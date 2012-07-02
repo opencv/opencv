@@ -17,8 +17,8 @@
  */
 
 #include "opencv2/core/core.hpp"
-#include "opencv2/highgui/highgui.hpp"
 #include "opencv2/contrib/contrib.hpp"
+#include "opencv2/highgui/highgui.hpp"
 
 #include <iostream>
 #include <fstream>
@@ -26,18 +26,6 @@
 
 using namespace cv;
 using namespace std;
-
-static Mat toGrayscale(InputArray _src) {
-    Mat src = _src.getMat();
-    // only allow one channel
-    if(src.channels() != 1) {
-        CV_Error(CV_StsBadArg, "Only Matrices with one channel are supported");
-    }
-    // create and return normalized image
-    Mat dst;
-    cv::normalize(_src, dst, 0, 255, NORM_MINMAX, CV_8UC1);
-    return dst;
-}
 
 static void read_csv(const string& filename, vector<Mat>& images, vector<int>& labels, char separator = ';') {
     std::ifstream file(filename.c_str(), ifstream::in);
@@ -96,21 +84,29 @@ int main(int argc, const char *argv[]) {
     int testLabel = labels[labels.size() - 1];
     images.pop_back();
     labels.pop_back();
-    // The following lines create an Eigenfaces model for
+    // The following lines create an LBPH model for
     // face recognition and train it with the images and
     // labels read from the given CSV file.
-    // This here is a full PCA, if you just want to keep
-    // 10 principal components (read Eigenfaces), then call
-    // the factory method like this:
     //
-    //      cv::createEigenFaceRecognizer(10);
+    // The LBPHFaceRecognizer uses Extended Local Binary Patterns
+    // (it's probably configurable with other operators at a later
+    // point), and has the following default values
     //
-    // If you want to create a FaceRecognizer with a
-    // confidennce threshold, call it with:
+    //      radius = 1
+    //      neighbors = 8
+    //      grid_x = 8
+    //      grid_y = 8
     //
-    //      cv::createEigenFaceRecognizer(10, 123.0);
+    // So if you want a LBPH FaceRecognizer using a radius of
+    // 2 and 16 neighbors, call the factory method with:
     //
-    Ptr<FaceRecognizer> model = createEigenFaceRecognizer();
+    //      cv::createLBPHFaceRecognizer(2, 16);
+    //
+    // And if you want a threshold (e.g. 123.0) call it with its default values:
+    //
+    //      cv::createLBPHFaceRecognizer(1,8,8,8,123.0)
+    //
+    Ptr<FaceRecognizer> model = createLBPHFaceRecognizer();
     model->train(images, labels);
     // The following line predicts the label of a given
     // test image:
@@ -139,24 +135,21 @@ int main(int argc, const char *argv[]) {
     // it
     predictedLabel = model->predict(testSample);
     cout << "Predicted class = " << predictedLabel << endl;
-    // Here is how to get the eigenvalues of this Eigenfaces model:
-    Mat eigenvalues = model->getMat("eigenvalues");
-    // And we can do the same to display the Eigenvectors (read Eigenfaces):
-    Mat W = model->getMat("eigenvectors");
-    // From this we will display the (at most) first 10 Eigenfaces:
-    for (int i = 0; i < min(10, W.cols); i++) {
-        string msg = format("Eigenvalue #%d = %.5f", i, eigenvalues.at<double>(i));
-        cout << msg << endl;
-        // get eigenvector #i
-        Mat ev = W.col(i).clone();
-        // Reshape to original size & normalize to [0...255] for imshow.
-        Mat grayscale = toGrayscale(ev.reshape(1, height));
-        // Show the image & apply a Jet colormap for better sensing.
-        Mat cgrayscale;
-        applyColorMap(grayscale, cgrayscale, COLORMAP_JET);
-        imshow(format("%d", i), cgrayscale);
-    }
-    waitKey(0);
-
+    // Show some informations about the model, as there's no cool
+    // Model data to display as in Eigenfaces/Fisherfaces.
+    // Due to efficiency reasons the LBP images are not stored
+    // within the model:
+    cout << "Model Information:" << endl;
+    string model_info = format("\tLBPH(radius=%i, neighbors=%i, grid_x=%i, grid_y=%i, threshold=%.2f)",
+            model->getInt("radius"),
+            model->getInt("neighbors"),
+            model->getInt("grid_x"),
+            model->getInt("grid_y"),
+            model->getDouble("threshold"));
+    cout << model_info << endl;
+    // We could get the histograms for example:
+    vector<Mat> histograms = model->getMatVector("histograms");
+    // But should I really visualize it? Probably the length is interesting:
+    cout << "Size of the histograms: " << histograms[0].total() << endl;
     return 0;
 }

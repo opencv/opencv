@@ -17,8 +17,8 @@
  */
 
 #include "opencv2/core/core.hpp"
-#include "opencv2/highgui/highgui.hpp"
 #include "opencv2/contrib/contrib.hpp"
+#include "opencv2/highgui/highgui.hpp"
 
 #include <iostream>
 #include <fstream>
@@ -27,15 +27,21 @@
 using namespace cv;
 using namespace std;
 
-static Mat toGrayscale(InputArray _src) {
+static Mat norm_0_255(InputArray _src) {
     Mat src = _src.getMat();
-    // only allow one channel
-    if(src.channels() != 1) {
-        CV_Error(CV_StsBadArg, "Only Matrices with one channel are supported");
-    }
-    // create and return normalized image
+    // Create and return normalized image:
     Mat dst;
-    cv::normalize(_src, dst, 0, 255, NORM_MINMAX, CV_8UC1);
+    switch(src.channels()) {
+    case 1:
+        cv::normalize(_src, dst, 0, 255, NORM_MINMAX, CV_8UC1);
+        break;
+    case 3:
+        cv::normalize(_src, dst, 0, 255, NORM_MINMAX, CV_8UC3);
+        break;
+    default:
+        src.copyTo(dst);
+        break;
+    }
     return dst;
 }
 
@@ -60,9 +66,13 @@ static void read_csv(const string& filename, vector<Mat>& images, vector<int>& l
 int main(int argc, const char *argv[]) {
     // Check for valid command line arguments, print usage
     // if no arguments were given.
-    if (argc != 2) {
-        cout << "usage: " << argv[0] << " <csv.ext>" << endl;
+    if (argc < 2) {
+        cout << "usage: " << argv[0] << " <csv.ext> <output_folder> " << endl;
         exit(1);
+    }
+    string output_folder;
+    if (argc == 3) {
+        output_folder = string(argv[2]);
     }
     // Get the path to your CSV.
     string fn_csv = string(argv[1]);
@@ -96,21 +106,25 @@ int main(int argc, const char *argv[]) {
     int testLabel = labels[labels.size() - 1];
     images.pop_back();
     labels.pop_back();
-    // The following lines create an Eigenfaces model for
+    // The following lines create an Fisherfaces model for
     // face recognition and train it with the images and
     // labels read from the given CSV file.
-    // This here is a full PCA, if you just want to keep
-    // 10 principal components (read Eigenfaces), then call
+    // If you just want to keep 10 Fisherfaces, then call
     // the factory method like this:
     //
-    //      cv::createEigenFaceRecognizer(10);
+    //      cv::createFisherFaceRecognizer(10);
+    //
+    // However it is not useful to discard Fisherfaces! Please
+    // always try to use _all_ available Fisherfaces for
+    // classification.
     //
     // If you want to create a FaceRecognizer with a
-    // confidennce threshold, call it with:
+    // confidence threshold (e.g. 123.0) and use _all_
+    // Fisherfaces, then call it with:
     //
-    //      cv::createEigenFaceRecognizer(10, 123.0);
+    //      cv::createFisherFaceRecognizer(0, 123.0);
     //
-    Ptr<FaceRecognizer> model = createEigenFaceRecognizer();
+    Ptr<FaceRecognizer> model = createFisherFaceRecognizer();
     model->train(images, labels);
     // The following line predicts the label of a given
     // test image:
@@ -124,39 +138,54 @@ int main(int argc, const char *argv[]) {
     //
     string result_message = format("Predicted class = %d / Actual class = %d.", predictedLabel, testLabel);
     cout << result_message << endl;
-    // Sometimes you'll need to get/set internal model data,
-    // which isn't exposed by the public cv::FaceRecognizer.
-    // Since each cv::FaceRecognizer is derived from a
-    // cv::Algorithm, you can query the data.
-    //
-    // First we'll use it to set the threshold of the FaceRecognizer
-    // to 0.0 without retraining the model. This can be useful if
-    // you are evaluating the model:
-    //
-    model->set("threshold", 0.0);
-    // Now the threshold of this model is set to 0.0. A prediction
-    // now returns -1, as it's impossible to have a distance below
-    // it
-    predictedLabel = model->predict(testSample);
-    cout << "Predicted class = " << predictedLabel << endl;
     // Here is how to get the eigenvalues of this Eigenfaces model:
     Mat eigenvalues = model->getMat("eigenvalues");
     // And we can do the same to display the Eigenvectors (read Eigenfaces):
     Mat W = model->getMat("eigenvectors");
-    // From this we will display the (at most) first 10 Eigenfaces:
-    for (int i = 0; i < min(10, W.cols); i++) {
+    // Get the sample mean from the training data
+    Mat mean = model->getMat("mean");
+    // Display or save:
+    if(argc == 2) {
+        imshow("mean", norm_0_255(mean.reshape(1, images[0].rows)));
+    } else {
+        imwrite(format("%s/mean.png", output_folder.c_str()), norm_0_255(mean.reshape(1, images[0].rows)));
+    }
+    // Display or save the first, at most 16 Fisherfaces:
+    for (int i = 0; i < min(16, W.cols); i++) {
         string msg = format("Eigenvalue #%d = %.5f", i, eigenvalues.at<double>(i));
         cout << msg << endl;
         // get eigenvector #i
         Mat ev = W.col(i).clone();
         // Reshape to original size & normalize to [0...255] for imshow.
-        Mat grayscale = toGrayscale(ev.reshape(1, height));
-        // Show the image & apply a Jet colormap for better sensing.
+        Mat grayscale = norm_0_255(ev.reshape(1, height));
+        // Show the image & apply a Bone colormap for better sensing.
         Mat cgrayscale;
-        applyColorMap(grayscale, cgrayscale, COLORMAP_JET);
-        imshow(format("%d", i), cgrayscale);
+        applyColorMap(grayscale, cgrayscale, COLORMAP_BONE);
+        // Display or save:
+        if(argc == 2) {
+            imshow(format("fisherface_%d", i), cgrayscale);
+        } else {
+            imwrite(format("%s/fisherface_%d.png", output_folder.c_str(), i), norm_0_255(cgrayscale));
+        }
     }
-    waitKey(0);
-
+    // Display or save the image reconstruction at some predefined steps:
+    for(int num_component = 0; num_component < min(16, W.cols); num_component++) {
+        // Slice the Fisherface from the model:
+        Mat ev = W.col(num_component);
+        Mat projection = subspaceProject(ev, mean, images[0].reshape(1,1));
+        Mat reconstruction = subspaceReconstruct(ev, mean, projection);
+        // Normalize the result:
+        reconstruction = norm_0_255(reconstruction.reshape(1, images[0].rows));
+        // Display or save:
+        if(argc == 2) {
+            imshow(format("fisherface_reconstruction_%d", num_component), reconstruction);
+        } else {
+            imwrite(format("%s/fisherface_reconstruction_%d.png", output_folder.c_str(), num_component), reconstruction);
+        }
+    }
+    // Display if we are not writing to an output folder:
+    if(argc == 2) {
+        waitKey(0);
+    }
     return 0;
 }

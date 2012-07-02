@@ -470,68 +470,6 @@ namespace colormap
         }
     };
 
-    // A perceptually improved Jet colormap (MKPJ1) by Matteo Niccoli
-    //
-    // Author's personal website:
-    //   http://mycarta.wordpress.com/
-    //
-    // Author's FEX page:
-    //   http://www.mathworks.com/matlabcentral/fileexchange/authors/87376
-    //
-    class MKPJ1 : public ColorMap {
-    public:
-        MKPJ1() : ColorMap() {
-            init(256);
-        }
-
-        MKPJ1(int n) : ColorMap() {
-            init(n);
-        }
-
-        void init(int n) {
-            float r[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.0476, 0.09710000000000001, 0.1466, 0.1961, 0.2456, 0.2952, 0.3447, 0.3942, 0.4437, 0.4932, 0.5427, 0.5921999999999999, 0.6417, 0.6912, 0.7407, 0.7903, 0.8398, 0.8893, 0.9388, 0.9883, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
-            float g[] = {0, 0, 0, 0.007900000000000001, 0.0574, 0.1069, 0.1564, 0.2059, 0.2555, 0.305, 0.3545, 0.404, 0.4535, 0.503, 0.5525, 0.602, 0.6515, 0.701, 0.7506, 0.8001, 0.8496, 0.8991, 0.9486, 0.9981, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0.9622000000000001, 0.9127, 0.8632, 0.8137, 0.7642, 0.7146, 0.6651, 0.6156, 0.5661, 0.5165999999999999, 0.4671, 0.4176, 0.3681, 0.3186, 0.2691, 0.2195, 0.17, 0.1205, 0.07099999999999999, 0.0215};
-            float b[] = {0.8594000000000001, 0.9089, 0.9584, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0.9524, 0.9029, 0.8534, 0.8038999999999999, 0.7544, 0.7048, 0.6553, 0.6058, 0.5563, 0.5068, 0.4573, 0.4078, 0.3583, 0.3088, 0.2593, 0.2097, 0.1602, 0.1107, 0.0612, 0.0117, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-            Mat X = linspace(0,1,64);
-            this->_lut = ColorMap::linear_colormap(X,
-                    Mat(64,1, CV_32FC1, r).clone(), // red
-                    Mat(64,1, CV_32FC1, g).clone(), // green
-                    Mat(64,1, CV_32FC1, b).clone(), // blue
-                    n);  // number of sample points
-        }
-    };
-
-    // A perceptually improved Jet colormap (MKPJ2) by Matteo Niccoli
-    //
-    // Author's personal website:
-    //   http://mycarta.wordpress.com/
-    //
-    // Author's FEX page:
-    //   http://www.mathworks.com/matlabcentral/fileexchange/authors/87376
-    //
-    class MKPJ2 : public ColorMap {
-    public:
-        MKPJ2() : ColorMap() {
-            init(256);
-        }
-
-        MKPJ2(int n) : ColorMap() {
-            init(n);
-        }
-
-        void init(int n) {
-            float r[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.0005, 0.0298, 0.0653, 0.1055, 0.1524, 0.2094, 0.2787, 0.3565, 0.4364, 0.5154, 0.5903, 0.6582, 0.7183, 0.7714, 0.8176, 0.8579, 0.8935999999999999, 0.9254, 0.954, 0.98, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
-            float g[] = {0.0116, 0.09089999999999999, 0.1791, 0.2667, 0.3472, 0.4196, 0.4849, 0.5404, 0.5878, 0.6292, 0.6657999999999999, 0.6988, 0.729, 0.7574, 0.7846, 0.8110000000000001, 0.837, 0.8628, 0.8885, 0.9145, 0.9409999999999999, 0.9687, 0.9975000000000001, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0.9963, 0.9743000000000001, 0.9537, 0.9344, 0.9162, 0.8987000000000001, 0.8821, 0.8659, 0.85, 0.8343, 0.8186, 0.8025, 0.7859, 0.7683, 0.7491, 0.7276, 0.7026, 0.6728, 0.6363, 0.5915, 0.5346, 0.4602};
-            float b[] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0.9995000000000001, 0.9702, 0.9347, 0.8945, 0.8476, 0.7906, 0.7213000000000001, 0.6435, 0.5636, 0.4846, 0.4097, 0.3418, 0.2817, 0.2286, 0.1824, 0.1421, 0.1064, 0.0746, 0.046, 0.02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-            Mat X = linspace(0,1,64);
-            this->_lut = ColorMap::linear_colormap(X,
-                    Mat(64,1, CV_32FC1, r).clone(), // red
-                    Mat(64,1, CV_32FC1, g).clone(), // green
-                    Mat(64,1, CV_32FC1, b).clone(), // blue
-                    n);  // number of sample points
-        }
-    };
-
     void ColorMap::operator()(InputArray _src, OutputArray _dst) const
     {
         if(_lut.total() != 256)
@@ -571,16 +509,16 @@ namespace colormap
         colormap::ColorMap* cm =
             colormap == COLORMAP_AUTUMN ? (colormap::ColorMap*)(new colormap::Autumn) :
             colormap == COLORMAP_BONE ? (colormap::ColorMap*)(new colormap::Bone) :
-            colormap == COLORMAP_JET ? (colormap::ColorMap*)(new colormap::Jet) :
-            colormap == COLORMAP_WINTER ? (colormap::ColorMap*)(new colormap::Winter) :
-            colormap == COLORMAP_OCEAN ? (colormap::ColorMap*)(new colormap::Ocean) :
-            colormap == COLORMAP_SUMMER ? (colormap::ColorMap*)(new colormap::Summer) :
-            colormap == COLORMAP_SPRING ? (colormap::ColorMap*)(new colormap::Spring) :
             colormap == COLORMAP_COOL ? (colormap::ColorMap*)(new colormap::Cool) :
-            colormap == COLORMAP_HSV ? (colormap::ColorMap*)(new colormap::HSV) :
             colormap == COLORMAP_HOT ? (colormap::ColorMap*)(new colormap::Hot) :
-            colormap == COLORMAP_MKPJ1 ? (colormap::ColorMap*)(new colormap::MKPJ1) :
-            colormap == COLORMAP_MKPJ2 ? (colormap::ColorMap*)(new colormap::MKPJ2) : 0;
+            colormap == COLORMAP_HSV ? (colormap::ColorMap*)(new colormap::HSV) :
+            colormap == COLORMAP_JET ? (colormap::ColorMap*)(new colormap::Jet) :
+            colormap == COLORMAP_OCEAN ? (colormap::ColorMap*)(new colormap::Ocean) :
+            colormap == COLORMAP_PINK ? (colormap::ColorMap*)(new colormap::Pink) :
+            colormap == COLORMAP_RAINBOW ? (colormap::ColorMap*)(new colormap::Rainbow) :
+            colormap == COLORMAP_SPRING ? (colormap::ColorMap*)(new colormap::Spring) :
+            colormap == COLORMAP_SUMMER ? (colormap::ColorMap*)(new colormap::Summer) :
+            colormap == COLORMAP_WINTER ? (colormap::ColorMap*)(new colormap::Winter) : 0;
 
         if( !cm )
             CV_Error( CV_StsBadArg, "Unknown colormap id; use one of COLORMAP_*");

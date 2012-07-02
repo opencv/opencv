@@ -17,8 +17,9 @@
  */
 
 #include "opencv2/core/core.hpp"
-#include "opencv2/highgui/highgui.hpp"
 #include "opencv2/contrib/contrib.hpp"
+#include "opencv2/highgui/highgui.hpp"
+
 
 #include <iostream>
 #include <fstream>
@@ -27,15 +28,21 @@
 using namespace cv;
 using namespace std;
 
-static Mat toGrayscale(InputArray _src) {
+static Mat norm_0_255(InputArray _src) {
     Mat src = _src.getMat();
-    // only allow one channel
-    if(src.channels() != 1) {
-        CV_Error(CV_StsBadArg, "Only Matrices with one channel are supported");
-    }
-    // create and return normalized image
+    // Create and return normalized image:
     Mat dst;
-    cv::normalize(_src, dst, 0, 255, NORM_MINMAX, CV_8UC1);
+    switch(src.channels()) {
+    case 1:
+        cv::normalize(_src, dst, 0, 255, NORM_MINMAX, CV_8UC1);
+        break;
+    case 3:
+        cv::normalize(_src, dst, 0, 255, NORM_MINMAX, CV_8UC3);
+        break;
+    default:
+        src.copyTo(dst);
+        break;
+    }
     return dst;
 }
 
@@ -110,7 +117,7 @@ int main(int argc, const char *argv[]) {
     //
     //      cv::createEigenFaceRecognizer(10, 123.0);
     //
-    Ptr<FaceRecognizer> model = createEigenFaceRecognizer();
+    Ptr<FaceRecognizer> model = createFisherFaceRecognizer();
     model->train(images, labels);
     // The following line predicts the label of a given
     // test image:
@@ -150,7 +157,7 @@ int main(int argc, const char *argv[]) {
         // get eigenvector #i
         Mat ev = W.col(i).clone();
         // Reshape to original size & normalize to [0...255] for imshow.
-        Mat grayscale = toGrayscale(ev.reshape(1, height));
+        Mat grayscale = norm_0_255(ev.reshape(1, height));
         // Show the image & apply a Jet colormap for better sensing.
         Mat cgrayscale;
         applyColorMap(grayscale, cgrayscale, COLORMAP_JET);
