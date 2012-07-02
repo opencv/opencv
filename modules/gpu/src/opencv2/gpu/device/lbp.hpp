@@ -44,62 +44,58 @@
 #define __OPENCV_GPU_DEVICE_LBP_HPP_
 
 #include "internal_shared.hpp"
-// #include "opencv2/gpu/device/border_interpolate.hpp"
-// #include "opencv2/gpu/device/vec_traits.hpp"
-// #include "opencv2/gpu/device/vec_math.hpp"
-// #include "opencv2/gpu/device/saturate_cast.hpp"
-// #include "opencv2/gpu/device/filters.hpp"
-
-// #define CALC_SUM_(p0, p1, p2, p3, offset) \
-//     ((p0)[offset] - (p1)[offset] - (p2)[offset] + (p3)[offset])
-
-// __device__ __forceinline__ int sum(p0, p1, p2, p3, offset)
-// {
-
-// }
 
 namespace cv { namespace gpu { namespace device {
 
+namespace lbp{
     struct Stage
     {
         int    first;
         int    ntrees;
         float  threshold;
-        __device__ __forceinline__ Stage(int f = 0, int n = 0, float t = 0.f) : first(f), ntrees(n), threshold(t) {}
-        __device__ __forceinline__ Stage(const Stage& other) : first(other.first), ntrees(other.ntrees), threshold(other.threshold) {}
     };
 
     struct ClNode
     {
-        int   featureIdx;
         int   left;
         int   right;
-        __device__ __forceinline__  ClNode(int f = 0, int l = 0, int r = 0) : featureIdx(f), left(l), right(r) {}
-        __device__ __forceinline__  ClNode(const ClNode& other) : featureIdx(other.featureIdx), left(other.left), right(other.right) {}
+        int   featureIdx;
     };
 
-    struct Feature
+    struct LBP
     {
-        __device__ __forceinline__ Feature(const Feature& other) {(void)other;}
-        __device__ __forceinline__ Feature() {}
+        __device__ __forceinline__ LBP(const LBP& other) {(void)other;}
+        __device__ __forceinline__ LBP() {}
 
         //feature as uchar x, y - left top, z,w - right bottom
-        __device__ __forceinline__ uchar operator() (unsigned int y, unsigned int x, uchar4 feature, const DevMem2Di integral) const
+        __device__ __forceinline__ int operator() (unsigned int y, unsigned int x, uchar4 feature, const DevMem2Di integral) const
         {
             int x_off = 2 * feature.z;
             int y_off = 2 * feature.w;
+            // printf("feature: %d %d %d %d\n", (int)feature.x, (int)feature.y, (int)feature.z, (int)feature.w);
+            feature.z += feature.x;
+            feature.w += feature.y;
 
             // load feature key points
             int anchors[16];
+            /*
+            P0-----P1-----P2-----P3
+            |      |      |       |
+            P4-----P5-----P6-----P7
+            |      |      |       |
+            P8-----P9-----P10----P11
+            |      |      |       |
+            P12----P13----P14----15
+            */
             anchors[0]  = integral(y + feature.y, x + feature.x);
             anchors[1]  = integral(y + feature.y, x + feature.z);
-            anchors[2]  = integral(y + feature.y, x + x_off + feature.x);
-            anchors[3]  = integral(y + feature.y, x + x_off + feature.z);
+            anchors[2]  = integral(y + feature.y, x + feature.x + x_off);
+            anchors[3]  = integral(y + feature.y, x + feature.z + x_off);
 
             anchors[4]  = integral(y + feature.w, x + feature.x);
             anchors[5]  = integral(y + feature.w, x + feature.z);
-            anchors[6]  = integral(y + feature.w, x + x_off + feature.x);
-            anchors[7]  = integral(y + feature.w, x + x_off + feature.z);
+            anchors[6]  = integral(y + feature.w, x + feature.x + x_off);
+            anchors[7]  = integral(y + feature.w, x + feature.z + x_off);
 
             anchors[8]  = integral(y + y_off + feature.y, x + feature.x);
             anchors[9]  = integral(y + y_off + feature.y, x + feature.z);
@@ -114,7 +110,7 @@ namespace cv { namespace gpu { namespace device {
             // calculate feature
             int sum = anchors[5] - anchors[6] - anchors[9] + anchors[10];
 
-            uchar response = (( (anchors[ 0] - anchors[ 1] - anchors[ 4] + anchors[ 5]) >= sum )? 128 : 0)
+            int response =   (( (anchors[ 0] - anchors[ 1] - anchors[ 4] + anchors[ 5]) >= sum )? 128 : 0)
                             |(( (anchors[ 1] - anchors[ 2] - anchors[ 5] + anchors[ 6]) >= sum )? 64  : 0)
                             |(( (anchors[ 2] - anchors[ 3] - anchors[ 6] + anchors[ 7]) >= sum )? 32  : 0)
                             |(( (anchors[ 6] - anchors[ 7] - anchors[10] + anchors[11]) >= sum )? 16  : 0)
@@ -122,11 +118,12 @@ namespace cv { namespace gpu { namespace device {
                             |(( (anchors[ 9] - anchors[10] - anchors[13] + anchors[14]) >= sum )? 4   : 0)
                             |(( (anchors[ 8] - anchors[ 9] - anchors[12] + anchors[13]) >= sum )? 2   : 0)
                             |(( (anchors[ 4] - anchors[ 5] - anchors[ 8] + anchors[ 9]) >= sum )? 1   : 0);
-
             return response;
         }
-
     };
+} // lbp
+
+
 } } }// namespaces
 
 #endif
