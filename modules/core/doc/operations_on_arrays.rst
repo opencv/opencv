@@ -1820,7 +1820,7 @@ Finds the global minimum and maximum in an array
 
         .. note::
 
-            When ``minIdx`` is not NULL, it must have at least 2 elements (as well as ``maxIdx``), even if ``src`` is a single-row or single-column matrix. In OpenCV (following MATLAB) each array has at least 2 dimensions, i.e. single-row matrix is ``Mx1`` matrix (and therefore ``minIdx``/``maxIdx`` will be ``(i1,0)``/``(i2,0)``) and single-column matrix is ``1xN`` matrix (and therefore ``minIdx``/``maxIdx`` will be ``(0,j1)``/``(0,j2)``).
+            When ``minIdx`` is not NULL, it must have at least 2 elements (as well as ``maxIdx``), even if ``src`` is a single-row or single-column matrix. In OpenCV (following MATLAB) each array has at least 2 dimensions, i.e. single-column matrix is ``Mx1`` matrix (and therefore ``minIdx``/``maxIdx`` will be ``(i1,0)``/``(i2,0)``) and single-row matrix is ``1xN`` matrix (and therefore ``minIdx``/``maxIdx`` will be ``(0,j1)``/``(0,j2)``).
 
     :param maxIdx: Pointer to the returned maximum location (in nD case).  ``NULL`` is used if not required.
 
