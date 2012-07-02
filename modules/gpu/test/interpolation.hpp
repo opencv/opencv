@@ -54,7 +54,7 @@ template <typename T> struct NearestInterpolator
 {
     static T getValue(const cv::Mat& src, float y, float x, int c, int border_type, cv::Scalar borderVal = cv::Scalar())
     {
-        return readVal<T>(src, cvRound(y), cvRound(x), c, border_type, borderVal);
+        return readVal<T>(src, int(y), int(x), c, border_type, borderVal);
     }
 };
 

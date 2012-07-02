@@ -64,7 +64,7 @@ namespace cv { namespace gpu { namespace device
 
         __device__ __forceinline__ elem_type operator ()(float y, float x) const
         {
-            return src(__float2int_rn(y), __float2int_rn(x));
+            return src(__float2int_rz(y), __float2int_rz(x));
         }
 
         const Ptr2D src;
