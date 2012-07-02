@@ -667,7 +667,7 @@ struct SURFInvoker
                         besty = sumy;
                     }
                 }
-                descriptor_dir = fastAtan2( besty, bestx );
+                descriptor_dir = fastAtan2( -besty, bestx );
             }
             kp.angle = descriptor_dir;
             if( !descriptors || !descriptors->data )
