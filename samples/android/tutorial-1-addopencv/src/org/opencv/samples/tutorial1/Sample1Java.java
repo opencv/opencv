@@ -94,7 +94,6 @@ public class Sample1Java extends Activity {
         if (!OpenCVLoader.initAsync(OpenCVLoader.OPEN_CV_VERSION_2_4_0, this, mOpenCVCallBack))
         {
         	Log.e(TAG, "Cannot connect to OpenCV Manager");
-        	finish();
         }
     }
 
