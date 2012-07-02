@@ -1,4 +1,4 @@
-Gender Classification with OpenCV 
+Gender Classification with OpenCV
 =================================
 
 .. contents:: Table of Contents
@@ -8,7 +8,7 @@ Introduction
 ------------
 
 A lot of people interested in face recognition, also want to know how to perform image classification tasks like:
-    
+
     * Gender Classification (Gender Detection)
     * Emotion Classification (Emotion Detection)
     * Glasses Classification (Glasses Detection)
@@ -35,12 +35,12 @@ For gender classification of faces, you'll need some images of male and female f
 * Patrick Stewart
 * Tom Cruise
 
-Once you have acquired some images, you'll need to read them. In the demo I have decided to read the images from a very simple CSV file. Why? Because it's the simplest platform-independent approach I can think of. However, if you know a simpler solution please ping me about it. Basically all the CSV file needs to contain are lines composed of a ``filename`` followed by a ``;`` followed by the ``label`` (as *integer number*), making up a line like this: 
+Once you have acquired some images, you'll need to read them. In the demo I have decided to read the images from a very simple CSV file. Why? Because it's the simplest platform-independent approach I can think of. However, if you know a simpler solution please ping me about it. Basically all the CSV file needs to contain are lines composed of a ``filename`` followed by a ``;`` followed by the ``label`` (as *integer number*), making up a line like this:
 
 .. code-block:: none
 
     /path/to/image.ext;0
-    
+
 Let's dissect the line. ``/path/to/image.ext`` is the path to an image, probably something like this if you are in Windows: ``C:/faces/person0/image0.jpg``. Then there is the separator ``;`` and finally we assign a label ``0`` to the image. Think of the label as the subject (the person, the gender or whatever comes to your mind). In the gender classification scenario, the label is the gender the person has. I'll give the label ``0`` to *male* persons and the label ``1`` is for *female* subjects. So my CSV file looks like this:
 
 .. code-block:: none
@@ -66,14 +66,14 @@ All images for this example were chosen to have a frontal face perspective. They
 .. image:: ../img/tutorial/gender_classification/clooney_set.png
     :align: center
 
-You really don't want to create the CSV file by hand. And you really don't want scale, rotate & translate the images manually. I have prepared you two Python scripts ``create_csv.py`` and ``crop_face.py``, you can find them in the ``src`` folder coming with this documentation. You'll see how to use them in the :ref:`appendix`. 
+You really don't want to create the CSV file by hand. And you really don't want scale, rotate & translate the images manually. I have prepared you two Python scripts ``create_csv.py`` and ``crop_face.py``, you can find them in the ``src`` folder coming with this documentation. You'll see how to use them in the :ref:`appendixfgc`.
 
 Fisherfaces for Gender Classification
 --------------------------------------
 
 If you want to decide wether a person is *male* or *female*, you have to learn the discriminative features of both classes. The Eigenfaces method is based on the Principal Component Analysis, which is an unsupervised statistical model and not suitable for this task. Please see the Face Recognition tutorial for insights into the algorithms. The Fisherfaces instead yields a class-specific linear projection, so it is much better suited for the gender classification task. `http://www.bytefish.de/blog/gender_classification <http://www.bytefish.de/blog/gender_classification>`_  shows the recongition rate of the Fisherfaces method for gender classification.
 
-The Fisherfaces method achieves a 98% recognition rate in a subject-independent cross-validation. A subject-independent cross-validation means *images of the person under test are never used for learning the model*. And could you believe it: you can simply use the facerec_fisherfaces demo, that's inlcuded in OpenCV. 
+The Fisherfaces method achieves a 98% recognition rate in a subject-independent cross-validation. A subject-independent cross-validation means *images of the person under test are never used for learning the model*. And could you believe it: you can simply use the facerec_fisherfaces demo, that's inlcuded in OpenCV.
 
 Fisherfaces in OpenCV
 ---------------------
@@ -92,7 +92,7 @@ If you are in Windows, then simply start the demo by running (from command line)
 .. code-block:: none
 
     facerec_fisherfaces.exe C:/path/to/your/csv.ext
-    
+
 If you are in Linux, then simply start the demo by running:
 
 .. code-block:: none
@@ -137,10 +137,10 @@ And for advanced users I have also shown the Eigenvalue for the Fisherface:
 And the Fisherfaces reconstruction:
 
 .. image:: ../img/tutorial/gender_classification/fisherface_reconstruction_0.png
-  
-I hope this gives you an idea how to approach gender classification and the other image classification tasks. 
 
-.. _appendix:
+I hope this gives you an idea how to approach gender classification and the other image classification tasks.
+
+.. _appendixfgc:
 
 Appendix
 --------
@@ -167,8 +167,8 @@ You don't really want to create the CSV file by hand. I have prepared you a litt
     |   |-- 1.pgm
     |   |-- ...
     |   |-- 10.pgm
-    
-    
+
+
 Then simply call ``create_csv.py`` with the path to the folder, just like this and you could save the output:
 
 .. code-block:: none
@@ -197,7 +197,7 @@ Here is the script, if you can't find it:
 .. literalinclude:: ../src/create_csv.py
    :language: python
    :linenos:
-   
+
 Aligning Face Images
 ++++++++++++++++++++
 
@@ -214,9 +214,9 @@ If you are using the same *offset_pct* and *dest_sz* for your images, they are a
    :language: python
    :linenos:
 
-Imagine we are given `this photo of Arnold Schwarzenegger <http://en.wikipedia.org/wiki/File:Arnold_Schwarzenegger_edit%28ws%29.jpg>`_, which is under a Public Domain license. The (x,y)-position of the eyes is approximately *(252,364)* for the left and *(420,366)* for the right eye. Now you only need to define the horizontal offset, vertical offset and the size your scaled, rotated & cropped face should have. 
+Imagine we are given `this photo of Arnold Schwarzenegger <http://en.wikipedia.org/wiki/File:Arnold_Schwarzenegger_edit%28ws%29.jpg>`_, which is under a Public Domain license. The (x,y)-position of the eyes is approximately *(252,364)* for the left and *(420,366)* for the right eye. Now you only need to define the horizontal offset, vertical offset and the size your scaled, rotated & cropped face should have.
 
-Here are some examples: 
+Here are some examples:
 
 +---------------------------------+----------------------------------------------------------------------------+
 | Configuration                   | Cropped, Scaled, Rotated Face                                              |
@@ -230,4 +230,4 @@ Here are some examples:
 | 0.2 (20%), 0.2 (20%), (70,70)   | .. image:: ../img/tutorial/gender_classification/arnie_20_20_70_70.jpg     |
 +---------------------------------+----------------------------------------------------------------------------+
 
- 
+

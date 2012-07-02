@@ -122,7 +122,7 @@ Then simply call create_csv.py with the path to the folder, just like this and y
     at/s17/3.pgm;1
     [...]
 
-Please see the :ref:`appendix` for additional informations.
+Please see the :ref:`appendixft` for additional informations.
 
 Eigenfaces
 ==========
@@ -516,7 +516,7 @@ Literature
 
 .. [Zhao03] Zhao, W., Chellappa, R., Phillips, P., and Rosenfeld, A. Face recognition: A literature survey. ACM Computing Surveys (CSUR) 35, 4 (2003), 399–458.
 
-.. _appendix:
+.. _appendixft:
 
 Appendix
 ========
