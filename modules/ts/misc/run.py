@@ -716,13 +716,20 @@ class RunInfo(object):
             # clean temporary files
             temp_path = os.environ.get('OPENCV_TEMP_PATH')
             if not temp_path:
-                if hostos == "nt":
+                if self.targetos == "nt":
                     temp_path = tempfile.gettempdir()
                 else:
                     temp_path = "/tmp"
 
-            for filename in glob.glob(os.path.join(temp_path, "__opencv_temp.*")) :
-                os.remove( filename )
+            try:
+                if self.targetos == "nt":
+                    for filename in glob.glob(os.path.join(temp_path, "ocv*")) :
+                        os.remove( filename )
+                else:
+                    for filename in glob.glob(os.path.join(temp_path, "__opencv_temp.*")) :
+                        os.remove( filename )
+            except:
+                pass
 
             logpath = os.path.join(workingDir, logfile)
             if os.path.isfile(logpath):
