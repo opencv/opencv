@@ -2,14 +2,16 @@
 Robust line fitting.
 ==================
 
-Example of using cv2.fitLine function for fitting line to points in presence of outliers.
+Example of using cv2.fitLine function for fitting line 
+to points in presence of outliers.
 
 Usage
 -----
 fitline.py
 
-Switch through different M-estimator functions and see, how well the robust functions
-fit the line even in case of ~50% of outliers.
+Switch through different M-estimator functions and see, 
+how well the robust functions fit the line even 
+in case of ~50% of outliers.
 
 Keys
 ----

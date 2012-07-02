@@ -76,7 +76,7 @@ class App(object):
         shuffle = np.random.permutation(len(digits))
         digits, labels = digits[shuffle], labels[shuffle]
         digits2 = map(deskew, digits)
-        samples = np.float32(digits2).reshape(-1, SZ*SZ) / 255.0
+        samples = preprocess_hog(digits2)
         return samples, labels
 
     def get_dataset(self):
@@ -95,8 +95,8 @@ class App(object):
         return ires
             
     def adjust_SVM(self):
-        Cs = np.logspace(0, 5, 10, base=2)
-        gammas = np.logspace(-7, -2, 10, base=2)
+        Cs = np.logspace(0, 10, 15, base=2)
+        gammas = np.logspace(-7, 4, 15, base=2)
         scores = np.zeros((len(Cs), len(gammas)))
         scores[:] = np.nan
 
@@ -113,6 +113,9 @@ class App(object):
             scores[i, j] = score
             print '%d / %d (best error: %.2f %%, last: %.2f %%)' % (count+1, scores.size, np.nanmin(scores)*100, score*100)
         print scores
+
+        print 'writing score table to "svm_scores.npz"'
+        np.savez('svm_scores.npz', scores=scores, Cs=Cs, gammas=gammas)
 
         i, j = np.unravel_index(scores.argmin(), scores.shape)
         best_params = dict(C = Cs[i], gamma=gammas[j])
@@ -141,7 +144,6 @@ if __name__ == '__main__':
     import sys
     
     print __doc__
-
 
     args, _ = getopt.getopt(sys.argv[1:], '', ['model=', 'cloud', 'env='])
     args = dict(args)
