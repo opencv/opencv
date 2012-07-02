@@ -133,11 +133,6 @@ public class Utils {
     }
     
     
-    // native stuff
-    static {
-        System.loadLibrary("opencv_java");
-    }
-
     private static native void nBitmapToMat2(Bitmap b, long m_addr, boolean unPremultiplyAlpha);
 
     private static native void nMatToBitmap2(long m_addr, Bitmap b, boolean premultiplyAlpha);
