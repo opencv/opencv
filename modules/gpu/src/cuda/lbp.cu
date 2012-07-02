@@ -47,11 +47,11 @@ namespace cv { namespace gpu { namespace device
     namespace lbp
     {
         __global__ void lbp_classify_stump(Stage* stages, int nstages, ClNode* nodes, const float* leaves, const int* subsets, const uchar4* features,
-            const DevMem2Di integral, int workWidth, int workHeight, int clWidth, int clHeight, float scale, int step, int subsetSize, DevMem2D_<int4> objects)
+            const DevMem2Di integral, int workWidth, int workHeight, int clWidth, int clHeight, float scale, int step, int subsetSize, DevMem2D_<int4> objects, unsigned int* n)
         {
             int y = threadIdx.x * scale;
             int x = blockIdx.x * scale;
-
+            *n = 0;
             int i = 0;
 
             int current_node = 0;
@@ -88,12 +88,11 @@ namespace cv { namespace gpu { namespace device
             rect.z = roundf(clWidth);
             rect.w = roundf(clHeight);
 
-            if(i >= 19)
-                printf( "GPU detected [%d, %d] - [%d, %d]\n", rect.x, rect.y, rect.z, rect.w);
-
+            int res = atomicInc(n, 1000);
+            objects(0, res) = rect;
         }
 
-        void classifyStump(const DevMem2Db mstages, const int nstages, const DevMem2Di mnodes, const DevMem2Df mleaves, const DevMem2Di msubsets, const DevMem2Db mfeatures,
+        int classifyStump(const DevMem2Db mstages, const int nstages, const DevMem2Di mnodes, const DevMem2Df mleaves, const DevMem2Di msubsets, const DevMem2Db mfeatures,
                            const DevMem2Di integral, const int workWidth, const int workHeight, const int clWidth, const int clHeight, float scale, int step, int subsetSize,
                            DevMem2D_<int4> objects)
         {
@@ -106,9 +105,12 @@ namespace cv { namespace gpu { namespace device
             const float* leaves = mleaves.ptr();
             const int* subsets = msubsets.ptr();
             const uchar4* features = (uchar4*)(mfeatures.ptr());
-
+            unsigned int * n, *h_n = new unsigned int[1];
+            cudaMalloc(&n, sizeof(int));
             lbp_classify_stump<<<blocks, threads>>>(stages, nstages, nodes, leaves, subsets, features, integral,
-                workWidth, workHeight, clWidth, clHeight, scale, step, subsetSize, objects);
+                workWidth, workHeight, clWidth, clHeight, scale, step, subsetSize, objects, n);
+            cudaMemcpy(h_n, n, sizeof(int), cudaMemcpyDeviceToHost);
+            return *h_n;
         }
     }
 }}}

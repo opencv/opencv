@@ -272,7 +272,7 @@ namespace cv { namespace gpu { namespace device
 {
     namespace lbp
     {
-        void classifyStump(const DevMem2Db mstages,
+        int classifyStump(const DevMem2Db mstages,
                            const int nstages,
                            const DevMem2Di mnodes,
                            const DevMem2Df mleaves,
@@ -298,13 +298,10 @@ int cv::gpu::CascadeClassifier_GPU_LBP::detectMultiScale(const GpuMat& image, Gp
 
     const int defaultObjSearchNum = 100;
 
-    // if( !objects.empty() && objects.depth() == CV_32S)
-    //     objects.reshape(4, 1);
-    // else
-    //     objects.create(1 , defaultObjSearchNum, CV_32SC4);
-
-    // temp solution
-    objects.create(image.rows, image.cols, CV_32SC4);
+    if( !objects.empty() && objects.depth() == CV_32S)
+        objects.reshape(4, 1);
+    else
+        objects.create(1 , defaultObjSearchNum, CV_32SC4);
 
     if (maxObjectSize == cv::Size())
         maxObjectSize = image.size();
@@ -333,8 +330,9 @@ int cv::gpu::CascadeClassifier_GPU_LBP::detectMultiScale(const GpuMat& image, Gp
 
         int step = (factor <= 2.) + 1;
 
-        cv::gpu::device::lbp::classifyStump(stage_mat, stage_mat.cols / sizeof(Stage), nodes_mat, leaves_mat, subsets_mat, features_mat,
+        int res = cv::gpu::device::lbp::classifyStump(stage_mat, stage_mat.cols / sizeof(Stage), nodes_mat, leaves_mat, subsets_mat, features_mat,
         integral, processingRectSize.width, processingRectSize.height, windowSize.width, windowSize.height, scaleFactor, step, subsetSize, objects);
+        std::cout  << res << "Results:    " << cv::Mat(objects).row(0).colRange(0, res) << std::endl;
     }
     // TODO: reject levels
 
