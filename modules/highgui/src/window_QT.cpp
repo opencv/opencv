@@ -3352,7 +3352,9 @@ void GlFuncTab_QT::unmapBuffer(unsigned int target) const
 
 void GlFuncTab_QT::generateBitmapFont(const std::string& family, int height, int weight, bool italic, bool /*underline*/, int start, int count, int base) const
 {
-    //CV_FUNCNAME( "GlFuncTab_QT::generateBitmapFont" );
+#ifdef Q_WS_WIN
+    CV_FUNCNAME( "GlFuncTab_QT::generateBitmapFont" );
+#endif
 
     QFont font(QString(family.c_str()), height, weight, italic);
 
