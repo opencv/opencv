@@ -53,7 +53,6 @@ struct Stage
     int    first;
     int    ntrees;
     float  threshold;
-    Stage(int f = 0, int n = 0, float t = 0.f) : first(f), ntrees(n), threshold(t) {}
 };
 
 struct DTreeNode
@@ -61,7 +60,6 @@ struct DTreeNode
     int   featureIdx;
     int   left;
     int   right;
-    DTreeNode(int f = 0, int l = 0, int r = 0) : featureIdx(f), left(l), right(r) {}
 };
 
 #if !defined (HAVE_CUDA)
@@ -70,9 +68,9 @@ cv::gpu::CascadeClassifier_GPU::CascadeClassifier_GPU()               { throw_no
 cv::gpu::CascadeClassifier_GPU::CascadeClassifier_GPU(const string&)  { throw_nogpu(); }
 cv::gpu::CascadeClassifier_GPU::~CascadeClassifier_GPU()              { throw_nogpu(); }
 
-bool cv::gpu::CascadeClassifier_GPU::empty() const { throw_nogpu(); return true; }
-bool cv::gpu::CascadeClassifier_GPU::load(const string&)  { throw_nogpu(); return true; }
-Size cv::gpu::CascadeClassifier_GPU::getClassifierSize() const { throw_nogpu(); return Size(); }
+bool cv::gpu::CascadeClassifier_GPU::empty() const              { throw_nogpu(); return true; }
+bool cv::gpu::CascadeClassifier_GPU::load(const string&)        { throw_nogpu(); return true; }
+Size cv::gpu::CascadeClassifier_GPU::getClassifierSize() const  { throw_nogpu(); return Size(); }
 
 int cv::gpu::CascadeClassifier_GPU::detectMultiScale( const GpuMat& , GpuMat& , double , int , Size)  { throw_nogpu(); return 0; }
 
@@ -89,13 +87,9 @@ int cv::gpu::CascadeClassifier_GPU_LBP::detectMultiScale(const cv::gpu::GpuMat&,
 
 #else
 
-cv::gpu::CascadeClassifier_GPU_LBP::CascadeClassifier_GPU_LBP()
-{
-}
+cv::gpu::CascadeClassifier_GPU_LBP::CascadeClassifier_GPU_LBP(){}
 
-cv::gpu::CascadeClassifier_GPU_LBP::~CascadeClassifier_GPU_LBP()
-{
-}
+cv::gpu::CascadeClassifier_GPU_LBP::~CascadeClassifier_GPU_LBP(){}
 
 void cv::gpu::CascadeClassifier_GPU_LBP::preallocateIntegralBuffer(cv::Size desired)
 {
@@ -134,6 +128,7 @@ bool cv::gpu::CascadeClassifier_GPU_LBP::load(const string& classifierAsXml)
 #define GPU_CC_FEATURES             "features"
 #define GPU_CC_RECT                 "rect"
 
+// currently only stump based boost classifiers are supported
 bool CascadeClassifier_GPU_LBP::read(const FileNode &root)
 {
     std::string stageTypeStr = (string)root[GPU_CC_STAGE_TYPE];
@@ -149,14 +144,14 @@ bool CascadeClassifier_GPU_LBP::read(const FileNode &root)
     isStumps = ((int)(root[GPU_CC_STAGE_PARAMS][GPU_CC_MAX_DEPTH]) == 1) ? true : false;
     CV_Assert(isStumps);
 
-    // features
     FileNode fn = root[GPU_CC_FEATURE_PARAMS];
     if (fn.empty())
         return false;
 
     ncategories = fn[GPU_CC_MAX_CAT_COUNT];
 
-    subsetSize = (ncategories + 31) / 32, nodeStep = 3 + ( ncategories > 0 ? subsetSize : 1 );
+    subsetSize = (ncategories + 31) / 32;
+    nodeStep = 3 + ( ncategories > 0 ? subsetSize : 1 );
 
     fn = root[GPU_CC_STAGES];
     if (fn.empty())
@@ -166,7 +161,7 @@ bool CascadeClassifier_GPU_LBP::read(const FileNode &root)
     stages.reserve(fn.size());
 
     std::vector<int> cl_trees;
-    std::vector<DTreeNode> cl_nodes;
+    std::vector<int> cl_nodes;
     std::vector<float> cl_leaves;
     std::vector<int> subsets;
 
@@ -184,7 +179,7 @@ bool CascadeClassifier_GPU_LBP::read(const FileNode &root)
         st.ntrees = (int)fns.size();
         st.first = (int)cl_trees.size();
 
-        stages.push_back(st);
+        stages.push_back(st);// (int, int, float)
 
         cl_trees.reserve(stages[si].first + stages[si].ntrees);
 
@@ -198,10 +193,11 @@ bool CascadeClassifier_GPU_LBP::read(const FileNode &root)
             FileNode leafValues = fnw[GPU_CC_LEAF_VALUES];
             if ( internalNodes.empty() || leafValues.empty() )
                 return false;
+
             int nodeCount = (int)internalNodes.size()/nodeStep;
             cl_trees.push_back(nodeCount);
 
-            cl_nodes.reserve(cl_nodes.size() + nodeCount);
+            cl_nodes.reserve((cl_nodes.size() + nodeCount) * 3);
             cl_leaves.reserve(cl_leaves.size() + leafValues.size());
 
             if( subsetSize > 0 )
@@ -212,8 +208,9 @@ bool CascadeClassifier_GPU_LBP::read(const FileNode &root)
 
             for( ; iIt != iEnd; )
             {
-                DTreeNode node((int)*(iIt++), (int)*(iIt++), (int)*(iIt++));
-                cl_nodes.push_back(node);
+                cl_nodes.push_back((int)*(iIt++));
+                cl_nodes.push_back((int)*(iIt++));
+                cl_nodes.push_back((int)*(iIt++));
 
                 if( subsetSize > 0 )
                     for( int j = 0; j < subsetSize; j++, ++iIt )
@@ -226,15 +223,16 @@ bool CascadeClassifier_GPU_LBP::read(const FileNode &root)
                 cl_leaves.push_back((float)*iIt);
         }
     }
+
     fn = root[GPU_CC_FEATURES];
     if( fn.empty() )
         return false;
-    std::vector<char> features;
+    std::vector<uchar> features;
     features.reserve(fn.size() * 4);
     FileNodeIterator f_it = fn.begin(), f_end = fn.end();
     for (; f_it != f_end; ++f_it)
     {
-        FileNode rect = (*it)[GPU_CC_RECT];
+        FileNode rect = (*f_it)[GPU_CC_RECT];
         FileNodeIterator r_it = rect.begin();
         features.push_back(saturate_cast<uchar>((int)*(r_it++)));
         features.push_back(saturate_cast<uchar>((int)*(r_it++)));
@@ -243,23 +241,12 @@ bool CascadeClassifier_GPU_LBP::read(const FileNode &root)
     }
 
     // copy data structures on gpu
-    stage_mat = cv::gpu::GpuMat(1, (int)stages.size() * sizeof(Stage), CV_8UC1);
-    stage_mat.upload(cv::Mat(1, stages.size() * sizeof(Stage), CV_8UC1, &(stages[0]) ));
-
-    trees_mat = cv::gpu::GpuMat(1, (int)cl_trees.size(), CV_32SC1);
-    stage_mat.upload(cv::Mat(cl_trees));
-
-    nodes_mat = cv::gpu::GpuMat(1, (int)cl_nodes.size() * sizeof(DTreeNode), CV_8UC1);
-    stage_mat.upload(cv::Mat(1, cl_nodes.size() * sizeof(DTreeNode), CV_8UC1, &(cl_nodes[0]) ));
-
-    leaves_mat = cv::gpu::GpuMat(1, (int)cl_leaves.size(), CV_32FC1);
-    stage_mat.upload(cv::Mat(cl_leaves));
-
-    subsets_mat = cv::gpu::GpuMat(1, (int)subsets.size(), CV_32SC1);
-    stage_mat.upload(cv::Mat(subsets));
-
-    features_mat = cv::gpu::GpuMat(1, (int)features.size(), CV_8UC1);
-    features_mat.upload(cv::Mat(features));
+    stage_mat.upload(cv::Mat(1, stages.size() * sizeof(Stage), CV_8UC1, (uchar*)&(stages[0]) ));
+    trees_mat.upload(cv::Mat(cl_trees).reshape(1,1));
+    nodes_mat.upload(cv::Mat(cl_nodes).reshape(1,1));
+    leaves_mat.upload(cv::Mat(cl_leaves).reshape(1,1));
+    subsets_mat.upload(cv::Mat(subsets).reshape(1,1));
+    features_mat.upload(cv::Mat(features).reshape(4,1));
 
     return true;
 }
