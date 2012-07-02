@@ -292,9 +292,9 @@ public:
     typedef typename Distance::ValueType ValueType;
     typedef typename Distance::ResultType DistanceType;
 
-    CV_DescriptorExtractorTest( const string _name, DistanceType _maxDist, const Ptr<DescriptorExtractor>& _dextractor, float _prevTime,
+    CV_DescriptorExtractorTest( const string _name, DistanceType _maxDist, const Ptr<DescriptorExtractor>& _dextractor,
                                 Distance d = Distance() ):
-            name(_name), maxDist(_maxDist), prevTime(_prevTime), dextractor(_dextractor), distance(d) {}
+            name(_name), maxDist(_maxDist), dextractor(_dextractor), distance(d) {}
 protected:
     virtual void createDescriptorExtractor() {}
 
@@ -400,7 +400,7 @@ protected:
             double t = (double)getTickCount();
             dextractor->compute( img, keypoints, calcDescriptors );
             t = getTickCount() - t;
-            ts->printf(cvtest::TS::LOG, "\nAverage time of computing one descriptor = %g ms (previous time = %g ms).\n", t/((double)cvGetTickFrequency()*1000.)/calcDescriptors.rows, prevTime );
+            ts->printf(cvtest::TS::LOG, "\nAverage time of computing one descriptor = %g ms.\n", t/((double)cvGetTickFrequency()*1000.)/calcDescriptors.rows);
 
             if( calcDescriptors.rows != (int)keypoints.size() )
             {
@@ -485,7 +485,6 @@ protected:
 
     string name;
     const DistanceType maxDist;
-    const float prevTime;
     Ptr<DescriptorExtractor> dextractor;
     Distance distance;
 
@@ -1027,11 +1026,15 @@ TEST( Features2d_Detector_PyramidFAST, regression )
     test.safe_run();
 }
 
+/*
+ * Descriptors
+ */
+
 TEST( Features2d_DescriptorExtractor_ORB, regression )
 {
     // TODO adjust the parameters below
     CV_DescriptorExtractorTest<Hamming> test( "descriptor-orb",  (CV_DescriptorExtractorTest<Hamming>::DistanceType)12.f,
-                                                 DescriptorExtractor::create("ORB"), 0.010f );
+                                                 DescriptorExtractor::create("ORB") );
     test.safe_run();
 }
 
@@ -1039,14 +1042,21 @@ TEST( Features2d_DescriptorExtractor_FREAK, regression )
 {
     // TODO adjust the parameters below
     CV_DescriptorExtractorTest<Hamming> test( "descriptor-freak",  (CV_DescriptorExtractorTest<Hamming>::DistanceType)12.f,
-                                                 DescriptorExtractor::create("FREAK"), 0.010f );
+                                                 DescriptorExtractor::create("FREAK") );
     test.safe_run();
 }
 
 TEST( Features2d_DescriptorExtractor_BRIEF, regression )
 {
     CV_DescriptorExtractorTest<Hamming> test( "descriptor-brief",  1,
-                                               DescriptorExtractor::create("BRIEF"), 0.00527548f );
+                                               DescriptorExtractor::create("BRIEF") );
+    test.safe_run();
+}
+
+TEST( Features2d_DescriptorExtractor_OpponentBRIEF, regression )
+{
+    CV_DescriptorExtractorTest<Hamming> test( "descriptor-opponent-brief",  1,
+                                               DescriptorExtractor::create("OpponentBRIEF") );
     test.safe_run();
 }
 

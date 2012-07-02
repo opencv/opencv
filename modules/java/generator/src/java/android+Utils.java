@@ -81,19 +81,28 @@ public class Utils {
      * <br>The output Mat is always created of the same size as the input Bitmap and of the 'CV_8UC4' type,
      * it keeps the image in RGBA format.
      * <br>The function throws an exception if the conversion fails.
-     *
-     * @param b is a valid input Bitmap object of the type 'ARGB_8888' or 'RGB_565'.
-     * @param m is a valid output Mat object, it will be reallocated if needed, so it's possible to pass an empty Mat.
+     * @param bmp is a valid input Bitmap object of the type 'ARGB_8888' or 'RGB_565'.
+     * @param mat is a valid output Mat object, it will be reallocated if needed, so it's possible to pass an empty Mat.
+     * @param unPremultiplyAlpha is a flag if the bitmap needs to be converted from alpha premultiplied format (like Android keeps 'ARGB_8888' ones) to regular one. The flag is ignored for 'RGB_565' bitmaps.
      */
-    public static void bitmapToMat(Bitmap b, Mat m) {
-        if (b == null)
-            throw new java.lang.IllegalArgumentException("Bitmap b == null");
-        if (m == null)
-            throw new java.lang.IllegalArgumentException("Mat m == null");
-    	nBitmapToMat(b, m.nativeObj);
+    public static void bitmapToMat(Bitmap bmp, Mat mat, boolean unPremultiplyAlpha) {
+        if (bmp == null)
+            throw new java.lang.IllegalArgumentException("bmp == null");
+        if (mat == null)
+            throw new java.lang.IllegalArgumentException("mat == null");
+        nBitmapToMat2(bmp, mat.nativeObj, unPremultiplyAlpha);
     }
 
+    /**
+     * Shortened form of the bitmapToMat(bmp, mat, unPremultiplyAlpha=false)
+     * @param bmp is a valid input Bitmap object of the type 'ARGB_8888' or 'RGB_565'.
+     * @param mat is a valid output Mat object, it will be reallocated if needed, so it's possible to pass an empty Mat.
+     */
+    public static void bitmapToMat(Bitmap bmp, Mat mat) {
+    	bitmapToMat(bmp, mat, false);
+    }
 
+    
     /**
      * Converts OpenCV Mat to Android Bitmap.
      * <p>
@@ -102,18 +111,34 @@ public class Utils {
      * <br>The output Bitmap object has to be of the same size as the input Mat and of the types 'ARGB_8888' or 'RGB_565'.
      * <br>The function throws an exception if the conversion fails.
      *
-     * @param m is a valid input Mat object of the types 'CV_8UC1', 'CV_8UC3' or 'CV_8UC4'.
-     * @param b is a valid Bitmap object of the same size as the Mat m and of type 'ARGB_8888' or 'RGB_565'.
+     * @param mat is a valid input Mat object of the types 'CV_8UC1', 'CV_8UC3' or 'CV_8UC4'.
+     * @param bmp is a valid Bitmap object of the same size as the Mat m and of type 'ARGB_8888' or 'RGB_565'.
+     * @param premultiplyAlpha is a flag if the Mat needs to be converted to alpha premultiplied format (like Android keeps 'ARGB_8888' bitmaps). The flag is ignored for 'RGB_565' bitmaps.
      */
-    public static void matToBitmap(Mat m, Bitmap b) {
-        if (m == null)
-            throw new java.lang.IllegalArgumentException("Mat m == null");
-        if (b == null)
-            throw new java.lang.IllegalArgumentException("Bitmap b == null");
-        nMatToBitmap(m.nativeObj, b);
+    public static void matToBitmap(Mat mat, Bitmap bmp, boolean premultiplyAlpha) {
+        if (mat == null)
+            throw new java.lang.IllegalArgumentException("mat == null");
+        if (bmp == null)
+            throw new java.lang.IllegalArgumentException("bmp == null");
+        nMatToBitmap2(mat.nativeObj, bmp, premultiplyAlpha);
     }
 
-    private static native void nBitmapToMat(Bitmap b, long m_addr);
+    /**
+     * Shortened form of the <b>matToBitmap(mat, bmp, premultiplyAlpha=false)</b>
+     * @param mat is a valid input Mat object of the types 'CV_8UC1', 'CV_8UC3' or 'CV_8UC4'.
+     * @param bmp is a valid Bitmap object of the same size as the Mat m and of type 'ARGB_8888' or 'RGB_565'.
+     */
+    public static void matToBitmap(Mat mat, Bitmap bmp) {
+    	matToBitmap(mat, bmp, false);
+    }
+    
+    
+    // native stuff
+    static {
+        System.loadLibrary("opencv_java");
+    }
 
-    private static native void nMatToBitmap(long m_addr, Bitmap b);
+    private static native void nBitmapToMat2(Bitmap b, long m_addr, boolean unPremultiplyAlpha);
+
+    private static native void nMatToBitmap2(long m_addr, Bitmap b, boolean premultiplyAlpha);
 }

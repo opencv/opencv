@@ -3128,6 +3128,57 @@ inline void cvtYUV422toRGBA(Mat& _dst, int _stride, const uchar* _yuv)
         converter(BlockedRange(0, _dst.rows));
 }
 
+/////////////////////////// RGBA <-> mRGBA (alpha premultiplied) //////////////
+
+template<typename _Tp>
+struct RGBA2mRGBA
+{
+    typedef _Tp channel_type;
+
+    void operator()(const _Tp* src, _Tp* dst, int n) const
+    {
+        _Tp max_val  = ColorChannel<_Tp>::max();
+        _Tp half_val = ColorChannel<_Tp>::half();
+        for( int i = 0; i < n; i++ )
+        {
+            _Tp v0 = *src++;
+            _Tp v1 = *src++;
+            _Tp v2 = *src++;
+            _Tp v3 = *src++;
+            
+            *dst++ = (v0 * v3 + half_val) / max_val;
+            *dst++ = (v1 * v3 + half_val) / max_val;
+            *dst++ = (v2 * v3 + half_val) / max_val;
+            *dst++ = v3;
+        }
+    }
+};
+
+
+template<typename _Tp>
+struct mRGBA2RGBA
+{
+    typedef _Tp channel_type;
+
+    void operator()(const _Tp* src, _Tp* dst, int n) const
+    {
+        _Tp max_val = ColorChannel<_Tp>::max();
+        for( int i = 0; i < n; i++ )
+        {
+            _Tp v0 = *src++;
+            _Tp v1 = *src++;
+            _Tp v2 = *src++;
+            _Tp v3 = *src++;
+            _Tp v3_half = v3 / 2;
+            
+            *dst++ = (v3==0)? 0 : (v0 * max_val + v3_half) / v3;
+            *dst++ = (v3==0)? 0 : (v1 * max_val + v3_half) / v3;
+            *dst++ = (v3==0)? 0 : (v2 * max_val + v3_half) / v3;
+            *dst++ = v3;
+        }
+    }
+};
+
 }//namespace cv
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -3638,6 +3689,38 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
                 CV_Assert( scn == 2 && depth == CV_8U );
 
                 extractChannel(_src, _dst, code == CV_YUV2GRAY_UYVY ? 1 : 0);
+            }
+            break;
+        case CV_RGBA2mRGBA:
+            {
+                if (dcn <= 0) dcn = 4;
+                CV_Assert( scn == 4 && dcn == 4 );
+
+                _dst.create(sz, CV_MAKETYPE(depth, dcn));
+                dst = _dst.getMat();
+
+                if( depth == CV_8U )
+                {
+                    CvtColorLoop(src, dst, RGBA2mRGBA<uchar>());
+                } else {
+                    CV_Error( CV_StsBadArg, "Unsupported image depth" );
+                }
+            }
+            break;
+        case CV_mRGBA2RGBA:
+            {
+                if (dcn <= 0) dcn = 4;
+                CV_Assert( scn == 4 && dcn == 4 );
+
+                _dst.create(sz, CV_MAKETYPE(depth, dcn));
+                dst = _dst.getMat();
+
+                if( depth == CV_8U )
+                {
+                    CvtColorLoop(src, dst, mRGBA2RGBA<uchar>());
+                } else {
+                    CV_Error( CV_StsBadArg, "Unsupported image depth" );
+                }
             }
             break;
         default:
