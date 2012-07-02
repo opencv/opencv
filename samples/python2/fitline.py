@@ -63,6 +63,8 @@ def update(_=None):
     cv2.imshow('fit line', img)
 
 if __name__ == '__main__':
+    print __doc__
+
     cv2.namedWindow('fit line')
     cv2.createTrackbar('noise', 'fit line', 3, 50, update)
     cv2.createTrackbar('point n', 'fit line', 100, 500, update)
