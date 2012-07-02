@@ -305,7 +305,7 @@ static void calcNWeights( const Mat& img, Mat& leftW, Mat& upleftW, Mat& upW, Ma
             }
             else
                 upW.at<double>(y,x) = 0;
-            if( x+1<img.cols-1 && y-1>=0 ) // upright
+            if( x+1<img.cols && y-1>=0 ) // upright
             {
                 Vec3d diff = color - (Vec3d)img.at<Vec3b>(y-1,x+1);
                 uprightW.at<double>(y,x) = gammaDivSqrt2 * exp(-beta*diff.dot(diff));

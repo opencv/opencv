@@ -1,4 +1,4 @@
-import sys, os, platform, xml, re, tempfile, glob, datetime, getpass
+import sys, os, platform, xml, re, tempfile, glob, datetime, getpass, shutil
 from optparse import OptionParser
 from subprocess import Popen, PIPE
 
@@ -228,6 +228,7 @@ class RunInfo(object):
         # fix empty tests dir
         if not self.tests_dir:
             self.tests_dir = self.path
+        self.tests_dir = os.path.normpath(self.tests_dir)
         # add path to adb
         if self.android_executable:
             self.adb = os.path.join(os.path.dirname(os.path.dirname(self.android_executable)), ("platform-tools/adb","platform-tools/adb.exe")[hostos == 'nt'])
@@ -375,7 +376,6 @@ class RunInfo(object):
             setattr(self, name, None)
         finally:
             if dir:
-                import shutil
                 shutil.rmtree(dir)
 
     def isTest(self, fullpath):
@@ -536,15 +536,16 @@ class RunInfo(object):
             if fname == name:
                 return t
             if fname.endswith(".exe") or (self.targetos == "android" and fname.endswith(".apk")):
-                if fname.endswith("d.exe"):
-                    fname = fname[:-5]
-                else:
-                    fname = fname[:-4]
+                fname = fname[:-4]
             if fname == name:
+                return t
+            if self.options.configuration == "Debug" and fname == name + 'd':
                 return t
             if fname.startswith(self.nameprefix):
                 fname = fname[len(self.nameprefix):]
             if fname == name:
+                return t
+            if self.options.configuration == "Debug" and fname == name + 'd':
                 return t
         return None
 
@@ -707,6 +708,11 @@ class RunInfo(object):
                 cmd.append("--help")
             else:
                 cmd.extend(args)
+
+            orig_temp_path = os.environ.get('OPENCV_TEMP_PATH')
+            temp_path = tempfile.mkdtemp(prefix="__opencv_temp.", dir=orig_temp_path or None)
+            os.environ['OPENCV_TEMP_PATH'] = temp_path
+
             print >> _stderr, "Running:", " ".join(cmd)
             try:
                 Popen(cmd, stdout=_stdout, stderr=_stderr, cwd = workingDir).wait()
@@ -714,20 +720,13 @@ class RunInfo(object):
                 pass
 
             # clean temporary files
-            temp_path = os.environ.get('OPENCV_TEMP_PATH')
-            if not temp_path:
-                if self.targetos == "nt":
-                    temp_path = tempfile.gettempdir()
-                else:
-                    temp_path = "/tmp"
+            if orig_temp_path:
+                os.environ['OPENCV_TEMP_PATH'] = orig_temp_path
+            else:
+                del os.environ['OPENCV_TEMP_PATH']
 
             try:
-                if self.targetos == "nt":
-                    for filename in glob.glob(os.path.join(temp_path, "ocv*")) :
-                        os.remove( filename )
-                else:
-                    for filename in glob.glob(os.path.join(temp_path, "__opencv_temp.*")) :
-                        os.remove( filename )
+                shutil.rmtree(temp_path)
             except:
                 pass
 

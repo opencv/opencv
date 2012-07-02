@@ -78,8 +78,8 @@ Release highlights
 - Face Recognition algorithms implemented:
 
   - Eigenfaces [TP91]_
-  - Fisherfaces [Belhumeur97]_
-  - Local Binary Patterns Histograms [Ahonen04]_
+  - Fisherfaces [BHK97]_
+  - Local Binary Patterns Histograms [AHP04]_
   
 - Added persistence facilities to store the models with a common API.
 - Unit Tests (using `gtest <http://code.google.com/p/googletest/>`_).
