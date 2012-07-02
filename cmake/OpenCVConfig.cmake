@@ -150,7 +150,7 @@ if(OpenCV_LIB_PATH AND EXISTS "${OpenCV_LIB_PATH}/OpenCVConfig.cmake")
   endif()
 else()
   if(NOT OpenCV_FIND_QUIETLY)
-    message(WARNING "Found OpenCV 2.4.0 Windows Super Pack but it has not binaries compatible with your configuration.
+    message(WARNING "Found OpenCV 2.4.2 Windows Super Pack but it has not binaries compatible with your configuration.
     You should manually point CMake variable OpenCV_DIR to your build of OpenCV library.")
   endif()
   set(OpenCV_FOUND FALSE CACHE BOOL "" FORCE)

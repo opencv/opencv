@@ -14,7 +14,7 @@ boolean initDebug()
 -------------------
 
 .. method:: static boolean initDebug()
-    
+
     Load and initialize OpenCV library from current application package. Roughly it is analog of system.loadLibrary("opencv_java")
 
     :rtype: boolean
