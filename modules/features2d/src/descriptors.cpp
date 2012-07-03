@@ -122,57 +122,24 @@ static void convertBGRImageToOpponentColorSpace( const Mat& bgrImage, vector<Mat
     if( bgrImage.type() != CV_8UC3 )
         CV_Error( CV_StsBadArg, "input image must be an BGR image of type CV_8UC3" );
 
-    // Split image into RGB to allow conversion to Opponent Color Space.
-    vector<Mat> bgrChannels(3);
-    split( bgrImage, bgrChannels );
-
     // Prepare opponent color space storage matrices.
     opponentChannels.resize( 3 );
     opponentChannels[0] = cv::Mat(bgrImage.size(), CV_8UC1); // R-G RED-GREEN
     opponentChannels[1] = cv::Mat(bgrImage.size(), CV_8UC1); // R+G-2B YELLOW-BLUE
     opponentChannels[2] = cv::Mat(bgrImage.size(), CV_8UC1); // R+G+B
 
-    // Calculate the channels of the opponent color space
-    {
-        // (R - G)/sqrt(2), but converted to the destination data type
-        MatConstIterator_<signed char> rIt = bgrChannels[2].begin<signed char>();
-        MatConstIterator_<signed char> gIt = bgrChannels[1].begin<signed char>();
-        MatIterator_<unsigned char> dstIt = opponentChannels[0].begin<unsigned char>();
-        for( ; dstIt != opponentChannels[0].end<unsigned char>(); ++rIt, ++gIt, ++dstIt )
+    for(int y = 0; y < bgrImage.rows; ++y)
+        for(int x = 0; x < bgrImage.cols; ++x)
         {
-            float value = 0.5f * (static_cast<int>(*gIt) -
-            					  static_cast<int>(*rIt) + 255);
-            (*dstIt) = static_cast<unsigned char>(value + 0.5f);
+            Vec3b v = bgrImage.at<Vec3b>(y, x);
+            uchar& b = v[0];
+            uchar& g = v[1];
+            uchar& r = v[2];
+
+            opponentChannels[0].at<uchar>(y, x) = saturate_cast<uchar>(0.5f    * (255 + g - r));       // (R - G)/sqrt(2), but converted to the destination data type
+            opponentChannels[1].at<uchar>(y, x) = saturate_cast<uchar>(0.25f   * (510 + r + g - 2*b)); // (R + G - 2B)/sqrt(6), but converted to the destination data type
+            opponentChannels[2].at<uchar>(y, x) = saturate_cast<uchar>(1.f/3.f * (r + g + b));         // (R + G + B)/sqrt(3), but converted to the destination data type
         }
-    }
-    {
-        // (R + G - 2B)/sqrt(6), but converted to the destination data type
-        MatConstIterator_<signed char> rIt = bgrChannels[2].begin<signed char>();
-        MatConstIterator_<signed char> gIt = bgrChannels[1].begin<signed char>();
-        MatConstIterator_<signed char> bIt = bgrChannels[0].begin<signed char>();
-        MatIterator_<unsigned char> dstIt = opponentChannels[1].begin<unsigned char>();
-        for( ; dstIt != opponentChannels[1].end<unsigned char>(); ++rIt, ++gIt, ++bIt, ++dstIt )
-        {
-            float value = 0.25f * (static_cast<int>(*rIt) + static_cast<int>(*gIt) -
-                                   2*static_cast<int>(*bIt) + 510);
-            (*dstIt) = static_cast<unsigned char>(value + 0.5f);
-        }
-    }
-    {
-        // (R + G + B)/sqrt(3), but converted to the destination data type
-        MatConstIterator_<signed char> rIt = bgrChannels[2].begin<signed char>();
-        MatConstIterator_<signed char> gIt = bgrChannels[1].begin<signed char>();
-        MatConstIterator_<signed char> bIt = bgrChannels[0].begin<signed char>();
-        MatIterator_<unsigned char> dstIt = opponentChannels[2].begin<unsigned char>();
-        float factor = 1.f/3.f;
-        for( ; dstIt != opponentChannels[2].end<unsigned char>(); ++rIt, ++gIt, ++bIt, ++dstIt )
-        {
-            float value = factor * (static_cast<int>(*rIt) + 
-									static_cast<int>(*gIt) + 
-									static_cast<int>(*bIt));
-            (*dstIt) = static_cast<unsigned char>(value + 0.5f);
-        }
-    }
 }
 
 struct KP_LessThan
