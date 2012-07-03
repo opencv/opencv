@@ -87,7 +87,7 @@ public class ColorBlobDetectionActivity extends Activity {
 
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         Log.i(TAG, "Trying to load OpenCV library");
-        if (!OpenCVLoader.initAsync(OpenCVLoader.OPEN_CV_VERSION_2_4_2, this, mOpenCVCallBack))
+        if (!OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_2, this, mOpenCVCallBack))
         {
         	Log.e(TAG, "Cannot connect to OpenCV Manager");
         }
