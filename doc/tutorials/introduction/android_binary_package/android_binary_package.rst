@@ -7,7 +7,7 @@ Using Android binary package with Eclipse
 
 This tutorial was tested using Ubuntu 10.04 and Windows 7 SP1 operating systems.
 Nevertheless, it should also work on any other **OS**\ es supported by Android SDK (including Mac OS X).
-If you encounter errors after following the steps described here, feel free to contact us via `android-opencv <https://groups.google.com/group/android-opencv/>`_ discussion group and we will try to help you.
+If you encounter errors after following the steps described here, feel free to contact us via `OpenCV4Android <https://groups.google.com/group/android-opencv/>`_ discussion group and we will try to help you.
 
 Quick environment setup for Android development
 ===============================================
