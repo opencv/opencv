@@ -84,11 +84,11 @@ public class BruteForceDescriptorMatcherTest extends OpenCVTestCase {
         matSize = 100;
 
         truth = new DMatch[] {
-        		new DMatch(0, 0, 0, 1.049694f),
-        		new DMatch(1, 0, 0, 1.098605f),
-        		new DMatch(2, 1, 0, 0.494587f),
-        		new DMatch(3, 1, 0, 0.484352f),
-        		new DMatch(4, 0, 0, 1.083795f)
+                new DMatch(0, 0, 0, 1.049694f),
+                new DMatch(1, 0, 0, 1.066820f),
+                new DMatch(2, 1, 0, 0.494587f),
+                new DMatch(3, 0, 0, 1.141826f),
+                new DMatch(4, 0, 0, 1.084099f)
                 };
 
         super.setUp();
@@ -166,7 +166,7 @@ public class BruteForceDescriptorMatcherTest extends OpenCVTestCase {
     }
 
     public void testKnnMatchMatMatListOfListOfDMatchInt() {
-    	final int k = 3; 
+        final int k = 3;
         Mat train = getTrainDescriptors();
         Mat query = getQueryDescriptors();
         List<MatOfDMatch> matches = new ArrayList<MatOfDMatch>();
@@ -181,12 +181,12 @@ public class BruteForceDescriptorMatcherTest extends OpenCVTestCase {
         assertEquals(query.rows(), matches.size());
         for(int i = 0; i<matches.size(); i++)
         {
-        	MatOfDMatch vdm = matches.get(i); 
-        	//Log.d("knn", "vdm["+i+"]="+vdm.dump());
+            MatOfDMatch vdm = matches.get(i);
+            //Log.d("knn", "vdm["+i+"]="+vdm.dump());
             assertTrue(Math.min(k, train.rows()) >= vdm.total());
             for(DMatch dm : vdm.toArray())
             {
-            	assertEquals(dm.queryIdx, i);
+                assertEquals(dm.queryIdx, i);
             }
         }
     }
@@ -206,7 +206,6 @@ public class BruteForceDescriptorMatcherTest extends OpenCVTestCase {
         matcher.add(Arrays.asList(train));
 
         matcher.match(query, matches);
-
         assertArrayDMatchEquals(truth, matches.toArray(), EPS);
     }
 

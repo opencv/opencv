@@ -17,15 +17,15 @@ import android.util.Log;
 
 /**
  * This only class is Android specific.
- * 
+ *
  * @see <a href="http://opencv.itseez.com">OpenCV</a>
  */
 
 public class OpenCVTestRunner extends InstrumentationTestRunner {
 
-	static { System.loadLibrary("opencv_java"); }
-	
-	public static String LENA_PATH;
+    static { System.loadLibrary("opencv_java"); }
+
+    public static String LENA_PATH;
     public static String CHESS_PATH;
     public static String LBPCASCADE_FRONTALFACE_PATH;
     public static Context context;

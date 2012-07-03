@@ -57,17 +57,11 @@ public class SURFFeatureDetectorTest extends OpenCVTestCase {
         matSize = 100;
 
         truth = new KeyPoint[] {
-        		/*
-        		new KeyPoint(55.775577545166016f, 44.224422454833984f, 16, 9.754629f, 8617.863f, 1, -1),
-                new KeyPoint(44.224422454833984f, 44.224422454833984f, 16, 99.75463f, 8617.863f, 1, -1),
-                new KeyPoint(44.224422454833984f, 55.775577545166016f, 16, 189.7546f, 8617.863f, 1, -1),
-                new KeyPoint(55.775577545166016f, 55.775577545166016f, 16, 279.75464f, 8617.863f, 1, -1)
-                */
-        		new KeyPoint(55.7755f, 44.2244f, 16,   9.754f, 8617.863f, 0, -1), 
-        		new KeyPoint(44.2244f, 44.2244f, 16,  99.754f, 8617.863f, 0, -1), 
-        		new KeyPoint(44.2244f, 55.7755f, 16, 189.754f, 8617.863f, 0, -1), 
-        		new KeyPoint(55.7755f, 55.7755f, 16, 279.754f, 8617.863f, 0, -1)
-        	};
+                new KeyPoint(55.775578f, 55.775578f, 16, 80.245735f, 8617.8633f, 0, -1),
+                new KeyPoint(44.224422f, 55.775578f, 16, 170.24574f, 8617.8633f, 0, -1),
+                new KeyPoint(44.224422f, 44.224422f, 16, 260.24573f, 8617.8633f, 0, -1),
+                new KeyPoint(55.775578f, 44.224422f, 16, 350.24573f, 8617.8633f, 0, -1)
+            };
 
         super.setUp();
     }
@@ -93,7 +87,7 @@ public class SURFFeatureDetectorTest extends OpenCVTestCase {
         assertEquals(3, keypoints.size());
 
         for (MatOfKeyPoint mkp : keypoints) {
-        	List<KeyPoint> lkp = mkp.toList();
+            List<KeyPoint> lkp = mkp.toList();
             order(lkp);
             assertListKeyPointEquals(Arrays.asList(truth), lkp, EPS);
         }
