@@ -379,7 +379,7 @@ There is a very base code snippet for Async init. It shows only basis principles
        super.onCreate(savedInstanceState);
 
        Log.i(TAG, "Trying to load OpenCV library");
-       if (!OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_0, this, mOpenCVCallBack))
+       if (!OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_2, this, mOpenCVCallBack))
        {
          Log.e(TAG, "Cannot connect to OpenCV Manager");
        }

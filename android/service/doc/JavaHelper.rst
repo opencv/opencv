@@ -38,10 +38,6 @@ boolean initAsync()
 OpenCV version constants
 -------------------------
 
-.. data:: OPENCV_VERSION_2_4_0
-
-    OpenCV Library version 2.4.0
-
 .. data:: OPENCV_VERSION_2_4_2
 
     OpenCV Library version 2.4.2
