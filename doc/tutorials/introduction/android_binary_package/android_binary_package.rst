@@ -250,6 +250,8 @@ Open OpenCV library and samples in Eclipse
    However **all these errors are only false-alarms**!
 
    To help Eclipse to understand that there are no any errors choose OpenCV library in :guilabel:`Package Explorer` (left mouse click) and press :kbd:`F5` button on your keyboard. Then choose any sample (except first samples in *Tutorial Base* and *Tutorial Advanced*) and also press :kbd:`F5`.
+   
+   In some cases these errors disappear after :menuselection:`Project --> Clean... --> Clean all --> OK`.
 
    Sometimes more advanced manipulations are needed:
 
@@ -257,12 +259,6 @@ Open OpenCV library and samples in Eclipse
 
       .. image:: images/eclipse_8a_target.png
          :alt: Updating target
-         :align: center
-
-   * Sometimes a project needs fixing its project properties. After right click on any project select  :guilabel:`Android Tools` and then :guilabel:`Fix Project Properties` in sub-menu:
-
-      .. image:: images/eclipse_8b_fix_props.png
-         :alt: Fixing project properties
          :align: center
 
    After this manipulation Eclipse will rebuild your workspace and error icons will disappear one after another:
