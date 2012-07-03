@@ -6,36 +6,34 @@
 Using C++ OpenCV code with Android binary package
 *************************************************
 
-The Android way is writing all your code in Java. But somethimes it is not enough and you need to go to a native level and write part of your application in C/C++.
-This is important when you already have some computer vision functionality which is written in C++ and uses OpenCV, and you want to use it in your Android application,
+The Android way is writing all your code in Java. But sometimes it is not enough and you need to go to the native level and write some parts of your application in C/C++.
+This is especially important when you already have some computer vision code which is written in C++ and uses OpenCV, and you want to reuse it in your Android application,
 but do not want to rewrite the C++ code to Java.
-In this case the only way is to use JNI mechanism.
-It means, that you should add a class with native methods wrapping your C++ functionality into the Java part of your Android application.
+In this case the only way is to use JNI - a Java framework for interaction with native code.
+It means, that you should add a Java class with native methods exposing your C++ functionality to the Java part of your Android application.
 
-This tutorial describes a fast way how to create and build Android applications containing OpenCV code written in C++. It shows how to build an application which uses OpenCV inside its JNI calls.
+This tutorial describes a fast way to create and build Android applications containing OpenCV code written in C++. It shows how to build an application which uses OpenCV inside its JNI calls. Tutorial 3 and 4 from the OpenCV for Android SDK can be used as examples. OpenCV Sample "face-detect" also contain a call to C++ class.
 
 Please note that before starting this tutorial you should fulfill all the steps, described in the tutorial :ref:`Android_Binary_Package`.
 
 This tutorial was tested using Ubuntu 10.04 and Windows 7 SP1 operating systems.
-Nevertheless, it should also work on Mac OS X. If you encounter errors after following the steps described here, feel free to contact us via
-`android-opencv <https://groups.google.com/group/android-opencv/>`_  discussion group and we will try to help you.
+Nevertheless, it should also work on Mac OS X. 
+If you encounter errors after following the steps described here, feel free to contact us via 
+`OpenCV4Android <https://groups.google.com/group/android-opencv/>`_ discussion group or 
+OpenCV `Q&A forum <http://answers.opencv.org>`_ and we will try to help you.
 
-
-Prerequisites: Setup NDK
-========================
+Prerequisites: Setup Android NDK
+================================
 
 To compile C++ code for Android platform you need ``Android Native Development Kit`` (*NDK*).
 
-You can get the latest version of NDK from the `download page <http://developer.android.com/sdk/ndk/index.html>`_.
-
-To install Android NDK just extract the archive to some folder on your computer. (Here is `installation instructions <http://developer.android.com/sdk/ndk/index.html#installing>`_ on the NDK home page.)
+You can get the latest version of NDK from the `download page <http://developer.android.com/sdk/ndk/index.html>`_. To install Android NDK just extract the archive to some folder on your computer. Here are `installation instructions <http://developer.android.com/sdk/ndk/index.html#installing>`_.
 
 .. note:: Before start you can read official Android NDK documentation which is in the Android NDK archive, in the folder :file:`docs/`.
 
-    The main article about using Android NDK build system you can read in the file :file:`ANDROID-MK.html`.
+    The main article about using Android NDK build system is in the :file:`ANDROID-MK.html` file.
 
-    Also some additional useful information you can read in the files
-    :file:`APPLICATION-MK.html`, :file:`NDK-BUILD.html`, and in the files :file:`CPU-ARM-NEON.html`, :file:`CPLUSPLUS-SUPPORT.html`,  :file:`PREBUILTS.html`.
+    Some additional information you can find in the :file:`APPLICATION-MK.html`, :file:`NDK-BUILD.html` files, and :file:`CPU-ARM-NEON.html`, :file:`CPLUSPLUS-SUPPORT.html`, :file:`PREBUILTS.html`.
 
 Theory: Android application structure
 =====================================
@@ -66,29 +64,29 @@ where
 
 + the :file:`libs` folder will contain native libraries after successful build,
 
-+ and the :file:`jni` folder contains C/C++ application source code and NDK's build scripts :file:`Android.mk` and :file:`Application.mk`.
++ and the :file:`jni` folder contains C/C++ application source code and NDK's build scripts :file:`Android.mk` and :file:`Application.mk`. 
 
   These scripts control the C++ build process (they are written in Makefile language).
 
 
-Also the root folder should contain the following files
+Also the root folder should contain the following files:
 
 * :file:`AndroidManifest.xml` file presents essential information about application to the Android system
-  (name of the Application, name of main application's package, components of the application, required permissions, etc)
+  (name of the Application, name of main application's package, components of the application, required permissions, etc).
 
-  It can be created using Eclipse wizard or :command:`android` tool from Android SDK
+  It can be created using Eclipse wizard or :command:`android` tool from Android SDK.
 
 * :file:`project.properties` is a text file containing information about target Android platform and other build details.
 
-  This file is generated by Eclipse or can be created with :command:`android` tool from Android SDK
+  This file is generated by Eclipse or can be created with :command:`android` tool from Android SDK.
 
 .. note:: Both files (:file:`AndroidManifest.xml` and :file:`project.properties`) are required to compile the C++ part of the application (NDK build system uses information from these files). If any of these files does not exist, compile the Java part of the project before the C++ part.
 
 .. _NDK_build_cli:
 
 
-Theory: How to build Android application having C++ native part (from command line)
-===================================================================================
+Theory: Building application with C++ native part from command line
+===================================================================
 
 Here is the standard way to compile C++ part of an Android application:
 
@@ -98,7 +96,7 @@ Here is the standard way to compile C++ part of an Android application:
 
         cd <root folder of the project>/
 
-   .. note:: Alternatively you can go to the folder :file:`jni` of Android project but samples from OpenCV binary package are configured for building from project root level (because of relative path to the OpenCV library).
+   .. note:: Alternatively you can go to the :file:`jni` folder of Android project. But samples from OpenCV binary package are configured for building from the project root level (because of relative path to the OpenCV library).
 
 #. Run the following command
 
@@ -106,7 +104,7 @@ Here is the standard way to compile C++ part of an Android application:
 
         <path_where_NDK_is_placed>/ndk-build
 
-   .. note:: On Windows we recomend use of ``ndk-build.cmd`` in standard Windows console (``cmd.exe``) rather than the similar ``bash`` script in ``Cygwin`` shell.
+   .. note:: On Windows we recommend to use ``ndk-build.cmd`` in standard Windows console (``cmd.exe``) rather than the similar ``bash`` script in ``Cygwin`` shell.
 
    .. image:: images/ndk_build.png
       :alt: NDK build
@@ -134,20 +132,20 @@ After that the Java part of the application can be (re)compiled (using either *E
 .. _Android_NDK_integration_with_Eclipse:
 
 
-Theory: How to build Android application having C++ native part (from *Eclipse*)
-================================================================================
+Theory: Building application with C++ native part from *Eclipse*
+================================================================
 
 There are several possible ways to integrate compilation of C++ code by Android NDK into Eclipse compilation process.
 We recommend the approach based on Eclipse :abbr:`CDT(C/C++ Development Tooling)` Builder.
 
-.. important:: Make sure your Eclipse IDE has the :abbr:`CDT(C/C++ Development Tooling)` plugin installed. (Menu ``Help`` -> ``About Eclipse SDK`` -> ``Installation Details``)
+.. important:: Make sure your Eclipse IDE has the :abbr:`CDT(C/C++ Development Tooling)` plugin installed. Menu :guilabel:`Help -> About Eclipse SDK` and push :guilabel:`Installation Details` button.
 
 .. image:: images/eclipse_inst_details.png
   :alt: Configure builders
   :align: center
 
-To install the `CDT plugin <http://eclipse.org/cdt/>`_ use menu ``Help`` -> ``Install New Software...``,
-then paste the CDT 8.0 repository URL http://download.eclipse.org/tools/cdt/releases/indigo as shown on the picture below and click :guilabel:`Add...`, name it *CDT* and click :guilabel:`OK`.
+To install the `CDT plugin <http://eclipse.org/cdt/>`_ use menu :guilabel:`Help -> Install New Software...`,
+then paste the CDT 8.0 repository URL http://download.eclipse.org/tools/cdt/releases/indigo as shown in the picture below and click :guilabel:`Add...`, name it *CDT* and click :guilabel:`OK`.
 
 .. image:: images/eclipse_inst_cdt.png
   :alt: Configure builders
@@ -160,9 +158,9 @@ then paste the CDT 8.0 repository URL http://download.eclipse.org/tools/cdt/rele
   :align: center
 
 
-.. important:: OpenCV 2.4.2 for Android package contains samples projects pre-configured to use CDT Builder for JNI part build via ``ndk-build``.
+.. important:: OpenCV for Android 2.4.2 package contains sample projects pre-configured to use CDT Builder. It automatically builds JNI part via ``ndk-build``.
 
-#. Define the ``NDKROOT`` environment variable containing the path to Android NDK in your system (e.g. **"X:\\Apps\\android-ndk-r8"** or **"/opt/android-ndk-r8"**)
+#. Define the ``NDKROOT`` environment variable containing the path to Android NDK in your system (e.g. **"X:\\Apps\\android-ndk-r8"** or **"/opt/android-ndk-r8"**).
 
 #. CDT Builder is configured for Windows hosts, on Linux or MacOS open `Project Properties` of the projects having JNI part (`face-detection`, `Tutorial 3` and `Tutorial 4`), select :guilabel:`C/C++ Build`   in the left pane, remove **".cmd"** and leave ``"${NDKROOT}/ndk-build"`` in the :guilabel:`Build command`   edit box and click :guilabel:`OK`.
 
