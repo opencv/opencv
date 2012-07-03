@@ -782,18 +782,7 @@ struct VResizeCubicVec_32f
     }
 };
 
-typedef HResizeNoVec HResizeLinearVec_8u32s;
-typedef HResizeNoVec HResizeLinearVec_16u32f;
-typedef HResizeNoVec HResizeLinearVec_16s32f;
-typedef HResizeNoVec HResizeLinearVec_32f;
-typedef HResizeNoVec HResizeLinearVec_64f;
-
 #else
-
-typedef HResizeNoVec HResizeLinearVec_8u32s;
-typedef HResizeNoVec HResizeLinearVec_16u32f;
-typedef HResizeNoVec HResizeLinearVec_16s32f;
-typedef HResizeNoVec HResizeLinearVec_32f;
 
 typedef VResizeNoVec VResizeLinearVec_32s8u;
 typedef VResizeNoVec VResizeLinearVec_32f16u;
@@ -806,6 +795,12 @@ typedef VResizeNoVec VResizeCubicVec_32f16s;
 typedef VResizeNoVec VResizeCubicVec_32f;
 
 #endif
+
+typedef HResizeNoVec HResizeLinearVec_8u32s;
+typedef HResizeNoVec HResizeLinearVec_16u32f;
+typedef HResizeNoVec HResizeLinearVec_16s32f;
+typedef HResizeNoVec HResizeLinearVec_32f;
+typedef HResizeNoVec HResizeLinearVec_64f;
 
 
 template<typename T, typename WT, typename AT, int ONE, class VecOp>
@@ -891,6 +886,34 @@ struct VResizeLinear
         #endif
         for( ; x < width; x++ )
             dst[x] = castOp(S0[x]*b0 + S1[x]*b1);
+    }
+};
+
+template<>
+struct VResizeLinear<uchar, int, short, FixedPtCast<int, uchar, INTER_RESIZE_COEF_BITS*2>, VResizeLinearVec_32s8u>
+{
+    typedef uchar value_type;
+    typedef int buf_type;
+    typedef short alpha_type;
+
+    void operator()(const buf_type** src, value_type* dst, const alpha_type* beta, int width ) const
+    {
+        alpha_type b0 = beta[0], b1 = beta[1];
+        const buf_type *S0 = src[0], *S1 = src[1];
+        VResizeLinearVec_32s8u vecOp;
+
+        int x = vecOp((const uchar**)src, (uchar*)dst, (const uchar*)beta, width);
+        #if CV_ENABLE_UNROLLED
+        for( ; x <= width - 4; x += 4 )
+        {
+            dst[x+0] = uchar(( ((b0 * (S0[x+0] >> 4)) >> 16) + ((b1 * (S1[x+0] >> 4)) >> 16) + 2)>>2);
+            dst[x+1] = uchar(( ((b0 * (S0[x+1] >> 4)) >> 16) + ((b1 * (S1[x+1] >> 4)) >> 16) + 2)>>2);
+            dst[x+2] = uchar(( ((b0 * (S0[x+2] >> 4)) >> 16) + ((b1 * (S1[x+2] >> 4)) >> 16) + 2)>>2);
+            dst[x+3] = uchar(( ((b0 * (S0[x+3] >> 4)) >> 16) + ((b1 * (S1[x+3] >> 4)) >> 16) + 2)>>2);
+        }
+        #endif
+        for( ; x < width; x++ )
+            dst[x] = uchar(( ((b0 * (S0[x] >> 4)) >> 16) + ((b1 * (S1[x] >> 4)) >> 16) + 2)>>2);
     }
 };
 
