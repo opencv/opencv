@@ -159,7 +159,7 @@ INSTANTIATE_TEST_CASE_P(GPU_ImgProc, Resize, testing::Combine(
 
 
 /////////////////
-PARAM_TEST_CASE(ResizeArea, cv::gpu::DeviceInfo, cv::Size, MatType, double, Interpolation, UseRoi)
+PARAM_TEST_CASE(ResizeSameAsHost, cv::gpu::DeviceInfo, cv::Size, MatType, double, Interpolation, UseRoi)
 {
     cv::gpu::DeviceInfo devInfo;
     cv::Size size;
@@ -181,25 +181,26 @@ PARAM_TEST_CASE(ResizeArea, cv::gpu::DeviceInfo, cv::Size, MatType, double, Inte
     }
 };
 
-TEST_P(ResizeArea, Accuracy)
+// downscaling only: used for classifiers
+TEST_P(ResizeSameAsHost, Accuracy)
 {
     cv::Mat src = randomMat(size, type);
 
     cv::gpu::GpuMat dst = createMat(cv::Size(cv::saturate_cast<int>(src.cols * coeff), cv::saturate_cast<int>(src.rows * coeff)), type, useRoi);
     cv::gpu::resize(loadMat(src, useRoi), dst, cv::Size(), coeff, coeff, interpolation);
 
-    cv::Mat dst_cpu;
-    cv::resize(src, dst_cpu, cv::Size(), coeff, coeff, interpolation);
+    cv::Mat dst_gold;
+    cv::resize(src, dst_gold, cv::Size(), coeff, coeff, interpolation);
 
-    EXPECT_MAT_NEAR(dst_cpu, dst, src.depth() == CV_32F ? 1e-2 : 1.0);
+    EXPECT_MAT_NEAR(dst_gold, dst, src.depth() == CV_32F ? 1e-2 : 1.0);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_ImgProc, ResizeArea, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_ImgProc, ResizeSameAsHost, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(MatType(CV_8UC3), MatType(CV_16UC1), MatType(CV_16UC3), MatType(CV_16UC4), MatType(CV_32FC1), MatType(CV_32FC3), MatType(CV_32FC4)),
     testing::Values(0.3, 0.5),
-    testing::Values(Interpolation(cv::INTER_AREA)),
+    testing::Values(Interpolation(cv::INTER_AREA), Interpolation(cv::INTER_NEAREST)),  //, Interpolation(cv::INTER_LINEAR), Interpolation(cv::INTER_CUBIC)
     WHOLE_SUBMAT));
 
 ///////////////////////////////////////////////////////////////////
