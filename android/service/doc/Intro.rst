@@ -1,3 +1,6 @@
+
+.. _Android_OpenCV_Manager_Intro:
+
 ************
 Introduction
 ************
