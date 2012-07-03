@@ -8,14 +8,14 @@
         android:id="@+id/textView4"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="About:"
+        android:text="About"
         android:textAppearance="?android:attr/textAppearanceLarge" />
 
     <TextView
         android:id="@+id/textView2"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="This application allows you to manage OpenCV library on your device."
+        android:text="OpenCV library (www.opencv.org) is used by other applications for image enhancement, panorama stitching, object detection, recognition and tracking and so on. OpenCV Manager provides the best version of the OpenCV for your hardware."
         android:textAppearance="?android:attr/textAppearanceMedium" />
 
     <LinearLayout
@@ -47,7 +47,7 @@
         android:id="@+id/textView3"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Device information:"
+        android:text="Device information"
         android:textAppearance="?android:attr/textAppearanceLarge" android:layout_marginTop="20dp"/>
 
     <LinearLayout
@@ -101,7 +101,7 @@
         android:id="@+id/textView1"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Installed packages:"
+        android:text="Installed packages"
         android:textAppearance="?android:attr/textAppearanceLarge" android:layout_marginTop="15dp"/>
 
     <ListView
@@ -114,6 +114,6 @@
         android:id="@+id/CheckEngineUpdate"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Check Manager update" />
+        android:text="Check for update" />
 
 </LinearLayout>
