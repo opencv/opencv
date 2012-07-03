@@ -352,40 +352,40 @@ There is a very base code snippet for Async init. It shows only basis principles
 
     public class MyActivity extends Activity implements HelperCallbackInterface
     {
-   private BaseLoaderCallback mOpenCVCallBack = new BaseLoaderCallback(this) {
-   @Override
-   public void onManagerConnected(int status) {
-      switch (status) {
-          case LoaderCallbackInterface.SUCCESS:
-          {
-         Log.i(TAG, "OpenCV loaded successfully");
-         // Create and set View
-         mView = new puzzle15View(mAppContext);
-         setContentView(mView);
-          } break;
-          default:
-          {
-         super.onManagerConnected(status);
-          } break;
-      }
+    private BaseLoaderCallback mOpenCVCallBack = new BaseLoaderCallback(this) {
+    @Override
+    public void onManagerConnected(int status) {
+       switch (status) {
+           case LoaderCallbackInterface.SUCCESS:
+           {
+          Log.i(TAG, "OpenCV loaded successfully");
+          // Create and set View
+          mView = new puzzle15View(mAppContext);
+          setContentView(mView);
+           } break;
+           default:
+           {
+          super.onManagerConnected(status);
+           } break;
        }
-   };
+        }
+    };
 
-   /** Called when the activity is first created. */
-   @Override
-   public void onCreate(Bundle savedInstanceState)
-   {
-       Log.i(TAG, "onCreate");
-       super.onCreate(savedInstanceState);
+    /** Called when the activity is first created. */
+    @Override
+    public void onCreate(Bundle savedInstanceState)
+    {
+        Log.i(TAG, "onCreate");
+        super.onCreate(savedInstanceState);
 
-       Log.i(TAG, "Trying to load OpenCV library");
-       if (!OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_2, this, mOpenCVCallBack))
-       {
-         Log.e(TAG, "Cannot connect to OpenCV Manager");
-       }
-   }
+        Log.i(TAG, "Trying to load OpenCV library");
+        if (!OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_2, this, mOpenCVCallBack))
+        {
+          Log.e(TAG, "Cannot connect to OpenCV Manager");
+        }
+    }
 
-   // ...
+    // ...
     }
 
 It this case application works with OpenCV Manager in asynchronous fashion. OnManagerConnected callback will be called in UI thread, when initialization finishes.
