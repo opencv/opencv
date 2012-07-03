@@ -154,12 +154,12 @@ Get the OpenCV package for Android development
 
    .. code-block:: bash
 
-      tar -jxvf ~/Downloads/OpenCV-2.4.2-android-sdk.tar.bz2
+      unzip ~/Downloads/OpenCV-2.4.2-android-sdk.zip
 
    For this tutorial I have unpacked OpenCV to the :file:`C:\\Work\\android-opencv\\` directory.
 
-.. |opencv_android_bin_pack| replace:: OpenCV-2.4.2-android-sdk.tar.bz2
-.. _opencv_android_bin_pack_url: http://sourceforge.net/projects/opencvlibrary/files/opencv-android/2.4.2/OpenCV-2.4.2-android-sdk.tar.bz2/download
+.. |opencv_android_bin_pack| replace:: OpenCV-2.4.2-android-sdk.zip
+.. _opencv_android_bin_pack_url: http://sourceforge.net/projects/opencvlibrary/files/opencv-android/2.4.2/OpenCV-2.4.2-android-sdk.zip/download
 .. |opencv_android_bin_pack_url| replace:: |opencv_android_bin_pack|
 .. |seven_zip| replace:: 7-Zip
 .. _seven_zip: http://www.7-zip.org/
