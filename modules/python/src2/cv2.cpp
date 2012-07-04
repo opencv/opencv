@@ -9,6 +9,7 @@
 #include "numpy/ndarrayobject.h"
 
 #include "opencv2/core/core.hpp"
+#include "opencv2/contrib/contrib.hpp"
 #include "opencv2/flann/miniflann.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/calib3d/calib3d.hpp"
@@ -115,6 +116,9 @@ typedef cvflann::flann_distance_t cvflann_flann_distance_t;
 typedef cvflann::flann_algorithm_t cvflann_flann_algorithm_t;
 typedef Ptr<flann::IndexParams> Ptr_flann_IndexParams;
 typedef Ptr<flann::SearchParams> Ptr_flann_SearchParams;
+
+typedef Ptr<FaceRecognizer> Ptr_FaceRecognizer;
+typedef vector<Scalar> vector_Scalar;
 
 static PyObject* failmsgp(const char *fmt, ...)
 {

@@ -10,7 +10,7 @@ if(ANDROID OR IOS OR NOT PYTHONLIBS_FOUND OR NOT PYTHON_USE_NUMPY)
 endif()
 
 set(the_description "The python bindings")
-ocv_add_module(python BINDINGS opencv_core opencv_flann opencv_imgproc opencv_video opencv_ml opencv_features2d opencv_highgui opencv_calib3d opencv_photo opencv_objdetect opencv_legacy OPTIONAL opencv_nonfree)
+ocv_add_module(python BINDINGS opencv_core opencv_flann opencv_imgproc opencv_video opencv_ml opencv_features2d opencv_highgui opencv_calib3d opencv_photo opencv_objdetect opencv_contrib opencv_legacy OPTIONAL opencv_nonfree)
 
 add_definitions(-DPYTHON_USE_NUMPY=1)
 
@@ -19,6 +19,8 @@ ocv_module_include_directories(
     "${PYTHON_NUMPY_INCLUDE_DIR}"
     "${CMAKE_CURRENT_SOURCE_DIR}/src2"
     )
+
+    
 
 set(opencv_hdrs
     "${OPENCV_MODULE_opencv_core_LOCATION}/include/opencv2/core/core.hpp"
@@ -31,7 +33,8 @@ set(opencv_hdrs
     "${OPENCV_MODULE_opencv_ml_LOCATION}/include/opencv2/ml/ml.hpp"
     "${OPENCV_MODULE_opencv_features2d_LOCATION}/include/opencv2/features2d/features2d.hpp"
     "${OPENCV_MODULE_opencv_calib3d_LOCATION}/include/opencv2/calib3d/calib3d.hpp"
-    "${OPENCV_MODULE_opencv_objdetect_LOCATION}/include/opencv2/objdetect/objdetect.hpp")
+    "${OPENCV_MODULE_opencv_objdetect_LOCATION}/include/opencv2/objdetect/objdetect.hpp"
+    "${OPENCV_MODULE_opencv_contrib_LOCATION}/include/opencv2/contrib/contrib.hpp")
 
 if(HAVE_opencv_nonfree)
   list(APPEND opencv_hdrs     "${OPENCV_MODULE_opencv_nonfree_LOCATION}/include/opencv2/nonfree/features2d.hpp"
