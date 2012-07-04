@@ -1438,16 +1438,12 @@ public:
     int detectMultiScale(const GpuMat& image, GpuMat& scaledImageBuffer, GpuMat& objectsBuf, double scaleFactor = 1.1, int minNeighbors = 4,
     cv::Size maxObjectSize = cv::Size()/*, Size minSize = Size()*/);
     void preallocateIntegralBuffer(cv::Size desired);
-
-    bool findLargestObject;
-    bool visualizeInPlace;
-
     Size getClassifierSize() const;
 private:
     bool read(const FileNode &root);
 
     static const stage stageType = BOOST;
-    static const feature feature = LBP;
+    static const feature featureType = LBP;
 
     cv::Size NxM;
     bool isStumps;
