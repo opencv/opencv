@@ -61,20 +61,46 @@ Size cv::gpu::CascadeClassifier_GPU::getClassifierSize() const  { throw_nogpu();
 int cv::gpu::CascadeClassifier_GPU::detectMultiScale( const GpuMat& , GpuMat& , double , int , Size)  { throw_nogpu(); return 0; }
 
 // ============ LBP cascade ==============================================//
-cv::gpu::CascadeClassifier_GPU_LBP::CascadeClassifier_GPU_LBP()               { throw_nogpu(); }
-cv::gpu::CascadeClassifier_GPU_LBP::~CascadeClassifier_GPU_LBP()              { throw_nogpu(); }
+cv::gpu::CascadeClassifier_GPU_LBP::CascadeClassifier_GPU_LBP(cv::Size /*frameSize*/){ throw_nogpu(); }
+cv::gpu::CascadeClassifier_GPU_LBP::~CascadeClassifier_GPU_LBP()                     { throw_nogpu(); }
 
 bool cv::gpu::CascadeClassifier_GPU_LBP::empty() const                               { throw_nogpu(); return true; }
 bool cv::gpu::CascadeClassifier_GPU_LBP::load(const string&)                         { throw_nogpu(); return true; }
 Size cv::gpu::CascadeClassifier_GPU_LBP::getClassifierSize() const                   { throw_nogpu(); return Size(); }
 void cv::gpu::CascadeClassifier_GPU_LBP::preallocateIntegralBuffer(cv::Size /*desired*/) { throw_nogpu();}
+void cv::gpu::CascadeClassifier_GPU_LBP::initializeBuffers(cv::Size /*frame*/)       { throw_nogpu();}
 
 int cv::gpu::CascadeClassifier_GPU_LBP::detectMultiScale(const cv::gpu::GpuMat& /*image*/, cv::gpu::GpuMat& /*scaledImageBuffer*/, cv::gpu::GpuMat& /*objectsBuf*/,
 double /*scaleFactor*/, int /*minNeighbors*/, cv::Size /*maxObjectSize*/){ throw_nogpu(); return 0;}
 
 #else
 
-cv::gpu::CascadeClassifier_GPU_LBP::CascadeClassifier_GPU_LBP(){}
+cv::gpu::CascadeClassifier_GPU_LBP::CascadeClassifier_GPU_LBP(cv::Size detectionFrameSize)
+{
+    if (detectionFrameSize != cv::Size())
+        initializeBuffers(detectionFrameSize);
+}
+
+void cv::gpu::CascadeClassifier_GPU_LBP::initializeBuffers(cv::Size frame)
+{
+    if (resuzeBuffer.empty() || frame.width > resuzeBuffer.cols || frame.height > resuzeBuffer.rows)
+    {
+        resuzeBuffer.create(frame, CV_8UC1);
+
+        integral.create(frame.height + 1, frame.width + 1, CV_32SC1);
+        NcvSize32u roiSize;
+        roiSize.width = frame.width;
+        roiSize.height = frame.height;
+
+        cudaDeviceProp prop;
+        cudaSafeCall( cudaGetDeviceProperties(&prop, cv::gpu::getDevice()) );
+
+        Ncv32u bufSize;
+        ncvSafeCall( nppiStIntegralGetSize_8u32u(roiSize, &bufSize, prop) );
+        // printf("HERE!!!!!!!%d\n", bufSize);
+        integralBuffer.create(1, bufSize, CV_8UC1);
+    }
+}
 
 cv::gpu::CascadeClassifier_GPU_LBP::~CascadeClassifier_GPU_LBP(){}
 
@@ -309,10 +335,12 @@ int cv::gpu::CascadeClassifier_GPU_LBP::detectMultiScale(const GpuMat& image, Gp
         objects.create(1 , defaultObjSearchNum, CV_32SC4);
 
     GpuMat candidates(1 , defaultObjSearchNum, CV_32SC4);
+    // GpuMat candidates(objects);
     if (maxObjectSize == cv::Size())
         maxObjectSize = image.size();
 
-    scaledImageBuffer.create(image.rows + 1, image.cols + 1, CV_8U);
+    initializeBuffers(image.size());
+
     unsigned int* classified = new unsigned int[1];
     *classified = 0;
     unsigned int* dclassified;
@@ -335,13 +363,17 @@ int cv::gpu::CascadeClassifier_GPU_LBP::detectMultiScale(const GpuMat& image, Gp
         // if( windowSize.width < minObjectSize.width || windowSize.height < minObjectSize.height )
         //     continue;
 
-        cv::gpu::resize(image, scaledImageBuffer, scaledImageSize, 0, 0, CV_INTER_LINEAR);
-        cv::gpu::integral(scaledImageBuffer, integral);
+        GpuMat scaledImg(resuzeBuffer, cv::Rect(0, 0, scaledImageSize.width, scaledImageSize.height));
+        GpuMat scaledIntegral(integral, cv::Rect(0, 0, scaledImageSize.width + 1, scaledImageSize.height + 1));
+        GpuMat currBuff = integralBuffer;//(integralBuffer, cv::Rect(0, 0, integralBuffer.width, integralBuffer.height));
+
+        cv::gpu::resize(image, scaledImg, scaledImageSize, 0, 0, CV_INTER_LINEAR);
+        cv::gpu::integralBuffered(scaledImg, scaledIntegral, currBuff);
 
         step = (factor <= 2.) + 1;
 
         cv::gpu::device::lbp::classifyStump(stage_mat, stage_mat.cols / sizeof(Stage), nodes_mat, leaves_mat, subsets_mat, features_mat,
-        integral, processingRectSize.width, processingRectSize.height, windowSize.width, windowSize.height, factor, step, subsetSize, candidates, dclassified);
+        scaledIntegral, processingRectSize.width, processingRectSize.height, windowSize.width, windowSize.height, factor, step, subsetSize, candidates, dclassified);
     }
     if (groupThreshold <= 0  || objects.empty())
         return 0;

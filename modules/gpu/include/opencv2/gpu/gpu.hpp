@@ -1428,7 +1428,7 @@ class CV_EXPORTS CascadeClassifier_GPU_LBP
 public:
     enum stage { BOOST = 0 };
     enum feature { LBP = 0 };
-    CascadeClassifier_GPU_LBP();
+    CascadeClassifier_GPU_LBP(cv::Size detectionFrameSize = cv::Size());
     ~CascadeClassifier_GPU_LBP();
 
     bool empty() const;
@@ -1441,6 +1441,7 @@ public:
     Size getClassifierSize() const;
 private:
     bool read(const FileNode &root);
+    void initializeBuffers(cv::Size frame);
 
     static const stage stageType = BOOST;
     static const feature featureType = LBP;
@@ -1459,8 +1460,9 @@ private:
     GpuMat subsets_mat;
     GpuMat features_mat;
 
-    // current integral image
     GpuMat integral;
+    GpuMat integralBuffer;
+    GpuMat resuzeBuffer;
 };
 
 ////////////////////////////////// SURF //////////////////////////////////////////
