@@ -28,9 +28,8 @@
 								</option>
 								<option id="org.eclipse.cdt.build.core.settings.holder.incpaths.1028672579" superClass="org.eclipse.cdt.build.core.settings.holder.incpaths" valueType="includePath">
 									<listOptionValue builtIn="false" value="&quot;${NDKROOT}/platforms/android-9/arch-arm/usr/include&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${NDKROOT}/toolchains/arm-linux-androideabi-4.4.3/prebuilt/windows/include&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${NDKROOT}/sources/cxx-stl/gnu-libstdc++/include&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/../../sdk/native\jni\include&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/../../sdk/native/jni/include&quot;"/>
 								</option>
 								<inputType id="org.eclipse.cdt.build.core.settings.holder.inType.1470189286" languageId="org.eclipse.cdt.core.assembly" languageName="Assembly" sourceContentType="org.eclipse.cdt.core.asmSource" superClass="org.eclipse.cdt.build.core.settings.holder.inType"/>
 							</tool>
@@ -40,7 +39,6 @@
 								</option>
 								<option id="org.eclipse.cdt.build.core.settings.holder.incpaths.1772035264" superClass="org.eclipse.cdt.build.core.settings.holder.incpaths" valueType="includePath">
 									<listOptionValue builtIn="false" value="&quot;${NDKROOT}/platforms/android-9/arch-arm/usr/include&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${NDKROOT}/toolchains/arm-linux-androideabi-4.4.3/prebuilt/windows/include&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${NDKROOT}/sources/cxx-stl/gnu-libstdc++/include&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/../../sdk/native/jni/include&quot;"/>
 								</option>
@@ -52,9 +50,8 @@
 								</option>
 								<option id="org.eclipse.cdt.build.core.settings.holder.incpaths.1841493632" superClass="org.eclipse.cdt.build.core.settings.holder.incpaths" valueType="includePath">
 									<listOptionValue builtIn="false" value="&quot;${NDKROOT}/platforms/android-9/arch-arm/usr/include&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${NDKROOT}/toolchains/arm-linux-androideabi-4.4.3/prebuilt/windows/include&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${NDKROOT}/sources/cxx-stl/gnu-libstdc++/include&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/../../sdk/native\jni\include&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/../../sdk/native/jni/include&quot;"/>
 								</option>
 								<inputType id="org.eclipse.cdt.build.core.settings.holder.inType.608739504" languageId="org.eclipse.cdt.core.gcc" languageName="GNU C" sourceContentType="org.eclipse.cdt.core.cSource,org.eclipse.cdt.core.cHeader" superClass="org.eclipse.cdt.build.core.settings.holder.inType"/>
 							</tool>

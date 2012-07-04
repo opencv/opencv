@@ -84,11 +84,11 @@ public class BruteForceL1DescriptorMatcherTest extends OpenCVTestCase {
         matSize = 100;
 
         truth = new DMatch[] {
-        		new DMatch(0, 1, 0, 6.9202342f), 
-        		new DMatch(1, 1, 0, 6.1675916f), 
-        		new DMatch(2, 1, 0, 2.6798589f), 
-        		new DMatch(3, 1, 0, 2.6545324f), 
-        		new DMatch(4, 0, 0, 6.1294847f)
+                new DMatch(0, 1, 0, 6.9202332f),
+                new DMatch(1, 0, 0, 6.0567350f),
+                new DMatch(2, 1, 0, 2.6798587f),
+                new DMatch(3, 0, 0, 5.8991642f),
+                new DMatch(4, 0, 0, 6.1321812f)
                 };
         super.setUp();
     }
@@ -183,7 +183,6 @@ public class BruteForceL1DescriptorMatcherTest extends OpenCVTestCase {
         matcher.add(Arrays.asList(train));
 
         matcher.match(query, matches);
-
         assertArrayDMatchEquals(truth, matches.toArray(), EPS);
     }
 

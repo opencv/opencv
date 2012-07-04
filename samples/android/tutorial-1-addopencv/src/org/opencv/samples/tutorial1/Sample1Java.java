@@ -75,8 +75,8 @@ public class Sample1Java extends Activity {
 			ad.setMessage("Fatal error: can't open camera!");  
 			ad.setButton("OK", new DialogInterface.OnClickListener() {  
 			    public void onClick(DialogInterface dialog, int which) {  
-			        dialog.dismiss();                      
-					finish();
+				dialog.dismiss();
+				finish();
 			    }  
 			});  
 			ad.show();
@@ -91,10 +91,9 @@ public class Sample1Java extends Activity {
         requestWindowFeature(Window.FEATURE_NO_TITLE);
 
         Log.i(TAG, "Trying to load OpenCV library");
-        if (!OpenCVLoader.initAsync(OpenCVLoader.OPEN_CV_VERSION_2_4_0, this, mOpenCVCallBack))
+        if (!OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_2, this, mOpenCVCallBack))
         {
         	Log.e(TAG, "Cannot connect to OpenCV Manager");
-        	finish();
         }
     }
 

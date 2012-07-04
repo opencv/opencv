@@ -25,10 +25,10 @@ import org.opencv.highgui.Highgui;
 
 public class OpenCVTestCase extends TestCase {
 
-	//change to 'true' to unblock fail on fail("Not yet implemented")
-	public static final boolean passNYI = true;
-    
-	protected static final int matSize = 10;
+    //change to 'true' to unblock fail on fail("Not yet implemented")
+    public static final boolean passNYI = true;
+
+    protected static final int matSize = 10;
     protected static final double EPS = 0.001;
     protected static final double weakEPS = 0.5;
 
@@ -185,11 +185,11 @@ public class OpenCVTestCase extends TestCase {
     }
 
     public static void fail(String msg) {
-    	if(msg == "Not yet implemented" && passNYI)
-    		return;
-    	TestCase.fail(msg);
+        if(msg == "Not yet implemented" && passNYI)
+            return;
+        TestCase.fail(msg);
     }
-    
+
     public static <E extends Number> void assertListEquals(List<E> list1, List<E> list2) {
         if (list1.size() != list2.size()) {
             throw new UnsupportedOperationException();
@@ -220,7 +220,7 @@ public class OpenCVTestCase extends TestCase {
         }
 
         for (int i = 0; i < ar1.length; i++)
-        	assertEquals(ar1[i].doubleValue(), ar2[i].doubleValue(), epsilon);
+            assertEquals(ar1[i].doubleValue(), ar2[i].doubleValue(), epsilon);
             //assertTrue(Math.abs(ar1[i].doubleValue() - ar2[i].doubleValue()) <= epsilon);
     }
 
@@ -230,7 +230,7 @@ public class OpenCVTestCase extends TestCase {
         }
 
         for (int i = 0; i < ar1.length; i++)
-        	assertEquals(ar1[i], ar2[i], epsilon);
+            assertEquals(ar1[i], ar2[i], epsilon);
             //assertTrue(Math.abs(ar1[i].doubleValue() - ar2[i].doubleValue()) <= epsilon);
     }
 
@@ -341,9 +341,9 @@ public class OpenCVTestCase extends TestCase {
     }
 
     public static void assertListDMatchEquals(List<DMatch> expected, List<DMatch> actual, double epsilon) {
-    	DMatch expectedArray[] = expected.toArray(new DMatch[0]);
-    	DMatch actualArray[]   = actual.toArray(new DMatch[0]);
-    	assertArrayDMatchEquals(expectedArray, actualArray, epsilon);
+        DMatch expectedArray[] = expected.toArray(new DMatch[0]);
+        DMatch actualArray[]   = actual.toArray(new DMatch[0]);
+        assertArrayDMatchEquals(expectedArray, actualArray, epsilon);
     }
 
     public static void assertPointEquals(Point expected, Point actual, double eps) {

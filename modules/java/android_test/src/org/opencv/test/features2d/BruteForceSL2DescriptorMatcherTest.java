@@ -31,7 +31,7 @@ public class BruteForceSL2DescriptorMatcherTest extends OpenCVTestCase {
             }
         };
     }
-    
+
     /*
     private float sqr(float val){
         return val * val;
@@ -89,11 +89,11 @@ public class BruteForceSL2DescriptorMatcherTest extends OpenCVTestCase {
         matSize = 100;
 
         truth = new DMatch[] {
-        		new DMatch(0, 0, 0, 1.1018577f), 
-        		new DMatch(1, 0, 0, 1.2069331f), 
-        		new DMatch(2, 1, 0, 0.2446168f), 
-        		new DMatch(3, 1, 0, 0.2345972f), 
-        		new DMatch(4, 0, 0, 1.1746116f)
+                new DMatch(0, 0, 0, 1.1018578f),
+                new DMatch(1, 0, 0, 1.1381058f),
+                new DMatch(2, 1, 0, 0.2446168f),
+                new DMatch(3, 0, 0, 1.3037685f),
+                new DMatch(4, 0, 0, 1.1752719f)
                 };
 
         super.setUp();
@@ -189,7 +189,9 @@ public class BruteForceSL2DescriptorMatcherTest extends OpenCVTestCase {
         matcher.add(Arrays.asList(train));
 
         matcher.match(query, matches);
-
+OpenCVTestRunner.Log(matches);
+OpenCVTestRunner.Log(matches);
+OpenCVTestRunner.Log(matches);
         assertArrayDMatchEquals(truth, matches.toArray(), EPS);
     }
 

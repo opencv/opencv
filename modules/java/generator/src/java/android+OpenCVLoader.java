@@ -8,14 +8,9 @@ import android.content.Context;
 public class OpenCVLoader
 {
     /**
-     * OpenCV Library version 2.4.0
+     * OpenCV Library version 2.4.2
      */
-    public static final String OPEN_CV_VERSION_2_4_0 = "2.4.0";
-
-    /**
-     * OpenCV Library version 2.4.0
-     */
-    public static final String OPEN_CV_VERSION_2_4_2 = "2.4.2";
+    public static final String OPENCV_VERSION_2_4_2 = "2.4.2";
 
     /**
      * Load and initialize OpenCV library from current application package. Roughly it is analog of system.loadLibrary("opencv_java")
