@@ -29,8 +29,8 @@ public abstract class BaseLoaderCallback implements LoaderCallbackInterface {
             {
                 Log.d(TAG, "OpenCV downloading. App restart is needed!");
                 AlertDialog RestartMessage = new AlertDialog.Builder(mAppContext).create();
-                RestartMessage.setTitle("App restart is required");
-                RestartMessage.setMessage("Application will be closed now. Start it when installation will be finished!");
+                RestartMessage.setTitle("OpenCV asks for restart");
+                RestartMessage.setMessage("Please, restart the application to finish installation.");
                 RestartMessage.setCancelable(false); // This blocks the 'BACK' button
                 RestartMessage.setButton("OK", new OnClickListener() {
                     public void onClick(DialogInterface dialog, int which) {
@@ -67,7 +67,7 @@ public abstract class BaseLoaderCallback implements LoaderCallbackInterface {
                 Log.d(TAG, "OpenCV Manager Service is uncompatible with this app!");
                 AlertDialog IncomatibilityMessage = new AlertDialog.Builder(mAppContext).create();
                 IncomatibilityMessage.setTitle("OpenCV Manager");
-                IncomatibilityMessage.setMessage("OpenCV Manager service is incompatible with this app. Update it!");
+                IncomatibilityMessage.setMessage("OpenCV Manager service is incompatible with this application. Update it!");
                 IncomatibilityMessage.setCancelable(false); // This blocks the 'BACK' button
                 IncomatibilityMessage.setButton("OK", new OnClickListener() {
                     public void onClick(DialogInterface dialog, int which) {
