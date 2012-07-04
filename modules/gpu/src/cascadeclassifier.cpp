@@ -273,21 +273,22 @@ namespace cv { namespace gpu { namespace device
 {
     namespace lbp
     {
-        int classifyStump(const DevMem2Db mstages,
-                           const int nstages,
-                           const DevMem2Di mnodes,
-                           const DevMem2Df mleaves,
-                           const DevMem2Di msubsets,
-                           const DevMem2Db mfeatures,
-                           const DevMem2Di integral,
-                           const int workWidth,
-                           const int workHeight,
-                           const int clWidth,
-                           const int clHeight,
-                           float scale,
-                           int step,
-                           int subsetSize,
-                           DevMem2D_<int4> objects);
+        classifyStump(const DevMem2Db mstages,
+                      const int nstages,
+                      const DevMem2Di mnodes,
+                      const DevMem2Df mleaves,
+                      const DevMem2Di msubsets,
+                      const DevMem2Db mfeatures,
+                      const DevMem2Di integral,
+                      const int workWidth,
+                      const int workHeight,
+                      const int clWidth,
+                      const int clHeight,
+                      float scale,
+                      int step,
+                      int subsetSize,
+                      DevMem2D_<int4> objects,
+                      unsigned int* classified);
     }
 }}}
 
@@ -308,6 +309,11 @@ int cv::gpu::CascadeClassifier_GPU_LBP::detectMultiScale(const GpuMat& image, Gp
         maxObjectSize = image.size();
 
     scaledImageBuffer.create(image.rows + 1, image.cols + 1, CV_8U);
+    unsigned int* classified = new unsigned int[1];
+    *classified = 0;
+    unsigned int* dclassified;
+    cudaMalloc(&dclassified, sizeof(int));
+    cudaMemcpy(dclassified, classified, sizeof(int), cudaMemcpyHostToDevice);
 
     for( double factor = 1; ; factor *= scaleFactor )
     {
@@ -331,10 +337,11 @@ int cv::gpu::CascadeClassifier_GPU_LBP::detectMultiScale(const GpuMat& image, Gp
 
         int step = (factor <= 2.) + 1;
 
-        int res = cv::gpu::device::lbp::classifyStump(stage_mat, stage_mat.cols / sizeof(Stage), nodes_mat, leaves_mat, subsets_mat, features_mat,
-        integral, processingRectSize.width, processingRectSize.height, windowSize.width, windowSize.height, scaleFactor, step, subsetSize, objects);
-        std::cout  << res << "Results:    " << cv::Mat(objects).row(0).colRange(0, res) << std::endl;
+        cv::gpu::device::lbp::classifyStump(stage_mat, stage_mat.cols / sizeof(Stage), nodes_mat, leaves_mat, subsets_mat, features_mat,
+        integral, processingRectSize.width, processingRectSize.height, windowSize.width, windowSize.height, scaleFactor, step, subsetSize, objects, dclassified);
     }
+        cudaMemcpy(classified, dclassified, sizeof(int), cudaMemcpyDeviceToHost);
+        std::cout  << *classified << "Results:    " << cv::Mat(objects).row(0).colRange(0, *classified) << std::endl;
     // TODO: reject levels
 
     return 0;
