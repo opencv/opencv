@@ -51,8 +51,8 @@ namespace cv { namespace gpu { namespace device
         __global__ void lbp_classify_stump(Stage* stages, int nstages, ClNode* nodes, const float* leaves, const int* subsets, const uchar4* features,
             const DevMem2Di integral, int workWidth, int workHeight, int clWidth, int clHeight, float scale, int step, int subsetSize, DevMem2D_<int4> objects, unsigned int* n)
         {
-            int y = threadIdx.x * scale;
-            int x = blockIdx.x * scale;
+            int x = threadIdx.x * step;
+            int y = blockIdx.x * step;
 
             int current_node = 0;
             int current_leave = 0;
@@ -92,7 +92,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         template<typename Pr>
-        __global__ void disjoin(int4* candidates, unsigned int n, int groupThreshold, float grouping_eps, unsigned int* nclasses)
+        __global__ void disjoin(int4* candidates, int4* objects, unsigned int n, int groupThreshold, float grouping_eps, unsigned int* nclasses)
         {
             using cv::gpu::device::VecTraits;
             unsigned int tid = threadIdx.x;
@@ -119,7 +119,7 @@ namespace cv { namespace gpu { namespace device
             __syncthreads();
 
             atomicInc((unsigned int*)labels + cls, n);
-            labels[n - 1] = 0;
+            *nclasses = 0;
 
             int active = labels[tid];
             if (active)
@@ -152,11 +152,9 @@ namespace cv { namespace gpu { namespace device
                             (n2 > max(3, n1) || n1 < 3) )
                             break;
                     }
-
                     if( j == n)
                     {
-                        // printf("founded gpu %d %d %d %d \n", r1[0], r1[1], r1[2], r1[3]);
-                        candidates[atomicInc((unsigned int*)labels + n -1, n)] = VecTraits<int4>::make(r1[0], r1[1], r1[2], r1[3]);
+                        objects[atomicInc(nclasses, n)] = VecTraits<int4>::make(r1[0], r1[1], r1[2], r1[3]);
                     }
                 }
             }
@@ -179,11 +177,11 @@ namespace cv { namespace gpu { namespace device
                 workWidth, workHeight, clWidth, clHeight, scale, step, subsetSize, objects, classified);
         }
 
-        int connectedConmonents(DevMem2D_<int4> candidates, int groupThreshold, float grouping_eps, unsigned int* nclasses)
+        int connectedConmonents(DevMem2D_<int4> candidates, DevMem2D_<int4> objects, int groupThreshold, float grouping_eps, unsigned int* nclasses)
         {
             int threads = candidates.cols;
             int smem_amount = threads * sizeof(int) + threads * sizeof(int4);
-            disjoin<InSameComponint><<<1, threads, smem_amount>>>((int4*)candidates.ptr(), candidates.cols, groupThreshold, grouping_eps, nclasses);
+            disjoin<InSameComponint><<<1, threads, smem_amount>>>((int4*)candidates.ptr(), (int4*)objects.ptr(), candidates.cols, groupThreshold, grouping_eps, nclasses);
             return 0;
         }
     }

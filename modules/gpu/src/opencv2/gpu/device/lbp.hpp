@@ -65,12 +65,12 @@ namespace lbp{
     struct InSameComponint
     {
     public:
-        __device__ __forceinline__ InSameComponint(float _eps) : eps(_eps * 0.5) {}
+        __device__ __forceinline__ InSameComponint(float _eps) : eps(_eps) {}
         __device__ __forceinline__ InSameComponint(const InSameComponint& other) : eps(other.eps) {}
 
         __device__ __forceinline__ bool operator()(const int4& r1, const int4& r2) const
         {
-            double delta = eps * (min(r1.z, r2.z) + min(r1.w, r2.w));
+            float delta = eps * (min(r1.z, r2.z) + min(r1.w, r2.w)) * 0.5;
 
             return abs(r1.x - r2.x) <= delta && abs(r1.y - r2.y) <= delta
                 && abs(r1.x + r1.z - r2.x - r2.z) <= delta && abs(r1.y + r1.w - r2.y - r2.w) <= delta;

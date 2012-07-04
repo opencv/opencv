@@ -308,4 +308,57 @@ INSTANTIATE_TEST_CASE_P(GPU_ObjDetect, LBP_Read_classifier, testing::Combine(
     testing::Values<int>(0)
     ));
 
+PARAM_TEST_CASE(LBP_classify, cv::gpu::DeviceInfo, int)
+{
+    cv::gpu::DeviceInfo devInfo;
+
+    virtual void SetUp()
+    {
+        devInfo = GET_PARAM(0);
+        cv::gpu::setDevice(devInfo.deviceID());
+    }
+};
+
+TEST_P(LBP_classify, Accuracy)
+{
+    std::string classifierXmlPath = std::string(cvtest::TS::ptr()->get_data_path()) + "lbpcascade/lbpcascade_frontalface.xml";
+    std::string imagePath = std::string(cvtest::TS::ptr()->get_data_path()) + "lbpcascade/er.png";
+
+    cv::CascadeClassifier cpuClassifier(classifierXmlPath);
+    ASSERT_FALSE(cpuClassifier.empty());
+
+    cv::Mat image = cv::imread(imagePath);
+    image = image.colRange(0, image.cols / 2);
+    cv::Mat grey;
+    cvtColor(image, grey, CV_BGR2GRAY);
+    ASSERT_FALSE(image.empty());
+
+    std::vector<cv::Rect> rects;
+    cpuClassifier.detectMultiScale(grey, rects);
+    cv::Mat markedImage = image.clone();
+
+    std::vector<cv::Rect>::iterator it = rects.begin();
+    for (; it != rects.end(); ++it)
+        cv::rectangle(markedImage, *it, cv::Scalar(255, 0, 0, 255));
+
+    cv::gpu::CascadeClassifier_GPU_LBP gpuClassifier;
+    ASSERT_TRUE(gpuClassifier.load(classifierXmlPath));
+    cv::gpu::GpuMat gpu_rects, buffer;
+    cv::gpu::GpuMat tested(grey);
+    int count = gpuClassifier.detectMultiScale(tested, buffer, gpu_rects);
+
+    cv::Mat gpu_f(gpu_rects);
+    int* gpu_faces = (int*)gpu_f.ptr();
+    for (int i = 0; i < count; i++)
+    {
+        cv::Rect r(gpu_faces[i * 4],gpu_faces[i * 4 + 1],gpu_faces[i * 4 + 2],gpu_faces[i * 4 + 3]);
+        cv::rectangle(markedImage, r , cv::Scalar(0, 0, 255, 255));
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(GPU_ObjDetect, LBP_classify, testing::Combine(
+    ALL_DEVICES,
+    testing::Values<int>(0)
+    ));
+
 } // namespace
