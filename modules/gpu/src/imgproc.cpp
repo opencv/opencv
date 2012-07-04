@@ -530,8 +530,8 @@ void cv::gpu::integral(const GpuMat& src, GpuMat& sum, Stream& s)
 void cv::gpu::integralBuffered(const GpuMat& src, GpuMat& sum, GpuMat& buffer, Stream& s)
 {
     CV_Assert(src.type() == CV_8UC1);
-
-    sum.create(src.rows + 1, src.cols + 1, CV_32S);
+    if (sum.cols != src.cols + 1 && sum.rows != src.rows + 1)
+        sum.create(src.rows + 1, src.cols + 1, CV_32S);
 
     NcvSize32u roiSize;
     roiSize.width = src.cols;

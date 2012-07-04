@@ -83,8 +83,8 @@ void cv::gpu::resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx, doub
         fx = static_cast<double>(dsize.width) / src.cols;
         fy = static_cast<double>(dsize.height) / src.rows;
     }
-
-    dst.create(dsize, src.type());
+    if (dsize != dst.size())
+        dst.create(dsize, src.type());
 
     if (dsize == src.size())
     {
