@@ -62,6 +62,50 @@ namespace lbp{
         int   featureIdx;
     };
 
+    struct InSameComponint
+    {
+    public:
+        __device__ __forceinline__ InSameComponint(float _eps) : eps(_eps * 0.5) {}
+        __device__ __forceinline__ InSameComponint(const InSameComponint& other) : eps(other.eps) {}
+
+        __device__ __forceinline__ bool operator()(const int4& r1, const int4& r2) const
+        {
+            double delta = eps * (min(r1.z, r2.z) + min(r1.w, r2.w));
+
+            return abs(r1.x - r2.x) <= delta && abs(r1.y - r2.y) <= delta
+                && abs(r1.x + r1.z - r2.x - r2.z) <= delta && abs(r1.y + r1.w - r2.y - r2.w) <= delta;
+        }
+        float eps;
+    };
+
+    template<typename Pr>
+    __device__ __forceinline__ void partition(int4* vec, unsigned int n, int* labels, Pr predicate)
+    {
+        unsigned tid = threadIdx.x;
+        labels[tid] = tid;
+        __syncthreads();
+
+        for (unsigned int id = 0; id < n; id++)
+        {
+            if (tid != id && predicate(vec[tid], vec[id]))
+            {
+                int p = labels[tid];
+                int q = labels[id];
+
+                if (p < q)
+                {
+                    atomicMin(labels + id, p);
+                }
+                else if (p > q)
+                {
+                    atomicMin(labels + tid, q);
+                }
+            }
+        }
+        __syncthreads();
+        // printf("tid %d label %d\n", tid, labels[tid]);
+    }
+
     struct LBP
     {
         __device__ __forceinline__ LBP(const LBP& other) {(void)other;}
@@ -72,7 +116,6 @@ namespace lbp{
         {
             int x_off = 2 * feature.z;
             int y_off = 2 * feature.w;
-            // printf("feature: %d %d %d %d\n", (int)feature.x, (int)feature.y, (int)feature.z, (int)feature.w);
             feature.z += feature.x;
             feature.w += feature.y;
 
@@ -107,7 +150,7 @@ namespace lbp{
             anchors[14] = integral(y + y_off + feature.w, x + x_off + feature.x);
             anchors[15] = integral(y + y_off + feature.w, x + x_off + feature.z);
 
-            // calculate feature
+            // calculate responce
             int sum = anchors[5] - anchors[6] - anchors[9] + anchors[10];
 
             int response =   (( (anchors[ 0] - anchors[ 1] - anchors[ 4] + anchors[ 5]) >= sum )? 128 : 0)

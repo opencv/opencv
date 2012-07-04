@@ -273,7 +273,7 @@ namespace cv { namespace gpu { namespace device
 {
     namespace lbp
     {
-        classifyStump(const DevMem2Db mstages,
+        void classifyStump(const DevMem2Db mstages,
                       const int nstages,
                       const DevMem2Di mnodes,
                       const DevMem2Df mleaves,
@@ -289,16 +289,19 @@ namespace cv { namespace gpu { namespace device
                       int subsetSize,
                       DevMem2D_<int4> objects,
                       unsigned int* classified);
+
+        int connectedConmonents(DevMem2D_<int4> candidates, int groupThreshold, float grouping_eps, unsigned int* nclasses);
     }
 }}}
 
 int cv::gpu::CascadeClassifier_GPU_LBP::detectMultiScale(const GpuMat& image, GpuMat& scaledImageBuffer, GpuMat& objects,
-                                                        double scaleFactor, int minNeighbors, cv::Size maxObjectSize /*, Size minSize=Size()*/)
+                                                        double scaleFactor, int groupThreshold, cv::Size maxObjectSize /*, Size minSize=Size()*/)
 {
     CV_Assert( scaleFactor > 1 && image.depth() == CV_8U );
     CV_Assert(!empty());
 
     const int defaultObjSearchNum = 100;
+    const float grouping_eps = 0.2;
 
     if( !objects.empty() && objects.depth() == CV_32S)
         objects.reshape(4, 1);
@@ -340,11 +343,14 @@ int cv::gpu::CascadeClassifier_GPU_LBP::detectMultiScale(const GpuMat& image, Gp
         cv::gpu::device::lbp::classifyStump(stage_mat, stage_mat.cols / sizeof(Stage), nodes_mat, leaves_mat, subsets_mat, features_mat,
         integral, processingRectSize.width, processingRectSize.height, windowSize.width, windowSize.height, scaleFactor, step, subsetSize, objects, dclassified);
     }
-        cudaMemcpy(classified, dclassified, sizeof(int), cudaMemcpyDeviceToHost);
-        std::cout  << *classified << "Results:    " << cv::Mat(objects).row(0).colRange(0, *classified) << std::endl;
-    // TODO: reject levels
 
-    return 0;
+    cudaMemcpy(classified, dclassified, sizeof(int), cudaMemcpyDeviceToHost);
+    GpuMat candidates(1, *classified, objects.type(), objects.ptr());
+    // std::cout  << *classified << " Results: " << cv::Mat(candidates) << std::endl;
+
+    if (groupThreshold <= 0  || objects.empty())
+        return 0;
+    return cv::gpu::device::lbp::connectedConmonents(candidates, groupThreshold, grouping_eps, dclassified);
 }
 
 // ============ old fashioned haar cascade ==============================================//

@@ -41,6 +41,8 @@
 //M*/
 
 #include <opencv2/gpu/device/lbp.hpp>
+#include <opencv2/gpu/device/vec_traits.hpp>
+#include <opencv2/gpu/device/saturate_cast.hpp>
 
 namespace cv { namespace gpu { namespace device
 {
@@ -89,13 +91,83 @@ namespace cv { namespace gpu { namespace device
             objects(0, res) = rect;
         }
 
-        classifyStump(const DevMem2Db mstages, const int nstages, const DevMem2Di mnodes, const DevMem2Df mleaves, const DevMem2Di msubsets, const DevMem2Db mfeatures,
+        template<typename Pr>
+        __global__ void disjoin(int4* candidates, unsigned int n, int groupThreshold, float grouping_eps, unsigned int* nclasses)
+        {
+            using cv::gpu::device::VecTraits;
+            unsigned int tid = threadIdx.x;
+            extern __shared__ int sbuff[];
+
+            int* labels = sbuff;
+            int* rrects = (int*)(sbuff + n);
+
+            Pr predicate(grouping_eps);
+            partition(candidates, n, labels, predicate);
+
+            rrects[tid * 4 + 0] = 0;
+            rrects[tid * 4 + 1] = 0;
+            rrects[tid * 4 + 2] = 0;
+            rrects[tid * 4 + 3] = 0;
+            __syncthreads();
+
+            int cls = labels[tid];
+            atomicAdd((int*)(rrects + cls * 4 + 0), candidates[tid].x);
+            atomicAdd((int*)(rrects + cls * 4 + 1), candidates[tid].y);
+            atomicAdd((int*)(rrects + cls * 4 + 2), candidates[tid].z);
+            atomicAdd((int*)(rrects + cls * 4 + 3), candidates[tid].w);
+            labels[tid] = 0;
+            __syncthreads();
+
+            atomicInc((unsigned int*)labels + cls, n);
+            labels[n - 1] = 0;
+
+            int active = labels[tid];
+            if (active)
+            {
+                int* r1 = rrects + tid * 4;
+                float s = 1.f / active;
+                r1[0] = saturate_cast<int>(r1[0] * s);
+                r1[1] = saturate_cast<int>(r1[1] * s);
+                r1[2] = saturate_cast<int>(r1[2] * s);
+                r1[3] = saturate_cast<int>(r1[3] * s);
+
+                int n1 = active;
+                __syncthreads();
+                unsigned int j = 0;
+                if( active > groupThreshold )
+                {
+                    for (j = 0; j < n; j++)
+                    {
+                        int n2 = labels[j];
+                        if(!n2 || j == tid || n2 <= groupThreshold )
+                        continue;
+
+                        int* r2 = rrects + j * 4;
+
+                        int dx = saturate_cast<int>( r2[2] * grouping_eps );
+                        int dy = saturate_cast<int>( r2[3] * grouping_eps );
+
+                        if( tid != j && r1[0] >= r2[0] - dx && r1[1] >= r2[1] - dy &&
+                            r1[0] + r1[2] <= r2[0] + r2[2] + dx && r1[1] + r1[3] <= r2[1] + r2[3] + dy &&
+                            (n2 > max(3, n1) || n1 < 3) )
+                            break;
+                    }
+
+                    if( j == n)
+                    {
+                        // printf("founded gpu %d %d %d %d \n", r1[0], r1[1], r1[2], r1[3]);
+                        candidates[atomicInc((unsigned int*)labels + n -1, n)] = VecTraits<int4>::make(r1[0], r1[1], r1[2], r1[3]);
+                    }
+                }
+            }
+        }
+
+        void classifyStump(const DevMem2Db mstages, const int nstages, const DevMem2Di mnodes, const DevMem2Df mleaves, const DevMem2Di msubsets, const DevMem2Db mfeatures,
                            const DevMem2Di integral, const int workWidth, const int workHeight, const int clWidth, const int clHeight, float scale, int step, int subsetSize,
                            DevMem2D_<int4> objects, unsigned int* classified)
         {
             int blocks  = ceilf(workHeight / (float)step);
             int threads = ceilf(workWidth / (float)step);
-            // printf("blocks %d, threads %d\n", blocks, threads);
 
             Stage* stages = (Stage*)(mstages.ptr());
             ClNode* nodes = (ClNode*)(mnodes.ptr());
@@ -105,6 +177,14 @@ namespace cv { namespace gpu { namespace device
 
             lbp_classify_stump<<<blocks, threads>>>(stages, nstages, nodes, leaves, subsets, features, integral,
                 workWidth, workHeight, clWidth, clHeight, scale, step, subsetSize, objects, classified);
+        }
+
+        int connectedConmonents(DevMem2D_<int4> candidates, int groupThreshold, float grouping_eps, unsigned int* nclasses)
+        {
+            int threads = candidates.cols;
+            int smem_amount = threads * sizeof(int) + threads * sizeof(int4);
+            disjoin<InSameComponint><<<1, threads, smem_amount>>>((int4*)candidates.ptr(), candidates.cols, groupThreshold, grouping_eps, nclasses);
+            return 0;
         }
     }
 }}}
