@@ -350,7 +350,9 @@ int cv::gpu::CascadeClassifier_GPU_LBP::detectMultiScale(const GpuMat& image, Gp
 
     if (groupThreshold <= 0  || objects.empty())
         return 0;
-    return cv::gpu::device::lbp::connectedConmonents(candidates, groupThreshold, grouping_eps, dclassified);
+    cv::gpu::device::lbp::connectedConmonents(candidates, groupThreshold, grouping_eps, dclassified);
+    cudaSafeCall( cudaDeviceSynchronize() );
+    return *classified;
 }
 
 // ============ old fashioned haar cascade ==============================================//

@@ -185,8 +185,6 @@ PARAM_TEST_CASE(WarpAffine, cv::gpu::DeviceInfo, cv::Size, MatType, Inverse, Int
     int borderType;
     bool useRoi;
 
-    cv::Mat M;
-
     virtual void SetUp()
     {
         devInfo = GET_PARAM(0);

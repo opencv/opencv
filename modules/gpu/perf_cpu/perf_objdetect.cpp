@@ -49,4 +49,26 @@ GPU_PERF_TEST_1(HaarClassifier, cv::gpu::DeviceInfo)
 
 INSTANTIATE_TEST_CASE_P(ObjDetect, HaarClassifier, ALL_DEVICES);
 
+//===================== LBP cascade ==========================//
+GPU_PERF_TEST_1(LBPClassifier, cv::gpu::DeviceInfo)
+{
+    cv::Mat img = readImage("gpu/haarcascade/group_1_640x480_VGA.pgm", cv::IMREAD_GRAYSCALE);
+    ASSERT_FALSE(img.empty());
+
+    cv::CascadeClassifier cascade;
+
+    ASSERT_TRUE(cascade.load(perf::TestBase::getDataPath("gpu/lbpcascade/lbpcascade_frontalface.xml")));
+
+    std::vector<cv::Rect> rects;
+
+    cascade.detectMultiScale(img, rects);
+
+    TEST_CYCLE()
+    {
+        cascade.detectMultiScale(img, rects);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(ObjDetect, LBPClassifier, ALL_DEVICES);
+
 #endif
