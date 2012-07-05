@@ -6,7 +6,7 @@ FaceRecognizer
 FaceRecognizer
 --------------
 
-.. ocv:class:: FaceRecognizer
+.. ocv:class:: FaceRecognizer : public Algorithm
 
 All face recognition models in OpenCV are derived from the abstract base class :ocv:class:`FaceRecognizer`, which provides
 a unified access to all face recongition algorithms in OpenCV. ::
@@ -143,14 +143,8 @@ And finally train it on the given dataset (the face images and labels):
 FaceRecognizer::predict
 -----------------------
 
-.. ocv:function:: int FaceRecognizer::predict(InputArray src) const
-
-    Predicts a label for a given input image.
-
-    :param src: Sample image to get a prediction from.
-
-
-.. ocv:function:: void predict(InputArray src, int &label, double &confidence) const
+.. ocv:function:: int FaceRecognizer::predict( InputArray src ) const = 0
+.. ocv:function:: void FaceRecognizer::predict( InputArray src, int & label, double & confidence ) const = 0
 
     Predicts a label and associated confidence (e.g. distance) for a given input image.
 
@@ -219,8 +213,8 @@ FaceRecognizer::load
 
 Loads a :ocv:class:`FaceRecognizer` and its model state.
 
-.. ocv:function:: void FaceRecognizer::load(const string& filename)
-.. ocv:function:: void FaceRecognizer::load(FileStorage& fs)
+.. ocv:function:: void FaceRecognizer::load( const string& filename )
+.. ocv:function:: void FaceRecognizer::load( const FileStorage& fs ) = 0
 
 Loads a persisted model and state from a given XML or YAML file . Every
 :ocv:class:`FaceRecognizer` has to overwrite ``FaceRecognizer::load(FileStorage& fs)``

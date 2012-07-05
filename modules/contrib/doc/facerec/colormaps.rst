@@ -7,7 +7,7 @@ applyColorMap
 Trains a FaceRecognizer with given data and associated labels.
 
 .. ocv:function:: void applyColorMap(InputArray src, OutputArray dst, int colormap)
-    
+
     :param src: The source image, grayscale or colored does not matter.
     :param dst: The result is the colormapped source image. Note: :ocv:func:`Mat::create` is called on dst.
     :param colormap: The colormap to apply, see the list of available colormaps below.
@@ -55,10 +55,10 @@ In OpenCV 2.4 you only need :ocv:func:`applyColorMap` to apply a colormap on a g
         if (argc > 1) {
             filename = string(argv[1]);
         }
-	    // The following lines show how to apply a colormap on a given image
-	    // and show it with cv::imshow example with an image. An exception is
-	    // thrown if the path to the image is invalid.
-	    if(!filename.empty()) {
+        // The following lines show how to apply a colormap on a given image
+        // and show it with cv::imshow example with an image. An exception is
+        // thrown if the path to the image is invalid.
+        if(!filename.empty()) {
             Mat img0 = imread(filename);
             // Throw an exception, if the image can't be read:
             if(img0.empty()) {
@@ -71,9 +71,9 @@ In OpenCV 2.4 you only need :ocv:func:`applyColorMap` to apply a colormap on a g
             // Show the result:
             imshow("cm_img0", cm_img0);
             waitKey(0);
-	    }
+        }
 
-	    return 0;
+        return 0;
     }
 
 And here are the color scales for each of the available colormaps:

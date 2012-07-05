@@ -312,7 +312,7 @@ def process_module(module, path):
             if namespace:
                 name = name[len(namespace) + 1:]
         #print namespace, parent, name, fn[0]
-        if not namespace and not parent and not name.startswith("cv") and not name.startswith("CV_"):
+        if not namespace and not parent and not name.startswith("cv") and not name.startswith("icv") and not name.startswith("CV_"):
             logerror(ERROR_004_MISSEDNAMESPACE, "function " + name + " from opencv_" + module + " is placed in global namespace but violates C-style naming convention")
         else:
             fdescr = (namespace, parent, name, fn)

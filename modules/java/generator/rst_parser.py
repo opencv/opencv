@@ -47,6 +47,8 @@ params_mapping = {
     }
 }
 
+known_text_sections_names = ["Appendix", "Results", "Prerequisites", "Introduction", "Description"]
+
 class DeclarationParser(object):
     def __init__(self, line=None):
         if line is None:
@@ -130,7 +132,7 @@ class RstParser(object):
         for root, dirs, files in os.walk(os.path.join(module_path,"doc")):
             for filename in fnmatch.filter(files, "*.rst"):
                 doclist.append(os.path.join(root, filename))
-            
+
         for doc in doclist:
             self.parse_rst_file(module_name, doc)
 
@@ -146,7 +148,7 @@ class RstParser(object):
         self.sections_total += 1
         # skip sections having whitespace in name
         #if section_name.find(" ") >= 0 and section_name.find("::operator") < 0:
-        if section_name.find(" ") >= 0 and not bool(re.match(r"(\w+::)*operator\s*(\w+|>>|<<|\(\)|->|\+\+|--|=|==|\+=|-=)", section_name)):
+        if (section_name.find(" ") >= 0 and not bool(re.match(r"(\w+::)*operator\s*(\w+|>>|<<|\(\)|->|\+\+|--|=|==|\+=|-=)", section_name)) ) or section_name.endswith(":"):
             if show_errors:
                 print >> sys.stderr, "RST parser warning W%03d:  SKIPPED: \"%s\" File: %s:%s" % (WARNING_002_HDRWHITESPACE, section_name, file_name, lineno)
             self.sections_skipped += 1
@@ -306,7 +308,11 @@ class RstParser(object):
             if verbose:
                 self.print_info(func)
         elif func:
-            if show_errors:
+            if func["name"] in known_text_sections_names:
+                if show_errors:
+                    print >> sys.stderr, "RST parser warning W%03d:  SKIPPED: \"%s\" File: %s:%s" % (WARNING_002_HDRWHITESPACE, section_name, file_name, lineno)
+                self.sections_skipped += 1
+            elif show_errors:
                 self.print_info(func, True, sys.stderr)
 
     def parse_rst_file(self, module_name, doc):
@@ -336,7 +342,7 @@ class RstParser(object):
                 continue
 
             ll = l.rstrip()
-            if len(prev_line) > 0 and len(ll) >= len(prev_line) and ll == "-" * len(ll):
+            if len(prev_line) > 0 and len(ll) >= len(prev_line) and (ll == "-" * len(ll) or ll == "+" * len(ll)):
                 # new function candidate
                 if len(lines) > 1:
                     self.parse_section_safe(module_name, fname, doc, flineno, lines[:len(lines)-1])

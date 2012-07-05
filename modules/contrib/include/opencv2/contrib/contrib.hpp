@@ -931,7 +931,7 @@ namespace cv
         virtual int predict(InputArray src) const = 0;
 
         // Predicts the label and confidence for a given sample.
-        CV_WRAP virtual void predict(InputArray src, CV_OUT int &label, CV_OUT double &dist) const = 0;
+        CV_WRAP virtual void predict(InputArray src, CV_OUT int &label, CV_OUT double &confidence) const = 0;
 
         // Serializes this object to a given filename.
         CV_WRAP virtual void save(const string& filename) const;
@@ -970,7 +970,7 @@ namespace cv
 
     CV_EXPORTS_W void applyColorMap(InputArray src, OutputArray dst, int colormap);
 
-    CV_EXPORTS_W bool initModule_contrib();
+    CV_EXPORTS bool initModule_contrib();
 }
 
 #include "opencv2/contrib/retina.hpp"
