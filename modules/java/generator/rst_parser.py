@@ -1,4 +1,4 @@
-import os, sys, re, string, glob
+import os, sys, re, string, fnmatch
 allmodules = ["core", "flann", "imgproc", "ml", "highgui", "video", "features2d", "calib3d", "objdetect", "legacy", "contrib", "gpu", "androidcamera", "java", "python", "stitching", "ts", "photo", "nonfree", "videostab"]
 verbose = False
 show_warnings = True
@@ -125,7 +125,12 @@ class RstParser(object):
     def parse(self, module_name, module_path=None):
         if module_path is None:
             module_path = "../" + module_name
-        doclist = glob.glob(os.path.join(module_path,"doc/*.rst"))
+
+        doclist = []
+        for root, dirs, files in os.walk(os.path.join(module_path,"doc")):
+            for filename in fnmatch.filter(files, "*.rst"):
+                doclist.append(os.path.join(root, filename))
+            
         for doc in doclist:
             self.parse_rst_file(module_name, doc)
 

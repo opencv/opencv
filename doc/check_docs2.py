@@ -1,7 +1,7 @@
-import os, sys, glob, re
+import os, sys, fnmatch, re
 
 sys.path.append("../modules/python/src2/")
-sys.path.append("../modules/java/")
+sys.path.append("../modules/java/generator")
 
 import hdr_parser as hp
 import rst_parser as rp
@@ -185,8 +185,10 @@ def process_module(module, path):
     rstparser.parse(module, path)
     rst = rstparser.definitions
 
-    hdrlist = glob.glob(os.path.join(path, "include", "opencv2", module, "*.h*"))
-    hdrlist.extend(glob.glob(os.path.join(path, "include", "opencv2", module, "detail", "*.h*")))
+    hdrlist = []
+    for root, dirs, files in os.walk(os.path.join(path, "include")):
+        for filename in fnmatch.filter(files, "*.h*"):
+            hdrlist.append(os.path.join(root, filename))
 
     if module == "gpu":
         hdrlist.append(os.path.join(path, "..", "core", "include", "opencv2", "core", "devmem2d.hpp"))
