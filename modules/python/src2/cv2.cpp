@@ -22,11 +22,10 @@
 #include "opencv2/highgui/highgui.hpp"
 
 #include "opencv2/opencv_modules.hpp"
-#ifdef HAVE_OPENCV_NONFREE
-#include "opencv2/nonfree/nonfree.hpp"
-static bool makeUseOfNonfree = cv::initModule_nonfree();
-#endif
 
+#ifdef HAVE_OPENCV_NONFREE
+#  include "opencv2/nonfree/nonfree.hpp"
+#endif
 
 using cv::flann::IndexParams;
 using cv::flann::SearchParams;

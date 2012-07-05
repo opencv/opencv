@@ -3878,10 +3878,51 @@ static PyMethodDef old_methods[] = {
 /************************************************************************/
 /* Module init */
 
+#include "opencv2/opencv_modules.hpp"
+
+#ifdef HAVE_OPENCV_NONFREE
+#  include "opencv2/nonfree/nonfree.hpp"
+#endif
+
+#ifdef HAVE_OPENCV_FEATURES2D
+#  include "opencv2/features2d/features2d.hpp"
+#endif
+
+#ifdef HAVE_OPENCV_VIDEO
+#  include "opencv2/video/video.hpp"
+#endif
+
+#ifdef HAVE_OPENCV_ML
+#  include "opencv2/ml/ml.hpp"
+#endif
+
+#ifdef HAVE_OPENCV_CONTRIB
+#  include "opencv2/contrib/contrib.hpp"
+#endif
+
 static PyObject* init_cv()
 {
   PyObject *m, *d;
   cvSetErrMode(CV_ErrModeParent);
+
+    bool init = true;
+#ifdef HAVE_OPENCV_NONFREE
+    init &= cv::initModule_nonfree();
+#endif
+#ifdef HAVE_OPENCV_FEATURES2D
+    init &= cv::initModule_features2d();
+#endif
+#ifdef HAVE_OPENCV_VIDEO
+    init &= cv::initModule_video();
+#endif
+#ifdef HAVE_OPENCV_ML
+    init &= cv::initModule_ml();
+#endif
+    #ifdef HAVE_OPENCV_CONTRIB
+    init &= cv::initModule_contrib();
+#endif
+  if(!init)
+    return 0;
 
   #define MKTYPE(NAME)  NAME##_specials(); to_ok(&NAME##_Type)
 
