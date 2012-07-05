@@ -41,6 +41,7 @@
 
 #ifdef __GNUC__
 #  pragma GCC diagnostic ignored "-Wmissing-declarations"
+#  pragma GCC diagnostic ignored "-Wmissing-prototypes" //OSX
 #endif
 
 #ifndef __OPENCV_TEST_PRECOMP_HPP__

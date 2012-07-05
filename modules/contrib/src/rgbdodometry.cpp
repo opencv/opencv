@@ -40,6 +40,8 @@
 //
 //M*/
 
+#include "precomp.hpp"
+
 #define SHOW_DEBUG_IMAGES 0
 
 #include "opencv2/core/core.hpp"
@@ -49,20 +51,17 @@
 #  include "opencv2/highgui/highgui.hpp"
 #endif
 
-#include "precomp.hpp"
-
 #include <iostream>
+#include <limits>
 
+#include "opencv2/core/internal.hpp"
 #if defined(HAVE_EIGEN) && EIGEN_WORLD_VERSION == 3
-#  include <Eigen/Core>
 #  ifdef ANDROID
      template <typename Scalar> Scalar log2(Scalar v) { using std::log; return log(v)/log(Scalar(2)); }
 #  endif
 #  include <unsupported/Eigen/MatrixFunctions>
 #  include <Eigen/Dense>
 #endif
-
-#include <limits>
 
 using namespace cv;
 

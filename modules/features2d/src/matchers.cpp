@@ -41,6 +41,7 @@
 
 #include "precomp.hpp"
 
+#include "opencv2/core/internal.hpp"
 #if defined(HAVE_EIGEN) && EIGEN_WORLD_VERSION == 2
 #include <Eigen/Array>
 #endif

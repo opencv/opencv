@@ -156,6 +156,9 @@ CV_INLINE IppiSize ippiSize(int width, int height)
 #endif
 
 #ifdef HAVE_EIGEN
+#  if defined __GNUC__ && defined __APPLE__
+#    pragma GCC diagnostic ignored "-Wshadow"
+#  endif
 #  include <Eigen/Core>
 #  include "opencv2/core/eigen.hpp"
 #endif

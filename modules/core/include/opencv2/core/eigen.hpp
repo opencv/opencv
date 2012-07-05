@@ -73,7 +73,7 @@ void eigen2cv( const Eigen::Matrix<_Tp, _rows, _cols, _options, _maxRows, _maxCo
         _src.copyTo(dst);
     }
 }
-    
+
 template<typename _Tp, int _rows, int _cols, int _options, int _maxRows, int _maxCols>
 void cv2eigen( const Mat& src,
                Eigen::Matrix<_Tp, _rows, _cols, _options, _maxRows, _maxCols>& dst )
@@ -132,14 +132,14 @@ void cv2eigen( const Mat& src,
     }
 }
 
-    
+
 template<typename _Tp>
 void cv2eigen( const Mat& src,
                Eigen::Matrix<_Tp, Eigen::Dynamic, 1>& dst )
 {
     CV_Assert(src.cols == 1);
     dst.resize(src.rows);
-    
+
     if( !(dst.Flags & Eigen::RowMajorBit) )
     {
         Mat _dst(src.cols, src.rows, DataType<_Tp>::type,
@@ -183,8 +183,8 @@ void cv2eigen( const Mat& src,
         src.convertTo(_dst, _dst.type());
         CV_DbgAssert(_dst.data == (uchar*)dst.data());
     }
-}                     
-              
+}
+
 }
 
 #endif
