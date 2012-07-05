@@ -2539,7 +2539,7 @@ CV_EXPORTS_W void fillPoly(InputOutputArray img, InputArrayOfArrays pts,
                            Point offset=Point() );
 
 //! draws one or more polygonal curves
-CV_EXPORTS void polylines(Mat& img, const Point** pts, const int* npts,
+CV_EXPORTS void polylines(Mat& img, const Point* const* pts, const int* npts,
                           int ncontours, bool isClosed, const Scalar& color,
                           int thickness=1, int lineType=8, int shift=0 );
 
