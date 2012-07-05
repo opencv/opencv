@@ -5,11 +5,17 @@ endif()
 
 project(tbb)
 
-# 4.0 update 4 - works fine
-set(tbb_ver "tbb40_20120408oss")
-set(tbb_url "http://threadingbuildingblocks.org/uploads/77/185/4.0%20update%204/tbb40_20120408oss_src.tgz")
-set(tbb_md5 "734b356da7fe0ed308741f3e6018251e")
+# 4.0 update 5 - works fine
+set(tbb_ver "tbb40_20120613oss")
+set(tbb_url "http://threadingbuildingblocks.org/uploads/77/187/4.0%20update%205/tbb40_20120613oss_src.tgz")
+set(tbb_md5 "da01ed74944ec5950cfae3476901a172")
 set(tbb_version_file "version_string.ver")
+
+# 4.0 update 4 - works fine
+#set(tbb_ver "tbb40_20120408oss")
+#set(tbb_url "http://threadingbuildingblocks.org/uploads/77/185/4.0%20update%204/tbb40_20120408oss_src.tgz")
+#set(tbb_md5 "734b356da7fe0ed308741f3e6018251e")
+#set(tbb_version_file "version_string.ver")
 
 # 4.0 update 3 - build broken
 #set(tbb_ver "tbb40_20120201oss")
