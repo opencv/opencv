@@ -269,14 +269,14 @@ public:
 /*!
  ORB implementation.
 */
-class CV_EXPORTS ORB : public Feature2D
+class CV_EXPORTS_W ORB : public Feature2D
 {
 public:
     // the size of the signature in bytes
     enum { kBytes = 32, HARRIS_SCORE=0, FAST_SCORE=1 };
 
-    explicit ORB(int nfeatures = 500, float scaleFactor = 1.2f, int nlevels = 8, int edgeThreshold = 31,
-                 int firstLevel = 0, int WTA_K=2, int scoreType=HARRIS_SCORE, int patchSize=31 );
+    CV_WRAP explicit ORB(int nfeatures = 500, float scaleFactor = 1.2f, int nlevels = 8, int edgeThreshold = 31,
+        int firstLevel = 0, int WTA_K=2, int scoreType=ORB::HARRIS_SCORE, int patchSize=31 );
 
     // returns the descriptor size in bytes
     int descriptorSize() const;
@@ -1376,7 +1376,7 @@ struct CV_EXPORTS DrawMatchesFlags
 };
 
 // Draw keypoints.
-CV_EXPORTS void drawKeypoints( const Mat& image, const vector<KeyPoint>& keypoints, Mat& outImage,
+CV_EXPORTS_W void drawKeypoints( const Mat& image, const vector<KeyPoint>& keypoints, CV_OUT Mat& outImage,
                                const Scalar& color=Scalar::all(-1), int flags=DrawMatchesFlags::DEFAULT );
 
 // Draws matches of keypints from two images on output image.
