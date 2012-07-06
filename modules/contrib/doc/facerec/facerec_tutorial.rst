@@ -13,11 +13,11 @@ OpenCV 2.4 now comes with the very new :ocv:class:`FaceRecognizer` class for fac
 
 The currently available algorithms are:
 
-    * Eigenfaces (see :ocv:func:`createEigenFaceRecognizer`)
-    * Fisherfaces (see :ocv:func:`createFisherFaceRecognizer`)
-    * Local Binary Patterns Histograms (see :ocv:func:`createLBPHFaceRecognizer`)
+* Eigenfaces (see :ocv:func:`createEigenFaceRecognizer`)
+* Fisherfaces (see :ocv:func:`createFisherFaceRecognizer`)
+* Local Binary Patterns Histograms (see :ocv:func:`createLBPHFaceRecognizer`)
 
-You don't need to copy and paste the source code examples from this page, because they are available in the ``samples/cpp`` folder coming with OpenCV. If you have built OpenCV with the samples turned on, chances are good you have them compiled already! Although it might be interesting for very advanced users, I've decided to leave the implementation details out as I am afraid they confuse new users.
+You don't need to copy and paste the source code examples from this page, because they are available in the ``src`` folder coming with this documentation. If you have built OpenCV with the samples turned on, chances are good you have them compiled already! Although it might be interesting for very advanced users, I've decided to leave the implementation details out as I am afraid they confuse new users.
 
 All code in this document is released under the `BSD license <http://www.opensource.org/licenses/bsd-license>`_, so feel free to use it for your projects.
 
@@ -39,16 +39,16 @@ Let's get some data to experiment with first. I don't want to do a toy example h
 
 * `AT&T Facedatabase <http://www.cl.cam.ac.uk/research/dtg/attarchive/facedatabase.html>`_ The AT&T Facedatabase, sometimes also referred to as *ORL Database of Faces*, contains ten different images of each of 40 distinct subjects. For some subjects, the images were taken at different times, varying the lighting, facial expressions (open / closed eyes, smiling / not smiling) and facial details (glasses / no glasses). All the images were taken against a dark homogeneous background with the subjects in an upright, frontal position (with tolerance for some side movement).
 
-* `Yale Facedatabase A <http://cvc.yale.edu/projects/yalefaces/yalefaces.html>`_ The AT&T Facedatabase is good for initial tests, but it's a fairly easy database. The Eigenfaces method already has a 97% recognition rate, so you won't see any improvements with other algorithms. The Yale Facedatabase A is a more appropriate dataset for initial experiments, because the recognition problem is harder. The database consists of 15 people (14 male, 1 female) each with 11 grayscale images sized :math:`320 \times 243` pixel. There are changes in the light conditions (center light, left light, right light), facial expressions (happy, normal, sad, sleepy, surprised, wink) and glasses (glasses, no-glasses).
+* `Yale Facedatabase A <http://vision.ucsd.edu/content/yale-face-database>`_, also known as Yalefaces. The AT&T Facedatabase is good for initial tests, but it's a fairly easy database. The Eigenfaces method already has a 97% recognition rate on it, so you won't see any great improvements with other algorithms. The Yale Facedatabase A (also known as Yalefaces) is a more appropriate dataset for initial experiments, because the recognition problem is harder. The database consists of 15 people (14 male, 1 female) each with 11 grayscale images sized :math:`320 \times 243` pixel. There are changes in the light conditions (center light, left light, right light), facial expressions (happy, normal, sad, sleepy, surprised, wink) and glasses (glasses, no-glasses).
 
-  Bad news is it's not available for public download anymore, because the original server seems to be down. You can find some sites mirroring it (`like the MIT <http://vismod.media.mit.edu/vismod/classes/mas622-00/datasets/>`_), but I can't make guarantees about the integrity. If you need to crop and align the images yourself, read my notes at `bytefish.de/blog/fisherfaces <http://bytefish.de/blog/fisherfaces>`_.
+  The original images are not cropped and aligned. Please look into the :ref:`appendixft` for a Python script, that does the job for you.
 
 * `Extended Yale Facedatabase B <http://vision.ucsd.edu/~leekc/ExtYaleDatabase/ExtYaleB.html>`_ The Extended Yale Facedatabase B contains 2414 images of 38 different people in its cropped version. The focus of this database is set on extracting features that are robust to illumination, the images have almost no variation in emotion/occlusion/... . I personally think, that this dataset is too large for the experiments I perform in this document. You better use the `AT&T Facedatabase <http://www.cl.cam.ac.uk/research/dtg/attarchive/facedatabase.html>`_ for intial testing. A first version of the Yale Facedatabase B was used in [BHK97]_ to see how the Eigenfaces and Fisherfaces method perform under heavy illumination changes. [Lee05]_ used the same setup to take 16128 images of 28 people. The Extended Yale Facedatabase B is the merge of the two databases, which is now known as Extended Yalefacedatabase B.
 
 Preparing the data
 -------------------
 
-Once we have acquired some data, we'll need to read it in our program. In the demo I have decided to read the images from a very simple CSV file. Why? Because it's the simplest platform-independent approach I can think of. However, if you know a simpler solution please ping me about it. Basically all the CSV file needs to contain are lines composed of a ``filename`` followed by a ``;`` followed by the ``label`` (as *integer number*), making up a line like this:
+Once we have acquired some data, we'll need to read it in our program. In the demo applications I have decided to read the images from a very simple CSV file. Why? Because it's the simplest platform-independent approach I can think of. However, if you know a simpler solution please ping me about it. Basically all the CSV file needs to contain are lines composed of a ``filename`` followed by a ``;`` followed by the ``label`` (as *integer number*), making up a line like this:
 
 .. code-block:: none
 
@@ -201,6 +201,11 @@ For the first source code example, I'll go through it with you. I am first givin
 .. literalinclude:: src/facerec_eigenfaces.cpp
    :language: cpp
    :linenos:
+   
+The source code for this demo application is also available in the ``src`` folder coming with this documentation:
+
+* :download:`src/facerec_eigenfaces.cpp <src/facerec_eigenfaces.cpp>`
+
 
 I've used the jet colormap, so you can see how the grayscale values are distributed within the specific Eigenfaces. You can see, that the Eigenfaces do not only encode facial features, but also the illumination in the images (see the left light in Eigenface \#4, right light in Eigenfaces \#5):
 
@@ -318,6 +323,11 @@ Fisherfaces in OpenCV
 .. literalinclude:: src/facerec_fisherfaces.cpp
    :language: cpp
    :linenos:
+
+The source code for this demo application is also available in the ``src`` folder coming with this documentation:
+
+* :download:`src/facerec_fisherfaces.cpp <src/facerec_fisherfaces.cpp>`
+
 
 For this example I am going to use the Yale Facedatabase A, just because the plots are nicer. Each Fisherface has the same length as an original image, thus it can be displayed as an image. The demo shows (or saves) the first, at most 16 Fisherfaces:
 
@@ -439,6 +449,10 @@ Local Binary Patterns Histograms in OpenCV
 .. literalinclude:: src/facerec_lbph.cpp
    :language: cpp
    :linenos:
+
+The source code for this demo application is also available in the ``src`` folder coming with this documentation:
+
+* :download:`src/facerec_lbph.cpp <src/facerec_lbph.cpp>`
 
 Conclusion
 ==========

@@ -9,10 +9,10 @@ Introduction
 
 A lot of people interested in face recognition, also want to know how to perform image classification tasks like:
 
-    * Gender Classification (Gender Detection)
-    * Emotion Classification (Emotion Detection)
-    * Glasses Classification (Glasses Detection)
-    * ...
+* Gender Classification (Gender Detection)
+* Emotion Classification (Emotion Detection)
+* Glasses Classification (Glasses Detection)
+* ...
 
 This is has become very, very easy with the new :ocv:class:`FaceRecognizer` class. In this tutorial I'll show you how to perform gender classification with OpenCV on a set of face images. You'll also learn how to align your images to enhance the recognition results. If you want to do emotion classification instead of gender classification, all you need to do is to update is your training data and the configuration you pass to the demo.
 
@@ -35,7 +35,7 @@ For gender classification of faces, you'll need some images of male and female f
 * Patrick Stewart
 * Tom Cruise
 
-Once you have acquired some images, you'll need to read them. In the demo I have decided to read the images from a very simple CSV file. Why? Because it's the simplest platform-independent approach I can think of. However, if you know a simpler solution please ping me about it. Basically all the CSV file needs to contain are lines composed of a ``filename`` followed by a ``;`` followed by the ``label`` (as *integer number*), making up a line like this:
+Once you have acquired some images, you'll need to read them. In the demo application I have decided to read the images from a very simple CSV file. Why? Because it's the simplest platform-independent approach I can think of. However, if you know a simpler solution please ping me about it. Basically all the CSV file needs to contain are lines composed of a ``filename`` followed by a ``;`` followed by the ``label`` (as *integer number*), making up a line like this:
 
 .. code-block:: none
 
@@ -71,14 +71,16 @@ You really don't want to create the CSV file by hand. And you really don't want 
 Fisherfaces for Gender Classification
 --------------------------------------
 
-If you want to decide wether a person is *male* or *female*, you have to learn the discriminative features of both classes. The Eigenfaces method is based on the Principal Component Analysis, which is an unsupervised statistical model and not suitable for this task. Please see the Face Recognition tutorial for insights into the algorithms. The Fisherfaces instead yields a class-specific linear projection, so it is much better suited for the gender classification task. `http://www.bytefish.de/blog/gender_classification <http://www.bytefish.de/blog/gender_classification>`_  shows the recongition rate of the Fisherfaces method for gender classification.
+If you want to decide wether a person is *male* or *female*, you have to learn the discriminative features of both classes. The Eigenfaces method is based on the Principal Component Analysis, which is an unsupervised statistical model and not suitable for this task. Please see the Face Recognition tutorial for insights into the algorithms. The Fisherfaces instead yields a class-specific linear projection, so it is much better suited for the gender classification task. `http://www.bytefish.de/blog/gender_classification <http://www.bytefish.de/blog/gender_classification>`_  shows the recognition rate of the Fisherfaces method for gender classification.
 
 The Fisherfaces method achieves a 98% recognition rate in a subject-independent cross-validation. A subject-independent cross-validation means *images of the person under test are never used for learning the model*. And could you believe it: you can simply use the facerec_fisherfaces demo, that's inlcuded in OpenCV.
 
 Fisherfaces in OpenCV
 ---------------------
 
-The source code for the demo is available in the ``samples/cpp`` folder of your OpenCV installation. If you have built OpenCV with samples turned on, chances are good you have the executable already.
+The source code for this demo application is also available in the ``src`` folder coming with this documentation:
+
+* :download:`src/facerec_fisherfaces.cpp <../src/facerec_fisherfaces.cpp>`
 
 .. literalinclude:: ../src/facerec_fisherfaces.cpp
    :language: cpp

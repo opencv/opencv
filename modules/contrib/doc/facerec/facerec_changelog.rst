@@ -5,7 +5,7 @@ Release 0.05
 ------------
 
 This library is now included in the official OpenCV distribution (from 2.4 on). 
-The cv::FaceRecognizer is now a cv::Algorithm, which better fits into the overall
+The :ocv:class`FaceRecognizer` is now an :ocv:class:`Algorithm`, which better fits into the overall
 OpenCV API. 
 
 To reduce the confusion on user side and minimize my work, libfacerec and OpenCV 
@@ -22,7 +22,7 @@ The library now has an extensive documentation:
 Release highlights
 ++++++++++++++++++
 
-- There are no single highlights to pick from, this release is a highlight itself.
+* There are no single highlights to pick from, this release is a highlight itself.
 
 Release 0.04
 ------------
@@ -33,8 +33,8 @@ bugfixes, but none influenced the recognition rate.
 Release highlights
 ++++++++++++++++++
 
-- A whole lot of exceptions with meaningful error messages.
-- A tutorial for Windows users: `http://bytefish.de/blog/opencv_visual_studio_and_libfacerec <http://bytefish.de/blog/opencv_visual_studio_and_libfacerec>`_
+* A whole lot of exceptions with meaningful error messages.
+* A tutorial for Windows users: `http://bytefish.de/blog/opencv_visual_studio_and_libfacerec <http://bytefish.de/blog/opencv_visual_studio_and_libfacerec>`_
 
 
 Release 0.03
@@ -48,8 +48,8 @@ documentation for details.
 Release highlights
 ++++++++++++++++++
 
-- New Unit Tests (for LBP Histograms) make the library more robust.
-- Added more documentation.
+* New Unit Tests (for LBP Histograms) make the library more robust.
+* Added more documentation.
 
 
 Release 0.02
@@ -63,8 +63,8 @@ documentation for details.
 Release highlights
 ++++++++++++++++++
 
-- New Unit Tests (for LBP Histograms) make the library more robust.
-- Added a documentation and changelog in reStructuredText.
+* New Unit Tests (for LBP Histograms) make the library more robust.
+* Added a documentation and changelog in reStructuredText.
 
 Release 0.01
 ------------
@@ -74,13 +74,13 @@ Initial release as header-only library.
 Release highlights
 ++++++++++++++++++
 
-- Colormaps for OpenCV to enhance the visualization.
-- Face Recognition algorithms implemented:
+* Colormaps for OpenCV to enhance the visualization.
+* Face Recognition algorithms implemented:
 
-  - Eigenfaces [TP91]_
-  - Fisherfaces [BHK97]_
-  - Local Binary Patterns Histograms [AHP04]_
+  * Eigenfaces [TP91]_
+  * Fisherfaces [BHK97]_
+  * Local Binary Patterns Histograms [AHP04]_
   
-- Added persistence facilities to store the models with a common API.
-- Unit Tests (using `gtest <http://code.google.com/p/googletest/>`_).
-- Providing a CMakeLists.txt to enable easy cross-platform building.
+* Added persistence facilities to store the models with a common API.
+* Unit Tests (using `gtest <http://code.google.com/p/googletest/>`_).
+* Providing a CMakeLists.txt to enable easy cross-platform building.

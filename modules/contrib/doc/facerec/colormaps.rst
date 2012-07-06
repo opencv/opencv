@@ -4,7 +4,7 @@ ColorMaps in OpenCV
 applyColorMap
 ---------------------
 
-Trains a FaceRecognizer with given data and associated labels.
+Applies a GNU Octave/MATLAB equivalent colormap on a given image.
 
 .. ocv:function:: void applyColorMap(InputArray src, OutputArray dst, int colormap)
 
