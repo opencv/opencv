@@ -151,12 +151,9 @@ class RectSelector:
             self.drag_start = (x, y)
         if self.drag_start: 
             if flags & cv2.EVENT_FLAG_LBUTTON:
-                #h, w = self.frame.shape[:2]
                 xo, yo = self.drag_start
                 x0, y0 = np.minimum([xo, yo], [x, y])
                 x1, y1 = np.maximum([xo, yo], [x, y])
-                #x0, y0 = np.maximum(0, np.minimum([xo, yo], [x, y]))
-                #x1, y1 = np.minimum([w, h], np.maximum([xo, yo], [x, y]))
                 self.drag_rect = None
                 if x1-x0 > 0 and y1-y0 > 0:
                     self.drag_rect = (x0, y0, x1, y1)
@@ -168,9 +165,13 @@ class RectSelector:
                     self.callback(rect)
     def draw(self, vis):
         if not self.drag_rect:
-            return
+            return False
         x0, y0, x1, y1 = self.drag_rect
         cv2.rectangle(vis, (x0, y0), (x1, y1), (0, 255, 0), 2)
+        return True
+    @property
+    def dragging(self):
+        return self.drag_rect is not None
 
 
 def grouper(n, iterable, fillvalue=None):
