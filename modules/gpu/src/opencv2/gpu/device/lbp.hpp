@@ -48,6 +48,46 @@
 namespace cv { namespace gpu { namespace device {
 
 namespace lbp{
+
+    #define TAG_MASK ( (1U << ( (sizeof(unsigned int) << 3) - 5U)) - 1U )
+template<typename T>
+__device__ __forceinline__ T __atomicInc(T* address, T val)
+{
+    T count;
+    unsigned int tag = threadIdx.x << ( (sizeof(unsigned int) << 3) - 5U);
+    do
+    {
+        count = *address & TAG_MASK;
+        count = tag | (count + 1);
+        *address = count;
+    } while (*address != count);
+    return (count & TAG_MASK) - 1;
+}
+
+template<typename T>
+__device__ __forceinline__ void __atomicAdd(T* address, T val)
+{
+    T count;
+    unsigned int tag = threadIdx.x << ( (sizeof(unsigned int) << 3) - 5U);
+    do
+    {
+        count = *address & TAG_MASK;
+        count = tag | (count + val);
+        *address = count;
+    } while (*address != count);
+}
+
+template<typename T>
+__device__ __forceinline__ T __atomicMin(T* address, T val)
+{
+    T count = min(*address, val);
+    do
+    {
+        *address = count;
+    } while (*address > count);
+    return count;
+}
+
     struct Stage
     {
         int    first;
@@ -94,11 +134,19 @@ namespace lbp{
 
                 if (p < q)
                 {
+#if defined (__CUDA_ARCH__) && (__CUDA_ARCH__ < 120)
+                    __atomicMin(labels + id, p);
+#else
                     atomicMin(labels + id, p);
+#endif
                 }
                 else if (p > q)
                 {
+#if defined (__CUDA_ARCH__) && (__CUDA_ARCH__ < 120)
+                    __atomicMin(labels + tid, q);
+#else
                     atomicMin(labels + tid, q);
+#endif
                 }
             }
         }

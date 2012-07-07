@@ -86,8 +86,11 @@ namespace cv { namespace gpu { namespace device
             rect.y = roundf(y * scale);
             rect.z = roundf(clWidth);
             rect.w = roundf(clHeight);
-
-            int res = atomicInc(n, 100);
+#if defined (__CUDA_ARCH__) && (__CUDA_ARCH__ < 120)
+            int res = __atomicInc(n, 100U);
+#else
+            int res = atomicInc(n, 100U);
+#endif
             objects(0, res) = rect;
         }
 
@@ -111,14 +114,24 @@ namespace cv { namespace gpu { namespace device
             __syncthreads();
 
             int cls = labels[tid];
+#if defined (__CUDA_ARCH__) && (__CUDA_ARCH__ < 120)
+            __atomicAdd((int*)(rrects + cls * 4 + 0), candidates[tid].x);
+            __atomicAdd((int*)(rrects + cls * 4 + 1), candidates[tid].y);
+            __atomicAdd((int*)(rrects + cls * 4 + 2), candidates[tid].z);
+            __atomicAdd((int*)(rrects + cls * 4 + 3), candidates[tid].w);
+#else
             atomicAdd((int*)(rrects + cls * 4 + 0), candidates[tid].x);
             atomicAdd((int*)(rrects + cls * 4 + 1), candidates[tid].y);
             atomicAdd((int*)(rrects + cls * 4 + 2), candidates[tid].z);
             atomicAdd((int*)(rrects + cls * 4 + 3), candidates[tid].w);
+#endif
             labels[tid] = 0;
             __syncthreads();
-
+#if defined (__CUDA_ARCH__) && (__CUDA_ARCH__ < 120)
+            __atomicInc((unsigned int*)labels + cls, n);
+#else
             atomicInc((unsigned int*)labels + cls, n);
+#endif
             *nclasses = 0;
 
             int active = labels[tid];
@@ -154,7 +167,11 @@ namespace cv { namespace gpu { namespace device
                     }
                     if( j == n)
                     {
+#if defined (__CUDA_ARCH__) && (__CUDA_ARCH__ < 120)
+                        objects[__atomicInc(nclasses, n)] = VecTraits<int4>::make(r1[0], r1[1], r1[2], r1[3]);
+#else
                         objects[atomicInc(nclasses, n)] = VecTraits<int4>::make(r1[0], r1[1], r1[2], r1[3]);
+#endif
                     }
                 }
             }
