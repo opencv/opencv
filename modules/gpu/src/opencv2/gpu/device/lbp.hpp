@@ -163,52 +163,66 @@ __device__ __forceinline__ T __atomicMin(T* address, T val)
         __device__ __forceinline__ int operator() (unsigned int y, unsigned int x, uchar4 feature, const DevMem2Di integral) const
         {
             int x_off = 2 * feature.z;
-            int y_off = 2 * feature.w;
-            feature.z += feature.x;
-            feature.w += feature.y;
+            int anchors[9];// = {0,0,0, 0,0,0, 0,0,0};
 
-            // load feature key points
-            int anchors[16];
-            /*
-            P0-----P1-----P2-----P3
-            |      |      |       |
-            P4-----P5-----P6-----P7
-            |      |      |       |
-            P8-----P9-----P10----P11
-            |      |      |       |
-            P12----P13----P14----15
-            */
-            anchors[0]  = integral(y + feature.y, x + feature.x);
-            anchors[1]  = integral(y + feature.y, x + feature.z);
-            anchors[2]  = integral(y + feature.y, x + feature.x + x_off);
-            anchors[3]  = integral(y + feature.y, x + feature.z + x_off);
+            x +=feature.x;
+            y +=feature.y;
+            anchors[0]  = integral(y, x);
+            anchors[1]  = integral(y, x + feature.z);
+            anchors[0] -= anchors[1];
+            anchors[2]  = integral(y, x + x_off);
+            anchors[1] -= anchors[2];
+            anchors[2] -= integral(y, x + feature.z + x_off);
+            y+=feature.w;
 
-            anchors[4]  = integral(y + feature.w, x + feature.x);
-            anchors[5]  = integral(y + feature.w, x + feature.z);
-            anchors[6]  = integral(y + feature.w, x + feature.x + x_off);
-            anchors[7]  = integral(y + feature.w, x + feature.z + x_off);
+            anchors[3]  = integral(y, x);
+            anchors[4]  = integral(y, x + feature.z);
+            anchors[3] -= anchors[4];
+            anchors[5]  = integral(y, x + x_off);
+            anchors[4] -= anchors[5];
+            anchors[5] -= integral(y, x + feature.z + x_off);
 
-            anchors[8]  = integral(y + y_off + feature.y, x + feature.x);
-            anchors[9]  = integral(y + y_off + feature.y, x + feature.z);
-            anchors[10] = integral(y + y_off + feature.y, x + x_off + feature.x);
-            anchors[11] = integral(y + y_off + feature.y, x + x_off + feature.z);
+            anchors[0] -= anchors[3];
+            anchors[1] -= anchors[4];
+            anchors[2] -= anchors[5];
+            // 0 - 2 contains s0 - s2
 
-            anchors[12] = integral(y + y_off + feature.w, x + feature.x);
-            anchors[13] = integral(y + y_off + feature.w, x + feature.z);
-            anchors[14] = integral(y + y_off + feature.w, x + x_off + feature.x);
-            anchors[15] = integral(y + y_off + feature.w, x + x_off + feature.z);
+            y+=feature.w;
+            anchors[6]  = integral(y, x);
+            anchors[7]  = integral(y, x + feature.z);
+            anchors[6] -= anchors[7];
+            anchors[8]  = integral(y, x + x_off);
+            anchors[7] -= anchors[8];
+            anchors[8] -= integral(y, x + x_off + feature.z);
 
-            // calculate responce
-            int sum = anchors[5] - anchors[6] - anchors[9] + anchors[10];
+            anchors[3] -= anchors[6];
+            anchors[4] -= anchors[7];
+            anchors[5] -= anchors[8];
+            // 3 - 5 contains s3 - s5
 
-            int response =   (( (anchors[ 0] - anchors[ 1] - anchors[ 4] + anchors[ 5]) >= sum )? 128 : 0)
-                            |(( (anchors[ 1] - anchors[ 2] - anchors[ 5] + anchors[ 6]) >= sum )? 64  : 0)
-                            |(( (anchors[ 2] - anchors[ 3] - anchors[ 6] + anchors[ 7]) >= sum )? 32  : 0)
-                            |(( (anchors[ 6] - anchors[ 7] - anchors[10] + anchors[11]) >= sum )? 16  : 0)
-                            |(( (anchors[10] - anchors[11] - anchors[14] + anchors[15]) >= sum )? 8   : 0)
-                            |(( (anchors[ 9] - anchors[10] - anchors[13] + anchors[14]) >= sum )? 4   : 0)
-                            |(( (anchors[ 8] - anchors[ 9] - anchors[12] + anchors[13]) >= sum )? 2   : 0)
-                            |(( (anchors[ 4] - anchors[ 5] - anchors[ 8] + anchors[ 9]) >= sum )? 1   : 0);
+            int response =   ((1 - ((unsigned int)(anchors[0] - anchors[4]) >> 31)) << 7);
+            response |= ((1 - ((unsigned int)(anchors[1] - anchors[4]) >> 31)) << 6);
+            response |= ((1 - ((unsigned int)(anchors[2] - anchors[4]) >> 31)) << 5);
+            response |= ((1 - ((unsigned int)(anchors[5] - anchors[4]) >> 31)) << 4);
+            response |= ((1 - ((unsigned int)(anchors[3] - anchors[4]) >> 31)) << 0);
+
+            y+=feature.w;
+            anchors[0]  = integral(y, x);
+            anchors[1]  = integral(y, x + feature.z);
+            anchors[0] -= anchors[1];
+            anchors[2]  = integral(y, x + x_off);
+            anchors[1] -= anchors[2];
+            anchors[2] -= integral(y, x + x_off + feature.z);
+
+            anchors[6] -= anchors[0];
+            anchors[7] -= anchors[1];
+            anchors[8] -= anchors[2];
+            // 0 -2 contains s6 - s8
+
+            response |= ((1 - ((unsigned int)(anchors[6] - anchors[4]) >> 31)) << 1);
+            response |= ((1 - ((unsigned int)(anchors[7] - anchors[4]) >> 31)) << 2);
+            response |= ((1 - ((unsigned int)(anchors[8] - anchors[4]) >> 31)) << 3);
+
             return response;
         }
     };
