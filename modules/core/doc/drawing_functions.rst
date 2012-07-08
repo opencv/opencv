@@ -444,7 +444,9 @@ polylines
 -------------
 Draws several polygonal curves.
 
-.. ocv:function:: void polylines(Mat& img, const Point** pts, const int* npts, int ncontours, bool isClosed, const Scalar& color, int thickness=1, int lineType=8, int shift=0 )
+.. ocv:function:: void polylines( Mat& img, const Point* const* pts, const int* npts, int ncontours, bool isClosed, const Scalar& color, int thickness=1, int lineType=8, int shift=0 )
+
+.. ocv:function:: void polylines( InputOutputArray img, InputArrayOfArrays pts, bool isClosed, const Scalar& color, int thickness=1, int lineType=8, int shift=0 )
 
 .. ocv:pyfunction:: cv2.polylines(img, pts, isClosed, color[, thickness[, lineType[, shift]]]) -> None
 
