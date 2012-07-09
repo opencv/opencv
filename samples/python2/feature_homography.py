@@ -85,6 +85,9 @@ class App:
         vis = np.zeros((h, w*2, 3), np.uint8)
         vis[:h,:w] = self.frame
         self.rect_sel.draw(vis)
+        for kp in self.frame_points:
+            x, y = kp.pt
+            cv2.circle(vis, (int(x), int(y)), 2, (0, 255, 255))
         
         if self.ref_frame is not None:
             vis[:h,w:] = self.ref_frame
