@@ -101,7 +101,7 @@ const_private_list = (
     "CV_RETR_.+",
     "CV_CHAIN_APPROX_.+",
     "OPPONENTEXTRACTOR",
-    "GRIDRETECTOR",
+    "GRIDDETECTOR",
     "PYRAMIDDETECTOR",
     "DYNAMICDETECTOR",
 )

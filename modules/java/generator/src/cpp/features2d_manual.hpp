@@ -33,18 +33,18 @@ public:
         DENSE         = 10,
 
 
-        GRIDRETECTOR = 1000,
+        GRIDDETECTOR = 1000,
 
-        GRID_FAST          = GRIDRETECTOR + FAST,
-        GRID_STAR          = GRIDRETECTOR + STAR,
-        GRID_SIFT          = GRIDRETECTOR + SIFT,
-        GRID_SURF          = GRIDRETECTOR + SURF,
-        GRID_ORB           = GRIDRETECTOR + ORB,
-        GRID_MSER          = GRIDRETECTOR + MSER,
-        GRID_GFTT          = GRIDRETECTOR + GFTT,
-        GRID_HARRIS        = GRIDRETECTOR + HARRIS,
-        GRID_SIMPLEBLOB    = GRIDRETECTOR + SIMPLEBLOB,
-        GRID_DENSE         = GRIDRETECTOR + DENSE,
+        GRID_FAST          = GRIDDETECTOR + FAST,
+        GRID_STAR          = GRIDDETECTOR + STAR,
+        GRID_SIFT          = GRIDDETECTOR + SIFT,
+        GRID_SURF          = GRIDDETECTOR + SURF,
+        GRID_ORB           = GRIDDETECTOR + ORB,
+        GRID_MSER          = GRIDDETECTOR + MSER,
+        GRID_GFTT          = GRIDDETECTOR + GFTT,
+        GRID_HARRIS        = GRIDDETECTOR + HARRIS,
+        GRID_SIMPLEBLOB    = GRIDDETECTOR + SIMPLEBLOB,
+        GRID_DENSE         = GRIDDETECTOR + DENSE,
 
 
         PYRAMIDDETECTOR = 2000,
@@ -89,10 +89,10 @@ public:
             name = "Pyramid";
             detectorType -= PYRAMIDDETECTOR;
         }
-        if (detectorType > GRIDRETECTOR)
+        if (detectorType > GRIDDETECTOR)
         {
             name = "Grid";
-            detectorType -= GRIDRETECTOR;
+            detectorType -= GRIDDETECTOR;
         }
 
         switch(detectorType)
