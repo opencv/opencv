@@ -457,7 +457,7 @@ struct KeypointGreater
         if(kp1.octave < kp2.octave) return false;
         if(kp1.pt.y < kp2.pt.y) return false;
         if(kp1.pt.y > kp2.pt.y) return true;
-        return kp1.pt.x < kp2.pt.y;
+        return kp1.pt.x < kp2.pt.x;
     }
 };
 
