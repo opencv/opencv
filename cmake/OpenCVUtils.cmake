@@ -468,32 +468,36 @@ macro(ocv_parse_header FILENAME FILE_VAR)
 endmacro()
 
 # read single version define from the header file
-macro(ocv_parse_header2 LIBNAME HDR_PATH VARNAME SCOPE)
+macro(ocv_parse_header2 LIBNAME HDR_PATH VARNAME)
+  ocv_clear_vars(${LIBNAME}_VERSION_MAJOR
+                 ${LIBNAME}_VERSION_MAJOR
+                 ${LIBNAME}_VERSION_MINOR
+                 ${LIBNAME}_VERSION_PATCH
+                 ${LIBNAME}_VERSION_TWEAK
+                 ${LIBNAME}_VERSION_STRING)
   set(${LIBNAME}_H "")
   if(EXISTS "${HDR_PATH}")
     file(STRINGS "${HDR_PATH}" ${LIBNAME}_H REGEX "^#define[ \t]+${VARNAME}[ \t]+\"[^\"]*\".*$" LIMIT_COUNT 1)
   endif()
+
   if(${LIBNAME}_H)
     string(REGEX REPLACE "^.*[ \t]${VARNAME}[ \t]+\"([0-9]+).*$" "\\1" ${LIBNAME}_VERSION_MAJOR "${${LIBNAME}_H}")
     string(REGEX REPLACE "^.*[ \t]${VARNAME}[ \t]+\"[0-9]+\\.([0-9]+).*$" "\\1" ${LIBNAME}_VERSION_MINOR  "${${LIBNAME}_H}")
     string(REGEX REPLACE "^.*[ \t]${VARNAME}[ \t]+\"[0-9]+\\.[0-9]+\\.([0-9]+).*$" "\\1" ${LIBNAME}_VERSION_PATCH "${${LIBNAME}_H}")
-    set(${LIBNAME}_VERSION_MAJOR ${${LIBNAME}_VERSION_MAJOR} ${SCOPE})
-    set(${LIBNAME}_VERSION_MINOR ${${LIBNAME}_VERSION_MINOR} ${SCOPE})
-    set(${LIBNAME}_VERSION_PATCH ${${LIBNAME}_VERSION_PATCH} ${SCOPE})
-    set(${LIBNAME}_VERSION_STRING "${${LIBNAME}_VERSION_MAJOR}.${${LIBNAME}_VERSION_MINOR}.${${LIBNAME}_VERSION_PATCH}" ${SCOPE})
+    set(${LIBNAME}_VERSION_MAJOR ${${LIBNAME}_VERSION_MAJOR} ${ARGN})
+    set(${LIBNAME}_VERSION_MINOR ${${LIBNAME}_VERSION_MINOR} ${ARGN})
+    set(${LIBNAME}_VERSION_PATCH ${${LIBNAME}_VERSION_PATCH} ${ARGN})
+    set(${LIBNAME}_VERSION_STRING "${${LIBNAME}_VERSION_MAJOR}.${${LIBNAME}_VERSION_MINOR}.${${LIBNAME}_VERSION_PATCH}")
 
     # append a TWEAK version if it exists:
     set(${LIBNAME}_VERSION_TWEAK "")
     if("${${LIBNAME}_H}" MATCHES "^.*[ \t]${VARNAME}[ \t]+\"[0-9]+\\.[0-9]+\\.[0-9]+\\.([0-9]+).*$")
-      set(${LIBNAME}_VERSION_TWEAK "${CMAKE_MATCH_1}" ${SCOPE})
-      set(${LIBNAME}_VERSION_STRING "${${LIBNAME}_VERSION_STRING}.${${LIBNAME}_VERSION_TWEAK}" ${SCOPE})
+      set(${LIBNAME}_VERSION_TWEAK "${CMAKE_MATCH_1}" ${ARGN})
     endif()
-  else()
-    ocv_clear_vars(${LIBNAME}_VERSION_MAJOR
-                   ${LIBNAME}_VERSION_MAJOR
-                   ${LIBNAME}_VERSION_MINOR
-                   ${LIBNAME}_VERSION_PATCH
-                   ${LIBNAME}_VERSION_TWEAK
-                   ${LIBNAME}_VERSION_STRING)
+    if(${LIBNAME}_VERSION_TWEAK)
+      set(${LIBNAME}_VERSION_STRING "${${LIBNAME}_VERSION_STRING}.${${LIBNAME}_VERSION_TWEAK}" ${ARGN})
+    else()
+      set(${LIBNAME}_VERSION_STRING "${${LIBNAME}_VERSION_STRING}" ${ARGN})
+    endif()
   endif()
 endmacro()
