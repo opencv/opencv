@@ -706,10 +706,13 @@ void cv::DetectionBasedTracker::updateTrackedObjects(const vector<Rect>& detecte
     }
 }
 
-void cv::DetectionBasedTracker::addObject(const Rect& location)
+int cv::DetectionBasedTracker::addObject(const Rect& location)
 {
     LOGD("DetectionBasedTracker::addObject: new object {%d, %d %dx%d}",location.x, location.y, location.width, location.height);
-    trackedObjects.push_back(location);
+    trackedObjects.push_back(TrackedObject(location));
+    int newId = trackedObjects.back().id;
+    LOGD("DetectionBasedTracker::addObject: newId = %d", newId);
+    return newId;
 }
 
 Rect cv::DetectionBasedTracker::calcTrackedObjectPositionToShow(int i) const
@@ -847,7 +850,7 @@ bool cv::DetectionBasedTracker::setParameters(const Parameters& params)
     return true;
 }
 
-const cv::DetectionBasedTracker::Parameters& DetectionBasedTracker::getParameters()
+const cv::DetectionBasedTracker::Parameters& DetectionBasedTracker::getParameters() const
 {
     return parameters;
 }
