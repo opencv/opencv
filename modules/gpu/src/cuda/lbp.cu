@@ -69,7 +69,7 @@ namespace cv { namespace gpu { namespace device
                     ClNode node = nodes[current_node];
 
                     uchar4 feature = features[node.featureIdx];
-                    int c = evaluator( (y + feature.y) * istep + x + feature.x , feature, integral, istep);
+                    int c = evaluator( (y + feature.y) * istep + x + feature.x , feature.w * istep, feature.z, integral, istep);
                     const int* subsetIdx = subsets + (current_node * subsetSize);
 
                     int idx =  (subsetIdx[c >> 5] & ( 1 << (c & 31))) ? current_leave : current_leave + 1;

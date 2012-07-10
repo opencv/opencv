@@ -160,38 +160,38 @@ __device__ __forceinline__ T __atomicMin(T* address, T val)
         __device__ __forceinline__ LBP() {}
 
         //feature as uchar x, y - left top, z,w - right bottom
-        __device__ __forceinline__ int operator() (unsigned int y, uchar4 feature, const int* integral, int step) const
+        __device__ __forceinline__ int operator() (unsigned int y, int featurew, int featurez, const int* integral, int step) const
         {
-            int x_off = 2 * feature.z;
+            int x_off = 2 * featurez;
             int anchors[9];
 
             anchors[0]  = integral[y];
-            anchors[1]  = integral[y + feature.z];
+            anchors[1]  = integral[y + featurez];
             anchors[0] -= anchors[1];
             anchors[2]  = integral[y + x_off];
             anchors[1] -= anchors[2];
-            anchors[2] -= integral[y + feature.z + x_off];
-            y+=feature.w * step;
+            anchors[2] -= integral[y + featurez + x_off];
+            y += featurew;
 
             anchors[3]  = integral[y];
-            anchors[4]  = integral[y + feature.z];
+            anchors[4]  = integral[y + featurez];
             anchors[3] -= anchors[4];
             anchors[5]  = integral[y + x_off];
             anchors[4] -= anchors[5];
-            anchors[5] -= integral[y + feature.z + x_off];
+            anchors[5] -= integral[y + featurez + x_off];
 
             anchors[0] -= anchors[3];
             anchors[1] -= anchors[4];
             anchors[2] -= anchors[5];
             // 0 - 2 contains s0 - s2
 
-            y+=feature.w * step;
+            y += featurew;
             anchors[6]  = integral[y];
-            anchors[7]  = integral[y + feature.z];
+            anchors[7]  = integral[y + featurez];
             anchors[6] -= anchors[7];
             anchors[8]  = integral[y + x_off];
             anchors[7] -= anchors[8];
-            anchors[8] -= integral[y + x_off + feature.z];
+            anchors[8] -= integral[y + x_off + featurez];
 
             anchors[3] -= anchors[6];
             anchors[4] -= anchors[7];
@@ -210,13 +210,13 @@ __device__ __forceinline__ T __atomicMin(T* address, T val)
             response |= (~(anchors[5] >> 31)) & 16;
             response |= (~(anchors[3] >> 31)) & 1;
 
-            y+=feature.w * step;
+            y += featurew;
             anchors[0]  = integral[y];
-            anchors[1]  = integral[y + feature.z];
+            anchors[1]  = integral[y + featurez];
             anchors[0] -= anchors[1];
             anchors[2]  = integral[y + x_off];
             anchors[1] -= anchors[2];
-            anchors[2] -= integral[y + x_off + feature.z];
+            anchors[2] -= integral[y + x_off + featurez];
 
             anchors[6] -= anchors[0];
             anchors[7] -= anchors[1];
