@@ -126,3 +126,5 @@ Detects keypoints and computes SURF descriptors for them.
     :param params: SURF algorithm parameters in OpenCV 1.x API.
 
 The function is parallelized with the TBB library.
+
+If you are using the C version, make sure you call ``cv::initModule_nonfree()`` from ``nonfree/nonfree.hpp``.
