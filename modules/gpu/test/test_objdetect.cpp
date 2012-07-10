@@ -343,15 +343,16 @@ TEST_P(LBP_classify, Accuracy)
 
     cv::gpu::CascadeClassifier_GPU_LBP gpuClassifier;
     ASSERT_TRUE(gpuClassifier.load(classifierXmlPath));
-    cv::gpu::GpuMat gpu_rects, buffer;
+    cv::gpu::GpuMat gpu_rects;
     cv::gpu::GpuMat tested(grey);
-    int count = gpuClassifier.detectMultiScale(tested, buffer, gpu_rects);
+    int count = gpuClassifier.detectMultiScale(tested, gpu_rects);
 
     cv::Mat gpu_f(gpu_rects);
     int* gpu_faces = (int*)gpu_f.ptr();
     for (int i = 0; i < count; i++)
     {
         cv::Rect r(gpu_faces[i * 4],gpu_faces[i * 4 + 1],gpu_faces[i * 4 + 2],gpu_faces[i * 4 + 3]);
+        std::cout << gpu_faces[i * 4]<< " " << gpu_faces[i * 4 + 1] << " " << gpu_faces[i * 4 + 2] << " " << gpu_faces[i * 4 + 3] << std::endl;
         cv::rectangle(markedImage, r , cv::Scalar(0, 0, 255, 255));
     }
 }

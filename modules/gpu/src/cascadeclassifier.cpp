@@ -70,7 +70,7 @@ Size cv::gpu::CascadeClassifier_GPU_LBP::getClassifierSize() const              
 void cv::gpu::CascadeClassifier_GPU_LBP::preallocateIntegralBuffer(cv::Size /*desired*/) { throw_nogpu();}
 void cv::gpu::CascadeClassifier_GPU_LBP::initializeBuffers(cv::Size /*frame*/)       { throw_nogpu();}
 
-int cv::gpu::CascadeClassifier_GPU_LBP::detectMultiScale(const cv::gpu::GpuMat& /*image*/, cv::gpu::GpuMat& /*scaledImageBuffer*/, cv::gpu::GpuMat& /*objectsBuf*/,
+int cv::gpu::CascadeClassifier_GPU_LBP::detectMultiScale(const cv::gpu::GpuMat& /*image*/, cv::gpu::GpuMat& /*objectsBuf*/,
 double /*scaleFactor*/, int /*minNeighbors*/, cv::Size /*maxObjectSize*/){ throw_nogpu(); return 0;}
 
 #else
@@ -299,28 +299,29 @@ namespace cv { namespace gpu { namespace device
 {
     namespace lbp
     {
-        void classifyStump(const DevMem2Db mstages,
-                      const int nstages,
-                      const DevMem2Di mnodes,
-                      const DevMem2Df mleaves,
-                      const DevMem2Di msubsets,
-                      const DevMem2Db mfeatures,
-                      const DevMem2Di integral,
-                      const int workWidth,
-                      const int workHeight,
-                      const int clWidth,
-                      const int clHeight,
-                      float scale,
-                      int step,
-                      int subsetSize,
-                      DevMem2D_<int4> objects,
-                      unsigned int* classified);
+        void classifyStump(const DevMem2Db& mstages,
+                          const int nstages,
+                          const DevMem2Di& mnodes,
+                          const DevMem2Df& mleaves,
+                          const DevMem2Di& msubsets,
+                          const DevMem2Db& mfeatures,
+                          const int workWidth,
+                          const int workHeight,
+                          const int clWidth,
+                          const int clHeight,
+                          float scale,
+                          int step,
+                          int subsetSize,
+                          DevMem2D_<int4> objects,
+                          unsigned int* classified);
 
-        int connectedConmonents(DevMem2D_<int4> candidates, DevMem2D_<int4> objects,int groupThreshold, float grouping_eps, unsigned int* nclasses);
+        int connectedConmonents(DevMem2D_<int4>  candidates, DevMem2D_<int4> objects,int groupThreshold, float grouping_eps, unsigned int* nclasses);
+        void bindIntegral(DevMem2Di integral);
+        void unbindIntegral();
     }
 }}}
 
-int cv::gpu::CascadeClassifier_GPU_LBP::detectMultiScale(const GpuMat& image, GpuMat& scaledImageBuffer, GpuMat& objects,
+int cv::gpu::CascadeClassifier_GPU_LBP::detectMultiScale(const GpuMat& image, GpuMat& objects,
                                                         double scaleFactor, int groupThreshold, cv::Size maxObjectSize /*, Size minSize=Size()*/)
 {
     CV_Assert( scaleFactor > 1 && image.depth() == CV_8U );
@@ -332,10 +333,12 @@ int cv::gpu::CascadeClassifier_GPU_LBP::detectMultiScale(const GpuMat& image, Gp
     if( !objects.empty() && objects.depth() == CV_32S)
         objects.reshape(4, 1);
     else
-        objects.create(1 , defaultObjSearchNum, CV_32SC4);
-
-    GpuMat candidates(1 , defaultObjSearchNum, CV_32SC4);
-    // GpuMat candidates(objects);
+        objects.create(1 , image.cols >> 4, CV_32SC4);
+    GpuMat candidates(1 , image.cols >> 1, CV_32SC4);
+    // GpuMat candidates(1 , defaultObjSearchNum, CV_32SC4);
+    // used for debug
+    // candidates.setTo(cv::Scalar::all(0));
+    // objects.setTo(cv::Scalar::all(0));
     if (maxObjectSize == cv::Size())
         maxObjectSize = image.size();
 
@@ -347,9 +350,11 @@ int cv::gpu::CascadeClassifier_GPU_LBP::detectMultiScale(const GpuMat& image, Gp
     cudaMalloc(&dclassified, sizeof(int));
     cudaMemcpy(dclassified, classified, sizeof(int), cudaMemcpyHostToDevice);
     int step;
+    cv::gpu::device::lbp::bindIntegral(integral);
 
     for( double factor = 1; ; factor *= scaleFactor )
     {
+        // if (factor > 2.0) break;
         cv::Size windowSize(cvRound(NxM.width * factor), cvRound(NxM.height * factor));
         cv::Size scaledImageSize(cvRound( image.cols / factor ), cvRound( image.rows / factor ));
         cv::Size processingRectSize( scaledImageSize.width - NxM.width + 1, scaledImageSize.height - NxM.height + 1 );
@@ -365,7 +370,7 @@ int cv::gpu::CascadeClassifier_GPU_LBP::detectMultiScale(const GpuMat& image, Gp
 
         GpuMat scaledImg(resuzeBuffer, cv::Rect(0, 0, scaledImageSize.width, scaledImageSize.height));
         GpuMat scaledIntegral(integral, cv::Rect(0, 0, scaledImageSize.width + 1, scaledImageSize.height + 1));
-        GpuMat currBuff = integralBuffer;//(integralBuffer, cv::Rect(0, 0, integralBuffer.width, integralBuffer.height));
+        GpuMat currBuff = integralBuffer;
 
         cv::gpu::resize(image, scaledImg, scaledImageSize, 0, 0, CV_INTER_LINEAR);
         cv::gpu::integralBuffered(scaledImg, scaledIntegral, currBuff);
@@ -373,8 +378,10 @@ int cv::gpu::CascadeClassifier_GPU_LBP::detectMultiScale(const GpuMat& image, Gp
         step = (factor <= 2.) + 1;
 
         cv::gpu::device::lbp::classifyStump(stage_mat, stage_mat.cols / sizeof(Stage), nodes_mat, leaves_mat, subsets_mat, features_mat,
-        scaledIntegral, processingRectSize.width, processingRectSize.height, windowSize.width, windowSize.height, factor, step, subsetSize, candidates, dclassified);
+        processingRectSize.width, processingRectSize.height, windowSize.width, windowSize.height, factor, step, subsetSize, candidates, dclassified);
     }
+
+    cv::gpu::device::lbp::unbindIntegral();
     if (groupThreshold <= 0  || objects.empty())
         return 0;
     cv::gpu::device::lbp::connectedConmonents(candidates, objects, groupThreshold, grouping_eps, dclassified);

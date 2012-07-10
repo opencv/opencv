@@ -69,16 +69,14 @@ GPU_PERF_TEST_1(LBPClassifier, cv::gpu::DeviceInfo)
 
 
     cv::gpu::GpuMat img(img_host);
-        cv::gpu::GpuMat gpu_rects, buffer;
+        cv::gpu::GpuMat gpu_rects;
     cv::gpu::CascadeClassifier_GPU_LBP cascade(img.size());
     ASSERT_TRUE(cascade.load(perf::TestBase::getDataPath("gpu/lbpcascade/lbpcascade_frontalface.xml")));
 
-    // cascade.detectMultiScale(img, objects_buffer);
-    cascade.detectMultiScale(img, buffer, gpu_rects);
-
+    cascade.detectMultiScale(img, gpu_rects);
     TEST_CYCLE()
     {
-        cascade.detectMultiScale(img, buffer, gpu_rects);
+        cascade.detectMultiScale(img, gpu_rects);
     }
 }
 
