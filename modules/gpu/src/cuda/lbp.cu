@@ -48,8 +48,9 @@ namespace cv { namespace gpu { namespace device
 {
     namespace lbp
     {
-        __global__ void lbp_classify_stump(Stage* stages, int nstages, ClNode* nodes, const float* leaves, const int* subsets, const uchar4* features,
-            const DevMem2Di integral, int workWidth, int workHeight, int clWidth, int clHeight, float scale, int step, int subsetSize, DevMem2D_<int4> objects, unsigned int* n)
+        __global__ void lbp_classify_stump(const Stage* stages, const int nstages, const ClNode* nodes, const float* leaves, const int* subsets, const uchar4* features,
+            const int* integral, const int istep, const int workWidth,const int workHeight, const int clWidth, const int clHeight, const float scale, const int step,
+            const int subsetSize, DevMem2D_<int4> objects, unsigned int* n)
         {
             int x = threadIdx.x * step;
             int y = blockIdx.x * step;
@@ -68,7 +69,7 @@ namespace cv { namespace gpu { namespace device
                     ClNode node = nodes[current_node];
 
                     uchar4 feature = features[node.featureIdx];
-                    int c = evaluator(y, x, feature, integral);
+                    int c = evaluator( (y + feature.y) * istep + x + feature.x , feature, integral, istep);
                     const int* subsetIdx = subsets + (current_node * subsetSize);
 
                     int idx =  (subsetIdx[c >> 5] & ( 1 << (c & 31))) ? current_leave : current_leave + 1;
@@ -189,8 +190,10 @@ namespace cv { namespace gpu { namespace device
             const float* leaves = mleaves.ptr();
             const int* subsets = msubsets.ptr();
             const uchar4* features = (uchar4*)(mfeatures.ptr());
+            const int* integ = integral.ptr();
+            int istep = integral.step / sizeof(int);
 
-            lbp_classify_stump<<<blocks, threads>>>(stages, nstages, nodes, leaves, subsets, features, integral,
+            lbp_classify_stump<<<blocks, threads>>>(stages, nstages, nodes, leaves, subsets, features, integ, istep,
                 workWidth, workHeight, clWidth, clHeight, scale, step, subsetSize, objects, classified);
         }
 

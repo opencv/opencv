@@ -160,68 +160,76 @@ __device__ __forceinline__ T __atomicMin(T* address, T val)
         __device__ __forceinline__ LBP() {}
 
         //feature as uchar x, y - left top, z,w - right bottom
-        __device__ __forceinline__ int operator() (unsigned int y, unsigned int x, uchar4 feature, const DevMem2Di integral) const
+        __device__ __forceinline__ int operator() (unsigned int y, uchar4 feature, const int* integral, int step) const
         {
             int x_off = 2 * feature.z;
-            int anchors[9];// = {0,0,0, 0,0,0, 0,0,0};
+            int anchors[9];
 
-            x +=feature.x;
-            y +=feature.y;
-            anchors[0]  = integral(y, x);
-            anchors[1]  = integral(y, x + feature.z);
+            anchors[0]  = integral[y];
+            anchors[1]  = integral[y + feature.z];
             anchors[0] -= anchors[1];
-            anchors[2]  = integral(y, x + x_off);
+            anchors[2]  = integral[y + x_off];
             anchors[1] -= anchors[2];
-            anchors[2] -= integral(y, x + feature.z + x_off);
-            y+=feature.w;
+            anchors[2] -= integral[y + feature.z + x_off];
+            y+=feature.w * step;
 
-            anchors[3]  = integral(y, x);
-            anchors[4]  = integral(y, x + feature.z);
+            anchors[3]  = integral[y];
+            anchors[4]  = integral[y + feature.z];
             anchors[3] -= anchors[4];
-            anchors[5]  = integral(y, x + x_off);
+            anchors[5]  = integral[y + x_off];
             anchors[4] -= anchors[5];
-            anchors[5] -= integral(y, x + feature.z + x_off);
+            anchors[5] -= integral[y + feature.z + x_off];
 
             anchors[0] -= anchors[3];
             anchors[1] -= anchors[4];
             anchors[2] -= anchors[5];
             // 0 - 2 contains s0 - s2
 
-            y+=feature.w;
-            anchors[6]  = integral(y, x);
-            anchors[7]  = integral(y, x + feature.z);
+            y+=feature.w * step;
+            anchors[6]  = integral[y];
+            anchors[7]  = integral[y + feature.z];
             anchors[6] -= anchors[7];
-            anchors[8]  = integral(y, x + x_off);
+            anchors[8]  = integral[y + x_off];
             anchors[7] -= anchors[8];
-            anchors[8] -= integral(y, x + x_off + feature.z);
+            anchors[8] -= integral[y + x_off + feature.z];
 
             anchors[3] -= anchors[6];
             anchors[4] -= anchors[7];
             anchors[5] -= anchors[8];
             // 3 - 5 contains s3 - s5
 
-            int response =   ((1 - ((unsigned int)(anchors[0] - anchors[4]) >> 31)) << 7);
-            response |= ((1 - ((unsigned int)(anchors[1] - anchors[4]) >> 31)) << 6);
-            response |= ((1 - ((unsigned int)(anchors[2] - anchors[4]) >> 31)) << 5);
-            response |= ((1 - ((unsigned int)(anchors[5] - anchors[4]) >> 31)) << 4);
-            response |= ((1 - ((unsigned int)(anchors[3] - anchors[4]) >> 31)) << 0);
+            anchors[0] -= anchors[4];
+            anchors[1] -= anchors[4];
+            anchors[2] -= anchors[4];
+            anchors[3] -= anchors[4];
+            anchors[5] -= anchors[4];
 
-            y+=feature.w;
-            anchors[0]  = integral(y, x);
-            anchors[1]  = integral(y, x + feature.z);
+            int response = (~(anchors[0] >> 31)) & 128;
+            response |= (~(anchors[1] >> 31)) & 64;;
+            response |= (~(anchors[2] >> 31)) & 32;
+            response |= (~(anchors[5] >> 31)) & 16;
+            response |= (~(anchors[3] >> 31)) & 1;
+
+            y+=feature.w * step;
+            anchors[0]  = integral[y];
+            anchors[1]  = integral[y + feature.z];
             anchors[0] -= anchors[1];
-            anchors[2]  = integral(y, x + x_off);
+            anchors[2]  = integral[y + x_off];
             anchors[1] -= anchors[2];
-            anchors[2] -= integral(y, x + x_off + feature.z);
+            anchors[2] -= integral[y + x_off + feature.z];
 
             anchors[6] -= anchors[0];
             anchors[7] -= anchors[1];
             anchors[8] -= anchors[2];
             // 0 -2 contains s6 - s8
 
-            response |= ((1 - ((unsigned int)(anchors[6] - anchors[4]) >> 31)) << 1);
-            response |= ((1 - ((unsigned int)(anchors[7] - anchors[4]) >> 31)) << 2);
-            response |= ((1 - ((unsigned int)(anchors[8] - anchors[4]) >> 31)) << 3);
+            anchors[6] -= anchors[4];
+            anchors[7] -= anchors[4];
+            anchors[8] -= anchors[4];
+
+            response |= (~(anchors[6] >> 31)) & 2;
+            response |= (~(anchors[7] >> 31)) & 4;
+            response |= (~(anchors[8] >> 31)) & 8;
 
             return response;
         }
