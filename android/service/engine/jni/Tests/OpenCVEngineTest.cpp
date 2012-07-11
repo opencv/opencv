@@ -104,9 +104,9 @@ TEST(OpenCVEngineTest, GetPathForExecHWNewVersion)
 {
     sp<IOpenCVEngine> Engine = InitConnect();
     Starter.PackageManager->InstalledPackages.clear();
-    Starter.PackageManager->InstallVersion("241", PLATFORM_TEGRA3, ARCH_ARMv7 | FEATURES_HAS_NEON);
+    Starter.PackageManager->InstallVersion("242", PLATFORM_TEGRA3, ARCH_ARMv7 | FEATURES_HAS_NEON);
     EXPECT_FALSE(NULL == Engine.get());
-    String16 result = Engine->GetLibPathByVersion(String16("2.4.2"));
+    String16 result = Engine->GetLibPathByVersion(String16("2.4.3"));
     EXPECT_EQ(0, result.size());
 }
 
@@ -118,48 +118,9 @@ TEST(OpenCVEngineTest, GetPathForUnExistVersion)
     EXPECT_EQ(0, result.size());
 }
 
-TEST(OpenCVEngineTest, GetPathForCompatiblePackage1)
-{
-    sp<IOpenCVEngine> Engine = InitConnect();
-    Starter.PackageManager->InstalledPackages.clear();
-    Starter.PackageManager->InstallVersion("242", PLATFORM_UNKNOWN, ARCH_ARMv5);
-    EXPECT_FALSE(NULL == Engine.get());
-    String16 result = Engine->GetLibPathByVersion(String16("2.4"));    
-    EXPECT_STREQ("/data/data/org.opencv.lib_v24_armv5/lib", String8(result).string());
-}
-
-TEST(OpenCVEngineTest, GetPathForCompatiblePackage2)
-{
-    sp<IOpenCVEngine> Engine = InitConnect();
-    Starter.PackageManager->InstalledPackages.clear();
-    Starter.PackageManager->InstallVersion("242", PLATFORM_TEGRA3, ARCH_ARMv7 | FEATURES_HAS_NEON);
-    EXPECT_FALSE(NULL == Engine.get());
-    String16 result = Engine->GetLibPathByVersion(String16("2.4"));
-#ifdef __SUPPORT_TEGRA3
-    EXPECT_STREQ("/data/data/org.opencv.lib_v24_tegra3/lib", String8(result).string());
-#else
-#ifdef __SUPPORT_ARMEABI_V7A_FEATURES
-    EXPECT_STREQ("/data/data/org.opencv.lib_v24_armv7a_neon/lib", String8(result).string());
-#else
-    EXPECT_STREQ("/data/data/org.opencv.lib_v24_armv7a/lib", String8(result).string());
-#endif
-#endif
-}
-
-TEST(OpenCVEngineTest, GetPathForInCompatiblePackage1)
-{
-    sp<IOpenCVEngine> Engine = InitConnect();
-    Starter.PackageManager->InstalledPackages.clear();
-    Starter.PackageManager->InstallVersion("242", PLATFORM_UNKNOWN, ARCH_X64);
-    EXPECT_FALSE(NULL == Engine.get());
-    String16 result = Engine->GetLibPathByVersion(String16("2.4"));    
-    EXPECT_EQ(0, result.size());
-}
-
 TEST(OpenCVEngineTest, InstallAndGetVersion)
 {
     sp<IOpenCVEngine> Engine = InitConnect();
-    Starter.PackageManager->InstalledPackages.clear();
     EXPECT_FALSE(NULL == Engine.get());
     EXPECT_TRUE(Engine->InstallVersion(String16("2.4")));
     String16 result = Engine->GetLibPathByVersion(String16("2.4"));
