@@ -1093,10 +1093,10 @@ protected:
  * For efficiency, BruteForceMatcher is templated on the distance metric.
  * For float descriptors, a common choice would be cv::L2<float>.
  */
-class CV_EXPORTS BFMatcher : public DescriptorMatcher
+class CV_EXPORTS_W BFMatcher : public DescriptorMatcher
 {
 public:
-    BFMatcher( int normType, bool crossCheck=false );
+    CV_WRAP BFMatcher( int normType, bool crossCheck=false );
     virtual ~BFMatcher() {}
 
     virtual bool isMaskSupported() const { return true; }

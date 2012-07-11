@@ -58,15 +58,15 @@ namespace cv
 class CV_EXPORTS_W SIFT : public Feature2D
 {
 public:
-    explicit SIFT( int nfeatures=0, int nOctaveLayers=3,
+    CV_WRAP explicit SIFT( int nfeatures=0, int nOctaveLayers=3,
           double contrastThreshold=0.04, double edgeThreshold=10,
           double sigma=1.6);
 
     //! returns the descriptor size in floats (128)
-    int descriptorSize() const;
+    CV_WRAP int descriptorSize() const;
     
     //! returns the descriptor type
-    int descriptorType() const;
+    CV_WRAP int descriptorType() const;
     
     //! finds the keypoints using SIFT algorithm
     void operator()(InputArray img, InputArray mask,
@@ -121,10 +121,10 @@ public:
     CV_WRAP int descriptorType() const;
     
     //! finds the keypoints using fast hessian detector used in SURF
-    CV_WRAP_AS(detect) void operator()(InputArray img, InputArray mask,
+    void operator()(InputArray img, InputArray mask,
                     CV_OUT vector<KeyPoint>& keypoints) const;
     //! finds the keypoints and computes their descriptors. Optionally it can compute descriptors for the user-provided keypoints
-    CV_WRAP_AS(detect) void operator()(InputArray img, InputArray mask,
+    void operator()(InputArray img, InputArray mask,
                     CV_OUT vector<KeyPoint>& keypoints,
                     OutputArray descriptors,
                     bool useProvidedKeypoints=false) const;
