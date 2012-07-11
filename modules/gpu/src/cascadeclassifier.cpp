@@ -354,8 +354,8 @@ int cv::gpu::CascadeClassifier_GPU_LBP::detectMultiScale(const GpuMat& image, Gp
     GpuMat candidates(1 , image.cols >> 1, CV_32SC4);
     // GpuMat candidates(1 , defaultObjSearchNum, CV_32SC4);
     // used for debug
-    candidates.setTo(cv::Scalar::all(0));
-    objects.setTo(cv::Scalar::all(0));
+    // candidates.setTo(cv::Scalar::all(0));
+    // objects.setTo(cv::Scalar::all(0));
     if (maxObjectSize == cv::Size())
         maxObjectSize = image.size();
 
