@@ -407,11 +407,11 @@ Decomposes a projection matrix into a rotation matrix and a camera matrix.
 
     :param rotMatrZ: Optional 3x3 rotation matrix around z-axis.
 
-    :param eulerAngles: Optional three-element vector containing three Euler angles of rotation (in degrees).
+    :param eulerAngles: Optional three-element vector containing three Euler angles of rotation in degrees.
 
 The function computes a decomposition of a projection matrix into a calibration and a rotation matrix and the position of a camera.
 
-It optionally returns three rotation matrices, one for each axis, and three Euler angles that could be used in OpenGL.
+It optionally returns three rotation matrices, one for each axis, and three Euler angles that could be used in OpenGL. Note, there is always more than one sequence of rotations about the three principle axes that results in the same orientation of an object, eg. see [Slabaugh]_. Returned tree rotation matrices and corresponding three Euler angules are only one of the possible solutions.
 
 The function is based on
 :ocv:func:`RQDecomp3x3` .
@@ -999,9 +999,7 @@ Computes an RQ decomposition of 3x3 matrices.
 The function computes a RQ decomposition using the given rotations. This function is used in
 :ocv:func:`decomposeProjectionMatrix` to decompose the left 3x3 submatrix of a projection matrix into a camera and a rotation matrix.
 
-It optionally returns three rotation matrices, one for each axis, and the three Euler angles in degrees
-(as the return value)
-that could be used in OpenGL.
+It optionally returns three rotation matrices, one for each axis, and the three Euler angles in degrees (as the return value) that could be used in OpenGL. Note, there is always more than one sequence of rotations about the three principle axes that results in the same orientation of an object, eg. see [Slabaugh]_. Returned tree rotation matrices and corresponding three Euler angules are only one of the possible solutions.
 
 
 
@@ -1478,5 +1476,7 @@ The function reconstructs 3-dimensional points (in homogeneous coordinates) by u
 .. [Hartley99] Hartley, R.I., Theory and Practice of Projective Rectification. IJCV 35 2, pp 115-127 (1999)
 
 .. [HH08] Hirschmuller, H. Stereo Processing by Semiglobal Matching and Mutual Information, PAMI(30), No. 2, February 2008, pp. 328-341.
+
+.. [Slabaugh] G.G. Slabaugh, Computing Euler angles from a rotation matrix. http://gregslabaugh.name/publications/euler.pdf
 
 .. [Zhang2000] Z. Zhang. A Flexible New Technique for Camera Calibration. IEEE Transactions on Pattern Analysis and Machine Intelligence, 22(11):1330-1334, 2000.
