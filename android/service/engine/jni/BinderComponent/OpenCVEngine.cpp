@@ -106,7 +106,7 @@ String16 OpenCVEngine::GetLibPathByVersion(android::String16 version)
     }
     else
     {
-	LOGE("OpenCV version \"%s\" is not supported", norm_version.c_str());
+	LOGE("OpenCV version \"%s\" (%s) is not supported", String8(version).string(), norm_version.c_str());
     }
 
     return String16(path.c_str());

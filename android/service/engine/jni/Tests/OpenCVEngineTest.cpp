@@ -20,10 +20,7 @@ class ServiceStarter
 public:
     ServiceStarter()
     {
-	PackageManager = new PackageManagerStub();
-	PackageInfo info("230", PLATFORM_UNKNOWN, ARCH_ARMv7);
-	PackageManager->InstalledPackages.push_back(info);
-	
+	PackageManager = new PackageManagerStub();	
 	Engine = new OpenCVEngine(PackageManager);
 	
 	defaultServiceManager()->addService(IOpenCVEngine::descriptor, Engine);
@@ -34,7 +31,7 @@ public:
     {
 	delete PackageManager;
     }
-private:
+
     PackageManagerStub* PackageManager;
     sp<IBinder> Engine;
 };
@@ -67,20 +64,50 @@ TEST(OpenCVEngineTest, GetVersion)
     EXPECT_EQ(OPEN_CV_ENGINE_VERSION, Version);
 }
 
-TEST(OpenCVEngineTest, InstallVersion)
+TEST(OpenCVEngineTest, GetPathForExecHWExistVersion)
 {
     sp<IOpenCVEngine> Engine = InitConnect();
+    Starter.PackageManager->InstalledPackages.clear();
+    Starter.PackageManager->InstallVersion("240", PLATFORM_TEGRA3, ARCH_ARMv7 | FEATURES_HAS_NEON);
     EXPECT_FALSE(NULL == Engine.get());
-    bool result = Engine->InstallVersion(String16("2.4"));
-    EXPECT_EQ(true, result);
+    String16 result = Engine->GetLibPathByVersion(String16("2.4"));
+    #ifdef __SUPPORT_TEGRA3    
+    EXPECT_STREQ("/data/data/org.opencv.lib_v24_tegra3/lib", String8(result).string());
+    #else
+    #ifdef __SUPPORT_ARMEABI_V7A_FEATURES
+    EXPECT_STREQ("/data/data/org.opencv.lib_v24_armv7a_neon/lib", String8(result).string());
+    #else
+    EXPECT_STREQ("/data/data/org.opencv.lib_v24_armv7a/lib", String8(result).string());
+    #endif
+    #endif
 }
 
-TEST(OpenCVEngineTest, GetPathForExistVersion)
+TEST(OpenCVEngineTest, GetPathForExecHWOldVersion)
 {
     sp<IOpenCVEngine> Engine = InitConnect();
+    Starter.PackageManager->InstalledPackages.clear();
+    Starter.PackageManager->InstallVersion("242", PLATFORM_TEGRA3, ARCH_ARMv7 | FEATURES_HAS_NEON);
     EXPECT_FALSE(NULL == Engine.get());
-    String16 result = Engine->GetLibPathByVersion(String16("2.3"));
-    EXPECT_STREQ("/data/data/org.opencv.lib_v23_armv7/lib",String8(result).string());
+    String16 result = Engine->GetLibPathByVersion(String16("2.4.1"));
+    #ifdef __SUPPORT_TEGRA3    
+    EXPECT_STREQ("/data/data/org.opencv.lib_v24_tegra3/lib", String8(result).string());
+    #else
+    #ifdef __SUPPORT_ARMEABI_V7A_FEATURES
+    EXPECT_STREQ("/data/data/org.opencv.lib_v24_armv7a_neon/lib", String8(result).string());
+    #else
+    EXPECT_STREQ("/data/data/org.opencv.lib_v24_armv7a/lib", String8(result).string());
+    #endif
+    #endif
+}
+
+TEST(OpenCVEngineTest, GetPathForExecHWNewVersion)
+{
+    sp<IOpenCVEngine> Engine = InitConnect();
+    Starter.PackageManager->InstalledPackages.clear();
+    Starter.PackageManager->InstallVersion("242", PLATFORM_TEGRA3, ARCH_ARMv7 | FEATURES_HAS_NEON);
+    EXPECT_FALSE(NULL == Engine.get());
+    String16 result = Engine->GetLibPathByVersion(String16("2.4.3"));
+    EXPECT_EQ(0, result.size());
 }
 
 TEST(OpenCVEngineTest, GetPathForUnExistVersion)
@@ -95,7 +122,15 @@ TEST(OpenCVEngineTest, InstallAndGetVersion)
 {
     sp<IOpenCVEngine> Engine = InitConnect();
     EXPECT_FALSE(NULL == Engine.get());
-    EXPECT_TRUE(Engine->InstallVersion(String16("2.5")));
-    String16 result = Engine->GetLibPathByVersion(String16("2.5"));
-    EXPECT_STREQ("/data/data/org.opencv.lib_v25_tegra3/lib", String8(result).string());
+    EXPECT_TRUE(Engine->InstallVersion(String16("2.4")));
+    String16 result = Engine->GetLibPathByVersion(String16("2.4"));
+#ifdef __SUPPORT_TEGRA3    
+    EXPECT_STREQ("/data/data/org.opencv.lib_v24_tegra3/lib", String8(result).string());
+#else
+#ifdef __SUPPORT_ARMEABI_V7A_FEATURES
+    EXPECT_STREQ("/data/data/org.opencv.lib_v24_armv7a_neon/lib", String8(result).string());
+#else
+    EXPECT_STREQ("/data/data/org.opencv.lib_v24_armv7a/lib", String8(result).string());
+#endif
+#endif
 }

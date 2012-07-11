@@ -179,8 +179,8 @@ inline int SplitPlatfrom(const vector<string>& features)
  * First part is base namespace.
  * Second part is version. Version starts from "v" symbol. After "v" symbol version nomber without dot symbol added.
  * If platform is known third part is platform name
- * If platform is unknown it is defined by hardware capabilities using pattern: <arch>_<fpu features>_<vectorisation features>_<other features>
- * Example: armv7_vfpv3_neon, armv7_vfpv3d16_neon
+ * If platform is unknown it is defined by hardware capabilities using pattern: <arch>_<floating point and vectorization features>_<other features>
+ * Example: armv7_neon, armv5_vfpv3
  */ 
 PackageInfo::PackageInfo(const string& version, int platform, int cpu_id):
     Version(version),
@@ -188,9 +188,13 @@ PackageInfo::PackageInfo(const string& version, int platform, int cpu_id):
     CpuID(cpu_id),
     InstallPath("")
 {
+#ifndef __SUPPORT_TEGRA3
+    Platform = PLATFORM_UNKNOWN;
+#endif
     FullName = BasePackageName + "_v" + Version.substr(0, Version.size()-1);
     if (PLATFORM_UNKNOWN != Platform)
     {
+	LOGD("Try to use known platform !!!");
 	FullName += string("_") + JoinPlatform(platform);
     }
     else
@@ -201,72 +205,98 @@ PackageInfo::PackageInfo(const string& version, int platform, int cpu_id):
 	    {
 		LOGD("Found processor with x86 arch");
 		FullName += string("_") + ARCH_X86_NAME;
-		// NOTE: Intel features temporary are not supported
-		//string features = JoinIntelFeatures(CpuID);
+#ifdef __SUPPORT_INTEL_FEATURES
+		string features = JoinIntelFeatures(CpuID);
+#else
 		string features;
+#endif
 		if (!features.empty())
 		{
 		    FullName += string("_") + features;
 		}
 	    }
-	    if (ARCH_X64 & CpuID)
+	    else if (ARCH_X64 & CpuID)
 	    {
 		LOGD("Found processor with x64 arch");
-		// NOTE: Intel features temporary are not supported
-		//FullName += string("_") + ARCH_X64_NAME;
-		//string features = JoinIntelFeatures(CpuID);
+#ifdef __SUPPORT_INTEL_x64
+		FullName += string("_") + ARCH_X64_NAME;
+#else
 		FullName += string("_") + ARCH_X86_NAME;
+#endif
+#ifdef __SUPPORT_INTEL_FEATURES
+		string features = JoinIntelFeatures(CpuID);
+#else
 		string features;
+#endif
 		if (!features.empty())
 		{
 		    FullName += string("_") + features;
 		}
 	    }
-	    if (ARCH_ARMv5 & CpuID)
+	    else if (ARCH_ARMv5 & CpuID)
 	    {
 		LOGD("Found processor with ARMv5 arch");
 		FullName += string("_") + ARCH_ARMv5_NAME;
+#ifdef __SUPPORT_ARMEABI_FEATURES
 		string features = JoinARMFeatures(CpuID);
+#else
+		string features;
+#endif
 		if (!features.empty())
 		{
 		    FullName += string("_") + features;
 		}
 	    }
-	    if (ARCH_ARMv6 & CpuID)
+	    else if (ARCH_ARMv6 & CpuID)
 	    {
 		LOGD("Found processor with ARMv6 arch");
-		// NOTE: ARM v6 used instead ARM v6
+		// NOTE: ARM v5 used instead ARM v6
 		//FullName += string("_") + ARCH_ARMv6_NAME;
 		FullName += string("_") + ARCH_ARMv5_NAME;
-		// NOTE: ARM features temporary are not supported
-		//string features = JoinARMFeatures(CpuID);
+#ifdef __SUPPORT_ARMEABI_FEATURES
+		string features = JoinARMFeatures(CpuID);
+#else
 		string features;
+#endif
 		if (!features.empty())
 		{
 		    FullName += string("_") + features;
 		}
 	    }
-	    if (ARCH_ARMv7 & CpuID)
+	    else if (ARCH_ARMv7 & CpuID)
 	    {
 		LOGD("Found processor with ARMv7 arch");
 		FullName += string("_") + ARCH_ARMv7_NAME;
-		// NOTE: ARM features temporary are not supported
-		//string features = JoinARMFeatures(CpuID);
+#ifdef __SUPPORT_ARMEABI_V7A_FEATURES
+		string features = JoinARMFeatures(CpuID);
+#else
 		string features;
+#endif
 		if (!features.empty())
 		{
 		    FullName += string("_") + features;
 		}
 	    }
-	    if (ARCH_ARMv8 & CpuID)
+	    else if (ARCH_ARMv8 & CpuID)
 	    {
 		LOGD("Found processor with ARMv8 arch");
+#ifdef __SUPPORT_ARMEABI_V8		
 		FullName += string("_") + ARCH_ARMv8_NAME;
-		string features = JoinARMFeatures(CpuID);
-		if (!features.empty())
-		{
-		    FullName += string("_") + features;
-		}
+#else
+		FullName += string("_") + ARCH_ARMv7_NAME;
+#endif
+		//string features = JoinARMFeatures(CpuID);
+		//if (!features.empty())
+		//{
+		//    FullName += string("_") + features;
+		//}
+	    }
+	    else
+	    {
+		LOGD("Found processor with unknown arch");
+		Version.clear();
+		CpuID = ARCH_UNKNOWN;
+		Platform = PLATFORM_UNKNOWN;
 	    }
 	}
 	else
