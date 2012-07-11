@@ -105,7 +105,7 @@ bool EM::trainE(InputArray samples,
     Mat means0 = _means0.getMat(), weights0 = _weights0.getMat();
 
     setTrainData(START_E_STEP, samplesMat, 0, !_means0.empty() ? &means0 : 0,
-                 !_covs0.empty() ? &covs0 : 0, _weights0.empty() ? &weights0 : 0);
+                 !_covs0.empty() ? &covs0 : 0, !_weights0.empty() ? &weights0 : 0);
     return doTrain(START_E_STEP, logLikelihoods, labels, probs);
 }
 
