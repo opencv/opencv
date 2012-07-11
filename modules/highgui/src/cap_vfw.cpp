@@ -182,6 +182,12 @@ bool CvCaptureAVI_VFW::open( const char* filename )
                 getframe = AVIStreamGetFrameOpen( avistream, &bmihdr );
                 if( getframe != 0 )
                     return true;
+				
+				// Attempt to open as 8-bit AVI.
+                bmihdr = icvBitmapHeader( size.width, size.height, 8);
+                getframe = AVIStreamGetFrameOpen( avistream, &bmihdr );
+                if( getframe != 0 ) 
+					return true;
             }
         }
     }
@@ -201,14 +207,28 @@ IplImage* CvCaptureAVI_VFW::retrieveFrame(int)
 {
     if( avistream && bmih )
     {
+		bool isColor = bmih->biBitCount == 24;
+		int nChannels = (isColor) ? 3 : 1;
         IplImage src;
         cvInitImageHeader( &src, cvSize( bmih->biWidth, bmih->biHeight ),
-                           IPL_DEPTH_8U, 3, IPL_ORIGIN_BL, 4 );
-        cvSetData( &src, (char*)(bmih + 1), src.widthStep );
+                           IPL_DEPTH_8U, nChannels, IPL_ORIGIN_BL, 4 );
+
+		char* dataPtr = (char*)(bmih + 1);
+
+		// Only account for the color map size if we are an 8-bit image and the color map is used
+		if (!isColor) 
+		{
+			static int RGBQUAD_SIZE_PER_BYTE = sizeof(RGBQUAD)/sizeof(BYTE);
+			int offsetFromColormapToData = (int)bmih->biClrUsed*RGBQUAD_SIZE_PER_BYTE;
+			dataPtr += offsetFromColormapToData;
+		}
+
+		cvSetData( &src, dataPtr, src.widthStep );
+
         if( !frame || frame->width != src.width || frame->height != src.height )
         {
             cvReleaseImage( &frame );
-            frame = cvCreateImage( cvGetSize(&src), 8, 3 );
+            frame = cvCreateImage( cvGetSize(&src), 8, nChannels );
         }
 
         cvFlip( &src, frame, 0 );
