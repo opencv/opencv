@@ -195,3 +195,6 @@ def mosaic(w, imgs):
 def getsize(img):
     h, w = img.shape[:2]
     return w, h
+
+def mdot(*args):
+    return reduce(np.dot, args)
