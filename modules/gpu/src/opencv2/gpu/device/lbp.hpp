@@ -61,6 +61,7 @@ __device__ __forceinline__ T __atomicInc(T* address, T val)
         count = tag | (count + 1);
         *address = count;
     } while (*address != count);
+
     return (count & TAG_MASK) - 1;
 }
 
@@ -85,6 +86,7 @@ __device__ __forceinline__ T __atomicMin(T* address, T val)
     {
         *address = count;
     } while (*address > count);
+
     return count;
 }
 
@@ -151,7 +153,6 @@ __device__ __forceinline__ T __atomicMin(T* address, T val)
             }
         }
         __syncthreads();
-        // printf("tid %d label %d\n", tid, labels[tid]);
     }
 } // lbp
 

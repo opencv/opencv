@@ -315,7 +315,24 @@ namespace cv { namespace gpu { namespace device
                           DevMem2D_<int4> objects,
                           unsigned int* classified);
 
-        int connectedConmonents(DevMem2D_<int4>  candidates, DevMem2D_<int4> objects,int groupThreshold, float grouping_eps, unsigned int* nclasses);
+        void classifyStumpFixed(const DevMem2Db& mstages,
+                              const int nstages,
+                              const DevMem2Di& mnodes,
+                              const DevMem2Df& mleaves,
+                              const DevMem2Di& msubsets,
+                              const DevMem2Db& mfeatures,
+                              const int workWidth,
+                              const int workHeight,
+                              const int clWidth,
+                              const int clHeight,
+                              float scale,
+                              int step,
+                              int subsetSize,
+                              DevMem2D_<int4> objects,
+                              unsigned int* classified,
+                              const int maxX);
+
+        int connectedConmonents(DevMem2D_<int4>  candidates, int ncandidates, DevMem2D_<int4> objects,int groupThreshold, float grouping_eps, unsigned int* nclasses);
         void bindIntegral(DevMem2Di integral);
         void unbindIntegral();
     }
@@ -337,8 +354,8 @@ int cv::gpu::CascadeClassifier_GPU_LBP::detectMultiScale(const GpuMat& image, Gp
     GpuMat candidates(1 , image.cols >> 1, CV_32SC4);
     // GpuMat candidates(1 , defaultObjSearchNum, CV_32SC4);
     // used for debug
-    // candidates.setTo(cv::Scalar::all(0));
-    // objects.setTo(cv::Scalar::all(0));
+    candidates.setTo(cv::Scalar::all(0));
+    objects.setTo(cv::Scalar::all(0));
     if (maxObjectSize == cv::Size())
         maxObjectSize = image.size();
 
@@ -349,16 +366,50 @@ int cv::gpu::CascadeClassifier_GPU_LBP::detectMultiScale(const GpuMat& image, Gp
     unsigned int* dclassified;
     cudaMalloc(&dclassified, sizeof(int));
     cudaMemcpy(dclassified, classified, sizeof(int), cudaMemcpyHostToDevice);
-    int step;
+    int step = 2;
     cv::gpu::device::lbp::bindIntegral(integral);
 
-    for( double factor = 1; ; factor *= scaleFactor )
-    {
-        // if (factor > 2.0) break;
-        cv::Size windowSize(cvRound(NxM.width * factor), cvRound(NxM.height * factor));
-        cv::Size scaledImageSize(cvRound( image.cols / factor ), cvRound( image.rows / factor ));
-        cv::Size processingRectSize( scaledImageSize.width - NxM.width + 1, scaledImageSize.height - NxM.height + 1 );
+    cv::Size scaledImageSize(image.cols, image.rows);
+    cv::Size processingRectSize( scaledImageSize.width - NxM.width + 1, scaledImageSize.height - NxM.height + 1 );
+    cv::Size windowSize(NxM.width, NxM.height);
 
+    double factor = 1;
+
+    for (; processingRectSize.width / step >= 256;)
+    {
+        // std::cout << "IN FIXED: factor " << factor << " size " << processingRectSize.width << " " << processingRectSize.height << std::endl;
+        // if (factor > 2.0) break;
+        if (processingRectSize.width <= 0 || processingRectSize.height <= 0 )
+            break;
+
+        if( windowSize.width > maxObjectSize.width || windowSize.height > maxObjectSize.height )
+            break;
+
+        // if( windowSize.width < minObjectSize.width || windowSize.height < minObjectSize.height )
+        //     continue;
+
+        GpuMat scaledImg(resuzeBuffer, cv::Rect(0, 0, scaledImageSize.width, scaledImageSize.height));
+        GpuMat scaledIntegral(integral, cv::Rect(0, 0, scaledImageSize.width + 1, scaledImageSize.height + 1));
+        GpuMat currBuff = integralBuffer;
+
+        cv::gpu::resize(image, scaledImg, scaledImageSize, 0, 0, CV_INTER_LINEAR);
+        cv::gpu::integralBuffered(scaledImg, scaledIntegral, currBuff);
+
+        step = (factor <= 2.) + 1;
+
+        cv::gpu::device::lbp::classifyStumpFixed(stage_mat, stage_mat.cols / sizeof(Stage), nodes_mat, leaves_mat, subsets_mat, features_mat,
+        processingRectSize.width, processingRectSize.height, windowSize.width, windowSize.height, factor, step, subsetSize, candidates, dclassified, processingRectSize.width);
+
+        factor *= scaleFactor;
+        windowSize = cv::Size(cvRound(NxM.width * factor), cvRound(NxM.height * factor));
+        scaledImageSize = cv::Size(cvRound( image.cols / factor ), cvRound( image.rows / factor ));
+        processingRectSize = cv::Size(scaledImageSize.width - NxM.width + 1, scaledImageSize.height - NxM.height + 1 );
+    }
+
+    for (; /*processingRectSize.width / step >= 128*/;)
+    {
+        // std::cout << "In FLOATING: factor " << factor << " size " << processingRectSize.width << " " << processingRectSize.height << std::endl;
+        // if (factor > 2.0) break;
         if (processingRectSize.width <= 0 || processingRectSize.height <= 0 )
             break;
 
@@ -379,12 +430,19 @@ int cv::gpu::CascadeClassifier_GPU_LBP::detectMultiScale(const GpuMat& image, Gp
 
         cv::gpu::device::lbp::classifyStump(stage_mat, stage_mat.cols / sizeof(Stage), nodes_mat, leaves_mat, subsets_mat, features_mat,
         processingRectSize.width, processingRectSize.height, windowSize.width, windowSize.height, factor, step, subsetSize, candidates, dclassified);
+
+        factor *= scaleFactor;
+        windowSize = cv::Size(cvRound(NxM.width * factor), cvRound(NxM.height * factor));
+        scaledImageSize = cv::Size(cvRound( image.cols / factor ), cvRound( image.rows / factor ));
+        processingRectSize = cv::Size(scaledImageSize.width - NxM.width + 1, scaledImageSize.height - NxM.height + 1 );
     }
 
     cv::gpu::device::lbp::unbindIntegral();
     if (groupThreshold <= 0  || objects.empty())
         return 0;
-    cv::gpu::device::lbp::connectedConmonents(candidates, objects, groupThreshold, grouping_eps, dclassified);
+    cudaMemcpy(classified, dclassified, sizeof(int), cudaMemcpyDeviceToHost);
+    // std::cout << "!!! CLASSIFIED " << *classified << std::endl;
+    cv::gpu::device::lbp::connectedConmonents(candidates, *classified, objects, groupThreshold, grouping_eps, dclassified);
     cudaMemcpy(classified, dclassified, sizeof(int), cudaMemcpyDeviceToHost);
     cudaSafeCall( cudaDeviceSynchronize() );
     step = *classified;
