@@ -654,8 +654,8 @@ protected:
 
         double trainError = (double)(trainConfusionMat.at<int>(1,0) + trainConfusionMat.at<int>(0,1)) / trainSamplesCount;
         double testError = (double)(testConfusionMat.at<int>(1,0) + testConfusionMat.at<int>(0,1)) / (samples.rows - trainSamplesCount);
-        const double maxTrainError = 0.16;
-        const double maxTestError = 0.19;
+        const double maxTrainError = 0.23;
+        const double maxTestError = 0.26;
 
         int code = cvtest::TS::OK;
         if(trainError > maxTrainError)
@@ -665,7 +665,7 @@ protected:
         }
         if(testError > maxTestError)
         {
-            ts->printf(cvtest::TS::LOG, "Too large test classification error (calc = %f, valid=%f).\n", trainError, maxTrainError);
+            ts->printf(cvtest::TS::LOG, "Too large test classification error (calc = %f, valid=%f).\n", testError, maxTestError);
             code = cvtest::TS::FAIL_INVALID_TEST_DATA;
         }
 
