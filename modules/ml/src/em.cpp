@@ -386,7 +386,8 @@ void EM::computeLogWeightDivDet()
     for(int clusterIndex = 0; clusterIndex < nclusters; clusterIndex++)
     {
         double logDetCov = 0.;
-        for(int di = 0; di < covsEigenValues[clusterIndex].cols; di++)
+        const int evalCount = covsEigenValues[clusterIndex].total();
+        for(int di = 0; di < evalCount; di++)
             logDetCov += std::log(covsEigenValues[clusterIndex].at<double>(covMatType != EM::COV_MAT_SPHERICAL ? di : 0));
 
         logWeightDivDet.at<double>(clusterIndex) = logWeights.at<double>(clusterIndex) - 0.5 * logDetCov;
