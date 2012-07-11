@@ -407,7 +407,7 @@ Decomposes a projection matrix into a rotation matrix and a camera matrix.
 
     :param rotMatrZ: Optional 3x3 rotation matrix around z-axis.
 
-    :param eulerAngles: Optional three-element vector containing three Euler angles of rotation.
+    :param eulerAngles: Optional three-element vector containing three Euler angles of rotation (in degrees).
 
 The function computes a decomposition of a projection matrix into a calibration and a rotation matrix and the position of a camera.
 
@@ -999,7 +999,7 @@ Computes an RQ decomposition of 3x3 matrices.
 The function computes a RQ decomposition using the given rotations. This function is used in
 :ocv:func:`decomposeProjectionMatrix` to decompose the left 3x3 submatrix of a projection matrix into a camera and a rotation matrix.
 
-It optionally returns three rotation matrices, one for each axis, and the three Euler angles
+It optionally returns three rotation matrices, one for each axis, and the three Euler angles in degrees
 (as the return value)
 that could be used in OpenGL.
 
