@@ -156,7 +156,6 @@ int GetProcessorCount()
 
 int DetectKnownPlatforms()
 {
-#ifdef __SUPPORT_TEGRA3
     int tegra_status = DetectTegra();
     
     if (3 == tegra_status)
@@ -167,9 +166,6 @@ int DetectKnownPlatforms()
     {
 	return PLATFORM_UNKNOWN;
     }
-#else
-    return PLATFORM_UNKNOWN;
-#endif
     
     // NOTE: Uncomment when all Tegras will be supported
     /*if (tegra_status > 0)
