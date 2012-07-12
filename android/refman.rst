@@ -6,3 +6,4 @@ OpenCV4Android Reference
    :maxdepth: 2
 
    service/doc/index.rst
+   java.rst
