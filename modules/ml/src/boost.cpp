@@ -910,7 +910,7 @@ CvBoost::CvBoost()
 
 void CvBoost::prune( CvSlice slice )
 {
-    if( weak )
+    if( weak && weak->total > 0 )
     {
         CvSeqReader reader;
         int i, count = cvSliceLength( slice, weak );
@@ -1076,11 +1076,15 @@ CvBoost::train( const CvMat* _train_data, int _tflag,
             break;
     }
 
-    get_active_vars(); // recompute active_vars* maps and condensed_idx's in the splits.
-    data->is_classifier = true;
-    ok = true;
-
-    data->free_train_data();
+    if(weak->total > 0)
+    {
+        get_active_vars(); // recompute active_vars* maps and condensed_idx's in the splits.
+        data->is_classifier = true;
+        data->free_train_data();
+        ok = true;
+    }
+    else
+        clear();
 
     __END__;
 
