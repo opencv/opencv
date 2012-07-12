@@ -212,14 +212,13 @@ namespace cv { namespace gpu { namespace device
             classifier(y, x, objects, maxN, n);
         }
 
-        __global__ void lbp_classify_stump(const Classifier classifier, DevMem2D_<int4> objects, const unsigned int maxN, unsigned int* n, int lines, int maxX)
+        __global__ void lbp_classify_stump(const Classifier classifier, DevMem2D_<int4> objects, const unsigned int maxN, unsigned int* n, int maxX)
         {
-            int x = threadIdx.x * lines * classifier.step;
-            if (x >= maxX) return;
+            int ftid = blockIdx.x * blockDim.x + threadIdx.x;
+            int y = ftid / maxX;
+            int x = ftid - y * maxX;
 
-            int y = blockIdx.x * classifier.step / lines;
-
-            classifier(y, x, objects, maxN, n);
+            classifier(y * classifier.step, x * classifier.step, objects, maxN, n);
         }
 
         template<typename Pr>
@@ -304,16 +303,14 @@ namespace cv { namespace gpu { namespace device
         }
 
         void classifyStumpFixed(const DevMem2Db& mstages, const int nstages, const DevMem2Di& mnodes, const DevMem2Df& mleaves, const DevMem2Di& msubsets, const DevMem2Db& mfeatures,
-                           const int workWidth, const int workHeight, const int clWidth, const int clHeight, float scale, int step, int subsetSize, DevMem2D_<int4> objects, unsigned int* classified,
-                           int maxX)
+                           const int workWidth, const int workHeight, const int clWidth, const int clHeight, float scale, int step, int subsetSize, DevMem2D_<int4> objects, unsigned int* classified)
         {
             const int THREADS_BLOCK = 256;
-            int blocks  = ceilf(workHeight / (float)step);
-            int threads = ceilf(workWidth / (float)step);
+            int work_amount = ceilf(workHeight / (float)step) * ceilf(workWidth / (float)step);
+            int blocks  = divUp(work_amount, THREADS_BLOCK);
 
             Classifier clr((Stage*)(mstages.ptr()), (ClNode*)(mnodes.ptr()), mleaves.ptr(), msubsets.ptr(), (uchar4*)(mfeatures.ptr()), nstages, clWidth, clHeight, scale, step, subsetSize);
-            int lines = divUp(threads, THREADS_BLOCK);
-            lbp_classify_stump<<<blocks * lines, THREADS_BLOCK>>>(clr, objects, objects.cols, classified, lines, maxX);
+            lbp_classify_stump<<<blocks, THREADS_BLOCK>>>(clr, objects, objects.cols, classified, workWidth >> 1);
         }
 
         int connectedConmonents(DevMem2D_<int4> candidates, int ncandidates, DevMem2D_<int4> objects, int groupThreshold, float grouping_eps, unsigned int* nclasses)
