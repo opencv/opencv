@@ -104,9 +104,9 @@ TEST(OpenCVEngineTest, GetPathForExecHWNewVersion)
 {
     sp<IOpenCVEngine> Engine = InitConnect();
     Starter.PackageManager->InstalledPackages.clear();
-    Starter.PackageManager->InstallVersion("242", PLATFORM_TEGRA3, ARCH_ARMv7 | FEATURES_HAS_NEON);
+    Starter.PackageManager->InstallVersion("241", PLATFORM_TEGRA3, ARCH_ARMv7 | FEATURES_HAS_NEON);
     EXPECT_FALSE(NULL == Engine.get());
-    String16 result = Engine->GetLibPathByVersion(String16("2.4.3"));
+    String16 result = Engine->GetLibPathByVersion(String16("2.4.2"));
     EXPECT_EQ(0, result.size());
 }
 
@@ -121,6 +121,7 @@ TEST(OpenCVEngineTest, GetPathForUnExistVersion)
 TEST(OpenCVEngineTest, InstallAndGetVersion)
 {
     sp<IOpenCVEngine> Engine = InitConnect();
+    Starter.PackageManager->InstalledPackages.clear();
     EXPECT_FALSE(NULL == Engine.get());
     EXPECT_TRUE(Engine->InstallVersion(String16("2.4")));
     String16 result = Engine->GetLibPathByVersion(String16("2.4"));
