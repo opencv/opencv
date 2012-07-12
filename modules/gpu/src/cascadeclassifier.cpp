@@ -298,37 +298,39 @@ namespace cv { namespace gpu { namespace device
 {
     namespace lbp
     {
-        void classifyStump(const DevMem2Db& mstages,
-                          const int nstages,
-                          const DevMem2Di& mnodes,
-                          const DevMem2Df& mleaves,
-                          const DevMem2Di& msubsets,
-                          const DevMem2Db& mfeatures,
-                          const int workWidth,
-                          const int workHeight,
-                          const int clWidth,
-                          const int clHeight,
-                          float scale,
-                          int step,
-                          int subsetSize,
-                          DevMem2D_<int4> objects,
-                          unsigned int* classified);
+        // void classifyStump(const DevMem2Db& mstages,
+        //                   const int nstages,
+        //                   const DevMem2Di& mnodes,
+        //                   const DevMem2Df& mleaves,
+        //                   const DevMem2Di& msubsets,
+        //                   const DevMem2Db& mfeatures,
+        //                   const int workWidth,
+        //                   const int workHeight,
+        //                   const int clWidth,
+        //                   const int clHeight,
+        //                   float scale,
+        //                   int step,
+        //                   int subsetSize,
+        //                   DevMem2D_<int4> objects,
+        //                   unsigned int* classified);
 
-        void classifyStumpFixed(const DevMem2Db& mstages,
-                              const int nstages,
-                              const DevMem2Di& mnodes,
-                              const DevMem2Df& mleaves,
-                              const DevMem2Di& msubsets,
-                              const DevMem2Db& mfeatures,
-                              const int workWidth,
-                              const int workHeight,
-                              const int clWidth,
-                              const int clHeight,
-                              float scale,
-                              int step,
-                              int subsetSize,
-                              DevMem2D_<int4> objects,
-                              unsigned int* classified);
+        void classifyStumpFixed(const DevMem2Di& integral,
+                                const int integralPitch,
+                                const DevMem2Db& mstages,
+                                const int nstages,
+                                const DevMem2Di& mnodes,
+                                const DevMem2Df& mleaves,
+                                const DevMem2Di& msubsets,
+                                const DevMem2Db& mfeatures,
+                                const int workWidth,
+                                const int workHeight,
+                                const int clWidth,
+                                const int clHeight,
+                                float scale,
+                                int step,
+                                int subsetSize,
+                                DevMem2D_<int4> objects,
+                                unsigned int* classified);
 
         int connectedConmonents(DevMem2D_<int4>  candidates, int ncandidates, DevMem2D_<int4> objects,int groupThreshold, float grouping_eps, unsigned int* nclasses);
         void bindIntegral(DevMem2Di integral);
@@ -365,7 +367,7 @@ int cv::gpu::CascadeClassifier_GPU_LBP::detectMultiScale(const GpuMat& image, Gp
     cudaMalloc(&dclassified, sizeof(int));
     cudaMemcpy(dclassified, classified, sizeof(int), cudaMemcpyHostToDevice);
     int step = 2;
-    cv::gpu::device::lbp::bindIntegral(integral);
+    // cv::gpu::device::lbp::bindIntegral(integral);
 
     cv::Size scaledImageSize(image.cols, image.rows);
     cv::Size processingRectSize( scaledImageSize.width - NxM.width + 1, scaledImageSize.height - NxM.height + 1 );
@@ -393,7 +395,7 @@ int cv::gpu::CascadeClassifier_GPU_LBP::detectMultiScale(const GpuMat& image, Gp
 
         step = (factor <= 2.) + 1;
 
-        cv::gpu::device::lbp::classifyStumpFixed(stage_mat, stage_mat.cols / sizeof(Stage), nodes_mat, leaves_mat, subsets_mat, features_mat,
+        cv::gpu::device::lbp::classifyStumpFixed(integral, integral.step1(), stage_mat, stage_mat.cols / sizeof(Stage), nodes_mat, leaves_mat, subsets_mat, features_mat,
         processingRectSize.width, processingRectSize.height, windowSize.width, windowSize.height, factor, step, subsetSize, candidates, dclassified);
 
         factor *= scaleFactor;
@@ -402,7 +404,7 @@ int cv::gpu::CascadeClassifier_GPU_LBP::detectMultiScale(const GpuMat& image, Gp
         processingRectSize = cv::Size(scaledImageSize.width - NxM.width + 1, scaledImageSize.height - NxM.height + 1 );
     }
 
-    cv::gpu::device::lbp::unbindIntegral();
+    // cv::gpu::device::lbp::unbindIntegral();
     if (groupThreshold <= 0  || objects.empty())
         return 0;
     cudaMemcpy(classified, dclassified, sizeof(int), cudaMemcpyDeviceToHost);

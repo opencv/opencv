@@ -56,6 +56,80 @@ namespace cv { namespace gpu { namespace device
             __host__ __device__ __forceinline__ LBP(const LBP& other) {(void)other;}
             __host__ __device__ __forceinline__ LBP() {}
 
+            // for integral matrix stored in the global memory
+            __device__ __forceinline__ int operator() (const int* integral, const int pitch, int ty, int tx, int fh, int fw, int& shift) const
+            {
+                int anchors[9];
+
+                anchors[0]  = integral[ty * pitch + tx];
+                anchors[1]  = integral[ty * pitch + tx + fw];
+                anchors[0] -= anchors[1];
+                anchors[2]  = integral[ty * pitch + tx + fw * 2];
+                anchors[1] -= anchors[2];
+                anchors[2] -= integral[ty * pitch + tx + fw * 3];
+
+                ty += fh;
+                anchors[3]  = integral[ty * pitch + tx];
+                anchors[4]  = integral[ty * pitch + tx + fw];
+                anchors[3] -= anchors[4];
+                anchors[5]  = integral[ty * pitch + tx + fw * 2];
+                anchors[4] -= anchors[5];
+                anchors[5] -= integral[ty * pitch + tx + fw * 3];
+
+                anchors[0] -= anchors[3];
+                anchors[1] -= anchors[4];
+                anchors[2] -= anchors[5];
+                // 0 - 2 contains s0 - s2
+
+                ty += fh;
+                anchors[6]  = integral[ty * pitch + tx];
+                anchors[7]  = integral[ty * pitch + tx + fw];
+                anchors[6] -= anchors[7];
+                anchors[8]  = integral[ty * pitch + tx + fw * 2];
+                anchors[7] -= anchors[8];
+                anchors[8] -= integral[ty * pitch + tx + fw * 3];
+
+                anchors[3] -= anchors[6];
+                anchors[4] -= anchors[7];
+                anchors[5] -= anchors[8];
+                // 3 - 5 contains s3 - s5
+
+                anchors[0] -= anchors[4];
+                anchors[1] -= anchors[4];
+                anchors[2] -= anchors[4];
+                anchors[3] -= anchors[4];
+                anchors[5] -= anchors[4];
+
+                int response = (~(anchors[0] >> 31)) & 4;
+                response |= (~(anchors[1] >> 31)) & 2;;
+                response |= (~(anchors[2] >> 31)) & 1;
+
+                shift = (~(anchors[5] >> 31)) & 16;
+                shift |= (~(anchors[3] >> 31)) & 1;
+
+                ty += fh;
+                anchors[0]  = integral[ty * pitch + tx];
+                anchors[1]  = integral[ty * pitch + tx + fw];
+                anchors[0] -= anchors[1];
+                anchors[2]  = integral[ty * pitch + tx + fw * 2];
+                anchors[1] -= anchors[2];
+                anchors[2] -= integral[ty * pitch + tx + fw * 3];
+
+                anchors[6] -= anchors[0];
+                anchors[7] -= anchors[1];
+                anchors[8] -= anchors[2];
+                // 0 -2 contains s6 - s8
+
+                anchors[6] -= anchors[4];
+                anchors[7] -= anchors[4];
+                anchors[8] -= anchors[4];
+
+                shift |= (~(anchors[6] >> 31)) & 2;
+                shift |= (~(anchors[7] >> 31)) & 4;
+                shift |= (~(anchors[8] >> 31)) & 8;
+                return response;
+            }
+            // for texture fetchrd integral matrix
             __device__ __forceinline__ int operator() (int ty, int tx, int fh, int fw, int& shift) const
             {
                 int anchors[9];
@@ -143,9 +217,9 @@ namespace cv { namespace gpu { namespace device
 
         struct Classifier
         {
-            __host__ __device__ __forceinline__ Classifier(const Stage* _stages, const ClNode* _nodes, const float* _leaves, const int* _subsets, const uchar4* _features,
+            __host__ __device__ __forceinline__ Classifier(const int* _integral, const int _pitch, const Stage* _stages, const ClNode* _nodes, const float* _leaves, const int* _subsets, const uchar4* _features,
                 const int _nstages, const int _clWidth, const int _clHeight, const float _scale, const int _step, const int _subsetSize)
-            : stages(_stages), nodes(_nodes), leaves(_leaves), subsets(_subsets), features(_features), nstages(_nstages), clWidth(_clWidth), clHeight(_clHeight),
+            : integral(_integral), pitch(_pitch), stages(_stages), nodes(_nodes), leaves(_leaves), subsets(_subsets), features(_features), nstages(_nstages), clWidth(_clWidth), clHeight(_clHeight),
               scale(_scale), step(_step), subsetSize(_subsetSize){}
 
             __device__ __forceinline__ void operator() (int y, int x, DevMem2D_<int4> objects, const unsigned int maxN, unsigned int* n) const
@@ -163,7 +237,8 @@ namespace cv { namespace gpu { namespace device
                         uchar4 feature = features[node.featureIdx];
 
                         int shift;
-                        int c = evaluator(y + feature.y, x + feature.x, feature.w, feature.z, shift);
+                        // int c = evaluator(y + feature.y, x + feature.x, feature.w, feature.z, shift);
+                        int c = evaluator(integral, pitch, (y + feature.y), x + feature.x, feature.w, feature.z, shift);
                         int idx =  (subsets[ current_node * subsetSize + c] & ( 1 << shift)) ? current_leave : current_leave + 1;
                         sum += leaves[idx];
 
@@ -188,6 +263,9 @@ namespace cv { namespace gpu { namespace device
 #endif
                 objects(0, res) = rect;
             }
+
+            const int* integral;
+            const int pitch;
 
             const Stage*  stages;
             const ClNode* nodes;
@@ -292,24 +370,24 @@ namespace cv { namespace gpu { namespace device
             }
         }
 
-        void classifyStump(const DevMem2Db& mstages, const int nstages, const DevMem2Di& mnodes, const DevMem2Df& mleaves, const DevMem2Di& msubsets, const DevMem2Db& mfeatures,
-                           const int workWidth, const int workHeight, const int clWidth, const int clHeight, float scale, int step, int subsetSize, DevMem2D_<int4> objects, unsigned int* classified)
-        {
-            int blocks  = ceilf(workHeight / (float)step);
-            int threads = ceilf(workWidth / (float)step);
+        // void classifyStump(const DevMem2Db& mstages, const int nstages, const DevMem2Di& mnodes, const DevMem2Df& mleaves, const DevMem2Di& msubsets, const DevMem2Db& mfeatures,
+        //                    const int workWidth, const int workHeight, const int clWidth, const int clHeight, float scale, int step, int subsetSize, DevMem2D_<int4> objects, unsigned int* classified)
+        // {
+        //     int blocks  = ceilf(workHeight / (float)step);
+        //     int threads = ceilf(workWidth / (float)step);
 
-            Classifier clr((Stage*)(mstages.ptr()), (ClNode*)(mnodes.ptr()), mleaves.ptr(), msubsets.ptr(), (uchar4*)(mfeatures.ptr()), nstages, clWidth, clHeight, scale, step, subsetSize);
-            lbp_classify_stump<<<blocks, threads>>>(clr,  objects, objects.cols, classified);
-        }
+        //     Classifier clr((Stage*)(mstages.ptr()), (ClNode*)(mnodes.ptr()), mleaves.ptr(), msubsets.ptr(), (uchar4*)(mfeatures.ptr()), nstages, clWidth, clHeight, scale, step, subsetSize);
+        //     lbp_classify_stump<<<blocks, threads>>>(clr,  objects, objects.cols, classified);
+        // }
 
-        void classifyStumpFixed(const DevMem2Db& mstages, const int nstages, const DevMem2Di& mnodes, const DevMem2Df& mleaves, const DevMem2Di& msubsets, const DevMem2Db& mfeatures,
+        void classifyStumpFixed(const DevMem2Di& integral, const int pitch, const DevMem2Db& mstages, const int nstages, const DevMem2Di& mnodes, const DevMem2Df& mleaves, const DevMem2Di& msubsets, const DevMem2Db& mfeatures,
                            const int workWidth, const int workHeight, const int clWidth, const int clHeight, float scale, int step, int subsetSize, DevMem2D_<int4> objects, unsigned int* classified)
         {
             const int THREADS_BLOCK = 256;
             int work_amount = ceilf(workHeight / (float)step) * ceilf(workWidth / (float)step);
             int blocks  = divUp(work_amount, THREADS_BLOCK);
 
-            Classifier clr((Stage*)(mstages.ptr()), (ClNode*)(mnodes.ptr()), mleaves.ptr(), msubsets.ptr(), (uchar4*)(mfeatures.ptr()), nstages, clWidth, clHeight, scale, step, subsetSize);
+            Classifier clr(integral.ptr(), pitch, (Stage*)(mstages.ptr()), (ClNode*)(mnodes.ptr()), mleaves.ptr(), msubsets.ptr(), (uchar4*)(mfeatures.ptr()), nstages, clWidth, clHeight, scale, step, subsetSize);
             lbp_classify_stump<<<blocks, THREADS_BLOCK>>>(clr, objects, objects.cols, classified, workWidth >> 1);
         }
 
