@@ -206,21 +206,19 @@ PackageInfo::PackageInfo(const string& version, int platform, int cpu_id, std::s
 	{
 	    if (ARCH_X86 & CpuID)
 	    {
-		LOGD("Found processor with x86 arch");
+		LOGD("PackageInfo::PackageInfo: package arch x86");
 		FullName += string("_") + ARCH_X86_NAME;
 #ifdef __SUPPORT_INTEL_FEATURES
 		string features = JoinIntelFeatures(CpuID);
-#else
-		string features;
-#endif
 		if (!features.empty())
 		{
 		    FullName += string("_") + features;
 		}
+#endif
 	    }
 	    else if (ARCH_X64 & CpuID)
 	    {
-		LOGD("Found processor with x64 arch");
+		LOGD("PackageInfo::PackageInfo: package arch x64");
 #ifdef __SUPPORT_INTEL_x64
 		FullName += string("_") + ARCH_X64_NAME;
 #else
@@ -228,61 +226,53 @@ PackageInfo::PackageInfo(const string& version, int platform, int cpu_id, std::s
 #endif
 #ifdef __SUPPORT_INTEL_FEATURES
 		string features = JoinIntelFeatures(CpuID);
-#else
-		string features;
-#endif
 		if (!features.empty())
 		{
 		    FullName += string("_") + features;
 		}
+#endif
 	    }
 	    else if (ARCH_ARMv5 & CpuID)
 	    {
-		LOGD("Found processor with ARMv5 arch");
+		LOGD("PackageInfo::PackageInfo: package arch ARMv5");
 		FullName += string("_") + ARCH_ARMv5_NAME;
 #ifdef __SUPPORT_ARMEABI_FEATURES
 		string features = JoinARMFeatures(CpuID);
-#else
-		string features;
-#endif
 		if (!features.empty())
 		{
 		    FullName += string("_") + features;
 		}
+#endif
 	    }
 	    else if (ARCH_ARMv6 & CpuID)
 	    {
-		LOGD("Found processor with ARMv6 arch");
+		LOGD("PackageInfo::PackageInfo: package arch ARMv6");
 		// NOTE: ARM v5 used instead ARM v6
 		//FullName += string("_") + ARCH_ARMv6_NAME;
 		FullName += string("_") + ARCH_ARMv5_NAME;
 #ifdef __SUPPORT_ARMEABI_FEATURES
 		string features = JoinARMFeatures(CpuID);
-#else
-		string features;
-#endif
 		if (!features.empty())
 		{
 		    FullName += string("_") + features;
 		}
+#endif
 	    }
 	    else if (ARCH_ARMv7 & CpuID)
 	    {
-		LOGD("Found processor with ARMv7 arch");
+		LOGD("PackageInfo::PackageInfo: package arch ARMv7");
 		FullName += string("_") + ARCH_ARMv7_NAME;
 #ifdef __SUPPORT_ARMEABI_V7A_FEATURES
 		string features = JoinARMFeatures(CpuID);
-#else
-		string features;
-#endif
 		if (!features.empty())
 		{
 		    FullName += string("_") + features;
 		}
+#endif
 	    }
 	    else if (ARCH_ARMv8 & CpuID)
 	    {
-		LOGD("Found processor with ARMv8 arch");
+		LOGD("PackageInfo::PackageInfo: package arch ARMv8");
 #ifdef __SUPPORT_ARMEABI_V8		
 		FullName += string("_") + ARCH_ARMv8_NAME;
 #else
@@ -296,7 +286,7 @@ PackageInfo::PackageInfo(const string& version, int platform, int cpu_id, std::s
 	    }
 	    else
 	    {
-		LOGD("Found processor with unknown arch");
+		LOGD("PackageInfo::PackageInfo: package arch unknown");
 		Version.clear();
 		CpuID = ARCH_UNKNOWN;
 		Platform = PLATFORM_UNKNOWN;
@@ -304,7 +294,7 @@ PackageInfo::PackageInfo(const string& version, int platform, int cpu_id, std::s
 	}
 	else
 	{
-	    LOGD("Found processor with unknown arch");
+	    LOGD("PackageInfo::PackageInfo: package arch unknown");
 	    Version.clear();
 	    CpuID = ARCH_UNKNOWN;
 	    Platform = PLATFORM_UNKNOWN;
