@@ -114,7 +114,7 @@ CV_EXPORTS void read(const FileNode& node, CV_OUT vector<KeyPoint>& keypoints);
 /*
  * A class filters a vector of keypoints.
  * Because now it is difficult to provide a convenient interface for all usage scenarios of the keypoints filter class,
- * it has only 4 needed by now static methods.
+ * it has only several needed by now static methods.
  */
 class CV_EXPORTS KeyPointsFilter
 {
@@ -142,7 +142,7 @@ public:
     /*
      * Retain the specified number of the best keypoints (according to the response)
      */
-    static void retainBest(vector<KeyPoint>& keypoints, int npoints);
+    static void retainBest( vector<KeyPoint>& keypoints, int npoints );
 };
 
 
