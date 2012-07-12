@@ -63,9 +63,15 @@ string CommonPackageManager::GetPackagePathByVersion(const std::string& version,
     
     for (vector<PackageInfo>::iterator it = all_packages.begin(); it != all_packages.end(); ++it)
     {
+	LOGD("Check version \"%s\" compatibility with \"%s\"\n", version.c_str(), it->GetVersion().c_str());
 	if (IsVersionCompatible(version, it->GetVersion()))
 	{
+	    LOGD("Compatible");
 	    packages.push_back(*it);
+	}
+	else
+	{
+	    LOGD("NOT Compatible");   
 	}
     }
     

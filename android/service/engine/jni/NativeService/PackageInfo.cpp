@@ -30,19 +30,23 @@ inline string JoinARMFeatures(int cpu_id)
 
     if (FEATURES_HAS_NEON2 & cpu_id)
     {
-	result = string(FEATURES_HAS_NEON2_NAME);
+	if (!((ARCH_ARMv5 & cpu_id) || (ARCH_ARMv6 & cpu_id) ||(ARCH_ARMv7 & cpu_id)))
+	    result = string(FEATURES_HAS_NEON2_NAME);
     }    
     else if (FEATURES_HAS_NEON & cpu_id)
     {
-	result = string(FEATURES_HAS_NEON_NAME);
+	if (!((ARCH_ARMv5 & cpu_id) || (ARCH_ARMv6 & cpu_id)))
+	    result = string(FEATURES_HAS_NEON_NAME);
     }
     else if (FEATURES_HAS_VFPv3 & cpu_id)
     {
-	result = string(FEATURES_HAS_VFPv3_NAME);
+	if ((ARCH_ARMv5 & cpu_id) || (ARCH_ARMv6 & cpu_id))
+	    result = string(FEATURES_HAS_VFPv3_NAME);
     }
     else if (FEATURES_HAS_VFPv3d16 & cpu_id)
     {
-	result = string(FEATURES_HAS_VFPv3d16_NAME);
+	if ((ARCH_ARMv5 & cpu_id) || (ARCH_ARMv6 & cpu_id))
+	    result = string(FEATURES_HAS_VFPv3d16_NAME);
     }
     
     return result;
@@ -182,7 +186,7 @@ inline int SplitPlatfrom(const vector<string>& features)
  * If platform is unknown it is defined by hardware capabilities using pattern: <arch>_<floating point and vectorization features>_<other features>
  * Example: armv7_neon, armv5_vfpv3
  */ 
-PackageInfo::PackageInfo(const string& version, int platform, int cpu_id):
+PackageInfo::PackageInfo(const string& version, int platform, int cpu_id, std::string install_path):
     Version(version),
     Platform(platform),
     CpuID(cpu_id),
@@ -194,7 +198,6 @@ PackageInfo::PackageInfo(const string& version, int platform, int cpu_id):
     FullName = BasePackageName + "_v" + Version.substr(0, Version.size()-1);
     if (PLATFORM_UNKNOWN != Platform)
     {
-	LOGD("Try to use known platform !!!");
 	FullName += string("_") + JoinPlatform(platform);
     }
     else
@@ -307,13 +310,18 @@ PackageInfo::PackageInfo(const string& version, int platform, int cpu_id):
 	    Platform = PLATFORM_UNKNOWN;
 	}
     }
+    
+    if (!FullName.empty())
+    {
+	InstallPath = install_path + FullName + "/lib";
+    }
 }
 
 PackageInfo::PackageInfo(const string& fullname, const string& install_path, const string& package_version):
     FullName(fullname),
     InstallPath(install_path)
 {
-    LOGD("PackageInfo::PackageInfo(\"%s\", \"%s\")", fullname.c_str(), install_path.c_str());
+    LOGD("PackageInfo::PackageInfo(\"%s\", \"%s\", \"%s\")", fullname.c_str(), install_path.c_str(), package_version.c_str());
     
     assert(!fullname.empty());
     assert(!install_path.empty());
