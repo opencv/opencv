@@ -53,28 +53,27 @@ namespace cv { namespace gpu { namespace device
 
         struct LBP
         {
-            __host__ __device__ __forceinline__ LBP(const LBP& other) {(void)other;}
             __host__ __device__ __forceinline__ LBP() {}
 
             // for integral matrix stored in the global memory
-            __device__ __forceinline__ int operator() (const int* integral, const int pitch, int ty, int tx, int fh, int fw, int& shift) const
+            __device__ __forceinline__ int operator() (const int* integral, int ty, int fh, int fw, int& shift) const
             {
                 int anchors[9];
 
-                anchors[0]  = integral[ty * pitch + tx];
-                anchors[1]  = integral[ty * pitch + tx + fw];
+                anchors[0]  = integral[ty];
+                anchors[1]  = integral[ty + fw];
                 anchors[0] -= anchors[1];
-                anchors[2]  = integral[ty * pitch + tx + fw * 2];
+                anchors[2]  = integral[ty + fw * 2];
                 anchors[1] -= anchors[2];
-                anchors[2] -= integral[ty * pitch + tx + fw * 3];
+                anchors[2] -= integral[ty + fw * 3];
 
                 ty += fh;
-                anchors[3]  = integral[ty * pitch + tx];
-                anchors[4]  = integral[ty * pitch + tx + fw];
+                anchors[3]  = integral[ty];
+                anchors[4]  = integral[ty + fw];
                 anchors[3] -= anchors[4];
-                anchors[5]  = integral[ty * pitch + tx + fw * 2];
+                anchors[5]  = integral[ty + fw * 2];
                 anchors[4] -= anchors[5];
-                anchors[5] -= integral[ty * pitch + tx + fw * 3];
+                anchors[5] -= integral[ty + fw * 3];
 
                 anchors[0] -= anchors[3];
                 anchors[1] -= anchors[4];
@@ -82,12 +81,12 @@ namespace cv { namespace gpu { namespace device
                 // 0 - 2 contains s0 - s2
 
                 ty += fh;
-                anchors[6]  = integral[ty * pitch + tx];
-                anchors[7]  = integral[ty * pitch + tx + fw];
+                anchors[6]  = integral[ty];
+                anchors[7]  = integral[ty + fw];
                 anchors[6] -= anchors[7];
-                anchors[8]  = integral[ty * pitch + tx + fw * 2];
+                anchors[8]  = integral[ty + fw * 2];
                 anchors[7] -= anchors[8];
-                anchors[8] -= integral[ty * pitch + tx + fw * 3];
+                anchors[8] -= integral[ty + fw * 3];
 
                 anchors[3] -= anchors[6];
                 anchors[4] -= anchors[7];
@@ -108,12 +107,12 @@ namespace cv { namespace gpu { namespace device
                 shift |= (~(anchors[3] >> 31)) & 1;
 
                 ty += fh;
-                anchors[0]  = integral[ty * pitch + tx];
-                anchors[1]  = integral[ty * pitch + tx + fw];
+                anchors[0]  = integral[ty];
+                anchors[1]  = integral[ty + fw];
                 anchors[0] -= anchors[1];
-                anchors[2]  = integral[ty * pitch + tx + fw * 2];
+                anchors[2]  = integral[ty + fw * 2];
                 anchors[1] -= anchors[2];
-                anchors[2] -= integral[ty * pitch + tx + fw * 3];
+                anchors[2] -= integral[ty + fw * 3];
 
                 anchors[6] -= anchors[0];
                 anchors[7] -= anchors[1];
@@ -238,7 +237,7 @@ namespace cv { namespace gpu { namespace device
 
                         int shift;
                         // int c = evaluator(y + feature.y, x + feature.x, feature.w, feature.z, shift);
-                        int c = evaluator(integral, pitch, (y + feature.y), x + feature.x, feature.w, feature.z, shift);
+                        int c = evaluator(integral, (y + feature.y) * pitch + x + feature.x, feature.w * pitch, feature.z, shift);
                         int idx =  (subsets[ current_node * subsetSize + c] & ( 1 << shift)) ? current_leave : current_leave + 1;
                         sum += leaves[idx];
 
@@ -369,16 +368,6 @@ namespace cv { namespace gpu { namespace device
 #endif
             }
         }
-
-        // void classifyStump(const DevMem2Db& mstages, const int nstages, const DevMem2Di& mnodes, const DevMem2Df& mleaves, const DevMem2Di& msubsets, const DevMem2Db& mfeatures,
-        //                    const int workWidth, const int workHeight, const int clWidth, const int clHeight, float scale, int step, int subsetSize, DevMem2D_<int4> objects, unsigned int* classified)
-        // {
-        //     int blocks  = ceilf(workHeight / (float)step);
-        //     int threads = ceilf(workWidth / (float)step);
-
-        //     Classifier clr((Stage*)(mstages.ptr()), (ClNode*)(mnodes.ptr()), mleaves.ptr(), msubsets.ptr(), (uchar4*)(mfeatures.ptr()), nstages, clWidth, clHeight, scale, step, subsetSize);
-        //     lbp_classify_stump<<<blocks, threads>>>(clr,  objects, objects.cols, classified);
-        // }
 
         void classifyStumpFixed(const DevMem2Di& integral, const int pitch, const DevMem2Db& mstages, const int nstages, const DevMem2Di& mnodes, const DevMem2Df& mleaves, const DevMem2Di& msubsets, const DevMem2Db& mfeatures,
                            const int workWidth, const int workHeight, const int clWidth, const int clHeight, float scale, int step, int subsetSize, DevMem2D_<int4> objects, unsigned int* classified)

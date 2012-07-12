@@ -298,22 +298,6 @@ namespace cv { namespace gpu { namespace device
 {
     namespace lbp
     {
-        // void classifyStump(const DevMem2Db& mstages,
-        //                   const int nstages,
-        //                   const DevMem2Di& mnodes,
-        //                   const DevMem2Df& mleaves,
-        //                   const DevMem2Di& msubsets,
-        //                   const DevMem2Db& mfeatures,
-        //                   const int workWidth,
-        //                   const int workHeight,
-        //                   const int clWidth,
-        //                   const int clHeight,
-        //                   float scale,
-        //                   int step,
-        //                   int subsetSize,
-        //                   DevMem2D_<int4> objects,
-        //                   unsigned int* classified);
-
         void classifyStumpFixed(const DevMem2Di& integral,
                                 const int integralPitch,
                                 const DevMem2Db& mstages,
