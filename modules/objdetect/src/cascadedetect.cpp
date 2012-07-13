@@ -44,6 +44,73 @@
 
 #include "cascadedetect.hpp"
 
+#include <string>
+
+
+struct Logger
+{
+	enum { STADIES_NUM = 20 };
+
+	int gid;	
+	cv::Mat mask;
+	cv::Size sz0;
+	int step;
+	
+
+	Logger() : gid (0), step(2) {}
+	void setImage(const cv::Mat& image) 
+	{   
+     if (gid == 0)
+		 sz0 = image.size();
+
+	  mask.create(image.rows, image.cols * (STADIES_NUM + 1) + STADIES_NUM, CV_8UC1);
+	  mask = cv::Scalar(0);
+	  cv::Mat roi = mask(cv::Rect(cv::Point(0,0), image.size()));
+	  image.copyTo(roi);
+
+	  printf("%d) Size = (%d, %d)\n", gid, image.cols, image.rows);
+
+	  for(int i = 0; i < STADIES_NUM; ++i)
+	  {
+		  int x = image.cols + i * (image.cols + 1);
+		  cv::line(mask, cv::Point(x, 0), cv::Point(x, mask.rows-1), cv::Scalar(255));
+	  }
+
+	  if (sz0.width/image.cols > 2 && sz0.height/image.rows > 2)
+		  step = 1;
+	}
+
+	void setPoint(const cv::Point& p, int passed_stadies)		
+	{
+		int cols = mask.cols / (STADIES_NUM + 1);
+
+		passed_stadies = -passed_stadies;
+		passed_stadies = (passed_stadies == -1) ? STADIES_NUM : passed_stadies;
+		
+		unsigned char* ptr = mask.ptr<unsigned char>(p.y) + cols + 1 + p.x;
+		for(int i = 0; i < passed_stadies; ++i, ptr += cols + 1)
+		{
+			*ptr = 255;
+
+			if (step == 2)
+			{
+				ptr[1] = 255;
+				ptr[mask.step] = 255;
+				ptr[mask.step + 1] = 255;
+			}
+		}
+	};
+
+	void write()
+	{		
+		char buf[4096];
+		sprintf(buf, "%04d.png", gid++);
+		cv::imwrite(buf, mask);
+	}
+
+} logger;
+
+
 namespace cv
 {
 
@@ -910,6 +977,8 @@ struct CascadeClassifierInvoker
 
                 double gypWeight;
                 int result = classifier->runAt(evaluator, Point(x, y), gypWeight);
+
+				logger.setPoint(Point(x, y), result);
                 if( rejectLevels )
                 {
                     if( result == 1 )
@@ -942,12 +1011,16 @@ struct CascadeClassifierInvoker
 
 struct getRect { Rect operator ()(const CvAvgComp& e) const { return e.rect; } };
 
+
 bool CascadeClassifier::detectSingleScale( const Mat& image, int stripCount, Size processingRectSize,
                                            int stripSize, int yStep, double factor, vector<Rect>& candidates,
                                            vector<int>& levels, vector<double>& weights, bool outputRejectLevels )
 {
     if( !featureEvaluator->setImage( image, data.origWinSize ) )
         return false;
+
+    logger.setImage(image);
+	
 
     Mat currentMask;
     if (!maskGenerator.empty()) {
@@ -971,7 +1044,8 @@ bool CascadeClassifier::detectSingleScale( const Mat& image, int stripCount, Siz
     }
     candidates.insert( candidates.end(), concurrentCandidates.begin(), concurrentCandidates.end() );
 
-    return true;
+	logger.write();
+    return true;	
 }
 
 bool CascadeClassifier::isOldFormatCascade() const

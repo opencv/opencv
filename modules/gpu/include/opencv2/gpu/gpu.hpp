@@ -1441,7 +1441,7 @@ public:
     Size getClassifierSize() const;
 private:
     bool read(const FileNode &root);
-    void initializeBuffers(cv::Size frame);
+	void allocateBuffers(cv::Size frame = cv::Size());
 
     static const stage stageType = BOOST;
     static const feature featureType = LBP;
@@ -1463,6 +1463,8 @@ private:
     GpuMat integral;
     GpuMat integralBuffer;
     GpuMat resuzeBuffer;
+
+	GpuMat candidates;
 };
 
 ////////////////////////////////// SURF //////////////////////////////////////////

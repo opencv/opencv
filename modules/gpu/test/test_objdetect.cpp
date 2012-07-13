@@ -285,6 +285,10 @@ TEST_P(HOG, GetDescriptors)
 
 INSTANTIATE_TEST_CASE_P(GPU_ObjDetect, HOG, ALL_DEVICES);
 
+
+//////////////////////////////////////////////////////////////////////////////////////////
+/// LBP classifier
+
 PARAM_TEST_CASE(LBP_Read_classifier, cv::gpu::DeviceInfo, int)
 {
     cv::gpu::DeviceInfo devInfo;
@@ -303,10 +307,9 @@ TEST_P(LBP_Read_classifier, Accuracy)
     ASSERT_TRUE(classifier.load(classifierXmlPath));
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_ObjDetect, LBP_Read_classifier, testing::Combine(
-    ALL_DEVICES,
-    testing::Values<int>(0)
-    ));
+INSTANTIATE_TEST_CASE_P(GPU_ObjDetect, LBP_Read_classifier, 
+						testing::Combine(ALL_DEVICES, testing::Values<int>(0)));
+
 
 PARAM_TEST_CASE(LBP_classify, cv::gpu::DeviceInfo, int)
 {
@@ -328,7 +331,7 @@ TEST_P(LBP_classify, Accuracy)
     ASSERT_FALSE(cpuClassifier.empty());
 
     cv::Mat image = cv::imread(imagePath);
-    image = image.colRange(0, image.cols / 2);
+    image = image.colRange(0, image.cols/2);
     cv::Mat grey;
     cvtColor(image, grey, CV_BGR2GRAY);
     ASSERT_FALSE(image.empty());
@@ -339,27 +342,29 @@ TEST_P(LBP_classify, Accuracy)
 
     std::vector<cv::Rect>::iterator it = rects.begin();
     for (; it != rects.end(); ++it)
-        cv::rectangle(markedImage, *it, cv::Scalar(255, 0, 0, 255));
+        cv::rectangle(markedImage, *it, CV_RGB(0, 0, 255));
 
     cv::gpu::CascadeClassifier_GPU_LBP gpuClassifier;
     ASSERT_TRUE(gpuClassifier.load(classifierXmlPath));
+
     cv::gpu::GpuMat gpu_rects;
     cv::gpu::GpuMat tested(grey);
     int count = gpuClassifier.detectMultiScale(tested, gpu_rects);
 
-    cv::Mat gpu_f(gpu_rects);
-    int* gpu_faces = (int*)gpu_f.ptr();
+    cv::Mat downloaded(gpu_rects);
+	const cv::Rect* faces = downloaded.ptr<cv::Rect>();
     for (int i = 0; i < count; i++)
     {
-        cv::Rect r(gpu_faces[i * 4],gpu_faces[i * 4 + 1],gpu_faces[i * 4 + 2],gpu_faces[i * 4 + 3]);
-        std::cout << gpu_faces[i * 4]<< " " << gpu_faces[i * 4 + 1] << " " << gpu_faces[i * 4 + 2] << " " << gpu_faces[i * 4 + 3] << std::endl;
-        cv::rectangle(markedImage, r , cv::Scalar(0, 0, 255, 255));
+        cv::Rect r = faces[i];
+
+		std::cout << r.x << " " << r.y  << " " << r.width << " " << r.height << std::endl;
+        cv::rectangle(markedImage, r , CV_RGB(255, 0, 0));
     }
+
+	cv::imshow("Res", markedImage); cv::waitKey();
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_ObjDetect, LBP_classify, testing::Combine(
-    ALL_DEVICES,
-    testing::Values<int>(0)
-    ));
+INSTANTIATE_TEST_CASE_P(GPU_ObjDetect, LBP_classify, 
+						testing::Combine(ALL_DEVICES, testing::Values<int>(0)));
 
 } // namespace

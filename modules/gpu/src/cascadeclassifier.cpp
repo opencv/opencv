@@ -75,14 +75,14 @@ double /*scaleFactor*/, int /*minNeighbors*/, cv::Size /*maxObjectSize*/){ throw
 
 #else
 
-cv::gpu::CascadeClassifier_GPU_LBP::CascadeClassifier_GPU_LBP(cv::Size detectionFrameSize)
-{
-    if (detectionFrameSize != cv::Size())
-        initializeBuffers(detectionFrameSize);
-}
+cv::gpu::CascadeClassifier_GPU_LBP::CascadeClassifier_GPU_LBP(cv::Size detectionFrameSize) { allocateBuffers(detectionFrameSize); }
+cv::gpu::CascadeClassifier_GPU_LBP::~CascadeClassifier_GPU_LBP(){}
 
-void cv::gpu::CascadeClassifier_GPU_LBP::initializeBuffers(cv::Size frame)
+void cv::gpu::CascadeClassifier_GPU_LBP::allocateBuffers(cv::Size frame)
 {
+	if (frame == cv::Size())
+		return;
+
     if (resuzeBuffer.empty() || frame.width > resuzeBuffer.cols || frame.height > resuzeBuffer.rows)
     {
         resuzeBuffer.create(frame, CV_8UC1);
@@ -98,10 +98,12 @@ void cv::gpu::CascadeClassifier_GPU_LBP::initializeBuffers(cv::Size frame)
         Ncv32u bufSize;
         ncvSafeCall( nppiStIntegralGetSize_8u32u(roiSize, &bufSize, prop) );
         integralBuffer.create(1, bufSize, CV_8UC1);
+
+		candidates.create(1 , frame.width >> 1, CV_32SC4);
     }
 }
 
-cv::gpu::CascadeClassifier_GPU_LBP::~CascadeClassifier_GPU_LBP(){}
+
 
 void cv::gpu::CascadeClassifier_GPU_LBP::preallocateIntegralBuffer(cv::Size desired)
 {
@@ -335,7 +337,8 @@ int cv::gpu::CascadeClassifier_GPU_LBP::detectMultiScale(const GpuMat& image, Gp
         objects.reshape(4, 1);
     else
         objects.create(1 , image.cols >> 4, CV_32SC4);
-    GpuMat candidates(1 , image.cols >> 1, CV_32SC4);
+
+    candidates.create(1 , image.cols >> 1, CV_32SC4);
     // GpuMat candidates(1 , defaultObjSearchNum, CV_32SC4);
     // used for debug
     // candidates.setTo(cv::Scalar::all(0));
@@ -343,13 +346,12 @@ int cv::gpu::CascadeClassifier_GPU_LBP::detectMultiScale(const GpuMat& image, Gp
     if (maxObjectSize == cv::Size())
         maxObjectSize = image.size();
 
-    initializeBuffers(image.size());
-
-    unsigned int* classified = new unsigned int[1];
-    *classified = 0;
+    allocateBuffers(image.size());
+	
+    unsigned int classified = 0;    
     unsigned int* dclassified;
     cudaMalloc(&dclassified, sizeof(int));
-    cudaMemcpy(dclassified, classified, sizeof(int), cudaMemcpyHostToDevice);
+    cudaMemcpy(dclassified, &classified, sizeof(int), cudaMemcpyHostToDevice);
     int step = 2;
     // cv::gpu::device::lbp::bindIntegral(integral);
 
@@ -370,8 +372,8 @@ int cv::gpu::CascadeClassifier_GPU_LBP::detectMultiScale(const GpuMat& image, Gp
         // if( windowSize.width < minObjectSize.width || windowSize.height < minObjectSize.height )
         //     continue;
 
-        GpuMat scaledImg(resuzeBuffer, cv::Rect(0, 0, scaledImageSize.width, scaledImageSize.height));
-        GpuMat scaledIntegral(integral, cv::Rect(0, 0, scaledImageSize.width + 1, scaledImageSize.height + 1));
+        GpuMat scaledImg      = resuzeBuffer(cv::Rect(0, 0, scaledImageSize.width, scaledImageSize.height));
+        GpuMat scaledIntegral = integral(cv::Rect(0, 0, scaledImageSize.width + 1, scaledImageSize.height + 1));
         GpuMat currBuff = integralBuffer;
 
         cv::gpu::resize(image, scaledImg, scaledImageSize, 0, 0, CV_INTER_LINEAR);
@@ -391,12 +393,13 @@ int cv::gpu::CascadeClassifier_GPU_LBP::detectMultiScale(const GpuMat& image, Gp
     // cv::gpu::device::lbp::unbindIntegral();
     if (groupThreshold <= 0  || objects.empty())
         return 0;
-    cudaMemcpy(classified, dclassified, sizeof(int), cudaMemcpyDeviceToHost);
-    cv::gpu::device::lbp::connectedConmonents(candidates, *classified, objects, groupThreshold, grouping_eps, dclassified);
-    cudaMemcpy(classified, dclassified, sizeof(int), cudaMemcpyDeviceToHost);
+    cudaMemcpy(&classified, dclassified, sizeof(int), cudaMemcpyDeviceToHost);
+    cv::gpu::device::lbp::connectedConmonents(candidates, classified, objects, groupThreshold, grouping_eps, dclassified);
+    cudaMemcpy(&classified, dclassified, sizeof(int), cudaMemcpyDeviceToHost);
     cudaSafeCall( cudaDeviceSynchronize() );
-    step = *classified;
-    delete[] classified;
+    
+	step = classified;
+    
     cudaFree(dclassified);
     return step;
 }
