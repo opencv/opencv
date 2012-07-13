@@ -47,6 +47,11 @@ if(BUILD_DOCS AND HAVE_SPHINX)
     endif()
   endforeach()
 
+  file(GLOB_RECURSE _OPENCV_FILES_REF "${OpenCV_SOURCE_DIR}/android/service/doc/*.rst")
+  file(GLOB_RECURSE _OPENCV_FILES_REF_PICT "${OpenCV_SOURCE_DIR}/android/service/doc/*.png" "${OpenCV_SOURCE_DIR}/android/service/doc/*.jpg")
+  list(APPEND OPENCV_FILES_REF ${_OPENCV_FILES_REF})
+  list(APPEND OPENCV_FILES_REF_PICT ${_OPENCV_FILES_REF_PICT})
+
   configure_file("${OpenCV_SOURCE_DIR}/modules/refman.rst.in" "${OpenCV_SOURCE_DIR}/modules/refman.rst" IMMEDIATE @ONLY)
 
   file(GLOB_RECURSE OPENCV_FILES_UG user_guide/*.rst)
@@ -61,9 +66,11 @@ if(BUILD_DOCS AND HAVE_SPHINX)
       COMMAND ${SPHINX_BUILD} -b latex -c ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/.. .
       COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/pics ${CMAKE_CURRENT_BINARY_DIR}/doc/opencv1/pics
       COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/mymath.sty ${CMAKE_CURRENT_BINARY_DIR}
-      COMMAND ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/patch_refman_latex.py" opencv2refman.tex
+      COMMAND ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/patch_refman_latex.py" opencv2manager.tex
       COMMAND ${PDFLATEX_COMPILER} opencv2refman.tex
       COMMAND ${PDFLATEX_COMPILER} opencv2refman.tex
+      COMMAND ${PDFLATEX_COMPILER} opencv2manager.tex
+      COMMAND ${PDFLATEX_COMPILER} opencv2manager.tex
       COMMAND ${PDFLATEX_COMPILER} opencv_user.tex
       COMMAND ${PDFLATEX_COMPILER} opencv_user.tex
       COMMAND ${PDFLATEX_COMPILER} opencv_tutorials.tex

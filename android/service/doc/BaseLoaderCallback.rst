@@ -7,5 +7,5 @@ Base Loader Callback Interface implementation
 
     Basic implementation of LoaderCallbackInterface. Implementation logic is described by diagram.
 
-.. image:: img/AndroidAppUsageModel.dia.png
+.. image:: img/AndroidAppUsageModel.png
 
