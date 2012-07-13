@@ -2,10 +2,6 @@
 Install Callback Interface
 **************************
 .. highlight:: java
-.. module:: org.opencv.android
-    :platform: Android
-    :synopsis: Defines callback interface for package management.
-
 .. class:: InstallCallbackInterface
 
     Callback interface for package installation or update.
