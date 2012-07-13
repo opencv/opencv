@@ -1477,6 +1477,6 @@ The function reconstructs 3-dimensional points (in homogeneous coordinates) by u
 
 .. [HH08] Hirschmuller, H. Stereo Processing by Semiglobal Matching and Mutual Information, PAMI(30), No. 2, February 2008, pp. 328-341.
 
-.. [Slabaugh] G.G. Slabaugh, Computing Euler angles from a rotation matrix. http://gregslabaugh.name/publications/euler.pdf
+.. [Slabaugh] Slabaugh, G.G. Computing Euler angles from a rotation matrix. http://gregslabaugh.name/publications/euler.pdf
 
 .. [Zhang2000] Z. Zhang. A Flexible New Technique for Camera Calibration. IEEE Transactions on Pattern Analysis and Machine Intelligence, 22(11):1330-1334, 2000.
