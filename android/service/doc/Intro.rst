@@ -17,7 +17,7 @@ OpenCV Manager is an Android service targeted to manage OpenCV library binaries 
 Usage model for target user
 ---------------------------
 
-.. image:: img/AndroidAppUsageModel.dia.png
+.. image:: img/AndroidAppUsageModel.png
 
 First OpenCV app\:
 
@@ -37,4 +37,4 @@ Next OpenCV app\:
 OpenCV Manager structure
 ------------------------
 
-.. image:: img/Structure.dia.png
+.. image:: img/Structure.png

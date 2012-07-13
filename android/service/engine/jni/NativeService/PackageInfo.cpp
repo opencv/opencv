@@ -30,19 +30,23 @@ inline string JoinARMFeatures(int cpu_id)
 
     if (FEATURES_HAS_NEON2 & cpu_id)
     {
-	result = string(FEATURES_HAS_NEON2_NAME);
+	if (!((ARCH_ARMv5 & cpu_id) || (ARCH_ARMv6 & cpu_id) ||(ARCH_ARMv7 & cpu_id)))
+	    result = string(FEATURES_HAS_NEON2_NAME);
     }    
     else if (FEATURES_HAS_NEON & cpu_id)
     {
-	result = string(FEATURES_HAS_NEON_NAME);
+	if (!((ARCH_ARMv5 & cpu_id) || (ARCH_ARMv6 & cpu_id)))
+	    result = string(FEATURES_HAS_NEON_NAME);
     }
     else if (FEATURES_HAS_VFPv3 & cpu_id)
     {
-	result = string(FEATURES_HAS_VFPv3_NAME);
+	if ((ARCH_ARMv5 & cpu_id) || (ARCH_ARMv6 & cpu_id))
+	    result = string(FEATURES_HAS_VFPv3_NAME);
     }
     else if (FEATURES_HAS_VFPv3d16 & cpu_id)
     {
-	result = string(FEATURES_HAS_VFPv3d16_NAME);
+	if ((ARCH_ARMv5 & cpu_id) || (ARCH_ARMv6 & cpu_id))
+	    result = string(FEATURES_HAS_VFPv3d16_NAME);
     }
     
     return result;
@@ -179,15 +183,18 @@ inline int SplitPlatfrom(const vector<string>& features)
  * First part is base namespace.
  * Second part is version. Version starts from "v" symbol. After "v" symbol version nomber without dot symbol added.
  * If platform is known third part is platform name
- * If platform is unknown it is defined by hardware capabilities using pattern: <arch>_<fpu features>_<vectorisation features>_<other features>
- * Example: armv7_vfpv3_neon, armv7_vfpv3d16_neon
+ * If platform is unknown it is defined by hardware capabilities using pattern: <arch>_<floating point and vectorization features>_<other features>
+ * Example: armv7_neon, armv5_vfpv3
  */ 
-PackageInfo::PackageInfo(const string& version, int platform, int cpu_id):
+PackageInfo::PackageInfo(const string& version, int platform, int cpu_id, std::string install_path):
     Version(version),
     Platform(platform),
     CpuID(cpu_id),
     InstallPath("")
 {
+#ifndef __SUPPORT_TEGRA3
+    Platform = PLATFORM_UNKNOWN;
+#endif
     FullName = BasePackageName + "_v" + Version.substr(0, Version.size()-1);
     if (PLATFORM_UNKNOWN != Platform)
     {
@@ -199,83 +206,104 @@ PackageInfo::PackageInfo(const string& version, int platform, int cpu_id):
 	{
 	    if (ARCH_X86 & CpuID)
 	    {
-		LOGD("Found processor with x86 arch");
+		LOGD("PackageInfo::PackageInfo: package arch x86");
 		FullName += string("_") + ARCH_X86_NAME;
-		// NOTE: Intel features temporary are not supported
-		//string features = JoinIntelFeatures(CpuID);
-		string features;
+#ifdef __SUPPORT_INTEL_FEATURES
+		string features = JoinIntelFeatures(CpuID);
 		if (!features.empty())
 		{
 		    FullName += string("_") + features;
 		}
+#endif
 	    }
-	    if (ARCH_X64 & CpuID)
+	    else if (ARCH_X64 & CpuID)
 	    {
-		LOGD("Found processor with x64 arch");
-		// NOTE: Intel features temporary are not supported
-		//FullName += string("_") + ARCH_X64_NAME;
-		//string features = JoinIntelFeatures(CpuID);
+		LOGD("PackageInfo::PackageInfo: package arch x64");
+#ifdef __SUPPORT_INTEL_x64
+		FullName += string("_") + ARCH_X64_NAME;
+#else
 		FullName += string("_") + ARCH_X86_NAME;
-		string features;
+#endif
+#ifdef __SUPPORT_INTEL_FEATURES
+		string features = JoinIntelFeatures(CpuID);
 		if (!features.empty())
 		{
 		    FullName += string("_") + features;
 		}
+#endif
 	    }
-	    if (ARCH_ARMv5 & CpuID)
+	    else if (ARCH_ARMv5 & CpuID)
 	    {
-		LOGD("Found processor with ARMv5 arch");
+		LOGD("PackageInfo::PackageInfo: package arch ARMv5");
 		FullName += string("_") + ARCH_ARMv5_NAME;
+#ifdef __SUPPORT_ARMEABI_FEATURES
 		string features = JoinARMFeatures(CpuID);
 		if (!features.empty())
 		{
 		    FullName += string("_") + features;
 		}
+#endif
 	    }
-	    if (ARCH_ARMv6 & CpuID)
+	    else if (ARCH_ARMv6 & CpuID)
 	    {
-		LOGD("Found processor with ARMv6 arch");
-		// NOTE: ARM v6 used instead ARM v6
+		LOGD("PackageInfo::PackageInfo: package arch ARMv6");
+		// NOTE: ARM v5 used instead ARM v6
 		//FullName += string("_") + ARCH_ARMv6_NAME;
 		FullName += string("_") + ARCH_ARMv5_NAME;
-		// NOTE: ARM features temporary are not supported
-		//string features = JoinARMFeatures(CpuID);
-		string features;
-		if (!features.empty())
-		{
-		    FullName += string("_") + features;
-		}
-	    }
-	    if (ARCH_ARMv7 & CpuID)
-	    {
-		LOGD("Found processor with ARMv7 arch");
-		FullName += string("_") + ARCH_ARMv7_NAME;
-		// NOTE: ARM features temporary are not supported
-		//string features = JoinARMFeatures(CpuID);
-		string features;
-		if (!features.empty())
-		{
-		    FullName += string("_") + features;
-		}
-	    }
-	    if (ARCH_ARMv8 & CpuID)
-	    {
-		LOGD("Found processor with ARMv8 arch");
-		FullName += string("_") + ARCH_ARMv8_NAME;
+#ifdef __SUPPORT_ARMEABI_FEATURES
 		string features = JoinARMFeatures(CpuID);
 		if (!features.empty())
 		{
 		    FullName += string("_") + features;
 		}
+#endif
+	    }
+	    else if (ARCH_ARMv7 & CpuID)
+	    {
+		LOGD("PackageInfo::PackageInfo: package arch ARMv7");
+		FullName += string("_") + ARCH_ARMv7_NAME;
+#ifdef __SUPPORT_ARMEABI_V7A_FEATURES
+		string features = JoinARMFeatures(CpuID);
+		if (!features.empty())
+		{
+		    FullName += string("_") + features;
+		}
+#endif
+	    }
+	    else if (ARCH_ARMv8 & CpuID)
+	    {
+		LOGD("PackageInfo::PackageInfo: package arch ARMv8");
+#ifdef __SUPPORT_ARMEABI_V8		
+		FullName += string("_") + ARCH_ARMv8_NAME;
+#else
+		FullName += string("_") + ARCH_ARMv7_NAME;
+#endif
+		//string features = JoinARMFeatures(CpuID);
+		//if (!features.empty())
+		//{
+		//    FullName += string("_") + features;
+		//}
+	    }
+	    else
+	    {
+		LOGD("PackageInfo::PackageInfo: package arch unknown");
+		Version.clear();
+		CpuID = ARCH_UNKNOWN;
+		Platform = PLATFORM_UNKNOWN;
 	    }
 	}
 	else
 	{
-	    LOGD("Found processor with unknown arch");
+	    LOGD("PackageInfo::PackageInfo: package arch unknown");
 	    Version.clear();
 	    CpuID = ARCH_UNKNOWN;
 	    Platform = PLATFORM_UNKNOWN;
 	}
+    }
+    
+    if (!FullName.empty())
+    {
+	InstallPath = install_path + FullName + "/lib";
     }
 }
 
@@ -283,7 +311,7 @@ PackageInfo::PackageInfo(const string& fullname, const string& install_path, con
     FullName(fullname),
     InstallPath(install_path)
 {
-    LOGD("PackageInfo::PackageInfo(\"%s\", \"%s\")", fullname.c_str(), install_path.c_str());
+    LOGD("PackageInfo::PackageInfo(\"%s\", \"%s\", \"%s\")", fullname.c_str(), install_path.c_str(), package_version.c_str());
     
     assert(!fullname.empty());
     assert(!install_path.empty());

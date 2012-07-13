@@ -1,5 +1,5 @@
 if(${CMAKE_VERSION} VERSION_LESS "2.8.3")
-  message(STATUS WITH_CUDA flag requires CMake 2.8.3. CUDA support is disabled.)
+  message(STATUS "WITH_CUDA flag requires CMake 2.8.3 or newer. CUDA support is disabled.")
   return()
 endif()
 

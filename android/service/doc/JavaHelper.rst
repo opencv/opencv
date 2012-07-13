@@ -3,9 +3,6 @@ Java OpenCV Loader
 ******************
 
 .. highlight:: java
-.. module:: org.opencv.android
-    :platform: Android
-    :synopsis: Implements Android dependent Java classes.
 .. Class:: OpenCVLoader
 
 Helper class provides common initialization methods for OpenCV library

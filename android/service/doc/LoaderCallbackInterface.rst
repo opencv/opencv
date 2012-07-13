@@ -3,9 +3,6 @@ Loader Callback Interface
 *************************
 
 .. highlight:: java
-.. module:: org.opencv.android
-    :platform: Android
-    :synopsis: Defines OpenCV initialization callback interface.
 .. class:: LoaderCallbackInterface
 
     Interface for callback object in case of asynchronous initialization of OpenCV
@@ -26,7 +23,7 @@ void onPackageInstall()
 
     Callback method that is called in case when package installation is needed
 
-    @param callback Answer object with approve and cancel methods and package description
+    :param callback: Answer object with approve and cancel methods and package description
 
 Initialization status constants
 -------------------------------

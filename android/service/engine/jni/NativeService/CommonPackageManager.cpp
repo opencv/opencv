@@ -63,9 +63,15 @@ string CommonPackageManager::GetPackagePathByVersion(const std::string& version,
     
     for (vector<PackageInfo>::iterator it = all_packages.begin(); it != all_packages.end(); ++it)
     {
+	LOGD("Check version \"%s\" compatibility with \"%s\"\n", version.c_str(), it->GetVersion().c_str());
 	if (IsVersionCompatible(version, it->GetVersion()))
 	{
+	    LOGD("Compatible");
 	    packages.push_back(*it);
+	}
+	else
+	{
+	    LOGD("NOT Compatible");   
 	}
     }
     
@@ -85,10 +91,11 @@ string CommonPackageManager::GetPackagePathByVersion(const std::string& version,
 		group = CommonPackageManager::IntelRating;
 	    
 	    int HardwareRating = GetHardwareRating(platform, cpu_id, group);
+	    LOGD("Current hardware platform %d, %d", platform, cpu_id);
 	    
 	    if (-1 == HardwareRating)
 	    {
-		LOGE("Cannot calculate rating for current hardware platfrom!");
+		LOGE("Cannot calculate rating for current hardware platform!");
 	    }
 	    else
 	    {
@@ -108,6 +115,10 @@ string CommonPackageManager::GetPackagePathByVersion(const std::string& version,
 		if ((-1 != OptRating) && (packages.end() != found))
 		{
 		    result = found->GetInstalationPath();
+		}
+		else
+		{
+		    LOGI("Found package is incompatible with current hardware platform");
 		}
 	    }
 	}
@@ -156,8 +167,10 @@ std::vector<std::pair<int, int> > CommonPackageManager::InitArmRating()
     result.push_back(std::pair<int, int>(PLATFORM_UNKNOWN, ARCH_ARMv6));
     result.push_back(std::pair<int, int>(PLATFORM_UNKNOWN, ARCH_ARMv6 | FEATURES_HAS_VFPv3d16));
     result.push_back(std::pair<int, int>(PLATFORM_UNKNOWN, ARCH_ARMv6 | FEATURES_HAS_VFPv3));
+    result.push_back(std::pair<int, int>(PLATFORM_UNKNOWN, ARCH_ARMv6 | FEATURES_HAS_VFPv3 | FEATURES_HAS_VFPv3d16));    
     result.push_back(std::pair<int, int>(PLATFORM_UNKNOWN, ARCH_ARMv7));
     result.push_back(std::pair<int, int>(PLATFORM_UNKNOWN, ARCH_ARMv7 | FEATURES_HAS_VFPv3));
+    result.push_back(std::pair<int, int>(PLATFORM_UNKNOWN, ARCH_ARMv7 | FEATURES_HAS_NEON));
     result.push_back(std::pair<int, int>(PLATFORM_UNKNOWN, ARCH_ARMv7 | FEATURES_HAS_VFPv3 | FEATURES_HAS_NEON));
     result.push_back(std::pair<int, int>(PLATFORM_TEGRA2, ARCH_ARMv7 | FEATURES_HAS_VFPv3));
     result.push_back(std::pair<int, int>(PLATFORM_TEGRA3, ARCH_ARMv7 | FEATURES_HAS_VFPv3 | FEATURES_HAS_NEON));

@@ -162,8 +162,12 @@ then paste the CDT 8.0 repository URL http://download.eclipse.org/tools/cdt/rele
 
 #. Define the ``NDKROOT`` environment variable containing the path to Android NDK in your system (e.g. **"X:\\Apps\\android-ndk-r8"** or **"/opt/android-ndk-r8"**).
 
-#. CDT Builder is configured for Windows hosts, on Linux or MacOS open `Project Properties` of the projects having JNI part (`face-detection`, `Tutorial 3` and `Tutorial 4`), select :guilabel:`C/C++ Build`   in the left pane, remove **".cmd"** and leave ``"${NDKROOT}/ndk-build"`` in the :guilabel:`Build command`   edit box and click :guilabel:`OK`.
-
+#. | CDT Builder is already configured for **Windows** hosts,
+   | on **Linux** or **MacOS** a small modification is required:
+   
+   Open `Project Properties` of the projects having JNI part (`face-detection`, `Tutorial 3` and `Tutorial 4`),
+   select :guilabel:`C/C++ Build`   in the left pane,
+   remove **".cmd"** and leave ``"${NDKROOT}/ndk-build"`` in the :guilabel:`Build command`   edit box and click :guilabel:`OK`.
 
      .. image:: images/eclipse_cdt_cfg4.png
         :alt: Configure CDT
@@ -242,13 +246,15 @@ To build your own Android application, which uses OpenCV from native part, the f
 
            include C:\Work\android-opencv\OpenCV-2.4.0\share\OpenCV\OpenCV.mk
 
-   should be inserted into the :file:`jni/Android.mk` file right after the line
+   should be inserted into the :file:`jni/Android.mk` file **after** the line
 
    .. code-block:: make
 
         include $(CLEAR_VARS)
 
-   Several variables can be used to customize OpenCV stuff, they should be  set **before**  the ``"include ...\OpenCV.mk"`` line:
+#. Several variables can be used to customize OpenCV stuff, but you **don't need** to use them when your application uses the `async initialization` via the `OpenCV Manager` API.
+   
+   Note: these variables should be set **before**  the ``"include .../OpenCV.mk"`` line:
 
    .. code-block:: make
 
