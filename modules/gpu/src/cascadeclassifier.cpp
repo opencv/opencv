@@ -67,8 +67,7 @@ cv::gpu::CascadeClassifier_GPU_LBP::~CascadeClassifier_GPU_LBP()                
 bool cv::gpu::CascadeClassifier_GPU_LBP::empty() const                               { throw_nogpu(); return true; }
 bool cv::gpu::CascadeClassifier_GPU_LBP::load(const string&)                         { throw_nogpu(); return true; }
 Size cv::gpu::CascadeClassifier_GPU_LBP::getClassifierSize() const                   { throw_nogpu(); return Size(); }
-void cv::gpu::CascadeClassifier_GPU_LBP::preallocateIntegralBuffer(cv::Size /*desired*/) { throw_nogpu();}
-void cv::gpu::CascadeClassifier_GPU_LBP::initializeBuffers(cv::Size /*frame*/)       { throw_nogpu();}
+void cv::gpu::CascadeClassifier_GPU_LBP::allocateBuffers(cv::Size /*frame*/)       { throw_nogpu();}
 
 int cv::gpu::CascadeClassifier_GPU_LBP::detectMultiScale(const cv::gpu::GpuMat& /*image*/, cv::gpu::GpuMat& /*objectsBuf*/,
 double /*scaleFactor*/, int /*minNeighbors*/, cv::Size /*maxObjectSize*/){ throw_nogpu(); return 0;}
@@ -80,8 +79,8 @@ cv::gpu::CascadeClassifier_GPU_LBP::~CascadeClassifier_GPU_LBP(){}
 
 void cv::gpu::CascadeClassifier_GPU_LBP::allocateBuffers(cv::Size frame)
 {
-	if (frame == cv::Size())
-		return;
+    if (frame == cv::Size())
+        return;
 
     if (resuzeBuffer.empty() || frame.width > resuzeBuffer.cols || frame.height > resuzeBuffer.rows)
     {
@@ -97,17 +96,10 @@ void cv::gpu::CascadeClassifier_GPU_LBP::allocateBuffers(cv::Size frame)
 
         Ncv32u bufSize;
         ncvSafeCall( nppiStIntegralGetSize_8u32u(roiSize, &bufSize, prop) );
-        integralBuffer.create(1, bufSize, CV_8UC1);		
+        integralBuffer.create(1, bufSize, CV_8UC1);
     }
 
-	candidates.create(1 , frame.width >> 1, CV_32SC4);
-}
-
-
-
-void cv::gpu::CascadeClassifier_GPU_LBP::preallocateIntegralBuffer(cv::Size desired)
-{
-    integral.create(desired.width + 1, desired.height + 1, CV_32SC1);
+    candidates.create(1 , frame.width >> 1, CV_32SC4);
 }
 
 bool cv::gpu::CascadeClassifier_GPU_LBP::empty() const { return stage_mat.empty(); }
@@ -115,8 +107,8 @@ Size cv::gpu::CascadeClassifier_GPU_LBP::getClassifierSize() const { return NxM;
 
 bool cv::gpu::CascadeClassifier_GPU_LBP::load(const string& classifierAsXml)
 {
-    FileStorage fs(classifierAsXml, FileStorage::READ);    
-	return fs.isOpened() ? read(fs.getFirstTopLevelNode()) : false;
+    FileStorage fs(classifierAsXml, FileStorage::READ);
+    return fs.isOpened() ? read(fs.getFirstTopLevelNode()) : false;
 }
 
 struct Stage
@@ -129,24 +121,24 @@ struct Stage
 // currently only stump based boost classifiers are supported
 bool CascadeClassifier_GPU_LBP::read(const FileNode &root)
 {
-	const char *GPU_CC_STAGE_TYPE       = "stageType";
-	const char *GPU_CC_FEATURE_TYPE     = "featureType";
-	const char *GPU_CC_BOOST            = "BOOST";
-	const char *GPU_CC_LBP              = "LBP";
-	const char *GPU_CC_MAX_CAT_COUNT    = "maxCatCount";
-	const char *GPU_CC_HEIGHT           = "height";
-	const char *GPU_CC_WIDTH            = "width";
-	const char *GPU_CC_STAGE_PARAMS     = "stageParams";
-	const char *GPU_CC_MAX_DEPTH        = "maxDepth";
-	const char *GPU_CC_FEATURE_PARAMS   = "featureParams";
-	const char *GPU_CC_STAGES           = "stages";
-	const char *GPU_CC_STAGE_THRESHOLD  = "stageThreshold";
-	const float GPU_THRESHOLD_EPS       = 1e-5f;
-	const char *GPU_CC_WEAK_CLASSIFIERS = "weakClassifiers";
-	const char *GPU_CC_INTERNAL_NODES   = "internalNodes";
-	const char *GPU_CC_LEAF_VALUES      = "leafValues";
-	const char *GPU_CC_FEATURES         = "features";
-	const char *GPU_CC_RECT             = "rect";
+    const char *GPU_CC_STAGE_TYPE       = "stageType";
+    const char *GPU_CC_FEATURE_TYPE     = "featureType";
+    const char *GPU_CC_BOOST            = "BOOST";
+    const char *GPU_CC_LBP              = "LBP";
+    const char *GPU_CC_MAX_CAT_COUNT    = "maxCatCount";
+    const char *GPU_CC_HEIGHT           = "height";
+    const char *GPU_CC_WIDTH            = "width";
+    const char *GPU_CC_STAGE_PARAMS     = "stageParams";
+    const char *GPU_CC_MAX_DEPTH        = "maxDepth";
+    const char *GPU_CC_FEATURE_PARAMS   = "featureParams";
+    const char *GPU_CC_STAGES           = "stages";
+    const char *GPU_CC_STAGE_THRESHOLD  = "stageThreshold";
+    const float GPU_THRESHOLD_EPS       = 1e-5f;
+    const char *GPU_CC_WEAK_CLASSIFIERS = "weakClassifiers";
+    const char *GPU_CC_INTERNAL_NODES   = "internalNodes";
+    const char *GPU_CC_LEAF_VALUES      = "leafValues";
+    const char *GPU_CC_FEATURES         = "features";
+    const char *GPU_CC_RECT             = "rect";
 
     std::string stageTypeStr = (string)root[GPU_CC_STAGE_TYPE];
     CV_Assert(stageTypeStr == GPU_CC_BOOST);
@@ -300,7 +292,7 @@ int cv::gpu::CascadeClassifier_GPU_LBP::detectMultiScale(const GpuMat& image, Gp
                                                         double scaleFactor, int groupThreshold, cv::Size maxObjectSize /*, Size minSize=Size()*/)
 {
     CV_Assert(!empty() && scaleFactor > 1 && image.depth() == CV_8U);
-    
+
     const int defaultObjSearchNum = 100;
     const float grouping_eps = 0.2;
 
@@ -317,10 +309,10 @@ int cv::gpu::CascadeClassifier_GPU_LBP::detectMultiScale(const GpuMat& image, Gp
         maxObjectSize = image.size();
 
     allocateBuffers(image.size());
-	
-    unsigned int classified = 0;   
-	GpuMat dclassified(1, 1, CV_32S);
-	cudaSafeCall( cudaMemcpy(dclassified.ptr(), &classified, sizeof(int), cudaMemcpyHostToDevice) );
+
+    unsigned int classified = 0;
+    GpuMat dclassified(1, 1, CV_32S);
+    cudaSafeCall( cudaMemcpy(dclassified.ptr(), &classified, sizeof(int), cudaMemcpyHostToDevice) );
 
     //int step = 2;
     // cv::gpu::device::lbp::bindIntegral(integral);
@@ -349,10 +341,10 @@ int cv::gpu::CascadeClassifier_GPU_LBP::detectMultiScale(const GpuMat& image, Gp
         gpu::resize(image, scaledImg, scaledImageSize, 0, 0, CV_INTER_LINEAR);
         gpu::integralBuffered(scaledImg, scaledIntegral, currBuff);
 
-		int step = factor <= 2.f ? 2 : 1;
+        int step = factor <= 2.f ? 2 : 1;
 
         device::lbp::classifyStumpFixed(integral, integral.step1(), stage_mat, stage_mat.cols / sizeof(Stage), nodes_mat, leaves_mat, subsets_mat, features_mat,
-			processingRectSize.width, processingRectSize.height, windowSize.width, windowSize.height, factor, step, subsetSize, candidates, dclassified.ptr<unsigned int>());
+            processingRectSize.width, processingRectSize.height, windowSize.width, windowSize.height, factor, step, subsetSize, candidates, dclassified.ptr<unsigned int>());
 
         factor *= scaleFactor;
         windowSize = cv::Size(cvRound(NxM.width * factor), cvRound(NxM.height * factor));
@@ -363,13 +355,13 @@ int cv::gpu::CascadeClassifier_GPU_LBP::detectMultiScale(const GpuMat& image, Gp
     // cv::gpu::device::lbp::unbindIntegral();
     if (groupThreshold <= 0  || objects.empty())
         return 0;
-	
-	cudaSafeCall( cudaMemcpy(&classified, dclassified.ptr(), sizeof(int), cudaMemcpyDeviceToHost) );
-	device::lbp::connectedConmonents(candidates, classified, objects, groupThreshold, grouping_eps, dclassified.ptr<unsigned int>());
-	
-	cudaSafeCall( cudaMemcpy(&classified, dclassified.ptr(), sizeof(int), cudaMemcpyDeviceToHost) );
+
+    cudaSafeCall( cudaMemcpy(&classified, dclassified.ptr(), sizeof(int), cudaMemcpyDeviceToHost) );
+    device::lbp::connectedConmonents(candidates, classified, objects, groupThreshold, grouping_eps, dclassified.ptr<unsigned int>());
+
+    cudaSafeCall( cudaMemcpy(&classified, dclassified.ptr(), sizeof(int), cudaMemcpyDeviceToHost) );
     cudaSafeCall( cudaDeviceSynchronize() );
-    	        
+
     return classified;
 }
 

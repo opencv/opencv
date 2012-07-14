@@ -1437,7 +1437,6 @@ public:
 
     int detectMultiScale(const GpuMat& image, GpuMat& objectsBuf, double scaleFactor = 1.1, int minNeighbors = 4,
     cv::Size maxObjectSize = cv::Size()/*, Size minSize = Size()*/);
-    void preallocateIntegralBuffer(cv::Size desired);
     Size getClassifierSize() const;
 private:
     bool read(const FileNode &root);
