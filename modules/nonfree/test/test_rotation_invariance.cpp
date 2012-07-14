@@ -63,14 +63,14 @@ Mat generateHomography(float angle)
 static
 Mat rotateImage(const Mat& srcImage, float angle, Mat& dstImage, Mat& dstMask)
 {
-    int diag = std::sqrt(srcImage.cols * srcImage.cols + srcImage.rows * srcImage.rows);
+    float diag = std::sqrt(static_cast<float>(srcImage.cols * srcImage.cols + srcImage.rows * srcImage.rows));
     Mat LUShift = Mat::eye(3, 3, CV_32FC1); // left up
     LUShift.at<float>(0,2) = -srcImage.cols/2;
     LUShift.at<float>(1,2) = -srcImage.rows/2;
     Mat RDShift = Mat::eye(3, 3, CV_32FC1); // right down
     RDShift.at<float>(0,2) = diag/2;
     RDShift.at<float>(1,2) = diag/2;
-    Size sz(diag, diag);
+    Size sz(cvRound(diag), cvRound(diag));
 
     Mat srcMask(srcImage.size(), CV_8UC1, Scalar(255));
 
