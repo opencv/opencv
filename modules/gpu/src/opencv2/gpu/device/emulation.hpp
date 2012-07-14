@@ -49,17 +49,55 @@ namespace cv { namespace gpu { namespace device
 {
     struct Emulation
     {
-        static __forceinline__ __device__ int Ballot(int predicate, volatile int* cta_buffer)
+		template<int CTA_SIZE>
+        static __forceinline__ __device__ int Ballot(int predicate)
         {
-    #if __CUDA_ARCH__ >= 200
-            (void)cta_buffer;
+#if (__CUDA_ARCH__ >= 200) 
             return __ballot(predicate);
-    #else
+#else
+			__shared__ volatile int cta_buffer[CTA_SIZE]
+
             int tid = threadIdx.x;
             cta_buffer[tid] = predicate ? (1 << (tid & 31)) : 0;
             return warp_reduce(cta_buffer);
-    #endif
+#endif
         }
+
+		struct smem
+		{
+			enum { TAG_MASK = (1U << ( (sizeof(unsigned int) << 3) - 5U)) - 1U };
+			
+			template<typename T>
+			static __device__ __forceinline__ T atomicInc(T* address, T val)
+			{
+#if (__CUDA_ARCH__ < 120)
+
+#else
+			
+#endif
+		
+			}
+
+			template<typename T>
+			static __device__ __forceinline__ void atomicAdd(T* address, T val)
+			{
+#if (__CUDA_ARCH__ < 120)
+
+#else
+			
+#endif
+			}
+
+			template<typename T>
+			__device__ __forceinline__ T __atomicMin(T* address, T val)
+			{
+#if (__CUDA_ARCH__ < 120)
+
+#else
+			
+#endif
+			}
+		};
     };
 }}} // namespace cv { namespace gpu { namespace device
 

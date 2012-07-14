@@ -282,7 +282,7 @@ namespace cv { namespace gpu { namespace device
                                 DevMem2D_<int4> objects,
                                 unsigned int* classified);
 
-        int connectedConmonents(DevMem2D_<int4>  candidates, int ncandidates, DevMem2D_<int4> objects,int groupThreshold, float grouping_eps, unsigned int* nclasses);
+        void connectedConmonents(DevMem2D_<int4>  candidates, int ncandidates, DevMem2D_<int4> objects,int groupThreshold, float grouping_eps, unsigned int* nclasses);
         void bindIntegral(DevMem2Di integral);
         void unbindIntegral();
     }
@@ -294,7 +294,7 @@ int cv::gpu::CascadeClassifier_GPU_LBP::detectMultiScale(const GpuMat& image, Gp
     CV_Assert(!empty() && scaleFactor > 1 && image.depth() == CV_8U);
 
     const int defaultObjSearchNum = 100;
-    const float grouping_eps = 0.2;
+    const float grouping_eps = 0.2f;
 
     if( !objects.empty() && objects.depth() == CV_32S)
         objects.reshape(4, 1);

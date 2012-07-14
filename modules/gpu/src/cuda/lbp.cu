@@ -216,10 +216,10 @@ namespace cv { namespace gpu { namespace device
 
         struct Classifier
         {
-            __host__ __device__ __forceinline__ Classifier(const int* _integral, const int _pitch, const Stage* _stages, const ClNode* _nodes, const float* _leaves, const int* _subsets, const uchar4* _features,
-                const int _nstages, const int _clWidth, const int _clHeight, const float _scale, const int _step, const int _subsetSize)
-            : integral(_integral), pitch(_pitch), stages(_stages), nodes(_nodes), leaves(_leaves), subsets(_subsets), features(_features), nstages(_nstages), clWidth(_clWidth), clHeight(_clHeight),
-              scale(_scale), step(_step), subsetSize(_subsetSize){}
+            __host__ __device__ __forceinline__ Classifier(const int* _integral, int _pitch, const Stage* _stages, const ClNode* _nodes, const float* _leaves, 
+				const int* _subsets, const uchar4* _features, int _nstages, int _clWidth, int _clHeight, float _scale, int _step, int _subsetSize)
+            : integral(_integral), pitch(_pitch), stages(_stages), nodes(_nodes), leaves(_leaves), subsets(_subsets), features(_features), nstages(_nstages), 
+			  clWidth(_clWidth), clHeight(_clHeight), scale(_scale), step(_step), subsetSize(_subsetSize){}
 
             __device__ __forceinline__ void operator() (int y, int x, DevMem2D_<int4> objects, const unsigned int maxN, unsigned int* n) const
             {
@@ -255,7 +255,7 @@ namespace cv { namespace gpu { namespace device
                 rect.z = clWidth;
                 rect.w = clHeight;
 
-#if defined (__CUDA_ARCH__) && (__CUDA_ARCH__ < 120)
+#if (__CUDA_ARCH__ < 120)
                 int res = __atomicInc(n, maxN);
 #else
                 int res = atomicInc(n, maxN);
@@ -305,7 +305,7 @@ namespace cv { namespace gpu { namespace device
             extern __shared__ int sbuff[];
 
             int* labels = sbuff;
-            int* rrects = (int*)(sbuff + n);
+            int* rrects = sbuff + n;
 
             Pr predicate(grouping_eps);
             partition(candidates, n, labels, predicate);
@@ -317,7 +317,7 @@ namespace cv { namespace gpu { namespace device
             __syncthreads();
 
             int cls = labels[tid];
-#if defined (__CUDA_ARCH__) && (__CUDA_ARCH__ < 120)
+#if (__CUDA_ARCH__ < 120)
             __atomicAdd((rrects + cls * 4 + 0), candidates[tid].x);
             __atomicAdd((rrects + cls * 4 + 1), candidates[tid].y);
             __atomicAdd((rrects + cls * 4 + 2), candidates[tid].z);
@@ -332,7 +332,7 @@ namespace cv { namespace gpu { namespace device
             labels[tid] = 0;
 
             __syncthreads();
-#if defined (__CUDA_ARCH__) && (__CUDA_ARCH__ < 120)
+#if (__CUDA_ARCH__ < 120)
             __atomicInc((unsigned int*)labels + cls, n);
 #else
             atomicInc((unsigned int*)labels + cls, n);
@@ -354,13 +354,10 @@ namespace cv { namespace gpu { namespace device
 
             if (active && active >= groupThreshold)
             {
-                int* r1 = rrects + tid * 4;
-                int4 r_out;
-                r_out.x = r1[0];
-                r_out.y = r1[1];
-                r_out.z = r1[2];
-                r_out.w = r1[3];
-#if defined (__CUDA_ARCH__) && (__CUDA_ARCH__ < 120)
+                int* r1 = rrects + tid * 4;                				
+				int4 r_out = make_int4(r1[0], r1[1], r1[2], r1[3]);
+
+#if (__CUDA_ARCH__ < 120)
                 objects[__atomicInc(nclasses, n)] = r_out;
 #else
                 int aidx = atomicInc(nclasses, n);
@@ -371,21 +368,24 @@ namespace cv { namespace gpu { namespace device
 
         void classifyStumpFixed(const DevMem2Di& integral, const int pitch, const DevMem2Db& mstages, const int nstages, const DevMem2Di& mnodes, const DevMem2Df& mleaves, const DevMem2Di& msubsets, const DevMem2Db& mfeatures,
                            const int workWidth, const int workHeight, const int clWidth, const int clHeight, float scale, int step, int subsetSize, DevMem2D_<int4> objects, unsigned int* classified)
-        {
-            const int THREADS_BLOCK = 256;
-            int work_amount = ceilf(workHeight / (float)step) * ceilf(workWidth / (float)step);
-            int blocks  = divUp(work_amount, THREADS_BLOCK);
+        {			          			            
+			Classifier clr(integral, pitch, (Stage*)mstages.ptr(), (ClNode*)mnodes.ptr(), mleaves.ptr(), msubsets, 
+				(uchar4*)mfeatures.ptr(), nstages, clWidth, clHeight, scale, step, subsetSize);
 
-            Classifier clr(integral.ptr(), pitch, (Stage*)(mstages.ptr()), (ClNode*)(mnodes.ptr()), mleaves.ptr(), msubsets.ptr(), (uchar4*)(mfeatures.ptr()), nstages, clWidth, clHeight, scale, step, subsetSize);
-            lbp_classify_stump<<<blocks, THREADS_BLOCK>>>(clr, objects, objects.cols, classified, workWidth >> 1);
+			int total = ceilf(workHeight / (float)step) * ceilf(workWidth / (float)step); 
+
+			int block = 256;
+            int grid  = divUp(total, block);
+            lbp_classify_stump<<<grid, block>>>(clr, objects, objects.cols, classified, workWidth >> 1);
+			cudaSafeCall( cudaGetLastError() );
         }
 
-        int connectedConmonents(DevMem2D_<int4> candidates, int ncandidates, DevMem2D_<int4> objects, int groupThreshold, float grouping_eps, unsigned int* nclasses)
+        void connectedConmonents(DevMem2D_<int4> candidates, int ncandidates, DevMem2D_<int4> objects, int groupThreshold, float grouping_eps, unsigned int* nclasses)
         {
-            int threads = ncandidates;
-            int smem_amount = threads * sizeof(int) + threads * sizeof(int4);
-            disjoin<InSameComponint><<<1, threads, smem_amount>>>((int4*)candidates.ptr(), (int4*)objects.ptr(), ncandidates, groupThreshold, grouping_eps, nclasses);
-            return 0;
+            int block = ncandidates;
+            int smem  = block * ( sizeof(int) + sizeof(int4) );
+            disjoin<InSameComponint><<<1, block, smem>>>(candidates, objects, ncandidates, groupThreshold, grouping_eps, nclasses);
+			cudaSafeCall( cudaGetLastError() );
         }
     }
 }}}

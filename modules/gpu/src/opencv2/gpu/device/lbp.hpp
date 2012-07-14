@@ -50,45 +50,46 @@ namespace cv { namespace gpu { namespace device {
 namespace lbp{
 
     #define TAG_MASK ( (1U << ( (sizeof(unsigned int) << 3) - 5U)) - 1U )
-template<typename T>
-__device__ __forceinline__ T __atomicInc(T* address, T val)
-{
-    T count;
-    unsigned int tag = threadIdx.x << ( (sizeof(unsigned int) << 3) - 5U);
-    do
-    {
-        count = *address & TAG_MASK;
-        count = tag | (count + 1);
-        *address = count;
-    } while (*address != count);
+	
+	template<typename T>
+	__device__ __forceinline__ T __atomicInc(T* address, T val)
+	{
+		T count;
+		unsigned int tag = threadIdx.x << ( (sizeof(unsigned int) << 3) - 5U);
+		do
+		{
+			count = *address & TAG_MASK;
+			count = tag | (count + 1);
+			*address = count;
+		} while (*address != count);
 
-    return (count & TAG_MASK) - 1;
-}
+		return (count & TAG_MASK) - 1;
+	}
 
-template<typename T>
-__device__ __forceinline__ void __atomicAdd(T* address, T val)
-{
-    T count;
-    unsigned int tag = threadIdx.x << ( (sizeof(unsigned int) << 3) - 5U);
-    do
-    {
-        count = *address & TAG_MASK;
-        count = tag | (count + val);
-        *address = count;
-    } while (*address != count);
-}
+	template<typename T>
+	__device__ __forceinline__ void __atomicAdd(T* address, T val)
+	{
+		T count;
+		unsigned int tag = threadIdx.x << ( (sizeof(unsigned int) << 3) - 5U);
+		do
+		{
+			count = *address & TAG_MASK;
+			count = tag | (count + val);
+			*address = count;
+		} while (*address != count);
+	}
 
-template<typename T>
-__device__ __forceinline__ T __atomicMin(T* address, T val)
-{
-    T count = min(*address, val);
-    do
-    {
-        *address = count;
-    } while (*address > count);
+	template<typename T>
+	__device__ __forceinline__ T __atomicMin(T* address, T val)
+	{
+		T count = min(*address, val);
+		do
+		{
+			*address = count;
+		} while (*address > count);
 
-    return count;
-}
+		return count;
+	}
 
     struct Stage
     {
@@ -112,7 +113,7 @@ __device__ __forceinline__ T __atomicMin(T* address, T val)
 
         __device__ __forceinline__ bool operator()(const int4& r1, const int4& r2) const
         {
-            float delta = eps * (min(r1.z, r2.z) + min(r1.w, r2.w)) * 0.5;
+            float delta = eps * (min(r1.z, r2.z) + min(r1.w, r2.w)) * 0.5f;
 
             return abs(r1.x - r2.x) <= delta && abs(r1.y - r2.y) <= delta
                 && abs(r1.x + r1.z - r2.x - r2.z) <= delta && abs(r1.y + r1.w - r2.y - r2.w) <= delta;
@@ -134,22 +135,15 @@ __device__ __forceinline__ T __atomicMin(T* address, T val)
                 int p = labels[tid];
                 int q = labels[id];
 
-                if (p < q)
-                {
-#if defined (__CUDA_ARCH__) && (__CUDA_ARCH__ < 120)
-                    __atomicMin(labels + id, p);
+				if (p != q)
+				{
+					int m = min(p, q);
+#if (__CUDA_ARCH__ < 120)
+                    __atomicMin(labels + id, m);
 #else
-                    atomicMin(labels + id, p);
+                    atomicMin(labels + id, m);
 #endif
-                }
-                else if (p > q)
-                {
-#if defined (__CUDA_ARCH__) && (__CUDA_ARCH__ < 120)
-                    __atomicMin(labels + tid, q);
-#else
-                    atomicMin(labels + tid, q);
-#endif
-                }
+				}
             }
         }
         __syncthreads();
