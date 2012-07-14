@@ -185,9 +185,8 @@ protected:
                 {
                     inliersCount++;
 
-                    const float maxAngleDiff = 3.f; // grad
-
-                    float angle0 = keypoints0[m0].angle;
+                    const float maxAngleDiff = 15.f; // grad
+					float angle0 = keypoints0[m0].angle;
                     float angle1 = keypoints1[nearestPointIndex].angle;
                     if(angle0 == -1 || angle1 == -1)
                         CV_Error(CV_StsBadArg, "Given FeatureDetector is not rotation invariant, it can not be tested here.\n");
@@ -199,7 +198,8 @@ protected:
                         rotAngle0 -= 360.f;
 
                     float angleDiff = std::max(rotAngle0, angle1) - std::min(rotAngle0, angle1);
-                    angleDiff = std::min(angleDiff, static_cast<float>(2. * CV_PI - angleDiff));
+                    angleDiff = std::min(angleDiff, static_cast<float>(360.f - angleDiff));
+					CV_Assert(angleDiff >= 0.f);
                     bool isAngleCorrect = angleDiff < maxAngleDiff;
 
                     if(isAngleCorrect)
@@ -243,13 +243,13 @@ protected:
 
 TEST(Features2d_RotationInvariance_Detector_SURF, regression)
 {
-    DetectorRotatationInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.SURF"), 0.60f, 0.94f);
+    DetectorRotatationInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.SURF"), 0.60f, 0.76f);
     test.safe_run();
 }
 
 TEST(Features2d_RotationInvariance_Detector_SIFT, regression)
 {
-    DetectorRotatationInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.SIFT"), 0.76f, 0.99f);
+    DetectorRotatationInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.SIFT"), 0.76f, 0.76f);
     test.safe_run();
 }
 
