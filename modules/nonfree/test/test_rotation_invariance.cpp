@@ -48,9 +48,12 @@ using namespace cv;
 const string FEATURES2D_DIR = "features2d";
 const string IMAGE_FILENAME = "tsukuba.png";
 
+#define SHOW_DEBUG_LOG 0
+
 static
 Mat generateHomography(float angle)
 {
+	// angle - rotation around Oz in degrees
     float angleRadian = angle * CV_PI / 180.;
     Mat H = Mat::eye(3, 3, CV_32FC1);
     H.at<float>(0,0) = H.at<float>(1,1) = std::cos(angleRadian);
@@ -63,6 +66,7 @@ Mat generateHomography(float angle)
 static
 Mat rotateImage(const Mat& srcImage, float angle, Mat& dstImage, Mat& dstMask)
 {
+	// angle - rotation around Oz in degrees
     float diag = std::sqrt(static_cast<float>(srcImage.cols * srcImage.cols + srcImage.rows * srcImage.rows));
     Mat LUShift = Mat::eye(3, 3, CV_32FC1); // left up
     LUShift.at<float>(0,2) = -srcImage.cols/2;
@@ -82,7 +86,7 @@ Mat rotateImage(const Mat& srcImage, float angle, Mat& dstImage, Mat& dstMask)
 }
 
 static
-float calcIntersectArea(const Point2f& p0, float r0, const Point2f& p1, float r1)
+float calcCirclesIntersectArea(const Point2f& p0, float r0, const Point2f& p1, float r1)
 {
     float c = norm(p0 - p1), sqr_c = c * c;
 
@@ -110,18 +114,58 @@ float calcIntersectArea(const Point2f& p0, float r0, const Point2f& p1, float r1
 static
 float calcIntersectRatio(const Point2f& p0, float r0, const Point2f& p1, float r1)
 {
-    float intersectArea = calcIntersectArea(p0, r0, p1, r1);
+    float intersectArea = calcCirclesIntersectArea(p0, r0, p1, r1);
     float unionArea = CV_PI * (r0 * r0 + r1 * r1) - intersectArea;
     return intersectArea / unionArea;
+}
+
+static 
+void matchKeyPoints(const vector<KeyPoint>& keypoints0, const Mat& H,
+					const vector<KeyPoint>& keypoints1,
+					vector<DMatch>& matches)
+{
+	vector<Point2f> points0;
+    KeyPoint::convert(keypoints0, points0);
+    Mat points0t;
+    perspectiveTransform(Mat(points0), points0t, H);
+
+	matches.clear();
+	vector<uchar> usedMask(keypoints1.size(), 0);
+	for(size_t i0 = 0; i0 < keypoints0.size(); i0++)
+	{
+		int nearestPointIndex = -1;
+        float maxIntersectRatio = -1.f;
+        const float r0 =  0.5f * keypoints0[i0].size;
+        for(size_t i1 = 0; i1 < keypoints1.size(); i1++)
+        {
+			if(nearestPointIndex >= 0 && usedMask[i1])
+				continue;
+
+			float r1 = 0.5f * keypoints1[i1].size;
+            float intersectRatio = calcIntersectRatio(points0t.at<Point2f>(i0), r0,
+                                                      keypoints1[i1].pt, r1);
+            if(intersectRatio > maxIntersectRatio)
+            {
+				maxIntersectRatio = intersectRatio;
+				nearestPointIndex = i1;
+            }
+        }
+
+		matches.push_back(DMatch(i0, nearestPointIndex, maxIntersectRatio));
+		if(nearestPointIndex >= 0)
+			usedMask[nearestPointIndex] = 1;
+	}
 }
 
 class DetectorRotatationInvarianceTest : public cvtest::BaseTest
 {
 public:
     DetectorRotatationInvarianceTest(const Ptr<FeatureDetector>& _featureDetector,
-                                     float _minInliersRatio,
+                                     float _minKeyPointMatchesRatio,
                                      float _minAngleInliersRatio) :
-        featureDetector(_featureDetector), minInliersRatio(_minInliersRatio), minAngleInliersRatio(_minAngleInliersRatio)
+        featureDetector(_featureDetector), 
+		minKeyPointMatchesRatio(_minKeyPointMatchesRatio), 
+		minAngleInliersRatio(_minAngleInliersRatio)
     {
         CV_Assert(!featureDetector.empty());
     }
@@ -134,7 +178,6 @@ protected:
 
         // Read test data
         Mat image0 = imread(imageFilename), image1, mask1;
-
         if(image0.empty())
         {
             ts->printf(cvtest::TS::LOG, "Image %s can not be read.\n", imageFilename.c_str());
@@ -147,7 +190,7 @@ protected:
 
         CV_Assert(keypoints0.size() > 15);
 
-        const int maxAngle = 360, angleStep = 10;
+        const int maxAngle = 360, angleStep = 15;
         for(int angle = 0; angle < maxAngle; angle += angleStep)
         {
             Mat H = rotateImage(image0, angle, image1, mask1);
@@ -155,70 +198,53 @@ protected:
             vector<KeyPoint> keypoints1;
             featureDetector->detect(image1, keypoints1, mask1);
 
-            vector<Point2f> points0;
-            KeyPoint::convert(keypoints0, points0);
-            Mat points0t;
-            perspectiveTransform(Mat(points0), points0t, H);
+			vector<DMatch> matches;
+			matchKeyPoints(keypoints0, H, keypoints1, matches);
 
-            int inliersCount = 0;
             int angleInliersCount = 0;
 
-            for(size_t m0 = 0; m0 < points0t.total(); m0++)
+			const float minIntersectRatio = 0.5f;
+			int keyPointMatchesCount = 0;
+            for(size_t m = 0; m < matches.size(); m++)
             {
-                int nearestPointIndex = -1;
-                float maxIntersectRatio = 0.f;
-                const float r0 =  0.5f * keypoints0[m0].size;
-                for(size_t m1 = 0; m1 < keypoints1.size(); m1++)
-                {
+				if(matches[m].distance < minIntersectRatio)
+					continue;
+				
+				keyPointMatchesCount++;
 
-                    float r1 = 0.5f * keypoints1[m1].size;
-                    float intersectRatio = calcIntersectRatio(points0t.at<Point2f>(m0), r0,
-                                                              keypoints1[m1].pt, r1);
-                    if(intersectRatio > maxIntersectRatio)
-                    {
-                        maxIntersectRatio = intersectRatio;
-                        nearestPointIndex = m1;
-                    }
-                }
+				// Check does this inlier have consistent angles
+                const float maxAngleDiff = 15.f; // grad
+				float angle0 = keypoints0[matches[m].queryIdx].angle;
+                float angle1 = keypoints1[matches[m].trainIdx].angle;
+                if(angle0 == -1 || angle1 == -1)
+                    CV_Error(CV_StsBadArg, "Given FeatureDetector is not rotation invariant, it can not be tested here.\n");
+                CV_Assert(angle0 >= 0.f && angle0 < 360.f);
+                CV_Assert(angle1 >= 0.f && angle1 < 360.f);
 
-                if(maxIntersectRatio > 0.5f)
-                {
-                    inliersCount++;
+                float rotAngle0 = angle0 + angle;
+                if(rotAngle0 >= 360.f)
+                    rotAngle0 -= 360.f;
 
-                    const float maxAngleDiff = 15.f; // grad
-					float angle0 = keypoints0[m0].angle;
-                    float angle1 = keypoints1[nearestPointIndex].angle;
-                    if(angle0 == -1 || angle1 == -1)
-                        CV_Error(CV_StsBadArg, "Given FeatureDetector is not rotation invariant, it can not be tested here.\n");
-                    CV_Assert(angle0 >= 0.f && angle0 < 360.f);
-                    CV_Assert(angle1 >= 0.f && angle1 < 360.f);
-
-                    float rotAngle0 = angle0 + angle;
-                    if(rotAngle0 >= 360.f)
-                        rotAngle0 -= 360.f;
-
-                    float angleDiff = std::max(rotAngle0, angle1) - std::min(rotAngle0, angle1);
-                    angleDiff = std::min(angleDiff, static_cast<float>(360.f - angleDiff));
-					CV_Assert(angleDiff >= 0.f);
-                    bool isAngleCorrect = angleDiff < maxAngleDiff;
-
-                    if(isAngleCorrect)
-                        angleInliersCount++;
-                }
+                float angleDiff = std::max(rotAngle0, angle1) - std::min(rotAngle0, angle1);
+                angleDiff = std::min(angleDiff, static_cast<float>(360.f - angleDiff));
+				CV_Assert(angleDiff >= 0.f);
+                bool isAngleCorrect = angleDiff < maxAngleDiff;
+                if(isAngleCorrect)
+                    angleInliersCount++;
             }
 
-            float inliersRatio = static_cast<float>(inliersCount) / keypoints0.size();
-            if(inliersRatio < minInliersRatio)
+			float keyPointMatchesRatio = static_cast<float>(keyPointMatchesCount) / keypoints0.size();
+            if(keyPointMatchesRatio < minKeyPointMatchesRatio)
             {
-                ts->printf(cvtest::TS::LOG, "Incorrect inliersRatio: curr = %f, min = %f.\n",
-                           inliersRatio, minInliersRatio);
+                ts->printf(cvtest::TS::LOG, "Incorrect keyPointMatchesRatio: curr = %f, min = %f.\n",
+                           keyPointMatchesRatio, minKeyPointMatchesRatio);
                 ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
                 return;
             }
 
-            if(inliersCount)
+			if(keyPointMatchesCount)
             {
-                float angleInliersRatio = static_cast<float>(angleInliersCount) / inliersCount;
+				float angleInliersRatio = static_cast<float>(angleInliersCount) / keyPointMatchesCount;
                 if(angleInliersRatio < minAngleInliersRatio)
                 {
                     ts->printf(cvtest::TS::LOG, "Incorrect angleInliersRatio: curr = %f, min = %f.\n",
@@ -227,29 +253,165 @@ protected:
                     return;
                 }
             }
-
-//            std::cout << "inliersRatio - " << inliersRatio
-//                      << " - angleInliersRatio " << static_cast<float>(angleInliersCount) / inliersCount << std::endl;
+#if SHOW_DEBUG_LOG
+            std::cout << "keyPointMatchesRatio - " << keyPointMatchesRatio
+				<< " - angleInliersRatio " << static_cast<float>(angleInliersCount) / keyPointMatchesCount << std::endl;
+#endif
         }
         ts->set_failed_test_info( cvtest::TS::OK );
     }
 
     Ptr<FeatureDetector> featureDetector;
-    float minInliersRatio;
+    float minKeyPointMatchesRatio;
     float minAngleInliersRatio;
+};
+
+class DescriptorRotatationInvarianceTest : public cvtest::BaseTest
+{
+public:
+    DescriptorRotatationInvarianceTest(const Ptr<FeatureDetector>& _featureDetector,
+									   const Ptr<DescriptorExtractor>& _descriptorExtractor,
+									   int _normType,
+									   float _minKeyPointMatchesRatio,
+									   float _minDescInliersRatio) :
+        featureDetector(_featureDetector), 
+		descriptorExtractor(_descriptorExtractor),
+		normType(_normType),
+		minKeyPointMatchesRatio(_minKeyPointMatchesRatio),
+		minDescInliersRatio(_minDescInliersRatio)
+    {
+        CV_Assert(!featureDetector.empty());
+		CV_Assert(!descriptorExtractor.empty());
+    }
+
+protected:
+
+    void run(int)
+    {
+        const string imageFilename = string(ts->get_data_path()) + FEATURES2D_DIR + "/" + IMAGE_FILENAME;
+
+        // Read test data
+        Mat image0 = imread(imageFilename), image1, mask1;
+        if(image0.empty())
+        {
+            ts->printf(cvtest::TS::LOG, "Image %s can not be read.\n", imageFilename.c_str());
+            ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_TEST_DATA);
+            return;
+        }
+
+        vector<KeyPoint> keypoints0;
+		Mat descriptors0;
+        featureDetector->detect(image0, keypoints0);
+		descriptorExtractor->compute(image0, keypoints0, descriptors0);
+
+        CV_Assert(keypoints0.size() > 15);
+		BFMatcher bfmatcher(normType);
+
+        const int maxAngle = 360, angleStep = 15;
+        for(int angle = 0; angle < maxAngle; angle += angleStep)
+        {
+            Mat H = rotateImage(image0, angle, image1, mask1);
+
+            vector<KeyPoint> keypoints1;
+			Mat descriptors1;
+            featureDetector->detect(image1, keypoints1, mask1);
+			descriptorExtractor->compute(image1, keypoints1, descriptors1);
+
+			vector<DMatch> descMatches;
+			bfmatcher.match(descriptors0, descriptors1, descMatches);
+
+			vector<DMatch> keyPointMatches;
+			matchKeyPoints(keypoints0, H, keypoints1, keyPointMatches);
+
+			const float minIntersectRatio = 0.5f;
+			int keyPointMatchesCount = 0;
+			for(size_t m = 0; m < keyPointMatches.size(); m++)
+			{
+				if(keyPointMatches[m].distance >= minIntersectRatio)
+					keyPointMatchesCount++;
+			}
+			int descInliersCount = 0;
+			for(size_t m = 0; m < descMatches.size(); m++)
+            {
+				int queryIdx = descMatches[m].queryIdx;
+				if(keyPointMatches[queryIdx].distance >= minIntersectRatio &&
+					descMatches[m].trainIdx == keyPointMatches[queryIdx].trainIdx)
+					descInliersCount++;
+			}
+
+            float keyPointMatchesRatio = static_cast<float>(keyPointMatchesCount) / keypoints0.size();
+            if(keyPointMatchesRatio < minKeyPointMatchesRatio)
+            {
+                ts->printf(cvtest::TS::LOG, "Incorrect keyPointMatchesRatio: curr = %f, min = %f.\n",
+                           keyPointMatchesRatio, minKeyPointMatchesRatio);
+                ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
+                return;
+            }
+
+			if(keyPointMatchesCount)
+            {
+				float descInliersRatio = static_cast<float>(descInliersCount) / keyPointMatchesCount;
+				if(descInliersRatio < minDescInliersRatio)
+                {
+                    ts->printf(cvtest::TS::LOG, "Incorrect descInliersRatio: curr = %f, min = %f.\n",
+                               descInliersRatio, minDescInliersRatio);
+                    ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
+                    return;
+                }
+            }
+#if SHOW_DEBUG_LOG
+            std::cout << "keyPointMatchesRatio - " << keyPointMatchesRatio
+   				<< " - descInliersRatio " << static_cast<float>(descInliersCount) / keyPointMatchesCount << std::endl;
+#endif
+        }
+        ts->set_failed_test_info( cvtest::TS::OK );
+    }
+
+    Ptr<FeatureDetector> featureDetector;
+	Ptr<DescriptorExtractor> descriptorExtractor;
+    int normType;
+	float minKeyPointMatchesRatio;
+	float minDescInliersRatio;
+	
 };
 
 // Tests registration
 
+// Detector's rotation invariance check
 TEST(Features2d_RotationInvariance_Detector_SURF, regression)
 {
-    DetectorRotatationInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.SURF"), 0.60f, 0.76f);
+    DetectorRotatationInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.SURF"), 
+										  0.44f, 
+										  0.76f);
     test.safe_run();
 }
+
 
 TEST(Features2d_RotationInvariance_Detector_SIFT, regression)
 {
-    DetectorRotatationInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.SIFT"), 0.76f, 0.76f);
+    DetectorRotatationInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.SIFT"), 
+										  0.64f, 
+										  0.74f);
     test.safe_run();
 }
 
+// Descriptors's rotation invariance check
+TEST(Features2d_RotationInvariance_Descriptor_SURF, regression)
+{
+    DescriptorRotatationInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.SURF"), 
+											Algorithm::create<DescriptorExtractor>("Feature2D.SURF"), 
+											NORM_L1, 
+											0.44f,
+											0.64f);
+    test.safe_run();
+}
+
+TEST(Features2d_RotationInvariance_Descriptor_SIFT, regression)
+{
+    DescriptorRotatationInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.SIFT"), 
+											Algorithm::create<DescriptorExtractor>("Feature2D.SIFT"), 
+											NORM_L1, 
+											0.64f,
+											0.72f);
+    test.safe_run();
+}
