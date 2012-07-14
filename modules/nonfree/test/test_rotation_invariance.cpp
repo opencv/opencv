@@ -157,10 +157,10 @@ void matchKeyPoints(const vector<KeyPoint>& keypoints0, const Mat& H,
 	}
 }
 
-class DetectorRotatationInvarianceTest : public cvtest::BaseTest
+class DetectorRotationInvarianceTest : public cvtest::BaseTest
 {
 public:
-    DetectorRotatationInvarianceTest(const Ptr<FeatureDetector>& _featureDetector,
+    DetectorRotationInvarianceTest(const Ptr<FeatureDetector>& _featureDetector,
                                      float _minKeyPointMatchesRatio,
                                      float _minAngleInliersRatio) :
         featureDetector(_featureDetector), 
@@ -266,10 +266,10 @@ protected:
     float minAngleInliersRatio;
 };
 
-class DescriptorRotatationInvarianceTest : public cvtest::BaseTest
+class DescriptorRotationInvarianceTest : public cvtest::BaseTest
 {
 public:
-    DescriptorRotatationInvarianceTest(const Ptr<FeatureDetector>& _featureDetector,
+    DescriptorRotationInvarianceTest(const Ptr<FeatureDetector>& _featureDetector,
 									   const Ptr<DescriptorExtractor>& _descriptorExtractor,
 									   int _normType,
 									   float _minKeyPointMatchesRatio,
@@ -380,38 +380,38 @@ protected:
 // Detector's rotation invariance check
 TEST(Features2d_RotationInvariance_Detector_SURF, regression)
 {
-    DetectorRotatationInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.SURF"), 
-										  0.44f, 
-										  0.76f);
+    DetectorRotationInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.SURF"), 
+										0.44f, 
+										0.76f);
     test.safe_run();
 }
 
 
 TEST(Features2d_RotationInvariance_Detector_SIFT, regression)
 {
-    DetectorRotatationInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.SIFT"), 
-										  0.64f, 
-										  0.74f);
+    DetectorRotationInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.SIFT"), 
+										0.64f, 
+										0.74f);
     test.safe_run();
 }
 
 // Descriptors's rotation invariance check
 TEST(Features2d_RotationInvariance_Descriptor_SURF, regression)
 {
-    DescriptorRotatationInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.SURF"), 
-											Algorithm::create<DescriptorExtractor>("Feature2D.SURF"), 
-											NORM_L1, 
-											0.44f,
-											0.64f);
+    DescriptorRotationInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.SURF"), 
+										  Algorithm::create<DescriptorExtractor>("Feature2D.SURF"), 
+										  NORM_L1, 
+										  0.44f,
+										  0.64f);
     test.safe_run();
 }
 
 TEST(Features2d_RotationInvariance_Descriptor_SIFT, regression)
 {
-    DescriptorRotatationInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.SIFT"), 
-											Algorithm::create<DescriptorExtractor>("Feature2D.SIFT"), 
-											NORM_L1, 
-											0.64f,
-											0.72f);
+    DescriptorRotationInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.SIFT"), 
+										  Algorithm::create<DescriptorExtractor>("Feature2D.SIFT"), 
+										  NORM_L1, 
+										  0.64f,
+										  0.72f);
     test.safe_run();
 }

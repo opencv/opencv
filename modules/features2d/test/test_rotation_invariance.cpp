@@ -157,10 +157,10 @@ void matchKeyPoints(const vector<KeyPoint>& keypoints0, const Mat& H,
 	}
 }
 
-class DetectorRotatationInvarianceTest : public cvtest::BaseTest
+class DetectorRotationInvarianceTest : public cvtest::BaseTest
 {
 public:
-    DetectorRotatationInvarianceTest(const Ptr<FeatureDetector>& _featureDetector,
+    DetectorRotationInvarianceTest(const Ptr<FeatureDetector>& _featureDetector,
                                      float _minKeyPointMatchesRatio,
                                      float _minAngleInliersRatio) :
         featureDetector(_featureDetector), 
@@ -266,10 +266,10 @@ protected:
     float minAngleInliersRatio;
 };
 
-class DescriptorRotatationInvarianceTest : public cvtest::BaseTest
+class DescriptorRotationInvarianceTest : public cvtest::BaseTest
 {
 public:
-    DescriptorRotatationInvarianceTest(const Ptr<FeatureDetector>& _featureDetector,
+    DescriptorRotationInvarianceTest(const Ptr<FeatureDetector>& _featureDetector,
 									   const Ptr<DescriptorExtractor>& _descriptorExtractor,
 									   int _normType,
 									   float _minKeyPointMatchesRatio,
@@ -380,27 +380,27 @@ protected:
 // Detector's rotation invariance check
 TEST(Features2d_RotationInvariance_Detector_ORB, regression)
 {
-    DetectorRotatationInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.ORB"),
-										  0.45f, 
-										  0.75f);
+    DetectorRotationInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.ORB"),
+										0.45f, 
+										0.75f);
     test.safe_run();
 }
 
 // Descriptors's rotation invariance check
 TEST(Features2d_RotationInvariance_Descriptor_ORB, regression)
 {
-    DescriptorRotatationInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.ORB"), 
-											Algorithm::create<DescriptorExtractor>("Feature2D.ORB"), 
-											NORM_HAMMING, 
-											0.45f,
-											0.53f);
+    DescriptorRotationInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.ORB"), 
+										  Algorithm::create<DescriptorExtractor>("Feature2D.ORB"), 
+									      NORM_HAMMING, 
+										  0.45f,
+										  0.53f);
     test.safe_run();
 }
 
 // TODO: uncomment test for FREAK when it will work
 //TEST(Features2d_RotationInvariance_Descriptor_FREAK, regression)
 //{
-//    DescriptorRotatationInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.ORB"), 
+//    DescriptorRotationInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.ORB"), 
 //											Algorithm::create<DescriptorExtractor>("Feature2D.FREAK"), 
 //											NORM_HAMMING(?), 
 //											0.45f,
