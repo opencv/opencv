@@ -31,7 +31,7 @@ public class ColorBlobDetectionActivity extends Activity {
 							AlertDialog ad = new AlertDialog.Builder(mAppContext).create();
 							ad.setCancelable(false); // This blocks the 'BACK' button
 							ad.setMessage("Fatal error: can't open camera!");
-							ad.setButton("OK", new DialogInterface.OnClickListener() {
+							ad.setButton(AlertDialog.BUTTON_POSITIVE, "OK", new DialogInterface.OnClickListener() {
 							    public void onClick(DialogInterface dialog, int which) {
 								dialog.dismiss();
 								finish();
@@ -69,7 +69,7 @@ public class ColorBlobDetectionActivity extends Activity {
 			AlertDialog ad = new AlertDialog.Builder(this).create();
 			ad.setCancelable(false); // This blocks the 'BACK' button
 			ad.setMessage("Fatal error: can't open camera!");
-			ad.setButton("OK", new DialogInterface.OnClickListener() {
+			ad.setButton(AlertDialog.BUTTON_POSITIVE, "OK", new DialogInterface.OnClickListener() {
 			    public void onClick(DialogInterface dialog, int which) {
 				dialog.dismiss();
 				finish();
