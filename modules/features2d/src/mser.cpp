@@ -1296,7 +1296,7 @@ void MserFeatureDetector::detectImpl( const Mat& image, vector<KeyPoint>& keypoi
         float diam = sqrt(rect.size.height*rect.size.width);
         
         if( diam > std::numeric_limits<float>::epsilon() && r.contains(rect.center) )
-            keypoints.push_back( KeyPoint( rect.center, diam, rect.angle) );
+            keypoints.push_back( KeyPoint(rect.center, diam) );
     }
 
 }
