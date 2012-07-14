@@ -24,7 +24,7 @@ KeyPoint
 
   .. ocv:member:: float angle
 
-     computed orientation of the keypoint (-1 if not applicable)
+     computed orientation of the keypoint (-1 if not applicable). Its possible values are in a range [0,360) degrees. It is measured relative to image coordinate system (y-axis is directed downward), ie in clockwise.
 
   .. ocv:member:: float response
 
