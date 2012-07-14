@@ -45,6 +45,21 @@ public class puzzle15Activity extends Activity
 						ad.show();
 					}
 				} break;
+				/** OpenCV loader cannot start Google Play **/
+				case LoaderCallbackInterface.MARKET_ERROR:
+				{
+					Log.d(TAG, "Google Play service is not accessible!");
+					AlertDialog MarketErrorMessage = new AlertDialog.Builder(mAppContext).create();
+					MarketErrorMessage.setTitle("OpenCV Manager");
+					MarketErrorMessage.setMessage("Google Play service is not accessible!\nTry to install the 'OpenCV Manager' and the appropriate 'OpenCV binary pack' APKs from OpenCV SDK manually via 'adb install file_name.apk' command.");
+					MarketErrorMessage.setCancelable(false); // This blocks the 'BACK' button
+					MarketErrorMessage.setButton(AlertDialog.BUTTON_POSITIVE, "OK", new DialogInterface.OnClickListener() {
+						public void onClick(DialogInterface dialog, int which) {
+							mAppContext.finish();
+						}
+					});
+					MarketErrorMessage.show();
+				} break;
 				default:
 				{
 					super.onManagerConnected(status);
