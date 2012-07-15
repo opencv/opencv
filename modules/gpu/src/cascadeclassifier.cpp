@@ -97,13 +97,15 @@ void cv::gpu::CascadeClassifier_GPU_LBP::allocateBuffers(cv::Size frame)
         Ncv32u bufSize;
         ncvSafeCall( nppiStIntegralGetSize_8u32u(roiSize, &bufSize, prop) );
         integralBuffer.create(1, bufSize, CV_8UC1);
-    }
 
-    candidates.create(1 , frame.width >> 1, CV_32SC4);
+        candidates.create(1 , frame.width >> 1, CV_32SC4);
+    }
 }
 
-bool cv::gpu::CascadeClassifier_GPU_LBP::empty() const { return stage_mat.empty(); }
-Size cv::gpu::CascadeClassifier_GPU_LBP::getClassifierSize() const { return NxM; }
+bool cv::gpu::CascadeClassifier_GPU_LBP::empty() const
+{
+    return stage_mat.empty();
+}
 
 bool cv::gpu::CascadeClassifier_GPU_LBP::load(const string& classifierAsXml)
 {
@@ -301,7 +303,6 @@ int cv::gpu::CascadeClassifier_GPU_LBP::detectMultiScale(const GpuMat& image, Gp
     else
         objects.create(1 , image.cols >> 4, CV_32SC4);
 
-    // GpuMat candidates(1 , defaultObjSearchNum, CV_32SC4);
     // used for debug
     // candidates.setTo(cv::Scalar::all(0));
     // objects.setTo(cv::Scalar::all(0));
@@ -314,7 +315,6 @@ int cv::gpu::CascadeClassifier_GPU_LBP::detectMultiScale(const GpuMat& image, Gp
     GpuMat dclassified(1, 1, CV_32S);
     cudaSafeCall( cudaMemcpy(dclassified.ptr(), &classified, sizeof(int), cudaMemcpyHostToDevice) );
 
-    //int step = 2;
     // cv::gpu::device::lbp::bindIntegral(integral);
 
     Size scaledImageSize(image.cols, image.rows);

@@ -357,14 +357,18 @@ TEST_P(LBP_classify, Accuracy)
     {
         cv::Rect r = faces[i];
 
+#if defined (LOG_CASCADE_STATISTIC)
 		std::cout << r.x << " " << r.y  << " " << r.width << " " << r.height << std::endl;
+#endif
         cv::rectangle(markedImage, r , CV_RGB(255, 0, 0));
     }
 
+#if defined (LOG_CASCADE_STATISTIC)
 	cv::imshow("Res", markedImage); cv::waitKey();
+#endif
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_ObjDetect, LBP_classify, 
+INSTANTIATE_TEST_CASE_P(GPU_ObjDetect, LBP_classify,
 						testing::Combine(ALL_DEVICES, testing::Values<int>(0)));
 
 } // namespace
