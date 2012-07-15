@@ -45,8 +45,8 @@
 using namespace std;
 using namespace cv;
 
-const string FEATURES2D_DIR = "features2d";
-const string IMAGE_FILENAME = "tsukuba.png";
+const string IMAGE_TSUKUBA = "/features2d/tsukuba.png";
+const string IMAGE_BIKES = "/detectors_descriptors_evaluation/images_datasets/bikes/img1.png";
 
 #define SHOW_DEBUG_LOG 0
 
@@ -127,14 +127,17 @@ void matchKeyPoints(const vector<KeyPoint>& keypoints0, const Mat& H,
 	vector<Point2f> points0;
     KeyPoint::convert(keypoints0, points0);
     Mat points0t;
-    perspectiveTransform(Mat(points0), points0t, H);
+	if(H.empty())
+		points0t = Mat(points0);
+	else
+		perspectiveTransform(Mat(points0), points0t, H);
 
 	matches.clear();
 	vector<uchar> usedMask(keypoints1.size(), 0);
 	for(size_t i0 = 0; i0 < keypoints0.size(); i0++)
 	{
 		int nearestPointIndex = -1;
-        float maxIntersectRatio = -1.f;
+        float maxIntersectRatio = 0.f;
         const float r0 =  0.5f * keypoints0[i0].size;
         for(size_t i1 = 0; i1 < keypoints1.size(); i1++)
         {
@@ -174,7 +177,7 @@ protected:
 
     void run(int)
     {
-        const string imageFilename = string(ts->get_data_path()) + FEATURES2D_DIR + "/" + IMAGE_FILENAME;
+		const string imageFilename = string(ts->get_data_path()) + IMAGE_TSUKUBA;
 
         // Read test data
         Mat image0 = imread(imageFilename), image1, mask1;
@@ -187,8 +190,8 @@ protected:
 
         vector<KeyPoint> keypoints0;
         featureDetector->detect(image0, keypoints0);
-
-        CV_Assert(keypoints0.size() > 15);
+        if(keypoints0.size() < 15)
+			CV_Error(CV_StsAssert, "Detector gives too few points in a test image\n");
 
         const int maxAngle = 360, angleStep = 15;
         for(int angle = 0; angle < maxAngle; angle += angleStep)
@@ -266,6 +269,13 @@ protected:
     float minAngleInliersRatio;
 };
 
+void scaleKeyPoints(const vector<KeyPoint>& src, vector<KeyPoint>& dst, float scale)
+{
+	dst.resize(src.size());
+	for(size_t i = 0; i < src.size(); i++)
+		dst[i] = KeyPoint(src[i].pt.x * scale, src[i].pt.y * scale, src[i].size * scale);
+}
+
 class DescriptorRotationInvarianceTest : public cvtest::BaseTest
 {
 public:
@@ -288,7 +298,7 @@ protected:
 
     void run(int)
     {
-        const string imageFilename = string(ts->get_data_path()) + FEATURES2D_DIR + "/" + IMAGE_FILENAME;
+        const string imageFilename = string(ts->get_data_path()) + IMAGE_TSUKUBA;
 
         // Read test data
         Mat image0 = imread(imageFilename), image1, mask1;
@@ -302,9 +312,10 @@ protected:
         vector<KeyPoint> keypoints0;
 		Mat descriptors0;
         featureDetector->detect(image0, keypoints0);
+		if(keypoints0.size() < 15)
+			CV_Error(CV_StsAssert, "Detector gives too few points in a test image\n");
 		descriptorExtractor->compute(image0, keypoints0, descriptors0);
 
-        CV_Assert(keypoints0.size() > 15);
 		BFMatcher bfmatcher(normType);
 
         const int maxAngle = 360, angleStep = 15;
@@ -375,6 +386,258 @@ protected:
 	
 };
 
+class DetectorScaleInvarianceTest : public cvtest::BaseTest
+{
+public:
+    DetectorScaleInvarianceTest(const Ptr<FeatureDetector>& _featureDetector,
+                                float _minKeyPointMatchesRatio,
+                                float _minScaleInliersRatio) :
+        featureDetector(_featureDetector), 
+		minKeyPointMatchesRatio(_minKeyPointMatchesRatio), 
+		minScaleInliersRatio(_minScaleInliersRatio)
+    {
+        CV_Assert(!featureDetector.empty());
+    }
+
+protected:
+
+    void run(int)
+    {
+		const string imageFilename = string(ts->get_data_path()) + IMAGE_BIKES;
+
+        // Read test data
+        Mat image0 = imread(imageFilename);
+        if(image0.empty())
+        {
+            ts->printf(cvtest::TS::LOG, "Image %s can not be read.\n", imageFilename.c_str());
+            ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_TEST_DATA);
+            return;
+        }
+
+        vector<KeyPoint> keypoints0;
+        featureDetector->detect(image0, keypoints0);
+        if(keypoints0.size() < 15)
+			CV_Error(CV_StsAssert, "Detector gives too few points in a test image\n");
+
+		for(int scale = 2; scale <= 4; scale++)
+        {
+			Mat image1; 
+			resize(image0, image1, Size(), 1./scale, 1./scale);
+
+            vector<KeyPoint> keypoints1, osiKeypoints1; // osi - original size image
+            featureDetector->detect(image1, keypoints1);
+			if(keypoints1.size() < 15)
+				CV_Error(CV_StsAssert, "Detector gives too few points in a test image\n");
+
+			if(keypoints1.size() > keypoints0.size())
+			{
+                ts->printf(cvtest::TS::LOG, "Strange behavior of the detector. "
+					"It gives more points count in an image of the smaller size.\n"
+					"original size (%d, %d), keypoints count = %d\n"
+					"reduced size (%d, %d), keypoints count = %d\n",
+					image0.cols, image0.rows, keypoints0.size(),
+					image1.cols, image1.rows, keypoints1.size());
+				ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
+                return;
+            }
+
+			scaleKeyPoints(keypoints1, osiKeypoints1, scale); 
+
+			vector<DMatch> matches;
+			// image1 is query image (it's reduced image0)
+			// image0 is train image
+			matchKeyPoints(osiKeypoints1, Mat(), keypoints0, matches);
+
+			const float minIntersectRatio = 0.5f;
+			int keyPointMatchesCount = 0;
+			int scaleInliersCount = 0;
+
+			for(size_t m = 0; m < matches.size(); m++)
+            {
+				if(matches[m].distance < minIntersectRatio)
+					continue;
+
+				keyPointMatchesCount++;
+
+				// Check does this inlier have consistent sizes
+                const float maxSizeDiff = 0.8;//0.9f; // grad
+				float size0 = keypoints0[matches[m].trainIdx].size;
+                float size1 = osiKeypoints1[matches[m].queryIdx].size;
+				CV_Assert(size0 > 0 && size1 > 0);
+				if(std::min(size0, size1) > maxSizeDiff * std::max(size0, size1))
+                    scaleInliersCount++;
+            }
+
+			float keyPointMatchesRatio = static_cast<float>(keyPointMatchesCount) / keypoints1.size();
+            if(keyPointMatchesRatio < minKeyPointMatchesRatio)
+            {
+                ts->printf(cvtest::TS::LOG, "Incorrect keyPointMatchesRatio: curr = %f, min = %f.\n",
+                           keyPointMatchesRatio, minKeyPointMatchesRatio);
+                ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
+                return;
+            }
+
+			if(keyPointMatchesCount)
+            {
+				float scaleInliersRatio = static_cast<float>(scaleInliersCount) / keyPointMatchesCount;
+                if(scaleInliersRatio < minScaleInliersRatio)
+                {
+                    ts->printf(cvtest::TS::LOG, "Incorrect scaleInliersRatio: curr = %f, min = %f.\n",
+                               scaleInliersRatio, minScaleInliersRatio);
+                    ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
+                    return;
+                }
+            }
+#if SHOW_DEBUG_LOG
+            std::cout << "keyPointMatchesRatio - " << keyPointMatchesRatio
+				<< " - scaleInliersRatio " << static_cast<float>(scaleInliersCount) / keyPointMatchesCount << std::endl;
+#endif
+			/*vector<DMatch> filteredMatches;
+			for(size_t i = 0; i < matches.size(); i++)
+			{
+				if(matches[i].distance >= minIntersectRatio)
+					filteredMatches.push_back(matches[i]);
+			}
+
+			Mat out;
+			namedWindow("out", CV_WINDOW_NORMAL);
+			drawMatches(image1, keypoints1, image0, keypoints0, filteredMatches, out,
+				Scalar::all(-1), Scalar(-1), vector<char>(), DrawMatchesFlags::DEFAULT + DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
+			imshow("out", out);
+			waitKey();*/
+        }
+        ts->set_failed_test_info( cvtest::TS::OK );
+    }
+
+    Ptr<FeatureDetector> featureDetector;
+    float minKeyPointMatchesRatio;
+    float minScaleInliersRatio;
+};
+
+class DescriptorScaleInvarianceTest : public cvtest::BaseTest
+{
+public:
+    DescriptorScaleInvarianceTest(const Ptr<FeatureDetector>& _featureDetector,
+								const Ptr<DescriptorExtractor>& _descriptorExtractor,
+								int _normType,
+                                float _minKeyPointMatchesRatio,
+                                float _minDescInliersRatio) :
+        featureDetector(_featureDetector), 
+		descriptorExtractor(_descriptorExtractor),
+		normType(_normType),
+		minKeyPointMatchesRatio(_minKeyPointMatchesRatio), 
+		minDescInliersRatio(_minDescInliersRatio)
+    {
+        CV_Assert(!featureDetector.empty());
+		CV_Assert(!descriptorExtractor.empty());
+    }
+
+protected:
+
+    void run(int)
+    {
+		const string imageFilename = string(ts->get_data_path()) + IMAGE_BIKES;
+
+        // Read test data
+        Mat image0 = imread(imageFilename);
+        if(image0.empty())
+        {
+            ts->printf(cvtest::TS::LOG, "Image %s can not be read.\n", imageFilename.c_str());
+            ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_TEST_DATA);
+            return;
+        }
+
+        vector<KeyPoint> keypoints0;
+        featureDetector->detect(image0, keypoints0);
+		if(keypoints0.size() < 15)
+			CV_Error(CV_StsAssert, "Detector gives too few points in a test image\n");
+		Mat descriptors0;
+		descriptorExtractor->compute(image0, keypoints0, descriptors0);
+
+		BFMatcher bfmatcher(normType);
+		for(int scale = 2; scale <= 4; scale++)
+        {
+			Mat image1; 
+			resize(image0, image1, Size(), 1./scale, 1./scale);
+
+            vector<KeyPoint> keypoints1, osiKeypoints1; // osi - original size image
+            featureDetector->detect(image1, keypoints1);
+			if(keypoints1.size() < 15)
+				CV_Error(CV_StsAssert, "Detector gives too few points in a test image\n");
+			if(keypoints1.size() > keypoints0.size() )
+			{
+                ts->printf(cvtest::TS::LOG, "Strange behavior of the detector. "
+					"It gives more points count in an image of the smaller size.\n"
+					"original size (%d, %d), keypoints count = %d\n"
+					"reduced size (%d, %d), keypoints count = %d\n",
+					image0.cols, image0.rows, keypoints0.size(),
+					image1.cols, image1.rows, keypoints1.size());
+				ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
+                return;
+            }
+
+			Mat descriptors1;
+			descriptorExtractor->compute(image1, keypoints1, descriptors1);
+
+			vector<DMatch> keyPointMatches, descMatches;
+			// image1 is query image (it's reduced image0)
+			// image0 is train image
+			bfmatcher.match(descriptors1, descriptors0, descMatches);
+
+			scaleKeyPoints(keypoints1, osiKeypoints1, scale); 
+			matchKeyPoints(osiKeypoints1, Mat(), keypoints0, keyPointMatches);
+
+			const float minIntersectRatio = 0.5f;
+			int keyPointMatchesCount = 0;
+			for(size_t m = 0; m < keyPointMatches.size(); m++)
+			{
+				if(keyPointMatches[m].distance >= minIntersectRatio)
+					keyPointMatchesCount++;
+			}
+			int descInliersCount = 0;
+			for(size_t m = 0; m < descMatches.size(); m++)
+            {
+				int queryIdx = descMatches[m].queryIdx;
+				if(keyPointMatches[queryIdx].distance >= minIntersectRatio &&
+					descMatches[m].trainIdx == keyPointMatches[queryIdx].trainIdx)
+					descInliersCount++;
+			}
+
+			float keyPointMatchesRatio = static_cast<float>(keyPointMatchesCount) / keypoints1.size();
+            if(keyPointMatchesRatio < minKeyPointMatchesRatio)
+            {
+                ts->printf(cvtest::TS::LOG, "Incorrect keyPointMatchesRatio: curr = %f, min = %f.\n",
+                           keyPointMatchesRatio, minKeyPointMatchesRatio);
+                ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
+                return;
+            }
+
+			if(keyPointMatchesCount)
+            {
+				float descInliersRatio = static_cast<float>(descInliersCount) / keyPointMatchesCount;
+				if(descInliersRatio < minDescInliersRatio)
+                {
+                    ts->printf(cvtest::TS::LOG, "Incorrect descInliersRatio: curr = %f, min = %f.\n",
+                               descInliersRatio, minDescInliersRatio);
+                    ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
+                    return;
+                }
+            }
+#if SHOW_DEBUG_LOG
+            std::cout << "keyPointMatchesRatio - " << keyPointMatchesRatio
+   				<< " - descInliersRatio " << static_cast<float>(descInliersCount) / keyPointMatchesCount << std::endl;
+#endif
+        }
+        ts->set_failed_test_info( cvtest::TS::OK );
+    }
+
+    Ptr<FeatureDetector> featureDetector;
+	Ptr<DescriptorExtractor> descriptorExtractor;
+	int normType;
+    float minKeyPointMatchesRatio;
+    float minDescInliersRatio;
+};
+
 // Tests registration
 
 // Detector's rotation invariance check
@@ -397,7 +660,7 @@ TEST(Features2d_RotationInvariance_Descriptor_ORB, regression)
     test.safe_run();
 }
 
-// TODO: uncomment test for FREAK when it will work
+// TODO: Uncomment test for FREAK when it will work; add test for scale invariance for FREAK
 //TEST(Features2d_RotationInvariance_Descriptor_FREAK, regression)
 //{
 //    DescriptorRotationInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.ORB"), 
@@ -407,3 +670,24 @@ TEST(Features2d_RotationInvariance_Descriptor_ORB, regression)
 //											0.?f);
 //    test.safe_run();
 //}
+
+/* TODO: Why ORB has bad scale invariance in this tests?
+// Detector's scale invariance check
+TEST(Features2d_ScaleInvariance_Detector_ORB, regression)
+{
+    DetectorScaleInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.ORB"),
+									 0.13f, 
+									 0.0f);
+    test.safe_run();
+}
+
+// Descriptor's scale invariance check
+TEST(Features2d_ScaleInvariance_Descriptor_ORB, regression)
+{
+    DescriptorScaleInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.ORB"),
+									 Algorithm::create<DescriptorExtractor>("Feature2D.ORB"),
+									 NORM_HAMMING,
+									 0.13f, 
+									 0.36f);
+    test.safe_run();
+}*/
