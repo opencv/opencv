@@ -36,7 +36,7 @@ public class Sample1Java extends Activity {
 						AlertDialog ad = new AlertDialog.Builder(mAppContext).create();
 						ad.setCancelable(false); // This blocks the 'BACK' button
 						ad.setMessage("Fatal error: can't open camera!");
-						ad.setButton("OK", new DialogInterface.OnClickListener() {
+						ad.setButton(AlertDialog.BUTTON_POSITIVE, "OK", new DialogInterface.OnClickListener() {
 						    public void onClick(DialogInterface dialog, int which) {
 							dialog.dismiss();
 							finish();
@@ -44,6 +44,21 @@ public class Sample1Java extends Activity {
 						});
 						ad.show();
 					}
+				} break;
+				/** OpenCV loader cannot start Google Play **/
+				case LoaderCallbackInterface.MARKET_ERROR:
+				{
+					Log.d(TAG, "Google Play service is not accessible!");
+					AlertDialog MarketErrorMessage = new AlertDialog.Builder(mAppContext).create();
+					MarketErrorMessage.setTitle("OpenCV Manager");
+					MarketErrorMessage.setMessage("Google Play service is not accessible!\nTry to install the 'OpenCV Manager' and the appropriate 'OpenCV binary pack' APKs from OpenCV SDK manually via 'adb install' command.");
+					MarketErrorMessage.setCancelable(false); // This blocks the 'BACK' button
+					MarketErrorMessage.setButton(AlertDialog.BUTTON_POSITIVE, "OK", new DialogInterface.OnClickListener() {
+						public void onClick(DialogInterface dialog, int which) {
+							mAppContext.finish();
+						}
+					});
+					MarketErrorMessage.show();
 				} break;
 				default:
 				{
@@ -73,7 +88,7 @@ public class Sample1Java extends Activity {
 			AlertDialog ad = new AlertDialog.Builder(this).create();  
 			ad.setCancelable(false); // This blocks the 'BACK' button  
 			ad.setMessage("Fatal error: can't open camera!");  
-			ad.setButton("OK", new DialogInterface.OnClickListener() {  
+			ad.setButton(AlertDialog.BUTTON_POSITIVE, "OK", new DialogInterface.OnClickListener() {  
 			    public void onClick(DialogInterface dialog, int which) {  
 				dialog.dismiss();
 				finish();
