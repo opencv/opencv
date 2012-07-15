@@ -429,6 +429,9 @@ void cv::correctMatches( InputArray _F, InputArray _points1, InputArray _points2
 {
     Mat F = _F.getMat();
     Mat points1 = _points1.getMat(), points2 = _points2.getMat();
+	points1 = points1.reshape(1, 2);
+	points2 = points2.reshape(1, 2);
+
     CvMat cvPoints1 = points1, cvPoints2 = points2;
     CvMat cvF = F;
 
