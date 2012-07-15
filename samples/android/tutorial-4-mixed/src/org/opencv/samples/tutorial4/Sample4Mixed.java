@@ -57,7 +57,7 @@ public class Sample4Mixed extends Activity {
 					Log.d(TAG, "Google Play service is not accessible!");
 					AlertDialog MarketErrorMessage = new AlertDialog.Builder(mAppContext).create();
 					MarketErrorMessage.setTitle("OpenCV Manager");
-					MarketErrorMessage.setMessage("Google Play service is not accessible!\nTry to install the 'OpenCV Manager' and the appropriate 'OpenCV binary pack' APKs from OpenCV SDK manually via 'adb install file_name.apk' command.");
+					MarketErrorMessage.setMessage("Google Play service is not accessible!\nTry to install the 'OpenCV Manager' and the appropriate 'OpenCV binary pack' APKs from OpenCV SDK manually via 'adb install' command.");
 					MarketErrorMessage.setCancelable(false); // This blocks the 'BACK' button
 					MarketErrorMessage.setButton(AlertDialog.BUTTON_POSITIVE, "OK", new DialogInterface.OnClickListener() {
 						public void onClick(DialogInterface dialog, int which) {
