@@ -19,7 +19,6 @@ FLANN_INDEX_LSH    = 6
 
 
 def init_feature(name):
-    detector, matcher = None, None
     chunks = name.split('-')
     if chunks[0] == 'sift':
         detector = cv2.SIFT()
@@ -30,6 +29,8 @@ def init_feature(name):
     elif chunks[0] == 'orb':
         detector = cv2.ORB(400)
         norm = cv2.NORM_HAMMING
+    else:
+        return None, None
     if 'flann' in chunks:
         if norm == cv2.NORM_L2:
             flann_params = dict(algorithm = FLANN_INDEX_KDTREE, trees = 5)
