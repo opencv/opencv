@@ -172,6 +172,9 @@
 /* NVidia Cuda Runtime API*/
 #cmakedefine HAVE_CUDA
 
+/* OpenCL Support */
+#cmakedefine HAVE_OPENCL
+
 /* NVidia Cuda Fast Fourier Transform (FFT) API*/
 #cmakedefine HAVE_CUFFT
 
