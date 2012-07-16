@@ -127,7 +127,7 @@ TEST(Features2d_Detector_Keypoints_FAST, validation)
 
 TEST(Features2d_Detector_Keypoints_HARRIS, validation)
 {
-    CV_FeatureDetectorKeypointsTest test(FeatureDetector::create("HARRIS"));
+    CV_FeatureDetectorKeypointsTest test(Algorithm::create<FeatureDetector>("Feature2D.HARRIS"));
     test.safe_run();
 }
 
