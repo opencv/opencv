@@ -71,7 +71,7 @@ def explore_match(win, img1, img2, kp_pairs, status = None, H = None):
         cv2.polylines(vis, [corners], True, (255, 255, 255))
 
     if status is None:
-        status = np.ones(len(p1), np.bool_)
+        status = np.ones(len(kp_pairs), np.bool_)
     p1 = np.int32([kpp[0].pt for kpp in kp_pairs])
     p2 = np.int32([kpp[1].pt for kpp in kp_pairs]) + (w1, 0)
 
