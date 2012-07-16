@@ -137,7 +137,7 @@ if __name__ == '__main__':
         vis = explore_match(win, img1, img2, kp_pairs, None, H) 
 
 
-    match_and_draw('find_obj')
+    match_and_draw('affine find_obj')
     cv2.waitKey()
     cv2.destroyAllWindows() 			
 
