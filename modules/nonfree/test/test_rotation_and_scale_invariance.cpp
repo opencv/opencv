@@ -108,7 +108,7 @@ void scaleKeyPoints(const vector<KeyPoint>& src, vector<KeyPoint>& dst, float sc
 {
     dst.resize(src.size());
     for(size_t i = 0; i < src.size(); i++)
-        dst[i] = KeyPoint(src[i].pt.x * scale, src[i].pt.y * scale, src[i].size * scale);
+        dst[i] = KeyPoint(src[i].pt.x * scale, src[i].pt.y * scale, src[i].size * scale, src[i].angle);
 }
 
 static
@@ -415,7 +415,7 @@ protected:
         if(keypoints0.size() < 15)
             CV_Error(CV_StsAssert, "Detector gives too few points in a test image\n");
 
-        for(float scaleIdx = 1; scaleIdx <= 3; scaleIdx++)
+        for(int scaleIdx = 1; scaleIdx <= 3; scaleIdx++)
         {
             float scale = 1.f + scaleIdx * 0.5f;
             Mat image1;
@@ -537,7 +537,7 @@ protected:
         descriptorExtractor->compute(image0, keypoints0, descriptors0);
 
         BFMatcher bfmatcher(normType);
-        for(float scaleIdx = 1; scaleIdx <= 3; scaleIdx++)
+        for(int scaleIdx = 1; scaleIdx <= 3; scaleIdx++)
         {
             float scale = 1.f + scaleIdx * 0.5f;
 
@@ -654,17 +654,17 @@ TEST(Features2d_ScaleInvariance_Detector_SIFT, regression)
 TEST(Features2d_ScaleInvariance_Descriptor_SURF, regression)
 {
     DescriptorScaleInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.SURF"),
-									 Algorithm::create<DescriptorExtractor>("Feature2D.SURF"),
-									 NORM_L1,
-                                     0.61f);
+                                       Algorithm::create<DescriptorExtractor>("Feature2D.SURF"),
+                                       NORM_L1,
+                                       0.61f);
     test.safe_run();
 }
 
-//TEST(Features2d_ScaleInvariance_Descriptor_SIFT, regression)
-//{
-//    DescriptorScaleInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.SIFT"),
-//									 Algorithm::create<DescriptorExtractor>("Feature2D.SIFT"),
-//									 NORM_L1,
-//                                   0.14f);
-//    test.safe_run();
-//}
+TEST(Features2d_ScaleInvariance_Descriptor_SIFT, regression)
+{
+    DescriptorScaleInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.SIFT"),
+                                       Algorithm::create<DescriptorExtractor>("Feature2D.SIFT"),
+                                       NORM_L1,
+                                       0.87f);
+    test.safe_run();
+}

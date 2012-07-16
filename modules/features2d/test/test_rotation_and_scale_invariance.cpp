@@ -108,7 +108,7 @@ void scaleKeyPoints(const vector<KeyPoint>& src, vector<KeyPoint>& dst, float sc
 {
     dst.resize(src.size());
     for(size_t i = 0; i < src.size(); i++)
-        dst[i] = KeyPoint(src[i].pt.x * scale, src[i].pt.y * scale, src[i].size * scale);
+        dst[i] = KeyPoint(src[i].pt.x * scale, src[i].pt.y * scale, src[i].size * scale, src[i].angle);
 }
 
 static
@@ -415,7 +415,7 @@ protected:
         if(keypoints0.size() < 15)
             CV_Error(CV_StsAssert, "Detector gives too few points in a test image\n");
 
-        for(float scaleIdx = 1; scaleIdx <= 3; scaleIdx++)
+        for(int scaleIdx = 1; scaleIdx <= 3; scaleIdx++)
         {
             float scale = 1.f + scaleIdx * 0.5f;
             Mat image1;
@@ -537,7 +537,7 @@ protected:
         descriptorExtractor->compute(image0, keypoints0, descriptors0);
 
         BFMatcher bfmatcher(normType);
-        for(float scaleIdx = 1; scaleIdx <= 3; scaleIdx++)
+        for(int scaleIdx = 1; scaleIdx <= 3; scaleIdx++)
         {
             float scale = 1.f + scaleIdx * 0.5f;
 
