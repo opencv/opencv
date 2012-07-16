@@ -8,7 +8,6 @@ USAGE
                 to use Flann-based matcher instead bruteforce.
 
   Press left mouse button on a feature point to see its mathcing point.
-
 '''
 
 import numpy as np
@@ -26,10 +25,10 @@ def init_feature(name):
         detector = cv2.SIFT()
         norm = cv2.NORM_L2
     elif chunks[0] == 'surf':
-        detector = cv2.SURF(1000)
+        detector = cv2.SURF(800)
         norm = cv2.NORM_L2
     elif chunks[0] == 'orb':
-        detector = cv2.ORB(500)
+        detector = cv2.ORB(400)
         norm = cv2.NORM_HAMMING
     if 'flann' in chunks:
         if norm == cv2.NORM_L2:
