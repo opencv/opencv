@@ -9,7 +9,7 @@ is used to reject outliers. Threaing is used for faster affine sampling.
 [1] http://www.ipol.im/pub/algo/my_affine_sift/
 
 USAGE
-  find_obj.py [--feature=<sift|surf|orb>[-flann]] [ <image1> <image2> ]
+  asift.py [--feature=<sift|surf|orb>[-flann]] [ <image1> <image2> ]
 
   --feature  - Feature to use. Can be sift, surf of orb. Append '-flann' to feature name
                 to use Flann-based matcher instead bruteforce.
