@@ -44,52 +44,11 @@
 #define __OPENCV_GPU_DEVICE_LBP_HPP_
 
 #include "internal_shared.hpp"
+#include <opencv2/gpu/device/emulation.hpp>
 
 namespace cv { namespace gpu { namespace device {
 
-namespace lbp{
-
-    #define TAG_MASK ( (1U << ( (sizeof(unsigned int) << 3) - 5U)) - 1U )
-	
-	template<typename T>
-	__device__ __forceinline__ T __atomicInc(T* address, T val)
-	{
-		T count;
-		unsigned int tag = threadIdx.x << ( (sizeof(unsigned int) << 3) - 5U);
-		do
-		{
-			count = *address & TAG_MASK;
-			count = tag | (count + 1);
-			*address = count;
-		} while (*address != count);
-
-		return (count & TAG_MASK) - 1;
-	}
-
-	template<typename T>
-	__device__ __forceinline__ void __atomicAdd(T* address, T val)
-	{
-		T count;
-		unsigned int tag = threadIdx.x << ( (sizeof(unsigned int) << 3) - 5U);
-		do
-		{
-			count = *address & TAG_MASK;
-			count = tag | (count + val);
-			*address = count;
-		} while (*address != count);
-	}
-
-	template<typename T>
-	__device__ __forceinline__ T __atomicMin(T* address, T val)
-	{
-		T count = min(*address, val);
-		do
-		{
-			*address = count;
-		} while (*address > count);
-
-		return count;
-	}
+namespace lbp {
 
     struct Stage
     {
@@ -127,27 +86,25 @@ namespace lbp{
         unsigned tid = threadIdx.x;
         labels[tid] = tid;
         __syncthreads();
-
         for (unsigned int id = 0; id < n; id++)
         {
             if (tid != id && predicate(vec[tid], vec[id]))
             {
                 int p = labels[tid];
                 int q = labels[id];
-
-				if (p != q)
-				{
-					int m = min(p, q);
-#if (__CUDA_ARCH__ < 120)
-                    __atomicMin(labels + id, m);
-#else
-                    atomicMin(labels + id, m);
-#endif
-				}
+                if (p < q)
+                {
+                    Emulation::smem::atomicMin(labels + id, p);
+                }
+                else if (p > q)
+                {
+                    Emulation::smem::atomicMin(labels + tid, q);
+                }
             }
         }
         __syncthreads();
     }
+
 } // lbp
 
 } } }// namespaces

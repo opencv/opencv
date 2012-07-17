@@ -67,7 +67,7 @@ cv::gpu::CascadeClassifier_GPU_LBP::~CascadeClassifier_GPU_LBP()                
 bool cv::gpu::CascadeClassifier_GPU_LBP::empty() const                               { throw_nogpu(); return true; }
 bool cv::gpu::CascadeClassifier_GPU_LBP::load(const string&)                         { throw_nogpu(); return true; }
 Size cv::gpu::CascadeClassifier_GPU_LBP::getClassifierSize() const                   { throw_nogpu(); return Size(); }
-void cv::gpu::CascadeClassifier_GPU_LBP::allocateBuffers(cv::Size /*frame*/)       { throw_nogpu();}
+void cv::gpu::CascadeClassifier_GPU_LBP::allocateBuffers(cv::Size /*frame*/)         { throw_nogpu();}
 
 int cv::gpu::CascadeClassifier_GPU_LBP::detectMultiScale(const cv::gpu::GpuMat& /*image*/, cv::gpu::GpuMat& /*objectsBuf*/,
 double /*scaleFactor*/, int /*minNeighbors*/, cv::Size /*maxObjectSize*/){ throw_nogpu(); return 0;}
@@ -86,7 +86,7 @@ void cv::gpu::CascadeClassifier_GPU_LBP::allocateBuffers(cv::Size frame)
     {
         resuzeBuffer.create(frame, CV_8UC1);
 
-        integral.create(frame.height + 1, frame.width + 1, CV_32SC1);
+        integral.create(frame.height + 1, integralFactor * (frame.width + 1), CV_32SC1);
         NcvSize32u roiSize;
         roiSize.width = frame.width;
         roiSize.height = frame.height;
@@ -284,14 +284,83 @@ namespace cv { namespace gpu { namespace device
                                 DevMem2D_<int4> objects,
                                 unsigned int* classified);
 
+        void classifyPyramid(int frameW,
+                             int frameH,
+                             int windowW,
+                             int windowH,
+                             float initalScale,
+                             float factor,
+                             int total,
+                             const DevMem2Db& mstages,
+                             const int nstages,
+                             const DevMem2Di& mnodes,
+                             const DevMem2Df& mleaves,
+                             const DevMem2Di& msubsets,
+                             const DevMem2Db& mfeatures,
+                             const int subsetSize,
+                             DevMem2D_<int4> objects,
+                             unsigned int* classified,
+                             DevMem2Di integral);
+
         void connectedConmonents(DevMem2D_<int4>  candidates, int ncandidates, DevMem2D_<int4> objects,int groupThreshold, float grouping_eps, unsigned int* nclasses);
         void bindIntegral(DevMem2Di integral);
         void unbindIntegral();
     }
 }}}
 
-int cv::gpu::CascadeClassifier_GPU_LBP::detectMultiScale(const GpuMat& image, GpuMat& objects,
-                                                        double scaleFactor, int groupThreshold, cv::Size maxObjectSize /*, Size minSize=Size()*/)
+cv::Size operator -(const cv::Size& a, const cv::Size& b)
+{
+    return cv::Size(a.width - b.width, a.height - b.height);
+}
+
+cv::Size operator +(const cv::Size& a, const int& i)
+{
+    return cv::Size(a.width + i, a.height + i);
+}
+
+cv::Size operator *(const cv::Size& a, const float& f)
+{
+    return cv::Size(cvRound(a.width * f), cvRound(a.height * f));
+}
+
+cv::Size operator /(const cv::Size& a, const float& f)
+{
+    return cv::Size(cvRound(a.width / f), cvRound(a.height / f));
+}
+
+bool operator <=(const cv::Size& a, const cv::Size& b)
+{
+    return a.width <= b.width && a.height <= b.width;
+}
+
+struct PyrLavel
+{
+    PyrLavel(int _order, float _scale, cv::Size frame, cv::Size window) : order(_order)
+    {
+        scale = pow(_scale, order);
+        sFrame = frame / scale;
+        workArea = sFrame - window + 1;
+        sWindow = window * scale;
+    }
+
+    bool isFeasible(cv::Size maxObj)
+    {
+        return workArea.width > 0 && workArea.height > 0 && sWindow <= maxObj;
+    }
+
+    PyrLavel next(float factor, cv::Size frame, cv::Size window)
+    {
+        return PyrLavel(order + 1, factor, frame, window);
+    }
+
+    int order;
+    float scale;
+    cv::Size sFrame;
+    cv::Size workArea;
+    cv::Size sWindow;
+};
+
+int cv::gpu::CascadeClassifier_GPU_LBP::detectMultiScale(const GpuMat& image, GpuMat& objects, double scaleFactor, int groupThreshold, cv::Size maxObjectSize)
 {
     CV_Assert(!empty() && scaleFactor > 1 && image.depth() == CV_8U);
 
@@ -306,6 +375,7 @@ int cv::gpu::CascadeClassifier_GPU_LBP::detectMultiScale(const GpuMat& image, Gp
     // used for debug
     // candidates.setTo(cv::Scalar::all(0));
     // objects.setTo(cv::Scalar::all(0));
+
     if (maxObjectSize == cv::Size())
         maxObjectSize = image.size();
 
@@ -315,52 +385,54 @@ int cv::gpu::CascadeClassifier_GPU_LBP::detectMultiScale(const GpuMat& image, Gp
     GpuMat dclassified(1, 1, CV_32S);
     cudaSafeCall( cudaMemcpy(dclassified.ptr(), &classified, sizeof(int), cudaMemcpyHostToDevice) );
 
-    // cv::gpu::device::lbp::bindIntegral(integral);
+    PyrLavel level(0, 1.0f, image.size(), NxM);
 
-    Size scaledImageSize(image.cols, image.rows);
-    Size processingRectSize( scaledImageSize.width - NxM.width + 1, scaledImageSize.height - NxM.height + 1 );
-    Size windowSize(NxM.width, NxM.height);
-
-    float factor = 1;
-
-    for (;;)
+    while (level.isFeasible(maxObjectSize))
     {
-        if (processingRectSize.width <= 0 || processingRectSize.height <= 0 )
-            break;
+        int acc = level.sFrame.width + 1;
+        float iniScale = level.scale;
+        cv::Size area = level.workArea;
+        float step = (float)(1 + (level.scale <= 2.f));
 
-        if( windowSize.width > maxObjectSize.width || windowSize.height > maxObjectSize.height )
-            break;
+        int total = 0, prev  = 0;
 
-        // if( windowSize.width < minObjectSize.width || windowSize.height < minObjectSize.height )
-        //     continue;
+        while (acc <= integralFactor * (image.cols + 1) && level.isFeasible(maxObjectSize))
+        {
+            // create sutable matrix headers
+            GpuMat src  = resuzeBuffer(cv::Rect(0, 0, level.sFrame.width, level.sFrame.height));
+            GpuMat sint = integral(cv::Rect(prev, 0, level.sFrame.width + 1, level.sFrame.height + 1));
+            GpuMat buff = integralBuffer;
 
-        GpuMat scaledImg      = resuzeBuffer(cv::Rect(0, 0, scaledImageSize.width, scaledImageSize.height));
-        GpuMat scaledIntegral = integral(cv::Rect(0, 0, scaledImageSize.width + 1, scaledImageSize.height + 1));
-        GpuMat currBuff = integralBuffer;
+            // generate integral for scale
+            gpu::resize(image, src, level.sFrame, 0, 0, CV_INTER_LINEAR);
+            gpu::integralBuffered(src, sint, buff);
 
-        gpu::resize(image, scaledImg, scaledImageSize, 0, 0, CV_INTER_LINEAR);
-        gpu::integralBuffered(scaledImg, scaledIntegral, currBuff);
+            total += cvCeil(area.width / step) * cvCeil(area.height / step);
+            // std::cout << "Total for scale: " << total <<  " this step contribution " <<  cvCeil(area.width / step) * cvCeil(area.height / step) << " previous width shift " << prev << " acc " <<  acc << " scales: " << cvCeil(area.width / step) << std::endl;
 
-        int step = factor <= 2.f ? 2 : 1;
+            // increment pyr lavel
+            level = level.next(scaleFactor, image.size(), NxM);
+            area = level.workArea;
 
-        device::lbp::classifyStumpFixed(integral, integral.step1(), stage_mat, stage_mat.cols / sizeof(Stage), nodes_mat, leaves_mat, subsets_mat, features_mat,
-            processingRectSize.width, processingRectSize.height, windowSize.width, windowSize.height, factor, step, subsetSize, candidates, dclassified.ptr<unsigned int>());
+            step =  (float)(1 + (level.scale <= 2.f));
+            prev = acc;
+            acc += level.sFrame.width + 1;
+        }
 
-        factor *= scaleFactor;
-        windowSize = cv::Size(cvRound(NxM.width * factor), cvRound(NxM.height * factor));
-        scaledImageSize = cv::Size(cvRound( image.cols / factor ), cvRound( image.rows / factor ));
-        processingRectSize = cv::Size(scaledImageSize.width - NxM.width + 1, scaledImageSize.height - NxM.height + 1 );
+        device::lbp::classifyPyramid(image.cols, image.rows, NxM.width, NxM.height, iniScale, scaleFactor, total, stage_mat, stage_mat.cols / sizeof(Stage), nodes_mat,
+            leaves_mat, subsets_mat, features_mat, subsetSize, candidates, dclassified.ptr<unsigned int>(), integral);
     }
 
-    // cv::gpu::device::lbp::unbindIntegral();
     if (groupThreshold <= 0  || objects.empty())
         return 0;
 
     cudaSafeCall( cudaMemcpy(&classified, dclassified.ptr(), sizeof(int), cudaMemcpyDeviceToHost) );
     device::lbp::connectedConmonents(candidates, classified, objects, groupThreshold, grouping_eps, dclassified.ptr<unsigned int>());
 
+    // candidates.copyTo(objects);
     cudaSafeCall( cudaMemcpy(&classified, dclassified.ptr(), sizeof(int), cudaMemcpyDeviceToHost) );
     cudaSafeCall( cudaDeviceSynchronize() );
+    // std::cout << classified << " !!!!!!!!!!" <<  std::endl;
 
     return classified;
 }

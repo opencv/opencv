@@ -216,10 +216,10 @@ namespace cv { namespace gpu { namespace device
 
         struct Classifier
         {
-            __host__ __device__ __forceinline__ Classifier(const int* _integral, int _pitch, const Stage* _stages, const ClNode* _nodes, const float* _leaves, 
-				const int* _subsets, const uchar4* _features, int _nstages, int _clWidth, int _clHeight, float _scale, int _step, int _subsetSize)
-            : integral(_integral), pitch(_pitch), stages(_stages), nodes(_nodes), leaves(_leaves), subsets(_subsets), features(_features), nstages(_nstages), 
-			  clWidth(_clWidth), clHeight(_clHeight), scale(_scale), step(_step), subsetSize(_subsetSize){}
+            __host__ __device__ __forceinline__ Classifier(const int* _integral, int _pitch, const Stage* _stages, const ClNode* _nodes, const float* _leaves,
+                const int* _subsets, const uchar4* _features, int _nstages, int _clWidth, int _clHeight, float _scale, int _step, int _subsetSize)
+            : integral(_integral), pitch(_pitch), stages(_stages), nodes(_nodes), leaves(_leaves), subsets(_subsets), features(_features), nstages(_nstages),
+              clWidth(_clWidth), clHeight(_clHeight), scale(_scale), step(_step), subsetSize(_subsetSize){}
 
             __device__ __forceinline__ void operator() (int y, int x, DevMem2D_<int4> objects, const unsigned int maxN, unsigned int* n) const
             {
@@ -255,11 +255,7 @@ namespace cv { namespace gpu { namespace device
                 rect.z = clWidth;
                 rect.w = clHeight;
 
-#if (__CUDA_ARCH__ < 120)
-                int res = __atomicInc(n, maxN);
-#else
-                int res = atomicInc(n, maxN);
-#endif
+                int res = Emulation::smem::atomicInc(n, maxN);
                 objects(0, res) = rect;
             }
 
@@ -317,26 +313,17 @@ namespace cv { namespace gpu { namespace device
             __syncthreads();
 
             int cls = labels[tid];
-#if (__CUDA_ARCH__ < 120)
-            __atomicAdd((rrects + cls * 4 + 0), candidates[tid].x);
-            __atomicAdd((rrects + cls * 4 + 1), candidates[tid].y);
-            __atomicAdd((rrects + cls * 4 + 2), candidates[tid].z);
-            __atomicAdd((rrects + cls * 4 + 3), candidates[tid].w);
-#else
-            atomicAdd((rrects + cls * 4 + 0), candidates[tid].x);
-            atomicAdd((rrects + cls * 4 + 1), candidates[tid].y);
-            atomicAdd((rrects + cls * 4 + 2), candidates[tid].z);
-            atomicAdd((rrects + cls * 4 + 3), candidates[tid].w);
-#endif
+            Emulation::smem::atomicAdd((rrects + cls * 4 + 0), candidates[tid].x);
+            Emulation::smem::atomicAdd((rrects + cls * 4 + 1), candidates[tid].y);
+            Emulation::smem::atomicAdd((rrects + cls * 4 + 2), candidates[tid].z);
+            Emulation::smem::atomicAdd((rrects + cls * 4 + 3), candidates[tid].w);
+
             __syncthreads();
             labels[tid] = 0;
 
             __syncthreads();
-#if (__CUDA_ARCH__ < 120)
-            __atomicInc((unsigned int*)labels + cls, n);
-#else
-            atomicInc((unsigned int*)labels + cls, n);
-#endif
+            Emulation::smem::atomicInc((unsigned int*)labels + cls, n);
+
             __syncthreads();
             *nclasses = 0;
 
@@ -354,30 +341,26 @@ namespace cv { namespace gpu { namespace device
 
             if (active && active >= groupThreshold)
             {
-                int* r1 = rrects + tid * 4;                				
-				int4 r_out = make_int4(r1[0], r1[1], r1[2], r1[3]);
+                int* r1 = rrects + tid * 4;
+                int4 r_out = make_int4(r1[0], r1[1], r1[2], r1[3]);
 
-#if (__CUDA_ARCH__ < 120)
-                objects[__atomicInc(nclasses, n)] = r_out;
-#else
-                int aidx = atomicInc(nclasses, n);
+                int aidx = Emulation::smem::atomicInc(nclasses, n);
                 objects[aidx] = r_out;
-#endif
             }
         }
 
         void classifyStumpFixed(const DevMem2Di& integral, const int pitch, const DevMem2Db& mstages, const int nstages, const DevMem2Di& mnodes, const DevMem2Df& mleaves, const DevMem2Di& msubsets, const DevMem2Db& mfeatures,
                            const int workWidth, const int workHeight, const int clWidth, const int clHeight, float scale, int step, int subsetSize, DevMem2D_<int4> objects, unsigned int* classified)
-        {			          			            
-			Classifier clr(integral, pitch, (Stage*)mstages.ptr(), (ClNode*)mnodes.ptr(), mleaves.ptr(), msubsets, 
-				(uchar4*)mfeatures.ptr(), nstages, clWidth, clHeight, scale, step, subsetSize);
+        {
+            Classifier clr(integral, pitch, (Stage*)mstages.ptr(), (ClNode*)mnodes.ptr(), mleaves.ptr(), msubsets,
+                (uchar4*)mfeatures.ptr(), nstages, clWidth, clHeight, scale, step, subsetSize);
 
-			int total = ceilf(workHeight / (float)step) * ceilf(workWidth / (float)step); 
+            int total = ceilf(workHeight / (float)step) * ceilf(workWidth / (float)step);
 
-			int block = 256;
+            int block = 256;
             int grid  = divUp(total, block);
             lbp_classify_stump<<<grid, block>>>(clr, objects, objects.cols, classified, workWidth >> 1);
-			cudaSafeCall( cudaGetLastError() );
+            cudaSafeCall( cudaGetLastError() );
         }
 
         void connectedConmonents(DevMem2D_<int4> candidates, int ncandidates, DevMem2D_<int4> objects, int groupThreshold, float grouping_eps, unsigned int* nclasses)
@@ -385,7 +368,124 @@ namespace cv { namespace gpu { namespace device
             int block = ncandidates;
             int smem  = block * ( sizeof(int) + sizeof(int4) );
             disjoin<InSameComponint><<<1, block, smem>>>(candidates, objects, ncandidates, groupThreshold, grouping_eps, nclasses);
-			cudaSafeCall( cudaGetLastError() );
+            cudaSafeCall( cudaGetLastError() );
+        }
+
+        struct Cascade
+        {
+            __host__ __device__ __forceinline__ Cascade(const Stage* _stages, int _nstages, const ClNode* _nodes, const float* _leaves,
+                const int* _subsets, const uchar4* _features, int _subsetSize)
+
+            : stages(_stages), nstages(_nstages), nodes(_nodes), leaves(_leaves), subsets(_subsets), features(_features), subsetSize(_subsetSize){}
+
+            __device__ __forceinline__ bool operator() (int y, int x, int* integral, const int pitch/*, DevMem2D_<int4> objects, const unsigned int maxN, unsigned int* n*/) const
+            {
+                int current_node = 0;
+                int current_leave = 0;
+
+                for (int s = 0; s < nstages; ++s)
+                {
+                    float sum = 0;
+                    Stage stage = stages[s];
+                    for (int t = 0; t < stage.ntrees; t++)
+                    {
+                        ClNode node = nodes[current_node];
+                        uchar4 feature = features[node.featureIdx];
+
+                        int shift;
+                        int c = evaluator(integral, (y + feature.y) * pitch + x + feature.x, feature.w * pitch, feature.z, shift);
+                        int idx =  (subsets[ current_node * subsetSize + c] & ( 1 << shift)) ? current_leave : current_leave + 1;
+                        sum += leaves[idx];
+
+                        current_node += 1;
+                        current_leave += 2;
+                    }
+
+                    if (sum < stage.threshold)
+                        return false;
+                }
+
+                return true;
+            }
+
+            const Stage*  stages;
+            const int nstages;
+
+            const ClNode* nodes;
+            const float* leaves;
+            const int* subsets;
+            const uchar4* features;
+
+            const int subsetSize;
+            const LBP evaluator;
+        };
+
+        // stepShift, scale, width_k, sum_prev => y =  sum_prev + tid_k / width_k, x = tid_k - tid_k / width_k
+        __global__ void lbp_cascade(const Cascade cascade, int frameW, int frameH, int windowW, int windowH, float scale, const float factor,
+            const int workAmount, int* integral, const int pitch, DevMem2D_<int4> objects, unsigned int* classified)
+        {
+            int ftid = blockIdx.x * blockDim.x + threadIdx.x;
+            if (ftid >= workAmount ) return;
+
+            int sum = 0;
+            // float scale = 1.0f;
+            float stepShift = (scale <= 2.f) ? 2.0 : 1.0;
+            int w = ceilf( ( __float2int_rn(frameW / scale) - windowW + 1) / stepShift);
+            int h = ceilf( ( __float2int_rn(frameH / scale) - windowH + 1) / stepShift);
+
+            // if (!ftid)
+                // printf("!!!!: %d %d", w, h);
+
+            int framTid = ftid;
+            int i = 0;
+
+            while (1)
+            {
+                if (framTid < (w - 1) * (h - 1)) break;
+                i++;
+                sum +=  __float2int_rn(frameW / scale) + 1;
+                framTid -= w * h;
+                scale *= factor;
+                stepShift = (scale <= 2.f) ? 2.0 : 1.0;
+                int w = ceilf( ( __float2int_rn(frameW / scale) - windowW + 1) / stepShift);
+                int h = ceilf( ( __float2int_rn(frameH / scale) - windowH + 1) / stepShift);
+            }
+
+            int y = (framTid / w);
+            int x = (framTid - y * w) * stepShift;
+            y *= stepShift;
+            x += sum;
+
+            // if (i == 2)
+            // printf("!!!!!!!!!!!!!! %f %d %d %d\n", windowW * scale, sum, y, x);
+
+            if (cascade(y, x, integral, pitch))
+            {
+                int4 rect;
+                rect.x = roundf( (x - sum) * scale);
+                rect.y = roundf(y * scale);
+                rect.z = roundf(windowW * scale);
+                rect.w = roundf(windowH * scale);
+
+                if (rect.x > frameW || rect.y > frameH) return;
+                    // printf("OUTLAUER %d %d %d %d %d %d %d %d %d %f %f\n", x, y, ftid, framTid, rect.x, rect.y, sum, w, h, stepShift, scale);
+
+                // printf("passed: %d %d ---- %d %d %d %d %d\n", y, x, rect.x, rect.y, rect.z, rect.w, sum);
+
+                int res = Emulation::smem::atomicInc(classified, (unsigned int)objects.cols);
+                objects(0, res) = rect;
+
+            }
+        }
+
+        void classifyPyramid(int frameW, int frameH, int windowW, int windowH, float initialScale, float factor, int workAmount,
+            const DevMem2Db& mstages, const int nstages, const DevMem2Di& mnodes, const DevMem2Df& mleaves, const DevMem2Di& msubsets, const DevMem2Db& mfeatures,
+            const int subsetSize, DevMem2D_<int4> objects, unsigned int* classified, DevMem2Di integral)
+        {
+            const int block = 256;
+            int grid = divUp(workAmount, block);
+            Cascade cascade((Stage*)mstages.ptr(), nstages, (ClNode*)mnodes.ptr(), mleaves.ptr(), msubsets.ptr(), (uchar4*)mfeatures.ptr(), subsetSize);
+            lbp_cascade<<<grid, block>>>(cascade, frameW, frameH, windowW, windowH, initialScale, factor, workAmount, integral.ptr(), integral.step / sizeof(int), objects, classified);
         }
     }
 }}}

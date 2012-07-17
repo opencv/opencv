@@ -1464,6 +1464,7 @@ private:
     GpuMat resuzeBuffer;
 
 	GpuMat candidates;
+    static const int integralFactor = 4;
 };
 
 ////////////////////////////////// SURF //////////////////////////////////////////

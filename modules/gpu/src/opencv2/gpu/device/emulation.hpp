@@ -44,18 +44,19 @@
 #define OPENCV_GPU_EMULATION_HPP_
 
 #include "warp_reduce.hpp"
+#include <stdio.h>
 
 namespace cv { namespace gpu { namespace device
 {
     struct Emulation
     {
-		template<int CTA_SIZE>
+        template<int CTA_SIZE>
         static __forceinline__ __device__ int Ballot(int predicate)
         {
-#if (__CUDA_ARCH__ >= 200) 
+#if defined (__CUDA_ARCH__) && (__CUDA_ARCH__ >= 200)
             return __ballot(predicate);
 #else
-			__shared__ volatile int cta_buffer[CTA_SIZE]
+            __shared__ volatile int cta_buffer[CTA_SIZE];
 
             int tid = threadIdx.x;
             cta_buffer[tid] = predicate ? (1 << (tid & 31)) : 0;
@@ -63,41 +64,62 @@ namespace cv { namespace gpu { namespace device
 #endif
         }
 
-		struct smem
-		{
-			enum { TAG_MASK = (1U << ( (sizeof(unsigned int) << 3) - 5U)) - 1U };
-			
-			template<typename T>
-			static __device__ __forceinline__ T atomicInc(T* address, T val)
-			{
-#if (__CUDA_ARCH__ < 120)
+        struct smem
+        {
+            enum { TAG_MASK = (1U << ( (sizeof(unsigned int) << 3) - 5U)) - 1U };
 
+            template<typename T>
+            static __device__ __forceinline__ T atomicInc(T* address, T val)
+            {
+#if defined (__CUDA_ARCH__) && (__CUDA_ARCH__ < 120)
+                T count;
+                unsigned int tag = threadIdx.x << ( (sizeof(unsigned int) << 3) - 5U);
+                do
+                {
+                    count = *address & TAG_MASK;
+                    count = tag | (count + 1);
+                    *address = count;
+                } while (*address != count);
+
+                return (count & TAG_MASK) - 1;
 #else
-			
+                return ::atomicInc(address, val);
 #endif
-		
-			}
+            }
 
-			template<typename T>
-			static __device__ __forceinline__ void atomicAdd(T* address, T val)
-			{
-#if (__CUDA_ARCH__ < 120)
-
+            template<typename T>
+            static __device__ __forceinline__ void atomicAdd(T* address, T val)
+            {
+#if defined (__CUDA_ARCH__) && (__CUDA_ARCH__ < 120)
+                T count;
+                unsigned int tag = threadIdx.x << ( (sizeof(unsigned int) << 3) - 5U);
+                do
+                {
+                    count = *address & TAG_MASK;
+                    count = tag | (count + val);
+                    *address = count;
+                } while (*address != count);
 #else
-			
+                ::atomicAdd(address, val);
 #endif
-			}
+            }
 
-			template<typename T>
-			__device__ __forceinline__ T __atomicMin(T* address, T val)
-			{
-#if (__CUDA_ARCH__ < 120)
+            template<typename T>
+            static __device__ __forceinline__ T atomicMin(T* address, T val)
+            {
+#if defined (__CUDA_ARCH__) && (__CUDA_ARCH__ < 120)
+                T count = min(*address, val);
+                do
+                {
+                    *address = count;
+                } while (*address > count);
 
+                return count;
 #else
-			
+                return ::atomicMin(address, val);
 #endif
-			}
-		};
+            }
+        };
     };
 }}} // namespace cv { namespace gpu { namespace device
 
