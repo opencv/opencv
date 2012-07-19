@@ -1,0 +1,6 @@
+Example 3-16. CvFileStorage structure; data is accessed by CxCore data persistence functions
+typedef struct CvFileStorage
+{
+    ...       // hidden fields
+} CvFileStorage;
+

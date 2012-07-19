@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<opencv_storage>
+<params>
+	<!-- caseName, datasetName, numDisp, winSize, fullDP -->
+	case_barn2_0 barn2 "32" "3" "0"
+	case_barn2_1 barn2 "32" "3" "1"
+	case_bull_0 bull "32" "7" "0"
+	case_bull_1 bull "32" "7" "1"
+	case_cones_0 cones "64" "5" "0"
+	case_cones_1 cones "64" "5" "1"
+	case_poster_0 poster "32" "5" "0"
+	case_poster_1 poster "32" "5" "1"
+	case_sawtooth_0 sawtooth "32" "3" "0"
+	case_sawtooth_1 sawtooth "32" "3" "1"
+	case_teddy_0 teddy "48" "3" "0"
+	case_teddy_1 teddy "48" "3" "1"
+	case_tsukuba_0 tsukuba "16" "1" "0"
+	case_tsukuba_1 tsukuba "16" "1" "0"
+	case_venus_0 venus "32" "3" "0"
+	case_venus_1 venus "32" "3" "0"
+</params>
+</opencv_storage>

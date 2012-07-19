@@ -1,0 +1,46 @@
+<?xml version="1.0"?>
+<opencv_storage>
+<cascade>
+  <distE>0.005</distE>
+  <sE>0.017</sE>
+  <noPairE>0.1</noPairE>
+  <detector_names>
+    haarold1 haarold2 haar1 haar3 lbp1 lbp3</detector_names>
+  <detectors>
+    <haarold1>
+      <fn>cascadeandhog/cascades/haarcascade_frontalface_alt.xml</fn>
+      <scale_cascade>0</scale_cascade></haarold1>
+    <haarold2>
+      <fn>cascadeandhog/cascades/haarcascade_frontalface_alt2.xml</fn>
+      <scale_cascade>1</scale_cascade></haarold2>
+    <haar1>
+      <fn>cascadeandhog/cascades/haarcascade_1.xml</fn>
+      <scale_cascade>0</scale_cascade></haar1>
+    <haar3>
+      <fn>cascadeandhog/cascades/haarcascade_3.xml</fn>
+      <scale_cascade>0</scale_cascade></haar3>
+    <lbp1>
+      <fn>cascadeandhog/cascades/lbpcascade_frontalface.xml</fn>
+      <scale_cascade>0</scale_cascade></lbp1>
+    <lbp3>
+      <fn>cascadeandhog/cascades/lbpcascade_frontalface_alt3.xml</fn>
+      <scale_cascade>0</scale_cascade></lbp3></detectors>
+  <image_filenames>
+    <!-- img_0 -->
+    cascadeandhog/images/audrybt1.png
+    <!-- img_1 -->
+    cascadeandhog/images/churchill-downs.png
+    <!-- img_2 -->
+    cascadeandhog/images/class57.png
+    <!-- img_3 -->
+    cascadeandhog/images/er.png
+    <!-- img_4 -->
+    cascadeandhog/images/mona-lisa.png
+    <!-- img_5 -->
+    cascadeandhog/images/waynesworld2.png
+    <!-- img_6 -->
+    cascadeandhog/images/rehg-thanksgiving-1994.png
+    <!-- img_7 -->
+    cascadeandhog/images/karen-and-rob.png</image_filenames>
+</cascade>
+</opencv_storage>

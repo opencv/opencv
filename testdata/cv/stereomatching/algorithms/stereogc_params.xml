@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<opencv_storage>
+<params>
+	<!-- caseName, datasetName, numDisp, iterCount -->
+	case_barn2 barn2 "32" "2"
+	case_bull bull "40" "2"
+	case_cones cones "50" "3"
+	case_poster poster "51" "3"
+	case_sawtooth sawtooth "20" "3"
+	case_teddy teddy "70" "3"
+	case_tsukuba tsukuba "16" "3"
+	case_venus venus "25" "2"
+</params>
+</opencv_storage>

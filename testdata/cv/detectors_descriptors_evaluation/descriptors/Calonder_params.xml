@@ -1,0 +1,47 @@
+<?xml version="1.0"?>
+<opencv_storage>
+<run_params>
+  <default>
+    <projectKeypointsFrom1Image>1</projectKeypointsFrom1Image>
+    <matchFilter>0</matchFilter></default>
+  <bark>
+    <isActiveParams>0</isActiveParams>
+    <keypointsFilename>SURF_bark.xml.gz</keypointsFilename>
+    <projectKeypointsFrom1Image>1</projectKeypointsFrom1Image>
+    <matchFilter>0</matchFilter></bark>
+  <bikes>
+    <isActiveParams>0</isActiveParams>
+    <keypointsFilename>SURF_bikes.xml.gz</keypointsFilename>
+    <projectKeypointsFrom1Image>1</projectKeypointsFrom1Image>
+    <matchFilter>0</matchFilter></bikes>
+  <boat>
+    <isActiveParams>0</isActiveParams>
+    <keypointsFilename>SURF_boat.xml.gz</keypointsFilename>
+    <projectKeypointsFrom1Image>1</projectKeypointsFrom1Image>
+    <matchFilter>0</matchFilter></boat>
+  <graf>
+    <isActiveParams>0</isActiveParams>
+    <keypointsFilename>SURF_graf.xml.gz</keypointsFilename>
+    <projectKeypointsFrom1Image>1</projectKeypointsFrom1Image>
+    <matchFilter>0</matchFilter></graf>
+  <leuven>
+    <isActiveParams>0</isActiveParams>
+    <keypointsFilename>SURF_leuven.xml.gz</keypointsFilename>
+    <projectKeypointsFrom1Image>1</projectKeypointsFrom1Image>
+    <matchFilter>0</matchFilter></leuven>
+  <trees>
+    <isActiveParams>0</isActiveParams>
+    <keypointsFilename>SURF_trees.xml.gz</keypointsFilename>
+    <projectKeypointsFrom1Image>1</projectKeypointsFrom1Image>
+    <matchFilter>0</matchFilter></trees>
+  <ubc>
+    <isActiveParams>0</isActiveParams>
+    <keypointsFilename>SURF_ubc.xml.gz</keypointsFilename>
+    <projectKeypointsFrom1Image>1</projectKeypointsFrom1Image>
+    <matchFilter>0</matchFilter></ubc>
+  <wall>
+    <isActiveParams>0</isActiveParams>
+    <keypointsFilename>SURF_wall.xml.gz</keypointsFilename>
+    <projectKeypointsFrom1Image>1</projectKeypointsFrom1Image>
+    <matchFilter>0</matchFilter></wall></run_params>
+</opencv_storage>

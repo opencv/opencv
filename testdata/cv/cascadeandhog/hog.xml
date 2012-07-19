@@ -1,0 +1,48 @@
+<?xml version="1.0"?>
+<opencv_storage>
+<hog>
+  <distE>0.005</distE>
+  <sE>0.008</sE>
+  <noPairE>0.2</noPairE>
+  <detector_names>
+    default</detector_names>
+  <detectors>
+    <default>
+      <fn>""</fn></default></detectors>
+  <image_filenames>
+    <!-- img_0 -->
+    cascadeandhog/images/addams-family.png
+    <!-- img_1 -->
+    cascadeandhog/images/audrybt1.png
+    <!-- img_2 -->
+    cascadeandhog/images/churchill-downs.png
+    <!-- img_3 -->
+    cascadeandhog/images/class57.png
+    <!-- img_4 -->
+    cascadeandhog/images/er.png
+    <!-- img_5 -->
+    cascadeandhog/images/larroquette.png
+    <!-- img_6 -->
+    cascadeandhog/images/mickymouse-self-p.png
+    <!-- img_7 -->
+    cascadeandhog/images/karen-and-rob.png
+    <!-- img_8 -->
+    cascadeandhog/images/bttf301.png</image_filenames>
+  <validation>
+    <default>
+      <img_0></img_0>
+      <img_1></img_1>
+      <img_2></img_2>
+      <img_3>
+        685 461 95 189 38 746 106 211 719 436 143 285</img_3>
+      <img_4>
+        328 2 66 133 245 290 96 192</img_4>
+      <img_5>
+        422 175 74 148</img_5>
+      <img_6>
+        365 333 72 143 595 917 76 152 221 345 93 186 212 832 96 192 474
+        185 162 325 255 308 153 305 415 264 181 363</img_6>
+      <img_7>
+        19 326 74 148</img_7>
+      <img_8></img_8></default></validation></hog>
+</opencv_storage>

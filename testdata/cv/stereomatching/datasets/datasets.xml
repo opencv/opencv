@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<opencv_storage>
+<datasets>
+	<!-- name, scaleFactor, unknValue -->
+	barn2 "8" "0"
+	bull "8" "0"
+	cones "4" "0"
+	poster "8" "0"
+	sawtooth "8" "0"
+	teddy "4" "0"
+	tsukuba "16" "0"
+	venus "8" "0"
+</datasets>
+</opencv_storage>

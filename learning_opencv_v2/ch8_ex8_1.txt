@@ -1,0 +1,199 @@
+/* License:
+   July 20, 2011
+   Standard BSD
+
+   BOOK: It would be nice if you cited it:
+   Learning OpenCV 2: Computer Vision with the OpenCV Library
+     by Gary Bradski and Adrian Kaehler
+     Published by O'Reilly Media
+ 
+   AVAILABLE AT: 
+     http://www.amazon.com/Learning-OpenCV-Computer-Vision-Library/dp/0596516134
+     Or: http://oreilly.com/catalog/9780596516130/
+     ISBN-10: 0596516134 or: ISBN-13: 978-0596516130    
+
+   Main OpenCV site
+   http://opencv.willowgarage.com/wiki/
+   * An active user group is at:
+     http://tech.groups.yahoo.com/group/OpenCV/
+   * The minutes of weekly OpenCV development meetings are at:
+     http://pr.willowgarage.com/wiki/OpenCV
+*/
+
+// Example 8-1. Internal organization of CvSeq sequence structure
+/*!
+
+ Template Sequence Class derived from CvSeq
+
+
+ The class provides more convenient access to sequence elements,
+
+ STL-style operations and iterators.
+
+ 
+
+ \note The class is targeted for simple data types,
+
+    i.e. no constructors or destructors
+
+    are called for the sequence elements.
+    
+    Note also that it includes pointer to the old-style sequence as a member.
+
+*/
+
+template<typename _Tp> class CV_EXPORTS Seq
+
+{
+
+public:
+
+    typedef SeqIterator<_Tp> iterator;
+
+    typedef SeqIterator<_Tp> const_iterator;
+
+    
+
+    //! the default constructor
+
+    Seq();
+
+    //! the constructor for wrapping CvSeq structure. The real element type in CvSeq should match _Tp.
+
+    Seq(const CvSeq* seq);
+
+    //! creates the empty sequence that resides in the specified storage
+
+    Seq(MemStorage& storage, int headerSize = sizeof(CvSeq));
+
+    //! returns read-write reference to the specified element
+
+    _Tp& operator [](int idx);
+
+    //! returns read-only reference to the specified element
+
+    const _Tp& operator[](int idx) const;
+
+    //! returns iterator pointing to the beginning of the sequence
+
+    SeqIterator<_Tp> begin() const;
+
+    //! returns iterator pointing to the element following the last sequence element
+
+    SeqIterator<_Tp> end() const;
+
+    //! returns the number of elements in the sequence
+
+    size_t size() const;
+
+    //! returns the type of sequence elements (CV_8UC1 ... CV_64FC(CV_CN_MAX) ...)
+
+    int type() const;
+
+    //! returns the depth of sequence elements (CV_8U ... CV_64F)
+
+    int depth() const;
+
+    //! returns the number of channels in each sequence element
+
+    int channels() const;
+
+    //! returns the size of each sequence element
+
+    size_t elemSize() const;
+
+    //! returns index of the specified sequence element
+
+    size_t index(const _Tp& elem) const;
+
+    //! appends the specified element to the end of the sequence
+
+    void push_back(const _Tp& elem);
+
+    //! appends the specified element to the front of the sequence
+
+    void push_front(const _Tp& elem);
+
+    //! appends zero or more elements to the end of the sequence
+
+    void push_back(const _Tp* elems, size_t count);
+
+    //! appends zero or more elements to the front of the sequence
+
+    void push_front(const _Tp* elems, size_t count);
+
+    //! inserts the specified element to the specified position
+
+    void insert(int idx, const _Tp& elem);
+
+    //! inserts zero or more elements to the specified position
+
+    void insert(int idx, const _Tp* elems, size_t count);
+
+    //! removes element at the specified position
+
+    void remove(int idx);
+
+    //! removes the specified subsequence
+
+    void remove(const Range& r);
+
+    
+
+    //! returns reference to the first sequence element
+
+    _Tp& front();
+
+    //! returns read-only reference to the first sequence element
+
+    const _Tp& front() const;
+
+    //! returns reference to the last sequence element
+
+    _Tp& back();
+
+    //! returns read-only reference to the last sequence element
+
+    const _Tp& back() const;
+
+    //! returns true iff the sequence contains no elements
+
+    bool empty() const;
+
+
+    //! removes all the elements from the sequence
+
+    void clear();
+
+    //! removes the first element from the sequence
+
+    void pop_front();
+
+    //! removes the last element from the sequence
+
+    void pop_back();
+
+    //! removes zero or more elements from the beginning of the sequence
+
+    void pop_front(_Tp* elems, size_t count);
+
+    //! removes zero or more elements from the end of the sequence
+
+    void pop_back(_Tp* elems, size_t count);
+
+
+    //! copies the whole sequence or the sequence slice to the specified vector
+
+    void copyTo(vector<_Tp>& vec, const Range& range=Range::all()) const;
+
+    //! returns the vector containing all the sequence elements
+
+    operator vector<_Tp>() const;
+
+    
+
+    CvSeq* seq;
+
+};
+
+

@@ -1,0 +1,6 @@
+cmake_minimum_required(VERSION 2.6)
+find_package(OpenCV REQUIRED)
+project(tracker3D)
+set(tracker3D_files object_tracker.cpp tracker3D.cpp tracker_calibration.cpp tracker_calibration.h tracker3D.h object_tracker.h)
+add_executable(tracker3D ${tracker3D_files})
+target_link_libraries(tracker3D ${OpenCV_LIBS})

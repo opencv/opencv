@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<opencv_storage>
+<boards>
+"chess3.jpg" 1 5 7
+"chess1.jpg" 1 5 7
+"../shared/baboon.jpg" 0 6 8
+"../shared/box_in_scene.png" 0 5 7
+"../shared/airplane.jpg" 0 5 7
+"chessboard-artificial2.jpg" 1 5 11
+"chessboard-artificial1.jpg" 1 5 13
+"chess2.jpg" 1 5 7
+"chess4.jpg" 1 5 7
+"chess5.jpg" 1 5 7
+"chess6.jpg" 1 5 7
+"chess7.jpg" 1 5 7
+"chess8.jpg" 1 4 6
+"chess9.jpg" 1 19 21
+"small_chessboard1.jpg" 1 3 4
+"small_chessboard2.jpg" 1 3 4
+"small_chessboard3.jpg" 1 3 4
+"../shared/box.png" 0 6 8
+"../shared/fruits.jpg" 0 5 7
+</boards></opencv_storage>

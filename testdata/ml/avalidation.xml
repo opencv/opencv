@@ -1,0 +1,601 @@
+<?xml version="1.0"?>
+<opencv_storage>
+<mltest type_id="opencv-mltest">
+	<run_params>
+		<dtree type_id="seq"> 
+			<_> mushroom </_>
+			<_> adult </_>
+			<_> vehicle </_>
+			<_> abalone </_>
+		</dtree>
+		<boost type_id="seq"> 
+			<_> adult </_>
+			<_> mushroom </_>
+			<_> ringnorm </_>
+			<_> spambase </_>
+		</boost>
+		<rtrees type_id="seq"> 
+			<_> waveform </_>
+			<_> mushroom </_>
+			<_> adult </_>
+			<_> abalone </_>
+			<_> vehicle </_>
+			<_> letter </_>
+			<_> ringnorm </_>
+			<_> twonorm </_>
+			<_> spambase </_>
+		</rtrees>
+		<ertrees type_id="seq">
+			<_> waveform </_>
+			<_> abalone </_>
+			<_> vehicle </_>
+			<_> letter </_>
+			<_> ringnorm </_>
+			<_> twonorm </_>
+			<_> spambase </_>
+		</ertrees>
+	</run_params>        
+	<validation>
+		<dtree>
+			<mushroom>
+				<model_params>
+					<max_depth> 10 </max_depth>
+					<min_sample_count> 2 </min_sample_count>
+					<use_surrogate> 1 </use_surrogate>
+					 <max_categories> 16 </max_categories>
+					<cv_folds> 0 </cv_folds>
+					<is_pruned> 0 </is_pruned>
+				</model_params>
+				<data_params>
+					<LS> 4000 </LS>
+					<resp_idx> 0 </resp_idx>
+					<types> cat </types>
+				</data_params>
+				<result>
+					<iter_count> 100 </iter_count>
+					<mean> 0.027401 </mean>
+					<sigma> 0.036236 </sigma>
+				</result>
+			</mushroom>
+			<adult>
+				<model_params>
+					<max_depth> 10 </max_depth>
+					<min_sample_count> 2 </min_sample_count>
+					<use_surrogate> 1 </use_surrogate>
+					 <max_categories> 16 </max_categories>
+					<cv_folds> 0 </cv_folds>
+					<is_pruned> 0 </is_pruned>
+				</model_params>
+				<data_params>
+					<LS> 22561 </LS>
+					<resp_idx> 14 </resp_idx>
+					<types> ord[0,2,4,10-12],cat[1,3,5-9,13,14] </types>
+				</data_params>
+				<result>
+					<iter_count> 100 </iter_count>
+					<mean> 14.279000 </mean>
+					<sigma> 0.354323 </sigma>
+				</result>
+			</adult>
+			<vehicle>
+				<model_params>
+					<max_depth> 10 </max_depth>
+					<min_sample_count> 2 </min_sample_count>
+					<use_surrogate> 1 </use_surrogate>
+					 <max_categories> 4 </max_categories>
+					<cv_folds> 0 </cv_folds>
+					<is_pruned> 0 </is_pruned>
+				</model_params>
+				<data_params>
+					<LS> 761 </LS>
+					<resp_idx> 18 </resp_idx>
+					<types> ord[0-17],cat[18] </types>
+				</data_params>
+				<result>
+					<iter_count> 1000 </iter_count>
+					<mean> 29.761162 </mean>
+					<sigma> 4.823927 </sigma>
+				</result>
+			</vehicle>
+			<abalone>
+				<model_params>
+					<max_depth> 10 </max_depth>
+					<min_sample_count> 2 </min_sample_count>
+					<use_surrogate> 0 </use_surrogate>
+					<max_categories> 16 </max_categories>
+					<cv_folds> 0 </cv_folds>
+					<is_pruned> 0 </is_pruned>
+				</model_params>
+				<data_params>
+					<LS> 3133 </LS>
+					<resp_idx> 8 </resp_idx>
+					<types> ord[1-8],cat[0] </types>
+				</data_params>
+				<result>
+					<iter_count> 1000 </iter_count>
+					<mean> 7.297540 </mean>
+					<sigma> 0.510058 </sigma>
+				</result>
+			</abalone>
+		</dtree>
+		<boost>
+			<adult>
+				<model_params>
+					<type> REAL </type>
+					<weak_count> 20 </weak_count>
+					<weight_trim_rate> 0.95 </weight_trim_rate>
+					<max_depth> 4 </max_depth>
+					<use_surrogate> 4 </use_surrogate>
+				</model_params>
+				<data_params>
+					<LS> 22561 </LS>
+					<resp_idx> 14 </resp_idx>
+					<types> ord[0,2,4,10-12],cat[1,3,5-9,13,14] </types>
+				</data_params>
+				<result>
+					<iter_count> 100 </iter_count>
+					<mean> 13.894001 </mean>
+					<sigma> 0.337763 </sigma>
+				</result>
+			</adult>
+			<mushroom> 
+				<model_params>
+					<type> DISCRETE </type>
+					<weak_count> 20 </weak_count>
+					<weight_trim_rate> 0.95 </weight_trim_rate>
+					<max_depth> 4 </max_depth>
+					<use_surrogate> 1 </use_surrogate>
+				</model_params>
+				<data_params>
+					<LS> 4000 </LS>
+					<resp_idx> 0 </resp_idx>
+					<types> cat </types>
+				</data_params>
+				<result>
+					<iter_count> 100 </iter_count>
+					<mean> 0.007274 </mean>
+					<sigma> 0.029400 </sigma>
+				</result>
+			</mushroom>
+			<ringnorm>
+				<model_params>
+					<type> LOGIT </type>
+					<weak_count> 20 </weak_count>
+					<weight_trim_rate> 0.95 </weight_trim_rate>
+					<max_depth> 4 </max_depth>
+					<use_surrogate> 1 </use_surrogate>
+				</model_params>
+				<data_params>
+					<LS> 300 </LS>
+					<resp_idx> 20 </resp_idx>
+					<types> ord[0-19],cat[20] </types>
+				</data_params>
+				<result>
+					<iter_count> 100 </iter_count>
+					<mean> 9.993943 </mean>
+					<sigma> 0.860256 </sigma>
+				</result>
+			</ringnorm>
+			<spambase>
+				<model_params>
+					<type> GENTLE </type>
+					<weak_count> 20 </weak_count>
+					<weight_trim_rate> 0.95 </weight_trim_rate>
+					<max_depth> 4 </max_depth>
+					<use_surrogate> 1 </use_surrogate>
+				</model_params>
+				<data_params>
+					<LS> 3221 </LS>
+					<resp_idx> 57 </resp_idx>
+					<types> ord[0-56],cat[57] </types>
+				</data_params>
+				<result>
+					<iter_count> 100 </iter_count>
+					<mean> 5.404347 </mean>
+					<sigma> 0.581716 </sigma>   
+				</result>
+			</spambase>
+		</boost>
+		<rtrees>
+			<waveform>
+				<model_params>
+					<max_depth> 20 </max_depth>
+					<min_sample_count> 2 </min_sample_count>
+					<use_surrogate> 0 </use_surrogate>
+					<max_categories> 3 </max_categories>
+					<cv_folds> 0 </cv_folds>
+					<is_pruned> 0 </is_pruned>
+					<nactive_vars> 0 </nactive_vars>
+					<max_trees_num> 100 </max_trees_num>
+				</model_params>
+				<data_params>
+					<LS> 300 </LS>
+					<resp_idx> 21 </resp_idx>
+					<types> ord[0-20],cat[21] </types>
+				</data_params>
+				<result>
+					<iter_count> 100 </iter_count>
+					<mean> 17.100641 </mean>
+					<sigma> 0.630052 </sigma>
+				</result>
+			</waveform>
+			<mushroom>
+				<model_params>
+					<max_depth> 20 </max_depth>
+					<min_sample_count> 2 </min_sample_count>
+					<use_surrogate> 1 </use_surrogate>
+					<max_categories> 16 </max_categories>
+					<cv_folds> 0 </cv_folds>
+					<is_pruned> 0 </is_pruned>
+					<nactive_vars> 0 </nactive_vars>
+					<max_trees_num> 100 </max_trees_num>
+				</model_params>
+				<data_params>
+					<LS> 4000 </LS>
+					<resp_idx> 0 </resp_idx>
+					<types> cat </types>
+				</data_params>
+				<result>
+					<iter_count> 100 </iter_count>
+					<mean> 0.006547 </mean>
+					<sigma> 0.028248 </sigma>
+				</result>
+			</mushroom>
+			<adult>
+				<model_params>
+					<max_depth> 20 </max_depth>
+					<min_sample_count> 2 </min_sample_count>
+					<use_surrogate> 1 </use_surrogate>
+					<max_categories> 16 </max_categories>
+					<cv_folds> 0 </cv_folds>
+					<is_pruned> 0 </is_pruned>
+					<nactive_vars> 0 </nactive_vars>
+					<max_trees_num> 100 </max_trees_num>
+				</model_params>
+				<data_params>
+					<LS> 22561 </LS>
+					<resp_idx> 14 </resp_idx>
+					<types> ord[0,2,4,10-12],cat[1,3,5-9,13,14] </types>
+				</data_params>
+				<result>
+					<iter_count> 100 </iter_count>
+					<mean> 13.5129 </mean>
+					<sigma> 0.266065 </sigma>
+				</result>
+			</adult>
+			<abalone>
+				<model_params>
+					<max_depth> 20 </max_depth>
+					<min_sample_count> 2 </min_sample_count>
+					<use_surrogate> 0 </use_surrogate>
+					<max_categories> 16 </max_categories>
+					<cv_folds> 0 </cv_folds>
+					<is_pruned> 0 </is_pruned>
+					<nactive_vars> 0 </nactive_vars>
+					<max_trees_num> 100 </max_trees_num>
+				</model_params>
+				<data_params>
+					<LS> 3133 </LS>
+					<resp_idx> 8 </resp_idx>
+					<types> ord[1-8],cat[0] </types>
+				</data_params>
+				<result>
+					<iter_count> 100 </iter_count>
+					<mean> 4.745199 </mean>
+					<sigma> 0.282112 </sigma>
+				</result>
+			</abalone>
+			<vehicle>
+				<model_params>
+					<max_depth> 20 </max_depth>
+					<min_sample_count> 2 </min_sample_count>
+					<use_surrogate> 0 </use_surrogate>
+					<max_categories> 4 </max_categories>
+					<cv_folds> 0 </cv_folds>
+					<is_pruned> 0 </is_pruned>
+					<nactive_vars> 0 </nactive_vars>
+					<max_trees_num> 100 </max_trees_num>
+				</model_params>
+				<data_params>
+					<LS> 761 </LS>
+					<resp_idx> 18 </resp_idx>
+					<types> ord[0-17],cat[18] </types>
+				</data_params>
+				<result>
+					<iter_count> 100 </iter_count>
+					<mean> 24.964712 </mean>
+					<sigma> 4.469287 </sigma>
+				</result>
+			</vehicle>
+			<elevators>
+				<model_params>
+					<max_depth> 20 </max_depth>
+					<min_sample_count> 2 </min_sample_count>
+					<use_surrogate> 0 </use_surrogate>
+					<max_categories> 0 </max_categories>
+					<cv_folds> 0 </cv_folds>
+					<is_pruned> 0 </is_pruned>
+					<nactive_vars> 0 </nactive_vars>
+					<max_trees_num> 100 </max_trees_num>
+				</model_params>
+				<data_params>
+					<LS> 5000 </LS>
+					<resp_idx> 18 </resp_idx>
+					<types> ord </types>
+				</data_params>
+				<result>
+					<iter_count> 0 </iter_count>
+					<mean> 0 </mean>
+					<sigma> 0 </sigma>
+				</result>
+			</elevators>
+			<letter>
+				<model_params>
+					<max_depth> 20 </max_depth>
+					<min_sample_count> 2 </min_sample_count>
+					<use_surrogate> 0 </use_surrogate>
+					<max_categories> 26 </max_categories>
+					<cv_folds> 0 </cv_folds>
+					<is_pruned> 0 </is_pruned>
+					<nactive_vars> 0 </nactive_vars>
+					<max_trees_num> 100 </max_trees_num>
+				</model_params>
+				<data_params>
+					<LS> 10000 </LS>
+					<resp_idx> 16 </resp_idx>
+					<types> ord[0-15],cat[16] </types>
+				</data_params>
+				<result>
+					<iter_count> 100 </iter_count>
+					<mean> 5.334999 </mean>
+					<sigma> 0.261142 </sigma>
+				</result>
+			</letter>
+			<ringnorm>
+				<model_params>
+					<max_depth> 20 </max_depth>
+					<min_sample_count> 2 </min_sample_count>
+					<use_surrogate> 0 </use_surrogate>
+					<max_categories> 2 </max_categories>
+					<cv_folds> 0 </cv_folds>
+					<is_pruned> 0 </is_pruned>
+					<nactive_vars> 0 </nactive_vars>
+					<max_trees_num> 100 </max_trees_num>
+				</model_params>
+				<data_params>
+					<LS> 300 </LS>
+					<resp_idx> 20 </resp_idx>
+					<types> ord[0-19],cat[20] </types>
+				</data_params>
+				<result>
+					<iter_count> 100 </iter_count>
+					<mean> 6.248733 </mean>
+					<sigma> 0.904713 </sigma>
+				</result>
+			</ringnorm>
+			<twonorm>
+				<model_params>
+					<max_depth> 20 </max_depth>
+					<min_sample_count> 2 </min_sample_count>
+					<use_surrogate> 0 </use_surrogate>
+					<max_categories> 3 </max_categories>
+					<cv_folds> 0 </cv_folds>
+					<is_pruned> 0 </is_pruned>
+					<nactive_vars> 0 </nactive_vars>
+					<max_trees_num> 100 </max_trees_num>
+				</model_params>
+				<data_params>
+					<LS> 300 </LS>
+					<resp_idx> 20 </resp_idx>
+					<types> ord[0-19],cat[20] </types>
+				</data_params>
+				<result>
+					<iter_count> 100 </iter_count>
+					<mean> 4.506479 </mean>
+					<sigma> 0.449739 </sigma>
+				</result>
+			</twonorm>
+			<spambase>
+				<model_params>
+					<max_depth> 20 </max_depth>
+					<min_sample_count> 2 </min_sample_count>
+					<use_surrogate> 0 </use_surrogate>
+					<max_categories> 3 </max_categories>
+					<cv_folds> 0 </cv_folds>
+					<is_pruned> 0 </is_pruned>
+					<nactive_vars> 0 </nactive_vars>
+					<max_trees_num> 100 </max_trees_num>
+				</model_params>
+				<data_params>
+					<LS> 3221 </LS>
+					<resp_idx> 57 </resp_idx>
+					<types> ord[0-56],cat[57] </types>
+				</data_params>
+				<result>
+					<iter_count> 100 </iter_count>
+					<mean> 5.243477 </mean>
+					<sigma> 0.54232 </sigma>
+				</result>
+			</spambase>
+		</rtrees>
+		<ertrees>
+			<waveform>
+				<model_params>
+					<max_depth> 20 </max_depth>
+					<min_sample_count> 2 </min_sample_count>
+					<use_surrogate> 0 </use_surrogate>
+					<max_categories> 3 </max_categories>
+					<cv_folds> 0 </cv_folds>
+					<is_pruned> 0 </is_pruned>
+					<nactive_vars> 0 </nactive_vars>
+					<max_trees_num> 100 </max_trees_num>
+				</model_params>
+				<data_params>
+					<LS> 300 </LS>
+					<resp_idx> 21 </resp_idx>
+					<types> ord[0-20],cat[21] </types>
+				</data_params>
+				<result>
+					<iter_count> 1000 </iter_count>
+					<mean> 16.540234 </mean>
+					<sigma> 0.759467 </sigma>
+				</result>
+			</waveform>
+			<abalone>
+				<model_params>
+					<max_depth> 20 </max_depth>
+					<min_sample_count> 2 </min_sample_count>
+					<use_surrogate> 0 </use_surrogate>
+					<max_categories> 16 </max_categories>
+					<cv_folds> 0 </cv_folds>
+					<is_pruned> 0 </is_pruned>
+					<nactive_vars> 0 </nactive_vars>
+					<max_trees_num> 100 </max_trees_num>
+				</model_params>
+				<data_params>
+					<LS> 3133 </LS>
+					<resp_idx> 8 </resp_idx>
+					<types> ord[1-8],cat[0] </types>
+				</data_params>
+				<result>
+					<iter_count> 1000 </iter_count>
+					<mean> 4.778008 </mean>
+					<sigma> 0.323757 </sigma>
+				</result>
+			</abalone>
+			<vehicle>
+				<model_params>
+					<max_depth> 20 </max_depth>
+					<min_sample_count> 2 </min_sample_count>
+					<use_surrogate> 0 </use_surrogate>
+					<max_categories> 4 </max_categories>
+					<cv_folds> 0 </cv_folds>
+					<is_pruned> 0 </is_pruned>
+					<nactive_vars> 0 </nactive_vars>
+					<max_trees_num> 100 </max_trees_num>
+				</model_params>
+				<data_params>
+					<LS> 761 </LS>
+					<resp_idx> 18 </resp_idx>
+					<types> ord[0-17],cat[18] </types>
+				</data_params>
+				<result>
+					<iter_count> 1000 </iter_count>
+					<mean> 24.864685 </mean>
+					<sigma> 4.407731 </sigma>
+				</result>
+			</vehicle>
+			<elevators>
+				<model_params>
+					<max_depth> 20 </max_depth>
+					<min_sample_count> 2 </min_sample_count>
+					<use_surrogate> 0 </use_surrogate>
+					<max_categories> 0 </max_categories>
+					<cv_folds> 0 </cv_folds>
+					<is_pruned> 0 </is_pruned>
+					<nactive_vars> 0 </nactive_vars>
+					<max_trees_num> 100 </max_trees_num>
+				</model_params>
+				<data_params>
+					<LS> 5000 </LS>
+					<resp_idx> 18 </resp_idx>
+					<types> ord </types>
+				</data_params>
+				<result>
+					<iter_count> 0 </iter_count>
+					<mean> 0 </mean>
+					<sigma> 0 </sigma>
+				</result>
+			</elevators>
+			<letter>
+				<model_params>
+					<max_depth> 20 </max_depth>
+					<min_sample_count> 2 </min_sample_count>
+					<use_surrogate> 0 </use_surrogate>
+					<max_categories> 26 </max_categories>
+					<cv_folds> 0 </cv_folds>
+					<is_pruned> 0 </is_pruned>
+					<nactive_vars> 0 </nactive_vars>
+					<max_trees_num> 100 </max_trees_num>
+				</model_params>
+				<data_params>
+					<LS> 10000 </LS>
+					<resp_idx> 16 </resp_idx>
+					<types> ord[0-15],cat[16] </types>
+				</data_params>
+				<result>
+					<iter_count> 1000 </iter_count>
+					<mean> 4.777311 </mean>
+					<sigma> 0.225572 </sigma>
+				</result>
+			</letter>
+			<ringnorm>
+				<model_params>
+					<max_depth> 20 </max_depth>
+					<min_sample_count> 2 </min_sample_count>
+					<use_surrogate> 0 </use_surrogate>
+					<max_categories> 2 </max_categories>
+					<cv_folds> 0 </cv_folds>
+					<is_pruned> 0 </is_pruned>
+					<nactive_vars> 0 </nactive_vars>
+					<max_trees_num> 100 </max_trees_num>
+				</model_params>
+				<data_params>
+					<LS> 300 </LS>
+					<resp_idx> 20 </resp_idx>
+					<types> ord[0-19],cat[20] </types>
+				</data_params>
+				<result>
+					<iter_count> 1000 </iter_count>
+					<mean> 3.008637 </mean>
+					<sigma> 0.291173 </sigma>
+				</result>
+			</ringnorm>
+			<twonorm>
+				<model_params>
+					<max_depth> 20 </max_depth>
+					<min_sample_count> 2 </min_sample_count>
+					<use_surrogate> 0 </use_surrogate>
+					<max_categories> 3 </max_categories>
+					<cv_folds> 0 </cv_folds>
+					<is_pruned> 0 </is_pruned>
+					<nactive_vars> 0 </nactive_vars>
+					<max_trees_num> 100 </max_trees_num>
+				</model_params>
+				<data_params>
+					<LS> 300 </LS>
+					<resp_idx> 20 </resp_idx>
+					<types> ord[0-19],cat[20] </types>
+				</data_params>
+				<result>
+					<iter_count> 1000 </iter_count>
+					<mean> 3.837478 </mean>
+					<sigma> 0.402819 </sigma>
+				</result>
+			</twonorm>
+			<spambase>
+				<model_params>
+					<max_depth> 20 </max_depth>
+					<min_sample_count> 2 </min_sample_count>
+					<use_surrogate> 0 </use_surrogate>
+					<max_categories> 3 </max_categories>
+					<cv_folds> 0 </cv_folds>
+					<is_pruned> 0 </is_pruned>
+					<nactive_vars> 0 </nactive_vars>
+					<max_trees_num> 100 </max_trees_num>
+				</model_params>
+				<data_params>
+					<LS> 3221 </LS>
+					<resp_idx> 57 </resp_idx>
+					<types> ord[0-56],cat[57] </types>
+				</data_params>
+				<result>
+					<iter_count> 100 </iter_count>
+					<mean> 7.550869 </mean>
+					<sigma> 0.738573 </sigma>
+				</result>
+			</spambase>
+		</ertrees>
+	</validation>
+</mltest>
+</opencv_storage>

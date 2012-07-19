@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<opencv_storage>
+<hog>
+   <distE>0.005</distE>
+  <sE>0.008</sE>
+  <noPairE>0.2</noPairE>
+  <detector_names>
+    default</detector_names>
+  <detectors>
+    <default>
+		<fn>""</fn></default></detectors>
+  <image_filenames>
+    <!-- img_0 -->
+    cascadeandhog/images/addams-family.png
+    <!-- img_1 -->
+    cascadeandhog/images/audrybt1.png
+    <!-- img_2 -->
+    cascadeandhog/images/churchill-downs.png
+    <!-- img_3 -->
+    cascadeandhog/images/class57.png
+    <!-- img_4 -->
+    cascadeandhog/images/er.png
+    <!-- img_5 -->
+    cascadeandhog/images/larroquette.png
+    <!-- img_6 -->
+    cascadeandhog/images/mickymouse-self-p.png
+    <!-- img_7 -->
+    cascadeandhog/images/karen-and-rob.png
+    <!-- img_8 -->
+    cascadeandhog/images/bttf301.png</image_filenames>
+</hog>
+</opencv_storage>

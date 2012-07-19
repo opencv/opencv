@@ -1,0 +1,204 @@
+<?xml version="1.0"?>
+<opencv_storage>
+<mltest type_id="opencv-mltest">
+	<run_params>
+		<nbayes type_id="seq"> 
+			<_> waveform </_></nbayes>
+		<knearest type_id="seq"> 
+			<_> waveform </_>
+			<_> abalone </_></knearest>
+		<svm type_id="seq"> 
+			<_> waveform </_>
+			<_> poletelecomm </_></svm>
+		<em type_id="seq"></em>
+		<ann type_id="seq"> 
+			<_> waveform </_></ann>
+		<dtree type_id="seq"> 
+			<_> mushroom </_>
+			<_> abalone </_></dtree>
+		<boost type_id="seq"> 
+			<_> adult </_></boost>
+		<rtrees type_id="seq"> 
+			<_> waveform </_>
+			<_> abalone </_></rtrees>
+		<ertrees type_id="seq">
+			<_> waveform </_>
+			<_> abalone </_></ertrees></run_params>        
+	<validation>
+		<nbayes>
+			<waveform>
+				<data_params>
+					<LS> 300 </LS>
+					<resp_idx> 21 </resp_idx>
+					<types> ord[0-20],cat[21] </types></data_params></waveform></nbayes>
+		<knearest> 
+			<waveform>
+				<model_params>
+					<k> 4 </k></model_params>
+				<data_params>
+					<LS> 300 </LS>
+					<resp_idx> 21 </resp_idx>
+					<types> ord[0-20],cat[21] </types></data_params></waveform>
+			<abalone>
+				<model_params>
+					<k> 4 </k></model_params>
+				<data_params>
+					<LS> 3133 </LS>
+					<resp_idx> 8 </resp_idx>
+					<types> ord[1-8],cat[0] </types></data_params></abalone></knearest>
+		<svm>
+			<waveform>
+				<model_params>
+					<svm_type> C_SVC </svm_type>
+					<kernel_type> LINEAR </kernel_type>
+					<degree> 0 </degree>
+					<gamma> 1 </gamma>
+					<coef0> 0 </coef0>
+					<C> 0.5 </C>
+					<nu> 0 </nu>
+					<p> 0 </p></model_params>
+				<data_params>
+					<LS> 300 </LS>
+					<resp_idx> 21 </resp_idx>
+					<types> ord[0-20],cat[21] </types></data_params></waveform>
+			<poletelecomm>
+				<model_params>
+					<svm_type> NU_SVR  </svm_type>
+					<kernel_type> RBF  </kernel_type>
+					<degree> 0 </degree>
+					<gamma> 0.00225 </gamma>
+					<coef0> 0 </coef0>
+					<C> 62.5 </C>
+					<nu> 0.03 </nu>
+					<p> 0 </p></model_params>
+				<data_params>
+					<LS> 2500 </LS>
+					<resp_idx> 48 </resp_idx>
+					<types> ord </types></data_params></poletelecomm>
+		</svm>
+		<em></em>
+		<ann>
+			<letter>
+				<model_params>
+					<train_method> RPROP </train_method>
+					<param1> 0.1 </param1>
+					<param2> 0.1 </param2></model_params>
+				<data_params>
+					<LS> 10000 </LS>
+					<resp_idx> 17 </resp_idx>
+					<types> ord[0-16],cat[17] </types></data_params></letter>
+			<spambase>
+				<model_params>
+					<train_method> BACKPROP </train_method>
+					<param1> 0.1 </param1>
+					<param2> 0.1 </param2></model_params>
+				<data_params>
+					<LS> 3221 </LS>
+					<resp_idx> 57 </resp_idx>
+					<types> ord[0-56],cat[57] </types></data_params></spambase>
+			<waveform>
+				<model_params>
+					<train_method> RPROP </train_method>
+					<param1> 0.1 </param1>
+					<param2> 0.1 </param2></model_params>
+				<data_params>
+					<LS> 300 </LS>
+					<resp_idx> 21 </resp_idx>
+					<types> ord[0-20],cat[21] </types></data_params></waveform></ann>
+		<dtree>
+			<mushroom>
+				<model_params>
+					<max_depth> 10 </max_depth>
+					<min_sample_count> 2 </min_sample_count>
+					<use_surrogate> 1 </use_surrogate>
+					<max_categories> 16 </max_categories>
+					<cv_folds> 0 </cv_folds>
+					<is_pruned> 0 </is_pruned></model_params>
+				<data_params>
+					<LS> 4000 </LS>
+					<resp_idx> 0 </resp_idx>
+					<types> cat </types></data_params></mushroom>
+			<abalone>
+				<model_params>
+					<max_depth> 10 </max_depth>
+					<min_sample_count> 2 </min_sample_count>
+					<use_surrogate> 0 </use_surrogate>
+					<max_categories> 16 </max_categories>
+					<cv_folds> 0 </cv_folds>
+					<is_pruned> 0 </is_pruned></model_params>
+				<data_params>
+					<LS> 3133 </LS>
+					<resp_idx> 8 </resp_idx>
+					<types> ord[1-8],cat[0] </types></data_params></abalone></dtree>
+		<boost>
+			<adult>
+				<model_params>
+					<type> REAL </type>
+					<weak_count> 20 </weak_count>
+					<weight_trim_rate> 0.95 </weight_trim_rate>
+					<max_depth> 4 </max_depth>
+					<use_surrogate> 1 </use_surrogate></model_params>
+				<data_params>
+					<LS> 22561 </LS>
+					<resp_idx> 14 </resp_idx>
+					<types> ord[0,2,4,10-12],cat[1,3,5-9,13,14] </types></data_params></adult></boost>
+		<rtrees>
+			<waveform>
+				<model_params>
+					<max_depth> 20 </max_depth>
+					<min_sample_count> 2 </min_sample_count>
+					<use_surrogate> 0 </use_surrogate>
+					<max_categories> 3 </max_categories>
+					<cv_folds> 0 </cv_folds>
+					<is_pruned> 0 </is_pruned>
+					<nactive_vars> 0 </nactive_vars>
+					<max_trees_num> 100 </max_trees_num></model_params>
+				<data_params>
+					<LS> 300 </LS>
+					<resp_idx> 21 </resp_idx>
+					<types> ord[0-20],cat[21] </types></data_params></waveform>
+			<abalone>
+				<model_params>
+					<max_depth> 20 </max_depth>
+					<min_sample_count> 2 </min_sample_count>
+					<use_surrogate> 0 </use_surrogate>
+					<max_categories> 16 </max_categories>
+					<cv_folds> 0 </cv_folds>
+					<is_pruned> 0 </is_pruned>
+					<nactive_vars> 0 </nactive_vars>
+					<max_trees_num> 100 </max_trees_num></model_params>
+				<data_params>
+					<LS> 3133 </LS>
+					<resp_idx> 8 </resp_idx>
+					<types> ord[1-8],cat[0] </types></data_params></abalone></rtrees>
+		<ertrees>
+			<waveform>
+				<model_params>
+					<max_depth> 20 </max_depth>
+					<min_sample_count> 2 </min_sample_count>
+					<use_surrogate> 0 </use_surrogate>
+					<max_categories> 3 </max_categories>
+					<cv_folds> 0 </cv_folds>
+					<is_pruned> 0 </is_pruned>
+					<nactive_vars> 0 </nactive_vars>
+					<max_trees_num> 100 </max_trees_num></model_params>
+				<data_params>
+					<LS> 300 </LS>
+					<resp_idx> 21 </resp_idx>
+					<types> ord[0-20],cat[21] </types></data_params></waveform>
+			<abalone>
+				<model_params>
+					<max_depth> 20 </max_depth>
+					<min_sample_count> 2 </min_sample_count>
+					<use_surrogate> 0 </use_surrogate>
+					<max_categories> 16 </max_categories>
+					<cv_folds> 0 </cv_folds>
+					<is_pruned> 0 </is_pruned>
+					<nactive_vars> 0 </nactive_vars>
+					<max_trees_num> 100 </max_trees_num></model_params>
+				<data_params>
+					<LS> 3133 </LS>
+					<resp_idx> 8 </resp_idx>
+					<types> ord[1-8],cat[0] </types></data_params></abalone></ertrees></validation>
+</mltest>
+</opencv_storage>

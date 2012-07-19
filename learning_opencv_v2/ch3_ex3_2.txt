@@ -1,0 +1,32 @@
+//Example 3-2. Matrix creation and release
+// Create a new rows by cols matrix of type ‘type’.
+//
+CvMat* cvCreateMat( int rows, int cols, int type );
+// Create only matrix header without allocating data
+//
+CvMat* cvCreateMatHeader( int rows, int cols, int type );
+// Initialize header on existing CvMat structure
+//
+CvMat* cvInitMatHeader(
+   CvMat* mat,
+   int   rows,
+   int   cols,
+   int   type,
+   void* data = NULL,
+   int   step = CV_AUTOSTEP
+);
+// Like cvInitMatHeader() but allocates CvMat as well.
+//
+CvMat cvMat(
+   int   rows,
+   int   cols,
+   int   type,
+   void* data = NULL
+);
+// Allocate a new matrix just like the matrix ‘mat’.
+//
+CvMat* cvCloneMat( const cvMat* mat );
+// Free the matrix ‘mat’, both header and data.
+//
+void cvReleaseMat( CvMat** mat );
+

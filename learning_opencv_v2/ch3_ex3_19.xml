@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<opencv_storage>
+<frame_count>10</frame_count>
+<frame_size>
+  320 200</frame_size>
+<color_cvt_matrix type_id="opencv-matrix">
+  <rows>5</rows>
+  <cols>5</cols>
+  <dt>f</dt>
+  <data>
+    0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 7.69999981
+    0.50000000 0. 0. 0. 0. 0. 0.50000000</data></color_cvt_matrix>
+</opencv_storage>

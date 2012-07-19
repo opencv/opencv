@@ -1,0 +1,138 @@
+------------------------------------------------------------------------
+          0. Directory contents                             
+------------------------------------------------------------------------
+In this directory there is a data of tests evaluating detectors and descriptors.
+[detectors]
+    contains files with run parameters and results of detectors, 
+    (detectorName)_params.xml and (detectorName)_res.xml respectively.
+[descriptors]
+    contains files with run parameters and results of descriptors, 
+    (detectorName)_params.xml and (detectorName)_res.xml respectively.
+[images_datasets]
+    contains 8 folders with images datasets taken from http://www.robots.ox.ac.uk/~vgg/data/data-aff.html.
+    Each dataset consists from 6 images and 5 homography matrices.
+[keypoints_datasets]     
+    contains files with keypoints calculated by detectors for each images dataset from [images_datasets],
+    e.g. surf_bark.xml contains 6 keypoints sets corresponding to 6 images of dataset "bark". These files
+    are written by the detector evaluation tests, but used in the description evaluation tests.
+    
+------------------------------------------------------------------------
+          1. Detector evaluation tests
+------------------------------------------------------------------------
+These tests are regression tests of opencv_test system. 
+The criterions of the detector repeatability implemented in these tests are described in "Scale & Affine 
+Invariant Interest Point Detectors" and "A Comparison of Affine Region Detectors", Mikolajczyk et al.
+
+Repeatability criterions:
+1. repeating key points locations,
+2. repeating regions. There are two cases:
+    1.) scale invariant detector (the region is a circle),
+    2.) affine covariant detector (the region is an ellipse).
+
+Current test implementation supports case of the elliptic regions and close to MatLab code 
+from http://www.robots.ox.ac.uk/~vgg/research/affine/evaluation.html#eval_soft. But KeyPoint class used 
+for storing a key point detected by some inheritor of FeatureDetector (features2d.hpp) is a circular region. We 
+assume that the circular region (KeyPoint) is a local case of elliptic region.
+TODO: affine adaptation.
+
+Detector quality:
+    1.) repeatability,
+    2.) correspondence count.
+Common run parameter of detectors:
+    <isSaveKeypoints>
+        if 1 (true), then keypoints will be saved in directory [keypoints_datasets],
+        if 0 (false), then keypoints will not be saved.
+
+Source:
+    opencv/tests/cv/src/adetectordescriptor_evaluation.cpp
+    DetectorQualityTest is a base class for the detector repeatability test.
+    (DetectorName)DetectorQualityTest is a class for testing the corresponding detector.
+
+Testdata:
+    The tests run the detectors on the images from [images_datasets] (as Mikolajczyk et al.).
+    Run parameters and results are in [detectors].
+    Keypoints sets are saved in [keypoints_datasets].
+
+To run these tests:
+1. specify the test names in configure file of opencv_test system or using -tn parameter (see opencv_test --help). The test names:
+    "quality-detector-fast"
+    "quality-detector-gftt" (GFTT with useHarrisDetector == false)
+    "quality-detector-harris" (GFTT with useHarrisDetector == false)
+    "quality-detector-mser"
+    "quality-detector-star"
+    "quality-detector-sift"
+    "quality-detector-surf"
+2. run opencv_test with spesified test names. There are two ways for this: using -f or -tn parameter of test system. The command line examples: 1st way) ./opencv_test -d /home/opencv_extra/testdata/cv -f /home/cvcfg.xml; 2nd way) ./opencv_test -d /home/opencv_extra/testdata/cv -tn  "quality-detector-fast, quality-detector-gftt"
+
+If there is not the file with run parameters for some detector in the directory [detectors], the default values of 
+these parameters will be used and written in such file.
+If there is not the file with quality results for some detector in the directory [detectors], the corresponding 
+test will not be validate the results, but simply save them in such file.
+TODO: regression keipoints sets comparison (?).
+
+To add test for new detector:
+1. if new detector class is not an inheritor of FeatureDetector, wrap this class as inheritor of FeatureDetector,
+2. add object creation in factory function createDetector,
+3. create instance of DetectorQualityTest passing detector name and test name as parameters  
+See existing detector test classes.
+
+To plot graphics of detector quality:
+1. Go to folder detector/plots. This folder contains data (csv files) written by the test and script createPlots.p
+need to plot graphics of detectors quality. Both metrics are supported: repeatability and correspondences count. 
+Detectors are evaluated on each image dataset (8) independently. Each dataset is used to assess detectors quality 
+under some transformation: rotation+zoom, viewpoint changes, blur, light changes or JPEG compression.
+2. Run gnuplot on createPlots.p script, i.e. type "gnuplot createPlots.p".
+To add new detector evaluation in graphics modify createPlots.p.
+
+------------------------------------------------------------------------
+          2. Description evaluation tests
+------------------------------------------------------------------------
+These tests are regression tests of opencv_test system. 
+The criterion of the descriptor quality implemented in these tests are described in "A Performance Evaluation of Local
+Dedcriptors", Mikolajczyk et al.
+
+Descriptor quality:
+    1.) recall,
+    2.) precision.
+Common run parameters of descriptors:
+    <keypointsFilename> 
+        is a keypoints filename located in [keypoints_datasets], e.g. surf_bark.xml.gz. The descriptors will be calculated for
+        these keypoints. Such file may be written by detector evaluation test.
+    <projectKeypointsFrom1Image>
+        if 0 (false) then first image keypoints (from 6) will be projected on other images using homography matrix to evaluate 
+        the descriptor. If 1 (true) then all 6 keypoints sets calculated by some detector will be used to evaluate the descriptor.
+    <matchFilter>
+        is not supported now. This parameter specify a filter to matches, e.g. confidence of Lowe. Now one correspondence is found
+        for each keypoint of first image and not filtered.
+TODO: support <matchFilter>.
+
+Source:
+    opencv/tests/cv/src/adetectordescriptor_evaluation.cpp
+    DescriptorQualityTest is a base class for the descriptor quality test.
+
+Testdata:
+    The tests run the descriptors on the images from [images_datasets] (as Mikolajczyk et al.).
+    Run parameters and results are in [descriptors].
+    Keypoints file must be in [keypoints_datasets].
+   
+To run these tests:
+1. specify the test names in configure file of opencv_test system or using -tn parameter (see opencv_test --help). The test names:
+    "quality-descriptor-sift"
+    "quality-descriptor-surf"
+    "quality-descriptor-calonder"
+    "quality-descriptor-fern"
+2. run opencv_test with spesified test names. There are two ways for this: using -f or -tn parameter of test system. The command line examples: 1st way) ./opencv_test -d /home/opencv_extra/testdata/cv -f /home/cvcfg.xml; 2nd way) ./opencv_test -d /home/opencv_extra/testdata/cv -tn  "quality-descriptor-surf, quality-descriptor-calonder"
+
+If there is not the file with run parameters for some descriptor in the directory [descriptors], the default values of 
+these parameters will be used and written in such file.
+If there is not the file with quality results for some descriptor in the directory [descriptors], the corresponding 
+test will not be validate the results, but simply save them in such file.
+
+To add test for new descriptor:
+1. if new descriptor class is not an inheritor of DescriptorExtractor or GenericDescriptorMatch, wrap this class as inheritor of DescriptorExtractor or GenericDescriptorMatch,
+2. add object creation in factory function createDescriptorExtractor or createDescriptorMatcher,
+3. create instance of DescriptorQualityTest passing descriptor name and test name as parameters. 
+See existing descriptor test classes.
+
+To plot graphics of descriptor quality:
+1. Run createPlots.sh. All evaluated descriptors are being added automatically.

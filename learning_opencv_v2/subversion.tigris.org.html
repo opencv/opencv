@@ -1,0 +1,743 @@
+
+ 
+ 
+ <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html>
+                 
+ 
+ <head>
+ <style type="text/css"> /* <![CDATA[ */
+ @import "/branding/css/tigris.css";
+ @import "/branding/css/inst.css";
+ /* ]]> */</style>
+ <link rel="stylesheet" type="text/css" href="/branding/css/print.css" media="print" />
+ <script src="/branding/scripts/tigris.js" type="text/javascript"></script>
+  
+             
+ 
+  <script src="/branding/scripts/alm.js" type="text/javascript"></script>
+ <style type="text/css">
+    /* <![CDATA[ */
+    @import "/branding/css/alm.css";
+   /* ]]> */
+ </style>
+ 
+ 
+                                                    <title>
+ subversion.tigris.org
+ </title>
+ <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+ <meta http-equiv="Content-Style-Type" content="text/css" />
+ <meta name="version" content="4.5.1.52.8" />
+ <meta name="keywords" content="Defect Tracking, Issue Tracking, Version Control, Configuration Management, Software Configuration Management, SCM, CM, Revision Control, Software Engineering, Unit Testing, Outsourcing, Collaboration, Open Source, Software Development, Collaborative Software Development, Enterprise, Java, Web Services" />   
+<meta name="description" content="CollabNet, Facilitating Collaborative Software Development" /> <meta name="description" content="Open source software engineering" />
+
+ 
+<style type="text/css"> /* <![CDATA[ */
+  @import "branding/css/tigris.css";
+  @import "branding/css/inst.css";
+  /* ]]> */</style>
+<link rel="stylesheet" type="text/css" media="print"
+  href="branding/css/print.css"/>
+<script type="text/javascript" src="branding/scripts/tigris.js"></script>
+
+<!-- Custom stylations to hide the obnoxious project info -->
+<style type="text/css">
+#projecthome .axial { display: none; }
+#apphead h1 { display: none; }
+#longdescription { border: none; }
+#longdescription h2 { display: none; }
+#customcontent h2 { display: block; }
+</style>
+<!-- End custom stylations -->
+
+ 
+  <!--   Single pic border tables -->
+ <style type="text/css">
+/* <![CDATA[ */
+
+table.sborder, table.sborder td
+{
+	border-color: #A9A9A9;
+	border-style: solid;
+}
+
+table.sborder
+{
+	border-width: 0 0 1px 1px;
+	border-spacing: 0;
+	border-collapse: collapse;
+}
+
+table.sborder td
+{
+	margin: 0;
+	padding: 4px;
+	border-width: 1px 1px 0 0;
+	background-color: #FFFFFF;
+}
+
+/* ]]> */
+</style>
+ 
+ <!--   Tigris Script to load random images -->
+ <SCRIPT LANGUAGE="JavaScript">
+var theImages = new Array()
+//Random-loading images
+theImages[0] = 'http://www.tigris.org/branding/images/banners/svn15support.gif' 
+theImages[1] = 'http://www.tigris.org/branding/images/banners/mergeclient.gif' 
+var p = theImages.length;
+
+var preBuffer = new Array()
+for (i = 0; i < p; i++){
+preBuffer[i] = new Image()
+preBuffer[i].src = theImages[i]
+}
+
+var whichImage = Math.round(Math.random()*(p-1));
+function showImage(){
+
+if(whichImage==0){
+document.write('<a href ="http://www.collab.net/services/subversion"><img src="'+theImages[whichImage]+'" border=0 width=175 height=60></a>');
+}
+else if(whichImage==1){
+document.write('<a href ="http://www.collab.net/subversion15-tigris"><img src="'+theImages[whichImage]+'" border=0 width=175 height=60></a>');
+}
+}
+</script>
+</head>
+ 
+ 
+<body  class="composite">
+ 
+ 
+ <div id="collabnet">
+ <div id="login"> 
+     <div>
+      <a href="http://www.tigris.org/servlets/Login?detour=http://subversion.tigris.org/servlets/ProjectHome;jsessionid=70827FC693CF52B617D4C02454BDAC98">Login</a>
+      |    <a href="http://www.tigris.org/servlets/Join">Register</a>     </div>
+ </div>
+ <a href="http://www.collab.net/special/clickpbc0502.html" id="cnlogo">
+<span class="alt">CollabNet Enterprise Edition</span></a>
+</div>
+ 
+ 
+ 
+ 
+ <div id="banner">
+</div>
+ 
+ 
+ 
+ 
+ <div id="banner">
+ <table width="100%" id="bannertable" cellpadding="0" cellspacing="0">
+   <tr>
+    <td rowspan="2" style="width: 50px;">
+    <a href="http://www.tigris.org/" title="Tigris.org:Defect
+Tracking,Issue Tracking,Version Control,Software Configuration
+Management,SCM,CM,Revision Control,Unit Testing,Software
+Engineering,Document Templates,Outsourcing,Collaboration,Open
+Source,Development,Enterprise,Java,Web Services">
+<img src="/branding/images/logo.gif" alt="Tigris.org" id="tigrislogo" height="48" width="48" /></a>
+    </td>
+    <td style="min-width: 300px;" id="tigrisheading">
+     <div>Tigris.org</div>
+      <div class="smaller">Open Source Software Engineering Tools</div>
+    </td>
+    <td rowspan="2" style="width: 300px;" id="collabnote">
+      <table cellpadding="0" cellspacing="0">
+       <tr>
+        <td>
+        <a href="http://www.collab.net/subversion15"><img src="/branding/images/banners/resoucecenter.gif" alt="Subversion 1.5 Resource Center" width="175" height="60" border="0"></a>
+
+       </td>
+       <td>
+	 <a href="http://www.subconf.com/"><img src="/branding/images/banners/CollabNet_Banner_SubConf.jpg" alt="SubConf Subversion Conference" width="175" height="60" border="0"></a>
+       </td>
+      </tr>
+     </table>  
+</td>
+</tr>
+</table>
+</div>
+<div id="toptabs">
+<table cellpadding="4" cellspacing="0" border="0"><tr>
+<td>   <a href="http://www.tigris.org/servlets/StartPage">My pages</a> </td>
+<th>   <a href="http://www.tigris.org/servlets/ProjectList">Projects</a> </th>
+  <td>   <a href="http://www.tigris.org/servlets/DomainHome">Community</a> </td>
+		<td>   <a href="http://www.tigris.org/servlets/OpenCollabNet">openCollabNet</a> </td>
+</tr></table>
+</div>
+  
+ 
+ <div id="breadcrumbs">
+   <a href="http://www.tigris.org/servlets/ProjectList">Projects</a>     >
+     
+
+   <strong>   <a href="http://subversion.tigris.org/"
+    class="selfref"   >subversion</a>
+   </strong>  </div>
+ 
+ 
+ 
+ 
+<table border="0" cellspacing="0" cellpadding="4" width="100%" id="main">
+<tr>
+<td id="navcol">
+ 
+ 
+ 
+
+
+  
+             
+ 
+  
+ 
+                                                        <dl id="projecttools" class="navgroup">
+   <dt>Project tools</dt>
+   <dd>
+    <ul>
+          <li>   <a href="http://subversion.tigris.org/servlets/ProjectHome;jsessionid=70827FC693CF52B617D4C02454BDAC98" class="selfref">Project home</a> </li>
+                               	</ul>
+       </dd>
+            <dd>
+   <!-- Begin Left Navigation Bar Override -->
+
+<!-- This file overrides the left navigation bar on subversion.tigris.org, 
+     a feature specific to the CEE branding on tigris.org.  See 
+     www/overrides/ in the "look" project for details. -->
+
+<!-- dd --><ul>
+
+<li><p><a href="/servlets/ProjectMemberList">Membership</a></p></li>
+</ul></dd>
+
+<dt>Announcements</dt>
+<dd><ul>
+  <li><a href="/servlets/ProjectNewsList">via Web</a></li>
+  <li><a href="/mailing-lists.html#announcements">via email</a></li>
+  <li><a href="/servlets/ProjectNewsRSS">via RSS</a></li>
+</ul></dd>
+
+<dt>Additional Resources</dt>
+<dd><ul>
+<li><a href="/license-1.html">License</a></li>
+<li><a href="/tools_contrib.html">Contributed tools</a></li>
+<li><a href="http://subversion.org/legal/trademark-policy.html"
+    >Trademark policy</a></li>
+<li><a href="/security.html">Security</a></li>
+<li><a href="/testimonials.html">Testimonials</a></li>
+</ul><!-- /dd -->
+
+<!-- End Left Navigation Bar Override -->
+
+   </dd> 
+    
+ </dl>
+ 
+
+
+
+
+<form action="http://subversion.tigris.org/servlets/Search;jsessionid=70827FC693CF52B617D4C02454BDAC98" method="get">
+ <dl id="searchbox" class="navgroup">
+  
+      <dt>Search</dt>
+  <dd>
+   <div>
+       <select name="scope">
+           <option value="project" selected="selected">This project</option>
+               <option value="domain" >All projects</option>
+    </select>
+      </div>
+   <div>
+    <input type="hidden" name="resultsPerPage" value="40" /> 
+    <input type="text" name="query" size="10" maxlength="99" /> 
+    <input type="submit" name="Button" value="Go" />
+   </div>
+   <div>
+       <a href="http://subversion.tigris.org/servlets/Search;jsessionid=70827FC693CF52B617D4C02454BDAC98?mode=advanced">Advanced search</a>    </div>
+  </dd>
+
+ </dl>
+</form>
+
+
+<div style="padding: 6px; padding-left: 20px;">
+ <a href="http://www.collab.net/special/clickpbc0502.html" onclick="return launch(this.href, 1)"><img src="/branding/images/poweredby.gif" alt="This site is Powered by CollabNet." id="poweredbycollabnet" width="102" height="38" /></a>
+</div>
+
+<dl id="helptext" class="navgroup">
+ <dt>How do I...</dt>
+ <dd>
+  <ul>
+      
+ 
+  <li>  <a href="http://www.tigris.org/scdocs/Learning" onclick="return launch(this.href, 1)" 
+ title="Note: link may open in new window" class="helplink">
+ 
+ Learn about projects?</a>
+</li>
+ <li>  <a href="http://www.tigris.org/scdocs/ContentEditor_C" onclick="return launch(this.href, 1)" 
+ title="Note: link may open in new window" class="helplink">
+ 
+ Customize my project home page?</a>
+</li>
+  
+ 
+ 
+     
+   <li> <a href="http://www.collab.net/rn/" onclick="return launch(this.href, 1)" 
+ title="Note: link may open in new window" class="helplink">
+ 
+ Get release notes for CollabNet 4.5.1?</a>
+</li>
+
+   <li><a href="http://subversion.tigris.org/nonav/servlets/HelpTOC" onclick="return launch(this.href, 1)" 
+title="Note: link may open in new window" class="helplink">Get help?</a></li>
+  </ul>
+ </dd>
+</dl>
+
+<div id="mainhighlights">        
+
+<table border="0" cellspacing="0" cellpadding="3"  width="100%">
+ <tr>
+  <th>Category</th>
+  <th>Featured projects</th>
+ </tr>
+ <tr>
+  <td><a href="http://scm.tigris.org/">scm</a></td>
+  <td><a href="http://subversion.tigris.org/" title="open source version control">Subversion</a>, 
+<a href="http://subclipse.tigris.org/" title="Subversion Eclipse integration">Subclipse</a>,
+<a href="http://tortoisesvn.tigris.org/" title="Subversion client">TortoiseSVN</a>,
+<a href="http://rapidsvn.tigris.org/" title="Subversion client">RapidSVN</a>
+  </td>
+ </tr>
+ <tr>
+  <td><a href="http://issuetrack.tigris.org/">issuetrack</a></td>
+  <td><a href="http://scarab.tigris.org/" title="customizable software defect tracking system">Scarab</a></td>
+ </tr>
+ <tr>
+  <td><a href="http://requirements.tigris.org/">requirements</a></td>
+  <td><a href="http://xmlbasedsrs.tigris.org/">xmlbasedsrs</a></td>
+ </tr>
+ <tr>
+  <td><a href="http://design.tigris.org/">design</a></td>
+  <td><a href="http://argouml.tigris.org/" title="Free UML tool, use cases, uml tutorials">ArgoUML</a></td>
+ </tr>
+ <tr>
+  <td><a href="http://techcomm.tigris.org/">techcomm</a></td>
+  <td><a href="http://subetha.tigris.org/" title="Mailing list manager">SubEtha</a>, 
+  <a href="http://eyebrowse.tigris.org/" title="Mailing list archive tool">eyebrowse</a>, 
+<a href="http://midgard.tigris.org/">midgard</a>,
+<a href="http://cowiki.tigris.org/">cowiki</a></td>
+ </tr>
+ <tr>
+  <td><a href="http://construction.tigris.org/">construction</a></td>
+  <td><a href="http://antelope.tigris.org/" title="Ant GUI">antelope</a>,
+  <a href="http://scons.tigris.org/" title="cross-platform build tool">scons</a>,
+  <a href="http://frameworx.tigris.org/">frameworx</a>,
+  <a href="http://build-interceptor.tigris.org/">build-interceptor</a>,
+  <a href="http://propel.tigris.org/">propel</a>,
+  <a href="http://phing.tigris.org/">phing</a>
+  </td>
+ </tr>
+ <tr>
+  <td><a href="http://testing.tigris.org/" title="tools for quality software">testing</a></td>
+  <td><a href="http://maxq.tigris.org/" title="record and playback web automated testing tool">maxq</a>, 
+<a href="http://aut.tigris.org/" title="advanced unit testing">aut</a>
+  </td>
+ </tr>
+ <tr>
+  <td><a href="http://deployment.tigris.org/">deployment</a></td>
+  <td><a href="http://current.tigris.org/">current</a></td>
+ </tr>
+ <tr>
+  <td><a href="http://process.tigris.org/" title="software development process, extreme programming">process</a></td>
+  <td><a href="http://readyset.tigris.org/" 
+title="Use case template, example test plans, software requirements specification templates, sample project plan template">ReadySET</a></td>
+ </tr>
+ <tr>
+  <td><a href="http://libraries.tigris.org/" title="software reuse, web services">libraries</a></td>
+  <td><a href="http://gef.tigris.org/" title="Graphical diagram editing">GEF</a>, 
+<a href="http://axion.tigris.org/" title="Relational database">Axion</a>, 
+<a href="http://style.tigris.org/" title="Reusable CSS stylesheets">Style</a>,
+<a href="http://sstree.tigris.org/" title="Super-simple trees in HTML, CSS, and javascript">SSTree</a>
+ </td>
+ </tr>
+ <tr>
+  <td colspan="2" style="text-align:center">Over 500 <a style="text-decoration:underline;" 
+  href="http://www.tigris.org/servlets/ProjectList">more tools...</a></td>
+ </tr>
+</table>
+
+
+
+<table border="0" cellspacing="2" cellpadding="3"  width="100%" style="margin-top: 15px;">
+ <tr>
+  <th>Subversion and IDEs</th>
+ </tr>
+ <tr>
+ <td>
+ <a href="http://subclipse.tigris.org/">Eclipse</a>
+ </td>
+ </tr>
+  <tr>
+ <td>
+ <a href="http://www.oracle.com/technology/products/jdev/htdocs/partners/addins/exchange/subversion/subversion.html">JDeveloper</a>
+ </td>
+ </tr>
+  <tr>
+ <td>
+ <a href="http://subversion.netbeans.org/">NetBeans</a>
+ </td>
+ </tr>
+ <tr>
+  <td>
+ <a href="http://ankhsvn.open.collab.net/">Visual Studio</a>
+ </td>
+ </tr>
+ </table>
+ 
+ </div>
+
+ 
+<!--
+<br/>
+<div id="subnewsletter" class="toolgroup">
+<div class="label"><strong>Tigris.org Newsletter</strong></div>
+<div class="body">
+ Get the latest news and feature articles.
+ <div><a style="color: blue;"
+ href="http://www.tigris.org/newsletter/">Newsletter info</a></div>
+ <div><a style="color: blue;" title="ArgoUML; Adoptable SPI"
+ href="http://www.tigris.org/newsletter/newsletter-2004-06.html">Jun 2004 issue</a></div>
+</div></div>
+-->
+
+
+ 
+ 
+<div class="strut">&nbsp;</div>
+</td>
+<td id="midcol">
+ 
+  <div id="bodycol">
+<div id="apphead">
+<h1><small>subversion</small><br />    
+  Project home
+  
+ </h1>
+</div>
+ 
+ 
+ 
+        
+                 
+                 
+           
+    
+  
+
+ 
+ 
+ 
+ 
+ <p class="tasknav">
+
+
+
+
+
+      
+     If you were <a href="http://www.tigris.org/servlets/Join">registered</a> and <a href="http://www.tigris.org/servlets/Login?detour=http://subversion.tigris.org/servlets/ProjectHome;jsessionid=70827FC693CF52B617D4C02454BDAC98">logged in</a>, you could join this project.
+    
+  
+  
+</p>
+ 
+ 
+
+
+
+ 
+ 
+
+ 
+ 
+ <div id="projecthome" class="application">
+
+
+
+
+    <table class="axial">
+      <tr>
+       <th>Summary</th>
+       <td>A compelling replacement for CVS</td>
+      </tr>
+         <tr>
+       <th>
+             Category
+           </th> 
+     <td>
+           <a href="http://scm.tigris.org/">scm</a>
+          </td>
+    </tr>  
+        
+                 
+               <tr>
+        <th>License</th> 
+       <td>
+        <a href="http://subversion.tigris.org/servlets/LicenseDetails?licenseID=9">CollabNet/Tigris.org Apache-style license</a>
+       </td>
+      </tr>
+             
+        
+    
+         <tr>
+       <th>Owner(s)</th> 
+       <td>
+          svn       </td>
+     </tr>  
+        
+        </table>
+
+
+
+ 
+             
+ 
+  
+ 
+                                                       
+                   
+
+<!-- The class h2 is included on the main div, because the HTML which the
+     server will wrap around the page includes a <div class="h2">.
+     Thus, we include one here so that the page looks right when previewed
+     locally, *but* we override the border which the CSS assigns to that
+     style, so that we do not get two borders on the live page. -->
+<div class="h2 app" style="border-left: 0px" id="customcontent">
+
+<div style="text-align: center;">
+  <img src="images/subversion_logo_hor-468x64.png" alt="Subversion" />
+</div>
+
+<div style="text-align: center; font-size: 150%;
+     margin-left: 5%; margin-right: 5%;">
+<p>Subversion is an open source <a
+   href="http://en.wikipedia.org/wiki/Revision_control">version
+   control system</a>.<br/>
+   See <a href="features.html" >here</a> for a detailed feature list.</p>
+</div>
+
+<div style="text-align: center;">
+
+<table width="90%" border="0" style="margin-right: 5%; margin-left: 5%;">
+
+<tr align="center">
+
+<!-- ========================= WANT ==================================== -->
+<td style="width: 50%">
+<div id="want" title="want">
+<h2 style="text-align: center;">Get Subversion</h2>
+
+<p>The latest release of Subversion is 1.5.2.  See the <a
+   href="svn_1.5_releasenotes.html" >release notes</a> for what's new
+   in the 1.5.x series generally.</p>
+
+<table border="0" style="margin-right: auto; margin-left: auto;">
+<tr align="center">
+<th style="text-align: center; width: 50%"><strong>Subversion</strong></th>
+<th style="text-align: center; width: 50%">Third-Party Clients</th>
+</tr>
+<tr align="center">
+<td style="width: 50%">
+   <ul style="text-align: left">
+   <li><a href="getting.html#source-release"
+       >Source code</a><br/>
+       (<a href="/downloads/subversion-1.5.2.tar.bz2">.tar.bz2</a>, 
+        <a href="/downloads/subversion-1.5.2.tar.gz">.tar.gz</a>,
+        <a href="/downloads/subversion-1.5.2.zip">.zip</a>)</li>
+   <li><a href="getting.html#windows"
+       >Windows binaries</a></li>
+   <li><a href="getting.html#osx"
+       >Mac OS&nbsp;X binaries</a></li>
+   <li><a href="getting.html#fedora"
+       >Fedora</a> / <a href="getting.html#redhat">Red Hat binaries</a></li>
+   <li><a href="getting.html#debian"
+       >Debian</a> / <a href="getting.html#ubuntu">Ubuntu binaries</a></li>
+   <li><a href="getting.html#freebsd"
+       >FreeBSD (ports)</a></li>
+   <li><a href="getting.html#solaris"
+       >Solaris binaries</a></li>
+   <li><a href="getting.html#binary-packages"
+       >...more downloads...</a></li>
+   </ul>
+</td>
+<td style="width: 50%">
+   <ul style="text-align: left">
+   <li><a href="http://tortoisesvn.tigris.org/"
+       >TortoiseSVN</a> (Windows)</li>
+   <li><a href="http://subclipse.tigris.org/"
+       >Subclipse</a> (Eclipse)</li>
+   <li><a
+   href="http://www.polarion.org/index.php?page=overview&amp;project=subversive"
+       >Subversive</a> (Eclipse)</li>
+   <li><a href="http://scplugin.tigris.org/"
+       >SCPlugin</a> (Mac OS&nbsp;X)</li>
+   <li><a href="http://rapidsvn.tigris.org/"
+       >RapidSVN</a> (cross-platform)</li>
+   <li><a href="http://ankhsvn.open.collab.net/"
+       >AnkhSVN</a> (Visual Studio)</li>
+   <li><a href="http://www.visualsvn.com/visualsvn/"
+       >VisualSVN</a> (Visual Studio)</li>
+   <li><a href="links.html#clients"
+       >...more clients...</a></li>
+   </ul>
+</td>
+</tr>
+</table>
+
+</div> <!-- want -->
+
+</td>
+
+<!-- ========================= HELP ==================================== -->
+<td style="width: 50%">
+<div id="help" title="help">
+<h2 style="text-align: center;">Help</h2>
+
+<p>In addition to the resources below, you can use an Internet search
+engine to find answers to Subversion questions.  For example, if you
+got an error message, try entering part of the error into a search
+engine&nbsp;&mdash;&nbsp;often, the first few results will contain the
+answer you're looking for.</p>
+
+<div style="width: 70%">
+   <ul style="text-align: left">
+   <li><a href="mailing-lists.html"
+       >Mailing Lists</a> (non-subscribers can post)</li>
+   <li><a href="faq.html"
+       >FAQ</a> (Frequently Asked Questions)
+                (<a href="faq.ja.html">&#26085;&#26412;&#35486;</a>)</li>
+   <li><a href="http://svnbook.red-bean.com/"
+       >Subversion Book</a> (complete online)</li>
+   <li>Chat room: <a href="irc://irc.freenode.net/svn"
+       ><tt>irc.freenode.net</tt> (channel <tt>#svn</tt>)</a></li>
+   <li>Subversion <a href="issue-tracker.html"
+       >bug database</a></li>
+   <li>Various <a href="links.html"
+       >Subversion-related links</a></li>
+   <li><a href="links.html#converters"
+       >Converting to Subversion</a></li>
+   <li><a href="commercial-support.html"
+       >Commercial Support</a></li>
+   </ul>
+</div>
+
+</div> <!-- help -->
+</td>
+
+</tr>
+
+<tr align="center">
+
+<!-- ========================= COMPLAIN ================================ -->
+<td style="width: 50%">
+<div id="complain" title="complain">
+<h2 style="text-align: center;">Report a Problem</h2>
+
+<p><strong>To report a bug:</strong></p>
+
+<p>First, please read the <a href="bugs.html" >bug report instructions</a>.</p>
+
+<p>Then, please read the <a href="bugs.html" >bug report instructions</a>.</p>
+
+<p>Finally, please read the <a href="bugs.html" >bug report instructions</a>.</p>
+
+<p><strong>We really mean that&nbsp;&mdash;&nbsp;please read the
+instructions all the way through.</strong> The vast majority of bug
+reports are insufficiently detailed, or are duplicates of existing
+reports, or are not bugs, or are already fixed.  You can save the
+maintainers a lot of time by following the instructions carefully.
+Thank you.</p>
+
+</div> <!-- complain -->
+
+</td>
+
+<!-- ========================= DEVELOPMENT ============================= -->
+<td style="width: 50%">
+<div id="development" title="development">
+<h2 style="text-align: center;">Development</h2>
+
+<p>Subversion is an open source project; we welcome <a
+href="hacking.html#patches" >patches</a>, and we'll help you get more
+<a href="http://www.red-bean.com/svnproject/contribulyzer/"
+>involved</a> if you want to be.</p>
+
+     <ul>
+     <li><p>Read the <a href="development.html">Introduction to Subversion
+      Development</a>.</p></li>
+     <li><p>Read the <a href="hacking.html">Hacker's Guide to
+      Subversion</a>.</p></li>
+     <li><p>Maybe browse the <a href="http://svn.collab.net/svn-doxygen/"
+      >API documentation</a>.</p></li>
+     <li><p><a href="http://svn.collab.net/viewvc/svn/trunk/"
+      >Browse the source tree</a> with ViewVC.</p></li>
+     <li><p>Check out the source tree:<br/>
+      <tt>svn&nbsp;checkout&nbsp;<a
+      href="http://svn.collab.net/repos/svn/trunk/"
+      >http://svn.collab.net/repos/svn/trunk/</a></tt></p></li>
+     <li><p>Hack!</p></li>
+     </ul>
+
+</div> <!-- development -->
+
+</td>
+
+</tr>
+
+</table>
+
+</div>
+</div>
+
+                           
+            
+        
+
+</div>
+ 
+ 
+
+ 
+ 
+ 
+</div>
+</td>
+</tr>
+</table>
+ 
+ 
+ <div id="footer">
+    <a href="http://www.tigris.org/nonav/DomainFAQ"  onclick="return launch(this.href, 1)" title="Note: link may open in new window" class="helplink">Site FAQ</a> |
+<a href="http://www.tigris.org/nonav/DomainFeedback"  onclick="return launch(this.href, 1)" title="Note: link may open in new window" class="helplink">Feedback</a> |
+<a href="http://www.tigris.org/nonav/servlets/LegalNotices?type=TermsOfService" onclick="return launch(this.href, 1)" title="Note: link may open in new window" class="helplink">Terms of service</a> | 
+<a href="http://www.tigris.org/nonav/servlets/LegalNotices?type=PrivacyPolicy" onclick="return launch(this.href, 1)" title="Note: link may open in new window" class="helplink">Privacy policy</a> | 
+<a href="http://www.collab.net/developers/tools/" onclick="return launch(this.href, 1)" title="Note: link may open in new window">Developer tools</a> 
+   
+   
+	   
+   <p>&#169; 2006 CollabNet. CollabNet is a registered trademark of CollabNet, Inc.</p>
+   
+ </div> 
+ 
+</body>
+</html>
+ 
+ 
