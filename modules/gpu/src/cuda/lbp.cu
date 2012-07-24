@@ -48,14 +48,10 @@ namespace cv { namespace gpu { namespace device
 {
     namespace lbp
     {
-
-        texture<int, cudaTextureType2D, cudaReadModeElementType> tintegral(false, cudaFilterModePoint, cudaAddressModeClamp);
-
         struct LBP
         {
             __host__ __device__ __forceinline__ LBP() {}
 
-            // for integral matrix stored in the global memory
             __device__ __forceinline__ int operator() (const int* integral, int ty, int fh, int fw, int& shift) const
             {
                 int anchors[9];
@@ -128,171 +124,7 @@ namespace cv { namespace gpu { namespace device
                 shift |= (~(anchors[8] >> 31)) & 8;
                 return response;
             }
-            // for texture fetchrd integral matrix
-            __device__ __forceinline__ int operator() (int ty, int tx, int fh, int fw, int& shift) const
-            {
-                int anchors[9];
-
-                anchors[0]  = tex2D(tintegral, tx, ty);
-                anchors[1]  = tex2D(tintegral, tx + fw, ty);
-                anchors[0] -= anchors[1];
-                anchors[2]  = tex2D(tintegral, tx + fw * 2, ty);
-                anchors[1] -= anchors[2];
-                anchors[2] -= tex2D(tintegral, tx + fw * 3, ty);
-
-                ty += fh;
-                anchors[3]  = tex2D(tintegral, tx, ty);
-                anchors[4]  = tex2D(tintegral, tx + fw, ty);
-                anchors[3] -= anchors[4];
-                anchors[5]  = tex2D(tintegral, tx + fw * 2, ty);
-                anchors[4] -= anchors[5];
-                anchors[5] -= tex2D(tintegral, tx + fw * 3, ty);
-
-                anchors[0] -= anchors[3];
-                anchors[1] -= anchors[4];
-                anchors[2] -= anchors[5];
-                // 0 - 2 contains s0 - s2
-
-                ty += fh;
-                anchors[6]  = tex2D(tintegral, tx, ty);
-                anchors[7]  = tex2D(tintegral, tx + fw, ty);
-                anchors[6] -= anchors[7];
-                anchors[8]  = tex2D(tintegral, tx + fw * 2, ty);
-                anchors[7] -= anchors[8];
-                anchors[8] -= tex2D(tintegral, tx + fw * 3, ty);
-
-                anchors[3] -= anchors[6];
-                anchors[4] -= anchors[7];
-                anchors[5] -= anchors[8];
-                // 3 - 5 contains s3 - s5
-
-                anchors[0] -= anchors[4];
-                anchors[1] -= anchors[4];
-                anchors[2] -= anchors[4];
-                anchors[3] -= anchors[4];
-                anchors[5] -= anchors[4];
-
-                int response = (~(anchors[0] >> 31)) & 4;
-                response |= (~(anchors[1] >> 31)) & 2;;
-                response |= (~(anchors[2] >> 31)) & 1;
-
-                shift = (~(anchors[5] >> 31)) & 16;
-                shift |= (~(anchors[3] >> 31)) & 1;
-
-                ty += fh;
-                anchors[0]  = tex2D(tintegral, tx, ty);
-                anchors[1]  = tex2D(tintegral, tx + fw, ty);
-                anchors[0] -= anchors[1];
-                anchors[2]  = tex2D(tintegral, tx + fw * 2, ty);
-                anchors[1] -= anchors[2];
-                anchors[2] -= tex2D(tintegral, tx + fw * 3, ty);
-
-                anchors[6] -= anchors[0];
-                anchors[7] -= anchors[1];
-                anchors[8] -= anchors[2];
-                // 0 -2 contains s6 - s8
-
-                anchors[6] -= anchors[4];
-                anchors[7] -= anchors[4];
-                anchors[8] -= anchors[4];
-
-                shift |= (~(anchors[6] >> 31)) & 2;
-                shift |= (~(anchors[7] >> 31)) & 4;
-                shift |= (~(anchors[8] >> 31)) & 8;
-                return response;
-            }
         };
-
-        void bindIntegral(DevMem2Di integral)
-        {
-            cudaChannelFormatDesc desc = cudaCreateChannelDesc<int>();
-            cudaSafeCall( cudaBindTexture2D(0, &tintegral, integral.ptr(), &desc, (size_t)integral.cols, (size_t)integral.rows, (size_t)integral.step));
-        }
-
-        void unbindIntegral()
-        {
-             cudaSafeCall( cudaUnbindTexture(&tintegral));
-        }
-
-        struct Classifier
-        {
-            __host__ __device__ __forceinline__ Classifier(const int* _integral, int _pitch, const Stage* _stages, const ClNode* _nodes, const float* _leaves,
-                const int* _subsets, const uchar4* _features, int _nstages, int _clWidth, int _clHeight, float _scale, int _step, int _subsetSize)
-            : integral(_integral), pitch(_pitch), stages(_stages), nodes(_nodes), leaves(_leaves), subsets(_subsets), features(_features), nstages(_nstages),
-              clWidth(_clWidth), clHeight(_clHeight), scale(_scale), step(_step), subsetSize(_subsetSize){}
-
-            __device__ __forceinline__ void operator() (int y, int x, DevMem2D_<int4> objects, const unsigned int maxN, unsigned int* n) const
-            {
-                int current_node = 0;
-                int current_leave = 0;
-
-                for (int s = 0; s < nstages; ++s)
-                {
-                    float sum = 0;
-                    Stage stage = stages[s];
-                    for (int t = 0; t < stage.ntrees; t++)
-                    {
-                        ClNode node = nodes[current_node];
-                        uchar4 feature = features[node.featureIdx];
-
-                        int shift;
-                        // int c = evaluator(y + feature.y, x + feature.x, feature.w, feature.z, shift);
-                        int c = evaluator(integral, (y + feature.y) * pitch + x + feature.x, feature.w * pitch, feature.z, shift);
-                        int idx =  (subsets[ current_node * subsetSize + c] & ( 1 << shift)) ? current_leave : current_leave + 1;
-                        sum += leaves[idx];
-
-                        current_node += 1;
-                        current_leave += 2;
-                    }
-
-                    if (sum < stage.threshold)
-                        return;
-                }
-
-                int4 rect;
-                rect.x = roundf(x * scale);
-                rect.y = roundf(y * scale);
-                rect.z = clWidth;
-                rect.w = clHeight;
-
-                int res = Emulation::smem::atomicInc(n, maxN);
-                objects(0, res) = rect;
-            }
-
-            const int* integral;
-            const int pitch;
-
-            const Stage*  stages;
-            const ClNode* nodes;
-            const float* leaves;
-            const int* subsets;
-            const uchar4* features;
-
-            const int nstages;
-            const int clWidth;
-            const int clHeight;
-            const float scale;
-            const int step;
-            const int subsetSize;
-            const LBP evaluator;
-        };
-
-        __global__ void lbp_classify_stump(const Classifier classifier, DevMem2D_<int4> objects, const unsigned int maxN, unsigned int* n)
-        {
-            int x = threadIdx.x * classifier.step;
-            int y = blockIdx.x * classifier.step;
-
-            classifier(y, x, objects, maxN, n);
-        }
-
-        __global__ void lbp_classify_stump(const Classifier classifier, DevMem2D_<int4> objects, const unsigned int maxN, unsigned int* n, int maxX)
-        {
-            int ftid = blockIdx.x * blockDim.x + threadIdx.x;
-            int y = ftid / maxX;
-            int x = ftid - y * maxX;
-
-            classifier(y * classifier.step, x * classifier.step, objects, maxN, n);
-        }
 
         template<typename Pr>
         __global__ void disjoin(int4* candidates, int4* objects, unsigned int n, int groupThreshold, float grouping_eps, unsigned int* nclasses)
@@ -349,20 +181,6 @@ namespace cv { namespace gpu { namespace device
             }
         }
 
-        void classifyStumpFixed(const DevMem2Di& integral, const int pitch, const DevMem2Db& mstages, const int nstages, const DevMem2Di& mnodes, const DevMem2Df& mleaves, const DevMem2Di& msubsets, const DevMem2Db& mfeatures,
-                           const int workWidth, const int workHeight, const int clWidth, const int clHeight, float scale, int step, int subsetSize, DevMem2D_<int4> objects, unsigned int* classified)
-        {
-            Classifier clr(integral, pitch, (Stage*)mstages.ptr(), (ClNode*)mnodes.ptr(), mleaves.ptr(), msubsets,
-                (uchar4*)mfeatures.ptr(), nstages, clWidth, clHeight, scale, step, subsetSize);
-
-            int total = ceilf(workHeight / (float)step) * ceilf(workWidth / (float)step);
-
-            int block = 256;
-            int grid  = divUp(total, block);
-            lbp_classify_stump<<<grid, block>>>(clr, objects, objects.cols, classified, workWidth >> 1);
-            cudaSafeCall( cudaGetLastError() );
-        }
-
         void connectedConmonents(DevMem2D_<int4> candidates, int ncandidates, DevMem2D_<int4> objects, int groupThreshold, float grouping_eps, unsigned int* nclasses)
         {
             int block = ncandidates;
@@ -378,7 +196,7 @@ namespace cv { namespace gpu { namespace device
 
             : stages(_stages), nstages(_nstages), nodes(_nodes), leaves(_leaves), subsets(_subsets), features(_features), subsetSize(_subsetSize){}
 
-            __device__ __forceinline__ bool operator() (int y, int x, int* integral, const int pitch/*, DevMem2D_<int4> objects, const unsigned int maxN, unsigned int* n*/) const
+            __device__ __forceinline__ bool operator() (int y, int x, int* integral, const int pitch) const
             {
                 int current_node = 0;
                 int current_leave = 0;
@@ -482,7 +300,7 @@ namespace cv { namespace gpu { namespace device
             const DevMem2Db& mstages, const int nstages, const DevMem2Di& mnodes, const DevMem2Df& mleaves, const DevMem2Di& msubsets, const DevMem2Db& mfeatures,
             const int subsetSize, DevMem2D_<int4> objects, unsigned int* classified, DevMem2Di integral)
         {
-            const int block = 256;
+            const int block = 128;
             int grid = divUp(workAmount, block);
             Cascade cascade((Stage*)mstages.ptr(), nstages, (ClNode*)mnodes.ptr(), mleaves.ptr(), msubsets.ptr(), (uchar4*)mfeatures.ptr(), subsetSize);
             lbp_cascade<<<grid, block>>>(cascade, frameW, frameH, windowW, windowH, initialScale, factor, workAmount, integral.ptr(), integral.step / sizeof(int), objects, classified);

@@ -266,24 +266,6 @@ namespace cv { namespace gpu { namespace device
 {
     namespace lbp
     {
-        void classifyStumpFixed(const DevMem2Di& integral,
-                                const int integralPitch,
-                                const DevMem2Db& mstages,
-                                const int nstages,
-                                const DevMem2Di& mnodes,
-                                const DevMem2Df& mleaves,
-                                const DevMem2Di& msubsets,
-                                const DevMem2Db& mfeatures,
-                                const int workWidth,
-                                const int workHeight,
-                                const int clWidth,
-                                const int clHeight,
-                                float scale,
-                                int step,
-                                int subsetSize,
-                                DevMem2D_<int4> objects,
-                                unsigned int* classified);
-
         void classifyPyramid(int frameW,
                              int frameH,
                              int windowW,
@@ -303,8 +285,6 @@ namespace cv { namespace gpu { namespace device
                              DevMem2Di integral);
 
         void connectedConmonents(DevMem2D_<int4>  candidates, int ncandidates, DevMem2D_<int4> objects,int groupThreshold, float grouping_eps, unsigned int* nclasses);
-        void bindIntegral(DevMem2Di integral);
-        void unbindIntegral();
     }
 }}}
 
