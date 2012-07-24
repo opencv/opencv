@@ -78,7 +78,7 @@ copyMask_(const uchar* _src, size_t sstep, const uchar* mask, size_t mstep, ucha
     }
 }
 
-template<> static void
+template<> void
 copyMask_<uchar>(const uchar* _src, size_t sstep, const uchar* mask, size_t mstep, uchar* _dst, size_t dstep, Size size)
 {
     for( ; size.height--; mask += mstep, _src += sstep, _dst += dstep )
@@ -108,7 +108,7 @@ copyMask_<uchar>(const uchar* _src, size_t sstep, const uchar* mask, size_t mste
     }
 }
 
-template<> static void
+template<> void
 copyMask_<ushort>(const uchar* _src, size_t sstep, const uchar* mask, size_t mstep, uchar* _dst, size_t dstep, Size size)
 {
     for( ; size.height--; mask += mstep, _src += sstep, _dst += dstep )
