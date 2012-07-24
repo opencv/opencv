@@ -74,10 +74,131 @@ double /*scaleFactor*/, int /*minNeighbors*/, cv::Size /*maxObjectSize*/){ throw
 
 #else
 
-cv::gpu::CascadeClassifier_GPU_LBP::CascadeClassifier_GPU_LBP(cv::Size detectionFrameSize) { allocateBuffers(detectionFrameSize); }
-cv::gpu::CascadeClassifier_GPU_LBP::~CascadeClassifier_GPU_LBP(){}
+cv::Size operator -(const cv::Size& a, const cv::Size& b)
+{
+    return cv::Size(a.width - b.width, a.height - b.height);
+}
 
-void cv::gpu::CascadeClassifier_GPU_LBP::allocateBuffers(cv::Size frame)
+cv::Size operator +(const cv::Size& a, const int& i)
+{
+    return cv::Size(a.width + i, a.height + i);
+}
+
+cv::Size operator *(const cv::Size& a, const float& f)
+{
+    return cv::Size(cvRound(a.width * f), cvRound(a.height * f));
+}
+
+cv::Size operator /(const cv::Size& a, const float& f)
+{
+    return cv::Size(cvRound(a.width / f), cvRound(a.height / f));
+}
+
+bool operator <=(const cv::Size& a, const cv::Size& b)
+{
+    return a.width <= b.width && a.height <= b.width;
+}
+
+struct PyrLavel
+{
+    PyrLavel(int _order, float _scale, cv::Size frame, cv::Size window) : order(_order)
+    {
+        scale = pow(_scale, order);
+        sFrame = frame / scale;
+        workArea = sFrame - window + 1;
+        sWindow = window * scale;
+    }
+
+    bool isFeasible(cv::Size maxObj)
+    {
+        return workArea.width > 0 && workArea.height > 0 && sWindow <= maxObj;
+    }
+
+    PyrLavel next(float factor, cv::Size frame, cv::Size window)
+    {
+        return PyrLavel(order + 1, factor, frame, window);
+    }
+
+    int order;
+    float scale;
+    cv::Size sFrame;
+    cv::Size workArea;
+    cv::Size sWindow;
+};
+
+namespace cv { namespace gpu { namespace device
+{
+    namespace lbp
+    {
+        void classifyPyramid(int frameW,
+                             int frameH,
+                             int windowW,
+                             int windowH,
+                             float initalScale,
+                             float factor,
+                             int total,
+                             const DevMem2Db& mstages,
+                             const int nstages,
+                             const DevMem2Di& mnodes,
+                             const DevMem2Df& mleaves,
+                             const DevMem2Di& msubsets,
+                             const DevMem2Db& mfeatures,
+                             const int subsetSize,
+                             DevMem2D_<int4> objects,
+                             unsigned int* classified,
+                             DevMem2Di integral);
+
+        void connectedConmonents(DevMem2D_<int4>  candidates, int ncandidates, DevMem2D_<int4> objects,int groupThreshold, float grouping_eps, unsigned int* nclasses);
+    }
+}}}
+
+struct cv::gpu::CascadeClassifier_GPU_LBP::CascadeClassifierImpl
+{
+public:
+    struct Stage
+    {
+        int    first;
+        int    ntrees;
+        float  threshold;
+    };
+
+    bool read(const FileNode &root);
+    void allocateBuffers(cv::Size frame = cv::Size());
+    bool empty() const {return stage_mat.empty();}
+
+    int process(const GpuMat& image, GpuMat& objects, double scaleFactor, int groupThreshold, cv::Size maxObjectSize);
+
+private:
+
+    enum stage { BOOST = 0 };
+    enum feature { LBP = 0 };
+
+    static const stage stageType = BOOST;
+    static const feature featureType = LBP;
+
+    cv::Size NxM;
+    bool isStumps;
+    int ncategories;
+    int subsetSize;
+    int nodeStep;
+
+    // gpu representation of classifier
+    GpuMat stage_mat;
+    GpuMat trees_mat;
+    GpuMat nodes_mat;
+    GpuMat leaves_mat;
+    GpuMat subsets_mat;
+    GpuMat features_mat;
+
+    GpuMat integral;
+    GpuMat integralBuffer;
+    GpuMat resuzeBuffer;
+
+    GpuMat candidates;
+    static const int integralFactor = 4;
+};
+
+void cv::gpu::CascadeClassifier_GPU_LBP::CascadeClassifierImpl::allocateBuffers(cv::Size frame)
 {
     if (frame == cv::Size())
         return;
@@ -102,26 +223,8 @@ void cv::gpu::CascadeClassifier_GPU_LBP::allocateBuffers(cv::Size frame)
     }
 }
 
-bool cv::gpu::CascadeClassifier_GPU_LBP::empty() const
-{
-    return stage_mat.empty();
-}
-
-bool cv::gpu::CascadeClassifier_GPU_LBP::load(const string& classifierAsXml)
-{
-    FileStorage fs(classifierAsXml, FileStorage::READ);
-    return fs.isOpened() ? read(fs.getFirstTopLevelNode()) : false;
-}
-
-struct Stage
-{
-    int    first;
-    int    ntrees;
-    float  threshold;
-};
-
 // currently only stump based boost classifiers are supported
-bool CascadeClassifier_GPU_LBP::read(const FileNode &root)
+bool CascadeClassifier_GPU_LBP::CascadeClassifierImpl::read(const FileNode &root)
 {
     const char *GPU_CC_STAGE_TYPE       = "stageType";
     const char *GPU_CC_FEATURE_TYPE     = "featureType";
@@ -262,85 +365,7 @@ bool CascadeClassifier_GPU_LBP::read(const FileNode &root)
     return true;
 }
 
-namespace cv { namespace gpu { namespace device
-{
-    namespace lbp
-    {
-        void classifyPyramid(int frameW,
-                             int frameH,
-                             int windowW,
-                             int windowH,
-                             float initalScale,
-                             float factor,
-                             int total,
-                             const DevMem2Db& mstages,
-                             const int nstages,
-                             const DevMem2Di& mnodes,
-                             const DevMem2Df& mleaves,
-                             const DevMem2Di& msubsets,
-                             const DevMem2Db& mfeatures,
-                             const int subsetSize,
-                             DevMem2D_<int4> objects,
-                             unsigned int* classified,
-                             DevMem2Di integral);
-
-        void connectedConmonents(DevMem2D_<int4>  candidates, int ncandidates, DevMem2D_<int4> objects,int groupThreshold, float grouping_eps, unsigned int* nclasses);
-    }
-}}}
-
-cv::Size operator -(const cv::Size& a, const cv::Size& b)
-{
-    return cv::Size(a.width - b.width, a.height - b.height);
-}
-
-cv::Size operator +(const cv::Size& a, const int& i)
-{
-    return cv::Size(a.width + i, a.height + i);
-}
-
-cv::Size operator *(const cv::Size& a, const float& f)
-{
-    return cv::Size(cvRound(a.width * f), cvRound(a.height * f));
-}
-
-cv::Size operator /(const cv::Size& a, const float& f)
-{
-    return cv::Size(cvRound(a.width / f), cvRound(a.height / f));
-}
-
-bool operator <=(const cv::Size& a, const cv::Size& b)
-{
-    return a.width <= b.width && a.height <= b.width;
-}
-
-struct PyrLavel
-{
-    PyrLavel(int _order, float _scale, cv::Size frame, cv::Size window) : order(_order)
-    {
-        scale = pow(_scale, order);
-        sFrame = frame / scale;
-        workArea = sFrame - window + 1;
-        sWindow = window * scale;
-    }
-
-    bool isFeasible(cv::Size maxObj)
-    {
-        return workArea.width > 0 && workArea.height > 0 && sWindow <= maxObj;
-    }
-
-    PyrLavel next(float factor, cv::Size frame, cv::Size window)
-    {
-        return PyrLavel(order + 1, factor, frame, window);
-    }
-
-    int order;
-    float scale;
-    cv::Size sFrame;
-    cv::Size workArea;
-    cv::Size sWindow;
-};
-
-int cv::gpu::CascadeClassifier_GPU_LBP::detectMultiScale(const GpuMat& image, GpuMat& objects, double scaleFactor, int groupThreshold, cv::Size maxObjectSize)
+int cv::gpu::CascadeClassifier_GPU_LBP::CascadeClassifierImpl::process(const GpuMat& image, GpuMat& objects, double scaleFactor, int groupThreshold, cv::Size maxObjectSize)
 {
     CV_Assert(!empty() && scaleFactor > 1 && image.depth() == CV_8U);
 
@@ -417,6 +442,26 @@ int cv::gpu::CascadeClassifier_GPU_LBP::detectMultiScale(const GpuMat& image, Gp
     cudaSafeCall( cudaMemcpy(&classified, dclassified.ptr(), sizeof(int), cudaMemcpyDeviceToHost) );
     cudaSafeCall( cudaDeviceSynchronize() );
     return classified;
+}
+
+cv::gpu::CascadeClassifier_GPU_LBP::CascadeClassifier_GPU_LBP(cv::Size detectionFrameSize) : impl(new CascadeClassifierImpl()) { (*impl).allocateBuffers(detectionFrameSize); }
+cv::gpu::CascadeClassifier_GPU_LBP::~CascadeClassifier_GPU_LBP(){ delete impl; }
+
+
+bool cv::gpu::CascadeClassifier_GPU_LBP::empty() const
+{
+    return (*impl).empty();
+}
+
+bool cv::gpu::CascadeClassifier_GPU_LBP::load(const string& classifierAsXml)
+{
+    FileStorage fs(classifierAsXml, FileStorage::READ);
+    return fs.isOpened() ? (*impl).read(fs.getFirstTopLevelNode()) : false;
+}
+
+int cv::gpu::CascadeClassifier_GPU_LBP::detectMultiScale(const GpuMat& image, GpuMat& objects, double scaleFactor, int groupThreshold, cv::Size maxObjectSize)
+{
+    return (*impl).process(image, objects, scaleFactor, groupThreshold, maxObjectSize);
 }
 
 // ============ old fashioned haar cascade ==============================================//

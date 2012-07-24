@@ -1426,8 +1426,6 @@ private:
 class CV_EXPORTS CascadeClassifier_GPU_LBP
 {
 public:
-    enum stage { BOOST = 0 };
-    enum feature { LBP = 0 };
     CascadeClassifier_GPU_LBP(cv::Size detectionFrameSize = cv::Size());
     ~CascadeClassifier_GPU_LBP();
 
@@ -1438,33 +1436,10 @@ public:
     int detectMultiScale(const GpuMat& image, GpuMat& objectsBuf, double scaleFactor = 1.1, int minNeighbors = 4,
     cv::Size maxObjectSize = cv::Size()/*, Size minSize = Size()*/);
     Size getClassifierSize() const;
+
 private:
-    bool read(const FileNode &root);
-	void allocateBuffers(cv::Size frame = cv::Size());
-
-    static const stage stageType = BOOST;
-    static const feature featureType = LBP;
-
-    cv::Size NxM;
-    bool isStumps;
-    int ncategories;
-    int subsetSize;
-    int nodeStep;
-
-    // gpu representation of classifier
-    GpuMat stage_mat;
-    GpuMat trees_mat;
-    GpuMat nodes_mat;
-    GpuMat leaves_mat;
-    GpuMat subsets_mat;
-    GpuMat features_mat;
-
-    GpuMat integral;
-    GpuMat integralBuffer;
-    GpuMat resuzeBuffer;
-
-	GpuMat candidates;
-    static const int integralFactor = 4;
+    struct CascadeClassifierImpl;
+    CascadeClassifierImpl* impl;
 };
 
 ////////////////////////////////// SURF //////////////////////////////////////////
