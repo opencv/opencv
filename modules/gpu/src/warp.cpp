@@ -44,6 +44,7 @@
 
 #ifndef HAVE_CUDA
 
+
 void cv::gpu::warpAffine(const GpuMat&, GpuMat&, const Mat&, Size, int, int, Scalar, Stream&) { throw_nogpu(); }
 void cv::gpu::buildWarpAffineMaps(const Mat&, bool, Size, GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
 
