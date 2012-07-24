@@ -1397,7 +1397,7 @@ public:
 };
 
 ////////////////////////////////// CascadeClassifier_GPU //////////////////////////////////////////
-// The cascade classifier class for object detection.
+// The cascade classifier class for object detection: supports old haar and new lbp xlm formats and nvbin for haar cascades olny.
 class CV_EXPORTS CascadeClassifier_GPU
 {
 public:
@@ -1410,36 +1410,22 @@ public:
     void release();
 
     /* returns number of detected objects */
-    int detectMultiScale(const GpuMat& image, GpuMat& objectsBuf, double scaleFactor=1.2, int minNeighbors=4, Size minSize=Size());
+    int detectMultiScale(const GpuMat& image, GpuMat& objectsBuf, double scaleFactor = 1.2, int minNeighbors = 4, Size minSize = Size());
 
     bool findLargestObject;
     bool visualizeInPlace;
 
     Size getClassifierSize() const;
-private:
 
+private:
     struct CascadeClassifierImpl;
     CascadeClassifierImpl* impl;
-};
+    struct HaarCascade;
+    struct LbpCascade;
+    friend class CascadeClassifier_GPU_LBP;
 
-// The cascade classifier class for object detection.
-class CV_EXPORTS CascadeClassifier_GPU_LBP
-{
 public:
-    CascadeClassifier_GPU_LBP(cv::Size detectionFrameSize = cv::Size());
-    ~CascadeClassifier_GPU_LBP();
-
-    bool empty() const;
-    bool load(const std::string& filename);
-    void release();
-
-    int detectMultiScale(const GpuMat& image, GpuMat& objectsBuf, double scaleFactor = 1.1, int minNeighbors = 4,
-    cv::Size maxObjectSize = cv::Size()/*, Size minSize = Size()*/);
-    Size getClassifierSize() const;
-
-private:
-    struct CascadeClassifierImpl;
-    CascadeClassifierImpl* impl;
+    int detectMultiScale(const GpuMat& image, GpuMat& objectsBuf, Size maxObjectSize, Size minSize = Size(), double scaleFactor = 1.1, int minNeighbors = 4);
 };
 
 ////////////////////////////////// SURF //////////////////////////////////////////

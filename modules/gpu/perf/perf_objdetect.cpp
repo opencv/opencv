@@ -70,7 +70,7 @@ GPU_PERF_TEST_1(LBPClassifier, cv::gpu::DeviceInfo)
 
     cv::gpu::GpuMat img(img_host);
         cv::gpu::GpuMat gpu_rects;
-    cv::gpu::CascadeClassifier_GPU_LBP cascade(img.size());
+    cv::gpu::CascadeClassifier_GPU cascade;
     ASSERT_TRUE(cascade.load(perf::TestBase::getDataPath("gpu/lbpcascade/lbpcascade_frontalface.xml")));
 
     cascade.detectMultiScale(img, gpu_rects);

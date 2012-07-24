@@ -302,13 +302,13 @@ PARAM_TEST_CASE(LBP_Read_classifier, cv::gpu::DeviceInfo, int)
 
 TEST_P(LBP_Read_classifier, Accuracy)
 {
-    cv::gpu::CascadeClassifier_GPU_LBP classifier;
+    cv::gpu::CascadeClassifier_GPU classifier;
     std::string classifierXmlPath = std::string(cvtest::TS::ptr()->get_data_path()) + "lbpcascade/lbpcascade_frontalface.xml";
     ASSERT_TRUE(classifier.load(classifierXmlPath));
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_ObjDetect, LBP_Read_classifier, 
-						testing::Combine(ALL_DEVICES, testing::Values<int>(0)));
+INSTANTIATE_TEST_CASE_P(GPU_ObjDetect, LBP_Read_classifier,
+                        testing::Combine(ALL_DEVICES, testing::Values<int>(0)));
 
 
 PARAM_TEST_CASE(LBP_classify, cv::gpu::DeviceInfo, int)
@@ -344,7 +344,7 @@ TEST_P(LBP_classify, Accuracy)
     for (; it != rects.end(); ++it)
         cv::rectangle(markedImage, *it, CV_RGB(0, 0, 255));
 
-    cv::gpu::CascadeClassifier_GPU_LBP gpuClassifier;
+    cv::gpu::CascadeClassifier_GPU gpuClassifier;
     ASSERT_TRUE(gpuClassifier.load(classifierXmlPath));
 
     cv::gpu::GpuMat gpu_rects;
@@ -352,23 +352,23 @@ TEST_P(LBP_classify, Accuracy)
     int count = gpuClassifier.detectMultiScale(tested, gpu_rects);
 
     cv::Mat downloaded(gpu_rects);
-	const cv::Rect* faces = downloaded.ptr<cv::Rect>();
+    const cv::Rect* faces = downloaded.ptr<cv::Rect>();
     for (int i = 0; i < count; i++)
     {
         cv::Rect r = faces[i];
 
 #if defined (LOG_CASCADE_STATISTIC)
-		std::cout << r.x << " " << r.y  << " " << r.width << " " << r.height << std::endl;
-#endif
+        std::cout << r.x << " " << r.y  << " " << r.width << " " << r.height << std::endl;
         cv::rectangle(markedImage, r , CV_RGB(255, 0, 0));
+#endif
     }
 
 #if defined (LOG_CASCADE_STATISTIC)
-	cv::imshow("Res", markedImage); cv::waitKey();
+    cv::imshow("Res", markedImage); cv::waitKey();
 #endif
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_ObjDetect, LBP_classify,
-						testing::Combine(ALL_DEVICES, testing::Values<int>(0)));
+                        testing::Combine(ALL_DEVICES, testing::Values<int>(0)));
 
 } // namespace
