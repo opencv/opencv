@@ -205,6 +205,8 @@ IPPInitializer ippInitializer;
 #endif
 
 volatile bool USE_SSE2 = featuresEnabled.have[CV_CPU_SSE2];
+volatile bool USE_SSE4_2 = featuresEnabled.have[CV_CPU_SSE4_2];
+volatile bool USE_AVX = featuresEnabled.have[CV_CPU_AVX];
 
 void setUseOptimized( bool flag )
 {

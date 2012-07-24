@@ -657,6 +657,62 @@ cvtScale_<short, short, float>( const short* src, size_t sstep,
     }
 }
 
+template<> void
+cvtScale_<short, int, float>( const short* src, size_t sstep,
+           int* dst, size_t dstep, Size size,
+           float scale, float shift )
+{
+    sstep /= sizeof(src[0]);
+    dstep /= sizeof(dst[0]);
+
+    for( ; size.height--; src += sstep, dst += dstep )
+    {
+        int x = 0;
+
+		 #if CV_SSE2
+            if(USE_SSE2)//~5X
+            {
+                __m128 scale128 = _mm_set1_ps (scale);
+                __m128 shift128 = _mm_set1_ps (shift);
+                for(; x <= size.width - 8; x += 8 )
+                {
+                    __m128i r0 = _mm_loadl_epi64((const __m128i*)(src + x));
+                    __m128i r1 = _mm_loadl_epi64((const __m128i*)(src + x + 4));
+                    __m128 rf0 =_mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpacklo_epi16(r0, r0), 16));
+                    __m128 rf1 =_mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpacklo_epi16(r1, r1), 16));
+                    rf0 = _mm_add_ps(_mm_mul_ps(rf0, scale128), shift128);
+                    rf1 = _mm_add_ps(_mm_mul_ps(rf1, scale128), shift128);
+                    r0 = _mm_cvtps_epi32(rf0);
+                    r1 = _mm_cvtps_epi32(rf1);
+                    
+                    _mm_storeu_si128((__m128i*)(dst + x), r0);
+					_mm_storeu_si128((__m128i*)(dst + x + 4), r1);
+                }
+            }
+        #endif
+
+		//We will wait Haswell
+		/*
+        #if CV_AVX
+            if(USE_AVX)//2X - bad variant
+            {
+				////TODO:AVX implementation (optimization?) required
+                __m256 scale256 = _mm256_set1_ps (scale);
+                __m256 shift256 = _mm256_set1_ps (shift);		
+                for(; x <= size.width - 8; x += 8 )
+                {
+					__m256i buf = _mm256_set_epi32((int)(*(src+x+7)),(int)(*(src+x+6)),(int)(*(src+x+5)),(int)(*(src+x+4)),(int)(*(src+x+3)),(int)(*(src+x+2)),(int)(*(src+x+1)),(int)(*(src+x)));
+					__m256 r0 = _mm256_add_ps( _mm256_mul_ps(_mm256_cvtepi32_ps (buf), scale256), shift256);
+					__m256i res = _mm256_cvtps_epi32(r0);
+					_mm256_storeu_si256 ((__m256i*)(dst+x), res);
+                }
+            }
+        #endif*/
+
+        for(; x < size.width; x++ )
+            dst[x] = saturate_cast<int>(src[x]*scale + shift);
+    }
+}
 
 template<typename T, typename DT> static void
 cvt_( const T* src, size_t sstep,
