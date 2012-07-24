@@ -371,8 +371,9 @@ int cv::gpu::CascadeClassifier_GPU_LBP::detectMultiScale(const GpuMat& image, Gp
     {
         int acc = level.sFrame.width + 1;
         float iniScale = level.scale;
+
         cv::Size area = level.workArea;
-        float step = (float)(1 + (level.scale <= 2.f));
+        int step = 1 + (level.scale <= 2.f);
 
         int total = 0, prev  = 0;
 
@@ -387,19 +388,22 @@ int cv::gpu::CascadeClassifier_GPU_LBP::detectMultiScale(const GpuMat& image, Gp
             gpu::resize(image, src, level.sFrame, 0, 0, CV_INTER_LINEAR);
             gpu::integralBuffered(src, sint, buff);
 
-            total += cvCeil(area.width / step) * cvCeil(area.height / step);
-            // std::cout << "Total for scale: " << total <<  " this step contribution " <<  cvCeil(area.width / step) * cvCeil(area.height / step) << " previous width shift " << prev << " acc " <<  acc << " scales: " << cvCeil(area.width / step) << std::endl;
+            // calculate job
+            int totalWidth = level.workArea.width / step;
+            // totalWidth  = ((totalWidth + WARP_MASK) / WARP_SIZE) << WARP_LOG;
 
-            // increment pyr lavel
+            total += totalWidth * (level.workArea.height / step);
+
+            // go to next pyramide level
             level = level.next(scaleFactor, image.size(), NxM);
             area = level.workArea;
 
-            step =  (float)(1 + (level.scale <= 2.f));
+            step = (1 + (level.scale <= 2.f));
             prev = acc;
             acc += level.sFrame.width + 1;
         }
 
-        device::lbp::classifyPyramid(image.cols, image.rows, NxM.width, NxM.height, iniScale, scaleFactor, total, stage_mat, stage_mat.cols / sizeof(Stage), nodes_mat,
+        device::lbp::classifyPyramid(image.cols, image.rows, NxM.width - 1, NxM.height - 1, iniScale, scaleFactor, total, stage_mat, stage_mat.cols / sizeof(Stage), nodes_mat,
             leaves_mat, subsets_mat, features_mat, subsetSize, candidates, dclassified.ptr<unsigned int>(), integral);
     }
 
@@ -412,8 +416,6 @@ int cv::gpu::CascadeClassifier_GPU_LBP::detectMultiScale(const GpuMat& image, Gp
     // candidates.copyTo(objects);
     cudaSafeCall( cudaMemcpy(&classified, dclassified.ptr(), sizeof(int), cudaMemcpyDeviceToHost) );
     cudaSafeCall( cudaDeviceSynchronize() );
-    // std::cout << classified << " !!!!!!!!!!" <<  std::endl;
-
     return classified;
 }
 

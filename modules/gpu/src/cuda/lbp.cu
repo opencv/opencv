@@ -240,59 +240,47 @@ namespace cv { namespace gpu { namespace device
 
         // stepShift, scale, width_k, sum_prev => y =  sum_prev + tid_k / width_k, x = tid_k - tid_k / width_k
         __global__ void lbp_cascade(const Cascade cascade, int frameW, int frameH, int windowW, int windowH, float scale, const float factor,
-            const int workAmount, int* integral, const int pitch, DevMem2D_<int4> objects, unsigned int* classified)
+            const int total, int* integral, const int pitch, DevMem2D_<int4> objects, unsigned int* classified)
         {
             int ftid = blockIdx.x * blockDim.x + threadIdx.x;
-            if (ftid >= workAmount ) return;
+            if (ftid >= total) return;
 
-            int sum = 0;
-            // float scale = 1.0f;
-            float stepShift = (scale <= 2.f) ? 2.0 : 1.0;
-            int w = ceilf( ( __float2int_rn(frameW / scale) - windowW + 1) / stepShift);
-            int h = ceilf( ( __float2int_rn(frameH / scale) - windowH + 1) / stepShift);
+            int step = (scale <= 2.f);
 
-            // if (!ftid)
-                // printf("!!!!: %d %d", w, h);
+            int windowsForLine = (__float2int_rn( __fdividef(frameW, scale)) - windowW) >> step;
+            int stotal = windowsForLine * ( (__float2int_rn( __fdividef(frameH, scale)) - windowH) >> step);
+            int wshift = 0;
 
-            int framTid = ftid;
-            int i = 0;
+            int scaleTid = ftid;
 
-            while (1)
+            while (scaleTid >= stotal)
             {
-                if (framTid < (w - 1) * (h - 1)) break;
-                i++;
-                sum +=  __float2int_rn(frameW / scale) + 1;
-                framTid -= w * h;
+                scaleTid -= stotal;
+                wshift += __float2int_rn(__fdividef(frameW, scale)) + 1;
                 scale *= factor;
-                stepShift = (scale <= 2.f) ? 2.0 : 1.0;
-                int w = ceilf( ( __float2int_rn(frameW / scale) - windowW + 1) / stepShift);
-                int h = ceilf( ( __float2int_rn(frameH / scale) - windowH + 1) / stepShift);
+                step = (scale <= 2.f);
+                windowsForLine = ( ((__float2int_rn(__fdividef(frameW, scale)) - windowW) >> step));
+                stotal = windowsForLine * ( (__float2int_rn(__fdividef(frameH, scale)) - windowH) >> step);
             }
 
-            int y = (framTid / w);
-            int x = (framTid - y * w) * stepShift;
-            y *= stepShift;
-            x += sum;
+            int y = __fdividef(scaleTid, windowsForLine);
+            int x = scaleTid - y * windowsForLine;
 
-            // if (i == 2)
-            // printf("!!!!!!!!!!!!!! %f %d %d %d\n", windowW * scale, sum, y, x);
+            x <<= step;
+            y <<= step;
 
-            if (cascade(y, x, integral, pitch))
+            if (cascade(y, x + wshift, integral, pitch))
             {
+                if(x >= __float2int_rn(__fdividef(frameW, scale)) - windowW) return;
+
                 int4 rect;
-                rect.x = roundf( (x - sum) * scale);
-                rect.y = roundf(y * scale);
-                rect.z = roundf(windowW * scale);
-                rect.w = roundf(windowH * scale);
-
-                if (rect.x > frameW || rect.y > frameH) return;
-                    // printf("OUTLAUER %d %d %d %d %d %d %d %d %d %f %f\n", x, y, ftid, framTid, rect.x, rect.y, sum, w, h, stepShift, scale);
-
-                // printf("passed: %d %d ---- %d %d %d %d %d\n", y, x, rect.x, rect.y, rect.z, rect.w, sum);
+                rect.x = __float2int_rn(x * scale);
+                rect.y = __float2int_rn(y * scale);
+                rect.z = __float2int_rn(windowW * scale);
+                rect.w = __float2int_rn(windowH * scale);
 
                 int res = Emulation::smem::atomicInc(classified, (unsigned int)objects.cols);
                 objects(0, res) = rect;
-
             }
         }
 
