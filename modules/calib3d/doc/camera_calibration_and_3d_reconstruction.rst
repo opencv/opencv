@@ -1456,9 +1456,9 @@ Reconstructs points by triangulation.
 
     :param projMatr2: 3x4 projection matrix of the second camera.
 
-    :param projPoints1: 2xN array of feature points in the first image.
+    :param projPoints1: 2xN array of feature points in the first image. In case of c++ version it can be also a vector of feature points or two-channel matrix of size 1xN or Nx1.
 
-    :param projPoints2: 2xN array of corresponding points in the second image.
+    :param projPoints2: 2xN array of corresponding points in the second image. In case of c++ version it can be also a vector of feature points or two-channel matrix of size 1xN or Nx1.
 
     :param points4D: 4xN array of reconstructed points in homogeneous coordinates.
 
