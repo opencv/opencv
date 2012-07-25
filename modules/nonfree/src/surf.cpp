@@ -615,7 +615,7 @@ struct SURFInvoker
                 continue;
             }
 
-            float descriptor_dir = 90.f;
+            float descriptor_dir = 360.f - 90.f;
             if (upright == 0)
             {
                 resizeHaarPattern( dx_s, dx_t, NX, 4, grad_wav_size, sum->cols );
