@@ -57,6 +57,8 @@ void cv::gpu::HOGDescriptor::getDescriptors(const GpuMat&, Size, GpuMat&, int) {
 std::vector<float> cv::gpu::HOGDescriptor::getDefaultPeopleDetector() { throw_nogpu(); return std::vector<float>(); }
 std::vector<float> cv::gpu::HOGDescriptor::getPeopleDetector48x96() { throw_nogpu(); return std::vector<float>(); }
 std::vector<float> cv::gpu::HOGDescriptor::getPeopleDetector64x128() { throw_nogpu(); return std::vector<float>(); }
+void cv::gpu::HOGDescriptor::computeConfidence(const GpuMat&, vector<Point>&, double, Size, Size, vector<Point>&, vector<double>&) { throw_nogpu(); }
+void cv::gpu::HOGDescriptor::computeConfidenceMultiScale(const GpuMat&, vector<Rect>&, double, Size, Size, vector<HOGConfidence>&, int) { throw_nogpu(); }
 
 #else
 
@@ -78,6 +80,10 @@ namespace cv { namespace gpu { namespace device
                             int block_stride_x, int win_stride_y, int win_stride_x, int height,
                             int width, float* block_hists, float* coefs, float free_coef,
                             float threshold, unsigned char* labels);
+
+        void compute_confidence_hists(int win_height, int win_width, int block_stride_y, int block_stride_x,
+                           int win_stride_y, int win_stride_x, int height, int width, float* block_hists,
+                           float* coefs, float free_coef, float threshold, float *confidences);
 
         void extract_descrs_by_rows(int win_height, int win_width, int block_stride_y, int block_stride_x,
                                     int win_stride_y, int win_stride_x, int height, int width, float* block_hists,
@@ -256,6 +262,99 @@ void cv::gpu::HOGDescriptor::getDescriptors(const GpuMat& img, Size win_stride, 
     default:
         CV_Error(CV_StsBadArg, "Unknown descriptor format");
     }
+}
+
+void cv::gpu::HOGDescriptor::computeConfidence(const GpuMat& img, vector<Point>& hits, double hit_threshold,
+                          Size win_stride, Size padding, vector<Point>& locations, vector<double>& confidences)
+{
+  CV_Assert(padding == Size(0, 0));
+
+  hits.clear();
+  if (detector.empty())
+    return;
+
+  computeBlockHistograms(img);
+
+  if (win_stride == Size())
+    win_stride = block_stride;
+  else
+    CV_Assert(win_stride.width % block_stride.width == 0 &&
+         win_stride.height % block_stride.height == 0);
+
+  Size wins_per_img = numPartsWithin(img.size(), win_size, win_stride);
+  labels.create(1, wins_per_img.area(), CV_32F);
+
+  hog::compute_confidence_hists(win_size.height, win_size.width, block_stride.height, block_stride.width,
+               win_stride.height, win_stride.width, img.rows, img.cols, block_hists.ptr<float>(),
+               detector.ptr<float>(), (float)free_coef, (float)hit_threshold, labels.ptr<float>());
+
+  labels.download(labels_host);
+  float* vec = labels_host.ptr<float>();
+
+  // does not support roi for now..
+  locations.clear();
+  confidences.clear();
+  for (int i = 0; i < wins_per_img.area(); i++)
+    {
+      int y = i / wins_per_img.width;
+      int x = i - wins_per_img.width * y;
+      if (vec[i] >= hit_threshold)
+   hits.push_back(Point(x * win_stride.width, y * win_stride.height));
+
+      Point pt(win_stride.width * x, win_stride.height * y);
+      locations.push_back(pt);
+      confidences.push_back((double)vec[i]);
+    }
+}
+
+void cv::gpu::HOGDescriptor::computeConfidenceMultiScale(const GpuMat& img, vector<Rect>& found_locations,
+                            double hit_threshold, Size win_stride, Size padding,
+                            vector<HOGConfidence> &conf_out, int group_threshold)
+{
+  vector<double> level_scale;
+  double scale = 1.;
+  int levels = 0;
+
+  for (levels = 0; levels < conf_out.size(); levels++)
+    {
+      scale = conf_out[levels].scale;
+      level_scale.push_back(scale);
+      if (cvRound(img.cols/scale) < win_size.width ||
+     cvRound(img.rows/scale) < win_size.height)
+   break;
+    }
+
+  levels = std::max(levels, 1);
+  level_scale.resize(levels);
+
+  std::vector<Rect> all_candidates;
+  vector<Point> locations;
+
+  for (size_t i = 0; i < level_scale.size(); i++)
+    {
+      double scale = level_scale[i];
+      Size sz(cvRound(img.cols / scale), cvRound(img.rows / scale));
+      GpuMat smaller_img;
+
+      if (sz == img.size())
+   smaller_img = img;
+      else
+   {
+     smaller_img.create(sz, img.type());
+     switch (img.type()) {
+     case CV_8UC1: hog::resize_8UC1(img, smaller_img); break;
+     case CV_8UC4: hog::resize_8UC4(img, smaller_img); break;
+     }
+   }
+
+      computeConfidence(smaller_img, locations, hit_threshold, win_stride, padding, conf_out[i].locations, conf_out[i].confidences);
+
+      Size scaled_win_size(cvRound(win_size.width * scale), cvRound(win_size.height * scale));
+      for (size_t j = 0; j < locations.size(); j++)
+   all_candidates.push_back(Rect(Point2d((CvPoint)locations[j]) * scale, scaled_win_size));
+    }
+  found_locations.assign(all_candidates.begin(), all_candidates.end());
+  groupRectangles(found_locations, group_threshold, 0.2/*magic number copied from CPU version*/);
 }
 
 

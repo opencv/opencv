@@ -1142,6 +1142,13 @@ private:
 
 
 //////////////// HOG (Histogram-of-Oriented-Gradients) Descriptor and Object Detector //////////////
+struct CV_EXPORTS HOGConfidence
+{
+   double scale;
+   vector<Point> locations;
+   vector<double> confidences;
+   vector<double> part_scores[4];
+};
 
 struct CV_EXPORTS HOGDescriptor
 {
@@ -1172,6 +1179,13 @@ struct CV_EXPORTS HOGDescriptor
                           double hit_threshold=0, Size win_stride=Size(),
                           Size padding=Size(), double scale0=1.05,
                           int group_threshold=2);
+
+    void computeConfidence(const GpuMat& img, vector<Point>& hits, double hit_threshold,
+                                                Size win_stride, Size padding, vector<Point>& locations, vector<double>& confidences);
+
+    void computeConfidenceMultiScale(const GpuMat& img, vector<Rect>& found_locations,
+                                                                    double hit_threshold, Size win_stride, Size padding,
+                                                                    vector<HOGConfidence> &conf_out, int group_threshold);
 
     void getDescriptors(const GpuMat& img, Size win_stride,
                         GpuMat& descriptors,
