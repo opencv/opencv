@@ -500,7 +500,7 @@ void SIFT::findScaleSpaceExtrema( const vector<Mat>& gauss_pyr, const vector<Mat
                                 bin = bin < 0 ? n + bin : bin >= n ? bin - n : bin;
                                 kpt.angle = 360.f - (float)((360.f/n) * bin);
                                 if(std::abs(kpt.angle - 360.f) < FLT_EPSILON)
-           							kpt.angle = 0.f;
+                                    kpt.angle = 0.f;
                                 keypoints.push_back(kpt);
                             }
                         }

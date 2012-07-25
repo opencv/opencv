@@ -198,7 +198,7 @@ namespace
             keypoints.cols = featureCounter;
 
             if (surf_.upright)
-                keypoints.row(SURF_GPU::ANGLE_ROW).setTo(Scalar::all(90.0));
+                keypoints.row(SURF_GPU::ANGLE_ROW).setTo(Scalar::all(360.0 - 90.0));
             else
                 findOrientation(keypoints);
         }

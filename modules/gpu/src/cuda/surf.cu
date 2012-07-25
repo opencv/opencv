@@ -51,6 +51,7 @@
 #include "opencv2/gpu/device/utility.hpp"
 #include "opencv2/gpu/device/functional.hpp"
 #include "opencv2/gpu/device/filters.hpp"
+#include <float.h>
 
 namespace cv { namespace gpu { namespace device
 {
@@ -625,6 +626,10 @@ namespace cv { namespace gpu { namespace device
                     kp_dir += 2.0f * CV_PI_F;
                 kp_dir *= 180.0f / CV_PI_F;
 
+                kp_dir = 360.0f - kp_dir;
+                if (abs(kp_dir - 360.f) < FLT_EPSILON)
+                    kp_dir = 0.f;
+
                 featureDir[blockIdx.x] = kp_dir;
             }
         }
@@ -709,7 +714,10 @@ namespace cv { namespace gpu { namespace device
             const float centerX = featureX[blockIdx.x];
             const float centerY = featureY[blockIdx.x];
             const float size = featureSize[blockIdx.x];
-            const float descriptor_dir = featureDir[blockIdx.x] * (float)(CV_PI_F / 180.0f);
+            float descriptor_dir = 360.0f - featureDir[blockIdx.x];
+            if (std::abs(descriptor_dir - 360.f) < FLT_EPSILON)
+                descriptor_dir = 0.f;
+            descriptor_dir *= (float)(CV_PI_F / 180.0f);
 
             /* The sampling intervals and wavelet sized for selecting an orientation
              and building the keypoint descriptor are defined relative to 's' */
