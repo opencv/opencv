@@ -1425,6 +1425,11 @@ bilateralFilter_32f( const Mat& src, Mat& dst, int d,
     // compute the min/max range for the input image (even if multichannel)
 
     minMaxLoc( src.reshape(1), &minValSrc, &maxValSrc );
+    if(std::abs(minValSrc - maxValSrc) < FLT_EPSILON)
+    {
+        src.copyTo(dst);
+        return;
+    }
 
     // temporary copy of the image with borders for easy processing
     Mat temp;

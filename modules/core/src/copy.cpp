@@ -78,6 +78,66 @@ copyMask_(const uchar* _src, size_t sstep, const uchar* mask, size_t mstep, ucha
     }
 }
 
+template<> void
+copyMask_<uchar>(const uchar* _src, size_t sstep, const uchar* mask, size_t mstep, uchar* _dst, size_t dstep, Size size)
+{
+    for( ; size.height--; mask += mstep, _src += sstep, _dst += dstep )
+    {
+        const uchar* src = (const uchar*)_src;
+        uchar* dst = (uchar*)_dst;
+        int x = 0;
+        #if CV_SSE4_2
+		if(USE_SSE4_2)//
+		{
+			__m128i zero = _mm_setzero_si128 ();
+	
+			 for( ; x <= size.width - 16; x += 16 )
+			 {
+				 const __m128i rSrc = _mm_lddqu_si128((const __m128i*)(src+x));
+				 __m128i _mask = _mm_lddqu_si128((const __m128i*)(mask+x)); 
+				 __m128i rDst = _mm_lddqu_si128((__m128i*)(dst+x));
+				 __m128i _negMask = _mm_cmpeq_epi8(_mask, zero);
+				 rDst = _mm_blendv_epi8(rSrc, rDst, _negMask); 
+				 _mm_storeu_si128((__m128i*)(dst + x), rDst);
+			 }
+		}
+        #endif
+        for( ; x < size.width; x++ )
+            if( mask[x] )
+                dst[x] = src[x];
+    }
+}
+
+template<> void
+copyMask_<ushort>(const uchar* _src, size_t sstep, const uchar* mask, size_t mstep, uchar* _dst, size_t dstep, Size size)
+{
+    for( ; size.height--; mask += mstep, _src += sstep, _dst += dstep )
+    {
+		const ushort* src = (const ushort*)_src;
+        ushort* dst = (ushort*)_dst;
+        int x = 0;
+        #if CV_SSE4_2
+		if(USE_SSE4_2)//
+		{
+			__m128i zero = _mm_setzero_si128 ();
+			for( ; x <= size.width - 8; x += 8 )
+			{
+				 const __m128i rSrc =_mm_lddqu_si128((const __m128i*)(src+x));
+				 __m128i _mask = _mm_loadl_epi64((const __m128i*)(mask+x));
+				 _mask = _mm_unpacklo_epi8(_mask, _mask); 
+				 __m128i rDst = _mm_lddqu_si128((const __m128i*)(dst+x));
+				 __m128i _negMask = _mm_cmpeq_epi8(_mask, zero);
+				 rDst = _mm_blendv_epi8(rSrc, rDst, _negMask); 
+				 _mm_storeu_si128((__m128i*)(dst + x), rDst);
+			 }
+		}
+        #endif
+        for( ; x < size.width; x++ )
+            if( mask[x] )
+                dst[x] = src[x];
+    }
+}
+
 static void
 copyMaskGeneric(const uchar* _src, size_t sstep, const uchar* mask, size_t mstep, uchar* _dst, size_t dstep, Size size, void* _esz)
 {

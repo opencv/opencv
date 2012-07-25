@@ -1010,6 +1010,25 @@ double cv::invert( InputArray _src, OutputArray _dst, int method )
             if( type == CV_32FC1 )
             {
                 double d = det2(Sf);
+				#if CV_SSE4_2
+					if(USE_SSE4_2)
+					{
+						__m128 zero = _mm_setzero_ps();
+						__m128 t0 = _mm_loadl_pi(zero, (const __m64*)srcdata); //t0 = sf(0,0) sf(0,1)
+						__m128 t1 = _mm_loadh_pi(zero,(const __m64*)((const float*)(srcdata+srcstep))); //t1 = sf(1,0) sf(1,1)
+						__m128 s0 = _mm_blend_ps(t0,t1,12); 
+						d = 1./d;
+						result = true;
+						__m128 det =_mm_set1_ps((float)d);
+						s0 =  _mm_mul_ps(s0, det);
+						const uchar CV_DECL_ALIGNED(16) inv[16] = {0,0,0,0,0,0,0,0x80,0,0,0,0x80,0,0,0,0};
+						__m128 pattern = _mm_load_ps((const float*)inv); 
+						s0 = _mm_xor_ps(s0, pattern);//==-1*s0
+						s0 = _mm_shuffle_ps(s0, s0, _MM_SHUFFLE(0,2,1,3));
+						_mm_storel_pi((__m64*)dstdata, s0);
+						_mm_storeh_pi((__m64*)((float*)(dstdata+dststep)), s0);
+					}
+				#else
                 if( d != 0. )
                 {
                     double t0, t1;
@@ -1022,12 +1041,36 @@ double cv::invert( InputArray _src, OutputArray _dst, int method )
                     t0 = -Sf(0,1)*d;
                     t1 = -Sf(1,0)*d;
                     Df(0,1) = (float)t0;
-                    Df(1,0) = (float)t1;
+                    Df(1,0) = (float)t1;		
                 }
+				#endif
             }
             else
             {
-                double d = det2(Sd);
+				double d = det2(Sd);
+				#if CV_SSE2
+					if(USE_SSE2)
+					{
+						__m128d s0 = _mm_loadu_pd((const double*)srcdata); //s0 = sf(0,0) sf(0,1)
+						__m128d s1 = _mm_loadu_pd ((const double*)(srcdata+srcstep));//s1 = sf(1,0) sf(1,1)
+						__m128d sm = _mm_shuffle_pd(s0, s1, _MM_SHUFFLE2(1,0)); //sm = sf(0,0) sf(1,1) - main diagonal
+						__m128d ss = _mm_shuffle_pd(s0, s1, _MM_SHUFFLE2(0,1)); //sm = sf(0,1) sf(1,0) - secondary diagonal
+						result = true;
+						d = 1./d;
+						__m128d det = _mm_load1_pd((const double*)&d);
+						sm =  _mm_mul_pd(sm, det);
+						//__m128d pattern = _mm_set1_pd(-1.);
+						static const uchar CV_DECL_ALIGNED(16) inv[8] = {0,0,0,0,0,0,0,0x80};
+						__m128d pattern = _mm_load1_pd((double*)inv); 
+						ss = _mm_mul_pd(ss, det);
+						ss = _mm_xor_pd(ss, pattern);//==-1*ss
+						//ss = _mm_mul_pd(ss,pattern);
+						s0 = _mm_shuffle_pd(sm, ss, _MM_SHUFFLE2(0,1));
+						s1 = _mm_shuffle_pd(ss, sm, _MM_SHUFFLE2(0,1));
+						_mm_store_pd((double*)dstdata, s0);
+						_mm_store_pd((double*)(dstdata+dststep), s1);
+					}
+				#else
                 if( d != 0. )
                 {
                     double t0, t1;
@@ -1042,6 +1085,7 @@ double cv::invert( InputArray _src, OutputArray _dst, int method )
                     Dd(0,1) = t0;
                     Dd(1,0) = t1;
                 }
+				#endif
             }
         }
         else if( n == 3 )
@@ -1147,6 +1191,7 @@ double cv::invert( InputArray _src, OutputArray _dst, int method )
 
     return result;
 }
+
 
 /****************************************************************************************\
 *                              Solving a linear system                                   *
