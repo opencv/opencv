@@ -44,7 +44,7 @@
 
 #ifdef HAVE_OPENNI
 
-#if TBB_INTERFACE_VERSION < 5000
+#if defined TBB_INTERFACE_VERSION && TBB_INTERFACE_VERSION < 5000
 # undef HAVE_TBB
 #endif
 
@@ -578,8 +578,8 @@ CvCapture_OpenNI::CvCapture_OpenNI( int index )
 		for( int i = 0; i < index && it!=devicesList.End(); ++i ) it++;
 		if ( it == devicesList.End() )
 		{
-			std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : Faile
-				return;
+			std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : Failed device with index " << index << std::endl;
+			return;
 		}
 
     xn::NodeInfo deviceNode = *it;
