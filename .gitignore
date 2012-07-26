@@ -1,0 +1,3 @@
+*.pyc
+.DS_Store
+refman.rst
