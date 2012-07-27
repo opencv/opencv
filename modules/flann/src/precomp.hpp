@@ -11,17 +11,17 @@
 #include "opencv2/core/core.hpp"
 #include "opencv2/core/internal.hpp"
 
-#include "opencv2/cvflann/miniflann.hpp"
-#include "opencv2/cvflann/dist.h"
-#include "opencv2/cvflann/index_testing.h"
-#include "opencv2/cvflann/params.h"
-#include "opencv2/cvflann/saving.h"
-#include "opencv2/cvflann/general.h"
-#include "opencv2/cvflann/dummy.h"
+#include "opencv2/flann/miniflann.hpp"
+#include "opencv2/flann/dist.h"
+#include "opencv2/flann/index_testing.h"
+#include "opencv2/flann/params.h"
+#include "opencv2/flann/saving.h"
+#include "opencv2/flann/general.h"
+#include "opencv2/flann/dummy.h"
 
 // index types
-#include "opencv2/cvflann/all_indices.h"
-#include "opencv2/cvflann/flann_base.hpp"
+#include "opencv2/flann/all_indices.h"
+#include "opencv2/flann/flann_base.hpp"
 
 #endif
 

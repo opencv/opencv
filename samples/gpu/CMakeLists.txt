@@ -1,4 +1,4 @@
-SET(OPENCV_GPU_SAMPLES_REQUIRED_DEPS opencv_core opencv_cvflann opencv_imgproc opencv_highgui
+SET(OPENCV_GPU_SAMPLES_REQUIRED_DEPS opencv_core opencv_flann opencv_imgproc opencv_highgui
                                      opencv_ml opencv_video opencv_objdetect opencv_features2d
                                      opencv_calib3d opencv_legacy opencv_contrib opencv_gpu
                                      opencv_nonfree)

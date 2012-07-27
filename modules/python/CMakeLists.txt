@@ -10,7 +10,7 @@ if(ANDROID OR IOS OR NOT PYTHONLIBS_FOUND OR NOT PYTHON_USE_NUMPY)
 endif()
 
 set(the_description "The python bindings")
-ocv_add_module(python BINDINGS opencv_core opencv_cvflann opencv_imgproc opencv_video opencv_ml opencv_features2d opencv_highgui opencv_calib3d opencv_photo opencv_objdetect opencv_contrib opencv_legacy OPTIONAL opencv_nonfree)
+ocv_add_module(python BINDINGS opencv_core opencv_flann opencv_imgproc opencv_video opencv_ml opencv_features2d opencv_highgui opencv_calib3d opencv_photo opencv_objdetect opencv_contrib opencv_legacy OPTIONAL opencv_nonfree)
 
 add_definitions(-DPYTHON_USE_NUMPY=1)
 
@@ -24,7 +24,7 @@ ocv_module_include_directories(
 
 set(opencv_hdrs
     "${OPENCV_MODULE_opencv_core_LOCATION}/include/opencv2/core/core.hpp"
-    "${OPENCV_MODULE_opencv_cvflann_LOCATION}/include/opencv2/cvflann/miniflann.hpp"
+    "${OPENCV_MODULE_opencv_flann_LOCATION}/include/opencv2/flann/miniflann.hpp"
     "${OPENCV_MODULE_opencv_imgproc_LOCATION}/include/opencv2/imgproc/imgproc.hpp"
     "${OPENCV_MODULE_opencv_video_LOCATION}/include/opencv2/video/background_segm.hpp"
     "${OPENCV_MODULE_opencv_video_LOCATION}/include/opencv2/video/tracking.hpp"
