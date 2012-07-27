@@ -734,6 +734,12 @@ void LBPH::train(InputArray _src, InputArray _lbls) {
     // get the vector of matrices
     vector<Mat> src;
     _src.getMatVector(src);
+    for (vector<Mat>::const_iterator image = src.begin(); image != src.end(); ++image) {
+      if (image->channels() != 1) {
+        string error_message = format("The images must be single channel (grayscale), but an image has %d channels.", image->channels());
+	CV_Error(CV_StsUnsupportedFormat, error_message);
+      }
+    }
     // turn the label matrix into a vector
     Mat labels = _lbls.getMat();
     CV_Assert( labels.type() == CV_32S && (labels.cols == 1 || labels.rows == 1));
@@ -760,6 +766,10 @@ void LBPH::train(InputArray _src, InputArray _lbls) {
 
 void LBPH::predict(InputArray _src, int &minClass, double &minDist) const {
     Mat src = _src.getMat();
+    if (src.channels() != 1) {
+      string error_message = format("The image must be single channel (grayscale), but the image has %d channels.", src.channels());
+      CV_Error(CV_StsUnsupportedFormat, error_message);
+    }
     // get the spatial histogram from input image
     Mat lbp_image = elbp(src, _radius, _neighbors);
     Mat query = spatial_histogram(
