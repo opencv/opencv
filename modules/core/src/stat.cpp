@@ -225,7 +225,7 @@ template <>
 int countNonZero_ <uchar> (const uchar* src, int len)
 {
 	int i=0, nz = 0;
-	#if CV_SSE4_2
+	#if (defined CV_SSE4_2 && CV_SSE4_2)
 	if(USE_SSE4_2)//5x-6x
 	{
 		__m128i pattern = _mm_setzero_si128 ();

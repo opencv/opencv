@@ -120,15 +120,15 @@ CV_INLINE IppiSize ippiSize(int width, int height)
 #  else
 #    define CV_SSSE3 0
 #  endif
-#  if defined __SSE4_1__ || _MSC_VER >= 1600
+#  if defined __SSE4_1__ || (defined _MSC_VER && _MSC_VER >= 1600)
 #	 include <smmintrin.h>
 #	 define CV_SSE4_1 1
 #  endif
-#  if defined __SSE4_2__ || _MSC_VER >= 1600
+#  if defined __SSE4_2__ || (defined _MSC_VER && _MSC_VER >= 1600)
 #	 include <nmmintrin.h>
 #    define CV_SSE4_2 1
 #  endif
-#  if defined __AVX__ || _MSC_VER >= 1600
+#  if defined __AVX__ || (defined _MSC_VER && _MSC_VER >= 1600)
 #	 include <immintrin.h>
 #    define CV_AVX 1
 #  endif
