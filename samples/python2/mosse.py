@@ -176,6 +176,7 @@ class App:
 
         
 if __name__ == '__main__':
+    print __doc__
     import sys, getopt
     opts, args = getopt.getopt(sys.argv[1:], '', ['pause'])
     opts = dict(opts)
