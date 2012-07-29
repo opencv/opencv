@@ -124,7 +124,7 @@ public:
     // Initializes and computes an Eigenfaces model with images in src and
     // corresponding labels in labels. num_components will be kept for
     // classification.
-    Eigenfaces(InputArray src, InputArray labels,
+    Eigenfaces(InputArrayOfArrays src, InputArray labels,
             int num_components = 0, double threshold = DBL_MAX) :
         _num_components(num_components),
         _threshold(threshold) {
@@ -133,7 +133,7 @@ public:
 
     // Computes an Eigenfaces model with images in src and corresponding labels
     // in labels.
-    void train(InputArray src, InputArray labels);
+    void train(InputArrayOfArrays src, InputArray labels);
 
     // Predicts the label of a query image in src.
     int predict(InputArray src) const;
@@ -177,7 +177,7 @@ public:
     // Initializes and computes a Fisherfaces model with images in src and
     // corresponding labels in labels. num_components will be kept for
     // classification.
-    Fisherfaces(InputArray src, InputArray labels,
+    Fisherfaces(InputArrayOfArrays src, InputArray labels,
             int num_components = 0, double threshold = DBL_MAX) :
         _num_components(num_components),
         _threshold(threshold) {
@@ -188,7 +188,7 @@ public:
 
     // Computes a Fisherfaces model with images in src and corresponding labels
     // in labels.
-    void train(InputArray src, InputArray labels);
+    void train(InputArrayOfArrays src, InputArray labels);
 
     // Predicts the label of a query image in src.
     int predict(InputArray src) const;
@@ -246,7 +246,7 @@ public:
     //
     // (radius=1), (neighbors=8) are used in the local binary patterns creation.
     // (grid_x=8), (grid_y=8) controls the grid size of the spatial histograms.
-    LBPH(InputArray src,
+    LBPH(InputArrayOfArrays src,
             InputArray labels,
             int radius_=1, int neighbors_=8,
             int gridx=8, int gridy=8,
@@ -263,7 +263,7 @@ public:
 
     // Computes a LBPH model with images in src and
     // corresponding labels in labels.
-    void train(InputArray src, InputArray labels);
+    void train(InputArrayOfArrays src, InputArray labels);
 
     // Predicts the label of a query image in src.
     int predict(InputArray src) const;
@@ -306,11 +306,10 @@ void FaceRecognizer::load(const string& filename) {
     fs.release();
 }
 
-
 //------------------------------------------------------------------------------
 // Eigenfaces
 //------------------------------------------------------------------------------
-void Eigenfaces::train(InputArray _src, InputArray _local_labels) {
+void Eigenfaces::train(InputArrayOfArrays _src, InputArray _local_labels) {
     if(_src.total() == 0) {
         string error_message = format("Empty training data was given. You'll need more than one sample to learn a model.");
         CV_Error(CV_StsBadArg, error_message);
@@ -417,7 +416,7 @@ void Eigenfaces::save(FileStorage& fs) const {
 //------------------------------------------------------------------------------
 // Fisherfaces
 //------------------------------------------------------------------------------
-void Fisherfaces::train(InputArray src, InputArray _lbls) {
+void Fisherfaces::train(InputArrayOfArrays src, InputArray _lbls) {
     if(src.total() == 0) {
         string error_message = format("Empty training data was given. You'll need more than one sample to learn a model.");
         CV_Error(CV_StsBadArg, error_message);
@@ -728,7 +727,7 @@ void LBPH::save(FileStorage& fs) const {
     fs << "labels" << _labels;
 }
 
-void LBPH::train(InputArray _src, InputArray _lbls) {
+void LBPH::train(InputArrayOfArrays _src, InputArray _lbls) {
     if(_src.kind() != _InputArray::STD_VECTOR_MAT && _src.kind() != _InputArray::STD_VECTOR_VECTOR) {
         string error_message = "The images are expected as InputArray::STD_VECTOR_MAT (a std::vector<Mat>) or _InputArray::STD_VECTOR_VECTOR (a std::vector< vector<...> >).";
         CV_Error(CV_StsBadArg, error_message);

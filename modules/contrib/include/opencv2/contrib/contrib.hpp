@@ -925,7 +925,7 @@ namespace cv
         virtual ~FaceRecognizer() {}
 
         // Trains a FaceRecognizer.
-        CV_WRAP virtual void train(InputArray src, InputArray labels) = 0;
+        CV_WRAP virtual void train(InputArrayOfArrays src, InputArray labels) = 0;
 
         // Gets a prediction from a FaceRecognizer.
         virtual int predict(InputArray src) const = 0;
