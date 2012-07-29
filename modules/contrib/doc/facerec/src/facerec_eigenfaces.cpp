@@ -169,8 +169,9 @@ int main(int argc, const char *argv[]) {
             imwrite(format("%s/eigenface_%d.png", output_folder.c_str(), i), norm_0_255(cgrayscale));
         }
     }
+
     // Display or save the image reconstruction at some predefined steps:
-    for(int num_components = 10; num_components < 300; num_components+=15) {
+    for(int num_components = min(W.cols, 10); num_components < min(W.cols, 300); num_components+=15) {
         // slice the eigenvectors from the model
         Mat evs = Mat(W, Range::all(), Range(0, num_components));
         Mat projection = subspaceProject(evs, mean, images[0].reshape(1,1));

@@ -751,11 +751,11 @@ void LBPH::train(InputArray _src, InputArray _lbls) {
         CV_Error(CV_StsBadArg, error_message);
     }
     // append labels to _labels matrix
-    for(int labelIdx = 0; labelIdx < labels.total(); labelIdx++) {
-        _labels.push_back(labels.at<int>(labelIdx));
+    for(size_t labelIdx = 0; labelIdx < labels.total(); labelIdx++) {
+        _labels.push_back(labels.at<int>((int)labelIdx));
     }
     // store the spatial histograms of the original data
-    for(int sampleIdx = 0; sampleIdx < src.size(); sampleIdx++) {
+    for(size_t sampleIdx = 0; sampleIdx < src.size(); sampleIdx++) {
         // calculate lbp image
         Mat lbp_image = elbp(src[sampleIdx], _radius, _neighbors);
         // get spatial histogram from this lbp image
@@ -788,11 +788,11 @@ void LBPH::predict(InputArray _src, int &minClass, double &minDist) const {
     // find 1-nearest neighbor
     minDist = DBL_MAX;
     minClass = -1;
-    for(int sampleIdx = 0; sampleIdx < _histograms.size(); sampleIdx++) {
+    for(size_t sampleIdx = 0; sampleIdx < _histograms.size(); sampleIdx++) {
         double dist = compareHist(_histograms[sampleIdx], query, CV_COMP_CHISQR);
         if((dist < minDist) && (dist < _threshold)) {
             minDist = dist;
-            minClass = _labels.at<int>(sampleIdx);
+            minClass = _labels.at<int>((int) sampleIdx);
         }
     }
 }
