@@ -39,6 +39,8 @@ a unified access to all face recongition algorithms in OpenCV. ::
       virtual void load(const FileStorage& fs) = 0;
   };
 
+Description
++++++++++++
 
 I'll go a bit more into detail explaining :ocv:class:`FaceRecognizer`, because it doesn't look like a powerful interface at first sight. But: Every :ocv:class:`FaceRecognizer` is an :ocv:class:`Algorithm`, so you can easily get/set all model internals (if allowed by the implementation). :ocv:class:`Algorithm` is a relatively new OpenCV concept, which is available since the 2.4 release. I suggest you take a look at its description.
 
@@ -52,11 +54,14 @@ I'll go a bit more into detail explaining :ocv:class:`FaceRecognizer`, because i
 
 Moreover every :ocv:class:`FaceRecognizer` supports the:
 
-* **Training** of a :ocv:class:`FaceRecognizer` with :ocv:func:`FaceRecognizer::train` on a given set of images (your face database!).
+* **Training** of a :ocv:class:`FaceRecognizer` with :ocv:func:`FaceRecognizer::train` on a given set of images (your face database!). 
 
 * **Prediction** of a given sample image, that means a face. The image is given as a :ocv:class:`Mat`.
 
 * **Loading/Saving** the model state from/to a given XML or YAML.
+
+Setting the Thresholds
++++++++++++++++++++++++
 
 Sometimes you run into the situation, when you want to apply a threshold on the prediction. A common scenario in face recognition is to tell, wether a face belongs to the training dataset or if it is unknown. You might wonder, why there's no public API in :ocv:class:`FaceRecognizer` to set the threshold for the prediction, but rest assured: It's supported. It just means there's no generic way in an abstract class to provide an interface for setting/getting the thresholds of *every possible* :ocv:class:`FaceRecognizer` algorithm. The appropriate place to set the thresholds is in the constructor of the specific :ocv:class:`FaceRecognizer` and since every :ocv:class:`FaceRecognizer` is a :ocv:class:`Algorithm` (see above), you can get/set the thresholds at runtime!
 
@@ -93,6 +98,26 @@ If you've set the threshold to ``0.0`` as we did above, then:
     // ...
 
 is going to yield ``-1`` as predicted label, which states this face is unknown.
+
+Adding new samples to a trained FaceRecognizer
+++++++++++++++++++++++++++++++++++++++++++++++
+
+Adding new images to a trained :ocv:class:`FaceRecognizer` is possible, but only if the :ocv:class:`FaceRecognizer` supports it. For the Eigenfaces and Fisherfaces method each call to :ocv:func:`FaceRecognizer::train` empties the old model and estimates a new model on the given data. This is an algorithmic necessity for these two algorithms, no way around that. Please see the tutorial Guide To Face Recognition with OpenCV for details. If you call :ocv:func:`FaceRecognizer::train` on a LBPH model, the internal model is extended with the new samples.
+
+Please note: A :ocv:class:`FaceRecognizer` does not store your training images (this would be very memory intense), the caller is responsible for maintaining the dataset.
+
+Getting the name of a FaceRecognizer
++++++++++++++++++++++++++++++++++++++
+
+Since every :ocv:class:`FaceRecognizer` is a :ocv:class:`Algorithm`, you can use :ocv:func:`Algorithm::name` to get the name of a :ocv:class:`FaceRecognizer`:
+
+.. code-block:: cpp
+
+    // Create a FaceRecognizer:
+    Ptr<FaceRecognizer> model = createEigenFaceRecognizer();        
+    // And here's how to get its name:
+    std::string name = model->name();
+
 
 FaceRecognizer::train
 ---------------------
@@ -235,6 +260,7 @@ Notes:
 
 * Training and prediction must be done on grayscale images, use :ocv:func:`cvtColor` to convert between the color spaces.
 * **THE EIGENFACES METHOD MAKES THE ASSUMPTION, THAT THE TRAINING AND TEST IMAGES ARE OF EQUAL SIZE.** (caps-lock, because I got so many mails asking for this). You have to make sure your input data has the correct shape, else a meaningful exception is thrown. Use :ocv:func:`resize` to resize the images.
+* A call to :ocv:func:`FaceRecognizer::train` empties the Eigenfaces model and re-estimates a model on given data.
 
 Model internal data:
 ++++++++++++++++++++
@@ -261,6 +287,7 @@ Notes:
 
 * Training and prediction must be done on grayscale images, use :ocv:func:`cvtColor` to convert between the color spaces.
 * **THE FISHERFACES METHOD MAKES THE ASSUMPTION, THAT THE TRAINING AND TEST IMAGES ARE OF EQUAL SIZE.** (caps-lock, because I got so many mails asking for this). You have to make sure your input data has the correct shape, else a meaningful exception is thrown. Use :ocv:func:`resize` to resize the images.
+* A call to :ocv:func:`FaceRecognizer::train` empties the Fisherfaces model and re-estimates a model on given data.
 
 Model internal data:
 ++++++++++++++++++++
@@ -289,6 +316,7 @@ Notes:
 ++++++
 
 * The Circular Local Binary Patterns (used in training and prediction) expect the data given as grayscale images, use :ocv:func:`cvtColor` to convert between the color spaces.
+* A call to :ocv:func:`FaceRecognizer::train` extends the LBPH model with given data.
 
 Model internal data:
 ++++++++++++++++++++
