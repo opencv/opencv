@@ -118,6 +118,7 @@ def explore_match(win, img1, img2, kp_pairs, status = None, H = None):
 
         cv2.imshow(win, cur_vis)
     cv2.setMouseCallback(win, onmouse)
+    return vis
 
 
 if __name__ == '__main__':

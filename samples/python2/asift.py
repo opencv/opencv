@@ -3,8 +3,8 @@ Affine invariant feature-based image matching sample.
 
 This sample is similar to find_obj.py, but uses the affine transformation
 space sampling technique, called ASIFT [1]. While the original implementation
-is based on SIFT, can try to use SURF or ORB detectors instead. Homography RANSAC
-is used to reject outliers. Threaing is used for faster affine sampling.
+is based on SIFT, you can try to use SURF or ORB detectors instead. Homography RANSAC
+is used to reject outliers. Threading is used for faster affine sampling.
 
 [1] http://www.ipol.im/pub/algo/my_affine_sift/
 
@@ -101,11 +101,11 @@ if __name__ == '__main__':
     import sys, getopt
     opts, args = getopt.getopt(sys.argv[1:], '', ['feature='])
     opts = dict(opts)
-    feature_name = opts.get('--feature', 'sift')
+    feature_name = opts.get('--feature', 'sift-flann')
     try: fn1, fn2 = args
     except:
-        fn1 = 'data/t4_0deg.png'
-        fn2 = 'data/t4_60deg.png'
+        fn1 = 'data/aero1.jpg'
+        fn2 = 'data/aero3.jpg'
         
     img1 = cv2.imread(fn1, 0)
     img2 = cv2.imread(fn2, 0)
