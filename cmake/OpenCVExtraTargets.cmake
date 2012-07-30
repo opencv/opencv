@@ -63,7 +63,7 @@ endif()
 
 
 # ----------------------------------------------------------------------------
-# spefial targets to build all OpenCV modules
+# special targets to build all OpenCV modules
 # ----------------------------------------------------------------------------
 add_custom_target(opencv_modules)
 if(ENABLE_SOLUTION_FOLDERS)
@@ -72,7 +72,7 @@ endif()
 
 
 # ----------------------------------------------------------------------------
-# spefial targets to build all tests
+# special targets to build all tests
 # ----------------------------------------------------------------------------
 if(BUILD_TESTS)
   add_custom_target(opencv_tests)
