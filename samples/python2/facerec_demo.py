@@ -133,24 +133,24 @@ if __name__ == "__main__":
     eigenvectors = model.getMat("eigenvectors")
     cv2.imwrite("test.png", X[0])
     # We'll save the mean, by first normalizing it:
-    mean_norm = normalize(mean, 0, 255)
+    mean_norm = normalize(mean, 0, 255, dtype=np.uint8)
     mean_resized = mean_norm.reshape(X[0].shape)
     if out_dir is None:
-        cv2.imshow("mean", np.asarray(mean_resized, dtype=np.uint8))
+        cv2.imshow("mean", mean_resized)
     else:
-        cv2.imwrite("%s/mean.png" % (out_dir), np.asarray(mean_resized, dtype=np.uint8))
+        cv2.imwrite("%s/mean.png" % (out_dir), mean_resized)
     # Turn the first (at most) 16 eigenvectors into grayscale 
     # images. You could also use cv::normalize here, but sticking
     # to NumPy is much easier for now. 
     # Note: eigenvectors are stored by column:
     for i in xrange(min(len(X), 16)):
         eigenvector_i = eigenvectors[:,i].reshape(X[0].shape)
-        eigenvector_i_norm = normalize(eigenvector_i, 0, 255)
+        eigenvector_i_norm = normalize(eigenvector_i, 0, 255, dtype=np.uint8)
         # Show or save the images:
         if out_dir is None:
-            cv2.imshow("%s/eigenvector_%d" % (out_dir,i), np.asarray(eigenvector_i_norm, dtype=np.uint8))
+            cv2.imshow("%s/eigenface_%d" % (out_dir,i), eigenvector_i_norm)
         else:
-            cv2.imwrite("%s/eigenvector_%d.png" % (out_dir,i), np.asarray(eigenvector_i_norm, dtype=np.uint8))
+            cv2.imwrite("%s/eigenface_%d.png" % (out_dir,i), eigenvector_i_norm)
     # Show the images:
     if out_dir is None:
         cv2.waitKey(0)
