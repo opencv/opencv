@@ -1170,6 +1170,12 @@ namespace
         #endif
     }
 
+    void rgb_to_lab(const GpuMat& src, GpuMat& dst, int, Stream& stream)
+    {
+        bgr_to_rgb(src, dst, -1, stream);
+        bgr_to_lab(dst, dst, -1, stream);
+    }
+
     void lab_to_bgr(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
     {
         #if (CUDA_VERSION < 5000)
@@ -1194,6 +1200,12 @@ namespace
 
             nppSafeCall( nppiLabToBGR_8u_C3R(src.ptr<Npp8u>(), static_cast<int>(src.step), dst.ptr<Npp8u>(), static_cast<int>(dst.step), oSizeROI) );
         #endif
+    }
+
+    void lab_to_rgb(const GpuMat& src, GpuMat& dst, int, Stream& stream)
+    {
+        lab_to_bgr(src, dst, -1, stream);
+        bgr_to_rgb(dst, dst, -1, stream);
     }
 
     void rgb_to_luv(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
@@ -1225,6 +1237,12 @@ namespace
         #endif
     }
 
+    void bgr_to_luv(const GpuMat& src, GpuMat& dst, int, Stream& stream)
+    {
+        bgr_to_rgb(src, dst, -1, stream);
+        rgb_to_luv(dst, dst, -1, stream);
+    }
+
     void luv_to_rgb(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
     {
         #if (CUDA_VERSION < 5000)
@@ -1252,6 +1270,12 @@ namespace
             else
                 nppSafeCall( nppiLUVToRGB_8u_AC4R(src.ptr<Npp8u>(), static_cast<int>(src.step), dst.ptr<Npp8u>(), static_cast<int>(dst.step), oSizeROI) );
         #endif
+    }
+
+    void luv_to_bgr(const GpuMat& src, GpuMat& dst, int, Stream& stream)
+    {
+        luv_to_rgb(src, dst, -1, stream);
+        bgr_to_rgb(dst, dst, -1, stream);
     }
 }
 
@@ -1315,14 +1339,14 @@ void cv::gpu::cvtColor(const GpuMat& src, GpuMat& dst, int code, int dcn, Stream
         0,                      //                =43
 
         bgr_to_lab,             // CV_BGR2Lab     =44
-        0,                      // CV_RGB2Lab     =45
+        rgb_to_lab,             // CV_RGB2Lab     =45
 
         0,                      // CV_BayerBG2BGR =46
         0,                      // CV_BayerGB2BGR =47
         0,                      // CV_BayerRG2BGR =48
         0,                      // CV_BayerGR2BGR =49
 
-        0,                      // CV_BGR2Luv     =50
+        bgr_to_luv,             // CV_BGR2Luv     =50
         rgb_to_luv,             // CV_RGB2Luv     =51
 
         bgr_to_hls,             // CV_BGR2HLS     =52
@@ -1332,8 +1356,8 @@ void cv::gpu::cvtColor(const GpuMat& src, GpuMat& dst, int code, int dcn, Stream
         hsv_to_rgb,             // CV_HSV2RGB     =55
 
         lab_to_bgr,             // CV_Lab2BGR     =56
-        0,                      // CV_Lab2RGB     =57
-        0,                      // CV_Luv2BGR     =58
+        lab_to_rgb,             // CV_Lab2RGB     =57
+        luv_to_bgr,             // CV_Luv2BGR     =58
         luv_to_rgb,             // CV_Luv2RGB     =59
 
         hls_to_bgr,             // CV_HLS2BGR     =60
