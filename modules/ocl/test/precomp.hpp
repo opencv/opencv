@@ -67,7 +67,7 @@
 #include "interpolation.hpp"
 //#include "add_test_info.h"
 
-#define OPENCV_DEFAULT_OPENCL_DEVICE CVCL_DEVICE_TYPE_ALL
+#define OPENCV_DEFAULT_OPENCL_DEVICE CVCL_DEVICE_TYPE_GPU
 
 #endif
 

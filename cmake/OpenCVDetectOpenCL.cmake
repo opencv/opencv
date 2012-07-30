@@ -2,7 +2,7 @@ if(APPLE)
     set(OPENCL_FOUND YES)
     set(OPENCL_LIBRARIES "-framework OpenCL")
 else()
-    find_package(OpenCL)
+    find_package(OpenCL QUIET)
 
     # Try AMD/ATI Stream SDK
     if (NOT OPENCL_FOUND)

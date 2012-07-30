@@ -858,10 +858,10 @@ PARAM_TEST_CASE(Remap, MatType, MatType, MatType, int, int)
 
         cv::RNG& rng = TS::ptr()->get_rng();
         //cv::Size size = cv::Size(20, 20);
-        cv::Size srcSize = cv::Size(15, 20);
-        cv::Size dstSize = cv::Size(20, 20);
-        cv::Size map1Size = cv::Size(20, 20);
-        double min = 1, max = 20;
+        cv::Size srcSize = cv::Size(100, 100);
+        cv::Size dstSize = cv::Size(100, 100);
+        cv::Size map1Size = cv::Size(100, 100);
+        double min = 5, max = 16;
 
         if(srcType != nulltype)
         {
@@ -898,14 +898,11 @@ PARAM_TEST_CASE(Remap, MatType, MatType, MatType, int, int)
         src_roicols = rng.uniform(1, src.cols);
         src_roirows = rng.uniform(1, src.rows);
 
-        cout << "dst_roicols: " << dst_roicols << "dst_roirows: "<< dst_roirows << endl;
-        cout << "src_roicols: " << src_roicols << "dst_roirows: "<< src_roirows << endl;
-        
+         
         srcx = rng.uniform(0, src.cols - src_roicols);
         srcy = rng.uniform(0, src.rows - src_roirows);
         dstx = rng.uniform(0, dst.cols - dst_roicols);
         dsty = rng.uniform(0, dst.rows - dst_roirows);
-        cout << "srcx: " << srcx << "srcy: " << srcy << "dstx: " << dstx << "dsty: " << dsty << endl;
         map1_roicols = dst_roicols;
         map1_roirows = dst_roirows;
         map2_roicols = dst_roicols;
@@ -940,10 +937,6 @@ PARAM_TEST_CASE(Remap, MatType, MatType, MatType, int, int)
         {
             map1_roi = map1(Rect(map1x,map1y,map1_roicols,map1_roirows));
             gmap1_roi = map1_roi;
-          //  cv::Mat maptest(gmap1_roi);
-           // cout << "maptest " << endl;
-            //cout << maptest << endl;
-            //gmap1_roi = gmap1(Rect(map1x,map1y,map1_roicols,map1_roirows));
         }
 
         else if (map1Type == CV_32FC1 && map2Type == CV_32FC1)
@@ -962,6 +955,11 @@ PARAM_TEST_CASE(Remap, MatType, MatType, MatType, int, int)
 
 TEST_P(Remap, Mat)
 {
+    if((interpolation == 1 && map1Type == CV_16SC2) ||(interpolation == 1 && map1Type == CV_16SC1 && map2Type == CV_16SC1))
+    {
+        cout << "LINEAR don't support the map1Type and map2Type" << endl;
+        return;                
+    }
     int bordertype[] = {cv::BORDER_CONSTANT,cv::BORDER_REPLICATE/*,BORDER_REFLECT,BORDER_WRAP,BORDER_REFLECT_101*/};
     const char* borderstr[]={"BORDER_CONSTANT", "BORDER_REPLICATE"/*, "BORDER_REFLECT","BORDER_WRAP","BORDER_REFLECT_101"*/};
     // for(int i = 0; i < sizeof(bordertype)/sizeof(int); i++)
@@ -1448,7 +1446,7 @@ INSTANTIATE_TEST_CASE_P(Imgproc, meanShiftProc, Combine(
 ));
 
 INSTANTIATE_TEST_CASE_P(Imgproc, Remap, Combine(
-            Values(CV_8UC1, CV_8UC2, CV_8UC4),
+            Values(CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4),
             Values(CV_16SC2, CV_32FC2), NULL_TYPE,
             Values((int)cv::INTER_NEAREST, (int)cv::INTER_LINEAR), 
             Values((int)cv::BORDER_CONSTANT)));
