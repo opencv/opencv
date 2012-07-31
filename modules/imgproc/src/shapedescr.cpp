@@ -951,9 +951,6 @@ cvBoundingRect( CvArr* array, int update )
 
         if( ptseq->header_size < (int)sizeof(CvContour))
         {
-            /*if( update == 1 )
-                CV_Error( CV_StsBadArg, "The header is too small to fit the rectangle, "
-                                        "so it could not be updated" );*/
             update = 0;
             calculate = 1;
         }
@@ -1067,86 +1064,123 @@ cvBoundingRect( CvArr* array, int update )
 
         if( xmin >= size.width )
             xmin = ymin = 0;
-    }
-    else if( ptseq->total )
-    {
-        int  is_float = CV_SEQ_ELTYPE(ptseq) == CV_32FC2;
-        cvStartReadSeq( ptseq, &reader, 0 );
+	}
+	else if( ptseq->total )
+	{
+		int  is_float = CV_SEQ_ELTYPE(ptseq) == CV_32FC2;
+		cvStartReadSeq( ptseq, &reader, 0 );
+		CvPoint pt;
+		CV_READ_SEQ_ELEM( pt, reader ); 
+    #if CV_SSE4_2 
+		if(cv::checkHardwareSupport(CV_CPU_SSE4_2))
+		{
+			if( !is_float )
+			{
+                __m128i minval, maxval;
+				minval = maxval = _mm_loadl_epi64((const __m128i*)(&pt)); //min[0]=pt.x, min[1]=pt.y
+					
+				for( i = 1; i < ptseq->total; i++)
+				{				
+					__m128i ptXY = _mm_loadl_epi64((const __m128i*)(reader.ptr));
+                    CV_NEXT_SEQ_ELEM(sizeof(pt), reader);
+					minval = _mm_min_epi32(ptXY, minval);
+					maxval = _mm_max_epi32(ptXY, maxval);
+				}
+                xmin = _mm_cvtsi128_si32(minval);
+                ymin = _mm_cvtsi128_si32(_mm_srli_si128(minval, 4));
+                xmax = _mm_cvtsi128_si32(maxval);
+                ymax = _mm_cvtsi128_si32(_mm_srli_si128(maxval, 4));
+			}
+			else
+			{
+                __m128 minvalf, maxvalf, z = _mm_setzero_ps(), ptXY = _mm_setzero_ps();
+				minvalf = maxvalf = _mm_loadl_pi(z, (const __m64*)(&pt));
 
-        if( !is_float )
-        {
-            CvPoint pt;
-            /* init values */
-            CV_READ_SEQ_ELEM( pt, reader );
-            xmin = xmax = pt.x;
-            ymin = ymax = pt.y;
+				for( i = 1; i < ptseq->total; i++ )
+				{
+					ptXY = _mm_loadl_pi(ptXY, (const __m64*)reader.ptr);
+                    CV_NEXT_SEQ_ELEM(sizeof(pt), reader);
 
-            for( i = 1; i < ptseq->total; i++ )
-            {
-                CV_READ_SEQ_ELEM( pt, reader );
-
-                if( xmin > pt.x )
-                    xmin = pt.x;
-
-                if( xmax < pt.x )
-                    xmax = pt.x;
-
-                if( ymin > pt.y )
-                    ymin = pt.y;
-
-                if( ymax < pt.y )
-                    ymax = pt.y;
+					minvalf = _mm_min_ps(minvalf, ptXY);
+					maxvalf = _mm_max_ps(maxvalf, ptXY);
+				}
+                
+                float xyminf[2], xymaxf[2];
+                _mm_storel_pi((__m64*)xyminf, minvalf);
+                _mm_storel_pi((__m64*)xymaxf, maxvalf);
+                xmin = cvFloor(xyminf[0]);
+                ymin = cvFloor(xyminf[1]);
+                xmax = cvFloor(xymaxf[0]);
+                ymax = cvFloor(xymaxf[1]);
             }
-        }
+		}
         else
-        {
-            CvPoint pt;
-            Cv32suf v;
-            /* init values */
-            CV_READ_SEQ_ELEM( pt, reader );
-            xmin = xmax = CV_TOGGLE_FLT(pt.x);
-            ymin = ymax = CV_TOGGLE_FLT(pt.y);
+    #endif
+		{
+			if( !is_float )
+			{
+				xmin = xmax = pt.x;
+				ymin = ymax = pt.y;
 
-            for( i = 1; i < ptseq->total; i++ )
-            {
-                CV_READ_SEQ_ELEM( pt, reader );
-                pt.x = CV_TOGGLE_FLT(pt.x);
-                pt.y = CV_TOGGLE_FLT(pt.y);
+				for( i = 1; i < ptseq->total; i++ )
+				{
+					CV_READ_SEQ_ELEM( pt, reader );
 
-                if( xmin > pt.x )
-                    xmin = pt.x;
+					if( xmin > pt.x )
+						xmin = pt.x;
 
-                if( xmax < pt.x )
-                    xmax = pt.x;
+					if( xmax < pt.x )
+						xmax = pt.x;
 
-                if( ymin > pt.y )
-                    ymin = pt.y;
+					if( ymin > pt.y )
+						ymin = pt.y;
 
-                if( ymax < pt.y )
-                    ymax = pt.y;
-            }
+					if( ymax < pt.y )
+						ymax = pt.y;
+				}
+			}
+			else
+			{		
+				Cv32suf v;
+				// init values 
+				xmin = xmax = CV_TOGGLE_FLT(pt.x);
+				ymin = ymax = CV_TOGGLE_FLT(pt.y);
 
-            v.i = CV_TOGGLE_FLT(xmin); xmin = cvFloor(v.f);
-            v.i = CV_TOGGLE_FLT(ymin); ymin = cvFloor(v.f);
-            /* because right and bottom sides of
-               the bounding rectangle are not inclusive
-               (note +1 in width and height calculation below),
-               cvFloor is used here instead of cvCeil */
-            v.i = CV_TOGGLE_FLT(xmax); xmax = cvFloor(v.f);
-            v.i = CV_TOGGLE_FLT(ymax); ymax = cvFloor(v.f);
-        }
-    }
+				for( i = 1; i < ptseq->total; i++ )
+				{
+					CV_READ_SEQ_ELEM( pt, reader );
+					pt.x = CV_TOGGLE_FLT(pt.x);
+					pt.y = CV_TOGGLE_FLT(pt.y);
 
-    rect.x = xmin;
-    rect.y = ymin;
-    rect.width = xmax - xmin + 1;
-    rect.height = ymax - ymin + 1;
+					if( xmin > pt.x )
+						xmin = pt.x;
 
-    if( update )
+					if( xmax < pt.x )
+						xmax = pt.x;
+
+					if( ymin > pt.y )
+						ymin = pt.y;
+
+					if( ymax < pt.y )
+						ymax = pt.y;
+				}
+
+				v.i = CV_TOGGLE_FLT(xmin); xmin = cvFloor(v.f);
+				v.i = CV_TOGGLE_FLT(ymin); ymin = cvFloor(v.f);
+				// because right and bottom sides of the bounding rectangle are not inclusive
+                // (note +1 in width and height calculation below), cvFloor is used here instead of cvCeil 
+				v.i = CV_TOGGLE_FLT(xmax); xmax = cvFloor(v.f);
+				v.i = CV_TOGGLE_FLT(ymax); ymax = cvFloor(v.f);
+			}
+		}
+        rect.x = xmin;
+        rect.y = ymin;
+        rect.width = xmax - xmin + 1;
+        rect.height = ymax - ymin + 1;
+	}
+	if( update )
         ((CvContour*)ptseq)->rect = rect;
-
     return rect;
 }
-
 
 /* End of file. */

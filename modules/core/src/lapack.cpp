@@ -954,7 +954,7 @@ double cv::invert( InputArray _src, OutputArray _dst, int method )
     size_t esz = CV_ELEM_SIZE(type);
     int m = src.rows, n = src.cols;
     
-    if( method == DECOMP_SVD )
+   if( method == DECOMP_SVD )
     {
         int nm = std::min(m, n);
         
@@ -1010,82 +1010,84 @@ double cv::invert( InputArray _src, OutputArray _dst, int method )
             if( type == CV_32FC1 )
             {
                 double d = det2(Sf);
-				#if CV_SSE4_2
-					if(USE_SSE4_2)
-					{
-						__m128 zero = _mm_setzero_ps();
-						__m128 t0 = _mm_loadl_pi(zero, (const __m64*)srcdata); //t0 = sf(0,0) sf(0,1)
-						__m128 t1 = _mm_loadh_pi(zero,(const __m64*)((const float*)(srcdata+srcstep))); //t1 = sf(1,0) sf(1,1)
-						__m128 s0 = _mm_blend_ps(t0,t1,12); 
-						d = 1./d;
-						result = true;
-						__m128 det =_mm_set1_ps((float)d);
-						s0 =  _mm_mul_ps(s0, det);
-						const uchar CV_DECL_ALIGNED(16) inv[16] = {0,0,0,0,0,0,0,0x80,0,0,0,0x80,0,0,0,0};
-						__m128 pattern = _mm_load_ps((const float*)inv); 
-						s0 = _mm_xor_ps(s0, pattern);//==-1*s0
-						s0 = _mm_shuffle_ps(s0, s0, _MM_SHUFFLE(0,2,1,3));
-						_mm_storel_pi((__m64*)dstdata, s0);
-						_mm_storeh_pi((__m64*)((float*)(dstdata+dststep)), s0);
-					}
-				#else
-                if( d != 0. )
+				if( d != 0. )
                 {
-                    double t0, t1;
-                    result = true;
-                    d = 1./d;
-                    t0 = Sf(0,0)*d;
-                    t1 = Sf(1,1)*d;
-                    Df(1,1) = (float)t0;
-                    Df(0,0) = (float)t1;
-                    t0 = -Sf(0,1)*d;
-                    t1 = -Sf(1,0)*d;
-                    Df(0,1) = (float)t0;
-                    Df(1,0) = (float)t1;		
-                }
-				#endif
+					result = true;
+					d = 1./d;
+				
+					#if CV_SSE2
+						if(USE_SSE2)
+						{
+							__m128 zero = _mm_setzero_ps();
+							__m128 t0 = _mm_loadl_pi(zero, (const __m64*)srcdata); //t0 = sf(0,0) sf(0,1)
+							__m128 t1 = _mm_loadh_pi(zero, (const __m64*)(srcdata+srcstep)); //t1 = sf(1,0) sf(1,1)
+							__m128 s0 = _mm_or_ps(t0, t1);
+							__m128 det =_mm_set1_ps((float)d);
+							s0 =  _mm_mul_ps(s0, det);
+							const uchar CV_DECL_ALIGNED(16) inv[16] = {0,0,0,0,0,0,0,0x80,0,0,0,0x80,0,0,0,0};
+							__m128 pattern = _mm_load_ps((const float*)inv); 
+							s0 = _mm_xor_ps(s0, pattern);//==-1*s0
+							s0 = _mm_shuffle_ps(s0, s0, _MM_SHUFFLE(0,2,1,3));
+							_mm_storel_pi((__m64*)dstdata, s0);
+							_mm_storeh_pi((__m64*)((float*)(dstdata+dststep)), s0);
+						}
+						else
+					#endif
+						{
+						double t0, t1;
+						t0 = Sf(0,0)*d;
+						t1 = Sf(1,1)*d;
+						Df(1,1) = (float)t0;
+						Df(0,0) = (float)t1;
+						t0 = -Sf(0,1)*d;
+						t1 = -Sf(1,0)*d;
+						Df(0,1) = (float)t0;
+						Df(1,0) = (float)t1;		
+						}
+					
+				}	
             }
             else
             {
 				double d = det2(Sd);
-				#if CV_SSE2
-					if(USE_SSE2)
-					{
-						__m128d s0 = _mm_loadu_pd((const double*)srcdata); //s0 = sf(0,0) sf(0,1)
-						__m128d s1 = _mm_loadu_pd ((const double*)(srcdata+srcstep));//s1 = sf(1,0) sf(1,1)
-						__m128d sm = _mm_shuffle_pd(s0, s1, _MM_SHUFFLE2(1,0)); //sm = sf(0,0) sf(1,1) - main diagonal
-						__m128d ss = _mm_shuffle_pd(s0, s1, _MM_SHUFFLE2(0,1)); //sm = sf(0,1) sf(1,0) - secondary diagonal
-						result = true;
-						d = 1./d;
-						__m128d det = _mm_load1_pd((const double*)&d);
-						sm =  _mm_mul_pd(sm, det);
-						//__m128d pattern = _mm_set1_pd(-1.);
-						static const uchar CV_DECL_ALIGNED(16) inv[8] = {0,0,0,0,0,0,0,0x80};
-						__m128d pattern = _mm_load1_pd((double*)inv); 
-						ss = _mm_mul_pd(ss, det);
-						ss = _mm_xor_pd(ss, pattern);//==-1*ss
-						//ss = _mm_mul_pd(ss,pattern);
-						s0 = _mm_shuffle_pd(sm, ss, _MM_SHUFFLE2(0,1));
-						s1 = _mm_shuffle_pd(ss, sm, _MM_SHUFFLE2(0,1));
-						_mm_store_pd((double*)dstdata, s0);
-						_mm_store_pd((double*)(dstdata+dststep), s1);
-					}
-				#else
-                if( d != 0. )
+				if( d != 0. )
                 {
-                    double t0, t1;
-                    result = true;
-                    d = 1./d;
-                    t0 = Sd(0,0)*d;
-                    t1 = Sd(1,1)*d;
-                    Dd(1,1) = t0;
-                    Dd(0,0) = t1;
-                    t0 = -Sd(0,1)*d;
-                    t1 = -Sd(1,0)*d;
-                    Dd(0,1) = t0;
-                    Dd(1,0) = t1;
-                }
-				#endif
+					result = true;
+					d = 1./d;
+					#if CV_SSE2
+						if(USE_SSE2)
+						{
+							__m128d s0 = _mm_loadu_pd((const double*)srcdata); //s0 = sf(0,0) sf(0,1)
+							__m128d s1 = _mm_loadu_pd ((const double*)(srcdata+srcstep));//s1 = sf(1,0) sf(1,1)
+							__m128d sm = _mm_unpacklo_pd(s0, _mm_load_sd((const double*)(srcdata+srcstep)+1)); //sm = sf(0,0) sf(1,1) - main diagonal
+							__m128d ss = _mm_shuffle_pd(s0, s1, _MM_SHUFFLE2(0,1)); //ss = sf(0,1) sf(1,0) - secondary diagonal 
+							__m128d det = _mm_load1_pd((const double*)&d);
+							sm =  _mm_mul_pd(sm, det);
+				
+							uchar CV_DECL_ALIGNED(16) inv[8] = {0,0,0,0,0,0,0,0x80};
+							__m128d pattern = _mm_load1_pd((double*)inv); 
+							ss = _mm_mul_pd(ss, det);
+							ss = _mm_xor_pd(ss, pattern);//==-1*ss
+						
+							s0 = _mm_shuffle_pd(sm, ss, _MM_SHUFFLE2(0,1));
+							s1 = _mm_shuffle_pd(ss, sm, _MM_SHUFFLE2(0,1));
+							_mm_storeu_pd((double*)dstdata, s0);
+							_mm_storeu_pd((double*)(dstdata+dststep), s1);
+						}
+						else
+					#endif
+						{
+							double t0, t1;
+							t0 = Sd(0,0)*d;
+							t1 = Sd(1,1)*d;
+							Dd(1,1) = t0;
+							Dd(0,0) = t1;
+							t0 = -Sd(0,1)*d;
+							t1 = -Sd(1,0)*d;
+							Dd(0,1) = t0;
+							Dd(1,0) = t1;
+						}
+				}
             }
         }
         else if( n == 3 )
@@ -1095,18 +1097,17 @@ double cv::invert( InputArray _src, OutputArray _dst, int method )
                 double d = det3(Sf);
                 if( d != 0. )
                 {
-                    float t[9];
                     result = true;
                     d = 1./d;
-
+                    float t[9];
                     t[0] = (float)(((double)Sf(1,1) * Sf(2,2) - (double)Sf(1,2) * Sf(2,1)) * d);
                     t[1] = (float)(((double)Sf(0,2) * Sf(2,1) - (double)Sf(0,1) * Sf(2,2)) * d);
                     t[2] = (float)(((double)Sf(0,1) * Sf(1,2) - (double)Sf(0,2) * Sf(1,1)) * d);
-                           
+                   
                     t[3] = (float)(((double)Sf(1,2) * Sf(2,0) - (double)Sf(1,0) * Sf(2,2)) * d);
                     t[4] = (float)(((double)Sf(0,0) * Sf(2,2) - (double)Sf(0,2) * Sf(2,0)) * d);
                     t[5] = (float)(((double)Sf(0,2) * Sf(1,0) - (double)Sf(0,0) * Sf(1,2)) * d);
-                           
+                   
                     t[6] = (float)(((double)Sf(1,0) * Sf(2,1) - (double)Sf(1,1) * Sf(2,0)) * d);
                     t[7] = (float)(((double)Sf(0,1) * Sf(2,0) - (double)Sf(0,0) * Sf(2,1)) * d);
                     t[8] = (float)(((double)Sf(0,0) * Sf(1,1) - (double)Sf(0,1) * Sf(1,0)) * d);
@@ -1121,18 +1122,18 @@ double cv::invert( InputArray _src, OutputArray _dst, int method )
                 double d = det3(Sd);
                 if( d != 0. )
                 {
+					result = true;
+					d = 1./d;
                     double t[9];
-                    result = true;
-                    d = 1./d;
 
                     t[0] = (Sd(1,1) * Sd(2,2) - Sd(1,2) * Sd(2,1)) * d;
                     t[1] = (Sd(0,2) * Sd(2,1) - Sd(0,1) * Sd(2,2)) * d;
                     t[2] = (Sd(0,1) * Sd(1,2) - Sd(0,2) * Sd(1,1)) * d;
-                           
+                   
                     t[3] = (Sd(1,2) * Sd(2,0) - Sd(1,0) * Sd(2,2)) * d;
                     t[4] = (Sd(0,0) * Sd(2,2) - Sd(0,2) * Sd(2,0)) * d;
                     t[5] = (Sd(0,2) * Sd(1,0) - Sd(0,0) * Sd(1,2)) * d;
-                           
+                   
                     t[6] = (Sd(1,0) * Sd(2,1) - Sd(1,1) * Sd(2,0)) * d;
                     t[7] = (Sd(0,1) * Sd(2,0) - Sd(0,0) * Sd(2,1)) * d;
                     t[8] = (Sd(0,0) * Sd(1,1) - Sd(0,1) * Sd(1,0)) * d;
@@ -1171,7 +1172,7 @@ double cv::invert( InputArray _src, OutputArray _dst, int method )
         return result;
     }
 
-    int elem_size = CV_ELEM_SIZE(type);
+   int elem_size = CV_ELEM_SIZE(type);
     AutoBuffer<uchar> buf(n*n*elem_size);
     Mat src1(n, n, type, (uchar*)buf);
     src.copyTo(src1);
@@ -1191,6 +1192,7 @@ double cv::invert( InputArray _src, OutputArray _dst, int method )
 
     return result;
 }
+
 
 
 /****************************************************************************************\
@@ -1603,7 +1605,7 @@ void SVD::backSubst( InputArray _w, InputArray _u, InputArray _vt,
     Mat w = _w.getMat(), u = _u.getMat(), vt = _vt.getMat(), rhs = _rhs.getMat();
     int type = w.type(), esz = (int)w.elemSize();
     int m = u.rows, n = vt.cols, nb = rhs.data ? rhs.cols : m, nm = std::min(m, n);
-    size_t wstep = w.rows == 1 ? esz : w.cols == 1 ? (size_t)w.step : (size_t)w.step + esz;
+    size_t wstep = w.rows == 1 ? (size_t)esz : w.cols == 1 ? (size_t)w.step : (size_t)w.step + esz;
     AutoBuffer<uchar> buffer(nb*sizeof(double) + 16);
     CV_Assert( w.type() == u.type() && u.type() == vt.type() && u.data && vt.data && w.data );
     CV_Assert( u.cols >= nm && vt.rows >= nm &&
