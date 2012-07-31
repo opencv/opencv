@@ -440,6 +440,16 @@ CV_EXPORTS_W void Canny( InputArray image, OutputArray edges,
                          double threshold1, double threshold2,
                          int apertureSize=3, bool L2gradient=false );
 
+//! finds upper and lower values to stretch the contrast of an image using a histogram
+CV_EXPORTS_W void stretchlim( const InputArray image, double* low_value,
+                                  double* high_value, double low_fract = 0.01,
+                                  double high_fract = 0.99);
+
+//! adjust image pixel values by linear mapping
+CV_EXPORTS_W void imadjust( const InputArray src, OutputArray dst,
+                            double low_in = 0, double high_in = 0,
+                            double low_out = 0, double high_out = 1 );
+
 //! computes minimum eigen value of 2x2 derivative covariation matrix at each pixel - the cornerness criteria
 CV_EXPORTS_W void cornerMinEigenVal( InputArray src, OutputArray dst,
                                    int blockSize, int ksize=3,
