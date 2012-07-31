@@ -473,12 +473,18 @@ protected:
 
 //! detects corners using FAST algorithm by E. Rosten
 CV_EXPORTS void FAST( InputArray image, CV_OUT vector<KeyPoint>& keypoints,
-                      int threshold, bool nonmaxSupression=true );
+                      int threshold, bool nonmaxSupression=true, int type = 2 );
 
 class CV_EXPORTS_W FastFeatureDetector : public FeatureDetector
 {
 public:
-    CV_WRAP FastFeatureDetector( int threshold=10, bool nonmaxSuppression=true );
+    enum
+    {
+      TYPE_5_8 = 0, TYPE_7_12 = 1, TYPE_9_16 = 2
+    };
+
+    CV_WRAP FastFeatureDetector( int threshold=10, bool nonmaxSuppression=true);
+    CV_WRAP FastFeatureDetector( int threshold, bool nonmaxSuppression, int type);
     AlgorithmInfo* info() const;
 
 protected:
@@ -486,6 +492,7 @@ protected:
 
     int threshold;
     bool nonmaxSuppression;
+    int type;
 };
 
 

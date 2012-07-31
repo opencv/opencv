@@ -58,6 +58,7 @@ CV_FastTest::~CV_FastTest() {}
 
 void CV_FastTest::run( int )
 {
+  for(int type=0; type <= 2; ++type) {
     Mat image1 = imread(string(ts->get_data_path()) + "inpaint/orig.jpg");
     Mat image2 = imread(string(ts->get_data_path()) + "cameracalibration/chess9.jpg");
     string xml = string(ts->get_data_path()) + "fast/result.xml";
@@ -74,8 +75,8 @@ void CV_FastTest::run( int )
 
     vector<KeyPoint> keypoints1;
     vector<KeyPoint> keypoints2;
-    FAST(gray1, keypoints1, 30);
-    FAST(gray2, keypoints2, 30);
+    FAST(gray1, keypoints1, 30, type);
+    FAST(gray2, keypoints2, 30, type);
 
     for(size_t i = 0; i < keypoints1.size(); ++i)
     {
@@ -109,17 +110,21 @@ void CV_FastTest::run( int )
     read( fs["exp_kps2"], exp_kps2, Mat() );
     fs.release();
 
+    // We only have testing data for 9_16 but it actually works equally well for 7_12
+    if ((type==1) || (type==2)){
     if ( 0 != norm(exp_kps1, kps1, NORM_L2) || 0 != norm(exp_kps2, kps2, NORM_L2))
     {
         ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
         return;
     }
+    }
 
- /*   cv::namedWindow("Img1"); cv::imshow("Img1", image1);
+    /*cv::namedWindow("Img1"); cv::imshow("Img1", image1);
     cv::namedWindow("Img2"); cv::imshow("Img2", image2);
     cv::waitKey(0);*/
+  }
 
-    ts->set_failed_test_info(cvtest::TS::OK);
+  ts->set_failed_test_info(cvtest::TS::OK);
 }
 
 TEST(Features2d_FAST, regression) { CV_FastTest test; test.safe_run(); }
