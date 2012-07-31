@@ -22,9 +22,13 @@ PERF_TEST_P(fast, detectForORB, testing::Values(FAST_IMAGES))
 
     declare.in(frame);
 
-    FastFeatureDetector fd(20, true);
+    FastFeatureDetector fd(20, true, FastFeatureDetector::TYPE_5_8);
     vector<KeyPoint> points;
 
+    TEST_CYCLE() fd.detect(frame, points);
+    fd = FastFeatureDetector(20, true, FastFeatureDetector::TYPE_7_12);
+    TEST_CYCLE() fd.detect(frame, points);
+    fd = FastFeatureDetector(20, true, FastFeatureDetector::TYPE_9_16);
     TEST_CYCLE() fd.detect(frame, points);
 }
 

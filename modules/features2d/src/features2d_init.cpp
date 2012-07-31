@@ -58,7 +58,8 @@ CV_INIT_ALGORITHM(BriefDescriptorExtractor, "Feature2D.BRIEF",
 
 CV_INIT_ALGORITHM(FastFeatureDetector, "Feature2D.FAST",
                   obj.info()->addParam(obj, "threshold", obj.threshold);
-                  obj.info()->addParam(obj, "nonmaxSuppression", obj.nonmaxSuppression));
+                  obj.info()->addParam(obj, "nonmaxSuppression", obj.nonmaxSuppression);
+                  obj.info()->addParam(obj, "type", obj.type, FastFeatureDetector::TYPE_9_16));
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
