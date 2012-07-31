@@ -578,24 +578,6 @@ void olbp_(InputArray _src, OutputArray _dst) {
     }
 }
 
-static void olbp(InputArray src, OutputArray dst) {
-    int type = src.getMat().type();
-    switch (type) {
-    case CV_8SC1:   olbp_<char>(src,dst); break;
-    case CV_8UC1:   olbp_<unsigned char>(src,dst); break;
-    case CV_16SC1:  olbp_<short>(src,dst); break;
-    case CV_16UC1:  olbp_<unsigned short>(src,dst); break;
-    case CV_32SC1:  olbp_<int>(src,dst); break;
-    case CV_32FC1:  olbp_<float>(src,dst); break;
-    case CV_64FC1:  olbp_<double>(src,dst); break;
-    default:
-        string error_msg = format("Using Original Local Binary Patterns for feature extraction only works on single-channel images (given %d). Please pass the image data as a grayscale image!", type);
-        CV_Error(CV_StsNotImplemented, error_msg);
-        break;
-    }
-}
-
-
 //------------------------------------------------------------------------------
 // cv::elbp
 //------------------------------------------------------------------------------
