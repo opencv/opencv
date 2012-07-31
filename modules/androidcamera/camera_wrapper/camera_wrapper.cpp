@@ -58,9 +58,6 @@
 
 using namespace android;
 
-void debugShowFPS();
-
-#if defined(ANDROID_r4_1_1)
 class ConsumerListenerStub: public BufferQueue::ConsumerListener
 {
 public:
@@ -71,7 +68,6 @@ public:
     {
     }
 };
-#endif
 
 void debugShowFPS()
 {
@@ -281,7 +277,7 @@ public:
 
     virtual void postData(int32_t msgType, const sp<IMemory>& dataPtr
 #if defined(ANDROID_r4_0_0) || defined(ANDROID_r4_0_3) || defined(ANDROID_r4_1_1)
-                          ,camera_frame_metadata_t*
+                          ,camera_frame_metadata_t* metadata
 #endif
                           )
     {
