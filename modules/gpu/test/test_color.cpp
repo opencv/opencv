@@ -1717,6 +1717,33 @@ TEST_P(CvtColor, RGB2Luv)
     }
 }
 
+TEST_P(CvtColor, RGBA2mRGBA)
+{
+    if (depth != CV_8U)
+        return;
+
+    try
+    {
+        cv::Mat src = randomMat(size, CV_MAKE_TYPE(depth, 4));
+
+        cv::gpu::GpuMat dst = createMat(src.size(), src.type(), useRoi);
+        cv::gpu::cvtColor(loadMat(src, useRoi), dst, cv::COLOR_RGBA2mRGBA);
+
+        cv::Mat dst_gold;
+        cv::cvtColor(src, dst_gold, cv::COLOR_RGBA2mRGBA);
+
+        EXPECT_MAT_NEAR(dst_gold, dst, 1);
+    }
+    catch (const cv::Exception& e)
+    {
+#if (CUDA_VERSION < 5000)
+        ASSERT_EQ(CV_StsBadFlag, e.code);
+#else
+        FAIL();
+#endif
+    }
+}
+
 INSTANTIATE_TEST_CASE_P(GPU_ImgProc, CvtColor, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,

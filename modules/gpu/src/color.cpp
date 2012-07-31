@@ -1277,6 +1277,31 @@ namespace
         luv_to_rgb(src, dst, -1, stream);
         bgr_to_rgb(dst, dst, -1, stream);
     }
+
+    void rgba_to_mbgra(const GpuMat& src, GpuMat& dst, int, Stream& stream)
+    {
+    #if (CUDA_VERSION < 5000)
+        (void)src;
+        (void)dst;
+        (void)stream;
+        CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" );
+    #else
+        CV_Assert(src.type() == CV_8UC4 || src.type() == CV_16UC4);
+
+        dst.create(src.size(), src.type());
+
+        NppStreamHandler h(StreamAccessor::getStream(stream));
+
+        NppiSize oSizeROI;
+        oSizeROI.width = src.cols;
+        oSizeROI.height = src.rows;
+
+        if (src.depth() == CV_8U)
+            nppSafeCall( nppiAlphaPremul_8u_AC4R(src.ptr<Npp8u>(), static_cast<int>(src.step), dst.ptr<Npp8u>(), static_cast<int>(dst.step), oSizeROI) );
+        else
+            nppSafeCall( nppiAlphaPremul_16u_AC4R(src.ptr<Npp16u>(), static_cast<int>(src.step), dst.ptr<Npp16u>(), static_cast<int>(dst.step), oSizeROI) );
+    #endif
+    }
 }
 
 void cv::gpu::cvtColor(const GpuMat& src, GpuMat& dst, int code, int dcn, Stream& stream)
@@ -1396,10 +1421,63 @@ void cv::gpu::cvtColor(const GpuMat& src, GpuMat& dst, int code, int dcn, Stream
         0,                      // CV_BayerBG2GRAY = 86
         0,                      // CV_BayerGB2GRAY = 87
         0,                      // CV_BayerRG2GRAY = 88
-        0                       // CV_BayerGR2GRAY = 89
+        0,                      // CV_BayerGR2GRAY = 89
+
+        //YUV 4:2:0 formats family
+        0,                      // COLOR_YUV2RGB_NV12 = 90,
+        0,                      // COLOR_YUV2BGR_NV12 = 91,
+        0,                      // COLOR_YUV2RGB_NV21 = 92,
+        0,                      // COLOR_YUV2BGR_NV21 = 93,
+
+        0,                      // COLOR_YUV2RGBA_NV12 = 94,
+        0,                      // COLOR_YUV2BGRA_NV12 = 95,
+        0,                      // COLOR_YUV2RGBA_NV21 = 96,
+        0,                      // COLOR_YUV2BGRA_NV21 = 97,
+
+        0,                      // COLOR_YUV2RGB_YV12 = 98,
+        0,                      // COLOR_YUV2BGR_YV12 = 99,
+        0,                      // COLOR_YUV2RGB_IYUV = 100,
+        0,                      // COLOR_YUV2BGR_IYUV = 101,
+
+        0,                      // COLOR_YUV2RGBA_YV12 = 102,
+        0,                      // COLOR_YUV2BGRA_YV12 = 103,
+        0,                      // COLOR_YUV2RGBA_IYUV = 104,
+        0,                      // COLOR_YUV2BGRA_IYUV = 105,
+
+        0,                      // COLOR_YUV2GRAY_420 = 106,
+
+        //YUV 4:2:2 formats family
+        0,                      // COLOR_YUV2RGB_UYVY = 107,
+        0,                      // COLOR_YUV2BGR_UYVY = 108,
+        0,                      // //COLOR_YUV2RGB_VYUY = 109,
+        0,                      // //COLOR_YUV2BGR_VYUY = 110,
+
+        0,                      // COLOR_YUV2RGBA_UYVY = 111,
+        0,                      // COLOR_YUV2BGRA_UYVY = 112,
+        0,                      // //COLOR_YUV2RGBA_VYUY = 113,
+        0,                      // //COLOR_YUV2BGRA_VYUY = 114,
+
+        0,                      // COLOR_YUV2RGB_YUY2 = 115,
+        0,                      // COLOR_YUV2BGR_YUY2 = 116,
+        0,                      // COLOR_YUV2RGB_YVYU = 117,
+        0,                      // COLOR_YUV2BGR_YVYU = 118,
+
+        0,                      // COLOR_YUV2RGBA_YUY2 = 119,
+        0,                      // COLOR_YUV2BGRA_YUY2 = 120,
+        0,                      // COLOR_YUV2RGBA_YVYU = 121,
+        0,                      // COLOR_YUV2BGRA_YVYU = 122,
+
+        0,                      // COLOR_YUV2GRAY_UYVY = 123,
+        0,                      // COLOR_YUV2GRAY_YUY2 = 124,
+
+        // alpha premultiplication
+        rgba_to_mbgra,          // COLOR_RGBA2mRGBA = 125,
+        0,                      // COLOR_mRGBA2RGBA = 126,
+
+        0,                      // COLOR_COLORCVT_MAX  = 127
     };
 
-    CV_Assert(code < 94);
+    CV_Assert(code < 128);
 
     func_t func = funcs[code];
 
