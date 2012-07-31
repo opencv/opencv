@@ -4,18 +4,27 @@ project(${the_target})
 
 link_directories("${ANDROID_SOURCE_TREE}/out/target/product/generic/system/lib")
 
-INCLUDE_DIRECTORIES(BEFORE
+if (ANDROID_VERSION VERSION_LESS "4.1")
+    INCLUDE_DIRECTORIES(BEFORE
 	${ANDROID_SOURCE_TREE}
 	${ANDROID_SOURCE_TREE}/frameworks/base/include/ui
 	${ANDROID_SOURCE_TREE}/frameworks/base/include/surfaceflinger
 	${ANDROID_SOURCE_TREE}/frameworks/base/include/camera
 	${ANDROID_SOURCE_TREE}/frameworks/base/include/media
-	${ANDROID_SOURCE_TREE}/frameworks/base/include/camera
 	${ANDROID_SOURCE_TREE}/frameworks/base/include
 	${ANDROID_SOURCE_TREE}/system/core/include
 	${ANDROID_SOURCE_TREE}/hardware/libhardware/include
 	${ANDROID_SOURCE_TREE}/frameworks/base/native/include
 	)
+else()
+    INCLUDE_DIRECTORIES(BEFORE
+	${ANDROID_SOURCE_TREE}
+	${ANDROID_SOURCE_TREE}/frameworks/native/include
+	${ANDROID_SOURCE_TREE}/frameworks/av/include
+	${ANDROID_SOURCE_TREE}/system/core/include
+	${ANDROID_SOURCE_TREE}/hardware/libhardware/include
+	)
+endif()
 
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH FALSE)
 
