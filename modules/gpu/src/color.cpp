@@ -54,6 +54,15 @@ void cv::gpu::gammaCorrection(const GpuMat&, GpuMat&, bool, Stream&) { throw_nog
 #else /* !defined (HAVE_CUDA) */
 
 #include <cvt_colot_internal.h>
+
+namespace cv { namespace gpu {
+    namespace device
+    {
+        template <typename T, int cn>
+        void Bayer2BGR_gpu(DevMem2Db src, DevMem2Db dst, bool blue_last, bool start_with_green, cudaStream_t stream);
+    }
+}}
+
 using namespace ::cv::gpu::device;
 
 namespace
@@ -1302,6 +1311,47 @@ namespace
             nppSafeCall( nppiAlphaPremul_16u_AC4R(src.ptr<Npp16u>(), static_cast<int>(src.step), dst.ptr<Npp16u>(), static_cast<int>(dst.step), oSizeROI) );
     #endif
     }
+
+    void bayer_to_bgr(const GpuMat& src, GpuMat& dst, int dcn, bool blue_last, bool start_with_green, Stream& stream)
+    {
+        typedef void (*func_t)(DevMem2Db src, DevMem2Db dst, bool blue_last, bool start_with_green, cudaStream_t stream);
+        static const func_t funcs[3][4] =
+        {
+            {0,0,Bayer2BGR_gpu<uchar, 3>, Bayer2BGR_gpu<uchar, 4>},
+            {0,0,0,0},
+            {0,0,Bayer2BGR_gpu<ushort, 3>, Bayer2BGR_gpu<ushort, 4>}
+        };
+
+        if (dcn <= 0) dcn = 3;
+
+        CV_Assert(src.type() == CV_8UC1 || src.type() == CV_16UC1);
+        CV_Assert(src.rows > 2 && src.cols > 2);
+        CV_Assert(dcn == 3 || dcn == 4);
+
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));
+
+        funcs[src.depth()][dcn - 1](src, dst, blue_last, start_with_green, StreamAccessor::getStream(stream));
+    }
+
+    void bayerBG_to_bgr(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
+    {
+        bayer_to_bgr(src, dst, dcn, false, false, stream);
+    }
+
+    void bayerGB_to_bgr(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
+    {
+        bayer_to_bgr(src, dst, dcn, false, true, stream);
+    }
+
+    void bayerRG_to_bgr(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
+    {
+        bayer_to_bgr(src, dst, dcn, true, false, stream);
+    }
+
+    void bayerGR_to_bgr(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
+    {
+        bayer_to_bgr(src, dst, dcn, true, true, stream);
+    }
 }
 
 void cv::gpu::cvtColor(const GpuMat& src, GpuMat& dst, int code, int dcn, Stream& stream)
@@ -1366,10 +1416,10 @@ void cv::gpu::cvtColor(const GpuMat& src, GpuMat& dst, int code, int dcn, Stream
         bgr_to_lab,             // CV_BGR2Lab     =44
         rgb_to_lab,             // CV_RGB2Lab     =45
 
-        0,                      // CV_BayerBG2BGR =46
-        0,                      // CV_BayerGB2BGR =47
-        0,                      // CV_BayerRG2BGR =48
-        0,                      // CV_BayerGR2BGR =49
+        bayerBG_to_bgr,         // CV_BayerBG2BGR =46
+        bayerGB_to_bgr,         // CV_BayerGB2BGR =47
+        bayerRG_to_bgr,         // CV_BayerRG2BGR =48
+        bayerGR_to_bgr,         // CV_BayerGR2BGR =49
 
         bgr_to_luv,             // CV_BGR2Luv     =50
         rgb_to_luv,             // CV_RGB2Luv     =51
