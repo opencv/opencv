@@ -255,6 +255,8 @@ private:
 
         ncvAssertPrintReturn(gpuAllocator->isInitialized(), "Error creating GPU memory allocator", NCV_CUDA_ERROR);
         ncvAssertPrintReturn(cpuAllocator->isInitialized(), "Error creating CPU memory allocator", NCV_CUDA_ERROR);
+
+        lastAllocatedFrameSize = frameSize;
         return NCV_SUCCESS;
     }
 

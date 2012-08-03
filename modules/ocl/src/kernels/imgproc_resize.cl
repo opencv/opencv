@@ -16,7 +16,7 @@
 //
 // @Authors
 //    Zhang Ying, zhangying913@gmail.com
-//
+//	  Niko Li, newlife20080214@gmail.com
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
 //
@@ -50,20 +50,10 @@
 
 #if defined DOUBLE_SUPPORT
 #pragma OPENCL EXTENSION cl_khr_fp64:enable
-typedef double F ;
+#define F double
 #else 
-typedef float F;
+#define F float
 #endif
-
-inline uint4 getPoint_8uc4(__global uchar4 * data, int offset, int x, int y, int step)
-{
-    return convert_uint4(data[(offset>>2)+ y * (step>>2) + x]);
-}
-
-inline float getPoint_32fc1(__global float * data, int offset, int x, int y, int step)
-{
-    return data[(offset>>2)+ y * (step>>2) + x];
-}
 
 
 #define INTER_RESIZE_COEF_BITS 11
@@ -72,8 +62,8 @@ inline float getPoint_32fc1(__global float * data, int offset, int x, int y, int
 #define CAST_SCALE (1.0f/(1<<CAST_BITS))
 #define INC(x,l) ((x+1) >= (l) ? (x):((x)+1))
 
-__kernel void resizeLN_C1_D0(__global unsigned char * dst, __global unsigned char const * restrict src,
-                     int dst_offset, int src_offset,int dst_step, int src_step, 
+__kernel void resizeLN_C1_D0(__global uchar * dst, __global uchar const * restrict src,
+                     int dstoffset_in_pixel, int srcoffset_in_pixel,int dststep_in_pixel, int srcstep_in_pixel, 
                      int src_cols, int src_rows, int dst_cols, int dst_rows, float ifx, float ify )
 {
     int gx = get_global_id(0);
@@ -81,7 +71,7 @@ __kernel void resizeLN_C1_D0(__global unsigned char * dst, __global unsigned cha
     
     float4  sx, u, xf;
     int4 x, DX;
-    gx = (gx<<2) - (dst_offset&3);
+    gx = (gx<<2) - (dstoffset_in_pixel&3);
     DX = (int4)(gx, gx+1, gx+2, gx+3);
     sx = (convert_float4(DX) + 0.5f) * ifx - 0.5f;
     xf = floor(sx);
@@ -119,10 +109,10 @@ __kernel void resizeLN_C1_D0(__global unsigned char * dst, __global unsigned cha
     int4 val1, val2, val;
     int4 sdata1, sdata2, sdata3, sdata4;
 
-    int4 pos1 = src_offset + y * src_step + x;
-    int4 pos2 = src_offset + y * src_step + x_;
-    int4 pos3 = src_offset + y_ * src_step + x;
-    int4 pos4 = src_offset + y_ * src_step + x_;
+    int4 pos1 = mad24(y, srcstep_in_pixel, x+srcoffset_in_pixel);
+    int4 pos2 = mad24(y, srcstep_in_pixel, x_+srcoffset_in_pixel);
+    int4 pos3 = mad24(y_, srcstep_in_pixel, x+srcoffset_in_pixel);
+    int4 pos4 = mad24(y_, srcstep_in_pixel, x_+srcoffset_in_pixel);
 
     sdata1.s0 = src[pos1.s0];
     sdata1.s1 = src[pos1.s1];
@@ -144,20 +134,44 @@ __kernel void resizeLN_C1_D0(__global unsigned char * dst, __global unsigned cha
     sdata4.s2 = src[pos4.s2];
     sdata4.s3 = src[pos4.s3];
 
-    val1 = U1 * sdata1 + U * sdata2;
-    val2 = U1 * sdata3 + U * sdata4;
-    val = V1 * val1 + V * val2;
+    val1 = mul24(U1 , sdata1) + mul24(U , sdata2);
+    val2 = mul24(U1 , sdata3) + mul24(U , sdata4);
+    val = mul24(V1 , val1) + mul24(V , val2);
     
-    __global uchar4* d = (__global uchar4*)(dst + dst_offset + dy * dst_step + gx);
-    uchar4 dVal = *d;
-    int4 con = ( DX >= 0 && DX < dst_cols && dy >= 0 && dy < dst_rows);
+    //__global uchar4* d = (__global uchar4*)(dst + dstoffset_in_pixel + dy * dststep_in_pixel + gx);
+    //uchar4 dVal = *d;
+    //int4 con = ( DX >= 0 && DX < dst_cols && dy >= 0 && dy < dst_rows);
     val = ((val + (1<<(CAST_BITS-1))) >> CAST_BITS);
-    *d = convert_uchar4(con != 0) ? convert_uchar4_sat(val) : dVal;
-    
+    //*d = convert_uchar4(con != 0) ? convert_uchar4_sat(val) : dVal;
+
+	pos4 = mad24(dy, dststep_in_pixel, gx+dstoffset_in_pixel);
+	pos4.y++;
+	pos4.z+=2;
+	uchar4 uval = convert_uchar4_sat(val);
+    int con = (gx >= 0 && gx+3 < dst_cols && dy >= 0 && dy < dst_rows);
+	if(con)
+	{
+		*(__global uchar4*)(dst + pos4.x)=uval;
+	}
+	else
+	{
+		if(gx >= 0 && gx < dst_cols && dy >= 0 && dy < dst_rows)
+		{
+			dst[pos4.x]=uval.x;
+		}
+		if(gx+1 >= 0 && gx+1 < dst_cols && dy >= 0 && dy < dst_rows)
+		{
+			dst[pos4.y]=uval.y;
+		}
+		if(gx+2 >= 0 && gx+2 < dst_cols && dy >= 0 && dy < dst_rows)
+		{
+			dst[pos4.z]=uval.z;
+		}
+	}
 }
 
 __kernel void resizeLN_C4_D0(__global uchar4 * dst, __global uchar4 * src,
-                     int dst_offset, int src_offset,int dst_step, int src_step, 
+                     int dstoffset_in_pixel, int srcoffset_in_pixel,int dststep_in_pixel, int srcstep_in_pixel, 
                      int src_cols, int src_rows, int dst_cols, int dst_rows, float ifx, float ify )
 {
     int dx = get_global_id(0);
@@ -182,18 +196,25 @@ __kernel void resizeLN_C4_D0(__global uchar4 * dst, __global uchar4 * src,
 
     int y_ = INC(y,src_rows);
     int x_ = INC(x,src_cols);
-      
-    uint4 val = U1* V1 *  getPoint_8uc4(src,src_offset,x,y,src_step) +
-               U1* V  *  getPoint_8uc4(src,src_offset,x,y_,src_step) +
-               U * V1 *  getPoint_8uc4(src,src_offset,x_,y,src_step) +
-               U * V  *  getPoint_8uc4(src,src_offset,x_,y_,src_step);
-               
+	int4 srcpos;
+	srcpos.x = mad24(y, srcstep_in_pixel, x+srcoffset_in_pixel);
+	srcpos.y = mad24(y, srcstep_in_pixel, x_+srcoffset_in_pixel);
+	srcpos.z = mad24(y_, srcstep_in_pixel, x+srcoffset_in_pixel);
+	srcpos.w = mad24(y_, srcstep_in_pixel, x_+srcoffset_in_pixel);
+    int4 data0 = convert_int4(src[srcpos.x]);
+    int4 data1 = convert_int4(src[srcpos.y]);
+    int4 data2 = convert_int4(src[srcpos.z]);
+    int4 data3 = convert_int4(src[srcpos.w]);
+    int4 val = mul24(mul24(U1, V1) ,  data0) + mul24(mul24(U, V1) ,  data1)
+               +mul24(mul24(U1, V) ,  data2)+mul24(mul24(U, V) ,  data3);
+	int dstpos = mad24(dy, dststep_in_pixel, dx+dstoffset_in_pixel);
+    uchar4 uval =   convert_uchar4((val + (1<<(CAST_BITS-1)))>>CAST_BITS);
     if(dx>=0 && dx<dst_cols && dy>=0 && dy<dst_rows)
-         dst[(dst_offset>>2) + dy * (dst_step>>2) + dx] = convert_uchar4((val + (1<<(CAST_BITS-1)))>>CAST_BITS);
+         dst[dstpos] = uval;
 }
 
 __kernel void resizeLN_C1_D5(__global float * dst, __global float * src,
-                     int dst_offset, int src_offset,int dst_step, int src_step, 
+                     int dstoffset_in_pixel, int srcoffset_in_pixel,int dststep_in_pixel, int srcstep_in_pixel, 
                      int src_cols, int src_rows, int dst_cols, int dst_rows, float ifx, float ify )
 {
     int dx = get_global_id(0);
@@ -210,19 +231,29 @@ __kernel void resizeLN_C1_D5(__global float * dst, __global float * src,
     
     int y_ = INC(y,src_rows);
     int x_ = INC(x,src_cols);
-
-    float val1 = (1.0f-u) *  getPoint_32fc1(src,src_offset,x,y,src_step) +
-                u  *  getPoint_32fc1(src,src_offset,x_,y,src_step) ;
-    float val2 = (1.0f-u) *  getPoint_32fc1(src,src_offset,x,y_,src_step) +
-                u *  getPoint_32fc1(src,src_offset,x_,y_,src_step);
-    float val = (1.0f-v) * val1 + v * val2;
-
+	float u1 = 1.f-u;
+	float v1 = 1.f-v;
+	int4 srcpos;
+	srcpos.x = mad24(y, srcstep_in_pixel, x+srcoffset_in_pixel);
+	srcpos.y = mad24(y, srcstep_in_pixel, x_+srcoffset_in_pixel);
+	srcpos.z = mad24(y_, srcstep_in_pixel, x+srcoffset_in_pixel);
+	srcpos.w = mad24(y_, srcstep_in_pixel, x_+srcoffset_in_pixel);
+    float data0 = src[srcpos.x];
+    float data1 = src[srcpos.y];
+    float data2 = src[srcpos.z];
+    float data3 = src[srcpos.w];
+    float val1 = u1 *  data0 +
+                u  *  data1 ;
+    float val2 = u1 *  data2 +
+                u *  data3;
+    float val = v1 * val1 + v * val2;
+	int dstpos = mad24(dy, dststep_in_pixel, dx+dstoffset_in_pixel);
     if(dx>=0 && dx<dst_cols && dy>=0 && dy<dst_rows)
-         dst[(dst_offset>>2) + dy * (dst_step>>2) + dx] = val; 
+         dst[dstpos] = val; 
 }
 
 __kernel void resizeLN_C4_D5(__global float4 * dst, __global float4 * src,
-                     int dst_offset, int src_offset,int dst_step, int src_step, 
+                     int dstoffset_in_pixel, int srcoffset_in_pixel,int dststep_in_pixel, int srcstep_in_pixel, 
                      int src_cols, int src_rows, int dst_cols, int dst_rows, float ifx, float ify )
 {
     int dx = get_global_id(0);
@@ -239,31 +270,35 @@ __kernel void resizeLN_C4_D5(__global float4 * dst, __global float4 * src,
     
     int y_ = INC(y,src_rows);
     int x_ = INC(x,src_cols);
-
+	float u1 = 1.f-u;
+	float v1 = 1.f-v;
+	int4 srcpos;
+	srcpos.x = mad24(y, srcstep_in_pixel, x+srcoffset_in_pixel);
+	srcpos.y = mad24(y, srcstep_in_pixel, x_+srcoffset_in_pixel);
+	srcpos.z = mad24(y_, srcstep_in_pixel, x+srcoffset_in_pixel);
+	srcpos.w = mad24(y_, srcstep_in_pixel, x_+srcoffset_in_pixel);
     float4 s_data1, s_data2, s_data3, s_data4;
-    src_offset = (src_offset >> 4);
-    src_step = (src_step >> 4);
-    s_data1 = src[src_offset + y*src_step + x];
-    s_data2 = src[src_offset + y*src_step + x_];
-    s_data3 = src[src_offset + y_*src_step + x];
-    s_data4 = src[src_offset + y_*src_step + x_];
-    s_data1 = (1.0f-u) * s_data1 + u * s_data2;
-    s_data2 = (1.0f-u) * s_data3 + u * s_data4;
-    s_data3 = (1.0f-v) * s_data1 + v * s_data2;
+    s_data1 = src[srcpos.x];
+    s_data2 = src[srcpos.y];
+    s_data3 = src[srcpos.z];
+    s_data4 = src[srcpos.w];
+    float4 val = u1 * v1 * s_data1 + u * v1 * s_data2
+			  +u1 * v *s_data3 + u * v *s_data4;
+	int dstpos = mad24(dy, dststep_in_pixel, dx+dstoffset_in_pixel);
 
     if(dx>=0 && dx<dst_cols && dy>=0 && dy<dst_rows)
-         dst[(dst_offset>>4) + dy * (dst_step>>4) + dx] = s_data3; 
+         dst[dstpos] = val; 
 }
 
 __kernel void resizeNN_C1_D0(__global uchar * dst, __global uchar * src,
-                     int dst_offset, int src_offset,int dst_step, int src_step, 
+                     int dstoffset_in_pixel, int srcoffset_in_pixel,int dststep_in_pixel, int srcstep_in_pixel, 
                      int src_cols, int src_rows, int dst_cols, int dst_rows, F ifx, F ify )
 {
     int gx = get_global_id(0);
     int dy = get_global_id(1);
     
-    gx = (gx<<2) - (dst_offset&3);
-    int4 GX = (int4)(gx, gx+1, gx+2, gx+3);
+    gx = (gx<<2) - (dstoffset_in_pixel&3);
+    //int4 GX = (int4)(gx, gx+1, gx+2, gx+3);
     
     int4 sx;
     int sy;
@@ -279,22 +314,42 @@ __kernel void resizeNN_C1_D0(__global uchar * dst, __global uchar * src,
     sy = min((int)floor(s5), src_rows-1);
     
     uchar4 val;
-    int4 pos = src_offset + sy * src_step + sx;
+    int4 pos = mad24(sy, srcstep_in_pixel, sx+srcoffset_in_pixel);
     val.s0 = src[pos.s0];
     val.s1 = src[pos.s1];
     val.s2 = src[pos.s2];
     val.s3 = src[pos.s3];
     
-    __global uchar4* d = (__global uchar4*)(dst + dst_offset + dy * dst_step + gx);
-    uchar4 dVal = *d;
-    int4 con = (GX >= 0 && GX < dst_cols && dy >= 0 && dy < dst_rows);
-    val = convert_uchar4(con != 0) ? val : dVal;
-    
-    *d = val;
+    //__global uchar4* d = (__global uchar4*)(dst + dstoffset_in_pixel + dy * dststep_in_pixel + gx);
+    //uchar4 dVal = *d;
+	pos = mad24(dy, dststep_in_pixel, gx+dstoffset_in_pixel);
+	pos.y++;
+	pos.z+=2;
+
+    int con = (gx >= 0 && gx+3 < dst_cols && dy >= 0 && dy < dst_rows);
+	if(con)
+	{
+		*(__global uchar4*)(dst + pos.x)=val;
+	}
+	else
+	{
+		if(gx >= 0 && gx < dst_cols && dy >= 0 && dy < dst_rows)
+		{
+			dst[pos.x]=val.x;
+		}
+		if(gx+1 >= 0 && gx+1 < dst_cols && dy >= 0 && dy < dst_rows)
+		{
+			dst[pos.y]=val.y;
+		}
+		if(gx+2 >= 0 && gx+2 < dst_cols && dy >= 0 && dy < dst_rows)
+		{
+			dst[pos.z]=val.z;
+		}
+	}
 }
 
 __kernel void resizeNN_C4_D0(__global uchar4 * dst, __global uchar4 * src,
-                     int dst_offset, int src_offset,int dst_step, int src_step, 
+                     int dstoffset_in_pixel, int srcoffset_in_pixel,int dststep_in_pixel, int srcstep_in_pixel, 
                      int src_cols, int src_rows, int dst_cols, int dst_rows, F ifx, F ify )
 {
     int dx = get_global_id(0);
@@ -304,8 +359,8 @@ __kernel void resizeNN_C4_D0(__global uchar4 * dst, __global uchar4 * src,
     F s2 = dy*ify;
     int sx = fmin((float)floor(s1), (float)src_cols-1);
     int sy = fmin((float)floor(s2), (float)src_rows-1);
-    int dpos = (dst_offset>>2) + dy * (dst_step>>2) + dx;
-    int spos = (src_offset>>2) + sy * (src_step>>2) + sx;
+    int dpos = mad24(dy, dststep_in_pixel, dx + dstoffset_in_pixel);
+    int spos = mad24(sy, srcstep_in_pixel, sx + srcoffset_in_pixel);
     
     if(dx>=0 && dx<dst_cols && dy>=0 && dy<dst_rows)
         dst[dpos] = src[spos];
@@ -313,7 +368,7 @@ __kernel void resizeNN_C4_D0(__global uchar4 * dst, __global uchar4 * src,
 }
 
 __kernel void resizeNN_C1_D5(__global float * dst, __global float * src,
-                     int dst_offset, int src_offset,int dst_step, int src_step, 
+                     int dstoffset_in_pixel, int srcoffset_in_pixel,int dststep_in_pixel, int srcstep_in_pixel, 
                      int src_cols, int src_rows, int dst_cols, int dst_rows, F ifx, F ify )
 {
     int dx = get_global_id(0);
@@ -323,16 +378,16 @@ __kernel void resizeNN_C1_D5(__global float * dst, __global float * src,
     F s2 = dy*ify;
     int sx = fmin((float)floor(s1), (float)src_cols-1);
     int sy = fmin((float)floor(s2), (float)src_rows-1);
-    int dpos = (dst_offset>>2) + dy * (dst_step>>2) + dx;
-    int spos = (src_offset>>2) + sy * (src_step>>2) + sx;
-    
+
+    int dpos = mad24(dy, dststep_in_pixel, dx + dstoffset_in_pixel);
+    int spos = mad24(sy, srcstep_in_pixel, sx + srcoffset_in_pixel);   
     if(dx>=0 && dx<dst_cols && dy>=0 && dy<dst_rows)
         dst[dpos] = src[spos];
    
 }
 
 __kernel void resizeNN_C4_D5(__global float4 * dst, __global float4 * src,
-                     int dst_offset, int src_offset,int dst_step, int src_step, 
+                     int dstoffset_in_pixel, int srcoffset_in_pixel,int dststep_in_pixel, int srcstep_in_pixel, 
                      int src_cols, int src_rows, int dst_cols, int dst_rows, F ifx, F ify )
 {
     int dx = get_global_id(0);
@@ -343,8 +398,8 @@ __kernel void resizeNN_C4_D5(__global float4 * dst, __global float4 * src,
     int s_row = floor(s2);
     int sx = min(s_col, src_cols-1);
     int sy = min(s_row, src_rows-1);
-    int dpos = (dst_offset>>4) + dy * (dst_step>>4) + dx;
-    int spos = (src_offset>>4) + sy * (src_step>>4) + sx;
+    int dpos = mad24(dy, dststep_in_pixel, dx + dstoffset_in_pixel);
+    int spos = mad24(sy, srcstep_in_pixel, sx + srcoffset_in_pixel);
     
     if(dx>=0 && dx<dst_cols && dy>=0 && dy<dst_rows)
         dst[dpos] = src[spos];

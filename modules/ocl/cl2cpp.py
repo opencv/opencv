@@ -14,7 +14,7 @@ cl_list = glob.glob(os.path.join(indir, "*.cl"))
 kfile = open(outname, "wt")
 
 kfile.write("""// This file is auto-generated. Do not edit!
-//#include "precomp.hpp"
+
 namespace cv
 {
 namespace ocl

@@ -34,13 +34,8 @@
 //
 //
 
-/*
-#if defined (DOUBLE_SUPPORT)
-#pragma OPENCL EXTENSION cl_khr_fp64:enable
-#endif
-*/
 
-__kernel void set_to_without_mask_C1_D0(float4 scalar,__global uchar * dstMat,
+__kernel void set_to_without_mask_C1_D0(uchar scalar,__global uchar * dstMat,
         int cols,int rows,int dstStep_in_pixel,int offset_in_pixel)
 {
 		int x=get_global_id(0)<<2;
@@ -49,7 +44,8 @@ __kernel void set_to_without_mask_C1_D0(float4 scalar,__global uchar * dstMat,
 		int addr_end = mad24(y,dstStep_in_pixel,cols+offset_in_pixel);
 		int idx = mad24(y,dstStep_in_pixel,(int)(x+ offset_in_pixel & (int)0xfffffffc));
 		uchar4 out;
-		out.x = out.y = out.z = out.w = convert_uchar_sat(scalar.x);
+		out.x = out.y = out.z = out.w = scalar;
+	
 		if ( (idx>=addr_start)&(idx+3 < addr_end) & (y < rows))
 		{
 			*(__global uchar4*)(dstMat+idx) = out;
@@ -65,7 +61,7 @@ __kernel void set_to_without_mask_C1_D0(float4 scalar,__global uchar * dstMat,
 		}
 }
 
-__kernel void set_to_without_mask_C4_D0(float4 scalar,__global uchar4 * dstMat,
+__kernel void set_to_without_mask(GENTYPE scalar,__global GENTYPE * dstMat,
         int cols,int rows,int dstStep_in_pixel,int offset_in_pixel)
 {
 		int x=get_global_id(0);
@@ -73,52 +69,6 @@ __kernel void set_to_without_mask_C4_D0(float4 scalar,__global uchar4 * dstMat,
 		if ( (x < cols) & (y < rows))
 		{
 		    int idx = mad24(y,dstStep_in_pixel,x+ offset_in_pixel);
-			dstMat[idx] = convert_uchar4_sat(scalar);
+			dstMat[idx] = scalar;	
 		}
 }
-__kernel void set_to_without_mask_C1_D4(float4 scalar,__global int * dstMat,
-        int cols,int rows,int dstStep_in_pixel,int offset_in_pixel)
-{
-		int x=get_global_id(0);
-		int y=get_global_id(1);
-		if ( (x < cols) & (y < rows))
-		{
-		    int idx = mad24(y, dstStep_in_pixel, x+offset_in_pixel);
-			dstMat[idx] = convert_int_sat(scalar.x);
-		}
-}
-__kernel void set_to_without_mask_C4_D4(float4 scalar,__global int4 * dstMat,
-        int cols,int rows,int dstStep_in_pixel,int offset_in_pixel)
-{
-		int x=get_global_id(0);
-		int y=get_global_id(1);
-		if ( (x < cols) & (y < rows))
-		{
-		    int idx = mad24(y,dstStep_in_pixel,x+ offset_in_pixel);
-			dstMat[idx] = convert_int4_sat(scalar);
-		}
-}
-
-__kernel void set_to_without_mask_C1_D5(float4 scalar,__global float * dstMat,
-        int cols,int rows,int dstStep_in_pixel,int offset_in_pixel)
-{
-		int x=get_global_id(0);
-		int y=get_global_id(1);
-		if ( (x < cols) & (y < rows))
-		{
-		    int idx = mad24(y,dstStep_in_pixel,x+ offset_in_pixel);
-			dstMat[idx] = scalar.x;
-		}
-}
-__kernel void set_to_without_mask_C4_D5(float4 scalar,__global float4 * dstMat,
-        int cols,int rows,int dstStep_in_pixel,int offset_in_pixel)
-{
-		int x=get_global_id(0);
-		int y=get_global_id(1);
-		if ( (x < cols) & (y < rows))
-		{
-		    int idx = mad24(y,dstStep_in_pixel,x+ offset_in_pixel);
-			dstMat[idx] = scalar;
-		}
-}
-

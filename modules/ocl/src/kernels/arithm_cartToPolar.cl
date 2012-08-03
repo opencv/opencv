@@ -49,6 +49,10 @@
 
 #define CV_PI   3.1415926535897932384626433832795
 
+#ifndef DBL_EPSILON
+#define DBL_EPSILON 0x1.0p-52
+#endif
+
 __kernel void arithm_cartToPolar_D5 (__global float *src1, int src1_step, int src1_offset,
                                      __global float *src2, int src2_step, int src2_offset,
                                      __global float *dst1, int dst1_step, int dst1_offset, //magnitude

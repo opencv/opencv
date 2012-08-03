@@ -578,7 +578,6 @@ void olbp_(InputArray _src, OutputArray _dst) {
     }
 }
 
-
 //------------------------------------------------------------------------------
 // cv::elbp
 //------------------------------------------------------------------------------
@@ -622,15 +621,19 @@ inline void elbp_(InputArray _src, OutputArray _dst, int radius, int neighbors) 
 
 static void elbp(InputArray src, OutputArray dst, int radius, int neighbors)
 {
-    switch (src.type()) {
-        case CV_8SC1:   elbp_<char>(src,dst, radius, neighbors); break;
-        case CV_8UC1:   elbp_<unsigned char>(src, dst, radius, neighbors); break;
-        case CV_16SC1:  elbp_<short>(src,dst, radius, neighbors); break;
-        case CV_16UC1:  elbp_<unsigned short>(src,dst, radius, neighbors); break;
-        case CV_32SC1:  elbp_<int>(src,dst, radius, neighbors); break;
-        case CV_32FC1:  elbp_<float>(src,dst, radius, neighbors); break;
-        case CV_64FC1:  elbp_<double>(src,dst, radius, neighbors); break;
-        default: break;
+    int type = src.type();
+    switch (type) {
+    case CV_8SC1:   elbp_<char>(src,dst, radius, neighbors); break;
+    case CV_8UC1:   elbp_<unsigned char>(src, dst, radius, neighbors); break;
+    case CV_16SC1:  elbp_<short>(src,dst, radius, neighbors); break;
+    case CV_16UC1:  elbp_<unsigned short>(src,dst, radius, neighbors); break;
+    case CV_32SC1:  elbp_<int>(src,dst, radius, neighbors); break;
+    case CV_32FC1:  elbp_<float>(src,dst, radius, neighbors); break;
+    case CV_64FC1:  elbp_<double>(src,dst, radius, neighbors); break;
+    default:
+        string error_msg = format("Using Original Local Binary Patterns for feature extraction only works on single-channel images (given %d). Please pass the image data as a grayscale image!", type);
+        CV_Error(CV_StsNotImplemented, error_msg);
+        break;
     }
 }
 
