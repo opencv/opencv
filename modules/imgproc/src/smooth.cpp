@@ -1292,22 +1292,22 @@ class BilateralFilter_8u_Invoker :
     public ParallelLoopBody
 {
 public:
-    BilateralFilter_8u_Invoker(const Mat &_src, Mat& _dst, Mat _temp, int _radius, int _maxk,
+    BilateralFilter_8u_Invoker(Mat& _dest, const Mat& _temp, int _radius, int _maxk,
         int* _space_ofs, float *_space_weight, float *_color_weight) :
-        ParallelLoopBody(), src(_src), dst(_dst), temp(_temp), radius(_radius),
+        ParallelLoopBody(), dest(&_dest), temp(&_temp), radius(_radius),
         maxk(_maxk), space_ofs(_space_ofs), space_weight(_space_weight), color_weight(_color_weight)
     {
     }
     
     virtual void operator() (const Range& range) const
     {
-        int i, j, cn = src.channels(), k;
-        Size size = src.size();
+        int i, j, cn = dest->channels(), k;
+        Size size = dest->size();
         
         for( i = range.start; i < range.end; i++ )
         {
-            const uchar* sptr = temp.data + (i+radius)*temp.step + radius*cn;
-            uchar* dptr = dst.data + i*dst.step;
+            const uchar* sptr = temp->ptr(i+radius) + radius*cn;
+            uchar* dptr = dest->ptr(i);
             
             if( cn == 1 )
             {
@@ -1353,9 +1353,9 @@ public:
     }
     
 private:
-    const Mat& src;
-    Mat &dst, temp;
-    int radius, maxk, * space_ofs;
+    const Mat *temp;
+    Mat *dest;
+    int radius, maxk, *space_ofs;
     float *space_weight, *color_weight;
 };
 
@@ -1412,7 +1412,7 @@ bilateralFilter_8u( const Mat& src, Mat& dst, int d,
             space_ofs[maxk++] = (int)(i*temp.step + j*cn);
         }
     
-    BilateralFilter_8u_Invoker body(src, dst, temp, radius, maxk, space_ofs, space_weight, color_weight);
+    BilateralFilter_8u_Invoker body(dst, temp, radius, maxk, space_ofs, space_weight, color_weight);
     parallel_for_(Range(0, size.height), body);
 }
 
@@ -1423,22 +1423,21 @@ class BilateralFilter_32f_Invoker :
 public:
 
     BilateralFilter_32f_Invoker(int _cn, int _radius, int _maxk, int *_space_ofs,
-        Mat _temp, Mat *_dest, Size _size,
-        float _scale_index, float *_space_weight, float *_expLUT) :
+        const Mat& _temp, Mat& _dest, float _scale_index, float *_space_weight, float *_expLUT) :
         ParallelLoopBody(), cn(_cn), radius(_radius), maxk(_maxk), space_ofs(_space_ofs),
-        temp(_temp), dest(_dest), size(_size), scale_index(_scale_index), space_weight(_space_weight), expLUT(_expLUT)
+        temp(&_temp), dest(&_dest), scale_index(_scale_index), space_weight(_space_weight), expLUT(_expLUT)
     {
     }
 
     virtual void operator() (const Range& range) const
     {
-        Mat& dst = *dest;
         int i, j, k;
+        Size size = dest->size();
 
         for( i = range.start; i < range.end; i++ )
         {
-            const float* sptr = (const float*)(temp.data + (i+radius)*temp.step) + radius*cn;
-            float* dptr = (float*)(dst.data + i*dst.step);
+            const float* sptr = temp->ptr<float>(i+radius) + radius*cn;
+            float* dptr = dest->ptr<float>(i);
 
             if( cn == 1 )
             {
@@ -1490,8 +1489,8 @@ public:
 
 private:
     int cn, radius, maxk, *space_ofs;
-    Mat temp, *dest;
-    Size size;
+    const Mat* temp;
+    Mat *dest;
     float scale_index, *space_weight, *expLUT;
 };
 
@@ -1581,7 +1580,7 @@ bilateralFilter_32f( const Mat& src, Mat& dst, int d,
 
     // parallel_for usage
 
-    BilateralFilter_32f_Invoker body(cn, radius, maxk, space_ofs, temp, &dst, size, scale_index, space_weight, expLUT);
+    BilateralFilter_32f_Invoker body(cn, radius, maxk, space_ofs, temp, dst, scale_index, space_weight, expLUT);
     parallel_for_(Range(0, size.height), body);
 }
 

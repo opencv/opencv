@@ -90,8 +90,8 @@ namespace cvtest
 
     int CV_BilateralFilterTest::getRandInt(RNG& rng, int min_value, int max_value) const
     {
-        double rand_value = rng.uniform(log(min_value), log(max_value + 1));
-        return cvRound(exp(rand_value));
+        double rand_value = rng.uniform(log((double)min_value), log((double)max_value + 1));
+        return cvRound(exp((double)rand_value));
     }
 
     void CV_BilateralFilterTest::reference_bilateral_filter(const Mat &src, Mat &dst, int d, 
