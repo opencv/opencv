@@ -6,7 +6,7 @@
 // Third party copyrights are property of their respective owners.
 //
 // @Authors
-//    Zero Lin, zero.lin@amd.com
+//    Niko Li, newlife20080214@gmail.com
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
 //
@@ -32,106 +32,107 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //
-
-__kernel void convertC3C4_D0(__global const char4 * restrict src, __global char4 *dst, int cols, int rows, 
-					int srcStep, int dstStep)
+//#pragma OPENCL EXTENSION cl_amd_printf : enable
+__kernel void convertC3C4(__global const GENTYPE4 * restrict src, __global GENTYPE4 *dst, int cols, int rows, 
+					int dstStep_in_piexl,int pixel_end)
 {
 	int id = get_global_id(0);
-	int y = id / cols;
-	int x = id % cols;
+	//int pixel_end = mul24(cols -1 , rows -1);
+	int3 pixelid = (int3)(mul24(id,3),mad24(id,3,1),mad24(id,3,2));
+	pixelid = clamp(pixelid,0,pixel_end);
+	GENTYPE4 pixel0, pixel1, pixel2, outpix0,outpix1,outpix2,outpix3;
+	pixel0 = src[pixelid.x];
+	pixel1 = src[pixelid.y];
+	pixel2 = src[pixelid.z];
 
-	int d = y * srcStep + x * 3;
-	char8 data = (char8)(src[d>>2], src[(d>>2) + 1]);
-	char temp[8] = {data.s0, data.s1, data.s2, data.s3, data.s4, data.s5, data.s6, data.s7};
-	
-	int start = d & 3;
-	char4 ndata = (char4)(temp[start], temp[start + 1], temp[start + 2], 0);
-	if(y < rows)
-		dst[y * dstStep + x] = ndata;
-}
 
-__kernel void convertC3C4_D1(__global const short* restrict src, __global short4 *dst, int cols, int rows, 
-					int srcStep, int dstStep)
-{
-	int id = get_global_id(0);
-	int y = id / cols;
-	int x = id % cols;
+	outpix0 = (GENTYPE4)(pixel0.x,pixel0.y,pixel0.z,0);
+	outpix1 = (GENTYPE4)(pixel0.w,pixel1.x,pixel1.y,0);
+	outpix2 = (GENTYPE4)(pixel1.z,pixel1.w,pixel2.x,0);
+	outpix3 = (GENTYPE4)(pixel2.y,pixel2.z,pixel2.w,0);
 
-	int d = (y * srcStep + x * 6)>>1;
-	short4 data = *(__global short4 *)(src + ((d>>1)<<1));
-	short temp[4] = {data.s0, data.s1, data.s2, data.s3};
-	
-	int start = d & 1;
-	short4 ndata = (short4)(temp[start], temp[start + 1], temp[start + 2], 0);
-	if(y < rows)
-		dst[y * dstStep + x] = ndata;
-}
-
-__kernel void convertC3C4_D2(__global const int * restrict src, __global int4 *dst, int cols, int rows, 
-					int srcStep, int dstStep)
-{
-	int id = get_global_id(0);
-	int y = id / cols;
-	int x = id % cols;
-
-	int d = (y * srcStep + x * 12)>>2;
-	int4 data = *(__global int4 *)(src + d);
-	data.z = 0;
-	
-	if(y < rows)
-		dst[y * dstStep + x] = data;
-}
-
-__kernel void convertC4C3_D2(__global const int4 * restrict src, __global int *dst, int cols, int rows, 
-					int srcStep, int dstStep)
-{
-	int id = get_global_id(0);
-	int y = id / cols;
-	int x = id % cols;
-
-	int4 data = src[y * srcStep + x];
-	
-	if(y < rows)
+	int4 outy = (id<<2)/cols;
+	int4 outx = (id<<2)%cols;
+	outx.y++;
+	outx.z+=2;
+	outx.w+=3;
+	outy = select(outy,outy+1,outx>=cols);
+	outx = select(outx,outx-cols,outx>=cols);
+	//outpix3 = select(outpix3, outpix0, (uchar4)(outy.w>=rows));
+	//outpix2 = select(outpix2, outpix0, (uchar4)(outy.z>=rows));
+	//outpix1 = select(outpix1, outpix0, (uchar4)(outy.y>=rows));
+	//outx = select(outx,(int4)outx.x,outy>=rows);
+	//outy = select(outy,(int4)outy.x,outy>=rows);
+	int4 addr = mad24(outy,dstStep_in_piexl,outx);
+	if(outx.w<cols && outy.w<rows)
 	{
-		int d = y * dstStep + x * 3;
-		dst[d] = data.x;
-		dst[d + 1] = data.y;
-		dst[d + 2] = data.z;
+		dst[addr.x] = outpix0;
+		dst[addr.y] = outpix1;
+		dst[addr.z] = outpix2;
+		dst[addr.w] = outpix3;
 	}
+	else if(outx.z<cols && outy.z<rows)
+	{
+		dst[addr.x] = outpix0;
+		dst[addr.y] = outpix1;
+		dst[addr.z] = outpix2;
+	}
+	else if(outx.y<cols && outy.y<rows)
+	{
+		dst[addr.x] = outpix0;
+		dst[addr.y] = outpix1;
+	}
+	else if(outx.x<cols && outy.x<rows)
+	{
+		dst[addr.x] = outpix0;
+	}	
 }
 
-__kernel void convertC4C3_D1(__global const short4 * restrict src, __global short *dst, int cols, int rows, 
-					int srcStep, int dstStep)
+
+
+
+__kernel void convertC4C3(__global const GENTYPE4 * restrict src, __global GENTYPE4 *dst, int cols, int rows, 
+					int srcStep_in_pixel,int pixel_end)
 {
-	int id = get_global_id(0);
+	int id = get_global_id(0)<<2;
 	int y = id / cols;
 	int x = id % cols;
+	int4 x4 = (int4)(x,x+1,x+2,x+3);
+	int4 y4 = select((int4)y,(int4)(y+1),x4>=(int4)cols);
+	x4 = select(x4,x4-(int4)cols,x4>=(int4)cols);
+	int4 addr = mad24(y4,(int4)srcStep_in_pixel,x4);
+	GENTYPE4 pixel0,pixel1,pixel2,pixel3, outpixel1, outpixel2;
+	pixel0 = src[addr.x];
+	pixel1 = src[addr.y];
+	pixel2 = src[addr.z];
+	pixel3 = src[addr.w];
 
-	short4 data = src[y * srcStep + x];
-	
-	if(y < rows)
+	pixel0.w = pixel1.x;
+	outpixel1.x = pixel1.y;
+	outpixel1.y = pixel1.z;
+	outpixel1.z = pixel2.x;
+	outpixel1.w = pixel2.y;
+	outpixel2.x = pixel2.z;
+	outpixel2.y = pixel3.x;
+	outpixel2.z = pixel3.y;
+	outpixel2.w = pixel3.z;
+	int4 outaddr = mul24(id>>2 , 3);
+	outaddr.y++;
+	outaddr.z+=2;
+	//printf("%d    ",outaddr.z);
+	if(outaddr.z <= pixel_end)
 	{
-		int d = y * dstStep + x * 3;
-		dst[d] = data.x;
-		dst[d + 1] = data.y;
-		dst[d + 2] = data.z;
+		dst[outaddr.x] = pixel0;
+		dst[outaddr.y] = outpixel1;
+		dst[outaddr.z] = outpixel2;
 	}
-}
-
-__kernel void convertC4C3_D0(__global const char4 * restrict src, __global char *dst, int cols, int rows, 
-					int srcStep, int dstStep)
-{
-	int id = get_global_id(0);
-	int y = id / cols;
-	int x = id % cols;
-
-	char4 data = src[y * srcStep + x];
-	
-	if(y < rows)
+	else if(outaddr.y <= pixel_end)
 	{
-		int d = y * dstStep + x * 3;
-		dst[d] = data.x;
-		dst[d + 1] = data.y;
-		dst[d + 2] = data.z;
+		dst[outaddr.x] = pixel0;
+		dst[outaddr.y] = outpixel1;
 	}
+	else if(outaddr.x <= pixel_end)
+	{
+		dst[outaddr.x] = pixel0;
+	}	
 }

@@ -410,7 +410,11 @@ namespace cv
             float ify = 1. / fy;
             double ifx_d = 1. / fx;
             double ify_d = 1. / fy;
-
+			int srcStep_in_pixel = src.step1() / src.channels();
+			int srcoffset_in_pixel = src.offset / src.elemSize();
+			int dstStep_in_pixel = dst.step1() / dst.channels();
+			int dstoffset_in_pixel = dst.offset / dst.elemSize();
+			//printf("%d %d\n",src.step1() , dst.elemSize());
             string kernelName;
             if(interpolation == INTER_LINEAR)
                 kernelName = "resizeLN";
@@ -438,25 +442,33 @@ namespace cv
             {
                 args.push_back( make_pair(sizeof(cl_mem), (void *)&dst.data));
                 args.push_back( make_pair(sizeof(cl_mem), (void *)&src.data));
-                args.push_back( make_pair(sizeof(cl_int), (void *)&dst.offset));
-                args.push_back( make_pair(sizeof(cl_int), (void *)&src.offset));
-                args.push_back( make_pair(sizeof(cl_int), (void *)&dst.step));
-                args.push_back( make_pair(sizeof(cl_int), (void *)&src.step));
+                args.push_back( make_pair(sizeof(cl_int), (void *)&dstoffset_in_pixel));
+                args.push_back( make_pair(sizeof(cl_int), (void *)&srcoffset_in_pixel));
+                args.push_back( make_pair(sizeof(cl_int), (void *)&dstStep_in_pixel));
+                args.push_back( make_pair(sizeof(cl_int), (void *)&srcStep_in_pixel));
                 args.push_back( make_pair(sizeof(cl_int), (void *)&src.cols));
                 args.push_back( make_pair(sizeof(cl_int), (void *)&src.rows));
                 args.push_back( make_pair(sizeof(cl_int), (void *)&dst.cols));
                 args.push_back( make_pair(sizeof(cl_int), (void *)&dst.rows));
-                args.push_back( make_pair(sizeof(cl_double), (void *)&ifx_d));
-                args.push_back( make_pair(sizeof(cl_double), (void *)&ify_d));
+                if(src.clCxt -> impl -> double_support != 0)
+                {
+					args.push_back( make_pair(sizeof(cl_double), (void *)&ifx_d));
+					args.push_back( make_pair(sizeof(cl_double), (void *)&ify_d));
+                }
+                else
+                {
+					args.push_back( make_pair(sizeof(cl_float), (void *)&ifx));
+					args.push_back( make_pair(sizeof(cl_float), (void *)&ify));
+                }
             }
             else
             {
                 args.push_back( make_pair(sizeof(cl_mem), (void *)&dst.data));
                 args.push_back( make_pair(sizeof(cl_mem), (void *)&src.data));
-                args.push_back( make_pair(sizeof(cl_int), (void *)&dst.offset));
-                args.push_back( make_pair(sizeof(cl_int), (void *)&src.offset));
-                args.push_back( make_pair(sizeof(cl_int), (void *)&dst.step));
-                args.push_back( make_pair(sizeof(cl_int), (void *)&src.step));
+                args.push_back( make_pair(sizeof(cl_int), (void *)&dstoffset_in_pixel));
+                args.push_back( make_pair(sizeof(cl_int), (void *)&srcoffset_in_pixel));
+                args.push_back( make_pair(sizeof(cl_int), (void *)&dstStep_in_pixel));
+                args.push_back( make_pair(sizeof(cl_int), (void *)&srcStep_in_pixel));
                 args.push_back( make_pair(sizeof(cl_int), (void *)&src.cols));
                 args.push_back( make_pair(sizeof(cl_int), (void *)&src.rows));
                 args.push_back( make_pair(sizeof(cl_int), (void *)&dst.cols));

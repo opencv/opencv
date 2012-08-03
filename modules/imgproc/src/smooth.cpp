@@ -1288,48 +1288,119 @@ void cv::medianBlur( InputArray _src0, OutputArray _dst, int ksize )
 namespace cv
 {
 
+class BilateralFilter_8u_Invoker :
+    public ParallelLoopBody
+{
+public:
+    BilateralFilter_8u_Invoker(const Mat &_src, Mat& _dst, Mat _temp, int _radius, int _maxk,
+        int* _space_ofs, float *_space_weight, float *_color_weight) :
+        ParallelLoopBody(), src(_src), dst(_dst), temp(_temp), radius(_radius),
+        maxk(_maxk), space_ofs(_space_ofs), space_weight(_space_weight), color_weight(_color_weight)
+    {
+    }
+    
+    virtual void operator() (const Range& range) const
+    {
+        int i, j, cn = src.channels(), k;
+        Size size = src.size();
+        
+        for( i = range.start; i < range.end; i++ )
+        {
+            const uchar* sptr = temp.data + (i+radius)*temp.step + radius*cn;
+            uchar* dptr = dst.data + i*dst.step;
+            
+            if( cn == 1 )
+            {
+                for( j = 0; j < size.width; j++ )
+                {
+                    float sum = 0, wsum = 0;
+                    int val0 = sptr[j];
+                    for( k = 0; k < maxk; k++ )
+                    {
+                        int val = sptr[j + space_ofs[k]];
+                        float w = space_weight[k]*color_weight[std::abs(val - val0)];
+                        sum += val*w;
+                        wsum += w;
+                    }
+                    // overflow is not possible here => there is no need to use CV_CAST_8U
+                    dptr[j] = (uchar)cvRound(sum/wsum);
+                }
+            }
+            else
+            {
+                assert( cn == 3 );
+                for( j = 0; j < size.width*3; j += 3 )
+                {
+                    float sum_b = 0, sum_g = 0, sum_r = 0, wsum = 0;
+                    int b0 = sptr[j], g0 = sptr[j+1], r0 = sptr[j+2];
+                    for( k = 0; k < maxk; k++ )
+                    {
+                        const uchar* sptr_k = sptr + j + space_ofs[k];
+                        int b = sptr_k[0], g = sptr_k[1], r = sptr_k[2];
+                        float w = space_weight[k]*color_weight[std::abs(b - b0) +
+                                                               std::abs(g - g0) + std::abs(r - r0)];
+                        sum_b += b*w; sum_g += g*w; sum_r += r*w;
+                        wsum += w;
+                    }
+                    wsum = 1.f/wsum;
+                    b0 = cvRound(sum_b*wsum);
+                    g0 = cvRound(sum_g*wsum);
+                    r0 = cvRound(sum_r*wsum);
+                    dptr[j] = (uchar)b0; dptr[j+1] = (uchar)g0; dptr[j+2] = (uchar)r0;
+                }
+            }
+        }
+    }
+    
+private:
+    const Mat& src;
+    Mat &dst, temp;
+    int radius, maxk, * space_ofs;
+    float *space_weight, *color_weight;
+};
+
 static void
 bilateralFilter_8u( const Mat& src, Mat& dst, int d,
-                    double sigma_color, double sigma_space,
-                    int borderType )
+    double sigma_color, double sigma_space,
+    int borderType )
 {
     int cn = src.channels();
-    int i, j, k, maxk, radius;
+    int i, j, maxk, radius;
     Size size = src.size();
-
+    
     CV_Assert( (src.type() == CV_8UC1 || src.type() == CV_8UC3) &&
-        src.type() == dst.type() && src.size() == dst.size() &&
-        src.data != dst.data );
-
+              src.type() == dst.type() && src.size() == dst.size() &&
+              src.data != dst.data );
+    
     if( sigma_color <= 0 )
         sigma_color = 1;
     if( sigma_space <= 0 )
         sigma_space = 1;
-
+    
     double gauss_color_coeff = -0.5/(sigma_color*sigma_color);
     double gauss_space_coeff = -0.5/(sigma_space*sigma_space);
-
+    
     if( d <= 0 )
         radius = cvRound(sigma_space*1.5);
     else
         radius = d/2;
     radius = MAX(radius, 1);
     d = radius*2 + 1;
-
+    
     Mat temp;
     copyMakeBorder( src, temp, radius, radius, radius, radius, borderType );
-
+    
     vector<float> _color_weight(cn*256);
     vector<float> _space_weight(d*d);
     vector<int> _space_ofs(d*d);
     float* color_weight = &_color_weight[0];
     float* space_weight = &_space_weight[0];
     int* space_ofs = &_space_ofs[0];
-
+    
     // initialize color-related bilateral filter coefficients
     for( i = 0; i < 256*cn; i++ )
         color_weight[i] = (float)std::exp(i*i*gauss_color_coeff);
-
+    
     // initialize space-related bilateral filter coefficients
     for( i = -radius, maxk = 0; i <= radius; i++ )
         for( j = -radius; j <= radius; j++ )
@@ -1340,55 +1411,89 @@ bilateralFilter_8u( const Mat& src, Mat& dst, int d,
             space_weight[maxk] = (float)std::exp(r*r*gauss_space_coeff);
             space_ofs[maxk++] = (int)(i*temp.step + j*cn);
         }
+    
+    BilateralFilter_8u_Invoker body(src, dst, temp, radius, maxk, space_ofs, space_weight, color_weight);
+    parallel_for_(Range(0, size.height), body);
+}
 
-    for( i = 0; i < size.height; i++ )
+
+class BilateralFilter_32f_Invoker :
+    public ParallelLoopBody
+{
+public:
+
+    BilateralFilter_32f_Invoker(int _cn, int _radius, int _maxk, int *_space_ofs,
+        Mat _temp, Mat *_dest, Size _size,
+        float _scale_index, float *_space_weight, float *_expLUT) :
+        ParallelLoopBody(), cn(_cn), radius(_radius), maxk(_maxk), space_ofs(_space_ofs),
+        temp(_temp), dest(_dest), size(_size), scale_index(_scale_index), space_weight(_space_weight), expLUT(_expLUT)
     {
-        const uchar* sptr = temp.data + (i+radius)*temp.step + radius*cn;
-        uchar* dptr = dst.data + i*dst.step;
+    }
 
-        if( cn == 1 )
+    virtual void operator() (const Range& range) const
+    {
+        Mat& dst = *dest;
+        int i, j, k;
+
+        for( i = range.start; i < range.end; i++ )
         {
-            for( j = 0; j < size.width; j++ )
+            const float* sptr = (const float*)(temp.data + (i+radius)*temp.step) + radius*cn;
+            float* dptr = (float*)(dst.data + i*dst.step);
+
+            if( cn == 1 )
             {
-                float sum = 0, wsum = 0;
-                int val0 = sptr[j];
-                for( k = 0; k < maxk; k++ )
+                for( j = 0; j < size.width; j++ )
                 {
-                    int val = sptr[j + space_ofs[k]];
-                    float w = space_weight[k]*color_weight[std::abs(val - val0)];
-                    sum += val*w;
-                    wsum += w;
+                    float sum = 0, wsum = 0;
+                    float val0 = sptr[j];
+                    for( k = 0; k < maxk; k++ )
+                    {
+                        float val = sptr[j + space_ofs[k]];
+                        float alpha = (float)(std::abs(val - val0)*scale_index);
+                        int idx = cvFloor(alpha);
+                        alpha -= idx;
+                        float w = space_weight[k]*(expLUT[idx] + alpha*(expLUT[idx+1] - expLUT[idx]));
+                        sum += val*w;
+                        wsum += w;
+                    }
+                    dptr[j] = (float)(sum/wsum);
                 }
-                // overflow is not possible here => there is no need to use CV_CAST_8U
-                dptr[j] = (uchar)cvRound(sum/wsum);
             }
-        }
-        else
-        {
-            assert( cn == 3 );
-            for( j = 0; j < size.width*3; j += 3 )
+            else
             {
-                float sum_b = 0, sum_g = 0, sum_r = 0, wsum = 0;
-                int b0 = sptr[j], g0 = sptr[j+1], r0 = sptr[j+2];
-                for( k = 0; k < maxk; k++ )
+                assert( cn == 3 );
+                for( j = 0; j < size.width*3; j += 3 )
                 {
-                    const uchar* sptr_k = sptr + j + space_ofs[k];
-                    int b = sptr_k[0], g = sptr_k[1], r = sptr_k[2];
-                    float w = space_weight[k]*color_weight[std::abs(b - b0) +
-                        std::abs(g - g0) + std::abs(r - r0)];
-                    sum_b += b*w; sum_g += g*w; sum_r += r*w;
-                    wsum += w;
+                    float sum_b = 0, sum_g = 0, sum_r = 0, wsum = 0;
+                    float b0 = sptr[j], g0 = sptr[j+1], r0 = sptr[j+2];
+                    for( k = 0; k < maxk; k++ )
+                    {
+                        const float* sptr_k = sptr + j + space_ofs[k];
+                        float b = sptr_k[0], g = sptr_k[1], r = sptr_k[2];
+                        float alpha = (float)((std::abs(b - b0) +
+                            std::abs(g - g0) + std::abs(r - r0))*scale_index);
+                        int idx = cvFloor(alpha);
+                        alpha -= idx;
+                        float w = space_weight[k]*(expLUT[idx] + alpha*(expLUT[idx+1] - expLUT[idx]));
+                        sum_b += b*w; sum_g += g*w; sum_r += r*w;
+                        wsum += w;
+                    }
+                    wsum = 1.f/wsum;
+                    b0 = sum_b*wsum;
+                    g0 = sum_g*wsum;
+                    r0 = sum_r*wsum;
+                    dptr[j] = b0; dptr[j+1] = g0; dptr[j+2] = r0;
                 }
-                wsum = 1.f/wsum;
-                b0 = cvRound(sum_b*wsum);
-                g0 = cvRound(sum_g*wsum);
-                r0 = cvRound(sum_r*wsum);
-                dptr[j] = (uchar)b0; dptr[j+1] = (uchar)g0; dptr[j+2] = (uchar)r0;
             }
         }
     }
-}
 
+private:
+    int cn, radius, maxk, *space_ofs;
+    Mat temp, *dest;
+    Size size;
+    float scale_index, *space_weight, *expLUT;
+};
 
 static void
 bilateralFilter_32f( const Mat& src, Mat& dst, int d,
@@ -1396,7 +1501,7 @@ bilateralFilter_32f( const Mat& src, Mat& dst, int d,
                      int borderType )
 {
     int cn = src.channels();
-    int i, j, k, maxk, radius;
+    int i, j, maxk, radius;
     double minValSrc=-1, maxValSrc=1;
     const int kExpNumBinsPerChannel = 1 << 12;
     int kExpNumBins = 0;
@@ -1474,57 +1579,10 @@ bilateralFilter_32f( const Mat& src, Mat& dst, int d,
             space_ofs[maxk++] = (int)(i*(temp.step/sizeof(float)) + j*cn);
         }
 
-    for( i = 0; i < size.height; i++ )
-    {
-        const float* sptr = (const float*)(temp.data + (i+radius)*temp.step) + radius*cn;
-        float* dptr = (float*)(dst.data + i*dst.step);
+    // parallel_for usage
 
-        if( cn == 1 )
-        {
-            for( j = 0; j < size.width; j++ )
-            {
-                float sum = 0, wsum = 0;
-                float val0 = sptr[j];
-                for( k = 0; k < maxk; k++ )
-                {
-                    float val = sptr[j + space_ofs[k]];
-                    float alpha = (float)(std::abs(val - val0)*scale_index);
-                    int idx = cvFloor(alpha);
-                    alpha -= idx;
-                    float w = space_weight[k]*(expLUT[idx] + alpha*(expLUT[idx+1] - expLUT[idx]));
-                    sum += val*w;
-                    wsum += w;
-                }
-                dptr[j] = (float)(sum/wsum);
-            }
-        }
-        else
-        {
-            assert( cn == 3 );
-            for( j = 0; j < size.width*3; j += 3 )
-            {
-                float sum_b = 0, sum_g = 0, sum_r = 0, wsum = 0;
-                float b0 = sptr[j], g0 = sptr[j+1], r0 = sptr[j+2];
-                for( k = 0; k < maxk; k++ )
-                {
-                    const float* sptr_k = sptr + j + space_ofs[k];
-                    float b = sptr_k[0], g = sptr_k[1], r = sptr_k[2];
-                    float alpha = (float)((std::abs(b - b0) +
-                        std::abs(g - g0) + std::abs(r - r0))*scale_index);
-                    int idx = cvFloor(alpha);
-                    alpha -= idx;
-                    float w = space_weight[k]*(expLUT[idx] + alpha*(expLUT[idx+1] - expLUT[idx]));
-                    sum_b += b*w; sum_g += g*w; sum_r += r*w;
-                    wsum += w;
-                }
-                wsum = 1.f/wsum;
-                b0 = sum_b*wsum;
-                g0 = sum_g*wsum;
-                r0 = sum_r*wsum;
-                dptr[j] = b0; dptr[j+1] = g0; dptr[j+2] = r0;
-            }
-        }
-    }
+    BilateralFilter_32f_Invoker body(cn, radius, maxk, space_ofs, temp, &dst, size, scale_index, space_weight, expLUT);
+    parallel_for_(Range(0, size.height), body);
 }
 
 }
