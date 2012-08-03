@@ -45,36 +45,45 @@
 
 #if defined (DOUBLE_SUPPORT)
 #pragma OPENCL EXTENSION cl_khr_fp64:enable
+typedef double F ;
+typedef double4 F4;
+#define convert_F4 convert_double4
+#define convert_F  convert_double
+#else 
+typedef float F;
+typedef float4 F4;
+#define convert_F4 convert_float4
+#define convert_F  convert_float
 #endif
 
-uchar round2_uchar(double v){
+uchar round2_uchar(F v){
 
-    uchar v1 = convert_uchar_sat(v);
-    uchar v2 = convert_uchar_sat(v+(v>=0 ? 0.5 : -0.5));
+    uchar v1 = convert_uchar_sat(round(v));
+    //uchar v2 = convert_uchar_sat(v+(v>=0 ? 0.5 : -0.5));
 
-    return (((v-v1)==0.5) && (v1%2==0)) ? v1 : v2;
+    return v1;//(((v-v1)==0.5) && (v1%2==0)) ? v1 : v2;
 }
 
-ushort round2_ushort(double v){
+ushort round2_ushort(F v){
 
-    ushort v1 = convert_ushort_sat(v);
-    ushort v2 = convert_ushort_sat(v+(v>=0 ? 0.5 : -0.5));
+    ushort v1 = convert_ushort_sat(round(v));
+    //ushort v2 = convert_ushort_sat(v+(v>=0 ? 0.5 : -0.5));
 
-    return (((v-v1)==0.5) && (v1%2==0)) ? v1 : v2;
+    return v1;//(((v-v1)==0.5) && (v1%2==0)) ? v1 : v2;
 }
-short round2_short(double v){
+short round2_short(F v){
 
-    short v1 = convert_short_sat(v);
-    short v2 = convert_short_sat(v+(v>=0 ? 0.5 : -0.5));
+    short v1 = convert_short_sat(round(v));
+    //short v2 = convert_short_sat(v+(v>=0 ? 0.5 : -0.5));
 
-    return (((v-v1)==0.5) && (v1%2==0)) ? v1 : v2;
+    return v1;//(((v-v1)==0.5) && (v1%2==0)) ? v1 : v2;
 }
-int round2_int(double v){
+int round2_int(F v){
 
-    int v1 = convert_int_sat(v);
-    int v2 = convert_int_sat(v+(v>=0 ? 0.5 : -0.5));
+    int v1 = convert_int_sat(round(v));
+    //int v2 = convert_int_sat(v+(v>=0 ? 0.5 : -0.5));
 
-    return (((v-v1)==0.5) && (v1%2==0)) ? v1 : v2;
+    return v1;//(((v-v1)==0.5) && (v1%2==0)) ? v1 : v2;
 }
 ///////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////divide///////////////////////////////////////////////////
@@ -83,7 +92,7 @@ int round2_int(double v){
 __kernel void arithm_div_D0 (__global uchar *src1, int src1_step, int src1_offset,
                              __global uchar *src2, int src2_step, int src2_offset,
                              __global uchar *dst,  int dst_step,  int dst_offset,
-                             int rows, int cols, int dst_step1, double scalar)
+                             int rows, int cols, int dst_step1, F scalar)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
@@ -104,13 +113,13 @@ __kernel void arithm_div_D0 (__global uchar *src1, int src1_step, int src1_offse
         uchar4 src2_data = vload4(0, src2 + src2_index);
         uchar4 dst_data  = *((__global uchar4 *)(dst + dst_index));
 
-        double4 tmp      = convert_double4(src1_data) * scalar;
+        F4 tmp      = convert_F4(src1_data) * scalar;
 
         uchar4 tmp_data;
-        tmp_data.x = ((tmp.x == 0) || (src2_data.x == 0)) ? 0 : round2_uchar(tmp.x / (double)src2_data.x);
-        tmp_data.y = ((tmp.y == 0) || (src2_data.y == 0)) ? 0 : round2_uchar(tmp.y / (double)src2_data.y);
-        tmp_data.z = ((tmp.z == 0) || (src2_data.z == 0)) ? 0 : round2_uchar(tmp.z / (double)src2_data.z);
-        tmp_data.w = ((tmp.w == 0) || (src2_data.w == 0)) ? 0 : round2_uchar(tmp.w / (double)src2_data.w);
+        tmp_data.x = ((tmp.x == 0) || (src2_data.x == 0)) ? 0 : round2_uchar(tmp.x / (F)src2_data.x);
+        tmp_data.y = ((tmp.y == 0) || (src2_data.y == 0)) ? 0 : round2_uchar(tmp.y / (F)src2_data.y);
+        tmp_data.z = ((tmp.z == 0) || (src2_data.z == 0)) ? 0 : round2_uchar(tmp.z / (F)src2_data.z);
+        tmp_data.w = ((tmp.w == 0) || (src2_data.w == 0)) ? 0 : round2_uchar(tmp.w / (F)src2_data.w);
 
         dst_data.x = ((dst_index + 0 >= dst_start) && (dst_index + 0 < dst_end)) ? tmp_data.x : dst_data.x;
         dst_data.y = ((dst_index + 1 >= dst_start) && (dst_index + 1 < dst_end)) ? tmp_data.y : dst_data.y;
@@ -124,7 +133,7 @@ __kernel void arithm_div_D0 (__global uchar *src1, int src1_step, int src1_offse
 __kernel void arithm_div_D2 (__global ushort *src1, int src1_step, int src1_offset,
                              __global ushort *src2, int src2_step, int src2_offset,
                              __global ushort *dst,  int dst_step,  int dst_offset,
-                             int rows, int cols, int dst_step1, double scalar)
+                             int rows, int cols, int dst_step1, F scalar)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
@@ -145,13 +154,13 @@ __kernel void arithm_div_D2 (__global ushort *src1, int src1_step, int src1_offs
         ushort4 src2_data = vload4(0, (__global ushort *)((__global char *)src2 + src2_index));
         ushort4 dst_data = *((__global ushort4 *)((__global char *)dst + dst_index));
 
-        double4 tmp   = convert_double4(src1_data) * scalar;
+        F4 tmp   = convert_F4(src1_data) * scalar;
 
         ushort4 tmp_data;
-        tmp_data.x = ((tmp.x == 0) || (src2_data.x == 0)) ? 0 : round2_ushort(tmp.x / (double)src2_data.x);
-        tmp_data.y = ((tmp.y == 0) || (src2_data.y == 0)) ? 0 : round2_ushort(tmp.y / (double)src2_data.y);
-        tmp_data.z = ((tmp.z == 0) || (src2_data.z == 0)) ? 0 : round2_ushort(tmp.z / (double)src2_data.z);
-        tmp_data.w = ((tmp.w == 0) || (src2_data.w == 0)) ? 0 : round2_ushort(tmp.w / (double)src2_data.w);
+        tmp_data.x = ((tmp.x == 0) || (src2_data.x == 0)) ? 0 : round2_ushort(tmp.x / (F)src2_data.x);
+        tmp_data.y = ((tmp.y == 0) || (src2_data.y == 0)) ? 0 : round2_ushort(tmp.y / (F)src2_data.y);
+        tmp_data.z = ((tmp.z == 0) || (src2_data.z == 0)) ? 0 : round2_ushort(tmp.z / (F)src2_data.z);
+        tmp_data.w = ((tmp.w == 0) || (src2_data.w == 0)) ? 0 : round2_ushort(tmp.w / (F)src2_data.w);
 
         dst_data.x = ((dst_index + 0 >= dst_start) && (dst_index + 0 < dst_end)) ? tmp_data.x : dst_data.x;
         dst_data.y = ((dst_index + 2 >= dst_start) && (dst_index + 2 < dst_end)) ? tmp_data.y : dst_data.y;
@@ -164,7 +173,7 @@ __kernel void arithm_div_D2 (__global ushort *src1, int src1_step, int src1_offs
 __kernel void arithm_div_D3 (__global short *src1, int src1_step, int src1_offset,
                              __global short *src2, int src2_step, int src2_offset,
                              __global short *dst,  int dst_step,  int dst_offset,
-                             int rows, int cols, int dst_step1, double scalar)
+                             int rows, int cols, int dst_step1, F scalar)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
@@ -185,13 +194,13 @@ __kernel void arithm_div_D3 (__global short *src1, int src1_step, int src1_offse
         short4 src2_data = vload4(0, (__global short *)((__global char *)src2 + src2_index));
         short4 dst_data = *((__global short4 *)((__global char *)dst + dst_index));
 
-        double4 tmp   = convert_double4(src1_data) * scalar;
+        F4 tmp   = convert_F4(src1_data) * scalar;
 
         short4 tmp_data;
-        tmp_data.x = ((tmp.x == 0) || (src2_data.x == 0)) ? 0 : round2_short(tmp.x / (double)src2_data.x);
-        tmp_data.y = ((tmp.y == 0) || (src2_data.y == 0)) ? 0 : round2_short(tmp.y / (double)src2_data.y);
-        tmp_data.z = ((tmp.z == 0) || (src2_data.z == 0)) ? 0 : round2_short(tmp.z / (double)src2_data.z);
-        tmp_data.w = ((tmp.w == 0) || (src2_data.w == 0)) ? 0 : round2_short(tmp.w / (double)src2_data.w);
+        tmp_data.x = ((tmp.x == 0) || (src2_data.x == 0)) ? 0 : round2_short(tmp.x / (F)src2_data.x);
+        tmp_data.y = ((tmp.y == 0) || (src2_data.y == 0)) ? 0 : round2_short(tmp.y / (F)src2_data.y);
+        tmp_data.z = ((tmp.z == 0) || (src2_data.z == 0)) ? 0 : round2_short(tmp.z / (F)src2_data.z);
+        tmp_data.w = ((tmp.w == 0) || (src2_data.w == 0)) ? 0 : round2_short(tmp.w / (F)src2_data.w);
 
 
         dst_data.x = ((dst_index + 0 >= dst_start) && (dst_index + 0 < dst_end)) ? tmp_data.x : dst_data.x;
@@ -206,7 +215,7 @@ __kernel void arithm_div_D3 (__global short *src1, int src1_step, int src1_offse
 __kernel void arithm_div_D4 (__global int *src1, int src1_step, int src1_offset,
                              __global int *src2, int src2_step, int src2_offset,
                              __global int *dst,  int dst_step,  int dst_offset,
-                             int rows, int cols, int dst_step1, double scalar)
+                             int rows, int cols, int dst_step1, F scalar)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
@@ -220,8 +229,8 @@ __kernel void arithm_div_D4 (__global int *src1, int src1_step, int src1_offset,
         int data1 = *((__global int *)((__global char *)src1 + src1_index));
         int data2 = *((__global int *)((__global char *)src2 + src2_index));
 
-        double tmp  = convert_double(data1) * scalar;
-        int tmp_data = (tmp == 0 || data2 == 0) ? 0 : round2_int(tmp / (convert_double)(data2));
+        F tmp  = convert_F(data1) * scalar;
+        int tmp_data = (tmp == 0 || data2 == 0) ? 0 : round2_int(tmp / (convert_F)(data2));
 
         *((__global int *)((__global char *)dst + dst_index)) =tmp_data;
     }
@@ -230,7 +239,7 @@ __kernel void arithm_div_D4 (__global int *src1, int src1_step, int src1_offset,
 __kernel void arithm_div_D5 (__global float *src1, int src1_step, int src1_offset,
                              __global float *src2, int src2_step, int src2_offset,
                              __global float *dst,  int dst_step,  int dst_offset,
-                             int rows, int cols, int dst_step1, double scalar)
+                             int rows, int cols, int dst_step1, F scalar)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
@@ -244,13 +253,14 @@ __kernel void arithm_div_D5 (__global float *src1, int src1_step, int src1_offse
         float data1 = *((__global float *)((__global char *)src1 + src1_index));
         float data2 = *((__global float *)((__global char *)src2 + src2_index));
 
-        double tmp  = convert_double(data1) * scalar;
-        float tmp_data = (tmp == 0 || data2 == 0) ? 0 : convert_float(tmp / (convert_double)(data2));
+        F tmp  = convert_F(data1) * scalar;
+        float tmp_data = (tmp == 0 || data2 == 0) ? 0 : convert_float(tmp / (convert_F)(data2));
 
         *((__global float *)((__global char *)dst + dst_index)) = tmp_data;
     }
 }
 
+#if defined (DOUBLE_SUPPORT)
 __kernel void arithm_div_D6 (__global double *src1, int src1_step, int src1_offset,
                              __global double *src2, int src2_step, int src2_offset,
                              __global double *dst,  int dst_step,  int dst_offset,
@@ -274,10 +284,11 @@ __kernel void arithm_div_D6 (__global double *src1, int src1_step, int src1_offs
         *((__global double *)((__global char *)dst + dst_index)) = tmp_data;
     }
 }
+#endif
 /************************************div with scalar************************************/
 __kernel void arithm_s_div_D0 (__global uchar *src, int src_step, int src_offset,
                                __global uchar *dst,  int dst_step,  int dst_offset,
-                               int rows, int cols, int dst_step1, double scalar)
+                               int rows, int cols, int dst_step1, F scalar)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
@@ -297,10 +308,10 @@ __kernel void arithm_s_div_D0 (__global uchar *src, int src_step, int src_offset
         uchar4 dst_data  = *((__global uchar4 *)(dst + dst_index));
 
         uchar4 tmp_data;
-        tmp_data.x = ((scalar == 0) || (src_data.x == 0)) ? 0 : round2_uchar(scalar / (double)src_data.x);
-        tmp_data.y = ((scalar == 0) || (src_data.y == 0)) ? 0 : round2_uchar(scalar / (double)src_data.y);
-        tmp_data.z = ((scalar == 0) || (src_data.z == 0)) ? 0 : round2_uchar(scalar / (double)src_data.z);
-        tmp_data.w = ((scalar == 0) || (src_data.w == 0)) ? 0 : round2_uchar(scalar / (double)src_data.w);
+        tmp_data.x = ((scalar == 0) || (src_data.x == 0)) ? 0 : round2_uchar(scalar / (F)src_data.x);
+        tmp_data.y = ((scalar == 0) || (src_data.y == 0)) ? 0 : round2_uchar(scalar / (F)src_data.y);
+        tmp_data.z = ((scalar == 0) || (src_data.z == 0)) ? 0 : round2_uchar(scalar / (F)src_data.z);
+        tmp_data.w = ((scalar == 0) || (src_data.w == 0)) ? 0 : round2_uchar(scalar / (F)src_data.w);
 
         dst_data.x = ((dst_index + 0 >= dst_start) && (dst_index + 0 < dst_end)) ? tmp_data.x : dst_data.x;
         dst_data.y = ((dst_index + 1 >= dst_start) && (dst_index + 1 < dst_end)) ? tmp_data.y : dst_data.y;
@@ -313,7 +324,7 @@ __kernel void arithm_s_div_D0 (__global uchar *src, int src_step, int src_offset
 
 __kernel void arithm_s_div_D2 (__global ushort *src, int src_step, int src_offset,
                                __global ushort *dst,  int dst_step,  int dst_offset,
-                               int rows, int cols, int dst_step1, double scalar)
+                               int rows, int cols, int dst_step1, F scalar)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
@@ -333,10 +344,10 @@ __kernel void arithm_s_div_D2 (__global ushort *src, int src_step, int src_offse
         ushort4 dst_data = *((__global ushort4 *)((__global char *)dst + dst_index));
 
         ushort4 tmp_data;
-        tmp_data.x = ((scalar == 0) || (src_data.x == 0)) ? 0 : round2_ushort(scalar / (double)src_data.x);
-        tmp_data.y = ((scalar == 0) || (src_data.y == 0)) ? 0 : round2_ushort(scalar / (double)src_data.y);
-        tmp_data.z = ((scalar == 0) || (src_data.z == 0)) ? 0 : round2_ushort(scalar / (double)src_data.z);
-        tmp_data.w = ((scalar == 0) || (src_data.w == 0)) ? 0 : round2_ushort(scalar / (double)src_data.w);
+        tmp_data.x = ((scalar == 0) || (src_data.x == 0)) ? 0 : round2_ushort(scalar / (F)src_data.x);
+        tmp_data.y = ((scalar == 0) || (src_data.y == 0)) ? 0 : round2_ushort(scalar / (F)src_data.y);
+        tmp_data.z = ((scalar == 0) || (src_data.z == 0)) ? 0 : round2_ushort(scalar / (F)src_data.z);
+        tmp_data.w = ((scalar == 0) || (src_data.w == 0)) ? 0 : round2_ushort(scalar / (F)src_data.w);
 
         dst_data.x = ((dst_index + 0 >= dst_start) && (dst_index + 0 < dst_end)) ? tmp_data.x : dst_data.x;
         dst_data.y = ((dst_index + 2 >= dst_start) && (dst_index + 2 < dst_end)) ? tmp_data.y : dst_data.y;
@@ -348,7 +359,7 @@ __kernel void arithm_s_div_D2 (__global ushort *src, int src_step, int src_offse
 }
 __kernel void arithm_s_div_D3 (__global short *src, int src_step, int src_offset,
                                __global short *dst,  int dst_step,  int dst_offset,
-                               int rows, int cols, int dst_step1, double scalar)
+                               int rows, int cols, int dst_step1, F scalar)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
@@ -368,10 +379,10 @@ __kernel void arithm_s_div_D3 (__global short *src, int src_step, int src_offset
         short4 dst_data = *((__global short4 *)((__global char *)dst + dst_index));
 
         short4 tmp_data;
-        tmp_data.x = ((scalar == 0) || (src_data.x == 0)) ? 0 : round2_short(scalar / (double)src_data.x);
-        tmp_data.y = ((scalar == 0) || (src_data.y == 0)) ? 0 : round2_short(scalar / (double)src_data.y);
-        tmp_data.z = ((scalar == 0) || (src_data.z == 0)) ? 0 : round2_short(scalar / (double)src_data.z);
-        tmp_data.w = ((scalar == 0) || (src_data.w == 0)) ? 0 : round2_short(scalar / (double)src_data.w);
+        tmp_data.x = ((scalar == 0) || (src_data.x == 0)) ? 0 : round2_short(scalar / (F)src_data.x);
+        tmp_data.y = ((scalar == 0) || (src_data.y == 0)) ? 0 : round2_short(scalar / (F)src_data.y);
+        tmp_data.z = ((scalar == 0) || (src_data.z == 0)) ? 0 : round2_short(scalar / (F)src_data.z);
+        tmp_data.w = ((scalar == 0) || (src_data.w == 0)) ? 0 : round2_short(scalar / (F)src_data.w);
 
 
         dst_data.x = ((dst_index + 0 >= dst_start) && (dst_index + 0 < dst_end)) ? tmp_data.x : dst_data.x;
@@ -385,7 +396,7 @@ __kernel void arithm_s_div_D3 (__global short *src, int src_step, int src_offset
 
 __kernel void arithm_s_div_D4 (__global int *src, int src_step, int src_offset,
                                __global int *dst,  int dst_step,  int dst_offset,
-                               int rows, int cols, int dst_step1, double scalar)
+                               int rows, int cols, int dst_step1, F scalar)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
@@ -397,7 +408,7 @@ __kernel void arithm_s_div_D4 (__global int *src, int src_step, int src_offset,
 
         int data = *((__global int *)((__global char *)src + src_index));
 
-        int tmp_data = (scalar == 0 || data == 0) ? 0 : round2_int(scalar / (convert_double)(data));
+        int tmp_data = (scalar == 0 || data == 0) ? 0 : round2_int(scalar / (convert_F)(data));
 
         *((__global int *)((__global char *)dst + dst_index)) =tmp_data;
     }
@@ -405,7 +416,7 @@ __kernel void arithm_s_div_D4 (__global int *src, int src_step, int src_offset,
 
 __kernel void arithm_s_div_D5 (__global float *src, int src_step, int src_offset,
                                __global float *dst,  int dst_step,  int dst_offset,
-                               int rows, int cols, int dst_step1, double scalar)
+                               int rows, int cols, int dst_step1, F scalar)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
@@ -417,12 +428,13 @@ __kernel void arithm_s_div_D5 (__global float *src, int src_step, int src_offset
 
         float data = *((__global float *)((__global char *)src + src_index));
 
-        float tmp_data = (scalar == 0 || data == 0) ? 0 : convert_float(scalar / (convert_double)(data));
+        float tmp_data = (scalar == 0 || data == 0) ? 0 : convert_float(scalar / (convert_F)(data));
 
         *((__global float *)((__global char *)dst + dst_index)) = tmp_data;
     }
 }
 
+#if defined (DOUBLE_SUPPORT)
 __kernel void arithm_s_div_D6 (__global double *src, int src_step, int src_offset,
                                __global double *dst,  int dst_step,  int dst_offset,
                                int rows, int cols, int dst_step1, double scalar)
@@ -442,5 +454,6 @@ __kernel void arithm_s_div_D6 (__global double *src, int src_step, int src_offse
         *((__global double *)((__global char *)dst + dst_index)) = tmp_data;
     }
 }
+#endif
 
 

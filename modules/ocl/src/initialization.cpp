@@ -378,20 +378,36 @@ namespace cv
 
         void openCLMemcpy2D(Context *clCxt, void *dst, size_t dpitch,
                 const void *src, size_t spitch,
-                size_t width, size_t height, enum openCLMemcpyKind kind)
+                size_t width, size_t height, enum openCLMemcpyKind kind, int channels)
         {
             size_t buffer_origin[3] = {0, 0, 0};
             size_t host_origin[3] = {0, 0, 0};
             size_t region[3] = {width, height, 1};
             if(kind == clMemcpyHostToDevice)
             {
-                openCLSafeCall(clEnqueueWriteBufferRect(clCxt->impl->clCmdQueue, (cl_mem)dst, CL_TRUE,
-                            buffer_origin, host_origin, region, dpitch, 0, spitch, 0, src, 0, 0, 0));
+				if(dpitch == width || channels==3)
+				{
+					openCLSafeCall(clEnqueueWriteBuffer(clCxt->impl->clCmdQueue, (cl_mem)dst, CL_TRUE,
+								0, width*height, src, 0, NULL, NULL));
+				}
+				else
+				{
+					openCLSafeCall(clEnqueueWriteBufferRect(clCxt->impl->clCmdQueue, (cl_mem)dst, CL_TRUE,
+								buffer_origin, host_origin, region, dpitch, 0, spitch, 0, src, 0, 0, 0));
+				}
             }
             else if(kind == clMemcpyDeviceToHost)
             {
-                openCLSafeCall(clEnqueueReadBufferRect(clCxt->impl->clCmdQueue, (cl_mem)src, CL_TRUE,
-                            buffer_origin, host_origin, region, spitch, 0, dpitch, 0, dst, 0, 0, 0));
+				if(spitch == width || channels==3)
+				{
+					openCLSafeCall(clEnqueueReadBuffer(clCxt->impl->clCmdQueue, (cl_mem)src, CL_TRUE,
+								0, width*height, dst, 0, NULL, NULL));
+				}
+				else
+				{
+					openCLSafeCall(clEnqueueReadBufferRect(clCxt->impl->clCmdQueue, (cl_mem)src, CL_TRUE,
+								buffer_origin, host_origin, region, spitch, 0, dpitch, 0, dst, 0, 0, 0));
+				}
             }
         }
 

@@ -35,12 +35,6 @@
 //
 
 
-/*#if defined (__ATI__)
-#pragma OPENCL EXTENSION cl_amd_fp64:enable
-#elif defined (__NVIDIA__)
-#pragma OPENCL EXTENSION cl_khr_fp64:enable
-#endif
-*/
 /*
 __kernel void set_to_with_mask_C1_D0(
 		float4 scalar,
@@ -67,7 +61,7 @@ __kernel void set_to_with_mask_C1_D0(
 */
 //#pragma OPENCL EXTENSION cl_amd_printf : enable
 __kernel void set_to_with_mask_C1_D0(
-		float4 scalar,
+		uchar scalar,
 		__global uchar* dstMat,
 		int cols,
 		int rows,
@@ -85,7 +79,7 @@ __kernel void set_to_with_mask_C1_D0(
 		int mask_addr_start = mad24(y,maskStep,maskoffset);
 		int mask_addr_end = mad24(y,maskStep,cols+maskoffset);
 		int maskidx = mad24(y,maskStep,x+ maskoffset & (int)0xfffffffc);
-		uchar out = convert_uchar_sat(scalar.x);	
+	
 		int off_mask = (maskoffset & 3) - (dstoffset_in_pixel & 3) +3;	
 		
 		if ( (x < cols) & (y < rows) )
@@ -107,16 +101,16 @@ __kernel void set_to_with_mask_C1_D0(
 			temp_mask2.z = (maskidx+6 >=mask_addr_start)&(maskidx+6 < mask_addr_end) ? temp_mask2.z : 0;
 			temp_mask2.w = (maskidx+7 >=mask_addr_start)&(maskidx+7 < mask_addr_end) ? temp_mask2.w : 0;	
 			uchar trans_mask[10] = {temp_mask1.y,temp_mask1.z,temp_mask1.w,temp_mask.x,temp_mask.y,temp_mask.z,temp_mask.w,temp_mask2.x,temp_mask2.y,temp_mask2.z};				
-			temp_dst.x = (dstidx>=dst_addr_start)&(dstidx<dst_addr_end)& trans_mask[off_mask] ? out : temp_dst.x;
-			temp_dst.y = (dstidx+1>=dst_addr_start)&(dstidx+1<dst_addr_end)& trans_mask[off_mask+1] ? out : temp_dst.y;
-			temp_dst.z = (dstidx+2>=dst_addr_start)&(dstidx+2<dst_addr_end)& trans_mask[off_mask+2] ? out : temp_dst.z;
-			temp_dst.w = (dstidx+3>=dst_addr_start)&(dstidx+3<dst_addr_end)& trans_mask[off_mask+3] ? out : temp_dst.w;
+			temp_dst.x = (dstidx>=dst_addr_start)&(dstidx<dst_addr_end)& trans_mask[off_mask] ? scalar : temp_dst.x;
+			temp_dst.y = (dstidx+1>=dst_addr_start)&(dstidx+1<dst_addr_end)& trans_mask[off_mask+1] ? scalar : temp_dst.y;
+			temp_dst.z = (dstidx+2>=dst_addr_start)&(dstidx+2<dst_addr_end)& trans_mask[off_mask+2] ? scalar : temp_dst.z;
+			temp_dst.w = (dstidx+3>=dst_addr_start)&(dstidx+3<dst_addr_end)& trans_mask[off_mask+3] ? scalar : temp_dst.w;
 			*(__global uchar4*)(dstMat+dstidx) = temp_dst;
 		}
 }
-__kernel void set_to_with_mask_C4_D0(
-		float4 scalar,
-		__global uchar4 * dstMat,
+__kernel void set_to_with_mask(
+		GENTYPE scalar,
+		__global GENTYPE * dstMat,
 		int cols,
 		int rows,
 		int dstStep_in_pixel,
@@ -132,95 +126,7 @@ __kernel void set_to_with_mask_C4_D0(
 		uchar mask = maskMat[maskidx];		
 		if ( (x < cols) & (y < rows) & mask)
 		{
-			dstMat[dstidx] = convert_uchar4_sat(scalar);
-		}
-
-}
-__kernel void set_to_with_mask_C1_D4(
-		float4 scalar,
-		__global int * dstMat,
-		int cols,
-		int rows,
-		int dstStep_in_pixel,
-		int dstoffset_in_pixel, 		
-        __global const uchar * restrict maskMat,
-		int maskStep,
-		int maskoffset)
-{
-		int x=get_global_id(0);
-		int y=get_global_id(1);
-		int dstidx = mad24(y,dstStep_in_pixel,x+ dstoffset_in_pixel);
-		int maskidx = mad24(y,maskStep,x+ maskoffset);
-		uchar mask = maskMat[maskidx];		
-		if ( (x < cols) & (y < rows) & mask)
-		{
-			dstMat[dstidx] = convert_int_sat(scalar.x);
-		}
-
-}
-__kernel void set_to_with_mask_C4_D4(
-		float4 scalar,
-		__global int4 * dstMat,
-		int cols,
-		int rows,
-		int dstStep_in_pixel,
-		int dstoffset_in_pixel, 		
-        __global const uchar * restrict maskMat,
-		int maskStep,
-		int maskoffset)
-{
-		int x=get_global_id(0);
-		int y=get_global_id(1);
-		int dstidx = mad24(y,dstStep_in_pixel,x+ dstoffset_in_pixel);
-		int maskidx = mad24(y,maskStep,x+ maskoffset);
-		uchar mask = maskMat[maskidx];		
-		if ( (x < cols) & (y < rows) & mask)
-		{
-			dstMat[dstidx] = convert_int4_sat(scalar);
-		}
-
-}
-__kernel void set_to_with_mask_C1_D5(
-		float4 scalar,
-		__global float * dstMat,
-		int cols,
-		int rows,
-		int dstStep_in_pixel,
-		int dstoffset_in_pixel, 		
-        __global const uchar * restrict maskMat,
-		int maskStep,
-		int maskoffset)
-{
-		int x=get_global_id(0);
-		int y=get_global_id(1);
-		int dstidx = mad24(y,dstStep_in_pixel,x+ dstoffset_in_pixel);
-		int maskidx = mad24(y,maskStep,x+ maskoffset);
-		uchar mask = maskMat[maskidx];		
-		if ( (x < cols) & (y < rows) & mask)
-		{
-			dstMat[dstidx] = scalar.x;
-		}
-
-}
-__kernel void set_to_with_mask_C4_D5(
-		float4 scalar,
-		__global float4 * dstMat,
-		int cols,
-		int rows,
-		int dstStep_in_pixel,
-		int dstoffset_in_pixel, 		
-        __global const uchar * restrict maskMat,
-		int maskStep,
-		int maskoffset)
-{
-		int x=get_global_id(0);
-		int y=get_global_id(1);
-		int dstidx = mad24(y,dstStep_in_pixel,x+ dstoffset_in_pixel);
-		int maskidx = mad24(y,maskStep,x+ maskoffset);
-		uchar mask = maskMat[maskidx];		
-		if ( (x < cols) & (y < rows) & mask)
-		{
-			dstMat[dstidx] = scalar;
+			dstMat[dstidx] = scalar;	
 		}
 
 }
