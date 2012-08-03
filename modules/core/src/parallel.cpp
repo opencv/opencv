@@ -40,21 +40,15 @@
 //
 //M*/
 
-#ifndef __OPENCV_PARALLEL_TOOL_HPP__
-#define __OPENCV_PARALLEL_TOOL_HPP__
+#include "precomp.hpp"
 
-#ifdef HAVE_CVCONFIG_H
-# include <cvconfig.h>
-#endif // HAVE_CVCONFIG_H
-
-/*
-    HAVE_TBB - using TBB
-    HAVE_GCD - using GCD
-    HAVE_OPENMP - using OpenMP
-    HAVE_CONCURRENCY - using visual studio 2010 concurrency
-*/
-
-#ifdef HAVE_TBB
+#ifdef HAVE_CONCURRENCY
+#  include <ppl.h>
+#elif defined HAVE_OPENMP
+#  include <omp.h>
+#elif defined HAVE_GCD
+#  include <dispatch/dispatch.h>
+#elif defined HAVE_TBB
 #  include "tbb/tbb_stddef.h"
 #  if TBB_VERSION_MAJOR*100 + TBB_VERSION_MINOR >= 202
 #    include "tbb/tbb.h"
@@ -63,46 +57,73 @@
 #    undef max
 #  else
 #    undef HAVE_TBB
-#   endif // end TBB version
-#endif // HAVE_TBB
+#  endif // end TBB version
+#endif // HAVE_CONCURRENCY
 
-#ifdef __cplusplus
+/*
+    HAVE_TBB - using TBB
+    HAVE_GCD - using GCD
+    HAVE_OPENMP - using OpenMP
+    HAVE_CONCURRENCY - using visual studio 2010 concurrency
+*/
 
 namespace cv
 {
-    // a base body class
-    class CV_EXPORTS ParallelLoopBody
+    ParallelLoopBody::~ParallelLoopBody() { }
+
+#ifdef HAVE_TBB
+    class TbbProxyLoopBody
     {
     public:
-        virtual void operator() (const Range& range) const = 0;
-        virtual ~ParallelLoopBody();
+        TbbProxyLoopBody(const ParallelLoopBody& _body) :
+            body(&_body)
+        { }
+
+        void operator ()(const tbb::blocked_range<int>& range) const
+        {
+            body->operator()(Range(range.begin(), range.end()));
+        }
+
+    private:
+        const ParallelLoopBody* body;
     };
+#endif // end HAVE_TBB
 
-    CV_EXPORTS void parallel_for_(const Range& range, const ParallelLoopBody& body);
-
-    template <typename Iterator, typename Body> inline
-    CV_EXPORTS void parallel_do_(Iterator first, Iterator last, const Body& body)
+#ifdef HAVE_GCD
+    static
+    void block_function(void* context, size_t index)
     {
-#ifdef HAVE_TBB
-        tbb::parallel_do(first, last, body);
-#else
-        for ( ; first != last; ++first)
-            body(*first);
-#endif // HAVE_TBB
+        ParallelLoopBody* ptr_body = static_cast<ParallelLoopBody*>(context);
+        ptr_body->operator()(Range(index, index + 1));
     }
+#endif // HAVE_GCD
 
-    template <typename Body> inline
-    CV_EXPORTS void parallel_reduce_(const Range& range, Body& body)
+    void parallel_for_(const Range& range, const ParallelLoopBody& body)
     {
 #ifdef HAVE_TBB
-        tbb::parallel_reduce(tbb::blocked_range<int>(range.start, range.end), body);
+
+        tbb::parallel_for(tbb::blocked_range<int>(range.start, range.end), TbbProxyLoopBody(body));
+
+#elif defined HAVE_CONCURRENCY
+
+        Concurrency::parallel_for(range.start, range.end, body);
+
+#elif defined HAVE_OPENMP
+
+#pragma omp parallel for schedule(dynamic)
+        for (int i = range.start; i < range.end; ++i)
+            body(Range(i, i + 1));
+
+#elif defined (HAVE_GCD)
+
+        dispatch_queue_t concurrent_queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
+        dispatch_apply_f(range.end - range.start, concurrent_queue, &const_cast<ParallelLoopBody&>(body), block_function);
+
 #else
+
         body(range);
+
 #endif // end HAVE_TBB
     }
 
 } // namespace cv
-
-#endif // __cplusplus
-
-#endif // __OPENCV_PARALLEL_TOOL_HPP__

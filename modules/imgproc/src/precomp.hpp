@@ -50,7 +50,6 @@
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/imgproc/imgproc_c.h"
 #include "opencv2/core/internal.hpp"
-#include "opencv2/core/parallel_tool.hpp"
 #include <math.h>
 #include <assert.h>
 #include <string.h>
