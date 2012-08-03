@@ -180,6 +180,8 @@
 #   - modified May 2012
 #     [+] updated for NDK r8
 #     [+] added mips architecture support
+#   - modified August 2012
+#     [+] updated for NDK r8b
 # ------------------------------------------------------------------------------
 
 cmake_minimum_required( VERSION 2.6.3 )
@@ -199,7 +201,7 @@ set( CMAKE_SYSTEM_NAME Linux )
 #this one not so much
 set( CMAKE_SYSTEM_VERSION 1 )
 
-set( ANDROID_SUPPORTED_NDK_VERSIONS ${ANDROID_EXTRA_NDK_VERSIONS} -r8 -r7c -r7b -r7 -r6b -r6 -r5c -r5b -r5 "" )
+set( ANDROID_SUPPORTED_NDK_VERSIONS ${ANDROID_EXTRA_NDK_VERSIONS} -r8b -r8 -r7c -r7b -r7 -r6b -r6 -r5c -r5b -r5 "" )
 if(NOT DEFINED ANDROID_NDK_SEARCH_PATHS)
  if( CMAKE_HOST_WIN32 )
   file( TO_CMAKE_PATH "$ENV{PROGRAMFILES}" ANDROID_NDK_SEARCH_PATHS )
@@ -473,11 +475,11 @@ if( BUILD_WITH_ANDROID_NDK )
  foreach( __toolchain ${__availableToolchains} )
   __DETECT_TOOLCHAIN_MACHINE_NAME( __machine "${ANDROID_NDK}/toolchains/${__toolchain}/prebuilt/${ANDROID_NDK_HOST_SYSTEM_NAME}" )
   if( __machine )
-   string( REGEX MATCH "[0-9]+.[0-9]+.[0-9]+$" __version "${__toolchain}" )
+   string( REGEX MATCH "[0-9]+[.][0-9]+[.]*[0-9]*$" __version "${__toolchain}" )
    string( REGEX MATCH "^[^-]+" __arch "${__toolchain}" )
-   list( APPEND __availableToolchainMachines ${__machine} )
-   list( APPEND __availableToolchainArchs ${__arch} )
-   list( APPEND __availableToolchainCompilerVersions ${__version} )
+   list( APPEND __availableToolchainMachines "${__machine}" )
+   list( APPEND __availableToolchainArchs "${__arch}" )
+   list( APPEND __availableToolchainCompilerVersions "${__version}" )
   else()
    list( REMOVE_ITEM __availableToolchains "${__toolchain}" )
   endif()
@@ -669,8 +671,13 @@ if( BUILD_WITH_ANDROID_NDK )
   set( __stlIncludePath "${ANDROID_NDK}/sources/cxx-stl/stlport/stlport" )
   set( __stlLibPath "${ANDROID_NDK}/sources/cxx-stl/stlport/libs/${ANDROID_NDK_ABI_NAME}" )
  else()
-  set( __stlIncludePath "${ANDROID_NDK}/sources/cxx-stl/gnu-libstdc++/include" )
-  set( __stlLibPath "${ANDROID_NDK}/sources/cxx-stl/gnu-libstdc++/libs/${ANDROID_NDK_ABI_NAME}" )
+  if( EXISTS "${ANDROID_NDK}/sources/cxx-stl/gnu-libstdc++/${ANDROID_COMPILER_VERSION}" )
+   set( __stlIncludePath "${ANDROID_NDK}/sources/cxx-stl/gnu-libstdc++/${ANDROID_COMPILER_VERSION}/include" )
+   set( __stlLibPath "${ANDROID_NDK}/sources/cxx-stl/gnu-libstdc++/${ANDROID_COMPILER_VERSION}/libs/${ANDROID_NDK_ABI_NAME}" )
+  else()
+   set( __stlIncludePath "${ANDROID_NDK}/sources/cxx-stl/gnu-libstdc++/include" )
+   set( __stlLibPath "${ANDROID_NDK}/sources/cxx-stl/gnu-libstdc++/libs/${ANDROID_NDK_ABI_NAME}" )
+  endif()
  endif()
 endif()
 
