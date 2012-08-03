@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # Software License Agreement (BSD License)
 #
-# Copyright (c) 2012, Philipp Wagner
+# Copyright (c) 2012, Philipp Wagner <bytefish[at]gmx[dot]de>.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without

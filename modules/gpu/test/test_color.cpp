@@ -1609,6 +1609,141 @@ TEST_P(CvtColor, RGBA2YUV4)
     EXPECT_MAT_NEAR(dst_gold, h_dst, 1e-5);
 }
 
+TEST_P(CvtColor, BGR2Lab)
+{
+    if (depth != CV_8U)
+        return;
+
+    try
+    {
+        cv::Mat src = readImage("stereobm/aloe-L.png");
+
+        cv::gpu::GpuMat dst_lab = createMat(src.size(), src.type(), useRoi);
+        cv::gpu::cvtColor(loadMat(src, useRoi), dst_lab, cv::COLOR_BGR2Lab);
+
+        cv::gpu::GpuMat dst_bgr = createMat(src.size(), src.type(), useRoi);
+        cv::gpu::cvtColor(dst_lab, dst_bgr, cv::COLOR_Lab2BGR);
+
+        EXPECT_MAT_NEAR(src, dst_bgr, 10);
+    }
+    catch (const cv::Exception& e)
+    {
+#if (CUDA_VERSION < 5000)
+        ASSERT_EQ(CV_StsBadFlag, e.code);
+#else
+        FAIL();
+#endif
+    }
+}
+
+TEST_P(CvtColor, RGB2Lab)
+{
+    if (depth != CV_8U)
+        return;
+
+    try
+    {
+        cv::Mat src = readImage("stereobm/aloe-L.png");
+
+        cv::gpu::GpuMat dst_lab = createMat(src.size(), src.type(), useRoi);
+        cv::gpu::cvtColor(loadMat(src, useRoi), dst_lab, cv::COLOR_RGB2Lab);
+
+        cv::gpu::GpuMat dst_bgr = createMat(src.size(), src.type(), useRoi);
+        cv::gpu::cvtColor(dst_lab, dst_bgr, cv::COLOR_Lab2RGB);
+
+        EXPECT_MAT_NEAR(src, dst_bgr, 10);
+    }
+    catch (const cv::Exception& e)
+    {
+#if (CUDA_VERSION < 5000)
+        ASSERT_EQ(CV_StsBadFlag, e.code);
+#else
+        FAIL();
+#endif
+    }
+}
+
+TEST_P(CvtColor, BGR2Luv)
+{
+    if (depth != CV_8U)
+        return;
+
+    try
+    {
+        cv::Mat src = img;
+
+        cv::gpu::GpuMat dst_luv = createMat(src.size(), src.type(), useRoi);
+        cv::gpu::cvtColor(loadMat(src, useRoi), dst_luv, cv::COLOR_BGR2Luv);
+
+        cv::gpu::GpuMat dst_rgb = createMat(src.size(), src.type(), useRoi);
+        cv::gpu::cvtColor(dst_luv, dst_rgb, cv::COLOR_Luv2BGR);
+
+        EXPECT_MAT_NEAR(src, dst_rgb, 10);
+    }
+    catch (const cv::Exception& e)
+    {
+#if (CUDA_VERSION < 5000)
+        ASSERT_EQ(CV_StsBadFlag, e.code);
+#else
+        FAIL();
+#endif
+    }
+}
+
+TEST_P(CvtColor, RGB2Luv)
+{
+    if (depth != CV_8U)
+        return;
+
+    try
+    {
+        cv::Mat src = img;
+
+        cv::gpu::GpuMat dst_luv = createMat(src.size(), src.type(), useRoi);
+        cv::gpu::cvtColor(loadMat(src, useRoi), dst_luv, cv::COLOR_RGB2Luv);
+
+        cv::gpu::GpuMat dst_rgb = createMat(src.size(), src.type(), useRoi);
+        cv::gpu::cvtColor(dst_luv, dst_rgb, cv::COLOR_Luv2RGB);
+
+        EXPECT_MAT_NEAR(src, dst_rgb, 10);
+    }
+    catch (const cv::Exception& e)
+    {
+#if (CUDA_VERSION < 5000)
+        ASSERT_EQ(CV_StsBadFlag, e.code);
+#else
+        FAIL();
+#endif
+    }
+}
+
+TEST_P(CvtColor, RGBA2mRGBA)
+{
+    if (depth != CV_8U)
+        return;
+
+    try
+    {
+        cv::Mat src = randomMat(size, CV_MAKE_TYPE(depth, 4));
+
+        cv::gpu::GpuMat dst = createMat(src.size(), src.type(), useRoi);
+        cv::gpu::cvtColor(loadMat(src, useRoi), dst, cv::COLOR_RGBA2mRGBA);
+
+        cv::Mat dst_gold;
+        cv::cvtColor(src, dst_gold, cv::COLOR_RGBA2mRGBA);
+
+        EXPECT_MAT_NEAR(dst_gold, dst, 1);
+    }
+    catch (const cv::Exception& e)
+    {
+#if (CUDA_VERSION < 5000)
+        ASSERT_EQ(CV_StsBadFlag, e.code);
+#else
+        FAIL();
+#endif
+    }
+}
+
 INSTANTIATE_TEST_CASE_P(GPU_ImgProc, CvtColor, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,

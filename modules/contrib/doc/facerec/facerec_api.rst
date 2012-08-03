@@ -19,16 +19,19 @@ a unified access to all face recongition algorithms in OpenCV. ::
 
       // Trains a FaceRecognizer.
       virtual void train(InputArray src, InputArray labels) = 0;
-
+      
+      // Updates a FaceRecognizer.
+      virtual void update(InputArrayOfArrays src, InputArray labels);
+      
       // Gets a prediction from a FaceRecognizer.
       virtual int predict(InputArray src) const = 0;
-
+      
       // Predicts the label and confidence for a given sample.
       virtual void predict(InputArray src, int &label, double &confidence) const = 0;
 
       // Serializes this object to a given filename.
       virtual void save(const string& filename) const;
-
+      
       // Deserializes this object from a given filename.
       virtual void load(const string& filename);
 
@@ -38,6 +41,7 @@ a unified access to all face recongition algorithms in OpenCV. ::
       // Deserializes this object from a given cv::FileStorage.
       virtual void load(const FileStorage& fs) = 0;
   };
+
 
 Description
 +++++++++++
@@ -99,13 +103,6 @@ If you've set the threshold to ``0.0`` as we did above, then:
 
 is going to yield ``-1`` as predicted label, which states this face is unknown.
 
-Adding new samples to a trained FaceRecognizer
-++++++++++++++++++++++++++++++++++++++++++++++
-
-Adding new images to a trained :ocv:class:`FaceRecognizer` is possible, but only if the :ocv:class:`FaceRecognizer` supports it. For the Eigenfaces and Fisherfaces method each call to :ocv:func:`FaceRecognizer::train` empties the old model and estimates a new model on the given data. This is an algorithmic necessity for these two algorithms, no way around that. Please see the tutorial Guide To Face Recognition with OpenCV for details. If you call :ocv:func:`FaceRecognizer::train` on a LBPH model, the internal model is extended with the new samples.
-
-Please note: A :ocv:class:`FaceRecognizer` does not store your training images (this would be very memory intense), the caller is responsible for maintaining the dataset.
-
 Getting the name of a FaceRecognizer
 +++++++++++++++++++++++++++++++++++++
 
@@ -164,6 +161,50 @@ And finally train it on the given dataset (the face images and labels):
     //
     model->train(images, labels);
 
+FaceRecognizer::update
+----------------------
+
+Updates a FaceRecognizer with given data and associated labels.
+
+.. ocv:function:: void FaceRecognizer::update(InputArray src, InputArray labels)
+
+    :param src: The training images, that means the faces you want to learn. The data has to be given as a ``vector<Mat>``.
+
+    :param labels: The labels corresponding to the images have to be given either as a ``vector<int>`` or a
+
+This method updates a (probably trained) :ocv:class:`FaceRecognizer`, but only if the algorithm supports it. The Local Binary Patterns Histograms (LBPH) recognizer (see :ocv:func:`createLBPHFaceRecognizer`) can be updated. For the Eigenfaces and Fisherfaces method, this is algorithmically not possible and you have to re-estimate the model with :ocv:func:`FaceRecognizer::train`. In any case, a call to train empties the existing model and learns a new model, while update does not delete any model data.
+
+.. code-block:: cpp
+
+    // Create a new LBPH model (it can be updated) and use the default parameters,
+    // this is the most common usage of this specific FaceRecognizer:
+    //
+    Ptr<FaceRecognizer> model =  createLBPHFaceRecognizer();
+    // This is the common interface to train all of the available cv::FaceRecognizer
+    // implementations:
+    //
+    model->train(images, labels);
+    // Some containers to hold new image:
+    vector<Mat> newImages;
+    vector<int> newLabels;
+    // You should add some images to the containers:
+    //
+    // ...
+    //
+    // Now updating the model is as easy as calling:
+    model->update(newImages,newLabels);
+    // This will preserve the old model data and extend the existing model 
+    // with the new features extracted from newImages!
+
+Calling update on an Eigenfaces model (see :ocv:func:`createEigenFaceRecognizer`), which doesn't support updating, will throw an error similar to:
+
+.. code-block:: none
+
+    OpenCV Error: The function/feature is not implemented (This FaceRecognizer (FaceRecognizer.Eigenfaces) does not support updating, you have to use FaceRecognizer::train to update it.) in update, file /home/philipp/git/opencv/modules/contrib/src/facerec.cpp, line 305
+    terminate called after throwing an instance of 'cv::Exception'
+
+Please note: The :ocv:class:`FaceRecognizer` does not store your training images, because this would be very memory intense and it's not the responsibility of te :ocv:class:`FaceRecognizer` to do so. The caller is responsible for maintaining the dataset, he want to work with. 
+ 
 FaceRecognizer::predict
 -----------------------
 
@@ -175,8 +216,6 @@ FaceRecognizer::predict
     :param src: Sample image to get a prediction from.
     :param label: The predicted label for the given image.
     :param confidence: Associated confidence (e.g. distance) for the predicted label.
-
-
 
 The suffix ``const`` means that prediction does not affect the internal model
 state, so the method can be safely called from within different threads.
@@ -260,7 +299,7 @@ Notes:
 
 * Training and prediction must be done on grayscale images, use :ocv:func:`cvtColor` to convert between the color spaces.
 * **THE EIGENFACES METHOD MAKES THE ASSUMPTION, THAT THE TRAINING AND TEST IMAGES ARE OF EQUAL SIZE.** (caps-lock, because I got so many mails asking for this). You have to make sure your input data has the correct shape, else a meaningful exception is thrown. Use :ocv:func:`resize` to resize the images.
-* A call to :ocv:func:`FaceRecognizer::train` empties the Eigenfaces model and re-estimates a model on given data.
+* This model does not support updating.
 
 Model internal data:
 ++++++++++++++++++++
@@ -287,7 +326,7 @@ Notes:
 
 * Training and prediction must be done on grayscale images, use :ocv:func:`cvtColor` to convert between the color spaces.
 * **THE FISHERFACES METHOD MAKES THE ASSUMPTION, THAT THE TRAINING AND TEST IMAGES ARE OF EQUAL SIZE.** (caps-lock, because I got so many mails asking for this). You have to make sure your input data has the correct shape, else a meaningful exception is thrown. Use :ocv:func:`resize` to resize the images.
-* A call to :ocv:func:`FaceRecognizer::train` empties the Fisherfaces model and re-estimates a model on given data.
+* This model does not support updating.
 
 Model internal data:
 ++++++++++++++++++++
@@ -316,7 +355,7 @@ Notes:
 ++++++
 
 * The Circular Local Binary Patterns (used in training and prediction) expect the data given as grayscale images, use :ocv:func:`cvtColor` to convert between the color spaces.
-* A call to :ocv:func:`FaceRecognizer::train` extends the LBPH model with given data.
+* This model supports updating.
 
 Model internal data:
 ++++++++++++++++++++

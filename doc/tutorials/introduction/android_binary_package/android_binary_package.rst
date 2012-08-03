@@ -93,7 +93,6 @@ You need the following to be installed:
      But for successful compilation of some samples the **target** platform should be set to Android 3.0 (API 11) or higher. It will not prevent them from running on  Android 2.2.
 
      .. image:: images/android_sdk_and_avd_manager.png
-        :height: 500px
         :alt: Android SDK Manager
         :align: center
 
@@ -330,7 +329,6 @@ Well, running samples from Eclipse is very simple:
 * Here is ``Tutorial 2 - Use OpenCV Camera`` sample, running on top of stock camera-preview of the emulator.
 
   .. image:: images/emulator_canny.png
-     :height: 600px
      :alt: Tutorial 1 Basic - 1. Add OpenCV - running Canny
      :align: center
 

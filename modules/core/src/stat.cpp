@@ -221,38 +221,41 @@ static int countNonZero_(const T* src, int len )
     return nz;
 }
 
-template <> 
-int countNonZero_ <uchar> (const uchar* src, int len)
+static int countNonZero8u( const uchar* src, int len )
 {
-	int i=0, nz = 0;
-	#if (defined CV_SSE4_2 && CV_SSE4_2 && (_WIN64 || __amd64__))
-	if(USE_SSE4_2)//5x-6x
-	{
-		__m128i pattern = _mm_setzero_si128 ();
-		__m128i inv = _mm_set1_epi8((char)1); 
-		__int64 CV_DECL_ALIGNED(16) buf[2];
-		for (; i<=len-16; i+=16)
-		{
-			__m128i r0 = _mm_lddqu_si128((const __m128i*)(src+i));
-			__m128i res = _mm_cmpeq_epi8(r0, pattern);
-			res =  _mm_add_epi8(res, inv);//11111111+1=00000000, 00000000+1=00000001
-			_mm_store_si128 ((__m128i*)buf, res);
-
-			__int64 countLow = _mm_popcnt_u64(buf[0]);
-			nz += countLow;
-		
-			__int64 countHigh = _mm_popcnt_u64(buf[1]);
-			nz +=countHigh;
-		}
-	}
-	#endif
-	for( ; i < len; i++ )
-		nz += src[i] != 0;
+    int i=0, nz = 0;
+#if CV_SSE2
+    if(USE_SSE2)//5x-6x
+    {
+        __m128i pattern = _mm_setzero_si128 ();
+        static uchar tab[256];
+        static volatile bool initialized = false;
+        if( !initialized )
+        {
+            // we compute inverse popcount table,
+            // since we pass (img[x] == 0) mask as index in the table.
+            for( int j = 0; j < 256; j++ )
+            {
+                int val = 0;
+                for( int mask = 1; mask < 256; mask += mask )
+                    val += (j & mask) == 0;
+                tab[j] = (uchar)val;
+            }
+            initialized = true;
+        }
+        
+        for (; i<=len-16; i+=16)
+        {
+            __m128i r0 = _mm_loadu_si128((const __m128i*)(src+i));
+            int val = _mm_movemask_epi8(_mm_cmpeq_epi8(r0, pattern));
+            nz += tab[val & 255] + tab[val >> 8];
+        }
+    }
+#endif
+    for( ; i < len; i++ )
+        nz += src[i] != 0;
     return nz;
 }
-
-static int countNonZero8u( const uchar* src, int len )
-{ return countNonZero_(src, len); }
 
 static int countNonZero16u( const ushort* src, int len )
 { return countNonZero_(src, len); }

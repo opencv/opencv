@@ -72,4 +72,9 @@
 #include "utility.hpp"
 #include "interpolation.hpp"
 
+#ifdef HAVE_CUDA
+    #include <cuda.h>
+    #include <cuda_runtime.h>
+#endif
+
 #endif
