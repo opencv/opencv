@@ -97,7 +97,7 @@ namespace cv
                                size_t widthInBytes, size_t height);
         void openCLMemcpy2D(Context *clCxt, void *dst, size_t dpitch,
                             const void *src, size_t spitch,
-                            size_t width, size_t height, enum openCLMemcpyKind kind);
+                            size_t width, size_t height, enum openCLMemcpyKind kind, int channels=-1);
         void openCLCopyBuffer2D(Context *clCxt, void *dst, size_t dpitch, int dst_offset,
                                 const void *src, size_t spitch,
                                 size_t width, size_t height, int src_offset, enum openCLMemcpyKind kind);
@@ -126,8 +126,8 @@ namespace cv
 
         cl_mem openCLMalloc(cl_context clCxt, size_t size, cl_mem_flags flags, void *host_ptr);
 
-        void openCLMemcpy2DWithNoPadding(cl_command_queue command_queue, cl_mem buffer, size_t size, size_t offset, void *ptr,
-                                         enum openCLMemcpyKind kind, cl_bool blocking_write);
+        //void openCLMemcpy2DWithNoPadding(cl_command_queue command_queue, cl_mem buffer, size_t size, size_t offset, void *ptr,
+        //                                 enum openCLMemcpyKind kind, cl_bool blocking_write);
 		int savetofile(const Context *clcxt,  cl_program &program, const char *fileName);
 		struct Context::Impl
 		{

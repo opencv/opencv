@@ -43,19 +43,26 @@
 
 #include "precomp.hpp"
 #include <stdio.h>
-
-/*#if CV_SSE2
-#   if CV_SSE4 || defined __SSE4__
-#       include <smmintrin.h>
-#   else
-#       define _mm_blendv_pd(a, b, m) _mm_xor_pd(a, _mm_and_pd(_mm_xor_pd(b, a), m))
-#       define _mm_blendv_ps(a, b, m) _mm_xor_ps(a, _mm_and_ps(_mm_xor_ps(b, a), m))
+/*
+#if CV_SSE2
+#   if !CV_SSE4_1 && !CV_SSE4_2
+#		define _mm_blendv_pd(a, b, m) _mm_xor_pd(a, _mm_and_pd(_mm_xor_pd(b, a), m))
+#       define _mm_blendv_ps(a, b, m) _mm_xor_ps(a, _mm_and_ps(_mm_xor_ps(b, a), m)) 
 #   endif
-#if defined CV_ICC
-#   define CV_HAAR_USE_SSE 1
 #endif
-#endif*/
 
+#if defined CV_ICC
+#	if defined CV_AVX
+#		define CV_HAAR_USE_AVX 1
+#	else 
+#		if  defined CV_SSE2 ||  defined CV_SSE4_1 || defined CV_SSE4_2
+#			define CV_HAAR_USE_SSE 1
+#		else 
+#			define CV_HAAR_NO_SIMD 1
+#		endif
+#	endif
+#endif
+*/
 /* these settings affect the quality of detection: change with care */
 #define CV_ADJUST_FEATURES 1
 #define CV_ADJUST_WEIGHTS  0
@@ -730,6 +737,7 @@ cvRunHaarClassifierCascadeSum( const CvHaarClassifierCascade* _cascade,
                 {
                     CvHidHaarClassifier* classifier = cascade->stage_classifier[i].classifier + j;
                     CvHidHaarTreeNode* node = classifier->node;
+
 #ifndef CV_HAAR_USE_SSE
                     double t = node->threshold*variance_norm_factor;
                     double sum = calc_sum(node->feature.rect[0],p_offset) * node->feature.rect[0].weight;
@@ -745,6 +753,7 @@ cvRunHaarClassifierCascadeSum( const CvHaarClassifierCascade* _cascade,
                     t = _mm_cmpgt_sd(t, sum);
                     stage_sum = _mm_add_sd(stage_sum, _mm_blendv_pd(b, a, t));
 #endif
+
                 }
             }
             else

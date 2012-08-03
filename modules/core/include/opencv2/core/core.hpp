@@ -4608,6 +4608,18 @@ float CommandLineParser::analyzeValue<float>(const std::string& str, bool space_
 template<> CV_EXPORTS
 double CommandLineParser::analyzeValue<double>(const std::string& str, bool space_delete);
 
+/////////////////////////////// Parallel Primitives //////////////////////////////////
+
+// a base body class
+class CV_EXPORTS ParallelLoopBody
+{
+public:
+    virtual void operator() (const Range& range) const = 0;
+    virtual ~ParallelLoopBody();
+};
+
+CV_EXPORTS void parallel_for_(const Range& range, const ParallelLoopBody& body);
+
 }
 
 #endif // __cplusplus
