@@ -975,10 +975,17 @@ void LDA::load(const FileStorage& fs) {
     fs["eigenvectors"] >> _eigenvectors;
 }
 
-void LDA::lda(InputArray _src, InputArray _lbls) {
+void LDA::lda(InputArrayOfArrays _src, InputArray _lbls) {
     // get data
     Mat src = _src.getMat();
-    vector<int> labels = _lbls.getMat();
+    vector<int> labels;
+    // safely copy the labels
+    {
+        Mat tmp = _lbls.getMat();
+        for(unsigned int i = 0; i < tmp.total(); i++) {
+            labels.push_back(tmp.at<int>(i));
+        }
+    }
     // turn into row sampled matrix
     Mat data;
     // ensure working matrix is double precision
@@ -1078,7 +1085,7 @@ void LDA::lda(InputArray _src, InputArray _lbls) {
     _eigenvectors = Mat(_eigenvectors, Range::all(), Range(0, _num_components));
 }
 
-void LDA::compute(InputArray _src, InputArray _lbls) {
+void LDA::compute(InputArrayOfArrays _src, InputArray _lbls) {
     switch(_src.kind()) {
     case _InputArray::STD_VECTOR_MAT:
         lda(asRowMatrix(_src, CV_64FC1), _lbls);
