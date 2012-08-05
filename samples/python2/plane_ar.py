@@ -1,3 +1,25 @@
+'''
+Planar augmented reality
+==================
+
+This sample shows an example of augmented reality overlay over a planar object
+tracked by PlaneTracker from plane_tracker.py. solvePnP funciton is used to
+estimate the tracked object location in 3d space.
+
+video: http://www.youtube.com/watch?v=pzVbhxx6aog
+
+Usage
+-----
+plane_ar.py [<video source>]
+
+Keys:
+   SPACE  -  pause video
+   c      -  clear targets
+
+Select a textured planar object to track by drawing a box with a mouse.
+Use 'focal' slider to adjust to camera focal length for proper video augmentation.
+'''
+
 import numpy as np
 import cv2
 import video

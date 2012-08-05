@@ -3,16 +3,21 @@ Feature homography
 ==================
 
 Example of using features2d framework for interactive video homography matching.
-ORB features and FLANN matcher are used.
+ORB features and FLANN matcher are used. The actual tracking is implemented by
+PlaneTracker class in plane_tracker.py
 
 Inspired by http://www.youtube.com/watch?v=-ZNYoL8rzPY
+
+video: http://www.youtube.com/watch?v=FirtmYcC0Vc
 
 Usage
 -----
 feature_homography.py [<video source>]
 
-Select a textured planar object to track by drawing a box with a mouse.
+Keys:
+   SPACE  -  pause video
 
+Select a textured planar object to track by drawing a box with a mouse.
 '''
 
 import numpy as np
