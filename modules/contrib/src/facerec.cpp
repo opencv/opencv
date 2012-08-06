@@ -464,9 +464,12 @@ void Fisherfaces::train(InputArrayOfArrays src, InputArray _lbls) {
     // clear existing model data
     _labels.release();
     _projections.clear();
-    // get the number of unique classes (provide a cv::Mat overloaded version?)
+    // safely copy from cv::Mat to std::vector
     vector<int> ll;
-    labels.copyTo(ll);
+    for(unsigned int i = 0; i < labels.total(); i++) {
+        ll.push_back(labels.at<int>(i));
+    }
+    // get the number of unique classes
     int C = (int) remove_dups(ll).size();
     // clip number of components to be a valid number
     if((_num_components <= 0) || (_num_components > (C-1)))
