@@ -858,7 +858,44 @@ namespace cv
         void benchmark_copy_vectorize(const oclMat &src, oclMat &dst);
         void benchmark_copy_offset_stride(const oclMat &src, oclMat &dst);
         void benchmark_ILP();
-        
+
+		//! computes vertical sum, supports only CV_32FC1 images
+		CV_EXPORTS void columnSum(const oclMat& src, oclMat& sum);
+
+		//! performs linear blending of two images
+		//! to avoid accuracy errors sum of weigths shouldn't be very close to zero
+		// supports only CV_8UC1 source type
+		CV_EXPORTS void blendLinear(const oclMat& img1, const oclMat& img2, const oclMat& weights1, const oclMat& weights2, oclMat& result);
+
+		/////////////////////////////// Pyramid /////////////////////////////////////
+		CV_EXPORTS void pyrDown(const oclMat& src, oclMat& dst);
+
+		//! upsamples the source image and then smoothes it
+		CV_EXPORTS void pyrUp(const cv::ocl::oclMat& src,cv::ocl::oclMat& dst);
+
+		///////////////////////////////////////// match_template /////////////////////////////////////////////////////////////
+		struct CV_EXPORTS MatchTemplateBuf
+		{
+			Size user_block_size;
+			oclMat imagef, templf;
+			std::vector<oclMat> images;
+			std::vector<oclMat> image_sums;
+			std::vector<oclMat> image_sqsums;
+		};
+
+
+		//! computes the proximity map for the raster template and the image where the template is searched for
+		// Supports TM_SQDIFF, TM_SQDIFF_NORMED, TM_CCORR, TM_CCORR_NORMED, TM_CCOEFF, TM_CCOEFF_NORMED for type 8UC1 and 8UC4
+		// Supports TM_SQDIFF, TM_CCORR for type 32FC1 and 32FC4
+		CV_EXPORTS void matchTemplate(const oclMat& image, const oclMat& templ, oclMat& result, int method);
+		
+		//! computes the proximity map for the raster template and the image where the template is searched for
+		// Supports TM_SQDIFF, TM_SQDIFF_NORMED, TM_CCORR, TM_CCORR_NORMED, TM_CCOEFF, TM_CCOEFF_NORMED for type 8UC1 and 8UC4
+		// Supports TM_SQDIFF, TM_CCORR for type 32FC1 and 32FC4
+		CV_EXPORTS void matchTemplate(const oclMat& image, const oclMat& templ, oclMat& result, int method, MatchTemplateBuf& buf);
+
+
+
     }
 }
 #include "opencv2/ocl/matrix_operations.hpp"
