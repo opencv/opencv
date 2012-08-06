@@ -337,10 +337,9 @@ class RunInfo(object):
 
     def getSvnVersion(self, path, name):
         if not path:
-            setattr(self, name, None)
-            return
-        if not self.svnversion_path and hostos == 'nt':
-            self.tryGetSvnVersionWithTortoise(path, name)
+            val = None
+        elif not self.svnversion_path and hostos == 'nt':
+            val = self.tryGetSvnVersionWithTortoise(path, name)
         else:
             svnversion = self.svnversion_path
             if not svnversion:
@@ -348,11 +347,14 @@ class RunInfo(object):
             try:
                 output = Popen([svnversion, "-n", path], stdout=PIPE, stderr=PIPE).communicate()
                 if not output[1]:
-                    setattr(self, name, output[0])
+                    val = output[0]
                 else:
-                    setattr(self, name, None)
+                    val = None
             except OSError:
-                setattr(self, name, None)
+                val = None
+        if val:
+            val = val.replace(" ", "_")
+        setattr(self, name, val)
 
     def tryGetSvnVersionWithTortoise(self, path, name):
         try:
@@ -371,9 +373,9 @@ class RunInfo(object):
                 tmpfile = open(tmpfilename2, "r")
                 version = tmpfile.read()
                 tmpfile.close()
-            setattr(self, name, version)
+            return version
         except:
-            setattr(self, name, None)
+            return None
         finally:
             if dir:
                 shutil.rmtree(dir)
