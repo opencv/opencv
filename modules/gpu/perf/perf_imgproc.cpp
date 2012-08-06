@@ -1148,6 +1148,9 @@ GPU_PERF_TEST(CvtColor, cv::gpu::DeviceInfo, cv::Size, MatDepth, CvtColorInfo)
     cv::gpu::GpuMat src(src_host);
     cv::gpu::GpuMat dst;
 
+    if (info.code >= cv::COLOR_BayerBG2BGR && info.code <= cv::COLOR_BayerGR2BGR)
+        info.dcn = 4;
+
     cv::gpu::cvtColor(src, dst, info.code, info.dcn);
 
     TEST_CYCLE()

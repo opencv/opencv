@@ -58,8 +58,10 @@ void cv::gpu::gammaCorrection(const GpuMat&, GpuMat&, bool, Stream&) { throw_nog
 namespace cv { namespace gpu {
     namespace device
     {
-        template <typename T, int cn>
-        void Bayer2BGR_gpu(DevMem2Db src, DevMem2Db dst, bool blue_last, bool start_with_green, cudaStream_t stream);
+        template <int cn>
+        void Bayer2BGR_8u_gpu(DevMem2Db src, DevMem2Db dst, bool blue_last, bool start_with_green, cudaStream_t stream);
+        template <int cn>
+        void Bayer2BGR_16u_gpu(DevMem2Db src, DevMem2Db dst, bool blue_last, bool start_with_green, cudaStream_t stream);
     }
 }}
 
@@ -1337,9 +1339,9 @@ namespace
         typedef void (*func_t)(DevMem2Db src, DevMem2Db dst, bool blue_last, bool start_with_green, cudaStream_t stream);
         static const func_t funcs[3][4] =
         {
-            {0,0,Bayer2BGR_gpu<uchar, 3>, Bayer2BGR_gpu<uchar, 4>},
+            {0,0,Bayer2BGR_8u_gpu<3>, Bayer2BGR_8u_gpu<4>},
             {0,0,0,0},
-            {0,0,Bayer2BGR_gpu<ushort, 3>, Bayer2BGR_gpu<ushort, 4>}
+            {0,0,Bayer2BGR_16u_gpu<3>, Bayer2BGR_16u_gpu<4>}
         };
 
         if (dcn <= 0) dcn = 3;

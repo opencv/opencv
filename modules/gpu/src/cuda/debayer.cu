@@ -42,167 +42,286 @@
 
 #include <opencv2/gpu/device/common.hpp>
 #include <opencv2/gpu/device/vec_traits.hpp>
+#include <opencv2/gpu/device/vec_math.hpp>
+#include <opencv2/gpu/device/limits.hpp>
 
 namespace cv { namespace gpu {
     namespace device
     {
-        template <class SrcPtr, typename T>
-        __global__ void Bayer2BGR(const SrcPtr src, PtrStep_<T> dst, const int width, const int height, const bool glob_blue_last, const bool glob_start_with_green)
+        template <typename D>
+        __global__ void Bayer2BGR_8u(const PtrStepb src, DevMem2D_<D> dst, const bool blue_last, const bool start_with_green)
         {
-            const int tx = blockIdx.x * blockDim.x + threadIdx.x;
-            const int y = blockIdx.y * blockDim.y + threadIdx.y;
+            const int s_x = blockIdx.x * blockDim.x + threadIdx.x;
+            int s_y = blockIdx.y * blockDim.y + threadIdx.y;
 
-            if (y >= height)
+            if (s_y >= dst.rows || (s_x << 2) >= dst.cols)
                 return;
 
-            const bool blue_last = (y & 1) ? !glob_blue_last : glob_blue_last;
-            const bool start_with_green = (y & 1) ? !glob_start_with_green : glob_start_with_green;
+            s_y = ::min(::max(s_y, 1), dst.rows - 2);
 
-            int x = tx * 2;
+            uchar4 patch[3][3];
+            patch[0][1] = ((const uchar4*) src.ptr(s_y - 1))[s_x];
+            patch[0][0] = ((const uchar4*) src.ptr(s_y - 1))[::max(s_x - 1, 0)];
+            patch[0][2] = ((const uchar4*) src.ptr(s_y - 1))[::min(s_x + 1, ((dst.cols + 3) >> 2) - 1)];
 
-            if (start_with_green)
+            patch[1][1] = ((const uchar4*) src.ptr(s_y))[s_x];
+            patch[1][0] = ((const uchar4*) src.ptr(s_y))[::max(s_x - 1, 0)];
+            patch[1][2] = ((const uchar4*) src.ptr(s_y))[::min(s_x + 1, ((dst.cols + 3) >> 2) - 1)];
+
+            patch[2][1] = ((const uchar4*) src.ptr(s_y + 1))[s_x];
+            patch[2][0] = ((const uchar4*) src.ptr(s_y + 1))[::max(s_x - 1, 0)];
+            patch[2][2] = ((const uchar4*) src.ptr(s_y + 1))[::min(s_x + 1, ((dst.cols + 3) >> 2) - 1)];
+
+            D res0 = VecTraits<D>::all(numeric_limits<uchar>::max());
+            D res1 = VecTraits<D>::all(numeric_limits<uchar>::max());
+            D res2 = VecTraits<D>::all(numeric_limits<uchar>::max());
+            D res3 = VecTraits<D>::all(numeric_limits<uchar>::max());
+
+            if ((s_y & 1) ^ start_with_green)
             {
-                --x;
+                const int t0 = (patch[0][1].x + patch[2][1].x + 1) >> 1;
+                const int t1 = (patch[1][0].w + patch[1][1].y + 1) >> 1;
 
-                if (tx == 0)
+                const int t2 = (patch[0][1].x + patch[0][1].z + patch[2][1].x + patch[2][1].z + 2) >> 2;
+                const int t3 = (patch[0][1].y + patch[1][1].x + patch[1][1].z + patch[2][1].y + 2) >> 2;
+
+                const int t4 = (patch[0][1].z + patch[2][1].z + 1) >> 1;
+                const int t5 = (patch[1][1].y + patch[1][1].w + 1) >> 1;
+
+                const int t6 = (patch[0][1].z + patch[0][2].x + patch[2][1].z + patch[2][2].x + 2) >> 2;
+                const int t7 = (patch[0][1].w + patch[1][1].z + patch[1][2].x + patch[2][1].w + 2) >> 2;
+
+                if ((s_y & 1) ^ blue_last)
                 {
-                    const int t0 = (src(y, 1) + src(y + 2, 1) + 1) >> 1;
-                    const int t1 = (src(y + 1, 0) + src(y + 1, 2) + 1) >> 1;
+                    res0.x = t1;
+                    res0.y = patch[1][1].x;
+                    res0.z = t0;
 
-                    T res;
-                    res.x = blue_last ? t0 : t1;
-                    res.y = src(y + 1, 1);
-                    res.z = blue_last ? t1 : t0;
+                    res1.x = patch[1][1].y;
+                    res1.y = t3;
+                    res1.z = t2;
 
-                    dst(y + 1, 0) = dst(y + 1, 1) = res;
-                    if (y == 0)
-                    {
-                        dst(0, 0) = dst(0, 1) = res;
-                    }
-                    else if (y == height - 1)
-                    {
-                        dst(height + 1, 0) = dst(height + 1, 1) = res;
-                    }
-                }
-            }
+                    res2.x = t5;
+                    res2.y = patch[1][1].z;
+                    res2.z = t4;
 
-            if (x >= 0 && x <= width - 2)
-            {
-                const int t0 = (src(y, x) + src(y, x + 2) + src(y + 2, x) + src(y + 2, x + 2) + 2) >> 2;
-                const int t1 = (src(y, x + 1) + src(y + 1, x) + src(y + 1, x + 2) + src(y + 2, x + 1) + 2) >> 2;
-
-                const int t2 = (src(y, x + 2) + src(y + 2, x + 2) + 1) >> 1;
-                const int t3 = (src(y + 1, x + 1) + src(y + 1, x + 3) + 1) >> 1;
-
-                T res1, res2;
-
-                if (blue_last)
-                {
-                    res1.x = t0;
-                    res1.y = t1;
-                    res1.z = src(y + 1, x + 1);
-
-                    res2.x = t2;
-                    res2.y = src(y + 1, x + 2);
-                    res2.z = t3;
+                    res3.x = patch[1][1].w;
+                    res3.y = t7;
+                    res3.z = t6;
                 }
                 else
                 {
-                    res1.x = src(y + 1, x + 1);
-                    res1.y = t1;
-                    res1.z = t0;
+                    res0.x = t0;
+                    res0.y = patch[1][1].x;
+                    res0.z = t1;
 
-                    res2.x = t3;
-                    res2.y = src(y + 1, x + 2);
-                    res2.z = t2;
-                }
+                    res1.x = t2;
+                    res1.y = t3;
+                    res1.z = patch[1][1].y;
 
-                dst(y + 1, x + 1) = res1;
-                dst(y + 1, x + 2) = res2;
+                    res2.x = t4;
+                    res2.y = patch[1][1].z;
+                    res2.z = t5;
 
-                if (y == 0)
-                {
-                    dst(0, x + 1) = res1;
-                    dst(0, x + 2) = res2;
-
-                    if (x == 0)
-                    {
-                        dst(0, 0) = res1;
-                    }
-                    else if (x == width - 2)
-                    {
-                        dst(0, width + 1) = res2;
-                    }
-                }
-                else if (y == height - 1)
-                {
-                    dst(height + 1, x + 1) = res1;
-                    dst(height + 1, x + 2) = res2;
-
-                    if (x == 0)
-                    {
-                        dst(height + 1, 0) = res1;
-                    }
-                    else if (x == width - 2)
-                    {
-                        dst(height + 1, width + 1) = res2;
-                    }
-                }
-
-                if (x == 0)
-                {
-                    dst(y + 1, 0) = res1;
-                }
-                else if (x == width - 2)
-                {
-                    dst(y + 1, width + 1) = res2;
+                    res3.x = t6;
+                    res3.y = t7;
+                    res3.z = patch[1][1].w;
                 }
             }
-            else if (x == width - 1)
+            else
             {
-                const int t0 = (src(y, x) + src(y, x + 2) + src(y + 2, x) + src(y + 2, x + 2) + 2) >> 2;
-                const int t1 = (src(y, x + 1) + src(y + 1, x) + src(y + 1, x + 2) + src(y + 2, x + 1) + 2) >> 2;
+                const int t0 = (patch[0][0].w + patch[0][1].y + patch[2][0].w + patch[2][1].y + 2) >> 2;
+                const int t1 = (patch[0][1].x + patch[1][0].w + patch[1][1].y + patch[2][1].x + 2) >> 2;
 
-                T res;
-                res.x = blue_last ? t0 : src(y + 1, x + 1);
-                res.y = t1;
-                res.z = blue_last ? src(y + 1, x + 1) : t0;
+                const int t2 = (patch[0][1].y + patch[2][1].y + 1) >> 1;
+                const int t3 = (patch[1][1].x + patch[1][1].z + 1) >> 1;
 
-                dst(y + 1, x + 1) = dst(y + 1, x + 2) = res;
-                if (y == 0)
+                const int t4 = (patch[0][1].y + patch[0][1].w + patch[2][1].y + patch[2][1].w + 2) >> 2;
+                const int t5 = (patch[0][1].z + patch[1][1].y + patch[1][1].w + patch[2][1].z + 2) >> 2;
+
+                const int t6 = (patch[0][1].w + patch[2][1].w + 1) >> 1;
+                const int t7 = (patch[1][1].z + patch[1][2].x + 1) >> 1;
+
+                if ((s_y & 1) ^ blue_last)
                 {
-                    dst(0, x + 1) = dst(0, x + 2) = res;
+                    res0.x = patch[1][1].x;
+                    res0.y = t1;
+                    res0.z = t0;
+
+                    res1.x = t3;
+                    res1.y = patch[1][1].y;
+                    res1.z = t2;
+
+                    res2.x = patch[1][1].z;
+                    res2.y = t5;
+                    res2.z = t4;
+
+                    res3.x = t7;
+                    res3.y = patch[1][1].w;
+                    res3.z = t6;
                 }
-                else if (y == height - 1)
+                else
                 {
-                    dst(height + 1, x + 1) = dst(height + 1, x + 2) = res;
+                    res0.x = t0;
+                    res0.y = t1;
+                    res0.z = patch[1][1].x;
+
+                    res1.x = t2;
+                    res1.y = patch[1][1].y;
+                    res1.z = t3;
+
+                    res2.x = t4;
+                    res2.y = t5;
+                    res2.z = patch[1][1].z;
+
+                    res3.x = t6;
+                    res3.y = patch[1][1].w;
+                    res3.z = t7;
                 }
             }
+
+            const int d_x = (blockIdx.x * blockDim.x + threadIdx.x) << 2;
+            const int d_y = blockIdx.y * blockDim.y + threadIdx.y;
+
+            dst(d_y, d_x) = res0;
+            if (d_x + 1 < dst.cols)
+                dst(d_y, d_x + 1) = res1;
+            if (d_x + 2 < dst.cols)
+                dst(d_y, d_x + 2) = res2;
+            if (d_x + 3 < dst.cols)
+                dst(d_y, d_x + 3) = res3;
         }
 
-        template <typename T, int cn>
-        void Bayer2BGR_gpu(DevMem2Db src, DevMem2Db dst, bool blue_last, bool start_with_green, cudaStream_t stream)
+        template <typename D>
+        __global__ void Bayer2BGR_16u(const PtrStepb src, DevMem2D_<D> dst, const bool blue_last, const bool start_with_green)
         {
-            typedef typename TypeVec<T, cn>::vec_type dst_t;
+            const int s_x = blockIdx.x * blockDim.x + threadIdx.x;
+            int s_y = blockIdx.y * blockDim.y + threadIdx.y;
 
-            const int width = src.cols - 2;
-            const int height = src.rows - 2;
+            if (s_y >= dst.rows || (s_x << 1) >= dst.cols)
+                return;
 
-            const dim3 total(divUp(width, 2), height);
+            s_y = ::min(::max(s_y, 1), dst.rows - 2);
+
+            ushort2 patch[3][3];
+            patch[0][1] = ((const ushort2*) src.ptr(s_y - 1))[s_x];
+            patch[0][0] = ((const ushort2*) src.ptr(s_y - 1))[::max(s_x - 1, 0)];
+            patch[0][2] = ((const ushort2*) src.ptr(s_y - 1))[::min(s_x + 1, ((dst.cols + 1) >> 1) - 1)];
+
+            patch[1][1] = ((const ushort2*) src.ptr(s_y))[s_x];
+            patch[1][0] = ((const ushort2*) src.ptr(s_y))[::max(s_x - 1, 0)];
+            patch[1][2] = ((const ushort2*) src.ptr(s_y))[::min(s_x + 1, ((dst.cols + 1) >> 1) - 1)];
+
+            patch[2][1] = ((const ushort2*) src.ptr(s_y + 1))[s_x];
+            patch[2][0] = ((const ushort2*) src.ptr(s_y + 1))[::max(s_x - 1, 0)];
+            patch[2][2] = ((const ushort2*) src.ptr(s_y + 1))[::min(s_x + 1, ((dst.cols + 1) >> 1) - 1)];
+
+            D res0 = VecTraits<D>::all(numeric_limits<ushort>::max());
+            D res1 = VecTraits<D>::all(numeric_limits<ushort>::max());
+
+            if ((s_y & 1) ^ start_with_green)
+            {
+                const int t0 = (patch[0][1].x + patch[2][1].x + 1) >> 1;
+                const int t1 = (patch[1][0].y + patch[1][1].y + 1) >> 1;
+
+                const int t2 = (patch[0][1].x + patch[0][2].x + patch[2][1].x + patch[2][2].x + 2) >> 2;
+                const int t3 = (patch[0][1].y + patch[1][1].x + patch[1][2].x + patch[2][1].y + 2) >> 2;
+
+                if ((s_y & 1) ^ blue_last)
+                {
+                    res0.x = t1;
+                    res0.y = patch[1][1].x;
+                    res0.z = t0;
+
+                    res1.x = patch[1][1].y;
+                    res1.y = t3;
+                    res1.z = t2;
+                }
+                else
+                {
+                    res0.x = t0;
+                    res0.y = patch[1][1].x;
+                    res0.z = t1;
+
+                    res1.x = t2;
+                    res1.y = t3;
+                    res1.z = patch[1][1].y;
+                }
+            }
+            else
+            {
+                const int t0 = (patch[0][0].y + patch[0][1].y + patch[2][0].y + patch[2][1].y + 2) >> 2;
+                const int t1 = (patch[0][1].x + patch[1][0].y + patch[1][1].y + patch[2][1].x + 2) >> 2;
+
+                const int t2 = (patch[0][1].y + patch[2][1].y + 1) >> 1;
+                const int t3 = (patch[1][1].x + patch[1][2].x + 1) >> 1;
+
+                if ((s_y & 1) ^ blue_last)
+                {
+                    res0.x = patch[1][1].x;
+                    res0.y = t1;
+                    res0.z = t0;
+
+                    res1.x = t3;
+                    res1.y = patch[1][1].y;
+                    res1.z = t2;
+                }
+                else
+                {
+                    res0.x = t0;
+                    res0.y = t1;
+                    res0.z = patch[1][1].x;
+
+                    res1.x = t2;
+                    res1.y = patch[1][1].y;
+                    res1.z = t3;
+                }
+            }
+
+            const int d_x = (blockIdx.x * blockDim.x + threadIdx.x) << 1;
+            const int d_y = blockIdx.y * blockDim.y + threadIdx.y;
+
+            dst(d_y, d_x) = res0;
+            if (d_x + 1 < dst.cols)
+                dst(d_y, d_x + 1) = res1;
+        }
+
+        template <int cn>
+        void Bayer2BGR_8u_gpu(DevMem2Db src, DevMem2Db dst, bool blue_last, bool start_with_green, cudaStream_t stream)
+        {
+            typedef typename TypeVec<uchar, cn>::vec_type dst_t;
 
             const dim3 block(32, 8);
-            const dim3 grid(divUp(total.x, block.x), divUp(total.y, block.y));
+            const dim3 grid(divUp(dst.cols, 4 * block.x), divUp(dst.rows, block.y));
 
-            Bayer2BGR<PtrStep_<T>, dst_t><<<grid, block, 0, stream>>>((DevMem2D_<T>)src, (DevMem2D_<dst_t>)dst, width, height, blue_last, start_with_green);
+            cudaSafeCall( cudaFuncSetCacheConfig(Bayer2BGR_8u<dst_t>, cudaFuncCachePreferL1) );
+
+            Bayer2BGR_8u<dst_t><<<grid, block, 0, stream>>>(src, (DevMem2D_<dst_t>)dst, blue_last, start_with_green);
+            cudaSafeCall( cudaGetLastError() );
+
+            if (stream == 0)
+                cudaSafeCall( cudaDeviceSynchronize() );
+        }
+        template <int cn>
+        void Bayer2BGR_16u_gpu(DevMem2Db src, DevMem2Db dst, bool blue_last, bool start_with_green, cudaStream_t stream)
+        {
+            typedef typename TypeVec<ushort, cn>::vec_type dst_t;
+
+            const dim3 block(32, 8);
+            const dim3 grid(divUp(dst.cols, 2 * block.x), divUp(dst.rows, block.y));
+
+            cudaSafeCall( cudaFuncSetCacheConfig(Bayer2BGR_16u<dst_t>, cudaFuncCachePreferL1) );
+
+            Bayer2BGR_16u<dst_t><<<grid, block, 0, stream>>>(src, (DevMem2D_<dst_t>)dst, blue_last, start_with_green);
             cudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
                 cudaSafeCall( cudaDeviceSynchronize() );
         }
 
-        template void Bayer2BGR_gpu<uchar, 3>(DevMem2Db src, DevMem2Db dst, bool blue_last, bool start_with_green, cudaStream_t stream);
-        template void Bayer2BGR_gpu<uchar, 4>(DevMem2Db src, DevMem2Db dst, bool blue_last, bool start_with_green, cudaStream_t stream);
-        template void Bayer2BGR_gpu<ushort, 3>(DevMem2Db src, DevMem2Db dst, bool blue_last, bool start_with_green, cudaStream_t stream);
-        template void Bayer2BGR_gpu<ushort, 4>(DevMem2Db src, DevMem2Db dst, bool blue_last, bool start_with_green, cudaStream_t stream);
+        template void Bayer2BGR_8u_gpu<3>(DevMem2Db src, DevMem2Db dst, bool blue_last, bool start_with_green, cudaStream_t stream);
+        template void Bayer2BGR_8u_gpu<4>(DevMem2Db src, DevMem2Db dst, bool blue_last, bool start_with_green, cudaStream_t stream);
+        template void Bayer2BGR_16u_gpu<3>(DevMem2Db src, DevMem2Db dst, bool blue_last, bool start_with_green, cudaStream_t stream);
+        template void Bayer2BGR_16u_gpu<4>(DevMem2Db src, DevMem2Db dst, bool blue_last, bool start_with_green, cudaStream_t stream);
     }
 }}
