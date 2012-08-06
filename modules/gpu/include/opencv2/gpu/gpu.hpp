@@ -917,6 +917,9 @@ CV_EXPORTS void graphcut(GpuMat& terminals, GpuMat& leftTransp, GpuMat& rightTra
                          GpuMat& labels,
                          GpuMat& buf, Stream& stream = Stream::Null());
 
+//! performs connected componnents labeling.
+CV_EXPORTS void labelComponents(const GpuMat& image, GpuMat& mask, GpuMat& components, const cv::Scalar& lo, const cv::Scalar& hi);
+
 ////////////////////////////////// Histograms //////////////////////////////////
 
 //! Compute levels with even distribution. levels will have 1 row and nLevels cols and CV_32SC1 type.

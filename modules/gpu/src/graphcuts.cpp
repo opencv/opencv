@@ -47,7 +47,25 @@
 void cv::gpu::graphcut(GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
 void cv::gpu::graphcut(GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
 
+void cv::gpu::labelComponents(const GpuMat& image, GpuMat& mask, GpuMat& components, const cv::Scalar& lo, const cv::Scalar& hi) { throw_nogpu(); }
+
 #else /* !defined (HAVE_CUDA) */
+
+namespace cv { namespace gpu { namespace device
+{
+    namespace ccl
+    {
+        void labelComponents(const DevMem2D& edges, DevMem2Di comps);
+        void computeEdges(const DevMem2D& image, DevMem2D edges, const int lo, const int hi);
+    }
+}}}
+
+void cv::gpu::labelComponents(const GpuMat& image, GpuMat& mask, GpuMat& components, const cv::Scalar& lo, const cv::Scalar& hi)
+{
+    device::ccl::computeEdges(image, mask, lo[0], hi[0]);
+    device::ccl::labelComponents(mask, components);
+}
+
 
 namespace
 {
