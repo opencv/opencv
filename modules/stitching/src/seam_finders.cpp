@@ -659,7 +659,7 @@ namespace
 {
 
 template <typename T>
-inline float diffL2Square(const Mat &image1, int y1, int x1, const Mat &image2, int y2, int x2)
+float diffL2Square(const Mat &image1, int y1, int x1, const Mat &image2, int y2, int x2)
 {
     const T *r1 = image1.ptr<T>(y1);
     const T *r2 = image2.ptr<T>(y2);
