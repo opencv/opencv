@@ -60,6 +60,7 @@ PARAM_TEST_CASE(MatchTemplate8U, cv::Size, TemplateSize, Channels, TemplateMetho
     cv::Size templ_size;
     int cn;
     int method;
+	std::vector<cv::ocl::Info> oclinfo;
 
     virtual void SetUp()
     {
@@ -67,6 +68,8 @@ PARAM_TEST_CASE(MatchTemplate8U, cv::Size, TemplateSize, Channels, TemplateMetho
         templ_size = GET_PARAM(1);
         cn = GET_PARAM(2);
         method = GET_PARAM(3);
+        int devnums = getDevice(oclinfo, OPENCV_DEFAULT_OPENCL_DEVICE);
+        CV_Assert(devnums > 0);
     }
 };
 
@@ -109,6 +112,7 @@ PARAM_TEST_CASE(MatchTemplate32F, cv::Size, TemplateSize, Channels, TemplateMeth
     cv::Size templ_size;
     int cn;
     int method;
+	std::vector<cv::ocl::Info> oclinfo;
 
     virtual void SetUp()
     {
@@ -116,6 +120,8 @@ PARAM_TEST_CASE(MatchTemplate32F, cv::Size, TemplateSize, Channels, TemplateMeth
         templ_size = GET_PARAM(1);
         cn = GET_PARAM(2);
         method = GET_PARAM(3);
+        int devnums = getDevice(oclinfo, OPENCV_DEFAULT_OPENCL_DEVICE);
+        CV_Assert(devnums > 0);
     }
 };
 

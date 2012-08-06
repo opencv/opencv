@@ -119,8 +119,8 @@ PARAM_TEST_CASE(PyrDown, MatType, bool)
 
         val = cv::Scalar(rng.uniform(-10.0, 10.0), rng.uniform(-10.0, 10.0), rng.uniform(-10.0, 10.0), rng.uniform(-10.0, 10.0));
 
-        //int devnums = getDevice(oclinfo);
-        //CV_Assert(devnums > 0);
+        int devnums = getDevice(oclinfo);
+        CV_Assert(devnums > 0);
         //if you want to use undefault device, set it here
         //setDevice(oclinfo[0]);
     }

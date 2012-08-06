@@ -33,7 +33,7 @@ void blendLinearGold(const cv::Mat& img1, const cv::Mat& img2, const cv::Mat& we
 
 PARAM_TEST_CASE(Blend, cv::Size, MatType/*, UseRoi*/)
 {
-    //cv::gpu::DeviceInfo devInfo;
+    std::vector<cv::ocl::Info> oclinfo;
     cv::Size size;
     int type;
     bool useRoi;
@@ -45,7 +45,8 @@ PARAM_TEST_CASE(Blend, cv::Size, MatType/*, UseRoi*/)
         type = GET_PARAM(1);
         /*useRoi = GET_PARAM(3);*/
 
-        //cv::gpu::setDevice(devInfo.deviceID());
+        int devnums = getDevice(oclinfo, OPENCV_DEFAULT_OPENCL_DEVICE);
+        CV_Assert(devnums > 0);
     }
 };
 

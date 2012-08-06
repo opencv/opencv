@@ -60,11 +60,14 @@ PARAM_TEST_CASE(ColumnSum, cv::Size, bool )
     cv::Size size;
     cv::Mat src;
 	bool useRoi;
+	std::vector<cv::ocl::Info> oclinfo;
 
     virtual void SetUp()
     {
         size = GET_PARAM(0);
 		useRoi = GET_PARAM(1);
+        int devnums = getDevice(oclinfo, OPENCV_DEFAULT_OPENCL_DEVICE);
+        CV_Assert(devnums > 0);
     }
 };
 
