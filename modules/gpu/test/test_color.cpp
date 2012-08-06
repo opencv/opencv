@@ -1628,7 +1628,7 @@ TEST_P(CvtColor, BGR2Lab)
     }
     catch (const cv::Exception& e)
     {
-#if (CUDA_VERSION < 5000)
+#if defined (CUDA_VERSION) && (CUDA_VERSION < 5000)
         ASSERT_EQ(CV_StsBadFlag, e.code);
 #else
         FAIL();
@@ -1655,7 +1655,7 @@ TEST_P(CvtColor, RGB2Lab)
     }
     catch (const cv::Exception& e)
     {
-#if (CUDA_VERSION < 5000)
+#if defined (CUDA_VERSION) && (CUDA_VERSION < 5000)
         ASSERT_EQ(CV_StsBadFlag, e.code);
 #else
         FAIL();
@@ -1682,7 +1682,7 @@ TEST_P(CvtColor, BGR2Luv)
     }
     catch (const cv::Exception& e)
     {
-#if (CUDA_VERSION < 5000)
+#if defined (CUDA_VERSION) && (CUDA_VERSION < 5000)
         ASSERT_EQ(CV_StsBadFlag, e.code);
 #else
         FAIL();
@@ -1709,7 +1709,7 @@ TEST_P(CvtColor, RGB2Luv)
     }
     catch (const cv::Exception& e)
     {
-#if (CUDA_VERSION < 5000)
+#if defined (CUDA_VERSION) && (CUDA_VERSION < 5000)
         ASSERT_EQ(CV_StsBadFlag, e.code);
 #else
         FAIL();
@@ -1736,7 +1736,7 @@ TEST_P(CvtColor, RGBA2mRGBA)
     }
     catch (const cv::Exception& e)
     {
-#if (CUDA_VERSION < 5000)
+#if defined (CUDA_VERSION) && (CUDA_VERSION < 5000)
         ASSERT_EQ(CV_StsBadFlag, e.code);
 #else
         FAIL();
