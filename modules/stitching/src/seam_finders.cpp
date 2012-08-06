@@ -509,8 +509,6 @@ void DpSeamFinder::resolveConflicts(const Mat &image1, const Mat &image2,
 void DpSeamFinder::computeGradients(const Mat &image1, const Mat &image2)
 {
     CV_Assert(costFunction() == COLOR_GRAD);
-    CV_Assert(image1.type() == CV_32FC3);
-    CV_Assert(image2.type() == CV_32FC3);
 
     Mat gray;
     cvtColor(image1, gray, CV_BGR2GRAY);
@@ -603,8 +601,7 @@ bool DpSeamFinder::getSeamTips(int c1, int c2, Point &p1, Point &p2)
 
     // select two most distant clusters
 
-    int idx[2];
-
+    int idx[2] = {-1,-1};
     double maxDist = -numeric_limits<double>::max();
 
     for (int i = 0; i < nlabels-1; ++i)
@@ -658,14 +655,35 @@ bool DpSeamFinder::getSeamTips(int c1, int c2, Point &p1, Point &p2)
 }
 
 
+namespace
+{
+
+template <typename T>
+inline float diffL2Square(const Mat &image1, int y1, int x1, const Mat &image2, int y2, int x2)
+{
+    const T *r1 = image1.ptr<T>(y1);
+    const T *r2 = image2.ptr<T>(y2);
+    return static_cast<float>(sqr(r1[3*x1] - r2[3*x2]) + sqr(r1[3*x1+1] - r2[3*x2+1]) +
+                              sqr(r1[3*x1+2] - r2[3*x2+2]));
+}
+
+} // namespace
+
+
 void DpSeamFinder::computeCosts(const Mat &image1, const Mat &image2, Point tl1, Point tl2,
                                 int c, Mat_<float> &costV, Mat_<float> &costH)
 {
-    CV_Assert(image1.type() == CV_32FC3);
-    CV_Assert(image2.type() == CV_32FC3);
     CV_Assert(states_[c] & INTERS);
 
-    // compute costs
+    // compute costs    
+
+    float (*diff)(const Mat&, int, int, const Mat&, int, int) = 0;
+    if (image1.type() == CV_32FC3 && image2.type() == CV_32FC3)
+        diff = diffL2Square<float>;
+    else if (image1.type() == CV_8UC3 && image2.type() == CV_8UC3)
+        diff = diffL2Square<uchar>;
+    else
+        CV_Error(CV_StsBadArg, "both images must have CV_32FC3 or CV_8UC3 type");
 
     int l = c+1;
     Rect roi(tls_[c], brs_[c]);
@@ -684,18 +702,14 @@ void DpSeamFinder::computeCosts(const Mat &image1, const Mat &image2, Point tl1,
         {
             if (labels_(y, x) == l && x > 0 && labels_(y, x-1) == l)
             {
-                const Point3f &pr1 = image1.at<Point3f>(y + dy1, x + dx1);
-                const Point3f &pl1 = image1.at<Point3f>(y + dy1, x + dx1 - 1);
-                const Point3f &pr2 = image2.at<Point3f>(y + dy2, x + dx2);
-                const Point3f &pl2 = image2.at<Point3f>(y + dy2, x + dx2 - 1);
-
-                float costColor = (normL2(pl1, pr2) + normL2(pl2, pr1)) / 2;
+                float costColor = (diff(image1, y + dy1, x + dx1 - 1, image2, y + dy2, x + dx2) +
+                                   diff(image1, y + dy1, x + dx1, image2, y + dy2, x + dx2 - 1)) / 2;
                 if (costFunc_ == COLOR)
                     costV(y - roi.y, x - roi.x) = costColor;
                 else if (costFunc_ == COLOR_GRAD)
                 {
-                    float costGrad = fabs(gradx1_(y + dy1, x + dx1)) + fabs(gradx1_(y + dy1, x + dx1 - 1)) +
-                                     fabs(gradx2_(y + dy2, x + dx2)) + fabs(gradx2_(y + dy2, x + dx2 - 1)) + 1.f;
+                    float costGrad = std::abs(gradx1_(y + dy1, x + dx1)) + std::abs(gradx1_(y + dy1, x + dx1 - 1)) +
+                                     std::abs(gradx2_(y + dy2, x + dx2)) + std::abs(gradx2_(y + dy2, x + dx2 - 1)) + 1.f;
                     costV(y - roi.y, x - roi.x) = costColor / costGrad;
                 }
             }
@@ -712,18 +726,14 @@ void DpSeamFinder::computeCosts(const Mat &image1, const Mat &image2, Point tl1,
         {
             if (labels_(y, x) == l && y > 0 && labels_(y-1, x) == l)
             {
-                const Point3f &pd1 = image1.at<Point3f>(y + dy1, x + dx1);
-                const Point3f &pu1 = image1.at<Point3f>(y + dy1 - 1, x + dx1);
-                const Point3f &pd2 = image2.at<Point3f>(y + dy2, x + dx2);
-                const Point3f &pu2 = image2.at<Point3f>(y + dy2 - 1, x + dx2);
-
-                float costColor = (normL2(pu1, pd2) + normL2(pu2, pd1)) / 2;
+                float costColor = (diff(image1, y + dy1 - 1, x + dx1, image2, y + dy2, x + dx2) +
+                                   diff(image1, y + dy1, x + dx1, image2, y + dy2 - 1, x + dx2)) / 2;
                 if (costFunc_ == COLOR)
                     costH(y - roi.y, x - roi.x) = costColor;
                 else if (costFunc_ == COLOR_GRAD)
                 {
-                    float costGrad = fabs(grady1_(y + dy1, x + dx1)) + fabs(grady1_(y + dy1 - 1, x + dx1)) +
-                                     fabs(grady2_(y + dy2, x + dx2)) + fabs(grady2_(y + dy2 - 1, x + dx2)) + 1.f;
+                    float costGrad = std::abs(grady1_(y + dy1, x + dx1)) + std::abs(grady1_(y + dy1 - 1, x + dx1)) +
+                                     std::abs(grady2_(y + dy2, x + dx2)) + std::abs(grady2_(y + dy2 - 1, x + dx2)) + 1.f;
                     costH(y - roi.y, x - roi.x) = costColor / costGrad;
                 }
             }

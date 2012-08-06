@@ -98,7 +98,7 @@ class CV_EXPORTS DpSeamFinder : public SeamFinder
 public:
     enum CostFunction { COLOR, COLOR_GRAD };
 
-    DpSeamFinder(CostFunction costFunc = COLOR_GRAD);
+    DpSeamFinder(CostFunction costFunc = COLOR);
 
     CostFunction costFunction() const { return costFunc_; }
     void setCostFunction(CostFunction val) { costFunc_ = val; }
@@ -169,10 +169,10 @@ private:
 
     bool closeToContour(int y, int x, const Mat_<uchar> &contourMask);
 
-    bool getSeamTips(int c1, int c2, Point &p1, Point &p2);
+    bool getSeamTips(int c1, int c2, Point &p1, Point &p2);    
 
     void computeCosts(const Mat &image1, const Mat &image2, Point tl1, Point tl2,
-                      int c, Mat_<float> &costV, Mat_<float> &costH);
+                      int c, Mat_<float> &costV, Mat_<float> &costH);   
 
     bool estimateSeam(
             const Mat &image1, const Mat &image2, Point tl1, Point tl2, int c,
