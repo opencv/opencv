@@ -47,7 +47,8 @@
 void cv::gpu::graphcut(GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
 void cv::gpu::graphcut(GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
 
-void cv::gpu::labelComponents(const GpuMat&, GpuMat&, GpuMat&, const cv::Scalar&, const cv::Scalar&, Stream&) { throw_nogpu(); }
+void cv::gpu::connectivityMask(const GpuMat&, GpuMat&, const cv::Scalar&, const cv::Scalar&, Stream&) { throw_nogpu(); }
+void cv::gpu::labelComponents(const GpuMat& mask, GpuMat& components, Stream& stream) { throw_nogpu(); }
 
 #else /* !defined (HAVE_CUDA) */
 
@@ -56,29 +57,65 @@ namespace cv { namespace gpu { namespace device
     namespace ccl
     {
         void labelComponents(const DevMem2D& edges, DevMem2Di comps, cudaStream_t stream);
-        void computeEdges(const DevMem2D& image, DevMem2D edges, const int lo, const int hi, cudaStream_t stream);
+
+        template<typename T>
+        void computeEdges(const DevMem2D& image, DevMem2D edges, const float4& lo, const float4& hi, cudaStream_t stream);
     }
 }}}
 
-void cv::gpu::labelComponents(const GpuMat& image, GpuMat& mask, GpuMat& components, const cv::Scalar& lo, const cv::Scalar& hi, Stream& s)
+
+float4 scalarToCudaType(const cv::Scalar& in)
+{
+    float4 res;
+    res.x = in[0]; res.y = in[1]; res.z = in[2]; res.w = in[3];
+    return res;
+}
+
+
+void cv::gpu::connectivityMask(const GpuMat& image, GpuMat& mask, const cv::Scalar& lo, const cv::Scalar& hi, Stream& s)
 {
     CV_Assert(!image.empty());
 
-    int type = image.type();
-    CV_Assert(type == CV_8UC1);
+    int ch = image.channels();
+    CV_Assert(ch <= 4);
+
+    int depth = image.depth();
+
+    typedef void (*func_t)(const DevMem2D& image, DevMem2D edges, const float4& lo, const float4& hi, cudaStream_t stream);
+
+    static const func_t suppotLookup[8][4] =
+    {   //    1,    2,     3,     4
+        { device::ccl::computeEdges<uchar>,  0,  device::ccl::computeEdges<uchar3>,  device::ccl::computeEdges<uchar4>  },// CV_8U
+        { 0,                                 0,  0,                                  0                                  },// CV_16U
+        { device::ccl::computeEdges<ushort>, 0,  device::ccl::computeEdges<ushort3>, device::ccl::computeEdges<ushort4> },// CV_8S
+        { 0,                                 0,  0,                                  0                                  },// CV_16S
+        { device::ccl::computeEdges<int>,    0,  0,                                  0                                  },// CV_32S
+        { device::ccl::computeEdges<float>,  0,  0,                                  0                                  },// CV_32F
+        { 0,                                 0,  0,                                  0                                  },// CV_64F
+        { 0,                                 0,  0,                                  0                                  } // CV_USRTYPE1
+    };
+
+    func_t f = suppotLookup[depth][ch - 1];
+    CV_Assert(f);
 
     if (image.size() != mask.size() || mask.type() != CV_8UC1)
         mask.create(image.size(), CV_8UC1);
 
-    if (image.size() != components.size() || components.type() != CV_32SC1)
-        components.create(image.size(), CV_32SC1);
-
     cudaStream_t stream = StreamAccessor::getStream(s);
-
-    device::ccl::computeEdges(image, mask, lo[0], hi[0], stream);
-    device::ccl::labelComponents(mask, components, stream);
+    float4 culo = scalarToCudaType(lo), cuhi = scalarToCudaType(hi);
+    f(image, mask, culo, cuhi, stream);
 }
 
+void cv::gpu::labelComponents(const GpuMat& mask, GpuMat& components, Stream& s)
+{
+    CV_Assert(!mask.empty() && mask.type() == CV_8U);
+
+    if (mask.size() != components.size() || components.type() != CV_32SC1)
+        components.create(mask.size(), CV_32SC1);
+
+    cudaStream_t stream = StreamAccessor::getStream(s);
+    device::ccl::labelComponents(mask, components, stream);
+}
 
 namespace
 {

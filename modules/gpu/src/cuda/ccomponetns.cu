@@ -65,32 +65,108 @@ namespace cv { namespace gpu { namespace device
             TILE_ROWS = CTA_SIZE_Y * TPB_Y
         };
 
+        template<typename T> struct IntervalsTraits
+        {
+            typedef T elem_type;
+        };
+
+        template<> struct IntervalsTraits<unsigned char>
+        {
+            typedef int dist_type;
+            enum {ch = 1};
+        };
+
+        template<> struct IntervalsTraits<uchar3>
+        {
+            typedef int3 dist_type;
+            enum {ch = 3};
+        };
+
+        template<> struct IntervalsTraits<uchar4>
+        {
+            typedef int3 dist_type;
+            enum {ch = 4};
+        };
+
+        template<> struct IntervalsTraits<unsigned short>
+        {
+            typedef int dist_type;
+            enum {ch = 1};
+        };
+
+        template<> struct IntervalsTraits<ushort3>
+        {
+            typedef int3 dist_type;
+            enum {ch = 3};
+        };
+
+        template<> struct IntervalsTraits<ushort4>
+        {
+            typedef int4 dist_type;
+            enum {ch = 4};
+        };
+
+        template<> struct IntervalsTraits<float>
+        {
+            typedef float dist_type;
+            enum {ch = 1};
+        };
+
+        template<> struct IntervalsTraits<int>
+        {
+            typedef int dist_type;
+            enum {ch = 1};
+        };
+
         typedef unsigned char component;
         enum Edges { UP = 1, DOWN = 2, LEFT = 4, RIGHT = 8, EMPTY = 0xF0 };
 
-        template<typename T>
-        struct InInterval
+        template<typename T, int CH> struct InInterval {};
+
+        template<typename T> struct InInterval<T, 1>
         {
-            __host__ __device__ __forceinline__ InInterval(const T& _lo, const T& _hi) : lo(-_lo), hi(_hi) {};
+            __host__ __device__ __forceinline__ InInterval(const float4& _lo, const float4& _hi) : lo(-_lo.x), hi(_hi.x) {};
             T lo, hi;
 
-            __device__ __forceinline__ bool operator() (const T& a, const T& b) const
+            template<typename I> __device__ __forceinline__ bool operator() (const I& a, const I& b) const
             {
                 T d = a - b;
                 return lo <= d && d <= hi;
             }
-
         };
 
-        template<typename F>
-        __global__ void computeConnectivity(const DevMem2D image, DevMem2D components, F connected)
+        template<typename T> struct InInterval<T, 3>
+        {
+            __host__ __device__ __forceinline__ InInterval(const float4& _lo, const float4& _hi){};
+            T lo, hi;
+
+            template<typename I> __device__ __forceinline__ bool operator() (const I& a, const I& b) const
+            {
+                return true;
+            }
+        };
+
+        template<typename T> struct InInterval<T, 4>
+        {
+            __host__ __device__ __forceinline__ InInterval(const float4& _lo, const float4& _hi){};
+            T lo, hi;
+
+            template<typename I> __device__ __forceinline__ bool operator() (const I& a, const I& b) const
+            {
+                return true;
+            }
+        };
+
+
+        template<typename T, typename F>
+        __global__ void computeConnectivity(const DevMem2D_<T> image, DevMem2D components, F connected)
         {
             int x = threadIdx.x + blockIdx.x * blockDim.x;
             int y = threadIdx.y + blockIdx.y * blockDim.y;
 
             if (x >= image.cols || y >= image.rows) return;
 
-            int intensity = image(y, x);
+            T intensity = image(y, x);
             component c = 0;
 
             if ( x > 0 && connected(intensity, image(y, x - 1)))
@@ -108,17 +184,30 @@ namespace cv { namespace gpu { namespace device
             components(y, x) = c;
         }
 
-        void computeEdges(const DevMem2D& image, DevMem2D edges, const int lo, const int hi, cudaStream_t stream)
+        template< typename T>
+        void computeEdges(const DevMem2D& image, DevMem2D edges, const float4& lo, const float4& hi, cudaStream_t stream)
         {
             dim3 block(CTA_SIZE_X, CTA_SIZE_Y);
             dim3 grid(divUp(image.cols, block.x), divUp(image.rows, block.y));
-            InInterval<int> inInt(lo, hi);
-            computeConnectivity<InInterval<int> ><<<grid, block, 0, stream>>>(image, edges, inInt);
+
+            typedef InInterval<typename IntervalsTraits<T>::dist_type, IntervalsTraits<T>::ch> Int_t;
+
+            Int_t inInt(lo, hi);
+            computeConnectivity<T, Int_t><<<grid, block, 0, stream>>>(static_cast<const DevMem2D_<T> >(image), edges, inInt);
 
             cudaSafeCall( cudaGetLastError() );
             if (stream == 0)
                 cudaSafeCall( cudaDeviceSynchronize() );
         }
+
+        template void computeEdges<uchar>  (const DevMem2D& image, DevMem2D edges, const float4& lo, const float4& hi, cudaStream_t stream);
+        template void computeEdges<uchar3> (const DevMem2D& image, DevMem2D edges, const float4& lo, const float4& hi, cudaStream_t stream);
+        template void computeEdges<uchar4> (const DevMem2D& image, DevMem2D edges, const float4& lo, const float4& hi, cudaStream_t stream);
+        template void computeEdges<ushort> (const DevMem2D& image, DevMem2D edges, const float4& lo, const float4& hi, cudaStream_t stream);
+        template void computeEdges<ushort3>(const DevMem2D& image, DevMem2D edges, const float4& lo, const float4& hi, cudaStream_t stream);
+        template void computeEdges<ushort4>(const DevMem2D& image, DevMem2D edges, const float4& lo, const float4& hi, cudaStream_t stream);
+        template void computeEdges<int>    (const DevMem2D& image, DevMem2D edges, const float4& lo, const float4& hi, cudaStream_t stream);
+        template void computeEdges<float>  (const DevMem2D& image, DevMem2D edges, const float4& lo, const float4& hi, cudaStream_t stream);
 
         __global__ void lableTiles(const DevMem2D edges, DevMem2Di comps)
         {

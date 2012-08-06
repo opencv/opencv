@@ -70,7 +70,9 @@ TEST_P(Labeling, ConnectedComponents)
     cv::gpu::GpuMat components;
     components.create(image.rows, image.cols, CV_32SC1);
 
-    cv::gpu::labelComponents(cv::gpu::GpuMat(image), mask, components, cv::Scalar::all(0), cv::Scalar::all(2));
+    cv::gpu::connectivityMask(cv::gpu::GpuMat(image), mask, cv::Scalar::all(0), cv::Scalar::all(2));
+
+    cv::gpu::labelComponents(mask, components);
 
     // std::cout << cv::Mat(components) << std::endl;
     // cv::imshow("test", image);

@@ -917,8 +917,11 @@ CV_EXPORTS void graphcut(GpuMat& terminals, GpuMat& leftTransp, GpuMat& rightTra
                          GpuMat& labels,
                          GpuMat& buf, Stream& stream = Stream::Null());
 
+//! compute mask for Generalized Flood fill componetns labeling.
+CV_EXPORTS void connectivityMask(const GpuMat& image, GpuMat& mask, const cv::Scalar& lo, const cv::Scalar& hi, Stream& stream = Stream::Null());
+
 //! performs connected componnents labeling.
-CV_EXPORTS void labelComponents(const GpuMat& image, GpuMat& mask, GpuMat& components, const cv::Scalar& lo, const cv::Scalar& hi, Stream& stream = Stream::Null());
+CV_EXPORTS void labelComponents(const GpuMat& mask, GpuMat& components, Stream& stream = Stream::Null());
 
 ////////////////////////////////// Histograms //////////////////////////////////
 
