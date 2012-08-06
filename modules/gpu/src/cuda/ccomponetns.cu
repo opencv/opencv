@@ -39,7 +39,9 @@
 // the use of this software, even if advised of the possibility of such damage.
 //M*/
 
-#include "opencv2/gpu/device/common.hpp"
+#include <opencv2/gpu/device/common.hpp>
+#include <opencv2/gpu/device/vec_traits.hpp>
+#include <opencv2/gpu/device/vec_math.hpp>
 #include <iostream>
 #include <stdio.h>
 
@@ -84,7 +86,7 @@ namespace cv { namespace gpu { namespace device
 
         template<> struct IntervalsTraits<uchar4>
         {
-            typedef int3 dist_type;
+            typedef int4 dist_type;
             enum {ch = 4};
         };
 
@@ -130,30 +132,39 @@ namespace cv { namespace gpu { namespace device
 
             template<typename I> __device__ __forceinline__ bool operator() (const I& a, const I& b) const
             {
-                T d = a - b;
+                I d = a - b;
                 return lo <= d && d <= hi;
             }
         };
 
         template<typename T> struct InInterval<T, 3>
         {
-            __host__ __device__ __forceinline__ InInterval(const float4& _lo, const float4& _hi){};
+            __host__ __device__ __forceinline__ InInterval(const float4& _lo, const float4& _hi)
+            : lo (VecTraits<T>::make(-_lo.x, -_lo.y, -_lo.z)), hi (VecTraits<T>::make(_hi.x, _hi.y, _hi.z)){};
             T lo, hi;
 
             template<typename I> __device__ __forceinline__ bool operator() (const I& a, const I& b) const
             {
-                return true;
+                I d = a - b;
+                return lo.x <= d.x && d.x <= hi.x &&
+                       lo.y <= d.y && d.y <= hi.y &&
+                       lo.z <= d.z && d.z <= hi.z;
             }
         };
 
         template<typename T> struct InInterval<T, 4>
         {
-            __host__ __device__ __forceinline__ InInterval(const float4& _lo, const float4& _hi){};
+            __host__ __device__ __forceinline__ InInterval(const float4& _lo, const float4& _hi)
+            : lo (VecTraits<T>::make(-_lo.x, -_lo.y, -_lo.z, -_lo.w)), hi (VecTraits<T>::make(_hi.x, _hi.y, _hi.z, -_hi.w)){};
             T lo, hi;
 
             template<typename I> __device__ __forceinline__ bool operator() (const I& a, const I& b) const
             {
-                return true;
+                I d = a - b;
+                return lo.x <= d.x && d.x <= hi.x &&
+                       lo.y <= d.y && d.y <= hi.y &&
+                       lo.z <= d.z && d.z <= hi.z &&
+                       lo.w <= d.w && d.w <= hi.w;
             }
         };
 
@@ -275,16 +286,16 @@ namespace cv { namespace gpu { namespace device
                         int label = new_labels[i][j];
 
                         if (c & UP)
-                           label = min(label, labelsTile[yloc - 1][xloc]);
+                           label = ::min(label, labelsTile[yloc - 1][xloc]);
 
                         if (c &  DOWN)
-                           label = min(label, labelsTile[yloc + 1][xloc]);
+                           label = ::min(label, labelsTile[yloc + 1][xloc]);
 
                         if (c & LEFT)
-                           label = min(label, labelsTile[yloc][xloc - 1]);
+                           label = ::min(label, labelsTile[yloc][xloc - 1]);
 
                         if (c & RIGHT)
-                           label = min(label, labelsTile[yloc][xloc + 1]);
+                           label = ::min(label, labelsTile[yloc][xloc + 1]);
 
                        new_labels[i][j] = label;
                     }
@@ -366,8 +377,8 @@ namespace cv { namespace gpu { namespace device
 
             if (r1 == r2) return;
 
-            int mi = min(r1, r2);
-            int ma = max(r1, r2);
+            int mi = ::min(r1, r2);
+            int ma = ::max(r1, r2);
 
             int y = ma / comps.cols;
             int x = ma - y * comps.cols;
