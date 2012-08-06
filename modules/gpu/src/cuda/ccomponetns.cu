@@ -83,7 +83,7 @@ namespace cv { namespace gpu { namespace device
         };
 
         template<typename F>
-        __global__ void computeComponents(const DevMem2D image, DevMem2D components, F connected)
+        __global__ void computeConnectivity(const DevMem2D image, DevMem2D components, F connected)
         {
             int x = threadIdx.x + blockIdx.x * blockDim.x;
             int y = threadIdx.y + blockIdx.y * blockDim.y;
@@ -108,15 +108,16 @@ namespace cv { namespace gpu { namespace device
             components(y, x) = c;
         }
 
-        void computeEdges(const DevMem2D& image, DevMem2D components, const int lo, const int hi)
+        void computeEdges(const DevMem2D& image, DevMem2D edges, const int lo, const int hi, cudaStream_t stream)
         {
             dim3 block(CTA_SIZE_X, CTA_SIZE_Y);
             dim3 grid(divUp(image.cols, block.x), divUp(image.rows, block.y));
             InInterval<int> inInt(lo, hi);
-            computeComponents<InInterval<int> ><<<grid, block>>>(image, components, inInt);
+            computeConnectivity<InInterval<int> ><<<grid, block, 0, stream>>>(image, edges, inInt);
 
             cudaSafeCall( cudaGetLastError() );
-            cudaSafeCall( cudaDeviceSynchronize() );
+            if (stream == 0)
+                cudaSafeCall( cudaDeviceSynchronize() );
         }
 
         __global__ void lableTiles(const DevMem2D edges, DevMem2Di comps)
@@ -384,25 +385,25 @@ namespace cv { namespace gpu { namespace device
                 comps(y, x) = root(comps, comps(y, x));
         }
 
-        void labelComponents(const DevMem2D& edges, DevMem2Di comps)
+        void labelComponents(const DevMem2D& edges, DevMem2Di comps, cudaStream_t stream)
         {
             dim3 block(CTA_SIZE_X, CTA_SIZE_Y);
             dim3 grid(divUp(edges.cols, TILE_COLS), divUp(edges.rows, TILE_ROWS));
 
-            lableTiles<<<grid, block>>>(edges, comps);
+            lableTiles<<<grid, block, 0, stream>>>(edges, comps);
             cudaSafeCall( cudaGetLastError() );
 
             int tileSizeX = TILE_COLS, tileSizeY = TILE_ROWS;
 
             cudaSafeCall( cudaGetLastError() );
-            cudaSafeCall( cudaDeviceSynchronize() );
+            // cudaSafeCall( cudaDeviceSynchronize() );
 
             while (grid.x > 1 || grid.y > 1)
             {
                 dim3 mergeGrid(ceilf(grid.x / 2.0), ceilf(grid.y / 2.0));
                 dim3 mergeBlock(STA_SIZE_MARGE_X, STA_SIZE_MARGE_Y);
                 std::cout << "merging: " << grid.y  << " x " << grid.x << " ---> " << mergeGrid.y <<  " x " << mergeGrid.x << " for tiles: " << tileSizeY << " x " << tileSizeX << std::endl;
-                crossMerge<<<mergeGrid, mergeBlock>>>(2, 2, tileSizeY, tileSizeX, edges, comps, ceilf(grid.y / 2.0) - grid.y / 2, ceilf(grid.x / 2.0) - grid.x / 2);
+                crossMerge<<<mergeGrid, mergeBlock, 0, stream>>>(2, 2, tileSizeY, tileSizeX, edges, comps, ceilf(grid.y / 2.0) - grid.y / 2, ceilf(grid.x / 2.0) - grid.x / 2);
                 tileSizeX <<= 1;
                 tileSizeY <<= 1;
                 grid = mergeGrid;
@@ -412,9 +413,10 @@ namespace cv { namespace gpu { namespace device
 
             grid.x = divUp(edges.cols, block.x);
             grid.y = divUp(edges.rows, block.y);
-            flatten<<<grid, block>>>(edges, comps);
+            flatten<<<grid, block, 0, stream>>>(edges, comps);
             cudaSafeCall( cudaGetLastError() );
-            cudaSafeCall( cudaDeviceSynchronize() );
+            if (stream == 0)
+                cudaSafeCall( cudaDeviceSynchronize() );
         }
     }
 } } }

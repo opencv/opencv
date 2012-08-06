@@ -63,9 +63,6 @@ TEST_P(Labeling, ConnectedComponents)
 {
     cv::Mat image;
     cvtColor(loat_image(), image, CV_BGR2GRAY);
-    cv::Mat image_cpu = image.clone();
-
-    // cv::floodFill(image, cv::Point(1,1),cv::Scalar::all(64), 0, cv::Scalar::all(0), cv::Scalar::all(256));
 
     cv::gpu::GpuMat mask;
     mask.create(image.rows, image.cols, CV_8UC1);
@@ -73,20 +70,7 @@ TEST_P(Labeling, ConnectedComponents)
     cv::gpu::GpuMat components;
     components.create(image.rows, image.cols, CV_32SC1);
 
-    std::cout << "summary: " << image.cols << " " << image.rows << " "
-    << cv::gpu::GpuMat(image).cols << " " << cv::gpu::GpuMat(image).rows<< " "
-    << mask.cols << " " << mask.rows<< " "
-    << components.cols << " " << components.rows<< std::endl;
-
-
     cv::gpu::labelComponents(cv::gpu::GpuMat(image), mask, components, cv::Scalar::all(0), cv::Scalar::all(2));
-
-    // // for(int i = 0; i + 32 < image.rows; i += 32)
-    // //     for(int j = 0; j + 32 < image.cols; j += 32)
-    // //     {
-    // //         std::cout << cv::Mat(cv::Mat(mask), cv::Rect(j, i, 32, 32 ))<< std::endl;
-    // //         std::cout << cv::Mat(cv::Mat(components), cv::Rect(j, i, 32, 32 )) << std::endl;
-    // //     }
 
     // std::cout << cv::Mat(components) << std::endl;
     // cv::imshow("test", image);
@@ -102,7 +86,6 @@ TEST_P(Labeling, ConnectedComponents)
     cv::waitKey(0);
     cv::imshow("test", cv::Mat(components) * 2);
     cv::waitKey(0);
-    std::cout << "test! " << image.cols << std::endl;
 }
 
 INSTANTIATE_TEST_CASE_P(ConnectedComponents, Labeling, ALL_DEVICES);

@@ -47,7 +47,7 @@
 void cv::gpu::graphcut(GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
 void cv::gpu::graphcut(GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
 
-void cv::gpu::labelComponents(const GpuMat& image, GpuMat& mask, GpuMat& components, const cv::Scalar& lo, const cv::Scalar& hi) { throw_nogpu(); }
+void cv::gpu::labelComponents(const GpuMat&, GpuMat&, GpuMat&, const cv::Scalar&, const cv::Scalar&, Stream&) { throw_nogpu(); }
 
 #else /* !defined (HAVE_CUDA) */
 
@@ -55,15 +55,28 @@ namespace cv { namespace gpu { namespace device
 {
     namespace ccl
     {
-        void labelComponents(const DevMem2D& edges, DevMem2Di comps);
-        void computeEdges(const DevMem2D& image, DevMem2D edges, const int lo, const int hi);
+        void labelComponents(const DevMem2D& edges, DevMem2Di comps, cudaStream_t stream);
+        void computeEdges(const DevMem2D& image, DevMem2D edges, const int lo, const int hi, cudaStream_t stream);
     }
 }}}
 
-void cv::gpu::labelComponents(const GpuMat& image, GpuMat& mask, GpuMat& components, const cv::Scalar& lo, const cv::Scalar& hi)
+void cv::gpu::labelComponents(const GpuMat& image, GpuMat& mask, GpuMat& components, const cv::Scalar& lo, const cv::Scalar& hi, Stream& s)
 {
-    device::ccl::computeEdges(image, mask, lo[0], hi[0]);
-    device::ccl::labelComponents(mask, components);
+    CV_Assert(!image.empty());
+
+    int type = image.type();
+    CV_Assert(type == CV_8UC1);
+
+    if (image.size() != mask.size() || mask.type() != CV_8UC1)
+        mask.create(image.size(), CV_8UC1);
+
+    if (image.size() != components.size() || components.type() != CV_32SC1)
+        components.create(image.size(), CV_32SC1);
+
+    cudaStream_t stream = StreamAccessor::getStream(s);
+
+    device::ccl::computeEdges(image, mask, lo[0], hi[0], stream);
+    device::ccl::labelComponents(mask, components, stream);
 }
 
 

@@ -918,7 +918,7 @@ CV_EXPORTS void graphcut(GpuMat& terminals, GpuMat& leftTransp, GpuMat& rightTra
                          GpuMat& buf, Stream& stream = Stream::Null());
 
 //! performs connected componnents labeling.
-CV_EXPORTS void labelComponents(const GpuMat& image, GpuMat& mask, GpuMat& components, const cv::Scalar& lo, const cv::Scalar& hi);
+CV_EXPORTS void labelComponents(const GpuMat& image, GpuMat& mask, GpuMat& components, const cv::Scalar& lo, const cv::Scalar& hi, Stream& stream = Stream::Null());
 
 ////////////////////////////////// Histograms //////////////////////////////////
 
