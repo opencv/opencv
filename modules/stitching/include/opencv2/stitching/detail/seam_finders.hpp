@@ -103,6 +103,9 @@ public:
     CostFunction costFunction() const { return costFunc_; }
     void setCostFunction(CostFunction val) { costFunc_ = val; }
 
+    virtual void find(const std::vector<Mat> &src, const std::vector<Point> &corners,
+                      std::vector<Mat> &masks);
+
 private:
     enum ComponentState
     {
@@ -149,9 +152,6 @@ private:
     private:
         int minDist_;
     };
-
-    virtual void find(const std::vector<Mat> &src, const std::vector<Point> &corners,
-                      std::vector<Mat> &masks);
 
     void process(const Mat &image1, const Mat &image2, Point tl1, Point tl2,
                  Mat &mask1, Mat &mask2);

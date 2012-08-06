@@ -189,6 +189,9 @@ void DpSeamFinder::process(
         const Mat &image1, const Mat &image2, Point tl1, Point tl2,
         Mat &mask1, Mat &mask2)
 {
+    CV_Assert(image1.size() == mask1.size());
+    CV_Assert(image2.size() == mask2.size());
+
     Point intersectTl(std::max(tl1.x, tl2.x), std::max(tl1.y, tl2.y));
 
     Point intersectBr(std::min(tl1.x + image1.cols, tl2.x + image2.cols),
@@ -489,7 +492,7 @@ void DpSeamFinder::resolveConflicts(const Mat &image1, const Mat &image2,
         for (int x = 0; x < mask2.cols; ++x)
         {
              int l = labels_(y - dy2, x - dx2);
-             if ((states_[l-1] & FIRST) && mask1.at<uchar>(y - dy2 + dy1, x - dx2 + dx1))
+             if (l > 0 && (states_[l-1] & FIRST) && mask1.at<uchar>(y - dy2 + dy1, x - dx2 + dx1))
                 mask2.at<uchar>(y, x) = 0;
         }
     }
@@ -499,7 +502,7 @@ void DpSeamFinder::resolveConflicts(const Mat &image1, const Mat &image2,
         for (int x = 0; x < mask1.cols; ++x)
         {
              int l = labels_(y - dy1, x - dx1);
-             if ((states_[l-1] & SECOND) && mask2.at<uchar>(y - dy1 + dy2, x - dx1 + dx2))
+             if (l > 0 && (states_[l-1] & SECOND) && mask2.at<uchar>(y - dy1 + dy2, x - dx1 + dx2))
                 mask1.at<uchar>(y, x) = 0;
         }
     }
