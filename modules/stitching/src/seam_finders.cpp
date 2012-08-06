@@ -925,7 +925,7 @@ void DpSeamFinder::updateLabelsUsingSeam(int c1, int c2, const vector<Point> &se
             int c = x + dx[j];
             int r = y + dy[j];
 
-            if (c > 0 && c < mask.cols && r > 0 && r < mask.rows &&
+            if (c >= 0 && c < mask.cols && r >= 0 && r < mask.rows &&
                 mask(r, c) && mask(r, c) != 255)
             {
                 ok = true;
