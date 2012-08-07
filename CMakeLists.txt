@@ -140,6 +140,9 @@ OCV_OPTION(WITH_XIMEA          "Include XIMEA cameras support"               OFF
 OCV_OPTION(WITH_XINE           "Include Xine support (GPL)"                  OFF  IF (UNIX AND NOT APPLE AND NOT ANDROID) )
 OCV_OPTION(WITH_CLP            "Include Clp support (EPL)"                   OFF)
 OCV_OPTION(WITH_OPENCL         "Include OpenCL Runtime support"              OFF  IF (NOT ANDROID AND NOT IOS) )
+OCV_OPTION(WITH_OPENCLAMDFFT   "Include AMD OpenCL FFT library support"      OFF  IF (NOT ANDROID AND NOT IOS) )
+OCV_OPTION(WITH_OPENCLAMDBLAS  "Include AMD OpenCL BLAS library support"     OFF  IF (NOT ANDROID AND NOT IOS) )
+
 
 # OpenCV build components
 # ===================================================
@@ -395,6 +398,12 @@ if(WITH_OPENCL)
   include(cmake/OpenCVDetectOpenCL.cmake REQUIRED)
   if(OPENCL_FOUND)
     set(HAVE_OPENCL 1)
+  endif()
+  if(WITH_OPENCLAMDFFT)
+    set(HAVE_CLAMDFFT 1)
+  endif()
+  if(WITH_OPENCLAMDBLAS)
+    set(HAVE_CLAMDBLAS 1)
   endif()
 endif()
 
