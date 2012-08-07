@@ -43,6 +43,106 @@
 #include <string>
 #include <iostream>
 
+namespace {
+
+    struct GreedyLabeling
+    {
+        struct dot
+        {
+            int x;
+            int y;
+
+            static dot make(int i, int j)
+            {
+                dot d; d.x = i; d.y = j;
+                return d;
+            }
+        };
+
+        struct InInterval
+        {
+            InInterval(const int& _lo, const int& _hi) : lo(-_lo), hi(_hi) {};
+            const int lo, hi;
+
+            bool operator() (const unsigned char a, const unsigned char b) const
+            {
+                int d = a - b;
+                return lo <= d && d <= hi;
+            }
+        };
+
+        GreedyLabeling(cv::Mat img)
+        : image(img), _labels(image.cols, image.rows, CV_32SC1, cv::Scalar::all(-1)) {}
+
+        void operator() (cv::Mat labels) const
+        {
+            InInterval inInt(0, 2);
+            dot* stack = new dot[image.cols * image.rows];
+
+            int cc = -1;
+
+            int* dist_labels = (int*)labels.data;
+            int pitch = labels.step1();
+
+            unsigned char* source = (unsigned char*)image.data;
+            int width = image.cols;
+            int height = image.rows;
+
+            for (int j = 0; j < image.rows; ++j)
+                for(int i = 0; i < image.cols; ++i)
+                {
+                    if (dist_labels[j * pitch + i] != -1) continue;
+
+                    dot* top = stack;
+                    dot p = dot::make(i, j);
+                    cc++;
+
+                    dist_labels[j * pitch + i] = cc;
+
+                    while (top >= stack)
+                    {
+                        int*  dl = &dist_labels[p.y * pitch + p.x];
+                        unsigned char* sp = &source[p.y * image.step1() + p.x];
+
+                        //right
+                        if( p.x < (width - 1) && dl[ +1] == -1 && inInt(sp[0], sp[+1]))
+                        {
+                            dl[+1] = cc;
+                            *top++ = dot::make(p.x + 1, p.y);
+                        }
+
+                        //left
+                        if( p.x > 0 && dl[-1] == -1 && inInt(sp[0], sp[-1]))
+                        {
+                            dl[-1] = cc;
+                            *top++ = dot::make(p.x - 1, p.y);
+                        }
+
+                        //bottom
+                        if( p.y < (height - 1) && dl[+pitch] == -1 && inInt(sp[0], sp[+pitch]))
+                        {
+                            dl[+pitch] = cc;
+                            *top++ = dot::make(p.x, p.y + 1);
+                        }
+
+                        //top
+                        if( p.y > 0 && dl[-pitch] == -1 && inInt(sp[0], sp[-pitch]))
+                        {
+                            dl[-pitch] = cc;
+                            *top++ = dot::make(p.x, p.y - 1);
+                        }
+
+                        p = *--top;
+                    }
+                }
+            delete[] stack;
+        }
+
+        cv::Mat image;
+        cv::Mat _labels;
+    };
+}
+
 struct Labeling : testing::TestWithParam<cv::gpu::DeviceInfo>
 {
     cv::gpu::DeviceInfo devInfo;
@@ -64,6 +164,11 @@ TEST_P(Labeling, ConnectedComponents)
     cv::Mat image;
     cvtColor(loat_image(), image, CV_BGR2GRAY);
 
+    ASSERT_TRUE(image.type() == CV_8UC1);
+
+    GreedyLabeling host(image);
+    host(host._labels);
+
     cv::gpu::GpuMat mask;
     mask.create(image.rows, image.cols, CV_8UC1);
 
@@ -74,11 +179,21 @@ TEST_P(Labeling, ConnectedComponents)
 
     ASSERT_NO_THROW(cv::gpu::labelComponents(mask, components));
 
+    // for (int j = 0; j + 32 < components.rows; j += 32)
+    //     for (int i = 0; i + 32 < components.cols; i += 32)
+    //     {
+    //         std::cout << "Tile: " << i << " " << j << std::endl;
+    //         std::cout << cv::Mat(host._labels, cv::Rect(i,j,32,32)) << std::endl;
+    //         std::cout << cv::Mat(cv::Mat(components), cv::Rect(i,j,32,32)) << std::endl;
+    //     }
+
     // for debug
     // cv::imshow("test", image);
     // cv::waitKey(0);
-    // cv::imshow("test", cv::Mat(mask) * 10);
+    // cv::imshow("test", host._labels * 50);
     // cv::waitKey(0);
+    // // cv::imshow("test", cv::Mat(mask) * 10);
+    // // cv::waitKey(0);
     // cv::imshow("test", cv::Mat(components) * 2);
     // cv::waitKey(0);
 }
