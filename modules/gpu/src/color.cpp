@@ -1161,7 +1161,7 @@ namespace
             (void)src;
             (void)dst;
             (void)dcn;
-            (void)stream;
+            (void)st;
             CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" );
         #else
             CV_Assert(src.depth() == CV_8U);
@@ -1197,7 +1197,7 @@ namespace
             (void)src;
             (void)dst;
             (void)dcn;
-            (void)stream;
+            (void)st;
             CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" );
         #else
             CV_Assert(src.depth() == CV_8U);
@@ -1233,7 +1233,7 @@ namespace
             (void)src;
             (void)dst;
             (void)dcn;
-            (void)stream;
+            (void)st;
             CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" );
         #else
             CV_Assert(src.depth() == CV_8U);
@@ -1272,7 +1272,7 @@ namespace
             (void)src;
             (void)dst;
             (void)dcn;
-            (void)stream;
+            (void)st;
             CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" );
         #else
             CV_Assert(src.depth() == CV_8U);
@@ -1310,7 +1310,7 @@ namespace
     #if (CUDA_VERSION < 5000)
         (void)src;
         (void)dst;
-        (void)stream;
+        (void)st;
         CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" );
     #else
         CV_Assert(src.type() == CV_8UC4 || src.type() == CV_16UC4);
