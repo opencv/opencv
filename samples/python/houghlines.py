@@ -14,7 +14,7 @@ if __name__ == "__main__":
         filename = sys.argv[1]
         src = cv.LoadImage(filename, cv.CV_LOAD_IMAGE_GRAYSCALE)
     else:
-        url = 'http://code.opencv.org/svn/opencv/trunk/opencv/doc/pics/building.jpg'
+        url = 'http://code.opencv.org/projects/opencv/repository/revisions/master/raw/doc/pics/building.jpg'
         filedata = urllib2.urlopen(url).read()
         imagefiledata = cv.CreateMatHeader(1, len(filedata), cv.CV_8UC1)
         cv.SetData(imagefiledata, filedata, len(filedata))
@@ -37,7 +37,7 @@ if __name__ == "__main__":
             for (rho, theta) in lines[:100]:
                 a = cos(theta)
                 b = sin(theta)
-                x0 = a * rho 
+                x0 = a * rho
                 y0 = b * rho
                 pt1 = (cv.Round(x0 + 1000*(-b)), cv.Round(y0 + 1000*(a)))
                 pt2 = (cv.Round(x0 - 1000*(-b)), cv.Round(y0 - 1000*(a)))

@@ -444,7 +444,7 @@ inline int predictCategoricalStump( CascadeClassifier& cascade, Ptr<FeatureEvalu
     CascadeClassifier::Data::Stage* cascadeStages = &cascade.data.stages[0];
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
-    float tmp; // float accumulator -- float operations are quicker
+    float tmp = 0; // float accumulator -- float operations are quicker
 #endif
     for( int si = 0; si < nstages; si++ )
     {

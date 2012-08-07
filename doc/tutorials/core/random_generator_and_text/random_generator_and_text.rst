@@ -19,10 +19,10 @@ Code
 .. container:: enumeratevisibleitemswithsquare
 
    * In the previous tutorial (:ref:`Drawing_1`) we drew diverse geometric figures, giving as input parameters such as coordinates (in the form of :point:`Points <>`), color, thickness, etc. You might have noticed that we gave specific values for these arguments.
- 
+
    * In this tutorial, we intend to use *random* values for the drawing parameters. Also, we intend to populate our image with a big number of geometric figures. Since we will be initializing them in a random fashion, this process will be automatic and made by using *loops* .
 
-   * This code is in your OpenCV sample folder. Otherwise you can grab it from `here <http://code.opencv.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/core/Matrix/Drawing_2.cpp>`_ .
+   * This code is in your OpenCV sample folder. Otherwise you can grab it from `here <http://code.opencv.org/projects/opencv/repository/revisions/master/raw/samples/cpp/tutorial_code/core/Matrix/Drawing_2.cpp>`_ .
 
 Explanation
 ============
@@ -43,7 +43,7 @@ Explanation
       Mat image = Mat::zeros( window_height, window_width, CV_8UC3 );
 
       /// Show it in a window during DELAY ms
-      imshow( window_name, image ); 
+      imshow( window_name, image );
 
 #. Then we proceed to draw crazy stuff. After taking a look at the code, you can see that it is mainly divided in 8 sections, defined as functions:
 
@@ -110,22 +110,22 @@ Explanation
 
    * The *for* loop will repeat **NUMBER** times. Since the function :line:`line <>` is inside this loop, that means that **NUMBER** lines will be generated.
    * The line extremes are given by *pt1* and *pt2*. For *pt1* we can see that:
-  
+
      .. code-block:: cpp
-         
-        pt1.x = rng.uniform( x_1, x_2 );    
+
+        pt1.x = rng.uniform( x_1, x_2 );
         pt1.y = rng.uniform( y_1, y_2 );
 
-     * We know that **rng** is a *Random number generator* object. In the code above we are calling **rng.uniform(a,b)**. This generates a radombly uniformed distribution between the values **a** and **b** (inclusive in **a**, exclusive in **b**). 
+     * We know that **rng** is a *Random number generator* object. In the code above we are calling **rng.uniform(a,b)**. This generates a radombly uniformed distribution between the values **a** and **b** (inclusive in **a**, exclusive in **b**).
 
      * From the explanation above, we deduce that the extremes *pt1* and *pt2* will be random values, so the lines positions will be quite impredictable, giving a nice visual effect (check out the Result section below).
 
      * As another observation, we notice that in the :line:`line <>` arguments, for the *color* input we enter:
 
        .. code-block:: cpp
-      
-          randomColor(rng)           
-      
+
+          randomColor(rng)
+
        Let's check the function implementation:
 
        .. code-block:: cpp
@@ -138,7 +138,7 @@ Explanation
 
        As we can see, the return value is an *Scalar* with 3 randomly initialized values, which are used as the *R*, *G* and *B* parameters for the line color. Hence, the color of the lines will be random too!
 
-#. The explanation above applies for the other functions generating circles, ellipses, polygones, etc. The parameters such as *center* and *vertices* are also generated randomly. 
+#. The explanation above applies for the other functions generating circles, ellipses, polygones, etc. The parameters such as *center* and *vertices* are also generated randomly.
 
 #. Before finishing, we also should take a look at the functions *Display_Random_Text* and *Displaying_Big_End*, since they both have a few interesting features:
 
@@ -158,7 +158,7 @@ Explanation
 
           putText( image, "Testing text rendering", org, rng.uniform(0,8),
                    rng.uniform(0,100)*0.05+0.1, randomColor(rng), rng.uniform(1, 10), lineType);
-        
+
           imshow( window_name, image );
           if( waitKey(DELAY) >= 0 )
             { return -1; }
@@ -172,7 +172,7 @@ Explanation
    .. code-block:: cpp
 
       putText( image, "Testing text rendering", org, rng.uniform(0,8),
-               rng.uniform(0,100)*0.05+0.1, randomColor(rng), rng.uniform(1, 10), lineType);   
+               rng.uniform(0,100)*0.05+0.1, randomColor(rng), rng.uniform(1, 10), lineType);
 
 
    So, what does the function :put_text:`putText <>` do? In our example:
@@ -197,7 +197,7 @@ Explanation
         Size textsize = getTextSize("OpenCV forever!", CV_FONT_HERSHEY_COMPLEX, 3, 5, 0);
         Point org((window_width - textsize.width)/2, (window_height - textsize.height)/2);
         int lineType = 8;
-    
+
         Mat image2;
 
         for( int i = 0; i < 255; i += 2 )
@@ -205,7 +205,7 @@ Explanation
           image2 = image - Scalar::all(i);
           putText( image2, "OpenCV forever!", org, CV_FONT_HERSHEY_COMPLEX, 3,
                  Scalar(i, i, 255), 5, lineType );
-        
+
           imshow( window_name, image2 );
           if( waitKey(DELAY) >= 0 )
             { return -1; }
@@ -222,8 +222,8 @@ Explanation
 
    So, **image2** is the substraction of **image** and **Scalar::all(i)**. In fact, what happens here is that every pixel of **image2** will be the result of substracting every pixel of **image** minus the value of **i** (remember that for each pixel we are considering three values such as R, G and B, so each of them will be affected)
 
-  Also remember that the substraction operation *always* performs internally a **saturate** operation, which means that the result obtained will always be inside the allowed range (no negative and between 0 and 255 for our example).   
- 
+  Also remember that the substraction operation *always* performs internally a **saturate** operation, which means that the result obtained will always be inside the allowed range (no negative and between 0 and 255 for our example).
+
 
 Result
 ========
@@ -234,7 +234,7 @@ As you just saw in the Code section, the program will sequentially execute diver
 
    .. image:: images/Drawing_2_Tutorial_Result_0.jpg
       :alt: Drawing Tutorial 2 - Final Result 0
-      :align: center 
+      :align: center
 
 #. Then, a new set of figures, these time *rectangles* will follow.
 
@@ -242,13 +242,13 @@ As you just saw in the Code section, the program will sequentially execute diver
 
    .. image:: images/Drawing_2_Tutorial_Result_2.jpg
       :alt: Drawing Tutorial 2 - Final Result 2
-      :align: center 
+      :align: center
 
 #. Now, *polylines* with 03 segments will appear on screen, again in random configurations.
 
    .. image:: images/Drawing_2_Tutorial_Result_3.jpg
       :alt: Drawing Tutorial 2 - Final Result 3
-      :align: center 
+      :align: center
 
 #. Filled polygons (in this example triangles) will follow.
 
@@ -256,7 +256,7 @@ As you just saw in the Code section, the program will sequentially execute diver
 
    .. image:: images/Drawing_2_Tutorial_Result_5.jpg
       :alt: Drawing Tutorial 2 - Final Result 5
-      :align: center 
+      :align: center
 
 #. Near the end, the text *"Testing Text Rendering"* will appear in a variety of fonts, sizes, colors and positions.
 
@@ -264,4 +264,4 @@ As you just saw in the Code section, the program will sequentially execute diver
 
    .. image:: images/Drawing_2_Tutorial_Result_7.jpg
       :alt: Drawing Tutorial 2 - Final Result 7
-      :align: center 
+      :align: center

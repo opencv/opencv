@@ -4,7 +4,7 @@
 
 
 Using OpenCV in C++ code with OpenCV4Android SDK
-*********************************************
+************************************************
 
 The Android way is writing all your code in Java. But sometimes, it is not enough and you need to go to the native level and write some parts of your application in C/C++.
 This is especially important when you already have some computer vision code which is written in C++ and uses OpenCV, and you want to reuse it in your Android application.

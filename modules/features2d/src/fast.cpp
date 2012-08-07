@@ -9,16 +9,16 @@ Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions
 are met:
 
-	*Redistributions of source code must retain the above copyright
-	 notice, this list of conditions and the following disclaimer.
+    *Redistributions of source code must retain the above copyright
+     notice, this list of conditions and the following disclaimer.
 
-	*Redistributions in binary form must reproduce the above copyright
-	 notice, this list of conditions and the following disclaimer in the
-	 documentation and/or other materials provided with the distribution.
+    *Redistributions in binary form must reproduce the above copyright
+     notice, this list of conditions and the following disclaimer in the
+     documentation and/or other materials provided with the distribution.
 
-	*Neither the name of the University of Cambridge nor the names of
-	 its contributors may be used to endorse or promote products derived
-	 from this software without specific prior written permission.
+    *Neither the name of the University of Cambridge nor the names of
+     its contributors may be used to endorse or promote products derived
+     from this software without specific prior written permission.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
@@ -350,7 +350,7 @@ int cornerScore<8>(const uchar* ptr, const int pixel[], int threshold)
     }
 
     int b0 = -a0;
-    for( k = 0; k < 12; k += 2 )
+    for( k = 0; k < 8; k += 2 )
     {
         int b = std::max((int)d[k+1], (int)d[k+2]);
         b = std::max(b, (int)d[k+3]);
@@ -375,7 +375,10 @@ template<int patternSize>
 void FAST_t(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool nonmax_suppression)
 {
     Mat img = _img.getMat();
-    const int K = patternSize/2, N = patternSize + K + 1, quarterPatternSize = patternSize/4;
+    const int K = patternSize/2, N = patternSize + K + 1;
+#if CV_SSE2
+    const int quarterPatternSize = patternSize/4;
+#endif
     int i, j, k, pixel[25];
     makeOffsets(pixel, (int)img.step, patternSize);
     for(k = patternSize; k < 25; k++)
@@ -585,7 +588,7 @@ FastFeatureDetector::FastFeatureDetector( int _threshold, bool _nonmaxSuppressio
 FastFeatureDetector::FastFeatureDetector( int _threshold, bool _nonmaxSuppression, int _type )
 : threshold(_threshold), nonmaxSuppression(_nonmaxSuppression), type(_type)
 {}
-    
+
 void FastFeatureDetector::detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask ) const
 {
     Mat grayImage = image;

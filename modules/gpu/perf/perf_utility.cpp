@@ -65,19 +65,19 @@ void PrintTo(const CvtColorInfo& info, ostream* os)
         "BGR2HSV",
         "RGB2HSV",
 
-        0,
-        0,
+        "",
+        "",
 
-        0,
-        0,
+        "BGR2Lab",
+        "RGB2Lab",
 
-        0,
-        0,
-        0,
-        0,
+        "BayerBG2BGR",
+        "BayerGB2BGR",
+        "BayerRG2BGR",
+        "BayerGR2BGR",
 
-        0,
-        0,
+        "BGR2Luv",
+        "RGB2Luv",
 
         "BGR2HLS",
         "RGB2HLS",
@@ -85,18 +85,18 @@ void PrintTo(const CvtColorInfo& info, ostream* os)
         "HSV2BGR",
         "HSV2RGB",
 
-        0,
-        0,
-        0,
-        0,
+        "Lab2BGR",
+        "Lab2RGB",
+        "Luv2BGR",
+        "Luv2RGB",
 
         "HLS2BGR",
         "HLS2RGB",
 
-        0,
-        0,
-        0,
-        0,
+        "BayerBG2BGR_VNG",
+        "BayerGB2BGR_VNG",
+        "BayerRG2BGR_VNG",
+        "BayerGR2BGR_VNG",
 
         "BGR2HSV_FULL",
         "RGB2HSV_FULL",
@@ -108,30 +108,78 @@ void PrintTo(const CvtColorInfo& info, ostream* os)
         "HLS2BGR_FULL",
         "HLS2RGB_FULL",
 
-        0,
-        0,
-        0,
-        0,
+        "LBGR2Lab",
+        "LRGB2Lab",
+        "LBGR2Luv",
+        "LRGB2Luv",
 
-        0,
-        0,
-        0,
-        0,
+        "Lab2LBGR",
+        "Lab2LRGB",
+        "Luv2LBGR",
+        "Luv2LRGB",
 
         "BGR2YUV",
         "RGB2YUV",
         "YUV2BGR",
         "YUV2RGB",
 
-        0,
-        0,
-        0,
-        0,
+        "BayerBG2GRAY",
+        "BayerGB2GRAY",
+        "BayerRG2GRAY",
+        "BayerGR2GRAY",
 
-        0,
-        0,
-        0,
-        0
+        //YUV 4:2:0 formats family
+        "YUV2RGB_NV12",
+        "YUV2BGR_NV12",
+        "YUV2RGB_NV21",
+        "YUV2BGR_NV21",
+
+        "YUV2RGBA_NV12",
+        "YUV2BGRA_NV12",
+        "YUV2RGBA_NV21",
+        "YUV2BGRA_NV21",
+
+        "YUV2RGB_YV12",
+        "YUV2BGR_YV12",
+        "YUV2RGB_IYUV",
+        "YUV2BGR_IYUV",
+
+        "YUV2RGBA_YV12",
+        "YUV2BGRA_YV12",
+        "YUV2RGBA_IYUV",
+        "YUV2BGRA_IYUV",
+
+        "YUV2GRAY_420",
+
+        //YUV 4:2:2 formats family
+        "YUV2RGB_UYVY",
+        "YUV2BGR_UYVY",
+        "YUV2RGB_VYUY",
+        "YUV2BGR_VYUY",
+
+        "YUV2RGBA_UYVY",
+        "YUV2BGRA_UYVY",
+        "YUV2RGBA_VYUY",
+        "YUV2BGRA_VYUY",
+
+        "YUV2RGB_YUY2",
+        "YUV2BGR_YUY2",
+        "YUV2RGB_YVYU",
+        "YUV2BGR_YVYU",
+
+        "YUV2RGBA_YUY2",
+        "YUV2BGRA_YUY2",
+        "YUV2RGBA_YVYU",
+        "YUV2BGRA_YVYU",
+
+        "YUV2GRAY_UYVY",
+        "YUV2GRAY_YUY2",
+
+        // alpha premultiplication
+        "RGBA2mRGBA",
+        "mRGBA2RGBA",
+
+        "COLORCVT_MAX"
     };
 
     *os << str[info.code];

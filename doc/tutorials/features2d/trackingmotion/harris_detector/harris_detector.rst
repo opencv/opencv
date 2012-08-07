@@ -10,7 +10,7 @@ In this tutorial you will learn:
 
 .. container:: enumeratevisibleitemswithsquare
 
-   * What features are and why they are important    
+   * What features are and why they are important
    * Use the function :corner_harris:`cornerHarris <>` to detect corners using the Harris-Stephens method.
 
 Theory
@@ -56,7 +56,7 @@ How does it work?
 
 .. container:: enumeratevisibleitemswithsquare
 
-   * Let's look for corners. Since corners represents a variation in the gradient in the image, we will look for this "variation". 
+   * Let's look for corners. Since corners represents a variation in the gradient in the image, we will look for this "variation".
 
    * Consider a grayscale image :math:`I`. We are going to sweep a window :math:`w(x,y)` (with displacements :math:`u` in the x direction and :math:`v` in the right direction) :math:`I` and will calculate the variation of intensity.
 
@@ -66,10 +66,10 @@ How does it work?
 
      where:
 
-     * :math:`w(x,y)` is the window at position :math:`(x,y)`    
+     * :math:`w(x,y)` is the window at position :math:`(x,y)`
      * :math:`I(x,y)` is the intensity at :math:`(x,y)`
      * :math:`I(x+u,y+v)` is the intensity at the moved window :math:`(x+u,y+v)`
-	
+
    * Since we are looking for windows with corners, we are looking for windows with a large variation in intensity. Hence, we have to maximize the equation above, specifically the term:
 
      .. math::
@@ -89,36 +89,36 @@ How does it work?
      .. math::
 
         E(u,v) \approx \sum _{x,y} u^{2}I_{x}^{2} + 2uvI_{x}I_{y} + v^{2}I_{y}^{2}
-  
+
    * Which can be expressed in a matrix form as:
 
      .. math::
 
         E(u,v) \approx \begin{bmatrix}
-                        u & v 
+                        u & v
                        \end{bmatrix}
                        \left (
 		       \displaystyle \sum_{x,y}
                        w(x,y)
                        \begin{bmatrix}
                         I_x^{2} & I_{x}I_{y} \\
-                        I_xI_{y} & I_{y}^{2} 
+                        I_xI_{y} & I_{y}^{2}
 		       \end{bmatrix}
-		       \right )	
+		       \right )
 		       \begin{bmatrix}
                         u \\
-			v 
-                       \end{bmatrix}		
+			v
+                       \end{bmatrix}
 
    * Let's denote:
 
      .. math::
 
         M = \displaystyle \sum_{x,y}
-			      w(x,y) 
+			      w(x,y)
 			      \begin{bmatrix}
                         	I_x^{2} & I_{x}I_{y} \\
-                        	I_xI_{y} & I_{y}^{2} 
+                        	I_xI_{y} & I_{y}^{2}
 		       	       \end{bmatrix}
 
    * So, our equation now is:
@@ -126,34 +126,34 @@ How does it work?
      .. math::
 
         E(u,v) \approx \begin{bmatrix}
-                        u & v 
+                        u & v
                        \end{bmatrix}
 		       M
 		       \begin{bmatrix}
                         u \\
-			v 
-                       \end{bmatrix}		
+			v
+                       \end{bmatrix}
 
-  
+
    * A score is calculated for each window, to determine if it can possibly contain a corner:
 
      .. math::
 
-        R = det(M) - k(trace(M))^{2} 
-	
+        R = det(M) - k(trace(M))^{2}
+
      where:
-  
+
      * det(M) = :math:`\lambda_{1}\lambda_{2}`
      * trace(M) = :math:`\lambda_{1}+\lambda_{2}`
 
      a window with a score :math:`R` greater than a certain value is considered a "corner"
-     
+
 Code
 ====
 
-This tutorial code's is shown lines below. You can also download it from `here <http://code.opencv.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/TrackingMotion/cornerHarris_Demo.cpp>`_
+This tutorial code's is shown lines below. You can also download it from `here <http://code.opencv.org/projects/opencv/repository/revisions/master/raw/samples/cpp/tutorial_code/TrackingMotion/cornerHarris_Demo.cpp>`_
 
-.. code-block:: cpp 
+.. code-block:: cpp
 
    #include "opencv2/highgui/highgui.hpp"
    #include "opencv2/imgproc/imgproc.hpp"
@@ -161,7 +161,7 @@ This tutorial code's is shown lines below. You can also download it from `here <
    #include <stdio.h>
    #include <stdlib.h>
 
-   using namespace cv; 
+   using namespace cv;
    using namespace std;
 
    /// Global variables
@@ -186,7 +186,7 @@ This tutorial code's is shown lines below. You can also download it from `here <
      namedWindow( source_window, CV_WINDOW_AUTOSIZE );
      createTrackbar( "Threshold: ", source_window, &thresh, max_thresh, cornerHarris_demo );
      imshow( source_window, src );
-  
+
      cornerHarris_demo( 0, 0 );
 
      waitKey(0);
@@ -204,25 +204,25 @@ This tutorial code's is shown lines below. You can also download it from `here <
      int blockSize = 2;
      int apertureSize = 3;
      double k = 0.04;
- 
+
      /// Detecting corners
      cornerHarris( src_gray, dst, blockSize, apertureSize, k, BORDER_DEFAULT );
 
      /// Normalizing
      normalize( dst, dst_norm, 0, 255, NORM_MINMAX, CV_32FC1, Mat() );
-     convertScaleAbs( dst_norm, dst_norm_scaled ); 
+     convertScaleAbs( dst_norm, dst_norm_scaled );
 
      /// Drawing a circle around corners
      for( int j = 0; j < dst_norm.rows ; j++ )
         { for( int i = 0; i < dst_norm.cols; i++ )
              {
                if( (int) dst_norm.at<float>(j,i) > thresh )
-                 { 
-                  circle( dst_norm_scaled, Point( i, j ), 5,  Scalar(0), 2, 8, 0 ); 
+                 {
+                  circle( dst_norm_scaled, Point( i, j ), 5,  Scalar(0), 2, 8, 0 );
                  }
-             } 
-        }    
-     /// Showing the result 
+             }
+        }
+     /// Showing the result
      namedWindow( corners_window, CV_WINDOW_AUTOSIZE );
      imshow( corners_window, dst_norm_scaled );
    }
@@ -237,11 +237,11 @@ Result
 The original image:
 
 .. image:: images/Harris_Detector_Original_Image.jpg
-              :align: center   
+              :align: center
 
 The detected corners are surrounded by a small black circle
 
 .. image:: images/Harris_Detector_Result.jpg
-              :align: center   
+              :align: center
 
 

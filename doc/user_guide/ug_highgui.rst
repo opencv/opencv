@@ -15,7 +15,7 @@ In order to use depth sensor with OpenCV you should do the following preliminary
     Install OpenNI library (from here http://www.openni.org/downloadfiles) and PrimeSensor Module for OpenNI (from here https://github.com/avin2/SensorKinect). The installation should be done to default folders listed in the instructions of these products, e.g.:
 
     .. code-block:: text
-    
+
         OpenNI:
             Linux & MacOSX:
                 Libs into: /usr/lib
@@ -30,7 +30,7 @@ In order to use depth sensor with OpenCV you should do the following preliminary
                 Bins into: c:/Program Files/Prime Sense/Sensor/Bin
 
     If one or both products were installed to the other folders, the user should change corresponding CMake variables ``OPENNI_LIB_DIR``, ``OPENNI_INCLUDE_DIR`` or/and ``OPENNI_PRIME_SENSOR_MODULE_BIN_DIR``.
-    
+
 #.
     Configure OpenCV with OpenNI support by setting ``WITH_OPENNI`` flag in CMake. If OpenNI is found in install folders OpenCV will be built with OpenNI library (see a status ``OpenNI`` in CMake log) whereas PrimeSensor Modules can not be found (see a status ``OpenNI PrimeSensor Modules`` in CMake log). Without PrimeSensor module OpenCV will be successfully compiled with OpenNI library, but ``VideoCapture`` object will not grab data from Kinect sensor.
 
@@ -56,9 +56,9 @@ In order to get depth map from depth sensor use ``VideoCapture::operator >>``, e
     VideoCapture capture( CV_CAP_OPENNI );
     for(;;)
     {
-        Mat depthMap;    
+        Mat depthMap;
         capture >> depthMap;
-    
+
         if( waitKey( 30 ) >= 0 )
             break;
     }
@@ -70,19 +70,19 @@ For getting several data maps use ``VideoCapture::grab`` and ``VideoCapture::ret
     {
         Mat depthMap;
         Mat rgbImage
-    
+
         capture.grab();
-    
+
         capture.retrieve( depthMap, OPENNI_DEPTH_MAP );
         capture.retrieve( bgrImage, OPENNI_BGR_IMAGE );
-    
+
         if( waitKey( 30 ) >= 0 )
             break;
     }
 
 For setting and getting some property of sensor` data generators use ``VideoCapture::set`` and ``VideoCapture::get`` methods respectively, e.g. ::
 
-    VideoCapture capture( CV_CAP_OPENNI );    
+    VideoCapture capture( CV_CAP_OPENNI );
     capture.set( CV_CAP_OPENNI_IMAGE_GENERATOR_OUTPUT_MODE, CV_CAP_OPENNI_VGA_30HZ );
     cout << "FPS    " << capture.get( CV_CAP_OPENNI_IMAGE_GENERATOR+CV_CAP_PROP_FPS ) << endl;
 
@@ -100,34 +100,34 @@ Some depth sensors (for example XtionPRO) do not have image generator. In order 
 
 Flags specifing the needed generator type must be used in combination with particular generator property. The following properties of cameras available through OpenNI interfaces are supported:
 
-* 
+*
   For image generator:
-  
-  - ``CV_CAP_PROP_OPENNI_OUTPUT_MODE`` -- Three output modes are supported: ``CV_CAP_OPENNI_VGA_30HZ`` used by default (image generator returns images in VGA resolution with 30 FPS), ``CV_CAP_OPENNI_SXGA_15HZ`` (image generator returns images in SXGA resolution with 15 FPS) and ``CV_CAP_OPENNI_SXGA_30HZ`` (image generator returns images in SXGA resolution with 30 FPS, the mode is supported by XtionPRO Live); depth generator's maps are always in VGA resolution.
-  
 
-* 
+  - ``CV_CAP_PROP_OPENNI_OUTPUT_MODE`` -- Three output modes are supported: ``CV_CAP_OPENNI_VGA_30HZ`` used by default (image generator returns images in VGA resolution with 30 FPS), ``CV_CAP_OPENNI_SXGA_15HZ`` (image generator returns images in SXGA resolution with 15 FPS) and ``CV_CAP_OPENNI_SXGA_30HZ`` (image generator returns images in SXGA resolution with 30 FPS, the mode is supported by XtionPRO Live); depth generator's maps are always in VGA resolution.
+
+
+*
   For depth generator:
 
   - ``CV_CAP_PROP_OPENNI_REGISTRATION`` -- Flag that registers the remapping depth map to image map  by changing depth generator's view point (if the flag is ``"on"``) or sets this view point to its normal one (if the flag is ``"off"``). The registration process’s resulting images are pixel-aligned,which means that every pixel in the image is aligned to a pixel in the depth image.
-  
+
     Next properties are available for getting only:
-  
+
   - ``CV_CAP_PROP_OPENNI_FRAME_MAX_DEPTH`` -- A maximum supported depth of Kinect in mm.
-  - ``CV_CAP_PROP_OPENNI_BASELINE`` -- Baseline value in mm. 
-  - ``CV_CAP_PROP_OPENNI_FOCAL_LENGTH`` -- A focal length in pixels. 
+  - ``CV_CAP_PROP_OPENNI_BASELINE`` -- Baseline value in mm.
+  - ``CV_CAP_PROP_OPENNI_FOCAL_LENGTH`` -- A focal length in pixels.
   - ``CV_CAP_PROP_FRAME_WIDTH`` -- Frame width in pixels.
   - ``CV_CAP_PROP_FRAME_HEIGHT`` -- Frame height in pixels.
   - ``CV_CAP_PROP_FPS`` -- Frame rate in FPS.
 
 *
   Some typical flags combinations "generator type + property" are defined as single flags:
-  
+
     - ``CV_CAP_OPENNI_IMAGE_GENERATOR_OUTPUT_MODE = CV_CAP_OPENNI_IMAGE_GENERATOR + CV_CAP_PROP_OPENNI_OUTPUT_MODE``
     - ``CV_CAP_OPENNI_DEPTH_GENERATOR_BASELINE = CV_CAP_OPENNI_DEPTH_GENERATOR + CV_CAP_PROP_OPENNI_BASELINE``
     - ``CV_CAP_OPENNI_DEPTH_GENERATOR_FOCAL_LENGTH = CV_CAP_OPENNI_DEPTH_GENERATOR + CV_CAP_PROP_OPENNI_FOCAL_LENGTH``
     - ``CV_CAP_OPENNI_DEPTH_GENERATOR_REGISTRATION = CV_CAP_OPENNI_DEPTH_GENERATOR + CV_CAP_PROP_OPENNI_REGISTRATION``
-    
+
 For more information please refer to the example of usage openni_capture.cpp_ in ``opencv/samples/cpp`` folder.
 
-.. _openni_capture.cpp: http://code.opencv.org/svn/opencv/trunk/opencv/samples/cpp/openni_capture.cpp
+.. _openni_capture.cpp: http://code.opencv.org/projects/opencv/repository/revisions/master/raw/samples/cpp/openni_capture.cpp

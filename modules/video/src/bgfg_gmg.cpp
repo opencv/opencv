@@ -440,8 +440,7 @@ bool BackgroundSubtractorGMG::HistogramFeatureGMG::operator ==(HistogramFeatureG
     std::vector<size_t>::iterator color_a;
     std::vector<size_t>::iterator color_b;
     std::vector<size_t>::iterator color_a_end = this->color.end();
-    std::vector<size_t>::iterator color_b_end = rhs.color.end();
-    for (color_a = color.begin(),color_b =rhs.color.begin();color_a!=color_a_end;++color_a,++color_b)
+    for (color_a = color.begin(), color_b = rhs.color.begin(); color_a != color_a_end; ++color_a, ++color_b)
     {
         if (*color_a != *color_b)
         {

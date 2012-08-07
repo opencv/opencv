@@ -16,14 +16,14 @@ Theory
 What is remapping?
 ------------------
 
-* It is the process of taking pixels from one place in the image and locating them in  another position in a new image. 
+* It is the process of taking pixels from one place in the image and locating them in  another position in a new image.
 
 * To accomplish the mapping process, it might be necessary to do some interpolation for non-integer pixel locations, since there will not always be a one-to-one-pixel correspondence between source and destination images.
 
 * We can express the remap for every pixel location :math:`(x,y)` as:
 
   .. math::
-  
+
      g(x,y) = f ( h(x,y) )
 
   where :math:`g()` is the remapped image, :math:`f()` the source image and :math:`h(x,y)` is the mapping function that operates on :math:`(x,y)`.
@@ -34,7 +34,7 @@ What is remapping?
 
      h(x,y) = (I.cols - x, y )
 
-  What would happen? It is easily seen that the image would flip in the :math:`x` direction. For instance,  consider the input image: 
+  What would happen? It is easily seen that the image would flip in the :math:`x` direction. For instance,  consider the input image:
 
   .. image:: images/Remap_Tutorial_Theory_0.jpg
            :alt: Original test image
@@ -54,12 +54,12 @@ Code
 ====
 
 #. **What does this program do?**
- 
+
    * Loads an image
    * Each second, apply 1 of 4 different remapping processes to the image and display them indefinitely in a window.
    * Wait for the user to exit the program
- 
-#. The tutorial code's is shown lines below. You can also download it from `here <http://code.opencv.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/ImgTrans/Remap_Demo.cpp>`_
+
+#. The tutorial code's is shown lines below. You can also download it from `here <http://code.opencv.org/projects/opencv/repository/revisions/master/raw/samples/cpp/tutorial_code/ImgTrans/Remap_Demo.cpp>`_
 
 .. code-block:: cpp
 
@@ -91,7 +91,7 @@ Code
     dst.create( src.size(), src.type() );
     map_x.create( src.size(), CV_32FC1 );
     map_y.create( src.size(), CV_32FC1 );
-  
+
     /// Create window
     namedWindow( remap_window, CV_WINDOW_AUTOSIZE );
 
@@ -106,7 +106,7 @@ Code
 
       /// Update map_x & map_y. Then apply remap
       update_map();
-      remap( src, dst, map_x, map_y, CV_INTER_LINEAR, BORDER_CONSTANT, Scalar(0,0, 0) ); 
+      remap( src, dst, map_x, map_y, CV_INTER_LINEAR, BORDER_CONSTANT, Scalar(0,0, 0) );
 
       /// Display results
       imshow( remap_window, dst );
@@ -126,7 +126,7 @@ Code
      { for( int i = 0; i < src.cols; i++ )
  	 {
            switch( ind )
-	   {   
+	   {
 	     case 0:
 	       if( i > src.cols*0.25 && i < src.cols*0.75 && j > src.rows*0.25 && j < src.rows*0.75 )
                  {
@@ -169,7 +169,7 @@ Explanation
       int ind = 0;
 
 #. Load an image:
-   
+
    .. code-block:: cpp
 
       src = imread( argv[1], 1 );
@@ -181,7 +181,7 @@ Explanation
       dst.create( src.size(), src.type() );
       map_x.create( src.size(), CV_32FC1 );
       map_y.create( src.size(), CV_32FC1 );
-  
+
 #. Create a window to  display results
 
    .. code-block:: cpp
@@ -189,7 +189,7 @@ Explanation
       namedWindow( remap_window, CV_WINDOW_AUTOSIZE );
 
 #. Establish a loop. Each 1000 ms we update our mapping matrices (*mat_x* and *mat_y*) and apply them to our source image:
-   
+
    .. code-block:: cpp
 
       while( true )
@@ -202,19 +202,19 @@ Explanation
 
         /// Update map_x & map_y. Then apply remap
         update_map();
-        remap( src, dst, map_x, map_y, CV_INTER_LINEAR, BORDER_CONSTANT, Scalar(0,0, 0) ); 
+        remap( src, dst, map_x, map_y, CV_INTER_LINEAR, BORDER_CONSTANT, Scalar(0,0, 0) );
 
         /// Display results
         imshow( remap_window, dst );
       }
 
    The function that applies the remapping is :remap:`remap <>`. We give the following arguments:
- 
+
    * **src**: Source image
    * **dst**: Destination image of same size as *src*
    * **map_x**: The mapping function in the x direction. It is equivalent to the first component of :math:`h(i,j)`
    * **map_y**: Same as above, but in y direction. Note that *map_y* and *map_x* are both of the same size as *src*
-   * **CV_INTER_LINEAR**: The type of interpolation to use for non-integer pixels. This is by default. 
+   * **CV_INTER_LINEAR**: The type of interpolation to use for non-integer pixels. This is by default.
    * **BORDER_CONSTANT**: Default
 
    How do we update our mapping matrices *mat_x* and *mat_y*? Go on reading:
@@ -225,25 +225,25 @@ Explanation
 
       .. math::
 
-         h(i,j) = ( 2*i - src.cols/2  + 0.5, 2*j - src.rows/2  + 0.5) 
+         h(i,j) = ( 2*i - src.cols/2  + 0.5, 2*j - src.rows/2  + 0.5)
 
-      for all pairs :math:`(i,j)` such that: :math:`\dfrac{src.cols}{4}<i<\dfrac{3 \cdot src.cols}{4}`  and  :math:`\dfrac{src.rows}{4}<j<\dfrac{3 \cdot src.rows}{4}`		
- 
+      for all pairs :math:`(i,j)` such that: :math:`\dfrac{src.cols}{4}<i<\dfrac{3 \cdot src.cols}{4}`  and  :math:`\dfrac{src.rows}{4}<j<\dfrac{3 \cdot src.rows}{4}`
+
    b. Turn the image upside down: :math:`h( i, j ) = (i, src.rows - j)`
-       
+
    c. Reflect the image from left to right: :math:`h(i,j) = ( src.cols - i, j )`
 
    d. Combination of b and c: :math:`h(i,j) = ( src.cols - i, src.rows - j )`
 
   This is expressed in the following snippet. Here, *map_x* represents the first coordinate of *h(i,j)* and *map_y* the second coordinate.
-  
+
   .. code-block:: cpp
 
      for( int j = 0; j < src.rows; j++ )
      { for( int i = 0; i < src.cols; i++ )
  	 {
            switch( ind )
-	   {   
+	   {
 	     case 0:
 	       if( i > src.cols*0.25 && i < src.cols*0.75 && j > src.rows*0.25 && j < src.rows*0.75 )
                  {
@@ -292,7 +292,7 @@ Result
             :align: center
 
 #. Turning it upside down:
- 
+
    .. image:: images/Remap_Tutorial_Result_1.jpg
             :alt: Result 0 for remapping
             :width: 250pt

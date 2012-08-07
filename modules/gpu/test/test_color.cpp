@@ -41,6 +41,8 @@
 
 #include "precomp.hpp"
 
+#ifdef HAVE_CUDA
+
 namespace {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1628,7 +1630,7 @@ TEST_P(CvtColor, BGR2Lab)
     }
     catch (const cv::Exception& e)
     {
-#if (CUDA_VERSION < 5000)
+#if defined (CUDA_VERSION) && (CUDA_VERSION < 5000)
         ASSERT_EQ(CV_StsBadFlag, e.code);
 #else
         FAIL();
@@ -1655,7 +1657,7 @@ TEST_P(CvtColor, RGB2Lab)
     }
     catch (const cv::Exception& e)
     {
-#if (CUDA_VERSION < 5000)
+#if defined (CUDA_VERSION) && (CUDA_VERSION < 5000)
         ASSERT_EQ(CV_StsBadFlag, e.code);
 #else
         FAIL();
@@ -1682,7 +1684,7 @@ TEST_P(CvtColor, BGR2Luv)
     }
     catch (const cv::Exception& e)
     {
-#if (CUDA_VERSION < 5000)
+#if defined (CUDA_VERSION) && (CUDA_VERSION < 5000)
         ASSERT_EQ(CV_StsBadFlag, e.code);
 #else
         FAIL();
@@ -1709,7 +1711,7 @@ TEST_P(CvtColor, RGB2Luv)
     }
     catch (const cv::Exception& e)
     {
-#if (CUDA_VERSION < 5000)
+#if defined (CUDA_VERSION) && (CUDA_VERSION < 5000)
         ASSERT_EQ(CV_StsBadFlag, e.code);
 #else
         FAIL();
@@ -1736,12 +1738,165 @@ TEST_P(CvtColor, RGBA2mRGBA)
     }
     catch (const cv::Exception& e)
     {
-#if (CUDA_VERSION < 5000)
+#if defined (CUDA_VERSION) && (CUDA_VERSION < 5000)
         ASSERT_EQ(CV_StsBadFlag, e.code);
 #else
         FAIL();
 #endif
     }
+}
+
+TEST_P(CvtColor, BayerBG2BGR)
+{
+    if ((depth != CV_8U && depth != CV_16U) || useRoi)
+        return;
+
+    cv::Mat src = randomMat(size, depth);
+
+    cv::gpu::GpuMat dst;
+    cv::gpu::cvtColor(loadMat(src, useRoi), dst, cv::COLOR_BayerBG2BGR);
+
+    cv::Mat dst_gold;
+    cv::cvtColor(src, dst_gold, cv::COLOR_BayerBG2BGR);
+
+    EXPECT_MAT_NEAR(dst_gold(cv::Rect(1, 1, dst.cols - 2, dst.rows - 2)), dst(cv::Rect(1, 1, dst.cols - 2, dst.rows - 2)), 0);
+}
+
+TEST_P(CvtColor, BayerBG2BGR4)
+{
+    if ((depth != CV_8U && depth != CV_16U) || useRoi)
+        return;
+
+    cv::Mat src = randomMat(size, depth);
+
+    cv::gpu::GpuMat dst;
+    cv::gpu::cvtColor(loadMat(src, useRoi), dst, cv::COLOR_BayerBG2BGR, 4);
+
+    ASSERT_EQ(4, dst.channels());
+
+    cv::Mat dst_gold;
+    cv::cvtColor(src, dst_gold, cv::COLOR_BayerBG2BGR);
+
+    cv::Mat dst4(dst);
+    cv::Mat dst3;
+    cv::cvtColor(dst4, dst3, cv::COLOR_BGRA2BGR);
+
+
+    EXPECT_MAT_NEAR(dst_gold(cv::Rect(1, 1, dst.cols - 2, dst.rows - 2)), dst3(cv::Rect(1, 1, dst.cols - 2, dst.rows - 2)), 0);
+}
+
+TEST_P(CvtColor, BayerGB2BGR)
+{
+    if ((depth != CV_8U && depth != CV_16U) || useRoi)
+        return;
+
+    cv::Mat src = randomMat(size, depth);
+
+    cv::gpu::GpuMat dst;
+    cv::gpu::cvtColor(loadMat(src, useRoi), dst, cv::COLOR_BayerGB2BGR);
+
+    cv::Mat dst_gold;
+    cv::cvtColor(src, dst_gold, cv::COLOR_BayerGB2BGR);
+
+    EXPECT_MAT_NEAR(dst_gold(cv::Rect(1, 1, dst.cols - 2, dst.rows - 2)), dst(cv::Rect(1, 1, dst.cols - 2, dst.rows - 2)), 0);
+}
+
+TEST_P(CvtColor, BayerGB2BGR4)
+{
+    if ((depth != CV_8U && depth != CV_16U) || useRoi)
+        return;
+
+    cv::Mat src = randomMat(size, depth);
+
+    cv::gpu::GpuMat dst;
+    cv::gpu::cvtColor(loadMat(src, useRoi), dst, cv::COLOR_BayerGB2BGR, 4);
+
+    ASSERT_EQ(4, dst.channels());
+
+    cv::Mat dst_gold;
+    cv::cvtColor(src, dst_gold, cv::COLOR_BayerGB2BGR);
+
+    cv::Mat dst4(dst);
+    cv::Mat dst3;
+    cv::cvtColor(dst4, dst3, cv::COLOR_BGRA2BGR);
+
+    EXPECT_MAT_NEAR(dst_gold(cv::Rect(1, 1, dst.cols - 2, dst.rows - 2)), dst3(cv::Rect(1, 1, dst.cols - 2, dst.rows - 2)), 0);
+}
+
+TEST_P(CvtColor, BayerRG2BGR)
+{
+    if ((depth != CV_8U && depth != CV_16U) || useRoi)
+        return;
+
+    cv::Mat src = randomMat(size, depth);
+
+    cv::gpu::GpuMat dst;
+    cv::gpu::cvtColor(loadMat(src, useRoi), dst, cv::COLOR_BayerRG2BGR);
+
+    cv::Mat dst_gold;
+    cv::cvtColor(src, dst_gold, cv::COLOR_BayerRG2BGR);
+
+    EXPECT_MAT_NEAR(dst_gold(cv::Rect(1, 1, dst.cols - 2, dst.rows - 2)), dst(cv::Rect(1, 1, dst.cols - 2, dst.rows - 2)), 0);
+}
+
+TEST_P(CvtColor, BayerRG2BGR4)
+{
+    if ((depth != CV_8U && depth != CV_16U) || useRoi)
+        return;
+
+    cv::Mat src = randomMat(size, depth);
+
+    cv::gpu::GpuMat dst;
+    cv::gpu::cvtColor(loadMat(src, useRoi), dst, cv::COLOR_BayerRG2BGR, 4);
+
+    ASSERT_EQ(4, dst.channels());
+
+    cv::Mat dst_gold;
+    cv::cvtColor(src, dst_gold, cv::COLOR_BayerRG2BGR);
+
+    cv::Mat dst4(dst);
+    cv::Mat dst3;
+    cv::cvtColor(dst4, dst3, cv::COLOR_BGRA2BGR);
+
+    EXPECT_MAT_NEAR(dst_gold(cv::Rect(1, 1, dst.cols - 2, dst.rows - 2)), dst3(cv::Rect(1, 1, dst.cols - 2, dst.rows - 2)), 0);
+}
+
+TEST_P(CvtColor, BayerGR2BGR)
+{
+    if ((depth != CV_8U && depth != CV_16U) || useRoi)
+        return;
+
+    cv::Mat src = randomMat(size, depth);
+
+    cv::gpu::GpuMat dst;
+    cv::gpu::cvtColor(loadMat(src, useRoi), dst, cv::COLOR_BayerGR2BGR);
+
+    cv::Mat dst_gold;
+    cv::cvtColor(src, dst_gold, cv::COLOR_BayerGR2BGR);
+
+    EXPECT_MAT_NEAR(dst_gold(cv::Rect(1, 1, dst.cols - 2, dst.rows - 2)), dst(cv::Rect(1, 1, dst.cols - 2, dst.rows - 2)), 0);
+}
+
+TEST_P(CvtColor, BayerGR2BGR4)
+{
+    if ((depth != CV_8U && depth != CV_16U) || useRoi)
+        return;
+
+    cv::Mat src = randomMat(size, depth);
+
+    cv::gpu::GpuMat dst;
+    cv::gpu::cvtColor(loadMat(src, useRoi), dst, cv::COLOR_BayerGR2BGR, 4);
+
+    ASSERT_EQ(4, dst.channels());
+
+    cv::Mat dst_gold;
+    cv::cvtColor(src, dst_gold, cv::COLOR_BayerGR2BGR);
+
+    cv::Mat dst4(dst);
+    cv::Mat dst3;
+    cv::cvtColor(dst4, dst3, cv::COLOR_BGRA2BGR);
+
+    EXPECT_MAT_NEAR(dst_gold(cv::Rect(1, 1, dst.cols - 2, dst.rows - 2)), dst3(cv::Rect(1, 1, dst.cols - 2, dst.rows - 2)), 0);
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_ImgProc, CvtColor, testing::Combine(
@@ -1791,3 +1946,5 @@ INSTANTIATE_TEST_CASE_P(GPU_ImgProc, SwapChannels, testing::Combine(
     WHOLE_SUBMAT));
 
 } // namespace
+
+#endif // HAVE_CUDA

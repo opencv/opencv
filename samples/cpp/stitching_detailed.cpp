@@ -276,7 +276,9 @@ static int parseCmdArgs(int argc, char** argv)
             if (string(argv[i + 1]) == "no" ||
                 string(argv[i + 1]) == "voronoi" ||
                 string(argv[i + 1]) == "gc_color" ||
-                string(argv[i + 1]) == "gc_colorgrad")
+                string(argv[i + 1]) == "gc_colorgrad" ||
+                string(argv[i + 1]) == "dp_color" ||
+                string(argv[i + 1]) == "dp_colorgrad")
                 seam_find_type = argv[i + 1];
             else
             {
@@ -612,6 +614,10 @@ int main(int argc, char* argv[])
 #endif
             seam_finder = new detail::GraphCutSeamFinder(GraphCutSeamFinderBase::COST_COLOR_GRAD);
     }
+    else if (seam_find_type == "dp_color")
+        seam_finder = new detail::DpSeamFinder(DpSeamFinder::COLOR);
+    else if (seam_find_type == "dp_colorgrad")
+        seam_finder = new detail::DpSeamFinder(DpSeamFinder::COLOR_GRAD);
     if (seam_finder.empty())
     {
         cout << "Can't create the following seam finder '" << seam_find_type << "'\n";

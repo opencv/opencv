@@ -1298,17 +1298,17 @@ public:
         maxk(_maxk), space_ofs(_space_ofs), space_weight(_space_weight), color_weight(_color_weight)
     {
     }
-    
+
     virtual void operator() (const Range& range) const
     {
         int i, j, cn = dest->channels(), k;
         Size size = dest->size();
-        
+
         for( i = range.start; i < range.end; i++ )
         {
             const uchar* sptr = temp->ptr(i+radius) + radius*cn;
             uchar* dptr = dest->ptr(i);
-            
+
             if( cn == 1 )
             {
                 for( j = 0; j < size.width; j++ )
@@ -1351,10 +1351,10 @@ public:
             }
         }
     }
-    
+
 private:
-    const Mat *temp;
     Mat *dest;
+    const Mat *temp;
     int radius, maxk, *space_ofs;
     float *space_weight, *color_weight;
 };
@@ -1367,40 +1367,40 @@ bilateralFilter_8u( const Mat& src, Mat& dst, int d,
     int cn = src.channels();
     int i, j, maxk, radius;
     Size size = src.size();
-    
+
     CV_Assert( (src.type() == CV_8UC1 || src.type() == CV_8UC3) &&
               src.type() == dst.type() && src.size() == dst.size() &&
               src.data != dst.data );
-    
+
     if( sigma_color <= 0 )
         sigma_color = 1;
     if( sigma_space <= 0 )
         sigma_space = 1;
-    
+
     double gauss_color_coeff = -0.5/(sigma_color*sigma_color);
     double gauss_space_coeff = -0.5/(sigma_space*sigma_space);
-    
+
     if( d <= 0 )
         radius = cvRound(sigma_space*1.5);
     else
         radius = d/2;
     radius = MAX(radius, 1);
     d = radius*2 + 1;
-    
+
     Mat temp;
     copyMakeBorder( src, temp, radius, radius, radius, radius, borderType );
-    
+
     vector<float> _color_weight(cn*256);
     vector<float> _space_weight(d*d);
     vector<int> _space_ofs(d*d);
     float* color_weight = &_color_weight[0];
     float* space_weight = &_space_weight[0];
     int* space_ofs = &_space_ofs[0];
-    
+
     // initialize color-related bilateral filter coefficients
     for( i = 0; i < 256*cn; i++ )
         color_weight[i] = (float)std::exp(i*i*gauss_color_coeff);
-    
+
     // initialize space-related bilateral filter coefficients
     for( i = -radius, maxk = 0; i <= radius; i++ )
         for( j = -radius; j <= radius; j++ )
@@ -1411,7 +1411,7 @@ bilateralFilter_8u( const Mat& src, Mat& dst, int d,
             space_weight[maxk] = (float)std::exp(r*r*gauss_space_coeff);
             space_ofs[maxk++] = (int)(i*temp.step + j*cn);
         }
-    
+
     BilateralFilter_8u_Invoker body(dst, temp, radius, maxk, space_ofs, space_weight, color_weight);
     parallel_for_(Range(0, size.height), body);
 }

@@ -54,6 +54,17 @@ void cv::gpu::gammaCorrection(const GpuMat&, GpuMat&, bool, Stream&) { throw_nog
 #else /* !defined (HAVE_CUDA) */
 
 #include <cvt_colot_internal.h>
+
+namespace cv { namespace gpu {
+    namespace device
+    {
+        template <int cn>
+        void Bayer2BGR_8u_gpu(DevMem2Db src, DevMem2Db dst, bool blue_last, bool start_with_green, cudaStream_t stream);
+        template <int cn>
+        void Bayer2BGR_16u_gpu(DevMem2Db src, DevMem2Db dst, bool blue_last, bool start_with_green, cudaStream_t stream);
+    }
+}}
+
 using namespace ::cv::gpu::device;
 
 namespace
@@ -1144,13 +1155,13 @@ namespace
         funcs[dcn == 4][src.channels() == 4][src.depth()](src, dst, StreamAccessor::getStream(stream));
     }
 
-    void bgr_to_lab(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
+    void bgr_to_lab(const GpuMat& src, GpuMat& dst, int dcn, Stream& st)
     {
         #if (CUDA_VERSION < 5000)
             (void)src;
             (void)dst;
             (void)dcn;
-            (void)stream;
+            (void)st;
             CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" );
         #else
             CV_Assert(src.depth() == CV_8U);
@@ -1160,13 +1171,17 @@ namespace
 
             dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));
 
-            NppStreamHandler h(StreamAccessor::getStream(stream));
+            cudaStream_t stream = StreamAccessor::getStream(st);
+            NppStreamHandler h(stream);
 
             NppiSize oSizeROI;
             oSizeROI.width = src.cols;
             oSizeROI.height = src.rows;
 
             nppSafeCall( nppiBGRToLab_8u_C3R(src.ptr<Npp8u>(), static_cast<int>(src.step), dst.ptr<Npp8u>(), static_cast<int>(dst.step), oSizeROI) );
+
+            if (stream == 0)
+                cudaSafeCall( cudaDeviceSynchronize() );
         #endif
     }
 
@@ -1176,13 +1191,13 @@ namespace
         bgr_to_lab(dst, dst, -1, stream);
     }
 
-    void lab_to_bgr(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
+    void lab_to_bgr(const GpuMat& src, GpuMat& dst, int dcn, Stream& st)
     {
         #if (CUDA_VERSION < 5000)
             (void)src;
             (void)dst;
             (void)dcn;
-            (void)stream;
+            (void)st;
             CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" );
         #else
             CV_Assert(src.depth() == CV_8U);
@@ -1192,13 +1207,17 @@ namespace
 
             dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));
 
-            NppStreamHandler h(StreamAccessor::getStream(stream));
+            cudaStream_t stream = StreamAccessor::getStream(st);
+            NppStreamHandler h(stream);
 
             NppiSize oSizeROI;
             oSizeROI.width = src.cols;
             oSizeROI.height = src.rows;
 
             nppSafeCall( nppiLabToBGR_8u_C3R(src.ptr<Npp8u>(), static_cast<int>(src.step), dst.ptr<Npp8u>(), static_cast<int>(dst.step), oSizeROI) );
+
+            if (stream == 0)
+                cudaSafeCall( cudaDeviceSynchronize() );
         #endif
     }
 
@@ -1208,13 +1227,13 @@ namespace
         bgr_to_rgb(dst, dst, -1, stream);
     }
 
-    void rgb_to_luv(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
+    void rgb_to_luv(const GpuMat& src, GpuMat& dst, int dcn, Stream& st)
     {
         #if (CUDA_VERSION < 5000)
             (void)src;
             (void)dst;
             (void)dcn;
-            (void)stream;
+            (void)st;
             CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" );
         #else
             CV_Assert(src.depth() == CV_8U);
@@ -1224,7 +1243,8 @@ namespace
 
             dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));
 
-            NppStreamHandler h(StreamAccessor::getStream(stream));
+            cudaStream_t stream = StreamAccessor::getStream(st);
+            NppStreamHandler h(stream);
 
             NppiSize oSizeROI;
             oSizeROI.width = src.cols;
@@ -1234,6 +1254,9 @@ namespace
                 nppSafeCall( nppiRGBToLUV_8u_C3R(src.ptr<Npp8u>(), static_cast<int>(src.step), dst.ptr<Npp8u>(), static_cast<int>(dst.step), oSizeROI) );
             else
                 nppSafeCall( nppiRGBToLUV_8u_AC4R(src.ptr<Npp8u>(), static_cast<int>(src.step), dst.ptr<Npp8u>(), static_cast<int>(dst.step), oSizeROI) );
+
+            if (stream == 0)
+                cudaSafeCall( cudaDeviceSynchronize() );
         #endif
     }
 
@@ -1243,13 +1266,13 @@ namespace
         rgb_to_luv(dst, dst, -1, stream);
     }
 
-    void luv_to_rgb(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
+    void luv_to_rgb(const GpuMat& src, GpuMat& dst, int dcn, Stream& st)
     {
         #if (CUDA_VERSION < 5000)
             (void)src;
             (void)dst;
             (void)dcn;
-            (void)stream;
+            (void)st;
             CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" );
         #else
             CV_Assert(src.depth() == CV_8U);
@@ -1259,7 +1282,8 @@ namespace
 
             dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));
 
-            NppStreamHandler h(StreamAccessor::getStream(stream));
+            cudaStream_t stream = StreamAccessor::getStream(st);
+            NppStreamHandler h(stream);
 
             NppiSize oSizeROI;
             oSizeROI.width = src.cols;
@@ -1269,6 +1293,9 @@ namespace
                 nppSafeCall( nppiLUVToRGB_8u_C3R(src.ptr<Npp8u>(), static_cast<int>(src.step), dst.ptr<Npp8u>(), static_cast<int>(dst.step), oSizeROI) );
             else
                 nppSafeCall( nppiLUVToRGB_8u_AC4R(src.ptr<Npp8u>(), static_cast<int>(src.step), dst.ptr<Npp8u>(), static_cast<int>(dst.step), oSizeROI) );
+
+            if (stream == 0)
+                cudaSafeCall( cudaDeviceSynchronize() );
         #endif
     }
 
@@ -1278,19 +1305,20 @@ namespace
         bgr_to_rgb(dst, dst, -1, stream);
     }
 
-    void rgba_to_mbgra(const GpuMat& src, GpuMat& dst, int, Stream& stream)
+    void rgba_to_mbgra(const GpuMat& src, GpuMat& dst, int, Stream& st)
     {
     #if (CUDA_VERSION < 5000)
         (void)src;
         (void)dst;
-        (void)stream;
+        (void)st;
         CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" );
     #else
         CV_Assert(src.type() == CV_8UC4 || src.type() == CV_16UC4);
 
         dst.create(src.size(), src.type());
 
-        NppStreamHandler h(StreamAccessor::getStream(stream));
+        cudaStream_t stream = StreamAccessor::getStream(st);
+        NppStreamHandler h(stream);
 
         NppiSize oSizeROI;
         oSizeROI.width = src.cols;
@@ -1300,7 +1328,51 @@ namespace
             nppSafeCall( nppiAlphaPremul_8u_AC4R(src.ptr<Npp8u>(), static_cast<int>(src.step), dst.ptr<Npp8u>(), static_cast<int>(dst.step), oSizeROI) );
         else
             nppSafeCall( nppiAlphaPremul_16u_AC4R(src.ptr<Npp16u>(), static_cast<int>(src.step), dst.ptr<Npp16u>(), static_cast<int>(dst.step), oSizeROI) );
+
+        if (stream == 0)
+            cudaSafeCall( cudaDeviceSynchronize() );
     #endif
+    }
+
+    void bayer_to_bgr(const GpuMat& src, GpuMat& dst, int dcn, bool blue_last, bool start_with_green, Stream& stream)
+    {
+        typedef void (*func_t)(DevMem2Db src, DevMem2Db dst, bool blue_last, bool start_with_green, cudaStream_t stream);
+        static const func_t funcs[3][4] =
+        {
+            {0,0,Bayer2BGR_8u_gpu<3>, Bayer2BGR_8u_gpu<4>},
+            {0,0,0,0},
+            {0,0,Bayer2BGR_16u_gpu<3>, Bayer2BGR_16u_gpu<4>}
+        };
+
+        if (dcn <= 0) dcn = 3;
+
+        CV_Assert(src.type() == CV_8UC1 || src.type() == CV_16UC1);
+        CV_Assert(src.rows > 2 && src.cols > 2);
+        CV_Assert(dcn == 3 || dcn == 4);
+
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), dcn));
+
+        funcs[src.depth()][dcn - 1](src, dst, blue_last, start_with_green, StreamAccessor::getStream(stream));
+    }
+
+    void bayerBG_to_bgr(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
+    {
+        bayer_to_bgr(src, dst, dcn, false, false, stream);
+    }
+
+    void bayerGB_to_bgr(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
+    {
+        bayer_to_bgr(src, dst, dcn, false, true, stream);
+    }
+
+    void bayerRG_to_bgr(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
+    {
+        bayer_to_bgr(src, dst, dcn, true, false, stream);
+    }
+
+    void bayerGR_to_bgr(const GpuMat& src, GpuMat& dst, int dcn, Stream& stream)
+    {
+        bayer_to_bgr(src, dst, dcn, true, true, stream);
     }
 }
 
@@ -1366,10 +1438,10 @@ void cv::gpu::cvtColor(const GpuMat& src, GpuMat& dst, int code, int dcn, Stream
         bgr_to_lab,             // CV_BGR2Lab     =44
         rgb_to_lab,             // CV_RGB2Lab     =45
 
-        0,                      // CV_BayerBG2BGR =46
-        0,                      // CV_BayerGB2BGR =47
-        0,                      // CV_BayerRG2BGR =48
-        0,                      // CV_BayerGR2BGR =49
+        bayerBG_to_bgr,         // CV_BayerBG2BGR =46
+        bayerGB_to_bgr,         // CV_BayerGB2BGR =47
+        bayerRG_to_bgr,         // CV_BayerRG2BGR =48
+        bayerGR_to_bgr,         // CV_BayerGR2BGR =49
 
         bgr_to_luv,             // CV_BGR2Luv     =50
         rgb_to_luv,             // CV_RGB2Luv     =51
@@ -1424,57 +1496,57 @@ void cv::gpu::cvtColor(const GpuMat& src, GpuMat& dst, int code, int dcn, Stream
         0,                      // CV_BayerGR2GRAY = 89
 
         //YUV 4:2:0 formats family
-        0,                      // COLOR_YUV2RGB_NV12 = 90,
-        0,                      // COLOR_YUV2BGR_NV12 = 91,
-        0,                      // COLOR_YUV2RGB_NV21 = 92,
-        0,                      // COLOR_YUV2BGR_NV21 = 93,
+        0,                      // CV_YUV2RGB_NV12 = 90,
+        0,                      // CV_YUV2BGR_NV12 = 91,
+        0,                      // CV_YUV2RGB_NV21 = 92,
+        0,                      // CV_YUV2BGR_NV21 = 93,
 
-        0,                      // COLOR_YUV2RGBA_NV12 = 94,
-        0,                      // COLOR_YUV2BGRA_NV12 = 95,
-        0,                      // COLOR_YUV2RGBA_NV21 = 96,
-        0,                      // COLOR_YUV2BGRA_NV21 = 97,
+        0,                      // CV_YUV2RGBA_NV12 = 94,
+        0,                      // CV_YUV2BGRA_NV12 = 95,
+        0,                      // CV_YUV2RGBA_NV21 = 96,
+        0,                      // CV_YUV2BGRA_NV21 = 97,
 
-        0,                      // COLOR_YUV2RGB_YV12 = 98,
-        0,                      // COLOR_YUV2BGR_YV12 = 99,
-        0,                      // COLOR_YUV2RGB_IYUV = 100,
-        0,                      // COLOR_YUV2BGR_IYUV = 101,
+        0,                      // CV_YUV2RGB_YV12 = 98,
+        0,                      // CV_YUV2BGR_YV12 = 99,
+        0,                      // CV_YUV2RGB_IYUV = 100,
+        0,                      // CV_YUV2BGR_IYUV = 101,
 
-        0,                      // COLOR_YUV2RGBA_YV12 = 102,
-        0,                      // COLOR_YUV2BGRA_YV12 = 103,
-        0,                      // COLOR_YUV2RGBA_IYUV = 104,
-        0,                      // COLOR_YUV2BGRA_IYUV = 105,
+        0,                      // CV_YUV2RGBA_YV12 = 102,
+        0,                      // CV_YUV2BGRA_YV12 = 103,
+        0,                      // CV_YUV2RGBA_IYUV = 104,
+        0,                      // CV_YUV2BGRA_IYUV = 105,
 
-        0,                      // COLOR_YUV2GRAY_420 = 106,
+        0,                      // CV_YUV2GRAY_420 = 106,
 
         //YUV 4:2:2 formats family
-        0,                      // COLOR_YUV2RGB_UYVY = 107,
-        0,                      // COLOR_YUV2BGR_UYVY = 108,
-        0,                      // //COLOR_YUV2RGB_VYUY = 109,
-        0,                      // //COLOR_YUV2BGR_VYUY = 110,
+        0,                      // CV_YUV2RGB_UYVY = 107,
+        0,                      // CV_YUV2BGR_UYVY = 108,
+        0,                      // //CV_YUV2RGB_VYUY = 109,
+        0,                      // //CV_YUV2BGR_VYUY = 110,
 
-        0,                      // COLOR_YUV2RGBA_UYVY = 111,
-        0,                      // COLOR_YUV2BGRA_UYVY = 112,
-        0,                      // //COLOR_YUV2RGBA_VYUY = 113,
-        0,                      // //COLOR_YUV2BGRA_VYUY = 114,
+        0,                      // CV_YUV2RGBA_UYVY = 111,
+        0,                      // CV_YUV2BGRA_UYVY = 112,
+        0,                      // //CV_YUV2RGBA_VYUY = 113,
+        0,                      // //CV_YUV2BGRA_VYUY = 114,
 
-        0,                      // COLOR_YUV2RGB_YUY2 = 115,
-        0,                      // COLOR_YUV2BGR_YUY2 = 116,
-        0,                      // COLOR_YUV2RGB_YVYU = 117,
-        0,                      // COLOR_YUV2BGR_YVYU = 118,
+        0,                      // CV_YUV2RGB_YUY2 = 115,
+        0,                      // CV_YUV2BGR_YUY2 = 116,
+        0,                      // CV_YUV2RGB_YVYU = 117,
+        0,                      // CV_YUV2BGR_YVYU = 118,
 
-        0,                      // COLOR_YUV2RGBA_YUY2 = 119,
-        0,                      // COLOR_YUV2BGRA_YUY2 = 120,
-        0,                      // COLOR_YUV2RGBA_YVYU = 121,
-        0,                      // COLOR_YUV2BGRA_YVYU = 122,
+        0,                      // CV_YUV2RGBA_YUY2 = 119,
+        0,                      // CV_YUV2BGRA_YUY2 = 120,
+        0,                      // CV_YUV2RGBA_YVYU = 121,
+        0,                      // CV_YUV2BGRA_YVYU = 122,
 
-        0,                      // COLOR_YUV2GRAY_UYVY = 123,
-        0,                      // COLOR_YUV2GRAY_YUY2 = 124,
+        0,                      // CV_YUV2GRAY_UYVY = 123,
+        0,                      // CV_YUV2GRAY_YUY2 = 124,
 
         // alpha premultiplication
-        rgba_to_mbgra,          // COLOR_RGBA2mRGBA = 125,
-        0,                      // COLOR_mRGBA2RGBA = 126,
+        rgba_to_mbgra,          // CV_RGBA2mRGBA = 125,
+        0,                      // CV_mRGBA2RGBA = 126,
 
-        0,                      // COLOR_COLORCVT_MAX  = 127
+        0,                      // CV_COLORCVT_MAX  = 127
     };
 
     CV_Assert(code < 128);

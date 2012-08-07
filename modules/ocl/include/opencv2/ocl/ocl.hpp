@@ -858,7 +858,72 @@ namespace cv
         void benchmark_copy_vectorize(const oclMat &src, oclMat &dst);
         void benchmark_copy_offset_stride(const oclMat &src, oclMat &dst);
         void benchmark_ILP();
-        
+
+		//! computes vertical sum, supports only CV_32FC1 images
+		CV_EXPORTS void columnSum(const oclMat& src, oclMat& sum);
+
+		//! performs linear blending of two images
+		//! to avoid accuracy errors sum of weigths shouldn't be very close to zero
+		// supports only CV_8UC1 source type
+		CV_EXPORTS void blendLinear(const oclMat& img1, const oclMat& img2, const oclMat& weights1, const oclMat& weights2, oclMat& result);
+
+		/////////////////////////////// Pyramid /////////////////////////////////////
+		CV_EXPORTS void pyrDown(const oclMat& src, oclMat& dst);
+
+		//! upsamples the source image and then smoothes it
+		CV_EXPORTS void pyrUp(const cv::ocl::oclMat& src,cv::ocl::oclMat& dst);
+
+		///////////////////////////////////////// match_template /////////////////////////////////////////////////////////////
+		struct CV_EXPORTS MatchTemplateBuf
+		{
+			Size user_block_size;
+			oclMat imagef, templf;
+			std::vector<oclMat> images;
+			std::vector<oclMat> image_sums;
+			std::vector<oclMat> image_sqsums;
+		};
+
+
+		//! computes the proximity map for the raster template and the image where the template is searched for
+		// Supports TM_SQDIFF, TM_SQDIFF_NORMED, TM_CCORR, TM_CCORR_NORMED, TM_CCOEFF, TM_CCOEFF_NORMED for type 8UC1 and 8UC4
+		// Supports TM_SQDIFF, TM_CCORR for type 32FC1 and 32FC4
+		CV_EXPORTS void matchTemplate(const oclMat& image, const oclMat& templ, oclMat& result, int method);
+		
+		//! computes the proximity map for the raster template and the image where the template is searched for
+		// Supports TM_SQDIFF, TM_SQDIFF_NORMED, TM_CCORR, TM_CCORR_NORMED, TM_CCOEFF, TM_CCOEFF_NORMED for type 8UC1 and 8UC4
+		// Supports TM_SQDIFF, TM_CCORR for type 32FC1 and 32FC4
+		CV_EXPORTS void matchTemplate(const oclMat& image, const oclMat& templ, oclMat& result, int method, MatchTemplateBuf& buf);
+
+#ifdef HAVE_CLAMDFFT
+            ///////////////////////////////////////// clAmdFft related /////////////////////////////////////////
+            // the two functions must be called before/after run any fft library functions.
+            CV_EXPORTS void fft_setup();    // this will be implicitly invoked
+            CV_EXPORTS void fft_teardown(); // you need to teardown fft library manually
+
+		    /////////////////////////////////////// DFT /////////////////////////////////////////////////////
+		    //! Performs a forward or inverse discrete Fourier transform (1D or 2D) of floating point matrix.
+		    //! Param dft_size is the size of DFT transform.
+		    //!
+		    //! For complex-to-real transform it is assumed that the source matrix is packed in CLFFT's format.
+		    // support src type of CV32FC1, CV32FC2
+		    // support flags: DFT_INVERSE, DFT_REAL_OUTPUT, DFT_COMPLEX_OUTPUT, DFT_ROWS
+		    // dft_size is the size of original input, which is used for transformation from complex to real.
+		    // dft_size must be powers of 2, 3 and 5
+		    // real to complex dft requires at least v1.8 clAmdFft
+		    // real to complex dft output is not the same with cpu version
+		    // real to complex and complex to real does not support DFT_ROWS
+		    CV_EXPORTS void dft(const oclMat& src, oclMat& dst, Size dft_size = Size(0, 0), int flags = 0);
+#endif // HAVE_CLAMDFFT
+
+#ifdef HAVE_CLAMDBLAS
+		//! implements generalized matrix product algorithm GEMM from BLAS
+		// The functionality requires clAmdBlas library
+		// only support type CV_32FC1
+		// flag GEMM_3_T is not supported
+		CV_EXPORTS void gemm(const oclMat& src1, const oclMat& src2, double alpha,
+		const oclMat& src3, double beta, oclMat& dst, int flags = 0);
+#endif
+
     }
 }
 #include "opencv2/ocl/matrix_operations.hpp"

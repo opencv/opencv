@@ -2,8 +2,19 @@ if(APPLE)
     set(OPENCL_FOUND YES)
     set(OPENCL_LIBRARIES "-framework OpenCL")
 else()
-    find_package(OpenCL QUIET)
-
+    #find_package(OpenCL QUIET)
+	if(WITH_OPENCLAMDFFT)
+            find_path(CLAMDFFT_INCLUDE_DIR
+                NAMES clAmdFft.h)
+            find_library(CLAMDFFT_LIBRARIES
+                NAMES clAmdFft.Runtime)
+	endif()
+	if(WITH_OPENCLAMDBLAS)
+            find_path(CLAMDBLAS_INCLUDE_DIR
+                NAMES clAmdBlas.h)
+            find_library(CLAMDBLAS_LIBRARIES
+                NAMES clAmdBlas)
+	endif()
     # Try AMD/ATI Stream SDK
     if (NOT OPENCL_FOUND)
         set(ENV_AMDSTREAMSDKROOT $ENV{AMDAPPSDKROOT})
