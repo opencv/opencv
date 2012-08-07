@@ -382,8 +382,8 @@ void DpSeamFinder::findEdges()
 }
 
 
-void DpSeamFinder::resolveConflicts(const Mat &image1, const Mat &image2,
-                                    Point tl1, Point tl2, Mat &mask1, Mat &mask2)
+void DpSeamFinder::resolveConflicts(
+        const Mat &image1, const Mat &image2, Point tl1, Point tl2, Mat &mask1, Mat &mask2)
 {
     if (costFunc_ == COLOR_GRAD)
         computeGradients(image1, image2);
@@ -524,11 +524,11 @@ void DpSeamFinder::computeGradients(const Mat &image1, const Mat &image2)
 }
 
 
-bool DpSeamFinder::hasOnlyOneNeighbor(int c)
+bool DpSeamFinder::hasOnlyOneNeighbor(int comp)
 {
     set<pair<int, int> >::iterator begin, end;
-    begin = lower_bound(edges_.begin(), edges_.end(), make_pair(c, numeric_limits<int>::min()));
-    end = upper_bound(edges_.begin(), edges_.end(), make_pair(c, numeric_limits<int>::max()));
+    begin = lower_bound(edges_.begin(), edges_.end(), make_pair(comp, numeric_limits<int>::min()));
+    end = upper_bound(edges_.begin(), edges_.end(), make_pair(comp, numeric_limits<int>::max()));
     return ++begin == end;
 }
 
@@ -556,19 +556,19 @@ bool DpSeamFinder::closeToContour(int y, int x, const Mat_<uchar> &contourMask)
 }
 
 
-bool DpSeamFinder::getSeamTips(int c1, int c2, Point &p1, Point &p2)
+bool DpSeamFinder::getSeamTips(int comp1, int comp2, Point &p1, Point &p2)
 {
-    CV_Assert(states_[c1] & INTERS);
+    CV_Assert(states_[comp1] & INTERS);
 
     // find special points
 
     vector<Point> specialPoints;
-    int l2 = c2+1;
+    int l2 = comp2+1;
 
-    for (size_t i = 0; i < contours_[c1].size(); ++i)
+    for (size_t i = 0; i < contours_[comp1].size(); ++i)
     {
-        int x = contours_[c1][i].x;
-        int y = contours_[c1][i].y;
+        int x = contours_[comp1][i].x;
+        int y = contours_[comp1][i].y;
 
         if (closeToContour(y, x, contour1mask_) &&
             closeToContour(y, x, contour2mask_) &&
@@ -673,10 +673,11 @@ float diffL2Square(const Mat &image1, int y1, int x1, const Mat &image2, int y2,
 } // namespace
 
 
-void DpSeamFinder::computeCosts(const Mat &image1, const Mat &image2, Point tl1, Point tl2,
-                                int c, Mat_<float> &costV, Mat_<float> &costH)
+void DpSeamFinder::computeCosts(
+        const Mat &image1, const Mat &image2, Point tl1, Point tl2,
+        int comp, Mat_<float> &costV, Mat_<float> &costH)
 {
-    CV_Assert(states_[c] & INTERS);
+    CV_Assert(states_[comp] & INTERS);
 
     // compute costs    
 
@@ -688,8 +689,8 @@ void DpSeamFinder::computeCosts(const Mat &image1, const Mat &image2, Point tl1,
     else
         CV_Error(CV_StsBadArg, "both images must have CV_32FC3 or CV_8UC3 type");
 
-    int l = c+1;
-    Rect roi(tls_[c], brs_[c]);
+    int l = comp+1;
+    Rect roi(tls_[comp], brs_[comp]);
 
     int dx1 = unionTl_.x - tl1.x, dy1 = unionTl_.y - tl1.y;
     int dx2 = unionTl_.x - tl2.x, dy2 = unionTl_.y - tl2.y;
@@ -748,18 +749,18 @@ void DpSeamFinder::computeCosts(const Mat &image1, const Mat &image2, Point tl1,
 
 
 bool DpSeamFinder::estimateSeam(
-        const Mat &image1, const Mat &image2, Point tl1, Point tl2, int c,
+        const Mat &image1, const Mat &image2, Point tl1, Point tl2, int comp,
         Point p1, Point p2, vector<Point> &seam, bool &isHorizontal)
 {
-    CV_Assert(states_[c] & INTERS);
+    CV_Assert(states_[comp] & INTERS);
 
     Mat_<float> costV, costH;
-    computeCosts(image1, image2, tl1, tl2, c, costV, costH);
+    computeCosts(image1, image2, tl1, tl2, comp, costV, costH);
 
-    Rect roi(tls_[c], brs_[c]);
+    Rect roi(tls_[comp], brs_[comp]);
     Point src = p1 - roi.tl();
     Point dst = p2 - roi.tl();
-    int l = c+1;
+    int l = comp+1;
 
     // estimate seam direction
 
@@ -890,31 +891,33 @@ bool DpSeamFinder::estimateSeam(
 }
 
 
-void DpSeamFinder::updateLabelsUsingSeam(int c1, int c2, const vector<Point> &seam, bool isHorizontalSeam)
+void DpSeamFinder::updateLabelsUsingSeam(
+        int comp1, int comp2, const vector<Point> &seam, bool isHorizontalSeam)
 {
-    Mat_<int> mask = Mat::zeros(brs_[c1].y - tls_[c1].y, brs_[c1].x - tls_[c1].x, CV_32S);
+    Mat_<int> mask = Mat::zeros(brs_[comp1].y - tls_[comp1].y,
+                                brs_[comp1].x - tls_[comp1].x, CV_32S);
 
-    for (size_t i = 0; i < contours_[c1].size(); ++i)
-        mask(contours_[c1][i] - tls_[c1]) = 255;
+    for (size_t i = 0; i < contours_[comp1].size(); ++i)
+        mask(contours_[comp1][i] - tls_[comp1]) = 255;
 
     for (size_t i = 0; i < seam.size(); ++i)
-        mask(seam[i] - tls_[c1]) = 255;
+        mask(seam[i] - tls_[comp1]) = 255;
 
     // find connected components after seam carving
 
-    int l1 = c1+1, l2 = c2+1;
+    int l1 = comp1+1, l2 = comp2+1;
 
     int ncomps = 0;
 
     for (int y = 0; y < mask.rows; ++y)
         for (int x = 0; x < mask.cols; ++x)
-            if (!mask(y, x) && labels_(y + tls_[c1].y, x + tls_[c1].x) == l1)
+            if (!mask(y, x) && labels_(y + tls_[comp1].y, x + tls_[comp1].x) == l1)
                 floodFill(mask, Point(x, y), ++ncomps);
 
-    for (size_t i = 0; i < contours_[c1].size(); ++i)
+    for (size_t i = 0; i < contours_[comp1].size(); ++i)
     {
-        int x = contours_[c1][i].x - tls_[c1].x;
-        int y = contours_[c1][i].y - tls_[c1].y;
+        int x = contours_[comp1][i].x - tls_[comp1].x;
+        int y = contours_[comp1][i].y - tls_[comp1].y;
 
         bool ok = false;
         static const int dx[] = {-1, +1, 0, 0, -1, +1, -1, +1};
@@ -941,8 +944,8 @@ void DpSeamFinder::updateLabelsUsingSeam(int c1, int c2, const vector<Point> &se
     {
         for (size_t i = 0; i < seam.size(); ++i)
         {
-            int x = seam[i].x - tls_[c1].x;
-            int y = seam[i].y - tls_[c1].y;
+            int x = seam[i].x - tls_[comp1].x;
+            int y = seam[i].y - tls_[comp1].y;
 
             if (y < mask.rows-1 && mask(y+1, x) && mask(y+1, x) != 255)
                 mask(y, x) = mask(y+1, x);
@@ -954,8 +957,8 @@ void DpSeamFinder::updateLabelsUsingSeam(int c1, int c2, const vector<Point> &se
     {
         for (size_t i = 0; i < seam.size(); ++i)
         {
-            int x = seam[i].x - tls_[c1].x;
-            int y = seam[i].y - tls_[c1].y;
+            int x = seam[i].x - tls_[comp1].x;
+            int y = seam[i].y - tls_[comp1].y;
 
             if (x < mask.cols-1 && mask(y, x+1) && mask(y, x+1) != 255)
                 mask(y, x) = mask(y, x+1);
@@ -976,17 +979,17 @@ void DpSeamFinder::updateLabelsUsingSeam(int c1, int c2, const vector<Point> &se
         connectOther.insert(make_pair(i, 0));
     }
 
-    for (size_t i = 0; i < contours_[c1].size(); ++i)
+    for (size_t i = 0; i < contours_[comp1].size(); ++i)
     {
-        int x = contours_[c1][i].x;
-        int y = contours_[c1][i].y;
+        int x = contours_[comp1][i].x;
+        int y = contours_[comp1][i].y;
 
         if ((x > 0 && labels_(y, x-1) == l2) ||
             (y > 0 && labels_(y-1, x) == l2) ||
             (x < unionSize_.width-1 && labels_(y, x+1) == l2) ||
             (y < unionSize_.height-1 && labels_(y+1, x) == l2))
         {
-            connect2[mask(y - tls_[c1].y, x - tls_[c1].x)]++;
+            connect2[mask(y - tls_[comp1].y, x - tls_[comp1].x)]++;
         }
 
         if ((x > 0 && labels_(y, x-1) != l1 && labels_(y, x-1) != l2) ||
@@ -994,7 +997,7 @@ void DpSeamFinder::updateLabelsUsingSeam(int c1, int c2, const vector<Point> &se
             (x < unionSize_.width-1 && labels_(y, x+1) != l1 && labels_(y, x+1) != l2) ||
             (y < unionSize_.height-1 && labels_(y+1, x) != l1 && labels_(y+1, x) != l2))
         {
-            connectOther[mask(y - tls_[c1].y, x - tls_[c1].x)]++;
+            connectOther[mask(y - tls_[comp1].y, x - tls_[comp1].x)]++;
         }
     }
 
@@ -1002,7 +1005,7 @@ void DpSeamFinder::updateLabelsUsingSeam(int c1, int c2, const vector<Point> &se
 
     for (map<int, int>::iterator itr = connect2.begin(); itr != connect2.end(); ++itr)
     {
-        double len = contours_[c1].size();
+        double len = contours_[comp1].size();
         isAdjComp[itr->first] = itr->second / len > 0.05 && connectOther.find(itr->first)->second / len < 0.1;
     }
 
@@ -1011,7 +1014,7 @@ void DpSeamFinder::updateLabelsUsingSeam(int c1, int c2, const vector<Point> &se
     for (int y = 0; y < mask.rows; ++y)
         for (int x = 0; x < mask.cols; ++x)
             if (mask(y, x) && isAdjComp[mask(y, x)])
-                labels_(y + tls_[c1].y, x + tls_[c1].x) = l2;
+                labels_(y + tls_[comp1].y, x + tls_[comp1].x) = l2;
 }
 
 

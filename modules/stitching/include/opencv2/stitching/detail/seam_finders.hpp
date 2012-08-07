@@ -153,33 +153,34 @@ private:
         int minDist_;
     };
 
-    void process(const Mat &image1, const Mat &image2, Point tl1, Point tl2,
-                 Mat &mask1, Mat &mask2);
+    void process(
+            const Mat &image1, const Mat &image2, Point tl1, Point tl2, Mat &mask1, Mat &mask2);
 
     void findComponents();
 
     void findEdges();
 
-    void resolveConflicts(const Mat &image1, const Mat &image2,
-                          Point tl1, Point tl2, Mat &mask1, Mat &mask2);
+    void resolveConflicts(
+            const Mat &image1, const Mat &image2, Point tl1, Point tl2, Mat &mask1, Mat &mask2);
 
     void computeGradients(const Mat &image1, const Mat &image2);
 
-    bool hasOnlyOneNeighbor(int c);
+    bool hasOnlyOneNeighbor(int comp);
 
     bool closeToContour(int y, int x, const Mat_<uchar> &contourMask);
 
-    bool getSeamTips(int c1, int c2, Point &p1, Point &p2);    
+    bool getSeamTips(int comp1, int comp2, Point &p1, Point &p2);
 
-    void computeCosts(const Mat &image1, const Mat &image2, Point tl1, Point tl2,
-                      int c, Mat_<float> &costV, Mat_<float> &costH);   
+    void computeCosts(
+            const Mat &image1, const Mat &image2, Point tl1, Point tl2,
+            int comp, Mat_<float> &costV, Mat_<float> &costH);
 
     bool estimateSeam(
-            const Mat &image1, const Mat &image2, Point tl1, Point tl2, int c,
+            const Mat &image1, const Mat &image2, Point tl1, Point tl2, int comp,
             Point p1, Point p2, std::vector<Point> &seam, bool &isHorizontal);
 
-    void updateLabelsUsingSeam(int c1, int c2, const std::vector<Point> &seam,
-                               bool isHorizontalSeam);
+    void updateLabelsUsingSeam(
+            int comp1, int comp2, const std::vector<Point> &seam, bool isHorizontalSeam);
 
     CostFunction costFunc_;
 
