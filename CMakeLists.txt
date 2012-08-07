@@ -285,25 +285,37 @@ ocv_include_directories(${OPENCV_CONFIG_FILE_INCLUDE_DIR})
 
 
 # ----------------------------------------------------------------------------
-#  Autodetect if we are in a SVN repository
+#  Autodetect if we are in a GIT repository
 # ----------------------------------------------------------------------------
-find_host_program(SVNVERSION_PATH svnversion)
-mark_as_advanced(force SVNVERSION_PATH)
-if(SVNVERSION_PATH)
-    message(STATUS "Extracting svn version, please wait...")
-    execute_process(COMMAND ${SVNVERSION_PATH} -n ${OpenCV_SOURCE_DIR} OUTPUT_VARIABLE SVNVERSION_RESULT)
 
-    if(SVNVERSION_RESULT MATCHES "exported")
-        # This is NOT a svn repository:
-        set(OPENCV_SVNVERSION "")
-        message(STATUS "SVNVERSION: exported")
-    else()
-        set(OPENCV_SVNVERSION " svn:${SVNVERSION_RESULT}")
-        message(STATUS "SVNVERSION: ${OPENCV_SVNVERSION}")
-    endif()
+# don't use FindGit because it requires CMake 2.8.2
+set(git_names git eg) # eg = easy git
+# Prefer .cmd variants on Windows unless running in a Makefile in the MSYS shell
+if(WIN32)
+  if(NOT CMAKE_GENERATOR MATCHES "MSYS")
+    set(git_names git.cmd git eg.cmd eg)
+  endif()
+endif()
+
+find_host_program(GIT_EXECUTABLE NAMES ${git_names} PATH_SUFFIXES Git/cmd Git/bin DOC "git command line client")
+mark_as_advanced(GIT_EXECUTABLE)
+
+if(GIT_EXECUTABLE)
+  execute_process(COMMAND ${GIT_EXECUTABLE} rev-parse --short HEAD
+    WORKING_DIRECTORY "${OpenCV_SOURCE_DIR}"
+    OUTPUT_VARIABLE OPENCV_GIT_HASH_SORT
+    RESULT_VARIABLE GIT_RESULT
+    ERROR_QUIET
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+  )
+  if(GIT_RESULT EQUAL 0)
+    set(OPENCV_VCSVERSION "commit:${OPENCV_GIT_HASH_SORT}")
+  else()
+    set(OPENCV_VCSVERSION "exported")
+  endif()
 else()
-    # We don't have svnversion:
-    set(OPENCV_SVNVERSION "")
+  # We don't have git:
+  set(OPENCV_VCSVERSION "")
 endif()
 
 
@@ -474,8 +486,8 @@ include(cmake/OpenCVGenConfig.cmake REQUIRED)
 # ----------------------------------------------------------------------------
 status("")
 status("General configuration for OpenCV ${OPENCV_VERSION} =====================================")
-if(OPENCV_SVNVERSION)
-  status("Version control:" ${OPENCV_SVNVERSION})
+if(OPENCV_VCSVERSION)
+  status("  Version control:" ${OPENCV_VCSVERSION})
 endif()
 
 # ========================== build platform ==========================
