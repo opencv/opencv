@@ -175,6 +175,12 @@
 /* OpenCL Support */
 #cmakedefine HAVE_OPENCL
 
+/* AMD's OpenCL Fast Fourier Transform Library*/ 
+#cmakedefine HAVE_CLAMDFFT
+
+/* AMD's Basic Linear Algebra Subprograms Library*/
+#cmakedefine HAVE_CLAMDBLAS
+
 /* NVidia Cuda Fast Fourier Transform (FFT) API*/
 #cmakedefine HAVE_CUFFT
 
