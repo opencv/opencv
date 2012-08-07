@@ -324,9 +324,9 @@ Class used for background/foreground segmentation. ::
         std::vector< std::vector<cv::Point> > foreground_regions;
     };
 
-The class discriminates between foreground and background pixels by building and maintaining a model of the background. Any pixel which does not fit this model is then deemed to be foreground. The class implements algorithm described in [FGD2003]_.
+  The class discriminates between foreground and background pixels by building and maintaining a model of the background. Any pixel which does not fit this model is then deemed to be foreground. The class implements algorithm described in [FGD2003]_.
 
-The results are available through the class fields:
+  The results are available through the class fields:
 
     .. ocv:member:: cv::gpu::GpuMat background
 
@@ -489,9 +489,9 @@ Gaussian Mixture-based Background/Foreground Segmentation Algorithm. ::
         ...
     };
 
-The class discriminates between foreground and background pixels by building and maintaining a model of the background. Any pixel which does not fit this model is then deemed to be foreground. The class implements algorithm described in [MOG2004]_.
+  The class discriminates between foreground and background pixels by building and maintaining a model of the background. Any pixel which does not fit this model is then deemed to be foreground. The class implements algorithm described in [MOG2004]_.
 
-Here are important members of the class that control the algorithm, which you can set after constructing the class instance:
+  Here are important members of the class that control the algorithm, which you can set after constructing the class instance:
 
     .. ocv:member:: float backgroundRatio
 
