@@ -49,7 +49,7 @@ class App:
                 ret, frame = self.cap.read()
                 if not ret:
                     break
-                self.frame = np.frame.copy()
+                self.frame = frame.copy()
             
             w, h = getsize(self.frame)
             vis = np.zeros((h, w*2, 3), np.uint8)
