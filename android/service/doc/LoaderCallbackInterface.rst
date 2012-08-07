@@ -8,7 +8,7 @@ Loader Callback Interface
     Interface for callback object in case of asynchronous initialization of OpenCV
 
 void onManagerConnected()
-------------------------
+-------------------------
 
 .. method:: void onManagerConnected(int status)
 
