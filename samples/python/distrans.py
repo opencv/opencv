@@ -20,12 +20,12 @@ edge = 0
 def on_trackbar(edge_thresh):
 
     cv.Threshold(gray, edge, float(edge_thresh), float(edge_thresh), cv.CV_THRESH_BINARY)
-    #Distance transform                  
+    #Distance transform
     cv.DistTransform(edge, dist, cv.CV_DIST_L2, cv.CV_DIST_MASK_5)
 
     cv.ConvertScale(dist, dist, 5000.0, 0)
     cv.Pow(dist, dist, 0.5)
-    
+
     cv.ConvertScale(dist, dist32s, 1.0, 0.5)
     cv.AndS(dist32s, cv.ScalarAll(255), dist32s, None)
     cv.ConvertScale(dist32s, dist8u1, 1, 0)
@@ -42,7 +42,7 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         gray = cv.LoadImage(sys.argv[1], cv.CV_LOAD_IMAGE_GRAYSCALE)
     else:
-        url = 'http://code.opencv.org/svn/opencv/trunk/opencv/samples/c/stuff.jpg'
+        url = 'http://code.opencv.org/projects/opencv/repository/revisions/master/raw/samples/c/stuff.jpg'
         filedata = urllib2.urlopen(url).read()
         imagefiledata = cv.CreateMatHeader(1, len(filedata), cv.CV_8UC1)
         cv.SetData(imagefiledata, filedata, len(filedata))
@@ -61,7 +61,7 @@ if __name__ == "__main__":
     # Create a window
     cv.NamedWindow(wndname, 1)
 
-    # create a toolbar 
+    # create a toolbar
     cv.CreateTrackbar(tbarname, wndname, edge_thresh, 255, on_trackbar)
 
     # Show the image

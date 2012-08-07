@@ -15,7 +15,7 @@ In this tutorial you will learn how to:
      * Use :surf_descriptor_extractor:`SurfDescriptorExtractor<>` and its function :descriptor_extractor:`compute<>` to perform the required calculations.
      * Use a :brute_force_matcher:`BruteForceMatcher<>`	to match the features vector
      * Use the function :draw_matches:`drawMatches<>` to draw the detected matches.
-     
+
 
 Theory
 ======
@@ -23,9 +23,9 @@ Theory
 Code
 ====
 
-This tutorial code's is shown lines below. You can also download it from `here <http://code.opencv.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/features2D/SURF_descriptor.cpp>`_
+This tutorial code's is shown lines below. You can also download it from `here <http://code.opencv.org/projects/opencv/repository/revisions/master/raw/samples/cpp/tutorial_code/features2D/SURF_descriptor.cpp>`_
 
-.. code-block:: cpp 
+.. code-block:: cpp
 
    #include <stdio.h>
    #include <iostream>
@@ -45,7 +45,7 @@ This tutorial code's is shown lines below. You can also download it from `here <
 
      Mat img_1 = imread( argv[1], CV_LOAD_IMAGE_GRAYSCALE );
      Mat img_2 = imread( argv[2], CV_LOAD_IMAGE_GRAYSCALE );
-  
+
      if( !img_1.data || !img_2.data )
       { return -1; }
 
@@ -74,7 +74,7 @@ This tutorial code's is shown lines below. You can also download it from `here <
 
      //-- Draw matches
      Mat img_matches;
-     drawMatches( img_1, keypoints_1, img_2, keypoints_2, matches, img_matches ); 
+     drawMatches( img_1, keypoints_1, img_2, keypoints_2, matches, img_matches );
 
      //-- Show detected matches
      imshow("Matches", img_matches );
@@ -93,9 +93,9 @@ Explanation
 
 Result
 ======
- 
+
 #. Here is the result after applying the BruteForce matcher between the two original images:
- 
+
    .. image:: images/Feature_Description_BruteForce_Result.jpg
       :align: center
       :height: 200pt
