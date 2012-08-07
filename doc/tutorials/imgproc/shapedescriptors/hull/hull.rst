@@ -10,7 +10,7 @@ In this tutorial you will learn how to:
 
 .. container:: enumeratevisibleitemswithsquare
 
-   * Use the OpenCV function :convex_hull:`convexHull <>` 
+   * Use the OpenCV function :convex_hull:`convexHull <>`
 
 
 Theory
@@ -19,11 +19,11 @@ Theory
 Code
 ====
 
-This tutorial code's is shown lines below. You can also download it from `here <http://code.opencv.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/ShapeDescriptors/hull_demo.cpp>`_
+This tutorial code's is shown lines below. You can also download it from `here <http://code.opencv.org/projects/opencv/repository/revisions/master/raw/samples/cpp/tutorial_code/ShapeDescriptors/hull_demo.cpp>`_
 
-.. code-block:: cpp 
+.. code-block:: cpp
 
-   #include "opencv2/highgui/highgui.hpp" 
+   #include "opencv2/highgui/highgui.hpp"
    #include "opencv2/imgproc/imgproc.hpp"
    #include <iostream>
    #include <stdio.h>
@@ -33,7 +33,7 @@ This tutorial code's is shown lines below. You can also download it from `here <
    using namespace std;
 
    Mat src; Mat src_gray;
-   int thresh = 100; 
+   int thresh = 100;
    int max_thresh = 255;
    RNG rng(12345);
 
@@ -73,21 +73,21 @@ This tutorial code's is shown lines below. You can also download it from `here <
      /// Detect edges using Threshold
      threshold( src_gray, threshold_output, thresh, 255, THRESH_BINARY );
 
-     /// Find contours  
+     /// Find contours
      findContours( threshold_output, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0, 0) );
 
      /// Find the convex hull object for each contour
      vector<vector<Point> >hull( contours.size() );
      for( int i = 0; i < contours.size(); i++ )
-        {  convexHull( Mat(contours[i]), hull[i], false ); } 
+        {  convexHull( Mat(contours[i]), hull[i], false ); }
 
      /// Draw contours + hull results
      Mat drawing = Mat::zeros( threshold_output.size(), CV_8UC3 );
      for( int i = 0; i< contours.size(); i++ )
-        { 
+        {
           Scalar color = Scalar( rng.uniform(0, 255), rng.uniform(0,255), rng.uniform(0,255) );
-          drawContours( drawing, contours, i, color, 1, 8, vector<Vec4i>(), 0, Point() ); 
-          drawContours( drawing, hull, i, color, 1, 8, vector<Vec4i>(), 0, Point() );       
+          drawContours( drawing, contours, i, color, 1, 8, vector<Vec4i>(), 0, Point() );
+          drawContours( drawing, hull, i, color, 1, 8, vector<Vec4i>(), 0, Point() );
         }
 
      /// Show in a window
@@ -104,13 +104,13 @@ Result
 
 #. Here it is:
 
-   ========== ==========  
-    |Hull_0|   |Hull_1|   
-   ========== ==========   
+   ========== ==========
+    |Hull_0|   |Hull_1|
+   ========== ==========
 
    .. |Hull_0|  image:: images/Hull_Original_Image.jpg
                      :align: middle
 
    .. |Hull_1|  image:: images/Hull_Result.jpg
-                     :align: middle   
+                     :align: middle
 

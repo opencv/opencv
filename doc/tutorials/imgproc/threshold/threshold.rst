@@ -26,18 +26,18 @@ What is Thresholding?
 
 * Application example: Separate out regions of an image corresponding to objects which we want to analyze. This separation is based on the variation of intensity between the object pixels and the background pixels.
 
-* To differentiate the pixels we are interested in from the rest (which will eventually be rejected), we perform a comparison of  each pixel intensity value with respect to a *threshold* (determined according to the problem to solve). 
+* To differentiate the pixels we are interested in from the rest (which will eventually be rejected), we perform a comparison of  each pixel intensity value with respect to a *threshold* (determined according to the problem to solve).
 
 * Once we have separated properly the important pixels, we can set them with a determined value to identify them (i.e. we can assign them a value of :math:`0` (black), :math:`255` (white) or any value  that suits your needs).
 
   .. image:: images/Threshold_Tutorial_Theory_Example.jpg
      :alt: Threshold simple example
-     :align: center 
+     :align: center
 
 Types of Thresholding
 -----------------------
 
-* OpenCV offers the function :threshold:`threshold <>` to perform thresholding operations. 
+* OpenCV offers the function :threshold:`threshold <>` to perform thresholding operations.
 
 * We can effectuate :math:`5` types of Thresholding operations with this function. We will explain them in the following subsections.
 
@@ -45,7 +45,7 @@ Types of Thresholding
 
   .. image:: images/Threshold_Tutorial_Theory_Base_Figure.png
      :alt: Threshold Binary
-     :align: center 
+     :align: center
 
 Threshold Binary
 ^^^^^^^^^^^^^^^^^
@@ -53,86 +53,86 @@ Threshold Binary
 * This thresholding operation can be expressed as:
 
   .. math::
-         
-     \texttt{dst} (x,y) =  \fork{\texttt{maxVal}}{if $\texttt{src}(x,y) > \texttt{thresh}$}{0}{otherwise}   
- 
+
+     \texttt{dst} (x,y) =  \fork{\texttt{maxVal}}{if $\texttt{src}(x,y) > \texttt{thresh}$}{0}{otherwise}
+
 * So, if the intensity of the pixel :math:`src(x,y)` is higher than :math:`thresh`, then the new pixel intensity is set to a :math:`MaxVal`. Otherwise, the pixels are set to :math:`0`.
 
   .. image:: images/Threshold_Tutorial_Theory_Binary.png
      :alt: Threshold Binary
-     :align: center 
+     :align: center
 
 
 Threshold Binary, Inverted
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 * This thresholding operation can be expressed as:
-                
+
   .. math::
-        
-     \texttt{dst} (x,y) =  \fork{0}{if $\texttt{src}(x,y) > \texttt{thresh}$}{\texttt{maxVal}}{otherwise}   
+
+     \texttt{dst} (x,y) =  \fork{0}{if $\texttt{src}(x,y) > \texttt{thresh}$}{\texttt{maxVal}}{otherwise}
 
 * If the intensity of the pixel :math:`src(x,y)` is higher than :math:`thresh`, then the new pixel intensity is set to a :math:`0`. Otherwise, it is set to :math:`MaxVal`.
-        
+
   .. image:: images/Threshold_Tutorial_Theory_Binary_Inverted.png
      :alt: Threshold Binary Inverted
-     :align: center 
+     :align: center
 
 Truncate
 ^^^^^^^^^
-        
+
 * This thresholding operation can be expressed as:
-               
+
   .. math::
-        
-     \texttt{dst} (x,y) =  \fork{\texttt{threshold}}{if $\texttt{src}(x,y) > \texttt{thresh}$}{\texttt{src}(x,y)}{otherwise}   
-       
+
+     \texttt{dst} (x,y) =  \fork{\texttt{threshold}}{if $\texttt{src}(x,y) > \texttt{thresh}$}{\texttt{src}(x,y)}{otherwise}
+
 * The maximum intensity value for the pixels is :math:`thresh`, if :math:`src(x,y)` is greater, then its value is *truncated*. See figure below:
- 
+
   .. image:: images/Threshold_Tutorial_Theory_Truncate.png
      :alt: Threshold Truncate
-     :align: center 
-        
+     :align: center
+
 
 
 Threshold to Zero
 ^^^^^^^^^^^^^^^^^^
 
 * This operation can be expressed as:
-        
+
    .. math::
-        
-      \texttt{dst} (x,y) =  \fork{\texttt{src}(x,y)}{if $\texttt{src}(x,y) > \texttt{thresh}$}{0}{otherwise}   
+
+      \texttt{dst} (x,y) =  \fork{\texttt{src}(x,y)}{if $\texttt{src}(x,y) > \texttt{thresh}$}{0}{otherwise}
 
 * If :math:`src(x,y)` is lower than :math:`thresh`, the new pixel value will be set to :math:`0`.
 
   .. image:: images/Threshold_Tutorial_Theory_Zero.png
      :alt: Threshold Zero
-     :align: center 
+     :align: center
 
 
 Threshold to Zero, Inverted
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 * This operation can be expressed as:
-        
+
    .. math::
-        
-      \texttt{dst} (x,y) =  \fork{0}{if $\texttt{src}(x,y) > \texttt{thresh}$}{\texttt{src}(x,y)}{otherwise}   
+
+      \texttt{dst} (x,y) =  \fork{0}{if $\texttt{src}(x,y) > \texttt{thresh}$}{\texttt{src}(x,y)}{otherwise}
 
 * If  :math:`src(x,y)` is greater than :math:`thresh`, the new pixel value will be set to :math:`0`.
 
   .. image:: images/Threshold_Tutorial_Theory_Zero_Inverted.png
      :alt: Threshold Zero Inverted
-     :align: center 
+     :align: center
 
 
 Code
 ======
 
-The tutorial code's is shown lines below. You can also download it from `here <http://code.opencv.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/ImgProc/Threshold.cpp>`_
+The tutorial code's is shown lines below. You can also download it from `here <http://code.opencv.org/projects/opencv/repository/revisions/master/raw/samples/cpp/tutorial_code/ImgProc/Threshold.cpp>`_
 
-.. code-block:: cpp 
+.. code-block:: cpp
 
    #include "opencv2/imgproc/imgproc.hpp"
    #include "opencv2/highgui/highgui.hpp"
@@ -173,8 +173,8 @@ The tutorial code's is shown lines below. You can also download it from `here <h
      namedWindow( window_name, CV_WINDOW_AUTOSIZE );
 
      /// Create Trackbar to choose type of Threshold
-     createTrackbar( trackbar_type, 
-		     window_name, &threshold_type, 
+     createTrackbar( trackbar_type,
+		     window_name, &threshold_type,
 		     max_type, Threshold_Demo );
 
      createTrackbar( trackbar_value,
@@ -244,8 +244,8 @@ Explanation
 
      .. code-block:: cpp
 
-        createTrackbar( trackbar_type, 
-		     window_name, &threshold_type, 
+        createTrackbar( trackbar_type,
+		     window_name, &threshold_type,
 		     max_type, Threshold_Demo );
 
         createTrackbar( trackbar_value,
@@ -293,18 +293,18 @@ Results
 
    .. image:: images/Threshold_Tutorial_Original_Image.jpg
       :alt: Threshold Original Image
-      :align: center 
+      :align: center
 
 #. First, we try to threshold our image with a *binary threhold inverted*. We expect that the pixels brighter than the :math:`thresh` will turn dark, which is what actually happens, as we can see in the snapshot below (notice from the original image, that the doggie's tongue and eyes are particularly bright in comparison with the image, this is reflected in the output image).
 
 
    .. image:: images/Threshold_Tutorial_Result_Binary_Inverted.jpg
       :alt: Threshold Result Binary Inverted
-      :align: center 
+      :align: center
 
 
 #. Now we try with the *threshold to zero*. With this, we expect that the darkest pixels (below the threshold) will become completely black, whereas the pixels with value greater than the threshold will keep its original value. This is verified by the following snapshot of the output image:
 
    .. image:: images/Threshold_Tutorial_Result_Zero.jpg
       :alt: Threshold Result Zero
-      :align: center 
+      :align: center

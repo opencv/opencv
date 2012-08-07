@@ -14,7 +14,7 @@ In this tutorial you will learn how to:
 
      * :cascade_classifier_load:`load <>` to load a .xml classifier file. It can be either a Haar or a LBP classifer
      * :cascade_classifier_detect_multiscale:`detectMultiScale <>` to perform the detection.
-           
+
 
 Theory
 ======
@@ -22,9 +22,9 @@ Theory
 Code
 ====
 
-This tutorial code's is shown lines below. You can also download it from `here <http://code.opencv.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/objectDetection/objectDetection.cpp>`_ . The second version (using LBP for face detection) can be `found here <http://code.opencv.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/objectDetection/objectDetection2.cpp>`_ 
+This tutorial code's is shown lines below. You can also download it from `here <http://code.opencv.org/projects/opencv/repository/revisions/master/raw/samples/cpp/tutorial_code/objectDetection/objectDetection.cpp>`_ . The second version (using LBP for face detection) can be `found here <http://code.opencv.org/projects/opencv/repository/revisions/master/raw/samples/cpp/tutorial_code/objectDetection/objectDetection2.cpp>`_
 
-.. code-block:: cpp 
+.. code-block:: cpp
 
    #include "opencv2/objdetect/objdetect.hpp"
    #include "opencv2/highgui/highgui.hpp"
@@ -56,7 +56,7 @@ This tutorial code's is shown lines below. You can also download it from `here <
      //-- 1. Load the cascades
      if( !face_cascade.load( face_cascade_name ) ){ printf("--(!)Error loading\n"); return -1; };
      if( !eyes_cascade.load( eyes_cascade_name ) ){ printf("--(!)Error loading\n"); return -1; };
- 
+
      //-- 2. Read the video stream
      capture = cvCaptureFromCAM( -1 );
      if( capture )
@@ -64,15 +64,15 @@ This tutorial code's is shown lines below. You can also download it from `here <
        while( true )
        {
      frame = cvQueryFrame( capture );
-  
+
      //-- 3. Apply the classifier to the frame
          if( !frame.empty() )
          { detectAndDisplay( frame ); }
          else
          { printf(" --(!) No captured frame -- Break!"); break; }
-      
+
          int c = waitKey(10);
-         if( (char)c == 'c' ) { break; } 
+         if( (char)c == 'c' ) { break; }
         }
      }
      return 0;
@@ -103,11 +103,11 @@ This tutorial code's is shown lines below. You can also download it from `here <
 
       for( int j = 0; j < eyes.size(); j++ )
        {
-         Point center( faces[i].x + eyes[j].x + eyes[j].width*0.5, faces[i].y + eyes[j].y + eyes[j].height*0.5 ); 
+         Point center( faces[i].x + eyes[j].x + eyes[j].width*0.5, faces[i].y + eyes[j].y + eyes[j].height*0.5 );
          int radius = cvRound( (eyes[j].width + eyes[j].height)*0.25 );
          circle( frame, center, radius, Scalar( 255, 0, 0 ), 4, 8, 0 );
        }
-    } 
+    }
     //-- Show what you got
     imshow( window_name, frame );
    }
@@ -124,11 +124,11 @@ Result
       :align: center
       :height: 300pt
 
-   Remember to copy the files *haarcascade_frontalface_alt.xml* and *haarcascade_eye_tree_eyeglasses.xml* in your current directory. They are located in *opencv/data/haarcascades* 
+   Remember to copy the files *haarcascade_frontalface_alt.xml* and *haarcascade_eye_tree_eyeglasses.xml* in your current directory. They are located in *opencv/data/haarcascades*
 
-#. This is the result of using the file *lbpcascade_frontalface.xml* (LBP trained) for the face detection. For the eyes we keep using the file used in the tutorial. 
+#. This is the result of using the file *lbpcascade_frontalface.xml* (LBP trained) for the face detection. For the eyes we keep using the file used in the tutorial.
 
    .. image:: images/Cascade_Classifier_Tutorial_Result_LBP.jpg
       :align: center
-      :height: 300pt   
+      :height: 300pt
 

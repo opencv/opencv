@@ -25,43 +25,43 @@ Theory
 
 
      a. **Correlation ( CV\_COMP\_CORREL )**
-        
+
         .. math::
-    
-           d(H_1,H_2) =  \frac{\sum_I (H_1(I) - \bar{H_1}) (H_2(I) - \bar{H_2})}{\sqrt{\sum_I(H_1(I) - \bar{H_1})^2 \sum_I(H_2(I) - \bar{H_2})^2}} 
-    
+
+           d(H_1,H_2) =  \frac{\sum_I (H_1(I) - \bar{H_1}) (H_2(I) - \bar{H_2})}{\sqrt{\sum_I(H_1(I) - \bar{H_1})^2 \sum_I(H_2(I) - \bar{H_2})^2}}
+
         where
-    
+
         .. math::
-    
-           \bar{H_k} =  \frac{1}{N} \sum _J H_k(J) 
-    
-    
+
+           \bar{H_k} =  \frac{1}{N} \sum _J H_k(J)
+
+
         and :math:`N` is the total number of histogram bins.
-    
-    
+
+
 
      b. **Chi-Square ( CV\_COMP\_CHISQR )**
-    
+
         .. math::
-    
-           d(H_1,H_2) =  \sum _I  \frac{\left(H_1(I)-H_2(I)\right)^2}{H_1(I)} 
-     
-    
+
+           d(H_1,H_2) =  \sum _I  \frac{\left(H_1(I)-H_2(I)\right)^2}{H_1(I)}
+
+
      c. **Intersection ( method=CV\_COMP\_INTERSECT )**
-    
+
         .. math::
-    
-           d(H_1,H_2) =  \sum _I  \min (H_1(I), H_2(I))  
-    
-    
+
+           d(H_1,H_2) =  \sum _I  \min (H_1(I), H_2(I))
+
+
      d. **Bhattacharyya distance ( CV\_COMP\_BHATTACHARYYA )**
-    
+
         .. math::
-    
-           d(H_1,H_2) =  \sqrt{1 - \frac{1}{\sqrt{\bar{H_1} \bar{H_2} N^2}} \sum_I \sqrt{H_1(I) \cdot H_2(I)}} 
-    
- 
+
+           d(H_1,H_2) =  \sqrt{1 - \frac{1}{\sqrt{\bar{H_1} \bar{H_2} N^2}} \sum_I \sqrt{H_1(I) \cdot H_2(I)}}
+
+
 
 Code
 ====
@@ -69,7 +69,7 @@ Code
 .. container:: enumeratevisibleitemswithsquare
 
    * **What does this program do?**
- 
+
      .. container:: enumeratevisibleitemswithsquare
 
         * Loads a *base image* and 2 *test images* to be compared with it.
@@ -79,8 +79,8 @@ Code
         * Compare the histogram of the *base image* with respect to the 2 test histograms, the histogram of the lower half base image and with the same base image histogram.
         * Display the numerical matching parameters obtained.
 
-   * **Downloadable code**: 
-     Click `here <http://code.opencv.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/Histograms_Matching/compareHist_Demo.cpp>`_ 
+   * **Downloadable code**:
+     Click `here <http://code.opencv.org/projects/opencv/repository/revisions/master/raw/samples/cpp/tutorial_code/Histograms_Matching/compareHist_Demo.cpp>`_
 
    * **Code at glance:**
 
@@ -105,7 +105,7 @@ Code
      /// Load three images with different environment settings
      if( argc < 4 )
        { printf("** Error. Usage: ./compareHist_Demo <image_settings0> <image_setting1> <image_settings2>\n");
-         return -1; 
+         return -1;
        }
 
      src_base = imread( argv[1], 1 );
@@ -117,7 +117,7 @@ Code
      cvtColor( src_test1, hsv_test1, CV_BGR2HSV );
      cvtColor( src_test2, hsv_test2, CV_BGR2HSV );
 
-     hsv_half_down = hsv_base( Range( hsv_base.rows/2, hsv_base.rows - 1 ), Range( 0, hsv_base.cols - 1 ) );  
+     hsv_half_down = hsv_base( Range( hsv_base.rows/2, hsv_base.rows - 1 ), Range( 0, hsv_base.cols - 1 ) );
 
      /// Using 30 bins for hue and 32 for saturation
      int h_bins = 50; int s_bins = 60;
@@ -153,14 +153,14 @@ Code
 
      /// Apply the histogram comparison methods
      for( int i = 0; i < 4; i++ )
-        { int compare_method = i; 
+        { int compare_method = i;
           double base_base = compareHist( hist_base, hist_base, compare_method );
           double base_half = compareHist( hist_base, hist_half_down, compare_method );
           double base_test1 = compareHist( hist_base, hist_test1, compare_method );
           double base_test2 = compareHist( hist_base, hist_test2, compare_method );
-     
+
           printf( " Method [%d] Perfect, Base-Half, Base-Test(1), Base-Test(2) : %f, %f, %f, %f \n", i, base_base, base_half , base_test1, base_test2 );
-        } 
+        }
 
      printf( "Done \n" );
 
@@ -171,7 +171,7 @@ Code
 Explanation
 ===========
 
-#. Declare variables such as the matrices to store the base image and the two other images to compare ( RGB and HSV ) 
+#. Declare variables such as the matrices to store the base image and the two other images to compare ( RGB and HSV )
 
    .. code-block:: cpp
 
@@ -186,7 +186,7 @@ Explanation
 
       if( argc < 4 )
         { printf("** Error. Usage: ./compareHist_Demo <image_settings0> <image_setting1> <image_settings2>\n");
-          return -1; 
+          return -1;
         }
 
       src_base = imread( argv[1], 1 );
@@ -205,7 +205,7 @@ Explanation
 
    .. code-block:: cpp
 
-      hsv_half_down = hsv_base( Range( hsv_base.rows/2, hsv_base.rows - 1 ), Range( 0, hsv_base.cols - 1 ) );  
+      hsv_half_down = hsv_base( Range( hsv_base.rows/2, hsv_base.rows - 1 ), Range( 0, hsv_base.cols - 1 ) );
 
 #. Initialize the arguments to calculate the histograms (bins, ranges and channels H and S ).
 
@@ -233,7 +233,7 @@ Explanation
 #. Calculate the Histograms for the base image, the 2 test images and the half-down base image:
 
    .. code-block:: cpp
- 
+
       calcHist( &hsv_base, 1, channels, Mat(), hist_base, 2, histSize, ranges, true, false );
       normalize( hist_base, hist_base, 0, 1, NORM_MINMAX, -1, Mat() );
 
@@ -252,24 +252,24 @@ Explanation
    .. code-block:: cpp
 
       for( int i = 0; i < 4; i++ )
-         { int compare_method = i; 
+         { int compare_method = i;
            double base_base = compareHist( hist_base, hist_base, compare_method );
            double base_half = compareHist( hist_base, hist_half_down, compare_method );
            double base_test1 = compareHist( hist_base, hist_test1, compare_method );
            double base_test2 = compareHist( hist_base, hist_test2, compare_method );
-     
-          printf( " Method [%d] Perfect, Base-Half, Base-Test(1), Base-Test(2) : %f, %f, %f, %f \n", i, base_base, base_half , base_test1, base_test2 );
-        } 
 
-     
+          printf( " Method [%d] Perfect, Base-Half, Base-Test(1), Base-Test(2) : %f, %f, %f, %f \n", i, base_base, base_half , base_test1, base_test2 );
+        }
+
+
 Results
 ========
 
 #. We use as input the following images:
 
-   ============  ============  ============ 
+   ============  ============  ============
     |Base_0|       |Test_1|      |Test_2|
-   ============  ============  ============ 
+   ============  ============  ============
 
    .. |Base_0| image:: images/Histogram_Comparison_Source_0.jpg
                     :align: middle
@@ -289,10 +289,10 @@ Results
   ===============   ===============  ===============  ===============  ===============
   *Method*          Base - Base      Base - Half      Base - Test 1    Base - Test 2
   ===============   ===============  ===============  ===============  ===============
-  *Correlation*     1.000000         0.930766         0.182073         0.120447 
-  *Chi-square*      0.000000         4.940466         21.184536        49.273437 
-  *Intersection*    24.391548        14.959809        3.889029         5.775088 
-  *Bhattacharyya*   0.000000         0.222609         0.646576         0.801869 
+  *Correlation*     1.000000         0.930766         0.182073         0.120447
+  *Chi-square*      0.000000         4.940466         21.184536        49.273437
+  *Intersection*    24.391548        14.959809        3.889029         5.775088
+  *Bhattacharyya*   0.000000         0.222609         0.646576         0.801869
   ===============   ===============  ===============  ===============  ===============
 
 

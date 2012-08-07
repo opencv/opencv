@@ -9,7 +9,7 @@ Goal
 In this tutorial you will learn how to:
 
 .. container:: enumeratevisibleitemswithsquare
-   
+
    * Load an image (using :imread:`imread <>`)
    * Create a named OpenCV window (using :named_window:`namedWindow <>`)
    * Display an image in an OpenCV window (using :imshow:`imshow <>`)
@@ -17,7 +17,7 @@ In this tutorial you will learn how to:
 Source Code
 ===========
 
-Download the source code from `here <http://code.opencv.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/introduction/display_image/display_image.cpp>`_.
+Download the source code from `here <http://code.opencv.org/projects/opencv/repository/revisions/master/raw/samples/cpp/tutorial_code/introduction/display_image/display_image.cpp>`_.
 
 .. literalinclude:: ../../../../samples/cpp/tutorial_code/introduction/display_image/display_image.cpp
    :language: cpp
@@ -29,7 +29,7 @@ Explanation
 
 In OpenCV 2 we have multiple modules. Each one takes care of a different area or approach towards image processing. You could already observe this in the structure of the user guide of these tutorials itself. Before you use any of them you first need to include the header files where the content of each individual module is declared.
 
-You'll almost always end up using the: 
+You'll almost always end up using the:
 
 .. container:: enumeratevisibleitemswithsquare
 
@@ -75,23 +75,23 @@ Now we call the :imread:`imread <>` function which loads the image name specifie
    :tab-width: 4
    :lines: 17
 
-.. note:: 
+.. note::
 
-   OpenCV offers support for the image formats Windows bitmap (bmp), portable image formats (pbm, pgm, ppm) and Sun raster (sr, ras). With help of plugins (you need to specify to use them if you build yourself the library, nevertheless in the packages we ship present by default) you may also load image formats like JPEG (jpeg, jpg, jpe), JPEG 2000 (jp2 - codenamed in the CMake as Jasper), TIFF files (tiff, tif) and portable network graphics (png). Furthermore, OpenEXR is also a possibility. 
+   OpenCV offers support for the image formats Windows bitmap (bmp), portable image formats (pbm, pgm, ppm) and Sun raster (sr, ras). With help of plugins (you need to specify to use them if you build yourself the library, nevertheless in the packages we ship present by default) you may also load image formats like JPEG (jpeg, jpg, jpe), JPEG 2000 (jp2 - codenamed in the CMake as Jasper), TIFF files (tiff, tif) and portable network graphics (png). Furthermore, OpenEXR is also a possibility.
 
-After checking that the image data was loaded correctly, we want to display our image, so we create an OpenCV window using the :named_window:`namedWindow <>` function. These are automatically managed by OpenCV once you create them. For this you need to specify its name and how it should handle the change of the image it contains from a size point of view. It may be: 
+After checking that the image data was loaded correctly, we want to display our image, so we create an OpenCV window using the :named_window:`namedWindow <>` function. These are automatically managed by OpenCV once you create them. For this you need to specify its name and how it should handle the change of the image it contains from a size point of view. It may be:
 
 .. container:: enumeratevisibleitemswithsquare
 
-   + *CV_WINDOW_AUTOSIZE* is the only supported one if you do not use the Qt backend. In this case the window size will take up the size of the image it shows. No resize permitted! 
-   + *CV_WINDOW_NORMAL* on Qt you may use this to allow window resize. The image will resize itself according to the current window size. By using the | operator you also need to specify if you would like the image to keep its aspect ratio (*CV_WINDOW_KEEPRATIO*) or not (*CV_WINDOW_FREERATIO*). 
+   + *CV_WINDOW_AUTOSIZE* is the only supported one if you do not use the Qt backend. In this case the window size will take up the size of the image it shows. No resize permitted!
+   + *CV_WINDOW_NORMAL* on Qt you may use this to allow window resize. The image will resize itself according to the current window size. By using the | operator you also need to specify if you would like the image to keep its aspect ratio (*CV_WINDOW_KEEPRATIO*) or not (*CV_WINDOW_FREERATIO*).
 
 .. literalinclude:: ../../../../samples/cpp/tutorial_code/introduction/display_image/display_image.cpp
    :language: cpp
    :lines: 25
    :tab-width: 4
 
-Finally, to update the content of the OpenCV window with a new image use the :imshow:`imshow <>` function. Specify the OpenCV window name to update and the image to use during this operation: 
+Finally, to update the content of the OpenCV window with a new image use the :imshow:`imshow <>` function. Specify the OpenCV window name to update and the image to use during this operation:
 
 .. literalinclude:: ../../../../samples/cpp/tutorial_code/introduction/display_image/display_image.cpp
    :language: cpp
@@ -110,7 +110,7 @@ Result
 
 .. container:: enumeratevisibleitemswithsquare
 
-   * Compile your code and then run the executable giving an image path as argument. If you're on Windows the executable will of course contain an *exe* extension too. Of course assure the image file is near your program file. 
+   * Compile your code and then run the executable giving an image path as argument. If you're on Windows the executable will of course contain an *exe* extension too. Of course assure the image file is near your program file.
 
      .. code-block:: bash
 
@@ -120,7 +120,7 @@ Result
 
      .. image:: images/Display_Image_Tutorial_Result.jpg
         :alt: Display Image Tutorial - Final Result
-        :align: center 
+        :align: center
 
    .. raw:: html
 

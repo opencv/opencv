@@ -10,7 +10,7 @@ ADD_CUSTOM_TARGET(uninstall "${CMAKE_COMMAND}" -P "${CMAKE_CURRENT_BINARY_DIR}/c
 if(ENABLE_SOLUTION_FOLDERS)
   set_target_properties(uninstall PROPERTIES FOLDER "CMakeTargets")
 endif()
-  
+
 
 # ----------------------------------------------------------------------------
 # Source package, for "make package_source"
@@ -26,11 +26,11 @@ if(BUILD_PACKAGE)
     set(TAR_TRANSFORM "\"s,^,${TARBALL_NAME}/,\"")
     add_custom_target(package_source
       #TODO: maybe we should not remove dll's
-      COMMAND ${TAR_CMD} --transform ${TAR_TRANSFORM} -cjpf ${CMAKE_CURRENT_BINARY_DIR}/${TARBALL_NAME}.tar.bz2 --exclude=".svn" --exclude="*.pyc" --exclude="*.vcproj" --exclude="*/lib/*" --exclude="*.dll" ./
+      COMMAND ${TAR_CMD} --transform ${TAR_TRANSFORM} -cjpf ${CMAKE_CURRENT_BINARY_DIR}/${TARBALL_NAME}.tar.bz2 --exclude=".svn" --exclude=".git" --exclude="*.pyc" --exclude="*.vcproj" --exclude="*/lib/*" --exclude="*.dll" ./
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
   else()
     add_custom_target(package_source
-      COMMAND zip -9 -r ${CMAKE_CURRENT_BINARY_DIR}/${TARBALL_NAME}.zip . -x '*/.svn/*' '*.vcproj' '*.pyc'
+      COMMAND zip -9 -r ${CMAKE_CURRENT_BINARY_DIR}/${TARBALL_NAME}.zip . -x '*/.svn/*' '*/.git/*' '*.vcproj' '*.pyc'
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
   endif()
   if(ENABLE_SOLUTION_FOLDERS)

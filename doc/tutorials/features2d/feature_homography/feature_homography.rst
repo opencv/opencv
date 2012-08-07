@@ -12,7 +12,7 @@ In this tutorial you will learn how to:
 
    * Use the function :find_homography:`findHomography<>` to find the transform between matched keypoints.
    * Use the function :perspective_transform:`perspectiveTransform<>` to map the points.
-     
+
 
 Theory
 ======
@@ -20,9 +20,9 @@ Theory
 Code
 ====
 
-This tutorial code's is shown lines below. You can also download it from `here <http://code.opencv.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/features2D/SURF_Homography.cpp>`_
+This tutorial code's is shown lines below. You can also download it from `here <http://code.opencv.org/projects/opencv/repository/revisions/master/raw/samples/cpp/tutorial_code/features2D/SURF_Homography.cpp>`_
 
-.. code-block:: cpp 
+.. code-block:: cpp
 
    #include <stdio.h>
    #include <iostream>
@@ -43,7 +43,7 @@ This tutorial code's is shown lines below. You can also download it from `here <
 
      Mat img_object = imread( argv[1], CV_LOAD_IMAGE_GRAYSCALE );
      Mat img_scene = imread( argv[2], CV_LOAD_IMAGE_GRAYSCALE );
-  
+
      if( !img_object.data || !img_scene.data )
      { std::cout<< " --(!) Error reading images " << std::endl; return -1; }
 
@@ -81,21 +81,21 @@ This tutorial code's is shown lines below. You can also download it from `here <
 
      printf("-- Max dist : %f \n", max_dist );
      printf("-- Min dist : %f \n", min_dist );
-  
+
      //-- Draw only "good" matches (i.e. whose distance is less than 3*min_dist )
      std::vector< DMatch > good_matches;
 
      for( int i = 0; i < descriptors_object.rows; i++ )
      { if( matches[i].distance < 3*min_dist )
         { good_matches.push_back( matches[i]); }
-     }  
+     }
 
      Mat img_matches;
-     drawMatches( img_object, keypoints_object, img_scene, keypoints_scene, 
-                  good_matches, img_matches, Scalar::all(-1), Scalar::all(-1), 
-                  vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS ); 
+     drawMatches( img_object, keypoints_object, img_scene, keypoints_scene,
+                  good_matches, img_matches, Scalar::all(-1), Scalar::all(-1),
+                  vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );
 
-     //-- Localize the object 
+     //-- Localize the object
      std::vector<Point2f> obj;
      std::vector<Point2f> scene;
 
@@ -103,7 +103,7 @@ This tutorial code's is shown lines below. You can also download it from `here <
      {
        //-- Get the keypoints from the good matches
        obj.push_back( keypoints_object[ good_matches[i].queryIdx ].pt );
-       scene.push_back( keypoints_scene[ good_matches[i].trainIdx ].pt ); 
+       scene.push_back( keypoints_scene[ good_matches[i].trainIdx ].pt );
      }
 
      Mat H = findHomography( obj, scene, CV_RANSAC );
@@ -143,6 +143,6 @@ Result
 #. And here is the result for the detected object (highlighted in green)
 
    .. image:: images/Feature_Homography_Result.jpg
-      :align: center  
-      :height: 200pt 
+      :align: center
+      :height: 200pt
 

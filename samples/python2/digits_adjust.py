@@ -1,15 +1,15 @@
 '''
-Digit recognition adjustment. 
-Grid search is used to find the best parameters for SVN and KNearest classifiers.
-SVM adjustment follows the guidelines given in 
+Digit recognition adjustment.
+Grid search is used to find the best parameters for SVM and KNearest classifiers.
+SVM adjustment follows the guidelines given in
 http://www.csie.ntu.edu.tw/~cjlin/papers/guide/guide.pdf
 
-Threading or cloud computing (with http://www.picloud.com/)) may be used 
+Threading or cloud computing (with http://www.picloud.com/)) may be used
 to speedup the computation.
 
 Usage:
   digits_adjust.py [--model {svm|knearest}] [--cloud] [--env <PiCloud environment>]
-  
+
   --model {svm|knearest}   - select the classifier (SVM is the default)
   --cloud                  - use PiCloud computing platform
   --env                    - cloud environment name
@@ -23,12 +23,12 @@ from multiprocessing.pool import ThreadPool
 
 from digits import *
 
-try: 
+try:
     import cloud
     have_cloud = True
 except ImportError:
     have_cloud = False
-    
+
 
 
 def cross_validate(model_class, params, samples, labels, kfold = 3, pool = None):
@@ -93,7 +93,7 @@ class App(object):
             pool = ThreadPool(processes=cv2.getNumberOfCPUs())
             ires = pool.imap_unordered(f, jobs)
         return ires
-            
+
     def adjust_SVM(self):
         Cs = np.logspace(0, 10, 15, base=2)
         gammas = np.logspace(-7, 4, 15, base=2)
@@ -107,7 +107,7 @@ class App(object):
             params = dict(C = Cs[i], gamma=gammas[j])
             score = cross_validate(SVM, params, samples, labels)
             return i, j, score
-        
+
         ires = self.run_jobs(f, np.ndindex(*scores.shape))
         for count, (i, j, score) in enumerate(ires):
             scores[i, j] = score
@@ -142,7 +142,7 @@ class App(object):
 if __name__ == '__main__':
     import getopt
     import sys
-    
+
     print __doc__
 
     args, _ = getopt.getopt(sys.argv[1:], '', ['model=', 'cloud', 'env='])
