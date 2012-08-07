@@ -105,8 +105,8 @@ Here you can read tutorials about how to set up your computer to work with the O
 
   .. tabularcolumns:: m{100pt} m{300pt}
   .. cssclass:: toctableopencv
-    
-  ================ ======================================================
+
+  ================ =================================================
   |AndroidBinPack| **Title:** :ref:`Android_Binary_Package`
 
                    *Compatibility:* > OpenCV 2.3.1
@@ -115,17 +115,13 @@ Here you can read tutorials about how to set up your computer to work with the O
 
                    You will learn how to setup OpenCV for Android platform!
 
-  ================ ======================================================
-
-     .. |AndroidBinPack| image:: images/android_logo.png
-                           :height: 90pt
-                           :width:  90pt
+  ================ =================================================
 
   .. tabularcolumns:: m{100pt} m{300pt}
   .. cssclass:: toctableopencv
-    
-  ================ ======================================================
-  |AndroidNDKPack| **Title:** :ref:`Android_Binary_Package_with_NDK`
+
+  ================ =================================================
+  |AndroidBinPack| **Title:** :ref:`Android_Binary_Package_with_NDK`
 
                    *Compatibility:* > OpenCV 2.3.1
 
@@ -133,34 +129,84 @@ Here you can read tutorials about how to set up your computer to work with the O
 
                    You will learn how to work with C++ OpenCV code for Android platform
 
-  ================ ======================================================
+  ================ =================================================
+
+     .. |AndroidBinPack| image:: images/android_logo.png
+                           :height: 90pt
+                           :width:  90pt
+
+
+* **Android** tutorials v2 [in progress]
+
+  .. tabularcolumns:: m{100pt} m{300pt}
+  .. cssclass:: toctableopencv
+
+  ================ =================================================
+  |AndroidNDKPack| **Title:** :ref:`Android_Dev_Intro`
+
+                   *Compatibility:* > OpenCV 2.4.2
+
+                   *Author:* |Author_VsevolodG|
+
+                   Not a tutorial, but a guide introducing Android development basics and environment setup
+
+  ================ =================================================
+
+  .. tabularcolumns:: m{100pt} m{300pt}
+  .. cssclass:: toctableopencv
+
+  ================ =================================================
+  |AndroidNDKPack| **Title:** :ref:`O4A_SDK`
+
+                   *Compatibility:* > OpenCV 2.4.2
+
+                   *Author:* |Author_VsevolodG|
+
+                   OpenCV4Android SDK: general info, installation, running samples
+
+  ================ =================================================
+
+  .. tabularcolumns:: m{100pt} m{300pt}
+  .. cssclass:: toctableopencv
+
+  ================ =================================================
+  |AndroidNDKPack| **Title:** :ref:`dev_with_OCV_on_Android`
+
+                   *Compatibility:* > OpenCV 2.4.2
+
+                   *Author:* |Author_VsevolodG|
+
+                   Development with OpenCV4Android SDK
+
+  ================ =================================================
 
      .. |AndroidNDKPack| image:: images/android_logo.png
                            :height: 90pt
                            :width:  90pt
 
+
 * **iOS**
 
-.. tabularcolumns:: m{100pt} m{300pt}
-.. cssclass:: toctableopencv
+  .. tabularcolumns:: m{100pt} m{300pt}
+  .. cssclass:: toctableopencv
 
-=========== ======================================================
-|Install_2| **Title:** :ref:`iOS-Installation`
+  =========== ======================================================
+  |Install_2| **Title:** :ref:`iOS-Installation`
 
-            *Compatibility:* > OpenCV 2.3.1
+              *Compatibility:* > OpenCV 2.3.1
 
-            *Author:* |Author_ArtemM|
+              *Author:* |Author_ArtemM|
 
-            We will learn how to setup OpenCV for using it in iOS!
+              We will learn how to setup OpenCV for using it in iOS!
 
-=========== ======================================================
+  =========== ======================================================
 
-.. |Install_2| image:: images/ios4_logo.jpg
-               :width:  90pt
+     .. |Install_2| image:: images/ios4_logo.jpg
+                 :width:  90pt
 
-.. tabularcolumns:: m{100pt} m{300pt}
-.. cssclass:: toctableopencv
-
+  .. tabularcolumns:: m{100pt} m{300pt}
+  .. cssclass:: toctableopencv
+  
   ============= ======================================================
   |Beginners_1| **Title:** :ref:`Display_Image`
 
@@ -172,12 +218,12 @@ Here you can read tutorials about how to set up your computer to work with the O
 
   ============= ======================================================
 
-  .. |Beginners_1| image:: images/Display_Image_Tutorial_Result.jpg
-                   :height: 90pt
-                   :width:  90pt
+     .. |Beginners_1| image:: images/Display_Image_Tutorial_Result.jpg
+                     :height: 90pt
+                     :width:  90pt
 
   .. tabularcolumns:: m{100pt} m{300pt}
-  .. cssclass:: toctableopencv  
+  .. cssclass:: toctableopencv
   
   =============== ======================================================
    |Beginners_2|  **Title:** :ref:`Load_Save_Image`
@@ -190,12 +236,15 @@ Here you can read tutorials about how to set up your computer to work with the O
 
   =============== ======================================================
 
-  .. |Beginners_2| image:: images/Load_Save_Image_Result_1.jpg
-                   :height: 90pt
-                   :width:  90pt
+     .. |Beginners_2| image:: images/Load_Save_Image_Result_1.jpg
+                     :height: 90pt
+                     :width:  90pt
 
 * **Want to contribute, and see your own work between the OpenCV tutorials?**
 
+  .. tabularcolumns:: m{100pt} m{300pt}
+  .. cssclass:: toctableopencv
+  
   =============== ======================================================
    |HowToWriteT|  **Title:** :ref:`howToWriteTutorial`
 
@@ -226,6 +275,8 @@ Here you can read tutorials about how to set up your computer to work with the O
    ../windows_visual_studio_Opencv/windows_visual_studio_Opencv
    ../android_binary_package/android_binary_package
    ../android_binary_package/android_binary_package_using_with_NDK
+   ../android_binary_package/android_dev_intro
+   ../android_binary_package/dev_with_OCV_on_Android
    ../ios_install/ios_install
    ../display_image/display_image
    ../load_save_image/load_save_image
