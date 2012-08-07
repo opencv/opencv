@@ -72,22 +72,15 @@ TEST_P(Labeling, ConnectedComponents)
 
     cv::gpu::connectivityMask(cv::gpu::GpuMat(image), mask, cv::Scalar::all(0), cv::Scalar::all(2));
 
-    cv::gpu::labelComponents(mask, components);
+    ASSERT_NO_THROW(cv::gpu::labelComponents(mask, components));
 
-    // std::cout << cv::Mat(components) << std::endl;
+    // for debug
     // cv::imshow("test", image);
     // cv::waitKey(0);
-
-    // for(int i = 0; i + 32 < image.rows; i += 32)
-    //     for(int j = 0; j + 32 < image.cols; j += 32)
-    //         cv::rectangle(image, cv::Rect(j, i, 32, 32) , CV_RGB(255, 255, 255));
-
-    cv::imshow("test", image);
-    cv::waitKey(0);
-    cv::imshow("test", cv::Mat(mask) * 10);
-    cv::waitKey(0);
-    cv::imshow("test", cv::Mat(components) * 2);
-    cv::waitKey(0);
+    // cv::imshow("test", cv::Mat(mask) * 10);
+    // cv::waitKey(0);
+    // cv::imshow("test", cv::Mat(components) * 2);
+    // cv::waitKey(0);
 }
 
 INSTANTIATE_TEST_CASE_P(ConnectedComponents, Labeling, ALL_DEVICES);
