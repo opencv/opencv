@@ -11,7 +11,7 @@ In this tutorial you will learn how to:
 .. container:: enumeratevisibleitemswithsquare
 
    * Use the OpenCV function :corner_eigenvals_and_vecs:`cornerEigenValsAndVecs <>` to find the eigenvalues and eigenvectors to determine if a pixel is a corner.
-   * Use the OpenCV function :corner_min_eigenval:`cornerMinEigenVal <>` to find the minimum eigenvalues for corner detection. 
+   * Use the OpenCV function :corner_min_eigenval:`cornerMinEigenVal <>` to find the minimum eigenvalues for corner detection.
    * To implement our own version of the Harris detector as well as the Shi-Tomasi detector, by using the two functions above.
 
 Theory
@@ -20,9 +20,9 @@ Theory
 Code
 ====
 
-This tutorial code's is shown lines below. You can also download it from `here <http://code.opencv.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/TrackingMotion/cornerDetector_Demo.cpp>`_
+This tutorial code's is shown lines below. You can also download it from `here <http://code.opencv.org/projects/opencv/repository/revisions/master/raw/samples/cpp/tutorial_code/TrackingMotion/cornerDetector_Demo.cpp>`_
 
-.. code-block:: cpp 
+.. code-block:: cpp
 
    #include "opencv2/highgui/highgui.hpp"
    #include "opencv2/imgproc/imgproc.hpp"
@@ -34,9 +34,9 @@ This tutorial code's is shown lines below. You can also download it from `here <
    using namespace std;
 
    /// Global variables
-   Mat src, src_gray; 
+   Mat src, src_gray;
    Mat myHarris_dst; Mat myHarris_copy; Mat Mc;
-   Mat myShiTomasi_dst; Mat myShiTomasi_copy; 
+   Mat myShiTomasi_dst; Mat myShiTomasi_copy;
 
    int myShiTomasi_qualityLevel = 50;
    int myHarris_qualityLevel = 50;
@@ -70,7 +70,7 @@ This tutorial code's is shown lines below. You can also download it from `here <
 
      cornerEigenValsAndVecs( src_gray, myHarris_dst, blockSize, apertureSize, BORDER_DEFAULT );
 
-     /* calculate Mc */ 
+     /* calculate Mc */
      for( int j = 0; j < src_gray.rows; j++ )
         { for( int i = 0; i < src_gray.cols; i++ )
              {
@@ -81,25 +81,25 @@ This tutorial code's is shown lines below. You can also download it from `here <
         }
 
      minMaxLoc( Mc, &myHarris_minVal, &myHarris_maxVal, 0, 0, Mat() );
-  
+
      /* Create Window and Trackbar */
      namedWindow( myHarris_window, CV_WINDOW_AUTOSIZE );
-     createTrackbar( " Quality Level:", myHarris_window, &myHarris_qualityLevel, max_qualityLevel, 
-                       myHarris_function );  
+     createTrackbar( " Quality Level:", myHarris_window, &myHarris_qualityLevel, max_qualityLevel,
+                       myHarris_function );
      myHarris_function( 0, 0 );
 
      /// My Shi-Tomasi -- Using cornerMinEigenVal
-     myShiTomasi_dst = Mat::zeros( src_gray.size(), CV_32FC1 );  
+     myShiTomasi_dst = Mat::zeros( src_gray.size(), CV_32FC1 );
      cornerMinEigenVal( src_gray, myShiTomasi_dst, blockSize, apertureSize, BORDER_DEFAULT );
 
      minMaxLoc( myShiTomasi_dst, &myShiTomasi_minVal, &myShiTomasi_maxVal, 0, 0, Mat() );
 
      /* Create Window and Trackbar */
-     namedWindow( myShiTomasi_window, CV_WINDOW_AUTOSIZE );   
-     createTrackbar( " Quality Level:", myShiTomasi_window, &myShiTomasi_qualityLevel, max_qualityLevel, 
-                        myShiTomasi_function );  
+     namedWindow( myShiTomasi_window, CV_WINDOW_AUTOSIZE );
+     createTrackbar( " Quality Level:", myShiTomasi_window, &myShiTomasi_qualityLevel, max_qualityLevel,
+                        myShiTomasi_function );
      myShiTomasi_function( 0, 0 );
-  
+
      waitKey(0);
      return(0);
    }
@@ -114,9 +114,9 @@ This tutorial code's is shown lines below. You can also download it from `here <
      for( int j = 0; j < src_gray.rows; j++ )
         { for( int i = 0; i < src_gray.cols; i++ )
              {
-               if( myShiTomasi_dst.at<float>(j,i) > myShiTomasi_minVal + ( myShiTomasi_maxVal - 
+               if( myShiTomasi_dst.at<float>(j,i) > myShiTomasi_minVal + ( myShiTomasi_maxVal -
                         myShiTomasi_minVal )*myShiTomasi_qualityLevel/max_qualityLevel )
-                 { circle( myShiTomasi_copy, Point(i,j), 4, Scalar( rng.uniform(0,255), 
+                 { circle( myShiTomasi_copy, Point(i,j), 4, Scalar( rng.uniform(0,255),
                             rng.uniform(0,255), rng.uniform(0,255) ), -1, 8, 0 ); }
              }
         }
@@ -135,9 +135,9 @@ This tutorial code's is shown lines below. You can also download it from `here <
              {
                if( Mc.at<float>(j,i) > myHarris_minVal + ( myHarris_maxVal - myHarris_minVal )
                                                             *myHarris_qualityLevel/max_qualityLevel )
-                 { circle( myHarris_copy, Point(i,j), 4, Scalar( rng.uniform(0,255), rng.uniform(0,255), 
+                 { circle( myHarris_copy, Point(i,j), 4, Scalar( rng.uniform(0,255), rng.uniform(0,255),
                            rng.uniform(0,255) ), -1, 8, 0 ); }
-             } 
+             }
         }
      imshow( myHarris_window, myHarris_copy );
    }
@@ -151,9 +151,9 @@ Result
 ======
 
 .. image:: images/My_Harris_corner_detector_Result.jpg
-              :align: center   
+              :align: center
 
 
 .. image:: images/My_Shi_Tomasi_corner_detector_Result.jpg
-              :align: center   
+              :align: center
 

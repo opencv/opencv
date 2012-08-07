@@ -12,11 +12,11 @@ def cvShiftDFT(src_arr, dst_arr ):
     dst_size = cv.GetSize(dst_arr)
 
     if dst_size != size:
-        cv.Error( cv.CV_StsUnmatchedSizes, "cv.ShiftDFT", "Source and Destination arrays must have equal sizes", __FILE__, __LINE__ )    
+        cv.Error( cv.CV_StsUnmatchedSizes, "cv.ShiftDFT", "Source and Destination arrays must have equal sizes", __FILE__, __LINE__ )
 
     if(src_arr is dst_arr):
         tmp = cv.CreateMat(size[1]/2, size[0]/2, cv.GetElemType(src_arr))
-    
+
     cx = size[0] / 2
     cy = size[1] / 2 # image center
 
@@ -31,13 +31,13 @@ def cvShiftDFT(src_arr, dst_arr ):
 
     if(src_arr is not dst_arr):
         if( not cv.CV_ARE_TYPES_EQ( q1, d1 )):
-            cv.Error( cv.CV_StsUnmatchedFormats, "cv.ShiftDFT", "Source and Destination arrays must have the same format", __FILE__, __LINE__ )    
-        
+            cv.Error( cv.CV_StsUnmatchedFormats, "cv.ShiftDFT", "Source and Destination arrays must have the same format", __FILE__, __LINE__ )
+
         cv.Copy(q3, d1)
         cv.Copy(q4, d2)
         cv.Copy(q1, d3)
         cv.Copy(q2, d4)
-    
+
     else:
         cv.Copy(q3, tmp)
         cv.Copy(q1, q3)
@@ -47,11 +47,11 @@ def cvShiftDFT(src_arr, dst_arr ):
         cv.Copy(tmp, q2)
 
 if __name__ == "__main__":
-    
+
     if len(sys.argv) > 1:
         im = cv.LoadImage( sys.argv[1], cv.CV_LOAD_IMAGE_GRAYSCALE)
     else:
-        url = 'http://code.opencv.org/svn/opencv/trunk/opencv/samples/c/baboon.jpg'
+        url = 'http://code.opencv.org/projects/opencv/repository/revisions/master/raw/samples/c/baboon.jpg'
         filedata = urllib2.urlopen(url).read()
         imagefiledata = cv.CreateMatHeader(1, len(filedata), cv.CV_8UC1)
         cv.SetData(imagefiledata, filedata, len(filedata))

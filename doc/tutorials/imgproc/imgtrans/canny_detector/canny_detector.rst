@@ -19,7 +19,7 @@ Theory
 
    * **Low error rate:** Meaning a good detection of only existent edges.
    * **Good localization:** The distance between edge pixels detected and real edge pixels have to be minimized.
-   * **Minimal response:** Only one detector response per edge.  
+   * **Minimal response:** Only one detector response per edge.
 
 Steps
 ------
@@ -27,39 +27,39 @@ Steps
 #. Filter out any noise. The Gaussian filter is used for this purpose. An example of a Gaussian kernel of :math:`size = 5` that might be used is shown below:
 
    .. math::
-   
+
       K = \dfrac{1}{159}\begin{bmatrix}
                 2 & 4 & 5 & 4 & 2 \\
                 4 & 9 & 12 & 9 & 4 \\
                 5 & 12 & 15 & 12 & 5 \\
                 4 & 9 & 12 & 9 & 4 \\
-                2 & 4 & 5 & 4 & 2 
-                        \end{bmatrix} 
+                2 & 4 & 5 & 4 & 2
+                        \end{bmatrix}
 
 
-#. Find the intensity gradient of the image. For this, we follow a procedure analogous to Sobel: 
+#. Find the intensity gradient of the image. For this, we follow a procedure analogous to Sobel:
 
    a. Apply a pair of convolution masks (in :math:`x` and :math:`y` directions:
 
       .. math::
-   
+
          G_{x} = \begin{bmatrix}
          -1 & 0 & +1  \\
          -2 & 0 & +2  \\
-         -1 & 0 & +1 
+         -1 & 0 & +1
          \end{bmatrix}
-   
+
          G_{y} = \begin{bmatrix}
          -1 & -2 & -1  \\
          0 & 0 & 0  \\
-         +1 & +2 & +1 
-         \end{bmatrix} 
+         +1 & +2 & +1
+         \end{bmatrix}
 
    b. Find the gradient strength and direction with:
 
       .. math::
          \begin{array}{l}
-         G = \sqrt{ G_{x}^{2} + G_{y}^{2} } \\        
+         G = \sqrt{ G_{x}^{2} + G_{y}^{2} } \\
          \theta = \arctan(\dfrac{ G_{y} }{ G_{x} })
          \end{array}
 
@@ -71,22 +71,22 @@ Steps
 
    a. If a pixel gradient is higher than the *upper* threshold, the pixel is accepted as an edge
    b. If a pixel gradient value is below the *lower* threshold, then it is rejected.
-   c. If the pixel gradient is between the two thresholds, then it will be accepted only if it is connected to a pixel that is above the *upper* threshold. 
+   c. If the pixel gradient is between the two thresholds, then it will be accepted only if it is connected to a pixel that is above the *upper* threshold.
 
    Canny recommended a *upper*:*lower* ratio between 2:1 and 3:1.
-  
-#. For more details, you can always consult your favorite Computer Vision book. 
+
+#. For more details, you can always consult your favorite Computer Vision book.
 
 Code
 =====
 
 #. **What does this program do?**
- 
+
    * Asks the user to enter a numerical value to set the lower threshold for our *Canny Edge Detector* (by means of a Trackbar)
    * Applies the *Canny Detector* and generates a **mask** (bright lines representing the edges on a black background).
    * Applies the mask obtained on the original image and display it in a window.
- 
-#. The tutorial code's is shown lines below. You can also download it from `here <http://code.opencv.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/ImgTrans/CannyDetector_Demo.cpp>`_
+
+#. The tutorial code's is shown lines below. You can also download it from `here <http://code.opencv.org/projects/opencv/repository/revisions/master/raw/samples/cpp/tutorial_code/ImgTrans/CannyDetector_Demo.cpp>`_
 
 .. code-block::  cpp
 
@@ -123,7 +123,7 @@ Code
 
      /// Using Canny's output as a mask, we display our result
      dst = Scalar::all(0);
-    
+
      src.copyTo( dst, detected_edges);
      imshow( window_name, dst );
     }
@@ -194,7 +194,7 @@ Explanation
         { return -1; }
 
 #. Create a matrix of the same type and size of *src* (to be *dst*)
- 
+
    .. code-block:: cpp
 
       dst.create( src.size(), src.type() );
@@ -249,9 +249,9 @@ Explanation
    .. code-block:: cpp
 
       dst = Scalar::all(0);
-    
-#. Finally, we will use the function :copy_to:`copyTo <>` to map only the areas of the image that are identified as edges (on a black background). 
-  
+
+#. Finally, we will use the function :copy_to:`copyTo <>` to map only the areas of the image that are identified as edges (on a black background).
+
    .. code-block:: cpp
 
       src.copyTo( dst, detected_edges);
@@ -280,8 +280,8 @@ Result
            :alt: Result after running Canny
            :width: 200pt
            :align: center
-  
+
 * Notice how the image is superposed to the black background on the edge regions.
-  
+
 
 

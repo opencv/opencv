@@ -9,7 +9,7 @@ In this tutorial you will learn how to:
 
 .. container:: enumeratevisibleitemswithsquare
 
-   * Use  :point:`Point <>`  to define 2D points in an image. 
+   * Use  :point:`Point <>`  to define 2D points in an image.
    * Use  :scalar:`Scalar <>`  and why it is useful
    * Draw a **line** by using the OpenCV function :line:`line <>`
    * Draw an **ellipse** by using the OpenCV function :ellipse:`ellipse <>`
@@ -30,15 +30,15 @@ Point
    It represents a 2D point, specified by its image coordinates :math:`x` and :math:`y`. We can define it as:
 
 .. code-block:: cpp
-   
+
    Point pt;
-   pt.x = 10; 
+   pt.x = 10;
    pt.y = 8;
 
 or
 
 .. code-block:: cpp
-   
+
    Point pt =  Point(10, 8);
 
 Scalar
@@ -48,7 +48,7 @@ Scalar
 * Let's see an example, if we are asked for a color argument and we give:
 
   .. code-block:: cpp
-     
+
      Scalar( a, b, c )
 
   We would be defining a RGB color such as: *Red = c*, *Green = b* and *Blue = a*
@@ -56,12 +56,12 @@ Scalar
 
 Code
 =====
-* This code is in your OpenCV sample folder. Otherwise you can grab it from `here <http://code.opencv.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/core/Matrix/Drawing_1.cpp>`_
+* This code is in your OpenCV sample folder. Otherwise you can grab it from `here <http://code.opencv.org/projects/opencv/repository/revisions/master/raw/samples/cpp/tutorial_code/core/Matrix/Drawing_1.cpp>`_
 
 Explanation
 =============
 
-#. Since we plan to draw two examples (an atom and a rook), we have to create 02 images and two windows to display them. 
+#. Since we plan to draw two examples (an atom and a rook), we have to create 02 images and two windows to display them.
 
    .. code-block:: cpp
 
@@ -69,7 +69,7 @@ Explanation
       char atom_window[] = "Drawing 1: Atom";
       char rook_window[] = "Drawing 2: Rook";
 
-      /// Create black empty images 
+      /// Create black empty images
       Mat atom_image = Mat::zeros( w, w, CV_8UC3 );
       Mat rook_image = Mat::zeros( w, w, CV_8UC3 );
 
@@ -79,7 +79,7 @@ Explanation
 
       /// 1. Draw a simple atom:
 
-      /// 1.a. Creating ellipses 
+      /// 1.a. Creating ellipses
       MyEllipse( atom_image, 90 );
       MyEllipse( atom_image, 0 );
       MyEllipse( atom_image, 45 );
@@ -105,7 +105,7 @@ Explanation
 	         -1,
 	         8 );
 
-      /// 2.c. Create a few lines 
+      /// 2.c. Create a few lines
       MyLine( rook_image, Point( 0, 15*w/16 ), Point( w, 15*w/16 ) );
       MyLine( rook_image, Point( w/4, 7*w/8 ), Point( w/4, w ) );
       MyLine( rook_image, Point( w/2, 7*w/8 ), Point( w/2, w ) );
@@ -113,15 +113,15 @@ Explanation
 
 #. Let's check what is inside each of these functions:
 
-   * *MyLine* 
-     
-     .. code-block:: cpp   
+   * *MyLine*
+
+     .. code-block:: cpp
 
         void MyLine( Mat img, Point start, Point end )
 	{
   	  int thickness = 2;
   	  int lineType = 8;
-  	  line( img, 
+  	  line( img,
 	  	start,
 		end,
 		Scalar( 0, 0, 0 ),
@@ -136,12 +136,12 @@ Explanation
         * Draw a line from Point **start** to Point **end**
         * The line is displayed in the image **img**
         * The line color is defined by **Scalar( 0, 0, 0)** which is the RGB value correspondent to **Black**
-        * The line thickness is set to **thickness** (in this case 2) 
+        * The line thickness is set to **thickness** (in this case 2)
         * The line is a 8-connected one (**lineType** = 8)
 
    * *MyEllipse*
 
-     .. code-block:: cpp    
+     .. code-block:: cpp
 
         void MyEllipse( Mat img, double angle )
         {
@@ -152,15 +152,15 @@ Explanation
 	   	   Point( w/2.0, w/2.0 ),
 	   	   Size( w/4.0, w/16.0 ),
 	   	   angle,
-	   	   0, 
+	   	   0,
 	   	   360,
 	   	   Scalar( 255, 0, 0 ),
 	   	   thickness,
-	   	   lineType );  
+	   	   lineType );
         }
 
      From the code above, we can observe that the function :ellipse:`ellipse <>` draws an ellipse such that:
-      
+
      .. container:: enumeratevisibleitemswithsquare
 
         * The ellipse is displayed in the image **img**
@@ -169,7 +169,7 @@ Explanation
         * The ellipse extends an arc between **0** and **360** degrees
         * The color of the figure will be **Scalar( 255, 255, 0)** which means blue in RGB value.
         * The ellipse's **thickness** is 2.
-  
+
 
    * *MyFilledCircle*
 
@@ -180,11 +180,11 @@ Explanation
   	 int thickness = -1;
   	 int lineType = 8;
 
-	 circle( img, 
+	 circle( img,
 	  	 center,
 	  	 w/32.0,
 	  	 Scalar( 0, 0, 255 ),
-	  	 thickness, 
+	  	 thickness,
 	  	 lineType );
 	}
 
@@ -193,9 +193,9 @@ Explanation
      .. container:: enumeratevisibleitemswithsquare
 
         * The image where the circle will be displayed (**img**)
-        * The center of the circle denoted as the Point **center**	
+        * The center of the circle denoted as the Point **center**
         * The radius of the circle: **w/32.0**
-        * The color of the circle: **Scalar(0, 0, 255)** which means *Red* in BGR 
+        * The color of the circle: **Scalar(0, 0, 255)** which means *Red* in BGR
         * Since **thickness** = -1, the circle will be drawn filled.
 
    * *MyPolygon*
@@ -237,18 +237,18 @@ Explanation
 	    	    npt,
             	    1,
 	    	    Scalar( 255, 255, 255 ),
-	    	    lineType );			
+	    	    lineType );
          }
 
      To draw a filled polygon we use the function :fill_poly:`fillPoly <>`. We note that:
-   
+
      .. container:: enumeratevisibleitemswithsquare
 
         * The polygon will be drawn on **img**
         * The vertices of the polygon are the set of points in **ppt**
         * The total number of vertices to be drawn are **npt**
         * The number of polygons to be drawn is only **1**
-        * The color of the polygon is defined by **Scalar( 255, 255, 255)**, which is the BGR value for *white*     
+        * The color of the polygon is defined by **Scalar( 255, 255, 255)**, which is the BGR value for *white*
 
    * *rectangle*
 
@@ -277,4 +277,4 @@ Compiling and running your program should give you a result like this:
 
 .. image:: images/Drawing_1_Tutorial_Result_0.png
    :alt: Drawing Tutorial 1 - Final Result
-   :align: center 
+   :align: center
