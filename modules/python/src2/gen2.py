@@ -329,6 +329,9 @@ class ArgInfo(object):
     def isbig(self):
         return self.tp == "Mat" or self.tp == "vector_Mat"# or self.tp.startswith("vector")
 
+    def crepr(self):
+        return "ArgInfo(\"%s\", %d)" % (self.name, self.outputarg)
+
 
 class FuncVariant(object):
     def __init__(self, classname, name, decl, isconstructor):
@@ -561,7 +564,7 @@ class FuncInfo(object):
                     if amapping[1] == "O":
                         code_decl += "    PyObject* pyobj_%s = NULL;\n" % (a.name,)
                         parse_name = "pyobj_" + a.name
-                        code_cvt_list.append("pyopencv_to(pyobj_%s, %s)" % (a.name, a.name))
+                        code_cvt_list.append("pyopencv_to(pyobj_%s, %s, %s)" % (a.name, a.name, a.crepr()))
 
                 all_cargs.append([amapping, parse_name])
 
