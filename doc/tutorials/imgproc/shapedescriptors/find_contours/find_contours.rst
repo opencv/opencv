@@ -10,8 +10,8 @@ In this tutorial you will learn how to:
 
 .. container:: enumeratevisibleitemswithsquare
 
-   * Use the OpenCV function :find_contours:`findContours <>` 
-   * Use the OpenCV function :draw_contours:`drawContours <>` 
+   * Use the OpenCV function :find_contours:`findContours <>`
+   * Use the OpenCV function :draw_contours:`drawContours <>`
 
 Theory
 ======
@@ -19,9 +19,9 @@ Theory
 Code
 ====
 
-This tutorial code's is shown lines below. You can also download it from `here <http://code.opencv.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/ShapeDescriptors/findContours_demo.cpp>`_
+This tutorial code's is shown lines below. You can also download it from `here <http://code.opencv.org/projects/opencv/repository/revisions/master/raw/samples/cpp/tutorial_code/ShapeDescriptors/findContours_demo.cpp>`_
 
-.. code-block:: cpp 
+.. code-block:: cpp
 
    #include "opencv2/highgui/highgui.hpp"
    #include "opencv2/imgproc/imgproc.hpp"
@@ -71,20 +71,20 @@ This tutorial code's is shown lines below. You can also download it from `here <
 
      /// Detect edges using canny
      Canny( src_gray, canny_output, thresh, thresh*2, 3 );
-     /// Find contours  
+     /// Find contours
      findContours( canny_output, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0, 0) );
 
      /// Draw contours
      Mat drawing = Mat::zeros( canny_output.size(), CV_8UC3 );
      for( int i = 0; i< contours.size(); i++ )
-        { 
+        {
           Scalar color = Scalar( rng.uniform(0, 255), rng.uniform(0,255), rng.uniform(0,255) );
-          drawContours( drawing, contours, i, color, 2, 8, hierarchy, 0, Point() ); 
+          drawContours( drawing, contours, i, color, 2, 8, hierarchy, 0, Point() );
         }
 
      /// Show in a window
      namedWindow( "Contours", CV_WINDOW_AUTOSIZE );
-     imshow( "Contours", drawing ); 
+     imshow( "Contours", drawing );
    }
 
 Explanation
@@ -95,13 +95,13 @@ Result
 
 #. Here it is:
 
-   ============= =============  
-    |contour_0|   |contour_1|   
-   ============= =============   
+   ============= =============
+    |contour_0|   |contour_1|
+   ============= =============
 
    .. |contour_0|  image:: images/Find_Contours_Original_Image.jpg
                      :align: middle
 
    .. |contour_1|  image:: images/Find_Contours_Result.jpg
-                     :align: middle   
+                     :align: middle
 

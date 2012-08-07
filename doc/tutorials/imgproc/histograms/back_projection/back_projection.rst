@@ -14,7 +14,7 @@ In this tutorial you will learn:
    * What is Back Projection and why it is useful
 
    * How to use the OpenCV function :calc_back_project:`calcBackProject <>` to calculate Back Projection
-  
+
    * How to mix different channels of an image by using the OpenCV function :mix_channels:`mixChannels <>`
 
 
@@ -27,8 +27,8 @@ What is Back Projection?
 .. container:: enumeratevisibleitemswithsquare
 
    * Back Projection is a way of recording how well the pixels of a given image fit the distribution of pixels in a histogram model.
-   
-   * To make it simpler: For Back Projection, you calculate the histogram model of a feature and then use it to find this feature in an image. 
+
+   * To make it simpler: For Back Projection, you calculate the histogram model of a feature and then use it to find this feature in an image.
 
    * Application example: If you have a histogram of flesh color (say, a Hue-Saturation histogram ), then you can use it to find flesh color areas in an image:
 
@@ -42,9 +42,9 @@ How does it work?
 
    * Let's say you have gotten a skin histogram (Hue-Saturation) based on the image below. The histogram besides is going to be our *model histogram* (which we know represents a sample of skin tonality). You applied some mask to capture only the histogram of the skin area:
 
-     ======  ======  
-      |T0|    |T1|   
-     ======  ======   
+     ======  ======
+      |T0|    |T1|
+     ======  ======
 
      .. |T0| image:: images/Back_Projection_Theory0.jpg
                    :align: middle
@@ -55,9 +55,9 @@ How does it work?
 
    * Now, let's imagine that you get another hand image (Test Image) like the one below: (with its respective histogram):
 
-     ======  ======  
-      |T2|    |T3|   
-     ======  ======   
+     ======  ======
+      |T2|    |T3|
+     ======  ======
 
      .. |T2| image:: images/Back_Projection_Theory2.jpg
                    :align: middle
@@ -70,7 +70,7 @@ How does it work?
 
      a. In each pixel of our Test Image (i.e. :math:`p(i,j)` ), collect the data and find the correspondent bin location for that pixel (i.e. :math:`( h_{i,j}, s_{i,j} )` ).
 
-     b. Lookup the *model histogram* in the correspondent bin - :math:`( h_{i,j}, s_{i,j} )` - and read the bin value. 
+     b. Lookup the *model histogram* in the correspondent bin - :math:`( h_{i,j}, s_{i,j} )` - and read the bin value.
 
      c. Store this bin value in a new image (*BackProjection*). Also, you may consider to normalize the *model histogram* first, so the output for the Test Image can be visible for you.
 
@@ -88,7 +88,7 @@ Code
 .. container:: enumeratevisibleitemswithsquare
 
    * **What does this program do?**
- 
+
      .. container:: enumeratevisibleitemswithsquare
 
         * Loads an image
@@ -99,9 +99,9 @@ Code
 
    * **Downloadable code**:
 
-      a. Click `here <http://code.opencv.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/Histograms_Matching/calcBackProject_Demo1.cpp>`_ for the basic version (explained in this tutorial). 
-      b. For stuff slightly fancier (using H-S histograms and floodFill to define a mask for the skin area) you can check the `improved demo <http://code.opencv.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/Histograms_Matching/calcBackProject_Demo2.cpp>`_ 
-      c. ...or you can always check out the classical `camshiftdemo <http://code.opencv.org/svn/opencv/trunk/opencv/samples/cpp/camshiftdemo.cpp>`_ in samples.
+      a. Click `here <http://code.opencv.org/projects/opencv/repository/revisions/master/raw/samples/cpp/tutorial_code/Histograms_Matching/calcBackProject_Demo1.cpp>`_ for the basic version (explained in this tutorial).
+      b. For stuff slightly fancier (using H-S histograms and floodFill to define a mask for the skin area) you can check the `improved demo <http://code.opencv.org/projects/opencv/repository/revisions/master/raw/samples/cpp/tutorial_code/Histograms_Matching/calcBackProject_Demo2.cpp>`_
+      c. ...or you can always check out the classical `camshiftdemo <http://code.opencv.org/projects/opencv/repository/revisions/master/raw/samples/cpp/camshiftdemo.cpp>`_ in samples.
 
    * **Code at glance:**
 
@@ -116,7 +116,7 @@ Code
    using namespace std;
 
    /// Global Variables
-   Mat src; Mat hsv; Mat hue; 
+   Mat src; Mat hsv; Mat hue;
    int bins = 25;
 
    /// Function Headers
@@ -133,7 +133,7 @@ Code
      /// Use only the Hue value
      hue.create( hsv.size(), hsv.depth() );
      int ch[] = { 0, 0 };
-     mixChannels( &hsv, 1, &hue, 1, ch, 1 );  
+     mixChannels( &hsv, 1, &hue, 1, ch, 1 );
 
      /// Create Trackbar to enter the number of bins
      char* window_image = "Source image";
@@ -146,7 +146,7 @@ Code
 
      /// Wait until user exits the program
      waitKey(0);
-     return 0;  
+     return 0;
    }
 
 
@@ -157,7 +157,7 @@ Code
    void Hist_and_Backproj(int, void* )
    {
      MatND hist;
-     int histSize = MAX( bins, 2 ); 
+     int histSize = MAX( bins, 2 );
      float hue_range[] = { 0, 180 };
      const float* ranges = { hue_range };
 
@@ -168,16 +168,16 @@ Code
      /// Get Backprojection
      MatND backproj;
      calcBackProject( &hue, 1, 0, hist, backproj, &ranges, 1, true );
- 
+
      /// Draw the backproj
      imshow( "BackProj", backproj );
 
      /// Draw the histogram
      int w = 400; int h = 400;
-     int bin_w = cvRound( (double) w / histSize ); 
+     int bin_w = cvRound( (double) w / histSize );
      Mat histImg = Mat::zeros( w, h, CV_8UC3 );
 
-     for( int i = 0; i < bins; i ++ )  
+     for( int i = 0; i < bins; i ++ )
         { rectangle( histImg, Point( i*bin_w, h ), Point( (i+1)*bin_w, h - cvRound( hist.at<float>(i)*h/255.0 ) ), Scalar( 0, 0, 255 ), -1 ); }
 
      imshow( "Histogram", histImg );
@@ -190,7 +190,7 @@ Explanation
 
    .. code-block:: cpp
 
-      Mat src; Mat hsv; Mat hue; 
+      Mat src; Mat hsv; Mat hue;
       int bins = 25;
 
 #. Read the input image and transform it to HSV format:
@@ -206,7 +206,7 @@ Explanation
 
       hue.create( hsv.size(), hsv.depth() );
       int ch[] = { 0, 0 };
-      mixChannels( &hsv, 1, &hue, 1, ch, 1 );  
+      mixChannels( &hsv, 1, &hue, 1, ch, 1 );
 
    as you see, we use the function :mix_channels:`mixChannels` to get only the channel 0 (Hue) from the hsv image. It gets the following parameters:
 
@@ -214,15 +214,15 @@ Explanation
 
       + **&hsv:** The source array from which the channels will be copied
       + **1:** The number of source arrays
-      + **&hue:** The destination array of the copied channels  
+      + **&hue:** The destination array of the copied channels
       + **1:** The number of destination arrays
       + **ch[] = {0,0}:** The array of index pairs indicating how the channels are copied. In this case, the Hue(0) channel of &hsv is being copied to the 0 channel of &hue (1-channel)
-      + **1:** Number of index pairs 
- 
+      + **1:** Number of index pairs
+
 #. Create a Trackbar for the user to enter the bin values. Any change on the Trackbar means a call to the **Hist_and_Backproj** callback function.
 
    .. code-block:: cpp
-  
+
       char* window_image = "Source image";
       namedWindow( window_image, CV_WINDOW_AUTOSIZE );
       createTrackbar("* Hue  bins: ", window_image, &bins, 180, Hist_and_Backproj );
@@ -235,7 +235,7 @@ Explanation
      imshow( window_image, src );
 
      waitKey(0);
-     return 0;  
+     return 0;
 
 #. **Hist_and_Backproj function:** Initialize the arguments needed for :calc_hist:`calcHist <>`. The number of bins comes from the Trackbar:
 
@@ -245,7 +245,7 @@ Explanation
       void Hist_and_Backproj(int, void* )
       {
         MatND hist;
-        int histSize = MAX( bins, 2 ); 
+        int histSize = MAX( bins, 2 );
         float hue_range[] = { 0, 180 };
         const float* ranges = { hue_range };
 
@@ -264,7 +264,7 @@ Explanation
       calcBackProject( &hue, 1, 0, hist, backproj, &ranges, 1, true );
 
    all the arguments are known (the same as used to calculate the histogram), only we add the backproj matrix, which will store the backprojection of the source image (&hue)
- 
+
 #. Display backproj:
 
    .. code-block:: cpp
@@ -276,10 +276,10 @@ Explanation
    .. code-block:: cpp
 
       int w = 400; int h = 400;
-      int bin_w = cvRound( (double) w / histSize ); 
+      int bin_w = cvRound( (double) w / histSize );
       Mat histImg = Mat::zeros( w, h, CV_8UC3 );
 
-      for( int i = 0; i < bins; i ++ )  
+      for( int i = 0; i < bins; i ++ )
          { rectangle( histImg, Point( i*bin_w, h ), Point( (i+1)*bin_w, h - cvRound( hist.at<float>(i)*h/255.0 ) ), Scalar( 0, 0, 255 ), -1 ); }
 
       imshow( "Histogram", histImg );
@@ -291,9 +291,9 @@ Results
 
 #. Here are the output by using a sample image ( guess what? Another hand ). You can play with the bin values and you will observe how it affects the results:
 
-   ======  ======  ======  
-    |R0|    |R1|    |R2|   
-   ======  ======  ====== 
+   ======  ======  ======
+    |R0|    |R1|    |R2|
+   ======  ======  ======
 
    .. |R0| image:: images/Back_Projection1_Source_Image.jpg
                  :align: middle

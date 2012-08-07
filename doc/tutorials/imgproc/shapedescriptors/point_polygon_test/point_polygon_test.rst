@@ -10,8 +10,8 @@ In this tutorial you will learn how to:
 
 .. container:: enumeratevisibleitemswithsquare
 
-   * Use the OpenCV function :point_polygon_test:`pointPolygonTest <>` 
-           
+   * Use the OpenCV function :point_polygon_test:`pointPolygonTest <>`
+
 
 Theory
 ======
@@ -19,9 +19,9 @@ Theory
 Code
 ====
 
-This tutorial code's is shown lines below. You can also download it from `here <http://code.opencv.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/ShapeDescriptors/pointPolygonTest_demo.cpp>`_
+This tutorial code's is shown lines below. You can also download it from `here <http://code.opencv.org/projects/opencv/repository/revisions/master/raw/samples/cpp/tutorial_code/ShapeDescriptors/pointPolygonTest_demo.cpp>`_
 
-.. code-block:: cpp 
+.. code-block:: cpp
 
    #include "opencv2/highgui/highgui.hpp"
    #include "opencv2/imgproc/imgproc.hpp"
@@ -51,13 +51,13 @@ This tutorial code's is shown lines below. You can also download it from `here <
 
      /// Draw it in src
      for( int j = 0; j < 6; j++ )
-        { line( src, vert[j],  vert[(j+1)%6], Scalar( 255 ), 3, 8 ); } 
+        { line( src, vert[j],  vert[(j+1)%6], Scalar( 255 ), 3, 8 ); }
 
      /// Get the contours
      vector<vector<Point> > contours; vector<Vec4i> hierarchy;
      Mat src_copy = src.clone();
 
-     findContours( src_copy, contours, hierarchy, RETR_TREE, CHAIN_APPROX_SIMPLE);  
+     findContours( src_copy, contours, hierarchy, RETR_TREE, CHAIN_APPROX_SIMPLE);
 
      /// Calculate the distances to the contour
      Mat raw_dist( src.size(), CV_32FC1 );
@@ -70,19 +70,19 @@ This tutorial code's is shown lines below. You can also download it from `here <
      double minVal; double maxVal;
      minMaxLoc( raw_dist, &minVal, &maxVal, 0, 0, Mat() );
      minVal = abs(minVal); maxVal = abs(maxVal);
-  
+
      /// Depicting the  distances graphically
      Mat drawing = Mat::zeros( src.size(), CV_8UC3 );
 
      for( int j = 0; j < src.rows; j++ )
         { for( int i = 0; i < src.cols; i++ )
-             { 
+             {
                if( raw_dist.at<float>(j,i) < 0 )
                  { drawing.at<Vec3b>(j,i)[0] = 255 - (int) abs(raw_dist.at<float>(j,i))*255/minVal; }
                else if( raw_dist.at<float>(j,i) > 0 )
-                 { drawing.at<Vec3b>(j,i)[2] = 255 - (int) raw_dist.at<float>(j,i)*255/maxVal; }    
+                 { drawing.at<Vec3b>(j,i)[2] = 255 - (int) raw_dist.at<float>(j,i)*255/maxVal; }
                else
-                 { drawing.at<Vec3b>(j,i)[0] = 255; drawing.at<Vec3b>(j,i)[1] = 255; drawing.at<Vec3b>(j,i)[2] = 255; }     
+                 { drawing.at<Vec3b>(j,i)[0] = 255; drawing.at<Vec3b>(j,i)[1] = 255; drawing.at<Vec3b>(j,i)[2] = 255; }
              }
         }
 
@@ -105,13 +105,13 @@ Result
 
 #. Here it is:
 
-   ========== ==========  
-    |PPT_0|   |PPT_1|   
-   ========== ==========   
+   ========== ==========
+    |PPT_0|   |PPT_1|
+   ========== ==========
 
    .. |PPT_0|  image:: images/Point_Polygon_Test_Source_Image.png
                     :align: middle
 
    .. |PPT_1|  image:: images/Point_Polygon_Test_Result.jpg
-                    :align: middle   
+                    :align: middle
 

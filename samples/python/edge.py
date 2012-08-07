@@ -24,7 +24,7 @@ def on_trackbar(position):
 
     # copy edge points
     cv.Copy(im, col_edge, edge)
-    
+
     # show the im
     cv.ShowImage(win_name, col_edge)
 
@@ -32,7 +32,7 @@ if __name__ == '__main__':
     if len(sys.argv) > 1:
         im = cv.LoadImage( sys.argv[1], cv.CV_LOAD_IMAGE_COLOR)
     else:
-        url = 'http://code.opencv.org/svn/opencv/trunk/opencv/samples/c/fruits.jpg'
+        url = 'http://code.opencv.org/projects/opencv/repository/revisions/master/raw/samples/c/fruits.jpg'
         filedata = urllib2.urlopen(url).read()
         imagefiledata = cv.CreateMatHeader(1, len(filedata), cv.CV_8UC1)
         cv.SetData(imagefiledata, filedata, len(filedata))
