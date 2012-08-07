@@ -43,6 +43,8 @@
 #include <string>
 #include <iostream>
 
+#ifdef HAVE_CUDA
+
 namespace {
 
     struct GreedyLabeling
@@ -199,3 +201,5 @@ TEST_P(Labeling, ConnectedComponents)
 }
 
 INSTANTIATE_TEST_CASE_P(ConnectedComponents, Labeling, ALL_DEVICES);
+
+#endif
