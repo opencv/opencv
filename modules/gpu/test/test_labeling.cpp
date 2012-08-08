@@ -91,7 +91,7 @@ namespace {
             int height = image.rows;
 
             for (int j = 0; j < image.rows; ++j)
-                for(int i = 0; i < image.cols; ++i)
+                for (int i = 0; i < image.cols; ++i)
                 {
                     if (dist_labels[j * pitch + i] != -1) continue;
 
@@ -130,6 +130,23 @@ namespace {
             delete[] stack;
         }
 
+        void checkCorrectness(cv::Mat gpu)
+        {
+            cv::Mat diff = gpu - _labels;
+
+            int outliers = 0;
+            for (int j = 0; j < image.rows; ++j)
+                for (int i = 0; i < image.cols; ++i)
+                {
+                    if ( (_labels.at<int>(j,i) == gpu.at<int>(j,i + 1)) && (diff.at<int>(j, i) != diff.at<int>(j,i + 1)))
+                    {
+                        outliers++;
+                        // std::cout <<  j << " " << i << " " << _labels.at<int>(j,i) << " " << gpu.at<int>(j,i + 1) << " " << diff.at<int>(j, i) << " " << diff.at<int>(j,i + 1) << std::endl;
+                    }
+                }
+            ASSERT_FALSE(outliers);
+        }
+
         cv::Mat image;
         cv::Mat _labels;
     };
@@ -161,10 +178,6 @@ TEST_P(Labeling, ConnectedComponents)
     GreedyLabeling host(image);
     host(host._labels);
 
-    double minVal, maxVal;
-    cv::minMaxLoc(host._labels, &minVal, &maxVal);
-    std::cout << minVal << " " << maxVal << std::endl;
-
     cv::gpu::GpuMat mask;
     mask.create(image.rows, image.cols, CV_8UC1);
 
@@ -175,25 +188,7 @@ TEST_P(Labeling, ConnectedComponents)
 
     ASSERT_NO_THROW(cv::gpu::labelComponents(mask, components));
 
-    for (int j = 0; j + 32 < components.rows; j += 32)
-        for (int i = 0; i + 32 < components.cols; i += 32)
-        {
-            std::cout << "Tile: " << i << " " << j << std::endl;
-
-            std::cout << cv::Mat(image, cv::Rect(i,j,32,32)) << std::endl;
-            std::cout << cv::Mat(host._labels, cv::Rect(i,j,32,32)) << std::endl;
-            // std::cout << cv::Mat(cv::Mat(components), cv::Rect(i,j,32,32)) << std::endl;
-        }
-
-    // for debug
-    // cv::imshow("test", image);
-    // cv::waitKey(0);
-    // cv::imshow("test", host._labels * 5);
-    // cv::waitKey(0);
-    // // cv::imshow("test", cv::Mat(mask) * 10);
-    // // cv::waitKey(0);
-    // cv::imshow("test", cv::Mat(components) * 2);
-    // cv::waitKey(0);
+    host.checkCorrectness(cv::Mat(components));
 }
 
 INSTANTIATE_TEST_CASE_P(ConnectedComponents, Labeling, ALL_DEVICES);
