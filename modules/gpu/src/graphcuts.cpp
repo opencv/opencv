@@ -48,7 +48,7 @@ void cv::gpu::graphcut(GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, Gpu
 void cv::gpu::graphcut(GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
 
 void cv::gpu::connectivityMask(const GpuMat&, GpuMat&, const cv::Scalar&, const cv::Scalar&, Stream&) { throw_nogpu(); }
-void cv::gpu::labelComponents(const GpuMat& mask, GpuMat& components, Stream& stream) { throw_nogpu(); }
+void cv::gpu::labelComponents(const GpuMat& mask, GpuMat& components, int, Stream& stream) { throw_nogpu(); }
 
 #else /* !defined (HAVE_CUDA) */
 
@@ -106,7 +106,7 @@ void cv::gpu::connectivityMask(const GpuMat& image, GpuMat& mask, const cv::Scal
     f(image, mask, culo, cuhi, stream);
 }
 
-void cv::gpu::labelComponents(const GpuMat& mask, GpuMat& components, Stream& s)
+void cv::gpu::labelComponents(const GpuMat& mask, GpuMat& components, int flags, Stream& s)
 {
     CV_Assert(!mask.empty() && mask.type() == CV_8U);
 
@@ -114,7 +114,7 @@ void cv::gpu::labelComponents(const GpuMat& mask, GpuMat& components, Stream& s)
         components.create(mask.size(), CV_32SC1);
 
     cudaStream_t stream = StreamAccessor::getStream(s);
-    device::ccl::labelComponents(mask, components, 0, stream);
+    device::ccl::labelComponents(mask, components, flags, stream);
 }
 
 namespace
