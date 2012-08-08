@@ -64,8 +64,8 @@ ocv_add_accuracy_tests(FILES "Include" ${test_hdrs}
 ################################################################################################################
 ################################   OpenCL Module Performance  ##################################################
 ################################################################################################################
-#file(GLOB perf_srcs "perf/*.cpp")
-#file(GLOB perf_hdrs "perf/*.hpp" "perf/*.h")
+file(GLOB perf_srcs "perf/*.cpp")
+file(GLOB perf_hdrs "perf/*.hpp" "perf/*.h")
 
-#ocv_add_perf_tests(FILES "Include" ${perf_hdrs}
-#                       FILES "Src" ${perf_srcs})
+ocv_add_perf_tests(FILES "Include" ${perf_hdrs}
+                       FILES "Src" ${perf_srcs})
