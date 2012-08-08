@@ -74,7 +74,7 @@ namespace {
         };
 
         GreedyLabeling(cv::Mat img)
-        : image(img), _labels(image.cols, image.rows, CV_32SC1, cv::Scalar::all(-1)) {}
+        : image(img), _labels(image.size(), CV_32SC1, cv::Scalar::all(-1)) {}
 
         void operator() (cv::Mat labels) const
         {
@@ -106,33 +106,23 @@ namespace {
                         int*  dl = &dist_labels[p.y * pitch + p.x];
                         unsigned char* sp = &source[p.y * image.step1() + p.x];
 
+                        dl[0] = cc;
+
                         //right
                         if( p.x < (width - 1) && dl[ +1] == -1 && inInt(sp[0], sp[+1]))
-                        {
-                            dl[+1] = cc;
                             *top++ = dot::make(p.x + 1, p.y);
-                        }
 
                         //left
                         if( p.x > 0 && dl[-1] == -1 && inInt(sp[0], sp[-1]))
-                        {
-                            dl[-1] = cc;
                             *top++ = dot::make(p.x - 1, p.y);
-                        }
 
                         //bottom
-                        if( p.y < (height - 1) && dl[+pitch] == -1 && inInt(sp[0], sp[+pitch]))
-                        {
-                            dl[+pitch] = cc;
+                        if( p.y < (height - 1) && dl[+pitch] == -1 && inInt(sp[0], sp[+image.step1()]))
                             *top++ = dot::make(p.x, p.y + 1);
-                        }
 
                         //top
-                        if( p.y > 0 && dl[-pitch] == -1 && inInt(sp[0], sp[-pitch]))
-                        {
-                            dl[-pitch] = cc;
+                        if( p.y > 0 && dl[-pitch] == -1 && inInt(sp[0], sp[-image.step1()]))
                             *top++ = dot::make(p.x, p.y - 1);
-                        }
 
                         p = *--top;
                     }
@@ -171,6 +161,10 @@ TEST_P(Labeling, ConnectedComponents)
     GreedyLabeling host(image);
     host(host._labels);
 
+    double minVal, maxVal;
+    cv::minMaxLoc(host._labels, &minVal, &maxVal);
+    std::cout << minVal << " " << maxVal << std::endl;
+
     cv::gpu::GpuMat mask;
     mask.create(image.rows, image.cols, CV_8UC1);
 
@@ -181,18 +175,20 @@ TEST_P(Labeling, ConnectedComponents)
 
     ASSERT_NO_THROW(cv::gpu::labelComponents(mask, components));
 
-    // for (int j = 0; j + 32 < components.rows; j += 32)
-    //     for (int i = 0; i + 32 < components.cols; i += 32)
-    //     {
-    //         std::cout << "Tile: " << i << " " << j << std::endl;
-    //         std::cout << cv::Mat(host._labels, cv::Rect(i,j,32,32)) << std::endl;
-    //         std::cout << cv::Mat(cv::Mat(components), cv::Rect(i,j,32,32)) << std::endl;
-    //     }
+    for (int j = 0; j + 32 < components.rows; j += 32)
+        for (int i = 0; i + 32 < components.cols; i += 32)
+        {
+            std::cout << "Tile: " << i << " " << j << std::endl;
+
+            std::cout << cv::Mat(image, cv::Rect(i,j,32,32)) << std::endl;
+            std::cout << cv::Mat(host._labels, cv::Rect(i,j,32,32)) << std::endl;
+            // std::cout << cv::Mat(cv::Mat(components), cv::Rect(i,j,32,32)) << std::endl;
+        }
 
     // for debug
     // cv::imshow("test", image);
     // cv::waitKey(0);
-    // cv::imshow("test", host._labels * 50);
+    // cv::imshow("test", host._labels * 5);
     // cv::waitKey(0);
     // // cv::imshow("test", cv::Mat(mask) * 10);
     // // cv::waitKey(0);
