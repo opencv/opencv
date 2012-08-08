@@ -88,9 +88,9 @@ Rect RotationWarperBase<P>::buildMaps(Size src_size, const Mat &K, const Mat &R,
 template <class P>
 Point RotationWarperBase<P>::warp(const Mat &src, const Mat &K, const Mat &R, int interp_mode, int border_mode,
                                   Mat &dst)
-{    
+{
     Mat xmap, ymap;
-    Rect dst_roi = buildMaps(src.size(), K, R, xmap, ymap);    
+    Rect dst_roi = buildMaps(src.size(), K, R, xmap, ymap);
 
     dst.create(dst_roi.height + 1, dst_roi.width + 1, src.type());
     remap(src, dst, xmap, ymap, interp_mode, border_mode);
@@ -236,13 +236,14 @@ void PlaneProjector::mapBackward(float u, float v, float &x, float &y)
 
 inline
 void SphericalProjector::mapForward(float x, float y, float &u, float &v)
-{    
+{
     float x_ = r_kinv[0] * x + r_kinv[1] * y + r_kinv[2];
     float y_ = r_kinv[3] * x + r_kinv[4] * y + r_kinv[5];
     float z_ = r_kinv[6] * x + r_kinv[7] * y + r_kinv[8];
 
     u = scale * atan2f(x_, z_);
-    v = scale * (static_cast<float>(CV_PI) - acosf(y_ / sqrtf(x_ * x_ + y_ * y_ + z_ * z_)));
+    float w = y_ / sqrtf(x_ * x_ + y_ * y_ + z_ * z_);
+    v = scale * (static_cast<float>(CV_PI) - acosf(w == w ? w : 0));
 }
 
 
@@ -346,7 +347,7 @@ void StereographicProjector::mapForward(float x, float y, float &u, float &v)
     float v_ = (float)CV_PI - acosf(y_ / sqrtf(x_ * x_ + y_ * y_ + z_ * z_));
 
 	float r = sinf(v_) / (1 - cosf(v_));
-	
+
 	u = scale * r * cos(u_);
 	v = scale * r * sin(u_);
 }
@@ -377,7 +378,7 @@ void StereographicProjector::mapBackward(float u, float v, float &x, float &y)
 
 inline
 void CompressedRectilinearProjector::mapForward(float x, float y, float &u, float &v)
-{    
+{
 	float x_ = r_kinv[0] * x + r_kinv[1] * y + r_kinv[2];
     float y_ = r_kinv[3] * x + r_kinv[4] * y + r_kinv[5];
     float z_ = r_kinv[6] * x + r_kinv[7] * y + r_kinv[8];
@@ -415,7 +416,7 @@ void CompressedRectilinearProjector::mapBackward(float u, float v, float &x, flo
 
 inline
 void CompressedRectilinearPortraitProjector::mapForward(float x, float y, float &u, float &v)
-{    
+{
 	float y_ = r_kinv[0] * x + r_kinv[1] * y + r_kinv[2];
     float x_ = r_kinv[3] * x + r_kinv[4] * y + r_kinv[5];
     float z_ = r_kinv[6] * x + r_kinv[7] * y + r_kinv[8];
@@ -453,17 +454,17 @@ void CompressedRectilinearPortraitProjector::mapBackward(float u, float v, float
 
 inline
 void PaniniProjector::mapForward(float x, float y, float &u, float &v)
-{    
+{
 	float x_ = r_kinv[0] * x + r_kinv[1] * y + r_kinv[2];
     float y_ = r_kinv[3] * x + r_kinv[4] * y + r_kinv[5];
     float z_ = r_kinv[6] * x + r_kinv[7] * y + r_kinv[8];
 
     float u_ = atan2f(x_, z_);
     float v_ = asinf(y_ / sqrtf(x_ * x_ + y_ * y_ + z_ * z_));
-	
+
 	float tg = a * tanf(u_ / a);
 	u = scale * tg;
-	
+
 	float sinu = sinf(u_);
 	if ( fabs(sinu) < 1E-7 )
 		v = scale * b * tanf(v_);
@@ -479,11 +480,11 @@ void PaniniProjector::mapBackward(float u, float v, float &x, float &y)
 
 	float lamda = a * atanf(u / a);
 	float u_ = lamda;
-	
+
 	float v_;
 	if ( fabs(lamda) > 1E-7)
 		v_ = atanf(v * sinf(lamda) / (b * a * tanf(lamda / a)));
-	else 
+	else
 		v_ = atanf(v / b);
 
     float cosv = cosf(v_);
@@ -502,17 +503,17 @@ void PaniniProjector::mapBackward(float u, float v, float &x, float &y)
 
 inline
 void PaniniPortraitProjector::mapForward(float x, float y, float &u, float &v)
-{    
+{
 	float y_ = r_kinv[0] * x + r_kinv[1] * y + r_kinv[2];
     float x_ = r_kinv[3] * x + r_kinv[4] * y + r_kinv[5];
     float z_ = r_kinv[6] * x + r_kinv[7] * y + r_kinv[8];
 
     float u_ = atan2f(x_, z_);
     float v_ = asinf(y_ / sqrtf(x_ * x_ + y_ * y_ + z_ * z_));
-	
+
 	float tg = a * tanf(u_ / a);
 	u = - scale * tg;
-	
+
 	float sinu = sinf( u_ );
 	if ( fabs(sinu) < 1E-7 )
 		v = scale * b * tanf(v_);
@@ -528,11 +529,11 @@ void PaniniPortraitProjector::mapBackward(float u, float v, float &x, float &y)
 
 	float lamda = a * atanf(u / a);
 	float u_ = lamda;
-	
+
 	float v_;
 	if ( fabs(lamda) > 1E-7)
 		v_ = atanf(v * sinf(lamda) / (b * a * tanf(lamda/a)));
-	else 
+	else
 		v_ = atanf(v / b);
 
     float cosv = cosf(v_);
@@ -551,14 +552,14 @@ void PaniniPortraitProjector::mapBackward(float u, float v, float &x, float &y)
 
 inline
 void MercatorProjector::mapForward(float x, float y, float &u, float &v)
-{    
+{
 	float x_ = r_kinv[0] * x + r_kinv[1] * y + r_kinv[2];
     float y_ = r_kinv[3] * x + r_kinv[4] * y + r_kinv[5];
     float z_ = r_kinv[6] * x + r_kinv[7] * y + r_kinv[8];
 
     float u_ = atan2f(x_, z_);
     float v_ = asinf(y_ / sqrtf(x_ * x_ + y_ * y_ + z_ * z_));
-	
+
 	u = scale * u_;
 	v = scale * logf( tanf( (float)(CV_PI/4) + v_/2 ) );
 }
@@ -588,16 +589,16 @@ void MercatorProjector::mapBackward(float u, float v, float &x, float &y)
 
 inline
 void TransverseMercatorProjector::mapForward(float x, float y, float &u, float &v)
-{    
+{
 	float x_ = r_kinv[0] * x + r_kinv[1] * y + r_kinv[2];
     float y_ = r_kinv[3] * x + r_kinv[4] * y + r_kinv[5];
     float z_ = r_kinv[6] * x + r_kinv[7] * y + r_kinv[8];
 
     float u_ = atan2f(x_, z_);
     float v_ = asinf(y_ / sqrtf(x_ * x_ + y_ * y_ + z_ * z_));
-	
+
 	float B = cosf(v_) * sinf(u_);
-	
+
 	u = scale / 2 * logf( (1+B) / (1-B) );
 	v = scale * atan2f(tanf(v_), cosf(u_));
 }
@@ -627,7 +628,7 @@ void TransverseMercatorProjector::mapBackward(float u, float v, float &x, float 
 
 inline
 void SphericalPortraitProjector::mapForward(float x, float y, float &u0, float &v0)
-{    
+{
     float x0_ = r_kinv[0] * x + r_kinv[1] * y + r_kinv[2];
     float y0_ = r_kinv[3] * x + r_kinv[4] * y + r_kinv[5];
     float z_ = r_kinv[6] * x + r_kinv[7] * y + r_kinv[8];
@@ -673,7 +674,7 @@ void SphericalPortraitProjector::mapBackward(float u0, float v0, float &x, float
 
 inline
 void CylindricalPortraitProjector::mapForward(float x, float y, float &u0, float &v0)
-{    
+{
     float x0_ = r_kinv[0] * x + r_kinv[1] * y + r_kinv[2];
     float y0_ = r_kinv[3] * x + r_kinv[4] * y + r_kinv[5];
     float z_  = r_kinv[6] * x + r_kinv[7] * y + r_kinv[8];
