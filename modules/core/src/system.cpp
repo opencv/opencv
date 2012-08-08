@@ -96,6 +96,10 @@
 #endif
 #endif
 
+#ifdef ANDROID
+# include <android/log.h>
+#endif
+
 namespace cv
 {
 
@@ -554,6 +558,9 @@ void error( const Exception& exc )
             exc.func.c_str() : "unknown function", exc.file.c_str(), exc.line );
         fprintf( stderr, "%s\n", buf );
         fflush( stderr );
+#  ifdef ANDROID
+        __android_log_print(ANDROID_LOG_ERROR, "cv::error()", "%s", buf);
+#  endif
     }
 
     if(breakOnError)
