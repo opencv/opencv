@@ -2492,32 +2492,32 @@ CV_EXPORTS void randShuffle(InputOutputArray dst, double iterFactor=1., RNG* rng
 CV_EXPORTS_AS(randShuffle) void randShuffle_(InputOutputArray dst, double iterFactor=1.);
 
 //! draws the line segment (pt1, pt2) in the image
-CV_EXPORTS_W void line(Mat& img, Point pt1, Point pt2, const Scalar& color,
+CV_EXPORTS_W void line(CV_IN_OUT Mat& img, Point pt1, Point pt2, const Scalar& color,
                      int thickness=1, int lineType=8, int shift=0);
 
 //! draws the rectangle outline or a solid rectangle with the opposite corners pt1 and pt2 in the image
-CV_EXPORTS_W void rectangle(Mat& img, Point pt1, Point pt2,
+CV_EXPORTS_W void rectangle(CV_IN_OUT Mat& img, Point pt1, Point pt2,
                           const Scalar& color, int thickness=1,
                           int lineType=8, int shift=0);
 
 //! draws the rectangle outline or a solid rectangle covering rec in the image
-CV_EXPORTS void rectangle(Mat& img, Rect rec,
+CV_EXPORTS void rectangle(CV_IN_OUT Mat& img, Rect rec,
                           const Scalar& color, int thickness=1,
                           int lineType=8, int shift=0);
 
 //! draws the circle outline or a solid circle in the image
-CV_EXPORTS_W void circle(Mat& img, Point center, int radius,
+CV_EXPORTS_W void circle(CV_IN_OUT Mat& img, Point center, int radius,
                        const Scalar& color, int thickness=1,
                        int lineType=8, int shift=0);
 
 //! draws an elliptic arc, ellipse sector or a rotated ellipse in the image
-CV_EXPORTS_W void ellipse(Mat& img, Point center, Size axes,
+CV_EXPORTS_W void ellipse(CV_IN_OUT Mat& img, Point center, Size axes,
                         double angle, double startAngle, double endAngle,
                         const Scalar& color, int thickness=1,
                         int lineType=8, int shift=0);
 
 //! draws a rotated ellipse in the image
-CV_EXPORTS_W void ellipse(Mat& img, const RotatedRect& box, const Scalar& color,
+CV_EXPORTS_W void ellipse(CV_IN_OUT Mat& img, const RotatedRect& box, const Scalar& color,
                         int thickness=1, int lineType=8);
 
 //! draws a filled convex polygon in the image
