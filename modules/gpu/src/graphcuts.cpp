@@ -56,7 +56,7 @@ namespace cv { namespace gpu { namespace device
 {
     namespace ccl
     {
-        void labelComponents(const DevMem2D& edges, DevMem2Di comps, cudaStream_t stream);
+        void labelComponents(const DevMem2D& edges, DevMem2Di comps, int flags, cudaStream_t stream);
 
         template<typename T>
         void computeEdges(const DevMem2D& image, DevMem2D edges, const float4& lo, const float4& hi, cudaStream_t stream);
@@ -114,7 +114,7 @@ void cv::gpu::labelComponents(const GpuMat& mask, GpuMat& components, Stream& s)
         components.create(mask.size(), CV_32SC1);
 
     cudaStream_t stream = StreamAccessor::getStream(s);
-    device::ccl::labelComponents(mask, components, stream);
+    device::ccl::labelComponents(mask, components, 0, stream);
 }
 
 namespace
