@@ -241,7 +241,7 @@ private:
     double minVal_;
 
     cv::Size frameSize_;
-    size_t frameNum_;
+    int frameNum_;
 
     cv::Mat_<int> nfeatures_;
     cv::Mat_<int> colors_;
