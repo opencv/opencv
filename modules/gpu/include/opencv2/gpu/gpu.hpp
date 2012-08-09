@@ -2160,25 +2160,25 @@ public:
     void release();
 
     //! Total number of distinct colors to maintain in histogram.
-    int     maxFeatures;
+    int maxFeatures;
 
     //! Set between 0.0 and 1.0, determines how quickly features are "forgotten" from histograms.
-    float  learningRate;
+    float learningRate;
 
     //! Number of frames of video to use to initialize histograms.
-    int     numInitializationFrames;
+    int numInitializationFrames;
 
     //! Number of discrete levels in each channel to be used in histograms.
-    int     quantizationLevels;
+    int quantizationLevels;
 
     //! Prior probability that any given pixel is a background pixel. A sensitivity parameter.
-    float  backgroundPrior;
+    float backgroundPrior;
 
     //! value above which pixel is determined to be FG.
-    float  decisionThreshold;
+    float decisionThreshold;
 
     //! smoothing radius, in pixels, for cleaning up FG image.
-    int     smoothingRadius;
+    int smoothingRadius;
 
 private:
     float maxVal_, minVal_;
