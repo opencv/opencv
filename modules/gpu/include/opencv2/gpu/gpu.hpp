@@ -917,6 +917,12 @@ CV_EXPORTS void graphcut(GpuMat& terminals, GpuMat& leftTransp, GpuMat& rightTra
                          GpuMat& labels,
                          GpuMat& buf, Stream& stream = Stream::Null());
 
+//! compute mask for Generalized Flood fill componetns labeling.
+CV_EXPORTS void connectivityMask(const GpuMat& image, GpuMat& mask, const cv::Scalar& lo, const cv::Scalar& hi, Stream& stream = Stream::Null());
+
+//! performs connected componnents labeling.
+CV_EXPORTS void labelComponents(const GpuMat& mask, GpuMat& components, int flags = 0, Stream& stream = Stream::Null());
+
 ////////////////////////////////// Histograms //////////////////////////////////
 
 //! Compute levels with even distribution. levels will have 1 row and nLevels cols and CV_32SC1 type.
@@ -2119,6 +2125,77 @@ private:
     GpuMat randStates_;
 
     GpuMat samples_;
+};
+
+/**
+ * Background Subtractor module. Takes a series of images and returns a sequence of mask (8UC1)
+ * images of the same size, where 255 indicates Foreground and 0 represents Background.
+ * This class implements an algorithm described in "Visual Tracking of Human Visitors under
+ * Variable-Lighting Conditions for a Responsive Audio Art Installation," A. Godbehere,
+ * A. Matsukawa, K. Goldberg, American Control Conference, Montreal, June 2012.
+ */
+class CV_EXPORTS GMG_GPU
+{
+public:
+    GMG_GPU();
+
+    /**
+     * Validate parameters and set up data structures for appropriate frame size.
+     * @param frameSize Input frame size
+     * @param min       Minimum value taken on by pixels in image sequence. Usually 0
+     * @param max       Maximum value taken on by pixels in image sequence. e.g. 1.0 or 255
+     */
+    void initialize(Size frameSize, float min = 0.0f, float max = 255.0f);
+
+    /**
+     * Performs single-frame background subtraction and builds up a statistical background image
+     * model.
+     * @param frame        Input frame
+     * @param fgmask       Output mask image representing foreground and background pixels
+     * @param stream       Stream for the asynchronous version
+     */
+    void operator ()(const GpuMat& frame, GpuMat& fgmask, float learningRate = -1.0f, Stream& stream = Stream::Null());
+
+    //! Releases all inner buffers
+    void release();
+
+    //! Total number of distinct colors to maintain in histogram.
+    int maxFeatures;
+
+    //! Set between 0.0 and 1.0, determines how quickly features are "forgotten" from histograms.
+    float learningRate;
+
+    //! Number of frames of video to use to initialize histograms.
+    int numInitializationFrames;
+
+    //! Number of discrete levels in each channel to be used in histograms.
+    int quantizationLevels;
+
+    //! Prior probability that any given pixel is a background pixel. A sensitivity parameter.
+    float backgroundPrior;
+
+    //! Value above which pixel is determined to be FG.
+    float decisionThreshold;
+
+    //! Smoothing radius, in pixels, for cleaning up FG image.
+    int smoothingRadius;
+
+    //! Perform background model update.
+    bool updateBackgroundModel;
+
+private:
+    float maxVal_, minVal_;
+
+    Size frameSize_;
+
+    int frameNum_;
+
+    GpuMat nfeatures_;
+    GpuMat colors_;
+    GpuMat weights_;
+
+    Ptr<FilterEngine_GPU> boxFilter_;
+    GpuMat buf_;
 };
 
 ////////////////////////////////// Video Encoding //////////////////////////////////

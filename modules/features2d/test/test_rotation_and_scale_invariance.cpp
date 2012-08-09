@@ -596,7 +596,7 @@ TEST(Features2d_RotationInvariance_Detector_ORB, regression)
 {
     DetectorRotationInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.ORB"),
                                         0.47f,
-                                        0.77f);
+                                        0.76f);
     test.safe_run();
 }
 
@@ -605,9 +605,9 @@ TEST(Features2d_RotationInvariance_Detector_ORB, regression)
  */
 TEST(Features2d_RotationInvariance_Descriptor_ORB, regression)
 {
-    DescriptorRotationInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.ORB"), 
-										  Algorithm::create<DescriptorExtractor>("Feature2D.ORB"), 
-									      NORM_HAMMING, 
+    DescriptorRotationInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.ORB"),
+										  Algorithm::create<DescriptorExtractor>("Feature2D.ORB"),
+									      NORM_HAMMING,
                                           0.99f);
     test.safe_run();
 }

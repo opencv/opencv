@@ -11,9 +11,9 @@ In this tutorial you will learn how to:
 
 .. container:: enumeratevisibleitemswithsquare
 
-   * Use the OpenCV function :moments:`moments <>` 
+   * Use the OpenCV function :moments:`moments <>`
    * Use the OpenCV function :contour_area:`contourArea <>`
-   * Use the OpenCV function :arc_length:`arcLength <>`           
+   * Use the OpenCV function :arc_length:`arcLength <>`
 
 Theory
 ======
@@ -21,9 +21,9 @@ Theory
 Code
 ====
 
-This tutorial code's is shown lines below. You can also download it from `here <http://code.opencv.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/ShapeDescriptors/moments_demo.cpp>`_
+This tutorial code's is shown lines below. You can also download it from `here <http://code.opencv.org/projects/opencv/repository/revisions/master/raw/samples/cpp/tutorial_code/ShapeDescriptors/moments_demo.cpp>`_
 
-.. code-block:: cpp 
+.. code-block:: cpp
 
    #include "opencv2/highgui/highgui.hpp"
    #include "opencv2/imgproc/imgproc.hpp"
@@ -73,7 +73,7 @@ This tutorial code's is shown lines below. You can also download it from `here <
 
      /// Detect edges using canny
      Canny( src_gray, canny_output, thresh, thresh*2, 3 );
-     /// Find contours  
+     /// Find contours
      findContours( canny_output, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0, 0) );
 
      /// Get the moments
@@ -81,7 +81,7 @@ This tutorial code's is shown lines below. You can also download it from `here <
      for( int i = 0; i < contours.size(); i++ )
         { mu[i] = moments( contours[i], false ); }
 
-     ///  Get the mass centers: 
+     ///  Get the mass centers:
      vector<Point2f> mc( contours.size() );
      for( int i = 0; i < contours.size(); i++ )
         { mc[i] = Point2f( mu[i].m10/mu[i].m00 , mu[i].m01/mu[i].m00 ); }
@@ -89,9 +89,9 @@ This tutorial code's is shown lines below. You can also download it from `here <
      /// Draw contours
      Mat drawing = Mat::zeros( canny_output.size(), CV_8UC3 );
      for( int i = 0; i< contours.size(); i++ )
-        { 
+        {
           Scalar color = Scalar( rng.uniform(0, 255), rng.uniform(0,255), rng.uniform(0,255) );
-          drawContours( drawing, contours, i, color, 2, 8, hierarchy, 0, Point() ); 
+          drawContours( drawing, contours, i, color, 2, 8, hierarchy, 0, Point() );
           circle( drawing, mc[i], 4, color, -1, 8, 0 );
         }
 
@@ -103,9 +103,9 @@ This tutorial code's is shown lines below. You can also download it from `here <
      printf("\t Info: Area and Contour Length \n");
      for( int i = 0; i< contours.size(); i++ )
         {
-          printf(" * Contour[%d] - Area (M_00) = %.2f - Area OpenCV: %.2f - Length: %.2f \n", i, mu[i].m00, contourArea(contours[i]), arcLength( contours[i], true ) );  
+          printf(" * Contour[%d] - Area (M_00) = %.2f - Area OpenCV: %.2f - Length: %.2f \n", i, mu[i].m00, contourArea(contours[i]), arcLength( contours[i], true ) );
           Scalar color = Scalar( rng.uniform(0, 255), rng.uniform(0,255), rng.uniform(0,255) );
-          drawContours( drawing, contours, i, color, 2, 8, hierarchy, 0, Point() ); 
+          drawContours( drawing, contours, i, color, 2, 8, hierarchy, 0, Point() );
           circle( drawing, mc[i], 4, color, -1, 8, 0 );
         }
    }
@@ -118,9 +118,9 @@ Result
 
 #. Here it is:
 
-   ========== ==========  ==========  
-    |MU_0|     |MU_1|      |MU_2|   
-   ========== ==========  ========== 
+   ========== ==========  ==========
+    |MU_0|     |MU_1|      |MU_2|
+   ========== ==========  ==========
 
    .. |MU_0|  image:: images/Moments_Source_Image.jpg
                     :width: 250pt
@@ -128,9 +128,9 @@ Result
 
    .. |MU_1|  image:: images/Moments_Result1.jpg
                     :width: 250pt
-                    :align: middle   
+                    :align: middle
 
    .. |MU_2|  image:: images/Moments_Result2.jpg
                     :width: 250pt
-                    :align: middle   
+                    :align: middle
 

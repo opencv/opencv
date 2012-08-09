@@ -18,9 +18,9 @@ Theory
 Code
 ====
 
-This tutorial code's is shown lines below. You can also download it from `here <http://code.opencv.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/TrackingMotion/goodFeaturesToTrack_Demo.cpp>`_
+This tutorial code's is shown lines below. You can also download it from `here <http://code.opencv.org/projects/opencv/repository/revisions/master/raw/samples/cpp/tutorial_code/TrackingMotion/goodFeaturesToTrack_Demo.cpp>`_
 
-.. code-block:: cpp 
+.. code-block:: cpp
 
    #include "opencv2/highgui/highgui.hpp"
    #include "opencv2/imgproc/imgproc.hpp"
@@ -56,7 +56,7 @@ This tutorial code's is shown lines below. You can also download it from `here <
      namedWindow( source_window, CV_WINDOW_AUTOSIZE );
 
      /// Create Trackbar to set the number of corners
-     createTrackbar( "Max  corners:", source_window, &maxCorners, maxTrackbar, goodFeaturesToTrack_Demo );  
+     createTrackbar( "Max  corners:", source_window, &maxCorners, maxTrackbar, goodFeaturesToTrack_Demo );
 
      imshow( source_window, src );
 
@@ -70,10 +70,10 @@ This tutorial code's is shown lines below. You can also download it from `here <
     * @function goodFeaturesToTrack_Demo.cpp
     * @brief Apply Shi-Tomasi corner detector
     */
-   void goodFeaturesToTrack_Demo( int, void* ) 
+   void goodFeaturesToTrack_Demo( int, void* )
    {
      if( maxCorners < 1 ) { maxCorners = 1; }
-  
+
      /// Parameters for Shi-Tomasi algorithm
      vector<Point2f> corners;
      double qualityLevel = 0.01;
@@ -87,7 +87,7 @@ This tutorial code's is shown lines below. You can also download it from `here <
      copy = src.clone();
 
      /// Apply corner detection
-     goodFeaturesToTrack( src_gray, 
+     goodFeaturesToTrack( src_gray,
                   corners,
                   maxCorners,
                   qualityLevel,
@@ -96,18 +96,18 @@ This tutorial code's is shown lines below. You can also download it from `here <
                   blockSize,
                   useHarrisDetector,
                   k );
-  
+
 
      /// Draw corners detected
      cout<<"** Number of corners detected: "<<corners.size()<<endl;
      int r = 4;
      for( int i = 0; i < corners.size(); i++ )
-        { circle( copy, corners[i], r, Scalar(rng.uniform(0,255), rng.uniform(0,255), 
+        { circle( copy, corners[i], r, Scalar(rng.uniform(0,255), rng.uniform(0,255),
                  rng.uniform(0,255)), -1, 8, 0 ); }
 
      /// Show what you got
      namedWindow( source_window, CV_WINDOW_AUTOSIZE );
-     imshow( source_window, copy );  
+     imshow( source_window, copy );
    }
 
 Explanation
@@ -117,6 +117,6 @@ Result
 ======
 
 .. image:: images/Feature_Detection_Result_a.jpg
-              :align: center   
+              :align: center
 
 

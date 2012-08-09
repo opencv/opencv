@@ -11,9 +11,9 @@ In this tutorial you will learn how to:
 
 .. container:: enumeratevisibleitemswithsquare
 
-   * Use the OpenCV function :bounding_rect:`boundingRect <>` 
+   * Use the OpenCV function :bounding_rect:`boundingRect <>`
    * Use the OpenCV function :min_enclosing_circle:`minEnclosingCircle <>`
-          
+
 
 Theory
 ======
@@ -21,9 +21,9 @@ Theory
 Code
 ====
 
-This tutorial code's is shown lines below. You can also download it from `here <http://code.opencv.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/ShapeDescriptors/generalContours_demo1.cpp>`_
+This tutorial code's is shown lines below. You can also download it from `here <http://code.opencv.org/projects/opencv/repository/revisions/master/raw/samples/cpp/tutorial_code/ShapeDescriptors/generalContours_demo1.cpp>`_
 
-.. code-block:: cpp 
+.. code-block:: cpp
 
    #include "opencv2/highgui/highgui.hpp"
    #include "opencv2/imgproc/imgproc.hpp"
@@ -73,7 +73,7 @@ This tutorial code's is shown lines below. You can also download it from `here <
 
      /// Detect edges using Threshold
      threshold( src_gray, threshold_output, thresh, 255, THRESH_BINARY );
-     /// Find contours  
+     /// Find contours
      findContours( threshold_output, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0, 0) );
 
      /// Approximate contours to polygons + get bounding rects and circles
@@ -83,18 +83,18 @@ This tutorial code's is shown lines below. You can also download it from `here <
      vector<float>radius( contours.size() );
 
      for( int i = 0; i < contours.size(); i++ )
-        { approxPolyDP( Mat(contours[i]), contours_poly[i], 3, true ); 
-          boundRect[i] = boundingRect( Mat(contours_poly[i]) ); 
+        { approxPolyDP( Mat(contours[i]), contours_poly[i], 3, true );
+          boundRect[i] = boundingRect( Mat(contours_poly[i]) );
           minEnclosingCircle( contours_poly[i], center[i], radius[i] );
-        } 
+        }
 
 
      /// Draw polygonal contour + bonding rects + circles
      Mat drawing = Mat::zeros( threshold_output.size(), CV_8UC3 );
      for( int i = 0; i< contours.size(); i++ )
-        { 
+        {
           Scalar color = Scalar( rng.uniform(0, 255), rng.uniform(0,255), rng.uniform(0,255) );
-          drawContours( drawing, contours_poly, i, color, 1, 8, vector<Vec4i>(), 0, Point() ); 
+          drawContours( drawing, contours_poly, i, color, 1, 8, vector<Vec4i>(), 0, Point() );
           rectangle( drawing, boundRect[i].tl(), boundRect[i].br(), color, 2, 8, 0 );
           circle( drawing, center[i], (int)radius[i], color, 2, 8, 0 );
         }
@@ -112,13 +112,13 @@ Result
 
 #. Here it is:
 
-   ========== ==========  
-    |BRC_0|   |BRC_1|   
-   ========== ==========   
+   ========== ==========
+    |BRC_0|   |BRC_1|
+   ========== ==========
 
    .. |BRC_0|  image:: images/Bounding_Rects_Circles_Source_Image.jpg
                     :align: middle
 
    .. |BRC_1|  image:: images/Bounding_Rects_Circles_Result.jpg
-                    :align: middle   
+                    :align: middle
 

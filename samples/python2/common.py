@@ -6,6 +6,12 @@ import itertools as it
 
 image_extensions = ['.bmp', '.jpg', '.jpeg', '.png', '.tif', '.tiff', '.pbm', '.pgm', '.ppm']
 
+class Bunch(object):
+    def __init__(self, **kw):
+        self.__dict__.update(kw)
+    def __str__(self):
+        return str(self.__dict__)
+
 def splitfn(fn):
     path, fn = os.path.split(fn)
     name, ext = os.path.splitext(fn)
@@ -198,3 +204,9 @@ def getsize(img):
 
 def mdot(*args):
     return reduce(np.dot, args)
+
+def draw_keypoints(vis, keypoints, color = (0, 255, 255)):
+    for kp in keypoints:
+            x, y = kp.pt
+            cv2.circle(vis, (int(x), int(y)), 2, color)
+

@@ -10,8 +10,8 @@ In this tutorial you will learn how to:
 
 .. container:: enumeratevisibleitemswithsquare
 
-   * Use the OpenCV function :filter2d:`filter2D <>` to create your own linear filters.  
-  
+   * Use the OpenCV function :filter2d:`filter2D <>` to create your own linear filters.
+
 Theory
 =======
 
@@ -21,15 +21,15 @@ Theory
 
 Convolution
 ------------
-In a very general sense, convolution is an operation between every part of an image and an operator (kernel). 
+In a very general sense, convolution is an operation between every part of an image and an operator (kernel).
 
 What is a kernel?
 ------------------
-A kernel is essentially a fixed size array of numerical coefficeints along with an *anchor point* in that array, which is tipically located at the center. 
+A kernel is essentially a fixed size array of numerical coefficeints along with an *anchor point* in that array, which is tipically located at the center.
 
 .. image:: images/filter_2d_tutorial_kernel_theory.png
         :alt: kernel example
-        :align: center 
+        :align: center
 
 How does convolution with a kernel work?
 -----------------------------------------
@@ -38,7 +38,7 @@ Assume you want to know the resulting value of a particular location in the imag
 
 #. Place the kernel anchor on top of a determined pixel, with the rest of the kernel overlaying the corresponding local pixels in the image.
 
-#. Multiply the kernel coefficients by the corresponding image pixel values and sum the result. 
+#. Multiply the kernel coefficients by the corresponding image pixel values and sum the result.
 
 #. Place the result to the location of the *anchor* in the input image.
 
@@ -47,35 +47,35 @@ Assume you want to know the resulting value of a particular location in the imag
 Expressing the procedure above in the form of an equation we would have:
 
 .. math::
- 
+
    H(x,y) = \sum_{i=0}^{M_{i} - 1} \sum_{j=0}^{M_{j}-1} I(x+i - a_{i}, y + j - a_{j})K(i,j)
 
-Fortunately, OpenCV provides you with the function :filter2d:`filter2D <>` so you do not have to code all these operations. 
+Fortunately, OpenCV provides you with the function :filter2d:`filter2D <>` so you do not have to code all these operations.
 
 Code
 ======
 
 #. **What does this program do?**
- 
+
    * Loads an image
    * Performs a *normalized box filter*. For instance, for a kernel of size :math:`size = 3`, the kernel would be:
 
      .. math::
-   
+
         K = \dfrac{1}{3 \cdot 3} \begin{bmatrix}
         1 & 1 & 1  \\
         1 & 1 & 1  \\
-        1 & 1 & 1 
-        \end{bmatrix} 
+        1 & 1 & 1
+        \end{bmatrix}
 
      The program will perform the filter operation with kernels of sizes 3, 5, 7, 9 and 11.
 
    * The filter output (with each kernel) will be shown during 500 milliseconds
 
-#. The tutorial code's is shown lines below. You can also download it from `here <http://code.opencv.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/ImgTrans/filter2D_demo.cpp>`_
+#. The tutorial code's is shown lines below. You can also download it from `here <http://code.opencv.org/projects/opencv/repository/revisions/master/raw/samples/cpp/tutorial_code/ImgTrans/filter2D_demo.cpp>`_
 
 
-.. code-block:: cpp 
+.. code-block:: cpp
 
    #include "opencv2/imgproc/imgproc.hpp"
    #include "opencv2/highgui/highgui.hpp"
@@ -93,7 +93,7 @@ Code
      Mat kernel;
      Point anchor;
      double delta;
-     int ddepth;  
+     int ddepth;
      int kernel_size;
      char* window_name = "filter2D Demo";
 
@@ -107,7 +107,7 @@ Code
 
      /// Create window
      namedWindow( window_name, CV_WINDOW_AUTOSIZE );
-  
+
      /// Initialize arguments for the filter
      anchor = Point( -1, -1 );
      delta = 0;
@@ -131,7 +131,7 @@ Code
          imshow( window_name, dst );
          ind++;
        }
-  
+
      return 0;
    }
 
@@ -171,12 +171,12 @@ Explanation
       kernel_size = 3 + 2*( ind%5 );
       kernel = Mat::ones( kernel_size, kernel_size, CV_32F )/ (float)(kernel_size*kernel_size);
 
-   The first line is to update the *kernel_size* to odd values in the range: :math:`[3,11]`. The second line actually builds the kernel by setting its value to a matrix filled with :math:`1's` and normalizing it by dividing it between the number of elements. 
+   The first line is to update the *kernel_size* to odd values in the range: :math:`[3,11]`. The second line actually builds the kernel by setting its value to a matrix filled with :math:`1's` and normalizing it by dividing it between the number of elements.
 
 #. After setting the kernel, we can generate the filter by using the function :filter2d:`filter2D <>`:
 
    .. code-block:: cpp
-   
+
       filter2D(src, dst, ddepth , kernel, anchor, delta, BORDER_DEFAULT );
 
    The arguments denote:

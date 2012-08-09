@@ -78,7 +78,9 @@ CV_INIT_ALGORITHM(BackgroundSubtractorGMG, "BackgroundSubtractor.GMG",
                   obj.info()->addParam(obj, "smoothingRadius", obj.smoothingRadius,false,0,0,
                                        "Radius of smoothing kernel to filter noise from FG mask image.");
                   obj.info()->addParam(obj, "decisionThreshold", obj.decisionThreshold,false,0,0,
-                                       "Threshold for FG decision rule. Pixel is FG if posterior probability exceeds threshold."));
+                                       "Threshold for FG decision rule. Pixel is FG if posterior probability exceeds threshold.");
+                  obj.info()->addParam(obj, "updateBackgroundModel", obj.updateBackgroundModel,false,0,0,
+                                       "Perform background model update."));
 
 bool initModule_video(void)
 {

@@ -12,6 +12,7 @@
 //
 // Copyright (C) 2010-2012, Institute Of Software Chinese Academy Of Science, all rights reserved.
 // Copyright (C) 2010-2012, Advanced Micro Devices, Inc., all rights reserved.
+// Copyright (C) 2010-2012, Multicoreware, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -858,7 +859,220 @@ namespace cv
         void benchmark_copy_vectorize(const oclMat &src, oclMat &dst);
         void benchmark_copy_offset_stride(const oclMat &src, oclMat &dst);
         void benchmark_ILP();
-        
+
+		//! computes vertical sum, supports only CV_32FC1 images
+		CV_EXPORTS void columnSum(const oclMat& src, oclMat& sum);
+
+		//! performs linear blending of two images
+		//! to avoid accuracy errors sum of weigths shouldn't be very close to zero
+		// supports only CV_8UC1 source type
+		CV_EXPORTS void blendLinear(const oclMat& img1, const oclMat& img2, const oclMat& weights1, const oclMat& weights2, oclMat& result);
+
+		/////////////////////////////// Pyramid /////////////////////////////////////
+		CV_EXPORTS void pyrDown(const oclMat& src, oclMat& dst);
+
+		//! upsamples the source image and then smoothes it
+		CV_EXPORTS void pyrUp(const cv::ocl::oclMat& src,cv::ocl::oclMat& dst);
+
+		///////////////////////////////////////// match_template /////////////////////////////////////////////////////////////
+		struct CV_EXPORTS MatchTemplateBuf
+		{
+			Size user_block_size;
+			oclMat imagef, templf;
+			std::vector<oclMat> images;
+			std::vector<oclMat> image_sums;
+			std::vector<oclMat> image_sqsums;
+		};
+
+
+		//! computes the proximity map for the raster template and the image where the template is searched for
+		// Supports TM_SQDIFF, TM_SQDIFF_NORMED, TM_CCORR, TM_CCORR_NORMED, TM_CCOEFF, TM_CCOEFF_NORMED for type 8UC1 and 8UC4
+		// Supports TM_SQDIFF, TM_CCORR for type 32FC1 and 32FC4
+		CV_EXPORTS void matchTemplate(const oclMat& image, const oclMat& templ, oclMat& result, int method);
+		
+		//! computes the proximity map for the raster template and the image where the template is searched for
+		// Supports TM_SQDIFF, TM_SQDIFF_NORMED, TM_CCORR, TM_CCORR_NORMED, TM_CCOEFF, TM_CCOEFF_NORMED for type 8UC1 and 8UC4
+		// Supports TM_SQDIFF, TM_CCORR for type 32FC1 and 32FC4
+		CV_EXPORTS void matchTemplate(const oclMat& image, const oclMat& templ, oclMat& result, int method, MatchTemplateBuf& buf);
+
+#ifdef HAVE_CLAMDFFT
+            ///////////////////////////////////////// clAmdFft related /////////////////////////////////////////
+            // the two functions must be called before/after run any fft library functions.
+            CV_EXPORTS void fft_setup();    // this will be implicitly invoked
+            CV_EXPORTS void fft_teardown(); // you need to teardown fft library manually
+
+		    /////////////////////////////////////// DFT /////////////////////////////////////////////////////
+		    //! Performs a forward or inverse discrete Fourier transform (1D or 2D) of floating point matrix.
+		    //! Param dft_size is the size of DFT transform.
+		    //!
+		    //! For complex-to-real transform it is assumed that the source matrix is packed in CLFFT's format.
+		    // support src type of CV32FC1, CV32FC2
+		    // support flags: DFT_INVERSE, DFT_REAL_OUTPUT, DFT_COMPLEX_OUTPUT, DFT_ROWS
+		    // dft_size is the size of original input, which is used for transformation from complex to real.
+		    // dft_size must be powers of 2, 3 and 5
+		    // real to complex dft requires at least v1.8 clAmdFft
+		    // real to complex dft output is not the same with cpu version
+		    // real to complex and complex to real does not support DFT_ROWS
+		    CV_EXPORTS void dft(const oclMat& src, oclMat& dst, Size dft_size = Size(0, 0), int flags = 0);
+#endif // HAVE_CLAMDFFT
+
+#ifdef HAVE_CLAMDBLAS
+		//! implements generalized matrix product algorithm GEMM from BLAS
+		// The functionality requires clAmdBlas library
+		// only support type CV_32FC1
+		// flag GEMM_3_T is not supported
+		CV_EXPORTS void gemm(const oclMat& src1, const oclMat& src2, double alpha,
+		const oclMat& src3, double beta, oclMat& dst, int flags = 0);
+#endif
+
+        //////////////// HOG (Histogram-of-Oriented-Gradients) Descriptor and Object Detector //////////////
+        struct CV_EXPORTS HOGDescriptor
+        {
+            enum { DEFAULT_WIN_SIGMA = -1 };
+            enum { DEFAULT_NLEVELS = 64 };
+            enum { DESCR_FORMAT_ROW_BY_ROW, DESCR_FORMAT_COL_BY_COL };
+
+            HOGDescriptor(Size win_size=Size(64, 128), Size block_size=Size(16, 16),
+                          Size block_stride=Size(8, 8), Size cell_size=Size(8, 8),
+                          int nbins=9, double win_sigma=DEFAULT_WIN_SIGMA,
+                          double threshold_L2hys=0.2, bool gamma_correction=true,
+                          int nlevels=DEFAULT_NLEVELS);
+
+            size_t getDescriptorSize() const;
+            size_t getBlockHistogramSize() const;
+
+            void setSVMDetector(const vector<float>& detector);
+
+            static vector<float> getDefaultPeopleDetector();
+            static vector<float> getPeopleDetector48x96();
+            static vector<float> getPeopleDetector64x128();
+
+            void detect(const oclMat& img, vector<Point>& found_locations,
+                        double hit_threshold=0, Size win_stride=Size(),
+                        Size padding=Size());
+
+            void detectMultiScale(const oclMat& img, vector<Rect>& found_locations,
+                                  double hit_threshold=0, Size win_stride=Size(),
+                                  Size padding=Size(), double scale0=1.05,
+                                  int group_threshold=2);
+
+            void getDescriptors(const oclMat& img, Size win_stride,
+                                oclMat& descriptors,
+                                int descr_format=DESCR_FORMAT_COL_BY_COL);
+
+            Size win_size;
+            Size block_size;
+            Size block_stride;
+            Size cell_size;
+            int nbins;
+            double win_sigma;
+            double threshold_L2hys;
+            bool gamma_correction;
+            int nlevels;
+
+        protected:
+            void computeBlockHistograms(const oclMat& img);
+            void computeGradient(const oclMat& img, oclMat& grad, oclMat& qangle);
+
+            double getWinSigma() const;
+            bool checkDetectorSize() const;
+
+            static int numPartsWithin(int size, int part_size, int stride);
+            static Size numPartsWithin(Size size, Size part_size, Size stride);
+
+            // Coefficients of the separating plane
+            float free_coef;
+            oclMat detector;
+
+            // Results of the last classification step
+            oclMat labels;
+            Mat labels_host;
+
+            // Results of the last histogram evaluation step
+            oclMat block_hists;
+
+            // Gradients conputation results
+            oclMat grad, qangle;
+
+            std::vector<oclMat> image_scales;
+        };
+
+        //! Speeded up robust features, port from GPU module.
+        ////////////////////////////////// SURF //////////////////////////////////////////
+        class CV_EXPORTS SURF_OCL
+        {
+        public:
+            enum KeypointLayout
+            {
+                X_ROW = 0,
+                Y_ROW,
+                LAPLACIAN_ROW,
+                OCTAVE_ROW,
+                SIZE_ROW,
+                ANGLE_ROW,
+                HESSIAN_ROW,
+                ROWS_COUNT
+            };
+
+            //! the default constructor
+            SURF_OCL();
+            //! the full constructor taking all the necessary parameters
+            explicit SURF_OCL(double _hessianThreshold, int _nOctaves=4,
+                int _nOctaveLayers=2, bool _extended=false, float _keypointsRatio=0.01f, bool _upright = false);
+
+            //! returns the descriptor size in float's (64 or 128)
+            int descriptorSize() const;
+            
+            //! upload host keypoints to device memory
+            void uploadKeypoints(const vector<cv::KeyPoint>& keypoints, oclMat& keypointsocl);
+            //! download keypoints from device to host memory
+            void downloadKeypoints(const oclMat& keypointsocl, vector<KeyPoint>& keypoints);
+
+            //! download descriptors from device to host memory
+            void downloadDescriptors(const oclMat& descriptorsocl, vector<float>& descriptors);
+
+            //! finds the keypoints using fast hessian detector used in SURF
+            //! supports CV_8UC1 images
+            //! keypoints will have nFeature cols and 6 rows
+            //! keypoints.ptr<float>(X_ROW)[i] will contain x coordinate of i'th feature
+            //! keypoints.ptr<float>(Y_ROW)[i] will contain y coordinate of i'th feature
+            //! keypoints.ptr<float>(LAPLACIAN_ROW)[i] will contain laplacian sign of i'th feature
+            //! keypoints.ptr<float>(OCTAVE_ROW)[i] will contain octave of i'th feature
+            //! keypoints.ptr<float>(SIZE_ROW)[i] will contain size of i'th feature
+            //! keypoints.ptr<float>(ANGLE_ROW)[i] will contain orientation of i'th feature
+            //! keypoints.ptr<float>(HESSIAN_ROW)[i] will contain response of i'th feature
+            void operator()(const oclMat& img, const oclMat& mask, oclMat& keypoints);
+            //! finds the keypoints and computes their descriptors.
+            //! Optionally it can compute descriptors for the user-provided keypoints and recompute keypoints direction
+            void operator()(const oclMat& img, const oclMat& mask, oclMat& keypoints, oclMat& descriptors,
+                bool useProvidedKeypoints = false);
+
+            void operator()(const oclMat& img, const oclMat& mask, std::vector<KeyPoint>& keypoints);
+            void operator()(const oclMat& img, const oclMat& mask, std::vector<KeyPoint>& keypoints, oclMat& descriptors,
+                bool useProvidedKeypoints = false);
+
+            void operator()(const oclMat& img, const oclMat& mask, std::vector<KeyPoint>& keypoints, std::vector<float>& descriptors,
+                bool useProvidedKeypoints = false);
+
+            void releaseMemory();
+
+            // SURF parameters
+            float hessianThreshold;
+            int nOctaves;
+            int nOctaveLayers;
+            bool extended;
+            bool upright;
+
+            //! max keypoints = min(keypointsRatio * img.size().area(), 65535)
+            float keypointsRatio;
+
+            oclMat sum, mask1, maskSum, intBuffer;
+
+            oclMat det, trace;
+
+            oclMat maxPosBuffer;
+
+        };
     }
 }
 #include "opencv2/ocl/matrix_operations.hpp"

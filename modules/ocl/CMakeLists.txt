@@ -29,6 +29,14 @@ if (HAVE_OPENCL)
   if(OPENCL_INCLUDE_DIR)
       ocv_include_directories(${OPENCL_INCLUDE_DIR})
   endif()
+  if (HAVE_CLAMDFFT)
+	set(ocl_link_libs ${ocl_link_libs} ${CLAMDFFT_LIBRARIES})
+	ocv_include_directories(${CLAMDFFT_INCLUDE_DIR})
+  endif()
+  if (HAVE_CLAMDBLAS)
+	set(ocl_link_libs ${ocl_link_libs} ${CLAMDBLAS_LIBRARIES})
+	ocv_include_directories(${CLAMDBLAS_INCLUDE_DIR})
+  endif()
 endif()
 
 ocv_set_module_sources(
@@ -56,8 +64,8 @@ ocv_add_accuracy_tests(FILES "Include" ${test_hdrs}
 ################################################################################################################
 ################################   OpenCL Module Performance  ##################################################
 ################################################################################################################
-#file(GLOB perf_srcs "perf/*.cpp")
-#file(GLOB perf_hdrs "perf/*.hpp" "perf/*.h")
+file(GLOB perf_srcs "perf/*.cpp")
+file(GLOB perf_hdrs "perf/*.hpp" "perf/*.h")
 
-#ocv_add_perf_tests(FILES "Include" ${perf_hdrs}
-#                       FILES "Src" ${perf_srcs})
+ocv_add_perf_tests(FILES "Include" ${perf_hdrs}
+                       FILES "Src" ${perf_srcs})

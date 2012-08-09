@@ -44,36 +44,36 @@ def on_mouse( event, x, y, flags, param ):
             if( is_mask ):
                 my_mask = mask
                 cv.Threshold( mask, mask, 1, 128, cv.CV_THRESH_BINARY );
-               
+
             if( is_color ):
-            
+
                 color = cv.CV_RGB( r, g, b );
                 comp = cv.FloodFill( color_img, seed, color, cv.CV_RGB( lo, lo, lo ),
                              cv.CV_RGB( up, up, up ), flags, my_mask );
                 cv.ShowImage( "image", color_img );
-            
+
             else:
-            
+
                 brightness = cv.RealScalar((r*2 + g*7 + b + 5)/10);
                 comp = cv.FloodFill( gray_img, seed, brightness, cv.RealScalar(lo),
                              cv.RealScalar(up), flags, my_mask );
                 cv.ShowImage( "image", gray_img );
-            
+
 
             print "%g pixels were repainted" % comp[0]
 
             if( is_mask ):
                 cv.ShowImage( "mask", mask );
-        
-    
+
+
 
 
 if __name__ == "__main__":
-    
+
     if len(sys.argv) > 1:
         im = cv.LoadImage( sys.argv[1], cv.CV_LOAD_IMAGE_COLOR)
     else:
-        url = 'http://code.opencv.org/svn/opencv/trunk/opencv/samples/c/fruits.jpg'
+        url = 'http://code.opencv.org/projects/opencv/repository/revisions/master/raw/samples/c/fruits.jpg'
         filedata = urllib2.urlopen(url).read()
         imagefiledata = cv.CreateMatHeader(1, len(filedata), cv.CV_8UC1)
         cv.SetData(imagefiledata, filedata, len(filedata))
@@ -89,7 +89,7 @@ if __name__ == "__main__":
     print "\tg - use gradient floodfill with floating(relative) range"
     print "\t4 - use 4-connectivity mode"
     print "\t8 - use 8-connectivity mode"
-        
+
     color_img = cv.CloneImage( im );
     gray_img0 = cv.CreateImage( (color_img.width, color_img.height), 8, 1 );
     cv.CvtColor( color_img, gray_img0, cv.CV_BGR2GRAY );
@@ -102,7 +102,7 @@ if __name__ == "__main__":
 
     cv.SetMouseCallback( "image", on_mouse );
 
-    while True: 
+    while True:
         if( is_color ):
             cv.ShowImage( "image", color_img );
         else:
@@ -114,29 +114,29 @@ if __name__ == "__main__":
             sys.exit(0)
         elif c == ord('c'):
             if( is_color ):
-            
+
                 print("Grayscale mode is set");
                 cv.CvtColor( color_img, gray_img, cv.CV_BGR2GRAY );
                 is_color = 0;
-            
+
             else:
-            
+
                 print("Color mode is set");
                 cv.Copy( im, color_img, None );
                 cv.Zero( mask );
                 is_color = 1;
-            
+
         elif c == ord('m'):
             if( is_mask ):
                 cv.DestroyWindow( "mask" );
                 is_mask = 0;
-            
+
             else:
                 cv.NamedWindow( "mask", 0 );
                 cv.Zero( mask );
                 cv.ShowImage( "mask", mask );
                 is_mask = 1;
-            
+
         elif c == ord('r'):
             print("Original image is restored");
             cv.Copy( im, color_img, None );

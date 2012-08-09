@@ -148,7 +148,7 @@ Wrapping class for feature detection using the
     class FastFeatureDetector : public FeatureDetector
     {
     public:
-        FastFeatureDetector( int threshold=1, bool nonmaxSuppression=true );
+        FastFeatureDetector( int threshold=1, bool nonmaxSuppression=true, type=FastFeatureDetector::TYPE_9_16 );
         virtual void read( const FileNode& fn );
         virtual void write( FileStorage& fs ) const;
     protected:

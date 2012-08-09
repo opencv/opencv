@@ -324,9 +324,9 @@ Class used for background/foreground segmentation. ::
         std::vector< std::vector<cv::Point> > foreground_regions;
     };
 
-The class discriminates between foreground and background pixels by building and maintaining a model of the background. Any pixel which does not fit this model is then deemed to be foreground. The class implements algorithm described in [FGD2003]_.
+  The class discriminates between foreground and background pixels by building and maintaining a model of the background. Any pixel which does not fit this model is then deemed to be foreground. The class implements algorithm described in [FGD2003]_.
 
-The results are available through the class fields:
+  The results are available through the class fields:
 
     .. ocv:member:: cv::gpu::GpuMat background
 
@@ -489,9 +489,9 @@ Gaussian Mixture-based Background/Foreground Segmentation Algorithm. ::
         ...
     };
 
-The class discriminates between foreground and background pixels by building and maintaining a model of the background. Any pixel which does not fit this model is then deemed to be foreground. The class implements algorithm described in [MOG2004]_.
+  The class discriminates between foreground and background pixels by building and maintaining a model of the background. Any pixel which does not fit this model is then deemed to be foreground. The class implements algorithm described in [MOG2004]_.
 
-Here are important members of the class that control the algorithm, which you can set after constructing the class instance:
+  Here are important members of the class that control the algorithm, which you can set after constructing the class instance:
 
     .. ocv:member:: float backgroundRatio
 
@@ -646,6 +646,114 @@ gpu::VIBE_GPU::release
 Releases all inner buffer's memory.
 
 .. ocv:function:: void gpu::VIBE_GPU::release()
+
+
+
+gpu::GMG_GPU
+------------
+.. ocv:class:: gpu::GMG_GPU
+
+Class used for background/foreground segmentation. ::
+
+    class GMG_GPU_GPU
+    {
+    public:
+        GMG_GPU();
+
+        void initialize(Size frameSize, float min = 0.0f, float max = 255.0f);
+
+        void operator ()(const GpuMat& frame, GpuMat& fgmask, float learningRate = -1.0f, Stream& stream = Stream::Null());
+
+        void release();
+
+        int    maxFeatures;
+        float  learningRate;
+        int    numInitializationFrames;
+        int    quantizationLevels;
+        float  backgroundPrior;
+        float  decisionThreshold;
+        int    smoothingRadius;
+
+        ...
+    };
+
+The class discriminates between foreground and background pixels by building and maintaining a model of the background. Any pixel which does not fit this model is then deemed to be foreground. The class implements algorithm described in [GMG2012]_.
+
+Here are important members of the class that control the algorithm, which you can set after constructing the class instance:
+
+    .. ocv:member:: int maxFeatures
+
+        Total number of distinct colors to maintain in histogram.
+
+    .. ocv:member:: float learningRate
+
+        Set between 0.0 and 1.0, determines how quickly features are "forgotten" from histograms.
+
+    .. ocv:member:: int numInitializationFrames
+
+        Number of frames of video to use to initialize histograms.
+
+    .. ocv:member:: int quantizationLevels
+
+        Number of discrete levels in each channel to be used in histograms.
+
+    .. ocv:member:: float backgroundPrior
+
+        Prior probability that any given pixel is a background pixel. A sensitivity parameter.
+
+    .. ocv:member:: float decisionThreshold
+
+        Value above which pixel is determined to be FG.
+
+    .. ocv:member:: float smoothingRadius
+
+        Smoothing radius, in pixels, for cleaning up FG image.
+
+
+
+gpu::GMG_GPU::GMG_GPU
+---------------------
+The default constructor.
+
+.. ocv:function:: gpu::GMG_GPU::GMG_GPU()
+
+Default constructor sets all parameters to default values.
+
+
+
+gpu::GMG_GPU::initialize
+------------------------
+Initialize background model and allocates all inner buffers.
+
+.. ocv:function:: void gpu::GMG_GPU::initialize(Size frameSize, float min = 0.0f, float max = 255.0f)
+
+    :param frameSize: Input frame size.
+
+    :param min: Minimum value taken on by pixels in image sequence. Usually 0.
+
+    :param max: Maximum value taken on by pixels in image sequence, e.g. 1.0 or 255.
+
+
+
+gpu::GMG_GPU::operator()
+------------------------
+Updates the background model and returns the foreground mask
+
+.. ocv:function:: void gpu::GMG_GPU::operator()(const GpuMat& frame, GpuMat& fgmask, Stream& stream = Stream::Null())
+
+    :param frame: Next video frame.
+
+    :param fgmask: The output foreground mask as an 8-bit binary image.
+
+    :param stream: Stream for the asynchronous version.
+
+
+
+gpu::GMG_GPU::release
+---------------------
+Releases all inner buffer's memory.
+
+.. ocv:function:: void gpu::GMG_GPU::release()
 
 
 
@@ -1093,3 +1201,4 @@ Parse next video frame. Implementation must call this method after new frame was
 .. [MOG2004] Z. Zivkovic. *Improved adaptive Gausian mixture model for background subtraction*. International Conference Pattern Recognition, UK, August, 2004
 .. [ShadowDetect2003] Prati, Mikic, Trivedi and Cucchiarra. *Detecting Moving Shadows...*. IEEE PAMI, 2003
 .. [VIBE2011] O. Barnich and M. Van D Roogenbroeck. *ViBe: A universal background subtraction algorithm for video sequences*. IEEE Transactions on Image Processing, 20(6) :1709-1724, June 2011
+.. [GMG2012] A. Godbehere, A. Matsukawa and K. Goldberg. *Visual Tracking of Human Visitors under Variable-Lighting Conditions for a Responsive Audio Art Installation*. American Control Conference, Montreal, June 2012

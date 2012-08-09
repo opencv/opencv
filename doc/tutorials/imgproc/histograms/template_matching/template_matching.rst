@@ -31,81 +31,81 @@ How does it work?
 
    * We need two primary components:
 
-     a. **Source image (I):** The image in which we expect to find a match to the template image 
-     b. **Template image (T):** The patch image which will be compared to the template image 
+     a. **Source image (I):** The image in which we expect to find a match to the template image
+     b. **Template image (T):** The patch image which will be compared to the template image
 
      our goal is to detect the highest matching area:
 
      .. image:: images/Template_Matching_Template_Theory_Summary.jpg
-              :align: center      
+              :align: center
 
    * To identify the matching area, we have to *compare* the template image against the source image by sliding it:
 
      .. image:: images/Template_Matching_Template_Theory_Sliding.jpg
-              :align: center      
+              :align: center
 
    *  By **sliding**, we mean moving the patch one pixel at a time (left to right, up to down). At each location, a metric is calculated so it represents how "good" or "bad" the match at that location is (or how similar the patch is to that particular area of the source image).
 
    *  For each location of **T** over **I**, you *store* the metric in the *result matrix* **(R)**. Each location :math:`(x,y)` in **R** contains the match metric:
 
       .. image:: images/Template_Matching_Template_Theory_Result.jpg
-               :align: center      
+               :align: center
 
-      the image above is the result **R** of sliding the patch with a metric **TM_CCORR_NORMED**. The brightest locations indicate the highest matches. As you can see, the location marked by the red circle is probably the one with the highest value, so that location (the rectangle formed by that point as a corner and width and height equal to the patch image) is considered the match. 
+      the image above is the result **R** of sliding the patch with a metric **TM_CCORR_NORMED**. The brightest locations indicate the highest matches. As you can see, the location marked by the red circle is probably the one with the highest value, so that location (the rectangle formed by that point as a corner and width and height equal to the patch image) is considered the match.
 
    * In practice, we use the function :min_max_loc:`minMaxLoc <>` to locate the highest value (or lower, depending of the type of matching method) in the *R* matrix.
-   
+
 Which are the matching methods available in OpenCV?
 ----------------------------------------------------
 
 Good question. OpenCV implements Template matching in the function :match_template:`matchTemplate <>`. The available methods are 6:
 
 a. **method=CV\_TM\_SQDIFF**
-        
+
    .. math::
-    
-      R(x,y)= \sum _{x',y'} (T(x',y')-I(x+x',y+y'))^2  
-    
-    
+
+      R(x,y)= \sum _{x',y'} (T(x',y')-I(x+x',y+y'))^2
+
+
 b. **method=CV\_TM\_SQDIFF\_NORMED**
-        
+
    .. math::
-    
-      R(x,y)= \frac{\sum_{x',y'} (T(x',y')-I(x+x',y+y'))^2}{\sqrt{\sum_{x',y'}T(x',y')^2 \cdot \sum_{x',y'} I(x+x',y+y')^2}} 
-       
+
+      R(x,y)= \frac{\sum_{x',y'} (T(x',y')-I(x+x',y+y'))^2}{\sqrt{\sum_{x',y'}T(x',y')^2 \cdot \sum_{x',y'} I(x+x',y+y')^2}}
+
 
 c. **method=CV\_TM\_CCORR**
-    
-   .. math::
-    
-      R(x,y)= \sum _{x',y'} (T(x',y')  \cdot I(x+x',y+y'))  
-      
 
-d. **method=CV\_TM\_CCORR\_NORMED**    
-    
    .. math::
-    
-      R(x,y)= \frac{\sum_{x',y'} (T(x',y') \cdot I'(x+x',y+y'))}{\sqrt{\sum_{x',y'}T(x',y')^2 \cdot \sum_{x',y'} I(x+x',y+y')^2}} 
-    
+
+      R(x,y)= \sum _{x',y'} (T(x',y')  \cdot I(x+x',y+y'))
+
+
+d. **method=CV\_TM\_CCORR\_NORMED**
+
+   .. math::
+
+      R(x,y)= \frac{\sum_{x',y'} (T(x',y') \cdot I'(x+x',y+y'))}{\sqrt{\sum_{x',y'}T(x',y')^2 \cdot \sum_{x',y'} I(x+x',y+y')^2}}
+
 
 e. **method=CV\_TM\_CCOEFF**
-    
+
    .. math::
-    
-      R(x,y)= \sum _{x',y'} (T'(x',y')  \cdot I(x+x',y+y'))  
-   
+
+      R(x,y)= \sum _{x',y'} (T'(x',y')  \cdot I(x+x',y+y'))
+
    where
-     
+
    .. math::
-    
-      \begin{array}{l} T'(x',y')=T(x',y') - 1/(w  \cdot h)  \cdot \sum _{x'',y''} T(x'',y'') \\ I'(x+x',y+y')=I(x+x',y+y') - 1/(w  \cdot h)  \cdot \sum _{x'',y''} I(x+x'',y+y'') \end{array} 
-    
-    
+
+      \begin{array}{l} T'(x',y')=T(x',y') - 1/(w  \cdot h)  \cdot \sum _{x'',y''} T(x'',y'') \\ I'(x+x',y+y')=I(x+x',y+y') - 1/(w  \cdot h)  \cdot \sum _{x'',y''} I(x+x'',y+y'') \end{array}
+
+
 f. **method=CV\_TM\_CCOEFF\_NORMED**
-    
+
    .. math::
-    
-      R(x,y)= \frac{ \sum_{x',y'} (T'(x',y') \cdot I'(x+x',y+y')) }{ \sqrt{\sum_{x',y'}T'(x',y')^2 \cdot \sum_{x',y'} I'(x+x',y+y')^2} } 
+
+      R(x,y)= \frac{ \sum_{x',y'} (T'(x',y') \cdot I'(x+x',y+y')) }{ \sqrt{\sum_{x',y'}T'(x',y')^2 \cdot \sum_{x',y'} I'(x+x',y+y')^2} }
 
 
 Code
@@ -115,7 +115,7 @@ Code
 .. container:: enumeratevisibleitemswithsquare
 
    * **What does this program do?**
- 
+
      .. container:: enumeratevisibleitemswithsquare
 
         * Loads an input image and a image patch (*template*)
@@ -125,13 +125,13 @@ Code
         * Draw a rectangle around the area corresponding to the highest match
 
    * **Downloadable code**:
-     Click `here <http://code.opencv.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/Histograms_Matching/MatchTemplate_Demo.cpp>`_
+     Click `here <http://code.opencv.org/projects/opencv/repository/revisions/master/raw/samples/cpp/tutorial_code/Histograms_Matching/MatchTemplate_Demo.cpp>`_
 
    * **Code at glance:**
 
 .. code-block:: cpp
 
-   #include "opencv2/highgui/highgui.hpp" 
+   #include "opencv2/highgui/highgui.hpp"
    #include "opencv2/imgproc/imgproc.hpp"
    #include <iostream>
    #include <stdio.h>
@@ -160,7 +160,7 @@ Code
      /// Create windows
      namedWindow( image_window, CV_WINDOW_AUTOSIZE );
      namedWindow( result_window, CV_WINDOW_AUTOSIZE );
-  
+
      /// Create Trackbar
      char* trackbar_label = "Method: \n 0: SQDIFF \n 1: SQDIFF NORMED \n 2: TM CCORR \n 3: TM CCORR NORMED \n 4: TM COEFF \n 5: TM COEFF NORMED";
      createTrackbar( trackbar_label, image_window, &match_method, max_Trackbar, MatchingMethod );
@@ -180,11 +180,11 @@ Code
      /// Source image to display
      Mat img_display;
      img.copyTo( img_display );
- 
+
      /// Create the result matrix
      int result_cols =  img.cols - templ.cols + 1;
-     int result_rows = img.rows - templ.rows + 1;   
-  
+     int result_rows = img.rows - templ.rows + 1;
+
      result.create( result_cols, result_rows, CV_32FC1 );
 
      /// Do the Matching and Normalize
@@ -194,18 +194,18 @@ Code
      /// Localizing the best match with minMaxLoc
      double minVal; double maxVal; Point minLoc; Point maxLoc;
      Point matchLoc;
- 
+
      minMaxLoc( result, &minVal, &maxVal, &minLoc, &maxLoc, Mat() );
 
      /// For SQDIFF and SQDIFF_NORMED, the best matches are lower values. For all the other methods, the higher the better
      if( match_method  == CV_TM_SQDIFF || match_method == CV_TM_SQDIFF_NORMED )
        { matchLoc = minLoc; }
-     else  
+     else
        { matchLoc = maxLoc; }
 
      /// Show me what you got
-     rectangle( img_display, matchLoc, Point( matchLoc.x + templ.cols , matchLoc.y + templ.rows ), Scalar::all(0), 2, 8, 0 ); 
-     rectangle( result, matchLoc, Point( matchLoc.x + templ.cols , matchLoc.y + templ.rows ), Scalar::all(0), 2, 8, 0 ); 
+     rectangle( img_display, matchLoc, Point( matchLoc.x + templ.cols , matchLoc.y + templ.rows ), Scalar::all(0), 2, 8, 0 );
+     rectangle( result, matchLoc, Point( matchLoc.x + templ.cols , matchLoc.y + templ.rows ), Scalar::all(0), 2, 8, 0 );
 
      imshow( image_window, img_display );
      imshow( result_window, result );
@@ -241,7 +241,7 @@ Explanation
 
       namedWindow( image_window, CV_WINDOW_AUTOSIZE );
       namedWindow( result_window, CV_WINDOW_AUTOSIZE );
-  
+
 #. Create the Trackbar to enter the kind of matching method to be used. When a change is detected the callback function **MatchingMethod** is called.
 
    .. code-block:: cpp
@@ -255,7 +255,7 @@ Explanation
 
       waitKey(0);
       return 0;
-  
+
 #. Let's check out the callback function. First, it makes a copy of the source image:
 
    .. code-block:: cpp
@@ -267,12 +267,12 @@ Explanation
 #. Next, it creates the result matrix that will store the matching results for each template location. Observe in detail the size of the result matrix (which matches all possible locations for it)
 
    .. code-block:: cpp
- 
+
       int result_cols =  img.cols - templ.cols + 1;
-      int result_rows = img.rows - templ.rows + 1;   
-  
+      int result_rows = img.rows - templ.rows + 1;
+
       result.create( result_cols, result_rows, CV_32FC1 );
- 
+
 #. Perform the template matching operation:
 
    .. code-block:: cpp
@@ -287,18 +287,18 @@ Explanation
 
       normalize( result, result, 0, 1, NORM_MINMAX, -1, Mat() );
 
-#. We localize the minimum and maximum values in the result matrix **R** by using :min_max_loc:`minMaxLoc <>`. 
+#. We localize the minimum and maximum values in the result matrix **R** by using :min_max_loc:`minMaxLoc <>`.
 
    .. code-block:: cpp
 
       double minVal; double maxVal; Point minLoc; Point maxLoc;
       Point matchLoc;
- 
+
       minMaxLoc( result, &minVal, &maxVal, &minLoc, &maxLoc, Mat() );
-   
+
    the function calls as arguments:
 
-   .. container:: enumeratevisibleitemswithsquare   
+   .. container:: enumeratevisibleitemswithsquare
 
       + **result:** The source array
       + **&minVal** and **&maxVal:** Variables to save the minimum and maximum values in **result**
@@ -309,18 +309,18 @@ Explanation
 #. For the first two methods ( CV\_SQDIFF and CV\_SQDIFF\_NORMED ) the best match are the lowest values. For all the others, higher values represent better matches. So, we save the corresponding value in the **matchLoc** variable:
 
    .. code-block:: cpp
-     
+
      if( match_method  == CV_TM_SQDIFF || match_method == CV_TM_SQDIFF_NORMED )
        { matchLoc = minLoc; }
-     else  
+     else
        { matchLoc = maxLoc; }
 
 #. Display the source image and the result matrix. Draw a rectangle around the highest possible matching area:
 
    .. code-block:: cpp
 
-      rectangle( img_display, matchLoc, Point( matchLoc.x + templ.cols , matchLoc.y + templ.rows ), Scalar::all(0), 2, 8, 0 ); 
-      rectangle( result, matchLoc, Point( matchLoc.x + templ.cols , matchLoc.y + templ.rows ), Scalar::all(0), 2, 8, 0 ); 
+      rectangle( img_display, matchLoc, Point( matchLoc.x + templ.cols , matchLoc.y + templ.rows ), Scalar::all(0), 2, 8, 0 );
+      rectangle( result, matchLoc, Point( matchLoc.x + templ.cols , matchLoc.y + templ.rows ), Scalar::all(0), 2, 8, 0 );
 
       imshow( image_window, img_display );
       imshow( result_window, result );
@@ -333,19 +333,19 @@ Results
 
    .. image:: images/Template_Matching_Original_Image.jpg
             :align: center
- 
+
    and a template image:
 
    .. image:: images/Template_Matching_Template_Image.jpg
-            :align: center  
+            :align: center
 
 #. Generate the following result matrices (first row are the standard methods SQDIFF, CCORR and CCOEFF, second row are the same methods in its normalized version). In the first column, the darkest is the better match, for the other two columns, the brighter a location, the higher the match.
 
-   ============  ============  ============ 
+   ============  ============  ============
     |Result_0|    |Result_2|    |Result_4|
-   ============  ============  ============ 
+   ============  ============  ============
     |Result_1|    |Result_3|    |Result_5|
-   ============  ============  ============ 
+   ============  ============  ============
 
    .. |Result_0| image:: images/Template_Matching_Correl_Result_0.jpg
                       :align: middle

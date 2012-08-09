@@ -1148,6 +1148,9 @@ GPU_PERF_TEST(CvtColor, cv::gpu::DeviceInfo, cv::Size, MatDepth, CvtColorInfo)
     cv::gpu::GpuMat src(src_host);
     cv::gpu::GpuMat dst;
 
+    if (info.code >= cv::COLOR_BayerBG2BGR && info.code <= cv::COLOR_BayerGR2BGR)
+        info.dcn = 4;
+
     cv::gpu::cvtColor(src, dst, info.code, info.dcn);
 
     TEST_CYCLE()
@@ -1172,7 +1175,20 @@ INSTANTIATE_TEST_CASE_P(ImgProc, CvtColor, testing::Combine(
                     CvtColorInfo(3, 3, cv::COLOR_BGR2HSV),
                     CvtColorInfo(3, 3, cv::COLOR_HSV2BGR),
                     CvtColorInfo(3, 3, cv::COLOR_BGR2HLS),
-                    CvtColorInfo(3, 3, cv::COLOR_HLS2BGR))));
+                    CvtColorInfo(3, 3, cv::COLOR_HLS2BGR),
+                    CvtColorInfo(3, 3, cv::COLOR_BGR2Lab),
+                    CvtColorInfo(3, 3, cv::COLOR_RGB2Lab),
+                    CvtColorInfo(3, 3, cv::COLOR_BGR2Luv),
+                    CvtColorInfo(3, 3, cv::COLOR_RGB2Luv),
+                    CvtColorInfo(3, 3, cv::COLOR_Lab2BGR),
+                    CvtColorInfo(3, 3, cv::COLOR_Lab2RGB),
+                    CvtColorInfo(3, 3, cv::COLOR_Luv2BGR),
+                    CvtColorInfo(3, 3, cv::COLOR_Luv2RGB),
+                    CvtColorInfo(1, 3, cv::COLOR_BayerBG2BGR),
+                    CvtColorInfo(1, 3, cv::COLOR_BayerGB2BGR),
+                    CvtColorInfo(1, 3, cv::COLOR_BayerRG2BGR),
+                    CvtColorInfo(1, 3, cv::COLOR_BayerGR2BGR),
+                    CvtColorInfo(4, 4, cv::COLOR_RGBA2mRGBA))));
 
 //////////////////////////////////////////////////////////////////////
 // SwapChannels

@@ -9,7 +9,7 @@ Goal
 In this tutorial you will learn how to:
 
 * Use the OpenCV functions :hough_lines:`HoughLines <>` and :hough_lines_p:`HoughLinesP <>` to detect lines in an image.
-  
+
 Theory
 =======
 
@@ -18,60 +18,60 @@ Theory
 
 Hough Line Transform
 ---------------------
-#. The Hough Line Transform is a transform used to detect straight lines. 
+#. The Hough Line Transform is a transform used to detect straight lines.
 #. To apply the Transform, first an edge detection pre-processing is desirable.
 
 How does it work?
 ^^^^^^^^^^^^^^^^^^
 
 #. As you know, a line in the image space can be expressed with two variables. For example:
- 
+
    a. In the **Cartesian coordinate system:**  Parameters: :math:`(m,b)`.
    b. In the **Polar coordinate system:** Parameters: :math:`(r,\theta)`
 
    .. image:: images/Hough_Lines_Tutorial_Theory_0.jpg
       :alt: Line variables
-      :align: center 
+      :align: center
 
-   For Hough Transforms, we will express lines in the *Polar system*. Hence, a line equation can be written as: 
+   For Hough Transforms, we will express lines in the *Polar system*. Hence, a line equation can be written as:
 
    .. math::
 
-      y = \left ( -\dfrac{\cos \theta}{\sin \theta} \right ) x + \left ( \dfrac{r}{\sin \theta} \right ) 
+      y = \left ( -\dfrac{\cos \theta}{\sin \theta} \right ) x + \left ( \dfrac{r}{\sin \theta} \right )
 
   Arranging the terms: :math:`r = x \cos \theta + y \sin \theta`
 
 #. In general for each point :math:`(x_{0}, y_{0})`, we can define the family of lines that goes through that point as:
 
    .. math::
-   
+
       r_{\theta} = x_{0} \cdot \cos \theta  + y_{0} \cdot \sin \theta
 
-   Meaning that each pair :math:`(r_{\theta},\theta)` represents each line that passes by :math:`(x_{0}, y_{0})`. 
+   Meaning that each pair :math:`(r_{\theta},\theta)` represents each line that passes by :math:`(x_{0}, y_{0})`.
 
 #. If for a given :math:`(x_{0}, y_{0})` we plot the family of lines that goes through it, we get a sinusoid. For instance, for :math:`x_{0} = 8` and :math:`y_{0} = 6` we get the following plot (in a plane :math:`\theta` - :math:`r`):
 
    .. image:: images/Hough_Lines_Tutorial_Theory_1.jpg
       :alt: Polar plot of a the family of lines of a point
-      :align: center 
+      :align: center
 
-   We consider only points such that :math:`r > 0` and :math:`0< \theta < 2 \pi`. 
+   We consider only points such that :math:`r > 0` and :math:`0< \theta < 2 \pi`.
 
 #. We can do the same operation above for all the points in an image. If the curves of two different points intersect in the plane :math:`\theta` - :math:`r`, that means that both points belong to a same line. For instance, following with the example above and drawing the plot for two more points: :math:`x_{1} = 9`, :math:`y_{1} = 4` and :math:`x_{2} = 12`, :math:`y_{2} = 3`, we get:
 
    .. image:: images/Hough_Lines_Tutorial_Theory_2.jpg
       :alt: Polar plot of the family of lines for three points
-      :align: center 
+      :align: center
 
-   The three plots intersect in one single point :math:`(0.925, 9.6)`, these coordinates are the parameters (:math:`\theta, r`) or the line in which :math:`(x_{0}, y_{0})`, :math:`(x_{1}, y_{1})` and :math:`(x_{2}, y_{2})` lay. 
+   The three plots intersect in one single point :math:`(0.925, 9.6)`, these coordinates are the parameters (:math:`\theta, r`) or the line in which :math:`(x_{0}, y_{0})`, :math:`(x_{1}, y_{1})` and :math:`(x_{2}, y_{2})` lay.
 
 #. What does all the stuff above mean? It means that in general, a line can be *detected* by finding the number of intersections between curves.The more curves intersecting means that the line represented by that intersection have more points. In general, we can define a *threshold* of the minimum number of intersections needed to *detect* a line.
- 
+
 #. This is what the Hough Line Transform does. It keeps track of the intersection between curves of every point in the image. If the number of intersections is above some *threshold*, then it declares it as a line with the parameters :math:`(\theta, r_{\theta})` of the intersection point.
 
 Standard and Probabilistic Hough Line Transform
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-OpenCV implements two kind of Hough Line Transforms: 
+OpenCV implements two kind of Hough Line Transforms:
 
 a. **The Standard Hough Transform**
 
@@ -89,20 +89,20 @@ Code
 ======
 
 .. |TutorialHoughLinesSimpleDownload| replace:: here
-.. _TutorialHoughLinesSimpleDownload: http://code.opencv.org/svn/opencv/trunk/opencv/samples/cpp/houghlines.cpp
+.. _TutorialHoughLinesSimpleDownload: http://code.opencv.org/projects/opencv/repository/revisions/master/raw/samples/cpp/houghlines.cpp
 .. |TutorialHoughLinesFancyDownload| replace:: here
-.. _TutorialHoughLinesFancyDownload: http://code.opencv.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/ImgTrans/HoughLines_Demo.cpp
+.. _TutorialHoughLinesFancyDownload: http://code.opencv.org/projects/opencv/repository/revisions/master/raw/samples/cpp/tutorial_code/ImgTrans/HoughLines_Demo.cpp
 
 
 #. **What does this program do?**
- 
+
    * Loads an image
-   * Applies either a *Standard Hough Line Transform* or a *Probabilistic Line Transform*. 
+   * Applies either a *Standard Hough Line Transform* or a *Probabilistic Line Transform*.
    * Display the original image and the detected line in two windows.
 
 #. The sample code that we will explain can be downloaded from  |TutorialHoughLinesSimpleDownload|_. A slightly fancier version (which shows both Hough standard and probabilistic with trackbars for changing the threshold values) can be found  |TutorialHoughLinesFancyDownload|_.
 
-.. code-block:: cpp 
+.. code-block:: cpp
 
    #include "opencv2/highgui/highgui.hpp"
    #include "opencv2/imgproc/imgproc.hpp"
@@ -207,9 +207,9 @@ Explanation
       * *rho* : The resolution of the parameter :math:`r` in pixels. We use **1** pixel.
       * *theta*: The resolution of the parameter :math:`\theta` in radians. We use **1 degree** (CV_PI/180)
       * *threshold*: The minimum number of intersections to "*detect*" a line
-      * *srn* and *stn*: Default parameters to zero. Check OpenCV reference for more info. 
+      * *srn* and *stn*: Default parameters to zero. Check OpenCV reference for more info.
 
-   b. And then you display the result by drawing the lines. 
+   b. And then you display the result by drawing the lines.
 
       .. code-block:: cpp
 
@@ -236,14 +236,14 @@ Explanation
          HoughLinesP(dst, lines, 1, CV_PI/180, 50, 50, 10 );
 
       with the arguments:
- 
+
       * *dst*: Output of the edge detector. It should be a grayscale image (although in fact it is a binary one)
       * *lines*: A vector that will store the parameters :math:`(x_{start}, y_{start}, x_{end}, y_{end})` of the detected lines
       * *rho* : The resolution of the parameter :math:`r` in pixels. We use **1** pixel.
       * *theta*: The resolution of the parameter :math:`\theta` in radians. We use **1 degree** (CV_PI/180)
       * *threshold*: The minimum number of intersections to "*detect*" a line
-      * *minLinLength*: The minimum number of points that can form a line. Lines with less than this number of points are disregarded. 
-      * *maxLineGap*: The maximum gap between two points to be considered in the same line. 
+      * *minLinLength*: The minimum number of points that can form a line. Lines with less than this number of points are disregarded.
+      * *maxLineGap*: The maximum gap between two points to be considered in the same line.
 
    b. And then you display the result by drawing the lines.
 
@@ -256,7 +256,7 @@ Explanation
          }
 
 
-#. Display the original image and the detected lines: 
+#. Display the original image and the detected lines:
 
    .. code-block:: cpp
 
@@ -274,20 +274,20 @@ Result
 =======
 
 .. note::
-  
+
    The results below are obtained using the slightly fancier version we mentioned in the *Code* section. It still implements the same stuff as above, only adding the Trackbar for the Threshold.
 
 Using an input image such as:
 
 .. image:: images/Hough_Lines_Tutorial_Original_Image.jpg
    :alt: Result of detecting lines with Hough Transform
-   :align: center 
- 
+   :align: center
+
 We get the following result by using the Probabilistic Hough Line Transform:
 
 .. image:: images/Hough_Lines_Tutorial_Result.jpg
    :alt: Result of detecting lines with Hough Transform
-   :align: center 
+   :align: center
 
-You may observe that the number of lines detected vary while you change the *threshold*. The explanation is sort of evident: If you establish a higher threshold, fewer lines will be detected (since you will need more points to declare a line detected). 
+You may observe that the number of lines detected vary while you change the *threshold*. The explanation is sort of evident: If you establish a higher threshold, fewer lines will be detected (since you will need more points to declare a line detected).
 
