@@ -2156,6 +2156,9 @@ public:
      */
     void operator ()(const GpuMat& frame, GpuMat& fgmask, float learningRate = -1.0f, Stream& stream = Stream::Null());
 
+    //! releases all inner buffers
+    void release();
+
     //! Total number of distinct colors to maintain in histogram.
     int     maxFeatures;
 

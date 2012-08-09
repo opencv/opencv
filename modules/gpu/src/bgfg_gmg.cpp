@@ -47,6 +47,7 @@
 cv::gpu::GMG_GPU::GMG_GPU() { throw_nogpu(); }
 void cv::gpu::GMG_GPU::initialize(cv::Size, float, float) { throw_nogpu(); }
 void cv::gpu::GMG_GPU::operator ()(const cv::gpu::GpuMat&, cv::gpu::GpuMat&, float, cv::gpu::Stream&) { throw_nogpu(); }
+void cv::gpu::GMG_GPU::release() {}
 
 #else
 
@@ -149,6 +150,17 @@ void cv::gpu::GMG_GPU::operator ()(const cv::gpu::GpuMat& frame, cv::gpu::GpuMat
 
     // keep track of how many frames we have processed
     ++frameNum_;
+}
+
+void cv::gpu::GMG_GPU::release()
+{
+    frameSize_ = Size();
+
+    nfeatures_.release();
+    colors_.release();
+    weights_.release();
+    boxFilter_.release();
+    buf_.release();
 }
 
 #endif
