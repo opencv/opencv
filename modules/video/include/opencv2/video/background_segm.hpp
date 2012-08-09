@@ -221,7 +221,6 @@ public:
      */
     virtual void operator()(InputArray image, OutputArray fgmask, double learningRate=-1.0);
 
-protected:
     //! Total number of distinct colors to maintain in histogram.
     int     maxFeatures;
     //! Set between 0.0 and 1.0, determines how quickly features are "forgotten" from histograms.
