@@ -361,10 +361,9 @@ GPU_PERF_TEST(GMG, cv::gpu::DeviceInfo, std::string, Channels, MaxFeatures)
 
     cv::BackgroundSubtractorGMG gmg;
     gmg.set("maxFeatures", maxFeatures);
-    gmg.initializeType(frame, 0.0, 255.0);
+    gmg.initialize(frame.size(), 0.0, 255.0);
 
     gmg(frame, fgmask);
-    gmg.updateBackgroundModel(zeros);
 
     for (int i = 0; i < 150; ++i)
     {
@@ -387,7 +386,6 @@ GPU_PERF_TEST(GMG, cv::gpu::DeviceInfo, std::string, Channels, MaxFeatures)
 
         startTimer(); next();
         gmg(frame, fgmask);
-        gmg.updateBackgroundModel(zeros);
         stopTimer();
     }
 }
