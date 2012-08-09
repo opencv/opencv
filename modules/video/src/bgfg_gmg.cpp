@@ -199,7 +199,7 @@ namespace
     public:
         GMG_LoopBody(const cv::Mat& frame, const cv::Mat& fgmask, const cv::Mat_<int>& nfeatures, const cv::Mat_<int>& colors, const cv::Mat_<float>& weights,
                      int maxFeatures, double learningRate, int numInitializationFrames, int quantizationLevels, double backgroundPrior, double decisionThreshold,
-                     double maxVal, double minVal, size_t frameNum) :
+                     double maxVal, double minVal, int frameNum) :
             frame_(frame), fgmask_(fgmask), nfeatures_(nfeatures), colors_(colors), weights_(weights),
             maxFeatures_(maxFeatures), learningRate_(learningRate), numInitializationFrames_(numInitializationFrames),
             quantizationLevels_(quantizationLevels), backgroundPrior_(backgroundPrior), decisionThreshold_(decisionThreshold),
@@ -227,7 +227,7 @@ namespace
 
         double maxVal_;
         double minVal_;
-        size_t frameNum_;
+        int frameNum_;
     };
 
     void GMG_LoopBody::operator() (const cv::Range& range) const
@@ -262,7 +262,7 @@ namespace
 
                 bool isForeground = false;
 
-                if (frameNum_ > numInitializationFrames_)
+                if (frameNum_ >= numInitializationFrames_)
                 {
                     // typical operation
 
@@ -272,21 +272,7 @@ namespace
                     const double posterior = (weight * backgroundPrior_) / (weight * backgroundPrior_ + (1.0 - weight) * (1.0 - backgroundPrior_));
 
                     isForeground = ((1.0 - posterior) > decisionThreshold_);
-                }
 
-                fgmask_row[x] = (uchar)(-isForeground);
-
-                if (frameNum_ <= numInitializationFrames_ + 1)
-                {
-                    // training-mode update
-
-                    insertFeature(newFeatureColor, 1.0f, colors, weights, nfeatures, maxFeatures_);
-
-                    if (frameNum_ == numInitializationFrames_ + 1)
-                        normalizeHistogram(weights, nfeatures);
-                }
-                else
-                {
                     // update histogram.
 
                     for (int i = 0; i < nfeatures; ++i)
@@ -295,10 +281,22 @@ namespace
                     bool inserted = insertFeature(newFeatureColor, learningRate_, colors, weights, nfeatures, maxFeatures_);
 
                     if (inserted)
+                    {
+                        normalizeHistogram(weights, nfeatures);
+                        nfeatures_row[x] = nfeatures;
+                    }
+                }
+                else
+                {
+                    // training-mode update
+
+                    insertFeature(newFeatureColor, 1.0f, colors, weights, nfeatures, maxFeatures_);
+
+                    if (frameNum_ == numInitializationFrames_ - 1)
                         normalizeHistogram(weights, nfeatures);
                 }
 
-                nfeatures_row[x] = nfeatures;
+                fgmask_row[x] = (uchar)(-isForeground);
             }
         }
     }
