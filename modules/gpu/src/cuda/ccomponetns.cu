@@ -42,6 +42,7 @@
 #include <opencv2/gpu/device/common.hpp>
 #include <opencv2/gpu/device/vec_traits.hpp>
 #include <opencv2/gpu/device/vec_math.hpp>
+#include <opencv2/gpu/device/emulation.hpp>
 #include <iostream>
 #include <stdio.h>
 
@@ -255,8 +256,7 @@ namespace cv { namespace gpu { namespace device
                     edgesTile[yloc][xloc] = c;
                 }
 
-
-            for (int i = 0; ; ++i)
+            for (int k = 0; ;++k)
             {
                 //1. backup
                 #pragma unroll
@@ -312,11 +312,12 @@ namespace cv { namespace gpu { namespace device
                         if (new_labels[i][j] < old_labels[i][j])
                         {
                             changed = 1;
-                            atomicMin(&labelsTile[0][0] + old_labels[i][j], new_labels[i][j]);
+                            Emulation::smem::atomicMin(&labelsTile[0][0] + old_labels[i][j], new_labels[i][j]);
                         }
                     }
 
-                changed = __syncthreads_or(changed);
+                changed = Emulation::sycthOr(changed);
+
                 if (!changed)
                     break;
 

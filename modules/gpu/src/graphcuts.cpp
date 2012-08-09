@@ -108,6 +108,8 @@ void cv::gpu::connectivityMask(const GpuMat& image, GpuMat& mask, const cv::Scal
 
 void cv::gpu::labelComponents(const GpuMat& mask, GpuMat& components, int flags, Stream& s)
 {
+    if (!TargetArchs::builtWith(SHARED_ATOMICS) || !DeviceInfo().supports(SHARED_ATOMICS))
+        CV_Error(CV_StsNotImplemented, "The device doesn't support shared atomics and communicative synchronization!");
     CV_Assert(!mask.empty() && mask.type() == CV_8U);
 
     if (mask.size() != components.size() || components.type() != CV_32SC1)

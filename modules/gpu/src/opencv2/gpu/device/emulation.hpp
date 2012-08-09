@@ -50,6 +50,17 @@ namespace cv { namespace gpu { namespace device
 {
     struct Emulation
     {
+
+        static __device__ __forceinline__ int sycthOr(int pred)
+        {
+#if defined (__CUDA_ARCH__) && (__CUDA_ARCH__ < 120)
+                // just campilation stab
+                return false;
+#else
+                return __syncthreads_or(pred);
+#endif
+        }
+
         template<int CTA_SIZE>
         static __forceinline__ __device__ int Ballot(int predicate)
         {

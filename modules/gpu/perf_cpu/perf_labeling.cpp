@@ -39,9 +39,7 @@
 // the use of this software, even if advised of the possibility of such damage.
 //M*/
 
-#include "precomp.hpp"
-#include <string>
-#include <iostream>
+#include "perf_precomp.hpp"
 
 #ifdef HAVE_CUDA
 
@@ -74,13 +72,13 @@ namespace {
         };
 
         GreedyLabeling(cv::Mat img)
-        : image(img), _labels(image.size(), CV_32SC1, cv::Scalar::all(-1)) {}
+        : image(img), _labels(image.size(), CV_32SC1, cv::Scalar::all(-1)) {stack = new dot[image.cols * image.rows];}
+
+        ~GreedyLabeling(){delete[] stack;}
 
         void operator() (cv::Mat labels) const
         {
             InInterval inInt(0, 2);
-            dot* stack = new dot[image.cols * image.rows];
-
             int cc = -1;
 
             int* dist_labels = (int*)labels.data;
@@ -127,76 +125,33 @@ namespace {
                         p = *--top;
                     }
                 }
-            delete[] stack;
-        }
-
-        void checkCorrectness(cv::Mat gpu)
-        {
-            cv::Mat diff = gpu - _labels;
-
-            int outliers = 0;
-            for (int j = 0; j < image.rows; ++j)
-                for (int i = 0; i < image.cols; ++i)
-                {
-                    if ( (_labels.at<int>(j,i) == gpu.at<int>(j,i + 1)) && (diff.at<int>(j, i) != diff.at<int>(j,i + 1)))
-                    {
-                        outliers++;
-                        // std::cout <<  j << " " << i << " " << _labels.at<int>(j,i) << " " << gpu.at<int>(j,i + 1) << " " << diff.at<int>(j, i) << " " << diff.at<int>(j,i + 1) << std::endl;
-                    }
-                }
-            ASSERT_FALSE(outliers);
         }
 
         cv::Mat image;
         cv::Mat _labels;
+        dot* stack;
     };
 }
 
-struct Labeling : testing::TestWithParam<cv::gpu::DeviceInfo>
+GPU_PERF_TEST(ConnectedComponents, cv::gpu::DeviceInfo, cv::Size)
 {
-    cv::gpu::DeviceInfo devInfo;
+    cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
+    cv::gpu::setDevice(devInfo.deviceID());
 
-    virtual void SetUp()
-    {
-        devInfo = GetParam();
-        cv::gpu::setDevice(devInfo.deviceID());
-    }
-
-    cv::Mat loat_image()
-    {
-        return cv::imread(std::string( cvtest::TS::ptr()->get_data_path() ) + "labeling/IMG_0727.JPG");
-    }
-};
-
-TEST_P(Labeling, ConnectedComponents)
-{
-    cv::Mat image;
-    cvtColor(loat_image(), image, CV_BGR2GRAY);
-
-    cv::threshold(image, image, 150, 255, CV_THRESH_BINARY);
-
-    ASSERT_TRUE(image.type() == CV_8UC1);
+    cv::Mat image = readImage("gpu/labeling/aloe-disp.png", cv::IMREAD_GRAYSCALE);
 
     GreedyLabeling host(image);
+
     host(host._labels);
 
-    cv::gpu::GpuMat mask;
-    mask.create(image.rows, image.cols, CV_8UC1);
+    declare.time(1.0);
 
-    cv::gpu::GpuMat components;
-    components.create(image.rows, image.cols, CV_32SC1);
-
-    cv::gpu::connectivityMask(cv::gpu::GpuMat(image), mask, cv::Scalar::all(0), cv::Scalar::all(2));
-
-    ASSERT_NO_THROW(cv::gpu::labelComponents(mask, components));
-
-    host.checkCorrectness(cv::Mat(components));
-    cv::imshow("test", image);
-    cv::waitKey(0);
-    cv::imshow("test", host._labels);
-    cv::waitKey(0);
+    TEST_CYCLE()
+    {
+        host(host._labels);
+    }
 }
 
-INSTANTIATE_TEST_CASE_P(ConnectedComponents, Labeling, ALL_DEVICES);
+INSTANTIATE_TEST_CASE_P(Labeling, ConnectedComponents, testing::Combine(ALL_DEVICES, testing::Values(cv::Size(261, 262))));
 
 #endif
