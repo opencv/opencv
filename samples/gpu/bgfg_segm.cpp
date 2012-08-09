@@ -14,7 +14,8 @@ enum Method
     FGD_STAT,
     MOG,
     MOG2,
-    VIBE
+    VIBE,
+    GMG
 };
 
 int main(int argc, const char** argv)
@@ -22,7 +23,7 @@ int main(int argc, const char** argv)
     cv::CommandLineParser cmd(argc, argv,
         "{ c | camera | false       | use camera }"
         "{ f | file   | 768x576.avi | input video file }"
-        "{ m | method | mog         | method (fgd_stat, mog, mog2, vibe) }"
+        "{ m | method | mog         | method (fgd, mog, mog2, vibe, gmg) }"
         "{ h | help   | false       | print help message }");
 
     if (cmd.get<bool>("help"))
@@ -37,13 +38,13 @@ int main(int argc, const char** argv)
     string file = cmd.get<string>("file");
     string method = cmd.get<string>("method");
 
-    if (method != "fgd_stat" && method != "mog" && method != "mog2" && method != "vibe")
+    if (method != "fgd" && method != "mog" && method != "mog2" && method != "vibe" && method != "gmg")
     {
         cerr << "Incorrect method" << endl;
         return -1;
     }
 
-    Method m = method == "fgd_stat" ? FGD_STAT : method == "mog" ? MOG : method == "mog2" ? MOG2 : VIBE;
+    Method m = method == "fgd" ? FGD_STAT : method == "mog" ? MOG : method == "mog2" ? MOG2 : method == "vibe" ? VIBE : GMG;
 
     VideoCapture cap;
 
@@ -67,6 +68,8 @@ int main(int argc, const char** argv)
     MOG_GPU mog;
     MOG2_GPU mog2;
     VIBE_GPU vibe;
+    GMG_GPU gmg;
+    gmg.numInitializationFrames = 40;
 
     GpuMat d_fgmask;
     GpuMat d_fgimg;
@@ -93,12 +96,16 @@ int main(int argc, const char** argv)
     case VIBE:
         vibe.initialize(d_frame);
         break;
+
+    case GMG:
+        gmg.initialize(d_frame.size());
+        break;
     }
 
     namedWindow("image", WINDOW_NORMAL);
     namedWindow("foreground mask", WINDOW_NORMAL);
     namedWindow("foreground image", WINDOW_NORMAL);
-    if (m != VIBE)
+    if (m != VIBE && m != GMG)
         namedWindow("mean background image", WINDOW_NORMAL);
 
     for(;;)
@@ -107,6 +114,8 @@ int main(int argc, const char** argv)
         if (frame.empty())
             break;
         d_frame.upload(frame);
+
+        int64 start = cv::getTickCount();
 
         //update the model
         switch (m)
@@ -130,7 +139,14 @@ int main(int argc, const char** argv)
         case VIBE:
             vibe(d_frame, d_fgmask);
             break;
+
+        case GMG:
+            gmg(d_frame, d_fgmask);
+            break;
         }
+
+        double fps = cv::getTickFrequency() / (cv::getTickCount() - start);
+        std::cout << "FPS : " << fps << std::endl;
 
         d_fgimg.setTo(Scalar::all(0));
         d_frame.copyTo(d_fgimg, d_fgmask);
