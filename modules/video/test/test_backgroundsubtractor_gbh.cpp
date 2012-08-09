@@ -115,43 +115,43 @@ void CV_BackgroundSubtractorTest::run(int)
         {
             rng.fill(simImage,RNG::UNIFORM,(unsigned char)(minuc/2+maxuc/2),maxuc);
             if (i == 0)
-                fgbg->initializeType(simImage,minuc,maxuc);
+                fgbg->initialize(simImage.size(),minuc,maxuc);
         }
         else if (type == CV_8S)
         {
             rng.fill(simImage,RNG::UNIFORM,(char)(minc/2+maxc/2),maxc);
             if (i==0)
-                fgbg->initializeType(simImage,minc,maxc);
+                fgbg->initialize(simImage.size(),minc,maxc);
         }
         else if (type == CV_16U)
         {
             rng.fill(simImage,RNG::UNIFORM,(unsigned int)(minui/2+maxui/2),maxui);
             if (i==0)
-                fgbg->initializeType(simImage,minui,maxui);
+                fgbg->initialize(simImage.size(),minui,maxui);
         }
         else if (type == CV_16S)
         {
             rng.fill(simImage,RNG::UNIFORM,(int)(mini/2+maxi/2),maxi);
             if (i==0)
-                fgbg->initializeType(simImage,mini,maxi);
+                fgbg->initialize(simImage.size(),mini,maxi);
         }
         else if (type == CV_32F)
         {
             rng.fill(simImage,RNG::UNIFORM,(float)(minf/2.0+maxf/2.0),maxf);
             if (i==0)
-                fgbg->initializeType(simImage,minf,maxf);
+                fgbg->initialize(simImage.size(),minf,maxf);
         }
         else if (type == CV_32S)
         {
             rng.fill(simImage,RNG::UNIFORM,(long int)(minli/2+maxli/2),maxli);
             if (i==0)
-                fgbg->initializeType(simImage,minli,maxli);
+                fgbg->initialize(simImage.size(),minli,maxli);
         }
         else if (type == CV_64F)
         {
             rng.fill(simImage,RNG::UNIFORM,(double)(mind/2.0+maxd/2.0),maxd);
             if (i==0)
-                fgbg->initializeType(simImage,mind,maxd);
+                fgbg->initialize(simImage.size(),mind,maxd);
         }
 
         /**
@@ -159,7 +159,6 @@ void CV_BackgroundSubtractorTest::run(int)
          */
         (*fgbg)(simImage,fgmask);
         Mat fullbg = Mat::zeros(simImage.rows, simImage.cols, CV_8U);
-        fgbg->updateBackgroundModel(fullbg);
 
         //! fgmask should be entirely background during training
         code = cvtest::cmpEps2( ts, fgmask, fullbg, 0, false, "The training foreground mask" );

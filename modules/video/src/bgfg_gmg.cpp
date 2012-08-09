@@ -48,12 +48,7 @@
 
 #include "precomp.hpp"
 
-using namespace std;
-
-namespace cv
-{
-
-BackgroundSubtractorGMG::BackgroundSubtractorGMG()
+cv::BackgroundSubtractorGMG::BackgroundSubtractorGMG()
 {
     /*
      * Default Parameter Values. Override with algorithm "set" method.
@@ -65,391 +60,293 @@ BackgroundSubtractorGMG::BackgroundSubtractorGMG()
     backgroundPrior = 0.8;
     decisionThreshold = 0.8;
     smoothingRadius = 7;
+    updateBackgroundModel = true;
 }
 
-void BackgroundSubtractorGMG::initializeType(InputArray _image, double min, double max)
+cv::BackgroundSubtractorGMG::~BackgroundSubtractorGMG()
 {
-    minVal = min;
-    maxVal = max;
-
-    if (minVal == maxVal)
-    {
-        CV_Error_(CV_StsBadArg,("minVal and maxVal cannot be the same."));
-    }
-
-    /*
-     * Parameter validation
-     */
-    if (maxFeatures <= 0)
-    {
-        CV_Error_(CV_StsBadArg,
-                ("maxFeatures parameter must be 1 or greater. Instead, it is %d.",maxFeatures));
-    }
-    if (learningRate < 0.0 || learningRate > 1.0)
-    {
-        CV_Error_(CV_StsBadArg,
-                ("learningRate parameter must be in the range [0.0,1.0]. Instead, it is %f.",
-                learningRate));
-    }
-    if (numInitializationFrames < 1)
-    {
-        CV_Error_(CV_StsBadArg,
-                ("numInitializationFrames must be at least 1. Instead, it is %d.",
-                        numInitializationFrames));
-    }
-    if (quantizationLevels < 1)
-    {
-        CV_Error_(CV_StsBadArg,
-                ("quantizationLevels must be at least 1 (preferably more). Instead it is %d.",
-                        quantizationLevels));
-    }
-    if (backgroundPrior < 0.0 || backgroundPrior > 1.0)
-    {
-        CV_Error_(CV_StsBadArg,
-                ("backgroundPrior must be a probability, between 0.0 and 1.0. Instead it is %f.",
-                        backgroundPrior));
-    }
-
-    /*
-     * Detect and accommodate the image depth
-     */
-    Mat image = _image.getMat();
-    numChannels = image.channels();
-
-    /*
-     * Color quantization [0 | | | | max] --> [0 | | max]
-     *  (0) Use double as intermediary to convert all types to int.
-     *  (i) Shift min to 0,
-     *  (ii) max/(num intervals) = factor.  x/factor * factor = quantized result, after integer operation.
-     */
-
-    /*
-     * Data Structure Initialization
-     */
-    imWidth = image.cols;
-    imHeight = image.rows;
-    numPixels = image.total();
-    pixels.resize(numPixels);
-    frameNum = 0;
-
-    // used to iterate through matrix of type unknown at compile time
-    //elemSize = image.elemSize();
-    //elemSize1 = image.elemSize1();
-
-    vector<PixelModelGMG>::iterator pixel;
-    vector<PixelModelGMG>::iterator pixel_end = pixels.end();
-    for (pixel = pixels.begin(); pixel != pixel_end; ++pixel)
-    {
-        pixel->setMaxFeatures(maxFeatures);
-    }
-
-    fgMaskImage = Mat::zeros(imHeight, imWidth, CV_8UC1);  // 8-bit unsigned mask. 255 for FG, 0 for BG
-    posteriorImage = Mat::zeros(imHeight, imWidth, CV_32FC1);  // float for storing probabilities. Can be viewed directly with imshow.
-    isDataInitialized = true;
 }
 
-void BackgroundSubtractorGMG::operator()(InputArray _image, OutputArray _fgmask, double newLearningRate)
+void cv::BackgroundSubtractorGMG::initialize(cv::Size frameSize, double min, double max)
 {
-    if (!isDataInitialized)
+    CV_Assert(min < max);
+    CV_Assert(maxFeatures > 0);
+    CV_Assert(learningRate >= 0.0 && learningRate <= 1.0);
+    CV_Assert(numInitializationFrames >= 1);
+    CV_Assert(quantizationLevels >= 1 && quantizationLevels <= 255);
+    CV_Assert(backgroundPrior >= 0.0 && backgroundPrior <= 1.0);
+
+    minVal_ = min;
+    maxVal_ = max;
+
+    frameSize_ = frameSize;
+    frameNum_ = 0;
+
+    nfeatures_.create(frameSize_);
+    colors_.create(frameSize_.area(), maxFeatures);
+    weights_.create(frameSize_.area(), maxFeatures);
+
+    nfeatures_.setTo(cv::Scalar::all(0));
+}
+
+namespace
+{
+    float findFeature(int color, const int* colors, const float* weights, int nfeatures)
     {
-        CV_Error(CV_StsError,"BackgroundSubstractorGMG has not been initialized. Call initialize() first.\n");
+        for (int i = 0; i < nfeatures; ++i)
+        {
+            if (color == colors[i])
+                return weights[i];
+        }
+
+        // not in histogram, so return 0.
+        return 0.0f;
     }
 
-    /*
-     * Update learning rate parameter, if desired
-     */
+    void normalizeHistogram(float* weights, int nfeatures)
+    {
+        float total = 0.0f;
+        for (int i = 0; i < nfeatures; ++i)
+            total += weights[i];
+
+        if (total != 0.0f)
+        {
+            for (int i = 0; i < nfeatures; ++i)
+                weights[i] /= total;
+        }
+    }
+
+    bool insertFeature(int color, float weight, int* colors, float* weights, int& nfeatures, int maxFeatures)
+    {
+        int idx = -1;
+        for (int i = 0; i < nfeatures; ++i)
+        {
+            if (color == colors[i])
+            {
+                // feature in histogram
+                weight += weights[i];
+                idx = i;
+                break;
+            }
+        }
+
+        if (idx >= 0)
+        {
+            // move feature to beginning of list
+
+            ::memmove(colors + 1, colors, idx * sizeof(int));
+            ::memmove(weights + 1, weights, idx * sizeof(float));
+
+            colors[0] = color;
+            weights[0] = weight;
+        }
+        else if (nfeatures == maxFeatures)
+        {
+            // discard oldest feature
+
+            ::memmove(colors + 1, colors, (nfeatures - 1) * sizeof(int));
+            ::memmove(weights + 1, weights, (nfeatures - 1) * sizeof(float));
+
+            colors[0] = color;
+            weights[0] = weight;
+        }
+        else
+        {
+            colors[nfeatures] = color;
+            weights[nfeatures] = weight;
+
+            ++nfeatures;
+
+            return true;
+        }
+
+        return false;
+    }
+}
+
+namespace
+{
+    template <int cn> struct Quantization_
+    {
+        template <typename T>
+        static inline int apply(T val, double minVal, double maxVal, int quantizationLevels)
+        {
+            int res = 0;
+            res |= static_cast<int>((val[0] - minVal) * quantizationLevels / (maxVal - minVal));
+            res |= static_cast<int>((val[1] - minVal) * quantizationLevels / (maxVal - minVal)) << 8;
+            res |= static_cast<int>((val[2] - minVal) * quantizationLevels / (maxVal - minVal)) << 16;
+            return res;
+        }
+    };
+    template <> struct Quantization_<1>
+    {
+        template <typename T>
+        static inline int apply(T val, double minVal, double maxVal, int quantizationLevels)
+        {
+            return static_cast<int>((val - minVal) * quantizationLevels / (maxVal - minVal));
+        }
+    };
+    template <typename T> struct Quantization
+    {
+        static int apply(const void* src_, int x, double minVal, double maxVal, int quantizationLevels)
+        {
+            const T* src = static_cast<const T*>(src_);
+            return Quantization_<cv::DataType<T>::channels>::apply(src[x], minVal, maxVal, quantizationLevels);
+        }
+    };
+
+    class GMG_LoopBody : public cv::ParallelLoopBody
+    {
+    public:
+        GMG_LoopBody(const cv::Mat& frame, const cv::Mat& fgmask, const cv::Mat_<int>& nfeatures, const cv::Mat_<int>& colors, const cv::Mat_<float>& weights,
+                     int maxFeatures, double learningRate, int numInitializationFrames, int quantizationLevels, double backgroundPrior, double decisionThreshold,
+                     double maxVal, double minVal, int frameNum, bool updateBackgroundModel) :
+            frame_(frame), fgmask_(fgmask), nfeatures_(nfeatures), colors_(colors), weights_(weights),
+            maxFeatures_(maxFeatures), learningRate_(learningRate), numInitializationFrames_(numInitializationFrames),
+            quantizationLevels_(quantizationLevels), backgroundPrior_(backgroundPrior), decisionThreshold_(decisionThreshold),
+            maxVal_(maxVal), minVal_(minVal), frameNum_(frameNum), updateBackgroundModel_(updateBackgroundModel)
+        {
+        }
+
+        void operator() (const cv::Range& range) const;
+
+    private:
+        const cv::Mat frame_;
+
+        mutable cv::Mat_<uchar> fgmask_;
+
+        mutable cv::Mat_<int> nfeatures_;
+        mutable cv::Mat_<int> colors_;
+        mutable cv::Mat_<float> weights_;
+
+        int     maxFeatures_;
+        double  learningRate_;
+        int     numInitializationFrames_;
+        int     quantizationLevels_;
+        double  backgroundPrior_;
+        double  decisionThreshold_;
+        bool updateBackgroundModel_;
+
+        double maxVal_;
+        double minVal_;
+        int frameNum_;
+    };
+
+    void GMG_LoopBody::operator() (const cv::Range& range) const
+    {
+        typedef int (*func_t)(const void* src_, int x, double minVal, double maxVal, int quantizationLevels);
+        static const func_t funcs[6][4] =
+        {
+            {Quantization<uchar>::apply, 0, Quantization<cv::Vec3b>::apply, Quantization<cv::Vec4b>::apply},
+            {0,0,0,0},
+            {Quantization<ushort>::apply, 0, Quantization<cv::Vec3w>::apply, Quantization<cv::Vec4w>::apply},
+            {0,0,0,0},
+            {0,0,0,0},
+            {Quantization<float>::apply, 0, Quantization<cv::Vec3f>::apply, Quantization<cv::Vec4f>::apply},
+        };
+
+        const func_t func = funcs[frame_.depth()][frame_.channels() - 1];
+        CV_Assert(func != 0);
+
+        for (int y = range.start, featureIdx = y * frame_.cols; y < range.end; ++y)
+        {
+            const uchar* frame_row = frame_.ptr(y);
+            int* nfeatures_row = nfeatures_[y];
+            uchar* fgmask_row = fgmask_[y];
+
+            for (int x = 0; x < frame_.cols; ++x, ++featureIdx)
+            {
+                int nfeatures = nfeatures_row[x];
+                int* colors = colors_[featureIdx];
+                float* weights = weights_[featureIdx];
+
+                int newFeatureColor = func(frame_row, x, minVal_, maxVal_, quantizationLevels_);
+
+                bool isForeground = false;
+
+                if (frameNum_ >= numInitializationFrames_)
+                {
+                    // typical operation
+
+                    const double weight = findFeature(newFeatureColor, colors, weights, nfeatures);
+
+                    // see Godbehere, Matsukawa, Goldberg (2012) for reasoning behind this implementation of Bayes rule
+                    const double posterior = (weight * backgroundPrior_) / (weight * backgroundPrior_ + (1.0 - weight) * (1.0 - backgroundPrior_));
+
+                    isForeground = ((1.0 - posterior) > decisionThreshold_);
+
+                    // update histogram.
+
+                    if (updateBackgroundModel_)
+                    {
+                        for (int i = 0; i < nfeatures; ++i)
+                            weights[i] *= 1.0f - learningRate_;
+
+                        bool inserted = insertFeature(newFeatureColor, learningRate_, colors, weights, nfeatures, maxFeatures_);
+
+                        if (inserted)
+                        {
+                            normalizeHistogram(weights, nfeatures);
+                            nfeatures_row[x] = nfeatures;
+                        }
+                    }
+                }
+                else if (updateBackgroundModel_)
+                {
+                    // training-mode update
+
+                    insertFeature(newFeatureColor, 1.0f, colors, weights, nfeatures, maxFeatures_);
+
+                    if (frameNum_ == numInitializationFrames_ - 1)
+                        normalizeHistogram(weights, nfeatures);
+                }
+
+                fgmask_row[x] = (uchar)(-isForeground);
+            }
+        }
+    }
+}
+
+void cv::BackgroundSubtractorGMG::operator ()(InputArray _frame, OutputArray _fgmask, double newLearningRate)
+{
+    cv::Mat frame = _frame.getMat();
+
+    CV_Assert(frame.depth() == CV_8U || frame.depth() == CV_16U || frame.depth() == CV_32F);
+    CV_Assert(frame.channels() == 1 || frame.channels() == 3 || frame.channels() == 4);
+
     if (newLearningRate != -1.0)
     {
-        if (newLearningRate < 0.0 || newLearningRate > 1.0)
-        {
-            CV_Error(CV_StsOutOfRange,"Learning rate for Operator () must be between 0.0 and 1.0.\n");
-        }
-        this->learningRate = newLearningRate;
+        CV_Assert(newLearningRate >= 0.0 && newLearningRate <= 1.0);
+        learningRate = newLearningRate;
     }
 
-    Mat image = _image.getMat();
+    if (frame.size() != frameSize_)
+        initialize(frame.size(), 0.0, frame.depth() == CV_8U ? 255.0 : frame.depth() == CV_16U ? std::numeric_limits<ushort>::max() : 1.0);
 
-    _fgmask.create(imHeight,imWidth,CV_8U);
-    fgMaskImage = _fgmask.getMat();  // 8-bit unsigned mask. 255 for FG, 0 for BG
+    _fgmask.create(frameSize_, CV_8UC1);
+    cv::Mat fgmask = _fgmask.getMat();
 
-    /*
-     * Iterate over pixels in image
-     */
-    // grab data at each pixel (1,2,3 channels, int, float, etc.)
-    // grab data as an array of bytes. Then, send that array to a function that reads data into vector of appropriate types... and quantizing... before saving as a feature, which is a vector of flexitypes, so code can be portable.
-    // multiple channels do have sequential storage, use mat::elemSize() and mat::elemSize1()
-    vector<PixelModelGMG>::iterator pixel;
-    vector<PixelModelGMG>::iterator pixel_end = pixels.end();
-    size_t i;
-    //#pragma omp parallel
-    for (i = 0, pixel=pixels.begin(); pixel != pixel_end; ++i,++pixel)
+    GMG_LoopBody body(frame, fgmask, nfeatures_, colors_, weights_,
+                      maxFeatures, learningRate, numInitializationFrames, quantizationLevels, backgroundPrior, decisionThreshold,
+                      maxVal_, minVal_, frameNum_, updateBackgroundModel);
+    cv::parallel_for_(cv::Range(0, frame.rows), body);
+
+    if (smoothingRadius > 0)
     {
-        HistogramFeatureGMG newFeature;
-        newFeature.color.clear();
-        int irow = int(i / imWidth);
-        int icol = i % imWidth;
-        for (size_t c = 0; c < numChannels; ++c)
-        {
-            /*
-             * Perform quantization. in each channel. (color-min)*(levels)/(max-min).
-             * Shifts min to 0 and scales, finally casting to an int.
-             */
-            double color;
-            switch(image.depth())
-            {
-                case CV_8U: color = image.ptr<uchar>(irow)[icol * numChannels + c]; break;
-                case CV_8S: color = image.ptr<schar>(irow)[icol * numChannels + c]; break;
-                case CV_16U: color = image.ptr<ushort>(irow)[icol * numChannels + c]; break;
-                case CV_16S: color = image.ptr<short>(irow)[icol * numChannels + c]; break;
-                case CV_32S: color = image.ptr<int>(irow)[icol * numChannels + c]; break;
-                case CV_32F: color = image.ptr<float>(irow)[icol * numChannels + c]; break;
-                case CV_64F: color = image.ptr<double>(irow)[icol * numChannels + c]; break;
-                default: color = 0; break;
-            }
-            size_t quantizedColor = (size_t)((color-minVal)*quantizationLevels/(maxVal-minVal));
-            newFeature.color.push_back(quantizedColor);
-        }
-        // now that the feature is ready for use, put it in the histogram
-
-        if (frameNum > numInitializationFrames)  // typical operation
-        {
-            newFeature.likelihood = float(learningRate);
-            /*
-             * (1) Query histogram to find posterior probability of feature under model.
-             */
-            float likelihood = (float)pixel->getLikelihood(newFeature);
-
-            // see Godbehere, Matsukawa, Goldberg (2012) for reasoning behind this implementation of Bayes rule
-            float posterior = float((likelihood*backgroundPrior)/(likelihood*backgroundPrior+(1-likelihood)*(1-backgroundPrior)));
-
-            /*
-             * (2) feed posterior probability into the posterior image
-             */
-            int row,col;
-            col = i%imWidth;
-            row = int(i-col)/imWidth;
-            posteriorImage.at<float>(row,col) = (1.0f-posterior);
-        }
-        pixel->setLastObservedFeature(newFeature);
-    }
-    /*
-     * (3) Perform filtering and threshold operations to yield final mask image.
-     *
-     * 2 options. First is morphological open/close as before. Second is "median filtering" which Jon Barron says is good to remove noise
-     */
-    Mat thresholdedPosterior;
-    threshold(posteriorImage,thresholdedPosterior,decisionThreshold,1.0,THRESH_BINARY);
-    thresholdedPosterior.convertTo(fgMaskImage,CV_8U,255);  // convert image to integer space for further filtering and mask creation
-    medianBlur(fgMaskImage,fgMaskImage,smoothingRadius);
-
-    fgMaskImage.copyTo(_fgmask);
-
-    ++frameNum;  // keep track of how many frames we have processed
-}
-
-void BackgroundSubtractorGMG::getPosteriorImage(OutputArray _img)
-{
-    _img.create(Size(imWidth,imHeight),CV_32F);
-    Mat img = _img.getMat();
-    posteriorImage.copyTo(img);
-}
-
-void BackgroundSubtractorGMG::updateBackgroundModel(InputArray _mask)
-{
-    CV_Assert(_mask.size() == Size(imWidth,imHeight));  // mask should be same size as image
-
-    Mat maskImg = _mask.getMat();
-//#pragma omp parallel
-    for (int i = 0; i < imHeight; ++i)
-    {
-//#pragma omp parallel
-        for (int j = 0; j < imWidth; ++j)
-        {
-            if (frameNum <= numInitializationFrames + 1)
-            {
-                // insert previously observed feature into the histogram. -1.0 parameter indicates training.
-                pixels[i*imWidth+j].insertFeature(-1.0);
-                if (frameNum >= numInitializationFrames+1)  // training is done, normalize
-                {
-                    pixels[i*imWidth+j].normalizeHistogram();
-                }
-            }
-            // if mask is 0, pixel is identified as a background pixel, so update histogram.
-            else if (maskImg.at<uchar>(i,j) == 0)
-            {
-                pixels[i*imWidth+j].insertFeature(learningRate); // updates the histogram for the next iteration.
-            }
-        }
-    }
-}
-
-BackgroundSubtractorGMG::~BackgroundSubtractorGMG()
-{
-
-}
-
-BackgroundSubtractorGMG::PixelModelGMG::PixelModelGMG()
-{
-    numFeatures = 0;
-    maxFeatures = 0;
-}
-
-BackgroundSubtractorGMG::PixelModelGMG::~PixelModelGMG()
-{
-
-}
-
-void BackgroundSubtractorGMG::PixelModelGMG::setLastObservedFeature(HistogramFeatureGMG f)
-{
-    this->lastObservedFeature = f;
-}
-
-double BackgroundSubtractorGMG::PixelModelGMG::getLikelihood(BackgroundSubtractorGMG::HistogramFeatureGMG f)
-{
-    std::list<HistogramFeatureGMG>::iterator feature = histogram.begin();
-    std::list<HistogramFeatureGMG>::iterator feature_end = histogram.end();
-
-    for (feature = histogram.begin(); feature != feature_end; ++feature)
-    {
-        // comparing only feature color, not likelihood. See equality operator for HistogramFeatureGMG
-        if (f == *feature)
-        {
-            return feature->likelihood;
-        }
+        cv::medianBlur(fgmask, buf_, smoothingRadius);
+        cv::swap(fgmask, buf_);
     }
 
-    return 0.0; // not in histogram, so return 0.
+    // keep track of how many frames we have processed
+    ++frameNum_;
 }
 
-void BackgroundSubtractorGMG::PixelModelGMG::insertFeature(double learningRate)
+void cv::BackgroundSubtractorGMG::release()
 {
+    frameSize_ = cv::Size();
 
-    std::list<HistogramFeatureGMG>::iterator feature;
-    std::list<HistogramFeatureGMG>::iterator swap_end;
-    std::list<HistogramFeatureGMG>::iterator last_feature = histogram.end();
-    /*
-     * If feature is in histogram already, add the weights, and move feature to front.
-     * If there are too many features, remove the end feature and push new feature to beginning
-     */
-    if (learningRate == -1.0) // then, this is a training-mode update.
-    {
-        /*
-         * (1) Check if feature already represented in histogram
-         */
-        lastObservedFeature.likelihood = 1.0;
-
-        for (feature = histogram.begin(); feature != last_feature; ++feature)
-        {
-            if (lastObservedFeature == *feature)  // feature in histogram
-            {
-                feature->likelihood += lastObservedFeature.likelihood;
-                // now, move feature to beginning of list and break the loop
-                HistogramFeatureGMG tomove = *feature;
-                histogram.erase(feature);
-                histogram.push_front(tomove);
-                return;
-            }
-        }
-        if (numFeatures == maxFeatures)
-        {
-            histogram.pop_back(); // discard oldest feature
-            histogram.push_front(lastObservedFeature);
-        }
-        else
-        {
-            histogram.push_front(lastObservedFeature);
-            ++numFeatures;
-        }
-    }
-    else
-    {
-        /*
-         * (1) Scale entire histogram by scaling factor
-         * (2) Scale input feature.
-         * (3) Check if feature already represented. If so, simply add.
-         * (4) If feature is not represented, remove old feature, distribute weight evenly among existing features, add in new feature.
-         */
-        *this *= float(1.0-learningRate);
-        lastObservedFeature.likelihood = float(learningRate);
-
-        for (feature = histogram.begin(); feature != last_feature; ++feature)
-        {
-            if (lastObservedFeature == *feature)  // feature in histogram
-            {
-                lastObservedFeature.likelihood += feature->likelihood;
-                histogram.erase(feature);
-                histogram.push_front(lastObservedFeature);
-                return;  // done with the update.
-            }
-        }
-        if (numFeatures == maxFeatures)
-        {
-            histogram.pop_back(); // discard oldest feature
-            histogram.push_front(lastObservedFeature);
-            normalizeHistogram();
-        }
-        else
-        {
-            histogram.push_front(lastObservedFeature);
-            ++numFeatures;
-        }
-    }
+    nfeatures_.release();
+    colors_.release();
+    weights_.release();
+    buf_.release();
 }
-
-BackgroundSubtractorGMG::PixelModelGMG& BackgroundSubtractorGMG::PixelModelGMG::operator *=(const float &rhs)
-{
-    /*
-     * Used to scale histogram by a constant factor
-     */
-    list<HistogramFeatureGMG>::iterator feature;
-    list<HistogramFeatureGMG>::iterator last_feature = histogram.end();
-    for (feature = histogram.begin(); feature != last_feature; ++feature)
-    {
-        feature->likelihood *= rhs;
-    }
-    return *this;
-}
-
-void BackgroundSubtractorGMG::PixelModelGMG::normalizeHistogram()
-{
-    /*
-     * First, calculate the total weight in the histogram
-     */
-    list<HistogramFeatureGMG>::iterator feature;
-    list<HistogramFeatureGMG>::iterator last_feature = histogram.end();
-    double total = 0.0;
-    for (feature = histogram.begin(); feature != last_feature; ++feature)
-    {
-        total += feature->likelihood;
-    }
-
-    /*
-     * Then, if weight is not 0, divide every feature by the total likelihood to re-normalize.
-     */
-    for (feature = histogram.begin(); feature != last_feature; ++feature)
-    {
-        if (total != 0.0)
-            feature->likelihood = float(feature->likelihood / total);
-    }
-}
-
-bool BackgroundSubtractorGMG::HistogramFeatureGMG::operator ==(HistogramFeatureGMG &rhs)
-{
-    CV_Assert(color.size() == rhs.color.size());
-
-    std::vector<size_t>::iterator color_a;
-    std::vector<size_t>::iterator color_b;
-    std::vector<size_t>::iterator color_a_end = this->color.end();
-    for (color_a = color.begin(), color_b = rhs.color.begin(); color_a != color_a_end; ++color_a, ++color_b)
-    {
-        if (*color_a != *color_b)
-        {
-            return false;
-        }
-    }
-    return true;
-}
-
-
-}
-
