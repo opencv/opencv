@@ -58,7 +58,8 @@ namespace cv { namespace gpu { namespace device {
                            float decisionThreshold, int maxFeatures, int numInitializationFrames);
 
         template <typename SrcT>
-        void update_gpu(DevMem2Db frame, PtrStepb fgmask, DevMem2Di colors, PtrStepf weights, PtrStepi nfeatures, int frameNum,  float learningRate, cudaStream_t stream);
+        void update_gpu(DevMem2Db frame, PtrStepb fgmask, DevMem2Di colors, PtrStepf weights, PtrStepi nfeatures,
+                        int frameNum,  float learningRate, bool updateBackgroundModel, cudaStream_t stream);
     }
 }}}
 
@@ -71,6 +72,7 @@ cv::gpu::GMG_GPU::GMG_GPU()
     backgroundPrior = 0.8f;
     decisionThreshold = 0.8f;
     smoothingRadius = 7;
+    updateBackgroundModel = true;
 }
 
 void cv::gpu::GMG_GPU::initialize(cv::Size frameSize, float min, float max)
@@ -108,7 +110,7 @@ void cv::gpu::GMG_GPU::operator ()(const cv::gpu::GpuMat& frame, cv::gpu::GpuMat
     using namespace cv::gpu::device::bgfg_gmg;
 
     typedef void (*func_t)(DevMem2Db frame, PtrStepb fgmask, DevMem2Di colors, PtrStepf weights, PtrStepi nfeatures,
-                           int frameNum, float learningRate, cudaStream_t stream);
+                           int frameNum, float learningRate, bool updateBackgroundModel, cudaStream_t stream);
     static const func_t funcs[6][4] =
     {
         {update_gpu<uchar>, 0, update_gpu<uchar3>, update_gpu<uchar4>},
@@ -137,7 +139,7 @@ void cv::gpu::GMG_GPU::operator ()(const cv::gpu::GpuMat& frame, cv::gpu::GpuMat
     else
         fgmask.setTo(cv::Scalar::all(0));
 
-    funcs[frame.depth()][frame.channels() - 1](frame, fgmask, colors_, weights_, nfeatures_, frameNum_, learningRate, cv::gpu::StreamAccessor::getStream(stream));
+    funcs[frame.depth()][frame.channels() - 1](frame, fgmask, colors_, weights_, nfeatures_, frameNum_, learningRate, updateBackgroundModel, cv::gpu::StreamAccessor::getStream(stream));
 
     // medianBlur
     if (smoothingRadius > 0)

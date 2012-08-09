@@ -2156,7 +2156,7 @@ public:
      */
     void operator ()(const GpuMat& frame, GpuMat& fgmask, float learningRate = -1.0f, Stream& stream = Stream::Null());
 
-    //! releases all inner buffers
+    //! Releases all inner buffers
     void release();
 
     //! Total number of distinct colors to maintain in histogram.
@@ -2174,11 +2174,14 @@ public:
     //! Prior probability that any given pixel is a background pixel. A sensitivity parameter.
     float backgroundPrior;
 
-    //! value above which pixel is determined to be FG.
+    //! Value above which pixel is determined to be FG.
     float decisionThreshold;
 
-    //! smoothing radius, in pixels, for cleaning up FG image.
+    //! Smoothing radius, in pixels, for cleaning up FG image.
     int smoothingRadius;
+
+    //! Perform background model update.
+    bool updateBackgroundModel;
 
 private:
     float maxVal_, minVal_;
