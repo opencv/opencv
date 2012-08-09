@@ -63,13 +63,13 @@ private:
     cv::BackgroundSubtractorMOG2 mog2_cpu;
     cv::gpu::MOG2_GPU mog2_gpu;
 
-    cv::gpu::VIBE_GPU vibe_gpu;
-
     cv::gpu::FGDStatModel fgd_gpu;
     cv::Ptr<CvBGStatModel> fgd_cpu;
 
     cv::gpu::GMG_GPU gmg_gpu;
     cv::BackgroundSubtractorGMG gmg_cpu;
+
+    cv::gpu::VIBE_GPU vibe_gpu;
 };
 
 App::App()
@@ -80,6 +80,8 @@ App::App()
 
     gmg_gpu.numInitializationFrames = 40;
     gmg_cpu.numInitializationFrames = 40;
+
+    vibe_gpu.subsamplingFactor = 2;
 }
 
 void App::process()
