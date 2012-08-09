@@ -60,6 +60,7 @@ cv::BackgroundSubtractorGMG::BackgroundSubtractorGMG()
     backgroundPrior = 0.8;
     decisionThreshold = 0.8;
     smoothingRadius = 7;
+    updateBackgroundModel = true;
 }
 
 cv::BackgroundSubtractorGMG::~BackgroundSubtractorGMG()
@@ -199,11 +200,11 @@ namespace
     public:
         GMG_LoopBody(const cv::Mat& frame, const cv::Mat& fgmask, const cv::Mat_<int>& nfeatures, const cv::Mat_<int>& colors, const cv::Mat_<float>& weights,
                      int maxFeatures, double learningRate, int numInitializationFrames, int quantizationLevels, double backgroundPrior, double decisionThreshold,
-                     double maxVal, double minVal, int frameNum) :
+                     double maxVal, double minVal, int frameNum, bool updateBackgroundModel) :
             frame_(frame), fgmask_(fgmask), nfeatures_(nfeatures), colors_(colors), weights_(weights),
             maxFeatures_(maxFeatures), learningRate_(learningRate), numInitializationFrames_(numInitializationFrames),
             quantizationLevels_(quantizationLevels), backgroundPrior_(backgroundPrior), decisionThreshold_(decisionThreshold),
-            maxVal_(maxVal), minVal_(minVal), frameNum_(frameNum)
+            maxVal_(maxVal), minVal_(minVal), frameNum_(frameNum), updateBackgroundModel_(updateBackgroundModel)
         {
         }
 
@@ -224,6 +225,7 @@ namespace
         int     quantizationLevels_;
         double  backgroundPrior_;
         double  decisionThreshold_;
+        bool updateBackgroundModel_;
 
         double maxVal_;
         double minVal_;
@@ -275,18 +277,21 @@ namespace
 
                     // update histogram.
 
-                    for (int i = 0; i < nfeatures; ++i)
-                        weights[i] *= 1.0f - learningRate_;
-
-                    bool inserted = insertFeature(newFeatureColor, learningRate_, colors, weights, nfeatures, maxFeatures_);
-
-                    if (inserted)
+                    if (updateBackgroundModel_)
                     {
-                        normalizeHistogram(weights, nfeatures);
-                        nfeatures_row[x] = nfeatures;
+                        for (int i = 0; i < nfeatures; ++i)
+                            weights[i] *= 1.0f - learningRate_;
+
+                        bool inserted = insertFeature(newFeatureColor, learningRate_, colors, weights, nfeatures, maxFeatures_);
+
+                        if (inserted)
+                        {
+                            normalizeHistogram(weights, nfeatures);
+                            nfeatures_row[x] = nfeatures;
+                        }
                     }
                 }
-                else
+                else if (updateBackgroundModel_)
                 {
                     // training-mode update
 
@@ -323,12 +328,25 @@ void cv::BackgroundSubtractorGMG::operator ()(InputArray _frame, OutputArray _fg
 
     GMG_LoopBody body(frame, fgmask, nfeatures_, colors_, weights_,
                       maxFeatures, learningRate, numInitializationFrames, quantizationLevels, backgroundPrior, decisionThreshold,
-                      maxVal_, minVal_, frameNum_);
+                      maxVal_, minVal_, frameNum_, updateBackgroundModel);
     cv::parallel_for_(cv::Range(0, frame.rows), body);
 
-    cv::medianBlur(fgmask, buf_, smoothingRadius);
-    cv::swap(fgmask, buf_);
+    if (smoothingRadius > 0)
+    {
+        cv::medianBlur(fgmask, buf_, smoothingRadius);
+        cv::swap(fgmask, buf_);
+    }
 
     // keep track of how many frames we have processed
     ++frameNum_;
+}
+
+void cv::BackgroundSubtractorGMG::release()
+{
+    frameSize_ = cv::Size();
+
+    nfeatures_.release();
+    colors_.release();
+    weights_.release();
+    buf_.release();
 }

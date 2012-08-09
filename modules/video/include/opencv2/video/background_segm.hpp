@@ -221,6 +221,11 @@ public:
      */
     virtual void operator()(InputArray image, OutputArray fgmask, double learningRate=-1.0);
 
+    /**
+     * Releases all inner buffers.
+     */
+    void release();
+
     //! Total number of distinct colors to maintain in histogram.
     int     maxFeatures;
     //! Set between 0.0 and 1.0, determines how quickly features are "forgotten" from histograms.
@@ -231,10 +236,12 @@ public:
     int     quantizationLevels;
     //! Prior probability that any given pixel is a background pixel. A sensitivity parameter.
     double  backgroundPrior;
-    //! value above which pixel is determined to be FG.
+    //! Value above which pixel is determined to be FG.
     double  decisionThreshold;
-    //! smoothing radius, in pixels, for cleaning up FG image.
+    //! Smoothing radius, in pixels, for cleaning up FG image.
     int     smoothingRadius;
+    //! Perform background model update
+    bool updateBackgroundModel;
 
 private:
     double maxVal_;
