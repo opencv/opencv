@@ -7,28 +7,38 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/gpu/gpu.hpp>
 #include <opencv2/video/video.hpp>
+#include <opencv2/legacy/legacy.hpp>
 
 #include "utility_lib/utility_lib.h"
 
 enum Method
 {
-    MOG_CPU,
-    MOG_GPU,
-    MOG2_CPU,
-    MOG2_GPU,
-    VIBE_GPU,
-    FGD_STAT_GPU
+    MOG,
+    MOG2,
+    FGD,
+    GMG,
+    VIBE,
+    METHOD_MAX
 };
 
 const char* method_str[] =
 {
-    "MOG CPU",
-    "MOG CUDA",
-    "MOG2 CPU",
-    "MOG2 CUDA",
-    "VIBE CUDA",
-    "FGD STAT CUDA"
+    "MOG",
+    "MOG2",
+    "FGD",
+    "GMG",
+    "VIBE"
 };
+
+namespace cv
+{
+    template <>
+    void cv::Ptr<CvBGStatModel>::delete_obj()
+    {
+        cvReleaseBGStatModel(&obj);
+        obj = 0;
+    }
+}
 
 class App : public BaseApp
 {
@@ -41,9 +51,11 @@ protected:
     bool processKey(int key);
 
 private:
-    void displayState(cv::Mat& frame, double fps);
+    void displayState(cv::Mat& outImg, double proc_fps, double total_fps);
 
     Method method;
+    bool useGpu;
+    bool reinitialize;
 
     cv::BackgroundSubtractorMOG mog_cpu;
     cv::gpu::MOG_GPU mog_gpu;
@@ -53,12 +65,21 @@ private:
 
     cv::gpu::VIBE_GPU vibe_gpu;
 
-    cv::gpu::FGDStatModel fgd_stat_gpu;
+    cv::gpu::FGDStatModel fgd_gpu;
+    cv::Ptr<CvBGStatModel> fgd_cpu;
+
+    cv::gpu::GMG_GPU gmg_gpu;
+    cv::BackgroundSubtractorGMG gmg_cpu;
 };
 
 App::App()
 {
-    method = MOG_CPU;
+    method = MOG;
+    useGpu = true;
+    reinitialize = true;
+
+    gmg_gpu.numInitializationFrames = 40;
+    gmg_cpu.numInitializationFrames = 40;
 }
 
 void App::process()
@@ -70,139 +91,161 @@ void App::process()
         sources[0] = new VideoSource("data/pedestrian_detect/mitsubishi.avi");
     }
 
+    cv::Mat frame3;
     cv::Mat frame;
     cv::gpu::GpuMat d_frame;
+    IplImage ipl_frame;
 
-    cv::Mat dst;
     cv::Mat fgmask;
-    cv::Mat fgimg;
-
     cv::gpu::GpuMat d_fgmask;
 
-    sources[0]->next(frame);
-    d_frame.upload(frame);
-
-    mog_cpu(frame, fgmask, 0.01);
-    mog_gpu(d_frame, d_fgmask, 0.01);
-
-    mog2_cpu(frame, fgmask);
-    mog2_gpu(d_frame, d_fgmask);
-
-    vibe_gpu.initialize(d_frame);
-
-    fgd_stat_gpu.create(d_frame);
+    cv::Mat outImg;
 
     while (!exited)
     {
-        sources[0]->next(frame);
+        int64 total_time = cv::getTickCount();
 
-        int64 upload_time = 0;
-        int64 proc_time = 0;
+        sources[0]->next(frame3);
+        cv::cvtColor(frame3, frame, cv::COLOR_BGR2BGRA);
+        d_frame.upload(frame);
+        ipl_frame = frame3;
 
-        // Upload
-        {
-            int64 upload_start = cv::getTickCount();
+        int64 proc_time = cv::getTickCount();
 
-            d_frame.upload(frame);
-
-            if (method == MOG_GPU || method == MOG2_GPU || method == VIBE_GPU || method == FGD_STAT_GPU)
-                upload_time = cv::getTickCount() - upload_start;
-        }
-
-        // MOG_CPU
-        {
-            int64 proc_start = cv::getTickCount();
-
-            mog_cpu(frame, dst, 0.01);
-
-            if (method == MOG_CPU)
+        switch (method) {
+        case MOG:
             {
-                proc_time = cv::getTickCount() - proc_start;
-                dst.copyTo(fgmask);
+                if (useGpu)
+                {
+                    if (reinitialize)
+                    {
+                        mog_gpu.initialize(d_frame.size(), d_frame.type());
+                        reinitialize = false;
+                    }
+
+                    mog_gpu(d_frame, d_fgmask, 0.01);
+                }
+                else
+                {
+                    if (reinitialize)
+                    {
+                        mog_cpu.initialize(frame3.size(), frame3.type());
+                        reinitialize = false;
+                    }
+
+                    mog_cpu(frame3, fgmask, 0.01);
+                }
+                break;
+            }
+        case MOG2:
+            {
+                if (useGpu)
+                {
+                    if (reinitialize)
+                    {
+                        mog2_gpu.initialize(d_frame.size(), d_frame.type());
+                        reinitialize = false;
+                    }
+
+                    mog2_gpu(d_frame, d_fgmask);
+                }
+                else
+                {
+                    if (reinitialize)
+                    {
+                        mog2_cpu.initialize(frame3.size(), frame3.type());
+                        reinitialize = false;
+                    }
+
+                    mog2_cpu(frame3, fgmask);
+                }
+                break;
+            }
+        case GMG:
+            {
+                if (useGpu)
+                {
+                    if (reinitialize)
+                    {
+                        gmg_gpu.initialize(d_frame.size());
+                        reinitialize = false;
+                    }
+
+                    gmg_gpu(d_frame, d_fgmask);
+                }
+                else
+                {
+                    if (reinitialize)
+                    {
+                        gmg_cpu.initialize(frame3.size(), 0, 255);
+                        reinitialize = false;
+                    }
+
+                    gmg_cpu(frame3, fgmask);
+                }
+                break;
+            }
+        case FGD:
+            {
+                if (useGpu)
+                {
+                    if (reinitialize)
+                    {
+                        fgd_gpu.create(d_frame);
+                        reinitialize = false;
+                    }
+
+                    fgd_gpu.update(d_frame);
+                    d_fgmask = fgd_gpu.foreground;
+                }
+                else
+                {
+                    if (reinitialize)
+                    {
+                        fgd_cpu = cvCreateFGDStatModel(&ipl_frame);
+                        reinitialize = false;
+                    }
+
+                    cvUpdateBGStatModel(&ipl_frame, fgd_cpu);
+                    fgmask = fgd_cpu->foreground;
+                }
+                break;
+            }
+        case VIBE:
+            {
+                if (useGpu)
+                {
+                    if (reinitialize)
+                    {
+                        vibe_gpu.initialize(d_frame);
+                        reinitialize = false;
+                    }
+
+                    vibe_gpu(d_frame, d_fgmask);
+                }
+                break;
             }
         }
 
-        // MOG_GPU
-        {
-            int64 proc_start = cv::getTickCount();
+        double proc_fps = cv::getTickFrequency() / (cv::getTickCount() - proc_time);
 
-            mog_gpu(d_frame, d_fgmask, 0.01);
+        if (useGpu)
+            d_fgmask.download(fgmask);
 
-            if (method == MOG_GPU)
-            {
-                d_fgmask.download(fgmask);
-                proc_time = cv::getTickCount() - proc_start;
-            }
-        }
+        frame.copyTo(outImg);
+        cv::add(outImg, cv::Scalar(100, 100, 0), outImg, fgmask);
 
-        // MOG2_CPU
-        {
-            int64 proc_start = cv::getTickCount();
+        double total_fps = cv::getTickFrequency() / (cv::getTickCount() - total_time);
 
-            mog2_cpu(frame, dst);
+        displayState(outImg, proc_fps, total_fps);
 
-            if (method == MOG2_CPU)
-            {
-                proc_time = cv::getTickCount() - proc_start;
-                dst.copyTo(fgmask);
-            }
-        }
+        cv::imshow("Background Subtraction Demo", outImg);
 
-        // MOG2_GPU
-        {
-            int64 proc_start = cv::getTickCount();
-
-            mog2_gpu(d_frame, d_fgmask);
-
-            if (method == MOG2_GPU)
-            {
-                d_fgmask.download(fgmask);
-                proc_time = cv::getTickCount() - proc_start;
-            }
-        }
-
-        // VIBE_GPU
-        {
-            int64 proc_start = cv::getTickCount();
-
-            vibe_gpu(d_frame, d_fgmask);
-
-            if (method == VIBE_GPU)
-            {
-                d_fgmask.download(fgmask);
-                proc_time = cv::getTickCount() - proc_start;
-            }
-        }
-
-        // FGD_STAT_GPU
-        {
-            int64 proc_start = cv::getTickCount();
-
-            fgd_stat_gpu.update(d_frame);
-
-            if (method == FGD_STAT_GPU)
-            {
-                fgd_stat_gpu.foreground.download(fgmask);
-                proc_time = cv::getTickCount() - proc_start;
-            }
-        }
-
-        double fps = cv::getTickFrequency() / proc_time;
-
-        fgimg.setTo(0);
-        frame.copyTo(fgimg, fgmask);
-
-        displayState(fgimg, fps);
-
-        cv::imshow("Source Frame", frame);
-        cv::imshow("Foreground Mask", fgmask);
-        cv::imshow("Foreground Image", fgimg);
-
-        processKey(cv::waitKey(3) & 0xff);
+        processKey(cv::waitKey(10) & 0xff);
     }
 }
 
-void App::displayState(cv::Mat& frame, double fps)
+void App::displayState(cv::Mat& frame, double proc_fps, double total_fps)
 {
     const cv::Scalar fontColorRed = CV_RGB(255, 0, 0);
 
@@ -212,13 +255,17 @@ void App::displayState(cv::Mat& frame, double fps)
     txt.str(""); txt << "Source size: " << frame.cols << 'x' << frame.rows;
     printText(frame, txt.str(), i++);
 
-    txt.str(""); txt << "Method: " << method_str[method];
+    txt.str(""); txt << "Method: " << method_str[method] << (useGpu ? " CUDA" : " CPU");
     printText(frame, txt.str(), i++);
 
-    txt.str(""); txt << "FPS: " << std::fixed << std::setprecision(1) << fps;
+    txt.str(""); txt << "Process FPS: " << std::fixed << std::setprecision(1) << proc_fps;
     printText(frame, txt.str(), i++);
 
-    printText(frame, "Space - switch method", i++, fontColorRed);
+    txt.str(""); txt << "Total FPS: " << std::fixed << std::setprecision(1) << total_fps;
+    printText(frame, txt.str(), i++);
+
+    printText(frame, "M - switch method", i++, fontColorRed);
+    printText(frame, "Space - switch CUDA/CPU mode", i++, fontColorRed);
 }
 
 void App::printHelp()
@@ -234,29 +281,21 @@ bool App::processKey(int key)
 
     switch (toupper(key))
     {
-    case 32:
-        switch (method)
-        {
-        case MOG_CPU:
-            method = MOG_GPU;
-            break;
-        case MOG_GPU:
-            method = MOG2_CPU;
-            break;
-        case MOG2_CPU:
-            method = MOG2_GPU;
-            break;
-        case MOG2_GPU:
-            method = VIBE_GPU;
-            break;
-        case VIBE_GPU:
-            method = FGD_STAT_GPU;
-            break;
-        case FGD_STAT_GPU:
-            method = MOG_CPU;
-            break;
-        }
+    case 'M':
+        method = static_cast<Method>((method + 1) % METHOD_MAX);
+        if (method == VIBE)
+            useGpu = true;
+        reinitialize = true;
+        std::cout << "Switch method to " << method_str[method] << std::endl;
         break;
+
+    case 32:
+        if (method != VIBE)
+        {
+            useGpu = !useGpu;
+            reinitialize = true;
+            std::cout << "Switch mode to " << (useGpu ? " CUDA" : " CPU") << std::endl;
+        }
 
     default:
         return false;
