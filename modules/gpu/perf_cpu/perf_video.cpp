@@ -329,6 +329,76 @@ INSTANTIATE_TEST_CASE_P(Video, MOG2_getBackgroundImage, testing::Combine(
     testing::Values(/*Channels(1),*/ Channels(3)/*, Channels(4)*/)));
 
 //////////////////////////////////////////////////////
+// GMG
+
+IMPLEMENT_PARAM_CLASS(MaxFeatures, int)
+
+GPU_PERF_TEST(GMG, cv::gpu::DeviceInfo, std::string, Channels, MaxFeatures)
+{
+    std::string inputFile = perf::TestBase::getDataPath(std::string("gpu/video/") + GET_PARAM(1));
+    int cn = GET_PARAM(2);
+    int maxFeatures = GET_PARAM(3);
+
+    cv::VideoCapture cap(inputFile);
+    ASSERT_TRUE(cap.isOpened());
+
+    cv::Mat frame;
+    cap >> frame;
+    ASSERT_FALSE(frame.empty());
+
+    if (cn != 3)
+    {
+        cv::Mat temp;
+        if (cn == 1)
+            cv::cvtColor(frame, temp, cv::COLOR_BGR2GRAY);
+        else
+            cv::cvtColor(frame, temp, cv::COLOR_BGR2BGRA);
+        cv::swap(temp, frame);
+    }
+
+    cv::Mat fgmask;
+    cv::Mat zeros(frame.size(), CV_8UC1, cv::Scalar::all(0));
+
+    cv::BackgroundSubtractorGMG gmg;
+    gmg.set("maxFeatures", maxFeatures);
+    gmg.initializeType(frame, 0.0, 255.0);
+
+    gmg(frame, fgmask);
+    gmg.updateBackgroundModel(zeros);
+
+    for (int i = 0; i < 150; ++i)
+    {
+        cap >> frame;
+        if (frame.empty())
+        {
+            cap.open(inputFile);
+            cap >> frame;
+        }
+
+        if (cn != 3)
+        {
+            cv::Mat temp;
+            if (cn == 1)
+                cv::cvtColor(frame, temp, cv::COLOR_BGR2GRAY);
+            else
+                cv::cvtColor(frame, temp, cv::COLOR_BGR2BGRA);
+            cv::swap(temp, frame);
+        }
+
+        startTimer(); next();
+        gmg(frame, fgmask);
+        gmg.updateBackgroundModel(zeros);
+        stopTimer();
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(Video, GMG, testing::Combine(
+    ALL_DEVICES,
+    testing::Values(std::string("768x576.avi"), std::string("1920x1080.avi")),
+    testing::Values(Channels(1), Channels(3), Channels(4)),
+    testing::Values(MaxFeatures(20), MaxFeatures(40), MaxFeatures(60))));
+
+//////////////////////////////////////////////////////
 // VideoWriter
 
 #ifdef WIN32
