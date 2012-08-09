@@ -181,32 +181,18 @@ namespace cv { namespace gpu { namespace device {
 
             int nfeatures = nfeatures_(y, x);
 
-            bool isForeground = false;
-
-            if (frameNum > c_numInitializationFrames)
+            if (frameNum >= c_numInitializationFrames)
             {
                 // typical operation
+
                 const float weight = findFeature(newFeatureColor, colors_, weights_, x, y, nfeatures);
 
                 // see Godbehere, Matsukawa, Goldberg (2012) for reasoning behind this implementation of Bayes rule
                 const float posterior = (weight * c_backgroundPrior) / (weight * c_backgroundPrior + (1.0f - weight) * (1.0f - c_backgroundPrior));
 
-                isForeground = ((1.0f - posterior) > c_decisionThreshold);
-            }
+                const bool isForeground = ((1.0f - posterior) > c_decisionThreshold);
+                fgmask(y, x) = (uchar)(-isForeground);
 
-            fgmask(y, x) = (uchar)(-isForeground);
-
-            if (frameNum <= c_numInitializationFrames + 1)
-            {
-                // training-mode update
-
-                insertFeature(newFeatureColor, 1.0f, colors_, weights_, x, y, nfeatures);
-
-                if (frameNum == c_numInitializationFrames + 1)
-                    normalizeHistogram(weights_, x, y, nfeatures);
-            }
-            else
-            {
                 // update histogram.
 
                 for (int i = 0, fy = y; i < nfeatures; ++i, fy += c_height)
@@ -219,6 +205,15 @@ namespace cv { namespace gpu { namespace device {
                     normalizeHistogram(weights_, x, y, nfeatures);
                     nfeatures_(y, x) = nfeatures;
                 }
+            }
+            else
+            {
+                // training-mode update
+
+                insertFeature(newFeatureColor, 1.0f, colors_, weights_, x, y, nfeatures);
+
+                if (frameNum == c_numInitializationFrames - 1)
+                    normalizeHistogram(weights_, x, y, nfeatures);
             }
         }
 
