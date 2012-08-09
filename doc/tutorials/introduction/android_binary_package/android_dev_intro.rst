@@ -9,7 +9,7 @@ This guide was designed to help you in learning Android development basics and q
 
 This guide was written with Windows 7 in mind, though it works with Linux (Ubuntu), Mac OS X and any other OS supported by Android SDK.
 
-If you encounter any error after thoroughly following these steps, feel free to contact us via `OpenCV4Android <https://groups.google.com/group/android-opencv/>`_ discussion group or OpenCV `Q&A forum <http://answers.opencv.org>`_ . We'll do our best to help you out.
+If you encounter any error after thoroughly following these steps, feel free to contact us via `OpenCV4Android <https://groups.google.com/group/android-opencv/>`_ discussion group or OpenCV `Q&A forum <http://answers.opencv.org>`_. We'll do our best to help you out.
 
 Android application structure
 =============================
@@ -112,7 +112,7 @@ If you are a beginner in Android development then we also recommend you to start
 
 .. _Android_Environment_Setup_Lite:
 
-Manual environment setup for Android Development
+Manual environment setup for Android development
 ================================================
 
 Development in Java
