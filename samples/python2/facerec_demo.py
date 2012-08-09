@@ -131,7 +131,6 @@ if __name__ == "__main__":
     # Now let's get some data:
     mean = model.getMat("mean")
     eigenvectors = model.getMat("eigenvectors")
-    cv2.imwrite("test.png", X[0])
     # We'll save the mean, by first normalizing it:
     mean_norm = normalize(mean, 0, 255, dtype=np.uint8)
     mean_resized = mean_norm.reshape(X[0].shape)
