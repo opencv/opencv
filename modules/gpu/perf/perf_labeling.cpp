@@ -50,7 +50,7 @@ GPU_PERF_TEST(ConnectedComponents, cv::gpu::DeviceInfo, cv::Size)
 
     cv::Mat image = readImage("gpu/labeling/aloe-disp.png", cv::IMREAD_GRAYSCALE);
 
-    cv::threshold(image, image, 150, 255, CV_THRESH_BINARY);
+    // cv::threshold(image, image, 150, 255, CV_THRESH_BINARY);
 
     cv::gpu::GpuMat mask;
     mask.create(image.rows, image.cols, CV_8UC1);

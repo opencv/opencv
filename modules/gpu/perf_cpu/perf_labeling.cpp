@@ -78,6 +78,7 @@ namespace {
 
         void operator() (cv::Mat labels) const
         {
+            labels.setTo(cv::Scalar::all(-1));
             InInterval inInt(0, 2);
             int cc = -1;
 
