@@ -16,7 +16,7 @@ using namespace cv::gpu;
 class App : public BaseApp
 {
 public:
-    App() : use_gpu(true),
+    App() : use_gpu(true), 
             stitcher_cpu(Stitcher::createDefault(false)),
             stitcher_gpu(Stitcher::createDefault(true)) {}
 
@@ -33,7 +33,7 @@ private:
 
 void App::process()
 {
-    if (sources.empty())
+    if (sources.empty()) 
     {
         cout << "Loading default images...\n";
         sources.resize(2);
@@ -41,8 +41,8 @@ void App::process()
         sources[1] = new ImageSource("data/stitching/t100mB.JPG");
     }
 
-    stitcher_cpu.setFeaturesMatcher(new cv::detail::BestOf2NearestMatcher(false, 0.5));
-    stitcher_gpu.setFeaturesMatcher(new cv::detail::BestOf2NearestMatcher(true, 0.5));
+    stitcher_cpu.setFeaturesMatcher(new detail::BestOf2NearestMatcher(false, 0.5));
+    stitcher_gpu.setFeaturesMatcher(new detail::BestOf2NearestMatcher(true, 0.5));
 
     cout << "\nControls:\n"
          << "  space - chanege CPU/GPU mode\n\n";

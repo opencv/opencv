@@ -31,21 +31,9 @@ public:
 
     void next(cv::Mat& frame);
 
-protected:
+private:
     cv::VideoCapture vc_;
     std::string path_;
-};
-
-class ImagesVideoSource : public VideoSource
-{
-public:
-    explicit ImagesVideoSource(const std::string& path) : VideoSource(path), looped(false), prev(0.0){}
-
-    void next(cv::Mat& frame);
-
-private:
-    bool looped;
-    double prev;
 };
 
 class CameraSource : public FrameSource
@@ -73,12 +61,12 @@ public:
 
 void makeGray(const cv::Mat& src, cv::Mat& dst);
 
-void printText(cv::Mat& img, const std::string& msg, int lineOffsY, cv::Scalar fontColor = CV_RGB(118, 185, 0), double fontScale = 0.8);
+void printText(cv::Mat& img, const std::string& msg, int lineOffsY, cv::Scalar fontColor = CV_RGB(118, 185, 0));
 
 class BaseApp
 {
 public:
-    BaseApp() : exited(false), frame_width(-1), frame_height(-1), device_(0) {}
+    BaseApp() : exited(false), frame_width(-1), frame_height(-1) {}
 
     void run(int argc, const char* argv[]);
 
@@ -94,12 +82,9 @@ protected:
     int frame_width;
     int frame_height;
 
-    virtual bool parseFrameSourcesCmdArgs(int& i, int argc, const char* argv[]);
 private:
     bool parseHelpCmdArg(int& i, int argc, const char* argv[]);
-    bool parseGpuDeviceCmdArgs(int& i, int argc, const char* argv[]);
-
-    int device_;
+    bool parseFrameSourcesCmdArgs(int& i, int argc, const char* argv[]);
 };
 
 #define RUN_APP(App) \
@@ -112,7 +97,7 @@ private:
         } \
         catch (const std::exception &e) \
         { \
-            std::cout << "Error: " << e.what() << std::endl; \
+            std::cout << "Error: " << e.what() << endl; \
             return -1; \
         } \
         return 0; \

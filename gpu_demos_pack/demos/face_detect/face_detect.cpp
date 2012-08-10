@@ -1,7 +1,13 @@
+// WARNING: this sample is under construction! Use it on your own risk.
+#if defined _MSC_VER && _MSC_VER >= 1400
+#pragma warning(disable : 4100)
+#endif
+
 #include <iostream>
 #include <iomanip>
 #include <stdexcept>
 
+#include <opencv2/contrib/contrib.hpp>
 #include <opencv2/objdetect/objdetect.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -13,27 +19,11 @@ using namespace std;
 using namespace cv;
 using namespace cv::gpu;
 
-template<class T> void resizeAndConvert(const T& src, T& resized, T& gray, double scale)
-{
-    Size sz(cvRound(src.cols * scale), cvRound(src.rows * scale));
-
-    if (scale != 1)
-        resize(src, resized, sz);
-    else
-        resized = src;
-
-    if (resized.channels() == 3)
-        cvtColor(resized, gray, COLOR_BGR2GRAY);
-    else if (resized.channels() == 4)
-        cvtColor(resized, gray, COLOR_BGRA2GRAY);
-    else
-        gray = resized;
-}
-
 class App : public BaseApp
 {
 public:
-    App();
+    App() : useGPU(true), scaleFactor(1.), findLargestObject(false), 
+            filterRects(true), helpScreen(false) {}
 
 protected:
     void process();
@@ -42,8 +32,6 @@ protected:
     void printHelp();
 
 private:
-    void displayState(cv::Mat& frame, double proc_fps, double total_fps);
-
     string cascade_name;
     CascadeClassifier_GPU cascade_gpu;
     CascadeClassifier cascade_cpu;
@@ -53,16 +41,52 @@ private:
     double scaleFactor;
     bool findLargestObject;
     bool filterRects;
-    bool showHelp;
+    bool helpScreen;
 };
 
-App::App()
+template<class T> void convertAndResize(const T& src, T& gray, T& resized, double scale)
 {
-    useGPU = true;
-    scaleFactor = 1.4;
-    findLargestObject = false;
-    filterRects = true;
-    showHelp = false;
+    if (src.channels() == 3)
+        cvtColor(src, gray, COLOR_BGR2GRAY);
+    else if (src.channels() == 4)
+        cvtColor(src, gray, COLOR_BGRA2GRAY);
+    else
+        gray = src;
+
+    Size sz(cvRound(gray.cols * scale), cvRound(gray.rows * scale));
+
+    if (scale != 1)
+        resize(gray, resized, sz);
+    else
+        resized = gray;
+}
+
+void displayState(Mat& canvas, bool bHelp, bool bGpu, bool bLargestFace, bool bFilter, double fps)
+{
+    Scalar fontColorRed = CV_RGB(255, 0, 0);
+    Scalar fontColorNV  = CV_RGB(118, 185, 0);
+
+    ostringstream ss;
+    ss << "FPS = " << setprecision(1) << fixed << fps;
+    printText(canvas, ss.str(), 0, fontColorRed);
+
+    ss.str("");
+    ss << "[" << canvas.cols << "x" << canvas.rows << "], " <<
+        (bGpu ? "GPU, " : "CPU, ") <<
+        (bLargestFace ? "OneFace, " : "MultiFace, ") <<
+        (bFilter ? "Filter:ON" : "Filter:OFF");
+    printText(canvas, ss.str(), 1, fontColorRed);
+
+    if (!bHelp)
+        printText(canvas, "H - toggle hotkeys help", 2, fontColorNV);
+    else
+    {
+        printText(canvas, "Space - switch GPU / CPU", 2, fontColorNV);
+        printText(canvas, "M - switch OneFace / MultiFace", 3, fontColorNV);
+        printText(canvas, "F - toggle rectangles Filter", 4, fontColorNV);
+        printText(canvas, "H - toggle hotkeys help", 5, fontColorNV);
+        printText(canvas, "1/Q - increase/decrease scale", 6, fontColorNV);
+    }
 }
 
 void App::process()
@@ -87,113 +111,66 @@ void App::process()
         sources[0] = new VideoSource("data/face_detect/browser.flv");
     }
 
-    cout << "\nControls:\n"
-         << "\tESC - exit\n"
-         << "\tSpace - change mode GPU <-> CPU\n"
-         << "\t1/Q - increase/decrease scale\n"
-         << "\tM - switch OneFace / MultiFace\n"
-         << "\tF - toggle rectangles filter\n"
-         << endl;
+    Mat frame, frame_cpu, gray_cpu, resized_cpu, faces_downloaded, frameDisp;
+    vector<Rect> facesBuf_cpu;
 
-    Mat frame, frame_cpu, gray_cpu, resized_cpu, img_to_show;
     GpuMat frame_gpu, gray_gpu, resized_gpu, facesBuf_gpu;
 
-    vector<Rect> faces;
+    int detections_num;
 
     while (!exited)
     {
-        int64 start = getTickCount();
-
         sources[0]->next(frame_cpu);
+        frame_gpu.upload(frame_cpu);
 
-        double proc_fps;
+        convertAndResize(frame_gpu, gray_gpu, resized_gpu, scaleFactor);
+        convertAndResize(frame_cpu, gray_cpu, resized_cpu, scaleFactor);
+
+        TickMeter tm;
+        tm.start();
+
         if (useGPU)
         {
-            frame_gpu.upload(frame_cpu);
-            resizeAndConvert(frame_gpu, resized_gpu, gray_gpu, scaleFactor);
-
-            cascade_gpu.visualizeInPlace = false;
+            cascade_gpu.visualizeInPlace = true;
             cascade_gpu.findLargestObject = findLargestObject;
 
-            int64 proc_start = getTickCount();
-
-            int detections_num = cascade_gpu.detectMultiScale(gray_gpu, facesBuf_gpu, 1.2,
+            detections_num = cascade_gpu.detectMultiScale(resized_gpu, facesBuf_gpu, 1.2,
                                                           (filterRects || findLargestObject) ? 4 : 0);
-
-            if (detections_num == 0)
-                faces.clear();
-            else
-            {
-                faces.resize(detections_num);
-                cv::Mat facesMat(1, detections_num, DataType<Rect>::type, &faces[0]);
-                facesBuf_gpu.colRange(0, detections_num).download(facesMat);
-            }
-
-            proc_fps = getTickFrequency() / (getTickCount() - proc_start);
+            facesBuf_gpu.colRange(0, detections_num).download(faces_downloaded);
         }
         else
         {
-            resizeAndConvert(frame_cpu, resized_cpu, gray_cpu, scaleFactor);
-
             Size minSize = cascade_gpu.getClassifierSize();
-
-            int64 proc_start = getTickCount();
-
-            cascade_cpu.detectMultiScale(gray_cpu, faces, 1.2,
+            cascade_cpu.detectMultiScale(resized_cpu, facesBuf_cpu, 1.2,
                                          (filterRects || findLargestObject) ? 4 : 0,
                                          (findLargestObject ? CV_HAAR_FIND_BIGGEST_OBJECT : 0)
                                             | CV_HAAR_SCALE_IMAGE,
                                          minSize);
+            detections_num = (int)facesBuf_cpu.size();
+        }
 
-            proc_fps = getTickFrequency() / (getTickCount() - proc_start);
+        if (!useGPU && detections_num)
+        {
+            for (int i = 0; i < detections_num; ++i)
+            {
+                rectangle(resized_cpu, facesBuf_cpu[i], Scalar(255));
+            }
         }
 
         if (useGPU)
-            resized_gpu.download(img_to_show);
-        else
-            img_to_show = resized_cpu;
+        {
+            resized_gpu.download(resized_cpu);
+        }
 
-        for (size_t i = 0; i < faces.size(); i++)
-            rectangle(img_to_show, faces[i], CV_RGB(0, 255, 0), 3);
+        tm.stop();
+        double detectionTime = tm.getTimeSec();
+        double fps = 1.0 / detectionTime;
 
-        double total_fps = getTickFrequency() / (getTickCount() - start);
+        cvtColor(resized_cpu, frameDisp, CV_GRAY2BGR);
+        displayState(frameDisp, helpScreen, useGPU, findLargestObject, filterRects, fps);
+        imshow("face_detect_demo", frameDisp);
 
-        displayState(img_to_show, proc_fps, total_fps);
-
-        imshow("face_detect_demo", img_to_show);
-
-        processKey(waitKey(3) & 0xff);
-    }
-}
-
-void App::displayState(Mat& frame, double proc_fps, double total_fps)
-{
-    const Scalar fontColorRed = CV_RGB(255, 0, 0);
-
-    int i = 0;
-
-    ostringstream txt;
-    txt.str(""); txt << "Source size: " << frame.cols << 'x' << frame.rows;
-    printText(frame, txt.str(), i++);
-
-    printText(frame, useGPU ? "Mode: CUDA" : "Mode: CPU", i++);
-
-    txt.str(""); txt << "FPS (FD only): " << fixed << setprecision(1) << proc_fps;
-    printText(frame, txt.str(), i++);
-
-    txt.str(""); txt << "FPS (total): " << fixed << setprecision(1) << total_fps;
-    printText(frame, txt.str(), i++);
-
-    if (!showHelp)
-    {
-        printText(frame, "H - toggle hotkeys help", i++, fontColorRed);
-    }
-    else
-    {
-        printText(frame, "Space - switch GPU / CPU", i++, fontColorRed);
-        printText(frame, "1/Q - increase/decrease scale", i++, fontColorRed);
-        printText(frame, "M - switch OneFace / MultiFace", i++, fontColorRed);
-        printText(frame, "F - toggle rectangles filter", i++, fontColorRed);
+        processKey(waitKey(3));
     }
 }
 
@@ -223,37 +200,26 @@ bool App::processKey(int key)
     {
     case 32 /*space*/:
         useGPU = !useGPU;
-        cout << "Switched to " << (useGPU ? "CUDA" : "CPU") << " mode\n";
-        break;
-
-    case 'H':
-        showHelp = !showHelp;
-        break;
-
-    case '1':
-        scaleFactor *= 1.05;
-        cout << "Scale: " << scaleFactor << endl;
-        break;
-
-    case 'Q':
-        scaleFactor /= 1.05;
-        cout << "Scale: " << scaleFactor << endl;
         break;
 
     case 'M':
         findLargestObject = !findLargestObject;
-        if (findLargestObject)
-            cout << "OneFace mode" << endl;
-        else
-            cout << "MultiFace mode" << endl;
         break;
 
     case 'F':
         filterRects = !filterRects;
-        if (filterRects)
-            cout << "Enable rectangles filter" << endl;
-        else
-            cout << "Disable rectangles filter" << endl;
+        break;
+
+    case '1':
+        scaleFactor *= 1.05;
+        break;
+
+    case 'Q':
+        scaleFactor /= 1.05;
+        break;
+
+    case 'H':
+        helpScreen = !helpScreen;
         break;
 
     default:

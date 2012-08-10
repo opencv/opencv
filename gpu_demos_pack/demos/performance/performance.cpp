@@ -63,7 +63,7 @@ void TestSystem::finishCurrentSubtest()
     double cpu_time = cpu_elapsed_ / getTickFrequency() * 1000.0;
     double gpu_time = gpu_elapsed_ / getTickFrequency() * 1000.0;
 
-    double speedup = static_cast<double>(cpu_elapsed_) / std::max(1.0, gpu_elapsed_);
+    double speedup = static_cast<double>(cpu_elapsed_) / std::max((int64)1, gpu_elapsed_);
     speedup_total_ += speedup;
 
     printMetrics(cpu_time, gpu_time, speedup);
@@ -155,21 +155,12 @@ int CV_CDECL cvErrorCallback(int /*status*/, const char* /*func_name*/,
 
 int main(int argc, const char* argv[])
 {
-    int num_devices = getCudaEnabledDeviceCount();
-    if (num_devices == 0)
-    {
-        cerr << "No GPU found or the library was compiled without GPU support";
-        return -1;
-    }
-
     redirectError(cvErrorCallback);
 
     const char* keys =
        "{ h | help    | false | print help message }"
        "{ f | filter  |       | filter for test }"
-       "{ l | list    | false | show all tests }"
-       "{ d | device  | 0     | device id }"
-       "{ i | iters   | 5     | iteration count }";
+       "{ l | list    | false | show all tests }";
 
     CommandLineParser cmd(argc, argv, keys);
 
@@ -181,29 +172,8 @@ int main(int argc, const char* argv[])
         return 0;
     }
 
-    int device = cmd.get<int>("device");
-    if (device < 0 || device >= num_devices)
-    {
-        cerr << "Invalid device ID" << endl;
-        return -1;
-    }
-    DeviceInfo dev_info(device);
-    if (!dev_info.isCompatible())
-    {
-        cerr << "GPU module isn't built for GPU #" << device << " " << dev_info.name() << ", CC " << dev_info.majorVersion() << '.' << dev_info.minorVersion() << endl;
-        return -1;
-    }
-
-    cout << "Initializing device..." << endl;
-    setDevice(device);
-    GpuMat m(10, 10, CV_8U);
-    m.release();
-
-    printShortCudaDeviceInfo(device);
-
     string filter = cmd.get<string>("filter");
     bool list = cmd.get<bool>("list");
-    int iters = cmd.get<int>("iters");
 
     if (!filter.empty())
         TestSystem::instance().setTestFilter(filter);
@@ -212,7 +182,7 @@ int main(int argc, const char* argv[])
         TestSystem::instance().setListMode(true);
 
     TestSystem::instance().setWorkingDir("data/");
-    TestSystem::instance().setNumIters(iters);
+    TestSystem::instance().setNumIters(2);
     TestSystem::instance().run();
 
     cout << "\nPress ENTER to exit...\n";

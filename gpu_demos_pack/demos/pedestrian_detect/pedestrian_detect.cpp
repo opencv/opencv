@@ -2,6 +2,7 @@
 #include <iomanip>
 #include <stdexcept>
 
+#include <opencv2/contrib/contrib.hpp>
 #include <opencv2/objdetect/objdetect.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -25,9 +26,12 @@ protected:
     void printHelp();
 
 private:
-    void displayState(cv::Mat& frame, double proc_fps, double total_fps);
+    bool write_video;
+    string dst_video;
+    double dst_video_fps;
 
     bool make_gray;
+
     bool resize_src;
 
     double scale;
@@ -43,13 +47,15 @@ private:
     bool gamma_corr;
 
     bool use_gpu;
-
-    bool showHelp;
 };
 
 App::App()
 {
+    write_video = false;
+    dst_video_fps = 24.;
+
     make_gray = false;
+
     resize_src = false;
 
     scale = 1.05;
@@ -65,8 +71,6 @@ App::App()
     gamma_corr = false;
 
     use_gpu = true;
-
-    showHelp = false;
 }
 
 void App::process()
@@ -80,12 +84,12 @@ void App::process()
 
     cout << "\nControls:\n"
          << "\tESC - exit\n"
-         << "\tSpace - change mode GPU <-> CPU\n"
-         << "\t1/Q - increase/decrease HOG scale\n"
-         << "\t2/W - increase/decrease levels count\n"
-         << "\t3/E - increase/decrease HOG group threshold\n"
-         << "\t4/R - increase/decrease hit threshold\n"
-         << "\tG - switch gray / color\n"
+         << "\tspace - change mode GPU <-> CPU\n"
+         << "\tg - convert image to gray or not\n"
+         << "\t1/q - increase/decrease HOG scale\n"
+         << "\t2/w - increase/decrease levels count\n"
+         << "\t3/e - increase/decrease HOG group threshold\n"
+         << "\t4/r - increase/decrease hit threshold\n"
          << endl;
 
     if (hit_threshold_auto)
@@ -113,15 +117,15 @@ void App::process()
 
     // Create HOG descriptors and detectors here
     vector<float> detector;
-    if (win_size == Size(64, 128))
+    if (win_size == Size(64, 128)) 
         detector = cv::gpu::HOGDescriptor::getPeopleDetector64x128();
     else
         detector = cv::gpu::HOGDescriptor::getPeopleDetector48x96();
 
-    cv::gpu::HOGDescriptor gpu_hog(win_size, Size(16, 16), Size(8, 8), Size(8, 8), 9,
-                                   cv::gpu::HOGDescriptor::DEFAULT_WIN_SIGMA, 0.2, gamma_corr,
+    cv::gpu::HOGDescriptor gpu_hog(win_size, Size(16, 16), Size(8, 8), Size(8, 8), 9, 
+                                   cv::gpu::HOGDescriptor::DEFAULT_WIN_SIGMA, 0.2, gamma_corr, 
                                    cv::gpu::HOGDescriptor::DEFAULT_NLEVELS);
-    cv::HOGDescriptor cpu_hog(win_size, Size(16, 16), Size(8, 8), Size(8, 8), 9, 1, -1,
+    cv::HOGDescriptor cpu_hog(win_size, Size(16, 16), Size(8, 8), Size(8, 8), 9, 1, -1, 
                               cv::HOGDescriptor::L2Hys, 0.2, gamma_corr, cv::HOGDescriptor::DEFAULT_NLEVELS);
     gpu_hog.setSVMDetector(detector);
     cpu_hog.setSVMDetector(detector);
@@ -129,6 +133,8 @@ void App::process()
     Mat frame;
     Mat img_aux, img, img_to_show;
     gpu::GpuMat gpu_img;
+
+    double total_fps = 0;
 
     // Iterate over all frames
     while (!exited)
@@ -138,26 +144,15 @@ void App::process()
         sources[0]->next(frame);
 
         // Change format of the image
-        if (make_gray)
-            cvtColor(frame, img_aux, CV_BGR2GRAY);
-        else if (use_gpu)
-            cvtColor(frame, img_aux, CV_BGR2BGRA);
-        else
-            frame.copyTo(img_aux);
+        if (make_gray) cvtColor(frame, img_aux, CV_BGR2GRAY);
+        else if (use_gpu) cvtColor(frame, img_aux, CV_BGR2BGRA);
+        else frame.copyTo(img_aux);
 
         // Resize image
-        if (resize_src)
+        if (resize_src) 
             resize(img_aux, img, Size(frame_width, frame_height));
-        else
-            img = img_aux;
-
-        // Display image
-        if (make_gray)
-            cvtColor(img, img_to_show, CV_GRAY2BGR);
-        else if (use_gpu)
-            cvtColor(img, img_to_show, CV_BGRA2BGR);
-        else
-            img_to_show = img;
+        else img = img_aux;
+        img_to_show = img;
 
         gpu_hog.nlevels = nlevels;
         cpu_hog.nlevels = nlevels;
@@ -169,58 +164,34 @@ void App::process()
         if (use_gpu)
         {
             gpu_img.upload(img);
-            gpu_hog.detectMultiScale(gpu_img, found, hit_threshold, win_stride, Size(0, 0), scale, gr_threshold);
+            gpu_hog.detectMultiScale(gpu_img, found, hit_threshold, win_stride, 
+                                     Size(0, 0), scale, gr_threshold);
         }
-        else
-        {
-            cpu_hog.detectMultiScale(img, found, hit_threshold, win_stride, Size(0, 0), scale, gr_threshold);
-        }
+        else cpu_hog.detectMultiScale(img, found, hit_threshold, win_stride, 
+                                      Size(0, 0), scale, gr_threshold);
         double proc_fps = getTickFrequency() / (getTickCount() - proc_start);
 
         // Draw positive classified windows
         for (size_t i = 0; i < found.size(); i++)
-            rectangle(img_to_show, found[i], CV_RGB(0, 255, 0), 3);
+        {
+            Rect r = found[i];
+            rectangle(img_to_show, r.tl(), r.br(), CV_RGB(0, 255, 0), 3);
+        }
 
-        double total_fps = getTickFrequency() / (getTickCount() - start);
+        printText(img_to_show, use_gpu ? "Mode: GPU" : "Mode: CPU", 0);
 
-        displayState(img_to_show, proc_fps, total_fps);
+        ostringstream txt;
+        txt << "FPS (HOG only): " << proc_fps;
+        printText(img_to_show, txt.str(), 1);
+
+        txt.str(""); txt << "FPS (total): " << total_fps;
+        printText(img_to_show, txt.str(), 2);
 
         imshow("pedestrian_detect_demo", img_to_show);
 
         processKey(waitKey(3) & 0xff);
-    }
-}
 
-void App::displayState(cv::Mat& frame, double proc_fps, double total_fps)
-{
-    const Scalar fontColorRed = CV_RGB(255, 0, 0);
-
-    int i = 0;
-
-    ostringstream txt;
-    txt.str(""); txt << "Source size: " << frame.cols << 'x' << frame.rows;
-    printText(frame, txt.str(), i++);
-
-    printText(frame, use_gpu ? "Mode: CUDA" : "Mode: CPU", i++);
-
-    txt.str(""); txt << "FPS (HOG only): " << fixed << setprecision(1) << proc_fps;
-    printText(frame, txt.str(), i++);
-
-    txt.str(""); txt << "FPS (total): " << fixed << setprecision(1) << total_fps;
-    printText(frame, txt.str(), i++);
-
-    if (!showHelp)
-    {
-        printText(frame, "H - toggle hotkeys help", i++, fontColorRed);
-    }
-    else
-    {
-        printText(frame, "Space - switch GPU / CPU", i++, fontColorRed);
-        printText(frame, "1/Q - increase/decrease HOG scale", i++, fontColorRed);
-        printText(frame, "2/W - increase/decrease levels count", i++, fontColorRed);
-        printText(frame, "3/E - increase/decrease HOG group threshold", i++, fontColorRed);
-        printText(frame, "4/R - increase/decrease hit threshold", i++, fontColorRed);
-        printText(frame, "G - switch gray / color", i++, fontColorRed);
+        total_fps = getTickFrequency() / (getTickCount() - start);
     }
 }
 
@@ -228,25 +199,25 @@ bool App::parseCmdArgs(int& i, int argc, const char* argv[])
 {
     string key = argv[i];
 
-    if (key == "--make-gray")
+    if (key == "--make-gray") 
     {
         make_gray = true;
     }
-    else if (key == "--resize-src")
+    else if (key == "--resize-src") 
     {
         resize_src = true;
     }
-    else if (key == "--hit-threshold")
+    else if (key == "--hit-threshold") 
     {
         ++i;
 
         if (i >= argc)
             throw runtime_error("Missing value after --hit-threshold");
 
-        hit_threshold = atof(argv[i]);
-        hit_threshold_auto = false;
+        hit_threshold = atof(argv[i]); 
+        hit_threshold_auto = false; 
     }
-    else if (key == "--scale")
+    else if (key == "--scale") 
     {
         ++i;
 
@@ -255,7 +226,7 @@ bool App::parseCmdArgs(int& i, int argc, const char* argv[])
 
         scale = atof(argv[i]);
     }
-    else if (key == "--nlevels")
+    else if (key == "--nlevels") 
     {
         ++i;
 
@@ -264,7 +235,7 @@ bool App::parseCmdArgs(int& i, int argc, const char* argv[])
 
         nlevels = atoi(argv[i]);
     }
-    else if (key == "--win-width")
+    else if (key == "--win-width") 
     {
         ++i;
 
@@ -273,7 +244,7 @@ bool App::parseCmdArgs(int& i, int argc, const char* argv[])
 
         win_width = atoi(argv[i]);
     }
-    else if (key == "--win-stride-width")
+    else if (key == "--win-stride-width") 
     {
         ++i;
 
@@ -282,7 +253,7 @@ bool App::parseCmdArgs(int& i, int argc, const char* argv[])
 
         win_stride_width = atoi(argv[i]);
     }
-    else if (key == "--win-stride-height")
+    else if (key == "--win-stride-height") 
     {
         ++i;
 
@@ -291,7 +262,7 @@ bool App::parseCmdArgs(int& i, int argc, const char* argv[])
 
         win_stride_height = atoi(argv[i]);
     }
-    else if (key == "--gr-threshold")
+    else if (key == "--gr-threshold") 
     {
         ++i;
 
@@ -300,11 +271,33 @@ bool App::parseCmdArgs(int& i, int argc, const char* argv[])
 
         gr_threshold = atoi(argv[i]);
     }
-    else if (key == "--gamma-correct")
+    else if (key == "--gamma-correct") 
     {
         gamma_corr = true;
     }
-    else
+    else if (key == "--write-video") 
+    {
+        write_video = true;
+    }
+    else if (key == "--dst-video") 
+    {
+        ++i;
+
+        if (i >= argc)
+            throw runtime_error("Missing value after --dst-video");
+
+        dst_video = string(argv[i]);
+    }
+    else if (key == "--dst-video-fps") 
+    {
+        ++i;
+
+        if (i >= argc)
+            throw runtime_error("Missing value after --dst-video-fps");
+
+        dst_video_fps= atof(argv[i]);
+    }
+    else 
         return false;
 
     return true;
@@ -320,10 +313,6 @@ bool App::processKey(int key)
     case 32:
         use_gpu = !use_gpu;
         cout << "Switched to " << (use_gpu ? "CUDA" : "CPU") << " mode\n";
-        break;
-
-    case 'H':
-        showHelp = !showHelp;
         break;
 
     case 'G':
@@ -385,7 +374,8 @@ bool App::processKey(int key)
 
 void App::printHelp()
 {
-    cout << "\nUsage: demo_pedestrian_detect <frames_source>\n"
+    cout << "Histogram of Oriented Gradients descriptor and detector sample.\n"
+         << "\nUsage: demo_pedestrian_detect <frames_source>\n"
          << "  [--make-gray] # convert image to gray one\n"
          << "  [--resize-src] # do resize of the source image\n"
          << "  [--hit-threshold <double>] # classifying plane distance threshold (0.0 usually)\n"
@@ -395,7 +385,10 @@ void App::printHelp()
          << "  [--win-stride-width <int>] # distance by OX axis between neighbour wins\n"
          << "  [--win-stride-height <int>] # distance by OY axis between neighbour wins\n"
          << "  [--gr-threshold <int>] # merging similar rects constant\n"
-         << "  [--gamma-correct <int>] # do gamma correction or not\n";
+         << "  [--gamma-correct <int>] # do gamma correction or not\n"
+         << "  [--write-video] # write video\n"
+         << "  [--dst-video <path>] # output video path\n"
+         << "  [--dst-video-fps <double>] # output video fps\n";
     BaseApp::printHelp();
 }
 
