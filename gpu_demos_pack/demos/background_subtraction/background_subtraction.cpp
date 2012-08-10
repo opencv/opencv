@@ -52,6 +52,7 @@ protected:
 
 private:
     void displayState(cv::Mat& outImg, double proc_fps, double total_fps);
+    void releaseAllAlgs();
 
     Method method;
     bool useGpu;
@@ -111,133 +112,156 @@ void App::process()
         cv::cvtColor(frame3, frame, cv::COLOR_BGR2BGRA);
         d_frame.upload(frame);
         ipl_frame = frame3;
+        frame3.copyTo(outImg);
 
-        int64 proc_time = cv::getTickCount();
+        double total_fps = 0.0;
+        double proc_fps = 0.0;
 
-        switch (method) {
-        case MOG:
-            {
-                if (useGpu)
+        try
+        {
+            int64 proc_time = cv::getTickCount();
+
+            switch (method) {
+            case MOG:
                 {
-                    if (reinitialize)
+                    if (useGpu)
                     {
-                        mog_gpu.initialize(d_frame.size(), d_frame.type());
-                        reinitialize = false;
-                    }
+                        if (reinitialize)
+                        {
+                            mog_gpu.initialize(d_frame.size(), d_frame.type());
+                            reinitialize = false;
+                        }
 
-                    mog_gpu(d_frame, d_fgmask, 0.01);
+                        mog_gpu(d_frame, d_fgmask, 0.01f);
+                    }
+                    else
+                    {
+                        if (reinitialize)
+                        {
+                            mog_cpu.initialize(frame3.size(), frame3.type());
+                            reinitialize = false;
+                        }
+
+                        mog_cpu(frame3, fgmask, 0.01);
+                    }
+                    break;
                 }
-                else
+            case MOG2:
                 {
-                    if (reinitialize)
+                    if (useGpu)
                     {
-                        mog_cpu.initialize(frame3.size(), frame3.type());
-                        reinitialize = false;
-                    }
+                        if (reinitialize)
+                        {
+                            mog2_gpu.initialize(d_frame.size(), d_frame.type());
+                            reinitialize = false;
+                        }
 
-                    mog_cpu(frame3, fgmask, 0.01);
+                        mog2_gpu(d_frame, d_fgmask);
+                    }
+                    else
+                    {
+                        if (reinitialize)
+                        {
+                            mog2_cpu.initialize(frame3.size(), frame3.type());
+                            reinitialize = false;
+                        }
+
+                        mog2_cpu(frame3, fgmask);
+                    }
+                    break;
                 }
-                break;
+            case GMG:
+                {
+                    if (useGpu)
+                    {
+                        if (reinitialize)
+                        {
+                            gmg_gpu.initialize(d_frame.size());
+                            reinitialize = false;
+                        }
+
+                        gmg_gpu(d_frame, d_fgmask);
+                    }
+                    else
+                    {
+                        if (reinitialize)
+                        {
+                            gmg_cpu.initialize(frame3.size(), 0, 255);
+                            reinitialize = false;
+                        }
+
+                        gmg_cpu(frame3, fgmask);
+                    }
+                    break;
+                }
+            case FGD:
+                {
+                    if (useGpu)
+                    {
+                        if (reinitialize)
+                        {
+                            fgd_gpu.create(d_frame);
+                            reinitialize = false;
+                        }
+
+                        fgd_gpu.update(d_frame);
+                        fgd_gpu.foreground.copyTo(d_fgmask);
+                    }
+                    else
+                    {
+                        if (reinitialize)
+                        {
+                            fgd_cpu = cvCreateFGDStatModel(&ipl_frame);
+                            reinitialize = false;
+                        }
+
+                        cvUpdateBGStatModel(&ipl_frame, fgd_cpu);
+                        cv::Mat(fgd_cpu->foreground).copyTo(fgmask);
+                    }
+                    break;
+                }
+            case VIBE:
+                {
+                    if (useGpu)
+                    {
+                        if (reinitialize)
+                        {
+                            vibe_gpu.initialize(d_frame);
+                            reinitialize = false;
+                        }
+
+                        vibe_gpu(d_frame, d_fgmask);
+                    }
+                    break;
+                }
             }
-        case MOG2:
-            {
-                if (useGpu)
-                {
-                    if (reinitialize)
-                    {
-                        mog2_gpu.initialize(d_frame.size(), d_frame.type());
-                        reinitialize = false;
-                    }
 
-                    mog2_gpu(d_frame, d_fgmask);
-                }
-                else
-                {
-                    if (reinitialize)
-                    {
-                        mog2_cpu.initialize(frame3.size(), frame3.type());
-                        reinitialize = false;
-                    }
+            proc_fps = cv::getTickFrequency() / (cv::getTickCount() - proc_time);
 
-                    mog2_cpu(frame3, fgmask);
-                }
-                break;
-            }
-        case GMG:
-            {
-                if (useGpu)
-                {
-                    if (reinitialize)
-                    {
-                        gmg_gpu.initialize(d_frame.size());
-                        reinitialize = false;
-                    }
+            if (useGpu)
+                d_fgmask.download(fgmask);
 
-                    gmg_gpu(d_frame, d_fgmask);
-                }
-                else
-                {
-                    if (reinitialize)
-                    {
-                        gmg_cpu.initialize(frame3.size(), 0, 255);
-                        reinitialize = false;
-                    }
+            cv::add(outImg, cv::Scalar(100, 100, 0), outImg, fgmask);
 
-                    gmg_cpu(frame3, fgmask);
-                }
-                break;
-            }
-        case FGD:
-            {
-                if (useGpu)
-                {
-                    if (reinitialize)
-                    {
-                        fgd_gpu.create(d_frame);
-                        reinitialize = false;
-                    }
-
-                    fgd_gpu.update(d_frame);
-                    d_fgmask = fgd_gpu.foreground;
-                }
-                else
-                {
-                    if (reinitialize)
-                    {
-                        fgd_cpu = cvCreateFGDStatModel(&ipl_frame);
-                        reinitialize = false;
-                    }
-
-                    cvUpdateBGStatModel(&ipl_frame, fgd_cpu);
-                    fgmask = fgd_cpu->foreground;
-                }
-                break;
-            }
-        case VIBE:
-            {
-                if (useGpu)
-                {
-                    if (reinitialize)
-                    {
-                        vibe_gpu.initialize(d_frame);
-                        reinitialize = false;
-                    }
-
-                    vibe_gpu(d_frame, d_fgmask);
-                }
-                break;
-            }
+            total_fps = cv::getTickFrequency() / (cv::getTickCount() - total_time);
         }
+        catch (const cv::Exception& e)
+        {
+            std::string msg = "Can't allocate memory";
 
-        double proc_fps = cv::getTickFrequency() / (cv::getTickCount() - proc_time);
+            int fontFace = cv::FONT_HERSHEY_DUPLEX;
+            int fontThickness = 2;
+            double fontScale = 0.8;
 
-        if (useGpu)
-            d_fgmask.download(fgmask);
+            cv::Size fontSize = cv::getTextSize("T[]", fontFace, fontScale, fontThickness, 0);
 
-        frame.copyTo(outImg);
-        cv::add(outImg, cv::Scalar(100, 100, 0), outImg, fgmask);
+            cv::Point org(outImg.cols / 2, outImg.rows / 2);
+            org.x -= fontSize.width;
+            org.y -= fontSize.height / 2;
 
-        double total_fps = cv::getTickFrequency() / (cv::getTickCount() - total_time);
+            cv::putText(outImg, msg, org, fontFace, fontScale, cv::Scalar(0,0,0,255), 5 * fontThickness / 2, 16);
+            cv::putText(outImg, msg, org, fontFace, fontScale, CV_RGB(255, 0, 0), fontThickness, 16);
+        }
 
         displayState(outImg, proc_fps, total_fps);
 
@@ -276,6 +300,23 @@ void App::printHelp()
     BaseApp::printHelp();
 }
 
+void App::releaseAllAlgs()
+{
+    mog_cpu = cv::BackgroundSubtractorMOG();
+    mog_gpu.release();
+
+    mog2_cpu = cv::BackgroundSubtractorMOG2();
+    mog2_gpu.release();
+
+    fgd_gpu.release();
+    fgd_cpu.release();
+
+    gmg_gpu.release();
+    gmg_cpu.release();
+
+    vibe_gpu.release();
+}
+
 bool App::processKey(int key)
 {
     if (BaseApp::processKey(key))
@@ -285,19 +326,36 @@ bool App::processKey(int key)
     {
     case 'M':
         method = static_cast<Method>((method + 1) % METHOD_MAX);
+        #if defined(_LP64) || defined(_WIN64)
         if (method == VIBE)
             useGpu = true;
+        #else
+        if (method == VIBE || method == FGD)
+            useGpu = true;
+        #endif
         reinitialize = true;
+        releaseAllAlgs();
         std::cout << "Switch method to " << method_str[method] << std::endl;
         break;
 
     case 32:
+        #if defined(_LP64) || defined(_WIN64)
         if (method != VIBE)
         {
             useGpu = !useGpu;
             reinitialize = true;
+            releaseAllAlgs();
             std::cout << "Switch mode to " << (useGpu ? " CUDA" : " CPU") << std::endl;
         }
+        #else
+        if (method != VIBE && method != FGD)
+        {
+            useGpu = !useGpu;
+            reinitialize = true;
+            releaseAllAlgs();
+            std::cout << "Switch mode to " << (useGpu ? " CUDA" : " CPU") << std::endl;
+        }
+        #endif
 
     default:
         return false;

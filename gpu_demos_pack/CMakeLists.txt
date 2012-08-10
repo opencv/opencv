@@ -5,7 +5,7 @@ project(${target})
 
 find_package(OpenCV REQUIRED)
 
-file(COPY "data" DESTINATION ${CMAKE_BINARY_DIR}/bin PATTERN ".svn" EXCLUDE)
+file(COPY "data" DESTINATION ${CMAKE_BINARY_DIR}/bin)
 
 add_subdirectory("utility_lib")
 add_subdirectory("demos/features2d")
