@@ -92,6 +92,28 @@ PERF_TEST_P(Size_MatType_BorderType3x3, blur3x3,
     SANITY_CHECK(dst, 1e-3);
 }
 
+PERF_TEST_P(Size_MatType_BorderType, blur16x16,
+            testing::Combine(
+                testing::Values(szODD, szQVGA, szVGA, sz720p),
+                testing::Values(CV_8UC1, CV_8UC4, CV_16UC1, CV_16SC1, CV_32FC1),
+                testing::ValuesIn(BorderType::all())
+                )
+            )
+{
+    Size size = get<0>(GetParam());
+    int type = get<1>(GetParam());
+    BorderType btype = get<2>(GetParam());
+
+    Mat src(size, type);
+    Mat dst(size, type);
+
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    TEST_CYCLE() blur(src, dst, Size(16,16), Point(-1,-1), btype);
+
+    SANITY_CHECK(dst, 1e-3);
+}
+
 PERF_TEST_P(Size_MatType_BorderType3x3, box3x3,
             testing::Combine(
                 testing::Values(szODD, szQVGA, szVGA, sz720p),
