@@ -16,6 +16,8 @@ using std::tr1::get;
 
 typedef TestBaseWithParam<String> stitch;
 typedef TestBaseWithParam<String> match;
+typedef std::tr1::tuple<String, int> matchVector_t;
+typedef TestBaseWithParam<matchVector_t> matchVector;
 
 #ifdef HAVE_OPENCV_NONFREE
 #define TEST_DETECTORS testing::Values("surf", "orb")
@@ -128,6 +130,59 @@ PERF_TEST_P( match, bestOf2Nearest, TEST_DETECTORS)
         cvflann::seed_random(42);//for predictive FlannBasedMatcher
         startTimer();
         (*matcher)(features1, features2, pairwise_matches);
+        stopTimer();
+        matcher->collectGarbage();
+    }
+}
+
+PERF_TEST_P( matchVector, bestOf2NearestVectorFeatures, testing::Combine(
+                 TEST_DETECTORS,
+                 testing::Values(2, 4, 6, 8))
+             )
+{
+    Mat img1, img1_full = imread( getDataPath("stitching/b1.jpg") );
+    Mat img2, img2_full = imread( getDataPath("stitching/b2.jpg") );
+    float scale1 = (float)std::min(1.0, sqrt(WORK_MEGAPIX * 1e6 / img1_full.total()));
+    float scale2 = (float)std::min(1.0, sqrt(WORK_MEGAPIX * 1e6 / img2_full.total()));
+    resize(img1_full, img1, Size(), scale1, scale1);
+    resize(img2_full, img2, Size(), scale2, scale2);
+
+    Ptr<detail::FeaturesFinder> finder;
+    Ptr<detail::FeaturesMatcher> matcher;
+    String detectorName = get<0>(GetParam());
+    int featuresVectorSize = get<1>(GetParam());
+    if (detectorName == "surf")
+    {
+        finder = new detail::SurfFeaturesFinder();
+        matcher = new detail::BestOf2NearestMatcher(false, SURF_MATCH_CONFIDENCE);
+    }
+    else if (detectorName == "orb")
+    {
+        finder = new detail::OrbFeaturesFinder();
+        matcher = new detail::BestOf2NearestMatcher(false, ORB_MATCH_CONFIDENCE);
+    }
+    else
+    {
+        FAIL() << "Unknown 2D features type: " << get<0>(GetParam());
+    }
+
+    detail::ImageFeatures features1, features2;
+    (*finder)(img1, features1);
+    (*finder)(img2, features2);
+    vector<detail::ImageFeatures> features;
+    vector<detail::MatchesInfo> pairwise_matches;
+    for(int i = 0; i < featuresVectorSize/2; i++)
+    {
+        features.push_back(features1);
+        features.push_back(features2);
+    }
+
+    declare.time(200);
+    while(next())
+    {
+        cvflann::seed_random(42);//for predictive FlannBasedMatcher
+        startTimer();
+        (*matcher)(features, pairwise_matches);
         stopTimer();
         matcher->collectGarbage();
     }
