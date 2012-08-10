@@ -474,7 +474,7 @@ namespace cv { namespace gpu { namespace device
                         }
                     }
                 }
-            } while (__syncthreads_or(changed));
+            } while (Emulation::sycthOr(changed));
         }
 
         __global__ void flatten(const DevMem2D edges, DevMem2Di comps)

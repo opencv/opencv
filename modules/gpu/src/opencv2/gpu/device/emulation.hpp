@@ -53,7 +53,7 @@ namespace cv { namespace gpu { namespace device
 
         static __device__ __forceinline__ int sycthOr(int pred)
         {
-#if defined (__CUDA_ARCH__) && (__CUDA_ARCH__ < 120)
+#if defined (__CUDA_ARCH__) && (__CUDA_ARCH__ < 200)
                 // just campilation stab
                 return false;
 #else
@@ -119,7 +119,7 @@ namespace cv { namespace gpu { namespace device
             static __device__ __forceinline__ T atomicMin(T* address, T val)
             {
 #if defined (__CUDA_ARCH__) && (__CUDA_ARCH__ < 120)
-                T count = min(*address, val);
+                T count = ::min(*address, val);
                 do
                 {
                     *address = count;
