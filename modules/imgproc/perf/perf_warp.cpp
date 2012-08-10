@@ -7,13 +7,17 @@ using namespace testing;
 using std::tr1::make_tuple;
 using std::tr1::get;
 
+enum{HALF_SIZE=0, UPSIDE_DOWN, REFLECTION_X, REFLECTION_BOTH};
 
 CV_ENUM(BorderMode, BORDER_CONSTANT, BORDER_REPLICATE);
 CV_ENUM(InterType, INTER_NEAREST, INTER_LINEAR);
+CV_ENUM(RemapMode, HALF_SIZE, UPSIDE_DOWN, REFLECTION_X, REFLECTION_BOTH);
 
 typedef TestBaseWithParam< tr1::tuple<Size, InterType, BorderMode> > TestWarpAffine;
 typedef TestBaseWithParam< tr1::tuple<Size, InterType, BorderMode> > TestWarpPerspective;
+typedef TestBaseWithParam< tr1::tuple<MatType, Size, InterType, BorderMode, RemapMode> > TestRemap;
 
+void update_map(const Mat& src, Mat& map_x, Mat& map_y, const int remapMode );
 
 PERF_TEST_P( TestWarpAffine, WarpAffine,
              Combine(
@@ -74,6 +78,91 @@ PERF_TEST_P( TestWarpPerspective, WarpPerspective,
     TEST_CYCLE() warpPerspective( src, dst, warpMat, sz, interType, borderMode, Scalar::all(150) );
 
     SANITY_CHECK(dst);
+}
 
+PERF_TEST_P( TestRemap, remap,
+             Combine(
+                 Values( TYPICAL_MAT_TYPES ),
+                 Values( szVGA, sz720p, sz1080p ),
+                 ValuesIn( InterType::all() ),
+                 ValuesIn( BorderMode::all() ),
+                 ValuesIn( RemapMode::all() )
+                 )
+             )
+{
+    int type = get<0>(GetParam());
+    Size size = get<1>(GetParam());
+    int interpolationType = get<2>(GetParam());
+    int borderMode = get<3>(GetParam());
+    int remapMode = get<4>(GetParam());
+    unsigned int height = size.height;
+    unsigned int width = size.width;
+    Mat source(height, width, type);
+    Mat destination;
+    Mat map_x(height, width, CV_32F);
+    Mat map_y(height, width, CV_32F);
+
+    declare.in(source, WARMUP_RNG);
+
+    update_map(source, map_x, map_y, remapMode);
+
+    TEST_CYCLE()
+    {
+        remap(source, destination, map_x, map_y, interpolationType, borderMode);
+    }
+
+    SANITY_CHECK(destination, 1);
+}
+
+void update_map(const Mat& src, Mat& map_x, Mat& map_y, const int remapMode )
+{
+    for( int j = 0; j < src.rows; j++ )
+    {
+        for( int i = 0; i < src.cols; i++ )
+        {
+            switch( remapMode )
+            {
+            case HALF_SIZE:
+                if( i > src.cols*0.25 && i < src.cols*0.75 && j > src.rows*0.25 && j < src.rows*0.75 )
+                {
+                    map_x.at<float>(j,i) = 2*( i - src.cols*0.25 ) + 0.5 ;
+                    map_y.at<float>(j,i) = 2*( j - src.rows*0.25 ) + 0.5 ;
+                }
+                else
+                {
+                    map_x.at<float>(j,i) = 0 ;
+                    map_y.at<float>(j,i) = 0 ;
+                }
+                break;
+            case UPSIDE_DOWN:
+                map_x.at<float>(j,i) = i ;
+                map_y.at<float>(j,i) = src.rows - j ;
+                break;
+            case REFLECTION_X:
+                map_x.at<float>(j,i) = src.cols - i ;
+                map_y.at<float>(j,i) = j ;
+                break;
+            case REFLECTION_BOTH:
+                map_x.at<float>(j,i) = src.cols - i ;
+                map_y.at<float>(j,i) = src.rows - j ;
+                break;
+            } // end of switch
+        }
+    }
+}
+
+PERF_TEST(Transform, getPerspectiveTransform)
+{
+    unsigned int size = 8;
+    Mat source(1, size/2, CV_32FC2);
+    Mat destination(1, size/2, CV_32FC2);
+    Mat transformCoefficient;
+
+    declare.in(source, destination, WARMUP_RNG);
+
+    TEST_CYCLE()
+    {
+        transformCoefficient = getPerspectiveTransform(source, destination);
+    }
 }
 
