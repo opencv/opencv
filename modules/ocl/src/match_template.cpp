@@ -105,7 +105,7 @@ namespace cv { namespace ocl
 			if (depth == CV_8U) return 300;
 			break;
 		case CV_TM_SQDIFF:
-			if (depth == CV_32F) return MAXSHORT; // do naive SQDIFF for CV_32F
+			if (depth == CV_32F) return 0x7fffffff; // do naive SQDIFF for CV_32F
 			if (depth == CV_8U) return 300;
 			break;
 		}
