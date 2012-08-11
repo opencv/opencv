@@ -98,6 +98,12 @@ if __name__ == "__main__":
         sys.exit()
     # Now read in the image data. This must be a valid path!
     [X,y] = read_images(sys.argv[1])
+    # Convert labels to 32bit integers. This is a workaround for 64bit machines,
+    # because the labels will truncated else. This will be fixed in code as 
+    # soon as possible, so Python users don't need to know about this.
+    # Thanks to Leo Dirac for reporting:
+    y = np.asarray(y, dtype=np.int32)
+    # If a out_dir is given, set it:
     if len(sys.argv) == 3:
         out_dir = sys.argv[2]
     # Create the Eigenfaces model. We are going to use the default
