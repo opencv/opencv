@@ -64,15 +64,6 @@ public:
     // Creates stitcher with default parameters
     static Stitcher createDefault(bool try_use_gpu = false);
 
-    Status estimateTransform(InputArray images);
-    Status estimateTransform(InputArray images, const std::vector<std::vector<Rect> > &rois);
-
-    Status composePanorama(OutputArray pano);
-    Status composePanorama(InputArray images, OutputArray pano);
-
-    Status stitch(InputArray images, OutputArray pano);
-    Status stitch(InputArray images, const std::vector<std::vector<Rect> > &rois, OutputArray pano);
-
     double registrationResol() const { return registr_resol_; }
     void setRegistrationResol(double resol_mpx) { registr_resol_ = resol_mpx; }
 
@@ -129,6 +120,19 @@ public:
     Ptr<detail::Blender> blender() { return blender_; }
     const Ptr<detail::Blender> blender() const { return blender_; }
     void setBlender(Ptr<detail::Blender> b) { blender_ = b; }
+
+    Status estimateTransform(InputArray images);
+    Status estimateTransform(InputArray images, const std::vector<std::vector<Rect> > &rois);
+
+    Status composePanorama(OutputArray pano);
+    Status composePanorama(InputArray images, OutputArray pano);
+
+    Status stitch(InputArray images, OutputArray pano);
+    Status stitch(InputArray images, const std::vector<std::vector<Rect> > &rois, OutputArray pano);
+
+    std::vector<int> component() const { return indices_; }
+    std::vector<detail::CameraParams> cameras() const { return cameras_; }
+    double workScale() const { return work_scale_; }
 
 private:
     Stitcher() {}

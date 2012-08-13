@@ -65,11 +65,13 @@ public:
     virtual Point warp(const Mat &src, const Mat &K, const Mat &R, int interp_mode, int border_mode,
                        Mat &dst) = 0;
 
-    // TODO add other backward functions for consistency or move this into a separated interface
     virtual void warpBackward(const Mat &src, const Mat &K, const Mat &R, int interp_mode, int border_mode,
                               Size dst_size, Mat &dst) = 0;
 
     virtual Rect warpRoi(Size src_size, const Mat &K, const Mat &R) = 0;
+
+    virtual float getScale() const { return 1.f; }
+    virtual void setScale(float) {}
 };
 
 
@@ -104,6 +106,9 @@ public:
 
     Rect warpRoi(Size src_size, const Mat &K, const Mat &R);
 
+    float getScale() const { return projector_.scale; }
+    void setScale(float val) { projector_.scale = val; }
+
 protected:
 
     // Detects ROI of the destination image. It's correct for any projection.
@@ -128,8 +133,6 @@ class CV_EXPORTS PlaneWarper : public RotationWarperBase<PlaneProjector>
 {
 public:
     PlaneWarper(float scale = 1.f) { projector_.scale = scale; }
-
-    void setScale(float scale) { projector_.scale = scale; }
 
     Point2f warpPoint(const Point2f &pt, const Mat &K, const Mat &R, const Mat &T);
 
@@ -225,12 +228,12 @@ struct CV_EXPORTS CompressedRectilinearProjector : ProjectorBase
 class CV_EXPORTS CompressedRectilinearWarper : public RotationWarperBase<CompressedRectilinearProjector>
 {
 public:
-   CompressedRectilinearWarper(float scale, float A = 1, float B = 1)
-   {
-	   projector_.a = A;
-	   projector_.b = B;
-	   projector_.scale = scale;
-   }
+    CompressedRectilinearWarper(float scale, float A = 1, float B = 1)
+    {
+        projector_.a = A;
+        projector_.b = B;
+        projector_.scale = scale;
+    }
 };
 
 
@@ -250,7 +253,7 @@ public:
    {
 	   projector_.a = A;
 	   projector_.b = B;
-	   projector_.scale = scale;
+       projector_.scale = scale;
    }
 };
 
@@ -271,7 +274,7 @@ public:
    {
 	   projector_.a = A;
 	   projector_.b = B;
-	   projector_.scale = scale;
+       projector_.scale = scale;
    }
 };
 
@@ -292,7 +295,7 @@ public:
    {
 	   projector_.a = A;
 	   projector_.b = B;
-	   projector_.scale = scale;
+       projector_.scale = scale;
    }
 
 };
