@@ -96,8 +96,8 @@ cvMeanShift( const void* imgProb, CvRect windowIn,
         }
         cur_rect.width = MAX(cur_rect.width, 1);
         cur_rect.height = MAX(cur_rect.height, 1);
-        
-        cvGetSubRect( mat, &cur_win, cur_rect ); 
+
+        cvGetSubRect( mat, &cur_win, cur_rect );
         cvMoments( &cur_win, &moments );
 
         /* Calculating center of mass */
@@ -240,7 +240,7 @@ cvCamShift( const void* imgProb, CvRect windowIn,
     if( length < width )
     {
         double t;
-        
+
         CV_SWAP( length, width, t );
         CV_SWAP( cs, sn, t );
         theta = CV_PI*0.5 - theta;
@@ -275,7 +275,7 @@ cvCamShift( const void* imgProb, CvRect windowIn,
 
     if( _comp )
         *_comp = comp;
-    
+
     if( box )
     {
         box->size.height = (float)length;
@@ -300,6 +300,10 @@ cv::RotatedRect cv::CamShift( InputArray _probImage, Rect& window,
 {
     CvConnectedComp comp;
     CvBox2D box;
+
+    box.center.x = box.center.y = 0; box.angle = 0; box.size.width = box.size.height = 0;
+    comp.rect.x = comp.rect.y = comp.rect.width = comp.rect.height = 0;
+
     Mat probImage = _probImage.getMat();
     CvMat c_probImage = probImage;
     cvCamShift(&c_probImage, window, (CvTermCriteria)criteria, &comp, &box);
