@@ -5,15 +5,15 @@
 Introduction into Android Development
 *************************************
 
-This guide was designed to help you in learning Android development basics and quickly seting up your working environment.
+This guide was designed to help you in learning Android development basics and seting up your working environment quickly.
 
-This guide was written with Windows 7 in mind, though it works with Linux (Ubuntu), Mac OS X and any other OS supported by Android SDK.
+This guide was written with Windows 7 in mind, though it would work with Linux (Ubuntu), Mac OS X and any other OS supported by Android SDK.
 
 If you encounter any error after thoroughly following these steps, feel free to contact us via `OpenCV4Android <https://groups.google.com/group/android-opencv/>`_ discussion group or OpenCV `Q&A forum <http://answers.opencv.org>`_. We'll do our best to help you out.
 
 Preface
 =======
-Android is a linux-based, open source mobile operating system developed by Open Handset Allience and backed by Google. See the `official site <http://www.android.com/about/>`_ for general details.
+Android is a linux-based, open source mobile operating system developed by Open Handset Alliance and backed by Google. See the `official site <http://www.android.com/about/>`_ for general details.
 
 Though being relatively easy to enter, Android development would require fair understanding of programming and its common concepts. Even basic familiarity with Java or C++ is advantageous.
 
@@ -217,7 +217,7 @@ where:
 
 * the :file:`src` folder contains Java code of the application,
 
-* the :file:`res` folder contains resources of the application (images, xml files describing UI layout , etc),
+* the :file:`res` folder contains resources of the application (images, xml files describing UI layout, etc),
 
 * the :file:`libs` folder will contain native libraries after a successful build,
 
