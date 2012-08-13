@@ -229,17 +229,29 @@ static int pyopencv_to(const PyObject* o, Mat& m, const ArgInfo info, bool allow
         return false;
     }
 
-    int typenum = PyArray_TYPE(o);
-    int type = typenum == NPY_UBYTE ? CV_8U : typenum == NPY_BYTE ? CV_8S :
-               typenum == NPY_USHORT ? CV_16U : typenum == NPY_SHORT ? CV_16S :
-               typenum == NPY_INT || typenum == NPY_LONG ? CV_32S :
+    bool needcopy = false, needcast = false;
+    int typenum = PyArray_TYPE(o), new_typenum = typenum;
+    int type = typenum == NPY_UBYTE ? CV_8U :
+               typenum == NPY_BYTE ? CV_8S :
+               typenum == NPY_USHORT ? CV_16U :
+               typenum == NPY_SHORT ? CV_16S :
+               typenum == NPY_INT32 ? CV_32S :
                typenum == NPY_FLOAT ? CV_32F :
                typenum == NPY_DOUBLE ? CV_64F : -1;
 
     if( type < 0 )
     {
-        failmsg("%s data type = %d is not supported", info.name, typenum);
-        return false;
+        if( typenum == NPY_INT64 || typenum == NPY_UINT64 || type == NPY_LONG )
+        {
+            needcopy = needcast = true;
+            new_typenum = NPY_INT32;
+            type = CV_32S;
+        }
+        else
+        {
+            failmsg("%s data type = %d is not supported", info.name, typenum);
+            return false;
+        }
     }
 
     int ndims = PyArray_NDIM(o);
@@ -255,8 +267,16 @@ static int pyopencv_to(const PyObject* o, Mat& m, const ArgInfo info, bool allow
     const npy_intp* _strides = PyArray_STRIDES(o);
     bool ismultichannel = ndims == 3 && _sizes[2] <= CV_CN_MAX;
 
-    bool needcopy = (_strides[ndims-1] != elemsize) 
-        || (ismultichannel && _strides[ndims-2] != elemsize*_sizes[ndims-1]);
+    for( int i = ndims-1; i >= 0 && !needcopy; i-- )
+    {
+        // these checks handle cases of
+        //  a) multi-dimensional (ndims > 2) arrays, as well as simpler 1- and 2-dimensional cases
+        //  b) transposed arrays, where _strides[] elements go in non-descending order
+        //  c) flipped arrays, where some of _strides[] elements are negative
+        if( (i == ndims-1 && (size_t)_strides[i] != elemsize) ||
+            (i < ndims-1 && _strides[i] < _strides[i+1]) )
+            needcopy = true;
+    }
     
     if (needcopy)
     {
@@ -265,7 +285,10 @@ static int pyopencv_to(const PyObject* o, Mat& m, const ArgInfo info, bool allow
             failmsg("output array %s is not row-contiguous (step[ndims-1] != elemsize)", info.name);
             return false;
         }
-        o = (PyObject*)PyArray_GETCONTIGUOUS((PyArrayObject*)o);
+        if( needcast )
+            o = (PyObject*)PyArray_Cast((PyArrayObject*)o, new_typenum);
+        else
+            o = (PyObject*)PyArray_GETCONTIGUOUS((PyArrayObject*)o);
         _strides = PyArray_STRIDES(o);
     }
 
