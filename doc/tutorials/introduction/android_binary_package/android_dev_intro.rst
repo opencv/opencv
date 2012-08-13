@@ -11,6 +11,18 @@ This guide was written with Windows 7 in mind, though it works with Linux (Ubunt
 
 If you encounter any error after thoroughly following these steps, feel free to contact us via `OpenCV4Android <https://groups.google.com/group/android-opencv/>`_ discussion group or OpenCV `Q&A forum <http://answers.opencv.org>`_. We'll do our best to help you out.
 
+Preface
+=======
+Android is a linux-based, open source mobile operating system developed by Open Handset Allience and backed by Google. See the `official site <http://www.android.com/about/>`_ for general details.
+
+Though being relatively easy to enter, Android development would require fair understanding of programming and its common concepts. Even basic familiarity with Java or C++ is advantageous.
+
+For the quick start with Android development, you should get yourself accustomed with some fundamental Android aspects:
+
+#. Activity and its lifecycle. Information on this essential Android class is available on the `official site for Android developers <http://developer.android.com/training/basics/activity-lifecycle/starting.html>`_ (see first two sections) or on the corresponding page of the `reference <http://developer.android.com/training/basics/activity-lifecycle/starting.html>`_.
+#. OpenCV development will certainly require some knowlege of the `Android camera <http://developer.android.com/guide/topics/media/camera.html>`_ essentials.
+#. Some basic understanding of `Java Native Interface <http://en.wikipedia.org/wiki/Java_Native_Interface>`_ will help you to apprehend the concept of using native code in Java.
+
 Quick environment setup for Android development
 ===============================================
 
