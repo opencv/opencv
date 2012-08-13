@@ -284,7 +284,8 @@ AVD (*Android Virtual Device*) is not probably the most convenient way to test a
 
 Hardware Device
 ---------------
-If you have an Android device, you can use it to test and debug your applications. This way is more authentic, though a little bit harder to set up.
+If you have an Android device, you can use it to test and debug your applications. This way is more authentic, though a little bit harder to set up. You need to make some actions for Windows and Linux operating systems to be able to work with Android devices. No actions are required for Mac OS. See detailed information on configuring hardware devices in subsections below. You may also consult the official `Android Developers site <http://developer.android.com/tools/device.html>`_ for more information.
+
 
 Windows host computer
 ^^^^^^^^^^^^^^^^^^^^^
@@ -304,7 +305,7 @@ Windows host computer
     .. image:: images/usb_device_connect_03.png
      :alt: Device properties details
      :align: center
-#. There should be a record like existing ones for your device and you need to add one manually. 
+#. There should be a record like existing ones for your device and you need to add one manually.
     .. image:: images/usb_device_connect_04.png
      :alt: Device properties details
      :align: center
@@ -339,12 +340,20 @@ Windows host computer
 
 #. Now, in Eclipse go :guilabel:`Run -> Run/Debug` to run your application in regular or debugging mode. :guilabel:`Device Chooser` will let you choose among the devices.
 
-Consult the official `Android Developers site <http://developer.android.com/tools/device.html>`_ for more information on configuring hardware devices to work with other operating systems.
+Linux host computer
+^^^^^^^^^^^^^^^^^^^
+By default Linux doesn't recognize Android devices, but it's easy to fix this issue. On Ubuntu Linux you have to create a new **/etc/udev/rules.d/51-android.rules** configuration file that contains information about your Android device. You may find some Vendor ID's `here <http://developer.android.com/tools/device.html#VendorIds>`_ or execute :command:`lsusb` command to view VendorID of plugged Android device. Here is an example of such file for LG device:
 
+.. code-block:: guess
 
-Linux & MacOS host computer
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
-**TODO:** Describe device setup.
+  SUBSYSTEM=="usb", ATTR{idVendor}=="1004",  MODE="0666", GROUP="plugdev"
+
+Then restart your adb server (even better to restart the system), plug in your Android device and execute :command:`adb devices` command. You will see the list of attached devices:
+
+  .. image:: images/usb_device_connect_ubuntu.png
+    :alt: List of attached devices
+    :align: center
+
 
 What's next
 ===========
