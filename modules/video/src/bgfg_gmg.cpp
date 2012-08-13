@@ -91,7 +91,7 @@ void cv::BackgroundSubtractorGMG::initialize(cv::Size frameSize, double min, dou
 
 namespace
 {
-    float findFeature(uint color, const uint* colors, const float* weights, int nfeatures)
+    float findFeature(unsigned int color, const unsigned int* colors, const float* weights, int nfeatures)
     {
         for (int i = 0; i < nfeatures; ++i)
         {
@@ -116,7 +116,7 @@ namespace
         }
     }
 
-    bool insertFeature(uint color, float weight, uint* colors, float* weights, int& nfeatures, int maxFeatures)
+    bool insertFeature(unsigned int color, float weight, unsigned int* colors, float* weights, int& nfeatures, int maxFeatures)
     {
         int idx = -1;
         for (int i = 0; i < nfeatures; ++i)
@@ -134,7 +134,7 @@ namespace
         {
             // move feature to beginning of list
 
-            ::memmove(colors + 1, colors, idx * sizeof(uint));
+            ::memmove(colors + 1, colors, idx * sizeof(unsigned int));
             ::memmove(weights + 1, weights, idx * sizeof(float));
 
             colors[0] = color;
@@ -144,7 +144,7 @@ namespace
         {
             // discard oldest feature
 
-            ::memmove(colors + 1, colors, (nfeatures - 1) * sizeof(uint));
+            ::memmove(colors + 1, colors, (nfeatures - 1) * sizeof(unsigned int));
             ::memmove(weights + 1, weights, (nfeatures - 1) * sizeof(float));
 
             colors[0] = color;
@@ -168,12 +168,12 @@ namespace
 {
     template <typename T> struct Quantization
     {
-        static uint apply(const void* src_, int x, int cn, double minVal, double maxVal, int quantizationLevels)
+        static unsigned int apply(const void* src_, int x, int cn, double minVal, double maxVal, int quantizationLevels)
         {
             const T* src = static_cast<const T*>(src_);
             src += x * cn;
 
-            uint res = 0;
+            unsigned int res = 0;
             for (int i = 0, shift = 0; i < cn; ++i, ++src, shift += 8)
                 res |= static_cast<int>((*src - minVal) * quantizationLevels / (maxVal - minVal)) << shift;
 
@@ -184,7 +184,7 @@ namespace
     class GMG_LoopBody : public cv::ParallelLoopBody
     {
     public:
-        GMG_LoopBody(const cv::Mat& frame, const cv::Mat& fgmask, const cv::Mat_<int>& nfeatures, const cv::Mat_<uint>& colors, const cv::Mat_<float>& weights,
+        GMG_LoopBody(const cv::Mat& frame, const cv::Mat& fgmask, const cv::Mat_<int>& nfeatures, const cv::Mat_<unsigned int>& colors, const cv::Mat_<float>& weights,
                      int maxFeatures, double learningRate, int numInitializationFrames, int quantizationLevels, double backgroundPrior, double decisionThreshold,
                      double maxVal, double minVal, int frameNum, bool updateBackgroundModel) :
             frame_(frame), fgmask_(fgmask), nfeatures_(nfeatures), colors_(colors), weights_(weights),
@@ -202,7 +202,7 @@ namespace
         mutable cv::Mat_<uchar> fgmask_;
 
         mutable cv::Mat_<int> nfeatures_;
-        mutable cv::Mat_<uint> colors_;
+        mutable cv::Mat_<unsigned int> colors_;
         mutable cv::Mat_<float> weights_;
 
         int     maxFeatures_;
@@ -220,7 +220,7 @@ namespace
 
     void GMG_LoopBody::operator() (const cv::Range& range) const
     {
-        typedef uint (*func_t)(const void* src_, int x, int cn, double minVal, double maxVal, int quantizationLevels);
+        typedef unsigned int (*func_t)(const void* src_, int x, int cn, double minVal, double maxVal, int quantizationLevels);
         static const func_t funcs[] =
         {
             Quantization<uchar>::apply,
@@ -246,10 +246,10 @@ namespace
             for (int x = 0; x < frame_.cols; ++x, ++featureIdx)
             {
                 int nfeatures = nfeatures_row[x];
-                uint* colors = colors_[featureIdx];
+                unsigned int* colors = colors_[featureIdx];
                 float* weights = weights_[featureIdx];
 
-                uint newFeatureColor = func(frame_row, x, cn, minVal_, maxVal_, quantizationLevels_);
+                unsigned int newFeatureColor = func(frame_row, x, cn, minVal_, maxVal_, quantizationLevels_);
 
                 bool isForeground = false;
 

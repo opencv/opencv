@@ -251,7 +251,7 @@ private:
     int frameNum_;
 
     cv::Mat_<int> nfeatures_;
-    cv::Mat_<uint> colors_;
+    cv::Mat_<unsigned int> colors_;
     cv::Mat_<float> weights_;
 
     cv::Mat buf_;
