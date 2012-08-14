@@ -1,4 +1,4 @@
-#include "perf_precomp.hpp"
+/*#include "perf_precomp.hpp"
 #include "distransform.cpp"
 
 using namespace std;
@@ -7,7 +7,7 @@ using namespace perf;
 
 typedef perf::TestBaseWithParam<Size> Size_DistanceTransform;
 
-/*PERF_TEST_P(Size_DistanceTransform, icvTrueDistTrans, testing::Values(TYPICAL_MAT_SIZES))
+PERF_TEST_P(Size_DistanceTransform, icvTrueDistTrans, testing::Values(TYPICAL_MAT_SIZES))
 {
     Size size = GetParam();
     Mat src(size, CV_8UC1);
