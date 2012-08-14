@@ -13,15 +13,15 @@ If you encounter any error after thoroughly following these steps, feel free to 
 
 Preface
 =======
-Android is a linux-based, open source mobile operating system developed by Open Handset Alliance and backed by Google. See the `official site <http://www.android.com/about/>`_ for general details.
+Android is a Linux-based, open source mobile operating system developed by Open Handset Alliance led by Google. See the `official site <http://www.android.com/about/>`_ for general details.
 
-Though being relatively easy to enter, Android development would require fair understanding of programming and its common concepts. Even basic familiarity with Java or C++ is advantageous.
+Development for Android significantly differs from development for other platforms.
+So before starting programming for Android we recommend you make sure that you are familiar with the following key topis:
 
-For the quick start with Android development, you should get yourself accustomed with some fundamental Android aspects:
-
-#. Activity and its lifecycle. Information on this essential Android class is available on the `official site for Android developers <http://developer.android.com/training/basics/activity-lifecycle/starting.html>`_ (see first two sections) or on the corresponding page of the `reference <http://developer.android.com/training/basics/activity-lifecycle/starting.html>`_.
-#. OpenCV development will certainly require some knowlege of the `Android camera <http://developer.android.com/guide/topics/media/camera.html>`_ essentials.
-#. Some basic understanding of `Java Native Interface <http://en.wikipedia.org/wiki/Java_Native_Interface>`_ will help you to apprehend the concept of using native code in Java.
+#. `Java <http://en.wikipedia.org/wiki/Java_(programming_language)>`_ programming language that is the primary development technology for Android OS. Also you can find `Oracle docs on Java <http://docs.oracle.com/javase/>`_ useful.
+#. `Java Native Interface (JNI) <http://en.wikipedia.org/wiki/Java_Native_Interface>`_ that is a technology of running native code in Java virtual machine. Also you can find `Oracle docs on JNI <http://docs.oracle.com/javase/7/docs/technotes/guides/jni/>`_ useful.
+#. `Android Activity <http://developer.android.com/training/basics/activity-lifecycle/starting.html>`_ and its lifecycle, that is an essential Android API class.
+#. OpenCV development will certainly require some knowlege of the `Android Camera <http://developer.android.com/guide/topics/media/camera.html>`_ specifics.
 
 Quick environment setup for Android development
 ===============================================
@@ -284,58 +284,91 @@ AVD (*Android Virtual Device*) is not probably the most convenient way to test a
 
 Hardware Device
 ---------------
-If you have an Android device, you can use it to test and debug your applications. This way is more authentic, though a little bit harder to set up. You need to make some actions for Windows and Linux operating systems to be able to work with Android devices. No actions are required for Mac OS. See detailed information on configuring hardware devices in subsections below. You may also consult the official `Android Developers site <http://developer.android.com/tools/device.html>`_ for more information.
+If you have an Android device, you can use it to test and debug your applications. This way is more authentic, though a little bit harder to set up. You need to make some actions for Windows and Linux operating systems to be able to work with Android devices. No actions are required for Mac OS. See detailed information on configuring hardware devices in subsections below.
 
+You may also consult the official `Android Developers site <http://developer.android.com/tools/device.html>`_ for more information.
 
 Windows host computer
 ^^^^^^^^^^^^^^^^^^^^^
 
-#. Enable USB debugging on the Android device (settings menu).
+#. Enable USB debugging on the Android device (via :guilabel:`Settings` menu).
 #. Attach the Android device to your PC with a USB cable.
 #. Go to :guilabel:`Start Menu` and **right-click** on :guilabel:`Computer`. Select :guilabel:`Manage` in the context menu. You may be asked for Administrative permittions.
 #. Select :guilabel:`Device Manager` in the left pane and find an unknown device in the list. You may try unplugging it and then plugging back in order to check whether it's your exact equipment appearing in the list.
     .. image:: images/usb_device_connect_01.png
      :alt: Unknown device
      :align: center
-#. Right-click on the unknoen device, select :guilabel:`Properties` then select the :guilabel:`Details` tab. Select :guilabel:`Hardware Ids` and copy the line like ``USB\VID_XXXX&PID_XXXX&MI_XX``.
+#. Try your luck installing `Google USB drivers` without any modifications: **right-click** on the unknown device, select :guilabel:`Properties` menu item --> :guilabel:`Details` tab --> :guilabel:`Update Driver` button.
+    .. image:: images/usb_device_connect_05.png
+     :alt: Device properties
+     :align: center
+#. Select :guilabel:`Browse computer for driver software`.
+    .. image:: images/usb_device_connect_06.png
+     :alt: Browse for driver
+     :align: center
+#. Specify the path to :file:`<Android SDK folder>/extras/google/usb_driver/` folder.
+    .. image:: images/usb_device_connect_07.png
+     :alt: Browse for driver
+     :align: center
+#. If you get the prompt to install unverified drivers and report about success - you've finished with USB driver installation.
+    .. image:: images/usb_device_connect_08.png
+     :alt: Install prompt
+     :align: center
+
+    ` `
+
+    .. image:: images/usb_device_connect_09.png
+     :alt: Installed OK
+     :align: center
+#. Otherwise (getting the failure like shown below) follow the next steps.
+    .. image:: images/usb_device_connect_12.png
+     :alt: No driver
+     :align: center
+#. Again **right-click** on the unknown device, select :guilabel:`Properties --> Details --> Hardware Ids` and copy the line like ``USB\VID_XXXX&PID_XXXX&MI_XX``.
     .. image:: images/usb_device_connect_02.png
      :alt: Device properties details
      :align: center
 #. Now open file :file:`<Android SDK folder>/extras/google/usb_driver/android_winusb.inf`. Select either ``Google.NTx86`` or ``Google.NTamd64`` section depending on your host system architecture.
     .. image:: images/usb_device_connect_03.png
-     :alt: Device properties details
+     :alt: "android_winusb.inf"
      :align: center
 #. There should be a record like existing ones for your device and you need to add one manually.
     .. image:: images/usb_device_connect_04.png
-     :alt: Device properties details
+     :alt: "android_winusb.inf"
      :align: center
-#. TBD.
+#. Save the :file:`android_winusb.inf` file and try to install the USB driver again.
     .. image:: images/usb_device_connect_05.png
-     :alt: Device properties details
+     :alt: Device properties
      :align: center
-#. TBD.
+
+    ` `
+
     .. image:: images/usb_device_connect_06.png
-     :alt: Device properties details
+     :alt: Browse for driver
      :align: center
-#. TBD.
+
+    ` `
+
     .. image:: images/usb_device_connect_07.png
-     :alt: Device properties details
+     :alt: Browse for driver
      :align: center
-#. TBD.
+#. This time installation should go successfully.
     .. image:: images/usb_device_connect_08.png
-     :alt: Device properties details
+     :alt: Install prompt
      :align: center
-#. TBD.
+
+    ` `
+
     .. image:: images/usb_device_connect_09.png
-     :alt: Device properties details
+     :alt: Installed OK
      :align: center
-#. TBD.
+#. And "unknown" device becomes "known" one.
     .. image:: images/usb_device_connect_10.png
-     :alt: Device properties details
+     :alt: "Known" device
      :align: center
-#. TBD.
+#. Successful device USB connection can be verified in console via ``adb devices`` command.
     .. image:: images/usb_device_connect_11.png
-     :alt: Device properties details
+     :alt: "adb devices"
      :align: center
 
 #. Now, in Eclipse go :guilabel:`Run -> Run/Debug` to run your application in regular or debugging mode. :guilabel:`Device Chooser` will let you choose among the devices.
