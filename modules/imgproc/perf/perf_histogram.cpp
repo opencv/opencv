@@ -25,6 +25,8 @@ PERF_TEST_P(Size_Source, calcHist,
     Mat hist;
     int channels [] = {0};
     int histSize [] = {256};
+    int dims = 1;
+    int numberOfImages = 1;
 
     const float r[] = {0.0f, 256.0f};
     const float* ranges[] = {r};
@@ -32,7 +34,7 @@ PERF_TEST_P(Size_Source, calcHist,
     declare.in(source, WARMUP_RNG).time(20).iterations(1000);
     TEST_CYCLE()
     {
-        calcHist(&source, 1, channels, Mat(), hist, 1, histSize, ranges);
+        calcHist(&source, numberOfImages, channels, Mat(), hist, dims, histSize, ranges);
     }
 
     SANITY_CHECK(hist);
