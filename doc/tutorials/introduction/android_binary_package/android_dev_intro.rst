@@ -47,7 +47,7 @@ If you are a beginner in Android development then we also recommend you to start
 
 
 .. |Nvidia_Tegra_Platform| replace:: *NVIDIA*\ ’s Tegra platform
-.. _Nvidia_Tegra_Platform: http://developer.nvidia.com/node/19071
+.. _Nvidia_Tegra_Platform: http://www.nvidia.com/object/tegra-3-processor.html
 .. |Tegra_Development_Kit| replace:: Tegra Development Kit
 .. _Tegra_Development_Kit: http://developer.nvidia.com/mobile/tegra-hardware-sales-inquiries
 
