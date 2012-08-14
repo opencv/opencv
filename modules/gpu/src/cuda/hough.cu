@@ -54,40 +54,30 @@ namespace cv { namespace gpu { namespace device
 
         __global__ void buildPointList(const DevMem2Db src, unsigned int* list)
         {
-            const int x = blockIdx.x * 32 * PIXELS_PER_THREAD + threadIdx.x;
-            const int y = blockIdx.y * 4 + threadIdx.y;
+            __shared__ unsigned int s_queues[4][32 * PIXELS_PER_THREAD];
+            __shared__ unsigned int s_qsize[4];
+            __shared__ unsigned int s_start[4];
+
+            const int x = blockIdx.x * blockDim.x * PIXELS_PER_THREAD + threadIdx.x;
+            const int y = blockIdx.y * blockDim.y + threadIdx.y;
 
             if (y >= src.rows)
                 return;
 
-            volatile int qindex = -1;
-            __shared__ volatile int s_qindex[4];
-            __shared__ volatile int s_qstart[4];
-            s_qindex[threadIdx.y] = -1;
+            if (threadIdx.x == 0)
+                s_qsize[threadIdx.y] = 0;
 
-            __shared__ volatile unsigned int s_queue[4][32 * PIXELS_PER_THREAD];
+            __syncthreads();
 
             // fill the queue
-            for (int i = 0; i < PIXELS_PER_THREAD; ++i)
+            for (int i = 0, xx = x; i < PIXELS_PER_THREAD && xx < src.cols; ++i, xx += blockDim.x)
             {
-                const int xx = i * blockDim.x + x;
-
-                if (xx >= src.cols)
-                    break;
-
                 if (src(y, xx))
                 {
-                    const unsigned int queue_val = (y << 16) | xx;
-
-                    do {
-                        qindex++;
-                        s_qindex[threadIdx.y] = qindex;
-                        s_queue[threadIdx.y][qindex] = queue_val;
-                    } while (s_queue[threadIdx.y][qindex] != queue_val);
+                    const unsigned int val = (y << 16) | xx;
+                    int qidx = Emulation::smem::atomicInc(&s_qsize[threadIdx.y], (unsigned int)(-1));
+                    s_queues[threadIdx.y][qidx] = val;
                 }
-
-                // reload index from smem (last thread to write to smem will have updated it)
-                qindex = s_qindex[threadIdx.y];
             }
 
             __syncthreads();
@@ -96,31 +86,27 @@ namespace cv { namespace gpu { namespace device
             if (threadIdx.x == 0 && threadIdx.y == 0)
             {
                 // find how many items are stored in each list
-                int total_index = 0;
-                #pragma unroll
-                for (int i = 0; i < 4; ++i)
+                unsigned int total_size = 0;
+                for (int i = 0; i < blockDim.y; ++i)
                 {
-                    s_qstart[i] = total_index;
-                    total_index += (s_qindex[i] + 1u);
+                    s_start[i] = total_size;
+                    total_size += s_qsize[i];
                 }
 
                 //calculate the offset in the global list
-                const unsigned int global_offset = atomicAdd(&g_counter, total_index);
-                #pragma unroll
-                for (int i = 0; i < 4; ++i)
-                    s_qstart[i] += global_offset;
+                const unsigned int global_offset = atomicAdd(&g_counter, total_size);
+                for (int i = 0; i < blockDim.y; ++i)
+                    s_start[i] += global_offset;
             }
 
             __syncthreads();
 
             // copy local queues to global queue
-            for(int i = 0; i <= qindex; i += 32)
+            const unsigned int qsize = s_qsize[threadIdx.y];
+            for(int i = threadIdx.x; i < qsize; i += blockDim.x)
             {
-                if(i + threadIdx.x > qindex)
-                    break;
-
-                unsigned int qvalue = s_queue[threadIdx.y][i + threadIdx.x];
-                list[s_qstart[threadIdx.y] + i + threadIdx.x] = qvalue;
+                unsigned int val = s_queues[threadIdx.y][i];
+                list[s_start[threadIdx.y] + i] = val;
             }
         }
 

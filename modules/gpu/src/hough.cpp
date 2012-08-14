@@ -61,8 +61,24 @@ void cv::gpu::HoughLinesTransform(const GpuMat& src, GpuMat& accum, GpuMat& buf,
     CV_Assert(src.rows < std::numeric_limits<unsigned short>::max());
 
     ensureSizeIsEnough(1, src.size().area(), CV_32SC1, buf);
-
     unsigned int count = buildPointList_gpu(src, buf.ptr<unsigned int>());
+//    unsigned int count = 0;
+//    {
+//        cv::Mat h_src(src);
+//        cv::Mat h_buf(1, src.size().area(), CV_32SC1);
+//        for (int y = 0; y < h_src.rows; ++y)
+//        {
+//            for (int x = 0; x < h_src.cols; ++x)
+//            {
+//                if (h_src.at<uchar>(y, x))
+//                {
+//                    const unsigned int val = (y << 16) | x;
+//                    h_buf.ptr<unsigned int>()[count++] = val;
+//                }
+//            }
+//        }
+//        buf.upload(h_buf);
+//    }
 
     const int numangle = cvRound(CV_PI / theta);
     const int numrho = cvRound(((src.cols + src.rows) * 2 + 1) / rho);
@@ -70,7 +86,8 @@ void cv::gpu::HoughLinesTransform(const GpuMat& src, GpuMat& accum, GpuMat& buf,
     ensureSizeIsEnough(numangle + 2, numrho + 2, CV_32SC1, accum);
     accum.setTo(cv::Scalar::all(0));
 
-    linesAccum_gpu(buf.ptr<unsigned int>(), count, accum, rho, theta);
+    if (count > 0)
+        linesAccum_gpu(buf.ptr<unsigned int>(), count, accum, rho, theta);
 }
 
 void cv::gpu::HoughLinesGet(const GpuMat& accum, GpuMat& lines, float rho, float theta, int threshold, bool doSort, int maxLines)
