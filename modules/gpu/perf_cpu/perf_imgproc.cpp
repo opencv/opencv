@@ -730,38 +730,42 @@ INSTANTIATE_TEST_CASE_P(ImgProc, CvtColor, testing::Combine(
 //////////////////////////////////////////////////////////////////////
 // HoughLines
 
-GPU_PERF_TEST(HoughLines, cv::gpu::DeviceInfo, std::string)
+IMPLEMENT_PARAM_CLASS(DoSort, bool)
+
+GPU_PERF_TEST(HoughLines, cv::gpu::DeviceInfo, cv::Size, DoSort)
 {
-    const std::string fileName = GET_PARAM(1);
+    declare.time(30.0);
+
+    const cv::Size size = GET_PARAM(1);
 
     const float rho = 1.0f;
     const float theta = CV_PI / 180.0f;
     const int threshold = 300;
 
-    cv::Mat img_base = readImage(fileName, cv::IMREAD_GRAYSCALE);
-    ASSERT_FALSE(img_base.empty());
+    cv::RNG rng(123456789);
 
-    cv::Mat img;
-    cv::resize(img_base, img, cv::Size(1920, 1080));
+    cv::Mat src(size, CV_8UC1, cv::Scalar::all(0));
 
-    cv::Mat edges;
-    cv::Canny(img, edges, 50, 200);
+    const int numLines = rng.uniform(500, 2000);
+    for (int i = 0; i < numLines; ++i)
+    {
+        cv::Point p1(rng.uniform(0, src.cols), rng.uniform(0, src.rows));
+        cv::Point p2(rng.uniform(0, src.cols), rng.uniform(0, src.rows));
+        cv::line(src, p1, p2, cv::Scalar::all(255), 2);
+    }
 
     std::vector<cv::Vec2f> lines;
-    cv::HoughLines(edges, lines, rho, theta, threshold);
+    cv::HoughLines(src, lines, rho, theta, threshold);
 
     TEST_CYCLE()
     {
-        cv::HoughLines(edges, lines, rho, theta, threshold);
+        cv::HoughLines(src, lines, rho, theta, threshold);
     }
 }
 
 INSTANTIATE_TEST_CASE_P(ImgProc, HoughLines, testing::Combine(
     ALL_DEVICES,
-    testing::Values(std::string("cv/shared/pic1.png"),
-                    std::string("cv/shared/pic3.png"),
-                    std::string("cv/shared/pic4.png"),
-                    std::string("cv/shared/pic5.png"),
-                    std::string("cv/shared/pic6.png"))));
+    GPU_TYPICAL_MAT_SIZES,
+    testing::Values(DoSort(false), DoSort(true))));
 
 #endif

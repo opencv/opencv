@@ -75,12 +75,12 @@ namespace cv { namespace gpu { namespace device
             }
         }
 
-        void linesAccum_gpu(DevMem2Db src, PtrStep_<uint> accum, float theta, int numangle, int numrho, float irho)
+        void linesAccum_gpu(DevMem2Db src, DevMem2D_<uint> accum, float rho, float theta)
         {
             const dim3 block(32, 8);
             const dim3 grid(divUp(src.cols, block.x), divUp(src.rows, block.y));
 
-            linesAccum<<<grid, block>>>(src, accum, theta, numangle, numrho, irho);
+            linesAccum<<<grid, block>>>(src, accum, theta, accum.rows - 2, accum.cols - 2, 1.0f / rho);
             cudaSafeCall( cudaGetLastError() );
 
             cudaSafeCall( cudaDeviceSynchronize() );
@@ -125,7 +125,7 @@ namespace cv { namespace gpu { namespace device
             }
         }
 
-        int linesGetResult_gpu(DevMem2D_<uint> accum, float2* out, int* voices, int maxSize, float threshold, float theta, float rho, bool doSort)
+        unsigned int linesGetResult_gpu(DevMem2D_<uint> accum, float2* out, int* voices, unsigned int maxSize, float rho, float theta, float threshold, bool doSort)
         {
             void* counter_ptr;
             cudaSafeCall( cudaGetSymbolAddress(&counter_ptr, g_counter) );
@@ -143,7 +143,9 @@ namespace cv { namespace gpu { namespace device
             uint total_count;
             cudaSafeCall( cudaMemcpy(&total_count, counter_ptr, sizeof(uint), cudaMemcpyDeviceToHost) );
 
-            if (doSort)
+            total_count = ::min(total_count, maxSize);
+
+            if (doSort && total_count > 0)
             {
                 thrust::device_ptr<float2> out_ptr(out);
                 thrust::device_ptr<int> voices_ptr(voices);

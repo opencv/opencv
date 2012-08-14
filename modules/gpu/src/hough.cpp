@@ -46,8 +46,8 @@ namespace cv { namespace gpu { namespace device
 {
     namespace hough
     {
-        void linesAccum_gpu(DevMem2Db src, PtrStep_<uint> accum, float theta, int numangle, int numrho, float irho);
-        int linesGetResult_gpu(DevMem2D_<uint> accum, float2* out, int* voices, int maxSize, float threshold, float theta, float rho, bool doSort);
+        void linesAccum_gpu(DevMem2Db src, DevMem2D_<uint> accum, float rho, float theta);
+        unsigned int linesGetResult_gpu(DevMem2D_<uint> accum, float2* out, int* voices, unsigned int maxSize, float rho, float theta, float threshold, bool doSort);
     }
 }}}
 
@@ -59,12 +59,11 @@ void cv::gpu::HoughLinesTransform(const GpuMat& src, GpuMat& accum, float rho, f
 
     const int numangle = cvRound(CV_PI / theta);
     const int numrho = cvRound(((src.cols + src.rows) * 2 + 1) / rho);
-    const float irho = 1.0f / rho;
 
-    accum.create(numangle + 2, numrho + 2, CV_32SC1);
+    ensureSizeIsEnough(numangle + 2, numrho + 2, CV_32SC1, accum);
     accum.setTo(cv::Scalar::all(0));
 
-    hough::linesAccum_gpu(src, accum, theta, numangle, numrho, irho);
+    hough::linesAccum_gpu(src, accum, rho, theta);
 }
 
 void cv::gpu::HoughLinesGet(const GpuMat& accum, GpuMat& lines, float rho, float theta, int threshold, bool doSort, int maxLines)
@@ -73,11 +72,11 @@ void cv::gpu::HoughLinesGet(const GpuMat& accum, GpuMat& lines, float rho, float
 
     CV_Assert(accum.type() == CV_32SC1);
 
-    lines.create(2, maxLines, CV_32FC2);
-    int count = hough::linesGetResult_gpu(accum, lines.ptr<float2>(0), lines.ptr<int>(1), maxLines, threshold, theta, rho, doSort);
+    ensureSizeIsEnough(2, maxLines, CV_32FC2, lines);
+    unsigned int count = hough::linesGetResult_gpu(accum, lines.ptr<float2>(0), lines.ptr<int>(1), maxLines, rho, theta, threshold, doSort);
 
     if (count > 0)
-        lines.cols = std::min(count, maxLines);
+        lines.cols = count;
     else
         lines.release();
 }
