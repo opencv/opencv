@@ -42,6 +42,16 @@
 
 #include "precomp.hpp"
 
+#if !defined (HAVE_CUDA)
+
+void cv::gpu::HoughLinesTransform(const GpuMat&, GpuMat&, GpuMat&, float, float) { throw_nogpu(); }
+void cv::gpu::HoughLinesGet(const GpuMat&, GpuMat&, float, float, int, bool, int) { throw_nogpu(); }
+void cv::gpu::HoughLines(const GpuMat&, GpuMat&, float, float, int, bool, int) { throw_nogpu(); }
+void cv::gpu::HoughLines(const GpuMat&, GpuMat&, GpuMat&, GpuMat&, float, float, int, bool, int) { throw_nogpu(); }
+void cv::gpu::HoughLinesDownload(const GpuMat&, OutputArray, OutputArray) { throw_nogpu(); }
+
+#else /* !defined (HAVE_CUDA) */
+
 namespace cv { namespace gpu { namespace device
 {
     namespace hough
@@ -62,23 +72,6 @@ void cv::gpu::HoughLinesTransform(const GpuMat& src, GpuMat& accum, GpuMat& buf,
 
     ensureSizeIsEnough(1, src.size().area(), CV_32SC1, buf);
     unsigned int count = buildPointList_gpu(src, buf.ptr<unsigned int>());
-//    unsigned int count = 0;
-//    {
-//        cv::Mat h_src(src);
-//        cv::Mat h_buf(1, src.size().area(), CV_32SC1);
-//        for (int y = 0; y < h_src.rows; ++y)
-//        {
-//            for (int x = 0; x < h_src.cols; ++x)
-//            {
-//                if (h_src.at<uchar>(y, x))
-//                {
-//                    const unsigned int val = (y << 16) | x;
-//                    h_buf.ptr<unsigned int>()[count++] = val;
-//                }
-//            }
-//        }
-//        buf.upload(h_buf);
-//    }
 
     const int numangle = cvRound(CV_PI / theta);
     const int numrho = cvRound(((src.cols + src.rows) * 2 + 1) / rho);
@@ -141,3 +134,5 @@ void cv::gpu::HoughLinesDownload(const GpuMat& d_lines, OutputArray h_lines_, Ou
         d_voices.download(h_voices);
     }
 }
+
+#endif /* !defined (HAVE_CUDA) */
