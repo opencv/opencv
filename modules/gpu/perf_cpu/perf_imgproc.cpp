@@ -727,4 +727,41 @@ INSTANTIATE_TEST_CASE_P(ImgProc, CvtColor, testing::Combine(
                     CvtColorInfo(1, 3, cv::COLOR_BayerGR2BGR),
                     CvtColorInfo(4, 4, cv::COLOR_RGBA2mRGBA))));
 
+//////////////////////////////////////////////////////////////////////
+// HoughLines
+
+GPU_PERF_TEST(HoughLines, cv::gpu::DeviceInfo, std::string)
+{
+    const std::string fileName = GET_PARAM(1);
+
+    const float rho = 1.0f;
+    const float theta = CV_PI / 180.0f;
+    const int threshold = 300;
+
+    cv::Mat img_base = readImage(fileName, cv::IMREAD_GRAYSCALE);
+    ASSERT_FALSE(img_base.empty());
+
+    cv::Mat img;
+    cv::resize(img_base, img, cv::Size(1920, 1080));
+
+    cv::Mat edges;
+    cv::Canny(img, edges, 50, 200);
+
+    std::vector<cv::Vec2f> lines;
+    cv::HoughLines(edges, lines, rho, theta, threshold);
+
+    TEST_CYCLE()
+    {
+        cv::HoughLines(edges, lines, rho, theta, threshold);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(ImgProc, HoughLines, testing::Combine(
+    ALL_DEVICES,
+    testing::Values(std::string("cv/shared/pic1.png"),
+                    std::string("cv/shared/pic3.png"),
+                    std::string("cv/shared/pic4.png"),
+                    std::string("cv/shared/pic5.png"),
+                    std::string("cv/shared/pic6.png"))));
+
 #endif

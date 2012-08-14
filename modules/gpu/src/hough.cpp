@@ -74,7 +74,12 @@ void cv::gpu::HoughLinesGet(const GpuMat& accum, GpuMat& lines, float rho, float
     CV_Assert(accum.type() == CV_32SC1);
 
     lines.create(2, maxLines, CV_32FC2);
-    lines.cols = hough::linesGetResult_gpu(accum, lines.ptr<float2>(0), lines.ptr<int>(1), maxLines, threshold, theta, rho, doSort);
+    int count = hough::linesGetResult_gpu(accum, lines.ptr<float2>(0), lines.ptr<int>(1), maxLines, threshold, theta, rho, doSort);
+
+    if (count > 0)
+        lines.cols = std::min(count, maxLines);
+    else
+        lines.release();
 }
 
 void cv::gpu::HoughLines(const GpuMat& src, GpuMat& lines, float rho, float theta, int threshold, bool doSort, int maxLines)
@@ -91,6 +96,16 @@ void cv::gpu::HoughLines(const GpuMat& src, GpuMat& lines, GpuMat& accum, float 
 
 void cv::gpu::HoughLinesDownload(const GpuMat& d_lines, OutputArray h_lines_, OutputArray h_voices_)
 {
+    if (d_lines.empty())
+    {
+        h_lines_.release();
+        if (h_voices_.needed())
+            h_voices_.release();
+        return;
+    }
+
+    CV_Assert(d_lines.rows == 2 && d_lines.type() == CV_32FC2);
+
     h_lines_.create(1, d_lines.cols, CV_32FC2);
     cv::Mat h_lines = h_lines_.getMat();
     d_lines.row(0).download(h_lines);

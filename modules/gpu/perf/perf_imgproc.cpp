@@ -1331,4 +1331,45 @@ INSTANTIATE_TEST_CASE_P(ImgProc, ImagePyramid_getLayer, testing::Combine(
                     MatType(CV_16UC1), MatType(CV_16UC3), MatType(CV_16UC4),
                     MatType(CV_32FC1), MatType(CV_32FC3), MatType(CV_32FC4))));
 
+//////////////////////////////////////////////////////////////////////
+// HoughLines
+
+GPU_PERF_TEST(HoughLines, cv::gpu::DeviceInfo, std::string)
+{
+    const cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
+    cv::gpu::setDevice(devInfo.deviceID());
+    const std::string fileName = GET_PARAM(1);
+
+    const float rho = 1.0f;
+    const float theta = CV_PI / 180.0f;
+    const int threshold = 300;
+
+    cv::Mat img_base = readImage(fileName, cv::IMREAD_GRAYSCALE);
+    ASSERT_FALSE(img_base.empty());
+
+    cv::Mat img;
+    cv::resize(img_base, img, cv::Size(1920, 1080));
+
+    cv::Mat edges;
+    cv::Canny(img, edges, 50, 200);
+
+    cv::gpu::GpuMat d_edges(edges);
+    cv::gpu::GpuMat d_lines;
+    cv::gpu::GpuMat d_accum;
+    cv::gpu::HoughLines(d_edges, d_lines, d_accum, rho, theta, threshold);
+
+    TEST_CYCLE()
+    {
+        cv::gpu::HoughLines(d_edges, d_lines, d_accum, rho, theta, threshold);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(ImgProc, HoughLines, testing::Combine(
+    ALL_DEVICES,
+    testing::Values(std::string("cv/shared/pic1.png"),
+                    std::string("cv/shared/pic3.png"),
+                    std::string("cv/shared/pic4.png"),
+                    std::string("cv/shared/pic5.png"),
+                    std::string("cv/shared/pic6.png"))));
+
 #endif
