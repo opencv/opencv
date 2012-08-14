@@ -44,7 +44,7 @@ class Sample2View extends SampleCvViewBase {
             break;
         case Sample2NativeCamera.VIEW_MODE_RGBA:
             capture.retrieve(mRgba, Highgui.CV_CAP_ANDROID_COLOR_FRAME_RGBA);
-            Core.putText(mRgba, "OpenCV + Android", new Point(10, 100), 3, 2, new Scalar(255, 0, 0, 255), 3);
+            Core.putText(mRgba, "OpenCV+Android", new Point(10, 50), 3, 1, new Scalar(255, 0, 0, 255), 2);
             break;
         case Sample2NativeCamera.VIEW_MODE_CANNY:
             capture.retrieve(mGray, Highgui.CV_CAP_ANDROID_GREY_FRAME);
