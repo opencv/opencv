@@ -14,9 +14,9 @@
 enum Method
 {
     MOG,
-    MOG2,
+    //MOG2,
     FGD,
-    GMG,
+    //GMG,
     VIBE,
     METHOD_MAX
 };
@@ -24,11 +24,20 @@ enum Method
 const char* method_str[] =
 {
     "MOG",
-    "MOG2",
+    //"MOG2",
     "FGD",
-    "GMG",
+    //"GMG",
     "VIBE"
 };
+
+namespace cv {
+// TODO: conflicts with calib3d.hpp : filterSpeckles, should be removed ?
+
+//! Speckle filtering - filters small connected components on diparity image.
+//! It sets pixel (x,y) to newVal if it coresponds to small CC with size < maxSpeckleSize.
+//! Threshold for border between CC is diffThreshold;
+  CV_EXPORTS void filterSpeckles(Mat& img, uchar newVal, int maxSpeckleSize, uchar diffThreshold, Mat& buf);
+}
 
 namespace cv
 {
@@ -58,17 +67,19 @@ private:
     bool useGpu;
     bool reinitialize;
 
+    int curSource;
+
     cv::BackgroundSubtractorMOG mog_cpu;
     cv::gpu::MOG_GPU mog_gpu;
 
-    cv::BackgroundSubtractorMOG2 mog2_cpu;
-    cv::gpu::MOG2_GPU mog2_gpu;
+    //cv::BackgroundSubtractorMOG2 mog2_cpu;
+    //cv::gpu::MOG2_GPU mog2_gpu;
 
     cv::gpu::FGDStatModel fgd_gpu;
     cv::Ptr<CvBGStatModel> fgd_cpu;
 
-    cv::gpu::GMG_GPU gmg_gpu;
-    cv::BackgroundSubtractorGMG gmg_cpu;
+    //cv::gpu::GMG_GPU gmg_gpu;
+    //cv::BackgroundSubtractorGMG gmg_cpu;
 
     cv::gpu::VIBE_GPU vibe_gpu;
 };
@@ -78,41 +89,39 @@ App::App()
     method = MOG;
     useGpu = true;
     reinitialize = true;
+    curSource = 0;
 
-    gmg_gpu.numInitializationFrames = 40;
-    gmg_cpu.numInitializationFrames = 40;
-
-    vibe_gpu.subsamplingFactor = 2;
+    //mog2_cpu.set("detectShadows", false);
+    //mog2_gpu.bShadowDetection = false;
 }
 
 void App::process()
 {
-    if (sources.size() != 1)
+    if (sources.empty())
     {
         std::cout << "Using default frames source...\n";
-        sources.resize(1);
-        sources[0] = new VideoSource("data/pedestrian_detect/mitsubishi.avi");
+        sources.push_back(new VideoSource("data/bgfg/haut-640x480.avi"));
     }
 
-    cv::Mat frame3;
     cv::Mat frame;
     cv::gpu::GpuMat d_frame;
     IplImage ipl_frame;
 
     cv::Mat fgmask;
     cv::gpu::GpuMat d_fgmask;
+    cv::Mat buf;
 
     cv::Mat outImg;
+    cv::Mat foreground;
 
     while (!exited)
     {
         int64 total_time = cv::getTickCount();
 
-        sources[0]->next(frame3);
-        cv::cvtColor(frame3, frame, cv::COLOR_BGR2BGRA);
+        sources[curSource]->next(frame);
         d_frame.upload(frame);
-        ipl_frame = frame3;
-        frame3.copyTo(outImg);
+        ipl_frame = frame;
+        frame.copyTo(outImg);
 
         double total_fps = 0.0;
         double proc_fps = 0.0;
@@ -127,109 +136,76 @@ void App::process()
                     if (useGpu)
                     {
                         if (reinitialize)
-                        {
                             mog_gpu.initialize(d_frame.size(), d_frame.type());
-                            reinitialize = false;
-                        }
-
                         mog_gpu(d_frame, d_fgmask, 0.01f);
                     }
                     else
                     {
                         if (reinitialize)
-                        {
-                            mog_cpu.initialize(frame3.size(), frame3.type());
-                            reinitialize = false;
-                        }
-
-                        mog_cpu(frame3, fgmask, 0.01);
+                            mog_cpu.initialize(frame.size(), frame.type());
+                        mog_cpu(frame, fgmask, 0.01);
                     }
                     break;
                 }
-            case MOG2:
-                {
-                    if (useGpu)
-                    {
-                        if (reinitialize)
-                        {
-                            mog2_gpu.initialize(d_frame.size(), d_frame.type());
-                            reinitialize = false;
-                        }
-
-                        mog2_gpu(d_frame, d_fgmask);
-                    }
-                    else
-                    {
-                        if (reinitialize)
-                        {
-                            mog2_cpu.initialize(frame3.size(), frame3.type());
-                            reinitialize = false;
-                        }
-
-                        mog2_cpu(frame3, fgmask);
-                    }
-                    break;
-                }
-            case GMG:
-                {
-                    if (useGpu)
-                    {
-                        if (reinitialize)
-                        {
-                            gmg_gpu.initialize(d_frame.size());
-                            reinitialize = false;
-                        }
-
-                        gmg_gpu(d_frame, d_fgmask);
-                    }
-                    else
-                    {
-                        if (reinitialize)
-                        {
-                            gmg_cpu.initialize(frame3.size(), 0, 255);
-                            reinitialize = false;
-                        }
-
-                        gmg_cpu(frame3, fgmask);
-                    }
-                    break;
-                }
+            //case MOG2:
+            //    {
+            //        if (useGpu)
+            //        {
+            //            if (reinitialize)
+            //                mog2_gpu.initialize(d_frame.size(), d_frame.type());
+            //            mog2_gpu(d_frame, d_fgmask);
+            //        }
+            //        else
+            //        {
+            //            if (reinitialize)
+            //            {
+            //                mog2_cpu.set("detectShadows", false);
+            //                mog2_cpu.initialize(frame.size(), frame.type());
+            //            }
+            //            mog2_cpu(frame, fgmask);
+            //        }
+            //        break;
+            //    }
             case FGD:
                 {
                     if (useGpu)
                     {
                         if (reinitialize)
-                        {
                             fgd_gpu.create(d_frame);
-                            reinitialize = false;
-                        }
-
                         fgd_gpu.update(d_frame);
                         fgd_gpu.foreground.copyTo(d_fgmask);
                     }
                     else
                     {
                         if (reinitialize)
-                        {
                             fgd_cpu = cvCreateFGDStatModel(&ipl_frame);
-                            reinitialize = false;
-                        }
-
                         cvUpdateBGStatModel(&ipl_frame, fgd_cpu);
                         cv::Mat(fgd_cpu->foreground).copyTo(fgmask);
                     }
                     break;
                 }
+            //case GMG:
+            //    {
+            //        if (useGpu)
+            //        {
+            //            if (reinitialize)
+            //                gmg_gpu.initialize(d_frame.size());
+            //            gmg_gpu(d_frame, d_fgmask);
+            //        }
+            //        else
+            //        {
+            //            if (reinitialize)
+            //                gmg_cpu.initialize(frame.size(), 0, 255);
+            //            gmg_cpu(frame, fgmask);
+            //        }
+            //        break;
+            //    }
             case VIBE:
                 {
                     if (useGpu)
                     {
                         if (reinitialize)
-                        {
                             vibe_gpu.initialize(d_frame);
-                            reinitialize = false;
-                        }
-
                         vibe_gpu(d_frame, d_fgmask);
                     }
                     break;
@@ -241,11 +217,19 @@ void App::process()
             if (useGpu)
                 d_fgmask.download(fgmask);
 
+            cv::filterSpeckles(fgmask, 0, 100, 1, buf);
+
             cv::add(outImg, cv::Scalar(100, 100, 0), outImg, fgmask);
 
+            foreground.create(frame.size(), frame.type());
+            foreground.setTo(0);
+            frame.copyTo(foreground, fgmask);
+
             total_fps = cv::getTickFrequency() / (cv::getTickCount() - total_time);
+
+            reinitialize = false;
         }
-        catch (const cv::Exception& e)
+        catch (const cv::Exception&)
         {
             std::string msg = "Can't allocate memory";
 
@@ -266,8 +250,9 @@ void App::process()
         displayState(outImg, proc_fps, total_fps);
 
         cv::imshow("Background Subtraction Demo", outImg);
+        cv::imshow("Foreground", foreground);
 
-        processKey(cv::waitKey(10) & 0xff);
+        processKey(cv::waitKey(30) & 0xff);
     }
 }
 
@@ -292,6 +277,8 @@ void App::displayState(cv::Mat& frame, double proc_fps, double total_fps)
 
     printText(frame, "M - switch method", i++, fontColorRed);
     printText(frame, "Space - switch CUDA/CPU mode", i++, fontColorRed);
+    if (sources.size() > 1)
+        printText(frame, "S - switch source", i++, fontColorRed);
 }
 
 void App::printHelp()
@@ -305,14 +292,14 @@ void App::releaseAllAlgs()
     mog_cpu = cv::BackgroundSubtractorMOG();
     mog_gpu.release();
 
-    mog2_cpu = cv::BackgroundSubtractorMOG2();
-    mog2_gpu.release();
+    //mog2_cpu = cv::BackgroundSubtractorMOG2();
+    //mog2_gpu.release();
 
     fgd_gpu.release();
     fgd_cpu.release();
 
-    gmg_gpu.release();
-    gmg_cpu.release();
+    //gmg_gpu.release();
+    //gmg_cpu.release();
 
     vibe_gpu.release();
 }
@@ -336,6 +323,12 @@ bool App::processKey(int key)
         reinitialize = true;
         releaseAllAlgs();
         std::cout << "Switch method to " << method_str[method] << std::endl;
+        break;
+
+    case 'S':
+        curSource = (curSource + 1) % sources.size();
+        reinitialize = true;
+        std::cout << "Switch source to " << curSource << std::endl;
         break;
 
     case 32:
