@@ -7,7 +7,7 @@ OpenCV4Android SDK
 
 This tutorial was designed to help you with installation and configuration of OpenCV4Android SDK.
 
-This guide was written with Windows 7 in mind, though it should work with any other OS supported by OpenCV4Android SDK.
+This guide was written with MS Windows 7 in mind, though it should work with GNU Linux and Apple MacOS as well.
 
 This tutorial assumes you have the following installed and configured:
 
@@ -27,15 +27,66 @@ If you encounter any error after thoroughly following these steps, feel free to 
 
 General info
 ============
-**TODO:** rewrite this section.
 
-OpenCV4Android SDK uses Android OpenCV Manager for library initialization. OpenCV Manager provides the following benefits:
+OpenCV4Android SDK package contains the stuff that enables development Android applications with use of OpenCV library.
+
+The package content look like the following:
+
+::
+
+    OpenCV-2.4.2-android-sdk
+    |_ apk
+    |   |_ OpenCV_2.4.2_binary_pack_XXX.apk 
+    |   |_ OpenCV_2.4.2_Manager.apk 
+    |
+    |_ doc
+    |_ samples
+    |_ sdk
+    |    |_ etc 
+    |    |_ java 
+    |    |_ native 
+    |          |_ 3rdparty 
+    |          |_ jni 
+    |          |_ libs 
+    |               |_ armeabi 
+    |               |_ armeabi-v7a 
+    |               |_ x86 
+    |
+    |_ license.txt
+    |_ README.android
+
+* :file:`sdk` folder contains OpenCV API and libraries for Android:
+
+* :file:`sdk/java` folder contains an Android library Eclipse project providing OpenCV Java API that can be imported into developer's workspace;
+
+* :file:`sdk/native` folder contains OpenCV C++ headers (for JNI code) and native Android libraries (\*\.so and \*\.a) for ARM-v5, ARM-v7a and x86 architectures;
+
+* :file:`sdk/etc` folder contains Haar and LBP cascades distributed with OpenCV.
+
+* :file:`apk` folder contains Android packages that should be installed on the target Android device to enable OpenCV library access via OpenCV Manager API (see details below).
+   
+  On production devices that have access to Google Play Market (and internet) these packages will be installed from Market on the first start of an application using OpenCV Manager API.
+  But dev kits without Market or internet require this packages to be installed manually.
+  (Install the `Manager.apk` and the corresponding `binary_pack.apk` depending on the device CPU, the Manager GUI provides this info).
+  
+  **Note**: installation from internet is the preferable way since we may publish updated versions of this packages on the Market.
+
+* :file:`samples` folder contains sample applications projects and their prebuilt packages (APK).
+  Import them into Eclipse workspace (like described below) and browse the code to learn possible ways of OpenCV use on Android.
+
+* :file:`doc` folder contains various OpenCV documentation in PDF format.
+  It's also available online at http://docs.opencv.org.
+  
+  **Note**: the most recent docs (nightly build) are at http://docs.opencv.org/trunk/.
+  Generally it's more up-to-date, but can refer not-yet-released functionality.
+
+Starting version 2.4.2 `OpenCV4Android SDK` uses `OpenCV Manager` API for library initialization. `OpenCV Manager` is an Android service based solution providing the following benefits for OpenCV applications developers:
 
 * Compact apk-size, since all applications use the same binaries from Manager and do not store native libs within themselves;
 
 * Hardware specific optimizations are automatically enabled on all supported platforms;
 
-* Regular updates and bug fixes;
+* Automatic updates and bug fixes;
 
 * Trusted OpenCV library source. All packages with OpenCV are published on Google Play;
 
@@ -44,27 +95,14 @@ OpenCV4Android SDK uses Android OpenCV Manager for library initialization. OpenC
 
 For additional information on OpenCV Manager see the:
  
-* |OpenCV4Android_Tutorial|_ 
+* |OpenCV4Android_Slides|_ 
   
 * |OpenCV4Android_Reference|_ 
 
      ..
 
-
-This package is quite close to the current OpenCV4Android distribution. If you're beginner with OpenCV, tutorial from above will help you to start.
-
-* Library Project for Java development with Eclipse. 
-
-* C++ headers and libraries for native application development.
-
-* Java samples, javadoc documentation.
-
-* prebuilt binaries for ARM-v7a platform.
-
-     ..
-
-.. |OpenCV4Android_Tutorial| replace:: Tutorial
-.. _OpenCV4Android_Tutorial: http://docs.opencv.org/doc/tutorials/introduction/android_binary_package/android_binary_package.html#android-binary-package
+.. |OpenCV4Android_Slides| replace:: Slides
+.. _OpenCV4Android_Slides: https://docs.google.com/a/itseez.com/presentation/d/1EO_1kijgBg_BsjNp2ymk-aarg-0K279_1VZRcPplSuk/present#slide=id.p
 .. |OpenCV4Android_Reference| replace:: Reference Manual
 .. _OpenCV4Android_Reference: http://docs.opencv.org/android/refman.html
 
@@ -255,4 +293,4 @@ Well, running samples from Eclipse is very simple:
 What's next
 ===========
 
-Now, when you have your instance of OpenCV4Adroid SDK set up and configured, you may want to proceed to using OpenCV in your own application. You can learn how to do that in a separate *Development with OpenCV* tutorial.
+Now, when you have your instance of OpenCV4Adroid SDK set up and configured, you may want to proceed to using OpenCV in your own application. You can learn how to do that in a separate :ref:`dev_with_OCV_on_Android` tutorial.
