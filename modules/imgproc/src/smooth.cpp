@@ -1538,8 +1538,9 @@ bilateralFilter_32f( const Mat& src, Mat& dst, int d,
     // temporary copy of the image with borders for easy processing
     Mat temp;
     copyMakeBorder( src, temp, radius, radius, radius, radius, borderType );
-    patchNaNs(temp);
-
+    const double insteadNaNValue = -5. * sigma_color;
+    patchNaNs( temp, insteadNaNValue ); // this replacement of NaNs makes the assumption that depth values are nonnegative
+                                        // TODO: make insteadNaNValue avalible in the outside function interface to control the cases breaking the assumption
     // allocate lookup tables
     vector<float> _space_weight(d*d);
     vector<int> _space_ofs(d*d);
