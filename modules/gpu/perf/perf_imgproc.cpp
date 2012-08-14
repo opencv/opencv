@@ -1364,11 +1364,12 @@ GPU_PERF_TEST(HoughLines, cv::gpu::DeviceInfo, cv::Size, DoSort)
     cv::gpu::GpuMat d_src(src);
     cv::gpu::GpuMat d_lines;
     cv::gpu::GpuMat d_accum;
-    cv::gpu::HoughLines(d_src, d_lines, d_accum, rho, theta, threshold, doSort);
+    cv::gpu::GpuMat d_buf;
+    cv::gpu::HoughLines(d_src, d_lines, d_accum, d_buf, rho, theta, threshold, doSort);
 
     TEST_CYCLE()
     {
-        cv::gpu::HoughLines(d_src, d_lines, d_accum, rho, theta, threshold, doSort);
+        cv::gpu::HoughLines(d_src, d_lines, d_accum, d_buf, rho, theta, threshold, doSort);
     }
 }
 

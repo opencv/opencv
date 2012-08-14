@@ -821,8 +821,8 @@ private:
 };
 
 CV_EXPORTS void HoughLines(const GpuMat& src, GpuMat& lines, float rho, float theta, int threshold, bool doSort = false, int maxLines = 4096);
-CV_EXPORTS void HoughLines(const GpuMat& src, GpuMat& lines, GpuMat& accum, float rho, float theta, int threshold, bool doSort = false, int maxLines = 4096);
-CV_EXPORTS void HoughLinesTransform(const GpuMat& src, GpuMat& accum, float rho, float theta);
+CV_EXPORTS void HoughLines(const GpuMat& src, GpuMat& lines, GpuMat& accum, GpuMat& buf, float rho, float theta, int threshold, bool doSort = false, int maxLines = 4096);
+CV_EXPORTS void HoughLinesTransform(const GpuMat& src, GpuMat& accum, GpuMat& buf, float rho, float theta);
 CV_EXPORTS void HoughLinesGet(const GpuMat& accum, GpuMat& lines, float rho, float theta, int threshold, bool doSort = false, int maxLines = 4096);
 CV_EXPORTS void HoughLinesDownload(const GpuMat& d_lines, OutputArray h_lines, OutputArray h_voices = noArray());
 

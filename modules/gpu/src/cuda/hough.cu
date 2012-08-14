@@ -42,55 +42,167 @@
 
 #include <thrust/sort.h>
 #include "opencv2/gpu/device/common.hpp"
+#include "opencv2/gpu/device/emulation.hpp"
 
 namespace cv { namespace gpu { namespace device
 {
     namespace hough
     {
-        __global__ void linesAccum(const DevMem2Db src, PtrStep_<uint> accum, const float theta, const int numangle, const int numrho, const float irho)
-        {
-            const int x = blockIdx.x * blockDim.x + threadIdx.x;
-            const int y = blockIdx.y * blockDim.y + threadIdx.y;
+        __device__ unsigned int g_counter;
 
-            if (x >= src.cols || y >= src.rows)
+        const int PIXELS_PER_THREAD = 16;
+
+        __global__ void buildPointList(const DevMem2Db src, unsigned int* list)
+        {
+            const int x = blockIdx.x * 32 * PIXELS_PER_THREAD + threadIdx.x;
+            const int y = blockIdx.y * 4 + threadIdx.y;
+
+            if (y >= src.rows)
                 return;
 
-            if (src(y, x))
+            volatile int qindex = -1;
+            __shared__ volatile int s_qindex[4];
+            __shared__ volatile int s_qstart[4];
+            s_qindex[threadIdx.y] = -1;
+
+            __shared__ volatile unsigned int s_queue[4][32 * PIXELS_PER_THREAD];
+
+            // fill the queue
+            for (int i = 0; i < PIXELS_PER_THREAD; ++i)
             {
-                float ang = 0.0f;
-                for(int n = 0; n < numangle; ++n, ang += theta)
+                const int xx = i * blockDim.x + x;
+
+                if (xx >= src.cols)
+                    break;
+
+                if (src(y, xx))
                 {
-                    float sin_ang;
-                    float cos_ang;
-                    sincosf(ang, &sin_ang, &cos_ang);
+                    const unsigned int queue_val = (y << 16) | xx;
 
-                    const float tabSin = sin_ang * irho;
-                    const float tabCos = cos_ang * irho;
-
-                    int r = __float2int_rn(x * tabCos + y * tabSin);
-                    r += (numrho - 1) / 2;
-
-                    atomicInc(accum.ptr(n + 1) + r + 1, (unsigned int)-1);
+                    do {
+                        qindex++;
+                        s_qindex[threadIdx.y] = qindex;
+                        s_queue[threadIdx.y][qindex] = queue_val;
+                    } while (s_queue[threadIdx.y][qindex] != queue_val);
                 }
+
+                // reload index from smem (last thread to write to smem will have updated it)
+                qindex = s_qindex[threadIdx.y];
+            }
+
+            __syncthreads();
+
+            // let one thread reserve the space required in the global list
+            if (threadIdx.x == 0 && threadIdx.y == 0)
+            {
+                // find how many items are stored in each list
+                int total_index = 0;
+                #pragma unroll
+                for (int i = 0; i < 4; ++i)
+                {
+                    s_qstart[i] = total_index;
+                    total_index += (s_qindex[i] + 1u);
+                }
+
+                //calculate the offset in the global list
+                const unsigned int global_offset = atomicAdd(&g_counter, total_index);
+                #pragma unroll
+                for (int i = 0; i < 4; ++i)
+                    s_qstart[i] += global_offset;
+            }
+
+            __syncthreads();
+
+            // copy local queues to global queue
+            for(int i = 0; i <= qindex; i += 32)
+            {
+                if(i + threadIdx.x > qindex)
+                    break;
+
+                unsigned int qvalue = s_queue[threadIdx.y][i + threadIdx.x];
+                list[s_qstart[threadIdx.y] + i + threadIdx.x] = qvalue;
             }
         }
 
-        void linesAccum_gpu(DevMem2Db src, DevMem2D_<uint> accum, float rho, float theta)
+        unsigned int buildPointList_gpu(DevMem2Db src, unsigned int* list)
         {
-            const dim3 block(32, 8);
-            const dim3 grid(divUp(src.cols, block.x), divUp(src.rows, block.y));
+            void* counter_ptr;
+            cudaSafeCall( cudaGetSymbolAddress(&counter_ptr, g_counter) );
 
-            linesAccum<<<grid, block>>>(src, accum, theta, accum.rows - 2, accum.cols - 2, 1.0f / rho);
+            cudaSafeCall( cudaMemset(counter_ptr, 0, sizeof(unsigned int)) );
+
+            const dim3 block(32, 4);
+            const dim3 grid(divUp(src.cols, block.x * PIXELS_PER_THREAD), divUp(src.rows, block.y));
+
+            cudaSafeCall( cudaFuncSetCacheConfig(buildPointList, cudaFuncCachePreferShared) );
+
+            buildPointList<<<grid, block>>>(src, list);
+            cudaSafeCall( cudaGetLastError() );
+
+            cudaSafeCall( cudaDeviceSynchronize() );
+
+            unsigned int total_count;
+            cudaSafeCall( cudaMemcpy(&total_count, counter_ptr, sizeof(unsigned int), cudaMemcpyDeviceToHost) );
+
+            return total_count;
+        }
+
+        __global__ void linesAccum(const unsigned int* list, const unsigned int count, PtrStep_<unsigned int> accum,
+                                   const float irho, const float theta, const int numrho)
+        {
+            extern __shared__ unsigned int smem[];
+
+            for (int i = threadIdx.x; i < numrho; i += blockDim.x)
+                smem[i] = 0;
+            __syncthreads();
+
+            const int n = blockIdx.x;
+            const float ang = n * theta;
+
+            float sin_ang;
+            float cos_ang;
+            sincosf(ang, &sin_ang, &cos_ang);
+
+            const float tabSin = sin_ang * irho;
+            const float tabCos = cos_ang * irho;
+
+            for (int i = threadIdx.x; i < count; i += blockDim.x)
+            {
+                // read one element from global memory
+                const unsigned int qvalue = list[i];
+                const unsigned int x = (qvalue & 0x0000FFFF);
+                const unsigned int y = (qvalue >> 16) & 0x0000FFFF;
+
+                int r = __float2int_rn(x * tabCos + y * tabSin);
+                r += (numrho - 1) / 2;
+
+                Emulation::smem::atomicInc(&smem[r], (unsigned int)(-1));
+            }
+            __syncthreads();
+
+            for (int i = threadIdx.x; i < numrho; i += blockDim.x)
+                accum(n + 1, i + 1) = smem[i];
+        }
+
+        void linesAccum_gpu(const unsigned int* list, unsigned int count, DevMem2D_<unsigned int> accum, float rho, float theta)
+        {
+            const dim3 block(1024);
+            const dim3 grid(accum.rows - 2);
+
+            cudaSafeCall( cudaFuncSetCacheConfig(linesAccum, cudaFuncCachePreferShared) );
+
+            size_t smem_size = (accum.cols - 2) * sizeof(unsigned int);
+
+            linesAccum<<<grid, block, smem_size>>>(list, count, accum, 1.0f / rho, theta, accum.cols - 2);
             cudaSafeCall( cudaGetLastError() );
 
             cudaSafeCall( cudaDeviceSynchronize() );
         }
 
-        __device__ unsigned int g_counter;
-
-        __global__ void linesGetResult(const DevMem2D_<uint> accum, float2* out, int* voices, const int maxSize, const float threshold, const float theta, const float rho, const int numrho)
+        __global__ void linesGetResult(const DevMem2D_<unsigned int> accum, float2* out, int* voices, const int maxSize,
+                                       const float threshold, const float theta, const float rho, const int numrho)
         {
-            __shared__ uint smem[8][32];
+            __shared__ unsigned int smem[8][32];
 
             int r = blockIdx.x * (blockDim.x - 2) + threadIdx.x;
             int n = blockIdx.y * (blockDim.y - 2) + threadIdx.y;
@@ -125,7 +237,8 @@ namespace cv { namespace gpu { namespace device
             }
         }
 
-        unsigned int linesGetResult_gpu(DevMem2D_<uint> accum, float2* out, int* voices, unsigned int maxSize, float rho, float theta, float threshold, bool doSort)
+        unsigned int linesGetResult_gpu(DevMem2D_<unsigned int> accum, float2* out, int* voices, unsigned int maxSize,
+                                        float rho, float theta, float threshold, bool doSort)
         {
             void* counter_ptr;
             cudaSafeCall( cudaGetSymbolAddress(&counter_ptr, g_counter) );
@@ -140,8 +253,8 @@ namespace cv { namespace gpu { namespace device
 
             cudaSafeCall( cudaDeviceSynchronize() );
 
-            uint total_count;
-            cudaSafeCall( cudaMemcpy(&total_count, counter_ptr, sizeof(uint), cudaMemcpyDeviceToHost) );
+            unsigned int total_count;
+            cudaSafeCall( cudaMemcpy(&total_count, counter_ptr, sizeof(unsigned int), cudaMemcpyDeviceToHost) );
 
             total_count = ::min(total_count, maxSize);
 

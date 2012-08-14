@@ -1155,7 +1155,7 @@ TEST_P(HoughLines, Accuracy)
 
     const float rho = 1.0f;
     const float theta = CV_PI / 180.0f;
-    const int threshold = 300;
+    const int threshold = 50;
 
     cv::Mat img = readImage(fileName, cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(img.empty());
@@ -1182,7 +1182,6 @@ INSTANTIATE_TEST_CASE_P(GPU_ImgProc, HoughLines, testing::Combine(
     ALL_DEVICES,
     testing::Values(std::string("../cv/shared/pic1.png"),
                     std::string("../cv/shared/pic3.png"),
-                    std::string("../cv/shared/pic4.png"),
                     std::string("../cv/shared/pic5.png"),
                     std::string("../cv/shared/pic6.png"))));
 
