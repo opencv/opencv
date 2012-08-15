@@ -112,6 +112,8 @@ namespace cv { namespace gpu
 
         int multiProcessorCount() const { return multi_processor_count_; }
 
+        size_t sharedMemPerBlock() const { return sharedMemPerBlock_; }
+
         size_t freeMemory() const;
         size_t totalMemory() const;
 
@@ -133,6 +135,7 @@ namespace cv { namespace gpu
         int multi_processor_count_;
         int majorVersion_;
         int minorVersion_;
+        size_t sharedMemPerBlock_;
     };
 
     CV_EXPORTS void printCudaDeviceInfo(int device);
