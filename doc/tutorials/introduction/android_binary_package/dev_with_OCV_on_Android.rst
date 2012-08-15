@@ -252,10 +252,8 @@ To build your own Android application, which uses OpenCV from native part, the f
                  APP_PLATFORM := android-9
 
 
-#. Either use :ref:`manual <NDK_build_cli>` ``ndk-build`` invocation or :ref:`setup Eclipse CDT Builder <Android_NDK_integration_with_Eclipse>` to build native JNI lib before Java part [re]build and APK creation.
+#. Either use :ref:`manual <NDK_build_cli>` ``ndk-build`` invocation or :ref:`setup Eclipse CDT Builder <CDT_Builder>` to build native JNI lib before Java part [re]build and APK creation.
    
-   **TBD:** move this info from tutorial v1 to part 1 of  tutorial v2.
-
 
 Hello OpenCV Sample
 ===================
