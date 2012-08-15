@@ -197,7 +197,7 @@ namespace
         void operator() (const cv::Range& range) const;
 
     private:
-        const cv::Mat frame_;
+        cv::Mat frame_;
 
         mutable cv::Mat_<uchar> fgmask_;
 

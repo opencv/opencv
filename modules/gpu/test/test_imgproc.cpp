@@ -1124,4 +1124,65 @@ INSTANTIATE_TEST_CASE_P(GPU_ImgProc, CornerMinEigen, testing::Combine(
     testing::Values(BlockSize(3), BlockSize(5), BlockSize(7)),
     testing::Values(ApertureSize(0), ApertureSize(3), ApertureSize(5), ApertureSize(7))));
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+// HoughLines
+
+PARAM_TEST_CASE(HoughLines, cv::gpu::DeviceInfo, std::string)
+{
+};
+
+void drawLines(cv::Mat& dst, const std::vector<cv::Vec2f>& lines)
+{
+    for (size_t i = 0; i < lines.size(); ++i)
+    {
+        float rho = lines[i][0], theta = lines[i][1];
+        cv::Point pt1, pt2;
+        double a = std::cos(theta), b = std::sin(theta);
+        double x0 = a*rho, y0 = b*rho;
+        pt1.x = cvRound(x0 + 1000*(-b));
+        pt1.y = cvRound(y0 + 1000*(a));
+        pt2.x = cvRound(x0 - 1000*(-b));
+        pt2.y = cvRound(y0 - 1000*(a));
+        cv::line(dst, pt1, pt2, cv::Scalar::all(255));
+    }
+}
+
+TEST_P(HoughLines, Accuracy)
+{
+    const cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
+    cv::gpu::setDevice(devInfo.deviceID());
+    const std::string fileName = GET_PARAM(1);
+
+    const float rho = 1.0f;
+    const float theta = CV_PI / 180.0f;
+    const int threshold = 50;
+
+    cv::Mat img = readImage(fileName, cv::IMREAD_GRAYSCALE);
+    ASSERT_FALSE(img.empty());
+
+    cv::Mat edges;
+    cv::Canny(img, edges, 50, 200);
+
+    cv::gpu::GpuMat d_lines;
+    cv::gpu::HoughLines(loadMat(edges), d_lines, rho, theta, threshold);
+    std::vector<cv::Vec2f> lines;
+    cv::gpu::HoughLinesDownload(d_lines, lines);
+    cv::Mat dst(img.size(), CV_8UC1, cv::Scalar::all(0));
+    drawLines(dst, lines);
+
+    std::vector<cv::Vec2f> lines_gold;
+    cv::HoughLines(edges, lines_gold, rho, theta, threshold);
+    cv::Mat dst_gold(img.size(), CV_8UC1, cv::Scalar::all(0));
+    drawLines(dst_gold, lines_gold);
+
+    ASSERT_MAT_NEAR(dst_gold, dst, 0.0);
+}
+
+INSTANTIATE_TEST_CASE_P(GPU_ImgProc, HoughLines, testing::Combine(
+    ALL_DEVICES,
+    testing::Values(std::string("../cv/shared/pic1.png"),
+                    std::string("../cv/shared/pic3.png"),
+                    std::string("../cv/shared/pic5.png"),
+                    std::string("../cv/shared/pic6.png"))));
+
 } // namespace

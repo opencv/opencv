@@ -727,4 +727,45 @@ INSTANTIATE_TEST_CASE_P(ImgProc, CvtColor, testing::Combine(
                     CvtColorInfo(1, 3, cv::COLOR_BayerGR2BGR),
                     CvtColorInfo(4, 4, cv::COLOR_RGBA2mRGBA))));
 
+//////////////////////////////////////////////////////////////////////
+// HoughLines
+
+IMPLEMENT_PARAM_CLASS(DoSort, bool)
+
+GPU_PERF_TEST(HoughLines, cv::gpu::DeviceInfo, cv::Size, DoSort)
+{
+    declare.time(30.0);
+
+    const cv::Size size = GET_PARAM(1);
+
+    const float rho = 1.0f;
+    const float theta = CV_PI / 180.0f;
+    const int threshold = 300;
+
+    cv::RNG rng(123456789);
+
+    cv::Mat src(size, CV_8UC1, cv::Scalar::all(0));
+
+    const int numLines = rng.uniform(500, 2000);
+    for (int i = 0; i < numLines; ++i)
+    {
+        cv::Point p1(rng.uniform(0, src.cols), rng.uniform(0, src.rows));
+        cv::Point p2(rng.uniform(0, src.cols), rng.uniform(0, src.rows));
+        cv::line(src, p1, p2, cv::Scalar::all(255), 2);
+    }
+
+    std::vector<cv::Vec2f> lines;
+    cv::HoughLines(src, lines, rho, theta, threshold);
+
+    TEST_CYCLE()
+    {
+        cv::HoughLines(src, lines, rho, theta, threshold);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(ImgProc, HoughLines, testing::Combine(
+    ALL_DEVICES,
+    GPU_TYPICAL_MAT_SIZES,
+    testing::Values(DoSort(false), DoSort(true))));
+
 #endif

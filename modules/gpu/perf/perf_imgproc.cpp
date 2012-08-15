@@ -1331,4 +1331,51 @@ INSTANTIATE_TEST_CASE_P(ImgProc, ImagePyramid_getLayer, testing::Combine(
                     MatType(CV_16UC1), MatType(CV_16UC3), MatType(CV_16UC4),
                     MatType(CV_32FC1), MatType(CV_32FC3), MatType(CV_32FC4))));
 
+//////////////////////////////////////////////////////////////////////
+// HoughLines
+
+IMPLEMENT_PARAM_CLASS(DoSort, bool)
+
+GPU_PERF_TEST(HoughLines, cv::gpu::DeviceInfo, cv::Size, DoSort)
+{
+    declare.time(30.0);
+
+    const cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
+    cv::gpu::setDevice(devInfo.deviceID());
+    const cv::Size size = GET_PARAM(1);
+    const bool doSort = GET_PARAM(2);
+
+    const float rho = 1.0f;
+    const float theta = CV_PI / 180.0f;
+    const int threshold = 300;
+
+    cv::RNG rng(123456789);
+
+    cv::Mat src(size, CV_8UC1, cv::Scalar::all(0));
+
+    const int numLines = rng.uniform(500, 2000);
+    for (int i = 0; i < numLines; ++i)
+    {
+        cv::Point p1(rng.uniform(0, src.cols), rng.uniform(0, src.rows));
+        cv::Point p2(rng.uniform(0, src.cols), rng.uniform(0, src.rows));
+        cv::line(src, p1, p2, cv::Scalar::all(255), 2);
+    }
+
+    cv::gpu::GpuMat d_src(src);
+    cv::gpu::GpuMat d_lines;
+    cv::gpu::GpuMat d_accum;
+    cv::gpu::GpuMat d_buf;
+    cv::gpu::HoughLines(d_src, d_lines, d_accum, d_buf, rho, theta, threshold, doSort);
+
+    TEST_CYCLE()
+    {
+        cv::gpu::HoughLines(d_src, d_lines, d_accum, d_buf, rho, theta, threshold, doSort);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(ImgProc, HoughLines, testing::Combine(
+    ALL_DEVICES,
+    GPU_TYPICAL_MAT_SIZES,
+    testing::Values(DoSort(false), DoSort(true))));
+
 #endif
