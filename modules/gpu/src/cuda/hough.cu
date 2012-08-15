@@ -210,7 +210,7 @@ namespace cv { namespace gpu { namespace device
 
             cudaSafeCall( cudaFuncSetCacheConfig(linesAccumShared, cudaFuncCachePreferShared) );
 
-            size_t smemSize = (accum.cols - 2) * sizeof(int);
+            size_t smemSize = (accum.cols - 1) * sizeof(int);
 
             if (smemSize < sharedMemPerBlock - 1000)
                 linesAccumShared<<<grid, block, smemSize>>>(list, count, accum, 1.0f / rho, theta, accum.cols - 2);
