@@ -370,6 +370,39 @@ We recommend the approach based on Eclipse :abbr:`CDT(C/C++ Development Tooling)
         :alt: Configure CDT
         :align: center
 
+#. But if you open your C++ source file in Eclipse editor you'll see syntax errors marks. They are not real errors, but additional CDT configuring is required.
+   
+     .. image:: images/eclipse_cdt_cfg7.png
+        :alt: Configure CDT
+        :align: center
+
+#. Open :guilabel:`Project Properties -> C/C++ General -> Paths and Symbols` and add the following **Include** paths for **C++**:
+
+     ::
+
+        ${NDKROOT}/platforms/android-9/arch-arm/usr/include
+        ${NDKROOT}/sources/cxx-stl/gnu-libstdc++/include
+        ${NDKROOT}/sources/cxx-stl/gnu-libstdc++/libs/armeabi-v7a/include
+        ${ProjDirPath}/../../sdk/native/jni/include
+
+     The last path should be changed to the correct absolute or relative path to OpenCV4Android SDK location.
+     
+     This should eliminate those syntax errors marks in Eclipse C++ editor.
+   
+     .. image:: images/eclipse_cdt_cfg8.png
+        :alt: Configure CDT
+        :align: center
+
+     .. note:: The latest Android NDK **r8b** has a bit different STL headers path. So if you use this NDK version please use the following modified include paths list:
+
+       ::
+
+          ${NDKROOT}/platforms/android-9/arch-arm/usr/include
+          ${NDKROOT}/sources/cxx-stl/gnu-libstdc++/4.6/include
+          ${NDKROOT}/sources/cxx-stl/gnu-libstdc++/4.6/libs/armeabi-v7a/include
+          ${ProjDirPath}/../../sdk/native/jni/include
+
+
 Debugging and Testing
 =====================
 In this section we will give you some easy-to-follow instructions on how to set up an emulator or hardware device for testing and debugging an Android project.
