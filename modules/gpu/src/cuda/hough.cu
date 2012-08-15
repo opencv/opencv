@@ -48,15 +48,18 @@ namespace cv { namespace gpu { namespace device
 {
     namespace hough
     {
-        __device__ unsigned int g_counter;
+        __device__ int g_counter;
+
+        ////////////////////////////////////////////////////////////////////////
+        // buildPointList
 
         const int PIXELS_PER_THREAD = 16;
 
         __global__ void buildPointList(const DevMem2Db src, unsigned int* list)
         {
-            __shared__ unsigned int s_queues[4][32 * PIXELS_PER_THREAD];
-            __shared__ unsigned int s_qsize[4];
-            __shared__ unsigned int s_start[4];
+            __shared__ int s_queues[4][32 * PIXELS_PER_THREAD];
+            __shared__ int s_qsize[4];
+            __shared__ int s_start[4];
 
             const int x = blockIdx.x * blockDim.x * PIXELS_PER_THREAD + threadIdx.x;
             const int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -75,7 +78,7 @@ namespace cv { namespace gpu { namespace device
                 if (src(y, xx))
                 {
                     const unsigned int val = (y << 16) | xx;
-                    int qidx = Emulation::smem::atomicInc(&s_qsize[threadIdx.y], (unsigned int)(-1));
+                    const int qidx = Emulation::smem::atomicAdd(&s_qsize[threadIdx.y], 1);
                     s_queues[threadIdx.y][qidx] = val;
                 }
             }
@@ -86,15 +89,15 @@ namespace cv { namespace gpu { namespace device
             if (threadIdx.x == 0 && threadIdx.y == 0)
             {
                 // find how many items are stored in each list
-                unsigned int total_size = 0;
+                int total_size = 0;
                 for (int i = 0; i < blockDim.y; ++i)
                 {
                     s_start[i] = total_size;
                     total_size += s_qsize[i];
                 }
 
-                //calculate the offset in the global list
-                const unsigned int global_offset = atomicAdd(&g_counter, total_size);
+                // calculate the offset in the global list
+                const int global_offset = atomicAdd(&g_counter, total_size);
                 for (int i = 0; i < blockDim.y; ++i)
                     s_start[i] += global_offset;
             }
@@ -102,20 +105,20 @@ namespace cv { namespace gpu { namespace device
             __syncthreads();
 
             // copy local queues to global queue
-            const unsigned int qsize = s_qsize[threadIdx.y];
+            const int qsize = s_qsize[threadIdx.y];
             for(int i = threadIdx.x; i < qsize; i += blockDim.x)
             {
-                unsigned int val = s_queues[threadIdx.y][i];
+                const unsigned int val = s_queues[threadIdx.y][i];
                 list[s_start[threadIdx.y] + i] = val;
             }
         }
 
-        unsigned int buildPointList_gpu(DevMem2Db src, unsigned int* list)
+        int buildPointList_gpu(DevMem2Db src, unsigned int* list)
         {
             void* counter_ptr;
             cudaSafeCall( cudaGetSymbolAddress(&counter_ptr, g_counter) );
 
-            cudaSafeCall( cudaMemset(counter_ptr, 0, sizeof(unsigned int)) );
+            cudaSafeCall( cudaMemset(counter_ptr, 0, sizeof(int)) );
 
             const dim3 block(32, 4);
             const dim3 grid(divUp(src.cols, block.x * PIXELS_PER_THREAD), divUp(src.rows, block.y));
@@ -127,19 +130,48 @@ namespace cv { namespace gpu { namespace device
 
             cudaSafeCall( cudaDeviceSynchronize() );
 
-            unsigned int total_count;
-            cudaSafeCall( cudaMemcpy(&total_count, counter_ptr, sizeof(unsigned int), cudaMemcpyDeviceToHost) );
+            int total_count;
+            cudaSafeCall( cudaMemcpy(&total_count, counter_ptr, sizeof(int), cudaMemcpyDeviceToHost) );
 
             return total_count;
         }
 
-        __global__ void linesAccum(const unsigned int* list, const unsigned int count, PtrStep_<unsigned int> accum,
-                                   const float irho, const float theta, const int numrho)
-        {
-            extern __shared__ unsigned int smem[];
+        ////////////////////////////////////////////////////////////////////////
+        // linesAccum
 
-            for (int i = threadIdx.x; i < numrho; i += blockDim.x)
+        __global__ void linesAccumGlobal(const unsigned int* list, const int count, PtrStepi accum, const float irho, const float theta, const int numrho)
+        {
+            const int n = blockIdx.x;
+            const float ang = n * theta;
+
+            float sin_ang;
+            float cos_ang;
+            sincosf(ang, &sin_ang, &cos_ang);
+
+            const float tabSin = sin_ang * irho;
+            const float tabCos = cos_ang * irho;
+
+            for (int i = threadIdx.x; i < count; i += blockDim.x)
+            {
+                const unsigned int qvalue = list[i];
+
+                const int x = (qvalue & 0x0000FFFF);
+                const int y = (qvalue >> 16) & 0x0000FFFF;
+
+                int r = __float2int_rn(x * tabCos + y * tabSin);
+                r += (numrho - 1) / 2;
+
+                ::atomicAdd(accum.ptr(n + 1) + r + 1, 1);
+            }
+        }
+
+        __global__ void linesAccumShared(const unsigned int* list, const int count, PtrStepi accum, const float irho, const float theta, const int numrho)
+        {
+            extern __shared__ int smem[];
+
+            for (int i = threadIdx.x; i < numrho + 1; i += blockDim.x)
                 smem[i] = 0;
+
             __syncthreads();
 
             const int n = blockIdx.x;
@@ -154,41 +186,48 @@ namespace cv { namespace gpu { namespace device
 
             for (int i = threadIdx.x; i < count; i += blockDim.x)
             {
-                // read one element from global memory
                 const unsigned int qvalue = list[i];
-                const unsigned int x = (qvalue & 0x0000FFFF);
-                const unsigned int y = (qvalue >> 16) & 0x0000FFFF;
+
+                const int x = (qvalue & 0x0000FFFF);
+                const int y = (qvalue >> 16) & 0x0000FFFF;
 
                 int r = __float2int_rn(x * tabCos + y * tabSin);
                 r += (numrho - 1) / 2;
 
-                Emulation::smem::atomicInc(&smem[r], (unsigned int)(-1));
+                Emulation::smem::atomicAdd(&smem[r + 1], 1);
             }
+
             __syncthreads();
 
             for (int i = threadIdx.x; i < numrho; i += blockDim.x)
-                accum(n + 1, i + 1) = smem[i];
+                accum(n + 1, i) = smem[i];
         }
 
-        void linesAccum_gpu(const unsigned int* list, unsigned int count, DevMem2D_<unsigned int> accum, float rho, float theta)
+        void linesAccum_gpu(const unsigned int* list, int count, DevMem2Di accum, float rho, float theta, size_t sharedMemPerBlock)
         {
             const dim3 block(1024);
             const dim3 grid(accum.rows - 2);
 
-            cudaSafeCall( cudaFuncSetCacheConfig(linesAccum, cudaFuncCachePreferShared) );
+            cudaSafeCall( cudaFuncSetCacheConfig(linesAccumShared, cudaFuncCachePreferShared) );
 
-            size_t smem_size = (accum.cols - 2) * sizeof(unsigned int);
+            size_t smemSize = (accum.cols - 2) * sizeof(int);
 
-            linesAccum<<<grid, block, smem_size>>>(list, count, accum, 1.0f / rho, theta, accum.cols - 2);
+            if (smemSize < sharedMemPerBlock - 1000)
+                linesAccumShared<<<grid, block, smemSize>>>(list, count, accum, 1.0f / rho, theta, accum.cols - 2);
+            else
+                linesAccumGlobal<<<grid, block>>>(list, count, accum, 1.0f / rho, theta, accum.cols - 2);
+
             cudaSafeCall( cudaGetLastError() );
 
             cudaSafeCall( cudaDeviceSynchronize() );
         }
 
-        __global__ void linesGetResult(const DevMem2D_<unsigned int> accum, float2* out, int* voices, const int maxSize,
-                                       const float threshold, const float theta, const float rho, const int numrho)
+        ////////////////////////////////////////////////////////////////////////
+        // linesGetResult
+
+        __global__ void linesGetResult(const DevMem2Di accum, float2* out, int* voices, const int maxSize, const float threshold, const float theta, const float rho, const int numrho)
         {
-            __shared__ unsigned int smem[8][32];
+            __shared__ int smem[8][32];
 
             int r = blockIdx.x * (blockDim.x - 2) + threadIdx.x;
             int n = blockIdx.y * (blockDim.y - 2) + threadIdx.y;
@@ -211,10 +250,10 @@ namespace cv { namespace gpu { namespace device
                 smem[threadIdx.y][threadIdx.x] >  smem[threadIdx.y][threadIdx.x - 1] &&
                 smem[threadIdx.y][threadIdx.x] >= smem[threadIdx.y][threadIdx.x + 1])
             {
-                float radius = (r - (numrho - 1) * 0.5f) * rho;
-                float angle = n * theta;
+                const float radius = (r - (numrho - 1) * 0.5f) * rho;
+                const float angle = n * theta;
 
-                const unsigned int ind = atomicInc(&g_counter, (unsigned int)(-1));
+                const int ind = ::atomicAdd(&g_counter, 1);
                 if (ind < maxSize)
                 {
                     out[ind] = make_float2(radius, angle);
@@ -223,13 +262,12 @@ namespace cv { namespace gpu { namespace device
             }
         }
 
-        unsigned int linesGetResult_gpu(DevMem2D_<unsigned int> accum, float2* out, int* voices, unsigned int maxSize,
-                                        float rho, float theta, float threshold, bool doSort)
+        int linesGetResult_gpu(DevMem2Di accum, float2* out, int* voices, int maxSize, float rho, float theta, float threshold, bool doSort)
         {
             void* counter_ptr;
             cudaSafeCall( cudaGetSymbolAddress(&counter_ptr, g_counter) );
 
-            cudaSafeCall( cudaMemset(counter_ptr, 0, sizeof(unsigned int)) );
+            cudaSafeCall( cudaMemset(counter_ptr, 0, sizeof(int)) );
 
             const dim3 block(32, 8);
             const dim3 grid(divUp(accum.cols, block.x - 2), divUp(accum.rows, block.y - 2));
@@ -239,8 +277,8 @@ namespace cv { namespace gpu { namespace device
 
             cudaSafeCall( cudaDeviceSynchronize() );
 
-            unsigned int total_count;
-            cudaSafeCall( cudaMemcpy(&total_count, counter_ptr, sizeof(unsigned int), cudaMemcpyDeviceToHost) );
+            int total_count;
+            cudaSafeCall( cudaMemcpy(&total_count, counter_ptr, sizeof(int), cudaMemcpyDeviceToHost) );
 
             total_count = ::min(total_count, maxSize);
 

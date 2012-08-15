@@ -99,7 +99,7 @@ namespace cv { namespace gpu { namespace device
             }
 
             template<typename T>
-            static __device__ __forceinline__ void atomicAdd(T* address, T val)
+            static __device__ __forceinline__ T atomicAdd(T* address, T val)
             {
 #if defined (__CUDA_ARCH__) && (__CUDA_ARCH__ < 120)
                 T count;
@@ -110,8 +110,10 @@ namespace cv { namespace gpu { namespace device
                     count = tag | (count + val);
                     *address = count;
                 } while (*address != count);
+
+                return (count & TAG_MASK) - val;
 #else
-                ::atomicAdd(address, val);
+                return ::atomicAdd(address, val);
 #endif
             }
 

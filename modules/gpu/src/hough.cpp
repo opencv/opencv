@@ -56,9 +56,9 @@ namespace cv { namespace gpu { namespace device
 {
     namespace hough
     {
-        unsigned int buildPointList_gpu(DevMem2Db src, unsigned int* list);
-        void linesAccum_gpu(const unsigned int* list, unsigned int count, DevMem2D_<unsigned int> accum, float rho, float theta);
-        unsigned int linesGetResult_gpu(DevMem2D_<uint> accum, float2* out, int* voices, unsigned int maxSize, float rho, float theta, float threshold, bool doSort);
+        int buildPointList_gpu(DevMem2Db src, unsigned int* list);
+        void linesAccum_gpu(const unsigned int* list, int count, DevMem2Di accum, float rho, float theta, size_t sharedMemPerBlock);
+        int linesGetResult_gpu(DevMem2Di accum, float2* out, int* voices, int maxSize, float rho, float theta, float threshold, bool doSort);
     }
 }}}
 
@@ -71,16 +71,21 @@ void cv::gpu::HoughLinesTransform(const GpuMat& src, GpuMat& accum, GpuMat& buf,
     CV_Assert(src.rows < std::numeric_limits<unsigned short>::max());
 
     ensureSizeIsEnough(1, src.size().area(), CV_32SC1, buf);
-    unsigned int count = buildPointList_gpu(src, buf.ptr<unsigned int>());
+
+    const int count = buildPointList_gpu(src, buf.ptr<unsigned int>());
 
     const int numangle = cvRound(CV_PI / theta);
     const int numrho = cvRound(((src.cols + src.rows) * 2 + 1) / rho);
 
+    CV_Assert(numangle > 0 && numrho > 0);
+
     ensureSizeIsEnough(numangle + 2, numrho + 2, CV_32SC1, accum);
     accum.setTo(cv::Scalar::all(0));
 
+    cv::gpu::DeviceInfo devInfo;
+
     if (count > 0)
-        linesAccum_gpu(buf.ptr<unsigned int>(), count, accum, rho, theta);
+        linesAccum_gpu(buf.ptr<unsigned int>(), count, accum, rho, theta, devInfo.sharedMemPerBlock());
 }
 
 void cv::gpu::HoughLinesGet(const GpuMat& accum, GpuMat& lines, float rho, float theta, int threshold, bool doSort, int maxLines)
@@ -90,7 +95,8 @@ void cv::gpu::HoughLinesGet(const GpuMat& accum, GpuMat& lines, float rho, float
     CV_Assert(accum.type() == CV_32SC1);
 
     ensureSizeIsEnough(2, maxLines, CV_32FC2, lines);
-    unsigned int count = hough::linesGetResult_gpu(accum, lines.ptr<float2>(0), lines.ptr<int>(1), maxLines, rho, theta, threshold, doSort);
+
+    int count = hough::linesGetResult_gpu(accum, lines.ptr<float2>(0), lines.ptr<int>(1), maxLines, rho, theta, threshold, doSort);
 
     if (count > 0)
         lines.cols = count;
