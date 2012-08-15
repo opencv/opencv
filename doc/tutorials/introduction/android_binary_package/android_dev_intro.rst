@@ -18,8 +18,8 @@ Android is a Linux-based, open source mobile operating system developed by Open 
 Development for Android significantly differs from development for other platforms.
 So before starting programming for Android we recommend you make sure that you are familiar with the following key topis:
 
-#. `Java <http://en.wikipedia.org/wiki/Java_(programming_language)>`_ programming language that is the primary development technology for Android OS. Also you can find `Oracle docs on Java <http://docs.oracle.com/javase/>`_ useful.
-#. `Java Native Interface (JNI) <http://en.wikipedia.org/wiki/Java_Native_Interface>`_ that is a technology of running native code in Java virtual machine. Also you can find `Oracle docs on JNI <http://docs.oracle.com/javase/7/docs/technotes/guides/jni/>`_ useful.
+#. `Java <http://en.wikipedia.org/wiki/Java_(programming_language)>`_ programming language that is the primary development technology for Android OS. Also, you can find `Oracle docs on Java <http://docs.oracle.com/javase/>`_ useful.
+#. `Java Native Interface (JNI) <http://en.wikipedia.org/wiki/Java_Native_Interface>`_ that is a technology of running native code in Java virtual machine. Also, you can find `Oracle docs on JNI <http://docs.oracle.com/javase/7/docs/technotes/guides/jni/>`_ useful.
 #. `Android Activity <http://developer.android.com/training/basics/activity-lifecycle/starting.html>`_ and its lifecycle, that is an essential Android API class.
 #. OpenCV development will certainly require some knowlege of the `Android Camera <http://developer.android.com/guide/topics/media/camera.html>`_ specifics.
 
@@ -279,12 +279,12 @@ AVD (*Android Virtual Device*) is not probably the most convenient way to test a
      :alt: Configure builders
      :align: center
 #. When you click the :guilabel:`Create AVD` button, your new AVD will be availible in :guilabel:`AVD Manager`.
-#. Press :guilabel:`Start` to launch the device. Be aware that any AVD (aka Emulator) is usually much slower than a hardware Android device, so it may take up to several minutes to start.
+#. Press :guilabel:`Start` to launch the device. Be aware that any AVD (a.k.a. Emulator) is usually much slower than a hardware Android device, so it may take up to several minutes to start.
 #. Go :guilabel:`Run -> Run/Debug`  in Eclipse IDE to run your application in regular or debugging mode. :guilabel:`Device Chooser` will let you choose among the running devices or to start a new one.
 
 Hardware Device
 ---------------
-If you have an Android device, you can use it to test and debug your applications. This way is more authentic, though a little bit harder to set up. You need to make some actions for Windows and Linux operating systems to be able to work with Android devices. No actions are required for Mac OS. See detailed information on configuring hardware devices in subsections below.
+If you have an Android device, you can use it to test and debug your applications. This way is more authentic, though a little bit harder to set up. You need to make some actions for Windows and Linux operating systems to be able to work with Android devices. No extra actions are required for Mac OS. See detailed information on configuring hardware devices in subsections below.
 
 You may also consult the official `Android Developers site <http://developer.android.com/tools/device.html>`_ for more information.
 
@@ -293,8 +293,8 @@ Windows host computer
 
 #. Enable USB debugging on the Android device (via :guilabel:`Settings` menu).
 #. Attach the Android device to your PC with a USB cable.
-#. Go to :guilabel:`Start Menu` and **right-click** on :guilabel:`Computer`. Select :guilabel:`Manage` in the context menu. You may be asked for Administrative permittions.
-#. Select :guilabel:`Device Manager` in the left pane and find an unknown device in the list. You may try unplugging it and then plugging back in order to check whether it's your exact equipment appearing in the list.
+#. Go to :guilabel:`Start Menu` and **right-click** on :guilabel:`Computer`. Select :guilabel:`Manage` in the context menu. You may be asked for Administrative permissions.
+#. Select :guilabel:`Device Manager` in the left pane and find an unknown device in the list. You may try unplugging it and then plugging back in order to check whether it's your exact equipment appears in the list.
     .. image:: images/usb_device_connect_01.png
      :alt: Unknown device
      :align: center
@@ -362,7 +362,7 @@ Windows host computer
     .. image:: images/usb_device_connect_09.png
      :alt: Installed OK
      :align: center
-#. And "unknown" device becomes "known" one.
+#. And an unknown device is now recognized as an Android phone.
     .. image:: images/usb_device_connect_10.png
      :alt: "Known" device
      :align: center
