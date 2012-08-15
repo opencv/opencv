@@ -23,14 +23,14 @@ This tutorial assumes you have the following installed and configured:
 
 If you need help with anything of the above, you may refer to our :ref:`android_dev_intro` guide.
 
-If you encounter any error after thoroughly following these steps, feel free to contact us via `OpenCV4Android <https://groups.google.com/group/android-opencv/>`_ discussion group or OpenCV `Q&A forum <http://answers.opencv.org>`_ . We'll do our best to help you out.
+If you encounter any error after thoroughly following these steps, feel free to contact us via `OpenCV4Android <https://groups.google.com/group/android-opencv/>`_ discussion group or OpenCV `Q&A forum <http://answers.opencv.org>`_. We'll do our best to help you out.
 
 General info
 ============
 
-OpenCV4Android SDK package contains the stuff that enables development Android applications with use of OpenCV library.
+OpenCV4Android SDK package enables development of Android applications with use of OpenCV library.
 
-The package content look like the following:
+The structure of package contents looks as follows:
 
 ::
 
@@ -78,7 +78,7 @@ The package content look like the following:
   It's also available online at http://docs.opencv.org.
   
   **Note**: the most recent docs (nightly build) are at http://docs.opencv.org/trunk/.
-  Generally it's more up-to-date, but can refer not-yet-released functionality.
+  Generally, it's more up-to-date, but can refer to not-yet-released functionality.
 
 Starting version 2.4.2 `OpenCV4Android SDK` uses `OpenCV Manager` API for library initialization. `OpenCV Manager` is an Android service based solution providing the following benefits for OpenCV applications developers:
 
@@ -124,7 +124,7 @@ Get the OpenCV4Android SDK
 
 #. Go to the `OpenCV dowload page on SourceForge <http://sourceforge.net/projects/opencvlibrary/files/opencv-android/>`_ and download the latest available version. Currently it's |opencv_android_bin_pack_url|_
 
-#. Create a new folder for development for Android with OpenCV development. For this tutorial I have unpacked OpenCV to the :file:`C:\\Work\\OpenCV4Android\\` directory.
+#. Create a new folder for Android with OpenCV development. For this tutorial I have unpacked OpenCV to the :file:`C:\\Work\\OpenCV4Android\\` directory.
 
       .. note:: Better to use a path without spaces in it. Otherwise you may have problems with :command:`ndk-build`.
 
@@ -227,7 +227,7 @@ Open OpenCV library and samples in Eclipse
 Running OpenCV Samples
 ----------------------
 
-At this point you should be able to build and run the samples. Keep in mind, that ``face-detection``, ``Tutorial 3`` and ``Tutorial 4`` ones include some native code and require Android NDK and CDT plugin for Eclipse to build working applications.
+At this point you should be able to build and run the samples. Keep in mind, that ``face-detection``, ``Tutorial 3`` and ``Tutorial 4`` include some native code and require Android NDK and CDT plugin for Eclipse to build working applications.
 If you haven't installed these tools see the corresponding section of :ref:`Android_Dev_Intro`.
 
 Also, please consider that ``Tutorial 0`` and ``Tutorial 1`` samples use Java Camera API that definitelly accessible on emulator from the Android SDK.
