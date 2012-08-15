@@ -331,7 +331,7 @@ We recommend the approach based on Eclipse :abbr:`CDT(C/C++ Development Tooling)
 
 #. Open Eclipse and load the Android app project to configure.
 
-#. Add a "native nature" to the project via Eclipse menu :guilabel:`New -> Other -> C/C++ -> Convert to a C/C++ Project`.
+#. Add C/C++ Nature to the project via Eclipse menu :guilabel:`New -> Other -> C/C++ -> Convert to a C/C++ Project`.
    
      .. image:: images/eclipse_cdt_cfg1.png
         :alt: Configure CDT
@@ -343,7 +343,7 @@ We recommend the approach based on Eclipse :abbr:`CDT(C/C++ Development Tooling)
         :alt: Configure CDT
         :align: center
 
-#. Check the project(s) to convert, the "Project type" = ``Makefile project``, "Toolchains" = ``Other Toolchain``.
+#. Select the project(s) to convert. Specify "Project type" = ``Makefile project``, "Toolchains" = ``Other Toolchain``.
    
      .. image:: images/eclipse_cdt_cfg3.png
         :alt: Configure CDT
@@ -358,7 +358,7 @@ We recommend the approach based on Eclipse :abbr:`CDT(C/C++ Development Tooling)
         :alt: Configure CDT
         :align: center
 
-#. Move to :guilabel:`Behaviour`  tab and change "Workbench build type" section like shown below:
+#. Go to :guilabel:`Behaviour`  tab and change "Workbench build type" section like shown below:
    
      .. image:: images/eclipse_cdt_cfg5.png
         :alt: Configure CDT
@@ -370,7 +370,7 @@ We recommend the approach based on Eclipse :abbr:`CDT(C/C++ Development Tooling)
         :alt: Configure CDT
         :align: center
 
-#. But if you open your C++ source file in Eclipse editor you'll see syntax errors marks. They are not real errors, but additional CDT configuring is required.
+#. If you open your C++ source file in Eclipse editor, you'll see syntax error notifications. They are not real errors, but additional CDT configuring is required.
    
      .. image:: images/eclipse_cdt_cfg7.png
         :alt: Configure CDT
@@ -387,13 +387,13 @@ We recommend the approach based on Eclipse :abbr:`CDT(C/C++ Development Tooling)
 
      The last path should be changed to the correct absolute or relative path to OpenCV4Android SDK location.
      
-     This should eliminate those syntax errors marks in Eclipse C++ editor.
+     This should clear the syntax error notifications in Eclipse C++ editor.
    
      .. image:: images/eclipse_cdt_cfg8.png
         :alt: Configure CDT
         :align: center
 
-     .. note:: The latest Android NDK **r8b** has a bit different STL headers path. So if you use this NDK version please use the following modified include paths list:
+     .. note:: The latest Android NDK **r8b** has a bit different STL headers path. So if you use this NDK version please use the following modified **Include** paths list:
 
        ::
 
