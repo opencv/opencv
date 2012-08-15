@@ -325,17 +325,50 @@ We recommend the approach based on Eclipse :abbr:`CDT(C/C++ Development Tooling)
 
 #. Define the ``NDKROOT`` environment variable containing the path to Android NDK in your system (e.g. ``"X:\\Apps\\android-ndk-r8"`` or ``"/opt/android-ndk-r8"``).
     **On Windows** an environment variable can be set via :guilabel:`My Computer -> Properties -> Advanced -> Environment variables` and restarting Eclipse.
+    On Windows 7 it's also possible to use `setx <http://ss64.com/nt/setx.html>`_ command in a console session.
 
     **On Linux** and **MacOS** an environment variable can be set via appending a ``"export VAR_NAME=VAR_VALUE"`` line to the :file:`"~/.bashrc"` file and logging off and then on.
 
-#. Text 1.
-   
-   Text 2.
+#. Open Eclipse and load the Android app project to configure.
 
+#. Add a "native nature" to the project via Eclipse menu :guilabel:`New -> Other -> C/C++ -> Convert to a C/C++ Project`.
+   
+     .. image:: images/eclipse_cdt_cfg1.png
+        :alt: Configure CDT
+        :align: center
+
+    ` `
+
+     .. image:: images/eclipse_cdt_cfg2.png
+        :alt: Configure CDT
+        :align: center
+
+#. Check the project(s) to convert, the "Project type" = ``Makefile project``, "Toolchains" = ``Other Toolchain``.
+   
+     .. image:: images/eclipse_cdt_cfg3.png
+        :alt: Configure CDT
+        :align: center
+
+#. Open :guilabel:`Project Properties -> C/C++ Build`, unckeck ``Use default build command``, replace "Build command" text from ``"make"`` to 
+     ``"${NDKROOT}/ndk-build.cmd"`` on Windows,
+
+     ``"${NDKROOT}/ndk-build"`` on Linux and MacOS.
+   
      .. image:: images/eclipse_cdt_cfg4.png
         :alt: Configure CDT
         :align: center
 
+#. Move to :guilabel:`Behaviour`  tab and change "Workbench build type" section like shown below:
+   
+     .. image:: images/eclipse_cdt_cfg5.png
+        :alt: Configure CDT
+        :align: center
+
+#. Press :guilabel:`OK`  and make sure the ``ndk-build`` is successfully invoked when building the project.
+   
+     .. image:: images/eclipse_cdt_cfg6.png
+        :alt: Configure CDT
+        :align: center
 
 Debugging and Testing
 =====================
