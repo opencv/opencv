@@ -277,11 +277,6 @@ void FREAK::computeImpl( const Mat& image, std::vector<KeyPoint>& keypoints, Mat
         descriptors = cv::Mat::zeros((int)keypoints.size(), FREAK_NB_PAIRS/8, CV_8U);
 #if CV_SSE2
         __m128i* ptr= (__m128i*) (descriptors.data+(keypoints.size()-1)*descriptors.step[0]);
-        // binary: 10000000 => char: 128 or hex: 0x80
-        const __m128i binMask = _mm_set_epi8('\x80', '\x80', '\x80', '\x80',
-                                             '\x80', '\x80', '\x80', '\x80',
-                                             '\x80', '\x80', '\x80', '\x80',
-                                             '\x80', '\x80', '\x80', '\x80');
 #else
         std::bitset<FREAK_NB_PAIRS>* ptr = (std::bitset<FREAK_NB_PAIRS>*) (descriptors.data+(keypoints.size()-1)*descriptors.step[0]);
 #endif
@@ -364,7 +359,7 @@ void FREAK::computeImpl( const Mat& image, std::vector<KeyPoint>& keypoints, Mat
                     __m128i workReg = _mm_min_epu8(operand1, operand2); // emulated "not less than" for 8-bit UNSIGNED integers
                     workReg = _mm_cmpeq_epi8(workReg, operand2);        // emulated "not less than" for 8-bit UNSIGNED integers
 
-                    workReg = _mm_and_si128(_mm_srli_epi16(binMask, m), workReg); // merge the last 16 bits with the 128bits std::vector until full
+                    workReg = _mm_and_si128(_mm_set1_epi16(short(0x8080 >> m)), workReg); // merge the last 16 bits with the 128bits std::vector until full
                     result128 = _mm_or_si128(result128, workReg);
                 }
                 (*ptr) = result128;
