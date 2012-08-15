@@ -401,6 +401,8 @@ cv::gpu::ORB_GPU::ORB_GPU(int nFeatures, float scaleFactor, int nLevels, int edg
     scoreType_(scoreType), patchSize_(patchSize),
     fastDetector_(DEFAULT_FAST_THRESHOLD)
 {
+    CV_Assert(patchSize_ >= 2);
+
     // fill the extractors and descriptors for the corresponding scales
     float factor = 1.0f / scaleFactor_;
     float n_desired_features_per_scale = nFeatures_ * (1.0f - factor) / (1.0f - std::pow(factor, nLevels_));
@@ -417,7 +419,7 @@ cv::gpu::ORB_GPU::ORB_GPU(int nFeatures, float scaleFactor, int nLevels, int edg
 
     // pre-compute the end of a row in a circular patch
     int half_patch_size = patchSize_ / 2;
-    vector<int> u_max(half_patch_size + 1);
+    vector<int> u_max(half_patch_size + 2);
     for (int v = 0; v <= half_patch_size * std::sqrt(2.f) / 2 + 1; ++v)
         u_max[v] = cvRound(std::sqrt(static_cast<float>(half_patch_size * half_patch_size - v * v)));
 
