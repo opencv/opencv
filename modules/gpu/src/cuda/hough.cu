@@ -225,7 +225,7 @@ namespace cv { namespace gpu { namespace device
         ////////////////////////////////////////////////////////////////////////
         // linesGetResult
 
-        __global__ void linesGetResult(const DevMem2Di accum, float2* out, int* voices, const int maxSize, const float threshold, const float theta, const float rho, const int numrho)
+        __global__ void linesGetResult(const DevMem2Di accum, float2* out, int* votes, const int maxSize, const float threshold, const float theta, const float rho, const int numrho)
         {
             __shared__ int smem[8][32];
 
@@ -257,12 +257,12 @@ namespace cv { namespace gpu { namespace device
                 if (ind < maxSize)
                 {
                     out[ind] = make_float2(radius, angle);
-                    voices[ind] = smem[threadIdx.y][threadIdx.x];
+                    votes[ind] = smem[threadIdx.y][threadIdx.x];
                 }
             }
         }
 
-        int linesGetResult_gpu(DevMem2Di accum, float2* out, int* voices, int maxSize, float rho, float theta, float threshold, bool doSort)
+        int linesGetResult_gpu(DevMem2Di accum, float2* out, int* votes, int maxSize, float rho, float theta, float threshold, bool doSort)
         {
             void* counter_ptr;
             cudaSafeCall( cudaGetSymbolAddress(&counter_ptr, g_counter) );
@@ -272,7 +272,7 @@ namespace cv { namespace gpu { namespace device
             const dim3 block(32, 8);
             const dim3 grid(divUp(accum.cols, block.x - 2), divUp(accum.rows, block.y - 2));
 
-            linesGetResult<<<grid, block>>>(accum, out, voices, maxSize, threshold, theta, rho, accum.cols - 2);
+            linesGetResult<<<grid, block>>>(accum, out, votes, maxSize, threshold, theta, rho, accum.cols - 2);
             cudaSafeCall( cudaGetLastError() );
 
             cudaSafeCall( cudaDeviceSynchronize() );
@@ -285,8 +285,8 @@ namespace cv { namespace gpu { namespace device
             if (doSort && total_count > 0)
             {
                 thrust::device_ptr<float2> out_ptr(out);
-                thrust::device_ptr<int> voices_ptr(voices);
-                thrust::sort_by_key(voices_ptr, voices_ptr + total_count, out_ptr, thrust::greater<int>());
+                thrust::device_ptr<int> votes_ptr(votes);
+                thrust::sort_by_key(votes_ptr, votes_ptr + total_count, out_ptr, thrust::greater<int>());
             }
 
             return total_count;

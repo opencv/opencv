@@ -58,7 +58,7 @@ namespace cv { namespace gpu { namespace device
     {
         int buildPointList_gpu(DevMem2Db src, unsigned int* list);
         void linesAccum_gpu(const unsigned int* list, int count, DevMem2Di accum, float rho, float theta, size_t sharedMemPerBlock);
-        int linesGetResult_gpu(DevMem2Di accum, float2* out, int* voices, int maxSize, float rho, float theta, float threshold, bool doSort);
+        int linesGetResult_gpu(DevMem2Di accum, float2* out, int* votes, int maxSize, float rho, float theta, float threshold, bool doSort);
     }
 }}}
 
@@ -116,13 +116,13 @@ void cv::gpu::HoughLines(const GpuMat& src, GpuMat& lines, GpuMat& accum, GpuMat
     HoughLinesGet(accum, lines, rho, theta, threshold, doSort, maxLines);
 }
 
-void cv::gpu::HoughLinesDownload(const GpuMat& d_lines, OutputArray h_lines_, OutputArray h_voices_)
+void cv::gpu::HoughLinesDownload(const GpuMat& d_lines, OutputArray h_lines_, OutputArray h_votes_)
 {
     if (d_lines.empty())
     {
         h_lines_.release();
-        if (h_voices_.needed())
-            h_voices_.release();
+        if (h_votes_.needed())
+            h_votes_.release();
         return;
     }
 
@@ -132,12 +132,12 @@ void cv::gpu::HoughLinesDownload(const GpuMat& d_lines, OutputArray h_lines_, Ou
     cv::Mat h_lines = h_lines_.getMat();
     d_lines.row(0).download(h_lines);
 
-    if (h_voices_.needed())
+    if (h_votes_.needed())
     {
-        h_voices_.create(1, d_lines.cols, CV_32SC1);
-        cv::Mat h_voices = h_voices_.getMat();
-        cv::gpu::GpuMat d_voices(1, d_lines.cols, CV_32SC1, const_cast<int*>(d_lines.ptr<int>(1)));
-        d_voices.download(h_voices);
+        h_votes_.create(1, d_lines.cols, CV_32SC1);
+        cv::Mat h_votes = h_votes_.getMat();
+        cv::gpu::GpuMat d_votes(1, d_lines.cols, CV_32SC1, const_cast<int*>(d_lines.ptr<int>(1)));
+        d_votes.download(h_votes);
     }
 }
 
