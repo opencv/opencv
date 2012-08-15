@@ -3262,7 +3262,7 @@ convertScaleData_(const void* _from, void* _to, int cn, double alpha, double bet
             to[i] = saturate_cast<T2>(from[i]*alpha + beta);
 }
 
-static ConvertData getConvertData(int fromType, int toType)
+ConvertData getConvertElem(int fromType, int toType)
 {
     static ConvertData tab[][8] =
     {{ convertData_<uchar, uchar>, convertData_<uchar, schar>,
@@ -3307,7 +3307,7 @@ static ConvertData getConvertData(int fromType, int toType)
     return func;
 }
 
-static ConvertScaleData getConvertScaleData(int fromType, int toType)
+ConvertScaleData getConvertScaleElem(int fromType, int toType)
 {
     static ConvertScaleData tab[][8] =
     {{ convertScaleData_<uchar, uchar>, convertScaleData_<uchar, schar>,
@@ -3537,7 +3537,7 @@ void SparseMat::convertTo( SparseMat& m, int rtype, double alpha ) const
 
     if( alpha == 1 )
     {
-        ConvertData cvtfunc = getConvertData(type(), rtype);
+        ConvertData cvtfunc = getConvertElem(type(), rtype);
         for( i = 0; i < N; i++, ++from )
         {
             const Node* n = from.node();
@@ -3547,7 +3547,7 @@ void SparseMat::convertTo( SparseMat& m, int rtype, double alpha ) const
     }
     else
     {
-        ConvertScaleData cvtfunc = getConvertScaleData(type(), rtype);
+        ConvertScaleData cvtfunc = getConvertScaleElem(type(), rtype);
         for( i = 0; i < N; i++, ++from )
         {
             const Node* n = from.node();
@@ -3574,7 +3574,7 @@ void SparseMat::convertTo( Mat& m, int rtype, double alpha, double beta ) const
 
     if( alpha == 1 && beta == 0 )
     {
-        ConvertData cvtfunc = getConvertData(type(), rtype);
+        ConvertData cvtfunc = getConvertElem(type(), rtype);
         for( i = 0; i < N; i++, ++from )
         {
             const Node* n = from.node();
@@ -3584,7 +3584,7 @@ void SparseMat::convertTo( Mat& m, int rtype, double alpha, double beta ) const
     }
     else
     {
-        ConvertScaleData cvtfunc = getConvertScaleData(type(), rtype);
+        ConvertScaleData cvtfunc = getConvertScaleElem(type(), rtype);
         for( i = 0; i < N; i++, ++from )
         {
             const Node* n = from.node();
