@@ -203,9 +203,9 @@ namespace cv { namespace gpu { namespace device
                 accum(n + 1, i) = smem[i];
         }
 
-        void linesAccum_gpu(const unsigned int* list, int count, DevMem2Di accum, float rho, float theta, size_t sharedMemPerBlock)
+        void linesAccum_gpu(const unsigned int* list, int count, DevMem2Di accum, float rho, float theta, size_t sharedMemPerBlock, bool has20)
         {
-            const dim3 block(1024);
+            const dim3 block(has20 ? 1024 : 512);
             const dim3 grid(accum.rows - 2);
 
             cudaSafeCall( cudaFuncSetCacheConfig(linesAccumShared, cudaFuncCachePreferShared) );

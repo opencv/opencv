@@ -57,7 +57,7 @@ namespace cv { namespace gpu { namespace device
     namespace hough
     {
         int buildPointList_gpu(DevMem2Db src, unsigned int* list);
-        void linesAccum_gpu(const unsigned int* list, int count, DevMem2Di accum, float rho, float theta, size_t sharedMemPerBlock);
+        void linesAccum_gpu(const unsigned int* list, int count, DevMem2Di accum, float rho, float theta, size_t sharedMemPerBlock, bool has20);
         int linesGetResult_gpu(DevMem2Di accum, float2* out, int* votes, int maxSize, float rho, float theta, float threshold, bool doSort);
     }
 }}}
@@ -85,7 +85,7 @@ void cv::gpu::HoughLinesTransform(const GpuMat& src, GpuMat& accum, GpuMat& buf,
     cv::gpu::DeviceInfo devInfo;
 
     if (count > 0)
-        linesAccum_gpu(buf.ptr<unsigned int>(), count, accum, rho, theta, devInfo.sharedMemPerBlock());
+        linesAccum_gpu(buf.ptr<unsigned int>(), count, accum, rho, theta, devInfo.sharedMemPerBlock(), devInfo.supports(cv::gpu::FEATURE_SET_COMPUTE_20));
 }
 
 void cv::gpu::HoughLinesGet(const GpuMat& accum, GpuMat& lines, float rho, float theta, int threshold, bool doSort, int maxLines)
