@@ -13,7 +13,7 @@ If you encounter any error after thoroughly following these steps, feel free to 
 
 Preface
 =======
-Android is a Linux-based, open source mobile operating system developed by Open Handset Alliance led by Google. See the `official site <http://www.android.com/about/>`_ for general details.
+Android is a Linux-based, open source mobile operating system developed by Open Handset Alliance led by Google. See the `Android home site <http://www.android.com/about/>`_ for general details.
 
 Development for Android significantly differs from development for other platforms.
 So before starting programming for Android we recommend you make sure that you are familiar with the following key topis:
@@ -263,6 +263,80 @@ Usually the file :file:`Application.mk` is optional, but in case of project usin
         APP_CPPFLAGS := -frtti -fexceptions
         APP_ABI := armeabi-v7a
 
+
+.. _NDK_build_cli:
+
+Building application native part from command line
+==================================================
+
+Here is the standard way to compile C++ part of an Android application:
+
+#. Open console and go to the root folder of an Android application
+
+   .. code-block:: bash
+
+        cd <root folder of the project>/
+
+#. Run the following command
+
+   .. code-block:: bash
+
+        <path_where_NDK_is_placed>/ndk-build
+
+   .. note:: On Windows we recommend to use ``ndk-build.cmd`` in standard Windows console (``cmd.exe``) rather than the similar ``bash`` script in ``Cygwin`` shell.
+
+   .. image:: images/ndk_build.png
+      :alt: NDK build
+      :align: center
+
+#.   After executing this command the C++ part of the source code is compiled.
+
+After that the Java part of the application can be (re)compiled (using either *Eclipse* or *Ant* build tool).
+
+.. note:: Some parameters can be set for the :command:`ndk-build`:
+
+    **Example 1**: Verbose compilation
+
+    .. code-block:: bash
+
+        <path_where_NDK_is_placed>/ndk-build V=1
+
+    **Example 2**: Rebuild all
+
+    .. code-block:: bash
+
+        <path_where_NDK_is_placed>/ndk-build -B
+
+.. _CDT_Builder:
+
+Building application native part from *Eclipse* (CDT Builder)
+=============================================================
+
+There are several possible ways to integrate compilation of native C++ code by Android NDK into Eclipse build process.
+We recommend the approach based on Eclipse :abbr:`CDT(C/C++ Development Tooling)` Builder.
+
+.. important:: Make sure your Eclipse IDE has the :abbr:`CDT(C/C++ Development Tooling)` plugin installed. Menu :guilabel:`Help -> About Eclipse SDK -> Installation Details`.
+
+.. image:: images/eclipse_inst_details.png
+  :alt: Eclipse About
+  :align: center
+
+.. important:: OpenCV for Android 2.4.2 package contains sample projects pre-configured CDT Builders. For your own projects follow the steps below.
+
+#. Define the ``NDKROOT`` environment variable containing the path to Android NDK in your system (e.g. ``"X:\\Apps\\android-ndk-r8"`` or ``"/opt/android-ndk-r8"``).
+    **On Windows** an environment variable can be set via :guilabel:`My Computer -> Properties -> Advanced -> Environment variables` and restarting Eclipse.
+
+    **On Linux** and **MacOS** an environment variable can be set via appending a ``"export VAR_NAME=VAR_VALUE"`` line to the :file:`"~/.bashrc"` file and logging off and then on.
+
+#. Text 1.
+   
+   Text 2.
+
+     .. image:: images/eclipse_cdt_cfg4.png
+        :alt: Configure CDT
+        :align: center
+
+
 Debugging and Testing
 =====================
 In this section we will give you some easy-to-follow instructions on how to set up an emulator or hardware device for testing and debugging an Android project.
@@ -286,7 +360,7 @@ Hardware Device
 ---------------
 If you have an Android device, you can use it to test and debug your applications. This way is more authentic, though a little bit harder to set up. You need to make some actions for Windows and Linux operating systems to be able to work with Android devices. No actions are required for Mac OS. See detailed information on configuring hardware devices in subsections below.
 
-You may also consult the official `Android Developers site <http://developer.android.com/tools/device.html>`_ for more information.
+You may also consult the official `Android Developers site instructions <http://developer.android.com/tools/device.html>`_ for more information.
 
 Windows host computer
 ^^^^^^^^^^^^^^^^^^^^^
@@ -387,6 +461,9 @@ Then restart your adb server (even better to restart the system), plug in your A
     :alt: List of attached devices
     :align: center
 
+MacOS host computer
+^^^^^^^^^^^^^^^^^^^
+No actions are required, just connect your device via USB and run ``adb devices`` to check connection.
 
 What's next
 ===========

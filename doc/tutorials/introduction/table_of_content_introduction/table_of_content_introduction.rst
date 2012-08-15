@@ -107,41 +107,6 @@ Here you can read tutorials about how to set up your computer to work with the O
   .. cssclass:: toctableopencv
 
   ================ =================================================
-  |AndroidBinPack| **Title:** :ref:`Android_Binary_Package`
-
-                   *Compatibility:* > OpenCV 2.3.1
-
-                   *Author:* |Author_AndreyK|
-
-                   You will learn how to setup OpenCV for Android platform!
-
-  ================ =================================================
-
-  .. tabularcolumns:: m{100pt} m{300pt}
-  .. cssclass:: toctableopencv
-
-  ================ =================================================
-  |AndroidBinPack| **Title:** :ref:`Android_Binary_Package_with_NDK`
-
-                   *Compatibility:* > OpenCV 2.3.1
-
-                   *Author:* |Author_LeonidBLB|
-
-                   You will learn how to work with C++ OpenCV code for Android platform
-
-  ================ =================================================
-
-     .. |AndroidBinPack| image:: images/android_logo.png
-                           :height: 90pt
-                           :width:  90pt
-
-
-* **Android** tutorials v2 [in progress]
-
-  .. tabularcolumns:: m{100pt} m{300pt}
-  .. cssclass:: toctableopencv
-
-  ================ =================================================
   |AndroidLogo|    **Title:** :ref:`Android_Dev_Intro`
 
                    *Compatibility:* > OpenCV 2.4.2
@@ -273,8 +238,6 @@ Here you can read tutorials about how to set up your computer to work with the O
    ../linux_eclipse/linux_eclipse
    ../windows_install/windows_install
    ../windows_visual_studio_Opencv/windows_visual_studio_Opencv
-   ../android_binary_package/android_binary_package
-   ../android_binary_package/android_binary_package_using_with_NDK
    ../android_binary_package/android_dev_intro
    ../android_binary_package/O4A_SDK
    ../android_binary_package/dev_with_OCV_on_Android
