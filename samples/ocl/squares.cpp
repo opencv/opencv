@@ -16,15 +16,15 @@ using namespace std;
 
 void help()
 {
-	cout <<
-	"\nA program using OCL module pyramid scaling, Canny, dilate functions; cpu contours, contour simpification and\n"
-	"memory storage (it's got it all folks) to find\n"
-	"squares in a list of images pic1-6.png\n"
-	"Returns sequence of squares detected on the image.\n"
-	"the sequence is stored in the specified memory storage\n"
-	"Call:\n"
-	"./squares\n"
-    "Using OpenCV version %s\n" << CV_VERSION << "\n" << endl;
+    cout <<
+        "\nA program using OCL module pyramid scaling, Canny, dilate functions, threshold, split; cpu contours, contour simpification and\n"
+        "memory storage (it's got it all folks) to find\n"
+        "squares in a list of images pic1-6.png\n"
+        "Returns sequence of squares detected on the image.\n"
+        "the sequence is stored in the specified memory storage\n"
+        "Call:\n"
+        "./squares\n"
+        "Using OpenCV version %s\n" << CV_VERSION << "\n" << endl;
 }
 
 
@@ -48,23 +48,21 @@ double angle( Point pt1, Point pt2, Point pt0 )
 void findSquares( const Mat& image, vector<vector<Point> >& squares )
 {
     squares.clear();
-    
-    Mat pyr, timg, gray0(image.size(), CV_8U), gray;
-    cv::ocl::oclMat pyr_ocl, timg_ocl, gray0_ocl(gray0), gray_ocl;
+
+    Mat gray;
+    cv::ocl::oclMat pyr_ocl, timg_ocl, gray0_ocl, gray_ocl;
 
     // down-scale and upscale the image to filter out the noise
     ocl::pyrDown(ocl::oclMat(image), pyr_ocl);
     ocl::pyrUp(pyr_ocl, timg_ocl);
-    timg = Mat(timg_ocl);
 
     vector<vector<Point> > contours;
-    
+    vector<cv::ocl::oclMat> gray0s;
+    ocl::split(timg_ocl, gray0s); // split 3 channels into a vector of oclMat
     // find squares in every color plane of the image
     for( int c = 0; c < 3; c++ )
     {
-        int ch[] = {c, 0};
-        mixChannels(&timg, 1, &gray0, 1, ch, 1);
-         
+        gray0_ocl = gray0s[c];
         // try several threshold levels
         for( int l = 0; l < N; l++ )
         {
@@ -78,28 +76,29 @@ void findSquares( const Mat& image, vector<vector<Point> >& squares )
                 cv::ocl::Canny(gray0_ocl, gray_ocl, 0, thresh, 5);
                 // dilate canny output to remove potential
                 // holes between edge segments
-                ocl::dilate(gray0_ocl, gray_ocl, Mat(), Point(-1,-1));
+                ocl::dilate(gray_ocl, gray_ocl, Mat(), Point(-1,-1));
                 gray = Mat(gray_ocl);
             }
             else
             {
                 // apply threshold if l!=0:
                 //     tgray(x,y) = gray(x,y) < (l+1)*255/N ? 255 : 0
-                gray = gray0 >= (l+1)*255/N;
+                cv::ocl::threshold(gray0_ocl, gray_ocl, (l+1)*255/N, 255, THRESH_BINARY);
+                gray = gray_ocl;
             }
 
             // find contours and store them all as a list
             findContours(gray, contours, CV_RETR_LIST, CV_CHAIN_APPROX_SIMPLE);
 
             vector<Point> approx;
-            
+
             // test each contour
             for( size_t i = 0; i < contours.size(); i++ )
             {
                 // approximate contour with accuracy proportional
                 // to the contour perimeter
                 approxPolyDP(Mat(contours[i]), approx, arcLength(Mat(contours[i]), true)*0.02, true);
-                
+
                 // square contours should have 4 vertices after approximation
                 // relatively large area (to filter out noisy contours)
                 // and be convex.
@@ -157,7 +156,7 @@ int main(int /*argc*/, char** /*argv*/)
     help();
     namedWindow( wndname, 1 );
     vector<vector<Point> > squares;
-    
+
     for( int i = 0; names[i] != 0; i++ )
     {
         Mat image = imread(names[i], 1);
@@ -166,7 +165,7 @@ int main(int /*argc*/, char** /*argv*/)
             cout << "Couldn't load " << names[i] << endl;
             continue;
         }
-        
+
         findSquares(image, squares);
         drawSquares(image, squares);
 
