@@ -56,6 +56,7 @@
 #include <limits>
 #include <algorithm>
 #include <iterator>
+#include <stdexcept>
 
 #include "cvconfig.h"
 #include "opencv2/core/core.hpp"
