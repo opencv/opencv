@@ -17,16 +17,31 @@ PERF_TEST_P(Image, ObjDetect_HOG, Values<string>("gpu/hog/road.png"))
 
     std::vector<cv::Rect> found_locations;
 
-    cv::gpu::GpuMat d_img(img);
-
-    cv::gpu::HOGDescriptor d_hog;
-    d_hog.setSVMDetector(cv::gpu::HOGDescriptor::getDefaultPeopleDetector());
-
-    d_hog.detectMultiScale(d_img, found_locations);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
+        cv::gpu::GpuMat d_img(img);
+
+        cv::gpu::HOGDescriptor d_hog;
+        d_hog.setSVMDetector(cv::gpu::HOGDescriptor::getDefaultPeopleDetector());
+
         d_hog.detectMultiScale(d_img, found_locations);
+
+        TEST_CYCLE()
+        {
+            d_hog.detectMultiScale(d_img, found_locations);
+        }
+    }
+    else
+    {
+        cv::HOGDescriptor hog;
+        hog.setSVMDetector(cv::gpu::HOGDescriptor::getDefaultPeopleDetector());
+
+        hog.detectMultiScale(img, found_locations);
+
+        TEST_CYCLE()
+        {
+            hog.detectMultiScale(img, found_locations);
+        }
     }
 }
 
@@ -42,18 +57,34 @@ PERF_TEST_P(ImageAndCascade, ObjDetect_HaarClassifier,
     cv::Mat img = readImage(GetParam().first, cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(img.empty());
 
-    cv::gpu::CascadeClassifier_GPU d_cascade;
-
-    ASSERT_TRUE(d_cascade.load(perf::TestBase::getDataPath(GetParam().second)));
-
-    cv::gpu::GpuMat d_img(img);
-    cv::gpu::GpuMat d_objects_buffer;
-
-    d_cascade.detectMultiScale(d_img, d_objects_buffer);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
+        cv::gpu::CascadeClassifier_GPU d_cascade;
+        ASSERT_TRUE(d_cascade.load(perf::TestBase::getDataPath(GetParam().second)));
+
+        cv::gpu::GpuMat d_img(img);
+        cv::gpu::GpuMat d_objects_buffer;
+
         d_cascade.detectMultiScale(d_img, d_objects_buffer);
+
+        TEST_CYCLE()
+        {
+            d_cascade.detectMultiScale(d_img, d_objects_buffer);
+        }
+    }
+    else
+    {
+        cv::CascadeClassifier cascade;
+        ASSERT_TRUE(cascade.load(perf::TestBase::getDataPath("gpu/perf/haarcascade_frontalface_alt.xml")));
+
+        std::vector<cv::Rect> rects;
+
+        cascade.detectMultiScale(img, rects);
+
+        TEST_CYCLE()
+        {
+            cascade.detectMultiScale(img, rects);
+        }
     }
 }
 
@@ -66,18 +97,34 @@ PERF_TEST_P(ImageAndCascade, ObjDetect_LBPClassifier,
     cv::Mat img = readImage(GetParam().first, cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(img.empty());
 
-    cv::gpu::CascadeClassifier_GPU d_cascade;
-
-    ASSERT_TRUE(d_cascade.load(perf::TestBase::getDataPath(GetParam().second)));
-
-    cv::gpu::GpuMat d_img(img);
-    cv::gpu::GpuMat d_gpu_rects;
-
-    d_cascade.detectMultiScale(d_img, d_gpu_rects);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
+        cv::gpu::CascadeClassifier_GPU d_cascade;
+        ASSERT_TRUE(d_cascade.load(perf::TestBase::getDataPath(GetParam().second)));
+
+        cv::gpu::GpuMat d_img(img);
+        cv::gpu::GpuMat d_gpu_rects;
+
         d_cascade.detectMultiScale(d_img, d_gpu_rects);
+
+        TEST_CYCLE()
+        {
+            d_cascade.detectMultiScale(d_img, d_gpu_rects);
+        }
+    }
+    else
+    {
+        cv::CascadeClassifier cascade;
+        ASSERT_TRUE(cascade.load(perf::TestBase::getDataPath("gpu/lbpcascade/lbpcascade_frontalface.xml")));
+
+        std::vector<cv::Rect> rects;
+
+        cascade.detectMultiScale(img, rects);
+
+        TEST_CYCLE()
+        {
+            cascade.detectMultiScale(img, rects);
+        }
     }
 }
 

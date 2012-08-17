@@ -12,21 +12,39 @@ namespace {
 
 PERF_TEST_P(Sz_Depth_Cn, Core_Merge, Combine(GPU_TYPICAL_MAT_SIZES, ARITHM_MAT_DEPTH, Values(2, 3, 4)))
 {
-    cv::Size size = GET_PARAM(0);
-    int depth = GET_PARAM(1);
-    int channels = GET_PARAM(2);
+    const cv::Size size = GET_PARAM(0);
+    const int depth = GET_PARAM(1);
+    const int channels = GET_PARAM(2);
 
-    std::vector<cv::gpu::GpuMat> d_src(channels);
+    std::vector<cv::Mat> src(channels);
     for (int i = 0; i < channels; ++i)
-        d_src[i] = cv::gpu::GpuMat(size, depth, cv::Scalar::all(i));
+        src[i] = cv::Mat(size, depth, cv::Scalar::all(i));
 
-    cv::gpu::GpuMat d_dst;
-
-    cv::gpu::merge(d_src, d_dst);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
+        std::vector<cv::gpu::GpuMat> d_src(channels);
+        for (int i = 0; i < channels; ++i)
+            d_src[i].upload(src[i]);
+
+        cv::gpu::GpuMat d_dst;
+
         cv::gpu::merge(d_src, d_dst);
+
+        TEST_CYCLE()
+        {
+            cv::gpu::merge(d_src, d_dst);
+        }
+    }
+    else
+    {
+        cv::Mat dst;
+
+        cv::merge(src, dst);
+
+        TEST_CYCLE()
+        {
+            cv::merge(src, dst);
+        }
     }
 }
 
@@ -35,19 +53,35 @@ PERF_TEST_P(Sz_Depth_Cn, Core_Merge, Combine(GPU_TYPICAL_MAT_SIZES, ARITHM_MAT_D
 
 PERF_TEST_P(Sz_Depth_Cn, Core_Split, Combine(GPU_TYPICAL_MAT_SIZES, ARITHM_MAT_DEPTH, Values(2, 3, 4)))
 {
-    cv::Size size = GET_PARAM(0);
-    int depth = GET_PARAM(1);
-    int channels = GET_PARAM(2);
+    const cv::Size size = GET_PARAM(0);
+    const int depth = GET_PARAM(1);
+    const int channels = GET_PARAM(2);
 
-    cv::gpu::GpuMat d_src(size, CV_MAKE_TYPE(depth, channels), cv::Scalar(1, 2, 3, 4));
+    cv::Mat src(size, CV_MAKE_TYPE(depth, channels), cv::Scalar(1, 2, 3, 4));
 
-    std::vector<cv::gpu::GpuMat> d_dst;
-
-    cv::gpu::split(d_src, d_dst);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
+        cv::gpu::GpuMat d_src(src);
+
+        std::vector<cv::gpu::GpuMat> d_dst;
+
         cv::gpu::split(d_src, d_dst);
+
+        TEST_CYCLE()
+        {
+            cv::gpu::split(d_src, d_dst);
+        }
+    }
+    else
+    {
+        std::vector<cv::Mat> dst;
+
+        cv::split(src, dst);
+
+        TEST_CYCLE()
+        {
+            cv::split(src, dst);
+        }
     }
 }
 
@@ -56,8 +90,8 @@ PERF_TEST_P(Sz_Depth_Cn, Core_Split, Combine(GPU_TYPICAL_MAT_SIZES, ARITHM_MAT_D
 
 PERF_TEST_P(Sz_Depth, Core_AddMat, Combine(GPU_TYPICAL_MAT_SIZES, ARITHM_MAT_DEPTH))
 {
-    cv::Size size = GET_PARAM(0);
-    int depth = GET_PARAM(1);
+    const cv::Size size = GET_PARAM(0);
+    const int depth = GET_PARAM(1);
 
     cv::Mat src1(size, depth);
     fillRandom(src1);
@@ -65,15 +99,29 @@ PERF_TEST_P(Sz_Depth, Core_AddMat, Combine(GPU_TYPICAL_MAT_SIZES, ARITHM_MAT_DEP
     cv::Mat src2(size, depth);
     fillRandom(src2);
 
-    cv::gpu::GpuMat d_src1(src1);
-    cv::gpu::GpuMat d_src2(src2);
-    cv::gpu::GpuMat d_dst;
-
-    cv::gpu::add(d_src1, d_src2, d_dst);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
+        cv::gpu::GpuMat d_src1(src1);
+        cv::gpu::GpuMat d_src2(src2);
+        cv::gpu::GpuMat d_dst;
+
         cv::gpu::add(d_src1, d_src2, d_dst);
+
+        TEST_CYCLE()
+        {
+            cv::gpu::add(d_src1, d_src2, d_dst);
+        }
+    }
+    else
+    {
+        cv::Mat dst;
+
+        cv::add(src1, src2, dst);
+
+        TEST_CYCLE()
+        {
+            cv::add(src1, src2, dst);
+        }
     }
 }
 
@@ -82,22 +130,36 @@ PERF_TEST_P(Sz_Depth, Core_AddMat, Combine(GPU_TYPICAL_MAT_SIZES, ARITHM_MAT_DEP
 
 PERF_TEST_P(Sz_Depth, Core_AddScalar, Combine(GPU_TYPICAL_MAT_SIZES, ARITHM_MAT_DEPTH))
 {
-    cv::Size size = GET_PARAM(0);
-    int depth = GET_PARAM(1);
+    const cv::Size size = GET_PARAM(0);
+    const int depth = GET_PARAM(1);
 
     cv::Mat src(size, depth);
     fillRandom(src);
 
     cv::Scalar s(1, 2, 3, 4);
 
-    cv::gpu::GpuMat d_src(src);
-    cv::gpu::GpuMat d_dst;
-
-    cv::gpu::add(d_src, s, d_dst);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
+        cv::gpu::GpuMat d_src(src);
+        cv::gpu::GpuMat d_dst;
+
         cv::gpu::add(d_src, s, d_dst);
+
+        TEST_CYCLE()
+        {
+            cv::gpu::add(d_src, s, d_dst);
+        }
+    }
+    else
+    {
+        cv::Mat dst;
+
+        cv::add(src, s, dst);
+
+        TEST_CYCLE()
+        {
+            cv::add(src, s, dst);
+        }
     }
 }
 
@@ -106,8 +168,8 @@ PERF_TEST_P(Sz_Depth, Core_AddScalar, Combine(GPU_TYPICAL_MAT_SIZES, ARITHM_MAT_
 
 PERF_TEST_P(Sz_Depth, Core_SubtractMat, Combine(GPU_TYPICAL_MAT_SIZES, ARITHM_MAT_DEPTH))
 {
-    cv::Size size = GET_PARAM(0);
-    int depth = GET_PARAM(1);
+    const cv::Size size = GET_PARAM(0);
+    const int depth = GET_PARAM(1);
 
     cv::Mat src1(size, depth);
     fillRandom(src1);
@@ -115,15 +177,29 @@ PERF_TEST_P(Sz_Depth, Core_SubtractMat, Combine(GPU_TYPICAL_MAT_SIZES, ARITHM_MA
     cv::Mat src2(size, depth);
     fillRandom(src2);
 
-    cv::gpu::GpuMat d_src1(src1);
-    cv::gpu::GpuMat d_src2(src2);
-    cv::gpu::GpuMat d_dst;
-
-    cv::gpu::subtract(d_src1, d_src2, d_dst);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
+        cv::gpu::GpuMat d_src1(src1);
+        cv::gpu::GpuMat d_src2(src2);
+        cv::gpu::GpuMat d_dst;
+
         cv::gpu::subtract(d_src1, d_src2, d_dst);
+
+        TEST_CYCLE()
+        {
+            cv::gpu::subtract(d_src1, d_src2, d_dst);
+        }
+    }
+    else
+    {
+        cv::Mat dst;
+
+        cv::subtract(src1, src2, dst);
+
+        TEST_CYCLE()
+        {
+            cv::subtract(src1, src2, dst);
+        }
     }
 }
 
@@ -132,22 +208,36 @@ PERF_TEST_P(Sz_Depth, Core_SubtractMat, Combine(GPU_TYPICAL_MAT_SIZES, ARITHM_MA
 
 PERF_TEST_P(Sz_Depth, Core_SubtractScalar, Combine(GPU_TYPICAL_MAT_SIZES, ARITHM_MAT_DEPTH))
 {
-    cv::Size size = GET_PARAM(0);
-    int depth = GET_PARAM(1);
+    const cv::Size size = GET_PARAM(0);
+    const int depth = GET_PARAM(1);
 
     cv::Mat src(size, depth);
     fillRandom(src);
 
     cv::Scalar s(1, 2, 3, 4);
 
-    cv::gpu::GpuMat d_src(src);
-    cv::gpu::GpuMat d_dst;
-
-    cv::gpu::subtract(d_src, s, d_dst);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
+        cv::gpu::GpuMat d_src(src);
+        cv::gpu::GpuMat d_dst;
+
         cv::gpu::subtract(d_src, s, d_dst);
+
+        TEST_CYCLE()
+        {
+            cv::gpu::subtract(d_src, s, d_dst);
+        }
+    }
+    else
+    {
+        cv::Mat dst;
+
+        cv::subtract(src, s, dst);
+
+        TEST_CYCLE()
+        {
+            cv::subtract(src, s, dst);
+        }
     }
 }
 
@@ -156,8 +246,8 @@ PERF_TEST_P(Sz_Depth, Core_SubtractScalar, Combine(GPU_TYPICAL_MAT_SIZES, ARITHM
 
 PERF_TEST_P(Sz_Depth, Core_MultiplyMat, Combine(GPU_TYPICAL_MAT_SIZES, ARITHM_MAT_DEPTH))
 {
-    cv::Size size = GET_PARAM(0);
-    int depth = GET_PARAM(1);
+    const cv::Size size = GET_PARAM(0);
+    const int depth = GET_PARAM(1);
 
     cv::Mat src1(size, depth);
     fillRandom(src1);
@@ -165,15 +255,29 @@ PERF_TEST_P(Sz_Depth, Core_MultiplyMat, Combine(GPU_TYPICAL_MAT_SIZES, ARITHM_MA
     cv::Mat src2(size, depth);
     fillRandom(src2);
 
-    cv::gpu::GpuMat d_src1(src1);
-    cv::gpu::GpuMat d_src2(src2);
-    cv::gpu::GpuMat d_dst;
-
-    cv::gpu::multiply(d_src1, d_src2, d_dst);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
+        cv::gpu::GpuMat d_src1(src1);
+        cv::gpu::GpuMat d_src2(src2);
+        cv::gpu::GpuMat d_dst;
+
         cv::gpu::multiply(d_src1, d_src2, d_dst);
+
+        TEST_CYCLE()
+        {
+            cv::gpu::multiply(d_src1, d_src2, d_dst);
+        }
+    }
+    else
+    {
+        cv::Mat dst;
+
+        cv::multiply(src1, src2, dst);
+
+        TEST_CYCLE()
+        {
+            cv::multiply(src1, src2, dst);
+        }
     }
 }
 
@@ -182,22 +286,36 @@ PERF_TEST_P(Sz_Depth, Core_MultiplyMat, Combine(GPU_TYPICAL_MAT_SIZES, ARITHM_MA
 
 PERF_TEST_P(Sz_Depth, Core_MultiplyScalar, Combine(GPU_TYPICAL_MAT_SIZES, ARITHM_MAT_DEPTH))
 {
-    cv::Size size = GET_PARAM(0);
-    int depth = GET_PARAM(1);
+    const cv::Size size = GET_PARAM(0);
+    const int depth = GET_PARAM(1);
 
     cv::Mat src(size, depth);
     fillRandom(src);
 
     cv::Scalar s(1, 2, 3, 4);
 
-    cv::gpu::GpuMat d_src(src);
-    cv::gpu::GpuMat d_dst;
-
-    cv::gpu::multiply(d_src, s, d_dst);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
+        cv::gpu::GpuMat d_src(src);
+        cv::gpu::GpuMat d_dst;
+
         cv::gpu::multiply(d_src, s, d_dst);
+
+        TEST_CYCLE()
+        {
+            cv::gpu::multiply(d_src, s, d_dst);
+        }
+    }
+    else
+    {
+        cv::Mat dst;
+
+        cv::multiply(src, s, dst);
+
+        TEST_CYCLE()
+        {
+            cv::multiply(src, s, dst);
+        }
     }
 }
 
@@ -206,8 +324,8 @@ PERF_TEST_P(Sz_Depth, Core_MultiplyScalar, Combine(GPU_TYPICAL_MAT_SIZES, ARITHM
 
 PERF_TEST_P(Sz_Depth, Core_DivideMat, Combine(GPU_TYPICAL_MAT_SIZES, ARITHM_MAT_DEPTH))
 {
-    cv::Size size = GET_PARAM(0);
-    int depth = GET_PARAM(1);
+    const cv::Size size = GET_PARAM(0);
+    const int depth = GET_PARAM(1);
 
     cv::Mat src1(size, depth);
     fillRandom(src1);
@@ -215,15 +333,29 @@ PERF_TEST_P(Sz_Depth, Core_DivideMat, Combine(GPU_TYPICAL_MAT_SIZES, ARITHM_MAT_
     cv::Mat src2(size, depth);
     fillRandom(src2);
 
-    cv::gpu::GpuMat d_src1(src1);
-    cv::gpu::GpuMat d_src2(src2);
-    cv::gpu::GpuMat d_dst;
-
-    cv::gpu::divide(d_src1, d_src2, d_dst);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
+        cv::gpu::GpuMat d_src1(src1);
+        cv::gpu::GpuMat d_src2(src2);
+        cv::gpu::GpuMat d_dst;
+
         cv::gpu::divide(d_src1, d_src2, d_dst);
+
+        TEST_CYCLE()
+        {
+            cv::gpu::divide(d_src1, d_src2, d_dst);
+        }
+    }
+    else
+    {
+        cv::Mat dst;
+
+        cv::divide(src1, src2, dst);
+
+        TEST_CYCLE()
+        {
+            cv::divide(src1, src2, dst);
+        }
     }
 }
 
@@ -232,22 +364,36 @@ PERF_TEST_P(Sz_Depth, Core_DivideMat, Combine(GPU_TYPICAL_MAT_SIZES, ARITHM_MAT_
 
 PERF_TEST_P(Sz_Depth, Core_DivideScalar, Combine(GPU_TYPICAL_MAT_SIZES, ARITHM_MAT_DEPTH))
 {
-    cv::Size size = GET_PARAM(0);
-    int depth = GET_PARAM(1);
+    const cv::Size size = GET_PARAM(0);
+    const int depth = GET_PARAM(1);
 
     cv::Mat src(size, depth);
     fillRandom(src);
 
     cv::Scalar s(1, 2, 3, 4);
 
-    cv::gpu::GpuMat d_src(src);
-    cv::gpu::GpuMat d_dst;
-
-    cv::gpu::divide(d_src, s, d_dst);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
+        cv::gpu::GpuMat d_src(src);
+        cv::gpu::GpuMat d_dst;
+
         cv::gpu::divide(d_src, s, d_dst);
+
+        TEST_CYCLE()
+        {
+            cv::gpu::divide(d_src, s, d_dst);
+        }
+    }
+    else
+    {
+        cv::Mat dst;
+
+        cv::divide(src, s, dst);
+
+        TEST_CYCLE()
+        {
+            cv::divide(src, s, dst);
+        }
     }
 }
 
@@ -256,22 +402,36 @@ PERF_TEST_P(Sz_Depth, Core_DivideScalar, Combine(GPU_TYPICAL_MAT_SIZES, ARITHM_M
 
 PERF_TEST_P(Sz_Depth, Core_DivideScalarInv, Combine(GPU_TYPICAL_MAT_SIZES, ARITHM_MAT_DEPTH))
 {
-    cv::Size size = GET_PARAM(0);
-    int depth = GET_PARAM(1);
+    const cv::Size size = GET_PARAM(0);
+    const int depth = GET_PARAM(1);
 
     cv::Mat src(size, depth);
     fillRandom(src);
 
     double s = 100.0;
 
-    cv::gpu::GpuMat d_src(src);
-    cv::gpu::GpuMat d_dst;
-
-    cv::gpu::divide(s, d_src, d_dst);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
+        cv::gpu::GpuMat d_src(src);
+        cv::gpu::GpuMat d_dst;
+
         cv::gpu::divide(s, d_src, d_dst);
+
+        TEST_CYCLE()
+        {
+            cv::gpu::divide(s, d_src, d_dst);
+        }
+    }
+    else
+    {
+        cv::Mat dst;
+
+        cv::divide(s, src, dst);
+
+        TEST_CYCLE()
+        {
+            cv::divide(s, src, dst);
+        }
     }
 }
 
@@ -280,8 +440,8 @@ PERF_TEST_P(Sz_Depth, Core_DivideScalarInv, Combine(GPU_TYPICAL_MAT_SIZES, ARITH
 
 PERF_TEST_P(Sz_Depth, Core_AbsDiffMat, Combine(GPU_TYPICAL_MAT_SIZES, ARITHM_MAT_DEPTH))
 {
-    cv::Size size = GET_PARAM(0);
-    int depth = GET_PARAM(1);
+    const cv::Size size = GET_PARAM(0);
+    const int depth = GET_PARAM(1);
 
     cv::Mat src1(size, depth);
     fillRandom(src1);
@@ -289,15 +449,29 @@ PERF_TEST_P(Sz_Depth, Core_AbsDiffMat, Combine(GPU_TYPICAL_MAT_SIZES, ARITHM_MAT
     cv::Mat src2(size, depth);
     fillRandom(src2);
 
-    cv::gpu::GpuMat d_src1(src1);
-    cv::gpu::GpuMat d_src2(src2);
-    cv::gpu::GpuMat d_dst;
-
-    cv::gpu::absdiff(d_src1, d_src2, d_dst);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
+        cv::gpu::GpuMat d_src1(src1);
+        cv::gpu::GpuMat d_src2(src2);
+        cv::gpu::GpuMat d_dst;
+
         cv::gpu::absdiff(d_src1, d_src2, d_dst);
+
+        TEST_CYCLE()
+        {
+            cv::gpu::absdiff(d_src1, d_src2, d_dst);
+        }
+    }
+    else
+    {
+        cv::Mat dst;
+
+        cv::absdiff(src1, src2, dst);
+
+        TEST_CYCLE()
+        {
+            cv::absdiff(src1, src2, dst);
+        }
     }
 }
 
@@ -306,22 +480,36 @@ PERF_TEST_P(Sz_Depth, Core_AbsDiffMat, Combine(GPU_TYPICAL_MAT_SIZES, ARITHM_MAT
 
 PERF_TEST_P(Sz_Depth, Core_AbsDiffScalar, Combine(GPU_TYPICAL_MAT_SIZES, ARITHM_MAT_DEPTH))
 {
-    cv::Size size = GET_PARAM(0);
-    int depth = GET_PARAM(1);
+    const cv::Size size = GET_PARAM(0);
+    const int depth = GET_PARAM(1);
 
     cv::Mat src(size, depth);
     fillRandom(src);
 
     cv::Scalar s(1, 2, 3, 4);
 
-    cv::gpu::GpuMat d_src(src);
-    cv::gpu::GpuMat d_dst;
-
-    cv::gpu::absdiff(d_src, s, d_dst);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
+        cv::gpu::GpuMat d_src(src);
+        cv::gpu::GpuMat d_dst;
+
         cv::gpu::absdiff(d_src, s, d_dst);
+
+        TEST_CYCLE()
+        {
+            cv::gpu::absdiff(d_src, s, d_dst);
+        }
+    }
+    else
+    {
+        cv::Mat dst;
+
+        cv::absdiff(src, s, dst);
+
+        TEST_CYCLE()
+        {
+            cv::absdiff(src, s, dst);
+        }
     }
 }
 
@@ -330,20 +518,27 @@ PERF_TEST_P(Sz_Depth, Core_AbsDiffScalar, Combine(GPU_TYPICAL_MAT_SIZES, ARITHM_
 
 PERF_TEST_P(Sz_Depth, Core_Abs, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_16S, CV_32F)))
 {
-    cv::Size size = GET_PARAM(0);
-    int depth = GET_PARAM(1);
+    const cv::Size size = GET_PARAM(0);
+    const int depth = GET_PARAM(1);
 
     cv::Mat src(size, depth);
     fillRandom(src);
 
-    cv::gpu::GpuMat d_src(src);
-    cv::gpu::GpuMat d_dst;
-
-    cv::gpu::abs(d_src, d_dst);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
+        cv::gpu::GpuMat d_src(src);
+        cv::gpu::GpuMat d_dst;
+
         cv::gpu::abs(d_src, d_dst);
+
+        TEST_CYCLE()
+        {
+            cv::gpu::abs(d_src, d_dst);
+        }
+    }
+    else
+    {
+        FAIL();
     }
 }
 
@@ -352,20 +547,27 @@ PERF_TEST_P(Sz_Depth, Core_Abs, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_16S, CV
 
 PERF_TEST_P(Sz_Depth, Core_Sqr, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8U, CV_16S, CV_32F)))
 {
-    cv::Size size = GET_PARAM(0);
-    int depth = GET_PARAM(1);
+    const cv::Size size = GET_PARAM(0);
+    const int depth = GET_PARAM(1);
 
     cv::Mat src(size, depth);
     fillRandom(src);
 
-    cv::gpu::GpuMat d_src(src);
-    cv::gpu::GpuMat d_dst;
-
-    cv::gpu::sqr(d_src, d_dst);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
+        cv::gpu::GpuMat d_src(src);
+        cv::gpu::GpuMat d_dst;
+
         cv::gpu::sqr(d_src, d_dst);
+
+        TEST_CYCLE()
+        {
+            cv::gpu::sqr(d_src, d_dst);
+        }
+    }
+    else
+    {
+        FAIL();
     }
 }
 
@@ -374,20 +576,34 @@ PERF_TEST_P(Sz_Depth, Core_Sqr, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8U, CV_
 
 PERF_TEST_P(Sz_Depth, Core_Sqrt, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8U, CV_16S, CV_32F)))
 {
-    cv::Size size = GET_PARAM(0);
-    int depth = GET_PARAM(1);
+    const cv::Size size = GET_PARAM(0);
+    const int depth = GET_PARAM(1);
 
     cv::Mat src(size, depth);
     fillRandom(src);
 
-    cv::gpu::GpuMat d_src(src);
-    cv::gpu::GpuMat d_dst;
-
-    cv::gpu::sqrt(d_src, d_dst);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
+        cv::gpu::GpuMat d_src(src);
+        cv::gpu::GpuMat d_dst;
+
         cv::gpu::sqrt(d_src, d_dst);
+
+        TEST_CYCLE()
+        {
+            cv::gpu::sqrt(d_src, d_dst);
+        }
+    }
+    else
+    {
+        cv::Mat dst;
+
+        cv::sqrt(src, dst);
+
+        TEST_CYCLE()
+        {
+            cv::sqrt(src, dst);
+        }
     }
 }
 
@@ -396,20 +612,34 @@ PERF_TEST_P(Sz_Depth, Core_Sqrt, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8U, CV
 
 PERF_TEST_P(Sz_Depth, Core_Log, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8U, CV_16S, CV_32F)))
 {
-    cv::Size size = GET_PARAM(0);
-    int depth = GET_PARAM(1);
+    const cv::Size size = GET_PARAM(0);
+    const int depth = GET_PARAM(1);
 
     cv::Mat src(size, depth);
     fillRandom(src, 1.0, 255.0);
 
-    cv::gpu::GpuMat d_src(src);
-    cv::gpu::GpuMat d_dst;
-
-    cv::gpu::log(d_src, d_dst);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
+        cv::gpu::GpuMat d_src(src);
+        cv::gpu::GpuMat d_dst;
+
         cv::gpu::log(d_src, d_dst);
+
+        TEST_CYCLE()
+        {
+            cv::gpu::log(d_src, d_dst);
+        }
+    }
+    else
+    {
+        cv::Mat dst;
+
+        cv::log(src, dst);
+
+        TEST_CYCLE()
+        {
+            cv::log(src, dst);
+        }
     }
 }
 
@@ -418,20 +648,34 @@ PERF_TEST_P(Sz_Depth, Core_Log, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8U, CV_
 
 PERF_TEST_P(Sz_Depth, Core_Exp, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8U, CV_16S, CV_32F)))
 {
-    cv::Size size = GET_PARAM(0);
-    int depth = GET_PARAM(1);
+    const cv::Size size = GET_PARAM(0);
+    const int depth = GET_PARAM(1);
 
     cv::Mat src(size, depth);
     fillRandom(src, 1.0, 10.0);
 
-    cv::gpu::GpuMat d_src(src);
-    cv::gpu::GpuMat d_dst;
-
-    cv::gpu::exp(d_src, d_dst);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
+        cv::gpu::GpuMat d_src(src);
+        cv::gpu::GpuMat d_dst;
+
         cv::gpu::exp(d_src, d_dst);
+
+        TEST_CYCLE()
+        {
+            cv::gpu::exp(d_src, d_dst);
+        }
+    }
+    else
+    {
+        cv::Mat dst;
+
+        cv::exp(src, dst);
+
+        TEST_CYCLE()
+        {
+            cv::exp(src, dst);
+        }
     }
 }
 
@@ -442,21 +686,35 @@ DEF_PARAM_TEST(Sz_Depth_Power, cv::Size, MatDepth, double);
 
 PERF_TEST_P(Sz_Depth_Power, Core_Pow, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8U, CV_16S, CV_32F), Values(0.3, 2.0, 2.4)))
 {
-    cv::Size size = GET_PARAM(0);
-    int depth = GET_PARAM(1);
-    double power = GET_PARAM(2);
+    const cv::Size size = GET_PARAM(0);
+    const int depth = GET_PARAM(1);
+    const double power = GET_PARAM(2);
 
     cv::Mat src(size, depth);
     fillRandom(src, 1.0, 10.0);
 
-    cv::gpu::GpuMat d_src(src);
-    cv::gpu::GpuMat d_dst;
-
-    cv::gpu::pow(d_src, power, d_dst);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
+        cv::gpu::GpuMat d_src(src);
+        cv::gpu::GpuMat d_dst;
+
         cv::gpu::pow(d_src, power, d_dst);
+
+        TEST_CYCLE()
+        {
+            cv::gpu::pow(d_src, power, d_dst);
+        }
+    }
+    else
+    {
+        cv::Mat dst;
+
+        cv::pow(src, power, dst);
+
+        TEST_CYCLE()
+        {
+            cv::pow(src, power, dst);
+        }
     }
 }
 
@@ -470,9 +728,9 @@ DEF_PARAM_TEST(Sz_Depth_Code, cv::Size, MatDepth, CmpCode);
 
 PERF_TEST_P(Sz_Depth_Code, Core_CompareMat, Combine(GPU_TYPICAL_MAT_SIZES, ARITHM_MAT_DEPTH, ALL_CMP_CODES))
 {
-    cv::Size size = GET_PARAM(0);
-    int depth = GET_PARAM(1);
-    int cmp_code = GET_PARAM(2);
+    const cv::Size size = GET_PARAM(0);
+    const int depth = GET_PARAM(1);
+    const int cmp_code = GET_PARAM(2);
 
     cv::Mat src1(size, depth);
     fillRandom(src1);
@@ -480,15 +738,29 @@ PERF_TEST_P(Sz_Depth_Code, Core_CompareMat, Combine(GPU_TYPICAL_MAT_SIZES, ARITH
     cv::Mat src2(size, depth);
     fillRandom(src2);
 
-    cv::gpu::GpuMat d_src1(src1);
-    cv::gpu::GpuMat d_src2(src2);
-    cv::gpu::GpuMat d_dst;
-
-    cv::gpu::compare(d_src1, d_src2, d_dst, cmp_code);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
+        cv::gpu::GpuMat d_src1(src1);
+        cv::gpu::GpuMat d_src2(src2);
+        cv::gpu::GpuMat d_dst;
+
         cv::gpu::compare(d_src1, d_src2, d_dst, cmp_code);
+
+        TEST_CYCLE()
+        {
+            cv::gpu::compare(d_src1, d_src2, d_dst, cmp_code);
+        }
+    }
+    else
+    {
+        cv::Mat dst;
+
+        cv::compare(src1, src2, dst, cmp_code);
+
+        TEST_CYCLE()
+        {
+            cv::compare(src1, src2, dst, cmp_code);
+        }
     }
 }
 
@@ -497,23 +769,37 @@ PERF_TEST_P(Sz_Depth_Code, Core_CompareMat, Combine(GPU_TYPICAL_MAT_SIZES, ARITH
 
 PERF_TEST_P(Sz_Depth_Code, Core_CompareScalar, Combine(GPU_TYPICAL_MAT_SIZES, ARITHM_MAT_DEPTH, ALL_CMP_CODES))
 {
-    cv::Size size = GET_PARAM(0);
-    int depth = GET_PARAM(1);
-    int cmp_code = GET_PARAM(2);
+    const cv::Size size = GET_PARAM(0);
+    const int depth = GET_PARAM(1);
+    const int cmp_code = GET_PARAM(2);
 
     cv::Mat src(size, depth);
     fillRandom(src);
 
     cv::Scalar s = cv::Scalar::all(100);
 
-    cv::gpu::GpuMat d_src(src);
-    cv::gpu::GpuMat d_dst;
-
-    cv::gpu::compare(d_src, s, d_dst, cmp_code);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
+        cv::gpu::GpuMat d_src(src);
+        cv::gpu::GpuMat d_dst;
+
         cv::gpu::compare(d_src, s, d_dst, cmp_code);
+
+        TEST_CYCLE()
+        {
+            cv::gpu::compare(d_src, s, d_dst, cmp_code);
+        }
+    }
+    else
+    {
+        cv::Mat dst;
+
+        cv::compare(src, s, dst, cmp_code);
+
+        TEST_CYCLE()
+        {
+            cv::compare(src, s, dst, cmp_code);
+        }
     }
 }
 
@@ -522,20 +808,34 @@ PERF_TEST_P(Sz_Depth_Code, Core_CompareScalar, Combine(GPU_TYPICAL_MAT_SIZES, AR
 
 PERF_TEST_P(Sz_Depth, Core_BitwiseNot, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8U, CV_16U, CV_32S)))
 {
-    cv::Size size = GET_PARAM(0);
-    int depth = GET_PARAM(1);
+    const cv::Size size = GET_PARAM(0);
+    const int depth = GET_PARAM(1);
 
     cv::Mat src(size, depth);
     fillRandom(src);
 
-    cv::gpu::GpuMat d_src(src);
-    cv::gpu::GpuMat d_dst;
-
-    cv::gpu::bitwise_not(d_src, d_dst);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
+        cv::gpu::GpuMat d_src(src);
+        cv::gpu::GpuMat d_dst;
+
         cv::gpu::bitwise_not(d_src, d_dst);
+
+        TEST_CYCLE()
+        {
+            cv::gpu::bitwise_not(d_src, d_dst);
+        }
+    }
+    else
+    {
+        cv::Mat dst;
+
+        cv::bitwise_not(src, dst);
+
+        TEST_CYCLE()
+        {
+            cv::bitwise_not(src, dst);
+        }
     }
 }
 
@@ -544,8 +844,8 @@ PERF_TEST_P(Sz_Depth, Core_BitwiseNot, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_
 
 PERF_TEST_P(Sz_Depth, Core_BitwiseAndMat, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8U, CV_16U, CV_32S)))
 {
-    cv::Size size = GET_PARAM(0);
-    int depth = GET_PARAM(1);
+    const cv::Size size = GET_PARAM(0);
+    const int depth = GET_PARAM(1);
 
     cv::Mat src1(size, depth);
     fillRandom(src1);
@@ -553,15 +853,29 @@ PERF_TEST_P(Sz_Depth, Core_BitwiseAndMat, Combine(GPU_TYPICAL_MAT_SIZES, Values(
     cv::Mat src2(size, depth);
     fillRandom(src2);
 
-    cv::gpu::GpuMat d_src1(src1);
-    cv::gpu::GpuMat d_src2(src2);
-    cv::gpu::GpuMat d_dst;
-
-    cv::gpu::bitwise_and(d_src1, d_src2, d_dst);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
+        cv::gpu::GpuMat d_src1(src1);
+        cv::gpu::GpuMat d_src2(src2);
+        cv::gpu::GpuMat d_dst;
+
         cv::gpu::bitwise_and(d_src1, d_src2, d_dst);
+
+        TEST_CYCLE()
+        {
+            cv::gpu::bitwise_and(d_src1, d_src2, d_dst);
+        }
+    }
+    else
+    {
+        cv::Mat dst;
+
+        cv::bitwise_and(src1, src2, dst);
+
+        TEST_CYCLE()
+        {
+            cv::bitwise_and(src1, src2, dst);
+        }
     }
 }
 
@@ -570,25 +884,39 @@ PERF_TEST_P(Sz_Depth, Core_BitwiseAndMat, Combine(GPU_TYPICAL_MAT_SIZES, Values(
 
 PERF_TEST_P(Sz_Depth_Cn, Core_BitwiseAndScalar, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8U, CV_16U, CV_32S), Values(1, 3, 4)))
 {
-    cv::Size size = GET_PARAM(0);
-    int depth = GET_PARAM(1);
-    int channels = GET_PARAM(2);
+    const cv::Size size = GET_PARAM(0);
+    const int depth = GET_PARAM(1);
+    const int channels = GET_PARAM(2);
 
-    int type = CV_MAKE_TYPE(depth, channels);
+    const int type = CV_MAKE_TYPE(depth, channels);
 
     cv::Mat src(size, type);
     fillRandom(src);
 
     cv::Scalar s = cv::Scalar::all(100);
 
-    cv::gpu::GpuMat d_src(src);
-    cv::gpu::GpuMat d_dst;
-
-    cv::gpu::bitwise_and(d_src, s, d_dst);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
+        cv::gpu::GpuMat d_src(src);
+        cv::gpu::GpuMat d_dst;
+
         cv::gpu::bitwise_and(d_src, s, d_dst);
+
+        TEST_CYCLE()
+        {
+            cv::gpu::bitwise_and(d_src, s, d_dst);
+        }
+    }
+    else
+    {
+        cv::Mat dst;
+
+        cv::bitwise_and(src, s, dst);
+
+        TEST_CYCLE()
+        {
+            cv::bitwise_and(src, s, dst);
+        }
     }
 }
 
@@ -597,8 +925,8 @@ PERF_TEST_P(Sz_Depth_Cn, Core_BitwiseAndScalar, Combine(GPU_TYPICAL_MAT_SIZES, V
 
 PERF_TEST_P(Sz_Depth, Core_BitwiseOrMat, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8U, CV_16U, CV_32S)))
 {
-    cv::Size size = GET_PARAM(0);
-    int depth = GET_PARAM(1);
+    const cv::Size size = GET_PARAM(0);
+    const int depth = GET_PARAM(1);
 
     cv::Mat src1(size, depth);
     fillRandom(src1);
@@ -606,15 +934,29 @@ PERF_TEST_P(Sz_Depth, Core_BitwiseOrMat, Combine(GPU_TYPICAL_MAT_SIZES, Values(C
     cv::Mat src2(size, depth);
     fillRandom(src2);
 
-    cv::gpu::GpuMat d_src1(src1);
-    cv::gpu::GpuMat d_src2(src2);
-    cv::gpu::GpuMat d_dst;
-
-    cv::gpu::bitwise_or(d_src1, d_src2, d_dst);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
+        cv::gpu::GpuMat d_src1(src1);
+        cv::gpu::GpuMat d_src2(src2);
+        cv::gpu::GpuMat d_dst;
+
         cv::gpu::bitwise_or(d_src1, d_src2, d_dst);
+
+        TEST_CYCLE()
+        {
+            cv::gpu::bitwise_or(d_src1, d_src2, d_dst);
+        }
+    }
+    else
+    {
+        cv::Mat dst;
+
+        cv::bitwise_or(src1, src2, dst);
+
+        TEST_CYCLE()
+        {
+            cv::bitwise_or(src1, src2, dst);
+        }
     }
 }
 
@@ -623,25 +965,39 @@ PERF_TEST_P(Sz_Depth, Core_BitwiseOrMat, Combine(GPU_TYPICAL_MAT_SIZES, Values(C
 
 PERF_TEST_P(Sz_Depth_Cn, Core_BitwiseOrScalar, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8U, CV_16U, CV_32S), Values(1, 3, 4)))
 {
-    cv::Size size = GET_PARAM(0);
-    int depth = GET_PARAM(1);
-    int channels = GET_PARAM(2);
+    const cv::Size size = GET_PARAM(0);
+    const int depth = GET_PARAM(1);
+    const int channels = GET_PARAM(2);
 
-    int type = CV_MAKE_TYPE(depth, channels);
+    const int type = CV_MAKE_TYPE(depth, channels);
 
     cv::Mat src(size, type);
     fillRandom(src);
 
     cv::Scalar s = cv::Scalar::all(100);
 
-    cv::gpu::GpuMat d_src(src);
-    cv::gpu::GpuMat d_dst;
-
-    cv::gpu::bitwise_or(d_src, s, d_dst);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
+        cv::gpu::GpuMat d_src(src);
+        cv::gpu::GpuMat d_dst;
+
         cv::gpu::bitwise_or(d_src, s, d_dst);
+
+        TEST_CYCLE()
+        {
+            cv::gpu::bitwise_or(d_src, s, d_dst);
+        }
+    }
+    else
+    {
+        cv::Mat dst;
+
+        cv::bitwise_or(src, s, dst);
+
+        TEST_CYCLE()
+        {
+            cv::bitwise_or(src, s, dst);
+        }
     }
 }
 
@@ -650,8 +1006,8 @@ PERF_TEST_P(Sz_Depth_Cn, Core_BitwiseOrScalar, Combine(GPU_TYPICAL_MAT_SIZES, Va
 
 PERF_TEST_P(Sz_Depth, Core_BitwiseXorMat, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8U, CV_16U, CV_32S)))
 {
-    cv::Size size = GET_PARAM(0);
-    int depth = GET_PARAM(1);
+    const cv::Size size = GET_PARAM(0);
+    const int depth = GET_PARAM(1);
 
     cv::Mat src1(size, depth);
     fillRandom(src1);
@@ -659,15 +1015,29 @@ PERF_TEST_P(Sz_Depth, Core_BitwiseXorMat, Combine(GPU_TYPICAL_MAT_SIZES, Values(
     cv::Mat src2(size, depth);
     fillRandom(src2);
 
-    cv::gpu::GpuMat d_src1(src1);
-    cv::gpu::GpuMat d_src2(src2);
-    cv::gpu::GpuMat d_dst;
-
-    cv::gpu::bitwise_xor(d_src1, d_src2, d_dst);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
+        cv::gpu::GpuMat d_src1(src1);
+        cv::gpu::GpuMat d_src2(src2);
+        cv::gpu::GpuMat d_dst;
+
         cv::gpu::bitwise_xor(d_src1, d_src2, d_dst);
+
+        TEST_CYCLE()
+        {
+            cv::gpu::bitwise_xor(d_src1, d_src2, d_dst);
+        }
+    }
+    else
+    {
+        cv::Mat dst;
+
+        cv::bitwise_xor(src1, src2, dst);
+
+        TEST_CYCLE()
+        {
+            cv::bitwise_xor(src1, src2, dst);
+        }
     }
 }
 
@@ -676,25 +1046,39 @@ PERF_TEST_P(Sz_Depth, Core_BitwiseXorMat, Combine(GPU_TYPICAL_MAT_SIZES, Values(
 
 PERF_TEST_P(Sz_Depth_Cn, Core_BitwiseXorScalar, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8U, CV_16U, CV_32S), Values(1, 3, 4)))
 {
-    cv::Size size = GET_PARAM(0);
-    int depth = GET_PARAM(1);
-    int channels = GET_PARAM(2);
+    const cv::Size size = GET_PARAM(0);
+    const int depth = GET_PARAM(1);
+    const int channels = GET_PARAM(2);
 
-    int type = CV_MAKE_TYPE(depth, channels);
+    const int type = CV_MAKE_TYPE(depth, channels);
 
     cv::Mat src(size, type);
     fillRandom(src);
 
     cv::Scalar s = cv::Scalar::all(100);
 
-    cv::gpu::GpuMat d_src(src);
-    cv::gpu::GpuMat d_dst;
-
-    cv::gpu::bitwise_xor(d_src, s, d_dst);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
+        cv::gpu::GpuMat d_src(src);
+        cv::gpu::GpuMat d_dst;
+
         cv::gpu::bitwise_xor(d_src, s, d_dst);
+
+        TEST_CYCLE()
+        {
+            cv::gpu::bitwise_xor(d_src, s, d_dst);
+        }
+    }
+    else
+    {
+        cv::Mat dst;
+
+        cv::bitwise_xor(src, s, dst);
+
+        TEST_CYCLE()
+        {
+            cv::bitwise_xor(src, s, dst);
+        }
     }
 }
 
@@ -703,25 +1087,32 @@ PERF_TEST_P(Sz_Depth_Cn, Core_BitwiseXorScalar, Combine(GPU_TYPICAL_MAT_SIZES, V
 
 PERF_TEST_P(Sz_Depth_Cn, Core_RShift, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8U, CV_16U, CV_32S), Values(1, 3, 4)))
 {
-    cv::Size size = GET_PARAM(0);
-    int depth = GET_PARAM(1);
-    int channels = GET_PARAM(2);
+    const cv::Size size = GET_PARAM(0);
+    const int depth = GET_PARAM(1);
+    const int channels = GET_PARAM(2);
 
-    int type = CV_MAKE_TYPE(depth, channels);
+    const int type = CV_MAKE_TYPE(depth, channels);
 
     cv::Mat src(size, type);
     fillRandom(src);
 
-    cv::Scalar_<int> val = cv::Scalar_<int>::all(4);
+    const cv::Scalar_<int> val = cv::Scalar_<int>::all(4);
 
-    cv::gpu::GpuMat d_src(src);
-    cv::gpu::GpuMat d_dst;
-
-    cv::gpu::rshift(d_src, val, d_dst);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
+        cv::gpu::GpuMat d_src(src);
+        cv::gpu::GpuMat d_dst;
+
         cv::gpu::rshift(d_src, val, d_dst);
+
+        TEST_CYCLE()
+        {
+            cv::gpu::rshift(d_src, val, d_dst);
+        }
+    }
+    else
+    {
+        FAIL();
     }
 }
 
@@ -730,25 +1121,32 @@ PERF_TEST_P(Sz_Depth_Cn, Core_RShift, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8
 
 PERF_TEST_P(Sz_Depth_Cn, Core_LShift, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8U, CV_16U, CV_32S), Values(1, 3, 4)))
 {
-    cv::Size size = GET_PARAM(0);
-    int depth = GET_PARAM(1);
-    int channels = GET_PARAM(2);
+    const cv::Size size = GET_PARAM(0);
+    const int depth = GET_PARAM(1);
+    const int channels = GET_PARAM(2);
 
-    int type = CV_MAKE_TYPE(depth, channels);
+    const int type = CV_MAKE_TYPE(depth, channels);
 
     cv::Mat src(size, type);
     fillRandom(src);
 
-    cv::Scalar_<int> val = cv::Scalar_<int>::all(4);
+    const cv::Scalar_<int> val = cv::Scalar_<int>::all(4);
 
-    cv::gpu::GpuMat d_src(src);
-    cv::gpu::GpuMat d_dst;
-
-    cv::gpu::lshift(d_src, val, d_dst);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
+        cv::gpu::GpuMat d_src(src);
+        cv::gpu::GpuMat d_dst;
+
         cv::gpu::lshift(d_src, val, d_dst);
+
+        TEST_CYCLE()
+        {
+            cv::gpu::lshift(d_src, val, d_dst);
+        }
+    }
+    else
+    {
+        FAIL();
     }
 }
 
@@ -757,8 +1155,8 @@ PERF_TEST_P(Sz_Depth_Cn, Core_LShift, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8
 
 PERF_TEST_P(Sz_Depth, Core_MinMat, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8U, CV_16U, CV_32F)))
 {
-    cv::Size size = GET_PARAM(0);
-    int depth = GET_PARAM(1);
+    const cv::Size size = GET_PARAM(0);
+    const int depth = GET_PARAM(1);
 
     cv::Mat src1(size, depth);
     fillRandom(src1);
@@ -766,15 +1164,29 @@ PERF_TEST_P(Sz_Depth, Core_MinMat, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8U, 
     cv::Mat src2(size, depth);
     fillRandom(src2);
 
-    cv::gpu::GpuMat d_src1(src1);
-    cv::gpu::GpuMat d_src2(src2);
-    cv::gpu::GpuMat d_dst;
-
-    cv::gpu::min(d_src1, d_src2, d_dst);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
+        cv::gpu::GpuMat d_src1(src1);
+        cv::gpu::GpuMat d_src2(src2);
+        cv::gpu::GpuMat d_dst;
+
         cv::gpu::min(d_src1, d_src2, d_dst);
+
+        TEST_CYCLE()
+        {
+            cv::gpu::min(d_src1, d_src2, d_dst);
+        }
+    }
+    else
+    {
+        cv::Mat dst;
+
+        cv::min(src1, src2, dst);
+
+        TEST_CYCLE()
+        {
+            cv::min(src1, src2, dst);
+        }
     }
 }
 
@@ -783,22 +1195,36 @@ PERF_TEST_P(Sz_Depth, Core_MinMat, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8U, 
 
 PERF_TEST_P(Sz_Depth, Core_MinScalar, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8U, CV_16U, CV_32F)))
 {
-    cv::Size size = GET_PARAM(0);
-    int depth = GET_PARAM(1);
+    const cv::Size size = GET_PARAM(0);
+    const int depth = GET_PARAM(1);
 
     cv::Mat src(size, depth);
     fillRandom(src);
 
-    double val = 50.0;
+    const double val = 50.0;
 
-    cv::gpu::GpuMat d_src(src);
-    cv::gpu::GpuMat d_dst;
-
-    cv::gpu::min(d_src, val, d_dst);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
+        cv::gpu::GpuMat d_src(src);
+        cv::gpu::GpuMat d_dst;
+
         cv::gpu::min(d_src, val, d_dst);
+
+        TEST_CYCLE()
+        {
+            cv::gpu::min(d_src, val, d_dst);
+        }
+    }
+    else
+    {
+        cv::Mat dst;
+
+        cv::min(src, val, dst);
+
+        TEST_CYCLE()
+        {
+            cv::min(src, val, dst);
+        }
     }
 }
 
@@ -807,8 +1233,8 @@ PERF_TEST_P(Sz_Depth, Core_MinScalar, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8
 
 PERF_TEST_P(Sz_Depth, Core_MaxMat, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8U, CV_16U, CV_32F)))
 {
-    cv::Size size = GET_PARAM(0);
-    int depth = GET_PARAM(1);
+    const cv::Size size = GET_PARAM(0);
+    const int depth = GET_PARAM(1);
 
     cv::Mat src1(size, depth);
     fillRandom(src1);
@@ -816,15 +1242,29 @@ PERF_TEST_P(Sz_Depth, Core_MaxMat, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8U, 
     cv::Mat src2(size, depth);
     fillRandom(src2);
 
-    cv::gpu::GpuMat d_src1(src1);
-    cv::gpu::GpuMat d_src2(src2);
-    cv::gpu::GpuMat d_dst;
-
-    cv::gpu::max(d_src1, d_src2, d_dst);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
+        cv::gpu::GpuMat d_src1(src1);
+        cv::gpu::GpuMat d_src2(src2);
+        cv::gpu::GpuMat d_dst;
+
         cv::gpu::max(d_src1, d_src2, d_dst);
+
+        TEST_CYCLE()
+        {
+            cv::gpu::max(d_src1, d_src2, d_dst);
+        }
+    }
+    else
+    {
+        cv::Mat dst;
+
+        cv::max(src1, src2, dst);
+
+        TEST_CYCLE()
+        {
+            cv::max(src1, src2, dst);
+        }
     }
 }
 
@@ -833,22 +1273,36 @@ PERF_TEST_P(Sz_Depth, Core_MaxMat, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8U, 
 
 PERF_TEST_P(Sz_Depth, Core_MaxScalar, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8U, CV_16U, CV_32F)))
 {
-    cv::Size size = GET_PARAM(0);
-    int depth = GET_PARAM(1);
+    const cv::Size size = GET_PARAM(0);
+    const int depth = GET_PARAM(1);
 
     cv::Mat src(size, depth);
     fillRandom(src);
 
-    double val = 50.0;
+    const double val = 50.0;
 
-    cv::gpu::GpuMat d_src(src);
-    cv::gpu::GpuMat d_dst;
-
-    cv::gpu::max(d_src, val, d_dst);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
+        cv::gpu::GpuMat d_src(src);
+        cv::gpu::GpuMat d_dst;
+
         cv::gpu::max(d_src, val, d_dst);
+
+        TEST_CYCLE()
+        {
+            cv::gpu::max(d_src, val, d_dst);
+        }
+    }
+    else
+    {
+        cv::Mat dst;
+
+        cv::max(src, val, dst);
+
+        TEST_CYCLE()
+        {
+            cv::max(src, val, dst);
+        }
     }
 }
 
@@ -863,10 +1317,10 @@ PERF_TEST_P(Sz_3Depth, Core_AddWeighted, Combine(
     Values(CV_8U, CV_16U, CV_32F, CV_64F),
     Values(CV_8U, CV_16U, CV_32F, CV_64F)))
 {
-    cv::Size size = GET_PARAM(0);
-    int depth1 = GET_PARAM(1);
-    int depth2 = GET_PARAM(2);
-    int dst_depth = GET_PARAM(3);
+    const cv::Size size = GET_PARAM(0);
+    const int depth1 = GET_PARAM(1);
+    const int depth2 = GET_PARAM(2);
+    const int dst_depth = GET_PARAM(3);
 
     cv::Mat src1(size, depth1);
     fillRandom(src1);
@@ -874,15 +1328,29 @@ PERF_TEST_P(Sz_3Depth, Core_AddWeighted, Combine(
     cv::Mat src2(size, depth2);
     fillRandom(src2);
 
-    cv::gpu::GpuMat d_src1(src1);
-    cv::gpu::GpuMat d_src2(src2);
-    cv::gpu::GpuMat d_dst;
-
-    cv::gpu::addWeighted(d_src1, 0.5, d_src2, 0.5, 10.0, d_dst, dst_depth);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
+        cv::gpu::GpuMat d_src1(src1);
+        cv::gpu::GpuMat d_src2(src2);
+        cv::gpu::GpuMat d_dst;
+
         cv::gpu::addWeighted(d_src1, 0.5, d_src2, 0.5, 10.0, d_dst, dst_depth);
+
+        TEST_CYCLE()
+        {
+            cv::gpu::addWeighted(d_src1, 0.5, d_src2, 0.5, 10.0, d_dst, dst_depth);
+        }
+    }
+    else
+    {
+        cv::Mat dst;
+
+        cv::addWeighted(src1, 0.5, src2, 0.5, 10.0, dst, dst_depth);
+
+        TEST_CYCLE()
+        {
+            cv::addWeighted(src1, 0.5, src2, 0.5, 10.0, dst, dst_depth);
+        }
     }
 }
 
@@ -901,9 +1369,9 @@ PERF_TEST_P(Sz_Type_Flags, Core_GEMM, Combine(
 {
     declare.time(5.0);
 
-    cv::Size size = GET_PARAM(0);
-    int type = GET_PARAM(1);
-    int flags = GET_PARAM(2);
+    const cv::Size size = GET_PARAM(0);
+    const int type = GET_PARAM(1);
+    const int flags = GET_PARAM(2);
 
     cv::Mat src1(size, type);
     fillRandom(src1);
@@ -914,16 +1382,32 @@ PERF_TEST_P(Sz_Type_Flags, Core_GEMM, Combine(
     cv::Mat src3(size, type);
     fillRandom(src3);
 
-    cv::gpu::GpuMat d_src1(src1);
-    cv::gpu::GpuMat d_src2(src2);
-    cv::gpu::GpuMat d_src3(src3);
-    cv::gpu::GpuMat d_dst;
-
-    cv::gpu::gemm(d_src1, d_src2, 1.0, d_src3, 1.0, d_dst, flags);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
+        cv::gpu::GpuMat d_src1(src1);
+        cv::gpu::GpuMat d_src2(src2);
+        cv::gpu::GpuMat d_src3(src3);
+        cv::gpu::GpuMat d_dst;
+
         cv::gpu::gemm(d_src1, d_src2, 1.0, d_src3, 1.0, d_dst, flags);
+
+        TEST_CYCLE()
+        {
+            cv::gpu::gemm(d_src1, d_src2, 1.0, d_src3, 1.0, d_dst, flags);
+        }
+    }
+    else
+    {
+        cv::Mat dst;
+
+        cv::gemm(src1, src2, 1.0, src3, 1.0, dst, flags);
+
+        declare.time(50.0);
+
+        TEST_CYCLE()
+        {
+            cv::gemm(src1, src2, 1.0, src3, 1.0, dst, flags);
+        }
     }
 }
 
@@ -940,14 +1424,28 @@ PERF_TEST_P(Sz_Type, Core_Transpose, Combine(
     cv::Mat src(size, type);
     fillRandom(src);
 
-    cv::gpu::GpuMat d_src(src);
-    cv::gpu::GpuMat d_dst;
-
-    cv::gpu::transpose(d_src, d_dst);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
+        cv::gpu::GpuMat d_src(src);
+        cv::gpu::GpuMat d_dst;
+
         cv::gpu::transpose(d_src, d_dst);
+
+        TEST_CYCLE()
+        {
+            cv::gpu::transpose(d_src, d_dst);
+        }
+    }
+    else
+    {
+        cv::Mat dst;
+
+        cv::transpose(src, dst);
+
+        TEST_CYCLE()
+        {
+            cv::transpose(src, dst);
+        }
     }
 }
 
@@ -976,14 +1474,28 @@ PERF_TEST_P(Sz_Depth_Cn_Code, Core_Flip, Combine(
     cv::Mat src(size, type);
     fillRandom(src);
 
-    cv::gpu::GpuMat d_src(src);
-    cv::gpu::GpuMat d_dst;
-
-    cv::gpu::flip(d_src, d_dst, flipCode);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
+        cv::gpu::GpuMat d_src(src);
+        cv::gpu::GpuMat d_dst;
+
         cv::gpu::flip(d_src, d_dst, flipCode);
+
+        TEST_CYCLE()
+        {
+            cv::gpu::flip(d_src, d_dst, flipCode);
+        }
+    }
+    else
+    {
+        cv::Mat dst;
+
+        cv::flip(src, dst, flipCode);
+
+        TEST_CYCLE()
+        {
+            cv::flip(src, dst, flipCode);
+        }
     }
 }
 
@@ -1003,14 +1515,28 @@ PERF_TEST_P(Sz_Type, Core_LutOneChannel, Combine(
     cv::Mat lut(1, 256, CV_8UC1);
     fillRandom(lut);
 
-    cv::gpu::GpuMat d_src(src);
-    cv::gpu::GpuMat d_dst;
-
-    cv::gpu::LUT(d_src, lut, d_dst);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
+        cv::gpu::GpuMat d_src(src);
+        cv::gpu::GpuMat d_dst;
+
         cv::gpu::LUT(d_src, lut, d_dst);
+
+        TEST_CYCLE()
+        {
+            cv::gpu::LUT(d_src, lut, d_dst);
+        }
+    }
+    else
+    {
+        cv::Mat dst;
+
+        cv::LUT(src, lut, dst);
+
+        TEST_CYCLE()
+        {
+            cv::LUT(src, lut, dst);
+        }
     }
 }
 
@@ -1030,14 +1556,28 @@ PERF_TEST_P(Sz_Type, Core_LutMultiChannel, Combine(
     cv::Mat lut(1, 256, CV_MAKE_TYPE(CV_8U, src.channels()));
     fillRandom(lut);
 
-    cv::gpu::GpuMat d_src(src);
-    cv::gpu::GpuMat d_dst;
-
-    cv::gpu::LUT(d_src, lut, d_dst);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
+        cv::gpu::GpuMat d_src(src);
+        cv::gpu::GpuMat d_dst;
+
         cv::gpu::LUT(d_src, lut, d_dst);
+
+        TEST_CYCLE()
+        {
+            cv::gpu::LUT(d_src, lut, d_dst);
+        }
+    }
+    else
+    {
+        cv::Mat dst;
+
+        cv::LUT(src, lut, dst);
+
+        TEST_CYCLE()
+        {
+            cv::LUT(src, lut, dst);
+        }
     }
 }
 
@@ -1051,14 +1591,31 @@ PERF_TEST_P(Sz, Core_MagnitudeComplex, GPU_TYPICAL_MAT_SIZES)
     cv::Mat src(size, CV_32FC2);
     fillRandom(src, -100.0, 100.0);
 
-    cv::gpu::GpuMat d_src(src);
-    cv::gpu::GpuMat d_dst;
-
-    cv::gpu::magnitude(d_src, d_dst);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
+        cv::gpu::GpuMat d_src(src);
+        cv::gpu::GpuMat d_dst;
+
         cv::gpu::magnitude(d_src, d_dst);
+
+        TEST_CYCLE()
+        {
+            cv::gpu::magnitude(d_src, d_dst);
+        }
+    }
+    else
+    {
+        cv::Mat xy[2];
+        cv::split(src, xy);
+
+        cv::Mat dst;
+
+        cv::magnitude(xy[0], xy[1], dst);
+
+        TEST_CYCLE()
+        {
+            cv::magnitude(xy[0], xy[1], dst);
+        }
     }
 }
 
@@ -1072,14 +1629,21 @@ PERF_TEST_P(Sz, Core_MagnitudeSqrComplex, GPU_TYPICAL_MAT_SIZES)
     cv::Mat src(size, CV_32FC2);
     fillRandom(src, -100.0, 100.0);
 
-    cv::gpu::GpuMat d_src(src);
-    cv::gpu::GpuMat d_dst;
-
-    cv::gpu::magnitudeSqr(d_src, d_dst);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
+        cv::gpu::GpuMat d_src(src);
+        cv::gpu::GpuMat d_dst;
+
         cv::gpu::magnitudeSqr(d_src, d_dst);
+
+        TEST_CYCLE()
+        {
+            cv::gpu::magnitudeSqr(d_src, d_dst);
+        }
+    }
+    else
+    {
+        FAIL();
     }
 }
 
@@ -1096,15 +1660,29 @@ PERF_TEST_P(Sz, Core_Magnitude, GPU_TYPICAL_MAT_SIZES)
     cv::Mat src2(size, CV_32FC1);
     fillRandom(src2, -100.0, 100.0);
 
-    cv::gpu::GpuMat d_src1(src1);
-    cv::gpu::GpuMat d_src2(src2);
-    cv::gpu::GpuMat d_dst;
-
-    cv::gpu::magnitude(d_src1, d_src2, d_dst);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
+        cv::gpu::GpuMat d_src1(src1);
+        cv::gpu::GpuMat d_src2(src2);
+        cv::gpu::GpuMat d_dst;
+
         cv::gpu::magnitude(d_src1, d_src2, d_dst);
+
+        TEST_CYCLE()
+        {
+            cv::gpu::magnitude(d_src1, d_src2, d_dst);
+        }
+    }
+    else
+    {
+        cv::Mat dst;
+
+        cv::magnitude(src1, src2, dst);
+
+        TEST_CYCLE()
+        {
+            cv::magnitude(src1, src2, dst);
+        }
     }
 }
 
@@ -1121,15 +1699,22 @@ PERF_TEST_P(Sz, Core_MagnitudeSqr, GPU_TYPICAL_MAT_SIZES)
     cv::Mat src2(size, CV_32FC1);
     fillRandom(src2, -100.0, 100.0);
 
-    cv::gpu::GpuMat d_src1(src1);
-    cv::gpu::GpuMat d_src2(src2);
-    cv::gpu::GpuMat d_dst;
-
-    cv::gpu::magnitudeSqr(d_src1, d_src2, d_dst);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
+        cv::gpu::GpuMat d_src1(src1);
+        cv::gpu::GpuMat d_src2(src2);
+        cv::gpu::GpuMat d_dst;
+
         cv::gpu::magnitudeSqr(d_src1, d_src2, d_dst);
+
+        TEST_CYCLE()
+        {
+            cv::gpu::magnitudeSqr(d_src1, d_src2, d_dst);
+        }
+    }
+    else
+    {
+        FAIL();
     }
 }
 
@@ -1149,15 +1734,29 @@ PERF_TEST_P(Sz_AngleInDegrees, Core_Phase, Combine(GPU_TYPICAL_MAT_SIZES, Bool()
     cv::Mat src2(size, CV_32FC1);
     fillRandom(src2, -100.0, 100.0);
 
-    cv::gpu::GpuMat d_src1(src1);
-    cv::gpu::GpuMat d_src2(src2);
-    cv::gpu::GpuMat d_dst;
-
-    cv::gpu::phase(d_src1, d_src2, d_dst, angleInDegrees);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
+        cv::gpu::GpuMat d_src1(src1);
+        cv::gpu::GpuMat d_src2(src2);
+        cv::gpu::GpuMat d_dst;
+
         cv::gpu::phase(d_src1, d_src2, d_dst, angleInDegrees);
+
+        TEST_CYCLE()
+        {
+            cv::gpu::phase(d_src1, d_src2, d_dst, angleInDegrees);
+        }
+    }
+    else
+    {
+        cv::Mat dst;
+
+        cv::phase(src1, src2, dst, angleInDegrees);
+
+        TEST_CYCLE()
+        {
+            cv::phase(src1, src2, dst, angleInDegrees);
+        }
     }
 }
 
@@ -1175,16 +1774,31 @@ PERF_TEST_P(Sz_AngleInDegrees, Core_CartToPolar, Combine(GPU_TYPICAL_MAT_SIZES, 
     cv::Mat src2(size, CV_32FC1);
     fillRandom(src2, -100.0, 100.0);
 
-    cv::gpu::GpuMat d_src1(src1);
-    cv::gpu::GpuMat d_src2(src2);
-    cv::gpu::GpuMat d_magnitude;
-    cv::gpu::GpuMat d_angle;
-
-    cv::gpu::cartToPolar(d_src1, d_src2, d_magnitude, d_angle, angleInDegrees);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
+        cv::gpu::GpuMat d_src1(src1);
+        cv::gpu::GpuMat d_src2(src2);
+        cv::gpu::GpuMat d_magnitude;
+        cv::gpu::GpuMat d_angle;
+
         cv::gpu::cartToPolar(d_src1, d_src2, d_magnitude, d_angle, angleInDegrees);
+
+        TEST_CYCLE()
+        {
+            cv::gpu::cartToPolar(d_src1, d_src2, d_magnitude, d_angle, angleInDegrees);
+        }
+    }
+    else
+    {
+        cv::Mat magnitude;
+        cv::Mat angle;
+
+        cv::cartToPolar(src1, src2, magnitude, angle, angleInDegrees);
+
+        TEST_CYCLE()
+        {
+            cv::cartToPolar(src1, src2, magnitude, angle, angleInDegrees);
+        }
     }
 }
 
@@ -1202,16 +1816,31 @@ PERF_TEST_P(Sz_AngleInDegrees, Core_PolarToCart, Combine(GPU_TYPICAL_MAT_SIZES, 
     cv::Mat angle(size, CV_32FC1);
     fillRandom(angle, 0.0, angleInDegrees ? 360.0 : 2 * CV_PI);
 
-    cv::gpu::GpuMat d_magnitude(magnitude);
-    cv::gpu::GpuMat d_angle(angle);
-    cv::gpu::GpuMat d_x;
-    cv::gpu::GpuMat d_y;
-
-    cv::gpu::polarToCart(d_magnitude, d_angle, d_x, d_y, angleInDegrees);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
+        cv::gpu::GpuMat d_magnitude(magnitude);
+        cv::gpu::GpuMat d_angle(angle);
+        cv::gpu::GpuMat d_x;
+        cv::gpu::GpuMat d_y;
+
         cv::gpu::polarToCart(d_magnitude, d_angle, d_x, d_y, angleInDegrees);
+
+        TEST_CYCLE()
+        {
+            cv::gpu::polarToCart(d_magnitude, d_angle, d_x, d_y, angleInDegrees);
+        }
+    }
+    else
+    {
+        cv::Mat x;
+        cv::Mat y;
+
+        cv::polarToCart(magnitude, angle, x, y, angleInDegrees);
+
+        TEST_CYCLE()
+        {
+            cv::polarToCart(magnitude, angle, x, y, angleInDegrees);
+        }
     }
 }
 
@@ -1228,14 +1857,26 @@ PERF_TEST_P(Sz, Core_MeanStdDev, GPU_TYPICAL_MAT_SIZES)
     cv::Scalar mean;
     cv::Scalar stddev;
 
-    cv::gpu::GpuMat d_src(src);
-    cv::gpu::GpuMat d_buf;
-
-    cv::gpu::meanStdDev(d_src, mean, stddev, d_buf);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
+        cv::gpu::GpuMat d_src(src);
+        cv::gpu::GpuMat d_buf;
+
         cv::gpu::meanStdDev(d_src, mean, stddev, d_buf);
+
+        TEST_CYCLE()
+        {
+            cv::gpu::meanStdDev(d_src, mean, stddev, d_buf);
+        }
+    }
+    else
+    {
+        cv::meanStdDev(src, mean, stddev);
+
+        TEST_CYCLE()
+        {
+            cv::meanStdDev(src, mean, stddev);
+        }
     }
 }
 
@@ -1258,14 +1899,26 @@ PERF_TEST_P(Sz_Depth_Norm, Core_Norm, Combine(
 
     double dst;
 
-    cv::gpu::GpuMat d_src(src);
-    cv::gpu::GpuMat d_buf;
-
-    dst = cv::gpu::norm(d_src, normType, d_buf);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
+        cv::gpu::GpuMat d_src(src);
+        cv::gpu::GpuMat d_buf;
+
         dst = cv::gpu::norm(d_src, normType, d_buf);
+
+        TEST_CYCLE()
+        {
+            dst = cv::gpu::norm(d_src, normType, d_buf);
+        }
+    }
+    else
+    {
+        dst = cv::norm(src, normType);
+
+        TEST_CYCLE()
+        {
+            dst = cv::norm(src, normType);
+        }
     }
 }
 
@@ -1289,14 +1942,26 @@ PERF_TEST_P(Sz_Norm, Core_NormDiff, Combine(
 
     double dst;
 
-    cv::gpu::GpuMat d_src1(src1);
-    cv::gpu::GpuMat d_src2(src2);
-
-    dst = cv::gpu::norm(d_src1, d_src2, normType);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
+        cv::gpu::GpuMat d_src1(src1);
+        cv::gpu::GpuMat d_src2(src2);
+
         dst = cv::gpu::norm(d_src1, d_src2, normType);
+
+        TEST_CYCLE()
+        {
+            dst = cv::gpu::norm(d_src1, d_src2, normType);
+        }
+    }
+    else
+    {
+        dst = cv::norm(src1, src2, normType);
+
+        TEST_CYCLE()
+        {
+            dst = cv::norm(src1, src2, normType);
+        }
     }
 }
 
@@ -1319,14 +1984,26 @@ PERF_TEST_P(Sz_Depth_Cn, Core_Sum, Combine(
 
     cv::Scalar dst;
 
-    cv::gpu::GpuMat d_src(src);
-    cv::gpu::GpuMat d_buf;
-
-    dst = cv::gpu::sum(d_src, d_buf);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
+        cv::gpu::GpuMat d_src(src);
+        cv::gpu::GpuMat d_buf;
+
         dst = cv::gpu::sum(d_src, d_buf);
+
+        TEST_CYCLE()
+        {
+            dst = cv::gpu::sum(d_src, d_buf);
+        }
+    }
+    else
+    {
+        dst = cv::sum(src);
+
+        TEST_CYCLE()
+        {
+            dst = cv::sum(src);
+        }
     }
 }
 
@@ -1349,14 +2026,21 @@ PERF_TEST_P(Sz_Depth_Cn, Core_SumAbs, Combine(
 
     cv::Scalar dst;
 
-    cv::gpu::GpuMat d_src(src);
-    cv::gpu::GpuMat d_buf;
-
-    dst = cv::gpu::absSum(d_src, d_buf);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
+        cv::gpu::GpuMat d_src(src);
+        cv::gpu::GpuMat d_buf;
+
         dst = cv::gpu::absSum(d_src, d_buf);
+
+        TEST_CYCLE()
+        {
+            dst = cv::gpu::absSum(d_src, d_buf);
+        }
+    }
+    else
+    {
+        FAIL();
     }
 }
 
@@ -1379,14 +2063,21 @@ PERF_TEST_P(Sz_Depth_Cn, Core_SumSqr, Combine(
 
     cv::Scalar dst;
 
-    cv::gpu::GpuMat d_src(src);
-    cv::gpu::GpuMat d_buf;
-
-    dst = cv::gpu::sqrSum(d_src, d_buf);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
+        cv::gpu::GpuMat d_src(src);
+        cv::gpu::GpuMat d_buf;
+
         dst = cv::gpu::sqrSum(d_src, d_buf);
+
+        TEST_CYCLE()
+        {
+            dst = cv::gpu::sqrSum(d_src, d_buf);
+        }
+    }
+    else
+    {
+        FAIL();
     }
 }
 
@@ -1405,14 +2096,21 @@ PERF_TEST_P(Sz_Depth, Core_MinMax, Combine(
 
     double minVal, maxVal;
 
-    cv::gpu::GpuMat d_src(src);
-    cv::gpu::GpuMat d_buf;
-
-    cv::gpu::minMax(d_src, &minVal, &maxVal, cv::gpu::GpuMat(), d_buf);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
+        cv::gpu::GpuMat d_src(src);
+        cv::gpu::GpuMat d_buf;
+
         cv::gpu::minMax(d_src, &minVal, &maxVal, cv::gpu::GpuMat(), d_buf);
+
+        TEST_CYCLE()
+        {
+            cv::gpu::minMax(d_src, &minVal, &maxVal, cv::gpu::GpuMat(), d_buf);
+        }
+    }
+    else
+    {
+        FAIL();
     }
 }
 
@@ -1432,14 +2130,26 @@ PERF_TEST_P(Sz_Depth, Core_MinMaxLoc, Combine(
     double minVal, maxVal;
     cv::Point minLoc, maxLoc;
 
-    cv::gpu::GpuMat d_src(src);
-    cv::gpu::GpuMat d_valbuf, d_locbuf;
-
-    cv::gpu::minMaxLoc(d_src, &minVal, &maxVal, &minLoc, &maxLoc, cv::gpu::GpuMat(), d_valbuf, d_locbuf);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
+        cv::gpu::GpuMat d_src(src);
+        cv::gpu::GpuMat d_valbuf, d_locbuf;
+
         cv::gpu::minMaxLoc(d_src, &minVal, &maxVal, &minLoc, &maxLoc, cv::gpu::GpuMat(), d_valbuf, d_locbuf);
+
+        TEST_CYCLE()
+        {
+            cv::gpu::minMaxLoc(d_src, &minVal, &maxVal, &minLoc, &maxLoc, cv::gpu::GpuMat(), d_valbuf, d_locbuf);
+        }
+    }
+    else
+    {
+        cv::minMaxLoc(src, &minVal, &maxVal, &minLoc, &maxLoc);
+
+        TEST_CYCLE()
+        {
+            cv::minMaxLoc(src, &minVal, &maxVal, &minLoc, &maxLoc);
+        }
     }
 }
 
@@ -1458,14 +2168,26 @@ PERF_TEST_P(Sz_Depth, Core_CountNonZero, Combine(
 
     int dst;
 
-    cv::gpu::GpuMat d_src(src);
-    cv::gpu::GpuMat d_buf;
-
-    dst = cv::gpu::countNonZero(d_src, d_buf);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
+        cv::gpu::GpuMat d_src(src);
+        cv::gpu::GpuMat d_buf;
+
         dst = cv::gpu::countNonZero(d_src, d_buf);
+
+        TEST_CYCLE()
+        {
+            dst = cv::gpu::countNonZero(d_src, d_buf);
+        }
+    }
+    else
+    {
+        dst = cv::countNonZero(src);
+
+        TEST_CYCLE()
+        {
+            dst = cv::countNonZero(src);
+        }
     }
 }
 
@@ -1499,14 +2221,28 @@ PERF_TEST_P(Sz_Depth_Cn_Code_Dim, Core_Reduce, Combine(
     cv::Mat src(size, type);
     fillRandom(src);
 
-    cv::gpu::GpuMat d_src(src);
-    cv::gpu::GpuMat d_dst;
-
-    cv::gpu::reduce(d_src, d_dst, dim, reduceOp);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
+        cv::gpu::GpuMat d_src(src);
+        cv::gpu::GpuMat d_dst;
+
         cv::gpu::reduce(d_src, d_dst, dim, reduceOp);
+
+        TEST_CYCLE()
+        {
+            cv::gpu::reduce(d_src, d_dst, dim, reduceOp);
+        }
+    }
+    else
+    {
+        cv::Mat dst;
+
+        cv::reduce(src, dst, dim, reduceOp);
+
+        TEST_CYCLE()
+        {
+            cv::reduce(src, dst, dim, reduceOp);
+        }
     }
 }
 
