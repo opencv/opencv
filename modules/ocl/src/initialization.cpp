@@ -44,9 +44,9 @@
 //M*/
 
 #include "precomp.hpp"
-#include "threadsafe.h"
+#include "Threadsafe.h"
 #include <iomanip>
-#include "binarycaching.hpp"
+#include "binaryCaching.hpp"
 
 using namespace cv;
 using namespace cv::ocl;

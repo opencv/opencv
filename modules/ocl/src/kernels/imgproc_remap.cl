@@ -94,7 +94,7 @@ __kernel void remapNNSConstant_C1_D0(__global unsigned char* dst, __global unsig
         uchar4 dVal = *d;      
 
         int4 con = (Gx >= 0 && Gx < dst_cols && y >= 0 && y < dst_rows);
-        dst_data = (convert_uchar4(con) != (uchar4)0) ? dst_data : dVal;
+        dst_data = (convert_uchar4(con) != convert_uchar4((int4)(0))) ? dst_data : dVal;
 
         *d = dst_data;
 
@@ -139,8 +139,8 @@ __kernel void remapNNFConstant_C1_D0(__global unsigned char* dst, __global unsig
         uchar4 dVal = *d;      
 
         int4 con = (Gx >= 0 && Gx < dst_cols && y >= 0 && y < dst_rows);
-        dst_data = (convert_uchar4(con) != (uchar4)0) ? dst_data : dVal;
-
+  
+        dst_data = (convert_uchar4(con) != convert_uchar4((int4)(0))) ? dst_data : dVal;
         *d = dst_data;
 
     }
@@ -167,7 +167,7 @@ __kernel void remapNNSConstant_C4_D0(__global unsigned char* dst, __global unsig
         short8 map1_data;
 
         map1_data = *((__global short8 *)((__global char*)map1 + map1Start));
-        int4 srcIdx = convert_int4(map1_data.odd) * src_step + convert_int4(map1_data.even <<(short4)2) + src_offset;
+        int4 srcIdx = convert_int4(map1_data.odd) * src_step + (convert_int4(map1_data.even) <<((int4)(2))) + src_offset;
         uchar4 src_a, src_b, src_c, src_d;
         src_a = *((__global uchar4 *)((__global char*)src + srcIdx.s0));
         src_b = *((__global uchar4 *)((__global char*)src + srcIdx.s1));
@@ -187,7 +187,7 @@ __kernel void remapNNSConstant_C4_D0(__global unsigned char* dst, __global unsig
         uchar16 dVal = *d;      
 
         int16 con = (Gx >= 0 && Gx < (dst_cols<<2) && y >= 0 && y < dst_rows);
-        dst_data = (convert_uchar16(con) != (uchar16)0) ? dst_data : dVal;
+        dst_data = (convert_uchar16(con) != ((uchar16)(0))) ? dst_data : dVal;
 
         *d = dst_data;
     }
@@ -216,7 +216,7 @@ __kernel void remapNNFConstant_C4_D0(__global unsigned char* dst, __global unsig
         map1_data = *((__global float8 *)((__global char*)map1 + map1Start));
         int8 map1_dataZ = convert_int8_sat_rte(map1_data);
 
-        int4 srcIdx = map1_dataZ.odd * src_step + (map1_dataZ.even <<2) + src_offset;
+        int4 srcIdx = map1_dataZ.odd * src_step + (map1_dataZ.even <<((int4)(2))) + src_offset;
         uchar4 src_a, src_b, src_c, src_d;
         src_a = *((__global uchar4 *)((__global char*)src + srcIdx.s0));
         src_b = *((__global uchar4 *)((__global char*)src + srcIdx.s1));
@@ -236,7 +236,7 @@ __kernel void remapNNFConstant_C4_D0(__global unsigned char* dst, __global unsig
         uchar16 dVal = *d;      
 
         int16 con = (Gx >= 0 && Gx < (dst_cols<<2) && y >= 0 && y < dst_rows);
-        dst_data = (convert_uchar16(con) != (uchar16)0) ? dst_data : dVal;
+        dst_data = (convert_uchar16(con) != ((uchar16)(0))) ? dst_data : dVal;
 
         *d = dst_data;
 
@@ -269,7 +269,7 @@ __kernel void remapNNSConstant_C1_D5(__global float* dst, __global float const *
 
         map1_data = *((__global short8 *)((__global char*)map1 + map1Start));
     
-        int4 srcIdx = convert_int4(map1_data.odd) * src_step + convert_int4(map1_data.even <<(short4)2) + src_offset;
+        int4 srcIdx = convert_int4(map1_data.odd) * src_step + (convert_int4(map1_data.even) <<((int4)(2))) + src_offset;
     
         float4 src_data;
         src_data.s0 = *((__global float *)((__global char*)src + srcIdx.s0));
@@ -289,7 +289,7 @@ __kernel void remapNNSConstant_C1_D5(__global float* dst, __global float const *
         float4 dVal = *d;      
 
         int4 con = (Gx >= 0 && Gx < (dst_cols<<2) && y >= 0 && y < dst_rows);
-        dst_data = (convert_float4(con) != 0) ? dst_data : dVal;
+        dst_data = (convert_float4(con) != (float4)(0)) ? dst_data : dVal;
 
         *d = dst_data;
 
@@ -321,7 +321,7 @@ __kernel void remapNNFConstant_C1_D5(__global float* dst, __global float const *
         map1_data = *((__global float8 *)((__global char*)map1 + map1Start));
         int8 map1_dataZ = convert_int8_sat_rte(map1_data);
 
-        int4 srcIdx = convert_int4(map1_dataZ.odd) * src_step + convert_int4(map1_dataZ.even <<2) + src_offset;
+        int4 srcIdx = convert_int4(map1_dataZ.odd) * src_step + convert_int4(map1_dataZ.even <<(int4)(2)) + src_offset;
     
         float4 src_data;
         src_data.s0 = *((__global float *)((__global char*)src + srcIdx.s0));
@@ -341,7 +341,7 @@ __kernel void remapNNFConstant_C1_D5(__global float* dst, __global float const *
         float4 dVal = *d;      
 
         int4 con = (Gx >= 0 && Gx < (dst_cols<<2) && y >= 0 && y < dst_rows);
-        dst_data = (convert_float4(con) != 0) ? dst_data : dVal;
+        dst_data = (convert_float4(con) != (float4)(0)) ? dst_data : dVal;
 
         *d = dst_data;
 
@@ -418,21 +418,21 @@ __kernel void remapLNFConstant_C1_D0(__global unsigned char* dst, __global unsig
 
       float4 u = temp.even;
       float4 v = temp.odd;
-      float4 ud = 1.f - u;
-      float4 vd = 1.f - v;
+      float4 ud = (float4)(1.0) - u;
+      float4 vd = (float4)(1.0) - v;
       //float8 map1_dataU = map1_dataD + 1;
 
       int4 map1_dataDx = map1_dataD.even;
       int4 map1_dataDy = map1_dataD.odd;
-      int4 map1_dataDx1 = map1_dataDx + 1;
-      int4 map1_dataDy1 = map1_dataDy + 1;
+      int4 map1_dataDx1 = map1_dataDx + (int4)(1);
+      int4 map1_dataDy1 = map1_dataDy + (int4)(1);
 
       int4 src_StartU = map1_dataDy * src_step + map1_dataDx + src_offset;
       int4 src_StartD = src_StartU + src_step;
      /* 
       //not using the vload
-      int4 src_StartU1 = src_StartU + 1;
-      int4 src_StartD1 = src_StartD + 1;
+      int4 src_StartU1 = src_StartU + (int4)(1);
+      int4 src_StartD1 = src_StartD + (int4)(1);
 
       uchar4 a, b, c, d;
       a.x = *(src_StartU.x + src);
@@ -476,10 +476,10 @@ __kernel void remapLNFConstant_C1_D0(__global unsigned char* dst, __global unsig
       int4 bc =(map1_dataDx1 >= src_cols || map1_dataDy >= src_rows || map1_dataDx1 < 0 || map1_dataDy < 0);
       int4 cc =(map1_dataDx >= src_cols || map1_dataDy1 >= src_rows || map1_dataDy1 < 0 || map1_dataDx < 0);
       int4 dc =(map1_dataDx1 >= src_cols || map1_dataDy1 >= src_rows || map1_dataDy1 < 0 || map1_dataDy1 < 0);
-      a = (convert_uchar4(ac) == (uchar4)0)? a : val;
-      b = (convert_uchar4(bc) == (uchar4)0)? b : val;
-      c = (convert_uchar4(cc) == (uchar4)0)? c : val;
-      d = (convert_uchar4(dc) == (uchar4)0)? d : val;
+      a = (convert_uchar4(ac) == (uchar4)(0))? a : val;
+      b = (convert_uchar4(bc) == (uchar4)(0))? b : val;
+      c = (convert_uchar4(cc) == (uchar4)(0))? c : val;
+      d = (convert_uchar4(dc) == (uchar4)(0))? d : val;
 
       uchar4 dst_data = convert_uchar4_sat_rte((convert_float4(a))* ud * vd +(convert_float4(b))* u * vd + (convert_float4(c))* ud * v + (convert_float4(d)) * u * v );
     
@@ -487,7 +487,7 @@ __kernel void remapLNFConstant_C1_D0(__global unsigned char* dst, __global unsig
 
       uchar4 dVal = *D;      
       int4 con = (Gx >= 0 && Gx < dst_cols && y >= 0 && y < dst_rows);
-      dst_data = (convert_uchar4(con) != (uchar4)0) ? dst_data : dVal;
+      dst_data = (convert_uchar4(con) != (uchar4)(0)) ? dst_data : dVal;
 
       *D = dst_data;
     }
@@ -531,7 +531,7 @@ __kernel void remapLNSConstant_C1_D0(__global unsigned char* dst, __global unsig
         uchar4 dVal = *d;      
 
         int4 con = (Gx >= 0 && Gx < dst_cols && y >= 0 && y < dst_rows);
-        dst_data = (convert_uchar4(con) != (uchar4)0) ? dst_data : dVal;
+        dst_data = (convert_uchar4(con) != (uchar4)(0)) ? dst_data : dVal;
 
         *d = dst_data;
 
@@ -567,17 +567,17 @@ __kernel void remapLNFConstant_C4_D0(__global unsigned char* dst, __global unsig
 
       float4 u = temp.even;
       float4 v = temp.odd;
-      float4 ud = 1.f - u;
-      float4 vd = 1.f - v;
+      float4 ud = (float4)(1.0) - u;
+      float4 vd = (float4)(1.0) - v;
       
       //float8 map1_dataU = map1_dataD + 1;
 
       int4 map1_dataDx = map1_dataD.even;
       int4 map1_dataDy = map1_dataD.odd;
-      int4 map1_dataDx1 = map1_dataDx + 1;
-      int4 map1_dataDy1 = map1_dataDy + 1;
+      int4 map1_dataDx1 = map1_dataDx + (int4)(1);
+      int4 map1_dataDy1 = map1_dataDy + (int4)(1);
 
-      int4 src_StartU = map1_dataDy * src_step + (map1_dataDx << 2) + src_offset;
+      int4 src_StartU = map1_dataDy * src_step + (convert_int4(map1_dataDx) << (int4)(2)) + src_offset;
       int4 src_StartD = src_StartU + src_step;
 
       uchar8 aU, bU, cU, dU, aD, bD, cD, dD;
@@ -605,10 +605,10 @@ __kernel void remapLNFConstant_C4_D0(__global unsigned char* dst, __global unsig
       int16 dcc = (int16)((int4)(dc.x), (int4)(dc.y), (int4)(dc.z), (int4)(dc.w));
  
       uchar16 val = (uchar16)(nval, nval, nval, nval);
-      a = (convert_uchar16(acc) == (uchar16)0)? a : val;
-      b = (convert_uchar16(bcc) == (uchar16)0)? b : val;
-      c = (convert_uchar16(ccc) == (uchar16)0)? c : val;
-      d = (convert_uchar16(dcc) == (uchar16)0)? d : val;
+      a = (convert_uchar16(acc) == (uchar16)(0))? a : val;
+      b = (convert_uchar16(bcc) == (uchar16)(0))? b : val;
+      c = (convert_uchar16(ccc) == (uchar16)(0))? c : val;
+      d = (convert_uchar16(dcc) == (uchar16)(0))? d : val;
 
       float16 U = (float16)((float4)(u.x), (float4)(u.y), (float4)(u.z), (float4)(u.w));
       float16 V = (float16)((float4)(v.x), (float4)(v.y), (float4)(v.z), (float4)(v.w));
@@ -621,7 +621,7 @@ __kernel void remapLNFConstant_C4_D0(__global unsigned char* dst, __global unsig
 
       uchar16 dVal = *D;      
       int16 con = (Gx >= 0 && Gx < (dst_cols<<2) && y >= 0 && y < dst_rows);
-      dst_data = (convert_uchar16(con) != (uchar16)0) ? dst_data : dVal;
+      dst_data = (convert_uchar16(con) != (uchar16)(0)) ? dst_data : dVal;
 
       *D = dst_data;
     }
@@ -646,7 +646,7 @@ __kernel void remapLNSConstant_C4_D0(__global unsigned char* dst, __global unsig
         short8 map1_data;
 
         map1_data = *((__global short8 *)((__global char*)map1 + map1Start));
-        int4 srcIdx = convert_int4(map1_data.odd) * src_step + convert_int4(map1_data.even <<(short4)2) + src_offset;
+        int4 srcIdx = convert_int4(map1_data.odd) * src_step + (convert_int4(map1_data.even) <<(int4)(2)) + src_offset;
         uchar4 src_a, src_b, src_c, src_d;
         src_a = *((__global uchar4 *)((__global char*)src + srcIdx.s0));
         src_b = *((__global uchar4 *)((__global char*)src + srcIdx.s1));
@@ -666,7 +666,7 @@ __kernel void remapLNSConstant_C4_D0(__global unsigned char* dst, __global unsig
         uchar16 dVal = *d;      
 
         int16 con = (Gx >= 0 && Gx < (dst_cols<<2) && y >= 0 && y < dst_rows);
-        dst_data = (convert_uchar16(con) != (uchar16)0) ? dst_data : dVal;
+        dst_data = (convert_uchar16(con) != (uchar16)(0)) ? dst_data : dVal;
 
         *d = dst_data;
 
@@ -700,21 +700,21 @@ __kernel void remapLNFConstant_C1_D5(__global float* dst, __global float const *
 
       float4 u = temp.even;
       float4 v = temp.odd;
-      float4 ud = 1.f - u;
-      float4 vd = 1.f - v;
+      float4 ud = (float4)(1.0) - u;
+      float4 vd = (float4)(1.0) - v;
       //float8 map1_dataU = map1_dataD + 1;
 
       int4 map1_dataDx = map1_dataD.even;
       int4 map1_dataDy = map1_dataD.odd;
-      int4 map1_dataDx1 = map1_dataDx + 1;
-      int4 map1_dataDy1 = map1_dataDy + 1;
+      int4 map1_dataDx1 = map1_dataDx + (int4)(1);
+      int4 map1_dataDy1 = map1_dataDy + (int4)(1);
 
-      int4 src_StartU = map1_dataDy * src_step + (map1_dataDx << 2) + src_offset;
+      int4 src_StartU = map1_dataDy * src_step + (map1_dataDx << (int4)(2)) + src_offset;
       int4 src_StartD = src_StartU + src_step;
      /* 
       //not using the vload
-      int4 src_StartU1 = src_StartU + 1;
-      int4 src_StartD1 = src_StartD + 1;
+      int4 src_StartU1 = src_StartU + (int4)(1);
+      int4 src_StartD1 = src_StartD + (int4)(1);
 
       float4 a, b, c, d;
       a.x = *(src_StartU.x + src);
@@ -754,14 +754,14 @@ __kernel void remapLNFConstant_C1_D5(__global float* dst, __global float const *
       c = (float4)(aD.x, bD.x, cD.x, dD.x);
       d = (float4)(aD.y, bD.y, cD.y, dD.y);
       
-      int4 ac =(map1_dataDx >= src_cols || map1_dataDy >= src_rows || map1_dataDy< 0 || map1_dataDy < 0);
-      int4 bc =(map1_dataDx1 >= src_cols || map1_dataDy >= src_rows || map1_dataDx1 < 0 || map1_dataDy < 0);
-      int4 cc =(map1_dataDx >= src_cols || map1_dataDy1 >= src_rows || map1_dataDy1 < 0 || map1_dataDx < 0);
-      int4 dc =(map1_dataDx1 >= src_cols || map1_dataDy1 >= src_rows || map1_dataDy1 < 0 || map1_dataDy1 < 0);
-      a = (convert_float4(ac) == 0)? a : val;
-      b = (convert_float4(bc) == 0)? b : val;
-      c = (convert_float4(cc) == 0)? c : val;
-      d = (convert_float4(dc) == 0)? d : val;
+      int4 ac =(map1_dataDx >= (int4)(src_cols) || map1_dataDy >= (int4)(src_rows) || map1_dataDy < (int4)(0) || map1_dataDy < (int4)(0));
+      int4 bc =(map1_dataDx1 >= (int4)(src_cols) || map1_dataDy >= (int4)(src_rows) || map1_dataDx1 < (int4)(0) || map1_dataDy < (int4)(0));
+      int4 cc =(map1_dataDx >= (int4)(src_cols) || map1_dataDy1 >= (int4)(src_rows) || map1_dataDy1 < (int4)(0) || map1_dataDx < (int4)(0));
+      int4 dc =(map1_dataDx1 >= (int4)(src_cols) || map1_dataDy1 >= (int4)(src_rows) || map1_dataDy1 < (int4)(0) || map1_dataDy1 < (int4)(0));
+      a = (convert_float4(ac) == (float4)(0))? a : val;
+      b = (convert_float4(bc) == (float4)(0))? b : val;
+      c = (convert_float4(cc) == (float4)(0))? c : val;
+      d = (convert_float4(dc) == (float4)(0))? d : val;
 
       float4 dst_data = a * ud * vd + b * u * vd + c * ud * v + d * u * v ;
     
@@ -769,7 +769,7 @@ __kernel void remapLNFConstant_C1_D5(__global float* dst, __global float const *
 
       float4 dVal = *D;      
       int4 con = (Gx >= 0 && Gx < (dst_cols << 2) && y >= 0 && y < dst_rows);
-      dst_data = (convert_float4(con) != 0) ? dst_data : dVal;
+      dst_data = (convert_float4(con) != (float4)(0)) ? dst_data : dVal;
 
       *D = dst_data;
     }
@@ -798,7 +798,7 @@ __kernel void remapLNSConstant_C1_D5(__global float* dst, __global float const *
 
         map1_data = *((__global short8 *)((__global char*)map1 + map1Start));
     
-        int4 srcIdx = convert_int4(map1_data.odd) * src_step + convert_int4(map1_data.even <<(short4)2) + src_offset;
+        int4 srcIdx = convert_int4(map1_data.odd) * src_step + (convert_int4(map1_data.even) << (int4)(2)) + src_offset;
     
         float4 src_data;
         src_data.s0 = *((__global float *)((__global char*)src + srcIdx.s0));
@@ -818,7 +818,7 @@ __kernel void remapLNSConstant_C1_D5(__global float* dst, __global float const *
         float4 dVal = *d;      
 
         int4 con = (Gx >= 0 && Gx < (dst_cols<<2) && y >= 0 && y < dst_rows);
-        dst_data = (convert_float4(con) != 0) ? dst_data : dVal;
+        dst_data = (convert_float4(con) != (float4)(0)) ? dst_data : dVal;
 
         *d = dst_data;
 
@@ -918,7 +918,7 @@ __kernel void remapNNSConstant_C1_D0(__global unsigned char* dst, __read_only im
       __global uchar4* d = (__global uchar4 *)(dst + dstStart);
       uchar4 dVal = *d;
       int4 con = (Gx >= 0 && Gx < dst_cols && y >= 0 && y < dst_rows);
-      dst_data = (convert_uchar4(con) != (uchar4)0) ? dst_data : dVal;
+      dst_data = (convert_uchar4(con) != (uchar4)(0)) ? dst_data : dVal;
 
       *d = dst_data;   
     }

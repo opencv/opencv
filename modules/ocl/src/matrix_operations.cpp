@@ -588,6 +588,13 @@ void set_to_withoutmask_run(const oclMat &dst, const Scalar &scalar, string kern
 			sprintf(compile_option, "-D GENTYPE=int");
 			args.push_back( make_pair( sizeof(cl_int) , (void *)&val.ival.s[0] ));
 			break;
+		case 2:
+			sprintf(compile_option, "-D GENTYPE=int2");
+			cl_int2 i2val;
+			i2val.s[0] = val.ival.s[0];
+			i2val.s[1] = val.ival.s[1];
+			args.push_back( make_pair( sizeof(cl_int2) , (void *)&i2val ));
+			break;
 		case 4:
 			sprintf(compile_option, "-D GENTYPE=int4");
 			args.push_back( make_pair( sizeof(cl_int4) , (void *)&val.ival ));

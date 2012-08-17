@@ -325,7 +325,7 @@ PARAM_TEST_CASE(LaplacianTestBase, MatType, int)
 		ksize = GET_PARAM(1);
 
 		cv::RNG& rng = TS::ptr()->get_rng();
-		cv::Size size = cv::Size(2560, 2560);
+		cv::Size size = cv::Size(MWIDTH, MHEIGHT);
 
 		mat  = randomMat(rng, size, type, 5, 16, false);
 		dst  = randomMat(rng, size, type, 5, 16, false);
@@ -468,7 +468,7 @@ PARAM_TEST_CASE(ErodeDilateBase, MatType, bool)
 		//  iterations = GET_PARAM(1);
 
 		cv::RNG& rng = TS::ptr()->get_rng();
-		cv::Size size = cv::Size(2560, 2560);
+		cv::Size size = cv::Size(MWIDTH, MHEIGHT);
 
 		mat1 = randomMat(rng, size, type, 5, 16, false);
 		dst  = randomMat(rng, size, type, 5, 16, false);
@@ -679,7 +679,7 @@ PARAM_TEST_CASE(Sobel, MatType, int, int, int, int)
 		dx = 2; dy=0;
 
 		cv::RNG& rng = TS::ptr()->get_rng();
-		cv::Size size = cv::Size(2560, 2560);
+		cv::Size size = cv::Size(MWIDTH, MHEIGHT);
 
 		mat1 = randomMat(rng, size, type, 5, 16, false);
 		dst  = randomMat(rng, size, type, 5, 16, false);
@@ -817,7 +817,7 @@ PARAM_TEST_CASE(Scharr, MatType, int, int, int)
 		dx = 1; dy=0;
 
 		cv::RNG& rng = TS::ptr()->get_rng();
-		cv::Size size = cv::Size(2560, 2560);
+		cv::Size size = cv::Size(MWIDTH, MHEIGHT);
 
 		mat1 = randomMat(rng, size, type, 5, 16, false);
 		dst  = randomMat(rng, size, type, 5, 16, false);
@@ -956,7 +956,7 @@ PARAM_TEST_CASE(GaussianBlur, MatType, cv::Size, int)
 		bordertype = GET_PARAM(2);
 
 		cv::RNG& rng = TS::ptr()->get_rng();
-		cv::Size size = cv::Size(2560, 2560);
+		cv::Size size = cv::Size(MWIDTH, MHEIGHT);
 
 		sigma1 = rng.uniform(0.1, 1.0); 
 		sigma2 = rng.uniform(0.1, 1.0);

@@ -260,7 +260,7 @@ namespace cv
             CV_Assert((!map2.data || map2.size()== map1.size()));
 
             dst.create(map1.size(), src.type());
-            
+
 
             string kernelName;
 
@@ -394,8 +394,15 @@ namespace cv
                 args.push_back( make_pair(sizeof(cl_int),(void*)&map1.cols));
                 args.push_back( make_pair(sizeof(cl_int),(void*)&map1.rows));
                 args.push_back( make_pair(sizeof(cl_int), (void *)&cols));
-                args.push_back( make_pair(sizeof(cl_double4),(void*)&borderValue));
-            }
+                if(src.clCxt -> impl -> double_support != 0)
+                {
+                    args.push_back( make_pair(sizeof(cl_double4),(void*)&borderValue));
+                }
+                else
+                {
+                    args.push_back( make_pair(sizeof(cl_float4),(void*)&borderValue));
+                }
+              }
             openCLExecuteKernel(clCxt,&imgproc_remap,kernelName,globalThreads,localThreads,args,src.channels(),src.depth());
     }	
     

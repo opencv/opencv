@@ -958,7 +958,7 @@ TEST_P(Remap, Mat)
     if((interpolation == 1 && map1Type == CV_16SC2) ||(interpolation == 1 && map1Type == CV_16SC1 && map2Type == CV_16SC1))
     {
         cout << "LINEAR don't support the map1Type and map2Type" << endl;
-        return;
+        return;                
     }
     int bordertype[] = {cv::BORDER_CONSTANT,cv::BORDER_REPLICATE/*,BORDER_REFLECT,BORDER_WRAP,BORDER_REFLECT_101*/};
     const char* borderstr[]={"BORDER_CONSTANT", "BORDER_REPLICATE"/*, "BORDER_REFLECT","BORDER_WRAP","BORDER_REFLECT_101"*/};

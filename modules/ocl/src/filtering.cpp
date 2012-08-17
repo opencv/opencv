@@ -177,9 +177,7 @@ namespace cv
         extern const char *filter_sep_row;
         extern const char *filter_sep_col;
         extern const char *filtering_laplacian;
-        extern const char *filtering_erodeFilter;
-        extern const char *filtering_dilateFilter;
-
+        extern const char *filtering_morph;
     }
 }
 
@@ -334,28 +332,54 @@ void GPUErode(const oclMat &src, oclMat &dst, oclMat &mat_kernel, Size &ksize, c
 
     int srcStep = src.step1() / src.channels();
     int dstStep = dst.step1() / dst.channels();
-    int srcOffset = src.offset / src.channels() / src.elemSize1();
-    int dstOffset = dst.offset / dst.channels() / dst.elemSize1();
-    int minclos = -(srcOffset % srcStep);
-    int maxclos = src.wholecols + minclos - 1;
-    int minrows = -(srcOffset / srcStep);
-    int maxrows = src.wholerows + minrows - 1;
+    int srcOffset = src.offset /  src.elemSize();
+    int dstOffset = dst.offset /  dst.elemSize();
 
-    //int D=src.depth();
-
+    int srcOffset_x=srcOffset%srcStep;
+	int srcOffset_y=srcOffset/srcStep;
     Context *clCxt = src.clCxt;
-
-    string kernelName = "erode";
-
+	string kernelName;
+    size_t localThreads[3] = {16, 16, 1};
+    size_t globalThreads[3] = {(src.cols + localThreads[0]) / localThreads[0] * localThreads[0], (src.rows + localThreads[1]) / localThreads[1] * localThreads[1], 1};
+      
+	if(src.type()==CV_8UC1)
+	{
+		kernelName = "morph_C1_D0";
+		globalThreads[0] = ((src.cols + 3) / 4 + localThreads[0]) / localThreads[0] * localThreads[0];
+		CV_Assert( localThreads[0]*localThreads[1]*8 >= (localThreads[0]*4+ksize.width-1)*(localThreads[1]+ksize.height-1) );
+	}
+	else
+	{
+		kernelName = "morph";
+		CV_Assert( localThreads[0]*localThreads[1]*2 >= (localThreads[0]+ksize.width-1)*(localThreads[1]+ksize.height-1) );
+	}
+	char s[64];
+	switch(src.type())
+	{
+	case CV_8UC1:
+		sprintf(s, "-D VAL=255");
+		break;
+	case CV_8UC3:
+	case CV_8UC4:
+		sprintf(s, "-D VAL=255 -D GENTYPE=uchar4");
+		break;
+	case CV_32FC1:
+		sprintf(s, "-D VAL=FLT_MAX -D GENTYPE=float");
+		break;
+	case CV_32FC3:
+	case CV_32FC4:
+		sprintf(s, "-D VAL=FLT_MAX -D GENTYPE=float4");
+		break;
+	default:
+		CV_Error(-217,"unsupported type");
+	}
+    char compile_option[128];
+    sprintf(compile_option, "-D RADIUSX=%d -D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D ERODE %s", anchor.x, anchor.y, localThreads[0], localThreads[1],s); 
     vector< pair<size_t, const void *> > args;
     args.push_back( make_pair( sizeof(cl_mem), (void *)&src.data));
     args.push_back( make_pair( sizeof(cl_mem), (void *)&dst.data));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&srcOffset));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&dstOffset));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&minclos));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&maxclos));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&minrows));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&maxrows));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&srcOffset_x));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&srcOffset_y));
     args.push_back( make_pair( sizeof(cl_int), (void *)&src.cols));
     args.push_back( make_pair( sizeof(cl_int), (void *)&src.rows));
     args.push_back( make_pair( sizeof(cl_int), (void *)&srcStep));
@@ -363,18 +387,8 @@ void GPUErode(const oclMat &src, oclMat &dst, oclMat &mat_kernel, Size &ksize, c
     args.push_back( make_pair( sizeof(cl_mem), (void *)&mat_kernel.data));
 	args.push_back( make_pair( sizeof(cl_int),(void*)&src.wholecols));
 	args.push_back( make_pair( sizeof(cl_int),(void*)&src.wholerows));
-    //args.push_back( make_pair( sizeof(cl_int),(void*)&ksize.width));
-    //args.push_back( make_pair( sizeof(cl_int),(void*)&ksize.height));
-
-    size_t globalThreads[3] = {(src.cols + 15) / 16 * 16, (src.rows + 15) / 16 * 16, 1};
-    if(src.channels() == 1)
-        globalThreads[0] = ((src.cols + 9) / 4 + 15) / 16 * 16;
-    size_t localThreads[3] = {16, 16, 1};
-
-    char compile_option[128];
-    sprintf(compile_option, "-D anX=%d -D anY=%d -D ksX=%d -D ksY=%d", anchor.x, anchor.y, ksize.width, ksize.height);
-
-    openCLExecuteKernel(clCxt, &filtering_erodeFilter, kernelName, globalThreads, localThreads, args, src.channels(), src.depth(), compile_option);
+    args.push_back( make_pair( sizeof(cl_int),(void*)&dstOffset));
+    openCLExecuteKernel(clCxt, &filtering_morph, kernelName, globalThreads, localThreads, args, -1, -1, compile_option);
 }
 
 
@@ -390,26 +404,54 @@ void GPUDilate(const oclMat &src, oclMat &dst, oclMat &mat_kernel, Size &ksize, 
 
     int srcStep = src.step1() / src.channels();
     int dstStep = dst.step1() / dst.channels();
-    int srcOffset = src.offset / src.channels() / src.elemSize1();
-    int dstOffset = dst.offset / dst.channels() / dst.elemSize1();
-    int minclos = -(srcOffset % srcStep);
-    int maxclos = src.wholecols + minclos - 1;
-    int minrows = -(srcOffset / srcStep);
-    int maxrows = src.wholerows + minrows - 1;
+    int srcOffset = src.offset /  src.elemSize();
+    int dstOffset = dst.offset /  dst.elemSize();
 
-
+    int srcOffset_x=srcOffset%srcStep;
+	int srcOffset_y=srcOffset/srcStep;
     Context *clCxt = src.clCxt;
-
-    string kernelName = "dilate";
+	string kernelName;
+    size_t localThreads[3] = {16, 16, 1};
+    size_t globalThreads[3] = {(src.cols + localThreads[0]) / localThreads[0] * localThreads[0], (src.rows + localThreads[1]) / localThreads[1] * localThreads[1], 1};
+      
+	if(src.type()==CV_8UC1)
+	{
+		kernelName = "morph_C1_D0";
+		globalThreads[0] = ((src.cols + 3) / 4 + localThreads[0]) / localThreads[0] * localThreads[0];
+		CV_Assert( localThreads[0]*localThreads[1]*8 >= (localThreads[0]*4+ksize.width-1)*(localThreads[1]+ksize.height-1) );
+	}
+	else
+	{
+		kernelName = "morph";
+		CV_Assert( localThreads[0]*localThreads[1]*2 >= (localThreads[0]+ksize.width-1)*(localThreads[1]+ksize.height-1) );
+	}
+	char s[64];
+	switch(src.type())
+	{
+	case CV_8UC1:
+		sprintf(s, "-D VAL=0");
+		break;
+	case CV_8UC3:
+	case CV_8UC4:
+		sprintf(s, "-D VAL=0 -D GENTYPE=uchar4");
+		break;
+	case CV_32FC1:
+		sprintf(s, "-D VAL=-FLT_MAX -D GENTYPE=float");
+		break;
+	case CV_32FC3:
+	case CV_32FC4:
+		sprintf(s, "-D VAL=-FLT_MAX -D GENTYPE=float4");
+		break;
+	default:
+		CV_Error(-217,"unsupported type");
+	}
+    char compile_option[128];
+    sprintf(compile_option, "-D RADIUSX=%d -D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D DILATE %s", anchor.x, anchor.y, localThreads[0], localThreads[1],s); 
     vector< pair<size_t, const void *> > args;
     args.push_back( make_pair( sizeof(cl_mem), (void *)&src.data));
     args.push_back( make_pair( sizeof(cl_mem), (void *)&dst.data));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&srcOffset));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&dstOffset));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&minclos));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&maxclos));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&minrows));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&maxrows));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&srcOffset_x));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&srcOffset_y));
     args.push_back( make_pair( sizeof(cl_int), (void *)&src.cols));
     args.push_back( make_pair( sizeof(cl_int), (void *)&src.rows));
     args.push_back( make_pair( sizeof(cl_int), (void *)&srcStep));
@@ -417,15 +459,8 @@ void GPUDilate(const oclMat &src, oclMat &dst, oclMat &mat_kernel, Size &ksize, 
     args.push_back( make_pair( sizeof(cl_mem), (void *)&mat_kernel.data));
 	args.push_back( make_pair( sizeof(cl_int),(void*)&src.wholecols));
 	args.push_back( make_pair( sizeof(cl_int),(void*)&src.wholerows));
-
-    size_t globalThreads[3] = {(src.cols + 15) / 16 * 16, (src.rows + 15) / 16 * 16, 1};
-    if(src.channels() == 1)
-        globalThreads[0] = ((src.cols + 9) / 4 + 15) / 16 * 16;
-    size_t localThreads[3] = {16, 16, 1};
-    char compile_option[128];
-    sprintf(compile_option, "-D anX=%d -D anY=%d -D ksX=%d -D ksY=%d", anchor.x, anchor.y, ksize.width, ksize.height);
-
-    openCLExecuteKernel(clCxt, &filtering_dilateFilter, kernelName, globalThreads, localThreads, args, src.channels(), src.depth(), compile_option);
+    args.push_back( make_pair( sizeof(cl_int),(void*)&dstOffset));
+    openCLExecuteKernel(clCxt, &filtering_morph, kernelName, globalThreads, localThreads, args, -1, -1, compile_option);
 }
 
 Ptr<BaseFilter_GPU> cv::ocl::getMorphologyFilter_GPU(int op, int type, const Mat &kernel, const Size &ksize, Point anchor)
@@ -739,7 +774,7 @@ namespace
             int src_type = src.type();
 
             int cn = src.channels();
-            dst.create(src_size, src_type);
+            //dst.create(src_size, src_type);
             dst = Scalar(0.0);
             //dstBuf.create(src_size, src_type);
             dstBuf.create(src_size.height + ksize.height - 1, src_size.width, CV_MAKETYPE(CV_32F, cn));
@@ -1265,8 +1300,8 @@ void linearColumnFilter_gpu(const oclMat &src, const oclMat &dst, oclMat mat_ker
         sprintf(btype, "BORDER_REFLECT_101");
         break;
     }
-    char compile_option[128];
-    sprintf(compile_option, "-D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D CN=%d -D %s", anchor, localThreads[0], localThreads[1], channels, btype);
+    char compile_option[256];
+    
 
     size_t globalThreads[3];
     globalThreads[1] = (dst.rows + localThreads[1] - 1) / localThreads[1] * localThreads[1];
@@ -1277,21 +1312,46 @@ void linearColumnFilter_gpu(const oclMat &src, const oclMat &dst, oclMat mat_ker
         {
         case 1:
             globalThreads[0] = (dst.cols + localThreads[0] - 1) / localThreads[0] * localThreads[0];
+			sprintf(compile_option, "-D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D CN=%d -D %s -D GENTYPE_SRC=%s -D GENTYPE_DST=%s -D convert_to_DST=%s",
+				anchor, localThreads[0], localThreads[1], channels, btype,"float","uchar","convert_uchar_sat");
             break;
         case 2:
             globalThreads[0] = ((dst.cols + 1) / 2 + localThreads[0] - 1) / localThreads[0] * localThreads[0];
+			sprintf(compile_option, "-D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D CN=%d -D %s -D GENTYPE_SRC=%s -D GENTYPE_DST=%s -D convert_to_DST=%s",
+				anchor, localThreads[0], localThreads[1], channels, btype,"float2","uchar2","convert_uchar2_sat");
             break;
         case 3:
-            globalThreads[0] = ((dst.cols * 3 + 3) / 4 + localThreads[0] - 1) / localThreads[0] * localThreads[0];
-            break;
         case 4:
             globalThreads[0] = (dst.cols + localThreads[0] - 1) / localThreads[0] * localThreads[0];
+			sprintf(compile_option, "-D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D CN=%d -D %s -D GENTYPE_SRC=%s -D GENTYPE_DST=%s -D convert_to_DST=%s",
+				anchor, localThreads[0], localThreads[1], channels, btype,"float4","uchar4","convert_uchar4_sat");
             break;
         }
     }
     else
     {
         globalThreads[0] = (dst.cols + localThreads[0] - 1) / localThreads[0] * localThreads[0];
+		switch(dst.type())
+		{
+		case CV_32SC1:
+			sprintf(compile_option, "-D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D CN=%d -D %s -D GENTYPE_SRC=%s -D GENTYPE_DST=%s -D convert_to_DST=%s",
+				anchor, localThreads[0], localThreads[1], channels, btype,"float","int","convert_int_sat");
+			break;
+		case CV_32SC3:
+		case CV_32SC4:
+			sprintf(compile_option, "-D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D CN=%d -D %s -D GENTYPE_SRC=%s -D GENTYPE_DST=%s -D convert_to_DST=%s",
+				anchor, localThreads[0], localThreads[1], channels, btype,"float4","int4","convert_int4_sat");
+			break;
+		case CV_32FC1:
+			sprintf(compile_option, "-D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D CN=%d -D %s -D GENTYPE_SRC=%s -D GENTYPE_DST=%s -D convert_to_DST=%s",
+				anchor, localThreads[0], localThreads[1], channels, btype,"float","float","");
+			break;
+		case CV_32FC3:
+		case CV_32FC4:
+			sprintf(compile_option, "-D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D CN=%d -D %s -D GENTYPE_SRC=%s -D GENTYPE_DST=%s -D convert_to_DST=%s",
+				anchor, localThreads[0], localThreads[1], channels, btype,"float4","float4","");
+			break;
+		}
     }
 
     //sanity checks
@@ -1321,7 +1381,7 @@ void linearColumnFilter_gpu(const oclMat &src, const oclMat &dst, oclMat mat_ker
     args.push_back(make_pair(sizeof(cl_int), (void *)&dst_offset_in_pixel));
     args.push_back(make_pair(sizeof(cl_mem), (void *)&mat_kernel.data));
 
-    openCLExecuteKernel(clCxt, &filter_sep_col, kernelName, globalThreads, localThreads, args, channels, dst.depth(), compile_option);
+    openCLExecuteKernel(clCxt, &filter_sep_col, kernelName, globalThreads, localThreads, args, -1, -1, compile_option);
 }
 
 Ptr<BaseColumnFilter_GPU> cv::ocl::getLinearColumnFilter_GPU(int bufType, int dstType, const Mat &columnKernel, int anchor, int bordertype, double delta)
@@ -1376,7 +1436,7 @@ void cv::ocl::sepFilter2D(const oclMat &src, oclMat &dst, int ddepth, const Mat 
 {
     if( ddepth < 0 )
         ddepth = src.depth();
-    CV_Assert(ddepth == src.depth());
+    //CV_Assert(ddepth == src.depth());
     dst.create(src.size(), CV_MAKETYPE(ddepth, src.channels()));
 
     Ptr<FilterEngine_GPU> f = createSeparableLinearFilter_GPU(src.type(), dst.type(), kernelX, kernelY, anchor, delta, bordertype);
