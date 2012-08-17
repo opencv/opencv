@@ -46,7 +46,7 @@
 
 #ifdef __APPLE__
 #define HAVE_GCD
-#elif defined __MSC_VER && __MSC_VER >= 1600
+#elif defined _MSC_VER && _MSC_VER >= 1600
 #define HAVE_CONCURRENCY
 #endif
 
