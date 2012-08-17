@@ -11,6 +11,10 @@
 
 #include "cvconfig.h"
 
+#ifdef HAVE_CUDA
+#include <cuda_runtime.h>
+#endif
+
 #include "opencv2/ts/ts.hpp"
 #include "opencv2/ts/ts_perf.hpp"
 
@@ -18,6 +22,10 @@
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/gpu/gpu.hpp"
 #include "opencv2/calib3d/calib3d.hpp"
+#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/video/video.hpp"
+#include "opencv2/nonfree/nonfree.hpp"
+#include "opencv2/legacy/legacy.hpp"
 
 #include "perf_utility.hpp"
 

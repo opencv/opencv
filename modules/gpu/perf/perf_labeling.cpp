@@ -41,14 +41,16 @@
 
 #include "perf_precomp.hpp"
 
-#ifdef HAVE_CUDA
+using namespace std;
+using namespace testing;
 
-GPU_PERF_TEST(ConnectedComponents, cv::gpu::DeviceInfo, cv::Size)
+namespace {
+
+DEF_PARAM_TEST_1(Image, string);
+
+PERF_TEST_P(Image, Labeling_ConnectedComponents, Values<string>("gpu/labeling/aloe-disp.png"))
 {
-    cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
-    cv::gpu::setDevice(devInfo.deviceID());
-
-    cv::Mat image = readImage("gpu/labeling/aloe-disp.png", cv::IMREAD_GRAYSCALE);
+    cv::Mat image = readImage(GetParam(), cv::IMREAD_GRAYSCALE);
 
     // cv::threshold(image, image, 150, 255, CV_THRESH_BINARY);
 
@@ -70,6 +72,4 @@ GPU_PERF_TEST(ConnectedComponents, cv::gpu::DeviceInfo, cv::Size)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(Labeling, ConnectedComponents, testing::Combine(ALL_DEVICES, testing::Values(cv::Size(261, 262))));
-
-#endif
+} // namespace

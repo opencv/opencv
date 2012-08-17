@@ -4,10 +4,15 @@ using namespace std;
 using namespace cv;
 using namespace cv::gpu;
 
-void fill(Mat& m, double a, double b)
+void fillRandom(Mat& m, double a, double b)
 {
     RNG rng(123456789);
     rng.fill(m, RNG::UNIFORM, Scalar::all(a), Scalar::all(b));
+}
+
+Mat readImage(const string& fileName, int flags)
+{
+    return imread(perf::TestBase::getDataPath(fileName), flags);
 }
 
 void PrintTo(const CvtColorInfo& info, ostream* os)
@@ -183,38 +188,4 @@ void PrintTo(const CvtColorInfo& info, ostream* os)
     };
 
     *os << str[info.code];
-}
-
-void cv::gpu::PrintTo(const DeviceInfo& info, ostream* os)
-{
-    *os << info.name();
-}
-
-Mat readImage(const string& fileName, int flags)
-{
-    return imread(perf::TestBase::getDataPath(fileName), flags);
-}
-
-const vector<DeviceInfo>& devices()
-{
-    static vector<DeviceInfo> devs;
-    static bool first = true;
-
-    if (first)
-    {
-        int deviceCount = getCudaEnabledDeviceCount();
-
-        devs.reserve(deviceCount);
-
-        for (int i = 0; i < deviceCount; ++i)
-        {
-            DeviceInfo info(i);
-            if (info.isCompatible())
-                devs.push_back(info);
-        }
-
-        first = false;
-    }
-
-    return devs;
 }

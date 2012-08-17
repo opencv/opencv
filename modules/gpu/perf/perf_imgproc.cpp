@@ -1,188 +1,226 @@
 #include "perf_precomp.hpp"
 
-#ifdef HAVE_CUDA
+using namespace std;
+using namespace testing;
+
+namespace {
 
 //////////////////////////////////////////////////////////////////////
 // Remap
 
-GPU_PERF_TEST(Remap, cv::gpu::DeviceInfo, cv::Size, MatType, Interpolation, BorderMode)
+enum{HALF_SIZE=0, UPSIDE_DOWN, REFLECTION_X, REFLECTION_BOTH};
+CV_ENUM(RemapMode, HALF_SIZE, UPSIDE_DOWN, REFLECTION_X, REFLECTION_BOTH);
+#define ALL_REMAP_MODES ValuesIn(RemapMode::all())
+
+void generateMap(cv::Mat& map_x, cv::Mat& map_y, int remapMode)
 {
-    cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
-    cv::gpu::setDevice(devInfo.deviceID());
-
-    cv::Size size = GET_PARAM(1);
-    int type = GET_PARAM(2);
-    int interpolation = GET_PARAM(3);
-    int borderMode = GET_PARAM(4);
-
-    cv::Mat src_host(size, type);
-    fill(src_host, 0, 255);
-
-    cv::Mat xmap_host(size, CV_32FC1);
-    fill(xmap_host, 0, size.width);
-
-    cv::Mat ymap_host(size, CV_32FC1);
-    fill(ymap_host, 0, size.height);
-
-    cv::gpu::GpuMat src(src_host);
-    cv::gpu::GpuMat xmap(xmap_host);
-    cv::gpu::GpuMat ymap(ymap_host);
-    cv::gpu::GpuMat dst;
-
-    cv::gpu::remap(src, dst, xmap, ymap, interpolation, borderMode);
-
-    declare.time(3.0);
-
-    TEST_CYCLE()
+    for (int j = 0; j < map_x.rows; ++j)
     {
-        cv::gpu::remap(src, dst, xmap, ymap, interpolation, borderMode);
+        for (int i = 0; i < map_x.cols; ++i)
+        {
+            switch (remapMode)
+            {
+            case HALF_SIZE:
+                if (i > map_x.cols*0.25 && i < map_x.cols*0.75 && j > map_x.rows*0.25 && j < map_x.rows*0.75)
+                {
+                    map_x.at<float>(j,i) = 2 * (i - map_x.cols * 0.25) + 0.5;
+                    map_y.at<float>(j,i) = 2 * (j - map_x.rows * 0.25) + 0.5;
+                }
+                else
+                {
+                    map_x.at<float>(j,i) = 0;
+                    map_y.at<float>(j,i) = 0;
+                }
+                break;
+            case UPSIDE_DOWN:
+                map_x.at<float>(j,i) = i;
+                map_y.at<float>(j,i) = map_x.rows - j;
+                break;
+            case REFLECTION_X:
+                map_x.at<float>(j,i) = map_x.cols - i;
+                map_y.at<float>(j,i) = j;
+                break;
+            case REFLECTION_BOTH:
+                map_x.at<float>(j,i) = map_x.cols - i;
+                map_y.at<float>(j,i) = map_x.rows - j;
+                break;
+            } // end of switch
+        }
     }
 }
 
-INSTANTIATE_TEST_CASE_P(ImgProc, Remap, testing::Combine(
-    ALL_DEVICES,
-    GPU_TYPICAL_MAT_SIZES,
-    testing::Values(MatType(CV_8UC1), MatType(CV_8UC3), MatType(CV_8UC4),
-                    MatType(CV_16UC1), MatType(CV_16UC3), MatType(CV_16UC4),
-                    MatType(CV_32FC1), MatType(CV_32FC3), MatType(CV_32FC4)),
-    testing::Values(Interpolation(cv::INTER_NEAREST), Interpolation(cv::INTER_LINEAR), Interpolation(cv::INTER_CUBIC)),
-    testing::Values(BorderMode(cv::BORDER_REFLECT101), BorderMode(cv::BORDER_REPLICATE), BorderMode(cv::BORDER_CONSTANT), BorderMode(cv::BORDER_REFLECT), BorderMode(cv::BORDER_WRAP))));
+DEF_PARAM_TEST(Sz_Depth_Cn_Inter_Border_Mode, cv::Size, MatDepth, int, Interpolation, BorderMode, RemapMode);
 
+PERF_TEST_P(Sz_Depth_Cn_Inter_Border_Mode, ImgProc_Remap, Combine(
+    GPU_TYPICAL_MAT_SIZES,
+    Values(CV_8U, CV_16U, CV_32F),
+    Values(1, 3, 4),
+    Values(Interpolation(cv::INTER_NEAREST), Interpolation(cv::INTER_LINEAR), Interpolation(cv::INTER_CUBIC)),
+    ALL_BORDER_MODES,
+    ALL_REMAP_MODES))
+{
+    declare.time(3.0);
+
+    cv::Size size = GET_PARAM(0);
+    int depth = GET_PARAM(1);
+    int channels = GET_PARAM(2);
+    int interpolation = GET_PARAM(3);
+    int borderMode = GET_PARAM(4);
+    int remapMode = GET_PARAM(5);
+
+    int type = CV_MAKE_TYPE(depth, channels);
+
+    cv::Mat src(size, type);
+    fillRandom(src);
+
+    cv::Mat xmap(size, CV_32FC1);
+    cv::Mat ymap(size, CV_32FC1);
+
+    generateMap(xmap, ymap, remapMode);
+
+    cv::gpu::GpuMat d_src(src);
+    cv::gpu::GpuMat d_xmap(xmap);
+    cv::gpu::GpuMat d_ymap(ymap);
+    cv::gpu::GpuMat d_dst;
+
+    cv::gpu::remap(d_src, d_dst, d_xmap, d_ymap, interpolation, borderMode);
+
+    TEST_CYCLE()
+    {
+        cv::gpu::remap(d_src, d_dst, d_xmap, d_ymap, interpolation, borderMode);
+    }
+}
 
 //////////////////////////////////////////////////////////////////////
 // Resize
 
-IMPLEMENT_PARAM_CLASS(Scale, double)
+DEF_PARAM_TEST(Sz_Depth_Cn_Inter_Scale, cv::Size, MatDepth, int, Interpolation, double);
 
-GPU_PERF_TEST(Resize, cv::gpu::DeviceInfo, cv::Size, MatType, Interpolation, Scale)
+PERF_TEST_P(Sz_Depth_Cn_Inter_Scale, ImgProc_Resize, Combine(
+    GPU_TYPICAL_MAT_SIZES,
+    Values(CV_8U, CV_16U, CV_32F),
+    Values(1, 3, 4),
+    ALL_INTERPOLATIONS,
+    Values(0.5, 0.3, 2.0)))
 {
-    cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
-    cv::gpu::setDevice(devInfo.deviceID());
+    declare.time(1.0);
 
-    cv::Size size = GET_PARAM(1);
-    int type = GET_PARAM(2);
+    cv::Size size = GET_PARAM(0);
+    int depth = GET_PARAM(1);
+    int channels = GET_PARAM(2);
     int interpolation = GET_PARAM(3);
     double f = GET_PARAM(4);
 
-    cv::Mat src_host(size, type);
-    fill(src_host, 0, 255);
+    int type = CV_MAKE_TYPE(depth, channels);
 
-    cv::gpu::GpuMat src(src_host);
-    cv::gpu::GpuMat dst;
+    cv::Mat src(size, type);
+    fillRandom(src);
 
-    cv::gpu::resize(src, dst, cv::Size(), f, f, interpolation);
+    cv::gpu::GpuMat d_src(src);
+    cv::gpu::GpuMat d_dst;
 
-    declare.time(1.0);
+    cv::gpu::resize(d_src, d_dst, cv::Size(), f, f, interpolation);
 
     TEST_CYCLE()
     {
-        cv::gpu::resize(src, dst, cv::Size(), f, f, interpolation);
+        cv::gpu::resize(d_src, d_dst, cv::Size(), f, f, interpolation);
     }
 }
 
-INSTANTIATE_TEST_CASE_P(ImgProc, Resize, testing::Combine(
-    ALL_DEVICES,
+//////////////////////////////////////////////////////////////////////
+// ResizeArea
+
+DEF_PARAM_TEST(Sz_Depth_Cn_Scale, cv::Size, MatDepth, int, double);
+
+PERF_TEST_P(Sz_Depth_Cn_Scale, ImgProc_ResizeArea, Combine(
     GPU_TYPICAL_MAT_SIZES,
-    testing::Values(MatType(CV_8UC1), MatType(CV_8UC3), MatType(CV_8UC4),
-                    MatType(CV_16UC1), MatType(CV_16UC3), MatType(CV_16UC4),
-                    MatType(CV_32FC1), MatType(CV_32FC3), MatType(CV_32FC4)),
-    testing::Values(Interpolation(cv::INTER_NEAREST), Interpolation(cv::INTER_LINEAR),
-                    Interpolation(cv::INTER_CUBIC),   Interpolation(cv::INTER_AREA)),
-    testing::Values(Scale(0.5), Scale(0.3), Scale(2.0))));
-
-GPU_PERF_TEST(ResizeArea, cv::gpu::DeviceInfo, cv::Size, MatType, Scale)
+    Values(CV_8U, CV_16U, CV_32F),
+    Values(1, 3, 4),
+    Values(0.2, 0.1, 0.05)))
 {
-    cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
-    cv::gpu::setDevice(devInfo.deviceID());
+    declare.time(1.0);
 
-    cv::Size size = GET_PARAM(1);
-    int type = GET_PARAM(2);
+    cv::Size size = GET_PARAM(0);
+    int depth = GET_PARAM(1);
+    int channels = GET_PARAM(2);
     int interpolation = cv::INTER_AREA;
     double f = GET_PARAM(3);
 
-    cv::Mat src_host(size, type);
-    fill(src_host, 0, 255);
+    int type = CV_MAKE_TYPE(depth, channels);
 
-    cv::gpu::GpuMat src(src_host);
-    cv::gpu::GpuMat dst;
+    cv::Mat src(size, type);
+    fillRandom(src);
 
-    cv::gpu::resize(src, dst, cv::Size(), f, f, interpolation);
+    cv::gpu::GpuMat d_src(src);
+    cv::gpu::GpuMat d_dst;
 
-    declare.time(1.0);
+    cv::gpu::resize(d_src, d_dst, cv::Size(), f, f, interpolation);
 
     TEST_CYCLE()
     {
-        cv::gpu::resize(src, dst, cv::Size(), f, f, interpolation);
+        cv::gpu::resize(d_src, d_dst, cv::Size(), f, f, interpolation);
     }
 }
-
-INSTANTIATE_TEST_CASE_P(ImgProc, ResizeArea, testing::Combine(
-    ALL_DEVICES,
-    testing::Values(perf::sz1080p/*, cv::Size(4096, 2048)*/),
-    testing::Values(MatType(CV_8UC1), MatType(CV_8UC3), MatType(CV_8UC4),
-                    MatType(CV_16UC1), MatType(CV_16UC3), MatType(CV_16UC4),
-                    MatType(CV_32FC1), MatType(CV_32FC3), MatType(CV_32FC4)),
-    testing::Values(Scale(0.2),Scale(0.1),Scale(0.05))));
 
 //////////////////////////////////////////////////////////////////////
 // WarpAffine
 
-GPU_PERF_TEST(WarpAffine, cv::gpu::DeviceInfo, cv::Size, MatType, Interpolation, BorderMode)
-{
-    cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
-    cv::gpu::setDevice(devInfo.deviceID());
+DEF_PARAM_TEST(Sz_Depth_Cn_Inter_Border, cv::Size, MatDepth, int, Interpolation, BorderMode);
 
-    cv::Size size = GET_PARAM(1);
-    int type = GET_PARAM(2);
+PERF_TEST_P(Sz_Depth_Cn_Inter_Border, ImgProc_WarpAffine, Combine(
+    GPU_TYPICAL_MAT_SIZES,
+    Values(CV_8U, CV_16U, CV_32F),
+    Values(1, 3, 4),
+    Values(Interpolation(cv::INTER_NEAREST), Interpolation(cv::INTER_LINEAR), Interpolation(cv::INTER_CUBIC)),
+    ALL_BORDER_MODES))
+{
+    cv::Size size = GET_PARAM(0);
+    int depth = GET_PARAM(1);
+    int channels = GET_PARAM(2);
     int interpolation = GET_PARAM(3);
     int borderMode = GET_PARAM(4);
 
-    cv::Mat src_host(size, type);
-    fill(src_host, 0, 255);
+    int type = CV_MAKE_TYPE(depth, channels);
 
-    cv::gpu::GpuMat src(src_host);
-    cv::gpu::GpuMat dst;
+    cv::Mat src(size, type);
+    fillRandom(src);
 
     const double aplha = CV_PI / 4;
     double mat[2][3] = { {std::cos(aplha), -std::sin(aplha), src.cols / 2},
                          {std::sin(aplha),  std::cos(aplha), 0}};
     cv::Mat M(2, 3, CV_64F, (void*) mat);
 
-    cv::gpu::warpAffine(src, dst, M, size, interpolation, borderMode);
+    cv::gpu::GpuMat d_src(src);
+    cv::gpu::GpuMat d_dst;
+
+    cv::gpu::warpAffine(d_src, d_dst, M, size, interpolation, borderMode);
 
     TEST_CYCLE()
     {
-        cv::gpu::warpAffine(src, dst, M, size, interpolation, borderMode);
+        cv::gpu::warpAffine(d_src, d_dst, M, size, interpolation, borderMode);
     }
 }
-
-INSTANTIATE_TEST_CASE_P(ImgProc, WarpAffine, testing::Combine(
-    ALL_DEVICES,
-    GPU_TYPICAL_MAT_SIZES,
-    testing::Values(MatType(CV_8UC1), MatType(CV_8UC3), MatType(CV_8UC4),
-                    MatType(CV_16UC1), MatType(CV_16UC3), MatType(CV_16UC4),
-                    MatType(CV_32FC1), MatType(CV_32FC3), MatType(CV_32FC4)),
-    testing::Values(Interpolation(cv::INTER_NEAREST), Interpolation(cv::INTER_LINEAR), Interpolation(cv::INTER_CUBIC)),
-    testing::Values(BorderMode(cv::BORDER_REFLECT101), BorderMode(cv::BORDER_REPLICATE), BorderMode(cv::BORDER_CONSTANT), BorderMode(cv::BORDER_REFLECT), BorderMode(cv::BORDER_WRAP))));
 
 //////////////////////////////////////////////////////////////////////
 // WarpPerspective
 
-GPU_PERF_TEST(WarpPerspective, cv::gpu::DeviceInfo, cv::Size, MatType, Interpolation, BorderMode)
+PERF_TEST_P(Sz_Depth_Cn_Inter_Border, ImgProc_WarpPerspective, Combine(
+    GPU_TYPICAL_MAT_SIZES,
+    Values(CV_8U, CV_16U, CV_32F),
+    Values(1, 3, 4),
+    Values(Interpolation(cv::INTER_NEAREST), Interpolation(cv::INTER_LINEAR), Interpolation(cv::INTER_CUBIC)),
+    ALL_BORDER_MODES))
 {
-    cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
-    cv::gpu::setDevice(devInfo.deviceID());
-
-    cv::Size size = GET_PARAM(1);
-    int type = GET_PARAM(2);
+    cv::Size size = GET_PARAM(0);
+    int depth = GET_PARAM(1);
+    int channels = GET_PARAM(2);
     int interpolation = GET_PARAM(3);
     int borderMode = GET_PARAM(4);
 
-    cv::Mat src_host(size, type);
-    fill(src_host, 0, 255);
+    int type = CV_MAKE_TYPE(depth, channels);
 
-    cv::gpu::GpuMat src(src_host);
-    cv::gpu::GpuMat dst;
+    cv::Mat src(size, type);
+    fillRandom(src);
 
     const double aplha = CV_PI / 4;
     double mat[3][3] = { {std::cos(aplha), -std::sin(aplha), src.cols / 2},
@@ -190,1160 +228,958 @@ GPU_PERF_TEST(WarpPerspective, cv::gpu::DeviceInfo, cv::Size, MatType, Interpola
                          {0.0,              0.0,             1.0}};
     cv::Mat M(3, 3, CV_64F, (void*) mat);
 
-    cv::gpu::warpPerspective(src, dst, M, size, interpolation, borderMode);
+    cv::gpu::GpuMat d_src(src);
+    cv::gpu::GpuMat d_dst;
+
+    cv::gpu::warpPerspective(d_src, d_dst, M, size, interpolation, borderMode);
 
     TEST_CYCLE()
     {
-        cv::gpu::warpPerspective(src, dst, M, size, interpolation, borderMode);
+        cv::gpu::warpPerspective(d_src, d_dst, M, size, interpolation, borderMode);
     }
 }
-
-INSTANTIATE_TEST_CASE_P(ImgProc, WarpPerspective, testing::Combine(
-    ALL_DEVICES,
-    GPU_TYPICAL_MAT_SIZES,
-    testing::Values(MatType(CV_8UC1), MatType(CV_8UC3), MatType(CV_8UC4),
-                    MatType(CV_16UC1), MatType(CV_16UC3), MatType(CV_16UC4),
-                    MatType(CV_32FC1), MatType(CV_32FC3), MatType(CV_32FC4)),
-    testing::Values(Interpolation(cv::INTER_NEAREST), Interpolation(cv::INTER_LINEAR), Interpolation(cv::INTER_CUBIC)),
-    testing::Values(BorderMode(cv::BORDER_REFLECT101), BorderMode(cv::BORDER_REPLICATE), BorderMode(cv::BORDER_CONSTANT), BorderMode(cv::BORDER_REFLECT), BorderMode(cv::BORDER_WRAP))));
 
 //////////////////////////////////////////////////////////////////////
 // CopyMakeBorder
 
-GPU_PERF_TEST(CopyMakeBorder, cv::gpu::DeviceInfo, cv::Size, MatType, BorderMode)
+DEF_PARAM_TEST(Sz_Depth_Cn_Border, cv::Size, MatDepth, int, BorderMode);
+
+PERF_TEST_P(Sz_Depth_Cn_Border, ImgProc_CopyMakeBorder, Combine(
+    GPU_TYPICAL_MAT_SIZES,
+    Values(CV_8U, CV_16U, CV_32F),
+    Values(1, 3, 4),
+    ALL_BORDER_MODES))
 {
-    cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
-    cv::gpu::setDevice(devInfo.deviceID());
+    cv::Size size = GET_PARAM(0);
+    int depth = GET_PARAM(1);
+    int channels = GET_PARAM(2);
+    int borderMode = GET_PARAM(3);
 
-    cv::Size size = GET_PARAM(1);
-    int type = GET_PARAM(2);
-    int borderType = GET_PARAM(3);
+    int type = CV_MAKE_TYPE(depth, channels);
 
-    cv::Mat src_host(size, type);
-    fill(src_host, 0, 255);
+    cv::Mat src(size, type);
+    fillRandom(src);
 
-    cv::gpu::GpuMat src(src_host);
-    cv::gpu::GpuMat dst;
+    cv::gpu::GpuMat d_src(src);
+    cv::gpu::GpuMat d_dst;
 
-    cv::gpu::copyMakeBorder(src, dst, 5, 5, 5, 5, borderType);
+    cv::gpu::copyMakeBorder(d_src, d_dst, 5, 5, 5, 5, borderMode);
 
     TEST_CYCLE()
     {
-        cv::gpu::copyMakeBorder(src, dst, 5, 5, 5, 5, borderType);
+        cv::gpu::copyMakeBorder(d_src, d_dst, 5, 5, 5, 5, borderMode);
     }
 }
-
-INSTANTIATE_TEST_CASE_P(ImgProc, CopyMakeBorder, testing::Combine(
-    ALL_DEVICES,
-    GPU_TYPICAL_MAT_SIZES,
-    testing::Values(MatType(CV_8UC1), MatType(CV_8UC3), MatType(CV_8UC4),
-                    MatType(CV_16UC1), MatType(CV_16UC3), MatType(CV_16UC4),
-                    MatType(CV_32FC1), MatType(CV_32FC3), MatType(CV_32FC4)),
-    testing::Values(BorderMode(cv::BORDER_REFLECT101), BorderMode(cv::BORDER_REPLICATE), BorderMode(cv::BORDER_CONSTANT), BorderMode(cv::BORDER_REFLECT), BorderMode(cv::BORDER_WRAP))));
 
 //////////////////////////////////////////////////////////////////////
 // Threshold
 
 CV_ENUM(ThreshOp, cv::THRESH_BINARY, cv::THRESH_BINARY_INV, cv::THRESH_TRUNC, cv::THRESH_TOZERO, cv::THRESH_TOZERO_INV)
-#define ALL_THRESH_OPS testing::Values(ThreshOp(cv::THRESH_BINARY), ThreshOp(cv::THRESH_BINARY_INV), ThreshOp(cv::THRESH_TRUNC), ThreshOp(cv::THRESH_TOZERO), ThreshOp(cv::THRESH_TOZERO_INV))
+#define ALL_THRESH_OPS ValuesIn(ThreshOp::all())
 
-GPU_PERF_TEST(Threshold, cv::gpu::DeviceInfo, cv::Size, MatDepth, ThreshOp)
+DEF_PARAM_TEST(Sz_Depth_Op, cv::Size, MatDepth, ThreshOp);
+
+PERF_TEST_P(Sz_Depth_Op, ImgProc_Threshold, Combine(
+    GPU_TYPICAL_MAT_SIZES,
+    Values(CV_8U, CV_16U, CV_32F, CV_64F),
+    ALL_THRESH_OPS))
 {
-    cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
-    cv::gpu::setDevice(devInfo.deviceID());
+    cv::Size size = GET_PARAM(0);
+    int depth = GET_PARAM(1);
+    int threshOp = GET_PARAM(2);
 
-    cv::Size size = GET_PARAM(1);
-    int depth = GET_PARAM(2);
-    int threshOp = GET_PARAM(3);
+    cv::Mat src(size, depth);
+    fillRandom(src);
 
-    cv::Mat src_host(size, depth);
-    fill(src_host, 0, 255);
+    cv::gpu::GpuMat d_src(src);
+    cv::gpu::GpuMat d_dst;
 
-    cv::gpu::GpuMat src(src_host);
-    cv::gpu::GpuMat dst;
-
-    cv::gpu::threshold(src, dst, 100.0, 255.0, threshOp);
+    cv::gpu::threshold(d_src, d_dst, 100.0, 255.0, threshOp);
 
     TEST_CYCLE()
     {
-        cv::gpu::threshold(src, dst, 100.0, 255.0, threshOp);
+        cv::gpu::threshold(d_src, d_dst, 100.0, 255.0, threshOp);
     }
 }
-
-INSTANTIATE_TEST_CASE_P(ImgProc, Threshold, testing::Combine(
-    ALL_DEVICES,
-    GPU_TYPICAL_MAT_SIZES,
-    testing::Values(MatDepth(CV_8U), MatDepth(CV_16U), MatDepth(CV_32F), MatDepth(CV_64F)),
-    ALL_THRESH_OPS));
 
 //////////////////////////////////////////////////////////////////////
 // Integral
 
-GPU_PERF_TEST(Integral, cv::gpu::DeviceInfo, cv::Size)
+PERF_TEST_P(Sz, ImgProc_Integral, GPU_TYPICAL_MAT_SIZES)
 {
-    cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
-    cv::gpu::setDevice(devInfo.deviceID());
+    cv::Size size = GetParam();
 
-    cv::Size size = GET_PARAM(1);
+    cv::Mat src(size, CV_8UC1);
+    fillRandom(src);
 
-    cv::Mat src_host(size, CV_8UC1);
-    fill(src_host, 0, 255);
+    cv::gpu::GpuMat d_src(src);
+    cv::gpu::GpuMat d_dst;
+    cv::gpu::GpuMat d_buf;
 
-    cv::gpu::GpuMat src(src_host);
-    cv::gpu::GpuMat dst;
-    cv::gpu::GpuMat buf;
-
-    cv::gpu::integralBuffered(src, dst, buf);
+    cv::gpu::integralBuffered(d_src, d_dst, d_buf);
 
     TEST_CYCLE()
     {
-        cv::gpu::integralBuffered(src, dst, buf);
+        cv::gpu::integralBuffered(d_src, d_dst, d_buf);
     }
 }
 
-INSTANTIATE_TEST_CASE_P(ImgProc, Integral, testing::Combine(
-    ALL_DEVICES,
-    GPU_TYPICAL_MAT_SIZES));
-
 //////////////////////////////////////////////////////////////////////
-// Integral_Sqr
+// IntegralSqr
 
-GPU_PERF_TEST(Integral_Sqr, cv::gpu::DeviceInfo, cv::Size)
+PERF_TEST_P(Sz, ImgProc_IntegralSqr, GPU_TYPICAL_MAT_SIZES)
 {
-    cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
-    cv::gpu::setDevice(devInfo.deviceID());
+    cv::Size size = GetParam();
 
-    cv::Size size = GET_PARAM(1);
+    cv::Mat src(size, CV_8UC1);
+    fillRandom(src);
 
-    cv::Mat src_host(size, CV_8UC1);
-    fill(src_host, 0, 255);
+    cv::gpu::GpuMat d_src(src);
+    cv::gpu::GpuMat d_dst;
 
-    cv::gpu::GpuMat src(src_host);
-    cv::gpu::GpuMat dst;
-
-    cv::gpu::sqrIntegral(src, dst);
+    cv::gpu::sqrIntegral(d_src, d_dst);
 
     TEST_CYCLE()
     {
-        cv::gpu::sqrIntegral(src, dst);
+        cv::gpu::sqrIntegral(d_src, d_dst);
     }
 }
 
-INSTANTIATE_TEST_CASE_P(ImgProc, Integral_Sqr, testing::Combine(
-    ALL_DEVICES,
-    GPU_TYPICAL_MAT_SIZES));
-
 //////////////////////////////////////////////////////////////////////
-// HistEven_OneChannel
+// HistEvenC1
 
-GPU_PERF_TEST(HistEven_OneChannel, cv::gpu::DeviceInfo, cv::Size, MatDepth)
+PERF_TEST_P(Sz_Depth, ImgProc_HistEvenC1, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8U, CV_16U, CV_16S)))
 {
-    cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
-    cv::gpu::setDevice(devInfo.deviceID());
+    cv::Size size = GET_PARAM(0);
+    int depth = GET_PARAM(1);
 
-    cv::Size size = GET_PARAM(1);
-    int depth = GET_PARAM(2);
+    cv::Mat src(size, depth);
+    fillRandom(src);
 
-    cv::Mat src_host(size, depth);
-    fill(src_host, 0, 255);
+    cv::gpu::GpuMat d_src(src);
+    cv::gpu::GpuMat d_hist;
+    cv::gpu::GpuMat d_buf;
 
-    cv::gpu::GpuMat src(src_host);
-    cv::gpu::GpuMat hist;
-    cv::gpu::GpuMat buf;
-
-    cv::gpu::histEven(src, hist, buf, 30, 0, 180);
+    cv::gpu::histEven(d_src, d_hist, d_buf, 30, 0, 180);
 
     TEST_CYCLE()
     {
-        cv::gpu::histEven(src, hist, buf, 30, 0, 180);
+        cv::gpu::histEven(d_src, d_hist, d_buf, 30, 0, 180);
     }
 }
 
-INSTANTIATE_TEST_CASE_P(ImgProc, HistEven_OneChannel, testing::Combine(
-    ALL_DEVICES,
-    GPU_TYPICAL_MAT_SIZES,
-    testing::Values(MatDepth(CV_8U), MatDepth(CV_16U), MatDepth(CV_16S))));
-
 //////////////////////////////////////////////////////////////////////
-// HistEven_FourChannel
+// HistEvenC4
 
-GPU_PERF_TEST(HistEven_FourChannel, cv::gpu::DeviceInfo, cv::Size, MatDepth)
+PERF_TEST_P(Sz_Depth, ImgProc_HistEvenC4, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8U, CV_16U, CV_16S)))
 {
-    cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
-    cv::gpu::setDevice(devInfo.deviceID());
+    cv::Size size = GET_PARAM(0);
+    int depth = GET_PARAM(1);
 
-    cv::Size size = GET_PARAM(1);
-    int depth = GET_PARAM(2);
+    cv::Mat src(size, CV_MAKE_TYPE(depth, 4));
+    fillRandom(src);
 
-    cv::Mat src_host(size, CV_MAKE_TYPE(depth, 4));
-    fill(src_host, 0, 255);
-
-    cv::gpu::GpuMat src(src_host);
-    cv::gpu::GpuMat hist[4];
-    cv::gpu::GpuMat buf;
     int histSize[] = {30, 30, 30, 30};
     int lowerLevel[] = {0, 0, 0, 0};
     int upperLevel[] = {180, 180, 180, 180};
 
-    cv::gpu::histEven(src, hist, buf, histSize, lowerLevel, upperLevel);
+    cv::gpu::GpuMat d_src(src);
+    cv::gpu::GpuMat d_hist[4];
+    cv::gpu::GpuMat d_buf;
+
+    cv::gpu::histEven(d_src, d_hist, d_buf, histSize, lowerLevel, upperLevel);
 
     TEST_CYCLE()
     {
-        cv::gpu::histEven(src, hist, buf, histSize, lowerLevel, upperLevel);
+        cv::gpu::histEven(d_src, d_hist, d_buf, histSize, lowerLevel, upperLevel);
     }
 }
-
-INSTANTIATE_TEST_CASE_P(ImgProc, HistEven_FourChannel, testing::Combine(
-    ALL_DEVICES,
-    GPU_TYPICAL_MAT_SIZES,
-    testing::Values(MatDepth(CV_8U), MatDepth(CV_16U), MatDepth(CV_16S))));
 
 //////////////////////////////////////////////////////////////////////
 // CalcHist
 
-GPU_PERF_TEST(CalcHist, cv::gpu::DeviceInfo, cv::Size)
+PERF_TEST_P(Sz, ImgProc_CalcHist, GPU_TYPICAL_MAT_SIZES)
 {
-    cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
-    cv::gpu::setDevice(devInfo.deviceID());
+    cv::Size size = GetParam();
 
-    cv::Size size = GET_PARAM(1);
+    cv::Mat src(size, CV_8UC1);
+    fillRandom(src);
 
-    cv::Mat src_host(size, CV_8UC1);
-    fill(src_host, 0, 255);
+    cv::gpu::GpuMat d_src(src);
+    cv::gpu::GpuMat d_hist;
+    cv::gpu::GpuMat d_buf;
 
-    cv::gpu::GpuMat src(src_host);
-    cv::gpu::GpuMat hist;
-    cv::gpu::GpuMat buf;
-
-    cv::gpu::calcHist(src, hist, buf);
+    cv::gpu::calcHist(d_src, d_hist, d_buf);
 
     TEST_CYCLE()
     {
-        cv::gpu::calcHist(src, hist, buf);
+        cv::gpu::calcHist(d_src, d_hist, d_buf);
     }
 }
-
-INSTANTIATE_TEST_CASE_P(ImgProc, CalcHist, testing::Combine(
-    ALL_DEVICES,
-    GPU_TYPICAL_MAT_SIZES));
 
 //////////////////////////////////////////////////////////////////////
 // EqualizeHist
 
-GPU_PERF_TEST(EqualizeHist, cv::gpu::DeviceInfo, cv::Size)
+PERF_TEST_P(Sz, ImgProc_EqualizeHist, GPU_TYPICAL_MAT_SIZES)
 {
-    cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
-    cv::gpu::setDevice(devInfo.deviceID());
+    cv::Size size = GetParam();
 
-    cv::Size size = GET_PARAM(1);
+    cv::Mat src(size, CV_8UC1);
+    fillRandom(src);
 
-    cv::Mat src_host(size, CV_8UC1);
-    fill(src_host, 0, 255);
+    cv::gpu::GpuMat d_src(src);
+    cv::gpu::GpuMat d_dst;
+    cv::gpu::GpuMat d_hist;
+    cv::gpu::GpuMat d_buf;
 
-    cv::gpu::GpuMat src(src_host);
-    cv::gpu::GpuMat dst;
-    cv::gpu::GpuMat hist;
-    cv::gpu::GpuMat buf;
-
-    cv::gpu::equalizeHist(src, dst, hist, buf);
+    cv::gpu::equalizeHist(d_src, d_dst, d_hist, d_buf);
 
     TEST_CYCLE()
     {
-        cv::gpu::equalizeHist(src, dst, hist, buf);
+        cv::gpu::equalizeHist(d_src, d_dst, d_hist, d_buf);
     }
 }
-
-INSTANTIATE_TEST_CASE_P(ImgProc, EqualizeHist, testing::Combine(
-    ALL_DEVICES,
-    GPU_TYPICAL_MAT_SIZES));
 
 //////////////////////////////////////////////////////////////////////
 // ColumnSum
 
-GPU_PERF_TEST(ColumnSum, cv::gpu::DeviceInfo, cv::Size)
+PERF_TEST_P(Sz, ImgProc_ColumnSum, GPU_TYPICAL_MAT_SIZES)
 {
-    cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
-    cv::gpu::setDevice(devInfo.deviceID());
+    cv::Size size = GetParam();
 
-    cv::Size size = GET_PARAM(1);
+    cv::Mat src(size, CV_32FC1);
+    fillRandom(src);
 
-    cv::Mat src_host(size, CV_32FC1);
-    fill(src_host, 0, 255);
+    cv::gpu::GpuMat d_src(src);
+    cv::gpu::GpuMat d_dst;
 
-    cv::gpu::GpuMat src(src_host);
-    cv::gpu::GpuMat dst;
-
-    cv::gpu::columnSum(src, dst);
+    cv::gpu::columnSum(d_src, d_dst);
 
     TEST_CYCLE()
     {
-        cv::gpu::columnSum(src, dst);
+        cv::gpu::columnSum(d_src, d_dst);
     }
 }
-
-INSTANTIATE_TEST_CASE_P(ImgProc, ColumnSum, testing::Combine(
-    ALL_DEVICES,
-    GPU_TYPICAL_MAT_SIZES));
 
 //////////////////////////////////////////////////////////////////////
 // Canny
 
-IMPLEMENT_PARAM_CLASS(AppertureSize, int)
-IMPLEMENT_PARAM_CLASS(L2gradient, bool)
+DEF_PARAM_TEST(Image_AppertureSz_L2gradient, string, int, bool);
 
-GPU_PERF_TEST(Canny, cv::gpu::DeviceInfo, AppertureSize, L2gradient)
+PERF_TEST_P(Image_AppertureSz_L2gradient, ImgProc_Canny, Combine(
+    Values("perf/800x600.jpg", "perf/1280x1024.jpg", "perf/1680x1050.jpg"),
+    Values(3, 5),
+    Bool()))
 {
-    cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
-    cv::gpu::setDevice(devInfo.deviceID());
-
+    string fileName = GET_PARAM(0);
     int apperture_size = GET_PARAM(1);
     bool useL2gradient = GET_PARAM(2);
 
-    cv::Mat image_host = readImage("perf/1280x1024.jpg", cv::IMREAD_GRAYSCALE);
-    ASSERT_FALSE(image_host.empty());
+    cv::Mat image = readImage(fileName, cv::IMREAD_GRAYSCALE);
+    ASSERT_FALSE(image.empty());
 
-    cv::gpu::GpuMat image(image_host);
-    cv::gpu::GpuMat dst;
-    cv::gpu::CannyBuf buf;
+    cv::gpu::GpuMat d_image(image);
+    cv::gpu::GpuMat d_dst;
+    cv::gpu::CannyBuf d_buf;
 
-    cv::gpu::Canny(image, buf, dst, 50.0, 100.0, apperture_size, useL2gradient);
+    cv::gpu::Canny(d_image, d_buf, d_dst, 50.0, 100.0, apperture_size, useL2gradient);
 
     TEST_CYCLE()
     {
-        cv::gpu::Canny(image, buf, dst, 50.0, 100.0, apperture_size, useL2gradient);
+        cv::gpu::Canny(d_image, d_buf, d_dst, 50.0, 100.0, apperture_size, useL2gradient);
     }
 }
-
-INSTANTIATE_TEST_CASE_P(ImgProc, Canny, testing::Combine(
-    ALL_DEVICES,
-    testing::Values(AppertureSize(3), AppertureSize(5)),
-    testing::Values(L2gradient(false), L2gradient(true))));
 
 //////////////////////////////////////////////////////////////////////
 // MeanShiftFiltering
 
-GPU_PERF_TEST_1(MeanShiftFiltering, cv::gpu::DeviceInfo)
-{
-    cv::gpu::DeviceInfo devInfo = GetParam();
-    cv::gpu::setDevice(devInfo.deviceID());
+DEF_PARAM_TEST_1(Image, string);
 
-    cv::Mat img = readImage("gpu/meanshift/cones.png");
+PERF_TEST_P(Image, ImgProc_MeanShiftFiltering, Values<string>("gpu/meanshift/cones.png"))
+{
+    declare.time(5.0);
+
+    cv::Mat img = readImage(GetParam());
     ASSERT_FALSE(img.empty());
 
     cv::Mat rgba;
     cv::cvtColor(img, rgba, cv::COLOR_BGR2BGRA);
 
-    cv::gpu::GpuMat src(rgba);
-    cv::gpu::GpuMat dst;
+    cv::gpu::GpuMat d_src(rgba);
+    cv::gpu::GpuMat d_dst;
 
-    cv::gpu::meanShiftFiltering(src, dst, 50, 50);
-
-    declare.time(5.0);
+    cv::gpu::meanShiftFiltering(d_src, d_dst, 50, 50);
 
     TEST_CYCLE()
     {
-        cv::gpu::meanShiftFiltering(src, dst, 50, 50);
+        cv::gpu::meanShiftFiltering(d_src, d_dst, 50, 50);
     }
 }
-
-INSTANTIATE_TEST_CASE_P(ImgProc, MeanShiftFiltering, ALL_DEVICES);
 
 //////////////////////////////////////////////////////////////////////
 // MeanShiftProc
 
-GPU_PERF_TEST_1(MeanShiftProc, cv::gpu::DeviceInfo)
+PERF_TEST_P(Image, ImgProc_MeanShiftProc, Values<string>("gpu/meanshift/cones.png"))
 {
-    cv::gpu::DeviceInfo devInfo = GetParam();
-    cv::gpu::setDevice(devInfo.deviceID());
+    declare.time(5.0);
 
-    cv::Mat img = readImage("gpu/meanshift/cones.png");
+    cv::Mat img = readImage(GetParam());
     ASSERT_FALSE(img.empty());
 
     cv::Mat rgba;
     cv::cvtColor(img, rgba, cv::COLOR_BGR2BGRA);
 
-    cv::gpu::GpuMat src(rgba);
-    cv::gpu::GpuMat dstr;
-    cv::gpu::GpuMat dstsp;
+    cv::gpu::GpuMat d_src(rgba);
+    cv::gpu::GpuMat d_dstr;
+    cv::gpu::GpuMat d_dstsp;
 
-    cv::gpu::meanShiftProc(src, dstr, dstsp, 50, 50);
-
-    declare.time(5.0);
+    cv::gpu::meanShiftProc(d_src, d_dstr, d_dstsp, 50, 50);
 
     TEST_CYCLE()
     {
-        cv::gpu::meanShiftProc(src, dstr, dstsp, 50, 50);
+        cv::gpu::meanShiftProc(d_src, d_dstr, d_dstsp, 50, 50);
     }
 }
-
-INSTANTIATE_TEST_CASE_P(ImgProc, MeanShiftProc, ALL_DEVICES);
 
 //////////////////////////////////////////////////////////////////////
 // MeanShiftSegmentation
 
-GPU_PERF_TEST_1(MeanShiftSegmentation, cv::gpu::DeviceInfo)
+PERF_TEST_P(Image, ImgProc_MeanShiftSegmentation, Values<string>("gpu/meanshift/cones.png"))
 {
-    cv::gpu::DeviceInfo devInfo = GetParam();
-    cv::gpu::setDevice(devInfo.deviceID());
+    declare.time(5.0);
 
-    cv::Mat img = readImage("gpu/meanshift/cones.png");
+    cv::Mat img = readImage(GetParam());
     ASSERT_FALSE(img.empty());
 
     cv::Mat rgba;
     cv::cvtColor(img, rgba, cv::COLOR_BGR2BGRA);
 
-    cv::gpu::GpuMat src(rgba);
     cv::Mat dst;
 
-    meanShiftSegmentation(src, dst, 10, 10, 20);
+    cv::gpu::GpuMat d_src(rgba);
 
-    declare.time(5.0);
+    cv::gpu::meanShiftSegmentation(d_src, dst, 10, 10, 20);
 
     TEST_CYCLE()
     {
-        meanShiftSegmentation(src, dst, 10, 10, 20);
+        cv::gpu::meanShiftSegmentation(d_src, dst, 10, 10, 20);
     }
 }
-
-INSTANTIATE_TEST_CASE_P(ImgProc, MeanShiftSegmentation, ALL_DEVICES);
 
 //////////////////////////////////////////////////////////////////////
 // BlendLinear
 
-GPU_PERF_TEST(BlendLinear, cv::gpu::DeviceInfo, cv::Size, MatType)
+PERF_TEST_P(Sz_Depth_Cn, ImgProc_BlendLinear, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8U, CV_32F), Values(1, 3, 4)))
 {
-    cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
-    cv::gpu::setDevice(devInfo.deviceID());
+    cv::Size size = GET_PARAM(0);
+    int depth = GET_PARAM(1);
+    int channels = GET_PARAM(2);
 
-    cv::Size size = GET_PARAM(1);
-    int type = GET_PARAM(2);
+    int type = CV_MAKE_TYPE(depth, channels);
 
-    cv::Mat img1_host(size, type);
-    fill(img1_host, 0, 255);
+    cv::Mat img1(size, type);
+    fillRandom(img1);
 
-    cv::Mat img2_host(size, type);
-    fill(img2_host, 0, 255);
+    cv::Mat img2(size, type);
+    fillRandom(img2);
 
-    cv::gpu::GpuMat img1(img1_host);
-    cv::gpu::GpuMat img2(img2_host);
-    cv::gpu::GpuMat weights1(size, CV_32FC1, cv::Scalar::all(0.5));
-    cv::gpu::GpuMat weights2(size, CV_32FC1, cv::Scalar::all(0.5));
-    cv::gpu::GpuMat dst;
+    cv::gpu::GpuMat d_img1(img1);
+    cv::gpu::GpuMat d_img2(img2);
+    cv::gpu::GpuMat d_weights1(size, CV_32FC1, cv::Scalar::all(0.5));
+    cv::gpu::GpuMat d_weights2(size, CV_32FC1, cv::Scalar::all(0.5));
+    cv::gpu::GpuMat d_dst;
 
-    cv::gpu::blendLinear(img1, img2, weights1, weights2, dst);
+    cv::gpu::blendLinear(d_img1, d_img2, d_weights1, d_weights2, d_dst);
 
     TEST_CYCLE()
     {
-        cv::gpu::blendLinear(img1, img2, weights1, weights2, dst);
+        cv::gpu::blendLinear(d_img1, d_img2, d_weights1, d_weights2, d_dst);
     }
 }
-
-INSTANTIATE_TEST_CASE_P(ImgProc, BlendLinear, testing::Combine(
-    ALL_DEVICES,
-    GPU_TYPICAL_MAT_SIZES,
-    testing::Values(MatType(CV_8UC1), MatType(CV_8UC3), MatType(CV_8UC4),
-                    MatType(CV_32FC1), MatType(CV_32FC3), MatType(CV_32FC4))));
 
 //////////////////////////////////////////////////////////////////////
 // Convolve
 
-IMPLEMENT_PARAM_CLASS(KSize, int)
-IMPLEMENT_PARAM_CLASS(Ccorr, bool)
+DEF_PARAM_TEST(Sz_KernelSz_Ccorr, cv::Size, int, bool);
 
-GPU_PERF_TEST(Convolve, cv::gpu::DeviceInfo, cv::Size, KSize, Ccorr)
+PERF_TEST_P(Sz_KernelSz_Ccorr, ImgProc_Convolve, Combine(GPU_TYPICAL_MAT_SIZES, Values(17, 27, 32, 64), Bool()))
 {
-    cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
-    cv::gpu::setDevice(devInfo.deviceID());
-
-    cv::Size size = GET_PARAM(1);
-    int templ_size = GET_PARAM(2);
-    bool ccorr = GET_PARAM(3);
-
-    cv::gpu::GpuMat image = cv::gpu::createContinuous(size, CV_32FC1);
-    image.setTo(cv::Scalar(1.0));
-
-    cv::gpu::GpuMat templ = cv::gpu::createContinuous(templ_size, templ_size, CV_32FC1);
-    templ.setTo(cv::Scalar(1.0));
-
-    cv::gpu::GpuMat dst;
-    cv::gpu::ConvolveBuf buf;
-
-    cv::gpu::convolve(image, templ, dst, ccorr, buf);
-
     declare.time(2.0);
+
+    cv::Size size = GET_PARAM(0);
+    int templ_size = GET_PARAM(1);
+    bool ccorr = GET_PARAM(2);
+
+    cv::gpu::GpuMat d_image = cv::gpu::createContinuous(size, CV_32FC1);
+    d_image.setTo(cv::Scalar(1.0));
+
+    cv::gpu::GpuMat d_templ = cv::gpu::createContinuous(templ_size, templ_size, CV_32FC1);
+    d_templ.setTo(cv::Scalar(1.0));
+
+    cv::gpu::GpuMat d_dst;
+    cv::gpu::ConvolveBuf d_buf;
+
+    cv::gpu::convolve(d_image, d_templ, d_dst, ccorr, d_buf);
 
     TEST_CYCLE()
     {
-        cv::gpu::convolve(image, templ, dst, ccorr, buf);
+        cv::gpu::convolve(d_image, d_templ, d_dst, ccorr, d_buf);
     }
 }
 
-INSTANTIATE_TEST_CASE_P(ImgProc, Convolve, testing::Combine(
-    ALL_DEVICES,
-    GPU_TYPICAL_MAT_SIZES,
-    testing::Values(KSize(3), KSize(9), KSize(17), KSize(27), KSize(32), KSize(64)),
-    testing::Values(Ccorr(false), Ccorr(true))));
-
 ////////////////////////////////////////////////////////////////////////////////
-// MatchTemplate_8U
+// MatchTemplate8U
 
 CV_ENUM(TemplateMethod, cv::TM_SQDIFF, cv::TM_SQDIFF_NORMED, cv::TM_CCORR, cv::TM_CCORR_NORMED, cv::TM_CCOEFF, cv::TM_CCOEFF_NORMED)
-#define ALL_TEMPLATE_METHODS testing::Values(TemplateMethod(cv::TM_SQDIFF), TemplateMethod(cv::TM_SQDIFF_NORMED), TemplateMethod(cv::TM_CCORR), TemplateMethod(cv::TM_CCORR_NORMED), TemplateMethod(cv::TM_CCOEFF), TemplateMethod(cv::TM_CCOEFF_NORMED))
+#define ALL_TEMPLATE_METHODS ValuesIn(TemplateMethod::all())
 
-IMPLEMENT_PARAM_CLASS(TemplateSize, cv::Size)
+DEF_PARAM_TEST(Sz_TemplateSz_Cn_Method, cv::Size, cv::Size, int, TemplateMethod);
 
-GPU_PERF_TEST(MatchTemplate_8U, cv::gpu::DeviceInfo, cv::Size, TemplateSize, Channels, TemplateMethod)
+PERF_TEST_P(Sz_TemplateSz_Cn_Method, ImgProc_MatchTemplate8U, Combine(
+    GPU_TYPICAL_MAT_SIZES,
+    Values(cv::Size(5, 5), cv::Size(16, 16), cv::Size(30, 30)),
+    Values(1, 3, 4),
+    ALL_TEMPLATE_METHODS))
 {
-    cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
-    cv::gpu::setDevice(devInfo.deviceID());
+    cv::Size size = GET_PARAM(0);
+    cv::Size templ_size = GET_PARAM(1);
+    int cn = GET_PARAM(2);
+    int method = GET_PARAM(3);
 
-    cv::Size size = GET_PARAM(1);
-    cv::Size templ_size = GET_PARAM(2);
-    int cn = GET_PARAM(3);
-    int method = GET_PARAM(4);
+    cv::Mat image(size, CV_MAKE_TYPE(CV_8U, cn));
+    fillRandom(image);
 
-    cv::Mat image_host(size, CV_MAKE_TYPE(CV_8U, cn));
-    fill(image_host, 0, 255);
+    cv::Mat templ(templ_size, CV_MAKE_TYPE(CV_8U, cn));
+    fillRandom(templ);
 
-    cv::Mat templ_host(templ_size, CV_MAKE_TYPE(CV_8U, cn));
-    fill(templ_host, 0, 255);
+    cv::gpu::GpuMat d_image(image);
+    cv::gpu::GpuMat d_templ(templ);
+    cv::gpu::GpuMat d_dst;
 
-    cv::gpu::GpuMat image(image_host);
-    cv::gpu::GpuMat templ(templ_host);
-    cv::gpu::GpuMat dst;
-
-    cv::gpu::matchTemplate(image, templ, dst, method);
+    cv::gpu::matchTemplate(d_image, d_templ, d_dst, method);
 
     TEST_CYCLE()
     {
-        cv::gpu::matchTemplate(image, templ, dst, method);
+        cv::gpu::matchTemplate(d_image, d_templ, d_dst, method);
     }
 };
-
-INSTANTIATE_TEST_CASE_P(ImgProc, MatchTemplate_8U, testing::Combine(
-    ALL_DEVICES,
-    GPU_TYPICAL_MAT_SIZES,
-    testing::Values(TemplateSize(cv::Size(5, 5)), TemplateSize(cv::Size(16, 16)), TemplateSize(cv::Size(30, 30))),
-    testing::Values(Channels(1), Channels(3), Channels(4)),
-    ALL_TEMPLATE_METHODS));
 
 ////////////////////////////////////////////////////////////////////////////////
-// MatchTemplate_32F
+// MatchTemplate32F
 
-GPU_PERF_TEST(MatchTemplate_32F, cv::gpu::DeviceInfo, cv::Size, TemplateSize, Channels, TemplateMethod)
+PERF_TEST_P(Sz_TemplateSz_Cn_Method, ImgProc_MatchTemplate32F, Combine(
+    GPU_TYPICAL_MAT_SIZES,
+    Values(cv::Size(5, 5), cv::Size(16, 16), cv::Size(30, 30)),
+    Values(1, 3, 4),
+    Values(TemplateMethod(cv::TM_SQDIFF), TemplateMethod(cv::TM_CCORR))))
 {
-    cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
-    cv::gpu::setDevice(devInfo.deviceID());
+    cv::Size size = GET_PARAM(0);
+    cv::Size templ_size = GET_PARAM(1);
+    int cn = GET_PARAM(2);
+    int method = GET_PARAM(3);
 
-    cv::Size size = GET_PARAM(1);
-    cv::Size templ_size = GET_PARAM(2);
-    int cn = GET_PARAM(3);
-    int method = GET_PARAM(4);
+    cv::Mat image(size, CV_MAKE_TYPE(CV_32F, cn));
+    fillRandom(image);
 
-    cv::Mat image_host(size, CV_MAKE_TYPE(CV_32F, cn));
-    fill(image_host, 0, 255);
+    cv::Mat templ(templ_size, CV_MAKE_TYPE(CV_32F, cn));
+    fillRandom(templ);
 
-    cv::Mat templ_host(templ_size, CV_MAKE_TYPE(CV_32F, cn));
-    fill(templ_host, 0, 255);
+    cv::gpu::GpuMat d_image(image);
+    cv::gpu::GpuMat d_templ(templ);
+    cv::gpu::GpuMat d_dst;
 
-    cv::gpu::GpuMat image(image_host);
-    cv::gpu::GpuMat templ(templ_host);
-    cv::gpu::GpuMat dst;
-
-    cv::gpu::matchTemplate(image, templ, dst, method);
+    cv::gpu::matchTemplate(d_image, d_templ, d_dst, method);
 
     TEST_CYCLE()
     {
-        cv::gpu::matchTemplate(image, templ, dst, method);
+        cv::gpu::matchTemplate(d_image, d_templ, d_dst, method);
     }
 };
-
-INSTANTIATE_TEST_CASE_P(ImgProc, MatchTemplate_32F, testing::Combine(
-    ALL_DEVICES,
-    GPU_TYPICAL_MAT_SIZES,
-    testing::Values(TemplateSize(cv::Size(5, 5)), TemplateSize(cv::Size(16, 16)), TemplateSize(cv::Size(30, 30))),
-    testing::Values(Channels(1), Channels(3), Channels(4)),
-    testing::Values(TemplateMethod(cv::TM_SQDIFF), TemplateMethod(cv::TM_CCORR))));
 
 //////////////////////////////////////////////////////////////////////
 // MulSpectrums
 
 CV_FLAGS(DftFlags, 0, cv::DFT_INVERSE, cv::DFT_SCALE, cv::DFT_ROWS, cv::DFT_COMPLEX_OUTPUT, cv::DFT_REAL_OUTPUT)
 
-GPU_PERF_TEST(MulSpectrums, cv::gpu::DeviceInfo, cv::Size, DftFlags)
+DEF_PARAM_TEST(Sz_Flags, cv::Size, DftFlags);
+
+PERF_TEST_P(Sz_Flags, ImgProc_MulSpectrums, Combine(
+    GPU_TYPICAL_MAT_SIZES,
+    Values(0, DftFlags(cv::DFT_ROWS))))
 {
-    cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
-    cv::gpu::setDevice(devInfo.deviceID());
+    cv::Size size = GET_PARAM(0);
+    int flag = GET_PARAM(1);
 
-    cv::Size size = GET_PARAM(1);
-    int flag = GET_PARAM(2);
+    cv::Mat a(size, CV_32FC2);
+    fillRandom(a, 0, 100);
 
-    cv::Mat a_host(size, CV_32FC2);
-    fill(a_host, 0, 100);
+    cv::Mat b(size, CV_32FC2);
+    fillRandom(b, 0, 100);
 
-    cv::Mat b_host(size, CV_32FC2);
-    fill(b_host, 0, 100);
+    cv::gpu::GpuMat d_a(a);
+    cv::gpu::GpuMat d_b(b);
+    cv::gpu::GpuMat d_dst;
 
-    cv::gpu::GpuMat a(a_host);
-    cv::gpu::GpuMat b(b_host);
-    cv::gpu::GpuMat dst;
-
-    cv::gpu::mulSpectrums(a, b, dst, flag);
+    cv::gpu::mulSpectrums(d_a, d_b, d_dst, flag);
 
     TEST_CYCLE()
     {
-        cv::gpu::mulSpectrums(a, b, dst, flag);
+        cv::gpu::mulSpectrums(d_a, d_b, d_dst, flag);
     }
 }
-
-INSTANTIATE_TEST_CASE_P(ImgProc, MulSpectrums, testing::Combine(
-    ALL_DEVICES,
-    GPU_TYPICAL_MAT_SIZES,
-    testing::Values(DftFlags(0), DftFlags(cv::DFT_ROWS))));
 
 //////////////////////////////////////////////////////////////////////
 // MulAndScaleSpectrums
 
-GPU_PERF_TEST(MulAndScaleSpectrums, cv::gpu::DeviceInfo, cv::Size)
+PERF_TEST_P(Sz, ImgProc_MulAndScaleSpectrums, GPU_TYPICAL_MAT_SIZES)
 {
-    cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
-    cv::gpu::setDevice(devInfo.deviceID());
-
-    cv::Size size = GET_PARAM(1);
+    cv::Size size = GetParam();
 
     float scale = 1.f / size.area();
 
-    cv::Mat src1_host(size, CV_32FC2);
-    fill(src1_host, 0, 100);
+    cv::Mat src1(size, CV_32FC2);
+    fillRandom(src1, 0, 100);
 
-    cv::Mat src2_host(size, CV_32FC2);
-    fill(src2_host, 0, 100);
+    cv::Mat src2(size, CV_32FC2);
+    fillRandom(src2, 0, 100);
 
-    cv::gpu::GpuMat src1(src1_host);
-    cv::gpu::GpuMat src2(src2_host);
-    cv::gpu::GpuMat dst;
+    cv::gpu::GpuMat d_src1(src1);
+    cv::gpu::GpuMat d_src2(src2);
+    cv::gpu::GpuMat d_dst;
 
-    cv::gpu::mulAndScaleSpectrums(src1, src2, dst, cv::DFT_ROWS, scale, false);
+    cv::gpu::mulAndScaleSpectrums(d_src1, d_src2, d_dst, cv::DFT_ROWS, scale, false);
 
     TEST_CYCLE()
     {
-        cv::gpu::mulAndScaleSpectrums(src1, src2, dst, cv::DFT_ROWS, scale, false);
+        cv::gpu::mulAndScaleSpectrums(d_src1, d_src2, d_dst, cv::DFT_ROWS, scale, false);
     }
 }
-
-INSTANTIATE_TEST_CASE_P(ImgProc, MulAndScaleSpectrums, testing::Combine(
-    ALL_DEVICES,
-    GPU_TYPICAL_MAT_SIZES));
 
 //////////////////////////////////////////////////////////////////////
 // Dft
 
-GPU_PERF_TEST(Dft, cv::gpu::DeviceInfo, cv::Size, DftFlags)
+PERF_TEST_P(Sz_Flags, ImgProc_Dft, Combine(
+    GPU_TYPICAL_MAT_SIZES,
+    Values(0, DftFlags(cv::DFT_ROWS), DftFlags(cv::DFT_INVERSE))))
 {
-    cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
-    cv::gpu::setDevice(devInfo.deviceID());
-
-    cv::Size size = GET_PARAM(1);
-    int flag = GET_PARAM(2);
-
-    cv::Mat src_host(size, CV_32FC2);
-    fill(src_host, 0, 100);
-
-    cv::gpu::GpuMat src(src_host);
-    cv::gpu::GpuMat dst;
-
-    cv::gpu::dft(src, dst, size, flag);
-
     declare.time(2.0);
+
+    cv::Size size = GET_PARAM(0);
+    int flag = GET_PARAM(1);
+
+    cv::Mat src(size, CV_32FC2);
+    fillRandom(src, 0, 100);
+
+    cv::gpu::GpuMat d_src(src);
+    cv::gpu::GpuMat d_dst;
+
+    cv::gpu::dft(d_src, d_dst, size, flag);
 
     TEST_CYCLE()
     {
-        cv::gpu::dft(src, dst, size, flag);
+        cv::gpu::dft(d_src, d_dst, size, flag);
     }
 }
-
-INSTANTIATE_TEST_CASE_P(ImgProc, Dft, testing::Combine(
-    ALL_DEVICES,
-    GPU_TYPICAL_MAT_SIZES,
-    testing::Values(DftFlags(0), DftFlags(cv::DFT_ROWS), DftFlags(cv::DFT_INVERSE))));
 
 //////////////////////////////////////////////////////////////////////
 // CornerHarris
 
-IMPLEMENT_PARAM_CLASS(BlockSize, int)
-IMPLEMENT_PARAM_CLASS(ApertureSize, int)
+DEF_PARAM_TEST(Image_Type_Border_BlockSz_ApertureSz, string, MatType, BorderMode, int, int);
 
-GPU_PERF_TEST(CornerHarris, cv::gpu::DeviceInfo, MatType, BorderMode, BlockSize, ApertureSize)
+PERF_TEST_P(Image_Type_Border_BlockSz_ApertureSz, ImgProc_CornerHarris, Combine(
+    Values<string>("gpu/stereobm/aloe-L.png"),
+    Values(CV_8UC1, CV_32FC1),
+    Values(BorderMode(cv::BORDER_REFLECT101), BorderMode(cv::BORDER_REPLICATE), BorderMode(cv::BORDER_REFLECT)),
+    Values(3, 5, 7),
+    Values(0, 3, 5, 7)))
 {
-    cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
-    cv::gpu::setDevice(devInfo.deviceID());
+    double k = 0.5;
 
+    string fileName = GET_PARAM(0);
     int type = GET_PARAM(1);
-    int borderType = GET_PARAM(2);
+    int borderMode = GET_PARAM(2);
     int blockSize = GET_PARAM(3);
     int apertureSize = GET_PARAM(4);
 
-    cv::Mat img = readImage("gpu/stereobm/aloe-L.png", cv::IMREAD_GRAYSCALE);
+    cv::Mat img = readImage(fileName, cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(img.empty());
 
     img.convertTo(img, type, type == CV_32F ? 1.0 / 255.0 : 1.0);
 
-    cv::gpu::GpuMat src(img);
-    cv::gpu::GpuMat dst;
-    cv::gpu::GpuMat Dx;
-    cv::gpu::GpuMat Dy;
-    cv::gpu::GpuMat buf;
+    cv::gpu::GpuMat d_img(img);
+    cv::gpu::GpuMat d_dst;
+    cv::gpu::GpuMat d_Dx;
+    cv::gpu::GpuMat d_Dy;
+    cv::gpu::GpuMat d_buf;
 
-    double k = 0.5;
-
-    cv::gpu::cornerHarris(src, dst, Dx, Dy, buf, blockSize, apertureSize, k, borderType);
+    cv::gpu::cornerHarris(d_img, d_dst, d_Dx, d_Dy, d_buf, blockSize, apertureSize, k, borderMode);
 
     TEST_CYCLE()
     {
-        cv::gpu::cornerHarris(src, dst, Dx, Dy, buf, blockSize, apertureSize, k, borderType);
+        cv::gpu::cornerHarris(d_img, d_dst, d_Dx, d_Dy, d_buf, blockSize, apertureSize, k, borderMode);
     }
 }
-
-INSTANTIATE_TEST_CASE_P(ImgProc, CornerHarris, testing::Combine(
-    ALL_DEVICES,
-    testing::Values(MatType(CV_8UC1), MatType(CV_32FC1)),
-    testing::Values(BorderMode(cv::BORDER_REFLECT101), BorderMode(cv::BORDER_REPLICATE), BorderMode(cv::BORDER_REFLECT)),
-    testing::Values(BlockSize(3), BlockSize(5), BlockSize(7)),
-    testing::Values(ApertureSize(0), ApertureSize(3), ApertureSize(5), ApertureSize(7))));
 
 //////////////////////////////////////////////////////////////////////
 // CornerMinEigenVal
 
-GPU_PERF_TEST(CornerMinEigenVal, cv::gpu::DeviceInfo, MatType, BorderMode, BlockSize, ApertureSize)
+PERF_TEST_P(Image_Type_Border_BlockSz_ApertureSz, ImgProc_CornerMinEigenVal, Combine(
+    Values<string>("gpu/stereobm/aloe-L.png"),
+    Values(CV_8UC1, CV_32FC1),
+    Values(BorderMode(cv::BORDER_REFLECT101), BorderMode(cv::BORDER_REPLICATE), BorderMode(cv::BORDER_REFLECT)),
+    Values(3, 5, 7),
+    Values(0, 3, 5, 7)))
 {
-    cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
-    cv::gpu::setDevice(devInfo.deviceID());
-
+    string fileName = GET_PARAM(0);
     int type = GET_PARAM(1);
-    int borderType = GET_PARAM(2);
+    int borderMode = GET_PARAM(2);
     int blockSize = GET_PARAM(3);
     int apertureSize = GET_PARAM(4);
 
-    cv::Mat img = readImage("gpu/stereobm/aloe-L.png", cv::IMREAD_GRAYSCALE);
+    cv::Mat img = readImage(fileName, cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(img.empty());
 
     img.convertTo(img, type, type == CV_32F ? 1.0 / 255.0 : 1.0);
 
-    cv::gpu::GpuMat src(img);
-    cv::gpu::GpuMat dst;
-    cv::gpu::GpuMat Dx;
-    cv::gpu::GpuMat Dy;
-    cv::gpu::GpuMat buf;
+    cv::gpu::GpuMat d_img(img);
+    cv::gpu::GpuMat d_dst;
+    cv::gpu::GpuMat d_Dx;
+    cv::gpu::GpuMat d_Dy;
+    cv::gpu::GpuMat d_buf;
 
-    cv::gpu::cornerMinEigenVal(src, dst, Dx, Dy, buf, blockSize, apertureSize, borderType);
+    cv::gpu::cornerMinEigenVal(d_img, d_dst, d_Dx, d_Dy, d_buf, blockSize, apertureSize, borderMode);
 
     TEST_CYCLE()
     {
-        cv::gpu::cornerMinEigenVal(src, dst, Dx, Dy, buf, blockSize, apertureSize, borderType);
+        cv::gpu::cornerMinEigenVal(d_img, d_dst, d_Dx, d_Dy, d_buf, blockSize, apertureSize, borderMode);
     }
 }
-
-INSTANTIATE_TEST_CASE_P(ImgProc, CornerMinEigenVal, testing::Combine(
-    ALL_DEVICES,
-    testing::Values(MatType(CV_8UC1), MatType(CV_32FC1)),
-    testing::Values(BorderMode(cv::BORDER_REFLECT101), BorderMode(cv::BORDER_REPLICATE), BorderMode(cv::BORDER_REFLECT)),
-    testing::Values(BlockSize(3), BlockSize(5), BlockSize(7)),
-    testing::Values(ApertureSize(0), ApertureSize(3), ApertureSize(5), ApertureSize(7))));
 
 //////////////////////////////////////////////////////////////////////
 // BuildWarpPlaneMaps
 
-GPU_PERF_TEST(BuildWarpPlaneMaps, cv::gpu::DeviceInfo, cv::Size)
+PERF_TEST_P(Sz, ImgProc_BuildWarpPlaneMaps, GPU_TYPICAL_MAT_SIZES)
 {
-    cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
-    cv::gpu::setDevice(devInfo.deviceID());
-
-    cv::Size size = GET_PARAM(1);
+    cv::Size size = GetParam();
 
     cv::Mat K = cv::Mat::eye(3, 3, CV_32FC1);
     cv::Mat R = cv::Mat::ones(3, 3, CV_32FC1);
     cv::Mat T = cv::Mat::zeros(1, 3, CV_32F);
-    cv::gpu::GpuMat map_x;
-    cv::gpu::GpuMat map_y;
 
-    cv::gpu::buildWarpPlaneMaps(size, cv::Rect(0, 0, size.width, size.height), K, R, T, 1.0, map_x, map_y);
+    cv::gpu::GpuMat d_map_x;
+    cv::gpu::GpuMat d_map_y;
+
+    cv::gpu::buildWarpPlaneMaps(size, cv::Rect(0, 0, size.width, size.height), K, R, T, 1.0, d_map_x, d_map_y);
 
     TEST_CYCLE()
     {
-        cv::gpu::buildWarpPlaneMaps(size, cv::Rect(0, 0, size.width, size.height), K, R, T, 1.0, map_x, map_y);
+        cv::gpu::buildWarpPlaneMaps(size, cv::Rect(0, 0, size.width, size.height), K, R, T, 1.0, d_map_x, d_map_y);
     }
 }
-
-INSTANTIATE_TEST_CASE_P(ImgProc, BuildWarpPlaneMaps, testing::Combine(
-    ALL_DEVICES,
-    GPU_TYPICAL_MAT_SIZES));
 
 //////////////////////////////////////////////////////////////////////
 // BuildWarpCylindricalMaps
 
-GPU_PERF_TEST(BuildWarpCylindricalMaps, cv::gpu::DeviceInfo, cv::Size)
+PERF_TEST_P(Sz, ImgProc_BuildWarpCylindricalMaps, GPU_TYPICAL_MAT_SIZES)
 {
-    cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
-    cv::gpu::setDevice(devInfo.deviceID());
-
-    cv::Size size = GET_PARAM(1);
+    cv::Size size = GetParam();
 
     cv::Mat K = cv::Mat::eye(3, 3, CV_32FC1);
     cv::Mat R = cv::Mat::ones(3, 3, CV_32FC1);
-    cv::gpu::GpuMat map_x;
-    cv::gpu::GpuMat map_y;
 
-    cv::gpu::buildWarpCylindricalMaps(size, cv::Rect(0, 0, size.width, size.height), K, R, 1.0, map_x, map_y);
+    cv::gpu::GpuMat d_map_x;
+    cv::gpu::GpuMat d_map_y;
+
+    cv::gpu::buildWarpCylindricalMaps(size, cv::Rect(0, 0, size.width, size.height), K, R, 1.0, d_map_x, d_map_y);
 
     TEST_CYCLE()
     {
-        cv::gpu::buildWarpCylindricalMaps(size, cv::Rect(0, 0, size.width, size.height), K, R, 1.0, map_x, map_y);
+        cv::gpu::buildWarpCylindricalMaps(size, cv::Rect(0, 0, size.width, size.height), K, R, 1.0, d_map_x, d_map_y);
     }
 }
-
-INSTANTIATE_TEST_CASE_P(ImgProc, BuildWarpCylindricalMaps, testing::Combine(
-    ALL_DEVICES,
-    GPU_TYPICAL_MAT_SIZES));
 
 //////////////////////////////////////////////////////////////////////
 // BuildWarpSphericalMaps
 
-GPU_PERF_TEST(BuildWarpSphericalMaps, cv::gpu::DeviceInfo, cv::Size)
+PERF_TEST_P(Sz, ImgProc_BuildWarpSphericalMaps, GPU_TYPICAL_MAT_SIZES)
 {
-    cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
-    cv::gpu::setDevice(devInfo.deviceID());
-
-    cv::Size size = GET_PARAM(1);
+    cv::Size size = GetParam();
 
     cv::Mat K = cv::Mat::eye(3, 3, CV_32FC1);
     cv::Mat R = cv::Mat::ones(3, 3, CV_32FC1);
-    cv::gpu::GpuMat map_x;
-    cv::gpu::GpuMat map_y;
 
-    cv::gpu::buildWarpSphericalMaps(size, cv::Rect(0, 0, size.width, size.height), K, R, 1.0, map_x, map_y);
+    cv::gpu::GpuMat d_map_x;
+    cv::gpu::GpuMat d_map_y;
+
+    cv::gpu::buildWarpSphericalMaps(size, cv::Rect(0, 0, size.width, size.height), K, R, 1.0, d_map_x, d_map_y);
 
     TEST_CYCLE()
     {
-        cv::gpu::buildWarpSphericalMaps(size, cv::Rect(0, 0, size.width, size.height), K, R, 1.0, map_x, map_y);
+        cv::gpu::buildWarpSphericalMaps(size, cv::Rect(0, 0, size.width, size.height), K, R, 1.0, d_map_x, d_map_y);
     }
 }
-
-INSTANTIATE_TEST_CASE_P(ImgProc, BuildWarpSphericalMaps, testing::Combine(
-    ALL_DEVICES,
-    GPU_TYPICAL_MAT_SIZES));
 
 //////////////////////////////////////////////////////////////////////
 // Rotate
 
-GPU_PERF_TEST(Rotate, cv::gpu::DeviceInfo, cv::Size, MatType, Interpolation)
-{
-    cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
-    cv::gpu::setDevice(devInfo.deviceID());
+DEF_PARAM_TEST(Sz_Depth_Cn_Inter, cv::Size, MatDepth, int, Interpolation);
 
-    cv::Size size = GET_PARAM(1);
-    int type = GET_PARAM(2);
+PERF_TEST_P(Sz_Depth_Cn_Inter, ImgProc_Rotate, Combine(
+    GPU_TYPICAL_MAT_SIZES,
+    Values(CV_8U, CV_16U, CV_32F),
+    Values(1, 3, 4),
+    Values(Interpolation(cv::INTER_NEAREST), Interpolation(cv::INTER_LINEAR), Interpolation(cv::INTER_CUBIC))))
+{
+    cv::Size size = GET_PARAM(0);
+    int depth = GET_PARAM(1);
+    int channels = GET_PARAM(2);
     int interpolation = GET_PARAM(3);
 
-    cv::Mat src_host(size, type);
-    fill(src_host, 0, 255);
+    int type = CV_MAKE_TYPE(depth, channels);
 
-    cv::gpu::GpuMat src(src_host);
-    cv::gpu::GpuMat dst;
+    cv::Mat src(size, type);
+    fillRandom(src);
 
-    cv::gpu::rotate(src, dst, size, 30.0, 0, 0, interpolation);
+    cv::gpu::GpuMat d_src(src);
+    cv::gpu::GpuMat d_dst;
+
+    cv::gpu::rotate(d_src, d_dst, size, 30.0, 0, 0, interpolation);
 
     TEST_CYCLE()
     {
-        cv::gpu::rotate(src, dst, size, 30.0, 0, 0, interpolation);
+        cv::gpu::rotate(d_src, d_dst, size, 30.0, 0, 0, interpolation);
     }
 }
-
-INSTANTIATE_TEST_CASE_P(ImgProc, Rotate, testing::Combine(
-    ALL_DEVICES,
-    GPU_TYPICAL_MAT_SIZES,
-    testing::Values(MatType(CV_8UC1), MatType(CV_8UC3), MatType(CV_8UC4),
-                    MatType(CV_16UC1), MatType(CV_16UC3), MatType(CV_16UC4),
-                    MatType(CV_32FC1), MatType(CV_32FC3), MatType(CV_32FC4)),
-    testing::Values(Interpolation(cv::INTER_NEAREST), Interpolation(cv::INTER_LINEAR), Interpolation(cv::INTER_CUBIC))));
 
 //////////////////////////////////////////////////////////////////////
 // PyrDown
 
-GPU_PERF_TEST(PyrDown, cv::gpu::DeviceInfo, cv::Size, MatType)
+PERF_TEST_P(Sz_Depth_Cn, ImgProc_PyrDown, Combine(
+    GPU_TYPICAL_MAT_SIZES,
+    Values(CV_8U, CV_16U, CV_32F),
+    Values(1, 3, 4)))
 {
-    cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
-    cv::gpu::setDevice(devInfo.deviceID());
+    cv::Size size = GET_PARAM(0);
+    int depth = GET_PARAM(1);
+    int channels = GET_PARAM(2);
 
-    cv::Size size = GET_PARAM(1);
-    int type = GET_PARAM(2);
+    int type = CV_MAKE_TYPE(depth, channels);
 
-    cv::Mat src_host(size, type);
-    fill(src_host, 0, 255);
+    cv::Mat src(size, type);
+    fillRandom(src);
 
-    cv::gpu::GpuMat src(src_host);
-    cv::gpu::GpuMat dst;
+    cv::gpu::GpuMat d_src(src);
+    cv::gpu::GpuMat d_dst;
 
-    cv::gpu::pyrDown(src, dst);
+    cv::gpu::pyrDown(d_src, d_dst);
 
     TEST_CYCLE()
     {
-        cv::gpu::pyrDown(src, dst);
+        cv::gpu::pyrDown(d_src, d_dst);
     }
 }
-
-INSTANTIATE_TEST_CASE_P(ImgProc, PyrDown, testing::Combine(
-    ALL_DEVICES,
-    GPU_TYPICAL_MAT_SIZES,
-    testing::Values(MatType(CV_8UC1), MatType(CV_8UC3), MatType(CV_8UC4),
-                    MatType(CV_16UC1), MatType(CV_16UC3), MatType(CV_16UC4),
-                    MatType(CV_32FC1), MatType(CV_32FC3), MatType(CV_32FC4))));
 
 //////////////////////////////////////////////////////////////////////
 // PyrUp
 
-GPU_PERF_TEST(PyrUp, cv::gpu::DeviceInfo, cv::Size, MatType)
+PERF_TEST_P(Sz_Depth_Cn, ImgProc_PyrUp, Combine(
+    GPU_TYPICAL_MAT_SIZES,
+    Values(CV_8U, CV_16U, CV_32F),
+    Values(1, 3, 4)))
 {
-    cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
-    cv::gpu::setDevice(devInfo.deviceID());
+    cv::Size size = GET_PARAM(0);
+    int depth = GET_PARAM(1);
+    int channels = GET_PARAM(2);
 
-    cv::Size size = GET_PARAM(1);
-    int type = GET_PARAM(2);
+    int type = CV_MAKE_TYPE(depth, channels);
 
-    cv::Mat src_host(size, type);
-    fill(src_host, 0, 255);
+    cv::Mat src(size, type);
+    fillRandom(src);
 
-    cv::gpu::GpuMat src(src_host);
-    cv::gpu::GpuMat dst;
+    cv::gpu::GpuMat d_src(src);
+    cv::gpu::GpuMat d_dst;
 
-    cv::gpu::pyrUp(src, dst);
+    cv::gpu::pyrUp(d_src, d_dst);
 
     TEST_CYCLE()
     {
-        cv::gpu::pyrUp(src, dst);
+        cv::gpu::pyrUp(d_src, d_dst);
     }
 }
-
-INSTANTIATE_TEST_CASE_P(ImgProc, PyrUp, testing::Combine(
-    ALL_DEVICES,
-    GPU_TYPICAL_MAT_SIZES,
-    testing::Values(MatType(CV_8UC1), MatType(CV_8UC3), MatType(CV_8UC4),
-                    MatType(CV_16UC1), MatType(CV_16UC3), MatType(CV_16UC4),
-                    MatType(CV_32FC1), MatType(CV_32FC3), MatType(CV_32FC4))));
 
 //////////////////////////////////////////////////////////////////////
 // CvtColor
 
-GPU_PERF_TEST(CvtColor, cv::gpu::DeviceInfo, cv::Size, MatDepth, CvtColorInfo)
+DEF_PARAM_TEST(Sz_Depth_Code, cv::Size, MatDepth, CvtColorInfo);
+
+PERF_TEST_P(Sz_Depth_Code, ImgProc_CvtColor, Combine(
+    GPU_TYPICAL_MAT_SIZES,
+    Values(CV_8U, CV_16U, CV_32F),
+    Values(CvtColorInfo(4, 4, cv::COLOR_RGBA2BGRA),
+           CvtColorInfo(4, 1, cv::COLOR_BGRA2GRAY),
+           CvtColorInfo(1, 4, cv::COLOR_GRAY2BGRA),
+           CvtColorInfo(3, 3, cv::COLOR_BGR2XYZ),
+           CvtColorInfo(3, 3, cv::COLOR_XYZ2BGR),
+           CvtColorInfo(3, 3, cv::COLOR_BGR2YCrCb),
+           CvtColorInfo(3, 3, cv::COLOR_YCrCb2BGR),
+           CvtColorInfo(3, 3, cv::COLOR_BGR2YUV),
+           CvtColorInfo(3, 3, cv::COLOR_YUV2BGR),
+           CvtColorInfo(3, 3, cv::COLOR_BGR2HSV),
+           CvtColorInfo(3, 3, cv::COLOR_HSV2BGR),
+           CvtColorInfo(3, 3, cv::COLOR_BGR2HLS),
+           CvtColorInfo(3, 3, cv::COLOR_HLS2BGR),
+           CvtColorInfo(3, 3, cv::COLOR_BGR2Lab),
+           CvtColorInfo(3, 3, cv::COLOR_RGB2Lab),
+           CvtColorInfo(3, 3, cv::COLOR_BGR2Luv),
+           CvtColorInfo(3, 3, cv::COLOR_RGB2Luv),
+           CvtColorInfo(3, 3, cv::COLOR_Lab2BGR),
+           CvtColorInfo(3, 3, cv::COLOR_Lab2RGB),
+           CvtColorInfo(3, 3, cv::COLOR_Luv2BGR),
+           CvtColorInfo(3, 3, cv::COLOR_Luv2RGB),
+           CvtColorInfo(1, 3, cv::COLOR_BayerBG2BGR),
+           CvtColorInfo(1, 3, cv::COLOR_BayerGB2BGR),
+           CvtColorInfo(1, 3, cv::COLOR_BayerRG2BGR),
+           CvtColorInfo(1, 3, cv::COLOR_BayerGR2BGR),
+           CvtColorInfo(4, 4, cv::COLOR_RGBA2mRGBA))))
 {
-    cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
-    cv::gpu::setDevice(devInfo.deviceID());
+    cv::Size size = GET_PARAM(0);
+    int depth = GET_PARAM(1);
+    CvtColorInfo info = GET_PARAM(2);
 
-    cv::Size size = GET_PARAM(1);
-    int depth = GET_PARAM(2);
-    CvtColorInfo info = GET_PARAM(3);
+    cv::Mat src(size, CV_MAKETYPE(depth, info.scn));
+    fillRandom(src);
 
-    cv::Mat src_host(size, CV_MAKETYPE(depth, info.scn));
-    fill(src_host, 0, 255);
+    cv::gpu::GpuMat d_src(src);
+    cv::gpu::GpuMat d_dst;
 
-    cv::gpu::GpuMat src(src_host);
-    cv::gpu::GpuMat dst;
-
-    if (info.code >= cv::COLOR_BayerBG2BGR && info.code <= cv::COLOR_BayerGR2BGR)
-        info.dcn = 4;
-
-    cv::gpu::cvtColor(src, dst, info.code, info.dcn);
+    cv::gpu::cvtColor(d_src, d_dst, info.code, info.dcn);
 
     TEST_CYCLE()
     {
-        cv::gpu::cvtColor(src, dst, info.code, info.dcn);
+        cv::gpu::cvtColor(d_src, d_dst, info.code, info.dcn);
     }
 }
-
-INSTANTIATE_TEST_CASE_P(ImgProc, CvtColor, testing::Combine(
-    ALL_DEVICES,
-    GPU_TYPICAL_MAT_SIZES,
-    testing::Values(MatDepth(CV_8U), MatDepth(CV_16U), MatDepth(CV_32F)),
-    testing::Values(CvtColorInfo(4, 4, cv::COLOR_RGBA2BGRA),
-                    CvtColorInfo(4, 1, cv::COLOR_BGRA2GRAY),
-                    CvtColorInfo(1, 4, cv::COLOR_GRAY2BGRA),
-                    CvtColorInfo(3, 3, cv::COLOR_BGR2XYZ),
-                    CvtColorInfo(3, 3, cv::COLOR_XYZ2BGR),
-                    CvtColorInfo(3, 3, cv::COLOR_BGR2YCrCb),
-                    CvtColorInfo(3, 3, cv::COLOR_YCrCb2BGR),
-                    CvtColorInfo(3, 3, cv::COLOR_BGR2YUV),
-                    CvtColorInfo(3, 3, cv::COLOR_YUV2BGR),
-                    CvtColorInfo(3, 3, cv::COLOR_BGR2HSV),
-                    CvtColorInfo(3, 3, cv::COLOR_HSV2BGR),
-                    CvtColorInfo(3, 3, cv::COLOR_BGR2HLS),
-                    CvtColorInfo(3, 3, cv::COLOR_HLS2BGR),
-                    CvtColorInfo(3, 3, cv::COLOR_BGR2Lab),
-                    CvtColorInfo(3, 3, cv::COLOR_RGB2Lab),
-                    CvtColorInfo(3, 3, cv::COLOR_BGR2Luv),
-                    CvtColorInfo(3, 3, cv::COLOR_RGB2Luv),
-                    CvtColorInfo(3, 3, cv::COLOR_Lab2BGR),
-                    CvtColorInfo(3, 3, cv::COLOR_Lab2RGB),
-                    CvtColorInfo(3, 3, cv::COLOR_Luv2BGR),
-                    CvtColorInfo(3, 3, cv::COLOR_Luv2RGB),
-                    CvtColorInfo(1, 3, cv::COLOR_BayerBG2BGR),
-                    CvtColorInfo(1, 3, cv::COLOR_BayerGB2BGR),
-                    CvtColorInfo(1, 3, cv::COLOR_BayerRG2BGR),
-                    CvtColorInfo(1, 3, cv::COLOR_BayerGR2BGR),
-                    CvtColorInfo(4, 4, cv::COLOR_RGBA2mRGBA))));
 
 //////////////////////////////////////////////////////////////////////
 // SwapChannels
 
-GPU_PERF_TEST(SwapChannels, cv::gpu::DeviceInfo, cv::Size)
+PERF_TEST_P(Sz, ImgProc_SwapChannels, GPU_TYPICAL_MAT_SIZES)
 {
-    cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
-    cv::gpu::setDevice(devInfo.deviceID());
+    cv::Size size = GetParam();
 
-    cv::Size size = GET_PARAM(1);
-
-    cv::Mat src_host(size, CV_8UC4);
-    fill(src_host, 0, 255);
-
-    cv::gpu::GpuMat src(src_host);
+    cv::Mat src(size, CV_8UC4);
+    fillRandom(src);
 
     const int dstOrder[] = {2, 1, 0, 3};
 
-    cv::gpu::swapChannels(src, dstOrder);
+    cv::gpu::GpuMat d_src(src);
+
+    cv::gpu::swapChannels(d_src, dstOrder);
 
     TEST_CYCLE()
     {
-        cv::gpu::swapChannels(src, dstOrder);
+        cv::gpu::swapChannels(d_src, dstOrder);
     }
 }
-
-INSTANTIATE_TEST_CASE_P(ImgProc, SwapChannels, testing::Combine(ALL_DEVICES, GPU_TYPICAL_MAT_SIZES));
 
 //////////////////////////////////////////////////////////////////////
 // AlphaComp
 
 CV_ENUM(AlphaOp, cv::gpu::ALPHA_OVER, cv::gpu::ALPHA_IN, cv::gpu::ALPHA_OUT, cv::gpu::ALPHA_ATOP, cv::gpu::ALPHA_XOR, cv::gpu::ALPHA_PLUS, cv::gpu::ALPHA_OVER_PREMUL, cv::gpu::ALPHA_IN_PREMUL, cv::gpu::ALPHA_OUT_PREMUL, cv::gpu::ALPHA_ATOP_PREMUL, cv::gpu::ALPHA_XOR_PREMUL, cv::gpu::ALPHA_PLUS_PREMUL, cv::gpu::ALPHA_PREMUL)
+#define ALL_ALPHA_OPS ValuesIn(AlphaOp::all())
 
-GPU_PERF_TEST(AlphaComp, cv::gpu::DeviceInfo, cv::Size, MatType, AlphaOp)
+DEF_PARAM_TEST(Sz_Type_Op, cv::Size, MatType, AlphaOp);
+
+PERF_TEST_P(Sz_Type_Op, ImgProc_AlphaComp, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8UC4, CV_16UC4, CV_32SC4, CV_32FC4), ALL_ALPHA_OPS))
 {
-    cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
-    cv::gpu::setDevice(devInfo.deviceID());
+    cv::Size size = GET_PARAM(0);
+    int type = GET_PARAM(1);
+    int alpha_op = GET_PARAM(2);
 
-    cv::Size size = GET_PARAM(1);
-    int type = GET_PARAM(2);
-    int alpha_op = GET_PARAM(3);
+    cv::Mat img1(size, type);
+    fillRandom(img1);
 
-    cv::Mat img1_host(size, type);
-    fill(img1_host, 0, 255);
+    cv::Mat img2(size, type);
+    fillRandom(img2);
 
-    cv::Mat img2_host(size, type);
-    fill(img2_host, 0, 255);
+    cv::gpu::GpuMat d_img1(img1);
+    cv::gpu::GpuMat d_img2(img2);
+    cv::gpu::GpuMat d_dst;
 
-    cv::gpu::GpuMat img1(img1_host);
-    cv::gpu::GpuMat img2(img2_host);
-    cv::gpu::GpuMat dst;
-
-    cv::gpu::alphaComp(img1, img2, dst, alpha_op);
+    cv::gpu::alphaComp(d_img1, d_img2, d_dst, alpha_op);
 
     TEST_CYCLE()
     {
-        cv::gpu::alphaComp(img1, img2, dst, alpha_op);
+        cv::gpu::alphaComp(d_img1, d_img2, d_dst, alpha_op);
     }
 }
-
-INSTANTIATE_TEST_CASE_P(ImgProc, AlphaComp, testing::Combine(
-    ALL_DEVICES,
-    GPU_TYPICAL_MAT_SIZES,
-    testing::Values(MatType(CV_8UC4), MatType(CV_16UC4), MatType(CV_32SC4), MatType(CV_32FC4)),
-    testing::Values(AlphaOp(cv::gpu::ALPHA_OVER),
-                    AlphaOp(cv::gpu::ALPHA_IN),
-                    AlphaOp(cv::gpu::ALPHA_OUT),
-                    AlphaOp(cv::gpu::ALPHA_ATOP),
-                    AlphaOp(cv::gpu::ALPHA_XOR),
-                    AlphaOp(cv::gpu::ALPHA_PLUS),
-                    AlphaOp(cv::gpu::ALPHA_OVER_PREMUL),
-                    AlphaOp(cv::gpu::ALPHA_IN_PREMUL),
-                    AlphaOp(cv::gpu::ALPHA_OUT_PREMUL),
-                    AlphaOp(cv::gpu::ALPHA_ATOP_PREMUL),
-                    AlphaOp(cv::gpu::ALPHA_XOR_PREMUL),
-                    AlphaOp(cv::gpu::ALPHA_PLUS_PREMUL),
-                    AlphaOp(cv::gpu::ALPHA_PREMUL))));
 
 //////////////////////////////////////////////////////////////////////
-// ImagePyramid
+// ImagePyramidBuild
 
-GPU_PERF_TEST(ImagePyramid_build, cv::gpu::DeviceInfo, cv::Size, MatType)
+PERF_TEST_P(Sz_Depth_Cn, ImgProc_ImagePyramidBuild, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8U, CV_16U, CV_32F), Values(1, 3, 4)))
 {
-    cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
-    cv::gpu::setDevice(devInfo.deviceID());
+    cv::Size size = GET_PARAM(0);
+    int depth = GET_PARAM(1);
+    int channels = GET_PARAM(2);
 
-    cv::Size size = GET_PARAM(1);
-    int type = GET_PARAM(2);
+    int type = CV_MAKE_TYPE(depth, channels);
 
-    cv::Mat src_host(size, type);
-    fill(src_host, 0, 255);
+    cv::Mat src(size, type);
+    fillRandom(src);
 
-    cv::gpu::GpuMat src(src_host);
+    cv::gpu::GpuMat d_src(src);
 
-    cv::gpu::ImagePyramid pyr;
+    cv::gpu::ImagePyramid d_pyr;
 
-    pyr.build(src, 5);
+    d_pyr.build(d_src, 5);
 
     TEST_CYCLE()
     {
-        pyr.build(src, 5);
+        d_pyr.build(d_src, 5);
     }
 }
 
-INSTANTIATE_TEST_CASE_P(ImgProc, ImagePyramid_build, testing::Combine(
-    ALL_DEVICES,
-    GPU_TYPICAL_MAT_SIZES,
-    testing::Values(MatType(CV_8UC1), MatType(CV_8UC3), MatType(CV_8UC4),
-                    MatType(CV_16UC1), MatType(CV_16UC3), MatType(CV_16UC4),
-                    MatType(CV_32FC1), MatType(CV_32FC3), MatType(CV_32FC4))));
+//////////////////////////////////////////////////////////////////////
+// ImagePyramidGetLayer
 
-GPU_PERF_TEST(ImagePyramid_getLayer, cv::gpu::DeviceInfo, cv::Size, MatType)
+PERF_TEST_P(Sz_Depth_Cn, ImgProc_ImagePyramidGetLayer, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8U, CV_16U, CV_32F), Values(1, 3, 4)))
 {
-    cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
-    cv::gpu::setDevice(devInfo.deviceID());
+    cv::Size size = GET_PARAM(0);
+    int depth = GET_PARAM(1);
+    int channels = GET_PARAM(2);
 
-    cv::Size size = GET_PARAM(1);
-    int type = GET_PARAM(2);
+    int type = CV_MAKE_TYPE(depth, channels);
 
-    cv::Mat src_host(size, type);
-    fill(src_host, 0, 255);
+    cv::Mat src(size, type);
+    fillRandom(src);
 
-    cv::gpu::GpuMat src(src_host);
-    cv::gpu::GpuMat dst;
+    cv::Size dstSize(size.width / 2 + 10, size.height / 2 + 10);
 
-    cv::gpu::ImagePyramid pyr(src, 3);
+    cv::gpu::GpuMat d_src(src);
+    cv::gpu::GpuMat d_dst;
 
-    pyr.getLayer(dst, cv::Size(size.width / 2 + 10, size.height / 2 + 10));
+    cv::gpu::ImagePyramid d_pyr(d_src, 3);
+
+    d_pyr.getLayer(d_dst, dstSize);
 
     TEST_CYCLE()
     {
-        pyr.getLayer(dst, cv::Size(size.width / 2 + 10, size.height / 2 + 10));
+        d_pyr.getLayer(d_dst, dstSize);
     }
 }
-
-INSTANTIATE_TEST_CASE_P(ImgProc, ImagePyramid_getLayer, testing::Combine(
-    ALL_DEVICES,
-    GPU_TYPICAL_MAT_SIZES,
-    testing::Values(MatType(CV_8UC1), MatType(CV_8UC3), MatType(CV_8UC4),
-                    MatType(CV_16UC1), MatType(CV_16UC3), MatType(CV_16UC4),
-                    MatType(CV_32FC1), MatType(CV_32FC3), MatType(CV_32FC4))));
 
 //////////////////////////////////////////////////////////////////////
 // HoughLines
 
-IMPLEMENT_PARAM_CLASS(DoSort, bool)
+DEF_PARAM_TEST(Sz_DoSort, cv::Size, bool);
 
-GPU_PERF_TEST(HoughLines, cv::gpu::DeviceInfo, cv::Size, DoSort)
+PERF_TEST_P(Sz_DoSort, ImgProc_HoughLines, Combine(GPU_TYPICAL_MAT_SIZES, Bool()))
 {
     declare.time(30.0);
 
-    const cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
-    cv::gpu::setDevice(devInfo.deviceID());
-    const cv::Size size = GET_PARAM(1);
-    const bool doSort = GET_PARAM(2);
+    const cv::Size size = GET_PARAM(0);
+    const bool doSort = GET_PARAM(1);
 
     const float rho = 1.0f;
     const float theta = CV_PI / 180.0f;
@@ -1365,6 +1201,7 @@ GPU_PERF_TEST(HoughLines, cv::gpu::DeviceInfo, cv::Size, DoSort)
     cv::gpu::GpuMat d_lines;
     cv::gpu::GpuMat d_accum;
     cv::gpu::GpuMat d_buf;
+
     cv::gpu::HoughLines(d_src, d_lines, d_accum, d_buf, rho, theta, threshold, doSort);
 
     TEST_CYCLE()
@@ -1373,9 +1210,4 @@ GPU_PERF_TEST(HoughLines, cv::gpu::DeviceInfo, cv::Size, DoSort)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(ImgProc, HoughLines, testing::Combine(
-    ALL_DEVICES,
-    GPU_TYPICAL_MAT_SIZES,
-    testing::Values(DoSort(false), DoSort(true))));
-
-#endif
+} // namespace
