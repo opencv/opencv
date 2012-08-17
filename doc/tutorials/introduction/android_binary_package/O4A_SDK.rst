@@ -36,21 +36,21 @@ The structure of package contents looks as follows:
 
     OpenCV-2.4.2-android-sdk
     |_ apk
-    |   |_ OpenCV_2.4.2_binary_pack_XXX.apk 
-    |   |_ OpenCV_2.4.2_Manager.apk 
+    |   |_ OpenCV_2.4.2_binary_pack_XXX.apk
+    |   |_ OpenCV_2.4.2_Manager.apk
     |
     |_ doc
     |_ samples
     |_ sdk
-    |    |_ etc 
-    |    |_ java 
-    |    |_ native 
-    |          |_ 3rdparty 
-    |          |_ jni 
-    |          |_ libs 
-    |               |_ armeabi 
-    |               |_ armeabi-v7a 
-    |               |_ x86 
+    |    |_ etc
+    |    |_ java
+    |    |_ native
+    |          |_ 3rdparty
+    |          |_ jni
+    |          |_ libs
+    |               |_ armeabi
+    |               |_ armeabi-v7a
+    |               |_ x86
     |
     |_ license.txt
     |_ README.android
@@ -64,11 +64,11 @@ The structure of package contents looks as follows:
 * :file:`sdk/etc` folder contains Haar and LBP cascades distributed with OpenCV.
 
 * :file:`apk` folder contains Android packages that should be installed on the target Android device to enable OpenCV library access via OpenCV Manager API (see details below).
-   
+
   On production devices that have access to Google Play Market (and internet) these packages will be installed from Market on the first start of an application using OpenCV Manager API.
   But dev kits without Market or internet require this packages to be installed manually.
   (Install the `Manager.apk` and the corresponding `binary_pack.apk` depending on the device CPU, the Manager GUI provides this info).
-  
+
   **Note**: installation from internet is the preferable way since we may publish updated versions of this packages on the Market.
 
 * :file:`samples` folder contains sample applications projects and their prebuilt packages (APK).
@@ -76,7 +76,7 @@ The structure of package contents looks as follows:
 
 * :file:`doc` folder contains various OpenCV documentation in PDF format.
   It's also available online at http://docs.opencv.org.
-  
+
   **Note**: the most recent docs (nightly build) are at http://docs.opencv.org/trunk/.
   Generally, it's more up-to-date, but can refer to not-yet-released functionality.
 
@@ -94,10 +94,10 @@ Starting version 2.4.2 `OpenCV4Android SDK` uses `OpenCV Manager` API for librar
 
 
 For additional information on OpenCV Manager see the:
- 
-* |OpenCV4Android_Slides|_ 
-  
-* |OpenCV4Android_Reference|_ 
+
+* |OpenCV4Android_Slides|_
+
+* |OpenCV4Android_Reference|_
 
      ..
 
@@ -196,15 +196,15 @@ Open OpenCV library and samples in Eclipse
    However, **all these errors are only false-alarms**!
 
    Just give a minute to Eclipse to complete initialization.
-   
+
    In some cases these errors disappear after :menuselection:`Project --> Clean... --> Clean all --> OK`
    or after pressing :kbd:`F5` (for Refresh action) when selecting error-label-marked projects in :guilabel:`Package Explorer`.
 
    Sometimes more advanced manipulations are required:
 
-   * The provided projects are configured for ``API 11`` target (and ``API 9`` for the library) that can be missing platform in your Android SDK.
-     After right click on any project select  :guilabel:`Properties` and then :guilabel:`Android` on the left pane.
-     Click some target with `API Level` 11 or higher:
+   The provided projects are configured for ``API 11`` target (and ``API 9`` for the library) that can be missing platform in your Android SDK.
+   After right click on any project select  :guilabel:`Properties` and then :guilabel:`Android` on the left pane.
+   Click some target with `API Level` 11 or higher:
 
       .. image:: images/eclipse_8a_target.png
          :alt: Updating target
@@ -239,10 +239,10 @@ Well, running samples from Eclipse is very simple:
 
 * Connect your device with :command:`adb` tool from Android SDK or create an emulator with camera support.
 
-   * See `Managing Virtual Devices
-     <http://developer.android.com/guide/developing/devices/index.html>`_ document for help with Android Emulator.
-   * See `Using Hardware Devices
-     <http://developer.android.com/guide/developing/device.html>`_ for help with real devices (not emulators).
+  * See `Managing Virtual Devices
+    <http://developer.android.com/guide/developing/devices/index.html>`_ document for help with Android Emulator.
+  * See `Using Hardware Devices
+    <http://developer.android.com/guide/developing/device.html>`_ for help with real devices (not emulators).
 
 
 * Select project you want to start in :guilabel:`Package Explorer` and just press :kbd:`Ctrl + F11` or select option :menuselection:`Run --> Run` from the main menu, or click :guilabel:`Run` button on the toolbar.
@@ -263,33 +263,33 @@ Well, running samples from Eclipse is very simple:
   .. image:: images/android_emulator_opencv_manager_fail.png
      :alt: You will see this message if you have no OpenCV Manager installed
      :align: center
-     
+
   To get rid of the message you will need to install `OpenCV Manager` and the appropriate `OpenCV binary pack`.
   Simply tap :menuselection:`Yes` if you have *Google Play Market* installed on your device/emulator. It will redirect you to the corresponding page on *Google Play Market*.
-  
+
   If you have no access to the *Market*, which is often the case with emulators - you will need to install the packages from OpenCV4Android SDK folder manually. Open the console/terminal and type in the following two commands:
-  
+
   .. code-block:: sh
     :linenos:
 
     <Android SDK path>/platform-tools/adb install <OpenCV4Android SDK path>/apk/OpenCV_2.4.2_Manager.apk
     <Android SDK path>/platform-tools/adb install <OpenCV4Android SDK path>/apk/OpenCV_2.4.2_binary_pack_armv7a.apk
-    
+
   If you're running Windows, that will probably look like this:
-    
+
   .. image:: images/install_opencv_manager_with_adb.png
      :alt: Run these commands in the console to install OpenCV Manager
      :align: center
-     
+
   When done, you will be able to run OpenCV samples on your device/emulator seamlessly.
-  
+
 * Here is ``Tutorial 2 - Use OpenCV Camera`` sample, running on top of stock camera-preview of the emulator.
 
   .. image:: images/emulator_canny.png
      :height: 600px
      :alt: Tutorial 1 Basic - 1. Add OpenCV - running Canny
      :align: center
-  
+
 What's next
 ===========
 
