@@ -4620,6 +4620,34 @@ public:
 
 CV_EXPORTS void parallel_for_(const Range& range, const ParallelLoopBody& body);
 
+/////////////////////////// Synchronization Primitives ///////////////////////////////
+
+class CV_EXPORTS Mutex
+{
+public:
+    Mutex();
+    ~Mutex();
+    Mutex(const Mutex& m);
+    Mutex& operator = (const Mutex& m);
+    
+    void lock();
+    bool trylock();
+    void unlock();
+    
+    struct Impl;
+protected:
+    Impl* impl;
+};
+
+class CV_EXPORTS AutoLock
+{
+public:    
+    AutoLock(Mutex& m) : mutex(&m) { mutex->lock(); }
+    ~AutoLock() { mutex->unlock(); }
+protected:    
+    Mutex* mutex;
+};
+
 }
 
 #endif // __cplusplus
