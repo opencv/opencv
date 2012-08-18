@@ -115,7 +115,8 @@ public abstract class SampleCvViewBase extends SurfaceView implements SurfaceHol
             if (bmp != null) {
                 Canvas canvas = mHolder.lockCanvas();
                 if (canvas != null) {
-                    canvas.drawBitmap(bmp, (canvas.getWidth() - bmp.getWidth()) / 2, (canvas.getHeight() - bmp.getHeight()) / 2, null);
+                	canvas.drawColor(0, android.graphics.PorterDuff.Mode.CLEAR);
+                	canvas.drawBitmap(bmp, (canvas.getWidth()-bmp.getWidth()) / 2, (canvas.getHeight()-bmp.getHeight()) / 2, null);
                     mHolder.unlockCanvasAndPost(canvas);
                 }
                 bmp.recycle();

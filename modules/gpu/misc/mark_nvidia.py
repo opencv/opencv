@@ -1,7 +1,7 @@
 import sys, re
 
 spaces = '[\s]*'
-symbols = '[\s\w\d,=:|]*'
+symbols = '[\s\w\d,.=:|]*'
 
 def pattern1(prefix, test):
     return re.compile(spaces + 'perf::' + prefix + '/' + test + '::' + '\(' + symbols + '\)' + spaces)

@@ -44,7 +44,7 @@
 //M*/
 
 #include "precomp.hpp"
-#include "threadsafe.h"
+#include "Threadsafe.h"
 
 CriticalSection::CriticalSection()
 {

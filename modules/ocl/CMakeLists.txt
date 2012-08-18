@@ -4,7 +4,7 @@ if(NOT HAVE_OPENCL)
 endif()
 
 set(the_description "OpenCL-accelerated Computer Vision")
-ocv_add_module(ocl opencv_core opencv_imgproc opencv_calib3d opencv_objdetect opencv_video opencv_nonfree)
+ocv_add_module(ocl opencv_core opencv_imgproc opencv_calib3d opencv_objdetect opencv_video opencv_nonfree opencv_ts)
 
 ocv_module_include_directories()
 
