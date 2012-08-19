@@ -125,8 +125,8 @@ void update_map(const Mat& src, Mat& map_x, Mat& map_y, const int remapMode )
             case HALF_SIZE:
                 if( i > src.cols*0.25 && i < src.cols*0.75 && j > src.rows*0.25 && j < src.rows*0.75 )
                 {
-                    map_x.at<float>(j,i) = 2*( i - src.cols*0.25 ) + 0.5 ;
-                    map_y.at<float>(j,i) = 2*( j - src.rows*0.25 ) + 0.5 ;
+                    map_x.at<float>(j,i) = 2*( i - src.cols*0.25f ) + 0.5f ;
+                    map_y.at<float>(j,i) = 2*( j - src.rows*0.25f ) + 0.5f ;
                 }
                 else
                 {
@@ -135,16 +135,16 @@ void update_map(const Mat& src, Mat& map_x, Mat& map_y, const int remapMode )
                 }
                 break;
             case UPSIDE_DOWN:
-                map_x.at<float>(j,i) = i ;
-                map_y.at<float>(j,i) = src.rows - j ;
+                map_x.at<float>(j,i) = static_cast<float>(i) ;
+                map_y.at<float>(j,i) = static_cast<float>(src.rows - j) ;
                 break;
             case REFLECTION_X:
-                map_x.at<float>(j,i) = src.cols - i ;
-                map_y.at<float>(j,i) = j ;
+                map_x.at<float>(j,i) = static_cast<float>(src.cols - i) ;
+                map_y.at<float>(j,i) = static_cast<float>(j) ;
                 break;
             case REFLECTION_BOTH:
-                map_x.at<float>(j,i) = src.cols - i ;
-                map_y.at<float>(j,i) = src.rows - j ;
+                map_x.at<float>(j,i) = static_cast<float>(src.cols - i) ;
+                map_y.at<float>(j,i) = static_cast<float>(src.rows - j) ;
                 break;
             } // end of switch
         }
