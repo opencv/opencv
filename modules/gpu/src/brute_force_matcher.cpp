@@ -420,16 +420,16 @@ void cv::gpu::BFMatcher_GPU::matchConvert(const Mat& trainIdx, const Mat& imgIdx
     const float* distance_ptr =  distance.ptr<float>();
     for (int queryIdx = 0; queryIdx < nQuery; ++queryIdx, ++trainIdx_ptr, ++imgIdx_ptr, ++distance_ptr)
     {
-        int trainIdx = *trainIdx_ptr;
+        int _trainIdx = *trainIdx_ptr;
 
-        if (trainIdx == -1)
+        if (_trainIdx == -1)
             continue;
 
-        int imgIdx = *imgIdx_ptr;
+        int _imgIdx = *imgIdx_ptr;
 
-        float distance = *distance_ptr;
+        float _distance = *distance_ptr;
 
-        DMatch m(queryIdx, trainIdx, imgIdx, distance);
+        DMatch m(queryIdx, _trainIdx, _imgIdx, _distance);
 
         matches.push_back(m);
     }
@@ -558,13 +558,13 @@ void cv::gpu::BFMatcher_GPU::knnMatchConvert(const Mat& trainIdx, const Mat& dis
 
         for (int i = 0; i < k; ++i, ++trainIdx_ptr, ++distance_ptr)
         {
-            int trainIdx = *trainIdx_ptr;
+            int _trainIdx = *trainIdx_ptr;
 
-            if (trainIdx != -1)
+            if (_trainIdx != -1)
             {
-                float distance = *distance_ptr;
+                float _distance = *distance_ptr;
 
-                DMatch m(queryIdx, trainIdx, 0, distance);
+                DMatch m(queryIdx, _trainIdx, 0, _distance);
 
                 curMatches.push_back(m);
             }
@@ -680,15 +680,15 @@ void cv::gpu::BFMatcher_GPU::knnMatch2Convert(const Mat& trainIdx, const Mat& im
 
         for (int i = 0; i < 2; ++i, ++trainIdx_ptr, ++imgIdx_ptr, ++distance_ptr)
         {
-            int trainIdx = *trainIdx_ptr;
+            int _trainIdx = *trainIdx_ptr;
 
-            if (trainIdx != -1)
+            if (_trainIdx != -1)
             {
-                int imgIdx = *imgIdx_ptr;
+                int _imgIdx = *imgIdx_ptr;
 
-                float distance = *distance_ptr;
+                float _distance = *distance_ptr;
 
-                DMatch m(queryIdx, trainIdx, imgIdx, distance);
+                DMatch m(queryIdx, _trainIdx, _imgIdx, _distance);
 
                 curMatches.push_back(m);
             }
@@ -868,25 +868,25 @@ void cv::gpu::BFMatcher_GPU::radiusMatchConvert(const Mat& trainIdx, const Mat& 
         const int* trainIdx_ptr = trainIdx.ptr<int>(queryIdx);
         const float* distance_ptr = distance.ptr<float>(queryIdx);
 
-        const int nMatches = std::min(nMatches_ptr[queryIdx], trainIdx.cols);
+        const int nMatched = std::min(nMatches_ptr[queryIdx], trainIdx.cols);
 
-        if (nMatches == 0)
+        if (nMatched == 0)
         {
             if (!compactResult)
                 matches.push_back(vector<DMatch>());
             continue;
         }
 
-        matches.push_back(vector<DMatch>(nMatches));
+        matches.push_back(vector<DMatch>(nMatched));
         vector<DMatch>& curMatches = matches.back();
 
-        for (int i = 0; i < nMatches; ++i, ++trainIdx_ptr, ++distance_ptr)
+        for (int i = 0; i < nMatched; ++i, ++trainIdx_ptr, ++distance_ptr)
         {
-            int trainIdx = *trainIdx_ptr;
+            int _trainIdx = *trainIdx_ptr;
 
-            float distance = *distance_ptr;
+            float _distance = *distance_ptr;
 
-            DMatch m(queryIdx, trainIdx, 0, distance);
+            DMatch m(queryIdx, _trainIdx, 0, _distance);
 
             curMatches[i] = m;
         }
@@ -1009,9 +1009,9 @@ void cv::gpu::BFMatcher_GPU::radiusMatchConvert(const Mat& trainIdx, const Mat& 
         const int* imgIdx_ptr = imgIdx.ptr<int>(queryIdx);
         const float* distance_ptr = distance.ptr<float>(queryIdx);
 
-        const int nMatches = std::min(nMatches_ptr[queryIdx], trainIdx.cols);
+        const int nMatched = std::min(nMatches_ptr[queryIdx], trainIdx.cols);
 
-        if (nMatches == 0)
+        if (nMatched == 0)
         {
             if (!compactResult)
                 matches.push_back(vector<DMatch>());
@@ -1020,9 +1020,9 @@ void cv::gpu::BFMatcher_GPU::radiusMatchConvert(const Mat& trainIdx, const Mat& 
 
         matches.push_back(vector<DMatch>());
         vector<DMatch>& curMatches = matches.back();
-        curMatches.reserve(nMatches);
+        curMatches.reserve(nMatched);
 
-        for (int i = 0; i < nMatches; ++i, ++trainIdx_ptr, ++imgIdx_ptr, ++distance_ptr)
+        for (int i = 0; i < nMatched; ++i, ++trainIdx_ptr, ++imgIdx_ptr, ++distance_ptr)
         {
             int _trainIdx = *trainIdx_ptr;
             int _imgIdx = *imgIdx_ptr;
