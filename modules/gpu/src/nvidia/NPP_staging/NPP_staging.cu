@@ -1423,7 +1423,7 @@ NCVStatus compactVector_32u_device(Ncv32u *d_src, Ncv32u srcLen,
                     (d_hierSums.ptr() + partSumOffsets[i],
                      partSumNums[i], NULL,
                      d_hierSums.ptr() + partSumOffsets[i+1],
-                     NULL);
+                     0);
             }
             else
             {
@@ -1433,7 +1433,7 @@ NCVStatus compactVector_32u_device(Ncv32u *d_src, Ncv32u srcLen,
                     (d_hierSums.ptr() + partSumOffsets[i],
                      partSumNums[i], NULL,
                      NULL,
-                     NULL);
+                     0);
             }
 
             ncvAssertCUDALastErrorReturn(NPPST_CUDA_KERNEL_EXECUTION_ERROR);
@@ -1557,15 +1557,20 @@ NCVStatus nppsStCompact_32s(Ncv32s *d_src, Ncv32u srcLen,
 }
 
 
+#if defined __GNUC__ && __GNUC__ > 2 && __GNUC_MINOR__  > 4
+typedef Ncv32u __attribute__((__may_alias__)) Ncv32u_a;
+#else
+typedef Ncv32u Ncv32u_a;
+#endif
+
 NCVStatus nppsStCompact_32f(Ncv32f *d_src, Ncv32u srcLen,
                             Ncv32f *d_dst, Ncv32u *p_dstLen,
                             Ncv32f elemRemove, Ncv8u *pBuffer,
                             Ncv32u bufSize, cudaDeviceProp &devProp)
 {
     return nppsStCompact_32u((Ncv32u *)d_src, srcLen, (Ncv32u *)d_dst, p_dstLen,
-                             *(Ncv32u *)&elemRemove, pBuffer, bufSize, devProp);
+                             *(Ncv32u_a *)&elemRemove, pBuffer, bufSize, devProp);
 }
-
 
 NCVStatus nppsStCompact_32u_host(Ncv32u *h_src, Ncv32u srcLen,
                                  Ncv32u *h_dst, Ncv32u *dstLen, Ncv32u elemRemove)
@@ -1602,16 +1607,15 @@ NCVStatus nppsStCompact_32u_host(Ncv32u *h_src, Ncv32u srcLen,
 NCVStatus nppsStCompact_32s_host(Ncv32s *h_src, Ncv32u srcLen,
                                  Ncv32s *h_dst, Ncv32u *dstLen, Ncv32s elemRemove)
 {
-    return nppsStCompact_32u_host((Ncv32u *)h_src, srcLen, (Ncv32u *)h_dst, dstLen, *(Ncv32u *)&elemRemove);
+    return nppsStCompact_32u_host((Ncv32u *)h_src, srcLen, (Ncv32u *)h_dst, dstLen, *(Ncv32u_a *)&elemRemove);
 }
 
 
 NCVStatus nppsStCompact_32f_host(Ncv32f *h_src, Ncv32u srcLen,
                                  Ncv32f *h_dst, Ncv32u *dstLen, Ncv32f elemRemove)
 {
-    return nppsStCompact_32u_host((Ncv32u *)h_src, srcLen, (Ncv32u *)h_dst, dstLen, *(Ncv32u *)&elemRemove);
+    return nppsStCompact_32u_host((Ncv32u *)h_src, srcLen, (Ncv32u *)h_dst, dstLen, *(Ncv32u_a *)&elemRemove);
 }
-
 
 //==============================================================================
 //

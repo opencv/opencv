@@ -261,6 +261,12 @@ namespace
     }
 }
 
+#if defined __GNUC__ && __GNUC__ > 2 && __GNUC_MINOR__  > 4
+typedef Npp32s __attribute__((__may_alias__)) Npp32s_a;
+#else
+typedef Npp32s Npp32s_a;
+#endif
+
 void cv::gpu::copyMakeBorder(const GpuMat& src, GpuMat& dst, int top, int bottom, int left, int right, int borderType, const Scalar& value, Stream& s)
 {
     CV_Assert(src.depth() <= CV_32F && src.channels() <= 4);
@@ -308,7 +314,7 @@ void cv::gpu::copyMakeBorder(const GpuMat& src, GpuMat& dst, int top, int bottom
         case CV_32FC1:
             {
                 Npp32f val = saturate_cast<Npp32f>(value[0]);
-                Npp32s nVal = *(reinterpret_cast<Npp32s*>(&val));
+                Npp32s nVal = *(reinterpret_cast<Npp32s_a*>(&val));
                 nppSafeCall( nppiCopyConstBorder_32s_C1R(src.ptr<Npp32s>(), static_cast<int>(src.step), srcsz,
                     dst.ptr<Npp32s>(), static_cast<int>(dst.step), dstsz, top, left, nVal) );
                 break;

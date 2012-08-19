@@ -1,4 +1,6 @@
-#pragma warning (disable : 4408 4201 4100)
+#if defined _MSC_VER && _MSC_VER >= 1200
+# pragma warning (disable : 4408 4201 4100)
+#endif
 
 #include <cstdio>
 
