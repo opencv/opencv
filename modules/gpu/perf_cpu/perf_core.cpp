@@ -1229,6 +1229,7 @@ GPU_PERF_TEST(Norm, cv::gpu::DeviceInfo, cv::Size, MatDepth, NormType)
     {
         dst = cv::norm(src, normType);
     }
+    (void)dst;
 }
 
 INSTANTIATE_TEST_CASE_P(Core, Norm, testing::Combine(
@@ -1259,6 +1260,7 @@ GPU_PERF_TEST(NormDiff, cv::gpu::DeviceInfo, cv::Size, NormType)
     {
         dst = cv::norm(src1, src2, normType);
     }
+    (void)dst;
 }
 
 INSTANTIATE_TEST_CASE_P(Core, NormDiff, testing::Combine(
@@ -1338,6 +1340,7 @@ GPU_PERF_TEST(CountNonZero, cv::gpu::DeviceInfo, cv::Size, MatDepth)
     {
         dst = cv::countNonZero(src);
     }
+    (void)dst;
 }
 
 INSTANTIATE_TEST_CASE_P(Core, CountNonZero, testing::Combine(

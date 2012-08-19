@@ -351,21 +351,22 @@ TEST_P(LBP_classify, Accuracy)
     cv::gpu::GpuMat tested(grey);
     int count = gpuClassifier.detectMultiScale(tested, gpu_rects);
 
+#if defined (LOG_CASCADE_STATISTIC)
     cv::Mat downloaded(gpu_rects);
     const cv::Rect* faces = downloaded.ptr<cv::Rect>();
     for (int i = 0; i < count; i++)
     {
         cv::Rect r = faces[i];
 
-#if defined (LOG_CASCADE_STATISTIC)
         std::cout << r.x << " " << r.y  << " " << r.width << " " << r.height << std::endl;
         cv::rectangle(markedImage, r , CV_RGB(255, 0, 0));
-#endif
     }
+#endif
 
 #if defined (LOG_CASCADE_STATISTIC)
     cv::imshow("Res", markedImage); cv::waitKey();
 #endif
+    (void)count;
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_ObjDetect, LBP_classify,
