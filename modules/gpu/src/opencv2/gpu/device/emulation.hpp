@@ -51,11 +51,11 @@ namespace cv { namespace gpu { namespace device
     struct Emulation
     {
 
-        static __device__ __forceinline__ int sycthOr(int pred)
+        static __device__ __forceinline__ int syncthreadsOr(int pred)
         {
 #if defined (__CUDA_ARCH__) && (__CUDA_ARCH__ < 200)
                 // just campilation stab
-                return false;
+                return 0;
 #else
                 return __syncthreads_or(pred);
 #endif
