@@ -51,6 +51,7 @@
 #include <cstdio>
 #include <iostream>
 #include <fstream>
+#include <functional>
 #include <sstream>
 #include <string>
 #include <limits>

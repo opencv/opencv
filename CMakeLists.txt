@@ -336,6 +336,7 @@ include(cmake/OpenCVCompilerOptions.cmake REQUIRED)
 # ----------------------------------------------------------------------------
 if(MSVC)
   include(cmake/OpenCVCRTLinkage.cmake REQUIRED)
+  add_definitions(-D_VARIADIC_MAX=10)
 endif(MSVC)
 
 
