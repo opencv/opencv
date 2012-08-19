@@ -1154,7 +1154,7 @@ TEST_P(HoughLines, Accuracy)
     const std::string fileName = GET_PARAM(1);
 
     const float rho = 1.0f;
-    const float theta = CV_PI / 180.0f;
+    const float theta = static_cast<float>(CV_PI / 180);
     const int threshold = 50;
 
     cv::Mat img = readImage(fileName, cv::IMREAD_GRAYSCALE);

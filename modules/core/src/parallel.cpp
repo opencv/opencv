@@ -116,7 +116,22 @@ namespace cv
 
 #elif defined HAVE_CONCURRENCY
 
-        Concurrency::parallel_for(range.start, range.end, body);
+        class ConcurrencyProxyLoopBody
+        {
+        public:
+            ConcurrencyProxyLoopBody(const ParallelLoopBody& body) : _body(body) {}
+
+            void operator ()(int i) const
+            {
+                _body(Range(i, i + 1));
+            }
+
+        private:
+            const ParallelLoopBody& _body;
+            ConcurrencyProxyLoopBody& operator=(const ConcurrencyProxyLoopBody&) {return *this;}
+        } proxy(body);
+
+        Concurrency::parallel_for(range.start, range.end, proxy);
 
 #elif defined HAVE_OPENMP
 

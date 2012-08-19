@@ -2563,7 +2563,7 @@ void HOGDescriptor::readALTModel(std::string modelfile)
        throw Exception();
    }
    int kernel_type;
-   int nread;
+   size_t nread;
    nread=fread(&(kernel_type),sizeof(int),1,modelfl);
 
    {// ignore these
