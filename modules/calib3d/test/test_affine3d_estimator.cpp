@@ -48,6 +48,7 @@ using namespace std;
 #include <string>
 #include <iostream>
 #include <fstream>
+#include <functional>
 #include <iterator>
 #include <limits>
 #include <numeric>
