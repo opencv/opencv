@@ -39,7 +39,7 @@
 //
 //M*/
 
-#include "precomp.hpp"
+#include "test_precomp.hpp"
 
 using namespace std;
 using namespace cv;
@@ -180,105 +180,6 @@ void DeviceManager::loadAll()
             devices_.push_back(info);
         }
     }
-}
-
-class DevicesGenerator : public ParamGeneratorInterface<DeviceInfo>
-{
-public:
-    ~DevicesGenerator();
-
-    ParamIteratorInterface<DeviceInfo>* Begin() const;
-    ParamIteratorInterface<DeviceInfo>* End() const;
-
-private:
-    class Iterator : public ParamIteratorInterface<DeviceInfo>
-    {
-    public:
-        Iterator(const ParamGeneratorInterface<DeviceInfo>* base, vector<DeviceInfo>::const_iterator iterator);
-
-        virtual ~Iterator();
-
-        virtual const ParamGeneratorInterface<DeviceInfo>* BaseGenerator() const;
-
-        virtual void Advance();
-
-        virtual ParamIteratorInterface<DeviceInfo>* Clone() const;
-
-        virtual const DeviceInfo* Current() const;
-
-        virtual bool Equals(const ParamIteratorInterface<DeviceInfo>& other) const;
-
-    private:
-        Iterator(const Iterator& other);
-
-        const ParamGeneratorInterface<DeviceInfo>* const base_;
-        vector<DeviceInfo>::const_iterator iterator_;
-
-        mutable DeviceInfo value_;
-    };
-};
-
-DevicesGenerator::~DevicesGenerator()
-{
-}
-
-ParamIteratorInterface<DeviceInfo>* DevicesGenerator::Begin() const
-{
-    return new Iterator(this, DeviceManager::instance().values().begin());
-}
-
-ParamIteratorInterface<DeviceInfo>* DevicesGenerator::End() const
-{
-    return new Iterator(this, DeviceManager::instance().values().end());
-}
-
-DevicesGenerator::Iterator::Iterator(const ParamGeneratorInterface<DeviceInfo>* base, vector<DeviceInfo>::const_iterator iterator)
-    : base_(base), iterator_(iterator)
-{
-}
-
-DevicesGenerator::Iterator::~Iterator()
-{
-}
-
-const ParamGeneratorInterface<DeviceInfo>* DevicesGenerator::Iterator::BaseGenerator() const
-{
-    return base_;
-}
-
-void DevicesGenerator::Iterator::Advance()
-{
-    ++iterator_;
-}
-
-ParamIteratorInterface<DeviceInfo>* DevicesGenerator::Iterator::Clone() const
-{
-    return new Iterator(*this);
-}
-
-const DeviceInfo* DevicesGenerator::Iterator::Current() const
-{
-    value_ = *iterator_;
-    return &value_;
-}
-
-bool DevicesGenerator::Iterator::Equals(const ParamIteratorInterface<DeviceInfo>& other) const
-{
-    GTEST_CHECK_(BaseGenerator() == other.BaseGenerator())
-        << "The program attempted to compare iterators "
-        << "from different generators." << endl;
-
-    return iterator_ == CheckedDowncastToActualType<const Iterator>(&other)->iterator_;
-}
-
-DevicesGenerator::Iterator::Iterator(const Iterator& other) :
-    ParamIteratorInterface<DeviceInfo>(), base_(other.base_), iterator_(other.iterator_)
-{
-}
-
-ParamGenerator<DeviceInfo> DevicesGenerator_()
-{
-  return ParamGenerator<DeviceInfo>(new DevicesGenerator);
 }
 
 //////////////////////////////////////////////////////////////////////

@@ -39,8 +39,9 @@
 //
 //M*/
 
-#include "precomp.hpp"
-#include <string>
+#include "test_precomp.hpp"
+
+#ifdef HAVE_CUDA
 
 namespace {
 
@@ -372,3 +373,5 @@ INSTANTIATE_TEST_CASE_P(GPU_ObjDetect, LBP_classify,
                         testing::Combine(ALL_DEVICES, testing::Values<int>(0)));
 
 } // namespace
+
+#endif // HAVE_CUDA

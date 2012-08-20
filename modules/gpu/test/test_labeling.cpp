@@ -39,9 +39,7 @@
 // the use of this software, even if advised of the possibility of such damage.
 //M*/
 
-#include "precomp.hpp"
-#include <string>
-#include <iostream>
+#include "test_precomp.hpp"
 
 #ifdef HAVE_CUDA
 
@@ -199,4 +197,4 @@ TEST_P(Labeling, ConnectedComponents)
 
 INSTANTIATE_TEST_CASE_P(ConnectedComponents, Labeling, ALL_DEVICES);
 
-#endif
+#endif // HAVE_CUDA

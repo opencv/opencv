@@ -71,9 +71,9 @@ void printCudaInfo()
 #endif
 }
 
-int main(int argc, char **argv)
+int main(int argc, char** argv)
 {
-    CommandLineParser cmd(argc, argv,
+    CommandLineParser cmd(argc, (const char**) argv,
         "{ print_info_only | print_info_only | false | Print information about system and exit }"
         "{ device | device | 0 | Device on which tests will be executed }"
         "{ cpu | cpu | false | Run tests on cpu }"
@@ -119,7 +119,7 @@ int main(int argc, char **argv)
         cout << "Run tests on device " << device << " [" << info.name() << "] \n" << endl;
     }
 
-    testing::InitGoogleTest(&argc, argv);
+    InitGoogleTest(&argc, argv);
     perf::TestBase::Init(argc, argv);
     return RUN_ALL_TESTS();
 }

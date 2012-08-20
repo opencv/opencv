@@ -39,7 +39,9 @@
 //
 //M*/
 
-#include "precomp.hpp"
+#include "test_precomp.hpp"
+
+#ifdef HAVE_CUDA
 
 //#define DUMP
 
@@ -865,3 +867,5 @@ TEST_P(VideoReader, Regression)
 INSTANTIATE_TEST_CASE_P(GPU_Video, VideoReader, testing::Combine(
     ALL_DEVICES,
     testing::Values(std::string("768x576.avi"), std::string("1920x1080.avi"))));
+
+#endif // HAVE_CUDA

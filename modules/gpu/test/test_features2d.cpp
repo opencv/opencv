@@ -39,7 +39,9 @@
 //
 //M*/
 
-#include "precomp.hpp"
+#include "test_precomp.hpp"
+
+#ifdef HAVE_CUDA
 
 namespace {
 
@@ -984,3 +986,5 @@ INSTANTIATE_TEST_CASE_P(GPU_Features2D, BruteForceMatcher, testing::Combine(
     testing::Values(UseMask(false), UseMask(true))));
 
 } // namespace
+
+#endif // HAVE_CUDA

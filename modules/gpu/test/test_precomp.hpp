@@ -59,6 +59,7 @@
 #include <stdexcept>
 
 #include "cvconfig.h"
+
 #include "opencv2/core/core.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/calib3d/calib3d.hpp"
@@ -72,6 +73,7 @@
 
 #include "utility.hpp"
 #include "interpolation.hpp"
+#include "main_test_nvidia.h"
 
 #ifdef HAVE_CUDA
     #include <cuda.h>

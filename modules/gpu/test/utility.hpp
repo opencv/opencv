@@ -94,9 +94,7 @@ private:
     std::vector<cv::gpu::DeviceInfo> devices_;
 };
 
-testing::internal::ParamGenerator<cv::gpu::DeviceInfo> DevicesGenerator_();
-
-#define ALL_DEVICES DevicesGenerator_()
+#define ALL_DEVICES testing::ValuesIn(DeviceManager::instance().values())
 
 //////////////////////////////////////////////////////////////////////
 // Additional assertion
