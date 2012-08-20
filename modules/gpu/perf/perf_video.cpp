@@ -453,7 +453,7 @@ PERF_TEST_P(Video_Cn_LearningRate, Video_MOG, Combine(Values("gpu/video/768x576.
         cv::gpu::MOG_GPU d_mog;
         cv::gpu::GpuMat d_foreground;
 
-        d_mog(d_frame, d_foreground, learningRate);
+        d_mog(d_frame, d_foreground, static_cast<float>(learningRate));
 
         for (int i = 0; i < 10; ++i)
         {
@@ -473,7 +473,7 @@ PERF_TEST_P(Video_Cn_LearningRate, Video_MOG, Combine(Values("gpu/video/768x576.
             d_frame.upload(frame);
 
             startTimer(); next();
-            d_mog(d_frame, d_foreground, learningRate);
+            d_mog(d_frame, d_foreground, static_cast<float>(learningRate));
             stopTimer();
         }
     }
