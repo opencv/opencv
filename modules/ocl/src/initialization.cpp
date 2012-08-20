@@ -44,9 +44,9 @@
 //M*/
 
 #include "precomp.hpp"
-#include "Threadsafe.h"
+#include "threadsafe.h"
 #include <iomanip>
-#include "binaryCaching.hpp"
+#include "binarycaching.hpp"
 
 using namespace cv;
 using namespace cv::ocl;
@@ -775,7 +775,7 @@ namespace cv
         {
             if(val == 0)
             {
-                AutoLock al(&cs);
+                myAutoLock al(&cs);
                 if( NULL == clCxt.get())
                     clCxt.reset(new Context);
 
