@@ -42,6 +42,8 @@ set (CMAKE_CXX_OSX_CURRENT_VERSION_FLAG "${CMAKE_C_OSX_CURRENT_VERSION_FLAG}")
 set (CMAKE_C_FLAGS "")
 set (CMAKE_CXX_FLAGS "-headerpad_max_install_names -fvisibility=hidden -fvisibility-inlines-hidden")
 
+set (CMAKE_CXX_FLAGS_RELEASE "-O3 -fomit-frame-pointer")
+
 if (HAVE_FLAG_SEARCH_PATHS_FIRST)
 	set (CMAKE_C_LINK_FLAGS "-Wl,-search_paths_first ${CMAKE_C_LINK_FLAGS}")
 	set (CMAKE_CXX_LINK_FLAGS "-Wl,-search_paths_first ${CMAKE_CXX_LINK_FLAGS}")

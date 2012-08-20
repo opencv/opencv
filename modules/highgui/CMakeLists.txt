@@ -193,6 +193,12 @@ elseif(APPLE)
   endif()
 endif()
 
+if(IOS)
+  add_definitions(-DHAVE_IOS=1)
+  list(APPEND highgui_srcs src/cap_ios_abstract_camera.mm src/cap_ios_photo_camera.mm src/cap_ios_video_camera.mm)
+  list(APPEND HIGHGUI_LIBRARIES "-framework Accelerate" "-framework AVFoundation" "-framework CoreGraphics" "-framework CoreImage" "-framework CoreMedia" "-framework CoreVideo" "-framework QuartzCore" "-framework AssetsLibrary")
+endif()
+
 if(WIN32)
   link_directories("${OpenCV_SOURCE_DIR}/3rdparty/lib") # for ffmpeg wrapper only
   include_directories(AFTER SYSTEM "${OpenCV_SOURCE_DIR}/3rdparty/include") # for directshow in VS2005 and multi-monitor support on MinGW
