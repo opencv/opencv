@@ -27,7 +27,7 @@
 #include "opencv2/nonfree/nonfree.hpp"
 #include "opencv2/legacy/legacy.hpp"
 
-#include "perf_utility.hpp"
+#include "utility.hpp"
 
 #ifdef GTEST_CREATE_SHARED_LIBRARY
 #error no modules except ts should have GTEST_CREATE_SHARED_LIBRARY defined
