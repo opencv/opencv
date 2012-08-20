@@ -23,7 +23,7 @@ struct GreedyLabeling
 
     struct InInterval
     {
-        InInterval(const int& _lo, const int& _hi) : lo(-_lo), hi(_hi) {};
+        InInterval(const int& _lo, const int& _hi) : lo(-_lo), hi(_hi) {}
         const int lo, hi;
 
         bool operator() (const unsigned char a, const unsigned char b) const
@@ -31,6 +31,9 @@ struct GreedyLabeling
             int d = a - b;
             return lo <= d && d <= hi;
         }
+
+    private:
+        InInterval& operator=(const InInterval&);
     };
 
     GreedyLabeling(cv::Mat img)
@@ -82,7 +85,7 @@ struct GreedyLabeling
                         *top++ = dot::make(p.x, p.y + 1);
 
                     //top
-                    if( p.y > 0 && dl[-pitch] == -1 && inInt(sp[0], sp[-image.step1()]))
+                    if( p.y > 0 && dl[-pitch] == -1 && inInt(sp[0], sp[-static_cast<int>(image.step1())]))
                         *top++ = dot::make(p.x, p.y - 1);
 
                     p = *--top;

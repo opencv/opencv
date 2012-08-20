@@ -75,8 +75,8 @@ void CV_FastTest::run( int )
 
     vector<KeyPoint> keypoints1;
     vector<KeyPoint> keypoints2;
-    FAST(gray1, keypoints1, 30, type);
-    FAST(gray2, keypoints2, 30, type);
+    FAST(gray1, keypoints1, 30, true, type);
+    FAST(gray2, keypoints2, 30, true, type);
 
     for(size_t i = 0; i < keypoints1.size(); ++i)
     {

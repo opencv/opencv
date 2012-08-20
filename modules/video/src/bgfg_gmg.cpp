@@ -269,9 +269,9 @@ namespace
                     if (updateBackgroundModel_)
                     {
                         for (int i = 0; i < nfeatures; ++i)
-                            weights[i] *= 1.0f - learningRate_;
+                            weights[i] *= static_cast<float>(1.0f - learningRate_);
 
-                        bool inserted = insertFeature(newFeatureColor, learningRate_, colors, weights, nfeatures, maxFeatures_);
+                        bool inserted = insertFeature(newFeatureColor, static_cast<float>(learningRate_), colors, weights, nfeatures, maxFeatures_);
 
                         if (inserted)
                         {
