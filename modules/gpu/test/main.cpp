@@ -39,7 +39,7 @@
 //
 //M*/
 
-#include "precomp.hpp"
+#include "test_precomp.hpp"
 
 #ifdef HAVE_CUDA
 
@@ -49,87 +49,128 @@ using namespace cv::gpu;
 using namespace cvtest;
 using namespace testing;
 
-void print_info()
+void printOsInfo()
 {
-    printf("\n");
 #if defined _WIN32
 #   if defined _WIN64
-        puts("OS: Windows 64");
+        cout << "OS: Windows x64 \n" << endl;
 #   else
-        puts("OS: Windows 32");
+        cout << "OS: Windows x32 \n" << endl;
 #   endif
 #elif defined linux
 #   if defined _LP64
-        puts("OS: Linux 64");
+        cout << "OS: Linux x64 \n" << endl;
 #   else
-        puts("OS: Linux 32");
+        cout << "OS: Linux x32 \n" << endl;
 #   endif
 #elif defined __APPLE__
 #   if defined _LP64
-        puts("OS: Apple 64");
+        cout << "OS: Apple x64 \n" << endl;
 #   else
-        puts("OS: Apple 32");
+        cout << "OS: Apple x32 \n" << endl;
 #   endif
 #endif
+}
 
-    int deviceCount = getCudaEnabledDeviceCount();
+void printCudaInfo()
+{
+#ifndef HAVE_CUDA
+    cout << "OpenCV was built without CUDA support \n" << endl;
+#else
     int driver;
     cudaDriverGetVersion(&driver);
 
-    printf("CUDA Driver  version: %d\n", driver);
-    printf("CUDA Runtime version: %d\n", CUDART_VERSION);
-    printf("CUDA device count: %d\n\n", deviceCount);
+    cout << "CUDA Driver  version: " << driver << '\n';
+    cout << "CUDA Runtime version: " << CUDART_VERSION << '\n';
+
+    cout << endl;
+
+    cout << "GPU module was compiled for the following GPU archs:" << endl;
+    cout << "    BIN: " << CUDA_ARCH_BIN << '\n';
+    cout << "    PTX: " << CUDA_ARCH_PTX << '\n';
+
+    cout << endl;
+
+    int deviceCount = getCudaEnabledDeviceCount();
+    cout << "CUDA device count: " << deviceCount << '\n';
+
+    cout << endl;
 
     for (int i = 0; i < deviceCount; ++i)
     {
         DeviceInfo info(i);
 
-        printf("Device %d:\n", i);
-        printf("    Name: %s\n", info.name().c_str());
-        printf("    Compute capability version: %d.%d\n", info.majorVersion(), info.minorVersion());
-        printf("    Total memory: %d Mb\n", static_cast<int>(static_cast<int>(info.totalMemory() / 1024.0) / 1024.0));
-        printf("    Free  memory: %d Mb\n", static_cast<int>(static_cast<int>(info.freeMemory() / 1024.0) / 1024.0));
-        if (info.isCompatible())
-            puts("    This device is compatible with current GPU module build\n");
-        else
-            puts("    This device is NOT compatible with current GPU module build\n");
+        cout << "Device [" << i << "] \n";
+        cout << "\t Name: " << info.name() << '\n';
+        cout << "\t Compute capability: " << info.majorVersion() << '.' << info.minorVersion()<< '\n';
+        cout << "\t Multi Processor Count: " << info.multiProcessorCount() << '\n';
+        cout << "\t Total memory: " << static_cast<int>(static_cast<int>(info.totalMemory() / 1024.0) / 1024.0) << " Mb \n";
+        cout << "\t Free  memory: " << static_cast<int>(static_cast<int>(info.freeMemory() / 1024.0) / 1024.0) << " Mb \n";
+        if (!info.isCompatible())
+            cout << "\t !!! This device is NOT compatible with current GPU module build \n";
+
+        cout << endl;
     }
-
-    puts("GPU module was compiled for the following GPU archs:");
-    printf("    BIN: %s\n", CUDA_ARCH_BIN);
-    printf("    PTX: %s\n\n", CUDA_ARCH_PTX);
+#endif
 }
-
-enum OutputLevel
-{
-    OutputLevelNone,
-    OutputLevelCompact,
-    OutputLevelFull
-};
-
-extern OutputLevel nvidiaTestOutputLevel;
 
 int main(int argc, char** argv)
 {
-    TS::ptr()->init("gpu");
-    InitGoogleTest(&argc, argv);
+    try
+    {
+        CommandLineParser cmd(argc, (const char**)argv,
+            "{ print_info_only | print_info_only | false | Print information about system and exit }"
+            "{ device | device | -1 | Device on which tests will be executed (-1 means all devices) }"
+            "{ nvtest_output_level | nvtest_output_level | compact | NVidia test verbosity level }"
+        );
 
-    const char* keys ="{ nvtest_output_level | nvtest_output_level | compact | NVidia test verbosity level }";
+        printOsInfo();
+        printCudaInfo();
 
-    CommandLineParser parser(argc, (const char**)argv, keys);
+        if (cmd.get<bool>("print_info_only"))
+            return 0;
 
-    string outputLevel = parser.get<string>("nvtest_output_level", "none");
+        int device = cmd.get<int>("device");
+        if (device < 0)
+        {
+            DeviceManager::instance().loadAll();
 
-    if (outputLevel == "none")
-        nvidiaTestOutputLevel = OutputLevelNone;
-    else if (outputLevel == "compact")
-        nvidiaTestOutputLevel = OutputLevelCompact;
-    else if (outputLevel == "full")
-        nvidiaTestOutputLevel = OutputLevelFull;
+            cout << "Run tests on all supported devices \n" << endl;
+        }
+        else
+        {
+            DeviceManager::instance().load(device);
 
-    print_info();
+            DeviceInfo info(device);
+            cout << "Run tests on device " << device << " [" << info.name() << "] \n" << endl;
+        }
 
-    return RUN_ALL_TESTS();
+        string outputLevel = cmd.get<string>("nvtest_output_level");
+
+        if (outputLevel == "none")
+            nvidiaTestOutputLevel = OutputLevelNone;
+        else if (outputLevel == "compact")
+            nvidiaTestOutputLevel = OutputLevelCompact;
+        else if (outputLevel == "full")
+            nvidiaTestOutputLevel = OutputLevelFull;
+
+        TS::ptr()->init("gpu");
+        InitGoogleTest(&argc, argv);
+
+        return RUN_ALL_TESTS();
+    }
+    catch (const exception& e)
+    {
+        cerr << e.what() << endl;
+        return -1;
+    }
+    catch (...)
+    {
+        cerr << "Unknown error" << endl;
+        return -1;
+    }
+
+    return 0;
 }
 
 #else // HAVE_CUDA

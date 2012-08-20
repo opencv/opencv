@@ -1,209 +1,278 @@
 #include "perf_precomp.hpp"
 
-#ifdef HAVE_CUDA
+using namespace std;
+using namespace testing;
+
+namespace {
 
 //////////////////////////////////////////////////////////////////////
 // SURF
 
-GPU_PERF_TEST_1(SURF, cv::gpu::DeviceInfo)
+DEF_PARAM_TEST_1(Image, string);
+
+PERF_TEST_P(Image, Features2D_SURF, Values<string>("gpu/perf/aloe.jpg"))
 {
-    cv::gpu::DeviceInfo devInfo = GetParam();
-    cv::gpu::setDevice(devInfo.deviceID());
+    declare.time(50.0);
 
-    cv::Mat img_host = readImage("gpu/perf/aloe.jpg", cv::IMREAD_GRAYSCALE);
-    ASSERT_FALSE(img_host.empty());
+    cv::Mat img = readImage(GetParam(), cv::IMREAD_GRAYSCALE);
+    ASSERT_FALSE(img.empty());
 
-    cv::gpu::SURF_GPU surf;
-
-    cv::gpu::GpuMat img(img_host);
-    cv::gpu::GpuMat keypoints, descriptors;
-
-    surf(img, cv::gpu::GpuMat(), keypoints, descriptors);
-
-    declare.time(2.0);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
-        surf(img, cv::gpu::GpuMat(), keypoints, descriptors);
+        cv::gpu::SURF_GPU d_surf;
+
+        cv::gpu::GpuMat d_img(img);
+        cv::gpu::GpuMat d_keypoints, d_descriptors;
+
+        d_surf(d_img, cv::gpu::GpuMat(), d_keypoints, d_descriptors);
+
+        TEST_CYCLE()
+        {
+            d_surf(d_img, cv::gpu::GpuMat(), d_keypoints, d_descriptors);
+        }
+    }
+    else
+    {
+        cv::SURF surf;
+
+        std::vector<cv::KeyPoint> keypoints;
+        cv::Mat descriptors;
+
+        surf(img, cv::noArray(), keypoints, descriptors);
+
+        TEST_CYCLE()
+        {
+            keypoints.clear();
+            surf(img, cv::noArray(), keypoints, descriptors);
+        }
     }
 }
-
-INSTANTIATE_TEST_CASE_P(Features2D, SURF, ALL_DEVICES);
 
 //////////////////////////////////////////////////////////////////////
 // FAST
 
-GPU_PERF_TEST_1(FAST, cv::gpu::DeviceInfo)
+PERF_TEST_P(Image, Features2D_FAST, Values<string>("gpu/perf/aloe.jpg"))
 {
-    cv::gpu::DeviceInfo devInfo = GetParam();
-    cv::gpu::setDevice(devInfo.deviceID());
+    cv::Mat img = readImage(GetParam(), cv::IMREAD_GRAYSCALE);
+    ASSERT_FALSE(img.empty());
 
-    cv::Mat img_host = readImage("gpu/perf/aloe.jpg", cv::IMREAD_GRAYSCALE);
-    ASSERT_FALSE(img_host.empty());
-
-    cv::gpu::FAST_GPU fast(20);
-
-    cv::gpu::GpuMat img(img_host);
-    cv::gpu::GpuMat keypoints;
-
-    fast(img, cv::gpu::GpuMat(), keypoints);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
-        fast(img, cv::gpu::GpuMat(), keypoints);
+        cv::gpu::FAST_GPU d_fast(20);
+
+        cv::gpu::GpuMat d_img(img);
+        cv::gpu::GpuMat d_keypoints;
+
+        d_fast(d_img, cv::gpu::GpuMat(), d_keypoints);
+
+        TEST_CYCLE()
+        {
+            d_fast(d_img, cv::gpu::GpuMat(), d_keypoints);
+        }
+    }
+    else
+    {
+        std::vector<cv::KeyPoint> keypoints;
+
+        cv::FAST(img, keypoints, 20);
+
+        TEST_CYCLE()
+        {
+            keypoints.clear();
+            cv::FAST(img, keypoints, 20);
+        }
     }
 }
-
-INSTANTIATE_TEST_CASE_P(Features2D, FAST, ALL_DEVICES);
 
 //////////////////////////////////////////////////////////////////////
 // ORB
 
-GPU_PERF_TEST_1(ORB, cv::gpu::DeviceInfo)
+PERF_TEST_P(Image, Features2D_ORB, Values<string>("gpu/perf/aloe.jpg"))
 {
-    cv::gpu::DeviceInfo devInfo = GetParam();
-    cv::gpu::setDevice(devInfo.deviceID());
+    cv::Mat img = readImage(GetParam(), cv::IMREAD_GRAYSCALE);
+    ASSERT_FALSE(img.empty());
 
-    cv::Mat img_host = readImage("gpu/perf/aloe.jpg", cv::IMREAD_GRAYSCALE);
-    ASSERT_FALSE(img_host.empty());
-
-    cv::gpu::ORB_GPU orb(4000);
-
-    cv::gpu::GpuMat img(img_host);
-    cv::gpu::GpuMat keypoints, descriptors;
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
-        orb(img, cv::gpu::GpuMat(), keypoints, descriptors);
+        cv::gpu::ORB_GPU d_orb(4000);
+
+        cv::gpu::GpuMat d_img(img);
+        cv::gpu::GpuMat d_keypoints, d_descriptors;
+
+        d_orb(d_img, cv::gpu::GpuMat(), d_keypoints, d_descriptors);
+
+        TEST_CYCLE()
+        {
+            d_orb(d_img, cv::gpu::GpuMat(), d_keypoints, d_descriptors);
+        }
+    }
+    else
+    {
+        cv::ORB orb(4000);
+
+        std::vector<cv::KeyPoint> keypoints;
+        cv::Mat descriptors;
+
+        orb(img, cv::noArray(), keypoints, descriptors);
+
+        TEST_CYCLE()
+        {
+            keypoints.clear();
+            orb(img, cv::noArray(), keypoints, descriptors);
+        }
     }
 }
 
-INSTANTIATE_TEST_CASE_P(Features2D, ORB, ALL_DEVICES);
+//////////////////////////////////////////////////////////////////////
+// BFMatch
+
+DEF_PARAM_TEST(DescSize_Norm, int, NormType);
+
+PERF_TEST_P(DescSize_Norm, Features2D_BFMatch, Combine(Values(64, 128, 256), Values(NormType(cv::NORM_L1), NormType(cv::NORM_L2), NormType(cv::NORM_HAMMING))))
+{
+    declare.time(20.0);
+
+    int desc_size = GET_PARAM(0);
+    int normType = GET_PARAM(1);
+
+    int type = normType == cv::NORM_HAMMING ? CV_8U : CV_32F;
+
+    cv::Mat query(3000, desc_size, type);
+    fillRandom(query);
+
+    cv::Mat train(3000, desc_size, type);
+    fillRandom(train);
+
+    if (runOnGpu)
+    {
+        cv::gpu::BFMatcher_GPU d_matcher(normType);
+
+        cv::gpu::GpuMat d_query(query);
+        cv::gpu::GpuMat d_train(train);
+        cv::gpu::GpuMat d_trainIdx, d_distance;
+
+        d_matcher.matchSingle(d_query, d_train, d_trainIdx, d_distance);
+
+        TEST_CYCLE()
+        {
+            d_matcher.matchSingle(d_query, d_train, d_trainIdx, d_distance);
+        }
+    }
+    else
+    {
+        cv::BFMatcher matcher(normType);
+
+        std::vector<cv::DMatch> matches;
+
+        matcher.match(query, train, matches);
+
+        TEST_CYCLE()
+        {
+            matcher.match(query, train, matches);
+        }
+    }
+}
 
 //////////////////////////////////////////////////////////////////////
-// BruteForceMatcher_match
+// BFKnnMatch
 
-IMPLEMENT_PARAM_CLASS(DescriptorSize, int)
+DEF_PARAM_TEST(DescSize_K_Norm, int, int, NormType);
 
-GPU_PERF_TEST(BruteForceMatcher_match, cv::gpu::DeviceInfo, DescriptorSize, NormType)
+PERF_TEST_P(DescSize_K_Norm, Features2D_BFKnnMatch, Combine(
+    Values(64, 128, 256),
+    Values(2, 3),
+    Values(NormType(cv::NORM_L1), NormType(cv::NORM_L2), NormType(cv::NORM_HAMMING))))
 {
-    cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
-    cv::gpu::setDevice(devInfo.deviceID());
+    declare.time(30.0);
 
-    int desc_size = GET_PARAM(1);
+    int desc_size = GET_PARAM(0);
+    int k = GET_PARAM(1);
     int normType = GET_PARAM(2);
 
     int type = normType == cv::NORM_HAMMING ? CV_8U : CV_32F;
 
-    cv::Mat query_host(3000, desc_size, type);
-    fill(query_host, 0.0, 10.0);
+    cv::Mat query(3000, desc_size, type);
+    fillRandom(query);
 
-    cv::Mat train_host(3000, desc_size, type);
-    fill(train_host, 0.0, 10.0);
+    cv::Mat train(3000, desc_size, type);
+    fillRandom(train);
 
-    cv::gpu::BFMatcher_GPU matcher(normType);
-
-    cv::gpu::GpuMat query(query_host);
-    cv::gpu::GpuMat train(train_host);
-    cv::gpu::GpuMat trainIdx, distance;
-
-    matcher.matchSingle(query, train, trainIdx, distance);
-
-    declare.time(3.0);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
-        matcher.matchSingle(query, train, trainIdx, distance);
+        cv::gpu::BFMatcher_GPU d_matcher(normType);
+
+        cv::gpu::GpuMat d_query(query);
+        cv::gpu::GpuMat d_train(train);
+        cv::gpu::GpuMat d_trainIdx, d_distance, d_allDist;
+
+        d_matcher.knnMatchSingle(d_query, d_train, d_trainIdx, d_distance, d_allDist, k);
+
+        TEST_CYCLE()
+        {
+            d_matcher.knnMatchSingle(d_query, d_train, d_trainIdx, d_distance, d_allDist, k);
+        }
+    }
+    else
+    {
+        cv::BFMatcher matcher(normType);
+
+        std::vector< std::vector<cv::DMatch> > matches;
+
+        matcher.knnMatch(query, train, matches, k);
+
+        TEST_CYCLE()
+        {
+            matcher.knnMatch(query, train, matches, k);
+        }
     }
 }
 
-INSTANTIATE_TEST_CASE_P(Features2D, BruteForceMatcher_match, testing::Combine(
-    ALL_DEVICES,
-    testing::Values(DescriptorSize(64), DescriptorSize(128), DescriptorSize(256)),
-    testing::Values(NormType(cv::NORM_L1), NormType(cv::NORM_L2), NormType(cv::NORM_HAMMING))));
-
 //////////////////////////////////////////////////////////////////////
-// BruteForceMatcher_knnMatch
+// BFRadiusMatch
 
-IMPLEMENT_PARAM_CLASS(K, int)
-
-GPU_PERF_TEST(BruteForceMatcher_knnMatch, cv::gpu::DeviceInfo, DescriptorSize, K, NormType)
+PERF_TEST_P(DescSize_Norm, Features2D_BFRadiusMatch, Combine(Values(64, 128, 256), Values(NormType(cv::NORM_L1), NormType(cv::NORM_L2), NormType(cv::NORM_HAMMING))))
 {
-    cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
-    cv::gpu::setDevice(devInfo.deviceID());
+    declare.time(30.0);
 
-    int desc_size = GET_PARAM(1);
-    int k = GET_PARAM(2);
-    int normType = GET_PARAM(3);
+    int desc_size = GET_PARAM(0);
+    int normType = GET_PARAM(1);
 
     int type = normType == cv::NORM_HAMMING ? CV_8U : CV_32F;
 
-    cv::Mat query_host(3000, desc_size, type);
-    fill(query_host, 0.0, 10.0);
+    cv::Mat query(3000, desc_size, type);
+    fillRandom(query, 0.0, 1.0);
 
-    cv::Mat train_host(3000, desc_size, type);
-    fill(train_host, 0.0, 10.0);
+    cv::Mat train(3000, desc_size, type);
+    fillRandom(train, 0.0, 1.0);
 
-    cv::gpu::BFMatcher_GPU matcher(normType);
-
-    cv::gpu::GpuMat query(query_host);
-    cv::gpu::GpuMat train(train_host);
-    cv::gpu::GpuMat trainIdx, distance, allDist;
-
-    matcher.knnMatchSingle(query, train, trainIdx, distance, allDist, k);
-
-    declare.time(3.0);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
-        matcher.knnMatchSingle(query, train, trainIdx, distance, allDist, k);
+        cv::gpu::BFMatcher_GPU d_matcher(normType);
+
+        cv::gpu::GpuMat d_query(query);
+        cv::gpu::GpuMat d_train(train);
+        cv::gpu::GpuMat d_trainIdx, d_nMatches, d_distance;
+
+        d_matcher.radiusMatchSingle(d_query, d_train, d_trainIdx, d_distance, d_nMatches, 2.0);
+
+        TEST_CYCLE()
+        {
+            d_matcher.radiusMatchSingle(d_query, d_train, d_trainIdx, d_distance, d_nMatches, 2.0);
+        }
+    }
+    else
+    {
+        cv::BFMatcher matcher(normType);
+
+        std::vector< std::vector<cv::DMatch> > matches;
+
+        matcher.radiusMatch(query, train, matches, 2.0);
+
+        TEST_CYCLE()
+        {
+            matcher.radiusMatch(query, train, matches, 2.0);
+        }
     }
 }
 
-INSTANTIATE_TEST_CASE_P(Features2D, BruteForceMatcher_knnMatch, testing::Combine(
-    ALL_DEVICES,
-    testing::Values(DescriptorSize(64), DescriptorSize(128), DescriptorSize(256)),
-    testing::Values(K(2), K(3)),
-    testing::Values(NormType(cv::NORM_L1), NormType(cv::NORM_L2), NormType(cv::NORM_HAMMING))));
-
-//////////////////////////////////////////////////////////////////////
-// BruteForceMatcher_radiusMatch
-
-GPU_PERF_TEST(BruteForceMatcher_radiusMatch, cv::gpu::DeviceInfo, DescriptorSize, NormType)
-{
-    cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
-    cv::gpu::setDevice(devInfo.deviceID());
-
-    int desc_size = GET_PARAM(1);
-    int normType = GET_PARAM(2);
-
-    int type = normType == cv::NORM_HAMMING ? CV_8U : CV_32F;
-
-    cv::Mat query_host(3000, desc_size, type);
-    fill(query_host, 0.0, 1.0);
-
-    cv::Mat train_host(3000, desc_size, type);
-    fill(train_host, 0.0, 1.0);
-
-    cv::gpu::BFMatcher_GPU matcher(normType);
-
-    cv::gpu::GpuMat query(query_host);
-    cv::gpu::GpuMat train(train_host);
-    cv::gpu::GpuMat trainIdx, nMatches, distance;
-
-    matcher.radiusMatchSingle(query, train, trainIdx, distance, nMatches, 2.0);
-
-    declare.time(3.0);
-
-    TEST_CYCLE()
-    {
-        matcher.radiusMatchSingle(query, train, trainIdx, distance, nMatches, 2.0);
-    }
-}
-
-INSTANTIATE_TEST_CASE_P(Features2D, BruteForceMatcher_radiusMatch, testing::Combine(
-    ALL_DEVICES,
-    testing::Values(DescriptorSize(64), DescriptorSize(128), DescriptorSize(256)),
-    testing::Values(NormType(cv::NORM_L1), NormType(cv::NORM_L2), NormType(cv::NORM_HAMMING))));
-
-#endif
+} // namespace

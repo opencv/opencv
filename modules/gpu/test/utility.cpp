@@ -39,13 +39,14 @@
 //
 //M*/
 
-#include "precomp.hpp"
+#include "test_precomp.hpp"
 
 using namespace std;
 using namespace cv;
 using namespace cv::gpu;
 using namespace cvtest;
 using namespace testing;
+using namespace testing::internal;
 
 //////////////////////////////////////////////////////////////////////
 // random generators
@@ -108,12 +109,12 @@ GpuMat loadMat(const Mat& m, bool useRoi)
 //////////////////////////////////////////////////////////////////////
 // Image load
 
-Mat readImage(const string& fileName, int flags)
+Mat readImage(const std::string& fileName, int flags)
 {
-    return imread(string(cvtest::TS::ptr()->get_data_path()) + fileName, flags);
+    return imread(TS::ptr()->get_data_path() + fileName, flags);
 }
 
-Mat readImageType(const string& fname, int type)
+Mat readImageType(const std::string& fname, int type)
 {
     Mat src = readImage(fname, CV_MAT_CN(type) == 1 ? IMREAD_GRAYSCALE : IMREAD_COLOR);
     if (CV_MAT_CN(type) == 4)
@@ -134,50 +135,51 @@ bool supportFeature(const DeviceInfo& info, FeatureSet feature)
     return TargetArchs::builtWith(feature) && info.supports(feature);
 }
 
-const vector<DeviceInfo>& devices()
+DeviceManager& DeviceManager::instance()
 {
-    static vector<DeviceInfo> devs;
-    static bool first = true;
-
-    if (first)
-    {
-        int deviceCount = getCudaEnabledDeviceCount();
-
-        devs.reserve(deviceCount);
-
-        for (int i = 0; i < deviceCount; ++i)
-        {
-            DeviceInfo info(i);
-            if (info.isCompatible())
-                devs.push_back(info);
-        }
-
-        first = false;
-    }
-
-    return devs;
+    static DeviceManager obj;
+    return obj;
 }
 
-vector<DeviceInfo> devices(FeatureSet feature)
+void DeviceManager::load(int i)
 {
-    const vector<DeviceInfo>& d = devices();
+    devices_.clear();
+    devices_.reserve(1);
 
-    vector<DeviceInfo> devs_filtered;
+    ostringstream msg;
 
-    if (TargetArchs::builtWith(feature))
+    if (i < 0 || i >= getCudaEnabledDeviceCount())
     {
-        devs_filtered.reserve(d.size());
-
-        for (size_t i = 0, size = d.size(); i < size; ++i)
-        {
-            const DeviceInfo& info = d[i];
-
-            if (info.supports(feature))
-                devs_filtered.push_back(info);
-        }
+        msg << "Incorrect device number - " << i;
+        throw runtime_error(msg.str());
     }
 
-    return devs_filtered;
+    DeviceInfo info(i);
+
+    if (!info.isCompatible())
+    {
+        msg << "Device " << i << " [" << info.name() << "] is NOT compatible with current GPU module build";
+        throw runtime_error(msg.str());
+    }
+
+    devices_.push_back(info);
+}
+
+void DeviceManager::loadAll()
+{
+    int deviceCount = getCudaEnabledDeviceCount();
+
+    devices_.clear();
+    devices_.reserve(deviceCount);
+
+    for (int i = 0; i < deviceCount; ++i)
+    {
+        DeviceInfo info(i);
+        if (info.isCompatible())
+        {
+            devices_.push_back(info);
+        }
+    }
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -250,7 +252,7 @@ void minMaxLocGold(const Mat& src, double* minVal_, double* maxVal_, Point* minL
 
 namespace
 {
-    template <typename T, typename OutT> string printMatValImpl(const Mat& m, Point p)
+    template <typename T, typename OutT> std::string printMatValImpl(const Mat& m, Point p)
     {
         const int cn = m.channels();
 
@@ -269,9 +271,9 @@ namespace
         return ostr.str();
     }
 
-    string printMatVal(const Mat& m, Point p)
+    std::string printMatVal(const Mat& m, Point p)
     {
-        typedef string (*func_t)(const Mat& m, Point p);
+        typedef std::string (*func_t)(const Mat& m, Point p);
 
         static const func_t funcs[] =
         {

@@ -39,7 +39,9 @@
 //
 //M*/
 
-#include "precomp.hpp"
+#include "test_precomp.hpp"
+
+#ifdef HAVE_CUDA
 
 namespace {
 
@@ -329,7 +331,7 @@ TEST_P(ReprojectImageTo3D, Accuracy)
 
     cv::gpu::GpuMat dst;
     cv::gpu::reprojectImageTo3D(loadMat(disp, useRoi), dst, Q, 3);
-    
+
     cv::Mat dst_gold;
     cv::reprojectImageTo3D(disp, dst_gold, Q, false);
 
@@ -343,3 +345,5 @@ INSTANTIATE_TEST_CASE_P(GPU_Calib3D, ReprojectImageTo3D, testing::Combine(
     WHOLE_SUBMAT));
 
 } // namespace
+
+#endif // HAVE_CUDA
