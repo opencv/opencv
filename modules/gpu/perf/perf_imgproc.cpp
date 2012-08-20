@@ -1626,7 +1626,7 @@ PERF_TEST_P(Sz_DoSort, ImgProc_HoughLines, Combine(GPU_TYPICAL_MAT_SIZES, Bool()
 
     cv::Mat src(size, CV_8UC1, cv::Scalar::all(0));
 
-    const int numLines = rng.uniform(500, 2000);
+    const int numLines = rng.uniform(100, 300);
     for (int i = 0; i < numLines; ++i)
     {
         cv::Point p1(rng.uniform(0, src.cols), rng.uniform(0, src.rows));
