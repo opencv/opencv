@@ -115,6 +115,9 @@ FastNlMeansMultiDenoisingInvoker<T>::FastNlMeansMultiDenoisingInvoker(
     int search_window_size, 
     const double h) : dst_(dst), extended_srcs_(srcImgs.size())
 {
+    CV_Assert(srcImgs.size() > 0);
+    CV_Assert(srcImgs[0].channels() <= 3);
+
     rows_ = srcImgs[0].rows;
     cols_ = srcImgs[0].cols;
     channels_count_ = srcImgs[0].channels();

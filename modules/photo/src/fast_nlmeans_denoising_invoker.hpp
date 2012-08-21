@@ -106,6 +106,8 @@ FastNlMeansDenoisingInvoker<T>::FastNlMeansDenoisingInvoker(
     int search_window_size, 
     const double h) : src_(src), dst_(dst)
 {
+    CV_Assert(src.channels() <= 3);
+
     template_window_half_size_ = template_window_size / 2;
     search_window_half_size_ = search_window_size / 2;
     template_window_size_ = template_window_half_size_ * 2 + 1;
