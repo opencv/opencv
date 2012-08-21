@@ -1,0 +1,5 @@
+/home/kevin/Pictures/orl_faces/s13/2.pgm
+/home/kevin/Pictures/orl_faces/s17/2.pgm
+/home/kevin/Pictures/orl_faces/s32/2.pgm
+/home/kevin/Pictures/orl_faces/s10/2.pgm
+/home/kevin/Pictures/orl_faces/s15/2.pgm
