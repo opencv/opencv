@@ -4,7 +4,7 @@
 *  Author: 
 *  Kevin Hughes <kevinhughes27[at]gmail[dot]com>
 *
-*  Special Thanks to
+*  Special Thanks to:
 *  Philipp Wagner <bytefish[at]gmx[dot]de>
 *
 * This program demonstrates how to use OpenCV PCA with a 
@@ -35,7 +35,7 @@ string winName = "Reconstruction | press 'q' to quit";
 
 ///////////////////////
 // Functions
-void read_csv(const string& filename, vector<Mat>& images) {
+void read_imgList(const string& filename, vector<Mat>& images) {
     std::ifstream file(filename.c_str(), ifstream::in);
     if (!file) {
         string error_message = "No valid input file was given, please check the given filename.";
@@ -94,18 +94,18 @@ void onTrackbar(int pos, void* ptr)
 int main(int argc, char** argv) 
 {
     if (argc != 2) {
-        cout << "usage: " << argv[0] << " <image_list.csv>" << endl;
+        cout << "usage: " << argv[0] << " <image_list.txt>" << endl;
         exit(1);
     }
     
     // Get the path to your CSV.
-    string csv_file = string(argv[1]);
+    string imgList = string(argv[1]);
     
     // Read in the data. This can fail if not valid
     try {
-        read_csv(csv_file, images);
+        read_imgList(imgList, images);
     } catch (cv::Exception& e) {
-        cerr << "Error opening file \"" << csv_file << "\". Reason: " << e.msg << endl;
+        cerr << "Error opening file \"" << imgList << "\". Reason: " << e.msg << endl;
         exit(1);
     }
     
