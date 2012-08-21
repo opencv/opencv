@@ -1702,6 +1702,8 @@ inline bool operator!=(const GTEST_10_TUPLE_(T)& t,
      GTEST_OS_OPENBSD || GTEST_OS_QNX)
 # define GTEST_HAS_DEATH_TEST 1
 # include <vector>  // NOLINT
+#else
+# define GTEST_HAS_DEATH_TEST 0
 #endif
 
 // We don't support MSVC 7.1 with exceptions disabled now.  Therefore
