@@ -62,6 +62,10 @@ struct FastNlMeansDenoisingInvoker {
 
         void operator() (const BlockedRange& range) const;
 
+		void operator= (const FastNlMeansDenoisingInvoker& invoker) {
+			CV_Error(CV_StsNotImplemented, "Assigment operator is not implemented");
+		}
+
     private:
         const Mat& src_;
         Mat& dst_;
@@ -153,16 +157,12 @@ void FastNlMeansDenoisingInvoker<T>::operator() (const BlockedRange& range) cons
     int row_from = range.begin();
     int row_to = range.end() - 1;
 
-    int dist_sums_array[search_window_size_ * search_window_size_];
-    Array2d<int> dist_sums(dist_sums_array, search_window_size_, search_window_size_);
+    Array2d<int> dist_sums(search_window_size_, search_window_size_);
     
     // for lazy calc optimization
-    int col_dist_sums_array[template_window_size_ * search_window_size_ * search_window_size_];
-    Array3d<int> col_dist_sums(&col_dist_sums_array[0], 
-        template_window_size_, search_window_size_, search_window_size_);
+    Array3d<int> col_dist_sums(template_window_size_, search_window_size_, search_window_size_);
     
     int first_col_num = -1;
-
     Array3d<int> up_col_dist_sums(src_.cols, search_window_size_, search_window_size_);
 
     for (int i = row_from; i <= row_to; i++) {
@@ -233,7 +233,7 @@ void FastNlMeansDenoisingInvoker<T>::operator() (const BlockedRange& range) cons
             // calc weights
             int weights_sum = 0;
             
-            int estimation[src_.channels()];            
+            int estimation[3];            
             for (int channel_num = 0; channel_num < src_.channels(); channel_num++) {
                 estimation[channel_num] = 0;
             }
