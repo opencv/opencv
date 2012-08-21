@@ -12,6 +12,30 @@
 * is illustrated further by using a trackbar to
 * change the value for retained varaince.
 *
+* The program takes as input a text file with each line
+* begin the full path to an image. PCA will be performed
+* on this list of images. The author recommends using
+* the first 15 faces of the AT&T face data set:
+* http://www.cl.cam.ac.uk/research/dtg/attarchive/facedatabase.html
+* 
+* so for example your input text file would look like this:
+* 
+*        <path_to_at&t_faces>/orl_faces/s1/1.pgm
+*        <path_to_at&t_faces>/orl_faces/s2/1.pgm
+*        <path_to_at&t_faces>/orl_faces/s3/1.pgm
+*        <path_to_at&t_faces>/orl_faces/s4/1.pgm
+*        <path_to_at&t_faces>/orl_faces/s5/1.pgm
+*        <path_to_at&t_faces>/orl_faces/s6/1.pgm
+*        <path_to_at&t_faces>/orl_faces/s7/1.pgm
+*        <path_to_at&t_faces>/orl_faces/s8/1.pgm
+*        <path_to_at&t_faces>/orl_faces/s9/1.pgm
+*        <path_to_at&t_faces>/orl_faces/s10/1.pgm
+*        <path_to_at&t_faces>/orl_faces/s11/1.pgm
+*        <path_to_at&t_faces>/orl_faces/s12/1.pgm
+*        <path_to_at&t_faces>/orl_faces/s13/1.pgm
+*        <path_to_at&t_faces>/orl_faces/s14/1.pgm
+*        <path_to_at&t_faces>/orl_faces/s15/1.pgm
+*
 */
 
 #include <iostream>
