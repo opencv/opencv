@@ -48,12 +48,15 @@
 #include <android/log.h>
 #include <camera_activity.hpp>
 
-#if !defined(LOGD) && !defined(LOGI) && !defined(LOGE)
+//#if !defined(LOGD) && !defined(LOGI) && !defined(LOGE)
+#undef LOGD
+#undef LOGE
+#undef LOGI
 #define LOG_TAG "CV_CAP"
 #define LOGD(...) ((void)__android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__))
 #define LOGI(...) ((void)__android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__))
 #define LOGE(...) ((void)__android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__))
-#endif
+//#endif
 
 class HighguiAndroidCameraActivity;
 
@@ -86,8 +89,8 @@ protected:
     //raw from camera
     int m_width;
     int m_height;
-    unsigned char *m_frameYUV420;
-    unsigned char *m_frameYUV420next;
+    cv::Mat m_frameYUV420;
+    cv::Mat m_frameYUV420next;
 
     enum YUVformat
     {
@@ -115,9 +118,9 @@ private:
     bool m_hasColor;
 
     enum CvCapture_Android_DataState {
-	    CVCAPTURE_ANDROID_STATE_NO_FRAME=0,
-	    CVCAPTURE_ANDROID_STATE_HAS_NEW_FRAME_UNGRABBED,
-	    CVCAPTURE_ANDROID_STATE_HAS_FRAME_GRABBED
+        CVCAPTURE_ANDROID_STATE_NO_FRAME=0,
+        CVCAPTURE_ANDROID_STATE_HAS_NEW_FRAME_UNGRABBED,
+        CVCAPTURE_ANDROID_STATE_HAS_FRAME_GRABBED
     };
     volatile CvCapture_Android_DataState m_dataState;
 
@@ -189,8 +192,8 @@ CvCapture_Android::CvCapture_Android(int cameraId)
     m_height              = 0;
     m_activity            = 0;
     m_isOpened            = false;
-    m_frameYUV420        = 0;
-    m_frameYUV420next    = 0;
+    // m_frameYUV420        = 0;
+    // m_frameYUV420next    = 0;
     m_hasGray             = false;
     m_hasColor            = false;
     m_dataState           = CVCAPTURE_ANDROID_STATE_NO_FRAME;
@@ -231,20 +234,19 @@ CvCapture_Android::~CvCapture_Android()
     {
         ((HighguiAndroidCameraActivity*)m_activity)->LogFramesRate();
 
+        pthread_mutex_lock(&m_nextFrameMutex);
 
-	pthread_mutex_lock(&m_nextFrameMutex);
+        // unsigned char *tmp1=m_frameYUV420;
+        // unsigned char *tmp2=m_frameYUV420next;
+        // m_frameYUV420 = 0;
+        // m_frameYUV420next = 0;
+        // delete tmp1;
+        // delete tmp2;
 
-        unsigned char *tmp1=m_frameYUV420;
-        unsigned char *tmp2=m_frameYUV420next;
-        m_frameYUV420 = 0;
-        m_frameYUV420next = 0;
-        delete tmp1;
-        delete tmp2;
+        m_dataState=CVCAPTURE_ANDROID_STATE_NO_FRAME;
+        pthread_cond_broadcast(&m_nextFrameCond);
 
-	m_dataState=CVCAPTURE_ANDROID_STATE_NO_FRAME;
-	pthread_cond_broadcast(&m_nextFrameCond);
-
-	pthread_mutex_unlock(&m_nextFrameMutex);
+        pthread_mutex_unlock(&m_nextFrameMutex);
 
         //m_activity->disconnect() will be automatically called inside destructor;
         delete m_activity;
@@ -257,7 +259,7 @@ CvCapture_Android::~CvCapture_Android()
 
 double CvCapture_Android::getProperty( int propIdx )
 {
-  switch ( propIdx )
+    switch ( propIdx )
     {
     case CV_CAP_PROP_FRAME_WIDTH:
         return (double)m_activity->getFrameWidth();
@@ -308,7 +310,7 @@ bool CvCapture_Android::setProperty( int propIdx, double propValue )
             m_activity->setProperty(ANDROID_CAMERA_PROPERTY_FRAMEHEIGHT, propValue);
             break;
         case CV_CAP_PROP_AUTOGRAB:
-	    m_shouldAutoGrab=(propValue != 0);
+        m_shouldAutoGrab=(propValue != 0);
             break;
         case CV_CAP_PROP_EXPOSURE:
             m_activity->setProperty(ANDROID_CAMERA_PROPERTY_EXPOSURE, propValue);
@@ -327,13 +329,13 @@ bool CvCapture_Android::setProperty( int propIdx, double propValue )
             break;
         default:
             CV_Error( CV_StsOutOfRange, "Failed attempt to SET unsupported camera property." );
-	    return false;
+        return false;
         }
 
-	if (propIdx != CV_CAP_PROP_AUTOGRAB) {// property for highgui class CvCapture_Android only
-		m_CameraParamsChanged = true;
-	}
-	res = true;
+        if (propIdx != CV_CAP_PROP_AUTOGRAB) {// property for highgui class CvCapture_Android only
+            m_CameraParamsChanged = true;
+        }
+        res = true;
     }
 
     return res;
@@ -342,8 +344,8 @@ bool CvCapture_Android::setProperty( int propIdx, double propValue )
 bool CvCapture_Android::grabFrame()
 {
     if( !isOpened() ) {
-	    LOGE("CvCapture_Android::grabFrame(): camera is not opened");
-	    return false;
+        LOGE("CvCapture_Android::grabFrame(): camera is not opened");
+        return false;
     }
 
     bool res=false;
@@ -352,38 +354,38 @@ bool CvCapture_Android::grabFrame()
     {
         m_activity->applyProperties();
         m_CameraParamsChanged = false;
-	m_dataState= CVCAPTURE_ANDROID_STATE_NO_FRAME;//we will wait new frame
+    m_dataState= CVCAPTURE_ANDROID_STATE_NO_FRAME;//we will wait new frame
     }
 
-    if (m_dataState!=CVCAPTURE_ANDROID_STATE_HAS_NEW_FRAME_UNGRABBED) {
-	    m_waitingNextFrame = true;
-	    pthread_cond_wait(&m_nextFrameCond, &m_nextFrameMutex);
+    if (m_dataState!=CVCAPTURE_ANDROID_STATE_HAS_NEW_FRAME_UNGRABBED)
+    {
+        m_waitingNextFrame = true;
+        pthread_cond_wait(&m_nextFrameCond, &m_nextFrameMutex);
     }
 
-    if (m_dataState == CVCAPTURE_ANDROID_STATE_HAS_NEW_FRAME_UNGRABBED) {
-            //LOGD("CvCapture_Android::grabFrame: get new frame");
-	    //swap current and new frames
-            unsigned char* tmp = m_frameYUV420;
-            m_frameYUV420 = m_frameYUV420next;
-            m_frameYUV420next = tmp;
+    if (m_dataState == CVCAPTURE_ANDROID_STATE_HAS_NEW_FRAME_UNGRABBED)
+    {
+        //LOGD("CvCapture_Android::grabFrame: get new frame");
+        //swap current and new frames
+        cv::swap(m_frameYUV420, m_frameYUV420next);
 
-	    //discard cached frames
-	    m_hasGray = false;
-	    m_hasColor = false;
+        //discard cached frames
+        m_hasGray = false;
+        m_hasColor = false;
 
-	    m_dataState=CVCAPTURE_ANDROID_STATE_HAS_FRAME_GRABBED;
-	    m_framesGrabbed++;
+        m_dataState=CVCAPTURE_ANDROID_STATE_HAS_FRAME_GRABBED;
+        m_framesGrabbed++;
 
-	    res=true;
+        res=true;
     } else {
-	    LOGE("CvCapture_Android::grabFrame: NO new frame");
+        LOGE("CvCapture_Android::grabFrame: NO new frame");
     }
 
 
     int res_unlock=pthread_mutex_unlock(&m_nextFrameMutex);
     if (res_unlock) {
-	    LOGE("Error in CvCapture_Android::grabFrame: pthread_mutex_unlock returned %d --- probably, this object has been destroyed", res_unlock);
-	    return false;
+        LOGE("Error in CvCapture_Android::grabFrame: pthread_mutex_unlock returned %d --- probably, this object has been destroyed", res_unlock);
+        return false;
     }
 
     return res;
@@ -393,7 +395,8 @@ IplImage* CvCapture_Android::retrieveFrame( int outputType )
 {
     IplImage* image = NULL;
 
-    unsigned char *current_frameYUV420=m_frameYUV420;
+    cv::Mat m_frameYUV420_ref = m_frameYUV420;
+    unsigned char *current_frameYUV420=m_frameYUV420_ref.ptr();
     //Attention! all the operations in this function below should occupy less time than the period between two frames from camera
     if (NULL != current_frameYUV420)
     {
@@ -456,19 +459,9 @@ void CvCapture_Android::setFrame(const void* buffer, int bufferSize)
     prepareCacheForYUV(width, height);
 
     //copy data
-    memcpy(m_frameYUV420next, buffer, bufferSize);
-    //LOGD("CvCapture_Android::setFrame -- memcpy is done");
-
-#if 0 //moved this part of code into grabFrame
-    //swap current and new frames
-    unsigned char* tmp = m_frameYUV420;
-    m_frameYUV420 = m_frameYUV420next;
-    m_frameYUV420next = tmp;
-
-    //discard cached frames
-    m_hasGray = false;
-    m_hasColor = false;
-#endif
+    cv::Mat m_frameYUV420next_ref = m_frameYUV420next;
+    memcpy(m_frameYUV420next_ref.ptr(), buffer, bufferSize);
+    LOGD("CvCapture_Android::setFrame -- memcpy is done");
 
     m_dataState = CVCAPTURE_ANDROID_STATE_HAS_NEW_FRAME_UNGRABBED;
     m_waitingNextFrame = false;//set flag that no more frames required at this moment
@@ -482,17 +475,22 @@ void CvCapture_Android::prepareCacheForYUV(int width, int height)
         LOGD("CvCapture_Android::prepareCacheForYUV: Changing size of buffers: from width=%d height=%d to width=%d height=%d", m_width, m_height, width, height);
         m_width = width;
         m_height = height;
+        /*
         unsigned char *tmp = m_frameYUV420next;
         m_frameYUV420next = new unsigned char [width * height * 3 / 2];
-	if (tmp != NULL) {
-		delete[] tmp;
-	}
+        if (tmp != NULL)
+        {
+            delete[] tmp;
+        }
 
         tmp = m_frameYUV420;
         m_frameYUV420 = new unsigned char [width * height * 3 / 2];
-	if (tmp != NULL) {
-		delete[] tmp;
-	}
+        if (tmp != NULL)
+        {
+            delete[] tmp;
+        }*/
+        m_frameYUV420.create(height * 3 / 2, width, CV_8UC1);
+        m_frameYUV420next.create(height * 3 / 2, width, CV_8UC1);
     }
 }
 
