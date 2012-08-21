@@ -24,15 +24,6 @@
 using namespace cv;
 using namespace std;
 
-
-///////////////////////
-// Global Variables
-vector<Mat> images;
-Mat data;
-PCA pca;
-string winName = "Reconstruction | press 'q' to quit";
-
-
 ///////////////////////
 // Functions
 void read_imgList(const string& filename, vector<Mat>& images) {
@@ -71,21 +62,33 @@ Mat toGrayscale(InputArray _src) {
     return dst;
 }
 
-void onTrackbar(int pos, void* ptr) 
+struct params
 {
-    cout << "Retained Variance = " << pos << "%" << endl;
+    Mat data;
+    int ch;
+    int rows;
+    PCA pca;
+    string winName;
+};
+
+void onTrackbar(int pos, void* ptr) 
+{    
+    cout << "Retained Variance = " << pos << "%   ";
     cout << "re-calculating PCA..." << std::flush;
     
     double var = pos / 100.0;
-    pca = PCA(data, cv::Mat(), CV_PCA_DATA_AS_ROW, var);
     
-    Mat point = pca.project(data.row(0));
-    Mat reconstruction = pca.backProject(point);
-    reconstruction = reconstruction.reshape(images[0].channels(), images[0].rows);
+    struct params *p = (struct params *)ptr;
+    
+    p->pca = PCA(p->data, cv::Mat(), CV_PCA_DATA_AS_ROW, var);
+    
+    Mat point = p->pca.project(p->data.row(0));
+    Mat reconstruction = p->pca.backProject(point);
+    reconstruction = reconstruction.reshape(p->ch, p->rows);
     reconstruction = toGrayscale(reconstruction);
     
-    imshow(winName, reconstruction);
-    cout << "done!" << endl;
+    imshow(p->winName, reconstruction);
+    cout << "done!   # of principal components: " << p->pca.eigenvectors.rows << endl;
 }
 
 
@@ -101,6 +104,9 @@ int main(int argc, char** argv)
     // Get the path to your CSV.
     string imgList = string(argv[1]);
     
+    // vector to hold the images
+    vector<Mat> images;
+    
     // Read in the data. This can fail if not valid
     try {
         read_imgList(imgList, images);
@@ -114,12 +120,12 @@ int main(int argc, char** argv)
         string error_message = "This demo needs at least 2 images to work. Please add more images to your data set!";
         CV_Error(CV_StsError, error_message);
     }
-    
+        
     // Reshape and stack images into a rowMatrix
-    data = formatImagesForPCA(images);
+    Mat data = formatImagesForPCA(images);
     
     // perform PCA
-    pca = PCA(data, cv::Mat(), CV_PCA_DATA_AS_ROW, 0.95); // trackbar is initially set here, also this is a common value for retainedVariance
+    PCA pca(data, cv::Mat(), CV_PCA_DATA_AS_ROW, 0.95); // trackbar is initially set here, also this is a common value for retainedVariance
     
     // Demonstration of the effect of retainedVariance on the first image 
     Mat point = pca.project(data.row(0)); // project into the eigenspace, thus the image becomes a "point"
@@ -127,13 +133,27 @@ int main(int argc, char** argv)
     reconstruction = reconstruction.reshape(images[0].channels(), images[0].rows); // reshape from a row vector into image shape
     reconstruction = toGrayscale(reconstruction); // re-scale for displaying purposes
     
+    // init highgui window
+    string winName = "Reconstruction | press 'q' to quit";
     namedWindow(winName, CV_WINDOW_NORMAL);
-    int pos = 95;
-    createTrackbar("Retained Variance (%)", winName, &pos, 100, onTrackbar); 
     
+    // params struct to pass to the trackbar handler
+    params p;
+    p.data = data;
+    p.ch = images[0].channels();
+    p.rows = images[0].rows;
+    p.pca = pca;
+    p.winName = winName;
+    
+    // create the tracbar
+    int pos = 95;
+    createTrackbar("Retained Variance (%)", winName, &pos, 100, onTrackbar, (void*)&p); 
+    
+    // display until user presses q
     imshow(winName, reconstruction);
+    
     char key = 0;
-    while(key != 'q' || key == 27)
+    while(key != 'q')
         key = waitKey();
    
    return 0; 

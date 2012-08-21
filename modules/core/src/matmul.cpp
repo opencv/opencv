@@ -2925,7 +2925,7 @@ PCA& PCA::operator()(InputArray _data, InputArray __mean, int flags, double reta
 
     CV_Assert( retainedVariance > 0 && retainedVariance <= 1 );
 
-    int count = std::min(len, in_count), out_count = count;
+    int count = std::min(len, in_count);
 
     // "scrambled" way to compute PCA (when cols(A)>rows(A)):
     // B = A'A; B*x=b*x; C = AA'; C*y=c*y -> AA'*y=c*y -> A'A*(A'*y)=c*(A'*y) -> c = b, x=A'*y
@@ -2967,8 +2967,8 @@ PCA& PCA::operator()(InputArray _data, InputArray __mean, int flags, double reta
             (flags & CV_PCA_DATA_AS_COL) ? CV_GEMM_B_T : 0);
         eigenvectors = evects1;
 
-        // normalize eigenvectors
-        for( i = 0; i < out_count; i++ )
+        // normalize all eigenvectors
+        for( i = 0; i < eigenvectors.rows; i++ )
         {
             Mat vec = eigenvectors.row(i);
             normalize(vec, vec);
@@ -2995,11 +2995,11 @@ PCA& PCA::operator()(InputArray _data, InputArray __mean, int flags, double reta
             break;    
     }
 
-    out_count = std::max(2, L);
+    L = std::max(2, L);
     
     // use clone() to physically copy the data and thus deallocate the original matrices
-    eigenvalues = eigenvalues.rowRange(0,out_count).clone();
-    eigenvectors = eigenvectors.rowRange(0,out_count).clone();
+    eigenvalues = eigenvalues.rowRange(0,L).clone();
+    eigenvectors = eigenvectors.rowRange(0,L).clone();
   
     return *this;
 }
