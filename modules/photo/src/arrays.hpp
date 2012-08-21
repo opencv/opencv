@@ -67,7 +67,7 @@ template <class T> struct Array2d {
 
     ~Array2d() {
         if (needToDeallocArray) {
-            delete a;
+            delete[] a;
         }
     }
 
@@ -96,7 +96,7 @@ template <class T> struct Array3d {
 
     ~Array3d() {
         if (needToDeallocArray) {
-            delete a;
+            delete[] a;
         }
     }
 
@@ -138,7 +138,7 @@ template <class T> struct Array4d {
 
     ~Array4d() {
         if (needToDeallocArray) {
-            delete a;
+            delete[] a;
         }
     }
 

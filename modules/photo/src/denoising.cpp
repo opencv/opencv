@@ -103,7 +103,7 @@ static void fastNlMeansDenoisingMultiCheckPreconditions(
                                int imgToDenoiseIndex, int temporalWindowSize,
                                int templateWindowSize, int searchWindowSize) 
 {
-    int src_imgs_size = srcImgs.size();
+    int src_imgs_size = (int)srcImgs.size();
     if (src_imgs_size == 0) {
         CV_Error(CV_StsBadArg, "Input images vector should not be empty!");
     }
@@ -176,7 +176,7 @@ void cv::fastNlMeansDenoisingColoredMulti( const std::vector<Mat>& srcImgs,
         temporalWindowSize, templateWindowSize, searchWindowSize
     );
 
-    int src_imgs_size = srcImgs.size();
+    int src_imgs_size = (int)srcImgs.size();
 
     if (srcImgs[0].type() != CV_8UC3) {
         CV_Error(CV_StsBadArg, "Type of input images should be CV_8UC3!");

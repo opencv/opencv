@@ -63,6 +63,10 @@ struct FastNlMeansMultiDenoisingInvoker {
 
         void operator() (const BlockedRange& range) const;
 
+		void operator= (const FastNlMeansMultiDenoisingInvoker& invoker) {
+			CV_Error(CV_StsNotImplemented, "Assigment operator is not implemented");
+		}
+
     private:
         int rows_;
         int cols_;
@@ -111,6 +115,9 @@ FastNlMeansMultiDenoisingInvoker<T>::FastNlMeansMultiDenoisingInvoker(
     int search_window_size, 
     const double h) : dst_(dst), extended_srcs_(srcImgs.size())
 {
+    CV_Assert(srcImgs.size() > 0);
+    CV_Assert(srcImgs[0].channels() <= 3);
+
     rows_ = srcImgs[0].rows;
     cols_ = srcImgs[0].cols;
     channels_count_ = srcImgs[0].channels();
@@ -175,16 +182,11 @@ void FastNlMeansMultiDenoisingInvoker<T>::operator() (const BlockedRange& range)
     int row_from = range.begin();
     int row_to = range.end() - 1;
 
-    int dist_sums_array[temporal_window_size_ * search_window_size_ * search_window_size_];
-    Array3d<int> dist_sums(dist_sums_array, 
-        temporal_window_size_, search_window_size_, search_window_size_);
+    Array3d<int> dist_sums(temporal_window_size_, search_window_size_, search_window_size_);
     
     // for lazy calc optimization
-    int col_dist_sums_array[
-        template_window_size_ * temporal_window_size_ * search_window_size_ * search_window_size_];
-
-    Array4d<int> col_dist_sums(col_dist_sums_array, 
-        template_window_size_, temporal_window_size_, search_window_size_, search_window_size_);
+    Array4d<int> col_dist_sums(
+		template_window_size_, temporal_window_size_, search_window_size_, search_window_size_);
     
     int first_col_num = -1;
 
@@ -263,7 +265,7 @@ void FastNlMeansMultiDenoisingInvoker<T>::operator() (const BlockedRange& range)
             // calc weights
             int weights_sum = 0;
             
-            int estimation[channels_count_];            
+            int estimation[3];            
             for (int channel_num = 0; channel_num < channels_count_; channel_num++) {
                 estimation[channel_num] = 0;
             }
