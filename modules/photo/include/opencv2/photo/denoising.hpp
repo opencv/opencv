@@ -55,23 +55,23 @@
 namespace cv
 {
 
-CV_EXPORTS void fastNlMeansDenoising( const Mat& src, Mat& dst,
-                                      int templateWindowSize, int searchWindowSize, int h);
+CV_EXPORTS_W void fastNlMeansDenoising( InputArray src, OutputArray dst,
+                                        int templateWindowSize, int searchWindowSize, int h);
 
-CV_EXPORTS void fastNlMeansDenoisingColored( const Mat& src, Mat& dst,
-                                             int templateWindowSize, int searchWindowSize, 
-                                             int h, int hForColorComponents);
+CV_EXPORTS_W void fastNlMeansDenoisingColored( InputArray src, OutputArray dst,
+                                               int templateWindowSize, int searchWindowSize, 
+                                               int h, int hForColorComponents);
 
-CV_EXPORTS void fastNlMeansDenoisingMulti( const std::vector<Mat>& srcImgs, 
-                                           int imgToDenoiseIndex, int temporalWindowSize,
-                                           Mat& dst,
-                                           int templateWindowSize, int searchWindowSize, int h);
+CV_EXPORTS_W void fastNlMeansDenoisingMulti( InputArrayOfArrays srcImgs, 
+                                             int imgToDenoiseIndex, int temporalWindowSize,
+                                             OutputArray dst,
+                                             int templateWindowSize, int searchWindowSize, int h);
 
-CV_EXPORTS void fastNlMeansDenoisingColoredMulti( const std::vector<Mat>& srcImgs, 
-                                                  int imgToDenoiseIndex, int temporalWindowSize,
-                                                  Mat& dst,
-                                                  int templateWindowSize, int searchWindowSize, 
-                                                  int h, int hForColorComponents);
+CV_EXPORTS_W void fastNlMeansDenoisingColoredMulti( InputArrayOfArrays srcImgs, 
+                                                    int imgToDenoiseIndex, int temporalWindowSize,
+                                                    OutputArray dst,
+                                                    int templateWindowSize, int searchWindowSize, 
+                                                    int h, int hForColorComponents);
 
 }
 #endif

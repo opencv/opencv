@@ -270,9 +270,9 @@ void FastNlMeansMultiDenoisingInvoker<T>::operator() (const BlockedRange& range)
                 estimation[channel_num] = 0;
             }
             for (int d = 0; d < temporal_window_size_; d++) {
+                const Mat& esrc_d = extended_srcs_[d];
                 for (int y = 0; y < search_window_size_; y++) {
-                    const T* cur_row_ptr = 
-                        extended_srcs_[d].ptr<T>(border_size_ + search_window_y + y);
+                    const T* cur_row_ptr = esrc_d.ptr<T>(border_size_ + search_window_y + y);
 
                     int* dist_sums_row = dist_sums.row_ptr(d, y);
 
@@ -298,7 +298,8 @@ void FastNlMeansMultiDenoisingInvoker<T>::operator() (const BlockedRange& range)
                 dst_.at<T>(i,j) = saturateCastFromArray<T>(estimation);
 
             } else { // weights_sum == 0
-                dst_.at<T>(i,j) = extended_srcs_[temporal_window_half_size_].at<T>(i,j);
+                const Mat& esrc = extended_srcs_[temporal_window_half_size_];
+                dst_.at<T>(i,j) = esrc.at<T>(i,j);
             }
         }
     }

@@ -1294,28 +1294,64 @@ class BilateralFilter_8u_Invoker :
 public:
     BilateralFilter_8u_Invoker(Mat& _dest, const Mat& _temp, int _radius, int _maxk,
         int* _space_ofs, float *_space_weight, float *_color_weight) :
-        ParallelLoopBody(), dest(&_dest), temp(&_temp), radius(_radius),
+        temp(&_temp), dest(&_dest), radius(_radius),
         maxk(_maxk), space_ofs(_space_ofs), space_weight(_space_weight), color_weight(_color_weight)
     {
     }
-
+    
     virtual void operator() (const Range& range) const
     {
         int i, j, cn = dest->channels(), k;
         Size size = dest->size();
-
+		#if CV_SSE3
+        int CV_DECL_ALIGNED(16) buf[4];
+        float CV_DECL_ALIGNED(16) bufSum[4];
+        static const int CV_DECL_ALIGNED(16) bufSignMask[] = { 0x80000000, 0x80000000, 0x80000000, 0x80000000 };
+        bool haveSSE3 = checkHardwareSupport(CV_CPU_SSE3);
+		#endif
+        
         for( i = range.start; i < range.end; i++ )
         {
             const uchar* sptr = temp->ptr(i+radius) + radius*cn;
             uchar* dptr = dest->ptr(i);
-
+            
             if( cn == 1 )
             {
                 for( j = 0; j < size.width; j++ )
                 {
                     float sum = 0, wsum = 0;
                     int val0 = sptr[j];
-                    for( k = 0; k < maxk; k++ )
+					k = 0;
+					#if CV_SSE3
+					if( haveSSE3 )
+					{
+						__m128 _val0 = _mm_set1_ps(val0);
+						const __m128 _signMask = _mm_load_ps((const float*)bufSignMask);
+
+						for( ; k <= maxk - 4; k += 4 )
+						{
+							__m128 _valF = _mm_set_ps(sptr[j + space_ofs[k+3]], sptr[j + space_ofs[k+2]],
+                                                      sptr[j + space_ofs[k+1]], sptr[j + space_ofs[k]]);
+							
+							__m128 _val = _mm_andnot_ps(_signMask, _mm_sub_ps(_valF, _val0));
+							_mm_store_si128((__m128i*)buf, _mm_cvtps_epi32(_val));
+
+							__m128 _cw = _mm_set_ps(color_weight[buf[3]],color_weight[buf[2]],
+                                                    color_weight[buf[1]],color_weight[buf[0]]);
+							__m128 _sw = _mm_loadu_ps(space_weight+k);
+							__m128 _w = _mm_mul_ps(_cw, _sw);
+							 _cw = _mm_mul_ps(_w, _valF);
+
+							 _sw = _mm_hadd_ps(_w, _cw);
+							 _sw = _mm_hadd_ps(_sw, _sw);
+							 _mm_storel_pi((__m64*)bufSum, _sw);
+
+							 sum += bufSum[1];
+							 wsum += bufSum[0];
+						}
+					}
+					#endif
+                    for( ; k < maxk; k++ )
                     {
                         int val = sptr[j + space_ofs[k]];
                         float w = space_weight[k]*color_weight[std::abs(val - val0)];
@@ -1333,7 +1369,57 @@ public:
                 {
                     float sum_b = 0, sum_g = 0, sum_r = 0, wsum = 0;
                     int b0 = sptr[j], g0 = sptr[j+1], r0 = sptr[j+2];
-                    for( k = 0; k < maxk; k++ )
+					k = 0;
+					#if CV_SSE3
+					if( haveSSE3 )
+					{
+                        const __m128 _b0 = _mm_set1_ps(b0);
+						const __m128 _g0 = _mm_set1_ps(g0);
+						const __m128 _r0 = _mm_set1_ps(r0);
+						const __m128 _signMask = _mm_load_ps((const float*)bufSignMask);
+                        
+                        for( ; k <= maxk - 4; k += 4 )
+                        {
+							const uchar* sptr_k  = sptr + j + space_ofs[k];
+							const uchar* sptr_k1 = sptr + j + space_ofs[k+1];
+							const uchar* sptr_k2 = sptr + j + space_ofs[k+2];
+							const uchar* sptr_k3 = sptr + j + space_ofs[k+3];
+
+							__m128 _b = _mm_set_ps(sptr_k3[0],sptr_k2[0],sptr_k1[0],sptr_k[0]);
+							__m128 _g = _mm_set_ps(sptr_k3[1],sptr_k2[1],sptr_k1[1],sptr_k[1]);
+							__m128 _r = _mm_set_ps(sptr_k3[2],sptr_k2[2],sptr_k1[2],sptr_k[2]);
+
+							__m128 bt = _mm_andnot_ps(_signMask, _mm_sub_ps(_b,_b0));
+							__m128 gt = _mm_andnot_ps(_signMask, _mm_sub_ps(_g,_g0));
+							__m128 rt = _mm_andnot_ps(_signMask, _mm_sub_ps(_r,_r0));
+
+							bt =_mm_add_ps(rt, _mm_add_ps(bt, gt));
+							_mm_store_si128((__m128i*)buf, _mm_cvtps_epi32(bt));
+
+							__m128 _w  = _mm_set_ps(color_weight[buf[3]],color_weight[buf[2]],
+                                                    color_weight[buf[1]],color_weight[buf[0]]);
+							__m128 _sw = _mm_loadu_ps(space_weight+k);
+
+							_w = _mm_mul_ps(_w,_sw);
+							_b = _mm_mul_ps(_b, _w);
+							_g = _mm_mul_ps(_g, _w);
+							_r = _mm_mul_ps(_r, _w);
+
+							 _w = _mm_hadd_ps(_w, _b);
+							 _g = _mm_hadd_ps(_g, _r);
+
+							 _w = _mm_hadd_ps(_w, _g);
+							 _mm_store_ps(bufSum, _w);
+
+							 wsum  += bufSum[0];
+							 sum_b += bufSum[1];
+							 sum_g += bufSum[2];
+							 sum_r += bufSum[3];
+						 }
+					}
+					#endif
+
+                    for( ; k < maxk; k++ )
                     {
                         const uchar* sptr_k = sptr + j + space_ofs[k];
                         int b = sptr_k[0], g = sptr_k[1], r = sptr_k[2];
@@ -1351,10 +1437,10 @@ public:
             }
         }
     }
-
+    
 private:
-    Mat *dest;
     const Mat *temp;
+    Mat *dest;
     int radius, maxk, *space_ofs;
     float *space_weight, *color_weight;
 };
@@ -1364,46 +1450,51 @@ bilateralFilter_8u( const Mat& src, Mat& dst, int d,
     double sigma_color, double sigma_space,
     int borderType )
 {
+
     int cn = src.channels();
     int i, j, maxk, radius;
     Size size = src.size();
-
+    
     CV_Assert( (src.type() == CV_8UC1 || src.type() == CV_8UC3) &&
               src.type() == dst.type() && src.size() == dst.size() &&
               src.data != dst.data );
-
+    
     if( sigma_color <= 0 )
         sigma_color = 1;
     if( sigma_space <= 0 )
         sigma_space = 1;
-
+    
     double gauss_color_coeff = -0.5/(sigma_color*sigma_color);
     double gauss_space_coeff = -0.5/(sigma_space*sigma_space);
-
+    
     if( d <= 0 )
         radius = cvRound(sigma_space*1.5);
     else
         radius = d/2;
     radius = MAX(radius, 1);
     d = radius*2 + 1;
-
+    
     Mat temp;
     copyMakeBorder( src, temp, radius, radius, radius, radius, borderType );
-
+    
     vector<float> _color_weight(cn*256);
     vector<float> _space_weight(d*d);
     vector<int> _space_ofs(d*d);
     float* color_weight = &_color_weight[0];
     float* space_weight = &_space_weight[0];
     int* space_ofs = &_space_ofs[0];
-
+    
     // initialize color-related bilateral filter coefficients
+
     for( i = 0; i < 256*cn; i++ )
         color_weight[i] = (float)std::exp(i*i*gauss_color_coeff);
-
+    
     // initialize space-related bilateral filter coefficients
     for( i = -radius, maxk = 0; i <= radius; i++ )
-        for( j = -radius; j <= radius; j++ )
+	{
+		j = -radius;
+
+        for( ;j <= radius; j++ )
         {
             double r = std::sqrt((double)i*i + (double)j*j);
             if( r > radius )
@@ -1411,7 +1502,8 @@ bilateralFilter_8u( const Mat& src, Mat& dst, int d,
             space_weight[maxk] = (float)std::exp(r*r*gauss_space_coeff);
             space_ofs[maxk++] = (int)(i*temp.step + j*cn);
         }
-
+	}
+    
     BilateralFilter_8u_Invoker body(dst, temp, radius, maxk, space_ofs, space_weight, color_weight);
     parallel_for_(Range(0, size.height), body);
 }
@@ -1424,7 +1516,7 @@ public:
 
     BilateralFilter_32f_Invoker(int _cn, int _radius, int _maxk, int *_space_ofs,
         const Mat& _temp, Mat& _dest, float _scale_index, float *_space_weight, float *_expLUT) :
-        ParallelLoopBody(), cn(_cn), radius(_radius), maxk(_maxk), space_ofs(_space_ofs),
+        cn(_cn), radius(_radius), maxk(_maxk), space_ofs(_space_ofs),
         temp(&_temp), dest(&_dest), scale_index(_scale_index), space_weight(_space_weight), expLUT(_expLUT)
     {
     }
@@ -1433,6 +1525,12 @@ public:
     {
         int i, j, k;
         Size size = dest->size();
+		#if CV_SSE3
+        int CV_DECL_ALIGNED(16) idxBuf[4];
+        float CV_DECL_ALIGNED(16) bufSum32[4];
+        static const int CV_DECL_ALIGNED(16) bufSignMask[] = { 0x80000000, 0x80000000, 0x80000000, 0x80000000 };
+        bool haveSSE3 = checkHardwareSupport(CV_CPU_SSE3);
+		#endif
 
         for( i = range.start; i < range.end; i++ )
         {
@@ -1445,7 +1543,44 @@ public:
                 {
                     float sum = 0, wsum = 0;
                     float val0 = sptr[j];
-                    for( k = 0; k < maxk; k++ )
+					k = 0;
+					#if CV_SSE3
+					if( haveSSE3 )
+					{
+						const __m128 _val0 = _mm_set1_ps(sptr[j]);
+						const __m128 _scale_index = _mm_set1_ps(scale_index);
+						const __m128 _signMask = _mm_load_ps((const float*)bufSignMask);
+					
+						for( ; k <= maxk - 4 ; k += 4 )
+						{
+							__m128 _sw    = _mm_loadu_ps(space_weight + k);
+							__m128 _val   = _mm_set_ps(sptr[j + space_ofs[k+3]], sptr[j + space_ofs[k+2]],
+                                                       sptr[j + space_ofs[k+1]], sptr[j + space_ofs[k]]);
+							__m128 _alpha = _mm_mul_ps(_mm_andnot_ps( _signMask, _mm_sub_ps(_val,_val0)), _scale_index);
+
+							__m128i _idx = _mm_cvtps_epi32(_alpha);
+							_mm_store_si128((__m128i*)idxBuf, _idx);
+							_alpha = _mm_sub_ps(_alpha, _mm_cvtepi32_ps(_idx));
+
+							__m128 _explut  = _mm_set_ps(expLUT[idxBuf[3]], expLUT[idxBuf[2]],
+                                                         expLUT[idxBuf[1]], expLUT[idxBuf[0]]);
+							__m128 _explut1 = _mm_set_ps(expLUT[idxBuf[3]+1], expLUT[idxBuf[2]+1],
+                                                         expLUT[idxBuf[1]+1], expLUT[idxBuf[0]+1]);
+						
+							__m128 _w = _mm_mul_ps(_sw, _mm_add_ps(_explut, _mm_mul_ps(_alpha, _mm_sub_ps(_explut1, _explut))));
+							_val = _mm_mul_ps(_w, _val);
+
+							 _sw = _mm_hadd_ps(_w, _val);
+							 _sw = _mm_hadd_ps(_sw, _sw);
+							 _mm_storel_pi((__m64*)bufSum32, _sw);
+
+							 sum += bufSum32[1];
+							 wsum += bufSum32[0];
+						}
+					}
+					#endif
+
+                    for( ; k < maxk; k++ )
                     {
                         float val = sptr[j + space_ofs[k]];
                         float alpha = (float)(std::abs(val - val0)*scale_index);
@@ -1465,7 +1600,64 @@ public:
                 {
                     float sum_b = 0, sum_g = 0, sum_r = 0, wsum = 0;
                     float b0 = sptr[j], g0 = sptr[j+1], r0 = sptr[j+2];
-                    for( k = 0; k < maxk; k++ )
+					k = 0;
+					#if  CV_SSE3
+					if( haveSSE3 )
+					{
+						const __m128 _b0 = _mm_set1_ps(b0);
+						const __m128 _g0 = _mm_set1_ps(g0);
+						const __m128 _r0 = _mm_set1_ps(r0);
+						const __m128 _scale_index = _mm_set1_ps(scale_index);
+                        const __m128 _signMask = _mm_load_ps((const float*)bufSignMask);
+				
+						for( ; k <= maxk-4; k += 4 )
+						{
+							__m128 _sw = _mm_loadu_ps(space_weight + k);
+
+							const float* sptr_k  = sptr + j + space_ofs[k];
+							const float* sptr_k1 = sptr + j + space_ofs[k+1];
+							const float* sptr_k2 = sptr + j + space_ofs[k+2];
+							const float* sptr_k3 = sptr + j + space_ofs[k+3];
+
+							__m128 _b = _mm_set_ps(sptr_k3[0], sptr_k2[0], sptr_k1[0], sptr_k[0]);
+							__m128 _g = _mm_set_ps(sptr_k3[1], sptr_k2[1], sptr_k1[1], sptr_k[1]);
+							__m128 _r = _mm_set_ps(sptr_k3[2], sptr_k2[2], sptr_k1[2], sptr_k[2]);
+
+							__m128 _bt = _mm_andnot_ps(_signMask,_mm_sub_ps(_b,_b0));
+							__m128 _gt = _mm_andnot_ps(_signMask,_mm_sub_ps(_g,_g0));
+							__m128 _rt = _mm_andnot_ps(_signMask,_mm_sub_ps(_r,_r0));
+
+							__m128 _alpha = _mm_mul_ps(_scale_index, _mm_add_ps(_rt,_mm_add_ps(_bt, _gt)));
+
+							__m128i _idx  = _mm_cvtps_epi32(_alpha);
+							_mm_store_si128((__m128i*)idxBuf, _idx);
+							_alpha = _mm_sub_ps(_alpha, _mm_cvtepi32_ps(_idx));
+
+							__m128 _explut  = _mm_set_ps(expLUT[idxBuf[3]], expLUT[idxBuf[2]], expLUT[idxBuf[1]], expLUT[idxBuf[0]]);
+							__m128 _explut1 = _mm_set_ps(expLUT[idxBuf[3]+1], expLUT[idxBuf[2]+1], expLUT[idxBuf[1]+1], expLUT[idxBuf[0]+1]);
+							
+							__m128 _w = _mm_mul_ps(_sw, _mm_add_ps(_explut, _mm_mul_ps(_alpha, _mm_sub_ps(_explut1, _explut))));
+
+							_b = _mm_mul_ps(_b, _w);
+							_g = _mm_mul_ps(_g, _w);
+							_r = _mm_mul_ps(_r, _w);
+
+							 _w = _mm_hadd_ps(_w, _b);
+							 _g = _mm_hadd_ps(_g, _r);
+
+							 _w = _mm_hadd_ps(_w, _g);
+							 _mm_store_ps(bufSum32, _w);
+
+							 wsum  += bufSum32[0];
+							 sum_b += bufSum32[1];
+							 sum_g += bufSum32[2];
+							 sum_r += bufSum32[3];
+						}
+
+					}
+					#endif
+					
+                    for(; k < maxk; k++ )
                     {
                         const float* sptr_k = sptr + j + space_ofs[k];
                         float b = sptr_k[0], g = sptr_k[1], r = sptr_k[2];
@@ -1493,6 +1685,7 @@ private:
     Mat *dest;
     float scale_index, *space_weight, *expLUT;
 };
+    
 
 static void
 bilateralFilter_32f( const Mat& src, Mat& dst, int d,
@@ -1569,7 +1762,7 @@ bilateralFilter_32f( const Mat& src, Mat& dst, int d,
     }
 
     // initialize space-related bilateral filter coefficients
-    for( i = -radius, maxk = 0; i <= radius; i++ )
+    for( i = -radius, maxk = 0; i <= radius; i++ ) 
         for( j = -radius; j <= radius; j++ )
         {
             double r = std::sqrt((double)i*i + (double)j*j);

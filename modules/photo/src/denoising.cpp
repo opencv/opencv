@@ -45,9 +45,13 @@
 #include "fast_nlmeans_denoising_invoker.hpp"
 #include "fast_nlmeans_multi_denoising_invoker.hpp"
 
-void cv::fastNlMeansDenoising( const cv::Mat& src, cv::Mat& dst,
+void cv::fastNlMeansDenoising( InputArray _src, OutputArray _dst,
                                int templateWindowSize, int searchWindowSize, int h)
-{  
+{
+    Mat src = _src.getMat();
+    _dst.create(src.size(), src.type());
+    Mat dst = _dst.getMat();
+    
     switch (src.type()) {
         case CV_8U:
             parallel_for(cv::BlockedRange(0, src.rows), 
@@ -70,10 +74,14 @@ void cv::fastNlMeansDenoising( const cv::Mat& src, cv::Mat& dst,
     }
 }
 
-void cv::fastNlMeansDenoisingColored( const cv::Mat& src, cv::Mat& dst,
+void cv::fastNlMeansDenoisingColored( InputArray _src, OutputArray _dst,
                                       int templateWindowSize, int searchWindowSize, 
                                       int h, int hForColorComponents)
 {
+    Mat src = _src.getMat();
+    _dst.create(src.size(), src.type());
+    Mat dst = _dst.getMat();
+    
     if (src.type() != CV_8UC3) {
         CV_Error(CV_StsBadArg, "Type of input image should be CV_8UC3!");
         return;
@@ -130,15 +138,20 @@ static void fastNlMeansDenoisingMultiCheckPreconditions(
     }
 }
 
-void cv::fastNlMeansDenoisingMulti( const std::vector<Mat>& srcImgs, 
+void cv::fastNlMeansDenoisingMulti( InputArrayOfArrays _srcImgs, 
                                     int imgToDenoiseIndex, int temporalWindowSize,
-                                    cv::Mat& dst,
+                                    OutputArray _dst,
                                     int templateWindowSize, int searchWindowSize, int h)
-{ 
+{
+    vector<Mat> srcImgs;
+    _srcImgs.getMatVector(srcImgs);
+    
     fastNlMeansDenoisingMultiCheckPreconditions(
         srcImgs, imgToDenoiseIndex, 
         temporalWindowSize, templateWindowSize, searchWindowSize
     );
+    _dst.create(srcImgs[0].size(), srcImgs[0].type());
+    Mat dst = _dst.getMat();
 
     switch (srcImgs[0].type()) {
         case CV_8U:
@@ -165,16 +178,22 @@ void cv::fastNlMeansDenoisingMulti( const std::vector<Mat>& srcImgs,
     }
 }
 
-void cv::fastNlMeansDenoisingColoredMulti( const std::vector<Mat>& srcImgs, 
+void cv::fastNlMeansDenoisingColoredMulti( InputArrayOfArrays _srcImgs, 
                                            int imgToDenoiseIndex, int temporalWindowSize,
-                                           cv::Mat& dst,
+                                           OutputArray _dst,
                                            int templateWindowSize, int searchWindowSize, 
                                            int h, int hForColorComponents)
 {
+    vector<Mat> srcImgs;
+    _srcImgs.getMatVector(srcImgs);
+    
     fastNlMeansDenoisingMultiCheckPreconditions(
         srcImgs, imgToDenoiseIndex, 
         temporalWindowSize, templateWindowSize, searchWindowSize
     );
+    
+    _dst.create(srcImgs[0].size(), srcImgs[0].type());
+    Mat dst = _dst.getMat();
 
     int src_imgs_size = (int)srcImgs.size();
 
