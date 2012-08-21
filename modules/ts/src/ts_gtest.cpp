@@ -5896,7 +5896,7 @@ bool SkipPrefix(const char* prefix, const char** pstr) {
 // part can be omitted.
 //
 // Returns the value of the flag, or NULL if the parsing failed.
-const char* ParseFlagValue(const char* str,
+static const char* ParseFlagValue(const char* str,
                            const char* flag,
                            bool def_optional) {
   // str and flag must not be NULL.

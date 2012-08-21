@@ -41,17 +41,17 @@ protected:
 
 inline uchar CvLBPEvaluator::Feature::calc(const Mat &_sum, size_t y) const
 {
-    const int* sum = _sum.ptr<int>((int)y);
-    int cval = sum[p[5]] - sum[p[6]] - sum[p[9]] + sum[p[10]];
+    const int* psum = _sum.ptr<int>((int)y);
+    int cval = psum[p[5]] - psum[p[6]] - psum[p[9]] + psum[p[10]];
 
-    return (uchar)((sum[p[0]] - sum[p[1]] - sum[p[4]] + sum[p[5]] >= cval ? 128 : 0) |   // 0
-        (sum[p[1]] - sum[p[2]] - sum[p[5]] + sum[p[6]] >= cval ? 64 : 0) |    // 1
-        (sum[p[2]] - sum[p[3]] - sum[p[6]] + sum[p[7]] >= cval ? 32 : 0) |    // 2
-        (sum[p[6]] - sum[p[7]] - sum[p[10]] + sum[p[11]] >= cval ? 16 : 0) |  // 5
-        (sum[p[10]] - sum[p[11]] - sum[p[14]] + sum[p[15]] >= cval ? 8 : 0) | // 8
-        (sum[p[9]] - sum[p[10]] - sum[p[13]] + sum[p[14]] >= cval ? 4 : 0) |  // 7
-        (sum[p[8]] - sum[p[9]] - sum[p[12]] + sum[p[13]] >= cval ? 2 : 0) |   // 6
-        (sum[p[4]] - sum[p[5]] - sum[p[8]] + sum[p[9]] >= cval ? 1 : 0));     // 3
+    return (uchar)((psum[p[0]] - psum[p[1]] - psum[p[4]] + psum[p[5]] >= cval ? 128 : 0) |   // 0
+        (psum[p[1]] - psum[p[2]] - psum[p[5]] + psum[p[6]] >= cval ? 64 : 0) |    // 1
+        (psum[p[2]] - psum[p[3]] - psum[p[6]] + psum[p[7]] >= cval ? 32 : 0) |    // 2
+        (psum[p[6]] - psum[p[7]] - psum[p[10]] + psum[p[11]] >= cval ? 16 : 0) |  // 5
+        (psum[p[10]] - psum[p[11]] - psum[p[14]] + psum[p[15]] >= cval ? 8 : 0) | // 8
+        (psum[p[9]] - psum[p[10]] - psum[p[13]] + psum[p[14]] >= cval ? 4 : 0) |  // 7
+        (psum[p[8]] - psum[p[9]] - psum[p[12]] + psum[p[13]] >= cval ? 2 : 0) |   // 6
+        (psum[p[4]] - psum[p[5]] - psum[p[8]] + psum[p[9]] >= cval ? 1 : 0));     // 3
 }
 
 #endif

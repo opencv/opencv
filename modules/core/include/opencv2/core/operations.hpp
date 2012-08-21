@@ -866,7 +866,7 @@ template<typename _Tp, int m, int n> struct CV_EXPORTS Matx_FastSolveOp
 template<typename _Tp> struct CV_EXPORTS Matx_FastSolveOp<_Tp, 2, 1>
 {
     bool operator()(const Matx<_Tp, 2, 2>& a, const Matx<_Tp, 2, 1>& b,
-                    Matx<_Tp, 2, 1>& x, int method) const
+                    Matx<_Tp, 2, 1>& x, int /*method*/) const
     {
         _Tp d = determinant(a);
         if( d == 0 )
@@ -1244,7 +1244,7 @@ template<> inline Vec<double, 4> Vec<double, 4>::conj() const
     return conjugate(*this);
 }
 
-template<typename _Tp, int cn> inline Vec<_Tp, cn> Vec<_Tp, cn>::cross(const Vec<_Tp, cn>& v) const
+template<typename _Tp, int cn> inline Vec<_Tp, cn> Vec<_Tp, cn>::cross(const Vec<_Tp, cn>& /*v*/) const
 {
     CV_Error(CV_StsError, "for arbitrary-size vector there is no cross-product defined");
     return Vec<_Tp, cn>();
