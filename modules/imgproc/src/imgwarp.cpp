@@ -1330,9 +1330,9 @@ static void resizeArea_( const Mat& src, Mat& dst, const DecimateAlpha* xofs, in
 }
     
     
-template <> static void 
-resizeAreaFast_<uchar, int>( const Mat& src, Mat& dst, const int* ofs, const int* xofs,
-                            int scale_x, int scale_y )
+static void resizeAreaFast_8u( const Mat& src, Mat& dst,
+                               const int* ofs, const int* xofs,
+                               int scale_x, int scale_y )
 {
 #if CV_SSE2
     bool haveSSE2 = checkHardwareSupport(CV_CPU_SSE2);
@@ -1553,7 +1553,7 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
 
     static ResizeAreaFastFunc areafast_tab[] =
     {
-        resizeAreaFast_<uchar, int>, 0,
+        resizeAreaFast_8u, 0,
         resizeAreaFast_<ushort, float>,
         resizeAreaFast_<short, float>,
         0,
