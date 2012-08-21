@@ -1328,6 +1328,123 @@ static void resizeArea_( const Mat& src, Mat& dst, const DecimateAlpha* xofs, in
         }
     }
 }
+    
+    
+template <> static void 
+resizeAreaFast_<uchar, int>( const Mat& src, Mat& dst, const int* ofs, const int* xofs,
+                            int scale_x, int scale_y )
+{
+#if CV_SSE2
+    bool haveSSE2 = checkHardwareSupport(CV_CPU_SSE2);
+#endif
+    
+    Size ssize = src.size(), dsize = dst.size();
+    int cn = src.channels();
+    int dy, dx, k = 0;
+    int area = scale_x*scale_y;
+    float scale = 1.f/(scale_x*scale_y);
+    int dwidth1 = (ssize.width/scale_x)*cn;
+    dsize.width *= cn;
+    ssize.width *= cn;
+    //avg values
+    for( dy = 0; dy < dsize.height; dy++ )
+    {
+        uchar* D = (uchar*)(dst.data + dst.step*dy);
+        int sy0 = dy*scale_y, w = sy0 + scale_y <= ssize.height ? dwidth1 : 0;
+        if( sy0 >= ssize.height )
+        {
+            for( dx = 0; dx < dsize.width; dx++ ) //memset(D,0, dsize.width);//warning, never executed -> not tested
+                D[dx] = 0;
+            continue;
+        }
+        dx = 0;
+        
+    #if CV_SSE2
+        if( haveSSE2 )
+        {
+            const __m128 _scale = _mm_set1_ps(scale);
+            const __m128i _ucMAXs = _mm_set1_epi16(UCHAR_MAX);
+            const uchar* _S[8];
+            
+            for(; dx < w-8; dx+=8 )
+            {
+                __m128i _sum = _mm_setzero_si128();
+                __m128i _sum1 = _mm_setzero_si128();
+                _S[0] = (const uchar*)(src.data + src.step*sy0) + xofs[dx];
+                _S[1] = (const uchar*)(src.data + src.step*sy0) + xofs[dx+1];
+                _S[2] = (const uchar*)(src.data + src.step*sy0) + xofs[dx+2];
+                _S[3] = (const uchar*)(src.data + src.step*sy0) + xofs[dx+3];
+                
+                _S[4] = (const uchar*)(src.data + src.step*sy0) + xofs[dx+4];
+                _S[5] = (const uchar*)(src.data + src.step*sy0) + xofs[dx+5];
+                _S[6] = (const uchar*)(src.data + src.step*sy0) + xofs[dx+6];
+                _S[7] = (const uchar*)(src.data + src.step*sy0) + xofs[dx+7];
+                
+                for( k = 0; k < area; k++ )
+                {
+                    int ofsk = ofs[k];
+                    __m128i _temp = _mm_set_epi32(_S[3][ofsk],_S[2][ofsk],_S[1][ofsk],_S[0][ofsk]);
+                    _sum = _mm_add_epi32(_sum, _temp);
+                    
+                    __m128i _temp1 = _mm_set_epi32(_S[7][ofsk],_S[6][ofsk],_S[5][ofsk],_S[4][ofsk]);
+                    _sum1 = _mm_add_epi32(_sum1, _temp1);
+                }
+                
+                __m128i _tempSum =  _mm_cvtps_epi32(_mm_mul_ps(_mm_cvtepi32_ps(_sum), _scale));
+                __m128i _tempSum1 = _mm_cvtps_epi32(_mm_mul_ps(_mm_cvtepi32_ps(_sum1), _scale));
+                
+                _tempSum = _mm_packs_epi32(_tempSum, _tempSum1);
+                _tempSum = _mm_min_epi16(_ucMAXs, _tempSum);
+                _tempSum = _mm_packus_epi16(_tempSum, _tempSum);
+                _mm_storel_epi64((__m128i*)(D+dx),_tempSum);
+            }
+        }
+    #endif
+        
+        for(; dx < w; dx++ )
+        {
+            const uchar* S = (const uchar*)(src.data + src.step*sy0) + xofs[dx];
+            int sum = 0;
+            k=0;
+            
+        #if CV_ENABLE_UNROLLED
+            for( ; k <= area - 4; k += 4 )
+                sum += S[ofs[k]] + S[ofs[k+1]] + S[ofs[k+2]] + S[ofs[k+3]];
+        #endif
+            
+            for( ; k < area; k++ )
+                sum += S[ofs[k]];
+            
+            
+            D[dx] = saturate_cast<uchar>(sum*scale);
+        }
+        
+        for( ; dx < dsize.width; dx++ )
+        {
+            int sum = 0;
+            int count = 0, sx0 = xofs[dx];
+            if( sx0 >= ssize.width )
+                D[dx] = 0;
+            
+            for( int sy = 0; sy < scale_y; sy++ )
+            {
+                if( sy0 + sy >= ssize.height )
+                    break;
+                const uchar* S = (const uchar*)(src.data + src.step*(sy0 + sy)) + sx0;
+                int sx = 0;
+                for( ; sx < scale_x*cn; sx += cn )
+                {
+                    if( sx0 + sx >= ssize.width )
+                        break;
+                    sum += S[sx];
+                    count++;
+                }
+            }
+            
+            D[dx] = saturate_cast<uchar>((float)sum/count);
+        }
+    }
+}
 
 
 typedef void (*ResizeFunc)( const Mat& src, Mat& dst,
