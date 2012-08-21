@@ -23,8 +23,8 @@ void generateMap(cv::Mat& map_x, cv::Mat& map_y, int remapMode)
             case HALF_SIZE:
                 if (i > map_x.cols*0.25 && i < map_x.cols*0.75 && j > map_x.rows*0.25 && j < map_x.rows*0.75)
                 {
-                    map_x.at<float>(j,i) = 2 * (i - map_x.cols * 0.25) + 0.5;
-                    map_y.at<float>(j,i) = 2 * (j - map_x.rows * 0.25) + 0.5;
+                    map_x.at<float>(j,i) = 2 * (i - map_x.cols * 0.25f) + 0.5f;
+                    map_y.at<float>(j,i) = 2 * (j - map_x.rows * 0.25f) + 0.5f;
                 }
                 else
                 {
@@ -33,16 +33,16 @@ void generateMap(cv::Mat& map_x, cv::Mat& map_y, int remapMode)
                 }
                 break;
             case UPSIDE_DOWN:
-                map_x.at<float>(j,i) = i;
-                map_y.at<float>(j,i) = map_x.rows - j;
+                map_x.at<float>(j,i) = static_cast<float>(i);
+                map_y.at<float>(j,i) = static_cast<float>(map_x.rows - j);
                 break;
             case REFLECTION_X:
-                map_x.at<float>(j,i) = map_x.cols - i;
-                map_y.at<float>(j,i) = j;
+                map_x.at<float>(j,i) = static_cast<float>(map_x.cols - i);
+                map_y.at<float>(j,i) = static_cast<float>(j);
                 break;
             case REFLECTION_BOTH:
-                map_x.at<float>(j,i) = map_x.cols - i;
-                map_y.at<float>(j,i) = map_x.rows - j;
+                map_x.at<float>(j,i) = static_cast<float>(map_x.cols - i);
+                map_y.at<float>(j,i) = static_cast<float>(map_x.rows - j);
                 break;
             } // end of switch
         }
@@ -1619,7 +1619,7 @@ PERF_TEST_P(Sz_DoSort, ImgProc_HoughLines, Combine(GPU_TYPICAL_MAT_SIZES, Bool()
     const bool doSort = GET_PARAM(1);
 
     const float rho = 1.0f;
-    const float theta = CV_PI / 180.0f;
+    const float theta = static_cast<float>(CV_PI / 180.0);
     const int threshold = 300;
 
     cv::RNG rng(123456789);

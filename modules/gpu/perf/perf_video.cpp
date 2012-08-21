@@ -427,7 +427,7 @@ PERF_TEST_P(Video_Cn_LearningRate, Video_MOG, Combine(Values("gpu/video/768x576.
 {
     string inputFile = perf::TestBase::getDataPath(GET_PARAM(0));
     int cn = GET_PARAM(1);
-    double learningRate = GET_PARAM(2);
+    float learningRate = static_cast<float>(GET_PARAM(2));
 
     cv::VideoCapture cap(inputFile);
     ASSERT_TRUE(cap.isOpened());

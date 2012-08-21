@@ -31,6 +31,11 @@ struct GreedyLabeling
             int d = a - b;
             return lo <= d && d <= hi;
         }
+
+	private:
+		InInterval& operator=(const InInterval&);
+
+
     };
 
     GreedyLabeling(cv::Mat img)
@@ -45,7 +50,7 @@ struct GreedyLabeling
         int cc = -1;
 
         int* dist_labels = (int*)labels.data;
-        int pitch = labels.step1();
+        int pitch = static_cast<int>(labels.step1());
 
         unsigned char* source = (unsigned char*)image.data;
         int width = image.cols;
@@ -82,7 +87,7 @@ struct GreedyLabeling
                         *top++ = dot::make(p.x, p.y + 1);
 
                     //top
-                    if( p.y > 0 && dl[-pitch] == -1 && inInt(sp[0], sp[-image.step1()]))
+                    if( p.y > 0 && dl[-pitch] == -1 && inInt(sp[0], sp[-static_cast<int>(image.step1())]))
                         *top++ = dot::make(p.x, p.y - 1);
 
                     p = *--top;

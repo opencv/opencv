@@ -7,6 +7,7 @@
 #include <fstream>
 #include <iostream>
 #include <memory>
+#include <functional>
 
 #if defined WIN32 || defined _WIN32
 #define WIN32_LEAN_AND_MEAN
