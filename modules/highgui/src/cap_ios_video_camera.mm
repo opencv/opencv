@@ -522,9 +522,9 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;};
 		}
 		
 		// check if matrix data pointer or dimensions were changed by the delegate
-		bool iOSimage = true;
+		bool iOSimage = false;
 		if (height == image.rows && width == image.cols && format_opencv == image.type() && bufferAddress == image.data && bytesPerRow == image.step) {
-			iOSimage = false;
+			iOSimage = true;
 		}
 		
 		
