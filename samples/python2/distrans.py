@@ -1,20 +1,25 @@
-import numpy as np
-import cv2
-import cv2.cv as cv
-from common import make_cmap
+'''
+Distance transform sample.
 
-help_message = '''USAGE: distrans.py [<image>]
+Usage: 
+  distrans.py [<image>]
 
 Keys:
   ESC   - exit
   v     - toggle voronoi mode
 '''
 
+
+import numpy as np
+import cv2
+import cv2.cv as cv
+from common import make_cmap
+
 if __name__ == '__main__':
     import sys
     try: fn = sys.argv[1]
     except: fn = '../cpp/fruits.jpg'
-    print help_message
+    print __doc__
 
     img = cv2.imread(fn, 0)
     cm = make_cmap('jet')
