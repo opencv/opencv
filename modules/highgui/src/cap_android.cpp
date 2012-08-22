@@ -461,7 +461,8 @@ void CvCapture_Android::setFrame(const void* buffer, int bufferSize)
     //copy data
     cv::Mat m_frameYUV420next_ref = m_frameYUV420next;
     memcpy(m_frameYUV420next_ref.ptr(), buffer, bufferSize);
-    LOGD("CvCapture_Android::setFrame -- memcpy is done");
+    // LOGD("CvCapture_Android::setFrame -- memcpy is done");
+    // ((HighguiAndroidCameraActivity*)m_activity)->LogFramesRate();
 
     m_dataState = CVCAPTURE_ANDROID_STATE_HAS_NEW_FRAME_UNGRABBED;
     m_waitingNextFrame = false;//set flag that no more frames required at this moment
