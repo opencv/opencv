@@ -22,35 +22,35 @@ class Sample1View extends SampleViewBase {
     private Mat mRgba;
     private Mat mGraySubmat;
     private Mat mIntermediateMat;
-	private Bitmap mBitmap;
-	private int mViewMode;
+    private Bitmap mBitmap;
+    private int mViewMode;
 
     public Sample1View(Context context) {
         super(context);
         mViewMode = VIEW_MODE_RGBA;
     }
 
-	@Override
-	protected void onPreviewStarted(int previewWidth, int previewHeight) {
-	    synchronized (this) {
-        	// initialize Mats before usage
-        	mYuv = new Mat(getFrameHeight() + getFrameHeight() / 2, getFrameWidth(), CvType.CV_8UC1);
-        	mGraySubmat = mYuv.submat(0, getFrameHeight(), 0, getFrameWidth());
+    @Override
+    protected void onPreviewStarted(int previewWidth, int previewHeight) {
+        synchronized (this) {
+            // initialize Mats before usage
+            mYuv = new Mat(getFrameHeight() + getFrameHeight() / 2, getFrameWidth(), CvType.CV_8UC1);
+            mGraySubmat = mYuv.submat(0, getFrameHeight(), 0, getFrameWidth());
 
-        	mRgba = new Mat();
-        	mIntermediateMat = new Mat();
+            mRgba = new Mat();
+            mIntermediateMat = new Mat();
 
-        	mBitmap = Bitmap.createBitmap(previewWidth, previewHeight, Bitmap.Config.ARGB_8888); 
-    	    }
-	}
+            mBitmap = Bitmap.createBitmap(previewWidth, previewHeight, Bitmap.Config.ARGB_8888);
+            }
+    }
 
-	@Override
-	protected void onPreviewStopped() {
-		if(mBitmap != null) {
-			mBitmap.recycle();
-		}
+    @Override
+    protected void onPreviewStopped() {
+        if(mBitmap != null) {
+            mBitmap.recycle();
+        }
 
-		synchronized (this) {
+        synchronized (this) {
             // Explicitly deallocate Mats
             if (mYuv != null)
                 mYuv.release();
@@ -101,7 +101,7 @@ class Sample1View extends SampleViewBase {
     }
 
     public void setViewMode(int viewMode) {
-    	mViewMode = viewMode;
+        mViewMode = viewMode;
     }
 
 }

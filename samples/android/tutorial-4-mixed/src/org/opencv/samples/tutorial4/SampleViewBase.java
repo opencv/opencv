@@ -45,35 +45,35 @@ public abstract class SampleViewBase extends SurfaceView implements SurfaceHolde
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB)
             mCamera.setPreviewTexture( new SurfaceTexture(10) );
         else
-        	mCamera.setPreviewDisplay(null);
-	}
-    
+            mCamera.setPreviewDisplay(null);
+    }
+
     public boolean openCamera() {
         Log.i(TAG, "openCamera");
         releaseCamera();
         mCamera = Camera.open();
         if(mCamera == null) {
-        	Log.e(TAG, "Can't open camera!");
-        	return false;
+            Log.e(TAG, "Can't open camera!");
+            return false;
         }
 
         mCamera.setPreviewCallbackWithBuffer(new PreviewCallback() {
             public void onPreviewFrame(byte[] data, Camera camera) {
                 synchronized (SampleViewBase.this) {
                     System.arraycopy(data, 0, mFrame, 0, data.length);
-                    SampleViewBase.this.notify(); 
+                    SampleViewBase.this.notify();
                 }
                 camera.addCallbackBuffer(mBuffer);
             }
         });
         return true;
     }
-    
+
     public void releaseCamera() {
         Log.i(TAG, "releaseCamera");
         mThreadRun = false;
         synchronized (this) {
-	        if (mCamera != null) {
+            if (mCamera != null) {
                 mCamera.stopPreview();
                 mCamera.setPreviewCallback(null);
                 mCamera.release();
@@ -82,7 +82,7 @@ public abstract class SampleViewBase extends SurfaceView implements SurfaceHolde
         }
         onPreviewStopped();
     }
-    
+
     public void setupCamera(int width, int height) {
         Log.i(TAG, "setupCamera");
         synchronized (this) {
@@ -105,15 +105,15 @@ public abstract class SampleViewBase extends SurfaceView implements SurfaceHolde
                 }
 
                 params.setPreviewSize(getFrameWidth(), getFrameHeight());
-                
+
                 List<String> FocusModes = params.getSupportedFocusModes();
                 if (FocusModes.contains(Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO))
                 {
-                	params.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO);
-                }            
-                
+                    params.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO);
+                }
+
                 mCamera.setParameters(params);
-                
+
                 /* Now allocate the buffer */
                 params = mCamera.getParameters();
                 int size = params.getPreviewSize().width * params.getPreviewSize().height;
@@ -123,11 +123,11 @@ public abstract class SampleViewBase extends SurfaceView implements SurfaceHolde
                 mFrame = new byte [size];
                 mCamera.addCallbackBuffer(mBuffer);
 
-    			try {
-    				setPreview();
-    			} catch (IOException e) {
-    				Log.e(TAG, "mCamera.setPreviewDisplay/setPreviewTexture fails: " + e);
-    			}
+                try {
+                    setPreview();
+                } catch (IOException e) {
+                    Log.e(TAG, "mCamera.setPreviewDisplay/setPreviewTexture fails: " + e);
+                }
 
                 /* Notify that the preview is about to be started and deliver preview size */
                 onPreviewStarted(params.getPreviewSize().width, params.getPreviewSize().height);
@@ -137,7 +137,7 @@ public abstract class SampleViewBase extends SurfaceView implements SurfaceHolde
             }
         }
     }
-    
+
     public void surfaceChanged(SurfaceHolder _holder, int format, int width, int height) {
         Log.i(TAG, "surfaceChanged");
         setupCamera(width, height);
