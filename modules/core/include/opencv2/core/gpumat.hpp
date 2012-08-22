@@ -72,9 +72,11 @@ namespace cv { namespace gpu
         FEATURE_SET_COMPUTE_13 = 13,
         FEATURE_SET_COMPUTE_20 = 20,
         FEATURE_SET_COMPUTE_21 = 21,
+        FEATURE_SET_COMPUTE_30 = 30,
         GLOBAL_ATOMICS = FEATURE_SET_COMPUTE_11,
         SHARED_ATOMICS = FEATURE_SET_COMPUTE_12,
-        NATIVE_DOUBLE = FEATURE_SET_COMPUTE_13
+        NATIVE_DOUBLE = FEATURE_SET_COMPUTE_13,
+        WARP_SHUFFLE_FUNCTIONS = FEATURE_SET_COMPUTE_30
     };
 
     // Gives information about what GPU archs this OpenCV GPU module was
