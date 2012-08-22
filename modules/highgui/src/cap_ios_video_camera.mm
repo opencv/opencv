@@ -98,90 +98,29 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;};
 {
     [super start];
     
-	if (self.recordVideo == YES) {
-//		[self.videoFileOutput startRecordingToOutputFileURL:[self tempFileURL] recordingDelegate:self];
-		
+	if (self.recordVideo == YES) {		
         NSError* error;
-        if ([[NSFileManager defaultManager] fileExistsAtPath:[self tempFileString]]) [[NSFileManager defaultManager] removeItemAtPath:[self tempFileString] error:&error];
+        if ([[NSFileManager defaultManager] fileExistsAtPath:[self videoFileString]]) {
+			[[NSFileManager defaultManager] removeItemAtPath:[self videoFileString] error:&error];
+		}
         if (error == nil) {
-            NSLog(@"[Camera] Delete file %@", [self tempFileString]);
-        }
-
-        
-		BOOL started = [self.recordAssetWriter startWriting];
-		[self.recordAssetWriter startSessionAtSourceTime:kCMTimeZero];
-        
-        NSLog(@"[Camera] Session started? %d", started);
-        
-        if (self.recordAssetWriter.status == AVAssetWriterStatusUnknown) {
-            NSLog(@"AVAssetWriter status: unknown");
-        } else if (self.recordAssetWriter.status == AVAssetWriterStatusWriting) {
-            NSLog(@"AVAssetWriter status: writing");
-        } else if (self.recordAssetWriter.status == AVAssetWriterStatusCompleted) {
-            NSLog(@"AVAssetWriter status: completed");
-        } else if (self.recordAssetWriter.status == AVAssetWriterStatusFailed) {
-            NSLog(@"AVAssetWriter status: failed");
-        } else if (self.recordAssetWriter.status == AVAssetWriterStatusCancelled) {
-            NSLog(@"AVAssetWriter status: cancelled");
-        }
-        
-        if (self.recordAssetWriter.status != AVAssetWriterStatusWriting) {
-            NSLog(@"[Camera] Recording Error: asset writer status is not writing: %@", self.recordAssetWriter.error);
-        } else {
-            NSLog(@"[Camera] Recording started");
+            NSLog(@"[Camera] Delete file %@", [self videoFileString]);
         }
 	}
 }
 
-
-
-- (void)pause;
-{
-	[super pause];
-	if (self.recordVideo == YES) {
-//		[self.videoFileOutput stopRecording];
-		
-
-        if (self.recordAssetWriter.status == AVAssetWriterStatusUnknown) {
-            NSLog(@"AVAssetWriter status: unknown");
-        } else if (self.recordAssetWriter.status == AVAssetWriterStatusWriting) {
-            NSLog(@"AVAssetWriter status: writing");
-        } else if (self.recordAssetWriter.status == AVAssetWriterStatusCompleted) {
-            NSLog(@"AVAssetWriter status: completed");
-        } else if (self.recordAssetWriter.status == AVAssetWriterStatusFailed) {
-            NSLog(@"AVAssetWriter status: failed");
-        } else if (self.recordAssetWriter.status == AVAssetWriterStatusCancelled) {
-            NSLog(@"AVAssetWriter status: cancelled");
-        }
-        
-        if (self.recordAssetWriter.status == AVAssetWriterStatusWriting) {
-            [self.recordAssetWriter finishWriting];
-            NSLog(@"[Camera] recording stopped");
-        } else {
-            NSLog(@"[Camera] Recording Error: asset writer status is not writing");
-        }
-	}
-}
 
 
 - (void)stop;
 {
 	[super stop];
     
-    if (self.recordVideo == YES) {
-        NSLog(@"recording stop");
-        if (self.recordAssetWriter.status == AVAssetWriterStatusUnknown) {
-            NSLog(@"AVAssetWriter status: unknown");
-        } else if (self.recordAssetWriter.status == AVAssetWriterStatusWriting) {
-            NSLog(@"AVAssetWriter status: writing");
-        } else if (self.recordAssetWriter.status == AVAssetWriterStatusCompleted) {
-            NSLog(@"AVAssetWriter status: completed");
-        } else if (self.recordAssetWriter.status == AVAssetWriterStatusFailed) {
-            NSLog(@"AVAssetWriter status: failed");
-        } else if (self.recordAssetWriter.status == AVAssetWriterStatusCancelled) {
-            NSLog(@"AVAssetWriter status: cancelled");
-        }
-		
+	self.videoDataOutput = nil;
+	if (videoDataOutputQueue) {
+		dispatch_release(videoDataOutputQueue);
+	}
+	
+	if (self.recordVideo == YES) {
         
         if (self.recordAssetWriter.status == AVAssetWriterStatusWriting) {
             [self.recordAssetWriter finishWriting];
@@ -193,11 +132,6 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;};
         self.recordAssetWriter = nil;
         self.recordAssetWriterInput = nil;
         self.recordPixelBufferAdaptor = nil;
-	}
-    
-	self.videoDataOutput = nil;
-	if (videoDataOutputQueue) {
-		dispatch_release(videoDataOutputQueue);
 	}
 	
 	[self.customPreviewLayer removeFromSuperlayer];
@@ -405,15 +339,6 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;};
 
 - (void)createVideoFileOutput;
 {
-	/*
-	if (self.recordVideo == YES) {
-		self.videoFileOutput = [[AVCaptureMovieFileOutput alloc] init];
-		if ( [self.captureSession canAddOutput:self.videoFileOutput] ) {
-			[self.captureSession addOutput:self.videoFileOutput];
-		}
-	}
-	*/
-	
 	/* Video File Output in H.264, via AVAsserWriter */
     NSLog(@"Create Video with dimensions %dx%d", self.imageWidth, self.imageHeight);
     
@@ -426,21 +351,18 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;};
     
 	
 	self.recordAssetWriterInput = [AVAssetWriterInput assetWriterInputWithMediaType:AVMediaTypeVideo outputSettings:outputSettings];
-    
 	
-	/* I'm going to push pixel buffers to it, so will need a 
-	   AVAssetWriterPixelBufferAdaptor, to expect the same 32BGRA input as I've
-	   asked the AVCaptureVideDataOutput to supply */
+	
 	int pixelBufferFormat = (self.grayscaleMode == YES) ? kCVPixelFormatType_420YpCbCr8BiPlanarFullRange : kCVPixelFormatType_32BGRA;
 	
 	self.recordPixelBufferAdaptor =
 	           [[AVAssetWriterInputPixelBufferAdaptor alloc] 
 	                initWithAssetWriterInput:self.recordAssetWriterInput 
-	                sourcePixelBufferAttributes:[NSDictionary dictionaryWithObjectsAndKeys:[NSNumber numberWithInt:pixelBufferFormat], kCVPixelBufferPixelFormatTypeKey,nil]];
+	                sourcePixelBufferAttributes:[NSDictionary dictionaryWithObjectsAndKeys:[NSNumber numberWithInt:pixelBufferFormat], kCVPixelBufferPixelFormatTypeKey, nil]];
 	
 	NSError* error = nil;
-    NSLog(@"Create AVAssetWriter with url: %@", [self tempFileURL]);
-	self.recordAssetWriter = [AVAssetWriter assetWriterWithURL:[self tempFileURL]
+    NSLog(@"Create AVAssetWriter with url: %@", [self videoFileURL]);
+	self.recordAssetWriter = [AVAssetWriter assetWriterWithURL:[self videoFileURL]
                                                       fileType:AVFileTypeMPEG4
                                                          error:&error];
 	if (error != nil) {
@@ -448,10 +370,9 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;};
 	}
 	
 	[self.recordAssetWriter addInput:self.recordAssetWriterInput];
-	self.recordAssetWriterInput.expectsMediaDataInRealTime = NO;
+	self.recordAssetWriterInput.expectsMediaDataInRealTime = YES;
     
     NSLog(@"[Camera] created AVAssetWriter");
-
 }
 
 
@@ -580,8 +501,6 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;};
 		}
 		
 		
-		
-		
 		// render buffer
 		dispatch_sync(dispatch_get_main_queue(), ^{
 			self.customPreviewLayer.contents = (__bridge id)dstImage;
@@ -589,16 +508,26 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;};
 		
 		
 		if (self.recordVideo == YES) {
-			// a very dense way to keep track of the time at which this frame
-			// occurs relative to the output stream, but it's just an example!
-			
-			// TODO reset frame number
-			static int64_t frameNumber = 0;
-			if (self.recordAssetWriterInput.readyForMoreMediaData) {
-				[self.recordPixelBufferAdaptor appendPixelBuffer:imageBuffer
-		                          	withPresentationTime:CMTimeMake(frameNumber, self.defaultFPS)];
+			lastSampleTime = CMSampleBufferGetPresentationTimeStamp(sampleBuffer);
+//			CMTimeShow(lastSampleTime);
+			if (self.recordAssetWriter.status != AVAssetWriterStatusWriting) {
+				[self.recordAssetWriter startWriting];
+				[self.recordAssetWriter startSessionAtSourceTime:lastSampleTime];
+				if (self.recordAssetWriter.status != AVAssetWriterStatusWriting) {
+					NSLog(@"[Camera] Recording Error: asset writer status is not writing: %@", self.recordAssetWriter.error);
+					return;
+				} else {
+					NSLog(@"[Camera] Video recording started");
+				}
 			}
-			frameNumber++;
+			
+			if (self.recordAssetWriterInput.readyForMoreMediaData) {
+				if (! [self.recordPixelBufferAdaptor appendPixelBuffer:imageBuffer
+											  	  withPresentationTime:lastSampleTime] ) {
+					NSLog(@"Video Writing Error");
+				}
+			}
+		
 		}
 		
 		
@@ -627,14 +556,14 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;};
     }
     
 	ALAssetsLibrary *library = [[ALAssetsLibrary alloc] init];
-    if ([library videoAtPathIsCompatibleWithSavedPhotosAlbum:[self tempFileURL]]) {
-        [library writeVideoAtPathToSavedPhotosAlbum:[self tempFileURL]
+    if ([library videoAtPathIsCompatibleWithSavedPhotosAlbum:[self videoFileURL]]) {
+        [library writeVideoAtPathToSavedPhotosAlbum:[self videoFileURL]
                                     completionBlock:^(NSURL *assetURL, NSError *error){}];
     }
 }
 
 
-- (NSURL *)tempFileURL;
+- (NSURL *)videoFileURL;
 {
     NSString *outputPath = [[NSString alloc] initWithFormat:@"%@%@", NSTemporaryDirectory(), @"output.mov"];
     NSURL *outputURL = [NSURL fileURLWithPath:outputPath];
@@ -647,7 +576,7 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;};
 
 
 
-- (NSString *)tempFileString;
+- (NSString *)videoFileString;
 {
     NSString *outputPath = [[NSString alloc] initWithFormat:@"%@%@", NSTemporaryDirectory(), @"output.mov"];
     return outputPath;

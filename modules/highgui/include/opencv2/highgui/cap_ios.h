@@ -80,7 +80,6 @@
 
 @property (nonatomic, retain) UIView* parentView;
 
-- (void)pause;
 - (void)start;
 - (void)stop;
 - (void)switchCameras;
@@ -120,6 +119,8 @@
     AVAssetWriterInput* recordAssetWriterInput;
     AVAssetWriterInputPixelBufferAdaptor* recordPixelBufferAdaptor;
     AVAssetWriter* recordAssetWriter;
+
+	CMTime lastSampleTime;
     
 }
 
@@ -134,6 +135,8 @@
 - (void)adjustLayoutToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation;
 - (void)layoutPreviewLayer;
 - (void)saveVideo;
+- (NSURL *)videoFileURL;
+
 
 @end
 
