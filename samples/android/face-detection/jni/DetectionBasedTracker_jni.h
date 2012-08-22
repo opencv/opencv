@@ -46,7 +46,7 @@ JNIEXPORT void JNICALL Java_org_opencv_samples_fd_DetectionBasedTracker_nativeSt
    */
   JNIEXPORT void JNICALL Java_org_opencv_samples_fd_DetectionBasedTracker_nativeSetFaceSize
   (JNIEnv *, jclass, jlong, jint);
-   
+
 /*
  * Class:     org_opencv_samples_fd_DetectionBasedTracker
  * Method:    nativeDetect

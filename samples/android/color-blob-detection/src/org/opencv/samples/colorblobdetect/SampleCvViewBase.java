@@ -29,30 +29,29 @@ public abstract class SampleCvViewBase extends SurfaceView implements SurfaceHol
     public boolean openCamera() {
         Log.i(TAG, "openCamera");
         synchronized (this) {
-	        releaseCamera();
-	        mCamera = new VideoCapture(Highgui.CV_CAP_ANDROID);
-	        if (!mCamera.isOpened()) {
-	            mCamera.release();
-	            mCamera = null;
-	            Log.e(TAG, "Failed to open native camera");
-	            return false;
-	        }
-	    }
+            releaseCamera();
+            mCamera = new VideoCapture(Highgui.CV_CAP_ANDROID);
+            if (!mCamera.isOpened()) {
+                releaseCamera();
+                Log.e(TAG, "Failed to open native camera");
+                return false;
+            }
+        }
         return true;
     }
-    
+
     public void releaseCamera() {
         Log.i(TAG, "releaseCamera");
         synchronized (this) {
-	        if (mCamera != null) {
-	                mCamera.release();
-	                mCamera = null;
+            if (mCamera != null) {
+                mCamera.release();
+                mCamera = null;
             }
         }
     }
-    
+
     public void setupCamera(int width, int height) {
-    	Log.i(TAG, "setupCamera("+width+", "+height+")");
+        Log.i(TAG, "setupCamera("+width+", "+height+")");
         synchronized (this) {
             if (mCamera != null && mCamera.isOpened()) {
                 List<Size> sizes = mCamera.getSupportedPreviewSizes();
@@ -77,7 +76,7 @@ public abstract class SampleCvViewBase extends SurfaceView implements SurfaceHol
         }
 
     }
-    
+
     public void surfaceChanged(SurfaceHolder _holder, int format, int width, int height) {
         Log.i(TAG, "surfaceChanged");
         setupCamera(width, height);
@@ -111,12 +110,12 @@ public abstract class SampleCvViewBase extends SurfaceView implements SurfaceHol
 
                 bmp = processFrame(mCamera);
             }
-            
+
             if (bmp != null) {
                 Canvas canvas = mHolder.lockCanvas();
                 if (canvas != null) {
-                	canvas.drawColor(0, android.graphics.PorterDuff.Mode.CLEAR);
-                	canvas.drawBitmap(bmp, (canvas.getWidth() - bmp.getWidth()) / 2, (canvas.getHeight() - bmp.getHeight()) / 2, null);
+                    canvas.drawColor(0, android.graphics.PorterDuff.Mode.CLEAR);
+                    canvas.drawBitmap(bmp, (canvas.getWidth() - bmp.getWidth()) / 2, (canvas.getHeight() - bmp.getHeight()) / 2, null);
                     mHolder.unlockCanvasAndPost(canvas);
                 }
                 bmp.recycle();
