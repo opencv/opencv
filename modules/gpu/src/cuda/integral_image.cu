@@ -59,7 +59,7 @@ namespace cv { namespace gpu { namespace device
 
         __global__ void shfl_integral_horizontal(const PtrStep_<uint4> img, PtrStep_<uint4> integral)
         {
-        #if __CUDA_ARCH__ >= 300
+        #if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ >= 300)
             __shared__ int sums[128];
 
             const int id = threadIdx.x;
@@ -299,7 +299,7 @@ namespace cv { namespace gpu { namespace device
         // block sums.
         __global__ void shfl_integral_vertical(DevMem2D_<unsigned int> integral)
         {
-        #if __CUDA_ARCH__ >= 300
+        #if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ >= 300)
             __shared__ unsigned int sums[32][9];
 
             const int tidx = blockIdx.x * blockDim.x + threadIdx.x;

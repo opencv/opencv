@@ -2070,7 +2070,7 @@ NCVStatus nppiStInterpolateFrames(const NppStInterpolationState *pState)
 //==============================================================================
 
 
-#if __CUDA_ARCH__ < 200
+#if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ < 200)
 
 // FP32 atomic add
 static __forceinline__ __device__ float _atomicAdd(float *addr, float val)

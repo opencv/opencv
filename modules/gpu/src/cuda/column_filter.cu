@@ -64,7 +64,7 @@ namespace cv { namespace gpu { namespace device
         template <int KSIZE, typename T, typename D, typename B>
         __global__ void linearColumnFilter(const DevMem2D_<T> src, PtrStep<D> dst, const int anchor, const B brd)
         {
-            #if __CUDA_ARCH__ >= 200
+            #if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ >= 200)
                 const int BLOCK_DIM_X = 16;
                 const int BLOCK_DIM_Y = 16;
                 const int PATCH_PER_BLOCK = 4;

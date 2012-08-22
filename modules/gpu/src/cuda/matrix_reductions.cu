@@ -215,7 +215,7 @@ namespace cv { namespace gpu { namespace device
                     maxval[blockIdx.y * gridDim.x + blockIdx.x] = (T)smaxval[0];
                 }
 
-            #if __CUDA_ARCH__ >= 110
+            #if defined (__CUDA_ARCH__) && (__CUDA_ARCH__ >= 110)
 		        __shared__ bool is_last;
 
 		        if (tid == 0)
@@ -535,7 +535,7 @@ namespace cv { namespace gpu { namespace device
 
                 findMinMaxLocInSmem<nthreads, best_type>(sminval, smaxval, sminloc, smaxloc, tid);
 
-            #if __CUDA_ARCH__ >= 110
+            #if defined (__CUDA_ARCH__) && (__CUDA_ARCH__ >= 110)
 		        __shared__ bool is_last;
 
 		        if (tid == 0)
@@ -841,7 +841,7 @@ namespace cv { namespace gpu { namespace device
 
                 sumInSmem<nthreads, uint>(scount, tid);
 
-            #if __CUDA_ARCH__ >= 110
+            #if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ >= 110)
 		        __shared__ bool is_last;
 
 		        if (tid == 0)
@@ -1034,7 +1034,7 @@ namespace cv { namespace gpu { namespace device
 
                 sumInSmem<nthreads, R>(smem, tid);
 
-            #if __CUDA_ARCH__ >= 110
+            #if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ >= 110)
                 __shared__ bool is_last;
 
                 if (tid == 0)
@@ -1115,7 +1115,7 @@ namespace cv { namespace gpu { namespace device
                 sumInSmem<nthreads, R>(smem, tid);
                 sumInSmem<nthreads, R>(smem + nthreads, tid);
 
-            #if __CUDA_ARCH__ >= 110
+            #if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ >= 110)
                 __shared__ bool is_last;
 
                 if (tid == 0)
@@ -1222,7 +1222,7 @@ namespace cv { namespace gpu { namespace device
                 sumInSmem<nthreads, R>(smem + nthreads, tid);
                 sumInSmem<nthreads, R>(smem + 2 * nthreads, tid);
 
-            #if __CUDA_ARCH__ >= 110
+            #if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 110
                 __shared__ bool is_last;
 
                 if (tid == 0)
@@ -1339,7 +1339,7 @@ namespace cv { namespace gpu { namespace device
                 sumInSmem<nthreads, R>(smem + 2 * nthreads, tid);
                 sumInSmem<nthreads, R>(smem + 3 * nthreads, tid);
 
-            #if __CUDA_ARCH__ >= 110
+            #if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ >= 110)
                 __shared__ bool is_last;
 
                 if (tid == 0)
@@ -1975,7 +1975,7 @@ namespace cv { namespace gpu { namespace device
             for (int c = 0; c < cn; ++c)
                 myVal[c] = op.startValue();
 
-        #if __CUDA_ARCH__ >= 200
+        #if defined (__CUDA_ARCH__) && __CUDA_ARCH__ >= 200
 
             // For cc >= 2.0 prefer L1 cache
             for (int x = threadIdx.x; x < src.cols; x += 256)

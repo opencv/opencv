@@ -82,7 +82,7 @@ namespace cv { namespace gpu { namespace device
             smem3[tid] = val3;
             __syncthreads();
 
-#if __CUDA_ARCH__ > 110
+#if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ > 110)
             if (tid < 128)
             {
                 smem1[tid] = val1 += smem1[tid + 128];
@@ -138,7 +138,7 @@ namespace cv { namespace gpu { namespace device
             smem2[tid] = val2;
             __syncthreads();
 
-#if __CUDA_ARCH__ > 110
+#if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ > 110)
             if (tid < 128)
             {
                 smem1[tid] = val1 += smem1[tid + 128];
@@ -184,7 +184,7 @@ namespace cv { namespace gpu { namespace device
             smem1[tid] = val1;
             __syncthreads();
 
-#if __CUDA_ARCH__ > 110
+#if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ > 110)
             if (tid < 128)
             {
                 smem1[tid] = val1 += smem1[tid + 128];
@@ -271,7 +271,7 @@ namespace cv { namespace gpu { namespace device
         template <int cn, int PATCH_X, int PATCH_Y, bool calcErr>
         __global__ void lkSparse(const float2* prevPts, float2* nextPts, uchar* status, float* err, const int level, const int rows, const int cols)
         {
-#if __CUDA_ARCH__ <= 110
+#if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ <= 110)
             __shared__ float smem1[128];
             __shared__ float smem2[128];
             __shared__ float smem3[128];

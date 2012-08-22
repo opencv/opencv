@@ -63,7 +63,7 @@ namespace cv { namespace gpu { namespace device
 
     #define MERGE_THREADBLOCK_SIZE 256
 
-    #define USE_SMEM_ATOMICS (__CUDA_ARCH__ >= 120)
+    #define USE_SMEM_ATOMICS (defined (__CUDA_ARCH__) && (__CUDA_ARCH__ >= 120))
 
     namespace hist
     {
