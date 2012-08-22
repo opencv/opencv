@@ -279,7 +279,7 @@ namespace cv { namespace gpu { namespace device
                 rect.z = __float2int_rn(windowW * scale);
                 rect.w = __float2int_rn(windowH * scale);
 
-                int res = Emulation::smem::atomicInc(classified, (unsigned int)objects.cols);
+                int res = atomicInc(classified, (unsigned int)objects.cols);
                 objects(0, res) = rect;
             }
         }

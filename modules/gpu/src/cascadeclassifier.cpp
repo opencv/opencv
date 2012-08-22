@@ -143,7 +143,7 @@ public:
     }
 
     unsigned int process(const GpuMat& image, GpuMat& objectsBuf, float scaleFactor, int minNeighbors,
-                      bool findLargestObject, bool visualizeInPlace, cv::Size minSize, cv::Size maxObjectSize)
+                      bool findLargestObject, bool visualizeInPlace, cv::Size minSize, cv::Size /*maxObjectSize*/)
     {
         CV_Assert( scaleFactor > 1 && image.depth() == CV_8U);
 
@@ -380,12 +380,12 @@ public:
     LbpCascade(){}
     virtual ~LbpCascade(){}
 
-    virtual unsigned int process(const GpuMat& image, GpuMat& objects, float scaleFactor, int groupThreshold, bool findLargestObject,
-        bool visualizeInPlace, cv::Size minObjectSize, cv::Size maxObjectSize)
+    virtual unsigned int process(const GpuMat& image, GpuMat& objects, float scaleFactor, int groupThreshold, bool /*findLargestObject*/,
+        bool /*visualizeInPlace*/, cv::Size minObjectSize, cv::Size maxObjectSize)
     {
         CV_Assert(scaleFactor > 1 && image.depth() == CV_8U);
 
-        const int defaultObjSearchNum = 100;
+        // const int defaultObjSearchNum = 100;
         const float grouping_eps = 0.2f;
 
         if( !objects.empty() && objects.depth() == CV_32S)

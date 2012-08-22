@@ -64,9 +64,14 @@ macro(ocv_generate_dependencies_map_configcmake suffix configuration)
       string(REGEX REPLACE "${CMAKE_SHARED_LIBRARY_SUFFIX}$" "${OPENCV_LINK_LIBRARY_SUFFIX}" __libname "${__libname}")
     endif()
 
+    string(REPLACE " " "\\ " __mod_deps "${${__ocv_lib}_MODULE_DEPS_${suffix}}")
+    string(REPLACE " " "\\ " __ext_deps "${${__ocv_lib}_EXTRA_DEPS_${suffix}}")
+    string(REPLACE "\"" "\\\"" __mod_deps "${__mod_deps}")
+    string(REPLACE "\"" "\\\"" __ext_deps "${__ext_deps}")
+
     set(OPENCV_DEPENDENCIES_MAP_${suffix} "${OPENCV_DEPENDENCIES_MAP_${suffix}}set(OpenCV_${__ocv_lib}_LIBNAME_${suffix} \"${__libname}\")\n")
-    set(OPENCV_DEPENDENCIES_MAP_${suffix} "${OPENCV_DEPENDENCIES_MAP_${suffix}}set(OpenCV_${__ocv_lib}_DEPS_${suffix} ${${__ocv_lib}_MODULE_DEPS_${suffix}})\n")
-    set(OPENCV_DEPENDENCIES_MAP_${suffix} "${OPENCV_DEPENDENCIES_MAP_${suffix}}set(OpenCV_${__ocv_lib}_EXTRA_DEPS_${suffix} ${${__ocv_lib}_EXTRA_DEPS_${suffix}})\n")
+    set(OPENCV_DEPENDENCIES_MAP_${suffix} "${OPENCV_DEPENDENCIES_MAP_${suffix}}set(OpenCV_${__ocv_lib}_DEPS_${suffix} ${__mod_deps})\n")
+    set(OPENCV_DEPENDENCIES_MAP_${suffix} "${OPENCV_DEPENDENCIES_MAP_${suffix}}set(OpenCV_${__ocv_lib}_EXTRA_DEPS_${suffix} ${__ext_deps})\n")
 
     list(APPEND OPENCV_PROCESSED_LIBS ${__ocv_lib})
     list(APPEND OPENCV_LIBS_TO_PROCESS ${${__ocv_lib}_MODULE_DEPS_${suffix}})

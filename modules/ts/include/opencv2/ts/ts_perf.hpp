@@ -442,7 +442,7 @@ CV_EXPORTS void PrintTo(const Size& sz, ::std::ostream* os);
 //     SANITY_CHECK(c);
 //   }
 #define PERF_TEST_P(fixture, name, params)  \
-    class fixture##_##name : public ::fixture {\
+    class fixture##_##name : public fixture {\
      public:\
       fixture##_##name() {}\
      protected:\

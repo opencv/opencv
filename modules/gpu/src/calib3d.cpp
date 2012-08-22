@@ -56,14 +56,14 @@ void cv::gpu::solvePnPRansac(const Mat&, const Mat&, const Mat&, const Mat&, Mat
 
 #else
 
-namespace cv { namespace gpu { namespace device 
+namespace cv { namespace gpu { namespace device
 {
-    namespace transform_points 
+    namespace transform_points
     {
         void call(const DevMem2D_<float3> src, const float* rot, const float* transl, DevMem2D_<float3> dst, cudaStream_t stream);
     }
 
-    namespace project_points 
+    namespace project_points
     {
         void call(const DevMem2D_<float3> src, const float* rot, const float* transl, const float* proj, DevMem2D_<float2> dst, cudaStream_t stream);
     }
@@ -154,11 +154,11 @@ namespace
     class TransformHypothesesGenerator
     {
     public:
-        TransformHypothesesGenerator(const Mat& object_, const Mat& image_, const Mat& dist_coef_, 
-                                     const Mat& camera_mat_, int num_points_, int subset_size_, 
+        TransformHypothesesGenerator(const Mat& object_, const Mat& image_, const Mat& dist_coef_,
+                                     const Mat& camera_mat_, int num_points_, int subset_size_,
                                      Mat rot_matrices_, Mat transl_vectors_)
-                : object(&object_), image(&image_), dist_coef(&dist_coef_), camera_mat(&camera_mat_), 
-                  num_points(num_points_), subset_size(subset_size_), rot_matrices(rot_matrices_), 
+                : object(&object_), image(&image_), dist_coef(&dist_coef_), camera_mat(&camera_mat_),
+                  num_points(num_points_), subset_size(subset_size_), rot_matrices(rot_matrices_),
                   transl_vectors(transl_vectors_) {}
 
         void operator()(const BlockedRange& range) const
@@ -211,9 +211,10 @@ namespace
 
 void cv::gpu::solvePnPRansac(const Mat& object, const Mat& image, const Mat& camera_mat,
                              const Mat& dist_coef, Mat& rvec, Mat& tvec, bool use_extrinsic_guess,
-                             int num_iters, float max_dist, int min_inlier_count, 
+                             int num_iters, float max_dist, int min_inlier_count,
                              vector<int>* inliers)
 {
+    (void)min_inlier_count;
     CV_Assert(object.rows == 1 && object.cols > 0 && object.type() == CV_32FC3);
     CV_Assert(image.rows == 1 && image.cols > 0 && image.type() == CV_32FC2);
     CV_Assert(object.cols == image.cols);
@@ -236,7 +237,7 @@ void cv::gpu::solvePnPRansac(const Mat& object, const Mat& image, const Mat& cam
     Mat transl_vectors(1, num_iters * 3, CV_32F);
 
     // Generate set of hypotheses using small subsets of the input data
-    TransformHypothesesGenerator body(object, image_normalized, empty_dist_coef, eye_camera_mat, 
+    TransformHypothesesGenerator body(object, image_normalized, empty_dist_coef, eye_camera_mat,
                                       num_points, subset_size, rot_matrices, transl_vectors);
     parallel_for(BlockedRange(0, num_iters), body);
 
@@ -246,7 +247,7 @@ void cv::gpu::solvePnPRansac(const Mat& object, const Mat& image, const Mat& cam
     GpuMat d_hypothesis_scores(1, num_iters, CV_32S);
     solve_pnp_ransac::computeHypothesisScores(
             num_iters, num_points, rot_matrices.ptr<float>(), transl_vectors.ptr<float3>(),
-            d_object.ptr<float3>(), d_image_normalized.ptr<float2>(), max_dist * max_dist, 
+            d_object.ptr<float3>(), d_image_normalized.ptr<float2>(), max_dist * max_dist,
             d_hypothesis_scores.ptr<int>());
 
     // Find the best hypothesis index

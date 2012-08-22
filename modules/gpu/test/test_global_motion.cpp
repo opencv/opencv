@@ -39,11 +39,11 @@
 //
 //M*/
 
-#include "precomp.hpp"
+#include "test_precomp.hpp"
 
-#include <iostream>
+#ifdef HAVE_CUDA
+
 using namespace std;
-
 using namespace cv;
 
 struct CompactPoints : testing::TestWithParam<gpu::DeviceInfo>
@@ -85,3 +85,5 @@ TEST_P(CompactPoints, CanCompactizeSmallInput)
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_GlobalMotion, CompactPoints, ALL_DEVICES);
+
+#endif // HAVE_CUDA

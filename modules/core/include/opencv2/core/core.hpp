@@ -440,7 +440,7 @@ template<typename _Tp, int m, int n> class CV_EXPORTS Matx
 {
 public:
     typedef _Tp value_type;
-    typedef Matx<_Tp, MIN(m, n), 1> diag_type;
+    typedef Matx<_Tp, (m < n ? m : n), 1> diag_type;
     typedef Matx<_Tp, m, n> mat_type;
     enum { depth = DataDepth<_Tp>::value, rows = m, cols = n, channels = rows*cols,
            type = CV_MAKETYPE(depth, channels) };

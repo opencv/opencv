@@ -57,10 +57,26 @@ namespace cv { namespace gpu { namespace device
     namespace hough
     {
         int buildPointList_gpu(DevMem2Db src, unsigned int* list);
+
         void linesAccum_gpu(const unsigned int* list, int count, DevMem2Di accum, float rho, float theta, size_t sharedMemPerBlock, bool has20);
         int linesGetResult_gpu(DevMem2Di accum, float2* out, int* votes, int maxSize, float rho, float theta, float threshold, bool doSort);
     }
 }}}
+
+//////////////////////////////////////////////////////////
+// HoughLines
+
+void cv::gpu::HoughLines(const GpuMat& src, GpuMat& lines, float rho, float theta, int threshold, bool doSort, int maxLines)
+{
+    GpuMat accum, buf;
+    HoughLines(src, lines, accum, buf, rho, theta, threshold, doSort, maxLines);
+}
+
+void cv::gpu::HoughLines(const GpuMat& src, GpuMat& lines, GpuMat& accum, GpuMat& buf, float rho, float theta, int threshold, bool doSort, int maxLines)
+{
+    HoughLinesTransform(src, accum, buf, rho, theta);
+    HoughLinesGet(accum, lines, rho, theta, threshold, doSort, maxLines);
+}
 
 void cv::gpu::HoughLinesTransform(const GpuMat& src, GpuMat& accum, GpuMat& buf, float rho, float theta)
 {
@@ -80,40 +96,28 @@ void cv::gpu::HoughLinesTransform(const GpuMat& src, GpuMat& accum, GpuMat& buf,
     CV_Assert(numangle > 0 && numrho > 0);
 
     ensureSizeIsEnough(numangle + 2, numrho + 2, CV_32SC1, accum);
-    accum.setTo(cv::Scalar::all(0));
+    accum.setTo(Scalar::all(0));
 
-    cv::gpu::DeviceInfo devInfo;
+    DeviceInfo devInfo;
 
     if (count > 0)
-        linesAccum_gpu(buf.ptr<unsigned int>(), count, accum, rho, theta, devInfo.sharedMemPerBlock(), devInfo.supports(cv::gpu::FEATURE_SET_COMPUTE_20));
+        linesAccum_gpu(buf.ptr<unsigned int>(), count, accum, rho, theta, devInfo.sharedMemPerBlock(), devInfo.supports(FEATURE_SET_COMPUTE_20));
 }
 
 void cv::gpu::HoughLinesGet(const GpuMat& accum, GpuMat& lines, float rho, float theta, int threshold, bool doSort, int maxLines)
 {
-    using namespace cv::gpu::device;
+    using namespace cv::gpu::device::hough;
 
     CV_Assert(accum.type() == CV_32SC1);
 
     ensureSizeIsEnough(2, maxLines, CV_32FC2, lines);
 
-    int count = hough::linesGetResult_gpu(accum, lines.ptr<float2>(0), lines.ptr<int>(1), maxLines, rho, theta, threshold, doSort);
+    int count = linesGetResult_gpu(accum, lines.ptr<float2>(0), lines.ptr<int>(1), maxLines, rho, theta, threshold, doSort);
 
     if (count > 0)
         lines.cols = count;
     else
         lines.release();
-}
-
-void cv::gpu::HoughLines(const GpuMat& src, GpuMat& lines, float rho, float theta, int threshold, bool doSort, int maxLines)
-{
-    cv::gpu::GpuMat accum, buf;
-    HoughLines(src, lines, accum, buf, rho, theta, threshold, doSort, maxLines);
-}
-
-void cv::gpu::HoughLines(const GpuMat& src, GpuMat& lines, GpuMat& accum, GpuMat& buf, float rho, float theta, int threshold, bool doSort, int maxLines)
-{
-    HoughLinesTransform(src, accum, buf, rho, theta);
-    HoughLinesGet(accum, lines, rho, theta, threshold, doSort, maxLines);
 }
 
 void cv::gpu::HoughLinesDownload(const GpuMat& d_lines, OutputArray h_lines_, OutputArray h_votes_)
@@ -129,14 +133,14 @@ void cv::gpu::HoughLinesDownload(const GpuMat& d_lines, OutputArray h_lines_, Ou
     CV_Assert(d_lines.rows == 2 && d_lines.type() == CV_32FC2);
 
     h_lines_.create(1, d_lines.cols, CV_32FC2);
-    cv::Mat h_lines = h_lines_.getMat();
+    Mat h_lines = h_lines_.getMat();
     d_lines.row(0).download(h_lines);
 
     if (h_votes_.needed())
     {
         h_votes_.create(1, d_lines.cols, CV_32SC1);
-        cv::Mat h_votes = h_votes_.getMat();
-        cv::gpu::GpuMat d_votes(1, d_lines.cols, CV_32SC1, const_cast<int*>(d_lines.ptr<int>(1)));
+        Mat h_votes = h_votes_.getMat();
+        GpuMat d_votes(1, d_lines.cols, CV_32SC1, const_cast<int*>(d_lines.ptr<int>(1)));
         d_votes.download(h_votes);
     }
 }

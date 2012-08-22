@@ -119,7 +119,6 @@ namespace
 
         int depth = src.depth();
         int num_channels = src.channels();
-        Size size = src.size();
 
         if (depth == CV_64F)
         {

@@ -88,7 +88,11 @@ if(CUDA_FOUND)
     if(APPLE)
       set (CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -Xcompiler -fno-finite-math-only)
     endif()
-    string(REPLACE "-Wsign-promo" "" CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS}")
+
+    # disabled because of multiple warnings during building nvcc auto generated files
+    if(CMAKE_COMPILER_IS_GNUCXX AND CMAKE_GCC_REGEX_VERSION VERSION_GREATER "4.6.0")
+      ocv_warnings_disable(CMAKE_CXX_FLAGS -Wunused-but-set-variable)
+    endif()
 
     # we remove -ggdb3 flag as it leads to preprocessor errors when compiling CUDA files (CUDA 4.1)
     set(CMAKE_CXX_FLAGS_DEBUG_ ${CMAKE_CXX_FLAGS_DEBUG})

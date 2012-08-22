@@ -1199,10 +1199,6 @@ namespace
 
         void setTo(GpuMat& m, Scalar s, const GpuMat& mask) const
         {
-            NppiSize sz;
-            sz.width  = m.cols;
-            sz.height = m.rows;
-
             if (mask.empty())
             {
                 if (s[0] == 0.0 && s[1] == 0.0 && s[2] == 0.0 && s[3] == 0.0)

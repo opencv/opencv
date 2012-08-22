@@ -43,8 +43,8 @@
 //
 //M*/
 
-#include "precomp.hpp"
-#include "Threadsafe.h"
+//#include "precomp.hpp"
+#include "threadsafe.h"
 
 CriticalSection::CriticalSection()
 {

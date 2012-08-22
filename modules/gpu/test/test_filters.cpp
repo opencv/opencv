@@ -39,7 +39,9 @@
 //
 //M*/
 
-#include "precomp.hpp"
+#include "test_precomp.hpp"
+
+#ifdef HAVE_CUDA
 
 namespace {
 
@@ -552,3 +554,5 @@ INSTANTIATE_TEST_CASE_P(GPU_Filter, Filter2D, testing::Combine(
     WHOLE_SUBMAT));
 
 } // namespace
+
+#endif // HAVE_CUDA

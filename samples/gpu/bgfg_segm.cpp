@@ -86,7 +86,7 @@ int main(int argc, const char** argv)
         break;
 
     case MOG:
-        mog(d_frame, d_fgmask, 0.01);
+        mog(d_frame, d_fgmask, 0.01f);
         break;
 
     case MOG2:
@@ -127,7 +127,7 @@ int main(int argc, const char** argv)
             break;
 
         case MOG:
-            mog(d_frame, d_fgmask, 0.01);
+            mog(d_frame, d_fgmask, 0.01f);
             mog.getBackgroundImage(d_bgimg);
             break;
 
@@ -162,7 +162,7 @@ int main(int argc, const char** argv)
         if (!bgimg.empty())
             imshow("mean background image", bgimg);
 
-        char key = waitKey(30);
+        int key = waitKey(30);
         if (key == 27)
             break;
     }
