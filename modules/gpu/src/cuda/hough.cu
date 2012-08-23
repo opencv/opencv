@@ -226,7 +226,7 @@ namespace cv { namespace gpu { namespace device
         ////////////////////////////////////////////////////////////////////////
         // linesGetResult
 
-        __global__ void linesGetResult(const DevMem2Di accum, float2* out, int* votes, const int maxSize, const float rho, const float theta, const float threshold, const int numrho)
+        __global__ void linesGetResult(const DevMem2Di accum, float2* out, int* votes, const int maxSize, const float rho, const float theta, const int threshold, const int numrho)
         {
             const int r = blockIdx.x * blockDim.x + threadIdx.x;
             const int n = blockIdx.y * blockDim.y + threadIdx.y;
@@ -254,7 +254,7 @@ namespace cv { namespace gpu { namespace device
             }
         }
 
-        int linesGetResult_gpu(DevMem2Di accum, float2* out, int* votes, int maxSize, float rho, float theta, float threshold, bool doSort)
+        int linesGetResult_gpu(DevMem2Di accum, float2* out, int* votes, int maxSize, float rho, float theta, int threshold, bool doSort)
         {
             void* counterPtr;
             cudaSafeCall( cudaGetSymbolAddress(&counterPtr, g_counter) );

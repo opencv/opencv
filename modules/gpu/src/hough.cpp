@@ -61,7 +61,7 @@ namespace cv { namespace gpu { namespace device
         int buildPointList_gpu(DevMem2Db src, unsigned int* list);
 
         void linesAccum_gpu(const unsigned int* list, int count, DevMem2Di accum, float rho, float theta, size_t sharedMemPerBlock, bool has20);
-        int linesGetResult_gpu(DevMem2Di accum, float2* out, int* votes, int maxSize, float rho, float theta, float threshold, bool doSort);
+        int linesGetResult_gpu(DevMem2Di accum, float2* out, int* votes, int maxSize, float rho, float theta, int threshold, bool doSort);
 
         void circlesAccumCenters_gpu(const unsigned int* list, int count, PtrStepi dx, PtrStepi dy, DevMem2Di accum, int minRadius, int maxRadius, float idp);
         int buildCentersList_gpu(DevMem2Di accum, unsigned int* centers, int threshold);
