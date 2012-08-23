@@ -39,7 +39,8 @@ using namespace std;
 static inline cv::Point2f centerRect(const cv::Rect& r)
 {
     return cv::Point2f(r.x+((float)r.width)/2, r.y+((float)r.height)/2);
-};
+}
+
 static inline cv::Rect scale_rect(const cv::Rect& r, float scale)
 {
     cv::Point2f m=centerRect(r);
@@ -49,9 +50,10 @@ static inline cv::Rect scale_rect(const cv::Rect& r, float scale)
     int y=cvRound(m.y - height/2);
 
     return cv::Rect(x, y, cvRound(width), cvRound(height));
-};
+}
 
 void* workcycleObjectDetectorFunction(void* p);
+
 class DetectionBasedTracker::SeparateDetectionWork
 {
     public:
@@ -61,6 +63,7 @@ class DetectionBasedTracker::SeparateDetectionWork
         bool run();
         void stop();
         void resetTracking();
+
         inline bool isWorking()
         {
             return (stateThread==STATE_THREAD_WORKING_SLEEPING) || (stateThread==STATE_THREAD_WORKING_WITH_IMAGE);
@@ -165,33 +168,33 @@ bool DetectionBasedTracker::SeparateDetectionWork::run()
 }
 
 #ifdef __GNUC__
-#define CATCH_ALL_AND_LOG(_block)                                                       \
-do {                                                                               \
+#define CATCH_ALL_AND_LOG(_block)                                                           \
+do {                                                                                        \
     try {                                                                                   \
         _block;                                                                             \
         break;                                                                              \
     }                                                                                       \
     catch(cv::Exception& e) {                                                               \
-        LOGE0("\n %s: ERROR: OpenCV Exception caught: \n'%s'\n\n", __func__, e.what());      \
+        LOGE0("\n %s: ERROR: OpenCV Exception caught: \n'%s'\n\n", __func__, e.what());     \
     } catch(std::exception& e) {                                                            \
-        LOGE0("\n %s: ERROR: Exception caught: \n'%s'\n\n", __func__, e.what());             \
+        LOGE0("\n %s: ERROR: Exception caught: \n'%s'\n\n", __func__, e.what());            \
     } catch(...) {                                                                          \
-        LOGE0("\n %s: ERROR: UNKNOWN Exception caught\n\n", __func__);                       \
+        LOGE0("\n %s: ERROR: UNKNOWN Exception caught\n\n", __func__);                      \
     }                                                                                       \
 } while(0)
 #else
-#define CATCH_ALL_AND_LOG(_block)                                                       \
-do {                                                                               \
+#define CATCH_ALL_AND_LOG(_block)                                                           \
+do {                                                                                        \
     try {                                                                                   \
         _block;                                                                             \
         break;                                                                              \
     }                                                                                       \
     catch(cv::Exception& e) {                                                               \
-        LOGE0("\n ERROR: OpenCV Exception caught: \n'%s'\n\n", e.what());                    \
+        LOGE0("\n ERROR: OpenCV Exception caught: \n'%s'\n\n", e.what());                   \
     } catch(std::exception& e) {                                                            \
-        LOGE0("\n ERROR: Exception caught: \n'%s'\n\n", e.what());                           \
+        LOGE0("\n ERROR: Exception caught: \n'%s'\n\n", e.what());                          \
     } catch(...) {                                                                          \
-        LOGE0("\n ERROR: UNKNOWN Exception caught\n\n");                                     \
+        LOGE0("\n ERROR: UNKNOWN Exception caught\n\n");                                    \
     }                                                                                       \
 } while(0)
 #endif
@@ -275,7 +278,7 @@ void DetectionBasedTracker::SeparateDetectionWork::workcycleObjectDetector()
         int64 t1_detect=getTickCount();
 
         int minObjectSize=detectionBasedTracker.parameters.minObjectSize;
-        Size min_objectSize=Size(minObjectSize, minObjectSize);
+        Size min_objectSize = Size(minObjectSize, minObjectSize);
 
         int maxObjectSize=detectionBasedTracker.parameters.maxObjectSize;
         Size max_objectSize(maxObjectSize, maxObjectSize);
@@ -295,8 +298,8 @@ void DetectionBasedTracker::SeparateDetectionWork::workcycleObjectDetector()
             break;
         }
 
-        int64 t2_detect=getTickCount();
-        int64 dt_detect=t2_detect-t1_detect;
+        int64 t2_detect = getTickCount();
+        int64 dt_detect = t2_detect-t1_detect;
         double dt_detect_ms=((double)dt_detect)/freq * 1000.0;
 
         LOGI("DetectionBasedTracker::SeparateDetectionWork::workcycleObjectDetector() --- objects num==%d, t_ms=%.4f", (int)objects.size(), dt_detect_ms);
@@ -375,26 +378,26 @@ bool DetectionBasedTracker::SeparateDetectionWork::communicateWithDetectingThrea
 {
     static double freq = getTickFrequency();
 
-    bool shouldCommunicateWithDetectingThread=(stateThread==STATE_THREAD_WORKING_SLEEPING);
+    bool shouldCommunicateWithDetectingThread = (stateThread==STATE_THREAD_WORKING_SLEEPING);
     LOGD("DetectionBasedTracker::SeparateDetectionWork::communicateWithDetectingThread: shouldCommunicateWithDetectingThread=%d", (shouldCommunicateWithDetectingThread?1:0));
 
     if (!shouldCommunicateWithDetectingThread) {
         return false;
     }
 
-    bool shouldHandleResult=false;
+    bool shouldHandleResult = false;
     pthread_mutex_lock(&mutex);
 
     if (isObjectDetectingReady) {
         shouldHandleResult=true;
-        rectsWhereRegions=resultDetect;
+        rectsWhereRegions = resultDetect;
         isObjectDetectingReady=false;
 
-        double lastBigDetectionDuration=1000.0 * (((double)(getTickCount()  - timeWhenDetectingThreadStartedWork )) / freq);
+        double lastBigDetectionDuration = 1000.0 * (((double)(getTickCount()  - timeWhenDetectingThreadStartedWork )) / freq);
         LOGD("DetectionBasedTracker::SeparateDetectionWork::communicateWithDetectingThread: lastBigDetectionDuration=%f ms", (double)lastBigDetectionDuration);
     }
 
-    bool shouldSendNewDataToWorkThread=true;
+    bool shouldSendNewDataToWorkThread = true;
     if (timeWhenDetectingThreadStartedWork > 0) {
         double time_from_previous_launch_in_ms=1000.0 * (((double)(getTickCount()  - timeWhenDetectingThreadStartedWork )) / freq); //the same formula as for lastBigDetectionDuration
         shouldSendNewDataToWorkThread = (time_from_previous_launch_in_ms >= detectionBasedTracker.parameters.minDetectionPeriod);
@@ -430,8 +433,6 @@ DetectionBasedTracker::Parameters::Parameters()
     minDetectionPeriod=0;
 }
 
-
-
 DetectionBasedTracker::InnerParameters::InnerParameters()
 {
     numLastPositionsToTrack=4;
@@ -444,6 +445,7 @@ DetectionBasedTracker::InnerParameters::InnerParameters()
     coeffObjectSpeedUsingInPrediction=0.8;
 
 }
+
 DetectionBasedTracker::DetectionBasedTracker(const std::string& cascadeFilename, const Parameters& params)
     :separateDetectionWork(),
     innerParameters(),
@@ -468,15 +470,13 @@ DetectionBasedTracker::DetectionBasedTracker(const std::string& cascadeFilename,
     weightsSizesSmoothing.push_back(0.2);
 
 }
+
 DetectionBasedTracker::~DetectionBasedTracker()
 {
 }
 
-
-
 void DetectionBasedTracker::process(const Mat& imageGray)
 {
-
     CV_Assert(imageGray.type()==CV_8UC1);
 
     if (!separateDetectionWork->isWorking()) {
@@ -494,38 +494,36 @@ void DetectionBasedTracker::process(const Mat& imageGray)
 
     Mat imageDetect=imageGray;
 
-    int D=parameters.minObjectSize;
+    int D = parameters.minObjectSize;
     if (D < 1)
         D=1;
 
     vector<Rect> rectsWhereRegions;
     bool shouldHandleResult=separateDetectionWork->communicateWithDetectingThread(imageGray, rectsWhereRegions);
 
-
-
     if (shouldHandleResult) {
         LOGD("DetectionBasedTracker::process: get _rectsWhereRegions were got from resultDetect");
     } else {
         LOGD("DetectionBasedTracker::process: get _rectsWhereRegions from previous positions");
-        for(size_t i=0; i < trackedObjects.size(); i++) {
-            int n=trackedObjects[i].lastPositions.size();
+        for(size_t i = 0; i < trackedObjects.size(); i++) {
+            int n = trackedObjects[i].lastPositions.size();
             CV_Assert(n > 0);
 
-            Rect r=trackedObjects[i].lastPositions[n-1];
-            if(r.area()==0) {
+            Rect r = trackedObjects[i].lastPositions[n-1];
+            if(r.area() == 0) {
                 LOGE("DetectionBasedTracker::process: ERROR: ATTENTION: strange algorithm's behavior: trackedObjects[i].rect() is empty");
                 continue;
             }
 
 
-            //correction by speed of rectangle
+            // correction by speed of rectangle
             if (n > 1) {
-                Point2f center=centerRect(r);
-                Point2f center_prev=centerRect(trackedObjects[i].lastPositions[n-2]);
-                Point2f shift=(center - center_prev) * innerParameters.coeffObjectSpeedUsingInPrediction;
+                Point2f center = centerRect(r);
+                Point2f center_prev = centerRect(trackedObjects[i].lastPositions[n-2]);
+                Point2f shift = (center - center_prev) * innerParameters.coeffObjectSpeedUsingInPrediction;
 
-                r.x+=cvRound(shift.x);
-                r.y+=cvRound(shift.y);
+                r.x += cvRound(shift.x);
+                r.y += cvRound(shift.y);
             }
 
 
@@ -538,7 +536,7 @@ void DetectionBasedTracker::process(const Mat& imageGray)
 
     LOGD("DetectionBasedTracker::process: rectsWhereRegions.size()=%d", (int)rectsWhereRegions.size());
     for(size_t i=0; i < rectsWhereRegions.size(); i++) {
-        Rect r=rectsWhereRegions[i];
+        Rect r = rectsWhereRegions[i];
 
         detectInRegion(imageDetect, r, detectedObjectsInRegions);
     }
@@ -560,6 +558,7 @@ void DetectionBasedTracker::getObjects(std::vector<cv::Rect>& result) const
         LOGD("DetectionBasedTracker::process: found a object with SIZE %d x %d, rect={%d, %d, %d x %d}", r.width, r.height, r.x, r.y, r.width, r.height);
     }
 }
+
 void DetectionBasedTracker::getObjects(std::vector<Object>& result) const
 {
     result.clear();
@@ -573,8 +572,6 @@ void DetectionBasedTracker::getObjects(std::vector<Object>& result) const
         LOGD("DetectionBasedTracker::process: found a object with SIZE %d x %d, rect={%d, %d, %d x %d}", r.width, r.height, r.x, r.y, r.width, r.height);
     }
 }
-
-
 
 bool DetectionBasedTracker::run()
 {
@@ -711,6 +708,7 @@ void DetectionBasedTracker::updateTrackedObjects(const vector<Rect>& detectedObj
         }
     }
 }
+
 Rect DetectionBasedTracker::calcTrackedObjectPositionToShow(int i) const
 {
     if ( (i < 0) || (i >= (int)trackedObjects.size()) ) {
@@ -795,15 +793,16 @@ Rect DetectionBasedTracker::calcTrackedObjectPositionToShow(int i) const
 void DetectionBasedTracker::detectInRegion(const Mat& img, const Rect& r, vector<Rect>& detectedObjectsInRegions)
 {
     Rect r0(Point(), img.size());
-    Rect r1=scale_rect(r, innerParameters.coeffTrackingWindowSize);
-    r1=r1 & r0;
+    Rect r1 = scale_rect(r, innerParameters.coeffTrackingWindowSize);
+    r1 = r1 & r0;
+
     if ( (r1.width <=0) || (r1.height <= 0) ) {
         LOGD("DetectionBasedTracker::detectInRegion: Empty intersection");
         return;
     }
 
-    int d=std::min(r.width, r.height);
-    d=cvRound(d * innerParameters.coeffObjectSizeToTrack);
+    int d = std::min(r.width, r.height);
+    d = cvRound(d * innerParameters.coeffObjectSizeToTrack);
 
     vector<Rect> tmpobjects;
 
@@ -811,7 +810,7 @@ void DetectionBasedTracker::detectInRegion(const Mat& img, const Rect& r, vector
     LOGD("DetectionBasedTracker::detectInRegion: img1.size()=%d x %d, d=%d",
             img1.size().width, img1.size().height, d);
 
-    int maxObjectSize=parameters.maxObjectSize;
+    int maxObjectSize = parameters.maxObjectSize;
     Size max_objectSize(maxObjectSize, maxObjectSize);
 
     cascadeForTracking.detectMultiScale( img1, tmpobjects,
