@@ -77,7 +77,17 @@ if(CUDA_FOUND)
   unset(CUDA_npp_LIBRARY CACHE)
   find_cuda_helper_libs(npp)
 
-  macro(OCV_CUDA_COMPILE VAR)
+  macro(ocv_cuda_compile VAR)
+    foreach(var CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_RELEASE CMAKE_CXX_FLAGS_DEBUG)
+      set(${var}_backup_in_cuda_compile_ "${${var}}")
+      
+      # we reomove /EHa as it leasd warnings under windows
+      string(REPLACE "/EHa" "" ${var} "${${var}}")
+      
+      # we remove -ggdb3 flag as it leads to preprocessor errors when compiling CUDA files (CUDA 4.1)
+      string(REPLACE "-ggdb3" "" ${var} "${${var}}")
+    endforeach()
+    
     if (BUILD_SHARED_LIBS)
       set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -Xcompiler -DCVAPI_EXPORTS)
     endif()
@@ -94,11 +104,12 @@ if(CUDA_FOUND)
       ocv_warnings_disable(CMAKE_CXX_FLAGS -Wunused-but-set-variable)
     endif()
 
-    # we remove -ggdb3 flag as it leads to preprocessor errors when compiling CUDA files (CUDA 4.1)
-    set(CMAKE_CXX_FLAGS_DEBUG_ ${CMAKE_CXX_FLAGS_DEBUG})
-    string(REPLACE "-ggdb3" "" CMAKE_CXX_FLAGS_DEBUG ${CMAKE_CXX_FLAGS_DEBUG})
-    CUDA_COMPILE(${VAR} ${ARGN})
-    set(CMAKE_CXX_DEBUG_FLAGS ${CMAKE_CXX_FLAGS_DEBUG_})
+    CUDA_COMPILE(${VAR} ${ARGN})  
+    
+    foreach(var CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_RELEASE CMAKE_CXX_FLAGS_DEBUG)
+      set(${var} "${${var}_backup_in_cuda_compile_}")
+      unset(${var}_backup_in_cuda_compile_)
+    endforeach()    
   endmacro()
 else()
   unset(CUDA_ARCH_BIN CACHE)

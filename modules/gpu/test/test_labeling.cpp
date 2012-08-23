@@ -87,6 +87,7 @@ namespace {
             unsigned char* source = (unsigned char*)image.data;
             int width = image.cols;
             int height = image.rows;
+            int step1 = (int)image.step1();
 
             for (int j = 0; j < image.rows; ++j)
                 for (int i = 0; i < image.cols; ++i)
@@ -102,7 +103,7 @@ namespace {
                     while (top >= stack)
                     {
                         int*  dl = &dist_labels[p.y * pitch + p.x];
-                        unsigned char* sp = &source[p.y * image.step1() + p.x];
+                        unsigned char* sp = &source[p.y * step1 + p.x];
 
                         dl[0] = cc;
 
@@ -115,11 +116,11 @@ namespace {
                             *top++ = dot::make(p.x - 1, p.y);
 
                         //bottom
-                        if( p.y < (height - 1) && dl[+pitch] == -1 && inInt(sp[0], sp[+image.step1()]))
+                        if( p.y < (height - 1) && dl[+pitch] == -1 && inInt(sp[0], sp[+step1]))
                             *top++ = dot::make(p.x, p.y + 1);
 
                         //top
-                        if( p.y > 0 && dl[-pitch] == -1 && inInt(sp[0], sp[-image.step1()]))
+                        if( p.y > 0 && dl[-pitch] == -1 && inInt(sp[0], sp[-step1]))
                             *top++ = dot::make(p.x, p.y - 1);
 
                         p = *--top;

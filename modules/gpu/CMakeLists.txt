@@ -44,8 +44,9 @@ if (HAVE_CUDA)
       set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -Xcompiler /wd4251)
     endif()
   endif()
-
+  
   ocv_cuda_compile(cuda_objs ${lib_cuda} ${ncv_cuda})
+
   #CUDA_BUILD_CLEAN_TARGET()
 
   set(cuda_link_libs ${CUDA_LIBRARIES} ${CUDA_npp_LIBRARY})
