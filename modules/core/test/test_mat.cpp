@@ -297,6 +297,7 @@ protected:
         prjEps, backPrjEps,
         evalEps, evecEps;
         int maxComponents = 100;
+        double retainedVariance = 0.95;
         Mat rPoints(sz, CV_32FC1), rTestPoints(sz, CV_32FC1);
         RNG& rng = ts->get_rng();
 
@@ -423,9 +424,33 @@ protected:
             ts->set_failed_test_info( cvtest::TS::FAIL_BAD_ACCURACY );
             return;
         }
-
+        
+        // 3. check C++ PCA w/retainedVariance
+        cPCA( rPoints.t(), Mat(), CV_PCA_DATA_AS_COL, retainedVariance );
+        diffPrjEps = 1, diffBackPrjEps = 1;
+        Mat rvPrjTestPoints = cPCA.project(rTestPoints.t()); 
+        
+        if( cPCA.eigenvectors.rows > maxComponents)
+            err = norm(cv::abs(rvPrjTestPoints.rowRange(0,maxComponents)), cv::abs(rPrjTestPoints.t()), CV_RELATIVE_L2 );
+        else
+            err = norm(cv::abs(rvPrjTestPoints), cv::abs(rPrjTestPoints.colRange(0,cPCA.eigenvectors.rows).t()), CV_RELATIVE_L2 );
+          
+        if( err > diffPrjEps )
+        {
+            ts->printf( cvtest::TS::LOG, "bad accuracy of project() (CV_PCA_DATA_AS_COL); retainedVariance=0.95; err = %f\n", err );
+            ts->set_failed_test_info( cvtest::TS::FAIL_BAD_ACCURACY );
+            return;
+        }
+        err = norm(cPCA.backProject(rvPrjTestPoints), rBackPrjTestPoints.t(), CV_RELATIVE_L2 );
+        if( err > diffBackPrjEps )
+        {
+            ts->printf( cvtest::TS::LOG, "bad accuracy of backProject() (CV_PCA_DATA_AS_COL); retainedVariance=0.95; err = %f\n", err );
+            ts->set_failed_test_info( cvtest::TS::FAIL_BAD_ACCURACY );
+            return;
+        }
+        
     #ifdef CHECK_C
-        // 3. check C PCA & ROW
+        // 4. check C PCA & ROW
         _points = rPoints;
         _testPoints = rTestPoints;
         _avg = avg;
@@ -455,7 +480,7 @@ protected:
             return;
         }
 
-        // 3. check C PCA & COL
+        // 5. check C PCA & COL
         _points = cPoints;
         _testPoints = cTestPoints;
         avg = avg.t(); _avg = avg;

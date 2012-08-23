@@ -2240,6 +2240,8 @@ PCA constructors
 
 .. ocv:function:: PCA::PCA(InputArray data, InputArray mean, int flags, int maxComponents=0)
 
+.. ocv:function:: PCA::PCA(InputArray data, InputArray mean, int flags, double retainedVariance)
+
     :param data: Input samples stored as matrix rows or matrix columns.
 
     :param mean: Optional mean value. If the matrix is empty ( ``noArray()`` ), the mean is computed from the data.
@@ -2252,7 +2254,9 @@ PCA constructors
 
     :param maxComponents: Maximum number of components that PCA should retain. By default, all the components are retained.
 
-The default constructor initializes an empty PCA structure. The second constructor initializes the structure and calls
+    :param retainedVariance: Percentage of variance that PCA should retain. Using this parameter will let the PCA decided how many components to retain but it will always keep at least 2.
+
+The default constructor initializes an empty PCA structure. The other constructors initialize the structure and call
 :ocv:funcx:`PCA::operator()` .
 
 
@@ -2262,6 +2266,8 @@ PCA::operator ()
 Performs Principal Component Analysis of the supplied dataset.
 
 .. ocv:function:: PCA& PCA::operator()(InputArray data, InputArray mean, int flags, int maxComponents=0)
+
+.. ocv:function:: PCA& PCA::operator()(InputArray data, InputArray mean, int flags, double retainedVariance)
 
 .. ocv:pyfunction:: cv2.PCACompute(data[, mean[, eigenvectors[, maxComponents]]]) -> mean, eigenvectors
 
@@ -2276,6 +2282,8 @@ Performs Principal Component Analysis of the supplied dataset.
         * **CV_PCA_DATA_AS_COL** indicates that the input samples are stored as matrix columns.
 
     :param maxComponents: Maximum number of components that PCA should retain. By default, all the components are retained.
+
+    :param retainedVariance: Percentage of variance that PCA should retain. Using this parameter will let the PCA decided how many components to retain but it will always keep at least 2.
 
 The operator performs PCA of the supplied dataset. It is safe to reuse the same PCA structure for multiple datasets. That is, if the  structure has been previously used with another dataset, the existing internal data is reclaimed and the new ``eigenvalues``, ``eigenvectors`` , and ``mean`` are allocated and computed.
 
