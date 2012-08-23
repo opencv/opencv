@@ -551,13 +551,13 @@ void cv::gpu::integralBuffered(const GpuMat& src, GpuMat& sum, GpuMat& buffer, S
 
     if (info.supports(WARP_SHUFFLE_FUNCTIONS))
     {
-        GpuMat src16;
+        GpuMat srcAlligned;
 
-        if (src.cols % 16 == 0)
-            src16 = src;
+        if (src.cols % 16 == 0 && src.rows % 8 == 0)
+            srcAlligned = src;
         else
         {
-            ensureSizeIsEnough(src.rows, ((src.cols + 15) / 16) * 16, src.type(), buffer);
+            ensureSizeIsEnough(((src.rows + 7) / 8) * 8, ((src.cols + 15) / 16) * 16, src.type(), buffer);
 
             GpuMat inner = buffer(Rect(0, 0, src.cols, src.rows));
 
@@ -572,21 +572,21 @@ void cv::gpu::integralBuffered(const GpuMat& src, GpuMat& sum, GpuMat& buffer, S
                 src.copyTo(inner);
             }
 
-            src16 = buffer;
+            srcAlligned = buffer;
         }
 
-        sum.create(src16.rows + 1, src16.cols + 1, CV_32SC1);
+        sum.create(srcAlligned.rows + 1, srcAlligned.cols + 1, CV_32SC1);
 
         if (s)
             s.enqueueMemSet(sum, Scalar::all(0));
         else
             sum.setTo(Scalar::all(0));
 
-        GpuMat inner = sum(Rect(1, 1, src16.cols, src16.rows));
+        GpuMat inner = sum(Rect(1, 1, srcAlligned.cols, srcAlligned.rows));
 
-        cv::gpu::device::imgproc::shfl_integral_gpu(src16, inner, stream);
+        cv::gpu::device::imgproc::shfl_integral_gpu(srcAlligned, inner, stream);
 
-        if (src16.cols != src.cols)
+        if (srcAlligned.data != src.data)
             sum = sum(Rect(0, 0, src.cols + 1, src.rows + 1));
     }
     else
