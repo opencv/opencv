@@ -1609,14 +1609,11 @@ PERF_TEST_P(Sz_Depth_Cn, ImgProc_ImagePyramidGetLayer, Combine(GPU_TYPICAL_MAT_S
 //////////////////////////////////////////////////////////////////////
 // HoughLines
 
-DEF_PARAM_TEST(Sz_DoSort, cv::Size, bool);
-
-PERF_TEST_P(Sz_DoSort, ImgProc_HoughLines, Combine(GPU_TYPICAL_MAT_SIZES, Bool()))
+PERF_TEST_P(Sz, ImgProc_HoughLines, GPU_TYPICAL_MAT_SIZES)
 {
     declare.time(30.0);
 
-    const cv::Size size = GET_PARAM(0);
-    const bool doSort = GET_PARAM(1);
+    const cv::Size size = GetParam();
 
     const float rho = 1.0f;
     const float theta = static_cast<float>(CV_PI / 180.0);
@@ -1638,14 +1635,13 @@ PERF_TEST_P(Sz_DoSort, ImgProc_HoughLines, Combine(GPU_TYPICAL_MAT_SIZES, Bool()
     {
         cv::gpu::GpuMat d_src(src);
         cv::gpu::GpuMat d_lines;
-        cv::gpu::GpuMat d_accum;
-        cv::gpu::GpuMat d_buf;
+        cv::gpu::HoughLinesBuf d_buf;
 
-        cv::gpu::HoughLines(d_src, d_lines, d_accum, d_buf, rho, theta, threshold, doSort);
+        cv::gpu::HoughLines(d_src, d_lines, d_buf, rho, theta, threshold);
 
         TEST_CYCLE()
         {
-            cv::gpu::HoughLines(d_src, d_lines, d_accum, d_buf, rho, theta, threshold, doSort);
+            cv::gpu::HoughLines(d_src, d_lines, d_buf, rho, theta, threshold);
         }
     }
     else
@@ -1656,6 +1652,63 @@ PERF_TEST_P(Sz_DoSort, ImgProc_HoughLines, Combine(GPU_TYPICAL_MAT_SIZES, Bool()
         TEST_CYCLE()
         {
             cv::HoughLines(src, lines, rho, theta, threshold);
+        }
+    }
+}
+
+//////////////////////////////////////////////////////////////////////
+// HoughCircles
+
+DEF_PARAM_TEST(Sz_Dp_MinDist, cv::Size, float, float);
+
+PERF_TEST_P(Sz_Dp_MinDist, ImgProc_HoughCircles, Combine(GPU_TYPICAL_MAT_SIZES, Values(1.0f, 2.0f, 4.0f), Values(1.0f, 10.0f)))
+{
+    declare.time(30.0);
+
+    const cv::Size size = GET_PARAM(0);
+    const float dp = GET_PARAM(1);
+    const float minDist = GET_PARAM(2);
+
+    const int minRadius = 10;
+    const int maxRadius = 30;
+    const int cannyThreshold = 100;
+    const int votesThreshold = 15;
+
+    cv::RNG rng(123456789);
+
+    cv::Mat src(size, CV_8UC1, cv::Scalar::all(0));
+
+    const int numCircles = rng.uniform(50, 100);
+    for (int i = 0; i < numCircles; ++i)
+    {
+        cv::Point center(rng.uniform(0, src.cols), rng.uniform(0, src.rows));
+        const int radius = rng.uniform(minRadius, maxRadius + 1);
+
+        cv::circle(src, center, radius, cv::Scalar::all(255), -1);
+    }
+
+    if (runOnGpu)
+    {
+        cv::gpu::GpuMat d_src(src);
+        cv::gpu::GpuMat d_circles;
+        cv::gpu::HoughCirclesBuf d_buf;
+
+        cv::gpu::HoughCircles(d_src, d_circles, d_buf, CV_HOUGH_GRADIENT, dp, minDist, cannyThreshold, votesThreshold, minRadius, maxRadius);
+
+        TEST_CYCLE()
+        {
+            cv::gpu::HoughCircles(d_src, d_circles, d_buf, CV_HOUGH_GRADIENT, dp, minDist, cannyThreshold, votesThreshold, minRadius, maxRadius);
+        }
+    }
+    else
+    {
+        std::vector<cv::Vec3f> circles;
+
+        cv::HoughCircles(src, circles, CV_HOUGH_GRADIENT, dp, minDist, cannyThreshold, votesThreshold, minRadius, maxRadius);
+
+        TEST_CYCLE()
+        {
+            cv::HoughCircles(src, circles, CV_HOUGH_GRADIENT, dp, minDist, cannyThreshold, votesThreshold, minRadius, maxRadius);
         }
     }
 }

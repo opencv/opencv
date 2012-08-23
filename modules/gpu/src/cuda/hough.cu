@@ -57,7 +57,7 @@ namespace cv { namespace gpu { namespace device
 
         __global__ void buildPointList(const DevMem2Db src, unsigned int* list)
         {
-            __shared__ int s_queues[4][32 * PIXELS_PER_THREAD];
+            __shared__ unsigned int s_queues[4][32 * PIXELS_PER_THREAD];
             __shared__ int s_qsize[4];
             __shared__ int s_globStart[4];
 
@@ -211,8 +211,6 @@ namespace cv { namespace gpu { namespace device
             const dim3 block(has20 ? 1024 : 512);
             const dim3 grid(accum.rows - 2);
 
-            cudaSafeCall( cudaFuncSetCacheConfig(linesAccumShared, cudaFuncCachePreferShared) );
-
             size_t smemSize = (accum.cols - 1) * sizeof(int);
 
             if (smemSize < sharedMemPerBlock - 1000)
@@ -230,28 +228,19 @@ namespace cv { namespace gpu { namespace device
 
         __global__ void linesGetResult(const DevMem2Di accum, float2* out, int* votes, const int maxSize, const float rho, const float theta, const float threshold, const int numrho)
         {
-            __shared__ int smem[8][32];
+            const int r = blockIdx.x * blockDim.x + threadIdx.x;
+            const int n = blockIdx.y * blockDim.y + threadIdx.y;
 
-            const int x = blockIdx.x * (blockDim.x - 2) + threadIdx.x;
-            const int y = blockIdx.y * (blockDim.y - 2) + threadIdx.y;
-
-            if (x >= accum.cols || y >= accum.rows)
+            if (r >= accum.cols - 2 && n >= accum.rows - 2)
                 return;
 
-            smem[threadIdx.y][threadIdx.x] = accum(y, x);
-            __syncthreads();
+            const int curVotes = accum(n + 1, r + 1);
 
-            const int r = x - 1;
-            const int n = y - 1;
-
-            if (threadIdx.x == 0 || threadIdx.x == blockDim.x - 1 || threadIdx.y == 0 || threadIdx.y == blockDim.y - 1 || r >= accum.cols - 2 || n >= accum.rows - 2)
-                return;
-
-            if (smem[threadIdx.y][threadIdx.x] > threshold &&
-                smem[threadIdx.y][threadIdx.x] >  smem[threadIdx.y - 1][threadIdx.x] &&
-                smem[threadIdx.y][threadIdx.x] >= smem[threadIdx.y + 1][threadIdx.x] &&
-                smem[threadIdx.y][threadIdx.x] >  smem[threadIdx.y][threadIdx.x - 1] &&
-                smem[threadIdx.y][threadIdx.x] >= smem[threadIdx.y][threadIdx.x + 1])
+            if (curVotes > threshold &&
+                curVotes >  accum(n + 1, r) &&
+                curVotes >= accum(n + 1, r + 2) &&
+                curVotes >  accum(n, r + 1) &&
+                curVotes >= accum(n + 2, r + 1))
             {
                 const float radius = (r - (numrho - 1) * 0.5f) * rho;
                 const float angle = n * theta;
@@ -260,7 +249,7 @@ namespace cv { namespace gpu { namespace device
                 if (ind < maxSize)
                 {
                     out[ind] = make_float2(radius, angle);
-                    votes[ind] = smem[threadIdx.y][threadIdx.x];
+                    votes[ind] = curVotes;
                 }
             }
         }
@@ -273,7 +262,9 @@ namespace cv { namespace gpu { namespace device
             cudaSafeCall( cudaMemset(counterPtr, 0, sizeof(int)) );
 
             const dim3 block(32, 8);
-            const dim3 grid(divUp(accum.cols, block.x - 2), divUp(accum.rows, block.y - 2));
+            const dim3 grid(divUp(accum.cols - 2, block.x), divUp(accum.rows - 2, block.y));
+
+            cudaSafeCall( cudaFuncSetCacheConfig(linesGetResult, cudaFuncCachePreferL1) );
 
             linesGetResult<<<grid, block>>>(accum, out, votes, maxSize, rho, theta, threshold, accum.cols - 2);
             cudaSafeCall( cudaGetLastError() );
@@ -291,6 +282,203 @@ namespace cv { namespace gpu { namespace device
                 thrust::device_ptr<int> votesPtr(votes);
                 thrust::sort_by_key(votesPtr, votesPtr + totalCount, outPtr, thrust::greater<int>());
             }
+
+            return totalCount;
+        }
+
+        ////////////////////////////////////////////////////////////////////////
+        // circlesAccumCenters
+
+        __global__ void circlesAccumCenters(const unsigned int* list, const int count, const PtrStepi dx, const PtrStepi dy,
+                                            PtrStepi accum, const int width, const int height, const int minRadius, const int maxRadius, const float idp)
+        {
+            const int SHIFT = 10;
+            const int ONE = 1 << SHIFT;
+
+            const int tid = blockIdx.x * blockDim.x + threadIdx.x;
+
+            if (tid >= count)
+                return;
+
+            const unsigned int val = list[tid];
+
+            const int x = (val & 0xFFFF);
+            const int y = (val >> 16) & 0xFFFF;
+
+            const int vx = dx(y, x);
+            const int vy = dy(y, x);
+
+            if (vx == 0 && vy == 0)
+                return;
+
+            const float mag = ::sqrtf(vx * vx + vy * vy);
+
+            const int x0 = __float2int_rn((x * idp) * ONE);
+            const int y0 = __float2int_rn((y * idp) * ONE);
+
+            int sx = __float2int_rn((vx * idp) * ONE / mag);
+            int sy = __float2int_rn((vy * idp) * ONE / mag);
+
+            // Step from minRadius to maxRadius in both directions of the gradient
+            for (int k1 = 0; k1 < 2; ++k1)
+            {
+                int x1 = x0 + minRadius * sx;
+                int y1 = y0 + minRadius * sy;
+
+                for (int r = minRadius; r <= maxRadius; x1 += sx, y1 += sy, ++r)
+                {
+                    const int x2 = x1 >> SHIFT;
+                    const int y2 = y1 >> SHIFT;
+
+                    if (x2 < 0 || x2 >= width || y2 < 0 || y2 >= height)
+                        break;
+
+                    ::atomicAdd(accum.ptr(y2 + 1) + x2 + 1, 1);
+                }
+
+                sx = -sx;
+                sy = -sy;
+            }
+        }
+
+        void circlesAccumCenters_gpu(const unsigned int* list, int count, PtrStepi dx, PtrStepi dy, DevMem2Di accum, int minRadius, int maxRadius, float idp)
+        {
+            const dim3 block(256);
+            const dim3 grid(divUp(count, block.x));
+
+            cudaSafeCall( cudaFuncSetCacheConfig(circlesAccumCenters, cudaFuncCachePreferL1) );
+
+            circlesAccumCenters<<<grid, block>>>(list, count, dx, dy, accum, accum.cols - 2, accum.rows - 2, minRadius, maxRadius, idp);
+            cudaSafeCall( cudaGetLastError() );
+
+            cudaSafeCall( cudaDeviceSynchronize() );
+        }
+
+        ////////////////////////////////////////////////////////////////////////
+        // buildCentersList
+
+        __global__ void buildCentersList(const DevMem2Di accum, unsigned int* centers, const int threshold)
+        {
+            const int x = blockIdx.x * blockDim.x + threadIdx.x;
+            const int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+            if (x < accum.cols - 2 && y < accum.rows - 2)
+            {
+                const int top = accum(y, x + 1);
+
+                const int left = accum(y + 1, x);
+                const int cur = accum(y + 1, x + 1);
+                const int right = accum(y + 1, x + 2);
+
+                const int bottom = accum(y + 2, x + 1);
+
+                if (cur > threshold && cur > top && cur >= bottom && cur >  left && cur >= right)
+                {
+                    const unsigned int val = (y << 16) | x;
+                    const int idx = ::atomicAdd(&g_counter, 1);
+                    centers[idx] = val;
+                }
+            }
+        }
+
+        int buildCentersList_gpu(DevMem2Di accum, unsigned int* centers, int threshold)
+        {
+            void* counterPtr;
+            cudaSafeCall( cudaGetSymbolAddress(&counterPtr, g_counter) );
+
+            cudaSafeCall( cudaMemset(counterPtr, 0, sizeof(int)) );
+
+            const dim3 block(32, 8);
+            const dim3 grid(divUp(accum.cols - 2, block.x), divUp(accum.rows - 2, block.y));
+
+            cudaSafeCall( cudaFuncSetCacheConfig(buildCentersList, cudaFuncCachePreferL1) );
+
+            buildCentersList<<<grid, block>>>(accum, centers, threshold);
+            cudaSafeCall( cudaGetLastError() );
+
+            cudaSafeCall( cudaDeviceSynchronize() );
+
+            int totalCount;
+            cudaSafeCall( cudaMemcpy(&totalCount, counterPtr, sizeof(int), cudaMemcpyDeviceToHost) );
+
+            return totalCount;
+        }
+
+        ////////////////////////////////////////////////////////////////////////
+        // circlesAccumRadius
+
+        __global__ void circlesAccumRadius(const unsigned int* centers, const unsigned int* list, const int count,
+                                           float3* circles, const int maxCircles, const float dp,
+                                           const int minRadius, const int maxRadius, const int histSize, const int threshold)
+        {
+            extern __shared__ int smem[];
+
+            for (int i = threadIdx.x; i < histSize + 2; i += blockDim.x)
+                smem[i] = 0;
+            __syncthreads();
+
+            unsigned int val = centers[blockIdx.x];
+
+            float cx = (val & 0xFFFF);
+            float cy = (val >> 16) & 0xFFFF;
+
+            cx = (cx + 0.5f) * dp;
+            cy = (cy + 0.5f) * dp;
+
+            for (int i = threadIdx.x; i < count; i += blockDim.x)
+            {
+                val = list[i];
+
+                const int x = (val & 0xFFFF);
+                const int y = (val >> 16) & 0xFFFF;
+
+                const float rad = ::sqrtf((cx - x) * (cx - x) + (cy - y) * (cy - y));
+                if (rad >= minRadius && rad <= maxRadius)
+                {
+                    const int r = __float2int_rn(rad - minRadius);
+
+                    Emulation::smem::atomicAdd(&smem[r + 1], 1);
+                }
+            }
+
+            __syncthreads();
+
+            for (int i = threadIdx.x; i < histSize; i += blockDim.x)
+            {
+                const int curVotes = smem[i + 1];
+
+                if (curVotes >= threshold && curVotes > smem[i] && curVotes >= smem[i + 2])
+                {
+                    const int ind = ::atomicAdd(&g_counter, 1);
+                    if (ind < maxCircles)
+                        circles[ind] = make_float3(cx, cy, i + minRadius);
+                }
+            }
+        }
+
+        int circlesAccumRadius_gpu(const unsigned int* centers, int centersCount, const unsigned int* list, int count,
+                                   float3* circles, int maxCircles, float dp, int minRadius, int maxRadius, int threshold, bool has20)
+        {
+            void* counterPtr;
+            cudaSafeCall( cudaGetSymbolAddress(&counterPtr, g_counter) );
+
+            cudaSafeCall( cudaMemset(counterPtr, 0, sizeof(int)) );
+
+            const dim3 block(has20 ? 1024 : 512);
+            const dim3 grid(centersCount);
+
+            const int histSize = ::ceil(maxRadius - minRadius + 1);
+            size_t smemSize = (histSize + 2) * sizeof(int);
+
+            circlesAccumRadius<<<grid, block, smemSize>>>(centers, list, count, circles, maxCircles, dp, minRadius, maxRadius, histSize, threshold);
+            cudaSafeCall( cudaGetLastError() );
+
+            cudaSafeCall( cudaDeviceSynchronize() );
+
+            int totalCount;
+            cudaSafeCall( cudaMemcpy(&totalCount, counterPtr, sizeof(int), cudaMemcpyDeviceToHost) );
+
+            totalCount = ::min(totalCount, maxCircles);
 
             return totalCount;
         }

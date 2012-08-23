@@ -1131,7 +1131,7 @@ INSTANTIATE_TEST_CASE_P(GPU_ImgProc, CornerMinEigen, testing::Combine(
 
 PARAM_TEST_CASE(HoughLines, cv::gpu::DeviceInfo, cv::Size, UseRoi)
 {
-    void generateLines(cv::Mat& img)
+    static void generateLines(cv::Mat& img)
     {
         img.setTo(cv::Scalar::all(0));
 
@@ -1141,7 +1141,7 @@ PARAM_TEST_CASE(HoughLines, cv::gpu::DeviceInfo, cv::Size, UseRoi)
         cv::line(img, cv::Point(img.cols, 0), cv::Point(0, img.rows), cv::Scalar::all(255));
     }
 
-    void drawLines(cv::Mat& dst, const std::vector<cv::Vec2f>& lines)
+    static void drawLines(cv::Mat& dst, const std::vector<cv::Vec2f>& lines)
     {
         dst.setTo(cv::Scalar::all(0));
 
@@ -1187,6 +1187,77 @@ TEST_P(HoughLines, Accuracy)
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_ImgProc, HoughLines, testing::Combine(
+    ALL_DEVICES,
+    DIFFERENT_SIZES,
+    WHOLE_SUBMAT));
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+// HoughCircles
+
+PARAM_TEST_CASE(HoughCircles, cv::gpu::DeviceInfo, cv::Size, UseRoi)
+{
+    static void drawCircles(cv::Mat& dst, const std::vector<cv::Vec3f>& circles, bool fill)
+    {
+        dst.setTo(cv::Scalar::all(0));
+
+        for (size_t i = 0; i < circles.size(); ++i)
+            cv::circle(dst, cv::Point(circles[i][0], circles[i][1]), circles[i][2], cv::Scalar::all(255), fill ? -1 : 1);
+    }
+};
+
+TEST_P(HoughCircles, Accuracy)
+{
+    const cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
+    cv::gpu::setDevice(devInfo.deviceID());
+    const cv::Size size = GET_PARAM(1);
+    const bool useRoi = GET_PARAM(2);
+
+    const float dp = 2.0f;
+    const float minDist = 10.0f;
+    const int minRadius = 10;
+    const int maxRadius = 20;
+    const int cannyThreshold = 100;
+    const int votesThreshold = 20;
+
+    std::vector<cv::Vec3f> circles_gold(4);
+    circles_gold[0] = cv::Vec3f(20, 20, minRadius);
+    circles_gold[1] = cv::Vec3f(90, 87, minRadius + 3);
+    circles_gold[2] = cv::Vec3f(30, 70, minRadius + 8);
+    circles_gold[3] = cv::Vec3f(80, 10, maxRadius);
+
+    cv::Mat src(size, CV_8UC1);
+    drawCircles(src, circles_gold, true);
+
+    cv::gpu::GpuMat d_circles;
+    cv::gpu::HoughCircles(loadMat(src, useRoi), d_circles, CV_HOUGH_GRADIENT, dp, minDist, cannyThreshold, votesThreshold, minRadius, maxRadius);
+
+    std::vector<cv::Vec3f> circles;
+    cv::gpu::HoughCirclesDownload(d_circles, circles);
+
+    ASSERT_FALSE(circles.empty());
+
+    for (size_t i = 0; i < circles.size(); ++i)
+    {
+        cv::Vec3f cur = circles[i];
+
+        bool found = false;
+
+        for (size_t j = 0; j < circles_gold.size(); ++j)
+        {
+            cv::Vec3f gold = circles_gold[j];
+
+            if (std::fabs(cur[0] - gold[0]) < minDist && std::fabs(cur[1] - gold[1]) < minDist && std::fabs(cur[2] - gold[2]) < minDist)
+            {
+                found = true;
+                break;
+            }
+        }
+
+        ASSERT_TRUE(found);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(GPU_ImgProc, HoughCircles, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     WHOLE_SUBMAT));

@@ -40,6 +40,6 @@ typedef perf::Size_MatType Sz_Type;
 DEF_PARAM_TEST(Sz_Depth, cv::Size, MatDepth);
 DEF_PARAM_TEST(Sz_Depth_Cn, cv::Size, MatDepth, int);
 
-#define GPU_TYPICAL_MAT_SIZES testing::Values(perf::szSXGA, perf::sz720p, perf::sz1080p)
+#define GPU_TYPICAL_MAT_SIZES testing::Values(perf::sz720p, perf::szSXGA, perf::sz1080p)
 
 #endif // __OPENCV_PERF_GPU_UTILITY_HPP__

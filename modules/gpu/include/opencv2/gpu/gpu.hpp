@@ -821,11 +821,30 @@ private:
 };
 
 //! HoughLines
+
+struct HoughLinesBuf
+{
+    GpuMat accum;
+    GpuMat list;
+};
+
 CV_EXPORTS void HoughLines(const GpuMat& src, GpuMat& lines, float rho, float theta, int threshold, bool doSort = false, int maxLines = 4096);
-CV_EXPORTS void HoughLines(const GpuMat& src, GpuMat& lines, GpuMat& accum, GpuMat& buf, float rho, float theta, int threshold, bool doSort = false, int maxLines = 4096);
-CV_EXPORTS void HoughLinesTransform(const GpuMat& src, GpuMat& accum, GpuMat& buf, float rho, float theta);
-CV_EXPORTS void HoughLinesGet(const GpuMat& accum, GpuMat& lines, float rho, float theta, int threshold, bool doSort = false, int maxLines = 4096);
+CV_EXPORTS void HoughLines(const GpuMat& src, GpuMat& lines, HoughLinesBuf& buf, float rho, float theta, int threshold, bool doSort = false, int maxLines = 4096);
 CV_EXPORTS void HoughLinesDownload(const GpuMat& d_lines, OutputArray h_lines, OutputArray h_votes = noArray());
+
+//! HoughCircles
+
+struct HoughCirclesBuf
+{
+    GpuMat edges;
+    GpuMat accum;
+    GpuMat list;
+    CannyBuf cannyBuf;
+};
+
+CV_EXPORTS void HoughCircles(const GpuMat& src, GpuMat& circles, int method, float dp, float minDist, int cannyThreshold, int votesThreshold, int minRadius, int maxRadius, int maxCircles = 4096);
+CV_EXPORTS void HoughCircles(const GpuMat& src, GpuMat& circles, HoughCirclesBuf& buf, int method, float dp, float minDist, int cannyThreshold, int votesThreshold, int minRadius, int maxRadius, int maxCircles = 4096);
+CV_EXPORTS void HoughCirclesDownload(const GpuMat& d_circles, OutputArray h_circles);
 
 ////////////////////////////// Matrix reductions //////////////////////////////
 
