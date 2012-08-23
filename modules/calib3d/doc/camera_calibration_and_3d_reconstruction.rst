@@ -502,27 +502,27 @@ Sample usage of detecting and drawing chessboard corners: ::
 
 findCirclesGrid
 -------------------
-Finds the centers in the grid of circles.
+Finds centers in the grid of circles.
 
 .. ocv:function:: bool findCirclesGrid( InputArray image, Size patternSize, OutputArray centers, int flags=CALIB_CB_SYMMETRIC_GRID, const Ptr<FeatureDetector> &blobDetector = new SimpleBlobDetector() )
 
 .. ocv:pyfunction:: cv2.findCirclesGridDefault(image, patternSize[, centers[, flags]]) -> retval, centers
 
-    :param image: Grid view of source circles. It must be an 8-bit grayscale or color image.
+    :param image: grid view of input circles; it must be an 8-bit grayscale or color image.
 
-    :param patternSize: Number of circles per a grid row and column ``( patternSize = Size(points_per_row, points_per_colum) )`` .
+    :param patternSize: number of circles per row and column ``( patternSize = Size(points_per_row, points_per_colum) )``.
 
-    :param centers: Output array of detected centers.
+    :param centers: output array of detected centers.
 
-    :param flags: Various operation flags that can be one of the following values:
+    :param flags: various operation flags that can be one of the following values:
 
-            * **CALIB_CB_SYMMETRIC_GRID** Use symmetric pattern of circles.
+            * **CALIB_CB_SYMMETRIC_GRID** uses symmetric pattern of circles.
 
-            * **CALIB_CB_ASYMMETRIC_GRID** Use asymmetric pattern of circles.
+            * **CALIB_CB_ASYMMETRIC_GRID** uses asymmetric pattern of circles.
 
-            * **CALIB_CB_CLUSTERING** Use a special algorithm for grid detection. It is more robust to perspective distortions but much more sensitive to background clutter.
+            * **CALIB_CB_CLUSTERING** uses a special algorithm for grid detection. It is more robust to perspective distortions but much more sensitive to background clutter.
 
-    :param blobDetector: FeatureDetector that finds blobs like dark circles on light background
+    :param blobDetector: feature detector that finds blobs like dark circles on light background.
 
 
 The function attempts to determine

@@ -4,18 +4,18 @@ Feature Detection and Description
 .. highlight:: cpp
 
 FAST
---------
+----
 Detects corners using the FAST algorithm
 
 .. ocv:function:: void FAST( InputArray image, vector<KeyPoint>& keypoints, int threshold, bool nonmaxSupression=true, type=FastFeatureDetector::TYPE_9_16 )
 
-    :param image: Image where keypoints (corners) are detected.
+    :param image: grayscale image where keypoints (corners) are detected.
 
-    :param keypoints: Keypoints detected on the image.
+    :param keypoints: keypoints detected on the image.
 
-    :param threshold: Threshold on difference between intensity of the central pixel and pixels on a circle around this pixel. See the algorithm description below.
+    :param threshold: threshold on difference between intensity of the central pixel and pixels of a circle around this pixel.
 
-    :param nonmaxSupression: If it is true, non-maximum suppression is applied to detected corners (keypoints).
+    :param nonmaxSupression: if true, non-maximum suppression is applied to detected corners (keypoints).
 
     :param type: one of the three neighborhoods as defined in the paper: ``FastFeatureDetector::TYPE_9_16``, ``FastFeatureDetector::TYPE_7_12``, ``FastFeatureDetector::TYPE_5_8``
 

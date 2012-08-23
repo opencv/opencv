@@ -17,17 +17,17 @@ Finds edges in an image using the [Canny86]_ algorithm.
 
 .. ocv:pyoldfunction:: cv.Canny(image, edges, threshold1, threshold2, aperture_size=3) -> None
 
-    :param image: Single-channel 8-bit input image.
+    :param image: single-channel 8-bit input image.
 
-    :param edges: Output edge map. It has the same size and type as  ``image`` .
+    :param edges: output edge map; it has the same size and type as  ``image`` .
 
-    :param threshold1: First threshold for the hysteresis procedure.
+    :param threshold1: first threshold for the hysteresis procedure.
 
-    :param threshold2: Second threshold for the hysteresis procedure.
+    :param threshold2: second threshold for the hysteresis procedure.
 
-    :param apertureSize: Aperture size for the  :ocv:func:`Sobel`  operator.
+    :param apertureSize: aperture size for the :ocv:func:`Sobel` operator.
 
-    :param L2gradient: Flag indicating whether a more accurate  :math:`L_2`  norm  :math:`=\sqrt{(dI/dx)^2 + (dI/dy)^2}`  should be used to compute the image gradient magnitude ( ``L2gradient=true`` ), or a faster default  :math:`L_1`  norm  :math:`=|dI/dx|+|dI/dy|`  is enough ( ``L2gradient=false`` ).
+    :param L2gradient: a flag, indicating whether a more accurate  :math:`L_2`  norm  :math:`=\sqrt{(dI/dx)^2 + (dI/dy)^2}`  should be used to calculate the image gradient magnitude ( ``L2gradient=true`` ), or whether the default  :math:`L_1`  norm  :math:`=|dI/dx|+|dI/dy|`  is enough ( ``L2gradient=false`` ).
 
 The function finds edges in the input image ``image`` and marks them in the output map ``edges`` using the Canny algorithm. The smallest value between ``threshold1`` and ``threshold2`` is used for edge linking. The largest value is used to find initial segments of strong edges. See
 http://en.wikipedia.org/wiki/Canny_edge_detector
