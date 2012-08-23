@@ -24,6 +24,7 @@ public abstract class SampleViewBase extends SurfaceView implements SurfaceHolde
     private byte[]              mFrame;
     private boolean             mThreadRun;
     private byte[]              mBuffer;
+    private SurfaceTexture      mSf;
 
 
     public SampleViewBase(Context context) {
@@ -42,8 +43,10 @@ public abstract class SampleViewBase extends SurfaceView implements SurfaceHolde
     }
 
     public void setPreview() throws IOException {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB)
-            mCamera.setPreviewTexture( new SurfaceTexture(10) );
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
+            mSf = new SurfaceTexture(10);
+            mCamera.setPreviewTexture( mSf );
+        }
         else
             mCamera.setPreviewDisplay(null);
     }
@@ -123,14 +126,14 @@ public abstract class SampleViewBase extends SurfaceView implements SurfaceHolde
                 mFrame = new byte [size];
                 mCamera.addCallbackBuffer(mBuffer);
 
+                /* Notify that the preview is about to be started and deliver preview size */
+                onPreviewStarted(params.getPreviewSize().width, params.getPreviewSize().height);
+
                 try {
                     setPreview();
                 } catch (IOException e) {
                     Log.e(TAG, "mCamera.setPreviewDisplay/setPreviewTexture fails: " + e);
                 }
-
-                /* Notify that the preview is about to be started and deliver preview size */
-                onPreviewStarted(params.getPreviewSize().width, params.getPreviewSize().height);
 
                 /* Now we can start a preview */
                 mCamera.startPreview();
