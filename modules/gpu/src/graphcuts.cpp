@@ -63,14 +63,10 @@ namespace cv { namespace gpu { namespace device
     }
 }}}
 
-
-float4 scalarToCudaType(const cv::Scalar& in)
+static float4 scalarToCudaType(const cv::Scalar& in)
 {
-    float4 res;
-    res.x = in[0]; res.y = in[1]; res.z = in[2]; res.w = in[3];
-    return res;
+  return make_float4((float)in[0], (float)in[1], (float)in[2], (float)in[3]);
 }
-
 
 void cv::gpu::connectivityMask(const GpuMat& image, GpuMat& mask, const cv::Scalar& lo, const cv::Scalar& hi, Stream& s)
 {

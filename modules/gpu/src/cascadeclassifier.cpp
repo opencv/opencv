@@ -155,7 +155,7 @@ public:
 
         cv::Size ncvMinSize = this->getClassifierCvSize();
 
-        if (ncvMinSize.width < (unsigned)minSize.width && ncvMinSize.height < (unsigned)minSize.height)
+        if (ncvMinSize.width < minSize.width && ncvMinSize.height < minSize.height)
         {
             ncvMinSize.width = minSize.width;
             ncvMinSize.height = minSize.height;

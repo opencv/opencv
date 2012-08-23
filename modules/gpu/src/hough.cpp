@@ -112,7 +112,7 @@ void cv::gpu::HoughLinesGet(const GpuMat& accum, GpuMat& lines, float rho, float
 
     ensureSizeIsEnough(2, maxLines, CV_32FC2, lines);
 
-    int count = linesGetResult_gpu(accum, lines.ptr<float2>(0), lines.ptr<int>(1), maxLines, rho, theta, threshold, doSort);
+    int count = linesGetResult_gpu(accum, lines.ptr<float2>(0), lines.ptr<int>(1), maxLines, rho, theta, (float)threshold, doSort);
 
     if (count > 0)
         lines.cols = count;

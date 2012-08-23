@@ -44,16 +44,16 @@ PERF_TEST_P( TestRemap, Remap,
             switch (map1_type)
             {
                 case CV_32FC1:
-                    map1.at<float>(j, i) = src.cols - i;
-                    map2.at<float>(j, i) = j;
+                    map1.at<float>(j, i) = (float)(src.cols - i);
+                    map2.at<float>(j, i) = (float)j;
                     break;
                 case CV_32FC2:
-                    map1.at<Vec2f>(j, i)[0] = src.cols - i;
-                    map1.at<Vec2f>(j, i)[1] = j;
+                    map1.at<Vec2f>(j, i)[0] = (float)(src.cols - i);
+                    map1.at<Vec2f>(j, i)[1] = (float)j;
                     break;
                 case CV_16SC2:
-                    map1.at<Vec2s>(j, i)[0] = src.cols - i;
-                    map1.at<Vec2s>(j, i)[1] = j;
+                    map1.at<Vec2s>(j, i)[0] = (float)(src.cols - i);
+                    map1.at<Vec2s>(j, i)[1] = (float)j;
                     break;
                 default:
                     CV_Assert(0);

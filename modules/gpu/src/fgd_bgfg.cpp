@@ -412,7 +412,7 @@ namespace
 
         changeMask.setTo(cv::Scalar::all(0));
 
-        funcs[prevFrame.channels() - 1][curFrame.channels() - 1](prevFrame, curFrame, make_uchar3(bestThres[0], bestThres[1], bestThres[2]), changeMask, 0);
+        funcs[prevFrame.channels() - 1][curFrame.channels() - 1](prevFrame, curFrame, make_uchar3((uchar)bestThres[0], (uchar)bestThres[1], (uchar)bestThres[2]), changeMask, 0);
     }
 
     // performs change detection for Foreground detection algorithm

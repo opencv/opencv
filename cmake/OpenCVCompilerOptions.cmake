@@ -283,3 +283,8 @@ if(MSVC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4251") #class 'std::XXX' needs to have dll-interface to be used by clients of YYY
   endif()
 endif()
+
+
+if (MSVC AND ENABLE_MULTI_PROCESSOR_COMPILATION)
+   SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
+endif()

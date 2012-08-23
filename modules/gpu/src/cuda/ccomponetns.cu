@@ -43,6 +43,7 @@
 #include <opencv2/gpu/device/vec_traits.hpp>
 #include <opencv2/gpu/device/vec_math.hpp>
 #include <opencv2/gpu/device/emulation.hpp>
+
 #include <iostream>
 #include <stdio.h>
 
@@ -128,7 +129,8 @@ namespace cv { namespace gpu { namespace device
 
         template<typename T> struct InInterval<T, 1>
         {
-            __host__ __device__ __forceinline__ InInterval(const float4& _lo, const float4& _hi) : lo(-_lo.x), hi(_hi.x) {};
+            typedef typename VecTraits<T>::elem_type E;
+            __host__ __device__ __forceinline__ InInterval(const float4& _lo, const float4& _hi) : lo((E)(-_lo.x)), hi((E)_hi.x) {};
             T lo, hi;
 
             template<typename I> __device__ __forceinline__ bool operator() (const I& a, const I& b) const
@@ -138,10 +140,12 @@ namespace cv { namespace gpu { namespace device
             }
         };
 
+
         template<typename T> struct InInterval<T, 3>
         {
+            typedef typename VecTraits<T>::elem_type E;
             __host__ __device__ __forceinline__ InInterval(const float4& _lo, const float4& _hi)
-            : lo (VecTraits<T>::make(-_lo.x, -_lo.y, -_lo.z)), hi (VecTraits<T>::make(_hi.x, _hi.y, _hi.z)){};
+            : lo (VecTraits<T>::make((E)(-_lo.x), (E)(-_lo.y), (E)(-_lo.z))), hi (VecTraits<T>::make((E)_hi.x, (E)_hi.y, (E)_hi.z)){};
             T lo, hi;
 
             template<typename I> __device__ __forceinline__ bool operator() (const I& a, const I& b) const
@@ -155,8 +159,9 @@ namespace cv { namespace gpu { namespace device
 
         template<typename T> struct InInterval<T, 4>
         {
+            typedef typename VecTraits<T>::elem_type E;
             __host__ __device__ __forceinline__ InInterval(const float4& _lo, const float4& _hi)
-            : lo (VecTraits<T>::make(-_lo.x, -_lo.y, -_lo.z, -_lo.w)), hi (VecTraits<T>::make(_hi.x, _hi.y, _hi.z, -_hi.w)){};
+            : lo (VecTraits<T>::make((E)(-_lo.x), (E)(-_lo.y), (E)(-_lo.z), (E)(-_lo.w))), hi (VecTraits<T>::make((E)_hi.x, (E)_hi.y, (E)_hi.z, (E)_hi.w)){};
             T lo, hi;
 
             template<typename I> __device__ __forceinline__ bool operator() (const I& a, const I& b) const
@@ -499,11 +504,11 @@ namespace cv { namespace gpu { namespace device
             int tileSizeX = TILE_COLS, tileSizeY = TILE_ROWS;
             while (grid.x > 1 || grid.y > 1)
             {
-                dim3 mergeGrid(ceilf(grid.x / 2.0), ceilf(grid.y / 2.0));
+                dim3 mergeGrid((int)ceilf(grid.x / 2.f), (int)ceilf(grid.y / 2.f));
                 dim3 mergeBlock(STA_SIZE_MERGE_X, STA_SIZE_MERGE_Y);
                 // debug log
                 // std::cout << "merging: " << grid.y  << " x " << grid.x << " ---> " << mergeGrid.y <<  " x " << mergeGrid.x << " for tiles: " << tileSizeY << " x " << tileSizeX << std::endl;
-                crossMerge<<<mergeGrid, mergeBlock, 0, stream>>>(2, 2, tileSizeY, tileSizeX, edges, comps, ceilf(grid.y / 2.0) - grid.y / 2, ceilf(grid.x / 2.0) - grid.x / 2);
+                crossMerge<<<mergeGrid, mergeBlock, 0, stream>>>(2, 2, tileSizeY, tileSizeX, edges, comps, (int)ceilf(grid.y / 2.f) - grid.y / 2, (int)ceilf(grid.x / 2.f) - grid.x / 2);
                 tileSizeX <<= 1;
                 tileSizeY <<= 1;
                 grid = mergeGrid;

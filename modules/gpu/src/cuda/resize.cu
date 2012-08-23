@@ -226,8 +226,8 @@ namespace cv { namespace gpu { namespace device
                 (void)srcWhole;
                 (void)xoff;
                 (void)yoff;
-                int iscale_x = round(fx);
-                int iscale_y = round(fy);
+                int iscale_x = (int)round(fx);
+                int iscale_y = (int)round(fy);
 
                 if( std::abs(fx - iscale_x) < FLT_MIN && std::abs(fy - iscale_y) < FLT_MIN)
                     ResizeDispatcherStream<IntegerAreaFilter, T>::call(src, fx, fy, dst, stream);
