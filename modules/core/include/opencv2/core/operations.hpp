@@ -1077,9 +1077,9 @@ double norm(const Matx<_Tp, m, n>& M)
 template<typename _Tp, int m, int n> static inline
 double norm(const Matx<_Tp, m, n>& M, int normType)
 {
-    return normType == NORM_INF ? (double)normInf<_Tp, DataType<_Tp>::work_type>(M.val, m*n) :
-        normType == NORM_L1 ? (double)normL1<_Tp, DataType<_Tp>::work_type>(M.val, m*n) :
-        std::sqrt((double)normL2Sqr<_Tp, DataType<_Tp>::work_type>(M.val, m*n));
+    return normType == NORM_INF ? (double)normInf<_Tp, typename DataType<_Tp>::work_type>(M.val, m*n) :
+        normType == NORM_L1 ? (double)normL1<_Tp, typename DataType<_Tp>::work_type>(M.val, m*n) :
+        std::sqrt((double)normL2Sqr<_Tp, typename DataType<_Tp>::work_type>(M.val, m*n));
 }
 
 
