@@ -301,6 +301,13 @@ private:
 *                                Tests registrations                                     *
 \****************************************************************************************/
 
+TEST( Features2d_DescriptorExtractor_BRISK, regression )
+{
+    CV_DescriptorExtractorTest<Hamming> test( "descriptor-brisk",  (CV_DescriptorExtractorTest<Hamming>::DistanceType)2.f,
+                                                 DescriptorExtractor::create("BRISK") );
+    test.safe_run();
+}
+
 TEST( Features2d_DescriptorExtractor_ORB, regression )
 {
     // TODO adjust the parameters below

@@ -247,6 +247,12 @@ void CV_FeatureDetectorTest::run( int /*start_from*/ )
 *                                Tests registrations                                     *
 \****************************************************************************************/
 
+TEST( Features2d_Detector_BRISK, regression )
+{
+    CV_FeatureDetectorTest test( "detector-brisk", FeatureDetector::create("BRISK") );
+    test.safe_run();
+}
+
 TEST( Features2d_Detector_FAST, regression )
 {
     CV_FeatureDetectorTest test( "detector-fast", FeatureDetector::create("FAST") );
