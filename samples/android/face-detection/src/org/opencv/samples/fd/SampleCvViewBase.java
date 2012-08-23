@@ -34,8 +34,8 @@ public abstract class SampleCvViewBase extends SurfaceView implements SurfaceHol
             releaseCamera();
             mCamera = new VideoCapture(Highgui.CV_CAP_ANDROID);
             if (!mCamera.isOpened()) {
-                releaseCamera();
                 Log.e(TAG, "Failed to open native camera");
+                releaseCamera();
                 return false;
             }
         }
@@ -92,6 +92,7 @@ public abstract class SampleCvViewBase extends SurfaceView implements SurfaceHol
     public void surfaceDestroyed(SurfaceHolder holder) {
         Log.i(TAG, "surfaceDestroyed");
         releaseCamera();
+        Log.i(TAG, "surfaceDestroyed2");
     }
 
     protected abstract Bitmap processFrame(VideoCapture capture);

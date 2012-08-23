@@ -21,6 +21,7 @@ inline void vector_Rect_to_Mat(vector<Rect>& v_rect, Mat& mat)
 JNIEXPORT jlong JNICALL Java_org_opencv_samples_fd_DetectionBasedTracker_nativeCreateObject
 (JNIEnv * jenv, jclass, jstring jFileName, jint faceSize)
 {
+    LOGD("Java_org_opencv_samples_fd_DetectionBasedTracker_nativeCreateObject enter");
     const char* jnamestr = jenv->GetStringUTFChars(jFileName, NULL);
     string stdFileName(jnamestr);
     jlong result = 0;
@@ -48,16 +49,21 @@ JNIEXPORT jlong JNICALL Java_org_opencv_samples_fd_DetectionBasedTracker_nativeC
         return 0;
     }
 
+    LOGD("Java_org_opencv_samples_fd_DetectionBasedTracker_nativeCreateObject exit");
     return result;
 }
 
 JNIEXPORT void JNICALL Java_org_opencv_samples_fd_DetectionBasedTracker_nativeDestroyObject
 (JNIEnv * jenv, jclass, jlong thiz)
 {
+    LOGD("Java_org_opencv_samples_fd_DetectionBasedTracker_nativeDestroyObject enter");
     try
     {
-        ((DetectionBasedTracker*)thiz)->stop();
-        delete (DetectionBasedTracker*)thiz;
+        if(thiz != 0)
+        {
+            ((DetectionBasedTracker*)thiz)->stop();
+            delete (DetectionBasedTracker*)thiz;
+        }
     }
     catch(cv::Exception e)
     {
@@ -73,11 +79,13 @@ JNIEXPORT void JNICALL Java_org_opencv_samples_fd_DetectionBasedTracker_nativeDe
         jclass je = jenv->FindClass("java/lang/Exception");
         jenv->ThrowNew(je, "Unknown exception in JNI code {highgui::VideoCapture_n_1VideoCapture__()}");
     }
+    LOGD("Java_org_opencv_samples_fd_DetectionBasedTracker_nativeDestroyObject exit");
 }
 
 JNIEXPORT void JNICALL Java_org_opencv_samples_fd_DetectionBasedTracker_nativeStart
 (JNIEnv * jenv, jclass, jlong thiz)
 {
+    LOGD("Java_org_opencv_samples_fd_DetectionBasedTracker_nativeStart enter");
     try
     {
         ((DetectionBasedTracker*)thiz)->run();
@@ -96,11 +104,13 @@ JNIEXPORT void JNICALL Java_org_opencv_samples_fd_DetectionBasedTracker_nativeSt
         jclass je = jenv->FindClass("java/lang/Exception");
         jenv->ThrowNew(je, "Unknown exception in JNI code {highgui::VideoCapture_n_1VideoCapture__()}");
     }
+    LOGD("Java_org_opencv_samples_fd_DetectionBasedTracker_nativeStart exit");
 }
 
 JNIEXPORT void JNICALL Java_org_opencv_samples_fd_DetectionBasedTracker_nativeStop
 (JNIEnv * jenv, jclass, jlong thiz)
 {
+    LOGD("Java_org_opencv_samples_fd_DetectionBasedTracker_nativeStop enter");
     try
     {
         ((DetectionBasedTracker*)thiz)->stop();
@@ -119,11 +129,13 @@ JNIEXPORT void JNICALL Java_org_opencv_samples_fd_DetectionBasedTracker_nativeSt
         jclass je = jenv->FindClass("java/lang/Exception");
         jenv->ThrowNew(je, "Unknown exception in JNI code {highgui::VideoCapture_n_1VideoCapture__()}");
     }
+    LOGD("Java_org_opencv_samples_fd_DetectionBasedTracker_nativeStop exit");
 }
 
 JNIEXPORT void JNICALL Java_org_opencv_samples_fd_DetectionBasedTracker_nativeSetFaceSize
 (JNIEnv * jenv, jclass, jlong thiz, jint faceSize)
 {
+    LOGD("Java_org_opencv_samples_fd_DetectionBasedTracker_nativeSetFaceSize enter");
     try
     {
         if (faceSize > 0)
@@ -148,12 +160,14 @@ JNIEXPORT void JNICALL Java_org_opencv_samples_fd_DetectionBasedTracker_nativeSe
         jclass je = jenv->FindClass("java/lang/Exception");
         jenv->ThrowNew(je, "Unknown exception in JNI code {highgui::VideoCapture_n_1VideoCapture__()}");
     }
+    LOGD("Java_org_opencv_samples_fd_DetectionBasedTracker_nativeSetFaceSize exit");
 }
 
 
 JNIEXPORT void JNICALL Java_org_opencv_samples_fd_DetectionBasedTracker_nativeDetect
 (JNIEnv * jenv, jclass, jlong thiz, jlong imageGray, jlong faces)
 {
+    LOGD("Java_org_opencv_samples_fd_DetectionBasedTracker_nativeDetect enter");
     try
     {
         vector<Rect> RectFaces;
@@ -175,4 +189,5 @@ JNIEXPORT void JNICALL Java_org_opencv_samples_fd_DetectionBasedTracker_nativeDe
         jclass je = jenv->FindClass("java/lang/Exception");
         jenv->ThrowNew(je, "Unknown exception in JNI code {highgui::VideoCapture_n_1VideoCapture__()}");
     }
+    LOGD("Java_org_opencv_samples_fd_DetectionBasedTracker_nativeDetect exit");
 }
