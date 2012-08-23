@@ -203,7 +203,7 @@ namespace cv { namespace gpu { namespace device
         };
 
         template <typename T, typename D, typename UnOp, typename Mask>
-        __global__ static void transformSmart(const DevMem2D_<T> src_, PtrStep<D> dst_, const Mask mask, const UnOp op)
+        __global__ static void transformSmart(const PtrStepSz<T> src_, PtrStep<D> dst_, const Mask mask, const UnOp op)
         {
             typedef TransformFunctorTraits<UnOp> ft;
             typedef typename UnaryReadWriteTraits<T, D, ft::smart_shift>::read_type read_type;
@@ -239,7 +239,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <typename T, typename D, typename UnOp, typename Mask>
-        static __global__ void transformSimple(const DevMem2D_<T> src, PtrStep<D> dst, const Mask mask, const UnOp op)
+        static __global__ void transformSimple(const PtrStepSz<T> src, PtrStep<D> dst, const Mask mask, const UnOp op)
         {
 	        const int x = blockDim.x * blockIdx.x + threadIdx.x;
 	        const int y = blockDim.y * blockIdx.y + threadIdx.y;
@@ -251,7 +251,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <typename T1, typename T2, typename D, typename BinOp, typename Mask>
-        __global__ static void transformSmart(const DevMem2D_<T1> src1_, const PtrStep<T2> src2_, PtrStep<D> dst_, 
+        __global__ static void transformSmart(const PtrStepSz<T1> src1_, const PtrStep<T2> src2_, PtrStep<D> dst_, 
             const Mask mask, const BinOp op)
         {
             typedef TransformFunctorTraits<BinOp> ft;
@@ -291,7 +291,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <typename T1, typename T2, typename D, typename BinOp, typename Mask>
-        static __global__ void transformSimple(const DevMem2D_<T1> src1, const PtrStep<T2> src2, PtrStep<D> dst, 
+        static __global__ void transformSimple(const PtrStepSz<T1> src1, const PtrStep<T2> src2, PtrStep<D> dst, 
             const Mask mask, const BinOp op)
         {
 	        const int x = blockDim.x * blockIdx.x + threadIdx.x;
@@ -309,7 +309,7 @@ namespace cv { namespace gpu { namespace device
         template<> struct TransformDispatcher<false>
         {
             template <typename T, typename D, typename UnOp, typename Mask>
-            static void call(DevMem2D_<T> src, DevMem2D_<D> dst, UnOp op, Mask mask, cudaStream_t stream)
+            static void call(PtrStepSz<T> src, PtrStepSz<D> dst, UnOp op, Mask mask, cudaStream_t stream)
             {
                 typedef TransformFunctorTraits<UnOp> ft;
 
@@ -324,7 +324,7 @@ namespace cv { namespace gpu { namespace device
             }
 
             template <typename T1, typename T2, typename D, typename BinOp, typename Mask>
-            static void call(DevMem2D_<T1> src1, DevMem2D_<T2> src2, DevMem2D_<D> dst, BinOp op, Mask mask, cudaStream_t stream)
+            static void call(PtrStepSz<T1> src1, PtrStepSz<T2> src2, PtrStepSz<D> dst, BinOp op, Mask mask, cudaStream_t stream)
             {
                 typedef TransformFunctorTraits<BinOp> ft;
 
@@ -341,7 +341,7 @@ namespace cv { namespace gpu { namespace device
         template<> struct TransformDispatcher<true>
         {
             template <typename T, typename D, typename UnOp, typename Mask>
-            static void call(DevMem2D_<T> src, DevMem2D_<D> dst, UnOp op, Mask mask, cudaStream_t stream)
+            static void call(PtrStepSz<T> src, PtrStepSz<D> dst, UnOp op, Mask mask, cudaStream_t stream)
             {
                 typedef TransformFunctorTraits<UnOp> ft;
 
@@ -365,7 +365,7 @@ namespace cv { namespace gpu { namespace device
             }
 
             template <typename T1, typename T2, typename D, typename BinOp, typename Mask>
-            static void call(DevMem2D_<T1> src1, DevMem2D_<T2> src2, DevMem2D_<D> dst, BinOp op, Mask mask, cudaStream_t stream)
+            static void call(PtrStepSz<T1> src1, PtrStepSz<T2> src2, PtrStepSz<D> dst, BinOp op, Mask mask, cudaStream_t stream)
             {
                 typedef TransformFunctorTraits<BinOp> ft;
 

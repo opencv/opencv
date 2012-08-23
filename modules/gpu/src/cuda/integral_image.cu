@@ -57,7 +57,7 @@ namespace cv { namespace gpu { namespace device
             return bytes;
         }
 
-        __global__ void shfl_integral_horizontal(const PtrStep_<uint4> img, PtrStep_<uint4> integral)
+        __global__ void shfl_integral_horizontal(const PtrStep<uint4> img, PtrStep<uint4> integral)
         {
         #if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ >= 300)
             __shared__ int sums[128];
@@ -297,7 +297,7 @@ namespace cv { namespace gpu { namespace device
         // The final set of sums from the block is then propgated, with the block
         // computing "down" the image and adding the running sum to the local
         // block sums.
-        __global__ void shfl_integral_vertical(DevMem2D_<unsigned int> integral)
+        __global__ void shfl_integral_vertical(PtrStepSz<unsigned int> integral)
         {
         #if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ >= 300)
             __shared__ unsigned int sums[32][9];
@@ -355,7 +355,7 @@ namespace cv { namespace gpu { namespace device
         #endif
         }
 
-        void shfl_integral_gpu(DevMem2Db img, DevMem2D_<unsigned int> integral, cudaStream_t stream)
+        void shfl_integral_gpu(PtrStepSzb img, PtrStepSz<unsigned int> integral, cudaStream_t stream)
         {
             {
                 // each thread handles 16 values, use 1 block/row
@@ -366,7 +366,7 @@ namespace cv { namespace gpu { namespace device
 
                 cudaSafeCall( cudaFuncSetCacheConfig(shfl_integral_horizontal, cudaFuncCachePreferL1) );
 
-                shfl_integral_horizontal<<<grid, block, 0, stream>>>((DevMem2D_<uint4>) img, (DevMem2D_<uint4>) integral);
+                shfl_integral_horizontal<<<grid, block, 0, stream>>>((PtrStepSz<uint4>) img, (PtrStepSz<uint4>) integral);
                 cudaSafeCall( cudaGetLastError() );
             }
 

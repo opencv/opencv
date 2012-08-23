@@ -352,18 +352,18 @@ namespace cv { namespace gpu { namespace device
                              float initalScale,
                              float factor,
                              int total,
-                             const DevMem2Db& mstages,
+                             const PtrStepSzb& mstages,
                              const int nstages,
-                             const DevMem2Di& mnodes,
-                             const DevMem2Df& mleaves,
-                             const DevMem2Di& msubsets,
-                             const DevMem2Db& mfeatures,
+                             const PtrStepSzi& mnodes,
+                             const PtrStepSzf& mleaves,
+                             const PtrStepSzi& msubsets,
+                             const PtrStepSzb& mfeatures,
                              const int subsetSize,
-                             DevMem2D_<int4> objects,
+                             PtrStepSz<int4> objects,
                              unsigned int* classified,
-                             DevMem2Di integral);
+                             PtrStepSzi integral);
 
-        void connectedConmonents(DevMem2D_<int4>  candidates, int ncandidates, DevMem2D_<int4> objects,int groupThreshold, float grouping_eps, unsigned int* nclasses);
+        void connectedConmonents(PtrStepSz<int4>  candidates, int ncandidates, PtrStepSz<int4> objects,int groupThreshold, float grouping_eps, unsigned int* nclasses);
     }
 }}}
 

@@ -60,12 +60,12 @@ namespace cv { namespace gpu { namespace device
 {
     namespace transform_points
     {
-        void call(const DevMem2D_<float3> src, const float* rot, const float* transl, DevMem2D_<float3> dst, cudaStream_t stream);
+        void call(const PtrStepSz<float3> src, const float* rot, const float* transl, PtrStepSz<float3> dst, cudaStream_t stream);
     }
 
     namespace project_points
     {
-        void call(const DevMem2D_<float3> src, const float* rot, const float* transl, const float* proj, DevMem2D_<float2> dst, cudaStream_t stream);
+        void call(const PtrStepSz<float3> src, const float* rot, const float* transl, const float* proj, PtrStepSz<float2> dst, cudaStream_t stream);
     }
 
     namespace solve_pnp_ransac

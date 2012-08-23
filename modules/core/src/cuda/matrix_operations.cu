@@ -46,6 +46,18 @@
 
 namespace cv { namespace gpu { namespace device
 {
+    void writeScalar(const uchar*);
+    void writeScalar(const schar*);
+    void writeScalar(const ushort*);
+    void writeScalar(const short int*);
+    void writeScalar(const int*);
+    void writeScalar(const float*);
+    void writeScalar(const double*);
+    void convert_gpu(PtrStepSzb, int, PtrStepSzb, int, double, double, cudaStream_t);
+}}}
+
+namespace cv { namespace gpu { namespace device
+{
     template <typename T> struct shift_and_sizeof;
     template <> struct shift_and_sizeof<signed char> { enum { shift = 0 }; };
     template <> struct shift_and_sizeof<unsigned char> { enum { shift = 0 }; };
@@ -59,17 +71,17 @@ namespace cv { namespace gpu { namespace device
     ////////////////////////////////// CopyTo /////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////
 
-    template <typename T> void copyToWithMask(DevMem2Db src, DevMem2Db dst, int cn, DevMem2Db mask, bool colorMask, cudaStream_t stream)
+    template <typename T> void copyToWithMask(PtrStepSzb src, PtrStepSzb dst, int cn, PtrStepSzb mask, bool colorMask, cudaStream_t stream)
     {
         if (colorMask)
-            cv::gpu::device::transform((DevMem2D_<T>)src, (DevMem2D_<T>)dst, identity<T>(), SingleMask(mask), stream);
+            cv::gpu::device::transform((PtrStepSz<T>)src, (PtrStepSz<T>)dst, identity<T>(), SingleMask(mask), stream);
         else
-            cv::gpu::device::transform((DevMem2D_<T>)src, (DevMem2D_<T>)dst, identity<T>(), SingleMaskChannels(mask, cn), stream);
+            cv::gpu::device::transform((PtrStepSz<T>)src, (PtrStepSz<T>)dst, identity<T>(), SingleMaskChannels(mask, cn), stream);
     }
 
-    void copyToWithMask_gpu(DevMem2Db src, DevMem2Db dst, size_t elemSize1, int cn, DevMem2Db mask, bool colorMask, cudaStream_t stream)
+    void copyToWithMask_gpu(PtrStepSzb src, PtrStepSzb dst, size_t elemSize1, int cn, PtrStepSzb mask, bool colorMask, cudaStream_t stream)
     {
-        typedef void (*func_t)(DevMem2Db src, DevMem2Db dst, int cn, DevMem2Db mask, bool colorMask, cudaStream_t stream);
+        typedef void (*func_t)(PtrStepSzb src, PtrStepSzb dst, int cn, PtrStepSzb mask, bool colorMask, cudaStream_t stream);
 
         static func_t tab[] =
         {
@@ -164,7 +176,7 @@ namespace cv { namespace gpu { namespace device
             }
     }
     template <typename T>
-    void set_to_gpu(DevMem2Db mat, const T* scalar, DevMem2Db mask, int channels, cudaStream_t stream)
+    void set_to_gpu(PtrStepSzb mat, const T* scalar, PtrStepSzb mask, int channels, cudaStream_t stream)
     {
         writeScalar(scalar);
 
@@ -178,16 +190,16 @@ namespace cv { namespace gpu { namespace device
             cudaSafeCall ( cudaDeviceSynchronize() );
     }
 
-    template void set_to_gpu<uchar >(DevMem2Db mat, const uchar*  scalar, DevMem2Db mask, int channels, cudaStream_t stream);
-    template void set_to_gpu<schar >(DevMem2Db mat, const schar*  scalar, DevMem2Db mask, int channels, cudaStream_t stream);
-    template void set_to_gpu<ushort>(DevMem2Db mat, const ushort* scalar, DevMem2Db mask, int channels, cudaStream_t stream);
-    template void set_to_gpu<short >(DevMem2Db mat, const short*  scalar, DevMem2Db mask, int channels, cudaStream_t stream);
-    template void set_to_gpu<int   >(DevMem2Db mat, const int*    scalar, DevMem2Db mask, int channels, cudaStream_t stream);
-    template void set_to_gpu<float >(DevMem2Db mat, const float*  scalar, DevMem2Db mask, int channels, cudaStream_t stream);
-    template void set_to_gpu<double>(DevMem2Db mat, const double* scalar, DevMem2Db mask, int channels, cudaStream_t stream);
+    template void set_to_gpu<uchar >(PtrStepSzb mat, const uchar*  scalar, PtrStepSzb mask, int channels, cudaStream_t stream);
+    template void set_to_gpu<schar >(PtrStepSzb mat, const schar*  scalar, PtrStepSzb mask, int channels, cudaStream_t stream);
+    template void set_to_gpu<ushort>(PtrStepSzb mat, const ushort* scalar, PtrStepSzb mask, int channels, cudaStream_t stream);
+    template void set_to_gpu<short >(PtrStepSzb mat, const short*  scalar, PtrStepSzb mask, int channels, cudaStream_t stream);
+    template void set_to_gpu<int   >(PtrStepSzb mat, const int*    scalar, PtrStepSzb mask, int channels, cudaStream_t stream);
+    template void set_to_gpu<float >(PtrStepSzb mat, const float*  scalar, PtrStepSzb mask, int channels, cudaStream_t stream);
+    template void set_to_gpu<double>(PtrStepSzb mat, const double* scalar, PtrStepSzb mask, int channels, cudaStream_t stream);
 
     template <typename T>
-    void set_to_gpu(DevMem2Db mat, const T* scalar, int channels, cudaStream_t stream)
+    void set_to_gpu(PtrStepSzb mat, const T* scalar, int channels, cudaStream_t stream)
     {
         writeScalar(scalar);
 
@@ -201,13 +213,13 @@ namespace cv { namespace gpu { namespace device
             cudaSafeCall ( cudaDeviceSynchronize() );
     }
 
-    template void set_to_gpu<uchar >(DevMem2Db mat, const uchar*  scalar, int channels, cudaStream_t stream);
-    template void set_to_gpu<schar >(DevMem2Db mat, const schar*  scalar, int channels, cudaStream_t stream);
-    template void set_to_gpu<ushort>(DevMem2Db mat, const ushort* scalar, int channels, cudaStream_t stream);
-    template void set_to_gpu<short >(DevMem2Db mat, const short*  scalar, int channels, cudaStream_t stream);
-    template void set_to_gpu<int   >(DevMem2Db mat, const int*    scalar, int channels, cudaStream_t stream);
-    template void set_to_gpu<float >(DevMem2Db mat, const float*  scalar, int channels, cudaStream_t stream);
-    template void set_to_gpu<double>(DevMem2Db mat, const double* scalar, int channels, cudaStream_t stream);
+    template void set_to_gpu<uchar >(PtrStepSzb mat, const uchar*  scalar, int channels, cudaStream_t stream);
+    template void set_to_gpu<schar >(PtrStepSzb mat, const schar*  scalar, int channels, cudaStream_t stream);
+    template void set_to_gpu<ushort>(PtrStepSzb mat, const ushort* scalar, int channels, cudaStream_t stream);
+    template void set_to_gpu<short >(PtrStepSzb mat, const short*  scalar, int channels, cudaStream_t stream);
+    template void set_to_gpu<int   >(PtrStepSzb mat, const int*    scalar, int channels, cudaStream_t stream);
+    template void set_to_gpu<float >(PtrStepSzb mat, const float*  scalar, int channels, cudaStream_t stream);
+    template void set_to_gpu<double>(PtrStepSzb mat, const double* scalar, int channels, cudaStream_t stream);
 
     ///////////////////////////////////////////////////////////////////////////
     //////////////////////////////// ConvertTo ////////////////////////////////
@@ -274,12 +286,12 @@ namespace cv { namespace gpu { namespace device
     };
 
     template<typename T, typename D>
-    void cvt_(DevMem2Db src, DevMem2Db dst, double alpha, double beta, cudaStream_t stream)
+    void cvt_(PtrStepSzb src, PtrStepSzb dst, double alpha, double beta, cudaStream_t stream)
     {
         cudaSafeCall( cudaSetDoubleForDevice(&alpha) );
         cudaSafeCall( cudaSetDoubleForDevice(&beta) );
         Convertor<T, D> op(alpha, beta);
-        cv::gpu::device::transform((DevMem2D_<T>)src, (DevMem2D_<D>)dst, op, WithOutMask(), stream);
+        cv::gpu::device::transform((PtrStepSz<T>)src, (PtrStepSz<D>)dst, op, WithOutMask(), stream);
     }
 
 #if defined  __clang__
@@ -287,9 +299,9 @@ namespace cv { namespace gpu { namespace device
 # pragma clang diagnostic ignored "-Wmissing-declarations"
 #endif
 
-    void convert_gpu(DevMem2Db src, int sdepth, DevMem2Db dst, int ddepth, double alpha, double beta, cudaStream_t stream)
+    void convert_gpu(PtrStepSzb src, int sdepth, PtrStepSzb dst, int ddepth, double alpha, double beta, cudaStream_t stream)
     {
-        typedef void (*caller_t)(DevMem2Db src, DevMem2Db dst, double alpha, double beta, cudaStream_t stream);
+        typedef void (*caller_t)(PtrStepSzb src, PtrStepSzb dst, double alpha, double beta, cudaStream_t stream);
 
         static const caller_t tab[8][8] =
         {

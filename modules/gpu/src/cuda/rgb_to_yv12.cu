@@ -59,7 +59,7 @@ namespace cv { namespace gpu { namespace device
             v = static_cast<uchar>(((int)(50 * r) - (int)(42 * g) - (int)(8 * b) + 12800) / 100);
         }
 
-        __global__ void Gray_to_YV12(const DevMem2Db src, PtrStepb dst)
+        __global__ void Gray_to_YV12(const PtrStepSzb src, PtrStepb dst)
         {
             const int x = (blockIdx.x * blockDim.x + threadIdx.x) * 2;
             const int y = (blockIdx.y * blockDim.y + threadIdx.y) * 2;
@@ -96,7 +96,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <typename T>
-        __global__ void BGR_to_YV12(const DevMem2D_<T> src, PtrStepb dst)
+        __global__ void BGR_to_YV12(const PtrStepSz<T> src, PtrStepb dst)
         {
             const int x = (blockIdx.x * blockDim.x + threadIdx.x) * 2;
             const int y = (blockIdx.y * blockDim.y + threadIdx.y) * 2;
@@ -132,7 +132,7 @@ namespace cv { namespace gpu { namespace device
             v_plane(y / 2, x / 2) = v_val;
         }
 
-        void Gray_to_YV12_caller(const DevMem2Db src, PtrStepb dst)
+        void Gray_to_YV12_caller(const PtrStepSzb src, PtrStepb dst)
         {
             dim3 block(32, 8);
             dim3 grid(divUp(src.cols, block.x * 2), divUp(src.rows, block.y * 2));
@@ -143,22 +143,22 @@ namespace cv { namespace gpu { namespace device
             cudaSafeCall( cudaDeviceSynchronize() );
         }
         template <int cn>
-        void BGR_to_YV12_caller(const DevMem2Db src, PtrStepb dst)
+        void BGR_to_YV12_caller(const PtrStepSzb src, PtrStepb dst)
         {
             typedef typename TypeVec<uchar, cn>::vec_type src_t;
 
             dim3 block(32, 8);
             dim3 grid(divUp(src.cols, block.x * 2), divUp(src.rows, block.y * 2));
 
-            BGR_to_YV12<<<grid, block>>>(static_cast< DevMem2D_<src_t> >(src), dst);
+            BGR_to_YV12<<<grid, block>>>(static_cast< PtrStepSz<src_t> >(src), dst);
             cudaSafeCall( cudaGetLastError() );
 
             cudaSafeCall( cudaDeviceSynchronize() );
         }
 
-        void YV12_gpu(const DevMem2Db src, int cn, DevMem2Db dst)
+        void YV12_gpu(const PtrStepSzb src, int cn, PtrStepSzb dst)
         {
-            typedef void (*func_t)(const DevMem2Db src, PtrStepb dst);
+            typedef void (*func_t)(const PtrStepSzb src, PtrStepb dst);
 
             static const func_t funcs[] =
             {

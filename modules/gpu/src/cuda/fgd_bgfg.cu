@@ -81,7 +81,7 @@ namespace bgfg
 
 
     template <typename PT, typename CT>
-    __global__ void calcPartialHistogram(const DevMem2D_<PT> prevFrame, const PtrStep_<CT> curFrame, unsigned int* partialBuf0, unsigned int* partialBuf1, unsigned int* partialBuf2)
+    __global__ void calcPartialHistogram(const PtrStepSz<PT> prevFrame, const PtrStep<CT> curFrame, unsigned int* partialBuf0, unsigned int* partialBuf1, unsigned int* partialBuf2)
     {
 #if (__CUDA_ARCH__ < 200)
         const int HISTOGRAM_WARP_COUNT = 4;
@@ -240,7 +240,7 @@ namespace bgfg
     }
 
     template <typename PT, typename CT>
-    void calcDiffHistogram_gpu(DevMem2Db prevFrame, DevMem2Db curFrame,
+    void calcDiffHistogram_gpu(PtrStepSzb prevFrame, PtrStepSzb curFrame,
                                unsigned int* hist0, unsigned int* hist1, unsigned int* hist2,
                                unsigned int* partialBuf0, unsigned int* partialBuf1, unsigned int* partialBuf2,
                                int cc, cudaStream_t stream)
@@ -249,7 +249,7 @@ namespace bgfg
         const int HISTOGRAM_THREADBLOCK_SIZE = HISTOGRAM_WARP_COUNT * WARP_SIZE;
 
         calcPartialHistogram<PT, CT><<<PARTIAL_HISTOGRAM_COUNT, HISTOGRAM_THREADBLOCK_SIZE, 0, stream>>>(
-                (DevMem2D_<PT>)prevFrame, (DevMem2D_<CT>)curFrame, partialBuf0, partialBuf1, partialBuf2);
+                (PtrStepSz<PT>)prevFrame, (PtrStepSz<CT>)curFrame, partialBuf0, partialBuf1, partialBuf2);
         cudaSafeCall( cudaGetLastError() );
 
         mergeHistogram<<<HISTOGRAM_BIN_COUNT, MERGE_THREADBLOCK_SIZE, 0, stream>>>(partialBuf0, partialBuf1, partialBuf2, hist0, hist1, hist2);
@@ -259,16 +259,16 @@ namespace bgfg
             cudaSafeCall( cudaDeviceSynchronize() );
     }
 
-    template void calcDiffHistogram_gpu<uchar3, uchar3>(DevMem2Db prevFrame, DevMem2Db curFrame, unsigned int* hist0, unsigned int* hist1, unsigned int* hist2, unsigned int* partialBuf0, unsigned int* partialBuf1, unsigned int* partialBuf2, int cc, cudaStream_t stream);
-    template void calcDiffHistogram_gpu<uchar3, uchar4>(DevMem2Db prevFrame, DevMem2Db curFrame, unsigned int* hist0, unsigned int* hist1, unsigned int* hist2, unsigned int* partialBuf0, unsigned int* partialBuf1, unsigned int* partialBuf2, int cc, cudaStream_t stream);
-    template void calcDiffHistogram_gpu<uchar4, uchar3>(DevMem2Db prevFrame, DevMem2Db curFrame, unsigned int* hist0, unsigned int* hist1, unsigned int* hist2, unsigned int* partialBuf0, unsigned int* partialBuf1, unsigned int* partialBuf2, int cc, cudaStream_t stream);
-    template void calcDiffHistogram_gpu<uchar4, uchar4>(DevMem2Db prevFrame, DevMem2Db curFrame, unsigned int* hist0, unsigned int* hist1, unsigned int* hist2, unsigned int* partialBuf0, unsigned int* partialBuf1, unsigned int* partialBuf2, int cc, cudaStream_t stream);
+    template void calcDiffHistogram_gpu<uchar3, uchar3>(PtrStepSzb prevFrame, PtrStepSzb curFrame, unsigned int* hist0, unsigned int* hist1, unsigned int* hist2, unsigned int* partialBuf0, unsigned int* partialBuf1, unsigned int* partialBuf2, int cc, cudaStream_t stream);
+    template void calcDiffHistogram_gpu<uchar3, uchar4>(PtrStepSzb prevFrame, PtrStepSzb curFrame, unsigned int* hist0, unsigned int* hist1, unsigned int* hist2, unsigned int* partialBuf0, unsigned int* partialBuf1, unsigned int* partialBuf2, int cc, cudaStream_t stream);
+    template void calcDiffHistogram_gpu<uchar4, uchar3>(PtrStepSzb prevFrame, PtrStepSzb curFrame, unsigned int* hist0, unsigned int* hist1, unsigned int* hist2, unsigned int* partialBuf0, unsigned int* partialBuf1, unsigned int* partialBuf2, int cc, cudaStream_t stream);
+    template void calcDiffHistogram_gpu<uchar4, uchar4>(PtrStepSzb prevFrame, PtrStepSzb curFrame, unsigned int* hist0, unsigned int* hist1, unsigned int* hist2, unsigned int* partialBuf0, unsigned int* partialBuf1, unsigned int* partialBuf2, int cc, cudaStream_t stream);
 
     /////////////////////////////////////////////////////////////////////////
     // calcDiffThreshMask
 
     template <typename PT, typename CT>
-    __global__ void calcDiffThreshMask(const DevMem2D_<PT> prevFrame, const PtrStep_<CT> curFrame, uchar3 bestThres, PtrStepb changeMask)
+    __global__ void calcDiffThreshMask(const PtrStepSz<PT> prevFrame, const PtrStep<CT> curFrame, uchar3 bestThres, PtrStepb changeMask)
     {
         const int y = blockIdx.y * blockDim.y + threadIdx.y;
         const int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -290,22 +290,22 @@ namespace bgfg
     }
 
     template <typename PT, typename CT>
-    void calcDiffThreshMask_gpu(DevMem2Db prevFrame, DevMem2Db curFrame, uchar3 bestThres, DevMem2Db changeMask, cudaStream_t stream)
+    void calcDiffThreshMask_gpu(PtrStepSzb prevFrame, PtrStepSzb curFrame, uchar3 bestThres, PtrStepSzb changeMask, cudaStream_t stream)
     {
         dim3 block(32, 8);
         dim3 grid(divUp(prevFrame.cols, block.x), divUp(prevFrame.rows, block.y));
 
-        calcDiffThreshMask<PT, CT><<<grid, block, 0, stream>>>((DevMem2D_<PT>)prevFrame, (DevMem2D_<CT>)curFrame, bestThres, changeMask);
+        calcDiffThreshMask<PT, CT><<<grid, block, 0, stream>>>((PtrStepSz<PT>)prevFrame, (PtrStepSz<CT>)curFrame, bestThres, changeMask);
         cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
             cudaSafeCall( cudaDeviceSynchronize() );
     }
 
-    template void calcDiffThreshMask_gpu<uchar3, uchar3>(DevMem2Db prevFrame, DevMem2Db curFrame, uchar3 bestThres, DevMem2Db changeMask, cudaStream_t stream);
-    template void calcDiffThreshMask_gpu<uchar3, uchar4>(DevMem2Db prevFrame, DevMem2Db curFrame, uchar3 bestThres, DevMem2Db changeMask, cudaStream_t stream);
-    template void calcDiffThreshMask_gpu<uchar4, uchar3>(DevMem2Db prevFrame, DevMem2Db curFrame, uchar3 bestThres, DevMem2Db changeMask, cudaStream_t stream);
-    template void calcDiffThreshMask_gpu<uchar4, uchar4>(DevMem2Db prevFrame, DevMem2Db curFrame, uchar3 bestThres, DevMem2Db changeMask, cudaStream_t stream);
+    template void calcDiffThreshMask_gpu<uchar3, uchar3>(PtrStepSzb prevFrame, PtrStepSzb curFrame, uchar3 bestThres, PtrStepSzb changeMask, cudaStream_t stream);
+    template void calcDiffThreshMask_gpu<uchar3, uchar4>(PtrStepSzb prevFrame, PtrStepSzb curFrame, uchar3 bestThres, PtrStepSzb changeMask, cudaStream_t stream);
+    template void calcDiffThreshMask_gpu<uchar4, uchar3>(PtrStepSzb prevFrame, PtrStepSzb curFrame, uchar3 bestThres, PtrStepSzb changeMask, cudaStream_t stream);
+    template void calcDiffThreshMask_gpu<uchar4, uchar4>(PtrStepSzb prevFrame, PtrStepSzb curFrame, uchar3 bestThres, PtrStepSzb changeMask, cudaStream_t stream);
 
     /////////////////////////////////////////////////////////////////////////
     // bgfgClassification
@@ -334,7 +334,7 @@ namespace bgfg
     };
 
     template <typename PT, typename CT, typename OT>
-    __global__ void bgfgClassification(const DevMem2D_<PT> prevFrame, const PtrStep_<CT> curFrame,
+    __global__ void bgfgClassification(const PtrStepSz<PT> prevFrame, const PtrStep<CT> curFrame,
                                        const PtrStepb Ftd, const PtrStepb Fbd, PtrStepb foreground,
                                        int deltaC, int deltaCC, float alpha2, int N1c, int N1cc)
     {
@@ -413,7 +413,7 @@ namespace bgfg
     }
 
     template <typename PT, typename CT, typename OT>
-    void bgfgClassification_gpu(DevMem2Db prevFrame, DevMem2Db curFrame, DevMem2Db Ftd, DevMem2Db Fbd, DevMem2Db foreground,
+    void bgfgClassification_gpu(PtrStepSzb prevFrame, PtrStepSzb curFrame, PtrStepSzb Ftd, PtrStepSzb Fbd, PtrStepSzb foreground,
                                 int deltaC, int deltaCC, float alpha2, int N1c, int N1cc, cudaStream_t stream)
     {
         dim3 block(32, 8);
@@ -421,7 +421,7 @@ namespace bgfg
 
         cudaSafeCall( cudaFuncSetCacheConfig(bgfgClassification<PT, CT, OT>, cudaFuncCachePreferL1) );
 
-        bgfgClassification<PT, CT, OT><<<grid, block, 0, stream>>>((DevMem2D_<PT>)prevFrame, (DevMem2D_<CT>)curFrame,
+        bgfgClassification<PT, CT, OT><<<grid, block, 0, stream>>>((PtrStepSz<PT>)prevFrame, (PtrStepSz<CT>)curFrame,
                                                                    Ftd, Fbd, foreground,
                                                                    deltaC, deltaCC, alpha2, N1c, N1cc);
         cudaSafeCall( cudaGetLastError() );
@@ -430,21 +430,21 @@ namespace bgfg
             cudaSafeCall( cudaDeviceSynchronize() );
     }
 
-    template void bgfgClassification_gpu<uchar3, uchar3, uchar3>(DevMem2Db prevFrame, DevMem2Db curFrame, DevMem2Db Ftd, DevMem2Db Fbd, DevMem2Db foreground, int deltaC, int deltaCC, float alpha2, int N1c, int N1cc, cudaStream_t stream);
-    template void bgfgClassification_gpu<uchar3, uchar3, uchar4>(DevMem2Db prevFrame, DevMem2Db curFrame, DevMem2Db Ftd, DevMem2Db Fbd, DevMem2Db foreground, int deltaC, int deltaCC, float alpha2, int N1c, int N1cc, cudaStream_t stream);
-    template void bgfgClassification_gpu<uchar3, uchar4, uchar3>(DevMem2Db prevFrame, DevMem2Db curFrame, DevMem2Db Ftd, DevMem2Db Fbd, DevMem2Db foreground, int deltaC, int deltaCC, float alpha2, int N1c, int N1cc, cudaStream_t stream);
-    template void bgfgClassification_gpu<uchar3, uchar4, uchar4>(DevMem2Db prevFrame, DevMem2Db curFrame, DevMem2Db Ftd, DevMem2Db Fbd, DevMem2Db foreground, int deltaC, int deltaCC, float alpha2, int N1c, int N1cc, cudaStream_t stream);
-    template void bgfgClassification_gpu<uchar4, uchar3, uchar3>(DevMem2Db prevFrame, DevMem2Db curFrame, DevMem2Db Ftd, DevMem2Db Fbd, DevMem2Db foreground, int deltaC, int deltaCC, float alpha2, int N1c, int N1cc, cudaStream_t stream);
-    template void bgfgClassification_gpu<uchar4, uchar3, uchar4>(DevMem2Db prevFrame, DevMem2Db curFrame, DevMem2Db Ftd, DevMem2Db Fbd, DevMem2Db foreground, int deltaC, int deltaCC, float alpha2, int N1c, int N1cc, cudaStream_t stream);
-    template void bgfgClassification_gpu<uchar4, uchar4, uchar3>(DevMem2Db prevFrame, DevMem2Db curFrame, DevMem2Db Ftd, DevMem2Db Fbd, DevMem2Db foreground, int deltaC, int deltaCC, float alpha2, int N1c, int N1cc, cudaStream_t stream);
-    template void bgfgClassification_gpu<uchar4, uchar4, uchar4>(DevMem2Db prevFrame, DevMem2Db curFrame, DevMem2Db Ftd, DevMem2Db Fbd, DevMem2Db foreground, int deltaC, int deltaCC, float alpha2, int N1c, int N1cc, cudaStream_t stream);
+    template void bgfgClassification_gpu<uchar3, uchar3, uchar3>(PtrStepSzb prevFrame, PtrStepSzb curFrame, PtrStepSzb Ftd, PtrStepSzb Fbd, PtrStepSzb foreground, int deltaC, int deltaCC, float alpha2, int N1c, int N1cc, cudaStream_t stream);
+    template void bgfgClassification_gpu<uchar3, uchar3, uchar4>(PtrStepSzb prevFrame, PtrStepSzb curFrame, PtrStepSzb Ftd, PtrStepSzb Fbd, PtrStepSzb foreground, int deltaC, int deltaCC, float alpha2, int N1c, int N1cc, cudaStream_t stream);
+    template void bgfgClassification_gpu<uchar3, uchar4, uchar3>(PtrStepSzb prevFrame, PtrStepSzb curFrame, PtrStepSzb Ftd, PtrStepSzb Fbd, PtrStepSzb foreground, int deltaC, int deltaCC, float alpha2, int N1c, int N1cc, cudaStream_t stream);
+    template void bgfgClassification_gpu<uchar3, uchar4, uchar4>(PtrStepSzb prevFrame, PtrStepSzb curFrame, PtrStepSzb Ftd, PtrStepSzb Fbd, PtrStepSzb foreground, int deltaC, int deltaCC, float alpha2, int N1c, int N1cc, cudaStream_t stream);
+    template void bgfgClassification_gpu<uchar4, uchar3, uchar3>(PtrStepSzb prevFrame, PtrStepSzb curFrame, PtrStepSzb Ftd, PtrStepSzb Fbd, PtrStepSzb foreground, int deltaC, int deltaCC, float alpha2, int N1c, int N1cc, cudaStream_t stream);
+    template void bgfgClassification_gpu<uchar4, uchar3, uchar4>(PtrStepSzb prevFrame, PtrStepSzb curFrame, PtrStepSzb Ftd, PtrStepSzb Fbd, PtrStepSzb foreground, int deltaC, int deltaCC, float alpha2, int N1c, int N1cc, cudaStream_t stream);
+    template void bgfgClassification_gpu<uchar4, uchar4, uchar3>(PtrStepSzb prevFrame, PtrStepSzb curFrame, PtrStepSzb Ftd, PtrStepSzb Fbd, PtrStepSzb foreground, int deltaC, int deltaCC, float alpha2, int N1c, int N1cc, cudaStream_t stream);
+    template void bgfgClassification_gpu<uchar4, uchar4, uchar4>(PtrStepSzb prevFrame, PtrStepSzb curFrame, PtrStepSzb Ftd, PtrStepSzb Fbd, PtrStepSzb foreground, int deltaC, int deltaCC, float alpha2, int N1c, int N1cc, cudaStream_t stream);
 
     ////////////////////////////////////////////////////////////////////////////
     // updateBackgroundModel
 
     template <typename PT, typename CT, typename OT, class PrevFramePtr2D, class CurFramePtr2D, class FtdPtr2D, class FbdPtr2D>
     __global__ void updateBackgroundModel(int cols, int rows, const PrevFramePtr2D prevFrame, const CurFramePtr2D curFrame, const FtdPtr2D Ftd, const FbdPtr2D Fbd,
-                                          PtrStepb foreground, PtrStep_<OT> background,
+                                          PtrStepb foreground, PtrStep<OT> background,
                                           int deltaC, int deltaCC, float alpha1, float alpha2, float alpha3, int N1c, int N1cc, int N2c, int N2cc, float T)
     {
         const int i = blockIdx.y * blockDim.y + threadIdx.y;
@@ -803,16 +803,16 @@ namespace bgfg
     template <typename PT, typename CT, typename OT>
     struct UpdateBackgroundModel
     {
-        static void call(DevMem2D_<PT> prevFrame, DevMem2D_<CT> curFrame, DevMem2Db Ftd, DevMem2Db Fbd, DevMem2Db foreground, DevMem2D_<OT> background,
+        static void call(PtrStepSz<PT> prevFrame, PtrStepSz<CT> curFrame, PtrStepSzb Ftd, PtrStepSzb Fbd, PtrStepSzb foreground, PtrStepSz<OT> background,
                          int deltaC, int deltaCC, float alpha1, float alpha2, float alpha3, int N1c, int N1cc, int N2c, int N2cc, float T,
                          cudaStream_t stream)
         {
             dim3 block(32, 8);
             dim3 grid(divUp(prevFrame.cols, block.x), divUp(prevFrame.rows, block.y));
 
-            cudaSafeCall( cudaFuncSetCacheConfig(updateBackgroundModel<PT, CT, OT, PtrStep_<PT>, PtrStep_<CT>, PtrStepb, PtrStepb>, cudaFuncCachePreferL1) );
+            cudaSafeCall( cudaFuncSetCacheConfig(updateBackgroundModel<PT, CT, OT, PtrStep<PT>, PtrStep<CT>, PtrStepb, PtrStepb>, cudaFuncCachePreferL1) );
 
-            updateBackgroundModel<PT, CT, OT, PtrStep_<PT>, PtrStep_<CT>, PtrStepb, PtrStepb><<<grid, block, 0, stream>>>(
+            updateBackgroundModel<PT, CT, OT, PtrStep<PT>, PtrStep<CT>, PtrStepb, PtrStepb><<<grid, block, 0, stream>>>(
                 prevFrame.cols, prevFrame.rows,
                 prevFrame, curFrame,
                 Ftd, Fbd, foreground, background,
@@ -825,20 +825,20 @@ namespace bgfg
     };
 
     template <typename PT, typename CT, typename OT>
-    void updateBackgroundModel_gpu(DevMem2Db prevFrame, DevMem2Db curFrame, DevMem2Db Ftd, DevMem2Db Fbd, DevMem2Db foreground, DevMem2Db background,
+    void updateBackgroundModel_gpu(PtrStepSzb prevFrame, PtrStepSzb curFrame, PtrStepSzb Ftd, PtrStepSzb Fbd, PtrStepSzb foreground, PtrStepSzb background,
                                    int deltaC, int deltaCC, float alpha1, float alpha2, float alpha3, int N1c, int N1cc, int N2c, int N2cc, float T,
                                    cudaStream_t stream)
     {
-        UpdateBackgroundModel<PT, CT, OT>::call(DevMem2D_<PT>(prevFrame), DevMem2D_<CT>(curFrame), Ftd, Fbd, foreground, DevMem2D_<OT>(background),
+        UpdateBackgroundModel<PT, CT, OT>::call(PtrStepSz<PT>(prevFrame), PtrStepSz<CT>(curFrame), Ftd, Fbd, foreground, PtrStepSz<OT>(background),
                                                 deltaC, deltaCC, alpha1, alpha2, alpha3, N1c, N1cc, N2c, N2cc, T, stream);
     }
 
-    template void updateBackgroundModel_gpu<uchar3, uchar3, uchar3>(DevMem2Db prevFrame, DevMem2Db curFrame, DevMem2Db Ftd, DevMem2Db Fbd, DevMem2Db foreground, DevMem2Db background, int deltaC, int deltaCC, float alpha1, float alpha2, float alpha3, int N1c, int N1cc, int N2c, int N2cc, float T, cudaStream_t stream);
-    template void updateBackgroundModel_gpu<uchar3, uchar3, uchar4>(DevMem2Db prevFrame, DevMem2Db curFrame, DevMem2Db Ftd, DevMem2Db Fbd, DevMem2Db foreground, DevMem2Db background, int deltaC, int deltaCC, float alpha1, float alpha2, float alpha3, int N1c, int N1cc, int N2c, int N2cc, float T, cudaStream_t stream);
-    template void updateBackgroundModel_gpu<uchar3, uchar4, uchar3>(DevMem2Db prevFrame, DevMem2Db curFrame, DevMem2Db Ftd, DevMem2Db Fbd, DevMem2Db foreground, DevMem2Db background, int deltaC, int deltaCC, float alpha1, float alpha2, float alpha3, int N1c, int N1cc, int N2c, int N2cc, float T, cudaStream_t stream);
-    template void updateBackgroundModel_gpu<uchar3, uchar4, uchar4>(DevMem2Db prevFrame, DevMem2Db curFrame, DevMem2Db Ftd, DevMem2Db Fbd, DevMem2Db foreground, DevMem2Db background, int deltaC, int deltaCC, float alpha1, float alpha2, float alpha3, int N1c, int N1cc, int N2c, int N2cc, float T, cudaStream_t stream);
-    template void updateBackgroundModel_gpu<uchar4, uchar3, uchar3>(DevMem2Db prevFrame, DevMem2Db curFrame, DevMem2Db Ftd, DevMem2Db Fbd, DevMem2Db foreground, DevMem2Db background, int deltaC, int deltaCC, float alpha1, float alpha2, float alpha3, int N1c, int N1cc, int N2c, int N2cc, float T, cudaStream_t stream);
-    template void updateBackgroundModel_gpu<uchar4, uchar3, uchar4>(DevMem2Db prevFrame, DevMem2Db curFrame, DevMem2Db Ftd, DevMem2Db Fbd, DevMem2Db foreground, DevMem2Db background, int deltaC, int deltaCC, float alpha1, float alpha2, float alpha3, int N1c, int N1cc, int N2c, int N2cc, float T, cudaStream_t stream);
-    template void updateBackgroundModel_gpu<uchar4, uchar4, uchar3>(DevMem2Db prevFrame, DevMem2Db curFrame, DevMem2Db Ftd, DevMem2Db Fbd, DevMem2Db foreground, DevMem2Db background, int deltaC, int deltaCC, float alpha1, float alpha2, float alpha3, int N1c, int N1cc, int N2c, int N2cc, float T, cudaStream_t stream);
-    template void updateBackgroundModel_gpu<uchar4, uchar4, uchar4>(DevMem2Db prevFrame, DevMem2Db curFrame, DevMem2Db Ftd, DevMem2Db Fbd, DevMem2Db foreground, DevMem2Db background, int deltaC, int deltaCC, float alpha1, float alpha2, float alpha3, int N1c, int N1cc, int N2c, int N2cc, float T, cudaStream_t stream);
+    template void updateBackgroundModel_gpu<uchar3, uchar3, uchar3>(PtrStepSzb prevFrame, PtrStepSzb curFrame, PtrStepSzb Ftd, PtrStepSzb Fbd, PtrStepSzb foreground, PtrStepSzb background, int deltaC, int deltaCC, float alpha1, float alpha2, float alpha3, int N1c, int N1cc, int N2c, int N2cc, float T, cudaStream_t stream);
+    template void updateBackgroundModel_gpu<uchar3, uchar3, uchar4>(PtrStepSzb prevFrame, PtrStepSzb curFrame, PtrStepSzb Ftd, PtrStepSzb Fbd, PtrStepSzb foreground, PtrStepSzb background, int deltaC, int deltaCC, float alpha1, float alpha2, float alpha3, int N1c, int N1cc, int N2c, int N2cc, float T, cudaStream_t stream);
+    template void updateBackgroundModel_gpu<uchar3, uchar4, uchar3>(PtrStepSzb prevFrame, PtrStepSzb curFrame, PtrStepSzb Ftd, PtrStepSzb Fbd, PtrStepSzb foreground, PtrStepSzb background, int deltaC, int deltaCC, float alpha1, float alpha2, float alpha3, int N1c, int N1cc, int N2c, int N2cc, float T, cudaStream_t stream);
+    template void updateBackgroundModel_gpu<uchar3, uchar4, uchar4>(PtrStepSzb prevFrame, PtrStepSzb curFrame, PtrStepSzb Ftd, PtrStepSzb Fbd, PtrStepSzb foreground, PtrStepSzb background, int deltaC, int deltaCC, float alpha1, float alpha2, float alpha3, int N1c, int N1cc, int N2c, int N2cc, float T, cudaStream_t stream);
+    template void updateBackgroundModel_gpu<uchar4, uchar3, uchar3>(PtrStepSzb prevFrame, PtrStepSzb curFrame, PtrStepSzb Ftd, PtrStepSzb Fbd, PtrStepSzb foreground, PtrStepSzb background, int deltaC, int deltaCC, float alpha1, float alpha2, float alpha3, int N1c, int N1cc, int N2c, int N2cc, float T, cudaStream_t stream);
+    template void updateBackgroundModel_gpu<uchar4, uchar3, uchar4>(PtrStepSzb prevFrame, PtrStepSzb curFrame, PtrStepSzb Ftd, PtrStepSzb Fbd, PtrStepSzb foreground, PtrStepSzb background, int deltaC, int deltaCC, float alpha1, float alpha2, float alpha3, int N1c, int N1cc, int N2c, int N2cc, float T, cudaStream_t stream);
+    template void updateBackgroundModel_gpu<uchar4, uchar4, uchar3>(PtrStepSzb prevFrame, PtrStepSzb curFrame, PtrStepSzb Ftd, PtrStepSzb Fbd, PtrStepSzb foreground, PtrStepSzb background, int deltaC, int deltaCC, float alpha1, float alpha2, float alpha3, int N1c, int N1cc, int N2c, int N2cc, float T, cudaStream_t stream);
+    template void updateBackgroundModel_gpu<uchar4, uchar4, uchar4>(PtrStepSzb prevFrame, PtrStepSzb curFrame, PtrStepSzb Ftd, PtrStepSzb Fbd, PtrStepSzb foreground, PtrStepSzb background, int deltaC, int deltaCC, float alpha1, float alpha2, float alpha3, int N1c, int N1cc, int N2c, int N2cc, float T, cudaStream_t stream);
 }

@@ -57,9 +57,9 @@ namespace cv { namespace gpu { namespace device
     {
         void loadConstants(int nbSamples, int reqMatches, int radius, int subsamplingFactor);
 
-        void init_gpu(DevMem2Db frame, int cn, DevMem2Db samples, DevMem2D_<unsigned int> randStates, cudaStream_t stream);
+        void init_gpu(PtrStepSzb frame, int cn, PtrStepSzb samples, PtrStepSz<unsigned int> randStates, cudaStream_t stream);
 
-        void update_gpu(DevMem2Db frame, int cn, DevMem2Db fgmask, DevMem2Db samples, DevMem2D_<unsigned int> randStates, cudaStream_t stream);
+        void update_gpu(PtrStepSzb frame, int cn, PtrStepSzb fgmask, PtrStepSzb samples, PtrStepSz<unsigned int> randStates, cudaStream_t stream);
     }
 }}}
 

@@ -331,6 +331,9 @@ private:
     Mat dst;
     int* x_ofs, pix_size4;
     double ify;
+
+    resizeNNInvoker(const resizeNNInvoker&);
+    resizeNNInvoker& operator=(const resizeNNInvoker&);
 };
 
 static void
@@ -1193,6 +1196,9 @@ private:
     const AT* alpha, *_beta;
     const Size ssize, dsize;
     const int ksize, xmin, xmax;
+
+    resizeGeneric_Invoker(const resizeGeneric_Invoker&);
+    resizeGeneric_Invoker& operator=(const resizeGeneric_Invoker&);
 };
 
 template<class HResize, class VResize>
@@ -1280,6 +1286,9 @@ private:
     const int cn;
     bool fast_mode;
     const int step;
+
+    ResizeAreaFast_2x2_8u(const ResizeAreaFast_2x2_8u&);
+    ResizeAreaFast_2x2_8u& operator=(const ResizeAreaFast_2x2_8u&);
 };
 
 template <typename T, typename WT, typename VecOp>
@@ -1357,7 +1366,7 @@ public:
                     }
                 }
 
-                D[dx] = saturate_cast<WT>((float)sum/count);
+                D[dx] = saturate_cast<T>((float)sum/count);
             }
         }
     }
@@ -1367,6 +1376,9 @@ private:
     Mat dst;
     const int scale_x, scale_y;
     const int *ofs, *xofs;
+
+    resizeAreaFast_Invoker(const resizeAreaFast_Invoker&);
+    resizeAreaFast_Invoker& operator=(const resizeAreaFast_Invoker&);
 };
 
 template<typename T, typename WT, typename VecOp>
@@ -1600,6 +1612,8 @@ private:
 #ifdef HAVE_TBB
     const int *yofs, *cur_dy_ofs;
 #endif
+    resizeArea_Invoker(const resizeArea_Invoker&);
+    resizeArea_Invoker& operator=(const resizeArea_Invoker&);
 };
 
 template<typename T, typename WT>
@@ -1617,7 +1631,7 @@ static void resizeArea_( const Mat& src, Mat& dst, const DecimateAlpha* xofs, in
         cur_dy_ofs[sy] = cur_dy;
         if( (cur_dy + 1)*scale_y_ <= sy + 1 || sy == ssize.height - 1 )
         {
-            WT beta = std::max(sy + 1 - (cur_dy+1)*scale_y_, 0.);
+            WT beta = (WT)std::max(sy + 1 - (cur_dy+1)*scale_y_, 0.);
             if( fabs(beta) < 1e-3 )
             {
                 if(cur_dy >= dsize.height)
@@ -2960,6 +2974,9 @@ private:
     RemapNNFunc nnfunc;
     RemapFunc ifunc;
     const void *ctab;
+
+    remapInvoker(const remapInvoker&);
+    remapInvoker& operator=(const remapInvoker&);
 };
 
 }
@@ -3324,8 +3341,11 @@ private:
     const Scalar borderValue;
     int *adelta, *bdelta;
     double *M;
+
+    warpAffineInvoker(const warpAffineInvoker&);
+    warpAffineInvoker& operator=(const warpAffineInvoker&);
 };
-    
+
 }
     
     
@@ -3477,6 +3497,8 @@ private:
     double* M;
     int interpolation, borderType;
     const Scalar borderValue;
+    warpPerspectiveInvoker(const warpPerspectiveInvoker&);
+    warpPerspectiveInvoker& operator=(const warpPerspectiveInvoker&);
 };
     
 }

@@ -505,7 +505,7 @@ namespace cv { namespace gpu { namespace device
 {
     namespace video_encoding
     {
-        void YV12_gpu(const DevMem2Db src, int cn, DevMem2Db dst);
+        void YV12_gpu(const PtrStepSzb src, int cn, PtrStepSzb dst);
     }
 }}}
 

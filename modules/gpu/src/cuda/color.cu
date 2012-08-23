@@ -222,12 +222,12 @@ namespace cv { namespace gpu { namespace device
     };
 
 #define OPENCV_GPU_IMPLEMENT_CVTCOLOR(name, traits) \
-    void name(const DevMem2Db& src, const DevMem2Db& dst, cudaStream_t stream) \
+    void name(const PtrStepSzb& src, const PtrStepSzb& dst, cudaStream_t stream) \
     { \
         traits::functor_type functor = traits::create_functor(); \
         typedef typename traits::functor_type::argument_type src_t; \
         typedef typename traits::functor_type::result_type   dst_t; \
-        cv::gpu::device::transform((DevMem2D_<src_t>)src, (DevMem2D_<dst_t>)dst, functor, WithOutMask(), stream); \
+        cv::gpu::device::transform((PtrStepSz<src_t>)src, (PtrStepSz<dst_t>)dst, functor, WithOutMask(), stream); \
     }
 
 #define OPENCV_GPU_IMPLEMENT_CVTCOLOR_ONE(name) \

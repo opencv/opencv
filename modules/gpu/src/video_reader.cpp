@@ -132,7 +132,7 @@ namespace cv { namespace gpu { namespace device {
     namespace video_decoding
     {
         void loadHueCSC(float hueCSC[9]);
-        void NV12ToARGB_gpu(const PtrStepb decodedFrame, DevMem2D_<unsigned int> interopFrame, cudaStream_t stream = 0);
+        void NV12ToARGB_gpu(const PtrStepb decodedFrame, PtrStepSz<unsigned int> interopFrame, cudaStream_t stream = 0);
     }
 }}}
 

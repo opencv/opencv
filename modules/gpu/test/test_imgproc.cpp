@@ -1201,7 +1201,7 @@ PARAM_TEST_CASE(HoughCircles, cv::gpu::DeviceInfo, cv::Size, UseRoi)
         dst.setTo(cv::Scalar::all(0));
 
         for (size_t i = 0; i < circles.size(); ++i)
-            cv::circle(dst, cv::Point(circles[i][0], circles[i][1]), circles[i][2], cv::Scalar::all(255), fill ? -1 : 1);
+            cv::circle(dst, cv::Point2f(circles[i][0], circles[i][1]), (int)circles[i][2], cv::Scalar::all(255), fill ? -1 : 1);
     }
 };
 
@@ -1220,10 +1220,10 @@ TEST_P(HoughCircles, Accuracy)
     const int votesThreshold = 20;
 
     std::vector<cv::Vec3f> circles_gold(4);
-    circles_gold[0] = cv::Vec3f(20, 20, minRadius);
-    circles_gold[1] = cv::Vec3f(90, 87, minRadius + 3);
-    circles_gold[2] = cv::Vec3f(30, 70, minRadius + 8);
-    circles_gold[3] = cv::Vec3f(80, 10, maxRadius);
+    circles_gold[0] = cv::Vec3i(20, 20, minRadius);
+    circles_gold[1] = cv::Vec3i(90, 87, minRadius + 3);
+    circles_gold[2] = cv::Vec3i(30, 70, minRadius + 8);
+    circles_gold[3] = cv::Vec3i(80, 10, maxRadius);
 
     cv::Mat src(size, CV_8UC1);
     drawCircles(src, circles_gold, true);

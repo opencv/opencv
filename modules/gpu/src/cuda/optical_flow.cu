@@ -49,7 +49,7 @@ namespace cv { namespace gpu { namespace device
         #define NEEDLE_MAP_SCALE 16
         #define NUM_VERTS_PER_ARROW 6
 
-        __global__ void NeedleMapAverageKernel(const DevMem2Df u, const PtrStepf v, PtrStepf u_avg, PtrStepf v_avg)
+        __global__ void NeedleMapAverageKernel(const PtrStepSzf u, const PtrStepf v, PtrStepf u_avg, PtrStepf v_avg)
         {
             __shared__ float smem[2 * NEEDLE_MAP_SCALE];
 
@@ -111,7 +111,7 @@ namespace cv { namespace gpu { namespace device
             }
         }
 
-        void NeedleMapAverage_gpu(DevMem2Df u, DevMem2Df v, DevMem2Df u_avg, DevMem2Df v_avg)
+        void NeedleMapAverage_gpu(PtrStepSzf u, PtrStepSzf v, PtrStepSzf u_avg, PtrStepSzf v_avg)
         {
             const dim3 block(NEEDLE_MAP_SCALE);
             const dim3 grid(u_avg.cols, u_avg.rows);
@@ -122,7 +122,7 @@ namespace cv { namespace gpu { namespace device
             cudaSafeCall( cudaDeviceSynchronize() );
         }
 
-        __global__ void NeedleMapVertexKernel(const DevMem2Df u_avg, const PtrStepf v_avg, float* vertex_data, float* color_data, float max_flow, float xscale, float yscale)
+        __global__ void NeedleMapVertexKernel(const PtrStepSzf u_avg, const PtrStepf v_avg, float* vertex_data, float* color_data, float max_flow, float xscale, float yscale)
         {
             // test - just draw a triangle at each pixel
             const int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -202,7 +202,7 @@ namespace cv { namespace gpu { namespace device
             }
         }
 
-        void CreateOpticalFlowNeedleMap_gpu(DevMem2Df u_avg, DevMem2Df v_avg, float* vertex_buffer, float* color_data, float max_flow, float xscale, float yscale)
+        void CreateOpticalFlowNeedleMap_gpu(PtrStepSzf u_avg, PtrStepSzf v_avg, float* vertex_buffer, float* color_data, float max_flow, float xscale, float yscale)
         {
             const dim3 block(16);
             const dim3 grid(divUp(u_avg.cols, block.x), divUp(u_avg.rows, block.y));

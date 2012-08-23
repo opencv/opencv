@@ -66,33 +66,33 @@ namespace cv { namespace gpu { namespace device { namespace optflow_farneback
             int polyN, const float *g, const float *xg, const float *xxg,
             float ig11, float ig03, float ig33, float ig55);
 
-    void polynomialExpansionGpu(const DevMem2Df &src, int polyN, DevMem2Df dst, cudaStream_t stream);
+    void polynomialExpansionGpu(const PtrStepSzf &src, int polyN, PtrStepSzf dst, cudaStream_t stream);
 
     void setUpdateMatricesConsts();
 
     void updateMatricesGpu(
-            const DevMem2Df flowx, const DevMem2Df flowy, const DevMem2Df R0, const DevMem2Df R1,
-            DevMem2Df M, cudaStream_t stream);
+            const PtrStepSzf flowx, const PtrStepSzf flowy, const PtrStepSzf R0, const PtrStepSzf R1,
+            PtrStepSzf M, cudaStream_t stream);
 
     void updateFlowGpu(
-            const DevMem2Df M, DevMem2Df flowx, DevMem2Df flowy, cudaStream_t stream);
+            const PtrStepSzf M, PtrStepSzf flowx, PtrStepSzf flowy, cudaStream_t stream);
 
-    /*void boxFilterGpu(const DevMem2Df src, int ksizeHalf, DevMem2Df dst, cudaStream_t stream);*/
+    /*void boxFilterGpu(const PtrStepSzf src, int ksizeHalf, PtrStepSzf dst, cudaStream_t stream);*/
 
-    void boxFilter5Gpu(const DevMem2Df src, int ksizeHalf, DevMem2Df dst, cudaStream_t stream);
+    void boxFilter5Gpu(const PtrStepSzf src, int ksizeHalf, PtrStepSzf dst, cudaStream_t stream);
 
-    void boxFilter5Gpu_CC11(const DevMem2Df src, int ksizeHalf, DevMem2Df dst, cudaStream_t stream);
+    void boxFilter5Gpu_CC11(const PtrStepSzf src, int ksizeHalf, PtrStepSzf dst, cudaStream_t stream);
 
     void setGaussianBlurKernel(const float *gKer, int ksizeHalf);
 
     void gaussianBlurGpu(
-            const DevMem2Df src, int ksizeHalf, DevMem2Df dst, int borderType, cudaStream_t stream);
+            const PtrStepSzf src, int ksizeHalf, PtrStepSzf dst, int borderType, cudaStream_t stream);
 
     void gaussianBlur5Gpu(
-            const DevMem2Df src, int ksizeHalf, DevMem2Df dst, int borderType, cudaStream_t stream);
+            const PtrStepSzf src, int ksizeHalf, PtrStepSzf dst, int borderType, cudaStream_t stream);
 
     void gaussianBlur5Gpu_CC11(
-            const DevMem2Df src, int ksizeHalf, DevMem2Df dst, int borderType, cudaStream_t stream);
+            const PtrStepSzf src, int ksizeHalf, PtrStepSzf dst, int borderType, cudaStream_t stream);
 
 }}}} // namespace cv { namespace gpu { namespace device { namespace optflow_farneback
 

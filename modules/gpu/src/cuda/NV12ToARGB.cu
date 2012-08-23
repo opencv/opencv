@@ -191,7 +191,7 @@ namespace cv { namespace gpu { namespace device {
             dstImage[y * dstImagePitch + x + 1 ] = RGBAPACK_10bit(red[1], green[1], blue[1], constAlpha);
         }
 
-        void NV12ToARGB_gpu(const PtrStepb decodedFrame, DevMem2D_<uint> interopFrame, cudaStream_t stream)
+        void NV12ToARGB_gpu(const PtrStepb decodedFrame, PtrStepSz<uint> interopFrame, cudaStream_t stream)
         {
             dim3 block(32, 8);
             dim3 grid(divUp(interopFrame.cols, 2 * block.x), divUp(interopFrame.rows, block.y));

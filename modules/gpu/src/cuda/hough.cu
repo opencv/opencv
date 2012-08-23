@@ -55,7 +55,7 @@ namespace cv { namespace gpu { namespace device
 
         const int PIXELS_PER_THREAD = 16;
 
-        __global__ void buildPointList(const DevMem2Db src, unsigned int* list)
+        __global__ void buildPointList(const PtrStepSzb src, unsigned int* list)
         {
             __shared__ unsigned int s_queues[4][32 * PIXELS_PER_THREAD];
             __shared__ int s_qsize[4];
@@ -112,7 +112,7 @@ namespace cv { namespace gpu { namespace device
                 list[gidx] = s_queues[threadIdx.y][i];
         }
 
-        int buildPointList_gpu(DevMem2Db src, unsigned int* list)
+        int buildPointList_gpu(PtrStepSzb src, unsigned int* list)
         {
             void* counterPtr;
             cudaSafeCall( cudaGetSymbolAddress(&counterPtr, g_counter) );
@@ -206,7 +206,7 @@ namespace cv { namespace gpu { namespace device
                 accumRow[i] = smem[i];
         }
 
-        void linesAccum_gpu(const unsigned int* list, int count, DevMem2Di accum, float rho, float theta, size_t sharedMemPerBlock, bool has20)
+        void linesAccum_gpu(const unsigned int* list, int count, PtrStepSzi accum, float rho, float theta, size_t sharedMemPerBlock, bool has20)
         {
             const dim3 block(has20 ? 1024 : 512);
             const dim3 grid(accum.rows - 2);
@@ -226,7 +226,7 @@ namespace cv { namespace gpu { namespace device
         ////////////////////////////////////////////////////////////////////////
         // linesGetResult
 
-        __global__ void linesGetResult(const DevMem2Di accum, float2* out, int* votes, const int maxSize, const float rho, const float theta, const int threshold, const int numrho)
+        __global__ void linesGetResult(const PtrStepSzi accum, float2* out, int* votes, const int maxSize, const float rho, const float theta, const int threshold, const int numrho)
         {
             const int r = blockIdx.x * blockDim.x + threadIdx.x;
             const int n = blockIdx.y * blockDim.y + threadIdx.y;
@@ -254,7 +254,7 @@ namespace cv { namespace gpu { namespace device
             }
         }
 
-        int linesGetResult_gpu(DevMem2Di accum, float2* out, int* votes, int maxSize, float rho, float theta, int threshold, bool doSort)
+        int linesGetResult_gpu(PtrStepSzi accum, float2* out, int* votes, int maxSize, float rho, float theta, int threshold, bool doSort)
         {
             void* counterPtr;
             cudaSafeCall( cudaGetSymbolAddress(&counterPtr, g_counter) );
@@ -341,7 +341,7 @@ namespace cv { namespace gpu { namespace device
             }
         }
 
-        void circlesAccumCenters_gpu(const unsigned int* list, int count, PtrStepi dx, PtrStepi dy, DevMem2Di accum, int minRadius, int maxRadius, float idp)
+        void circlesAccumCenters_gpu(const unsigned int* list, int count, PtrStepi dx, PtrStepi dy, PtrStepSzi accum, int minRadius, int maxRadius, float idp)
         {
             const dim3 block(256);
             const dim3 grid(divUp(count, block.x));
@@ -357,7 +357,7 @@ namespace cv { namespace gpu { namespace device
         ////////////////////////////////////////////////////////////////////////
         // buildCentersList
 
-        __global__ void buildCentersList(const DevMem2Di accum, unsigned int* centers, const int threshold)
+        __global__ void buildCentersList(const PtrStepSzi accum, unsigned int* centers, const int threshold)
         {
             const int x = blockIdx.x * blockDim.x + threadIdx.x;
             const int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -381,7 +381,7 @@ namespace cv { namespace gpu { namespace device
             }
         }
 
-        int buildCentersList_gpu(DevMem2Di accum, unsigned int* centers, int threshold)
+        int buildCentersList_gpu(PtrStepSzi accum, unsigned int* centers, int threshold)
         {
             void* counterPtr;
             cudaSafeCall( cudaGetSymbolAddress(&counterPtr, g_counter) );
@@ -467,7 +467,7 @@ namespace cv { namespace gpu { namespace device
             const dim3 block(has20 ? 1024 : 512);
             const dim3 grid(centersCount);
 
-            const int histSize = ::ceil(maxRadius - minRadius + 1);
+            const int histSize = maxRadius - minRadius + 1;
             size_t smemSize = (histSize + 2) * sizeof(int);
 
             circlesAccumRadius<<<grid, block, smemSize>>>(centers, list, count, circles, maxCircles, dp, minRadius, maxRadius, histSize, threshold);

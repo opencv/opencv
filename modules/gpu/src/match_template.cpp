@@ -56,85 +56,85 @@ namespace cv { namespace gpu { namespace device
 {
     namespace match_template
     {
-        void matchTemplateNaive_CCORR_8U(const DevMem2Db image, const DevMem2Db templ, DevMem2Df result, int cn, cudaStream_t stream);
-        void matchTemplateNaive_CCORR_32F(const DevMem2Db image, const DevMem2Db templ, DevMem2Df result, int cn, cudaStream_t stream);
+        void matchTemplateNaive_CCORR_8U(const PtrStepSzb image, const PtrStepSzb templ, PtrStepSzf result, int cn, cudaStream_t stream);
+        void matchTemplateNaive_CCORR_32F(const PtrStepSzb image, const PtrStepSzb templ, PtrStepSzf result, int cn, cudaStream_t stream);
 
-        void matchTemplateNaive_SQDIFF_8U(const DevMem2Db image, const DevMem2Db templ, DevMem2Df result, int cn, cudaStream_t stream);
-        void matchTemplateNaive_SQDIFF_32F(const DevMem2Db image, const DevMem2Db templ, DevMem2Df result, int cn, cudaStream_t stream);
+        void matchTemplateNaive_SQDIFF_8U(const PtrStepSzb image, const PtrStepSzb templ, PtrStepSzf result, int cn, cudaStream_t stream);
+        void matchTemplateNaive_SQDIFF_32F(const PtrStepSzb image, const PtrStepSzb templ, PtrStepSzf result, int cn, cudaStream_t stream);
 
-        void matchTemplatePrepared_SQDIFF_8U(int w, int h, const DevMem2D_<unsigned long long> image_sqsum, unsigned long long templ_sqsum, DevMem2Df result,
+        void matchTemplatePrepared_SQDIFF_8U(int w, int h, const PtrStepSz<unsigned long long> image_sqsum, unsigned long long templ_sqsum, PtrStepSzf result,
             int cn, cudaStream_t stream);
 
-        void matchTemplatePrepared_SQDIFF_NORMED_8U(int w, int h, const DevMem2D_<unsigned long long> image_sqsum, unsigned long long templ_sqsum, DevMem2Df result,
+        void matchTemplatePrepared_SQDIFF_NORMED_8U(int w, int h, const PtrStepSz<unsigned long long> image_sqsum, unsigned long long templ_sqsum, PtrStepSzf result,
             int cn, cudaStream_t stream);
 
-        void matchTemplatePrepared_CCOFF_8U(int w, int h, const DevMem2D_<unsigned int> image_sum, unsigned int templ_sum, DevMem2Df result, cudaStream_t stream);
+        void matchTemplatePrepared_CCOFF_8U(int w, int h, const PtrStepSz<unsigned int> image_sum, unsigned int templ_sum, PtrStepSzf result, cudaStream_t stream);
         void matchTemplatePrepared_CCOFF_8UC2(
             int w, int h,
-            const DevMem2D_<unsigned int> image_sum_r,
-            const DevMem2D_<unsigned int> image_sum_g,
+            const PtrStepSz<unsigned int> image_sum_r,
+            const PtrStepSz<unsigned int> image_sum_g,
             unsigned int templ_sum_r,
             unsigned int templ_sum_g,
-            DevMem2Df result, cudaStream_t stream);
+            PtrStepSzf result, cudaStream_t stream);
         void matchTemplatePrepared_CCOFF_8UC3(
                 int w, int h,
-                const DevMem2D_<unsigned int> image_sum_r,
-                const DevMem2D_<unsigned int> image_sum_g,
-                const DevMem2D_<unsigned int> image_sum_b,
+                const PtrStepSz<unsigned int> image_sum_r,
+                const PtrStepSz<unsigned int> image_sum_g,
+                const PtrStepSz<unsigned int> image_sum_b,
                 unsigned int templ_sum_r,
                 unsigned int templ_sum_g,
                 unsigned int templ_sum_b,
-                DevMem2Df result, cudaStream_t stream);
+                PtrStepSzf result, cudaStream_t stream);
         void matchTemplatePrepared_CCOFF_8UC4(
                 int w, int h,
-                const DevMem2D_<unsigned int> image_sum_r,
-                const DevMem2D_<unsigned int> image_sum_g,
-                const DevMem2D_<unsigned int> image_sum_b,
-                const DevMem2D_<unsigned int> image_sum_a,
+                const PtrStepSz<unsigned int> image_sum_r,
+                const PtrStepSz<unsigned int> image_sum_g,
+                const PtrStepSz<unsigned int> image_sum_b,
+                const PtrStepSz<unsigned int> image_sum_a,
                 unsigned int templ_sum_r,
                 unsigned int templ_sum_g,
                 unsigned int templ_sum_b,
                 unsigned int templ_sum_a,
-                DevMem2Df result, cudaStream_t stream);
+                PtrStepSzf result, cudaStream_t stream);
 
 
         void matchTemplatePrepared_CCOFF_NORMED_8U(
-                int w, int h, const DevMem2D_<unsigned int> image_sum,
-                const DevMem2D_<unsigned long long> image_sqsum,
+                int w, int h, const PtrStepSz<unsigned int> image_sum,
+                const PtrStepSz<unsigned long long> image_sqsum,
                 unsigned int templ_sum, unsigned long long templ_sqsum,
-                DevMem2Df result, cudaStream_t stream);
+                PtrStepSzf result, cudaStream_t stream);
         void matchTemplatePrepared_CCOFF_NORMED_8UC2(
                 int w, int h,
-                const DevMem2D_<unsigned int> image_sum_r, const DevMem2D_<unsigned long long> image_sqsum_r,
-                const DevMem2D_<unsigned int> image_sum_g, const DevMem2D_<unsigned long long> image_sqsum_g,
+                const PtrStepSz<unsigned int> image_sum_r, const PtrStepSz<unsigned long long> image_sqsum_r,
+                const PtrStepSz<unsigned int> image_sum_g, const PtrStepSz<unsigned long long> image_sqsum_g,
                 unsigned int templ_sum_r, unsigned long long templ_sqsum_r,
                 unsigned int templ_sum_g, unsigned long long templ_sqsum_g,
-                DevMem2Df result, cudaStream_t stream);
+                PtrStepSzf result, cudaStream_t stream);
         void matchTemplatePrepared_CCOFF_NORMED_8UC3(
                 int w, int h,
-                const DevMem2D_<unsigned int> image_sum_r, const DevMem2D_<unsigned long long> image_sqsum_r,
-                const DevMem2D_<unsigned int> image_sum_g, const DevMem2D_<unsigned long long> image_sqsum_g,
-                const DevMem2D_<unsigned int> image_sum_b, const DevMem2D_<unsigned long long> image_sqsum_b,
+                const PtrStepSz<unsigned int> image_sum_r, const PtrStepSz<unsigned long long> image_sqsum_r,
+                const PtrStepSz<unsigned int> image_sum_g, const PtrStepSz<unsigned long long> image_sqsum_g,
+                const PtrStepSz<unsigned int> image_sum_b, const PtrStepSz<unsigned long long> image_sqsum_b,
                 unsigned int templ_sum_r, unsigned long long templ_sqsum_r,
                 unsigned int templ_sum_g, unsigned long long templ_sqsum_g,
                 unsigned int templ_sum_b, unsigned long long templ_sqsum_b,
-                DevMem2Df result, cudaStream_t stream);
+                PtrStepSzf result, cudaStream_t stream);
         void matchTemplatePrepared_CCOFF_NORMED_8UC4(
                 int w, int h,
-                const DevMem2D_<unsigned int> image_sum_r, const DevMem2D_<unsigned long long> image_sqsum_r,
-                const DevMem2D_<unsigned int> image_sum_g, const DevMem2D_<unsigned long long> image_sqsum_g,
-                const DevMem2D_<unsigned int> image_sum_b, const DevMem2D_<unsigned long long> image_sqsum_b,
-                const DevMem2D_<unsigned int> image_sum_a, const DevMem2D_<unsigned long long> image_sqsum_a,
+                const PtrStepSz<unsigned int> image_sum_r, const PtrStepSz<unsigned long long> image_sqsum_r,
+                const PtrStepSz<unsigned int> image_sum_g, const PtrStepSz<unsigned long long> image_sqsum_g,
+                const PtrStepSz<unsigned int> image_sum_b, const PtrStepSz<unsigned long long> image_sqsum_b,
+                const PtrStepSz<unsigned int> image_sum_a, const PtrStepSz<unsigned long long> image_sqsum_a,
                 unsigned int templ_sum_r, unsigned long long templ_sqsum_r,
                 unsigned int templ_sum_g, unsigned long long templ_sqsum_g,
                 unsigned int templ_sum_b, unsigned long long templ_sqsum_b,
                 unsigned int templ_sum_a, unsigned long long templ_sqsum_a,
-                DevMem2Df result, cudaStream_t stream);
+                PtrStepSzf result, cudaStream_t stream);
 
-        void normalize_8U(int w, int h, const DevMem2D_<unsigned long long> image_sqsum,
-                          unsigned long long templ_sqsum, DevMem2Df result, int cn, cudaStream_t stream);
+        void normalize_8U(int w, int h, const PtrStepSz<unsigned long long> image_sqsum,
+                          unsigned long long templ_sqsum, PtrStepSzf result, int cn, cudaStream_t stream);
 
-        void extractFirstChannel_32F(const DevMem2Db image, DevMem2Df result, int cn, cudaStream_t stream);
+        void extractFirstChannel_32F(const PtrStepSzb image, PtrStepSzf result, int cn, cudaStream_t stream);
     }
 }}}
 

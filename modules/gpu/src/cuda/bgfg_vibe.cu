@@ -90,7 +90,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <typename SrcT, typename SampleT>
-        __global__ void init(const DevMem2D_<SrcT> frame, PtrStep_<SampleT> samples, PtrStep_<uint> randStates)
+        __global__ void init(const PtrStepSz<SrcT> frame, PtrStep<SampleT> samples, PtrStep<uint> randStates)
         {
             const int x = blockIdx.x * blockDim.x + threadIdx.x;
             const int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -116,23 +116,23 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <typename SrcT, typename SampleT>
-        void init_caller(DevMem2Db frame, DevMem2Db samples, DevMem2D_<uint> randStates, cudaStream_t stream)
+        void init_caller(PtrStepSzb frame, PtrStepSzb samples, PtrStepSz<uint> randStates, cudaStream_t stream)
         {
             dim3 block(32, 8);
             dim3 grid(divUp(frame.cols, block.x), divUp(frame.rows, block.y));
 
             cudaSafeCall( cudaFuncSetCacheConfig(init<SrcT, SampleT>, cudaFuncCachePreferL1) );
 
-            init<SrcT, SampleT><<<grid, block, 0, stream>>>((DevMem2D_<SrcT>) frame, (DevMem2D_<SampleT>) samples, randStates);
+            init<SrcT, SampleT><<<grid, block, 0, stream>>>((PtrStepSz<SrcT>) frame, (PtrStepSz<SampleT>) samples, randStates);
             cudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
                 cudaSafeCall( cudaDeviceSynchronize() );
         }
 
-        void init_gpu(DevMem2Db frame, int cn, DevMem2Db samples, DevMem2D_<uint> randStates, cudaStream_t stream)
+        void init_gpu(PtrStepSzb frame, int cn, PtrStepSzb samples, PtrStepSz<uint> randStates, cudaStream_t stream)
         {
-            typedef void (*func_t)(DevMem2Db frame, DevMem2Db samples, DevMem2D_<uint> randStates, cudaStream_t stream);
+            typedef void (*func_t)(PtrStepSzb frame, PtrStepSzb samples, PtrStepSz<uint> randStates, cudaStream_t stream);
             static const func_t funcs[] =
             {
                 0, init_caller<uchar, uchar>, 0, init_caller<uchar3, uchar4>, init_caller<uchar4, uchar4>
@@ -155,7 +155,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <typename SrcT, typename SampleT>
-        __global__ void update(const DevMem2D_<SrcT> frame, PtrStepb fgmask, PtrStep_<SampleT> samples, PtrStep_<uint> randStates)
+        __global__ void update(const PtrStepSz<SrcT> frame, PtrStepb fgmask, PtrStep<SampleT> samples, PtrStep<uint> randStates)
         {
             const int x = blockIdx.x * blockDim.x + threadIdx.x;
             const int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -225,23 +225,23 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <typename SrcT, typename SampleT>
-        void update_caller(DevMem2Db frame, DevMem2Db fgmask, DevMem2Db samples, DevMem2D_<uint> randStates, cudaStream_t stream)
+        void update_caller(PtrStepSzb frame, PtrStepSzb fgmask, PtrStepSzb samples, PtrStepSz<uint> randStates, cudaStream_t stream)
         {
             dim3 block(32, 8);
             dim3 grid(divUp(frame.cols, block.x), divUp(frame.rows, block.y));
 
             cudaSafeCall( cudaFuncSetCacheConfig(update<SrcT, SampleT>, cudaFuncCachePreferL1) );
 
-            update<SrcT, SampleT><<<grid, block, 0, stream>>>((DevMem2D_<SrcT>) frame, fgmask, (DevMem2D_<SampleT>) samples, randStates);
+            update<SrcT, SampleT><<<grid, block, 0, stream>>>((PtrStepSz<SrcT>) frame, fgmask, (PtrStepSz<SampleT>) samples, randStates);
             cudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
                 cudaSafeCall( cudaDeviceSynchronize() );
         }
 
-        void update_gpu(DevMem2Db frame, int cn, DevMem2Db fgmask, DevMem2Db samples, DevMem2D_<uint> randStates, cudaStream_t stream)
+        void update_gpu(PtrStepSzb frame, int cn, PtrStepSzb fgmask, PtrStepSzb samples, PtrStepSz<uint> randStates, cudaStream_t stream)
         {
-            typedef void (*func_t)(DevMem2Db frame, DevMem2Db fgmask, DevMem2Db samples, DevMem2D_<uint> randStates, cudaStream_t stream);
+            typedef void (*func_t)(PtrStepSzb frame, PtrStepSzb fgmask, PtrStepSzb samples, PtrStepSz<uint> randStates, cudaStream_t stream);
             static const func_t funcs[] =
             {
                 0, update_caller<uchar, uchar>, 0, update_caller<uchar3, uchar4>, update_caller<uchar4, uchar4>

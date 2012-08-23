@@ -104,7 +104,7 @@ namespace cv { namespace gpu { namespace device
 {
     namespace imgproc
     {
-        void meanShiftFiltering_gpu(const DevMem2Db& src, DevMem2Db dst, int sp, int sr, int maxIter, float eps, cudaStream_t stream);
+        void meanShiftFiltering_gpu(const PtrStepSzb& src, PtrStepSzb dst, int sp, int sr, int maxIter, float eps, cudaStream_t stream);
     }
 }}}
 
@@ -140,7 +140,7 @@ namespace cv { namespace gpu { namespace device
 {
     namespace imgproc
     {
-        void meanShiftProc_gpu(const DevMem2Db& src, DevMem2Db dstr, DevMem2Db dstsp, int sp, int sr, int maxIter, float eps, cudaStream_t stream);
+        void meanShiftProc_gpu(const PtrStepSzb& src, PtrStepSzb dstr, PtrStepSzb dstsp, int sp, int sr, int maxIter, float eps, cudaStream_t stream);
     }
 }}}
 
@@ -177,8 +177,8 @@ namespace cv { namespace gpu { namespace device
 {
     namespace imgproc
     {
-        void drawColorDisp_gpu(const DevMem2Db& src, const DevMem2Db& dst, int ndisp, const cudaStream_t& stream);
-        void drawColorDisp_gpu(const DevMem2D_<short>& src, const DevMem2Db& dst, int ndisp, const cudaStream_t& stream);
+        void drawColorDisp_gpu(const PtrStepSzb& src, const PtrStepSzb& dst, int ndisp, const cudaStream_t& stream);
+        void drawColorDisp_gpu(const PtrStepSz<short>& src, const PtrStepSzb& dst, int ndisp, const cudaStream_t& stream);
     }
 }}}
 
@@ -191,7 +191,7 @@ namespace
 
         dst.create(src.size(), CV_8UC4);
 
-        drawColorDisp_gpu((DevMem2D_<T>)src, dst, ndisp, stream);
+        drawColorDisp_gpu((PtrStepSz<T>)src, dst, ndisp, stream);
     }
 
     typedef void (*drawColorDisp_caller_t)(const GpuMat& src, GpuMat& dst, int ndisp, const cudaStream_t& stream);
@@ -214,7 +214,7 @@ namespace cv { namespace gpu { namespace device
     namespace imgproc
     {
         template <typename T, typename D>
-        void reprojectImageTo3D_gpu(const DevMem2Db disp, DevMem2Db xyz, const float* q, cudaStream_t stream);
+        void reprojectImageTo3D_gpu(const PtrStepSzb disp, PtrStepSzb xyz, const float* q, cudaStream_t stream);
     }
 }}}
 
@@ -222,7 +222,7 @@ void cv::gpu::reprojectImageTo3D(const GpuMat& disp, GpuMat& xyz, const Mat& Q, 
 {
     using namespace cv::gpu::device::imgproc;
 
-    typedef void (*func_t)(const DevMem2Db disp, DevMem2Db xyz, const float* q, cudaStream_t stream);
+    typedef void (*func_t)(const PtrStepSzb disp, PtrStepSzb xyz, const float* q, cudaStream_t stream);
     static const func_t funcs[2][4] =
     {
         {reprojectImageTo3D_gpu<uchar, float3>, 0, 0, reprojectImageTo3D_gpu<short, float3>},
@@ -245,13 +245,13 @@ namespace cv { namespace gpu { namespace device
 {
     namespace imgproc
     {
-        template <typename T, int cn> void copyMakeBorder_gpu(const DevMem2Db& src, const DevMem2Db& dst, int top, int left, int borderMode, const T* borderValue, cudaStream_t stream);
+        template <typename T, int cn> void copyMakeBorder_gpu(const PtrStepSzb& src, const PtrStepSzb& dst, int top, int left, int borderMode, const T* borderValue, cudaStream_t stream);
     }
 }}}
 
 namespace
 {
-    template <typename T, int cn> void copyMakeBorder_caller(const DevMem2Db& src, const DevMem2Db& dst, int top, int left, int borderType, const Scalar& value, cudaStream_t stream)
+    template <typename T, int cn> void copyMakeBorder_caller(const PtrStepSzb& src, const PtrStepSzb& dst, int top, int left, int borderType, const Scalar& value, cudaStream_t stream)
     {
         using namespace ::cv::gpu::device::imgproc;
 
@@ -326,7 +326,7 @@ void cv::gpu::copyMakeBorder(const GpuMat& src, GpuMat& dst, int top, int bottom
     }
     else
     {
-        typedef void (*caller_t)(const DevMem2Db& src, const DevMem2Db& dst, int top, int left, int borderType, const Scalar& value, cudaStream_t stream);
+        typedef void (*caller_t)(const PtrStepSzb& src, const PtrStepSzb& dst, int top, int left, int borderType, const Scalar& value, cudaStream_t stream);
         static const caller_t callers[6][4] =
         {
             {   copyMakeBorder_caller<uchar, 1>  , 0/*copyMakeBorder_caller<uchar, 2>*/ ,    copyMakeBorder_caller<uchar, 3>  ,    copyMakeBorder_caller<uchar, 4>},
@@ -354,7 +354,7 @@ namespace cv { namespace gpu { namespace device
 {
     namespace imgproc
     {
-        void buildWarpPlaneMaps(int tl_u, int tl_v, DevMem2Df map_x, DevMem2Df map_y,
+        void buildWarpPlaneMaps(int tl_u, int tl_v, PtrStepSzf map_x, PtrStepSzf map_y,
                                 const float k_rinv[9], const float r_kinv[9], const float t[3], float scale,
                                 cudaStream_t stream);
     }
@@ -388,7 +388,7 @@ namespace cv { namespace gpu { namespace device
 {
     namespace imgproc
     {
-        void buildWarpCylindricalMaps(int tl_u, int tl_v, DevMem2Df map_x, DevMem2Df map_y,
+        void buildWarpCylindricalMaps(int tl_u, int tl_v, PtrStepSzf map_x, PtrStepSzf map_y,
                                       const float k_rinv[9], const float r_kinv[9], float scale,
                                       cudaStream_t stream);
     }
@@ -421,7 +421,7 @@ namespace cv { namespace gpu { namespace device
 {
     namespace imgproc
     {
-        void buildWarpSphericalMaps(int tl_u, int tl_v, DevMem2Df map_x, DevMem2Df map_y,
+        void buildWarpSphericalMaps(int tl_u, int tl_v, PtrStepSzf map_x, PtrStepSzf map_y,
                                     const float k_rinv[9], const float r_kinv[9], float scale,
                                     cudaStream_t stream);
     }
@@ -537,7 +537,7 @@ namespace cv { namespace gpu { namespace device
 {
     namespace imgproc
     {
-        void shfl_integral_gpu(DevMem2Db img, DevMem2D_<unsigned int> integral, cudaStream_t stream);
+        void shfl_integral_gpu(PtrStepSzb img, PtrStepSz<unsigned int> integral, cudaStream_t stream);
     }
 }}}
 
@@ -652,7 +652,7 @@ namespace cv { namespace gpu { namespace device
 {
     namespace imgproc
     {
-        void columnSum_32F(const DevMem2Db src, const DevMem2Db dst);
+        void columnSum_32F(const PtrStepSzb src, const PtrStepSzb dst);
     }
 }}}
 
@@ -991,12 +991,12 @@ namespace cv { namespace gpu { namespace device
 {
     namespace hist
     {
-        void histogram256_gpu(DevMem2Db src, int* hist, unsigned int* buf, cudaStream_t stream);
+        void histogram256_gpu(PtrStepSzb src, int* hist, unsigned int* buf, cudaStream_t stream);
 
         const int PARTIAL_HISTOGRAM256_COUNT = 240;
         const int HISTOGRAM256_BIN_COUNT     = 256;
 
-        void equalizeHist_gpu(DevMem2Db src, DevMem2Db dst, const int* lut, cudaStream_t stream);
+        void equalizeHist_gpu(PtrStepSzb src, PtrStepSzb dst, const int* lut, cudaStream_t stream);
     }
 }}}
 
@@ -1072,8 +1072,8 @@ namespace cv { namespace gpu { namespace device
 {
     namespace imgproc
     {
-        void cornerHarris_gpu(int block_size, float k, DevMem2Df Dx, DevMem2Df Dy, DevMem2Df dst, int border_type, cudaStream_t stream);
-        void cornerMinEigenVal_gpu(int block_size, DevMem2Df Dx, DevMem2Df Dy, DevMem2Df dst, int border_type, cudaStream_t stream);
+        void cornerHarris_gpu(int block_size, float k, PtrStepSzf Dx, PtrStepSzf Dy, PtrStepSzf dst, int border_type, cudaStream_t stream);
+        void cornerMinEigenVal_gpu(int block_size, PtrStepSzf Dx, PtrStepSzf Dy, PtrStepSzf dst, int border_type, cudaStream_t stream);
     }
 }}}
 
@@ -1195,9 +1195,9 @@ namespace cv { namespace gpu { namespace device
 {
     namespace imgproc
     {
-        void mulSpectrums(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, DevMem2D_<cufftComplex> c, cudaStream_t stream);
+        void mulSpectrums(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, PtrStepSz<cufftComplex> c, cudaStream_t stream);
 
-        void mulSpectrums_CONJ(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, DevMem2D_<cufftComplex> c, cudaStream_t stream);
+        void mulSpectrums_CONJ(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, PtrStepSz<cufftComplex> c, cudaStream_t stream);
     }
 }}}
 
@@ -1206,7 +1206,7 @@ void cv::gpu::mulSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c, int flag
     (void)flags;
     using namespace ::cv::gpu::device::imgproc;
 
-    typedef void (*Caller)(const PtrStep<cufftComplex>, const PtrStep<cufftComplex>, DevMem2D_<cufftComplex>, cudaStream_t stream);
+    typedef void (*Caller)(const PtrStep<cufftComplex>, const PtrStep<cufftComplex>, PtrStepSz<cufftComplex>, cudaStream_t stream);
 
     static Caller callers[] = { device::imgproc::mulSpectrums, device::imgproc::mulSpectrums_CONJ };
 
@@ -1226,9 +1226,9 @@ namespace cv { namespace gpu { namespace device
 {
     namespace imgproc
     {
-        void mulAndScaleSpectrums(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, float scale, DevMem2D_<cufftComplex> c, cudaStream_t stream);
+        void mulAndScaleSpectrums(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, float scale, PtrStepSz<cufftComplex> c, cudaStream_t stream);
 
-        void mulAndScaleSpectrums_CONJ(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, float scale, DevMem2D_<cufftComplex> c, cudaStream_t stream);
+        void mulAndScaleSpectrums_CONJ(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, float scale, PtrStepSz<cufftComplex> c, cudaStream_t stream);
     }
 }}}
 
@@ -1237,7 +1237,7 @@ void cv::gpu::mulAndScaleSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c, 
     (void)flags;
     using namespace ::cv::gpu::device::imgproc;
 
-    typedef void (*Caller)(const PtrStep<cufftComplex>, const PtrStep<cufftComplex>, float scale, DevMem2D_<cufftComplex>, cudaStream_t stream);
+    typedef void (*Caller)(const PtrStep<cufftComplex>, const PtrStep<cufftComplex>, float scale, PtrStepSz<cufftComplex>, cudaStream_t stream);
     static Caller callers[] = { device::imgproc::mulAndScaleSpectrums, device::imgproc::mulAndScaleSpectrums_CONJ };
 
     CV_Assert(a.type() == b.type() && a.type() == CV_32FC2);

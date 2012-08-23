@@ -168,7 +168,7 @@ namespace cv { namespace gpu { namespace device {
         template <typename T> struct Quantization : detail::Quantization<VecTraits<T>::cn> {};
 
         template <typename SrcT>
-        __global__ void update(const PtrStep_<SrcT> frame, PtrStepb fgmask, PtrStepi colors_, PtrStepf weights_, PtrStepi nfeatures_,
+        __global__ void update(const PtrStep<SrcT> frame, PtrStepb fgmask, PtrStepi colors_, PtrStepf weights_, PtrStepi nfeatures_,
                                const int frameNum, const float learningRate, const bool updateBackgroundModel)
         {
             const int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -222,7 +222,7 @@ namespace cv { namespace gpu { namespace device {
         }
 
         template <typename SrcT>
-        void update_gpu(DevMem2Db frame, PtrStepb fgmask, DevMem2Di colors, PtrStepf weights, PtrStepi nfeatures,
+        void update_gpu(PtrStepSzb frame, PtrStepb fgmask, PtrStepSzi colors, PtrStepf weights, PtrStepi nfeatures,
                         int frameNum, float learningRate, bool updateBackgroundModel, cudaStream_t stream)
         {
             const dim3 block(32, 8);
@@ -230,7 +230,7 @@ namespace cv { namespace gpu { namespace device {
 
             cudaSafeCall( cudaFuncSetCacheConfig(update<SrcT>, cudaFuncCachePreferL1) );
 
-            update<SrcT><<<grid, block, 0, stream>>>((DevMem2D_<SrcT>) frame, fgmask, colors, weights, nfeatures, frameNum, learningRate, updateBackgroundModel);
+            update<SrcT><<<grid, block, 0, stream>>>((PtrStepSz<SrcT>) frame, fgmask, colors, weights, nfeatures, frameNum, learningRate, updateBackgroundModel);
 
             cudaSafeCall( cudaGetLastError() );
 
@@ -238,16 +238,16 @@ namespace cv { namespace gpu { namespace device {
                 cudaSafeCall( cudaDeviceSynchronize() );
         }
 
-        template void update_gpu<uchar  >(DevMem2Db frame, PtrStepb fgmask, DevMem2Di colors, PtrStepf weights, PtrStepi nfeatures, int frameNum, float learningRate, bool updateBackgroundModel, cudaStream_t stream);
-        template void update_gpu<uchar3 >(DevMem2Db frame, PtrStepb fgmask, DevMem2Di colors, PtrStepf weights, PtrStepi nfeatures, int frameNum, float learningRate, bool updateBackgroundModel, cudaStream_t stream);
-        template void update_gpu<uchar4 >(DevMem2Db frame, PtrStepb fgmask, DevMem2Di colors, PtrStepf weights, PtrStepi nfeatures, int frameNum, float learningRate, bool updateBackgroundModel, cudaStream_t stream);
+        template void update_gpu<uchar  >(PtrStepSzb frame, PtrStepb fgmask, PtrStepSzi colors, PtrStepf weights, PtrStepi nfeatures, int frameNum, float learningRate, bool updateBackgroundModel, cudaStream_t stream);
+        template void update_gpu<uchar3 >(PtrStepSzb frame, PtrStepb fgmask, PtrStepSzi colors, PtrStepf weights, PtrStepi nfeatures, int frameNum, float learningRate, bool updateBackgroundModel, cudaStream_t stream);
+        template void update_gpu<uchar4 >(PtrStepSzb frame, PtrStepb fgmask, PtrStepSzi colors, PtrStepf weights, PtrStepi nfeatures, int frameNum, float learningRate, bool updateBackgroundModel, cudaStream_t stream);
 
-        template void update_gpu<ushort >(DevMem2Db frame, PtrStepb fgmask, DevMem2Di colors, PtrStepf weights, PtrStepi nfeatures, int frameNum, float learningRate, bool updateBackgroundModel, cudaStream_t stream);
-        template void update_gpu<ushort3>(DevMem2Db frame, PtrStepb fgmask, DevMem2Di colors, PtrStepf weights, PtrStepi nfeatures, int frameNum, float learningRate, bool updateBackgroundModel, cudaStream_t stream);
-        template void update_gpu<ushort4>(DevMem2Db frame, PtrStepb fgmask, DevMem2Di colors, PtrStepf weights, PtrStepi nfeatures, int frameNum, float learningRate, bool updateBackgroundModel, cudaStream_t stream);
+        template void update_gpu<ushort >(PtrStepSzb frame, PtrStepb fgmask, PtrStepSzi colors, PtrStepf weights, PtrStepi nfeatures, int frameNum, float learningRate, bool updateBackgroundModel, cudaStream_t stream);
+        template void update_gpu<ushort3>(PtrStepSzb frame, PtrStepb fgmask, PtrStepSzi colors, PtrStepf weights, PtrStepi nfeatures, int frameNum, float learningRate, bool updateBackgroundModel, cudaStream_t stream);
+        template void update_gpu<ushort4>(PtrStepSzb frame, PtrStepb fgmask, PtrStepSzi colors, PtrStepf weights, PtrStepi nfeatures, int frameNum, float learningRate, bool updateBackgroundModel, cudaStream_t stream);
 
-        template void update_gpu<float  >(DevMem2Db frame, PtrStepb fgmask, DevMem2Di colors, PtrStepf weights, PtrStepi nfeatures, int frameNum, float learningRate, bool updateBackgroundModel, cudaStream_t stream);
-        template void update_gpu<float3 >(DevMem2Db frame, PtrStepb fgmask, DevMem2Di colors, PtrStepf weights, PtrStepi nfeatures, int frameNum, float learningRate, bool updateBackgroundModel, cudaStream_t stream);
-        template void update_gpu<float4 >(DevMem2Db frame, PtrStepb fgmask, DevMem2Di colors, PtrStepf weights, PtrStepi nfeatures, int frameNum, float learningRate, bool updateBackgroundModel, cudaStream_t stream);
+        template void update_gpu<float  >(PtrStepSzb frame, PtrStepb fgmask, PtrStepSzi colors, PtrStepf weights, PtrStepi nfeatures, int frameNum, float learningRate, bool updateBackgroundModel, cudaStream_t stream);
+        template void update_gpu<float3 >(PtrStepSzb frame, PtrStepb fgmask, PtrStepSzi colors, PtrStepf weights, PtrStepi nfeatures, int frameNum, float learningRate, bool updateBackgroundModel, cudaStream_t stream);
+        template void update_gpu<float4 >(PtrStepSzb frame, PtrStepb fgmask, PtrStepSzi colors, PtrStepf weights, PtrStepi nfeatures, int frameNum, float learningRate, bool updateBackgroundModel, cudaStream_t stream);
     }
 }}}

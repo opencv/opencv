@@ -57,7 +57,7 @@ namespace cv { namespace gpu { namespace device
         __constant__ short cedge_disc;
         __constant__ short cmax_disc;
 
-        void load_constants(float* table_color, DevMem2Df table_space, int ndisp, int radius, short edge_disc, short max_disc)
+        void load_constants(float* table_color, PtrStepSzf table_space, int ndisp, int radius, short edge_disc, short max_disc)
         {
             cudaSafeCall( cudaMemcpyToSymbol(ctable_color, &table_color, sizeof(table_color)) );
             cudaSafeCall( cudaMemcpyToSymbol(ctable_space, &table_space.data, sizeof(table_space.data)) );
@@ -176,7 +176,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <typename T>
-        void bilateral_filter_caller(DevMem2D_<T> disp, DevMem2Db img, int channels, int iters, cudaStream_t stream)
+        void bilateral_filter_caller(PtrStepSz<T> disp, PtrStepSzb img, int channels, int iters, cudaStream_t stream)
         {
             dim3 threads(32, 8, 1);
             dim3 grid(1, 1, 1);
@@ -213,12 +213,12 @@ namespace cv { namespace gpu { namespace device
                 cudaSafeCall( cudaDeviceSynchronize() );
         }
 
-        void bilateral_filter_gpu(DevMem2Db disp, DevMem2Db img, int channels, int iters, cudaStream_t stream)
+        void bilateral_filter_gpu(PtrStepSzb disp, PtrStepSzb img, int channels, int iters, cudaStream_t stream)
         {
             bilateral_filter_caller(disp, img, channels, iters, stream);
         }
 
-        void bilateral_filter_gpu(DevMem2D_<short> disp, DevMem2Db img, int channels, int iters, cudaStream_t stream)
+        void bilateral_filter_gpu(PtrStepSz<short> disp, PtrStepSzb img, int channels, int iters, cudaStream_t stream)
         {
             bilateral_filter_caller(disp, img, channels, iters, stream);
         }

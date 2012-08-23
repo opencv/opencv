@@ -458,7 +458,7 @@ namespace cv { namespace gpu { namespace device
                 cudaSafeCall( cudaDeviceSynchronize() );
         }
 
-        void lkSparse1_gpu(DevMem2Df I, DevMem2Df J, const float2* prevPts, float2* nextPts, uchar* status, float* err, int ptcount,
+        void lkSparse1_gpu(PtrStepSzf I, PtrStepSzf J, const float2* prevPts, float2* nextPts, uchar* status, float* err, int ptcount,
             int level, dim3 block, dim3 patch, cudaStream_t stream)
         {
             typedef void (*func_t)(int rows, int cols, const float2* prevPts, float2* nextPts, uchar* status, float* err, int ptcount,
@@ -480,7 +480,7 @@ namespace cv { namespace gpu { namespace device
                 level, block, stream);
         }
 
-        void lkSparse4_gpu(DevMem2D_<float4> I, DevMem2D_<float4> J, const float2* prevPts, float2* nextPts, uchar* status, float* err, int ptcount,
+        void lkSparse4_gpu(PtrStepSz<float4> I, PtrStepSz<float4> J, const float2* prevPts, float2* nextPts, uchar* status, float* err, int ptcount,
             int level, dim3 block, dim3 patch, cudaStream_t stream)
         {
             typedef void (*func_t)(int rows, int cols, const float2* prevPts, float2* nextPts, uchar* status, float* err, int ptcount,
@@ -648,8 +648,8 @@ namespace cv { namespace gpu { namespace device
             }
         }
 
-        void lkDense_gpu(DevMem2Db I, DevMem2Df J, DevMem2Df u, DevMem2Df v, DevMem2Df prevU, DevMem2Df prevV,
-                         DevMem2Df err, int2 winSize, cudaStream_t stream)
+        void lkDense_gpu(PtrStepSzb I, PtrStepSzf J, PtrStepSzf u, PtrStepSzf v, PtrStepSzf prevU, PtrStepSzf prevV,
+                         PtrStepSzf err, int2 winSize, cudaStream_t stream)
         {
             dim3 block(16, 16);
             dim3 grid(divUp(I.cols, block.x), divUp(I.rows, block.y));

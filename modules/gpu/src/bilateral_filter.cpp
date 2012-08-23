@@ -59,10 +59,10 @@ namespace cv { namespace gpu { namespace device
 {
     namespace bilateral_filter
     {
-        void load_constants(float* table_color, DevMem2Df table_space, int ndisp, int radius, short edge_disc, short max_disc);
+        void load_constants(float* table_color, PtrStepSzf table_space, int ndisp, int radius, short edge_disc, short max_disc);
 
-        void bilateral_filter_gpu(DevMem2Db disp, DevMem2Db img, int channels, int iters, cudaStream_t stream);
-        void bilateral_filter_gpu(DevMem2D_<short> disp, DevMem2Db img, int channels, int iters, cudaStream_t stream);
+        void bilateral_filter_gpu(PtrStepSzb disp, PtrStepSzb img, int channels, int iters, cudaStream_t stream);
+        void bilateral_filter_gpu(PtrStepSz<short> disp, PtrStepSzb img, int channels, int iters, cudaStream_t stream);
     }
 }}}
 
@@ -120,7 +120,7 @@ namespace
                 disp.copyTo(dst);
         }
 
-        bilateral_filter_gpu((DevMem2D_<T>)dst, img, img.channels(), iters, StreamAccessor::getStream(stream));
+        bilateral_filter_gpu((PtrStepSz<T>)dst, img, img.channels(), iters, StreamAccessor::getStream(stream));
     }
 
     typedef void (*bilateral_filter_operator_t)(int ndisp, int radius, int iters, float edge_threshold, float max_disc_threshold, 

@@ -206,7 +206,7 @@ namespace cv { namespace gpu { namespace device
 {
     namespace pyramid
     {
-        template <typename T> void kernelDownsampleX2_gpu(DevMem2Db src, DevMem2Db dst, cudaStream_t stream)
+        template <typename T> void kernelDownsampleX2_gpu(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream)
         {
             dim3 bDim(16, 8);
             dim3 gDim(divUp(src.cols, bDim.x), divUp(src.rows, bDim.y));
@@ -220,17 +220,17 @@ namespace cv { namespace gpu { namespace device
                 cudaSafeCall( cudaDeviceSynchronize() );
         }
 
-        template void kernelDownsampleX2_gpu<uchar1>(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
-        template void kernelDownsampleX2_gpu<uchar3>(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
-        template void kernelDownsampleX2_gpu<uchar4>(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
+        template void kernelDownsampleX2_gpu<uchar1>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
+        template void kernelDownsampleX2_gpu<uchar3>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
+        template void kernelDownsampleX2_gpu<uchar4>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
 
-        template void kernelDownsampleX2_gpu<ushort1>(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
-        template void kernelDownsampleX2_gpu<ushort3>(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
-        template void kernelDownsampleX2_gpu<ushort4>(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
+        template void kernelDownsampleX2_gpu<ushort1>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
+        template void kernelDownsampleX2_gpu<ushort3>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
+        template void kernelDownsampleX2_gpu<ushort4>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
 
-        template void kernelDownsampleX2_gpu<float1>(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
-        template void kernelDownsampleX2_gpu<float3>(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
-        template void kernelDownsampleX2_gpu<float4>(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
+        template void kernelDownsampleX2_gpu<float1>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
+        template void kernelDownsampleX2_gpu<float3>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
+        template void kernelDownsampleX2_gpu<float4>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
     }
 }}}
 
@@ -281,7 +281,7 @@ namespace cv { namespace gpu { namespace device
 {
     namespace pyramid
     {
-        template <typename T> void kernelInterpolateFrom1_gpu(DevMem2Db src, DevMem2Db dst, cudaStream_t stream)
+        template <typename T> void kernelInterpolateFrom1_gpu(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream)
         {
             dim3 bDim(16, 8);
             dim3 gDim(divUp(dst.cols, bDim.x), divUp(dst.rows, bDim.y));
@@ -295,17 +295,17 @@ namespace cv { namespace gpu { namespace device
                 cudaSafeCall( cudaDeviceSynchronize() );
         }
 
-        template void kernelInterpolateFrom1_gpu<uchar1>(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
-        template void kernelInterpolateFrom1_gpu<uchar3>(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
-        template void kernelInterpolateFrom1_gpu<uchar4>(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
+        template void kernelInterpolateFrom1_gpu<uchar1>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
+        template void kernelInterpolateFrom1_gpu<uchar3>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
+        template void kernelInterpolateFrom1_gpu<uchar4>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
 
-        template void kernelInterpolateFrom1_gpu<ushort1>(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
-        template void kernelInterpolateFrom1_gpu<ushort3>(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
-        template void kernelInterpolateFrom1_gpu<ushort4>(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
+        template void kernelInterpolateFrom1_gpu<ushort1>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
+        template void kernelInterpolateFrom1_gpu<ushort3>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
+        template void kernelInterpolateFrom1_gpu<ushort4>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
 
-        template void kernelInterpolateFrom1_gpu<float1>(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
-        template void kernelInterpolateFrom1_gpu<float3>(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
-        template void kernelInterpolateFrom1_gpu<float4>(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
+        template void kernelInterpolateFrom1_gpu<float1>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
+        template void kernelInterpolateFrom1_gpu<float3>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
+        template void kernelInterpolateFrom1_gpu<float4>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
     }
 }}}
 

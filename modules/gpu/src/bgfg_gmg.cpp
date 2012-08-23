@@ -58,7 +58,7 @@ namespace cv { namespace gpu { namespace device {
                            float decisionThreshold, int maxFeatures, int numInitializationFrames);
 
         template <typename SrcT>
-        void update_gpu(DevMem2Db frame, PtrStepb fgmask, DevMem2Di colors, PtrStepf weights, PtrStepi nfeatures,
+        void update_gpu(PtrStepSzb frame, PtrStepb fgmask, PtrStepSzi colors, PtrStepf weights, PtrStepi nfeatures,
                         int frameNum,  float learningRate, bool updateBackgroundModel, cudaStream_t stream);
     }
 }}}
@@ -109,7 +109,7 @@ void cv::gpu::GMG_GPU::operator ()(const cv::gpu::GpuMat& frame, cv::gpu::GpuMat
 {
     using namespace cv::gpu::device::bgfg_gmg;
 
-    typedef void (*func_t)(DevMem2Db frame, PtrStepb fgmask, DevMem2Di colors, PtrStepf weights, PtrStepi nfeatures,
+    typedef void (*func_t)(PtrStepSzb frame, PtrStepb fgmask, PtrStepSzi colors, PtrStepf weights, PtrStepi nfeatures,
                            int frameNum, float learningRate, bool updateBackgroundModel, cudaStream_t stream);
     static const func_t funcs[6][4] =
     {

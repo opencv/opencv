@@ -121,8 +121,8 @@ namespace cv { namespace gpu { namespace device
         // MOG without learning
 
         template <typename SrcT, typename WorkT>
-        __global__ void mog_withoutLearning(const DevMem2D_<SrcT> frame, PtrStepb fgmask,
-                                            const PtrStepf gmm_weight, const PtrStep_<WorkT> gmm_mean, const PtrStep_<WorkT> gmm_var,
+        __global__ void mog_withoutLearning(const PtrStepSz<SrcT> frame, PtrStepb fgmask,
+                                            const PtrStepf gmm_weight, const PtrStep<WorkT> gmm_mean, const PtrStep<WorkT> gmm_var,
                                             const int nmixtures, const float varThreshold, const float backgroundRatio)
         {
             const int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -172,7 +172,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <typename SrcT, typename WorkT>
-        void mog_withoutLearning_caller(DevMem2Db frame, DevMem2Db fgmask, DevMem2Df weight, DevMem2Db mean, DevMem2Db var,
+        void mog_withoutLearning_caller(PtrStepSzb frame, PtrStepSzb fgmask, PtrStepSzf weight, PtrStepSzb mean, PtrStepSzb var,
                                         int nmixtures, float varThreshold, float backgroundRatio, cudaStream_t stream)
         {
             dim3 block(32, 8);
@@ -180,8 +180,8 @@ namespace cv { namespace gpu { namespace device
 
             cudaSafeCall( cudaFuncSetCacheConfig(mog_withoutLearning<SrcT, WorkT>, cudaFuncCachePreferL1) );
 
-            mog_withoutLearning<SrcT, WorkT><<<grid, block, 0, stream>>>((DevMem2D_<SrcT>) frame, fgmask,
-                                                                         weight, (DevMem2D_<WorkT>) mean, (DevMem2D_<WorkT>) var,
+            mog_withoutLearning<SrcT, WorkT><<<grid, block, 0, stream>>>((PtrStepSz<SrcT>) frame, fgmask,
+                                                                         weight, (PtrStepSz<WorkT>) mean, (PtrStepSz<WorkT>) var,
                                                                          nmixtures, varThreshold, backgroundRatio);
 
             cudaSafeCall( cudaGetLastError() );
@@ -194,8 +194,8 @@ namespace cv { namespace gpu { namespace device
         // MOG with learning
 
         template <typename SrcT, typename WorkT>
-        __global__ void mog_withLearning(const DevMem2D_<SrcT> frame, PtrStepb fgmask,
-                                         PtrStepf gmm_weight, PtrStepf gmm_sortKey, PtrStep_<WorkT> gmm_mean, PtrStep_<WorkT> gmm_var,
+        __global__ void mog_withLearning(const PtrStepSz<SrcT> frame, PtrStepb fgmask,
+                                         PtrStepf gmm_weight, PtrStepf gmm_sortKey, PtrStep<WorkT> gmm_mean, PtrStep<WorkT> gmm_var,
                                          const int nmixtures, const float varThreshold, const float backgroundRatio, const float learningRate, const float minVar)
         {
             const float w0 = 0.05f;
@@ -324,7 +324,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <typename SrcT, typename WorkT>
-        void mog_withLearning_caller(DevMem2Db frame, DevMem2Db fgmask, DevMem2Df weight, DevMem2Df sortKey, DevMem2Db mean, DevMem2Db var,
+        void mog_withLearning_caller(PtrStepSzb frame, PtrStepSzb fgmask, PtrStepSzf weight, PtrStepSzf sortKey, PtrStepSzb mean, PtrStepSzb var,
                                      int nmixtures, float varThreshold, float backgroundRatio, float learningRate, float minVar,
                                      cudaStream_t stream)
         {
@@ -333,8 +333,8 @@ namespace cv { namespace gpu { namespace device
 
             cudaSafeCall( cudaFuncSetCacheConfig(mog_withLearning<SrcT, WorkT>, cudaFuncCachePreferL1) );
 
-            mog_withLearning<SrcT, WorkT><<<grid, block, 0, stream>>>((DevMem2D_<SrcT>) frame, fgmask,
-                                                                      weight, sortKey, (DevMem2D_<WorkT>) mean, (DevMem2D_<WorkT>) var,
+            mog_withLearning<SrcT, WorkT><<<grid, block, 0, stream>>>((PtrStepSz<SrcT>) frame, fgmask,
+                                                                      weight, sortKey, (PtrStepSz<WorkT>) mean, (PtrStepSz<WorkT>) var,
                                                                       nmixtures, varThreshold, backgroundRatio, learningRate, minVar);
 
             cudaSafeCall( cudaGetLastError() );
@@ -346,10 +346,10 @@ namespace cv { namespace gpu { namespace device
         ///////////////////////////////////////////////////////////////
         // MOG
 
-        void mog_gpu(DevMem2Db frame, int cn, DevMem2Db fgmask, DevMem2Df weight, DevMem2Df sortKey, DevMem2Db mean, DevMem2Db var, int nmixtures, float varThreshold, float learningRate, float backgroundRatio, float noiseSigma, cudaStream_t stream)
+        void mog_gpu(PtrStepSzb frame, int cn, PtrStepSzb fgmask, PtrStepSzf weight, PtrStepSzf sortKey, PtrStepSzb mean, PtrStepSzb var, int nmixtures, float varThreshold, float learningRate, float backgroundRatio, float noiseSigma, cudaStream_t stream)
         {
-            typedef void (*withoutLearning_t)(DevMem2Db frame, DevMem2Db fgmask, DevMem2Df weight, DevMem2Db mean, DevMem2Db var, int nmixtures, float varThreshold, float backgroundRatio, cudaStream_t stream);
-            typedef void (*withLearning_t)(DevMem2Db frame, DevMem2Db fgmask, DevMem2Df weight, DevMem2Df sortKey, DevMem2Db mean, DevMem2Db var, int nmixtures, float varThreshold, float backgroundRatio, float learningRate, float minVar, cudaStream_t stream);
+            typedef void (*withoutLearning_t)(PtrStepSzb frame, PtrStepSzb fgmask, PtrStepSzf weight, PtrStepSzb mean, PtrStepSzb var, int nmixtures, float varThreshold, float backgroundRatio, cudaStream_t stream);
+            typedef void (*withLearning_t)(PtrStepSzb frame, PtrStepSzb fgmask, PtrStepSzf weight, PtrStepSzf sortKey, PtrStepSzb mean, PtrStepSzb var, int nmixtures, float varThreshold, float backgroundRatio, float learningRate, float minVar, cudaStream_t stream);
 
             static const withoutLearning_t withoutLearning[] =
             {
@@ -369,7 +369,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <typename WorkT, typename OutT>
-        __global__ void getBackgroundImage(const PtrStepf gmm_weight, const PtrStep_<WorkT> gmm_mean, DevMem2D_<OutT> dst, const int nmixtures, const float backgroundRatio)
+        __global__ void getBackgroundImage(const PtrStepf gmm_weight, const PtrStep<WorkT> gmm_mean, PtrStepSz<OutT> dst, const int nmixtures, const float backgroundRatio)
         {
             const int x = blockIdx.x * blockDim.x + threadIdx.x;
             const int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -399,23 +399,23 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <typename WorkT, typename OutT>
-        void getBackgroundImage_caller(DevMem2Df weight, DevMem2Db mean, DevMem2Db dst, int nmixtures, float backgroundRatio, cudaStream_t stream)
+        void getBackgroundImage_caller(PtrStepSzf weight, PtrStepSzb mean, PtrStepSzb dst, int nmixtures, float backgroundRatio, cudaStream_t stream)
         {
             dim3 block(32, 8);
             dim3 grid(divUp(dst.cols, block.x), divUp(dst.rows, block.y));
 
             cudaSafeCall( cudaFuncSetCacheConfig(getBackgroundImage<WorkT, OutT>, cudaFuncCachePreferL1) );
 
-            getBackgroundImage<WorkT, OutT><<<grid, block, 0, stream>>>(weight, (DevMem2D_<WorkT>) mean, (DevMem2D_<OutT>) dst, nmixtures, backgroundRatio);
+            getBackgroundImage<WorkT, OutT><<<grid, block, 0, stream>>>(weight, (PtrStepSz<WorkT>) mean, (PtrStepSz<OutT>) dst, nmixtures, backgroundRatio);
             cudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
                 cudaSafeCall( cudaDeviceSynchronize() );
         }
 
-        void getBackgroundImage_gpu(int cn, DevMem2Df weight, DevMem2Db mean, DevMem2Db dst, int nmixtures, float backgroundRatio, cudaStream_t stream)
+        void getBackgroundImage_gpu(int cn, PtrStepSzf weight, PtrStepSzb mean, PtrStepSzb dst, int nmixtures, float backgroundRatio, cudaStream_t stream)
         {
-            typedef void (*func_t)(DevMem2Df weight, DevMem2Db mean, DevMem2Db dst, int nmixtures, float backgroundRatio, cudaStream_t stream);
+            typedef void (*func_t)(PtrStepSzf weight, PtrStepSzb mean, PtrStepSzb dst, int nmixtures, float backgroundRatio, cudaStream_t stream);
 
             static const func_t funcs[] =
             {
@@ -455,8 +455,8 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <bool detectShadows, typename SrcT, typename WorkT>
-        __global__ void mog2(const DevMem2D_<SrcT> frame, PtrStepb fgmask, PtrStepb modesUsed,
-                             PtrStepf gmm_weight, PtrStepf gmm_variance, PtrStep_<WorkT> gmm_mean,
+        __global__ void mog2(const PtrStepSz<SrcT> frame, PtrStepb fgmask, PtrStepb modesUsed,
+                             PtrStepf gmm_weight, PtrStepf gmm_variance, PtrStep<WorkT> gmm_mean,
                              const float alphaT, const float alpha1, const float prune)
         {
             const int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -653,7 +653,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <typename SrcT, typename WorkT>
-        void mog2_caller(DevMem2Db frame, DevMem2Db fgmask, DevMem2Db modesUsed, DevMem2Df weight, DevMem2Df variance, DevMem2Db mean,
+        void mog2_caller(PtrStepSzb frame, PtrStepSzb fgmask, PtrStepSzb modesUsed, PtrStepSzf weight, PtrStepSzf variance, PtrStepSzb mean,
                          float alphaT, float prune, bool detectShadows, cudaStream_t stream)
         {
             dim3 block(32, 8);
@@ -665,16 +665,16 @@ namespace cv { namespace gpu { namespace device
             {
                 cudaSafeCall( cudaFuncSetCacheConfig(mog2<true, SrcT, WorkT>, cudaFuncCachePreferL1) );
 
-                mog2<true, SrcT, WorkT><<<grid, block, 0, stream>>>((DevMem2D_<SrcT>) frame, fgmask, modesUsed,
-                                                                    weight, variance, (DevMem2D_<WorkT>) mean,
+                mog2<true, SrcT, WorkT><<<grid, block, 0, stream>>>((PtrStepSz<SrcT>) frame, fgmask, modesUsed,
+                                                                    weight, variance, (PtrStepSz<WorkT>) mean,
                                                                     alphaT, alpha1, prune);
             }
             else
             {
                 cudaSafeCall( cudaFuncSetCacheConfig(mog2<false, SrcT, WorkT>, cudaFuncCachePreferL1) );
 
-                mog2<false, SrcT, WorkT><<<grid, block, 0, stream>>>((DevMem2D_<SrcT>) frame, fgmask, modesUsed,
-                                                                    weight, variance, (DevMem2D_<WorkT>) mean,
+                mog2<false, SrcT, WorkT><<<grid, block, 0, stream>>>((PtrStepSz<SrcT>) frame, fgmask, modesUsed,
+                                                                    weight, variance, (PtrStepSz<WorkT>) mean,
                                                                     alphaT, alpha1, prune);
             }
 
@@ -684,10 +684,10 @@ namespace cv { namespace gpu { namespace device
                 cudaSafeCall( cudaDeviceSynchronize() );
         }
 
-        void mog2_gpu(DevMem2Db frame, int cn, DevMem2Db fgmask, DevMem2Db modesUsed, DevMem2Df weight, DevMem2Df variance, DevMem2Db mean,
+        void mog2_gpu(PtrStepSzb frame, int cn, PtrStepSzb fgmask, PtrStepSzb modesUsed, PtrStepSzf weight, PtrStepSzf variance, PtrStepSzb mean,
                       float alphaT, float prune, bool detectShadows, cudaStream_t stream)
         {
-            typedef void (*func_t)(DevMem2Db frame, DevMem2Db fgmask, DevMem2Db modesUsed, DevMem2Df weight, DevMem2Df variance, DevMem2Db mean, float alphaT, float prune, bool detectShadows, cudaStream_t stream);
+            typedef void (*func_t)(PtrStepSzb frame, PtrStepSzb fgmask, PtrStepSzb modesUsed, PtrStepSzf weight, PtrStepSzf variance, PtrStepSzb mean, float alphaT, float prune, bool detectShadows, cudaStream_t stream);
 
             static const func_t funcs[] =
             {
@@ -698,7 +698,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <typename WorkT, typename OutT>
-        __global__ void getBackgroundImage2(const DevMem2Db modesUsed, const PtrStepf gmm_weight, const PtrStep_<WorkT> gmm_mean, PtrStep_<OutT> dst)
+        __global__ void getBackgroundImage2(const PtrStepSzb modesUsed, const PtrStepf gmm_weight, const PtrStep<WorkT> gmm_mean, PtrStep<OutT> dst)
         {
             const int x = blockIdx.x * blockDim.x + threadIdx.x;
             const int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -730,23 +730,23 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <typename WorkT, typename OutT>
-        void getBackgroundImage2_caller(DevMem2Db modesUsed, DevMem2Df weight, DevMem2Db mean, DevMem2Db dst, cudaStream_t stream)
+        void getBackgroundImage2_caller(PtrStepSzb modesUsed, PtrStepSzf weight, PtrStepSzb mean, PtrStepSzb dst, cudaStream_t stream)
         {
             dim3 block(32, 8);
             dim3 grid(divUp(modesUsed.cols, block.x), divUp(modesUsed.rows, block.y));
 
             cudaSafeCall( cudaFuncSetCacheConfig(getBackgroundImage2<WorkT, OutT>, cudaFuncCachePreferL1) );
 
-            getBackgroundImage2<WorkT, OutT><<<grid, block, 0, stream>>>(modesUsed, weight, (DevMem2D_<WorkT>) mean, (DevMem2D_<OutT>) dst);
+            getBackgroundImage2<WorkT, OutT><<<grid, block, 0, stream>>>(modesUsed, weight, (PtrStepSz<WorkT>) mean, (PtrStepSz<OutT>) dst);
             cudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
                 cudaSafeCall( cudaDeviceSynchronize() );
         }
 
-        void getBackgroundImage2_gpu(int cn, DevMem2Db modesUsed, DevMem2Df weight, DevMem2Db mean, DevMem2Db dst, cudaStream_t stream)
+        void getBackgroundImage2_gpu(int cn, PtrStepSzb modesUsed, PtrStepSzf weight, PtrStepSzb mean, PtrStepSzb dst, cudaStream_t stream)
         {
-            typedef void (*func_t)(DevMem2Db modesUsed, DevMem2Df weight, DevMem2Db mean, DevMem2Db dst, cudaStream_t stream);
+            typedef void (*func_t)(PtrStepSzb modesUsed, PtrStepSzf weight, PtrStepSzb mean, PtrStepSzb dst, cudaStream_t stream);
 
             static const func_t funcs[] =
             {

@@ -56,8 +56,8 @@ namespace cv { namespace gpu { namespace device
 {
     namespace gfft
     {
-        int findCorners_gpu(DevMem2Df eig, float threshold, DevMem2Db mask, float2* corners, int max_count);
-        void sortCorners_gpu(DevMem2Df eig, float2* corners, int count);
+        int findCorners_gpu(PtrStepSzf eig, float threshold, PtrStepSzb mask, float2* corners, int max_count);
+        void sortCorners_gpu(PtrStepSzf eig, float2* corners, int count);
     }
 }}}
 

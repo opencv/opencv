@@ -58,13 +58,13 @@ namespace cv { namespace gpu { namespace device
 {
     namespace hough
     {
-        int buildPointList_gpu(DevMem2Db src, unsigned int* list);
+        int buildPointList_gpu(PtrStepSzb src, unsigned int* list);
 
-        void linesAccum_gpu(const unsigned int* list, int count, DevMem2Di accum, float rho, float theta, size_t sharedMemPerBlock, bool has20);
-        int linesGetResult_gpu(DevMem2Di accum, float2* out, int* votes, int maxSize, float rho, float theta, int threshold, bool doSort);
+        void linesAccum_gpu(const unsigned int* list, int count, PtrStepSzi accum, float rho, float theta, size_t sharedMemPerBlock, bool has20);
+        int linesGetResult_gpu(PtrStepSzi accum, float2* out, int* votes, int maxSize, float rho, float theta, int threshold, bool doSort);
 
-        void circlesAccumCenters_gpu(const unsigned int* list, int count, PtrStepi dx, PtrStepi dy, DevMem2Di accum, int minRadius, int maxRadius, float idp);
-        int buildCentersList_gpu(DevMem2Di accum, unsigned int* centers, int threshold);
+        void circlesAccumCenters_gpu(const unsigned int* list, int count, PtrStepi dx, PtrStepi dy, PtrStepSzi accum, int minRadius, int maxRadius, float idp);
+        int buildCentersList_gpu(PtrStepSzi accum, unsigned int* centers, int threshold);
         int circlesAccumRadius_gpu(const unsigned int* centers, int centersCount, const unsigned int* list, int count,
                                    float3* circles, int maxCircles, float dp, int minRadius, int maxRadius, int threshold, bool has20);
     }

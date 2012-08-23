@@ -68,7 +68,7 @@ int compactPoints(int N, float *points0, float *points1, const uchar *mask)
 
 __global__ void calcWobbleSuppressionMapsKernel(
         const int left, const int idx, const int right, const int width, const int height,
-        PtrElemStepf mapx, PtrElemStepf mapy)
+        PtrStepf mapx, PtrStepf mapy)
 {
     const int x = blockDim.x * blockIdx.x + threadIdx.x;
     const int y = blockDim.y * blockIdx.y + threadIdx.y;
@@ -97,7 +97,7 @@ __global__ void calcWobbleSuppressionMapsKernel(
 
 void calcWobbleSuppressionMaps(
         int left, int idx, int right, int width, int height,
-        const float *ml, const float *mr, DevMem2Df mapx, DevMem2Df mapy)
+        const float *ml, const float *mr, PtrStepSzf mapx, PtrStepSzf mapy)
 {
     cudaSafeCall(cudaMemcpyToSymbol(cml, ml, 9*sizeof(float)));
     cudaSafeCall(cudaMemcpyToSymbol(cmr, mr, 9*sizeof(float)));

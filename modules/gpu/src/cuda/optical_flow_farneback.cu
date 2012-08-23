@@ -135,7 +135,7 @@ namespace cv { namespace gpu { namespace device { namespace optflow_farneback
     }
 
 
-    void polynomialExpansionGpu(const DevMem2Df &src, int polyN, DevMem2Df dst, cudaStream_t stream)
+    void polynomialExpansionGpu(const PtrStepSzf &src, int polyN, PtrStepSzf dst, cudaStream_t stream)
     {
         dim3 block(256);
         dim3 grid(divUp(src.cols, block.x - 2*polyN), src.rows);
@@ -251,8 +251,8 @@ namespace cv { namespace gpu { namespace device { namespace optflow_farneback
 
 
     void updateMatricesGpu(
-            const DevMem2Df flowx, const DevMem2Df flowy, const DevMem2Df R0, const DevMem2Df R1,
-            DevMem2Df M, cudaStream_t stream)
+            const PtrStepSzf flowx, const PtrStepSzf flowy, const PtrStepSzf R0, const PtrStepSzf R1,
+            PtrStepSzf M, cudaStream_t stream)
     {
         dim3 block(32, 8);
         dim3 grid(divUp(flowx.cols, block.x), divUp(flowx.rows, block.y));
@@ -288,7 +288,7 @@ namespace cv { namespace gpu { namespace device { namespace optflow_farneback
     }
 
 
-    void updateFlowGpu(const DevMem2Df M, DevMem2Df flowx, DevMem2Df flowy, cudaStream_t stream)
+    void updateFlowGpu(const PtrStepSzf M, PtrStepSzf flowx, PtrStepSzf flowy, cudaStream_t stream)
     {
         dim3 block(32, 8);
         dim3 grid(divUp(flowx.cols, block.x), divUp(flowx.rows, block.y));
@@ -340,7 +340,7 @@ namespace cv { namespace gpu { namespace device { namespace optflow_farneback
     }
 
 
-    void boxFilterGpu(const DevMem2Df src, int ksizeHalf, DevMem2Df dst, cudaStream_t stream)
+    void boxFilterGpu(const PtrStepSzf src, int ksizeHalf, PtrStepSzf dst, cudaStream_t stream)
     {
         dim3 block(256);
         dim3 grid(divUp(src.cols, block.x), divUp(src.rows, block.y));
@@ -414,7 +414,7 @@ namespace cv { namespace gpu { namespace device { namespace optflow_farneback
     }
 
 
-    void boxFilter5Gpu(const DevMem2Df src, int ksizeHalf, DevMem2Df dst, cudaStream_t stream)
+    void boxFilter5Gpu(const PtrStepSzf src, int ksizeHalf, PtrStepSzf dst, cudaStream_t stream)
     {
         int height = src.rows / 5;
         int width = src.cols;
@@ -433,7 +433,7 @@ namespace cv { namespace gpu { namespace device { namespace optflow_farneback
     }
 
 
-    void boxFilter5Gpu_CC11(const DevMem2Df src, int ksizeHalf, DevMem2Df dst, cudaStream_t stream)
+    void boxFilter5Gpu_CC11(const PtrStepSzf src, int ksizeHalf, PtrStepSzf dst, cudaStream_t stream)
     {
         int height = src.rows / 5;
         int width = src.cols;
@@ -501,7 +501,7 @@ namespace cv { namespace gpu { namespace device { namespace optflow_farneback
 
 
     template <typename Border>
-    void gaussianBlurCaller(const DevMem2Df src, int ksizeHalf, DevMem2Df dst, cudaStream_t stream)
+    void gaussianBlurCaller(const PtrStepSzf src, int ksizeHalf, PtrStepSzf dst, cudaStream_t stream)
     {
         int height = src.rows;
         int width = src.cols;
@@ -521,9 +521,9 @@ namespace cv { namespace gpu { namespace device { namespace optflow_farneback
 
 
     void gaussianBlurGpu(
-            const DevMem2Df src, int ksizeHalf, DevMem2Df dst, int borderMode, cudaStream_t stream)
+            const PtrStepSzf src, int ksizeHalf, PtrStepSzf dst, int borderMode, cudaStream_t stream)
     {
-        typedef void (*caller_t)(const DevMem2Df, int, DevMem2Df, cudaStream_t);
+        typedef void (*caller_t)(const PtrStepSzf, int, PtrStepSzf, cudaStream_t);
 
         static const caller_t callers[] =
         {
@@ -596,7 +596,7 @@ namespace cv { namespace gpu { namespace device { namespace optflow_farneback
 
     template <typename Border, int blockDimX>
     void gaussianBlur5Caller(
-            const DevMem2Df src, int ksizeHalf, DevMem2Df dst, cudaStream_t stream)
+            const PtrStepSzf src, int ksizeHalf, PtrStepSzf dst, cudaStream_t stream)
     {
         int height = src.rows / 5;
         int width = src.cols;
@@ -616,9 +616,9 @@ namespace cv { namespace gpu { namespace device { namespace optflow_farneback
 
 
     void gaussianBlur5Gpu(
-            const DevMem2Df src, int ksizeHalf, DevMem2Df dst, int borderMode, cudaStream_t stream)
+            const PtrStepSzf src, int ksizeHalf, PtrStepSzf dst, int borderMode, cudaStream_t stream)
     {
-        typedef void (*caller_t)(const DevMem2Df, int, DevMem2Df, cudaStream_t);
+        typedef void (*caller_t)(const PtrStepSzf, int, PtrStepSzf, cudaStream_t);
 
         static const caller_t callers[] =
         {
@@ -630,9 +630,9 @@ namespace cv { namespace gpu { namespace device { namespace optflow_farneback
     }
 
     void gaussianBlur5Gpu_CC11(
-            const DevMem2Df src, int ksizeHalf, DevMem2Df dst, int borderMode, cudaStream_t stream)
+            const PtrStepSzf src, int ksizeHalf, PtrStepSzf dst, int borderMode, cudaStream_t stream)
     {
-        typedef void (*caller_t)(const DevMem2Df, int, DevMem2Df, cudaStream_t);
+        typedef void (*caller_t)(const PtrStepSzf, int, PtrStepSzf, cudaStream_t);
 
         static const caller_t callers[] =
         {
