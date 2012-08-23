@@ -1,8 +1,22 @@
+'''
+Morphology operations.
+
+Usage:
+  morphology.py [<image>]
+
+Keys:
+  1   - change operation
+  2   - change structure element shape
+  ESC - exit
+'''
+
 import numpy as np
 import cv2
 
 
 if __name__ == '__main__':
+    print __doc__
+
     import sys
     from itertools import cycle
     from common import draw_str
@@ -44,10 +58,6 @@ if __name__ == '__main__':
     cv2.createTrackbar('op/size', 'morphology', 12, 20, update)
     cv2.createTrackbar('iters', 'morphology', 1, 10, update)
     update()
-    print "Controls:"
-    print "  1 - change operation"
-    print "  2 - change structure element shape"
-    print
     while True:
         ch = 0xFF & cv2.waitKey()
         if ch == 27:

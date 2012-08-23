@@ -42,6 +42,16 @@
 
 #include "precomp.hpp"
 
+#if !defined HAVE_TBB && !defined HAVE_OPENMP && !defined HAVE_GCD && !defined HAVE_CONCURRENCY
+
+#ifdef __APPLE__
+#define HAVE_GCD
+#elif defined _MSC_VER && _MSC_VER >= 1600
+#define HAVE_CONCURRENCY
+#endif
+
+#endif
+
 #ifdef HAVE_CONCURRENCY
 #  include <ppl.h>
 #elif defined HAVE_OPENMP
@@ -106,7 +116,22 @@ namespace cv
 
 #elif defined HAVE_CONCURRENCY
 
-        Concurrency::parallel_for(range.start, range.end, body);
+        class ConcurrencyProxyLoopBody
+        {
+        public:
+            ConcurrencyProxyLoopBody(const ParallelLoopBody& body) : _body(body) {}
+
+            void operator ()(int i) const
+            {
+                _body(Range(i, i + 1));
+            }
+
+        private:
+            const ParallelLoopBody& _body;
+            ConcurrencyProxyLoopBody& operator=(const ConcurrencyProxyLoopBody&) {return *this;}
+        } proxy(body);
+
+        Concurrency::parallel_for(range.start, range.end, proxy);
 
 #elif defined HAVE_OPENMP
 

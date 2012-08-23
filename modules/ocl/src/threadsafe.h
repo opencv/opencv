@@ -65,15 +65,15 @@ protected:
 #endif
 };
 
-class AutoLock
+class myAutoLock
 {
 public:
-    explicit AutoLock(CriticalSection *lock)
+    explicit myAutoLock(CriticalSection *lock)
     {
         m_lock = lock;
         m_lock->Lock();
     };
-    ~AutoLock()
+    ~myAutoLock()
     {
         m_lock->Unlock();
     };

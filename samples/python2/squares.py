@@ -1,3 +1,9 @@
+'''
+Simple "Square Detector" program.
+
+Loads several images sequentially and tries to find squares in each image.
+'''
+
 import numpy as np
 import cv2
 

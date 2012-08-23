@@ -56,7 +56,7 @@ namespace cv { namespace gpu { namespace device
         __global__ void matchUnrolled(const DevMem2D_<T> query, int imgIdx, const DevMem2D_<T> train, float maxDistance, const Mask mask,
             PtrStepi bestTrainIdx, PtrStepi bestImgIdx, PtrStepf bestDistance, unsigned int* nMatches, int maxCount)
         {
-            #if __CUDA_ARCH__ >= 110
+            #if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ >= 110)
 
             extern __shared__ int smem[];
 
@@ -168,7 +168,7 @@ namespace cv { namespace gpu { namespace device
         __global__ void match(const DevMem2D_<T> query, int imgIdx, const DevMem2D_<T> train, float maxDistance, const Mask mask,
             PtrStepi bestTrainIdx, PtrStepi bestImgIdx, PtrStepf bestDistance, unsigned int* nMatches, int maxCount)
         {
-            #if __CUDA_ARCH__ >= 110
+            #if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ >= 110)
 
             extern __shared__ int smem[];
 

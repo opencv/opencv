@@ -501,3 +501,12 @@ macro(ocv_parse_header2 LIBNAME HDR_PATH VARNAME)
     endif()
   endif()
 endmacro()
+
+
+################################################################################################
+# short command to setup source group
+function(ocv_source_group group)
+  cmake_parse_arguments(OCV_SOURCE_GROUP "" "" "GLOB" ${ARGN})
+  file(GLOB srcs ${OCV_SOURCE_GROUP_GLOB})
+  source_group(${group} FILES ${srcs})
+endfunction()

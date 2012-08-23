@@ -48,7 +48,7 @@ void cv::gpu::graphcut(GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, Gpu
 void cv::gpu::graphcut(GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
 
 void cv::gpu::connectivityMask(const GpuMat&, GpuMat&, const cv::Scalar&, const cv::Scalar&, Stream&) { throw_nogpu(); }
-void cv::gpu::labelComponents(const GpuMat& mask, GpuMat& components, int, Stream& stream) { throw_nogpu(); }
+void cv::gpu::labelComponents(const GpuMat&, GpuMat&, int, Stream&) { throw_nogpu(); }
 
 #else /* !defined (HAVE_CUDA) */
 

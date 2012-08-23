@@ -290,7 +290,7 @@ namespace
                         normalizeHistogram(weights, nfeatures);
                 }
 
-                fgmask_row[x] = (uchar)(-isForeground);
+                fgmask_row[x] = (uchar)(-(schar)isForeground);
             }
         }
     }

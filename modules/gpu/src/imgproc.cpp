@@ -223,7 +223,7 @@ void cv::gpu::reprojectImageTo3D(const GpuMat& disp, GpuMat& xyz, const Mat& Q, 
     using namespace cv::gpu::device::imgproc;
 
     typedef void (*func_t)(const DevMem2Db disp, DevMem2Db xyz, const float* q, cudaStream_t stream);
-    static const func_t funcs[2][4] = 
+    static const func_t funcs[2][4] =
     {
         {reprojectImageTo3D_gpu<uchar, float3>, 0, 0, reprojectImageTo3D_gpu<short, float3>},
         {reprojectImageTo3D_gpu<uchar, float4>, 0, 0, reprojectImageTo3D_gpu<short, float4>}
@@ -260,6 +260,12 @@ namespace
         copyMakeBorder_gpu<T, cn>(src, dst, top, left, borderType, val.val, stream);
     }
 }
+
+#if defined __GNUC__ && __GNUC__ > 2 && __GNUC_MINOR__  > 4
+typedef Npp32s __attribute__((__may_alias__)) Npp32s_a;
+#else
+typedef Npp32s Npp32s_a;
+#endif
 
 void cv::gpu::copyMakeBorder(const GpuMat& src, GpuMat& dst, int top, int bottom, int left, int right, int borderType, const Scalar& value, Stream& s)
 {
@@ -308,7 +314,7 @@ void cv::gpu::copyMakeBorder(const GpuMat& src, GpuMat& dst, int top, int bottom
         case CV_32FC1:
             {
                 Npp32f val = saturate_cast<Npp32f>(value[0]);
-                Npp32s nVal = *(reinterpret_cast<Npp32s*>(&val));
+                Npp32s nVal = *(reinterpret_cast<Npp32s_a*>(&val));
                 nppSafeCall( nppiCopyConstBorder_32s_C1R(src.ptr<Npp32s>(), static_cast<int>(src.step), srcsz,
                     dst.ptr<Npp32s>(), static_cast<int>(dst.step), dstsz, top, left, nVal) );
                 break;
@@ -527,32 +533,86 @@ void cv::gpu::integral(const GpuMat& src, GpuMat& sum, Stream& s)
     integralBuffered(src, sum, buffer, s);
 }
 
+namespace cv { namespace gpu { namespace device
+{
+    namespace imgproc
+    {
+        void shfl_integral_gpu(DevMem2Db img, DevMem2D_<unsigned int> integral, cudaStream_t stream);
+    }
+}}}
+
 void cv::gpu::integralBuffered(const GpuMat& src, GpuMat& sum, GpuMat& buffer, Stream& s)
 {
     CV_Assert(src.type() == CV_8UC1);
-    if (sum.cols != src.cols + 1 && sum.rows != src.rows + 1)
-        sum.create(src.rows + 1, src.cols + 1, CV_32S);
-
-    NcvSize32u roiSize;
-    roiSize.width = src.cols;
-    roiSize.height = src.rows;
-
-    cudaDeviceProp prop;
-    cudaSafeCall( cudaGetDeviceProperties(&prop, cv::gpu::getDevice()) );
-
-    Ncv32u bufSize;
-    ncvSafeCall( nppiStIntegralGetSize_8u32u(roiSize, &bufSize, prop) );
-    ensureSizeIsEnough(1, bufSize, CV_8UC1, buffer);
 
     cudaStream_t stream = StreamAccessor::getStream(s);
 
-    NppStStreamHandler h(stream);
+    DeviceInfo info;
 
-    ncvSafeCall( nppiStIntegral_8u32u_C1R(const_cast<Ncv8u*>(src.ptr<Ncv8u>()), static_cast<int>(src.step),
-        sum.ptr<Ncv32u>(), static_cast<int>(sum.step), roiSize, buffer.ptr<Ncv8u>(), bufSize, prop) );
+    if (info.supports(WARP_SHUFFLE_FUNCTIONS))
+    {
+        GpuMat src16;
 
-    if (stream == 0)
-        cudaSafeCall( cudaDeviceSynchronize() );
+        if (src.cols % 16 == 0)
+            src16 = src;
+        else
+        {
+            ensureSizeIsEnough(src.rows, ((src.cols + 15) / 16) * 16, src.type(), buffer);
+
+            GpuMat inner = buffer(Rect(0, 0, src.cols, src.rows));
+
+            if (s)
+            {
+                s.enqueueMemSet(buffer, Scalar::all(0));
+                s.enqueueCopy(src, inner);
+            }
+            else
+            {
+                buffer.setTo(Scalar::all(0));
+                src.copyTo(inner);
+            }
+
+            src16 = buffer;
+        }
+
+        sum.create(src16.rows + 1, src16.cols + 1, CV_32SC1);
+
+        if (s)
+            s.enqueueMemSet(sum, Scalar::all(0));
+        else
+            sum.setTo(Scalar::all(0));
+
+        GpuMat inner = sum(Rect(1, 1, src16.cols, src16.rows));
+
+        cv::gpu::device::imgproc::shfl_integral_gpu(src16, inner, stream);
+
+        if (src16.cols != src.cols)
+            sum = sum(Rect(0, 0, src.cols + 1, src.rows + 1));
+    }
+    else
+    {
+        sum.create(src.rows + 1, src.cols + 1, CV_32SC1);
+
+        NcvSize32u roiSize;
+        roiSize.width = src.cols;
+        roiSize.height = src.rows;
+
+        cudaDeviceProp prop;
+        cudaSafeCall( cudaGetDeviceProperties(&prop, cv::gpu::getDevice()) );
+
+        Ncv32u bufSize;
+        ncvSafeCall( nppiStIntegralGetSize_8u32u(roiSize, &bufSize, prop) );
+        ensureSizeIsEnough(1, bufSize, CV_8UC1, buffer);
+
+
+        NppStStreamHandler h(stream);
+
+        ncvSafeCall( nppiStIntegral_8u32u_C1R(const_cast<Ncv8u*>(src.ptr<Ncv8u>()), static_cast<int>(src.step),
+            sum.ptr<Ncv32u>(), static_cast<int>(sum.step), roiSize, buffer.ptr<Ncv8u>(), bufSize, prop) );
+
+        if (stream == 0)
+            cudaSafeCall( cudaDeviceSynchronize() );
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1334,7 +1394,7 @@ Size cv::gpu::ConvolveBuf::estimateBlockSize(Size result_size, Size /*templ_size
     int width = (result_size.width + 2) / 3;
     int height = (result_size.height + 2) / 3;
     width = std::min(width, result_size.width);
-    height = std::min(height, result_size.height);    
+    height = std::min(height, result_size.height);
     return Size(width, height);
 }
 
@@ -1374,7 +1434,7 @@ void cv::gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result,
 
     cufftHandle planR2C, planC2R;
     cufftSafeCall(cufftPlan2d(&planC2R, dft_size.height, dft_size.width, CUFFT_C2R));
-    cufftSafeCall(cufftPlan2d(&planR2C, dft_size.height, dft_size.width, CUFFT_R2C));   
+    cufftSafeCall(cufftPlan2d(&planR2C, dft_size.height, dft_size.width, CUFFT_R2C));
 
     cufftSafeCall( cufftSetStream(planR2C, StreamAccessor::getStream(stream)) );
     cufftSafeCall( cufftSetStream(planC2R, StreamAccessor::getStream(stream)) );

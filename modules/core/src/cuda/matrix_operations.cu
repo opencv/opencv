@@ -44,7 +44,7 @@
 #include "opencv2/gpu/device/transform.hpp"
 #include "opencv2/gpu/device/functional.hpp"
 
-namespace cv { namespace gpu { namespace device 
+namespace cv { namespace gpu { namespace device
 {
     template <typename T> struct shift_and_sizeof;
     template <> struct shift_and_sizeof<signed char> { enum { shift = 0 }; };
@@ -272,7 +272,7 @@ namespace cv { namespace gpu { namespace device
     template <typename T, typename D> struct TransformFunctorTraits< Convertor<T, D> > : detail::ConvertTraits< Convertor<T, D> >
     {
     };
-        
+
     template<typename T, typename D>
     void cvt_(DevMem2Db src, DevMem2Db dst, double alpha, double beta, cudaStream_t stream)
     {
@@ -281,6 +281,11 @@ namespace cv { namespace gpu { namespace device
         Convertor<T, D> op(alpha, beta);
         cv::gpu::device::transform((DevMem2D_<T>)src, (DevMem2D_<D>)dst, op, WithOutMask(), stream);
     }
+
+#if defined  __clang__
+# pragma clang diagnostic push
+# pragma clang diagnostic ignored "-Wmissing-declarations"
+#endif
 
     void convert_gpu(DevMem2Db src, int sdepth, DevMem2Db dst, int ddepth, double alpha, double beta, cudaStream_t stream)
     {
@@ -318,4 +323,8 @@ namespace cv { namespace gpu { namespace device
 
         func(src, dst, alpha, beta, stream);
     }
+
+#if defined __clang__
+# pragma clang diagnostic pop
+#endif
 }}} // namespace cv { namespace gpu { namespace device

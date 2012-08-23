@@ -305,7 +305,73 @@ Mat estimateGlobalMotionLeastSquares(
 }
 
 
-Mat estimateGlobalMotionRobust(
+Mat estimateGlobalMotionMedian(
+        InputArray points0, InputArray points1, int model, int size, int niters)
+{
+    // perform 'niters' iterations over points subsets ('size' elements each) estimating
+    // motions, after that select median motion parameters from the distribution
+
+    CV_Assert(model <= MM_AFFINE);
+    CV_Assert(points0.type() == points1.type());
+    const int npoints = points0.getMat().checkVector(2);
+    CV_Assert(points1.getMat().checkVector(2) == npoints);
+
+    const Point2f *points0_ = points0.getMat().ptr<Point2f>();
+    const Point2f *points1_ = points1.getMat().ptr<Point2f>();
+
+    // all estimated motions
+    vector<float> Ms[3][3];
+    for (int i = 0; i < 3; ++i)
+        for (int j = 0; j < 3; ++j)
+            Ms[i][j].resize(niters);
+
+    // current hypothesis
+    vector<int> indices(size);
+    vector<Point2f> subset0(size);
+    vector<Point2f> subset1(size);
+
+    RNG rng(0);
+
+    for (int iter = 0; iter < niters; ++iter)
+    {
+        for (int i = 0; i < size; ++i)
+        {
+            bool ok = false;
+            while (!ok)
+            {
+                ok = true;
+                indices[i] = static_cast<unsigned>(rng) % npoints;
+                for (int j = 0; j < i; ++j)
+                    if (indices[i] == indices[j])
+                        { ok = false; break; }
+            }
+        }
+        for (int i = 0; i < size; ++i)
+        {
+            subset0[i] = points0_[indices[i]];
+            subset1[i] = points1_[indices[i]];
+        }
+
+        Mat_<float> M = estimateGlobalMotionLeastSquares(subset0, subset1, model, 0);
+        for (int i = 0; i < 3; ++i)
+            for (int j = 0; j < 3; ++j)
+                Ms[i][j][iter] = M(i, j);
+    }
+
+    Mat_<float> medianM(3, 3);
+
+    for (int i = 0; i < 3; ++i)
+        for (int j = 0; j < 3; ++j)
+        {
+            nth_element(Ms[i][j].begin(), Ms[i][j].begin() + niters/2, Ms[i][j].end());
+            medianM(i, j) = Ms[i][j][niters/2];
+        }
+
+    return medianM;
+}
+
+
+Mat estimateGlobalMotionRansac(
         InputArray points0, InputArray points1, int model, const RansacParams &params,
         float *rmse, int *ninliers)
 {
@@ -424,7 +490,7 @@ Mat MotionEstimatorRansacL2::estimate(InputArray points0, InputArray points1, bo
     Mat_<float> M;
 
     if (motionModel() != MM_HOMOGRAPHY)
-        M = estimateGlobalMotionRobust(
+        M = estimateGlobalMotionRansac(
                 points0, points1, motionModel(), ransacParams_, 0, &ninliers);
     else
     {

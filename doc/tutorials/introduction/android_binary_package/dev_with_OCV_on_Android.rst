@@ -57,12 +57,12 @@ Using async initialization is a **recommended** way for application development.
 To run OpenCV Manager-based application the first time you need to install packages with the `OpenCV Manager` and `OpenCV binary pack` for you platform.
 You can do it using Google Play Market or manually with ``adb`` tool:
 
-  .. code-block:: sh
+.. code-block:: sh
     :linenos:
 
     <Android SDK path>/platform-tools/adb install <OpenCV4Android SDK path>/apk/OpenCV_2.4.2_Manager.apk
     <Android SDK path>/platform-tools/adb install <OpenCV4Android SDK path>/apk/OpenCV_2.4.2_binary_pack_armv7a.apk
-	
+
 There is a very base code snippet implementing the async initialization. It shows basic principles. See the "15-puzzle" OpenCV sample for details.
 
 .. code-block:: java
@@ -107,7 +107,7 @@ There is a very base code snippet implementing the async initialization. It show
     }
 
 It this case application works with OpenCV Manager in asynchronous fashion. ``OnManagerConnected`` callback will be called in UI thread, when initialization finishes.
-Please note, that it is not allowed to use OpenCV calls or load OpenCV-dependent native libs before invoking this callback. 
+Please note, that it is not allowed to use OpenCV calls or load OpenCV-dependent native libs before invoking this callback.
 Load your own native libraries that depend on OpenCV after the successful OpenCV initialization.
 
 Application development with static initialization
@@ -130,27 +130,27 @@ This approach is deprecated for the production code, release package is recommen
        :align: center
 
 #. If your application project **doesn't have a JNI part**, just copy the corresponding OpenCV native libs from :file:`<OpenCV-2.4.2-android-sdk>/sdk/native/libs/<target_arch>` to your project directory to folder :file:`libs/<target_arch>`.
-   
-   In case of the application project **with a JNI part**, instead of manual libraries copying you need to modify your ``Android.mk`` file: 
+
+   In case of the application project **with a JNI part**, instead of manual libraries copying you need to modify your ``Android.mk`` file:
    add the following two code lines after the ``"include $(CLEAR_VARS)"`` and before ``"include path_to_OpenCV-2.4.2-android-sdk/sdk/native/jni/OpenCV.mk"``
 
    .. code-block:: make
-       :linenos:
+      :linenos:
 
-       OPENCV_CAMERA_MODULES:=on
-       OPENCV_INSTALL_MODULES:=on
- 
+      OPENCV_CAMERA_MODULES:=on
+      OPENCV_INSTALL_MODULES:=on
+
    The result should look like the following:
-  
+
    .. code-block:: make
-       :linenos:
+      :linenos:
 
-       include $(CLEAR_VARS)
+      include $(CLEAR_VARS)
 
-       # OpenCV
-       OPENCV_CAMERA_MODULES:=on
-       OPENCV_INSTALL_MODULES:=on
-       include ../../sdk/native/jni/OpenCV.mk
+      # OpenCV
+      OPENCV_CAMERA_MODULES:=on
+      OPENCV_INSTALL_MODULES:=on
+      include ../../sdk/native/jni/OpenCV.mk
 
    After that the OpenCV libraries will be copied to your application :file:`libs` folder during the JNI part build.
 
@@ -159,28 +159,28 @@ This approach is deprecated for the production code, release package is recommen
 #. The last step of enabling OpenCV in your application is Java initialization code before call to OpenCV API.
    It can be done, for example, in the static section of the ``Activity`` class:
 
-    .. code-block:: java
-       :linenos:
+   .. code-block:: java
+      :linenos:
 
-        static {
-            if (!OpenCVLoader.initDebug()) {
-                // Handle initialization error
-            }
-        }
+      static {
+          if (!OpenCVLoader.initDebug()) {
+              // Handle initialization error
+          }
+      }
 
-    If you application includes other OpenCV-dependent native libraries you should load them **after** OpenCV initialization:
+   If you application includes other OpenCV-dependent native libraries you should load them **after** OpenCV initialization:
 
-    .. code-block:: java
-        :linenos:
+   .. code-block:: java
+      :linenos:
 
-        static {
-            if (!OpenCVLoader.initDebug()) {
-                // Handle initialization error
-            } else {
-                System.loadLibrary("my_jni_lib1");
-                System.loadLibrary("my_jni_lib2");
-            }
-        }
+      static {
+          if (!OpenCVLoader.initDebug()) {
+              // Handle initialization error
+          } else {
+              System.loadLibrary("my_jni_lib1");
+              System.loadLibrary("my_jni_lib2");
+          }
+      }
 
 Native/C++
 ----------
@@ -198,33 +198,33 @@ To build your own Android application, which uses OpenCV from native part, the f
 
    .. code-block:: make
 
-           include C:\Work\OpenCV4Android\OpenCV-2.4.2-android-sdk\sdk\native\jni\OpenCV.mk
+      include C:\Work\OpenCV4Android\OpenCV-2.4.2-android-sdk\sdk\native\jni\OpenCV.mk
 
    should be inserted into the :file:`jni/Android.mk` file **after** the line
 
    .. code-block:: make
 
-        include $(CLEAR_VARS)
+      include $(CLEAR_VARS)
 
 #. Several variables can be used to customize OpenCV stuff, but you **don't need** to use them when your application uses the `async initialization` via the `OpenCV Manager` API.
-   
+
    Note: these variables should be set **before**  the ``"include .../OpenCV.mk"`` line:
 
    .. code-block:: make
 
-        OPENCV_INSTALL_MODULES:=on
+      OPENCV_INSTALL_MODULES:=on
 
    Copies necessary OpenCV dynamic libs to the project ``libs`` folder in order to include them into the APK.
 
    .. code-block:: make
 
-        OPENCV_CAMERA_MODULES:=off
+      OPENCV_CAMERA_MODULES:=off
 
    Skip native OpenCV camera related libs copying to the project ``libs`` folder.
 
    .. code-block:: make
 
-        OPENCV_LIB_TYPE:=STATIC
+      OPENCV_LIB_TYPE:=STATIC
 
    Perform static link with OpenCV. By default dynamic link is used and the project JNI lib depends on ``libopencv_java.so``.
 
@@ -232,14 +232,14 @@ To build your own Android application, which uses OpenCV from native part, the f
 
    .. code-block:: make
 
-        APP_STL := gnustl_static
-        APP_CPPFLAGS := -frtti -fexceptions
+      APP_STL := gnustl_static
+      APP_CPPFLAGS := -frtti -fexceptions
 
    Also the line like this one:
 
    .. code-block:: make
 
-                 APP_ABI := armeabi-v7a
+      APP_ABI := armeabi-v7a
 
    should specify the application target platforms.
 
@@ -249,11 +249,11 @@ To build your own Android application, which uses OpenCV from native part, the f
 
    .. code-block:: make
 
-                 APP_PLATFORM := android-9
+      APP_PLATFORM := android-9
 
 
 #. Either use :ref:`manual <NDK_build_cli>` ``ndk-build`` invocation or :ref:`setup Eclipse CDT Builder <CDT_Builder>` to build native JNI lib before Java part [re]build and APK creation.
-   
+
 
 Hello OpenCV Sample
 ===================
@@ -262,208 +262,217 @@ Here are basic steps to guide you trough the process of creating a simple OpenCV
 It will be capable of accessing camera output, processing it and displaying the result.
 
 #. Open Eclipse IDE, create a new clean workspace, create a new Android project (*File -> New -> Android Project*).
-   
+
 #. Set name, target, package and minSDKVersion accordingly.
-   
+
 #. Create a new class (*File -> New -> Class*). Name it for example: *HelloOpenCVView*.
-	.. image:: images/dev_OCV_new_class.png
-         :alt: Add a new class.
-         :align: center
 
-    * It should extend *SurfaceView* class.
+   .. image:: images/dev_OCV_new_class.png
+        :alt: Add a new class.
+        :align: center
 
-    * It also should implement *SurfaceHolder.Callback*, *Runnable*.
+   * It should extend *SurfaceView* class.
+   * It also should implement *SurfaceHolder.Callback*, *Runnable*.
 
 #. Edit *HelloOpenCVView* class.
 
-    * Add an *import* line for *android.content.context*.
+   * Add an *import* line for *android.content.context*.
 
-    * Modify autogenerated stubs: *HelloOpenCVView*, *surfaceCreated*, *surfaceDestroyed* and *surfaceChanged*.
-	 .. code-block:: java
+   * Modify autogenerated stubs: *HelloOpenCVView*, *surfaceCreated*, *surfaceDestroyed* and *surfaceChanged*.
 
-		  package com.hello.opencv.test;
+     .. code-block:: java
+        :linenos:
 
-		  import android.content.Context;
+        package com.hello.opencv.test;
 
-		  public class HelloOpenCVView extends SurfaceView implements Callback, Runnable {
+        import android.content.Context;
 
-		  public HelloOpenCVView(Context context) {
-		  super(context);
-		  getHolder().addCallback(this);
-		  }
-		  
-		  public void surfaceCreated(SurfaceHolder holder) {
-		  (new Thread(this)).start();
-		  }
-		  
-		  public void surfaceDestroyed(SurfaceHolder holder) {
-		  cameraRelease();
-		  }
-		  
-		  public void surfaceChanged(SurfaceHolder holder, int format, int width,
-		  int height) {
-		  cameraSetup(width, height);
-		  }
+        public class HelloOpenCVView extends SurfaceView implements Callback, Runnable {
 
-    * Add *cameraOpen*, *cameraRelease* and *cameraSetup* voids as shown below.
+        public HelloOpenCVView(Context context) {
+            super(context);
+            getHolder().addCallback(this);
+        }
 
-    * Also, don't forget to add the public void *run()* as follows:
-	
-	 .. code-block:: java
+        public void surfaceCreated(SurfaceHolder holder) {
+            (new Thread(this)).start();
+        }
 
-		  public void run() {
-			// TODO: loop { getFrame(), processFrame(), drawFrame() }
-		  }
+        public void surfaceDestroyed(SurfaceHolder holder) {
+            cameraRelease();
+        }
 
-		  public boolean cameraOpen() {
-			return false; //TODO: open camera
-		  }
-	
-		  private void cameraRelease() {
-			// TODO release camera
-		  }
+        public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
+            cameraSetup(width, height);
+        }
 
-		  private void cameraSetup(int width, int height) {
-			// TODO setup camera
-		  }
-  	
+        //...
 
-       ..
+   * Add *cameraOpen*, *cameraRelease* and *cameraSetup* voids as shown below.
+
+   * Also, don't forget to add the public void *run()* as follows:
+
+     .. code-block:: java
+        :linenos:
+
+        public void run() {
+            // TODO: loop { getFrame(), processFrame(), drawFrame() }
+        }
+
+        public boolean cameraOpen() {
+            return false; //TODO: open camera
+        }
+
+        private void cameraRelease() {
+            // TODO release camera
+        }
+
+        private void cameraSetup(int width, int height) {
+            // TODO setup camera
+        }
 
 #. Create a new *Activity* (*New -> Other -> Android -> Android Activity*) and name it, for example: *HelloOpenCVActivity*. For this activity define *onCreate*, *onResume* and *onPause* voids.
-	 .. code-block:: java
 
-		  public void onCreate (Bundle savedInstanceState) {
-			super.onCreate(savedInstanceState);
-			mView = new HelloOpenCVView(this);
-			setContentView (mView);
-		  }
+   .. code-block:: java
+      :linenos:
 
-		  protected void onPause() {
-			super.onPause();
-			mView.cameraRelease();
-		  }
+       public void onCreate (Bundle savedInstanceState) {
+           super.onCreate(savedInstanceState);
+           mView = new HelloOpenCVView(this);
+           setContentView (mView);
+       }
 
-		  protected void onResume() {
-			super.onResume();
-			if( !mView.cameraOpen() ) {
-				// MessageBox and exit app
-				AlertDialog ad = new AlertDialog.Builder(this).create();
-				ad.setCancelable(false); // This blocks the "BACK" button
-				ad.setMessage("Fatal error: can't open camera!");
-				ad.setButton("OK", new DialogInterface.OnClickListener() {
-					public void onClick(DialogInterface dialog, int which) {
-						dialog.dismiss();
-						finish();
-					}
-				});
-				ad.show();
-			}
-		
-		}
+       protected void onPause() {
+           super.onPause();
+           mView.cameraRelease();
+       }
+
+       protected void onResume() {
+           super.onResume();
+           if( !mView.cameraOpen() ) {
+               // MessageBox and exit app
+               AlertDialog ad = new AlertDialog.Builder(this).create();
+               ad.setCancelable(false); // This blocks the "BACK" button
+               ad.setMessage("Fatal error: can't open camera!");
+               ad.setButton("OK", new DialogInterface.OnClickListener() {
+                   public void onClick(DialogInterface dialog, int which) {
+                       dialog.dismiss();
+                       finish();
+                   }
+               });
+               ad.show();
+           }
+       }
 
 #. Add the following permissions to the AndroidManifest.xml file:
-	 .. code-block:: xml
 
-	  </application>
+   .. code-block:: xml
+      :linenos:
 
-	  <uses-permission android:name="android.permission.CAMERA" />
-	  <uses-feature android:name="android.hardware.camera" />
-	  <uses-feature android:name="android.hardware.camera.autofocus" />
-	  
+      </application>
+
+      <uses-permission android:name="android.permission.CAMERA" />
+      <uses-feature android:name="android.hardware.camera" />
+      <uses-feature android:name="android.hardware.camera.autofocus" />
+
 #. Reference OpenCV library within your project properties.
-	 .. image:: images/dev_OCV_reference.png
-          :alt: Reference OpenCV library.
-          :align: center
+
+   .. image:: images/dev_OCV_reference.png
+        :alt: Reference OpenCV library.
+        :align: center
 
 #. We now need some code to handle the camera. Update the *HelloOpenCVView* class as follows:
-	 .. code-block:: java
 
-		  private VideoCapture		mCamera;
-		  
-		  public boolean cameraOpen() {
-			synchronized (this) {
-				cameraRelease();
-				mCamera = new VideoCapture(Highgui.CV_CAP_ANDROID);
-				if (!mCamera.isOpened()) {
-					mCamera.release();
-					mCamera = null;
-					Log.e("HelloOpenCVView", "Failed to open native camera");
-					return false;
-				}
-			}
-			return true;
-		  }
-		  public void cameraRelease() {
-			synchronized(this) {
-				if (mCamera != null) {
-					mCamera.release();
-					mCamera = null;
-				}
-			}
-		  }
-		  private void cameraSetup(int width, int height) {
-			synchronized (this) {
-				if (mCamera != null && mCamera.isOpened()) {
-					List<Size> sizes = mCamera.getSupportedPreviewSizes();
-					int mFrameWidth = width;
-					int mFrameHeight = height;
-					{ // selecting optimal camera preview size
-						double minDiff = Double.MAX_VALUE;
-						for (Size size : sizes) {
-							if (Math.abs(size.height - height) < minDiff) {
-								mFrameWidth = (int) size.width;
-								mFrameHeight = (int) size.height;
-								minDiff = Math.abs(size.height - height);
-							}
-						}
-					}
-					mCamera.set(Highgui.CV_CAP_PROP_FRAME_WIDTH, mFrameWidth);
-					mCamera.set(Highgui.CV_CAP_PROP_FRAME_HEIGHT, mFrameHeight);
-				}
-			}
-		  }
+   .. code-block:: java
+      :linenos:
+
+      private VideoCapture      mCamera;
+
+      public boolean cameraOpen() {
+          synchronized (this) {
+              cameraRelease();
+              mCamera = new VideoCapture(Highgui.CV_CAP_ANDROID);
+              if (!mCamera.isOpened()) {
+                  mCamera.release();
+                  mCamera = null;
+                  Log.e("HelloOpenCVView", "Failed to open native camera");
+                  return false;
+              }
+          }
+          return true;
+      }
+
+      public void cameraRelease() {
+          synchronized(this) {
+              if (mCamera != null) {
+                   mCamera.release();
+                   mCamera = null;
+              }
+          }
+      }
+
+      private void cameraSetup(int width, int height) {
+          synchronized (this) {
+              if (mCamera != null && mCamera.isOpened()) {
+                  List<Size> sizes = mCamera.getSupportedPreviewSizes();
+                  int mFrameWidth = width;
+                  int mFrameHeight = height;
+                  { // selecting optimal camera preview size
+                       double minDiff = Double.MAX_VALUE;
+                       for (Size size : sizes) {
+                           if (Math.abs(size.height - height) < minDiff) {
+                               mFrameWidth = (int) size.width;
+                               mFrameHeight = (int) size.height;
+                               minDiff = Math.abs(size.height - height);
+                           }
+                       }
+                   }
+                   mCamera.set(Highgui.CV_CAP_PROP_FRAME_WIDTH, mFrameWidth);
+                   mCamera.set(Highgui.CV_CAP_PROP_FRAME_HEIGHT, mFrameHeight);
+              }
+          }
+      }
 
 #. The last step would be to update the *run()* void in *HelloOpenCVView* class as follows:
-	 .. code-block:: java
 
-		  public void run() {
-			while (true) {
-				Bitmap bmp = null;
-				synchronized (this) {
-					if (mCamera == null)
-						break;
-					if (!mCamera.grab())
-						break;
-				
-					bmp = processFrame(mCamera);
-				}
-				if (bmp != null) {
-					Canvas canvas = getHolder().lockCanvas();
-					if (canvas != null) {
-						canvas.drawBitmap(bmp, (canvas.getWidth() - bmp.getWidth()) / 2,
-								(canvas.getHeight() - bmp.getHeight()) / 2, null);
-						getHolder().unlockCanvasAndPost(canvas);
-					
-					}
-					bmp.recycle();
-				}
-			}
-		  }
+   .. code-block:: java
+      :linenos:
 
-		  protected Bitmap processFrame(VideoCapture capture) {
-			Mat mRgba = new Mat();
-			capture.retrieve(mRgba, Highgui.CV_CAP_ANDROID_COLOR_FRAME_RGBA);
-			//process mRgba
-			Bitmap bmp = Bitmap.createBitmap(mRgba.cols(), mRgba.rows(), Bitmap.Config.ARGB_8888);
-			try {
-				Utils.matToBitmap(mRgba, bmp);
-			} catch(Exception e) {
-				Log.e("processFrame", "Utils.matToBitmap() throws an exception: " + e.getMessage());
-				bmp.recycle();
-				bmp = null;
-			}
-			return bmp;
-		  }
+      public void run() {
+          while (true) {
+              Bitmap bmp = null;
+              synchronized (this) {
+                  if (mCamera == null)
+                      break;
+                  if (!mCamera.grab())
+                      break;
 
+                  bmp = processFrame(mCamera);
+              }
+              if (bmp != null) {
+                  Canvas canvas = getHolder().lockCanvas();
+                  if (canvas != null) {
+                      canvas.drawBitmap(bmp, (canvas.getWidth()  - bmp.getWidth())  / 2,
+                                             (canvas.getHeight() - bmp.getHeight()) / 2, null);
+                      getHolder().unlockCanvasAndPost(canvas);
 
+                  }
+                  bmp.recycle();
+              }
+          }
+      }
+
+      protected Bitmap processFrame(VideoCapture capture) {
+          Mat mRgba = new Mat();
+          capture.retrieve(mRgba, Highgui.CV_CAP_ANDROID_COLOR_FRAME_RGBA);
+          //process mRgba
+          Bitmap bmp = Bitmap.createBitmap(mRgba.cols(), mRgba.rows(), Bitmap.Config.ARGB_8888);
+          try {
+              Utils.matToBitmap(mRgba, bmp);
+          } catch(Exception e) {
+              Log.e("processFrame", "Utils.matToBitmap() throws an exception: " + e.getMessage());
+              bmp.recycle();
+              bmp = null;
+          }
+          return bmp;
+      }

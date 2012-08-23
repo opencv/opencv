@@ -315,7 +315,7 @@ void cv::gpu::HOGDescriptor::computeConfidenceMultiScale(const GpuMat& img, vect
   double scale = 1.;
   int levels = 0;
 
-  for (levels = 0; levels < conf_out.size(); levels++)
+  for (levels = 0; levels < (int)conf_out.size(); levels++)
     {
       scale = conf_out[levels].scale;
       level_scale.push_back(scale);
@@ -332,8 +332,8 @@ void cv::gpu::HOGDescriptor::computeConfidenceMultiScale(const GpuMat& img, vect
 
   for (size_t i = 0; i < level_scale.size(); i++)
     {
-      double scale = level_scale[i];
-      Size sz(cvRound(img.cols / scale), cvRound(img.rows / scale));
+      double _scale = level_scale[i];
+      Size sz(cvRound(img.cols / _scale), cvRound(img.rows / _scale));
       GpuMat smaller_img;
 
       if (sz == img.size())

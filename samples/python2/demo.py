@@ -1,3 +1,7 @@
+'''
+Sample-launcher application.
+'''
+
 import Tkinter as tk
 from ScrolledText import ScrolledText
 from glob import glob

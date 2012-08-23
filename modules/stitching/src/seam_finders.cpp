@@ -166,7 +166,7 @@ void DpSeamFinder::find(const vector<Mat> &src, const vector<Point> &corners, ve
     if (src.size() == 0)
         return;
 
-    vector<pair<int, int> > pairs;
+    vector<pair<size_t, size_t> > pairs;
 
     for (size_t i = 0; i+1 < src.size(); ++i)
         for (size_t j = i+1; j < src.size(); ++j)
@@ -177,7 +177,7 @@ void DpSeamFinder::find(const vector<Mat> &src, const vector<Point> &corners, ve
 
     for (size_t i = 0; i < pairs.size(); ++i)
     {
-        int i0 = pairs[i].first, i1 = pairs[i].second;
+        size_t i0 = pairs[i].first, i1 = pairs[i].second;
         process(src[i0], src[i1], corners[i0], corners[i1], masks[i0], masks[i1]);
     }
 
@@ -393,7 +393,7 @@ void DpSeamFinder::resolveConflicts(
     bool hasConflict = true;
     while (hasConflict)
     {
-        int c1, c2;
+        int c1 = 0, c2 = 0;
         hasConflict = false;
 
         for (set<pair<int, int> >::iterator itr = edges_.begin(); itr != edges_.end(); ++itr)
@@ -635,7 +635,7 @@ bool DpSeamFinder::getSeamTips(int comp1, int comp2, Point &p1, Point &p2)
         double cx = cvRound(sum[idx[i]].x / size);
         double cy = cvRound(sum[idx[i]].y / size);
 
-        int closest = -1;
+        size_t closest = points[idx[i]].size();
         double minDist = numeric_limits<double>::max();
 
         for (size_t j = 0; j < points[idx[i]].size(); ++j)
