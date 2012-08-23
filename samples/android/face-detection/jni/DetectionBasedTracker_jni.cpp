@@ -68,6 +68,7 @@ struct DetectorAgregator
 JNIEXPORT jlong JNICALL Java_org_opencv_samples_fd_DetectionBasedTracker_nativeCreateObject
 (JNIEnv * jenv, jclass, jstring jFileName, jint faceSize)
 {
+    LOGD("Java_org_opencv_samples_fd_DetectionBasedTracker_nativeCreateObject enter");
     const char* jnamestr = jenv->GetStringUTFChars(jFileName, NULL);
     string stdFileName(jnamestr);
     jlong result = 0;
@@ -101,6 +102,7 @@ JNIEXPORT jlong JNICALL Java_org_opencv_samples_fd_DetectionBasedTracker_nativeC
         return 0;
     }
 
+    LOGD("Java_org_opencv_samples_fd_DetectionBasedTracker_nativeCreateObject exit");
     return result;
 }
 
@@ -111,8 +113,11 @@ JNIEXPORT void JNICALL Java_org_opencv_samples_fd_DetectionBasedTracker_nativeDe
 
     try
     {
-        ((DetectorAgregator*)thiz)->tracker->stop();
-        delete (DetectorAgregator*)thiz;
+        if(thiz != 0)
+        {
+            ((DetectorAgregator*)thiz)->tracker->stop();
+            delete (DetectorAgregator*)thiz;
+        }
     }
     catch(cv::Exception e)
     {
@@ -128,6 +133,7 @@ JNIEXPORT void JNICALL Java_org_opencv_samples_fd_DetectionBasedTracker_nativeDe
         jclass je = jenv->FindClass("java/lang/Exception");
         jenv->ThrowNew(je, "Unknown exception in JNI code {Java_org_opencv_samples_fd_DetectionBasedTracker_nativeDestroyObject(...)}");
     }
+    LOGD("Java_org_opencv_samples_fd_DetectionBasedTracker_nativeDestroyObject exit");
 }
 
 JNIEXPORT void JNICALL Java_org_opencv_samples_fd_DetectionBasedTracker_nativeStart
@@ -153,6 +159,7 @@ JNIEXPORT void JNICALL Java_org_opencv_samples_fd_DetectionBasedTracker_nativeSt
         jclass je = jenv->FindClass("java/lang/Exception");
         jenv->ThrowNew(je, "Unknown exception in JNI code {Java_org_opencv_samples_fd_DetectionBasedTracker_nativeStart(...)}");
     }
+    LOGD("Java_org_opencv_samples_fd_DetectionBasedTracker_nativeStart exit");
 }
 
 JNIEXPORT void JNICALL Java_org_opencv_samples_fd_DetectionBasedTracker_nativeStop
@@ -178,6 +185,7 @@ JNIEXPORT void JNICALL Java_org_opencv_samples_fd_DetectionBasedTracker_nativeSt
         jclass je = jenv->FindClass("java/lang/Exception");
         jenv->ThrowNew(je, "Unknown exception in JNI code {Java_org_opencv_samples_fd_DetectionBasedTracker_nativeStop(...)}");
     }
+    LOGD("Java_org_opencv_samples_fd_DetectionBasedTracker_nativeStop exit");
 }
 
 JNIEXPORT void JNICALL Java_org_opencv_samples_fd_DetectionBasedTracker_nativeSetFaceSize
