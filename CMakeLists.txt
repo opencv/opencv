@@ -759,7 +759,7 @@ if(HAVE_CUDA)
   status("    Use CUFFT:"            HAVE_CUFFT  THEN YES ELSE NO)
   status("    Use CUBLAS:"           HAVE_CUBLAS THEN YES ELSE NO)
   status("    NVIDIA GPU arch:"      ${OPENCV_CUDA_ARCH_BIN})
-  status("    NVIDIA PTX archs:"     ${OPENCV_CUDA_ARCH_BIN})
+  status("    NVIDIA PTX archs:"     ${OPENCV_CUDA_ARCH_PTX})
 endif()
 
 # ========================== python ==========================

@@ -149,8 +149,8 @@ namespace cv { namespace gpu { namespace device
                     float2 vote = *(const float2*)grad_ptr;
                     uchar2 bin = *(const uchar2*)qangle_ptr;
 
-                    grad_ptr += grad.step/grad.elemSize();
-                    qangle_ptr += qangle.step/qangle.elemSize();
+                    grad_ptr += grad.step/sizeof(float);
+                    qangle_ptr += qangle.step;
 
                     int dist_center_y = dist_y - 4 * (1 - 2 * cell_y);
                     int dist_center_x = dist_x - 4 * (1 - 2 * cell_x);

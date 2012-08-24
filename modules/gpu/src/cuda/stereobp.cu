@@ -140,7 +140,7 @@ namespace cv { namespace gpu { namespace device
                 const uchar* rs = right.ptr(y) + x * cn;
 
                 D* ds = data.ptr(y) + x;
-                const size_t disp_step = data.step * left.rows / PtrStep<D>::elem_size;
+                const size_t disp_step = data.step * left.rows / sizeof(D);
 
                 for (int disp = 0; disp < cndisp; disp++)
                 {
@@ -303,8 +303,8 @@ namespace cv { namespace gpu { namespace device
 
             if (x < dst_cols && y < dst_rows)
             {
-                const size_t dst_disp_step = dst.step * dst_rows / PtrStep<T>::elem_size;
-                const size_t src_disp_step = src.step * src_rows / PtrStep<T>::elem_size;
+                const size_t dst_disp_step = dst.step * dst_rows / sizeof(T);
+                const size_t src_disp_step = src.step * src_rows / sizeof(T);
 
                 T*       dstr = dst.ptr(y  ) + x;
                 const T* srcr = src.ptr(y/2) + x/2;
@@ -419,26 +419,26 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <typename T>
-        __global__ void one_iteration(int t, PtrStep<T> u, T* d, T* l, T* r, const PtrStep<T> data, int cols, int rows)
+        __global__ void one_iteration(int t, int elem_step, T* u, T* d, T* l, T* r, const PtrStep<T> data, int cols, int rows)
         {
             const int y = blockIdx.y * blockDim.y + threadIdx.y;
             const int x = ((blockIdx.x * blockDim.x + threadIdx.x) << 1) + ((y + t) & 1);
 
             if ((y > 0) && (y < rows - 1) && (x > 0) && (x < cols - 1))
             {
-                T* us = u.ptr(y) + x;
-                T* ds = d + y * u.step/PtrStep<T>::elem_size + x;
-                T* ls = l + y * u.step/PtrStep<T>::elem_size + x;
-                T* rs = r + y * u.step/PtrStep<T>::elem_size + x;
+                T* us = u + y * elem_step + x;
+                T* ds = d + y * elem_step + x;
+                T* ls = l + y * elem_step + x;
+                T* rs = r + y * elem_step + x;
                 const T* dt = data.ptr(y) + x;
 
-                size_t msg_disp_step = u.step * rows;
-                size_t data_disp_step = data.step * rows / PtrStep<T>::elem_size;
+                size_t msg_disp_step = elem_step * rows;
+                size_t data_disp_step = data.step * rows / sizeof(T);
 
-                message(us + u.step, ls      + 1, rs - 1, dt, us, msg_disp_step, data_disp_step);
-                message(ds - u.step, ls      + 1, rs - 1, dt, ds, msg_disp_step, data_disp_step);
-                message(us + u.step, ds - u.step, rs - 1, dt, rs, msg_disp_step, data_disp_step);
-                message(us + u.step, ds - u.step, ls + 1, dt, ls, msg_disp_step, data_disp_step);
+                message(us + elem_step, ls         + 1, rs - 1, dt, us, msg_disp_step, data_disp_step);
+                message(ds - elem_step, ls         + 1, rs - 1, dt, ds, msg_disp_step, data_disp_step);
+                message(us + elem_step, ds - elem_step, rs - 1, dt, rs, msg_disp_step, data_disp_step);
+                message(us + elem_step, ds - elem_step, ls + 1, dt, ls, msg_disp_step, data_disp_step);
             }
         }
 
@@ -452,9 +452,11 @@ namespace cv { namespace gpu { namespace device
             grid.x = divUp(cols, threads.x << 1);
             grid.y = divUp(rows, threads.y);
 
+            int elem_step = u.step/sizeof(T);
+
             for(int t = 0; t < iters; ++t)
             {
-                one_iteration<T><<<grid, threads, 0, stream>>>(t, (PtrStepSz<T>)u, (T*)d.data, (T*)l.data, (T*)r.data, (PtrStepSz<T>)data, cols, rows);
+                one_iteration<T><<<grid, threads, 0, stream>>>(t, elem_step, (T*)u.data, (T*)d.data, (T*)l.data, (T*)r.data, (PtrStepSz<T>)data, cols, rows);
                 cudaSafeCall( cudaGetLastError() );
 
                 if (stream == 0)
@@ -470,7 +472,7 @@ namespace cv { namespace gpu { namespace device
         ///////////////////////////////////////////////////////////////
 
         template <typename T>
-        __global__ void output(const PtrStep<T> u, const T* d, const T* l, const T* r, const T* data,
+        __global__ void output(const int elem_step, const T* u, const T* d, const T* l, const T* r, const T* data,
             PtrStepSz<short> disp)
         {
             const int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -478,13 +480,13 @@ namespace cv { namespace gpu { namespace device
 
             if (y > 0 && y < disp.rows - 1 && x > 0 && x < disp.cols - 1)
             {
-                const T* us = u.ptr(y + 1) + x;
-                const T* ds = d + (y - 1) * u.step/PtrStep<T>::elem_size + x;
-                const T* ls = l + y * u.step/PtrStep<T>::elem_size + (x + 1);
-                const T* rs = r + y * u.step/PtrStep<T>::elem_size + (x - 1);
-                const T* dt = data + y * u.step/PtrStep<T>::elem_size + x;
+                const T* us = u + (y + 1) * elem_step + x;
+                const T* ds = d + (y - 1) * elem_step + x;
+                const T* ls = l + y * elem_step + (x + 1);
+                const T* rs = r + y * elem_step+ (x - 1);
+                const T* dt = data + y * elem_step + x;
 
-                size_t disp_step = disp.rows * u.step/PtrStep<T>::elem_size;
+                size_t disp_step = disp.rows * elem_step;
 
                 int best = 0;
                 float best_val = numeric_limits<float>::max();
@@ -517,7 +519,9 @@ namespace cv { namespace gpu { namespace device
             grid.x = divUp(disp.cols, threads.x);
             grid.y = divUp(disp.rows, threads.y);
 
-            output<T><<<grid, threads, 0, stream>>>((PtrStepSz<T>)u, (const T*)d.data, (const T*)l.data, (const T*)r.data, (const T*)data.data, disp);
+            int elem_step = static_cast<int>(u.step/sizeof(T));
+
+            output<T><<<grid, threads, 0, stream>>>(elem_step, (const T*)u.data, (const T*)d.data, (const T*)l.data, (const T*)r.data, (const T*)data.data, disp);
             cudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
