@@ -530,6 +530,9 @@ BRISK::operator()( InputArray _image, InputArray _mask, vector<KeyPoint>& keypoi
                    OutputArray _descriptors, bool useProvidedKeypoints) const
 {
   Mat image = _image.getMat(), mask = _mask.getMat();
+  if( image.type() != CV_8UC1 )
+      cvtColor(image, image, CV_BGR2GRAY);
+
   if (!useProvidedKeypoints)
     detectImpl(image, keypoints, mask);
 

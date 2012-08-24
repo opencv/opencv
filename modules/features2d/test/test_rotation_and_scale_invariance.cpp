@@ -592,6 +592,15 @@ protected:
 /*
  * Detector's rotation invariance check
  */
+
+TEST(Features2d_RotationInvariance_Detector_BRISK, regression)
+{
+    DetectorRotationInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.BRISK"),
+                                        0.32f,
+                                        0.81f);
+    test.safe_run();
+}
+
 TEST(Features2d_RotationInvariance_Detector_ORB, regression)
 {
     DetectorRotationInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.ORB"),
@@ -603,6 +612,16 @@ TEST(Features2d_RotationInvariance_Detector_ORB, regression)
 /*
  * Descriptors's rotation invariance check
  */
+
+TEST(Features2d_RotationInvariance_Descriptor_BRISK, regression)
+{
+    DescriptorRotationInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.BRISK"),
+                      Algorithm::create<DescriptorExtractor>("Feature2D.BRISK"),
+                        NORM_HAMMING,
+                                          0.99f);
+    test.safe_run();
+}
+
 TEST(Features2d_RotationInvariance_Descriptor_ORB, regression)
 {
     DescriptorRotationInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.ORB"),
@@ -625,6 +644,14 @@ TEST(Features2d_RotationInvariance_Descriptor_ORB, regression)
  * Detector's scale invariance check
  */
 
+//TEST(Features2d_ScaleInvariance_Detector_BRISK, regression)
+//{
+//    DetectorScaleInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.BRISK"),
+//                                     0.09f, 
+//                                     0.52f);
+//    test.safe_run();
+//}
+
 //TEST(Features2d_ScaleInvariance_Detector_ORB, regression)
 //{
 //    DetectorScaleInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.ORB"),
@@ -636,6 +663,15 @@ TEST(Features2d_RotationInvariance_Descriptor_ORB, regression)
 /*
  * Descriptor's scale invariance check
  */
+
+//TEST(Features2d_ScaleInvariance_Descriptor_BRISK, regression)
+//{
+//    DescriptorScaleInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.BRISK"),
+//                   Algorithm::create<DescriptorExtractor>("Feature2D.BRISK"),
+//                   NORM_HAMMING,
+//                                     0.99f);
+//    test.safe_run();
+//}
 
 //TEST(Features2d_ScaleInvariance_Descriptor_ORB, regression)
 //{
