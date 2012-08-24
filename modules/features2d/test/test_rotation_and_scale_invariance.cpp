@@ -644,13 +644,13 @@ TEST(Features2d_RotationInvariance_Descriptor_ORB, regression)
  * Detector's scale invariance check
  */
 
-//TEST(Features2d_ScaleInvariance_Detector_BRISK, regression)
-//{
-//    DetectorScaleInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.BRISK"),
-//                                     0.09f, 
-//                                     0.52f);
-//    test.safe_run();
-//}
+TEST(Features2d_ScaleInvariance_Detector_BRISK, regression)
+{
+    DetectorScaleInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.BRISK"),
+                                     0.08f,
+                                     0.54f);
+    test.safe_run();
+}
 
 //TEST(Features2d_ScaleInvariance_Detector_ORB, regression)
 //{
