@@ -307,6 +307,11 @@ protected:
     void computeImpl( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors ) const;
     void detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
 
+    void computeKeypointsNoOrientation(InputArray image, InputArray mask, vector<KeyPoint>& keypoints) const;
+    void computeDescriptorsAndOrOrientation(InputArray image, InputArray mask, vector<KeyPoint>& keypoints,
+                                       OutputArray descriptors, bool doDescriptors, bool doOrientation,
+                                       bool useProvidedKeypoints) const;
+
     // Feature parameters
     CV_PROP_RW int threshold;
     CV_PROP_RW int octaves;
