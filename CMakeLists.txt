@@ -161,11 +161,12 @@ OCV_OPTION(BUILD_ANDROID_PACKAGE    "Build platform-specific package for Google 
 
 
 # 3rd party libs
-OCV_OPTION(BUILD_ZLIB               "Build zlib from source"         WIN32 OR IOS OR APPLE )
-OCV_OPTION(BUILD_TIFF               "Build libtiff from source"      WIN32 OR IOS OR ANDROID OR APPLE )
-OCV_OPTION(BUILD_JASPER             "Build libjasper from source"    WIN32 OR IOS OR ANDROID OR APPLE )
-OCV_OPTION(BUILD_JPEG               "Build libjpeg from source"      WIN32 OR IOS OR ANDROID OR APPLE )
-OCV_OPTION(BUILD_PNG                "Build libpng from source"       WIN32 OR IOS OR ANDROID OR APPLE )
+OCV_OPTION(BUILD_ZLIB               "Build zlib from source"         WIN32 OR APPLE )
+OCV_OPTION(BUILD_TIFF               "Build libtiff from source"      WIN32 OR ANDROID OR APPLE )
+OCV_OPTION(BUILD_JASPER             "Build libjasper from source"    WIN32 OR ANDROID OR APPLE )
+OCV_OPTION(BUILD_JPEG               "Build libjpeg from source"      WIN32 OR ANDROID OR APPLE )
+OCV_OPTION(BUILD_PNG                "Build libpng from source"       WIN32 OR ANDROID OR APPLE )
+OCV_OPTION(BUILD_OPENEXR            "Build openexr from source"      WIN32 OR ANDROID OR APPLE )
 
 # OpenCV installation options
 # ===================================================
@@ -633,8 +634,11 @@ if(WITH_JASPER)
 else()
   status("    JPEG 2000:"  "NO")
 endif()
-
-status("    OpenEXR:"   WITH_OPENEXR AND OPENEXR_FOUND     THEN "${OPENEXR_LIBRARIES} (ver ${OPENEXR_VERSION})"                     ELSE NO)
+if(WITH_OPENEXR)
+  status("    OpenEXR:"  OPENEXR_FOUND  THEN "${OPENEXR_LIBRARIES} (ver ${OPENEXR_VERSION})" ELSE "build (ver ${OPENEXR_VERSION})")
+else()
+  status("    OpenEXR:"  "NO")
+endif()
 
 # ========================== VIDEO IO ==========================
 status("")
