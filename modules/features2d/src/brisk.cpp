@@ -74,11 +74,11 @@ public:
 
   // get scores - attention, this is in layer coordinates, not scale=1 coordinates!
   inline uint8_t
-  getAgastScore(int x, int y, uint8_t threshold);
+  getAgastScore(int x, int y, uint8_t threshold) const;
   inline uint8_t
-  getAgastScore_5_8(int x, int y, uint8_t threshold);
+  getAgastScore_5_8(int x, int y, uint8_t threshold) const;
   inline uint8_t
-  getAgastScore(float xf, float yf, uint8_t threshold, float scale = 1.0f);
+  getAgastScore(float xf, float yf, uint8_t threshold, float scale = 1.0f) const;
 
   // accessors
   inline const cv::Mat&
@@ -111,8 +111,8 @@ public:
 
 private:
   // access gray values (smoothed/interpolated)
-  __inline__ uint8_t
-  value(const cv::Mat& mat, float xf, float yf, float scale);
+  inline uint8_t
+  value(const cv::Mat& mat, float xf, float yf, float scale) const;
   // the image
   cv::Mat img_;
   // its Fast scores
@@ -139,40 +139,40 @@ public:
 
   // get Keypoints
   void
-    getKeypoints(const uint8_t _threshold, std::vector<cv::KeyPoint>& keypoints);
+  getKeypoints(const uint8_t _threshold, std::vector<cv::KeyPoint>& keypoints);
 
 protected:
   // nonmax suppression:
-  __inline__ bool
+  inline bool
   isMax2D(const uint8_t layer, const int x_layer, const int y_layer);
   // 1D (scale axis) refinement:
-  __inline__ float
-  refine1D(const float s_05, const float s0, const float s05, float& max); // around octave
-  __inline__ float
-  refine1D_1(const float s_05, const float s0, const float s05, float& max); // around intra
-  __inline__ float
-  refine1D_2(const float s_05, const float s0, const float s05, float& max); // around octave 0 only
+  inline float
+  refine1D(const float s_05, const float s0, const float s05, float& max) const; // around octave
+  inline float
+  refine1D_1(const float s_05, const float s0, const float s05, float& max) const; // around intra
+  inline float
+  refine1D_2(const float s_05, const float s0, const float s05, float& max) const; // around octave 0 only
   // 2D maximum refinement:
-  __inline__ float
+  inline float
   subpixel2D(const int s_0_0, const int s_0_1, const int s_0_2, const int s_1_0, const int s_1_1, const int s_1_2,
-             const int s_2_0, const int s_2_1, const int s_2_2, float& delta_x, float& delta_y);
+             const int s_2_0, const int s_2_1, const int s_2_2, float& delta_x, float& delta_y) const;
   // 3D maximum refinement centered around (x_layer,y_layer)
-  __inline__ float
-  refine3D(const uint8_t layer, const int x_layer, const int y_layer, float& x, float& y, float& scale, bool& ismax);
+  inline float
+  refine3D(const uint8_t layer, const int x_layer, const int y_layer, float& x, float& y, float& scale, bool& ismax) const;
 
   // interpolated score access with recalculation when needed:
-  __inline__ int
-  getScoreAbove(const uint8_t layer, const int x_layer, const int y_layer);
-  __inline__ int
-  getScoreBelow(const uint8_t layer, const int x_layer, const int y_layer);
+  inline int
+  getScoreAbove(const uint8_t layer, const int x_layer, const int y_layer) const;
+  inline int
+  getScoreBelow(const uint8_t layer, const int x_layer, const int y_layer) const;
 
   // return the maximum of score patches above or below
-  __inline__ float
+  inline float
   getScoreMaxAbove(const uint8_t layer, const int x_layer, const int y_layer, const int threshold, bool& ismax,
-                   float& dx, float& dy);
-  __inline__ float
+                   float& dx, float& dy) const;
+  inline float
   getScoreMaxBelow(const uint8_t layer, const int x_layer, const int y_layer, const int threshold, bool& ismax,
-                   float& dx, float& dy);
+                   float& dx, float& dy) const;
 
   // the image pyramids:
   uint8_t layers_;
@@ -354,7 +354,7 @@ BRISK::generateKernel(std::vector<float> &radiusList, std::vector<int> &numberLi
 }
 
 // simple alternative:
-__inline__ int
+inline int
 BRISK::smoothedIntensity(const cv::Mat& image, const cv::Mat& integral, const float key_x,
                                             const float key_y, const unsigned int scale, const unsigned int rot,
                                             const unsigned int point) const
@@ -650,7 +650,6 @@ BRISK::operator()( InputArray _image, InputArray _mask, vector<KeyPoint>& keypoi
   }
 
   // clean-up
-  _integral.release();
   delete[] _values;
 }
 
@@ -946,11 +945,11 @@ BriskScaleSpace::getKeypoints(const uint8_t _threshold, std::vector<cv::KeyPoint
 }
 
 // interpolated score access with recalculation when needed:
-__inline__ int
-BriskScaleSpace::getScoreAbove(const uint8_t layer, const int x_layer, const int y_layer)
+inline int
+BriskScaleSpace::getScoreAbove(const uint8_t layer, const int x_layer, const int y_layer) const
 {
   assert(layer<layers_-1);
-  BriskLayer& l = pyramid_[layer + 1];
+  const BriskLayer& l = pyramid_[layer + 1];
   if (layer % 2 == 0)
   { // octave
     const int sixths_x = 4 * x_layer - 1;
@@ -989,11 +988,11 @@ BriskScaleSpace::getScoreAbove(const uint8_t layer, const int x_layer, const int
     return score;
   }
 }
-__inline__ int
-BriskScaleSpace::getScoreBelow(const uint8_t layer, const int x_layer, const int y_layer)
+inline int
+BriskScaleSpace::getScoreBelow(const uint8_t layer, const int x_layer, const int y_layer) const
 {
   assert(layer);
-  BriskLayer& l = pyramid_[layer - 1];
+  const BriskLayer& l = pyramid_[layer - 1];
   int sixth_x;
   int quarter_x;
   float xf;
@@ -1090,7 +1089,7 @@ BriskScaleSpace::getScoreBelow(const uint8_t layer, const int x_layer, const int
   return ((ret_val + scaling2 / 2) / scaling2);
 }
 
-__inline__ bool
+inline bool
 BriskScaleSpace::isMax2D(const uint8_t layer, const int x_layer, const int y_layer)
 {
   const cv::Mat& scores = pyramid_[layer].scores();
@@ -1209,12 +1208,12 @@ BriskScaleSpace::isMax2D(const uint8_t layer, const int x_layer, const int y_lay
 }
 
 // 3D maximum refinement centered around (x_layer,y_layer)
-__inline__ float
+inline float
 BriskScaleSpace::refine3D(const uint8_t layer, const int x_layer, const int y_layer, float& x, float& y, float& scale,
-                          bool& ismax)
+                          bool& ismax) const
 {
   ismax = true;
-  BriskLayer& thisLayer = pyramid_[layer];
+  const BriskLayer& thisLayer = pyramid_[layer];
   const int center = thisLayer.getAgastScore(x_layer, y_layer, 1);
 
   // check and get above maximum:
@@ -1235,7 +1234,7 @@ BriskScaleSpace::refine3D(const uint8_t layer, const int x_layer, const int y_la
     if (layer == 0)
     {
       // guess the lower intra octave...
-      BriskLayer& l = pyramid_[0];
+      const BriskLayer& l = pyramid_[0];
       register int s_0_0 = l.getAgastScore_5_8(x_layer - 1, y_layer - 1, 1);
       max_below_uchar = s_0_0;
       register int s_1_0 = l.getAgastScore_5_8(x_layer, y_layer - 1, 1);
@@ -1375,9 +1374,9 @@ BriskScaleSpace::refine3D(const uint8_t layer, const int x_layer, const int y_la
 }
 
 // return the maximum of score patches above or below
-__inline__ float
+inline float
 BriskScaleSpace::getScoreMaxAbove(const uint8_t layer, const int x_layer, const int y_layer, const int threshold,
-                                  bool& ismax, float& dx, float& dy)
+                                  bool& ismax, float& dx, float& dy) const
 {
 
   ismax = false;
@@ -1389,7 +1388,7 @@ BriskScaleSpace::getScoreMaxAbove(const uint8_t layer, const int x_layer, const 
 
   // the layer above
   assert(layer+1<layers_);
-  BriskLayer& layerAbove = pyramid_[layer + 1];
+  const BriskLayer& layerAbove = pyramid_[layer + 1];
 
   if (layer % 2 == 0)
   {
@@ -1555,9 +1554,9 @@ BriskScaleSpace::getScoreMaxAbove(const uint8_t layer, const int x_layer, const 
   return max;
 }
 
-__inline__ float
+inline float
 BriskScaleSpace::getScoreMaxBelow(const uint8_t layer, const int x_layer, const int y_layer, const int threshold,
-                                  bool& ismax, float& dx, float& dy)
+                                  bool& ismax, float& dx, float& dy) const
 {
   ismax = false;
 
@@ -1585,7 +1584,7 @@ BriskScaleSpace::getScoreMaxBelow(const uint8_t layer, const int x_layer, const 
 
   // the layer below
   assert(layer>0);
-  BriskLayer& layerBelow = pyramid_[layer - 1];
+  const BriskLayer& layerBelow = pyramid_[layer - 1];
 
   // check the first row
   int max_x = x_1 + 1;
@@ -1754,8 +1753,8 @@ BriskScaleSpace::getScoreMaxBelow(const uint8_t layer, const int x_layer, const 
   return max;
 }
 
-__inline__ float
-BriskScaleSpace::refine1D(const float s_05, const float s0, const float s05, float& max)
+inline float
+BriskScaleSpace::refine1D(const float s_05, const float s0, const float s05, float& max) const
 {
   int i_05 = int(1024.0 * s_05 + 0.5);
   int i0 = int(1024.0 * s0 + 0.5);
@@ -1800,8 +1799,8 @@ BriskScaleSpace::refine1D(const float s_05, const float s0, const float s05, flo
   return ret_val;
 }
 
-__inline__ float
-BriskScaleSpace::refine1D_1(const float s_05, const float s0, const float s05, float& max)
+inline float
+BriskScaleSpace::refine1D_1(const float s_05, const float s0, const float s05, float& max) const
 {
   int i_05 = int(1024.0 * s_05 + 0.5);
   int i0 = int(1024.0 * s0 + 0.5);
@@ -1846,8 +1845,8 @@ BriskScaleSpace::refine1D_1(const float s_05, const float s0, const float s05, f
   return ret_val;
 }
 
-__inline__ float
-BriskScaleSpace::refine1D_2(const float s_05, const float s0, const float s05, float& max)
+inline float
+BriskScaleSpace::refine1D_2(const float s_05, const float s0, const float s05, float& max) const
 {
   int i_05 = int(1024.0 * s_05 + 0.5);
   int i0 = int(1024.0 * s0 + 0.5);
@@ -1892,10 +1891,10 @@ BriskScaleSpace::refine1D_2(const float s_05, const float s0, const float s05, f
   return ret_val;
 }
 
-__inline__ float
+inline float
 BriskScaleSpace::subpixel2D(const int s_0_0, const int s_0_1, const int s_0_2, const int s_1_0, const int s_1_1,
                             const int s_1_2, const int s_2_0, const int s_2_1, const int s_2_2, float& delta_x,
-                            float& delta_y)
+                            float& delta_y) const
 {
 
   // the coefficients of the 2d quadratic function least-squares fit:
@@ -2086,7 +2085,7 @@ BriskLayer::getAgastPoints(uint8_t threshold, std::vector<KeyPoint>& keypoints)
     scores_(keypoints[i].pt.y, keypoints[i].pt.x) = keypoints[i].response;
 }
 inline uint8_t
-BriskLayer::getAgastScore(int x, int y, uint8_t threshold)
+BriskLayer::getAgastScore(int x, int y, uint8_t threshold) const
 {
   if (x < 3 || y < 3)
     return 0;
@@ -2104,7 +2103,7 @@ BriskLayer::getAgastScore(int x, int y, uint8_t threshold)
 }
 
 inline uint8_t
-BriskLayer::getAgastScore_5_8(int x, int y, uint8_t threshold)
+BriskLayer::getAgastScore_5_8(int x, int y, uint8_t threshold) const
 {
   if (x < 2 || y < 2)
     return 0;
@@ -2117,7 +2116,7 @@ BriskLayer::getAgastScore_5_8(int x, int y, uint8_t threshold)
 }
 
 inline uint8_t
-BriskLayer::getAgastScore(float xf, float yf, uint8_t threshold_in, float scale_in)
+BriskLayer::getAgastScore(float xf, float yf, uint8_t threshold_in, float scale_in) const
 {
   if (scale_in <= 1.0f)
   {
@@ -2150,8 +2149,8 @@ BriskLayer::getAgastScore(float xf, float yf, uint8_t threshold_in, float scale_
 }
 
 // access gray values (smoothed/interpolated)
-__inline__ uint8_t
-BriskLayer::value(const cv::Mat& mat, float xf, float yf, float scale_in)
+inline uint8_t
+BriskLayer::value(const cv::Mat& mat, float xf, float yf, float scale_in) const
 {
   assert(!mat.empty());
   // get the position
