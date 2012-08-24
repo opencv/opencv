@@ -31,28 +31,27 @@ public abstract class SampleCvViewBase extends SurfaceView implements SurfaceHol
     public boolean openCamera() {
         Log.i(TAG, "openCamera");
         synchronized (this) {
-	        releaseCamera();
-	        mCamera = new VideoCapture(Highgui.CV_CAP_ANDROID);
-	        if (!mCamera.isOpened()) {
-	            mCamera.release();
-	            mCamera = null;
-	            Log.e(TAG, "Failed to open native camera");
-	            return false;
-	        }
-	    }
+            releaseCamera();
+            mCamera = new VideoCapture(Highgui.CV_CAP_ANDROID);
+            if (!mCamera.isOpened()) {
+                Log.e(TAG, "Failed to open native camera");
+                releaseCamera();
+                return false;
+            }
+        }
         return true;
     }
-    
+
     public void releaseCamera() {
         Log.i(TAG, "releaseCamera");
         synchronized (this) {
-	        if (mCamera != null) {
-	                mCamera.release();
-	                mCamera = null;
+            if (mCamera != null) {
+                    mCamera.release();
+                    mCamera = null;
             }
         }
     }
-    
+
     public void setupCamera(int width, int height) {
         Log.i(TAG, "setupCamera("+width+", "+height+")");
         synchronized (this) {
@@ -79,7 +78,7 @@ public abstract class SampleCvViewBase extends SurfaceView implements SurfaceHol
         }
 
     }
-    
+
     public void surfaceChanged(SurfaceHolder _holder, int format, int width, int height) {
         Log.i(TAG, "surfaceChanged");
         setupCamera(width, height);
@@ -93,6 +92,7 @@ public abstract class SampleCvViewBase extends SurfaceView implements SurfaceHol
     public void surfaceDestroyed(SurfaceHolder holder) {
         Log.i(TAG, "surfaceDestroyed");
         releaseCamera();
+        Log.i(TAG, "surfaceDestroyed2");
     }
 
     protected abstract Bitmap processFrame(VideoCapture capture);
