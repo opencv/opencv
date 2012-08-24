@@ -10,12 +10,12 @@ import android.view.MenuItem;
 import android.view.Window;
 
 public class Sample0Base extends Activity {
-    private static final String TAG            = "Sample::Activity";
+    
+	private static final String TAG            = "Sample::Activity";
 
     private MenuItem            mItemPreviewRGBA;
     private MenuItem            mItemPreviewGray;
-    private Sample0View mView;
-
+    private Sample0View         mView;
 
     public Sample0Base() {
         Log.i(TAG, "Instantiated new " + this.getClass());

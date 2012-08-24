@@ -127,7 +127,7 @@ class ImageManipulationsView extends SampleCvViewBase {
 
         case ImageManipulationsActivity.VIEW_MODE_HIST:
             capture.retrieve(mRgba, Highgui.CV_CAP_ANDROID_COLOR_FRAME_RGBA);
-            if (mSizeRgba == null)
+            if ((mSizeRgba == null) || (mRgba.cols() != mSizeRgba.width) || (mRgba.height() != mSizeRgba.height))
                 CreateAuxiliaryMats();
             int thikness = (int) (mSizeRgba.width / (mHistSizeNum + 10) / 5);
             if(thikness > 5) thikness = 5;
@@ -171,7 +171,7 @@ class ImageManipulationsView extends SampleCvViewBase {
         case ImageManipulationsActivity.VIEW_MODE_CANNY:
             capture.retrieve(mRgba, Highgui.CV_CAP_ANDROID_COLOR_FRAME_RGBA);
 
-            if (mRgbaInnerWindow == null || mGrayInnerWindow == null)
+            if ((mRgbaInnerWindow == null) || (mGrayInnerWindow == null) || (mRgba.cols() != mSizeRgba.width) || (mRgba.height() != mSizeRgba.height))
                 CreateAuxiliaryMats();
             Imgproc.Canny(mRgbaInnerWindow, mIntermediateMat, 80, 90);
             Imgproc.cvtColor(mIntermediateMat, mRgbaInnerWindow, Imgproc.COLOR_GRAY2BGRA, 4);
@@ -181,7 +181,7 @@ class ImageManipulationsView extends SampleCvViewBase {
             capture.retrieve(mRgba, Highgui.CV_CAP_ANDROID_COLOR_FRAME_RGBA);
             capture.retrieve(mGray, Highgui.CV_CAP_ANDROID_GREY_FRAME);
 
-            if (mRgbaInnerWindow == null || mGrayInnerWindow == null)
+            if ((mRgbaInnerWindow == null) || (mGrayInnerWindow == null) || (mRgba.cols() != mSizeRgba.width) || (mRgba.height() != mSizeRgba.height))
                 CreateAuxiliaryMats();
 
             Imgproc.Sobel(mGrayInnerWindow, mIntermediateMat, CvType.CV_8U, 1, 1);
@@ -196,7 +196,7 @@ class ImageManipulationsView extends SampleCvViewBase {
 
         case ImageManipulationsActivity.VIEW_MODE_ZOOM:
             capture.retrieve(mRgba, Highgui.CV_CAP_ANDROID_COLOR_FRAME_RGBA);
-            if (mZoomCorner == null || mZoomWindow == null)
+            if ((mZoomCorner == null) || (mZoomWindow == null) || (mRgba.cols() != mSizeRgba.width) || (mRgba.height() != mSizeRgba.height))
                 CreateAuxiliaryMats();
             Imgproc.resize(mZoomWindow, mZoomCorner, mZoomCorner.size());
 
@@ -206,7 +206,7 @@ class ImageManipulationsView extends SampleCvViewBase {
 
         case ImageManipulationsActivity.VIEW_MODE_PIXELIZE:
             capture.retrieve(mRgba, Highgui.CV_CAP_ANDROID_COLOR_FRAME_RGBA);
-            if (mRgbaInnerWindow == null)
+            if ((mRgbaInnerWindow == null) || (mRgba.cols() != mSizeRgba.width) || (mRgba.height() != mSizeRgba.height))
                 CreateAuxiliaryMats();
             Imgproc.resize(mRgbaInnerWindow, mIntermediateMat, mSize0, 0.1, 0.1, Imgproc.INTER_NEAREST);
             Imgproc.resize(mIntermediateMat, mRgbaInnerWindow, mSizeRgbaInner, 0., 0., Imgproc.INTER_NEAREST);
@@ -214,7 +214,7 @@ class ImageManipulationsView extends SampleCvViewBase {
 
         case ImageManipulationsActivity.VIEW_MODE_POSTERIZE:
             capture.retrieve(mRgba, Highgui.CV_CAP_ANDROID_COLOR_FRAME_RGBA);
-            if (mRgbaInnerWindow == null)
+            if ((mRgbaInnerWindow == null) || (mRgba.cols() != mSizeRgba.width) || (mRgba.height() != mSizeRgba.height))
                 CreateAuxiliaryMats();
             /*
             Imgproc.cvtColor(mRgbaInnerWindow, mIntermediateMat, Imgproc.COLOR_RGBA2RGB);

@@ -181,7 +181,10 @@ if(ANDROID)
   # force strip library after the build command
   # because samples and tests will make a copy of the library before install
   get_target_property(__opencv_java_location ${the_module} LOCATION)
-  add_custom_command(TARGET ${the_module} POST_BUILD COMMAND ${CMAKE_STRIP} --strip-unneeded "${__opencv_java_location}")
+  # Turn off stripping in debug build
+  if ( NOT (CMAKE_BUILD_TYPE MATCHES "debug"))
+    add_custom_command(TARGET ${the_module} POST_BUILD COMMAND ${CMAKE_STRIP} --strip-unneeded "${__opencv_java_location}")
+  endif()
 
   set(lib_proj_files "")
 

@@ -19,9 +19,9 @@ Theory
 Code
 ====
 
-This tutorial code's is shown lines below. You can also download it from `here <http://code.opencv.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/features2D/SURF_FlannMatcher.cpp>`_
+This tutorial code's is shown lines below. You can also download it from `here <http://code.opencv.org/projects/opencv/repository/revisions/master/raw/samples/cpp/tutorial_code/features2D/SURF_FlannMatcher.cpp>`_
 
-.. code-block:: cpp 
+.. code-block:: cpp
 
    #include <stdio.h>
    #include <iostream>
@@ -41,7 +41,7 @@ This tutorial code's is shown lines below. You can also download it from `here <
 
      Mat img_1 = imread( argv[1], CV_LOAD_IMAGE_GRAYSCALE );
      Mat img_2 = imread( argv[2], CV_LOAD_IMAGE_GRAYSCALE );
-  
+
      if( !img_1.data || !img_2.data )
      { std::cout<< " --(!) Error reading images " << std::endl; return -1; }
 
@@ -79,7 +79,7 @@ This tutorial code's is shown lines below. You can also download it from `here <
 
      printf("-- Max dist : %f \n", max_dist );
      printf("-- Min dist : %f \n", min_dist );
-  
+
      //-- Draw only "good" matches (i.e. whose distance is less than 2*min_dist )
      //-- PS.- radiusMatch can also be used here.
      std::vector< DMatch > good_matches;
@@ -87,13 +87,13 @@ This tutorial code's is shown lines below. You can also download it from `here <
      for( int i = 0; i < descriptors_1.rows; i++ )
      { if( matches[i].distance < 2*min_dist )
        { good_matches.push_back( matches[i]); }
-     }  
+     }
 
      //-- Draw only "good" matches
      Mat img_matches;
-     drawMatches( img_1, keypoints_1, img_2, keypoints_2, 
-                  good_matches, img_matches, Scalar::all(-1), Scalar::all(-1), 
-                  vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS ); 
+     drawMatches( img_1, keypoints_1, img_2, keypoints_2,
+                  good_matches, img_matches, Scalar::all(-1), Scalar::all(-1),
+                  vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );
 
      //-- Show detected matches
      imshow( "Good Matches", img_matches );
@@ -115,9 +115,9 @@ Explanation
 
 Result
 ======
- 
+
 #. Here is the result of the feature detection applied to the first image:
- 
+
    .. image:: images/Featur_FlannMatcher_Result.jpg
       :align: center
       :height: 250pt

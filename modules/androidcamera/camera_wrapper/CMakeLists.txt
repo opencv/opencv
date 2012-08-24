@@ -57,8 +57,9 @@ SET_TARGET_PROPERTIES(${the_target} PROPERTIES
                       RUNTIME_OUTPUT_DIRECTORY ${EXECUTABLE_OUTPUT_PATH}
                       )
 
-# force strip library after the build command
-ADD_CUSTOM_COMMAND( TARGET ${the_target} POST_BUILD COMMAND ${CMAKE_STRIP} "${LIBRARY_OUTPUT_PATH}/lib${the_target}.so" )
+if (NOT (CMAKE_BUILD_TYPE MATCHES "debug"))
+    ADD_CUSTOM_COMMAND( TARGET ${the_target} POST_BUILD COMMAND ${CMAKE_STRIP} "${LIBRARY_OUTPUT_PATH}/lib${the_target}.so" )
+endif()
 
 
 install(TARGETS ${the_target} LIBRARY DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT main)

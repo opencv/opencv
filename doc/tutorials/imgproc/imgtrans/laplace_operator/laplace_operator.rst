@@ -36,7 +36,7 @@ Laplacian Operator
 -------------------
 
 #. From the explanation above, we deduce that the second derivative can be used to *detect edges*. Since images are "*2D*", we would need to take the derivative in both dimensions. Here, the Laplacian operator comes handy.
- 
+
 #. The *Laplacian operator* is defined by:
 
   .. math::
@@ -49,13 +49,13 @@ Code
 ======
 
 #. **What does this program do?**
- 
+
    * Loads an image
-   * Remove noise by applying a Gaussian blur and then convert the original image to grayscale 
+   * Remove noise by applying a Gaussian blur and then convert the original image to grayscale
    * Applies a Laplacian operator to the grayscale image and stores the output image
    * Display the result in a window
 
-#. The tutorial code's is shown lines below. You can also download it from `here <http://code.opencv.org/svn/opencv/trunk/opencv/samples/cpp/tutorial_code/ImgTrans/Laplace_Demo.cpp>`_
+#. The tutorial code's is shown lines below. You can also download it from `here <http://code.opencv.org/projects/opencv/repository/revisions/master/raw/samples/cpp/tutorial_code/ImgTrans/Laplace_Demo.cpp>`_
 
 .. code-block:: cpp
 
@@ -70,7 +70,7 @@ Code
    int main( int argc, char** argv )
    {
      Mat src, src_gray, dst;
-     int kernel_size = 3; 
+     int kernel_size = 3;
      int scale = 1;
      int delta = 0;
      int ddepth = CV_16S;
@@ -116,7 +116,7 @@ Explanation
    .. code-block:: cpp
 
       Mat src, src_gray, dst;
-      int kernel_size = 3; 
+      int kernel_size = 3;
       int scale = 1;
       int delta = 0;
       int ddepth = CV_16S;
@@ -136,7 +136,7 @@ Explanation
    .. code-block:: cpp
 
       GaussianBlur( src, src, Size(3,3), 0, 0, BORDER_DEFAULT );
- 
+
 #. Convert the image to grayscale using :cvt_color:`cvtColor <>`
 
    .. code-block:: cpp

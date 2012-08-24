@@ -52,7 +52,7 @@ public abstract class SampleCvViewBase extends SurfaceView implements SurfaceHol
     }
     
     public void setupCamera(int width, int height) {
-        Log.i(TAG, "setupCamera("+width+", "+height+")");
+    	Log.i(TAG, "setupCamera("+width+", "+height+")");
         synchronized (this) {
             if (mCamera != null && mCamera.isOpened()) {
                 List<Size> sizes = mCamera.getSupportedPreviewSizes();
@@ -111,11 +111,12 @@ public abstract class SampleCvViewBase extends SurfaceView implements SurfaceHol
 
                 bmp = processFrame(mCamera);
             }
-
+            
             if (bmp != null) {
                 Canvas canvas = mHolder.lockCanvas();
                 if (canvas != null) {
-                    canvas.drawBitmap(bmp, (canvas.getWidth() - bmp.getWidth()) / 2, (canvas.getHeight() - bmp.getHeight()) / 2, null);
+                	canvas.drawColor(0, android.graphics.PorterDuff.Mode.CLEAR);
+                	canvas.drawBitmap(bmp, (canvas.getWidth() - bmp.getWidth()) / 2, (canvas.getHeight() - bmp.getHeight()) / 2, null);
                     mHolder.unlockCanvasAndPost(canvas);
                 }
                 bmp.recycle();

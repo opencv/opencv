@@ -175,6 +175,8 @@ a:hover {
 div.body p, div.body dd, div.body li {
     text-align: justify;
     line-height: 130%;
+    margin-top: 1em;
+    margin-bottom: 1em;
 }
 
 div.body h1,
@@ -327,16 +329,16 @@ table.field-list {
     margin-top: 20px;
 }
 
-ul.simple {
+/*ul.simple {
     list-style: none;
-}
+}*/
 
 em.menuselection, em.guilabel {
     font-family: {{ theme_guifont }};
 }
 
 .enumeratevisibleitemswithsquare ul {
-list-style: square; 
+list-style: square;
 margin-bottom: 0px;
 margin-left: 0px;
 margin-right: 0px;
@@ -349,25 +351,25 @@ margin-left: 0px;
 margin-right: 0px;
 margin-top: 0.2em;
  }
- 
+
  .enumeratevisibleitemswithsquare p {
  margin-bottom: 0pt;
  margin-top: 1pt;
  }
- 
+
  .enumeratevisibleitemswithsquare dl{
 margin-bottom: 0px;
 margin-left: 0px;
 margin-right: 0px;
 margin-top: 0px;
  }
- 
+
  .toctableopencv
  {
-   width: 100% ; 
+   width: 100% ;
    table-layout: fixed;
  }
- 
+
 
   .toctableopencv colgroup col:first-child
   {
@@ -375,12 +377,17 @@ margin-top: 0px;
     max-width: 100pt !important;
     min-width: 100pt !important;
   }
-  
-  .toctableopencv colgroup col:nth-child(2) 
+
+  .toctableopencv colgroup col:nth-child(2)
   {
     width: 100% !important;
   }
-  
+
 div.body ul.search li {
     text-align: left;
+}
+
+div.linenodiv {
+    min-width: 1em;
+    text-align: right;
 }

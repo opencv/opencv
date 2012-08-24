@@ -1,0 +1,5 @@
+*.pyc
+.DS_Store
+refman.rst
+OpenCV4Tegra/
+*.user

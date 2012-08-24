@@ -60,7 +60,7 @@ class DemHist:
             cv.Rectangle(self.hist_image, (int(i * bin_w), self.hist_image.height),
                          (int((i + 1) * bin_w), self.hist_image.height - cv.Round(self.hist.bins[i])),
                          cv.ScalarAll(0), -1, 8, 0)
-       
+
         cv.ShowImage("histogram", self.hist_image)
 
 if __name__ == "__main__":
@@ -68,7 +68,7 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         src_image = cv.GetMat(cv.LoadImage(sys.argv[1], 0))
     else:
-        url = 'http://code.opencv.org/svn/opencv/trunk/opencv/samples/c/baboon.jpg'
+        url = 'http://code.opencv.org/projects/opencv/repository/revisions/master/raw/samples/c/baboon.jpg'
         filedata = urllib2.urlopen(url).read()
         imagefiledata = cv.CreateMatHeader(1, len(filedata), cv.CV_8UC1)
         cv.SetData(imagefiledata, filedata, len(filedata))
