@@ -19,7 +19,7 @@ def pattern5(prefix, test, param1, param2, param3, param5):
     return re.compile(spaces + prefix + '_' + test + '::' + symbols + '::' + '\(' + symbols + param1 + symbols + param2 + symbols + param3 + symbols + param4 + symbols + '\)' + spaces)
 
 npp_patterns = [
-    ##############################################################
+    ###############################################################
     # Core
 
     # Core_AddMat (CV_8U | CV_16U | CV_32F)
