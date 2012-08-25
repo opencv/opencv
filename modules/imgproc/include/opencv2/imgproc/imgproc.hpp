@@ -1091,6 +1091,11 @@ enum { TM_SQDIFF=0, TM_SQDIFF_NORMED=1, TM_CCORR=2, TM_CCORR_NORMED=3, TM_CCOEFF
 CV_EXPORTS_W void matchTemplate( InputArray image, InputArray templ,
                                  OutputArray result, int method );
 
+//! computes the connected components labeled image of boolean image I with 4 or 8 way connectivity - returns N, the total
+//number of labels [0, N-1] where 0 represents the background label.
+CV_EXPORTS_W uint64_t connectedComponents(Mat &L, const Mat &I, int connectivity = 8);
+
+
 //! mode of the contour retrieval algorithm
 enum
 {
