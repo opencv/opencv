@@ -46,6 +46,10 @@
 
 #include "OpenEXRConfig.h"
 
+#if !defined (HAVE_LARGE_STACK)
+#include <string.h>
+#endif
+
 namespace Imf {
 
 
