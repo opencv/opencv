@@ -62,7 +62,7 @@
 //	string of bytes is compressed with zlib.
 //
 //-----------------------------------------------------------------------------
-#define ZLIB_WINAPI 
+//#define ZLIB_WINAPI 
 
 #include <ImfPxr24Compressor.h>
 #include <ImfHeader.h>

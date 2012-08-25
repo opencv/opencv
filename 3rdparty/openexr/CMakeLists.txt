@@ -37,8 +37,11 @@ endif()
 source_group("Include" FILES ${lib_hdrs} )
 source_group("Src" FILES ${lib_srcs})
 
-ocv_warnings_disable(CMAKE_CXX_FLAGS -Wshadow -Wunused -Wsign-compare -Wundef -Wmissing-declarations -Wuninitialized -Wswitch 
-                     /wd4018 /wd4099 /wd4100 /wd4101 /wd4127 /wd4189 /wd4244 /wd4245 /wd4267 /wd4305 /wd4334 /wd4389 /wd4512 /wd4701 /wd4702 /wd4706 /wd4800)
+ocv_warnings_disable(CMAKE_CXX_FLAGS -Wshadow -Wunused -Wsign-compare -Wundef -Wmissing-declarations -Wuninitialized -Wswitch -Wparentheses)
+ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4018 /wd4099 /wd4100 /wd4101 /wd4127 /wd4189 /wd4245 /wd4305 /wd4389 /wd4512 /wd4701 /wd4702 /wd4706 /wd4800) # vs2005
+ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4334) # vs2005 Win64
+ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4244) # vs2008
+ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4267) # vs2008 Win64
 
 add_library(IlmImf STATIC ${lib_hdrs} ${lib_srcs})
 target_link_libraries(IlmImf ${ZLIB_LIBRARIES})
