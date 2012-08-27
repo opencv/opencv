@@ -57,16 +57,16 @@ void cv::gpu::DisparityBilateralFilter::operator()(const GpuMat&, const GpuMat&,
 
 namespace cv { namespace gpu { namespace device 
 {
-    namespace bilateral_filter
+    namespace disp_bilateral_filter
     {
-        void load_constants(float* table_color, PtrStepSzf table_space, int ndisp, int radius, short edge_disc, short max_disc);
+        void disp_load_constants(float* table_color, PtrStepSzf table_space, int ndisp, int radius, short edge_disc, short max_disc);
 
-        void bilateral_filter_gpu(PtrStepSzb disp, PtrStepSzb img, int channels, int iters, cudaStream_t stream);
-        void bilateral_filter_gpu(PtrStepSz<short> disp, PtrStepSzb img, int channels, int iters, cudaStream_t stream);
+        template<typename T>
+        void disp_bilateral_filter(PtrStepSz<T> disp, PtrStepSzb img, int channels, int iters, cudaStream_t stream);
     }
 }}}
 
-using namespace ::cv::gpu::device::bilateral_filter;
+using namespace ::cv::gpu::device::disp_bilateral_filter;
 
 namespace
 {
@@ -103,14 +103,14 @@ namespace
     }
 
     template <typename T>
-    void bilateral_filter_operator(int ndisp, int radius, int iters, float edge_threshold,float max_disc_threshold, 
+    void disp_bilateral_filter_operator(int ndisp, int radius, int iters, float edge_threshold,float max_disc_threshold, 
                                    GpuMat& table_color, GpuMat& table_space, 
                                    const GpuMat& disp, const GpuMat& img, GpuMat& dst, Stream& stream)
     {
         short edge_disc = max<short>(short(1), short(ndisp * edge_threshold + 0.5));
         short max_disc = short(ndisp * max_disc_threshold + 0.5);
 
-        load_constants(table_color.ptr<float>(), table_space, ndisp, radius, edge_disc, max_disc);
+        disp_load_constants(table_color.ptr<float>(), table_space, ndisp, radius, edge_disc, max_disc);
 
         if (&dst != &disp)
         {
@@ -120,7 +120,7 @@ namespace
                 disp.copyTo(dst);
         }
 
-        bilateral_filter_gpu((PtrStepSz<T>)dst, img, img.channels(), iters, StreamAccessor::getStream(stream));
+        disp_bilateral_filter<T>(dst, img, img.channels(), iters, StreamAccessor::getStream(stream));
     }
 
     typedef void (*bilateral_filter_operator_t)(int ndisp, int radius, int iters, float edge_threshold, float max_disc_threshold, 
@@ -128,7 +128,7 @@ namespace
                                                 const GpuMat& disp, const GpuMat& img, GpuMat& dst, Stream& stream);
     
     const bilateral_filter_operator_t operators[] = 
-        {bilateral_filter_operator<unsigned char>, 0, 0, bilateral_filter_operator<short>, 0, 0, 0, 0};
+        {disp_bilateral_filter_operator<unsigned char>, 0, 0, disp_bilateral_filter_operator<short>, 0, 0, 0, 0};
 }
 
 cv::gpu::DisparityBilateralFilter::DisparityBilateralFilter(int ndisp_, int radius_, int iters_)
