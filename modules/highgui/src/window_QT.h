@@ -80,6 +80,12 @@
 #include <QMenu>
 #include <QtTest/QTest>
 
+#include <QComboBox>   // needed for new Buttonbar from *.cfg 
+#include <QSpinBox>    
+#include <QToolButton>
+#include <QMessageBox> // HS, 5.7.2012
+
+
 //start private enum
 enum { CV_MODE_NORMAL = 0, CV_MODE_OPENGL = 1 };
 
@@ -136,6 +142,7 @@ public slots:
     void setRatioWindow(QString name, double arg2 );
     void saveWindowParameters(QString name);
     void loadWindowParameters(QString name);
+    void ModifyContent(QString WndName, int etype, int idx, QString text); // GuiReceiver
     void putText(void* arg1, QString text, QPoint org, void* font);
     void addButton(QString button_name, int button_type, int initial_button_state , void* on_change, void* userdata);
 	void enablePropertiesButtonEachWindow();
@@ -278,6 +285,11 @@ private:
     void hideEvent ( QHideEvent * event ) ;
 };
 
+typedef struct AdmElem {
+	int elemtype;
+	int start;
+	int cnt;
+} AdmElem;
 
 class CvWindow : public CvWinModel
 {
@@ -303,13 +315,17 @@ public:
 
     void displayInfo(QString text, int delayms);
     void displayStatusBar(QString text, int delayms);
-
+    //-------------------------------------------------------------
+    void modifyContent(QString WndName, int eType,  int idx, QString text );  // *.cfg
+    void MsgBoxInfo(char * pCaption, std::string Info );
+    void applyTransTab();
+    //-------------------------------------------------------------
     void enablePropertiesButton();
 
     static CvButtonbar* createButtonBar(QString bar_name);
 
     static void addSlider(CvWindow* w, QString name, int* value, int count, CvTrackbarCallback on_change CV_DEFAULT(NULL));
-	static void addSlider2(CvWindow* w, QString name, int* value, int count, CvTrackbarCallback2 on_change CV_DEFAULT(NULL), void* userdata CV_DEFAULT(0));
+    static void addSlider2(CvWindow* w, QString name, int* value, int count, CvTrackbarCallback2 on_change CV_DEFAULT(NULL), void* userdata CV_DEFAULT(0));
 
     void setOpenGlDrawCallback(CvOpenGlDrawCallback callback, void* userdata);
     void setOpenGlCleanCallback(CvOpenGlCleanCallback callback, void* userdata);
@@ -322,7 +338,7 @@ public:
     //parameters (will be save/load)
     int param_flags;
     int param_gui_mode;
-	int param_ratio_mode;
+    int param_ratio_mode;
 
     QPointer<QBoxLayout> myGlobalLayout; //All the widget (toolbar, view, LayoutBar, ...) are attached to it
     QPointer<QBoxLayout> myBarLayout;
@@ -333,6 +349,11 @@ public:
     QPointer<QToolBar> myToolBar;
     QPointer<QLabel> myStatusBar_msg;
 
+    QVector<QString> m_ContentVec;
+    QVector<QString> m_CmdVec;
+    QVector<QString> m_LanguageVec;
+    bool m_bApplyLanguage;
+
 protected:
     virtual void keyPressEvent(QKeyEvent* event);
 
@@ -341,17 +362,36 @@ private:
     int mode_display; //opengl or native
     ViewPort* myView;
 
+    //------- new Toolbar elements from *.cfg ----------
+    bool bVerbose;
+    QString m_WndName;
+    int m_idxPropWnd;
+    QVector<QPushButton*>    vect_QButton;  
+    QVector<QComboBox*>      vect_QCombo;
+    QVector<QLineEdit*>      vect_QLineEdit;
+    QVector<QLabel*>         vect_QLabel;
+    QVector<QCheckBox*>      vect_QCheckBox;
+    QVector<QSlider*>        vect_QSlider;
+    QVector<QSpinBox *>      vect_QSpinBox;
+    QVector<QToolButton *>   vect_QToolButton;
+    QVector<QAction *>       vect_MenuAct;
+    QVector<QString>	  vecString;
+    QVector<AdmElem>      vect_Adm;
+    //--------------------------------------------------
+
     QVector<QShortcut*> vect_QShortcuts;
 
     void icvLoadTrackbars(QSettings *settings);
     void icvSaveTrackbars(QSettings *settings);
-	void icvLoadControlPanel();
-	void icvSaveControlPanel();
-	void icvLoadButtonbar(CvButtonbar* t,QSettings *settings);
-	void icvSaveButtonbar(CvButtonbar* t,QSettings *settings);
+    void icvLoadControlPanel();
+    void icvSaveControlPanel();
+    void icvLoadButtonbar(CvButtonbar* t,QSettings *settings);
+    void icvSaveButtonbar(CvButtonbar* t,QSettings *settings);
 
-	void createActions();
-	void createShortcuts();
+    void InitExchange(int idx);
+    void createStandardActions();
+    void createActions();
+    void createShortcuts();
     void createToolBar();
     void createView();
     void createStatusBar();
@@ -365,6 +405,41 @@ private:
 
 private slots:
     void displayPropertiesWin();
+	void slotCall_0();
+	void slotCall_1();
+	void slotCall_2();
+	void slotCall_3();
+	void slotCall_4();
+	void slotCall_5();
+	void slotCall_6();
+	void slotCall_7();
+	void slotCall_8();
+	void slotCall_9();
+	void slotCallPush_0();
+	void slotCallPush_1();
+	void slotCallPush_2();
+	void slotCallPush_3();
+	void slotCallPush_4();
+	void slotCallCheck_0();
+	void slotCallCheck_1();
+	void slotCallCheck_2();
+	void slotCallCheck_3();
+	void slotCallCheck_4();
+	void slotCallSpin_0(int iVal);
+	void slotCallSpin_1(int iVal);
+	void slotCallSpin_2(int iVal);
+	void slotCallSpin_3(int iVal);
+	void slotCallSpin_4(int iVal);
+	void slotCallString(const QString & s);
+
+	void slotCallBox();
+
+	void slotMenuAct0();
+	void slotMenuAct1();
+	void slotMenuAct2();
+	void slotMenuAct3();
+	void slotMenuAct4();
+
 };
 
 
