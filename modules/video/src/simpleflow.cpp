@@ -54,133 +54,95 @@
 namespace cv
 {
 
-WeightedCrossBilateralFilter::WeightedCrossBilateralFilter(
-  const Mat& _image,
-  int _windowSize,
-  double _sigmaDist,
-  double _sigmaColor)
-  : image(_image), 
-    windowSize(_windowSize), 
-    sigmaDist(_sigmaDist), 
-    sigmaColor(_sigmaColor) {
-    
-  expDist.resize(2*windowSize*windowSize+1);
-  const double sigmaDistSqr = 2 * sigmaDist * sigmaDist;
-  for (int i = 0; i <= 2*windowSize*windowSize; ++i) {
-    expDist[i] = exp(-i/sigmaDistSqr);
-  }
-
-  const double sigmaColorSqr = 2 * sigmaColor * sigmaColor;
-  wc.resize(image.rows);
-  for (int row = 0; row < image.rows; ++row) {
-    wc[row].resize(image.cols);
-    for (int col = 0; col < image.cols; ++col) {
-      int beginRow = max(0, row - windowSize);
-      int beginCol = max(0, col - windowSize);
-      int endRow = min(image.rows - 1, row + windowSize);
-      int endCol = min(image.cols - 1, col + windowSize);
-      wc[row][col] = build<double>(endRow - beginRow + 1, endCol - beginCol + 1);
-
-      for (int r = beginRow; r <= endRow; ++r) {
-        for (int c = beginCol; c <= endCol; ++c) {
-          wc[row][col][r - beginRow][c - beginCol] = 
-            exp(-dist(image.at<Vec3b>(row, col), 
-                      image.at<Vec3b>(r, c)) 
-                / sigmaColorSqr);
-        }
-      }
-    }
-  }
-}
-
-Mat WeightedCrossBilateralFilter::apply(Mat& matrix, Mat& weights) {
-  int rows = matrix.rows;
-  int cols = matrix.cols;
-
-  Mat result = Mat::zeros(rows, cols, CV_64F);
-  for (int row = 0; row < rows; ++row) {
-    for(int col = 0; col < cols; ++col) {
-      result.at<double>(row, col) = 
-        convolution(matrix, row, col, weights);
-    }
-  }
-  return result;
-}
-
-double WeightedCrossBilateralFilter::convolution(Mat& matrix, 
-                                                 int row, int col, 
-                                                 Mat& weights) {
-  double result = 0, weightsSum = 0;
-  int beginRow = max(0, row - windowSize);
-  int beginCol = max(0, col - windowSize);
-  int endRow = min(matrix.rows - 1, row + windowSize);
-  int endCol = min(matrix.cols - 1, col + windowSize);
-  for (int r = beginRow; r <= endRow; ++r) {
-    double* ptr = matrix.ptr<double>(r);
-    for (int c = beginCol; c <= endCol; ++c) {
-      const double w = expDist[dist(row, col, r, c)] *
-                       wc[row][col][r - beginRow][c - beginCol] *
-                       weights.at<double>(r, c);
-      result += ptr[c] * w;
-      weightsSum += w;
-    }
-  }
-  return result / weightsSum;
-}
-
-static void removeOcclusions(const Flow& flow, 
-                             const Flow& flow_inv,
-                             double occ_thr,
+static void removeOcclusions(const Mat& flow, 
+                             const Mat& flow_inv,
+                             float occ_thr,
                              Mat& confidence) {
-  const int rows = flow.u.rows;
-  const int cols = flow.v.cols;
-  int occlusions = 0;
+  const int rows = flow.rows;
+  const int cols = flow.cols;
   for (int r = 0; r < rows; ++r) {
     for (int c = 0; c < cols; ++c) {
-      if (dist(flow.u.at<double>(r, c), flow.v.at<double>(r, c),
-               -flow_inv.u.at<double>(r, c), -flow_inv.v.at<double>(r, c)) > occ_thr) {
-        confidence.at<double>(r, c) = 0;
-        occlusions++;
+      if (dist(flow.at<Vec2f>(r, c), -flow_inv.at<Vec2f>(r, c)) > occ_thr) {
+        confidence.at<float>(r, c) = 0;
+      } else {
+        confidence.at<float>(r, c) = 1;
       }
     }
   }
 }
 
-static Mat wd(int top_shift, int bottom_shift, int left_shift, int right_shift, double sigma) {
-  const double factor = 1.0 / (2.0 * sigma * sigma);
-  Mat d = Mat(top_shift + bottom_shift + 1, right_shift + left_shift + 1, CV_64F);
+static void wd(Mat& d, int top_shift, int bottom_shift, int left_shift, int right_shift, float sigma) {
+  const float factor = 1.0 / (2.0 * sigma * sigma);
   for (int dr = -top_shift, r = 0; dr <= bottom_shift; ++dr, ++r) {
     for (int dc = -left_shift, c = 0; dc <= right_shift; ++dc, ++c) {
-      d.at<double>(r, c) = -(dr*dr + dc*dc) * factor;
+      d.at<float>(r, c) = -(dr*dr + dc*dc) * factor;
     }
   }
-  Mat ed;
-  exp(d, ed);
-  return ed;
+  exp(d, d);
 }
 
-static Mat wc(const Mat& image, int r0, int c0, int top_shift, int bottom_shift, int left_shift, int right_shift, double sigma) {
-  const double factor = 1.0 / (2.0 * sigma * sigma);
-  Mat d = Mat(top_shift + bottom_shift + 1, right_shift + left_shift + 1, CV_64F);
+static void wc(const Mat& image, Mat& d, int r0, int c0, 
+               int top_shift, int bottom_shift, int left_shift, int right_shift, float sigma) {
+  const float factor = 1.0 / (2.0 * sigma * sigma);
+  const Vec3b centeral_point = image.at<Vec3b>(r0, c0);
   for (int dr = r0-top_shift, r = 0; dr <= r0+bottom_shift; ++dr, ++r) {
+    const Vec3b *row = image.ptr<Vec3b>(dr); 
+    float *d_row = d.ptr<float>(r);
     for (int dc = c0-left_shift, c = 0; dc <= c0+right_shift; ++dc, ++c) {
-      d.at<double>(r, c) = -dist(image.at<Vec3b>(r0, c0), image.at<Vec3b>(dr, dc)) * factor;
+      d_row[c] = -dist(centeral_point, row[dc]) * factor;
     }
   }
-  Mat ed;
-  exp(d, ed);
-  return ed;
+  exp(d, d);
 }
 
-inline static void dist(const Mat& m1, const Mat& m2, Mat& result) {
+static void dist(const Mat& m1, const Mat& m2, Mat& result) {
   const int rows = m1.rows;
   const int cols = m1.cols;
   for (int r = 0; r < rows; ++r) {
     const Vec3b *m1_row = m1.ptr<Vec3b>(r);
     const Vec3b *m2_row = m2.ptr<Vec3b>(r);
-    double* row = result.ptr<double>(r);
+    float* row = result.ptr<float>(r);
     for (int c = 0; c < cols; ++c) {
       row[c] = dist(m1_row[c], m2_row[c]);
+    }
+  }
+}
+
+static void crossBilateralFilter(const Mat& image, const Mat& edge_image, const Mat confidence, Mat& dst, int d, float sigma_color, float sigma_space, bool flag=false) {
+  const int rows = image.rows;
+  const int cols = image.cols;
+  Mat image_extended, edge_image_extended, confidence_extended;
+  copyMakeBorder(image, image_extended, d, d, d, d, BORDER_DEFAULT);
+  copyMakeBorder(edge_image, edge_image_extended, d, d, d, d, BORDER_DEFAULT);
+  copyMakeBorder(confidence, confidence_extended, d, d, d, d, BORDER_CONSTANT, Scalar(0));
+  Mat weights_space(2*d+1, 2*d+1, CV_32F);
+  wd(weights_space, d, d, d, d, sigma_space);
+  Mat weights(2*d+1, 2*d+1, CV_32F);
+  Mat weighted_sum(2*d+1, 2*d+1, CV_32F);
+  
+
+  vector<Mat> image_extended_channels;
+  split(image_extended, image_extended_channels);
+
+  for (int row = 0; row < rows; ++row) {
+    for (int col = 0; col < cols; ++col) {
+      wc(edge_image_extended, weights, row+d, col+d, d, d, d, d, sigma_color);
+
+      Range window_rows(row,row+2*d+1);
+      Range window_cols(col,col+2*d+1);
+
+      multiply(weights, confidence_extended(window_rows, window_cols), weights);
+      multiply(weights, weights_space, weights);
+      float weights_sum = sum(weights)[0];
+
+      for (int ch = 0; ch < 2; ++ch) {
+        multiply(weights, image_extended_channels[ch](window_rows, window_cols), weighted_sum);
+        float total_sum = sum(weighted_sum)[0];
+
+        dst.at<Vec2f>(row, col)[ch] = (flag && fabs(weights_sum) < 1e-9) 
+          ? image.at<float>(row, col) 
+          : total_sum / weights_sum;
+      }
     }
   }
 }
@@ -188,59 +150,58 @@ inline static void dist(const Mat& m1, const Mat& m2, Mat& result) {
 static void calcOpticalFlowSingleScaleSF(const Mat& prev, 
                                          const Mat& next,
                                          const Mat& mask,
-                                         Flow& flow,
+                                         Mat& flow,
                                          Mat& confidence,
                                          int averaging_radius, 
                                          int max_flow,
-                                         double sigma_dist,
-                                         double sigma_color) {
+                                         float sigma_dist,
+                                         float sigma_color) {
   const int rows = prev.rows;
   const int cols = prev.cols;
-  confidence = Mat::zeros(rows, cols, CV_64F);
+  confidence = Mat::zeros(rows, cols, CV_32F);
+  
+  Mat diff_storage(averaging_radius*2 + 1, averaging_radius*2 + 1, CV_32F);
+  Mat w_full_window(averaging_radius*2 + 1, averaging_radius*2 + 1, CV_32F);
+  Mat wd_full_window(averaging_radius*2 + 1, averaging_radius*2 + 1, CV_32F);
+  float w_full_window_sum;
+
+  Mat prev_extended;
+  copyMakeBorder(prev, prev_extended, 
+                 averaging_radius, averaging_radius, averaging_radius, averaging_radius,
+                 BORDER_DEFAULT);
+
+  wd(wd_full_window, averaging_radius, averaging_radius, averaging_radius, averaging_radius, sigma_dist);
 
   for (int r0 = 0; r0 < rows; ++r0) {
     for (int c0 = 0; c0 < cols; ++c0) {
-      int u0 = floor(flow.u.at<double>(r0, c0) + 0.5);
-      int v0 = floor(flow.v.at<double>(r0, c0) + 0.5);
+      Vec2f flow_at_point = flow.at<Vec2f>(r0, c0);
+      int u0 = floor(flow_at_point[0] + 0.5);
+      if (r0 + u0 < 0) { u0 = -r0; }
+      if (r0 + u0 >= rows) { u0 = rows - 1 - r0; }
+      int v0 = floor(flow_at_point[1] + 0.5);
+      if (c0 + v0 < 0) { v0 = -c0; }
+      if (c0 + v0 >= cols) { v0 = cols - 1 - c0; }
 
       const int min_row_shift = -min(r0 + u0, max_flow);
       const int max_row_shift = min(rows - 1 - (r0 + u0), max_flow);
       const int min_col_shift = -min(c0 + v0, max_flow);
       const int max_col_shift = min(cols - 1 - (c0 + v0), max_flow);
 
-      double min_cost = DBL_MAX, best_u = u0, best_v = v0;
+      float min_cost = DBL_MAX, best_u = u0, best_v = v0;
 
-      Mat w_full_window;
-      double w_full_window_sum;
-      Mat diff_storage;
-
-      if (r0 - averaging_radius >= 0 && 
-          r0 + averaging_radius < rows &&
-          c0 - averaging_radius >= 0 &&
-          c0 + averaging_radius < cols &&
-          mask.at<uchar>(r0, c0)) {
-          w_full_window = wd(averaging_radius, 
-                             averaging_radius, 
-                             averaging_radius, 
-                             averaging_radius, 
-                             sigma_dist).mul(
-                          wc(prev, r0, c0, 
-                             averaging_radius, 
-                             averaging_radius, 
-                             averaging_radius, 
-                             averaging_radius, 
-                             sigma_color));
-
+      if (mask.at<uchar>(r0, c0)) {
+          wc(prev_extended, w_full_window, r0 + averaging_radius, c0 + averaging_radius,
+             averaging_radius, averaging_radius, averaging_radius, averaging_radius, sigma_color);
+          multiply(w_full_window, wd_full_window, w_full_window);
           w_full_window_sum = sum(w_full_window)[0];
-          diff_storage = Mat::zeros(averaging_radius*2 + 1, averaging_radius*2 + 1, CV_64F);
       }
 
       bool first_flow_iteration = true;
-      double sum_e, min_e;
+      float sum_e, min_e;
 
       for (int u = min_row_shift; u <= max_row_shift; ++u) {
         for (int v = min_col_shift; v <= max_col_shift; ++v) {
-          double e = dist(prev.at<Vec3b>(r0, c0), next.at<Vec3b>(r0 + u0 + u, c0 + v0 + v));
+          float e = dist(prev.at<Vec3b>(r0, c0), next.at<Vec3b>(r0 + u0 + u, c0 + v0 + v));
           if (first_flow_iteration) {
             sum_e = e;
             min_e = e;
@@ -269,10 +230,11 @@ static void calcOpticalFlowSingleScaleSF(const Mat& prev,
                                      r0 + u0 + u + window_bottom_shift + 1);
           const Range next_col_range(c0 + v0 + v - window_left_shift, 
                                      c0 + v0 + v + window_right_shift + 1); 
-          
+         
+                     
           Mat diff2;
           Mat w;
-          double w_sum;
+          float w_sum;
           if (window_top_shift == averaging_radius &&
               window_bottom_shift == averaging_radius &&
               window_left_shift == averaging_radius &&
@@ -280,21 +242,23 @@ static void calcOpticalFlowSingleScaleSF(const Mat& prev,
             w = w_full_window;
             w_sum = w_full_window_sum;
             diff2 = diff_storage;
-
             dist(prev(prev_row_range, prev_col_range), next(next_row_range, next_col_range), diff2);
           } else {
-            diff2 = Mat::zeros(window_bottom_shift + window_top_shift + 1,  
-                                   window_right_shift + window_left_shift + 1, CV_64F);
+            diff2 = diff_storage(Range(averaging_radius - window_top_shift, 
+                                       averaging_radius + 1 + window_bottom_shift),
+                                 Range(averaging_radius - window_left_shift,
+                                       averaging_radius + 1 + window_right_shift));
             
             dist(prev(prev_row_range, prev_col_range), next(next_row_range, next_col_range), diff2);
-
-            w = wd(window_top_shift, window_bottom_shift, window_left_shift, window_right_shift, sigma_dist).mul( 
-                wc(prev, r0, c0, window_top_shift, window_bottom_shift, window_left_shift, window_right_shift, sigma_color));
+            w = w_full_window(Range(averaging_radius - window_top_shift, 
+                                    averaging_radius + 1 + window_bottom_shift),
+                              Range(averaging_radius - window_left_shift,
+                                    averaging_radius + 1 + window_right_shift));
             w_sum = sum(w)[0];
           }
           multiply(diff2, w, diff2);
       
-          const double cost = sum(diff2)[0] / w_sum;
+          const float cost = sum(diff2)[0] / w_sum;
           if (cost < min_cost) {
             min_cost = cost;
             best_u = u + u0;
@@ -302,72 +266,37 @@ static void calcOpticalFlowSingleScaleSF(const Mat& prev,
           }
         }
       }
-      int square = (max_row_shift - min_row_shift + 1) *
-                   (max_col_shift - min_col_shift + 1);
-      confidence.at<double>(r0, c0) = (square == 0) ? 0
-                                                   : sum_e / square - min_e;
+      int windows_square = (max_row_shift - min_row_shift + 1) *
+                           (max_col_shift - min_col_shift + 1);
+      confidence.at<float>(r0, c0) = (windows_square == 0) ? 0
+                                                           : sum_e / windows_square - min_e;
+      CV_Assert(confidence.at<float>(r0, c0) >= 0); // TODO: remove it after testing
       if (mask.at<uchar>(r0, c0)) {
-        flow.u.at<double>(r0, c0) = best_u;
-        flow.v.at<double>(r0, c0) = best_v;
+        flow.at<Vec2f>(r0, c0) = Vec2f(best_u, best_v);
       }
     }
   }
 }
 
-static Flow upscaleOpticalFlow(int new_rows, 
+static Mat upscaleOpticalFlow(int new_rows, 
                                int new_cols,
                                const Mat& image,
                                const Mat& confidence,
-                               const Flow& flow,
+                               Mat& flow,
                                int averaging_radius,
-                               double sigma_dist,
-                               double sigma_color) {
-  const int rows = image.rows;
-  const int cols = image.cols;
-  Flow new_flow(new_rows, new_cols);
-  for (int r = 0; r < rows; ++r) {
-    for (int c = 0; c < cols; ++c) {
-      const int window_top_shift = min(r, averaging_radius);
-      const int window_bottom_shift = min(rows - 1 - r, averaging_radius);
-      const int window_left_shift = min(c, averaging_radius);
-      const int window_right_shift = min(cols - 1 - c, averaging_radius);
-      
-      const Range row_range(r - window_top_shift, r + window_bottom_shift + 1);
-      const Range col_range(c - window_left_shift, c + window_right_shift + 1);
-      
-      const Mat w = confidence(row_range, col_range).mul(
-        wd(window_top_shift, window_bottom_shift, window_left_shift, window_right_shift, sigma_dist)).mul( 
-        wc(image, r, c, window_top_shift, window_bottom_shift, window_left_shift, window_right_shift, sigma_color));
-
-      const double w_sum = sum(w)[0];
-      double new_u, new_v;
-      if (fabs(w_sum) < 1e-9) {
-        new_u = flow.u.at<double>(r, c);
-        new_v = flow.v.at<double>(r, c);
-      } else {
-        new_u = sum(flow.u(row_range, col_range).mul(w))[0] / w_sum;
-        new_v = sum(flow.v(row_range, col_range).mul(w))[0] / w_sum;
-      }
-      
-      for (int dr = 0; dr <= 1; ++dr) {
-        int nr = 2*r + dr;
-        for (int dc = 0; dc <= 1; ++dc) {
-          int nc = 2*c + dc;
-          if (nr < new_rows && nc < new_cols) {
-            new_flow.u.at<double>(nr, nc) = 2 * new_u;
-            new_flow.v.at<double>(nr, nc) = 2 * new_v;
-          }
-        }
-      }
-    }
-  }
+                               float sigma_dist,
+                               float sigma_color) {
+  crossBilateralFilter(flow, image, confidence, flow, averaging_radius, sigma_color, sigma_dist, false);
+  Mat new_flow;
+  resize(flow, new_flow, Size(new_cols, new_rows), 0, 0, INTER_NEAREST);
+  new_flow *= 2;
   return new_flow;
 }
 
-static Mat calcIrregularityMat(const Flow& flow, int radius) {
-  const int rows = flow.u.rows;
-  const int cols = flow.v.cols;
-  Mat irregularity = Mat::zeros(rows, cols, CV_64F);
+static Mat calcIrregularityMat(const Mat& flow, int radius) {
+  const int rows = flow.rows;
+  const int cols = flow.cols;
+  Mat irregularity(rows, cols, CV_32F);
   for (int r = 0; r < rows; ++r) {
     const int start_row = max(0, r - radius);
     const int end_row = min(rows - 1, r + radius);
@@ -376,10 +305,9 @@ static Mat calcIrregularityMat(const Flow& flow, int radius) {
       const int end_col = min(cols - 1, c + radius);
       for (int dr = start_row; dr <= end_row; ++dr) {
         for (int dc = start_col; dc <= end_col; ++dc) {
-          const double diff = dist(flow.u.at<double>(r, c), flow.v.at<double>(r, c), 
-                                   flow.u.at<double>(dr, dc), flow.v.at<double>(dr, dc));
-          if (diff > irregularity.at<double>(r, c)) {
-            irregularity.at<double>(r, c) = diff;
+          const float diff = dist(flow.at<Vec2f>(r, c), flow.at<Vec2f>(dr, dc));
+          if (diff > irregularity.at<float>(r, c)) {
+            irregularity.at<float>(r, c) = diff;
           }
         }
       }
@@ -388,7 +316,7 @@ static Mat calcIrregularityMat(const Flow& flow, int radius) {
   return irregularity;
 }
 
-static void selectPointsToRecalcFlow(const Flow& flow, 
+static void selectPointsToRecalcFlow(const Mat& flow, 
                                      int irregularity_metric_radius,
                                      int speed_up_thr,
                                      int curr_rows,
@@ -396,11 +324,10 @@ static void selectPointsToRecalcFlow(const Flow& flow,
                                      const Mat& prev_speed_up,
                                      Mat& speed_up,
                                      Mat& mask) {
-  const int prev_rows = flow.u.rows;
-  const int prev_cols = flow.v.cols;
+  const int prev_rows = flow.rows;
+  const int prev_cols = flow.cols;
 
-  Mat is_flow_regular = calcIrregularityMat(flow, 
-                                                irregularity_metric_radius)
+  Mat is_flow_regular = calcIrregularityMat(flow, irregularity_metric_radius)
                               < speed_up_thr;
   Mat done = Mat::zeros(prev_rows, prev_cols, CV_8U);
   speed_up = Mat::zeros(curr_rows, curr_cols, CV_8U);
@@ -470,28 +397,28 @@ static void selectPointsToRecalcFlow(const Flow& flow,
   }
 }
 
-static inline double extrapolateValueInRect(int height, int width,
-                                            double v11, double v12,
-                                            double v21, double v22,
+static inline float extrapolateValueInRect(int height, int width,
+                                            float v11, float v12,
+                                            float v21, float v22,
                                             int r, int c) {
   if (r == 0 && c == 0) { return v11;}
   if (r == 0 && c == width) { return v12;}
   if (r == height && c == 0) { return v21;}
   if (r == height && c == width) { return v22;}
   
-  double qr = double(r) / height;
-  double pr = 1.0 - qr;
-  double qc = double(c) / width;
-  double pc = 1.0 - qc;
+  float qr = float(r) / height;
+  float pr = 1.0 - qr;
+  float qc = float(c) / width;
+  float pc = 1.0 - qc;
 
   return v11*pr*pc + v12*pr*qc + v21*qr*pc + v22*qc*qr; 
 }
                                               
-static void extrapolateFlow(Flow& flow,
+static void extrapolateFlow(Mat& flow,
                             const Mat& speed_up) {
-  const int rows = flow.u.rows;
-  const int cols = flow.u.cols;
-  Mat done = Mat::zeros(rows, cols, CV_8U);
+  const int rows = flow.rows;
+  const int cols = flow.cols;
+  Mat done(rows, cols, CV_8U);
   for (int r = 0; r < rows; ++r) {
     for (int c = 0; c < cols; ++c) {
       if (!done.at<uchar>(r, c) && speed_up.at<uchar>(r, c) > 1) {
@@ -506,21 +433,22 @@ static void extrapolateFlow(Flow& flow,
         for (int rr = top; rr <= bottom; ++rr) {
           for (int cc = left; cc <= right; ++cc) {
             done.at<uchar>(rr, cc) = 1;
-            flow.u.at<double>(rr, cc) = extrapolateValueInRect(
-                                          height, width, 
-                                          flow.u.at<double>(top, left),
-                                          flow.u.at<double>(top, right),
-                                          flow.u.at<double>(bottom, left),
-                                          flow.u.at<double>(bottom, right),
-                                          rr-top, cc-left); 
+            Vec2f flow_at_point;
+            Vec2f top_left = flow.at<Vec2f>(top, left);
+            Vec2f top_right = flow.at<Vec2f>(top, right);
+            Vec2f bottom_left = flow.at<Vec2f>(bottom, left);
+            Vec2f bottom_right = flow.at<Vec2f>(bottom, right);
 
-            flow.v.at<double>(rr, cc) = extrapolateValueInRect(
-                                          height, width, 
-                                          flow.v.at<double>(top, left),
-                                          flow.v.at<double>(top, right),
-                                          flow.v.at<double>(bottom, left),
-                                          flow.v.at<double>(bottom, right),
-                                          rr-top, cc-left); 
+            flow_at_point[0] = extrapolateValueInRect(height, width, 
+                                                      top_left[0], top_right[0],
+                                                      bottom_left[0], bottom_right[0],
+                                                      rr-top, cc-left); 
+
+            flow_at_point[1] = extrapolateValueInRect(height, width, 
+                                                      top_left[1], top_right[1],
+                                                      bottom_left[1], bottom_right[1],
+                                                      rr-top, cc-left); 
+            flow.at<Vec2f>(rr, cc) = flow_at_point;
           }
         }
       }
@@ -545,8 +473,9 @@ static void buildPyramidWithResizeMethod(Mat& src,
   }
 }
 
-static Flow calcOpticalFlowSF(Mat& from, 
+void calcOpticalFlowSF(Mat& from, 
                        Mat& to, 
+                       Mat& resulted_flow,
                        int layers,
                        int averaging_block_size, 
                        int max_flow,
@@ -565,8 +494,6 @@ static Flow calcOpticalFlowSF(Mat& from,
 
   buildPyramidWithResizeMethod(from, pyr_from_images, layers - 1, INTER_CUBIC);
   buildPyramidWithResizeMethod(to, pyr_to_images, layers - 1, INTER_CUBIC);
-//  buildPyramid(from, pyr_from_images, layers - 1, BORDER_WRAP);
-//  buildPyramid(to, pyr_to_images, layers - 1, BORDER_WRAP);
 
   if ((int)pyr_from_images.size() != layers) {
       exit(1);
@@ -582,8 +509,8 @@ static Flow calcOpticalFlowSF(Mat& from,
   Mat mask = Mat::ones(first_from_image.rows, first_from_image.cols, CV_8U);
   Mat mask_inv = Mat::ones(first_from_image.rows, first_from_image.cols, CV_8U);
 
-  Flow flow(first_from_image.rows, first_from_image.cols);
-  Flow flow_inv(first_to_image.rows, first_to_image.cols);
+  Mat flow(first_from_image.rows, first_from_image.cols, CV_32FC2);
+  Mat flow_inv(first_to_image.rows, first_to_image.cols, CV_32FC2);
 
   Mat confidence;
   Mat confidence_inv;
@@ -641,8 +568,6 @@ static Flow calcOpticalFlowSF(Mat& from,
                              new_speed_up,
                              mask);
 
-    int points_to_recalculate = sum(mask)[0] / MASK_TRUE_VALUE;
-
     selectPointsToRecalcFlow(flow_inv,
                              averaging_block_size,
                              speed_up_thr,
@@ -651,8 +576,6 @@ static Flow calcOpticalFlowSF(Mat& from,
                              speed_up_inv,
                              new_speed_up_inv,
                              mask_inv);
-
-    points_to_recalculate = sum(mask_inv)[0] / MASK_TRUE_VALUE;
 
     speed_up = new_speed_up;
     speed_up_inv = new_speed_up_inv;
@@ -702,55 +625,14 @@ static Flow calcOpticalFlowSF(Mat& from,
     removeOcclusions(flow_inv, flow, occ_thr, confidence_inv);
   }
 
-  WeightedCrossBilateralFilter filter_postprocess(pyr_from_images[0], 
-                                                  postprocess_window,
-                                                  sigma_dist_fix,
-                                                  sigma_color_fix);
+  crossBilateralFilter(flow, pyr_from_images[0], confidence, flow, 
+                       postprocess_window, sigma_color_fix, sigma_dist_fix);
 
-  flow.u = filter_postprocess.apply(flow.u, confidence);
-  flow.v = filter_postprocess.apply(flow.v, confidence);
+  GaussianBlur(flow, flow, Size(3, 3), 5);
 
-  Mat blured_u, blured_v;
-  GaussianBlur(flow.u, blured_u, Size(3, 3), 5);
-  GaussianBlur(flow.v, blured_v, Size(3, 3), 5);
-
-  return Flow(blured_v, blured_u);
-}
-
-void calcOpticalFlowSF(Mat& from, 
-                       Mat& to, 
-                       Mat& flowX, 
-                       Mat& flowY,
-                       int layers,
-                       int averaging_block_size, 
-                       int max_flow,
-                       double sigma_dist,
-                       double sigma_color,
-                       int postprocess_window, 
-                       double sigma_dist_fix, 
-                       double sigma_color_fix,
-                       double occ_thr,
-                       int upscale_averaging_radius,
-                       double upscale_sigma_dist,
-                       double upscale_sigma_color,
-                       double speed_up_thr) {
-
-  Flow flow = calcOpticalFlowSF(from, to, 
-                                layers,
-                                averaging_block_size,
-                                max_flow,
-                                sigma_dist,
-                                sigma_color,
-                                postprocess_window,
-                                sigma_dist_fix,
-                                sigma_color_fix,
-                                occ_thr,
-                                upscale_averaging_radius,
-                                upscale_sigma_dist,
-                                upscale_sigma_color,
-                                speed_up_thr);
-  flowX = flow.u;
-  flowY = flow.v;
+  resulted_flow = Mat(flow.size(), CV_32FC2);
+  int from_to[] = {0,1 , 1,0};
+  mixChannels(&flow, 1, &resulted_flow, 1, from_to, 2);
 }
 
 }

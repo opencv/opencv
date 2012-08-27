@@ -58,66 +58,67 @@ protected:
 
 CV_SimpleFlowTest::CV_SimpleFlowTest() {}
 
-static void readOpticalFlowFromFile(FILE* file, cv::Mat& flowX, cv::Mat& flowY) {
+static bool readOpticalFlowFromFile(FILE* file, cv::Mat& flow) {
   char header[5];
   if (fread(header, 1, 4, file) < 4 && (string)header != "PIEH") {
-    return;
+    return false;
   }
 
   int cols, rows;
   if (fread(&cols, sizeof(int), 1, file) != 1||
       fread(&rows, sizeof(int), 1, file) != 1) {
-    return;
+    return false;
   }
 
-  flowX = cv::Mat::zeros(rows, cols, CV_64F);
-  flowY = cv::Mat::zeros(rows, cols, CV_64F);
+  flow = cv::Mat::zeros(rows, cols, CV_32FC2);
 
   for (int i = 0; i < rows; ++i) {
     for (int j = 0; j < cols; ++j) {
-      float uPoint, vPoint;
-      if (fread(&uPoint, sizeof(float), 1, file) != 1 ||
-          fread(&vPoint, sizeof(float), 1, file) != 1) {
-        flowX.release();
-        flowY.release();
-        return;
+      cv::Vec2f flow_at_point;
+      if (fread(&(flow_at_point[0]), sizeof(float), 1, file) != 1 ||
+          fread(&(flow_at_point[1]), sizeof(float), 1, file) != 1) {
+        return false;
       }
-  
-      flowX.at<double>(i, j) = uPoint;
-      flowY.at<double>(i, j) = vPoint;
+      flow.at<cv::Vec2f>(i, j) = flow_at_point;
     }
   }
+
+  return true;
 }
 
-static bool isFlowCorrect(double u) {
+static bool isFlowCorrect(float u) {
   return !isnan(u) && (fabs(u) < 1e9);
 }
 
-static double calc_rmse(cv::Mat flow1X, cv::Mat flow1Y, cv::Mat flow2X, cv::Mat flow2Y) {
-  long double sum;
+static float calc_rmse(cv::Mat flow1, cv::Mat flow2) {
+  float sum;
   int counter = 0;
-  const int rows = flow1X.rows;
-  const int cols = flow1X.cols;
+  const int rows = flow1.rows;
+  const int cols = flow1.cols;
 
   for (int y = 0; y < rows; ++y) {
     for (int x = 0; x < cols; ++x) {
-      double u1 = flow1X.at<double>(y, x);
-      double v1 = flow1Y.at<double>(y, x);
-      double u2 = flow2X.at<double>(y, x);
-      double v2 = flow2Y.at<double>(y, x);
+      cv::Vec2f flow1_at_point = flow1.at<cv::Vec2f>(y, x);
+      cv::Vec2f flow2_at_point = flow2.at<cv::Vec2f>(y, x);
+
+      float u1 = flow1_at_point[0];
+      float v1 = flow1_at_point[1];
+      float u2 = flow2_at_point[0];
+      float v2 = flow2_at_point[1];
+
       if (isFlowCorrect(u1) && isFlowCorrect(u2) && isFlowCorrect(v1) && isFlowCorrect(v2)) {
         sum += (u1-u2)*(u1-u2) + (v1-v2)*(v1-v2);
         counter++;
       }
     }
   }
-  return sqrt((double)sum / (1e-9 + counter));
+  return sqrt(sum / (1e-9 + counter));
 }
 
 void CV_SimpleFlowTest::run(int) {
     int code = cvtest::TS::OK;
     
-    const double MAX_RMSE = 0.6;
+    const float MAX_RMSE = 0.6;
     const string frame1_path = ts->get_data_path() + "optflow/RubberWhale1.png";
     const string frame2_path = ts->get_data_path() + "optflow/RubberWhale2.png";
     const string gt_flow_path = ts->get_data_path() + "optflow/RubberWhale.flo";
@@ -151,7 +152,7 @@ void CV_SimpleFlowTest::run(int) {
       return;
     }
 
-    cv::Mat flowX_gt, flowY_gt;
+    cv::Mat flow_gt;
 
     FILE* gt_flow_file = fopen(gt_flow_path.c_str(), "rb");
     if (gt_flow_file == NULL) {
@@ -160,8 +161,8 @@ void CV_SimpleFlowTest::run(int) {
       ts->set_failed_test_info(cvtest::TS::FAIL_MISSING_TEST_DATA);
       return;
     }
-    readOpticalFlowFromFile(gt_flow_file, flowX_gt, flowY_gt);
-    if (flowX_gt.empty() || flowY_gt.empty()) {
+
+    if (!readOpticalFlowFromFile(gt_flow_file, flow_gt)) {
       ts->printf(cvtest::TS::LOG, "error while reading flow data from file %s",
                  gt_flow_path.c_str());
       ts->set_failed_test_info(cvtest::TS::FAIL_MISSING_TEST_DATA);
@@ -169,12 +170,12 @@ void CV_SimpleFlowTest::run(int) {
     }
     fclose(gt_flow_file);
 
-    cv::Mat flowX, flowY;
+    cv::Mat flow;
     cv::calcOpticalFlowSF(frame1, frame2, 
-                          flowX, flowY,
+                          flow,
                           3, 4, 2, 4.1, 25.5, 18, 55.0, 25.5, 0.35, 18, 55.0, 25.5, 10);
 
-    double rmse = calc_rmse(flowX_gt, flowY_gt, flowX, flowY);
+    float rmse = calc_rmse(flow_gt, flow);
     
     ts->printf(cvtest::TS::LOG, "Optical flow estimation RMSE for SimpleFlow algorithm : %lf\n",
                rmse);
