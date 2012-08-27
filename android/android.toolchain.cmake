@@ -189,6 +189,7 @@
 #     [~] libstdc++ and libsupc are removed from explicit link libraries
 #     [+] added CCache support (via NDK_CCACHE environment or cmake variable)
 #     [+] added gold linker support for NDK r8b
+#     [~] fixed mips linker flags for NDK r8b
 # ------------------------------------------------------------------------------
 
 cmake_minimum_required( VERSION 2.6.3 )
@@ -810,7 +811,7 @@ elseif( X86 )
  set( _CMAKE_C_FLAGS "-funwind-tables" )
 elseif( MIPS )
  set( _CMAKE_CXX_FLAGS "-fpic -Wno-psabi -fno-strict-aliasing -finline-functions -ffunction-sections -funwind-tables -fmessage-length=0 -fno-inline-functions-called-once -fgcse-after-reload -frerun-cse-after-loop -frename-registers" )
- set( _CMAKE_CXX_FLAGS "-fpic -Wno-psabi -fno-strict-aliasing -finline-functions -ffunction-sections -funwind-tables -fmessage-length=0 -fno-inline-functions-called-once -fgcse-after-reload -frerun-cse-after-loop -frename-registers" )
+ set( _CMAKE_C_FLAGS "-fpic -Wno-psabi -fno-strict-aliasing -finline-functions -ffunction-sections -funwind-tables -fmessage-length=0 -fno-inline-functions-called-once -fgcse-after-reload -frerun-cse-after-loop -frename-registers" )
  set( ANDROID_CXX_FLAGS "${ANDROID_CXX_FLAGS} -fsigned-char" )
 else()
  set( _CMAKE_CXX_FLAGS "" )
@@ -983,7 +984,7 @@ set( ANDROID_CXX_FLAGS    "${ANDROID_CXX_FLAGS}"    CACHE INTERNAL "Extra Androi
 set( ANDROID_LINKER_FLAGS "${ANDROID_LINKER_FLAGS}" CACHE INTERNAL "Extra Android linker flags")
 set( CMAKE_CXX_FLAGS           "${ANDROID_CXX_FLAGS} ${CMAKE_CXX_FLAGS}" )
 set( CMAKE_C_FLAGS             "${ANDROID_CXX_FLAGS} ${CMAKE_C_FLAGS}" )
-if( MIPS AND BUILD_WITH_ANDROID_NDK )
+if( MIPS AND BUILD_WITH_ANDROID_NDK AND ANDROID_NDK MATCHES "-r8$" )
  set( CMAKE_SHARED_LINKER_FLAGS "-Wl,-T,${ANDROID_NDK}/toolchains/${ANDROID_TOOLCHAIN_NAME}/mipself.xsc ${ANDROID_LINKER_FLAGS} ${CMAKE_SHARED_LINKER_FLAGS}" )
  set( CMAKE_MODULE_LINKER_FLAGS "-Wl,-T,${ANDROID_NDK}/toolchains/${ANDROID_TOOLCHAIN_NAME}/mipself.xsc ${ANDROID_LINKER_FLAGS} ${CMAKE_MODULE_LINKER_FLAGS}" )
  set( CMAKE_EXE_LINKER_FLAGS    "-Wl,-T,${ANDROID_NDK}/toolchains/${ANDROID_TOOLCHAIN_NAME}/mipself.x ${ANDROID_LINKER_FLAGS} ${CMAKE_EXE_LINKER_FLAGS}" )
