@@ -38,6 +38,8 @@
 
 //--------------------Google Code 2010 -- Yannick Verdie--------------------//
 
+// HS:
+// added: reading configuration for several controls from *.cfg
 
 #if defined(HAVE_QT)
 
