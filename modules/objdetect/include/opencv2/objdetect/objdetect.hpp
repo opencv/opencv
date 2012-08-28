@@ -411,7 +411,7 @@ protected:
     enum { DO_CANNY_PRUNING = 1, SCALE_IMAGE = 2,
            FIND_BIGGEST_OBJECT = 4, DO_ROUGH_SEARCH = 8 };
 
-    friend class CascadeClassifierInvoker;
+    friend struct CascadeClassifierInvoker;
 
     template<class FEval>
     friend int predictOrdered( CascadeClassifier& cascade, Ptr<FeatureEvaluator> &featureEvaluator, double& weight);
@@ -488,6 +488,28 @@ protected:
     Ptr<MaskGenerator> maskGenerator;
 };
 
+// ======================== soft cascade version ===================== //
+
+class CV_EXPORTS SoftCascade
+{
+public:
+    SoftCascade();
+    SoftCascade( const string& filename );
+    virtual ~SoftCascade();
+    bool load( const string& filename );
+
+    virtual void detectMultiScale(const Mat& image, const std::vector<cv::Rect>& rois, std::vector<cv::Rect>& objects, double factor = 1.05, int step = 4, int rejectfactor = 1);
+
+protected:
+    virtual void detectForOctave(int octave);
+    // virtual bool detectSingleScale( const Mat& image, int stripCount, Size processingRectSize,
+    //                                 int stripSize, int yStep, double factor, vector<Rect>& candidates,
+    //                                 vector<int>& rejectLevels, vector<double>& levelWeights, bool outputRejectLevels=false);
+    enum { BOOST = 0 };
+private:
+    struct Filds;
+    Filds* filds;
+};
 
 //////////////// HOG (Histogram-of-Oriented-Gradients) Descriptor and Object Detector //////////////
 
