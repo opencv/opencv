@@ -4,15 +4,15 @@ package org.opencv.core;
 public class TermCriteria {
 
     /**
-     * the maximum number of iterations or elements to compute
+     * the maximum of iterations or elements to compute
      */
     public static final int COUNT = 1;
     /**
-     * the maximum number of iterations or elements to compute
+     * the maximum of iterations or elements to compute
      */
     public static final int MAX_ITER = COUNT;
     /**
-     * the desired accuracy or change in parameters at which the iterative algorithm stops
+     * the desired accuracy threshold or change in parameters at which the iterative algorithm stops.
      */
     public static final int EPS = 2;
 
@@ -21,7 +21,7 @@ public class TermCriteria {
     public double epsilon;
 
     /**
-     * Termination criteria in iterative algorithms
+     * Termination criteria for iterative algorithms.
      * 
      * @param type
      *            the type of termination criteria: COUNT, EPS or COUNT + EPS
@@ -37,7 +37,7 @@ public class TermCriteria {
     }
 
     /**
-     * Termination criteria in iterative algorithms
+     * Termination criteria for iterative algorithms
      */
     public TermCriteria() {
         this(0, 0, 0.0);

@@ -1,21 +1,21 @@
 package org.opencv.android;
 
 /**
- * Installation callback interface
+ * Installation callback interface.
  */
 public interface InstallCallbackInterface
 {
     /**
-     * Target package name
-     * @return Return target package name
+     * Target package name.
+     * @return Return target package name.
      */
     public String getPackageName();
     /**
-     * Installation of package is approved
+     * Installation is approved.
      */
     public void install();
     /**
-     * Installation canceled
+     * Installation is canceled.
      */
     public void cancel();
 };

@@ -105,7 +105,7 @@ class AsyncServiceHelper
     }
     
     /**
-     * URI for OpenCV Manager on Google Play (Android Market)
+     *  URL of OpenCV Manager page on Google Play Market.
      */
     protected static final String OPEN_CV_SERVICE_URL = "market://details?id=org.opencv.engine";
 
@@ -263,7 +263,7 @@ class AsyncServiceHelper
             }
             else
             {
-                // If dependencies list is not defined or empty
+                // If dependencies list is not defined or empty.
                 String AbsLibraryPath = Path + File.separator + "libopencv_java.so";
                 result &= loadLibrary(AbsLibraryPath);
             }
