@@ -13,6 +13,12 @@ file(GLOB lib_hdrs *.h)
 #         Define the library target:
 # ----------------------------------------------------------------------------------
 
+add_definitions(-DPNG_CONFIGURE_LIBPNG)
+
+if(MSVC)
+  add_definitions(-D_CRT_SECURE_NO_DEPRECATE)
+endif(MSVC)
+
 add_library(${PNG_LIBRARY} STATIC ${lib_srcs} ${lib_hdrs})
 
 if(UNIX)
