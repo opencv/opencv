@@ -956,6 +956,7 @@ static int _capture_V4L (CvCaptureCAM_V4L *capture, char *deviceName)
      if (capture->memoryMap == MAP_FAILED) {
         fprintf( stderr, "HIGHGUI ERROR: V4L: Mapping Memmory from video source error: %s\n", strerror(errno));
         icvCloseCAM_V4L(capture);
+        return -1;
      }
 
      /* Set up video_mmap structure pointing to this memory mapped area so each image may be
@@ -1709,6 +1710,7 @@ static void icvCloseCAM_V4L( CvCaptureCAM_V4L* capture ){
      }
 #endif
 
+     free(capture->deviceName);
      //v4l2_free_ranges(capture);
      //cvFree((void **)capture);
    }
