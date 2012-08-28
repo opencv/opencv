@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
       package="org.opencv.samples.puzzle15"
-      android:versionCode="1"
-      android:versionName="1.0">
+      android:versionCode="21"
+      android:versionName="2.1">
 
     <supports-screens android:resizeable="true"
-                      android:smallScreens="true" 
-                      android:normalScreens="true" 
-                      android:largeScreens="true" 
+                      android:smallScreens="true"
+                      android:normalScreens="true"
+                      android:largeScreens="true"
                       android:anyDensity="true" />
-    
+
     <application android:icon="@drawable/icon" android:label="@string/app_name">
         <activity android:name=".puzzle15Activity"
                   android:label="@string/app_name"
@@ -21,7 +21,7 @@
             </intent-filter>
         </activity>
     </application>
-    
+
     <uses-sdk android:minSdkVersion="8" />
 
     <uses-permission android:name="android.permission.CAMERA"/>
