@@ -118,7 +118,7 @@ jpc_mqdec_t *jpc_mqdec_create(int maxctxs, jas_stream_t *in)
 	mqdec->in = in;
 	mqdec->maxctxs = maxctxs;
 	/* Allocate memory for the per-context state information. */
-	if (!(mqdec->ctxs = jas_malloc(mqdec->maxctxs * sizeof(jpc_mqstate_t *)))) {
+	if (!(mqdec->ctxs = jas_alloc2(mqdec->maxctxs, sizeof(jpc_mqstate_t *)))) {
 		goto error;
 	}
 	/* Set the current context to the first context. */
