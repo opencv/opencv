@@ -269,7 +269,7 @@ namespace
                     if (updateBackgroundModel_)
                     {
                         for (int i = 0; i < nfeatures; ++i)
-                            weights[i] *= 1.0f - learningRate_;
+                            weights[i] *= (float)(1.0f - learningRate_);
 
                         bool inserted = insertFeature(newFeatureColor, (float)learningRate_, colors, weights, nfeatures, maxFeatures_);
 

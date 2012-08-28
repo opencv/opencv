@@ -23,13 +23,13 @@ void generateMap(cv::Mat& map_x, cv::Mat& map_y, int remapMode)
             case HALF_SIZE:
                 if (i > map_x.cols*0.25 && i < map_x.cols*0.75 && j > map_x.rows*0.25 && j < map_x.rows*0.75)
                 {
-                    map_x.at<float>(j,i) = 2 * (i - map_x.cols * 0.25f) + 0.5f;
-                    map_y.at<float>(j,i) = 2 * (j - map_x.rows * 0.25f) + 0.5f;
+                    map_x.at<float>(j,i) = 2.f * (i - map_x.cols * 0.25f) + 0.5f;
+                    map_y.at<float>(j,i) = 2.f * (j - map_x.rows * 0.25f) + 0.5f;
                 }
                 else
                 {
-                    map_x.at<float>(j,i) = 0;
-                    map_y.at<float>(j,i) = 0;
+                    map_x.at<float>(j,i) = 0.f;
+                    map_y.at<float>(j,i) = 0.f;
                 }
                 break;
             case UPSIDE_DOWN:
