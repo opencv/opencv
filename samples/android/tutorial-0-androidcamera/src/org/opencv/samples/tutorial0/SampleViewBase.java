@@ -23,7 +23,7 @@ public abstract class SampleViewBase extends SurfaceView implements SurfaceHolde
     private int                 mFrameWidth;
     private int                 mFrameHeight;
     private byte[]              mFrame;
-    private boolean             mThreadRun;
+    private volatile boolean    mThreadRun;
     private byte[]              mBuffer;
     private SurfaceTexture      mSf;
 
@@ -55,9 +55,16 @@ public abstract class SampleViewBase extends SurfaceView implements SurfaceHolde
 
     public boolean openCamera() {
         Log.i(TAG, "openCamera");
-        mCamera = Camera.open();
+        mCamera = null;
+        try {
+            mCamera = Camera.open();
+        }
+        catch (Exception e){
+            Log.e(TAG, "Camera is not available (in use or does not exist)");
+            e.printStackTrace();
+        }
         if(mCamera == null) {
-            Log.e(TAG, "Can't open camera!");
+            Log.e(TAG, "Failed to open camera");
             return false;
         }
 
@@ -79,7 +86,6 @@ public abstract class SampleViewBase extends SurfaceView implements SurfaceHolde
         synchronized (this) {
             if (mCamera != null) {
                 mCamera.stopPreview();
-                mCamera.setPreviewCallback(null);
                 mCamera.release();
                 mCamera = null;
             }
@@ -91,6 +97,7 @@ public abstract class SampleViewBase extends SurfaceView implements SurfaceHolde
         Log.i(TAG, "setupCamera");
         synchronized (this) {
             if (mCamera != null) {
+                Log.i(TAG, "setupCamera - " + width + "x" + height);
                 Camera.Parameters params = mCamera.getParameters();
                 List<Camera.Size> sizes = params.getSupportedPreviewSizes();
                 mFrameWidth = width;
@@ -144,6 +151,14 @@ public abstract class SampleViewBase extends SurfaceView implements SurfaceHolde
 
     public void surfaceChanged(SurfaceHolder _holder, int format, int width, int height) {
         Log.i(TAG, "surfaceChanged");
+        // stop preview before making changes
+        try {
+            mCamera.stopPreview();
+        } catch (Exception e){
+          // ignore: tried to stop a non-existent preview
+        }
+
+        // start preview with new settings
         setupCamera(width, height);
     }
 
@@ -154,7 +169,6 @@ public abstract class SampleViewBase extends SurfaceView implements SurfaceHolde
 
     public void surfaceDestroyed(SurfaceHolder holder) {
         Log.i(TAG, "surfaceDestroyed");
-        releaseCamera();
     }
 
     /* The bitmap returned by this method shall be owned by the child and released in onPreviewStopped() */
@@ -184,6 +198,8 @@ public abstract class SampleViewBase extends SurfaceView implements SurfaceHolde
             synchronized (this) {
                 try {
                     this.wait();
+                    if (!mThreadRun)
+                        break;
                     bmp = processFrame(mFrame);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
