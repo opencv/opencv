@@ -1,4 +1,4 @@
-/* $Id: tif_pixarlog.c,v 1.35 2011-01-06 16:00:23 fwarmerdam Exp $ */
+/* $Id: tif_pixarlog.c,v 1.37 2012-05-24 23:21:45 fwarmerdam Exp $ */
 
 /*
  * Copyright (c) 1996-1997 Sam Leffler
@@ -120,9 +120,9 @@ horizontalAccumulateF(uint16 *wp, int n, int stride, float *op,
     if (n >= stride) {
 	mask = CODE_MASK;
 	if (stride == 3) {
-	    t0 = ToLinearF[cr = wp[0]];
-	    t1 = ToLinearF[cg = wp[1]];
-	    t2 = ToLinearF[cb = wp[2]];
+	    t0 = ToLinearF[cr = (wp[0] & mask)];
+	    t1 = ToLinearF[cg = (wp[1] & mask)];
+	    t2 = ToLinearF[cb = (wp[2] & mask)];
 	    op[0] = t0;
 	    op[1] = t1;
 	    op[2] = t2;
@@ -139,10 +139,10 @@ horizontalAccumulateF(uint16 *wp, int n, int stride, float *op,
 		op[2] = t2;
 	    }
 	} else if (stride == 4) {
-	    t0 = ToLinearF[cr = wp[0]];
-	    t1 = ToLinearF[cg = wp[1]];
-	    t2 = ToLinearF[cb = wp[2]];
-	    t3 = ToLinearF[ca = wp[3]];
+	    t0 = ToLinearF[cr = (wp[0] & mask)];
+	    t1 = ToLinearF[cg = (wp[1] & mask)];
+	    t2 = ToLinearF[cb = (wp[2] & mask)];
+	    t3 = ToLinearF[ca = (wp[3] & mask)];
 	    op[0] = t0;
 	    op[1] = t1;
 	    op[2] = t2;
@@ -186,9 +186,9 @@ horizontalAccumulate12(uint16 *wp, int n, int stride, int16 *op,
     if (n >= stride) {
 	mask = CODE_MASK;
 	if (stride == 3) {
-	    t0 = ToLinearF[cr = wp[0]] * SCALE12;
-	    t1 = ToLinearF[cg = wp[1]] * SCALE12;
-	    t2 = ToLinearF[cb = wp[2]] * SCALE12;
+	    t0 = ToLinearF[cr = (wp[0] & mask)] * SCALE12;
+	    t1 = ToLinearF[cg = (wp[1] & mask)] * SCALE12;
+	    t2 = ToLinearF[cb = (wp[2] & mask)] * SCALE12;
 	    op[0] = CLAMP12(t0);
 	    op[1] = CLAMP12(t1);
 	    op[2] = CLAMP12(t2);
@@ -205,10 +205,10 @@ horizontalAccumulate12(uint16 *wp, int n, int stride, int16 *op,
 		op[2] = CLAMP12(t2);
 	    }
 	} else if (stride == 4) {
-	    t0 = ToLinearF[cr = wp[0]] * SCALE12;
-	    t1 = ToLinearF[cg = wp[1]] * SCALE12;
-	    t2 = ToLinearF[cb = wp[2]] * SCALE12;
-	    t3 = ToLinearF[ca = wp[3]] * SCALE12;
+	    t0 = ToLinearF[cr = (wp[0] & mask)] * SCALE12;
+	    t1 = ToLinearF[cg = (wp[1] & mask)] * SCALE12;
+	    t2 = ToLinearF[cb = (wp[2] & mask)] * SCALE12;
+	    t3 = ToLinearF[ca = (wp[3] & mask)] * SCALE12;
 	    op[0] = CLAMP12(t0);
 	    op[1] = CLAMP12(t1);
 	    op[2] = CLAMP12(t2);
@@ -250,9 +250,9 @@ horizontalAccumulate16(uint16 *wp, int n, int stride, uint16 *op,
     if (n >= stride) {
 	mask = CODE_MASK;
 	if (stride == 3) {
-	    op[0] = ToLinear16[cr = wp[0]];
-	    op[1] = ToLinear16[cg = wp[1]];
-	    op[2] = ToLinear16[cb = wp[2]];
+	    op[0] = ToLinear16[cr = (wp[0] & mask)];
+	    op[1] = ToLinear16[cg = (wp[1] & mask)];
+	    op[2] = ToLinear16[cb = (wp[2] & mask)];
 	    n -= 3;
 	    while (n > 0) {
 		wp += 3;
@@ -263,10 +263,10 @@ horizontalAccumulate16(uint16 *wp, int n, int stride, uint16 *op,
 		op[2] = ToLinear16[(cb += wp[2]) & mask];
 	    }
 	} else if (stride == 4) {
-	    op[0] = ToLinear16[cr = wp[0]];
-	    op[1] = ToLinear16[cg = wp[1]];
-	    op[2] = ToLinear16[cb = wp[2]];
-	    op[3] = ToLinear16[ca = wp[3]];
+	    op[0] = ToLinear16[cr = (wp[0] & mask)];
+	    op[1] = ToLinear16[cg = (wp[1] & mask)];
+	    op[2] = ToLinear16[cb = (wp[2] & mask)];
+	    op[3] = ToLinear16[ca = (wp[3] & mask)];
 	    n -= 4;
 	    while (n > 0) {
 		wp += 4;
@@ -345,9 +345,9 @@ horizontalAccumulate8(uint16 *wp, int n, int stride, unsigned char *op,
     if (n >= stride) {
 	mask = CODE_MASK;
 	if (stride == 3) {
-	    op[0] = ToLinear8[cr = wp[0]];
-	    op[1] = ToLinear8[cg = wp[1]];
-	    op[2] = ToLinear8[cb = wp[2]];
+	    op[0] = ToLinear8[cr = (wp[0] & mask)];
+	    op[1] = ToLinear8[cg = (wp[1] & mask)];
+	    op[2] = ToLinear8[cb = (wp[2] & mask)];
 	    n -= 3;
 	    while (n > 0) {
 		n -= 3;
@@ -358,10 +358,10 @@ horizontalAccumulate8(uint16 *wp, int n, int stride, unsigned char *op,
 		op[2] = ToLinear8[(cb += wp[2]) & mask];
 	    }
 	} else if (stride == 4) {
-	    op[0] = ToLinear8[cr = wp[0]];
-	    op[1] = ToLinear8[cg = wp[1]];
-	    op[2] = ToLinear8[cb = wp[2]];
-	    op[3] = ToLinear8[ca = wp[3]];
+	    op[0] = ToLinear8[cr = (wp[0] & mask)];
+	    op[1] = ToLinear8[cg = (wp[1] & mask)];
+	    op[2] = ToLinear8[cb = (wp[2] & mask)];
+	    op[3] = ToLinear8[ca = (wp[3] & mask)];
 	    n -= 4;
 	    while (n > 0) {
 		n -= 4;
@@ -396,9 +396,9 @@ horizontalAccumulate8abgr(uint16 *wp, int n, int stride, unsigned char *op,
 	mask = CODE_MASK;
 	if (stride == 3) {
 	    op[0] = 0;
-	    t1 = ToLinear8[cb = wp[2]];
-	    t2 = ToLinear8[cg = wp[1]];
-	    t3 = ToLinear8[cr = wp[0]];
+	    t1 = ToLinear8[cb = (wp[2] & mask)];
+	    t2 = ToLinear8[cg = (wp[1] & mask)];
+	    t3 = ToLinear8[cr = (wp[0] & mask)];
 	    op[1] = t1;
 	    op[2] = t2;
 	    op[3] = t3;
@@ -416,10 +416,10 @@ horizontalAccumulate8abgr(uint16 *wp, int n, int stride, unsigned char *op,
 		op[3] = t3;
 	    }
 	} else if (stride == 4) {
-	    t0 = ToLinear8[ca = wp[3]];
-	    t1 = ToLinear8[cb = wp[2]];
-	    t2 = ToLinear8[cg = wp[1]];
-	    t3 = ToLinear8[cr = wp[0]];
+	    t0 = ToLinear8[ca = (wp[3] & mask)];
+	    t1 = ToLinear8[cb = (wp[2] & mask)];
+	    t2 = ToLinear8[cg = (wp[1] & mask)];
+	    t3 = ToLinear8[cr = (wp[0] & mask)];
 	    op[0] = t0;
 	    op[1] = t1;
 	    op[2] = t2;
@@ -673,7 +673,7 @@ PixarLogSetupDecode(TIFF* tif)
 				      td->td_rowsperstrip), sizeof(uint16));
 	if (tbuf_size == 0)
 		return (0);   /* TODO: this is an error return without error report through TIFFErrorExt */
-	sp->tbuf = (uint16 *) _TIFFmalloc(tbuf_size);
+	sp->tbuf = (uint16 *) _TIFFmalloc(tbuf_size+sizeof(uint16));
 	if (sp->tbuf == NULL)
 		return (0);
 	if (sp->user_datafmt == PIXARLOGDATAFMT_UNKNOWN)

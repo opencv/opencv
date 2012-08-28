@@ -1,4 +1,4 @@
-/* $Id: tif_getimage.c,v 1.78 2011-02-23 21:46:09 fwarmerdam Exp $ */
+/* $Id: tif_getimage.c,v 1.82 2012-06-06 00:17:49 fwarmerdam Exp $ */
 
 /*
  * Copyright (c) 1991-1997 Sam Leffler
@@ -692,6 +692,7 @@ gtTileSeparate(TIFFRGBAImage* img, uint32* raster, uint32 w, uint32 h)
 	unsigned char* p2;
 	unsigned char* pa;
 	tmsize_t tilesize;
+	tmsize_t bufsize;
 	int32 fromskew, toskew;
 	int alpha = img->alpha;
 	uint32 nrow;
@@ -699,12 +700,17 @@ gtTileSeparate(TIFFRGBAImage* img, uint32* raster, uint32 w, uint32 h)
         int colorchannels;
 
 	tilesize = TIFFTileSize(tif);  
-	buf = (unsigned char*) _TIFFmalloc((alpha?4:3)*tilesize);
+	bufsize = TIFFSafeMultiply(tmsize_t,alpha?4:3,tilesize);
+	if (bufsize == 0) {
+		TIFFErrorExt(tif->tif_clientdata, TIFFFileName(tif), "Integer overflow in %s", "gtTileSeparate");
+		return (0);
+	}
+	buf = (unsigned char*) _TIFFmalloc(bufsize);
 	if (buf == 0) {
 		TIFFErrorExt(tif->tif_clientdata, TIFFFileName(tif), "%s", "No space for tile buffer");
 		return (0);
 	}
-	_TIFFmemset(buf, 0, (alpha?4:3)*tilesize);
+	_TIFFmemset(buf, 0, bufsize);
 	p0 = buf;
 	p1 = p0 + tilesize;
 	p2 = p1 + tilesize;
@@ -917,17 +923,23 @@ gtStripSeparate(TIFFRGBAImage* img, uint32* raster, uint32 w, uint32 h)
 	uint32 rowsperstrip, offset_row;
 	uint32 imagewidth = img->width;
 	tmsize_t stripsize;
+	tmsize_t bufsize;
 	int32 fromskew, toskew;
 	int alpha = img->alpha;
 	int ret = 1, flip, colorchannels;
 
 	stripsize = TIFFStripSize(tif);  
-	p0 = buf = (unsigned char *)_TIFFmalloc((alpha?4:3)*stripsize);
+	bufsize = TIFFSafeMultiply(tmsize_t,alpha?4:3,stripsize);
+	if (bufsize == 0) {
+		TIFFErrorExt(tif->tif_clientdata, TIFFFileName(tif), "Integer overflow in %s", "gtStripSeparate");
+		return (0);
+	}
+	p0 = buf = (unsigned char *)_TIFFmalloc(bufsize);
 	if (buf == 0) {
 		TIFFErrorExt(tif->tif_clientdata, TIFFFileName(tif), "No space for tile buffer");
 		return (0);
 	}
-	_TIFFmemset(buf, 0, (alpha?4:3)*stripsize);
+	_TIFFmemset(buf, 0, bufsize);
 	p1 = p0 + stripsize;
 	p2 = p1 + stripsize;
 	pa = (alpha?(p2+stripsize):NULL);
@@ -1189,6 +1201,26 @@ DECLAREContigPutFunc(putgreytile)
 	for (x = w; x-- > 0;)
         {
 	    *cp++ = BWmap[*pp][0];
+            pp += samplesperpixel;
+        }
+	cp += toskew;
+	pp += fromskew;
+    }
+}
+
+/*
+ * 8-bit greyscale with associated alpha => colormap/RGBA
+ */
+DECLAREContigPutFunc(putagreytile)
+{
+    int samplesperpixel = img->samplesperpixel;
+    uint32** BWmap = img->BWmap;
+
+    (void) y;
+    while (h-- > 0) {
+	for (x = w; x-- > 0;)
+        {
+            *cp++ = BWmap[*pp][0] & (*(pp+1) << 24 | ~A1);
             pp += samplesperpixel;
         }
 	cp += toskew;
@@ -1489,6 +1521,26 @@ DECLARESepPutFunc(putRGBAAseparate8bittile)
 	(void) img; (void) x; (void) y; 
 	while (h-- > 0) {
 		UNROLL8(w, NOP, *cp++ = PACK4(*r++, *g++, *b++, *a++));
+		SKEW4(r, g, b, a, fromskew);
+		cp += toskew;
+	}
+}
+
+/*
+ * 8-bit unpacked CMYK samples => RGBA
+ */
+DECLARESepPutFunc(putCMYKseparate8bittile)
+{
+	(void) img; (void) y;
+	while (h-- > 0) {
+		uint32 rv, gv, bv, kv;
+		for (x = w; x-- > 0;) {
+			kv = 255 - *a++;
+			rv = (kv*(255-*r++))/255;
+			gv = (kv*(255-*g++))/255;
+			bv = (kv*(255-*b++))/255;
+			*cp++ = PACK4(rv,gv,bv,255);
+		}
 		SKEW4(r, g, b, a, fromskew);
 		cp += toskew;
 	}
@@ -2461,7 +2513,10 @@ PickContigCase(TIFFRGBAImage* img)
 						img->put.contig = put16bitbwtile;
 						break;
 					case 8:
-						img->put.contig = putgreytile;
+						if (img->alpha && img->samplesperpixel == 2)
+							img->put.contig = putagreytile;
+						else
+							img->put.contig = putgreytile;
 						break;
 					case 4:
 						img->put.contig = put4bitbwtile;
@@ -2540,58 +2595,65 @@ PickSeparateCase(TIFFRGBAImage* img)
 	img->get = TIFFIsTiled(img->tif) ? gtTileSeparate : gtStripSeparate;
 	img->put.separate = NULL;
 	switch (img->photometric) {
-		case PHOTOMETRIC_MINISWHITE:
-		case PHOTOMETRIC_MINISBLACK:
-                  /* greyscale images processed pretty much as RGB by gtTileSeparate */
-		case PHOTOMETRIC_RGB:
-			switch (img->bitspersample) {
-				case 8:
-					if (img->alpha == EXTRASAMPLE_ASSOCALPHA)
-						img->put.separate = putRGBAAseparate8bittile;
-					else if (img->alpha == EXTRASAMPLE_UNASSALPHA)
-					{
-						if (BuildMapUaToAa(img))
-							img->put.separate = putRGBUAseparate8bittile;
-					}
-					else
-						img->put.separate = putRGBseparate8bittile;
-					break;
-				case 16:
-					if (img->alpha == EXTRASAMPLE_ASSOCALPHA)
-					{
-						if (BuildMapBitdepth16To8(img))
-							img->put.separate = putRGBAAseparate16bittile;
-					}
-					else if (img->alpha == EXTRASAMPLE_UNASSALPHA)
-					{
-						if (BuildMapBitdepth16To8(img) &&
-						    BuildMapUaToAa(img))
-							img->put.separate = putRGBUAseparate16bittile;
-					}
-					else
-					{
-						if (BuildMapBitdepth16To8(img))
-							img->put.separate = putRGBseparate16bittile;
-					}
-					break;
+	case PHOTOMETRIC_MINISWHITE:
+	case PHOTOMETRIC_MINISBLACK:
+		/* greyscale images processed pretty much as RGB by gtTileSeparate */
+	case PHOTOMETRIC_RGB:
+		switch (img->bitspersample) {
+		case 8:
+			if (img->alpha == EXTRASAMPLE_ASSOCALPHA)
+				img->put.separate = putRGBAAseparate8bittile;
+			else if (img->alpha == EXTRASAMPLE_UNASSALPHA)
+			{
+				if (BuildMapUaToAa(img))
+					img->put.separate = putRGBUAseparate8bittile;
+			}
+			else
+				img->put.separate = putRGBseparate8bittile;
+			break;
+		case 16:
+			if (img->alpha == EXTRASAMPLE_ASSOCALPHA)
+			{
+				if (BuildMapBitdepth16To8(img))
+					img->put.separate = putRGBAAseparate16bittile;
+			}
+			else if (img->alpha == EXTRASAMPLE_UNASSALPHA)
+			{
+				if (BuildMapBitdepth16To8(img) &&
+				    BuildMapUaToAa(img))
+					img->put.separate = putRGBUAseparate16bittile;
+			}
+			else
+			{
+				if (BuildMapBitdepth16To8(img))
+					img->put.separate = putRGBseparate16bittile;
 			}
 			break;
-		case PHOTOMETRIC_YCBCR:
-			if ((img->bitspersample==8) && (img->samplesperpixel==3))
+		}
+		break;
+	case PHOTOMETRIC_SEPARATED:
+		if (img->bitspersample == 8 && img->samplesperpixel == 4)
+		{
+			img->alpha = 1; // Not alpha, but seems like the only way to get 4th band
+			img->put.separate = putCMYKseparate8bittile;
+		}
+		break;
+	case PHOTOMETRIC_YCBCR:
+		if ((img->bitspersample==8) && (img->samplesperpixel==3))
+		{
+			if (initYCbCrConversion(img)!=0)
 			{
-				if (initYCbCrConversion(img)!=0)
-				{
-					uint16 hs, vs;
-					TIFFGetFieldDefaulted(img->tif, TIFFTAG_YCBCRSUBSAMPLING, &hs, &vs);
-					switch ((hs<<4)|vs) {
-						case 0x11:
-							img->put.separate = putseparate8bitYCbCr11tile;
-							break;
-						/* TODO: add other cases here */
-					}
+				uint16 hs, vs;
+				TIFFGetFieldDefaulted(img->tif, TIFFTAG_YCBCRSUBSAMPLING, &hs, &vs);
+				switch ((hs<<4)|vs) {
+				case 0x11:
+					img->put.separate = putseparate8bitYCbCr11tile;
+					break;
+					/* TODO: add other cases here */
 				}
 			}
-			break;
+		}
+		break;
 	}
 	return ((img->get!=NULL) && (img->put.separate!=NULL));
 }
