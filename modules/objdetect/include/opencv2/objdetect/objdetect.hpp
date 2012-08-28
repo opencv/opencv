@@ -506,7 +506,19 @@ protected:
     //                                 int stripSize, int yStep, double factor, vector<Rect>& candidates,
     //                                 vector<int>& rejectLevels, vector<double>& levelWeights, bool outputRejectLevels=false);
     enum { BOOST = 0 };
+
 private:
+    struct Feature
+    {
+        cv::Rect rect;
+        int channel;
+    };
+
+    stuct Stamp
+    {
+
+    };
+
     struct Filds;
     Filds* filds;
 };
