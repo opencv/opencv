@@ -3662,7 +3662,7 @@ png_read_filter_row_paeth_multibyte_pixel(png_row_infop row_info, png_bytep row,
 
 #ifdef PNG_ARM_NEON
 
-#ifdef __linux__
+#if defined __linux__ && !defined __ANDROID__
 #include <stdio.h>
 #include <elf.h>
 #include <asm/hwcap.h>
@@ -3695,7 +3695,7 @@ static int png_have_hwcap(unsigned cap)
 static void
 png_init_filter_functions_neon(png_structp pp, unsigned int bpp)
 {
-#ifdef __linux__
+#if defined __linux__ && !defined __ANDROID__
    if (!png_have_hwcap(HWCAP_NEON))
       return;
 #endif
