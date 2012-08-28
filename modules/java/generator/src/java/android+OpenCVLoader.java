@@ -14,7 +14,7 @@ public class OpenCVLoader
 
     /**
      * Loads and initializes OpenCV library from current application package. Roughly, it's an analog of system.loadLibrary("opencv_java").
-     * @return Returns true is initialization of OpenCV was successful.
+     * @return returns true is initialization of OpenCV was successful.
      */
     public static boolean initDebug()
     {
@@ -23,10 +23,10 @@ public class OpenCVLoader
 
     /**
      * Loads and initializes OpenCV library using OpenCV Engine service.
-     * @param Version OpenCV Library version.
-     * @param AppContext Application context for connecting to service.
-     * @param Callback Object, that implements LoaderCallbackInterface for handling Connection status.
-     * @return Returns true if initialization of OpenCV is successful.
+     * @param Version OpenCV library version.
+     * @param AppContext application context for connecting to the service.
+     * @param Callback object, that implements LoaderCallbackInterface for handling the connection status.
+     * @return returns true if initialization of OpenCV is successful.
      */
     public static boolean initAsync(String Version, Context AppContext,
             LoaderCallbackInterface Callback)

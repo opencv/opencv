@@ -18,7 +18,7 @@ public interface LoaderCallbackInterface
      */
     static final int MARKET_ERROR = 2;
     /**
-     * OpenCV library installation has been canceled by user.
+     * OpenCV library installation has been canceled by the user.
      */
     static final int INSTALL_CANCELED = 3;
     /**
@@ -26,19 +26,19 @@ public interface LoaderCallbackInterface
      */
     static final int INCOMPATIBLE_MANAGER_VERSION = 4;
     /**
-     * OpenCV library initialization failed.
+     * OpenCV library initialization has failed.
      */
     static final int INIT_FAILED = 0xff;
 
     /**
-     * This callback method is called after OpenCV library initialization.
-     * @param status Status of initialization (see Initialization status constants).
+     * Callback method, called after OpenCV library initialization.
+     * @param status status of initialization (see initialization status constants).
      */
     public void onManagerConnected(int status);
 
     /**
-     * This callback method is called in case the package installation is needed.
-     * @param callback Answer object with approve and cancel methods and the package description.
+     * Callback method, called in case the package installation is needed.
+     * @param callback answer object with approve and cancel methods and the package description.
      */
     public void onPackageInstall(InstallCallbackInterface callback);
 };

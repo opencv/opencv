@@ -40,7 +40,7 @@ public abstract class BaseLoaderCallback implements LoaderCallbackInterface {
 
                 RestartMessage.show();
             } break;
-            /** OpenCV loader cannot start Google Play Market. **/
+            /** OpenCV loader can not start Google Play Market. **/
             case LoaderCallbackInterface.MARKET_ERROR:
             {
                 Log.d(TAG, "Google Play service is not installed! You can get it here");
