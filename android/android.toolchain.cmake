@@ -690,12 +690,13 @@ if( BUILD_WITH_ANDROID_NDK )
 endif()
 
 # ccache support
-__INIT_VARIABLE( NDK_CCACHE ENV_NDK_CCACHE )
-if( NDK_CCACHE )
- find_program(NDK_CCACHE "${NDK_CCACHE}" DOC "The path to ccache binary")
+__INIT_VARIABLE( _ndk_ccache NDK_CCACHE ENV_NDK_CCACHE )
+if( _ndk_ccache )
+ find_program( NDK_CCACHE "${_ndk_ccache}" DOC "The path to ccache binary")
 else()
- unset( NDK_CCACHE )
+ unset( NDK_CCACHE CACHE )
 endif()
+unset( _ndk_ccache )
 
 # specify the cross compiler
 if( NDK_CCACHE )
