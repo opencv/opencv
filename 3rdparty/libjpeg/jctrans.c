@@ -2,6 +2,7 @@
  * jctrans.c
  *
  * Copyright (C) 1995-1998, Thomas G. Lane.
+ * Modified 2000-2011 by Guido Vollbeding.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
@@ -76,6 +77,10 @@ jpeg_copy_critical_parameters (j_decompress_ptr srcinfo,
   dstinfo->image_height = srcinfo->image_height;
   dstinfo->input_components = srcinfo->num_components;
   dstinfo->in_color_space = srcinfo->jpeg_color_space;
+  dstinfo->jpeg_width = srcinfo->output_width;
+  dstinfo->jpeg_height = srcinfo->output_height;
+  dstinfo->min_DCT_h_scaled_size = srcinfo->min_DCT_h_scaled_size;
+  dstinfo->min_DCT_v_scaled_size = srcinfo->min_DCT_v_scaled_size;
   /* Initialize all parameters to default values */
   jpeg_set_defaults(dstinfo);
   /* jpeg_set_defaults may choose wrong colorspace, eg YCbCr if input is RGB.
@@ -158,25 +163,14 @@ LOCAL(void)
 transencode_master_selection (j_compress_ptr cinfo,
 			      jvirt_barray_ptr * coef_arrays)
 {
-  /* Although we don't actually use input_components for transcoding,
-   * jcmaster.c's initial_setup will complain if input_components is 0.
-   */
-  cinfo->input_components = 1;
   /* Initialize master control (includes parameter checking/processing) */
   jinit_c_master_control(cinfo, TRUE /* transcode only */);
 
   /* Entropy encoding: either Huffman or arithmetic coding. */
-  if (cinfo->arith_code) {
-    ERREXIT(cinfo, JERR_ARITH_NOTIMPL);
-  } else {
-    if (cinfo->progressive_mode) {
-#ifdef C_PROGRESSIVE_SUPPORTED
-      jinit_phuff_encoder(cinfo);
-#else
-      ERREXIT(cinfo, JERR_NOT_COMPILED);
-#endif
-    } else
-      jinit_huff_encoder(cinfo);
+  if (cinfo->arith_code)
+    jinit_arith_encoder(cinfo);
+  else {
+    jinit_huff_encoder(cinfo);
   }
 
   /* We need a special coefficient buffer controller. */
@@ -381,7 +375,7 @@ transencode_coef_controller (j_compress_ptr cinfo,
   buffer = (JBLOCKROW)
     (*cinfo->mem->alloc_large) ((j_common_ptr) cinfo, JPOOL_IMAGE,
 				C_MAX_BLOCKS_IN_MCU * SIZEOF(JBLOCK));
-  jzero_far((void FAR *) buffer, C_MAX_BLOCKS_IN_MCU * SIZEOF(JBLOCK));
+  FMEMZERO((void FAR *) buffer, C_MAX_BLOCKS_IN_MCU * SIZEOF(JBLOCK));
   for (i = 0; i < C_MAX_BLOCKS_IN_MCU; i++) {
     coef->dummy_buffer[i] = buffer + i;
   }
