@@ -219,7 +219,7 @@ PERF_TEST_P(ImagePair_Gray_NPts_WinSz_Levels_Iters, Video_PyrLKOpticalFlowSparse
 
     if (runOnGpu)
     {
-        cv::gpu::GpuMat d_pts(pts);
+        cv::gpu::GpuMat d_pts(pts.reshape(2, 1));
 
         cv::gpu::PyrLKOpticalFlow d_pyrLK;
         d_pyrLK.winSize = cv::Size(winSize, winSize);
