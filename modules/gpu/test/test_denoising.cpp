@@ -86,7 +86,7 @@ TEST_P(BilateralFilter, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, src.depth() == CV_32F ? 1e-3 : 1.0);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_ImgProc, BilateralFilter, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_Denoising, BilateralFilter, testing::Combine(
     ALL_DEVICES,
     testing::Values(cv::Size(128, 128), cv::Size(113, 113), cv::Size(639, 481)),
     testing::Values(MatType(CV_8UC1), MatType(CV_8UC3), MatType(CV_32FC1), MatType(CV_32FC3))
@@ -134,7 +134,7 @@ TEST_P(NonLocalMeans, Regression)
     EXPECT_MAT_NEAR(gray_gold, dgray, 1e-4);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_ImgProc, NonLocalMeans, ALL_DEVICES);
+INSTANTIATE_TEST_CASE_P(GPU_Denoising, NonLocalMeans, ALL_DEVICES);
 
 
 #endif // HAVE_CUDA
