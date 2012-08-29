@@ -75,6 +75,11 @@ cv::Mat readImage(const std::string& fileName, int flags = cv::IMREAD_COLOR);
 cv::Mat readImageType(const std::string& fname, int type);
 
 //////////////////////////////////////////////////////////////////////
+// Image dumping
+
+void dumpImage(const std::string& fileName, const cv::Mat& image);
+
+//////////////////////////////////////////////////////////////////////
 // Gpu devices
 
 //! return true if device supports specified feature and gpu module was built with support the feature.

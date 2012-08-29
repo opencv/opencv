@@ -128,6 +128,14 @@ Mat readImageType(const std::string& fname, int type)
 }
 
 //////////////////////////////////////////////////////////////////////
+// Image dumping
+
+void dumpImage(const std::string& fileName, const cv::Mat& image)
+{
+    cv::imwrite(TS::ptr()->get_data_path() + fileName, image);
+}
+
+//////////////////////////////////////////////////////////////////////
 // Gpu devices
 
 bool supportFeature(const DeviceInfo& info, FeatureSet feature)

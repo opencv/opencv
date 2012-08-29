@@ -423,7 +423,7 @@ PERF_TEST_P(Video, Video_FGDStatModel, Values("gpu/video/768x576.avi", "gpu/vide
 
 DEF_PARAM_TEST(Video_Cn_LearningRate, string, int, double);
 
-PERF_TEST_P(Video_Cn_LearningRate, Video_MOG, Combine(Values("gpu/video/768x576.avi", "gpu/video/1920x1080.avi"), Values(1, 3, 4), Values(0.0, 0.01)))
+PERF_TEST_P(Video_Cn_LearningRate, Video_MOG, Combine(Values("gpu/video/768x576.avi", "gpu/video/1920x1080.avi"), GPU_CHANNELS_1_3_4, Values(0.0, 0.01)))
 {
     string inputFile = perf::TestBase::getDataPath(GET_PARAM(0));
     int cn = GET_PARAM(1);
@@ -511,7 +511,7 @@ PERF_TEST_P(Video_Cn_LearningRate, Video_MOG, Combine(Values("gpu/video/768x576.
 
 DEF_PARAM_TEST(Video_Cn, string, int);
 
-PERF_TEST_P(Video_Cn, Video_MOG2, Combine(Values("gpu/video/768x576.avi", "gpu/video/1920x1080.avi"), Values(1, 3, 4)))
+PERF_TEST_P(Video_Cn, Video_MOG2, Combine(Values("gpu/video/768x576.avi", "gpu/video/1920x1080.avi"), GPU_CHANNELS_1_3_4))
 {
     string inputFile = perf::TestBase::getDataPath(GET_PARAM(0));
     int cn = GET_PARAM(1);
@@ -596,7 +596,7 @@ PERF_TEST_P(Video_Cn, Video_MOG2, Combine(Values("gpu/video/768x576.avi", "gpu/v
 //////////////////////////////////////////////////////
 // MOG2GetBackgroundImage
 
-PERF_TEST_P(Video_Cn, Video_MOG2GetBackgroundImage, Combine(Values("gpu/video/768x576.avi", "gpu/video/1920x1080.avi"), Values(1, 3, 4)))
+PERF_TEST_P(Video_Cn, Video_MOG2GetBackgroundImage, Combine(Values("gpu/video/768x576.avi", "gpu/video/1920x1080.avi"), GPU_CHANNELS_1_3_4))
 {
     string inputFile = perf::TestBase::getDataPath(GET_PARAM(0));
     int cn = GET_PARAM(1);
@@ -676,7 +676,7 @@ PERF_TEST_P(Video_Cn, Video_MOG2GetBackgroundImage, Combine(Values("gpu/video/76
 //////////////////////////////////////////////////////
 // VIBE
 
-PERF_TEST_P(Video_Cn, Video_VIBE, Combine(Values("gpu/video/768x576.avi", "gpu/video/1920x1080.avi"), Values(1, 3, 4)))
+PERF_TEST_P(Video_Cn, Video_VIBE, Combine(Values("gpu/video/768x576.avi", "gpu/video/1920x1080.avi"), GPU_CHANNELS_1_3_4))
 {
     string inputFile = perf::TestBase::getDataPath(GET_PARAM(0));
     int cn = GET_PARAM(1);
@@ -739,7 +739,7 @@ PERF_TEST_P(Video_Cn, Video_VIBE, Combine(Values("gpu/video/768x576.avi", "gpu/v
 
 DEF_PARAM_TEST(Video_Cn_MaxFeatures, string, int, int);
 
-PERF_TEST_P(Video_Cn_MaxFeatures, Video_GMG, Combine(Values("gpu/video/768x576.avi", "gpu/video/1920x1080.avi"), Values(1, 3, 4), Values(20, 40, 60)))
+PERF_TEST_P(Video_Cn_MaxFeatures, Video_GMG, Combine(Values("gpu/video/768x576.avi", "gpu/video/1920x1080.avi"), GPU_CHANNELS_1_3_4, Values(20, 40, 60)))
 {
     std::string inputFile = perf::TestBase::getDataPath(GET_PARAM(0));
     int cn = GET_PARAM(1);

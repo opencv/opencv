@@ -239,8 +239,8 @@ void cv::gpu::HoughCircles(const GpuMat& src, GpuMat& circles, HoughCirclesBuf& 
 
                     for(size_t j = 0; j < m.size(); ++j)
                     {
-                        float dx = p.x - m[j].x;
-                        float dy = p.y - m[j].y;
+                        float dx = (float)(p.x - m[j].x);
+                        float dy = (float)(p.y - m[j].y);
 
                         if (dx * dx + dy * dy < minDist)
                         {

@@ -1285,6 +1285,8 @@ void cv::medianBlur( InputArray _src0, OutputArray _dst, int ksize )
                                    Bilateral Filtering
 \****************************************************************************************/
 
+#undef CV_SSE3
+
 namespace cv
 {
 

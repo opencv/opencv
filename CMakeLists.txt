@@ -197,7 +197,6 @@ OCV_OPTION(ENABLE_SSE41               "Enable SSE4.1 instructions"              
 OCV_OPTION(ENABLE_SSE42               "Enable SSE4.2 instructions"                               OFF  IF (CMAKE_COMPILER_IS_GNUCXX AND (X86 OR X86_64)) )
 OCV_OPTION(ENABLE_NOISY_WARNINGS      "Show all warnings even if they are too noisy"             OFF )
 OCV_OPTION(OPENCV_WARNINGS_ARE_ERRORS "Treat warnings as errors"                                 OFF )
-OCV_OPTION(ENABLE_MULTI_PROCESSOR_COMPILATION "Enabling multi-processory compilation"            OFF IF MSVC)
 
 
 # uncategorized options
