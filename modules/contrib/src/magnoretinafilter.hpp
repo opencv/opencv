@@ -190,10 +190,52 @@ private:
     // varialbles
     float _temporalCoefficient;
 
-    // amacrine cells filter : high pass temporal filter
-    void _amacrineCellsComputing(const float *ONinput, const float *OFFinput);
+	// amacrine cells filter : high pass temporal filter
+	void _amacrineCellsComputing(const float *ONinput, const float *OFFinput);
+#ifdef HAVE_TBB
+/******************************************************
+** IF TBB is useable, then, main loops are parallelized using these functors
+** ==> main idea paralellise main filters loops, then, only the most used methods are parallelized... TODO : increase the number of parallelised methods as necessary
+** ==> functors names = Parallel_$$$ where $$$= the name of the serial method that is parallelised
+** ==> functors constructors can differ from the parameters used with their related serial functions
+*/
+    class Parallel_amacrineCellsComputing
+    {
+    private:
+	const float *OPL_ON, *OPL_OFF;
+        float *previousInput_ON, *previousInput_OFF, *amacrinCellsTempOutput_ON, *amacrinCellsTempOutput_OFF;
+	const float temporalCoefficient;
+    public:
+        Parallel_amacrineCellsComputing(const float *OPL_ON_PTR, const float *OPL_OFF_PTR, float *previousInput_ON_PTR, float *previousInput_OFF_PTR, float *amacrinCellsTempOutput_ON_PTR, float *amacrinCellsTempOutput_OFF_PTR, float temporalCoefficientVal)
+        :OPL_ON(OPL_ON_PTR), OPL_OFF(OPL_OFF_PTR), previousInput_ON(previousInput_ON_PTR), previousInput_OFF(previousInput_OFF_PTR), amacrinCellsTempOutput_ON(amacrinCellsTempOutput_ON_PTR), amacrinCellsTempOutput_OFF(amacrinCellsTempOutput_OFF_PTR), temporalCoefficient(temporalCoefficientVal) {}
+        
+        void operator()( const tbb::blocked_range<size_t>& r ) const {
+	register const float *OPL_ON_PTR=OPL_ON+r.begin();
+	register const float *OPL_OFF_PTR=OPL_OFF+r.begin();
+	register float *previousInput_ON_PTR= previousInput_ON+r.begin();
+	register float *previousInput_OFF_PTR= previousInput_OFF+r.begin();
+	register float *amacrinCellsTempOutput_ON_PTR= amacrinCellsTempOutput_ON+r.begin();
+	register float *amacrinCellsTempOutput_OFF_PTR= amacrinCellsTempOutput_OFF+r.begin();
 
+	for (unsigned int IDpixel=r.begin() ; IDpixel!=r.end(); ++IDpixel)
+	{
 
+		/* Compute ON and OFF amacrin cells high pass temporal filter */
+		float magnoXonPixelResult = temporalCoefficient*(*amacrinCellsTempOutput_ON_PTR+ *OPL_ON_PTR-*previousInput_ON_PTR);
+		*(amacrinCellsTempOutput_ON_PTR++)=((float)(magnoXonPixelResult>0))*magnoXonPixelResult;
+
+		float magnoXoffPixelResult = temporalCoefficient*(*amacrinCellsTempOutput_OFF_PTR+ *OPL_OFF_PTR-*previousInput_OFF_PTR);
+		*(amacrinCellsTempOutput_OFF_PTR++)=((float)(magnoXoffPixelResult>0))*magnoXoffPixelResult;
+
+		/* prepare next loop */
+		*(previousInput_ON_PTR++)=*(OPL_ON_PTR++);
+		*(previousInput_OFF_PTR++)=*(OPL_OFF_PTR++);
+
+	}
+        }
+
+    };
+#endif
 };
 
 }

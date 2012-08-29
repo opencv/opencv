@@ -248,9 +248,7 @@ protected:
 	void _getNormalizedContoursImage(const float *inputFrame, float *outputFrame);
 	// -> special adaptive filters dedicated to low pass filtering on the chrominance (skeeps filtering on the edges)
 	void _adaptiveSpatialLPfilter(const float *inputFrame,  float *outputFrame);
-	void _adaptiveHorizontalCausalFilter_addInput(const float *inputFrame, float *outputFrame, const unsigned int IDrowStart, const unsigned int IDrowEnd);
-	void _adaptiveHorizontalAnticausalFilter(float *outputFrame, const unsigned int IDrowStart, const unsigned int IDrowEnd);
-	void _adaptiveVerticalCausalFilter(float *outputFrame, const unsigned int IDcolumnStart, const unsigned int IDcolumnEnd);
+	void _adaptiveHorizontalCausalFilter_addInput(const float *inputFrame, float *outputFrame, const unsigned int IDrowStart, const unsigned int IDrowEnd); // TBB parallelized
 	void _adaptiveVerticalAnticausalFilter_multGain(float *outputFrame, const unsigned int IDcolumnStart, const unsigned int IDcolumnEnd);
 	void _computeGradient(const float *luminance);
 	void _normalizeOutputs_0_maxOutputValue(void);
@@ -258,6 +256,84 @@ protected:
 	// color space transform
 	void _applyImageColorSpaceConversion(const std::valarray<float> &inputFrame, std::valarray<float> &outputFrame, const float *transformTable);
 
+#ifdef HAVE_TBB
+/******************************************************
+** IF TBB is useable, then, main loops are parallelized using these functors
+** ==> main idea paralellise main filters loops, then, only the most used methods are parallelized... TODO : increase the number of parallelised methods as necessary
+** ==> functors names = Parallel_$$$ where $$$= the name of the serial method that is parallelised
+** ==> functors constructors can differ from the parameters used with their related serial functions
+*/
+
+/* Template :
+    class 
+    {
+    private:
+
+    public:
+         Parallel_()
+         : {}
+    
+         void operator()( const tbb::blocked_range<size_t>& r ) const {
+
+        }
+    }:
+*/
+    class Parallel_adaptiveHorizontalCausalFilter_addInput
+    {
+    private:
+	float *outputFrame;
+	const float *inputFrame, *imageGradient;
+	const unsigned int nbColumns;
+    public:
+         Parallel_adaptiveHorizontalCausalFilter_addInput(const float *inputImg, float *bufferToProcess, const float *imageGrad, const unsigned int nbCols)
+         :outputFrame(bufferToProcess), inputFrame(inputImg), imageGradient(imageGrad), nbColumns(nbCols) {};
+    
+         void operator()( const tbb::blocked_range<size_t>& r ) const {
+            register float* outputPTR=outputFrame+r.begin()*nbColumns;
+	    register const float* inputPTR=inputFrame+r.begin()*nbColumns;
+	    register const float *imageGradientPTR= imageGradient+r.begin()*nbColumns;
+	    for (unsigned int IDrow=r.begin(); IDrow!=r.end(); ++IDrow)
+	    {
+		register float result=0;
+		for (unsigned int index=0; index<nbColumns; ++index)
+		{
+			result = *(inputPTR++) + (*imageGradientPTR++)* result;
+			*(outputPTR++) = result;
+		}
+	    }
+        }
+    };
+
+    class Parallel_adaptiveVerticalAnticausalFilter_multGain
+    {
+    private:
+        float *outputFrame;
+	const float *imageGradient;
+        const unsigned int nbRows, nbColumns;
+        const float filterParam_gain;
+    public:        
+        Parallel_adaptiveVerticalAnticausalFilter_multGain(float *bufferToProcess, const float *imageGrad, const unsigned int nbRws, const unsigned int nbCols, const float  gain)
+        :outputFrame(bufferToProcess), imageGradient(imageGrad), nbRows(nbRws), nbColumns(nbCols), filterParam_gain(gain){}
+        
+        void operator()( const tbb::blocked_range<size_t>& r ) const {
+            float* offset=outputFrame+nbColumns*nbRows-nbColumns;
+            const float* gradOffset= imageGradient+nbColumns*nbRows-nbColumns;
+    	    for (unsigned int IDcolumn=r.begin(); IDcolumn!=r.end(); ++IDcolumn)
+	    {
+		register float result=0;
+		register float *outputPTR=offset+IDcolumn;
+		register const float *imageGradientPTR=gradOffset+IDcolumn;
+		for (unsigned int index=0; index<nbRows; ++index)
+		{
+			result = *(outputPTR) + *(imageGradientPTR) * result;
+			*(outputPTR) = filterParam_gain*result;
+			outputPTR-=nbColumns;
+			imageGradientPTR-=nbColumns;
+		}
+	    }
+        }
+    };
+#endif
 };
 }
 

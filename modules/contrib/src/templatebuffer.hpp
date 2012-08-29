@@ -70,6 +70,38 @@
 #include <iostream>
 #include <cmath>
 
+
+//// If TBB is used
+// ==> then include required includes 
+#ifdef HAVE_TBB
+#include "tbb/parallel_for.h"
+#include "tbb/blocked_range.h"
+
+// ==> declare usefull generic tools
+template <class type>
+class Parallel_clipBufferValues
+{
+private:
+    type *bufferToClip;
+    const type minValue, maxValue;
+    
+public:
+    Parallel_clipBufferValues(type* bufferToProcess, const type min, const type max)
+    : bufferToClip(bufferToProcess), minValue(min), maxValue(max){}
+
+    void operator()( const tbb::blocked_range<size_t>& r ) const {
+	register type *inputOutputBufferPTR=bufferToClip+r.begin();
+        for (register unsigned int jf = r.begin(); jf != r.end(); ++jf, ++inputOutputBufferPTR)
+	{
+	    if (*inputOutputBufferPTR>maxValue)
+		*inputOutputBufferPTR=maxValue;
+	    else if (*inputOutputBufferPTR<minValue)
+		*inputOutputBufferPTR=minValue;
+	}
+    }
+};
+#endif
+
 //#define __TEMPLATEBUFFERDEBUG //define TEMPLATEBUFFERDEBUG in order to display debug information
 
 namespace cv
@@ -351,21 +383,25 @@ public:
             }
         }
 
-        std::cout<<"Tdebug"<<std::endl;
-        std::cout<<"deltaL="<<deltaL<<", deltaH="<<deltaH<<std::endl;
-        std::cout<<"this->max()"<<this->max()<<"maxThreshold="<<maxThreshold<<"updatedHighValue="<<updatedHighValue<<std::endl;
-        std::cout<<"this->min()"<<this->min()<<"minThreshold="<<minThreshold<<"updatedLowValue="<<updatedLowValue<<std::endl;
-        // clipping values outside than the updated thresholds
-        bufferPTR=this->Buffer();
-        for (unsigned int i=0;i<this->size();++i, ++bufferPTR)
-        {
-            if (*bufferPTR<updatedLowValue)
-                *bufferPTR=updatedLowValue;
-            else if (*bufferPTR>updatedHighValue)
-                *bufferPTR=updatedHighValue;
-        }
+		std::cout<<"Tdebug"<<std::endl;
+		std::cout<<"deltaL="<<deltaL<<", deltaH="<<deltaH<<std::endl;
+		std::cout<<"this->max()"<<this->max()<<"maxThreshold="<<maxThreshold<<"updatedHighValue="<<updatedHighValue<<std::endl;
+		std::cout<<"this->min()"<<this->min()<<"minThreshold="<<minThreshold<<"updatedLowValue="<<updatedLowValue<<std::endl;
+		// clipping values outside than the updated thresholds
+                bufferPTR=this->Buffer();
+#ifdef HAVE_TBB // call the TemplateBuffer TBB clipping method
+                tbb::parallel_for(tbb::blocked_range<size_t>(0,this->size()), Parallel_clipBufferValues<type>(bufferPTR, updatedLowValue, updatedHighValue), tbb::auto_partitioner());
+#else
 
-        normalizeGrayOutput_0_maxOutputValue(this->Buffer(), this->size(), maxOutputValue);
+		for (unsigned int i=0;i<this->size();++i, ++bufferPTR)
+		{
+			if (*bufferPTR<updatedLowValue)
+				*bufferPTR=updatedLowValue;
+			else if (*bufferPTR>updatedHighValue)
+				*bufferPTR=updatedHighValue;
+		}
+#endif
+		normalizeGrayOutput_0_maxOutputValue(this->Buffer(), this->size(), maxOutputValue);
 
     }
 

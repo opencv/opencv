@@ -89,7 +89,7 @@ RetinaColor::RetinaColor(const unsigned int NBrows, const unsigned int NBcolumns
  _demultiplexedColorFrame(NBrows*NBcolumns*3),
  _chrominance(NBrows*NBcolumns*3),
  _colorLocalDensity(NBrows*NBcolumns*3),
- _imageGradient(NBrows*NBcolumns*3)
+ _imageGradient(NBrows*NBcolumns*2)
 {
 	// link to parent buffers (let's recycle !)
 	_luminance=&_filterOutput;
@@ -126,12 +126,12 @@ RetinaColor::~RetinaColor()
 void RetinaColor::clearAllBuffers()
 {
 	BasicRetinaFilter::clearAllBuffers();
-	_tempMultiplexedFrame=0;
-	_demultiplexedTempBuffer=0;
+	_tempMultiplexedFrame=0.f;
+	_demultiplexedTempBuffer=0.f;
 
-	_demultiplexedColorFrame=0;
-	_chrominance=0;
-	_imageGradient=1;
+	_demultiplexedColorFrame=0.f;
+	_chrominance=0.f;
+	_imageGradient=0.57f;
 }
 
 /**
@@ -149,7 +149,7 @@ void RetinaColor::resize(const unsigned int NBrows, const unsigned int NBcolumns
 	_demultiplexedColorFrame.resize(NBrows*NBcolumns*3);
 	_chrominance.resize(NBrows*NBcolumns*3);
 	_colorLocalDensity.resize(NBrows*NBcolumns*3);
-	_imageGradient.resize(NBrows*NBcolumns*3);
+	_imageGradient.resize(NBrows*NBcolumns*2);
 
 	// link to parent buffers (let's recycle !)
 	_luminance=&_filterOutput;
@@ -325,15 +325,15 @@ void RetinaColor::runColorDemultiplexing(const std::valarray<float> &multiplexed
 
 	}else
 	{
-		register const float *multiplexedColorFramePTR1= get_data(multiplexedColorFrame);
-		for (unsigned int indexc=0; indexc<_filterOutput.getNBpixels() ; ++indexc, ++chrominancePTR, ++colorLocalDensityPTR, ++luminance, ++multiplexedColorFramePTR1)
+		register const float *multiplexedColorFramePTR= get_data(multiplexedColorFrame);
+		for (unsigned int indexc=0; indexc<_filterOutput.getNBpixels() ; ++indexc, ++chrominancePTR, ++colorLocalDensityPTR, ++luminance, ++multiplexedColorFramePTR)
 		{
 			// normalize by photoreceptors density
 			float Cr=*(chrominancePTR)*_colorLocalDensity[indexc];
 			float Cg=*(chrominancePTR+_filterOutput.getNBpixels())*_colorLocalDensity[indexc+_filterOutput.getNBpixels()];
 			float Cb=*(chrominancePTR+_filterOutput.getDoubleNBpixels())*_colorLocalDensity[indexc+_filterOutput.getDoubleNBpixels()];
 			*luminance=(Cr+Cg+Cb)*_pG;
-			_demultiplexedTempBuffer[_colorSampling[indexc]] = *multiplexedColorFramePTR1 - *luminance;
+			_demultiplexedTempBuffer[_colorSampling[indexc]] = *multiplexedColorFramePTR - *luminance;
 
 		}
 
@@ -349,8 +349,9 @@ void RetinaColor::runColorDemultiplexing(const std::valarray<float> &multiplexed
 		_adaptiveSpatialLPfilter(&_demultiplexedTempBuffer[0]+_filterOutput.getNBpixels(), &_demultiplexedColorFrame[0]+_filterOutput.getNBpixels());
 		_adaptiveSpatialLPfilter(&_demultiplexedTempBuffer[0]+_filterOutput.getDoubleNBpixels(), &_demultiplexedColorFrame[0]+_filterOutput.getDoubleNBpixels());
 
-		for (unsigned int index=0; index<_filterOutput.getNBpixels()*3 ; ++index) // cette boucle pourrait �tre supprimee en passant la densit� � la fonction de filtrage
-			_demultiplexedColorFrame[index] /= _chrominance[index];
+/*		for (unsigned int index=0; index<_filterOutput.getNBpixels()*3 ; ++index) // cette boucle pourrait �tre supprimee en passant la densit� � la fonction de filtrage
+			_demultiplexedColorFrame[index] /= _chrominance[index];*/
+		_demultiplexedColorFrame/=_chrominance; // more optimal ;o)
 
 		// compute and substract the residual luminance
 		for (unsigned int index=0; index<_filterOutput.getNBpixels() ; ++index)
@@ -432,6 +433,9 @@ void RetinaColor::clipRGBOutput_0_maxInputValue(float *inputOutputBuffer, const 
 	if (inputOutputBuffer==NULL)
 		inputOutputBuffer= &_demultiplexedColorFrame[0];
 
+#ifdef HAVE_TBB // call the TemplateBuffer TBB clipping method
+        tbb::parallel_for(tbb::blocked_range<size_t>(0,_filterOutput.getNBpixels()*3), Parallel_clipBufferValues<float>(inputOutputBuffer, 0, maxInputValue), tbb::auto_partitioner());
+#else
 	register float *inputOutputBufferPTR=inputOutputBuffer;
 	for (register unsigned int jf = 0; jf < _filterOutput.getNBpixels()*3; ++jf, ++inputOutputBufferPTR)
 	{
@@ -440,6 +444,7 @@ void RetinaColor::clipRGBOutput_0_maxInputValue(float *inputOutputBuffer, const 
 		else if (*inputOutputBufferPTR<0)
 			*inputOutputBufferPTR=0;
 	}
+#endif
 	//std::cout<<"RetinaColor::...normalizing RGB frame OK"<<std::endl;
 }
 
@@ -535,8 +540,8 @@ void RetinaColor::_applyRIFfilter(const float *sourceBuffer, float *destinationB
 
 void RetinaColor::_getNormalizedContoursImage(const float *inputFrame, float *outputFrame)
 {
-	float maxValue=0;
-	float normalisationFactor=1.f/3;
+	float maxValue=0.f;
+	float normalisationFactor=1.f/3.f;
 	for (unsigned int indexr=1 ; indexr<_filterOutput.getNBrows()-1; ++indexr)
 	{
 		for (unsigned int indexc=1 ; indexc<_filterOutput.getNBcolumns()-1; ++indexc)
@@ -564,19 +569,23 @@ void RetinaColor::_adaptiveSpatialLPfilter(const float *inputFrame, float *outpu
 	_gain = (1-0.57f)*(1-0.57f)*(1-0.06f)*(1-0.06f);
 
 	// launch the serie of 1D directional filters in order to compute the 2D low pass filter
+	// -> horizontal filters work with the first layer of imageGradient
 	_adaptiveHorizontalCausalFilter_addInput(inputFrame, outputFrame, 0, _filterOutput.getNBrows());
-	_adaptiveHorizontalAnticausalFilter(outputFrame, 0, _filterOutput.getNBrows());
-	_adaptiveVerticalCausalFilter(outputFrame, 0, _filterOutput.getNBcolumns());
+	_horizontalAnticausalFilter_Irregular(outputFrame, 0, _filterOutput.getNBrows(), &_imageGradient[0]);
+	// -> horizontal filters work with the second layer of imageGradient
+	_verticalCausalFilter_Irregular(outputFrame, 0, _filterOutput.getNBcolumns(), &_imageGradient[0]+_filterOutput.getNBpixels());
 	_adaptiveVerticalAnticausalFilter_multGain(outputFrame, 0, _filterOutput.getNBcolumns());
-
 }
 
-//  horizontal causal filter which adds the input inside
+//  horizontal causal filter which adds the input inside... replaces the parent _horizontalCausalFilter_Irregular_addInput by avoiding a product for each pixel
 void RetinaColor::_adaptiveHorizontalCausalFilter_addInput(const float *inputFrame, float *outputFrame, unsigned int IDrowStart, unsigned int IDrowEnd)
 {
+#ifdef HAVE_TBB
+        tbb::parallel_for(tbb::blocked_range<size_t>(IDrowStart,IDrowEnd), Parallel_adaptiveHorizontalCausalFilter_addInput(inputFrame, outputFrame, &_imageGradient[0], _filterOutput.getNBcolumns()), tbb::auto_partitioner());
+#else
 	register float* outputPTR=outputFrame+IDrowStart*_filterOutput.getNBcolumns();
 	register const float* inputPTR=inputFrame+IDrowStart*_filterOutput.getNBcolumns();
-	register float *imageGradientPTR= &_imageGradient[0]+IDrowStart*_filterOutput.getNBcolumns();
+	register const float *imageGradientPTR= &_imageGradient[0]+IDrowStart*_filterOutput.getNBcolumns();
 	for (unsigned int IDrow=IDrowStart; IDrow<IDrowEnd; ++IDrow)
 	{
 		register float result=0;
@@ -589,51 +598,17 @@ void RetinaColor::_adaptiveHorizontalCausalFilter_addInput(const float *inputFra
 		}
 		//        std::cout<<" "<<std::endl;
 	}
+#endif
 }
 
-//  horizontal anticausal filter  (basic way, no add on)
-void RetinaColor::_adaptiveHorizontalAnticausalFilter(float *outputFrame, unsigned int IDrowStart, unsigned int IDrowEnd)
-{
-	register float* outputPTR=outputFrame+IDrowEnd*(_filterOutput.getNBcolumns())-1;
-	register float *imageGradientPTR= &_imageGradient[0]+IDrowEnd*(_filterOutput.getNBcolumns())-1;
-
-	for (unsigned int IDrow=IDrowStart; IDrow<IDrowEnd; ++IDrow)
-	{
-		register float result=0;
-		for (unsigned int index=0; index<_filterOutput.getNBcolumns(); ++index)
-		{
-			result = *(outputPTR)+  (*imageGradientPTR)* result;
-			*(outputPTR--) = result;
-			--imageGradientPTR;
-		}
-	}
-}
-
-//  vertical anticausal filter
-void RetinaColor::_adaptiveVerticalCausalFilter(float *outputFrame, unsigned int IDcolumnStart, unsigned int IDcolumnEnd)
-{
-	for (unsigned int IDcolumn=IDcolumnStart; IDcolumn<IDcolumnEnd; ++IDcolumn)
-	{
-		register float result=0;
-		register float *outputPTR=outputFrame+IDcolumn;
-		register float *imageGradientPTR= &_imageGradient[0]+IDcolumn;
-
-		for (unsigned int index=0; index<_filterOutput.getNBrows(); ++index)
-		{
-			result = *(outputPTR) + (*(imageGradientPTR+_filterOutput.getNBpixels())) * result;
-			*(outputPTR) = result;
-			outputPTR+=_filterOutput.getNBcolumns();
-			imageGradientPTR+=_filterOutput.getNBcolumns();
-
-		}
-	}
-}
-
-//  vertical anticausal filter which multiplies the output by _gain
+//  vertical anticausal filter which multiplies the output by _gain... replaces the parent _verticalAnticausalFilter_multGain by avoiding a product for each pixel and taking into account the second layer of the _imageGradient buffer
 void RetinaColor::_adaptiveVerticalAnticausalFilter_multGain(float *outputFrame, unsigned int IDcolumnStart, unsigned int IDcolumnEnd)
 {
+#ifdef HAVE_TBB
+        tbb::parallel_for(tbb::blocked_range<size_t>(IDcolumnStart,IDcolumnEnd), Parallel_adaptiveVerticalAnticausalFilter_multGain(outputFrame, &_imageGradient[0]+_filterOutput.getNBpixels(), _filterOutput.getNBrows(), _filterOutput.getNBcolumns(), _gain), tbb::auto_partitioner());
+#else
 	float* outputOffset=outputFrame+_filterOutput.getNBpixels()-_filterOutput.getNBcolumns();
-	float* gradOffset= &_imageGradient[0]+_filterOutput.getNBpixels()-_filterOutput.getNBcolumns();
+	float* gradOffset= &_imageGradient[0]+_filterOutput.getNBpixels()*2-_filterOutput.getNBcolumns();
 
 	for (unsigned int IDcolumn=IDcolumnStart; IDcolumn<IDcolumnEnd; ++IDcolumn)
 	{
@@ -642,12 +617,13 @@ void RetinaColor::_adaptiveVerticalAnticausalFilter_multGain(float *outputFrame,
 		register float *imageGradientPTR=gradOffset+IDcolumn;
 		for (unsigned int index=0; index<_filterOutput.getNBrows(); ++index)
 		{
-			result = *(outputPTR) + (*(imageGradientPTR+_filterOutput.getNBpixels())) * result;
+			result = *(outputPTR) + (*(imageGradientPTR)) * result;
 			*(outputPTR) = _gain*result;
 			outputPTR-=_filterOutput.getNBcolumns();
 			imageGradientPTR-=_filterOutput.getNBcolumns();
 		}
 	}
+#endif
 }
 
 ///////////////////////////

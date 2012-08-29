@@ -393,48 +393,261 @@ protected:
     // LP filter that squares the input and computes the output ONLY on the areas where the integrationAreas map are TRUE
     void _localSquaringSpatioTemporalLPfilter(const float *inputFrame, float *LPfilterOutput, const unsigned int *integrationAreas, const unsigned int filterIndex=0);
 
-    // local luminance adaptation of the input in regard of localLuminance buffer
-    void _localLuminanceAdaptation(const float *inputFrame, const float *localLuminance, float *outputFrame);
-    // local luminance adaptation of the input in regard of localLuminance buffer, the input is rewrited and becomes the output
-    void _localLuminanceAdaptation(float *inputOutputFrame, const float *localLuminance);
-    // local adaptation applied on a range of values which can be positive and negative
-    void _localLuminanceAdaptationPosNegValues(const float *inputFrame, const float *localLuminance, float *outputFrame);
+	// local luminance adaptation of the input in regard of localLuminance buffer
+	void _localLuminanceAdaptation(const float *inputFrame, const float *localLuminance, float *outputFrame, const bool updateLuminanceMean=true);
+	// local luminance adaptation of the input in regard of localLuminance buffer, the input is rewrited and becomes the output
+	void _localLuminanceAdaptation(float *inputOutputFrame, const float *localLuminance);
+	// local adaptation applied on a range of values which can be positive and negative
+	void _localLuminanceAdaptationPosNegValues(const float *inputFrame, const float *localLuminance, float *outputFrame);
 
 
     //////////////////////////////////////////////////////////////
     // 1D directional filters used for the 2D low pass filtering
 
-    // 1D filters with image input
-    void _horizontalCausalFilter_addInput(const float *inputFrame, float *outputFrame, unsigned int IDrowStart, unsigned int IDrowEnd);
-    // 1D filters  with image input that is squared in the function
-    void _squaringHorizontalCausalFilter(const float *inputFrame, float *outputFrame, unsigned int IDrowStart, unsigned int IDrowEnd);
-    //  vertical anticausal filter that returns the mean value of its result
-    float _verticalAnticausalFilter_returnMeanValue(float *outputFrame, unsigned int IDcolumnStart, unsigned int IDcolumnEnd);
+	// 1D filters with image input
+	void _horizontalCausalFilter_addInput(const float *inputFrame, float *outputFrame, unsigned int IDrowStart, unsigned int IDrowEnd);
+	// 1D filters  with image input that is squared in the function // parallelized with TBB
+	void _squaringHorizontalCausalFilter(const float *inputFrame, float *outputFrame, unsigned int IDrowStart, unsigned int IDrowEnd);
+	//  vertical anticausal filter that returns the mean value of its result
+	float _verticalAnticausalFilter_returnMeanValue(float *outputFrame, unsigned int IDcolumnStart, unsigned int IDcolumnEnd);
 
-    // most simple functions: only perform 1D filtering with output=input (no add on)
-    void _horizontalCausalFilter(float *outputFrame, unsigned int IDrowStart, unsigned int IDrowEnd);
-    void _horizontalAnticausalFilter(float *outputFrame, unsigned int IDrowStart, unsigned int IDrowEnd);
-    void _verticalCausalFilter(float *outputFrame, unsigned int IDcolumnStart, unsigned int IDcolumnEnd);
-    void _verticalAnticausalFilter(float *outputFrame, unsigned int IDcolumnStart, unsigned int IDcolumnEnd);
+	// most simple functions: only perform 1D filtering with output=input (no add on)
+	void _horizontalCausalFilter(float *outputFrame, unsigned int IDrowStart, unsigned int IDrowEnd);
+	void _horizontalAnticausalFilter(float *outputFrame, unsigned int IDrowStart, unsigned int IDrowEnd);     // parallelized with TBB
+	void _verticalCausalFilter(float *outputFrame, unsigned int IDcolumnStart, unsigned int IDcolumnEnd);     // parallelized with TBB 
+	void _verticalAnticausalFilter(float *outputFrame, unsigned int IDcolumnStart, unsigned int IDcolumnEnd);
 
-    // perform 1D filtering with output with varrying spatial coefficient
-    void _horizontalCausalFilter_Irregular(float *outputFrame, unsigned int IDrowStart, unsigned int IDrowEnd);
-    void _horizontalCausalFilter_Irregular_addInput(const float *inputFrame, float *outputFrame, unsigned int IDrowStart, unsigned int IDrowEnd);
-    void _horizontalAnticausalFilter_Irregular(float *outputFrame, unsigned int IDrowStart, unsigned int IDrowEnd);
-    void _verticalCausalFilter_Irregular(float *outputFrame, unsigned int IDcolumnStart, unsigned int IDcolumnEnd);
-    void _verticalAnticausalFilter_Irregular_multGain(float *outputFrame, unsigned int IDcolumnStart, unsigned int IDcolumnEnd);
+	// perform 1D filtering with output with varrying spatial coefficient
+	void _horizontalCausalFilter_Irregular(float *outputFrame, unsigned int IDrowStart, unsigned int IDrowEnd);
+	void _horizontalCausalFilter_Irregular_addInput(const float *inputFrame, float *outputFrame, unsigned int IDrowStart, unsigned int IDrowEnd);
+	void _horizontalAnticausalFilter_Irregular(float *outputFrame, unsigned int IDrowStart, unsigned int IDrowEnd, const float *spatialConstantBuffer);   // parallelized with TBB 
+	void _verticalCausalFilter_Irregular(float *outputFrame, unsigned int IDcolumnStart, unsigned int IDcolumnEnd, const float *spatialConstantBuffer);   // parallelized with TBB 
+	void _verticalAnticausalFilter_Irregular_multGain(float *outputFrame, unsigned int IDcolumnStart, unsigned int IDcolumnEnd);
 
 
-    // 1D filters in which the output is multiplied by _gain
-    void _verticalAnticausalFilter_multGain(float *outputFrame, unsigned int IDcolumnStart, unsigned int IDcolumnEnd); // this functions affects _gain at the output
-    void _horizontalAnticausalFilter_multGain(float *outputFrame, unsigned int IDcolumnStart, unsigned int IDcolumnEnd); // this functions affects _gain at the output
+	// 1D filters in which the output is multiplied by _gain
+	void _verticalAnticausalFilter_multGain(float *outputFrame, unsigned int IDcolumnStart, unsigned int IDcolumnEnd); // this functions affects _gain at the output // parallelized with TBB
+	void _horizontalAnticausalFilter_multGain(float *outputFrame, unsigned int IDcolumnStart, unsigned int IDcolumnEnd); // this functions affects _gain at the output
 
-    // LP filter on specific parts of the picture instead of all the image
-    // same functions (some of them) but take a binary flag to allow integration, false flag means, 0 at the output...
-    void _local_squaringHorizontalCausalFilter(const float *inputFrame, float *outputFrame, unsigned int IDrowStart, unsigned int IDrowEnd, const unsigned int *integrationAreas);
-    void _local_horizontalAnticausalFilter(float *outputFrame, unsigned int IDrowStart, unsigned int IDrowEnd, const unsigned int *integrationAreas);
-    void _local_verticalCausalFilter(float *outputFrame, unsigned int IDcolumnStart, unsigned int IDcolumnEnd, const unsigned int *integrationAreas);
-    void _local_verticalAnticausalFilter_multGain(float *outputFrame, unsigned int IDcolumnStart, unsigned int IDcolumnEnd, const unsigned int *integrationAreas); // this functions affects _gain at the output
+	// LP filter on specific parts of the picture instead of all the image
+	// same functions (some of them) but take a binary flag to allow integration, false flag means, 0 at the output...
+	void _local_squaringHorizontalCausalFilter(const float *inputFrame, float *outputFrame, unsigned int IDrowStart, unsigned int IDrowEnd, const unsigned int *integrationAreas);
+	void _local_horizontalAnticausalFilter(float *outputFrame, unsigned int IDrowStart, unsigned int IDrowEnd, const unsigned int *integrationAreas);
+	void _local_verticalCausalFilter(float *outputFrame, unsigned int IDcolumnStart, unsigned int IDcolumnEnd, const unsigned int *integrationAreas);
+	void _local_verticalAnticausalFilter_multGain(float *outputFrame, unsigned int IDcolumnStart, unsigned int IDcolumnEnd, const unsigned int *integrationAreas); // this functions affects _gain at the output
+
+#ifdef HAVE_TBB
+/******************************************************
+** IF TBB is useable, then, main loops are parallelized using these functors
+** ==> main idea paralellise main filters loops, then, only the most used methods are parallelized... TODO : increase the number of parallelised methods as necessary
+** ==> functors names = Parallel_$$$ where $$$= the name of the serial method that is parallelised
+** ==> functors constructors can differ from the parameters used with their related serial functions
+*/
+
+#define _DEBUG_TBB // define DEBUG_TBB in order to display additionnal data on stdout
+    class Parallel_horizontalAnticausalFilter
+    {
+    private:
+        float *outputFrame;
+        const unsigned int IDrowEnd, nbColumns;
+        const float filterParam_a;
+    public:
+        // constructor which takes the input image pointer reference reference and limits
+        Parallel_horizontalAnticausalFilter(float *bufferToProcess, const unsigned int idEnd, const unsigned int nbCols, const float a )
+        :outputFrame(bufferToProcess), IDrowEnd(idEnd), nbColumns(nbCols), filterParam_a(a)
+        {
+#ifdef DEBUG_TBB
+            std::cout<<"Parallel_horizontalAnticausalFilter::Parallel_horizontalAnticausalFilter :"
+		<<"\n\t idEnd="<<IDrowEnd
+		<<"\n\t nbCols="<<nbColumns
+		<<"\n\t filterParam="<<filterParam_a
+		<<std::endl;
+#endif
+        }
+
+        void operator()( const tbb::blocked_range<size_t>& r ) const {
+
+#ifdef DEBUG_TBB
+            std::cout<<"Parallel_horizontalAnticausalFilter::operator() :"
+		<<"\n\t range size="<<r.size()
+		<<"\n\t first index="<<r.begin()
+		//<<"\n\t last index="<<filterParam
+		<<std::endl;
+#endif
+            for (size_t IDrow=r.begin(); IDrow!=r.end(); ++IDrow)
+	    {
+                register float* outputPTR=outputFrame+(IDrowEnd-IDrow)*(nbColumns)-1;
+		register float result=0;
+		for (unsigned int index=0; index<nbColumns; ++index)
+		{
+			result = *(outputPTR)+  filterParam_a* result;
+			*(outputPTR--) = result;
+		}
+            }
+    }
+    };
+
+    class Parallel_horizontalCausalFilter_addInput
+    {
+    private:
+        const float *inputFrame;
+        float *outputFrame;
+        const unsigned int IDrowStart, nbColumns;
+        const float filterParam_a, filterParam_tau;
+    public:
+	Parallel_horizontalCausalFilter_addInput(const float *bufferToAddAsInputProcess, float *bufferToProcess, const unsigned int idStart, const unsigned int nbCols,  const float a,  const float tau)
+        :inputFrame(bufferToAddAsInputProcess), outputFrame(bufferToProcess), IDrowStart(idStart), nbColumns(nbCols), filterParam_a(a), filterParam_tau(tau){}
+
+        void operator()( const tbb::blocked_range<size_t>& r ) const {
+	    for (unsigned int IDrow=r.begin(); IDrow!=r.end(); ++IDrow)
+	    {
+		register float* outputPTR=outputFrame+(IDrowStart+IDrow)*nbColumns;
+		register const float* inputPTR=inputFrame+(IDrowStart+IDrow)*nbColumns;
+		register float result=0;
+		for (unsigned int index=0; index<nbColumns; ++index)
+		{
+			result = *(inputPTR++) + filterParam_tau**(outputPTR)+  filterParam_a* result;
+			*(outputPTR++) = result;
+		}
+	    }
+        }
+    };
+
+    class Parallel_verticalCausalFilter
+    {
+    private:
+        float *outputFrame;
+        const unsigned int nbRows, nbColumns;
+        const float filterParam_a;
+    public:
+        Parallel_verticalCausalFilter(float *bufferToProcess, const unsigned int nbRws, const unsigned int nbCols, const float a )
+        :outputFrame(bufferToProcess), nbRows(nbRws), nbColumns(nbCols), filterParam_a(a){}
+        
+        void operator()( const tbb::blocked_range<size_t>& r ) const {
+            for (unsigned int IDcolumn=r.begin(); IDcolumn!=r.end(); ++IDcolumn)
+	    {
+		register float result=0;
+		register float *outputPTR=outputFrame+IDcolumn;
+
+		for (unsigned int index=0; index<nbRows; ++index)
+		{
+			result = *(outputPTR) + filterParam_a * result;
+			*(outputPTR) = result;
+			outputPTR+=nbColumns;
+
+		}
+	    }
+        }
+    };
+
+    class Parallel_verticalAnticausalFilter_multGain
+    {
+    private:
+        float *outputFrame;
+        const unsigned int nbRows, nbColumns;
+        const float filterParam_a, filterParam_gain;
+    public:        
+        Parallel_verticalAnticausalFilter_multGain(float *bufferToProcess, const unsigned int nbRws, const unsigned int nbCols, const float a, const float  gain)
+        :outputFrame(bufferToProcess), nbRows(nbRws), nbColumns(nbCols), filterParam_a(a), filterParam_gain(gain){}
+        
+        void operator()( const tbb::blocked_range<size_t>& r ) const {
+            float* offset=outputFrame+nbColumns*nbRows-nbColumns;
+    	    for (unsigned int IDcolumn=r.begin(); IDcolumn!=r.end(); ++IDcolumn)
+	    {
+		register float result=0;
+		register float *outputPTR=offset+IDcolumn;
+
+		for (unsigned int index=0; index<nbRows; ++index)
+		{
+			result = *(outputPTR) + filterParam_a * result;
+			*(outputPTR) = filterParam_gain*result;
+			outputPTR-=nbColumns;
+
+		}
+	    }
+        }
+    };
+
+    class Parallel_localAdaptation
+    {
+    private:
+         const float *localLuminance, *inputFrame;
+         float *outputFrame;
+         const float localLuminanceFactor, localLuminanceAddon, maxInputValue;
+    public:
+         Parallel_localAdaptation(const float *localLum, const float *inputImg, float *bufferToProcess, const float localLuminanceFact, const float localLuminanceAdd, const float maxInputVal)
+         :localLuminance(localLum), inputFrame(inputImg),outputFrame(bufferToProcess), localLuminanceFactor(localLuminanceFact), localLuminanceAddon(localLuminanceAdd), maxInputValue(maxInputVal) {};
+
+         void operator()( const tbb::blocked_range<size_t>& r ) const {
+             const float *localLuminancePTR=localLuminance+r.begin();
+	     const float *inputFramePTR=inputFrame+r.begin();
+	     float *outputFramePTR=outputFrame+r.begin();
+	     for (register unsigned int IDpixel=r.begin() ; IDpixel!=r.end() ; ++IDpixel, ++inputFramePTR, ++outputFramePTR)
+	     {
+		float X0=*(localLuminancePTR++)*localLuminanceFactor+localLuminanceAddon;
+		// TODO : the following line can lead to a divide by zero ! A small offset is added, take care if the offset is too large in case of High Dynamic Range images which can use very small values...		
+		*(outputFramePTR) = (maxInputValue+X0)**inputFramePTR/(*inputFramePTR +X0+0.00000000001);
+		//std::cout<<"BasicRetinaFilter::inputFrame[IDpixel]=%f, X0=%f, outputFrame[IDpixel]=%f\n", inputFrame[IDpixel], X0, outputFrame[IDpixel]);
+	     }
+         }
+    };
+
+//////////////////////////////////////////
+/// Specific filtering methods which manage non const spatial filtering parameter (used By retinacolor and LogProjectors) 
+    class Parallel_horizontalAnticausalFilter_Irregular
+    {
+    private:
+	float *outputFrame;
+        const float *spatialConstantBuffer;
+        const unsigned int IDrowEnd, nbColumns;
+    public:
+        Parallel_horizontalAnticausalFilter_Irregular(float *bufferToProcess, const float *spatialConst, const unsigned int idEnd, const unsigned int nbCols)
+        :outputFrame(bufferToProcess), spatialConstantBuffer(spatialConst), IDrowEnd(idEnd), nbColumns(nbCols){}
+
+void operator()( const tbb::blocked_range<size_t>& r ) const {
+
+            for (size_t IDrow=r.begin(); IDrow!=r.end(); ++IDrow)
+	    {
+                register float* outputPTR=outputFrame+(IDrowEnd-IDrow)*(nbColumns)-1;
+                register const float* spatialConstantPTR=spatialConstantBuffer+(IDrowEnd-IDrow)*(nbColumns)-1;
+		register float result=0;
+		for (unsigned int index=0; index<nbColumns; ++index)
+		{
+			result = *(outputPTR)+  *(spatialConstantPTR--)* result;
+			*(outputPTR--) = result;
+		}
+            }
+        }
+    };
+
+    class Parallel_verticalCausalFilter_Irregular
+    {
+    private:
+        float *outputFrame;
+        const float *spatialConstantBuffer;
+        const unsigned int nbRows, nbColumns;
+    public:
+        Parallel_verticalCausalFilter_Irregular(float *bufferToProcess, const float *spatialConst, const unsigned int nbRws, const unsigned int nbCols)
+        :outputFrame(bufferToProcess), spatialConstantBuffer(spatialConst), nbRows(nbRws), nbColumns(nbCols){}
+        
+        void operator()( const tbb::blocked_range<size_t>& r ) const {
+            for (unsigned int IDcolumn=r.begin(); IDcolumn!=r.end(); ++IDcolumn)
+	    {
+		register float result=0;
+		register float *outputPTR=outputFrame+IDcolumn;
+                register const float* spatialConstantPTR=spatialConstantBuffer+IDcolumn;
+		for (unsigned int index=0; index<nbRows; ++index)
+		{
+			result = *(outputPTR) +  *(spatialConstantPTR) * result;
+			*(outputPTR) = result;
+			outputPTR+=nbColumns;
+                        spatialConstantPTR+=nbColumns;
+		}
+	    }
+        }
+    };
+
+#endif
 
 };
 

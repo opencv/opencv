@@ -316,28 +316,50 @@ void BasicRetinaFilter::runFilter_LocalAdapdation_autonomous(const std::valarray
 	_spatiotemporalLPfilter(get_data(inputFrame), &_filterOutput[0]);
 	_localLuminanceAdaptation(get_data(inputFrame), &_filterOutput[0], &outputFrame[0]);
 }
-// local luminance adaptation of the input in regard of localLuminance buffer
-void BasicRetinaFilter::_localLuminanceAdaptation(const float *inputFrame, const float *localLuminance, float *outputFrame)
-{
-	float meanLuminance=0;
-	const float *luminancePTR=inputFrame;
-	for (unsigned int i=0;i<_filterOutput.getNBpixels();++i)
-		meanLuminance+=*(luminancePTR++);
-	meanLuminance/=_filterOutput.getNBpixels();
-	//float tempMeanValue=meanLuminance+_meanInputValue*_tau;
 
-	updateCompressionParameter(meanLuminance);
+// local luminance adaptation of the input in regard of localLuminance buffer, the input is rewrited and becomes the output
+void BasicRetinaFilter::_localLuminanceAdaptation(float *inputOutputFrame, const float *localLuminance)
+{
+    _localLuminanceAdaptation(inputOutputFrame, localLuminance, inputOutputFrame, false);
+	
+    /*    const float *localLuminancePTR=localLuminance;
+	float *inputOutputFramePTR=inputOutputFrame;
+
+	for (register unsigned int IDpixel=0 ; IDpixel<_filterOutput.getNBpixels() ; ++IDpixel, ++inputOutputFramePTR)
+	{
+		float X0=*(localLuminancePTR++)*_localLuminanceFactor+_localLuminanceAddon;
+		*(inputOutputFramePTR) = (_maxInputValue+X0)**inputOutputFramePTR/(*inputOutputFramePTR +X0+0.00000000001);
+	}
+      */  
+}
+
+// local luminance adaptation of the input in regard of localLuminance buffer
+void BasicRetinaFilter::_localLuminanceAdaptation(const float *inputFrame, const float *localLuminance, float *outputFrame, const bool updateLuminanceMean)
+{
+	if (updateLuminanceMean)
+	{	float meanLuminance=0;
+		const float *luminancePTR=inputFrame;
+		for (unsigned int i=0;i<_filterOutput.getNBpixels();++i)
+			meanLuminance+=*(luminancePTR++);
+		meanLuminance/=_filterOutput.getNBpixels();
+		//float tempMeanValue=meanLuminance+_meanInputValue*_tau;
+		updateCompressionParameter(meanLuminance);
+	}
+#ifdef HAVE_TBB
+        tbb::parallel_for(tbb::blocked_range<size_t>(0,_filterOutput.getNBpixels()), Parallel_localAdaptation(localLuminance, inputFrame, outputFrame, _localLuminanceFactor, _localLuminanceAddon, _maxInputValue), tbb::auto_partitioner());
+#else
 	//std::cout<<meanLuminance<<std::endl;
 	const float *localLuminancePTR=localLuminance;
 	const float *inputFramePTR=inputFrame;
 	float *outputFramePTR=outputFrame;
-	for (register unsigned int IDpixel=0 ; IDpixel<_filterOutput.getNBpixels() ; ++IDpixel, ++inputFramePTR)
+	for (register unsigned int IDpixel=0 ; IDpixel<_filterOutput.getNBpixels() ; ++IDpixel, ++inputFramePTR, ++outputFramePTR)
 	{
 		float X0=*(localLuminancePTR++)*_localLuminanceFactor+_localLuminanceAddon;
 		// TODO : the following line can lead to a divide by zero ! A small offset is added, take care if the offset is too large in case of High Dynamic Range images which can use very small values...		
-		*(outputFramePTR++) = (_maxInputValue+X0)**inputFramePTR/(*inputFramePTR +X0+0.00000000001f);
+		*(outputFramePTR) = (_maxInputValue+X0)**inputFramePTR/(*inputFramePTR +X0+0.00000000001);
 		//std::cout<<"BasicRetinaFilter::inputFrame[IDpixel]=%f, X0=%f, outputFrame[IDpixel]=%f\n", inputFrame[IDpixel], X0, outputFrame[IDpixel]);
 	}
+#endif
 }
 
 // local adaptation applied on a range of values which can be positive and negative
@@ -355,27 +377,6 @@ void BasicRetinaFilter::_localLuminanceAdaptationPosNegValues(const float *input
 	}
 }
 
-// local luminance adaptation of the input in regard of localLuminance buffer, the input is rewrited and becomes the output
-void BasicRetinaFilter::_localLuminanceAdaptation(float *inputOutputFrame, const float *localLuminance)
-{
-	/*float meanLuminance=0;
-    const float *luminancePTR=inputOutputFrame;
-    for (unsigned int i=0;i<_filterOutput.getNBpixels();++i)
-      meanLuminance+=*(luminancePTR++);
-    meanLuminance/=_filterOutput.getNBpixels();
-    //float tempMeanValue=meanLuminance+_meanInputValue*_tau;
-
-    updateCompressionParameter(meanLuminance);
-	 */
-	const float *localLuminancePTR=localLuminance;
-	float *inputOutputFramePTR=inputOutputFrame;
-
-	for (register unsigned int IDpixel=0 ; IDpixel<_filterOutput.getNBpixels() ; ++IDpixel, ++inputOutputFramePTR)
-	{
-		float X0=*(localLuminancePTR++)*_localLuminanceFactor+_localLuminanceAddon;
-		*(inputOutputFramePTR) = (_maxInputValue+X0)**inputOutputFramePTR/(*inputOutputFramePTR +X0);
-	}
-}
 ///////////////////////////////////////////////////////////////////////
 /// Spatio temporal Low Pass filter functions
 // run LP filter and save result in the basic retina element buffer
@@ -465,7 +466,9 @@ void BasicRetinaFilter::_horizontalCausalFilter(float *outputFrame, unsigned int
 //  horizontal causal filter which adds the input inside
 void BasicRetinaFilter::_horizontalCausalFilter_addInput(const float *inputFrame, float *outputFrame, unsigned int IDrowStart, unsigned int IDrowEnd)
 {
-	//#pragma omp parallel for
+#ifdef HAVE_TBB
+        tbb::parallel_for(tbb::blocked_range<size_t>(IDrowStart,IDrowEnd), Parallel_horizontalCausalFilter_addInput(inputFrame, outputFrame, IDrowStart, _filterOutput.getNBcolumns(), _a, _tau), tbb::auto_partitioner());
+#else
 	for (unsigned int IDrow=IDrowStart; IDrow<IDrowEnd; ++IDrow)
 	{
 		register float* outputPTR=outputFrame+(IDrowStart+IDrow)*_filterOutput.getNBcolumns();
@@ -477,14 +480,16 @@ void BasicRetinaFilter::_horizontalCausalFilter_addInput(const float *inputFrame
 			*(outputPTR++) = result;
 		}
 	}
-
+#endif
 }
 
 //  horizontal anticausal filter  (basic way, no add on)
 void BasicRetinaFilter::_horizontalAnticausalFilter(float *outputFrame, unsigned int IDrowStart, unsigned int IDrowEnd)
 {
 
-	//#pragma omp parallel for
+#ifdef HAVE_TBB
+        tbb::parallel_for(tbb::blocked_range<size_t>(IDrowStart,IDrowEnd), Parallel_horizontalAnticausalFilter(outputFrame, IDrowEnd, _filterOutput.getNBcolumns(), _a ), tbb::auto_partitioner());
+#else
 	for (unsigned int IDrow=IDrowStart; IDrow<IDrowEnd; ++IDrow)
 	{
 		register float* outputPTR=outputFrame+(IDrowEnd-IDrow)*(_filterOutput.getNBcolumns())-1;
@@ -495,9 +500,9 @@ void BasicRetinaFilter::_horizontalAnticausalFilter(float *outputFrame, unsigned
 			*(outputPTR--) = result;
 		}
 	}
-
-
+#endif
 }
+
 //  horizontal anticausal filter which multiplies the output by _gain
 void BasicRetinaFilter::_horizontalAnticausalFilter_multGain(float *outputFrame, unsigned int IDrowStart, unsigned int IDrowEnd)
 {
@@ -518,8 +523,10 @@ void BasicRetinaFilter::_horizontalAnticausalFilter_multGain(float *outputFrame,
 //  vertical anticausal filter
 void BasicRetinaFilter::_verticalCausalFilter(float *outputFrame, unsigned int IDcolumnStart, unsigned int IDcolumnEnd)
 {
-	//#pragma omp parallel for
-	for (unsigned int IDcolumn=IDcolumnStart; IDcolumn<IDcolumnEnd; ++IDcolumn)
+#ifdef HAVE_TBB
+        tbb::parallel_for(tbb::blocked_range<size_t>(IDcolumnStart,IDcolumnEnd), Parallel_verticalCausalFilter(outputFrame, _filterOutput.getNBrows(), _filterOutput.getNBcolumns(), _a ), tbb::auto_partitioner());
+#else
+        for (unsigned int IDcolumn=IDcolumnStart; IDcolumn<IDcolumnEnd; ++IDcolumn)
 	{
 		register float result=0;
 		register float *outputPTR=outputFrame+IDcolumn;
@@ -532,6 +539,7 @@ void BasicRetinaFilter::_verticalCausalFilter(float *outputFrame, unsigned int I
 
 		}
 	}
+#endif
 }
 
 
@@ -558,7 +566,10 @@ void BasicRetinaFilter::_verticalAnticausalFilter(float *outputFrame, unsigned i
 //  vertical anticausal filter which multiplies the output by _gain
 void BasicRetinaFilter::_verticalAnticausalFilter_multGain(float *outputFrame, unsigned int IDcolumnStart, unsigned int IDcolumnEnd)
 {
-	float* offset=outputFrame+_filterOutput.getNBpixels()-_filterOutput.getNBcolumns();
+#ifdef HAVE_TBB
+        tbb::parallel_for(tbb::blocked_range<size_t>(IDcolumnStart,IDcolumnEnd), Parallel_verticalAnticausalFilter_multGain(outputFrame, _filterOutput.getNBrows(), _filterOutput.getNBcolumns(), _a, _gain ), tbb::auto_partitioner());
+#else
+        float* offset=outputFrame+_filterOutput.getNBpixels()-_filterOutput.getNBcolumns();
 	//#pragma omp parallel for
 	for (unsigned int IDcolumn=IDcolumnStart; IDcolumn<IDcolumnEnd; ++IDcolumn)
 	{
@@ -573,7 +584,7 @@ void BasicRetinaFilter::_verticalAnticausalFilter_multGain(float *outputFrame, u
 
 		}
 	}
-
+#endif
 }
 
 /////////////////////////////////////////
@@ -745,8 +756,8 @@ void BasicRetinaFilter::_spatiotemporalLPfilter_Irregular(float *inputOutputFram
 
 	// launch the serie of 1D directional filters in order to compute the 2D low pass filter
 	_horizontalCausalFilter_Irregular(inputOutputFrame, 0, (int)_filterOutput.getNBrows());
-	_horizontalAnticausalFilter_Irregular(inputOutputFrame, 0, (int)_filterOutput.getNBrows());
-	_verticalCausalFilter_Irregular(inputOutputFrame, 0, (int)_filterOutput.getNBcolumns());
+	_horizontalAnticausalFilter_Irregular(inputOutputFrame, 0, (int)_filterOutput.getNBrows(), &_progressiveSpatialConstant[0]);
+	_verticalCausalFilter_Irregular(inputOutputFrame, 0, (int)_filterOutput.getNBcolumns(), &_progressiveSpatialConstant[0]);
 	_verticalAnticausalFilter_Irregular_multGain(inputOutputFrame, 0, (int)_filterOutput.getNBcolumns());
 
 }
@@ -765,8 +776,8 @@ void BasicRetinaFilter::_spatiotemporalLPfilter_Irregular(const float *inputFram
 
 	// launch the serie of 1D directional filters in order to compute the 2D low pass filter
 	_horizontalCausalFilter_Irregular_addInput(inputFrame, outputFrame, 0, (int)_filterOutput.getNBrows());
-	_horizontalAnticausalFilter_Irregular(outputFrame, 0, (int)_filterOutput.getNBrows());
-	_verticalCausalFilter_Irregular(outputFrame, 0, (int)_filterOutput.getNBcolumns());
+	_horizontalAnticausalFilter_Irregular(outputFrame, 0, (int)_filterOutput.getNBrows(), &_progressiveSpatialConstant[0]);
+	_verticalCausalFilter_Irregular(outputFrame, 0, (int)_filterOutput.getNBcolumns(), &_progressiveSpatialConstant[0]);
 	_verticalAnticausalFilter_Irregular_multGain(outputFrame, 0, (int)_filterOutput.getNBcolumns());
 
 }
@@ -806,10 +817,13 @@ void BasicRetinaFilter::_horizontalCausalFilter_Irregular_addInput(const float *
 }
 
 //  horizontal anticausal filter  (basic way, no add on)
-void BasicRetinaFilter::_horizontalAnticausalFilter_Irregular(float *outputFrame, unsigned int IDrowStart, unsigned int IDrowEnd)
+void BasicRetinaFilter::_horizontalAnticausalFilter_Irregular(float *outputFrame, unsigned int IDrowStart, unsigned int IDrowEnd, const float *spatialConstantBuffer)
 {
+#ifdef HAVE_TBB
+        tbb::parallel_for(tbb::blocked_range<size_t>(IDrowStart,IDrowEnd), Parallel_horizontalAnticausalFilter_Irregular(outputFrame, spatialConstantBuffer, IDrowEnd, _filterOutput.getNBcolumns()), tbb::auto_partitioner());
+#else
 	register float* outputPTR=outputFrame+IDrowEnd*(_filterOutput.getNBcolumns())-1;
-	register const float* spatialConstantPTR=&_progressiveSpatialConstant[0]+IDrowEnd*(_filterOutput.getNBcolumns())-1;
+	register const float* spatialConstantPTR=spatialConstantBuffer+IDrowEnd*(_filterOutput.getNBcolumns())-1;
 
 	for (unsigned int IDrow=IDrowStart; IDrow<IDrowEnd; ++IDrow)
 	{
@@ -820,18 +834,21 @@ void BasicRetinaFilter::_horizontalAnticausalFilter_Irregular(float *outputFrame
 			*(outputPTR--) = result;
 		}
 	}
-
+#endif
 
 }
 
 //  vertical anticausal filter
-void BasicRetinaFilter::_verticalCausalFilter_Irregular(float *outputFrame, unsigned int IDcolumnStart, unsigned int IDcolumnEnd)
+void BasicRetinaFilter::_verticalCausalFilter_Irregular(float *outputFrame, unsigned int IDcolumnStart, unsigned int IDcolumnEnd, const float *spatialConstantBuffer)
 {
+#ifdef HAVE_TBB
+        tbb::parallel_for(tbb::blocked_range<size_t>(IDcolumnStart,IDcolumnEnd), Parallel_verticalCausalFilter_Irregular(outputFrame, spatialConstantBuffer, _filterOutput.getNBrows(), _filterOutput.getNBcolumns()), tbb::auto_partitioner());
+#else
 	for (unsigned int IDcolumn=IDcolumnStart; IDcolumn<IDcolumnEnd; ++IDcolumn)
 	{
 		register float result=0;
 		register float *outputPTR=outputFrame+IDcolumn;
-		register const float *spatialConstantPTR=&_progressiveSpatialConstant[0]+IDcolumn;
+		register const float *spatialConstantPTR=spatialConstantBuffer+IDcolumn;
 		for (unsigned int index=0; index<_filterOutput.getNBrows(); ++index)
 		{
 			result = *(outputPTR) + *(spatialConstantPTR) * result;
@@ -840,6 +857,7 @@ void BasicRetinaFilter::_verticalCausalFilter_Irregular(float *outputFrame, unsi
 			spatialConstantPTR+=_filterOutput.getNBcolumns();
 		}
 	}
+#endif
 }
 
 //  vertical anticausal filter which multiplies the output by _gain

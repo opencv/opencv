@@ -199,17 +199,20 @@ const std::valarray<float> &ParvoRetinaFilter::runFilter(const std::valarray<flo
 	return (*_parvocellularOutputONminusOFF);
 }
 
-void ParvoRetinaFilter::_OPL_OnOffWaysComputing()
+void ParvoRetinaFilter::_OPL_OnOffWaysComputing() // WARNING : this method requires many buffer accesses, parallelizing can increase bandwith & core efficacy
 {
 	// loop that makes the difference between photoreceptor cells output and horizontal cells
 	// positive part goes on the ON way, negative pat goes on the OFF way
-	register float *photoreceptorsOutput_PTR= &_photoreceptorsOutput[0];
-	register float *horizontalCellsOutput_PTR= &_horizontalCellsOutput[0];
-	register float *bipolarCellsON_PTR = &_bipolarCellsOutputON[0];
-	register float *bipolarCellsOFF_PTR = &_bipolarCellsOutputOFF[0];
-	register float *parvocellularOutputON_PTR= &_parvocellularOutputON[0];
-	register float *parvocellularOutputOFF_PTR= &_parvocellularOutputOFF[0];
 
+#ifdef HAVE_TBB
+        tbb::parallel_for(tbb::blocked_range<size_t>(0,_filterOutput.getNBpixels()), Parallel_OPL_OnOffWaysComputing(&_photoreceptorsOutput[0], &_horizontalCellsOutput[0], &_bipolarCellsOutputON[0], &_bipolarCellsOutputOFF[0], &_parvocellularOutputON[0], &_parvocellularOutputOFF[0]), tbb::auto_partitioner());
+#else
+	float *photoreceptorsOutput_PTR= &_photoreceptorsOutput[0];
+	float *horizontalCellsOutput_PTR= &_horizontalCellsOutput[0];
+	float *bipolarCellsON_PTR = &_bipolarCellsOutputON[0];
+	float *bipolarCellsOFF_PTR = &_bipolarCellsOutputOFF[0];
+	float *parvocellularOutputON_PTR= &_parvocellularOutputON[0];
+	float *parvocellularOutputOFF_PTR= &_parvocellularOutputOFF[0];
 	// compute bipolar cells response equal to photoreceptors minus horizontal cells response
 	// and copy the result on parvo cellular outputs... keeping time before their local contrast adaptation for final result
 	for (register unsigned int IDpixel=0 ; IDpixel<_filterOutput.getNBpixels() ; ++IDpixel)
@@ -222,6 +225,7 @@ void ParvoRetinaFilter::_OPL_OnOffWaysComputing()
 		*(parvocellularOutputON_PTR++)=*(bipolarCellsON_PTR++) = isPositive*pixelDifference;
 		*(parvocellularOutputOFF_PTR++)=*(bipolarCellsOFF_PTR++)= (isPositive-1.0f)*pixelDifference;
 	}
+#endif
 }
 }
 
