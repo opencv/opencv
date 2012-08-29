@@ -339,6 +339,8 @@ class RunInfo(object):
         self.tests = self.getAvailableTestApps()
 
     def getVCVersion(self, root_path):
+        if not root_path:
+            return None
         if os.path.isdir(os.path.join(root_path, ".svn")):
             return self.getSvnVersion(root_path)
         elif os.path.isdir(os.path.join(root_path, ".git")):
