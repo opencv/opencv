@@ -45,6 +45,47 @@ PERF_TEST_P(Image, ObjDetect_HOG, Values<string>("gpu/hog/road.png"))
     }
 }
 
+//===========test for CalTech data =============//
+DEF_PARAM_TEST_1(HOG, string);
+
+PERF_TEST_P(HOG, CalTech, Values<string>("gpu/caltech/image_00000009_0.png", "gpu/caltech/image_00000032_0.png",
+    "gpu/caltech/image_00000165_0.png", "gpu/caltech/image_00000261_0.png", "gpu/caltech/image_00000469_0.png",
+    "gpu/caltech/image_00000527_0.png", "gpu/caltech/image_00000574_0.png"))
+{
+    cv::Mat img = readImage(GetParam(), cv::IMREAD_GRAYSCALE);
+    ASSERT_FALSE(img.empty());
+
+    std::vector<cv::Rect> found_locations;
+
+    if (runOnGpu)
+    {
+        cv::gpu::GpuMat d_img(img);
+
+        cv::gpu::HOGDescriptor d_hog;
+        d_hog.setSVMDetector(cv::gpu::HOGDescriptor::getDefaultPeopleDetector());
+
+        d_hog.detectMultiScale(d_img, found_locations);
+
+        TEST_CYCLE()
+        {
+            d_hog.detectMultiScale(d_img, found_locations);
+        }
+    }
+    else
+    {
+        cv::HOGDescriptor hog;
+        hog.setSVMDetector(cv::gpu::HOGDescriptor::getDefaultPeopleDetector());
+
+        hog.detectMultiScale(img, found_locations);
+
+        TEST_CYCLE()
+        {
+            hog.detectMultiScale(img, found_locations);
+        }
+    }
+}
+
+
 ///////////////////////////////////////////////////////////////
 // HaarClassifier
 

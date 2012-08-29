@@ -6,29 +6,29 @@ import org.opencv.core.Point;
 public class KeyPoint {
 
     /**
-     * coordinates of the keypoint
+     * Coordinates of the keypoint.
      */
     public Point pt;
     /**
-     * diameter of the meaningful keypoint neighborhood
+     * Diameter of the useful keypoint adjacent area.
      */
     public float size;
     /**
-     * computed orientation of the keypoint (-1 if not applicable)
+     * Computed orientation of the keypoint (-1 if not applicable).
      */
     public float angle;
     /**
-     * the response by which the most strong keypoints have been selected. Can
-     * be used for further sorting or subsampling
+     * The response, by which the strongest keypoints have been selected. Can
+     * be used for further sorting or subsampling.
      */
     public float response;
     /**
-     * octave (pyramid layer) from which the keypoint has been extracted
+     * Octave (pyramid layer), from which the keypoint has been extracted.
      */
     public int octave;
     /**
-     * object id that can be used to clustered keypoints by an object they
-     * belong to
+     * Object ID, that can be used to cluster keypoints by an object they
+     * belong to.
      */
     public int class_id;
 

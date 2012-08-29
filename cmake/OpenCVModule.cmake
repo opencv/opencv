@@ -422,8 +422,8 @@ endmacro()
 # Usage:
 # ocv_glob_module_sources(<extra sources&headers in the same format as used in ocv_set_module_sources>)
 macro(ocv_glob_module_sources)
-  file(GLOB lib_srcs "src/*.cpp")
-  file(GLOB lib_int_hdrs "src/*.hpp" "src/*.h")
+  file(GLOB_RECURSE lib_srcs "src/*.cpp")
+  file(GLOB_RECURSE lib_int_hdrs "src/*.hpp" "src/*.h")
   file(GLOB lib_hdrs "include/opencv2/${name}/*.hpp" "include/opencv2/${name}/*.h")
   file(GLOB lib_hdrs_detail "include/opencv2/${name}/detail/*.hpp" "include/opencv2/${name}/detail/*.h")
 

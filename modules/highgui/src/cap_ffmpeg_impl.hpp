@@ -2050,7 +2050,7 @@ bool InputMediaStream_FFMPEG::read(unsigned char** data, int* size, int* endOfFi
 
         if (ret < 0)
         {
-            if (ret == (int64_t)AVERROR_EOF)
+            if ((int64_t)ret == (int64_t)AVERROR_EOF)
                 *endOfFile = true;
             return false;
         }

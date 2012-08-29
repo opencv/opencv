@@ -769,6 +769,14 @@ CV_EXPORTS void pyrUp(const GpuMat& src, GpuMat& dst, Stream& stream = Stream::N
 CV_EXPORTS void blendLinear(const GpuMat& img1, const GpuMat& img2, const GpuMat& weights1, const GpuMat& weights2,
                             GpuMat& result, Stream& stream = Stream::Null());
 
+//! Performa bilateral filtering of passsed image
+CV_EXPORTS void bilateralFilter(const GpuMat& src, GpuMat& dst, int kernel_size, float sigma_color, float sigma_spatial, 
+                                int borderMode = BORDER_DEFAULT, Stream& stream = Stream::Null());
+
+//! Brute force non-local means algorith (slow but universal)
+CV_EXPORTS void nonLocalMeans(const GpuMat& src, GpuMat& dst, float h, 
+                              int search_widow_size = 11, int block_size = 7, int borderMode = BORDER_DEFAULT, Stream& s = Stream::Null());
+
 
 struct CV_EXPORTS CannyBuf;
 

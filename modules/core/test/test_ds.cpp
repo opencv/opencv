@@ -845,7 +845,7 @@ int  Core_SeqBaseTest::test_seq_ops( int iters )
                 cvtest::randUni( rng, elem_mat, cvScalarAll(0), cvScalarAll(255) );
 
                 whence = op - 7;
-                pos = whence < 0 ? 0 : whence > 0 ? sseq->count : cvtest::randInt(rng) % (sseq->count+1);
+                pos = whence < 0 ? 0 : whence > 0 ? sseq->count : (int)(cvtest::randInt(rng) % (sseq->count+1));
                 if( whence != 0 )
                 {
                      cvSeqPushMulti( seq, elem, count, whence < 0 );
@@ -866,8 +866,8 @@ int  Core_SeqBaseTest::test_seq_ops( int iters )
                 if( sseq->count > 0 )
                 {
                     // choose the random element among the added
-                    pos = count > 0 ? cvtest::randInt(rng) % count + pos : MAX(pos-1,0);
-                     elem2 = cvGetSeqElem( seq, pos );
+                    pos = count > 0 ? (int)(cvtest::randInt(rng) % count + pos) : MAX(pos-1,0);
+                    elem2 = cvGetSeqElem( seq, pos );
                     CV_TS_SEQ_CHECK_CONDITION( elem2 != 0, "multi push operation doesn't add elements" );
                     CV_TS_SEQ_CHECK_CONDITION( seq->total == sseq->count &&
                                               memcmp( elem2, cvTsSimpleSeqElem(sseq,pos), elem_size) == 0,
@@ -889,7 +889,7 @@ int  Core_SeqBaseTest::test_seq_ops( int iters )
                 count = cvtest::randInt(rng) % (sseq->count+1);
                 whence = op - 10;
                 pos = whence < 0 ? 0 : whence > 0 ? sseq->count - count :
-                cvtest::randInt(rng) % (sseq->count - count + 1);
+                    (int)(cvtest::randInt(rng) % (sseq->count - count + 1));
 
                 if( whence != 0 )
                 {

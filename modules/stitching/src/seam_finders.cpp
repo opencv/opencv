@@ -817,7 +817,7 @@ bool DpSeamFinder::estimateSeam(
                 {
                     pair<float, int> opt = *min_element(steps, steps + nsteps);
                     cost(y, x) = opt.first;
-                    control(y, x) = opt.second;
+                    control(y, x) = (uchar)opt.second;
                     reachable(y, x) = 255;
                 }
             }
@@ -847,7 +847,7 @@ bool DpSeamFinder::estimateSeam(
                 {
                     pair<float, int> opt = *min_element(steps, steps + nsteps);
                     cost(y, x) = opt.first;
-                    control(y, x) = opt.second;
+                    control(y, x) = (uchar)opt.second;
                     reachable(y, x) = 255;
                 }
             }

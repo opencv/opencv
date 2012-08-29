@@ -47,6 +47,7 @@
 #include "saturate_cast.hpp"
 #include "vec_traits.hpp"
 #include "type_traits.hpp"
+#include "device_functions.h"
 
 namespace cv { namespace gpu { namespace device
 {
@@ -408,6 +409,7 @@ namespace cv { namespace gpu { namespace device
     OPENCV_GPU_IMPLEMENT_BIN_FUNCTOR(pow, ::pow)
 
     #undef OPENCV_GPU_IMPLEMENT_UN_FUNCTOR
+    #undef OPENCV_GPU_IMPLEMENT_UN_FUNCTOR_NO_DOUBLE
     #undef OPENCV_GPU_IMPLEMENT_BIN_FUNCTOR
 
     template<typename T> struct hypot_sqr_func : binary_function<T, T, float>

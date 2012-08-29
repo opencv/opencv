@@ -6,7 +6,7 @@ import android.util.Log;
 
 class Sample0View extends SampleViewBase {
 
-    private static final String TAG = "Sample0View";
+    private static final String TAG = "Sample::View";
     int mSize;
     int[] mRGBA;
     private Bitmap mBitmap;

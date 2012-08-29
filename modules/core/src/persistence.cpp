@@ -2793,7 +2793,7 @@ cvOpenFileStorage( const char* filename, CvMemStorage* dststorage, int flags, co
         fs->buffer_end = fs->buffer_start + buf_size;
         if( fs->fmt == CV_STORAGE_FORMAT_XML )
         {
-            size_t file_size = fs->file ? ftell( fs->file ) : (size_t)0;
+            size_t file_size = fs->file ? (size_t)ftell( fs->file ) : (size_t)0;
             fs->strstorage = cvCreateChildMemStorage( fs->memstorage );
             if( !append || file_size == 0 )
             {

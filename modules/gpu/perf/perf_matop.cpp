@@ -8,7 +8,7 @@ namespace {
 //////////////////////////////////////////////////////////////////////
 // SetTo
 
-PERF_TEST_P(Sz_Depth_Cn, MatOp_SetTo, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8U, CV_16U, CV_32F, CV_64F), Values(1, 3, 4)))
+PERF_TEST_P(Sz_Depth_Cn, MatOp_SetTo, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8U, CV_16U, CV_32F, CV_64F), GPU_CHANNELS_1_3_4))
 {
     cv::Size size = GET_PARAM(0);
     int depth = GET_PARAM(1);
@@ -45,7 +45,7 @@ PERF_TEST_P(Sz_Depth_Cn, MatOp_SetTo, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8
 //////////////////////////////////////////////////////////////////////
 // SetToMasked
 
-PERF_TEST_P(Sz_Depth_Cn, MatOp_SetToMasked, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8U, CV_16U, CV_32F, CV_64F), Values(1, 3, 4)))
+PERF_TEST_P(Sz_Depth_Cn, MatOp_SetToMasked, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8U, CV_16U, CV_32F, CV_64F), GPU_CHANNELS_1_3_4))
 {
     cv::Size size = GET_PARAM(0);
     int depth = GET_PARAM(1);
@@ -87,7 +87,7 @@ PERF_TEST_P(Sz_Depth_Cn, MatOp_SetToMasked, Combine(GPU_TYPICAL_MAT_SIZES, Value
 //////////////////////////////////////////////////////////////////////
 // CopyToMasked
 
-PERF_TEST_P(Sz_Depth_Cn, MatOp_CopyToMasked, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8U, CV_16U, CV_32F, CV_64F), Values(1, 3, 4)))
+PERF_TEST_P(Sz_Depth_Cn, MatOp_CopyToMasked, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8U, CV_16U, CV_32F, CV_64F), GPU_CHANNELS_1_3_4))
 {
     cv::Size size = GET_PARAM(0);
     int depth = GET_PARAM(1);

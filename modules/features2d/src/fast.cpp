@@ -578,6 +578,11 @@ void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool
       break;
   }
 }
+
+void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool nonmax_suppression)
+{
+    FAST(_img, keypoints, threshold, nonmax_suppression, FastFeatureDetector::TYPE_9_16);
+}
 /*
  *   FastFeatureDetector
  */

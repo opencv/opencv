@@ -1,33 +1,33 @@
 package org.opencv.engine;
 
 /**
-* Class provides Java interface to OpenCV Engine Service. Is synchronous with native OpenCVEngine class.
+* Class provides a Java interface for OpenCV Engine Service. It's synchronous with native OpenCVEngine class.
 */
 interface OpenCVEngineInterface
 {
 	/**
-	* @return Return service version
+	* @return Returns service version.
 	*/
 	int getEngineVersion();
 
 	/**
-	* Find installed OpenCV library
-	* @param OpenCV version
-	* @return Return path to OpenCV native libs or empty string if OpenCV was not found
+	* Finds an installed OpenCV library.
+	* @param OpenCV version.
+	* @return Returns path to OpenCV native libs or an empty string if OpenCV can not be found.
 	*/
 	String getLibPathByVersion(String version);
 
 	/**
-	* Try to install defined version of OpenCV from Google Play (Android Market).
-	* @param OpenCV version
-	* @return Return true if installation was successful or OpenCV package has been already installed
+	* Tries to install defined version of OpenCV from Google Play Market.
+	* @param OpenCV version.
+	* @return Returns true if installation was successful or OpenCV package has been already installed.
 	*/
 	boolean installVersion(String version);
  
 	/**
-	* Return list of libraries in loading order separated by ";" symbol
-	* @param OpenCV version
-	* @return Return OpenCV libraries names separated by symbol ";" in loading order
+	* Returns list of libraries in loading order, separated by semicolon.
+	* @param OpenCV version.
+	* @return Returns names of OpenCV libraries, separated by semicolon.
 	*/
 	String getLibraryList(String version);
 }

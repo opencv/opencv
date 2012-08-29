@@ -62,7 +62,7 @@ struct FastNlMeansDenoisingInvoker {
 
         void operator() (const BlockedRange& range) const;
 
-		void operator= (const FastNlMeansDenoisingInvoker& invoker) {
+		void operator= (const FastNlMeansDenoisingInvoker&) {
 			CV_Error(CV_StsNotImplemented, "Assigment operator is not implemented");
 		}
 

@@ -23,13 +23,13 @@ void generateMap(cv::Mat& map_x, cv::Mat& map_y, int remapMode)
             case HALF_SIZE:
                 if (i > map_x.cols*0.25 && i < map_x.cols*0.75 && j > map_x.rows*0.25 && j < map_x.rows*0.75)
                 {
-                    map_x.at<float>(j,i) = 2 * (i - map_x.cols * 0.25f) + 0.5f;
-                    map_y.at<float>(j,i) = 2 * (j - map_x.rows * 0.25f) + 0.5f;
+                    map_x.at<float>(j,i) = 2.f * (i - map_x.cols * 0.25f) + 0.5f;
+                    map_y.at<float>(j,i) = 2.f * (j - map_x.rows * 0.25f) + 0.5f;
                 }
                 else
                 {
-                    map_x.at<float>(j,i) = 0;
-                    map_y.at<float>(j,i) = 0;
+                    map_x.at<float>(j,i) = 0.f;
+                    map_y.at<float>(j,i) = 0.f;
                 }
                 break;
             case UPSIDE_DOWN:
@@ -54,7 +54,7 @@ DEF_PARAM_TEST(Sz_Depth_Cn_Inter_Border_Mode, cv::Size, MatDepth, int, Interpola
 PERF_TEST_P(Sz_Depth_Cn_Inter_Border_Mode, ImgProc_Remap, Combine(
     GPU_TYPICAL_MAT_SIZES,
     Values(CV_8U, CV_16U, CV_32F),
-    Values(1, 3, 4),
+    GPU_CHANNELS_1_3_4,
     Values(Interpolation(cv::INTER_NEAREST), Interpolation(cv::INTER_LINEAR), Interpolation(cv::INTER_CUBIC)),
     ALL_BORDER_MODES,
     ALL_REMAP_MODES))
@@ -113,7 +113,7 @@ DEF_PARAM_TEST(Sz_Depth_Cn_Inter_Scale, cv::Size, MatDepth, int, Interpolation, 
 PERF_TEST_P(Sz_Depth_Cn_Inter_Scale, ImgProc_Resize, Combine(
     GPU_TYPICAL_MAT_SIZES,
     Values(CV_8U, CV_16U, CV_32F),
-    Values(1, 3, 4),
+    GPU_CHANNELS_1_3_4,
     ALL_INTERPOLATIONS,
     Values(0.5, 0.3, 2.0)))
 {
@@ -163,7 +163,7 @@ DEF_PARAM_TEST(Sz_Depth_Cn_Scale, cv::Size, MatDepth, int, double);
 PERF_TEST_P(Sz_Depth_Cn_Scale, ImgProc_ResizeArea, Combine(
     GPU_TYPICAL_MAT_SIZES,
     Values(CV_8U, CV_16U, CV_32F),
-    Values(1, 3, 4),
+    GPU_CHANNELS_1_3_4,
     Values(0.2, 0.1, 0.05)))
 {
     declare.time(1.0);
@@ -212,7 +212,7 @@ DEF_PARAM_TEST(Sz_Depth_Cn_Inter_Border, cv::Size, MatDepth, int, Interpolation,
 PERF_TEST_P(Sz_Depth_Cn_Inter_Border, ImgProc_WarpAffine, Combine(
     GPU_TYPICAL_MAT_SIZES,
     Values(CV_8U, CV_16U, CV_32F),
-    Values(1, 3, 4),
+    GPU_CHANNELS_1_3_4,
     Values(Interpolation(cv::INTER_NEAREST), Interpolation(cv::INTER_LINEAR), Interpolation(cv::INTER_CUBIC)),
     ALL_BORDER_MODES))
 {
@@ -265,7 +265,7 @@ PERF_TEST_P(Sz_Depth_Cn_Inter_Border, ImgProc_WarpAffine, Combine(
 PERF_TEST_P(Sz_Depth_Cn_Inter_Border, ImgProc_WarpPerspective, Combine(
     GPU_TYPICAL_MAT_SIZES,
     Values(CV_8U, CV_16U, CV_32F),
-    Values(1, 3, 4),
+    GPU_CHANNELS_1_3_4,
     Values(Interpolation(cv::INTER_NEAREST), Interpolation(cv::INTER_LINEAR), Interpolation(cv::INTER_CUBIC)),
     ALL_BORDER_MODES))
 {
@@ -321,7 +321,7 @@ DEF_PARAM_TEST(Sz_Depth_Cn_Border, cv::Size, MatDepth, int, BorderMode);
 PERF_TEST_P(Sz_Depth_Cn_Border, ImgProc_CopyMakeBorder, Combine(
     GPU_TYPICAL_MAT_SIZES,
     Values(CV_8U, CV_16U, CV_32F),
-    Values(1, 3, 4),
+    GPU_CHANNELS_1_3_4,
     ALL_BORDER_MODES))
 {
     cv::Size size = GET_PARAM(0);
@@ -789,7 +789,7 @@ PERF_TEST_P(Image, ImgProc_MeanShiftSegmentation, Values<string>("gpu/meanshift/
 //////////////////////////////////////////////////////////////////////
 // BlendLinear
 
-PERF_TEST_P(Sz_Depth_Cn, ImgProc_BlendLinear, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8U, CV_32F), Values(1, 3, 4)))
+PERF_TEST_P(Sz_Depth_Cn, ImgProc_BlendLinear, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8U, CV_32F), GPU_CHANNELS_1_3_4))
 {
     cv::Size size = GET_PARAM(0);
     int depth = GET_PARAM(1);
@@ -887,7 +887,7 @@ DEF_PARAM_TEST(Sz_TemplateSz_Cn_Method, cv::Size, cv::Size, int, TemplateMethod)
 PERF_TEST_P(Sz_TemplateSz_Cn_Method, ImgProc_MatchTemplate8U, Combine(
     GPU_TYPICAL_MAT_SIZES,
     Values(cv::Size(5, 5), cv::Size(16, 16), cv::Size(30, 30)),
-    Values(1, 3, 4),
+    GPU_CHANNELS_1_3_4,
     ALL_TEMPLATE_METHODS))
 {
     cv::Size size = GET_PARAM(0);
@@ -933,7 +933,7 @@ PERF_TEST_P(Sz_TemplateSz_Cn_Method, ImgProc_MatchTemplate8U, Combine(
 PERF_TEST_P(Sz_TemplateSz_Cn_Method, ImgProc_MatchTemplate32F, Combine(
     GPU_TYPICAL_MAT_SIZES,
     Values(cv::Size(5, 5), cv::Size(16, 16), cv::Size(30, 30)),
-    Values(1, 3, 4),
+    GPU_CHANNELS_1_3_4,
     Values(TemplateMethod(cv::TM_SQDIFF), TemplateMethod(cv::TM_CCORR))))
 {
     cv::Size size = GET_PARAM(0);
@@ -1287,7 +1287,7 @@ DEF_PARAM_TEST(Sz_Depth_Cn_Inter, cv::Size, MatDepth, int, Interpolation);
 PERF_TEST_P(Sz_Depth_Cn_Inter, ImgProc_Rotate, Combine(
     GPU_TYPICAL_MAT_SIZES,
     Values(CV_8U, CV_16U, CV_32F),
-    Values(1, 3, 4),
+    GPU_CHANNELS_1_3_4,
     Values(Interpolation(cv::INTER_NEAREST), Interpolation(cv::INTER_LINEAR), Interpolation(cv::INTER_CUBIC))))
 {
     cv::Size size = GET_PARAM(0);
@@ -1324,7 +1324,7 @@ PERF_TEST_P(Sz_Depth_Cn_Inter, ImgProc_Rotate, Combine(
 PERF_TEST_P(Sz_Depth_Cn, ImgProc_PyrDown, Combine(
     GPU_TYPICAL_MAT_SIZES,
     Values(CV_8U, CV_16U, CV_32F),
-    Values(1, 3, 4)))
+    GPU_CHANNELS_1_3_4))
 {
     cv::Size size = GET_PARAM(0);
     int depth = GET_PARAM(1);
@@ -1366,7 +1366,7 @@ PERF_TEST_P(Sz_Depth_Cn, ImgProc_PyrDown, Combine(
 PERF_TEST_P(Sz_Depth_Cn, ImgProc_PyrUp, Combine(
     GPU_TYPICAL_MAT_SIZES,
     Values(CV_8U, CV_16U, CV_32F),
-    Values(1, 3, 4)))
+    GPU_CHANNELS_1_3_4))
 {
     cv::Size size = GET_PARAM(0);
     int depth = GET_PARAM(1);
@@ -1540,7 +1540,7 @@ PERF_TEST_P(Sz_Type_Op, ImgProc_AlphaComp, Combine(GPU_TYPICAL_MAT_SIZES, Values
 //////////////////////////////////////////////////////////////////////
 // ImagePyramidBuild
 
-PERF_TEST_P(Sz_Depth_Cn, ImgProc_ImagePyramidBuild, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8U, CV_16U, CV_32F), Values(1, 3, 4)))
+PERF_TEST_P(Sz_Depth_Cn, ImgProc_ImagePyramidBuild, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8U, CV_16U, CV_32F), GPU_CHANNELS_1_3_4))
 {
     cv::Size size = GET_PARAM(0);
     int depth = GET_PARAM(1);
@@ -1573,7 +1573,7 @@ PERF_TEST_P(Sz_Depth_Cn, ImgProc_ImagePyramidBuild, Combine(GPU_TYPICAL_MAT_SIZE
 //////////////////////////////////////////////////////////////////////
 // ImagePyramidGetLayer
 
-PERF_TEST_P(Sz_Depth_Cn, ImgProc_ImagePyramidGetLayer, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8U, CV_16U, CV_32F), Values(1, 3, 4)))
+PERF_TEST_P(Sz_Depth_Cn, ImgProc_ImagePyramidGetLayer, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8U, CV_16U, CV_32F), GPU_CHANNELS_1_3_4))
 {
     cv::Size size = GET_PARAM(0);
     int depth = GET_PARAM(1);
