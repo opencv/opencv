@@ -2,18 +2,35 @@
 #  CMake file for libpng. See root CMakeLists.txt
 #
 # ----------------------------------------------------------------------------
-project(${PNG_LIBRARY})
+
+if(NEON)
+  project(${PNG_LIBRARY} ASM)
+else()
+  project(${PNG_LIBRARY})
+endif()
 
 ocv_include_directories("${CMAKE_CURRENT_SOURCE_DIR}" ${ZLIB_INCLUDE_DIR})
 
 file(GLOB lib_srcs *.c)
 file(GLOB lib_hdrs *.h)
 
+if(NEON)
+  list(APPEND lib_srcs arm/filter_neon.S)
+  add_definitions(-DPNG_ARM_NEON)
+endif()
+
 # ----------------------------------------------------------------------------------
 #         Define the library target:
 # ----------------------------------------------------------------------------------
 
+add_definitions(-DPNG_CONFIGURE_LIBPNG)
+
+if(MSVC)
+  add_definitions(-D_CRT_SECURE_NO_DEPRECATE)
+endif(MSVC)
+
 add_library(${PNG_LIBRARY} STATIC ${lib_srcs} ${lib_hdrs})
+target_link_libraries(${PNG_LIBRARY} ${ZLIB_LIBRARY})
 
 if(UNIX)
   if(CMAKE_COMPILER_IS_GNUCXX OR CV_ICC)

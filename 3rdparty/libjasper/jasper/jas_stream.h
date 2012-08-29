@@ -77,6 +77,7 @@
 #include <jasper/jas_config.h>
 
 #include <stdio.h>
+#include <limits.h>
 #if defined(HAVE_FCNTL_H)
 #include <fcntl.h>
 #endif
@@ -251,7 +252,11 @@ typedef struct {
 typedef struct {
 	int fd;
 	int flags;
-	char pathname[L_tmpnam + 1];
+#if defined _WIN32 && !defined __MINGW__ && !defined __MINGW32__
+	char pathname[MAX_PATH + 1];
+#else
+	char pathname[PATH_MAX + 1];
+#endif
 } jas_stream_fileobj_t;
 
 #define	JAS_STREAM_FILEOBJ_DELONCLOSE	0x01

@@ -2,6 +2,7 @@
  * jcparam.c
  *
  * Copyright (C) 1991-1998, Thomas G. Lane.
+ * Modified 2003-2008 by Guido Vollbeding.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
@@ -60,6 +61,47 @@ jpeg_add_quant_table (j_compress_ptr cinfo, int which_tbl,
 }
 
 
+/* These are the sample quantization tables given in JPEG spec section K.1.
+ * The spec says that the values given produce "good" quality, and
+ * when divided by 2, "very good" quality.
+ */
+static const unsigned int std_luminance_quant_tbl[DCTSIZE2] = {
+  16,  11,  10,  16,  24,  40,  51,  61,
+  12,  12,  14,  19,  26,  58,  60,  55,
+  14,  13,  16,  24,  40,  57,  69,  56,
+  14,  17,  22,  29,  51,  87,  80,  62,
+  18,  22,  37,  56,  68, 109, 103,  77,
+  24,  35,  55,  64,  81, 104, 113,  92,
+  49,  64,  78,  87, 103, 121, 120, 101,
+  72,  92,  95,  98, 112, 100, 103,  99
+};
+static const unsigned int std_chrominance_quant_tbl[DCTSIZE2] = {
+  17,  18,  24,  47,  99,  99,  99,  99,
+  18,  21,  26,  66,  99,  99,  99,  99,
+  24,  26,  56,  99,  99,  99,  99,  99,
+  47,  66,  99,  99,  99,  99,  99,  99,
+  99,  99,  99,  99,  99,  99,  99,  99,
+  99,  99,  99,  99,  99,  99,  99,  99,
+  99,  99,  99,  99,  99,  99,  99,  99,
+  99,  99,  99,  99,  99,  99,  99,  99
+};
+
+
+GLOBAL(void)
+jpeg_default_qtables (j_compress_ptr cinfo, boolean force_baseline)
+/* Set or change the 'quality' (quantization) setting, using default tables
+ * and straight percentage-scaling quality scales.
+ * This entry point allows different scalings for luminance and chrominance.
+ */
+{
+  /* Set up two quantization tables using the specified scaling */
+  jpeg_add_quant_table(cinfo, 0, std_luminance_quant_tbl,
+		       cinfo->q_scale_factor[0], force_baseline);
+  jpeg_add_quant_table(cinfo, 1, std_chrominance_quant_tbl,
+		       cinfo->q_scale_factor[1], force_baseline);
+}
+
+
 GLOBAL(void)
 jpeg_set_linear_quality (j_compress_ptr cinfo, int scale_factor,
 			 boolean force_baseline)
@@ -69,31 +111,6 @@ jpeg_set_linear_quality (j_compress_ptr cinfo, int scale_factor,
  * applications that insist on a linear percentage scaling.
  */
 {
-  /* These are the sample quantization tables given in JPEG spec section K.1.
-   * The spec says that the values given produce "good" quality, and
-   * when divided by 2, "very good" quality.
-   */
-  static const unsigned int std_luminance_quant_tbl[DCTSIZE2] = {
-    16,  11,  10,  16,  24,  40,  51,  61,
-    12,  12,  14,  19,  26,  58,  60,  55,
-    14,  13,  16,  24,  40,  57,  69,  56,
-    14,  17,  22,  29,  51,  87,  80,  62,
-    18,  22,  37,  56,  68, 109, 103,  77,
-    24,  35,  55,  64,  81, 104, 113,  92,
-    49,  64,  78,  87, 103, 121, 120, 101,
-    72,  92,  95,  98, 112, 100, 103,  99
-  };
-  static const unsigned int std_chrominance_quant_tbl[DCTSIZE2] = {
-    17,  18,  24,  47,  99,  99,  99,  99,
-    18,  21,  26,  66,  99,  99,  99,  99,
-    24,  26,  56,  99,  99,  99,  99,  99,
-    47,  66,  99,  99,  99,  99,  99,  99,
-    99,  99,  99,  99,  99,  99,  99,  99,
-    99,  99,  99,  99,  99,  99,  99,  99,
-    99,  99,  99,  99,  99,  99,  99,  99,
-    99,  99,  99,  99,  99,  99,  99,  99
-  };
-
   /* Set up two quantization tables using the specified scaling */
   jpeg_add_quant_table(cinfo, 0, std_luminance_quant_tbl,
 		       scale_factor, force_baseline);
@@ -284,6 +301,8 @@ jpeg_set_defaults (j_compress_ptr cinfo)
 
   /* Initialize everything not dependent on the color space */
 
+  cinfo->scale_num = 1;		/* 1:1 scaling */
+  cinfo->scale_denom = 1;
   cinfo->data_precision = BITS_IN_JSAMPLE;
   /* Set up two quantization tables using default quality of 75 */
   jpeg_set_quality(cinfo, 75, TRUE);
@@ -319,6 +338,9 @@ jpeg_set_defaults (j_compress_ptr cinfo)
 
   /* By default, use the simpler non-cosited sampling alignment */
   cinfo->CCIR601_sampling = FALSE;
+
+  /* By default, apply fancy downsampling */
+  cinfo->do_fancy_downsampling = TRUE;
 
   /* No input smoothing */
   cinfo->smoothing_factor = 0;

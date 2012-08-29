@@ -2,6 +2,7 @@
  * jdtrans.c
  *
  * Copyright (C) 1995-1997, Thomas G. Lane.
+ * Modified 2000-2009 by Guido Vollbeding.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
@@ -99,18 +100,14 @@ transdecode_master_selection (j_decompress_ptr cinfo)
   /* This is effectively a buffered-image operation. */
   cinfo->buffered_image = TRUE;
 
+  /* Compute output image dimensions and related values. */
+  jpeg_core_output_dimensions(cinfo);
+
   /* Entropy decoding: either Huffman or arithmetic coding. */
-  if (cinfo->arith_code) {
-    ERREXIT(cinfo, JERR_ARITH_NOTIMPL);
-  } else {
-    if (cinfo->progressive_mode) {
-#ifdef D_PROGRESSIVE_SUPPORTED
-      jinit_phuff_decoder(cinfo);
-#else
-      ERREXIT(cinfo, JERR_NOT_COMPILED);
-#endif
-    } else
-      jinit_huff_decoder(cinfo);
+  if (cinfo->arith_code)
+    jinit_arith_decoder(cinfo);
+  else {
+    jinit_huff_decoder(cinfo);
   }
 
   /* Always get a full-image coefficient buffer. */

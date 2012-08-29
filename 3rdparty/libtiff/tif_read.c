@@ -1,4 +1,4 @@
-/* $Id: tif_read.c,v 1.38 2011-12-09 03:29:10 fwarmerdam Exp $ */
+/* $Id: tif_read.c,v 1.40 2012-06-01 00:55:09 fwarmerdam Exp $ */
 
 /*
  * Copyright (c) 1988-1997 Sam Leffler
@@ -93,6 +93,7 @@ TIFFFillStripPartial( TIFF *tif, int strip, tmsize_t read_ahead, int restart )
         
         if( unused_data > 0 )
         {
+		assert((tif->tif_flags&TIFF_BUFFERMMAP)==0);
                 memmove( tif->tif_rawdata, tif->tif_rawcp, unused_data );
         }
 
@@ -120,6 +121,7 @@ TIFFFillStripPartial( TIFF *tif, int strip, tmsize_t read_ahead, int restart )
                         - tif->tif_rawdataoff - tif->tif_rawdataloaded;
         }
 
+	assert((tif->tif_flags&TIFF_BUFFERMMAP)==0);
         cc = TIFFReadFile(tif, tif->tif_rawdata + unused_data, to_read);
 
         if (cc != to_read) {
@@ -145,8 +147,10 @@ TIFFFillStripPartial( TIFF *tif, int strip, tmsize_t read_ahead, int restart )
         tif->tif_rawcp = tif->tif_rawdata;
                         
         if (!isFillOrder(tif, td->td_fillorder) &&
-            (tif->tif_flags & TIFF_NOBITREV) == 0)
+            (tif->tif_flags & TIFF_NOBITREV) == 0) {
+		assert((tif->tif_flags&TIFF_BUFFERMMAP)==0);
                 TIFFReverseBits(tif->tif_rawdata + unused_data, to_read );
+	}
 
         /*
         ** When starting a strip from the beginning we need to
@@ -522,8 +526,11 @@ TIFFFillStrip(TIFF* tif, uint32 strip)
 			 * buffer (if they try to, the application will get a
 			 * fault since the file is mapped read-only).
 			 */
-			if ((tif->tif_flags & TIFF_MYBUFFER) && tif->tif_rawdata)
+			if ((tif->tif_flags & TIFF_MYBUFFER) && tif->tif_rawdata) {
 				_TIFFfree(tif->tif_rawdata);
+				tif->tif_rawdata = NULL;
+				tif->tif_rawdatasize = 0;
+			}
 			tif->tif_flags &= ~TIFF_MYBUFFER;
 			/*
 			 * We must check for overflow, potentially causing
@@ -565,6 +572,14 @@ TIFFFillStrip(TIFF* tif, uint32 strip)
 			tif->tif_rawdata = tif->tif_base + (tmsize_t)td->td_stripoffset[strip];
                         tif->tif_rawdataoff = 0;
                         tif->tif_rawdataloaded = (tmsize_t) bytecount;
+
+			/* 
+			 * When we have tif_rawdata reference directly into the memory mapped file
+			 * we need to be pretty careful about how we use the rawdata.  It is not
+			 * a general purpose working buffer as it normally otherwise is.  So we
+			 * keep track of this fact to avoid using it improperly.
+			 */
+			tif->tif_flags |= TIFF_BUFFERMMAP;
 		} else {
 			/*
 			 * Expand raw data buffer, if needed, to hold data
@@ -586,6 +601,11 @@ TIFFFillStrip(TIFF* tif, uint32 strip)
 					    (unsigned long) strip);
 					return (0);
 				}
+				if (!TIFFReadBufferSetup(tif, 0, bytecountm))
+					return (0);
+			}
+			if (tif->tif_flags&TIFF_BUFFERMMAP) {
+				tif->tif_curstrip = NOSTRIP;
 				if (!TIFFReadBufferSetup(tif, 0, bytecountm))
 					return (0);
 			}
@@ -809,8 +829,11 @@ TIFFFillTile(TIFF* tif, uint32 tile)
 			 * buffer (if they try to, the application will get a
 			 * fault since the file is mapped read-only).
 			 */
-			if ((tif->tif_flags & TIFF_MYBUFFER) && tif->tif_rawdata)
+			if ((tif->tif_flags & TIFF_MYBUFFER) && tif->tif_rawdata) {
 				_TIFFfree(tif->tif_rawdata);
+				tif->tif_rawdata = NULL;
+				tif->tif_rawdatasize = 0;
+			}
 			tif->tif_flags &= ~TIFF_MYBUFFER;
 			/*
 			 * We must check for overflow, potentially causing
@@ -831,6 +854,7 @@ TIFFFillTile(TIFF* tif, uint32 tile)
 				tif->tif_base + (tmsize_t)td->td_stripoffset[tile];
                         tif->tif_rawdataoff = 0;
                         tif->tif_rawdataloaded = (tmsize_t) bytecount;
+			tif->tif_flags |= TIFF_BUFFERMMAP;
 		} else {
 			/*
 			 * Expand raw data buffer, if needed, to hold data
@@ -855,6 +879,12 @@ TIFFFillTile(TIFF* tif, uint32 tile)
 				if (!TIFFReadBufferSetup(tif, 0, bytecountm))
 					return (0);
 			}
+			if (tif->tif_flags&TIFF_BUFFERMMAP) {
+				tif->tif_curtile = NOTILE;
+				if (!TIFFReadBufferSetup(tif, 0, bytecountm))
+					return (0);
+			}
+
 			if (TIFFReadRawTile1(tif, tile, tif->tif_rawdata,
 			    bytecountm, module) != bytecountm)
 				return (0);
@@ -886,10 +916,13 @@ TIFFReadBufferSetup(TIFF* tif, void* bp, tmsize_t size)
 	static const char module[] = "TIFFReadBufferSetup";
 
 	assert((tif->tif_flags&TIFF_NOREADRAW)==0);
+	tif->tif_flags &= ~TIFF_BUFFERMMAP;
+
 	if (tif->tif_rawdata) {
 		if (tif->tif_flags & TIFF_MYBUFFER)
 			_TIFFfree(tif->tif_rawdata);
 		tif->tif_rawdata = NULL;
+		tif->tif_rawdatasize = 0;
 	}
 	if (bp) {
 		tif->tif_rawdatasize = size;

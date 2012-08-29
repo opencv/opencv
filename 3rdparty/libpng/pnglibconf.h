@@ -3,9 +3,9 @@
 
 /* pnglibconf.h - library build configuration */
 
-/* Libpng 1.5.9 - February 18, 2012 */
+/* Libpng 1.5.12 - July 11, 2012 */
 
-/* Copyright (c) 1998-2011 Glenn Randers-Pehrson */
+/* Copyright (c) 1998-2012 Glenn Randers-Pehrson */
 
 /* This code is released under the libpng license. */
 /* For conditions of distribution and use, see the disclaimer */
@@ -31,10 +31,6 @@
 #define PNG_QUANTIZE_GREEN_BITS 5
 #define PNG_QUANTIZE_RED_BITS 5
 #define PNG_sCAL_PRECISION 5
-#define PNG_USER_CHUNK_CACHE_MAX 0
-#define PNG_USER_CHUNK_MALLOC_MAX 0
-#define PNG_USER_HEIGHT_MAX 1000000
-#define PNG_USER_WIDTH_MAX 1000000
 #define PNG_WEIGHT_SHIFT 8
 #define PNG_ZBUF_SIZE 8192
 /* end of settings */
@@ -45,6 +41,7 @@
 #define PNG_bKGD_SUPPORTED
 #define PNG_BUILD_GRAYSCALE_PALETTE_SUPPORTED
 #define PNG_CHECK_cHRM_SUPPORTED
+#define PNG_CHECK_FOR_INVALID_INDEX_SUPPORTED
 #define PNG_cHRM_SUPPORTED
 #define PNG_CONSOLE_IO_SUPPORTED
 #define PNG_CONVERT_tIME_SUPPORTED
@@ -74,6 +71,7 @@
 #define PNG_READ_BACKGROUND_SUPPORTED
 #define PNG_READ_BGR_SUPPORTED
 #define PNG_READ_bKGD_SUPPORTED
+#define PNG_READ_CHECK_FOR_INVALID_INDEX_SUPPORTED
 #define PNG_READ_cHRM_SUPPORTED
 #define PNG_READ_COMPOSITE_NODIV_SUPPORTED
 #define PNG_READ_COMPRESSED_TEXT_SUPPORTED
@@ -145,6 +143,7 @@
 #define PNG_WRITE_ANCILLARY_CHUNKS_SUPPORTED
 #define PNG_WRITE_BGR_SUPPORTED
 #define PNG_WRITE_bKGD_SUPPORTED
+#define PNG_WRITE_CHECK_FOR_INVALID_INDEX_SUPPORTED
 #define PNG_WRITE_cHRM_SUPPORTED
 #define PNG_WRITE_COMPRESSED_TEXT_SUPPORTED
 #define PNG_WRITE_CUSTOMIZE_ZTXT_COMPRESSION_SUPPORTED

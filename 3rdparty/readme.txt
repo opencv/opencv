@@ -6,33 +6,33 @@ In order to use these versions of libraries instead of system ones on UNIX syste
 should use BUILD_<library_name> CMake flags (for example, BUILD_PNG for the libpng library).
 
 ------------------------------------------------------------------------------------
-libjpeg 6b (6.2)  -   The Independent JPEG Group's JPEG software.
-                      Copyright (C) 1994-1997, Thomas G. Lane.
+libjpeg 8d (8.4)  -   The Independent JPEG Group's JPEG software.
+                      Copyright (C) 1991-2012, Thomas G. Lane, Guido Vollbeding.
                       See IGJ home page http://www.ijg.org
                       for details and links to the source code
 
                       HAVE_JPEG preprocessor flag must be set to make highgui use libjpeg.
                       On UNIX systems configure script takes care of it.
 ------------------------------------------------------------------------------------
-libpng 1.5.9      -   Portable Network Graphics library.
-                      Copyright (C) 2004, 2006-2011 Glenn Randers-Pehrson.
+libpng 1.5.12     -   Portable Network Graphics library.
+                      Copyright (c) 2004, 2006-2012 Glenn Randers-Pehrson.
                       See libpng home page http://www.libpng.org
                       for details and links to the source code
 
                       HAVE_PNG preprocessor flag must be set to make highgui use libpng.
                       On UNIX systems configure script takes care of it.
 ------------------------------------------------------------------------------------
-libtiff 4.0.1     -   Tag Image File Format (TIFF) Software
+libtiff 4.0.2     -   Tag Image File Format (TIFF) Software
                       Copyright (c) 1988-1997 Sam Leffler
                       Copyright (c) 1991-1997 Silicon Graphics, Inc.
-                      See libtiff home page http://www.libtiff.org
+                      See libtiff home page http://www.remotesensing.org/libtiff/
                       for details and links to the source code
 
                       HAVE_TIFF preprocessor flag must be set to make highgui use libtiff.
                       On UNIX systems configure script takes care of it.
                       In this build support for ZIP (LZ77 compression) is turned on.
 ------------------------------------------------------------------------------------
-zlib 1.2.6        -   General purpose LZ77 compression library
+zlib 1.2.7        -   General purpose LZ77 compression library
                       Copyright (C) 1995-2012 Jean-loup Gailly and Mark Adler.
                       See zlib home page http://www.zlib.net
                       for details and links to the source code

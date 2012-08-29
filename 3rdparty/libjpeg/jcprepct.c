@@ -173,10 +173,12 @@ pre_process_data (j_compress_ptr cinfo,
 	*out_row_group_ctr < out_row_groups_avail) {
       for (ci = 0, compptr = cinfo->comp_info; ci < cinfo->num_components;
 	   ci++, compptr++) {
+	numrows = (compptr->v_samp_factor * compptr->DCT_v_scaled_size) /
+		  cinfo->min_DCT_v_scaled_size;
 	expand_bottom_edge(output_buf[ci],
-			   compptr->width_in_blocks * DCTSIZE,
-			   (int) (*out_row_group_ctr * compptr->v_samp_factor),
-			   (int) (out_row_groups_avail * compptr->v_samp_factor));
+			   compptr->width_in_blocks * compptr->DCT_h_scaled_size,
+			   (int) (*out_row_group_ctr * numrows),
+			   (int) (out_row_groups_avail * numrows));
       }
       *out_row_group_ctr = out_row_groups_avail;
       break;			/* can exit outer loop without test */
@@ -288,7 +290,8 @@ create_context_buffer (j_compress_ptr cinfo)
      */
     true_buffer = (*cinfo->mem->alloc_sarray)
       ((j_common_ptr) cinfo, JPOOL_IMAGE,
-       (JDIMENSION) (((long) compptr->width_in_blocks * DCTSIZE *
+       (JDIMENSION) (((long) compptr->width_in_blocks *
+		      cinfo->min_DCT_h_scaled_size *
 		      cinfo->max_h_samp_factor) / compptr->h_samp_factor),
        (JDIMENSION) (3 * rgroup_height));
     /* Copy true buffer row pointers into the middle of the fake row array */
@@ -346,7 +349,8 @@ jinit_c_prep_controller (j_compress_ptr cinfo, boolean need_full_buffer)
 	 ci++, compptr++) {
       prep->color_buf[ci] = (*cinfo->mem->alloc_sarray)
 	((j_common_ptr) cinfo, JPOOL_IMAGE,
-	 (JDIMENSION) (((long) compptr->width_in_blocks * DCTSIZE *
+	 (JDIMENSION) (((long) compptr->width_in_blocks *
+			cinfo->min_DCT_h_scaled_size *
 			cinfo->max_h_samp_factor) / compptr->h_samp_factor),
 	 (JDIMENSION) cinfo->max_v_samp_factor);
     }

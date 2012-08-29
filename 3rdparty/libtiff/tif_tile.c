@@ -1,4 +1,4 @@
-/* $Id: tif_tile.c,v 1.22 2010-07-01 15:33:28 dron Exp $ */
+/* $Id: tif_tile.c,v 1.23 2012-06-06 05:33:55 fwarmerdam Exp $ */
 
 /*
  * Copyright (c) 1991-1997 Sam Leffler
@@ -203,12 +203,13 @@ TIFFVTileSize64(TIFF* tif, uint32 nrows)
 		uint64 samplingrow_size;
 		TIFFGetFieldDefaulted(tif,TIFFTAG_YCBCRSUBSAMPLING,ycbcrsubsampling+0,
 		    ycbcrsubsampling+1);
-		assert((ycbcrsubsampling[0]==1)||(ycbcrsubsampling[0]==2)||(ycbcrsubsampling[0]==4));
-		assert((ycbcrsubsampling[1]==1)||(ycbcrsubsampling[1]==2)||(ycbcrsubsampling[1]==4));
-		if (ycbcrsubsampling[0]*ycbcrsubsampling[1]==0)
+		if ((ycbcrsubsampling[0] != 1 && ycbcrsubsampling[0] != 2 && ycbcrsubsampling[0] != 4)
+		    ||(ycbcrsubsampling[1] != 1 && ycbcrsubsampling[1] != 2 && ycbcrsubsampling[1] != 4))
 		{
 			TIFFErrorExt(tif->tif_clientdata,module,
-			    "Invalid YCbCr subsampling");
+				     "Invalid YCbCr subsampling (%dx%d)", 
+				     ycbcrsubsampling[0], 
+				     ycbcrsubsampling[1] );
 			return 0;
 		}
 		samplingblock_samples=ycbcrsubsampling[0]*ycbcrsubsampling[1]+2;

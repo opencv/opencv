@@ -5,6 +5,11 @@
  * All rights reserved.
  */
 
+/*
+ * Modified by Andrey Kiselev <dron@remotesensing.org> to handle UUID
+ * box properly.
+ */
+
 /* __START_OF_JASPER_LICENSE__
  * 
  * JasPer License Version 2.0
@@ -229,6 +234,12 @@ typedef struct {
 	jp2_cmapent_t *ents;
 } jp2_cmap_t;
 
+typedef struct {
+	uint_fast32_t datalen;
+	uint_fast8_t uuid[16];
+	uint_fast8_t *data;
+} jp2_uuid_t;
+
 #define	JP2_CMAP_DIRECT		0
 #define	JP2_CMAP_PALETTE	1
 
@@ -257,6 +268,7 @@ typedef struct {
 		jp2_pclr_t pclr;
 		jp2_cdef_t cdef;
 		jp2_cmap_t cmap;
+		jp2_uuid_t uuid;
 	} data;
 
 } jp2_box_t;
