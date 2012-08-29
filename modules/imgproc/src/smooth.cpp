@@ -1325,7 +1325,7 @@ public:
 					#if CV_SSE3
 					if( haveSSE3 )
 					{
-						__m128 _val0 = _mm_set1_ps(val0);
+						__m128 _val0 = _mm_set1_ps(static_cast<float>(val0));
 						const __m128 _signMask = _mm_load_ps((const float*)bufSignMask);
 
 						for( ; k <= maxk - 4; k += 4 )
@@ -1373,9 +1373,9 @@ public:
 					#if CV_SSE3
 					if( haveSSE3 )
 					{
-                        const __m128 _b0 = _mm_set1_ps(b0);
-						const __m128 _g0 = _mm_set1_ps(g0);
-						const __m128 _r0 = _mm_set1_ps(r0);
+						const __m128 _b0 = _mm_set1_ps(static_cast<float>(b0));
+						const __m128 _g0 = _mm_set1_ps(static_cast<float>(g0));
+						const __m128 _r0 = _mm_set1_ps(static_cast<float>(r0));
 						const __m128 _signMask = _mm_load_ps((const float*)bufSignMask);
                         
                         for( ; k <= maxk - 4; k += 4 )
