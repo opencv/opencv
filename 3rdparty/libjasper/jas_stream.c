@@ -363,6 +363,17 @@ jas_stream_t *jas_stream_tmpfile()
 	obj->flags = 0;
 	stream->obj_ = obj;
 
+#ifdef _WIN32
+	/* Choose a file name. */
+	tmpnam(obj->pathname);
+
+	/* Open the underlying file. */
+	if ((obj->fd = open(obj->pathname, O_CREAT | O_EXCL | O_RDWR | O_TRUNC | O_BINARY,
+	  JAS_STREAM_PERMS)) < 0) {
+		jas_stream_destroy(stream);
+		return 0;
+	}
+#else
 	/* Choose a file name. */
 	snprintf(obj->pathname, L_tmpnam, "%s/tmp.XXXXXXXXXX", P_tmpdir);
 
@@ -371,6 +382,7 @@ jas_stream_t *jas_stream_tmpfile()
 		jas_stream_destroy(stream);
 		return 0;
 	}
+#endif
 
 	/* Unlink the file so that it will disappear if the program
 	terminates abnormally. */

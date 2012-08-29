@@ -78,7 +78,9 @@
 #include <string.h>
 #include <limits.h>
 #include <errno.h>
+#ifndef _WIN32
 #include <stdint.h>
+#endif
 
 #include "jasper/jas_malloc.h"
 
