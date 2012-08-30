@@ -47,7 +47,8 @@ using namespace cv::gpu;
 
 #if !defined (HAVE_CUDA)
 
-cv::gpu::bilateralFilter(const GpuMat&, GpuMat&, int, float, float, int, Stream&) { throw_nogpu(); }
+void cv::gpu::bilateralFilter(const GpuMat&, GpuMat&, int, float, float, int, Stream&) { throw_nogpu(); }
+void cv::gpu::nonLocalMeans(const GpuMat&, GpuMat&, float, int, int, int, Stream&) { throw_nogpu(); }
 
 #else
 
@@ -82,8 +83,8 @@ void cv::gpu::bilateralFilter(const GpuMat& src, GpuMat& dst, int kernel_size, f
 
     sigma_color = (sigma_color <= 0 ) ? 1 : sigma_color;
     sigma_spatial = (sigma_spatial <= 0 ) ? 1 : sigma_spatial;
-    
-    
+
+
     int radius = (kernel_size <= 0) ? cvRound(sigma_spatial*1.5) : kernel_size/2;
     kernel_size = std::max(radius, 1)*2 + 1;
 
