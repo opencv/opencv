@@ -11,7 +11,7 @@ namespace {
 typedef pair<string, string> pair_string;
 DEF_PARAM_TEST_1(ImagePair, pair_string);
 
-PERF_TEST_P(ImagePair, Calib3D_StereoBM, Values(make_pair<string, string>("gpu/perf/aloe.jpg", "gpu/perf/aloeR.jpg")))
+PERF_TEST_P(ImagePair, Calib3D_StereoBM, Values(pair<string, string>("gpu/perf/aloe.jpg", "gpu/perf/aloeR.jpg")))
 {
     declare.time(5.0);
 
@@ -57,7 +57,7 @@ PERF_TEST_P(ImagePair, Calib3D_StereoBM, Values(make_pair<string, string>("gpu/p
 //////////////////////////////////////////////////////////////////////
 // StereoBeliefPropagation
 
-PERF_TEST_P(ImagePair, Calib3D_StereoBeliefPropagation, Values(make_pair<string, string>("gpu/stereobp/aloe-L.png", "gpu/stereobp/aloe-R.png")))
+PERF_TEST_P(ImagePair, Calib3D_StereoBeliefPropagation, Values(pair<string, string>("gpu/stereobp/aloe-L.png", "gpu/stereobp/aloe-R.png")))
 {
     declare.time(10.0);
 
@@ -93,7 +93,7 @@ PERF_TEST_P(ImagePair, Calib3D_StereoBeliefPropagation, Values(make_pair<string,
 //////////////////////////////////////////////////////////////////////
 // StereoConstantSpaceBP
 
-PERF_TEST_P(ImagePair, Calib3D_StereoConstantSpaceBP, Values(make_pair<string, string>("gpu/stereobm/aloe-L.png", "gpu/stereobm/aloe-R.png")))
+PERF_TEST_P(ImagePair, Calib3D_StereoConstantSpaceBP, Values(pair<string, string>("gpu/stereobm/aloe-L.png", "gpu/stereobm/aloe-R.png")))
 {
     declare.time(10.0);
 
@@ -129,7 +129,7 @@ PERF_TEST_P(ImagePair, Calib3D_StereoConstantSpaceBP, Values(make_pair<string, s
 //////////////////////////////////////////////////////////////////////
 // DisparityBilateralFilter
 
-PERF_TEST_P(ImagePair, Calib3D_DisparityBilateralFilter, Values(make_pair<string, string>("gpu/stereobm/aloe-L.png", "gpu/stereobm/aloe-disp.png")))
+PERF_TEST_P(ImagePair, Calib3D_DisparityBilateralFilter, Values(pair<string, string>("gpu/stereobm/aloe-L.png", "gpu/stereobm/aloe-disp.png")))
 {
     const cv::Mat img = readImage(GetParam().first, cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(img.empty());
