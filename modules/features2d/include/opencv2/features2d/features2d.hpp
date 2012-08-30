@@ -267,6 +267,97 @@ public:
     static Ptr<Feature2D> create( const string& name );
 };
 
+/*!
+  BRISK implementation
+*/
+class CV_EXPORTS_W BRISK : public Feature2D
+{
+public:
+    CV_WRAP explicit BRISK(int thresh=30, int octaves=3, float patternScale=1.0f);
+
+    virtual ~BRISK();
+
+    // returns the descriptor size in bytes
+    int descriptorSize() const;
+    // returns the descriptor type
+    int descriptorType() const;
+
+    // Compute the BRISK features on an image
+    void operator()(InputArray image, InputArray mask, vector<KeyPoint>& keypoints) const;
+
+    // Compute the BRISK features and descriptors on an image
+    void operator()( InputArray image, InputArray mask, vector<KeyPoint>& keypoints,
+                      OutputArray descriptors, bool useProvidedKeypoints=false ) const;
+
+    AlgorithmInfo* info() const;
+
+    // custom setup
+    CV_WRAP explicit BRISK(std::vector<float> &radiusList, std::vector<int> &numberList,
+        float dMax=5.85f, float dMin=8.2f, std::vector<int> indexChange=std::vector<int>());
+
+    // call this to generate the kernel:
+    // circle of radius r (pixels), with n points;
+    // short pairings with dMax, long pairings with dMin
+    CV_WRAP void generateKernel(std::vector<float> &radiusList,
+        std::vector<int> &numberList, float dMax=5.85f, float dMin=8.2f,
+        std::vector<int> indexChange=std::vector<int>());
+
+protected:
+
+    void computeImpl( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors ) const;
+    void detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
+
+    void computeKeypointsNoOrientation(InputArray image, InputArray mask, vector<KeyPoint>& keypoints) const;
+    void computeDescriptorsAndOrOrientation(InputArray image, InputArray mask, vector<KeyPoint>& keypoints,
+                                       OutputArray descriptors, bool doDescriptors, bool doOrientation,
+                                       bool useProvidedKeypoints) const;
+
+    // Feature parameters
+    CV_PROP_RW int threshold;
+    CV_PROP_RW int octaves;
+
+    // some helper structures for the Brisk pattern representation
+    struct BriskPatternPoint{
+        float x;         // x coordinate relative to center
+        float y;         // x coordinate relative to center
+        float sigma;     // Gaussian smoothing sigma
+    };
+    struct BriskShortPair{
+        unsigned int i;  // index of the first pattern point
+        unsigned int j;  // index of other pattern point
+    };
+    struct BriskLongPair{
+        unsigned int i;  // index of the first pattern point
+        unsigned int j;  // index of other pattern point
+        int weighted_dx; // 1024.0/dx
+        int weighted_dy; // 1024.0/dy
+    };
+    inline int smoothedIntensity(const cv::Mat& image,
+                const cv::Mat& integral,const float key_x,
+                const float key_y, const unsigned int scale,
+                const unsigned int rot, const unsigned int point) const;
+    // pattern properties
+    BriskPatternPoint* patternPoints_;     //[i][rotation][scale]
+    unsigned int points_;                 // total number of collocation points
+    float* scaleList_;                     // lists the scaling per scale index [scale]
+    unsigned int* sizeList_;             // lists the total pattern size per scale index [scale]
+    static const unsigned int scales_;    // scales discretization
+    static const float scalerange_;     // span of sizes 40->4 Octaves - else, this needs to be adjusted...
+    static const unsigned int n_rot_;    // discretization of the rotation look-up
+
+    // pairs
+    int strings_;                        // number of uchars the descriptor consists of
+    float dMax_;                         // short pair maximum distance
+    float dMin_;                         // long pair maximum distance
+    BriskShortPair* shortPairs_;         // d<_dMax
+    BriskLongPair* longPairs_;             // d>_dMin
+    unsigned int noShortPairs_;         // number of shortParis
+    unsigned int noLongPairs_;             // number of longParis
+
+    // general
+    static const float basicSize_;
+};
+
 
 /*!
  ORB implementation.
