@@ -1314,7 +1314,7 @@ public:
         ssize.width *= cn;
         int dy, dx, k = 0;
         
-        VecOp vop(scale_x, scale_y, src.channels(), src.step/*, area_ofs*/);
+        VecOp vop(scale_x, scale_y, src.channels(), (int)src.step/*, area_ofs*/);
         
         for( dy = range.start; dy < range.end; dy++ )
         {
