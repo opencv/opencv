@@ -107,7 +107,6 @@ endif()
 
 if(WIN32)
   list(APPEND highgui_srcs src/cap_vfw.cpp src/cap_cmu.cpp src/cap_dshow.cpp)
-  list(APPEND HIGHGUI_LIBRARIES vfw32)
 endif(WIN32)
 
 if(HAVE_XINE)
