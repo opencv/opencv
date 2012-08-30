@@ -506,6 +506,7 @@ protected:
     //                                 int stripSize, int yStep, double factor, vector<Rect>& candidates,
     //                                 vector<int>& rejectLevels, vector<double>& levelWeights, bool outputRejectLevels=false);
     enum { BOOST = 0 };
+    enum { FRAME_WIDTH = 640, FRAME_HEIGHT = 480, TOTAL_SCALES = 55, CLASSIFIERS = 5};
 
 private:
     struct Feature
@@ -514,7 +515,7 @@ private:
         int channel;
     };
 
-    stuct Stamp
+    struct Stamp
     {
 
     };
