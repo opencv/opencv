@@ -106,13 +106,18 @@ struct Level {
 
     // according to R. Benenson, M. Mathias, R. Timofte and L. Van Gool paper
     struct CascadeIntrinsics {
-        static const float lambda = 1.099f/ 0.301029996f, a = 0.89f;
+        static const float lambda = 1.099f, a = 0.89f;
         static const float intrinsics[10][4];
 
-        static float getFor(int chennel, int scaling, int ab)
+        static float getFor(int chennel, float scaling)
         {
-            CV_Assert(chennel < 10 && scaling < 2 && ab < 2);
-            return intrinsics[chennel][(scaling << 1) + ab];
+            CV_Assert(chennel < 10);
+
+            if ((scaling - 1.f) < FLT_EPSILON)
+                return 1.f;
+
+            int ud = (int)(scaling < 1.f);
+            return intrinsics[chennel][(ud << 1)] * pow(scaling, intrinsics[chennel][(ud << 1) + 1]);
         }
 
     };
@@ -120,12 +125,12 @@ struct Level {
     const float CascadeIntrinsics::intrinsics[10][4] =
         {   //da, db, ua, ub
             // hog-like orientation bins
-            {a, lambda, 1, 2},
-            {a, lambda, 1, 2},
-            {a, lambda, 1, 2},
-            {a, lambda, 1, 2},
-            {a, lambda, 1, 2},
-            {a, lambda, 1, 2},
+            {a, lambda / log(2), 1, 2},
+            {a, lambda / log(2), 1, 2},
+            {a, lambda / log(2), 1, 2},
+            {a, lambda / log(2), 1, 2},
+            {a, lambda / log(2), 1, 2},
+            {a, lambda / log(2), 1, 2},
             // gradient magnitude
             {a, lambda / log(2), 1, 2},
             // luv -color chennels
@@ -133,6 +138,22 @@ struct Level {
             {1, 2,      1, 2},
             {1, 2,      1, 2}
         };
+
+    struct Feature
+    {
+        cv::Rect rect;
+        int channel;
+        float threshold;
+
+        Feature(int x, int y, int w, int h, int c, float t) : rect(cv::Rect(x, y, w, h)), channel(c), threshold(t) {}
+        Feature(cv::Rect r, int c, float t) : rect(r), channel(c), threshold(t) {}
+
+        Feature rescale(float relScale)
+        {
+            cv::Rect r(cvRound(rect.x * relScale), cvRound(rect.y * relScale), cvRound(rect.width * relScale), cvRound(rect.height * relScale));
+            return Feature( r, channel, threshold * CascadeIntrinsics::getFor(channel, relScale));
+        }
+    };
 }
 
 
