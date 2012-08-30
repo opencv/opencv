@@ -53,12 +53,12 @@ PARAM_TEST_CASE(PyrUp,cv::Size,int)
 {
 	cv::Size size;
 	int type;
-	std::vector<cv::ocl::Info> oclinfo;
+	//std::vector<cv::ocl::Info> oclinfo;
 
 	virtual void SetUp()
 	{
-		int devnums = cv::ocl::getDevice(oclinfo, OPENCV_DEFAULT_OPENCL_DEVICE);
-		CV_Assert(devnums > 0);
+		//int devnums = cv::ocl::getDevice(oclinfo, OPENCV_DEFAULT_OPENCL_DEVICE);
+		//CV_Assert(devnums > 0);
 		size = GET_PARAM(0);
 		type = GET_PARAM(1);
 	}

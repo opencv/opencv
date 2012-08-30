@@ -47,9 +47,11 @@
 #else
 #define LOOP_TIMES 1
 #endif
-#define MWIDTH 2557
-#define MHEIGHT 2579
+#define MWIDTH 256
+#define MHEIGHT 256
 #define CLBINPATH ".\\"
+#define LOOPROISTART 0
+#define LOOPROIEND 1
 int randomInt(int minVal, int maxVal);
 double randomDouble(double minVal, double maxVal);
 

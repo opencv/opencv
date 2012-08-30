@@ -74,13 +74,6 @@ void print_info()
 
 }
 
-#if PERF_TEST_OCL
-int main(int argc, char **argv)
-{
-    run_perf_test();
-    return 0;
-}
-#else
 int main(int argc, char **argv)
 {
     TS::ptr()->init("ocl");
@@ -89,16 +82,16 @@ int main(int argc, char **argv)
     print_info();
 
 	std::vector<cv::ocl::Info> oclinfo;
-	int devnums = getDevice(oclinfo, OPENCV_DEFAULT_OPENCL_DEVICE);
-	if(devnums<1){
+	int devnums = getDevice(oclinfo);
+	if(devnums<1)
+	{
 		std::cout << "no device found\n";
 		return -1;
 	}
     return RUN_ALL_TESTS();
 }
-#endif // PERF_TEST_OCL
 
-#else // HAVE_OPENC
+#else // DON'T HAVE_OPENCL
 
 int main()
 {

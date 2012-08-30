@@ -257,7 +257,7 @@ namespace cv
                     _devicetype = CL_DEVICE_TYPE_ALL;
                     break;
                 default:
-                    CV_Error(-217,"Unkown device type");
+                    CV_Error(CV_GpuApiCallError,"Unkown device type");
             }
             int devcienums = 0;
             // Platform info
@@ -456,7 +456,7 @@ namespace cv
             char **binaries = (char **)malloc( sizeof(char *) * numDevices );
             if(binaries == NULL)
             {
-                CV_Error(-217,"Failed to allocate host memory.(binaries)\r\n");
+                CV_Error(CV_StsNoMem,"Failed to allocate host memory.(binaries)\r\n");
             }
 
             for(i = 0; i < numDevices; i++)
@@ -466,7 +466,7 @@ namespace cv
                     binaries[i] = (char *)malloc( sizeof(char) * binarySizes[i]);
                     if(binaries[i] == NULL)
                     {
-                        CV_Error(-217,"Failed to allocate host memory.(binaries[i])\r\n");
+                        CV_Error(CV_StsNoMem,"Failed to allocate host memory.(binaries[i])\r\n");
                     }
                 }
                 else
@@ -498,7 +498,7 @@ namespace cv
                     {
                         char *temp;
                         sprintf(temp, "Failed to load kernel file : %s\r\n", fileName);
-                        CV_Error(-217, temp);
+                        CV_Error(CV_GpuApiCallError, temp);
                     }
                     else
                     {
@@ -661,14 +661,16 @@ namespace cv
 
             cl_kernel kernel;
             kernel = openCLGetKernelFromSource(clCxt, source, kernelName, build_options);
-
-            globalThreads[0] = divUp(globalThreads[0], localThreads[0]) * localThreads[0];
-            globalThreads[1] = divUp(globalThreads[1], localThreads[1]) * localThreads[1];
-            globalThreads[2] = divUp(globalThreads[2], localThreads[2]) * localThreads[2];
-
-            size_t blockSize = localThreads[0] * localThreads[1] * localThreads[2];
-            cv::ocl::openCLVerifyKernel(clCxt, kernel, &blockSize, globalThreads, localThreads);
-
+            
+            if ( localThreads != NULL)
+            {    
+                globalThreads[0] = divUp(globalThreads[0], localThreads[0]) * localThreads[0];
+                globalThreads[1] = divUp(globalThreads[1], localThreads[1]) * localThreads[1];
+                globalThreads[2] = divUp(globalThreads[2], localThreads[2]) * localThreads[2];
+           
+                size_t blockSize = localThreads[0] * localThreads[1] * localThreads[2];
+                cv::ocl::openCLVerifyKernel(clCxt, kernel, &blockSize, globalThreads, localThreads);
+            }
             for(int i = 0; i < args.size(); i ++)
                 openCLSafeCall(clSetKernelArg(kernel, i, args[i].first, args[i].second));
 

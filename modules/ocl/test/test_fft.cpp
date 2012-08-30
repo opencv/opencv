@@ -52,11 +52,11 @@ PARAM_TEST_CASE(Dft, cv::Size, bool)
 {
 	cv::Size dft_size;
 	bool	 dft_rows;
-	std::vector<cv::ocl::Info> oclinfo;
+	//std::vector<cv::ocl::Info> oclinfo;
     virtual void SetUp()
     {
-	    int devnums = getDevice(oclinfo);
-        CV_Assert(devnums > 0);
+	    //int devnums = getDevice(oclinfo);
+     //   CV_Assert(devnums > 0);
 		dft_size = GET_PARAM(0);
 		dft_rows = GET_PARAM(1);
     }

@@ -672,7 +672,7 @@ namespace cv
                 break;
             }
             default:
-                CV_Error(-217, "Unsupported source type");
+                CV_Error(CV_StsUnsupportedFormat, "Unsupported source type");
             }
         }
 
@@ -898,7 +898,7 @@ namespace cv
             CV_Assert(src.type() == CV_8UC1);
             if(src.clCxt->impl->double_support == 0 && src.depth() ==CV_64F)
             {
-                CV_Error(-217,"select device don't support double");
+                CV_Error(CV_GpuNotSupported,"select device don't support double");
             }
             int vlen = 4;
             int offset = src.offset / vlen;
@@ -1080,7 +1080,7 @@ namespace cv
         {
             if(src.clCxt->impl->double_support == 0 && src.depth() ==CV_64F)
             {
-                CV_Error(-217,"select device don't support double");
+                CV_Error(CV_GpuNotSupported,"select device don't support double");
             }
             oclMat Dx, Dy;
             CV_Assert(borderType == cv::BORDER_REFLECT101 || borderType == cv::BORDER_REPLICATE || borderType == cv::BORDER_REFLECT);
@@ -1093,7 +1093,7 @@ namespace cv
         {
             if(src.clCxt->impl->double_support == 0 && src.depth() ==CV_64F)
             {
-                CV_Error(-217,"select device don't support double");
+                CV_Error(CV_GpuNotSupported,"select device don't support double");
             }
             oclMat Dx, Dy;
             CV_Assert(borderType == cv::BORDER_REFLECT101 || borderType == cv::BORDER_REPLICATE || borderType == cv::BORDER_REFLECT);

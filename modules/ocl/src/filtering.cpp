@@ -371,7 +371,7 @@ void GPUErode(const oclMat &src, oclMat &dst, oclMat &mat_kernel, Size &ksize, c
 		sprintf(s, "-D VAL=FLT_MAX -D GENTYPE=float4");
 		break;
 	default:
-		CV_Error(-217,"unsupported type");
+		CV_Error(CV_StsUnsupportedFormat,"unsupported type");
 	}
     char compile_option[128];
     sprintf(compile_option, "-D RADIUSX=%d -D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D ERODE %s", anchor.x, anchor.y, localThreads[0], localThreads[1],s); 
@@ -443,7 +443,7 @@ void GPUDilate(const oclMat &src, oclMat &dst, oclMat &mat_kernel, Size &ksize, 
 		sprintf(s, "-D VAL=-FLT_MAX -D GENTYPE=float4");
 		break;
 	default:
-		CV_Error(-217,"unsupported type");
+		CV_Error(CV_StsUnsupportedFormat,"unsupported type");
 	}
     char compile_option[128];
     sprintf(compile_option, "-D RADIUSX=%d -D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D DILATE %s", anchor.x, anchor.y, localThreads[0], localThreads[1],s); 
@@ -1501,7 +1501,7 @@ void cv::ocl::Laplacian(const oclMat &src, oclMat &dst, int ddepth, int ksize, d
 {
     if(src.clCxt -> impl -> double_support ==0 && src.type() == CV_64F)
     {
-        CV_Error(-217,"Selected device don't support double\r\n");
+        CV_Error(CV_GpuNotSupported,"Selected device don't support double\r\n");
         return;
     }
 

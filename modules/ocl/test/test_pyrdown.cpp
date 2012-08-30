@@ -89,7 +89,7 @@ PARAM_TEST_CASE(PyrDown, MatType, bool)
     cv::Mat mask_roi;
     cv::Mat dst_roi;
     cv::Mat dst1_roi; //bak
-    std::vector<cv::ocl::Info> oclinfo;
+    //std::vector<cv::ocl::Info> oclinfo;
     //ocl dst mat for testing
     cv::ocl::oclMat gdst_whole;
     cv::ocl::oclMat gdst1_whole; //bak
@@ -119,10 +119,10 @@ PARAM_TEST_CASE(PyrDown, MatType, bool)
 
         val = cv::Scalar(rng.uniform(-10.0, 10.0), rng.uniform(-10.0, 10.0), rng.uniform(-10.0, 10.0), rng.uniform(-10.0, 10.0));
 
-        int devnums = getDevice(oclinfo);
-        CV_Assert(devnums > 0);
-        //if you want to use undefault device, set it here
-        //setDevice(oclinfo[0]);
+        //int devnums = getDevice(oclinfo);
+        //CV_Assert(devnums > 0);
+        ////if you want to use undefault device, set it here
+        ////setDevice(oclinfo[0]);
     }
 
 	void Cleanup()

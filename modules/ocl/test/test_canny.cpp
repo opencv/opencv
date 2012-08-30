@@ -64,13 +64,13 @@ PARAM_TEST_CASE(Canny, AppertureSize, L2gradient)
     bool useL2gradient;
 
     cv::Mat edges_gold;
-	std::vector<cv::ocl::Info> oclinfo;
+	//std::vector<cv::ocl::Info> oclinfo;
     virtual void SetUp()
     {
         apperture_size = GET_PARAM(0);
         useL2gradient = GET_PARAM(1);
-		int devnums = getDevice(oclinfo);
-		CV_Assert(devnums > 0);
+		//int devnums = getDevice(oclinfo);
+		//CV_Assert(devnums > 0);
     }
 };
 

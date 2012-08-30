@@ -157,7 +157,7 @@ void convert_C3C4(const cl_mem &src, oclMat &dst, int srcStep)
         sprintf(compile_option, "-D GENTYPE4=double4");
         break;
 	default:
-		CV_Error(-217,"unknown depth");
+		CV_Error(CV_StsUnsupportedFormat,"unknown depth");
     }
     vector< pair<size_t, const void *> > args;
     args.push_back( make_pair( sizeof(cl_mem), (void *)&src));
@@ -205,7 +205,7 @@ void convert_C4C3(const oclMat &src, cl_mem &dst, int dstStep)
         sprintf(compile_option, "-D GENTYPE4=double4");
         break;
 	default:
-		CV_Error(-217,"unknown depth");
+		CV_Error(CV_StsUnsupportedFormat,"unknown depth");
     }
 
     vector< pair<size_t, const void *> > args;
@@ -517,7 +517,7 @@ void set_to_withoutmask_run(const oclMat &dst, const Scalar &scalar, string kern
 			args.push_back( make_pair( sizeof(cl_uchar4) , (void *)&val.uval ));
 			break;
 		default:
-			CV_Error(-217,"unsupported channels");
+			CV_Error(CV_StsUnsupportedFormat,"unsupported channels");
 		}
         break;
     case 1:
@@ -536,7 +536,7 @@ void set_to_withoutmask_run(const oclMat &dst, const Scalar &scalar, string kern
 			args.push_back( make_pair( sizeof(cl_char4) , (void *)&val.cval ));
 			break;
 		default:
-			CV_Error(-217,"unsupported channels");
+			CV_Error(CV_StsUnsupportedFormat,"unsupported channels");
 		}
         break;
     case 2:
@@ -555,7 +555,7 @@ void set_to_withoutmask_run(const oclMat &dst, const Scalar &scalar, string kern
 			args.push_back( make_pair( sizeof(cl_ushort4) , (void *)&val.usval ));
 			break;
 		default:
-			CV_Error(-217,"unsupported channels");
+			CV_Error(CV_StsUnsupportedFormat,"unsupported channels");
 		}
         break;
     case 3:
@@ -574,7 +574,7 @@ void set_to_withoutmask_run(const oclMat &dst, const Scalar &scalar, string kern
 			args.push_back( make_pair( sizeof(cl_short4) , (void *)&val.shval ));
 			break;
 		default:
-			CV_Error(-217,"unsupported channels");
+			CV_Error(CV_StsUnsupportedFormat,"unsupported channels");
 		}
         break;
     case 4:
@@ -600,7 +600,7 @@ void set_to_withoutmask_run(const oclMat &dst, const Scalar &scalar, string kern
 			args.push_back( make_pair( sizeof(cl_int4) , (void *)&val.ival ));
 			break;
 		default:
-			CV_Error(-217,"unsupported channels");
+			CV_Error(CV_StsUnsupportedFormat,"unsupported channels");
 		}
         break;
     case 5:
@@ -619,7 +619,7 @@ void set_to_withoutmask_run(const oclMat &dst, const Scalar &scalar, string kern
 			args.push_back( make_pair( sizeof(cl_float4) , (void *)&val.fval ));
 			break;
 		default:
-			CV_Error(-217,"unsupported channels");
+			CV_Error(CV_StsUnsupportedFormat,"unsupported channels");
 		}
         break;
     case 6:
@@ -638,12 +638,28 @@ void set_to_withoutmask_run(const oclMat &dst, const Scalar &scalar, string kern
 			args.push_back( make_pair( sizeof(cl_double4) , (void *)&val.dval ));
 			break;
 		default:
-			CV_Error(-217,"unsupported channels");
+			CV_Error(CV_StsUnsupportedFormat,"unsupported channels");
 		}
         break;
 	default:
-		CV_Error(-217,"unknown depth");
+		CV_Error(CV_StsUnsupportedFormat,"unknown depth");
     }
+#if CL_VERSION_1_2
+	if(dst.offset==0 && dst.cols==dst.wholecols)
+	{
+		clEnqueueFillBuffer(dst.clCxt->impl->clCmdQueue,(cl_mem)dst.data,args[0].second,args[0].first,0,dst.step*dst.rows,0,NULL,NULL);
+	}
+	else
+	{
+		args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst.data ));
+		args.push_back( make_pair( sizeof(cl_int) , (void *)&dst.cols ));
+		args.push_back( make_pair( sizeof(cl_int) , (void *)&dst.rows ));
+		args.push_back( make_pair( sizeof(cl_int) , (void *)&step_in_pixel ));
+		args.push_back( make_pair( sizeof(cl_int) , (void *)&offset_in_pixel));
+		openCLExecuteKernel(dst.clCxt , &operator_setTo, kernelName, globalThreads,
+							localThreads, args, -1, -1,compile_option);
+	}
+#else
     args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst.data ));
     args.push_back( make_pair( sizeof(cl_int) , (void *)&dst.cols ));
     args.push_back( make_pair( sizeof(cl_int) , (void *)&dst.rows ));
@@ -651,6 +667,7 @@ void set_to_withoutmask_run(const oclMat &dst, const Scalar &scalar, string kern
     args.push_back( make_pair( sizeof(cl_int) , (void *)&offset_in_pixel));
     openCLExecuteKernel(dst.clCxt , &operator_setTo, kernelName, globalThreads,
                         localThreads, args, -1, -1,compile_option);
+#endif
 }
 
 void set_to_withmask_run(const oclMat &dst, const Scalar &scalar, const oclMat &mask, string kernelName)
@@ -696,7 +713,7 @@ void set_to_withmask_run(const oclMat &dst, const Scalar &scalar, const oclMat &
 			args.push_back( make_pair( sizeof(cl_uchar4) , (void *)&val.uval ));
 			break;
 		default:
-			CV_Error(-217,"unsupported channels");
+			CV_Error(CV_StsUnsupportedFormat,"unsupported channels");
 		}
         break;
     case 1:
@@ -715,7 +732,7 @@ void set_to_withmask_run(const oclMat &dst, const Scalar &scalar, const oclMat &
 			args.push_back( make_pair( sizeof(cl_char4) , (void *)&val.cval ));
 			break;
 		default:
-			CV_Error(-217,"unsupported channels");
+			CV_Error(CV_StsUnsupportedFormat,"unsupported channels");
 		}
         break;
     case 2:
@@ -734,7 +751,7 @@ void set_to_withmask_run(const oclMat &dst, const Scalar &scalar, const oclMat &
 			args.push_back( make_pair( sizeof(cl_ushort4) , (void *)&val.usval ));
 			break;
 		default:
-			CV_Error(-217,"unsupported channels");
+			CV_Error(CV_StsUnsupportedFormat,"unsupported channels");
 		}
         break;
     case 3:
@@ -753,7 +770,7 @@ void set_to_withmask_run(const oclMat &dst, const Scalar &scalar, const oclMat &
 			args.push_back( make_pair( sizeof(cl_short4) , (void *)&val.shval ));
 			break;
 		default:
-			CV_Error(-217,"unsupported channels");
+			CV_Error(CV_StsUnsupportedFormat,"unsupported channels");
 		}
         break;
     case 4:
@@ -772,7 +789,7 @@ void set_to_withmask_run(const oclMat &dst, const Scalar &scalar, const oclMat &
 			args.push_back( make_pair( sizeof(cl_int4) , (void *)&val.ival ));
 			break;
 		default:
-			CV_Error(-217,"unsupported channels");
+			CV_Error(CV_StsUnsupportedFormat,"unsupported channels");
 		}
         break;
     case 5:
@@ -791,7 +808,7 @@ void set_to_withmask_run(const oclMat &dst, const Scalar &scalar, const oclMat &
 			args.push_back( make_pair( sizeof(cl_float4) , (void *)&val.fval ));
 			break;
 		default:
-			CV_Error(-217,"unsupported channels");
+			CV_Error(CV_StsUnsupportedFormat,"unsupported channels");
 		}
         break;
     case 6:
@@ -810,11 +827,11 @@ void set_to_withmask_run(const oclMat &dst, const Scalar &scalar, const oclMat &
 			args.push_back( make_pair( sizeof(cl_double4) , (void *)&val.dval ));
 			break;
 		default:
-			CV_Error(-217,"unsupported channels");
+			CV_Error(CV_StsUnsupportedFormat,"unsupported channels");
 		}
         break;
 	default:
-		CV_Error(-217,"unknown depth");
+		CV_Error(CV_StsUnsupportedFormat,"unknown depth");
     }
     args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst.data ));
     args.push_back( make_pair( sizeof(cl_int) , (void *)&dst.cols ));
