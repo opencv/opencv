@@ -71,15 +71,14 @@
 #include <cmath>
 
 
-//// If TBB is used
+//// If a parallelization method is available then, you should define MAKE_PARALLEL, in the other case, the classical serial code will be used
+#define MAKE_PARALLEL 
 // ==> then include required includes 
-#ifdef HAVE_TBB
-#include "tbb/parallel_for.h"
-#include "tbb/blocked_range.h"
+#ifdef MAKE_PARALLEL
 
 // ==> declare usefull generic tools
 template <class type>
-class Parallel_clipBufferValues
+class Parallel_clipBufferValues: public cv::ParallelLoopBody
 {
 private:
     type *bufferToClip;
@@ -89,9 +88,9 @@ public:
     Parallel_clipBufferValues(type* bufferToProcess, const type min, const type max)
     : bufferToClip(bufferToProcess), minValue(min), maxValue(max){}
 
-    void operator()( const tbb::blocked_range<size_t>& r ) const {
-	register type *inputOutputBufferPTR=bufferToClip+r.begin();
-        for (register unsigned int jf = r.begin(); jf != r.end(); ++jf, ++inputOutputBufferPTR)
+    virtual void operator()( const cv::Range &r ) const {
+	register type *inputOutputBufferPTR=bufferToClip+r.start;
+        for (register int jf = r.start; jf != r.end; ++jf, ++inputOutputBufferPTR)
 	{
 	    if (*inputOutputBufferPTR>maxValue)
 		*inputOutputBufferPTR=maxValue;
@@ -389,8 +388,8 @@ public:
 		std::cout<<"this->min()"<<this->min()<<"minThreshold="<<minThreshold<<"updatedLowValue="<<updatedLowValue<<std::endl;
 		// clipping values outside than the updated thresholds
                 bufferPTR=this->Buffer();
-#ifdef HAVE_TBB // call the TemplateBuffer TBB clipping method
-                tbb::parallel_for(tbb::blocked_range<size_t>(0,this->size()), Parallel_clipBufferValues<type>(bufferPTR, updatedLowValue, updatedHighValue), tbb::auto_partitioner());
+#ifdef MAKE_PARALLEL // call the TemplateBuffer TBB clipping method
+                parallel_for_(tbb::blocked_range<size_t>(0,this->size()), Parallel_clipBufferValues<type>(bufferPTR, updatedLowValue, updatedHighValue));
 #else
 
 		for (unsigned int i=0;i<this->size();++i, ++bufferPTR)

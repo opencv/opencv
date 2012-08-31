@@ -204,8 +204,8 @@ void ParvoRetinaFilter::_OPL_OnOffWaysComputing() // WARNING : this method requi
 	// loop that makes the difference between photoreceptor cells output and horizontal cells
 	// positive part goes on the ON way, negative pat goes on the OFF way
 
-#ifdef HAVE_TBB
-        tbb::parallel_for(tbb::blocked_range<size_t>(0,_filterOutput.getNBpixels()), Parallel_OPL_OnOffWaysComputing(&_photoreceptorsOutput[0], &_horizontalCellsOutput[0], &_bipolarCellsOutputON[0], &_bipolarCellsOutputOFF[0], &_parvocellularOutputON[0], &_parvocellularOutputOFF[0]), tbb::auto_partitioner());
+#ifdef MAKE_PARALLEL
+        cv::parallel_for_(cv::Range(0,_filterOutput.getNBpixels()), Parallel_OPL_OnOffWaysComputing(&_photoreceptorsOutput[0], &_horizontalCellsOutput[0], &_bipolarCellsOutputON[0], &_bipolarCellsOutputOFF[0], &_parvocellularOutputON[0], &_parvocellularOutputOFF[0]));
 #else
 	float *photoreceptorsOutput_PTR= &_photoreceptorsOutput[0];
 	float *horizontalCellsOutput_PTR= &_horizontalCellsOutput[0];

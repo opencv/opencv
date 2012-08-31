@@ -433,8 +433,8 @@ void RetinaColor::clipRGBOutput_0_maxInputValue(float *inputOutputBuffer, const 
     if (inputOutputBuffer==NULL)
         inputOutputBuffer= &_demultiplexedColorFrame[0];
 
-#ifdef HAVE_TBB // call the TemplateBuffer TBB clipping method
-        tbb::parallel_for(tbb::blocked_range<size_t>(0,_filterOutput.getNBpixels()*3), Parallel_clipBufferValues<float>(inputOutputBuffer, 0, maxInputValue), tbb::auto_partitioner());
+#ifdef MAKE_PARALLEL // call the TemplateBuffer TBB clipping method
+        cv::parallel_for_(cv::Range(0,_filterOutput.getNBpixels()*3), Parallel_clipBufferValues<float>(inputOutputBuffer, 0,  maxInputValue));
 #else
     register float *inputOutputBufferPTR=inputOutputBuffer;
     for (register unsigned int jf = 0; jf < _filterOutput.getNBpixels()*3; ++jf, ++inputOutputBufferPTR)
@@ -580,8 +580,8 @@ void RetinaColor::_adaptiveSpatialLPfilter(const float *inputFrame, float *outpu
 //  horizontal causal filter which adds the input inside... replaces the parent _horizontalCausalFilter_Irregular_addInput by avoiding a product for each pixel
 void RetinaColor::_adaptiveHorizontalCausalFilter_addInput(const float *inputFrame, float *outputFrame, unsigned int IDrowStart, unsigned int IDrowEnd)
 {
-#ifdef HAVE_TBB
-        tbb::parallel_for(tbb::blocked_range<size_t>(IDrowStart,IDrowEnd), Parallel_adaptiveHorizontalCausalFilter_addInput(inputFrame, outputFrame, &_imageGradient[0], _filterOutput.getNBcolumns()), tbb::auto_partitioner());
+#ifdef MAKE_PARALLEL
+        cv::parallel_for_(cv::Range(IDrowStart,IDrowEnd), Parallel_adaptiveHorizontalCausalFilter_addInput(inputFrame, outputFrame, &_imageGradient[0], _filterOutput.getNBcolumns()));
 #else
     register float* outputPTR=outputFrame+IDrowStart*_filterOutput.getNBcolumns();
     register const float* inputPTR=inputFrame+IDrowStart*_filterOutput.getNBcolumns();
@@ -604,8 +604,8 @@ void RetinaColor::_adaptiveHorizontalCausalFilter_addInput(const float *inputFra
 //  vertical anticausal filter which multiplies the output by _gain... replaces the parent _verticalAnticausalFilter_multGain by avoiding a product for each pixel and taking into account the second layer of the _imageGradient buffer
 void RetinaColor::_adaptiveVerticalAnticausalFilter_multGain(float *outputFrame, unsigned int IDcolumnStart, unsigned int IDcolumnEnd)
 {
-#ifdef HAVE_TBB
-        tbb::parallel_for(tbb::blocked_range<size_t>(IDcolumnStart,IDcolumnEnd), Parallel_adaptiveVerticalAnticausalFilter_multGain(outputFrame, &_imageGradient[0]+_filterOutput.getNBpixels(), _filterOutput.getNBrows(), _filterOutput.getNBcolumns(), _gain), tbb::auto_partitioner());
+#ifdef MAKE_PARALLEL
+        cv::parallel_for_(cv::Range(IDcolumnStart,IDcolumnEnd), Parallel_adaptiveVerticalAnticausalFilter_multGain(outputFrame, &_imageGradient[0]+_filterOutput.getNBpixels(), _filterOutput.getNBrows(), _filterOutput.getNBcolumns(), _gain));
 #else
     float* outputOffset=outputFrame+_filterOutput.getNBpixels()-_filterOutput.getNBcolumns();
     float* gradOffset= &_imageGradient[0]+_filterOutput.getNBpixels()*2-_filterOutput.getNBcolumns();
@@ -661,8 +661,8 @@ void RetinaColor::_computeGradient(const float *luminance)
             }
         }
     }
-
 }
+
 bool RetinaColor::applyKrauskopfLMS2Acr1cr2Transform(std::valarray<float> &result)
 {
     bool processSuccess=true;

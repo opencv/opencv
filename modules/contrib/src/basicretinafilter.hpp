@@ -436,16 +436,16 @@ protected:
 	void _local_verticalCausalFilter(float *outputFrame, unsigned int IDcolumnStart, unsigned int IDcolumnEnd, const unsigned int *integrationAreas);
 	void _local_verticalAnticausalFilter_multGain(float *outputFrame, unsigned int IDcolumnStart, unsigned int IDcolumnEnd, const unsigned int *integrationAreas); // this functions affects _gain at the output
 
-#ifdef HAVE_TBB
+#ifdef MAKE_PARALLEL
 /******************************************************
-** IF TBB is useable, then, main loops are parallelized using these functors
+** IF some parallelizing thread methods are available, then, main loops are parallelized using these functors
 ** ==> main idea paralellise main filters loops, then, only the most used methods are parallelized... TODO : increase the number of parallelised methods as necessary
 ** ==> functors names = Parallel_$$$ where $$$= the name of the serial method that is parallelised
 ** ==> functors constructors can differ from the parameters used with their related serial functions
 */
 
 #define _DEBUG_TBB // define DEBUG_TBB in order to display additionnal data on stdout
-    class Parallel_horizontalAnticausalFilter
+    class Parallel_horizontalAnticausalFilter: public cv::ParallelLoopBody
     {
     private:
         float *outputFrame;
@@ -465,16 +465,16 @@ protected:
 #endif
         }
 
-        void operator()( const tbb::blocked_range<size_t>& r ) const {
+        virtual void operator()( const Range& r ) const {
 
 #ifdef DEBUG_TBB
             std::cout<<"Parallel_horizontalAnticausalFilter::operator() :"
 		<<"\n\t range size="<<r.size()
-		<<"\n\t first index="<<r.begin()
+		<<"\n\t first index="<<r.start
 		//<<"\n\t last index="<<filterParam
 		<<std::endl;
 #endif
-            for (size_t IDrow=r.begin(); IDrow!=r.end(); ++IDrow)
+            for (int IDrow=r.start; IDrow!=r.end; ++IDrow)
 	    {
                 register float* outputPTR=outputFrame+(IDrowEnd-IDrow)*(nbColumns)-1;
 		register float result=0;
@@ -487,7 +487,7 @@ protected:
     }
     };
 
-    class Parallel_horizontalCausalFilter_addInput
+    class Parallel_horizontalCausalFilter_addInput: public cv::ParallelLoopBody
     {
     private:
         const float *inputFrame;
@@ -498,8 +498,8 @@ protected:
 	Parallel_horizontalCausalFilter_addInput(const float *bufferToAddAsInputProcess, float *bufferToProcess, const unsigned int idStart, const unsigned int nbCols,  const float a,  const float tau)
         :inputFrame(bufferToAddAsInputProcess), outputFrame(bufferToProcess), IDrowStart(idStart), nbColumns(nbCols), filterParam_a(a), filterParam_tau(tau){}
 
-        void operator()( const tbb::blocked_range<size_t>& r ) const {
-	    for (unsigned int IDrow=r.begin(); IDrow!=r.end(); ++IDrow)
+        virtual void operator()( const Range& r ) const {
+	    for (int IDrow=r.start; IDrow!=r.end; ++IDrow)
 	    {
 		register float* outputPTR=outputFrame+(IDrowStart+IDrow)*nbColumns;
 		register const float* inputPTR=inputFrame+(IDrowStart+IDrow)*nbColumns;
@@ -513,7 +513,7 @@ protected:
         }
     };
 
-    class Parallel_verticalCausalFilter
+    class Parallel_verticalCausalFilter: public cv::ParallelLoopBody
     {
     private:
         float *outputFrame;
@@ -523,8 +523,8 @@ protected:
         Parallel_verticalCausalFilter(float *bufferToProcess, const unsigned int nbRws, const unsigned int nbCols, const float a )
         :outputFrame(bufferToProcess), nbRows(nbRws), nbColumns(nbCols), filterParam_a(a){}
         
-        void operator()( const tbb::blocked_range<size_t>& r ) const {
-            for (unsigned int IDcolumn=r.begin(); IDcolumn!=r.end(); ++IDcolumn)
+        virtual void operator()( const Range& r ) const {
+            for (int IDcolumn=r.start; IDcolumn!=r.end; ++IDcolumn)
 	    {
 		register float result=0;
 		register float *outputPTR=outputFrame+IDcolumn;
@@ -540,7 +540,7 @@ protected:
         }
     };
 
-    class Parallel_verticalAnticausalFilter_multGain
+    class Parallel_verticalAnticausalFilter_multGain: public cv::ParallelLoopBody
     {
     private:
         float *outputFrame;
@@ -550,9 +550,9 @@ protected:
         Parallel_verticalAnticausalFilter_multGain(float *bufferToProcess, const unsigned int nbRws, const unsigned int nbCols, const float a, const float  gain)
         :outputFrame(bufferToProcess), nbRows(nbRws), nbColumns(nbCols), filterParam_a(a), filterParam_gain(gain){}
         
-        void operator()( const tbb::blocked_range<size_t>& r ) const {
+        virtual void operator()( const Range& r ) const {
             float* offset=outputFrame+nbColumns*nbRows-nbColumns;
-    	    for (unsigned int IDcolumn=r.begin(); IDcolumn!=r.end(); ++IDcolumn)
+    	    for (int IDcolumn=r.start; IDcolumn!=r.end; ++IDcolumn)
 	    {
 		register float result=0;
 		register float *outputPTR=offset+IDcolumn;
@@ -568,7 +568,7 @@ protected:
         }
     };
 
-    class Parallel_localAdaptation
+    class Parallel_localAdaptation: public cv::ParallelLoopBody
     {
     private:
          const float *localLuminance, *inputFrame;
@@ -578,11 +578,11 @@ protected:
          Parallel_localAdaptation(const float *localLum, const float *inputImg, float *bufferToProcess, const float localLuminanceFact, const float localLuminanceAdd, const float maxInputVal)
          :localLuminance(localLum), inputFrame(inputImg),outputFrame(bufferToProcess), localLuminanceFactor(localLuminanceFact), localLuminanceAddon(localLuminanceAdd), maxInputValue(maxInputVal) {};
 
-         void operator()( const tbb::blocked_range<size_t>& r ) const {
-             const float *localLuminancePTR=localLuminance+r.begin();
-	     const float *inputFramePTR=inputFrame+r.begin();
-	     float *outputFramePTR=outputFrame+r.begin();
-	     for (register unsigned int IDpixel=r.begin() ; IDpixel!=r.end() ; ++IDpixel, ++inputFramePTR, ++outputFramePTR)
+         virtual void operator()( const Range& r ) const {
+             const float *localLuminancePTR=localLuminance+r.start;
+	     const float *inputFramePTR=inputFrame+r.start;
+	     float *outputFramePTR=outputFrame+r.start;
+	     for (register int IDpixel=r.start ; IDpixel!=r.end ; ++IDpixel, ++inputFramePTR, ++outputFramePTR)
 	     {
 		float X0=*(localLuminancePTR++)*localLuminanceFactor+localLuminanceAddon;
 		// TODO : the following line can lead to a divide by zero ! A small offset is added, take care if the offset is too large in case of High Dynamic Range images which can use very small values...		
@@ -594,7 +594,7 @@ protected:
 
 //////////////////////////////////////////
 /// Specific filtering methods which manage non const spatial filtering parameter (used By retinacolor and LogProjectors) 
-    class Parallel_horizontalAnticausalFilter_Irregular
+    class Parallel_horizontalAnticausalFilter_Irregular: public cv::ParallelLoopBody
     {
     private:
 	float *outputFrame;
@@ -604,9 +604,9 @@ protected:
         Parallel_horizontalAnticausalFilter_Irregular(float *bufferToProcess, const float *spatialConst, const unsigned int idEnd, const unsigned int nbCols)
         :outputFrame(bufferToProcess), spatialConstantBuffer(spatialConst), IDrowEnd(idEnd), nbColumns(nbCols){}
 
-void operator()( const tbb::blocked_range<size_t>& r ) const {
+virtual void operator()( const Range& r ) const {
 
-            for (size_t IDrow=r.begin(); IDrow!=r.end(); ++IDrow)
+            for (int IDrow=r.start; IDrow!=r.end; ++IDrow)
 	    {
                 register float* outputPTR=outputFrame+(IDrowEnd-IDrow)*(nbColumns)-1;
                 register const float* spatialConstantPTR=spatialConstantBuffer+(IDrowEnd-IDrow)*(nbColumns)-1;
@@ -620,7 +620,7 @@ void operator()( const tbb::blocked_range<size_t>& r ) const {
         }
     };
 
-    class Parallel_verticalCausalFilter_Irregular
+    class Parallel_verticalCausalFilter_Irregular: public cv::ParallelLoopBody
     {
     private:
         float *outputFrame;
@@ -630,8 +630,8 @@ void operator()( const tbb::blocked_range<size_t>& r ) const {
         Parallel_verticalCausalFilter_Irregular(float *bufferToProcess, const float *spatialConst, const unsigned int nbRws, const unsigned int nbCols)
         :outputFrame(bufferToProcess), spatialConstantBuffer(spatialConst), nbRows(nbRws), nbColumns(nbCols){}
         
-        void operator()( const tbb::blocked_range<size_t>& r ) const {
-            for (unsigned int IDcolumn=r.begin(); IDcolumn!=r.end(); ++IDcolumn)
+        virtual void operator()( const Range& r ) const {
+            for (int IDcolumn=r.start; IDcolumn!=r.end; ++IDcolumn)
 	    {
 		register float result=0;
 		register float *outputPTR=outputFrame+IDcolumn;

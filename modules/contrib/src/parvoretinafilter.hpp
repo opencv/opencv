@@ -216,14 +216,14 @@ private:
 	// private functions
 	void _OPL_OnOffWaysComputing();
 
-#ifdef HAVE_TBB
+#ifdef MAKE_PARALLEL
 /******************************************************
-** IF TBB is useable, then, main loops are parallelized using these functors
+** IF some parallelizing thread methods are available, then, main loops are parallelized using these functors
 ** ==> main idea paralellise main filters loops, then, only the most used methods are parallelized... TODO : increase the number of parallelised methods as necessary
 ** ==> functors names = Parallel_$$$ where $$$= the name of the serial method that is parallelised
 ** ==> functors constructors can differ from the parameters used with their related serial functions
 */
-    class Parallel_OPL_OnOffWaysComputing
+    class Parallel_OPL_OnOffWaysComputing: public cv::ParallelLoopBody
     {
     private:
 	float *photoreceptorsOutput, *horizontalCellsOutput, *bipolarCellsON, *bipolarCellsOFF, *parvocellularOutputON, *parvocellularOutputOFF;
@@ -231,17 +231,17 @@ private:
         Parallel_OPL_OnOffWaysComputing(float *photoreceptorsOutput_PTR, float *horizontalCellsOutput_PTR, float *bipolarCellsON_PTR, float *bipolarCellsOFF_PTR, float *parvocellularOutputON_PTR, float *parvocellularOutputOFF_PTR)
         :photoreceptorsOutput(photoreceptorsOutput_PTR), horizontalCellsOutput(horizontalCellsOutput_PTR), bipolarCellsON(bipolarCellsON_PTR), bipolarCellsOFF(bipolarCellsOFF_PTR), parvocellularOutputON(parvocellularOutputON_PTR), parvocellularOutputOFF(parvocellularOutputOFF_PTR) {}
         
-        void operator()( const tbb::blocked_range<size_t>& r ) const {
+        virtual void operator()( const Range& r ) const {
 	    // compute bipolar cells response equal to photoreceptors minus horizontal cells response
 	    // and copy the result on parvo cellular outputs... keeping time before their local contrast adaptation for final result
-	    float *photoreceptorsOutput_PTR= photoreceptorsOutput+r.begin();
-	    float *horizontalCellsOutput_PTR= horizontalCellsOutput+r.begin();
-	    float *bipolarCellsON_PTR = bipolarCellsON+r.begin();
-	    float *bipolarCellsOFF_PTR = bipolarCellsOFF+r.begin();
-	    float *parvocellularOutputON_PTR= parvocellularOutputON+r.begin();
-	    float *parvocellularOutputOFF_PTR= parvocellularOutputOFF+r.begin();
+	    float *photoreceptorsOutput_PTR= photoreceptorsOutput+r.start;
+	    float *horizontalCellsOutput_PTR= horizontalCellsOutput+r.start;
+	    float *bipolarCellsON_PTR = bipolarCellsON+r.start;
+	    float *bipolarCellsOFF_PTR = bipolarCellsOFF+r.start;
+	    float *parvocellularOutputON_PTR= parvocellularOutputON+r.start;
+	    float *parvocellularOutputOFF_PTR= parvocellularOutputOFF+r.start;
 
-            for (register unsigned int IDpixel=r.begin() ; IDpixel!=r.end() ; ++IDpixel)
+            for (register int IDpixel=r.start ; IDpixel!=r.end ; ++IDpixel)
 	    {
 		float pixelDifference = *(photoreceptorsOutput_PTR++) -*(horizontalCellsOutput_PTR++);
 		// test condition to allow write pixelDifference in ON or OFF buffer and 0 in the over

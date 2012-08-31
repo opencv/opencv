@@ -153,8 +153,8 @@ void MagnoRetinaFilter::setCoefficientsTable(const float parasolCells_beta, cons
 
 void MagnoRetinaFilter::_amacrineCellsComputing(const float *OPL_ON, const float *OPL_OFF)
 {
-#ifdef HAVE_TBB
-        tbb::parallel_for(tbb::blocked_range<size_t>(0,_filterOutput.getNBpixels()), Parallel_amacrineCellsComputing(OPL_ON, OPL_OFF, &_previousInput_ON[0], &_previousInput_OFF[0], &_amacrinCellsTempOutput_ON[0], &_amacrinCellsTempOutput_OFF[0], _temporalCoefficient), tbb::auto_partitioner());
+#ifdef MAKE_PARALLEL
+        cv::parallel_for_(cv::Range(0,_filterOutput.getNBpixels()), Parallel_amacrineCellsComputing(OPL_ON, OPL_OFF, &_previousInput_ON[0], &_previousInput_OFF[0], &_amacrinCellsTempOutput_ON[0], &_amacrinCellsTempOutput_OFF[0], _temporalCoefficient));
 #else
 	register const float *OPL_ON_PTR=OPL_ON;
 	register const float *OPL_OFF_PTR=OPL_OFF;

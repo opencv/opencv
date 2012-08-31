@@ -256,16 +256,16 @@ protected:
 	// color space transform
 	void _applyImageColorSpaceConversion(const std::valarray<float> &inputFrame, std::valarray<float> &outputFrame, const float *transformTable);
 
-#ifdef HAVE_TBB
+#ifdef MAKE_PARALLEL
 /******************************************************
-** IF TBB is useable, then, main loops are parallelized using these functors
+** IF some parallelizing thread methods are available, then, main loops are parallelized using these functors
 ** ==> main idea paralellise main filters loops, then, only the most used methods are parallelized... TODO : increase the number of parallelised methods as necessary
 ** ==> functors names = Parallel_$$$ where $$$= the name of the serial method that is parallelised
 ** ==> functors constructors can differ from the parameters used with their related serial functions
 */
 
 /* Template :
-    class 
+    class Parallel_ : public cv::ParallelLoopBody
     {
     private:
 
@@ -273,12 +273,12 @@ protected:
          Parallel_()
          : {}
     
-         void operator()( const tbb::blocked_range<size_t>& r ) const {
+         virtual void operator()( const cv::Range& r ) const {
 
         }
     }:
 */
-    class Parallel_adaptiveHorizontalCausalFilter_addInput
+    class Parallel_adaptiveHorizontalCausalFilter_addInput: public cv::ParallelLoopBody
     {
     private:
 	float *outputFrame;
@@ -288,11 +288,11 @@ protected:
          Parallel_adaptiveHorizontalCausalFilter_addInput(const float *inputImg, float *bufferToProcess, const float *imageGrad, const unsigned int nbCols)
          :outputFrame(bufferToProcess), inputFrame(inputImg), imageGradient(imageGrad), nbColumns(nbCols) {};
     
-         void operator()( const tbb::blocked_range<size_t>& r ) const {
-            register float* outputPTR=outputFrame+r.begin()*nbColumns;
-	    register const float* inputPTR=inputFrame+r.begin()*nbColumns;
-	    register const float *imageGradientPTR= imageGradient+r.begin()*nbColumns;
-	    for (unsigned int IDrow=r.begin(); IDrow!=r.end(); ++IDrow)
+         virtual void operator()( const Range& r ) const {
+            register float* outputPTR=outputFrame+r.start*nbColumns;
+	    register const float* inputPTR=inputFrame+r.start*nbColumns;
+	    register const float *imageGradientPTR= imageGradient+r.start*nbColumns;
+	    for (int IDrow=r.start; IDrow!=r.end; ++IDrow)
 	    {
 		register float result=0;
 		for (unsigned int index=0; index<nbColumns; ++index)
@@ -304,7 +304,7 @@ protected:
         }
     };
 
-    class Parallel_adaptiveVerticalAnticausalFilter_multGain
+    class Parallel_adaptiveVerticalAnticausalFilter_multGain: public cv::ParallelLoopBody
     {
     private:
         float *outputFrame;
@@ -315,10 +315,10 @@ protected:
         Parallel_adaptiveVerticalAnticausalFilter_multGain(float *bufferToProcess, const float *imageGrad, const unsigned int nbRws, const unsigned int nbCols, const float  gain)
         :outputFrame(bufferToProcess), imageGradient(imageGrad), nbRows(nbRws), nbColumns(nbCols), filterParam_gain(gain){}
         
-        void operator()( const tbb::blocked_range<size_t>& r ) const {
+        virtual void operator()( const Range& r ) const {
             float* offset=outputFrame+nbColumns*nbRows-nbColumns;
             const float* gradOffset= imageGradient+nbColumns*nbRows-nbColumns;
-    	    for (unsigned int IDcolumn=r.begin(); IDcolumn!=r.end(); ++IDcolumn)
+    	    for (int IDcolumn=r.start; IDcolumn!=r.end; ++IDcolumn)
 	    {
 		register float result=0;
 		register float *outputPTR=offset+IDcolumn;

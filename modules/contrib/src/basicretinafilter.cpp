@@ -345,8 +345,8 @@ void BasicRetinaFilter::_localLuminanceAdaptation(const float *inputFrame, const
 		//float tempMeanValue=meanLuminance+_meanInputValue*_tau;
 		updateCompressionParameter(meanLuminance);
 	}
-#ifdef HAVE_TBB
-        tbb::parallel_for(tbb::blocked_range<size_t>(0,_filterOutput.getNBpixels()), Parallel_localAdaptation(localLuminance, inputFrame, outputFrame, _localLuminanceFactor, _localLuminanceAddon, _maxInputValue), tbb::auto_partitioner());
+#ifdef MAKE_PARALLEL
+        cv::parallel_for_(cv::Range(0,_filterOutput.getNBpixels()), Parallel_localAdaptation(localLuminance, inputFrame, outputFrame, _localLuminanceFactor, _localLuminanceAddon, _maxInputValue));
 #else
 	//std::cout<<meanLuminance<<std::endl;
 	const float *localLuminancePTR=localLuminance;
@@ -466,8 +466,8 @@ void BasicRetinaFilter::_horizontalCausalFilter(float *outputFrame, unsigned int
 //  horizontal causal filter which adds the input inside
 void BasicRetinaFilter::_horizontalCausalFilter_addInput(const float *inputFrame, float *outputFrame, unsigned int IDrowStart, unsigned int IDrowEnd)
 {
-#ifdef HAVE_TBB
-        tbb::parallel_for(tbb::blocked_range<size_t>(IDrowStart,IDrowEnd), Parallel_horizontalCausalFilter_addInput(inputFrame, outputFrame, IDrowStart, _filterOutput.getNBcolumns(), _a, _tau), tbb::auto_partitioner());
+#ifdef MAKE_PARALLEL
+        cv::parallel_for_(cv::Range(IDrowStart,IDrowEnd), Parallel_horizontalCausalFilter_addInput(inputFrame, outputFrame, IDrowStart, _filterOutput.getNBcolumns(), _a, _tau));
 #else
 	for (unsigned int IDrow=IDrowStart; IDrow<IDrowEnd; ++IDrow)
 	{
@@ -487,8 +487,8 @@ void BasicRetinaFilter::_horizontalCausalFilter_addInput(const float *inputFrame
 void BasicRetinaFilter::_horizontalAnticausalFilter(float *outputFrame, unsigned int IDrowStart, unsigned int IDrowEnd)
 {
 
-#ifdef HAVE_TBB
-        tbb::parallel_for(tbb::blocked_range<size_t>(IDrowStart,IDrowEnd), Parallel_horizontalAnticausalFilter(outputFrame, IDrowEnd, _filterOutput.getNBcolumns(), _a ), tbb::auto_partitioner());
+#ifdef MAKE_PARALLEL
+        cv::parallel_for_(cv::Range(IDrowStart,IDrowEnd), Parallel_horizontalAnticausalFilter(outputFrame, IDrowEnd, _filterOutput.getNBcolumns(), _a ));
 #else
 	for (unsigned int IDrow=IDrowStart; IDrow<IDrowEnd; ++IDrow)
 	{
@@ -523,8 +523,8 @@ void BasicRetinaFilter::_horizontalAnticausalFilter_multGain(float *outputFrame,
 //  vertical anticausal filter
 void BasicRetinaFilter::_verticalCausalFilter(float *outputFrame, unsigned int IDcolumnStart, unsigned int IDcolumnEnd)
 {
-#ifdef HAVE_TBB
-        tbb::parallel_for(tbb::blocked_range<size_t>(IDcolumnStart,IDcolumnEnd), Parallel_verticalCausalFilter(outputFrame, _filterOutput.getNBrows(), _filterOutput.getNBcolumns(), _a ), tbb::auto_partitioner());
+#ifdef MAKE_PARALLEL
+        cv::parallel_for_(cv::Range(IDcolumnStart,IDcolumnEnd), Parallel_verticalCausalFilter(outputFrame, _filterOutput.getNBrows(), _filterOutput.getNBcolumns(), _a ));
 #else
         for (unsigned int IDcolumn=IDcolumnStart; IDcolumn<IDcolumnEnd; ++IDcolumn)
 	{
@@ -566,8 +566,8 @@ void BasicRetinaFilter::_verticalAnticausalFilter(float *outputFrame, unsigned i
 //  vertical anticausal filter which multiplies the output by _gain
 void BasicRetinaFilter::_verticalAnticausalFilter_multGain(float *outputFrame, unsigned int IDcolumnStart, unsigned int IDcolumnEnd)
 {
-#ifdef HAVE_TBB
-        tbb::parallel_for(tbb::blocked_range<size_t>(IDcolumnStart,IDcolumnEnd), Parallel_verticalAnticausalFilter_multGain(outputFrame, _filterOutput.getNBrows(), _filterOutput.getNBcolumns(), _a, _gain ), tbb::auto_partitioner());
+#ifdef MAKE_PARALLEL
+        cv::parallel_for_(cv::Range(IDcolumnStart,IDcolumnEnd), Parallel_verticalAnticausalFilter_multGain(outputFrame, _filterOutput.getNBrows(), _filterOutput.getNBcolumns(), _a, _gain ));
 #else
         float* offset=outputFrame+_filterOutput.getNBpixels()-_filterOutput.getNBcolumns();
 	//#pragma omp parallel for
@@ -819,8 +819,8 @@ void BasicRetinaFilter::_horizontalCausalFilter_Irregular_addInput(const float *
 //  horizontal anticausal filter  (basic way, no add on)
 void BasicRetinaFilter::_horizontalAnticausalFilter_Irregular(float *outputFrame, unsigned int IDrowStart, unsigned int IDrowEnd, const float *spatialConstantBuffer)
 {
-#ifdef HAVE_TBB
-        tbb::parallel_for(tbb::blocked_range<size_t>(IDrowStart,IDrowEnd), Parallel_horizontalAnticausalFilter_Irregular(outputFrame, spatialConstantBuffer, IDrowEnd, _filterOutput.getNBcolumns()), tbb::auto_partitioner());
+#ifdef MAKE_PARALLEL
+        cv::parallel_for_(cv::Range(IDrowStart,IDrowEnd), Parallel_horizontalAnticausalFilter_Irregular(outputFrame, spatialConstantBuffer, IDrowEnd, _filterOutput.getNBcolumns()));
 #else
 	register float* outputPTR=outputFrame+IDrowEnd*(_filterOutput.getNBcolumns())-1;
 	register const float* spatialConstantPTR=spatialConstantBuffer+IDrowEnd*(_filterOutput.getNBcolumns())-1;
@@ -841,8 +841,8 @@ void BasicRetinaFilter::_horizontalAnticausalFilter_Irregular(float *outputFrame
 //  vertical anticausal filter
 void BasicRetinaFilter::_verticalCausalFilter_Irregular(float *outputFrame, unsigned int IDcolumnStart, unsigned int IDcolumnEnd, const float *spatialConstantBuffer)
 {
-#ifdef HAVE_TBB
-        tbb::parallel_for(tbb::blocked_range<size_t>(IDcolumnStart,IDcolumnEnd), Parallel_verticalCausalFilter_Irregular(outputFrame, spatialConstantBuffer, _filterOutput.getNBrows(), _filterOutput.getNBcolumns()), tbb::auto_partitioner());
+#ifdef MAKE_PARALLEL
+        cv::parallel_for_(cv::Range(IDcolumnStart,IDcolumnEnd), Parallel_verticalCausalFilter_Irregular(outputFrame, spatialConstantBuffer, _filterOutput.getNBrows(), _filterOutput.getNBcolumns()));
 #else
 	for (unsigned int IDcolumn=IDcolumnStart; IDcolumn<IDcolumnEnd; ++IDcolumn)
 	{
