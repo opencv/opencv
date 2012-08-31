@@ -135,7 +135,7 @@ static bool isFlowCorrect(float u) {
 }
 
 static float calc_rmse(Mat flow1, Mat flow2) {
-  float sum;
+  float sum = 0;
   int counter = 0;
   const int rows = flow1.rows;
   const int cols = flow1.cols;
