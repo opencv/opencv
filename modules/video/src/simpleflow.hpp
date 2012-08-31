@@ -53,9 +53,9 @@ using namespace std;
 namespace cv {
 
 inline static float dist(const Vec3b& p1, const Vec3b& p2) {
-  return (p1[0] - p2[0]) * (p1[0] - p2[0]) +
+  return (float)((p1[0] - p2[0]) * (p1[0] - p2[0]) +
          (p1[1] - p2[1]) * (p1[1] - p2[1]) +
-         (p1[2] - p2[2]) * (p1[2] - p2[2]);
+         (p1[2] - p2[2]) * (p1[2] - p2[2]));
 }
 
 inline static float dist(const Vec2f& p1, const Vec2f& p2) {
