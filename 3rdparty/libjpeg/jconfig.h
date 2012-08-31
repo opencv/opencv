@@ -9,7 +9,7 @@
 /*#undef const*/
 #undef CHAR_IS_UNSIGNED
 
-#if !defined WIN32 && !defined _WIN32
+#if defined __MINGW__ || defined __MINGW32__ || (!defined WIN32 && !defined _WIN32)
 #define HAVE_STDDEF_H
 #define HAVE_STDLIB_H 
 #endif
