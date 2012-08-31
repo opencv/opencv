@@ -7,19 +7,6 @@ The section describes the main data structures, used by the OpenCV 1.x API, and 
 
 CvPoint
 -------
-
-.. ocv:struct:: CvPoint
-
-  2D point with integer coordinates (usually zero-based).
-
-  .. ocv:member:: int x
-
-     x-coordinate
-
-  .. ocv:member:: int y
-
-     y-coordinate
-
 .. ocv:cfunction:: CvPoint cvPoint( int x, int y )
 
     constructs ``CvPoint`` structure.
@@ -28,22 +15,20 @@ CvPoint
 
     converts ``CvPoint2D32f`` to ``CvPoint``.
 
+.. ocv:struct:: CvPoint
+
+  2D point with integer coordinates (usually zero-based).
+
+    :param x: x-coordinate of the point.
+
+    :param y: y-coordinate of the point.
+
+    :param point: the point to convert.
+
 .. seealso:: :ocv:class:`Point\_`
 
 CvPoint2D32f
 ------------
-
-.. ocv:struct:: CvPoint2D32f
-
-  2D point with floating-point coordinates.
-
-  .. ocv:member:: float x
-
-     x-coordinate
-
-  .. ocv:member:: float y
-
-     y-coordinate
 
 .. ocv:cfunction:: CvPoint2D32f cvPoint2D32f( double x, double y )
 
@@ -52,6 +37,16 @@ CvPoint2D32f
 .. ocv:cfunction:: CvPoint2D32f cvPointTo32f( CvPoint point )
 
     converts ``CvPoint`` to ``CvPoint2D32f``.
+
+.. ocv:struct:: CvPoint2D32f
+
+  2D point with floating-point coordinates.
+
+    :param x: floating-point x-coordinate of the point.
+
+    :param y: floating-point y-coordinate of the point.
+
+    :param point: the point to convert.
 
 .. seealso:: :ocv:class:`Point\_`
 
@@ -62,21 +57,15 @@ CvPoint3D32f
 
   3D point with floating-point coordinates
 
-  .. ocv:member:: float x
-
-     x-coordinate
-
-  .. ocv:member:: float y
-
-     y-coordinate
-
-  .. ocv:member:: float z
-
-     z-coordinate
-
 .. ocv:cfunction:: CvPoint3D32f cvPoint3D32f( double x, double y, double z )
 
     constructs ``CvPoint3D32f`` structure.
+
+    :param x: floating-point x-coordinate of the point.
+
+    :param y: floating-point y-coordinate of the point.
+
+    :param z: floating-point z-coordinate of the point.
 
 .. seealso:: :ocv:class:`Point3\_`
 
@@ -87,17 +76,13 @@ CvPoint2D64f
 
   2D point with double-precision floating-point coordinates.
 
-  .. ocv:member:: double x
-
-     x-coordinate
-
-  .. ocv:member:: double y
-
-     y-coordinate
-
 .. ocv:cfunction:: CvPoint2D64f cvPoint2D64f( double x, double y )
 
     constructs ``CvPoint2D64f`` structure.
+
+    :param x: double-precision floating-point x-coordinate of the point.
+
+    :param y: double-precision floating-point y-coordinate of the point.
 
 .. seealso:: :ocv:class:`Point\_`
 
@@ -108,19 +93,15 @@ CvPoint3D64f
 
   3D point with double-precision floating-point coordinates.
 
-  .. ocv:member:: double x
-
-     x-coordinate
-
-  .. ocv:member:: double y
-
-     y-coordinate
-
-  .. ocv:member:: double z
-
 .. ocv:cfunction:: CvPoint3D64f cvPoint3D64f( double x, double y, double z )
 
     constructs ``CvPoint3D64f`` structure.
+
+    :param x: double-precision floating-point x-coordinate of the point.
+
+    :param y: double-precision floating-point y-coordinate of the point.
+
+    :param z: double-precision floating-point z-coordinate of the point.
 
 .. seealso:: :ocv:class:`Point3\_`
 
@@ -131,17 +112,13 @@ CvSize
 
   Size of a rectangle or an image.
 
-  .. ocv:member:: int width
-
-     Width of the rectangle
-
-  .. ocv:member:: int height
-
-     Height of the rectangle
-
 .. ocv:cfunction:: CvSize cvSize( int width, int height )
 
     constructs ``CvSize`` structure.
+
+    :param width: width of the rectangle.
+
+    :param height: height of the rectangle.
 
 .. seealso:: :ocv:class:`Size\_`
 
@@ -152,17 +129,13 @@ CvSize2D32f
 
   Sub-pixel accurate size of a rectangle.
 
-  .. ocv:member:: float width
-
-     Width of the rectangle
-
-  .. ocv:member:: float height
-
-     Height of the rectangle
-
 .. ocv:cfunction:: CvSize2D32f cvSize2D32f( double width, double height )
 
     constructs ``CvSize2D32f`` structure.
+
+    :param width: floating-point width of the rectangle.
+
+    :param height: floating-point height of the rectangle.
 
 .. seealso:: :ocv:class:`Size\_`
 
@@ -173,25 +146,17 @@ CvRect
 
   Stores coordinates of a rectangle.
 
-  .. ocv:member:: int x
-
-     x-coordinate of the top-left corner
-
-  .. ocv:member:: int y
-
-     y-coordinate of the top-left corner (sometimes bottom-left corner)
-
-  .. ocv:member:: int width
-
-     Width of the rectangle
-
-  .. ocv:member:: int height
-
-     Height of the rectangle
-
 .. ocv:cfunction:: CvRect cvRect( int x, int y, int width, int height )
 
     constructs ``CvRect`` structure.
+
+    :param x: x-coordinate of the top-left corner.
+
+    :param y: y-coordinate of the top-left corner (sometimes bottom-left corner).
+
+    :param width: width of the rectangle.
+
+    :param height: height of the rectangle.
 
 .. seealso:: :ocv:class:`Rect\_`
 
@@ -1666,7 +1631,17 @@ SetIPLAllocators
 ----------------
 Makes OpenCV use IPL functions for allocating IplImage and IplROI structures.
 
-.. ocv:cfunction:: void cvSetIPLAllocators( Cv_iplCreateImageHeader create_header,                          Cv_iplAllocateImageData allocate_data, Cv_iplDeallocate deallocate,                          Cv_iplCreateROI create_roi, Cv_iplCloneImage clone_image )
+.. ocv:cfunction:: void cvSetIPLAllocators( Cv_iplCreateImageHeader create_header, Cv_iplAllocateImageData allocate_data, Cv_iplDeallocate deallocate, Cv_iplCreateROI create_roi, Cv_iplCloneImage clone_image )
+
+    :param create_header: pointer to a function, creating IPL image header.
+
+    :param allocate_data: pointer to a function, allocating IPL image data.
+
+    :param deallocate: pointer to a function, deallocating IPL image.
+
+    :param create_roi: pointer to a function, creating IPL image ROI (i.e. Region of Interest).
+
+    :param clone_image: pointer to a function, cloning an IPL image.
 
 Normally, the function is not called directly. Instead, a simple macro ``CV_TURN_ON_IPL_COMPATIBILITY()`` is used that calls ``cvSetIPLAllocators`` and passes there pointers to IPL allocation functions. ::
 
