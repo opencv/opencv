@@ -15,8 +15,7 @@ import android.view.Window;
 import android.view.WindowManager;
 
 public class ImageManipulationsActivity extends Activity {
-
-    private static final String TAG = "Sample-ImageManipulations::Activity";
+    private static final String TAG             = "OCVSample::Activity";
 
     public static final int     VIEW_MODE_RGBA      = 0;
     public static final int     VIEW_MODE_HIST      = 1;
@@ -35,10 +34,9 @@ public class ImageManipulationsActivity extends Activity {
     private MenuItem            mItemPreviewZoom;
     private MenuItem            mItemPreviewPixelize;
     private MenuItem            mItemPreviewPosterize;
+    private ImageManipulationsView mView;
 
     public static int           viewMode = VIEW_MODE_RGBA;
-
-    private ImageManipulationsView mView;
 
     private BaseLoaderCallback  mOpenCVCallBack = new BaseLoaderCallback(this) {
         @Override
@@ -50,6 +48,7 @@ public class ImageManipulationsActivity extends Activity {
                     // Create and set View
                     mView = new ImageManipulationsView(mAppContext);
                     setContentView(mView);
+
                     // Check native OpenCV camera
                     if( !mView.openCamera() ) {
                         AlertDialog ad = new AlertDialog.Builder(mAppContext).create();
@@ -57,13 +56,14 @@ public class ImageManipulationsActivity extends Activity {
                         ad.setMessage("Fatal error: can't open camera!");
                         ad.setButton(AlertDialog.BUTTON_POSITIVE, "OK", new DialogInterface.OnClickListener() {
                             public void onClick(DialogInterface dialog, int which) {
-                            dialog.dismiss();
-                            finish();
+                                dialog.dismiss();
+                                finish();
                             }
                         });
                         ad.show();
                     }
                 } break;
+
                 /** OpenCV loader cannot start Google Play **/
                 case LoaderCallbackInterface.MARKET_ERROR:
                 {
@@ -93,7 +93,7 @@ public class ImageManipulationsActivity extends Activity {
 
     @Override
     protected void onPause() {
-        Log.i(TAG, "onPause");
+        Log.i(TAG, "called onPause");
         if (null != mView)
             mView.releaseCamera();
         super.onPause();
@@ -101,12 +101,11 @@ public class ImageManipulationsActivity extends Activity {
 
     @Override
     protected void onResume() {
-        Log.i(TAG, "onResume");
+        Log.i(TAG, "called onResume");
         super.onResume();
 
         Log.i(TAG, "Trying to load OpenCV library");
-        if (!OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_2, this, mOpenCVCallBack))
-        {
+        if (!OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_2, this, mOpenCVCallBack)) {
             Log.e(TAG, "Cannot connect to OpenCV Manager");
         }
     }
@@ -114,7 +113,7 @@ public class ImageManipulationsActivity extends Activity {
     /** Called when the activity is first created. */
     @Override
     public void onCreate(Bundle savedInstanceState) {
-        Log.i(TAG, "onCreate");
+        Log.i(TAG, "called onCreate");
         super.onCreate(savedInstanceState);
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
@@ -122,7 +121,7 @@ public class ImageManipulationsActivity extends Activity {
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        Log.i(TAG, "onCreateOptionsMenu");
+        Log.i(TAG, "called onCreateOptionsMenu");
         mItemPreviewRGBA  = menu.add("Preview RGBA");
         mItemPreviewHist  = menu.add("Histograms");
         mItemPreviewCanny = menu.add("Canny");
@@ -136,7 +135,7 @@ public class ImageManipulationsActivity extends Activity {
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        Log.i(TAG, "Menu Item selected " + item);
+        Log.i(TAG, "called onOptionsItemSelected; selected item: " + item);
         if (item == mItemPreviewRGBA)
             viewMode = VIEW_MODE_RGBA;
         if (item == mItemPreviewHist)

@@ -15,7 +15,7 @@ import android.view.Window;
 import android.view.WindowManager;
 
 public class FdActivity extends Activity {
-    private static final String TAG         = "Sample-FD::Activity";
+    private static final String TAG             = "OCVSample::Activity";
 
     private MenuItem            mItemFace50;
     private MenuItem            mItemFace40;
@@ -42,6 +42,7 @@ public class FdActivity extends Activity {
                     mView.setDetectorType(mDetectorType);
                     mView.setMinFaceSize(0.2f);
                     setContentView(mView);
+
                     // Check native OpenCV camera
                     if( !mView.openCamera() ) {
                         AlertDialog ad = new AlertDialog.Builder(mAppContext).create();
@@ -49,13 +50,14 @@ public class FdActivity extends Activity {
                         ad.setMessage("Fatal error: can't open camera!");
                         ad.setButton(AlertDialog.BUTTON_POSITIVE, "OK", new DialogInterface.OnClickListener() {
                             public void onClick(DialogInterface dialog, int which) {
-                            dialog.dismiss();
-                            finish();
+                                dialog.dismiss();
+                                finish();
                             }
                         });
                         ad.show();
                     }
                 } break;
+
                 /** OpenCV loader cannot start Google Play **/
                 case LoaderCallbackInterface.MARKET_ERROR:
                 {
@@ -80,28 +82,27 @@ public class FdActivity extends Activity {
     };
 
     public FdActivity() {
-        Log.i(TAG, "Instantiated new " + this.getClass());
         mDetectorName = new String[2];
         mDetectorName[FdView.JAVA_DETECTOR] = "Java";
         mDetectorName[FdView.NATIVE_DETECTOR] = "Native (tracking)";
+        Log.i(TAG, "Instantiated new " + this.getClass());
     }
 
     @Override
     protected void onPause() {
-        Log.i(TAG, "onPause");
-        if (mView != null)
+        Log.i(TAG, "called onPause");
+        if (null != mView)
             mView.releaseCamera();
         super.onPause();
     }
 
     @Override
     protected void onResume() {
-        Log.i(TAG, "onResume");
+        Log.i(TAG, "called onResume");
         super.onResume();
 
         Log.i(TAG, "Trying to load OpenCV library");
-        if (!OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_2, this, mOpenCVCallBack))
-        {
+        if (!OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_2, this, mOpenCVCallBack)) {
             Log.e(TAG, "Cannot connect to OpenCV Manager");
         }
     }
@@ -109,7 +110,7 @@ public class FdActivity extends Activity {
     /** Called when the activity is first created. */
     @Override
     public void onCreate(Bundle savedInstanceState) {
-        Log.i(TAG, "onCreate");
+        Log.i(TAG, "called onCreate");
         super.onCreate(savedInstanceState);
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
@@ -117,7 +118,7 @@ public class FdActivity extends Activity {
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        Log.i(TAG, "onCreateOptionsMenu");
+        Log.i(TAG, "called onCreateOptionsMenu");
         mItemFace50 = menu.add("Face size 50%");
         mItemFace40 = menu.add("Face size 40%");
         mItemFace30 = menu.add("Face size 30%");
@@ -128,7 +129,7 @@ public class FdActivity extends Activity {
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        Log.i(TAG, "Menu Item selected " + item);
+        Log.i(TAG, "called onOptionsItemSelected; selected item: " + item);
         if (item == mItemFace50)
             mView.setMinFaceSize(0.5f);
         else if (item == mItemFace40)
@@ -137,8 +138,7 @@ public class FdActivity extends Activity {
             mView.setMinFaceSize(0.3f);
         else if (item == mItemFace20)
             mView.setMinFaceSize(0.2f);
-        else if (item == mItemType)
-        {
+        else if (item == mItemType) {
             mDetectorType = (mDetectorType + 1) % mDetectorName.length;
             item.setTitle(mDetectorName[mDetectorType]);
             mView.setDetectorType(mDetectorType);

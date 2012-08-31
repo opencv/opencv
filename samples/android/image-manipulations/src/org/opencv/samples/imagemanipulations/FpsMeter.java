@@ -10,7 +10,7 @@ import android.graphics.Paint;
 import android.util.Log;
 
 public class FpsMeter {
-    private static final String TAG       = "Sample::FpsMeter";
+    private static final String TAG       = "OCVSample::FpsMeter";
     int                         step;
     int                         framesCouner;
     double                      freq;

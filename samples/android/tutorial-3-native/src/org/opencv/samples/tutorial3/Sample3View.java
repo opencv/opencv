@@ -2,22 +2,27 @@ package org.opencv.samples.tutorial3;
 
 import android.content.Context;
 import android.graphics.Bitmap;
+import android.util.Log;
 
 class Sample3View extends SampleViewBase {
+    private static final String TAG = "OCVSample::View";
 
-    private int mFrameSize;
-    private Bitmap mBitmap;
-    private int[] mRGBA;
+    private int                 mFrameSize;
+    private Bitmap              mBitmap;
+    private int[]               mRGBA;
 
     public Sample3View(Context context) {
         super(context);
+        Log.i(TAG, "Instantiated new " + this.getClass());
     }
 
     @Override
-    protected void onPreviewStarted(int previewWidtd, int previewHeight) {
-        mFrameSize = previewWidtd * previewHeight;
+    protected void onPreviewStarted(int previewWidth, int previewHeight) {
+        Log.i(TAG, "called onPreviewStarted("+previewWidth+", "+previewHeight+")");
+
+        mFrameSize = previewWidth * previewHeight;
         mRGBA = new int[mFrameSize];
-        mBitmap = Bitmap.createBitmap(previewWidtd, previewHeight, Bitmap.Config.ARGB_8888);
+        mBitmap = Bitmap.createBitmap(previewWidth, previewHeight, Bitmap.Config.ARGB_8888);
     }
 
     @Override

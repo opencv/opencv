@@ -6,20 +6,21 @@ import android.util.Log;
 
 class Sample0View extends SampleViewBase {
 
-    private static final String TAG = "Sample::View";
-    int mSize;
-    int[] mRGBA;
-    private Bitmap mBitmap;
-    private int mViewMode;
+    private static final String TAG = "OCVSample::View";
 
     public static final int     VIEW_MODE_RGBA = 0;
     public static final int     VIEW_MODE_GRAY = 1;
 
+    int                         mSize;
+    int[]                       mRGBA;
+    private Bitmap              mBitmap;
+    private int                 mViewMode;
 
     public Sample0View(Context context) {
         super(context);
         mSize = 0;
         mViewMode = VIEW_MODE_RGBA;
+        Log.i(TAG, "Instantiated new " + this.getClass());
     }
 
     @Override
@@ -64,7 +65,7 @@ class Sample0View extends SampleViewBase {
 
     @Override
     protected void onPreviewStarted(int previewWidth, int previewHeight) {
-        Log.i(TAG, "onPreviewStarted("+previewWidth+", "+previewHeight+")");
+        Log.i(TAG, "called onPreviewStarted("+previewWidth+", "+previewHeight+")");
         /* Create a bitmap that will be used through to calculate the image to */
         mBitmap = Bitmap.createBitmap(previewWidth, previewHeight, Bitmap.Config.ARGB_8888);
         mRGBA = new int[previewWidth * previewHeight];
@@ -72,7 +73,7 @@ class Sample0View extends SampleViewBase {
 
     @Override
     protected void onPreviewStopped() {
-        Log.i(TAG, "onPreviewStopped");
+        Log.i(TAG, "called onPreviewStopped");
         if(mBitmap != null) {
             mBitmap.recycle();
             mBitmap = null;
@@ -84,7 +85,7 @@ class Sample0View extends SampleViewBase {
     }
 
     public void setViewMode(int viewMode) {
-        Log.i(TAG, "setViewMode("+viewMode+")");
+        Log.i(TAG, "called setViewMode("+viewMode+")");
         mViewMode = viewMode;
     }
 }
