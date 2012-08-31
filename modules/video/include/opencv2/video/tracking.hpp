@@ -333,6 +333,13 @@ CV_EXPORTS_W void calcOpticalFlowSF(Mat& from,
                                     Mat& flow,
                                     int layers,
                                     int averaging_block_size, 
+                                    int max_flow);
+
+CV_EXPORTS_W void calcOpticalFlowSF(Mat& from, 
+                                    Mat& to,
+                                    Mat& flow,
+                                    int layers,
+                                    int averaging_block_size, 
                                     int max_flow,
                                     double sigma_dist,
                                     double sigma_color,

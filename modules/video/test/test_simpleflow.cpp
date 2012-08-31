@@ -91,7 +91,7 @@ static bool isFlowCorrect(float u) {
 }
 
 static float calc_rmse(cv::Mat flow1, cv::Mat flow2) {
-  float sum;
+  float sum = 0;
   int counter = 0;
   const int rows = flow1.rows;
   const int cols = flow1.cols;
@@ -116,8 +116,6 @@ static float calc_rmse(cv::Mat flow1, cv::Mat flow2) {
 }
 
 void CV_SimpleFlowTest::run(int) {
-    int code = cvtest::TS::OK;
-    
     const float MAX_RMSE = 0.6;
     const string frame1_path = ts->get_data_path() + "optflow/RubberWhale1.png";
     const string frame2_path = ts->get_data_path() + "optflow/RubberWhale2.png";
@@ -171,9 +169,7 @@ void CV_SimpleFlowTest::run(int) {
     fclose(gt_flow_file);
 
     cv::Mat flow;
-    cv::calcOpticalFlowSF(frame1, frame2, 
-                          flow,
-                          3, 4, 2, 4.1, 25.5, 18, 55.0, 25.5, 0.35, 18, 55.0, 25.5, 10);
+    cv::calcOpticalFlowSF(frame1, frame2, flow, 3, 2, 4);
 
     float rmse = calc_rmse(flow_gt, flow);
     
