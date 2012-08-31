@@ -88,7 +88,10 @@ namespace cv
         //CV_EXPORTS void getComputeCapability(cl_device_id device, int &major, int &minor);
         //optional function, if you want save opencl binary kernel to the file, set its path
         CV_EXPORTS  void setBinpath(const char *path);
-
+		//The two functions below are used to get opencl runtime so that opencv can interactive with 
+		//other opencl program
+		CV_EXPORTS void* getoclContext();
+		CV_EXPORTS void* getoclCommandQueue();
         //////////////////////////////// Error handling ////////////////////////
         CV_EXPORTS void error(const char *error_string, const char *file, const int line, const char *func);
 

@@ -44,7 +44,6 @@
 //M*/
 
 #include "precomp.hpp"
-#include "threadsafe.h"
 #include <iomanip>
 #include "binarycaching.hpp"
 
@@ -348,7 +347,14 @@ namespace cv
             }
             Context::setContext(oclinfo);
         }
-
+		void* getoclContext()
+		{
+			return &(Context::getContext()->impl->clContext);
+		}
+		void* getoclCommandQueue()
+		{
+			return &(Context::getContext()->impl->clCmdQueue);
+		}
         void openCLReadBuffer(Context *clCxt, cl_mem dst_buffer, void *host_buffer, size_t size)
         {
             cl_int status;
@@ -772,12 +778,12 @@ namespace cv
         /////////////////////////////OpenCL initialization/////////////////
         auto_ptr<Context> Context::clCxt;
         int Context::val = 0;
-        CriticalSection cs;
+        Mutex cs;
         Context *Context::getContext()
         {
             if(val == 0)
             {
-                myAutoLock al(&cs);
+                AutoLock al(cs);
                 if( NULL == clCxt.get())
                     clCxt.reset(new Context);
 
