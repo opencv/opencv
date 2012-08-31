@@ -13,8 +13,9 @@ import android.view.Window;
 import android.view.WindowManager;
 
 public class Sample3Native extends Activity {
-    private static final String TAG = "Sample::Activity";
-    private Sample3View mView;
+    private static final String TAG = "OCVSample::Activity";
+
+    private Sample3View         mView;
 
     private BaseLoaderCallback  mOpenCVCallBack = new BaseLoaderCallback(this) {
         @Override
@@ -37,8 +38,8 @@ public class Sample3Native extends Activity {
                         ad.setMessage("Fatal error: can't open camera!");
                         ad.setButton(AlertDialog.BUTTON_POSITIVE, "OK", new DialogInterface.OnClickListener() {
                             public void onClick(DialogInterface dialog, int which) {
-                            dialog.dismiss();
-                            finish();
+                                dialog.dismiss();
+                                finish();
                             }
                         });
                         ad.show();
@@ -73,7 +74,7 @@ public class Sample3Native extends Activity {
 
     @Override
     protected void onPause() {
-        Log.i(TAG, "onPause");
+        Log.i(TAG, "called onPause");
         if (null != mView)
             mView.releaseCamera();
         super.onPause();
@@ -81,12 +82,11 @@ public class Sample3Native extends Activity {
 
     @Override
     protected void onResume() {
-        Log.i(TAG, "onResume");
+        Log.i(TAG, "called onResume");
         super.onResume();
 
         Log.i(TAG, "Trying to load OpenCV library");
-        if (!OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_2, this, mOpenCVCallBack))
-        {
+        if (!OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_2, this, mOpenCVCallBack)) {
             Log.e(TAG, "Cannot connect to OpenCV Manager");
         }
     }
@@ -94,7 +94,7 @@ public class Sample3Native extends Activity {
     /** Called when the activity is first created. */
     @Override
     public void onCreate(Bundle savedInstanceState) {
-        Log.i(TAG, "onCreate");
+        Log.i(TAG, "called onCreate");
         super.onCreate(savedInstanceState);
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);

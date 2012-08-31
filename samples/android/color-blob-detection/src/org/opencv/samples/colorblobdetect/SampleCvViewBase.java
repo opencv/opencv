@@ -14,7 +14,7 @@ import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 
 public abstract class SampleCvViewBase extends SurfaceView implements SurfaceHolder.Callback, Runnable {
-    private static final String TAG = "Sample::SurfaceView";
+    private static final String TAG = "OCVSample::BaseView";
 
     private SurfaceHolder       mHolder;
     private VideoCapture        mCamera;
@@ -26,76 +26,67 @@ public abstract class SampleCvViewBase extends SurfaceView implements SurfaceHol
         Log.i(TAG, "Instantiated new " + this.getClass());
     }
 
-    public boolean openCamera() {
-        Log.i(TAG, "openCamera");
-        synchronized (this) {
+    public synchronized boolean openCamera() {
+        Log.i(TAG, "Opening Camera");
+        mCamera = new VideoCapture(Highgui.CV_CAP_ANDROID);
+        if (!mCamera.isOpened()) {
             releaseCamera();
-            mCamera = new VideoCapture(Highgui.CV_CAP_ANDROID);
-            if (!mCamera.isOpened()) {
-                releaseCamera();
-                Log.e(TAG, "Failed to open native camera");
-                return false;
-            }
+            Log.e(TAG, "Can't open native camera");
+            return false;
         }
         return true;
     }
 
-    public void releaseCamera() {
-        Log.i(TAG, "releaseCamera");
-        synchronized (this) {
-            if (mCamera != null) {
+    public synchronized void releaseCamera() {
+        Log.i(TAG, "Releasing Camera");
+        if (mCamera != null) {
                 mCamera.release();
                 mCamera = null;
-            }
         }
     }
 
-    public void setupCamera(int width, int height) {
-        Log.i(TAG, "setupCamera("+width+", "+height+")");
-        synchronized (this) {
-            if (mCamera != null && mCamera.isOpened()) {
-                List<Size> sizes = mCamera.getSupportedPreviewSizes();
-                int mFrameWidth = width;
-                int mFrameHeight = height;
+    public synchronized void setupCamera(int width, int height) {
+        if (mCamera != null && mCamera.isOpened()) {
+            Log.i(TAG, "Setup Camera - " + width + "x" + height);
+            List<Size> sizes = mCamera.getSupportedPreviewSizes();
+            int mFrameWidth = width;
+            int mFrameHeight = height;
 
-                // selecting optimal camera preview size
-                {
-                    double minDiff = Double.MAX_VALUE;
-                    for (Size size : sizes) {
-                        if (Math.abs(size.height - height) < minDiff) {
-                            mFrameWidth = (int) size.width;
-                            mFrameHeight = (int) size.height;
-                            minDiff = Math.abs(size.height - height);
-                        }
+            // selecting optimal camera preview size
+            {
+                double minDiff = Double.MAX_VALUE;
+                for (Size size : sizes) {
+                    if (Math.abs(size.height - height) < minDiff) {
+                        mFrameWidth = (int) size.width;
+                        mFrameHeight = (int) size.height;
+                        minDiff = Math.abs(size.height - height);
                     }
                 }
-
-                mCamera.set(Highgui.CV_CAP_PROP_FRAME_WIDTH, mFrameWidth);
-                mCamera.set(Highgui.CV_CAP_PROP_FRAME_HEIGHT, mFrameHeight);
             }
-        }
 
+            mCamera.set(Highgui.CV_CAP_PROP_FRAME_WIDTH, mFrameWidth);
+            mCamera.set(Highgui.CV_CAP_PROP_FRAME_HEIGHT, mFrameHeight);
+        }
     }
 
     public void surfaceChanged(SurfaceHolder _holder, int format, int width, int height) {
-        Log.i(TAG, "surfaceChanged");
+        Log.i(TAG, "called surfaceChanged");
         setupCamera(width, height);
     }
 
     public void surfaceCreated(SurfaceHolder holder) {
-        Log.i(TAG, "surfaceCreated");
+        Log.i(TAG, "called surfaceCreated");
         (new Thread(this)).start();
     }
 
     public void surfaceDestroyed(SurfaceHolder holder) {
-        Log.i(TAG, "surfaceDestroyed");
-        releaseCamera();
+        Log.i(TAG, "called surfaceDestroyed");
     }
 
     protected abstract Bitmap processFrame(VideoCapture capture);
 
     public void run() {
-        Log.i(TAG, "Starting processing thread");
+        Log.i(TAG, "Started processing thread");
         while (true) {
             Bitmap bmp = null;
 
@@ -121,7 +112,6 @@ public abstract class SampleCvViewBase extends SurfaceView implements SurfaceHol
                 bmp.recycle();
             }
         }
-
-        Log.i(TAG, "Finishing processing thread");
+        Log.i(TAG, "Finished processing thread");
     }
 }

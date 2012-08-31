@@ -15,16 +15,20 @@ import android.util.Log;
 import android.view.SurfaceHolder;
 
 class Sample2View extends SampleCvViewBase {
-    private Mat mRgba;
-    private Mat mGray;
-    private Mat mIntermediateMat;
+    private static final String TAG = "OCVSample::View";
+
+    private Mat                 mRgba;
+    private Mat                 mGray;
+    private Mat                 mIntermediateMat;
 
     public Sample2View(Context context) {
         super(context);
+        Log.i(TAG, "Instantiated new " + this.getClass());
     }
 
     @Override
     public void surfaceCreated(SurfaceHolder holder) {
+        Log.i(TAG, "called surfaceCreated");
         synchronized (this) {
             // initialize Mats before usage
             mGray = new Mat();
@@ -59,7 +63,7 @@ class Sample2View extends SampleCvViewBase {
             Utils.matToBitmap(mRgba, bmp);
             return bmp;
         } catch(Exception e) {
-            Log.e("org.opencv.samples.tutorial2", "Utils.matToBitmap() throws an exception: " + e.getMessage());
+            Log.e(TAG, "Utils.matToBitmap() throws an exception: " + e.getMessage());
             bmp.recycle();
             return null;
         }

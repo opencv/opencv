@@ -22,35 +22,41 @@ import android.view.View;
 import android.view.View.OnTouchListener;
 
 public class ColorBlobDetectionView extends SampleCvViewBase implements OnTouchListener {
+    private static final String TAG                 = "OCVSample::View";
 
-    private Mat mRgba;
-
-    private boolean mIsColorSelected = false;
-    private Scalar mBlobColorRgba = new Scalar(255);
-    private Scalar mBlobColorHsv = new Scalar(255);
-    private ColorBlobDetector mDetector = new ColorBlobDetector();
-    private Mat mSpectrum = new Mat();
-    private static Size SPECTRUM_SIZE = new Size(200, 32);
-
-    // Logcat tag
-    private static final String TAG = "Sample-ColorBlobDetection::View";
-
-    private static final Scalar CONTOUR_COLOR = new Scalar(255,0,0,255);
+    private Mat                 mRgba;
+    private boolean             mIsColorSelected    = false;
+    private Scalar              mBlobColorRgba      = new Scalar(255);
+    private Scalar              mBlobColorHsv       = new Scalar(255);
+    private ColorBlobDetector   mDetector           = new ColorBlobDetector();
+    private Mat                 mSpectrum           = new Mat();
+    private static Size         SPECTRUM_SIZE       = new Size(200, 32);
+    private static final Scalar CONTOUR_COLOR       = new Scalar(255,0,0,255);
 
 
     public ColorBlobDetectionView(Context context) {
         super(context);
         setOnTouchListener(this);
+        Log.i(TAG, "Instantiated new " + this.getClass());
     }
 
     @Override
     public void surfaceCreated(SurfaceHolder holder) {
+        Log.i(TAG, "called surfaceCreated");
         synchronized (this) {
             // initialize Mat before usage
             mRgba = new Mat();
         }
 
         super.surfaceCreated(holder);
+    }
+
+    private Scalar converScalarHsv2Rgba(Scalar hsvColor) {
+        Mat pointMatRgba = new Mat();
+        Mat pointMatHsv = new Mat(1, 1, CvType.CV_8UC3, hsvColor);
+        Imgproc.cvtColor(pointMatHsv, pointMatRgba, Imgproc.COLOR_HSV2RGB_FULL, 4);
+
+        return new Scalar(pointMatRgba.get(0, 0));
     }
 
     public boolean onTouch(View v, MotionEvent event) {
@@ -110,8 +116,8 @@ public class ColorBlobDetectionView extends SampleCvViewBase implements OnTouchL
             mDetector.process(mRgba);
             List<MatOfPoint> contours = mDetector.getContours();
             Log.e(TAG, "Contours count: " + contours.size());
-        	Core.drawContours(mRgba, contours, -1, CONTOUR_COLOR);
-            
+            Core.drawContours(mRgba, contours, -1, CONTOUR_COLOR);
+
             Mat colorLabel = mRgba.submat(2, 34, 2, 34);
             colorLabel.setTo(mBlobColorRgba);
 
@@ -128,14 +134,6 @@ public class ColorBlobDetectionView extends SampleCvViewBase implements OnTouchL
         }
 
         return bmp;
-    }
-
-    private Scalar converScalarHsv2Rgba(Scalar hsvColor) {
-        Mat pointMatRgba = new Mat();
-        Mat pointMatHsv = new Mat(1, 1, CvType.CV_8UC3, hsvColor);
-        Imgproc.cvtColor(pointMatHsv, pointMatRgba, Imgproc.COLOR_HSV2RGB_FULL, 4);
-
-        return new Scalar(pointMatRgba.get(0, 0));
     }
 
     @Override

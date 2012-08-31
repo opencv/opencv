@@ -22,22 +22,22 @@ import android.util.Log;
 import android.view.SurfaceHolder;
 
 class FdView extends SampleCvViewBase {
-    private static final String   TAG = "Sample-FD::View";
-    private Mat                   mRgba;
-    private Mat                   mGray;
-    private File                  mCascadeFile;
-    private CascadeClassifier     mJavaDetector;
-    private DetectionBasedTracker mNativeDetector;
+    private static final String     TAG                 = "OCVSample::View";
+    private Mat                     mRgba;
+    private Mat                     mGray;
+    private File                    mCascadeFile;
+    private CascadeClassifier       mJavaDetector;
+    private DetectionBasedTracker   mNativeDetector;
 
-    private static final Scalar   FACE_RECT_COLOR = new Scalar(0, 255, 0, 255);
+    private static final Scalar     FACE_RECT_COLOR     = new Scalar(0, 255, 0, 255);
 
-    public static final int       JAVA_DETECTOR     = 0;
-    public static final int       NATIVE_DETECTOR   = 1;
+    public static final int         JAVA_DETECTOR       = 0;
+    public static final int         NATIVE_DETECTOR     = 1;
 
-    private int                   mDetectorType     = JAVA_DETECTOR;
+    private int                     mDetectorType       = JAVA_DETECTOR;
 
-    private float                 mRelativeFaceSize = 0;
-    private int                   mAbsoluteFaceSize = 0;
+    private float                   mRelativeFaceSize   = 0;
+    private int                     mAbsoluteFaceSize   = 0;
 
     public void setMinFaceSize(float faceSize) {
         mRelativeFaceSize = faceSize;
@@ -62,6 +62,7 @@ class FdView extends SampleCvViewBase {
         super(context);
 
         try {
+            // load cascade file from application resources
             InputStream is = context.getResources().openRawResource(R.raw.lbpcascade_frontalface);
             File cascadeDir = context.getDir("cascade", Context.MODE_PRIVATE);
             mCascadeFile = new File(cascadeDir, "lbpcascade_frontalface.xml");
@@ -90,10 +91,13 @@ class FdView extends SampleCvViewBase {
             e.printStackTrace();
             Log.e(TAG, "Failed to load cascade. Exception thrown: " + e);
         }
+
+        Log.i(TAG, "Instantiated new " + this.getClass());
     }
 
     @Override
     public void surfaceCreated(SurfaceHolder holder) {
+        Log.i(TAG, "called surfaceCreated");
         synchronized (this) {
             // initialize Mats before usage
             mGray = new Mat();

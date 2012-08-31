@@ -15,7 +15,7 @@ import android.view.Window;
 import android.view.WindowManager;
 
 public class Sample1Java extends Activity {
-    private static final String TAG = "Sample::Activity";
+    private static final String TAG = "OCVSample::Activity";
 
     private MenuItem            mItemPreviewRGBA;
     private MenuItem            mItemPreviewGray;
@@ -32,6 +32,7 @@ public class Sample1Java extends Activity {
                     // Create and set View
                     mView = new Sample1View(mAppContext);
                     setContentView(mView);
+
                     // Check native OpenCV camera
                     if( !mView.openCamera() ) {
                         AlertDialog ad = new AlertDialog.Builder(mAppContext).create();
@@ -39,8 +40,8 @@ public class Sample1Java extends Activity {
                         ad.setMessage("Fatal error: can't open camera!");
                         ad.setButton(AlertDialog.BUTTON_POSITIVE, "OK", new DialogInterface.OnClickListener() {
                             public void onClick(DialogInterface dialog, int which) {
-                            dialog.dismiss();
-                            finish();
+                                dialog.dismiss();
+                                finish();
                             }
                         });
                         ad.show();
@@ -76,7 +77,7 @@ public class Sample1Java extends Activity {
 
     @Override
     protected void onPause() {
-        Log.i(TAG, "onPause");
+        Log.i(TAG, "called onPause");
         if (null != mView)
             mView.releaseCamera();
         super.onPause();
@@ -84,12 +85,11 @@ public class Sample1Java extends Activity {
 
     @Override
     protected void onResume() {
-        Log.i(TAG, "onResume");
+        Log.i(TAG, "called onResume");
         super.onResume();
 
         Log.i(TAG, "Trying to load OpenCV library");
-        if (!OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_2, this, mOpenCVCallBack))
-        {
+        if (!OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_2, this, mOpenCVCallBack)) {
             Log.e(TAG, "Cannot connect to OpenCV Manager");
         }
     }
@@ -97,7 +97,7 @@ public class Sample1Java extends Activity {
     /** Called when the activity is first created. */
     @Override
     public void onCreate(Bundle savedInstanceState) {
-        Log.i(TAG, "onCreate");
+        Log.i(TAG, "called onCreate");
         super.onCreate(savedInstanceState);
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
@@ -105,7 +105,7 @@ public class Sample1Java extends Activity {
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        Log.i(TAG, "onCreateOptionsMenu");
+        Log.i(TAG, "called onCreateOptionsMenu");
         mItemPreviewRGBA = menu.add("Preview RGBA");
         mItemPreviewGray = menu.add("Preview GRAY");
         mItemPreviewCanny = menu.add("Canny");
@@ -114,7 +114,7 @@ public class Sample1Java extends Activity {
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        Log.i(TAG, "Menu Item selected " + item);
+        Log.i(TAG, "called onOptionsItemSelected; selected item: " + item);
         if (item == mItemPreviewRGBA) {
             mView.setViewMode(Sample1View.VIEW_MODE_RGBA);
         } else if (item == mItemPreviewGray) {

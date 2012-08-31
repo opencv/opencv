@@ -15,9 +15,8 @@ import android.view.Window;
 import android.view.WindowManager;
 
 /** Activity class implements LoaderCallbackInterface to handle OpenCV initialization status **/
-public class puzzle15Activity extends Activity
-{
-    private static final String TAG = "Sample::Activity";
+public class puzzle15Activity extends Activity {
+    private static final String TAG             = "OCVSample::Activity";
 
     private MenuItem            mItemNewGame;
     private MenuItem            mItemToggleNumbers;
@@ -33,6 +32,7 @@ public class puzzle15Activity extends Activity
                     // Create and set View
                     mView = new puzzle15View(mAppContext);
                     setContentView(mView);
+
                     // Check native OpenCV camera
                     if( !mView.openCamera() ) {
                         AlertDialog ad = new AlertDialog.Builder(mAppContext).create();
@@ -40,13 +40,14 @@ public class puzzle15Activity extends Activity
                         ad.setMessage("Fatal error: can't open camera!");
                         ad.setButton(AlertDialog.BUTTON_POSITIVE, "OK", new DialogInterface.OnClickListener() {
                             public void onClick(DialogInterface dialog, int which) {
-                            dialog.dismiss();
-                            finish();
+                                dialog.dismiss();
+                                finish();
                             }
                         });
                         ad.show();
                     }
                 } break;
+
                 /** OpenCV loader cannot start Google Play **/
                 case LoaderCallbackInterface.MARKET_ERROR:
                 {
@@ -76,7 +77,7 @@ public class puzzle15Activity extends Activity
 
     @Override
     protected void onPause() {
-        Log.i(TAG, "onPause");
+        Log.i(TAG, "called onPause");
         if (null != mView)
             mView.releaseCamera();
         super.onPause();
@@ -84,12 +85,11 @@ public class puzzle15Activity extends Activity
 
     @Override
     protected void onResume() {
-        Log.i(TAG, "onResume");
+        Log.i(TAG, "called onResume");
         super.onResume();
 
         Log.i(TAG, "Trying to load OpenCV library");
-        if (!OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_2, this, mOpenCVCallBack))
-        {
+        if (!OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_2, this, mOpenCVCallBack)) {
             Log.e(TAG, "Cannot connect to OpenCV Manager");
         }
     }
@@ -97,16 +97,15 @@ public class puzzle15Activity extends Activity
     /** Called when the activity is first created. */
     @Override
     public void onCreate(Bundle savedInstanceState) {
-        Log.i(TAG, "onCreate");
+        Log.i(TAG, "called onCreate");
         super.onCreate(savedInstanceState);
-
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
     }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        Log.i(TAG, "onCreateOptionsMenu");
+        Log.i(TAG, "called onCreateOptionsMenu");
         mItemNewGame = menu.add("Start new game");
         mItemToggleNumbers = menu.add("Show/hide tile numbers");
         return true;
@@ -114,12 +113,10 @@ public class puzzle15Activity extends Activity
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        Log.i(TAG, "Menu Item selected " + item);
-        if (item == mItemNewGame) {
-            synchronized (mView) {
-                mView.startNewGame();
-            }
-        } else if (item == mItemToggleNumbers)
+        Log.i(TAG, "called onOptionsItemSelected; selected item: " + item);
+        if (item == mItemNewGame)
+            mView.startNewGame();
+        else if (item == mItemToggleNumbers)
             mView.tolggleTileNumbers();
         return true;
     }

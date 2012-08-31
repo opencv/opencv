@@ -18,6 +18,8 @@ import android.view.View;
 import android.view.View.OnTouchListener;
 
 public class puzzle15View extends SampleCvViewBase implements OnTouchListener {
+    private static final String TAG = "OCVSample::View";
+
     private Mat     mRgba;
     private Mat     mRgba15;
     private Mat[]   mCells;
@@ -42,14 +44,17 @@ public class puzzle15View extends SampleCvViewBase implements OnTouchListener {
             mTextHeights[i] = (int) s.height;
             mTextWidths[i] = (int) s.width;
         }
+        Log.i(TAG, "Instantiated new " + this.getClass());
     }
 
     @Override
     public void surfaceCreated(SurfaceHolder holder) {
+        Log.i(TAG, "called surfaceCreated");
         synchronized (this) {
             // initialize Mat before usage
             mRgba = new Mat();
         }
+
         super.surfaceCreated(holder);
     }
 
@@ -102,7 +107,14 @@ public class puzzle15View extends SampleCvViewBase implements OnTouchListener {
         startNewGame();
     }
 
-    public void startNewGame() {
+    private void drawGrid(int cols, int rows) {
+        for (int i = 1; i < gridSize; i++) {
+            Core.line(mRgba15, new Point(0, i * rows / gridSize), new Point(cols, i * rows / gridSize), new Scalar(0, 255, 0, 255), 3);
+            Core.line(mRgba15, new Point(i * cols / gridSize, 0), new Point(i * cols / gridSize, rows), new Scalar(0, 255, 0, 255), 3);
+        }
+    }
+
+    public synchronized void startNewGame() {
         do {
             shuffle(mIndexses);
         } while (!isPuzzleSolvable());
@@ -151,13 +163,6 @@ public class puzzle15View extends SampleCvViewBase implements OnTouchListener {
             Log.e("org.opencv.samples.puzzle15", "Utils.matToBitmap() throws an exception: " + e.getMessage());
             bmp.recycle();
             return null;
-        }
-    }
-
-    private void drawGrid(int cols, int rows) {
-        for (int i = 1; i < gridSize; i++) {
-            Core.line(mRgba15, new Point(0, i * rows / gridSize), new Point(cols, i * rows / gridSize), new Scalar(0, 255, 0, 255), 3);
-            Core.line(mRgba15, new Point(i * cols / gridSize, 0), new Point(i * cols / gridSize, rows), new Scalar(0, 255, 0, 255), 3);
         }
     }
 

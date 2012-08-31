@@ -21,28 +21,32 @@ import android.util.Log;
 import android.view.SurfaceHolder;
 
 class ImageManipulationsView extends SampleCvViewBase {
-    private Size mSize0;
-    private Size mSizeRgba;
-    private Size mSizeRgbaInner;
+    private static final String TAG = "OCVSample::View";
+    private Size                mSize0;
+    private Size                mSizeRgba;
+    private Size                mSizeRgbaInner;
 
-    private Mat mRgba;
-    private Mat mGray;
-    private Mat mIntermediateMat;
-    private Mat mHist, mMat0;
-    private MatOfInt mChannels[], mHistSize;
-    private int mHistSizeNum;
-    private MatOfFloat mRanges;
-    private Scalar mColorsRGB[], mColorsHue[], mWhilte;
-    private Point mP1, mP2;
-    float mBuff[];
-
-    private Mat mRgbaInnerWindow;
-    private Mat mGrayInnerWindow;
-    private Mat mBlurWindow;
-    private Mat mZoomWindow;
-    private Mat mZoomCorner;
-
-    private Mat mSepiaKernel;
+    private Mat                 mRgba;
+    private Mat                 mGray;
+    private Mat                 mIntermediateMat;
+    private Mat                 mHist;
+    private Mat                 mMat0;
+    private MatOfInt            mChannels[];
+    private MatOfInt            mHistSize;
+    private int                 mHistSizeNum;
+    private MatOfFloat          mRanges;
+    private Scalar              mColorsRGB[];
+    private Scalar              mColorsHue[];
+    private Scalar              mWhilte;
+    private Point               mP1;
+    private Point               mP2;
+    private float               mBuff[];
+    private Mat                 mRgbaInnerWindow;
+    private Mat                 mGrayInnerWindow;
+    private Mat                 mBlurWindow;
+    private Mat                 mZoomWindow;
+    private Mat                 mZoomCorner;
+    private Mat                 mSepiaKernel;
 
     public ImageManipulationsView(Context context) {
         super(context);
@@ -52,10 +56,13 @@ class ImageManipulationsView extends SampleCvViewBase {
         mSepiaKernel.put(1, 0, /* G */0.168f, 0.686f, 0.349f, 0f);
         mSepiaKernel.put(2, 0, /* B */0.131f, 0.534f, 0.272f, 0f);
         mSepiaKernel.put(3, 0, /* A */0.000f, 0.000f, 0.000f, 1f);
+
+        Log.i(TAG, "Instantiated new " + this.getClass());
     }
 
     @Override
     public void surfaceCreated(SurfaceHolder holder) {
+        Log.i(TAG, "called surfaceCreated");
         synchronized (this) {
             // initialize Mats before usage
             mGray = new Mat();
@@ -234,7 +241,7 @@ class ImageManipulationsView extends SampleCvViewBase {
             Utils.matToBitmap(mRgba, bmp);
             return bmp;
         } catch(Exception e) {
-            Log.e("org.opencv.samples.puzzle15", "Utils.matToBitmap() throws an exception: " + e.getMessage());
+            Log.e(TAG, "Utils.matToBitmap() throws an exception: " + e.getMessage());
             bmp.recycle();
             return null;
         }
