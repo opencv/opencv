@@ -597,6 +597,50 @@ Returns background image
 See :ocv:func:`BackgroundSubtractor::getBackgroundImage`.
 
 
+calcOpticalFlowSF
+-----------
+Calculate an optical flow using "SimpleFlow" algorithm.
+
+.. ocv:function:: void calcOpticalFlowSF( Mat& prev, Mat& next, Mat& flowX, Mat& flowY, int layers, int averaging_block_size, int max_flow)
+
+.. ocv:function:: void calcOpticalFlowSF( Mat& prev, Mat& next, Mat& flowX, Mat& flowY, int layers, int averaging_block_size, int max_flow, double sigma_dist, double sigma_color, int postprocess_window, double sigma_dist_fix, double sigma_color_fix, double occ_thr, int upscale_averaging_radiud, double upscale_sigma_dist, double upscale_sigma_color, double speed_up_thr)
+
+    :param prev: First 8-bit 3-channel image.
+
+    :param next: Second 8-bit 3-channel image 
+
+    :param flowX: X-coordinate of estimated flow
+
+    :param flowY: Y-coordinate of estimated flow
+
+    :param layers: Number of layers
+
+    :param averaging_block_size: Size of block through which we sum up when calculate cost function for pixel
+
+    :param max_flow: maximal flow that we search at each level
+
+    :param sigma_dist: vector smooth spatial sigma parameter
+
+    :param sigma_color: vector smooth color sigma parameter
+
+    :param postprocess_window: window size for postprocess cross bilateral filter
+
+    :param sigma_dist_fix: spatial sigma for postprocess cross bilateralf filter
+
+    :param sigma_color_fix: color sigma for postprocess cross bilateral filter
+
+    :param occ_thr: threshold for detecting occlusions
+
+    :param upscale_averaging_radiud: window size for bilateral upscale operation
+
+    :param upscale_sigma_dist: spatial sigma for bilateral upscale operation
+
+    :param upscale_sigma_color: color sigma for bilateral upscale operation
+
+    :param speed_up_thr: threshold to detect point with irregular flow - where flow should be recalculated after upscale
+
+See [Tao2012]_. And site of project - http://graphics.berkeley.edu/papers/Tao-SAN-2012-05/. 
+
 .. [Bouguet00] Jean-Yves Bouguet. Pyramidal Implementation of the Lucas Kanade Feature Tracker.
 
 .. [Bradski98] Bradski, G.R. "Computer Vision Face Tracking for Use in a Perceptual User Interface", Intel, 1998
@@ -612,3 +656,5 @@ See :ocv:func:`BackgroundSubtractor::getBackgroundImage`.
 .. [Lucas81] Lucas, B., and Kanade, T. An Iterative Image Registration Technique with an Application to Stereo Vision, Proc. of 7th International Joint Conference on Artificial Intelligence (IJCAI), pp. 674-679.
 
 .. [Welch95] Greg Welch and Gary Bishop “An Introduction to the Kalman Filter”, 1995
+
+.. [Tao2012] Michael Tao, Jiamin Bai, Pushmeet Kohli and Sylvain Paris. SimpleFlow: A Non-iterative, Sublinear Optical Flow Algorithm. Computer Graphics Forum (Eurographics 2012)
