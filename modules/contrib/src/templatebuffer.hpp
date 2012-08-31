@@ -388,8 +388,8 @@ public:
 		std::cout<<"this->min()"<<this->min()<<"minThreshold="<<minThreshold<<"updatedLowValue="<<updatedLowValue<<std::endl;
 		// clipping values outside than the updated thresholds
                 bufferPTR=this->Buffer();
-#ifdef MAKE_PARALLEL // call the TemplateBuffer TBB clipping method
-                parallel_for_(tbb::blocked_range<size_t>(0,this->size()), Parallel_clipBufferValues<type>(bufferPTR, updatedLowValue, updatedHighValue));
+#ifdef MAKE_PARALLEL // call the TemplateBuffer multitreaded clipping method
+                parallel_for_(cv::Range(0,this->size()), Parallel_clipBufferValues<type>(bufferPTR, updatedLowValue, updatedHighValue));
 #else
 
 		for (unsigned int i=0;i<this->size();++i, ++bufferPTR)
