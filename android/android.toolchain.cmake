@@ -191,6 +191,8 @@
 #     [+] added CCache support (via NDK_CCACHE environment or cmake variable)
 #     [+] added gold linker support for NDK r8b
 #     [~] fixed mips linker flags for NDK r8b
+#   - modified September 2012
+#     [+] added NDK release name detection (see ANDROID_NDK_RELEASE)
 # ------------------------------------------------------------------------------
 
 cmake_minimum_required( VERSION 2.6.3 )
@@ -426,6 +428,7 @@ if( ANDROID_NDK )
  endif()
  set( ANDROID_NDK "${ANDROID_NDK}" CACHE INTERNAL "Path of the Android NDK" FORCE )
  set( BUILD_WITH_ANDROID_NDK True )
+ file( STRINGS "${ANDROID_NDK}/RELEASE.TXT" ANDROID_NDK_RELEASE LIMIT_COUNT 1 REGEX r[0-9]+[a-z]? )
 elseif( ANDROID_STANDALONE_TOOLCHAIN )
  get_filename_component( ANDROID_STANDALONE_TOOLCHAIN "${ANDROID_STANDALONE_TOOLCHAIN}" ABSOLUTE )
  # try to detect change
@@ -939,8 +942,9 @@ if( ANDROID_NO_UNDEFINED )
  set( ANDROID_LINKER_FLAGS "-Wl,--no-undefined ${ANDROID_LINKER_FLAGS}" )
 endif()
 
-if (ANDROID_NDK MATCHES "-r[56].?$")
- # libGLESv2.so in NDK's prior to r7 refers to exteranal symbols. So this flag option is required for all projects using OpenGL from native.
+if (ANDROID_NDK_RELEASE STRLESS "r7")
+ # libGLESv2.so in NDK's prior to r7 refers to missing exteranal symbols.
+ # So this flag option is required for all projects using OpenGL from native.
  __INIT_VARIABLE( ANDROID_SO_UNDEFINED VALUES ON )
 else()
  __INIT_VARIABLE( ANDROID_SO_UNDEFINED VALUES OFF )
@@ -994,7 +998,7 @@ set( ANDROID_CXX_FLAGS    "${ANDROID_CXX_FLAGS}"    CACHE INTERNAL "Extra Androi
 set( ANDROID_LINKER_FLAGS "${ANDROID_LINKER_FLAGS}" CACHE INTERNAL "Extra Android linker flags" )
 set( CMAKE_CXX_FLAGS           "${ANDROID_CXX_FLAGS} ${CMAKE_CXX_FLAGS}" )
 set( CMAKE_C_FLAGS             "${ANDROID_CXX_FLAGS} ${CMAKE_C_FLAGS}" )
-if( MIPS AND BUILD_WITH_ANDROID_NDK AND ANDROID_NDK MATCHES "-r8$" )
+if( MIPS AND BUILD_WITH_ANDROID_NDK AND ANDROID_NDK_RELEASE STREQUAL "r8" )
  set( CMAKE_SHARED_LINKER_FLAGS "-Wl,-T,${ANDROID_NDK}/toolchains/${ANDROID_TOOLCHAIN_NAME}/mipself.xsc ${ANDROID_LINKER_FLAGS} ${CMAKE_SHARED_LINKER_FLAGS}" )
  set( CMAKE_MODULE_LINKER_FLAGS "-Wl,-T,${ANDROID_NDK}/toolchains/${ANDROID_TOOLCHAIN_NAME}/mipself.xsc ${ANDROID_LINKER_FLAGS} ${CMAKE_MODULE_LINKER_FLAGS}" )
  set( CMAKE_EXE_LINKER_FLAGS    "-Wl,-T,${ANDROID_NDK}/toolchains/${ANDROID_TOOLCHAIN_NAME}/mipself.x ${ANDROID_LINKER_FLAGS} ${CMAKE_EXE_LINKER_FLAGS}" )
@@ -1144,6 +1148,7 @@ endif()
 #   BUILD_WITH_STANDALONE_TOOLCHAIN : TRUE if standalone toolchain is used
 #   ANDROID_NDK_HOST_SYSTEM_NAME : "windows", "linux-x86" or "darwin-x86" depending on host platform
 #   ANDROID_NDK_ABI_NAME : "armeabi", "armeabi-v7a", "x86" or "mips" depending on ANDROID_ABI
+#   ANDROID_NDK_RELEASE : one of r5, r5b, r5c, r6, r6b, r7, r7b, r7c, r8, r8b; set only for NDK
 #   ANDROID_ARCH_NAME : "arm" or "x86" or "mips" depending on ANDROID_ABI
 #   ANDROID_SYSROOT : path to the compiler sysroot
 #   ANDROID_SYSTEM_INCLUDE_DIRS
