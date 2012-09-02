@@ -57,18 +57,14 @@ jasper-1.900.1    -   JasPer is a collection of software
                       please, visit the project homepage:
                       http://www.ece.uvic.ca/~mdadams/jasper/
 ------------------------------------------------------------------------------------
-openexr-1.4.0     -   OpenEXR is a high dynamic-range (HDR) image file format developed
+openexr-1.7.1     -   OpenEXR is a high dynamic-range (HDR) image file format developed
                       by Industrial Light & Magic for use in computer imaging applications.
 
-                      Copyright (c) 2004, Industrial Light & Magic, a division of Lucasfilm
-                      Entertainment Company Ltd.  Portions contributed and copyright held by
-                      others as indicated.  All rights reserved.
+                      Copyright (c) 2006, Industrial Light & Magic, a division of Lucasfilm
+                      Entertainment Company Ltd. Portions contributed and copyright held by
+                      others as indicated. All rights reserved.
 
-                      The project homepage: http://www.openexr.com/
-
-                      OpenCV does not include openexr codec.
-                      To add it, you will need install OpenEXR, reconfigure OpenCV
-                      using CMake (make sure OpenEXR library is found) and the rebuild OpenCV.
+                      The project homepage: http://www.openexr.com
 ------------------------------------------------------------------------------------
 ffmpeg-0.8.0      -   FFmpeg is a complete, cross-platform solution to record,
                       convert and stream audio and video. It includes libavcodec -
