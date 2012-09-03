@@ -15,7 +15,7 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/IlmBaseConfig.h.cmakein"
                "${CMAKE_CURRENT_BINARY_DIR}/IlmBaseConfig.h" @ONLY)
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/OpenEXRConfig.h.cmakein"
                "${CMAKE_CURRENT_BINARY_DIR}/OpenEXRConfig.h" @ONLY)
-               
+
 set(OPENEXR_INCLUDE_PATHS "${CMAKE_CURRENT_SOURCE_DIR}/Half"
                           "${CMAKE_CURRENT_SOURCE_DIR}/Iex"
                           "${CMAKE_CURRENT_SOURCE_DIR}/IlmThread"
@@ -42,6 +42,10 @@ ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4018 /wd4099 /wd4100 /wd4101 /wd4127 /wd
 ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4334) # vs2005 Win64
 ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4244) # vs2008
 ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4267) # vs2008 Win64
+
+if(UNIX AND (CMAKE_COMPILER_IS_GNUCXX OR CV_ICC))
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
+endif()
 
 add_library(IlmImf STATIC ${lib_hdrs} ${lib_srcs})
 target_link_libraries(IlmImf ${ZLIB_LIBRARIES})
