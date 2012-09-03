@@ -88,25 +88,32 @@
 #        none           -> Do not configure the runtime.
 #        system         -> Use the default minimal system C++ runtime library.
 #                          Implies -fno-rtti -fno-exceptions.
+#                          Is not available for standalone toolchain.
 #        system_re      -> Use the default minimal system C++ runtime library.
 #                          Implies -frtti -fexceptions.
+#                          Is not available for standalone toolchain.
 #        gabi++_static  -> Use the GAbi++ runtime as a static library.
 #                          Implies -frtti -fno-exceptions.
 #                          Available for NDK r7 and newer.
+#                          Is not available for standalone toolchain.
 #        gabi++_shared  -> Use the GAbi++ runtime as a shared library.
 #                          Implies -frtti -fno-exceptions.
 #                          Available for NDK r7 and newer.
+#                          Is not available for standalone toolchain.
 #        stlport_static -> Use the STLport runtime as a static library.
 #                          Implies -fno-rtti -fno-exceptions for NDK before r7.
 #                          Implies -frtti -fno-exceptions for NDK r7 and newer.
+#                          Is not available for standalone toolchain.
 #        stlport_shared -> Use the STLport runtime as a shared library.
 #                          Implies -fno-rtti -fno-exceptions for NDK before r7.
 #                          Implies -frtti -fno-exceptions for NDK r7 and newer.
+#                          Is not available for standalone toolchain.
 #        gnustl_static  -> Use the GNU STL as a static library.
 #                          Implies -frtti -fexceptions.
 #        gnustl_shared  -> Use the GNU STL as a shared library.
 #                          Implies -frtti -fno-exceptions.
 #                          Available for NDK r7b and newer.
+#                          Silently degrades to gnustl_static if not available.
 #
 #    ANDROID_STL_FORCE_FEATURES=ON - turn rtti and exceptions support based on
 #      chosen runtime. If disabled, then the user is responsible for settings
@@ -222,6 +229,8 @@
 #     [~] fixed mips linker flags for NDK r8b
 #   - modified September 2012
 #     [+] added NDK release name detection (see ANDROID_NDK_RELEASE)
+#     [+] added support for all C++ runtimes from NDK
+#         (system, gabi++, stlport, gnustl)
 # ------------------------------------------------------------------------------
 
 cmake_minimum_required( VERSION 2.6.3 )
@@ -494,7 +503,7 @@ if( BUILD_WITH_STANDALONE_TOOLCHAIN )
  else()
   execute_process( COMMAND "${ANDROID_STANDALONE_TOOLCHAIN}/bin/${__availableToolchainMachines}-gcc${TOOL_OS_SUFFIX}" --version
    OUTPUT_VARIABLE __availableToolchainCompilerVersions OUTPUT_STRIP_TRAILING_WHITESPACE )
-  string( REGEX MATCH "[0-9]+.[0-9]+.[0-9]+" __availableToolchainCompilerVersions "${__availableToolchainCompilerVersions}" )
+  string( REGEX MATCH "[0-9]+[.][0-9]+([.][0-9]+)?" __availableToolchainCompilerVersions "${__availableToolchainCompilerVersions}" )
  endif()
 endif()
 
@@ -510,7 +519,7 @@ if( BUILD_WITH_ANDROID_NDK )
  foreach( __toolchain ${__availableToolchains} )
   __DETECT_TOOLCHAIN_MACHINE_NAME( __machine "${ANDROID_NDK}/toolchains/${__toolchain}/prebuilt/${ANDROID_NDK_HOST_SYSTEM_NAME}" )
   if( __machine )
-   string( REGEX MATCH "[0-9]+[.][0-9]+[.]*[0-9]*$" __version "${__toolchain}" )
+   string( REGEX MATCH "[0-9]+[.][0-9]+([.][0-9]+)?$" __version "${__toolchain}" )
    string( REGEX MATCH "^[^-]+" __arch "${__toolchain}" )
    list( APPEND __availableToolchainMachines "${__machine}" )
    list( APPEND __availableToolchainArchs "${__arch}" )
@@ -708,6 +717,7 @@ endif()
 
 # runtime choice (STL, rtti, exceptions)
 if( NOT ANDROID_STL )
+ # honor legacy ANDROID_USE_STLPORT
  if( DEFINED ANDROID_USE_STLPORT )
   if( ANDROID_USE_STLPORT )
    set( ANDROID_STL stlport_static )
@@ -722,8 +732,9 @@ set( ANDROID_STL "${ANDROID_STL}" CACHE STRING "C++ runtime" )
 set( ANDROID_STL_FORCE_FEATURES ON CACHE BOOL "automatically configure rtti and exceptions support based on C++ runtime" )
 mark_as_advanced( ANDROID_STL ANDROID_STL_FORCE_FEATURES )
 
-if( NOT "${ANDROID_STL}" MATCHES "^(none|system|system_re|gabi\\+\\+_static|gabi\\+\\+_shared|stlport_static|stlport_shared|gnustl_static|gnustl_shared)$")
- message( FATAL_ERROR "ANDROID_STL is set to invalid value \"${ANDROID_STL}\".
+if( BUILD_WITH_ANDROID_NDK )
+ if( NOT "${ANDROID_STL}" MATCHES "^(none|system|system_re|gabi\\+\\+_static|gabi\\+\\+_shared|stlport_static|stlport_shared|gnustl_static|gnustl_shared)$")
+  message( FATAL_ERROR "ANDROID_STL is set to invalid value \"${ANDROID_STL}\".
 The possible values are:
   none           -> Do not configure the runtime.
   system         -> Use the default minimal system C++ runtime library.
@@ -734,7 +745,17 @@ The possible values are:
   stlport_shared -> Use the STLport runtime as a shared library.
   gnustl_static  -> (default) Use the GNU STL as a static library.
   gnustl_shared  -> Use the GNU STL as a shared library.
-  " )
+" )
+ endif()
+elseif( BUILD_WITH_STANDALONE_TOOLCHAIN )
+ if( NOT "${ANDROID_STL}" MATCHES "^(none|gnustl_static|gnustl_shared)$")
+  message( FATAL_ERROR "ANDROID_STL is set to invalid value \"${ANDROID_STL}\".
+The possible values are:
+  none           -> Do not configure the runtime.
+  gnustl_static  -> (default) Use the GNU STL as a static library.
+  gnustl_shared  -> Use the GNU STL as a shared library.
+" )
+ endif()
 endif()
 
 unset( ANDROID_RTTI )
@@ -822,11 +843,22 @@ endif()
 if( BUILD_WITH_STANDALONE_TOOLCHAIN )
  set( ANDROID_TOOLCHAIN_ROOT "${ANDROID_STANDALONE_TOOLCHAIN}" )
  set( ANDROID_SYSROOT "${ANDROID_STANDALONE_TOOLCHAIN}/sysroot" )
+
+ if( NOT ANDROID_STL STREQUAL "none" )
+  set( ANDROID_STL_INCLUDE_DIRS "${ANDROID_STANDALONE_TOOLCHAIN}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/include/c++/${ANDROID_COMPILER_VERSION}" )
+  if( ARMEABI_V7A AND EXISTS "${ANDROID_STL_INCLUDE_DIRS}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/${CMAKE_SYSTEM_PROCESSOR}/bits" )
+   list( APPEND ANDROID_STL_INCLUDE_DIRS "${ANDROID_STL_INCLUDE_DIRS}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/${CMAKE_SYSTEM_PROCESSOR}" )
+  elseif( ARMEABI AND NOT ANDROID_FORCE_ARM_BUILD AND EXISTS "${ANDROID_STL_INCLUDE_DIRS}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/thumb/bits" )
+   list( APPEND ANDROID_STL_INCLUDE_DIRS "${ANDROID_STL_INCLUDE_DIRS}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/thumb" )
+  else()
+   list( APPEND ANDROID_STL_INCLUDE_DIRS "${ANDROID_STL_INCLUDE_DIRS}/${ANDROID_TOOLCHAIN_MACHINE_NAME}" )
+  endif()
+ endif()
  #set( __stlLibPath "${ANDROID_STANDALONE_TOOLCHAIN}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/lib" )
  #TODO: configure stl
 endif()
 
-
+# case of shared STL version
 if( ANDROID_STL MATCHES "shared" AND DEFINED __libstl )
  string( REPLACE "_static.a" "_shared.so" __libstl "${__libstl}" )
  get_filename_component( __libstlname "${__libstl}" NAME )
@@ -1067,7 +1099,7 @@ set( CMAKE_SHARED_LINKER_FLAGS "" CACHE STRING "linker flags" )
 set( CMAKE_MODULE_LINKER_FLAGS "" CACHE STRING "linker flags" )
 set( CMAKE_EXE_LINKER_FLAGS "-Wl,-z,nocopyreloc" CACHE STRING "linker flags" )
 
-include_directories( SYSTEM "${ANDROID_SYSROOT}/usr/include" ${ANDROID_STL_INCLUDE_DIRS} )
+include_directories( SYSTEM ${ANDROID_STL_INCLUDE_DIRS} ) #"${ANDROID_SYSROOT}/usr/include"
 link_directories( "${CMAKE_INSTALL_PREFIX}/libs/${ANDROID_NDK_ABI_NAME}" )
 
 # finish flags
