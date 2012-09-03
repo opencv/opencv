@@ -60,6 +60,9 @@ static void removeOcclusions(const Mat& flow,
                              Mat& confidence) {
   const int rows = flow.rows;
   const int cols = flow.cols;
+  if (!confidence.data) {
+    confidence = Mat::zeros(rows, cols, CV_32F);
+  }
   for (int r = 0; r < rows; ++r) {
     for (int c = 0; c < cols; ++c) {
       if (dist(flow.at<Vec2f>(r, c), -flow_inv.at<Vec2f>(r, c)) > occ_thr) {
@@ -96,20 +99,12 @@ static void wc(const Mat& image, Mat& d, int r0, int c0,
   exp(d, d);
 }
 
-static void dist(const Mat& m1, const Mat& m2, Mat& result) {
-  const int rows = m1.rows;
-  const int cols = m1.cols;
-  for (int r = 0; r < rows; ++r) {
-    const Vec3b *m1_row = m1.ptr<Vec3b>(r);
-    const Vec3b *m2_row = m2.ptr<Vec3b>(r);
-    float* row = result.ptr<float>(r);
-    for (int c = 0; c < cols; ++c) {
-      row[c] = dist(m1_row[c], m2_row[c]);
-    }
-  }
-}
-
-static void crossBilateralFilter(const Mat& image, const Mat& edge_image, const Mat confidence, Mat& dst, int d, float sigma_color, float sigma_space, bool flag=false) {
+static void crossBilateralFilter(const Mat& image, 
+                                 const Mat& edge_image, 
+                                 const Mat confidence, 
+                                 Mat& dst, int d, 
+                                 float sigma_color, float sigma_space, 
+                                 bool flag=false) {
   const int rows = image.rows;
   const int cols = image.cols;
   Mat image_extended, edge_image_extended, confidence_extended;
@@ -121,7 +116,6 @@ static void crossBilateralFilter(const Mat& image, const Mat& edge_image, const 
   Mat weights(2*d+1, 2*d+1, CV_32F);
   Mat weighted_sum(2*d+1, 2*d+1, CV_32F);
   
-
   vector<Mat> image_extended_channels;
   split(image_extended, image_extended_channels);
 
@@ -148,31 +142,15 @@ static void crossBilateralFilter(const Mat& image, const Mat& edge_image, const 
   }
 }
 
-static void calcOpticalFlowSingleScaleSF(const Mat& prev, 
-                                         const Mat& next,
-                                         const Mat& mask,
-                                         Mat& flow,
-                                         Mat& confidence,
-                                         int averaging_radius, 
-                                         int max_flow,
-                                         float sigma_dist,
-                                         float sigma_color) {
+static void calcConfidence(const Mat& prev, 
+                           const Mat& next,
+                           const Mat& flow,
+                           Mat& confidence,
+                           int max_flow) {
   const int rows = prev.rows;
   const int cols = prev.cols;
   confidence = Mat::zeros(rows, cols, CV_32F);
   
-  Mat diff_storage(averaging_radius*2 + 1, averaging_radius*2 + 1, CV_32F);
-  Mat w_full_window(averaging_radius*2 + 1, averaging_radius*2 + 1, CV_32F);
-  Mat wd_full_window(averaging_radius*2 + 1, averaging_radius*2 + 1, CV_32F);
-  float w_full_window_sum = 1e-9;
-
-  Mat prev_extended;
-  copyMakeBorder(prev, prev_extended, 
-                 averaging_radius, averaging_radius, averaging_radius, averaging_radius,
-                 BORDER_DEFAULT);
-
-  wd(wd_full_window, averaging_radius, averaging_radius, averaging_radius, averaging_radius, sigma_dist);
-
   for (int r0 = 0; r0 < rows; ++r0) {
     for (int c0 = 0; c0 < cols; ++c0) {
       Vec2f flow_at_point = flow.at<Vec2f>(r0, c0);
@@ -183,25 +161,16 @@ static void calcOpticalFlowSingleScaleSF(const Mat& prev,
       if (c0 + v0 < 0) { v0 = -c0; }
       if (c0 + v0 >= cols) { v0 = cols - 1 - c0; }
 
-      const int min_row_shift = -min(r0 + u0, max_flow);
-      const int max_row_shift = min(rows - 1 - (r0 + u0), max_flow);
-      const int min_col_shift = -min(c0 + v0, max_flow);
-      const int max_col_shift = min(cols - 1 - (c0 + v0), max_flow);
-
-      float min_cost = DBL_MAX, best_u = u0, best_v = v0;
-
-      if (mask.at<uchar>(r0, c0)) {
-          wc(prev_extended, w_full_window, r0 + averaging_radius, c0 + averaging_radius,
-             averaging_radius, averaging_radius, averaging_radius, averaging_radius, sigma_color);
-          multiply(w_full_window, wd_full_window, w_full_window);
-          w_full_window_sum = sum(w_full_window)[0];
-      }
+      const int top_row_shift = -min(r0 + u0, max_flow);
+      const int bottom_row_shift = min(rows - 1 - (r0 + u0), max_flow);
+      const int left_col_shift = -min(c0 + v0, max_flow);
+      const int right_col_shift = min(cols - 1 - (c0 + v0), max_flow);
 
       bool first_flow_iteration = true;
       float sum_e = 0, min_e = 0;
 
-      for (int u = min_row_shift; u <= max_row_shift; ++u) {
-        for (int v = min_col_shift; v <= max_col_shift; ++v) {
+      for (int u = top_row_shift; u <= bottom_row_shift; ++u) {
+        for (int v = left_col_shift; v <= right_col_shift; ++v) {
           float e = dist(prev.at<Vec3b>(r0, c0), next.at<Vec3b>(r0 + u0 + u, c0 + v0 + v));
           if (first_flow_iteration) {
             sum_e = e;
@@ -211,55 +180,83 @@ static void calcOpticalFlowSingleScaleSF(const Mat& prev,
             sum_e += e;
             min_e = std::min(min_e, e);
           }
-          if (!mask.at<uchar>(r0, c0)) {
-            continue;
+        }
+      }
+      int windows_square = (bottom_row_shift - top_row_shift + 1) *
+                           (right_col_shift - left_col_shift + 1);
+      confidence.at<float>(r0, c0) = (windows_square == 0) ? 0
+                                                           : sum_e / windows_square - min_e;
+      CV_Assert(confidence.at<float>(r0, c0) >= 0);
+    }
+  }
+}
+
+static void calcOpticalFlowSingleScaleSF(const Mat& prev_extended,
+                                         const Mat& next_extended,
+                                         const Mat& mask,
+                                         Mat& flow,
+                                         int averaging_radius, 
+                                         int max_flow,
+                                         float sigma_dist,
+                                         float sigma_color) {
+  const int averaging_radius_2 = averaging_radius << 1;
+  const int rows = prev_extended.rows - averaging_radius_2;
+  const int cols = prev_extended.cols - averaging_radius_2;
+  
+  Mat weight_window(averaging_radius_2 + 1, averaging_radius_2 + 1, CV_32F);
+  Mat space_weight_window(averaging_radius_2 + 1, averaging_radius_2 + 1, CV_32F);
+
+  wd(space_weight_window, averaging_radius, averaging_radius, averaging_radius, averaging_radius, sigma_dist);
+
+  for (int r0 = 0; r0 < rows; ++r0) {
+    for (int c0 = 0; c0 < cols; ++c0) {
+      if (!mask.at<uchar>(r0, c0)) {
+        continue;
+      }
+
+      // TODO: do smth with this creepy staff
+      Vec2f flow_at_point = flow.at<Vec2f>(r0, c0);
+      int u0 = floor(flow_at_point[0] + 0.5);
+      if (r0 + u0 < 0) { u0 = -r0; }
+      if (r0 + u0 >= rows) { u0 = rows - 1 - r0; }
+      int v0 = floor(flow_at_point[1] + 0.5);
+      if (c0 + v0 < 0) { v0 = -c0; }
+      if (c0 + v0 >= cols) { v0 = cols - 1 - c0; }
+
+      const int top_row_shift = -min(r0 + u0, max_flow);
+      const int bottom_row_shift = min(rows - 1 - (r0 + u0), max_flow);
+      const int left_col_shift = -min(c0 + v0, max_flow);
+      const int right_col_shift = min(cols - 1 - (c0 + v0), max_flow);
+
+      float min_cost = DBL_MAX, best_u = u0, best_v = v0;
+
+      wc(prev_extended, weight_window, r0 + averaging_radius, c0 + averaging_radius,
+         averaging_radius, averaging_radius, averaging_radius, averaging_radius, sigma_color);
+      multiply(weight_window, space_weight_window, weight_window);
+
+      const int prev_extended_top_window_row = r0;
+      const int prev_extended_left_window_col = c0;
+
+      for (int u = top_row_shift; u <= bottom_row_shift; ++u) {
+        const int next_extended_top_window_row = r0 + u0 + u;
+        for (int v = left_col_shift; v <= right_col_shift; ++v) {
+          const int next_extended_left_window_col = c0 + v0 + v;
+
+          float cost = 0;
+          for (int r = 0; r <= averaging_radius_2; ++r) {
+            const Vec3b *prev_extended_window_row = prev_extended.ptr<Vec3b>(prev_extended_top_window_row + r);
+            const Vec3b *next_extended_window_row = next_extended.ptr<Vec3b>(next_extended_top_window_row + r);
+            const float* weight_window_row = weight_window.ptr<float>(r);
+            for (int c = 0; c <= averaging_radius_2; ++c) {
+              cost += weight_window_row[c] * 
+                           dist(prev_extended_window_row[prev_extended_left_window_col + c], 
+                                next_extended_window_row[next_extended_left_window_col + c]);
+            }
           }
+          // cost should be divided by sum(weight_window), but because 
+          // we interested only in min(cost) and sum(weight_window) is constant
+          // for every point - we remove it
 
-          const int window_top_shift = min(r0, r0 + u + u0, averaging_radius);
-          const int window_bottom_shift = min(rows - 1 - r0, 
-                                              rows - 1 - (r0 + u + u0), 
-                                              averaging_radius);
-          const int window_left_shift = min(c0, c0 + v + v0, averaging_radius);
-          const int window_right_shift = min(cols - 1 - c0, 
-                                             cols - 1 - (c0 + v + v0), 
-                                             averaging_radius);
-
-          const Range prev_row_range(r0 - window_top_shift, r0 + window_bottom_shift + 1);
-          const Range prev_col_range(c0 - window_left_shift, c0 + window_right_shift + 1);
-
-          const Range next_row_range(r0 + u0 + u - window_top_shift, 
-                                     r0 + u0 + u + window_bottom_shift + 1);
-          const Range next_col_range(c0 + v0 + v - window_left_shift, 
-                                     c0 + v0 + v + window_right_shift + 1); 
-         
-                     
-          Mat diff2;
-          Mat w;
-          float w_sum;
-          if (window_top_shift == averaging_radius &&
-              window_bottom_shift == averaging_radius &&
-              window_left_shift == averaging_radius &&
-              window_right_shift == averaging_radius) {
-            w = w_full_window;
-            w_sum = w_full_window_sum;
-            diff2 = diff_storage;
-            dist(prev(prev_row_range, prev_col_range), next(next_row_range, next_col_range), diff2);
-          } else {
-            diff2 = diff_storage(Range(averaging_radius - window_top_shift, 
-                                       averaging_radius + 1 + window_bottom_shift),
-                                 Range(averaging_radius - window_left_shift,
-                                       averaging_radius + 1 + window_right_shift));
-            
-            dist(prev(prev_row_range, prev_col_range), next(next_row_range, next_col_range), diff2);
-            w = w_full_window(Range(averaging_radius - window_top_shift, 
-                                    averaging_radius + 1 + window_bottom_shift),
-                              Range(averaging_radius - window_left_shift,
-                                    averaging_radius + 1 + window_right_shift));
-            w_sum = sum(w)[0];
-          }
-          multiply(diff2, w, diff2);
-      
-          const float cost = sum(diff2)[0] / w_sum;
           if (cost < min_cost) {
             min_cost = cost;
             best_u = u + u0;
@@ -267,14 +264,7 @@ static void calcOpticalFlowSingleScaleSF(const Mat& prev,
           }
         }
       }
-      int windows_square = (max_row_shift - min_row_shift + 1) *
-                           (max_col_shift - min_col_shift + 1);
-      confidence.at<float>(r0, c0) = (windows_square == 0) ? 0
-                                                           : sum_e / windows_square - min_e;
-      CV_Assert(confidence.at<float>(r0, c0) >= 0); // TODO: remove it after testing
-      if (mask.at<uchar>(r0, c0)) {
-        flow.at<Vec2f>(r0, c0) = Vec2f(best_u, best_v);
-      }
+      flow.at<Vec2f>(r0, c0) = Vec2f(best_u, best_v);
     }
   }
 }
@@ -474,22 +464,22 @@ static void buildPyramidWithResizeMethod(Mat& src,
   }
 }
 
-void calcOpticalFlowSF(Mat& from, 
-                       Mat& to, 
-                       Mat& resulted_flow,
-                       int layers,
-                       int averaging_block_size, 
-                       int max_flow,
-                       double sigma_dist,
-                       double sigma_color,
-                       int postprocess_window, 
-                       double sigma_dist_fix, 
-                       double sigma_color_fix,
-                       double occ_thr,
-                       int upscale_averaging_radius,
-                       double upscale_sigma_dist,
-                       double upscale_sigma_color,
-                       double speed_up_thr) {
+CV_EXPORTS_W void calcOpticalFlowSF(Mat& from, 
+                                    Mat& to, 
+                                    Mat& resulted_flow,
+                                    int layers,
+                                    int averaging_radius, 
+                                    int max_flow,
+                                    double sigma_dist,
+                                    double sigma_color,
+                                    int postprocess_window, 
+                                    double sigma_dist_fix, 
+                                    double sigma_color_fix,
+                                    double occ_thr,
+                                    int upscale_averaging_radius,
+                                    double upscale_sigma_dist,
+                                    double upscale_sigma_color,
+                                    double speed_up_thr) {
   vector<Mat> pyr_from_images;
   vector<Mat> pyr_to_images;
 
@@ -498,34 +488,43 @@ void calcOpticalFlowSF(Mat& from,
 
   CV_Assert((int)pyr_from_images.size() == layers && (int)pyr_to_images.size() == layers);
 
-  Mat first_from_image = pyr_from_images[layers - 1];
-  Mat first_to_image = pyr_to_images[layers - 1];
+  Mat curr_from, curr_to, prev_from, prev_to;
+  Mat curr_from_extended, curr_to_extended;
 
-  Mat mask = Mat::ones(first_from_image.rows, first_from_image.cols, CV_8U);
-  Mat mask_inv = Mat::ones(first_from_image.rows, first_from_image.cols, CV_8U);
+  curr_from = pyr_from_images[layers - 1];
+  curr_to = pyr_to_images[layers - 1];
 
-  Mat flow(first_from_image.rows, first_from_image.cols, CV_32FC2);
-  Mat flow_inv(first_to_image.rows, first_to_image.cols, CV_32FC2);
+  copyMakeBorder(curr_from, curr_from_extended, 
+                 averaging_radius, averaging_radius, averaging_radius, averaging_radius,
+                 BORDER_DEFAULT);
+  copyMakeBorder(curr_to, curr_to_extended, 
+                 averaging_radius, averaging_radius, averaging_radius, averaging_radius,
+                 BORDER_DEFAULT);
+
+  Mat mask = Mat::ones(curr_from.size(), CV_8U);
+  Mat mask_inv = Mat::ones(curr_from.size(), CV_8U);
+
+  Mat flow(curr_from.size(), CV_32FC2);
+  Mat flow_inv(curr_to.size(), CV_32FC2);
 
   Mat confidence;
   Mat confidence_inv;
 
-  calcOpticalFlowSingleScaleSF(first_from_image, 
-                               first_to_image, 
+
+  calcOpticalFlowSingleScaleSF(curr_from_extended,
+                               curr_to_extended,
                                mask,
                                flow,
-                               confidence,
-                               averaging_block_size, 
+                               averaging_radius, 
                                max_flow, 
                                sigma_dist, 
                                sigma_color);
 
-  calcOpticalFlowSingleScaleSF(first_to_image, 
-                               first_from_image, 
+  calcOpticalFlowSingleScaleSF(curr_to_extended,
+                               curr_from_extended,
                                mask_inv,
                                flow_inv,
-                               confidence_inv,
-                               averaging_block_size, 
+                               averaging_radius, 
                                max_flow, 
                                sigma_dist, 
                                sigma_color);
@@ -540,14 +539,21 @@ void calcOpticalFlowSF(Mat& from,
                    occ_thr,
                    confidence_inv);
 
-  Mat speed_up = Mat::zeros(first_from_image.rows, first_from_image.cols, CV_8U);
-  Mat speed_up_inv = Mat::zeros(first_from_image.rows, first_from_image.cols, CV_8U);
+  Mat speed_up = Mat::zeros(curr_from.size(), CV_8U);
+  Mat speed_up_inv = Mat::zeros(curr_from.size(), CV_8U);
 
   for (int curr_layer = layers - 2; curr_layer >= 0; --curr_layer) {
-    const Mat curr_from = pyr_from_images[curr_layer];
-    const Mat curr_to = pyr_to_images[curr_layer];
-    const Mat prev_from = pyr_from_images[curr_layer + 1];
-    const Mat prev_to = pyr_to_images[curr_layer + 1];
+    curr_from = pyr_from_images[curr_layer];
+    curr_to = pyr_to_images[curr_layer];
+    prev_from = pyr_from_images[curr_layer + 1];
+    prev_to = pyr_to_images[curr_layer + 1];
+
+    copyMakeBorder(curr_from, curr_from_extended, 
+                   averaging_radius, averaging_radius, averaging_radius, averaging_radius,
+                   BORDER_DEFAULT);
+    copyMakeBorder(curr_to, curr_to_extended,
+                   averaging_radius, averaging_radius, averaging_radius, averaging_radius,
+                   BORDER_DEFAULT);
 
     const int curr_rows = curr_from.rows;
     const int curr_cols = curr_from.cols;
@@ -555,7 +561,7 @@ void calcOpticalFlowSF(Mat& from,
     Mat new_speed_up, new_speed_up_inv;
 
     selectPointsToRecalcFlow(flow,
-                             averaging_block_size,
+                             averaging_radius,
                              speed_up_thr,
                              curr_rows,
                              curr_cols,
@@ -564,7 +570,7 @@ void calcOpticalFlowSF(Mat& from,
                              mask);
 
     selectPointsToRecalcFlow(flow_inv,
-                             averaging_block_size,
+                             averaging_radius,
                              speed_up_thr,
                              curr_rows,
                              curr_cols,
@@ -593,22 +599,22 @@ void calcOpticalFlowSF(Mat& from,
                                   upscale_sigma_dist,
                                   upscale_sigma_color);
 
-    calcOpticalFlowSingleScaleSF(curr_from, 
-                                 curr_to, 
+    calcConfidence(curr_from, curr_to, flow, confidence, max_flow);
+    calcOpticalFlowSingleScaleSF(curr_from_extended,
+                                 curr_to_extended,
                                  mask,
                                  flow,
-                                 confidence,
-                                 averaging_block_size, 
+                                 averaging_radius, 
                                  max_flow, 
                                  sigma_dist, 
                                  sigma_color);
 
-    calcOpticalFlowSingleScaleSF(curr_to,
-                                 curr_from, 
+    calcConfidence(curr_to, curr_from, flow_inv, confidence_inv, max_flow);
+    calcOpticalFlowSingleScaleSF(curr_to_extended,
+                                 curr_from_extended,
                                  mask_inv,
                                  flow_inv,
-                                 confidence_inv,
-                                 averaging_block_size, 
+                                 averaging_radius, 
                                  max_flow, 
                                  sigma_dist, 
                                  sigma_color);
@@ -616,11 +622,12 @@ void calcOpticalFlowSF(Mat& from,
     extrapolateFlow(flow, speed_up);
     extrapolateFlow(flow_inv, speed_up_inv);
 
+    //TODO: should we remove occlusions for the last stage?
     removeOcclusions(flow, flow_inv, occ_thr, confidence);
     removeOcclusions(flow_inv, flow, occ_thr, confidence_inv);
   }
 
-  crossBilateralFilter(flow, pyr_from_images[0], confidence, flow, 
+  crossBilateralFilter(flow, curr_from, confidence, flow, 
                        postprocess_window, sigma_color_fix, sigma_dist_fix);
 
   GaussianBlur(flow, flow, Size(3, 3), 5);

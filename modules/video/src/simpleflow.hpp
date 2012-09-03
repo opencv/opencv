@@ -51,6 +51,22 @@ using namespace std;
 #define UNKNOWN_FLOW_THRESH 1e9
 
 namespace cv {
+/*
+template<class T>
+inline static T sqr(T t) {
+  return t*t;
+}
+
+static float dist(const Vec3b& p1, const Vec3b& p2) {
+  return sqr(p1[0] - p2[0]) +
+         sqr(p1[1] - p2[1]) +
+         sqr(p1[2] - p2[2]);
+}
+
+inline static float dist(const Vec2f& p1, const Vec2f& p2) {
+  return sqr(p1[0] - p2[0]) +
+         sqr(p1[1] - p2[1]);
+}*/
 
 inline static float dist(const Vec3b& p1, const Vec3b& p2) {
   return (p1[0] - p2[0]) * (p1[0] - p2[0]) +
