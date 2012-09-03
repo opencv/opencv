@@ -493,15 +493,15 @@ TEST_P(convertC3C4, Accuracy)
 }
 
 INSTANTIATE_TEST_CASE_P(MatrixOperation, ConvertTo, Combine(
-                            Values(CV_8UC1, CV_8UC4, CV_32SC1, CV_32SC4, CV_32FC1, CV_32FC4),
-                            Values(CV_8UC1, CV_8UC4, CV_32SC1, CV_32SC4, CV_32FC1, CV_32FC4)));
+                            Values(CV_8UC1, CV_8UC3,CV_8UC4, CV_32SC1, CV_32SC4, CV_32FC1, CV_32FC4),
+                            Values(CV_8UC1, CV_8UC3,CV_8UC4, CV_32SC1, CV_32SC4, CV_32FC1, CV_32FC4)));
 
 INSTANTIATE_TEST_CASE_P(MatrixOperation, CopyTo, Combine(
-                            Values(CV_8UC1, CV_8UC4, CV_32SC1, CV_32SC4, CV_32FC1, CV_32FC4),
+                            Values(CV_8UC1, CV_8UC3,CV_8UC4, CV_32SC1, CV_32SC4, CV_32FC1, CV_32FC4),
                             Values(false))); // Values(false) is the reserved parameter
 
 INSTANTIATE_TEST_CASE_P(MatrixOperation, SetTo, Combine(
-                            Values(CV_8UC1, CV_8UC4, CV_32SC1, CV_32SC4, CV_32FC1, CV_32FC4),
+                            Values(CV_8UC1, CV_8UC3,CV_8UC4, CV_32SC1, CV_32SC4, CV_32FC1, CV_32FC4),
                             Values(false))); // Values(false) is the reserved parameter
 
 INSTANTIATE_TEST_CASE_P(MatrixOperation, convertC3C4, Combine(

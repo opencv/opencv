@@ -79,5 +79,5 @@ TEST_P(Blend, Accuracy)
 
 INSTANTIATE_TEST_CASE_P(GPU_ImgProc, Blend, Combine(
 	DIFFERENT_SIZES,
-	testing::Values(MatType(CV_8UC1), MatType(CV_8UC4), MatType(CV_32FC1), MatType(CV_32FC4))
+	testing::Values(MatType(CV_8UC1), MatType(CV_8UC3),MatType(CV_8UC4), MatType(CV_32FC1), MatType(CV_32FC4))
 ));

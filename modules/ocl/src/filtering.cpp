@@ -1445,7 +1445,6 @@ void cv::ocl::sepFilter2D(const oclMat &src, oclMat &dst, int ddepth, const Mat 
 
 Ptr<FilterEngine_GPU> cv::ocl::createDerivFilter_GPU( int srcType, int dstType, int dx, int dy, int ksize, int borderType )
 {
-	CV_Assert(dstType == srcType);
 	Mat kx, ky;
 	getDerivKernels( kx, ky, dx, dy, ksize, false, CV_32F );
 	return createSeparableLinearFilter_GPU(srcType, dstType,

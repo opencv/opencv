@@ -391,7 +391,7 @@ namespace cv
             size_t region[3] = {width, height, 1};
             if(kind == clMemcpyHostToDevice)
             {
-				if(dpitch == width || channels==3)
+				if(dpitch == width || channels==3 || height == 1)
 				{
 					openCLSafeCall(clEnqueueWriteBuffer(clCxt->impl->clCmdQueue, (cl_mem)dst, CL_TRUE,
 								0, width*height, src, 0, NULL, NULL));
@@ -404,7 +404,7 @@ namespace cv
             }
             else if(kind == clMemcpyDeviceToHost)
             {
-				if(spitch == width || channels==3)
+				if(spitch == width || channels==3 || height == 1)
 				{
 					openCLSafeCall(clEnqueueReadBuffer(clCxt->impl->clCmdQueue, (cl_mem)src, CL_TRUE,
 								0, width*height, dst, 0, NULL, NULL));

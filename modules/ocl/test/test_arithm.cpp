@@ -1523,7 +1523,7 @@ TEST_P(AddWeighted, Mat)
 //********test****************
 
 INSTANTIATE_TEST_CASE_P(Arithm, Lut, Combine(
-                            Values(CV_8UC1, CV_8UC4),
+                            Values(CV_8UC1, CV_8UC3, CV_8UC4),
                             Values(false))); // Values(false) is the reserved parameter
 
 INSTANTIATE_TEST_CASE_P(Arithm, Exp, Combine(
@@ -1535,40 +1535,40 @@ INSTANTIATE_TEST_CASE_P(Arithm, Log, Combine(
                             Values(false))); // Values(false) is the reserved parameter
 
 INSTANTIATE_TEST_CASE_P(Arithm, Add, Combine(
-                            Values(CV_8UC1, CV_8UC4, CV_32SC1, CV_32SC4, CV_32FC1,  CV_32FC4),
+                            Values(CV_8UC1, CV_8UC3,CV_8UC4, CV_32SC1, CV_32SC4, CV_32FC1,  CV_32FC4),
                             Values(false)));
 
 INSTANTIATE_TEST_CASE_P(Arithm, Mul, Combine(
-                            Values(CV_8UC1, CV_8UC4, CV_32SC1, CV_32SC4, CV_32FC1, CV_32FC4),
+                            Values(CV_8UC1, CV_8UC3,CV_8UC4, CV_32SC1, CV_32SC4, CV_32FC1, CV_32FC4),
                             Values(false))); // Values(false) is the reserved parameter
 
 INSTANTIATE_TEST_CASE_P(Arithm, Div, Combine(
-                            Values(CV_8UC1, CV_8UC4, CV_32SC1, CV_32SC4, CV_32FC1, CV_32FC4),
+                            Values(CV_8UC1, CV_8UC3,CV_8UC4, CV_32SC1, CV_32SC4, CV_32FC1, CV_32FC4),
                             Values(false))); // Values(false) is the reserved parameter
 
 
 INSTANTIATE_TEST_CASE_P(Arithm, Absdiff, Combine(
-                            Values(CV_8UC1, CV_8UC4, CV_32SC1, CV_32SC4, CV_32FC1, CV_32FC4),
+                            Values(CV_8UC1,CV_8UC3, CV_8UC4, CV_32SC1, CV_32SC4, CV_32FC1, CV_32FC4),
                             Values(false))); // Values(false) is the reserved parameter
 
 INSTANTIATE_TEST_CASE_P(Arithm, CartToPolar, Combine(
-                            Values(CV_32FC1, CV_32FC4),
+                            Values(CV_32FC1, CV_32FC3,CV_32FC4),
                             Values(false))); // Values(false) is the reserved parameter
 
 INSTANTIATE_TEST_CASE_P(Arithm, PolarToCart, Combine(
-                            Values(CV_32FC1, CV_32FC4),
+                            Values(CV_32FC1, CV_32FC3,CV_32FC4),
                             Values(false))); // Values(false) is the reserved parameter
 
 INSTANTIATE_TEST_CASE_P(Arithm, Magnitude, Combine(
-                            Values(CV_32FC1, CV_32FC4),
+                            Values(CV_32FC1, CV_32FC3,CV_32FC4),
                             Values(false))); // Values(false) is the reserved parameter
 
 INSTANTIATE_TEST_CASE_P(Arithm, Transpose, Combine(
-                            Values(CV_8UC1, CV_8UC4, CV_32SC1, CV_32FC1),
+                            Values(CV_8UC1, CV_8UC3,CV_8UC4, CV_32SC1, CV_32FC1),
                             Values(false))); // Values(false) is the reserved parameter
 
 INSTANTIATE_TEST_CASE_P(Arithm, Flip, Combine(
-                            Values(CV_8UC1, CV_8UC4, CV_32SC1, CV_32SC4, CV_32FC1, CV_32FC4),
+                            Values(CV_8UC1, CV_8UC3,CV_8UC4, CV_32SC1, CV_32SC4, CV_32FC1, CV_32FC4),
                             Values(false))); // Values(false) is the reserved parameter
 
 INSTANTIATE_TEST_CASE_P(Arithm, MinMax, Combine(
@@ -1588,30 +1588,30 @@ INSTANTIATE_TEST_CASE_P(Arithm, CountNonZero, Combine(
                             Values(false)));
 
 
-INSTANTIATE_TEST_CASE_P(Arithm, Phase, Combine(Values(CV_32FC1, CV_32FC4), Values(false)));
+INSTANTIATE_TEST_CASE_P(Arithm, Phase, Combine(Values(CV_32FC1, CV_32FC3,CV_32FC4), Values(false)));
 // Values(false) is the reserved parameter
 
 
 INSTANTIATE_TEST_CASE_P(Arithm, Bitwise_and, Combine(
-                            Values(CV_8UC1, CV_32SC1, CV_32SC4, CV_32FC1, CV_32FC4), Values(false)));
+                            Values(CV_8UC1, CV_32SC1, CV_32SC4, CV_32FC1,CV_32FC3, CV_32FC4), Values(false)));
 //Values(false) is the reserved parameter
 
 INSTANTIATE_TEST_CASE_P(Arithm, Bitwise_or, Combine(
-                            Values(CV_8UC1, CV_32SC1, CV_32FC1, CV_32FC4), Values(false)));
+                            Values(CV_8UC1, CV_32SC1, CV_32FC1, CV_32FC3,CV_32FC4), Values(false)));
 //Values(false) is the reserved parameter
 
 INSTANTIATE_TEST_CASE_P(Arithm, Bitwise_xor, Combine(
-                            Values(CV_8UC1, CV_32SC1, CV_32FC1, CV_32FC4), Values(false)));
+                            Values(CV_8UC1, CV_32SC1, CV_32FC1, CV_32FC3,CV_32FC4), Values(false)));
 //Values(false) is the reserved parameter
 
 INSTANTIATE_TEST_CASE_P(Arithm, Bitwise_not, Combine(
-                            Values(CV_8UC1, CV_32SC1, CV_32FC1, CV_32FC4), Values(false)));
+                            Values(CV_8UC1, CV_32SC1, CV_32FC1, CV_32FC3,CV_32FC4), Values(false)));
 //Values(false) is the reserved parameter
 
 INSTANTIATE_TEST_CASE_P(Arithm, Compare, Combine(Values(CV_8UC1, CV_32SC1, CV_32FC1), Values(false)));
 // Values(false) is the reserved parameter
 
-INSTANTIATE_TEST_CASE_P(Arithm, Pow, Combine(Values(CV_32FC1, CV_32FC4), Values(false)));
+INSTANTIATE_TEST_CASE_P(Arithm, Pow, Combine(Values(CV_32FC1, CV_32FC3, CV_32FC4), Values(false)));
 // Values(false) is the reserved parameter
 
 INSTANTIATE_TEST_CASE_P(Arithm, MagnitudeSqr, Combine(

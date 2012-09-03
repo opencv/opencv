@@ -88,6 +88,7 @@ int main(int argc, char **argv)
 		std::cout << "no device found\n";
 		return -1;
 	}
+	//setDevice(oclinfo[1]);
     return RUN_ALL_TESTS();
 }
 

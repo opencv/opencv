@@ -364,11 +364,11 @@ TEST_P(Split, Accuracy)
 
 
 INSTANTIATE_TEST_CASE_P(SplitMerge, Merge, Combine(
-                            Values(CV_8U, CV_32S, CV_32F), Values(1, 4)));
+                            Values(CV_8U, CV_32S, CV_32F), Values(1, 3,4)));
 
 
 INSTANTIATE_TEST_CASE_P(SplitMerge, Split , Combine(
-                            Values(CV_8U, CV_32S, CV_32F), Values(1, 4)));
+                            Values(CV_8U, CV_32S, CV_32F), Values(1, 3,4)));
                            
 
 #endif // HAVE_OPENCL

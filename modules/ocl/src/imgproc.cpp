@@ -256,8 +256,9 @@ namespace cv
             Context *clCxt = src.clCxt;
             CV_Assert(interpolation == INTER_LINEAR || interpolation == INTER_NEAREST 
                     || interpolation == INTER_CUBIC || interpolation== INTER_LANCZOS4);
-            CV_Assert((map1.type() == CV_16SC2)&&(!map2.data) || (map1.type()== CV_32FC2)&&!map2.data);//more
-            CV_Assert((!map2.data || map2.size()== map1.size()));
+            CV_Assert((map1.type() == CV_16SC2 && !map2.data) || (map1.type()== CV_32FC2 && !map2.data) || (map1.type() == CV_32FC1 && map2.type() == CV_32FC1));
+            CV_Assert(!map2.data || map2.size()== map1.size());
+            CV_Assert(dst.size() == map1.size());
 
             dst.create(map1.size(), src.type());
 
@@ -279,6 +280,14 @@ namespace cv
                     kernelName = "remapNNSConstant";
 
             }
+            else if(map1.type() == CV_32FC1 && map2.type() == CV_32FC1) 
+            {
+                if(interpolation == INTER_LINEAR && borderType == BORDER_CONSTANT)
+                    kernelName = "remapLNF1Constant";
+                else if (interpolation == INTER_NEAREST && borderType == BORDER_CONSTANT)
+                    kernelName = "remapNNF1Constant";
+            }
+
             int channels = dst.channels();
             int depth = dst.depth();
                int type = src.type();
@@ -402,7 +411,36 @@ namespace cv
                 {
                     args.push_back( make_pair(sizeof(cl_float4),(void*)&borderValue));
                 }
-              }
+            }
+            if(map1.channels() == 1)
+            {
+                args.push_back( make_pair(sizeof(cl_mem),(void*)&dst.data));
+                args.push_back( make_pair(sizeof(cl_mem),(void*)&src.data));
+                // args.push_back( make_pair(sizeof(cl_mem),(void*)&srcImage));  //imageBuffer
+                args.push_back( make_pair(sizeof(cl_mem),(void*)&map1.data));
+                args.push_back( make_pair(sizeof(cl_mem),(void*)&map2.data));
+                args.push_back( make_pair(sizeof(cl_int),(void*)&dst.offset));
+                args.push_back( make_pair(sizeof(cl_int),(void*)&src.offset));
+                args.push_back( make_pair(sizeof(cl_int),(void*)&map1.offset));
+                args.push_back( make_pair(sizeof(cl_int),(void*)&dst.step));
+                args.push_back( make_pair(sizeof(cl_int),(void*)&src.step));
+                args.push_back( make_pair(sizeof(cl_int),(void*)&map1.step));
+                args.push_back( make_pair(sizeof(cl_int),(void*)&src.cols));
+                args.push_back( make_pair(sizeof(cl_int),(void*)&src.rows));
+                args.push_back( make_pair(sizeof(cl_int),(void*)&dst.cols));
+                args.push_back( make_pair(sizeof(cl_int),(void*)&dst.rows));
+                args.push_back( make_pair(sizeof(cl_int),(void*)&map1.cols));
+                args.push_back( make_pair(sizeof(cl_int),(void*)&map1.rows));
+                args.push_back( make_pair(sizeof(cl_int), (void *)&cols));
+                if(src.clCxt -> impl -> double_support != 0)
+                {
+                    args.push_back( make_pair(sizeof(cl_double4),(void*)&borderValue));
+                }
+                else
+                {
+                    args.push_back( make_pair(sizeof(cl_float4),(void*)&borderValue));
+                }
+            }
             openCLExecuteKernel(clCxt,&imgproc_remap,kernelName,globalThreads,localThreads,args,src.channels(),src.depth());
     }	
     
