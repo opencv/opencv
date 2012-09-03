@@ -59,11 +59,11 @@ void cv::ocl::Canny(const oclMat& dx, const oclMat& dy, CannyBuf& buf, oclMat& e
 
 namespace cv
 {
-	namespace ocl
-	{
-		///////////////////////////OpenCL kernel strings///////////////////////////
-		extern const char *imgproc_canny;
-	}
+    namespace ocl
+    {
+        ///////////////////////////OpenCL kernel strings///////////////////////////
+        extern const char *imgproc_canny;
+    }
 }
 
 cv::ocl::CannyBuf::CannyBuf(const oclMat& dx_, const oclMat& dy_) : dx(dx_), dy(dy_)
@@ -75,32 +75,35 @@ cv::ocl::CannyBuf::CannyBuf(const oclMat& dx_, const oclMat& dy_) : dx(dx_), dy(
 
 void cv::ocl::CannyBuf::create(const Size& image_size, int apperture_size)
 {
-	dx.create(image_size, CV_32SC1);
-	dy.create(image_size, CV_32SC1);
+    dx.create(image_size, CV_32SC1);
+    dy.create(image_size, CV_32SC1);
 
-	if(apperture_size == 3)
-	{
-		dx_buf.create(image_size, CV_32SC1);
-		dy_buf.create(image_size, CV_32SC1);
-	}
-	else if(apperture_size > 0)
+    if(apperture_size == 3)
     {
-		Mat kx, ky;
-        if (!filterDX)
-		{
-			filterDX = createDerivFilter_GPU(CV_32F, CV_32F, 1, 0, apperture_size, BORDER_REPLICATE);
-		}
-        if (!filterDY)
-		{
-            filterDY = createDerivFilter_GPU(CV_32F, CV_32F, 0, 1, apperture_size, BORDER_REPLICATE);
-		}
+        dx_buf.create(image_size, CV_32SC1);
+        dy_buf.create(image_size, CV_32SC1);
     }
-	edgeBuf.create(image_size.height + 2, image_size.width + 2, CV_32FC1);
-	
-	trackBuf1.create(1, image_size.width * image_size.height, CV_16UC2);
-	trackBuf2.create(1, image_size.width * image_size.height, CV_16UC2);
+    else if(apperture_size > 0)
+    {
+        Mat kx, ky;
+        if (!filterDX)
+        {
+            filterDX = createDerivFilter_GPU(CV_8U, CV_32S, 1, 0, apperture_size, BORDER_REPLICATE);
+        }
+        if (!filterDY)
+        {
+            filterDY = createDerivFilter_GPU(CV_8U, CV_32S, 0, 1, apperture_size, BORDER_REPLICATE);
+        }
+    }
+    edgeBuf.create(image_size.height + 2, image_size.width + 2, CV_32FC1);
 
-	counter.create(1,1, CV_32SC1);
+    trackBuf1.create(1, image_size.width * image_size.height, CV_16UC2);
+    trackBuf2.create(1, image_size.width * image_size.height, CV_16UC2);
+
+    float counter_f [1] = { 0 };
+    int err = 0;
+    counter = clCreateBuffer( Context::getContext()->impl->clContext, CL_MEM_COPY_HOST_PTR, sizeof(float), counter_f, &err );
+    openCLSafeCall(err);
 }
 
 void cv::ocl::CannyBuf::release()
@@ -112,12 +115,12 @@ void cv::ocl::CannyBuf::release()
     edgeBuf.release();
     trackBuf1.release();
     trackBuf2.release();
-	counter.release();
+    openCLFree(counter);
 }
 
 namespace cv { namespace ocl {
-	namespace canny
-	{
+    namespace canny
+    {
         void calcSobelRowPass_gpu(const oclMat& src, oclMat& dx_buf, oclMat& dy_buf, int rows, int cols);
 
         void calcMagnitude_gpu(const oclMat& dx_buf, const oclMat& dy_buf, oclMat& dx, oclMat& dy, oclMat& mag, int rows, int cols, bool L2Grad);
@@ -125,12 +128,12 @@ namespace cv { namespace ocl {
 
         void calcMap_gpu(oclMat& dx, oclMat& dy, oclMat& mag, oclMat& map, int rows, int cols, float low_thresh, float high_thresh);
 
-        void edgesHysteresisLocal_gpu(oclMat& map, oclMat& st1, oclMat& counter, int rows, int cols);
+        void edgesHysteresisLocal_gpu(oclMat& map, oclMat& st1, void * counter, int rows, int cols);
 
-        void edgesHysteresisGlobal_gpu(oclMat& map, oclMat& st1, oclMat& st2, oclMat& counter, int rows, int cols);
+        void edgesHysteresisGlobal_gpu(oclMat& map, oclMat& st1, oclMat& st2, void * counter, int rows, int cols);
 
         void getEdges_gpu(oclMat& map, oclMat& dst, int rows, int cols);
-	}
+    }
 }}// cv::ocl
 
 namespace
@@ -164,11 +167,10 @@ void cv::ocl::Canny(const oclMat& src, CannyBuf& buf, oclMat& dst, double low_th
         std::swap( low_thresh, high_thresh );
 
     dst.create(src.size(), CV_8U);
-    dst.setTo(Scalar::all(0));
+    //dst.setTo(Scalar::all(0));
 
     buf.create(src.size(), apperture_size);
-    buf.edgeBuf.setTo(Scalar::all(0));
-	buf.counter.setTo(Scalar::all(0));
+    //buf.edgeBuf.setTo(Scalar::all(0));
 
     if (apperture_size == 3)
     {
@@ -178,17 +180,8 @@ void cv::ocl::Canny(const oclMat& src, CannyBuf& buf, oclMat& dst, double low_th
     }
     else
     {
-		// FIXME:
-		// current ocl implementation requires the src and dst having same type
-		// convertTo is time consuming so this may be optimized later.
-		oclMat src_omat32f = src;
-		src.convertTo(src_omat32f, CV_32F); // FIXME
-
-        buf.filterDX->apply(src_omat32f, buf.dx);
-        buf.filterDY->apply(src_omat32f, buf.dy);
-
-		buf.dx.convertTo(buf.dx, CV_32S); // FIXME
-		buf.dy.convertTo(buf.dy, CV_32S); // FIXME
+        buf.filterDX->apply(src, buf.dx);
+        buf.filterDY->apply(src, buf.dy);
 
         calcMagnitude_gpu(buf.dx, buf.dy, buf.edgeBuf, src.rows, src.cols, L2gradient);
     }
@@ -210,12 +203,11 @@ void cv::ocl::Canny(const oclMat& dx, const oclMat& dy, CannyBuf& buf, oclMat& d
         std::swap( low_thresh, high_thresh);
 
     dst.create(dx.size(), CV_8U);
-    dst.setTo(Scalar::all(0));
+    //dst.setTo(Scalar::all(0));
 
     buf.dx = dx; buf.dy = dy;
     buf.create(dx.size(), -1);
-    buf.edgeBuf.setTo(Scalar::all(0));
-	buf.counter.setTo(Scalar::all(0));
+    //buf.edgeBuf.setTo(Scalar::all(0));
     calcMagnitude_gpu(buf.dx, buf.dy, buf.edgeBuf, dx.rows, dx.cols, L2gradient);
 
     CannyCaller(buf, dst, static_cast<float>(low_thresh), static_cast<float>(high_thresh));
@@ -223,197 +215,197 @@ void cv::ocl::Canny(const oclMat& dx, const oclMat& dy, CannyBuf& buf, oclMat& d
 
 void canny::calcSobelRowPass_gpu(const oclMat& src, oclMat& dx_buf, oclMat& dy_buf, int rows, int cols)
 {
-	Context *clCxt = src.clCxt;
-	string kernelName = "calcSobelRowPass";
-	vector< pair<size_t, const void *> > args;
+    Context *clCxt = src.clCxt;
+    string kernelName = "calcSobelRowPass";
+    vector< pair<size_t, const void *> > args;
 
-	args.push_back( make_pair( sizeof(cl_mem), (void *)&src.data));
-	args.push_back( make_pair( sizeof(cl_mem), (void *)&dx_buf.data));
-	args.push_back( make_pair( sizeof(cl_mem), (void *)&dy_buf.data));
-	args.push_back( make_pair( sizeof(cl_int), (void *)&rows));
-	args.push_back( make_pair( sizeof(cl_int), (void *)&cols));
-	args.push_back( make_pair( sizeof(cl_int), (void *)&src.step));
-	args.push_back( make_pair( sizeof(cl_int), (void *)&src.offset));
-	args.push_back( make_pair( sizeof(cl_int), (void *)&dx_buf.step));
-	args.push_back( make_pair( sizeof(cl_int), (void *)&dx_buf.offset));
-	args.push_back( make_pair( sizeof(cl_int), (void *)&dy_buf.step));
-	args.push_back( make_pair( sizeof(cl_int), (void *)&dy_buf.offset));
+    args.push_back( make_pair( sizeof(cl_mem), (void *)&src.data));
+    args.push_back( make_pair( sizeof(cl_mem), (void *)&dx_buf.data));
+    args.push_back( make_pair( sizeof(cl_mem), (void *)&dy_buf.data));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&rows));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&cols));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&src.step));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&src.offset));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&dx_buf.step));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&dx_buf.offset));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&dy_buf.step));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&dy_buf.offset));
 
-	size_t globalThreads[3] = {cols, rows, 1};
-	size_t localThreads[3]  = {16, 16, 1};
-	openCLExecuteKernel(clCxt, &imgproc_canny, kernelName, globalThreads, localThreads, args, -1, -1);
+    size_t globalThreads[3] = {cols, rows, 1};
+    size_t localThreads[3]  = {16, 16, 1};
+    openCLExecuteKernel(clCxt, &imgproc_canny, kernelName, globalThreads, localThreads, args, -1, -1);
 }
 
 void canny::calcMagnitude_gpu(const oclMat& dx_buf, const oclMat& dy_buf, oclMat& dx, oclMat& dy, oclMat& mag, int rows, int cols, bool L2Grad)
 {
-	Context *clCxt = dx_buf.clCxt;
-	string kernelName = "calcMagnitude_buf";
-	vector< pair<size_t, const void *> > args;
+    Context *clCxt = dx_buf.clCxt;
+    string kernelName = "calcMagnitude_buf";
+    vector< pair<size_t, const void *> > args;
 
-	args.push_back( make_pair( sizeof(cl_mem), (void *)&dx_buf.data));
-	args.push_back( make_pair( sizeof(cl_mem), (void *)&dy_buf.data));
-	args.push_back( make_pair( sizeof(cl_mem), (void *)&dx.data));
-	args.push_back( make_pair( sizeof(cl_mem), (void *)&dy.data));
-	args.push_back( make_pair( sizeof(cl_mem), (void *)&mag.data));
-	args.push_back( make_pair( sizeof(cl_int), (void *)&rows));
-	args.push_back( make_pair( sizeof(cl_int), (void *)&cols));
-	args.push_back( make_pair( sizeof(cl_int), (void *)&dx_buf.step));
-	args.push_back( make_pair( sizeof(cl_int), (void *)&dx_buf.offset));
-	args.push_back( make_pair( sizeof(cl_int), (void *)&dy_buf.step));
-	args.push_back( make_pair( sizeof(cl_int), (void *)&dy_buf.offset));
-	args.push_back( make_pair( sizeof(cl_int), (void *)&dx.step));
-	args.push_back( make_pair( sizeof(cl_int), (void *)&dx.offset));
-	args.push_back( make_pair( sizeof(cl_int), (void *)&dy.step));
-	args.push_back( make_pair( sizeof(cl_int), (void *)&dy.offset));
-	args.push_back( make_pair( sizeof(cl_int), (void *)&mag.step));
-	args.push_back( make_pair( sizeof(cl_int), (void *)&mag.offset));
+    args.push_back( make_pair( sizeof(cl_mem), (void *)&dx_buf.data));
+    args.push_back( make_pair( sizeof(cl_mem), (void *)&dy_buf.data));
+    args.push_back( make_pair( sizeof(cl_mem), (void *)&dx.data));
+    args.push_back( make_pair( sizeof(cl_mem), (void *)&dy.data));
+    args.push_back( make_pair( sizeof(cl_mem), (void *)&mag.data));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&rows));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&cols));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&dx_buf.step));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&dx_buf.offset));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&dy_buf.step));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&dy_buf.offset));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&dx.step));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&dx.offset));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&dy.step));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&dy.offset));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&mag.step));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&mag.offset));
 
-	size_t globalThreads[3] = {cols, rows, 1};
-	size_t localThreads[3]  = {16, 16, 1};
+    size_t globalThreads[3] = {cols, rows, 1};
+    size_t localThreads[3]  = {16, 16, 1};
 
-	char build_options [15] = "";
-	if(L2Grad)
-	{
-		strcat(build_options, "-D L2GRAD");
-	}
-	openCLExecuteKernel(clCxt, &imgproc_canny, kernelName, globalThreads, localThreads, args, -1, -1, build_options);
+    char build_options [15] = "";
+    if(L2Grad)
+    {
+        strcat(build_options, "-D L2GRAD");
+    }
+    openCLExecuteKernel(clCxt, &imgproc_canny, kernelName, globalThreads, localThreads, args, -1, -1, build_options);
 }
 void canny::calcMagnitude_gpu(const oclMat& dx, const oclMat& dy, oclMat& mag, int rows, int cols, bool L2Grad)
 {
-	Context *clCxt = dx.clCxt;
-	string kernelName = "calcMagnitude";
-	vector< pair<size_t, const void *> > args;
+    Context *clCxt = dx.clCxt;
+    string kernelName = "calcMagnitude";
+    vector< pair<size_t, const void *> > args;
 
-	args.push_back( make_pair( sizeof(cl_mem), (void *)&dx.data));
-	args.push_back( make_pair( sizeof(cl_mem), (void *)&dy.data));
-	args.push_back( make_pair( sizeof(cl_mem), (void *)&mag.data));
-	args.push_back( make_pair( sizeof(cl_int), (void *)&rows));
-	args.push_back( make_pair( sizeof(cl_int), (void *)&cols));
-	args.push_back( make_pair( sizeof(cl_int), (void *)&dx.step));
-	args.push_back( make_pair( sizeof(cl_int), (void *)&dx.offset));
-	args.push_back( make_pair( sizeof(cl_int), (void *)&dy.step));
-	args.push_back( make_pair( sizeof(cl_int), (void *)&dy.offset));
-	args.push_back( make_pair( sizeof(cl_int), (void *)&mag.step));
-	args.push_back( make_pair( sizeof(cl_int), (void *)&mag.offset));
+    args.push_back( make_pair( sizeof(cl_mem), (void *)&dx.data));
+    args.push_back( make_pair( sizeof(cl_mem), (void *)&dy.data));
+    args.push_back( make_pair( sizeof(cl_mem), (void *)&mag.data));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&rows));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&cols));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&dx.step));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&dx.offset));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&dy.step));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&dy.offset));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&mag.step));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&mag.offset));
 
-	size_t globalThreads[3] = {cols, rows, 1};
-	size_t localThreads[3]  = {16, 16, 1};
+    size_t globalThreads[3] = {cols, rows, 1};
+    size_t localThreads[3]  = {16, 16, 1};
 
-	char build_options [15] = "";
-	if(L2Grad)
-	{
-		strcat(build_options, "-D L2GRAD");
-	}
-	openCLExecuteKernel(clCxt, &imgproc_canny, kernelName, globalThreads, localThreads, args, -1, -1, build_options);
+    char build_options [15] = "";
+    if(L2Grad)
+    {
+        strcat(build_options, "-D L2GRAD");
+    }
+    openCLExecuteKernel(clCxt, &imgproc_canny, kernelName, globalThreads, localThreads, args, -1, -1, build_options);
 }
 
 void canny::calcMap_gpu(oclMat& dx, oclMat& dy, oclMat& mag, oclMat& map, int rows, int cols, float low_thresh, float high_thresh)
 {
-	Context *clCxt = dx.clCxt;
-	
-	vector< pair<size_t, const void *> > args;
+    Context *clCxt = dx.clCxt;
 
-	args.push_back( make_pair( sizeof(cl_mem), (void *)&dx.data));
-	args.push_back( make_pair( sizeof(cl_mem), (void *)&dy.data));
-	args.push_back( make_pair( sizeof(cl_mem), (void *)&mag.data));
-	args.push_back( make_pair( sizeof(cl_mem), (void *)&map.data));
-	args.push_back( make_pair( sizeof(cl_int), (void *)&rows));
-	args.push_back( make_pair( sizeof(cl_int), (void *)&cols));
-	args.push_back( make_pair( sizeof(cl_float), (void *)&low_thresh));
-	args.push_back( make_pair( sizeof(cl_float), (void *)&high_thresh));
-	args.push_back( make_pair( sizeof(cl_int), (void *)&dx.step));
-	args.push_back( make_pair( sizeof(cl_int), (void *)&dx.offset));
-	args.push_back( make_pair( sizeof(cl_int), (void *)&dy.step));
-	args.push_back( make_pair( sizeof(cl_int), (void *)&dy.offset));
-	args.push_back( make_pair( sizeof(cl_int), (void *)&mag.step));
-	args.push_back( make_pair( sizeof(cl_int), (void *)&mag.offset));
-	args.push_back( make_pair( sizeof(cl_int), (void *)&map.step));
-	args.push_back( make_pair( sizeof(cl_int), (void *)&map.offset));
+    vector< pair<size_t, const void *> > args;
+
+    args.push_back( make_pair( sizeof(cl_mem), (void *)&dx.data));
+    args.push_back( make_pair( sizeof(cl_mem), (void *)&dy.data));
+    args.push_back( make_pair( sizeof(cl_mem), (void *)&mag.data));
+    args.push_back( make_pair( sizeof(cl_mem), (void *)&map.data));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&rows));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&cols));
+    args.push_back( make_pair( sizeof(cl_float), (void *)&low_thresh));
+    args.push_back( make_pair( sizeof(cl_float), (void *)&high_thresh));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&dx.step));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&dx.offset));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&dy.step));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&dy.offset));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&mag.step));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&mag.offset));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&map.step));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&map.offset));
 
 #if CALCMAP_FIXED
-	size_t globalThreads[3] = {cols, rows, 1};
-	string kernelName = "calcMap";
-	size_t localThreads[3]  = {16, 16, 1};
+    size_t globalThreads[3] = {cols, rows, 1};
+    string kernelName = "calcMap";
+    size_t localThreads[3]  = {16, 16, 1};
 #else
-	size_t globalThreads[3] = {cols, rows, 1};
-	string kernelName = "calcMap_2";
-	size_t localThreads[3]  = {256, 1, 1};
+    size_t globalThreads[3] = {cols, rows, 1};
+    string kernelName = "calcMap_2";
+    size_t localThreads[3]  = {256, 1, 1};
 #endif
-	openCLExecuteKernel(clCxt, &imgproc_canny, kernelName, globalThreads, localThreads, args, -1, -1);
+    openCLExecuteKernel(clCxt, &imgproc_canny, kernelName, globalThreads, localThreads, args, -1, -1);
 }
 
-void canny::edgesHysteresisLocal_gpu(oclMat& map, oclMat& st1, oclMat& counter, int rows, int cols)
+void canny::edgesHysteresisLocal_gpu(oclMat& map, oclMat& st1, void * counter, int rows, int cols)
 {
-	Context *clCxt = map.clCxt;
-	string kernelName = "edgesHysteresisLocal";
-	vector< pair<size_t, const void *> > args;
+    Context *clCxt = map.clCxt;
+    string kernelName = "edgesHysteresisLocal";
+    vector< pair<size_t, const void *> > args;
 
-	args.push_back( make_pair( sizeof(cl_mem), (void *)&map.data));
-	args.push_back( make_pair( sizeof(cl_mem), (void *)&st1.data));
-	args.push_back( make_pair( sizeof(cl_mem), (void *)&counter.data));
-	args.push_back( make_pair( sizeof(cl_int), (void *)&rows));
-	args.push_back( make_pair( sizeof(cl_int), (void *)&cols));
-	args.push_back( make_pair( sizeof(cl_int), (void *)&map.step));
-	args.push_back( make_pair( sizeof(cl_int), (void *)&map.offset));
+    args.push_back( make_pair( sizeof(cl_mem), (void *)&map.data));
+    args.push_back( make_pair( sizeof(cl_mem), (void *)&st1.data));
+    args.push_back( make_pair( sizeof(cl_mem), (void *)&counter));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&rows));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&cols));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&map.step));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&map.offset));
 
-	size_t globalThreads[3] = {cols, rows, 1};
-	size_t localThreads[3]  = {16, 16, 1};
+    size_t globalThreads[3] = {cols, rows, 1};
+    size_t localThreads[3]  = {16, 16, 1};
 
-	openCLExecuteKernel(clCxt, &imgproc_canny, kernelName, globalThreads, localThreads, args, -1, -1);
+    openCLExecuteKernel(clCxt, &imgproc_canny, kernelName, globalThreads, localThreads, args, -1, -1);
 }
 
-void canny::edgesHysteresisGlobal_gpu(oclMat& map, oclMat& st1, oclMat& st2, oclMat& counter, int rows, int cols)
+void canny::edgesHysteresisGlobal_gpu(oclMat& map, oclMat& st1, oclMat& st2, void * counter, int rows, int cols)
 {
-	unsigned int count = Mat(counter).at<unsigned int>(0);
-
-	Context *clCxt = map.clCxt;
-	string kernelName = "edgesHysteresisGlobal";
-	vector< pair<size_t, const void *> > args;
-	size_t localThreads[3]  = {128, 1, 1};
+    unsigned int count;
+    openCLSafeCall(clEnqueueReadBuffer(Context::getContext()->impl->clCmdQueue, (cl_mem)counter, 1, 0, sizeof(float), &count, NULL, NULL, NULL));
+    Context *clCxt = map.clCxt;
+    string kernelName = "edgesHysteresisGlobal";
+    vector< pair<size_t, const void *> > args;
+    size_t localThreads[3]  = {128, 1, 1};
 
 #define DIVUP(a, b) ((a)+(b)-1)/(b)
 
-	while(count > 0)
-	{
-		counter.setTo(0);
-		args.clear();
-		size_t globalThreads[3] = {std::min(count, 65535u) * 128, DIVUP(count, 65535), 1};
-		args.push_back( make_pair( sizeof(cl_mem), (void *)&map.data));
-		args.push_back( make_pair( sizeof(cl_mem), (void *)&st1.data));
-		args.push_back( make_pair( sizeof(cl_mem), (void *)&st2.data));
-		args.push_back( make_pair( sizeof(cl_mem), (void *)&counter.data));
-		args.push_back( make_pair( sizeof(cl_int), (void *)&rows));
-		args.push_back( make_pair( sizeof(cl_int), (void *)&cols));
-		args.push_back( make_pair( sizeof(cl_int), (void *)&count));
-		args.push_back( make_pair( sizeof(cl_int), (void *)&map.step));
-		args.push_back( make_pair( sizeof(cl_int), (void *)&map.offset));
+    while(count > 0)
+    {
+        //counter.setTo(0);
+        args.clear();
+        size_t globalThreads[3] = {std::min(count, 65535u) * 128, DIVUP(count, 65535), 1};
+        args.push_back( make_pair( sizeof(cl_mem), (void *)&map.data));
+        args.push_back( make_pair( sizeof(cl_mem), (void *)&st1.data));
+        args.push_back( make_pair( sizeof(cl_mem), (void *)&st2.data));
+        args.push_back( make_pair( sizeof(cl_mem), (void *)&counter));
+        args.push_back( make_pair( sizeof(cl_int), (void *)&rows));
+        args.push_back( make_pair( sizeof(cl_int), (void *)&cols));
+        args.push_back( make_pair( sizeof(cl_int), (void *)&count));
+        args.push_back( make_pair( sizeof(cl_int), (void *)&map.step));
+        args.push_back( make_pair( sizeof(cl_int), (void *)&map.offset));
 
-		openCLExecuteKernel(clCxt, &imgproc_canny, kernelName, globalThreads, localThreads, args, -1, -1);
-		count = Mat(counter).at<unsigned int>(0);
-		std::swap(st1, st2);
-	}
+        openCLExecuteKernel(clCxt, &imgproc_canny, kernelName, globalThreads, localThreads, args, -1, -1);
+        openCLSafeCall(clEnqueueReadBuffer(Context::getContext()->impl->clCmdQueue, (cl_mem)counter, 1, 0, sizeof(float), &count, NULL, NULL, NULL));
+        std::swap(st1, st2);
+    }
 #undef DIVUP
 }
 
 void canny::getEdges_gpu(oclMat& map, oclMat& dst, int rows, int cols)
 {
-	Context *clCxt = map.clCxt;
-	string kernelName = "getEdges";
-	vector< pair<size_t, const void *> > args;
+    Context *clCxt = map.clCxt;
+    string kernelName = "getEdges";
+    vector< pair<size_t, const void *> > args;
 
-	args.push_back( make_pair( sizeof(cl_mem), (void *)&map.data));
-	args.push_back( make_pair( sizeof(cl_mem), (void *)&dst.data));
-	args.push_back( make_pair( sizeof(cl_int), (void *)&rows));
-	args.push_back( make_pair( sizeof(cl_int), (void *)&cols));
-	args.push_back( make_pair( sizeof(cl_int), (void *)&map.step));
-	args.push_back( make_pair( sizeof(cl_int), (void *)&map.offset));
-	args.push_back( make_pair( sizeof(cl_int), (void *)&dst.step));
-	args.push_back( make_pair( sizeof(cl_int), (void *)&dst.offset));
+    args.push_back( make_pair( sizeof(cl_mem), (void *)&map.data));
+    args.push_back( make_pair( sizeof(cl_mem), (void *)&dst.data));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&rows));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&cols));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&map.step));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&map.offset));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&dst.step));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&dst.offset));
 
-	size_t globalThreads[3] = {cols, rows, 1};
-	size_t localThreads[3]  = {16, 16, 1};
+    size_t globalThreads[3] = {cols, rows, 1};
+    size_t localThreads[3]  = {16, 16, 1};
 
-	openCLExecuteKernel(clCxt, &imgproc_canny, kernelName, globalThreads, localThreads, args, -1, -1);
+    openCLExecuteKernel(clCxt, &imgproc_canny, kernelName, globalThreads, localThreads, args, -1, -1);
 }
 
 #endif // HAVE_OPENCL

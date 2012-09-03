@@ -901,7 +901,7 @@ namespace cv
 			oclMat dx_buf, dy_buf;
 			oclMat edgeBuf;
 			oclMat trackBuf1, trackBuf2;
-			oclMat counter;
+			void * counter;
 			Ptr<FilterEngine_GPU> filterDX, filterDY;
 		};
 
@@ -981,6 +981,9 @@ namespace cv
             int nlevels;
 
         protected:
+            // initialize buffers; only need to do once in case of multiscale detection
+            void init_buffer(const oclMat& img, Size win_stride);
+
             void computeBlockHistograms(const oclMat& img);
             void computeGradient(const oclMat& img, oclMat& grad, oclMat& qangle);
 
@@ -1004,7 +1007,11 @@ namespace cv
             // Gradients conputation results
             oclMat grad, qangle;
 
-            std::vector<oclMat> image_scales;
+            // scaled image
+            oclMat image_scale;
+
+            // effect size of input image (might be different from original size after scaling)
+            Size effect_size;
         };
 
         //! Speeded up robust features, port from GPU module.

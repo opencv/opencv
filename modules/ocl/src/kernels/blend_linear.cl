@@ -67,32 +67,6 @@ __kernel void BlendLinear_C1_D0(
 	}
 }
 
-__kernel void BlendLinear_C3_D0(
-	__global uchar *dst,
-	__global uchar *img1,
-	__global uchar *img2,
-	__global float *weight1,
-	__global float *weight2,
-	int rows,
-	int cols,
-	int istep,
-	int wstep
-	)
-{
-	int idx = get_global_id(0);
-	int idy = get_global_id(1);
-	int x = idx / 3;
-	int y = idy;
-	if (x < cols && y < rows)
-	{
-		int pos = idy * istep + idx;
-		int wpos = idy * (wstep /sizeof(float)) + x;
-		float w1 = weight1[wpos];
-		float w2 = weight2[wpos];
-		dst[pos] = (img1[pos] * w1 + img2[pos] * w2) / (w1 + w2 + 1e-5f);
-	}
-}
-
 __kernel void BlendLinear_C4_D0(
 	__global uchar *dst,
 	__global uchar *img1,
@@ -143,32 +117,6 @@ __kernel void BlendLinear_C1_D5(
 	}
 }
 
-__kernel void BlendLinear_C3_D5(
-	__global float *dst,
-	__global float *img1,
-	__global float *img2,
-	__global float *weight1,
-	__global float *weight2,
-	int rows,
-	int cols,
-	int istep,
-	int wstep
-	)
-{
-	int idx = get_global_id(0);
-	int idy = get_global_id(1);
-	int x = idx / 3;
-	int y = idy;
-	if (x < cols && y < rows)
-	{
-		int pos = idy * (istep / sizeof(float)) + idx;
-		int wpos = idy * (wstep /sizeof(float)) + x;
-		float w1 = weight1[wpos];
-		float w2 = weight2[wpos];
-		dst[pos] = (img1[pos] * w1 + img2[pos] * w2) / (w1 + w2 + 1e-5f);
-	}
-}
-
 __kernel void BlendLinear_C4_D5(
 	__global float *dst,
 	__global float *img1,
@@ -194,3 +142,4 @@ __kernel void BlendLinear_C4_D5(
 		dst[pos] = (img1[pos] * w1 + img2[pos] * w2) / (w1 + w2 + 1e-5f);
 	}
 }
+

@@ -1,4 +1,4 @@
-/*M///////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////
 //
 //  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
 //
@@ -15,9 +15,7 @@
 // Third party copyrights are property of their respective owners.
 //
 // @Authors
-//		Zhang Chunpeng chunpeng@multicorewareinc.com
-//		Yao Wang, yao@multicorewareinc.com
-//    
+//    fangfang bai, fangfang@multicorewareinc.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -45,46 +43,95 @@
 //
 //M*/
 
-/* Haar features calculation */
-//#define EMU
-
 #include "precomp.hpp"
+#include <iomanip>
+
+#ifdef HAVE_OPENCL
 
 using namespace cv;
 using namespace cv::ocl;
+using namespace cvtest;
+using namespace testing;
 using namespace std;
 
-#ifndef HAVE_OPENCL
-void cv::ocl::pyrUp(const oclMat&, GpuMat&, oclMat&) { throw_nogpu(); }
-#else
-
-namespace cv { namespace ocl 
-{ 
-	extern const char *pyr_up;
-	void pyrUp(const cv::ocl::oclMat& src,cv::ocl::oclMat& dst)
-	{		
-		dst.create(src.rows * 2, src.cols * 2, src.type());
-		dst.download_channels=src.download_channels;
-		Context *clCxt = src.clCxt;
-		
-		const std::string kernelName = "pyrUp";
-  
-		std::vector< pair<size_t, const void *> > args;
-		args.push_back( make_pair( sizeof(cl_mem), (void *)&src.data));
-		args.push_back( make_pair( sizeof(cl_mem), (void *)&dst.data));
-		args.push_back( make_pair( sizeof(cl_int), (void *)&src.rows));
-		args.push_back( make_pair( sizeof(cl_int), (void *)&dst.rows));
-		args.push_back( make_pair( sizeof(cl_int), (void *)&src.cols));
-		args.push_back( make_pair( sizeof(cl_int), (void *)&dst.cols));
-		args.push_back( make_pair( sizeof(cl_int), (void *)&src.offset));
-		args.push_back( make_pair( sizeof(cl_int), (void *)&dst.offset));
-		args.push_back( make_pair( sizeof(cl_int), (void *)&src.step));
-		args.push_back( make_pair( sizeof(cl_int), (void *)&dst.step));
-		
-		size_t globalThreads[3] = {dst.cols, dst.rows, 1};
-		size_t localThreads[3]  = {16, 16, 1};
-	    
-		openCLExecuteKernel(clCxt, &pyr_up, kernelName, globalThreads, localThreads, args, src.channels(), src.depth());
+PARAM_TEST_CASE(PyrDown, MatType, int)
+{
+	int type;
+	int channels;
+	//src mat
+	cv::Mat mat1;
+	cv::Mat dst;
+	
+	//std::vector<cv::ocl::Info> oclinfo;
+	//ocl dst mat for testing
+	
+	cv::ocl::oclMat gmat1;
+	cv::ocl::oclMat gdst;
+	
+	
+	virtual void SetUp()
+	{
+		type = GET_PARAM(0);
+		channels = GET_PARAM(1);
+		//int devnums = getDevice(oclinfo);
+		//CV_Assert(devnums > 0);
 	}
-}};
+	
+	
+};
+
+#define VARNAME(A) string(#A);
+
+////////////////////////////////PyrDown/////////////////////////////////////////////////
+TEST_P(PyrDown, Mat)
+{
+	cv::Size size(MWIDTH, MHEIGHT);
+	cv::RNG &rng = TS::ptr()->get_rng();
+	mat1 = randomMat(rng, size, CV_MAKETYPE(type, channels), 5, 16, false);
+	
+	
+	cv::ocl::oclMat gdst;
+	double totalgputick = 0;
+	double totalgputick_kernel = 0;
+	
+	double t1 = 0;
+	double t2 = 0;
+	
+	for (int j = 0; j < LOOP_TIMES + 1; j ++)
+	{
+	
+		t1 = (double)cvGetTickCount();//gpu start1
+		
+		cv::ocl::oclMat gmat1(mat1);
+		
+		t2 = (double)cvGetTickCount(); //kernel
+		cv::ocl::pyrDown(gmat1, gdst);
+		t2 = (double)cvGetTickCount() - t2;//kernel
+		
+		cv::Mat cpu_dst;
+		gdst.download(cpu_dst);
+		
+		t1 = (double)cvGetTickCount() - t1;//gpu end1
+		
+		if (j == 0)
+		{
+			continue;
+		}
+		
+		totalgputick = t1 + totalgputick;
+		
+		totalgputick_kernel = t2 + totalgputick_kernel;
+		
+	}
+	
+	cout << "average gpu runtime is  " << totalgputick / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
+	cout << "average gpu runtime without data transfer is  " << totalgputick_kernel / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
+	
+}
+
+//********test****************
+INSTANTIATE_TEST_CASE_P(GPU_ImgProc, PyrDown, Combine(
+                            Values(CV_8U, CV_32F), Values(1, 4)));
+
+
 #endif // HAVE_OPENCL

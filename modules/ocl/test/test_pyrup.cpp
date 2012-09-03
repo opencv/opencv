@@ -16,6 +16,7 @@
 //
 // @Authors
 //    Zhang Chunpeng chunpeng@multicorewareinc.com
+//    Yao Wang yao@multicorewareinc.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -48,44 +49,49 @@
 
 #ifdef HAVE_OPENCL
 
+using namespace cv;
+using namespace cvtest;
+using namespace testing;
+using namespace std;
 
-PARAM_TEST_CASE(PyrUp,cv::Size,int)
+PARAM_TEST_CASE(PyrUp, MatType, int)
 {
-	cv::Size size;
 	int type;
+	int channels;
 	//std::vector<cv::ocl::Info> oclinfo;
 
 	virtual void SetUp()
 	{
 		//int devnums = cv::ocl::getDevice(oclinfo, OPENCV_DEFAULT_OPENCL_DEVICE);
 		//CV_Assert(devnums > 0);
-		size = GET_PARAM(0);
-		type = GET_PARAM(1);
+		type = GET_PARAM(0);
+		channels = GET_PARAM(1);
 	}
 };
 
 TEST_P(PyrUp,Accuracy)
 {
-	cv::Mat src = randomMat(size,type);
-	
+	for(int j = 0; j < LOOP_TIMES; j++)
+    {
+		Size size(MWIDTH, MHEIGHT);
+		Mat src = randomMat(size,CV_MAKETYPE(type, channels));	
+		Mat dst_gold;
+		pyrUp(src,dst_gold);
+		ocl::oclMat dst;
+		ocl::oclMat srcMat(src);
+		ocl::pyrUp(srcMat,dst);
+		Mat cpu_dst;
+		dst.download(cpu_dst);
+		char s[100]={0};
 
-	cv::Mat dst_gold;
-	cv::pyrUp(src,dst_gold);
-
-	cv::ocl::oclMat dst;
-	cv::ocl::oclMat srcMat(src);
-	cv::ocl::pyrUp(srcMat,dst);
-	char s[100]={0};
-
-	EXPECT_MAT_NEAR(dst_gold, dst, (src.depth() == CV_32F ? 1e-4f : 1.0),s);	
+		EXPECT_MAT_NEAR(dst_gold, cpu_dst, (src.depth() == CV_32F ? 1e-4f : 1.0),s);	
+	}
 	
 }
 
-#if 1
+
 INSTANTIATE_TEST_CASE_P(GPU_ImgProc, PyrUp, testing::Combine(
-    testing::Values(cv::Size(32, 32)),
-    testing::Values(MatType(CV_8UC1),MatType(CV_16UC1),MatType(CV_32FC1),MatType(CV_8UC4),
-	MatType(CV_16UC4),MatType(CV_32FC4))));
-#endif
+                            Values(CV_8U, CV_32F), Values(1, 3, 4)));
+
 
 #endif // HAVE_OPENCL

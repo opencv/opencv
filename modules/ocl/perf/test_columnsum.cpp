@@ -15,8 +15,7 @@
 // Third party copyrights are property of their respective owners.
 //
 // @Authors
-//		Zhang Chunpeng chunpeng@multicorewareinc.com
-//		Yao Wang, yao@multicorewareinc.com
+//	   Fangfang Bai fangfang@multicorewareinc.com
 //    
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -45,46 +44,77 @@
 //
 //M*/
 
-/* Haar features calculation */
-//#define EMU
-
 #include "precomp.hpp"
+#include <iomanip>
 
 using namespace cv;
 using namespace cv::ocl;
+using namespace cvtest;
+using namespace testing;
 using namespace std;
 
-#ifndef HAVE_OPENCL
-void cv::ocl::pyrUp(const oclMat&, GpuMat&, oclMat&) { throw_nogpu(); }
-#else
+///////////////////////////////////////////////////////////////////////////////
+/// ColumnSum
 
-namespace cv { namespace ocl 
-{ 
-	extern const char *pyr_up;
-	void pyrUp(const cv::ocl::oclMat& src,cv::ocl::oclMat& dst)
-	{		
-		dst.create(src.rows * 2, src.cols * 2, src.type());
-		dst.download_channels=src.download_channels;
-		Context *clCxt = src.clCxt;
-		
-		const std::string kernelName = "pyrUp";
-  
-		std::vector< pair<size_t, const void *> > args;
-		args.push_back( make_pair( sizeof(cl_mem), (void *)&src.data));
-		args.push_back( make_pair( sizeof(cl_mem), (void *)&dst.data));
-		args.push_back( make_pair( sizeof(cl_int), (void *)&src.rows));
-		args.push_back( make_pair( sizeof(cl_int), (void *)&dst.rows));
-		args.push_back( make_pair( sizeof(cl_int), (void *)&src.cols));
-		args.push_back( make_pair( sizeof(cl_int), (void *)&dst.cols));
-		args.push_back( make_pair( sizeof(cl_int), (void *)&src.offset));
-		args.push_back( make_pair( sizeof(cl_int), (void *)&dst.offset));
-		args.push_back( make_pair( sizeof(cl_int), (void *)&src.step));
-		args.push_back( make_pair( sizeof(cl_int), (void *)&dst.step));
-		
-		size_t globalThreads[3] = {dst.cols, dst.rows, 1};
-		size_t localThreads[3]  = {16, 16, 1};
-	    
-		openCLExecuteKernel(clCxt, &pyr_up, kernelName, globalThreads, localThreads, args, src.channels(), src.depth());
+#ifdef HAVE_OPENCL
+
+////////////////////////////////////////////////////////////////////////
+// ColumnSum
+
+PARAM_TEST_CASE(ColumnSum)
+{
+	cv::Mat src;
+	//std::vector<cv::ocl::Info> oclinfo;
+
+	virtual void SetUp()
+	{
+		//int devnums = getDevice(oclinfo);
+		//CV_Assert(devnums > 0);
 	}
-}};
-#endif // HAVE_OPENCL
+};
+
+TEST_F(ColumnSum, Performance)
+{
+	cv::Size size(MWIDTH,MHEIGHT);
+    cv::Mat src = randomMat(size, CV_32FC1);
+    cv::ocl::oclMat d_dst;
+
+	double totalgputick=0;
+	double totalgputick_kernel=0;
+	double t1=0;
+	double t2=0;
+
+	for(int j = 0; j < LOOP_TIMES+1; j ++)
+	{
+
+		t1 = (double)cvGetTickCount();//gpu start1
+
+        cv::ocl::oclMat d_src(src);		
+
+		t2=(double)cvGetTickCount();//kernel
+		cv::ocl::columnSum(d_src,d_dst);
+		t2 = (double)cvGetTickCount() - t2;//kernel
+
+		cv::Mat cpu_dst;
+		d_dst.download (cpu_dst);//download
+
+		t1 = (double)cvGetTickCount() - t1;//gpu end1
+
+		if(j == 0)
+			continue;
+
+		totalgputick=t1+totalgputick;
+		totalgputick_kernel=t2+totalgputick_kernel;	
+
+	}
+
+	cout << "average gpu runtime is  " << totalgputick/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
+	cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
+
+
+
+}
+
+
+
+#endif 

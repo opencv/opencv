@@ -74,12 +74,10 @@ PARAM_TEST_CASE(ColumnSum, cv::Size, bool )
 TEST_P(ColumnSum, Accuracy)
 {
     cv::Mat src = randomMat(size, CV_32FC1);
-	//cv::Mat src(size,CV_32FC1);
+	cv::ocl::oclMat d_dst;
+	cv::ocl::oclMat d_src(src);	
 
-	//cv::ocl::oclMat d_dst = ::createMat(size,src.type(),useRoi);
-	cv::ocl::oclMat d_dst = loadMat(src,useRoi);
-
-    cv::ocl::columnSum(loadMat(src,useRoi),d_dst);
+    cv::ocl::columnSum(d_src,d_dst);
 
     cv::Mat dst(d_dst);
 
