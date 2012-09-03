@@ -197,6 +197,420 @@ template<typename ST, typename T> struct ColumnSum : public BaseColumnFilter
 };
 
 
+template<> struct ColumnSum<int, uchar> : public BaseColumnFilter
+{
+    ColumnSum( int _ksize, int _anchor, double _scale )
+    {
+        ksize = _ksize;
+        anchor = _anchor;
+        scale = _scale;
+        sumCount = 0;
+    }
+
+    void reset() { sumCount = 0; }
+
+    void operator()(const uchar** src, uchar* dst, int dststep, int count, int width)
+    {
+        int i;
+        int* SUM;
+        bool haveScale = scale != 1;
+        double _scale = scale;
+	
+		#if CV_SSE2
+			bool haveSSE2 = checkHardwareSupport(CV_CPU_SSE2);	
+		#endif
+
+        if( width != (int)sum.size() )
+        {
+            sum.resize(width);
+            sumCount = 0;
+        }
+
+        SUM = &sum[0];
+        if( sumCount == 0 )
+        {
+			memset((void*)SUM, 0, width*sizeof(int));
+            for( ; sumCount < ksize - 1; sumCount++, src++ )
+            {
+                const int* Sp = (const int*)src[0];
+				i = 0;
+				#if CV_SSE2
+				if(haveSSE2)
+				{
+					for( ; i < width-4; i+=4 )
+					{
+						__m128i _sum = _mm_loadu_si128((const __m128i*)(SUM+i));
+						__m128i _sp = _mm_loadu_si128((const __m128i*)(Sp+i));
+						_mm_storeu_si128((__m128i*)(SUM+i),_mm_add_epi32(_sum, _sp));
+					}
+				}
+				#endif
+                for( ; i < width; i++ )
+                    SUM[i] += Sp[i];
+            }
+        }
+        else
+        {
+            CV_Assert( sumCount == ksize-1 );
+            src += ksize-1;
+        }
+
+        for( ; count--; src++ )
+        {
+            const int* Sp = (const int*)src[0];
+            const int* Sm = (const int*)src[1-ksize];
+            uchar* D = (uchar*)dst;
+            if( haveScale )
+            {
+				i = 0;
+				#if CV_SSE2
+				if(haveSSE2)
+				{
+					const __m128 scale4 = _mm_set1_ps((float)_scale);
+					for( ; i < width-8; i+=8 )
+					{
+						__m128i _sm  = _mm_loadu_si128((const __m128i*)(Sm+i));
+						__m128i _sm1  = _mm_loadu_si128((const __m128i*)(Sm+i+4));
+
+						__m128i _s0  = _mm_add_epi32(_mm_loadu_si128((const __m128i*)(SUM+i)),
+                                                     _mm_loadu_si128((const __m128i*)(Sp+i)));
+						__m128i _s01  = _mm_add_epi32(_mm_loadu_si128((const __m128i*)(SUM+i+4)),
+                                                      _mm_loadu_si128((const __m128i*)(Sp+i+4)));
+
+						__m128i _s0T = _mm_cvtps_epi32(_mm_mul_ps(scale4, _mm_cvtepi32_ps(_s0)));
+						__m128i _s0T1 = _mm_cvtps_epi32(_mm_mul_ps(scale4, _mm_cvtepi32_ps(_s01)));
+						
+						_s0T = _mm_packs_epi32(_s0T, _s0T1);
+
+						_mm_storel_epi64((__m128i*)(D+i), _mm_packus_epi16(_s0T, _s0T));
+
+						_mm_storeu_si128((__m128i*)(SUM+i), _mm_sub_epi32(_s0,_sm));
+						_mm_storeu_si128((__m128i*)(SUM+i+4),_mm_sub_epi32(_s01,_sm1));
+					}
+				}
+				#endif
+                for( ; i < width; i++ )
+                {
+                    int s0 = SUM[i] + Sp[i];
+                    D[i] = saturate_cast<uchar>(s0*_scale);
+                    SUM[i] = s0 - Sm[i];
+                }
+            }
+            else
+            {
+				i = 0;
+				#if CV_SSE2
+				if(haveSSE2)
+				{
+					for( ; i < width-8; i+=8 )
+					{
+						__m128i _sm  = _mm_loadu_si128((const __m128i*)(Sm+i));
+						__m128i _sm1  = _mm_loadu_si128((const __m128i*)(Sm+i+4));
+
+						__m128i _s0  = _mm_add_epi32(_mm_loadu_si128((const __m128i*)(SUM+i)),
+                                                     _mm_loadu_si128((const __m128i*)(Sp+i)));
+						__m128i _s01  = _mm_add_epi32(_mm_loadu_si128((const __m128i*)(SUM+i+4)),
+                                                      _mm_loadu_si128((const __m128i*)(Sp+i+4)));
+			
+						__m128i _s0T = _mm_packs_epi32(_s0, _s01);
+
+						_mm_storel_epi64((__m128i*)(D+i), _mm_packus_epi16(_s0T, _s0T)); 
+
+						_mm_storeu_si128((__m128i*)(SUM+i), _mm_sub_epi32(_s0,_sm));
+						_mm_storeu_si128((__m128i*)(SUM+i+4),_mm_sub_epi32(_s01,_sm1));
+					}
+				}
+				#endif
+
+                for( ; i < width; i++ )
+                {
+                    int s0 = SUM[i] + Sp[i];
+                    D[i] = saturate_cast<uchar>(s0);
+                    SUM[i] = s0 - Sm[i];
+                }
+            }
+            dst += dststep;
+        }
+    }
+
+    double scale;
+    int sumCount;
+    vector<int> sum;
+};
+
+template<> struct ColumnSum<int, short> : public BaseColumnFilter
+{
+    ColumnSum( int _ksize, int _anchor, double _scale )
+    {
+        ksize = _ksize;
+        anchor = _anchor;
+        scale = _scale;
+        sumCount = 0;
+    }
+
+    void reset() { sumCount = 0; }
+
+    void operator()(const uchar** src, uchar* dst, int dststep, int count, int width)
+    {
+        int i;
+        int* SUM;
+        bool haveScale = scale != 1;
+        double _scale = scale;
+
+		#if CV_SSE2
+			bool haveSSE2 = checkHardwareSupport(CV_CPU_SSE2);	
+		#endif
+
+        if( width != (int)sum.size() )
+        {
+            sum.resize(width);
+            sumCount = 0;
+        }
+        SUM = &sum[0];
+        if( sumCount == 0 )
+        {
+			memset((void*)SUM, 0, width*sizeof(int));
+            for( ; sumCount < ksize - 1; sumCount++, src++ )
+            {
+                const int* Sp = (const int*)src[0];
+				i = 0;
+				#if CV_SSE2
+				if(haveSSE2)
+				{
+					for( ; i < width-4; i+=4 )
+					{
+						__m128i _sum = _mm_loadu_si128((const __m128i*)(SUM+i));
+						__m128i _sp = _mm_loadu_si128((const __m128i*)(Sp+i));
+						_mm_storeu_si128((__m128i*)(SUM+i),_mm_add_epi32(_sum, _sp));
+					}
+				}
+				#endif
+                for( ; i < width; i++ )
+                    SUM[i] += Sp[i];
+            }
+        }
+        else
+        {
+            CV_Assert( sumCount == ksize-1 );
+            src += ksize-1;
+        }
+
+        for( ; count--; src++ )
+        {
+            const int* Sp = (const int*)src[0];
+            const int* Sm = (const int*)src[1-ksize];
+            short* D = (short*)dst;
+            if( haveScale )
+            {
+				i = 0;
+				#if CV_SSE2
+				if(haveSSE2)
+				{
+					const __m128 scale4 = _mm_set1_ps((float)_scale);
+					for( ; i < width-8; i+=8 )
+					{
+						__m128i _sm   = _mm_loadu_si128((const __m128i*)(Sm+i));
+						__m128i _sm1  = _mm_loadu_si128((const __m128i*)(Sm+i+4));
+
+						__m128i _s0  = _mm_add_epi32(_mm_loadu_si128((const __m128i*)(SUM+i)),
+                                                     _mm_loadu_si128((const __m128i*)(Sp+i)));
+						__m128i _s01  = _mm_add_epi32(_mm_loadu_si128((const __m128i*)(SUM+i+4)),
+                                                      _mm_loadu_si128((const __m128i*)(Sp+i+4)));
+
+						__m128i _s0T  = _mm_cvtps_epi32(_mm_mul_ps(scale4, _mm_cvtepi32_ps(_s0)));
+						__m128i _s0T1 = _mm_cvtps_epi32(_mm_mul_ps(scale4, _mm_cvtepi32_ps(_s01)));
+						
+						_mm_storeu_si128((__m128i*)(D+i), _mm_packs_epi32(_s0T, _s0T1));
+
+						_mm_storeu_si128((__m128i*)(SUM+i),_mm_sub_epi32(_s0,_sm));
+						_mm_storeu_si128((__m128i*)(SUM+i+4), _mm_sub_epi32(_s01,_sm1));
+					}
+				}
+				#endif
+                for( ; i < width; i++ )
+                {
+                    int s0 = SUM[i] + Sp[i];
+                    D[i] = saturate_cast<short>(s0*_scale);
+                    SUM[i] = s0 - Sm[i];
+                }
+            }
+            else
+            {
+				i = 0;
+				#if CV_SSE2
+				if(haveSSE2)
+				{
+					for( ; i < width-8; i+=8 )
+					{
+
+						__m128i _sm  = _mm_loadu_si128((const __m128i*)(Sm+i));
+						__m128i _sm1  = _mm_loadu_si128((const __m128i*)(Sm+i+4));
+
+						__m128i _s0  = _mm_add_epi32(_mm_loadu_si128((const __m128i*)(SUM+i)),
+                                                     _mm_loadu_si128((const __m128i*)(Sp+i)));
+						__m128i _s01  = _mm_add_epi32(_mm_loadu_si128((const __m128i*)(SUM+i+4)),
+                                                      _mm_loadu_si128((const __m128i*)(Sp+i+4)));
+
+						_mm_storeu_si128((__m128i*)(D+i), _mm_packs_epi32(_s0, _s01)); 
+
+						_mm_storeu_si128((__m128i*)(SUM+i), _mm_sub_epi32(_s0,_sm));
+						_mm_storeu_si128((__m128i*)(SUM+i+4),_mm_sub_epi32(_s01,_sm1));
+					}
+				}
+				#endif
+
+                for( ; i < width; i++ )
+                {
+                    int s0 = SUM[i] + Sp[i];
+                    D[i] = saturate_cast<short>(s0);
+                    SUM[i] = s0 - Sm[i];
+                }
+            }
+            dst += dststep;
+        }
+    }
+
+    double scale;
+    int sumCount;
+    vector<int> sum;
+};
+
+
+template<> struct ColumnSum<int, ushort> : public BaseColumnFilter
+{
+    ColumnSum( int _ksize, int _anchor, double _scale )
+    {
+        ksize = _ksize;
+        anchor = _anchor;
+        scale = _scale;
+        sumCount = 0;
+    }
+
+    void reset() { sumCount = 0; }
+
+    void operator()(const uchar** src, uchar* dst, int dststep, int count, int width)
+    {
+        int i;
+        int* SUM;
+        bool haveScale = scale != 1;
+        double _scale = scale;
+		#if CV_SSE2
+				bool haveSSE2 =  checkHardwareSupport(CV_CPU_SSE2);	
+		#endif
+
+        if( width != (int)sum.size() )
+        {
+            sum.resize(width);
+            sumCount = 0;
+        }
+        SUM = &sum[0];
+        if( sumCount == 0 )
+        {
+			memset((void*)SUM, 0, width*sizeof(int));
+            for( ; sumCount < ksize - 1; sumCount++, src++ )
+            {
+                const int* Sp = (const int*)src[0];
+				i = 0;
+				#if CV_SSE2
+				if(haveSSE2)
+				{
+					for( ; i < width-4; i+=4 )
+					{
+						__m128i _sum = _mm_loadu_si128((const __m128i*)(SUM+i));
+						__m128i _sp = _mm_loadu_si128((const __m128i*)(Sp+i));
+						_mm_storeu_si128((__m128i*)(SUM+i), _mm_add_epi32(_sum, _sp));
+					}
+				}
+				#endif
+                for( ; i < width; i++ )
+                    SUM[i] += Sp[i];
+            }
+        }
+        else
+        {
+            CV_Assert( sumCount == ksize-1 );
+            src += ksize-1;
+        }
+
+        for( ; count--; src++ )
+        {
+            const int* Sp = (const int*)src[0];
+            const int* Sm = (const int*)src[1-ksize];
+            ushort* D = (ushort*)dst;
+            if( haveScale )
+            {
+				i = 0;
+				#if CV_SSE2
+				if(haveSSE2)
+				{
+					const __m128 scale4 = _mm_set1_ps((float)_scale);
+					const __m128i delta0 = _mm_set1_epi32(0x8000);
+                    const __m128i delta1 = _mm_set1_epi32(0x80008000);
+
+					for( ; i < width-4; i+=4)
+					{
+						__m128i _sm   = _mm_loadu_si128((const __m128i*)(Sm+i));
+						__m128i _s0   = _mm_add_epi32(_mm_loadu_si128((const __m128i*)(SUM+i)),
+                                                      _mm_loadu_si128((const __m128i*)(Sp+i)));
+
+						__m128i _res = _mm_cvtps_epi32(_mm_mul_ps(scale4, _mm_cvtepi32_ps(_s0)));
+                        
+                        _res = _mm_sub_epi32(_res, delta0);
+                        _res = _mm_add_epi16(_mm_packs_epi16(_res, _res), delta1);
+						 
+						_mm_storel_epi64((__m128i*)(D+i), _res);
+						_mm_storeu_si128((__m128i*)(SUM+i), _mm_sub_epi32(_s0,_sm));
+					}
+				}
+				#endif
+                for( ; i < width; i++ )
+                {
+                    int s0 = SUM[i] + Sp[i];
+                    D[i] = saturate_cast<ushort>(s0*_scale);
+                    SUM[i] = s0 - Sm[i];
+                }
+            }
+            else
+            {
+				i = 0;
+				#if  CV_SSE2
+				if(haveSSE2)
+				{
+					const __m128i delta0 = _mm_set1_epi32(0x8000);
+                    const __m128i delta1 = _mm_set1_epi32(0x80008000);
+
+					for( ; i < width-4; i+=4 )
+					{
+						__m128i _sm   = _mm_loadu_si128((const __m128i*)(Sm+i));
+						__m128i _s0   = _mm_add_epi32(_mm_loadu_si128((const __m128i*)(SUM+i)),
+                                                      _mm_loadu_si128((const __m128i*)(Sp+i)));
+
+						__m128i _res = _mm_sub_epi32(_s0, delta0);
+                        _res = _mm_add_epi16(_mm_packs_epi16(_res, _res), delta1);
+						
+						_mm_storel_epi64((__m128i*)(D+i), _res);
+						_mm_storeu_si128((__m128i*)(SUM+i), _mm_sub_epi32(_s0,_sm));
+					}
+				}
+				#endif
+
+                for( ; i < width; i++ )
+                {
+                    int s0 = SUM[i] + Sp[i];
+                    D[i] = saturate_cast<ushort>(s0);
+                    SUM[i] = s0 - Sm[i];
+                }
+            }
+            dst += dststep;
+        }
+    }
+
+    double scale;
+    int sumCount;
+    vector<int> sum;
+};
+
+
 }
 
 cv::Ptr<cv::BaseRowFilter> cv::getRowSumFilter(int srcType, int sumType, int ksize, int anchor)
