@@ -44,6 +44,10 @@
 
 #ifdef HAVE_OPENEXR
 
+#if defined _MSC_VER && _MSC_VER >= 1200
+#  pragma warning( disable: 4100 4244 4267 )
+#endif
+
 #include <ImfHeader.h>
 #include <ImfInputFile.h>
 #include <ImfOutputFile.h>
@@ -52,12 +56,7 @@
 #include <half.h>
 #include "grfmt_exr.hpp"
 
-#if defined _MSC_VER && _MSC_VER >= 1200
-#pragma comment(lib, "Half.lib")
-#pragma comment(lib, "Iex.lib")
-#pragma comment(lib, "IlmImf.lib")
-#pragma comment(lib, "IlmThread.lib")
-#pragma comment(lib, "Imath.lib")
+#if defined _WIN32
 
 #undef UINT
 #define UINT ((Imf::PixelType)0)

@@ -39,9 +39,9 @@ if(WITH_JASPER)
   list(APPEND GRFMT_LIBS ${JASPER_LIBRARIES})
 endif()
 
-if(WITH_OPENEXR AND OPENEXR_FOUND)
+if(WITH_OPENEXR)
   add_definitions(-DHAVE_OPENEXR)
-  ocv_include_directories(${OPENEXR_INCLUDE_PATHS})
+  include_directories(SYSTEM ${OPENEXR_INCLUDE_PATHS})
   list(APPEND GRFMT_LIBS ${OPENEXR_LIBRARIES})
 endif()
 

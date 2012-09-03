@@ -142,7 +142,19 @@ set(PNG_VERSION "${PNG_LIBPNG_VER_MAJOR}.${PNG_LIBPNG_VER_MINOR}.${PNG_LIBPNG_VE
 
 # --- OpenEXR (optional) ---
 if(WITH_OPENEXR)
-  include("${OpenCV_SOURCE_DIR}/cmake/OpenCVFindOpenEXR.cmake")
+  if(BUILD_OPENEXR)
+    ocv_clear_vars(OPENEXR_FOUND)
+  else()
+    include("${OpenCV_SOURCE_DIR}/cmake/OpenCVFindOpenEXR.cmake")
+  endif()
+endif()
+
+if(WITH_OPENEXR AND NOT OPENEXR_FOUND)
+  ocv_clear_vars(OPENEXR_INCLUDE_PATHS OPENEXR_LIBRARIES OPENEXR_ILMIMF_LIBRARY OPENEXR_VERSION)
+
+  set(OPENEXR_LIBRARIES IlmImf)
+  set(OPENEXR_ILMIMF_LIBRARY IlmImf)
+  add_subdirectory("${OpenCV_SOURCE_DIR}/3rdparty/openexr")
 endif()
 
 #cmake 2.8.2 bug - it fails to determine zlib version
