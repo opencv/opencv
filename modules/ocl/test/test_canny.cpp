@@ -45,11 +45,7 @@
 
 #include "precomp.hpp"
 
-#ifdef WIN32
-#define FILTER_IMAGE "C:/Users/Public/Pictures/Sample Pictures/Penguins.jpg"
-#else
-#define FILTER_IMAGE "/Users/Test/Valve_original.PNG" // user need to specify a valid image path
-#endif
+#define FILTER_IMAGE "../../../samples/gpu/road.png"
 #define SHOW_RESULT 0
 
 ////////////////////////////////////////////////////////
@@ -107,6 +103,6 @@ TEST_P(Canny, Accuracy)
 	EXPECT_MAT_SIMILAR(edges_gold, edges, 1e-2);
 }
 
-INSTANTIATE_TEST_CASE_P(ocl_ImgProc, Canny, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_ImgProc, Canny, testing::Combine(
     testing::Values(AppertureSize(3), AppertureSize(5)),
     testing::Values(L2gradient(false), L2gradient(true))));

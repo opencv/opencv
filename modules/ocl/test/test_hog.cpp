@@ -184,7 +184,7 @@ TEST_P(HOG, Detect)
 }
 
 
-INSTANTIATE_TEST_CASE_P(OCL_ObjDetect, HOG, testing::Combine(
+INSTANTIATE_TEST_CASE_P(GPU_ImgProc, HOG, testing::Combine(
                         testing::Values(cv::Size(64, 128), cv::Size(48, 96)),
                         testing::Values(MatType(CV_8UC1), MatType(CV_8UC4))));
 
