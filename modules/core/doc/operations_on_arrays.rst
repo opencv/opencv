@@ -43,6 +43,10 @@ Calculates the per-element absolute difference between two arrays or between an 
 
     :param src2: second input array or a scalar.
 
+    :param src: single input array.
+
+    :param value: scalar value.
+
     :param dst: output array that has the same size and type as input arrays.
 
 The function ``absdiff`` calculates:
@@ -92,6 +96,10 @@ Calculates the per-element sum of two arrays or an array and a scalar.
     :param src1: first input array or a scalar.
 
     :param src2: second input array or a scalar.
+
+    :param src: single input array.
+
+    :param value: scalar value.
 
     :param dst: output array that has the same size and number of channels as the input array(s); the depth is defined by ``dtype`` or ``src1``/``src2``.
 
@@ -209,6 +217,10 @@ Calculates the per-element bit-wise conjunction of two arrays or an array and a 
 
     :param src2: second input array or a scalar.
 
+    :param src: single input array.
+
+    :param value: scalar value.
+
     :param dst: output array that has the same size and type as the input arrays.
 
     :param mask: optional operation mask, 8-bit single channel array, that specifies elements of the output array to be changed.
@@ -285,6 +297,10 @@ Calculates the per-element bit-wise disjunction of two arrays or an array and a 
 
     :param src2: second input array or a scalar.
 
+    :param src: single input array.
+
+    :param value: scalar value.
+
     :param dst: output array that has the same size and type as the input arrays.
 
     :param mask: optional operation mask, 8-bit single channel array, that specifies elements of the output array to be changed.
@@ -332,6 +348,10 @@ Calculates the per-element bit-wise "exclusive or" operation on two arrays or an
     :param src1: first input array or a scalar.
 
     :param src2: second input array or a scalar.
+
+    :param src: single input array.
+
+    :param value: scalar value.
 
     :param dst: output array that has the same size and type as the input arrays.
 
@@ -384,7 +404,13 @@ Calculates the covariance matrix of a set of vectors.
 
     :param covar: output covariance matrix of the type ``ctype`` and square size.
 
+    :param ctype: type of the matrixl; it equals 'CV_64F' by default.
+
+    :param cov_mat: output covariance matrix (specific to C syntax).
+
     :param mean: input or output (depending on the flags) array as the average value of the input vectors.
+
+    :param vects: a set of vectors.
 
     :param flags: operation flags as a combination of the following values:
 
@@ -444,6 +470,8 @@ Calculates the magnitude and angle of 2D vectors.
 
     :param angleInDegrees: a flag, indicating whether the angles are measured in radians (which is by default), or in degrees.
 
+    :param angle_in_degrees: a flag, indicating whether the angles are measured in radians, or in degrees (specific to C syntax).
+
 The function ``cartToPolar`` calculates either the magnitude, angle, or both for every 2D vector (x(I),y(I)):
 
 .. math::
@@ -502,6 +530,10 @@ Performs the per-element comparison of two arrays or an array and scalar value.
 
     :param src2: second input array or a scalar (in the case of ``cvCmp`` and ``cv.Cmp`` it is always an array; in the case of ``cvCmpS``, ``cv.CmpS`` it is always a scalar); when it is an array, it must have a single channel.
 
+    :param src: single input array.
+
+    :param value: scalar value.
+
     :param dst: output array that has the same size as the input arrays and type= ``CV_8UC1`` .
 
     :param cmpop: a flag, that specifies correspondence between the arrays:
@@ -512,6 +544,8 @@ Performs the per-element comparison of two arrays or an array and scalar value.
             * **CMP_LT** ``src1`` is less than ``src2``.
             * **CMP_LE** ``src1`` is less than or equal to ``src2``.
             * **CMP_NE** ``src1`` is unequal to ``src2``.
+
+    :param cmp_op: a flag, that specifies correspondence between the arrays (specific to C syntax; for possible values see 'cmpop above).
 
 The function compares:
 
