@@ -540,7 +540,7 @@ void CV_Resize_Test::validate_results() const
         const float* D = _dst.ptr<float>(dy);
 
         for (int dx = 0; dx < dsize.width; ++dx)
-            if (fabs(rD[dx] - D[dx]) > t /* && D[dx] <= 255.0f && rD[dx] <= 255.f */)
+            if (fabs(rD[dx] - D[dx]) > t)
             {
                 PRINT_TO_LOG("\nNorm of the difference: %lf\n", norm(reference_dst, _dst, NORM_INF));
                 PRINT_TO_LOG("Error in (dx, dy): (%d, %d)\n", dx / cn + 1, dy + 1);
@@ -1020,9 +1020,9 @@ void CV_Remap_Test::validate_results() const
         const float* eD = erode_dst.ptr<float>(y);
         dD = eD;
         
-        float t = 6.2f;
+        float t = 1.0f;
         for (int x = 0; x < dsize.width; ++x)
-            if ( !((eD[x] - t <= D[x] || (eD[x] >= 255.0f && D[x] >= 255.0f)) && (D[x] <= dD[x] + t || (eD[x] >= 255.0f && D[x] >= 255.0f))) )
+            if ( !(eD[x] - t <= D[x] && D[x] <= dD[x] + t) )
             {
                 PRINT_TO_LOG("\nnorm(erode_dst, dst): %lf\n", norm(erode_dst, _dst, NORM_INF));
                 PRINT_TO_LOG("norm(dst, dilate_dst): %lf\n", norm(_dst, dilate_dst, NORM_INF));
