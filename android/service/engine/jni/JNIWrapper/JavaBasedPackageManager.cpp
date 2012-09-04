@@ -46,6 +46,7 @@ bool JavaBasedPackageManager::InstallPackage(const PackageInfo& package)
     LOGD("Calling java package manager with package name %s\n", package.GetFullName().c_str());
     jobject jpkgname = jenv->NewStringUTF(package.GetFullName().c_str());
     bool result = jenv->CallNonvirtualBooleanMethod(JavaPackageManager, jclazz, jmethod, jpkgname);
+    jenv->DeleteLocalRef(jpkgname);   
     
     if (self_attached)
     {
@@ -99,9 +100,13 @@ vector<PackageInfo> JavaBasedPackageManager::GetInstalledPackages()
     {
 	jobject jtmp = jenv->GetObjectArrayElement(jpkgs, i);
 	PackageInfo tmp = ConvertPackageFromJava(jtmp, jenv);
+	jenv->DeleteLocalRef(jtmp);
+	
 	if (tmp.IsValid())
 	    result.push_back(tmp);
     }
+    
+    jenv->DeleteLocalRef(jpkgs);
     
     if (self_attached)
     {
@@ -113,6 +118,7 @@ vector<PackageInfo> JavaBasedPackageManager::GetInstalledPackages()
     return result;
 }
 
+// IMPORTANT: This method can be called only if thread is attached to Dalvik
 PackageInfo JavaBasedPackageManager::ConvertPackageFromJava(jobject package, JNIEnv* jenv)
 {
     jclass jclazz = jenv->GetObjectClass(package);
@@ -120,11 +126,13 @@ PackageInfo JavaBasedPackageManager::ConvertPackageFromJava(jobject package, JNI
     jstring jnameobj = static_cast<jstring>(jenv->GetObjectField(package, jfield));
     const char* jnamestr = jenv->GetStringUTFChars(jnameobj, NULL);
     string name(jnamestr);
+    jenv->DeleteLocalRef(jnameobj);
     
     jfield = jenv->GetFieldID(jclazz, "versionName", "Ljava/lang/String;");
     jstring jversionobj = static_cast<jstring>(jenv->GetObjectField(package, jfield));
     const char* jversionstr = jenv->GetStringUTFChars(jversionobj, NULL);
     string verison(jversionstr);
+    jenv->DeleteLocalRef(jversionobj);
     
     string path;
     jclazz = jenv->FindClass("android/os/Build$VERSION");
@@ -134,15 +142,14 @@ PackageInfo JavaBasedPackageManager::ConvertPackageFromJava(jobject package, JNI
     {
 	jclazz = jenv->GetObjectClass(package);
 	jfield = jenv->GetFieldID(jclazz, "applicationInfo", "Landroid/content/pm/ApplicationInfo;");
-	
 	jobject japp_info = jenv->GetObjectField(package, jfield);
 	jclazz = jenv->GetObjectClass(japp_info);
 	jfield = jenv->GetFieldID(jclazz, "nativeLibraryDir", "Ljava/lang/String;");
 	jstring jpathobj = static_cast<jstring>(jenv->GetObjectField(japp_info, jfield));
-	
 	const char* jpathstr = jenv->GetStringUTFChars(jpathobj, NULL);
 	path = string(jpathstr);
 	jenv->ReleaseStringUTFChars(jpathobj, jpathstr);
+	jenv->DeleteLocalRef(jpathobj);
     }
     else
     {
