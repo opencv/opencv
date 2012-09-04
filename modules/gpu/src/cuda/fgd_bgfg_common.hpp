@@ -1,7 +1,7 @@
 #ifndef __FGD_BGFG_COMMON_HPP__
 #define __FGD_BGFG_COMMON_HPP__
 
-#include "opencv2/core/devmem2d.hpp"
+#include "opencv2/core/cuda_devptrs.hpp"
 
 namespace bgfg
 {
@@ -122,24 +122,24 @@ namespace bgfg
     const int HISTOGRAM_BIN_COUNT = 256;
 
     template <typename PT, typename CT>
-    void calcDiffHistogram_gpu(cv::gpu::DevMem2Db prevFrame, cv::gpu::DevMem2Db curFrame,
+    void calcDiffHistogram_gpu(cv::gpu::PtrStepSzb prevFrame, cv::gpu::PtrStepSzb curFrame,
                                unsigned int* hist0, unsigned int* hist1, unsigned int* hist2,
                                unsigned int* partialBuf0, unsigned int* partialBuf1, unsigned int* partialBuf2,
                                int cc, cudaStream_t stream);
 
     template <typename PT, typename CT>
-    void calcDiffThreshMask_gpu(cv::gpu::DevMem2Db prevFrame, cv::gpu::DevMem2Db curFrame, uchar3 bestThres, cv::gpu::DevMem2Db changeMask, cudaStream_t stream);
+    void calcDiffThreshMask_gpu(cv::gpu::PtrStepSzb prevFrame, cv::gpu::PtrStepSzb curFrame, uchar3 bestThres, cv::gpu::PtrStepSzb changeMask, cudaStream_t stream);
 
     void setBGPixelStat(const BGPixelStat& stat);
 
     template <typename PT, typename CT, typename OT>
-    void bgfgClassification_gpu(cv::gpu::DevMem2Db prevFrame, cv::gpu::DevMem2Db curFrame,
-                                cv::gpu::DevMem2Db Ftd, cv::gpu::DevMem2Db Fbd, cv::gpu::DevMem2Db foreground,
+    void bgfgClassification_gpu(cv::gpu::PtrStepSzb prevFrame, cv::gpu::PtrStepSzb curFrame,
+                                cv::gpu::PtrStepSzb Ftd, cv::gpu::PtrStepSzb Fbd, cv::gpu::PtrStepSzb foreground,
                                 int deltaC, int deltaCC, float alpha2, int N1c, int N1cc, cudaStream_t stream);
 
     template <typename PT, typename CT, typename OT>
-    void updateBackgroundModel_gpu(cv::gpu::DevMem2Db prevFrame, cv::gpu::DevMem2Db curFrame,
-                                   cv::gpu::DevMem2Db Ftd, cv::gpu::DevMem2Db Fbd, cv::gpu::DevMem2Db foreground, cv::gpu::DevMem2Db background,
+    void updateBackgroundModel_gpu(cv::gpu::PtrStepSzb prevFrame, cv::gpu::PtrStepSzb curFrame,
+                                   cv::gpu::PtrStepSzb Ftd, cv::gpu::PtrStepSzb Fbd, cv::gpu::PtrStepSzb foreground, cv::gpu::PtrStepSzb background,
                                    int deltaC, int deltaCC, float alpha1, float alpha2, float alpha3, int N1c, int N1cc, int N2c, int N2cc, float T,
                                    cudaStream_t stream);
 }

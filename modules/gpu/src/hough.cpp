@@ -44,11 +44,13 @@
 
 #if !defined (HAVE_CUDA)
 
-void cv::gpu::HoughLinesTransform(const GpuMat&, GpuMat&, GpuMat&, float, float) { throw_nogpu(); }
-void cv::gpu::HoughLinesGet(const GpuMat&, GpuMat&, float, float, int, bool, int) { throw_nogpu(); }
 void cv::gpu::HoughLines(const GpuMat&, GpuMat&, float, float, int, bool, int) { throw_nogpu(); }
-void cv::gpu::HoughLines(const GpuMat&, GpuMat&, GpuMat&, GpuMat&, float, float, int, bool, int) { throw_nogpu(); }
+void cv::gpu::HoughLines(const GpuMat&, GpuMat&, HoughLinesBuf&, float, float, int, bool, int) { throw_nogpu(); }
 void cv::gpu::HoughLinesDownload(const GpuMat&, OutputArray, OutputArray) { throw_nogpu(); }
+
+void cv::gpu::HoughCircles(const GpuMat&, GpuMat&, int, float, float, int, int, int, int, int) { throw_nogpu(); }
+void cv::gpu::HoughCircles(const GpuMat&, GpuMat&, HoughCirclesBuf&, int, float, float, int, int, int, int, int) { throw_nogpu(); }
+void cv::gpu::HoughCirclesDownload(const GpuMat&, OutputArray) { throw_nogpu(); }
 
 #else /* !defined (HAVE_CUDA) */
 
@@ -56,13 +58,28 @@ namespace cv { namespace gpu { namespace device
 {
     namespace hough
     {
-        int buildPointList_gpu(DevMem2Db src, unsigned int* list);
-        void linesAccum_gpu(const unsigned int* list, int count, DevMem2Di accum, float rho, float theta, size_t sharedMemPerBlock, bool has20);
-        int linesGetResult_gpu(DevMem2Di accum, float2* out, int* votes, int maxSize, float rho, float theta, float threshold, bool doSort);
+        int buildPointList_gpu(PtrStepSzb src, unsigned int* list);
+
+        void linesAccum_gpu(const unsigned int* list, int count, PtrStepSzi accum, float rho, float theta, size_t sharedMemPerBlock, bool has20);
+        int linesGetResult_gpu(PtrStepSzi accum, float2* out, int* votes, int maxSize, float rho, float theta, int threshold, bool doSort);
+
+        void circlesAccumCenters_gpu(const unsigned int* list, int count, PtrStepi dx, PtrStepi dy, PtrStepSzi accum, int minRadius, int maxRadius, float idp);
+        int buildCentersList_gpu(PtrStepSzi accum, unsigned int* centers, int threshold);
+        int circlesAccumRadius_gpu(const unsigned int* centers, int centersCount, const unsigned int* list, int count,
+                                   float3* circles, int maxCircles, float dp, int minRadius, int maxRadius, int threshold, bool has20);
     }
 }}}
 
-void cv::gpu::HoughLinesTransform(const GpuMat& src, GpuMat& accum, GpuMat& buf, float rho, float theta)
+//////////////////////////////////////////////////////////
+// HoughLines
+
+void cv::gpu::HoughLines(const GpuMat& src, GpuMat& lines, float rho, float theta, int threshold, bool doSort, int maxLines)
+{
+    HoughLinesBuf buf;
+    HoughLines(src, lines, buf, rho, theta, threshold, doSort, maxLines);
+}
+
+void cv::gpu::HoughLines(const GpuMat& src, GpuMat& lines, HoughLinesBuf& buf, float rho, float theta, int threshold, bool doSort, int maxLines)
 {
     using namespace cv::gpu::device::hough;
 
@@ -70,50 +87,33 @@ void cv::gpu::HoughLinesTransform(const GpuMat& src, GpuMat& accum, GpuMat& buf,
     CV_Assert(src.cols < std::numeric_limits<unsigned short>::max());
     CV_Assert(src.rows < std::numeric_limits<unsigned short>::max());
 
-    ensureSizeIsEnough(1, src.size().area(), CV_32SC1, buf);
+    ensureSizeIsEnough(1, src.size().area(), CV_32SC1, buf.list);
+    unsigned int* srcPoints = buf.list.ptr<unsigned int>();
 
-    const int count = buildPointList_gpu(src, buf.ptr<unsigned int>());
+    const int pointsCount = buildPointList_gpu(src, srcPoints);
+    if (pointsCount == 0)
+    {
+        lines.release();
+        return;
+    }
 
     const int numangle = cvRound(CV_PI / theta);
     const int numrho = cvRound(((src.cols + src.rows) * 2 + 1) / rho);
-
     CV_Assert(numangle > 0 && numrho > 0);
 
-    ensureSizeIsEnough(numangle + 2, numrho + 2, CV_32SC1, accum);
-    accum.setTo(cv::Scalar::all(0));
+    ensureSizeIsEnough(numangle + 2, numrho + 2, CV_32SC1, buf.accum);
+    buf.accum.setTo(Scalar::all(0));
 
-    cv::gpu::DeviceInfo devInfo;
-
-    if (count > 0)
-        linesAccum_gpu(buf.ptr<unsigned int>(), count, accum, rho, theta, devInfo.sharedMemPerBlock(), devInfo.supports(cv::gpu::FEATURE_SET_COMPUTE_20));
-}
-
-void cv::gpu::HoughLinesGet(const GpuMat& accum, GpuMat& lines, float rho, float theta, int threshold, bool doSort, int maxLines)
-{
-    using namespace cv::gpu::device;
-
-    CV_Assert(accum.type() == CV_32SC1);
+    DeviceInfo devInfo;
+    linesAccum_gpu(srcPoints, pointsCount, buf.accum, rho, theta, devInfo.sharedMemPerBlock(), devInfo.supports(FEATURE_SET_COMPUTE_20));
 
     ensureSizeIsEnough(2, maxLines, CV_32FC2, lines);
 
-    int count = hough::linesGetResult_gpu(accum, lines.ptr<float2>(0), lines.ptr<int>(1), maxLines, rho, theta, threshold, doSort);
-
-    if (count > 0)
-        lines.cols = count;
+    int linesCount = linesGetResult_gpu(buf.accum, lines.ptr<float2>(0), lines.ptr<int>(1), maxLines, rho, theta, threshold, doSort);
+    if (linesCount > 0)
+        lines.cols = linesCount;
     else
         lines.release();
-}
-
-void cv::gpu::HoughLines(const GpuMat& src, GpuMat& lines, float rho, float theta, int threshold, bool doSort, int maxLines)
-{
-    cv::gpu::GpuMat accum, buf;
-    HoughLines(src, lines, accum, buf, rho, theta, threshold, doSort, maxLines);
-}
-
-void cv::gpu::HoughLines(const GpuMat& src, GpuMat& lines, GpuMat& accum, GpuMat& buf, float rho, float theta, int threshold, bool doSort, int maxLines)
-{
-    HoughLinesTransform(src, accum, buf, rho, theta);
-    HoughLinesGet(accum, lines, rho, theta, threshold, doSort, maxLines);
 }
 
 void cv::gpu::HoughLinesDownload(const GpuMat& d_lines, OutputArray h_lines_, OutputArray h_votes_)
@@ -129,16 +129,167 @@ void cv::gpu::HoughLinesDownload(const GpuMat& d_lines, OutputArray h_lines_, Ou
     CV_Assert(d_lines.rows == 2 && d_lines.type() == CV_32FC2);
 
     h_lines_.create(1, d_lines.cols, CV_32FC2);
-    cv::Mat h_lines = h_lines_.getMat();
+    Mat h_lines = h_lines_.getMat();
     d_lines.row(0).download(h_lines);
 
     if (h_votes_.needed())
     {
         h_votes_.create(1, d_lines.cols, CV_32SC1);
-        cv::Mat h_votes = h_votes_.getMat();
-        cv::gpu::GpuMat d_votes(1, d_lines.cols, CV_32SC1, const_cast<int*>(d_lines.ptr<int>(1)));
+        Mat h_votes = h_votes_.getMat();
+        GpuMat d_votes(1, d_lines.cols, CV_32SC1, const_cast<int*>(d_lines.ptr<int>(1)));
         d_votes.download(h_votes);
     }
+}
+
+//////////////////////////////////////////////////////////
+// HoughCircles
+
+void cv::gpu::HoughCircles(const GpuMat& src, GpuMat& circles, int method, float dp, float minDist, int cannyThreshold, int votesThreshold, int minRadius, int maxRadius, int maxCircles)
+{
+    HoughCirclesBuf buf;
+    HoughCircles(src, circles, buf, method, dp, minDist, cannyThreshold, votesThreshold, minRadius, maxRadius, maxCircles);
+}
+
+void cv::gpu::HoughCircles(const GpuMat& src, GpuMat& circles, HoughCirclesBuf& buf, int method,
+                           float dp, float minDist, int cannyThreshold, int votesThreshold, int minRadius, int maxRadius, int maxCircles)
+{
+    using namespace cv::gpu::device::hough;
+
+    CV_Assert(src.type() == CV_8UC1);
+    CV_Assert(src.cols < std::numeric_limits<unsigned short>::max());
+    CV_Assert(src.rows < std::numeric_limits<unsigned short>::max());
+    CV_Assert(method == CV_HOUGH_GRADIENT);
+    CV_Assert(dp > 0);
+    CV_Assert(minRadius > 0 && maxRadius > minRadius);
+    CV_Assert(cannyThreshold > 0);
+    CV_Assert(votesThreshold > 0);
+    CV_Assert(maxCircles > 0);
+
+    const float idp = 1.0f / dp;
+
+    cv::gpu::Canny(src, buf.cannyBuf, buf.edges, std::max(cannyThreshold / 2, 1), cannyThreshold);
+
+    ensureSizeIsEnough(2, src.size().area(), CV_32SC1, buf.list);
+    unsigned int* srcPoints = buf.list.ptr<unsigned int>(0);
+    unsigned int* centers = buf.list.ptr<unsigned int>(1);
+
+    const int pointsCount = buildPointList_gpu(buf.edges, srcPoints);
+    if (pointsCount == 0)
+    {
+        circles.release();
+        return;
+    }
+
+    ensureSizeIsEnough(cvCeil(src.rows * idp) + 2, cvCeil(src.cols * idp) + 2, CV_32SC1, buf.accum);
+    buf.accum.setTo(Scalar::all(0));
+
+    circlesAccumCenters_gpu(srcPoints, pointsCount, buf.cannyBuf.dx, buf.cannyBuf.dy, buf.accum, minRadius, maxRadius, idp);
+
+    int centersCount = buildCentersList_gpu(buf.accum, centers, votesThreshold);
+    if (centersCount == 0)
+    {
+        circles.release();
+        return;
+    }
+
+    if (minDist > 1)
+    {
+        cv::AutoBuffer<ushort2> oldBuf_(centersCount);
+        cv::AutoBuffer<ushort2> newBuf_(centersCount);
+        int newCount = 0;
+
+        ushort2* oldBuf = oldBuf_;
+        ushort2* newBuf = newBuf_;
+
+        cudaSafeCall( cudaMemcpy(oldBuf, centers, centersCount * sizeof(ushort2), cudaMemcpyDeviceToHost) );
+
+        const int cellSize = cvRound(minDist);
+        const int gridWidth = (src.cols + cellSize - 1) / cellSize;
+        const int gridHeight = (src.rows + cellSize - 1) / cellSize;
+
+        std::vector< std::vector<ushort2> > grid(gridWidth * gridHeight);
+
+        minDist *= minDist;
+
+        for (int i = 0; i < centersCount; ++i)
+        {
+            ushort2 p = oldBuf[i];
+
+            bool good = true;
+
+            int xCell = static_cast<int>(p.x / cellSize);
+            int yCell = static_cast<int>(p.y / cellSize);
+
+            int x1 = xCell - 1;
+            int y1 = yCell - 1;
+            int x2 = xCell + 1;
+            int y2 = yCell + 1;
+
+            // boundary check
+            x1 = std::max(0, x1);
+            y1 = std::max(0, y1);
+            x2 = std::min(gridWidth - 1, x2);
+            y2 = std::min(gridHeight - 1, y2);
+
+            for (int yy = y1; yy <= y2; ++yy)
+            {
+                for (int xx = x1; xx <= x2; ++xx)
+                {
+                    vector<ushort2>& m = grid[yy * gridWidth + xx];
+
+                    for(size_t j = 0; j < m.size(); ++j)
+                    {
+                        float dx = (float)(p.x - m[j].x);
+                        float dy = (float)(p.y - m[j].y);
+
+                        if (dx * dx + dy * dy < minDist)
+                        {
+                            good = false;
+                            goto break_out;
+                        }
+                    }
+                }
+            }
+
+            break_out:
+
+            if(good)
+            {
+                grid[yCell * gridWidth + xCell].push_back(p);
+
+                newBuf[newCount++] = p;
+            }
+        }
+
+        cudaSafeCall( cudaMemcpy(centers, newBuf, newCount * sizeof(unsigned int), cudaMemcpyHostToDevice) );
+        centersCount = newCount;
+    }
+
+    ensureSizeIsEnough(1, maxCircles, CV_32FC3, circles);
+
+    DeviceInfo devInfo;
+    const int circlesCount = circlesAccumRadius_gpu(centers, centersCount, srcPoints, pointsCount, circles.ptr<float3>(), maxCircles,
+                                                    dp, minRadius, maxRadius, votesThreshold, devInfo.supports(FEATURE_SET_COMPUTE_20));
+
+    if (circlesCount > 0)
+        circles.cols = circlesCount;
+    else
+        circles.release();
+}
+
+void cv::gpu::HoughCirclesDownload(const GpuMat& d_circles, cv::OutputArray h_circles_)
+{
+    if (d_circles.empty())
+    {
+        h_circles_.release();
+        return;
+    }
+
+    CV_Assert(d_circles.rows == 1 && d_circles.type() == CV_32FC3);
+
+    h_circles_.create(1, d_circles.cols, CV_32FC3);
+    Mat h_circles = h_circles_.getMat();
+    d_circles.download(h_circles);
 }
 
 #endif /* !defined (HAVE_CUDA) */

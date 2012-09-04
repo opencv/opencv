@@ -356,7 +356,7 @@ This function cannot operate in-place.
 
 
 resize
-----------
+------
 Resizes an image.
 
 .. ocv:function:: void resize( InputArray src, OutputArray dst, Size dsize, double fx=0, double fy=0, int interpolation=INTER_LINEAR )
@@ -366,11 +366,11 @@ Resizes an image.
 .. ocv:cfunction:: void cvResize( const CvArr* src, CvArr* dst, int interpolation=CV_INTER_LINEAR )
 .. ocv:pyoldfunction:: cv.Resize(src, dst, interpolation=CV_INTER_LINEAR)-> None
 
-    :param src: Source image.
+    :param src: input image.
 
-    :param dst: Destination image. It has the size  ``dsize``  (when it is non-zero) or the size computed from  ``src.size()``  ,  ``fx`` ,  and  ``fy`` . The type of  ``dst``  is the same as of  ``src`` .
+    :param dst: output image; it has the size ``dsize`` (when it is non-zero) or the size computed from ``src.size()``, ``fx``, and ``fy``; the type of ``dst`` is the same as of ``src``.
 
-    :param dsize: Destination image size. If it is zero, it is computed as:
+    :param dsize: output image size; if it equals zero, it is computed as:
 
         .. math::
 
@@ -379,19 +379,19 @@ Resizes an image.
 
         Either  ``dsize``  or both  ``fx``  and  ``fy``  must be non-zero.
 
-    :param fx: Scale factor along the horizontal axis. When it is 0, it is computed as
+    :param fx: scale factor along the horizontal axis; when it equals 0, it is computed as
 
         .. math::
 
             \texttt{(double)dsize.width/src.cols}
 
-    :param fy: Scale factor along the vertical axis. When it is 0, it is computed as
+    :param fy: scale factor along the vertical axis; when it equals 0, it is computed as
 
         .. math::
 
             \texttt{(double)dsize.height/src.rows}
 
-    :param interpolation: Interpolation method:
+    :param interpolation: interpolation method:
 
             * **INTER_NEAREST** - a nearest-neighbor interpolation
 
@@ -425,7 +425,7 @@ To shrink an image, it will generally look best with CV_INTER_AREA interpolation
 
 
 warpAffine
---------------
+----------
 Applies an affine transformation to an image.
 
 .. ocv:function:: void warpAffine( InputArray src, OutputArray dst, InputArray M, Size dsize, int flags=INTER_LINEAR, int borderMode=BORDER_CONSTANT, const Scalar& borderValue=Scalar())
@@ -440,19 +440,19 @@ Applies an affine transformation to an image.
 
 .. ocv:pyoldfunction:: cv.GetQuadrangleSubPix(src, dst, mapMatrix)-> None
 
-    :param src: Source image.
+    :param src: input image.
 
-    :param dst: Destination image that has the size  ``dsize``  and the same type as  ``src`` .
+    :param dst: output image that has the size  ``dsize``  and the same type as  ``src`` .
 
-    :param M: :math:`2\times 3`  transformation matrix.
+    :param M: :math:`2\times 3` transformation matrix.
 
-    :param dsize: Size of the destination image.
+    :param dsize: size of the output image.
 
-    :param flags: Combination of interpolation methods (see  :ocv:func:`resize` ) and the optional flag  ``WARP_INVERSE_MAP``  that means that  ``M``  is the inverse transformation ( :math:`\texttt{dst}\rightarrow\texttt{src}` ).
+    :param flags: combination of interpolation methods (see  :ocv:func:`resize` ) and the optional flag ``WARP_INVERSE_MAP`` that means that ``M`` is the inverse transformation ( :math:`\texttt{dst}\rightarrow\texttt{src}` ).
 
-    :param borderMode: Pixel extrapolation method (see  :ocv:func:`borderInterpolate` ). When  \   ``borderMode=BORDER_TRANSPARENT`` , it means that the pixels in the destination image corresponding to the "outliers" in the source image are not modified by the function.
+    :param borderMode: pixel extrapolation method (see :ocv:func:`borderInterpolate`); when  \   ``borderMode=BORDER_TRANSPARENT`` , it means that the pixels in the destination image corresponding to the "outliers" in the source image are not modified by the function.
 
-    :param borderValue: Value used in case of a constant border. By default, it is 0.
+    :param borderValue: value used in case of a constant border; by default, it is 0.
 
 The function ``warpAffine`` transforms the source image using the specified matrix:
 
@@ -476,7 +476,7 @@ The function cannot operate in-place.
 .. note:: ``cvGetQuadrangleSubPix`` is similar to ``cvWarpAffine``, but the outliers are extrapolated using replication border mode.
 
 warpPerspective
--------------------
+---------------
 Applies a perspective transformation to an image.
 
 .. ocv:function:: void warpPerspective( InputArray src, OutputArray dst, InputArray M, Size dsize, int flags=INTER_LINEAR, int borderMode=BORDER_CONSTANT, const Scalar& borderValue=Scalar())
@@ -487,19 +487,19 @@ Applies a perspective transformation to an image.
 
 .. ocv:pyoldfunction:: cv.WarpPerspective(src, dst, mapMatrix, flags=CV_INNER_LINEAR+CV_WARP_FILL_OUTLIERS, fillval=(0, 0, 0, 0))-> None
 
-    :param src: Source image.
+    :param src: input image.
 
-    :param dst: Destination image that has the size  ``dsize``  and the same type as  ``src`` .
+    :param dst: output image that has the size  ``dsize``  and the same type as  ``src`` .
 
     :param M: :math:`3\times 3`  transformation matrix.
 
-    :param dsize: Size of the destination image.
+    :param dsize: size of the output image.
 
-    :param flags: Combination of interpolation methods (see  :ocv:func:`resize` ) and the optional flag  ``WARP_INVERSE_MAP``  that means that  ``M``  is the inverse transformation ( :math:`\texttt{dst}\rightarrow\texttt{src}` ).
+    :param flags: combination of interpolation methods (``INTER_LINEAR`` or ``INTER_NEAREST``) and the optional flag  ``WARP_INVERSE_MAP``, that sets ``M`` as the inverse transformation ( :math:`\texttt{dst}\rightarrow\texttt{src}` ).
 
-    :param borderMode: Pixel extrapolation method (see  :ocv:func:`borderInterpolate` ). When  \   ``borderMode=BORDER_TRANSPARENT`` , it means that the pixels in the destination image that corresponds to the "outliers" in the source image are not modified by the function.
+    :param borderMode: pixel extrapolation method (``BORDER_CONSTANT`` or ``BORDER_REPLICATE``).
 
-    :param borderValue: Value used in case of a constant border. By default, it is 0.
+    :param borderValue: value used in case of a constant border; by default, it equals 0.
 
 The function ``warpPerspective`` transforms the source image using the specified matrix:
 
@@ -524,7 +524,7 @@ The function cannot operate in-place.
 
 
 initUndistortRectifyMap
----------------------------
+-----------------------
 Computes the undistortion and rectification transformation map.
 
 .. ocv:function:: void initUndistortRectifyMap( InputArray cameraMatrix, InputArray distCoeffs, InputArray R, InputArray newCameraMatrix, Size size, int m1type, OutputArray map1, OutputArray map2 )

@@ -49,7 +49,7 @@ namespace cv { namespace gpu {
     namespace device
     {
         template <typename D>
-        __global__ void Bayer2BGR_8u(const PtrStepb src, DevMem2D_<D> dst, const bool blue_last, const bool start_with_green)
+        __global__ void Bayer2BGR_8u(const PtrStepb src, PtrStepSz<D> dst, const bool blue_last, const bool start_with_green)
         {
             const int s_x = blockIdx.x * blockDim.x + threadIdx.x;
             int s_y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -193,7 +193,7 @@ namespace cv { namespace gpu {
         }
 
         template <typename D>
-        __global__ void Bayer2BGR_16u(const PtrStepb src, DevMem2D_<D> dst, const bool blue_last, const bool start_with_green)
+        __global__ void Bayer2BGR_16u(const PtrStepb src, PtrStepSz<D> dst, const bool blue_last, const bool start_with_green)
         {
             const int s_x = blockIdx.x * blockDim.x + threadIdx.x;
             int s_y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -287,7 +287,7 @@ namespace cv { namespace gpu {
         }
 
         template <int cn>
-        void Bayer2BGR_8u_gpu(DevMem2Db src, DevMem2Db dst, bool blue_last, bool start_with_green, cudaStream_t stream)
+        void Bayer2BGR_8u_gpu(PtrStepSzb src, PtrStepSzb dst, bool blue_last, bool start_with_green, cudaStream_t stream)
         {
             typedef typename TypeVec<uchar, cn>::vec_type dst_t;
 
@@ -296,14 +296,14 @@ namespace cv { namespace gpu {
 
             cudaSafeCall( cudaFuncSetCacheConfig(Bayer2BGR_8u<dst_t>, cudaFuncCachePreferL1) );
 
-            Bayer2BGR_8u<dst_t><<<grid, block, 0, stream>>>(src, (DevMem2D_<dst_t>)dst, blue_last, start_with_green);
+            Bayer2BGR_8u<dst_t><<<grid, block, 0, stream>>>(src, (PtrStepSz<dst_t>)dst, blue_last, start_with_green);
             cudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
                 cudaSafeCall( cudaDeviceSynchronize() );
         }
         template <int cn>
-        void Bayer2BGR_16u_gpu(DevMem2Db src, DevMem2Db dst, bool blue_last, bool start_with_green, cudaStream_t stream)
+        void Bayer2BGR_16u_gpu(PtrStepSzb src, PtrStepSzb dst, bool blue_last, bool start_with_green, cudaStream_t stream)
         {
             typedef typename TypeVec<ushort, cn>::vec_type dst_t;
 
@@ -312,16 +312,16 @@ namespace cv { namespace gpu {
 
             cudaSafeCall( cudaFuncSetCacheConfig(Bayer2BGR_16u<dst_t>, cudaFuncCachePreferL1) );
 
-            Bayer2BGR_16u<dst_t><<<grid, block, 0, stream>>>(src, (DevMem2D_<dst_t>)dst, blue_last, start_with_green);
+            Bayer2BGR_16u<dst_t><<<grid, block, 0, stream>>>(src, (PtrStepSz<dst_t>)dst, blue_last, start_with_green);
             cudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
                 cudaSafeCall( cudaDeviceSynchronize() );
         }
 
-        template void Bayer2BGR_8u_gpu<3>(DevMem2Db src, DevMem2Db dst, bool blue_last, bool start_with_green, cudaStream_t stream);
-        template void Bayer2BGR_8u_gpu<4>(DevMem2Db src, DevMem2Db dst, bool blue_last, bool start_with_green, cudaStream_t stream);
-        template void Bayer2BGR_16u_gpu<3>(DevMem2Db src, DevMem2Db dst, bool blue_last, bool start_with_green, cudaStream_t stream);
-        template void Bayer2BGR_16u_gpu<4>(DevMem2Db src, DevMem2Db dst, bool blue_last, bool start_with_green, cudaStream_t stream);
+        template void Bayer2BGR_8u_gpu<3>(PtrStepSzb src, PtrStepSzb dst, bool blue_last, bool start_with_green, cudaStream_t stream);
+        template void Bayer2BGR_8u_gpu<4>(PtrStepSzb src, PtrStepSzb dst, bool blue_last, bool start_with_green, cudaStream_t stream);
+        template void Bayer2BGR_16u_gpu<3>(PtrStepSzb src, PtrStepSzb dst, bool blue_last, bool start_with_green, cudaStream_t stream);
+        template void Bayer2BGR_16u_gpu<4>(PtrStepSzb src, PtrStepSzb dst, bool blue_last, bool start_with_green, cudaStream_t stream);
     }
 }}

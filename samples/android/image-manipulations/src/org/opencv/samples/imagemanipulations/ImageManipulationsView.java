@@ -21,28 +21,32 @@ import android.util.Log;
 import android.view.SurfaceHolder;
 
 class ImageManipulationsView extends SampleCvViewBase {
-    private Size mSize0;
-    private Size mSizeRgba;
-    private Size mSizeRgbaInner;
-    
-    private Mat mRgba;
-    private Mat mGray;
-    private Mat mIntermediateMat;
-    private Mat mHist, mMat0;
-    private MatOfInt mChannels[], mHistSize;
-    private int mHistSizeNum;
-    private MatOfFloat mRanges;
-    private Scalar mColorsRGB[], mColorsHue[], mWhilte;
-    private Point mP1, mP2;
-    float mBuff[];
+    private static final String TAG = "OCVSample::View";
+    private Size                mSize0;
+    private Size                mSizeRgba;
+    private Size                mSizeRgbaInner;
 
-    private Mat mRgbaInnerWindow;
-    private Mat mGrayInnerWindow;
-    private Mat mBlurWindow;
-    private Mat mZoomWindow;
-    private Mat mZoomCorner;
-
-    private Mat mSepiaKernel;
+    private Mat                 mRgba;
+    private Mat                 mGray;
+    private Mat                 mIntermediateMat;
+    private Mat                 mHist;
+    private Mat                 mMat0;
+    private MatOfInt            mChannels[];
+    private MatOfInt            mHistSize;
+    private int                 mHistSizeNum;
+    private MatOfFloat          mRanges;
+    private Scalar              mColorsRGB[];
+    private Scalar              mColorsHue[];
+    private Scalar              mWhilte;
+    private Point               mP1;
+    private Point               mP2;
+    private float               mBuff[];
+    private Mat                 mRgbaInnerWindow;
+    private Mat                 mGrayInnerWindow;
+    private Mat                 mBlurWindow;
+    private Mat                 mZoomWindow;
+    private Mat                 mZoomCorner;
+    private Mat                 mSepiaKernel;
 
     public ImageManipulationsView(Context context) {
         super(context);
@@ -52,10 +56,13 @@ class ImageManipulationsView extends SampleCvViewBase {
         mSepiaKernel.put(1, 0, /* G */0.168f, 0.686f, 0.349f, 0f);
         mSepiaKernel.put(2, 0, /* B */0.131f, 0.534f, 0.272f, 0f);
         mSepiaKernel.put(3, 0, /* A */0.000f, 0.000f, 0.000f, 1f);
+
+        Log.i(TAG, "Instantiated new " + this.getClass());
     }
 
     @Override
-	public void surfaceCreated(SurfaceHolder holder) {
+    public void surfaceCreated(SurfaceHolder holder) {
+        Log.i(TAG, "called surfaceCreated");
         synchronized (this) {
             // initialize Mats before usage
             mGray = new Mat();
@@ -71,11 +78,11 @@ class ImageManipulationsView extends SampleCvViewBase {
             mMat0  = new Mat();
             mColorsRGB = new Scalar[] { new Scalar(200, 0, 0, 255), new Scalar(0, 200, 0, 255), new Scalar(0, 0, 200, 255) };
             mColorsHue = new Scalar[] {
-            		new Scalar(255, 0, 0, 255),   new Scalar(255, 60, 0, 255),  new Scalar(255, 120, 0, 255), new Scalar(255, 180, 0, 255), new Scalar(255, 240, 0, 255),
-            		new Scalar(215, 213, 0, 255), new Scalar(150, 255, 0, 255), new Scalar(85, 255, 0, 255),  new Scalar(20, 255, 0, 255),  new Scalar(0, 255, 30, 255),
-            		new Scalar(0, 255, 85, 255),  new Scalar(0, 255, 150, 255), new Scalar(0, 255, 215, 255), new Scalar(0, 234, 255, 255), new Scalar(0, 170, 255, 255),
-            		new Scalar(0, 120, 255, 255), new Scalar(0, 60, 255, 255),  new Scalar(0, 0, 255, 255),   new Scalar(64, 0, 255, 255),  new Scalar(120, 0, 255, 255),
-            		new Scalar(180, 0, 255, 255), new Scalar(255, 0, 255, 255), new Scalar(255, 0, 215, 255), new Scalar(255, 0, 85, 255),  new Scalar(255, 0, 0, 255)
+                    new Scalar(255, 0, 0, 255),   new Scalar(255, 60, 0, 255),  new Scalar(255, 120, 0, 255), new Scalar(255, 180, 0, 255), new Scalar(255, 240, 0, 255),
+                    new Scalar(215, 213, 0, 255), new Scalar(150, 255, 0, 255), new Scalar(85, 255, 0, 255),  new Scalar(20, 255, 0, 255),  new Scalar(0, 255, 30, 255),
+                    new Scalar(0, 255, 85, 255),  new Scalar(0, 255, 150, 255), new Scalar(0, 255, 215, 255), new Scalar(0, 234, 255, 255), new Scalar(0, 170, 255, 255),
+                    new Scalar(0, 120, 255, 255), new Scalar(0, 60, 255, 255),  new Scalar(0, 0, 255, 255),   new Scalar(64, 0, 255, 255),  new Scalar(120, 0, 255, 255),
+                    new Scalar(180, 0, 255, 255), new Scalar(255, 0, 255, 255), new Scalar(255, 0, 215, 255), new Scalar(255, 0, 85, 255),  new Scalar(255, 0, 0, 255)
             };
             mWhilte = Scalar.all(255);
             mP1 = new Point();
@@ -83,13 +90,13 @@ class ImageManipulationsView extends SampleCvViewBase {
         }
 
         super.surfaceCreated(holder);
-	}
+    }
 
-	private void CreateAuxiliaryMats() {
+    private void CreateAuxiliaryMats() {
         if (mRgba.empty())
             return;
 
-        mSizeRgba = mRgba.size(); 
+        mSizeRgba = mRgba.size();
 
         int rows = (int) mSizeRgba.height;
         int cols = (int) mSizeRgba.width;
@@ -102,7 +109,7 @@ class ImageManipulationsView extends SampleCvViewBase {
 
         if (mRgbaInnerWindow == null)
             mRgbaInnerWindow = mRgba.submat(top, top + height, left, left + width);
-        mSizeRgbaInner = mRgbaInnerWindow.size(); 
+        mSizeRgbaInner = mRgbaInnerWindow.size();
 
         if (mGrayInnerWindow == null && !mGray.empty())
             mGrayInnerWindow = mGray.submat(top, top + height, left, left + width);
@@ -134,38 +141,38 @@ class ImageManipulationsView extends SampleCvViewBase {
             int offset = (int) ((mSizeRgba.width - (5*mHistSizeNum + 4*10)*thikness)/2);
             // RGB
             for(int c=0; c<3; c++) {
-            	Imgproc.calcHist(Arrays.asList(mRgba), mChannels[c], mMat0, mHist, mHistSize, mRanges);
-            	Core.normalize(mHist, mHist, mSizeRgba.height/2, 0, Core.NORM_INF);
-            	mHist.get(0, 0, mBuff);
-            	for(int h=0; h<mHistSizeNum; h++) {
-            		mP1.x = mP2.x = offset + (c * (mHistSizeNum + 10) + h) * thikness; 
-            		mP1.y = mSizeRgba.height-1;
-            		mP2.y = mP1.y - 2 - (int)mBuff[h]; 
-            		Core.line(mRgba, mP1, mP2, mColorsRGB[c], thikness);
-            	}
+                Imgproc.calcHist(Arrays.asList(mRgba), mChannels[c], mMat0, mHist, mHistSize, mRanges);
+                Core.normalize(mHist, mHist, mSizeRgba.height/2, 0, Core.NORM_INF);
+                mHist.get(0, 0, mBuff);
+                for(int h=0; h<mHistSizeNum; h++) {
+                    mP1.x = mP2.x = offset + (c * (mHistSizeNum + 10) + h) * thikness;
+                    mP1.y = mSizeRgba.height-1;
+                    mP2.y = mP1.y - 2 - (int)mBuff[h];
+                    Core.line(mRgba, mP1, mP2, mColorsRGB[c], thikness);
+                }
             }
             // Value and Hue
             Imgproc.cvtColor(mRgba, mIntermediateMat, Imgproc.COLOR_RGB2HSV_FULL);
             // Value
             Imgproc.calcHist(Arrays.asList(mIntermediateMat), mChannels[2], mMat0, mHist, mHistSize, mRanges);
-        	Core.normalize(mHist, mHist, mSizeRgba.height/2, 0, Core.NORM_INF);
-        	mHist.get(0, 0, mBuff);
-        	for(int h=0; h<mHistSizeNum; h++) {
-        		mP1.x = mP2.x = offset + (3 * (mHistSizeNum + 10) + h) * thikness; 
-        		mP1.y = mSizeRgba.height-1;
-        		mP2.y = mP1.y - 2 - (int)mBuff[h]; 
-        		Core.line(mRgba, mP1, mP2, mWhilte, thikness);
-        	}
+            Core.normalize(mHist, mHist, mSizeRgba.height/2, 0, Core.NORM_INF);
+            mHist.get(0, 0, mBuff);
+            for(int h=0; h<mHistSizeNum; h++) {
+                mP1.x = mP2.x = offset + (3 * (mHistSizeNum + 10) + h) * thikness;
+                mP1.y = mSizeRgba.height-1;
+                mP2.y = mP1.y - 2 - (int)mBuff[h];
+                Core.line(mRgba, mP1, mP2, mWhilte, thikness);
+            }
             // Hue
             Imgproc.calcHist(Arrays.asList(mIntermediateMat), mChannels[0], mMat0, mHist, mHistSize, mRanges);
-        	Core.normalize(mHist, mHist, mSizeRgba.height/2, 0, Core.NORM_INF);
-        	mHist.get(0, 0, mBuff);
-        	for(int h=0; h<mHistSizeNum; h++) {
-        		mP1.x = mP2.x = offset + (4 * (mHistSizeNum + 10) + h) * thikness; 
-        		mP1.y = mSizeRgba.height-1;
-        		mP2.y = mP1.y - 2 - (int)mBuff[h]; 
-        		Core.line(mRgba, mP1, mP2, mColorsHue[h], thikness);
-        	}
+            Core.normalize(mHist, mHist, mSizeRgba.height/2, 0, Core.NORM_INF);
+            mHist.get(0, 0, mBuff);
+            for(int h=0; h<mHistSizeNum; h++) {
+                mP1.x = mP2.x = offset + (4 * (mHistSizeNum + 10) + h) * thikness;
+                mP1.y = mSizeRgba.height-1;
+                mP2.y = mP1.y - 2 - (int)mBuff[h];
+                Core.line(mRgba, mP1, mP2, mColorsHue[h], thikness);
+            }
             break;
 
         case ImageManipulationsActivity.VIEW_MODE_CANNY:
@@ -231,10 +238,10 @@ class ImageManipulationsView extends SampleCvViewBase {
         Bitmap bmp = Bitmap.createBitmap(mRgba.cols(), mRgba.rows(), Bitmap.Config.ARGB_8888);
 
         try {
-        	Utils.matToBitmap(mRgba, bmp);
+            Utils.matToBitmap(mRgba, bmp);
             return bmp;
         } catch(Exception e) {
-        	Log.e("org.opencv.samples.puzzle15", "Utils.matToBitmap() throws an exception: " + e.getMessage());
+            Log.e(TAG, "Utils.matToBitmap() throws an exception: " + e.getMessage());
             bmp.recycle();
             return null;
         }

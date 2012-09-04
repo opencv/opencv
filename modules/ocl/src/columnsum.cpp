@@ -67,7 +67,9 @@ namespace cv
 
 void cv::ocl::columnSum(const oclMat& src,oclMat& dst)
 {
-	CV_Assert(src.type() == CV_32FC1 && dst.type() == CV_32FC1 && src.size() == dst.size());
+	CV_Assert(src.type() == CV_32FC1);
+
+	dst.create(src.size(), src.type());
 
 	Context *clCxt = src.clCxt;                                        
 		       

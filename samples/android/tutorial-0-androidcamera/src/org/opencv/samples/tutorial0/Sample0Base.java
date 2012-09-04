@@ -10,8 +10,8 @@ import android.view.MenuItem;
 import android.view.Window;
 
 public class Sample0Base extends Activity {
-    
-	private static final String TAG            = "Sample::Activity";
+
+    private static final String TAG = "OCVSample::Activity";
 
     private MenuItem            mItemPreviewRGBA;
     private MenuItem            mItemPreviewGray;
@@ -22,34 +22,34 @@ public class Sample0Base extends Activity {
     }
 
     @Override
-	protected void onPause() {
-        Log.i(TAG, "onPause");
-		super.onPause();
-		mView.releaseCamera();
-	}
+    protected void onPause() {
+        Log.i(TAG, "called onPause");
+        super.onPause();
+        mView.releaseCamera();
+    }
 
-	@Override
-	protected void onResume() {
-        Log.i(TAG, "onResume");
-		super.onResume();
-		if( !mView.openCamera() ) {
-			AlertDialog ad = new AlertDialog.Builder(this).create();  
-			ad.setCancelable(false); // This blocks the 'BACK' button  
-			ad.setMessage("Fatal error: can't open camera!");  
-			ad.setButton(AlertDialog.BUTTON_POSITIVE, "OK", new DialogInterface.OnClickListener() {  
-			    public void onClick(DialogInterface dialog, int which) {  
-				dialog.dismiss();
-				finish();
-			    }  
-			});  
-			ad.show();
-		}
-	}
+    @Override
+    protected void onResume() {
+        Log.i(TAG, "called onResume");
+        super.onResume();
+        if( !mView.openCamera() ) {
+            AlertDialog ad = new AlertDialog.Builder(this).create();
+            ad.setCancelable(false); // This blocks the 'BACK' button
+            ad.setMessage("Fatal error: can't open camera!");
+            ad.setButton(AlertDialog.BUTTON_POSITIVE, "OK", new DialogInterface.OnClickListener() {
+                public void onClick(DialogInterface dialog, int which) {
+                    dialog.dismiss();
+                    finish();
+                }
+            });
+            ad.show();
+        }
+    }
 
-	/** Called when the activity is first created. */
+    /** Called when the activity is first created. */
     @Override
     public void onCreate(Bundle savedInstanceState) {
-        Log.i(TAG, "onCreate");
+        Log.i(TAG, "called onCreate");
         super.onCreate(savedInstanceState);
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         mView = new Sample0View(this);
@@ -58,7 +58,7 @@ public class Sample0Base extends Activity {
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        Log.i(TAG, "onCreateOptionsMenu");
+        Log.i(TAG, "called onCreateOptionsMenu");
         mItemPreviewRGBA = menu.add("Preview RGBA");
         mItemPreviewGray = menu.add("Preview GRAY");
         return true;
@@ -66,11 +66,11 @@ public class Sample0Base extends Activity {
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        Log.i(TAG, "Menu Item selected " + item);
+        Log.i(TAG, "called onOptionsItemSelected; selected item: " + item);
         if (item == mItemPreviewRGBA)
-        	mView.setViewMode(Sample0View.VIEW_MODE_RGBA);
+            mView.setViewMode(Sample0View.VIEW_MODE_RGBA);
         else if (item == mItemPreviewGray)
-        	mView.setViewMode(Sample0View.VIEW_MODE_GRAY);
+            mView.setViewMode(Sample0View.VIEW_MODE_GRAY);
         return true;
     }
 }

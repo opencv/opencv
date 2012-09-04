@@ -70,9 +70,9 @@ namespace cv { namespace gpu { namespace device
         void loadGlobalConstants(int maxCandidates, int maxFeatures, int img_rows, int img_cols, int nOctaveLayers, float hessianThreshold);
         void loadOctaveConstants(int octave, int layer_rows, int layer_cols);
 
-        void bindImgTex(DevMem2Db img);
-        void bindSumTex(DevMem2D_<unsigned int> sum);
-        void bindMaskSumTex(DevMem2D_<unsigned int> maskSum);
+        void bindImgTex(PtrStepSzb img);
+        void bindSumTex(PtrStepSz<unsigned int> sum);
+        void bindMaskSumTex(PtrStepSz<unsigned int> maskSum);
 
         void icvCalcLayerDetAndTrace_gpu(const PtrStepf& det, const PtrStepf& trace, int img_rows, int img_cols, int octave, int nOctaveLayers);
 
@@ -85,7 +85,7 @@ namespace cv { namespace gpu { namespace device
 
         void icvCalcOrientation_gpu(const float* featureX, const float* featureY, const float* featureSize, float* featureDir, int nFeatures);
 
-        void compute_descriptors_gpu(const DevMem2Df& descriptors,
+        void compute_descriptors_gpu(const PtrStepSzf& descriptors,
             const float* featureX, const float* featureY, const float* featureSize, const float* featureDir, int nFeatures);
     }
 }}}

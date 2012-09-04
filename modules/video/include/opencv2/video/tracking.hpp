@@ -326,7 +326,32 @@ CV_EXPORTS_W void calcOpticalFlowFarneback( InputArray prev, InputArray next,
 // that maps one 2D point set to another or one image to another.
 CV_EXPORTS_W Mat estimateRigidTransform( InputArray src, InputArray dst,
                                          bool fullAffine);
-    
+  
+//! computes dense optical flow using Simple Flow algorithm
+CV_EXPORTS_W void calcOpticalFlowSF(Mat& from, 
+                                    Mat& to,
+                                    Mat& flow,
+                                    int layers,
+                                    int averaging_block_size, 
+                                    int max_flow);
+
+CV_EXPORTS_W void calcOpticalFlowSF(Mat& from, 
+                                    Mat& to,
+                                    Mat& flow,
+                                    int layers,
+                                    int averaging_block_size, 
+                                    int max_flow,
+                                    double sigma_dist,
+                                    double sigma_color,
+                                    int postprocess_window, 
+                                    double sigma_dist_fix, 
+                                    double sigma_color_fix,
+                                    double occ_thr,
+                                    int upscale_averaging_radius,
+                                    double upscale_sigma_dist,
+                                    double upscale_sigma_color,
+                                    double speed_up_thr);
+
 }
 
 #endif

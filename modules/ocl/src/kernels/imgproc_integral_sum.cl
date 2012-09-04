@@ -94,6 +94,7 @@ kernel void integral_cols(__global uchar4 *src,__global int *sum ,
             }
             offset <<= 1;
         }
+		barrier(CLK_LOCAL_MEM_FENCE);
         if(lid < 2)
         {
             lm_sum[lid][LSIZE_2 + LOG_LSIZE] = 0;
@@ -112,7 +113,8 @@ kernel void integral_cols(__global uchar4 *src,__global int *sum ,
                 lm_sum[lid >> 7][ai] = lm_sum[lid >> 7][bi] - lm_sum[lid >> 7][ai];
             }
         }
-        if(lid > 0 & (i+lid) <= rows){
+		barrier(CLK_LOCAL_MEM_FENCE);
+        if(lid > 0 && (i+lid) <= rows){
             int loc_s0 = gid * dst_step + i + lid - 1 - pre_invalid * dst_step / 4, loc_s1 = loc_s0 + dst_step ;
             lm_sum[0][bf_loc] += sum_t[0]; 
             lm_sum[1][bf_loc] += sum_t[1]; 
@@ -172,6 +174,7 @@ kernel void integral_rows(__global int4 *srcsum,__global int *sum ,
             }
             offset <<= 1;
         }
+		barrier(CLK_LOCAL_MEM_FENCE);
         if(lid < 2)
         {
             lm_sum[lid][LSIZE_2 + LOG_LSIZE] = 0;
@@ -190,7 +193,7 @@ kernel void integral_rows(__global int4 *srcsum,__global int *sum ,
                 lm_sum[lid >> 7][ai] = lm_sum[lid >> 7][bi] - lm_sum[lid >> 7][ai];
             }
         }
-        
+        barrier(CLK_LOCAL_MEM_FENCE);
         if(gid == 0 && (i + lid) <= rows)
         {
            sum[sum_offset + i + lid] = 0;
@@ -205,16 +208,16 @@ kernel void integral_rows(__global int4 *srcsum,__global int *sum ,
             }
         }
         
-        if(lid > 0 & (i+lid) <= rows){
+        if(lid > 0 && (i+lid) <= rows){
             int loc_s0 = sum_offset + gid * 2 * sum_step + sum_step / 4 + i + lid, loc_s1 = loc_s0 + sum_step ;
-            lm_sum[0][bf_loc] += sum_t[0]; 
-            lm_sum[1][bf_loc] += sum_t[1]; 
+            lm_sum[0][bf_loc] += sum_t[0];
+            lm_sum[1][bf_loc] += sum_t[1];
             sum_p = (__local int*)(&(lm_sum[0][bf_loc]));
             for(int k = 0; k < 4; k++)
             {
                 if(gid * 8 + k >= cols) break;
                 sum[loc_s0 + k * sum_step / 4] = sum_p[k];
-            } 
+            }
             sum_p = (__local int*)(&(lm_sum[1][bf_loc]));
             for(int k = 0; k < 4; k++)
             {

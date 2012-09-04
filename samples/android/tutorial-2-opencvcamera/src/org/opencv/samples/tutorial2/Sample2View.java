@@ -15,23 +15,27 @@ import android.util.Log;
 import android.view.SurfaceHolder;
 
 class Sample2View extends SampleCvViewBase {
-    private Mat mRgba;
-    private Mat mGray;
-    private Mat mIntermediateMat;
+    private static final String TAG = "OCVSample::View";
+
+    private Mat                 mRgba;
+    private Mat                 mGray;
+    private Mat                 mIntermediateMat;
 
     public Sample2View(Context context) {
         super(context);
+        Log.i(TAG, "Instantiated new " + this.getClass());
     }
 
     @Override
     public void surfaceCreated(SurfaceHolder holder) {
+        Log.i(TAG, "called surfaceCreated");
         synchronized (this) {
             // initialize Mats before usage
             mGray = new Mat();
             mRgba = new Mat();
             mIntermediateMat = new Mat();
         }
-        
+
         super.surfaceCreated(holder);
     }
 
@@ -50,16 +54,16 @@ class Sample2View extends SampleCvViewBase {
             capture.retrieve(mGray, Highgui.CV_CAP_ANDROID_GREY_FRAME);
             Imgproc.Canny(mGray, mIntermediateMat, 80, 100);
             Imgproc.cvtColor(mIntermediateMat, mRgba, Imgproc.COLOR_GRAY2BGRA, 4);
-			break;
+            break;
         }
 
         Bitmap bmp = Bitmap.createBitmap(mRgba.cols(), mRgba.rows(), Bitmap.Config.ARGB_8888);
 
         try {
-        	Utils.matToBitmap(mRgba, bmp);
+            Utils.matToBitmap(mRgba, bmp);
             return bmp;
         } catch(Exception e) {
-        	Log.e("org.opencv.samples.tutorial2", "Utils.matToBitmap() throws an exception: " + e.getMessage());
+            Log.e(TAG, "Utils.matToBitmap() throws an exception: " + e.getMessage());
             bmp.recycle();
             return null;
         }

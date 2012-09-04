@@ -76,7 +76,7 @@ class StaticHelper {
         }
         else
         {
-            // If dependencies list is not defined or empty
+            // If dependencies list is not defined or empty.
             result &= loadLibrary("opencv_java");
         }
 

@@ -46,7 +46,7 @@
 namespace cv { namespace gpu { namespace device
 {
 #define OPENCV_GPU_DECLARE_CVTCOLOR_ONE(name)                                   \
-    void name(const DevMem2Db& src, const DevMem2Db& dst, cudaStream_t stream);
+    void name(const PtrStepSzb& src, const PtrStepSzb& dst, cudaStream_t stream);
 
 #define OPENCV_GPU_DECLARE_CVTCOLOR_ALL(name)       \
     OPENCV_GPU_DECLARE_CVTCOLOR_ONE(name ## _8u)    \

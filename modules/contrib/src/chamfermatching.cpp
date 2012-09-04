@@ -100,8 +100,8 @@ private:
         float max_scale_;
 
     public:
-        SlidingWindowImageRange(int width, int height, int x_step = 3, int y_step = 3, int scales = 5, float min_scale = 0.6, float max_scale = 1.6) :
-        width_(width), height_(height), x_step_(x_step),y_step_(y_step), scales_(scales), min_scale_(min_scale), max_scale_(max_scale)
+        SlidingWindowImageRange(int width, int height, int x_step = 3, int y_step = 3, int _scales = 5, float min_scale = 0.6, float max_scale = 1.6) :
+        width_(width), height_(height), x_step_(x_step),y_step_(y_step), scales_(_scales), min_scale_(min_scale), max_scale_(max_scale)
         {
         }
 
@@ -121,8 +121,8 @@ private:
         LocationImageRange& operator=(const LocationImageRange&);
 
     public:
-        LocationImageRange(const std::vector<Point>& locations, int scales = 5, float min_scale = 0.6, float max_scale = 1.6) :
-        locations_(locations), scales_(scales), min_scale_(min_scale), max_scale_(max_scale)
+        LocationImageRange(const std::vector<Point>& locations, int _scales = 5, float min_scale = 0.6, float max_scale = 1.6) :
+        locations_(locations), scales_(_scales), min_scale_(min_scale), max_scale_(max_scale)
         {
         }
 
@@ -141,10 +141,10 @@ private:
         LocationScaleImageRange(const LocationScaleImageRange&);
         LocationScaleImageRange& operator=(const LocationScaleImageRange&);
     public:
-        LocationScaleImageRange(const std::vector<Point>& locations, const std::vector<float>& scales) :
-        locations_(locations), scales_(scales)
+        LocationScaleImageRange(const std::vector<Point>& locations, const std::vector<float>& _scales) :
+        locations_(locations), scales_(_scales)
         {
-            assert(locations.size()==scales.size());
+            assert(locations.size()==_scales.size());
         }
 
         ImageIterator* iterator() const
@@ -237,7 +237,7 @@ private:
 
         std::vector<Template*> templates;
     public:
-        Matching(bool use_orientation = true, float truncate = 10) : truncate_(truncate), use_orientation_(use_orientation)
+        Matching(bool use_orientation = true, float _truncate = 10) : truncate_(_truncate), use_orientation_(use_orientation)
         {
         }
 
@@ -370,7 +370,7 @@ private:
         LocationImageIterator& operator=(const LocationImageIterator&);
 
     public:
-        LocationImageIterator(const std::vector<Point>& locations, int scales, float min_scale, float max_scale);
+        LocationImageIterator(const std::vector<Point>& locations, int _scales, float min_scale, float max_scale);
 
         bool hasNext() const {
             return has_next_;
@@ -392,10 +392,10 @@ private:
         LocationScaleImageIterator& operator=(const LocationScaleImageIterator&);
 
     public:
-        LocationScaleImageIterator(const std::vector<Point>& locations, const std::vector<float>& scales) :
-        locations_(locations), scales_(scales)
+        LocationScaleImageIterator(const std::vector<Point>& locations, const std::vector<float>& _scales) :
+        locations_(locations), scales_(_scales)
         {
-            assert(locations.size()==scales.size());
+            assert(locations.size()==_scales.size());
             reset();
         }
 
@@ -494,7 +494,7 @@ ChamferMatcher::SlidingWindowImageIterator::SlidingWindowImageIterator( int widt
                                                                         int height,
                                                                         int x_step = 3,
                                                                         int y_step = 3,
-                                                                        int scales = 5,
+                                                                        int _scales = 5,
                                                                         float min_scale = 0.6,
                                                                         float max_scale = 1.6) :
 
@@ -502,7 +502,7 @@ ChamferMatcher::SlidingWindowImageIterator::SlidingWindowImageIterator( int widt
                                                                             height_(height),
                                                                             x_step_(x_step),
                                                                             y_step_(y_step),
-                                                                            scales_(scales),
+                                                                            scales_(_scales),
                                                                             min_scale_(min_scale),
                                                                             max_scale_(max_scale)
 {
@@ -550,11 +550,11 @@ ChamferMatcher::ImageIterator* ChamferMatcher::SlidingWindowImageRange::iterator
 
 
 ChamferMatcher::LocationImageIterator::LocationImageIterator(const std::vector<Point>& locations,
-                                                                int scales = 5,
+                                                                int _scales = 5,
                                                                 float min_scale = 0.6,
                                                                 float max_scale = 1.6) :
                                                                     locations_(locations),
-                                                                    scales_(scales),
+                                                                    scales_(_scales),
                                                                     min_scale_(min_scale),
                                                                     max_scale_(max_scale)
 {
@@ -1138,10 +1138,10 @@ ChamferMatcher::Match* ChamferMatcher::Matching::localChamferDistance(Point offs
 }
 
 
-ChamferMatcher::Matches* ChamferMatcher::Matching::matchTemplates(Mat& dist_img, Mat& orientation_img, const ImageRange& range, float orientation_weight)
+ChamferMatcher::Matches* ChamferMatcher::Matching::matchTemplates(Mat& dist_img, Mat& orientation_img, const ImageRange& range, float _orientation_weight)
 {
 
-    ChamferMatcher::Matches* matches(new Matches());
+    ChamferMatcher::Matches* pmatches(new Matches());
     // try each template
     for(size_t i = 0; i < templates.size(); i++) {
         ImageIterator* it = range.iterator();
@@ -1156,17 +1156,17 @@ ChamferMatcher::Matches* ChamferMatcher::Matching::matchTemplates(Mat& dist_img,
             if (loc.x-tpl->center.x<0 || loc.x+tpl->size.width/2>=dist_img.cols) continue;
             if (loc.y-tpl->center.y<0 || loc.y+tpl->size.height/2>=dist_img.rows) continue;
 
-            ChamferMatcher::Match* is = localChamferDistance(loc, dist_img, orientation_img, tpl, orientation_weight);
+            ChamferMatcher::Match* is = localChamferDistance(loc, dist_img, orientation_img, tpl, _orientation_weight);
             if(is)
             {
-                matches->push_back(*is);
+                pmatches->push_back(*is);
                 delete is;
             }
         }
 
         delete it;
     }
-    return matches;
+    return pmatches;
 }
 
 
@@ -1176,7 +1176,8 @@ ChamferMatcher::Matches* ChamferMatcher::Matching::matchTemplates(Mat& dist_img,
  * @param edge_img Edge image
  * @return a match object
  */
-ChamferMatcher::Matches* ChamferMatcher::Matching::matchEdgeImage(Mat& edge_img, const ImageRange& range, float orientation_weight, int /*max_matches*/, float /*min_match_distance*/)
+ChamferMatcher::Matches* ChamferMatcher::Matching::matchEdgeImage(Mat& edge_img, const ImageRange& range,
+                    float _orientation_weight, int /*max_matches*/, float /*min_match_distance*/)
 {
     CV_Assert(edge_img.channels()==1);
 
@@ -1203,10 +1204,10 @@ ChamferMatcher::Matches* ChamferMatcher::Matching::matchEdgeImage(Mat& edge_img,
 
 
     // Template matching
-    ChamferMatcher::Matches* matches = matchTemplates(    dist_img,
+    ChamferMatcher::Matches* pmatches = matchTemplates(    dist_img,
                                                         orientation_img,
                                                         range,
-                                                        orientation_weight);
+                                                        _orientation_weight);
 
 
     if (use_orientation_) {
@@ -1215,7 +1216,7 @@ ChamferMatcher::Matches* ChamferMatcher::Matching::matchEdgeImage(Mat& edge_img,
     dist_img.release();
     annotated_img.release();
 
-    return matches;
+    return pmatches;
 }
 
 

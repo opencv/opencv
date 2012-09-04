@@ -2,6 +2,7 @@
  * jerror.h
  *
  * Copyright (C) 1994-1997, Thomas G. Lane.
+ * Modified 1997-2009 by Guido Vollbeding.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
@@ -39,15 +40,15 @@ typedef enum {
 JMESSAGE(JMSG_NOMESSAGE, "Bogus message code %d") /* Must be first entry! */
 
 /* For maintenance convenience, list is alphabetical by message code name */
-JMESSAGE(JERR_ARITH_NOTIMPL,
-	 "Sorry, there are legal restrictions on arithmetic coding")
 JMESSAGE(JERR_BAD_ALIGN_TYPE, "ALIGN_TYPE is wrong, please fix")
 JMESSAGE(JERR_BAD_ALLOC_CHUNK, "MAX_ALLOC_CHUNK is wrong, please fix")
 JMESSAGE(JERR_BAD_BUFFER_MODE, "Bogus buffer control mode")
 JMESSAGE(JERR_BAD_COMPONENT_ID, "Invalid component ID %d in SOS")
 JMESSAGE(JERR_BAD_CROP_SPEC, "Invalid crop request")
 JMESSAGE(JERR_BAD_DCT_COEF, "DCT coefficient out of range")
-JMESSAGE(JERR_BAD_DCTSIZE, "IDCT output block size %d not supported")
+JMESSAGE(JERR_BAD_DCTSIZE, "DCT scaled block size %dx%d not supported")
+JMESSAGE(JERR_BAD_DROP_SAMPLING,
+	 "Component index %d: mismatching sampling ratio %d:%d, %d:%d, %c")
 JMESSAGE(JERR_BAD_HUFF_TABLE, "Bogus Huffman table definition")
 JMESSAGE(JERR_BAD_IN_COLORSPACE, "Bogus input colorspace")
 JMESSAGE(JERR_BAD_J_COLORSPACE, "Bogus JPEG colorspace")
@@ -94,6 +95,7 @@ JMESSAGE(JERR_MISSING_DATA, "Scan script does not transmit all data")
 JMESSAGE(JERR_MODE_CHANGE, "Invalid color quantization mode change")
 JMESSAGE(JERR_NOTIMPL, "Not implemented yet")
 JMESSAGE(JERR_NOT_COMPILED, "Requested feature was omitted at compile time")
+JMESSAGE(JERR_NO_ARITH_TABLE, "Arithmetic table 0x%02x was not defined")
 JMESSAGE(JERR_NO_BACKING_STORE, "Backing store not supported")
 JMESSAGE(JERR_NO_HUFF_TABLE, "Huffman table 0x%02x was not defined")
 JMESSAGE(JERR_NO_IMAGE, "JPEG datastream contains no image")
@@ -171,6 +173,7 @@ JMESSAGE(JTRC_UNKNOWN_IDS,
 JMESSAGE(JTRC_XMS_CLOSE, "Freed XMS handle %u")
 JMESSAGE(JTRC_XMS_OPEN, "Obtained XMS handle %u")
 JMESSAGE(JWRN_ADOBE_XFORM, "Unknown Adobe color transform code %d")
+JMESSAGE(JWRN_ARITH_BAD_CODE, "Corrupt JPEG data: bad arithmetic code")
 JMESSAGE(JWRN_BOGUS_PROGRESSION,
 	 "Inconsistent progression sequence for component %d coefficient %d")
 JMESSAGE(JWRN_EXTRANEOUS_DATA,
@@ -227,6 +230,15 @@ JMESSAGE(JWRN_TOO_MUCH_DATA, "Application transferred too many scanlines")
    (cinfo)->err->msg_parm.i[1] = (p2), \
    (cinfo)->err->msg_parm.i[2] = (p3), \
    (cinfo)->err->msg_parm.i[3] = (p4), \
+   (*(cinfo)->err->error_exit) ((j_common_ptr) (cinfo)))
+#define ERREXIT6(cinfo,code,p1,p2,p3,p4,p5,p6)  \
+  ((cinfo)->err->msg_code = (code), \
+   (cinfo)->err->msg_parm.i[0] = (p1), \
+   (cinfo)->err->msg_parm.i[1] = (p2), \
+   (cinfo)->err->msg_parm.i[2] = (p3), \
+   (cinfo)->err->msg_parm.i[3] = (p4), \
+   (cinfo)->err->msg_parm.i[4] = (p5), \
+   (cinfo)->err->msg_parm.i[5] = (p6), \
    (*(cinfo)->err->error_exit) ((j_common_ptr) (cinfo)))
 #define ERREXITS(cinfo,code,str)  \
   ((cinfo)->err->msg_code = (code), \

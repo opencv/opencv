@@ -321,7 +321,7 @@ void jpc_qmfb_split_row(jpc_fix_t *a, int numcols, int parity)
 #if !defined(HAVE_VLA)
 	/* Get a buffer. */
 	if (bufsize > QMFB_SPLITBUFSIZE) {
-		if (!(buf = jas_malloc(bufsize * sizeof(jpc_fix_t)))) {
+		if (!(buf = jas_alloc2(bufsize, sizeof(jpc_fix_t)))) {
 			/* We have no choice but to commit suicide in this case. */
 			abort();
 		}
@@ -389,7 +389,7 @@ void jpc_qmfb_split_col(jpc_fix_t *a, int numrows, int stride,
 #if !defined(HAVE_VLA)
 	/* Get a buffer. */
 	if (bufsize > QMFB_SPLITBUFSIZE) {
-		if (!(buf = jas_malloc(bufsize * sizeof(jpc_fix_t)))) {
+		if (!(buf = jas_alloc2(bufsize, sizeof(jpc_fix_t)))) {
 			/* We have no choice but to commit suicide in this case. */
 			abort();
 		}
@@ -460,7 +460,7 @@ void jpc_qmfb_split_colgrp(jpc_fix_t *a, int numrows, int stride,
 #if !defined(HAVE_VLA)
 	/* Get a buffer. */
 	if (bufsize > QMFB_SPLITBUFSIZE) {
-		if (!(buf = jas_malloc(bufsize * sizeof(jpc_fix_t)))) {
+		if (!(buf = jas_alloc2(bufsize, sizeof(jpc_fix_t)))) {
 			/* We have no choice but to commit suicide in this case. */
 			abort();
 		}
@@ -549,7 +549,7 @@ void jpc_qmfb_split_colres(jpc_fix_t *a, int numrows, int numcols,
 #if !defined(HAVE_VLA)
 	/* Get a buffer. */
 	if (bufsize > QMFB_SPLITBUFSIZE) {
-		if (!(buf = jas_malloc(bufsize * sizeof(jpc_fix_t)))) {
+		if (!(buf = jas_alloc2(bufsize, sizeof(jpc_fix_t)))) {
 			/* We have no choice but to commit suicide in this case. */
 			abort();
 		}
@@ -633,7 +633,7 @@ void jpc_qmfb_join_row(jpc_fix_t *a, int numcols, int parity)
 #if !defined(HAVE_VLA)
 	/* Allocate memory for the join buffer from the heap. */
 	if (bufsize > QMFB_JOINBUFSIZE) {
-		if (!(buf = jas_malloc(bufsize * sizeof(jpc_fix_t)))) {
+		if (!(buf = jas_alloc2(bufsize, sizeof(jpc_fix_t)))) {
 			/* We have no choice but to commit suicide. */
 			abort();
 		}
@@ -698,7 +698,7 @@ void jpc_qmfb_join_col(jpc_fix_t *a, int numrows, int stride,
 #if !defined(HAVE_VLA)
 	/* Allocate memory for the join buffer from the heap. */
 	if (bufsize > QMFB_JOINBUFSIZE) {
-		if (!(buf = jas_malloc(bufsize * sizeof(jpc_fix_t)))) {
+		if (!(buf = jas_alloc2(bufsize, sizeof(jpc_fix_t)))) {
 			/* We have no choice but to commit suicide. */
 			abort();
 		}
@@ -766,7 +766,7 @@ void jpc_qmfb_join_colgrp(jpc_fix_t *a, int numrows, int stride,
 #if !defined(HAVE_VLA)
 	/* Allocate memory for the join buffer from the heap. */
 	if (bufsize > QMFB_JOINBUFSIZE) {
-		if (!(buf = jas_malloc(bufsize * JPC_QMFB_COLGRPSIZE * sizeof(jpc_fix_t)))) {
+		if (!(buf = jas_alloc2(bufsize, JPC_QMFB_COLGRPSIZE * sizeof(jpc_fix_t)))) {
 			/* We have no choice but to commit suicide. */
 			abort();
 		}
@@ -852,7 +852,7 @@ void jpc_qmfb_join_colres(jpc_fix_t *a, int numrows, int numcols,
 #if !defined(HAVE_VLA)
 	/* Allocate memory for the join buffer from the heap. */
 	if (bufsize > QMFB_JOINBUFSIZE) {
-		if (!(buf = jas_malloc(bufsize * numcols * sizeof(jpc_fix_t)))) {
+		if (!(buf = jas_alloc3(bufsize, numcols, sizeof(jpc_fix_t)))) {
 			/* We have no choice but to commit suicide. */
 			abort();
 		}

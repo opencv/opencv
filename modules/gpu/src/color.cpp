@@ -59,9 +59,9 @@ namespace cv { namespace gpu {
     namespace device
     {
         template <int cn>
-        void Bayer2BGR_8u_gpu(DevMem2Db src, DevMem2Db dst, bool blue_last, bool start_with_green, cudaStream_t stream);
+        void Bayer2BGR_8u_gpu(PtrStepSzb src, PtrStepSzb dst, bool blue_last, bool start_with_green, cudaStream_t stream);
         template <int cn>
-        void Bayer2BGR_16u_gpu(DevMem2Db src, DevMem2Db dst, bool blue_last, bool start_with_green, cudaStream_t stream);
+        void Bayer2BGR_16u_gpu(PtrStepSzb src, PtrStepSzb dst, bool blue_last, bool start_with_green, cudaStream_t stream);
     }
 }}
 
@@ -69,7 +69,7 @@ using namespace ::cv::gpu::device;
 
 namespace
 {
-    typedef void (*gpu_func_t)(const DevMem2Db& src, const DevMem2Db& dst, cudaStream_t stream);
+    typedef void (*gpu_func_t)(const PtrStepSzb& src, const PtrStepSzb& dst, cudaStream_t stream);
 
     void bgr_to_rgb(const GpuMat& src, GpuMat& dst, int, Stream& stream)
     {
@@ -1336,7 +1336,7 @@ namespace
 
     void bayer_to_bgr(const GpuMat& src, GpuMat& dst, int dcn, bool blue_last, bool start_with_green, Stream& stream)
     {
-        typedef void (*func_t)(DevMem2Db src, DevMem2Db dst, bool blue_last, bool start_with_green, cudaStream_t stream);
+        typedef void (*func_t)(PtrStepSzb src, PtrStepSzb dst, bool blue_last, bool start_with_green, cudaStream_t stream);
         static const func_t funcs[3][4] =
         {
             {0,0,Bayer2BGR_8u_gpu<3>, Bayer2BGR_8u_gpu<4>},

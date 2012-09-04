@@ -861,7 +861,7 @@ cvCreateData( CvArr* arr )
         if( CV_IS_MAT_CONT( mat->type ))
         {
             total_size = (size_t)mat->dim[0].size*(mat->dim[0].step != 0 ?
-                         mat->dim[0].step : total_size);
+                         (size_t)mat->dim[0].step : total_size);
         }
         else
         {

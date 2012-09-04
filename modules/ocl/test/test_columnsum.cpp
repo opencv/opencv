@@ -60,26 +60,24 @@ PARAM_TEST_CASE(ColumnSum, cv::Size, bool )
     cv::Size size;
     cv::Mat src;
 	bool useRoi;
-	std::vector<cv::ocl::Info> oclinfo;
+	//std::vector<cv::ocl::Info> oclinfo;
 
     virtual void SetUp()
     {
         size = GET_PARAM(0);
 		useRoi = GET_PARAM(1);
-        int devnums = getDevice(oclinfo, OPENCV_DEFAULT_OPENCL_DEVICE);
-        CV_Assert(devnums > 0);
+        //int devnums = getDevice(oclinfo, OPENCV_DEFAULT_OPENCL_DEVICE);
+        //CV_Assert(devnums > 0);
     }
 };
 
 TEST_P(ColumnSum, Accuracy)
 {
     cv::Mat src = randomMat(size, CV_32FC1);
-	//cv::Mat src(size,CV_32FC1);
+	cv::ocl::oclMat d_dst;
+	cv::ocl::oclMat d_src(src);	
 
-	//cv::ocl::oclMat d_dst = ::createMat(size,src.type(),useRoi);
-	cv::ocl::oclMat d_dst = loadMat(src,useRoi);
-
-    cv::ocl::columnSum(loadMat(src,useRoi),d_dst);
+    cv::ocl::columnSum(d_src,d_dst);
 
     cv::Mat dst(d_dst);
 

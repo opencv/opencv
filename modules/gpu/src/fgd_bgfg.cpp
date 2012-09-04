@@ -336,7 +336,7 @@ namespace
 {
     void calcDiffHistogram(const cv::gpu::GpuMat& prevFrame, const cv::gpu::GpuMat& curFrame, cv::gpu::GpuMat& hist, cv::gpu::GpuMat& histBuf)
     {
-        typedef void (*func_t)(cv::gpu::DevMem2Db prevFrame, cv::gpu::DevMem2Db curFrame, unsigned int* hist0, unsigned int* hist1, unsigned int* hist2, unsigned int* partialBuf0, unsigned int* partialBuf1, unsigned int* partialBuf2, int cc, cudaStream_t stream);
+        typedef void (*func_t)(cv::gpu::PtrStepSzb prevFrame, cv::gpu::PtrStepSzb curFrame, unsigned int* hist0, unsigned int* hist1, unsigned int* hist2, unsigned int* partialBuf0, unsigned int* partialBuf1, unsigned int* partialBuf2, int cc, cudaStream_t stream);
         static const func_t funcs[4][4] =
         {
             {0,0,0,0},
@@ -401,7 +401,7 @@ namespace
 
     void calcDiffThreshMask(const cv::gpu::GpuMat& prevFrame, const cv::gpu::GpuMat& curFrame, cv::Vec3d bestThres, cv::gpu::GpuMat& changeMask)
     {
-        typedef void (*func_t)(cv::gpu::DevMem2Db prevFrame, cv::gpu::DevMem2Db curFrame, uchar3 bestThres, cv::gpu::DevMem2Db changeMask, cudaStream_t stream);
+        typedef void (*func_t)(cv::gpu::PtrStepSzb prevFrame, cv::gpu::PtrStepSzb curFrame, uchar3 bestThres, cv::gpu::PtrStepSzb changeMask, cudaStream_t stream);
         static const func_t funcs[4][4] =
         {
             {0,0,0,0},
@@ -412,7 +412,7 @@ namespace
 
         changeMask.setTo(cv::Scalar::all(0));
 
-        funcs[prevFrame.channels() - 1][curFrame.channels() - 1](prevFrame, curFrame, make_uchar3(bestThres[0], bestThres[1], bestThres[2]), changeMask, 0);
+        funcs[prevFrame.channels() - 1][curFrame.channels() - 1](prevFrame, curFrame, make_uchar3((uchar)bestThres[0], (uchar)bestThres[1], (uchar)bestThres[2]), changeMask, 0);
     }
 
     // performs change detection for Foreground detection algorithm
@@ -450,7 +450,7 @@ namespace
                            cv::gpu::GpuMat& foreground, cv::gpu::GpuMat& countBuf,
                            const cv::gpu::FGDStatModel::Params& params, int out_cn)
     {
-        typedef void (*func_t)(cv::gpu::DevMem2Db prevFrame, cv::gpu::DevMem2Db curFrame, cv::gpu::DevMem2Db Ftd, cv::gpu::DevMem2Db Fbd, cv::gpu::DevMem2Db foreground,
+        typedef void (*func_t)(cv::gpu::PtrStepSzb prevFrame, cv::gpu::PtrStepSzb curFrame, cv::gpu::PtrStepSzb Ftd, cv::gpu::PtrStepSzb Fbd, cv::gpu::PtrStepSzb foreground,
                                int deltaC, int deltaCC, float alpha2, int N1c, int N1cc, cudaStream_t stream);
         static const func_t funcs[4][4][4] =
         {
@@ -602,8 +602,8 @@ namespace
                                const cv::gpu::GpuMat& foreground, cv::gpu::GpuMat& background,
                                const cv::gpu::FGDStatModel::Params& params)
     {
-        typedef void (*func_t)(cv::gpu::DevMem2Db prevFrame, cv::gpu::DevMem2Db curFrame, cv::gpu::DevMem2Db Ftd, cv::gpu::DevMem2Db Fbd,
-                               cv::gpu::DevMem2Db foreground, cv::gpu::DevMem2Db background,
+        typedef void (*func_t)(cv::gpu::PtrStepSzb prevFrame, cv::gpu::PtrStepSzb curFrame, cv::gpu::PtrStepSzb Ftd, cv::gpu::PtrStepSzb Fbd,
+                               cv::gpu::PtrStepSzb foreground, cv::gpu::PtrStepSzb background,
                                int deltaC, int deltaCC, float alpha1, float alpha2, float alpha3, int N1c, int N1cc, int N2c, int N2cc, float T, cudaStream_t stream);
         static const func_t funcs[4][4][4] =
         {

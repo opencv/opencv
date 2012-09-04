@@ -769,6 +769,14 @@ CV_EXPORTS void pyrUp(const GpuMat& src, GpuMat& dst, Stream& stream = Stream::N
 CV_EXPORTS void blendLinear(const GpuMat& img1, const GpuMat& img2, const GpuMat& weights1, const GpuMat& weights2,
                             GpuMat& result, Stream& stream = Stream::Null());
 
+//! Performa bilateral filtering of passsed image
+CV_EXPORTS void bilateralFilter(const GpuMat& src, GpuMat& dst, int kernel_size, float sigma_color, float sigma_spatial, 
+                                int borderMode = BORDER_DEFAULT, Stream& stream = Stream::Null());
+
+//! Brute force non-local means algorith (slow but universal)
+CV_EXPORTS void nonLocalMeans(const GpuMat& src, GpuMat& dst, float h, 
+                              int search_widow_size = 11, int block_size = 7, int borderMode = BORDER_DEFAULT, Stream& s = Stream::Null());
+
 
 struct CV_EXPORTS CannyBuf;
 
@@ -820,11 +828,31 @@ private:
     int nLayers_;
 };
 
+//! HoughLines
+
+struct HoughLinesBuf
+{
+    GpuMat accum;
+    GpuMat list;
+};
+
 CV_EXPORTS void HoughLines(const GpuMat& src, GpuMat& lines, float rho, float theta, int threshold, bool doSort = false, int maxLines = 4096);
-CV_EXPORTS void HoughLines(const GpuMat& src, GpuMat& lines, GpuMat& accum, GpuMat& buf, float rho, float theta, int threshold, bool doSort = false, int maxLines = 4096);
-CV_EXPORTS void HoughLinesTransform(const GpuMat& src, GpuMat& accum, GpuMat& buf, float rho, float theta);
-CV_EXPORTS void HoughLinesGet(const GpuMat& accum, GpuMat& lines, float rho, float theta, int threshold, bool doSort = false, int maxLines = 4096);
+CV_EXPORTS void HoughLines(const GpuMat& src, GpuMat& lines, HoughLinesBuf& buf, float rho, float theta, int threshold, bool doSort = false, int maxLines = 4096);
 CV_EXPORTS void HoughLinesDownload(const GpuMat& d_lines, OutputArray h_lines, OutputArray h_votes = noArray());
+
+//! HoughCircles
+
+struct HoughCirclesBuf
+{
+    GpuMat edges;
+    GpuMat accum;
+    GpuMat list;
+    CannyBuf cannyBuf;
+};
+
+CV_EXPORTS void HoughCircles(const GpuMat& src, GpuMat& circles, int method, float dp, float minDist, int cannyThreshold, int votesThreshold, int minRadius, int maxRadius, int maxCircles = 4096);
+CV_EXPORTS void HoughCircles(const GpuMat& src, GpuMat& circles, HoughCirclesBuf& buf, int method, float dp, float minDist, int cannyThreshold, int votesThreshold, int minRadius, int maxRadius, int maxCircles = 4096);
+CV_EXPORTS void HoughCirclesDownload(const GpuMat& d_circles, OutputArray h_circles);
 
 ////////////////////////////// Matrix reductions //////////////////////////////
 

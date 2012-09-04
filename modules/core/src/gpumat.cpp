@@ -761,15 +761,15 @@ namespace
 
 namespace cv { namespace gpu { namespace device
 {
-    void copyToWithMask_gpu(DevMem2Db src, DevMem2Db dst, size_t elemSize1, int cn, DevMem2Db mask, bool colorMask, cudaStream_t stream);
+    void copyToWithMask_gpu(PtrStepSzb src, PtrStepSzb dst, size_t elemSize1, int cn, PtrStepSzb mask, bool colorMask, cudaStream_t stream);
 
     template <typename T>
-    void set_to_gpu(DevMem2Db mat, const T* scalar, int channels, cudaStream_t stream);
+    void set_to_gpu(PtrStepSzb mat, const T* scalar, int channels, cudaStream_t stream);
 
     template <typename T>
-    void set_to_gpu(DevMem2Db mat, const T* scalar, DevMem2Db mask, int channels, cudaStream_t stream);
+    void set_to_gpu(PtrStepSzb mat, const T* scalar, PtrStepSzb mask, int channels, cudaStream_t stream);
 
-    void convert_gpu(DevMem2Db src, int sdepth, DevMem2Db dst, int ddepth, double alpha, double beta, cudaStream_t stream);
+    void convert_gpu(PtrStepSzb src, int sdepth, PtrStepSzb dst, int ddepth, double alpha, double beta, cudaStream_t stream);
 }}}
 
 namespace
@@ -787,9 +787,22 @@ namespace
     }
 }
 
+
 namespace cv { namespace gpu
 {
-    CV_EXPORTS void copyWithMask(const GpuMat& src, GpuMat& dst, const GpuMat& mask, cudaStream_t stream = 0)
+    CV_EXPORTS void copyWithMask(const cv::gpu::GpuMat&, cv::gpu::GpuMat&, const cv::gpu::GpuMat&, CUstream_st*);
+    CV_EXPORTS void convertTo(const cv::gpu::GpuMat&, cv::gpu::GpuMat&);
+    CV_EXPORTS void convertTo(const cv::gpu::GpuMat&, cv::gpu::GpuMat&, double, double, CUstream_st*);
+    CV_EXPORTS void setTo(cv::gpu::GpuMat&, cv::Scalar, CUstream_st*);
+    CV_EXPORTS void setTo(cv::gpu::GpuMat&, cv::Scalar, const cv::gpu::GpuMat&, CUstream_st*);
+    CV_EXPORTS void setTo(cv::gpu::GpuMat&, cv::Scalar);
+    CV_EXPORTS void setTo(cv::gpu::GpuMat&, cv::Scalar, const cv::gpu::GpuMat&);
+}}
+
+
+namespace cv { namespace gpu
+{
+    void copyWithMask(const GpuMat& src, GpuMat& dst, const GpuMat& mask, cudaStream_t stream = 0)
     {
         CV_Assert(src.size() == dst.size() && src.type() == dst.type());
         CV_Assert(src.size() == mask.size() && mask.depth() == CV_8U && (mask.channels() == 1 || mask.channels() == src.channels()));
@@ -797,17 +810,17 @@ namespace cv { namespace gpu
         cv::gpu::device::copyToWithMask_gpu(src.reshape(1), dst.reshape(1), src.elemSize1(), src.channels(), mask.reshape(1), mask.channels() != 1, stream);
     }
 
-    CV_EXPORTS void convertTo(const GpuMat& src, GpuMat& dst)
+    void convertTo(const GpuMat& src, GpuMat& dst)
     {
         cv::gpu::device::convert_gpu(src.reshape(1), src.depth(), dst.reshape(1), dst.depth(), 1.0, 0.0, 0);
     }
 
-    CV_EXPORTS void convertTo(const GpuMat& src, GpuMat& dst, double alpha, double beta, cudaStream_t stream = 0)
+    void convertTo(const GpuMat& src, GpuMat& dst, double alpha, double beta, cudaStream_t stream = 0)
     {
         cv::gpu::device::convert_gpu(src.reshape(1), src.depth(), dst.reshape(1), dst.depth(), alpha, beta, stream);
     }
 
-    CV_EXPORTS void setTo(GpuMat& src, Scalar s, cudaStream_t stream)
+    void setTo(GpuMat& src, Scalar s, cudaStream_t stream)
     {
         typedef void (*caller_t)(GpuMat& src, Scalar s, cudaStream_t stream);
 
@@ -820,7 +833,7 @@ namespace cv { namespace gpu
         callers[src.depth()](src, s, stream);
     }
 
-    CV_EXPORTS void setTo(GpuMat& src, Scalar s, const GpuMat& mask, cudaStream_t stream)
+    void setTo(GpuMat& src, Scalar s, const GpuMat& mask, cudaStream_t stream)
     {
         typedef void (*caller_t)(GpuMat& src, Scalar s, const GpuMat& mask, cudaStream_t stream);
 
@@ -833,12 +846,12 @@ namespace cv { namespace gpu
         callers[src.depth()](src, s, mask, stream);
     }
 
-    CV_EXPORTS void setTo(GpuMat& src, Scalar s)
+    void setTo(GpuMat& src, Scalar s)
     {
         setTo(src, s, 0);
     }
 
-    CV_EXPORTS void setTo(GpuMat& src, Scalar s, const GpuMat& mask)
+    void setTo(GpuMat& src, Scalar s, const GpuMat& mask)
     {
         setTo(src, s, mask, 0);
     }
@@ -1199,10 +1212,6 @@ namespace
 
         void setTo(GpuMat& m, Scalar s, const GpuMat& mask) const
         {
-            NppiSize sz;
-            sz.width  = m.cols;
-            sz.height = m.rows;
-
             if (mask.empty())
             {
                 if (s[0] == 0.0 && s[1] == 0.0 && s[2] == 0.0 && s[3] == 0.0)

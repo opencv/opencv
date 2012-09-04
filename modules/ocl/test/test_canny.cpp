@@ -45,11 +45,7 @@
 
 #include "precomp.hpp"
 
-#ifdef WIN32
-#define FILTER_IMAGE "C:/Users/Public/Pictures/Sample Pictures/Penguins.jpg"
-#else
-#define FILTER_IMAGE "/Users/Test/Valve_original.PNG" // user need to specify a valid image path
-#endif
+#define FILTER_IMAGE "../../../samples/gpu/road.png"
 #define SHOW_RESULT 0
 
 ////////////////////////////////////////////////////////
@@ -64,13 +60,13 @@ PARAM_TEST_CASE(Canny, AppertureSize, L2gradient)
     bool useL2gradient;
 
     cv::Mat edges_gold;
-	std::vector<cv::ocl::Info> oclinfo;
+	//std::vector<cv::ocl::Info> oclinfo;
     virtual void SetUp()
     {
         apperture_size = GET_PARAM(0);
         useL2gradient = GET_PARAM(1);
-		int devnums = getDevice(oclinfo);
-		CV_Assert(devnums > 0);
+		//int devnums = getDevice(oclinfo);
+		//CV_Assert(devnums > 0);
     }
 };
 

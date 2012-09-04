@@ -5,24 +5,24 @@ Data Structures
 
 
 
-gpu::DevMem2D\_
+gpu::PtrStepSz
 ---------------
-.. ocv:class:: gpu::DevMem2D\_
+.. ocv:class:: gpu::PtrStepSz
 
 Lightweight class encapsulating pitched memory on a GPU and passed to nvcc-compiled code (CUDA kernels). Typically, it is used internally by OpenCV and by users who write device code. You can call its members from both host and device code. ::
 
-    template <typename T> struct DevMem2D_
+    template <typename T> struct PtrStepSz
     {
         int cols;
         int rows;
         T* data;
         size_t step;
 
-        DevMem2D_() : cols(0), rows(0), data(0), step(0){};
-        DevMem2D_(int rows, int cols, T *data, size_t step);
+        PtrStepSz() : cols(0), rows(0), data(0), step(0){};
+        PtrStepSz(int rows, int cols, T *data, size_t step);
 
         template <typename U>
-        explicit DevMem2D_(const DevMem2D_<U>& d);
+        explicit PtrStepSz(const PtrStepSz<U>& d);
 
         typedef T elem_type;
         enum { elem_size = sizeof(elem_type) };
@@ -34,25 +34,25 @@ Lightweight class encapsulating pitched memory on a GPU and passed to nvcc-compi
         __CV_GPU_HOST_DEVICE__ const T* ptr(int y = 0) const;
     };
 
-    typedef DevMem2D_<unsigned char> DevMem2D;
-    typedef DevMem2D_<float> DevMem2Df;
-    typedef DevMem2D_<int> DevMem2Di;
+    typedef PtrStepSz<unsigned char> PtrStepSzb;
+    typedef PtrStepSz<float> PtrStepSzf;
+    typedef PtrStepSz<int> PtrStepSzi;
 
 
 
-gpu::PtrStep\_
+gpu::PtrStep
 --------------
-.. ocv:class:: gpu::PtrStep\_
+.. ocv:class:: gpu::PtrStep
 
-Structure similar to :ocv:class:`gpu::DevMem2D_` but containing only a pointer and row step. Width and height fields are excluded due to performance reasons. The structure is intended for internal use or for users who write device code. ::
+Structure similar to :ocv:class:`gpu::PtrStepSz` but containing only a pointer and row step. Width and height fields are excluded due to performance reasons. The structure is intended for internal use or for users who write device code. ::
 
-    template<typename T> struct PtrStep_
+    template<typename T> struct PtrStep
     {
             T* data;
             size_t step;
 
-            PtrStep_();
-            PtrStep_(const DevMem2D_<T>& mem);
+            PtrStep();
+            PtrStep(const PtrStepSz<T>& mem);
 
             typedef T elem_type;
             enum { elem_size = sizeof(elem_type) };
@@ -62,25 +62,9 @@ Structure similar to :ocv:class:`gpu::DevMem2D_` but containing only a pointer a
             __CV_GPU_HOST_DEVICE__ const T* ptr(int y = 0) const;
     };
 
-    typedef PtrStep_<unsigned char> PtrStep;
-    typedef PtrStep_<float> PtrStepf;
-    typedef PtrStep_<int> PtrStepi;
-
-
-
-gpu::PtrElemStep\_
-------------------
-.. ocv:class:: gpu::PtrElemStep\_
-
-Structure similar to :ocv:class:`gpu::DevMem2D_` but containing only a pointer and a row step in elements. Width and height fields are excluded due to performance reasons. This class can only be constructed if ``sizeof(T)`` is a multiple of 256. The structure is intended for internal use or for users who write device code. ::
-
-    template<typename T> struct PtrElemStep_ : public PtrStep_<T>
-    {
-            PtrElemStep_(const DevMem2D_<T>& mem);
-            __CV_GPU_HOST_DEVICE__ T* ptr(int y = 0);
-            __CV_GPU_HOST_DEVICE__ const T* ptr(int y = 0) const;
-    };
-
+    typedef PtrStep<unsigned char> PtrStep;
+    typedef PtrStep<float> PtrStepf;
+    typedef PtrStep<int> PtrStepi;
 
 
 gpu::GpuMat
@@ -93,7 +77,7 @@ Base storage class for GPU memory with reference counting. Its interface matches
 * no functions that return references to their data (because references on GPU are not valid for CPU)
 * no expression templates technique support
 
-Beware that the latter limitation may lead to overloaded matrix operators that cause memory allocations. The ``GpuMat`` class is convertible to :ocv:class:`gpu::DevMem2D_` and :ocv:class:`gpu::PtrStep_` so it can be passed directly to the kernel.
+Beware that the latter limitation may lead to overloaded matrix operators that cause memory allocations. The ``GpuMat`` class is convertible to :ocv:class:`gpu::PtrStepSz` and :ocv:class:`gpu::PtrStep` so it can be passed directly to the kernel.
 
 .. note:: In contrast with :ocv:class:`Mat`, in most cases ``GpuMat::isContinuous() == false`` . This means that rows are aligned to a size depending on the hardware. Single-row ``GpuMat`` is always a continuous matrix.
 
@@ -113,10 +97,10 @@ Beware that the latter limitation may lead to overloaded matrix operators that c
             //! builds GpuMat from Mat. Blocks uploading to device.
             explicit GpuMat (const Mat& m);
 
-            //! returns lightweight DevMem2D_ structure for passing
+            //! returns lightweight PtrStepSz structure for passing
             //to nvcc-compiled code. Contains size, data ptr and step.
-            template <class T> operator DevMem2D_<T>() const;
-            template <class T> operator PtrStep_<T>() const;
+            template <class T> operator PtrStepSz<T>() const;
+            template <class T> operator PtrStep<T>() const;
 
             //! blocks uploading data to GpuMat.
             void upload(const cv::Mat& m);

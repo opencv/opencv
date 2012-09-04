@@ -143,7 +143,7 @@ public:
     }
 
     unsigned int process(const GpuMat& image, GpuMat& objectsBuf, float scaleFactor, int minNeighbors,
-                      bool findLargestObject, bool visualizeInPlace, cv::Size minSize, cv::Size maxObjectSize)
+                      bool findLargestObject, bool visualizeInPlace, cv::Size minSize, cv::Size /*maxObjectSize*/)
     {
         CV_Assert( scaleFactor > 1 && image.depth() == CV_8U);
 
@@ -155,7 +155,7 @@ public:
 
         cv::Size ncvMinSize = this->getClassifierCvSize();
 
-        if (ncvMinSize.width < (unsigned)minSize.width && ncvMinSize.height < (unsigned)minSize.height)
+        if (ncvMinSize.width < minSize.width && ncvMinSize.height < minSize.height)
         {
             ncvMinSize.width = minSize.width;
             ncvMinSize.height = minSize.height;
@@ -352,18 +352,18 @@ namespace cv { namespace gpu { namespace device
                              float initalScale,
                              float factor,
                              int total,
-                             const DevMem2Db& mstages,
+                             const PtrStepSzb& mstages,
                              const int nstages,
-                             const DevMem2Di& mnodes,
-                             const DevMem2Df& mleaves,
-                             const DevMem2Di& msubsets,
-                             const DevMem2Db& mfeatures,
+                             const PtrStepSzi& mnodes,
+                             const PtrStepSzf& mleaves,
+                             const PtrStepSzi& msubsets,
+                             const PtrStepSzb& mfeatures,
                              const int subsetSize,
-                             DevMem2D_<int4> objects,
+                             PtrStepSz<int4> objects,
                              unsigned int* classified,
-                             DevMem2Di integral);
+                             PtrStepSzi integral);
 
-        void connectedConmonents(DevMem2D_<int4>  candidates, int ncandidates, DevMem2D_<int4> objects,int groupThreshold, float grouping_eps, unsigned int* nclasses);
+        void connectedConmonents(PtrStepSz<int4>  candidates, int ncandidates, PtrStepSz<int4> objects,int groupThreshold, float grouping_eps, unsigned int* nclasses);
     }
 }}}
 
@@ -380,12 +380,12 @@ public:
     LbpCascade(){}
     virtual ~LbpCascade(){}
 
-    virtual unsigned int process(const GpuMat& image, GpuMat& objects, float scaleFactor, int groupThreshold, bool findLargestObject,
-        bool visualizeInPlace, cv::Size minObjectSize, cv::Size maxObjectSize)
+    virtual unsigned int process(const GpuMat& image, GpuMat& objects, float scaleFactor, int groupThreshold, bool /*findLargestObject*/,
+        bool /*visualizeInPlace*/, cv::Size minObjectSize, cv::Size maxObjectSize)
     {
         CV_Assert(scaleFactor > 1 && image.depth() == CV_8U);
 
-        const int defaultObjSearchNum = 100;
+        // const int defaultObjSearchNum = 100;
         const float grouping_eps = 0.2f;
 
         if( !objects.empty() && objects.depth() == CV_32S)

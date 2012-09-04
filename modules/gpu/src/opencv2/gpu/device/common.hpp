@@ -44,7 +44,7 @@
 #define __OPENCV_GPU_COMMON_HPP__
 
 #include <cuda_runtime.h>
-#include "opencv2/core/devmem2d.hpp"
+#include "opencv2/core/cuda_devptrs.hpp"
 
 #ifndef CV_PI
     #define CV_PI   3.1415926535897932384626433832795
@@ -101,7 +101,7 @@ namespace cv { namespace gpu
         typedef signed char schar;
         typedef unsigned int uint;
 
-        template<class T> inline void bindTexture(const textureReference* tex, const DevMem2D_<T>& img)
+        template<class T> inline void bindTexture(const textureReference* tex, const PtrStepSz<T>& img)
         {
             cudaChannelFormatDesc desc = cudaCreateChannelDesc<T>();
             cudaSafeCall( cudaBindTexture2D(0, tex, img.ptr(), &desc, img.cols, img.rows, img.step) );

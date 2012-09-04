@@ -53,13 +53,13 @@ PARAM_TEST_CASE(Gemm, int, cv::Size, int)
 	int      type;
 	cv::Size mat_size;
 	int		 flags;
-	vector<cv::ocl::Info> info;
+	//vector<cv::ocl::Info> info;
     virtual void SetUp()
     {
 		type     = GET_PARAM(0);
 		mat_size = GET_PARAM(1);
 		flags    = GET_PARAM(2);
-		cv::ocl::getDevice(info);
+		//cv::ocl::getDevice(info);
     }
 };
 

@@ -175,7 +175,7 @@ namespace cv { namespace gpu { namespace device
 
 
             template <int nthreads, typename T, typename Mask>
-            __global__ void minMaxKernel(const DevMem2Db src, Mask mask, T* minval, T* maxval)
+            __global__ void minMaxKernel(const PtrStepSzb src, Mask mask, T* minval, T* maxval)
             {
                 typedef typename MinMaxTypeTraits<T>::best_type best_type;
                 __shared__ best_type sminval[nthreads];
@@ -215,7 +215,7 @@ namespace cv { namespace gpu { namespace device
                     maxval[blockIdx.y * gridDim.x + blockIdx.x] = (T)smaxval[0];
                 }
 
-            #if __CUDA_ARCH__ >= 110
+            #if defined (__CUDA_ARCH__) && (__CUDA_ARCH__ >= 110)
 		        __shared__ bool is_last;
 
 		        if (tid == 0)
@@ -258,7 +258,7 @@ namespace cv { namespace gpu { namespace device
 
 
             template <typename T>
-            void minMaxMaskCaller(const DevMem2Db src, const PtrStepb mask, double* minval, double* maxval, PtrStepb buf)
+            void minMaxMaskCaller(const PtrStepSzb src, const PtrStepb mask, double* minval, double* maxval, PtrStepb buf)
             {
                 dim3 threads, grid;
                 estimateThreadCfg(src.cols, src.rows, threads, grid);
@@ -279,17 +279,17 @@ namespace cv { namespace gpu { namespace device
                 *maxval = maxval_;
             }
 
-            template void minMaxMaskCaller<uchar>(const DevMem2Db, const PtrStepb, double*, double*, PtrStepb);
-            template void minMaxMaskCaller<char>(const DevMem2Db, const PtrStepb, double*, double*, PtrStepb);
-            template void minMaxMaskCaller<ushort>(const DevMem2Db, const PtrStepb, double*, double*, PtrStepb);
-            template void minMaxMaskCaller<short>(const DevMem2Db, const PtrStepb, double*, double*, PtrStepb);
-            template void minMaxMaskCaller<int>(const DevMem2Db, const PtrStepb, double*, double*, PtrStepb);
-            template void minMaxMaskCaller<float>(const DevMem2Db, const PtrStepb, double*, double*, PtrStepb);
-            template void minMaxMaskCaller<double>(const DevMem2Db, const PtrStepb, double*, double*, PtrStepb);
+            template void minMaxMaskCaller<uchar>(const PtrStepSzb, const PtrStepb, double*, double*, PtrStepb);
+            template void minMaxMaskCaller<char>(const PtrStepSzb, const PtrStepb, double*, double*, PtrStepb);
+            template void minMaxMaskCaller<ushort>(const PtrStepSzb, const PtrStepb, double*, double*, PtrStepb);
+            template void minMaxMaskCaller<short>(const PtrStepSzb, const PtrStepb, double*, double*, PtrStepb);
+            template void minMaxMaskCaller<int>(const PtrStepSzb, const PtrStepb, double*, double*, PtrStepb);
+            template void minMaxMaskCaller<float>(const PtrStepSzb, const PtrStepb, double*, double*, PtrStepb);
+            template void minMaxMaskCaller<double>(const PtrStepSzb, const PtrStepb, double*, double*, PtrStepb);
 
 
             template <typename T>
-            void minMaxCaller(const DevMem2Db src, double* minval, double* maxval, PtrStepb buf)
+            void minMaxCaller(const PtrStepSzb src, double* minval, double* maxval, PtrStepb buf)
             {
                 dim3 threads, grid;
                 estimateThreadCfg(src.cols, src.rows, threads, grid);
@@ -310,13 +310,13 @@ namespace cv { namespace gpu { namespace device
                 *maxval = maxval_;
             }
 
-            template void minMaxCaller<uchar>(const DevMem2Db, double*, double*, PtrStepb);
-            template void minMaxCaller<char>(const DevMem2Db, double*, double*, PtrStepb);
-            template void minMaxCaller<ushort>(const DevMem2Db, double*, double*, PtrStepb);
-            template void minMaxCaller<short>(const DevMem2Db, double*, double*, PtrStepb);
-            template void minMaxCaller<int>(const DevMem2Db, double*, double*, PtrStepb);
-            template void minMaxCaller<float>(const DevMem2Db, double*,double*, PtrStepb);
-            template void minMaxCaller<double>(const DevMem2Db, double*, double*, PtrStepb);
+            template void minMaxCaller<uchar>(const PtrStepSzb, double*, double*, PtrStepb);
+            template void minMaxCaller<char>(const PtrStepSzb, double*, double*, PtrStepb);
+            template void minMaxCaller<ushort>(const PtrStepSzb, double*, double*, PtrStepb);
+            template void minMaxCaller<short>(const PtrStepSzb, double*, double*, PtrStepb);
+            template void minMaxCaller<int>(const PtrStepSzb, double*, double*, PtrStepb);
+            template void minMaxCaller<float>(const PtrStepSzb, double*,double*, PtrStepb);
+            template void minMaxCaller<double>(const PtrStepSzb, double*, double*, PtrStepb);
 
 
             template <int nthreads, typename T>
@@ -344,7 +344,7 @@ namespace cv { namespace gpu { namespace device
 
 
             template <typename T>
-            void minMaxMaskMultipassCaller(const DevMem2Db src, const PtrStepb mask, double* minval, double* maxval, PtrStepb buf)
+            void minMaxMaskMultipassCaller(const PtrStepSzb src, const PtrStepb mask, double* minval, double* maxval, PtrStepb buf)
             {
                 dim3 threads, grid;
                 estimateThreadCfg(src.cols, src.rows, threads, grid);
@@ -367,16 +367,16 @@ namespace cv { namespace gpu { namespace device
                 *maxval = maxval_;
             }
 
-            template void minMaxMaskMultipassCaller<uchar>(const DevMem2Db, const PtrStepb, double*, double*, PtrStepb);
-            template void minMaxMaskMultipassCaller<char>(const DevMem2Db, const PtrStepb, double*, double*, PtrStepb);
-            template void minMaxMaskMultipassCaller<ushort>(const DevMem2Db, const PtrStepb, double*, double*, PtrStepb);
-            template void minMaxMaskMultipassCaller<short>(const DevMem2Db, const PtrStepb, double*, double*, PtrStepb);
-            template void minMaxMaskMultipassCaller<int>(const DevMem2Db, const PtrStepb, double*, double*, PtrStepb);
-            template void minMaxMaskMultipassCaller<float>(const DevMem2Db, const PtrStepb, double*, double*, PtrStepb);
+            template void minMaxMaskMultipassCaller<uchar>(const PtrStepSzb, const PtrStepb, double*, double*, PtrStepb);
+            template void minMaxMaskMultipassCaller<char>(const PtrStepSzb, const PtrStepb, double*, double*, PtrStepb);
+            template void minMaxMaskMultipassCaller<ushort>(const PtrStepSzb, const PtrStepb, double*, double*, PtrStepb);
+            template void minMaxMaskMultipassCaller<short>(const PtrStepSzb, const PtrStepb, double*, double*, PtrStepb);
+            template void minMaxMaskMultipassCaller<int>(const PtrStepSzb, const PtrStepb, double*, double*, PtrStepb);
+            template void minMaxMaskMultipassCaller<float>(const PtrStepSzb, const PtrStepb, double*, double*, PtrStepb);
 
 
             template <typename T>
-            void minMaxMultipassCaller(const DevMem2Db src, double* minval, double* maxval, PtrStepb buf)
+            void minMaxMultipassCaller(const PtrStepSzb src, double* minval, double* maxval, PtrStepb buf)
             {
                 dim3 threads, grid;
                 estimateThreadCfg(src.cols, src.rows, threads, grid);
@@ -399,12 +399,12 @@ namespace cv { namespace gpu { namespace device
                 *maxval = maxval_;
             }
 
-            template void minMaxMultipassCaller<uchar>(const DevMem2Db, double*, double*, PtrStepb);
-            template void minMaxMultipassCaller<char>(const DevMem2Db, double*, double*, PtrStepb);
-            template void minMaxMultipassCaller<ushort>(const DevMem2Db, double*, double*, PtrStepb);
-            template void minMaxMultipassCaller<short>(const DevMem2Db, double*, double*, PtrStepb);
-            template void minMaxMultipassCaller<int>(const DevMem2Db, double*, double*, PtrStepb);
-            template void minMaxMultipassCaller<float>(const DevMem2Db, double*, double*, PtrStepb);
+            template void minMaxMultipassCaller<uchar>(const PtrStepSzb, double*, double*, PtrStepb);
+            template void minMaxMultipassCaller<char>(const PtrStepSzb, double*, double*, PtrStepb);
+            template void minMaxMultipassCaller<ushort>(const PtrStepSzb, double*, double*, PtrStepb);
+            template void minMaxMultipassCaller<short>(const PtrStepSzb, double*, double*, PtrStepb);
+            template void minMaxMultipassCaller<int>(const PtrStepSzb, double*, double*, PtrStepb);
+            template void minMaxMultipassCaller<float>(const PtrStepSzb, double*, double*, PtrStepb);
         } // namespace minmax
 
         ///////////////////////////////////////////////////////////////////////////////
@@ -493,7 +493,7 @@ namespace cv { namespace gpu { namespace device
 
 
             template <int nthreads, typename T, typename Mask>
-            __global__ void minMaxLocKernel(const DevMem2Db src, Mask mask, T* minval, T* maxval,
+            __global__ void minMaxLocKernel(const PtrStepSzb src, Mask mask, T* minval, T* maxval,
                                             uint* minloc, uint* maxloc)
             {
                 typedef typename MinMaxTypeTraits<T>::best_type best_type;
@@ -535,7 +535,7 @@ namespace cv { namespace gpu { namespace device
 
                 findMinMaxLocInSmem<nthreads, best_type>(sminval, smaxval, sminloc, smaxloc, tid);
 
-            #if __CUDA_ARCH__ >= 110
+            #if defined (__CUDA_ARCH__) && (__CUDA_ARCH__ >= 110)
 		        __shared__ bool is_last;
 
 		        if (tid == 0)
@@ -586,7 +586,7 @@ namespace cv { namespace gpu { namespace device
 
 
             template <typename T>
-            void minMaxLocMaskCaller(const DevMem2Db src, const PtrStepb mask, double* minval, double* maxval,
+            void minMaxLocMaskCaller(const PtrStepSzb src, const PtrStepb mask, double* minval, double* maxval,
                                      int minloc[2], int maxloc[2], PtrStepb valbuf, PtrStepb locbuf)
             {
                 dim3 threads, grid;
@@ -617,17 +617,17 @@ namespace cv { namespace gpu { namespace device
                 maxloc[1] = maxloc_ / src.cols; maxloc[0] = maxloc_ - maxloc[1] * src.cols;
             }
 
-            template void minMaxLocMaskCaller<uchar>(const DevMem2Db, const PtrStepb, double*, double*, int[2], int[2], PtrStepb, PtrStepb);
-            template void minMaxLocMaskCaller<char>(const DevMem2Db, const PtrStepb, double*, double*, int[2], int[2], PtrStepb, PtrStepb);
-            template void minMaxLocMaskCaller<ushort>(const DevMem2Db, const PtrStepb, double*, double*, int[2], int[2], PtrStepb, PtrStepb);
-            template void minMaxLocMaskCaller<short>(const DevMem2Db, const PtrStepb, double*, double*, int[2], int[2], PtrStepb, PtrStepb);
-            template void minMaxLocMaskCaller<int>(const DevMem2Db, const PtrStepb, double*, double*, int[2], int[2], PtrStepb, PtrStepb);
-            template void minMaxLocMaskCaller<float>(const DevMem2Db, const PtrStepb, double*, double*, int[2], int[2], PtrStepb, PtrStepb);
-            template void minMaxLocMaskCaller<double>(const DevMem2Db, const PtrStepb, double*, double*, int[2], int[2], PtrStepb, PtrStepb);
+            template void minMaxLocMaskCaller<uchar>(const PtrStepSzb, const PtrStepb, double*, double*, int[2], int[2], PtrStepb, PtrStepb);
+            template void minMaxLocMaskCaller<char>(const PtrStepSzb, const PtrStepb, double*, double*, int[2], int[2], PtrStepb, PtrStepb);
+            template void minMaxLocMaskCaller<ushort>(const PtrStepSzb, const PtrStepb, double*, double*, int[2], int[2], PtrStepb, PtrStepb);
+            template void minMaxLocMaskCaller<short>(const PtrStepSzb, const PtrStepb, double*, double*, int[2], int[2], PtrStepb, PtrStepb);
+            template void minMaxLocMaskCaller<int>(const PtrStepSzb, const PtrStepb, double*, double*, int[2], int[2], PtrStepb, PtrStepb);
+            template void minMaxLocMaskCaller<float>(const PtrStepSzb, const PtrStepb, double*, double*, int[2], int[2], PtrStepb, PtrStepb);
+            template void minMaxLocMaskCaller<double>(const PtrStepSzb, const PtrStepb, double*, double*, int[2], int[2], PtrStepb, PtrStepb);
 
 
             template <typename T>
-            void minMaxLocCaller(const DevMem2Db src, double* minval, double* maxval,
+            void minMaxLocCaller(const PtrStepSzb src, double* minval, double* maxval,
                                  int minloc[2], int maxloc[2], PtrStepb valbuf, PtrStepb locbuf)
             {
                 dim3 threads, grid;
@@ -658,13 +658,13 @@ namespace cv { namespace gpu { namespace device
                 maxloc[1] = maxloc_ / src.cols; maxloc[0] = maxloc_ - maxloc[1] * src.cols;
             }
 
-            template void minMaxLocCaller<uchar>(const DevMem2Db, double*, double*, int[2], int[2], PtrStepb, PtrStepb);
-            template void minMaxLocCaller<char>(const DevMem2Db, double*, double*, int[2], int[2], PtrStepb, PtrStepb);
-            template void minMaxLocCaller<ushort>(const DevMem2Db, double*, double*, int[2], int[2], PtrStepb, PtrStepb);
-            template void minMaxLocCaller<short>(const DevMem2Db, double*, double*, int[2], int[2], PtrStepb, PtrStepb);
-            template void minMaxLocCaller<int>(const DevMem2Db, double*, double*, int[2], int[2], PtrStepb, PtrStepb);
-            template void minMaxLocCaller<float>(const DevMem2Db, double*, double*, int[2], int[2], PtrStepb, PtrStepb);
-            template void minMaxLocCaller<double>(const DevMem2Db, double*, double*, int[2], int[2], PtrStepb, PtrStepb);
+            template void minMaxLocCaller<uchar>(const PtrStepSzb, double*, double*, int[2], int[2], PtrStepb, PtrStepb);
+            template void minMaxLocCaller<char>(const PtrStepSzb, double*, double*, int[2], int[2], PtrStepb, PtrStepb);
+            template void minMaxLocCaller<ushort>(const PtrStepSzb, double*, double*, int[2], int[2], PtrStepb, PtrStepb);
+            template void minMaxLocCaller<short>(const PtrStepSzb, double*, double*, int[2], int[2], PtrStepb, PtrStepb);
+            template void minMaxLocCaller<int>(const PtrStepSzb, double*, double*, int[2], int[2], PtrStepb, PtrStepb);
+            template void minMaxLocCaller<float>(const PtrStepSzb, double*, double*, int[2], int[2], PtrStepb, PtrStepb);
+            template void minMaxLocCaller<double>(const PtrStepSzb, double*, double*, int[2], int[2], PtrStepb, PtrStepb);
 
 
             // This kernel will be used only when compute capability is 1.0
@@ -699,7 +699,7 @@ namespace cv { namespace gpu { namespace device
 
 
             template <typename T>
-            void minMaxLocMaskMultipassCaller(const DevMem2Db src, const PtrStepb mask, double* minval, double* maxval,
+            void minMaxLocMaskMultipassCaller(const PtrStepSzb src, const PtrStepb mask, double* minval, double* maxval,
                                               int minloc[2], int maxloc[2], PtrStepb valbuf, PtrStepb locbuf)
             {
                 dim3 threads, grid;
@@ -732,16 +732,16 @@ namespace cv { namespace gpu { namespace device
                 maxloc[1] = maxloc_ / src.cols; maxloc[0] = maxloc_ - maxloc[1] * src.cols;
             }
 
-            template void minMaxLocMaskMultipassCaller<uchar>(const DevMem2Db, const PtrStepb, double*, double*, int[2], int[2], PtrStepb, PtrStepb);
-            template void minMaxLocMaskMultipassCaller<char>(const DevMem2Db, const PtrStepb, double*, double*, int[2], int[2], PtrStepb, PtrStepb);
-            template void minMaxLocMaskMultipassCaller<ushort>(const DevMem2Db, const PtrStepb, double*, double*, int[2], int[2], PtrStepb, PtrStepb);
-            template void minMaxLocMaskMultipassCaller<short>(const DevMem2Db, const PtrStepb, double*, double*, int[2], int[2], PtrStepb, PtrStepb);
-            template void minMaxLocMaskMultipassCaller<int>(const DevMem2Db, const PtrStepb, double*, double*, int[2], int[2], PtrStepb, PtrStepb);
-            template void minMaxLocMaskMultipassCaller<float>(const DevMem2Db, const PtrStepb, double*, double*, int[2], int[2], PtrStepb, PtrStepb);
+            template void minMaxLocMaskMultipassCaller<uchar>(const PtrStepSzb, const PtrStepb, double*, double*, int[2], int[2], PtrStepb, PtrStepb);
+            template void minMaxLocMaskMultipassCaller<char>(const PtrStepSzb, const PtrStepb, double*, double*, int[2], int[2], PtrStepb, PtrStepb);
+            template void minMaxLocMaskMultipassCaller<ushort>(const PtrStepSzb, const PtrStepb, double*, double*, int[2], int[2], PtrStepb, PtrStepb);
+            template void minMaxLocMaskMultipassCaller<short>(const PtrStepSzb, const PtrStepb, double*, double*, int[2], int[2], PtrStepb, PtrStepb);
+            template void minMaxLocMaskMultipassCaller<int>(const PtrStepSzb, const PtrStepb, double*, double*, int[2], int[2], PtrStepb, PtrStepb);
+            template void minMaxLocMaskMultipassCaller<float>(const PtrStepSzb, const PtrStepb, double*, double*, int[2], int[2], PtrStepb, PtrStepb);
 
 
             template <typename T>
-            void minMaxLocMultipassCaller(const DevMem2Db src, double* minval, double* maxval,
+            void minMaxLocMultipassCaller(const PtrStepSzb src, double* minval, double* maxval,
                                           int minloc[2], int maxloc[2], PtrStepb valbuf, PtrStepb locbuf)
             {
                 dim3 threads, grid;
@@ -774,12 +774,12 @@ namespace cv { namespace gpu { namespace device
                 maxloc[1] = maxloc_ / src.cols; maxloc[0] = maxloc_ - maxloc[1] * src.cols;
             }
 
-            template void minMaxLocMultipassCaller<uchar>(const DevMem2Db, double*, double*, int[2], int[2], PtrStepb, PtrStepb);
-            template void minMaxLocMultipassCaller<char>(const DevMem2Db, double*, double*, int[2], int[2], PtrStepb, PtrStepb);
-            template void minMaxLocMultipassCaller<ushort>(const DevMem2Db, double*, double*, int[2], int[2], PtrStepb, PtrStepb);
-            template void minMaxLocMultipassCaller<short>(const DevMem2Db, double*, double*, int[2], int[2], PtrStepb, PtrStepb);
-            template void minMaxLocMultipassCaller<int>(const DevMem2Db, double*, double*, int[2], int[2], PtrStepb, PtrStepb);
-            template void minMaxLocMultipassCaller<float>(const DevMem2Db, double*, double*, int[2], int[2], PtrStepb, PtrStepb);
+            template void minMaxLocMultipassCaller<uchar>(const PtrStepSzb, double*, double*, int[2], int[2], PtrStepb, PtrStepb);
+            template void minMaxLocMultipassCaller<char>(const PtrStepSzb, double*, double*, int[2], int[2], PtrStepb, PtrStepb);
+            template void minMaxLocMultipassCaller<ushort>(const PtrStepSzb, double*, double*, int[2], int[2], PtrStepb, PtrStepb);
+            template void minMaxLocMultipassCaller<short>(const PtrStepSzb, double*, double*, int[2], int[2], PtrStepb, PtrStepb);
+            template void minMaxLocMultipassCaller<int>(const PtrStepSzb, double*, double*, int[2], int[2], PtrStepb, PtrStepb);
+            template void minMaxLocMultipassCaller<float>(const PtrStepSzb, double*, double*, int[2], int[2], PtrStepb, PtrStepb);
         } // namespace minmaxloc
 
         //////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -820,7 +820,7 @@ namespace cv { namespace gpu { namespace device
 
 
             template <int nthreads, typename T>
-            __global__ void countNonZeroKernel(const DevMem2Db src, volatile uint* count)
+            __global__ void countNonZeroKernel(const PtrStepSzb src, volatile uint* count)
             {
                 __shared__ uint scount[nthreads];
 
@@ -841,7 +841,7 @@ namespace cv { namespace gpu { namespace device
 
                 sumInSmem<nthreads, uint>(scount, tid);
 
-            #if __CUDA_ARCH__ >= 110
+            #if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ >= 110)
 		        __shared__ bool is_last;
 
 		        if (tid == 0)
@@ -875,7 +875,7 @@ namespace cv { namespace gpu { namespace device
 
 
             template <typename T>
-            int countNonZeroCaller(const DevMem2Db src, PtrStepb buf)
+            int countNonZeroCaller(const PtrStepSzb src, PtrStepb buf)
             {
                 dim3 threads, grid;
                 estimateThreadCfg(src.cols, src.rows, threads, grid);
@@ -894,13 +894,13 @@ namespace cv { namespace gpu { namespace device
                 return count;
             }
 
-            template int countNonZeroCaller<uchar>(const DevMem2Db, PtrStepb);
-            template int countNonZeroCaller<char>(const DevMem2Db, PtrStepb);
-            template int countNonZeroCaller<ushort>(const DevMem2Db, PtrStepb);
-            template int countNonZeroCaller<short>(const DevMem2Db, PtrStepb);
-            template int countNonZeroCaller<int>(const DevMem2Db, PtrStepb);
-            template int countNonZeroCaller<float>(const DevMem2Db, PtrStepb);
-            template int countNonZeroCaller<double>(const DevMem2Db, PtrStepb);
+            template int countNonZeroCaller<uchar>(const PtrStepSzb, PtrStepb);
+            template int countNonZeroCaller<char>(const PtrStepSzb, PtrStepb);
+            template int countNonZeroCaller<ushort>(const PtrStepSzb, PtrStepb);
+            template int countNonZeroCaller<short>(const PtrStepSzb, PtrStepb);
+            template int countNonZeroCaller<int>(const PtrStepSzb, PtrStepb);
+            template int countNonZeroCaller<float>(const PtrStepSzb, PtrStepb);
+            template int countNonZeroCaller<double>(const PtrStepSzb, PtrStepb);
 
 
             template <int nthreads, typename T>
@@ -920,7 +920,7 @@ namespace cv { namespace gpu { namespace device
 
 
             template <typename T>
-            int countNonZeroMultipassCaller(const DevMem2Db src, PtrStepb buf)
+            int countNonZeroMultipassCaller(const PtrStepSzb src, PtrStepb buf)
             {
                 dim3 threads, grid;
                 estimateThreadCfg(src.cols, src.rows, threads, grid);
@@ -941,12 +941,12 @@ namespace cv { namespace gpu { namespace device
                 return count;
             }
 
-            template int countNonZeroMultipassCaller<uchar>(const DevMem2Db, PtrStepb);
-            template int countNonZeroMultipassCaller<char>(const DevMem2Db, PtrStepb);
-            template int countNonZeroMultipassCaller<ushort>(const DevMem2Db, PtrStepb);
-            template int countNonZeroMultipassCaller<short>(const DevMem2Db, PtrStepb);
-            template int countNonZeroMultipassCaller<int>(const DevMem2Db, PtrStepb);
-            template int countNonZeroMultipassCaller<float>(const DevMem2Db, PtrStepb);
+            template int countNonZeroMultipassCaller<uchar>(const PtrStepSzb, PtrStepb);
+            template int countNonZeroMultipassCaller<char>(const PtrStepSzb, PtrStepb);
+            template int countNonZeroMultipassCaller<ushort>(const PtrStepSzb, PtrStepb);
+            template int countNonZeroMultipassCaller<short>(const PtrStepSzb, PtrStepb);
+            template int countNonZeroMultipassCaller<int>(const PtrStepSzb, PtrStepb);
+            template int countNonZeroMultipassCaller<float>(const PtrStepSzb, PtrStepb);
 
         } // namespace countnonzero
 
@@ -1012,7 +1012,7 @@ namespace cv { namespace gpu { namespace device
             }
 
             template <typename T, typename R, typename Op, int nthreads>
-            __global__ void sumKernel(const DevMem2Db src, R* result)
+            __global__ void sumKernel(const PtrStepSzb src, R* result)
             {
                 __shared__ R smem[nthreads];
 
@@ -1034,7 +1034,7 @@ namespace cv { namespace gpu { namespace device
 
                 sumInSmem<nthreads, R>(smem, tid);
 
-            #if __CUDA_ARCH__ >= 110
+            #if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ >= 110)
                 __shared__ bool is_last;
 
                 if (tid == 0)
@@ -1084,7 +1084,7 @@ namespace cv { namespace gpu { namespace device
 
 
             template <typename T, typename R, typename Op, int nthreads>
-            __global__ void sumKernel_C2(const DevMem2Db src, typename TypeVec<R, 2>::vec_type* result)
+            __global__ void sumKernel_C2(const PtrStepSzb src, typename TypeVec<R, 2>::vec_type* result)
             {
                 typedef typename TypeVec<T, 2>::vec_type SrcType;
                 typedef typename TypeVec<R, 2>::vec_type DstType;
@@ -1115,7 +1115,7 @@ namespace cv { namespace gpu { namespace device
                 sumInSmem<nthreads, R>(smem, tid);
                 sumInSmem<nthreads, R>(smem + nthreads, tid);
 
-            #if __CUDA_ARCH__ >= 110
+            #if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ >= 110)
                 __shared__ bool is_last;
 
                 if (tid == 0)
@@ -1189,7 +1189,7 @@ namespace cv { namespace gpu { namespace device
 
 
             template <typename T, typename R, typename Op, int nthreads>
-            __global__ void sumKernel_C3(const DevMem2Db src, typename TypeVec<R, 3>::vec_type* result)
+            __global__ void sumKernel_C3(const PtrStepSzb src, typename TypeVec<R, 3>::vec_type* result)
             {
                 typedef typename TypeVec<T, 3>::vec_type SrcType;
                 typedef typename TypeVec<R, 3>::vec_type DstType;
@@ -1222,7 +1222,7 @@ namespace cv { namespace gpu { namespace device
                 sumInSmem<nthreads, R>(smem + nthreads, tid);
                 sumInSmem<nthreads, R>(smem + 2 * nthreads, tid);
 
-            #if __CUDA_ARCH__ >= 110
+            #if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 110
                 __shared__ bool is_last;
 
                 if (tid == 0)
@@ -1303,7 +1303,7 @@ namespace cv { namespace gpu { namespace device
             }
 
             template <typename T, typename R, typename Op, int nthreads>
-            __global__ void sumKernel_C4(const DevMem2Db src, typename TypeVec<R, 4>::vec_type* result)
+            __global__ void sumKernel_C4(const PtrStepSzb src, typename TypeVec<R, 4>::vec_type* result)
             {
                 typedef typename TypeVec<T, 4>::vec_type SrcType;
                 typedef typename TypeVec<R, 4>::vec_type DstType;
@@ -1339,7 +1339,7 @@ namespace cv { namespace gpu { namespace device
                 sumInSmem<nthreads, R>(smem + 2 * nthreads, tid);
                 sumInSmem<nthreads, R>(smem + 3 * nthreads, tid);
 
-            #if __CUDA_ARCH__ >= 110
+            #if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ >= 110)
                 __shared__ bool is_last;
 
                 if (tid == 0)
@@ -1428,7 +1428,7 @@ namespace cv { namespace gpu { namespace device
             }
 
             template <typename T>
-            void sumMultipassCaller(const DevMem2Db src, PtrStepb buf, double* sum, int cn)
+            void sumMultipassCaller(const PtrStepSzb src, PtrStepb buf, double* sum, int cn)
             {
                 typedef typename SumType<T>::R R;
 
@@ -1490,16 +1490,16 @@ namespace cv { namespace gpu { namespace device
                 sum[3] = result[3];
             }
 
-            template void sumMultipassCaller<uchar>(const DevMem2Db, PtrStepb, double*, int);
-            template void sumMultipassCaller<char>(const DevMem2Db, PtrStepb, double*, int);
-            template void sumMultipassCaller<ushort>(const DevMem2Db, PtrStepb, double*, int);
-            template void sumMultipassCaller<short>(const DevMem2Db, PtrStepb, double*, int);
-            template void sumMultipassCaller<int>(const DevMem2Db, PtrStepb, double*, int);
-            template void sumMultipassCaller<float>(const DevMem2Db, PtrStepb, double*, int);
+            template void sumMultipassCaller<uchar>(const PtrStepSzb, PtrStepb, double*, int);
+            template void sumMultipassCaller<char>(const PtrStepSzb, PtrStepb, double*, int);
+            template void sumMultipassCaller<ushort>(const PtrStepSzb, PtrStepb, double*, int);
+            template void sumMultipassCaller<short>(const PtrStepSzb, PtrStepb, double*, int);
+            template void sumMultipassCaller<int>(const PtrStepSzb, PtrStepb, double*, int);
+            template void sumMultipassCaller<float>(const PtrStepSzb, PtrStepb, double*, int);
 
 
             template <typename T>
-            void sumCaller(const DevMem2Db src, PtrStepb buf, double* sum, int cn)
+            void sumCaller(const PtrStepSzb src, PtrStepb buf, double* sum, int cn)
             {
                 typedef typename SumType<T>::R R;
 
@@ -1539,16 +1539,16 @@ namespace cv { namespace gpu { namespace device
                 sum[3] = result[3];
             }
 
-            template void sumCaller<uchar>(const DevMem2Db, PtrStepb, double*, int);
-            template void sumCaller<char>(const DevMem2Db, PtrStepb, double*, int);
-            template void sumCaller<ushort>(const DevMem2Db, PtrStepb, double*, int);
-            template void sumCaller<short>(const DevMem2Db, PtrStepb, double*, int);
-            template void sumCaller<int>(const DevMem2Db, PtrStepb, double*, int);
-            template void sumCaller<float>(const DevMem2Db, PtrStepb, double*, int);
+            template void sumCaller<uchar>(const PtrStepSzb, PtrStepb, double*, int);
+            template void sumCaller<char>(const PtrStepSzb, PtrStepb, double*, int);
+            template void sumCaller<ushort>(const PtrStepSzb, PtrStepb, double*, int);
+            template void sumCaller<short>(const PtrStepSzb, PtrStepb, double*, int);
+            template void sumCaller<int>(const PtrStepSzb, PtrStepb, double*, int);
+            template void sumCaller<float>(const PtrStepSzb, PtrStepb, double*, int);
 
 
             template <typename T>
-            void absSumMultipassCaller(const DevMem2Db src, PtrStepb buf, double* sum, int cn)
+            void absSumMultipassCaller(const PtrStepSzb src, PtrStepb buf, double* sum, int cn)
             {
                 typedef typename SumType<T>::R R;
 
@@ -1610,16 +1610,16 @@ namespace cv { namespace gpu { namespace device
                 sum[3] = result[3];
             }
 
-            template void absSumMultipassCaller<uchar>(const DevMem2Db, PtrStepb, double*, int);
-            template void absSumMultipassCaller<char>(const DevMem2Db, PtrStepb, double*, int);
-            template void absSumMultipassCaller<ushort>(const DevMem2Db, PtrStepb, double*, int);
-            template void absSumMultipassCaller<short>(const DevMem2Db, PtrStepb, double*, int);
-            template void absSumMultipassCaller<int>(const DevMem2Db, PtrStepb, double*, int);
-            template void absSumMultipassCaller<float>(const DevMem2Db, PtrStepb, double*, int);
+            template void absSumMultipassCaller<uchar>(const PtrStepSzb, PtrStepb, double*, int);
+            template void absSumMultipassCaller<char>(const PtrStepSzb, PtrStepb, double*, int);
+            template void absSumMultipassCaller<ushort>(const PtrStepSzb, PtrStepb, double*, int);
+            template void absSumMultipassCaller<short>(const PtrStepSzb, PtrStepb, double*, int);
+            template void absSumMultipassCaller<int>(const PtrStepSzb, PtrStepb, double*, int);
+            template void absSumMultipassCaller<float>(const PtrStepSzb, PtrStepb, double*, int);
 
 
             template <typename T>
-            void absSumCaller(const DevMem2Db src, PtrStepb buf, double* sum, int cn)
+            void absSumCaller(const PtrStepSzb src, PtrStepb buf, double* sum, int cn)
             {
                 typedef typename SumType<T>::R R;
 
@@ -1659,16 +1659,16 @@ namespace cv { namespace gpu { namespace device
                 sum[3] = result[3];
             }
 
-            template void absSumCaller<uchar>(const DevMem2Db, PtrStepb, double*, int);
-            template void absSumCaller<char>(const DevMem2Db, PtrStepb, double*, int);
-            template void absSumCaller<ushort>(const DevMem2Db, PtrStepb, double*, int);
-            template void absSumCaller<short>(const DevMem2Db, PtrStepb, double*, int);
-            template void absSumCaller<int>(const DevMem2Db, PtrStepb, double*, int);
-            template void absSumCaller<float>(const DevMem2Db, PtrStepb, double*, int);
+            template void absSumCaller<uchar>(const PtrStepSzb, PtrStepb, double*, int);
+            template void absSumCaller<char>(const PtrStepSzb, PtrStepb, double*, int);
+            template void absSumCaller<ushort>(const PtrStepSzb, PtrStepb, double*, int);
+            template void absSumCaller<short>(const PtrStepSzb, PtrStepb, double*, int);
+            template void absSumCaller<int>(const PtrStepSzb, PtrStepb, double*, int);
+            template void absSumCaller<float>(const PtrStepSzb, PtrStepb, double*, int);
 
 
             template <typename T>
-            void sqrSumMultipassCaller(const DevMem2Db src, PtrStepb buf, double* sum, int cn)
+            void sqrSumMultipassCaller(const PtrStepSzb src, PtrStepb buf, double* sum, int cn)
             {
                 typedef typename SumType<T>::R R;
 
@@ -1730,16 +1730,16 @@ namespace cv { namespace gpu { namespace device
                 sum[3] = result[3];
             }
 
-            template void sqrSumMultipassCaller<uchar>(const DevMem2Db, PtrStepb, double*, int);
-            template void sqrSumMultipassCaller<char>(const DevMem2Db, PtrStepb, double*, int);
-            template void sqrSumMultipassCaller<ushort>(const DevMem2Db, PtrStepb, double*, int);
-            template void sqrSumMultipassCaller<short>(const DevMem2Db, PtrStepb, double*, int);
-            template void sqrSumMultipassCaller<int>(const DevMem2Db, PtrStepb, double*, int);
-            template void sqrSumMultipassCaller<float>(const DevMem2Db, PtrStepb, double*, int);
+            template void sqrSumMultipassCaller<uchar>(const PtrStepSzb, PtrStepb, double*, int);
+            template void sqrSumMultipassCaller<char>(const PtrStepSzb, PtrStepb, double*, int);
+            template void sqrSumMultipassCaller<ushort>(const PtrStepSzb, PtrStepb, double*, int);
+            template void sqrSumMultipassCaller<short>(const PtrStepSzb, PtrStepb, double*, int);
+            template void sqrSumMultipassCaller<int>(const PtrStepSzb, PtrStepb, double*, int);
+            template void sqrSumMultipassCaller<float>(const PtrStepSzb, PtrStepb, double*, int);
 
 
             template <typename T>
-            void sqrSumCaller(const DevMem2Db src, PtrStepb buf, double* sum, int cn)
+            void sqrSumCaller(const PtrStepSzb src, PtrStepb buf, double* sum, int cn)
             {
                 typedef double R;
 
@@ -1779,12 +1779,12 @@ namespace cv { namespace gpu { namespace device
                 sum[3] = result[3];
             }
 
-            template void sqrSumCaller<uchar>(const DevMem2Db, PtrStepb, double*, int);
-            template void sqrSumCaller<char>(const DevMem2Db, PtrStepb, double*, int);
-            template void sqrSumCaller<ushort>(const DevMem2Db, PtrStepb, double*, int);
-            template void sqrSumCaller<short>(const DevMem2Db, PtrStepb, double*, int);
-            template void sqrSumCaller<int>(const DevMem2Db, PtrStepb, double*, int);
-            template void sqrSumCaller<float>(const DevMem2Db, PtrStepb, double*, int);
+            template void sqrSumCaller<uchar>(const PtrStepSzb, PtrStepb, double*, int);
+            template void sqrSumCaller<char>(const PtrStepSzb, PtrStepb, double*, int);
+            template void sqrSumCaller<ushort>(const PtrStepSzb, PtrStepb, double*, int);
+            template void sqrSumCaller<short>(const PtrStepSzb, PtrStepb, double*, int);
+            template void sqrSumCaller<int>(const PtrStepSzb, PtrStepb, double*, int);
+            template void sqrSumCaller<float>(const PtrStepSzb, PtrStepb, double*, int);
         } // namespace sum
 
         //////////////////////////////////////////////////////////////////////////////
@@ -1882,7 +1882,7 @@ namespace cv { namespace gpu { namespace device
             }
         };
 
-        template <class Op, typename T, typename S, typename D> __global__ void reduceRows(const DevMem2D_<T> src, D* dst, const Op op)
+        template <class Op, typename T, typename S, typename D> __global__ void reduceRows(const PtrStepSz<T> src, D* dst, const Op op)
         {
             __shared__ S smem[16 * 16];
 
@@ -1913,7 +1913,7 @@ namespace cv { namespace gpu { namespace device
                 dst[x] = saturate_cast<D>(op.result(smem[threadIdx.x * 16], src.rows));
         }
 
-        template <template <typename> class Op, typename T, typename S, typename D> void reduceRows_caller(const DevMem2D_<T>& src, DevMem2D_<D> dst, cudaStream_t stream)
+        template <template <typename> class Op, typename T, typename S, typename D> void reduceRows_caller(const PtrStepSz<T>& src, PtrStepSz<D> dst, cudaStream_t stream)
         {
             const dim3 block(16, 16);
             const dim3 grid(divUp(src.cols, block.x));
@@ -1927,9 +1927,9 @@ namespace cv { namespace gpu { namespace device
 
         }
 
-        template <typename T, typename S, typename D> void reduceRows_gpu(const DevMem2Db& src, const DevMem2Db& dst, int reduceOp, cudaStream_t stream)
+        template <typename T, typename S, typename D> void reduceRows_gpu(const PtrStepSzb& src, const PtrStepSzb& dst, int reduceOp, cudaStream_t stream)
         {
-            typedef void (*caller_t)(const DevMem2D_<T>& src, DevMem2D_<D> dst, cudaStream_t stream);
+            typedef void (*caller_t)(const PtrStepSz<T>& src, PtrStepSz<D> dst, cudaStream_t stream);
 
             static const caller_t callers[] =
             {
@@ -1939,29 +1939,29 @@ namespace cv { namespace gpu { namespace device
                 reduceRows_caller<MinReductor, T, S, D>
             };
 
-            callers[reduceOp](static_cast< DevMem2D_<T> >(src), static_cast< DevMem2D_<D> >(dst), stream);
+            callers[reduceOp](static_cast< PtrStepSz<T> >(src), static_cast< PtrStepSz<D> >(dst), stream);
         }
 
-        template void reduceRows_gpu<uchar, int, uchar>(const DevMem2Db& src, const DevMem2Db& dst, int reduceOp, cudaStream_t stream);
-        template void reduceRows_gpu<uchar, int, int>(const DevMem2Db& src, const DevMem2Db& dst, int reduceOp, cudaStream_t stream);
-        template void reduceRows_gpu<uchar, int, float>(const DevMem2Db& src, const DevMem2Db& dst, int reduceOp, cudaStream_t stream);
+        template void reduceRows_gpu<uchar, int, uchar>(const PtrStepSzb& src, const PtrStepSzb& dst, int reduceOp, cudaStream_t stream);
+        template void reduceRows_gpu<uchar, int, int>(const PtrStepSzb& src, const PtrStepSzb& dst, int reduceOp, cudaStream_t stream);
+        template void reduceRows_gpu<uchar, int, float>(const PtrStepSzb& src, const PtrStepSzb& dst, int reduceOp, cudaStream_t stream);
 
-        template void reduceRows_gpu<ushort, int, ushort>(const DevMem2Db& src, const DevMem2Db& dst, int reduceOp, cudaStream_t stream);
-        template void reduceRows_gpu<ushort, int, int>(const DevMem2Db& src, const DevMem2Db& dst, int reduceOp, cudaStream_t stream);
-        template void reduceRows_gpu<ushort, int, float>(const DevMem2Db& src, const DevMem2Db& dst, int reduceOp, cudaStream_t stream);
+        template void reduceRows_gpu<ushort, int, ushort>(const PtrStepSzb& src, const PtrStepSzb& dst, int reduceOp, cudaStream_t stream);
+        template void reduceRows_gpu<ushort, int, int>(const PtrStepSzb& src, const PtrStepSzb& dst, int reduceOp, cudaStream_t stream);
+        template void reduceRows_gpu<ushort, int, float>(const PtrStepSzb& src, const PtrStepSzb& dst, int reduceOp, cudaStream_t stream);
 
-        template void reduceRows_gpu<short, int, short>(const DevMem2Db& src, const DevMem2Db& dst, int reduceOp, cudaStream_t stream);
-        template void reduceRows_gpu<short, int, int>(const DevMem2Db& src, const DevMem2Db& dst, int reduceOp, cudaStream_t stream);
-        template void reduceRows_gpu<short, int, float>(const DevMem2Db& src, const DevMem2Db& dst, int reduceOp, cudaStream_t stream);
+        template void reduceRows_gpu<short, int, short>(const PtrStepSzb& src, const PtrStepSzb& dst, int reduceOp, cudaStream_t stream);
+        template void reduceRows_gpu<short, int, int>(const PtrStepSzb& src, const PtrStepSzb& dst, int reduceOp, cudaStream_t stream);
+        template void reduceRows_gpu<short, int, float>(const PtrStepSzb& src, const PtrStepSzb& dst, int reduceOp, cudaStream_t stream);
 
-        template void reduceRows_gpu<int, int, int>(const DevMem2Db& src, const DevMem2Db& dst, int reduceOp, cudaStream_t stream);
-        template void reduceRows_gpu<int, int, float>(const DevMem2Db& src, const DevMem2Db& dst, int reduceOp, cudaStream_t stream);
+        template void reduceRows_gpu<int, int, int>(const PtrStepSzb& src, const PtrStepSzb& dst, int reduceOp, cudaStream_t stream);
+        template void reduceRows_gpu<int, int, float>(const PtrStepSzb& src, const PtrStepSzb& dst, int reduceOp, cudaStream_t stream);
 
-        template void reduceRows_gpu<float, float, float>(const DevMem2Db& src, const DevMem2Db& dst, int reduceOp, cudaStream_t stream);
+        template void reduceRows_gpu<float, float, float>(const PtrStepSzb& src, const PtrStepSzb& dst, int reduceOp, cudaStream_t stream);
 
 
 
-        template <int cn, class Op, typename T, typename S, typename D> __global__ void reduceCols(const DevMem2D_<T> src, D* dst, const Op op)
+        template <int cn, class Op, typename T, typename S, typename D> __global__ void reduceCols(const PtrStepSz<T> src, D* dst, const Op op)
         {
             __shared__ S smem[256 * cn];
 
@@ -1975,7 +1975,7 @@ namespace cv { namespace gpu { namespace device
             for (int c = 0; c < cn; ++c)
                 myVal[c] = op.startValue();
 
-        #if __CUDA_ARCH__ >= 200
+        #if defined (__CUDA_ARCH__) && __CUDA_ARCH__ >= 200
 
             // For cc >= 2.0 prefer L1 cache
             for (int x = threadIdx.x; x < src.cols; x += 256)
@@ -2050,7 +2050,7 @@ namespace cv { namespace gpu { namespace device
                 dst[y * cn + threadIdx.x] = saturate_cast<D>(op.result(smem[threadIdx.x * 256], src.cols));
         }
 
-        template <int cn, template <typename> class Op, typename T, typename S, typename D> void reduceCols_caller(const DevMem2D_<T>& src, DevMem2D_<D> dst, cudaStream_t stream)
+        template <int cn, template <typename> class Op, typename T, typename S, typename D> void reduceCols_caller(const PtrStepSz<T>& src, PtrStepSz<D> dst, cudaStream_t stream)
         {
             const dim3 block(256);
             const dim3 grid(src.rows);
@@ -2064,9 +2064,9 @@ namespace cv { namespace gpu { namespace device
 
         }
 
-        template <typename T, typename S, typename D> void reduceCols_gpu(const DevMem2Db& src, int cn, const DevMem2Db& dst, int reduceOp, cudaStream_t stream)
+        template <typename T, typename S, typename D> void reduceCols_gpu(const PtrStepSzb& src, int cn, const PtrStepSzb& dst, int reduceOp, cudaStream_t stream)
         {
-            typedef void (*caller_t)(const DevMem2D_<T>& src, DevMem2D_<D> dst, cudaStream_t stream);
+            typedef void (*caller_t)(const PtrStepSz<T>& src, PtrStepSz<D> dst, cudaStream_t stream);
 
             static const caller_t callers[4][4] =
             {
@@ -2076,24 +2076,24 @@ namespace cv { namespace gpu { namespace device
                 {reduceCols_caller<4, SumReductor, T, S, D>, reduceCols_caller<4, AvgReductor, T, S, D>, reduceCols_caller<4, MaxReductor, T, S, D>, reduceCols_caller<4, MinReductor, T, S, D>},
             };
 
-            callers[cn - 1][reduceOp](static_cast< DevMem2D_<T> >(src), static_cast< DevMem2D_<D> >(dst), stream);
+            callers[cn - 1][reduceOp](static_cast< PtrStepSz<T> >(src), static_cast< PtrStepSz<D> >(dst), stream);
         }
 
-        template void reduceCols_gpu<uchar, int, uchar>(const DevMem2Db& src, int cn, const DevMem2Db& dst, int reduceOp, cudaStream_t stream);
-        template void reduceCols_gpu<uchar, int, int>(const DevMem2Db& src, int cn, const DevMem2Db& dst, int reduceOp, cudaStream_t stream);
-        template void reduceCols_gpu<uchar, int, float>(const DevMem2Db& src, int cn, const DevMem2Db& dst, int reduceOp, cudaStream_t stream);
+        template void reduceCols_gpu<uchar, int, uchar>(const PtrStepSzb& src, int cn, const PtrStepSzb& dst, int reduceOp, cudaStream_t stream);
+        template void reduceCols_gpu<uchar, int, int>(const PtrStepSzb& src, int cn, const PtrStepSzb& dst, int reduceOp, cudaStream_t stream);
+        template void reduceCols_gpu<uchar, int, float>(const PtrStepSzb& src, int cn, const PtrStepSzb& dst, int reduceOp, cudaStream_t stream);
 
-        template void reduceCols_gpu<ushort, int, ushort>(const DevMem2Db& src, int cn, const DevMem2Db& dst, int reduceOp, cudaStream_t stream);
-        template void reduceCols_gpu<ushort, int, int>(const DevMem2Db& src, int cn, const DevMem2Db& dst, int reduceOp, cudaStream_t stream);
-        template void reduceCols_gpu<ushort, int, float>(const DevMem2Db& src, int cn, const DevMem2Db& dst, int reduceOp, cudaStream_t stream);
+        template void reduceCols_gpu<ushort, int, ushort>(const PtrStepSzb& src, int cn, const PtrStepSzb& dst, int reduceOp, cudaStream_t stream);
+        template void reduceCols_gpu<ushort, int, int>(const PtrStepSzb& src, int cn, const PtrStepSzb& dst, int reduceOp, cudaStream_t stream);
+        template void reduceCols_gpu<ushort, int, float>(const PtrStepSzb& src, int cn, const PtrStepSzb& dst, int reduceOp, cudaStream_t stream);
 
-        template void reduceCols_gpu<short, int, short>(const DevMem2Db& src, int cn, const DevMem2Db& dst, int reduceOp, cudaStream_t stream);
-        template void reduceCols_gpu<short, int, int>(const DevMem2Db& src, int cn, const DevMem2Db& dst, int reduceOp, cudaStream_t stream);
-        template void reduceCols_gpu<short, int, float>(const DevMem2Db& src, int cn, const DevMem2Db& dst, int reduceOp, cudaStream_t stream);
+        template void reduceCols_gpu<short, int, short>(const PtrStepSzb& src, int cn, const PtrStepSzb& dst, int reduceOp, cudaStream_t stream);
+        template void reduceCols_gpu<short, int, int>(const PtrStepSzb& src, int cn, const PtrStepSzb& dst, int reduceOp, cudaStream_t stream);
+        template void reduceCols_gpu<short, int, float>(const PtrStepSzb& src, int cn, const PtrStepSzb& dst, int reduceOp, cudaStream_t stream);
 
-        template void reduceCols_gpu<int, int, int>(const DevMem2Db& src, int cn, const DevMem2Db& dst, int reduceOp, cudaStream_t stream);
-        template void reduceCols_gpu<int, int, float>(const DevMem2Db& src, int cn, const DevMem2Db& dst, int reduceOp, cudaStream_t stream);
+        template void reduceCols_gpu<int, int, int>(const PtrStepSzb& src, int cn, const PtrStepSzb& dst, int reduceOp, cudaStream_t stream);
+        template void reduceCols_gpu<int, int, float>(const PtrStepSzb& src, int cn, const PtrStepSzb& dst, int reduceOp, cudaStream_t stream);
 
-        template void reduceCols_gpu<float, float, float>(const DevMem2Db& src, int cn, const DevMem2Db& dst, int reduceOp, cudaStream_t stream);
+        template void reduceCols_gpu<float, float, float>(const PtrStepSzb& src, int cn, const PtrStepSzb& dst, int reduceOp, cudaStream_t stream);
     } // namespace mattrix_reductions
 }}} // namespace cv { namespace gpu { namespace device

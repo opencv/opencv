@@ -181,7 +181,7 @@ namespace cv { namespace gpu { namespace device
             }
         }
 
-        void connectedConmonents(DevMem2D_<int4> candidates, int ncandidates, DevMem2D_<int4> objects, int groupThreshold, float grouping_eps, unsigned int* nclasses)
+        void connectedConmonents(PtrStepSz<int4> candidates, int ncandidates, PtrStepSz<int4> objects, int groupThreshold, float grouping_eps, unsigned int* nclasses)
         {
             int block = ncandidates;
             int smem  = block * ( sizeof(int) + sizeof(int4) );
@@ -240,7 +240,7 @@ namespace cv { namespace gpu { namespace device
 
         // stepShift, scale, width_k, sum_prev => y =  sum_prev + tid_k / width_k, x = tid_k - tid_k / width_k
         __global__ void lbp_cascade(const Cascade cascade, int frameW, int frameH, int windowW, int windowH, float scale, const float factor,
-            const int total, int* integral, const int pitch, DevMem2D_<int4> objects, unsigned int* classified)
+            const int total, int* integral, const int pitch, PtrStepSz<int4> objects, unsigned int* classified)
         {
             int ftid = blockIdx.x * blockDim.x + threadIdx.x;
             if (ftid >= total) return;
@@ -279,14 +279,14 @@ namespace cv { namespace gpu { namespace device
                 rect.z = __float2int_rn(windowW * scale);
                 rect.w = __float2int_rn(windowH * scale);
 
-                int res = Emulation::smem::atomicInc(classified, (unsigned int)objects.cols);
+                int res = atomicInc(classified, (unsigned int)objects.cols);
                 objects(0, res) = rect;
             }
         }
 
         void classifyPyramid(int frameW, int frameH, int windowW, int windowH, float initialScale, float factor, int workAmount,
-            const DevMem2Db& mstages, const int nstages, const DevMem2Di& mnodes, const DevMem2Df& mleaves, const DevMem2Di& msubsets, const DevMem2Db& mfeatures,
-            const int subsetSize, DevMem2D_<int4> objects, unsigned int* classified, DevMem2Di integral)
+            const PtrStepSzb& mstages, const int nstages, const PtrStepSzi& mnodes, const PtrStepSzf& mleaves, const PtrStepSzi& msubsets, const PtrStepSzb& mfeatures,
+            const int subsetSize, PtrStepSz<int4> objects, unsigned int* classified, PtrStepSzi integral)
         {
             const int block = 128;
             int grid = divUp(workAmount, block);

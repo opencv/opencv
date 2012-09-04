@@ -89,7 +89,11 @@ endif(WIN32)
 
 ocv_warnings_disable(CMAKE_C_FLAGS -Wno-unused-but-set-variable -Wmissing-prototypes -Wmissing-declarations -Wundef -Wunused -Wsign-compare
                                    -Wcast-align -Wshadow -Wno-maybe-uninitialized -Wno-pointer-to-int-cast -Wno-int-to-pointer-cast)
-ocv_warnings_disable(CMAKE_CXX_FLAGS -Wmissing-declarations -Wunused-parameter /wd4100 /wd4244 /wd4706 /wd4127 /wd4701 /wd4018 /wd4267 /wd4306 /wd4305 /wd4312 /wd4311)
+ocv_warnings_disable(CMAKE_CXX_FLAGS -Wmissing-declarations -Wunused-parameter)
+ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4018 /wd4100 /wd4127 /wd4311 /wd4701 /wd4706) # vs2005
+ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4244) # vs2008
+ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4267 /wd4305 /wd4306) # vs2008 Win64
+ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4703) # vs2012
 
 if(UNIX AND (CMAKE_COMPILER_IS_GNUCXX OR CV_ICC))
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")

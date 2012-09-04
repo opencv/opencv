@@ -50,7 +50,7 @@ namespace cv { namespace gpu { namespace device
 {
     namespace imgproc
     {
-        template <typename T> __global__ void pyrUp(const DevMem2D_<T> src, DevMem2D_<T> dst)
+        template <typename T> __global__ void pyrUp(const PtrStepSz<T> src, PtrStepSz<T> dst)
         {
             typedef typename TypeVec<float, VecTraits<T>::cn>::vec_type sum_t;
 
@@ -142,7 +142,7 @@ namespace cv { namespace gpu { namespace device
                 dst(y, x) = saturate_cast<T>(4.0f * sum);
         }
 
-        template <typename T> void pyrUp_caller(DevMem2D_<T> src, DevMem2D_<T> dst, cudaStream_t stream)
+        template <typename T> void pyrUp_caller(PtrStepSz<T> src, PtrStepSz<T> dst, cudaStream_t stream)
         {
             const dim3 block(16, 16);
             const dim3 grid(divUp(dst.cols, block.x), divUp(dst.rows, block.y));
@@ -154,39 +154,39 @@ namespace cv { namespace gpu { namespace device
                 cudaSafeCall( cudaDeviceSynchronize() );
         }
 
-        template <typename T> void pyrUp_gpu(DevMem2Db src, DevMem2Db dst, cudaStream_t stream)
+        template <typename T> void pyrUp_gpu(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream)
         {
-            pyrUp_caller<T>(static_cast< DevMem2D_<T> >(src), static_cast< DevMem2D_<T> >(dst), stream);
+            pyrUp_caller<T>(static_cast< PtrStepSz<T> >(src), static_cast< PtrStepSz<T> >(dst), stream);
         }
 
-        template void pyrUp_gpu<uchar>(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
-        //template void pyrUp_gpu<uchar2>(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
-        template void pyrUp_gpu<uchar3>(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
-        template void pyrUp_gpu<uchar4>(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
+        template void pyrUp_gpu<uchar>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
+        //template void pyrUp_gpu<uchar2>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
+        template void pyrUp_gpu<uchar3>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
+        template void pyrUp_gpu<uchar4>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
 
-        //template void pyrUp_gpu<schar>(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
-        //template void pyrUp_gpu<char2>(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
-        //template void pyrUp_gpu<char3>(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
-        //template void pyrUp_gpu<char4>(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
+        //template void pyrUp_gpu<schar>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
+        //template void pyrUp_gpu<char2>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
+        //template void pyrUp_gpu<char3>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
+        //template void pyrUp_gpu<char4>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
 
-        template void pyrUp_gpu<ushort>(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
-        //template void pyrUp_gpu<ushort2>(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
-        template void pyrUp_gpu<ushort3>(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
-        template void pyrUp_gpu<ushort4>(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
+        template void pyrUp_gpu<ushort>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
+        //template void pyrUp_gpu<ushort2>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
+        template void pyrUp_gpu<ushort3>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
+        template void pyrUp_gpu<ushort4>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
 
-        template void pyrUp_gpu<short>(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
-        //template void pyrUp_gpu<short2>(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
-        template void pyrUp_gpu<short3>(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
-        template void pyrUp_gpu<short4>(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
+        template void pyrUp_gpu<short>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
+        //template void pyrUp_gpu<short2>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
+        template void pyrUp_gpu<short3>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
+        template void pyrUp_gpu<short4>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
 
-        //template void pyrUp_gpu<int>(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
-        //template void pyrUp_gpu<int2>(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
-        //template void pyrUp_gpu<int3>(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
-        //template void pyrUp_gpu<int4>(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
+        //template void pyrUp_gpu<int>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
+        //template void pyrUp_gpu<int2>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
+        //template void pyrUp_gpu<int3>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
+        //template void pyrUp_gpu<int4>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
 
-        template void pyrUp_gpu<float>(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
-        //template void pyrUp_gpu<float2>(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
-        template void pyrUp_gpu<float3>(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
-        template void pyrUp_gpu<float4>(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
+        template void pyrUp_gpu<float>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
+        //template void pyrUp_gpu<float2>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
+        template void pyrUp_gpu<float3>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
+        template void pyrUp_gpu<float4>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
     } // namespace imgproc
 }}} // namespace cv { namespace gpu { namespace device

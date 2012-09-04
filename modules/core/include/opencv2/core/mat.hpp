@@ -404,7 +404,7 @@ inline bool Mat::empty() const { return data == 0 || total() == 0; }
 inline size_t Mat::total() const
 {
     if( dims <= 2 )
-        return rows*cols;
+        return (size_t)rows*cols;
     size_t p = 1;
     for( int i = 0; i < dims; i++ )
         p *= size[i];

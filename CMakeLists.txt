@@ -161,11 +161,12 @@ OCV_OPTION(BUILD_ANDROID_PACKAGE    "Build platform-specific package for Google 
 
 
 # 3rd party libs
-OCV_OPTION(BUILD_ZLIB               "Build zlib from source"         WIN32 OR IOS OR APPLE )
-OCV_OPTION(BUILD_TIFF               "Build libtiff from source"      WIN32 OR IOS OR ANDROID OR APPLE )
-OCV_OPTION(BUILD_JASPER             "Build libjasper from source"    WIN32 OR IOS OR ANDROID OR APPLE )
-OCV_OPTION(BUILD_JPEG               "Build libjpeg from source"      WIN32 OR IOS OR ANDROID OR APPLE )
-OCV_OPTION(BUILD_PNG                "Build libpng from source"       WIN32 OR IOS OR ANDROID OR APPLE )
+OCV_OPTION(BUILD_ZLIB               "Build zlib from source"         WIN32 OR APPLE )
+OCV_OPTION(BUILD_TIFF               "Build libtiff from source"      WIN32 OR ANDROID OR APPLE )
+OCV_OPTION(BUILD_JASPER             "Build libjasper from source"    WIN32 OR ANDROID OR APPLE )
+OCV_OPTION(BUILD_JPEG               "Build libjpeg from source"      WIN32 OR ANDROID OR APPLE )
+OCV_OPTION(BUILD_PNG                "Build libpng from source"       WIN32 OR ANDROID OR APPLE )
+OCV_OPTION(BUILD_OPENEXR            "Build openexr from source"      WIN32 OR ANDROID OR APPLE )
 
 # OpenCV installation options
 # ===================================================
@@ -189,14 +190,15 @@ OCV_OPTION(ENABLE_PROFILING           "Enable profiling in the GCC compiler (Add
 OCV_OPTION(ENABLE_OMIT_FRAME_POINTER  "Enable -fomit-frame-pointer for GCC"                      ON   IF CMAKE_COMPILER_IS_GNUCXX )
 OCV_OPTION(ENABLE_POWERPC             "Enable PowerPC for GCC"                                   ON   IF (CMAKE_COMPILER_IS_GNUCXX AND CMAKE_SYSTEM_PROCESSOR MATCHES powerpc.*) )
 OCV_OPTION(ENABLE_FAST_MATH           "Enable -ffast-math (not recommended for GCC 4.6.x)"       OFF  IF (CMAKE_COMPILER_IS_GNUCXX AND (X86 OR X86_64)) )
-OCV_OPTION(ENABLE_SSE                 "Enable SSE instructions"                                  ON   IF (MSVC OR CMAKE_COMPILER_IS_GNUCXX AND (X86 OR X86_64)) )
-OCV_OPTION(ENABLE_SSE2                "Enable SSE2 instructions"                                 ON   IF (MSVC OR CMAKE_COMPILER_IS_GNUCXX AND (X86 OR X86_64)) )
-OCV_OPTION(ENABLE_SSE3                "Enable SSE3 instructions"                                 OFF  IF (CV_ICC OR CMAKE_COMPILER_IS_GNUCXX AND (X86 OR X86_64)) )
+OCV_OPTION(ENABLE_SSE                 "Enable SSE instructions"                                  ON   IF ((MSVC OR CMAKE_COMPILER_IS_GNUCXX) AND (X86 OR X86_64)) )
+OCV_OPTION(ENABLE_SSE2                "Enable SSE2 instructions"                                 ON   IF ((MSVC OR CMAKE_COMPILER_IS_GNUCXX) AND (X86 OR X86_64)) )
+OCV_OPTION(ENABLE_SSE3                "Enable SSE3 instructions"                                 ON   IF ((CV_ICC OR CMAKE_COMPILER_IS_GNUCXX) AND (X86 OR X86_64)) )
 OCV_OPTION(ENABLE_SSSE3               "Enable SSSE3 instructions"                                OFF  IF (CMAKE_COMPILER_IS_GNUCXX AND (X86 OR X86_64)) )
-OCV_OPTION(ENABLE_SSE41               "Enable SSE4.1 instructions"                               OFF  IF (CV_ICC OR CMAKE_COMPILER_IS_GNUCXX AND (X86 OR X86_64)) )
+OCV_OPTION(ENABLE_SSE41               "Enable SSE4.1 instructions"                               OFF  IF ((CV_ICC OR CMAKE_COMPILER_IS_GNUCXX) AND (X86 OR X86_64)) )
 OCV_OPTION(ENABLE_SSE42               "Enable SSE4.2 instructions"                               OFF  IF (CMAKE_COMPILER_IS_GNUCXX AND (X86 OR X86_64)) )
 OCV_OPTION(ENABLE_NOISY_WARNINGS      "Show all warnings even if they are too noisy"             OFF )
 OCV_OPTION(OPENCV_WARNINGS_ARE_ERRORS "Treat warnings as errors"                                 OFF )
+
 
 # uncategorized options
 # ===================================================
@@ -337,6 +339,10 @@ include(cmake/OpenCVCompilerOptions.cmake REQUIRED)
 if(MSVC)
   include(cmake/OpenCVCRTLinkage.cmake REQUIRED)
 endif(MSVC)
+
+if(WIN32 AND NOT MINGW)
+  add_definitions(-D_VARIADIC_MAX=10)
+endif(WIN32 AND NOT MINGW)
 
 
 # ----------------------------------------------------------------------------
@@ -514,10 +520,10 @@ endif()
 status("")
 status("  C/C++:")
 status("    Built as dynamic libs?:" BUILD_SHARED_LIBS THEN YES ELSE NO)
-status("    C++ Compiler:"           CMAKE_COMPILER_IS_GNUCXX THEN "${CMAKE_CXX_COMPILER} (ver ${CMAKE_GCC_REGEX_VERSION})" ELSE "${CMAKE_CXX_COMPILER}" )
+status("    C++ Compiler:"           CMAKE_COMPILER_IS_GNUCXX THEN "${CMAKE_CXX_COMPILER} ${CMAKE_CXX_COMPILER_ARG1} (ver ${CMAKE_GCC_REGEX_VERSION})" ELSE "${CMAKE_CXX_COMPILER}" )
 status("    C++ flags (Release):"    ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_RELEASE})
 status("    C++ flags (Debug):"      ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_DEBUG})
-status("    C Compiler:"             ${CMAKE_C_COMPILER})
+status("    C Compiler:"             ${CMAKE_C_COMPILER} ${CMAKE_C_COMPILER_ARG1})
 status("    C flags (Release):"      ${CMAKE_C_FLAGS} ${CMAKE_C_FLAGS_RELEASE})
 status("    C flags (Debug):"        ${CMAKE_C_FLAGS} ${CMAKE_C_FLAGS_DEBUG})
 if(WIN32)
@@ -628,8 +634,11 @@ if(WITH_JASPER)
 else()
   status("    JPEG 2000:"  "NO")
 endif()
-
-status("    OpenEXR:"   WITH_OPENEXR AND OPENEXR_FOUND     THEN "${OPENEXR_LIBRARIES} (ver ${OPENEXR_VERSION})"                     ELSE NO)
+if(WITH_OPENEXR)
+  status("    OpenEXR:"  OPENEXR_FOUND  THEN "${OPENEXR_LIBRARIES} (ver ${OPENEXR_VERSION})" ELSE "build (ver ${OPENEXR_VERSION})")
+else()
+  status("    OpenEXR:"  "NO")
+endif()
 
 # ========================== VIDEO IO ==========================
 status("")
@@ -756,8 +765,7 @@ if(HAVE_CUDA)
   status("    Use CUFFT:"            HAVE_CUFFT  THEN YES ELSE NO)
   status("    Use CUBLAS:"           HAVE_CUBLAS THEN YES ELSE NO)
   status("    NVIDIA GPU arch:"      ${OPENCV_CUDA_ARCH_BIN})
-  status("    NVIDIA PTX archs:"     ${OPENCV_CUDA_ARCH_BIN})
-  status("    NVIDIA GPU features:"  ${OPENCV_CUDA_ARCH_FEATURES})
+  status("    NVIDIA PTX archs:"     ${OPENCV_CUDA_ARCH_PTX})
 endif()
 
 # ========================== python ==========================

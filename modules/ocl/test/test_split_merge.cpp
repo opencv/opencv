@@ -87,7 +87,7 @@ PARAM_TEST_CASE(MergeTestBase, MatType, int)
 
     //dst mat with roi
     cv::Mat dst_roi;
-    std::vector<cv::ocl::Info> oclinfo;
+    //std::vector<cv::ocl::Info> oclinfo;
     //ocl dst mat for testing
     cv::ocl::oclMat gdst_whole;
 
@@ -112,10 +112,10 @@ PARAM_TEST_CASE(MergeTestBase, MatType, int)
         mat4 = randomMat(rng, size, CV_MAKETYPE(type, 1), 5, 16, false);
         dst  = randomMat(rng, size, CV_MAKETYPE(type, channels), 5, 16, false);
 
-        int devnums = getDevice(oclinfo, OPENCV_DEFAULT_OPENCL_DEVICE);
-        CV_Assert(devnums > 0);
-        //if you want to use undefault device, set it here
-        //setDevice(oclinfo[0]);
+        //int devnums = getDevice(oclinfo, OPENCV_DEFAULT_OPENCL_DEVICE);
+        //CV_Assert(devnums > 0);
+        ////if you want to use undefault device, set it here
+        ////setDevice(oclinfo[0]);
     }
 
     void random_roi()
@@ -240,7 +240,7 @@ PARAM_TEST_CASE(SplitTestBase, MatType, int)
     cv::Mat dst2_roi;
     cv::Mat dst3_roi;
     cv::Mat dst4_roi;
-    std::vector<cv::ocl::Info> oclinfo;
+    //std::vector<cv::ocl::Info> oclinfo;
     //ocl dst mat for testing
     cv::ocl::oclMat gdst1_whole;
     cv::ocl::oclMat gdst2_whole;
@@ -268,10 +268,10 @@ PARAM_TEST_CASE(SplitTestBase, MatType, int)
         dst3 = randomMat(rng, size, CV_MAKETYPE(type, 1), 5, 16, false);
         dst4 = randomMat(rng, size, CV_MAKETYPE(type, 1), 5, 16, false);
 
-        int devnums = getDevice(oclinfo, OPENCV_DEFAULT_OPENCL_DEVICE);
-        CV_Assert(devnums > 0);
-        //if you want to use undefault device, set it here
-        //setDevice(oclinfo[0]);
+        //int devnums = getDevice(oclinfo, OPENCV_DEFAULT_OPENCL_DEVICE);
+        //CV_Assert(devnums > 0);
+        ////if you want to use undefault device, set it here
+        ////setDevice(oclinfo[0]);
     }
 
     void random_roi()
@@ -364,11 +364,11 @@ TEST_P(Split, Accuracy)
 
 
 INSTANTIATE_TEST_CASE_P(SplitMerge, Merge, Combine(
-                            Values(CV_8U, CV_32S, CV_32F), Values(1, 4)));
+                            Values(CV_8U, CV_32S, CV_32F), Values(1, 3,4)));
 
 
 INSTANTIATE_TEST_CASE_P(SplitMerge, Split , Combine(
-                            Values(CV_8U, CV_32S, CV_32F), Values(1, 4)));
+                            Values(CV_8U, CV_32S, CV_32F), Values(1, 3,4)));
                            
 
 #endif // HAVE_OPENCL

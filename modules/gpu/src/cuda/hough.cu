@@ -55,31 +55,31 @@ namespace cv { namespace gpu { namespace device
 
         const int PIXELS_PER_THREAD = 16;
 
-        __global__ void buildPointList(const DevMem2Db src, unsigned int* list)
+        __global__ void buildPointList(const PtrStepSzb src, unsigned int* list)
         {
-            __shared__ int s_queues[4][32 * PIXELS_PER_THREAD];
+            __shared__ unsigned int s_queues[4][32 * PIXELS_PER_THREAD];
             __shared__ int s_qsize[4];
-            __shared__ int s_start[4];
+            __shared__ int s_globStart[4];
 
             const int x = blockIdx.x * blockDim.x * PIXELS_PER_THREAD + threadIdx.x;
             const int y = blockIdx.y * blockDim.y + threadIdx.y;
 
-            if (y >= src.rows)
-                return;
-
             if (threadIdx.x == 0)
                 s_qsize[threadIdx.y] = 0;
-
             __syncthreads();
 
-            // fill the queue
-            for (int i = 0, xx = x; i < PIXELS_PER_THREAD && xx < src.cols; ++i, xx += blockDim.x)
+            if (y < src.rows)
             {
-                if (src(y, xx))
+                // fill the queue
+                const uchar* srcRow = src.ptr(y);
+                for (int i = 0, xx = x; i < PIXELS_PER_THREAD && xx < src.cols; ++i, xx += blockDim.x)
                 {
-                    const unsigned int val = (y << 16) | xx;
-                    const int qidx = Emulation::smem::atomicAdd(&s_qsize[threadIdx.y], 1);
-                    s_queues[threadIdx.y][qidx] = val;
+                    if (srcRow[xx])
+                    {
+                        const unsigned int val = (y << 16) | xx;
+                        const int qidx = Emulation::smem::atomicAdd(&s_qsize[threadIdx.y], 1);
+                        s_queues[threadIdx.y][qidx] = val;
+                    }
                 }
             }
 
@@ -89,36 +89,34 @@ namespace cv { namespace gpu { namespace device
             if (threadIdx.x == 0 && threadIdx.y == 0)
             {
                 // find how many items are stored in each list
-                int total_size = 0;
+                int totalSize = 0;
                 for (int i = 0; i < blockDim.y; ++i)
                 {
-                    s_start[i] = total_size;
-                    total_size += s_qsize[i];
+                    s_globStart[i] = totalSize;
+                    totalSize += s_qsize[i];
                 }
 
                 // calculate the offset in the global list
-                const int global_offset = atomicAdd(&g_counter, total_size);
+                const int globalOffset = atomicAdd(&g_counter, totalSize);
                 for (int i = 0; i < blockDim.y; ++i)
-                    s_start[i] += global_offset;
+                    s_globStart[i] += globalOffset;
             }
 
             __syncthreads();
 
             // copy local queues to global queue
             const int qsize = s_qsize[threadIdx.y];
-            for(int i = threadIdx.x; i < qsize; i += blockDim.x)
-            {
-                const unsigned int val = s_queues[threadIdx.y][i];
-                list[s_start[threadIdx.y] + i] = val;
-            }
+            int gidx = s_globStart[threadIdx.y] + threadIdx.x;
+            for(int i = threadIdx.x; i < qsize; i += blockDim.x, gidx += blockDim.x)
+                list[gidx] = s_queues[threadIdx.y][i];
         }
 
-        int buildPointList_gpu(DevMem2Db src, unsigned int* list)
+        int buildPointList_gpu(PtrStepSzb src, unsigned int* list)
         {
-            void* counter_ptr;
-            cudaSafeCall( cudaGetSymbolAddress(&counter_ptr, g_counter) );
+            void* counterPtr;
+            cudaSafeCall( cudaGetSymbolAddress(&counterPtr, g_counter) );
 
-            cudaSafeCall( cudaMemset(counter_ptr, 0, sizeof(int)) );
+            cudaSafeCall( cudaMemset(counterPtr, 0, sizeof(int)) );
 
             const dim3 block(32, 4);
             const dim3 grid(divUp(src.cols, block.x * PIXELS_PER_THREAD), divUp(src.rows, block.y));
@@ -130,10 +128,10 @@ namespace cv { namespace gpu { namespace device
 
             cudaSafeCall( cudaDeviceSynchronize() );
 
-            int total_count;
-            cudaSafeCall( cudaMemcpy(&total_count, counter_ptr, sizeof(int), cudaMemcpyDeviceToHost) );
+            int totalCount;
+            cudaSafeCall( cudaMemcpy(&totalCount, counterPtr, sizeof(int), cudaMemcpyDeviceToHost) );
 
-            return total_count;
+            return totalCount;
         }
 
         ////////////////////////////////////////////////////////////////////////
@@ -144,24 +142,26 @@ namespace cv { namespace gpu { namespace device
             const int n = blockIdx.x;
             const float ang = n * theta;
 
-            float sin_ang;
-            float cos_ang;
-            sincosf(ang, &sin_ang, &cos_ang);
+            float sinVal;
+            float cosVal;
+            sincosf(ang, &sinVal, &cosVal);
+            sinVal *= irho;
+            cosVal *= irho;
 
-            const float tabSin = sin_ang * irho;
-            const float tabCos = cos_ang * irho;
+            const int shift = (numrho - 1) / 2;
 
+            int* accumRow = accum.ptr(n + 1);
             for (int i = threadIdx.x; i < count; i += blockDim.x)
             {
-                const unsigned int qvalue = list[i];
+                const unsigned int val = list[i];
 
-                const int x = (qvalue & 0x0000FFFF);
-                const int y = (qvalue >> 16) & 0x0000FFFF;
+                const int x = (val & 0xFFFF);
+                const int y = (val >> 16) & 0xFFFF;
 
-                int r = __float2int_rn(x * tabCos + y * tabSin);
-                r += (numrho - 1) / 2;
+                int r = __float2int_rn(x * cosVal + y * sinVal);
+                r += shift;
 
-                ::atomicAdd(accum.ptr(n + 1) + r + 1, 1);
+                ::atomicAdd(accumRow + r + 1, 1);
             }
         }
 
@@ -177,38 +177,38 @@ namespace cv { namespace gpu { namespace device
             const int n = blockIdx.x;
             const float ang = n * theta;
 
-            float sin_ang;
-            float cos_ang;
-            sincosf(ang, &sin_ang, &cos_ang);
+            float sinVal;
+            float cosVal;
+            sincosf(ang, &sinVal, &cosVal);
+            sinVal *= irho;
+            cosVal *= irho;
 
-            const float tabSin = sin_ang * irho;
-            const float tabCos = cos_ang * irho;
+            const int shift = (numrho - 1) / 2;
 
             for (int i = threadIdx.x; i < count; i += blockDim.x)
             {
-                const unsigned int qvalue = list[i];
+                const unsigned int val = list[i];
 
-                const int x = (qvalue & 0x0000FFFF);
-                const int y = (qvalue >> 16) & 0x0000FFFF;
+                const int x = (val & 0xFFFF);
+                const int y = (val >> 16) & 0xFFFF;
 
-                int r = __float2int_rn(x * tabCos + y * tabSin);
-                r += (numrho - 1) / 2;
+                int r = __float2int_rn(x * cosVal + y * sinVal);
+                r += shift;
 
                 Emulation::smem::atomicAdd(&smem[r + 1], 1);
             }
 
             __syncthreads();
 
-            for (int i = threadIdx.x; i < numrho; i += blockDim.x)
-                accum(n + 1, i) = smem[i];
+            int* accumRow = accum.ptr(n + 1);
+            for (int i = threadIdx.x; i < numrho + 1; i += blockDim.x)
+                accumRow[i] = smem[i];
         }
 
-        void linesAccum_gpu(const unsigned int* list, int count, DevMem2Di accum, float rho, float theta, size_t sharedMemPerBlock, bool has20)
+        void linesAccum_gpu(const unsigned int* list, int count, PtrStepSzi accum, float rho, float theta, size_t sharedMemPerBlock, bool has20)
         {
             const dim3 block(has20 ? 1024 : 512);
             const dim3 grid(accum.rows - 2);
-
-            cudaSafeCall( cudaFuncSetCacheConfig(linesAccumShared, cudaFuncCachePreferShared) );
 
             size_t smemSize = (accum.cols - 1) * sizeof(int);
 
@@ -225,30 +225,21 @@ namespace cv { namespace gpu { namespace device
         ////////////////////////////////////////////////////////////////////////
         // linesGetResult
 
-        __global__ void linesGetResult(const DevMem2Di accum, float2* out, int* votes, const int maxSize, const float threshold, const float theta, const float rho, const int numrho)
+        __global__ void linesGetResult(const PtrStepSzi accum, float2* out, int* votes, const int maxSize, const float rho, const float theta, const int threshold, const int numrho)
         {
-            __shared__ int smem[8][32];
+            const int r = blockIdx.x * blockDim.x + threadIdx.x;
+            const int n = blockIdx.y * blockDim.y + threadIdx.y;
 
-            int r = blockIdx.x * (blockDim.x - 2) + threadIdx.x;
-            int n = blockIdx.y * (blockDim.y - 2) + threadIdx.y;
-
-            if (r >= accum.cols || n >= accum.rows)
+            if (r >= accum.cols - 2 && n >= accum.rows - 2)
                 return;
 
-            smem[threadIdx.y][threadIdx.x] = accum(n, r);
-            __syncthreads();
+            const int curVotes = accum(n + 1, r + 1);
 
-            r -= 1;
-            n -= 1;
-
-            if (threadIdx.x == 0 || threadIdx.x == blockDim.x - 1 || threadIdx.y == 0 || threadIdx.y == blockDim.y - 1 || r >= accum.cols - 2 || n >= accum.rows - 2)
-                return;
-
-            if (smem[threadIdx.y][threadIdx.x] > threshold &&
-                smem[threadIdx.y][threadIdx.x] >  smem[threadIdx.y - 1][threadIdx.x] &&
-                smem[threadIdx.y][threadIdx.x] >= smem[threadIdx.y + 1][threadIdx.x] &&
-                smem[threadIdx.y][threadIdx.x] >  smem[threadIdx.y][threadIdx.x - 1] &&
-                smem[threadIdx.y][threadIdx.x] >= smem[threadIdx.y][threadIdx.x + 1])
+            if (curVotes > threshold &&
+                curVotes >  accum(n + 1, r) &&
+                curVotes >= accum(n + 1, r + 2) &&
+                curVotes >  accum(n, r + 1) &&
+                curVotes >= accum(n + 2, r + 1))
             {
                 const float radius = (r - (numrho - 1) * 0.5f) * rho;
                 const float angle = n * theta;
@@ -257,39 +248,238 @@ namespace cv { namespace gpu { namespace device
                 if (ind < maxSize)
                 {
                     out[ind] = make_float2(radius, angle);
-                    votes[ind] = smem[threadIdx.y][threadIdx.x];
+                    votes[ind] = curVotes;
                 }
             }
         }
 
-        int linesGetResult_gpu(DevMem2Di accum, float2* out, int* votes, int maxSize, float rho, float theta, float threshold, bool doSort)
+        int linesGetResult_gpu(PtrStepSzi accum, float2* out, int* votes, int maxSize, float rho, float theta, int threshold, bool doSort)
         {
-            void* counter_ptr;
-            cudaSafeCall( cudaGetSymbolAddress(&counter_ptr, g_counter) );
+            void* counterPtr;
+            cudaSafeCall( cudaGetSymbolAddress(&counterPtr, g_counter) );
 
-            cudaSafeCall( cudaMemset(counter_ptr, 0, sizeof(int)) );
+            cudaSafeCall( cudaMemset(counterPtr, 0, sizeof(int)) );
 
             const dim3 block(32, 8);
-            const dim3 grid(divUp(accum.cols, block.x - 2), divUp(accum.rows, block.y - 2));
+            const dim3 grid(divUp(accum.cols - 2, block.x), divUp(accum.rows - 2, block.y));
 
-            linesGetResult<<<grid, block>>>(accum, out, votes, maxSize, threshold, theta, rho, accum.cols - 2);
+            cudaSafeCall( cudaFuncSetCacheConfig(linesGetResult, cudaFuncCachePreferL1) );
+
+            linesGetResult<<<grid, block>>>(accum, out, votes, maxSize, rho, theta, threshold, accum.cols - 2);
             cudaSafeCall( cudaGetLastError() );
 
             cudaSafeCall( cudaDeviceSynchronize() );
 
-            int total_count;
-            cudaSafeCall( cudaMemcpy(&total_count, counter_ptr, sizeof(int), cudaMemcpyDeviceToHost) );
+            int totalCount;
+            cudaSafeCall( cudaMemcpy(&totalCount, counterPtr, sizeof(int), cudaMemcpyDeviceToHost) );
 
-            total_count = ::min(total_count, maxSize);
+            totalCount = ::min(totalCount, maxSize);
 
-            if (doSort && total_count > 0)
+            if (doSort && totalCount > 0)
             {
-                thrust::device_ptr<float2> out_ptr(out);
-                thrust::device_ptr<int> votes_ptr(votes);
-                thrust::sort_by_key(votes_ptr, votes_ptr + total_count, out_ptr, thrust::greater<int>());
+                thrust::device_ptr<float2> outPtr(out);
+                thrust::device_ptr<int> votesPtr(votes);
+                thrust::sort_by_key(votesPtr, votesPtr + totalCount, outPtr, thrust::greater<int>());
             }
 
-            return total_count;
+            return totalCount;
+        }
+
+        ////////////////////////////////////////////////////////////////////////
+        // circlesAccumCenters
+
+        __global__ void circlesAccumCenters(const unsigned int* list, const int count, const PtrStepi dx, const PtrStepi dy,
+                                            PtrStepi accum, const int width, const int height, const int minRadius, const int maxRadius, const float idp)
+        {
+            const int SHIFT = 10;
+            const int ONE = 1 << SHIFT;
+
+            const int tid = blockIdx.x * blockDim.x + threadIdx.x;
+
+            if (tid >= count)
+                return;
+
+            const unsigned int val = list[tid];
+
+            const int x = (val & 0xFFFF);
+            const int y = (val >> 16) & 0xFFFF;
+
+            const int vx = dx(y, x);
+            const int vy = dy(y, x);
+
+            if (vx == 0 && vy == 0)
+                return;
+
+            const float mag = ::sqrtf(vx * vx + vy * vy);
+
+            const int x0 = __float2int_rn((x * idp) * ONE);
+            const int y0 = __float2int_rn((y * idp) * ONE);
+
+            int sx = __float2int_rn((vx * idp) * ONE / mag);
+            int sy = __float2int_rn((vy * idp) * ONE / mag);
+
+            // Step from minRadius to maxRadius in both directions of the gradient
+            for (int k1 = 0; k1 < 2; ++k1)
+            {
+                int x1 = x0 + minRadius * sx;
+                int y1 = y0 + minRadius * sy;
+
+                for (int r = minRadius; r <= maxRadius; x1 += sx, y1 += sy, ++r)
+                {
+                    const int x2 = x1 >> SHIFT;
+                    const int y2 = y1 >> SHIFT;
+
+                    if (x2 < 0 || x2 >= width || y2 < 0 || y2 >= height)
+                        break;
+
+                    ::atomicAdd(accum.ptr(y2 + 1) + x2 + 1, 1);
+                }
+
+                sx = -sx;
+                sy = -sy;
+            }
+        }
+
+        void circlesAccumCenters_gpu(const unsigned int* list, int count, PtrStepi dx, PtrStepi dy, PtrStepSzi accum, int minRadius, int maxRadius, float idp)
+        {
+            const dim3 block(256);
+            const dim3 grid(divUp(count, block.x));
+
+            cudaSafeCall( cudaFuncSetCacheConfig(circlesAccumCenters, cudaFuncCachePreferL1) );
+
+            circlesAccumCenters<<<grid, block>>>(list, count, dx, dy, accum, accum.cols - 2, accum.rows - 2, minRadius, maxRadius, idp);
+            cudaSafeCall( cudaGetLastError() );
+
+            cudaSafeCall( cudaDeviceSynchronize() );
+        }
+
+        ////////////////////////////////////////////////////////////////////////
+        // buildCentersList
+
+        __global__ void buildCentersList(const PtrStepSzi accum, unsigned int* centers, const int threshold)
+        {
+            const int x = blockIdx.x * blockDim.x + threadIdx.x;
+            const int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+            if (x < accum.cols - 2 && y < accum.rows - 2)
+            {
+                const int top = accum(y, x + 1);
+
+                const int left = accum(y + 1, x);
+                const int cur = accum(y + 1, x + 1);
+                const int right = accum(y + 1, x + 2);
+
+                const int bottom = accum(y + 2, x + 1);
+
+                if (cur > threshold && cur > top && cur >= bottom && cur >  left && cur >= right)
+                {
+                    const unsigned int val = (y << 16) | x;
+                    const int idx = ::atomicAdd(&g_counter, 1);
+                    centers[idx] = val;
+                }
+            }
+        }
+
+        int buildCentersList_gpu(PtrStepSzi accum, unsigned int* centers, int threshold)
+        {
+            void* counterPtr;
+            cudaSafeCall( cudaGetSymbolAddress(&counterPtr, g_counter) );
+
+            cudaSafeCall( cudaMemset(counterPtr, 0, sizeof(int)) );
+
+            const dim3 block(32, 8);
+            const dim3 grid(divUp(accum.cols - 2, block.x), divUp(accum.rows - 2, block.y));
+
+            cudaSafeCall( cudaFuncSetCacheConfig(buildCentersList, cudaFuncCachePreferL1) );
+
+            buildCentersList<<<grid, block>>>(accum, centers, threshold);
+            cudaSafeCall( cudaGetLastError() );
+
+            cudaSafeCall( cudaDeviceSynchronize() );
+
+            int totalCount;
+            cudaSafeCall( cudaMemcpy(&totalCount, counterPtr, sizeof(int), cudaMemcpyDeviceToHost) );
+
+            return totalCount;
+        }
+
+        ////////////////////////////////////////////////////////////////////////
+        // circlesAccumRadius
+
+        __global__ void circlesAccumRadius(const unsigned int* centers, const unsigned int* list, const int count,
+                                           float3* circles, const int maxCircles, const float dp,
+                                           const int minRadius, const int maxRadius, const int histSize, const int threshold)
+        {
+            extern __shared__ int smem[];
+
+            for (int i = threadIdx.x; i < histSize + 2; i += blockDim.x)
+                smem[i] = 0;
+            __syncthreads();
+
+            unsigned int val = centers[blockIdx.x];
+
+            float cx = (val & 0xFFFF);
+            float cy = (val >> 16) & 0xFFFF;
+
+            cx = (cx + 0.5f) * dp;
+            cy = (cy + 0.5f) * dp;
+
+            for (int i = threadIdx.x; i < count; i += blockDim.x)
+            {
+                val = list[i];
+
+                const int x = (val & 0xFFFF);
+                const int y = (val >> 16) & 0xFFFF;
+
+                const float rad = ::sqrtf((cx - x) * (cx - x) + (cy - y) * (cy - y));
+                if (rad >= minRadius && rad <= maxRadius)
+                {
+                    const int r = __float2int_rn(rad - minRadius);
+
+                    Emulation::smem::atomicAdd(&smem[r + 1], 1);
+                }
+            }
+
+            __syncthreads();
+
+            for (int i = threadIdx.x; i < histSize; i += blockDim.x)
+            {
+                const int curVotes = smem[i + 1];
+
+                if (curVotes >= threshold && curVotes > smem[i] && curVotes >= smem[i + 2])
+                {
+                    const int ind = ::atomicAdd(&g_counter, 1);
+                    if (ind < maxCircles)
+                        circles[ind] = make_float3(cx, cy, i + minRadius);
+                }
+            }
+        }
+
+        int circlesAccumRadius_gpu(const unsigned int* centers, int centersCount, const unsigned int* list, int count,
+                                   float3* circles, int maxCircles, float dp, int minRadius, int maxRadius, int threshold, bool has20)
+        {
+            void* counterPtr;
+            cudaSafeCall( cudaGetSymbolAddress(&counterPtr, g_counter) );
+
+            cudaSafeCall( cudaMemset(counterPtr, 0, sizeof(int)) );
+
+            const dim3 block(has20 ? 1024 : 512);
+            const dim3 grid(centersCount);
+
+            const int histSize = maxRadius - minRadius + 1;
+            size_t smemSize = (histSize + 2) * sizeof(int);
+
+            circlesAccumRadius<<<grid, block, smemSize>>>(centers, list, count, circles, maxCircles, dp, minRadius, maxRadius, histSize, threshold);
+            cudaSafeCall( cudaGetLastError() );
+
+            cudaSafeCall( cudaDeviceSynchronize() );
+
+            int totalCount;
+            cudaSafeCall( cudaMemcpy(&totalCount, counterPtr, sizeof(int), cudaMemcpyDeviceToHost) );
+
+            totalCount = ::min(totalCount, maxCircles);
+
+            return totalCount;
         }
     }
 }}}

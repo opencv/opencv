@@ -22,52 +22,47 @@ import android.util.Log;
 import android.view.SurfaceHolder;
 
 class FdView extends SampleCvViewBase {
-    private static final String   TAG = "Sample::FdView";
-    private Mat                   mRgba;
-    private Mat                   mGray;
-    private File                  mCascadeFile;
-    private CascadeClassifier     mJavaDetector;
-    private DetectionBasedTracker mNativeDetector;
+    private static final String     TAG                 = "OCVSample::View";
+    private Mat                     mRgba;
+    private Mat                     mGray;
+    private File                    mCascadeFile;
+    private CascadeClassifier       mJavaDetector;
+    private DetectionBasedTracker   mNativeDetector;
 
-    private static final Scalar   FACE_RECT_COLOR = new Scalar(0, 255, 0, 255);
-    
-    public static final int       JAVA_DETECTOR     = 0;
-    public static final int       NATIVE_DETECTOR   = 1;
-    
-    private int                   mDetectorType     = JAVA_DETECTOR;
+    private static final Scalar     FACE_RECT_COLOR     = new Scalar(0, 255, 0, 255);
 
-    private float                 mRelativeFaceSize = 0;
-    private int					  mAbsoluteFaceSize = 0;
-    
-    public void setMinFaceSize(float faceSize)
-    {
-		mRelativeFaceSize = faceSize;
-		mAbsoluteFaceSize = 0;
+    public static final int         JAVA_DETECTOR       = 0;
+    public static final int         NATIVE_DETECTOR     = 1;
+
+    private int                     mDetectorType       = JAVA_DETECTOR;
+
+    private float                   mRelativeFaceSize   = 0;
+    private int                     mAbsoluteFaceSize   = 0;
+
+    public void setMinFaceSize(float faceSize) {
+        mRelativeFaceSize = faceSize;
+        mAbsoluteFaceSize = 0;
     }
-    
-    public void setDetectorType(int type)
-    {
-    	if (mDetectorType != type)
-    	{
-    		mDetectorType = type;
-    		
-    		if (type == NATIVE_DETECTOR)
-    		{
-    			Log.i(TAG, "Detection Based Tracker enabled");
-    			mNativeDetector.start();
-    		}
-    		else
-    		{
-    			Log.i(TAG, "Cascade detector enabled");
-    			mNativeDetector.stop();
-    		}
-    	}
+
+    public void setDetectorType(int type) {
+        if (mDetectorType != type) {
+            mDetectorType = type;
+
+            if (type == NATIVE_DETECTOR) {
+                Log.i(TAG, "Detection Based Tracker enabled");
+                mNativeDetector.start();
+            } else {
+                Log.i(TAG, "Cascade detector enabled");
+                mNativeDetector.stop();
+            }
+        }
     }
 
     public FdView(Context context) {
         super(context);
 
         try {
+            // load cascade file from application resources
             InputStream is = context.getResources().openRawResource(R.raw.lbpcascade_frontalface);
             File cascadeDir = context.getDir("cascade", Context.MODE_PRIVATE);
             mCascadeFile = new File(cascadeDir, "lbpcascade_frontalface.xml");
@@ -89,17 +84,20 @@ class FdView extends SampleCvViewBase {
                 Log.i(TAG, "Loaded cascade classifier from " + mCascadeFile.getAbsolutePath());
 
             mNativeDetector = new DetectionBasedTracker(mCascadeFile.getAbsolutePath(), 0);
-            
+
             cascadeDir.delete();
 
         } catch (IOException e) {
             e.printStackTrace();
             Log.e(TAG, "Failed to load cascade. Exception thrown: " + e);
         }
+
+        Log.i(TAG, "Instantiated new " + this.getClass());
     }
 
     @Override
-	public void surfaceCreated(SurfaceHolder holder) {
+    public void surfaceCreated(SurfaceHolder holder) {
+        Log.i(TAG, "called surfaceCreated");
         synchronized (this) {
             // initialize Mats before usage
             mGray = new Mat();
@@ -107,41 +105,36 @@ class FdView extends SampleCvViewBase {
         }
 
         super.surfaceCreated(holder);
-	}
+    }
 
-	@Override
+    @Override
     protected Bitmap processFrame(VideoCapture capture) {
         capture.retrieve(mRgba, Highgui.CV_CAP_ANDROID_COLOR_FRAME_RGBA);
         capture.retrieve(mGray, Highgui.CV_CAP_ANDROID_GREY_FRAME);
 
-        if (mAbsoluteFaceSize == 0)
-        {
-        	int height = mGray.rows();
-        	if (Math.round(height * mRelativeFaceSize) > 0);
-        	{
-        		mAbsoluteFaceSize = Math.round(height * mRelativeFaceSize);
-        	}
-        	mNativeDetector.setMinFaceSize(mAbsoluteFaceSize);
+        if (mAbsoluteFaceSize == 0) {
+            int height = mGray.rows();
+            if (Math.round(height * mRelativeFaceSize) > 0) {
+                mAbsoluteFaceSize = Math.round(height * mRelativeFaceSize);
+            }
+            mNativeDetector.setMinFaceSize(mAbsoluteFaceSize);
         }
-        
+
         MatOfRect faces = new MatOfRect();
-        
-        if (mDetectorType == JAVA_DETECTOR)
-        {
-        	if (mJavaDetector != null)
-                mJavaDetector.detectMultiScale(mGray, faces, 1.1, 2, 2 // TODO: objdetect.CV_HAAR_SCALE_IMAGE
-                        , new Size(mAbsoluteFaceSize, mAbsoluteFaceSize), new Size());
+
+        if (mDetectorType == JAVA_DETECTOR) {
+            if (mJavaDetector != null)
+                mJavaDetector.detectMultiScale(mGray, faces, 1.1, 2, 2, // TODO: objdetect.CV_HAAR_SCALE_IMAGE
+                        new Size(mAbsoluteFaceSize, mAbsoluteFaceSize), new Size());
         }
-        else if (mDetectorType == NATIVE_DETECTOR)
-        {
-        	if (mNativeDetector != null)
-        		mNativeDetector.detect(mGray, faces);
+        else if (mDetectorType == NATIVE_DETECTOR) {
+            if (mNativeDetector != null)
+                mNativeDetector.detect(mGray, faces);
         }
-        else
-        {
-        	Log.e(TAG, "Detection method is not selected!");
+        else {
+            Log.e(TAG, "Detection method is not selected!");
         }
-        
+
         Rect[] facesArray = faces.toArray();
         for (int i = 0; i < facesArray.length; i++)
             Core.rectangle(mRgba, facesArray[i].tl(), facesArray[i].br(), FACE_RECT_COLOR, 3);
@@ -149,13 +142,13 @@ class FdView extends SampleCvViewBase {
         Bitmap bmp = Bitmap.createBitmap(mRgba.cols(), mRgba.rows(), Bitmap.Config.ARGB_8888);
 
         try {
-        	Utils.matToBitmap(mRgba, bmp);
+            Utils.matToBitmap(mRgba, bmp);
         } catch(Exception e) {
-        	Log.e(TAG, "Utils.matToBitmap() throws an exception: " + e.getMessage());
+            Log.e(TAG, "Utils.matToBitmap() throws an exception: " + e.getMessage());
             bmp.recycle();
             bmp = null;
         }
-        
+
         return bmp;
     }
 
@@ -170,9 +163,9 @@ class FdView extends SampleCvViewBase {
             if (mGray != null)
                 mGray.release();
             if (mCascadeFile != null)
-            	mCascadeFile.delete();
+                mCascadeFile.delete();
             if (mNativeDetector != null)
-            	mNativeDetector.release();
+                mNativeDetector.release();
 
             mRgba = null;
             mGray = null;

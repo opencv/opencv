@@ -128,7 +128,7 @@ namespace cv { namespace gpu { namespace device
         };
 
         template <int cn, typename D>
-        __global__ void comp_data(const DevMem2Db left, const PtrStepb right, PtrElemStep_<D> data)
+        __global__ void comp_data(const PtrStepSzb left, const PtrStepb right, PtrStep<D> data)
         {
             const int x = blockIdx.x * blockDim.x + threadIdx.x;
             const int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -140,7 +140,7 @@ namespace cv { namespace gpu { namespace device
                 const uchar* rs = right.ptr(y) + x * cn;
 
                 D* ds = data.ptr(y) + x;
-                const size_t disp_step = data.step * left.rows;
+                const size_t disp_step = data.step * left.rows / sizeof(D);
 
                 for (int disp = 0; disp < cndisp; disp++)
                 {
@@ -159,9 +159,9 @@ namespace cv { namespace gpu { namespace device
         }
 
         template<typename T, typename D>
-        void comp_data_gpu(const DevMem2Db& left, const DevMem2Db& right, const DevMem2Db& data, cudaStream_t stream);
+        void comp_data_gpu(const PtrStepSzb& left, const PtrStepSzb& right, const PtrStepSzb& data, cudaStream_t stream);
 
-        template <> void comp_data_gpu<uchar, short>(const DevMem2Db& left, const DevMem2Db& right, const DevMem2Db& data, cudaStream_t stream)
+        template <> void comp_data_gpu<uchar, short>(const PtrStepSzb& left, const PtrStepSzb& right, const PtrStepSzb& data, cudaStream_t stream)
         {
             dim3 threads(32, 8, 1);
             dim3 grid(1, 1, 1);
@@ -169,13 +169,13 @@ namespace cv { namespace gpu { namespace device
             grid.x = divUp(left.cols, threads.x);
             grid.y = divUp(left.rows, threads.y);
 
-            comp_data<1, short><<<grid, threads, 0, stream>>>(left, right, (DevMem2D_<short>)data);
+            comp_data<1, short><<<grid, threads, 0, stream>>>(left, right, (PtrStepSz<short>)data);
             cudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
                 cudaSafeCall( cudaDeviceSynchronize() );
         }
-        template <> void comp_data_gpu<uchar, float>(const DevMem2Db& left, const DevMem2Db& right, const DevMem2Db& data, cudaStream_t stream)
+        template <> void comp_data_gpu<uchar, float>(const PtrStepSzb& left, const PtrStepSzb& right, const PtrStepSzb& data, cudaStream_t stream)
         {
             dim3 threads(32, 8, 1);
             dim3 grid(1, 1, 1);
@@ -183,43 +183,14 @@ namespace cv { namespace gpu { namespace device
             grid.x = divUp(left.cols, threads.x);
             grid.y = divUp(left.rows, threads.y);
 
-            comp_data<1, float><<<grid, threads, 0, stream>>>(left, right, (DevMem2D_<float>)data);
-            cudaSafeCall( cudaGetLastError() );
-
-            if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
-        }
-
-        template <> void comp_data_gpu<uchar3, short>(const DevMem2Db& left, const DevMem2Db& right, const DevMem2Db& data, cudaStream_t stream)
-        {
-            dim3 threads(32, 8, 1);
-            dim3 grid(1, 1, 1);
-
-            grid.x = divUp(left.cols, threads.x);
-            grid.y = divUp(left.rows, threads.y);
-
-            comp_data<3, short><<<grid, threads, 0, stream>>>(left, right, (DevMem2D_<short>)data);
-            cudaSafeCall( cudaGetLastError() );
-
-            if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
-        }
-        template <> void comp_data_gpu<uchar3, float>(const DevMem2Db& left, const DevMem2Db& right, const DevMem2Db& data, cudaStream_t stream)
-        {
-            dim3 threads(32, 8, 1);
-            dim3 grid(1, 1, 1);
-
-            grid.x = divUp(left.cols, threads.x);
-            grid.y = divUp(left.rows, threads.y);
-
-            comp_data<3, float><<<grid, threads, 0, stream>>>(left, right, (DevMem2D_<float>)data);
+            comp_data<1, float><<<grid, threads, 0, stream>>>(left, right, (PtrStepSz<float>)data);
             cudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
                 cudaSafeCall( cudaDeviceSynchronize() );
         }
 
-        template <> void comp_data_gpu<uchar4, short>(const DevMem2Db& left, const DevMem2Db& right, const DevMem2Db& data, cudaStream_t stream)
+        template <> void comp_data_gpu<uchar3, short>(const PtrStepSzb& left, const PtrStepSzb& right, const PtrStepSzb& data, cudaStream_t stream)
         {
             dim3 threads(32, 8, 1);
             dim3 grid(1, 1, 1);
@@ -227,13 +198,13 @@ namespace cv { namespace gpu { namespace device
             grid.x = divUp(left.cols, threads.x);
             grid.y = divUp(left.rows, threads.y);
 
-            comp_data<4, short><<<grid, threads, 0, stream>>>(left, right, (DevMem2D_<short>)data);
+            comp_data<3, short><<<grid, threads, 0, stream>>>(left, right, (PtrStepSz<short>)data);
             cudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
                 cudaSafeCall( cudaDeviceSynchronize() );
         }
-        template <> void comp_data_gpu<uchar4, float>(const DevMem2Db& left, const DevMem2Db& right, const DevMem2Db& data, cudaStream_t stream)
+        template <> void comp_data_gpu<uchar3, float>(const PtrStepSzb& left, const PtrStepSzb& right, const PtrStepSzb& data, cudaStream_t stream)
         {
             dim3 threads(32, 8, 1);
             dim3 grid(1, 1, 1);
@@ -241,7 +212,36 @@ namespace cv { namespace gpu { namespace device
             grid.x = divUp(left.cols, threads.x);
             grid.y = divUp(left.rows, threads.y);
 
-            comp_data<4, float><<<grid, threads, 0, stream>>>(left, right, (DevMem2D_<float>)data);
+            comp_data<3, float><<<grid, threads, 0, stream>>>(left, right, (PtrStepSz<float>)data);
+            cudaSafeCall( cudaGetLastError() );
+
+            if (stream == 0)
+                cudaSafeCall( cudaDeviceSynchronize() );
+        }
+
+        template <> void comp_data_gpu<uchar4, short>(const PtrStepSzb& left, const PtrStepSzb& right, const PtrStepSzb& data, cudaStream_t stream)
+        {
+            dim3 threads(32, 8, 1);
+            dim3 grid(1, 1, 1);
+
+            grid.x = divUp(left.cols, threads.x);
+            grid.y = divUp(left.rows, threads.y);
+
+            comp_data<4, short><<<grid, threads, 0, stream>>>(left, right, (PtrStepSz<short>)data);
+            cudaSafeCall( cudaGetLastError() );
+
+            if (stream == 0)
+                cudaSafeCall( cudaDeviceSynchronize() );
+        }
+        template <> void comp_data_gpu<uchar4, float>(const PtrStepSzb& left, const PtrStepSzb& right, const PtrStepSzb& data, cudaStream_t stream)
+        {
+            dim3 threads(32, 8, 1);
+            dim3 grid(1, 1, 1);
+
+            grid.x = divUp(left.cols, threads.x);
+            grid.y = divUp(left.rows, threads.y);
+
+            comp_data<4, float><<<grid, threads, 0, stream>>>(left, right, (PtrStepSz<float>)data);
             cudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
@@ -273,7 +273,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         template<typename T>
-        void data_step_down_gpu(int dst_cols, int dst_rows, int src_rows, const DevMem2Db& src, const DevMem2Db& dst, cudaStream_t stream)
+        void data_step_down_gpu(int dst_cols, int dst_rows, int src_rows, const PtrStepSzb& src, const PtrStepSzb& dst, cudaStream_t stream)
         {
             dim3 threads(32, 8, 1);
             dim3 grid(1, 1, 1);
@@ -281,30 +281,30 @@ namespace cv { namespace gpu { namespace device
             grid.x = divUp(dst_cols, threads.x);
             grid.y = divUp(dst_rows, threads.y);
 
-            data_step_down<T><<<grid, threads, 0, stream>>>(dst_cols, dst_rows, src_rows, (DevMem2D_<T>)src, (DevMem2D_<T>)dst);
+            data_step_down<T><<<grid, threads, 0, stream>>>(dst_cols, dst_rows, src_rows, (PtrStepSz<T>)src, (PtrStepSz<T>)dst);
             cudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
                 cudaSafeCall( cudaDeviceSynchronize() );
         }
 
-        template void data_step_down_gpu<short>(int dst_cols, int dst_rows, int src_rows, const DevMem2Db& src, const DevMem2Db& dst, cudaStream_t stream);
-        template void data_step_down_gpu<float>(int dst_cols, int dst_rows, int src_rows, const DevMem2Db& src, const DevMem2Db& dst, cudaStream_t stream);
+        template void data_step_down_gpu<short>(int dst_cols, int dst_rows, int src_rows, const PtrStepSzb& src, const PtrStepSzb& dst, cudaStream_t stream);
+        template void data_step_down_gpu<float>(int dst_cols, int dst_rows, int src_rows, const PtrStepSzb& src, const PtrStepSzb& dst, cudaStream_t stream);
 
         ///////////////////////////////////////////////////////////////
         /////////////////// level up messages  ////////////////////////
         ///////////////////////////////////////////////////////////////
 
         template <typename T>
-        __global__ void level_up_message(int dst_cols, int dst_rows, int src_rows, const PtrElemStep_<T> src, PtrElemStep_<T> dst)
+        __global__ void level_up_message(int dst_cols, int dst_rows, int src_rows, const PtrStep<T> src, PtrStep<T> dst)
         {
             const int x = blockIdx.x * blockDim.x + threadIdx.x;
             const int y = blockIdx.y * blockDim.y + threadIdx.y;
 
             if (x < dst_cols && y < dst_rows)
             {
-                const size_t dst_disp_step = dst.step * dst_rows;
-                const size_t src_disp_step = src.step * src_rows;
+                const size_t dst_disp_step = dst.step * dst_rows / sizeof(T);
+                const size_t src_disp_step = src.step * src_rows / sizeof(T);
 
                 T*       dstr = dst.ptr(y  ) + x;
                 const T* srcr = src.ptr(y/2) + x/2;
@@ -315,7 +315,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <typename T>
-        void level_up_messages_gpu(int dst_idx, int dst_cols, int dst_rows, int src_rows, DevMem2Db* mus, DevMem2Db* mds, DevMem2Db* mls, DevMem2Db* mrs, cudaStream_t stream)
+        void level_up_messages_gpu(int dst_idx, int dst_cols, int dst_rows, int src_rows, PtrStepSzb* mus, PtrStepSzb* mds, PtrStepSzb* mls, PtrStepSzb* mrs, cudaStream_t stream)
         {
             dim3 threads(32, 8, 1);
             dim3 grid(1, 1, 1);
@@ -325,24 +325,24 @@ namespace cv { namespace gpu { namespace device
 
             int src_idx = (dst_idx + 1) & 1;
 
-            level_up_message<T><<<grid, threads, 0, stream>>>(dst_cols, dst_rows, src_rows, (DevMem2D_<T>)mus[src_idx], (DevMem2D_<T>)mus[dst_idx]);
+            level_up_message<T><<<grid, threads, 0, stream>>>(dst_cols, dst_rows, src_rows, (PtrStepSz<T>)mus[src_idx], (PtrStepSz<T>)mus[dst_idx]);
             cudaSafeCall( cudaGetLastError() );
 
-            level_up_message<T><<<grid, threads, 0, stream>>>(dst_cols, dst_rows, src_rows, (DevMem2D_<T>)mds[src_idx], (DevMem2D_<T>)mds[dst_idx]);
+            level_up_message<T><<<grid, threads, 0, stream>>>(dst_cols, dst_rows, src_rows, (PtrStepSz<T>)mds[src_idx], (PtrStepSz<T>)mds[dst_idx]);
             cudaSafeCall( cudaGetLastError() );
 
-            level_up_message<T><<<grid, threads, 0, stream>>>(dst_cols, dst_rows, src_rows, (DevMem2D_<T>)mls[src_idx], (DevMem2D_<T>)mls[dst_idx]);
+            level_up_message<T><<<grid, threads, 0, stream>>>(dst_cols, dst_rows, src_rows, (PtrStepSz<T>)mls[src_idx], (PtrStepSz<T>)mls[dst_idx]);
             cudaSafeCall( cudaGetLastError() );
 
-            level_up_message<T><<<grid, threads, 0, stream>>>(dst_cols, dst_rows, src_rows, (DevMem2D_<T>)mrs[src_idx], (DevMem2D_<T>)mrs[dst_idx]);
+            level_up_message<T><<<grid, threads, 0, stream>>>(dst_cols, dst_rows, src_rows, (PtrStepSz<T>)mrs[src_idx], (PtrStepSz<T>)mrs[dst_idx]);
             cudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
                 cudaSafeCall( cudaDeviceSynchronize() );
         }
 
-        template void level_up_messages_gpu<short>(int dst_idx, int dst_cols, int dst_rows, int src_rows, DevMem2Db* mus, DevMem2Db* mds, DevMem2Db* mls, DevMem2Db* mrs, cudaStream_t stream);
-        template void level_up_messages_gpu<float>(int dst_idx, int dst_cols, int dst_rows, int src_rows, DevMem2Db* mus, DevMem2Db* mds, DevMem2Db* mls, DevMem2Db* mrs, cudaStream_t stream);
+        template void level_up_messages_gpu<short>(int dst_idx, int dst_cols, int dst_rows, int src_rows, PtrStepSzb* mus, PtrStepSzb* mds, PtrStepSzb* mls, PtrStepSzb* mrs, cudaStream_t stream);
+        template void level_up_messages_gpu<float>(int dst_idx, int dst_cols, int dst_rows, int src_rows, PtrStepSzb* mus, PtrStepSzb* mds, PtrStepSzb* mls, PtrStepSzb* mrs, cudaStream_t stream);
 
         ///////////////////////////////////////////////////////////////
         ////////////////////  calc all iterations /////////////////////
@@ -419,32 +419,32 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <typename T>
-        __global__ void one_iteration(int t, PtrElemStep_<T> u, T* d, T* l, T* r, const PtrElemStep_<T> data, int cols, int rows)
+        __global__ void one_iteration(int t, int elem_step, T* u, T* d, T* l, T* r, const PtrStep<T> data, int cols, int rows)
         {
             const int y = blockIdx.y * blockDim.y + threadIdx.y;
             const int x = ((blockIdx.x * blockDim.x + threadIdx.x) << 1) + ((y + t) & 1);
 
             if ((y > 0) && (y < rows - 1) && (x > 0) && (x < cols - 1))
             {
-                T* us = u.ptr(y) + x;
-                T* ds = d + y * u.step + x;
-                T* ls = l + y * u.step + x;
-                T* rs = r + y * u.step + x;
+                T* us = u + y * elem_step + x;
+                T* ds = d + y * elem_step + x;
+                T* ls = l + y * elem_step + x;
+                T* rs = r + y * elem_step + x;
                 const T* dt = data.ptr(y) + x;
 
-                size_t msg_disp_step = u.step * rows;
-                size_t data_disp_step = data.step * rows;
+                size_t msg_disp_step = elem_step * rows;
+                size_t data_disp_step = data.step * rows / sizeof(T);
 
-                message(us + u.step, ls      + 1, rs - 1, dt, us, msg_disp_step, data_disp_step);
-                message(ds - u.step, ls      + 1, rs - 1, dt, ds, msg_disp_step, data_disp_step);
-                message(us + u.step, ds - u.step, rs - 1, dt, rs, msg_disp_step, data_disp_step);
-                message(us + u.step, ds - u.step, ls + 1, dt, ls, msg_disp_step, data_disp_step);
+                message(us + elem_step, ls         + 1, rs - 1, dt, us, msg_disp_step, data_disp_step);
+                message(ds - elem_step, ls         + 1, rs - 1, dt, ds, msg_disp_step, data_disp_step);
+                message(us + elem_step, ds - elem_step, rs - 1, dt, rs, msg_disp_step, data_disp_step);
+                message(us + elem_step, ds - elem_step, ls + 1, dt, ls, msg_disp_step, data_disp_step);
             }
         }
 
         template <typename T>
-        void calc_all_iterations_gpu(int cols, int rows, int iters, const DevMem2Db& u, const DevMem2Db& d,
-            const DevMem2Db& l, const DevMem2Db& r, const DevMem2Db& data, cudaStream_t stream)
+        void calc_all_iterations_gpu(int cols, int rows, int iters, const PtrStepSzb& u, const PtrStepSzb& d,
+            const PtrStepSzb& l, const PtrStepSzb& r, const PtrStepSzb& data, cudaStream_t stream)
         {
             dim3 threads(32, 8, 1);
             dim3 grid(1, 1, 1);
@@ -452,9 +452,11 @@ namespace cv { namespace gpu { namespace device
             grid.x = divUp(cols, threads.x << 1);
             grid.y = divUp(rows, threads.y);
 
+            int elem_step = u.step/sizeof(T);
+
             for(int t = 0; t < iters; ++t)
             {
-                one_iteration<T><<<grid, threads, 0, stream>>>(t, (DevMem2D_<T>)u, (T*)d.data, (T*)l.data, (T*)r.data, (DevMem2D_<T>)data, cols, rows);
+                one_iteration<T><<<grid, threads, 0, stream>>>(t, elem_step, (T*)u.data, (T*)d.data, (T*)l.data, (T*)r.data, (PtrStepSz<T>)data, cols, rows);
                 cudaSafeCall( cudaGetLastError() );
 
                 if (stream == 0)
@@ -462,29 +464,29 @@ namespace cv { namespace gpu { namespace device
             }
         }
 
-        template void calc_all_iterations_gpu<short>(int cols, int rows, int iters, const DevMem2Db& u, const DevMem2Db& d, const DevMem2Db& l, const DevMem2Db& r, const DevMem2Db& data, cudaStream_t stream);
-        template void calc_all_iterations_gpu<float>(int cols, int rows, int iters, const DevMem2Db& u, const DevMem2Db& d, const DevMem2Db& l, const DevMem2Db& r, const DevMem2Db& data, cudaStream_t stream);
+        template void calc_all_iterations_gpu<short>(int cols, int rows, int iters, const PtrStepSzb& u, const PtrStepSzb& d, const PtrStepSzb& l, const PtrStepSzb& r, const PtrStepSzb& data, cudaStream_t stream);
+        template void calc_all_iterations_gpu<float>(int cols, int rows, int iters, const PtrStepSzb& u, const PtrStepSzb& d, const PtrStepSzb& l, const PtrStepSzb& r, const PtrStepSzb& data, cudaStream_t stream);
 
         ///////////////////////////////////////////////////////////////
         /////////////////////////// output ////////////////////////////
         ///////////////////////////////////////////////////////////////
 
         template <typename T>
-        __global__ void output(const PtrElemStep_<T> u, const T* d, const T* l, const T* r, const T* data,
-            DevMem2D_<short> disp)
+        __global__ void output(const int elem_step, const T* u, const T* d, const T* l, const T* r, const T* data,
+            PtrStepSz<short> disp)
         {
             const int x = blockIdx.x * blockDim.x + threadIdx.x;
             const int y = blockIdx.y * blockDim.y + threadIdx.y;
 
             if (y > 0 && y < disp.rows - 1 && x > 0 && x < disp.cols - 1)
             {
-                const T* us = u.ptr(y + 1) + x;
-                const T* ds = d + (y - 1) * u.step + x;
-                const T* ls = l + y * u.step + (x + 1);
-                const T* rs = r + y * u.step + (x - 1);
-                const T* dt = data + y * u.step + x;
+                const T* us = u + (y + 1) * elem_step + x;
+                const T* ds = d + (y - 1) * elem_step + x;
+                const T* ls = l + y * elem_step + (x + 1);
+                const T* rs = r + y * elem_step+ (x - 1);
+                const T* dt = data + y * elem_step + x;
 
-                size_t disp_step = disp.rows * u.step;
+                size_t disp_step = disp.rows * elem_step;
 
                 int best = 0;
                 float best_val = numeric_limits<float>::max();
@@ -508,8 +510,8 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <typename T>
-        void output_gpu(const DevMem2Db& u, const DevMem2Db& d, const DevMem2Db& l, const DevMem2Db& r, const DevMem2Db& data,
-            const DevMem2D_<short>& disp, cudaStream_t stream)
+        void output_gpu(const PtrStepSzb& u, const PtrStepSzb& d, const PtrStepSzb& l, const PtrStepSzb& r, const PtrStepSzb& data,
+            const PtrStepSz<short>& disp, cudaStream_t stream)
         {
             dim3 threads(32, 8, 1);
             dim3 grid(1, 1, 1);
@@ -517,14 +519,16 @@ namespace cv { namespace gpu { namespace device
             grid.x = divUp(disp.cols, threads.x);
             grid.y = divUp(disp.rows, threads.y);
 
-            output<T><<<grid, threads, 0, stream>>>((DevMem2D_<T>)u, (const T*)d.data, (const T*)l.data, (const T*)r.data, (const T*)data.data, disp);
+            int elem_step = static_cast<int>(u.step/sizeof(T));
+
+            output<T><<<grid, threads, 0, stream>>>(elem_step, (const T*)u.data, (const T*)d.data, (const T*)l.data, (const T*)r.data, (const T*)data.data, disp);
             cudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
                 cudaSafeCall( cudaDeviceSynchronize() );
         }
 
-        template void output_gpu<short>(const DevMem2Db& u, const DevMem2Db& d, const DevMem2Db& l, const DevMem2Db& r, const DevMem2Db& data, const DevMem2D_<short>& disp, cudaStream_t stream);
-        template void output_gpu<float>(const DevMem2Db& u, const DevMem2Db& d, const DevMem2Db& l, const DevMem2Db& r, const DevMem2Db& data, const DevMem2D_<short>& disp, cudaStream_t stream);
+        template void output_gpu<short>(const PtrStepSzb& u, const PtrStepSzb& d, const PtrStepSzb& l, const PtrStepSzb& r, const PtrStepSzb& data, const PtrStepSz<short>& disp, cudaStream_t stream);
+        template void output_gpu<float>(const PtrStepSzb& u, const PtrStepSzb& d, const PtrStepSzb& l, const PtrStepSzb& r, const PtrStepSzb& data, const PtrStepSz<short>& disp, cudaStream_t stream);
     } // namespace stereobp
 }}} // namespace cv { namespace gpu { namespace device

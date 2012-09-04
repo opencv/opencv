@@ -75,19 +75,31 @@ cv::Mat readImage(const std::string& fileName, int flags = cv::IMREAD_COLOR);
 cv::Mat readImageType(const std::string& fname, int type);
 
 //////////////////////////////////////////////////////////////////////
+// Image dumping
+
+void dumpImage(const std::string& fileName, const cv::Mat& image);
+
+//////////////////////////////////////////////////////////////////////
 // Gpu devices
 
 //! return true if device supports specified feature and gpu module was built with support the feature.
 bool supportFeature(const cv::gpu::DeviceInfo& info, cv::gpu::FeatureSet feature);
 
-//! return all devices compatible with current gpu module build.
-const std::vector<cv::gpu::DeviceInfo>& devices();
+class DeviceManager
+{
+public:
+    static DeviceManager& instance();
 
-//! return all devices compatible with current gpu module build which support specified feature.
-std::vector<cv::gpu::DeviceInfo> devices(cv::gpu::FeatureSet feature);
+    void load(int i);
+    void loadAll();
 
-#define ALL_DEVICES testing::ValuesIn(devices())
-#define DEVICES(feature) testing::ValuesIn(devices(feature))
+    const std::vector<cv::gpu::DeviceInfo>& values() const { return devices_; }
+
+private:
+    std::vector<cv::gpu::DeviceInfo> devices_;
+};
+
+#define ALL_DEVICES testing::ValuesIn(DeviceManager::instance().values())
 
 //////////////////////////////////////////////////////////////////////
 // Additional assertion

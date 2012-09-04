@@ -61,13 +61,13 @@ namespace cv { namespace gpu { namespace device
     {
         void loadConstants(int2 winSize, int iters);
 
-        void lkSparse1_gpu(DevMem2Df I, DevMem2Df J, const float2* prevPts, float2* nextPts, uchar* status, float* err, int ptcount,
+        void lkSparse1_gpu(PtrStepSzf I, PtrStepSzf J, const float2* prevPts, float2* nextPts, uchar* status, float* err, int ptcount,
             int level, dim3 block, dim3 patch, cudaStream_t stream = 0);
-        void lkSparse4_gpu(DevMem2D_<float4> I, DevMem2D_<float4> J, const float2* prevPts, float2* nextPts, uchar* status, float* err, int ptcount,
+        void lkSparse4_gpu(PtrStepSz<float4> I, PtrStepSz<float4> J, const float2* prevPts, float2* nextPts, uchar* status, float* err, int ptcount,
             int level, dim3 block, dim3 patch, cudaStream_t stream = 0);
 
-        void lkDense_gpu(DevMem2Db I, DevMem2Df J, DevMem2Df u, DevMem2Df v, DevMem2Df prevU, DevMem2Df prevV,
-                         DevMem2Df err, int2 winSize, cudaStream_t stream = 0);
+        void lkDense_gpu(PtrStepSzb I, PtrStepSzf J, PtrStepSzf u, PtrStepSzf v, PtrStepSzf prevU, PtrStepSzf prevV,
+                         PtrStepSzf err, int2 winSize, cudaStream_t stream = 0);
     }
 }}}
 
@@ -221,7 +221,7 @@ void cv::gpu::PyrLKOpticalFlow::dense(const GpuMat& prevImg, const GpuMat& nextI
     int2 winSize2i = make_int2(winSize.width, winSize.height);
     loadConstants(winSize2i, iters);
 
-    DevMem2Df derr = err ? *err : DevMem2Df();
+    PtrStepSzf derr = err ? *err : PtrStepSzf();
 
     int idx = 0;
 
@@ -230,7 +230,7 @@ void cv::gpu::PyrLKOpticalFlow::dense(const GpuMat& prevImg, const GpuMat& nextI
         int idx2 = (idx + 1) & 1;
 
         lkDense_gpu(prevPyr_[level], nextPyr_[level], uPyr_[idx], vPyr_[idx], uPyr_[idx2], vPyr_[idx2],
-            level == 0 ? derr : DevMem2Df(), winSize2i);
+            level == 0 ? derr : PtrStepSzf(), winSize2i);
 
         if (level > 0)
             idx = idx2;

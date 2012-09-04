@@ -59,8 +59,8 @@ namespace cv { namespace gpu { namespace device
 {
     namespace split_merge
     {
-        void merge_caller(const DevMem2Db* src, DevMem2Db& dst, int total_channels, size_t elem_size, const cudaStream_t& stream);
-        void split_caller(const DevMem2Db& src, DevMem2Db* dst, int num_channels, size_t elem_size1, const cudaStream_t& stream);
+        void merge_caller(const PtrStepSzb* src, PtrStepSzb& dst, int total_channels, size_t elem_size, const cudaStream_t& stream);
+        void split_caller(const PtrStepSzb& src, PtrStepSzb* dst, int num_channels, size_t elem_size1, const cudaStream_t& stream);
     }
 }}}
 
@@ -102,11 +102,11 @@ namespace
         {
             dst.create(size, CV_MAKETYPE(depth, total_channels));
 
-            DevMem2Db src_as_devmem[4];
+            PtrStepSzb src_as_devmem[4];
             for(size_t i = 0; i < n; ++i)
                 src_as_devmem[i] = src[i];
 
-            DevMem2Db dst_as_devmem(dst);
+            PtrStepSzb dst_as_devmem(dst);
             merge_caller(src_as_devmem, dst_as_devmem, total_channels, CV_ELEM_SIZE(depth), stream);
         }
     }
@@ -119,7 +119,6 @@ namespace
 
         int depth = src.depth();
         int num_channels = src.channels();
-        Size size = src.size();
 
         if (depth == CV_64F)
         {
@@ -138,11 +137,11 @@ namespace
 
         CV_Assert(num_channels <= 4);
 
-        DevMem2Db dst_as_devmem[4];
+        PtrStepSzb dst_as_devmem[4];
         for (int i = 0; i < num_channels; ++i)
             dst_as_devmem[i] = dst[i];
 
-        DevMem2Db src_as_devmem(src);
+        PtrStepSzb src_as_devmem(src);
         split_caller(src_as_devmem, dst_as_devmem, num_channels, src.elemSize1(), stream);
     }
 }

@@ -87,7 +87,7 @@ PARAM_TEST_CASE(MergeTestBase, MatType, int)
 
 	//dst mat with roi
 	cv::Mat dst_roi;
-	std::vector<cv::ocl::Info> oclinfo;
+	//std::vector<cv::ocl::Info> oclinfo;
 	//ocl dst mat for testing
 	cv::ocl::oclMat gdst_whole;
 
@@ -111,11 +111,11 @@ PARAM_TEST_CASE(MergeTestBase, MatType, int)
 		mat3 = randomMat(rng, size, CV_MAKETYPE(type, 1), 5, 16, false);
 		mat4 = randomMat(rng, size, CV_MAKETYPE(type, 1), 5, 16, false);
 		dst  = randomMat(rng, size, CV_MAKETYPE(type, channels), 5, 16, false);
-		int devnums = getDevice(oclinfo);
-		CV_Assert(devnums > 0);
-		//if you want to use undefault device, set it here
-		//setDevice(oclinfo[0]);
-		setBinpath(CLBINPATH);
+		//int devnums = getDevice(oclinfo);
+		//CV_Assert(devnums > 0);
+		////if you want to use undefault device, set it here
+		////setDevice(oclinfo[0]);
+		//setBinpath(CLBINPATH);
 	}
 	void Has_roi(int b)
 	{
@@ -174,7 +174,7 @@ TEST_P(Merge, Accuracy)
 	double t0=0;
 	double t1=0;
 	double t2=0;	
-	for(int k=0;k<2;k++){
+	for(int k=LOOPROISTART;k<LOOPROIEND;k++){
 		totalcputick=0;
 		totalgputick=0;
 		totalgputick_kernel=0;
@@ -223,7 +223,7 @@ TEST_P(Merge, Accuracy)
 		cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
 	}
 #else
-	for(int j = 0; j < 2; j ++)
+	for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
 	{
 		Has_roi(j);
 		gmat1 = mat1_roi;
@@ -281,7 +281,7 @@ PARAM_TEST_CASE(SplitTestBase, MatType, int)
 	cv::Mat dst2_roi;
 	cv::Mat dst3_roi;
 	cv::Mat dst4_roi;
-	std::vector<cv::ocl::Info> oclinfo;
+	//std::vector<cv::ocl::Info> oclinfo;
 	//ocl dst mat for testing
 	cv::ocl::oclMat gdst1_whole;
 	cv::ocl::oclMat gdst2_whole;
@@ -308,11 +308,11 @@ PARAM_TEST_CASE(SplitTestBase, MatType, int)
 		dst2 = randomMat(rng, size, CV_MAKETYPE(type, 1), 5, 16, false);
 		dst3 = randomMat(rng, size, CV_MAKETYPE(type, 1), 5, 16, false);
 		dst4 = randomMat(rng, size, CV_MAKETYPE(type, 1), 5, 16, false);
-		int devnums = getDevice(oclinfo);
-		CV_Assert(devnums > 0);
-		//if you want to use undefault device, set it here
-		//setDevice(oclinfo[0]);
-		setBinpath(CLBINPATH);
+		//int devnums = getDevice(oclinfo);
+		//CV_Assert(devnums > 0);
+		////if you want to use undefault device, set it here
+		////setDevice(oclinfo[0]);
+		//setBinpath(CLBINPATH);
 	}
 
 	void Has_roi(int b)
@@ -370,7 +370,7 @@ TEST_P(Split, Accuracy)
 	double t0=0;
 	double t1=0;
 	double t2=0;	
-	for(int k=0;k<2;k++){
+	for(int k=LOOPROISTART;k<LOOPROIEND;k++){
 		totalcputick=0;
 		totalgputick=0;
 		totalgputick_kernel=0;
@@ -422,7 +422,7 @@ TEST_P(Split, Accuracy)
 		cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
 	}
 #else
-	for(int j = 0; j < 2; j ++)
+	for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
 	{
 		Has_roi(j);
 		cv::Mat         dev_dst[4]  = {dst1_roi, dst2_roi, dst3_roi, dst4_roi};

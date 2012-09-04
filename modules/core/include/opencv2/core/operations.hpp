@@ -866,7 +866,7 @@ template<typename _Tp, int m, int n> struct CV_EXPORTS Matx_FastSolveOp
 template<typename _Tp> struct CV_EXPORTS Matx_FastSolveOp<_Tp, 2, 1>
 {
     bool operator()(const Matx<_Tp, 2, 2>& a, const Matx<_Tp, 2, 1>& b,
-                    Matx<_Tp, 2, 1>& x, int method) const
+                    Matx<_Tp, 2, 1>& x, int) const
     {
         _Tp d = determinant(a);
         if( d == 0 )
@@ -1077,9 +1077,9 @@ double norm(const Matx<_Tp, m, n>& M)
 template<typename _Tp, int m, int n> static inline
 double norm(const Matx<_Tp, m, n>& M, int normType)
 {
-    return normType == NORM_INF ? (double)normInf<_Tp, DataType<_Tp>::work_type>(M.val, m*n) :
-        normType == NORM_L1 ? (double)normL1<_Tp, DataType<_Tp>::work_type>(M.val, m*n) :
-        std::sqrt((double)normL2Sqr<_Tp, DataType<_Tp>::work_type>(M.val, m*n));
+    return normType == NORM_INF ? (double)normInf<_Tp, typename DataType<_Tp>::work_type>(M.val, m*n) :
+        normType == NORM_L1 ? (double)normL1<_Tp, typename DataType<_Tp>::work_type>(M.val, m*n) :
+        std::sqrt((double)normL2Sqr<_Tp, typename DataType<_Tp>::work_type>(M.val, m*n));
 }
 
 
@@ -1244,7 +1244,7 @@ template<> inline Vec<double, 4> Vec<double, 4>::conj() const
     return conjugate(*this);
 }
 
-template<typename _Tp, int cn> inline Vec<_Tp, cn> Vec<_Tp, cn>::cross(const Vec<_Tp, cn>& v) const
+template<typename _Tp, int cn> inline Vec<_Tp, cn> Vec<_Tp, cn>::cross(const Vec<_Tp, cn>&) const
 {
     CV_Error(CV_StsError, "for arbitrary-size vector there is no cross-product defined");
     return Vec<_Tp, cn>();
@@ -2466,7 +2466,8 @@ dot(const Vector<_Tp>& v1, const Vector<_Tp>& v2)
     {
         const _Tp *ptr1 = &v1[0], *ptr2 = &v2[0];
      #if CV_ENABLE_UNROLLED
-        for(; i <= n - 4; i += 4 )
+        const size_t n2 = (n > 4) ? n : 4;
+        for(; i <= n2 - 4; i += 4 )
             s += (_Tw)ptr1[i]*ptr2[i] + (_Tw)ptr1[i+1]*ptr2[i+1] +
                 (_Tw)ptr1[i+2]*ptr2[i+2] + (_Tw)ptr1[i+3]*ptr2[i+3];
     #endif
@@ -2500,7 +2501,7 @@ inline RNG::operator double()
     unsigned t = next();
     return (((uint64)t << 32) | next())*5.4210108624275221700372640043497e-20;
 }
-inline int RNG::uniform(int a, int b) { return a == b ? a : next()%(b - a) + a; }
+inline int RNG::uniform(int a, int b) { return a == b ? a : (int)(next()%(b - a) + a); }
 inline float RNG::uniform(float a, float b) { return ((float)*this)*(b - a) + a; }
 inline double RNG::uniform(double a, double b) { return ((double)*this)*(b - a) + a; }
 
@@ -2937,8 +2938,8 @@ inline bool FileNode::isNamed() const { return !node ? false : (node->tag & NAME
 inline size_t FileNode::size() const
 {
     int t = type();
-    return t == MAP ? ((CvSet*)node->data.map)->active_count :
-        t == SEQ ? node->data.seq->total : (size_t)!isNone();
+    return t == MAP ? (size_t)((CvSet*)node->data.map)->active_count :
+        t == SEQ ? (size_t)node->data.seq->total : (size_t)!isNone();
 }
 
 inline CvFileNode* FileNode::operator *() { return (CvFileNode*)node; }

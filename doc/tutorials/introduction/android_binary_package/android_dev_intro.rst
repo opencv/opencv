@@ -75,7 +75,7 @@ You need the following software to be installed in order to develop for Android 
 
            sudo update-java-alternatives --set java-6-sun
 
-   **TODO:** add a note on Sun/Oracle Java installation on Ubuntu 12.
+..   **TODO:** add a note on Sun/Oracle Java installation on Ubuntu 12.
 
 #. **Android SDK**
 
@@ -241,27 +241,29 @@ where:
 The script :file:`Android.mk` usually has the following structure:
 
 .. code-block:: make
+   :linenos:
 
-        LOCAL_PATH := $(call my-dir)
+   LOCAL_PATH := $(call my-dir)
 
-        include $(CLEAR_VARS)
-        LOCAL_MODULE    := <module_name>
-        LOCAL_SRC_FILES := <list of .c and .cpp project files>
-        <some variable name> := <some variable value>
-        ...
-        <some variable name> := <some variable value>
+   include $(CLEAR_VARS)
+   LOCAL_MODULE    := <module_name>
+   LOCAL_SRC_FILES := <list of .c and .cpp project files>
+   <some variable name> := <some variable value>
+   ...
+   <some variable name> := <some variable value>
 
-        include $(BUILD_SHARED_LIBRARY)
+   include $(BUILD_SHARED_LIBRARY)
 
 This is the minimal file :file:`Android.mk`, which builds C++ source code of an Android application. Note that the first two lines and the last line are mandatory for any :file:`Android.mk`.
 
 Usually the file :file:`Application.mk` is optional, but in case of project using OpenCV, when STL and exceptions are used in C++, it also should be created. Example of the file :file:`Application.mk`:
 
 .. code-block:: make
+   :linenos:
 
-        APP_STL := gnustl_static
-        APP_CPPFLAGS := -frtti -fexceptions
-        APP_ABI := armeabi-v7a
+   APP_STL := gnustl_static
+   APP_CPPFLAGS := -frtti -fexceptions
+   APP_ABI := armeabi-v7a
 
 
 .. _NDK_build_cli:
@@ -332,75 +334,76 @@ We recommend the approach based on Eclipse :abbr:`CDT(C/C++ Development Tooling)
 #. Open Eclipse and load the Android app project to configure.
 
 #. Add C/C++ Nature to the project via Eclipse menu :guilabel:`New -> Other -> C/C++ -> Convert to a C/C++ Project`.
-   
-     .. image:: images/eclipse_cdt_cfg1.png
-        :alt: Configure CDT
-        :align: center
 
-    ` `
+   .. image:: images/eclipse_cdt_cfg1.png
+      :alt: Configure CDT
+      :align: center
 
-     .. image:: images/eclipse_cdt_cfg2.png
-        :alt: Configure CDT
-        :align: center
+   And:
+
+   .. image:: images/eclipse_cdt_cfg2.png
+      :alt: Configure CDT
+      :align: center
 
 #. Select the project(s) to convert. Specify "Project type" = ``Makefile project``, "Toolchains" = ``Other Toolchain``.
-   
+
      .. image:: images/eclipse_cdt_cfg3.png
         :alt: Configure CDT
         :align: center
 
-#. Open :guilabel:`Project Properties -> C/C++ Build`, unckeck ``Use default build command``, replace "Build command" text from ``"make"`` to 
-     ``"${NDKROOT}/ndk-build.cmd"`` on Windows,
+#. Open :guilabel:`Project Properties -> C/C++ Build`, unckeck ``Use default build command``, replace "Build command" text from ``"make"`` to
 
-     ``"${NDKROOT}/ndk-build"`` on Linux and MacOS.
-   
-     .. image:: images/eclipse_cdt_cfg4.png
-        :alt: Configure CDT
-        :align: center
+   ``"${NDKROOT}/ndk-build.cmd"`` on Windows,
+
+   ``"${NDKROOT}/ndk-build"`` on Linux and MacOS.
+
+   .. image:: images/eclipse_cdt_cfg4.png
+      :alt: Configure CDT
+      :align: center
 
 #. Go to :guilabel:`Behaviour`  tab and change "Workbench build type" section like shown below:
-   
-     .. image:: images/eclipse_cdt_cfg5.png
-        :alt: Configure CDT
-        :align: center
+
+   .. image:: images/eclipse_cdt_cfg5.png
+      :alt: Configure CDT
+      :align: center
 
 #. Press :guilabel:`OK`  and make sure the ``ndk-build`` is successfully invoked when building the project.
-   
-     .. image:: images/eclipse_cdt_cfg6.png
-        :alt: Configure CDT
-        :align: center
+
+   .. image:: images/eclipse_cdt_cfg6.png
+      :alt: Configure CDT
+      :align: center
 
 #. If you open your C++ source file in Eclipse editor, you'll see syntax error notifications. They are not real errors, but additional CDT configuring is required.
-   
-     .. image:: images/eclipse_cdt_cfg7.png
-        :alt: Configure CDT
-        :align: center
+
+   .. image:: images/eclipse_cdt_cfg7.png
+      :alt: Configure CDT
+      :align: center
 
 #. Open :guilabel:`Project Properties -> C/C++ General -> Paths and Symbols` and add the following **Include** paths for **C++**:
 
-     ::
+   ::
 
         ${NDKROOT}/platforms/android-9/arch-arm/usr/include
         ${NDKROOT}/sources/cxx-stl/gnu-libstdc++/include
         ${NDKROOT}/sources/cxx-stl/gnu-libstdc++/libs/armeabi-v7a/include
         ${ProjDirPath}/../../sdk/native/jni/include
 
-     The last path should be changed to the correct absolute or relative path to OpenCV4Android SDK location.
-     
-     This should clear the syntax error notifications in Eclipse C++ editor.
-   
-     .. image:: images/eclipse_cdt_cfg8.png
-        :alt: Configure CDT
-        :align: center
+   The last path should be changed to the correct absolute or relative path to OpenCV4Android SDK location.
 
-     .. note:: The latest Android NDK **r8b** has a bit different STL headers path. So if you use this NDK version please use the following modified **Include** paths list:
+   This should clear the syntax error notifications in Eclipse C++ editor.
 
-       ::
+   .. image:: images/eclipse_cdt_cfg8.png
+      :alt: Configure CDT
+      :align: center
 
-          ${NDKROOT}/platforms/android-9/arch-arm/usr/include
-          ${NDKROOT}/sources/cxx-stl/gnu-libstdc++/4.6/include
-          ${NDKROOT}/sources/cxx-stl/gnu-libstdc++/4.6/libs/armeabi-v7a/include
-          ${ProjDirPath}/../../sdk/native/jni/include
+   .. note:: The latest Android NDK **r8b** uses different STL headers path. So if you use this NDK release add the following **Include** paths list instead:
+
+   ::
+
+        ${NDKROOT}/platforms/android-9/arch-arm/usr/include
+        ${NDKROOT}/sources/cxx-stl/gnu-libstdc++/4.6/include
+        ${NDKROOT}/sources/cxx-stl/gnu-libstdc++/4.6/libs/armeabi-v7a/include
+        ${ProjDirPath}/../../sdk/native/jni/include
 
 
 Debugging and Testing
@@ -412,12 +415,16 @@ AVD
 AVD (*Android Virtual Device*) is not probably the most convenient way to test an OpenCV-dependent application, but sure the most uncomplicated one to configure.
 
 #. Assuming you already have *Android SDK* and *Eclipse IDE* installed, in Eclipse go :guilabel:`Window -> AVD Manager`.
-     **TBD:** how to start AVD Manager without Eclipse...
+
+   ..     **TBD:** how to start AVD Manager without Eclipse...
+
 #. Press the :guilabel:`New` button in :guilabel:`AVD Manager` window.
 #. :guilabel:`Create new Android Virtual Device` window will let you select some properties for your new device, like target API level, size of SD-card and other.
-    .. image:: images/AVD_create.png
-     :alt: Configure builders
-     :align: center
+
+   .. image:: images/AVD_create.png
+      :alt: Configure builders
+      :align: center
+
 #. When you click the :guilabel:`Create AVD` button, your new AVD will be availible in :guilabel:`AVD Manager`.
 #. Press :guilabel:`Start` to launch the device. Be aware that any AVD (a.k.a. Emulator) is usually much slower than a hardware Android device, so it may take up to several minutes to start.
 #. Go :guilabel:`Run -> Run/Debug`  in Eclipse IDE to run your application in regular or debugging mode. :guilabel:`Device Chooser` will let you choose among the running devices or to start a new one.
@@ -435,81 +442,106 @@ Windows host computer
 #. Attach the Android device to your PC with a USB cable.
 #. Go to :guilabel:`Start Menu` and **right-click** on :guilabel:`Computer`. Select :guilabel:`Manage` in the context menu. You may be asked for Administrative permissions.
 #. Select :guilabel:`Device Manager` in the left pane and find an unknown device in the list. You may try unplugging it and then plugging back in order to check whether it's your exact equipment appears in the list.
-    .. image:: images/usb_device_connect_01.png
-     :alt: Unknown device
-     :align: center
+
+   .. image:: images/usb_device_connect_01.png
+      :alt: Unknown device
+      :align: center
+
 #. Try your luck installing `Google USB drivers` without any modifications: **right-click** on the unknown device, select :guilabel:`Properties` menu item --> :guilabel:`Details` tab --> :guilabel:`Update Driver` button.
-    .. image:: images/usb_device_connect_05.png
-     :alt: Device properties
-     :align: center
+
+   .. image:: images/usb_device_connect_05.png
+      :alt: Device properties
+      :align: center
+
 #. Select :guilabel:`Browse computer for driver software`.
-    .. image:: images/usb_device_connect_06.png
-     :alt: Browse for driver
-     :align: center
+
+   .. image:: images/usb_device_connect_06.png
+      :alt: Browse for driver
+      :align: center
+
 #. Specify the path to :file:`<Android SDK folder>/extras/google/usb_driver/` folder.
-    .. image:: images/usb_device_connect_07.png
-     :alt: Browse for driver
-     :align: center
+
+   .. image:: images/usb_device_connect_07.png
+      :alt: Browse for driver
+      :align: center
+
 #. If you get the prompt to install unverified drivers and report about success - you've finished with USB driver installation.
-    .. image:: images/usb_device_connect_08.png
-     :alt: Install prompt
-     :align: center
 
-    ` `
+   .. image:: images/usb_device_connect_08.png
+      :alt: Install prompt
+      :align: center
 
-    .. image:: images/usb_device_connect_09.png
-     :alt: Installed OK
-     :align: center
+   ` `
+
+   .. image:: images/usb_device_connect_09.png
+      :alt: Installed OK
+      :align: center
+
 #. Otherwise (getting the failure like shown below) follow the next steps.
-    .. image:: images/usb_device_connect_12.png
-     :alt: No driver
-     :align: center
+
+   .. image:: images/usb_device_connect_12.png
+      :alt: No driver
+      :align: center
+
 #. Again **right-click** on the unknown device, select :guilabel:`Properties --> Details --> Hardware Ids` and copy the line like ``USB\VID_XXXX&PID_XXXX&MI_XX``.
-    .. image:: images/usb_device_connect_02.png
-     :alt: Device properties details
-     :align: center
+
+   .. image:: images/usb_device_connect_02.png
+      :alt: Device properties details
+      :align: center
+
 #. Now open file :file:`<Android SDK folder>/extras/google/usb_driver/android_winusb.inf`. Select either ``Google.NTx86`` or ``Google.NTamd64`` section depending on your host system architecture.
-    .. image:: images/usb_device_connect_03.png
-     :alt: "android_winusb.inf"
-     :align: center
+
+   .. image:: images/usb_device_connect_03.png
+      :alt: "android_winusb.inf"
+      :align: center
+
 #. There should be a record like existing ones for your device and you need to add one manually.
-    .. image:: images/usb_device_connect_04.png
-     :alt: "android_winusb.inf"
-     :align: center
+
+   .. image:: images/usb_device_connect_04.png
+      :alt: "android_winusb.inf"
+      :align: center
+
 #. Save the :file:`android_winusb.inf` file and try to install the USB driver again.
-    .. image:: images/usb_device_connect_05.png
-     :alt: Device properties
-     :align: center
 
-    ` `
+   .. image:: images/usb_device_connect_05.png
+      :alt: Device properties
+      :align: center
 
-    .. image:: images/usb_device_connect_06.png
-     :alt: Browse for driver
-     :align: center
+   ` `
 
-    ` `
+   .. image:: images/usb_device_connect_06.png
+      :alt: Browse for driver
+      :align: center
 
-    .. image:: images/usb_device_connect_07.png
-     :alt: Browse for driver
-     :align: center
+   ` `
+
+   .. image:: images/usb_device_connect_07.png
+      :alt: Browse for driver
+      :align: center
+
 #. This time installation should go successfully.
-    .. image:: images/usb_device_connect_08.png
-     :alt: Install prompt
-     :align: center
 
-    ` `
+   .. image:: images/usb_device_connect_08.png
+      :alt: Install prompt
+      :align: center
 
-    .. image:: images/usb_device_connect_09.png
-     :alt: Installed OK
-     :align: center
+   ` `
+
+   .. image:: images/usb_device_connect_09.png
+      :alt: Installed OK
+      :align: center
+
 #. And an unknown device is now recognized as an Android phone.
-    .. image:: images/usb_device_connect_10.png
-     :alt: "Known" device
-     :align: center
+
+   .. image:: images/usb_device_connect_10.png
+      :alt: "Known" device
+      :align: center
+
 #. Successful device USB connection can be verified in console via ``adb devices`` command.
-    .. image:: images/usb_device_connect_11.png
-     :alt: "adb devices"
-     :align: center
+
+   .. image:: images/usb_device_connect_11.png
+      :alt: "adb devices"
+      :align: center
 
 #. Now, in Eclipse go :guilabel:`Run -> Run/Debug` to run your application in regular or debugging mode. :guilabel:`Device Chooser` will let you choose among the devices.
 
@@ -519,13 +551,13 @@ By default Linux doesn't recognize Android devices, but it's easy to fix this is
 
 .. code-block:: guess
 
-  SUBSYSTEM=="usb", ATTR{idVendor}=="1004",  MODE="0666", GROUP="plugdev"
+   SUBSYSTEM=="usb", ATTR{idVendor}=="1004",  MODE="0666", GROUP="plugdev"
 
 Then restart your adb server (even better to restart the system), plug in your Android device and execute :command:`adb devices` command. You will see the list of attached devices:
 
-  .. image:: images/usb_device_connect_ubuntu.png
-    :alt: List of attached devices
-    :align: center
+.. image:: images/usb_device_connect_ubuntu.png
+   :alt: List of attached devices
+   :align: center
 
 MacOS host computer
 ^^^^^^^^^^^^^^^^^^^

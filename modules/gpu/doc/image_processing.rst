@@ -818,9 +818,57 @@ Performs linear blending of two images.
     :param result: Destination image.
 
     :param stream: Stream for the asynchronous version.
+    
+    
+gpu::bilateralFilter
+-------------------
+Performs bilateral filtering of passed image
 
+.. ocv:function:: void gpu::bilateralFilter(const GpuMat& src, GpuMat& dst, int kernel_size, float sigma_color, float sigma_spatial, int borderMode, Stream& stream = Stream::Null());
+    
+    :param src: Source image. Supports only (channles != 2 && depth() != CV_8S && depth() != CV_32S && depth() != CV_64F).
 
+    :param dst: Destination imagwe.
 
+    :param kernel_size: Kernel window size.
+
+    :param sigma_color: Filter sigma in the color space. 
+    
+    :param sigma_spatial:  Filter sigma in the coordinate space. 
+
+    :param borderMode:  Border type. See :ocv:func:`borderInterpolate` for details. ``BORDER_REFLECT101`` , ``BORDER_REPLICATE`` , ``BORDER_CONSTANT`` , ``BORDER_REFLECT`` and ``BORDER_WRAP`` are supported for now.
+
+    :param stream: Stream for the asynchronous version.
+
+.. seealso::
+
+    :ocv:func:`bilateralFilter`,
+    
+    
+gpu::nonLocalMeans
+-------------------
+Performs pure non local means denoising without any simplification, and thus it is not fast.
+
+.. ocv:function:: void nonLocalMeans(const GpuMat& src, GpuMat& dst, float h, int search_widow_size = 11, int block_size = 7, int borderMode = BORDER_DEFAULT, Stream& s = Stream::Null());
+    
+    :param src: Source image. Supports only CV_8UC1, CV_8UC3.
+
+    :param dst: Destination imagwe.
+
+    :param h: Filter sigma regulating filter strength for color. 
+    
+    :param search_widow_size: Size of search window.
+
+    :param block_size: Size of block used for computing weights. 
+        
+    :param borderMode:  Border type. See :ocv:func:`borderInterpolate` for details. ``BORDER_REFLECT101`` , ``BORDER_REPLICATE`` , ``BORDER_CONSTANT`` , ``BORDER_REFLECT`` and ``BORDER_WRAP`` are supported for now.
+
+    :param stream: Stream for the asynchronous version.
+
+.. seealso::
+
+    :ocv:func:`fastNlMeansDenoising`
+    
 gpu::alphaComp
 -------------------
 Composites two images using alpha opacity values contained in each image.
@@ -893,7 +941,7 @@ Finds lines in a binary image using the classical Hough transform.
 
 .. ocv:function:: void gpu::HoughLines(const GpuMat& src, GpuMat& lines, float rho, float theta, int threshold, bool doSort = false, int maxLines = 4096)
 
-.. ocv:function:: void gpu::HoughLines(const GpuMat& src, GpuMat& lines, GpuMat& accum, GpuMat& buf, float rho, float theta, int threshold, bool doSort = false, int maxLines = 4096)
+.. ocv:function:: void gpu::HoughLines(const GpuMat& src, GpuMat& lines, HoughLinesBuf& buf, float rho, float theta, int threshold, bool doSort = false, int maxLines = 4096)
 
     :param src: 8-bit, single-channel binary source image.
 
@@ -908,58 +956,10 @@ Finds lines in a binary image using the classical Hough transform.
     :param doSort: Performs lines sort by votes.
 
     :param maxLines: Maximum number of output lines.
-
-    :param accum: Optional buffer for accumulator to avoid extra memory allocations (for many calls with the same sizes).
 
     :param buf: Optional buffer to avoid extra memory allocations (for many calls with the same sizes).
 
 .. seealso:: :ocv:func:`HoughLines`
-
-
-
-gpu::HoughLinesTransform
-------------------------
-Performs classical Hough transform for line detection.
-
-.. ocv:function:: void gpu::HoughLinesTransform(const GpuMat& src, GpuMat& accum, GpuMat& buf, float rho, float theta)
-
-    :param src: 8-bit, single-channel binary source image.
-
-    :param accum: Output accumulator array.
-
-    :param buf: Buffer to avoid extra memory allocations (for many calls with the same sizes).
-
-    :param rho: Distance resolution of the accumulator in pixels.
-
-    :param theta: Angle resolution of the accumulator in radians.
-
-    :param threshold: Accumulator threshold parameter. Only those lines are returned that get enough votes ( :math:`>\texttt{threshold}` ).
-
-.. seealso:: :ocv:func:`gpu::HoughLines`
-
-
-
-gpu::HoughLinesGet
-------------------
-Finds lines in Hough space.
-
-.. ocv:function:: void gpu::HoughLinesGet(const GpuMat& accum, GpuMat& lines, float rho, float theta, int threshold, bool doSort = false, int maxLines = 4096)
-
-    :param accum: Accumulator array.
-
-    :param lines: Output vector of lines. Each line is represented by a two-element vector  :math:`(\rho, \theta)` .  :math:`\rho`  is the distance from the coordinate origin  :math:`(0,0)`  (top-left corner of the image).  :math:`\theta`  is the line rotation angle in radians ( :math:`0 \sim \textrm{vertical line}, \pi/2 \sim \textrm{horizontal line}` ).
-
-    :param rho: Distance resolution of the accumulator in pixels.
-
-    :param theta: Angle resolution of the accumulator in radians.
-
-    :param threshold: Accumulator threshold parameter. Only those lines are returned that get enough votes ( :math:`>\texttt{threshold}` ).
-
-    :param doSort: Performs lines sort by votes.
-
-    :param maxLines: Maximum number of output lines.
-
-.. seealso:: :ocv:func:`gpu::HoughLines`
 
 
 
@@ -976,3 +976,51 @@ Downloads results from :ocv:func:`gpu::HoughLines` to host memory.
     :param h_votes: Optional output array for line's votes.
 
 .. seealso:: :ocv:func:`gpu::HoughLines`
+
+
+
+gpu::HoughCircles
+-----------------
+Finds circles in a grayscale image using the Hough transform.
+
+.. ocv:function:: void gpu::HoughCircles(const GpuMat& src, GpuMat& circles, int method, float dp, float minDist, int cannyThreshold, int votesThreshold, int minRadius, int maxRadius, int maxCircles = 4096)
+
+.. ocv:function:: void gpu::HoughCircles(const GpuMat& src, GpuMat& circles, HoughCirclesBuf& buf, int method, float dp, float minDist, int cannyThreshold, int votesThreshold, int minRadius, int maxRadius, int maxCircles = 4096)
+
+    :param src: 8-bit, single-channel grayscale input image.
+
+    :param circles: Output vector of found circles. Each vector is encoded as a 3-element floating-point vector  :math:`(x, y, radius)` .
+
+    :param method: Detection method to use. Currently, the only implemented method is  ``CV_HOUGH_GRADIENT`` , which is basically  *21HT* , described in  [Yuen90]_.
+
+    :param dp: Inverse ratio of the accumulator resolution to the image resolution. For example, if  ``dp=1`` , the accumulator has the same resolution as the input image. If  ``dp=2`` , the accumulator has half as big width and height.
+
+    :param minDist: Minimum distance between the centers of the detected circles. If the parameter is too small, multiple neighbor circles may be falsely detected in addition to a true one. If it is too large, some circles may be missed.
+
+    :param cannyThreshold: The higher threshold of the two passed to  the :ocv:func:`gpu::Canny`  edge detector (the lower one is twice smaller).
+
+    :param votesThreshold: The accumulator threshold for the circle centers at the detection stage. The smaller it is, the more false circles may be detected.
+
+    :param minRadius: Minimum circle radius.
+
+    :param maxRadius: Maximum circle radius.
+
+    :param maxCircles: Maximum number of output circles.
+
+    :param buf: Optional buffer to avoid extra memory allocations (for many calls with the same sizes).
+
+.. seealso:: :ocv:func:`HoughCircles`
+
+
+
+gpu::HoughCirclesDownload
+-------------------------
+Downloads results from :ocv:func:`gpu::HoughCircles` to host memory.
+
+.. ocv:function:: void gpu::HoughCirclesDownload(const GpuMat& d_circles, OutputArray h_circles)
+
+    :param d_circles: Result of :ocv:func:`gpu::HoughCircles` .
+
+    :param h_circles: Output host array.
+
+.. seealso:: :ocv:func:`gpu::HoughCircles`

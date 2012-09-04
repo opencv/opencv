@@ -43,6 +43,7 @@
 #include <opencv2/gpu/device/vec_traits.hpp>
 #include <opencv2/gpu/device/vec_math.hpp>
 #include <opencv2/gpu/device/emulation.hpp>
+
 #include <iostream>
 #include <stdio.h>
 
@@ -128,7 +129,8 @@ namespace cv { namespace gpu { namespace device
 
         template<typename T> struct InInterval<T, 1>
         {
-            __host__ __device__ __forceinline__ InInterval(const float4& _lo, const float4& _hi) : lo(-_lo.x), hi(_hi.x) {};
+            typedef typename VecTraits<T>::elem_type E;
+            __host__ __device__ __forceinline__ InInterval(const float4& _lo, const float4& _hi) : lo((E)(-_lo.x)), hi((E)_hi.x) {};
             T lo, hi;
 
             template<typename I> __device__ __forceinline__ bool operator() (const I& a, const I& b) const
@@ -138,10 +140,12 @@ namespace cv { namespace gpu { namespace device
             }
         };
 
+
         template<typename T> struct InInterval<T, 3>
         {
+            typedef typename VecTraits<T>::elem_type E;
             __host__ __device__ __forceinline__ InInterval(const float4& _lo, const float4& _hi)
-            : lo (VecTraits<T>::make(-_lo.x, -_lo.y, -_lo.z)), hi (VecTraits<T>::make(_hi.x, _hi.y, _hi.z)){};
+            : lo (VecTraits<T>::make((E)(-_lo.x), (E)(-_lo.y), (E)(-_lo.z))), hi (VecTraits<T>::make((E)_hi.x, (E)_hi.y, (E)_hi.z)){};
             T lo, hi;
 
             template<typename I> __device__ __forceinline__ bool operator() (const I& a, const I& b) const
@@ -155,8 +159,9 @@ namespace cv { namespace gpu { namespace device
 
         template<typename T> struct InInterval<T, 4>
         {
+            typedef typename VecTraits<T>::elem_type E;
             __host__ __device__ __forceinline__ InInterval(const float4& _lo, const float4& _hi)
-            : lo (VecTraits<T>::make(-_lo.x, -_lo.y, -_lo.z, -_lo.w)), hi (VecTraits<T>::make(_hi.x, _hi.y, _hi.z, -_hi.w)){};
+            : lo (VecTraits<T>::make((E)(-_lo.x), (E)(-_lo.y), (E)(-_lo.z), (E)(-_lo.w))), hi (VecTraits<T>::make((E)_hi.x, (E)_hi.y, (E)_hi.z, (E)_hi.w)){};
             T lo, hi;
 
             template<typename I> __device__ __forceinline__ bool operator() (const I& a, const I& b) const
@@ -171,7 +176,7 @@ namespace cv { namespace gpu { namespace device
 
 
         template<typename T, typename F>
-        __global__ void computeConnectivity(const DevMem2D_<T> image, DevMem2D components, F connected)
+        __global__ void computeConnectivity(const PtrStepSz<T> image, PtrStepSzb components, F connected)
         {
             int x = threadIdx.x + blockIdx.x * blockDim.x;
             int y = threadIdx.y + blockIdx.y * blockDim.y;
@@ -197,7 +202,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         template< typename T>
-        void computeEdges(const DevMem2D& image, DevMem2D edges, const float4& lo, const float4& hi, cudaStream_t stream)
+        void computeEdges(const PtrStepSzb& image, PtrStepSzb edges, const float4& lo, const float4& hi, cudaStream_t stream)
         {
             dim3 block(CTA_SIZE_X, CTA_SIZE_Y);
             dim3 grid(divUp(image.cols, block.x), divUp(image.rows, block.y));
@@ -205,23 +210,23 @@ namespace cv { namespace gpu { namespace device
             typedef InInterval<typename IntervalsTraits<T>::dist_type, IntervalsTraits<T>::ch> Int_t;
 
             Int_t inInt(lo, hi);
-            computeConnectivity<T, Int_t><<<grid, block, 0, stream>>>(static_cast<const DevMem2D_<T> >(image), edges, inInt);
+            computeConnectivity<T, Int_t><<<grid, block, 0, stream>>>(static_cast<const PtrStepSz<T> >(image), edges, inInt);
 
             cudaSafeCall( cudaGetLastError() );
             if (stream == 0)
                 cudaSafeCall( cudaDeviceSynchronize() );
         }
 
-        template void computeEdges<uchar>  (const DevMem2D& image, DevMem2D edges, const float4& lo, const float4& hi, cudaStream_t stream);
-        template void computeEdges<uchar3> (const DevMem2D& image, DevMem2D edges, const float4& lo, const float4& hi, cudaStream_t stream);
-        template void computeEdges<uchar4> (const DevMem2D& image, DevMem2D edges, const float4& lo, const float4& hi, cudaStream_t stream);
-        template void computeEdges<ushort> (const DevMem2D& image, DevMem2D edges, const float4& lo, const float4& hi, cudaStream_t stream);
-        template void computeEdges<ushort3>(const DevMem2D& image, DevMem2D edges, const float4& lo, const float4& hi, cudaStream_t stream);
-        template void computeEdges<ushort4>(const DevMem2D& image, DevMem2D edges, const float4& lo, const float4& hi, cudaStream_t stream);
-        template void computeEdges<int>    (const DevMem2D& image, DevMem2D edges, const float4& lo, const float4& hi, cudaStream_t stream);
-        template void computeEdges<float>  (const DevMem2D& image, DevMem2D edges, const float4& lo, const float4& hi, cudaStream_t stream);
+        template void computeEdges<uchar>  (const PtrStepSzb& image, PtrStepSzb edges, const float4& lo, const float4& hi, cudaStream_t stream);
+        template void computeEdges<uchar3> (const PtrStepSzb& image, PtrStepSzb edges, const float4& lo, const float4& hi, cudaStream_t stream);
+        template void computeEdges<uchar4> (const PtrStepSzb& image, PtrStepSzb edges, const float4& lo, const float4& hi, cudaStream_t stream);
+        template void computeEdges<ushort> (const PtrStepSzb& image, PtrStepSzb edges, const float4& lo, const float4& hi, cudaStream_t stream);
+        template void computeEdges<ushort3>(const PtrStepSzb& image, PtrStepSzb edges, const float4& lo, const float4& hi, cudaStream_t stream);
+        template void computeEdges<ushort4>(const PtrStepSzb& image, PtrStepSzb edges, const float4& lo, const float4& hi, cudaStream_t stream);
+        template void computeEdges<int>    (const PtrStepSzb& image, PtrStepSzb edges, const float4& lo, const float4& hi, cudaStream_t stream);
+        template void computeEdges<float>  (const PtrStepSzb& image, PtrStepSzb edges, const float4& lo, const float4& hi, cudaStream_t stream);
 
-        __global__ void lableTiles(const DevMem2D edges, DevMem2Di comps)
+        __global__ void lableTiles(const PtrStepSzb edges, PtrStepSzi comps)
         {
             int x = threadIdx.x + blockIdx.x * TILE_COLS;
             int y = threadIdx.y + blockIdx.y * TILE_ROWS;
@@ -316,7 +321,7 @@ namespace cv { namespace gpu { namespace device
                         }
                     }
 
-                changed = Emulation::sycthOr(changed);
+                changed = Emulation::syncthreadsOr(changed);
 
                 if (!changed)
                     break;
@@ -355,7 +360,7 @@ namespace cv { namespace gpu { namespace device
                 }
         }
 
-        __device__ __forceinline__ int root(const DevMem2Di& comps, int label)
+        __device__ __forceinline__ int root(const PtrStepSzi& comps, int label)
         {
             while(1)
             {
@@ -371,7 +376,7 @@ namespace cv { namespace gpu { namespace device
             return label;
         }
 
-        __device__ __forceinline__ void isConnected(DevMem2Di& comps, int l1, int l2, bool& changed)
+        __device__ __forceinline__ void isConnected(PtrStepSzi& comps, int l1, int l2, bool& changed)
         {
             int r1 = root(comps, l1);
             int r2 = root(comps, l2);
@@ -389,7 +394,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         __global__ void crossMerge(const int tilesNumY, const int tilesNumX, int tileSizeY, int tileSizeX,
-            const DevMem2D edges, DevMem2Di comps, const int yIncomplete, int xIncomplete)
+            const PtrStepSzb edges, PtrStepSzi comps, const int yIncomplete, int xIncomplete)
         {
             int tid = threadIdx.y * blockDim.x + threadIdx.x;
             int stride = blockDim.y * blockDim.x;
@@ -474,10 +479,10 @@ namespace cv { namespace gpu { namespace device
                         }
                     }
                 }
-            } while (Emulation::sycthOr(changed));
+            } while (Emulation::syncthreadsOr(changed));
         }
 
-        __global__ void flatten(const DevMem2D edges, DevMem2Di comps)
+        __global__ void flatten(const PtrStepSzb edges, PtrStepSzi comps)
         {
             int x = threadIdx.x + blockIdx.x * blockDim.x;
             int y = threadIdx.y + blockIdx.y * blockDim.y;
@@ -488,7 +493,7 @@ namespace cv { namespace gpu { namespace device
 
         enum {CC_NO_COMPACT = 0, CC_COMPACT_LABELS = 1};
 
-        void labelComponents(const DevMem2D& edges, DevMem2Di comps, int flags, cudaStream_t stream)
+        void labelComponents(const PtrStepSzb& edges, PtrStepSzi comps, int flags, cudaStream_t stream)
         {
             dim3 block(CTA_SIZE_X, CTA_SIZE_Y);
             dim3 grid(divUp(edges.cols, TILE_COLS), divUp(edges.rows, TILE_ROWS));
@@ -499,11 +504,11 @@ namespace cv { namespace gpu { namespace device
             int tileSizeX = TILE_COLS, tileSizeY = TILE_ROWS;
             while (grid.x > 1 || grid.y > 1)
             {
-                dim3 mergeGrid(ceilf(grid.x / 2.0), ceilf(grid.y / 2.0));
+                dim3 mergeGrid((int)ceilf(grid.x / 2.f), (int)ceilf(grid.y / 2.f));
                 dim3 mergeBlock(STA_SIZE_MERGE_X, STA_SIZE_MERGE_Y);
                 // debug log
                 // std::cout << "merging: " << grid.y  << " x " << grid.x << " ---> " << mergeGrid.y <<  " x " << mergeGrid.x << " for tiles: " << tileSizeY << " x " << tileSizeX << std::endl;
-                crossMerge<<<mergeGrid, mergeBlock, 0, stream>>>(2, 2, tileSizeY, tileSizeX, edges, comps, ceilf(grid.y / 2.0) - grid.y / 2, ceilf(grid.x / 2.0) - grid.x / 2);
+                crossMerge<<<mergeGrid, mergeBlock, 0, stream>>>(2, 2, tileSizeY, tileSizeX, edges, comps, (int)ceilf(grid.y / 2.f) - grid.y / 2, (int)ceilf(grid.x / 2.f) - grid.x / 2);
                 tileSizeX <<= 1;
                 tileSizeY <<= 1;
                 grid = mergeGrid;

@@ -97,7 +97,7 @@ namespace cv { namespace gpu { namespace device
             #endif // __CUDA_ARCH__ >= 110
         }
 
-        int findCorners_gpu(DevMem2Df eig, float threshold, DevMem2Db mask, float2* corners, int max_count)
+        int findCorners_gpu(PtrStepSzf eig, float threshold, PtrStepSzb mask, float2* corners, int max_count)
         {
             void* counter_ptr;
             cudaSafeCall( cudaGetSymbolAddress(&counter_ptr, g_counter) );
@@ -134,7 +134,7 @@ namespace cv { namespace gpu { namespace device
         };
 
 
-        void sortCorners_gpu(DevMem2Df eig, float2* corners, int count)
+        void sortCorners_gpu(PtrStepSzf eig, float2* corners, int count)
         {
             bindTexture(&eigTex, eig);
 

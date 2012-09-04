@@ -1341,7 +1341,7 @@ TEST(MOG)
     cv::gpu::MOG_GPU d_mog;
     cv::gpu::GpuMat d_foreground;
 
-    d_mog(d_frame, d_foreground, 0.01);
+    d_mog(d_frame, d_foreground, 0.01f);
 
     while (!TestSystem::instance().stop())
     {
@@ -1350,7 +1350,7 @@ TEST(MOG)
 
         TestSystem::instance().gpuOn();
 
-        d_mog(d_frame, d_foreground, 0.01);
+        d_mog(d_frame, d_foreground, 0.01f);
 
         TestSystem::instance().gpuOff();
     }

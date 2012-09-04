@@ -13,44 +13,49 @@ import android.graphics.Bitmap;
 import android.util.Log;
 
 class Sample1View extends SampleViewBase {
+    private static final String TAG = "OCVSample::View";
 
     public static final int     VIEW_MODE_RGBA  = 0;
     public static final int     VIEW_MODE_GRAY  = 1;
     public static final int     VIEW_MODE_CANNY = 2;
 
-    private Mat mYuv;
-    private Mat mRgba;
-    private Mat mGraySubmat;
-    private Mat mIntermediateMat;
-	private Bitmap mBitmap;
-	private int mViewMode;
+    private Mat                 mYuv;
+    private Mat                 mRgba;
+    private Mat                 mGraySubmat;
+    private Mat                 mIntermediateMat;
+    private Bitmap              mBitmap;
+    private int                 mViewMode;
 
     public Sample1View(Context context) {
         super(context);
         mViewMode = VIEW_MODE_RGBA;
+        Log.i(TAG, "Instantiated new " + this.getClass());
     }
 
-	@Override
-	protected void onPreviewStarted(int previewWidth, int previewHeight) {
-	    synchronized (this) {
-        	// initialize Mats before usage
-        	mYuv = new Mat(getFrameHeight() + getFrameHeight() / 2, getFrameWidth(), CvType.CV_8UC1);
-        	mGraySubmat = mYuv.submat(0, getFrameHeight(), 0, getFrameWidth());
+    @Override
+    protected void onPreviewStarted(int previewWidth, int previewHeight) {
+        Log.i(TAG, "called onPreviewStarted("+previewWidth+", "+previewHeight+")");
 
-        	mRgba = new Mat();
-        	mIntermediateMat = new Mat();
+        // initialize Mats before usage
+        mYuv = new Mat(getFrameHeight() + getFrameHeight() / 2, getFrameWidth(), CvType.CV_8UC1);
+        mGraySubmat = mYuv.submat(0, getFrameHeight(), 0, getFrameWidth());
 
-        	mBitmap = Bitmap.createBitmap(previewWidth, previewHeight, Bitmap.Config.ARGB_8888); 
-    	    }
-	}
+        mRgba = new Mat();
+        mIntermediateMat = new Mat();
 
-	@Override
-	protected void onPreviewStopped() {
-		if(mBitmap != null) {
-			mBitmap.recycle();
-		}
+        mBitmap = Bitmap.createBitmap(previewWidth, previewHeight, Bitmap.Config.ARGB_8888);
+    }
 
-		synchronized (this) {
+    @Override
+    protected void onPreviewStopped() {
+        Log.i(TAG, "called onPreviewStopped");
+
+        if(mBitmap != null) {
+            mBitmap.recycle();
+            mBitmap = null;
+        }
+
+        synchronized (this) {
             // Explicitly deallocate Mats
             if (mYuv != null)
                 mYuv.release();
@@ -101,7 +106,8 @@ class Sample1View extends SampleViewBase {
     }
 
     public void setViewMode(int viewMode) {
-    	mViewMode = viewMode;
+        Log.i(TAG, "called setViewMode("+viewMode+")");
+        mViewMode = viewMode;
     }
 
 }

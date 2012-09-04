@@ -120,7 +120,7 @@ private:
         ImagePairLess(const std::vector<Mat> &images, const std::vector<Point> &corners)
             : src_(&images[0]), corners_(&corners[0]) {}
 
-        bool operator() (const std::pair<int, int> &l, const std::pair<int, int> &r) const
+        bool operator() (const std::pair<size_t, size_t> &l, const std::pair<size_t, size_t> &r) const
         {
             Point c1 = corners_[l.first] + Point(src_[l.first].cols / 2, src_[l.first].rows / 2);
             Point c2 = corners_[l.second] + Point(src_[l.second].cols / 2, src_[l.second].rows / 2);

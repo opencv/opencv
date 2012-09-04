@@ -411,22 +411,22 @@ This filter does not work inplace.
 
 
 blur
---------
-Smoothes an image using the normalized box filter.
+----
+Blurs an image using the normalized box filter.
 
 .. ocv:function:: void blur( InputArray src, OutputArray dst, Size ksize, Point anchor=Point(-1,-1),           int borderType=BORDER_DEFAULT )
 
 .. ocv:pyfunction:: cv2.blur(src, ksize[, dst[, anchor[, borderType]]]) -> dst
 
-    :param src: Source image. The image can have any number of channels, which are processed independently. The depth should be ``CV_8U``, ``CV_16U``, ``CV_16S``, ``CV_32F`` or ``CV_64F``.
+    :param src: input image; it can have any number of channels, which are processed independently, but the depth should be ``CV_8U``, ``CV_16U``, ``CV_16S``, ``CV_32F`` or ``CV_64F``.
 
-    :param dst: Destination image of the same size and type as  ``src`` .
+    :param dst: output image of the same size and type as ``src``.
 
-    :param ksize: Smoothing kernel size.
+    :param ksize: blurring kernel size.
 
-    :param anchor: Anchor point. The default value  ``Point(-1,-1)``  means that the anchor is at the kernel center.
+    :param anchor: anchor point; default value ``Point(-1,-1)`` means that the anchor is at the kernel center.
 
-    :param borderType: Border mode used to extrapolate pixels outside of the image.
+    :param borderType: border mode used to extrapolate pixels outside of the image.
 
 The function smoothes an image using the kernel:
 
@@ -445,7 +445,7 @@ The call ``blur(src, dst, ksize, anchor, borderType)`` is equivalent to ``boxFil
 
 
 borderInterpolate
----------------------
+-----------------
 Computes the source location of an extrapolated pixel.
 
 .. ocv:function:: int borderInterpolate( int p, int len, int borderType )
@@ -476,24 +476,24 @@ Normally, the function is not called directly. It is used inside
 
 
 boxFilter
--------------
-Smoothes an image using the box filter.
+---------
+Blurs an image using the box filter.
 
 .. ocv:function:: void boxFilter( InputArray src, OutputArray dst, int ddepth, Size ksize, Point anchor=Point(-1,-1), bool normalize=true, int borderType=BORDER_DEFAULT )
 
 .. ocv:pyfunction:: cv2.boxFilter(src, ddepth, ksize[, dst[, anchor[, normalize[, borderType]]]]) -> dst
 
-    :param src: Source image.
+    :param src: input image.
 
-    :param dst: Destination image of the same size and type as  ``src`` .
+    :param dst: output image of the same size and type as ``src``.
 
-    :param ksize: Smoothing kernel size.
+    :param ksize: blurring kernel size.
 
-    :param anchor: Anchor point. The default value  ``Point(-1,-1)``  means that the anchor is at the kernel center.
+    :param anchor: anchor point; default value ``Point(-1,-1)`` means that the anchor is at the kernel center.
 
-    :param normalize: Flag specifying whether the kernel is normalized by its area or not.
+    :param normalize: flag, specifying whether the kernel is normalized by its area or not.
 
-    :param borderType: Border mode used to extrapolate pixels outside of the image.
+    :param borderType: border mode used to extrapolate pixels outside of the image.
 
 The function smoothes an image using the kernel:
 
@@ -520,7 +520,7 @@ Unnormalized box filter is useful for computing various integral characteristics
 
 
 buildPyramid
-----------------
+------------
 Constructs the Gaussian pyramid for an image.
 
 .. ocv:function:: void buildPyramid( InputArray src, OutputArrayOfArrays dst, int maxlevel, int borderType=BORDER_DEFAULT )
@@ -537,7 +537,7 @@ The function constructs a vector of images and builds the Gaussian pyramid by re
 
 
 copyMakeBorder
-------------------
+--------------
 Forms a border around an image.
 
 .. ocv:function:: void copyMakeBorder( InputArray src, OutputArray dst, int top, int bottom, int left, int right, int borderType, const Scalar& value=Scalar() )
@@ -828,7 +828,7 @@ The functions construct primitive separable linear filtering operations or a fil
 
 
 dilate
-----------
+------
 Dilates an image by using a specific structuring element.
 
 .. ocv:function:: void dilate( InputArray src, OutputArray dst, InputArray kernel, Point anchor=Point(-1,-1), int iterations=1, int borderType=BORDER_CONSTANT, const Scalar& borderValue=morphologyDefaultBorderValue() )
@@ -838,19 +838,19 @@ Dilates an image by using a specific structuring element.
 .. ocv:cfunction:: void cvDilate( const CvArr* src, CvArr* dst, IplConvKernel* element=NULL, int iterations=1 )
 .. ocv:pyoldfunction:: cv.Dilate(src, dst, element=None, iterations=1)-> None
 
-    :param src: Source image. The number of channels can be arbitrary. The depth should be one of ``CV_8U``, ``CV_16U``, ``CV_16S``,  ``CV_32F` or ``CV_64F``.
+    :param src: input image; the number of channels can be arbitrary, but the depth should be one of ``CV_8U``, ``CV_16U``, ``CV_16S``,  ``CV_32F` or ``CV_64F``.
 
-    :param dst: Destination image of the same size and type as  ``src`` .
+    :param dst: output image of the same size and type as ``src``.
 
-    :param element: Structuring element used for dilation. If  ``element=Mat()`` , a  ``3 x 3`` rectangular structuring element is used.
+    :param element: structuring element used for dilation; if  ``element=Mat()`` , a  ``3 x 3`` rectangular structuring element is used.
 
-    :param anchor: Position of the anchor within the element. The default value ``(-1, -1)`` means that the anchor is at the element center.
+    :param anchor: position of the anchor within the element; default value ``(-1, -1)`` means that the anchor is at the element center.
 
-    :param iterations: Number of times dilation is applied.
+    :param iterations: number of times dilation is applied.
 
-    :param borderType: Pixel extrapolation method. See  :ocv:func:`borderInterpolate` for details.
+    :param borderType: pixel extrapolation method (see  :ocv:func:`borderInterpolate` for details).
 
-    :param borderValue: Border value in case of a constant border. The default value has a special meaning. See  :ocv:func:`createMorphologyFilter` for details.
+    :param borderValue: border value in case of a constant border (see  :ocv:func:`createMorphologyFilter` for details).
 
 The function dilates the source image using the specified structuring element that determines the shape of a pixel neighborhood over which the maximum is taken:
 
@@ -868,7 +868,7 @@ The function supports the in-place mode. Dilation can be applied several ( ``ite
 
 
 erode
----------
+-----
 Erodes an image by using a specific structuring element.
 
 .. ocv:function:: void erode( InputArray src, OutputArray dst, InputArray kernel, Point anchor=Point(-1,-1), int iterations=1, int borderType=BORDER_CONSTANT, const Scalar& borderValue=morphologyDefaultBorderValue() )
@@ -878,19 +878,19 @@ Erodes an image by using a specific structuring element.
 .. ocv:cfunction:: void cvErode( const CvArr* src, CvArr* dst, IplConvKernel* element=NULL, int iterations=1)
 .. ocv:pyoldfunction:: cv.Erode(src, dst, element=None, iterations=1)-> None
 
-    :param src: Source image. The number of channels can be arbitrary. The depth should be one of ``CV_8U``, ``CV_16U``, ``CV_16S``,  ``CV_32F` or ``CV_64F``.
+    :param src: input image; the number of channels can be arbitrary, but the depth should be one of ``CV_8U``, ``CV_16U``, ``CV_16S``,  ``CV_32F` or ``CV_64F``.
 
-    :param dst: Destination image of the same size and type as ``src``.
+    :param dst: output image of the same size and type as ``src``.
 
-    :param element: Structuring element used for erosion. If  ``element=Mat()`` , a  ``3 x 3``  rectangular structuring element is used.
+    :param element: structuring element used for erosion; if  ``element=Mat()`` , a  ``3 x 3``  rectangular structuring element is used.
 
-    :param anchor: Position of the anchor within the element. The default value  ``(-1, -1)``  means that the anchor is at the element center.
+    :param anchor: position of the anchor within the element; default value  ``(-1, -1)``  means that the anchor is at the element center.
 
-    :param iterations: Number of times erosion is applied.
+    :param iterations: number of times erosion is applied.
 
-    :param borderType: Pixel extrapolation method. See  :ocv:func:`borderInterpolate` for details.
+    :param borderType: pixel extrapolation method (see  :ocv:func:`borderInterpolate` for details).
 
-    :param borderValue: Border value in case of a constant border. The default value has a special meaning. See  :ocv:func:`createMorphologyFilter` for details.
+    :param borderValue: border value in case of a constant border (see :ocv:func:`createMorphologyFilter` for details).
 
 The function erodes the source image using the specified structuring element that determines the shape of a pixel neighborhood over which the minimum is taken:
 
@@ -909,7 +909,7 @@ The function supports the in-place mode. Erosion can be applied several ( ``iter
 
 
 filter2D
-------------
+--------
 Convolves an image with the kernel.
 
 .. ocv:function:: void filter2D( InputArray src, OutputArray dst, int ddepth, InputArray kernel, Point anchor=Point(-1,-1), double delta=0, int borderType=BORDER_DEFAULT )
@@ -920,25 +920,26 @@ Convolves an image with the kernel.
 
 .. ocv:pyoldfunction:: cv.Filter2D(src, dst, kernel, anchor=(-1, -1))-> None
 
-    :param src: Source image.
+    :param src: input image.
 
-    :param dst: Destination image of the same size and the same number of channels as  ``src`` .
+    :param dst: output image of the same size and the same number of channels as ``src``.
 
-    :param ddepth: Desired depth of the destination image. If it is negative, it will be the same as  ``src.depth()`` . The following combination of ``src.depth()`` and ``ddepth`` are supported:
+
+    :param ddepth: desired depth of the destination image; if it is negative, it will be the same as ``src.depth()``; the following combinations of ``src.depth()`` and ``ddepth`` are supported:
          * ``src.depth()`` = ``CV_8U``, ``ddepth`` = -1/``CV_16S``/``CV_32F``/``CV_64F``
          * ``src.depth()`` = ``CV_16U``/``CV_16S``, ``ddepth`` = -1/``CV_32F``/``CV_64F``
          * ``src.depth()`` = ``CV_32F``, ``ddepth`` = -1/``CV_32F``/``CV_64F``
          * ``src.depth()`` = ``CV_64F``, ``ddepth`` = -1/``CV_64F``
 
-        when ``ddepth=-1``, the destination image will have the same depth as the source.
+        when ``ddepth=-1``, the output image will have the same depth as the source.
 
-    :param kernel: Convolution kernel (or rather a correlation kernel), a single-channel floating point matrix. If you want to apply different kernels to different channels, split the image into separate color planes using  :ocv:func:`split`  and process them individually.
+    :param kernel: convolution kernel (or rather a correlation kernel), a single-channel floating point matrix; if you want to apply different kernels to different channels, split the image into separate color planes using  :ocv:func:`split`  and process them individually.
 
-    :param anchor: Anchor of the kernel that indicates the relative position of a filtered point within the kernel. The anchor should lie within the kernel. The special default value (-1,-1) means that the anchor is at the kernel center.
+    :param anchor: anchor of the kernel that indicates the relative position of a filtered point within the kernel; the anchor should lie within the kernel; default value (-1,-1) means that the anchor is at the kernel center.
 
-    :param delta: Optional value added to the filtered pixels before storing them in  ``dst`` .
+    :param delta: optional value added to the filtered pixels before storing them in ``dst``.
 
-    :param borderType: Pixel extrapolation method. See  :ocv:func:`borderInterpolate` for details.
+    :param borderType: pixel extrapolation method (see  :ocv:func:`borderInterpolate` for details).
 
 The function applies an arbitrary linear filter to an image. In-place operation is supported. When the aperture is partially outside the image, the function interpolates outlier pixel values according to the specified border mode.
 
@@ -963,24 +964,24 @@ The function uses the DFT-based algorithm in case of sufficiently large kernels 
 
 
 GaussianBlur
-----------------
-Smoothes an image using a Gaussian filter.
+------------
+Blurs an image using a Gaussian filter.
 
 .. ocv:function:: void GaussianBlur( InputArray src, OutputArray dst, Size ksize, double sigmaX, double sigmaY=0, int borderType=BORDER_DEFAULT )
 
 .. ocv:pyfunction:: cv2.GaussianBlur(src, ksize, sigmaX[, dst[, sigmaY[, borderType]]]) -> dst
 
-    :param src: Source image. The image can have any number of channels, which are processed independently. The depth should be ``CV_8U``, ``CV_16U``, ``CV_16S``, ``CV_32F`` or ``CV_64F``.
+    :param src: input image; the image can have any number of channels, which are processed independently, but the depth should be ``CV_8U``, ``CV_16U``, ``CV_16S``, ``CV_32F`` or ``CV_64F``.
 
-    :param dst: Destination image of the same size and type as  ``src`` .
+    :param dst: output image of the same size and type as ``src``.
 
     :param ksize: Gaussian kernel size.  ``ksize.width``  and  ``ksize.height``  can differ but they both must be positive and odd. Or, they can be zero's and then they are computed from  ``sigma*`` .
 
     :param sigmaX: Gaussian kernel standard deviation in X direction.
 
-    :param sigmaY: Gaussian kernel standard deviation in Y direction. If  ``sigmaY``  is zero, it is set to be equal to  ``sigmaX`` . If both sigmas are zeros, they are computed from  ``ksize.width``  and  ``ksize.height`` , respectively. See  :ocv:func:`getGaussianKernel` for details. To fully control the result regardless of possible future modifications of all this semantics, it is recommended to specify all of  ``ksize`` ,  ``sigmaX`` ,  and  ``sigmaY`` .
+    :param sigmaY: Gaussian kernel standard deviation in Y direction; if  ``sigmaY``  is zero, it is set to be equal to  ``sigmaX``, if both sigmas are zeros, they are computed from  ``ksize.width``  and  ``ksize.height`` , respectively (see  :ocv:func:`getGaussianKernel` for details); to fully control the result regardless of possible future modifications of all this semantics, it is recommended to specify all of ``ksize``, ``sigmaX``, and ``sigmaY``.
 
-    :param borderType: Pixel extrapolation method. See  :ocv:func:`borderInterpolate` for details.
+    :param borderType: pixel extrapolation method (see  :ocv:func:`borderInterpolate` for details).
 
 The function convolves the source image with the specified Gaussian kernel. In-place filtering is supported.
 
@@ -995,7 +996,7 @@ The function convolves the source image with the specified Gaussian kernel. In-p
 
 
 getDerivKernels
--------------------
+---------------
 Returns filter coefficients for computing spatial image derivatives.
 
 .. ocv:function:: void getDerivKernels( OutputArray kx, OutputArray ky, int dx, int dy, int ksize,                      bool normalize=false, int ktype=CV_32F )
@@ -1026,7 +1027,7 @@ The function computes and returns the filter coefficients for spatial image deri
 
 
 getGaussianKernel
----------------------
+-----------------
 Returns Gaussian filter coefficients.
 
 .. ocv:function:: Mat getGaussianKernel( int ksize, double sigma, int ktype=CV_64F )
@@ -1066,7 +1067,7 @@ Two of such generated kernels can be passed to
 
 
 getKernelType
------------------
+-------------
 Returns the kernel type.
 
 .. ocv:function:: int getKernelType(InputArray kernel, Point anchor)
@@ -1089,7 +1090,7 @@ The function analyzes the kernel coefficients and returns the corresponding kern
 
 
 getStructuringElement
--------------------------
+---------------------
 Returns a structuring element of the specified size and shape for morphological operations.
 
 .. ocv:function:: Mat getStructuringElement(int shape, Size ksize, Point anchor=Point(-1,-1))
@@ -1142,18 +1143,18 @@ The function constructs and returns the structuring element that can be further 
 
 
 medianBlur
---------------
-Smoothes an image using the median filter.
+----------
+Blurs an image using the median filter.
 
 .. ocv:function:: void medianBlur( InputArray src, OutputArray dst, int ksize )
 
 .. ocv:pyfunction:: cv2.medianBlur(src, ksize[, dst]) -> dst
 
-    :param src: Source 1-, 3-, or 4-channel image. When  ``ksize``  is 3 or 5, the image depth should be  ``CV_8U`` ,  ``CV_16U`` ,  or  ``CV_32F`` . For larger aperture sizes, it can only be  ``CV_8U`` .
+    :param src: input 1-, 3-, or 4-channel image; when  ``ksize``  is 3 or 5, the image depth should be ``CV_8U``, ``CV_16U``, or ``CV_32F``, for larger aperture sizes, it can only be ``CV_8U``.
 
-    :param dst: Destination array of the same size and type as  ``src`` .
+    :param dst: destination array of the same size and type as ``src``.
 
-    :param ksize: Aperture linear size. It must be odd and greater than 1, for example: 3, 5, 7 ...
+    :param ksize: aperture linear size; it must be odd and greater than 1, for example: 3, 5, 7 ...
 
 The function smoothes an image using the median filter with the
 :math:`\texttt{ksize} \times \texttt{ksize}` aperture. Each channel of a multi-channel image is processed independently. In-place operation is supported.
@@ -1168,7 +1169,7 @@ The function smoothes an image using the median filter with the
 
 
 morphologyEx
-----------------
+------------
 Performs advanced morphological transformations.
 
 .. ocv:function:: void morphologyEx( InputArray src, OutputArray dst, int op, InputArray kernel, Point anchor=Point(-1,-1), int iterations=1, int borderType=BORDER_CONSTANT, const Scalar& borderValue=morphologyDefaultBorderValue() )
@@ -1244,7 +1245,7 @@ Any of the operations can be done in-place. In case of multi-channel images, eac
 
 
 Laplacian
--------------
+---------
 Calculates the Laplacian of an image.
 
 .. ocv:function:: void Laplacian( InputArray src, OutputArray dst, int ddepth, int ksize=1, double scale=1, double delta=0, int borderType=BORDER_DEFAULT )
@@ -1290,8 +1291,8 @@ This is done when ``ksize > 1`` . When ``ksize == 1`` , the Laplacian is compute
 
 
 pyrDown
------------
-Smoothes an image and downsamples it.
+-------
+Blurs an image and downsamples it.
 
 .. ocv:function:: void pyrDown( InputArray src, OutputArray dst, const Size& dstsize=Size(), int borderType=BORDER_DEFAULT )
 
@@ -1301,11 +1302,11 @@ Smoothes an image and downsamples it.
 
 .. ocv:pyoldfunction:: cv.PyrDown(src, dst, filter=CV_GAUSSIAN_5X5) -> None
 
-    :param src: Source image.
+    :param src: input image.
 
-    :param dst: Destination image. It has the specified size and the same type as  ``src`` .
+    :param dst: output image; it has the specified size and the same type as ``src``.
 
-    :param dstsize: Size of the destination image. By default, it is computed as  ``Size((src.cols+1)/2, (src.rows+1)/2)`` . But in any case, the following conditions should be satisfied:
+    :param dstsize: size of the output image; by default, it is computed as ``Size((src.cols+1)/2, (src.rows+1)/2)``, but in any case, the following conditions should be satisfied:
 
         .. math::
 
@@ -1323,8 +1324,8 @@ Then, it downsamples the image by rejecting even rows and columns.
 
 
 pyrUp
----------
-Upsamples an image and then smoothes it.
+-----
+Upsamples an image and then blurs it.
 
 .. ocv:function:: void pyrUp( InputArray src, OutputArray dst, const Size& dstsize=Size(), int borderType=BORDER_DEFAULT )
 
@@ -1334,18 +1335,18 @@ Upsamples an image and then smoothes it.
 
 .. ocv:pyoldfunction:: cv.PyrUp(src, dst, filter=CV_GAUSSIAN_5X5) -> None
 
-    :param src: Source image.
+    :param src: input image.
 
-    :param dst: Destination image. It has the specified size and the same type as  ``src`` .
+    :param dst: output image. It has the specified size and the same type as  ``src`` .
 
-    :param dstsize: Size of the destination image. By default, it is computed as  ``Size(src.cols*2, (src.rows*2)`` . But in any case, the following conditions should be satisfied:
+    :param dstsize: size of the output image; by default, it is computed as ``Size(src.cols*2, (src.rows*2)``, but in any case, the following conditions should be satisfied:
 
         .. math::
 
             \begin{array}{l}
             | \texttt{dstsize.width} -src.cols*2| \leq  ( \texttt{dstsize.width}   \mod  2)  \\ | \texttt{dstsize.height} -src.rows*2| \leq  ( \texttt{dstsize.height}   \mod  2) \end{array}
 
-The function performs the upsampling step of the Gaussian pyramid construction  though it can actually be used to construct the Laplacian pyramid. First, it upsamples the source image by injecting even zero rows and columns and then convolves the result with the same kernel as in
+The function performs the upsampling step of the Gaussian pyramid construction, though it can actually be used to construct the Laplacian pyramid. First, it upsamples the source image by injecting even zero rows and columns and then convolves the result with the same kernel as in
 :ocv:func:`pyrDown`  multiplied by 4.
 
 
@@ -1399,7 +1400,7 @@ When ``maxLevel > 0``, the gaussian pyramid of ``maxLevel+1`` levels is built, a
 
 
 sepFilter2D
----------------
+-----------
 Applies a separable linear filter to an image.
 
 .. ocv:function:: void sepFilter2D( InputArray src, OutputArray dst, int ddepth, InputArray kernelX, InputArray kernelY, Point anchor=Point(-1,-1), double delta=0, int borderType=BORDER_DEFAULT )
@@ -1493,7 +1494,7 @@ The function smooths an image using one of several methods. Every of the methods
 
 
 Sobel
----------
+-----
 Calculates the first, second, third, or mixed image derivatives using an extended Sobel operator.
 
 .. ocv:function:: void Sobel( InputArray src, OutputArray dst, int ddepth, int dx, int dy, int ksize=3, double scale=1, double delta=0, int borderType=BORDER_DEFAULT )
@@ -1504,29 +1505,29 @@ Calculates the first, second, third, or mixed image derivatives using an extende
 
 .. ocv:pyoldfunction:: cv.Sobel(src, dst, xorder, yorder, apertureSize=3)-> None
 
-    :param src: Source image.
+    :param src: input image.
 
-    :param dst: Destination image of the same size and the same number of channels as  ``src`` .
+    :param dst: output image of the same size and the same number of channels as  ``src`` .
 
-    :param ddepth: Destination image depth. The following combination of ``src.depth()`` and ``ddepth`` are supported:
+    :param ddepth: output image depth; the following combinations of ``src.depth()`` and ``ddepth`` are supported:
          * ``src.depth()`` = ``CV_8U``, ``ddepth`` = -1/``CV_16S``/``CV_32F``/``CV_64F``
          * ``src.depth()`` = ``CV_16U``/``CV_16S``, ``ddepth`` = -1/``CV_32F``/``CV_64F``
          * ``src.depth()`` = ``CV_32F``, ``ddepth`` = -1/``CV_32F``/``CV_64F``
          * ``src.depth()`` = ``CV_64F``, ``ddepth`` = -1/``CV_64F``
 
-        when ``ddepth=-1``, the destination image will have the same depth as the source. In the case of 8-bit input images it will result in truncated derivatives.
+        when ``ddepth=-1``, the destination image will have the same depth as the source; in the case of 8-bit input images it will result in truncated derivatives.
 
-    :param xorder: Order of the derivative x.
+    :param xorder: order of the derivative x.
 
-    :param yorder: Order of the derivative y.
+    :param yorder: order of the derivative y.
 
-    :param ksize: Size of the extended Sobel kernel. It must be 1, 3, 5, or 7.
+    :param ksize: size of the extended Sobel kernel; it must be 1, 3, 5, or 7.
 
-    :param scale: Optional scale factor for the computed derivative values. By default, no scaling is applied. See  :ocv:func:`getDerivKernels` for details.
+    :param scale: optional scale factor for the computed derivative values; by default, no scaling is applied (see  :ocv:func:`getDerivKernels` for details).
 
-    :param delta: Optional delta value that is added to the results prior to storing them in  ``dst`` .
+    :param delta: optional delta value that is added to the results prior to storing them in ``dst``.
 
-    :param borderType: Pixel extrapolation method. See  :ocv:func:`borderInterpolate` for details.
+    :param borderType: pixel extrapolation method (see  :ocv:func:`borderInterpolate` for details).
 
 In all cases except one, the
 :math:`\texttt{ksize} \times
@@ -1580,28 +1581,28 @@ The second case corresponds to a kernel of:
 
 
 Scharr
-----------
+------
 Calculates the first x- or y- image derivative using Scharr operator.
 
 .. ocv:function:: void Scharr( InputArray src, OutputArray dst, int ddepth, int dx, int dy, double scale=1, double delta=0, int borderType=BORDER_DEFAULT )
 
 .. ocv:pyfunction:: cv2.Scharr(src, ddepth, dx, dy[, dst[, scale[, delta[, borderType]]]]) -> dst
 
-    :param src: Source image.
+    :param src: input image.
 
-    :param dst: Destination image of the same size and the same number of channels as ``src``.
+    :param dst: output image of the same size and the same number of channels as ``src``.
 
-    :param ddepth: Destination image depth. See :ocv:func:`Sobel` for the list of supported combination of ``src.depth()`` and ``ddepth``.
+    :param ddepth: output image depth (see :ocv:func:`Sobel` for the list of supported combination of ``src.depth()`` and ``ddepth``).
 
-    :param dx: Order of the derivative x.
+    :param dx: order of the derivative x.
 
-    :param dy: Order of the derivative y.
+    :param dy: order of the derivative y.
 
-    :param scale: Optional scale factor for the computed derivative values. By default, no scaling is applied. See  :ocv:func:`getDerivKernels` for details.
+    :param scale: optional scale factor for the computed derivative values; by default, no scaling is applied (see  :ocv:func:`getDerivKernels` for details).
 
-    :param delta: Optional delta value that is added to the results prior to storing them in  ``dst``.
+    :param delta: optional delta value that is added to the results prior to storing them in ``dst``.
 
-    :param borderType: Pixel extrapolation method. See  :ocv:func:`borderInterpolate` for details.
+    :param borderType: pixel extrapolation method (see  :ocv:func:`borderInterpolate` for details).
 
 The function computes the first x- or y- spatial image derivative using the Scharr operator. The call
 

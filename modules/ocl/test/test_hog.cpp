@@ -53,12 +53,12 @@ PARAM_TEST_CASE(HOG,cv::Size,int)
 {
 	cv::Size winSize;
 	int type;
-	vector<cv::ocl::Info> info;
+	//vector<cv::ocl::Info> info;
 	virtual void SetUp()
 	{
 		winSize = GET_PARAM(0);
 		type = GET_PARAM(1);
-		cv::ocl::getDevice(info);
+		//cv::ocl::getDevice(info);
 	}
 };
 
@@ -186,7 +186,7 @@ TEST_P(HOG, Detect)
 
 INSTANTIATE_TEST_CASE_P(OCL_ObjDetect, HOG, testing::Combine(
                         testing::Values(cv::Size(64, 128), cv::Size(48, 96)),
-                        testing::Values(MatType(CV_8UC1), MatType(CV_8UC4))));
+                        testing::Values(MatType(CV_8UC1), MatType(CV_8UC3),MatType(CV_8UC4))));
 
 
 #endif //HAVE_OPENCL

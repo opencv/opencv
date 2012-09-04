@@ -10,60 +10,65 @@ import android.graphics.Bitmap;
 import android.util.Log;
 
 class Sample4View extends SampleViewBase {
+    private static final String TAG = "OCVSample::View";
 
     public static final int     VIEW_MODE_RGBA     = 0;
     public static final int     VIEW_MODE_GRAY     = 1;
     public static final int     VIEW_MODE_CANNY    = 2;
     public static final int     VIEW_MODE_FEATURES = 5;
-    
-    private Mat mYuv;
-    private Mat mRgba;
-    private Mat mGraySubmat;
-    private Mat mIntermediateMat;
 
-    private int mViewMode;
-	private Bitmap mBitmap;
+    private Mat                 mYuv;
+    private Mat                 mRgba;
+    private Mat                 mGraySubmat;
+    private Mat                 mIntermediateMat;
+    private Bitmap              mBitmap;
+    private int                 mViewMode;
 
     public Sample4View(Context context) {
         super(context);
     }
-    
-	@Override
-	protected void onPreviewStarted(int previewWidtd, int previewHeight) {
+
+    @Override
+    protected void onPreviewStarted(int previewWidth, int previewHeight) {
+        Log.i(TAG, "called onPreviewStarted("+previewWidth+", "+previewHeight+")");
+
         // initialize Mats before usage
         mYuv = new Mat(getFrameHeight() + getFrameHeight() / 2, getFrameWidth(), CvType.CV_8UC1);
         mGraySubmat = mYuv.submat(0, getFrameHeight(), 0, getFrameWidth());
 
         mRgba = new Mat();
         mIntermediateMat = new Mat();
-        
-        mBitmap = Bitmap.createBitmap(previewWidtd, previewHeight, Bitmap.Config.ARGB_8888);
-	}
 
-	@Override
-	protected void onPreviewStopped() {
-		
-		if (mBitmap != null) {
-			mBitmap.recycle();
-			mBitmap = null;
-		}
-		
-        // Explicitly deallocate Mats
-        if (mYuv != null)
-            mYuv.release();
-        if (mRgba != null)
-            mRgba.release();
-        if (mGraySubmat != null)
-            mGraySubmat.release();
-        if (mIntermediateMat != null)
-            mIntermediateMat.release();
+        mBitmap = Bitmap.createBitmap(previewWidth, previewHeight, Bitmap.Config.ARGB_8888);
+    }
 
-        mYuv = null;
-        mRgba = null;
-        mGraySubmat = null;
-        mIntermediateMat = null;
-		
-	}
+    @Override
+    protected void onPreviewStopped() {
+        Log.i(TAG, "called onPreviewStopped");
+
+        if (mBitmap != null) {
+            mBitmap.recycle();
+            mBitmap = null;
+        }
+
+        synchronized (this) {
+            // Explicitly deallocate Mats
+            if (mYuv != null)
+                mYuv.release();
+            if (mRgba != null)
+                mRgba.release();
+            if (mGraySubmat != null)
+                mGraySubmat.release();
+            if (mIntermediateMat != null)
+                mIntermediateMat.release();
+
+            mYuv = null;
+            mRgba = null;
+            mGraySubmat = null;
+            mIntermediateMat = null;
+        }
+
+    }
 
 
     @Override
@@ -105,6 +110,7 @@ class Sample4View extends SampleViewBase {
     public native void FindFeatures(long matAddrGr, long matAddrRgba);
 
     public void setViewMode(int viewMode) {
-		mViewMode = viewMode;
+        Log.i(TAG, "called setViewMode("+viewMode+")");
+        mViewMode = viewMode;
     }
 }

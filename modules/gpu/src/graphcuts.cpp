@@ -48,7 +48,7 @@ void cv::gpu::graphcut(GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, Gpu
 void cv::gpu::graphcut(GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
 
 void cv::gpu::connectivityMask(const GpuMat&, GpuMat&, const cv::Scalar&, const cv::Scalar&, Stream&) { throw_nogpu(); }
-void cv::gpu::labelComponents(const GpuMat& mask, GpuMat& components, int, Stream& stream) { throw_nogpu(); }
+void cv::gpu::labelComponents(const GpuMat&, GpuMat&, int, Stream&) { throw_nogpu(); }
 
 #else /* !defined (HAVE_CUDA) */
 
@@ -56,21 +56,17 @@ namespace cv { namespace gpu { namespace device
 {
     namespace ccl
     {
-        void labelComponents(const DevMem2D& edges, DevMem2Di comps, int flags, cudaStream_t stream);
+        void labelComponents(const PtrStepSzb& edges, PtrStepSzi comps, int flags, cudaStream_t stream);
 
         template<typename T>
-        void computeEdges(const DevMem2D& image, DevMem2D edges, const float4& lo, const float4& hi, cudaStream_t stream);
+        void computeEdges(const PtrStepSzb& image, PtrStepSzb edges, const float4& lo, const float4& hi, cudaStream_t stream);
     }
 }}}
 
-
-float4 scalarToCudaType(const cv::Scalar& in)
+static float4 scalarToCudaType(const cv::Scalar& in)
 {
-    float4 res;
-    res.x = in[0]; res.y = in[1]; res.z = in[2]; res.w = in[3];
-    return res;
+  return make_float4((float)in[0], (float)in[1], (float)in[2], (float)in[3]);
 }
-
 
 void cv::gpu::connectivityMask(const GpuMat& image, GpuMat& mask, const cv::Scalar& lo, const cv::Scalar& hi, Stream& s)
 {
@@ -81,7 +77,7 @@ void cv::gpu::connectivityMask(const GpuMat& image, GpuMat& mask, const cv::Scal
 
     int depth = image.depth();
 
-    typedef void (*func_t)(const DevMem2D& image, DevMem2D edges, const float4& lo, const float4& hi, cudaStream_t stream);
+    typedef void (*func_t)(const PtrStepSzb& image, PtrStepSzb edges, const float4& lo, const float4& hi, cudaStream_t stream);
 
     static const func_t suppotLookup[8][4] =
     {   //    1,    2,     3,     4

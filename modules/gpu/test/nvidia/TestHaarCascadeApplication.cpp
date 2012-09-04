@@ -245,8 +245,8 @@ bool TestHaarCascadeApplication::process()
 
     int devId;
     ncvAssertCUDAReturn(cudaGetDevice(&devId), false);
-    cudaDeviceProp devProp;
-    ncvAssertCUDAReturn(cudaGetDeviceProperties(&devProp, devId), false);
+    cudaDeviceProp _devProp;
+    ncvAssertCUDAReturn(cudaGetDeviceProperties(&_devProp, devId), false);
 
     ncvStat = ncvApplyHaarClassifierCascade_device(
         d_integralImage, d_rectStdDev, d_pixelMask,
@@ -254,7 +254,7 @@ bool TestHaarCascadeApplication::process()
         haar, h_HaarStages, d_HaarStages, d_HaarNodes, d_HaarFeatures, false,
         searchRoiU, 1, 1.0f,
         *this->allocatorGPU.get(), *this->allocatorCPU.get(),
-        devProp, 0);
+        _devProp, 0);
     ncvAssertReturn(ncvStat == NCV_SUCCESS, false);
 
     NCVMatrixAlloc<Ncv32u> h_pixelMask_d(*this->allocatorCPU.get(), this->width, this->height);

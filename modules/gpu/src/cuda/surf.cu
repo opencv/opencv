@@ -102,15 +102,15 @@ namespace cv { namespace gpu { namespace device
         texture<unsigned int, 2, cudaReadModeElementType> sumTex(0, cudaFilterModePoint, cudaAddressModeClamp);
         texture<unsigned int, 2, cudaReadModeElementType> maskSumTex(0, cudaFilterModePoint, cudaAddressModeClamp);
 
-        void bindImgTex(DevMem2Db img)
+        void bindImgTex(PtrStepSzb img)
         {
             bindTexture(&imgTex, img);
         }
-        void bindSumTex(DevMem2D_<uint> sum)
+        void bindSumTex(PtrStepSz<uint> sum)
         {
             bindTexture(&sumTex, sum);
         }
-        void bindMaskSumTex(DevMem2D_<uint> maskSum)
+        void bindMaskSumTex(PtrStepSz<uint> maskSum)
         {
             bindTexture(&maskSumTex, maskSum);
         }
@@ -958,7 +958,7 @@ namespace cv { namespace gpu { namespace device
             descriptor_base[threadIdx.x] = lookup / len;
         }
 
-        void compute_descriptors_gpu(const DevMem2Df& descriptors,
+        void compute_descriptors_gpu(const PtrStepSzf& descriptors,
             const float* featureX, const float* featureY, const float* featureSize, const float* featureDir, int nFeatures)
         {
             // compute unnormalized descriptors, then normalize them - odd indexing since grid must be 2D

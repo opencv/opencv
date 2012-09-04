@@ -67,7 +67,11 @@
 // Guaranteed size cross-platform classifier structures
 //
 //==============================================================================
-
+#if defined __GNUC__ && __GNUC__ > 2 && __GNUC_MINOR__  > 4
+typedef Ncv32f __attribute__((__may_alias__)) Ncv32f_a;
+#else
+typedef Ncv32f Ncv32f_a;
+#endif
 
 struct HaarFeature64
 {
@@ -87,7 +91,7 @@ struct HaarFeature64
 
     __host__ NCVStatus setWeight(Ncv32f weight)
     {
-        ((Ncv32f*)&(this->_ui2.y))[0] = weight;
+        ((Ncv32f_a*)&(this->_ui2.y))[0] = weight;
         return NCV_SUCCESS;
     }
 
@@ -102,7 +106,7 @@ struct HaarFeature64
 
     __device__ __host__ Ncv32f getWeight(void)
     {
-        return *(Ncv32f*)(&this->_ui2.y);
+        return *(Ncv32f_a*)(&this->_ui2.y);
     }
 };
 
@@ -168,14 +172,13 @@ public:
     }
 };
 
-
 struct HaarClassifierNodeDescriptor32
 {
     uint1 _ui1;
 
     __host__ NCVStatus create(Ncv32f leafValue)
     {
-        *(Ncv32f *)&this->_ui1 = leafValue;
+        *(Ncv32f_a *)&this->_ui1 = leafValue;
         return NCV_SUCCESS;
     }
 
@@ -187,7 +190,7 @@ struct HaarClassifierNodeDescriptor32
 
     __host__ Ncv32f getLeafValueHost(void)
     {
-        return *(Ncv32f *)&this->_ui1.x;
+        return *(Ncv32f_a *)&this->_ui1.x;
     }
 
 #ifdef __CUDACC__
@@ -203,6 +206,11 @@ struct HaarClassifierNodeDescriptor32
     }
 };
 
+#if defined __GNUC__ && __GNUC__ > 2 && __GNUC_MINOR__  > 4
+typedef Ncv32u __attribute__((__may_alias__)) Ncv32u_a;
+#else
+typedef Ncv32u Ncv32u_a;
+#endif
 
 struct HaarClassifierNode128
 {
@@ -216,19 +224,19 @@ struct HaarClassifierNode128
 
     __host__ NCVStatus setThreshold(Ncv32f t)
     {
-        this->_ui4.y = *(Ncv32u *)&t;
+        this->_ui4.y = *(Ncv32u_a *)&t;
         return NCV_SUCCESS;
     }
 
     __host__ NCVStatus setLeftNodeDesc(HaarClassifierNodeDescriptor32 nl)
     {
-        this->_ui4.z = *(Ncv32u *)&nl;
+        this->_ui4.z = *(Ncv32u_a *)&nl;
         return NCV_SUCCESS;
     }
 
     __host__ NCVStatus setRightNodeDesc(HaarClassifierNodeDescriptor32 nr)
     {
-        this->_ui4.w = *(Ncv32u *)&nr;
+        this->_ui4.w = *(Ncv32u_a *)&nr;
         return NCV_SUCCESS;
     }
 
@@ -239,7 +247,7 @@ struct HaarClassifierNode128
 
     __host__ __device__ Ncv32f getThreshold(void)
     {
-        return *(Ncv32f*)&this->_ui4.y;
+        return *(Ncv32f_a*)&this->_ui4.y;
     }
 
     __host__ __device__ HaarClassifierNodeDescriptor32 getLeftNodeDesc(void)
@@ -264,7 +272,7 @@ struct HaarStage64
 
     __host__ NCVStatus setStageThreshold(Ncv32f t)
     {
-        this->_ui2.x = *(Ncv32u *)&t;
+        this->_ui2.x = *(Ncv32u_a *)&t;
         return NCV_SUCCESS;
     }
 
@@ -290,7 +298,7 @@ struct HaarStage64
 
     __host__ __device__ Ncv32f getStageThreshold(void)
     {
-        return *(Ncv32f*)&this->_ui2.x;
+        return *(Ncv32f_a*)&this->_ui2.x;
     }
 
     __host__ __device__ Ncv32u getStartClassifierRootNodeOffset(void)

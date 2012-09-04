@@ -2,6 +2,7 @@
  * jdcoefct.c
  *
  * Copyright (C) 1994-1997, Thomas G. Lane.
+ * Modified 2002-2011 by Guido Vollbeding.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
@@ -162,8 +163,9 @@ decompress_onepass (j_decompress_ptr cinfo, JSAMPIMAGE output_buf)
     for (MCU_col_num = coef->MCU_ctr; MCU_col_num <= last_MCU_col;
 	 MCU_col_num++) {
       /* Try to fetch an MCU.  Entropy decoder expects buffer to be zeroed. */
-      jzero_far((void FAR *) coef->MCU_buffer[0],
-		(size_t) (cinfo->blocks_in_MCU * SIZEOF(JBLOCK)));
+      if (cinfo->lim_Se)	/* can bypass in DC only case */
+	FMEMZERO((void FAR *) coef->MCU_buffer[0],
+		 (size_t) (cinfo->blocks_in_MCU * SIZEOF(JBLOCK)));
       if (! (*cinfo->entropy->decode_mcu) (cinfo, coef->MCU_buffer)) {
 	/* Suspension forced; update state counters and exit */
 	coef->MCU_vert_offset = yoffset;
@@ -187,7 +189,7 @@ decompress_onepass (j_decompress_ptr cinfo, JSAMPIMAGE output_buf)
 	useful_width = (MCU_col_num < last_MCU_col) ? compptr->MCU_width
 						    : compptr->last_col_width;
 	output_ptr = output_buf[compptr->component_index] +
-	  yoffset * compptr->DCT_scaled_size;
+	  yoffset * compptr->DCT_v_scaled_size;
 	start_col = MCU_col_num * compptr->MCU_sample_width;
 	for (yindex = 0; yindex < compptr->MCU_height; yindex++) {
 	  if (cinfo->input_iMCU_row < last_iMCU_row ||
@@ -197,11 +199,11 @@ decompress_onepass (j_decompress_ptr cinfo, JSAMPIMAGE output_buf)
 	      (*inverse_DCT) (cinfo, compptr,
 			      (JCOEFPTR) coef->MCU_buffer[blkn+xindex],
 			      output_ptr, output_col);
-	      output_col += compptr->DCT_scaled_size;
+	      output_col += compptr->DCT_h_scaled_size;
 	    }
 	  }
 	  blkn += compptr->MCU_width;
-	  output_ptr += compptr->DCT_scaled_size;
+	  output_ptr += compptr->DCT_v_scaled_size;
 	}
       }
     }
@@ -362,9 +364,9 @@ decompress_data (j_decompress_ptr cinfo, JSAMPIMAGE output_buf)
 	(*inverse_DCT) (cinfo, compptr, (JCOEFPTR) buffer_ptr,
 			output_ptr, output_col);
 	buffer_ptr++;
-	output_col += compptr->DCT_scaled_size;
+	output_col += compptr->DCT_h_scaled_size;
       }
-      output_ptr += compptr->DCT_scaled_size;
+      output_ptr += compptr->DCT_v_scaled_size;
     }
   }
 
@@ -654,9 +656,9 @@ decompress_smooth_data (j_decompress_ptr cinfo, JSAMPIMAGE output_buf)
 	DC4 = DC5; DC5 = DC6;
 	DC7 = DC8; DC8 = DC9;
 	buffer_ptr++, prev_block_row++, next_block_row++;
-	output_col += compptr->DCT_scaled_size;
+	output_col += compptr->DCT_h_scaled_size;
       }
-      output_ptr += compptr->DCT_scaled_size;
+      output_ptr += compptr->DCT_v_scaled_size;
     }
   }
 
@@ -729,6 +731,9 @@ jinit_d_coef_controller (j_decompress_ptr cinfo, boolean need_full_buffer)
     for (i = 0; i < D_MAX_BLOCKS_IN_MCU; i++) {
       coef->MCU_buffer[i] = buffer + i;
     }
+    if (cinfo->lim_Se == 0)	/* DC only case: want to bypass later */
+      FMEMZERO((void FAR *) buffer,
+	       (size_t) (D_MAX_BLOCKS_IN_MCU * SIZEOF(JBLOCK)));
     coef->pub.consume_data = dummy_consume_data;
     coef->pub.decompress_data = decompress_onepass;
     coef->pub.coef_arrays = NULL; /* flag for no virtual arrays */

@@ -221,9 +221,9 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <bool calcScore, class Mask>
-        __global__ void calcKeypoints(const DevMem2Db img, const Mask mask, short2* kpLoc, const unsigned int maxKeypoints, PtrStepi score, const int threshold)
+        __global__ void calcKeypoints(const PtrStepSzb img, const Mask mask, short2* kpLoc, const unsigned int maxKeypoints, PtrStepi score, const int threshold)
         {
-            #if __CUDA_ARCH__ >= 110
+            #if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ >= 110)
 
             const int j = threadIdx.x + blockIdx.x * blockDim.x + 3;
             const int i = threadIdx.y + blockIdx.y * blockDim.y + 3;
@@ -282,7 +282,7 @@ namespace cv { namespace gpu { namespace device
             #endif
         }
 
-        int calcKeypoints_gpu(DevMem2Db img, DevMem2Db mask, short2* kpLoc, int maxKeypoints, DevMem2Di score, int threshold)
+        int calcKeypoints_gpu(PtrStepSzb img, PtrStepSzb mask, short2* kpLoc, int maxKeypoints, PtrStepSzi score, int threshold)
         {
             void* counter_ptr;
             cudaSafeCall( cudaGetSymbolAddress(&counter_ptr, g_counter) );
@@ -323,9 +323,9 @@ namespace cv { namespace gpu { namespace device
         ///////////////////////////////////////////////////////////////////////////
         // nonmaxSupression
 
-        __global__ void nonmaxSupression(const short2* kpLoc, int count, const DevMem2Di scoreMat, short2* locFinal, float* responseFinal)
+        __global__ void nonmaxSupression(const short2* kpLoc, int count, const PtrStepSzi scoreMat, short2* locFinal, float* responseFinal)
         {
-            #if __CUDA_ARCH__ >= 110
+            #if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ >= 110)
 
             const int kpIdx = threadIdx.x + blockIdx.x * blockDim.x;
 
@@ -359,7 +359,7 @@ namespace cv { namespace gpu { namespace device
             #endif
         }
 
-        int nonmaxSupression_gpu(const short2* kpLoc, int count, DevMem2Di score, short2* loc, float* response)
+        int nonmaxSupression_gpu(const short2* kpLoc, int count, PtrStepSzi score, short2* loc, float* response)
         {
             void* counter_ptr;
             cudaSafeCall( cudaGetSymbolAddress(&counter_ptr, g_counter) );

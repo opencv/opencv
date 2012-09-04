@@ -44,8 +44,9 @@ if (HAVE_CUDA)
       set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -Xcompiler /wd4251)
     endif()
   endif()
-
+  
   ocv_cuda_compile(cuda_objs ${lib_cuda} ${ncv_cuda})
+
   #CUDA_BUILD_CLEAN_TARGET()
 
   set(cuda_link_libs ${CUDA_LIBRARIES} ${CUDA_npp_LIBRARY})
@@ -111,43 +112,3 @@ ocv_add_accuracy_tests(FILES "Include" ${test_hdrs}
                        FILES "Src" ${test_srcs}
                        ${nvidia})
 ocv_add_perf_tests()
-
-
-
-set(perf_cpu_path "${CMAKE_CURRENT_SOURCE_DIR}/perf_cpu")
-if(BUILD_PERF_TESTS AND EXISTS "${perf_cpu_path}")
-    # opencv_highgui is required for imread/imwrite
-    set(perf_deps ${the_module} opencv_ts opencv_highgui opencv_imgproc opencv_calib3d opencv_objdetect opencv_video opencv_nonfree)
-    ocv_check_dependencies(${perf_deps})
-
-    if(OCV_DEPENDENCIES_FOUND)
-      set(the_target "opencv_perf_gpu_cpu")
-
-      ocv_module_include_directories(${perf_deps} "${perf_cpu_path}")
-
-      if(NOT OPENCV_PERF_${the_module}_CPU_SOURCES)
-        file(GLOB perf_srcs "${perf_cpu_path}/*.cpp")
-        file(GLOB perf_hdrs "${perf_cpu_path}/*.hpp" "${perf_cpu_path}/*.h")
-        source_group("Src" FILES ${perf_srcs})
-        source_group("Include" FILES ${perf_hdrs})
-        set(OPENCV_PERF_${the_module}_CPU_SOURCES ${perf_srcs} ${perf_hdrs})
-      endif()
-
-      add_executable(${the_target} ${OPENCV_PERF_${the_module}_CPU_SOURCES})
-      target_link_libraries(${the_target} ${OPENCV_MODULE_${the_module}_DEPS} ${perf_deps} ${OPENCV_LINKER_LIBS})
-
-      # Additional target properties
-      set_target_properties(${the_target} PROPERTIES
-        DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
-        RUNTIME_OUTPUT_DIRECTORY "${EXECUTABLE_OUTPUT_PATH}"
-      )
-
-      if(ENABLE_SOLUTION_FOLDERS)
-        set_target_properties(${the_target} PROPERTIES FOLDER "tests performance")
-      endif()
-
-      ocv_add_precompiled_headers(${the_target})
-    else(OCV_DEPENDENCIES_FOUND)
-      #TODO: warn about unsatisfied dependencies
-    endif(OCV_DEPENDENCIES_FOUND)
-  endif()

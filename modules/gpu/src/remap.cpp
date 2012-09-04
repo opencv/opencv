@@ -53,7 +53,7 @@ namespace cv { namespace gpu { namespace device
     namespace imgproc 
     {
         template <typename T> 
-        void remap_gpu(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, DevMem2Df xmap, DevMem2Df ymap, DevMem2Db dst, 
+        void remap_gpu(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, PtrStepSzf xmap, PtrStepSzf ymap, PtrStepSzb dst, 
                        int interpolation, int borderMode, const float* borderValue, cudaStream_t stream, int cc);
     }
 }}}
@@ -62,7 +62,7 @@ void cv::gpu::remap(const GpuMat& src, GpuMat& dst, const GpuMat& xmap, const Gp
 {
     using namespace cv::gpu::device::imgproc;
 
-    typedef void (*func_t)(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, DevMem2Df xmap, DevMem2Df ymap, DevMem2Db dst, int interpolation, 
+    typedef void (*func_t)(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, PtrStepSzf xmap, PtrStepSzf ymap, PtrStepSzb dst, int interpolation, 
         int borderMode, const float* borderValue, cudaStream_t stream, int cc);
 
     static const func_t funcs[6][4] = 
@@ -98,7 +98,7 @@ void cv::gpu::remap(const GpuMat& src, GpuMat& dst, const GpuMat& xmap, const Gp
     Point ofs;
     src.locateROI(wholeSize, ofs);
 
-    func(src, DevMem2Db(wholeSize.height, wholeSize.width, src.datastart, src.step), ofs.x, ofs.y, xmap, ymap, 
+    func(src, PtrStepSzb(wholeSize.height, wholeSize.width, src.datastart, src.step), ofs.x, ofs.y, xmap, ymap, 
         dst, interpolation, gpuBorderType, borderValueFloat.val, StreamAccessor::getStream(stream), cc);
 }
 

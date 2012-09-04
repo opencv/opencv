@@ -58,7 +58,7 @@ namespace cv { namespace gpu { namespace device
 {
     namespace imgproc
     {
-        template <typename T> void pyrDown_gpu(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
+        template <typename T> void pyrDown_gpu(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
     }
 }}}
 
@@ -66,7 +66,7 @@ void cv::gpu::pyrDown(const GpuMat& src, GpuMat& dst, Stream& stream)
 {
     using namespace cv::gpu::device::imgproc;
 
-    typedef void (*func_t)(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
+    typedef void (*func_t)(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
 
     static const func_t funcs[6][4] =
     {
@@ -96,7 +96,7 @@ namespace cv { namespace gpu { namespace device
 {
     namespace imgproc
     {
-        template <typename T> void pyrUp_gpu(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
+        template <typename T> void pyrUp_gpu(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
     }
 }}}
 
@@ -104,7 +104,7 @@ void cv::gpu::pyrUp(const GpuMat& src, GpuMat& dst, Stream& stream)
 {
     using namespace cv::gpu::device::imgproc;
 
-    typedef void (*func_t)(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
+    typedef void (*func_t)(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
 
     static const func_t funcs[6][4] =
     {
@@ -134,8 +134,8 @@ namespace cv { namespace gpu { namespace device
 {
     namespace pyramid
     {
-        template <typename T> void kernelDownsampleX2_gpu(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
-        template <typename T> void kernelInterpolateFrom1_gpu(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
+        template <typename T> void kernelDownsampleX2_gpu(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
+        template <typename T> void kernelInterpolateFrom1_gpu(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
     }
 }}}
 
@@ -143,7 +143,7 @@ void cv::gpu::ImagePyramid::build(const GpuMat& img, int numLayers, Stream& stre
 {
     using namespace cv::gpu::device::pyramid;
 
-    typedef void (*func_t)(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
+    typedef void (*func_t)(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
 
     static const func_t funcs[6][4] =
     {
@@ -191,7 +191,7 @@ void cv::gpu::ImagePyramid::getLayer(GpuMat& outImg, Size outRoi, Stream& stream
 {
     using namespace cv::gpu::device::pyramid;
 
-    typedef void (*func_t)(DevMem2Db src, DevMem2Db dst, cudaStream_t stream);
+    typedef void (*func_t)(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
 
     static const func_t funcs[6][4] =
     {

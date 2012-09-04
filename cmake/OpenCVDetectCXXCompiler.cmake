@@ -54,11 +54,11 @@ endif()
 # Detect GNU version:
 # ----------------------------------------------------------------------------
 if(CMAKE_COMPILER_IS_GNUCXX)
-    execute_process(COMMAND ${CMAKE_CXX_COMPILER} --version
+    execute_process(COMMAND ${CMAKE_CXX_COMPILER} ${CMAKE_CXX_COMPILER_ARG1} --version
                   OUTPUT_VARIABLE CMAKE_OPENCV_GCC_VERSION_FULL
                   OUTPUT_STRIP_TRAILING_WHITESPACE)
 
-    execute_process(COMMAND ${CMAKE_CXX_COMPILER} -v
+    execute_process(COMMAND ${CMAKE_CXX_COMPILER} ${CMAKE_CXX_COMPILER_ARG1} -v
                   ERROR_VARIABLE CMAKE_OPENCV_GCC_INFO_FULL
                   OUTPUT_STRIP_TRAILING_WHITESPACE)
 

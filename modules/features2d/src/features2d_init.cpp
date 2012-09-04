@@ -51,6 +51,12 @@ using namespace cv;
    Otherwise, linker may throw away some seemingly unused stuff.
 */
 
+CV_INIT_ALGORITHM(BRISK, "Feature2D.BRISK",
+                   obj.info()->addParam(obj, "thres", obj.threshold);
+                   obj.info()->addParam(obj, "octaves", obj.octaves));
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 CV_INIT_ALGORITHM(BriefDescriptorExtractor, "Feature2D.BRIEF",
                   obj.info()->addParam(obj, "bytes", obj.bytes_));
 
@@ -59,7 +65,7 @@ CV_INIT_ALGORITHM(BriefDescriptorExtractor, "Feature2D.BRIEF",
 CV_INIT_ALGORITHM(FastFeatureDetector, "Feature2D.FAST",
                   obj.info()->addParam(obj, "threshold", obj.threshold);
                   obj.info()->addParam(obj, "nonmaxSuppression", obj.nonmaxSuppression);
-                  obj.info()->addParam(obj, "type", obj.type, FastFeatureDetector::TYPE_9_16));
+                  obj.info()->addParam(obj, "type", obj.type));
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -154,6 +160,7 @@ bool cv::initModule_features2d(void)
 {
     bool all = true;
     all &= !BriefDescriptorExtractor_info_auto.name().empty();
+    all &= !BRISK_info_auto.name().empty();
     all &= !FastFeatureDetector_info_auto.name().empty();
     all &= !StarDetector_info_auto.name().empty();
     all &= !MSER_info_auto.name().empty();

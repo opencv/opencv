@@ -2563,7 +2563,7 @@ void HOGDescriptor::readALTModel(std::string modelfile)
        throw Exception();
    }
    int kernel_type;
-   int nread;
+   size_t nread;
    nread=fread(&(kernel_type),sizeof(int),1,modelfl);
 
    {// ignore these
@@ -2601,7 +2601,7 @@ void HOGDescriptor::readALTModel(std::string modelfile)
        double *linearwt = new double[totwords+1];
        int length = totwords;
        nread = fread(linearwt, sizeof(double), totwords + 1, modelfl);
-       if(nread != length + 1)
+       if(nread != static_cast<size_t>(length) + 1)
            throw Exception();
 
        for(int i = 0; i < length; i++)

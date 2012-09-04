@@ -119,6 +119,12 @@ protected:
 
 // Registration of tests
 
+TEST(Features2d_Detector_Keypoints_BRISK, validation)
+{
+    CV_FeatureDetectorKeypointsTest test(Algorithm::create<FeatureDetector>("Feature2D.BRISK"));
+    test.safe_run();
+}
+
 TEST(Features2d_Detector_Keypoints_FAST, validation)
 {
     CV_FeatureDetectorKeypointsTest test(Algorithm::create<FeatureDetector>("Feature2D.FAST"));

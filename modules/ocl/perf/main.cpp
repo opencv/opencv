@@ -74,29 +74,26 @@ void print_info()
 
 }
 
-#if PERF_TEST_OCL
 int main(int argc, char** argv)
 {
-	
-	static std::vector<Info> ocl_info;
-	ocl::getDevice(ocl_info);
-
-    run_perf_test();
-    return 0;
-}
-#else
-int main(int argc, char** argv)
-{
+	std::vector<cv::ocl::Info> oclinfo;
     TS::ptr()->init("ocl");
     InitGoogleTest(&argc, argv);
 
     print_info();
-
+	int devnums = getDevice(oclinfo);
+	if(devnums<1)
+	{
+		std::cout << "no device found\n";
+		return -1;
+	}
+	//if you want to use undefault device, set it here
+	//setDevice(oclinfo[0]);
+	setBinpath(CLBINPATH);
     return RUN_ALL_TESTS();
 }
-#endif // PERF_TEST_OCL
 
-#else // HAVE_OPENC
+#else // DON'T HAVE_OPENCL
 
 int main()
 {

@@ -664,7 +664,7 @@ namespace cv { namespace gpu { namespace device
     namespace imgproc
     {
         template <typename T, typename D>
-        void filter2D_gpu(DevMem2Db srcWhole, int ofsX, int ofsY, DevMem2Db dst,
+        void filter2D_gpu(PtrStepSzb srcWhole, int ofsX, int ofsY, PtrStepSzb dst,
                           int kWidth, int kHeight, int anchorX, int anchorY, const float* kernel,
                           int borderMode, const float* borderValue, cudaStream_t stream);
     }
@@ -708,7 +708,7 @@ namespace
         nppFilter2D_t func;
     };
 
-    typedef void (*gpuFilter2D_t)(DevMem2Db srcWhole, int ofsX, int ofsY, DevMem2Db dst,
+    typedef void (*gpuFilter2D_t)(PtrStepSzb srcWhole, int ofsX, int ofsY, PtrStepSzb dst,
                                    int kWidth, int kHeight, int anchorX, int anchorY, const float* kernel,
                                    int borderMode, const float* borderValue, cudaStream_t stream);
 
@@ -833,13 +833,13 @@ namespace cv { namespace gpu { namespace device
     namespace row_filter
     {
         template <typename T, typename D>
-        void linearRowFilter_gpu(DevMem2Db src, DevMem2Db dst, const float kernel[], int ksize, int anchor, int brd_type, int cc, cudaStream_t stream);
+        void linearRowFilter_gpu(PtrStepSzb src, PtrStepSzb dst, const float kernel[], int ksize, int anchor, int brd_type, int cc, cudaStream_t stream);
     }
 
     namespace column_filter
     {
         template <typename T, typename D>
-        void linearColumnFilter_gpu(DevMem2Db src, DevMem2Db dst, const float kernel[], int ksize, int anchor, int brd_type, int cc, cudaStream_t stream);
+        void linearColumnFilter_gpu(PtrStepSzb src, PtrStepSzb dst, const float kernel[], int ksize, int anchor, int brd_type, int cc, cudaStream_t stream);
     }
 }}}
 
@@ -848,7 +848,7 @@ namespace
     typedef NppStatus (*nppFilter1D_t)(const Npp8u * pSrc, Npp32s nSrcStep, Npp8u * pDst, Npp32s nDstStep, NppiSize oROI,
         const Npp32s * pKernel, Npp32s nMaskSize, Npp32s nAnchor, Npp32s nDivisor);
 
-    typedef void (*gpuFilter1D_t)(DevMem2Db src, DevMem2Db dst, const float kernel[], int ksize, int anchor, int brd_type, int cc, cudaStream_t stream);
+    typedef void (*gpuFilter1D_t)(PtrStepSzb src, PtrStepSzb dst, const float kernel[], int ksize, int anchor, int brd_type, int cc, cudaStream_t stream);
 
     struct NppLinearRowFilter : public BaseRowFilter_GPU
     {

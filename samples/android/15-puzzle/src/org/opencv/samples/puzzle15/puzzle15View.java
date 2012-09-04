@@ -18,7 +18,9 @@ import android.view.View;
 import android.view.View.OnTouchListener;
 
 public class puzzle15View extends SampleCvViewBase implements OnTouchListener {
-	private Mat     mRgba;
+    private static final String TAG = "OCVSample::View";
+
+    private Mat     mRgba;
     private Mat     mRgba15;
     private Mat[]   mCells;
     private Mat[]   mCells15;
@@ -42,16 +44,19 @@ public class puzzle15View extends SampleCvViewBase implements OnTouchListener {
             mTextHeights[i] = (int) s.height;
             mTextWidths[i] = (int) s.width;
         }
+        Log.i(TAG, "Instantiated new " + this.getClass());
     }
 
     @Override
-	public void surfaceCreated(SurfaceHolder holder) {
+    public void surfaceCreated(SurfaceHolder holder) {
+        Log.i(TAG, "called surfaceCreated");
         synchronized (this) {
             // initialize Mat before usage
             mRgba = new Mat();
         }
-		super.surfaceCreated(holder);
-	}
+
+        super.surfaceCreated(holder);
+    }
 
     public static void shuffle(int[] array) {
         for (int i = array.length; i > 1; i--) {
@@ -83,11 +88,11 @@ public class puzzle15View extends SampleCvViewBase implements OnTouchListener {
         return sum % 2 == 0;
     }
 
-    private void createPuzzle(int cols, int rows) {
+    private void createPuzzle(int cols, int rows, int type) {
         mCells = new Mat[gridArea];
         mCells15 = new Mat[gridArea];
 
-        mRgba15 = new Mat(rows, cols, mRgba.type());
+        mRgba15 = new Mat(rows, cols, type);
         mIndexses = new int[gridArea];
 
         for (int i = 0; i < gridSize; i++) {
@@ -102,7 +107,14 @@ public class puzzle15View extends SampleCvViewBase implements OnTouchListener {
         startNewGame();
     }
 
-    public void startNewGame() {
+    private void drawGrid(int cols, int rows) {
+        for (int i = 1; i < gridSize; i++) {
+            Core.line(mRgba15, new Point(0, i * rows / gridSize), new Point(cols, i * rows / gridSize), new Scalar(0, 255, 0, 255), 3);
+            Core.line(mRgba15, new Point(i * cols / gridSize, 0), new Point(i * cols / gridSize, rows), new Scalar(0, 255, 0, 255), 3);
+        }
+    }
+
+    public synchronized void startNewGame() {
         do {
             shuffle(mIndexses);
         } while (!isPuzzleSolvable());
@@ -122,7 +134,11 @@ public class puzzle15View extends SampleCvViewBase implements OnTouchListener {
         cols = cols - cols%4;
 
         if (mCells == null)
-            createPuzzle(cols, rows);
+            createPuzzle(cols, rows, mRgba.type());
+        else if(mRgba15.cols() != cols || mRgba15.rows() != rows) {
+            releaseMats();
+            createPuzzle(cols, rows, mRgba.type());
+        }
 
         // copy shuffled tiles
         for (int i = 0; i < gridArea; i++) {
@@ -141,19 +157,12 @@ public class puzzle15View extends SampleCvViewBase implements OnTouchListener {
         drawGrid(cols, rows);
         Bitmap bmp = Bitmap.createBitmap(cols, rows, Bitmap.Config.ARGB_8888);
         try {
-        	Utils.matToBitmap(mRgba15, bmp);
+            Utils.matToBitmap(mRgba15, bmp);
             return bmp;
         } catch(Exception e) {
-        	Log.e("org.opencv.samples.puzzle15", "Utils.matToBitmap() throws an exception: " + e.getMessage());
+            Log.e("org.opencv.samples.puzzle15", "Utils.matToBitmap() throws an exception: " + e.getMessage());
             bmp.recycle();
             return null;
-        }
-    }
-
-    private void drawGrid(int cols, int rows) {
-        for (int i = 1; i < gridSize; i++) {
-            Core.line(mRgba15, new Point(0, i * rows / gridSize), new Point(cols, i * rows / gridSize), new Scalar(0, 255, 0, 255), 3);
-            Core.line(mRgba15, new Point(i * cols / gridSize, 0), new Point(i * cols / gridSize, rows), new Scalar(0, 255, 0, 255), 3);
         }
     }
 
@@ -162,32 +171,38 @@ public class puzzle15View extends SampleCvViewBase implements OnTouchListener {
         super.run();
 
         synchronized (this) {
-            // Explicitly deallocate Mats
-            if (mCells != null) {
-                for (Mat m : mCells)
-                    m.release();
-            }
-            if (mCells15 != null) {
-                for (Mat m : mCells15)
-                    m.release();
-            }
+            releaseMats();
+
             if (mRgba != null)
                 mRgba.release();
-            if (mRgba15 != null)
-                mRgba15.release();
-
             mRgba = null;
-            mRgba15 = null;
-            mCells = null;
-            mCells15 = null;
-            mIndexses = null;
         }
+    }
+
+    private void releaseMats() {
+        // Explicitly deallocate Mats
+        if (mCells != null) {
+            for (Mat m : mCells)
+                m.release();
+        }
+        if (mCells15 != null) {
+            for (Mat m : mCells15)
+                m.release();
+        }
+
+        if (mRgba15 != null)
+            mRgba15.release();
+
+        mRgba15 = null;
+        mCells = null;
+        mCells15 = null;
+        mIndexses = null;
     }
 
     public boolean onTouch(View v, MotionEvent event) {
         if(mRgba==null) return false;
-        
-    	int cols = mRgba.cols();
+
+        int cols = mRgba.cols();
         int rows = mRgba.rows();
         float xoffset = (getWidth() - cols) / 2;
         float yoffset = (getHeight() - rows) / 2;

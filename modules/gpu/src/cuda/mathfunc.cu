@@ -130,7 +130,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <typename Mag, typename Angle>
-        void cartToPolar_caller(DevMem2Df x, DevMem2Df y, DevMem2Df mag, DevMem2Df angle, bool angleInDegrees, cudaStream_t stream)
+        void cartToPolar_caller(PtrStepSzf x, PtrStepSzf y, PtrStepSzf mag, PtrStepSzf angle, bool angleInDegrees, cudaStream_t stream)
         {
             dim3 threads(32, 8, 1);
             dim3 grid(1, 1, 1);
@@ -149,9 +149,9 @@ namespace cv { namespace gpu { namespace device
                 cudaSafeCall( cudaDeviceSynchronize() );
         }
 
-        void cartToPolar_gpu(DevMem2Df x, DevMem2Df y, DevMem2Df mag, bool magSqr, DevMem2Df angle, bool angleInDegrees, cudaStream_t stream)
+        void cartToPolar_gpu(PtrStepSzf x, PtrStepSzf y, PtrStepSzf mag, bool magSqr, PtrStepSzf angle, bool angleInDegrees, cudaStream_t stream)
         {
-            typedef void (*caller_t)(DevMem2Df x, DevMem2Df y, DevMem2Df mag, DevMem2Df angle, bool angleInDegrees, cudaStream_t stream);
+            typedef void (*caller_t)(PtrStepSzf x, PtrStepSzf y, PtrStepSzf mag, PtrStepSzf angle, bool angleInDegrees, cudaStream_t stream);
             static const caller_t callers[2][2][2] =
             {
                 {
@@ -180,7 +180,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <typename Mag>
-        void polarToCart_caller(DevMem2Df mag, DevMem2Df angle, DevMem2Df x, DevMem2Df y, bool angleInDegrees, cudaStream_t stream)
+        void polarToCart_caller(PtrStepSzf mag, PtrStepSzf angle, PtrStepSzf x, PtrStepSzf y, bool angleInDegrees, cudaStream_t stream)
         {
             dim3 threads(32, 8, 1);
             dim3 grid(1, 1, 1);
@@ -198,9 +198,9 @@ namespace cv { namespace gpu { namespace device
                 cudaSafeCall( cudaDeviceSynchronize() );
         }
 
-        void polarToCart_gpu(DevMem2Df mag, DevMem2Df angle, DevMem2Df x, DevMem2Df y, bool angleInDegrees, cudaStream_t stream)
+        void polarToCart_gpu(PtrStepSzf mag, PtrStepSzf angle, PtrStepSzf x, PtrStepSzf y, bool angleInDegrees, cudaStream_t stream)
         {
-            typedef void (*caller_t)(DevMem2Df mag, DevMem2Df angle, DevMem2Df x, DevMem2Df y, bool angleInDegrees, cudaStream_t stream);
+            typedef void (*caller_t)(PtrStepSzf mag, PtrStepSzf angle, PtrStepSzf x, PtrStepSzf y, bool angleInDegrees, cudaStream_t stream);
             static const caller_t callers[2] =
             {
                 polarToCart_caller<NonEmptyMag>,

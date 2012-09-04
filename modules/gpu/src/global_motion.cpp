@@ -60,7 +60,7 @@ namespace cv { namespace gpu { namespace device { namespace globmotion {
 
     void calcWobbleSuppressionMaps(
             int left, int idx, int right, int width, int height,
-            const float *ml, const float *mr, DevMem2Df mapx, DevMem2Df mapy);
+            const float *ml, const float *mr, PtrStepSzf mapx, PtrStepSzf mapy);
 
 }}}}
 

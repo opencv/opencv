@@ -1,219 +1,272 @@
 #include "perf_precomp.hpp"
 
-#ifdef HAVE_CUDA
+using namespace std;
+using namespace testing;
+
+namespace {
 
 //////////////////////////////////////////////////////////////////////
 // StereoBM
 
-GPU_PERF_TEST_1(StereoBM, cv::gpu::DeviceInfo)
+typedef pair<string, string> pair_string;
+DEF_PARAM_TEST_1(ImagePair, pair_string);
+
+static pair_string make_string_pair(const string& a, const string& b)
 {
-    cv::gpu::DeviceInfo devInfo = GetParam();
-    cv::gpu::setDevice(devInfo.deviceID());
-
-    cv::Mat img_l_host = readImage("gpu/perf/aloe.jpg", cv::IMREAD_GRAYSCALE);
-    ASSERT_FALSE(img_l_host.empty());
-
-    cv::Mat img_r_host = readImage("gpu/perf/aloeR.jpg", cv::IMREAD_GRAYSCALE);
-    ASSERT_FALSE(img_r_host.empty());
-
-    cv::gpu::StereoBM_GPU bm(0, 256);
-    cv::gpu::GpuMat img_l(img_l_host);
-    cv::gpu::GpuMat img_r(img_r_host);
-    cv::gpu::GpuMat dst;
-
-    bm(img_l, img_r, dst);
-
-    declare.time(5.0);
-
-    TEST_CYCLE()
-    {
-        bm(img_l, img_r, dst);
-    }
+#ifdef _MSC_VER    
+    return pair<string, string>(a, b);
+#else
+    return make_pair<string, string>(a, b);
+#endif    
 }
 
-INSTANTIATE_TEST_CASE_P(Calib3D, StereoBM, ALL_DEVICES);
+PERF_TEST_P(ImagePair, Calib3D_StereoBM, Values(make_string_pair("gpu/perf/aloe.jpg", "gpu/perf/aloeR.jpg")))
+{
+    declare.time(5.0);
+
+    const cv::Mat imgLeft = readImage(GetParam().first, cv::IMREAD_GRAYSCALE);
+    ASSERT_FALSE(imgLeft.empty());
+
+    const cv::Mat imgRight = readImage(GetParam().second, cv::IMREAD_GRAYSCALE);
+    ASSERT_FALSE(imgRight.empty());
+
+    const int preset = 0;
+    const int ndisp = 256;
+
+    if (runOnGpu)
+    {
+        cv::gpu::StereoBM_GPU d_bm(preset, ndisp);
+
+        cv::gpu::GpuMat d_imgLeft(imgLeft);
+        cv::gpu::GpuMat d_imgRight(imgRight);
+        cv::gpu::GpuMat d_dst;
+
+        d_bm(d_imgLeft, d_imgRight, d_dst);
+
+        TEST_CYCLE()
+        {
+            d_bm(d_imgLeft, d_imgRight, d_dst);
+        }
+    }
+    else
+    {
+        cv::StereoBM bm(preset, ndisp);
+
+        cv::Mat dst;
+
+        bm(imgLeft, imgRight, dst);
+
+        TEST_CYCLE()
+        {
+            bm(imgLeft, imgRight, dst);
+        }
+    }
+}
 
 //////////////////////////////////////////////////////////////////////
 // StereoBeliefPropagation
 
-GPU_PERF_TEST_1(StereoBeliefPropagation, cv::gpu::DeviceInfo)
+PERF_TEST_P(ImagePair, Calib3D_StereoBeliefPropagation, Values(make_string_pair("gpu/stereobp/aloe-L.png", "gpu/stereobp/aloe-R.png")))
 {
-    cv::gpu::DeviceInfo devInfo = GetParam();
-    cv::gpu::setDevice(devInfo.deviceID());
-
-    cv::Mat img_l_host = readImage("gpu/stereobp/aloe-L.png");
-    ASSERT_FALSE(img_l_host.empty());
-
-    cv::Mat img_r_host = readImage("gpu/stereobp/aloe-R.png");
-    ASSERT_FALSE(img_r_host.empty());
-
-    cv::gpu::StereoBeliefPropagation bp(64);
-    cv::gpu::GpuMat img_l(img_l_host);
-    cv::gpu::GpuMat img_r(img_r_host);
-    cv::gpu::GpuMat dst;
-
-    bp(img_l, img_r, dst);
-
     declare.time(10.0);
 
-    TEST_CYCLE()
+    const cv::Mat imgLeft = readImage(GetParam().first);
+    ASSERT_FALSE(imgLeft.empty());
+
+    const cv::Mat imgRight = readImage(GetParam().second);
+    ASSERT_FALSE(imgRight.empty());
+
+    const int ndisp = 64;
+
+    if (runOnGpu)
     {
-        bp(img_l, img_r, dst);
+        cv::gpu::StereoBeliefPropagation d_bp(ndisp);
+
+        cv::gpu::GpuMat d_imgLeft(imgLeft);
+        cv::gpu::GpuMat d_imgRight(imgRight);
+        cv::gpu::GpuMat d_dst;
+
+        d_bp(d_imgLeft, d_imgRight, d_dst);
+
+        TEST_CYCLE()
+        {
+            d_bp(d_imgLeft, d_imgRight, d_dst);
+        }
+    }
+    else
+    {
+        FAIL();
     }
 }
-
-INSTANTIATE_TEST_CASE_P(Calib3D, StereoBeliefPropagation, ALL_DEVICES);
 
 //////////////////////////////////////////////////////////////////////
 // StereoConstantSpaceBP
 
-GPU_PERF_TEST_1(StereoConstantSpaceBP, cv::gpu::DeviceInfo)
+PERF_TEST_P(ImagePair, Calib3D_StereoConstantSpaceBP, Values(make_string_pair("gpu/stereobm/aloe-L.png", "gpu/stereobm/aloe-R.png")))
 {
-    cv::gpu::DeviceInfo devInfo = GetParam();
-    cv::gpu::setDevice(devInfo.deviceID());
-
-    cv::Mat img_l_host = readImage("gpu/stereobm/aloe-L.png", cv::IMREAD_GRAYSCALE);
-    ASSERT_FALSE(img_l_host.empty());
-
-    cv::Mat img_r_host = readImage("gpu/stereobm/aloe-R.png", cv::IMREAD_GRAYSCALE);
-    ASSERT_FALSE(img_r_host.empty());
-
-    cv::gpu::StereoConstantSpaceBP csbp(128);
-    cv::gpu::GpuMat img_l(img_l_host);
-    cv::gpu::GpuMat img_r(img_r_host);
-    cv::gpu::GpuMat dst;
-
-    csbp(img_l, img_r, dst);
-
     declare.time(10.0);
 
-    TEST_CYCLE()
+    const cv::Mat imgLeft = readImage(GetParam().first, cv::IMREAD_GRAYSCALE);
+    ASSERT_FALSE(imgLeft.empty());
+
+    const cv::Mat imgRight = readImage(GetParam().second, cv::IMREAD_GRAYSCALE);
+    ASSERT_FALSE(imgRight.empty());
+
+    const int ndisp = 128;
+
+    if (runOnGpu)
     {
-        csbp(img_l, img_r, dst);
+        cv::gpu::StereoConstantSpaceBP d_csbp(ndisp);
+
+        cv::gpu::GpuMat d_imgLeft(imgLeft);
+        cv::gpu::GpuMat d_imgRight(imgRight);
+        cv::gpu::GpuMat d_dst;
+
+        d_csbp(d_imgLeft, d_imgRight, d_dst);
+
+        TEST_CYCLE()
+        {
+            d_csbp(d_imgLeft, d_imgRight, d_dst);
+        }
+    }
+    else
+    {
+        FAIL();
     }
 }
-
-INSTANTIATE_TEST_CASE_P(Calib3D, StereoConstantSpaceBP, ALL_DEVICES);
 
 //////////////////////////////////////////////////////////////////////
 // DisparityBilateralFilter
 
-GPU_PERF_TEST_1(DisparityBilateralFilter, cv::gpu::DeviceInfo)
+PERF_TEST_P(ImagePair, Calib3D_DisparityBilateralFilter, Values(make_string_pair("gpu/stereobm/aloe-L.png", "gpu/stereobm/aloe-disp.png")))
 {
-    cv::gpu::DeviceInfo devInfo = GetParam();
-    cv::gpu::setDevice(devInfo.deviceID());
+    const cv::Mat img = readImage(GetParam().first, cv::IMREAD_GRAYSCALE);
+    ASSERT_FALSE(img.empty());
 
-    cv::Mat img_host = readImage("gpu/stereobm/aloe-L.png", cv::IMREAD_GRAYSCALE);
-    ASSERT_FALSE(img_host.empty());
+    const cv::Mat disp = readImage(GetParam().second, cv::IMREAD_GRAYSCALE);
+    ASSERT_FALSE(disp.empty());
 
-    cv::Mat disp_host = readImage("gpu/stereobm/aloe-disp.png", cv::IMREAD_GRAYSCALE);
-    ASSERT_FALSE(disp_host.empty());
+    const int ndisp = 128;
 
-    cv::gpu::DisparityBilateralFilter f(128);
-    cv::gpu::GpuMat img(img_host);
-    cv::gpu::GpuMat disp(disp_host);
-    cv::gpu::GpuMat dst;
-
-    f(disp, img, dst);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
-        f(disp, img, dst);
+        cv::gpu::DisparityBilateralFilter d_filter(ndisp);
+
+        cv::gpu::GpuMat d_img(img);
+        cv::gpu::GpuMat d_disp(disp);
+        cv::gpu::GpuMat d_dst;
+
+        d_filter(d_disp, d_img, d_dst);
+
+        TEST_CYCLE()
+        {
+            d_filter(d_disp, d_img, d_dst);
+        }
+    }
+    else
+    {
+        FAIL();
     }
 }
-
-INSTANTIATE_TEST_CASE_P(Calib3D, DisparityBilateralFilter, ALL_DEVICES);
 
 //////////////////////////////////////////////////////////////////////
 // TransformPoints
 
-IMPLEMENT_PARAM_CLASS(Count, int)
+DEF_PARAM_TEST_1(Count, int);
 
-GPU_PERF_TEST(TransformPoints, cv::gpu::DeviceInfo, Count)
+PERF_TEST_P(Count, Calib3D_TransformPoints, Values(5000, 10000, 20000))
 {
-    cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
-    cv::gpu::setDevice(devInfo.deviceID());
+    const int count = GetParam();
 
-    int count = GET_PARAM(1);
+    cv::Mat src(1, count, CV_32FC3);
+    fillRandom(src, -100, 100);
 
-    cv::Mat src_host(1, count, CV_32FC3);
-    fill(src_host, -100, 100);
+    const cv::Mat rvec = cv::Mat::ones(1, 3, CV_32FC1);
+    const cv::Mat tvec = cv::Mat::ones(1, 3, CV_32FC1);
 
-    cv::gpu::GpuMat src(src_host);
-    cv::Mat rvec = cv::Mat::ones(1, 3, CV_32FC1);
-    cv::Mat tvec = cv::Mat::ones(1, 3, CV_32FC1);
-    cv::gpu::GpuMat dst;
-
-    cv::gpu::transformPoints(src, rvec, tvec, dst);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
-        cv::gpu::transformPoints(src, rvec, tvec, dst);
+        cv::gpu::GpuMat d_src(src);
+        cv::gpu::GpuMat d_dst;
+
+        cv::gpu::transformPoints(d_src, rvec, tvec, d_dst);
+
+        TEST_CYCLE()
+        {
+            cv::gpu::transformPoints(d_src, rvec, tvec, d_dst);
+        }
+    }
+    else
+    {
+        FAIL();
     }
 }
-
-INSTANTIATE_TEST_CASE_P(Calib3D, TransformPoints, testing::Combine(
-    ALL_DEVICES,
-    testing::Values<Count>(5000, 10000, 20000)));
 
 //////////////////////////////////////////////////////////////////////
 // ProjectPoints
 
-GPU_PERF_TEST(ProjectPoints, cv::gpu::DeviceInfo, Count)
+PERF_TEST_P(Count, Calib3D_ProjectPoints, Values(5000, 10000, 20000))
 {
-    cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
-    cv::gpu::setDevice(devInfo.deviceID());
+    const int count = GetParam();
 
-    int count = GET_PARAM(1);
+    cv::Mat src(1, count, CV_32FC3);
+    fillRandom(src, -100, 100);
 
-    cv::Mat src_host(1, count, CV_32FC3);
-    fill(src_host, -100, 100);
+    const cv::Mat rvec = cv::Mat::ones(1, 3, CV_32FC1);
+    const cv::Mat tvec = cv::Mat::ones(1, 3, CV_32FC1);
+    const cv::Mat camera_mat = cv::Mat::ones(3, 3, CV_32FC1);
 
-    cv::gpu::GpuMat src(src_host);
-    cv::Mat rvec = cv::Mat::ones(1, 3, CV_32FC1);
-    cv::Mat tvec = cv::Mat::ones(1, 3, CV_32FC1);
-    cv::Mat camera_mat = cv::Mat::ones(3, 3, CV_32FC1);
-    cv::gpu::GpuMat dst;
-
-    cv::gpu::projectPoints(src, rvec, tvec, camera_mat, cv::Mat(), dst);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
-        cv::gpu::projectPoints(src, rvec, tvec, camera_mat, cv::Mat(), dst);
+        cv::gpu::GpuMat d_src(src);
+        cv::gpu::GpuMat d_dst;
+
+        cv::gpu::projectPoints(d_src, rvec, tvec, camera_mat, cv::Mat(), d_dst);
+
+        TEST_CYCLE()
+        {
+            cv::gpu::projectPoints(d_src, rvec, tvec, camera_mat, cv::Mat(), d_dst);
+        }
+    }
+    else
+    {
+        cv::Mat dst;
+
+        cv::projectPoints(src, rvec, tvec, camera_mat, cv::noArray(), dst);
+
+        TEST_CYCLE()
+        {
+            cv::projectPoints(src, rvec, tvec, camera_mat, cv::noArray(), dst);
+        }
     }
 }
-
-INSTANTIATE_TEST_CASE_P(Calib3D, ProjectPoints, testing::Combine(
-    ALL_DEVICES,
-    testing::Values<Count>(5000, 10000, 20000)));
 
 //////////////////////////////////////////////////////////////////////
 // SolvePnPRansac
 
-GPU_PERF_TEST(SolvePnPRansac, cv::gpu::DeviceInfo, Count)
+PERF_TEST_P(Count, Calib3D_SolvePnPRansac, Values(5000, 10000, 20000))
 {
-    cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
-    cv::gpu::setDevice(devInfo.deviceID());
+    declare.time(10.0);
 
-    int count = GET_PARAM(1);
+    const int count = GetParam();
 
     cv::Mat object(1, count, CV_32FC3);
-    fill(object, -100, 100);
+    fillRandom(object, -100, 100);
 
     cv::Mat camera_mat(3, 3, CV_32FC1);
-    fill(camera_mat, 0.5, 1);
+    fillRandom(camera_mat, 0.5, 1);
     camera_mat.at<float>(0, 1) = 0.f;
     camera_mat.at<float>(1, 0) = 0.f;
     camera_mat.at<float>(2, 0) = 0.f;
     camera_mat.at<float>(2, 1) = 0.f;
 
-    cv::Mat dist_coef(1, 8, CV_32F, cv::Scalar::all(0));
+    const cv::Mat dist_coef(1, 8, CV_32F, cv::Scalar::all(0));
 
     std::vector<cv::Point2f> image_vec;
     cv::Mat rvec_gold(1, 3, CV_32FC1);
-    fill(rvec_gold, 0, 1);
+    fillRandom(rvec_gold, 0, 1);
     cv::Mat tvec_gold(1, 3, CV_32FC1);
-    fill(tvec_gold, 0, 1);
+    fillRandom(tvec_gold, 0, 1);
     cv::projectPoints(object, rvec_gold, tvec_gold, camera_mat, dist_coef, image_vec);
 
     cv::Mat image(1, count, CV_32FC2, &image_vec[0]);
@@ -221,82 +274,92 @@ GPU_PERF_TEST(SolvePnPRansac, cv::gpu::DeviceInfo, Count)
     cv::Mat rvec;
     cv::Mat tvec;
 
-    cv::gpu::solvePnPRansac(object, image, camera_mat, dist_coef, rvec, tvec);
-
-    declare.time(3.0);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
         cv::gpu::solvePnPRansac(object, image, camera_mat, dist_coef, rvec, tvec);
+
+        TEST_CYCLE()
+        {
+            cv::gpu::solvePnPRansac(object, image, camera_mat, dist_coef, rvec, tvec);
+        }
+    }
+    else
+    {
+        cv::solvePnPRansac(object, image, camera_mat, dist_coef, rvec, tvec);
+
+        TEST_CYCLE()
+        {
+            cv::solvePnPRansac(object, image, camera_mat, dist_coef, rvec, tvec);
+        }
     }
 }
-
-INSTANTIATE_TEST_CASE_P(Calib3D, SolvePnPRansac, testing::Combine(
-    ALL_DEVICES,
-    testing::Values<Count>(5000, 10000, 20000)));
 
 //////////////////////////////////////////////////////////////////////
 // ReprojectImageTo3D
 
-GPU_PERF_TEST(ReprojectImageTo3D, cv::gpu::DeviceInfo, cv::Size, MatDepth)
+PERF_TEST_P(Sz_Depth, Calib3D_ReprojectImageTo3D, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8U, CV_16S)))
 {
-    cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
-    cv::gpu::setDevice(devInfo.deviceID());
+    const cv::Size size = GET_PARAM(0);
+    const int depth = GET_PARAM(1);
 
-    cv::Size size = GET_PARAM(1);
-    int depth = GET_PARAM(2);
-
-    cv::Mat src_host(size, depth);
-    fill(src_host, 5.0, 30.0);
+    cv::Mat src(size, depth);
+    fillRandom(src, 5.0, 30.0);
 
     cv::Mat Q(4, 4, CV_32FC1);
-    fill(Q, 0.1, 1.0);
+    fillRandom(Q, 0.1, 1.0);
 
-    cv::gpu::GpuMat src(src_host);
-    cv::gpu::GpuMat dst;
-
-    cv::gpu::reprojectImageTo3D(src, dst, Q);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
-        cv::gpu::reprojectImageTo3D(src, dst, Q);
+        cv::gpu::GpuMat d_src(src);
+        cv::gpu::GpuMat d_dst;
+
+        cv::gpu::reprojectImageTo3D(d_src, d_dst, Q);
+
+        TEST_CYCLE()
+        {
+            cv::gpu::reprojectImageTo3D(d_src, d_dst, Q);
+        }
+    }
+    else
+    {
+        cv::Mat dst;
+
+        cv::reprojectImageTo3D(src, dst, Q);
+
+        TEST_CYCLE()
+        {
+            cv::reprojectImageTo3D(src, dst, Q);
+        }
     }
 }
-
-INSTANTIATE_TEST_CASE_P(Calib3D, ReprojectImageTo3D, testing::Combine(
-    ALL_DEVICES,
-    GPU_TYPICAL_MAT_SIZES,
-    testing::Values<MatDepth>(CV_8U, CV_16S)));
 
 //////////////////////////////////////////////////////////////////////
 // DrawColorDisp
 
-GPU_PERF_TEST(DrawColorDisp, cv::gpu::DeviceInfo, cv::Size, MatDepth)
+PERF_TEST_P(Sz_Depth, Calib3D_DrawColorDisp, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8U, CV_16S)))
 {
-    cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
-    cv::gpu::setDevice(devInfo.deviceID());
+    const cv::Size size = GET_PARAM(0);
+    const int type = GET_PARAM(1);
 
-    cv::Size size = GET_PARAM(1);
-    int type = GET_PARAM(2);
+    cv::Mat src(size, type);
+    fillRandom(src, 0, 255);
 
-    cv::Mat src_host(size, type);
-    fill(src_host, 0, 255);
-
-    cv::gpu::GpuMat src(src_host);
-    cv::gpu::GpuMat dst;
-
-    cv::gpu::drawColorDisp(src, dst, 255);
-
-    TEST_CYCLE()
+    if (runOnGpu)
     {
-        cv::gpu::drawColorDisp(src, dst, 255);
+        cv::gpu::GpuMat d_src(src);
+        cv::gpu::GpuMat d_dst;
+
+        cv::gpu::drawColorDisp(d_src, d_dst, 255);
+
+        TEST_CYCLE()
+        {
+            cv::gpu::drawColorDisp(d_src, d_dst, 255);
+        }
+    }
+    else
+    {
+        FAIL();
     }
 }
 
-INSTANTIATE_TEST_CASE_P(Calib3D, DrawColorDisp, testing::Combine(
-    ALL_DEVICES,
-    GPU_TYPICAL_MAT_SIZES,
-    testing::Values(MatDepth(CV_8U), MatDepth(CV_16S))));
-
-#endif
-
+} // namespace

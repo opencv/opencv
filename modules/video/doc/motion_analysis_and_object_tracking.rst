@@ -15,30 +15,30 @@ Calculates an optical flow for a sparse feature set using the iterative Lucas-Ka
 .. ocv:cfunction:: void cvCalcOpticalFlowPyrLK( const CvArr* prev, const CvArr* curr, CvArr* prev_pyr, CvArr* curr_pyr, const CvPoint2D32f* prev_features, CvPoint2D32f* curr_features, int count, CvSize win_size, int level, char* status, float* track_error, CvTermCriteria criteria, int flags )
 .. ocv:pyoldfunction:: cv.CalcOpticalFlowPyrLK(prev, curr, prevPyr, currPyr, prevFeatures, winSize, level, criteria, flags, guesses=None) -> (currFeatures, status, track_error)
 
-    :param prevImg: First 8-bit input image or pyramid constructed by :ocv:func:`buildOpticalFlowPyramid`.
+    :param prevImg: first 8-bit input image or pyramid constructed by :ocv:func:`buildOpticalFlowPyramid`.
 
-    :param nextImg: Second input image or pyramid of the same size and the same type as  ``prevImg``.
+    :param nextImg: second input image or pyramid of the same size and the same type as ``prevImg``.
 
-    :param prevPts: Vector of 2D points for which the flow needs to be found. The point coordinates must be single-precision floating-point numbers.
+    :param prevPts: vector of 2D points for which the flow needs to be found; point coordinates must be single-precision floating-point numbers.
 
-    :param nextPts: Output vector of 2D points (with single-precision floating-point coordinates) containing the calculated new positions of input features in the second image. When ``OPTFLOW_USE_INITIAL_FLOW`` flag is passed, the vector must have the same size as in the input.
+    :param nextPts: output vector of 2D points (with single-precision floating-point coordinates) containing the calculated new positions of input features in the second image; when ``OPTFLOW_USE_INITIAL_FLOW`` flag is passed, the vector must have the same size as in the input.
 
-    :param status: Output status vector. Each element of the vector is set to 1 if the flow for the corresponding features has been found. Otherwise, it is set to 0.
+    :param status: output status vector; each element of the vector is set to 1 if the flow for the corresponding features has been found, otherwise, it is set to 0.
 
-    :param err: Output vector of errors. Each element of the vector is set to a error for the corresponding feature. A type of the error measure can be set in ``flags`` parameter. If the flow wasn't found then the error is not defined (use the ``status`` parameter to find such cases).
+    :param err: output vector of errors; each element of the vector is set to an error for the corresponding feature, type of the error measure can be set in ``flags`` parameter; if the flow wasn't found then the error is not defined (use the ``status`` parameter to find such cases).
 
-    :param winSize: Size of the search window at each pyramid level.
+    :param winSize: size of the search window at each pyramid level.
 
-    :param maxLevel: 0-based maximal pyramid level number. If set to 0, pyramids are not used (single level). If set to 1, two levels are used, and so on. If pyramids are passed to input then algorithm will use as many levels as pyramids have but no more than ``maxLevel``.
+    :param maxLevel: 0-based maximal pyramid level number; if set to 0, pyramids are not used (single level), if set to 1, two levels are used, and so on; if pyramids are passed to input then algorithm will use as many levels as pyramids have but no more than ``maxLevel``.
 
-    :param criteria: Parameter specifying the termination criteria of the iterative search algorithm (after the specified maximum number of iterations  ``criteria.maxCount``  or when the search window moves by less than  ``criteria.epsilon`` .
+    :param criteria: parameter, specifying the termination criteria of the iterative search algorithm (after the specified maximum number of iterations  ``criteria.maxCount``  or when the search window moves by less than  ``criteria.epsilon``.
 
-    :param flags: Operation flags:
+    :param flags: operation flags:
 
-        * **OPTFLOW_USE_INITIAL_FLOW** Use initial estimations stored in  ``nextPts`` . If the flag is not set, then ``prevPts`` is copied to ``nextPts`` and is considered as the initial estimate.
-        * **OPTFLOW_LK_GET_MIN_EIGENVALS** Use minimum eigen values as a error measure (see ``minEigThreshold`` description). If the flag is not set, then L1 distance between patches around the original and a moved point divided by number of pixels in a window is used as a error measure.
+        * **OPTFLOW_USE_INITIAL_FLOW** uses initial estimations, stored in ``nextPts``; if the flag is not set, then ``prevPts`` is copied to ``nextPts`` and is considered the initial estimate.
+        * **OPTFLOW_LK_GET_MIN_EIGENVALS** use minimum eigen values as an error measure (see ``minEigThreshold`` description); if the flag is not set, then L1 distance between patches around the original and a moved point, divided by number of pixels in a window, is used as a error measure.
 
-    :param minEigThreshold: The algorithm computes a minimum eigen value of a 2x2 normal matrix of optical flow equations (this matrix is called a spatial gradient matrix in [Bouguet00]_) divided by number of pixels in a window. If this value is less then ``minEigThreshold`` then a corresponding feature is filtered out and its flow is not computed. So it allows to remove bad points earlier and speed up the computation.
+    :param minEigThreshold: the algorithm calculates the minimum eigen value of a 2x2 normal matrix of optical flow equations (this matrix is called a spatial gradient matrix in [Bouguet00]_), divided by number of pixels in a window; if this value is less than ``minEigThreshold``, then a corresponding feature is filtered out and its flow is not processed, so it allows to remove bad points and get a performance boost.
 
 The function implements a sparse iterative version of the Lucas-Kanade optical flow in pyramids. See [Bouguet00]_. The function is parallelized with the TBB library.
 
@@ -79,29 +79,29 @@ Computes a dense optical flow using the Gunnar Farneback's algorithm.
 
 .. ocv:pyfunction:: cv2.calcOpticalFlowFarneback(prev, next, pyr_scale, levels, winsize, iterations, poly_n, poly_sigma, flags[, flow]) -> flow
 
-    :param prev: First 8-bit single-channel input image.
+    :param prev: first 8-bit single-channel input image.
 
-    :param next: Second input image of the same size and the same type as  ``prev`` .
+    :param next: second input image of the same size and the same type as ``prev``.
 
-    :param flow: Computed flow image that has the same size as  ``prev``  and type  ``CV_32FC2`` .
+    :param flow: computed flow image that has the same size as ``prev`` and type ``CV_32FC2``.
 
-    :param pyr_scale: Parameter specifying the image scale (<1) to build pyramids for each image.  ``pyr_scale=0.5``  means a classical pyramid, where each next layer is twice smaller than the previous one.
+    :param pyr_scale: parameter, specifying the image scale (<1) to build pyramids for each image; ``pyr_scale=0.5`` means a classical pyramid, where each next layer is twice smaller than the previous one.
 
-    :param levels: Number of pyramid layers including the initial image.  ``levels=1``  means that no extra layers are created and only the original images are used.
+    :param levels: number of pyramid layers including the initial image; ``levels=1`` means that no extra layers are created and only the original images are used.
 
-    :param winsize: Averaging window size. Larger values increase the algorithm robustness to image noise and give more chances for fast motion detection, but yield more blurred motion field.
+    :param winsize: averaging window size; larger values increase the algorithm robustness to image noise and give more chances for fast motion detection, but yield more blurred motion field.
 
-    :param iterations: Number of iterations the algorithm does at each pyramid level.
+    :param iterations: number of iterations the algorithm does at each pyramid level.
 
-    :param poly_n: Size of the pixel neighborhood used to find polynomial expansion in each pixel. Larger values mean that the image will be approximated with smoother surfaces, yielding more robust algorithm and more blurred  motion field. Typically,  ``poly_n`` =5 or 7.
+    :param poly_n: size of the pixel neighborhood used to find polynomial expansion in each pixel; larger values mean that the image will be approximated with smoother surfaces, yielding more robust algorithm and more blurred  motion field, typically ``poly_n`` =5 or 7.
 
-    :param poly_sigma: Standard deviation of the Gaussian that is used to smooth derivatives used as a basis for the polynomial expansion. For  ``poly_n=5`` ,  you can set  ``poly_sigma=1.1`` . For  ``poly_n=7`` , a good value would be  ``poly_sigma=1.5`` .
+    :param poly_sigma: standard deviation of the Gaussian that is used to smooth derivatives used as a basis for the polynomial expansion; for  ``poly_n=5``, you can set ``poly_sigma=1.1``, for ``poly_n=7``, a good value would be ``poly_sigma=1.5``.
 
-    :param flags: Operation flags that can be a combination of the following:
+    :param flags: operation flags that can be a combination of the following:
 
-            * **OPTFLOW_USE_INITIAL_FLOW** Use the input  ``flow``  as an initial flow approximation.
+            * **OPTFLOW_USE_INITIAL_FLOW** uses the input  ``flow``  as an initial flow approximation.
 
-            * **OPTFLOW_FARNEBACK_GAUSSIAN** Use the Gaussian  :math:`\texttt{winsize}\times\texttt{winsize}`  filter instead of a box filter of the same size for optical flow estimation. Usually, this option gives z more accurate flow than with a box filter, at the cost of lower speed. Normally,  ``winsize``  for a Gaussian window should be set to a larger value to achieve the same level of robustness.
+            * **OPTFLOW_FARNEBACK_GAUSSIAN** uses the Gaussian :math:`\texttt{winsize}\times\texttt{winsize}` filter instead of a box filter of the same size for optical flow estimation; usually, this option gives z more accurate flow than with a box filter, at the cost of lower speed; normally, ``winsize`` for a Gaussian window should be set to a larger value to achieve the same level of robustness.
 
 The function finds an optical flow for each ``prev`` pixel using the [Farneback2003]_ algorithm so that
 
@@ -597,6 +597,50 @@ Returns background image
 See :ocv:func:`BackgroundSubtractor::getBackgroundImage`.
 
 
+calcOpticalFlowSF
+-----------
+Calculate an optical flow using "SimpleFlow" algorithm.
+
+.. ocv:function:: void calcOpticalFlowSF( Mat& prev, Mat& next, Mat& flowX, Mat& flowY, int layers, int averaging_block_size, int max_flow)
+
+.. ocv:function:: void calcOpticalFlowSF( Mat& prev, Mat& next, Mat& flowX, Mat& flowY, int layers, int averaging_block_size, int max_flow, double sigma_dist, double sigma_color, int postprocess_window, double sigma_dist_fix, double sigma_color_fix, double occ_thr, int upscale_averaging_radiud, double upscale_sigma_dist, double upscale_sigma_color, double speed_up_thr)
+
+    :param prev: First 8-bit 3-channel image.
+
+    :param next: Second 8-bit 3-channel image 
+
+    :param flowX: X-coordinate of estimated flow
+
+    :param flowY: Y-coordinate of estimated flow
+
+    :param layers: Number of layers
+
+    :param averaging_block_size: Size of block through which we sum up when calculate cost function for pixel
+
+    :param max_flow: maximal flow that we search at each level
+
+    :param sigma_dist: vector smooth spatial sigma parameter
+
+    :param sigma_color: vector smooth color sigma parameter
+
+    :param postprocess_window: window size for postprocess cross bilateral filter
+
+    :param sigma_dist_fix: spatial sigma for postprocess cross bilateralf filter
+
+    :param sigma_color_fix: color sigma for postprocess cross bilateral filter
+
+    :param occ_thr: threshold for detecting occlusions
+
+    :param upscale_averaging_radiud: window size for bilateral upscale operation
+
+    :param upscale_sigma_dist: spatial sigma for bilateral upscale operation
+
+    :param upscale_sigma_color: color sigma for bilateral upscale operation
+
+    :param speed_up_thr: threshold to detect point with irregular flow - where flow should be recalculated after upscale
+
+See [Tao2012]_. And site of project - http://graphics.berkeley.edu/papers/Tao-SAN-2012-05/. 
+
 .. [Bouguet00] Jean-Yves Bouguet. Pyramidal Implementation of the Lucas Kanade Feature Tracker.
 
 .. [Bradski98] Bradski, G.R. "Computer Vision Face Tracking for Use in a Perceptual User Interface", Intel, 1998
@@ -612,3 +656,5 @@ See :ocv:func:`BackgroundSubtractor::getBackgroundImage`.
 .. [Lucas81] Lucas, B., and Kanade, T. An Iterative Image Registration Technique with an Application to Stereo Vision, Proc. of 7th International Joint Conference on Artificial Intelligence (IJCAI), pp. 674-679.
 
 .. [Welch95] Greg Welch and Gary Bishop “An Introduction to the Kalman Filter”, 1995
+
+.. [Tao2012] Michael Tao, Jiamin Bai, Pushmeet Kohli and Sylvain Paris. SimpleFlow: A Non-iterative, Sublinear Optical Flow Algorithm. Computer Graphics Forum (Eurographics 2012)

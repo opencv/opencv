@@ -49,36 +49,36 @@ void cv::gpu::detail::VideoDecoder::create(const VideoReader_GPU::FormatInfo& vi
 {
     release();
 
-    cudaVideoCodec codec = static_cast<cudaVideoCodec>(videoFormat.codec);
-    cudaVideoChromaFormat chromaFormat = static_cast<cudaVideoChromaFormat>(videoFormat.chromaFormat);
+    cudaVideoCodec _codec = static_cast<cudaVideoCodec>(videoFormat.codec);
+    cudaVideoChromaFormat _chromaFormat = static_cast<cudaVideoChromaFormat>(videoFormat.chromaFormat);
 
-    cudaVideoCreateFlags videoCreateFlags = (codec == cudaVideoCodec_JPEG || codec == cudaVideoCodec_MPEG2) ?
+    cudaVideoCreateFlags videoCreateFlags = (_codec == cudaVideoCodec_JPEG || _codec == cudaVideoCodec_MPEG2) ?
                                             cudaVideoCreate_PreferCUDA :
                                             cudaVideoCreate_PreferCUVID;
 
     // Validate video format.  These are the currently supported formats via NVCUVID
-    CV_Assert(cudaVideoCodec_MPEG1 == codec ||
-              cudaVideoCodec_MPEG2 == codec ||
-              cudaVideoCodec_MPEG4 == codec ||
-              cudaVideoCodec_VC1   == codec ||
-              cudaVideoCodec_H264  == codec ||
-              cudaVideoCodec_JPEG  == codec ||
-              cudaVideoCodec_YUV420== codec ||
-              cudaVideoCodec_YV12  == codec ||
-              cudaVideoCodec_NV12  == codec ||
-              cudaVideoCodec_YUYV  == codec ||
-              cudaVideoCodec_UYVY  == codec );
+    CV_Assert(cudaVideoCodec_MPEG1 == _codec ||
+              cudaVideoCodec_MPEG2 == _codec ||
+              cudaVideoCodec_MPEG4 == _codec ||
+              cudaVideoCodec_VC1   == _codec ||
+              cudaVideoCodec_H264  == _codec ||
+              cudaVideoCodec_JPEG  == _codec ||
+              cudaVideoCodec_YUV420== _codec ||
+              cudaVideoCodec_YV12  == _codec ||
+              cudaVideoCodec_NV12  == _codec ||
+              cudaVideoCodec_YUYV  == _codec ||
+              cudaVideoCodec_UYVY  == _codec );
 
-    CV_Assert(cudaVideoChromaFormat_Monochrome == chromaFormat ||
-              cudaVideoChromaFormat_420        == chromaFormat ||
-              cudaVideoChromaFormat_422        == chromaFormat ||
-              cudaVideoChromaFormat_444        == chromaFormat);
+    CV_Assert(cudaVideoChromaFormat_Monochrome == _chromaFormat ||
+              cudaVideoChromaFormat_420        == _chromaFormat ||
+              cudaVideoChromaFormat_422        == _chromaFormat ||
+              cudaVideoChromaFormat_444        == _chromaFormat);
 
     // Fill the decoder-create-info struct from the given video-format struct.
     std::memset(&createInfo_, 0, sizeof(CUVIDDECODECREATEINFO));
 
     // Create video decoder
-    createInfo_.CodecType           = codec;
+    createInfo_.CodecType           = _codec;
     createInfo_.ulWidth             = videoFormat.width;
     createInfo_.ulHeight            = videoFormat.height;
     createInfo_.ulNumDecodeSurfaces = FrameQueue::MaximumSize;
@@ -87,7 +87,7 @@ void cv::gpu::detail::VideoDecoder::create(const VideoReader_GPU::FormatInfo& vi
     while (createInfo_.ulNumDecodeSurfaces * videoFormat.width * videoFormat.height > 16 * 1024 * 1024)
         createInfo_.ulNumDecodeSurfaces--;
 
-    createInfo_.ChromaFormat    = chromaFormat;
+    createInfo_.ChromaFormat    = _chromaFormat;
     createInfo_.OutputFormat    = cudaVideoSurfaceFormat_NV12;
     createInfo_.DeinterlaceMode = cudaVideoDeinterlaceMode_Adaptive;
 

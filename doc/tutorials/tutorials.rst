@@ -156,10 +156,25 @@ As always, we would be happy to hear your comments and receive your contribution
                  :width:  80pt
                  :alt: gpu icon
 
-*  :ref:`Table-Of-Content-General`
+*  :ref:`Table-Of-Content-iOS`
 
    .. tabularcolumns:: m{100pt} m{300pt}
    .. cssclass:: toctableopencv
+
+   =========== =======================================================
+      |iOS|     Run OpenCV and your vision apps on an iDevice
+
+   =========== =======================================================
+
+      .. |iOS| image:: images/opencv_ios.png
+                    :height: 80pt
+                    :width:  80pt
+                    :alt: gpu icon
+
+*  :ref:`Table-Of-Content-General`
+
+      .. tabularcolumns:: m{100pt} m{300pt}
+      .. cssclass:: toctableopencv
 
    =========== =======================================================
    |General|   These tutorials are the bottom of the iceberg as they link together multiple of the modules presented above in order to solve complex problems.
@@ -189,4 +204,5 @@ As always, we would be happy to hear your comments and receive your contribution
    objdetect/table_of_content_objdetect/table_of_content_objdetect
    ml/table_of_content_ml/table_of_content_ml
    gpu/table_of_content_gpu/table_of_content_gpu
+   ios/table_of_content_ios/table_of_content_ios
    general/table_of_content_general/table_of_content_general

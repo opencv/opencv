@@ -561,6 +561,18 @@ void cv::Laplacian( InputArray _src, OutputArray _dst, int ddepth, int ksize,
     _dst.create( src.size(), CV_MAKETYPE(ddepth, src.channels()) );
     Mat dst = _dst.getMat();
     
+#ifdef HAVE_TEGRA_OPTIMIZATION
+    if (scale == 1.0 && delta == 0)
+    {
+		if (ksize == 1 && tegra::laplace1(src, dst, borderType))
+            return;
+		if (ksize == 3 && tegra::laplace3(src, dst, borderType))
+            return;
+		if (ksize == 5 && tegra::laplace5(src, dst, borderType))
+            return;
+    }
+#endif
+    
     if( ksize == 1 || ksize == 3 )
     {
         float K[2][9] =

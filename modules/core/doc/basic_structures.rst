@@ -778,7 +778,7 @@ Here are examples of matrix expressions:
 Below is the formal description of the ``Mat`` methods.
 
 Mat::Mat
-------------
+--------
 Various Mat constructors
 
 .. ocv:function:: Mat::Mat()
@@ -861,7 +861,7 @@ often the default constructor is enough, and the proper matrix will be allocated
 
 
 Mat::~Mat
-------------
+---------
 The Mat destructor.
 
 .. ocv:function:: Mat::~Mat()
@@ -870,7 +870,7 @@ The matrix destructor calls :ocv:func:`Mat::release` .
 
 
 Mat::operator =
--------------------
+---------------
 Provides matrix assignment operators.
 
 .. ocv:function:: Mat& Mat::operator = (const Mat& m)
@@ -888,7 +888,7 @@ Provides matrix assignment operators.
 These are available assignment operators. Since they all are very different, make sure to read the operator parameters description.
 
 Mat::row
-------------
+--------
 Creates a matrix header for the specified matrix row.
 
 .. ocv:function:: Mat Mat::row(int y) const
@@ -923,7 +923,7 @@ The method makes a new header for the specified matrix row and returns it. This 
         A.row(j).copyTo(A.row(i));
 
 Mat::col
-------------
+--------
 Creates a matrix header for the specified matrix column.
 
 .. ocv:function:: Mat Mat::col(int x) const
@@ -935,7 +935,7 @@ The method makes a new header for the specified matrix column and returns it. Th
 
 
 Mat::rowRange
------------------
+-------------
 Creates a matrix header for the specified row span.
 
 .. ocv:function:: Mat Mat::rowRange(int startrow, int endrow) const
@@ -953,7 +953,7 @@ The method makes a new header for the specified row span of the matrix. Similarl
 :ocv:func:`Mat::col` , this is an O(1) operation.
 
 Mat::colRange
------------------
+-------------
 Creates a matrix header for the specified row span.
 
 .. ocv:function:: Mat Mat::colRange(int startcol, int endcol) const
@@ -971,7 +971,7 @@ The method makes a new header for the specified column span of the matrix. Simil
 :ocv:func:`Mat::col` , this is an O(1) operation.
 
 Mat::diag
--------------
+---------
 Extracts a diagonal from a matrix, or creates a diagonal matrix.
 
 .. ocv:function:: Mat Mat::diag( int d=0 ) const
@@ -991,7 +991,7 @@ The method makes a new header for the specified matrix diagonal. The new matrix 
 :ocv:func:`Mat::col` , this is an O(1) operation.
 
 Mat::clone
---------------
+----------
 Creates a full copy of the array and the underlying data.
 
 .. ocv:function:: Mat Mat::clone() const
@@ -1000,7 +1000,7 @@ The method creates a full copy of the array. The original ``step[]`` is not take
 
 
 Mat::copyTo
----------------
+-----------
 Copies the matrix to another one.
 
 .. ocv:function:: void Mat::copyTo( OutputArray m ) const
@@ -1022,18 +1022,18 @@ When the operation mask is specified, and the ``Mat::create`` call shown above r
 .. _Mat::convertTo:
 
 Mat::convertTo
-------------------
+--------------
 Converts an array to another data type with optional scaling.
 
 .. ocv:function:: void Mat::convertTo( OutputArray m, int rtype, double alpha=1, double beta=0 ) const
 
-    :param m: Destination matrix. If it does not have a proper size or type before the operation, it is reallocated.
+    :param m: output matrix; if it does not have a proper size or type before the operation, it is reallocated.
 
-    :param rtype: Desired destination matrix type or, rather, the depth since the number of channels are the same as the source has. If  ``rtype``  is negative, the destination matrix will have the same type as the source.
+    :param rtype: desired output matrix type or, rather, the depth since the number of channels are the same as the input has; if ``rtype``  is negative, the output matrix will have the same type as the input.
 
-    :param alpha: Optional scale factor.
+    :param alpha: optional scale factor.
 
-    :param beta: Optional delta added to the scaled values.
+    :param beta: optional delta added to the scaled values.
 
 The method converts source pixel values to the target data type. ``saturate_cast<>`` is applied at the end to avoid possible overflows:
 
@@ -1043,7 +1043,7 @@ The method converts source pixel values to the target data type. ``saturate_cast
 
 
 Mat::assignTo
------------------
+-------------
 Provides a functional form of ``convertTo``.
 
 .. ocv:function:: void Mat::assignTo( Mat& m, int type=-1 ) const
@@ -1056,7 +1056,7 @@ This is an internally used method called by the
 :ref:`MatrixExpressions` engine.
 
 Mat::setTo
---------------
+----------
 Sets all or some of the array elements to the specified value.
 
 .. ocv:function:: Mat& Mat::setTo( InputArray value, InputArray mask=noArray() )
@@ -1067,7 +1067,7 @@ Sets all or some of the array elements to the specified value.
 
 
 Mat::reshape
-----------------
+------------
 Changes the shape and/or the number of channels of a 2D matrix without copying the data.
 
 .. ocv:function:: Mat Mat::reshape(int cn, int rows=0) const
@@ -1100,7 +1100,7 @@ For example, if there is a set of 3D points stored as an STL vector, and you wan
 
 
 Mat::t
-----------
+------
 Transposes a matrix.
 
 .. ocv:function:: MatExpr Mat::t() const
@@ -1112,7 +1112,7 @@ The method performs matrix transposition by means of matrix expressions. It does
 
 
 Mat::inv
-------------
+--------
 Inverses a matrix.
 
 .. ocv:function:: MatExpr Mat::inv(int method=DECOMP_LU) const
@@ -1129,7 +1129,7 @@ The method performs a matrix inversion by means of matrix expressions. This mean
 
 
 Mat::mul
-------------
+--------
 Performs an element-wise multiplication or division of the two matrices.
 
 .. ocv:function:: MatExpr Mat::mul(InputArray m, double scale=1) const
@@ -1146,7 +1146,7 @@ Example: ::
 
 
 Mat::cross
---------------
+----------
 Computes a cross-product of two 3-element vectors.
 
 .. ocv:function:: Mat Mat::cross(InputArray m) const
@@ -1157,18 +1157,18 @@ The method computes a cross-product of two 3-element vectors. The vectors must b
 
 
 Mat::dot
-------------
+--------
 Computes a dot-product of two vectors.
 
 .. ocv:function:: double Mat::dot(InputArray m) const
 
-    :param m: Another dot-product operand.
+    :param m: another dot-product operand.
 
 The method computes a dot-product of two matrices. If the matrices are not single-column or single-row vectors, the top-to-bottom left-to-right scan ordering is used to treat them as 1D vectors. The vectors must have the same size and type. If the matrices have more than one channel, the dot products from all the channels are summed together.
 
 
 Mat::zeros
---------------
+----------
 Returns a zero array of the specified size and type.
 
 .. ocv:function:: static MatExpr Mat::zeros(int rows, int cols, int type)
@@ -1443,7 +1443,7 @@ The operators make a new header for the specified sub-array of ``*this`` . They 
 
 
 Mat::operator CvMat
------------------------
+-------------------
 Creates the ``CvMat`` header for the matrix.
 
 .. ocv:function:: Mat::operator CvMat() const
@@ -1462,7 +1462,7 @@ where ``mycvOldFunc`` is a function written to work with OpenCV 1.x data structu
 
 
 Mat::operator IplImage
---------------------------
+----------------------
 Creates the ``IplImage`` header for the matrix.
 
 .. ocv:function:: Mat::operator IplImage() const
@@ -1470,7 +1470,7 @@ Creates the ``IplImage`` header for the matrix.
 The operator creates the ``IplImage`` header for the matrix without copying the underlying data. You should make sure than the original matrix is not deallocated while the ``IplImage`` header is used. Similarly to ``Mat::operator CvMat`` , the operator is useful for intermixing the new and the old OpenCV API's.
 
 Mat::total
---------------
+----------
 Returns the total number of array elements.
 
 .. ocv:function:: size_t Mat::total() const
@@ -1478,7 +1478,7 @@ Returns the total number of array elements.
 The method returns the number of array elements (a number of pixels if the array represents an image).
 
 Mat::isContinuous
----------------------
+-----------------
 Reports whether the matrix is continuous or not.
 
 .. ocv:function:: bool Mat::isContinuous() const
@@ -1576,7 +1576,7 @@ The method returns a matrix element type. This is an identifier compatible with 
 
 
 Mat::depth
---------------
+----------
 Returns the depth of a matrix element.
 
 .. ocv:function:: int Mat::depth() const
@@ -1599,7 +1599,7 @@ The method returns the identifier of the matrix element depth (the type of each 
 
 
 Mat::channels
------------------
+-------------
 Returns the number of matrix channels.
 
 .. ocv:function:: int Mat::channels() const
@@ -1608,7 +1608,7 @@ The method returns the number of matrix channels.
 
 
 Mat::step1
---------------
+----------
 Returns a normalized step.
 
 .. ocv:function:: size_t Mat::step1( int i=0 ) const
@@ -1618,7 +1618,7 @@ The method returns a matrix step divided by
 
 
 Mat::size
--------------
+---------
 Returns a matrix size.
 
 .. ocv:function:: Size Mat::size() const
@@ -1627,7 +1627,7 @@ The method returns a matrix size: ``Size(cols, rows)`` . When the matrix is more
 
 
 Mat::empty
---------------
+----------
 Returns ``true`` if the array has no elements.
 
 .. ocv:function:: bool Mat::empty() const
@@ -1636,7 +1636,7 @@ The method returns ``true`` if ``Mat::total()`` is 0 or if ``Mat::data`` is NULL
 
 
 Mat::ptr
-------------
+--------
 Returns a pointer to the specified matrix row.
 
 .. ocv:function:: uchar* Mat::ptr(int i0=0)
@@ -1654,7 +1654,7 @@ The methods return ``uchar*`` or typed pointer to the specified matrix row. See 
 
 
 Mat::at
------------
+-------
 Returns a reference to the specified array element.
 
 .. ocv:function:: template<typename T> T& Mat::at(int i) const

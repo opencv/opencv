@@ -160,7 +160,7 @@ namespace cv
             {
                 if(mat_dst.clCxt -> impl -> double_support ==0 && mat_dst.type() == CV_64F)
                 {
-                    CV_Error(-217,"Selected device don't support double\r\n");
+                    CV_Error(CV_GpuNotSupported,"Selected device don't support double\r\n");
                     return;
                 }
 
@@ -299,7 +299,7 @@ namespace cv
 
                 if(mat_src.clCxt -> impl -> double_support ==0 && mat_src.type() == CV_64F)
                 {
-                    CV_Error(-217,"Selected device don't support double\r\n");
+                    CV_Error(CV_GpuNotSupported,"Selected device don't support double\r\n");
                     return;
                 }
 

@@ -153,6 +153,9 @@ void MagnoRetinaFilter::setCoefficientsTable(const float parasolCells_beta, cons
 
 void MagnoRetinaFilter::_amacrineCellsComputing(const float *OPL_ON, const float *OPL_OFF)
 {
+#ifdef MAKE_PARALLEL
+        cv::parallel_for_(cv::Range(0,_filterOutput.getNBpixels()), Parallel_amacrineCellsComputing(OPL_ON, OPL_OFF, &_previousInput_ON[0], &_previousInput_OFF[0], &_amacrinCellsTempOutput_ON[0], &_amacrinCellsTempOutput_OFF[0], _temporalCoefficient));
+#else
 	register const float *OPL_ON_PTR=OPL_ON;
 	register const float *OPL_OFF_PTR=OPL_OFF;
 	register float *previousInput_ON_PTR= &_previousInput_ON[0];
@@ -175,6 +178,7 @@ void MagnoRetinaFilter::_amacrineCellsComputing(const float *OPL_ON, const float
 		*(previousInput_OFF_PTR++)=*(OPL_OFF_PTR++);
 
 	}
+#endif
 }
 
 // launch filter that runs all the IPL filter

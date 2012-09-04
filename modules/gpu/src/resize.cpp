@@ -64,8 +64,8 @@ namespace cv { namespace gpu { namespace device
     namespace imgproc
     {
         template <typename T>
-        void resize_gpu(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, float fx, float fy,
-                        DevMem2Db dst, int interpolation, cudaStream_t stream);
+        void resize_gpu(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, float fx, float fy,
+                        PtrStepSzb dst, int interpolation, cudaStream_t stream);
     }
 }}}
 
@@ -139,7 +139,7 @@ void cv::gpu::resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx, doub
     {
         using namespace ::cv::gpu::device::imgproc;
 
-        typedef void (*func_t)(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, float fx, float fy, DevMem2Db dst, int interpolation, cudaStream_t stream);
+        typedef void (*func_t)(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, float fx, float fy, PtrStepSzb dst, int interpolation, cudaStream_t stream);
 
         static const func_t funcs[6][4] =
         {
@@ -154,7 +154,7 @@ void cv::gpu::resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx, doub
         const func_t func = funcs[src.depth()][src.channels() - 1];
         CV_Assert(func != 0);
 
-        func(src, DevMem2Db(wholeSize.height, wholeSize.width, src.datastart, src.step), ofs.x, ofs.y,
+        func(src, PtrStepSzb(wholeSize.height, wholeSize.width, src.datastart, src.step), ofs.x, ofs.y,
             static_cast<float>(1.0 / fx), static_cast<float>(1.0 / fy), dst, interpolation, stream);
     }
 }

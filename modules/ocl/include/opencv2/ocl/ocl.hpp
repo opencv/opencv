@@ -88,7 +88,10 @@ namespace cv
         //CV_EXPORTS void getComputeCapability(cl_device_id device, int &major, int &minor);
         //optional function, if you want save opencl binary kernel to the file, set its path
         CV_EXPORTS  void setBinpath(const char *path);
-
+		//The two functions below are used to get opencl runtime so that opencv can interactive with 
+		//other opencl program
+		CV_EXPORTS void* getoclContext();
+		CV_EXPORTS void* getoclCommandQueue();
         //////////////////////////////// Error handling ////////////////////////
         CV_EXPORTS void error(const char *error_string, const char *file, const int line, const char *func);
 
@@ -144,32 +147,15 @@ namespace cv
             //! assignment operator. Perfom blocking upload to device.
             oclMat &operator = (const Mat &m);
 
-            /* Fixme! To be supported in OpenCL later. */
-#if 0
-            //! returns lightweight DevMem2D_ structure for passing to nvcc-compiled code.
-            // Contains just image size, data ptr and step.
-            template <class T> operator DevMem2D_<T>() const;
-            template <class T> operator PtrStep_<T>() const;
-#endif
 
             //! pefroms blocking upload data to oclMat.
             void upload(const cv::Mat &m);
 
-            /* Fixme! To be supported in OpenCL later. */
-#if 0
-            //! upload async
-            void upload(const CudaMem &m, Stream &stream);
-#endif
 
             //! downloads data from device to host memory. Blocking calls.
             operator Mat() const;
             void download(cv::Mat &m) const;
 
-            /* Fixme! To be supported in OpenCL later. */
-#if 0
-            //! download async
-            void download(CudaMem &m, Stream &stream) const;
-#endif
 
             //! returns a new oclMatrix header for the specified row
             oclMat row(int y) const;
@@ -855,10 +841,6 @@ namespace cv
                     int minNeighbors, int flags, CvSize minSize = cvSize(0, 0), CvSize maxSize = cvSize(0, 0));
         };
 
-        ///////////////////////////////////////////////////////jhp_benchmark////////////////////////////////////////////////////
-        void benchmark_copy_vectorize(const oclMat &src, oclMat &dst);
-        void benchmark_copy_offset_stride(const oclMat &src, oclMat &dst);
-        void benchmark_ILP();
 
 		//! computes vertical sum, supports only CV_32FC1 images
 		CV_EXPORTS void columnSum(const oclMat& src, oclMat& sum);
@@ -919,7 +901,7 @@ namespace cv
 			oclMat dx_buf, dy_buf;
 			oclMat edgeBuf;
 			oclMat trackBuf1, trackBuf2;
-			oclMat counter;
+			void * counter;
 			Ptr<FilterEngine_GPU> filterDX, filterDY;
 		};
 
@@ -999,6 +981,9 @@ namespace cv
             int nlevels;
 
         protected:
+            // initialize buffers; only need to do once in case of multiscale detection
+            void init_buffer(const oclMat& img, Size win_stride);
+
             void computeBlockHistograms(const oclMat& img);
             void computeGradient(const oclMat& img, oclMat& grad, oclMat& qangle);
 
@@ -1022,7 +1007,11 @@ namespace cv
             // Gradients conputation results
             oclMat grad, qangle;
 
-            std::vector<oclMat> image_scales;
+            // scaled image
+            oclMat image_scale;
+
+            // effect size of input image (might be different from original size after scaling)
+            Size effect_size;
         };
 
         //! Speeded up robust features, port from GPU module.

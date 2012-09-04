@@ -62,14 +62,14 @@ namespace cv { namespace gpu { namespace device
 {
     namespace mog
     {
-        void mog_gpu(DevMem2Db frame, int cn, DevMem2Db fgmask, DevMem2Df weight, DevMem2Df sortKey, DevMem2Db mean, DevMem2Db var,
+        void mog_gpu(PtrStepSzb frame, int cn, PtrStepSzb fgmask, PtrStepSzf weight, PtrStepSzf sortKey, PtrStepSzb mean, PtrStepSzb var,
                      int nmixtures, float varThreshold, float learningRate, float backgroundRatio, float noiseSigma,
                      cudaStream_t stream);
-        void getBackgroundImage_gpu(int cn, DevMem2Df weight, DevMem2Db mean, DevMem2Db dst, int nmixtures, float backgroundRatio, cudaStream_t stream);
+        void getBackgroundImage_gpu(int cn, PtrStepSzf weight, PtrStepSzb mean, PtrStepSzb dst, int nmixtures, float backgroundRatio, cudaStream_t stream);
 
         void loadConstants(int nmixtures, float Tb, float TB, float Tg, float varInit, float varMin, float varMax, float tau, unsigned char shadowVal);
-        void mog2_gpu(DevMem2Db frame, int cn, DevMem2Db fgmask, DevMem2Db modesUsed, DevMem2Df weight, DevMem2Df variance, DevMem2Db mean, float alphaT, float prune, bool detectShadows, cudaStream_t stream);
-        void getBackgroundImage2_gpu(int cn, DevMem2Db modesUsed, DevMem2Df weight, DevMem2Db mean, DevMem2Db dst, cudaStream_t stream);
+        void mog2_gpu(PtrStepSzb frame, int cn, PtrStepSzb fgmask, PtrStepSzb modesUsed, PtrStepSzf weight, PtrStepSzf variance, PtrStepSzb mean, float alphaT, float prune, bool detectShadows, cudaStream_t stream);
+        void getBackgroundImage2_gpu(int cn, PtrStepSzb modesUsed, PtrStepSzf weight, PtrStepSzb mean, PtrStepSzb dst, cudaStream_t stream);
     }
 }}}
 

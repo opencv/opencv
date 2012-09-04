@@ -967,6 +967,8 @@ namespace cv
 
 #include "opencv2/contrib/retina.hpp"
 
+#include "opencv2/contrib/openfabmap.hpp"
+
 #endif
 
 #endif

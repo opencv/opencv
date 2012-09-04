@@ -2,6 +2,7 @@
  * jcmarker.c
  *
  * Copyright (C) 1991-1998, Thomas G. Lane.
+ * Modified 2003-2010 by Guido Vollbeding.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
@@ -153,21 +154,22 @@ emit_dqt (j_compress_ptr cinfo, int index)
     ERREXIT1(cinfo, JERR_NO_QUANT_TABLE, index);
 
   prec = 0;
-  for (i = 0; i < DCTSIZE2; i++) {
-    if (qtbl->quantval[i] > 255)
+  for (i = 0; i <= cinfo->lim_Se; i++) {
+    if (qtbl->quantval[cinfo->natural_order[i]] > 255)
       prec = 1;
   }
 
   if (! qtbl->sent_table) {
     emit_marker(cinfo, M_DQT);
 
-    emit_2bytes(cinfo, prec ? DCTSIZE2*2 + 1 + 2 : DCTSIZE2 + 1 + 2);
+    emit_2bytes(cinfo,
+      prec ? cinfo->lim_Se * 2 + 2 + 1 + 2 : cinfo->lim_Se + 1 + 1 + 2);
 
     emit_byte(cinfo, index + (prec<<4));
 
-    for (i = 0; i < DCTSIZE2; i++) {
+    for (i = 0; i <= cinfo->lim_Se; i++) {
       /* The table entries must be emitted in zigzag order. */
-      unsigned int qval = qtbl->quantval[jpeg_natural_order[i]];
+      unsigned int qval = qtbl->quantval[cinfo->natural_order[i]];
       if (prec)
 	emit_byte(cinfo, (int) (qval >> 8));
       emit_byte(cinfo, (int) (qval & 0xFF));
@@ -229,32 +231,38 @@ emit_dac (j_compress_ptr cinfo)
   char ac_in_use[NUM_ARITH_TBLS];
   int length, i;
   jpeg_component_info *compptr;
-  
+
   for (i = 0; i < NUM_ARITH_TBLS; i++)
     dc_in_use[i] = ac_in_use[i] = 0;
-  
+
   for (i = 0; i < cinfo->comps_in_scan; i++) {
     compptr = cinfo->cur_comp_info[i];
-    dc_in_use[compptr->dc_tbl_no] = 1;
-    ac_in_use[compptr->ac_tbl_no] = 1;
+    /* DC needs no table for refinement scan */
+    if (cinfo->Ss == 0 && cinfo->Ah == 0)
+      dc_in_use[compptr->dc_tbl_no] = 1;
+    /* AC needs no table when not present */
+    if (cinfo->Se)
+      ac_in_use[compptr->ac_tbl_no] = 1;
   }
-  
+
   length = 0;
   for (i = 0; i < NUM_ARITH_TBLS; i++)
     length += dc_in_use[i] + ac_in_use[i];
-  
-  emit_marker(cinfo, M_DAC);
-  
-  emit_2bytes(cinfo, length*2 + 2);
-  
-  for (i = 0; i < NUM_ARITH_TBLS; i++) {
-    if (dc_in_use[i]) {
-      emit_byte(cinfo, i);
-      emit_byte(cinfo, cinfo->arith_dc_L[i] + (cinfo->arith_dc_U[i]<<4));
-    }
-    if (ac_in_use[i]) {
-      emit_byte(cinfo, i + 0x10);
-      emit_byte(cinfo, cinfo->arith_ac_K[i]);
+
+  if (length) {
+    emit_marker(cinfo, M_DAC);
+
+    emit_2bytes(cinfo, length*2 + 2);
+
+    for (i = 0; i < NUM_ARITH_TBLS; i++) {
+      if (dc_in_use[i]) {
+	emit_byte(cinfo, i);
+	emit_byte(cinfo, cinfo->arith_dc_L[i] + (cinfo->arith_dc_U[i]<<4));
+      }
+      if (ac_in_use[i]) {
+	emit_byte(cinfo, i + 0x10);
+	emit_byte(cinfo, cinfo->arith_ac_K[i]);
+      }
     }
   }
 #endif /* C_ARITH_CODING_SUPPORTED */
@@ -285,13 +293,13 @@ emit_sof (j_compress_ptr cinfo, JPEG_MARKER code)
   emit_2bytes(cinfo, 3 * cinfo->num_components + 2 + 5 + 1); /* length */
 
   /* Make sure image isn't bigger than SOF field can handle */
-  if ((long) cinfo->image_height > 65535L ||
-      (long) cinfo->image_width > 65535L)
+  if ((long) cinfo->jpeg_height > 65535L ||
+      (long) cinfo->jpeg_width > 65535L)
     ERREXIT1(cinfo, JERR_IMAGE_TOO_BIG, (unsigned int) 65535);
 
   emit_byte(cinfo, cinfo->data_precision);
-  emit_2bytes(cinfo, (int) cinfo->image_height);
-  emit_2bytes(cinfo, (int) cinfo->image_width);
+  emit_2bytes(cinfo, (int) cinfo->jpeg_height);
+  emit_2bytes(cinfo, (int) cinfo->jpeg_width);
 
   emit_byte(cinfo, cinfo->num_components);
 
@@ -320,28 +328,38 @@ emit_sos (j_compress_ptr cinfo)
   for (i = 0; i < cinfo->comps_in_scan; i++) {
     compptr = cinfo->cur_comp_info[i];
     emit_byte(cinfo, compptr->component_id);
-    td = compptr->dc_tbl_no;
-    ta = compptr->ac_tbl_no;
-    if (cinfo->progressive_mode) {
-      /* Progressive mode: only DC or only AC tables are used in one scan;
-       * furthermore, Huffman coding of DC refinement uses no table at all.
-       * We emit 0 for unused field(s); this is recommended by the P&M text
-       * but does not seem to be specified in the standard.
-       */
-      if (cinfo->Ss == 0) {
-	ta = 0;			/* DC scan */
-	if (cinfo->Ah != 0 && !cinfo->arith_code)
-	  td = 0;		/* no DC table either */
-      } else {
-	td = 0;			/* AC scan */
-      }
-    }
+
+    /* We emit 0 for unused field(s); this is recommended by the P&M text
+     * but does not seem to be specified in the standard.
+     */
+
+    /* DC needs no table for refinement scan */
+    td = cinfo->Ss == 0 && cinfo->Ah == 0 ? compptr->dc_tbl_no : 0;
+    /* AC needs no table when not present */
+    ta = cinfo->Se ? compptr->ac_tbl_no : 0;
+
     emit_byte(cinfo, (td << 4) + ta);
   }
 
   emit_byte(cinfo, cinfo->Ss);
   emit_byte(cinfo, cinfo->Se);
   emit_byte(cinfo, (cinfo->Ah << 4) + cinfo->Al);
+}
+
+
+LOCAL(void)
+emit_pseudo_sos (j_compress_ptr cinfo)
+/* Emit a pseudo SOS marker */
+{
+  emit_marker(cinfo, M_SOS);
+  
+  emit_2bytes(cinfo, 2 + 1 + 3); /* length */
+  
+  emit_byte(cinfo, 0); /* Ns */
+
+  emit_byte(cinfo, 0); /* Ss */
+  emit_byte(cinfo, cinfo->block_size * cinfo->block_size - 1); /* Se */
+  emit_byte(cinfo, 0); /* Ah/Al */
 }
 
 
@@ -484,7 +502,7 @@ write_file_header (j_compress_ptr cinfo)
 
 /*
  * Write frame header.
- * This consists of DQT and SOFn markers.
+ * This consists of DQT and SOFn markers, and a conditional pseudo SOS marker.
  * Note that we do not emit the SOF until we have emitted the DQT(s).
  * This avoids compatibility problems with incorrect implementations that
  * try to error-check the quant table numbers as soon as they see the SOF.
@@ -511,7 +529,7 @@ write_frame_header (j_compress_ptr cinfo)
    * Note we assume that Huffman table numbers won't be changed later.
    */
   if (cinfo->arith_code || cinfo->progressive_mode ||
-      cinfo->data_precision != 8) {
+      cinfo->data_precision != 8 || cinfo->block_size != DCTSIZE) {
     is_baseline = FALSE;
   } else {
     is_baseline = TRUE;
@@ -529,7 +547,10 @@ write_frame_header (j_compress_ptr cinfo)
 
   /* Emit the proper SOF marker */
   if (cinfo->arith_code) {
-    emit_sof(cinfo, M_SOF9);	/* SOF code for arithmetic coding */
+    if (cinfo->progressive_mode)
+      emit_sof(cinfo, M_SOF10); /* SOF code for progressive arithmetic */
+    else
+      emit_sof(cinfo, M_SOF9);  /* SOF code for sequential arithmetic */
   } else {
     if (cinfo->progressive_mode)
       emit_sof(cinfo, M_SOF2);	/* SOF code for progressive Huffman */
@@ -538,6 +559,10 @@ write_frame_header (j_compress_ptr cinfo)
     else
       emit_sof(cinfo, M_SOF1);	/* SOF code for non-baseline Huffman file */
   }
+
+  /* Check to emit pseudo SOS marker */
+  if (cinfo->progressive_mode && cinfo->block_size != DCTSIZE)
+    emit_pseudo_sos(cinfo);
 }
 
 
@@ -566,19 +591,12 @@ write_scan_header (j_compress_ptr cinfo)
      */
     for (i = 0; i < cinfo->comps_in_scan; i++) {
       compptr = cinfo->cur_comp_info[i];
-      if (cinfo->progressive_mode) {
-	/* Progressive mode: only DC or only AC tables are used in one scan */
-	if (cinfo->Ss == 0) {
-	  if (cinfo->Ah == 0)	/* DC needs no table for refinement scan */
-	    emit_dht(cinfo, compptr->dc_tbl_no, FALSE);
-	} else {
-	  emit_dht(cinfo, compptr->ac_tbl_no, TRUE);
-	}
-      } else {
-	/* Sequential mode: need both DC and AC tables */
+      /* DC needs no table for refinement scan */
+      if (cinfo->Ss == 0 && cinfo->Ah == 0)
 	emit_dht(cinfo, compptr->dc_tbl_no, FALSE);
+      /* AC needs no table when not present */
+      if (cinfo->Se)
 	emit_dht(cinfo, compptr->ac_tbl_no, TRUE);
-      }
     }
   }
 

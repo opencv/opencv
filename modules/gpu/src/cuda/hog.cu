@@ -110,8 +110,8 @@ namespace cv { namespace gpu { namespace device
 
 
         template <int nblocks> // Number of histogram blocks processed by single GPU thread block
-        __global__ void compute_hists_kernel_many_blocks(const int img_block_width, const PtrElemStepf grad,
-                                                         const PtrElemStep qangle, float scale, float* block_hists)
+        __global__ void compute_hists_kernel_many_blocks(const int img_block_width, const PtrStepf grad,
+                                                         const PtrStepb qangle, float scale, float* block_hists)
         {
             const int block_x = threadIdx.z;
             const int cell_x = threadIdx.x / 16;
@@ -149,7 +149,7 @@ namespace cv { namespace gpu { namespace device
                     float2 vote = *(const float2*)grad_ptr;
                     uchar2 bin = *(const uchar2*)qangle_ptr;
 
-                    grad_ptr += grad.step;
+                    grad_ptr += grad.step/sizeof(float);
                     qangle_ptr += qangle.step;
 
                     int dist_center_y = dist_y - 4 * (1 - 2 * cell_y);
@@ -188,8 +188,8 @@ namespace cv { namespace gpu { namespace device
 
 
         void compute_hists(int nbins, int block_stride_x, int block_stride_y,
-                           int height, int width, const DevMem2Df& grad,
-                           const DevMem2Db& qangle, float sigma, float* block_hists)
+                           int height, int width, const PtrStepSzf& grad,
+                           const PtrStepSzb& qangle, float sigma, float* block_hists)
         {
             const int nblocks = 1;
 
@@ -512,7 +512,7 @@ namespace cv { namespace gpu { namespace device
 
         template <int nthreads>
         __global__ void extract_descrs_by_rows_kernel(const int img_block_width, const int win_block_stride_x, const int win_block_stride_y,
-											          const float* block_hists, PtrElemStepf descriptors)
+											          const float* block_hists, PtrStepf descriptors)
         {
             // Get left top corner of the window in src
             const float* hist = block_hists + (blockIdx.y * win_block_stride_y * img_block_width +
@@ -532,7 +532,7 @@ namespace cv { namespace gpu { namespace device
 
 
         void extract_descrs_by_rows(int win_height, int win_width, int block_stride_y, int block_stride_x, int win_stride_y, int win_stride_x,
-							        int height, int width, float* block_hists, DevMem2Df descriptors)
+							        int height, int width, float* block_hists, PtrStepSzf descriptors)
         {
             const int nthreads = 256;
 
@@ -555,7 +555,7 @@ namespace cv { namespace gpu { namespace device
         template <int nthreads>
         __global__ void extract_descrs_by_cols_kernel(const int img_block_width, const int win_block_stride_x,
                                                       const int win_block_stride_y, const float* block_hists,
-                                                      PtrElemStepf descriptors)
+                                                      PtrStepf descriptors)
         {
             // Get left top corner of the window in src
             const float* hist = block_hists + (blockIdx.y * win_block_stride_y * img_block_width +
@@ -581,7 +581,7 @@ namespace cv { namespace gpu { namespace device
 
         void extract_descrs_by_cols(int win_height, int win_width, int block_stride_y, int block_stride_x,
                                     int win_stride_y, int win_stride_x, int height, int width, float* block_hists,
-                                    DevMem2Df descriptors)
+                                    PtrStepSzf descriptors)
         {
             const int nthreads = 256;
 
@@ -605,8 +605,8 @@ namespace cv { namespace gpu { namespace device
 
 
         template <int nthreads, int correct_gamma>
-        __global__ void compute_gradients_8UC4_kernel(int height, int width, const PtrElemStep img,
-                                                      float angle_scale, PtrElemStepf grad, PtrElemStep qangle)
+        __global__ void compute_gradients_8UC4_kernel(int height, int width, const PtrStepb img,
+                                                      float angle_scale, PtrStepf grad, PtrStepb qangle)
         {
             const int x = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -707,8 +707,8 @@ namespace cv { namespace gpu { namespace device
         }
 
 
-        void compute_gradients_8UC4(int nbins, int height, int width, const DevMem2Db& img,
-                                    float angle_scale, DevMem2Df grad, DevMem2Db qangle, bool correct_gamma)
+        void compute_gradients_8UC4(int nbins, int height, int width, const PtrStepSzb& img,
+                                    float angle_scale, PtrStepSzf grad, PtrStepSzb qangle, bool correct_gamma)
         {
             (void)nbins;
             const int nthreads = 256;
@@ -727,8 +727,8 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <int nthreads, int correct_gamma>
-        __global__ void compute_gradients_8UC1_kernel(int height, int width, const PtrElemStep img,
-                                                      float angle_scale, PtrElemStepf grad, PtrElemStep qangle)
+        __global__ void compute_gradients_8UC1_kernel(int height, int width, const PtrStepb img,
+                                                      float angle_scale, PtrStepf grad, PtrStepb qangle)
         {
             const int x = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -780,8 +780,8 @@ namespace cv { namespace gpu { namespace device
         }
 
 
-        void compute_gradients_8UC1(int nbins, int height, int width, const DevMem2Db& img,
-                                    float angle_scale, DevMem2Df grad, DevMem2Db qangle, bool correct_gamma)
+        void compute_gradients_8UC1(int nbins, int height, int width, const PtrStepSzb& img,
+                                    float angle_scale, PtrStepSzf grad, PtrStepSzb qangle, bool correct_gamma)
         {
             (void)nbins;
             const int nthreads = 256;
@@ -807,7 +807,7 @@ namespace cv { namespace gpu { namespace device
         texture<uchar4, 2, cudaReadModeNormalizedFloat> resize8UC4_tex;
         texture<uchar,  2, cudaReadModeNormalizedFloat> resize8UC1_tex;
 
-        __global__ void resize_for_hog_kernel(float sx, float sy, DevMem2D_<uchar> dst, int colOfs)
+        __global__ void resize_for_hog_kernel(float sx, float sy, PtrStepSz<uchar> dst, int colOfs)
         {
             unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
             unsigned int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -816,7 +816,7 @@ namespace cv { namespace gpu { namespace device
                 dst.ptr(y)[x] = tex2D(resize8UC1_tex, x * sx + colOfs, y * sy) * 255;
         }
 
-        __global__ void resize_for_hog_kernel(float sx, float sy, DevMem2D_<uchar4> dst, int colOfs)
+        __global__ void resize_for_hog_kernel(float sx, float sy, PtrStepSz<uchar4> dst, int colOfs)
         {
             unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
             unsigned int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -829,7 +829,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         template<class T, class TEX>
-        static void resize_for_hog(const DevMem2Db& src, DevMem2Db dst, TEX& tex)
+        static void resize_for_hog(const PtrStepSzb& src, PtrStepSzb dst, TEX& tex)
         {
             tex.filterMode = cudaFilterModeLinear;
 
@@ -852,7 +852,7 @@ namespace cv { namespace gpu { namespace device
 	        float sx = static_cast<float>(src.cols) / dst.cols;
             float sy = static_cast<float>(src.rows) / dst.rows;
 
-            resize_for_hog_kernel<<<grid, threads>>>(sx, sy, (DevMem2D_<T>)dst, colOfs);
+            resize_for_hog_kernel<<<grid, threads>>>(sx, sy, (PtrStepSz<T>)dst, colOfs);
             cudaSafeCall( cudaGetLastError() );
 
             cudaSafeCall( cudaDeviceSynchronize() );
@@ -860,7 +860,7 @@ namespace cv { namespace gpu { namespace device
             cudaSafeCall( cudaUnbindTexture(tex) );
         }
 
-        void resize_8UC1(const DevMem2Db& src, DevMem2Db dst) { resize_for_hog<uchar> (src, dst, resize8UC1_tex); }
-        void resize_8UC4(const DevMem2Db& src, DevMem2Db dst) { resize_for_hog<uchar4>(src, dst, resize8UC4_tex); }
+        void resize_8UC1(const PtrStepSzb& src, PtrStepSzb dst) { resize_for_hog<uchar> (src, dst, resize8UC1_tex); }
+        void resize_8UC4(const PtrStepSzb& src, PtrStepSzb dst) { resize_for_hog<uchar4>(src, dst, resize8UC4_tex); }
     } // namespace hog
 }}} // namespace cv { namespace gpu { namespace device
