@@ -722,7 +722,7 @@ if( NOT ANDROID_STL )
   if( ANDROID_USE_STLPORT )
    set( ANDROID_STL stlport_static )
   endif()
-  message( WARNING "You are using an obsolete variable ANDROID_USE_STLPORT to select the STL. Use -DANDROID_STL=stlport_static instead." )
+  message( WARNING "You are using an obsolete variable ANDROID_USE_STLPORT to select the STL variant. Use -DANDROID_STL=stlport_static instead." )
  endif()
  if( NOT ANDROID_STL )
   set( ANDROID_STL gnustl_static )
@@ -763,6 +763,12 @@ unset( ANDROID_EXCEPTIONS )
 unset( ANDROID_STL_INCLUDE_DIRS )
 unset( __libstl )
 unset( __libsupcxx )
+
+if( NOT _CMAKE_IN_TRY_COMPILE AND ANDROID_NDK_RELEASE STREQUAL "r7b" AND ARMEABI_V7A AND NOT VFPV3 AND ANDROID_STL MATCHES "gnustl" )
+ message( WARNING  "The GNU STL armeabi-v7a binaries from NDK r7b can crash non-NEON devices. The files provided with NDK r7b were not configured properly, resulting in crashes on Tegra2-based devices and others when trying to use certain floating-point functions (e.g., cosf, sinf, expf).
+You are strongly recommended to switch to another NDK release.
+" )
+endif()
 
 # setup paths and STL for NDK
 if( BUILD_WITH_ANDROID_NDK )
@@ -867,7 +873,13 @@ if( BUILD_WITH_STANDALONE_TOOLCHAIN )
    set( __libstl    "${__libstl}/libstdc++.a" )
   endif()
   if( NOT EXISTS "${__libsupcxx}" )
-   message( FATAL_ERROR "TODO: missing stdsupc++ in NDK r7 error" )
+   message( FATAL_ERROR "The required libstdsupc++.a is missing in your standalone toolchain.
+ Usually it happens because of bug in make-standalone-toolchain.sh script from NDK r7, r7b and r7c.
+ You need to either upgrade to newer NDK or manually copy
+     $ANDROID_NDK/sources/cxx-stl/gnu-libstdc++/libs/${ANDROID_NDK_ABI_NAME}/libsupc++.a
+ to
+     ${__libsupcxx}
+   " )
   endif()
   if( ANDROID_STL STREQUAL "gnustl_shared" )
    if( ARMEABI_V7A AND EXISTS "${ANDROID_STANDALONE_TOOLCHAIN}/${ANDROID_TOOLCHAIN_MACHINE_NAME}/lib/${CMAKE_SYSTEM_PROCESSOR}/libgnustl_shared.so" )
