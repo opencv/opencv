@@ -100,15 +100,17 @@ __kernel
 
     __local int smem[16][18];
 
+    smem[lidy][lidx + 1] = src[gidx + gidy * src_step + src_offset]; 
+    if(lidx == 0)
+    {
+        smem[lidy][0]  = src[max(gidx - 1,  0)        + gidy * src_step + src_offset];
+        smem[lidy][17] = src[min(gidx + 16, cols - 1) + gidy * src_step + src_offset]; 
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+
     if(gidy < rows)
     {
-        smem[lidy][lidx + 1] = src[gidx + gidy * src_step + src_offset]; 
-        if(lidx == 0)
-        {
-            smem[lidy][0]  = src[max(gidx - 1,  0)        + gidy * src_step + src_offset];
-            smem[lidy][17] = src[min(gidx + 16, cols - 1) + gidy * src_step + src_offset]; 
-        }
-        barrier(CLK_LOCAL_MEM_FENCE);
+
         if(gidx < cols)
         {
             dx_buf[gidx + gidy * dx_buf_step + dx_buf_offset] =
@@ -168,21 +170,21 @@ __kernel
 
     __local int sdx[18][16];
     __local int sdy[18][16];
+    
+    sdx[lidy + 1][lidx] = dx_buf[gidx + gidy * dx_buf_step + dx_buf_offset];
+    sdy[lidy + 1][lidx] = dy_buf[gidx + gidy * dy_buf_step + dy_buf_offset];
+    if(lidy == 0)
+    {
+        sdx[0][lidx]  = dx_buf[gidx + max(gidy - 1,  0)        * dx_buf_step + dx_buf_offset];
+        sdx[17][lidx] = dx_buf[gidx + min(gidy + 16, rows - 1) * dx_buf_step + dx_buf_offset];
+
+        sdy[0][lidx]  = dy_buf[gidx + max(gidy - 1,  0)        * dy_buf_step + dy_buf_offset];
+        sdy[17][lidx] = dy_buf[gidx + min(gidy + 16, rows - 1) * dy_buf_step + dy_buf_offset];
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
 
     if(gidx < cols)
     {
-        sdx[lidy + 1][lidx] = dx_buf[gidx + gidy * dx_buf_step + dx_buf_offset];
-        sdy[lidy + 1][lidx] = dy_buf[gidx + gidy * dy_buf_step + dy_buf_offset];
-        if(lidy == 0)
-        {
-            sdx[0][lidx]  = dx_buf[gidx + max(gidy - 1,  0)        * dx_buf_step + dx_buf_offset];
-            sdx[17][lidx] = dx_buf[gidx + min(gidy + 16, rows - 1) * dx_buf_step + dx_buf_offset];
-
-            sdy[0][lidx]  = dy_buf[gidx + max(gidy - 1,  0)        * dy_buf_step + dy_buf_offset];
-            sdy[17][lidx] = dy_buf[gidx + min(gidy + 16, rows - 1) * dy_buf_step + dy_buf_offset];
-        }
-        barrier(CLK_LOCAL_MEM_FENCE);
-
         if(gidy < rows)
         {
             int x =  sdx[lidy][lidx] + 2 * sdx[lidy + 1][lidx] + sdx[lidy + 2][lidx];
