@@ -39,7 +39,7 @@ LOCAL_LDFLAGS = -Wl,-allow-shlib-undefined
 
 LOCAL_MODULE := OpenCVEngineTestApp
 
-LOCAL_LDLIBS += -lz -lbinder -llog
+LOCAL_LDLIBS += -lz -lbinder -llog -lutils
 
 LOCAL_SHARED_LIBRARIES += libOpenCVEngine
 
