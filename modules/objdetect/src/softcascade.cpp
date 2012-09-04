@@ -45,35 +45,94 @@
 
 #include <vector>
 #include <string>
+#include <stdio.h>
+
+namespace {
+
+    static const char* SC_OCT_SCALE        = "scale";
+    static const char* SC_OCT_STAGES       = "stageNum";
+
+    struct Octave
+    {
+        float scale;
+        int stages;
+
+        Octave(){}
+        Octave(const cv::FileNode& fn) : scale((float)fn[SC_OCT_SCALE]), stages((int)fn[SC_OCT_STAGES])
+        {printf("octave: %f %d\n", scale, stages);}
+    };
+
+    static const char *SC_STAGE_THRESHOLD  = "stageThreshold";
+    static const char *SC_STAGE_WEIGHT     = "weight";
+
+    struct Stage
+    {
+        float threshold;
+        float weight;
+
+        Stage(){}
+        Stage(const cv::FileNode& fn) : threshold((float)fn[SC_STAGE_THRESHOLD]), weight((float)fn[SC_STAGE_WEIGHT])
+        {printf("   stage: %f %f\n",threshold, weight);}
+    };
+
+    static const char *SC_F_THRESHOLD      = "threshold";
+    static const char *SC_F_DIRECTION      = "direction";
+    static const char *SC_F_CHANNEL        = "chennel";
+    static const char *SC_F_RECT           = "rect";
+
+    struct Feature
+    {
+        float threshold;
+        int direction;
+        int chennel;
+        cv::Rect rect;
+
+        Feature() {}
+        Feature(const cv::FileNode& fn)
+        : threshold((float)fn[SC_F_THRESHOLD]), direction((int)fn[SC_F_DIRECTION]),
+          chennel((int)fn[SC_F_CHANNEL])
+        {
+            cv::FileNode rn = fn[SC_F_RECT];
+            cv::FileNodeIterator r_it = rn.begin();
+            rect = cv::Rect(*(r_it++), *(r_it++), *(r_it++), *(r_it++));
+            printf("       feature: %f %d %d [%d %d %d %d]\n",threshold, direction, chennel, rect.x, rect.y, rect.width, rect.height);}
+    };
+}
 
 struct cv::SoftCascade::Filds
 {
-    std::vector<float> octaves;
-    // cv::Mat luv;
-    // std::vector<cv::Mat> bins;
-    // cv::Mat magnitude;
-    // double scaleFactor;
-    // int windowStep;
     float minScale;
     float maxScale;
+
+    int origObjWidth;
+    int origObjHeight;
+
     int noctaves;
+
+    std::vector<Octave>  octaves;
+    std::vector<Stage>   stages;
+    std::vector<Feature> features;
 
     bool fill(const FileNode &root, const float mins, const float maxs)
     {
         minScale = mins;
         maxScale = maxs;
 
+        // cascade properties
         const char *SC_STAGE_TYPE       = "stageType";
-        const char *SC_FEATURE_TYPE     = "featureType";
         const char *SC_BOOST            = "BOOST";
+        const char *SC_FEATURE_TYPE     = "featureType";
         const char *SC_ICF              = "ICF";
+        const char *SC_TREE_TYPE        = "stageTreeType";
+        const char *SC_STAGE_TH2        = "TH2";
         const char *SC_NUM_OCTAVES      = "octavesNum";
-        const char* SC_CASCADES         = "cascades";
-        const char *SC_HEIGHT           = "height";
-        const char *SC_WIDTH            = "width";
-        const char *SC_MAX_DEPTH        = "maxDepth";
+        const char *SC_ORIG_W           = "origObjWidth";
+        const char *SC_ORIG_H           = "origObjHeight";
+
+        const char* SC_OCTAVES          = "octaves";
         const char *SC_STAGES           = "stages";
-        const char *SC_STAGE_THRESHOLD  = "stageThreshold";
+        const char *SC_FEATURES         = "features";
+
 
         // only boost supported
         std::string stageTypeStr = (string)root[SC_STAGE_TYPE];
@@ -83,123 +142,157 @@ struct cv::SoftCascade::Filds
         string featureTypeStr = (string)root[SC_FEATURE_TYPE];
         CV_Assert(featureTypeStr == SC_ICF);
 
+        // only trees of height 2
+        string stageTreeTypeStr = (string)root[SC_TREE_TYPE];
+        CV_Assert(stageTreeTypeStr == SC_STAGE_TH2);
+
+        // not empty
         noctaves = (int)root[SC_NUM_OCTAVES];
         CV_Assert(noctaves > 0);
 
-        // const char *SC_WEAK_CLASSIFIERS = "weakClassifiers";
-        // const char *SC_INTERNAL_NODES   = "internalNodes";
-        // const char *SC_LEAF_VALUES      = "leafValues";
-        // const char *SC_FEATURES         = "features";
-        // const char *SC_RECT             = "rect";
+        origObjWidth = (int)root[SC_ORIG_W];
+        CV_Assert(origObjWidth == SoftCascade::ORIG_OBJECT_WIDTH);
 
-        // const char *SC_STAGE_PARAMS     = "stageParams";
-        // const char *SC_FEATURE_PARAMS   = "featureParams";
-        // const char *SC_MAX_CAT_COUNT    = "maxCatCount";
+        origObjHeight = (int)root[SC_ORIG_H];
+        CV_Assert(origObjHeight == SoftCascade::ORIG_OBJECT_HEIGHT);
 
+        // for each octave (~ one cascade in classic OpenCV xml)
+        FileNode fn = root[SC_OCTAVES];
+        if (fn.empty()) return false;
+
+        octaves.reserve(noctaves);
+        FileNodeIterator it = fn.begin(), it_end = fn.end();
+        for (; it != it_end; ++it)
+        {
+            FileNode fns = *it;
+            Octave octave = Octave(fns);
+            CV_Assert(octave.stages > 0);
+            octaves.push_back(octave);
+            stages.reserve(stages.size() + octave.stages);
+
+            fns = fns[SC_STAGES];
+            if (fn.empty()) return false;
+
+            // for each stage (~ decision tree with H = 2)
+            FileNodeIterator st = fns.begin(), st_end = fns.end();
+            for (; st != st_end; ++st )
+            {
+                fns = *st;
+                stages.push_back(Stage(fns));
+
+                fns = fns[SC_FEATURES];
+                // for each feature for tree. features stored in order {root, left, right}
+                FileNodeIterator ftr = fns.begin(), ft_end = fns.end();
+                for (; ftr != ft_end; ++ftr)
+                {
+                    features.push_back(Feature(*ftr));
+                }
+            }
+        }
         return true;
     }
 };
 
-namespace {
+// namespace {
 
-struct Cascade {
-    int logOctave;
-    float octave;
-    cv::Size objSize;
-};
+// struct Cascade {
+//     int logOctave;
+//     float octave;
+//     cv::Size objSize;
+// };
 
-struct Level {
-    int index;
-    float factor;
-    float logFactor;
-    int width;
-    int height;
-    float octave;
-    cv::Size objSize;
+// struct Level {
+//     int index;
+//     float factor;
+//     float logFactor;
+//     int width;
+//     int height;
+//     float octave;
+//     cv::Size objSize;
 
-    Level(int i,float f, float lf, int w, int h) : index(i), factor(f), logFactor(lf), width(w), height(h), octave(0.f) {}
+//     Level(int i,float f, float lf, int w, int h) : index(i), factor(f), logFactor(lf), width(w), height(h), octave(0.f) {}
 
-    void assign(float o, int detW, int detH)
-    {
-        octave = o;
-        objSize = cv::Size(cv::saturate_cast<int>(detW * o), cv::saturate_cast<int>(detH * o));
-    }
+//     void assign(float o, int detW, int detH)
+//     {
+//         octave = o;
+//         objSize = cv::Size(cv::saturate_cast<int>(detW * o), cv::saturate_cast<int>(detH * o));
+//     }
 
-    float relScale() {return (factor / octave); }
-};
-    // compute levels of full pyramid
-    void pyrLevels(int frameW, int frameH, int detW, int detH, int scales, float minScale, float maxScale, std::vector<Level> levels)
-    {
-        CV_Assert(scales > 1);
-        levels.clear();
-        float logFactor = (log(maxScale) - log(minScale)) / (scales -1);
+//     float relScale() {return (factor / octave); }
+// };
+//     // compute levels of full pyramid
+//     void pyrLevels(int frameW, int frameH, int detW, int detH, int scales, float minScale, float maxScale, std::vector<Level> levels)
+//     {
+//         CV_Assert(scales > 1);
+//         levels.clear();
+//         float logFactor = (log(maxScale) - log(minScale)) / (scales -1);
 
-        float scale = minScale;
-        for (int sc = 0; sc < scales; ++sc)
-        {
-            Level level(sc, scale, log(scale) + logFactor, std::max(0.0f, frameW - (detW * scale)), std::max(0.0f, frameH - (detH * scale)));
-            if (!level.width || !level.height)
-                break;
-            else
-                levels.push_back(level);
+//         float scale = minScale;
+//         for (int sc = 0; sc < scales; ++sc)
+//         {
+//             Level level(sc, scale, log(scale) + logFactor, std::max(0.0f, frameW - (detW * scale)), std::max(0.0f, frameH - (detH * scale)));
+//             if (!level.width || !level.height)
+//                 break;
+//             else
+//                 levels.push_back(level);
 
-            if (fabs(scale - maxScale) < FLT_EPSILON) break;
-            scale = std::min(maxScale, expf(log(scale) + logFactor));
-        }
+//             if (fabs(scale - maxScale) < FLT_EPSILON) break;
+//             scale = std::min(maxScale, expf(log(scale) + logFactor));
+//         }
 
-    }
+//     }
 
-    // according to R. Benenson, M. Mathias, R. Timofte and L. Van Gool paper
-    struct CascadeIntrinsics {
-        static const float lambda = 1.099f, a = 0.89f;
-        static const float intrinsics[10][4];
+//     // according to R. Benenson, M. Mathias, R. Timofte and L. Van Gool paper
+//     struct CascadeIntrinsics {
+//         static const float lambda = 1.099f, a = 0.89f;
+//         static const float intrinsics[10][4];
 
-        static float getFor(int chennel, float scaling)
-        {
-            CV_Assert(chennel < 10);
+//         static float getFor(int chennel, float scaling)
+//         {
+//             CV_Assert(chennel < 10);
 
-            if ((scaling - 1.f) < FLT_EPSILON)
-                return 1.f;
+//             if ((scaling - 1.f) < FLT_EPSILON)
+//                 return 1.f;
 
-            int ud = (int)(scaling < 1.f);
-            return intrinsics[chennel][(ud << 1)] * pow(scaling, intrinsics[chennel][(ud << 1) + 1]);
-        }
+//             int ud = (int)(scaling < 1.f);
+//             return intrinsics[chennel][(ud << 1)] * pow(scaling, intrinsics[chennel][(ud << 1) + 1]);
+//         }
 
-    };
+//     };
 
-    const float CascadeIntrinsics::intrinsics[10][4] =
-        {   //da, db, ua, ub
-            // hog-like orientation bins
-            {a, lambda / log(2), 1, 2},
-            {a, lambda / log(2), 1, 2},
-            {a, lambda / log(2), 1, 2},
-            {a, lambda / log(2), 1, 2},
-            {a, lambda / log(2), 1, 2},
-            {a, lambda / log(2), 1, 2},
-            // gradient magnitude
-            {a, lambda / log(2), 1, 2},
-            // luv -color chennels
-            {1, 2,      1, 2},
-            {1, 2,      1, 2},
-            {1, 2,      1, 2}
-        };
+//     const float CascadeIntrinsics::intrinsics[10][4] =
+//         {   //da, db, ua, ub
+//             // hog-like orientation bins
+//             {a, lambda / log(2), 1, 2},
+//             {a, lambda / log(2), 1, 2},
+//             {a, lambda / log(2), 1, 2},
+//             {a, lambda / log(2), 1, 2},
+//             {a, lambda / log(2), 1, 2},
+//             {a, lambda / log(2), 1, 2},
+//             // gradient magnitude
+//             {a, lambda / log(2), 1, 2},
+//             // luv -color chennels
+//             {1, 2,      1, 2},
+//             {1, 2,      1, 2},
+//             {1, 2,      1, 2}
+//         };
 
-    struct Feature
-    {
-        cv::Rect rect;
-        int channel;
-        float threshold;
+//     struct Feature
+//     {
+//         cv::Rect rect;
+//         int channel;
+//         float threshold;
 
-        Feature(int x, int y, int w, int h, int c, float t) : rect(cv::Rect(x, y, w, h)), channel(c), threshold(t) {}
-        Feature(cv::Rect r, int c, float t) : rect(r), channel(c), threshold(t) {}
+//         Feature(int x, int y, int w, int h, int c, float t) : rect(cv::Rect(x, y, w, h)), channel(c), threshold(t) {}
+//         Feature(cv::Rect r, int c, float t) : rect(r), channel(c), threshold(t) {}
 
-        Feature rescale(float relScale)
-        {
-            cv::Rect r(cvRound(rect.x * relScale), cvRound(rect.y * relScale), cvRound(rect.width * relScale), cvRound(rect.height * relScale));
-            return Feature( r, channel, threshold * CascadeIntrinsics::getFor(channel, relScale));
-        }
-    };
-}
+//         Feature rescale(float relScale)
+//         {
+//             cv::Rect r(cvRound(rect.x * relScale), cvRound(rect.y * relScale), cvRound(rect.width * relScale), cvRound(rect.height * relScale));
+//             return Feature( r, channel, threshold * CascadeIntrinsics::getFor(channel, relScale));
+//         }
+//     };
+// }
 
 
 
@@ -227,33 +320,33 @@ bool cv::SoftCascade::load( const string& filename, const float minScale, const 
     filds = new Filds;
     if (!(*filds).fill(fs.getFirstTopLevelNode(), minScale, maxScale)) return false;
 
-    ////////////////
-    // temp fixture
-    Filds& flds = *filds;
-    flds.octaves.push_back(0.5f);
-    flds.octaves.push_back(1.0f);
-    flds.octaves.push_back(2.0f);
-    flds.octaves.push_back(4.0f);
-    flds.octaves.push_back(8.0f);
+    // ////////////////
+    // // temp fixture
+    // Filds& flds = *filds;
+    // flds.octaves.push_back(0.5f);
+    // flds.octaves.push_back(1.0f);
+    // flds.octaves.push_back(2.0f);
+    // flds.octaves.push_back(4.0f);
+    // flds.octaves.push_back(8.0f);
 
-    // scales calculations
-    std::vector<Level> levels;
+    // // scales calculations
+    // std::vector<Level> levels;
 
-    pyrLevels(FRAME_WIDTH, FRAME_HEIGHT, ORIG_OBJECT_WIDTH, ORIG_OBJECT_HEIGHT, TOTAL_SCALES, minScale, maxScale, levels);
+    // pyrLevels(FRAME_WIDTH, FRAME_HEIGHT, ORIG_OBJECT_WIDTH, ORIG_OBJECT_HEIGHT, TOTAL_SCALES, minScale, maxScale, levels);
 
-    for (std::vector<Level>::iterator level = levels.begin(); level < levels.end(); ++level)
-    {
-        float minAbsLog = FLT_MAX;
-        for (std::vector<float>::iterator oct = flds.octaves.begin(); oct < flds.octaves.end(); ++oct)
-        {
-            float logOctave = log(*oct);
-            float logAbsScale = fabs((*level).logFactor - logOctave);
+    // for (std::vector<Level>::iterator level = levels.begin(); level < levels.end(); ++level)
+    // {
+    //     float minAbsLog = FLT_MAX;
+    //     for (std::vector<float>::iterator oct = flds.octaves.begin(); oct < flds.octaves.end(); ++oct)
+    //     {
+    //         float logOctave = log(*oct);
+    //         float logAbsScale = fabs((*level).logFactor - logOctave);
 
-            if(logAbsScale < minAbsLog)
-                (*level).assign(*oct, ORIG_OBJECT_WIDTH, ORIG_OBJECT_HEIGHT);
+    //         if(logAbsScale < minAbsLog)
+    //             (*level).assign(*oct, ORIG_OBJECT_WIDTH, ORIG_OBJECT_HEIGHT);
 
-        }
-    }
+    //     }
+    // }
 
     // load cascade from xml
     // read(const FileNode &root)

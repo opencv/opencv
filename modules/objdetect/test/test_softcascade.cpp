@@ -41,7 +41,10 @@
 
 #include "test_precomp.hpp"
 
-TEST(SoftCascade, HOG)
+TEST(SoftCascade, readCascade)
 {
+    std::string xml = "/home/kellan/icf-template.xml";
+    cv::SoftCascade cascade;
+    ASSERT_TRUE(cascade.load(xml));
 
 }

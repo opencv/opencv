@@ -517,17 +517,6 @@ protected:
     };
 
 private:
-    struct Feature
-    {
-        cv::Rect rect;
-        int channel;
-    };
-
-    struct Stamp
-    {
-
-    };
-
     struct Filds;
     Filds* filds;
 };
