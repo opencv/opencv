@@ -310,7 +310,7 @@ convertToXdr (OutputFile::Data *ofd,
               Array<char> &lineBuffer,
               int lineBufferMinY,
               int lineBufferMaxY,
-              int inSize)
+              int /*inSize*/)
 {
     //
     // Convert the contents of a lineBuffer from the machine's native

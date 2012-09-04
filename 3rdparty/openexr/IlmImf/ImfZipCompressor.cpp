@@ -93,7 +93,7 @@ ZipCompressor::numScanLines () const
 int
 ZipCompressor::compress (const char *inPtr,
 			 int inSize,
-			 int minY,
+			 int /*minY*/,
 			 const char *&outPtr)
 {
     //
@@ -167,7 +167,7 @@ ZipCompressor::compress (const char *inPtr,
 int
 ZipCompressor::uncompress (const char *inPtr,
 			   int inSize,
-			   int minY,
+			   int /*minY*/,
 			   const char *&outPtr)
 {
     //

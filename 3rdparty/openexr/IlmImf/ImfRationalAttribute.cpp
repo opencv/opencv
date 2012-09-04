@@ -54,7 +54,7 @@ RationalAttribute::staticTypeName ()
 
 template <>
 void
-RationalAttribute::writeValueTo (OStream &os, int version) const
+RationalAttribute::writeValueTo (OStream &os, int) const
 {
     Xdr::write <StreamIO> (os, _value.n);
     Xdr::write <StreamIO> (os, _value.d);
@@ -63,7 +63,7 @@ RationalAttribute::writeValueTo (OStream &os, int version) const
 
 template <>
 void
-RationalAttribute::readValueFrom (IStream &is, int size, int version)
+RationalAttribute::readValueFrom (IStream &is, int, int)
 {
     Xdr::read <StreamIO> (is, _value.n);
     Xdr::read <StreamIO> (is, _value.d);

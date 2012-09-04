@@ -55,7 +55,7 @@ EnvmapAttribute::staticTypeName ()
 
 template <>
 void
-EnvmapAttribute::writeValueTo (OStream &os, int version) const
+EnvmapAttribute::writeValueTo (OStream &os, int) const
 {
     unsigned char tmp = _value;
     Xdr::write <StreamIO> (os, tmp);
@@ -64,7 +64,7 @@ EnvmapAttribute::writeValueTo (OStream &os, int version) const
 
 template <>
 void
-EnvmapAttribute::readValueFrom (IStream &is, int size, int version)
+EnvmapAttribute::readValueFrom (IStream &is, int, int)
 {
     unsigned char tmp;
     Xdr::read <StreamIO> (is, tmp);

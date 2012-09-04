@@ -55,7 +55,7 @@ StringVectorAttribute::staticTypeName ()
 
 template <>
 void
-StringVectorAttribute::writeValueTo (OStream &os, int version) const
+StringVectorAttribute::writeValueTo (OStream &os, int) const
 {
     int size = _value.size();
 
@@ -70,7 +70,7 @@ StringVectorAttribute::writeValueTo (OStream &os, int version) const
 
 template <>
 void
-StringVectorAttribute::readValueFrom (IStream &is, int size, int version)
+StringVectorAttribute::readValueFrom (IStream &is, int size, int)
 {
     int read = 0;
 

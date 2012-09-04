@@ -54,7 +54,7 @@ KeyCodeAttribute::staticTypeName ()
 
 template <>
 void
-KeyCodeAttribute::writeValueTo (OStream &os, int version) const
+KeyCodeAttribute::writeValueTo (OStream &os, int) const
 {
     Xdr::write <StreamIO> (os, _value.filmMfcCode());
     Xdr::write <StreamIO> (os, _value.filmType());
@@ -68,7 +68,7 @@ KeyCodeAttribute::writeValueTo (OStream &os, int version) const
 
 template <>
 void
-KeyCodeAttribute::readValueFrom (IStream &is, int size, int version)
+KeyCodeAttribute::readValueFrom (IStream &is, int, int)
 {
     int tmp;
 

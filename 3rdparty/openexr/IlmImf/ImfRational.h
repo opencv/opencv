@@ -71,7 +71,7 @@ class Rational
     // Constructor, explicitly sets n and d
     //-------------------------------------
 
-    Rational (int n, int d): n (n), d (d) {}
+    Rational (int _n, int _d): n (_n), d (_d) {}
 
 
     //----------------------------

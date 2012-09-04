@@ -54,7 +54,7 @@ TimeCodeAttribute::staticTypeName ()
 
 template <>
 void
-TimeCodeAttribute::writeValueTo (OStream &os, int version) const
+TimeCodeAttribute::writeValueTo (OStream &os, int) const
 {
     Xdr::write <StreamIO> (os, _value.timeAndFlags());
     Xdr::write <StreamIO> (os, _value.userData());
@@ -63,7 +63,7 @@ TimeCodeAttribute::writeValueTo (OStream &os, int version) const
 
 template <>
 void
-TimeCodeAttribute::readValueFrom (IStream &is, int size, int version)
+TimeCodeAttribute::readValueFrom (IStream &is, int, int)
 {
     unsigned int tmp;
 

@@ -56,7 +56,7 @@ StringAttribute::staticTypeName ()
 
 template <>
 void
-StringAttribute::writeValueTo (OStream &os, int version) const
+StringAttribute::writeValueTo (OStream &os, int) const
 {
     int size = _value.size();
 
@@ -67,7 +67,7 @@ StringAttribute::writeValueTo (OStream &os, int version) const
 
 template <>
 void
-StringAttribute::readValueFrom (IStream &is, int size, int version)
+StringAttribute::readValueFrom (IStream &is, int size, int)
 {
     _value.resize (size);
 

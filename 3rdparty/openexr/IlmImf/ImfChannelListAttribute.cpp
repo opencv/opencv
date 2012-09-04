@@ -72,7 +72,7 @@ ChannelListAttribute::staticTypeName ()
 
 template <>
 void
-ChannelListAttribute::writeValueTo (OStream &os, int version) const
+ChannelListAttribute::writeValueTo (OStream &os, int) const
 {
     for (ChannelList::ConstIterator i = _value.begin();
 	 i != _value.end();
@@ -105,7 +105,7 @@ ChannelListAttribute::writeValueTo (OStream &os, int version) const
 
 template <>
 void
-ChannelListAttribute::readValueFrom (IStream &is, int size, int version)
+ChannelListAttribute::readValueFrom (IStream &is, int, int)
 {
     while (true)
     {

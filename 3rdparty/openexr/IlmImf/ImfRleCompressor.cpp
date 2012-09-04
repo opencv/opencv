@@ -191,7 +191,7 @@ RleCompressor::numScanLines () const
 int
 RleCompressor::compress (const char *inPtr,
 			 int inSize,
-			 int minY,
+			 int /*minY*/,
 			 const char *&outPtr)
 {
     //
@@ -257,7 +257,7 @@ RleCompressor::compress (const char *inPtr,
 int
 RleCompressor::uncompress (const char *inPtr,
 			   int inSize,
-			   int minY,
+			   int /*minY*/,
 			   const char *&outPtr)
 {
     //

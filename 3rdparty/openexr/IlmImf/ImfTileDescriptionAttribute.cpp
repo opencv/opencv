@@ -55,7 +55,7 @@ TileDescriptionAttribute::staticTypeName ()
 
 template <>
 void
-TileDescriptionAttribute::writeValueTo (OStream &os, int version) const
+TileDescriptionAttribute::writeValueTo (OStream &os, int) const
 {
     Xdr::write <StreamIO> (os, _value.xSize);
     Xdr::write <StreamIO> (os, _value.ySize);
@@ -68,8 +68,8 @@ TileDescriptionAttribute::writeValueTo (OStream &os, int version) const
 template <>
 void
 TileDescriptionAttribute::readValueFrom (IStream &is,
-					 int size,
-					 int version)
+					 int,
+					 int)
 {
     Xdr::read <StreamIO> (is, _value.xSize);
     Xdr::read <StreamIO> (is, _value.ySize);

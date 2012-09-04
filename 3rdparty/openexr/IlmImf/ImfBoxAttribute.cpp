@@ -57,7 +57,7 @@ Box2iAttribute::staticTypeName ()
 
 template <>
 void
-Box2iAttribute::writeValueTo (OStream &os, int version) const
+Box2iAttribute::writeValueTo (OStream &os, int) const
 {
     Xdr::write <StreamIO> (os, _value.min.x);
     Xdr::write <StreamIO> (os, _value.min.y);
@@ -68,7 +68,7 @@ Box2iAttribute::writeValueTo (OStream &os, int version) const
 
 template <>
 void
-Box2iAttribute::readValueFrom (IStream &is, int size, int version)
+Box2iAttribute::readValueFrom (IStream &is, int, int)
 {
     Xdr::read <StreamIO> (is, _value.min.x);
     Xdr::read <StreamIO> (is, _value.min.y);
@@ -87,7 +87,7 @@ Box2fAttribute::staticTypeName ()
 
 template <>
 void
-Box2fAttribute::writeValueTo (OStream &os, int version) const
+Box2fAttribute::writeValueTo (OStream &os, int) const
 {
     Xdr::write <StreamIO> (os, _value.min.x);
     Xdr::write <StreamIO> (os, _value.min.y);
@@ -98,7 +98,7 @@ Box2fAttribute::writeValueTo (OStream &os, int version) const
 
 template <>
 void
-Box2fAttribute::readValueFrom (IStream &is, int size, int version)
+Box2fAttribute::readValueFrom (IStream &is, int, int)
 {
     Xdr::read <StreamIO> (is, _value.min.x);
     Xdr::read <StreamIO> (is, _value.min.y);

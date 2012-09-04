@@ -90,7 +90,7 @@ namespace Imf {
 class RgbaOutputFile;
 class RgbaInputFile;
 struct PreviewRgba;
-class Chromaticities;
+struct Chromaticities;
 
 //
 // ACES red, green, blue and white-point chromaticities.

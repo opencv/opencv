@@ -55,7 +55,7 @@ PreviewImageAttribute::staticTypeName ()
 
 template <>
 void
-PreviewImageAttribute::writeValueTo (OStream &os, int version) const
+PreviewImageAttribute::writeValueTo (OStream &os, int) const
 {
     Xdr::write <StreamIO> (os, _value.width());
     Xdr::write <StreamIO> (os, _value.height());
@@ -75,7 +75,7 @@ PreviewImageAttribute::writeValueTo (OStream &os, int version) const
 
 template <>
 void
-PreviewImageAttribute::readValueFrom (IStream &is, int size, int version)
+PreviewImageAttribute::readValueFrom (IStream &is, int, int)
 {
     int width, height;
 

@@ -39,6 +39,7 @@
 //-----------------------------------------------------------------------------
 
 #include "IlmThreadPool.h"
+#include "ImfThreading.h"
 
 namespace Imf {
 

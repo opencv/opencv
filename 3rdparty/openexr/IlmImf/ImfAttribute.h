@@ -316,7 +316,7 @@ TypedAttribute<T>::copy () const
 
 template <class T>
 void		
-TypedAttribute<T>::writeValueTo (OStream &os, int version) const
+TypedAttribute<T>::writeValueTo (OStream &os, int) const
 {
     Xdr::write <StreamIO> (os, _value);
 }
@@ -324,7 +324,7 @@ TypedAttribute<T>::writeValueTo (OStream &os, int version) const
 
 template <class T>
 void		
-TypedAttribute<T>::readValueFrom (IStream &is, int size, int version)
+TypedAttribute<T>::readValueFrom (IStream &is, int, int)
 {
     Xdr::read <StreamIO> (is, _value);
 }
