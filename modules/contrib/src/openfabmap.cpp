@@ -63,7 +63,7 @@ namespace of2 {
 static double logsumexp(double a, double b) {
     return a > b ? log(1 + exp(b - a)) + a : log(1 + exp(a - b)) + b;
 }
-    
+
 FabMap::FabMap(const Mat& _clTree, double _PzGe,
         double _PzGNe, int _flags, int _numSamples) :
     clTree(_clTree), PzGe(_PzGe), PzGNe(_PzGNe), flags(
@@ -445,16 +445,16 @@ FabMap1::~FabMap1() {
 }
 
 void FabMap1::getLikelihoods(const Mat& queryImgDescriptor,
-        const vector<Mat>& testImgDescriptors, vector<IMatch>& matches) {
+        const vector<Mat>& testImageDescriptors, vector<IMatch>& matches) {
 
-    for (size_t i = 0; i < testImgDescriptors.size(); i++) {
+    for (size_t i = 0; i < testImageDescriptors.size(); i++) {
         bool zq, zpq, Lzq;
         double logP = 0;
         for (int q = 0; q < clTree.cols; q++) {
 
             zq = queryImgDescriptor.at<float>(0,q) > 0;
             zpq = queryImgDescriptor.at<float>(0,pq(q)) > 0;
-            Lzq = testImgDescriptors[i].at<float>(0,q) > 0;
+            Lzq = testImageDescriptors[i].at<float>(0,q) > 0;
 
             logP += log((this->*PzGL)(q, zq, zpq, Lzq));
 
@@ -490,16 +490,16 @@ FabMapLUT::~FabMapLUT() {
 }
 
 void FabMapLUT::getLikelihoods(const Mat& queryImgDescriptor,
-        const vector<Mat>& testImgDescriptors, vector<IMatch>& matches) {
+        const vector<Mat>& testImageDescriptors, vector<IMatch>& matches) {
 
     double precFactor = (double)pow(10.0, -precision);
 
-    for (size_t i = 0; i < testImgDescriptors.size(); i++) {
+    for (size_t i = 0; i < testImageDescriptors.size(); i++) {
         unsigned long long int logP = 0;
         for (int q = 0; q < clTree.cols; q++) {
             logP += table[q][(queryImgDescriptor.at<float>(0,pq(q)) > 0) +
             ((queryImgDescriptor.at<float>(0, q) > 0) << 1) +
-            ((testImgDescriptors[i].at<float>(0,q) > 0) << 2)];
+            ((testImageDescriptors[i].at<float>(0,q) > 0) << 2)];
         }
         matches.push_back(IMatch(0,(int)i,-precFactor*(double)logP,0));
     }
@@ -518,7 +518,7 @@ FabMapFBO::~FabMapFBO() {
 }
 
 void FabMapFBO::getLikelihoods(const Mat& queryImgDescriptor,
-        const vector<Mat>& testImgDescriptors, vector<IMatch>& matches) {
+        const vector<Mat>& testImageDescriptors, vector<IMatch>& matches) {
 
     std::multiset<WordStats> wordData;
     setWordStatistics(queryImgDescriptor, wordData);
@@ -526,7 +526,7 @@ void FabMapFBO::getLikelihoods(const Mat& queryImgDescriptor,
     vector<int> matchIndices;
     vector<IMatch> queryMatches;
 
-    for (size_t i = 0; i < testImgDescriptors.size(); i++) {
+    for (size_t i = 0; i < testImageDescriptors.size(); i++) {
         queryMatches.push_back(IMatch(0,(int)i,0,0));
         matchIndices.push_back((int)i);
     }
@@ -543,7 +543,7 @@ void FabMapFBO::getLikelihoods(const Mat& queryImgDescriptor,
 
         for (size_t i = 0; i < matchIndices.size(); i++) {
             bool Lzq =
-                testImgDescriptors[matchIndices[i]].at<float>(0,wordIter->q) > 0;
+                testImageDescriptors[matchIndices[i]].at<float>(0,wordIter->q) > 0;
             queryMatches[matchIndices[i]].likelihood +=
                 log((this->*PzGL)(wordIter->q,zq,zpq,Lzq));
             currBest =
@@ -689,17 +689,17 @@ void FabMap2::add(const vector<Mat>& queryImgDescriptors) {
 }
 
 void FabMap2::getLikelihoods(const Mat& queryImgDescriptor,
-        const vector<Mat>& testImgDescriptors, vector<IMatch>& matches) {
+        const vector<Mat>& testImageDescriptors, vector<IMatch>& matches) {
 
-    if (&testImgDescriptors== &(this->testImgDescriptors)) {
+    if (&testImageDescriptors == &testImgDescriptors) {
         getIndexLikelihoods(queryImgDescriptor, testDefaults, testInvertedMap,
             matches);
     } else {
         CV_Assert(!(flags & MOTION_MODEL));
         vector<double> defaults;
         std::map<int, vector<int> > invertedMap;
-        for (size_t i = 0; i < testImgDescriptors.size(); i++) {
-            addToIndex(testImgDescriptors[i],defaults,invertedMap);
+        for (size_t i = 0; i < testImageDescriptors.size(); i++) {
+            addToIndex(testImageDescriptors[i],defaults,invertedMap);
         }
         getIndexLikelihoods(queryImgDescriptor, defaults, invertedMap, matches);
     }
