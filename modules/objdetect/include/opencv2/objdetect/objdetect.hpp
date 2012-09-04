@@ -494,9 +494,9 @@ class CV_EXPORTS SoftCascade
 {
 public:
     SoftCascade();
-    SoftCascade( const string& filename );
+    SoftCascade( const string& filename, const float minScale = 0.4f, const float maxScale = 5.f);
     virtual ~SoftCascade();
-    bool load( const string& filename );
+    bool load( const string& filename, const float minScale = 0.4f, const float maxScale = 5.f);
 
     virtual void detectMultiScale(const Mat& image, const std::vector<cv::Rect>& rois, std::vector<cv::Rect>& objects, double factor = 1.05, int step = 4, int rejectfactor = 1);
 
@@ -506,7 +506,15 @@ protected:
     //                                 int stripSize, int yStep, double factor, vector<Rect>& candidates,
     //                                 vector<int>& rejectLevels, vector<double>& levelWeights, bool outputRejectLevels=false);
     enum { BOOST = 0 };
-    enum { FRAME_WIDTH = 640, FRAME_HEIGHT = 480, TOTAL_SCALES = 55, CLASSIFIERS = 5};
+    enum
+    {
+        FRAME_WIDTH = 640,
+        FRAME_HEIGHT = 480,
+        TOTAL_SCALES = 55,
+        CLASSIFIERS = 5,
+        ORIG_OBJECT_WIDTH = 64,
+        ORIG_OBJECT_HEIGHT = 128
+    };
 
 private:
     struct Feature

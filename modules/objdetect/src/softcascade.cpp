@@ -41,9 +41,10 @@
 
 #include <precomp.hpp>
 #include <opencv2/objdetect/objdetect.hpp>
+#include <opencv2/core/core.hpp>
 
 #include <vector>
-
+#include <string>
 
 struct cv::SoftCascade::Filds
 {
@@ -53,6 +54,50 @@ struct cv::SoftCascade::Filds
     // cv::Mat magnitude;
     // double scaleFactor;
     // int windowStep;
+    float minScale;
+    float maxScale;
+    int noctaves;
+
+    bool fill(const FileNode &root, const float mins, const float maxs)
+    {
+        minScale = mins;
+        maxScale = maxs;
+
+        const char *SC_STAGE_TYPE       = "stageType";
+        const char *SC_FEATURE_TYPE     = "featureType";
+        const char *SC_BOOST            = "BOOST";
+        const char *SC_ICF              = "ICF";
+        const char *SC_NUM_OCTAVES      = "octavesNum";
+        const char* SC_CASCADES         = "cascades";
+        const char *SC_HEIGHT           = "height";
+        const char *SC_WIDTH            = "width";
+        const char *SC_MAX_DEPTH        = "maxDepth";
+        const char *SC_STAGES           = "stages";
+        const char *SC_STAGE_THRESHOLD  = "stageThreshold";
+
+        // only boost supported
+        std::string stageTypeStr = (string)root[SC_STAGE_TYPE];
+        CV_Assert(stageTypeStr == SC_BOOST);
+
+        // only HOG-like integral channel features cupported
+        string featureTypeStr = (string)root[SC_FEATURE_TYPE];
+        CV_Assert(featureTypeStr == SC_ICF);
+
+        noctaves = (int)root[SC_NUM_OCTAVES];
+        CV_Assert(noctaves > 0);
+
+        // const char *SC_WEAK_CLASSIFIERS = "weakClassifiers";
+        // const char *SC_INTERNAL_NODES   = "internalNodes";
+        // const char *SC_LEAF_VALUES      = "leafValues";
+        // const char *SC_FEATURES         = "features";
+        // const char *SC_RECT             = "rect";
+
+        // const char *SC_STAGE_PARAMS     = "stageParams";
+        // const char *SC_FEATURE_PARAMS   = "featureParams";
+        // const char *SC_MAX_CAT_COUNT    = "maxCatCount";
+
+        return true;
+    }
 };
 
 namespace {
@@ -161,18 +206,28 @@ struct Level {
 
 cv::SoftCascade::SoftCascade() : filds(0) {}
 
-cv::SoftCascade::SoftCascade( const string& filename )
+cv::SoftCascade::SoftCascade( const string& filename, const float minScale, const float maxScale)
 {
     filds = new Filds;
-    load(filename);
+    load(filename, minScale, maxScale);
 }
 cv::SoftCascade::~SoftCascade()
 {
     delete filds;
 }
 
-bool cv::SoftCascade::load( const string& filename )
+bool cv::SoftCascade::load( const string& filename, const float minScale, const float maxScale)
 {
+    delete filds;
+    filds = 0;
+
+    cv::FileStorage fs(filename, FileStorage::READ);
+    if (!fs.isOpened()) return false;
+
+    filds = new Filds;
+    if (!(*filds).fill(fs.getFirstTopLevelNode(), minScale, maxScale)) return false;
+
+    ////////////////
     // temp fixture
     Filds& flds = *filds;
     flds.octaves.push_back(0.5f);
@@ -182,12 +237,9 @@ bool cv::SoftCascade::load( const string& filename )
     flds.octaves.push_back(8.0f);
 
     // scales calculations
-    int origObjectW = 64;
-    int origObjectH = 128;
-    float maxScale = 5.f, minScale = 0.4f;
     std::vector<Level> levels;
 
-    pyrLevels(FRAME_WIDTH, FRAME_HEIGHT, origObjectW, origObjectH, TOTAL_SCALES, minScale, maxScale,levels);
+    pyrLevels(FRAME_WIDTH, FRAME_HEIGHT, ORIG_OBJECT_WIDTH, ORIG_OBJECT_HEIGHT, TOTAL_SCALES, minScale, maxScale, levels);
 
     for (std::vector<Level>::iterator level = levels.begin(); level < levels.end(); ++level)
     {
@@ -198,10 +250,13 @@ bool cv::SoftCascade::load( const string& filename )
             float logAbsScale = fabs((*level).logFactor - logOctave);
 
             if(logAbsScale < minAbsLog)
-                (*level).assign(*oct, origObjectW, origObjectH);
+                (*level).assign(*oct, ORIG_OBJECT_WIDTH, ORIG_OBJECT_HEIGHT);
 
         }
     }
+
+    // load cascade from xml
+    // read(const FileNode &root)
 
     return true;
 }
