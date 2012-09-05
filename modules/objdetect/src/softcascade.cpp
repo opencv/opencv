@@ -164,6 +164,15 @@ namespace {
 
         float relScale() {return (factor / octave); }
     };
+
+    struct Integral
+    {
+        cv::Mat magnitude;
+        std::vector<cv::Mat> hist;
+        cv::Mat luv;
+
+        Integral(cv::Mat m, std::vector<cv::Mat> h, cv::Mat l) : magnitude(m), hist(h), luv(l) {}
+    };
 }
 
 struct cv::SoftCascade::Filds
@@ -180,6 +189,26 @@ struct cv::SoftCascade::Filds
     std::vector<Stage>   stages;
     std::vector<Feature> features;
     std::vector<Level>   levels;
+
+    typedef std::vector<Stage>::iterator stIter_t;
+
+        // carrently roi must be save for out of ranges.
+    void detectInRoi(const cv::Rect& roi, const Integral& ints, std::vector<cv::Rect>& objects, const int step)
+    {
+        for (int dy = roi.y; dy < roi.height; dy+=step)
+            for (int dx = roi.x; dx < roi.width; dx += step)
+            {
+                applyCascade(ints, dx, dy);
+            }
+    }
+
+    void applyCascade(const Integral& ints, const int x, const int y)
+    {
+        for (stIter_t sIt = sIt.begin(); sIt != stages.end(); ++sIt)
+        {
+            Stage stage& = *sIt;
+        }
+    }
 
     // compute levels of full pyramid
     void calcLevels(int frameW, int frameH, int scales)
@@ -327,7 +356,7 @@ bool cv::SoftCascade::load( const string& filename, const float minScale, const 
 
 namespace {
 
-    void calcHistBins(const cv::Mat& grey, std::vector<cv::Mat>& histInts, const int bins)
+    void calcHistBins(const cv::Mat& grey, cv::Mat magIntegral, std::vector<cv::Mat>& histInts, const int bins)
     {
         CV_Assert( grey.type() == CV_8U);
         const int rows = grey.rows + 1;
@@ -368,18 +397,10 @@ namespace {
             histInts.push_back(sum);
         }
 
-        cv::Mat magIntegral;
         cv::integral(mag, magIntegral, mag.depth());
     }
-
-    struct Integrals
-    {
-        /* data */
-    };
 }
 
-void cv::SoftCascade::detectInRoi()
-{}
 
 
 void cv::SoftCascade::detectMultiScale(const Mat& image, const std::vector<cv::Rect>& rois, std::vector<cv::Rect>& objects,
@@ -405,13 +426,16 @@ void cv::SoftCascade::detectMultiScale(const Mat& image, const std::vector<cv::R
     cv::cvtColor(image, grey, CV_RGB2GRAY);
 
     std::vector<cv::Mat> hist;
+    cv::Mat magnitude;
     const int bins = 6;
-    calcHistBins(grey, hist, bins);
+    calcHistBins(grey, magnitude, hist, bins);
+
+    Integral integrals(magnitude, hist, luv);
 
     for (RIter_t it = rois.begin(); it != rois.end(); ++it)
     {
         const cv::Rect& roi = *it;
-        // detectInRoi(roi, objects, step);
+        (*filds).detectInRoi(roi, integrals, objects, step);
     }
 
 }

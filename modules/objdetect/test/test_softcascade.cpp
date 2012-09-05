@@ -62,8 +62,8 @@ TEST(SoftCascade, Detect)
     std::vector<cv::Rect> objectBoxes;
     std::vector<cv::Rect> rois;
     rois.push_back(cv::Rect(0, 0, 640, 480));
-    ASSERT_NO_THROW(
-    {
+    // ASSERT_NO_THROW(
+    // {
         cascade.detectMultiScale(colored, rois, objectBoxes);
-    });
+    // });
 }
