@@ -94,14 +94,14 @@
 #define QMFB_SPLITBUFSIZE	4096
 #define	QMFB_JOINBUFSIZE	4096
 
-int jpc_ft_analyze(jpc_fix_t *a, int xstart, int ystart, int width, int height,
+int jpc_ft_analyze(int *a, int xstart, int ystart, int width, int height,
   int stride);
 int jpc_ft_synthesize(int *a, int xstart, int ystart, int width, int height,
   int stride);
 
-int jpc_ns_analyze(jpc_fix_t *a, int xstart, int ystart, int width, int height,
+int jpc_ns_analyze(int *a, int xstart, int ystart, int width, int height,
   int stride);
-int jpc_ns_synthesize(jpc_fix_t *a, int xstart, int ystart, int width,
+int jpc_ns_synthesize(int *a, int xstart, int ystart, int width,
   int height, int stride);
 
 void jpc_ft_fwdlift_row(jpc_fix_t *a, int numcols, int parity);
@@ -1556,7 +1556,7 @@ void jpc_ft_invlift_colres(jpc_fix_t *a, int numrows, int numcols, int stride,
 
 }
 
-int jpc_ft_analyze(jpc_fix_t *a, int xstart, int ystart, int width, int height,
+int jpc_ft_analyze(int *a, int xstart, int ystart, int width, int height,
   int stride)
 {
 	int numrows = height;
@@ -1568,7 +1568,7 @@ int jpc_ft_analyze(jpc_fix_t *a, int xstart, int ystart, int width, int height,
 	int maxcols;
 
 	maxcols = (numcols / JPC_QMFB_COLGRPSIZE) * JPC_QMFB_COLGRPSIZE;
-	startptr = &a[0];
+	startptr = (jpc_fix_t*)&a[0];
 	for (i = 0; i < maxcols; i += JPC_QMFB_COLGRPSIZE) {
 		jpc_qmfb_split_colgrp(startptr, numrows, stride, rowparity);
 		jpc_ft_fwdlift_colgrp(startptr, numrows, stride, rowparity);
@@ -1581,7 +1581,7 @@ int jpc_ft_analyze(jpc_fix_t *a, int xstart, int ystart, int width, int height,
 		  rowparity);
 	}
 
-	startptr = &a[0];
+	startptr = (jpc_fix_t*)&a[0];
 	for (i = 0; i < numrows; ++i) {
 		jpc_qmfb_split_row(startptr, numcols, colparity);
 		jpc_ft_fwdlift_row(startptr, numcols, colparity);
@@ -1604,7 +1604,7 @@ int jpc_ft_synthesize(int *a, int xstart, int ystart, int width, int height,
 	jpc_fix_t *startptr;
 	int i;
 
-	startptr = &a[0];
+	startptr = (jpc_fix_t*)&a[0];
 	for (i = 0; i < numrows; ++i) {
 		jpc_ft_invlift_row(startptr, numcols, colparity);
 		jpc_qmfb_join_row(startptr, numcols, colparity);
@@ -1612,7 +1612,7 @@ int jpc_ft_synthesize(int *a, int xstart, int ystart, int width, int height,
 	}
 
 	maxcols = (numcols / JPC_QMFB_COLGRPSIZE) * JPC_QMFB_COLGRPSIZE;
-	startptr = &a[0];
+	startptr = (jpc_fix_t*)&a[0];
 	for (i = 0; i < maxcols; i += JPC_QMFB_COLGRPSIZE) {
 		jpc_ft_invlift_colgrp(startptr, numrows, stride, rowparity);
 		jpc_qmfb_join_colgrp(startptr, numrows, stride, rowparity);
@@ -3068,7 +3068,7 @@ void jpc_ns_invlift_col(jpc_fix_t *a, int numrows, int stride,
 
 }
 
-int jpc_ns_analyze(jpc_fix_t *a, int xstart, int ystart, int width, int height,
+int jpc_ns_analyze(int *a, int xstart, int ystart, int width, int height,
   int stride)
 {
 
@@ -3081,7 +3081,7 @@ int jpc_ns_analyze(jpc_fix_t *a, int xstart, int ystart, int width, int height,
 	int maxcols;
 
 	maxcols = (numcols / JPC_QMFB_COLGRPSIZE) * JPC_QMFB_COLGRPSIZE;
-	startptr = &a[0];
+	startptr = (jpc_fix_t*)&a[0];
 	for (i = 0; i < maxcols; i += JPC_QMFB_COLGRPSIZE) {
 		jpc_qmfb_split_colgrp(startptr, numrows, stride, rowparity);
 		jpc_ns_fwdlift_colgrp(startptr, numrows, stride, rowparity);
@@ -3094,7 +3094,7 @@ int jpc_ns_analyze(jpc_fix_t *a, int xstart, int ystart, int width, int height,
 		  rowparity);
 	}
 
-	startptr = &a[0];
+	startptr = (jpc_fix_t*)&a[0];
 	for (i = 0; i < numrows; ++i) {
 		jpc_qmfb_split_row(startptr, numcols, colparity);
 		jpc_ns_fwdlift_row(startptr, numcols, colparity);
@@ -3105,7 +3105,7 @@ int jpc_ns_analyze(jpc_fix_t *a, int xstart, int ystart, int width, int height,
 
 }
 
-int jpc_ns_synthesize(jpc_fix_t *a, int xstart, int ystart, int width,
+int jpc_ns_synthesize(int *a, int xstart, int ystart, int width,
   int height, int stride)
 {
 
@@ -3117,7 +3117,7 @@ int jpc_ns_synthesize(jpc_fix_t *a, int xstart, int ystart, int width,
 	jpc_fix_t *startptr;
 	int i;
 
-	startptr = &a[0];
+	startptr = (jpc_fix_t*)&a[0];
 	for (i = 0; i < numrows; ++i) {
 		jpc_ns_invlift_row(startptr, numcols, colparity);
 		jpc_qmfb_join_row(startptr, numcols, colparity);
@@ -3125,7 +3125,7 @@ int jpc_ns_synthesize(jpc_fix_t *a, int xstart, int ystart, int width,
 	}
 
 	maxcols = (numcols / JPC_QMFB_COLGRPSIZE) * JPC_QMFB_COLGRPSIZE;
-	startptr = &a[0];
+	startptr = (jpc_fix_t*)&a[0];
 	for (i = 0; i < maxcols; i += JPC_QMFB_COLGRPSIZE) {
 		jpc_ns_invlift_colgrp(startptr, numrows, stride, rowparity);
 		jpc_qmfb_join_colgrp(startptr, numrows, stride, rowparity);

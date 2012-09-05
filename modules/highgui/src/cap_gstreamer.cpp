@@ -183,7 +183,7 @@ bool CvCapture_GStreamer::grabFrame()
 IplImage * CvCapture_GStreamer::retrieveFrame(int)
 {
     if(!buffer)
-        return false;
+        return 0;
 
     if(!frame) {
         gint height, width;
@@ -193,7 +193,7 @@ IplImage * CvCapture_GStreamer::retrieveFrame(int)
 
         if(!gst_structure_get_int(structure, "width", &width) ||
            !gst_structure_get_int(structure, "height", &height))
-            return false;
+            return 0;
 
         frame = cvCreateImageHeader(cvSize(width, height), IPL_DEPTH_8U, 3);
         gst_caps_unref(buff_caps);
@@ -572,7 +572,7 @@ CvVideoWriter* cvCreateVideoWriter_GStreamer(const char* filename, int fourcc, d
         return wrt;
 
     delete wrt;
-    return false;
+    return 0;
 }
 
 void CvCapture_GStreamer::close()
@@ -746,5 +746,5 @@ CvCapture* cvCreateCapture_GStreamer(int type, const char* filename )
         return capture;
 
     delete capture;
-    return false;
+    return 0;
 }

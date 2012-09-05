@@ -257,16 +257,97 @@ interpolateKeypoint( float N9[3][9], int dx, int dy, int ds, KeyPoint& kpt )
     return ok;
 }
 
+// Multi-threaded construction of the scale-space pyramid
+struct SURFBuildInvoker
+{
+    SURFBuildInvoker( const Mat& _sum, const vector<int>& _sizes,
+                      const vector<int>& _sampleSteps,
+                      vector<Mat>& _dets, vector<Mat>& _traces )
+    {
+        sum = &_sum;
+        sizes = &_sizes;
+        sampleSteps = &_sampleSteps;
+        dets = &_dets;
+        traces = &_traces;
+    }
+
+    void operator()(const BlockedRange& range) const
+    {
+        for( int i=range.begin(); i<range.end(); i++ )
+            calcLayerDetAndTrace( *sum, (*sizes)[i], (*sampleSteps)[i], (*dets)[i], (*traces)[i] );
+    }
+
+    const Mat *sum;
+    const vector<int> *sizes;
+    const vector<int> *sampleSteps;
+    vector<Mat>* dets;
+    vector<Mat>* traces;
+};
+
+// Multi-threaded search of the scale-space pyramid for keypoints
+struct SURFFindInvoker
+{
+    SURFFindInvoker( const Mat& _sum, const Mat& _mask_sum,
+                     const vector<Mat>& _dets, const vector<Mat>& _traces,
+                     const vector<int>& _sizes, const vector<int>& _sampleSteps,
+                     const vector<int>& _middleIndices, vector<KeyPoint>& _keypoints,
+                     int _nOctaveLayers, float _hessianThreshold )
+    {
+        sum = &_sum;
+        mask_sum = &_mask_sum;
+        dets = &_dets;
+        traces = &_traces;
+        sizes = &_sizes;
+        sampleSteps = &_sampleSteps;
+        middleIndices = &_middleIndices;
+        keypoints = &_keypoints;
+        nOctaveLayers = _nOctaveLayers;
+        hessianThreshold = _hessianThreshold;
+    }
+
+    static void findMaximaInLayer( const Mat& sum, const Mat& mask_sum,
+                   const vector<Mat>& dets, const vector<Mat>& traces,
+                   const vector<int>& sizes, vector<KeyPoint>& keypoints,
+                   int octave, int layer, float hessianThreshold, int sampleStep );
+
+    void operator()(const BlockedRange& range) const
+    {
+        for( int i=range.begin(); i<range.end(); i++ )
+        {
+            int layer = (*middleIndices)[i];
+            int octave = i / nOctaveLayers;
+            findMaximaInLayer( *sum, *mask_sum, *dets, *traces, *sizes,
+                               *keypoints, octave, layer, hessianThreshold,
+                               (*sampleSteps)[layer] );
+        }
+    }
+
+    const Mat *sum;
+    const Mat *mask_sum;
+    const vector<Mat>* dets;
+    const vector<Mat>* traces;
+    const vector<int>* sizes;
+    const vector<int>* sampleSteps;
+    const vector<int>* middleIndices;
+    vector<KeyPoint>* keypoints;
+    int nOctaveLayers;
+    float hessianThreshold;
+
 #ifdef HAVE_TBB
-static tbb::mutex findMaximaInLayer_m;
+    static tbb::mutex findMaximaInLayer_m;
 #endif
+};
+
+#ifdef HAVE_TBB
+tbb::mutex SURFFindInvoker::findMaximaInLayer_m;
+#endif
+
 
 /*
  * Find the maxima in the determinant of the Hessian in a layer of the
  * scale-space pyramid
  */
-static void
-findMaximaInLayer( const Mat& sum, const Mat& mask_sum,
+void SURFFindInvoker::findMaximaInLayer( const Mat& sum, const Mat& mask_sum,
                    const vector<Mat>& dets, const vector<Mat>& traces,
                    const vector<int>& sizes, vector<KeyPoint>& keypoints,
                    int octave, int layer, float hessianThreshold, int sampleStep )
@@ -366,84 +447,6 @@ findMaximaInLayer( const Mat& sum, const Mat& mask_sum,
         }
     }
 }
-
-
-// Multi-threaded construction of the scale-space pyramid
-struct SURFBuildInvoker
-{
-    SURFBuildInvoker( const Mat& _sum, const vector<int>& _sizes,
-                      const vector<int>& _sampleSteps,
-                      vector<Mat>& _dets, vector<Mat>& _traces )
-    {
-        sum = &_sum;
-        sizes = &_sizes;
-        sampleSteps = &_sampleSteps;
-        dets = &_dets;
-        traces = &_traces;
-    }
-
-    void operator()(const BlockedRange& range) const
-    {
-        for( int i=range.begin(); i<range.end(); i++ )
-            calcLayerDetAndTrace( *sum, (*sizes)[i], (*sampleSteps)[i], (*dets)[i], (*traces)[i] );
-    }
-
-    const Mat *sum;
-    const vector<int> *sizes;
-    const vector<int> *sampleSteps;
-    vector<Mat>* dets;
-    vector<Mat>* traces;
-};
-
-// Multi-threaded search of the scale-space pyramid for keypoints
-struct SURFFindInvoker
-{
-    SURFFindInvoker( const Mat& _sum, const Mat& _mask_sum,
-                     const vector<Mat>& _dets, const vector<Mat>& _traces,
-                     const vector<int>& _sizes, const vector<int>& _sampleSteps,
-                     const vector<int>& _middleIndices, vector<KeyPoint>& _keypoints,
-                     int _nOctaveLayers, float _hessianThreshold )
-    {
-        sum = &_sum;
-        mask_sum = &_mask_sum;
-        dets = &_dets;
-        traces = &_traces;
-        sizes = &_sizes;
-        sampleSteps = &_sampleSteps;
-        middleIndices = &_middleIndices;
-        keypoints = &_keypoints;
-        nOctaveLayers = _nOctaveLayers;
-        hessianThreshold = _hessianThreshold;
-
-#ifdef HAVE_TBB
-        //touch the mutex to ensure that it's initialization is finished
-        CV_Assert(&findMaximaInLayer_m > 0);
-#endif
-    }
-
-    void operator()(const BlockedRange& range) const
-    {
-        for( int i=range.begin(); i<range.end(); i++ )
-        {
-            int layer = (*middleIndices)[i];
-            int octave = i / nOctaveLayers;
-            findMaximaInLayer( *sum, *mask_sum, *dets, *traces, *sizes,
-                               *keypoints, octave, layer, hessianThreshold,
-                               (*sampleSteps)[layer] );
-        }
-    }
-
-    const Mat *sum;
-    const Mat *mask_sum;
-    const vector<Mat>* dets;
-    const vector<Mat>* traces;
-    const vector<int>* sizes;
-    const vector<int>* sampleSteps;
-    const vector<int>* middleIndices;
-    vector<KeyPoint>* keypoints;
-    int nOctaveLayers;
-    float hessianThreshold;
-};
 
 struct KeypointGreater
 {

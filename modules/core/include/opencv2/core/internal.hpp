@@ -135,6 +135,11 @@ CV_INLINE IppiSize ippiSize(int width, int height)
 #  if defined __AVX__ || (defined _MSC_FULL_VER && _MSC_FULL_VER >= 160040219)
 #	 include <immintrin.h>
 #    define CV_AVX 1
+#    if defined(_XCR_XFEATURE_ENABLED_MASK)
+#      define __xgetbv() _xgetbv(_XCR_XFEATURE_ENABLED_MASK)
+#    else
+#      define __xgetbv() 0
+#    endif
 #  else
 #    define CV_AVX 0
 #  endif

@@ -43,6 +43,7 @@
 
 #include "precomp.hpp"
 #include <stdio.h>
+#include "opencv2/core/internal.hpp"
 
 
 #if CV_SSE2 || CV_SSE3
@@ -780,7 +781,7 @@ cvRunHaarClassifierCascadeSum( const CvHaarClassifierCascade* _cascade,
     #ifdef CV_HAAR_USE_AVX
             bool haveAVX = false;
             if(cv::checkHardwareSupport(CV_CPU_AVX))
-                if(_xgetbv(_XCR_XFEATURE_ENABLED_MASK)&0x6)// Check if the OS will save the YMM registers
+                if(__xgetbv()&0x6)// Check if the OS will save the YMM registers
                 {
                     haveAVX = true;
                 }
@@ -867,7 +868,7 @@ cvRunHaarClassifierCascadeSum( const CvHaarClassifierCascade* _cascade,
                 for( i = start_stage; i < cascade->count; i++ )
                 {
                     stage_sum = 0.0;
-                    int j = 0;
+                    j = 0;
                     float  CV_DECL_ALIGNED(32) buf[8];
                     if( cascade->stage_classifier[i].two_rects )
                     {
@@ -1020,12 +1021,12 @@ cvRunHaarClassifierCascadeSum( const CvHaarClassifierCascade* _cascade,
             }
             else
     #endif
-    #if defined CV_HAAR_USE_SSE && CV_HAAR_USE_SSE && !CV_HAAR_USE_AVX //old SSE optimization
+    #if defined CV_HAAR_USE_SSE && CV_HAAR_USE_SSE && (!defined CV_HAAR_USE_AVX || !CV_HAAR_USE_AVX) //old SSE optimization
             if(haveSSE2)
             {
                 for( i = start_stage; i < cascade->count; i++ )
                 {
-                    __m128d stage_sum = _mm_setzero_pd();
+                    __m128d vstage_sum = _mm_setzero_pd();
                     if( cascade->stage_classifier[i].two_rects )
                     {
                         for( j = 0; j < cascade->stage_classifier[i].count; j++ )
@@ -1040,7 +1041,7 @@ cvRunHaarClassifierCascadeSum( const CvHaarClassifierCascade* _cascade,
                             __m128d sum = _mm_set_sd(calc_sum(node->feature.rect[0],p_offset) * node->feature.rect[0].weight +
                                                         calc_sum(node->feature.rect[1],p_offset) * node->feature.rect[1].weight);
                             t = _mm_cmpgt_sd(t, sum);
-                            stage_sum = _mm_add_sd(stage_sum, _mm_blendv_pd(b, a, t));
+                            vstage_sum = _mm_add_sd(vstage_sum, _mm_blendv_pd(b, a, t));
                         }
                     }
                     else
@@ -1060,11 +1061,11 @@ cvRunHaarClassifierCascadeSum( const CvHaarClassifierCascade* _cascade,
                             __m128d sum = _mm_set_sd(_sum);
 
                             t = _mm_cmpgt_sd(t, sum);
-                            stage_sum = _mm_add_sd(stage_sum, _mm_blendv_pd(b, a, t));
+                            vstage_sum = _mm_add_sd(vstage_sum, _mm_blendv_pd(b, a, t));
                         }
                     }
                     __m128d i_threshold = _mm_set1_pd(cascade->stage_classifier[i].threshold);
-                    if( _mm_comilt_sd(stage_sum, i_threshold) )
+                    if( _mm_comilt_sd(vstage_sum, i_threshold) )
                         return -i;
                 }
             }
