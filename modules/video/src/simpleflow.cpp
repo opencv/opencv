@@ -517,8 +517,8 @@ CV_EXPORTS_W void calcOpticalFlowSF(Mat& from,
                                flow,
                                averaging_radius, 
                                max_flow, 
-                               sigma_dist, 
-                               sigma_color);
+                               (float)sigma_dist, 
+                               (float)sigma_color);
 
   calcOpticalFlowSingleScaleSF(curr_to_extended,
                                curr_from_extended,
@@ -526,8 +526,8 @@ CV_EXPORTS_W void calcOpticalFlowSF(Mat& from,
                                flow_inv,
                                averaging_radius, 
                                max_flow, 
-                               sigma_dist, 
-                               sigma_color);
+                               (float)sigma_dist, 
+                               (float)sigma_color);
 
   removeOcclusions(flow, 
                    flow_inv,
@@ -586,9 +586,9 @@ CV_EXPORTS_W void calcOpticalFlowSF(Mat& from,
                               prev_from,
                               confidence,
                               flow, 
-                              (float)upscale_averaging_radius,
+                              upscale_averaging_radius,
                               (float)upscale_sigma_dist,
-                              upscale_sigma_color);
+                              (float)upscale_sigma_color);
 
     flow_inv = upscaleOpticalFlow(curr_rows,
                                   curr_cols,
