@@ -1531,6 +1531,13 @@ cvHaarDetectObjectsForROC( const CvArr* _img,
                 continue;
             }
 
+            if ( winSize.width > maxSize.width || winSize.height > maxSize.height )
+            {
+                if( !findBiggestObject )
+                    break;
+                continue;
+            }
+
             cvSetImagesForHaarClassifierCascade( cascade, sum, sqsum, tilted, factor );
             cvZero( temp );
 
