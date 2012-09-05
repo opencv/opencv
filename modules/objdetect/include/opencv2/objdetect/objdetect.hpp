@@ -493,12 +493,18 @@ protected:
 class CV_EXPORTS SoftCascade
 {
 public:
+    //! empty cascade will be created.
     SoftCascade();
+
+    //! cascade will be loaded from file "filename"
     SoftCascade( const string& filename, const float minScale = 0.4f, const float maxScale = 5.f);
-    virtual ~SoftCascade();
     bool load( const string& filename, const float minScale = 0.4f, const float maxScale = 5.f);
 
-    virtual void detectMultiScale(const Mat& image, const std::vector<cv::Rect>& rois, std::vector<cv::Rect>& objects, double factor = 1.05, int step = 4, int rejectfactor = 1);
+    virtual ~SoftCascade();
+
+    //! return vector of bounding boxes. Each box contains detected object
+    virtual void detectMultiScale(const Mat& image, const std::vector<cv::Rect>& rois, std::vector<cv::Rect>& objects,
+    int step = 4, int rejectfactor = 1);
 
 protected:
     virtual void detectForOctave(int octave);

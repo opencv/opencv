@@ -319,14 +319,20 @@ bool cv::SoftCascade::load( const string& filename, const float minScale, const 
     filds = new Filds;
     Filds& flds = *filds;
     if (!flds.fill(fs.getFirstTopLevelNode(), minScale, maxScale)) return false;
-    // flds.calcLevels(FRAME_WIDTH, FRAME_HEIGHT, TOTAL_SCALES);
+    flds.calcLevels(FRAME_WIDTH, FRAME_HEIGHT, TOTAL_SCALES);
 
     return true;
 }
 
 void cv::SoftCascade::detectMultiScale(const Mat& image, const std::vector<cv::Rect>& rois, std::vector<cv::Rect>& objects,
-                                           const double factor, const int step, const int rejectfactor)
-{}
+                                       const int step, const int rejectfactor)
+{
+    // only color images are supperted
+    CV_Assert(image.type() == CV_8UC3);
+
+    // only this window size allowed
+    CV_Assert(image.cols == 640 && image.rows == 480);
+}
 
 void cv::SoftCascade::detectForOctave(const int octave)
 {}
