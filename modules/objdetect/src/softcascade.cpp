@@ -59,7 +59,7 @@ namespace {
 
         Octave(){}
         Octave(const cv::FileNode& fn) : scale((float)fn[SC_OCT_SCALE]), stages((int)fn[SC_OCT_STAGES])
-        {printf("octave: %f %d\n", scale, stages);}
+        {/*printf("octave: %f %d\n", scale, stages);*/}
     };
 
     static const char *SC_STAGE_THRESHOLD  = "stageThreshold";
@@ -72,7 +72,7 @@ namespace {
 
         Stage(){}
         Stage(const cv::FileNode& fn) : threshold((float)fn[SC_STAGE_THRESHOLD]), weight((float)fn[SC_STAGE_WEIGHT])
-        {printf("   stage: %f %f\n",threshold, weight);}
+        {/*printf("   stage: %f %f\n",threshold, weight);*/}
     };
 
     // according to R. Benenson, M. Mathias, R. Timofte and L. Van Gool paper
@@ -131,7 +131,8 @@ namespace {
             cv::FileNode rn = fn[SC_F_RECT];
             cv::FileNodeIterator r_it = rn.begin();
             rect = cv::Rect(*(r_it++), *(r_it++), *(r_it++), *(r_it++));
-            printf("       feature: %f %d %d [%d %d %d %d]\n",threshold, direction, channel, rect.x, rect.y, rect.width, rect.height);}
+            // printf("       feature: %f %d %d [%d %d %d %d]\n",threshold, direction, channel, rect.x, rect.y, rect.width, rect.height);
+        }
 
         Feature rescale(float relScale)
         {
@@ -324,14 +325,95 @@ bool cv::SoftCascade::load( const string& filename, const float minScale, const 
     return true;
 }
 
+namespace {
+
+    void calcHistBins(const cv::Mat& grey, std::vector<cv::Mat>& histInts, const int bins)
+    {
+        CV_Assert( grey.type() == CV_8U);
+        const int rows = grey.rows + 1;
+        const int cols = grey.cols + 1;
+        cv::Size intSumSize(cols, rows);
+
+        histInts.clear();
+        std::vector<cv::Mat> hist;
+        for (int bin = 0; bin < bins; ++bin)
+        {
+            hist.push_back(cv::Mat(rows, cols, CV_32FC1));
+        }
+        cv::Mat df_dx, df_dy, mag, angle;
+        cv::Sobel(grey, df_dx, CV_32F, 1, 0);
+        cv::Sobel(grey, df_dy, CV_32F, 0, 1);
+
+        cv::cartToPolar(df_dx, df_dy, mag, angle, true);
+
+        const float magnitudeScaling = 1.0 / sqrt(2);
+        mag *= magnitudeScaling;
+        angle /= 60;
+
+        for (int h = 0; h < mag.rows; ++h)
+        {
+            float* magnitude = mag.ptr<float>(h);
+            float* ang = angle.ptr<float>(h);
+
+            for (int w = 0; w < mag.cols; ++w)
+            {
+                hist[(int)ang[w]].ptr<float>(h)[w] = magnitude[w];
+            }
+        }
+
+        for (int bin = 0; bin < bins; ++bin)
+        {
+            cv::Mat sum;
+            cv::integral(hist[bin], sum);
+            histInts.push_back(sum);
+        }
+
+        cv::Mat magIntegral;
+        cv::integral(mag, magIntegral, mag.depth());
+    }
+
+    struct Integrals
+    {
+        /* data */
+    };
+}
+
+void cv::SoftCascade::detectInRoi()
+{}
+
+
 void cv::SoftCascade::detectMultiScale(const Mat& image, const std::vector<cv::Rect>& rois, std::vector<cv::Rect>& objects,
                                        const int step, const int rejectfactor)
 {
+    typedef std::vector<cv::Rect>::const_iterator RIter_t;
     // only color images are supperted
     CV_Assert(image.type() == CV_8UC3);
 
     // only this window size allowed
     CV_Assert(image.cols == 640 && image.rows == 480);
+
+    objects.clear();
+
+    // create integrals
+    cv::Mat luv;
+    cv::cvtColor(image, luv, CV_BGR2Luv);
+
+    cv::Mat luvIntegral;
+    cv::integral(luv, luvIntegral);
+
+    cv::Mat grey;
+    cv::cvtColor(image, grey, CV_RGB2GRAY);
+
+    std::vector<cv::Mat> hist;
+    const int bins = 6;
+    calcHistBins(grey, hist, bins);
+
+    for (RIter_t it = rois.begin(); it != rois.end(); ++it)
+    {
+        const cv::Rect& roi = *it;
+        // detectInRoi(roi, objects, step);
+    }
+
 }
 
 void cv::SoftCascade::detectForOctave(const int octave)

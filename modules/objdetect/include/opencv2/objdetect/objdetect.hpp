@@ -507,6 +507,7 @@ public:
     int step = 4, int rejectfactor = 1);
 
 protected:
+    virtual void detectInRoi();
     virtual void detectForOctave(int octave);
     // virtual bool detectSingleScale( const Mat& image, int stripCount, Size processingRectSize,
     //                                 int stripSize, int yStep, double factor, vector<Rect>& candidates,
