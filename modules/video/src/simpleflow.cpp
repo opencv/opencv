@@ -128,11 +128,11 @@ static void crossBilateralFilter(const Mat& image,
 
       multiply(weights, confidence_extended(window_rows, window_cols), weights);
       multiply(weights, weights_space, weights);
-      float weights_sum = sum(weights)[0];
+      float weights_sum = (float)sum(weights)[0];
 
       for (int ch = 0; ch < 2; ++ch) {
         multiply(weights, image_extended_channels[ch](window_rows, window_cols), weighted_sum);
-        float total_sum = sum(weighted_sum)[0];
+        float total_sum = (float)sum(weighted_sum)[0];
 
         dst.at<Vec2f>(row, col)[ch] = (flag && fabs(weights_sum) < 1e-9) 
           ? image.at<float>(row, col) 
@@ -154,10 +154,10 @@ static void calcConfidence(const Mat& prev,
   for (int r0 = 0; r0 < rows; ++r0) {
     for (int c0 = 0; c0 < cols; ++c0) {
       Vec2f flow_at_point = flow.at<Vec2f>(r0, c0);
-      int u0 = floor(flow_at_point[0] + 0.5);
+      int u0 = cvRound(flow_at_point[0]);
       if (r0 + u0 < 0) { u0 = -r0; }
       if (r0 + u0 >= rows) { u0 = rows - 1 - r0; }
-      int v0 = floor(flow_at_point[1] + 0.5);
+      int v0 = cvRound(flow_at_point[1]);
       if (c0 + v0 < 0) { v0 = -c0; }
       if (c0 + v0 >= cols) { v0 = cols - 1 - c0; }
 
@@ -531,12 +531,12 @@ CV_EXPORTS_W void calcOpticalFlowSF(Mat& from,
 
   removeOcclusions(flow, 
                    flow_inv,
-                   occ_thr,
+                   (float)occ_thr,
                    confidence);
 
   removeOcclusions(flow_inv, 
                    flow,
-                   occ_thr,
+                   (float)occ_thr,
                    confidence_inv);
 
   Mat speed_up = Mat::zeros(curr_from.size(), CV_8U);
@@ -606,8 +606,8 @@ CV_EXPORTS_W void calcOpticalFlowSF(Mat& from,
                                  flow,
                                  averaging_radius, 
                                  max_flow, 
-                                 sigma_dist, 
-                                 sigma_color);
+                                 (float)sigma_dist, 
+                                 (float)sigma_color);
 
     calcConfidence(curr_to, curr_from, flow_inv, confidence_inv, max_flow);
     calcOpticalFlowSingleScaleSF(curr_to_extended,
@@ -616,8 +616,8 @@ CV_EXPORTS_W void calcOpticalFlowSF(Mat& from,
                                  flow_inv,
                                  averaging_radius, 
                                  max_flow, 
-                                 sigma_dist, 
-                                 sigma_color);
+                                 (float)sigma_dist, 
+                                 (float)sigma_color);
 
     extrapolateFlow(flow, speed_up);
     extrapolateFlow(flow_inv, speed_up_inv);
@@ -628,7 +628,7 @@ CV_EXPORTS_W void calcOpticalFlowSF(Mat& from,
   }
 
   crossBilateralFilter(flow, curr_from, confidence, flow, 
-                       postprocess_window, sigma_color_fix, sigma_dist_fix);
+                       postprocess_window, (float)sigma_color_fix, (float)sigma_dist_fix);
 
   GaussianBlur(flow, flow, Size(3, 3), 5);
 
