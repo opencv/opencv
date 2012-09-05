@@ -216,10 +216,10 @@ static void calcOpticalFlowSingleScaleSF(const Mat& prev_extended,
 
       // TODO: do smth with this creepy staff
       Vec2f flow_at_point = flow.at<Vec2f>(r0, c0);
-      int u0 = floor(flow_at_point[0] + 0.5);
+      int u0 = cvRound(flow_at_point[0]);
       if (r0 + u0 < 0) { u0 = -r0; }
       if (r0 + u0 >= rows) { u0 = rows - 1 - r0; }
-      int v0 = floor(flow_at_point[1] + 0.5);
+      int v0 = cvRound(flow_at_point[1]);
       if (c0 + v0 < 0) { v0 = -c0; }
       if (c0 + v0 >= cols) { v0 = cols - 1 - c0; }
 
@@ -228,7 +228,7 @@ static void calcOpticalFlowSingleScaleSF(const Mat& prev_extended,
       const int left_col_shift = -min(c0 + v0, max_flow);
       const int right_col_shift = min(cols - 1 - (c0 + v0), max_flow);
 
-      float min_cost = DBL_MAX, best_u = u0, best_v = v0;
+      float min_cost = FLT_MAX, best_u = (float)u0, best_v = (float)v0;
 
       wc(prev_extended, weight_window, r0 + averaging_radius, c0 + averaging_radius,
          averaging_radius, averaging_radius, averaging_radius, averaging_radius, sigma_color);
@@ -562,7 +562,7 @@ CV_EXPORTS_W void calcOpticalFlowSF(Mat& from,
 
     selectPointsToRecalcFlow(flow,
                              averaging_radius,
-                             speed_up_thr,
+                             (float)speed_up_thr,
                              curr_rows,
                              curr_cols,
                              speed_up,
@@ -571,7 +571,7 @@ CV_EXPORTS_W void calcOpticalFlowSF(Mat& from,
 
     selectPointsToRecalcFlow(flow_inv,
                              averaging_radius,
-                             speed_up_thr,
+                             (float)speed_up_thr,
                              curr_rows,
                              curr_cols,
                              speed_up_inv,

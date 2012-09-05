@@ -176,8 +176,8 @@ interpolate_method inter_array[] = { &interpolateLinear, &interpolateCubic, &int
 Size CV_ImageWarpBaseTest::randSize(RNG& rng) const
 {
     Size size;
-    size.width = saturate_cast<uint>(std::exp(rng.uniform(0.0f, 7.0f)));
-    size.height = saturate_cast<uint>(std::exp(rng.uniform(0.0f, 7.0f)));
+    size.width = saturate_cast<int>(std::exp(rng.uniform(0.0, 7.0)));
+    size.height = saturate_cast<int>(std::exp(rng.uniform(0.0, 7.0)));
 
     return size;
 }
@@ -347,7 +347,7 @@ void CV_Resize_Test::run_reference_func()
 
 double CV_Resize_Test::getWeight(double a, double b, int x)
 {
-    float w = std::min<double>(x + 1, b) - std::max<double>(x, a);
+    float w = std::min(x + 1., b) - std::max(x + 0., a);
     CV_Assert(w >= 0);
     return w;
 }
@@ -435,6 +435,8 @@ void CV_Resize_Test::resize_1d(const Mat& _src, Mat& _dst, int dy, const dim& _d
             ofs = 1, ksize = 4;
         else if (interpolation == INTER_LANCZOS4)
             ofs = 3, ksize = 8;
+        cv::AutoBuffer<float> _w(ksize);
+        float* w = _w;
         
         Mat _extended_src_row(1, _src.cols + ksize * 2, _src.type());
         uchar* srow = _src.data + dy * _src.step;
@@ -453,7 +455,6 @@ void CV_Resize_Test::resize_1d(const Mat& _src, Mat& _dst, int dy, const dim& _d
             float *xyD = yD + dx * cn;
             const float* xyS = _extended_src_row.ptr<float>(0) + (isx + ksize - ofs) * cn;
 
-            float w[ksize];
             inter_func(fsx, w);
 
             for (int r = 0; r < cn; ++r)
@@ -706,7 +707,7 @@ void CV_Remap_Test::generate_test_data()
                     {
                         MatIterator_<ushort> begin_y = mapy.begin<ushort>(), end_y = mapy.end<ushort>();
                         for ( ; begin_y != end_y; ++begin_y)
-                            begin_y[0] = rng.uniform(0, 1024);
+                            begin_y[0] = (ushort)rng.uniform(0, 1024);
                     }
                     break;
 
@@ -714,7 +715,7 @@ void CV_Remap_Test::generate_test_data()
                     {
                         MatIterator_<short> begin_y = mapy.begin<short>(), end_y = mapy.end<short>();
                         for ( ; begin_y != end_y; ++begin_y)
-                            begin_y[0] = rng.uniform(0, 1024);
+                            begin_y[0] = (short)rng.uniform(0, 1024);
                     }
                     break;
                 }
@@ -862,7 +863,7 @@ void CV_Remap_Test::remap_nearest(const Mat& _src, Mat& _dst)
             {
                 if (borderType == BORDER_CONSTANT)
                     for (int r = 0; r < cn; ++r)
-                        xyD[r] = borderValue[r];
+                        xyD[r] = (float)borderValue[r];
                 else
                 {
                     sx = borderInterpolate(sx, ssize.width, borderType);
@@ -936,7 +937,7 @@ void CV_Remap_Test::remap_generic(const Mat& _src, Mat& _dst)
                         (isx >= ssize.width || isx + ksize <= 0 ||
                         isy >= ssize.height || isy + ksize <= 0))
                     for (int r = 0; r < cn; ++r)
-                        xyD[r] = borderValue[r];
+                        xyD[r] = (float)borderValue[r];
                 else
                 {
                     int ar_x[8], ar_y[8];
@@ -1244,11 +1245,11 @@ void CV_WarpPerspective_Test::generate_test_data()
     // generating the M 3x3 matrix
     RNG& rng = ts->get_rng();
 
-    Point2f sp[] = { Point2f(0, 0), Point2f(src.cols, 0), Point2f(0, src.rows), Point2f(src.cols, src.rows) };
-    Point2f dp[] = { Point2f(rng.uniform(0, src.cols), rng.uniform(0, src.rows)),
-        Point2f(rng.uniform(0, src.cols), rng.uniform(0, src.rows)),
-        Point2f(rng.uniform(0, src.cols), rng.uniform(0, src.rows)),
-        Point2f(rng.uniform(0, src.cols), rng.uniform(0, src.rows)) };
+    Point2f sp[] = { Point(0, 0), Point(src.cols, 0), Point(0, src.rows), Point(src.cols, src.rows) };
+    Point2f dp[] = { Point(rng.uniform(0, src.cols), rng.uniform(0, src.rows)),
+        Point(rng.uniform(0, src.cols), rng.uniform(0, src.rows)),
+        Point(rng.uniform(0, src.cols), rng.uniform(0, src.rows)),
+        Point(rng.uniform(0, src.cols), rng.uniform(0, src.rows)) };
     M = getPerspectiveTransform(sp, dp);
 
     static const int depths[] = { CV_32F, CV_64F };
