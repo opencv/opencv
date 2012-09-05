@@ -259,8 +259,8 @@ static void calcOpticalFlowSingleScaleSF(const Mat& prev_extended,
 
           if (cost < min_cost) {
             min_cost = cost;
-            best_u = u + u0;
-            best_v = v + v0;
+            best_u = (float)(u + u0);
+            best_v = (float)(v + v0);
           }
         }
       }
@@ -309,7 +309,7 @@ static Mat calcIrregularityMat(const Mat& flow, int radius) {
 
 static void selectPointsToRecalcFlow(const Mat& flow, 
                                      int irregularity_metric_radius,
-                                     int speed_up_thr,
+                                     float speed_up_thr,
                                      int curr_rows,
                                      int curr_cols,
                                      const Mat& prev_speed_up,
@@ -562,7 +562,7 @@ CV_EXPORTS_W void calcOpticalFlowSF(Mat& from,
 
     selectPointsToRecalcFlow(flow,
                              averaging_radius,
-                             (int)speed_up_thr,
+                             speed_up_thr,
                              curr_rows,
                              curr_cols,
                              speed_up,
@@ -586,8 +586,8 @@ CV_EXPORTS_W void calcOpticalFlowSF(Mat& from,
                               prev_from,
                               confidence,
                               flow, 
-                              upscale_averaging_radius,
-                              upscale_sigma_dist,
+                              (float)upscale_averaging_radius,
+                              (float)upscale_sigma_dist,
                               upscale_sigma_color);
 
     flow_inv = upscaleOpticalFlow(curr_rows,
@@ -596,8 +596,8 @@ CV_EXPORTS_W void calcOpticalFlowSF(Mat& from,
                                   confidence_inv,
                                   flow_inv,
                                   upscale_averaging_radius,
-                                  upscale_sigma_dist,
-                                  upscale_sigma_color);
+                                  (float)upscale_sigma_dist,
+                                  (float)upscale_sigma_color);
 
     calcConfidence(curr_from, curr_to, flow, confidence, max_flow);
     calcOpticalFlowSingleScaleSF(curr_from_extended,
@@ -623,8 +623,8 @@ CV_EXPORTS_W void calcOpticalFlowSF(Mat& from,
     extrapolateFlow(flow_inv, speed_up_inv);
 
     //TODO: should we remove occlusions for the last stage?
-    removeOcclusions(flow, flow_inv, occ_thr, confidence);
-    removeOcclusions(flow_inv, flow, occ_thr, confidence_inv);
+    removeOcclusions(flow, flow_inv, (float)occ_thr, confidence);
+    removeOcclusions(flow_inv, flow, (float)occ_thr, confidence_inv);
   }
 
   crossBilateralFilter(flow, curr_from, confidence, flow, 
