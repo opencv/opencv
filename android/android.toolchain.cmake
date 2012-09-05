@@ -1175,11 +1175,8 @@ if( DEFINED ANDROID_EXCEPTIONS AND ANDROID_STL_FORCE_FEATURES )
 endif()
 
 # global includes and link directories
-if( ANDROID_STL_INCLUDE_DIRS )
- include_directories( SYSTEM ${ANDROID_STL_INCLUDE_DIRS} )
-endif()
+include_directories( SYSTEM "${ANDROID_SYSROOT}/usr/include" ${ANDROID_STL_INCLUDE_DIRS} )
 link_directories( "${CMAKE_INSTALL_PREFIX}/libs/${ANDROID_NDK_ABI_NAME}" )
-
 
 # set these global flags for cmake client scripts to change behavior
 set( ANDROID True )
