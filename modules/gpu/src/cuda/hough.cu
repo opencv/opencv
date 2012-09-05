@@ -64,23 +64,22 @@ namespace cv { namespace gpu { namespace device
             const int x = blockIdx.x * blockDim.x * PIXELS_PER_THREAD + threadIdx.x;
             const int y = blockIdx.y * blockDim.y + threadIdx.y;
 
-            if (y >= src.rows)
-                return;
-
             if (threadIdx.x == 0)
                 s_qsize[threadIdx.y] = 0;
-
             __syncthreads();
 
-            // fill the queue
-            const uchar* srcRow = src.ptr(y);
-            for (int i = 0, xx = x; i < PIXELS_PER_THREAD && xx < src.cols; ++i, xx += blockDim.x)
+            if (y < src.rows)
             {
-                if (srcRow[xx])
+                // fill the queue
+                const uchar* srcRow = src.ptr(y);
+                for (int i = 0, xx = x; i < PIXELS_PER_THREAD && xx < src.cols; ++i, xx += blockDim.x)
                 {
-                    const unsigned int val = (y << 16) | xx;
-                    const int qidx = Emulation::smem::atomicAdd(&s_qsize[threadIdx.y], 1);
-                    s_queues[threadIdx.y][qidx] = val;
+                    if (srcRow[xx])
+                    {
+                        const unsigned int val = (y << 16) | xx;
+                        const int qidx = Emulation::smem::atomicAdd(&s_qsize[threadIdx.y], 1);
+                        s_queues[threadIdx.y][qidx] = val;
+                    }
                 }
             }
 

@@ -149,8 +149,7 @@ namespace
             //loadGlobalConstants(maxCandidates, maxFeatures, img_rows, img_cols, surf_.nOctaveLayers, static_cast<float>(surf_.hessianThreshold));
 
             bindImgTex(img);
-            oclMat integral_sqsum;
-            integral(img, surf_.sum, integral_sqsum); // the two argumented integral version is incorrect
+            integral(img, surf_.sum); // the two argumented integral version is incorrect
 
             bindSumTex(surf_.sum);
             maskSumTex = 0;

@@ -307,7 +307,7 @@ void arithmetic_run(const oclMat &src1, const oclMat &src2, oclMat &dst, string 
 {
     if(src1.clCxt -> impl -> double_support ==0 && src1.type() == CV_64F)
     {
-        CV_Error(-217,"Selected device don't support double\r\n");
+        CV_Error(CV_GpuNotSupported,"Selected device don't support double\r\n");
         return;
     }
 
@@ -370,7 +370,7 @@ void arithmetic_run(const oclMat &src1, const oclMat &src2, oclMat &dst, const o
 {
     if(src1.clCxt -> impl -> double_support ==0 && src1.type() == CV_64F)
     {
-        CV_Error(-217,"Selected device don't support double\r\n");
+        CV_Error(CV_GpuNotSupported,"Selected device don't support double\r\n");
         return;
     }
 
@@ -467,7 +467,7 @@ void arithmetic_scalar_run(const oclMat &src1, const Scalar &src2, oclMat &dst, 
 {
     if(src1.clCxt -> impl -> double_support ==0 && src1.type() == CV_64F)
     {
-        CV_Error(-217,"Selected device don't support double\r\n");
+        CV_Error(CV_GpuNotSupported,"Selected device don't support double\r\n");
         return;
     }
 
@@ -537,7 +537,7 @@ void arithmetic_scalar_run(const oclMat &src, oclMat &dst, string kernelName, co
 {
     if(src.clCxt -> impl -> double_support ==0 && src.type() == CV_64F)
     {
-        CV_Error(-217,"Selected device don't support double\r\n");
+        CV_Error(CV_GpuNotSupported,"Selected device don't support double\r\n");
         return;
     }
 
@@ -640,7 +640,7 @@ void cv::ocl::divide(double scalar, const oclMat &src,  oclMat &dst)
 {
     if(src.clCxt -> impl -> double_support ==0)
     {
-        CV_Error(-217,"Selected device don't support double\r\n");
+        CV_Error(CV_GpuNotSupported,"Selected device don't support double\r\n");
         return;
     }
 
@@ -803,7 +803,7 @@ Scalar cv::ocl::sum(const oclMat &src)
 {
     if(src.clCxt->impl->double_support==0 && src.depth()==CV_64F)
     {
-        CV_Error(-217,"select device don't support double");
+        CV_Error(CV_GpuNotSupported,"select device don't support double");
     }
     static sumFunc functab[2] =
     {
@@ -948,7 +948,7 @@ void cv::ocl::minMax(const oclMat &src, double *minVal, double *maxVal, const oc
     CV_Assert(src.channels() == 1);
     if(src.clCxt->impl->double_support==0 && src.depth()==CV_64F)
     {
-        CV_Error(-217,"select device don't support double");
+        CV_Error(CV_GpuNotSupported,"select device don't support double");
     }
     static minMaxFunc functab[8] =
     {
@@ -1032,7 +1032,7 @@ void arithmetic_flip_rows_run(const oclMat &src, oclMat &dst, string kernelName)
 {
     if(src.clCxt -> impl -> double_support ==0 && src.type() == CV_64F)
     {
-        CV_Error(-217,"Selected device don't support double\r\n");
+        CV_Error(CV_GpuNotSupported,"Selected device don't support double\r\n");
         return;
     }
 
@@ -1081,7 +1081,7 @@ void arithmetic_flip_cols_run(const oclMat &src, oclMat &dst, string kernelName,
 {
     if(src.clCxt -> impl -> double_support ==0 && src.type() == CV_64F)
     {
-        CV_Error(-217,"Selected device don't support double\r\n");
+        CV_Error(CV_GpuNotSupported,"Selected device don't support double\r\n");
         return;
     }
 
@@ -1261,7 +1261,7 @@ void arithmetic_exp_log_run(const oclMat &src, oclMat &dst, string kernelName, c
     Context  *clCxt = src.clCxt;
 	if(clCxt -> impl -> double_support ==0 && src.type() == CV_64F)
     {
-        CV_Error(-217,"Selected device don't support double\r\n");
+        CV_Error(CV_GpuNotSupported,"Selected device don't support double\r\n");
         return;
     }
     //int channels = dst.channels();
@@ -1302,7 +1302,7 @@ void arithmetic_magnitude_phase_run(const oclMat &src1, const oclMat &src2, oclM
 {
     if(src1.clCxt -> impl -> double_support ==0 && src1.type() == CV_64F)
     {
-        CV_Error(-217,"Selected device don't support double\r\n");
+        CV_Error(CV_GpuNotSupported,"Selected device don't support double\r\n");
         return;
     }
 
@@ -1350,7 +1350,7 @@ void arithmetic_phase_run(const oclMat &src1, const oclMat &src2, oclMat &dst, s
 {
     if(src1.clCxt -> impl -> double_support ==0 && src1.type() == CV_64F)
     {
-        CV_Error(-217,"Selected device don't support double\r\n");
+        CV_Error(CV_GpuNotSupported,"Selected device don't support double\r\n");
         return;
     }
 
@@ -1414,7 +1414,7 @@ void arithmetic_cartToPolar_run(const oclMat &src1, const oclMat &src2, oclMat &
 {
     if(src1.clCxt -> impl -> double_support ==0 && src1.type() == CV_64F)
     {
-        CV_Error(-217,"Selected device don't support double\r\n");
+        CV_Error(CV_GpuNotSupported,"Selected device don't support double\r\n");
         return;
     }
 
@@ -1469,7 +1469,7 @@ void arithmetic_ptc_run(const oclMat &src1, const oclMat &src2, oclMat &dst1, oc
 {
     if(src1.clCxt -> impl -> double_support ==0 && src1.type() == CV_64F)
     {
-        CV_Error(-217,"Selected device don't support double\r\n");
+        CV_Error(CV_GpuNotSupported,"Selected device don't support double\r\n");
         return;
     }
 
@@ -1651,7 +1651,7 @@ void cv::ocl::minMaxLoc(const oclMat &src, double *minVal, double *maxVal,
 {
     if(src.clCxt->impl->double_support==0 && src.depth()==CV_64F)
     {
-        CV_Error(-217,"select device don't support double");
+        CV_Error(CV_GpuNotSupported,"select device don't support double");
     }
     static minMaxLocFunc functab[2] =
     {
@@ -1698,7 +1698,7 @@ int cv::ocl::countNonZero(const oclMat &src)
     size_t groupnum = src.clCxt->impl->maxComputeUnits;
     if(src.clCxt->impl->double_support == 0 && src.depth()==CV_64F)
     {
-        CV_Error(-217,"select device don't support double");
+        CV_Error(CV_GpuNotSupported,"select device don't support double");
     }
     CV_Assert(groupnum != 0);
     groupnum = groupnum * 2;
@@ -2122,7 +2122,7 @@ void transpose_run(const oclMat &src, oclMat &dst, string kernelName)
 {
     if(src.clCxt -> impl -> double_support ==0 && src.type() == CV_64F)
     {
-        CV_Error(-217,"Selected device don't support double\r\n");
+        CV_Error(CV_GpuNotSupported,"Selected device don't support double\r\n");
         return;
     }
 

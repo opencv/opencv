@@ -6,10 +6,15 @@
 #include "camera_activity.hpp"
 #include "camera_wrapper.h"
 
-#define LOG_TAG "CAMERA_ACTIVITY"
+#undef LOG_TAG
+#undef LOGE
+#undef LOGD
+#undef LOGI
+
+#define LOG_TAG "OpenCV::camera"
+#define LOGE(...) ((void)__android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__))
 #define LOGD(...) ((void)__android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__))
 #define LOGI(...) ((void)__android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__))
-#define LOGE(...) ((void)__android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__))
 
 ///////
 // Debug

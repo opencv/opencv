@@ -86,179 +86,255 @@
 namespace cv
 {
 
-class RetinaColor: public BasicRetinaFilter
-{
-public:
-	/**
-	* @typedef which allows to select the type of photoreceptors color sampling
-	*/
+    class RetinaColor: public BasicRetinaFilter
+    {
+    public:
+        /**
+        * @typedef which allows to select the type of photoreceptors color sampling
+        */
 
-	/**
-	* constructor of the retina color processing model
-	* @param NBrows: number of rows of the input image
-	* @param NBcolumns: number of columns of the input image
-	* @param samplingMethod: the chosen color sampling method
-	*/
-	RetinaColor(const unsigned int NBrows, const unsigned int NBcolumns, const RETINA_COLORSAMPLINGMETHOD samplingMethod=RETINA_COLOR_DIAGONAL);
+        /**
+        * constructor of the retina color processing model
+        * @param NBrows: number of rows of the input image
+        * @param NBcolumns: number of columns of the input image
+        * @param samplingMethod: the chosen color sampling method
+        */
+        RetinaColor(const unsigned int NBrows, const unsigned int NBcolumns, const RETINA_COLORSAMPLINGMETHOD samplingMethod=RETINA_COLOR_DIAGONAL);
 
-	/**
-	* standard destructor
-	*/
-	virtual ~RetinaColor();
+        /**
+        * standard destructor
+        */
+        virtual ~RetinaColor();
 
-	/**
-	* function that clears all buffers of the object
-	*/
-	void clearAllBuffers();
+        /**
+        * function that clears all buffers of the object
+        */
+        void clearAllBuffers();
 
-	/**
-	* resize retina color filter object (resize all allocated buffers)
-	* @param NBrows: the new height size
-	* @param NBcolumns: the new width size
-	*/
-	void resize(const unsigned int NBrows, const unsigned int NBcolumns);
+        /**
+        * resize retina color filter object (resize all allocated buffers)
+        * @param NBrows: the new height size
+        * @param NBcolumns: the new width size
+        */
+        void resize(const unsigned int NBrows, const unsigned int NBcolumns);
 
 
-	/**
-	* color multiplexing function: a demultiplexed RGB frame of size M*N*3 is transformed into a multiplexed M*N*1 pixels frame where each pixel is either Red, or Green or Blue
-	* @param inputRGBFrame: the input RGB frame to be processed
-	* @return, nothing but the multiplexed frame is available by the use of the getMultiplexedFrame() function
-	*/
-	inline void runColorMultiplexing(const std::valarray<float> &inputRGBFrame){runColorMultiplexing(inputRGBFrame, *_multiplexedFrame);};
+        /**
+        * color multiplexing function: a demultiplexed RGB frame of size M*N*3 is transformed into a multiplexed M*N*1 pixels frame where each pixel is either Red, or Green or Blue
+        * @param inputRGBFrame: the input RGB frame to be processed
+        * @return, nothing but the multiplexed frame is available by the use of the getMultiplexedFrame() function
+        */
+        inline void runColorMultiplexing(const std::valarray<float> &inputRGBFrame){runColorMultiplexing(inputRGBFrame, *_multiplexedFrame);};
 
-	/**
-	* color multiplexing function: a demultipleed RGB frame of size M*N*3 is transformed into a multiplexed M*N*1 pixels frame where each pixel is either Red, or Green or Blue if using RGB images
-	* @param demultiplexedInputFrame: the demultiplexed input frame to be processed of size M*N*3
-	* @param multiplexedFrame: the resulting multiplexed frame
-	*/
-	void runColorMultiplexing(const std::valarray<float> &demultiplexedInputFrame, std::valarray<float> &multiplexedFrame);
+        /**
+        * color multiplexing function: a demultipleed RGB frame of size M*N*3 is transformed into a multiplexed M*N*1 pixels frame where each pixel is either Red, or Green or Blue if using RGB images
+        * @param demultiplexedInputFrame: the demultiplexed input frame to be processed of size M*N*3
+        * @param multiplexedFrame: the resulting multiplexed frame
+        */
+        void runColorMultiplexing(const std::valarray<float> &demultiplexedInputFrame, std::valarray<float> &multiplexedFrame);
 
-	/**
-	* color demultiplexing function: a multiplexed frame of size M*N*1 pixels is transformed into a RGB demultiplexed M*N*3 pixels frame
-	* @param multiplexedColorFrame: the input multiplexed frame to be processed
-	* @param adaptiveFiltering: specifies if an adaptive filtering has to be perform rather than standard filtering (adaptive filtering allows a better rendering)
-	* @param maxInputValue: the maximum input data value (should be 255 for 8 bits images but it can change in the case of High Dynamic Range Images (HDRI)
-	* @return, nothing but the output demultiplexed frame is available by the use of the getDemultiplexedColorFrame() function, also use getLuminance() and getChrominance() in order to retreive either luminance or chrominance
-	*/
-	void runColorDemultiplexing(const std::valarray<float> &multiplexedColorFrame, const bool adaptiveFiltering=false, const float maxInputValue=255.0);
+        /**
+        * color demultiplexing function: a multiplexed frame of size M*N*1 pixels is transformed into a RGB demultiplexed M*N*3 pixels frame
+        * @param multiplexedColorFrame: the input multiplexed frame to be processed
+        * @param adaptiveFiltering: specifies if an adaptive filtering has to be perform rather than standard filtering (adaptive filtering allows a better rendering)
+        * @param maxInputValue: the maximum input data value (should be 255 for 8 bits images but it can change in the case of High Dynamic Range Images (HDRI)
+        * @return, nothing but the output demultiplexed frame is available by the use of the getDemultiplexedColorFrame() function, also use getLuminance() and getChrominance() in order to retreive either luminance or chrominance
+        */
+        void runColorDemultiplexing(const std::valarray<float> &multiplexedColorFrame, const bool adaptiveFiltering=false, const float maxInputValue=255.0);
 
-	/**
-	* activate color saturation as the final step of the color demultiplexing process
-	* -> this saturation is a sigmoide function applied to each channel of the demultiplexed image.
-	* @param saturateColors: boolean that activates color saturation (if true) or desactivate (if false)
-	* @param colorSaturationValue: the saturation factor
-	* */
-	void setColorSaturation(const bool saturateColors=true, const float colorSaturationValue=4.0){_saturateColors=saturateColors; _colorSaturationValue=colorSaturationValue;};
+        /**
+        * activate color saturation as the final step of the color demultiplexing process
+        * -> this saturation is a sigmoide function applied to each channel of the demultiplexed image.
+        * @param saturateColors: boolean that activates color saturation (if true) or desactivate (if false)
+        * @param colorSaturationValue: the saturation factor
+        * */
+        void setColorSaturation(const bool saturateColors=true, const float colorSaturationValue=4.0){_saturateColors=saturateColors; _colorSaturationValue=colorSaturationValue;};
 
-	/**
-	* set parameters of the low pass spatio-temporal filter used to retreive the low chrominance
-	* @param beta: gain of the filter (generally set to zero)
-	* @param tau: time constant of the filter (unit is frame for video processing), typically 0 when considering static processing, 1 or more if a temporal smoothing effect is required
-	* @param k: spatial constant of the filter (unit is pixels), typical value is 2.5
-	*/
-	void setChrominanceLPfilterParameters(const float beta, const float tau, const float k){setLPfilterParameters(beta, tau, k);};
+        /**
+        * set parameters of the low pass spatio-temporal filter used to retreive the low chrominance
+        * @param beta: gain of the filter (generally set to zero)
+        * @param tau: time constant of the filter (unit is frame for video processing), typically 0 when considering static processing, 1 or more if a temporal smoothing effect is required
+        * @param k: spatial constant of the filter (unit is pixels), typical value is 2.5
+        */
+        void setChrominanceLPfilterParameters(const float beta, const float tau, const float k){setLPfilterParameters(beta, tau, k);};
 
-	/**
-	* apply to the retina color output the Krauskopf transformation which leads to an opponent color system: output colorspace if Acr1cr2 if input of the retina was LMS color space
-	* @param result: the input buffer to fill with the transformed colorspace retina output
-	* @return true if process ended successfully
-	*/
-	bool applyKrauskopfLMS2Acr1cr2Transform(std::valarray<float> &result);
+        /**
+        * apply to the retina color output the Krauskopf transformation which leads to an opponent color system: output colorspace if Acr1cr2 if input of the retina was LMS color space
+        * @param result: the input buffer to fill with the transformed colorspace retina output
+        * @return true if process ended successfully
+        */
+        bool applyKrauskopfLMS2Acr1cr2Transform(std::valarray<float> &result);
 
-	/**
-	* apply to the retina color output the CIE Lab color transformation
-	* @param result: the input buffer to fill with the transformed colorspace retina output
-	* @return true if process ended successfully
-	*/
-	bool applyLMS2LabTransform(std::valarray<float> &result);
+        /**
+        * apply to the retina color output the CIE Lab color transformation
+        * @param result: the input buffer to fill with the transformed colorspace retina output
+        * @return true if process ended successfully
+        */
+        bool applyLMS2LabTransform(std::valarray<float> &result);
 
-	/**
-	* @return the multiplexed frame result (use this after function runColorMultiplexing)
-	*/
-	inline const std::valarray<float> &getMultiplexedFrame() const {return *_multiplexedFrame;};
+        /**
+        * @return the multiplexed frame result (use this after function runColorMultiplexing)
+        */
+        inline const std::valarray<float> &getMultiplexedFrame() const {return *_multiplexedFrame;};
 
-	/**
-	* @return the demultiplexed frame result (use this after function runColorDemultiplexing)
-	*/
-	inline const std::valarray<float> &getDemultiplexedColorFrame() const {return _demultiplexedColorFrame;};
+        /**
+        * @return the demultiplexed frame result (use this after function runColorDemultiplexing)
+        */
+        inline const std::valarray<float> &getDemultiplexedColorFrame() const {return _demultiplexedColorFrame;};
 
-	/**
-	* @return the luminance of the processed frame (use this after function runColorDemultiplexing)
-	*/
-	inline const std::valarray<float> &getLuminance() const {return *_luminance;};
+        /**
+        * @return the luminance of the processed frame (use this after function runColorDemultiplexing)
+        */
+        inline const std::valarray<float> &getLuminance() const {return *_luminance;};
 
-	/**
-	* @return the chrominance of the processed frame (use this after function runColorDemultiplexing)
-	*/
-	inline const std::valarray<float> &getChrominance() const {return _chrominance;};
+        /**
+        * @return the chrominance of the processed frame (use this after function runColorDemultiplexing)
+        */
+        inline const std::valarray<float> &getChrominance() const {return _chrominance;};
 
-	/**
-	* standard 0 to 255 image clipping function appled to RGB images (of size M*N*3 pixels)
-	* @param inputOutputBuffer: the image to be normalized (rewrites the input), if no parameter, then, the built in buffer reachable by getOutput() function is normalized
-	* @param maxOutputValue: the maximum value allowed at the output (values superior to it would be clipped
-	*/
-	void clipRGBOutput_0_maxInputValue(float *inputOutputBuffer, const float maxOutputValue=255.0);
+        /**
+        * standard 0 to 255 image clipping function appled to RGB images (of size M*N*3 pixels)
+        * @param inputOutputBuffer: the image to be normalized (rewrites the input), if no parameter, then, the built in buffer reachable by getOutput() function is normalized
+        * @param maxOutputValue: the maximum value allowed at the output (values superior to it would be clipped
+        */
+        void clipRGBOutput_0_maxInputValue(float *inputOutputBuffer, const float maxOutputValue=255.0);
 
-	/**
-	* standard 0 to 255 image normalization function appled to RGB images (of size M*N*3 pixels)
-	* @param maxOutputValue: the maximum value allowed at the output (values superior to it would be clipped
-	*/
-	void normalizeRGBOutput_0_maxOutputValue(const float maxOutputValue=255.0);
+        /**
+        * standard 0 to 255 image normalization function appled to RGB images (of size M*N*3 pixels)
+        * @param maxOutputValue: the maximum value allowed at the output (values superior to it would be clipped
+        */
+        void normalizeRGBOutput_0_maxOutputValue(const float maxOutputValue=255.0);
 
-	/**
-	* return the color sampling map: a Nrows*Mcolumns image in which each pixel value is the ofsset adress which gives the adress of the sampled pixel on an Nrows*Mcolumns*3 color image ordered by layers: layer1, layer2, layer3
-	*/
-	inline const std::valarray<unsigned int> &getSamplingMap() const {return _colorSampling;};
+        /**
+        * return the color sampling map: a Nrows*Mcolumns image in which each pixel value is the ofsset adress which gives the adress of the sampled pixel on an Nrows*Mcolumns*3 color image ordered by layers: layer1, layer2, layer3
+        */
+        inline const std::valarray<unsigned int> &getSamplingMap() const {return _colorSampling;};
 
-	/**
-	* function used (to bypass processing) to manually set the color output
-	* @param demultiplexedImage: the color image (luminance+chrominance) which has to be written in the object buffer
-	*/
-	inline void setDemultiplexedColorFrame(const std::valarray<float> &demultiplexedImage){_demultiplexedColorFrame=demultiplexedImage;};
+        /**
+        * function used (to bypass processing) to manually set the color output
+        * @param demultiplexedImage: the color image (luminance+chrominance) which has to be written in the object buffer
+        */
+        inline void setDemultiplexedColorFrame(const std::valarray<float> &demultiplexedImage){_demultiplexedColorFrame=demultiplexedImage;};
 
-protected:
+    protected:
 
-	// private functions
-	RETINA_COLORSAMPLINGMETHOD _samplingMethod;
-	bool _saturateColors;
-	float _colorSaturationValue;
-	// links to parent buffers (more convienient names
-	TemplateBuffer<float> *_luminance;
-	std::valarray<float> *_multiplexedFrame;
-	// instance buffers
-	std::valarray<unsigned int> _colorSampling; // table (size (_nbRows*_nbColumns) which specifies the color of each pixel
-	std::valarray<float> _RGBmosaic;
-	std::valarray<float> _tempMultiplexedFrame;
-	std::valarray<float> _demultiplexedTempBuffer;
-	std::valarray<float> _demultiplexedColorFrame;
-	std::valarray<float> _chrominance;
-	std::valarray<float> _colorLocalDensity;// buffer which contains the local density of the R, G and B photoreceptors for a normalization use
-	std::valarray<float> _imageGradient;
+        // private functions
+        RETINA_COLORSAMPLINGMETHOD _samplingMethod;
+        bool _saturateColors;
+        float _colorSaturationValue;
+        // links to parent buffers (more convienient names
+        TemplateBuffer<float> *_luminance;
+        std::valarray<float> *_multiplexedFrame;
+        // instance buffers
+        std::valarray<unsigned int> _colorSampling; // table (size (_nbRows*_nbColumns) which specifies the color of each pixel
+        std::valarray<float> _RGBmosaic;
+        std::valarray<float> _tempMultiplexedFrame;
+        std::valarray<float> _demultiplexedTempBuffer;
+        std::valarray<float> _demultiplexedColorFrame;
+        std::valarray<float> _chrominance;
+        std::valarray<float> _colorLocalDensity;// buffer which contains the local density of the R, G and B photoreceptors for a normalization use
+        std::valarray<float> _imageGradient;
 
-	// variables
-	float _pR, _pG, _pB; // probabilities of color R, G and B
-	bool _objectInit;
+        // variables
+        float _pR, _pG, _pB; // probabilities of color R, G and B
+        bool _objectInit;
 
-	// protected functions
-	void _initColorSampling();
-	void _interpolateImageDemultiplexedImage(float *inputOutputBuffer);
-	void _interpolateSingleChannelImage111(float *inputOutputBuffer);
-	void _interpolateBayerRGBchannels(float *inputOutputBuffer);
-	void _applyRIFfilter(const float *sourceBuffer, float *destinationBuffer);
-	void _getNormalizedContoursImage(const float *inputFrame, float *outputFrame);
-	// -> special adaptive filters dedicated to low pass filtering on the chrominance (skeeps filtering on the edges)
-	void _adaptiveSpatialLPfilter(const float *inputFrame,  float *outputFrame);
-	void _adaptiveHorizontalCausalFilter_addInput(const float *inputFrame, float *outputFrame, const unsigned int IDrowStart, const unsigned int IDrowEnd);
-	void _adaptiveHorizontalAnticausalFilter(float *outputFrame, const unsigned int IDrowStart, const unsigned int IDrowEnd);
-	void _adaptiveVerticalCausalFilter(float *outputFrame, const unsigned int IDcolumnStart, const unsigned int IDcolumnEnd);
-	void _adaptiveVerticalAnticausalFilter_multGain(float *outputFrame, const unsigned int IDcolumnStart, const unsigned int IDcolumnEnd);
-	void _computeGradient(const float *luminance);
-	void _normalizeOutputs_0_maxOutputValue(void);
+        // protected functions
+        void _initColorSampling();
+        void _interpolateImageDemultiplexedImage(float *inputOutputBuffer);
+        void _interpolateSingleChannelImage111(float *inputOutputBuffer);
+        void _interpolateBayerRGBchannels(float *inputOutputBuffer);
+        void _applyRIFfilter(const float *sourceBuffer, float *destinationBuffer);
+        void _getNormalizedContoursImage(const float *inputFrame, float *outputFrame);
+        // -> special adaptive filters dedicated to low pass filtering on the chrominance (skeeps filtering on the edges)
+        void _adaptiveSpatialLPfilter(const float *inputFrame,  float *outputFrame);
+        void _adaptiveHorizontalCausalFilter_addInput(const float *inputFrame, float *outputFrame, const unsigned int IDrowStart, const unsigned int IDrowEnd); // TBB parallelized
+        void _adaptiveVerticalAnticausalFilter_multGain(float *outputFrame, const unsigned int IDcolumnStart, const unsigned int IDcolumnEnd);
+        void _computeGradient(const float *luminance);
+        void _normalizeOutputs_0_maxOutputValue(void);
 
-	// color space transform
-	void _applyImageColorSpaceConversion(const std::valarray<float> &inputFrame, std::valarray<float> &outputFrame, const float *transformTable);
+        // color space transform
+        void _applyImageColorSpaceConversion(const std::valarray<float> &inputFrame, std::valarray<float> &outputFrame, const float *transformTable);
 
-};
+#ifdef MAKE_PARALLEL
+        /******************************************************
+        ** IF some parallelizing thread methods are available, then, main loops are parallelized using these functors
+        ** ==> main idea paralellise main filters loops, then, only the most used methods are parallelized... TODO : increase the number of parallelised methods as necessary
+        ** ==> functors names = Parallel_$$$ where $$$= the name of the serial method that is parallelised
+        ** ==> functors constructors can differ from the parameters used with their related serial functions
+        */
+
+        /* Template :
+        class Parallel_ : public cv::ParallelLoopBody
+        {
+        private:
+
+        public:
+        Parallel_()
+        : {}
+
+        virtual void operator()( const cv::Range& r ) const {
+
+        }
+        }:
+        */
+        class Parallel_adaptiveHorizontalCausalFilter_addInput: public cv::ParallelLoopBody
+        {
+        private:
+            float *outputFrame;
+            const float *inputFrame, *imageGradient;
+            unsigned int nbColumns;
+        public:
+            Parallel_adaptiveHorizontalCausalFilter_addInput(const float *inputImg, float *bufferToProcess, const float *imageGrad, const unsigned int nbCols)
+                :outputFrame(bufferToProcess), inputFrame(inputImg), imageGradient(imageGrad), nbColumns(nbCols) {};
+
+            virtual void operator()( const Range& r ) const {
+                register float* outputPTR=outputFrame+r.start*nbColumns;
+                register const float* inputPTR=inputFrame+r.start*nbColumns;
+                register const float *imageGradientPTR= imageGradient+r.start*nbColumns;
+                for (int IDrow=r.start; IDrow!=r.end; ++IDrow)
+                {
+                    register float result=0;
+                    for (unsigned int index=0; index<nbColumns; ++index)
+                    {
+                        result = *(inputPTR++) + (*imageGradientPTR++)* result;
+                        *(outputPTR++) = result;
+                    }
+                }
+            }
+        };
+
+        class Parallel_adaptiveVerticalAnticausalFilter_multGain: public cv::ParallelLoopBody
+        {
+        private:
+            float *outputFrame;
+            const float *imageGradient;
+            unsigned int nbRows, nbColumns;
+            float filterParam_gain;
+        public:        
+            Parallel_adaptiveVerticalAnticausalFilter_multGain(float *bufferToProcess, const float *imageGrad, const unsigned int nbRws, const unsigned int nbCols, const float  gain)
+                :outputFrame(bufferToProcess), imageGradient(imageGrad), nbRows(nbRws), nbColumns(nbCols), filterParam_gain(gain){}
+
+            virtual void operator()( const Range& r ) const {
+                float* offset=outputFrame+nbColumns*nbRows-nbColumns;
+                const float* gradOffset= imageGradient+nbColumns*nbRows-nbColumns;
+                for (int IDcolumn=r.start; IDcolumn!=r.end; ++IDcolumn)
+                {
+                    register float result=0;
+                    register float *outputPTR=offset+IDcolumn;
+                    register const float *imageGradientPTR=gradOffset+IDcolumn;
+                    for (unsigned int index=0; index<nbRows; ++index)
+                    {
+                        result = *(outputPTR) + *(imageGradientPTR) * result;
+                        *(outputPTR) = filterParam_gain*result;
+                        outputPTR-=nbColumns;
+                        imageGradientPTR-=nbColumns;
+                    }
+                }
+            }
+        };
+#endif
+    };
 }
 
 #endif /*RETINACOLOR_HPP_*/

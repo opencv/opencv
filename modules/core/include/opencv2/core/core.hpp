@@ -2359,8 +2359,10 @@ public:
     PCA();
     //! the constructor that performs PCA
     PCA(InputArray data, InputArray mean, int flags, int maxComponents=0);
+    PCA(InputArray data, InputArray mean, int flags, double retainedVariance);
     //! operator that performs PCA. The previously stored data, if any, is released
     PCA& operator()(InputArray data, InputArray mean, int flags, int maxComponents=0);
+    PCA& operator()(InputArray data, InputArray mean, int flags, double retainedVariance);
     //! projects vector from the original space to the principal components subspace
     Mat project(InputArray vec) const;
     //! projects vector from the original space to the principal components subspace
@@ -2377,6 +2379,9 @@ public:
 
 CV_EXPORTS_W void PCACompute(InputArray data, CV_OUT InputOutputArray mean,
                              OutputArray eigenvectors, int maxComponents=0);
+
+CV_EXPORTS_W void PCACompute(InputArray data, CV_OUT InputOutputArray mean,
+                             OutputArray eigenvectors, double retainedVariance);
 
 CV_EXPORTS_W void PCAProject(InputArray data, InputArray mean,
                              InputArray eigenvectors, OutputArray result);

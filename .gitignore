@@ -3,3 +3,6 @@
 refman.rst
 OpenCV4Tegra/
 *.user
+.sw[a-z]
+.*.swp
+tags

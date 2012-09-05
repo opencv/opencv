@@ -290,7 +290,7 @@ macro(add_android_project target path)
          COMMAND ${CMAKE_COMMAND} -E touch "${android_proj_bin_dir}/bin/${target}-debug.apk" # needed because ant does not update the timestamp of updated apk
          WORKING_DIRECTORY "${android_proj_bin_dir}"
          MAIN_DEPENDENCY "${android_proj_bin_dir}/${ANDROID_MANIFEST_FILE}"
-         DEPENDS ${android_proj_file_deps} ${JNI_LIB_NAME} ${__android_project_chain})
+         DEPENDS ${android_proj_file_deps} ${JNI_LIB_NAME})
     else()
       add_custom_command(
          OUTPUT "${android_proj_bin_dir}/bin/${target}-debug.apk"
@@ -299,9 +299,8 @@ macro(add_android_project target path)
          WORKING_DIRECTORY "${android_proj_bin_dir}"
          MAIN_DEPENDENCY "${android_proj_bin_dir}/${ANDROID_MANIFEST_FILE}"
          DEPENDS "${OpenCV_BINARY_DIR}/bin/.classes.jar.dephelper" opencv_java # as we are part of OpenCV we can just force this dependency
-         DEPENDS ${android_proj_file_deps} ${JNI_LIB_NAME} ${__android_project_chain})
+         DEPENDS ${android_proj_file_deps} ${JNI_LIB_NAME})
     endif()
-    set(__android_project_chain ${target} CACHE INTERNAL "auxiliary variable used for Android progects chaining")
 
     unset(JNI_LIB_NAME)
 
@@ -312,6 +311,11 @@ macro(add_android_project target path)
     if(android_proj_native_deps)
       add_dependencies(${target} ${android_proj_native_deps})
     endif()
+
+    if(__android_project_chain)
+      add_dependencies(${target} ${__android_project_chain})
+    endif()
+    set(__android_project_chain ${target} CACHE INTERNAL "auxiliary variable used for Android progects chaining")
 
     # put the final .apk to the OpenCV's bin folder
     add_custom_command(TARGET ${target} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy "${android_proj_bin_dir}/bin/${target}-debug.apk" "${OpenCV_BINARY_DIR}/bin/${target}.apk")

@@ -128,20 +128,20 @@ inline HaarEvaluator::Feature :: Feature()
         p[2][0] = p[2][1] = p[2][2] = p[2][3] = 0;
 }
 
-inline float HaarEvaluator::Feature :: calc( int offset ) const
+inline float HaarEvaluator::Feature :: calc( int _offset ) const
 {
-    float ret = rect[0].weight * CALC_SUM(p[0], offset) + rect[1].weight * CALC_SUM(p[1], offset);
+    float ret = rect[0].weight * CALC_SUM(p[0], _offset) + rect[1].weight * CALC_SUM(p[1], _offset);
 
     if( rect[2].weight != 0.0f )
-        ret += rect[2].weight * CALC_SUM(p[2], offset);
+        ret += rect[2].weight * CALC_SUM(p[2], _offset);
 
     return ret;
 }
 
-inline void HaarEvaluator::Feature :: updatePtrs( const Mat& sum )
+inline void HaarEvaluator::Feature :: updatePtrs( const Mat& _sum )
 {
-    const int* ptr = (const int*)sum.data;
-    size_t step = sum.step/sizeof(ptr[0]);
+    const int* ptr = (const int*)_sum.data;
+    size_t step = _sum.step/sizeof(ptr[0]);
     if (tilted)
     {
         CV_TILTED_PTRS( p[0][0], p[0][1], p[0][2], p[0][3], ptr, rect[0].r, step );
@@ -210,24 +210,24 @@ inline LBPEvaluator::Feature :: Feature()
         p[i] = 0;
 }
 
-inline int LBPEvaluator::Feature :: calc( int offset ) const
+inline int LBPEvaluator::Feature :: calc( int _offset ) const
 {
-    int cval = CALC_SUM_( p[5], p[6], p[9], p[10], offset );
+    int cval = CALC_SUM_( p[5], p[6], p[9], p[10], _offset );
 
-    return (CALC_SUM_( p[0], p[1], p[4], p[5], offset ) >= cval ? 128 : 0) |   // 0
-           (CALC_SUM_( p[1], p[2], p[5], p[6], offset ) >= cval ? 64 : 0) |    // 1
-           (CALC_SUM_( p[2], p[3], p[6], p[7], offset ) >= cval ? 32 : 0) |    // 2
-           (CALC_SUM_( p[6], p[7], p[10], p[11], offset ) >= cval ? 16 : 0) |  // 5
-           (CALC_SUM_( p[10], p[11], p[14], p[15], offset ) >= cval ? 8 : 0)|  // 8
-           (CALC_SUM_( p[9], p[10], p[13], p[14], offset ) >= cval ? 4 : 0)|   // 7
-           (CALC_SUM_( p[8], p[9], p[12], p[13], offset ) >= cval ? 2 : 0)|    // 6
-           (CALC_SUM_( p[4], p[5], p[8], p[9], offset ) >= cval ? 1 : 0);
+    return (CALC_SUM_( p[0], p[1], p[4], p[5], _offset ) >= cval ? 128 : 0) |   // 0
+           (CALC_SUM_( p[1], p[2], p[5], p[6], _offset ) >= cval ? 64 : 0) |    // 1
+           (CALC_SUM_( p[2], p[3], p[6], p[7], _offset ) >= cval ? 32 : 0) |    // 2
+           (CALC_SUM_( p[6], p[7], p[10], p[11], _offset ) >= cval ? 16 : 0) |  // 5
+           (CALC_SUM_( p[10], p[11], p[14], p[15], _offset ) >= cval ? 8 : 0)|  // 8
+           (CALC_SUM_( p[9], p[10], p[13], p[14], _offset ) >= cval ? 4 : 0)|   // 7
+           (CALC_SUM_( p[8], p[9], p[12], p[13], _offset ) >= cval ? 2 : 0)|    // 6
+           (CALC_SUM_( p[4], p[5], p[8], p[9], _offset ) >= cval ? 1 : 0);
 }
 
-inline void LBPEvaluator::Feature :: updatePtrs( const Mat& sum )
+inline void LBPEvaluator::Feature :: updatePtrs( const Mat& _sum )
 {
-    const int* ptr = (const int*)sum.data;
-    size_t step = sum.step/sizeof(ptr[0]);
+    const int* ptr = (const int*)_sum.data;
+    size_t step = _sum.step/sizeof(ptr[0]);
     Rect tr = rect;
     CV_SUM_PTRS( p[0], p[1], p[4], p[5], ptr, tr, step );
     tr.x += 2*rect.width;
@@ -292,10 +292,10 @@ inline HOGEvaluator::Feature :: Feature()
     featComponent = 0;
 }
 
-inline float HOGEvaluator::Feature :: calc( int offset ) const
+inline float HOGEvaluator::Feature :: calc( int _offset ) const
 {
-    float res = CALC_SUM(pF, offset);
-    float normFactor = CALC_SUM(pN, offset);
+    float res = CALC_SUM(pF, _offset);
+    float normFactor = CALC_SUM(pN, _offset);
     res = (res > 0.001f) ? (res / ( normFactor + 0.001f) ) : 0.f;
     return res;
 }

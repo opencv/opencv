@@ -58,17 +58,9 @@
 // Image read mode
 __constant sampler_t sampler    = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP_TO_EDGE | CLK_FILTER_NEAREST;
 
+#define FLT_EPSILON (1e-15)
 #define CV_PI_F 3.14159265f
 
-// print greyscale image to show image layout
-__kernel void printImage(image2d_t img)
-{
-    printf("(%d, %d) - %3d \n", 
-        get_global_id(0), 
-        get_global_id(1), 
-        read_imageui(img, (int2)(get_global_id(0), get_global_id(1))).x
-        );
-}
 
 // Use integral image to calculate haar wavelets.
 // N = 2
@@ -444,7 +436,6 @@ __kernel
         float val0 = N9[localLin];
         if (val0 > c_hessianThreshold)
         {
-            //printf(\"(%3d, %3d) N9[%3d]=%7.1f val0=%7.1f\\n\", l_x, l_y, localLin - zoff, N9[localLin], val0);
             // Coordinates for the start of the wavelet in the sum image. There
             // is some integer division involved, so don't try to simplify this
             // (cancel out sampleStep) without checking the result is the same
@@ -726,6 +717,7 @@ __kernel
     __global float* featureSize = keypoints + SIZE_ROW * keypoints_step;
     __global float* featureDir  = keypoints + ANGLE_ROW * keypoints_step;
 
+
     volatile __local  float s_X[128];
     volatile __local  float s_Y[128];
     volatile __local  float s_angle[128];
@@ -736,6 +728,7 @@ __kernel
     /* The sampling intervals and wavelet sized for selecting an orientation
     and building the keypoint descriptor are defined relative to 's' */
     const float s = featureSize[get_group_id(0)] * 1.2f / 9.0f;
+
 
     /* To find the dominant orientation, the gradients in x and y are
     sampled in a circle of radius 6s using wavelets of size 4s.
@@ -765,16 +758,18 @@ __kernel
             Y = c_aptW[tid] * icvCalcHaarPatternSum_2(sumTex, c_NY, 4, grad_wav_size, y, x);
 
             angle = atan2(Y, X);
+            
             if (angle < 0)
                 angle += 2.0f * CV_PI_F;
             angle *= 180.0f / CV_PI_F;
+
         }
     }
     s_X[tid] = X;
     s_Y[tid] = Y;
     s_angle[tid] = angle;
     barrier(CLK_LOCAL_MEM_FENCE);
-
+    
     float bestx = 0, besty = 0, best_mod = 0;
 
 #pragma unroll
@@ -807,7 +802,6 @@ __kernel
             sumx += s_X[get_local_id(0) + 96];
             sumy += s_Y[get_local_id(0) + 96];
         }
-
         reduce_32_sum(s_sumx + get_local_id(1) * 32, sumx, get_local_id(0));
         reduce_32_sum(s_sumy + get_local_id(1) * 32, sumy, get_local_id(0));
 
@@ -818,10 +812,8 @@ __kernel
             bestx = sumx;
             besty = sumy;
         }
-
         barrier(CLK_LOCAL_MEM_FENCE);
     }
-
     if (get_local_id(0) == 0)
     {
         s_X[get_local_id(1)] = bestx;
@@ -845,6 +837,10 @@ __kernel
         if (kp_dir < 0)
             kp_dir += 2.0f * CV_PI_F;
         kp_dir *= 180.0f / CV_PI_F;
+
+        kp_dir = 360.0f - kp_dir;
+        if (fabs(kp_dir - 360.f) < FLT_EPSILON)
+            kp_dir = 0.f;
 
         featureDir[get_group_id(0)] = kp_dir;
     }
@@ -940,7 +936,10 @@ void calc_dx_dy(
     const float centerX = featureX[get_group_id(0)];
     const float centerY = featureY[get_group_id(0)];
     const float size = featureSize[get_group_id(0)];
-    const float descriptor_dir = featureDir[get_group_id(0)] * (float)(CV_PI_F / 180.0f);
+    float descriptor_dir = 360.0f - featureDir[get_group_id(0)];
+    if (fabs(descriptor_dir - 360.f) < FLT_EPSILON)
+        descriptor_dir = 0.f;
+    descriptor_dir *= (float)(CV_PI_F / 180.0f);
 
     /* The sampling intervals and wavelet sized for selecting an orientation
     and building the keypoint descriptor are defined relative to 's' */

@@ -197,7 +197,7 @@ jpc_mqenc_t *jpc_mqenc_create(int maxctxs, jas_stream_t *out)
 	mqenc->maxctxs = maxctxs;
 
 	/* Allocate memory for the per-context state information. */
-	if (!(mqenc->ctxs = jas_malloc(mqenc->maxctxs * sizeof(jpc_mqstate_t *)))) {
+	if (!(mqenc->ctxs = jas_alloc2(mqenc->maxctxs, sizeof(jpc_mqstate_t *)))) {
 		goto error;
 	}
 

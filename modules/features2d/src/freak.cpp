@@ -455,7 +455,6 @@ uchar FREAK::meanIntensity( const cv::Mat& image, const cv::Mat& integral,
     const float radius = FreakPoint.sigma;
 
     // calculate output:
-    int ret_val;
     if( radius < 0.5 ) {
         // interpolation multipliers:
         const int r_x = static_cast<int>((xf-x)*1024);
@@ -463,6 +462,7 @@ uchar FREAK::meanIntensity( const cv::Mat& image, const cv::Mat& integral,
         const int r_x_1 = (1024-r_x);
         const int r_y_1 = (1024-r_y);
         uchar* ptr = image.data+x+y*imagecols;
+        unsigned int ret_val;
         // linear interpolation:
         ret_val = (r_x_1*r_y_1*int(*ptr));
         ptr++;
@@ -471,7 +471,9 @@ uchar FREAK::meanIntensity( const cv::Mat& image, const cv::Mat& integral,
         ret_val += (r_x*r_y*int(*ptr));
         ptr--;
         ret_val += (r_x_1*r_y*int(*ptr));
-        return static_cast<uchar>((ret_val+512)/1024);
+        //return the rounded mean
+        ret_val += 2 * 1024 * 1024;
+        return static_cast<uchar>(ret_val / (4 * 1024 * 1024));
     }
 
     // expected case:
@@ -481,6 +483,7 @@ uchar FREAK::meanIntensity( const cv::Mat& image, const cv::Mat& integral,
     const int y_top = int(yf-radius+0.5);
     const int x_right = int(xf+radius+1.5);//integral image is 1px wider
     const int y_bottom = int(yf+radius+1.5);//integral image is 1px higher
+    int ret_val;
 
     ret_val = integral.at<int>(y_bottom,x_right);//bottom right corner
     ret_val -= integral.at<int>(y_bottom,x_left);

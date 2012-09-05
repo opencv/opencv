@@ -103,7 +103,7 @@ PARAM_TEST_CASE(ImgprocTestBase, MatType,MatType,MatType,MatType,MatType, bool)
 	cv::Mat mask_roi;
 	cv::Mat dst_roi;
 	cv::Mat dst1_roi; //bak
-	std::vector<cv::ocl::Info> oclinfo;
+	//std::vector<cv::ocl::Info> oclinfo;
 	//ocl mat
 	cv::ocl::oclMat clmat1;
 	cv::ocl::oclMat clmat2;
@@ -128,11 +128,11 @@ PARAM_TEST_CASE(ImgprocTestBase, MatType,MatType,MatType,MatType,MatType, bool)
 		cv::RNG& rng = TS::ptr()->get_rng();
 		cv::Size size(MWIDTH, MHEIGHT);
 		double min = 1,max = 20; 
-		int devnums = getDevice(oclinfo);
-		CV_Assert(devnums>0);
-		//if you want to use undefault device, set it here
-		//setDevice(oclinfo[0]);
-		cv::ocl::setBinpath(CLBINPATH);
+		//int devnums = getDevice(oclinfo);
+		//CV_Assert(devnums>0);
+		////if you want to use undefault device, set it here
+		////setDevice(oclinfo[0]);
+		//cv::ocl::setBinpath(CLBINPATH);
 		if(type1!=nulltype)
 		{
 			mat1 = randomMat(rng, size, type1, min, max, false);
@@ -289,7 +289,7 @@ TEST_P(equalizeHist, MatType)
 		double t0=0;
 		double t1=0;
 		double t2=0;	
-		for(int k=0;k<2;k++){
+		for(int k=LOOPROISTART;k<LOOPROIEND;k++){
 			totalcputick=0;
 			totalgputick=0;
 			totalgputick_kernel=0;
@@ -328,7 +328,7 @@ TEST_P(equalizeHist, MatType)
 			cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
 		}
 #else
-		for(int j = 0; j < 2; j ++)
+		for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
 		{
 			Has_roi(j);
 			if(type1!=nulltype)
@@ -370,7 +370,7 @@ TEST_P(bilateralFilter, Mat)
 			double t0=0;
 			double t1=0;
 			double t2=0;	
-			for(int k=0;k<2;k++){
+			for(int k=LOOPROISTART;k<LOOPROIEND;k++){
 				totalcputick=0;
 				totalgputick=0;
 				totalgputick_kernel=0;
@@ -409,7 +409,7 @@ TEST_P(bilateralFilter, Mat)
 			}
 
 #else
-			for(int j = 0; j < 2; j ++)
+			for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
 			{
 				Has_roi(j);
 				if(type1!=nulltype)
@@ -450,7 +450,7 @@ TEST_P(CopyMakeBorder, Mat)
 			double t0=0;
 			double t1=0;
 			double t2=0;	
-			for(int k=0;k<2;k++){
+			for(int k=LOOPROISTART;k<LOOPROIEND;k++){
 				totalcputick=0;
 				totalgputick=0;
 				totalgputick_kernel=0;
@@ -488,7 +488,7 @@ TEST_P(CopyMakeBorder, Mat)
 				cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
 			}
 #else
-			for(int j = 0; j < 2; j ++)
+			for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
 			{
 				Has_roi(j);
 				if(type1!=nulltype)
@@ -516,7 +516,7 @@ TEST_P(cornerMinEigenVal, Mat)
 	double t0=0;
 	double t1=0;
 	double t2=0;	
-	for(int k=0;k<2;k++){
+	for(int k=LOOPROISTART;k<LOOPROIEND;k++){
 		totalcputick=0;
 		totalgputick=0;
 		totalgputick_kernel=0;
@@ -555,7 +555,7 @@ TEST_P(cornerMinEigenVal, Mat)
 		cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
 	}
 #else
-	for(int j = 0; j < 2; j ++)
+	for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
 	{
 		Has_roi(j);
 		int blockSize = 7, apertureSize= 1 + 2 * (rand() % 4);
@@ -584,7 +584,7 @@ TEST_P(cornerHarris, Mat)
 	double t0=0;
 	double t1=0;
 	double t2=0;	
-	for(int k=0;k<2;k++){
+	for(int k=LOOPROISTART;k<LOOPROIEND;k++){
 		totalcputick=0;
 		totalgputick=0;
 		totalgputick_kernel=0;
@@ -624,7 +624,7 @@ TEST_P(cornerHarris, Mat)
 		cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
 	}
 #else
-	for(int j = 0; j < 2; j ++)
+	for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
 	{
 		Has_roi(j);
 		double kk = 2;
@@ -655,7 +655,7 @@ TEST_P(integral, Mat)
 	double t0=0;
 	double t1=0;
 	double t2=0;	
-	for(int k=0;k<2;k++){
+	for(int k=LOOPROISTART;k<LOOPROIEND;k++){
 		totalcputick=0;
 		totalgputick=0;
 		totalgputick_kernel=0;
@@ -694,7 +694,7 @@ TEST_P(integral, Mat)
 		cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
 	}
 #else
-	for(int j = 0; j < 2; j ++)
+	for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
 	{
 		Has_roi(j);
 		if(type1!=nulltype)
@@ -735,7 +735,7 @@ PARAM_TEST_CASE(WarpTestBase, MatType, int)
 	//src mat with roi
 	cv::Mat mat1_roi;
 	cv::Mat dst_roi;
-	std::vector<cv::ocl::Info> oclinfo;
+	//std::vector<cv::ocl::Info> oclinfo;
 	//ocl dst mat for testing
 	cv::ocl::oclMat gdst_whole;
 
@@ -755,11 +755,11 @@ PARAM_TEST_CASE(WarpTestBase, MatType, int)
 		mat1 = randomMat(rng, size, type, 5, 16, false);
 		dst  = randomMat(rng, size, type, 5, 16, false);
 
-		int devnums = getDevice(oclinfo);
-		CV_Assert(devnums > 0);
-		//if you want to use undefault device, set it here
-		//setDevice(oclinfo[0]);
-		cv::ocl::setBinpath(CLBINPATH);
+		//int devnums = getDevice(oclinfo);
+		//CV_Assert(devnums > 0);
+		////if you want to use undefault device, set it here
+		////setDevice(oclinfo[0]);
+		//cv::ocl::setBinpath(CLBINPATH);
 	}
 	void Has_roi(int b)
 	{
@@ -816,7 +816,7 @@ TEST_P(WarpAffine, Mat)
 	double t0=0;
 	double t1=0;
 	double t2=0;	
-	for(int k=0;k<2;k++){
+	for(int k=LOOPROISTART;k<LOOPROIEND;k++){
 		totalcputick=0;
 		totalgputick=0;
 		totalgputick_kernel=0;
@@ -854,7 +854,7 @@ TEST_P(WarpAffine, Mat)
 		cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
 	}
 #else
-	for(int j = 0; j < 2; j ++)
+	for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
 	{
 		Has_roi(j);
 		gdst_whole = dst;
@@ -889,7 +889,7 @@ TEST_P(WarpPerspective, Mat)
 	double t0=0;
 	double t1=0;
 	double t2=0;	
-	for(int k=0;k<2;k++){
+	for(int k=LOOPROISTART;k<LOOPROIEND;k++){
 		totalcputick=0;
 		totalgputick=0;
 		totalgputick_kernel=0;
@@ -927,7 +927,7 @@ TEST_P(WarpPerspective, Mat)
 		cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
 	}
 #else
-	for(int j = 0; j < 2; j ++)
+	for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
 	{
 		Has_roi(j);
 		gdst_whole = dst;
@@ -969,7 +969,7 @@ PARAM_TEST_CASE(Resize, MatType, cv::Size, double, double, int)
 	//src mat with roi
 	cv::Mat mat1_roi;
 	cv::Mat dst_roi;
-	std::vector<cv::ocl::Info> oclinfo;
+	//std::vector<cv::ocl::Info> oclinfo;
 	//ocl dst mat for testing
 	cv::ocl::oclMat gdst_whole;
 
@@ -1003,11 +1003,11 @@ PARAM_TEST_CASE(Resize, MatType, cv::Size, double, double, int)
 		mat1 = randomMat(rng, size, type, 5, 16, false);
 		dst  = randomMat(rng, dsize, type, 5, 16, false);
 
-		int devnums = getDevice(oclinfo);
-		CV_Assert(devnums > 0);
-		//if you want to use undefault device, set it here
-		//setDevice(oclinfo[0]);
-		cv::ocl::setBinpath(CLBINPATH);
+		//int devnums = getDevice(oclinfo);
+		//CV_Assert(devnums > 0);
+		////if you want to use undefault device, set it here
+		////setDevice(oclinfo[0]);
+		//cv::ocl::setBinpath(CLBINPATH);
 	}
 	void Has_roi(int b)
 	{
@@ -1053,7 +1053,7 @@ TEST_P(Resize, Mat)
 	double t0=0;
 	double t1=0;
 	double t2=0;	
-	for(int k=0;k<2;k++){
+	for(int k=LOOPROISTART;k<LOOPROIEND;k++){
 		totalcputick=0;
 		totalgputick=0;
 		totalgputick_kernel=0;
@@ -1091,7 +1091,7 @@ TEST_P(Resize, Mat)
 		cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
 	}
 #else
-	for(int j = 0; j < 2; j ++)
+	for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
 	{
 		Has_roi(j);
 		gdst_whole = dst;
@@ -1127,7 +1127,7 @@ PARAM_TEST_CASE(Threshold, MatType, ThreshOp)
 	//src mat with roi
 	cv::Mat mat1_roi;
 	cv::Mat dst_roi;
-	std::vector<cv::ocl::Info> oclinfo;
+	//std::vector<cv::ocl::Info> oclinfo;
 	//ocl dst mat for testing
 	cv::ocl::oclMat gdst_whole;
 
@@ -1146,11 +1146,11 @@ PARAM_TEST_CASE(Threshold, MatType, ThreshOp)
 		mat1 = randomMat(rng, size, type, 5, 16, false);
 		dst  = randomMat(rng, size, type, 5, 16, false);
 
-		int devnums = getDevice(oclinfo);
-		CV_Assert(devnums > 0);
-		//if you want to use undefault device, set it here
-		//setDevice(oclinfo[0]);
-		cv::ocl::setBinpath(CLBINPATH);
+		//int devnums = getDevice(oclinfo);
+		//CV_Assert(devnums > 0);
+		////if you want to use undefault device, set it here
+		////setDevice(oclinfo[0]);
+		//cv::ocl::setBinpath(CLBINPATH);
 	}
 	void Has_roi(int b)
 	{
@@ -1191,7 +1191,7 @@ TEST_P(Threshold, Mat)
 	double t0=0;
 	double t1=0;
 	double t2=0;	
-	for(int k=0;k<2;k++){
+	for(int k=LOOPROISTART;k<LOOPROIEND;k++){
 		totalcputick=0;
 		totalgputick=0;
 		totalgputick_kernel=0;
@@ -1232,7 +1232,7 @@ TEST_P(Threshold, Mat)
 		cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
 	}
 #else
-	for(int j = 0; j < 2; j ++)
+	for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
 	{
 		Has_roi(j);
 		double maxVal = randomDouble(20.0, 127.0);
@@ -1277,7 +1277,7 @@ PARAM_TEST_CASE(meanShiftTestBase, MatType, MatType, int, int, cv::TermCriteria)
 	cv::ocl::oclMat gdst;
 	cv::ocl::oclMat gdstCoor;
 
-	std::vector<cv::ocl::Info> oclinfo;
+	//std::vector<cv::ocl::Info> oclinfo;
 	//ocl mat with roi
 	cv::ocl::oclMat gsrc_roi;
 	cv::ocl::oclMat gdst_roi;
@@ -1300,11 +1300,11 @@ PARAM_TEST_CASE(meanShiftTestBase, MatType, MatType, int, int, cv::TermCriteria)
 		dst = randomMat(rng, size, type, 5, 16, false);
 		dstCoor = randomMat(rng, size, typeCoor, 5, 16, false);
 
-		int devnums = getDevice(oclinfo);
-		CV_Assert(devnums > 0);
-		//if you want to use undefault device, set it here
-		//setDevice(oclinfo[0]);
-		cv::ocl::setBinpath(CLBINPATH);
+		//int devnums = getDevice(oclinfo);
+		//CV_Assert(devnums > 0);
+		////if you want to use undefault device, set it here
+		////setDevice(oclinfo[0]);
+		//cv::ocl::setBinpath(CLBINPATH);
 	}
 
 	void Has_roi(int b)
@@ -1380,7 +1380,7 @@ TEST_P(meanShiftFiltering, Mat)
 		cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
 	}
 #else
-	for(int j = 0; j < 2; j ++)
+	for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
 	{
 		Has_roi(j);
 
@@ -1438,7 +1438,7 @@ TEST_P(meanShiftProc, Mat)
 		cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
 	}
 #else
-	for(int j = 0; j < 2; j ++)
+	for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
 	{
 		Has_roi(j);
 
@@ -1482,21 +1482,21 @@ INSTANTIATE_TEST_CASE_P(ImgprocTestBase, equalizeHist, Combine(
 //	NULL_TYPE,
 //	Values(false))); // Values(false) is the reserved parameter
 
-//INSTANTIATE_TEST_CASE_P(ImgprocTestBase, cornerMinEigenVal, Combine(
-//	Values(CV_8UC1,CV_32FC1),
-//	NULL_TYPE,
-//	ONE_TYPE(CV_32FC1),
-//	NULL_TYPE,
-//	NULL_TYPE,
-//	Values(false))); // Values(false) is the reserved parameter
-//
-//INSTANTIATE_TEST_CASE_P(ImgprocTestBase, cornerHarris, Combine(
-//	Values(CV_8UC1,CV_32FC1),
-//	NULL_TYPE,
-//	ONE_TYPE(CV_32FC1),
-//	NULL_TYPE,
-//	NULL_TYPE,
-//	Values(false))); // Values(false) is the reserved parameter
+INSTANTIATE_TEST_CASE_P(ImgprocTestBase, cornerMinEigenVal, Combine(
+	Values(CV_8UC1,CV_32FC1),
+	NULL_TYPE,
+	ONE_TYPE(CV_32FC1),
+	NULL_TYPE,
+	NULL_TYPE,
+	Values(false))); // Values(false) is the reserved parameter
+
+INSTANTIATE_TEST_CASE_P(ImgprocTestBase, cornerHarris, Combine(
+	Values(CV_8UC1,CV_32FC1),
+	NULL_TYPE,
+	ONE_TYPE(CV_32FC1),
+	NULL_TYPE,
+	NULL_TYPE,
+	Values(false))); // Values(false) is the reserved parameter
 
 
 INSTANTIATE_TEST_CASE_P(ImgprocTestBase, integral, Combine(

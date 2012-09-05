@@ -87,7 +87,7 @@ static bool readOpticalFlowFromFile(FILE* file, cv::Mat& flow) {
 }
 
 static bool isFlowCorrect(float u) {
-  return !isnan(u) && (fabs(u) < 1e9);
+  return !cvIsNaN(u) && (fabs(u) < 1e9);
 }
 
 static float calc_rmse(cv::Mat flow1, cv::Mat flow2) {
@@ -112,11 +112,11 @@ static float calc_rmse(cv::Mat flow1, cv::Mat flow2) {
       }
     }
   }
-  return sqrt(sum / (1e-9 + counter));
+  return (float)sqrt(sum / (1e-9 + counter));
 }
 
 void CV_SimpleFlowTest::run(int) {
-    const float MAX_RMSE = 0.6;
+    const float MAX_RMSE = 0.6f;
     const string frame1_path = ts->get_data_path() + "optflow/RubberWhale1.png";
     const string frame2_path = ts->get_data_path() + "optflow/RubberWhale2.png";
     const string gt_flow_path = ts->get_data_path() + "optflow/RubberWhale.flo";

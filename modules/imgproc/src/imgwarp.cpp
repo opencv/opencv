@@ -1271,10 +1271,10 @@ struct ResizeAreaFast_2x2_8u
             for( ; dx < w; dx += 4 )
             {
                 int index = dx*2;
-                D[dx] = (S[index] + S[index+3] + nextS[index] + nextS[index+3] + 2) >> 2;
-                D[dx+1] = (S[index+1] + S[index+4] + nextS[index+1] + nextS[index+4] + 2) >> 2;
-                D[dx+2] = (S[index+2] + S[index+5] + nextS[index+2] + nextS[index+5] + 2) >> 2;
-                D[dx+3] = (S[index+3] + S[index+6] + nextS[index+3] + nextS[index+6] + 2) >> 2;
+                D[dx] = (S[index] + S[index+4] + nextS[index] + nextS[index+4] + 2) >> 2;
+                D[dx+1] = (S[index+1] + S[index+5] + nextS[index+1] + nextS[index+5] + 2) >> 2;
+                D[dx+2] = (S[index+2] + S[index+6] + nextS[index+2] + nextS[index+6] + 2) >> 2;
+                D[dx+3] = (S[index+3] + S[index+7] + nextS[index+3] + nextS[index+7] + 2) >> 2;
             }
         }
         
@@ -1314,7 +1314,7 @@ public:
         ssize.width *= cn;
         int dy, dx, k = 0;
         
-        VecOp vop(scale_x, scale_y, src.channels(), src.step/*, area_ofs*/);
+        VecOp vop(scale_x, scale_y, src.channels(), (int)src.step/*, area_ofs*/);
         
         for( dy = range.start; dy < range.end; dy++ )
         {

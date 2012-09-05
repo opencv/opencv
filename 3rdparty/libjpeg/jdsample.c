@@ -2,13 +2,14 @@
  * jdsample.c
  *
  * Copyright (C) 1991-1996, Thomas G. Lane.
+ * Modified 2002-2008 by Guido Vollbeding.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
  * This file contains upsampling routines.
  *
  * Upsampling input data is counted in "row groups".  A row group
- * is defined to be (v_samp_factor * DCT_scaled_size / min_DCT_scaled_size)
+ * is defined to be (v_samp_factor * DCT_v_scaled_size / min_DCT_v_scaled_size)
  * sample rows of each component.  Upsampling will normally produce
  * max_v_samp_factor pixel rows from each row group (but this could vary
  * if the upsampler is applying a scale factor of its own).
@@ -237,11 +238,11 @@ h2v1_upsample (j_decompress_ptr cinfo, jpeg_component_info * compptr,
   register JSAMPROW inptr, outptr;
   register JSAMPLE invalue;
   JSAMPROW outend;
-  int inrow;
+  int outrow;
 
-  for (inrow = 0; inrow < cinfo->max_v_samp_factor; inrow++) {
-    inptr = input_data[inrow];
-    outptr = output_data[inrow];
+  for (outrow = 0; outrow < cinfo->max_v_samp_factor; outrow++) {
+    inptr = input_data[outrow];
+    outptr = output_data[outrow];
     outend = outptr + cinfo->output_width;
     while (outptr < outend) {
       invalue = *inptr++;	/* don't need GETJSAMPLE() here */
@@ -286,112 +287,6 @@ h2v2_upsample (j_decompress_ptr cinfo, jpeg_component_info * compptr,
 
 
 /*
- * Fancy processing for the common case of 2:1 horizontal and 1:1 vertical.
- *
- * The upsampling algorithm is linear interpolation between pixel centers,
- * also known as a "triangle filter".  This is a good compromise between
- * speed and visual quality.  The centers of the output pixels are 1/4 and 3/4
- * of the way between input pixel centers.
- *
- * A note about the "bias" calculations: when rounding fractional values to
- * integer, we do not want to always round 0.5 up to the next integer.
- * If we did that, we'd introduce a noticeable bias towards larger values.
- * Instead, this code is arranged so that 0.5 will be rounded up or down at
- * alternate pixel locations (a simple ordered dither pattern).
- */
-
-METHODDEF(void)
-h2v1_fancy_upsample (j_decompress_ptr cinfo, jpeg_component_info * compptr,
-		     JSAMPARRAY input_data, JSAMPARRAY * output_data_ptr)
-{
-  JSAMPARRAY output_data = *output_data_ptr;
-  register JSAMPROW inptr, outptr;
-  register int invalue;
-  register JDIMENSION colctr;
-  int inrow;
-
-  for (inrow = 0; inrow < cinfo->max_v_samp_factor; inrow++) {
-    inptr = input_data[inrow];
-    outptr = output_data[inrow];
-    /* Special case for first column */
-    invalue = GETJSAMPLE(*inptr++);
-    *outptr++ = (JSAMPLE) invalue;
-    *outptr++ = (JSAMPLE) ((invalue * 3 + GETJSAMPLE(*inptr) + 2) >> 2);
-
-    for (colctr = compptr->downsampled_width - 2; colctr > 0; colctr--) {
-      /* General case: 3/4 * nearer pixel + 1/4 * further pixel */
-      invalue = GETJSAMPLE(*inptr++) * 3;
-      *outptr++ = (JSAMPLE) ((invalue + GETJSAMPLE(inptr[-2]) + 1) >> 2);
-      *outptr++ = (JSAMPLE) ((invalue + GETJSAMPLE(*inptr) + 2) >> 2);
-    }
-
-    /* Special case for last column */
-    invalue = GETJSAMPLE(*inptr);
-    *outptr++ = (JSAMPLE) ((invalue * 3 + GETJSAMPLE(inptr[-1]) + 1) >> 2);
-    *outptr++ = (JSAMPLE) invalue;
-  }
-}
-
-
-/*
- * Fancy processing for the common case of 2:1 horizontal and 2:1 vertical.
- * Again a triangle filter; see comments for h2v1 case, above.
- *
- * It is OK for us to reference the adjacent input rows because we demanded
- * context from the main buffer controller (see initialization code).
- */
-
-METHODDEF(void)
-h2v2_fancy_upsample (j_decompress_ptr cinfo, jpeg_component_info * compptr,
-		     JSAMPARRAY input_data, JSAMPARRAY * output_data_ptr)
-{
-  JSAMPARRAY output_data = *output_data_ptr;
-  register JSAMPROW inptr0, inptr1, outptr;
-#if BITS_IN_JSAMPLE == 8
-  register int thiscolsum, lastcolsum, nextcolsum;
-#else
-  register INT32 thiscolsum, lastcolsum, nextcolsum;
-#endif
-  register JDIMENSION colctr;
-  int inrow, outrow, v;
-
-  inrow = outrow = 0;
-  while (outrow < cinfo->max_v_samp_factor) {
-    for (v = 0; v < 2; v++) {
-      /* inptr0 points to nearest input row, inptr1 points to next nearest */
-      inptr0 = input_data[inrow];
-      if (v == 0)		/* next nearest is row above */
-	inptr1 = input_data[inrow-1];
-      else			/* next nearest is row below */
-	inptr1 = input_data[inrow+1];
-      outptr = output_data[outrow++];
-
-      /* Special case for first column */
-      thiscolsum = GETJSAMPLE(*inptr0++) * 3 + GETJSAMPLE(*inptr1++);
-      nextcolsum = GETJSAMPLE(*inptr0++) * 3 + GETJSAMPLE(*inptr1++);
-      *outptr++ = (JSAMPLE) ((thiscolsum * 4 + 8) >> 4);
-      *outptr++ = (JSAMPLE) ((thiscolsum * 3 + nextcolsum + 7) >> 4);
-      lastcolsum = thiscolsum; thiscolsum = nextcolsum;
-
-      for (colctr = compptr->downsampled_width - 2; colctr > 0; colctr--) {
-	/* General case: 3/4 * nearer pixel + 1/4 * further pixel in each */
-	/* dimension, thus 9/16, 3/16, 3/16, 1/16 overall */
-	nextcolsum = GETJSAMPLE(*inptr0++) * 3 + GETJSAMPLE(*inptr1++);
-	*outptr++ = (JSAMPLE) ((thiscolsum * 3 + lastcolsum + 8) >> 4);
-	*outptr++ = (JSAMPLE) ((thiscolsum * 3 + nextcolsum + 7) >> 4);
-	lastcolsum = thiscolsum; thiscolsum = nextcolsum;
-      }
-
-      /* Special case for last column */
-      *outptr++ = (JSAMPLE) ((thiscolsum * 3 + lastcolsum + 8) >> 4);
-      *outptr++ = (JSAMPLE) ((thiscolsum * 4 + 7) >> 4);
-    }
-    inrow++;
-  }
-}
-
-
-/*
  * Module initialization routine for upsampling.
  */
 
@@ -401,7 +296,7 @@ jinit_upsampler (j_decompress_ptr cinfo)
   my_upsample_ptr upsample;
   int ci;
   jpeg_component_info * compptr;
-  boolean need_buffer, do_fancy;
+  boolean need_buffer;
   int h_in_group, v_in_group, h_out_group, v_out_group;
 
   upsample = (my_upsample_ptr)
@@ -415,11 +310,6 @@ jinit_upsampler (j_decompress_ptr cinfo)
   if (cinfo->CCIR601_sampling)	/* this isn't supported */
     ERREXIT(cinfo, JERR_CCIR601_NOTIMPL);
 
-  /* jdmainct.c doesn't support context rows when min_DCT_scaled_size = 1,
-   * so don't ask for it.
-   */
-  do_fancy = cinfo->do_fancy_upsampling && cinfo->min_DCT_scaled_size > 1;
-
   /* Verify we can handle the sampling factors, select per-component methods,
    * and create storage as needed.
    */
@@ -428,10 +318,10 @@ jinit_upsampler (j_decompress_ptr cinfo)
     /* Compute size of an "input group" after IDCT scaling.  This many samples
      * are to be converted to max_h_samp_factor * max_v_samp_factor pixels.
      */
-    h_in_group = (compptr->h_samp_factor * compptr->DCT_scaled_size) /
-		 cinfo->min_DCT_scaled_size;
-    v_in_group = (compptr->v_samp_factor * compptr->DCT_scaled_size) /
-		 cinfo->min_DCT_scaled_size;
+    h_in_group = (compptr->h_samp_factor * compptr->DCT_h_scaled_size) /
+		 cinfo->min_DCT_h_scaled_size;
+    v_in_group = (compptr->v_samp_factor * compptr->DCT_v_scaled_size) /
+		 cinfo->min_DCT_v_scaled_size;
     h_out_group = cinfo->max_h_samp_factor;
     v_out_group = cinfo->max_v_samp_factor;
     upsample->rowgroup_height[ci] = v_in_group; /* save for use later */
@@ -446,19 +336,12 @@ jinit_upsampler (j_decompress_ptr cinfo)
       need_buffer = FALSE;
     } else if (h_in_group * 2 == h_out_group &&
 	       v_in_group == v_out_group) {
-      /* Special cases for 2h1v upsampling */
-      if (do_fancy && compptr->downsampled_width > 2)
-	upsample->methods[ci] = h2v1_fancy_upsample;
-      else
-	upsample->methods[ci] = h2v1_upsample;
+      /* Special case for 2h1v upsampling */
+      upsample->methods[ci] = h2v1_upsample;
     } else if (h_in_group * 2 == h_out_group &&
 	       v_in_group * 2 == v_out_group) {
-      /* Special cases for 2h2v upsampling */
-      if (do_fancy && compptr->downsampled_width > 2) {
-	upsample->methods[ci] = h2v2_fancy_upsample;
-	upsample->pub.need_context_rows = TRUE;
-      } else
-	upsample->methods[ci] = h2v2_upsample;
+      /* Special case for 2h2v upsampling */
+      upsample->methods[ci] = h2v2_upsample;
     } else if ((h_out_group % h_in_group) == 0 &&
 	       (v_out_group % v_in_group) == 0) {
       /* Generic integral-factors upsampling method */

@@ -16,6 +16,7 @@
 //
 // @Authors
 //		Zhang Chunpeng chunpeng@multicorewareinc.com
+//		Yao Wang, yao@multicorewareinc.com
 //    
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -61,8 +62,9 @@ namespace cv { namespace ocl
 { 
 	extern const char *pyr_up;
 	void pyrUp(const cv::ocl::oclMat& src,cv::ocl::oclMat& dst)
-	{
+	{		
 		dst.create(src.rows * 2, src.cols * 2, src.type());
+		dst.download_channels=src.download_channels;
 		Context *clCxt = src.clCxt;
 		
 		const std::string kernelName = "pyrUp";

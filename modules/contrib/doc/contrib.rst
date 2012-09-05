@@ -9,3 +9,4 @@ The module contains some recently added functionality that has not been stabiliz
 
     stereo
     FaceRecognizer Documentation <facerec/index>
+    Retina Documentation <retina/index>

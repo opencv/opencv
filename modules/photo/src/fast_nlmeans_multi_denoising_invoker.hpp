@@ -63,7 +63,7 @@ struct FastNlMeansMultiDenoisingInvoker {
 
         void operator() (const BlockedRange& range) const;
 
-		void operator= (const FastNlMeansMultiDenoisingInvoker& invoker) {
+		void operator= (const FastNlMeansMultiDenoisingInvoker&) {
 			CV_Error(CV_StsNotImplemented, "Assigment operator is not implemented");
 		}
 

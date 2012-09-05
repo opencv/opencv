@@ -2069,7 +2069,7 @@ void CvDTree::cluster_categories( const int* vectors, int n, int m,
     {
         int sum = 0;
         const int* v = vectors + i*m;
-        labels[i] = i < k ? i : (*r)(k);
+        labels[i] = i < k ? i : r->uniform(0, k);
 
         // compute weight of each vector
         for( j = 0; j < m; j++ )

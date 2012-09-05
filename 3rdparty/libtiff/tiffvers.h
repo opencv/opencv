@@ -1,4 +1,4 @@
-#define TIFFLIB_VERSION_STR "LIBTIFF, Version 4.0.1\nCopyright (c) 1988-1996 Sam Leffler\nCopyright (c) 1991-1996 Silicon Graphics, Inc."
+#define TIFFLIB_VERSION_STR "LIBTIFF, Version 4.0.2\nCopyright (c) 1988-1996 Sam Leffler\nCopyright (c) 1991-1996 Silicon Graphics, Inc."
 /*
  * This define can be used in code that requires
  * compilation-related definitions specific to a
@@ -6,4 +6,4 @@
  * version checking should be done based on the
  * string returned by TIFFGetVersion.
  */
-#define TIFFLIB_VERSION 20120218
+#define TIFFLIB_VERSION 20120615

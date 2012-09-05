@@ -77,7 +77,7 @@ static void removeOcclusions(const Mat& flow,
 static void wd(Mat& d, int top_shift, int bottom_shift, int left_shift, int right_shift, float sigma) {
   for (int dr = -top_shift, r = 0; dr <= bottom_shift; ++dr, ++r) {
     for (int dc = -left_shift, c = 0; dc <= right_shift; ++dc, ++c) {
-      d.at<float>(r, c) = -(dr*dr + dc*dc);
+      d.at<float>(r, c) = (float)-(dr*dr + dc*dc);
     }
   }
   d *= 1.0 / (2.0 * sigma * sigma);
@@ -361,7 +361,7 @@ static void selectPointsToRecalcFlow(const Mat& flow,
             mask.at<uchar>(curr_bottom, curr_right) = MASK_TRUE_VALUE;
             for (int rr = curr_top; rr <= curr_bottom; ++rr) {
               for (int cc = curr_left; cc <= curr_right; ++cc) {
-                speed_up.at<uchar>(rr, cc) = speed_up_at_this_point + 1; 
+                speed_up.at<uchar>(rr, cc) = (uchar)(speed_up_at_this_point + 1); 
               }
             }
           } else {
@@ -398,9 +398,9 @@ static inline float extrapolateValueInRect(int height, int width,
   if (r == height && c == width) { return v22;}
   
   float qr = float(r) / height;
-  float pr = 1.0 - qr;
+  float pr = 1.0f - qr;
   float qc = float(c) / width;
-  float pc = 1.0 - qc;
+  float pc = 1.0f - qc;
 
   return v11*pr*pc + v12*pr*qc + v21*qr*pc + v22*qc*qr; 
 }
@@ -562,7 +562,7 @@ CV_EXPORTS_W void calcOpticalFlowSF(Mat& from,
 
     selectPointsToRecalcFlow(flow,
                              averaging_radius,
-                             speed_up_thr,
+                             (int)speed_up_thr,
                              curr_rows,
                              curr_cols,
                              speed_up,

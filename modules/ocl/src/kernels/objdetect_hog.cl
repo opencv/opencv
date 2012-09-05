@@ -448,3 +448,42 @@ __kernel void compute_gradients_8UC1_kernel(const int height, const int width, c
         grad[ ((gidY * grad_quadstep + x) << 1) + 1 ]   = mag * ang;
     }
 }
+
+//----------------------------------------------------------------------------
+// Resize
+
+__kernel void resize_8UC4_kernel(__global uchar4 * dst, __global const uchar4 * src,
+                                 int dst_offset, int src_offset, int dst_step, int src_step, 
+                                 int src_cols, int src_rows, int dst_cols, int dst_rows, float ifx, float ify )
+{
+    int dx = get_global_id(0);
+    int dy = get_global_id(1);
+    
+    int sx = (int)floor(dx*ifx+0.5f);
+    int sy = (int)floor(dy*ify+0.5f);
+    sx = min(sx, src_cols-1);
+    sy = min(sy, src_rows-1);
+    int dpos = (dst_offset>>2) + dy * (dst_step>>2) + dx;
+    int spos = (src_offset>>2) + sy * (src_step>>2) + sx;
+    
+    if(dx<dst_cols && dy<dst_rows)
+        dst[dpos] = src[spos];
+}
+
+__kernel void resize_8UC1_kernel(__global uchar * dst, __global const uchar * src,
+                                 int dst_offset, int src_offset, int dst_step, int src_step, 
+                                 int src_cols, int src_rows, int dst_cols, int dst_rows, float ifx, float ify )
+{
+    int dx = get_global_id(0);
+    int dy = get_global_id(1);
+    
+    int sx = (int)floor(dx*ifx+0.5f);
+    int sy = (int)floor(dy*ify+0.5f);
+    sx = min(sx, src_cols-1);
+    sy = min(sy, src_rows-1);
+    int dpos = dst_offset + dy * dst_step + dx;
+    int spos = src_offset + sy * src_step + sx;
+    
+    if(dx<dst_cols && dy<dst_rows)
+        dst[dpos] = src[spos];
+}

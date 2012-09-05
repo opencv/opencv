@@ -2,6 +2,7 @@
  * jfdctflt.c
  *
  * Copyright (C) 1994-1996, Thomas G. Lane.
+ * Modified 2003-2009 by Guido Vollbeding.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
@@ -56,41 +57,46 @@
  */
 
 GLOBAL(void)
-jpeg_fdct_float (FAST_FLOAT * data)
+jpeg_fdct_float (FAST_FLOAT * data, JSAMPARRAY sample_data, JDIMENSION start_col)
 {
   FAST_FLOAT tmp0, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7;
   FAST_FLOAT tmp10, tmp11, tmp12, tmp13;
   FAST_FLOAT z1, z2, z3, z4, z5, z11, z13;
   FAST_FLOAT *dataptr;
+  JSAMPROW elemptr;
   int ctr;
 
   /* Pass 1: process rows. */
 
   dataptr = data;
-  for (ctr = DCTSIZE-1; ctr >= 0; ctr--) {
-    tmp0 = dataptr[0] + dataptr[7];
-    tmp7 = dataptr[0] - dataptr[7];
-    tmp1 = dataptr[1] + dataptr[6];
-    tmp6 = dataptr[1] - dataptr[6];
-    tmp2 = dataptr[2] + dataptr[5];
-    tmp5 = dataptr[2] - dataptr[5];
-    tmp3 = dataptr[3] + dataptr[4];
-    tmp4 = dataptr[3] - dataptr[4];
-    
+  for (ctr = 0; ctr < DCTSIZE; ctr++) {
+    elemptr = sample_data[ctr] + start_col;
+
+    /* Load data into workspace */
+    tmp0 = (FAST_FLOAT) (GETJSAMPLE(elemptr[0]) + GETJSAMPLE(elemptr[7]));
+    tmp7 = (FAST_FLOAT) (GETJSAMPLE(elemptr[0]) - GETJSAMPLE(elemptr[7]));
+    tmp1 = (FAST_FLOAT) (GETJSAMPLE(elemptr[1]) + GETJSAMPLE(elemptr[6]));
+    tmp6 = (FAST_FLOAT) (GETJSAMPLE(elemptr[1]) - GETJSAMPLE(elemptr[6]));
+    tmp2 = (FAST_FLOAT) (GETJSAMPLE(elemptr[2]) + GETJSAMPLE(elemptr[5]));
+    tmp5 = (FAST_FLOAT) (GETJSAMPLE(elemptr[2]) - GETJSAMPLE(elemptr[5]));
+    tmp3 = (FAST_FLOAT) (GETJSAMPLE(elemptr[3]) + GETJSAMPLE(elemptr[4]));
+    tmp4 = (FAST_FLOAT) (GETJSAMPLE(elemptr[3]) - GETJSAMPLE(elemptr[4]));
+
     /* Even part */
-    
+
     tmp10 = tmp0 + tmp3;	/* phase 2 */
     tmp13 = tmp0 - tmp3;
     tmp11 = tmp1 + tmp2;
     tmp12 = tmp1 - tmp2;
-    
-    dataptr[0] = tmp10 + tmp11; /* phase 3 */
+
+    /* Apply unsigned->signed conversion */
+    dataptr[0] = tmp10 + tmp11 - 8 * CENTERJSAMPLE; /* phase 3 */
     dataptr[4] = tmp10 - tmp11;
-    
+
     z1 = (tmp12 + tmp13) * ((FAST_FLOAT) 0.707106781); /* c4 */
     dataptr[2] = tmp13 + z1;	/* phase 5 */
     dataptr[6] = tmp13 - z1;
-    
+
     /* Odd part */
 
     tmp10 = tmp4 + tmp5;	/* phase 2 */
@@ -126,21 +132,21 @@ jpeg_fdct_float (FAST_FLOAT * data)
     tmp5 = dataptr[DCTSIZE*2] - dataptr[DCTSIZE*5];
     tmp3 = dataptr[DCTSIZE*3] + dataptr[DCTSIZE*4];
     tmp4 = dataptr[DCTSIZE*3] - dataptr[DCTSIZE*4];
-    
+
     /* Even part */
-    
+
     tmp10 = tmp0 + tmp3;	/* phase 2 */
     tmp13 = tmp0 - tmp3;
     tmp11 = tmp1 + tmp2;
     tmp12 = tmp1 - tmp2;
-    
+
     dataptr[DCTSIZE*0] = tmp10 + tmp11; /* phase 3 */
     dataptr[DCTSIZE*4] = tmp10 - tmp11;
-    
+
     z1 = (tmp12 + tmp13) * ((FAST_FLOAT) 0.707106781); /* c4 */
     dataptr[DCTSIZE*2] = tmp13 + z1; /* phase 5 */
     dataptr[DCTSIZE*6] = tmp13 - z1;
-    
+
     /* Odd part */
 
     tmp10 = tmp4 + tmp5;	/* phase 2 */

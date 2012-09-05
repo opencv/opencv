@@ -45,11 +45,13 @@
 #ifdef PRINT_KERNEL_RUN_TIME
 #define LOOP_TIMES 1
 #else
-#define LOOP_TIMES 1
+#define LOOP_TIMES 100
 #endif
-#define MWIDTH 2557
-#define MHEIGHT 2579
+#define MWIDTH 1920
+#define MHEIGHT 1080
 #define CLBINPATH ".\\"
+#define LOOPROISTART 0
+#define LOOPROIEND 1
 int randomInt(int minVal, int maxVal);
 double randomDouble(double minVal, double maxVal);
 

@@ -113,13 +113,13 @@ namespace
 
     const CvOpenGlFuncTab* g_glFuncTab = 0;
 
-//#ifdef HAVE_CUDA
+#if defined HAVE_CUDA || defined HAVE_OPENGL
     const CvOpenGlFuncTab* glFuncTab()
     {
         static EmptyGlFuncTab empty;
         return g_glFuncTab ? g_glFuncTab : &empty;
     }
-//#endif
+#endif
 }
 
 CvOpenGlFuncTab::~CvOpenGlFuncTab()

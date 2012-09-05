@@ -766,6 +766,19 @@ bool CV_OperationsTest::TestTemplateMat()
         Mat c = (a*b.t()).t();
         CV_Assert( norm(c, CV_L1) == 4. );
         }
+        
+        bool badarg_catched = false;
+        try
+        {
+            Mat m1 = Mat::zeros(1, 10, CV_8UC1);
+            Mat m2 = Mat::zeros(10, 10, CV_8UC3);
+            m1.copyTo(m2.row(1));
+        }
+        catch(const Exception& e)
+        {
+            badarg_catched = true;
+        }
+        CV_Assert( badarg_catched );
     }
     catch (const test_excep& e)
     {

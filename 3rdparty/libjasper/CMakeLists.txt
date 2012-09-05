@@ -19,12 +19,12 @@ file(GLOB lib_ext_hdrs jasper/*.h)
 
 add_library(${JASPER_LIBRARY} STATIC ${lib_srcs} ${lib_hdrs} ${lib_ext_hdrs})
 
-if(MSVC)
+if(WIN32 AND NOT MINGW)
   add_definitions(-DJAS_WIN_MSVC_BUILD)
-endif()
+endif(WIN32 AND NOT MINGW)
 
-ocv_warnings_disable(CMAKE_C_FLAGS -Wno-implicit-function-declaration -Wno-uninitialized -Wmissing-prototypes -Wmissing-declarations -Wunused -Wshadow -Wsign-compare
-                                   /wd4013 /wd4018 /wd4715 /wd4244 /wd4101 /wd4267)
+ocv_warnings_disable(CMAKE_C_FLAGS -Wno-implicit-function-declaration -Wno-uninitialized -Wmissing-prototypes -Wmissing-declarations -Wunused -Wshadow -Wsign-compare)
+ocv_warnings_disable(CMAKE_C_FLAGS /wd4013 /wd4018 /wd4101 /wd4244 /wd4267 /wd4715) # vs2005
 
 if(UNIX)
   if(CMAKE_COMPILER_IS_GNUCXX OR CV_ICC)

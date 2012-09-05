@@ -89,7 +89,7 @@ PARAM_TEST_CASE(ArithmTestBase, MatType, bool)
 	cv::Mat mask_roi;
 	cv::Mat dst_roi;
 	cv::Mat dst1_roi; //bak
-	std::vector<cv::ocl::Info> oclinfo;
+	//std::vector<cv::ocl::Info> oclinfo;
 	//ocl dst mat for testing
 	cv::ocl::oclMat gdst_whole;
 	cv::ocl::oclMat gdst1_whole; //bak
@@ -119,11 +119,11 @@ PARAM_TEST_CASE(ArithmTestBase, MatType, bool)
 		cv::threshold(mask, mask, 0.5, 255., CV_8UC1);
 
 		val = cv::Scalar(rng.uniform(-10.0, 10.0), rng.uniform(-10.0, 10.0), rng.uniform(-10.0, 10.0), rng.uniform(-10.0, 10.0));
-		int devnums = getDevice(oclinfo);
-		CV_Assert(devnums>0);
-		//if you want to use undefault device, set it here
-		//setDevice(oclinfo[0]);
-		setBinpath(CLBINPATH);
+		//int devnums = getDevice(oclinfo);
+		//CV_Assert(devnums>0);
+		////if you want to use undefault device, set it here
+		////setDevice(oclinfo[0]);
+		//setBinpath(CLBINPATH);
 	}
 
 	void Has_roi(int b)
@@ -193,7 +193,7 @@ TEST_P(Lut, Mat)
 	double t0=0;
 	double t1=0;
 	double t2=0;	
-	for(int k=0;k<2;k++){
+	for(int k=LOOPROISTART;k<LOOPROIEND;k++){
 		totalcputick=0;
 		totalgputick=0;
 		totalgputick_kernel=0;
@@ -235,7 +235,7 @@ TEST_P(Lut, Mat)
 		cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
 	}
 #else
-	for(int j = 0; j < 2; j ++)
+	for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
 	{
 		Has_roi(j);
 		//  src2x = rng.uniform( 0,mat2.cols - 256);
@@ -275,7 +275,7 @@ TEST_P(Exp, Mat)
 	double t0=0;
 	double t1=0;
 	double t2=0;	
-	for(int k=0;k<2;k++){
+	for(int k=LOOPROISTART;k<LOOPROIEND;k++){
 		totalcputick=0;
 		totalgputick=0;
 		totalgputick_kernel=0;
@@ -313,7 +313,7 @@ TEST_P(Exp, Mat)
 		cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
 	}
 #else
-	for(int j = 0; j < 2; j ++)
+	for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
 	{
 		Has_roi(j);
 		gdst_whole = dst;
@@ -341,7 +341,7 @@ TEST_P(Log, Mat)
 	double t0=0;
 	double t1=0;
 	double t2=0;	
-	for(int k=0;k<2;k++){
+	for(int k=LOOPROISTART;k<LOOPROIEND;k++){
 		totalcputick=0;
 		totalgputick=0;
 		totalgputick_kernel=0;
@@ -377,7 +377,7 @@ TEST_P(Log, Mat)
 		cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
 	}
 #else
-	for(int j = 0; j < 2; j ++)
+	for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
 	{
 		Has_roi(j);
 		gdst_whole = dst;
@@ -408,7 +408,7 @@ TEST_P(Add, Mat)
 	double t0=0;
 	double t1=0;
 	double t2=0;	
-	for(int k=0;k<2;k++){
+	for(int k=LOOPROISTART;k<LOOPROIEND;k++){
 		totalcputick=0;
 		totalgputick=0;
 		totalgputick_kernel=0;
@@ -446,7 +446,7 @@ TEST_P(Add, Mat)
 		cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
 	}
 #else
-	for(int j = 0; j < 2; j ++)
+	for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
 	{
 		Has_roi(j);
 		gdst_whole = dst;
@@ -468,7 +468,7 @@ TEST_P(Add, Mat_Mask)
 	double t0=0;
 	double t1=0;
 	double t2=0;	
-	for(int k=0;k<2;k++){
+	for(int k=LOOPROISTART;k<LOOPROIEND;k++){
 		totalcputick=0;
 		totalgputick=0;
 		totalgputick_kernel=0;
@@ -506,7 +506,7 @@ TEST_P(Add, Mat_Mask)
 		cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
 	}
 #else
-	for(int j = 0; j < 2; j ++)
+	for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
 	{
 		Has_roi(j);
 		gdst_whole = dst;
@@ -528,7 +528,7 @@ TEST_P(Add, Scalar)
 	double t0=0;
 	double t1=0;
 	double t2=0;	
-	for(int k=0;k<2;k++){
+	for(int k=LOOPROISTART;k<LOOPROIEND;k++){
 		totalcputick=0;
 		totalgputick=0;
 		totalgputick_kernel=0;
@@ -563,7 +563,7 @@ TEST_P(Add, Scalar)
 		cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
 	}
 #else
-	for(int j = 0; j < 2; j ++)
+	for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
 	{
 		Has_roi(j);
 		gdst_whole = dst;
@@ -584,7 +584,7 @@ TEST_P(Add, Scalar_Mask)
 	double t0=0;
 	double t1=0;
 	double t2=0;	
-	for(int k=0;k<2;k++){
+	for(int k=LOOPROISTART;k<LOOPROIEND;k++){
 		totalcputick=0;
 		totalgputick=0;
 		totalgputick_kernel=0;
@@ -620,7 +620,7 @@ TEST_P(Add, Scalar_Mask)
 		cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
 	}
 #else
-	for(int j = 0; j < 2; j ++)
+	for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
 	{
 		Has_roi(j);
 		gdst_whole = dst;
@@ -646,7 +646,7 @@ TEST_P(Sub, Mat)
 	double t0=0;
 	double t1=0;
 	double t2=0;	
-	for(int k=0;k<2;k++){
+	for(int k=LOOPROISTART;k<LOOPROIEND;k++){
 		totalcputick=0;
 		totalgputick=0;
 		totalgputick_kernel=0;
@@ -683,7 +683,7 @@ TEST_P(Sub, Mat)
 		cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
 	}
 #else
-	for(int j = 0; j < 2; j ++)
+	for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
 	{
 		Has_roi(j);
 		gdst_whole = dst;
@@ -705,7 +705,7 @@ TEST_P(Sub, Mat_Mask)
 	double t0=0;
 	double t1=0;
 	double t2=0;	
-	for(int k=0;k<2;k++){
+	for(int k=LOOPROISTART;k<LOOPROIEND;k++){
 		totalcputick=0;
 		totalgputick=0;
 		totalgputick_kernel=0;
@@ -743,7 +743,7 @@ TEST_P(Sub, Mat_Mask)
 		cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
 	}
 #else
-	for(int j = 0; j < 2; j ++)
+	for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
 	{
 		Has_roi(j);
 		gdst_whole = dst;
@@ -765,7 +765,7 @@ TEST_P(Sub, Scalar)
 	double t0=0;
 	double t1=0;
 	double t2=0;	
-	for(int k=0;k<2;k++){
+	for(int k=LOOPROISTART;k<LOOPROIEND;k++){
 		totalcputick=0;
 		totalgputick=0;
 		totalgputick_kernel=0;
@@ -801,7 +801,7 @@ TEST_P(Sub, Scalar)
 		cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
 	}
 #else
-	for(int j = 0; j < 2; j ++)
+	for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
 	{
 		Has_roi(j);
 		gdst_whole = dst;
@@ -822,7 +822,7 @@ TEST_P(Sub, Scalar_Mask)
 	double t0=0;
 	double t1=0;
 	double t2=0;	
-	for(int k=0;k<2;k++){
+	for(int k=LOOPROISTART;k<LOOPROIEND;k++){
 		totalcputick=0;
 		totalgputick=0;
 		totalgputick_kernel=0;
@@ -859,7 +859,7 @@ TEST_P(Sub, Scalar_Mask)
 		cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
 	}
 #else
-	for(int j = 0; j < 2; j ++)
+	for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
 	{
 		Has_roi(j);
 		gdst_whole = dst;
@@ -885,7 +885,7 @@ TEST_P(Mul, Mat)
 	double t0=0;
 	double t1=0;
 	double t2=0;	
-	for(int k=0;k<2;k++){
+	for(int k=LOOPROISTART;k<LOOPROIEND;k++){
 		totalcputick=0;
 		totalgputick=0;
 		totalgputick_kernel=0;
@@ -922,7 +922,7 @@ TEST_P(Mul, Mat)
 		cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
 	}
 #else
-	for(int j = 0; j < 2; j ++)
+	for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
 	{
 		Has_roi(j);
 		gdst_whole = dst;
@@ -944,7 +944,7 @@ TEST_P(Mul, Mat_Scalar)
 	double t0=0;
 	double t1=0;
 	double t2=0;	
-	for(int k=0;k<2;k++){
+	for(int k=LOOPROISTART;k<LOOPROIEND;k++){
 		totalcputick=0;
 		totalgputick=0;
 		totalgputick_kernel=0;
@@ -982,7 +982,7 @@ TEST_P(Mul, Mat_Scalar)
 		cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
 	}
 #else
-	for(int j = 0; j < 2; j ++)
+	for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
 	{
 		Has_roi(j);
 		cv::RNG& rng = TS::ptr()->get_rng();
@@ -1009,7 +1009,7 @@ TEST_P(Div, Mat)
 	double t0=0;
 	double t1=0;
 	double t2=0;	
-	for(int k=0;k<2;k++){
+	for(int k=LOOPROISTART;k<LOOPROIEND;k++){
 		totalcputick=0;
 		totalgputick=0;
 		totalgputick_kernel=0;
@@ -1046,7 +1046,7 @@ TEST_P(Div, Mat)
 		cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
 	}
 #else
-	for(int j = 0; j < 2; j ++)
+	for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
 	{
 		Has_roi(j);
 		gdst_whole = dst;
@@ -1068,7 +1068,7 @@ TEST_P(Div, Mat_Scalar)
 	double t0=0;
 	double t1=0;
 	double t2=0;	
-	for(int k=0;k<2;k++){
+	for(int k=LOOPROISTART;k<LOOPROIEND;k++){
 		totalcputick=0;
 		totalgputick=0;
 		totalgputick_kernel=0;
@@ -1106,7 +1106,7 @@ TEST_P(Div, Mat_Scalar)
 		cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
 	}
 #else
-	for(int j = 0; j < 2; j ++)
+	for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
 	{
 		Has_roi(j);
 		cv::RNG& rng = TS::ptr()->get_rng();
@@ -1134,7 +1134,7 @@ TEST_P(Absdiff, Mat)
 	double t0=0;
 	double t1=0;
 	double t2=0;	
-	for(int k=0;k<2;k++){
+	for(int k=LOOPROISTART;k<LOOPROIEND;k++){
 		totalcputick=0;
 		totalgputick=0;
 		totalgputick_kernel=0;
@@ -1171,7 +1171,7 @@ TEST_P(Absdiff, Mat)
 		cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
 	}
 #else
-	for(int j = 0; j < 2; j ++)
+	for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
 	{
 		Has_roi(j);
 		gdst_whole = dst;
@@ -1193,7 +1193,7 @@ TEST_P(Absdiff, Mat_Scalar)
 	double t0=0;
 	double t1=0;
 	double t2=0;	
-	for(int k=0;k<2;k++){
+	for(int k=LOOPROISTART;k<LOOPROIEND;k++){
 		totalcputick=0;
 		totalgputick=0;
 		totalgputick_kernel=0;
@@ -1229,7 +1229,7 @@ TEST_P(Absdiff, Mat_Scalar)
 		cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
 	}
 #else
-	for(int j = 0; j < 2; j ++)
+	for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
 	{
 		Has_roi(j);
 		gdst_whole = dst;
@@ -1254,7 +1254,7 @@ TEST_P(CartToPolar, angleInDegree)
 	double t0=0;
 	double t1=0;
 	double t2=0;	
-	for(int k=0;k<2;k++){
+	for(int k=LOOPROISTART;k<LOOPROIEND;k++){
 		totalcputick=0;
 		totalgputick=0;
 		totalgputick_kernel=0;
@@ -1295,7 +1295,7 @@ TEST_P(CartToPolar, angleInDegree)
 		cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
 	}
 #else
-	for(int j = 0; j < 2; j ++)
+	for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
 	{
 		Has_roi(j);
 		gdst_whole = dst;
@@ -1319,7 +1319,7 @@ TEST_P(CartToPolar, angleInRadians)
 	double t0=0;
 	double t1=0;
 	double t2=0;	
-	for(int k=0;k<2;k++){
+	for(int k=LOOPROISTART;k<LOOPROIEND;k++){
 		totalcputick=0;
 		totalgputick=0;
 		totalgputick_kernel=0;
@@ -1359,7 +1359,7 @@ TEST_P(CartToPolar, angleInRadians)
 		cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
 	}
 #else
-	for(int j = 0; j < 2; j ++)
+	for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
 	{
 		Has_roi(j);
 		gdst_whole = dst;
@@ -1386,7 +1386,7 @@ TEST_P(PolarToCart, angleInDegree)
 	double t0=0;
 	double t1=0;
 	double t2=0;	
-	for(int k=0;k<2;k++){
+	for(int k=LOOPROISTART;k<LOOPROIEND;k++){
 		totalcputick=0;
 		totalgputick=0;
 		totalgputick_kernel=0;
@@ -1427,7 +1427,7 @@ TEST_P(PolarToCart, angleInDegree)
 		cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
 	}
 #else
-	for(int j = 0; j < 2; j ++)
+	for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
 	{
 		Has_roi(j);
 		gdst_whole = dst;
@@ -1451,7 +1451,7 @@ TEST_P(PolarToCart, angleInRadians)
 	double t0=0;
 	double t1=0;
 	double t2=0;	
-	for(int k=0;k<2;k++){
+	for(int k=LOOPROISTART;k<LOOPROIEND;k++){
 		totalcputick=0;
 		totalgputick=0;
 		totalgputick_kernel=0;
@@ -1492,7 +1492,7 @@ TEST_P(PolarToCart, angleInRadians)
 		cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
 	}
 #else
-	for(int j = 0; j < 2; j ++)
+	for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
 	{
 		Has_roi(j);
 		gdst_whole = dst;
@@ -1520,7 +1520,7 @@ TEST_P(Magnitude, Mat)
 	double t0=0;
 	double t1=0;
 	double t2=0;	
-	for(int k=0;k<2;k++){
+	for(int k=LOOPROISTART;k<LOOPROIEND;k++){
 		totalcputick=0;
 		totalgputick=0;
 		totalgputick_kernel=0;
@@ -1557,7 +1557,7 @@ TEST_P(Magnitude, Mat)
 		cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
 	}
 #else
-	for(int j = 0; j < 2; j ++)
+	for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
 	{
 		Has_roi(j);
 		gdst_whole = dst;
@@ -1581,7 +1581,7 @@ TEST_P(Transpose, Mat)
 	double t0=0;
 	double t1=0;
 	double t2=0;	
-	for(int k=0;k<2;k++){
+	for(int k=LOOPROISTART;k<LOOPROIEND;k++){
 		totalcputick=0;
 		totalgputick=0;
 		totalgputick_kernel=0;
@@ -1617,7 +1617,7 @@ TEST_P(Transpose, Mat)
 		cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
 	}
 #else
-	for(int j = 0; j < 2; j ++)
+	for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
 	{
 		Has_roi(j);
 		gdst_whole = dst;
@@ -1641,7 +1641,7 @@ TEST_P(Flip, X)
 	double t0=0;
 	double t1=0;
 	double t2=0;	
-	for(int k=0;k<2;k++){
+	for(int k=LOOPROISTART;k<LOOPROIEND;k++){
 		totalcputick=0;
 		totalgputick=0;
 		totalgputick_kernel=0;
@@ -1677,7 +1677,7 @@ TEST_P(Flip, X)
 		cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
 	}
 #else
-	for(int j = 0; j < 2; j ++)
+	for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
 	{
 		Has_roi(j);
 		gdst_whole = dst;
@@ -1698,7 +1698,7 @@ TEST_P(Flip, Y)
 	double t0=0;
 	double t1=0;
 	double t2=0;	
-	for(int k=0;k<2;k++){
+	for(int k=LOOPROISTART;k<LOOPROIEND;k++){
 		totalcputick=0;
 		totalgputick=0;
 		totalgputick_kernel=0;
@@ -1734,7 +1734,7 @@ TEST_P(Flip, Y)
 		cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
 	}
 #else
-	for(int j = 0; j < 2; j ++)
+	for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
 	{
 		Has_roi(j);
 		gdst_whole = dst;
@@ -1755,7 +1755,7 @@ TEST_P(Flip, BOTH)
 	double t0=0;
 	double t1=0;
 	double t2=0;	
-	for(int k=0;k<2;k++){
+	for(int k=LOOPROISTART;k<LOOPROIEND;k++){
 		totalcputick=0;
 		totalgputick=0;
 		totalgputick_kernel=0;
@@ -1791,7 +1791,7 @@ TEST_P(Flip, BOTH)
 		cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
 	}
 #else
-	for(int j = 0; j < 2; j ++)
+	for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
 	{
 		Has_roi(j);
 		gdst_whole = dst;
@@ -1816,7 +1816,7 @@ TEST_P(MinMax, MAT)
 	double t0=0;
 	double t1=0;
 	double t2=0;	
-	for(int k=0;k<2;k++){
+	for(int k=LOOPROISTART;k<LOOPROIEND;k++){
 		totalcputick=0;
 		totalgputick=0;
 		totalgputick_kernel=0;
@@ -1865,7 +1865,7 @@ TEST_P(MinMax, MAT)
 		cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
 	}
 #else
-	for(int j = 0; j < 2; j ++)
+	for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
 	{
 		Has_roi(j);
 		gmat1 = mat1_roi;
@@ -1885,7 +1885,7 @@ TEST_P(MinMax, MASK)
 	double t0=0;
 	double t1=0;
 	double t2=0;	
-	for(int k=0;k<2;k++){
+	for(int k=LOOPROISTART;k<LOOPROIEND;k++){
 		totalcputick=0;
 		totalgputick=0;
 		totalgputick_kernel=0;
@@ -1936,7 +1936,7 @@ TEST_P(MinMax, MASK)
 		cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
 	}
 #else
-	for(int j = 0; j < 2; j ++)
+	for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
 	{
 		Has_roi(j);
 		gmat1 = mat1_roi;
@@ -1960,7 +1960,7 @@ TEST_P(MinMaxLoc, MAT)
 	double t0=0;
 	double t1=0;
 	double t2=0;	
-	for(int k=0;k<2;k++){
+	for(int k=LOOPROISTART;k<LOOPROIEND;k++){
 		totalcputick=0;
 		totalgputick=0;
 		totalgputick_kernel=0;
@@ -2020,7 +2020,7 @@ TEST_P(MinMaxLoc, MAT)
 		cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
 	}
 #else
-	for(int j = 0; j < 2; j ++)
+	for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
 	{
 		Has_roi(j);
 		gmat1 = mat1_roi;
@@ -2044,7 +2044,7 @@ TEST_P(MinMaxLoc, MASK)
 	double t0=0;
 	double t1=0;
 	double t2=0;	
-	for(int k=0;k<2;k++){
+	for(int k=LOOPROISTART;k<LOOPROIEND;k++){
 		totalcputick=0;
 		totalgputick=0;
 		totalgputick_kernel=0;
@@ -2106,7 +2106,7 @@ TEST_P(MinMaxLoc, MASK)
 		cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
 	}
 #else
-	for(int j = 0; j < 2; j ++)
+	for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
 	{
 		Has_roi(j);
 		gmat1 = mat1_roi;
@@ -2132,7 +2132,7 @@ TEST_P(Sum, MAT)
 	double t0=0;
 	double t1=0;
 	double t2=0;	
-	for(int k=0;k<2;k++){
+	for(int k=LOOPROISTART;k<LOOPROIEND;k++){
 		totalcputick=0;
 		totalgputick=0;
 		totalgputick_kernel=0;
@@ -2163,7 +2163,7 @@ TEST_P(Sum, MAT)
 		cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
 	}
 #else
-	for(int j = 0; j < 2; j ++)
+	for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
 	{
 		Has_roi(j);
 		gmat1 = mat1_roi;
@@ -2192,7 +2192,7 @@ TEST_P(CountNonZero, MAT)
 	double t0=0;
 	double t1=0;
 	double t2=0;	
-	for(int k=0;k<2;k++){
+	for(int k=LOOPROISTART;k<LOOPROIEND;k++){
 		totalcputick=0;
 		totalgputick=0;
 		totalgputick_kernel=0;
@@ -2223,7 +2223,7 @@ TEST_P(CountNonZero, MAT)
 		cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
 	}
 #else
-	for(int j = 0; j < 2; j ++)
+	for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
 	{
 		Has_roi(j);
 		gmat1 = mat1_roi;
@@ -2253,7 +2253,7 @@ TEST_P(Phase, Mat)
 	double t0=0;
 	double t1=0;
 	double t2=0;	
-	for(int k=0;k<2;k++){
+	for(int k=LOOPROISTART;k<LOOPROIEND;k++){
 		totalcputick=0;
 		totalgputick=0;
 		totalgputick_kernel=0;
@@ -2290,7 +2290,7 @@ TEST_P(Phase, Mat)
 		cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
 	}
 #else
-	for(int j = 0; j < 2; j ++)
+	for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
 	{
 		Has_roi(j);
 		gdst_whole = dst;
@@ -2318,7 +2318,7 @@ TEST_P(Bitwise_and, Mat)
 	double t0=0;
 	double t1=0;
 	double t2=0;	
-	for(int k=0;k<2;k++){
+	for(int k=LOOPROISTART;k<LOOPROIEND;k++){
 		totalcputick=0;
 		totalgputick=0;
 		totalgputick_kernel=0;
@@ -2355,7 +2355,7 @@ TEST_P(Bitwise_and, Mat)
 		cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
 	}
 #else
-	for(int j = 0; j < 2; j ++)
+	for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
 	{
 		Has_roi(j);
 		gdst_whole = dst;
@@ -2379,7 +2379,7 @@ TEST_P(Bitwise_and, Mat_Mask)
 	double t0=0;
 	double t1=0;
 	double t2=0;	
-	for(int k=0;k<2;k++){
+	for(int k=LOOPROISTART;k<LOOPROIEND;k++){
 		totalcputick=0;
 		totalgputick=0;
 		totalgputick_kernel=0;
@@ -2417,7 +2417,7 @@ TEST_P(Bitwise_and, Mat_Mask)
 		cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
 	}
 #else
-	for(int j = 0; j < 2; j ++)
+	for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
 	{
 		Has_roi(j);
 		gdst_whole = dst;
@@ -2441,7 +2441,7 @@ TEST_P(Bitwise_and, Scalar)
 	double t0=0;
 	double t1=0;
 	double t2=0;	
-	for(int k=0;k<2;k++){
+	for(int k=LOOPROISTART;k<LOOPROIEND;k++){
 		totalcputick=0;
 		totalgputick=0;
 		totalgputick_kernel=0;
@@ -2477,7 +2477,7 @@ TEST_P(Bitwise_and, Scalar)
 		cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
 	}
 #else
-	for(int j = 0; j < 2; j ++)
+	for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
 	{
 		Has_roi(j);
 		gdst_whole = dst;
@@ -2500,7 +2500,7 @@ TEST_P(Bitwise_and, Scalar_Mask)
 	double t0=0;
 	double t1=0;
 	double t2=0;	
-	for(int k=0;k<2;k++){
+	for(int k=LOOPROISTART;k<LOOPROIEND;k++){
 		totalcputick=0;
 		totalgputick=0;
 		totalgputick_kernel=0;
@@ -2537,7 +2537,7 @@ TEST_P(Bitwise_and, Scalar_Mask)
 		cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
 	}
 #else
-	for(int j = 0; j < 2; j ++)
+	for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
 	{
 		Has_roi(j);
 		gdst_whole = dst;
@@ -2567,7 +2567,7 @@ TEST_P(Bitwise_or, Mat)
 	double t0=0;
 	double t1=0;
 	double t2=0;	
-	for(int k=0;k<2;k++){
+	for(int k=LOOPROISTART;k<LOOPROIEND;k++){
 		totalcputick=0;
 		totalgputick=0;
 		totalgputick_kernel=0;
@@ -2604,7 +2604,7 @@ TEST_P(Bitwise_or, Mat)
 		cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
 	}
 #else
-	for(int j = 0; j < 2; j ++)
+	for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
 	{
 		Has_roi(j);
 		gdst_whole = dst;
@@ -2628,7 +2628,7 @@ TEST_P(Bitwise_or, Mat_Mask)
 	double t0=0;
 	double t1=0;
 	double t2=0;	
-	for(int k=0;k<2;k++){
+	for(int k=LOOPROISTART;k<LOOPROIEND;k++){
 		totalcputick=0;
 		totalgputick=0;
 		totalgputick_kernel=0;
@@ -2666,7 +2666,7 @@ TEST_P(Bitwise_or, Mat_Mask)
 		cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
 	}
 #else
-	for(int j = 0; j < 2; j ++)
+	for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
 	{
 		Has_roi(j);
 		gdst_whole = dst;
@@ -2689,7 +2689,7 @@ TEST_P(Bitwise_or, Scalar)
 	double t0=0;
 	double t1=0;
 	double t2=0;	
-	for(int k=0;k<2;k++){
+	for(int k=LOOPROISTART;k<LOOPROIEND;k++){
 		totalcputick=0;
 		totalgputick=0;
 		totalgputick_kernel=0;
@@ -2725,7 +2725,7 @@ TEST_P(Bitwise_or, Scalar)
 		cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
 	}
 #else
-	for(int j = 0; j < 2; j ++)
+	for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
 	{
 		Has_roi(j);
 		gdst_whole = dst;
@@ -2747,7 +2747,7 @@ TEST_P(Bitwise_or, Scalar_Mask)
 	double t0=0;
 	double t1=0;
 	double t2=0;	
-	for(int k=0;k<2;k++){
+	for(int k=LOOPROISTART;k<LOOPROIEND;k++){
 		totalcputick=0;
 		totalgputick=0;
 		totalgputick_kernel=0;
@@ -2784,7 +2784,7 @@ TEST_P(Bitwise_or, Scalar_Mask)
 		cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
 	}
 #else
-	for(int j = 0; j < 2; j ++)
+	for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
 	{
 		Has_roi(j);
 		gdst_whole = dst;
@@ -2812,7 +2812,7 @@ TEST_P(Bitwise_xor, Mat)
 	double t0=0;
 	double t1=0;
 	double t2=0;	
-	for(int k=0;k<2;k++){
+	for(int k=LOOPROISTART;k<LOOPROIEND;k++){
 		totalcputick=0;
 		totalgputick=0;
 		totalgputick_kernel=0;
@@ -2849,7 +2849,7 @@ TEST_P(Bitwise_xor, Mat)
 		cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
 	}
 #else
-	for(int j = 0; j < 2; j ++)
+	for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
 	{
 		Has_roi(j);
 		gdst_whole = dst;
@@ -2872,7 +2872,7 @@ TEST_P(Bitwise_xor, Mat_Mask)
 	double t0=0;
 	double t1=0;
 	double t2=0;	
-	for(int k=0;k<2;k++){
+	for(int k=LOOPROISTART;k<LOOPROIEND;k++){
 		totalcputick=0;
 		totalgputick=0;
 		totalgputick_kernel=0;
@@ -2910,7 +2910,7 @@ TEST_P(Bitwise_xor, Mat_Mask)
 		cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
 	}
 #else
-	for(int j = 0; j < 2; j ++)
+	for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
 	{
 		Has_roi(j);
 		gdst_whole = dst;
@@ -2934,7 +2934,7 @@ TEST_P(Bitwise_xor, Scalar)
 	double t0=0;
 	double t1=0;
 	double t2=0;	
-	for(int k=0;k<2;k++){
+	for(int k=LOOPROISTART;k<LOOPROIEND;k++){
 		totalcputick=0;
 		totalgputick=0;
 		totalgputick_kernel=0;
@@ -2970,7 +2970,7 @@ TEST_P(Bitwise_xor, Scalar)
 		cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
 	}
 #else
-	for(int j = 0; j < 2; j ++)
+	for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
 	{
 		Has_roi(j);
 		gdst_whole = dst;
@@ -2992,7 +2992,7 @@ TEST_P(Bitwise_xor, Scalar_Mask)
 	double t0=0;
 	double t1=0;
 	double t2=0;	
-	for(int k=0;k<2;k++){
+	for(int k=LOOPROISTART;k<LOOPROIEND;k++){
 		totalcputick=0;
 		totalgputick=0;
 		totalgputick_kernel=0;
@@ -3029,7 +3029,7 @@ TEST_P(Bitwise_xor, Scalar_Mask)
 		cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
 	}
 #else
-	for(int j = 0; j < 2; j ++)
+	for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
 	{
 		Has_roi(j);
 		gdst_whole = dst;
@@ -3057,7 +3057,7 @@ TEST_P(Bitwise_not, Mat)
 	double t0=0;
 	double t1=0;
 	double t2=0;	
-	for(int k=0;k<2;k++){
+	for(int k=LOOPROISTART;k<LOOPROIEND;k++){
 		totalcputick=0;
 		totalgputick=0;
 		totalgputick_kernel=0;
@@ -3093,7 +3093,7 @@ TEST_P(Bitwise_not, Mat)
 		cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
 	}
 #else
-	for(int j = 0; j < 2; j ++)
+	for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
 	{
 		Has_roi(j);
 		gdst_whole = dst;
@@ -3138,7 +3138,7 @@ PARAM_TEST_CASE ( CompareTestBase, MatType, bool)
 	cv::Mat mask_roi;
 	cv::Mat dst_roi;
 	cv::Mat dst1_roi; //bak
-	std::vector<cv::ocl::Info> oclinfo;
+	//std::vector<cv::ocl::Info> oclinfo;
 	//ocl dst mat for testing
 	cv::ocl::oclMat gdst_whole;
 	cv::ocl::oclMat gdst1_whole; //bak
@@ -3169,11 +3169,11 @@ PARAM_TEST_CASE ( CompareTestBase, MatType, bool)
 		cv::threshold(mask, mask, 0.5, 255., CV_8UC1);
 
 		val = cv::Scalar(rng.uniform(-10.0, 10.0), rng.uniform(-10.0, 10.0), rng.uniform(-10.0, 10.0), rng.uniform(-10.0, 10.0));
-		int devnums = getDevice(oclinfo);
-		CV_Assert(devnums>0);
-		//if you want to use undefault device, set it here
-		//setDevice(oclinfo[0]);
-		setBinpath(CLBINPATH);
+		//int devnums = getDevice(oclinfo);
+		//CV_Assert(devnums>0);
+		////if you want to use undefault device, set it here
+		////setDevice(oclinfo[0]);
+		//setBinpath(CLBINPATH);
 	}
 
 	void Has_roi(int b)
@@ -3235,7 +3235,7 @@ TEST_P(Compare, Mat)
 	}	
 
 	int cmp_codes[] = {CMP_EQ, CMP_GT, CMP_GE, CMP_LT, CMP_LE, CMP_NE};
-	//const char* cmp_str[] = {"CMP_EQ", "CMP_GT", "CMP_GE", "CMP_LT", "CMP_LE", "CMP_NE"};
+	const char* cmp_str[] = {"CMP_EQ", "CMP_GT", "CMP_GE", "CMP_LT", "CMP_LE", "CMP_NE"};
 	int cmp_num = sizeof(cmp_codes) / sizeof(int);
 	for (int i = 0; i < cmp_num; ++i)
 	{
@@ -3247,7 +3247,7 @@ TEST_P(Compare, Mat)
 		double t0=0;
 		double t1=0;
 		double t2=0;	
-		for(int k=1;k<2;k++){
+		for(int k=LOOPROISTART;k<LOOPROIEND;k++){
 			totalcputick=0;
 			totalgputick=0;
 			totalgputick_kernel=0;
@@ -3278,13 +3278,14 @@ TEST_P(Compare, Mat)
 				totalgputick_kernel=t2+totalgputick_kernel;	
 
 			}
+			cout<<cmp_str[i] <<endl;
 			if(k==0){cout<<"no roi\n";}else{cout<<"with roi\n";};
 			cout << "average cpu runtime is  " << totalcputick/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
 			cout << "average gpu runtime is  " << totalgputick/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
 			cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
 		}
 #else
-		for(int j = 0; j < 2; j ++)
+		for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
 		{
 			Has_roi(j);
 			gdst_whole = dst;
@@ -3315,7 +3316,7 @@ TEST_P(Pow, Mat)
 	double t0=0;
 	double t1=0;
 	double t2=0;	
-	for(int k=0;k<2;k++){
+	for(int k=LOOPROISTART;k<LOOPROIEND;k++){
 		totalcputick=0;
 		totalgputick=0;
 		totalgputick_kernel=0;
@@ -3351,7 +3352,7 @@ TEST_P(Pow, Mat)
 		cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
 	}
 #else
-	for(int j = 0; j < 2; j ++)
+	for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
 	{
 		Has_roi(j);
 		double p=4.5;
@@ -3377,7 +3378,7 @@ TEST_P(MagnitudeSqr, Mat)
 	double t0=0;
 	double t1=0;
 	double t2=0;	
-	for(int k=0;k<2;k++){
+	for(int k=LOOPROISTART;k<LOOPROIEND;k++){
 		totalcputick=0;
 		totalgputick=0;
 		totalgputick_kernel=0;
@@ -3418,7 +3419,7 @@ TEST_P(MagnitudeSqr, Mat)
 		cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
 	}
 #else
-	for(int j = 0; j < 2; j ++)
+	for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
 	{
 		Has_roi(j);
 		cv::ocl::oclMat clmat1(mat1),clmat2(mat2),cldst;
@@ -3441,7 +3442,7 @@ TEST_P(AddWeighted, Mat)
     double t0=0;
     double t1=0;
     double t2=0;
-    for(int k=0;k<2;k++){
+    for(int k=LOOPROISTART;k<LOOPROIEND;k++){
 		totalcputick=0;
 		totalgputick=0;
 		totalgputick_kernel=0;
@@ -3482,7 +3483,7 @@ TEST_P(AddWeighted, Mat)
     cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
 }
 #else
-    for(int j = 0; j < 2; j ++)
+    for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
     	{
           Has_roi(j);
     double alpha=2.0,beta=1.0,gama=3.0;   
@@ -3541,7 +3542,7 @@ TEST_P(AddWeighted, Mat)
 	cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
 
 #else
-	//for(int j = 0; j < 2; j ++)
+	//for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
 	//	{
 	double alpha=2.0,beta=1.0,gama=3.0;   
 	cv::ocl::oclMat clmat1(mat1),clmat2(mat2),cldst;
