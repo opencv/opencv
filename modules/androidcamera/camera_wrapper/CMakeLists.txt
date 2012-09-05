@@ -6,24 +6,25 @@ link_directories("${ANDROID_SOURCE_TREE}/out/target/product/generic/system/lib")
 
 if (ANDROID_VERSION VERSION_LESS "4.1")
     INCLUDE_DIRECTORIES(BEFORE
-	${ANDROID_SOURCE_TREE}
-	${ANDROID_SOURCE_TREE}/frameworks/base/include/ui
-	${ANDROID_SOURCE_TREE}/frameworks/base/include/surfaceflinger
-	${ANDROID_SOURCE_TREE}/frameworks/base/include/camera
-	${ANDROID_SOURCE_TREE}/frameworks/base/include/media
-	${ANDROID_SOURCE_TREE}/frameworks/base/include
-	${ANDROID_SOURCE_TREE}/system/core/include
-	${ANDROID_SOURCE_TREE}/hardware/libhardware/include
-	${ANDROID_SOURCE_TREE}/frameworks/base/native/include
-	)
+    ${ANDROID_SOURCE_TREE}
+    ${ANDROID_SOURCE_TREE}/frameworks/base/include/ui
+    ${ANDROID_SOURCE_TREE}/frameworks/base/include/surfaceflinger
+    ${ANDROID_SOURCE_TREE}/frameworks/base/include/camera
+    ${ANDROID_SOURCE_TREE}/frameworks/base/include/media
+    ${ANDROID_SOURCE_TREE}/frameworks/base/include
+    ${ANDROID_SOURCE_TREE}/system/core/include
+    ${ANDROID_SOURCE_TREE}/hardware/libhardware/include
+    ${ANDROID_SOURCE_TREE}/frameworks/base/native/include
+    ${ANDROID_SOURCE_TREE}/frameworks/base/opengl/include
+    )
 else()
     INCLUDE_DIRECTORIES(BEFORE
-	${ANDROID_SOURCE_TREE}
-	${ANDROID_SOURCE_TREE}/frameworks/native/include
-	${ANDROID_SOURCE_TREE}/frameworks/av/include
-	${ANDROID_SOURCE_TREE}/system/core/include
-	${ANDROID_SOURCE_TREE}/hardware/libhardware/include
-	)
+    ${ANDROID_SOURCE_TREE}
+    ${ANDROID_SOURCE_TREE}/frameworks/native/include
+    ${ANDROID_SOURCE_TREE}/frameworks/av/include
+    ${ANDROID_SOURCE_TREE}/system/core/include
+    ${ANDROID_SOURCE_TREE}/hardware/libhardware/include
+    )
 endif()
 
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH FALSE)
@@ -33,8 +34,8 @@ SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_RELEASE}")
 SET(CMAKE_C_FLAGS_RELEASE "")
 SET(CMAKE_CXX_FLAGS_RELEASE "")
 
-string(REPLACE "-O3" "" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
 string(REPLACE "-O3" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+string(REPLACE "-frtti" "-fno-rtti" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}") # because Android libraries are built without rtti
 
 SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Os -fno-strict-aliasing -finline-limit=64 -fuse-cxa-atexit" )
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Os -fno-strict-aliasing -finline-limit=64 -fuse-cxa-atexit")
