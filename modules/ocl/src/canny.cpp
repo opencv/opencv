@@ -66,7 +66,7 @@ namespace cv
     }
 }
 
-cv::ocl::CannyBuf::CannyBuf(const oclMat& dx_, const oclMat& dy_) : dx(dx_), dy(dy_)
+cv::ocl::CannyBuf::CannyBuf(const oclMat& dx_, const oclMat& dy_) : dx(dx_), dy(dy_), counter(NULL)
 {
     CV_Assert(dx_.type() == CV_32SC1 && dy_.type() == CV_32SC1 && dx_.size() == dy_.size());
 
@@ -102,6 +102,10 @@ void cv::ocl::CannyBuf::create(const Size& image_size, int apperture_size)
 
     float counter_f [1] = { 0 };
     int err = 0;
+    if(counter)
+    {
+        openCLFree(counter);
+    }
     counter = clCreateBuffer( Context::getContext()->impl->clContext, CL_MEM_COPY_HOST_PTR, sizeof(float), counter_f, &err );
     openCLSafeCall(err);
 }
@@ -322,15 +326,11 @@ void canny::calcMap_gpu(oclMat& dx, oclMat& dy, oclMat& mag, oclMat& map, int ro
     args.push_back( make_pair( sizeof(cl_int), (void *)&map.step));
     args.push_back( make_pair( sizeof(cl_int), (void *)&map.offset));
 
-#if CALCMAP_FIXED
+
     size_t globalThreads[3] = {cols, rows, 1};
     string kernelName = "calcMap";
     size_t localThreads[3]  = {16, 16, 1};
-#else
-    size_t globalThreads[3] = {cols, rows, 1};
-    string kernelName = "calcMap_2";
-    size_t localThreads[3]  = {256, 1, 1};
-#endif
+
     openCLExecuteKernel(clCxt, &imgproc_canny, kernelName, globalThreads, localThreads, args, -1, -1);
 }
 
