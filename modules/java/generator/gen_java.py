@@ -987,14 +987,14 @@ extern "C" {
             msg = "// Return type '%s' is not supported, skipping the function\n\n" % fi.ctype
             self.skipped_func_list.append(c_decl + "\n" + msg)
             j_code.write( " "*4 + msg )
-            print "SKIP:", c_decl, "\n\tdue to RET type", fi.ctype
+            print "SKIP:", c_decl.strip(), "\t due to RET type", fi.ctype
             return
         for a in fi.args:
             if a.ctype not in type_dict:
                 msg = "// Unknown type '%s' (%s), skipping the function\n\n" % (a.ctype, a.out or "I")
                 self.skipped_func_list.append(c_decl + "\n" + msg)
                 j_code.write( " "*4 + msg )
-                print "SKIP:", c_decl, "\n\tdue to ARG type", a.ctype, "/" + (a.out or "I")
+                print "SKIP:", c_decl.strip(), "\t due to ARG type", a.ctype, "/" + (a.out or "I")
                 return
 
         self.ported_func_list.append(c_decl)

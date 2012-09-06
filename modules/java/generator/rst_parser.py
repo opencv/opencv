@@ -612,7 +612,6 @@ class RstParser(object):
         return s
 
     def printSummary(self):
-        print
         print "RST Parser Summary:"
         print "  Total sections:   %s" % self.sections_total
         print "  Skipped sections: %s" % self.sections_skipped
