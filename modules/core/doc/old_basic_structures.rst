@@ -826,7 +826,7 @@ Returns one of array diagonals.
 The function returns the header, corresponding to a specified diagonal of the input array.
 
 GetDims
----------
+-------
 Return number of array dimensions
 
 .. ocv:cfunction:: int cvGetDims(const CvArr* arr, int* sizes=NULL)
@@ -847,7 +847,7 @@ The function returns the array dimensionality and the array of dimension sizes. 
         total *= sizes[i];
 
 GetDimSize
-------------
+----------
 Returns array size along the specified dimension.
 
 .. ocv:cfunction:: int cvGetDimSize(const CvArr* arr, int index)
