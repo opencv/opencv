@@ -136,8 +136,6 @@ Additionally, we have to manually add framework dependencies of the opencv frame
 
 * CoreVideo
 
-* CoreAnimation
-
 * QuartzCore
 
 * UIKit
