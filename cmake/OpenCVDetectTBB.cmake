@@ -1,4 +1,4 @@
-if(ANDROID)
+if(ANDROID AND NOT MIPS)
   add_subdirectory("${OpenCV_SOURCE_DIR}/3rdparty/tbb")
   include_directories(SYSTEM ${TBB_INCLUDE_DIRS})
   set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} tbb)
@@ -21,11 +21,11 @@ elseif(UNIX AND NOT APPLE)
 endif()
 
 if(NOT HAVE_TBB)
-  set(TBB_DEFAULT_INCLUDE_DIRS 
-    "/opt/intel/tbb" "/usr/local/include" "/usr/include" 
-    "C:/Program Files/Intel/TBB" "C:/Program Files (x86)/Intel/TBB" 
-    "C:/Program Files (x86)/tbb/include" 
-    "C:/Program Files (x86)/tbb/include" 
+  set(TBB_DEFAULT_INCLUDE_DIRS
+    "/opt/intel/tbb" "/usr/local/include" "/usr/include"
+    "C:/Program Files/Intel/TBB" "C:/Program Files (x86)/Intel/TBB"
+    "C:/Program Files (x86)/tbb/include"
+    "C:/Program Files (x86)/tbb/include"
     "${CMAKE_INSTALL_PREFIX}/include")
 
   find_path(TBB_INCLUDE_DIRS "tbb/tbb.h" PATHS ${TBB_INCLUDE_DIR} ${TBB_DEFAULT_INCLUDE_DIRS} DOC "The path to TBB headers")
