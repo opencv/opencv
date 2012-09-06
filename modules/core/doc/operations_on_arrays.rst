@@ -545,7 +545,7 @@ Performs the per-element comparison of two arrays or an array and scalar value.
             * **CMP_LE** ``src1`` is less than or equal to ``src2``.
             * **CMP_NE** ``src1`` is unequal to ``src2``.
 
-    :param cmp_op: a flag, that specifies correspondence between the arrays (specific to C syntax; for possible values see 'cmpop' above).
+    :param cmp_op: a flag, that specifies correspondence between the arrays (specific to C syntax; for possible values see 'cmpop above).
 
 The function compares:
 
@@ -1004,7 +1004,7 @@ All of the above improvements have been implemented in :ocv:func:`matchTemplate`
 
 
 divide
-------
+----------
 Performs per-element division of two arrays or a scalar by an array.
 
 .. ocv:function:: void divide(InputArray src1, InputArray src2, OutputArray dst, double scale=1, int dtype=-1)
@@ -1066,8 +1066,6 @@ Returns the determinant of a square floating-point matrix.
 
     :param mtx: input matrix that must have ``CV_32FC1`` or ``CV_64FC1`` type and square size.
 
-    :param mat: input matrix (C-specific; see 'mtx' for details).
-
 The function ``determinant`` calculates and returns the determinant of the specified matrix. For small matrices ( ``mtx.cols=mtx.rows<=3`` ),
 the direct method is used. For larger matrices, the function uses LU factorization with partial pivoting.
 
@@ -1099,15 +1097,9 @@ Calculates eigenvalues and eigenvectors of a symmetric matrix.
 
     :param src: input matrix that must have ``CV_32FC1`` or ``CV_64FC1`` type, square size and be symmetrical (``src`` :sup:`T` == ``src``).
 
-    :param mat: input matrix (see 'src' above for details).
-
     :param eigenvalues: output vector of eigenvalues of the same type as ``src``; the eigenvalues are stored in the descending order.
 
-    :param evals: output vector of eigenvalues (see 'eigenvalies' above for details).
-
     :param eigenvectors: output matrix of eigenvectors; it has the same size and type as ``src``; the eigenvectors are stored as subsequent matrix rows, in the same order as the corresponding eigenvalues.
-
-    :param evects: output matrix of eigenvectors (see 'eigenvectors' above for details).
 
     :param lowindex: optional index of largest eigenvalue/-vector to calculate; the parameter is ignored in the current implementation.
 
@@ -1204,7 +1196,7 @@ To insert a channel to a new-style matrix, use
 
 
 flip
-----
+--------
 Flips a 2D array around vertical, horizontal, or both axes.
 
 .. ocv:function:: void flip(InputArray src, OutputArray dst, int flipCode)
@@ -1219,9 +1211,7 @@ Flips a 2D array around vertical, horizontal, or both axes.
 
     :param dst: output array of the same size and type as ``src``.
 
-    :param flipCode: a flag, that specifies the mode of the flip; 0 means flipping around the x-axis and positive value (for example, 1) means flipping around y-axis. Negative value (for example, -1) means flipping around both axes (see the discussion below for the formulas).
-
-    :param flip_mode: a flag, that specifies the mode of the flip (see 'flipCode' above for details);
+    :param flipCode: a flag to specify how to flip the array; 0 means flipping around the x-axis and positive value (for example, 1) means flipping around y-axis. Negative value (for example, -1) means flipping around both axes (see the discussion below for the formulas).
 
 The function ``flip`` flips the array in one of three different ways (row and column indices are 0-based):
 
@@ -1282,8 +1272,6 @@ Performs generalized matrix multiplication.
             * **GEMM_1_T** transposes ``src1``.
             * **GEMM_2_T** transposes ``src2``.
             * **GEMM_3_T** transposes ``src3``.
-
-    :param tABC: operation flags (see 'flags' above for details).
 
 The function performs generalized matrix multiplication similar to the ``gemm`` functions in BLAS level 3. For example, ``gemm(src1, src2, alpha, src3, beta, dst, GEMM_1_T + GEMM_3_T)`` corresponds to
 
@@ -1346,8 +1334,6 @@ Returns the optimal DFT size for a given vector size.
 .. ocv:pyoldfunction:: cv.GetOptimalDFTSize(size0)-> int
 
     :param vecsize: vector size.
-
-    :param size0: vector size (see 'vecsize' above for details).
 
 DFT performance is not a monotonic function of a vector size. Therefore, when you calculate convolution of two arrays or perform the spectral analysis of an array, it usually makes sense to pad the input data with zeros to get a bit larger array that can be transformed much faster than the original one.
 Arrays whose size is a power-of-two (2, 4, 8, 16, 32, ...) are the fastest to process. Though, the arrays whose size is a product of 2's, 3's, and 5's (for example, 300 = 5*5*3*2*2) are also processed quite efficiently.
@@ -1436,11 +1422,7 @@ Checks if array elements lie between the elements of two other arrays.
 
     :param lowerb: inclusive lower boundary array or a scalar.
 
-    :param lower: inclusive lower boundary array or a scalar (see 'lowerb' above).
-
     :param upperb: inclusive upper boundary array or a scalar.
-
-    :param upper: inclusive upper boundary array or a scalar (see 'upperb' above).
 
     :param dst: output array of the same size as ``src`` and ``CV_8U`` type.
 
@@ -1488,8 +1470,6 @@ Finds the inverse or pseudo-inverse of a matrix.
             * **DECOMP_SVD** singular value decomposition (SVD) method.
 
             * **DECOMP_CHOLESKY** Cholesky decomposition; the matrix must be symmetrical and positively defined.
-
-    :param method: inversion method (see 'flags' above for possible values).
 
 The function ``invert`` inverts the matrix ``src`` and stores the result in ``dst`` .
 When the matrix ``src`` is singular or non-square, the function calculates the pseudo-inverse matrix (the ``dst`` matrix) so that ``norm(src*dst - I)`` is minimal, where I is an identity matrix.
@@ -1622,15 +1602,9 @@ Calculates the Mahalanobis distance between two vectors.
 
     :param vec1: first 1D input vector.
 
-    :param v1: first 1D input vector (see 'vec1' above).
-
     :param vec2: second 1D input vector.
 
-    :param v2: first 1D input vector (see 'vec2' above).
-
     :param icovar: inverse covariance matrix.
-
-    :param mat: inverse covariance matrix (see 'icovar' above).
 
 The function ``Mahalanobis`` calculates and returns the weighted distance between two vectors:
 
@@ -1669,9 +1643,7 @@ Calculates per-element maximum of two arrays or an array and a scalar.
 
     :param src1: first input array.
 
-    :param src2: second input array of the same size and type as ``src1``.
-
-    :param src: single input array.
+    :param src2: second input array of the same size and type as  ``src1`` .
 
     :param value: real scalar value.
 
@@ -1715,9 +1687,7 @@ Calculates an average (mean) of array elements.
 
 .. ocv:pyoldfunction:: cv.Avg(arr, mask=None) -> scalar
 
-    :param src: input array that should have from 1 to 4 channels so that the result can be stored in :ocv:class:`Scalar_`.
-
-    :param arr: input array (see 'src' above).
+    :param src: input array that should have from 1 to 4 channels so that the result can be stored in :ocv:class:`Scalar_` .
 
     :param mask: optional operation mask.
 
@@ -1752,13 +1722,9 @@ Calculates a mean and standard deviation of array elements.
 
     :param src: input array that should have from 1 to 4 channels so that the results can be stored in  :ocv:class:`Scalar_` 's.
 
-    :param arr: input array (see 'src' above).
+    :param mean: output parameter: calculated mean value.
 
-    :param mean: calculated mean value.
-
-    :param stddev: calculateded standard deviation.
-
-    :param std_dev: calculateded standard deviation (see 'stddev' above).
+    :param stddev: output parameter: calculateded standard deviation.
 
     :param mask: optional operation mask.
 
@@ -1796,14 +1762,6 @@ Creates one multichannel array out of several single-channel ones.
 .. ocv:pyoldfunction:: cv.Merge(src0, src1, src2, src3, dst)-> None
 
     :param mv: input array or vector of matrices to be merged; all the matrices in ``mv`` must have the same size and the same depth.
-
-    :param src0: first input array or vector of matrix to be merged.
-
-    :param src1: second input array or vector of matrix to be merged.
-
-    :param src2: third input array or vector of matrix to be merged.
-
-    :param src3: fourth input array or vector of matrix to be merged.
 
     :param count: number of input matrices when ``mv`` is a plain C array; it must be greater than zero.
 
@@ -1849,8 +1807,6 @@ Calculates per-element minimum of two arrays or an array and a scalar.
     :param src1: first input array.
 
     :param src2: second input array of the same size and type as ``src1``.
-
-    :param src: single input array.
 
     :param value: real scalar value.
 
@@ -1930,23 +1886,13 @@ Finds the global minimum and maximum in an array.
 
     :param src: input single-channel array.
 
-    :param arr: input single-channel array (see 'src' above).
-
     :param minVal: pointer to the returned minimum value;  ``NULL`` is used if not required.
-
-    :param min_val: pointer to the returned minimum value (see 'minVal' above).
 
     :param maxVal: pointer to the returned maximum value;  ``NULL`` is used if not required.
 
-    :param max_val: pointer to the returned minimum value (see 'maxVal' above).
-
     :param minLoc: pointer to the returned minimum location (in 2D case);  ``NULL`` is used if not required.
 
-    :param min_loc: pointer to the returned minimum value (see 'minLoc' above).
-
     :param maxLoc: pointer to the returned maximum location (in 2D case);  ``NULL`` is used if not required.
-
-    :param max_loc: pointer to the returned minimum value (see 'maxLoc' above).
 
     :param mask: optional mask used to select a sub-array.
 
@@ -1990,21 +1936,13 @@ Copies specified channels from input arrays to the specified channels of output 
 
     :param nsrcs: number of matrices in ``src``.
 
-    :param src_count: number of matrices in ``src`` (see 'nsrcs' above).
-
     :param dst: output array or vector of matrices; all the matrices *must be allocated*; their size and depth must be the same as in ``src[0]``.
 
     :param ndsts: number of matrices in ``dst``.
 
-    :param dst_count: number of matrices in ``dst`` (see 'ndsts' above).
-
     :param fromTo: array of index pairs specifying which channels are copied and where; ``fromTo[k*2]`` is a 0-based index of the input channel in ``src``, ``fromTo[k*2+1]`` is an index of the output channel in ``dst``; the continuous channel numbering is used: the first input image channels are indexed from ``0`` to ``src[0].channels()-1``, the second input image channels are indexed from ``src[0].channels()`` to ``src[0].channels() + src[1].channels()-1``,  and so on, the same scheme is used for the output image channels; as a special case, when ``fromTo[k*2]`` is negative, the corresponding output channel is filled with zero .
 
-    :param from_to: array of index pairs specifying which channels are copied and where (see 'fromTo' above for details).
-
     :param npairs: number of index pairs in ``fromTo``.
-
-    :param pair_count: number of index pairs in ``fromTo`` (see 'npairs' above).
 
 The functions ``mixChannels`` provide an advanced mechanism for shuffling image channels.
 
@@ -2050,15 +1988,9 @@ Performs the per-element multiplication of two Fourier spectrums.
 
     :param src1: first input array.
 
-    :param a: first input array (see 'src1' above).
+    :param src2: second input array of the same size and type as ``src1`` .
 
-    :param src2: second input array of the same size and type as ``src1``.
-
-    :param b: second input array (see 'src2' above).
-
-    :param dst: output array of the same size and type as ``src1``.
-
-    :param c: output array (see 'dst' above).
+    :param dst: output array of the same size and type as ``src1`` .
 
     :param flags: operation flags; currently, the only supported flag is ``DFT_ROWS``, which indicates that each row of ``src1`` and ``src2`` is an independent 1D Fourier spectrum.
 
@@ -2091,8 +2023,6 @@ Calculates the per-element scaled product of two arrays.
     :param dst: output array of the same size and type as ``src1``.
 
     :param scale: optional scale factor.
-
-    :param dtype: Optional type of the output matrix.
 
 The function ``multiply`` calculates the per-element product of two arrays:
 
@@ -2140,15 +2070,13 @@ Calculates the product of a matrix and its transposition.
 
     :param dst: output square matrix.
 
-    :param aTa: a flag, specifying the multiplication ordering (see the description below).
-
-    :param order: a flag, specifying the multiplication ordering (see 'aTa' above).
+    :param aTa: Flag specifying the multiplication ordering. See the description below.
 
     :param delta: Optional delta matrix subtracted from  ``src``  before the multiplication. When the matrix is empty ( ``delta=noArray()`` ), it is assumed to be zero, that is, nothing is subtracted. If it has the same size as  ``src`` , it is simply subtracted. Otherwise, it is "repeated" (see  :ocv:func:`repeat` ) to cover the full  ``src``  and then subtracted. Type of the delta matrix, when it is not empty, must be the same as the type of created output matrix. See the  ``dtype``  parameter description below.
 
     :param scale: Optional scale factor for the matrix product.
 
-    :param dtype: Optional type of the output matrix. When it is negative, the output matrix will have the same type as  ``src`` . Otherwise, it will be ``type=CV_MAT_DEPTH(dtype)`` that should be either  ``CV_32F`` or ``CV_64F``.
+    :param dtype: Optional type of the output matrix. When it is negative, the output matrix will have the same type as  ``src`` . Otherwise, it will be ``type=CV_MAT_DEPTH(dtype)`` that should be either  ``CV_32F``  or  ``CV_64F`` .
 
 The function ``mulTransposed`` calculates the product of ``src`` and its transposition:
 
@@ -2192,17 +2120,9 @@ Calculates an absolute array norm, an absolute difference norm, or a relative di
 
     :param src1: first input array.
 
-    :param: arr1: first input array (see 'src1' above).
-
     :param src2: second input array of the same size and the same type as ``src1``.
 
-    :param: arr2: second input array (see 'src2' above).
-
-    :param src: single input array.
-
     :param normType: type of the norm (see the details below).
-
-    :param norm_type: type of the norm (see 'normType' above).
 
     :param mask: optional operation mask; it must have the same size as ``src1`` and ``CV_8UC1`` type.
 
@@ -2257,8 +2177,6 @@ Normalizes the norm or value range of an array.
     :param beta: upper range boundary in case of the range normalization; it is not used for the norm normalization.
 
     :param normType: normalization type (see the details below).
-
-    :param norm_type: normalization type (see 'normType' above).
 
     :param dtype: when negative, the output array has the same type as ``src``; otherwise, it has the same number of channels as  ``src`` and the depth ``=CV_MAT_DEPTH(dtype)``.
 
@@ -2349,7 +2267,7 @@ The sample below is the function that takes two matrices. The first function sto
 
 
 PCA::PCA
---------
+------------
 PCA constructors
 
 .. ocv:function:: PCA::PCA()
@@ -2461,8 +2379,6 @@ Performs the perspective matrix transformation of vectors.
 
     :param m: ``3x3`` or ``4x4`` floating-point transformation matrix.
 
-    :param mat: ``3x3`` or ``4x4`` floating-point transformation matrix (see 'm' above).
-
 The function ``perspectiveTransform`` transforms every element of ``src`` by treating it as a 2D or 3D vector, in the following way:
 
 .. math::
@@ -2540,8 +2456,6 @@ Calculates x and y coordinates of 2D vectors from their magnitude and angle.
     :param y: output array of y-coordinates of 2D vectors; it has the same size and type as ``angle``.
 
     :param angleInDegrees: when true, the input angles are measured in degrees, otherwise, they are measured in radians.
-
-    :param angles_in_degrees: when true, the input angles are measured in degrees, otherwise, they are measured in radians (see 'angleInDegrees' above).
 
 The function ``polarToCart`` calculates the Cartesian coordinates of each 2D vector represented by the corresponding elements of ``magnitude`` and ``angle`` :
 
@@ -2962,11 +2876,7 @@ Initializes a scaled identity matrix.
 
     :param mtx: matrix to initialize (not necessarily square).
 
-    :param mat: matrix to initialize (see 'mtx' above).
-
-    :param value: scalar value to assign to diagonal elements.
-
-    :param s: scalar value to assign to diagonal elements (see 'value' above).
+    :param value: value to assign to diagonal elements.
 
 The function
 :ocv:func:`setIdentity` initializes a scaled identity matrix:
@@ -3020,9 +2930,7 @@ Solves one or more linear systems or least-squares problems.
 
             * **DECOMP_QR** QR factorization; the system can be over-defined and/or the matrix ``src1`` can be singular.
 
-            * **DECOMP_NORMAL** while all the previous flags are mutually exclusive, this flag can be used together with any of the previous; it means that the normal equations  :math:`\texttt{src1}^T\cdot\texttt{src1}\cdot\texttt{dst}=\texttt{src1}^T\texttt{src2}`  are solved instead of the original system  :math:`\texttt{src1}\cdot\texttt{dst}=\texttt{src2}`.
-
-    :param method: solution (matrix inversion) method.
+            * **DECOMP_NORMAL** while all the previous flags are mutually exclusive, this flag can be used together with any of the previous; it means that the normal equations  :math:`\texttt{src1}^T\cdot\texttt{src1}\cdot\texttt{dst}=\texttt{src1}^T\texttt{src2}`  are solved instead of the original system  :math:`\texttt{src1}\cdot\texttt{dst}=\texttt{src2}` .
 
 The function ``solve`` solves a linear system or least-squares problem (the latter is possible with SVD or QR methods, or by specifying the flag ``DECOMP_NORMAL`` ):
 
@@ -3044,7 +2952,7 @@ If ``DECOMP_LU`` or ``DECOMP_CHOLESKY`` method is used, the function returns 1 i
 
 
 solveCubic
-----------
+--------------
 Finds the real roots of a cubic equation.
 
 .. ocv:function:: int solveCubic( InputArray coeffs, OutputArray roots )
@@ -3184,19 +3092,7 @@ Divides a multi-channel array into several single-channel arrays.
 
     :param src: input multi-channel array.
 
-    :param m: input multi-channel array (see 'src' above).
-
-    :param dst0: first output array.
-
-    :param dst1: second output array.
-
-    :param dst2: third output array.
-
-    :param dst3: fourth output array.
-
     :param mv: output array or vector of arrays; in the first variant of the function the number of arrays must match ``src.channels()``; the arrays themselves are reallocated, if needed.
-
-    :param mvbegin: output array or vector of arrays (see 'mv' above for details).
 
 The functions ``split`` split a multi-channel array into separate single-channel arrays:
 
@@ -3258,8 +3154,6 @@ Calculates the per-element difference between two arrays or array and a scalar.
     :param src1: first input array or a scalar.
 
     :param src2: second input array or a scalar.
-
-    :param src: single input array.
 
     :param dst: output array of the same size and the same number of channels as the input array.
 
@@ -3479,8 +3373,6 @@ Calculates the sum of array elements.
 
     :param arr: input array that must have from 1 to 4 channels.
 
-    :param src: input array that must have from 1 to 4 channels (see 'arr' above).
-
 The functions ``sum`` calculate and return the sum of array elements, independently for each channel.
 
 .. seealso::
@@ -3526,8 +3418,6 @@ Returns the trace of a matrix.
 
     :param mat: input matrix.
 
-    :param mtx: input matrix (see 'mat' above).
-
 The function ``trace`` returns the sum of the diagonal elements of the matrix ``mtx`` .
 
 .. math::
@@ -3553,8 +3443,6 @@ Performs the matrix transformation of every array element.
     :param dst: output array of the same size and depth as ``src``; it has as many channels as ``m.rows``.
 
     :param m: transformation ``2x2`` or ``2x3`` floating-point matrix.
-
-    :param transmat: transformation ``2x2`` or ``2x3`` floating-point matrix (see 'm' above).
 
     :param shiftvec: optional translation vector (when ``m`` is ``2x2``)
 
