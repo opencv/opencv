@@ -73,20 +73,32 @@ void printCudaInfo()
 
 int main(int argc, char** argv)
 {
-    CommandLineParser cmd(argc, (const char**) argv,
-        "{ print_info_only | print_info_only | false | Print information about system and exit }"
-        "{ device | device | 0 | Device on which tests will be executed }"
-        "{ cpu | cpu | false | Run tests on cpu }"
-    );
+    const std::string keys =
+            "{ h help ? |   | Print help}"
+            "{ i info   |   | Print information about system and exit }"
+            "{ device   | 0 | Device on which tests will be executed }"
+            "{ cpu      |   | Run tests on cpu }"
+            ;
+
+    CommandLineParser cmd(argc, (const char**) argv, keys);
+
+    if (cmd.has("help"))
+    {
+        cmd.printMessage();
+        return 0;
+    }
 
     printOsInfo();
     printCudaInfo();
 
-    if (cmd.get<bool>("print_info_only"))
+
+    if (cmd.has("info"))
+    {
         return 0;
+    }
 
     int device = cmd.get<int>("device");
-    bool cpu = cmd.get<bool>("cpu");
+    bool cpu   = cmd.has("cpu");
 #ifndef HAVE_CUDA
     cpu = true;
 #endif

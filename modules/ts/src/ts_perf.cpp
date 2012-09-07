@@ -10,24 +10,23 @@ int64 TestBase::timeLimitDefault = 0;
 unsigned int TestBase::iterationsLimitDefault = (unsigned int)(-1);
 int64 TestBase::_timeadjustment = 0;
 
-const char *command_line_keys =
-{
-    "{   |perf_max_outliers   |8        |percent of allowed outliers}"
-    "{   |perf_min_samples    |10       |minimal required numer of samples}"
-    "{   |perf_force_samples  |100      |force set maximum number of samples for all tests}"
-    "{   |perf_seed           |809564   |seed for random numbers generator}"
-    "{   |perf_tbb_nthreads   |-1       |if TBB is enabled, the number of TBB threads}"
-    "{   |perf_write_sanity   |false    |allow to create new records for sanity checks}"
+const std::string command_line_keys =
+    "{   perf_max_outliers   |8        |percent of allowed outliers}"
+    "{   perf_min_samples    |10       |minimal required numer of samples}"
+    "{   perf_force_samples  |100      |force set maximum number of samples for all tests}"
+    "{   perf_seed           |809564   |seed for random numbers generator}"
+    "{   perf_tbb_nthreads   |-1       |if TBB is enabled, the number of TBB threads}"
+    "{   perf_write_sanity   |         |allow to create new records for sanity checks}"
     #ifdef ANDROID
-    "{   |perf_time_limit     |6.0      |default time limit for a single test (in seconds)}"
-    "{   |perf_affinity_mask  |0        |set affinity mask for the main thread}"
-    "{   |perf_log_power_checkpoints  |false    |additional xml logging for power measurement}"
+    "{   perf_time_limit     |6.0      |default time limit for a single test (in seconds)}"
+    "{   perf_affinity_mask  |0        |set affinity mask for the main thread}"
+    "{   perf_log_power_checkpoints  | |additional xml logging for power measurement}"
     #else
-    "{   |perf_time_limit     |3.0      |default time limit for a single test (in seconds)}"
+    "{   perf_time_limit     |3.0      |default time limit for a single test (in seconds)}"
     #endif
-    "{   |perf_max_deviation  |1.0      |}"
-    "{h  |help                |false    |}"
-};
+    "{   perf_max_deviation  |1.0      |}"
+    "{   help h              |         |print help info}"
+;
 
 static double       param_max_outliers;
 static double       param_max_deviation;
@@ -526,23 +525,28 @@ performance_metrics::performance_metrics()
 void TestBase::Init(int argc, const char* const argv[])
 {
     cv::CommandLineParser args(argc, argv, command_line_keys);
-    param_max_outliers = std::min(100., std::max(0., args.get<double>("perf_max_outliers")));
-    param_min_samples  = std::max(1u, args.get<unsigned int>("perf_min_samples"));
+    if (args.has("help"))
+    {
+        args.printMessage();
+        return;
+    }
+
+    param_max_outliers  = std::min(100., std::max(0., args.get<double>("perf_max_outliers")));
+    param_min_samples   = std::max(1u, args.get<unsigned int>("perf_min_samples"));
     param_max_deviation = std::max(0., args.get<double>("perf_max_deviation"));
-    param_seed = args.get<uint64>("perf_seed");
-    param_time_limit = std::max(0., args.get<double>("perf_time_limit"));
+    param_seed          = args.get<unsigned long long>("perf_seed");
+    param_time_limit    = std::max(0., args.get<double>("perf_time_limit"));
     param_force_samples = args.get<unsigned int>("perf_force_samples");
-    param_write_sanity = args.get<bool>("perf_write_sanity");
+    param_write_sanity  = args.has("perf_write_sanity");
     param_tbb_nthreads  = args.get<int>("perf_tbb_nthreads");
 #ifdef ANDROID
-    param_affinity_mask = args.get<int>("perf_affinity_mask");
-    log_power_checkpoints = args.get<bool>("perf_log_power_checkpoints");
+    param_affinity_mask   = args.get<int>("perf_affinity_mask");
+    log_power_checkpoints = args.has("perf_log_power_checkpoints");
 #endif
 
-    if (args.get<bool>("help"))
+    if (!args.check())
     {
-        args.printParams();
-        printf("\n\n");
+        args.printErrors();
         return;
     }
 
