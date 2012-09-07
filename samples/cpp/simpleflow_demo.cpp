@@ -131,7 +131,7 @@ static bool readOpticalFlowFromFile(FILE* file, Mat& flow) {
 }
 
 static bool isFlowCorrect(float u) {
-  return !isnan(u) && (fabs(u) < 1e9);
+  return !cvIsNaN(u) && (fabs(u) < 1e9);
 }
 
 static float calc_rmse(Mat flow1, Mat flow2) {
