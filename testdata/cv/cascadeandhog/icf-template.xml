@@ -1,0 +1,103 @@
+<?xml version="1.0"?>
+<opencv_storage>
+	<cascade>
+		<stageType>BOOST</stageType>
+		<featureType>ICF</featureType>
+		<octavesNum>5</octavesNum>
+		<origObjWidth>64</origObjWidth>
+		<origObjHeight>128</origObjHeight>
+		<stageTreeType>TH2</stageTreeType>
+		<octaves>
+		<!-- octave 0.5 -->
+		<_>
+			<scale>0.5</scale>
+			<stageNum>3</stageNum>
+			<stages>
+				<!-- stage 0 -->
+				<_>
+					<stageThreshold>0.0</stageThreshold>
+					<weight>1.71</weight>
+					<features>
+						<_>
+							<threshold>0.31</threshold>
+							<rect>16 0 12 12</rect>
+						</_>
+						<_>
+							<threshold>0.32</threshold>
+							<rect>16 0 12 12</rect>
+						</_>
+						<_>
+							<threshold>0.33</threshold>
+							<rect>16 0 12 12</rect>
+						</_>
+					</features>
+				</_>
+				<!-- stage 1 -->
+				<_>
+					<stageThreshold>0.1</stageThreshold>
+					<weight>1.71</weight>
+					<features>
+						<_>
+							<threshold>0.31</threshold>
+							<rect>16 0 12 12</rect>
+						</_>
+						<_>
+							<threshold>0.32</threshold>
+							<rect>16 0 12 12</rect>
+						</_>
+						<_>
+							<threshold>0.33</threshold>
+							<rect>16 0 12 12</rect>
+						</_>
+					</features>
+				</_>
+				<!-- stage 2 -->
+				<_>
+					<stageThreshold>0.2</stageThreshold>
+					<weight>1.71</weight>
+					<features>
+						<_>
+							<threshold>0.31</threshold>
+							<rect>16 0 12 12</rect>
+						</_>
+						<_>
+							<threshold>0.32</threshold>
+							<rect>16 0 12 12</rect>
+						</_>
+						<_>
+							<threshold>0.33</threshold>
+							<rect>16 0 12 12</rect>
+						</_>
+					</features>
+				</_>
+			</stages>
+		</_>
+		<!-- octave 1.0 -->
+		<_>
+			<scale>1.0</scale>
+			<stageNum>1</stageNum>
+			<stages>
+				<!-- stage 0 -->
+				<_>
+					<stageThreshold>1.0</stageThreshold>
+					<weight>1.71</weight>
+					<features>
+						<_>
+							<threshold>0.31</threshold>
+							<rect>16 0 12 12</rect>
+						</_>
+						<_>
+							<threshold>0.32</threshold>
+							<rect>16 0 12 12</rect>
+						</_>
+						<_>
+							<threshold>0.33</threshold>
+							<rect>16 0 12 12</rect>
+						</_>
+					</features>
+				</_>
+			</stages>
+		</_>
+		</octaves>
+	</cascade>
+</opencv_storage>
