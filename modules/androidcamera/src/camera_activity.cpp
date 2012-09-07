@@ -209,7 +209,7 @@ CameraActivity::ErrorCode CameraWrapperConnector::connectToLib()
 
     res = getSymbolFromLib(libHandle, SET_CAMERA_PROPERTY_SYMBOL_NAME, (void**)(&pSetProp_C));
     if (res) return res;
-    \
+
     res = getSymbolFromLib(libHandle, APPLY_CAMERA_PROPERTIES_SYMBOL_NAME, (void**)(&pApplyProp_C));
     if (res) return res;
 
@@ -391,16 +391,14 @@ void CameraActivity::applyProperties()
 
 int CameraActivity::getFrameWidth()
 {
-    if (frameWidth < 0)
-        frameWidth = getProperty(ANDROID_CAMERA_PROPERTY_FRAMEWIDTH);
-    return frameWidth;
+    LOGD("CameraActivity::getFrameWidth()");
+    return getProperty(ANDROID_CAMERA_PROPERTY_FRAMEWIDTH);
 }
 
 int CameraActivity::getFrameHeight()
 {
-    if (frameHeight < 0)
-        frameHeight = getProperty(ANDROID_CAMERA_PROPERTY_FRAMEHEIGHT);
-    return frameHeight;
+    LOGD("CameraActivity::getFrameHeight()");
+    return frameHeight = getProperty(ANDROID_CAMERA_PROPERTY_FRAMEHEIGHT);
 }
 
 void CameraActivity::setPathLibFolder(const char* path)

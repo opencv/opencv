@@ -203,6 +203,7 @@ CvCapture_Android::CvCapture_Android(int cameraId)
     m_frameFormat         = noformat;
 
     //try connect to camera
+    LOGD("CvCapture_Android::CvCapture_Android(%i)", cameraId);
     m_activity = new HighguiAndroidCameraActivity(this);
 
     if (m_activity == 0) return;
@@ -328,7 +329,7 @@ bool CvCapture_Android::setProperty( int propIdx, double propValue )
             break;
         default:
             CV_Error( CV_StsOutOfRange, "Failed attempt to SET unsupported camera property." );
-        return false;
+            return false;
         }
 
         if (propIdx != CV_CAP_PROP_AUTOGRAB) {// property for highgui class CvCapture_Android only
@@ -353,10 +354,10 @@ bool CvCapture_Android::grabFrame()
     {
         m_activity->applyProperties();
         m_CameraParamsChanged = false;
-    m_dataState= CVCAPTURE_ANDROID_STATE_NO_FRAME;//we will wait new frame
+        m_dataState = CVCAPTURE_ANDROID_STATE_NO_FRAME;//we will wait new frame
     }
 
-    if (m_dataState!=CVCAPTURE_ANDROID_STATE_HAS_NEW_FRAME_UNGRABBED)
+    if (m_dataState != CVCAPTURE_ANDROID_STATE_HAS_NEW_FRAME_UNGRABBED)
     {
         m_waitingNextFrame = true;
         pthread_cond_wait(&m_nextFrameCond, &m_nextFrameMutex);
