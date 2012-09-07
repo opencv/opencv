@@ -14,9 +14,9 @@
 #define CPU_INFO_SSE2_STR "sse2"
 #define CPU_INFO_SSSE3_STR "ssse3"
 
-#define CPU_INFO_ARCH_ARMV7_STR "ARMv7"
-#define CPU_INFO_ARCH_ARMV6_STR "ARMv6"
-#define CPU_INFO_ARCH_ARMV5_STR "ARMv5"
+#define CPU_INFO_ARCH_ARMV7_STR "(v7l)"
+#define CPU_INFO_ARCH_ARMV6_STR "(v6l)"
+#define CPU_INFO_ARCH_ARMV5_STR "(v5l)"
 
 #define CPU_INFO_ARCH_X86_STR "x86"
 
