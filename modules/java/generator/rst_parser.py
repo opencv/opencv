@@ -1,5 +1,5 @@
 import os, sys, re, string, fnmatch
-allmodules = ["core", "flann", "imgproc", "ml", "highgui", "video", "features2d", "calib3d", "objdetect", "legacy", "contrib", "gpu", "androidcamera", "java", "python", "stitching", "ts", "photo", "nonfree", "videostab"]
+allmodules = ["core", "flann", "imgproc", "ml", "highgui", "video", "features2d", "calib3d", "objdetect", "legacy", "contrib", "gpu", "androidcamera", "java", "python", "stitching", "ts", "photo", "nonfree", "videostab", "ocl"]
 verbose = False
 show_warnings = True
 show_errors = True
@@ -342,7 +342,7 @@ class RstParser(object):
                 continue
 
             ll = l.rstrip()
-            if len(prev_line) > 0 and len(ll) >= len(prev_line) and (ll == "-" * len(ll) or ll == "+" * len(ll)):
+            if len(prev_line) > 0 and len(ll) >= len(prev_line) and (ll == "-" * len(ll) or ll == "+" * len(ll) or ll == "=" * len(ll)):
                 # new function candidate
                 if len(lines) > 1:
                     self.parse_section_safe(module_name, fname, doc, flineno, lines[:len(lines)-1])

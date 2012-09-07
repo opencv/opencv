@@ -222,7 +222,7 @@ protected:
     void getLikelihoods(const Mat& queryImgDescriptor, const vector<
             Mat>& testImgDescriptors, vector<IMatch>& matches);
 
-    //procomputed data
+    //precomputed data
     int (*table)[8];
 
     //data precision

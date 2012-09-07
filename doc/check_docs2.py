@@ -31,7 +31,7 @@ doc_signatures_whitelist = [
 # templates
 "Matx", "Vec", "SparseMat_", "Scalar_", "Mat_", "Ptr", "Size_", "Point_", "Rect_", "Point3_",
 "DataType", "detail::RotationWarperBase", "flann::Index_", "CalonderDescriptorExtractor",
-"gpu::DevMem2D_", "gpu::PtrStep_", "gpu::PtrElemStep_",
+"gpu::PtrStepSz", "gpu::PtrStep", "gpu::PtrElemStep_",
 # black boxes
 "CvArr", "CvFileStorage",
 # other
@@ -191,7 +191,7 @@ def process_module(module, path):
             hdrlist.append(os.path.join(root, filename))
 
     if module == "gpu":
-        hdrlist.append(os.path.join(path, "..", "core", "include", "opencv2", "core", "devmem2d.hpp"))
+        hdrlist.append(os.path.join(path, "..", "core", "include", "opencv2", "core", "cuda_devptrs.hpp"))
         hdrlist.append(os.path.join(path, "..", "core", "include", "opencv2", "core", "gpumat.hpp"))
 
     decls = []

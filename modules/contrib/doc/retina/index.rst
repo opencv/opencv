@@ -14,7 +14,7 @@ Class which provides the main controls to the Gipsa/Listic labs human  retina mo
 
 * periphearal vision for sensitive transient signals detection (motion and events) : the magnocellular pathway.
 
-The retina can be settled up with various parameters, by default, the retina cancels mean luminance and enforces all details of the visual scene. In order to use your own parameters, you can use at least one time the *write(std::string fs)* method which will write a proper XML file with all default parameters. Then, tweak it on your own and reload them at any time using method *setup(std::string fs)*. These methods update a *cv::Retina::RetinaParameters* member structure that is described hereafter. ::
+The retina can be settled up with various parameters, by default, the retina cancels mean luminance and enforces all details of the visual scene. In order to use your own parameters, you can use at least one time the *write(std::string fs)* method which will write a proper XML file with all default parameters. Then, tweak it on your own and reload them at any time using method *setup(std::string fs)*. These methods update a *Retina::RetinaParameters* member structure that is described hereafter. ::
 
   class Retina
   {
@@ -25,7 +25,7 @@ The retina can be settled up with various parameters, by default, the retina can
     // constructors
     Retina (Size inputSize);
     Retina (Size inputSize, const bool colorMode, RETINA_COLORSAMPLINGMETHOD colorSamplingMethod=RETINA_COLOR_BAYER, const bool useRetinaLogSampling=false, const double reductionFactor=1.0, const double samplingStrenght=10.0);
-    
+
     // main method for input frame processing
     void run (const Mat &inputImage);
 
@@ -38,22 +38,22 @@ The retina can be settled up with various parameters, by default, the retina can
     void getMagno (Mat &retinaOutput_magno);
     void getMagno (std::valarray< float > &retinaOutput_magno);
     const std::valarray< float > & getMagno () const;
-    
+
     // reset retina buffers... equivalent to closing your eyes for some seconds
     void clearBuffers ();
-    
+
     // retreive input and output buffers sizes
     Size inputSize ();
     Size outputSize ();
-    
+
     // setup methods with specific parameters specification of global xml config file loading/write
     void setup (std::string retinaParameterFile="", const bool applyDefaultSetupOnFailure=true);
-    void setup (cv::FileStorage &fs, const bool applyDefaultSetupOnFailure=true);
+    void setup (FileStorage &fs, const bool applyDefaultSetupOnFailure=true);
     void setup (RetinaParameters newParameters);
     struct Retina::RetinaParameters getParameters ();
     const std::string printSetup ();
     virtual void write (std::string fs) const;
-    virtual void write (FileStorage &fs) const;    
+    virtual void write (FileStorage &fs) const;
     void setupOPLandIPLParvoChannel (const bool colorMode=true, const bool normaliseOutput=true, const float photoreceptorsLocalAdaptationSensitivity=0.7, const float photoreceptorsTemporalConstant=0.5, const float photoreceptorsSpatialConstant=0.53, const float horizontalCellsGain=0, const float HcellsTemporalConstant=1, const float HcellsSpatialConstant=7, const float ganglionCellsSensitivity=0.7);
     void setupIPLMagnoChannel (const bool normaliseOutput=true, const float parasolCells_beta=0, const float parasolCells_tau=0, const float parasolCells_k=7, const float amacrinCellsTemporalCutFrequency=1.2, const float V0CompressionParameter=0.95, const float localAdaptintegration_tau=0, const float localAdaptintegration_k=7);
     void setColorSaturation (const bool saturateColors=true, const float colorSaturationValue=4.0);
@@ -75,13 +75,13 @@ Class which allows the `Gipsa <http://www.gipsa-lab.inpg.fr>`_ (preliminary work
 
 * local logarithmic luminance compression allows details to be enhanced even in low light conditions
 
-Use : this model can be used basically for spatio-temporal video effects but also in the aim of : 
+Use : this model can be used basically for spatio-temporal video effects but also in the aim of :
 
 * performing texture analysis with enhanced signal to noise ratio and enhanced details robust against input images luminance ranges (check out the parvocellular retina channel output, by using the provided **getParvo** methods)
 
 * performing motion analysis also taking benefit of the previously cited properties  (check out the magnocellular retina channel output, by using the provided **getMagno** methods)
 
-For more information, refer to the following papers : 
+For more information, refer to the following papers :
 
 * Benoit A., Caplier A., Durette B., Herault, J., "Using Human Visual System Modeling For Bio-Inspired Low Level Image Processing", Elsevier, Computer Vision and Image Understanding 114 (2010), pp. 758-773. DOI <http://dx.doi.org/10.1016/j.cviu.2010.01.011>
 
@@ -100,7 +100,7 @@ Demos and experiments !
 
 Take a look at the C++ examples provided with OpenCV :
 
-* **samples/cpp/retinademo.cpp** shows how to use the retina module for details enhancement (Parvo channel output) and transient maps observation (Magno channel output). You can play with images, video sequences and webcam video. 
+* **samples/cpp/retinademo.cpp** shows how to use the retina module for details enhancement (Parvo channel output) and transient maps observation (Magno channel output). You can play with images, video sequences and webcam video.
     Typical uses are (provided your OpenCV installation is situated in folder *OpenCVReleaseFolder*)
 
     * image processing : **OpenCVReleaseFolder/bin/retinademo -image myPicture.jpg**
@@ -110,7 +110,7 @@ Take a look at the C++ examples provided with OpenCV :
     * webcam processing: **OpenCVReleaseFolder/bin/retinademo -video**
 
    **Note :** This demo generates the file *RetinaDefaultParameters.xml* which contains the default parameters of the retina. Then, rename this as *RetinaSpecificParameters.xml*, adjust the parameters the way you want and reload the program to check the effect.
-   
+
 
 * **samples/cpp/OpenEXRimages_HighDynamicRange_Retina_toneMapping.cpp** shows how to use the retina to perform High Dynamic Range (HDR) luminance compression
 
@@ -119,13 +119,13 @@ Take a look at the C++ examples provided with OpenCV :
    Typical use, supposing that you have the OpenEXR image *memorial.exr* (present in the samples/cpp/ folder)
 
    **OpenCVReleaseFolder/bin/OpenEXRimages_HighDynamicRange_Retina_toneMapping memorial.exr**
-      
+
       Note that some sliders are made available to allow you to play with luminance compression.
 
 Methods description
 ===================
 
-Here are detailled the main methods to control the retina model 
+Here are detailled the main methods to control the retina model
 
 Retina::Retina
 ++++++++++++++
@@ -148,7 +148,7 @@ Retina::Retina
 Retina::activateContoursProcessing
 ++++++++++++++++++++++++++++++++++
 
-.. ocv:function:: void cv::Retina::activateContoursProcessing(const bool activate)
+.. ocv:function:: void Retina::activateContoursProcessing(const bool activate)
 
     Activate/desactivate the Parvocellular pathway processing (contours information extraction), by default, it is activated
 
@@ -157,7 +157,7 @@ Retina::activateContoursProcessing
 Retina::activateMovingContoursProcessing
 ++++++++++++++++++++++++++++++++++++++++
 
-.. ocv:function:: void cv::Retina::activateMovingContoursProcessing(const bool activate)
+.. ocv:function:: void Retina::activateMovingContoursProcessing(const bool activate)
 
     Activate/desactivate the Magnocellular pathway processing (motion information extraction), by default, it is activated
 
@@ -166,42 +166,44 @@ Retina::activateMovingContoursProcessing
 Retina::clearBuffers
 ++++++++++++++++++++
 
-.. ocv:function:: void cv::Retina::clearBuffers()
+.. ocv:function:: void Retina::clearBuffers()
 
     Clears all retina buffers (equivalent to opening the eyes after a long period of eye close ;o) whatchout the temporal transition occuring just after this method call.
 
 Retina::getParvo
 ++++++++++++++++
 
-.. ocv:function:: void cv::Retina::getParvo(Mat & retinaOutput_parvo)
-.. ocv:function:: void cv::Retina::getParvo(std::valarray< float > & retinaOutput_parvo )
+.. ocv:function:: void Retina::getParvo( Mat & retinaOutput_parvo )
+.. ocv:function:: void Retina::getParvo( std::valarray<float> & retinaOutput_parvo )
+.. ocv:function:: const std::valarray<float> & Retina::getParvo() const
 
     Accessor of the details channel of the retina (models foveal vision)
 
     :param retinaOutput_parvo: the output buffer (reallocated if necessary), format can be :
-    
-        * a cv::Mat, this output is rescaled for standard 8bits image processing use in OpenCV
-    
+
+        * a Mat, this output is rescaled for standard 8bits image processing use in OpenCV
+
         * a 1D std::valarray Buffer (encoding is R1, R2, ... Rn), this output is the original retina filter model output, without any quantification or rescaling
 
 Retina::getMagno
 ++++++++++++++++
 
-.. ocv:function:: void cv::Retina::getMagno(Mat & retinaOutput_magno)
-.. ocv:function:: void cv::Retina::getMagno(std::valarray< float > & retinaOutput_magno)
+.. ocv:function:: void Retina::getMagno( Mat & retinaOutput_magno )
+.. ocv:function:: void Retina::getMagno( std::valarray<float> & retinaOutput_magno )
+.. ocv:function:: const std::valarray<float> & Retina::getMagno() const
 
     Accessor of the motion channel of the retina (models peripheral vision)
 
     :param retinaOutput_magno: the output buffer (reallocated if necessary), format can be :
-    
-        * a cv::Mat, this output is rescaled for standard 8bits image processing use in OpenCV
-    
+
+        * a Mat, this output is rescaled for standard 8bits image processing use in OpenCV
+
         * a 1D std::valarray Buffer (encoding is R1, R2, ... Rn), this output is the original retina filter model output, without any quantification or rescaling
 
 Retina::getParameters
 +++++++++++++++++++++
 
-.. ocv:function:: struct Retina::RetinaParameters cv::Retina::getParameters()
+.. ocv:function:: struct Retina::RetinaParameters Retina::getParameters()
 
     Retrieve the current parameters values in a *Retina::RetinaParameters* structure
 
@@ -210,7 +212,7 @@ Retina::getParameters
 Retina::inputSize
 +++++++++++++++++
 
-.. ocv:function:: Size cv::Retina::inputSize()
+.. ocv:function:: Size Retina::inputSize()
 
     Retreive retina input buffer size
 
@@ -219,16 +221,16 @@ Retina::inputSize
 Retina::outputSize
 ++++++++++++++++++
 
-.. ocv:function:: Size cv::Retina::outputSize()
+.. ocv:function:: Size Retina::outputSize()
 
-    Retreive retina output buffer size that can be different from the input if a spatial log transformation is applied 
+    Retreive retina output buffer size that can be different from the input if a spatial log transformation is applied
 
     :return: the retina output buffer size
 
 Retina::printSetup
 ++++++++++++++++++
 
-.. ocv:function:: const std::string cv::Retina::printSetup()
+.. ocv:function:: const std::string Retina::printSetup()
 
     Outputs a string showing the used parameters setup
 
@@ -237,16 +239,16 @@ Retina::printSetup
 Retina::run
 +++++++++++
 
-.. ocv:function:: void cv::Retina::run(const Mat & inputImage)
+.. ocv:function:: void Retina::run(const Mat & inputImage)
 
     Method which allows retina to be applied on an input image, after run, encapsulated retina module is ready to deliver its outputs using dedicated acccessors, see getParvo and getMagno methods
 
-    :param inputImage: the input cv::Mat image to be processed, can be gray level or BGR coded in any format (from 8bit to 16bits)
+    :param inputImage: the input Mat image to be processed, can be gray level or BGR coded in any format (from 8bit to 16bits)
 
 Retina::setColorSaturation
 ++++++++++++++++++++++++++
 
-.. ocv:function:: void cv::Retina::setColorSaturation(const bool saturateColors = true, const float colorSaturationValue = 4.0 )
+.. ocv:function:: void Retina::setColorSaturation(const bool saturateColors = true, const float colorSaturationValue = 4.0 )
 
     Activate color saturation as the final step of the color demultiplexing process -> this saturation is a sigmoide function applied to each channel of the demultiplexed image.
 
@@ -257,9 +259,9 @@ Retina::setColorSaturation
 Retina::setup
 +++++++++++++
 
-.. ocv:function:: void cv::Retina::setup(std::string retinaParameterFile = "", const bool applyDefaultSetupOnFailure = true )
-.. ocv:function:: void cv::Retina::setup(cv::FileStorage & fs, const bool applyDefaultSetupOnFailure = true )
-.. ocv:function:: void cv::Retina::setup(RetinaParameters newParameters)
+.. ocv:function:: void Retina::setup(std::string retinaParameterFile = "", const bool applyDefaultSetupOnFailure = true )
+.. ocv:function:: void Retina::setup(FileStorage & fs, const bool applyDefaultSetupOnFailure = true )
+.. ocv:function:: void Retina::setup(RetinaParameters newParameters)
 
     Try to open an XML retina parameters file to adjust current retina instance setup => if the xml file does not exist, then default setup is applied => warning, Exceptions are thrown if read XML file is not valid
 
@@ -271,8 +273,8 @@ Retina::setup
 Retina::write
 +++++++++++++
 
-.. ocv:function:: virtual void cv::Retina::write(std::string fs) const
-.. ocv:function:: virtual void cv::Retina::write(FileStorage & fs) const
+.. ocv:function:: void Retina::write( std::string fs ) const
+.. ocv:function:: void Retina::write( FileStorage& fs ) const
 
     Write xml/yml formated parameters information
 
@@ -281,7 +283,7 @@ Retina::write
 Retina::setupIPLMagnoChannel
 ++++++++++++++++++++++++++++
 
-.. ocv:function:: void cv::Retina::setupIPLMagnoChannel(const bool normaliseOutput = true, const float parasolCells_beta = 0, const float parasolCells_tau = 0, const float parasolCells_k = 7, const float amacrinCellsTemporalCutFrequency = 1.2, const float V0CompressionParameter = 0.95, const float localAdaptintegration_tau = 0, const float localAdaptintegration_k = 7 )
+.. ocv:function:: void Retina::setupIPLMagnoChannel(const bool normaliseOutput = true, const float parasolCells_beta = 0, const float parasolCells_tau = 0, const float parasolCells_k = 7, const float amacrinCellsTemporalCutFrequency = 1.2, const float V0CompressionParameter = 0.95, const float localAdaptintegration_tau = 0, const float localAdaptintegration_k = 7 )
 
     Set parameters values for the Inner Plexiform Layer (IPL) magnocellular channel this channel processes signals output from OPL processing stage in peripheral vision, it allows motion information enhancement. It is decorrelated from the details channel. See reference papers for more details.
 
@@ -297,7 +299,7 @@ Retina::setupIPLMagnoChannel
 Retina::setupOPLandIPLParvoChannel
 ++++++++++++++++++++++++++++++++++
 
-.. ocv:function:: void cv::Retina::setupOPLandIPLParvoChannel(const bool colorMode = true, const bool normaliseOutput = true, const float photoreceptorsLocalAdaptationSensitivity = 0.7, const float photoreceptorsTemporalConstant = 0.5, const float photoreceptorsSpatialConstant = 0.53, const float horizontalCellsGain = 0, const float HcellsTemporalConstant = 1, const float HcellsSpatialConstant = 7, const float ganglionCellsSensitivity = 0.7 )
+.. ocv:function:: void Retina::setupOPLandIPLParvoChannel(const bool colorMode = true, const bool normaliseOutput = true, const float photoreceptorsLocalAdaptationSensitivity = 0.7, const float photoreceptorsTemporalConstant = 0.5, const float photoreceptorsSpatialConstant = 0.53, const float horizontalCellsGain = 0, const float HcellsTemporalConstant = 1, const float HcellsSpatialConstant = 7, const float ganglionCellsSensitivity = 0.7 )
 
     Setup the OPL and IPL parvo channels (see biologocal model) OPL is referred as Outer Plexiform Layer of the retina, it allows the spatio-temporal filtering which withens the spectrum and reduces spatio-temporal noise while attenuating global luminance (low frequency energy) IPL parvo is the OPL next processing stage, it refers to a part of the Inner Plexiform layer of the retina, it allows high contours sensitivity in foveal vision. See reference papers for more informations.
 
@@ -315,12 +317,12 @@ Retina::setupOPLandIPLParvoChannel
 Retina::RetinaParameters
 ========================
 
-.. ocv:class:: RetinaParameters
-This structure merges all the parameters that can be adjusted threw the **cv::Retina::setup()**, **cv::Retina::setupOPLandIPLParvoChannel** and **cv::Retina::setupIPLMagnoChannel** setup methods
+.. ocv:struct:: Retina::RetinaParameters
+This structure merges all the parameters that can be adjusted threw the **Retina::setup()**, **Retina::setupOPLandIPLParvoChannel** and **Retina::setupIPLMagnoChannel** setup methods
 Parameters structure for better clarity, check explenations on the comments of methods : setupOPLandIPLParvoChannel and setupIPLMagnoChannel. ::
 
-    class RetinaParameters{ 
-        struct OPLandIplParvoParameters{ // Outer Plexiform Layer (OPL) and Inner Plexiform Layer Parvocellular (IplParvo) parameters 
+    class RetinaParameters{
+        struct OPLandIplParvoParameters{ // Outer Plexiform Layer (OPL) and Inner Plexiform Layer Parvocellular (IplParvo) parameters
                OPLandIplParvoParameters():colorMode(true),
                   normaliseOutput(true), // specifies if (true) output is rescaled between 0 and 255 of not (false)
                   photoreceptorsLocalAdaptationSensitivity(0.7f), // the photoreceptors sensitivity renage is 0-1 (more log compression effect when value increases)
