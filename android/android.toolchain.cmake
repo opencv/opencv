@@ -474,7 +474,7 @@ elseif( ANDROID_STANDALONE_TOOLCHAIN )
  set( BUILD_WITH_STANDALONE_TOOLCHAIN True )
 else()
  list(GET ANDROID_NDK_SEARCH_PATHS 0 ANDROID_NDK_SEARCH_PATH)
- message( FATAL_ERROR "Could not find neither Android NDK nor Android standalone toolcahin.
+ message( FATAL_ERROR "Could not find neither Android NDK nor Android standalone toolchain.
     You should either set an environment variable:
       export ANDROID_NDK=~/my-android-ndk
     or
@@ -773,6 +773,27 @@ You are strongly recommended to switch to another NDK release.
 " )
 endif()
 
+if( NOT _CMAKE_IN_TRY_COMPILE AND X86 AND ANDROID_STL MATCHES "gnustl" AND ANDROID_NDK_RELEASE STREQUAL "r6" )
+  message( WARNING  "The x86 system header file from NDK r6 has incorrect definition for ptrdiff_t. You are recommended to upgrade to a newer NDK release or manually patch the header:
+See https://android.googlesource.com/platform/development.git f907f4f9d4e56ccc8093df6fee54454b8bcab6c2
+  diff --git a/ndk/platforms/android-9/arch-x86/include/machine/_types.h b/ndk/platforms/android-9/arch-x86/include/machine/_types.h
+  index 5e28c64..65892a1 100644
+  --- a/ndk/platforms/android-9/arch-x86/include/machine/_types.h
+  +++ b/ndk/platforms/android-9/arch-x86/include/machine/_types.h
+  @@ -51,7 +51,11 @@ typedef long int       ssize_t;
+   #endif
+   #ifndef _PTRDIFF_T
+   #define _PTRDIFF_T
+  -typedef long           ptrdiff_t;
+  +#  ifdef __ANDROID__
+  +     typedef int            ptrdiff_t;
+  +#  else
+  +     typedef long           ptrdiff_t;
+  +#  endif
+   #endif
+" )
+endif()
+
 # setup paths and STL for NDK
 if( BUILD_WITH_ANDROID_NDK )
  set( ANDROID_TOOLCHAIN_ROOT "${ANDROID_NDK}/toolchains/${ANDROID_TOOLCHAIN_NAME}/prebuilt/${ANDROID_NDK_HOST_SYSTEM_NAME}" )
@@ -1048,6 +1069,11 @@ if( EXISTS "${__libstl}" OR EXISTS "${__libsupcxx}" )
   set( CMAKE_CXX_CREATE_SHARED_MODULE  "<CMAKE_CXX_COMPILER> <CMAKE_SHARED_LIBRARY_CXX_FLAGS> <LANGUAGE_COMPILE_FLAGS> <LINK_FLAGS> <CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS> <CMAKE_SHARED_LIBRARY_SONAME_CXX_FLAG><TARGET_SONAME> -o <TARGET> <OBJECTS> <LINK_LIBRARIES>" )
   set( CMAKE_CXX_LINK_EXECUTABLE       "<CMAKE_CXX_COMPILER> <FLAGS> <CMAKE_CXX_LINK_FLAGS> <LINK_FLAGS> <OBJECTS> -o <TARGET> <LINK_LIBRARIES>" )
  endif()
+ if ( X86 AND ANDROID_STL MATCHES "gnustl" AND ANDROID_NDK_RELEASE STREQUAL "r6" )
+  # workaround "undefined reference to `__dso_handle'" problem
+  set( CMAKE_CXX_CREATE_SHARED_LIBRARY "${CMAKE_CXX_CREATE_SHARED_LIBRARY} \"${ANDROID_SYSROOT}/usr/lib/crtbegin_so.o\"" )
+  set( CMAKE_CXX_CREATE_SHARED_MODULE  "${CMAKE_CXX_CREATE_SHARED_MODULE} \"${ANDROID_SYSROOT}/usr/lib/crtbegin_so.o\"" )
+ endif()
  if( EXISTS "${__libstl}" )
   set( CMAKE_CXX_CREATE_SHARED_LIBRARY "${CMAKE_CXX_CREATE_SHARED_LIBRARY} \"${__libstl}\"" )
   set( CMAKE_CXX_CREATE_SHARED_MODULE  "${CMAKE_CXX_CREATE_SHARED_MODULE} \"${__libstl}\"" )
@@ -1111,10 +1137,13 @@ if( ANDROID_FUNCTION_LEVEL_LINKING )
  set( ANDROID_LINKER_FLAGS "${ANDROID_LINKER_FLAGS} -Wl,--gc-sections" )
 endif()
 
-if( CMAKE_HOST_UNIX AND (ARMEABI_V7A OR X86) AND ANDROID_COMPILER_VERSION VERSION_EQUAL "4.6" )
- if( ANDROID_GOLD_LINKER )
-  set( ANDROID_LINKER_FLAGS "${ANDROID_LINKER_FLAGS} -fuse-ld=gold" )
- endif()
+if( ANDROID_GOLD_LINKER AND CMAKE_HOST_UNIX AND (ARMEABI OR ARMEABI_V7A OR X86) AND ANDROID_COMPILER_VERSION VERSION_EQUAL "4.6" )
+ set( ANDROID_LINKER_FLAGS "${ANDROID_LINKER_FLAGS} -fuse-ld=gold" )
+elseif( ANDROID_NDK_RELEASE STREQUAL "r8b" AND ARMEABI AND ANDROID_COMPILER_VERSION VERSION_EQUAL "4.6" AND NOT _CMAKE_IN_TRY_COMPILE )
+ message( WARNING "The default bfd linker from arm GCC 4.6 toolchain can fail with 'unresolvable R_ARM_THM_CALL relocation' error message. See https://code.google.com/p/android/issues/detail?id=35342
+  On Linux and OS X host platform you can workaround this problem using gold linker (default).
+  Rerun cmake with -DANDROID_GOLD_LINKER=ON option.
+" )
 endif()
 
 if( ANDROID_NOEXECSTACK )
