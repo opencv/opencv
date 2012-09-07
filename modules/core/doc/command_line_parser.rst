@@ -58,15 +58,15 @@ The sample below demonstrates how to use CommandLineParser:
     }
 
     int N = parser.get<int>("N");
-    double fps = parser.get<double>parser("fps");
+    double fps = parser.get<double>("fps");
     std::string path = parser.get<std::string>("path");
 
-    use_time_stamp = parserer.has("timestamp");
+    use_time_stamp = parser.has("timestamp");
 
-    std::string img1 = parser.get<string>(1);
-    std::string img2 = parser.get<string>(2);
+    std::string img1 = parser.get<string>(0);
+    std::string img2 = parser.get<string>(1);
 
-    int repeat = parser.get<int>(3);
+    int repeat = parser.get<int>(2);
 
     if (!parser.check())
     {

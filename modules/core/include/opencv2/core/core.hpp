@@ -221,7 +221,7 @@ CV_EXPORTS void setNumThreads(int nthreads);
 CV_EXPORTS int getNumThreads();
 CV_EXPORTS int getThreadNum();
 
-CV_EXPORTS_W const std::string& getBuildInformation();
+CV_EXPORTS_W const string& getBuildInformation();
 
 //! Returns the number of ticks.
 
@@ -4434,7 +4434,7 @@ protected:
 
 struct CV_EXPORTS Param
 {
-    enum { INT=0, BOOLEAN=1, REAL=2, STRING=3, MAT=4, MAT_VECTOR=5, ALGORITHM=6 };
+    enum { INT=0, BOOLEAN=1, REAL=2, STRING=3, MAT=4, MAT_VECTOR=5, ALGORITHM=6, FLOAT=7, UNSIGNED_INT=8, UINT64=9 };
 
     Param();
     Param(int _type, bool _readonly, int _offset,
@@ -4505,142 +4505,73 @@ template<> struct ParamType<Algorithm>
     enum { type = Param::ALGORITHM };
 };
 
-// The CommandLineParser class is designed for command line arguments parsing
-
-class CV_EXPORTS CommandLineParserParams
+template<> struct ParamType<float>
 {
-    public:
-        std::string help_message;
-        std::string def_value;
-        std::vector<std::string> keys;
-        int number;
+    typedef float const_param_type;
+    typedef float member_type;
+    
+    enum { type = Param::FLOAT };
+};
+    
+template<> struct ParamType<unsigned>
+{
+    typedef unsigned const_param_type;
+    typedef unsigned member_type;
+    
+    enum { type = Param::UNSIGNED_INT };
 };
 
-template <typename T>
-std::string get_type_name() { return "UNKNOW"; }
-
-bool cmp_params(const CommandLineParserParams & p1, const CommandLineParserParams & p2);
-
-template<typename T>
-T from_str(const std::string & str)
+template<> struct ParamType<uint64>
 {
-    T value;
-    std::stringstream ss(str);
-    ss >> value;
+    typedef uint64 const_param_type;
+    typedef uint64 member_type;
+    
+    enum { type = Param::UINT64 };
+};
 
-    if (ss.fail())
-    {
-        std::string err_msg =
-                std::string("can not convert: [")
-                + str
-                + std::string("] to [")
-                + get_type_name<T>()
-                + std::string("]");
 
-        CV_Error(CV_StsBadArg, err_msg);
-    }
-
-    return value;
-}
-
-template<> std::string from_str(const std::string & str);
-
-template<typename T>
-std::string to_str(T value)
-{
-    std::ostringstream os;
-    os << value;
-    return os.str();
-}
+// The CommandLineParser class is designed for command line arguments parsing
 
 class CV_EXPORTS CommandLineParser
 {
-    public:
-        CommandLineParser(int argc, const char * const argv[], const std::string keys);
+public:
+    CommandLineParser(int argc, const char* const argv[], const string& keys);
+    CommandLineParser(const CommandLineParser& parser);
+    CommandLineParser& operator = (const CommandLineParser& parser);
 
-        std::string getPathToApplication();
+    string getPathToApplication() const;
 
-        template <typename T>
-        T get(const std::string& name, bool space_delete = true)
-        {
-            try
-            {
-                for (size_t i = 0; i < data.size(); i++)
-                {
-                    for (size_t j = 0; j < data[i].keys.size(); j++)
-                    {
-                        if (name.compare(data[i].keys[j]) == 0)
-                        {
-                            std::string v = data[i].def_value;
-                            if (space_delete == true) v = cat_string(v);
-                            return from_str<T>(v);
-                        }
-                    }
-                }
-                error = true;
-                error_message += "Unknown parametes " + name + "\n";
-            }
-            catch (std::exception& e)
-            {
-                error = true;
-                error_message += "Exception: " + std::string(e.what()) + "\n";
-            }
-            return T();
-        }
+    template <typename T>
+    T get(const string& name, bool space_delete = true) const
+    {
+        T val = T();
+        getByName(name, space_delete, ParamType<T>::type, (void*)&val);
+        return val;
+    }
 
-        template <typename T>
-        T get(int index, bool space_delete = true)
-        {
-            try
-            {
-                for (size_t i = 0; i < data.size(); i++)
-                {
-                    if (data[i].number == index - 1)
-                    {
-                        std::string v = data[i].def_value;
-                        if (space_delete == true) v = cat_string(v);
-                        return from_str<T>(v);
-                    }
-                }
-                error = true;
-                error_message += "Unknown parametes #" + to_str<int>(index) + "\n";
-            }
-            catch(std::exception & e)
-            {
-                error = true;
-                error_message += "Exception: " + std::string(e.what()) + "\n";
-            }
-            return T();
-        }
+    template <typename T>
+    T get(int index, bool space_delete = true) const
+    {
+        T val = T();
+        getByIndex(index, space_delete, ParamType<T>::type, (void*)&val);
+        return val;
+    }
+    
+    bool has(const string& name) const;
+    
+    bool check() const;
+    
+    void about(const string& message);
+    
+    void printMessage() const;
+    void printErrors() const;
 
-        bool has(const std::string& name);
-
-        bool check();
-
-        void about(std::string message);
-
-        void printMessage();
-        void printErrors();
-
-    protected:
-        bool error;
-        std::string error_message;
-        std::string about_message;
-
-        std::string path_to_app;
-        std::string app_name;
-
-        std::vector<CommandLineParserParams> data;
-
-        std::vector<std::string> split_range_string(std::string str, char fs, char ss);
-        std::vector<std::string> split_string(std::string str, char symbol = ' ', bool create_empty_item = false);
-        std::string cat_string(std::string str);
-
-        void apply_params(std::string key, std::string value);
-        void apply_params(int i, std::string value);
-
-        void sort_params();
-
+protected:
+    void getByName(const string& name, bool space_delete, int type, void* dst) const;
+    void getByIndex(int index, bool space_delete, int type, void* dst) const;
+    
+    struct Impl;
+    Impl* impl;
 };
 
 /////////////////////////////// Parallel Primitives //////////////////////////////////
