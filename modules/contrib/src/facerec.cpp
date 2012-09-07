@@ -345,6 +345,7 @@ void Eigenfaces::train(InputArrayOfArrays _src, InputArray _local_labels) {
     Mat labels = _local_labels.getMat();
     // observations in row
     Mat data = asRowMatrix(_src, CV_64FC1);
+   
     // number of samples
    int n = data.rows;
     // assert there are as much samples as labels
@@ -358,6 +359,7 @@ void Eigenfaces::train(InputArrayOfArrays _src, InputArray _local_labels) {
     // clip number of components to be valid
     if((_num_components <= 0) || (_num_components > n))
         _num_components = n;
+    
     // perform the PCA
     PCA pca(data, Mat(), CV_PCA_DATA_AS_ROW, _num_components);
     // copy the PCA results
@@ -365,7 +367,7 @@ void Eigenfaces::train(InputArrayOfArrays _src, InputArray _local_labels) {
     _eigenvalues = pca.eigenvalues.clone(); // eigenvalues by row
     transpose(pca.eigenvectors, _eigenvectors); // eigenvectors by column
     // store labels for prediction
-    labels.copyTo(_labels);
+    _labels = labels.clone();
     // save projections
     for(int sampleIdx = 0; sampleIdx < data.rows; sampleIdx++) {
         Mat p = subspaceProject(_eigenvectors, _mean, data.row(sampleIdx));
@@ -481,7 +483,7 @@ void Fisherfaces::train(InputArrayOfArrays src, InputArray _lbls) {
     // store the total mean vector
     _mean = pca.mean.reshape(1,1);
     // store labels
-    labels.copyTo(_labels);
+    _labels = labels.clone();
     // store the eigenvalues of the discriminants
     lda.eigenvalues().convertTo(_eigenvalues, CV_64FC1);
     // Now calculate the projection matrix as pca.eigenvectors * lda.eigenvectors.
