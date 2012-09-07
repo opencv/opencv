@@ -71,6 +71,8 @@ static void from_str(const string& str, int type, void* dst)
         ss >> *(double*)dst;
     else if( type == Param::STRING )
         ss >> *(string*)dst;
+    else
+        CV_Error(CV_StsBadArg, "unknown/unsupported parameter type");
     
     if (ss.fail())
     {
