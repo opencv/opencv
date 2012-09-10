@@ -169,8 +169,8 @@ CameraActivity::ErrorCode CameraWrapperConnector::connectToLib()
     string folderPath = getPathLibFolder();
     if (folderPath.empty())
     {
-	LOGD("Trying to find native camera in default OpenCV packages");
-	folderPath = getDefaultPathLibFolder();
+        LOGD("Trying to find native camera in default OpenCV packages");
+        folderPath = getDefaultPathLibFolder();
     }
 
     LOGD("CameraWrapperConnector::connectToLib: folderPath=%s", folderPath.c_str());
@@ -270,21 +270,21 @@ std::string CameraWrapperConnector::getDefaultPathLibFolder()
     const string packageList[] = {"tegra3", "armv7a_neon", "armv7a", "armv5", "x86"};
     for (size_t i = 0; i < 5; i++)
     {
-	char path[128];
-	sprintf(path, "/data/data/org.opencv.lib_v%d%d_%s/lib/", CV_MAJOR_VERSION, CV_MINOR_VERSION, packageList[i].c_str());
-	LOGD("Trying package \"%s\" (\"%s\")", packageList[i], path);
+        char path[128];
+        sprintf(path, "/data/data/org.opencv.lib_v%d%d_%s/lib/", CV_MAJOR_VERSION, CV_MINOR_VERSION, packageList[i].c_str());
+        LOGD("Trying package \"%s\" (\"%s\")", packageList[i].c_str(), path);
 
-	DIR* dir = opendir(path);
-	if (!dir)
-	{
-	    LOGD("Package not found");
-	    continue;
-	}
-	else
-	{
-	    closedir(dir);
-	    return path;
-	}
+        DIR* dir = opendir(path);
+        if (!dir)
+        {
+            LOGD("Package not found");
+            continue;
+        }
+        else
+        {
+            closedir(dir);
+            return path;
+        }
     }
 
     return string();
@@ -301,18 +301,18 @@ std::string CameraWrapperConnector::getPathLibFolder()
         LOGD("Library name: %s", dl_info.dli_fname);
         LOGD("Library base address: %p", dl_info.dli_fbase);
 
-	const char* libName=dl_info.dli_fname;
-	while( ((*libName)=='/') || ((*libName)=='.') )
-		libName++;
+    const char* libName=dl_info.dli_fname;
+    while( ((*libName)=='/') || ((*libName)=='.') )
+        libName++;
 
         char lineBuf[2048];
         FILE* file = fopen("/proc/self/smaps", "rt");
 
         if(file)
         {
-	    while (fgets(lineBuf, sizeof lineBuf, file) != NULL)
-	    {
-		//verify that line ends with library name
+        while (fgets(lineBuf, sizeof lineBuf, file) != NULL)
+        {
+        //verify that line ends with library name
                 int lineLength = strlen(lineBuf);
                 int libNameLength = strlen(libName);
 
@@ -325,7 +325,7 @@ std::string CameraWrapperConnector::getPathLibFolder()
 
                 if (0 != strncmp(lineBuf + lineLength - libNameLength, libName, libNameLength))
                 {
-		    //the line does not contain the library name
+            //the line does not contain the library name
                     continue;
                 }
 
@@ -344,18 +344,18 @@ std::string CameraWrapperConnector::getPathLibFolder()
 
                 fclose(file);
                 return pathBegin;
-	    }
-	    fclose(file);
-	    LOGE("Could not find library path");
+        }
+        fclose(file);
+        LOGE("Could not find library path");
         }
         else
         {
-	    LOGE("Could not read /proc/self/smaps");
+        LOGE("Could not read /proc/self/smaps");
         }
     }
     else
     {
-	LOGE("Could not get library name and base address");
+    LOGE("Could not get library name and base address");
     }
 
     return string();
@@ -429,7 +429,7 @@ int CameraActivity::getFrameWidth()
 {
     LOGD("CameraActivity::getFrameWidth()");
     if (frameWidth <= 0)
-	frameWidth = getProperty(ANDROID_CAMERA_PROPERTY_FRAMEWIDTH);
+    frameWidth = getProperty(ANDROID_CAMERA_PROPERTY_FRAMEWIDTH);
     return frameWidth;
 }
 
@@ -437,7 +437,7 @@ int CameraActivity::getFrameHeight()
 {
     LOGD("CameraActivity::getFrameHeight()");
     if (frameHeight <= 0)
-	frameHeight = getProperty(ANDROID_CAMERA_PROPERTY_FRAMEHEIGHT);
+    frameHeight = getProperty(ANDROID_CAMERA_PROPERTY_FRAMEHEIGHT);
     return frameHeight;
 }
 
