@@ -1713,4 +1713,98 @@ PERF_TEST_P(Sz_Dp_MinDist, ImgProc_HoughCircles, Combine(GPU_TYPICAL_MAT_SIZES, 
     }
 }
 
+//////////////////////////////////////////////////////////////////////
+// GeneralizedHough
+
+CV_FLAGS(GHMethod, cv::GHT_POSITION, cv::GHT_SCALE, cv::GHT_ROTATION);
+
+DEF_PARAM_TEST(Method_Sz, GHMethod, cv::Size);
+
+PERF_TEST_P(Method_Sz, GeneralizedHough, Combine(
+            Values(GHMethod(cv::GHT_POSITION), GHMethod(cv::GHT_POSITION | cv::GHT_SCALE), GHMethod(cv::GHT_POSITION | cv::GHT_ROTATION), GHMethod(cv::GHT_POSITION | cv::GHT_SCALE | cv::GHT_ROTATION)),
+            GPU_TYPICAL_MAT_SIZES))
+{
+    declare.time(10);
+
+    const int method = GET_PARAM(0);
+    const cv::Size imageSize = GET_PARAM(1);
+
+    const cv::Mat templ = readImage("cv/shared/templ.png", cv::IMREAD_GRAYSCALE);
+    ASSERT_FALSE(templ.empty());
+
+    cv::Mat image(imageSize, CV_8UC1, cv::Scalar::all(0));
+
+    cv::RNG rng(123456789);
+    const int objCount = rng.uniform(5, 15);
+    for (int i = 0; i < objCount; ++i)
+    {
+        double scale = rng.uniform(0.7, 1.3);
+        bool rotate = rng.uniform(0, 2);
+
+        cv::Mat obj;
+        cv::resize(templ, obj, cv::Size(), scale, scale);
+        if (rotate)
+            obj = obj.t();
+
+        cv::Point pos;
+
+        pos.x = rng.uniform(0, image.cols - obj.cols);
+        pos.y = rng.uniform(0, image.rows - obj.rows);
+
+        cv::Mat roi = image(cv::Rect(pos, obj.size()));
+        cv::add(roi, obj, roi);
+    }
+
+    cv::Mat edges;
+    cv::Canny(image, edges, 50, 100);
+
+    cv::Mat dx, dy;
+    cv::Sobel(image, dx, CV_32F, 1, 0);
+    cv::Sobel(image, dy, CV_32F, 0, 1);
+
+    if (runOnGpu)
+    {
+        cv::gpu::GpuMat d_edges(edges);
+        cv::gpu::GpuMat d_dx(dx);
+        cv::gpu::GpuMat d_dy(dy);
+        cv::gpu::GpuMat d_position;
+
+        cv::Ptr<cv::gpu::GeneralizedHough_GPU> d_hough = cv::gpu::GeneralizedHough_GPU::create(method);
+        if (method & cv::GHT_ROTATION)
+        {
+            d_hough->set("maxAngle", 90.0);
+            d_hough->set("angleStep", 2.0);
+        }
+
+        d_hough->setTemplate(cv::gpu::GpuMat(templ));
+
+        d_hough->detect(d_edges, d_dx, d_dy, d_position);
+
+        TEST_CYCLE()
+        {
+            d_hough->detect(d_edges, d_dx, d_dy, d_position);
+        }
+    }
+    else
+    {
+        cv::Mat positions;
+
+        cv::Ptr<cv::GeneralizedHough> hough = cv::GeneralizedHough::create(method);
+        if (method & cv::GHT_ROTATION)
+        {
+            hough->set("maxAngle", 90.0);
+            hough->set("angleStep", 2.0);
+        }
+
+        hough->setTemplate(templ);
+
+        hough->detect(edges, dx, dy, positions);
+
+        TEST_CYCLE()
+        {
+            hough->detect(edges, dx, dy, positions);
+        }
+    }
+}
+
 } // namespace

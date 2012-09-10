@@ -489,6 +489,42 @@ CV_EXPORTS_W void HoughCircles( InputArray image, OutputArray circles,
                                double param1=100, double param2=100,
                                int minRadius=0, int maxRadius=0 );
 
+enum
+{
+    GHT_POSITION = 0,
+    GHT_SCALE = 1,
+    GHT_ROTATION = 2
+};
+
+//! finds arbitrary template in the grayscale image using Generalized Hough Transform
+//! Ballard, D.H. (1981). Generalizing the Hough transform to detect arbitrary shapes. Pattern Recognition 13 (2): 111-122.
+//! Guil, N., González-Linares, J.M. and Zapata, E.L. (1999). Bidimensional shape detection using an invariant approach. Pattern Recognition 32 (6): 1025-1038.
+class CV_EXPORTS GeneralizedHough : public Algorithm
+{
+public:
+    static Ptr<GeneralizedHough> create(int method);
+
+    virtual ~GeneralizedHough();
+
+    //! set template to search
+    void setTemplate(InputArray templ, int cannyThreshold = 100, Point templCenter = Point(-1, -1));
+    void setTemplate(InputArray edges, InputArray dx, InputArray dy, Point templCenter = Point(-1, -1));
+
+    //! find template on image
+    void detect(InputArray image, OutputArray positions, OutputArray votes = cv::noArray(), int cannyThreshold = 100);
+    void detect(InputArray edges, InputArray dx, InputArray dy, OutputArray positions, OutputArray votes = cv::noArray());
+
+    void release();
+
+protected:
+    virtual void setTemplateImpl(const Mat& edges, const Mat& dx, const Mat& dy, Point templCenter) = 0;
+    virtual void detectImpl(const Mat& edges, const Mat& dx, const Mat& dy, OutputArray positions, OutputArray votes) = 0;
+    virtual void releaseImpl() = 0;
+
+private:
+    Mat edges_, dx_, dy_;
+};
+
 //! erodes the image (applies the local minimum operator)
 CV_EXPORTS_W void erode( InputArray src, OutputArray dst, InputArray kernel,
                          Point anchor=Point(-1,-1), int iterations=1,
