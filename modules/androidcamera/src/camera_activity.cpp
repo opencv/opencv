@@ -1,8 +1,12 @@
 #include <dlfcn.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <dirent.h>
 #include <android/log.h>
 #include <string>
 #include <vector>
 #include <algorithm>
+#include <opencv2/core/version.hpp>
 #include "camera_activity.hpp"
 #include "camera_wrapper.h"
 
@@ -41,6 +45,7 @@ private:
     static bool isConnectedToLib;
 
     static std::string getPathLibFolder();
+    static std::string getDefaultPathLibFolder();
     static CameraActivity::ErrorCode connectToLib();
     static CameraActivity::ErrorCode getSymbolFromLib(void * libHandle, const char* symbolName, void** ppSymbol);
     static void fillListWrapperLibs(const string& folderPath, vector<string>& listLibs);
@@ -55,8 +60,6 @@ private:
 };
 
 std::string CameraWrapperConnector::pathLibFolder;
-#define DEFAULT_WRAPPER_PACKAGE_NAME "com.NativeCamera"
-#define DEFAULT_PATH_LIB_FOLDER "/data/data/" DEFAULT_WRAPPER_PACKAGE_NAME "/lib/"
 
 bool CameraWrapperConnector::isConnectedToLib=false;
 InitCameraConnectC  CameraWrapperConnector::pInitCameraC = 0;
@@ -163,7 +166,13 @@ CameraActivity::ErrorCode CameraWrapperConnector::connectToLib()
     }
 
     dlerror();
-    string folderPath=getPathLibFolder();
+    string folderPath = getPathLibFolder();
+    if (folderPath.empty())
+    {
+	LOGD("Trying to find native camera in default OpenCV packages");
+	folderPath = getDefaultPathLibFolder();
+    }
+
     LOGD("CameraWrapperConnector::connectToLib: folderPath=%s", folderPath.c_str());
 
     vector<string> listLibs;
@@ -256,6 +265,31 @@ void CameraWrapperConnector::fillListWrapperLibs(const string& folderPath, vecto
     }
 }
 
+std::string CameraWrapperConnector::getDefaultPathLibFolder()
+{
+    const string packageList[] = {"tegra3", "armv7a_neon", "armv7a", "armv5", "x86"};
+    for (size_t i = 0; i < 5; i++)
+    {
+	char path[128];
+	sprintf(path, "/data/data/org.opencv.lib_v%d%d_%s/lib/", CV_MAJOR_VERSION, CV_MINOR_VERSION, packageList[i].c_str());
+	LOGD("Trying package \"%s\" (\"%s\")", packageList[i], path);
+
+	DIR* dir = opendir(path);
+	if (!dir)
+	{
+	    LOGD("Package not found");
+	    continue;
+	}
+	else
+	{
+	    closedir(dir);
+	    return path;
+	}
+    }
+
+    return string();
+}
+
 std::string CameraWrapperConnector::getPathLibFolder()
 {
     if (!pathLibFolder.empty())
@@ -278,41 +312,41 @@ std::string CameraWrapperConnector::getPathLibFolder()
         {
 	    while (fgets(lineBuf, sizeof lineBuf, file) != NULL)
 	    {
-                    //verify that line ends with library name
-                    int lineLength = strlen(lineBuf);
-                    int libNameLength = strlen(libName);
+		//verify that line ends with library name
+                int lineLength = strlen(lineBuf);
+                int libNameLength = strlen(libName);
 
-                    //trim end
-                    for(int i = lineLength - 1; i >= 0 && isspace(lineBuf[i]); --i)
-                    {
-                        lineBuf[i] = 0;
-                        --lineLength;
-                    }
+                //trim end
+                for(int i = lineLength - 1; i >= 0 && isspace(lineBuf[i]); --i)
+                {
+                    lineBuf[i] = 0;
+                    --lineLength;
+                }
 
-                    if (0 != strncmp(lineBuf + lineLength - libNameLength, libName, libNameLength))
-                    {
-                        //the line does not contain the library name
-                        continue;
-                    }
+                if (0 != strncmp(lineBuf + lineLength - libNameLength, libName, libNameLength))
+                {
+		    //the line does not contain the library name
+                    continue;
+                }
 
-                    //extract path from smaps line
-                    char* pathBegin = strchr(lineBuf, '/');
-                    if (0 == pathBegin)
-                    {
-                        LOGE("Strange error: could not find path beginning in lin \"%s\"", lineBuf);
-                        continue;
-                    }
+                //extract path from smaps line
+                char* pathBegin = strchr(lineBuf, '/');
+                if (0 == pathBegin)
+                {
+                    LOGE("Strange error: could not find path beginning in lin \"%s\"", lineBuf);
+                    continue;
+                }
 
-                    char* pathEnd = strrchr(pathBegin, '/');
-                    pathEnd[1] = 0;
+                char* pathEnd = strrchr(pathBegin, '/');
+                pathEnd[1] = 0;
 
-                    LOGD("Libraries folder found: %s", pathBegin);
+                LOGD("Libraries folder found: %s", pathBegin);
 
-                    fclose(file);
-                    return pathBegin;
+                fclose(file);
+                return pathBegin;
 	    }
 	    fclose(file);
-	    LOGE("Could not find library path.");
+	    LOGE("Could not find library path");
         }
         else
         {
@@ -321,10 +355,10 @@ std::string CameraWrapperConnector::getPathLibFolder()
     }
     else
     {
-        LOGE("Could not get library name and base address.");
+	LOGE("Could not get library name and base address");
     }
 
-    return DEFAULT_PATH_LIB_FOLDER ;
+    return string();
 }
 
 void CameraWrapperConnector::setPathLibFolder(const string& path)
