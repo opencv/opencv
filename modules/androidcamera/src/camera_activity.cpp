@@ -53,7 +53,7 @@ std::string CameraWrapperConnector::pathLibFolder;
 #define DEFAULT_WRAPPER_PACKAGE_NAME "com.NativeCamera"
 #define DEFAULT_PATH_LIB_FOLDER "/data/data/" DEFAULT_WRAPPER_PACKAGE_NAME "/lib/"
 
-bool CameraWrapperConnector::isConnectedToLib=false;
+bool CameraWrapperConnector::isConnectedToLib = false;
 InitCameraConnectC  CameraWrapperConnector::pInitCameraC = 0;
 CloseCameraConnectC  CameraWrapperConnector::pCloseCameraC = 0;
 GetCameraPropertyC CameraWrapperConnector::pGetPropertyC = 0;
@@ -382,18 +382,24 @@ void CameraActivity::applyProperties()
     frameWidth = -1;
     frameHeight = -1;
     CameraWrapperConnector::applyProperties(&camera);
+    frameWidth = getProperty(ANDROID_CAMERA_PROPERTY_FRAMEWIDTH);
+    frameHeight = getProperty(ANDROID_CAMERA_PROPERTY_FRAMEHEIGHT);
 }
 
 int CameraActivity::getFrameWidth()
 {
     LOGD("CameraActivity::getFrameWidth()");
-    return getProperty(ANDROID_CAMERA_PROPERTY_FRAMEWIDTH);
+    if (frameWidth <= 0)
+	frameWidth = getProperty(ANDROID_CAMERA_PROPERTY_FRAMEWIDTH);
+    return frameWidth;
 }
 
 int CameraActivity::getFrameHeight()
 {
     LOGD("CameraActivity::getFrameHeight()");
-    return frameHeight = getProperty(ANDROID_CAMERA_PROPERTY_FRAMEHEIGHT);
+    if (frameHeight <= 0)
+	frameHeight = getProperty(ANDROID_CAMERA_PROPERTY_FRAMEHEIGHT);
+    return frameHeight;
 }
 
 void CameraActivity::setPathLibFolder(const char* path)
