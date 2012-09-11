@@ -64,10 +64,10 @@ namespace
     {
         return fabs(v) > numeric_limits<float>::epsilon();
     }
-    bool notNull(double v)
+    /*bool notNull(double v)
     {
         return fabs(v) > numeric_limits<double>::epsilon();
-    }
+    }*/
 
     class GHT_Pos : public GeneralizedHough
     {
