@@ -9,15 +9,15 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="About"
-        android:textAppearance="?android:attr/textAppearanceLarge" />
+        android:textAppearance="?android:attr/textAppearanceMedium" />
 
     <TextView
         android:id="@+id/textView2"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:autoLink="web"
-        android:text="OpenCV library is used by other applications for image enhancement, panorama stitching, object detection, recognition and tracking and so on. OpenCV Manager provides the best version of the OpenCV for your hardware. See www.opencv.org for details."
-        android:textAppearance="?android:attr/textAppearanceMedium" />
+        android:text="OpenCV is Open Computer Vision library. OpenCV Manager provides the best version of the OpenCV for your hardware. See www.opencv.org for details."
+        android:textAppearance="?android:attr/textAppearanceSmall" />
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -28,14 +28,14 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Version: "
-            android:textAppearance="?android:attr/textAppearanceMedium" />
+            android:textAppearance="?android:attr/textAppearanceSmall" />
 
         <TextView
             android:id="@+id/EngineVersionValue"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="version"
-            android:textAppearance="?android:attr/textAppearanceMedium" />
+            android:textAppearance="?android:attr/textAppearanceSmall" />
     </LinearLayout>
 
     <LinearLayout
@@ -49,7 +49,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Device information"
-        android:textAppearance="?android:attr/textAppearanceLarge" android:layout_marginTop="20dp"/>
+        android:textAppearance="?android:attr/textAppearanceMedium" android:layout_marginTop="15dp"/>
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -65,14 +65,14 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Hardware: "
-                android:textAppearance="?android:attr/textAppearanceMedium" />
+                android:textAppearance="?android:attr/textAppearanceSmall" />
 
             <TextView
                 android:id="@+id/HardwareValue"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Hardware"
-                android:textAppearance="?android:attr/textAppearanceMedium" />
+                android:textAppearance="?android:attr/textAppearanceSmall" />
 
         </LinearLayout>
 
@@ -87,14 +87,14 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="OS version: "
-            android:textAppearance="?android:attr/textAppearanceMedium" />
+            android:textAppearance="?android:attr/textAppearanceSmall" />
 
         <TextView
             android:id="@+id/OsVersionValue"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Os Specification"
-            android:textAppearance="?android:attr/textAppearanceMedium" />
+            android:textAppearance="?android:attr/textAppearanceSmall" />
 
     </LinearLayout>
 
@@ -103,7 +103,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Installed packages"
-        android:textAppearance="?android:attr/textAppearanceLarge" android:layout_marginTop="15dp"/>
+        android:textAppearance="?android:attr/textAppearanceMedium" android:layout_marginTop="15dp"/>
 
     <ListView
         android:id="@+id/InstalledPackageList"

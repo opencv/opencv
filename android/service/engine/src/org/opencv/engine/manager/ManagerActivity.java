@@ -290,7 +290,7 @@ public class ManagerActivity extends Activity
 	            if (null != ActivePackagePath && ActivePackagePath.indexOf(mInstalledPackageInfo[i].packageName) >= 0)
 	            {
 	            	temp.put("Activity", "y");
-	            	PublicName += " (Active)";
+	            	PublicName += " (in use)";
 	            }
 	            else
 	            {
