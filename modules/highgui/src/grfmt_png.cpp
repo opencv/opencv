@@ -357,28 +357,33 @@ bool  PngEncoder::write( const Mat& img, const vector<int>& params )
                         png_init_io( png_ptr, f );
                 }
 
-                int compression_level = 0;
-                int compression_strategy = Z_RLE;
+                int compression_level = -1; // Invalid value to allow setting 0-9 as valid
+                int compression_strategy = Z_RLE; // Default strategy
+				bool isBilevel = false;
 
                 for( size_t i = 0; i < params.size(); i += 2 )
                 {
                     if( params[i] == CV_IMWRITE_PNG_COMPRESSION )
                     {
                         compression_level = params[i+1];
-                        compression_level = MIN(MAX(compression_level, 0), MAX_MEM_LEVEL);
+                        compression_level = MIN(MAX(compression_level, 0), Z_BEST_COMPRESSION);
                     }
                     if( params[i] == CV_IMWRITE_PNG_STRATEGY )
                     {
                         compression_strategy = params[i+1];
                         compression_strategy = MIN(MAX(compression_strategy, 0), Z_FIXED);
                     }
+                    if( params[i] == CV_IMWRITE_PNG_BILEVEL )
+                    {
+                        isBilevel = params[i+1] != 0;                        
+                    }
                 }
 
                 if( m_buf || f )
                 {
-                    if( compression_level > 0 )
+                    if( compression_level >= 0 )
                     {
-                        png_set_compression_mem_level( png_ptr, compression_level );
+                        png_set_compression_level( png_ptr, compression_level );
                     }
                     else
                     {
@@ -389,13 +394,16 @@ bool  PngEncoder::write( const Mat& img, const vector<int>& params )
                     }
                     png_set_compression_strategy(png_ptr, compression_strategy);
 
-                    png_set_IHDR( png_ptr, info_ptr, width, height, depth == CV_8U ? 8 : 16,
+                    png_set_IHDR( png_ptr, info_ptr, width, height, depth == CV_8U ? isBilevel?1:8 : 16,
                         channels == 1 ? PNG_COLOR_TYPE_GRAY :
                         channels == 3 ? PNG_COLOR_TYPE_RGB : PNG_COLOR_TYPE_RGBA,
                         PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT,
                         PNG_FILTER_TYPE_DEFAULT );
 
                     png_write_info( png_ptr, info_ptr );
+
+					if (isBilevel)
+						png_set_packing(png_ptr);
 
                     png_set_bgr( png_ptr );
                     if( !isBigEndian() )
