@@ -8,14 +8,17 @@ ScriptHome = os.path.split(sys.argv[0])[0]
 ConfFile = open(os.path.join(ScriptHome, "camera_build.conf"), "rt")
 HomeDir = os.getcwd()
 for s in ConfFile.readlines():
+    s = s[0:s.find("#")]
+    if (not s):
+	continue
     keys = s.split(";")
     if (len(keys) < 4):
 	print("Error: invalid config line: \"%s\"" % s)
 	continue
-    MakeTarget = keys[0]
-    Arch = keys[1]
-    NativeApiLevel = keys[2]
-    AndroidTreeRoot = keys[3]
+    MakeTarget = str.strip(keys[0])
+    Arch = str.strip(keys[1])
+    NativeApiLevel = str.strip(keys[2])
+    AndroidTreeRoot = str.strip(keys[3])
     AndroidTreeRoot = str.strip(AndroidTreeRoot, "\n")
     print("Building %s for %s" % (MakeTarget, Arch))
     BuildDir = os.path.join(HomeDir, MakeTarget + "_" + Arch)
@@ -35,10 +38,10 @@ for s in ConfFile.readlines():
     BuildLog = os.path.join(BuildDir, "build.log")
     CmakeCmdLine = "cmake -DCMAKE_TOOLCHAIN_FILE=../android.toolchain.cmake -DANDROID_SOURCE_TREE=\"%s\" -DANDROID_NATIVE_API_LEVEL=\"%s\" -DANDROID_ABI=\"%s\" -DANDROID_USE_STLPORT=ON ../../ > \"%s\" 2>&1" % (AndroidTreeRoot, NativeApiLevel, Arch, BuildLog)
     MakeCmdLine = "make %s >> \"%s\" 2>&1" % (MakeTarget, BuildLog);
-    #print(CmakeCmdLine)
-    os.system(CmakeCmdLine)
-    #print(MakeCmdLine)
-    os.system(MakeCmdLine)
+    print(CmakeCmdLine)
+    #os.system(CmakeCmdLine)
+    print(MakeCmdLine)
+    #os.system(MakeCmdLine)
     os.chdir(HomeDir)
     CameraLib = os.path.join(BuildDir, "lib", Arch, "lib" + MakeTarget + ".so")
     if (os.path.exists(CameraLib)):
