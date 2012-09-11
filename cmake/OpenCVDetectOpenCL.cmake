@@ -56,7 +56,7 @@ else()
         if(OPENCL_LIB_SEARCH_PATH)
             find_library(OPENCL_LIBRARY NAMES OpenCL PATHS ${OPENCL_LIB_SEARCH_PATH} NO_DEFAULT_PATH)
         else()
-            find_library(OPENCL_LIBRARY NAMES OpenCL PATHS ${OPENCL_LIB_SEARCH_PATH} NO_DEFAULT_PATH)
+            find_library(OPENCL_LIBRARY NAMES OpenCL)
         endif()
 
         include(FindPackageHandleStandardArgs)
