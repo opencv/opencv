@@ -6,6 +6,11 @@ gen_template_check_self = Template("""    if(!PyObject_TypeCheck(self, &pyopencv
     $cname* _self_ = ${amp}((pyopencv_${name}_t*)self)->v;
 """)
 
+gen_template_check_self_algo = Template("""    if(!PyObject_TypeCheck(self, &pyopencv_${name}_Type))
+        return failmsgp("Incorrect type of self (must be '${name}' or its derivative)");
+    $cname* _self_ = dynamic_cast<$cname*>(${amp}((pyopencv_${name}_t*)self)->v.obj);
+""")
+
 gen_template_call_constructor = Template("""self = PyObject_NEW(pyopencv_${name}_t, &pyopencv_${name}_Type);
         new (&(self->v)) Ptr<$cname>(); // init Ptr with placement new
         if(self) ERRWRAP2(self->v = new $cname""")
@@ -70,7 +75,7 @@ gen_template_type_decl = Template("""
 struct pyopencv_${name}_t
 {
     PyObject_HEAD
-    Ptr<${cname}> v;
+    Ptr<${cname1}> v;
 };
 
 static PyTypeObject pyopencv_${name}_Type =
@@ -83,14 +88,14 @@ static PyTypeObject pyopencv_${name}_Type =
 
 static void pyopencv_${name}_dealloc(PyObject* self)
 {
-    ((pyopencv_${name}_t*)self)->v = NULL;
+    ((pyopencv_${name}_t*)self)->v.release();
     PyObject_Del(self);
 }
 
 static PyObject* pyopencv_from(const Ptr<${cname}>& r)
 {
     pyopencv_${name}_t *m = PyObject_NEW(pyopencv_${name}_t, &pyopencv_${name}_Type);
-    new (&(m->v)) Ptr<$cname>(); // init Ptr with placement new
+    new (&(m->v)) Ptr<$cname1>(); // init Ptr with placement new
     m->v = r;
     return (PyObject*)m;
 }
@@ -207,6 +212,7 @@ class ClassInfo(object):
         self.name = self.wname = normalize_class_name(name)
         self.ismap = False
         self.issimple = False
+        self.isalgorithm = False
         self.methods = {}
         self.props = []
         self.consts = {}
@@ -222,6 +228,8 @@ class ClassInfo(object):
                 #return sys.exit(-1)
             if self.bases and self.bases[0].startswith("cv::"):
                 self.bases[0] = self.bases[0][4:]
+            if self.bases and self.bases[0] == "Algorithm":
+                self.isalgorithm = True
             for m in decl[2]:
                 if m.startswith("="):
                     self.wname = m[1:]
@@ -510,7 +518,10 @@ class FuncInfo(object):
                 amp = ""
                 if selfinfo.issimple:
                     amp = "&"
-                code += gen_template_check_self.substitute(name=selfinfo.name, cname=selfinfo.cname, amp=amp)
+                if selfinfo.isalgorithm:
+                    code += gen_template_check_self_algo.substitute(name=selfinfo.name, cname=selfinfo.cname, amp=amp)
+                else:
+                    code += gen_template_check_self.substitute(name=selfinfo.name, cname=selfinfo.cname, amp=amp)
                 fullname = selfinfo.wname + "." + fullname
 
         all_code_variants = []
@@ -675,6 +686,8 @@ class PythonWrapperGenerator(object):
                 % (classinfo.name, classinfo.cname)
             sys.exit(-1)
         self.classes[classinfo.name] = classinfo
+        if classinfo.bases and not classinfo.isalgorithm:
+            classinfo.isalgorithm = self.classes[classinfo.bases[0]].isalgorithm
 
     def add_const(self, name, decl):
         constinfo = ConstInfo(name, decl[1])
@@ -770,8 +783,9 @@ class PythonWrapperGenerator(object):
                     templ = gen_template_simple_type_decl
                 else:
                     templ = gen_template_type_decl
-                self.code_types.write(templ.substitute(name=name, wname=classinfo.wname, cname=classinfo.cname))
-
+                self.code_types.write(templ.substitute(name=name, wname=classinfo.wname, cname=classinfo.cname,
+                                      cname1=("cv::Algorithm" if classinfo.isalgorithm else classinfo.cname)))
+                                    
         # register classes in the same order as they have been declared.
         # this way, base classes will be registered in Python before their derivatives.
         classlist1 = [(classinfo.decl_idx, name, classinfo) for name, classinfo in classlist]
@@ -813,6 +827,3 @@ if __name__ == "__main__":
         srcfiles = sys.argv[2:]
     generator = PythonWrapperGenerator()
     generator.gen(srcfiles, dstdir)
-
-
-

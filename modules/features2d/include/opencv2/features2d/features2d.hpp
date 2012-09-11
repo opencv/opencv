@@ -264,7 +264,7 @@ public:
                                      bool useProvidedKeypoints=false ) const = 0;
 
     // Create feature detector and descriptor extractor by name.
-    static Ptr<Feature2D> create( const string& name );
+    CV_WRAP static Ptr<Feature2D> create( const string& name );
 };
 
 /*!

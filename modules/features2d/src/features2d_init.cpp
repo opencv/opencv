@@ -44,6 +44,11 @@
 
 using namespace cv;
 
+Ptr<Feature2D> Feature2D::create( const string& feature2DType )
+{
+    return Algorithm::create<Feature2D>("Feature2D." + feature2DType);
+}
+
 /////////////////////// AlgorithmInfo for various detector & descriptors ////////////////////////////
 
 /* NOTE!!!
