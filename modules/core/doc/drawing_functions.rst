@@ -384,6 +384,7 @@ Class for iterating pixels on a raster line. ::
         // move the iterator to the next pixel
         LineIterator& operator ++();
         LineIterator operator ++(int);
+        Point pos() const;
 
         // internal state of the iterator
         uchar* ptr;
@@ -394,16 +395,23 @@ Class for iterating pixels on a raster line. ::
 
 The class ``LineIterator`` is used to get each pixel of a raster line. It can be treated as versatile implementation of the Bresenham algorithm where you can stop at each pixel and do some extra processing, for example, grab pixel values along the line or draw a line with an effect (for example, with XOR operation).
 
-The number of pixels along the line is stored in ``LineIterator::count`` . ::
+The number of pixels along the line is stored in ``LineIterator::count`` . The method ``LineIterator::pos`` returns the current position in the image ::
 
     // grabs pixels along the line (pt1, pt2)
     // from 8-bit 3-channel image to the buffer
     LineIterator it(img, pt1, pt2, 8);
+    LineIterator it2 = it;
     vector<Vec3b> buf(it.count);
 
     for(int i = 0; i < it.count; i++, ++it)
         buf[i] = *(const Vec3b)*it;
-
+    
+    // alternative way of iterating through the line    
+    for(int i = 0; i < it2.count; i++, ++it2)
+    {
+        Vec3b val = img.at<Vec3b>(it2.pos());
+        CV_Assert(buf[i] == val);
+    }
 
 
 rectangle
