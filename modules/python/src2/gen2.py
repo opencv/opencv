@@ -169,6 +169,13 @@ static PyObject* pyopencv_${name}_get_${member}(pyopencv_${name}_t* p, void *clo
 }
 """)
 
+gen_template_get_prop_algo = Template("""
+static PyObject* pyopencv_${name}_get_${member}(pyopencv_${name}_t* p, void *closure)
+{
+    return pyopencv_from(dynamic_cast<$cname*>(p->v.obj)${access}${member});
+}
+""")
+
 gen_template_set_prop = Template("""
 static int pyopencv_${name}_set_${member}(pyopencv_${name}_t* p, PyObject *value, void *closure)
 {
@@ -180,6 +187,19 @@ static int pyopencv_${name}_set_${member}(pyopencv_${name}_t* p, PyObject *value
     return pyopencv_to(value, p->v${access}${member}) ? 0 : -1;
 }
 """)
+
+gen_template_set_prop_algo = Template("""
+static int pyopencv_${name}_set_${member}(pyopencv_${name}_t* p, PyObject *value, void *closure)
+{
+    if (value == NULL)
+    {
+        PyErr_SetString(PyExc_TypeError, "Cannot delete the ${member} attribute");
+        return -1;
+    }
+    return pyopencv_to(value, dynamic_cast<$cname*>(p->v.obj)${access}${member}) ? 0 : -1;
+}
+""")
+
 
 gen_template_prop_init = Template("""
     {(char*)"${member}", (getter)pyopencv_${name}_get_${member}, NULL, (char*)"${member}", NULL},""")
@@ -267,11 +287,17 @@ class ClassInfo(object):
             access_op = "."
 
         for pname, p in sorted_props:
-            getset_code.write(gen_template_get_prop.substitute(name=self.name, member=pname, membertype=p.tp, access=access_op))
+            if self.isalgorithm:
+                getset_code.write(gen_template_get_prop_algo.substitute(name=self.name, cname=self.cname, member=pname, membertype=p.tp, access=access_op))
+            else:
+                getset_code.write(gen_template_get_prop.substitute(name=self.name, member=pname, membertype=p.tp, access=access_op))
             if p.readonly:
                 getset_inits.write(gen_template_prop_init.substitute(name=self.name, member=pname))
             else:
-                getset_code.write(gen_template_set_prop.substitute(name=self.name, member=pname, membertype=p.tp, access=access_op))
+                if self.isalgorithm:
+                    getset_code.write(gen_template_set_prop_algo.substitute(name=self.name, cname=self.cname, member=pname, membertype=p.tp, access=access_op))
+                else:
+                    getset_code.write(gen_template_set_prop.substitute(name=self.name, member=pname, membertype=p.tp, access=access_op))
                 getset_inits.write(gen_template_rw_prop_init.substitute(name=self.name, member=pname))
 
         methods_code = cStringIO.StringIO()
