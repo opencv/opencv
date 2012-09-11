@@ -576,8 +576,10 @@ namespace
         else if (iterations > 1 && countNonZero(_kernel) == _kernel.rows * _kernel.cols)
         {
             anchor = Point(anchor.x * iterations, anchor.y * iterations);
-            kernel = getStructuringElement(MORPH_RECT, Size(ksize.width + iterations * (ksize.width - 1),
-                ksize.height + iterations * (ksize.height - 1)), anchor);
+            kernel = getStructuringElement(MORPH_RECT,
+                                           Size(ksize.width + (iterations - 1) * (ksize.width - 1),
+                                                ksize.height + (iterations - 1) * (ksize.height - 1)),
+                                           anchor);
             iterations = 1;
         }
         else
