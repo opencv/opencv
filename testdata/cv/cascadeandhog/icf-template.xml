@@ -1,4 +1,3 @@
-<--simpleied version of coftcascade xml.represintation-->
 <?xml version="1.0"?>
 <opencv_storage>
 <cascade>
@@ -8,7 +7,7 @@
   <width>64</width>
   <height>128</height>
   <octaves>
-    <_>
+  	    <_>
       <stageParams>
         </stageParams>
       <featureParams>
@@ -63,5 +62,8 @@
           <channel>9</channel>
           <rect>
             19 76 44 101</rect></_>
-        </features></_>
+        </features>
+    </_>
+  </octaves>
+</cascade>
 </opencv_storage>
