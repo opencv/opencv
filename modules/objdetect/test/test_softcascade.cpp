@@ -43,16 +43,15 @@
 
 TEST(SoftCascade, readCascade)
 {
-    std::string xml = "/home/kellan/icf-template.xml";
+    std::string xml = cvtest::TS::ptr()->get_data_path() + "cascadeandhog/icf-template.xml";
     cv::SoftCascade cascade;
     ASSERT_TRUE(cascade.load(xml));
 
 }
 
-TEST(SoftCascade, Detect)
+TEST(SoftCascade, detect)
 {
     std::string xml =  cvtest::TS::ptr()->get_data_path() + "cascadeandhog/softcascade.xml";
-    std::cout << "PATH: "<< xml << std::endl;
     cv::SoftCascade cascade;
     ASSERT_TRUE(cascade.load(xml));
 

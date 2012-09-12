@@ -493,32 +493,36 @@ protected:
 class CV_EXPORTS SoftCascade
 {
 public:
-    //! empty cascade will be created.
+    //! An empty cascade will be created.
     SoftCascade();
 
-    //! cascade will be loaded from file "filename"
+    //! Cascade will be created from file for scales from minScale to maxScale.
+    //! Param filename is a path to xml-serialized cascade.
+    //! Param minScale is a minimum scale relative to the original size of the image on which cascade will be applyed.
+    //! Param minScale is a maximum scale relative to the original size of the image on which cascade will be applyed.
     SoftCascade( const string& filename, const float minScale = 0.4f, const float maxScale = 5.f);
+
+    //! cascade will be loaded from file "filename". The previous cascade will be destroyed.
+    //! Param filename is a path to xml-serialized cascade.
+    //! Param minScale is a minimum scale relative to the original size of the image on which cascade will be applyed.
+    //! Param minScale is a maximum scale relative to the original size of the image on which cascade will be applyed.
     bool load( const string& filename, const float minScale = 0.4f, const float maxScale = 5.f);
 
     virtual ~SoftCascade();
 
-    //! return vector of bounding boxes. Each box contains detected object
+    //! return vector of bounding boxes. Each box contains one detected object
     virtual void detectMultiScale(const Mat& image, const std::vector<cv::Rect>& rois, std::vector<cv::Rect>& objects,
     int step = 4, int rejectfactor = 1);
 
 protected:
-    virtual void detectForOctave(int octave);
-    // virtual bool detectSingleScale( const Mat& image, int stripCount, Size processingRectSize,
-    //                                 int stripSize, int yStep, double factor, vector<Rect>& candidates,
-    //                                 vector<int>& rejectLevels, vector<double>& levelWeights, bool outputRejectLevels=false);
     enum { BOOST = 0 };
     enum
     {
-        FRAME_WIDTH = 640,
-        FRAME_HEIGHT = 480,
-        TOTAL_SCALES = 55,
-        CLASSIFIERS = 5,
-        ORIG_OBJECT_WIDTH = 64,
+        FRAME_WIDTH        = 640,
+        FRAME_HEIGHT       = 480,
+        TOTAL_SCALES       = 55,
+        CLASSIFIERS        = 5,
+        ORIG_OBJECT_WIDTH  = 64,
         ORIG_OBJECT_HEIGHT = 128
     };
 
