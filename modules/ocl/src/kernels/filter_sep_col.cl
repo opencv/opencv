@@ -87,6 +87,7 @@ The length of the convovle kernel supported is only related to the MAX size of L
 which is HW related.
 Niko
 6/29/2011
+The info above maybe obsolete.
 ***********************************************************************************/
 
 

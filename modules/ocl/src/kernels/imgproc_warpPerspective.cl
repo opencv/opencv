@@ -91,8 +91,8 @@ __kernel void warpPerspectiveNN_C1_D0(__global uchar const * restrict src, __glo
     F4 DX = (F4)(dx, dx+1, dx+2, dx+3);
     F4 X0 = M[0]*DX + M[1]*dy + M[2];
     F4 Y0 = M[3]*DX + M[4]*dy + M[5];
-    F4 W = M[6]*DX + M[7]*dy + M[8];
-    W = (W!=0) ? 1./W : 0;
+    F4 W = M[6]*DX + M[7]*dy + M[8],one=1,zero=0;
+    W = (W!=zero) ? one/W : zero;
     short4 X = convert_short4(rint(X0*W));
     short4 Y = convert_short4(rint(Y0*W));
     int4 sx = convert_int4(X);

@@ -302,7 +302,9 @@ __kernel void __attribute__((reqd_work_group_size(8,8,1)))gpuRunHaarClassifierCa
 				nodecounter = splitnode;
 				for(int stageloop = split_stage; stageloop< end_stage && queuecount>0;stageloop++)
 				{
-					lclcount[0]=0;
+				  //barrier(CLK_LOCAL_MEM_FENCE);
+					//if(lcl_id == 0)  
+            lclcount[0]=0;
 					barrier(CLK_LOCAL_MEM_FENCE);
 
 					int2 stageinfo = *(global int2*)(stagecascadeptr+stageloop);
@@ -314,14 +316,17 @@ __kernel void __attribute__((reqd_work_group_size(8,8,1)))gpuRunHaarClassifierCa
 					int lcl_compute_win_id = (lcl_id >>(6-perfscale));
 					int lcl_loops = (stageinfo.x + lcl_compute_win -1) >> (6-perfscale);
 					int lcl_compute_id = lcl_id - (lcl_compute_win_id << (6-perfscale));
-					for(int queueloop=0;queueloop<queuecount_loop && lcl_compute_win_id < queuecount;queueloop++)
+					for(int queueloop=0;queueloop<queuecount_loop/* && lcl_compute_win_id < queuecount*/;queueloop++)
 					{
 						float stage_sum = 0.f;
 						int temp_coord = lcloutindex[lcl_compute_win_id<<1];
 						float variance_norm_factor = as_float(lcloutindex[(lcl_compute_win_id<<1)+1]);
 						int queue_pixel = mad24(((temp_coord  & (int)0xffff0000)>>16),readwidth,temp_coord & 0xffff);
 
-						int tempnodecounter = lcl_compute_id;
+					  //barrier(CLK_LOCAL_MEM_FENCE);
+            if(lcl_compute_win_id < queuecount) {
+						
+            int tempnodecounter = lcl_compute_id;
 						float part_sum = 0.f;
 						for(int lcl_loop=0;lcl_loop<lcl_loops && tempnodecounter<stageinfo.x;lcl_loop++)
 						{
@@ -353,10 +358,12 @@ __kernel void __attribute__((reqd_work_group_size(8,8,1)))gpuRunHaarClassifierCa
 									lcldata[mad24(info3.w,readwidth,info3.x)] + lcldata[mad24(info3.w,readwidth,info3.z)]) * w.z;
 						//}
 							part_sum += classsum >= nodethreshold ? alpha2.y : alpha2.x;
-							tempnodecounter+=lcl_compute_win;
+							tempnodecounter +=lcl_compute_win;
 						}//end for(int lcl_loop=0;lcl_loop<lcl_loops;lcl_loop++)
 						partialsum[lcl_id]=part_sum;
+            }
 						barrier(CLK_LOCAL_MEM_FENCE);
+            if(lcl_compute_win_id < queuecount) {
 						for(int i=0;i<lcl_compute_win && (lcl_compute_id==0);i++)
 						{
 							stage_sum += partialsum[lcl_id+i];
@@ -368,11 +375,14 @@ __kernel void __attribute__((reqd_work_group_size(8,8,1)))gpuRunHaarClassifierCa
 							lcloutindex[(queueindex<<1)+1] = as_int(variance_norm_factor);
 						}
 						lcl_compute_win_id +=(1<<perfscale);
+            }
 						barrier(CLK_LOCAL_MEM_FENCE);
 					}//end for(int queueloop=0;queueloop<queuecount_loop;queueloop++)
+				  barrier(CLK_LOCAL_MEM_FENCE);
 					queuecount = lclcount[0];
 					nodecounter += stageinfo.x;
 				}//end for(int stageloop = splitstage; stageloop< endstage && queuecount>0;stageloop++)
+				//barrier(CLK_LOCAL_MEM_FENCE);
 				if(lcl_id<queuecount)
 				{
 					int temp = lcloutindex[lcl_id<<1];

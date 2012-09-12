@@ -538,11 +538,11 @@ namespace cv
 
             if(NULL != build_options)
 			{
-                src_sign << (int64)source << clCxt->impl->clContext << "_" << build_options;
+                src_sign << (int64)(*source) << clCxt->impl->clContext << "_" << build_options;
 			}
             else
 			{
-                src_sign << (int64)source << clCxt->impl->clContext;			
+                src_sign << (int64)(*source) << clCxt->impl->clContext;			
 			}
             srcsign = src_sign.str();
 
@@ -562,11 +562,11 @@ namespace cv
                     strcat(all_build_options, build_options);
 				if(all_build_options != NULL)
 				{
-					filename = clCxt->impl->Binpath + "\\" + kernelName + "_" + clCxt->impl->devName + all_build_options + ".clb";
+					filename = clCxt->impl->Binpath  + kernelName + "_" + clCxt->impl->devName + all_build_options + ".clb";
 				}
 				else
 				{
-					filename = clCxt->impl->Binpath + "\\" + kernelName + "_" + clCxt->impl->devName + ".clb";
+					filename = clCxt->impl->Binpath  + kernelName + "_" + clCxt->impl->devName + ".clb";
 				}
 
                 FILE *fp;

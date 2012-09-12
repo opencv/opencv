@@ -55,22 +55,22 @@ namespace cv
         //////////////////////////////// oclMat ////////////////////////////////
         ////////////////////////////////////////////////////////////////////////
 
-        inline oclMat::oclMat() : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0), offset(0), wholerows(0), wholecols(0) {}
+        inline oclMat::oclMat() : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0), offset(0), wholerows(0), wholecols(0), download_channels(0) {}
 
-        inline oclMat::oclMat(int _rows, int _cols, int _type) : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0), offset(0), wholerows(0), wholecols(0)
+        inline oclMat::oclMat(int _rows, int _cols, int _type) : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0), offset(0), wholerows(0), wholecols(0), download_channels(0)
         {
             if( _rows > 0 && _cols > 0 )
                 create( _rows, _cols, _type );
         }
 
-        inline oclMat::oclMat(Size _size, int _type) : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0), offset(0), wholerows(0), wholecols(0)
+        inline oclMat::oclMat(Size _size, int _type) : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0), offset(0), wholerows(0), wholecols(0), download_channels(0)
         {
             if( _size.height > 0 && _size.width > 0 )
                 create( _size.height, _size.width, _type );
         }
 
         inline oclMat::oclMat(int _rows, int _cols, int _type, const Scalar &_s)
-            : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0), offset(0), wholerows(0), wholecols(0)
+            : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0), offset(0), wholerows(0), wholecols(0), download_channels(0)
         {
             if(_rows > 0 && _cols > 0)
             {
@@ -80,7 +80,7 @@ namespace cv
         }
 
         inline oclMat::oclMat(Size _size, int _type, const Scalar &_s)
-            : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0), offset(0), wholerows(0), wholecols(0)
+            : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0), offset(0), wholerows(0), wholecols(0), download_channels(0)
         {
             if( _size.height > 0 && _size.width > 0 )
             {
@@ -91,49 +91,53 @@ namespace cv
 
         inline oclMat::oclMat(const oclMat &m)
             : flags(m.flags), rows(m.rows), cols(m.cols), step(m.step), data(m.data),
-              refcount(m.refcount), datastart(m.datastart), dataend(m.dataend), clCxt(m.clCxt), offset(m.offset), wholerows(m.wholerows), wholecols(m.wholecols)
+			refcount(m.refcount), datastart(m.datastart), dataend(m.dataend), clCxt(m.clCxt), offset(m.offset), wholerows(m.wholerows), wholecols(m.wholecols), download_channels(m.download_channels)
         {
             if( refcount )
                 CV_XADD(refcount, 1);
         }
-        //Fixme, the data is not correct if _data point to the CPU memory
+        
         inline oclMat::oclMat(int _rows, int _cols, int _type, void *_data, size_t _step)
             : flags(Mat::MAGIC_VAL + (_type &TYPE_MASK)), rows(_rows), cols(_cols), step(_step), data((uchar *)_data), refcount(0),
-              datastart((uchar *)_data), dataend((uchar *)_data), offset(0), wholerows(_rows), wholecols(_cols)
+              datastart((uchar *)_data), dataend((uchar *)_data), offset(0), wholerows(_rows), wholecols(_cols), download_channels(CV_MAT_CN(_type))
         {
-            size_t minstep = cols * elemSize();
-            if( step == Mat::AUTO_STEP )
-            {
-                step = minstep;
-                flags |= Mat::CONTINUOUS_FLAG;
-            }
-            else
-            {
-                if( rows == 1 ) step = minstep;
-                CV_DbgAssert( step >= minstep );
-                flags |= step == minstep ? Mat::CONTINUOUS_FLAG : 0;
-            }
-            dataend += step * (rows - 1) + minstep;
+			cv::Mat m(_rows,_cols,_type,_data,_step);
+			upload(m);
+            //size_t minstep = cols * elemSize();
+            //if( step == Mat::AUTO_STEP )
+            //{
+            //    step = minstep;
+            //    flags |= Mat::CONTINUOUS_FLAG;
+            //}
+            //else
+            //{
+            //    if( rows == 1 ) step = minstep;
+            //    CV_DbgAssert( step >= minstep );
+            //    flags |= step == minstep ? Mat::CONTINUOUS_FLAG : 0;
+            //}
+            //dataend += step * (rows - 1) + minstep;
         }
-        //Fixme, the data is not correct if _data point to the CPU memory
+        
         inline oclMat::oclMat(Size _size, int _type, void *_data, size_t _step)
             : flags(Mat::MAGIC_VAL + (_type &TYPE_MASK)), rows(_size.height), cols(_size.width),
               step(_step), data((uchar *)_data), refcount(0),
-              datastart((uchar *)_data), dataend((uchar *)_data), offset(0), wholerows(_size.height), wholecols(_size.width)
+              datastart((uchar *)_data), dataend((uchar *)_data), offset(0), wholerows(_size.height), wholecols(_size.width), download_channels(CV_MAT_CN(_type))
         {
-            size_t minstep = cols * elemSize();
-            if( step == Mat::AUTO_STEP )
-            {
-                step = minstep;
-                flags |= Mat::CONTINUOUS_FLAG;
-            }
-            else
-            {
-                if( rows == 1 ) step = minstep;
-                CV_DbgAssert( step >= minstep );
-                flags |= step == minstep ? Mat::CONTINUOUS_FLAG : 0;
-            }
-            dataend += step * (rows - 1) + minstep;
+			cv::Mat m(_size,_type,_data,_step);
+			upload(m);
+            //size_t minstep = cols * elemSize();
+            //if( step == Mat::AUTO_STEP )
+            //{
+            //    step = minstep;
+            //    flags |= Mat::CONTINUOUS_FLAG;
+            //}
+            //else
+            //{
+            //    if( rows == 1 ) step = minstep;
+            //    CV_DbgAssert( step >= minstep );
+            //    flags |= step == minstep ? Mat::CONTINUOUS_FLAG : 0;
+            //}
+            //dataend += step * (rows - 1) + minstep;
         }
 
 
@@ -148,6 +152,7 @@ namespace cv
             wholerows = m.wholerows;
             wholecols = m.wholecols;
             offset = m.offset;
+			download_channels = m.download_channels;
             if( rowRange == Range::all() )
                 rows = m.rows;
             else
@@ -179,7 +184,7 @@ namespace cv
         inline oclMat::oclMat(const oclMat &m, const Rect &roi)
             : flags(m.flags), rows(roi.height), cols(roi.width),
               step(m.step), data(m.data), refcount(m.refcount),
-              datastart(m.datastart), dataend(m.dataend), clCxt(m.clCxt), offset(m.offset), wholerows(m.wholerows), wholecols(m.wholecols)
+			  datastart(m.datastart), dataend(m.dataend), clCxt(m.clCxt), offset(m.offset), wholerows(m.wholerows), wholecols(m.wholecols), download_channels(m.download_channels)
         {
             flags &= roi.width < m.cols ? ~Mat::CONTINUOUS_FLAG : -1;
             offset += roi.y * step + roi.x * elemSize();
@@ -192,7 +197,7 @@ namespace cv
         }
 
         inline oclMat::oclMat(const Mat &m)
-            : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0) , offset(0), wholerows(0), wholecols(0)
+            : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0) , offset(0), wholerows(0), wholecols(0), download_channels(0)
         {
             //clCxt = Context::getContext();
             upload(m);
@@ -222,6 +227,7 @@ namespace cv
                 wholerows = m.wholerows;
                 wholecols = m.wholecols;
                 refcount = m.refcount;
+				download_channels = m.download_channels;
             }
             return *this;
         }
@@ -323,6 +329,7 @@ namespace cv
             std::swap( offset, b.offset );
             std::swap( wholerows, b.wholerows );
             std::swap( wholecols, b.wholecols );
+			std::swap( download_channels, b.download_channels);
         }
 
         inline void oclMat::locateROI( Size &wholeSize, Point &ofs ) const
@@ -412,28 +419,32 @@ namespace cv
         }
 
 
-        //fixme, the ROI operation is not correct.
+        
         inline uchar *oclMat::ptr(int y)
         {
             CV_DbgAssert( (unsigned)y < (unsigned)rows );
+			CV_Error(CV_GpuNotSupported,"This function hasn't been supported yet.\n");
             return data + step * y;
         }
 
         inline const uchar *oclMat::ptr(int y) const
         {
             CV_DbgAssert( (unsigned)y < (unsigned)rows );
+			CV_Error(CV_GpuNotSupported,"This function hasn't been supported yet.\n");
             return data + step * y;
         }
 
         template<typename _Tp> inline _Tp *oclMat::ptr(int y)
         {
             CV_DbgAssert( (unsigned)y < (unsigned)rows );
+			CV_Error(CV_GpuNotSupported,"This function hasn't been supported yet.\n");
             return (_Tp *)(data + step * y);
         }
 
         template<typename _Tp> inline const _Tp *oclMat::ptr(int y) const
         {
             CV_DbgAssert( (unsigned)y < (unsigned)rows );
+			CV_Error(CV_GpuNotSupported,"This function hasn't been supported yet.\n");
             return (const _Tp *)(data + step * y);
         }
 

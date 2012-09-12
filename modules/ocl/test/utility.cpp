@@ -263,22 +263,4 @@ void PrintTo(const Inverse &inverse, std::ostream *os)
     else
         (*os) << "direct";
 }
-	cv::ocl::oclMat createMat(cv::Size size,int type,bool useRoi)
-	{
-		cv::Size size0 = size;
-		if (useRoi)
-		{
-			size0.width += randomInt(5, 15);
-			size0.height += randomInt(5, 15);
-		}
-		cv::ocl::oclMat d_m(size0, type);
-		if (size0 != size)
-			d_m = cv::ocl::oclMat(size.width,size.height,type); // suspicious point
-		return d_m;
-	}
-	cv::ocl::oclMat loadMat(const cv::Mat& m, bool useRoi)
-	{
-		cv::ocl::oclMat d_m = ::createMat(m.size(), m.type(), useRoi);
-		d_m.upload(m);
-		return d_m;
-	}
+

@@ -940,6 +940,239 @@ TEST_P(WarpPerspective, Mat)
 
 }
 
+/////////////////////////////////////////////////////////////////////////////////////////////////
+// remap
+//////////////////////////////////////////////////////////////////////////////////////////////////
+
+PARAM_TEST_CASE(Remap, MatType, MatType, MatType, int, int)
+{
+    int srcType;
+    int map1Type;
+    int map2Type;
+    cv::Scalar val;
+
+    int interpolation;
+    int bordertype;
+
+    cv::Mat src;
+    cv::Mat dst;
+    cv::Mat map1;
+    cv::Mat map2;
+
+   
+    int src_roicols;
+    int src_roirows;
+    int dst_roicols;
+    int dst_roirows;
+    int map1_roicols;
+    int map1_roirows;
+    int map2_roicols;
+    int map2_roirows;
+    int srcx;
+    int srcy;
+    int dstx;
+    int dsty;
+    int map1x;
+    int map1y;
+    int map2x;
+    int map2y;
+
+    cv::Mat src_roi;
+    cv::Mat dst_roi;
+    cv::Mat map1_roi;
+    cv::Mat map2_roi;
+
+    //ocl mat for testing
+    cv::ocl::oclMat gdst;
+
+    //ocl mat with roi
+    cv::ocl::oclMat gsrc_roi;
+    cv::ocl::oclMat gdst_roi;
+    cv::ocl::oclMat gmap1_roi;
+    cv::ocl::oclMat gmap2_roi;
+
+    virtual void SetUp()
+    {
+        srcType = GET_PARAM(0);
+        map1Type = GET_PARAM(1);
+        map2Type = GET_PARAM(2);
+        interpolation = GET_PARAM(3);
+        bordertype = GET_PARAM(4);
+
+        cv::RNG& rng = TS::ptr()->get_rng();
+        cv::Size srcSize = cv::Size(MWIDTH, MHEIGHT);
+        cv::Size dstSize = cv::Size(MWIDTH, MHEIGHT);
+        cv::Size map1Size = cv::Size(MWIDTH, MHEIGHT);
+        double min = 5, max = 16;
+
+        if(srcType != nulltype)
+        {
+            src = randomMat(rng, srcSize, srcType, min, max, false);
+        }
+        if((map1Type == CV_16SC2 && map2Type == nulltype) || (map1Type == CV_32FC2&& map2Type == nulltype))
+        {
+            map1 = randomMat(rng, map1Size, map1Type, min, max, false);
+
+        }
+        else if (map1Type == CV_32FC1 && map2Type == CV_32FC1)
+        {
+            map1 = randomMat(rng, map1Size, map1Type, min, max, false);
+            map2 = randomMat(rng, map1Size, map1Type, min, max, false);
+        }
+
+        else
+            cout<<"The wrong input type"<<endl;
+
+        dst = randomMat(rng, map1Size, srcType, min, max, false);
+        switch (src.channels())
+        {
+            case 1:
+                val = cv::Scalar(rng.uniform(0.0, 10.0), 0, 0, 0);
+                break;
+            case 2:
+                val = cv::Scalar(rng.uniform(0.0, 10.0), rng.uniform(0.0, 10.0), 0, 0);
+                break;
+            case 3:
+                val = cv::Scalar(rng.uniform(0.0, 10.0), rng.uniform(0.0, 10.0), rng.uniform(0.0, 10.0), 0);
+                break;
+            case 4:
+                val = cv::Scalar(rng.uniform(0.0, 10.0), rng.uniform(0.0, 10.0), rng.uniform(0.0, 10.0), rng.uniform(0.0, 10.0));
+                break;
+        }
+ 
+        //int devnums = getDevice(oclinfo);
+        //CV_Assert(devnums > 0);
+        //if you want to use undefault device, set it here
+        //setDevice(oclinfo[0]);
+        //cv::ocl::setBinpath(CLBINPATH);
+    }
+    void Has_roi(int b)
+    {
+        if(b)
+        {
+            //randomize ROI
+            dst_roicols = dst.cols - 1;
+            dst_roirows = dst.rows - 1;
+
+            src_roicols = src.cols - 1;
+            src_roirows = src.rows - 1;
+
+
+            srcx = 1;
+            srcy = 1;
+            dstx = 1;
+            dsty = 1;
+        }
+        else
+        {
+            dst_roicols = dst.cols;
+            dst_roirows = dst.rows;
+
+            src_roicols = src.cols;
+            src_roirows = src.rows;
+
+
+            srcx = 0;
+            srcy = 0;
+            dstx = 0;
+            dsty = 0;
+        }
+        map1_roicols = dst_roicols;
+        map1_roirows = dst_roirows;
+        map2_roicols = dst_roicols;
+        map2_roirows = dst_roirows;
+        map1x = dstx;
+        map1y = dsty;
+        map2x = dstx;
+        map2y = dsty;
+
+        if((map1Type == CV_16SC2 && map2Type == nulltype) || (map1Type == CV_32FC2&& map2Type == nulltype))
+        {
+            map1_roi = map1(Rect(map1x,map1y,map1_roicols,map1_roirows));
+            gmap1_roi = map1_roi;
+         }
+
+        else if (map1Type == CV_32FC1 && map2Type == CV_32FC1)
+        {
+            map1_roi = map1(Rect(map1x,map1y,map1_roicols,map1_roirows));
+            map2_roi = map2(Rect(map2x,map2y,map2_roicols,map2_roirows));
+            gmap1_roi = map1_roi;
+            gmap2_roi = map2_roi;
+        }
+        dst_roi = dst(Rect(dstx, dsty, dst_roicols, dst_roirows));
+        src_roi = dst(Rect(srcx, srcy, src_roicols, src_roirows));
+
+    }
+};
+
+TEST_P(Remap, Mat)
+{
+    if((interpolation == 1 && map1Type == CV_16SC2) ||(map1Type == CV_32FC1 && map2Type == nulltype) || (map1Type == CV_16SC2 && map2Type == CV_32FC1) || (map1Type == CV_32FC2 && map2Type == CV_32FC1))
+    {
+        cout << "LINEAR don't support the map1Type and map2Type" << endl;
+        return;                
+    }
+    int bordertype[] = {cv::BORDER_CONSTANT,cv::BORDER_REPLICATE/*,BORDER_REFLECT,BORDER_WRAP,BORDER_REFLECT_101*/};
+    const char* borderstr[]={"BORDER_CONSTANT", "BORDER_REPLICATE"/*, "BORDER_REFLECT","BORDER_WRAP","BORDER_REFLECT_101"*/};
+#ifndef PRINT_KERNEL_RUN_TIME   
+    double totalcputick=0;
+    double totalgputick=0;
+    double totalgputick_kernel=0;
+    double t0=0;
+    double t1=0;
+    double t2=0;	
+    for(int k = 0; k < 2; k++){
+        totalcputick = 0;
+        totalgputick = 0;
+        totalgputick_kernel = 0;
+        for(int j = 0; j < LOOP_TIMES+1; j++)
+        {
+            Has_roi(k);
+
+            t0 = (double)cvGetTickCount();//cpu start
+            cv::remap(src_roi, dst_roi, map1_roi, map2_roi, interpolation, bordertype[0], val);
+            t0 = (double)cvGetTickCount() - t0;//cpu end
+
+            t1 = (double)cvGetTickCount();//gpu start
+            gsrc_roi = src_roi;
+            gdst = dst;
+            gdst_roi = gdst(Rect(dstx,dsty,dst_roicols,dst_roirows));
+
+            t2 = (double)cvGetTickCount();//kernel
+            cv::ocl::remap(gsrc_roi, gdst_roi, gmap1_roi, gmap2_roi, interpolation, bordertype[0], val);
+            t2 = (double)cvGetTickCount() - t2;//kernel
+            
+            cv::Mat cpu_dst;
+            gdst.download(cpu_dst);
+        
+            t1 = (double)cvGetTickCount() - t1;//gpu end
+
+            if (j == 0)
+                continue;
+            totalgputick=t1+totalgputick;
+            totalcputick=t0+totalcputick;	
+            totalgputick_kernel=t2+totalgputick_kernel;	
+
+        }
+        if(k==0){cout<<"no roi\n";}else{cout<<"with roi\n";};
+        cout << "average cpu runtime is  " << totalcputick/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
+        cout << "average gpu runtime is  " << totalgputick/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
+        cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
+    }
+#else
+    for(int j = 0; j < 2; j ++)
+    {
+        Has_roi(j);
+        gdst = dst;
+        gdst_roi = gdst(Rect(dstx,dsty,dst_roicols,dst_roirows));
+        gsrc_roi = src_roi;
+        if(j==0){cout<<"no roi:";}else{cout<<"\nwith roi:";};
+        cv::ocl::remap(gsrc_roi, gdst_roi, gmap1_roi, gmap2_roi, interpolation, bordertype[0], val);
+    };
+#endif
+
+}
+
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // resize
@@ -1453,6 +1686,141 @@ TEST_P(meanShiftProc, Mat)
 
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////
+//hist
+
+void calcHistGold(const cv::Mat& src, cv::Mat& hist)
+{
+    hist.create(1, 256, CV_32SC1);
+    hist.setTo(cv::Scalar::all(0));
+
+    int* hist_row = hist.ptr<int>();
+    for (int y = 0; y < src.rows; ++y)
+    {
+        const uchar* src_row = src.ptr(y);
+
+        for (int x = 0; x < src.cols; ++x)
+            ++hist_row[src_row[x]];
+    }
+}
+
+PARAM_TEST_CASE(histTestBase, MatType, MatType)
+{
+    int type_src;
+
+    //src mat
+    cv::Mat src;
+    cv::Mat dst_hist;
+    //set up roi
+    int roicols;
+    int roirows;
+    int srcx;
+    int srcy;
+    //src mat with roi
+    cv::Mat src_roi;
+    //ocl dst mat, dst_hist and gdst_hist don't have roi
+    cv::ocl::oclMat gdst_hist;
+    
+    //ocl mat with roi
+    cv::ocl::oclMat gsrc_roi;
+
+//    std::vector<cv::ocl::Info> oclinfo;
+
+    virtual void SetUp()
+    {
+        type_src   = GET_PARAM(0);
+        
+        cv::RNG &rng = TS::ptr()->get_rng();
+        cv::Size size = cv::Size(MWIDTH, MHEIGHT);
+
+        src = randomMat(rng, size, type_src, 0, 256, false);
+
+//        int devnums = getDevice(oclinfo);
+//        CV_Assert(devnums > 0);
+        //if you want to use undefault device, set it here
+        //setDevice(oclinfo[0]);
+    }
+
+    void Has_roi(int b)
+    {
+        if(b)
+        {
+            //randomize ROI
+            roicols = src.cols-1;
+            roirows = src.rows-1;
+            srcx = 1;
+            srcy = 1;
+        }else
+        {
+            roicols = src.cols;
+            roirows = src.rows;
+            srcx = 0;
+            srcy = 0;
+        };
+        src_roi = src(Rect(srcx, srcy, roicols, roirows));
+    }
+};
+
+///////////////////////////calcHist///////////////////////////////////////
+struct calcHist : histTestBase {};
+
+TEST_P(calcHist, Mat)
+{
+#ifndef PRINT_KERNEL_RUN_TIME   
+    	double t0=0;
+      	double t1=0;
+      	double t2=0;	
+      	for(int k=0;k<2;k++)
+        {
+    	  double totalcputick=0;
+      	  double totalgputick=0;
+          double totalgputick_kernel=0;
+          for(int j = 0; j < LOOP_TIMES+1; j ++)
+          {
+                Has_roi(k);
+ 
+          	t0 = (double)cvGetTickCount();//cpu start
+                calcHistGold(src_roi, dst_hist);
+          	t0 = (double)cvGetTickCount() - t0;//cpu end
+            	
+            	t1 = (double)cvGetTickCount();//gpu start1		
+            
+                gsrc_roi = src_roi;
+
+            	t2=(double)cvGetTickCount();//kernel
+                cv::ocl::calcHist(gsrc_roi, gdst_hist);
+            	t2 = (double)cvGetTickCount() - t2;//kernel
+
+                cv::Mat cpu_hist;
+                gdst_hist.download(cpu_hist);//download
+
+            	t1 = (double)cvGetTickCount() - t1;//gpu end1	
+      
+                if(j == 0)
+                    continue;
+      
+          	totalcputick=t0+totalcputick;	
+            	totalgputick=t1+totalgputick;
+            	totalgputick_kernel=t2+totalgputick_kernel;	
+      
+          }
+        	if(k==0){cout<<"no roi\n";}else{cout<<"with roi\n";};
+      	        cout << "average cpu runtime is  " << totalcputick/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
+        	cout << "average gpu runtime is  " << totalgputick/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
+        	cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
+      	}
+#else
+      	for(int j = 0; j < 2; j ++)
+      	{
+      	     Has_roi(j);
+      
+             gsrc_roi = src_roi;
+
+             if(j==0){cout<<"no roi:";}else{cout<<"\nwith roi:";};
+             cv::ocl::calcHist(gsrc_roi, gdst_hist);
+      	};
+#endif
+}
 
 
 //************test*******************
@@ -1547,5 +1915,15 @@ INSTANTIATE_TEST_CASE_P(Imgproc, meanShiftProc, Combine(
 						Values(cv::TermCriteria(cv::TermCriteria::COUNT+cv::TermCriteria::EPS, 5, 1))
 						));
 
+INSTANTIATE_TEST_CASE_P(Imgproc, Remap, Combine(
+            Values(CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4),
+            Values(CV_32FC1, CV_16SC2, CV_32FC2),Values(-1,CV_32FC1),
+            Values((int)cv::INTER_NEAREST, (int)cv::INTER_LINEAR), 
+            Values((int)cv::BORDER_CONSTANT)));
+
+INSTANTIATE_TEST_CASE_P(histTestBase, calcHist, Combine(
+                                                ONE_TYPE(CV_8UC1),
+                                                ONE_TYPE(CV_32SC1) //no use
+));
 
 #endif // HAVE_OPENCL

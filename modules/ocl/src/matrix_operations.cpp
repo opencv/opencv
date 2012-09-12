@@ -339,24 +339,22 @@ inline int divUp(int total, int grain)
 void copy_to_with_mask(const oclMat &src, oclMat &dst, const oclMat &mask, string kernelName)
 {
     CV_DbgAssert( dst.rows == mask.rows && dst.cols == mask.cols &&
-                  src.rows == dst.rows && src.cols == dst.cols);
+                  src.rows == dst.rows && src.cols == dst.cols
+				  && mask.type() == CV_8UC1);
 
     vector<pair<size_t , const void *> > args;
 
-    int vector_lengths[4][7] = {{4, 4, 2, 2, 1, 1, 1},
-        {2, 2, 1, 1, 1, 1, 1},
-        {8, 8, 8, 8 , 4, 4, 4},      //vector length is undefined when channels = 3
-        {1, 1, 1, 1, 1, 1, 1}
+    std::string string_types[4][7] = {{"uchar", "char", "ushort", "short", "int", "float", "double"},
+        {"uchar2", "char2", "ushort2", "short2", "int2", "float2", "double2"},
+        {"uchar3", "char3", "ushort3", "short3", "int3", "float3", "double3"},
+        {"uchar4", "char4", "ushort4", "short4", "int4", "float4", "double4"}
     };
-
+	char compile_option[32];
+	sprintf(compile_option, "-D GENTYPE=%s", string_types[dst.channels()-1][dst.depth()].c_str());
     size_t localThreads[3] = {16, 16, 1};
     size_t globalThreads[3];
 
-    int vector_length = vector_lengths[dst.channels() -1][dst.depth()];
-    int offset_cols = divUp(dst.offset, dst.elemSize()) & (vector_length - 1);
-    int cols = vector_length == 1 ? divUp(dst.cols, vector_length) : divUp(dst.cols + offset_cols, vector_length);
-
-    globalThreads[0] = divUp(cols, localThreads[0]) * localThreads[0];
+    globalThreads[0] = divUp(dst.cols, localThreads[0]) * localThreads[0];
     globalThreads[1] = divUp(dst.rows, localThreads[1]) * localThreads[1];
     globalThreads[2] = 1;
 
@@ -376,7 +374,7 @@ void copy_to_with_mask(const oclMat &src, oclMat &dst, const oclMat &mask, strin
     args.push_back( make_pair( sizeof(cl_int) , (void *)&mask.offset ));
 
     openCLExecuteKernel(dst.clCxt , &operator_copyToM, kernelName, globalThreads,
-                        localThreads, args, dst.channels(), dst.depth());
+                        localThreads, args, -1, -1,compile_option);
 }
 
 void cv::ocl::oclMat::copyTo( oclMat &m ) const
@@ -679,10 +677,6 @@ void set_to_withmask_run(const oclMat &dst, const Scalar &scalar, const oclMat &
     globalThreads[0] = (dst.cols + localThreads[0] - 1) / localThreads[0] * localThreads[0];
     globalThreads[1] = (dst.rows + localThreads[1] - 1) / localThreads[1] * localThreads[1];
     globalThreads[2] = 1;
-    if(dst.type() == CV_8UC1)
-    {
-        globalThreads[0] = ((dst.cols + 4) / 4 + localThreads[0] - 1) / localThreads[0] * localThreads[0];
-    }
     int step_in_pixel = dst.step / dst.elemSize(), offset_in_pixel = dst.offset / dst.elemSize();
 	char compile_option[32];
 	union sc
@@ -697,7 +691,7 @@ void set_to_withmask_run(const oclMat &dst, const Scalar &scalar, const oclMat &
 	}val;
     switch(dst.depth())
     {
-    case 0:
+    case CV_8U:
 		val.uval.s[0] = saturate_cast<uchar>(scalar.val[0]);
 		val.uval.s[1] = saturate_cast<uchar>(scalar.val[1]);
 		val.uval.s[2] = saturate_cast<uchar>(scalar.val[2]);
@@ -716,7 +710,7 @@ void set_to_withmask_run(const oclMat &dst, const Scalar &scalar, const oclMat &
 			CV_Error(CV_StsUnsupportedFormat,"unsupported channels");
 		}
         break;
-    case 1:
+    case CV_8S:
 		val.cval.s[0] = saturate_cast<char>(scalar.val[0]);
 		val.cval.s[1] = saturate_cast<char>(scalar.val[1]);
 		val.cval.s[2] = saturate_cast<char>(scalar.val[2]);
@@ -735,7 +729,7 @@ void set_to_withmask_run(const oclMat &dst, const Scalar &scalar, const oclMat &
 			CV_Error(CV_StsUnsupportedFormat,"unsupported channels");
 		}
         break;
-    case 2:
+    case CV_16U:
 		val.usval.s[0] = saturate_cast<ushort>(scalar.val[0]);
 		val.usval.s[1] = saturate_cast<ushort>(scalar.val[1]);
 		val.usval.s[2] = saturate_cast<ushort>(scalar.val[2]);
@@ -754,7 +748,7 @@ void set_to_withmask_run(const oclMat &dst, const Scalar &scalar, const oclMat &
 			CV_Error(CV_StsUnsupportedFormat,"unsupported channels");
 		}
         break;
-    case 3:
+    case CV_16S:
 		val.shval.s[0] = saturate_cast<short>(scalar.val[0]);
 		val.shval.s[1] = saturate_cast<short>(scalar.val[1]);
 		val.shval.s[2] = saturate_cast<short>(scalar.val[2]);
@@ -773,7 +767,7 @@ void set_to_withmask_run(const oclMat &dst, const Scalar &scalar, const oclMat &
 			CV_Error(CV_StsUnsupportedFormat,"unsupported channels");
 		}
         break;
-    case 4:
+    case CV_32S:
 		val.ival.s[0] = saturate_cast<int>(scalar.val[0]);
 		val.ival.s[1] = saturate_cast<int>(scalar.val[1]);
 		val.ival.s[2] = saturate_cast<int>(scalar.val[2]);
@@ -792,7 +786,7 @@ void set_to_withmask_run(const oclMat &dst, const Scalar &scalar, const oclMat &
 			CV_Error(CV_StsUnsupportedFormat,"unsupported channels");
 		}
         break;
-    case 5:
+    case CV_32F:
 		val.fval.s[0] = scalar.val[0];
 		val.fval.s[1] = scalar.val[1];
 		val.fval.s[2] = scalar.val[2];
@@ -811,7 +805,7 @@ void set_to_withmask_run(const oclMat &dst, const Scalar &scalar, const oclMat &
 			CV_Error(CV_StsUnsupportedFormat,"unsupported channels");
 		}
         break;
-    case 6:
+    case CV_64F:
 		val.dval.s[0] = scalar.val[0];
 		val.dval.s[1] = scalar.val[1];
 		val.dval.s[2] = scalar.val[2];
@@ -872,14 +866,7 @@ oclMat &cv::ocl::oclMat::setTo(const Scalar &scalar, const oclMat &mask)
     }
     else
     {
-		if(type()==CV_8UC1)
-		{
-			set_to_withmask_run(*this, scalar, mask,"set_to_with_mask_C1_D0");
-		}
-		else
-		{
-			set_to_withmask_run(*this, scalar, mask, "set_to_with_mask");
-		}
+		set_to_withmask_run(*this, scalar, mask, "set_to_with_mask");
     }
 
     return *this;
@@ -942,6 +929,11 @@ void cv::ocl::oclMat::create(int _rows, int _cols, int _type)
 
     /* core logic */
     _type &= TYPE_MASK;
+	download_channels = CV_MAT_CN(_type);
+	if(download_channels==3)
+	{
+		_type = CV_MAKE_TYPE((CV_MAT_DEPTH(_type)),4);
+	}
     if( rows == _rows && cols == _cols && type() == _type && data )
         return;
     if( data )
@@ -986,6 +978,7 @@ void cv::ocl::oclMat::release()
     step = rows = cols = 0;
     offset = wholerows = wholecols = 0;
     refcount = 0;
+	download_channels=0;
 }
 
 #endif /* !defined (HAVE_OPENCL) */

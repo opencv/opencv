@@ -103,6 +103,11 @@ void cv::ocl::bilateralFilter(const oclMat &, oclMat &, int, double, double, int
 {
     throw_nogpu();
 }
+void cv::ocl::convolve(const oclMat&, const oclMat&, oclMat&)
+{
+    throw_nogpu();
+}
+
 #else /* !defined (HAVE_OPENCL) */
 
 namespace cv
@@ -126,6 +131,7 @@ namespace cv
         extern const char *imgproc_bilateral;
         extern const char *imgproc_calcHarris;
         extern const char *imgproc_calcMinEigenVal;
+	      extern const char *imgproc_convolve;
         ////////////////////////////////////OpenCL call wrappers////////////////////////////
 
         template <typename T> struct index_and_sizeof;
@@ -680,6 +686,19 @@ namespace cv
             size_t localThreads[3] = {256, 1, 1};
 
             openCLExecuteKernel(clCxt, &imgproc_copymakeboder, kernelName, globalThreads, localThreads, args, 1, D);
+/*		uchar* cputemp=new uchar[32*dst.wholerows];
+		//int* cpudata=new int[this->step*this->wholerows/sizeof(int)];
+		openCLSafeCall(clEnqueueReadBuffer(clCxt->impl->clCmdQueue, (cl_mem)dst.data, CL_TRUE,
+								0, 32*dst.wholerows, cputemp, 0, NULL, NULL));
+		for(int i=0;i<dst.wholerows;i++)
+		{
+			for(int j=0;j<dst.wholecols;j++)
+			{
+				cout<< (int)cputemp[i*32+j]<<" ";
+			}
+			cout<<endl;
+		}
+		delete []cputemp;*/
         }
 
         void copyMakeBorder(const oclMat &src, oclMat &dst, int top, int bottom, int left, int right, int boardtype, const Scalar &value)
@@ -796,14 +815,16 @@ namespace cv
                 //TODO: improve this kernel
                 size_t blkSizeX = 16, blkSizeY = 16;
                 size_t glbSizeX;
+                size_t cols;
                 //if(src.type() == CV_8UC1 && interpolation != 2)
                 if(src.type() == CV_8UC1 && interpolation != 2)
                 {
-                    size_t cols = (dst.cols + dst.offset % 4 + 3) / 4;
+                    cols = (dst.cols + dst.offset % 4 + 3) / 4;
                     glbSizeX = cols % blkSizeX == 0 ? cols : (cols / blkSizeX + 1) * blkSizeX;
                 }
                 else
                 {
+                    cols = dst.cols;
                     glbSizeX = dst.cols % blkSizeX == 0 ? dst.cols : (dst.cols / blkSizeX + 1) * blkSizeX;
                 }
                 size_t glbSizeY = dst.rows % blkSizeY == 0 ? dst.rows : (dst.rows / blkSizeY + 1) * blkSizeY;
@@ -823,6 +844,7 @@ namespace cv
                 args.push_back(make_pair(sizeof(cl_int), (void *)&src.offset));
                 args.push_back(make_pair(sizeof(cl_int), (void *)&dst.offset));
                 args.push_back(make_pair(sizeof(cl_mem), (void *)&coeffs_cm));
+                args.push_back(make_pair(sizeof(cl_int), (void *)&cols));
 
                 openCLExecuteKernel(clCxt, &imgproc_warpAffine, kernelName, globalThreads, localThreads, args, src.channels(), src.depth());
                 openCLSafeCall(clReleaseMemObject(coeffs_cm));
@@ -1279,62 +1301,54 @@ namespace cv
 
             string kernelName = "calc_sub_hist";
 
-            size_t localThreads[3]  = { 256, 1, 1 };
+            size_t localThreads[3]  = { HISTOGRAM256_BIN_COUNT, 1, 1 };
             size_t globalThreads[3] = { PARTIAL_HISTOGRAM256_COUNT *localThreads[0], 1, 1};
+
+            int dataWidth = 16;
+            int dataWidth_bits = 4;
+            int mask = dataWidth - 1;
 
             int cols = mat_src.cols * mat_src.channels();
             int src_offset = mat_src.offset;
             int hist_step = mat_sub_hist.step >> 2;
             int left_col = 0, right_col = 0;
-            if(cols > 6)
-            {
-                left_col = 4 - (src_offset & 3);
-                left_col &= 3;
-                //dst_offset +=left_col;
-                src_offset += left_col;
-                cols -= left_col;
-                right_col = cols & 3;
-                cols -= right_col;
-                //globalThreads[0] = (cols/4+globalThreads[0]-1)/localThreads[0]*localThreads[0];
-            }
-            else
-            {
-                left_col = cols;
-                right_col = 0;
-                cols = 0;
-                globalThreads[0] = 0;
-            }
+
+            left_col = dataWidth - (src_offset & mask);
+            left_col &= mask;
+            src_offset += left_col;
+            cols -= left_col;
+            right_col = cols & mask;
+            cols -= right_col;
 
             vector<pair<size_t , const void *> > args;
-            if(globalThreads[0] != 0)
+            if(cols > 0)
             {
-                int tempcols = cols / 4;
-                int inc_x = globalThreads[0] % tempcols;
-                int inc_y = globalThreads[0] / tempcols;
-                src_offset /= 4;
-                int src_step = mat_src.step / 4;
-                int datacount = tempcols * mat_src.rows * mat_src.channels();
-                args.push_back( make_pair( sizeof(cl_mem), (void *)&mat_src.data));
-                args.push_back( make_pair( sizeof(cl_int), (void *)&src_step));
-                args.push_back( make_pair( sizeof(cl_int), (void *)&src_offset));
-                args.push_back( make_pair( sizeof(cl_mem), (void *)&mat_sub_hist.data));
-                args.push_back( make_pair( sizeof(cl_int), (void *)&datacount));
-                args.push_back( make_pair( sizeof(cl_int), (void *)&tempcols));
-                args.push_back( make_pair( sizeof(cl_int), (void *)&inc_x));
-                args.push_back( make_pair( sizeof(cl_int), (void *)&inc_y));
-                args.push_back( make_pair( sizeof(cl_int), (void *)&hist_step));
-                openCLExecuteKernel(clCxt, &imgproc_histogram, kernelName, globalThreads, localThreads, args, -1, depth);
+                  int tempcols = cols >> dataWidth_bits;
+                  int inc_x = globalThreads[0] % tempcols;
+                  int inc_y = globalThreads[0] / tempcols;
+                  src_offset >>= dataWidth_bits;
+                  int src_step = mat_src.step >> dataWidth_bits;
+                  int datacount = tempcols * mat_src.rows;
+                  args.push_back( make_pair( sizeof(cl_mem), (void *)&mat_src.data));
+                  args.push_back( make_pair( sizeof(cl_int), (void *)&src_step));
+                  args.push_back( make_pair( sizeof(cl_int), (void *)&src_offset));
+                  args.push_back( make_pair( sizeof(cl_mem), (void *)&mat_sub_hist.data));
+                  args.push_back( make_pair( sizeof(cl_int), (void *)&datacount));
+                  args.push_back( make_pair( sizeof(cl_int), (void *)&tempcols));
+                  args.push_back( make_pair( sizeof(cl_int), (void *)&inc_x));
+                  args.push_back( make_pair( sizeof(cl_int), (void *)&inc_y));
+                  args.push_back( make_pair( sizeof(cl_int), (void *)&hist_step));
+                  openCLExecuteKernel(clCxt, &imgproc_histogram, kernelName, globalThreads, localThreads, args, -1, depth);
             }
             if(left_col != 0 || right_col != 0)
             {
-                kernelName = "calc_sub_hist2";
+                kernelName = "calc_sub_hist_border";
                 src_offset = mat_src.offset;
-                //dst_offset = dst.offset;
                 localThreads[0] = 1;
                 localThreads[1] = 256;
                 globalThreads[0] = left_col + right_col;
                 globalThreads[1] = (mat_src.rows + localThreads[1] - 1) / localThreads[1] * localThreads[1];
-                //kernel = openCLGetKernelFromSource(clCxt,&arithm_LUT,"LUT2");
+                
                 args.clear();
                 args.push_back( make_pair( sizeof(cl_mem), (void *)&mat_src.data));
                 args.push_back( make_pair( sizeof(cl_int), (void *)&mat_src.step));
@@ -1370,7 +1384,8 @@ namespace cv
             mat_hist.create(1, 256, CV_32SC1);
 
             oclMat buf(PARTIAL_HISTOGRAM256_COUNT, HISTOGRAM256_BIN_COUNT, CV_32SC1);
-            //buf.setTo(0);
+            buf.setTo(0);
+
             calc_sub_hist(mat_src, buf);
             merge_sub_hist(buf, mat_hist);
         }
@@ -1483,5 +1498,59 @@ namespace cv
         }
 
     }
+}
+//////////////////////////////////convolve////////////////////////////////////////////////////
+inline int divUp(int total, int grain)
+{
+    return (total + grain - 1) / grain;
+}
+void convolve_run(const oclMat &src, const oclMat &temp1,oclMat &dst,string kernelName,const char** kernelString)
+{
+    CV_Assert(src.depth() == CV_32FC1);
+    CV_Assert(temp1.depth() == CV_32F);
+    CV_Assert(temp1.cols <= 17 && temp1.rows <=17);
+
+    dst.create(src.size(),src.type());
+
+    CV_Assert(src.cols == dst.cols && src.rows == dst.rows);
+    CV_Assert(src.type() == dst.type());
+
+    Context  *clCxt = src.clCxt;
+    int channels = dst.channels();
+    int depth = dst.depth();
+
+    size_t vector_length =1; 
+    int offset_cols = ((dst.offset % dst.step) / dst.elemSize1()) & (vector_length-1);
+    int cols = divUp(dst.cols * channels + offset_cols, vector_length);
+    int rows = dst.rows;
+
+    size_t localThreads[3]  = { 16, 16, 1 };
+    size_t globalThreads[3] = { divUp(cols, localThreads[0]) * localThreads[0], 
+                                divUp(rows, localThreads[1]) * localThreads[1],
+                                1};
+
+    vector<pair<size_t ,const void *> > args;
+    args.push_back( make_pair( sizeof(cl_mem), (void *)&src.data ));
+    args.push_back( make_pair( sizeof(cl_mem), (void *)&temp1.data ));
+    args.push_back( make_pair( sizeof(cl_mem), (void *)&dst.data ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&src.rows ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&cols ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&src.step ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&dst.step ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&temp1.step ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&temp1.rows ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&temp1.cols ));
+
+    openCLExecuteKernel(clCxt, kernelString, kernelName, globalThreads, localThreads, args, -1, depth);
+}
+void cv::ocl::convolve(const oclMat& x, const oclMat& t, oclMat& y)
+{
+    CV_Assert(x.depth() == CV_32F);
+    CV_Assert(t.depth() == CV_32F);
+    CV_Assert(x.type() == y.type() && x.size() == y.size());
+    y.create(x.size(),x.type());
+    string kernelName = "convolve";
+    
+    convolve_run(x, t, y, kernelName, &imgproc_convolve);
 }
 #endif /* !defined (HAVE_OPENCL) */

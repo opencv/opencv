@@ -122,7 +122,8 @@ namespace
         SURF_OCL_Invoker(SURF_OCL& surf, const oclMat& img, const oclMat& mask) :
         surf_(surf),
             img_cols(img.cols), img_rows(img.rows),
-            use_mask(!mask.empty())
+            use_mask(!mask.empty()),
+			imgTex(NULL), sumTex(NULL), maskSumTex(NULL)
         {
             CV_Assert(!img.empty() && img.type() == CV_8UC1);
             CV_Assert(mask.empty() || (mask.size() == img.size() && mask.type() == CV_8UC1));
@@ -475,6 +476,11 @@ void SURF_OCL_Invoker::bindImgTex(const oclMat& img)
     format.image_channel_data_type = CL_UNSIGNED_INT8;
     format.image_channel_order     = CL_R;
 
+    if(imgTex)
+    {
+        openCLFree(imgTex);
+    }
+
 #if CL_VERSION_1_2
     cl_image_desc desc;
     desc.image_type       = CL_MEM_OBJECT_IMAGE2D;
@@ -509,6 +515,12 @@ void SURF_OCL_Invoker::bindSumTex(const oclMat& sum)
     int err;
     format.image_channel_data_type = CL_UNSIGNED_INT32;
     format.image_channel_order     = CL_R;
+
+    if(sumTex)
+    {
+        openCLFree(sumTex);
+    }
+
 #if CL_VERSION_1_2
     cl_image_desc desc;
     desc.image_type       = CL_MEM_OBJECT_IMAGE2D;
@@ -542,6 +554,12 @@ void SURF_OCL_Invoker::bindMaskSumTex(const oclMat& maskSum)
     int err;
     format.image_channel_data_type = CL_UNSIGNED_INT32;
     format.image_channel_order     = CL_R;
+
+    if(maskSumTex)
+    {
+        openCLFree(maskSumTex);
+    }
+
 #if CL_VERSION_1_2
     cl_image_desc desc;
     desc.image_type       = CL_MEM_OBJECT_IMAGE2D;

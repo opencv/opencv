@@ -171,10 +171,10 @@ void cv::ocl::Canny(const oclMat& src, CannyBuf& buf, oclMat& dst, double low_th
         std::swap( low_thresh, high_thresh );
 
     dst.create(src.size(), CV_8U);
-    //dst.setTo(Scalar::all(0));
+    dst.setTo(Scalar::all(0));
 
     buf.create(src.size(), apperture_size);
-    //buf.edgeBuf.setTo(Scalar::all(0));
+    buf.edgeBuf.setTo(Scalar::all(0));
 
     if (apperture_size == 3)
     {
@@ -207,11 +207,11 @@ void cv::ocl::Canny(const oclMat& dx, const oclMat& dy, CannyBuf& buf, oclMat& d
         std::swap( low_thresh, high_thresh);
 
     dst.create(dx.size(), CV_8U);
-    //dst.setTo(Scalar::all(0));
+    dst.setTo(Scalar::all(0));
 
     buf.dx = dx; buf.dy = dy;
     buf.create(dx.size(), -1);
-    //buf.edgeBuf.setTo(Scalar::all(0));
+    buf.edgeBuf.setTo(Scalar::all(0));
     calcMagnitude_gpu(buf.dx, buf.dy, buf.edgeBuf, dx.rows, dx.cols, L2gradient);
 
     CannyCaller(buf, dst, static_cast<float>(low_thresh), static_cast<float>(high_thresh));
@@ -367,7 +367,6 @@ void canny::edgesHysteresisGlobal_gpu(oclMat& map, oclMat& st1, oclMat& st2, voi
 
     while(count > 0)
     {
-        //counter.setTo(0);
         args.clear();
         size_t globalThreads[3] = {std::min(count, 65535u) * 128, DIVUP(count, 65535), 1};
         args.push_back( make_pair( sizeof(cl_mem), (void *)&map.data));

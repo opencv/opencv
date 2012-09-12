@@ -370,11 +370,11 @@ namespace cv
         CV_EXPORTS Scalar sum(const oclMat &m);
 
         //! finds global minimum and maximum array elements and returns their values
-        // support all types
+        // support all C1 types
         CV_EXPORTS void minMax(const oclMat &src, double *minVal, double *maxVal = 0, const oclMat &mask = oclMat());
 
         //! finds global minimum and maximum array elements and returns their values with locations
-        // support all types
+        // support all C1 types
         CV_EXPORTS void minMaxLoc(const oclMat &src, double *minVal, double *maxVal = 0, Point *minLoc = 0, Point *maxLoc = 0,
                 const oclMat &mask = oclMat());
 
@@ -440,6 +440,9 @@ namespace cv
         // supports all types
         CV_EXPORTS void bitwise_xor(const oclMat &src1, const oclMat &src2, oclMat &dst, const oclMat &mask = oclMat());
         CV_EXPORTS void bitwise_xor(const oclMat &src1, const Scalar &s, oclMat &dst, const oclMat &mask = oclMat());
+        //! computes convolution of two images 
+		    //! support only CV_32FC1 type
+	 	    CV_EXPORTS void convolve(const oclMat& image,const oclMat& temp1, oclMat& result);
 
         //! Logical operators
         CV_EXPORTS oclMat operator ~ (const oclMat &src);
@@ -644,11 +647,11 @@ namespace cv
         // supports CV_8UC1, CV_8UC4, CV_32FC1 and CV_32FC4 types
         CV_EXPORTS void resize(const oclMat &src, oclMat &dst, Size dsize, double fx = 0, double fy = 0, int interpolation = INTER_LINEAR);
 
-        //! Applies a generic geometrical transformation to an image.
-            // Supports INTER_NEAREST, INTER_LINEAR.
-            // Map1 supports CV_16SC2, CV_32FC2  types.
-        // Src supports CV_8UC1, CV_8UC2, CV_8UC4.
-        CV_EXPORTS void remap(const oclMat& src, oclMat& dst, oclMat& map1, oclMat& map2, int interpolation, int bordertype, const Scalar& value = Scalar());
+    //! Applies a generic geometrical transformation to an image.
+		// Supports INTER_NEAREST, INTER_LINEAR.
+		// Map1 supports CV_16SC2, CV_32FC2  types.
+    // Src supports CV_8UC1, CV_8UC2, CV_8UC4.
+    CV_EXPORTS void remap(const oclMat& src, oclMat& dst, oclMat& map1, oclMat& map2, int interpolation, int bordertype, const Scalar& value = Scalar());
         //! copies 2D array to a larger destination array and pads borders with user-specifiable constant
         // supports CV_8UC1, CV_8UC4, CV_32SC1 types
         CV_EXPORTS void copyMakeBorder(const oclMat &src, oclMat &dst, int top, int bottom, int left, int right, int boardtype, const Scalar &value = Scalar());
@@ -675,158 +678,6 @@ namespace cv
         CV_EXPORTS void cornerHarris(const oclMat &src, oclMat &dst, int blockSize, int ksize, double k, int bordertype = cv::BORDER_DEFAULT);
         CV_EXPORTS void cornerMinEigenVal(const oclMat &src, oclMat &dst, int blockSize, int ksize, int bordertype = cv::BORDER_DEFAULT);
 
-
-        //////////////////////////////// StereoBM_GPU ////////////////////////////////
-        class CV_EXPORTS StereoBM_GPU
-        {
-        public:
-            enum { BASIC_PRESET = 0, PREFILTER_XSOBEL = 1 };
-
-            enum { DEFAULT_NDISP = 64, DEFAULT_WINSZ = 19 };
-
-            //! the default constructor
-            StereoBM_GPU();
-            //! the full constructor taking the camera-specific preset, number of disparities and the SAD window size. ndisparities must be multiple of 8.
-            StereoBM_GPU(int preset, int ndisparities = DEFAULT_NDISP, int winSize = DEFAULT_WINSZ);
-
-            //! the stereo correspondence operator. Finds the disparity for the specified rectified stereo pair
-            //! Output disparity has CV_8U type.
-            void operator() ( const oclMat &left, const oclMat &right, oclMat &disparity);
-
-            //! Some heuristics that tries to estmate
-            // if current GPU will be faster then CPU in this algorithm.
-            // It queries current active device.
-            static bool checkIfGpuCallReasonable();
-
-            int preset;
-            int ndisp;
-            int winSize;
-
-            // If avergeTexThreshold  == 0 => post procesing is disabled
-            // If avergeTexThreshold != 0 then disparity is set 0 in each point (x,y) where for left image
-            // SumOfHorizontalGradiensInWindow(x, y, winSize) < (winSize * winSize) * avergeTexThreshold
-            // i.e. input left image is low textured.
-            float avergeTexThreshold;
-        private:
-            oclMat minSSD, leBuf, riBuf;
-        };
-
-        ////////////////////////// StereoBeliefPropagation ///////////////////////////
-        // "Efficient Belief Propagation for Early Vision"
-        // P.Felzenszwalb
-
-        class CV_EXPORTS StereoBeliefPropagation
-        {
-        public:
-            enum { DEFAULT_NDISP  = 64 };
-            enum { DEFAULT_ITERS  = 5  };
-            enum { DEFAULT_LEVELS = 5  };
-
-            static void estimateRecommendedParams(int width, int height, int &ndisp, int &iters, int &levels);
-
-            //! the default constructor
-            explicit StereoBeliefPropagation(int ndisp  = DEFAULT_NDISP,
-                    int iters  = DEFAULT_ITERS,
-                    int levels = DEFAULT_LEVELS,
-                    int msg_type = CV_16S);
-
-            //! the full constructor taking the number of disparities, number of BP iterations on each level,
-            //! number of levels, truncation of data cost, data weight,
-            //! truncation of discontinuity cost and discontinuity single jump
-            //! DataTerm = data_weight * min(fabs(I2-I1), max_data_term)
-            //! DiscTerm = min(disc_single_jump * fabs(f1-f2), max_disc_term)
-            //! please see paper for more details
-            StereoBeliefPropagation(int ndisp, int iters, int levels,
-                    float max_data_term, float data_weight,
-                    float max_disc_term, float disc_single_jump,
-                    int msg_type = CV_32F);
-
-            //! the stereo correspondence operator. Finds the disparity for the specified rectified stereo pair,
-            //! if disparity is empty output type will be CV_16S else output type will be disparity.type().
-            void operator()(const oclMat &left, const oclMat &right, oclMat &disparity);
-
-            //! version for user specified data term
-            void operator()(const oclMat &data, oclMat &disparity);
-
-            int ndisp;
-
-            int iters;
-            int levels;
-
-            float max_data_term;
-            float data_weight;
-            float max_disc_term;
-            float disc_single_jump;
-
-            int msg_type;
-        private:
-            oclMat u, d, l, r, u2, d2, l2, r2;
-            std::vector<oclMat> datas;
-            oclMat out;
-        };
-
-        /////////////////////////// StereoConstantSpaceBP ///////////////////////////
-        // "A Constant-Space Belief Propagation Algorithm for Stereo Matching"
-        // Qingxiong Yang, Liang Wangï¿? Narendra Ahuja
-        // http://vision.ai.uiuc.edu/~qyang6/
-
-        class CV_EXPORTS StereoConstantSpaceBP
-        {
-        public:
-            enum { DEFAULT_NDISP    = 128 };
-            enum { DEFAULT_ITERS    = 8   };
-            enum { DEFAULT_LEVELS   = 4   };
-            enum { DEFAULT_NR_PLANE = 4   };
-
-            static void estimateRecommendedParams(int width, int height, int &ndisp, int &iters, int &levels, int &nr_plane);
-
-            //! the default constructor
-            explicit StereoConstantSpaceBP(int ndisp    = DEFAULT_NDISP,
-                    int iters    = DEFAULT_ITERS,
-                    int levels   = DEFAULT_LEVELS,
-                    int nr_plane = DEFAULT_NR_PLANE,
-                    int msg_type = CV_32F);
-
-            //! the full constructor taking the number of disparities, number of BP iterations on each level,
-            //! number of levels, number of active disparity on the first level, truncation of data cost, data weight,
-            //! truncation of discontinuity cost, discontinuity single jump and minimum disparity threshold
-            StereoConstantSpaceBP(int ndisp, int iters, int levels, int nr_plane,
-                    float max_data_term, float data_weight, float max_disc_term, float disc_single_jump,
-                    int min_disp_th = 0,
-                    int msg_type = CV_32F);
-
-            //! the stereo correspondence operator. Finds the disparity for the specified rectified stereo pair,
-            //! if disparity is empty output type will be CV_16S else output type will be disparity.type().
-            void operator()(const oclMat &left, const oclMat &right, oclMat &disparity);
-
-            int ndisp;
-
-            int iters;
-            int levels;
-
-            int nr_plane;
-
-            float max_data_term;
-            float data_weight;
-            float max_disc_term;
-            float disc_single_jump;
-
-            int min_disp_th;
-
-            int msg_type;
-
-            bool use_local_init_data_cost;
-        private:
-            oclMat u[2], d[2], l[2], r[2];
-            oclMat disp_selected_pyr[2];
-
-            oclMat data_cost;
-            oclMat data_cost_selected;
-
-            oclMat temp;
-
-            oclMat out;
-        };
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         ///////////////////////////////////////////CascadeClassifier//////////////////////////////////////////////////////////////////
         ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -877,6 +728,7 @@ namespace cv
 		// Supports TM_SQDIFF, TM_CCORR for type 32FC1 and 32FC4
 		CV_EXPORTS void matchTemplate(const oclMat& image, const oclMat& templ, oclMat& result, int method, MatchTemplateBuf& buf);
 
+		
 		///////////////////////////////////////////// Canny /////////////////////////////////////////////
 		struct CV_EXPORTS CannyBuf;
 
@@ -889,8 +741,12 @@ namespace cv
 
 		struct CV_EXPORTS CannyBuf
 		{
-			CannyBuf() {}
-			explicit CannyBuf(const Size& image_size, int apperture_size = 3) {create(image_size, apperture_size);}
+			CannyBuf() : counter(NULL) {}
+            ~CannyBuf() { release(); }
+			explicit CannyBuf(const Size& image_size, int apperture_size = 3) : counter(NULL)
+            {
+                create(image_size, apperture_size);
+            }
 			CannyBuf(const oclMat& dx_, const oclMat& dy_);
 
 			void create(const Size& image_size, int apperture_size = 3);
