@@ -3,10 +3,10 @@
 import os
 import sys
 
-ANDROID_SDK_PATH="/opt/android-sdk-linux"
-ANDROID_NDK_PATH="/opt/android-ndk-r8"
-INSTALL_DIRECTORY="OpenCV-2.4.2-branch"
-CLASS_PATH=os.path.join(INSTALL_DIRECTORY, "sdk/java/bin/classes");
+ANDROID_SDK_PATH = "/opt/android-sdk-linux"
+ANDROID_NDK_PATH = None
+INSTALL_DIRECTORY = None
+CLASS_PATH = None
 TMP_HEADER_PATH="tmp_include"
 HEADER_EXTS = set(['h', 'hpp'])
 SYS_INCLUDES = ["platforms/android-8/arch-arm/usr/include", "sources/cxx-stl/gnu-libstdc++/include", "sources/cxx-stl/gnu-libstdc++/libs/armeabi/include"]
@@ -47,6 +47,34 @@ def FindHeaders(root):
 		if (path not in EXCLUDE_HEADERS):
 		    headers.append(currentPath)
     return headers
+
+if (len(sys.argv) < 3):
+    print("Error: Invalid command line arguments")
+    exit(-1)
+
+INSTALL_DIRECTORY = sys.argv[1]
+PROJECT_NAME = sys.argv[2]
+
+CLASS_PATH = os.path.join(INSTALL_DIRECTORY, "sdk/java/bin/classes")
+if (not os.path.exists(CLASS_PATH)):
+    print("Error: no java classes found in \"%s\"", CLASS_PATH)
+    exit(-2)
+
+if (os.environ.has_key("NDK_ROOT")):
+    ANDROID_NDK_PATH = os.environ["NDK_ROOT"];
+    print("Using Android NDK from NDK_ROOT (\"%s\")" % ANDROID_NDK_PATH)
+    
+
+if (not ANDROID_NDK_PATH):
+    pipe = os.popen("which ndk-build")
+    tmp = str.strip(pipe.readline(), "\n")
+    while(not tmp):
+	tmp = str.strip(pipe.readline(), "\n")
+    pipe.close()
+    ANDROID_NDK_PATH = tmp
+    print("Using Android NDK from PATH (\"%s\")" % ANDROID_NDK_PATH)
+
+print("Using Android SDK from \"%s\"" % ANDROID_SDK_PATH)
 
 outputFileName = PROJECT_NAME + ".xml"
 try:
