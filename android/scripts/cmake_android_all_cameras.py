@@ -38,10 +38,10 @@ for s in ConfFile.readlines():
     BuildLog = os.path.join(BuildDir, "build.log")
     CmakeCmdLine = "cmake -DCMAKE_TOOLCHAIN_FILE=../android.toolchain.cmake -DANDROID_SOURCE_TREE=\"%s\" -DANDROID_NATIVE_API_LEVEL=\"%s\" -DANDROID_ABI=\"%s\" -DANDROID_USE_STLPORT=ON ../../ > \"%s\" 2>&1" % (AndroidTreeRoot, NativeApiLevel, Arch, BuildLog)
     MakeCmdLine = "make %s >> \"%s\" 2>&1" % (MakeTarget, BuildLog);
-    print(CmakeCmdLine)
-    #os.system(CmakeCmdLine)
-    print(MakeCmdLine)
-    #os.system(MakeCmdLine)
+    #print(CmakeCmdLine)
+    os.system(CmakeCmdLine)
+    #print(MakeCmdLine)
+    os.system(MakeCmdLine)
     os.chdir(HomeDir)
     CameraLib = os.path.join(BuildDir, "lib", Arch, "lib" + MakeTarget + ".so")
     if (os.path.exists(CameraLib)):

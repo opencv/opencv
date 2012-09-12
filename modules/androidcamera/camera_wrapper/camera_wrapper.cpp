@@ -828,7 +828,7 @@ void CameraHandler::applyProperties(CameraHandler** ppcameraHandler)
 
     LOGD("CameraHandler::applyProperties()");
 
-#if !defined(ANDROID_r2_2_0)
+#if defined(ANDROID_r4_0_3)
     LOGD("Reconnect camera");
     (*ppcameraHandler)->camera->reconnect();
     (*ppcameraHandler)->params = (*ppcameraHandler)->camera->getParameters();
