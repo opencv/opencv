@@ -66,6 +66,8 @@ struct Octave
       size(cvRound(origObjSize.width * scale), cvRound(origObjSize.height * scale)),
       shrinkage((int)fn[SC_OCT_SHRINKAGE])
     {}
+
+    int index() const {return (int)log(scale);}
 };
 
 const char *const Octave::SC_OCT_SCALE     = "scale";
@@ -182,6 +184,89 @@ struct Level
 //             {1, 2,      1, 2}
 //         };
 
+
+void calcHistBins(const cv::Mat& grey, cv::Mat& magIntegral, std::vector<cv::Mat>& histInts,
+                  const int bins, int shrinkage)
+{
+    CV_Assert( grey.type() == CV_8U);
+
+    float scale = 1.f / shrinkage;
+
+    const int rows = grey.rows + 1;
+    const int cols = grey.cols + 1;
+    cv::Size intSumSize(cols, rows);
+
+    histInts.clear();
+    std::vector<cv::Mat> hist;
+    for (int bin = 0; bin < bins; ++bin)
+    {
+        hist.push_back(cv::Mat(rows, cols, CV_32FC1));
+    }
+
+    cv::Mat df_dx, df_dy, mag, angle;
+    cv::Sobel(grey, df_dx, CV_32F, 1, 0);
+    cv::Sobel(grey, df_dy, CV_32F, 0, 1);
+
+    cv::cartToPolar(df_dx, df_dy, mag, angle, true);
+
+    const float magnitudeScaling = 1.0 / sqrt(2);
+    mag *= magnitudeScaling;
+    angle /= 60;
+
+    for (int h = 0; h < mag.rows; ++h)
+    {
+        float* magnitude = mag.ptr<float>(h);
+        float* ang = angle.ptr<float>(h);
+
+        for (int w = 0; w < mag.cols; ++w)
+        {
+            hist[(int)ang[w]].ptr<float>(h)[w] = magnitude[w];
+        }
+    }
+
+    for (int bin = 0; bin < bins; ++bin)
+    {
+        cv::Mat shrunk, sum;
+        cv::resize(hist[bin], shrunk, cv::Size(), scale, scale, cv::INTER_AREA);
+        cv::integral(shrunk, sum);
+        histInts.push_back(sum);
+    }
+
+    cv::Mat shrMag;
+    cv::resize(mag, shrMag, cv::Size(), scale, scale, cv::INTER_AREA);
+
+    cv::integral(shrMag, magIntegral, mag.depth());
+}
+
+struct ChannelStorage
+{
+    std::vector<cv::Mat> hog;
+    cv::Mat magnitude;
+    cv::Mat luv;
+
+    int shrinkage;
+
+    enum {HOG_BINS = 6};
+
+    ChannelStorage() {}
+    ChannelStorage(const cv::Mat& colored, int shr) : shrinkage(shr)
+    {
+        cv::Mat _luv;
+        cv::cvtColor(colored, _luv, CV_BGR2Luv);
+
+        cv::integral(luv, luv);
+
+        cv::Mat grey;
+        cv::cvtColor(colored, grey, CV_RGB2GRAY);
+
+        calcHistBins(grey, magnitude, hog, HOG_BINS, shrinkage);
+    }
+
+    float get(int chennel, cv::Rect area) const
+    {
+        return 1.f;
+    }
+};
 }
 
 struct cv::SoftCascade::Filds
@@ -203,27 +288,37 @@ struct cv::SoftCascade::Filds
 
     std::vector<Level> levels;
 
-    // typedef std::vector<Stage>::iterator stIter_t;
-
-    //     // carrently roi must be save for out of ranges.
-    // void detectInRoi(const cv::Rect& roi, const Integral& ints, std::vector<cv::Rect>& objects, const int step)
-    // {
-    //     for (int dy = roi.y; dy < roi.height; dy+=step)
-    //         for (int dx = roi.x; dx < roi.width; dx += step)
-    //         {
-    //             applyCascade(ints, dx, dy);
-    //         }
-    // }
-
-    // void applyCascade(const Integral& ints, const int x, const int y)
-    // {
-    //     for (stIter_t sIt = stages.begin(); sIt != stages.end(); ++sIt)
-    //     {
-    //         Stage& stage = *sIt;
-    //     }
-    // }
-
     typedef std::vector<Octave>::iterator  octIt_t;
+
+    void detectAt(const Level& level, const int dx, const int dy, const ChannelStorage& storage,
+                  const std::vector<cv::Rect>& detections) const
+    {
+        float detectionScore = 0.f;
+
+        const Octave& octave = *(level.octave);
+        int stBegin = octave.index() * octave.stages, stEnd = stBegin + octave.stages;
+        for(int st = stBegin; st < stEnd; ++st)
+        {
+            const Stage& stage = stages[st];
+            if (detectionScore > stage.threshold)
+            {
+                int nId = st * 3;
+                const Node& node = nodes[nId];
+                const Feature& feature = features[node.feature];
+
+                float sum = storage.get(feature.channel, feature.rect);
+                int next = (sum >= node.threshold)? 2 : 1;
+
+                const Node& leaf = nodes[nId + next];
+                const Feature& fLeaf = features[node.feature];
+                sum = storage.get(feature.channel, feature.rect);
+
+                int lShift = (next - 1) * 2 + (sum >= leaf.threshold) ? 1 : 0;
+                float impact = leaves[nId + lShift];
+                detectionScore += impact;
+            }
+        }
+    }
 
     octIt_t fitOctave(const float& logFactor)
     {
@@ -407,90 +502,9 @@ bool cv::SoftCascade::load( const string& filename, const float minScale, const 
     return true;
 }
 
-namespace {
-
-    void calcHistBins(const cv::Mat& grey, cv::Mat& magIntegral, std::vector<cv::Mat>& histInts, const int bins, int shrinkage)
-    {
-        CV_Assert( grey.type() == CV_8U);
-
-        float scale = 1.f / shrinkage;
-
-        const int rows = grey.rows + 1;
-        const int cols = grey.cols + 1;
-        cv::Size intSumSize(cols, rows);
-
-        histInts.clear();
-        std::vector<cv::Mat> hist;
-        for (int bin = 0; bin < bins; ++bin)
-        {
-            hist.push_back(cv::Mat(rows, cols, CV_32FC1));
-        }
-
-        cv::Mat df_dx, df_dy, mag, angle;
-        cv::Sobel(grey, df_dx, CV_32F, 1, 0);
-        cv::Sobel(grey, df_dy, CV_32F, 0, 1);
-
-        cv::cartToPolar(df_dx, df_dy, mag, angle, true);
-
-        const float magnitudeScaling = 1.0 / sqrt(2);
-        mag *= magnitudeScaling;
-        angle /= 60;
-
-        for (int h = 0; h < mag.rows; ++h)
-        {
-            float* magnitude = mag.ptr<float>(h);
-            float* ang = angle.ptr<float>(h);
-
-            for (int w = 0; w < mag.cols; ++w)
-            {
-                hist[(int)ang[w]].ptr<float>(h)[w] = magnitude[w];
-            }
-        }
-
-        for (int bin = 0; bin < bins; ++bin)
-        {
-            cv::Mat shrunk, sum;
-            cv::resize(hist[bin], shrunk, cv::Size(), scale, scale, cv::INTER_AREA);
-            cv::integral(shrunk, sum);
-            histInts.push_back(sum);
-        }
-
-        cv::Mat shrMag;
-        cv::resize(mag, shrMag, cv::Size(), scale, scale, cv::INTER_AREA);
-
-        cv::integral(shrMag, magIntegral, mag.depth());
-    }
-
-    struct ChannelStorage
-    {
-        std::vector<cv::Mat> hog;
-        cv::Mat luv;
-        cv::Mat magnitude;
-
-        int shrinkage;
-
-        enum {HOG_BINS = 6};
-
-        ChannelStorage() {}
-        ChannelStorage(const cv::Mat& colored, int shr) : shrinkage(shr)
-        {
-            cv::Mat _luv;
-            cv::cvtColor(colored, _luv, CV_BGR2Luv);
-
-            cv::integral(luv, luv);
-
-            cv::Mat grey;
-            cv::cvtColor(colored, grey, CV_RGB2GRAY);
-
-            calcHistBins(grey, magnitude, hog, HOG_BINS, shrinkage);
-        }
-    };
-}
-
-
-
-void cv::SoftCascade::detectMultiScale(const Mat& image, const std::vector<cv::Rect>& rois, std::vector<cv::Rect>& objects,
-                                       const int step, const int rejectfactor)// add step scaling
+void cv::SoftCascade::detectMultiScale(const Mat& image, const std::vector<cv::Rect>& rois,
+                                       std::vector<cv::Rect>& objects,
+                                       const int step, const int rejectfactor)
 {
     typedef std::vector<cv::Rect>::const_iterator RIter_t;
     // only color images are supperted
@@ -506,10 +520,17 @@ void cv::SoftCascade::detectMultiScale(const Mat& image, const std::vector<cv::R
     // create integrals
     ChannelStorage storage(image, fld.shrinkage);
 
-    // for (RIter_t it = rois.begin(); it != rois.end(); ++it)
-    // {
-    //     const cv::Rect& roi = *it;
-    //     (*filds).detectInRoi(roi, integrals, objects, step);
-    // }
+    // object candidates
+    std::vector<cv::Rect> detections;
 
+    typedef std::vector<Level>::const_iterator lIt;
+    for (lIt it = fld.levels.begin(); it != fld.levels.end(); ++it)
+    {
+        const Level& level = *it;
+        for (int dy = 0; dy < level.workRect.height; ++dy)
+            for (int dx = 0; dx < level.workRect.width; ++dx)
+                fld.detectAt(level, dx, dy, storage, detections);
+    }
+
+    std::swap(detections, objects);
 }
