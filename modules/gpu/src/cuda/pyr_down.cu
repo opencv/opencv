@@ -40,7 +40,7 @@
 //
 //M*/
 
-#include "internal_shared.hpp"
+#include "opencv2/gpu/device/common.hpp"
 #include "opencv2/gpu/device/border_interpolate.hpp"
 #include "opencv2/gpu/device/vec_traits.hpp"
 #include "opencv2/gpu/device/vec_math.hpp"
@@ -50,57 +50,104 @@ namespace cv { namespace gpu { namespace device
 {
     namespace imgproc
     {
-        template <typename T, typename B> __global__ void pyrDown(const PtrStep<T> src, PtrStep<T> dst, const B b, int dst_cols)
+        template <typename T, typename B> __global__ void pyrDown(const PtrStepSz<T> src, PtrStep<T> dst, const B b, int dst_cols)
         {
-            typedef typename TypeVec<float, VecTraits<T>::cn>::vec_type value_type;
+            typedef typename TypeVec<float, VecTraits<T>::cn>::vec_type work_t;
+
+            __shared__ work_t smem[256 + 4];
 
             const int x = blockIdx.x * blockDim.x + threadIdx.x;
             const int y = blockIdx.y;
 
-            __shared__ value_type smem[256 + 4];
+            const int src_y = 2 * y;
 
-            value_type sum;
-
-            const int src_y = 2*y;
-
-            sum = VecTraits<value_type>::all(0);
-
-            sum = sum + 0.0625f * b.at(src_y - 2, x, src.data, src.step);
-            sum = sum + 0.25f   * b.at(src_y - 1, x, src.data, src.step);
-            sum = sum + 0.375f  * b.at(src_y    , x, src.data, src.step);
-            sum = sum + 0.25f   * b.at(src_y + 1, x, src.data, src.step);
-            sum = sum + 0.0625f * b.at(src_y + 2, x, src.data, src.step);
-
-            smem[2 + threadIdx.x] = sum;
-
-            if (threadIdx.x < 2)
+            if (src_y >= 2 && src_y < src.rows - 2 && x >= 2 && x < src.cols - 2)
             {
-                const int left_x = x - 2;
+                {
+                    work_t sum;
 
-                sum = VecTraits<value_type>::all(0);
+                    sum =       0.0625f * src(src_y - 2, x);
+                    sum = sum + 0.25f   * src(src_y - 1, x);
+                    sum = sum + 0.375f  * src(src_y    , x);
+                    sum = sum + 0.25f   * src(src_y + 1, x);
+                    sum = sum + 0.0625f * src(src_y + 2, x);
 
-                sum = sum + 0.0625f * b.at(src_y - 2, left_x, src.data, src.step);
-                sum = sum + 0.25f   * b.at(src_y - 1, left_x, src.data, src.step);
-                sum = sum + 0.375f  * b.at(src_y    , left_x, src.data, src.step);
-                sum = sum + 0.25f   * b.at(src_y + 1, left_x, src.data, src.step);
-                sum = sum + 0.0625f * b.at(src_y + 2, left_x, src.data, src.step);
+                    smem[2 + threadIdx.x] = sum;
+                }
 
-                smem[threadIdx.x] = sum;
+                if (threadIdx.x < 2)
+                {
+                    const int left_x = x - 2;
+
+                    work_t sum;
+
+                    sum =       0.0625f * src(src_y - 2, left_x);
+                    sum = sum + 0.25f   * src(src_y - 1, left_x);
+                    sum = sum + 0.375f  * src(src_y    , left_x);
+                    sum = sum + 0.25f   * src(src_y + 1, left_x);
+                    sum = sum + 0.0625f * src(src_y + 2, left_x);
+
+                    smem[threadIdx.x] = sum;
+                }
+
+                if (threadIdx.x > 253)
+                {
+                    const int right_x = x + 2;
+
+                    work_t sum;
+
+                    sum =       0.0625f * src(src_y - 2, right_x);
+                    sum = sum + 0.25f   * src(src_y - 1, right_x);
+                    sum = sum + 0.375f  * src(src_y    , right_x);
+                    sum = sum + 0.25f   * src(src_y + 1, right_x);
+                    sum = sum + 0.0625f * src(src_y + 2, right_x);
+
+                    smem[4 + threadIdx.x] = sum;
+                }
             }
-
-            if (threadIdx.x > 253)
+            else
             {
-                const int right_x = x + 2;
+                {
+                    work_t sum;
 
-                sum = VecTraits<value_type>::all(0);
+                    sum =       0.0625f * src(b.idx_row_low (src_y - 2), b.idx_col_high(x));
+                    sum = sum + 0.25f   * src(b.idx_row_low (src_y - 1), b.idx_col_high(x));
+                    sum = sum + 0.375f  * src(src_y                    , b.idx_col_high(x));
+                    sum = sum + 0.25f   * src(b.idx_row_high(src_y + 1), b.idx_col_high(x));
+                    sum = sum + 0.0625f * src(b.idx_row_high(src_y + 2), b.idx_col_high(x));
 
-                sum = sum + 0.0625f * b.at(src_y - 2, right_x, src.data, src.step);
-                sum = sum + 0.25f   * b.at(src_y - 1, right_x, src.data, src.step);
-                sum = sum + 0.375f  * b.at(src_y    , right_x, src.data, src.step);
-                sum = sum + 0.25f   * b.at(src_y + 1, right_x, src.data, src.step);
-                sum = sum + 0.0625f * b.at(src_y + 2, right_x, src.data, src.step);
+                    smem[2 + threadIdx.x] = sum;
+                }
 
-                smem[4 + threadIdx.x] = sum;
+                if (threadIdx.x < 2)
+                {
+                    const int left_x = x - 2;
+
+                    work_t sum;
+
+                    sum =       0.0625f * src(b.idx_row_low (src_y - 2), b.idx_col(left_x));
+                    sum = sum + 0.25f   * src(b.idx_row_low (src_y - 1), b.idx_col(left_x));
+                    sum = sum + 0.375f  * src(src_y                    , b.idx_col(left_x));
+                    sum = sum + 0.25f   * src(b.idx_row_high(src_y + 1), b.idx_col(left_x));
+                    sum = sum + 0.0625f * src(b.idx_row_high(src_y + 2), b.idx_col(left_x));
+
+                    smem[threadIdx.x] = sum;
+                }
+
+                if (threadIdx.x > 253)
+                {
+                    const int right_x = x + 2;
+
+                    work_t sum;
+
+                    sum =       0.0625f * src(b.idx_row_low (src_y - 2), b.idx_col_high(right_x));
+                    sum = sum + 0.25f   * src(b.idx_row_low (src_y - 1), b.idx_col_high(right_x));
+                    sum = sum + 0.375f  * src(src_y                    , b.idx_col_high(right_x));
+                    sum = sum + 0.25f   * src(b.idx_row_high(src_y + 1), b.idx_col_high(right_x));
+                    sum = sum + 0.0625f * src(b.idx_row_high(src_y + 2), b.idx_col_high(right_x));
+
+                    smem[4 + threadIdx.x] = sum;
+                }
             }
 
             __syncthreads();
@@ -109,9 +156,9 @@ namespace cv { namespace gpu { namespace device
             {
                 const int tid2 = threadIdx.x * 2;
 
-                sum = VecTraits<value_type>::all(0);
+                work_t sum;
 
-                sum = sum + 0.0625f * smem[2 + tid2 - 2];
+                sum =       0.0625f * smem[2 + tid2 - 2];
                 sum = sum + 0.25f   * smem[2 + tid2 - 1];
                 sum = sum + 0.375f  * smem[2 + tid2    ];
                 sum = sum + 0.25f   * smem[2 + tid2 + 1];
