@@ -161,8 +161,8 @@ namespace {
 //             {1, 2,      1, 2}
 //         };
 
-//     struct Level
-//     {
+    struct Level
+    {
 //         int index;
 
 //         float factor;
@@ -189,7 +189,7 @@ namespace {
 
 //         float relScale() {return (factor / octave.scale); }
 //         float srScale()  {return (factor / octave.scale * shrinkage); }
-//     };
+    };
 
 //     struct Integral
 //     {
@@ -209,12 +209,16 @@ struct cv::SoftCascade::Filds
     int origObjWidth;
     int origObjHeight;
 
+    int shrinkage;
+
     std::vector<Octave>  octaves;
     std::vector<Stage>   stages;
     std::vector<Node> nodes;
     std::vector<float> leaves;
 
     std::vector<Feature> features;
+
+    std::vector<Level> levels;
 
     // typedef std::vector<Stage>::iterator stIter_t;
 
@@ -236,11 +240,11 @@ struct cv::SoftCascade::Filds
     //     }
     // }
 
-    // // compute levels of full pyramid
-    // void calcLevels(int frameW, int frameH, int scales)
-    // {
-    //     CV_Assert(scales > 1);
-    //     levels.clear();
+    // compute levels of full pyramid
+    void calcLevels(int frameW, int frameH, int scales)
+    {
+        CV_Assert(scales > 1);
+        levels.clear();
     //     float logFactor = (log(maxScale) - log(minScale)) / (scales -1);
 
     //     float scale = minScale;
@@ -274,7 +278,7 @@ struct cv::SoftCascade::Filds
     //             }
     //         }
     //     }
-    // }
+    }
 
     bool fill(const FileNode &root, const float mins, const float maxs)
     {
@@ -360,15 +364,16 @@ struct cv::SoftCascade::Filds
             for (; st != st_end; ++st )
                 features.push_back(Feature(*st));
         }
+
+        shrinkage = octaves[0].shrinkage;
         return true;
     }
 };
 
 cv::SoftCascade::SoftCascade() : filds(0) {}
 
-cv::SoftCascade::SoftCascade( const string& filename, const float minScale, const float maxScale)
+cv::SoftCascade::SoftCascade( const string& filename, const float minScale, const float maxScale) : filds(0)
 {
-    filds = new Filds;
     load(filename, minScale, maxScale);
 }
 cv::SoftCascade::~SoftCascade()
@@ -378,7 +383,8 @@ cv::SoftCascade::~SoftCascade()
 
 bool cv::SoftCascade::load( const string& filename, const float minScale, const float maxScale)
 {
-    delete filds;
+    if (filds)
+        delete filds;
     filds = 0;
 
     cv::FileStorage fs(filename, FileStorage::READ);
@@ -387,56 +393,92 @@ bool cv::SoftCascade::load( const string& filename, const float minScale, const 
     filds = new Filds;
     Filds& flds = *filds;
     if (!flds.fill(fs.getFirstTopLevelNode(), minScale, maxScale)) return false;
-    // // flds.calcLevels(FRAME_WIDTH, FRAME_HEIGHT, TOTAL_SCALES);
+    flds.calcLevels(FRAME_WIDTH, FRAME_HEIGHT, TOTAL_SCALES);
 
     return true;
 }
 
 namespace {
 
-    void calcHistBins(const cv::Mat& grey, cv::Mat magIntegral, std::vector<cv::Mat>& histInts, const int bins)
+    void calcHistBins(const cv::Mat& grey, cv::Mat& magIntegral, std::vector<cv::Mat>& histInts, const int bins, int shrinkage)
     {
-        // CV_Assert( grey.type() == CV_8U);
-        // const int rows = grey.rows + 1;
-        // const int cols = grey.cols + 1;
-        // cv::Size intSumSize(cols, rows);
+        CV_Assert( grey.type() == CV_8U);
 
-        // histInts.clear();
-        // std::vector<cv::Mat> hist;
-        // for (int bin = 0; bin < bins; ++bin)
-        // {
-        //     hist.push_back(cv::Mat(rows, cols, CV_32FC1));
-        // }
-        // cv::Mat df_dx, df_dy, mag, angle;
-        // cv::Sobel(grey, df_dx, CV_32F, 1, 0);
-        // cv::Sobel(grey, df_dy, CV_32F, 0, 1);
+        float scale = 1.f / shrinkage;
 
-        // cv::cartToPolar(df_dx, df_dy, mag, angle, true);
+        const int rows = grey.rows + 1;
+        const int cols = grey.cols + 1;
+        cv::Size intSumSize(cols, rows);
 
-        // const float magnitudeScaling = 1.0 / sqrt(2);
-        // mag *= magnitudeScaling;
-        // angle /= 60;
+        histInts.clear();
+        std::vector<cv::Mat> hist;
+        for (int bin = 0; bin < bins; ++bin)
+        {
+            hist.push_back(cv::Mat(rows, cols, CV_32FC1));
+        }
 
-        // for (int h = 0; h < mag.rows; ++h)
-        // {
-        //     float* magnitude = mag.ptr<float>(h);
-        //     float* ang = angle.ptr<float>(h);
+        cv::Mat df_dx, df_dy, mag, angle;
+        cv::Sobel(grey, df_dx, CV_32F, 1, 0);
+        cv::Sobel(grey, df_dy, CV_32F, 0, 1);
 
-        //     for (int w = 0; w < mag.cols; ++w)
-        //     {
-        //         hist[(int)ang[w]].ptr<float>(h)[w] = magnitude[w];
-        //     }
-        // }
+        cv::cartToPolar(df_dx, df_dy, mag, angle, true);
 
-        // for (int bin = 0; bin < bins; ++bin)
-        // {
-        //     cv::Mat sum;
-        //     cv::integral(hist[bin], sum);
-        //     histInts.push_back(sum);
-        // }
+        const float magnitudeScaling = 1.0 / sqrt(2);
+        mag *= magnitudeScaling;
+        angle /= 60;
 
-        // cv::integral(mag, magIntegral, mag.depth());
+        for (int h = 0; h < mag.rows; ++h)
+        {
+            float* magnitude = mag.ptr<float>(h);
+            float* ang = angle.ptr<float>(h);
+
+            for (int w = 0; w < mag.cols; ++w)
+            {
+                hist[(int)ang[w]].ptr<float>(h)[w] = magnitude[w];
+            }
+        }
+
+        for (int bin = 0; bin < bins; ++bin)
+        {
+            cv::Mat shrunk, sum;
+            cv::resize(hist[bin], shrunk, cv::Size(), scale, scale, cv::INTER_AREA);
+            cv::integral(shrunk, sum);
+            histInts.push_back(sum);
+        }
+
+        cv::Mat shrMag;
+        cv::resize(mag, shrMag, cv::Size(), scale, scale, cv::INTER_AREA);
+
+        cv::integral(shrMag, magIntegral, mag.depth());
     }
+
+    struct ChannelStorage
+    {
+        std::vector<cv::Mat> hog;
+        cv::Mat luv;
+        cv::Mat magnitude;
+
+        int shrinkage;
+
+        enum {HOG_BINS = 6};
+
+        ChannelStorage() {}
+        ChannelStorage(const cv::Mat& colored, int shr) : shrinkage(shr)
+        {
+            cv::Mat _luv;
+            cv::cvtColor(colored, _luv, CV_BGR2Luv);
+
+            cv::integral(luv, luv);
+
+            cv::Mat grey;
+            cv::cvtColor(colored, grey, CV_RGB2GRAY);
+
+            calcHistBins(grey, magnitude, hog, HOG_BINS, shrinkage);
+            std::cout << magnitude.cols << " " << magnitude.rows << std::endl;
+            cv::imshow("1", magnitude);
+            cv::waitKey(0);
+        }
+    };
 }
 
 
@@ -444,31 +486,19 @@ namespace {
 void cv::SoftCascade::detectMultiScale(const Mat& image, const std::vector<cv::Rect>& rois, std::vector<cv::Rect>& objects,
                                        const int step, const int rejectfactor)// add step scaling
 {
-    // typedef std::vector<cv::Rect>::const_iterator RIter_t;
-    // // only color images are supperted
-    // CV_Assert(image.type() == CV_8UC3);
+    typedef std::vector<cv::Rect>::const_iterator RIter_t;
+    // only color images are supperted
+    CV_Assert(image.type() == CV_8UC3);
 
-    // // only this window size allowed
-    // CV_Assert(image.cols == 640 && image.rows == 480);
+    // only this window size allowed
+    CV_Assert(image.cols == 640 && image.rows == 480);
 
-    // objects.clear();
+    objects.clear();
 
-    // // create integrals
-    // cv::Mat luv;
-    // cv::cvtColor(image, luv, CV_BGR2Luv);
+    const Filds& fld = *filds;
 
-    // cv::Mat luvIntegral;
-    // cv::integral(luv, luvIntegral);
-
-    // cv::Mat grey;
-    // cv::cvtColor(image, grey, CV_RGB2GRAY);
-
-    // std::vector<cv::Mat> hist;
-    // cv::Mat magnitude;
-    // const int bins = 6;
-    // calcHistBins(grey, magnitude, hist, bins);
-
-    // Integral integrals(magnitude, hist, luv);
+    // create integrals
+    ChannelStorage storage(image, fld.shrinkage);
 
     // for (RIter_t it = rois.begin(); it != rois.end(); ++it)
     // {

@@ -51,7 +51,7 @@ TEST(SoftCascade, readCascade)
 
 TEST(SoftCascade, detect)
 {
-    std::string xml =  cvtest::TS::ptr()->get_data_path() + "cascadeandhog/softcascade.xml";
+    std::string xml =  cvtest::TS::ptr()->get_data_path() + "cascadeandhog/sc_cvpr_2012_to_opencv.xml";
     cv::SoftCascade cascade;
     ASSERT_TRUE(cascade.load(xml));
 
