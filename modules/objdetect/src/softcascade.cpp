@@ -49,69 +49,93 @@
 
 namespace {
 
-    struct Octave
+struct Octave
+{
+    float scale;
+    int stages;
+    cv::Size size;
+    int shrinkage;
+
+    static const char *const SC_OCT_SCALE;
+    static const char *const SC_OCT_STAGES;
+    static const char *const SC_OCT_SHRINKAGE;
+
+    Octave() : scale(0), stages(0), size(cv::Size()), shrinkage(0) {}
+    Octave(cv::Size origObjSize, const cv::FileNode& fn)
+    : scale((float)fn[SC_OCT_SCALE]), stages((int)fn[SC_OCT_STAGES]),
+      size(cvRound(origObjSize.width * scale), cvRound(origObjSize.height * scale)),
+      shrinkage((int)fn[SC_OCT_SHRINKAGE])
+    {}
+};
+
+const char *const Octave::SC_OCT_SCALE     = "scale";
+const char *const Octave::SC_OCT_STAGES    = "stageNum";
+const char *const Octave::SC_OCT_SHRINKAGE = "shrinkingFactor";
+
+
+struct Stage
+{
+    float threshold;
+
+    static const char *const SC_STAGE_THRESHOLD;
+
+    Stage(){}
+    Stage(const cv::FileNode& fn) : threshold((float)fn[SC_STAGE_THRESHOLD]){}
+};
+
+const char *const Stage::SC_STAGE_THRESHOLD  = "stageThreshold";
+
+struct Node
+{
+    int feature;
+    float threshold;
+
+    Node(){}
+    Node(cv::FileNodeIterator& fIt) : feature((int)(*(fIt +=2)++)), threshold((float)(*(fIt++))){}
+};
+
+
+struct Feature
+{
+    int channel;
+    cv::Rect rect;
+
+    static const char * const SC_F_CHANNEL;
+    static const char * const SC_F_RECT;
+
+    Feature() {}
+    Feature(const cv::FileNode& fn) : channel((int)fn[SC_F_CHANNEL])
     {
-        float scale;
-        int stages;
-        cv::Size size;
-        int shrinkage;
-        static const char *const SC_OCT_SCALE;
-        static const char *const SC_OCT_STAGES;
-        static const char *const SC_OCT_SHRINKAGE;
+        cv::FileNode rn = fn[SC_F_RECT];
+        cv::FileNodeIterator r_it = rn.end();
+        rect = cv::Rect(*(--r_it), *(--r_it), *(--r_it), *(--r_it));
+        // std::cout << "feature: " << rect.x << " " << rect.y << " " << rect.width
+        //<< " " << rect.height << " " << channel << std::endl;
+    }
+};
 
-        Octave(){}
-        Octave(cv::Size origObjSize, const cv::FileNode& fn)
-        : scale((float)fn[SC_OCT_SCALE]), stages((int)fn[SC_OCT_STAGES]),
-          size(cvRound(origObjSize.width * scale), cvRound(origObjSize.height * scale)),
-          shrinkage((int)fn[SC_OCT_SHRINKAGE])
-        {}
-    };
+const char * const Feature::SC_F_CHANNEL   = "channel";
+const char * const Feature::SC_F_RECT      = "rect";
 
-    const char *const Octave::SC_OCT_SCALE     = "scale";
-    const char *const Octave::SC_OCT_STAGES    = "stageNum";
-    const char *const Octave::SC_OCT_SHRINKAGE = "shrinkingFactor";
+struct Level
+{
+    const Octave* octave;
 
+    float origScale;
+    float relScale;
+    float shrScale;
 
-    struct Stage
-    {
-        float threshold;
-
-        static const char *const SC_STAGE_THRESHOLD;
-
-        Stage(){}
-        Stage(const cv::FileNode& fn) : threshold((float)fn[SC_STAGE_THRESHOLD])
-        { std::cout << "   stage: " << threshold << std::endl; }
-    };
-
-    const char *const Stage::SC_STAGE_THRESHOLD  = "stageThreshold";
-
-    struct Node
-    {
-        int feature;
-        float threshold;
-
-        Node(){}
-        Node(cv::FileNodeIterator& fIt) : feature((int)(*(fIt +=2)++)), threshold((float)(*(fIt++)))
-        { std::cout << "   Node: " << feature << " " << threshold << std::endl; }
-    };
+    cv::Size workRect;
+    cv::Size objSize;
 
 
-    struct Feature
-    {
-        int channel;
-        cv::Rect rect;
-
-        static const char * const SC_F_CHANNEL;
-        static const char * const SC_F_RECT;
-
-        Feature() {}
-        Feature(const cv::FileNode& fn) : channel((int)fn[SC_F_CHANNEL])
-        {
-            cv::FileNode rn = fn[SC_F_RECT];
-            cv::FileNodeIterator r_it = rn.end();
-            rect = cv::Rect(*(--r_it), *(--r_it), *(--r_it), *(--r_it));
-            std::cout << "feature: " << rect.x << " " << rect.y << " " << rect.width << " " << rect.height << " " << channel << std::endl;
-        }
+    // TiDo not reounding
+    Level(const Octave& oct, const float scale, const int shrinkage, const int w, const int h)
+    :  octave(&oct), origScale(scale), relScale(scale / oct.scale), shrScale (relScale / shrinkage),
+       workRect(cv::Size(cvRound(w / (float)shrinkage),cvRound(h / (float)shrinkage))),
+       objSize(cv::Size(cvRound(oct.size.width * relScale), cvRound(oct.size.height * relScale)))
+    {}
+};
 
 //         Feature rescale(float relScale)
 //         {
@@ -121,10 +145,7 @@ namespace {
 //             res.threshold = threshold * CascadeIntrinsics::getFor(channel, relScale);
 //             return res;
 //         }
-    };
 
-        const char * const Feature::SC_F_CHANNEL   = "channel";
-        const char * const Feature::SC_F_RECT      = "rect";
 //     // according to R. Benenson, M. Mathias, R. Timofte and L. Van Gool paper
 //     struct CascadeIntrinsics
 //     {
@@ -161,44 +182,6 @@ namespace {
 //             {1, 2,      1, 2}
 //         };
 
-    struct Level
-    {
-//         int index;
-
-//         float factor;
-//         float logFactor;
-
-//         int width;
-//         int height;
-
-//         Octave octave;
-
-//         cv::Size objSize;
-//         cv::Size dWinSize;
-
-//         static const float shrinkage = 0.25;
-
-//         Level(int i,float f, float lf, int w, int h): index(i), factor(f), logFactor(lf), width(w), height(h), octave(Octave())
-//         {}
-
-//         void assign(const Octave& o, int detW, int detH)
-//         {
-//             octave = o;
-//             objSize = cv::Size(cv::saturate_cast<int>(detW * o.scale), cv::saturate_cast<int>(detH * o.scale));
-//         }
-
-//         float relScale() {return (factor / octave.scale); }
-//         float srScale()  {return (factor / octave.scale * shrinkage); }
-    };
-
-//     struct Integral
-//     {
-//         cv::Mat magnitude;
-//         std::vector<cv::Mat> hist;
-//         cv::Mat luv;
-
-//         Integral(cv::Mat m, std::vector<cv::Mat> h, cv::Mat l) : magnitude(m), hist(h), luv(l) {}
-//     };
 }
 
 struct cv::SoftCascade::Filds
@@ -240,44 +223,70 @@ struct cv::SoftCascade::Filds
     //     }
     // }
 
+    typedef std::vector<Octave>::iterator  octIt_t;
+
+    octIt_t fitOctave(const float& logFactor)
+    {
+        float minAbsLog = FLT_MAX;
+        octIt_t res =  octaves.begin();
+        for (octIt_t oct = octaves.begin(); oct < octaves.end(); ++oct)
+        {
+            const Octave& octave =*oct;
+            float logOctave = log(octave.scale);
+            float logAbsScale = fabs(logFactor - logOctave);
+
+            if(logAbsScale < minAbsLog)
+            {
+                res = oct;
+                minAbsLog = logAbsScale;
+            }
+        }
+        return res;
+    }
+
     // compute levels of full pyramid
     void calcLevels(int frameW, int frameH, int scales)
     {
         CV_Assert(scales > 1);
         levels.clear();
-    //     float logFactor = (log(maxScale) - log(minScale)) / (scales -1);
+        float logFactor = (log(maxScale) - log(minScale)) / (scales -1);
 
-    //     float scale = minScale;
-    //     for (int sc = 0; sc < scales; ++sc)
-    //     {
-    //         Level level(sc, scale, log(scale), std::max(0.0f, frameW - (origObjWidth * scale)), std::max(0.0f, frameH - (origObjHeight * scale)));
-    //         if (!level.width || !level.height)
-    //             break;
-    //         else
-    //             levels.push_back(level);
+        float scale = minScale;
+        for (int sc = 0; sc < scales; ++sc)
+        {
+            int width  = std::max(0.0f, frameW - (origObjWidth  * scale));
+            int height = std::max(0.0f, frameH - (origObjHeight * scale));
 
-    //         if (fabs(scale - maxScale) < FLT_EPSILON) break;
-    //         scale = std::min(maxScale, expf(log(scale) + logFactor));
-    //     }
-
-    //     for (std::vector<Level>::iterator level = levels.begin(); level < levels.end(); ++level)
-    //     {
-    //         float minAbsLog = FLT_MAX;
-    //         for (std::vector<Octave>::iterator oct = octaves.begin(); oct < octaves.end(); ++oct)
-    //         {
-    //             const Octave& octave =*oct;
-    //             float logOctave = log(octave.scale);
-    //             float logAbsScale = fabs((*level).logFactor - logOctave);
+            float logScale = log(scale);
+            octIt_t fit = fitOctave(logScale);
 
 
-    //             if(logAbsScale < minAbsLog)
-    //             {
-    //                 printf("######### %f %f %f %f\n", octave.scale, logOctave, logAbsScale, (*level).logFactor);
-    //                 minAbsLog = logAbsScale;
-    //                 (*level).assign(octave, ORIG_OBJECT_WIDTH, ORIG_OBJECT_HEIGHT);
-    //             }
-    //         }
-    //     }
+            Level level(*fit, scale, shrinkage, width, height);
+
+            if (!width || !height)
+                break;
+            else
+                levels.push_back(level);
+
+            if (fabs(scale - maxScale) < FLT_EPSILON) break;
+            scale = std::min(maxScale, expf(log(scale) + logFactor));
+
+            // std::cout << "level  scale "
+            //           << levels[sc].origScale
+            //           << " octeve "
+            //           << levels[sc].octave->scale
+            //           << " "
+            //           << levels[sc].relScale
+            //           << " " << levels[sc].shrScale
+            //           << " [" << levels[sc].objSize.width
+            //           << " " << levels[sc].objSize.height << "] ["
+            // << levels[sc].workRect.width << " " << levels[sc].workRect.height  << std::endl;
+        }
+
+        return;
+
+
+        std::cout << std::endl << std::endl << std::endl;
     }
 
     bool fill(const FileNode &root, const float mins, const float maxs)
@@ -474,9 +483,6 @@ namespace {
             cv::cvtColor(colored, grey, CV_RGB2GRAY);
 
             calcHistBins(grey, magnitude, hog, HOG_BINS, shrinkage);
-            std::cout << magnitude.cols << " " << magnitude.rows << std::endl;
-            cv::imshow("1", magnitude);
-            cv::waitKey(0);
         }
     };
 }
