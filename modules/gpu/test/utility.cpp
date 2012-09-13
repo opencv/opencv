@@ -41,6 +41,8 @@
 
 #include "test_precomp.hpp"
 
+#ifdef HAVE_CUDA
+
 using namespace std;
 using namespace cv;
 using namespace cv::gpu;
@@ -418,3 +420,5 @@ void showDiff(InputArray gold_, InputArray actual_, double eps)
 
     waitKey();
 }
+
+#endif // HAVE_CUDA
