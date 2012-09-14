@@ -71,7 +71,7 @@ if (not ANDROID_NDK_PATH):
     while(not tmp):
 	tmp = str.strip(pipe.readline(), "\n")
     pipe.close()
-    ANDROID_NDK_PATH = tmp
+    ANDROID_NDK_PATH = os.path.split(tmp)[0]
     print("Using Android NDK from PATH (\"%s\")" % ANDROID_NDK_PATH)
 
 print("Using Android SDK from \"%s\"" % ANDROID_SDK_PATH)
