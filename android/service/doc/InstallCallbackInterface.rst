@@ -11,21 +11,21 @@ String getPackageName()
 
 .. method:: String getPackageName()
 
-    Get name of a package to be installed
+    Get name of a package to be installed.
 
-    :rtype: String
-    :return: Return package name, i.e. "OpenCV Manager Service" or "OpenCV library"
+    :rtype: string;
+    :return: returns package name, i.e. "OpenCV Manager Service" or "OpenCV library".
 
 void install()
 --------------
 
 .. method:: void install()
 
-    Installation of package is approved
+    Installation of package has been approved.
 
 void cancel()
 -------------
 
 .. method:: void cancel()
 
-    Installation if package was canceled
+    Installation if package has been canceled.
