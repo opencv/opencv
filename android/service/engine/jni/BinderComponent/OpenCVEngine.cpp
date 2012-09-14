@@ -125,23 +125,23 @@ android::String16 OpenCVEngine::GetLibraryList(android::String16 version)
 	if (!tmp.empty())
 	{
 	    tmp += "/libopencvinfo.so";
-	    
+
 	    LOGD("Trying to load info library \"%s\"", tmp.c_str());
-	    
+
 	    void *handle;
 	    char* (*info_func)();
-	    
+
 	    handle = dlopen(tmp.c_str(), RTLD_LAZY);
 	    if (handle)
 	    {
 		const char *error;
-		
-		dlerror(); 
+
+		dlerror();
 		*(void **) (&info_func) = dlsym(handle, "GetLibraryList");
 		if ((error = dlerror()) == NULL)
 		{
 		    result = String16((*info_func)());
-		    dlclose(handle);   
+		    dlclose(handle);
 		}
 		else
 		{

@@ -20,7 +20,7 @@
 #define FEATURES_HAS_SSSE3 4L
 #define FEATURES_HAS_GPU 65536L
 
-// TODO: Do not forget to add Platrfom name to PackageInfo::PlatformNameMap 
+// TODO: Do not forget to add Platrfom name to PackageInfo::PlatformNameMap
 // in method PackageInfo::InitPlatformNameMap()
 #define PLATFORM_UNKNOWN 0L
 #define PLATFORM_TEGRA 1L
