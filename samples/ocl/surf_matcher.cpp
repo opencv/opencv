@@ -44,7 +44,7 @@
 //M*/
 
 #include <iostream>
-
+#include <stdio.h>
 #include "opencv2/core/core.hpp"
 #include "opencv2/features2d/features2d.hpp"
 #include "opencv2/highgui/highgui.hpp"
@@ -58,7 +58,7 @@ using namespace cv::ocl;
 
 //#define USE_CPU_DESCRIPTOR // use cpu descriptor extractor until ocl descriptor extractor is fixed
 //#define USE_CPU_BFMATCHER
-
+void help();
 
 void help()
 {
@@ -169,7 +169,7 @@ int main(int argc, char* argv[])
 
     double max_dist = 0; double min_dist = 100;
     //-- Quick calculation of max and min distances between keypoints
-    for( int i = 0; i < keypoints1.size(); i++ )
+    for( size_t i = 0; i < keypoints1.size(); i++ )
     { 
         double dist = matches[i].distance;
         if( dist < min_dist ) min_dist = dist;
@@ -182,7 +182,7 @@ int main(int argc, char* argv[])
     //-- Draw only "good" matches (i.e. whose distance is less than 2.5*min_dist )
     std::vector< DMatch > good_matches;
 
-    for( int i = 0; i < keypoints1.size(); i++ )
+    for( size_t i = 0; i < keypoints1.size(); i++ )
     { 
         if( matches[i].distance < 3*min_dist )
         { 
@@ -200,7 +200,7 @@ int main(int argc, char* argv[])
     std::vector<Point2f> obj;
     std::vector<Point2f> scene;
 
-    for( int i = 0; i < good_matches.size(); i++ )
+    for( size_t i = 0; i < good_matches.size(); i++ )
     {
         //-- Get the keypoints from the good matches
         obj.push_back( keypoints1[ good_matches[i].queryIdx ].pt );

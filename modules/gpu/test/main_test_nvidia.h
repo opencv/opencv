@@ -1,8 +1,6 @@
 #ifndef __main_test_nvidia_h__
 #define __main_test_nvidia_h__
 
-#include <string>
-
 enum OutputLevel
 {
     OutputLevelNone,

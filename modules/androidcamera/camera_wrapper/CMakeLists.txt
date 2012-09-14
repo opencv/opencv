@@ -59,7 +59,7 @@ SET_TARGET_PROPERTIES(${the_target} PROPERTIES
                       )
 
 if (NOT (CMAKE_BUILD_TYPE MATCHES "debug"))
-    ADD_CUSTOM_COMMAND( TARGET ${the_target} POST_BUILD COMMAND ${CMAKE_STRIP} "${LIBRARY_OUTPUT_PATH}/lib${the_target}.so" )
+    ADD_CUSTOM_COMMAND( TARGET ${the_target} POST_BUILD COMMAND ${CMAKE_STRIP} --strip-unneeded "${LIBRARY_OUTPUT_PATH}/lib${the_target}.so" )
 endif()
 
 

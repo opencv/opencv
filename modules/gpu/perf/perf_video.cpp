@@ -777,6 +777,7 @@ PERF_TEST_P(Video_Cn_MaxFeatures, Video_GMG, Combine(Values("gpu/video/768x576.a
             cap >> frame;
             if (frame.empty())
             {
+                cap.release();
                 cap.open(inputFile);
                 cap >> frame;
             }
@@ -814,6 +815,7 @@ PERF_TEST_P(Video_Cn_MaxFeatures, Video_GMG, Combine(Values("gpu/video/768x576.a
             cap >> frame;
             if (frame.empty())
             {
+                cap.release();
                 cap.open(inputFile);
                 cap >> frame;
             }
