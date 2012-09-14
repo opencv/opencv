@@ -21,16 +21,16 @@ Usage model for target user
 
 First OpenCV app\:
 
-#. OpenCV app is downloaded as an dependency on Google Play marketplace or manually;
-#. When the app starts, it suggests installing OpenCV Manager;
+#. Any OpenCV-dependent app is installed from Google Play marketplace or manually;
+#. At the first launch, it suggests installing OpenCV Manager;
 #. Then OpenCV Manager is downloaded and installed, using Google Play marketplace service.
 #. When started, the application suggests installing OpenCV library for the target device trough Google Play marketplace;
 #. After installation is finished, the app may be launched to perform common tasks.
 
 Next OpenCV app\:
 
-#. OpenCV app is downloaded as an dependency on Google Play marketplace or manually;
-#. After the installation is finished, the app may be launched.
+#. Any OpenCV-dependent app is installed from Google Play marketplace or manually;
+#. At the first launch, the app starts as usually;
 #. If the selected version is not installed, OpenCV Manager suggests installing OpenCV library for the target device trough Google Play marketplace;
 #. After installation is finished, the app may be launched to perform common tasks.
 
