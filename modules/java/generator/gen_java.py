@@ -871,13 +871,16 @@ public class %(jc)s {
 
 #include "converters.h"
 
+// Log functions are defined only for Android.
+// TODO: Define log functions for desktop Java.
+#define LOGD(...)
+#ifdef ANDROID
 #ifdef DEBUG
 #include <android/log.h>
 #define MODULE_LOG_TAG "OpenCV.%(m)s"
 #define LOGD(...) ((void)__android_log_print(ANDROID_LOG_DEBUG, MODULE_LOG_TAG, __VA_ARGS__))
-#else //DEBUG
-#define LOGD(...)
 #endif //DEBUG
+#endif //ANDROID
 
 #include "opencv2/%(m)s/%(m)s.hpp"
 

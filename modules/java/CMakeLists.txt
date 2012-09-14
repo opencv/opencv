@@ -1,8 +1,18 @@
 # ----------------------------------------------------------------------------
 #  CMake file for java support
 # ----------------------------------------------------------------------------
-if(NOT ANDROID OR NOT PYTHON_EXECUTABLE OR ANDROID_NATIVE_API_LEVEL LESS 8)
+
+# Rely on the checks for PYTHON_EXECUTABLE to ensure we can build Java.
+if(NOT (PYTHON_EXECUTABLE AND 
+       (JAVA OR (ANDROID AND (NOT ANDROID_NATIVE_API_LEVEL LESS 8)))))
   ocv_module_disable(java)
+endif()
+
+# The Android NDK provides its own JNI, so we only need to do this search
+# if we're building desktop Java.
+if(JAVA AND (NOT ANDROID))
+  find_package(JNI REQUIRED)
+  include_directories(${JNI_INCLUDE_DIRS})
 endif()
 
 set(the_description "The java bindings")
@@ -128,24 +138,46 @@ foreach(java_file ${documented_java_files} ${handwrittren_aidl_sources})
   string(REPLACE "-jdoc.java" ".java" java_file_name "${java_file_name}")
   string(REPLACE "+" "/" java_file_name "${java_file_name}")
 
-  add_custom_command(
-        OUTPUT "${OpenCV_BINARY_DIR}/${JAVA_OUTPUT_DIR}/${java_file_name}"
-        COMMAND ${CMAKE_COMMAND} -E copy "${java_file}" "${OpenCV_BINARY_DIR}/${JAVA_OUTPUT_DIR}/${java_file_name}"
-        MAIN_DEPENDENCY "${java_file}"
-        DEPENDS ${java_documented_headers_deps}
-        COMMENT "Generating ${JAVA_OUTPUT_DIR}/${java_file_name}"
-        )
-  list(APPEND java_files "${OpenCV_BINARY_DIR}/${JAVA_OUTPUT_DIR}/${java_file_name}")
+  # If we're building for desktop java, we ignore the Android specific java
+  # files. These are the files which contain the string "android", and which
+  # will eventually go in the org.opencv.android module.
+  if(ANDROID OR (NOT (java_file_name MATCHES ".*android.*")))      
+    add_custom_command(
+      OUTPUT "${OpenCV_BINARY_DIR}/${JAVA_OUTPUT_DIR}/${java_file_name}"
+      COMMAND ${CMAKE_COMMAND} -E copy "${java_file}" "${OpenCV_BINARY_DIR}/${JAVA_OUTPUT_DIR}/${java_file_name}"
+      MAIN_DEPENDENCY "${java_file}"
+      DEPENDS ${java_documented_headers_deps}
+      COMMENT "Generating ${JAVA_OUTPUT_DIR}/${java_file_name}"
+      )
+    list(APPEND java_files "${OpenCV_BINARY_DIR}/${JAVA_OUTPUT_DIR}/${java_file_name}")
 
-  if(ANDROID)
-    get_filename_component(install_subdir "${java_file_name}" PATH)
-    install(FILES "${OpenCV_BINARY_DIR}/${JAVA_OUTPUT_DIR}/${java_file_name}" DESTINATION ${JAVA_INSTALL_ROOT}/${JAVA_OUTPUT_DIR}/${install_subdir} COMPONENT main)
+    if(ANDROID)
+      get_filename_component(install_subdir "${java_file_name}" PATH)
+      install(FILES "${OpenCV_BINARY_DIR}/${JAVA_OUTPUT_DIR}/${java_file_name}" DESTINATION ${JAVA_INSTALL_ROOT}/${JAVA_OUTPUT_DIR}/${install_subdir} COMPONENT main)
+    endif()
   endif()
 endforeach()
 
+# Copy the JAR build config into the build folder and run Ant to build
+# the JAR.
+add_custom_command(
+  OUTPUT "${OpenCV_BINARY_DIR}/build.xml"
+  COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/jar/build.xml" "${OpenCV_BINARY_DIR}"
+)
+add_custom_command(
+  OUTPUT "${OpenCV_BINARY_DIR}/OpenCV.jar"
+  COMMAND ${ANT_EXECUTABLE} jar
+  WORKING_DIRECTORY "${OpenCV_BINARY_DIR}"
+  DEPENDS ${java_files}
+)
+
 # custom target for java API
 set(api_target ${the_module}_api)
-add_custom_target(${api_target} DEPENDS ${java_files} ${documented_java_files} ${java_documented_headers_deps})
+if(JAVA AND (NOT ANDROID))
+  add_custom_target(${api_target} DEPENDS ${java_files} ${documented_java_files} ${java_documented_headers_deps} "${OpenCV_BINARY_DIR}/build.xml" "${OpenCV_BINARY_DIR}/OpenCV.jar")
+else()
+  add_custom_target(${api_target} DEPENDS ${java_files} ${documented_java_files} ${java_documented_headers_deps})
+endif()
 
 # add opencv_java library
 add_library(${the_module} SHARED ${handwrittren_h_sources} ${handwrittren_cpp_sources} ${generated_cpp_sources})
