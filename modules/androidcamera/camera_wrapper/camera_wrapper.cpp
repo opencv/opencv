@@ -357,25 +357,26 @@ const char* CameraHandler::antibandingModesNames[ANDROID_CAMERA_ANTIBANDING_MODE
 
 CameraHandler* CameraHandler::initCameraConnect(const CameraCallback& callback, int cameraId, void* userData, CameraParameters* prevCameraParameters)
 {
+
     typedef sp<Camera> (*Android22ConnectFuncType)();
     typedef sp<Camera> (*Android23ConnectFuncType)(int);
     typedef sp<Camera> (*Android3DConnectFuncType)(int, int);
-
+    
     enum {
 	CAMERA_SUPPORT_MODE_2D = 0x01, /* Camera Sensor supports 2D mode. */
 	CAMERA_SUPPORT_MODE_3D = 0x02, /* Camera Sensor supports 3D mode. */
 	CAMERA_SUPPORT_MODE_NONZSL = 0x04, /* Camera Sensor in NON-ZSL mode. */
 	CAMERA_SUPPORT_MODE_ZSL = 0x08 /* Camera Sensor supports ZSL mode. */
     };
-
+        
     const char Android22ConnectName[] = "_ZN7android6Camera7connectEv";
     const char Android23ConnectName[] = "_ZN7android6Camera7connectEi";
     const char Android3DConnectName[] = "_ZN7android6Camera7connectEii";
-
+    
     LOGD("CameraHandler::initCameraConnect(%p, %d, %p, %p)", callback, cameraId, userData, prevCameraParameters);
-
+    
     sp<Camera> camera = 0;
-
+    
     void* CameraHALHandle = dlopen("libcamera_client.so", RTLD_LAZY);
     
     if (!CameraHALHandle)
@@ -383,7 +384,7 @@ CameraHandler* CameraHandler::initCameraConnect(const CameraCallback& callback, 
 	LOGE("Cannot link to \"libcamera_client.so\"");
 	return NULL;
     }
-
+    
     // reset errors
     dlerror();
 
@@ -391,19 +392,16 @@ CameraHandler* CameraHandler::initCameraConnect(const CameraCallback& callback, 
     {
 	LOGD("Connecting to CameraService v 2.2");
 	camera = Android22Connect();
-	LOGD("Connection to CameraService v 2.2 established");
     }
     else if (Android23ConnectFuncType Android23Connect = (Android23ConnectFuncType)dlsym(CameraHALHandle, Android23ConnectName))
     {
 	LOGD("Connecting to CameraService v 2.3");
 	camera = Android23Connect(cameraId);
-	LOGD("Connection to CameraService v 2.3 established");
     }
     else if (Android3DConnectFuncType Android3DConnect = (Android3DConnectFuncType)dlsym(CameraHALHandle, Android3DConnectName))
     {
 	LOGD("Connecting to CameraService v 3D");
 	camera = Android3DConnect(cameraId, CAMERA_SUPPORT_MODE_2D);
-	LOGD("Connection to CameraService v 3D established");
     }
     else
     {
@@ -414,23 +412,19 @@ CameraHandler* CameraHandler::initCameraConnect(const CameraCallback& callback, 
     
     dlclose(CameraHALHandle);
     
-    if ( NULL == camera.get() )
+    if ( 0 == camera.get() )
     {
         LOGE("initCameraConnect: Unable to connect to CameraService\n");
         return 0;
     }
 
-    LOGD("Creating camera handler");
     CameraHandler* handler = new CameraHandler(callback, userData);
-    LOGD("Setting camera listener");
     camera->setListener(handler);
 
-    LOGD("Updating camera handler");
     handler->camera = camera;
     handler->cameraId = cameraId;
 
-    LOGD("Checking previous camera parameters");
-    if (NULL != prevCameraParameters)
+    if (prevCameraParameters != 0)
     {
         LOGI("initCameraConnect: Setting paramers from previous camera handler");
         camera->setParameters(prevCameraParameters->flatten());
@@ -460,7 +454,7 @@ CameraHandler* CameraHandler::initCameraConnect(const CameraCallback& callback, 
 #if !defined(ANDROID_r2_2_0)
         // Set focus mode to continuous-video if supported
         const char* available_focus_modes = handler->params.get(CameraParameters::KEY_SUPPORTED_FOCUS_MODES);
-        if (NULL != available_focus_modes)
+        if (available_focus_modes != 0)
         {
 	    if (strstr(available_focus_modes, "continuous-video") != NULL)
 	    {
@@ -468,7 +462,7 @@ CameraHandler* CameraHandler::initCameraConnect(const CameraCallback& callback, 
 
 		status_t resParams = handler->camera->setParameters(handler->params.flatten());
 
-                if (0 != resParams)
+                if (resParams != 0)
                 {
                     LOGE("initCameraConnect: failed to set autofocus mode to \"continuous-video\"");
                 }
@@ -566,7 +560,7 @@ CameraHandler* CameraHandler::initCameraConnect(const CameraCallback& callback, 
     {
 	LOGD("Preview started successfully");
     }
-    
+
     return handler;
 }
 
@@ -582,7 +576,7 @@ void CameraHandler::closeCameraConnect()
     camera->disconnect();
     camera.clear();
 
-    camera = NULL;
+    camera=NULL;
     // ATTENTION!!!!!!!!!!!!!!!!!!!!!!!!!!
     // When we set 
     //    camera=NULL
@@ -814,50 +808,43 @@ void CameraHandler::applyProperties(CameraHandler** ppcameraHandler)
 {
     LOGD("CameraHandler::applyProperties()");
 
-    if (NULL == ppcameraHandler)
+    if (ppcameraHandler == 0)
     {
         LOGE("applyProperties: Passed NULL ppcameraHandler");
         return;
     }
 
-    if (NULL == *ppcameraHandler)
+    if (*ppcameraHandler == 0)
     {
         LOGE("applyProperties: Passed null *ppcameraHandler");
         return;
     }
 
     LOGD("CameraHandler::applyProperties()");
-
-#if defined(ANDROID_r4_0_3)
-    LOGD("Reconnect camera");
-    (*ppcameraHandler)->camera->reconnect();
-    (*ppcameraHandler)->params = (*ppcameraHandler)->camera->getParameters();
-#else
-    CameraHandler* previousCameraHandler = *ppcameraHandler;
+    CameraHandler* previousCameraHandler=*ppcameraHandler;
     CameraParameters curCameraParameters(previousCameraHandler->params.flatten());
 
-    CameraCallback cameraCallback = previousCameraHandler->cameraCallback;
-    void* userData = previousCameraHandler->userData;
-    int cameraId = previousCameraHandler->cameraId;
+    CameraCallback cameraCallback=previousCameraHandler->cameraCallback;
+    void* userData=previousCameraHandler->userData;
+    int cameraId=previousCameraHandler->cameraId;
 
     LOGD("CameraHandler::applyProperties(): before previousCameraHandler->closeCameraConnect");
     previousCameraHandler->closeCameraConnect();
     LOGD("CameraHandler::applyProperties(): after previousCameraHandler->closeCameraConnect");
 
+
     LOGD("CameraHandler::applyProperties(): before initCameraConnect");
-    CameraHandler* handler = initCameraConnect(cameraCallback, cameraId, userData, &curCameraParameters);
+    CameraHandler* handler=initCameraConnect(cameraCallback, cameraId, userData, &curCameraParameters);
     LOGD("CameraHandler::applyProperties(): after initCameraConnect, handler=0x%x", (int)handler);
     if (handler == NULL) {
         LOGE("ERROR in applyProperties --- cannot reinit camera");
-        handler = initCameraConnect(cameraCallback, cameraId, userData, NULL);
+        handler=initCameraConnect(cameraCallback, cameraId, userData, NULL);
         LOGD("CameraHandler::applyProperties(): repeate initCameraConnect after ERROR, handler=0x%x", (int)handler);
         if (handler == NULL) {
             LOGE("ERROR in applyProperties --- cannot reinit camera AGAIN --- cannot do anything else");
         }
     }
-
-    (*ppcameraHandler) = handler;
-#endif
+    (*ppcameraHandler)=handler;
 }
 
 
