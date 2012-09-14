@@ -1,31 +1,31 @@
 /*M///////////////////////////////////////////////////////////////////////////////////////
 //
-// IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
+//  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
 //
-// By downloading, copying, installing or using the software you agree to this license.
-// If you do not agree to this license, do not download, install,
-// copy or use the software.
+//  By downloading, copying, installing or using the software you agree to this license.
+//  If you do not agree to this license, do not download, install,
+//  copy or use the software.
 //
 //
-//                          License Agreement
-//               For Open Source Computer Vision Library
+//                           License Agreement
+//                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
-// Copyright (C) 2008-2011, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2008-2012, Willow Garage Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
 //
-//  * Redistributions of source code must retain the above copyright notice,
-//    this list of conditions and the following disclaimer.
+//   * Redistribution's of source code must retain the above copyright notice,
+//     this list of conditions and the following disclaimer.
 //
-//  * Redistributions in binary form must reproduce the above copyright notice,
-//    this list of conditions and the following disclaimer in the documentation
-//    and/or other materials provided with the distribution.
+//   * Redistribution's in binary form must reproduce the above copyright notice,
+//     this list of conditions and the following disclaimer in the documentation
+//     and/or other materials provided with the distribution.
 //
-//  * The name of the copyright holders may not be used to endorse or promote products
-//    derived from this software without specific prior written permission.
+//   * The name of the copyright holders may not be used to endorse or promote products
+//     derived from this software without specific prior written permission.
 //
 // This software is provided by the copyright holders and contributors "as is" and
 // any express or implied warranties, including, but not limited to, the implied
@@ -37,6 +37,7 @@
 // and on any theory of liability, whether in contract, strict liability,
 // or tort (including negligence or otherwise) arising in any way out of
 // the use of this software, even if advised of the possibility of such damage.
+//
 //M*/
 
 #include <precomp.hpp>
@@ -137,6 +138,43 @@ struct Level
        workRect(cv::Size(cvRound(w / (float)shrinkage),cvRound(h / (float)shrinkage))),
        objSize(cv::Size(cvRound(oct.size.width * relScale), cvRound(oct.size.height * relScale)))
     {}
+
+    void markDetection(const int x, const int dx, std::vector<cv::Rect>& detections) const
+    {
+
+    }
+};
+
+
+struct CascadeIntrinsics
+{
+    static const float lambda = 1.099f, a = 0.89f;
+
+    static float getFor(int channel, float scaling)
+    {
+        CV_Assert(channel < 10);
+
+        if ((scaling - 1.f) < FLT_EPSILON)
+            return 1.f;
+
+        // according to R. Benenson, M. Mathias, R. Timofte and L. Van Gool paper
+        static const float A[2][2] =
+        {   //channel <= 6, otherwise
+            {        0.89f, 1.f}, // down
+            {        1.00f, 1.f}  // up
+        };
+
+        static const float B[2][2] =
+        {   //channel <= 6,  otherwise
+            { 1.099f / log(2), 2.f}, // down
+            {             2.f, 2.f}  // up
+        };
+
+        float a = A[(int)(scaling >= 1)][(int)(channel >= 6)];
+        float b = B[(int)(scaling >= 1)][(int)(channel >= 6)];
+
+        return a * pow(scaling, b);
+    }
 };
 
 //         Feature rescale(float relScale)
@@ -147,42 +185,6 @@ struct Level
 //             res.threshold = threshold * CascadeIntrinsics::getFor(channel, relScale);
 //             return res;
 //         }
-
-//     // according to R. Benenson, M. Mathias, R. Timofte and L. Van Gool paper
-//     struct CascadeIntrinsics
-//     {
-//         static const float lambda = 1.099f, a = 0.89f;
-//         static const float intrinsics[10][4];
-
-//         static float getFor(int channel, float scaling)
-//         {
-//             CV_Assert(channel < 10);
-
-//             if ((scaling - 1.f) < FLT_EPSILON)
-//                 return 1.f;
-
-//             int ud = (int)(scaling < 1.f);
-//             return intrinsics[channel][(ud << 1)] * pow(scaling, intrinsics[channel][(ud << 1) + 1]);
-//         }
-
-//     };
-
-//     const float CascadeIntrinsics::intrinsics[10][4] =
-//         {   //da, db, ua, ub
-//             // hog-like orientation bins
-//             {a, lambda / log(2), 1, 2},
-//             {a, lambda / log(2), 1, 2},
-//             {a, lambda / log(2), 1, 2},
-//             {a, lambda / log(2), 1, 2},
-//             {a, lambda / log(2), 1, 2},
-//             {a, lambda / log(2), 1, 2},
-//             // gradient magnitude
-//             {a, lambda / log(2), 1, 2},
-//             // luv color channels
-//             {1, 2,      1, 2},
-//             {1, 2,      1, 2},
-//             {1, 2,      1, 2}
-//         };
 
 
 void calcHistBins(const cv::Mat& grey, cv::Mat& magIntegral, std::vector<cv::Mat>& histInts,
@@ -236,6 +238,7 @@ void calcHistBins(const cv::Mat& grey, cv::Mat& magIntegral, std::vector<cv::Mat
     cv::resize(mag, shrMag, cv::Size(), scale, scale, cv::INTER_AREA);
 
     cv::integral(shrMag, magIntegral, mag.depth());
+    histInts.push_back(magIntegral);
 }
 
 struct ChannelStorage
@@ -246,25 +249,40 @@ struct ChannelStorage
 
     int shrinkage;
 
-    enum {HOG_BINS = 6};
+    enum {HOG_BINS = 6, HOG_LUV_BINS = 10};
 
     ChannelStorage() {}
     ChannelStorage(const cv::Mat& colored, int shr) : shrinkage(shr)
     {
-        cv::Mat _luv;
+        cv::Mat _luv, shrLuv;
         cv::cvtColor(colored, _luv, CV_BGR2Luv);
+        cv::resize(_luv, shrLuv, cv::Size(), 1.f / shr, 1.f / shr, cv::INTER_AREA);
 
-        cv::integral(luv, luv);
+        cv::integral(shrLuv, luv);
+
+        std::vector<cv::Mat> splited;
+        split(luv, splited);
 
         cv::Mat grey;
         cv::cvtColor(colored, grey, CV_RGB2GRAY);
 
         calcHistBins(grey, magnitude, hog, HOG_BINS, shrinkage);
+
+        hog.insert(hog.end(), splited.begin(), splited.end());
     }
 
-    float get(int chennel, cv::Rect area) const
+    float get(const int x, const int y, const int channel, const cv::Rect& area) const
     {
-        return 1.f;
+        CV_Assert(channel < HOG_LUV_BINS);
+
+        const cv::Mat m = hog[channel];
+
+        float a = m.ptr(y + area.y)[x + area.x];
+        float b = m.ptr(y + area.y)[x + area.width];
+        float c = m.ptr(y + area.height)[x + area.width];
+        float d = m.ptr(y + area.height)[x + area.x];
+
+        return (a - b + c - d);
     }
 };
 }
@@ -291,33 +309,87 @@ struct cv::SoftCascade::Filds
     typedef std::vector<Octave>::iterator  octIt_t;
 
     void detectAt(const Level& level, const int dx, const int dy, const ChannelStorage& storage,
-                  const std::vector<cv::Rect>& detections) const
+                  std::vector<cv::Rect>& detections) const
     {
         float detectionScore = 0.f;
 
         const Octave& octave = *(level.octave);
         int stBegin = octave.index() * octave.stages, stEnd = stBegin + octave.stages;
-        for(int st = stBegin; st < stEnd; ++st)
+        int st = stBegin;
+        for(; st < stEnd; ++st)
         {
             const Stage& stage = stages[st];
-            if (detectionScore > stage.threshold)
             {
                 int nId = st * 3;
+
+                // work with root node
                 const Node& node = nodes[nId];
                 const Feature& feature = features[node.feature];
 
-                float sum = storage.get(feature.channel, feature.rect);
-                int next = (sum >= node.threshold)? 2 : 1;
+                // rescaling
+                float scaling = CascadeIntrinsics::getFor(feature.channel, level.relScale);
+                cv::Rect scaledRect = feature.rect;
+                float farea = (scaledRect.width - scaledRect.x) * (scaledRect.height - scaledRect.y);
+                // rescale
+                scaledRect.x      = cvRound(scaling * scaledRect.x);
+                scaledRect.y      = cvRound(scaling * scaledRect.y);
+                scaledRect.width  = cvRound(scaling * scaledRect.width);
+                scaledRect.height = cvRound(scaling * scaledRect.height);
 
+                float sarea = (scaledRect.width - scaledRect.x) * (scaledRect.height - scaledRect.y);
+
+                float approx = 1.f;
+                if ((farea - 0.f) > FLT_EPSILON && (farea - 0.f) > FLT_EPSILON)
+                {
+                    const float expected_new_area = farea*level.relScale*level.relScale;
+                    approx = expected_new_area / sarea;
+                }
+
+                float rootThreshold = node.threshold / approx; // ToDo check
+                rootThreshold *= scaling;
+
+                // use rescaled
+                float sum = storage.get(dx, dy, feature.channel, scaledRect);
+                int next = (sum >= rootThreshold)? 2 : 1;
+
+                // leaces
                 const Node& leaf = nodes[nId + next];
                 const Feature& fLeaf = features[node.feature];
-                sum = storage.get(feature.channel, feature.rect);
 
-                int lShift = (next - 1) * 2 + (sum >= leaf.threshold) ? 1 : 0;
+                // rescaling
+                scaling = CascadeIntrinsics::getFor(fLeaf.channel, level.relScale);
+                scaledRect = fLeaf.rect;
+                farea = (scaledRect.width - scaledRect.x) * (scaledRect.height - scaledRect.y);
+                // rescale
+                scaledRect.x      = cvRound(scaling * scaledRect.x);
+                scaledRect.y      = cvRound(scaling * scaledRect.y);
+                scaledRect.width  = cvRound(scaling * scaledRect.width);
+                scaledRect.height = cvRound(scaling * scaledRect.height);
+
+                sarea = (scaledRect.width - scaledRect.x) * (scaledRect.height - scaledRect.y);
+
+                approx = 1.f;
+                if ((farea - 0.f) > FLT_EPSILON && (farea - 0.f) > FLT_EPSILON)
+                {
+                    const float expected_new_area = farea*level.relScale*level.relScale;
+                    approx = expected_new_area / sarea;
+                }
+
+                rootThreshold = leaf.threshold / approx; // ToDo check
+                rootThreshold *= scaling;
+
+                sum = storage.get(dx, dy, feature.channel, scaledRect);
+
+                int lShift = (next - 1) * 2 + (sum >= rootThreshold) ? 1 : 0;
                 float impact = leaves[nId + lShift];
                 detectionScore += impact;
             }
+
+            if (detectionScore <= stage.threshold) break;
         }
+
+        if (st == octave.stages - 1)
+            level.markDetection(dx, dy, detections);
     }
 
     octIt_t fitOctave(const float& logFactor)
