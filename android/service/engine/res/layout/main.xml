@@ -16,7 +16,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:autoLink="web"
-        android:text="OpenCV library is used by other applications for image enhancement, panorama stitching, object detection, recognition and tracking and so on. OpenCV Manager provides the best version of the OpenCV for your hardware. See www.opencv.org for details."
+        android:text="OpenCV library is used by other applications for image enhancement, panorama stitching, object detection, recognition and tracking and so on. OpenCV Manager provides the best version of the OpenCV for your hardware. See opencv.org for details."
         android:textAppearance="?android:attr/textAppearanceMedium" />
 
     <LinearLayout
