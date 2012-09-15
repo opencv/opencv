@@ -396,8 +396,11 @@ endif(BUILD_DOCS)
 include(cmake/OpenCVDetectPython.cmake REQUIRED)
 
 # --- Java Support ---
-if(ANDROID)
+if(JAVA OR ANDROID)
   include(cmake/OpenCVDetectApacheAnt.cmake REQUIRED)
+endif()
+
+if(ANDROID)
   include(cmake/OpenCVDetectAndroidSDK.cmake REQUIRED)
 
   if(NOT ANDROID_TOOLS_Pkg_Revision GREATER 13)
@@ -823,4 +826,3 @@ ocv_finalize_status()
 if("${CMAKE_CURRENT_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_BINARY_DIR}")
   message(WARNING "The source directory is the same as binary directory. \"make clean\" may damage the source tree")
 endif()
-

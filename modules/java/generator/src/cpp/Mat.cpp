@@ -2,14 +2,18 @@
 
 #include "converters.h"
 
+// Log functions are defined only for Android.
+// TODO: Define log functions for desktop Java.
+#define LOGE(...)
+#define LOGD(...)
+#ifdef ANDROID
 #include <android/log.h>
 #define LOG_TAG "org.opencv.core.Mat"
 #define LOGE(...) ((void)__android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__))
 #ifdef DEBUG
 #define LOGD(...) ((void)__android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__))
-#else //!DEBUG
-#define LOGD(...)
 #endif //DEBUG
+#endif //ANDROID
 
 #include "opencv2/core/core.hpp"
 
