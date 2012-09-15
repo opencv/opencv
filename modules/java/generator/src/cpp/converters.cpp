@@ -198,12 +198,12 @@ void Mat_to_vector_KeyPoint(Mat& mat, vector<KeyPoint>& v_kp)
 
 void vector_KeyPoint_to_Mat(vector<KeyPoint>& v_kp, Mat& mat)
 {
-    int count = v_kp.size();
+    int count = (int)v_kp.size();
     mat.create(count, 1, CV_32FC(7));
     for(int i=0; i<count; i++)
     {
         KeyPoint kp = v_kp[i];
-        mat.at< Vec<float, 7> >(i, 0) = Vec<float, 7>(kp.pt.x, kp.pt.y, kp.size, kp.angle, kp.response, kp.octave, kp.class_id);
+        mat.at< Vec<float, 7> >(i, 0) = Vec<float, 7>(kp.pt.x, kp.pt.y, kp.size, kp.angle, kp.response, (float)kp.octave, (float)kp.class_id);
     }
 }
 #endif
@@ -231,7 +231,7 @@ void Mat_to_vector_Mat(cv::Mat& mat, std::vector<cv::Mat>& v_mat)
 
 void vector_Mat_to_Mat(std::vector<cv::Mat>& v_mat, cv::Mat& mat)
 {
-    int count = v_mat.size();
+    int count = (int)v_mat.size();
     mat.create(count, 1, CV_32SC2);
     for(int i=0; i<count; i++)
     {
@@ -258,12 +258,12 @@ void Mat_to_vector_DMatch(Mat& mat, vector<DMatch>& v_dm)
 
 void vector_DMatch_to_Mat(vector<DMatch>& v_dm, Mat& mat)
 {
-    int count = v_dm.size();
+    int count = (int)v_dm.size();
     mat.create(count, 1, CV_32FC4);
     for(int i=0; i<count; i++)
     {
         DMatch dm = v_dm[i];
-        mat.at< Vec<float, 4> >(i, 0) = Vec<float, 4>(dm.queryIdx, dm.trainIdx, dm.imgIdx, dm.distance);
+        mat.at< Vec<float, 4> >(i, 0) = Vec<float, 4>((float)dm.queryIdx, (float)dm.trainIdx, (float)dm.imgIdx, dm.distance);
     }
 }
 #endif

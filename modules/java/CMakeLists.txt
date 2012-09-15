@@ -187,7 +187,9 @@ set_target_properties(${the_module} PROPERTIES
     LINK_INTERFACE_LIBRARIES ""
     )
 
-install(TARGETS ${the_module} LIBRARY DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT main)
+install(TARGETS ${the_module}
+        LIBRARY DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT main
+        ARCHIVE DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT main)
 
 set(lib_target ${the_module}_library)
 if(ANDROID)
