@@ -60,7 +60,7 @@ endif()
 
 project(OpenCV CXX C)
 
-include(cmake/OpenCVUtils.cmake REQUIRED)
+include(cmake/OpenCVUtils.cmake)
 
 # ----------------------------------------------------------------------------
 # Break in case of popular CMake configuration mistakes
@@ -73,7 +73,7 @@ endif()
 # ----------------------------------------------------------------------------
 # Detect compiler and target platform architecture
 # ----------------------------------------------------------------------------
-include(cmake/OpenCVDetectCXXCompiler.cmake REQUIRED)
+include(cmake/OpenCVDetectCXXCompiler.cmake)
 
 # Add these standard paths to the search paths for FIND_LIBRARY
 # to find libraries from these locations first
@@ -212,7 +212,7 @@ include(cmake/OpenCVLegacyOptions.cmake OPTIONAL)
 # ----------------------------------------------------------------------------
 #  Get actual OpenCV version number from sources
 # ----------------------------------------------------------------------------
-include(cmake/OpenCVVersion.cmake REQUIRED)
+include(cmake/OpenCVVersion.cmake)
 
 
 # ----------------------------------------------------------------------------
@@ -329,7 +329,7 @@ if(CMAKE_GENERATOR MATCHES "Makefiles|Ninja" AND "${CMAKE_BUILD_TYPE}" STREQUAL 
   set(CMAKE_BUILD_TYPE Release)
 endif()
 
-include(cmake/OpenCVCompilerOptions.cmake REQUIRED)
+include(cmake/OpenCVCompilerOptions.cmake)
 
 
 # ----------------------------------------------------------------------------
@@ -337,7 +337,7 @@ include(cmake/OpenCVCompilerOptions.cmake REQUIRED)
 # Default: dynamic
 # ----------------------------------------------------------------------------
 if(MSVC)
-  include(cmake/OpenCVCRTLinkage.cmake REQUIRED)
+  include(cmake/OpenCVCRTLinkage.cmake)
 endif(MSVC)
 
 if(WIN32 AND NOT MINGW)
@@ -370,17 +370,17 @@ if(UNIX)
   endif()
 endif()
 
-include(cmake/OpenCVPCHSupport.cmake REQUIRED)
-include(cmake/OpenCVModule.cmake REQUIRED)
+include(cmake/OpenCVPCHSupport.cmake)
+include(cmake/OpenCVModule.cmake)
 
 # ----------------------------------------------------------------------------
 #  Detect 3rd-party libraries
 # ----------------------------------------------------------------------------
 
-include(cmake/OpenCVFindLibsGrfmt.cmake REQUIRED)
-include(cmake/OpenCVFindLibsGUI.cmake   REQUIRED)
-include(cmake/OpenCVFindLibsVideo.cmake REQUIRED)
-include(cmake/OpenCVFindLibsPerf.cmake  REQUIRED)
+include(cmake/OpenCVFindLibsGrfmt.cmake)
+include(cmake/OpenCVFindLibsGUI.cmake)
+include(cmake/OpenCVFindLibsVideo.cmake)
+include(cmake/OpenCVFindLibsPerf.cmake)
 
 
 # ----------------------------------------------------------------------------
@@ -389,16 +389,16 @@ include(cmake/OpenCVFindLibsPerf.cmake  REQUIRED)
 
 # --- LATEX for pdf documentation ---
 if(BUILD_DOCS)
-  include(cmake/OpenCVFindLATEX.cmake REQUIRED)
+  include(cmake/OpenCVFindLATEX.cmake)
 endif(BUILD_DOCS)
 
 # --- Python Support ---
-include(cmake/OpenCVDetectPython.cmake REQUIRED)
+include(cmake/OpenCVDetectPython.cmake)
 
 # --- Java Support ---
 if(ANDROID)
-  include(cmake/OpenCVDetectApacheAnt.cmake REQUIRED)
-  include(cmake/OpenCVDetectAndroidSDK.cmake REQUIRED)
+  include(cmake/OpenCVDetectApacheAnt.cmake)
+  include(cmake/OpenCVDetectAndroidSDK.cmake)
 
   if(NOT ANDROID_TOOLS_Pkg_Revision GREATER 13)
     message(WARNING "OpenCV requires Android SDK tools revision 14 or newer. Otherwise tests and samples will no be compiled.")
@@ -413,7 +413,7 @@ endif()
 
 # --- OpenCL ---
 if(WITH_OPENCL)
-  include(cmake/OpenCVDetectOpenCL.cmake REQUIRED)
+  include(cmake/OpenCVDetectOpenCL.cmake)
   if(OPENCL_FOUND)
     set(HAVE_OPENCL 1)
   endif()
@@ -434,7 +434,7 @@ if(ENABLE_SOLUTION_FOLDERS)
 endif()
 
 # Extra OpenCV targets: uninstall, package_source, perf, etc.
-include(cmake/OpenCVExtraTargets.cmake REQUIRED)
+include(cmake/OpenCVExtraTargets.cmake)
 
 
 # ----------------------------------------------------------------------------
@@ -475,16 +475,16 @@ endif()
 ocv_track_build_dependencies()
 
 # Generate platform-dependent and configuration-dependent headers
-include(cmake/OpenCVGenHeaders.cmake REQUIRED)
+include(cmake/OpenCVGenHeaders.cmake)
 
 # Generate opencv.pc for pkg-config command
-include(cmake/OpenCVGenPkgconfig.cmake REQUIRED)
+include(cmake/OpenCVGenPkgconfig.cmake)
 
 # Generate OpenCV.mk for ndk-build (Android build tool)
-include(cmake/OpenCVGenAndroidMK.cmake REQUIRED)
+include(cmake/OpenCVGenAndroidMK.cmake)
 
 # Generate OpenCVСonfig.cmake and OpenCVConfig-version.cmake for cmake projects
-include(cmake/OpenCVGenConfig.cmake REQUIRED)
+include(cmake/OpenCVGenConfig.cmake)
 
 
 # ----------------------------------------------------------------------------

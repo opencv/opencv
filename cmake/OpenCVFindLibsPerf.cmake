@@ -4,7 +4,7 @@
 
 # --- TBB ---
 if(WITH_TBB)
-  include("${OpenCV_SOURCE_DIR}/cmake/OpenCVDetectTBB.cmake" REQUIRED)
+  include("${OpenCV_SOURCE_DIR}/cmake/OpenCVDetectTBB.cmake")
 endif(WITH_TBB)
 
 # --- IPP ---
@@ -21,7 +21,7 @@ endif(WITH_IPP)
 
 # --- CUDA ---
 if(WITH_CUDA)
-  include("${OpenCV_SOURCE_DIR}/cmake/OpenCVDetectCUDA.cmake" REQUIRED)
+  include("${OpenCV_SOURCE_DIR}/cmake/OpenCVDetectCUDA.cmake")
 endif(WITH_CUDA)
 
 # --- Eigen ---
