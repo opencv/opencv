@@ -396,14 +396,16 @@ endif(BUILD_DOCS)
 include(cmake/OpenCVDetectPython.cmake)
 
 # --- Java Support ---
+include(cmake/OpenCVDetectApacheAnt.cmake)
 if(ANDROID)
-  include(cmake/OpenCVDetectApacheAnt.cmake)
   include(cmake/OpenCVDetectAndroidSDK.cmake)
 
   if(NOT ANDROID_TOOLS_Pkg_Revision GREATER 13)
     message(WARNING "OpenCV requires Android SDK tools revision 14 or newer. Otherwise tests and samples will no be compiled.")
   endif()
-endif(ANDROID)
+elseif(ANT_EXECUTABLE)
+  find_package(JNI)
+endif()
 
 if(ANDROID AND ANDROID_EXECUTABLE AND ANT_EXECUTABLE AND (ANT_VERSION VERSION_GREATER 1.7) AND (ANDROID_TOOLS_Pkg_Revision GREATER 13))
   SET(CAN_BUILD_ANDROID_PROJECTS TRUE)

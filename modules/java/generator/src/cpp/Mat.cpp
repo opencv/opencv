@@ -2,6 +2,8 @@
 
 #include "converters.h"
 
+#ifdef ANDROID
+
 #include <android/log.h>
 #define LOG_TAG "org.opencv.core.Mat"
 #define LOGE(...) ((void)__android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__))
@@ -10,6 +12,11 @@
 #else //!DEBUG
 #define LOGD(...)
 #endif //DEBUG
+
+#else
+#define LOGE(...)
+#define LOGD(...)
+#endif
 
 #include "opencv2/core/core.hpp"
 
