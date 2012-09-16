@@ -774,7 +774,7 @@ bool CV_OperationsTest::TestTemplateMat()
             Mat m2 = Mat::zeros(10, 10, CV_8UC3);
             m1.copyTo(m2.row(1));
         }
-        catch(const Exception& e)
+        catch(const Exception&)
         {
             badarg_catched = true;
         }

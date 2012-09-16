@@ -86,7 +86,7 @@ static void run(int argc, char** argv) {
 
   Mat flow;
 
-  float start = getTickCount();
+  float start = (float)getTickCount();
   calcOpticalFlowSF(frame1, frame2, 
                     flow,
                     3, 2, 4, 4.1, 25.5, 18, 55.0, 25.5, 0.35, 18, 55.0, 25.5, 10);
@@ -156,7 +156,7 @@ static float calc_rmse(Mat flow1, Mat flow2) {
       }
     }
   }
-  return sqrt(sum / (1e-9 + counter));
+  return (float)sqrt(sum / (1e-9 + counter));
 }
 
 static void eval(int argc, char** argv) {

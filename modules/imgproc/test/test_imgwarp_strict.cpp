@@ -433,7 +433,7 @@ void CV_Resize_Test::run_reference_func()
 
 double CV_Resize_Test::getWeight(double a, double b, int x)
 {
-    float w = std::min(static_cast<double>(x + 1), b) - std::max(static_cast<double>(x), a);
+    double w = std::min(static_cast<double>(x + 1), b) - std::max(static_cast<double>(x), a);
     CV_Assert(w >= 0);
     return w;
 }
@@ -514,7 +514,7 @@ void CV_Resize_Test::resize_1d(const Mat& _src, Mat& _dst, int dy, const dim& _d
     else if (interpolation == INTER_LINEAR || interpolation == INTER_CUBIC || interpolation == INTER_LANCZOS4)
     {
         internal::interpolate_method inter_func = internal::inter_array[interpolation - (interpolation == INTER_LANCZOS4 ? 2 : 1)];
-        int elemsize = _src.elemSize();
+        size_t elemsize = _src.elemSize();
         
         int ofs = 0, ksize = 2;
         if (interpolation == INTER_CUBIC)
@@ -557,10 +557,10 @@ void CV_Resize_Test::resize_1d(const Mat& _src, Mat& _dst, int dy, const dim& _d
 
 void CV_Resize_Test::generate_buffer(double scale, dim& _dim)
 {
-    int length = _dim.size();
-    for (int dx = 0; dx < length; ++dx)
+    size_t length = _dim.size();
+    for (size_t dx = 0; dx < length; ++dx)
     {            
-        double fsx = scale * (dx + 0.5f) - 0.5f;
+        double fsx = scale * (dx + 0.5) - 0.5;
         int isx = cvFloor(fsx);
         _dim[dx] = std::make_pair(isx, fsx - isx);
     }

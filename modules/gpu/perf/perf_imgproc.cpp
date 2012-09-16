@@ -1739,7 +1739,7 @@ PERF_TEST_P(Method_Sz, ImgProc_GeneralizedHough, Combine(
     for (int i = 0; i < objCount; ++i)
     {
         double scale = rng.uniform(0.7, 1.3);
-        bool rotate = rng.uniform(0, 2);
+        bool rotate = 1 == rng.uniform(0, 2);
 
         cv::Mat obj;
         cv::resize(templ, obj, cv::Size(), scale, scale);
