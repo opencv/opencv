@@ -85,12 +85,18 @@ if(WITH_XINE)
 endif(WITH_XINE)
 
 # --- V4L ---
-ocv_clear_vars(HAVE_LIBV4L HAVE_CAMV4L HAVE_CAMV4L2)
+ocv_clear_vars(HAVE_LIBV4L HAVE_CAMV4L HAVE_CAMV4L2 HAVE_IOCTL_ULONG)
 if(WITH_V4L)
   CHECK_MODULE(libv4l1 HAVE_LIBV4L)
   CHECK_INCLUDE_FILE(linux/videodev.h HAVE_CAMV4L)
   CHECK_INCLUDE_FILE(linux/videodev2.h HAVE_CAMV4L2)
   CHECK_INCLUDE_FILE(sys/videoio.h HAVE_VIDEOIO)
+  INCLUDE(CheckPrototypeDefinition)
+  CHECK_PROTOTYPE_DEFINITION(ioctl
+    "int ioctl(int d, unsigned long request, ...)"
+    "-1"
+    "sys/ioctl.h"
+    HAVE_IOCTL_ULONG)
 endif(WITH_V4L)
 
 # --- OpenNI ---
