@@ -173,6 +173,7 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
     defined(HAVE_VFW)          || \
     defined(HAVE_LIBV4L)       || \
     (defined(HAVE_CAMV4L) && defined(HAVE_CAMV4L2)) || \
+    defined(HAVE_VIDEOIO)      || \
     defined(HAVE_GSTREAMER)    || \
     defined(HAVE_DC1394_2)     || \
     defined(HAVE_DC1394)       || \
@@ -216,7 +217,7 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
                 return capture;
 #endif
 
-#if defined HAVE_LIBV4L || (defined (HAVE_CAMV4L) && defined (HAVE_CAMV4L2))
+#if defined HAVE_LIBV4L || (defined (HAVE_CAMV4L) && defined (HAVE_CAMV4L2)) || defined HAVE_VIDEOIO
             capture = cvCreateCameraCapture_V4L (index);
             if (capture)
                 return capture;
