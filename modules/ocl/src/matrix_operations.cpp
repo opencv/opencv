@@ -916,6 +916,7 @@ oclMat cv::ocl::oclMat::reshape(int new_cn, int new_rows) const
         CV_Error(CV_BadNumChannels, "The total width is not divisible by the new number of channels");
 
     hdr.cols = new_width;
+	hdr.wholecols = new_width;
     hdr.flags = (hdr.flags & ~CV_MAT_CN_MASK) | ((new_cn - 1) << CV_CN_SHIFT);
 
     return hdr;

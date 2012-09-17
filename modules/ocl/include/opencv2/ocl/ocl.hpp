@@ -1125,6 +1125,66 @@ namespace cv
 			explicit BruteForceMatcher_OCL(Hamming /*d*/) : BruteForceMatcher_OCL_base(HammingDist) {}
 		};
 
+		/////////////////////////////// PyrLKOpticalFlow /////////////////////////////////////
+		class CV_EXPORTS PyrLKOpticalFlow
+		{
+		public:
+			PyrLKOpticalFlow()
+			{
+				winSize = Size(21, 21);
+				maxLevel = 3;
+				iters = 30;
+				derivLambda = 0.5;
+				useInitialFlow = false;
+				minEigThreshold = 1e-4f;
+				getMinEigenVals = false;
+				isDeviceArch11_ = false;
+			}
+
+			void sparse(const oclMat& prevImg, const oclMat& nextImg, const oclMat& prevPts, oclMat& nextPts,
+				oclMat& status, oclMat* err = 0);
+
+			void dense(const oclMat& prevImg, const oclMat& nextImg, oclMat& u, oclMat& v, oclMat* err = 0);
+
+			Size winSize;
+			int maxLevel;
+			int iters;
+			double derivLambda;
+			bool useInitialFlow;
+			float minEigThreshold;
+			bool getMinEigenVals;
+
+			void releaseMemory()
+			{
+				dx_calcBuf_.release();
+				dy_calcBuf_.release();
+
+				prevPyr_.clear();
+				nextPyr_.clear();
+
+				dx_buf_.release();
+				dy_buf_.release();
+			}
+
+		private:
+			void calcSharrDeriv(const oclMat& src, oclMat& dx, oclMat& dy);
+
+			void buildImagePyramid(const oclMat& img0, vector<oclMat>& pyr, bool withBorder);
+
+			oclMat dx_calcBuf_;
+			oclMat dy_calcBuf_;
+
+			vector<oclMat> prevPyr_;
+			vector<oclMat> nextPyr_;
+
+			oclMat dx_buf_;
+			oclMat dy_buf_;
+
+			oclMat uPyr_[2];
+			oclMat vPyr_[2];
+
+			bool isDeviceArch11_;
+		};
 
     }
 }

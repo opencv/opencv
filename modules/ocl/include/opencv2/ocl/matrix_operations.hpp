@@ -460,6 +460,18 @@ namespace cv
             a.swap(b);
         }
 
+		inline void ensureSizeIsEnough(int rows, int cols, int type, oclMat& m)
+		{
+			if (m.type() == type && m.rows >= rows && m.cols >= cols)
+				m = m(Rect(0, 0, cols, rows));
+			else
+				m.create(rows, cols, type);
+		}
+
+		inline void ensureSizeIsEnough(Size size, int type, oclMat& m)
+		{
+			ensureSizeIsEnough(size.height, size.width, type, m);
+		}
     } /* end of namespace ocl */
 
 } /* end of namespace cv */
