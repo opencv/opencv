@@ -288,7 +288,7 @@ ocv_include_directories(${OPENCV_CONFIG_FILE_INCLUDE_DIR})
 # don't use FindGit because it requires CMake 2.8.2
 set(git_names git eg) # eg = easy git
 # Prefer .cmd variants on Windows unless running in a Makefile in the MSYS shell
-if(WIN32)
+if(CMAKE_HOST_WIN32)
   if(NOT CMAKE_GENERATOR MATCHES "MSYS")
     set(git_names git.cmd git eg.cmd eg)
   endif()
