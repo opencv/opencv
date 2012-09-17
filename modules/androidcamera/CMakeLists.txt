@@ -5,7 +5,7 @@ ENDIF()
 set(the_description "Auxiliary module for Android native camera support")
 set(OPENCV_MODULE_TYPE STATIC)
 
-ocv_define_module(androidcamera INTERNAL log dl)
+ocv_define_module(androidcamera INTERNAL opencv_core log dl)
 ocv_include_directories("${CMAKE_CURRENT_SOURCE_DIR}/camera_wrapper")
 
 # Android source tree for native camera

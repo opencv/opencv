@@ -64,20 +64,19 @@ static void openGlDrawCallback(void* userdata)
 int main(int argc, const char* argv[])
 {
     const char* keys =
-       "{ l | left      |       | left image file name }"
-       "{ r | right     |       | right image file name }"
-       "{ i | intrinsic |       | intrinsic camera parameters file name }"
-       "{ e | extrinsic |       | extrinsic camera parameters file name }"
-       "{ d | ndisp     | 256   | number of disparities }"
-       "{ s | scale     | 1.0   | scale factor for point cloud }"
-       "{ h | help      | false | print help message }";
+       "{ l left      |       | left image file name }"
+       "{ r right     |       | right image file name }"
+       "{ i intrinsic |       | intrinsic camera parameters file name }"
+       "{ e extrinsic |       | extrinsic camera parameters file name }"
+       "{ d ndisp     | 256   | number of disparities }"
+       "{ s scale     | 1.0   | scale factor for point cloud }"
+       "{ h help      |       | print help message }";
 
     CommandLineParser cmd(argc, argv, keys);
 
-    if (cmd.get<bool>("help"))
+    if (cmd.has("help"))
     {
-        cout << "Avaible options:" << endl;
-        cmd.printParams();
+        cmd.printMessage();
         return 0;
     }
 
@@ -88,11 +87,18 @@ int main(int argc, const char* argv[])
     int ndisp = cmd.get<int>("ndisp");
     double scale = cmd.get<double>("scale");
 
+    if (!cmd.check())
+    {
+        cmd.printErrors();
+        return 0;
+    }
+
+
     if (left.empty() || right.empty())
     {
         cout << "Missed input images" << endl;
         cout << "Avaible options:" << endl;
-        cmd.printParams();
+        cmd.printMessage();
         return 0;
     }
 
@@ -100,7 +106,7 @@ int main(int argc, const char* argv[])
     {
         cout << "Boss camera parameters must be specified" << endl;
         cout << "Avaible options:" << endl;
-        cmd.printParams();
+        cmd.printMessage();
         return 0;
     }
 

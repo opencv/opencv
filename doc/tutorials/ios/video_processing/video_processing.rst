@@ -136,8 +136,6 @@ Additionally, we have to manually add framework dependencies of the opencv frame
 
 * CoreVideo
 
-* CoreAnimation
-
 * QuartzCore
 
 * UIKit
@@ -185,8 +183,7 @@ We follow the delegation pattern, which is very common in iOS, to provide access
 	#endif
 
 Note that we are using C++ here (cv::Mat).
-Important: You have to rename the view controller's extension .m into .mm, so that the compiler compiles it under the assumption of Objective-C++ (Objective-C and C++ mixed). Then, __cplusplus is defined when the compiler is processing the file for C++ code. Therefore, we put our code within a block where __cpluscplus is defined.
-
+Important: You have to rename the view controller's extension .m into .mm, so that the compiler compiles it under the assumption of Objective-C++ (Objective-C and C++ mixed). Then, __cplusplus is defined when the compiler is processing the file for C++ code. Therefore, we put our code within a block where __cplusplus is defined.
 
 
 Basic video processing

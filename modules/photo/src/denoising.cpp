@@ -51,37 +51,37 @@ void cv::fastNlMeansDenoising( InputArray _src, OutputArray _dst,
     Mat src = _src.getMat();
     _dst.create(src.size(), src.type());
     Mat dst = _dst.getMat();
-    
+
     switch (src.type()) {
         case CV_8U:
-            parallel_for(cv::BlockedRange(0, src.rows), 
+            parallel_for(cv::BlockedRange(0, src.rows),
                 FastNlMeansDenoisingInvoker<uchar>(
                     src, dst, templateWindowSize, searchWindowSize, h));
             break;
         case CV_8UC2:
-            parallel_for(cv::BlockedRange(0, src.rows), 
+            parallel_for(cv::BlockedRange(0, src.rows),
                 FastNlMeansDenoisingInvoker<cv::Vec2b>(
                     src, dst, templateWindowSize, searchWindowSize, h));
             break;
         case CV_8UC3:
-            parallel_for(cv::BlockedRange(0, src.rows), 
+            parallel_for(cv::BlockedRange(0, src.rows),
                 FastNlMeansDenoisingInvoker<cv::Vec3b>(
                     src, dst, templateWindowSize, searchWindowSize, h));
             break;
         default:
-            CV_Error(CV_StsBadArg, 
-                "Unsupported matrix format! Only uchar, Vec2b, Vec3b are supported");
+            CV_Error(CV_StsBadArg,
+                "Unsupported image format! Only CV_8UC1, CV_8UC2 and CV_8UC3 are supported");
     }
 }
 
 void cv::fastNlMeansDenoisingColored( InputArray _src, OutputArray _dst,
-                                      int templateWindowSize, int searchWindowSize, 
+                                      int templateWindowSize, int searchWindowSize,
                                       int h, int hForColorComponents)
 {
     Mat src = _src.getMat();
     _dst.create(src.size(), src.type());
     Mat dst = _dst.getMat();
-    
+
     if (src.type() != CV_8UC3) {
         CV_Error(CV_StsBadArg, "Type of input image should be CV_8UC3!");
         return;
@@ -89,13 +89,13 @@ void cv::fastNlMeansDenoisingColored( InputArray _src, OutputArray _dst,
 
     Mat src_lab;
     cvtColor(src, src_lab, CV_LBGR2Lab);
-    
+
     Mat l(src.size(), CV_8U);
     Mat ab(src.size(), CV_8UC2);
     Mat l_ab[] = { l, ab };
     int from_to[] = { 0,0, 1,1, 2,2 };
     mixChannels(&src_lab, 1, l_ab, 2, from_to, 3);
-    
+
     fastNlMeansDenoising(l, l, templateWindowSize, searchWindowSize, h);
     fastNlMeansDenoising(ab, ab, templateWindowSize, searchWindowSize, hForColorComponents);
 
@@ -106,10 +106,10 @@ void cv::fastNlMeansDenoisingColored( InputArray _src, OutputArray _dst,
     cvtColor(dst_lab, dst, CV_Lab2LBGR);
 }
 
-static void fastNlMeansDenoisingMultiCheckPreconditions( 
-                               const std::vector<Mat>& srcImgs, 
+static void fastNlMeansDenoisingMultiCheckPreconditions(
+                               const std::vector<Mat>& srcImgs,
                                int imgToDenoiseIndex, int temporalWindowSize,
-                               int templateWindowSize, int searchWindowSize) 
+                               int templateWindowSize, int searchWindowSize)
 {
     int src_imgs_size = (int)srcImgs.size();
     if (src_imgs_size == 0) {
@@ -123,10 +123,10 @@ static void fastNlMeansDenoisingMultiCheckPreconditions(
     }
 
     int temporalWindowHalfSize = temporalWindowSize / 2;
-    if (imgToDenoiseIndex - temporalWindowHalfSize < 0 || 
-        imgToDenoiseIndex + temporalWindowHalfSize >= src_imgs_size) 
-    {       
-        CV_Error(CV_StsBadArg, 
+    if (imgToDenoiseIndex - temporalWindowHalfSize < 0 ||
+        imgToDenoiseIndex + temporalWindowHalfSize >= src_imgs_size)
+    {
+        CV_Error(CV_StsBadArg,
             "imgToDenoiseIndex and temporalWindowSize "
             "should be choosen corresponding srcImgs size!");
     }
@@ -138,16 +138,16 @@ static void fastNlMeansDenoisingMultiCheckPreconditions(
     }
 }
 
-void cv::fastNlMeansDenoisingMulti( InputArrayOfArrays _srcImgs, 
+void cv::fastNlMeansDenoisingMulti( InputArrayOfArrays _srcImgs,
                                     int imgToDenoiseIndex, int temporalWindowSize,
                                     OutputArray _dst,
                                     int templateWindowSize, int searchWindowSize, int h)
 {
     vector<Mat> srcImgs;
     _srcImgs.getMatVector(srcImgs);
-    
+
     fastNlMeansDenoisingMultiCheckPreconditions(
-        srcImgs, imgToDenoiseIndex, 
+        srcImgs, imgToDenoiseIndex,
         temporalWindowSize, templateWindowSize, searchWindowSize
     );
     _dst.create(srcImgs[0].size(), srcImgs[0].type());
@@ -155,43 +155,43 @@ void cv::fastNlMeansDenoisingMulti( InputArrayOfArrays _srcImgs,
 
     switch (srcImgs[0].type()) {
         case CV_8U:
-            parallel_for(cv::BlockedRange(0, srcImgs[0].rows), 
+            parallel_for(cv::BlockedRange(0, srcImgs[0].rows),
                 FastNlMeansMultiDenoisingInvoker<uchar>(
-                    srcImgs, imgToDenoiseIndex, temporalWindowSize, 
+                    srcImgs, imgToDenoiseIndex, temporalWindowSize,
                     dst, templateWindowSize, searchWindowSize, h));
             break;
         case CV_8UC2:
-            parallel_for(cv::BlockedRange(0, srcImgs[0].rows), 
+            parallel_for(cv::BlockedRange(0, srcImgs[0].rows),
                 FastNlMeansMultiDenoisingInvoker<cv::Vec2b>(
-                    srcImgs, imgToDenoiseIndex, temporalWindowSize, 
+                    srcImgs, imgToDenoiseIndex, temporalWindowSize,
                     dst, templateWindowSize, searchWindowSize, h));
             break;
         case CV_8UC3:
-            parallel_for(cv::BlockedRange(0, srcImgs[0].rows), 
+            parallel_for(cv::BlockedRange(0, srcImgs[0].rows),
                 FastNlMeansMultiDenoisingInvoker<cv::Vec3b>(
-                    srcImgs, imgToDenoiseIndex, temporalWindowSize, 
+                    srcImgs, imgToDenoiseIndex, temporalWindowSize,
                     dst, templateWindowSize, searchWindowSize, h));
             break;
         default:
-            CV_Error(CV_StsBadArg, 
+            CV_Error(CV_StsBadArg,
                 "Unsupported matrix format! Only uchar, Vec2b, Vec3b are supported");
     }
 }
 
-void cv::fastNlMeansDenoisingColoredMulti( InputArrayOfArrays _srcImgs, 
+void cv::fastNlMeansDenoisingColoredMulti( InputArrayOfArrays _srcImgs,
                                            int imgToDenoiseIndex, int temporalWindowSize,
                                            OutputArray _dst,
-                                           int templateWindowSize, int searchWindowSize, 
+                                           int templateWindowSize, int searchWindowSize,
                                            int h, int hForColorComponents)
 {
     vector<Mat> srcImgs;
     _srcImgs.getMatVector(srcImgs);
-    
+
     fastNlMeansDenoisingMultiCheckPreconditions(
-        srcImgs, imgToDenoiseIndex, 
+        srcImgs, imgToDenoiseIndex,
         temporalWindowSize, templateWindowSize, searchWindowSize
     );
-    
+
     _dst.create(srcImgs[0].size(), srcImgs[0].type());
     Mat dst = _dst.getMat();
 
@@ -207,26 +207,26 @@ void cv::fastNlMeansDenoisingColoredMulti( InputArrayOfArrays _srcImgs,
     // TODO convert only required images
     vector<Mat> src_lab(src_imgs_size);
     vector<Mat> l(src_imgs_size);
-    vector<Mat> ab(src_imgs_size); 
+    vector<Mat> ab(src_imgs_size);
     for (int i = 0; i < src_imgs_size; i++) {
         src_lab[i] = Mat::zeros(srcImgs[0].size(), CV_8UC3);
         l[i] = Mat::zeros(srcImgs[0].size(), CV_8UC1);
         ab[i] = Mat::zeros(srcImgs[0].size(), CV_8UC2);
         cvtColor(srcImgs[i], src_lab[i], CV_LBGR2Lab);
-        
+
         Mat l_ab[] = { l[i], ab[i] };
         mixChannels(&src_lab[i], 1, l_ab, 2, from_to, 3);
     }
-    
+
     Mat dst_l;
     Mat dst_ab;
 
     fastNlMeansDenoisingMulti(
-        l, imgToDenoiseIndex, temporalWindowSize, 
+        l, imgToDenoiseIndex, temporalWindowSize,
         dst_l, templateWindowSize, searchWindowSize, h);
 
     fastNlMeansDenoisingMulti(
-        ab, imgToDenoiseIndex, temporalWindowSize, 
+        ab, imgToDenoiseIndex, temporalWindowSize,
         dst_ab, templateWindowSize, searchWindowSize, hForColorComponents);
 
     Mat l_ab_denoised[] = { dst_l, dst_ab };

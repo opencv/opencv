@@ -251,8 +251,7 @@ void cv::gpu::MOG2_GPU::operator()(const GpuMat& frame, GpuMat& fgmask, float le
     learningRate = learningRate >= 0.0f && nframes_ > 1 ? learningRate : 1.0f / std::min(2 * nframes_, history);
     CV_Assert(learningRate >= 0.0f);
 
-    if (learningRate > 0.0f)
-        mog2_gpu(frame, frame.channels(), fgmask, bgmodelUsedModes_, weight_, variance_, mean_, learningRate, -learningRate * fCT, bShadowDetection, StreamAccessor::getStream(stream));
+    mog2_gpu(frame, frame.channels(), fgmask, bgmodelUsedModes_, weight_, variance_, mean_, learningRate, -learningRate * fCT, bShadowDetection, StreamAccessor::getStream(stream));
 }
 
 void cv::gpu::MOG2_GPU::getBackgroundImage(GpuMat& backgroundImage, Stream& stream) const

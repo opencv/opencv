@@ -92,6 +92,7 @@ For channels = 2, the RADIUS is no more than LSIZE0
 For channels = 4, arbitary RADIUS is supported unless the LDS is not enough
 Niko
 6/29/2011
+The info above maybe obsolete.
 ***********************************************************************************/
 
 __kernel __attribute__((reqd_work_group_size(LSIZE0,LSIZE1,1))) void row_filter_C1_D0

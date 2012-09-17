@@ -1155,13 +1155,13 @@ void arithmetic_lut_run(const oclMat &src1, const oclMat &src2, oclMat &dst, str
     int rows = src1.rows;
     int cols = src1.cols;
     //int step = src1.step;
-    int src_step = src1.step;
-    int dst_step = dst.step;
+    int src_step = src1.step/ src1.elemSize();
+    int dst_step = dst.step/ dst.elemSize();
     int whole_rows = src1.wholerows;
     int whole_cols = src1.wholecols;
-    int src_offset = src1.offset;
-    int dst_offset = dst.offset;
-    int lut_offset = src2.offset;
+    int src_offset = src1.offset/ src1.elemSize();
+    int dst_offset = dst.offset/ dst.elemSize();
+    int lut_offset = src2.offset/ src2.elemSize();
     int left_col = 0, right_col = 0;
     size_t localSize[] = {16, 16, 1};
     //cl_kernel kernel = openCLGetKernelFromSource(clCxt,&arithm_LUT,kernelName);
@@ -2381,4 +2381,5 @@ void cv::ocl::pow(const oclMat &x, double p, oclMat &y)
 
     arithmetic_pow_run(x, p, y, kernelName, &arithm_pow);
 }
+
 #endif /* !defined (HAVE_OPENCL) */

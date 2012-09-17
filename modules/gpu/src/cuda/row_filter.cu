@@ -89,20 +89,45 @@ namespace cv { namespace gpu { namespace device
 
             const int xStart = blockIdx.x * (PATCH_PER_BLOCK * BLOCK_DIM_X) + threadIdx.x;
 
-            //Load left halo
-            #pragma unroll
-            for (int j = 0; j < HALO_SIZE; ++j)
-                smem[threadIdx.y][threadIdx.x + j * BLOCK_DIM_X] = saturate_cast<sum_t>(brd.at_low(xStart - (HALO_SIZE - j) * BLOCK_DIM_X, src_row));
+            if (blockIdx.x > 0)
+            {
+                //Load left halo
+                #pragma unroll
+                for (int j = 0; j < HALO_SIZE; ++j)
+                    smem[threadIdx.y][threadIdx.x + j * BLOCK_DIM_X] = saturate_cast<sum_t>(src_row[xStart - (HALO_SIZE - j) * BLOCK_DIM_X]);
+            }
+            else
+            {
+                //Load left halo
+                #pragma unroll
+                for (int j = 0; j < HALO_SIZE; ++j)
+                    smem[threadIdx.y][threadIdx.x + j * BLOCK_DIM_X] = saturate_cast<sum_t>(brd.at_low(xStart - (HALO_SIZE - j) * BLOCK_DIM_X, src_row));
+            }
 
-            //Load main data
-            #pragma unroll
-            for (int j = 0; j < PATCH_PER_BLOCK; ++j)
-                smem[threadIdx.y][threadIdx.x + HALO_SIZE * BLOCK_DIM_X + j * BLOCK_DIM_X] = saturate_cast<sum_t>(brd.at_high(xStart + j * BLOCK_DIM_X, src_row));
+            if (blockIdx.x + 2 < gridDim.x)
+            {
+                //Load main data
+                #pragma unroll
+                for (int j = 0; j < PATCH_PER_BLOCK; ++j)
+                    smem[threadIdx.y][threadIdx.x + HALO_SIZE * BLOCK_DIM_X + j * BLOCK_DIM_X] = saturate_cast<sum_t>(src_row[xStart + j * BLOCK_DIM_X]);
 
-            //Load right halo
-            #pragma unroll
-            for (int j = 0; j < HALO_SIZE; ++j)
-                smem[threadIdx.y][threadIdx.x + (PATCH_PER_BLOCK + HALO_SIZE) * BLOCK_DIM_X + j * BLOCK_DIM_X] = saturate_cast<sum_t>(brd.at_high(xStart + (PATCH_PER_BLOCK + j) * BLOCK_DIM_X, src_row));
+                //Load right halo
+                #pragma unroll
+                for (int j = 0; j < HALO_SIZE; ++j)
+                    smem[threadIdx.y][threadIdx.x + (PATCH_PER_BLOCK + HALO_SIZE) * BLOCK_DIM_X + j * BLOCK_DIM_X] = saturate_cast<sum_t>(src_row[xStart + (PATCH_PER_BLOCK + j) * BLOCK_DIM_X]);
+            }
+            else
+            {
+                //Load main data
+                #pragma unroll
+                for (int j = 0; j < PATCH_PER_BLOCK; ++j)
+                    smem[threadIdx.y][threadIdx.x + HALO_SIZE * BLOCK_DIM_X + j * BLOCK_DIM_X] = saturate_cast<sum_t>(brd.at_high(xStart + j * BLOCK_DIM_X, src_row));
+
+                //Load right halo
+                #pragma unroll
+                for (int j = 0; j < HALO_SIZE; ++j)
+                    smem[threadIdx.y][threadIdx.x + (PATCH_PER_BLOCK + HALO_SIZE) * BLOCK_DIM_X + j * BLOCK_DIM_X] = saturate_cast<sum_t>(brd.at_high(xStart + (PATCH_PER_BLOCK + j) * BLOCK_DIM_X, src_row));
+            }
 
             __syncthreads();
 

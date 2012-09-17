@@ -46,19 +46,23 @@
 #include <iostream>
 
 using namespace cv;
-using namespace std;
 
-void __wrap_printf_func(const char* fmt, ...)
+namespace internal
 {
-    va_list args;
-    va_start(args, fmt);
-    char buffer[256];
-    vsprintf (buffer, fmt, args);
-    cvtest::TS::ptr()->printf(cvtest::TS::SUMMARY, buffer);
-    va_end(args);
+    void __wrap_printf_func(const char* fmt, ...)
+    {
+        va_list args;
+        va_start(args, fmt);
+        char buffer[256];
+        vsprintf (buffer, fmt, args);
+        cvtest::TS::ptr()->printf(cvtest::TS::SUMMARY, buffer);
+        va_end(args);
+    }
+    
+    #define PRINT_TO_LOG __wrap_printf_func
 }
 
-#define PRINT_TO_LOG __wrap_printf_func
+using internal::PRINT_TO_LOG;
 #define SHOW_IMAGE
 #undef SHOW_IMAGE
 
@@ -70,23 +74,19 @@ class CV_ImageWarpBaseTest :
     public cvtest::BaseTest
 {
 public:
-    enum
-    {
-        cell_size = 10
-    };
+    enum { cell_size = 10 };
 
     CV_ImageWarpBaseTest();
-
-    virtual void run(int);
-
     virtual ~CV_ImageWarpBaseTest();
-
+    
+    virtual void run(int);
 protected:
     virtual void generate_test_data();
 
     virtual void run_func() = 0;
     virtual void run_reference_func() = 0;
-    virtual void validate_results() const = 0;
+    virtual void validate_results() const;
+    virtual void prepare_test_data_for_reference_func();
 
     Size randSize(RNG& rng) const;
     
@@ -95,11 +95,12 @@ protected:
     int interpolation;
     Mat src;
     Mat dst;
+    Mat reference_dst;
 };
 
 CV_ImageWarpBaseTest::CV_ImageWarpBaseTest() :
     BaseTest(), interpolation(-1),
-    src(), dst()
+    src(), dst(), reference_dst()
 {
     test_case_count = 40;
     ts->set_failed_test_info(cvtest::TS::OK);
@@ -126,58 +127,11 @@ const char* CV_ImageWarpBaseTest::interpolation_to_string(int inter) const
     return "Unsupported/Unkown interpolation type";
 }
 
-void interpolateLinear(float x, float* coeffs)
-{
-    coeffs[0] = 1.f - x;
-    coeffs[1] = x;
-}
-
-void interpolateCubic(float x, float* coeffs)
-{
-    const float A = -0.75f;
-
-    coeffs[0] = ((A*(x + 1) - 5*A)*(x + 1) + 8*A)*(x + 1) - 4*A;
-    coeffs[1] = ((A + 2)*x - (A + 3))*x*x + 1;
-    coeffs[2] = ((A + 2)*(1 - x) - (A + 3))*(1 - x)*(1 - x) + 1;
-    coeffs[3] = 1.f - coeffs[0] - coeffs[1] - coeffs[2];
-}
-
-void interpolateLanczos4(float x, float* coeffs)
-{
-    static const double s45 = 0.70710678118654752440084436210485;
-    static const double cs[][2]=
-    {{1, 0}, {-s45, -s45}, {0, 1}, {s45, -s45}, {-1, 0}, {s45, s45}, {0, -1}, {-s45, s45}};
-
-    if( x < FLT_EPSILON )
-    {
-        for( int i = 0; i < 8; i++ )
-            coeffs[i] = 0;
-        coeffs[3] = 1;
-        return;
-    }
-
-    float sum = 0;
-    double y0=-(x+3)*CV_PI*0.25, s0 = sin(y0), c0=cos(y0);
-    for(int i = 0; i < 8; i++ )
-    {
-        double y = -(x+3-i)*CV_PI*0.25;
-        coeffs[i] = (float)((cs[i][0]*s0 + cs[i][1]*c0)/(y*y));
-        sum += coeffs[i];
-    }
-
-    sum = 1.f/sum;
-    for(int i = 0; i < 8; i++ )
-        coeffs[i] *= sum;
-}
-
-typedef void (*interpolate_method)(float x, float* coeffs);
-interpolate_method inter_array[] = { &interpolateLinear, &interpolateCubic, &interpolateLanczos4 };
-
 Size CV_ImageWarpBaseTest::randSize(RNG& rng) const
 {
     Size size;
-    size.width = saturate_cast<uint>(std::exp(rng.uniform(0.0f, 7.0f)));
-    size.height = saturate_cast<uint>(std::exp(rng.uniform(0.0f, 7.0f)));
+    size.width = static_cast<int>(std::exp(rng.uniform(1.0f, 7.0f)));
+    size.height = static_cast<int>(std::exp(rng.uniform(1.0f, 7.0f)));
 
     return size;
 }
@@ -186,18 +140,17 @@ void CV_ImageWarpBaseTest::generate_test_data()
 {
     RNG& rng = ts->get_rng();
 
-    Size ssize = randSize(rng);
+    // generating the src matrix structure
+    Size ssize = randSize(rng), dsize;
 
-    int depth = CV_8S;
+    int depth = rng.uniform(0, CV_64F);
     while (depth == CV_8S || depth == CV_32S)
         depth = rng.uniform(0, CV_64F);
 
     int cn = rng.uniform(1, 4);
     while (cn == 2)
         cn = rng.uniform(1, 4);
-    interpolation = rng.uniform(0, CV_INTER_LANCZOS4 + 1);
-    interpolation = INTER_NEAREST;
-
+    
     src.create(ssize, CV_MAKE_TYPE(depth, cn));
 
     // generating the src matrix
@@ -217,6 +170,44 @@ void CV_ImageWarpBaseTest::generate_test_data()
         for (x = cell_size; x < src.cols; x += cell_size)
             line(src, Point2i(x, 0), Point2i(x, src.rows), Scalar::all(0), 1);
     }
+    
+    // generating an interpolation type
+    interpolation = rng.uniform(0, CV_INTER_LANCZOS4 + 1);
+    
+    // generating the dst matrix structure
+    double scale_x, scale_y;
+    if (interpolation == INTER_AREA)
+    {
+        bool area_fast = rng.uniform(0., 1.) > 0.5;
+        if (area_fast)
+        {
+            scale_x = rng.uniform(2, 5);
+            scale_y = rng.uniform(2, 5);
+        }
+        else
+        {
+            scale_x = rng.uniform(1.0, 3.0);
+            scale_y = rng.uniform(1.0, 3.0);
+        }
+    }
+    else
+    {
+        scale_x = rng.uniform(0.4, 4.0);
+        scale_y = rng.uniform(0.4, 4.0);
+    }
+    CV_Assert(scale_x > 0.0f && scale_y > 0.0f);
+    
+    dsize.width = saturate_cast<int>((ssize.width + scale_x - 1) / scale_x);
+    dsize.height = saturate_cast<int>((ssize.height + scale_y - 1) / scale_y);
+    
+    dst = Mat::zeros(dsize, src.type());
+    reference_dst = Mat::zeros(dst.size(), CV_MAKE_TYPE(CV_32F, dst.channels()));
+    
+    scale_x = src.cols / static_cast<double>(dst.cols);
+    scale_y = src.rows / static_cast<double>(dst.rows);
+    
+    if (interpolation == INTER_AREA && (scale_x < 1.0 || scale_y < 1.0))
+        interpolation = INTER_LINEAR;
 }
 
 void CV_ImageWarpBaseTest::run(int)
@@ -236,6 +227,97 @@ void CV_ImageWarpBaseTest::run(int)
     ts->set_gtest_status();
 }
 
+void CV_ImageWarpBaseTest::validate_results() const
+{
+    Mat _dst;
+    dst.convertTo(_dst, reference_dst.depth());
+    
+    Size dsize = dst.size(), ssize = src.size();
+    int cn = _dst.channels();
+    dsize.width *= cn;
+    float t = 1.0f;
+    if (interpolation == INTER_CUBIC)
+        t = 1.0f;
+    else if (interpolation == INTER_LANCZOS4)
+        t = 1.0f;
+    else if (interpolation == INTER_NEAREST)
+        t = 1.0f;
+    else if (interpolation == INTER_AREA)
+        t = 2.0f;
+    
+    for (int dy = 0; dy < dsize.height; ++dy)
+    {
+        const float* rD = reference_dst.ptr<float>(dy);
+        const float* D = _dst.ptr<float>(dy);
+        
+        for (int dx = 0; dx < dsize.width; ++dx)
+            if (fabs(rD[dx] - D[dx]) > t &&
+//                fabs(rD[dx] - D[dx]) < 250.0f &&
+                rD[dx] <= 255.0f && D[dx] <= 255.0f && rD[dx] >= 0.0f && D[dx] >= 0.0f)
+            {
+                PRINT_TO_LOG("\nNorm of the difference: %lf\n", norm(reference_dst, _dst, NORM_INF));
+                PRINT_TO_LOG("Error in (dx, dy): (%d, %d)\n", dx / cn + 1, dy + 1);
+                PRINT_TO_LOG("Tuple (rD, D): (%f, %f)\n", rD[dx], D[dx]);
+                PRINT_TO_LOG("Dsize: (%d, %d)\n", dsize.width / cn, dsize.height);
+                PRINT_TO_LOG("Ssize: (%d, %d)\n", src.cols, src.rows);
+                
+                double scale_x = static_cast<double>(ssize.width) / dsize.width;
+                double scale_y = static_cast<double>(ssize.height) / dsize.height;
+                bool area_fast = interpolation == INTER_AREA &&
+                    fabs(scale_x - cvRound(scale_x)) < FLT_EPSILON &&
+                    fabs(scale_y - cvRound(scale_y)) < FLT_EPSILON;
+                if (area_fast)
+                {
+                    scale_y = cvRound(scale_y);
+                    scale_x = cvRound(scale_x);
+                }
+                
+                PRINT_TO_LOG("Interpolation: %s\n", interpolation_to_string(area_fast ? INTER_LANCZOS4 + 1 : interpolation));
+                PRINT_TO_LOG("Scale (x, y): (%lf, %lf)\n", scale_x, scale_y);
+                PRINT_TO_LOG("Elemsize: %d\n", src.elemSize1());
+                PRINT_TO_LOG("Channels: %d\n", cn);
+                
+#ifdef SHOW_IMAGE
+                const std::string w1("OpenCV impl (run func)"), w2("Reference func"), w3("Src image"), w4("Diff");
+                namedWindow(w1, CV_WINDOW_KEEPRATIO);
+                namedWindow(w2, CV_WINDOW_KEEPRATIO);
+                namedWindow(w3, CV_WINDOW_KEEPRATIO);
+                namedWindow(w4, CV_WINDOW_KEEPRATIO);
+                
+                Mat diff;
+                absdiff(reference_dst, _dst, diff);
+                
+                imshow(w1, dst);
+                imshow(w2, reference_dst);
+                imshow(w3, src);
+                imshow(w4, diff);
+                
+                waitKey();
+#endif
+                
+                const int radius = 3;
+                int rmin = MAX(dy - radius, 0), rmax = MIN(dy + radius, dsize.height);
+                int cmin = MAX(dx / cn - radius, 0), cmax = MIN(dx / cn + radius, dsize.width);
+                
+                std::cout << "opencv result:\n" << dst(Range(rmin, rmax), Range(cmin, cmax)) << std::endl;
+                std::cout << "reference result:\n" << reference_dst(Range(rmin, rmax), Range(cmin, cmax)) << std::endl;
+                
+                ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
+                return;
+            }
+    }
+}
+
+void CV_ImageWarpBaseTest::prepare_test_data_for_reference_func()
+{
+    if (src.depth() != CV_32F)
+    {
+        Mat tmp;
+        src.convertTo(tmp, CV_32F);
+        src = tmp;
+    }
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Resize
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -252,13 +334,11 @@ protected:
 
     virtual void run_func();
     virtual void run_reference_func();
-    virtual void validate_results() const;
-
+    
 private:
     double scale_x;
     double scale_y;
     bool area_fast;
-    Mat reference_dst;
 
     void resize_generic();
     void resize_area();
@@ -270,8 +350,8 @@ private:
 };
 
 CV_Resize_Test::CV_Resize_Test() :
-    CV_ImageWarpBaseTest(), scale_x(), scale_y(),
-    area_fast(false), reference_dst()
+    CV_ImageWarpBaseTest(), scale_x(),
+    scale_y(), area_fast(false)
 {
 }
 
@@ -279,43 +359,63 @@ CV_Resize_Test::~CV_Resize_Test()
 {
 }
 
+namespace internal
+{
+    void interpolateLinear(float x, float* coeffs)
+    {
+        coeffs[0] = 1.f - x;
+        coeffs[1] = x;
+    }
+    
+    void interpolateCubic(float x, float* coeffs)
+    {
+        const float A = -0.75f;
+        
+        coeffs[0] = ((A*(x + 1) - 5*A)*(x + 1) + 8*A)*(x + 1) - 4*A;
+        coeffs[1] = ((A + 2)*x - (A + 3))*x*x + 1;
+        coeffs[2] = ((A + 2)*(1 - x) - (A + 3))*(1 - x)*(1 - x) + 1;
+        coeffs[3] = 1.f - coeffs[0] - coeffs[1] - coeffs[2];
+    }
+    
+    void interpolateLanczos4(float x, float* coeffs)
+    {
+        static const double s45 = 0.70710678118654752440084436210485;
+        static const double cs[][2]=
+        {{1, 0}, {-s45, -s45}, {0, 1}, {s45, -s45}, {-1, 0}, {s45, s45}, {0, -1}, {-s45, s45}};
+        
+        if( x < FLT_EPSILON )
+        {
+            for( int i = 0; i < 8; i++ )
+                coeffs[i] = 0;
+            coeffs[3] = 1;
+            return;
+        }
+        
+        float sum = 0;
+        double y0=-(x+3)*CV_PI*0.25, s0 = sin(y0), c0=cos(y0);
+        for(int i = 0; i < 8; i++ )
+        {
+            double y = -(x+3-i)*CV_PI*0.25;
+            coeffs[i] = (float)((cs[i][0]*s0 + cs[i][1]*c0)/(y*y));
+            sum += coeffs[i];
+        }
+        
+        sum = 1.f/sum;
+        for(int i = 0; i < 8; i++ )
+            coeffs[i] *= sum;
+    }
+    
+    typedef void (*interpolate_method)(float x, float* coeffs);
+    interpolate_method inter_array[] = { &interpolateLinear, &interpolateCubic, &interpolateLanczos4 };
+}
+
 void CV_Resize_Test::generate_test_data()
 {
     CV_ImageWarpBaseTest::generate_test_data();
-    RNG& rng = ts->get_rng();
-    Size dsize, ssize = src.size();
     
-    if (interpolation == INTER_AREA)
-    {
-        area_fast = rng.uniform(0., 1.) > 0.5;
-        if (area_fast)
-        {
-            scale_x = rng.uniform(2, 5);
-            scale_y = rng.uniform(2, 5);
-        }
-        else
-        {
-            scale_x = rng.uniform(1.0, 3.0);
-            scale_y = rng.uniform(1.0, 3.0);
-        }
-    }
-    else
-    {
-        scale_x = rng.uniform(0.4, 4.0);
-        scale_y = rng.uniform(0.4, 4.0);
-    }
-    dsize.width = saturate_cast<int>((ssize.width + scale_x - 1) / scale_x);
-    dsize.height = saturate_cast<int>((ssize.height + scale_y - 1) / scale_y);
-
-    dst = Mat::zeros(dsize, src.type());
-    reference_dst = Mat::zeros(dst.size(), CV_MAKE_TYPE(CV_32F, dst.channels()));
-
     scale_x = src.cols / static_cast<double>(dst.cols);
     scale_y = src.rows / static_cast<double>(dst.rows);
-    
-    if (interpolation == INTER_AREA && (scale_x < 1.0 || scale_y < 1.0))
-        interpolation = INTER_LINEAR;
-    
+        
     area_fast = interpolation == INTER_AREA &&
         fabs(scale_x - cvRound(scale_x)) < FLT_EPSILON &&
         fabs(scale_y - cvRound(scale_y)) < FLT_EPSILON;
@@ -333,12 +433,8 @@ void CV_Resize_Test::run_func()
 
 void CV_Resize_Test::run_reference_func()
 {
-    if (src.depth() != CV_32F)
-    {
-        Mat tmp;
-        src.convertTo(tmp, CV_32F);
-        src = tmp;
-    }
+    CV_ImageWarpBaseTest::prepare_test_data_for_reference_func();
+    
     if (interpolation == INTER_AREA)
         resize_area();
     else
@@ -347,7 +443,7 @@ void CV_Resize_Test::run_reference_func()
 
 double CV_Resize_Test::getWeight(double a, double b, int x)
 {
-    float w = std::min<double>(x + 1, b) - std::max<double>(x, a);
+    double w = std::min(static_cast<double>(x + 1), b) - std::max(static_cast<double>(x), a);
     CV_Assert(w >= 0);
     return w;
 }
@@ -367,7 +463,7 @@ void CV_Resize_Test::resize_area()
         int isy0 = cvFloor(fsy0), isy1 = std::min(cvFloor(fsy1), ssize.height - 1);
         CV_Assert(isy1 <= ssize.height && isy0 < ssize.height);
        
-        float fsx0 = 0, fsx1 = scale_x;
+        double fsx0 = 0, fsx1 = scale_x;
 
         for (int dx = 0; dx < dsize.width; ++dx)
         {
@@ -390,18 +486,18 @@ void CV_Resize_Test::resize_area()
                         double wy = getWeight(fsy0, fsy1, sy);
                         double wx = getWeight(fsx0, fsx1, sx);
                         double w = wx * wy;
-                        xyD[r] += yS[sx * cn + r] * w;
+                        xyD[r] += static_cast<float>(yS[sx * cn + r] * w);
                         area += w;
                     }
                 }
                 
                 CV_Assert(area != 0);
                 // norming pixel
-                xyD[r] /= area;
+                xyD[r] = static_cast<float>(xyD[r] / area);
             }
-            fsx1 = std::min<double>((fsx0 = fsx1) + scale_x, ssize.width);
+            fsx1 = std::min((fsx0 = fsx1) + scale_x, static_cast<double>(ssize.width));
         }
-        fsy1 = std::min<double>((fsy0 = fsy1) + scale_y, ssize.height);
+        fsy1 = std::min((fsy0 = fsy1) + scale_y, static_cast<double>(ssize.height));
     }
 }
 
@@ -427,8 +523,8 @@ void CV_Resize_Test::resize_1d(const Mat& _src, Mat& _dst, int dy, const dim& _d
     }
     else if (interpolation == INTER_LINEAR || interpolation == INTER_CUBIC || interpolation == INTER_LANCZOS4)
     {
-        interpolate_method inter_func = inter_array[interpolation - (interpolation == INTER_LANCZOS4 ? 2 : 1)];
-        int elemsize = _src.elemSize();
+        internal::interpolate_method inter_func = internal::inter_array[interpolation - (interpolation == INTER_LANCZOS4 ? 2 : 1)];
+        size_t elemsize = _src.elemSize();
         
         int ofs = 0, ksize = 2;
         if (interpolation == INTER_CUBIC)
@@ -453,8 +549,8 @@ void CV_Resize_Test::resize_1d(const Mat& _src, Mat& _dst, int dy, const dim& _d
             float *xyD = yD + dx * cn;
             const float* xyS = _extended_src_row.ptr<float>(0) + (isx + ksize - ofs) * cn;
 
-            float w[ksize];
-            inter_func(fsx, w);
+            float w[8];
+            inter_func(static_cast<float>(fsx), w);
 
             for (int r = 0; r < cn; ++r)
             {
@@ -471,10 +567,10 @@ void CV_Resize_Test::resize_1d(const Mat& _src, Mat& _dst, int dy, const dim& _d
 
 void CV_Resize_Test::generate_buffer(double scale, dim& _dim)
 {
-    int length = _dim.size();
-    for (int dx = 0; dx < length; ++dx)
+    size_t length = _dim.size();
+    for (size_t dx = 0; dx < length; ++dx)
     {            
-        double fsx = scale * (dx + 0.5f) - 0.5f;
+        double fsx = scale * (dx + 0.5) - 0.5;
         int isx = cvFloor(fsx);
         _dim[dx] = std::make_pair(isx, fsx - isx);
     }
@@ -511,80 +607,6 @@ void CV_Resize_Test::resize_generic()
     transpose(reference_dst, reference_dst);
 }
 
-void CV_Resize_Test::validate_results() const
-{
-    Mat _dst = dst;
-    if (dst.depth() != reference_dst.depth())
-    {
-        Mat tmp;
-        dst.convertTo(tmp, reference_dst.depth());
-        _dst = tmp;
-    }
-
-    Size dsize = dst.size();
-    int cn = _dst.channels();
-    dsize.width *= cn;
-    float t = 1.0f;
-    if (interpolation == INTER_CUBIC)
-        t = 1.0f;
-    else if (interpolation == INTER_LANCZOS4)
-        t = 1.0f;
-    else if (interpolation == INTER_NEAREST)
-        t = 1.0f;
-    else if (interpolation == INTER_AREA)
-        t = 2.0f;
-    
-    for (int dy = 0; dy < dsize.height; ++dy)
-    {
-        const float* rD = reference_dst.ptr<float>(dy);
-        const float* D = _dst.ptr<float>(dy);
-
-        for (int dx = 0; dx < dsize.width; ++dx)
-            if (fabs(rD[dx] - D[dx]) > t)
-            {
-                PRINT_TO_LOG("\nNorm of the difference: %lf\n", norm(reference_dst, _dst, NORM_INF));
-                PRINT_TO_LOG("Error in (dx, dy): (%d, %d)\n", dx / cn + 1, dy + 1);
-                PRINT_TO_LOG("Tuple (rD, D): (%f, %f)\n", rD[dx], D[dx]);
-                PRINT_TO_LOG("Dsize: (%d, %d)\n", dsize.width / cn, dsize.height);
-                PRINT_TO_LOG("Ssize: (%d, %d)\n", src.cols, src.rows);
-                PRINT_TO_LOG("Interpolation: %s\n",
-                    interpolation_to_string(area_fast ? INTER_LANCZOS4 + 1 : interpolation));
-                PRINT_TO_LOG("Scale (x, y): (%lf, %lf)\n", scale_x, scale_y);
-                PRINT_TO_LOG("Elemsize: %d\n", src.elemSize());
-                PRINT_TO_LOG("Channels: %d\n", cn);
-
-#ifdef SHOW_IMAGE
-                const std::string w1("Resize (run func)"), w2("Reference Resize"), w3("Src image"), w4("Diff");
-                namedWindow(w1, CV_WINDOW_KEEPRATIO);
-                namedWindow(w2, CV_WINDOW_KEEPRATIO);
-                namedWindow(w3, CV_WINDOW_KEEPRATIO);
-                namedWindow(w4, CV_WINDOW_KEEPRATIO);
-                
-                Mat diff;
-                absdiff(reference_dst, _dst, diff);
-                
-                imshow(w1, dst);
-                imshow(w2, reference_dst);
-                imshow(w3, src);
-                imshow(w4, diff);
-                
-                waitKey();
-#endif
-                /*
-                const int radius = 3;
-                int rmin = MAX(dy - radius, 0), rmax = MIN(dy + radius, dsize.height);
-                int cmin = MAX(dx - radius, 0), cmax = MIN(dx + radius, dsize.width);
-                
-                cout << "opencv result:\n" << dst(Range(rmin, rmax), Range(cmin, cmax)) << endl;
-                cout << "reference result:\n" << reference_dst(Range(rmin, rmax), Range(cmin, cmax)) << endl;
-                */
-                
-                ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
-                return;
-            }
-    }
-}
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 // remap
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -606,31 +628,25 @@ protected:
 
     virtual void run_func();
     virtual void run_reference_func();
-    virtual void validate_results() const;
 
     Mat mapx, mapy;
     int borderType;
     Scalar borderValue;
 
     remap_func funcs[2];
-
-    Mat dilate_src;
-    Mat erode_src;
-    Mat dilate_dst;
-    Mat erode_dst;
-
+    
 private:
     void remap_nearest(const Mat&, Mat&);
     void remap_generic(const Mat&, Mat&);
 
     void convert_maps();
     const char* borderType_to_string() const;
+    virtual void validate_results() const;
 };
 
 CV_Remap_Test::CV_Remap_Test() :
     CV_ImageWarpBaseTest(), mapx(), mapy(),
-    borderType(), borderValue(), dilate_src(), erode_src(),
-    dilate_dst(), erode_dst()
+    borderType(-1), borderValue()
 {
     funcs[0] = &CV_Remap_Test::remap_nearest;
     funcs[1] = &CV_Remap_Test::remap_generic;
@@ -638,17 +654,6 @@ CV_Remap_Test::CV_Remap_Test() :
 
 CV_Remap_Test::~CV_Remap_Test()
 {
-}
-
-const char* CV_Remap_Test::borderType_to_string() const
-{
-    if (borderType == BORDER_CONSTANT)
-        return "BORDER_CONSTANT";
-    if (borderType == BORDER_REPLICATE)
-        return "BORDER_REPLICATE";
-    if (borderType == BORDER_REFLECT)
-        return "BORDER_REFLECT";
-    return "Unsupported/Unkown border type";
 }
 
 void CV_Remap_Test::generate_test_data()
@@ -659,31 +664,14 @@ void CV_Remap_Test::generate_test_data()
     borderType = rng.uniform(1, BORDER_WRAP);
     borderValue = Scalar::all(rng.uniform(0, 255));
 
-    Size dsize = randSize(rng);
-    dst.create(dsize, src.type());
-
-    // generating the mapx, mapy matrix
+    // generating the mapx, mapy matrices
     static const int mapx_types[] = { CV_16SC2, CV_32FC1, CV_32FC2 };
     mapx.create(dst.size(), mapx_types[rng.uniform(0, sizeof(mapx_types) / sizeof(int))]);
-    mapy.release();
+    mapy = Mat();
 
     const int n = std::min(std::min(src.cols, src.rows) / 10 + 1, 2);
     float _n = 0; //static_cast<float>(-n);
-
-//     mapy.release();
-//     mapx.create(dst.size(), CV_32FC2);
-//     for (int y = 0; y < dsize.height; ++y)
-//     {
-//         float* yM = mapx.ptr<float>(y);
-//         for (int x = 0; x < dsize.width; ++x)
-//         {
-//             float* xyM = yM + (x << 1);
-//             xyM[0] = x;
-//             xyM[1] = y;
-//         }
-//     }
-//     return;
-     
+    
     switch (mapx.type())
     {
         case CV_16SC2:
@@ -691,8 +679,8 @@ void CV_Remap_Test::generate_test_data()
             MatIterator_<Vec2s> begin_x = mapx.begin<Vec2s>(), end_x = mapx.end<Vec2s>();
             for ( ; begin_x != end_x; ++begin_x)
             {
-                begin_x[0] = rng.uniform(static_cast<int>(_n), std::max(src.cols + n - 1, 0));
-                begin_x[1] = rng.uniform(static_cast<int>(_n), std::max(src.rows + n - 1, 0));
+                begin_x[0] = static_cast<short>(rng.uniform(static_cast<int>(_n), std::max(src.cols + n - 1, 0)));
+                begin_x[1] = static_cast<short>(rng.uniform(static_cast<int>(_n), std::max(src.rows + n - 1, 0)));
             }
 
             if (interpolation != INTER_NEAREST)
@@ -706,7 +694,7 @@ void CV_Remap_Test::generate_test_data()
                     {
                         MatIterator_<ushort> begin_y = mapy.begin<ushort>(), end_y = mapy.end<ushort>();
                         for ( ; begin_y != end_y; ++begin_y)
-                            begin_y[0] = rng.uniform(0, 1024);
+                            begin_y[0] = static_cast<short>(rng.uniform(0, 1024));
                     }
                     break;
 
@@ -714,7 +702,7 @@ void CV_Remap_Test::generate_test_data()
                     {
                         MatIterator_<short> begin_y = mapy.begin<short>(), end_y = mapy.end<short>();
                         for ( ; begin_y != end_y; ++begin_y)
-                            begin_y[0] = rng.uniform(0, 1024);
+                            begin_y[0] = static_cast<short>(rng.uniform(0, 1024));
                     }
                     break;
                 }
@@ -749,6 +737,10 @@ void CV_Remap_Test::generate_test_data()
             }
         }
         break;
+            
+        default:
+            assert(0);
+        break;
     }
 }
 
@@ -759,41 +751,33 @@ void CV_Remap_Test::run_func()
 
 void CV_Remap_Test::convert_maps()
 {
-    if (mapx.type() == mapy.type() && mapx.type() == CV_32FC1)
-    {
-        Mat maps[] = { mapx, mapy };
-        Mat dst_map;
-        merge(maps, sizeof(maps) / sizeof(Mat), dst_map);
-        mapx = dst_map;
-    }
-    else if (interpolation == INTER_NEAREST && mapx.type() == CV_16SC2)
-    {
-        Mat tmp_mapx;
-        mapx.convertTo(tmp_mapx, CV_32F);
-        mapx = tmp_mapx;
-        mapy.release();
-        return;
-    }
-    else if (mapx.type() != CV_32FC2)
-    {
-        Mat out_mapy;
-        convertMaps(mapx.clone(), mapy, mapx, out_mapy, CV_32FC2, interpolation == INTER_NEAREST);
-    }
+    if (mapx.type() != CV_16SC2)
+        convertMaps(mapx.clone(), mapy.clone(), mapx, mapy, CV_16SC2, interpolation == INTER_NEAREST);
+    else if (interpolation != INTER_NEAREST)
+        if (mapy.type() != CV_16UC1)
+            mapy.clone().convertTo(mapy, CV_16UC1);
+    
+    if (interpolation == INTER_NEAREST)
+        mapy = Mat();
+    CV_Assert(((interpolation == INTER_NEAREST && !mapy.data) || mapy.type() == CV_16UC1 ||
+               mapy.type() == CV_16SC1) && mapx.type() == CV_16SC2);
+}
 
-    mapy.release();
+const char* CV_Remap_Test::borderType_to_string() const
+{
+    if (borderType == BORDER_CONSTANT)
+        return "BORDER_CONSTANT";
+    if (borderType == BORDER_REPLICATE)
+        return "BORDER_REPLICATE";
+    if (borderType == BORDER_REFLECT)
+        return "BORDER_REFLECT";
+    return "Unsupported/Unkown border type";
 }
 
 void CV_Remap_Test::prepare_test_data_for_reference_func()
 {
+    CV_ImageWarpBaseTest::prepare_test_data_for_reference_func();
     convert_maps();
-
-    if (src.depth() != CV_32F)
-    {
-        Mat _src;
-        src.convertTo(_src, CV_32F);
-        src = _src;
-    }
-	
 /*
     const int ksize = 3;
     Mat kernel = getStructuringElement(CV_MOP_ERODE, Size(ksize, ksize));
@@ -811,12 +795,6 @@ void CV_Remap_Test::prepare_test_data_for_reference_func()
     src.copyTo(dilate_src, dst_mask);
     dst_mask.release();
 */
-
-	dilate_src = src;
-    erode_src = src;
-
-    dilate_dst = Mat::zeros(dst.size(), dilate_src.type());
-    erode_dst = Mat::zeros(dst.size(), erode_src.type());
 }
 
 void CV_Remap_Test::run_reference_func()
@@ -825,17 +803,15 @@ void CV_Remap_Test::run_reference_func()
 
     if (interpolation == INTER_AREA)
         interpolation = INTER_LINEAR;
-    CV_Assert(interpolation != INTER_AREA);
-
+    
     int index = interpolation == INTER_NEAREST ? 0 : 1;
-    (this->*funcs[index])(erode_src, erode_dst);
-    (this->*funcs[index])(dilate_src, dilate_dst);
+    (this->*funcs[index])(src, reference_dst);
 }
 
 void CV_Remap_Test::remap_nearest(const Mat& _src, Mat& _dst)
 {
     CV_Assert(_src.depth() == CV_32F && _dst.type() == _src.type());
-    CV_Assert(mapx.type() == CV_32FC2);
+    CV_Assert(mapx.type() == CV_16SC2 && !mapy.data);
 
     Size ssize = _src.size(), dsize = _dst.size();
     CV_Assert(ssize.area() > 0 && dsize.area() > 0);
@@ -843,36 +819,36 @@ void CV_Remap_Test::remap_nearest(const Mat& _src, Mat& _dst)
 
     for (int dy = 0; dy < dsize.height; ++dy)
     {
-        const float* yM = mapx.ptr<float>(dy);
+        const short* yM = mapx.ptr<short>(dy);
         float* yD = _dst.ptr<float>(dy);
         
         for (int dx = 0; dx < dsize.width; ++dx)
         {
             float* xyD = yD + cn * dx;
-            int sx = cvRound(yM[dx * 2]), sy = cvRound(yM[dx * 2 + 1]);
+            int sx = yM[dx * 2], sy = yM[dx * 2 + 1];
 
             if (sx >= 0 && sx < ssize.width && sy >= 0 && sy < ssize.height)
             {
-                const float *S = _src.ptr<float>(sy) + sx * cn;
+                const float *xyS = _src.ptr<float>(sy) + sx * cn;
 
                 for (int r = 0; r < cn; ++r)
-                    xyD[r] = S[r];
+                    xyD[r] = xyS[r];
             }
             else if (borderType != BORDER_TRANSPARENT)
             {
                 if (borderType == BORDER_CONSTANT)
                     for (int r = 0; r < cn; ++r)
-                        xyD[r] = borderValue[r];
+                        xyD[r] = saturate_cast<float>(borderValue[r]);
                 else
                 {
                     sx = borderInterpolate(sx, ssize.width, borderType);
                     sy = borderInterpolate(sy, ssize.height, borderType);
                     CV_Assert(sx >= 0 && sy >= 0 && sx < ssize.width && sy < ssize.height);
 
-                    const float *S = _src.ptr<float>(sy) + sx * cn;
+                    const float *xyS = _src.ptr<float>(sy) + sx * cn;
 
                     for (int r = 0; r < cn; ++r)
-                        xyD[r] = S[r];
+                        xyD[r] = xyS[r];
                 }
             }
         }
@@ -881,50 +857,56 @@ void CV_Remap_Test::remap_nearest(const Mat& _src, Mat& _dst)
 
 void CV_Remap_Test::remap_generic(const Mat& _src, Mat& _dst)
 {
+    CV_Assert(mapx.type() == CV_16SC2 && mapy.type() == CV_16UC1);
+    
     int ksize = 2;
     if (interpolation == INTER_CUBIC)
         ksize = 4;
     else if (interpolation == INTER_LANCZOS4)
         ksize = 8;
+    else if (interpolation != INTER_LINEAR)
+        assert(0);
     int ofs = (ksize / 2) - 1;
     
     CV_Assert(_src.depth() == CV_32F && _dst.type() == _src.type());
-    CV_Assert(mapx.type() == CV_32FC2);
-
     Size ssize = _src.size(), dsize = _dst.size();
-    int cn = _src.channels(), width1 = std::max(ssize.width - ksize / 2, 0), height1 = std::max(ssize.height - ksize / 2, 0);
+    int cn = _src.channels(), width1 = std::max(ssize.width - ksize + 1, 0),
+        height1 = std::max(ssize.height - ksize + 1, 0);
 
     float ix[8], w[16];
-    interpolate_method inter_func = inter_array[interpolation - (interpolation == INTER_LANCZOS4 ? 2 : 1)];
+    internal::interpolate_method inter_func = internal::inter_array[interpolation - (interpolation == INTER_LANCZOS4 ? 2 : 1)];
 
     for (int dy = 0; dy < dsize.height; ++dy)
     {
-        const float* yM = mapx.ptr<float>(dy);
+        const short* yMx = mapx.ptr<short>(dy);
+        const ushort* yMy = mapy.ptr<ushort>(dy);
+
         float* yD = _dst.ptr<float>(dy);
         
         for (int dx = 0; dx < dsize.width; ++dx)
         {
             float* xyD = yD + dx * cn;
-            float sx = yM[dx * 2], sy = yM[dx * 2 + 1];
+            float sx = yMx[dx * 2], sy = yMx[dx * 2 + 1];
             int isx = cvFloor(sx), isy = cvFloor(sy);
 
-            float fsx = sx - isx, fsy = sy - isy;
-            inter_func(fsx, w);
-            inter_func(fsy, w + ksize);
+            inter_func((yMy[dx] & (INTER_TAB_SIZE - 1)) / static_cast<float>(INTER_TAB_SIZE), w);
+            inter_func(((yMy[dx] >> INTER_BITS) & (INTER_TAB_SIZE - 1)) / static_cast<float>(INTER_TAB_SIZE), w + ksize);
+            
+            isx -= ofs;
+            isy -= ofs;
 
-            if (isx >= ofs && isx < width1 && isy >= ofs && isy < height1)
+            if (isx >= 0 && isx < width1 && isy >= 0 && isy < height1)
             {
                 for (int r = 0; r < cn; ++r)
                 {
                     for (int y = 0; y < ksize; ++y)
                     {
-                        const float* xyS = _src.ptr<float>(isy + y - ofs) + isx * cn;
+                        const float* xyS = _src.ptr<float>(isy + y) + isx * cn;
 
                         ix[y] = 0;
                         for (int i = 0; i < ksize; ++i)
                             ix[y] += w[i] * xyS[i * cn + r];
                     }
-
                     xyD[r] = 0;
                     for (int i = 0; i < ksize; ++i)
                         xyD[r] += w[ksize + i] * ix[i];
@@ -932,70 +914,32 @@ void CV_Remap_Test::remap_generic(const Mat& _src, Mat& _dst)
             }
             else if (borderType != BORDER_TRANSPARENT)
             {
-                if (borderType == BORDER_CONSTANT &&
-                        (isx >= ssize.width || isx + ksize <= 0 ||
-                        isy >= ssize.height || isy + ksize <= 0))
-                    for (int r = 0; r < cn; ++r)
-                        xyD[r] = borderValue[r];
-                else
+                int ar_x[8], ar_y[8];
+                
+                for (int k = 0; k < ksize; k++)
                 {
-                    int ar_x[8], ar_y[8];
-                  
-                    for(int k = 0; k < ksize; k++ )
-                    {
-                        ar_x[k] = borderInterpolate(isx + k - ofs, ssize.width, borderType) * cn;
-                        ar_y[k] = borderInterpolate(isy + k - ofs, ssize.height, borderType);
-                        
-                        CV_Assert(ar_x[k] < ssize.width * cn && ar_y[k] < ssize.height);
-                    }
+                    ar_x[k] = borderInterpolate(isx + k, ssize.width, borderType) * cn;
+                    ar_y[k] = borderInterpolate(isy + k, ssize.height, borderType);
+                }
 
-                    for (int r = 0; r < cn; r++)
+                for (int r = 0; r < cn; r++)
+                {
+                    xyD[r] = 0;
+                    for (int i = 0; i < ksize; ++i)
                     {
-//                         if (interpolation == INTER_LINEAR)
+                        ix[i] = 0;
+                        if (ar_y[i] >= 0)
                         {
-                            xyD[r] = 0;
-                            for (int i = 0; i < ksize; ++i)
-                            {
-                                ix[i] = 0;
-                                if (ar_y[i] >= 0)
-                                {
-                                    const float* yS = _src.ptr<float>(ar_y[i]);
-                                    for (int j = 0; j < ksize; ++j)
-                                        if (ar_x[j] >= 0)
-                                        {
-                                            CV_Assert(ar_x[j] < ssize.width * cn);
-                                            ix[i] += yS[ar_x[j] + r] * w[j];
-                                        }
-                                        else
-                                            ix[i] += borderValue[r] * w[j];
-                                }
-                                else
-                                    for (int j = 0; j < ksize; ++j)
-                                        ix[i] += borderValue[r] * w[j];
-                            }
-                            for (int i = 0; i < ksize; ++i)
-                                xyD[r] += w[ksize + i] * ix[i];
+                            const float* yS = _src.ptr<float>(ar_y[i]);
+                            for (int j = 0; j < ksize; ++j)
+                                ix[i] += saturate_cast<float>((ar_x[j] >= 0 ? yS[ar_x[j] + r] : borderValue[r]) * w[j]);
                         }
-//                         else
-//                         {
-//                             int ONE = 1;
-//                             if (src.elemSize() == 4)
-//                                 ONE <<= 15;
-//                         
-//                             float cv = borderValue[r], sum = cv * ONE;
-//                             for (int i = 0; i < ksize; ++i)
-//                             {
-//                                 int yi = ar_y[i];
-//                                 if (yi < 0)
-//                                     continue;
-//                                 const float* S1 = _src.ptr<float>(ar_y[i]);
-//                                 for (int j = 0; j < ksize; ++j)
-//                                     if( ar_x[j] >= 0 )
-//                                         sum += (S1[ar_x[j] + r] - cv) * w[j];
-//                             }
-//                             xyD[r] = sum;
-//                         }
+                        else
+                            for (int j = 0; j < ksize; ++j)
+                                ix[i] += saturate_cast<float>(borderValue[r] * w[j]);
                     }
+                    for (int i = 0; i < ksize; ++i)
+                        xyD[r] += saturate_cast<float>(w[ksize + i] * ix[i]);
                 }
             }
         }
@@ -1004,78 +948,12 @@ void CV_Remap_Test::remap_generic(const Mat& _src, Mat& _dst)
 
 void CV_Remap_Test::validate_results() const
 {
-    Mat _dst;
-    dst.convertTo(_dst, CV_32F);
-    
-    Size dsize = _dst.size(), ssize = src.size();
-    dsize.width *= _dst.channels();
-
-    CV_Assert(_dst.size() == erode_dst.size() && dilate_dst.size() == _dst.size());
-    CV_Assert(dilate_dst.type() == _dst.type() && _dst.type() == erode_dst.type());
-    
-    for (int y = 0; y < dsize.height; ++y)
+    CV_ImageWarpBaseTest::validate_results();
+    if (cvtest::TS::ptr()->get_err_code() == cvtest::TS::FAIL_BAD_ACCURACY)
     {
-        const float* D = _dst.ptr<float>(y);
-        const float* dD = dilate_dst.ptr<float>(y);
-        const float* eD = erode_dst.ptr<float>(y);
-        dD = eD;
-        
-        float t = 1.0f;
-        for (int x = 0; x < dsize.width; ++x)
-            if ( !(eD[x] - t <= D[x] && D[x] <= dD[x] + t) )
-            {
-                PRINT_TO_LOG("\nnorm(erode_dst, dst): %lf\n", norm(erode_dst, _dst, NORM_INF));
-                PRINT_TO_LOG("norm(dst, dilate_dst): %lf\n", norm(_dst, dilate_dst, NORM_INF));
-                PRINT_TO_LOG("(dx, dy): (%d, %d)\n", x / _dst.channels() + 1, 1 + y);
-                PRINT_TO_LOG("Values = (%f, %f, %f)\n", eD[x], D[x], dD[x]);
-                PRINT_TO_LOG("Interpolation: %s\n",
-                    interpolation_to_string((interpolation | CV_WARP_INVERSE_MAP) ^ CV_WARP_INVERSE_MAP));
-                PRINT_TO_LOG("Ssize: (%d, %d)\n", ssize.width, ssize.height);
-                PRINT_TO_LOG("Dsize: (%d, %d)\n", _dst.cols, dsize.height);
-                PRINT_TO_LOG("BorderType: %s\n", borderType_to_string());
-                PRINT_TO_LOG("BorderValue: (%f, %f, %f, %f)\n",
-                    borderValue[0], borderValue[1], borderValue[2], borderValue[3]);
-                
-#ifdef _SHOW_IMAGE
-                
-                std::string w1("Dst"), w2("Erode dst"), w3("Dilate dst"), w4("Diff erode"), w5("Diff dilate");
-                
-                cv::namedWindow(w1, CV_WINDOW_AUTOSIZE);
-                cv::namedWindow(w2, CV_WINDOW_AUTOSIZE);
-                cv::namedWindow(w3, CV_WINDOW_AUTOSIZE);
-                cv::namedWindow(w4, CV_WINDOW_AUTOSIZE);
-                cv::namedWindow(w5, CV_WINDOW_AUTOSIZE);
-                
-                Mat diff_dilate, diff_erode;
-                absdiff(_dst, erode_dst, diff_erode);
-                absdiff(_dst, dilate_dst, diff_dilate);
-
-                cv::imshow(w1, dst / 255.);
-                cv::imshow(w2, erode_dst / 255.);
-                cv::imshow(w3, dilate_dst / 255.);
-                cv::imshow(w4, erode_dst / 255.);
-                cv::imshow(w5, dilate_dst / 255.);
-
-                cv::waitKey();
-                
-#endif
-                
-                /*
-                 const int radius = 3;
-                 int rmin = MAX(y - radius, 0), rmax = MIN(y + radius, dsize.height);
-                 int cmin = MAX(x - radius, 0), cmax = MIN(x + radius, dsize.width);
-                 
-                 cout << "src:\n" << src(Range(rmin, rmax), Range(cmin, cmax)) << endl;
-                 cout << "opencv result:\n" << dst(Range(rmin, rmax), Range(cmin, cmax)) << endl << std::endl;
-                 cout << "erode src:\n" << erode_src(Range(rmin, rmax), Range(cmin, cmax)) << endl;
-                 cout << "erode result:\n" << dilate_dst(Range(rmin, rmax), Range(cmin, cmax)) << endl << std::endl;
-                 cout << "dilate src:\n" << dilate_src(Range(rmin, rmax), Range(cmin, cmax)) << endl;
-                 cout << "dilate result:\n" << dilate_dst(Range(rmin, rmax), Range(cmin, cmax)) << endl << std::endl;
-                 */
-
-                ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
-                return;
-            }
+        PRINT_TO_LOG("BorderType: %s\n", borderType_to_string());
+        PRINT_TO_LOG("BorderValue: (%f, %f, %f, %f)\n",
+                     borderValue[0], borderValue[1], borderValue[2], borderValue[3]);
     }
 }
 
@@ -1093,6 +971,7 @@ public:
 
 protected:
     virtual void generate_test_data();
+    virtual void prepare_test_data_for_reference_func();
 
     virtual void run_func();
     virtual void run_reference_func();
@@ -1114,14 +993,6 @@ CV_WarpAffine_Test::~CV_WarpAffine_Test()
 void CV_WarpAffine_Test::generate_test_data()
 {
     CV_Remap_Test::generate_test_data();
-    CV_Remap_Test::prepare_test_data_for_reference_func();
-    
-    if (src.depth() != CV_32F)
-    {
-        Mat tmp;
-        src.convertTo(tmp, CV_32F);
-        src = tmp;
-    }
 
     RNG& rng = ts->get_rng();
 
@@ -1149,19 +1020,24 @@ void CV_WarpAffine_Test::run_func()
     cv::warpAffine(src, dst, M, dst.size(), interpolation, borderType, borderValue);
 }
 
+void CV_WarpAffine_Test::prepare_test_data_for_reference_func()
+{
+    CV_ImageWarpBaseTest::prepare_test_data_for_reference_func();
+}
+
 void CV_WarpAffine_Test::run_reference_func()
 {
-    CV_Remap_Test::prepare_test_data_for_reference_func();
+    prepare_test_data_for_reference_func();
 
-    warpAffine(erode_src, erode_dst);
-    warpAffine(dilate_src, dilate_dst);
+    warpAffine(src, reference_dst);
 }
 
 void CV_WarpAffine_Test::warpAffine(const Mat& _src, Mat& _dst)
 {
     Size dsize = _dst.size();
 
-    CV_Assert(_src.size().area() > 0 && dsize.area() > 0);
+    CV_Assert(_src.size().area() > 0);
+    CV_Assert(dsize.area() > 0);
     CV_Assert(_src.type() == _dst.type());
 
     Mat tM;
@@ -1174,6 +1050,8 @@ void CV_WarpAffine_Test::warpAffine(const Mat& _src, Mat& _dst)
     mapx.create(dsize, CV_16SC2);
     if (inter != INTER_NEAREST)
         mapy.create(dsize, CV_16SC1);
+    else
+        mapy = Mat();
         
     if (!(interpolation & CV_WARP_INVERSE_MAP))
         invertAffineTransform(tM.clone(), tM);
@@ -1203,6 +1081,7 @@ void CV_WarpAffine_Test::warpAffine(const Mat& _src, Mat& _dst)
         }
     }
     
+    CV_Assert(mapx.type() == CV_16SC2 && ((inter == INTER_NEAREST && !mapy.data) || mapy.type() == CV_16SC1));
     cv::remap(_src, _dst, mapx, mapy, inter, borderType, borderValue);
 }
 
@@ -1227,7 +1106,7 @@ protected:
 private:
     void warpPerspective(const Mat&, Mat&);
 };
-
+ 
 CV_WarpPerspective_Test::CV_WarpPerspective_Test() :
     CV_WarpAffine_Test()
 {
@@ -1244,11 +1123,12 @@ void CV_WarpPerspective_Test::generate_test_data()
     // generating the M 3x3 matrix
     RNG& rng = ts->get_rng();
 
-    Point2f sp[] = { Point2f(0, 0), Point2f(src.cols, 0), Point2f(0, src.rows), Point2f(src.cols, src.rows) };
-    Point2f dp[] = { Point2f(rng.uniform(0, src.cols), rng.uniform(0, src.rows)),
-        Point2f(rng.uniform(0, src.cols), rng.uniform(0, src.rows)),
-        Point2f(rng.uniform(0, src.cols), rng.uniform(0, src.rows)),
-        Point2f(rng.uniform(0, src.cols), rng.uniform(0, src.rows)) };
+    float cols = static_cast<float>(src.cols), rows = static_cast<float>(src.rows);
+    Point2f sp[] = { Point2f(0.0f, 0.0f), Point2f(cols, 0.0f), Point2f(0.0f, rows), Point2f(cols, rows) };
+    Point2f dp[] = { Point2f(rng.uniform(0.0f, cols), rng.uniform(0.0f, rows)),
+        Point2f(rng.uniform(0.0f, cols), rng.uniform(0.0f, rows)),
+        Point2f(rng.uniform(0.0f, cols), rng.uniform(0.0f, rows)),
+        Point2f(rng.uniform(0.0f, cols), rng.uniform(0.0f, rows)) };
     M = getPerspectiveTransform(sp, dp);
 
     static const int depths[] = { CV_32F, CV_64F };
@@ -1263,17 +1143,17 @@ void CV_WarpPerspective_Test::run_func()
 
 void CV_WarpPerspective_Test::run_reference_func()
 {
-    CV_Remap_Test::prepare_test_data_for_reference_func();
+    prepare_test_data_for_reference_func();
 
-    warpPerspective(erode_src, erode_dst);
-    warpPerspective(dilate_src, dilate_dst);
+    warpPerspective(src, reference_dst);
 }
 
 void CV_WarpPerspective_Test::warpPerspective(const Mat& _src, Mat& _dst)
 {
     Size ssize = _src.size(), dsize = _dst.size();
 
-    CV_Assert(ssize.area() > 0 && dsize.area() > 0);
+    CV_Assert(ssize.area() > 0);
+    CV_Assert(dsize.area() > 0);
     CV_Assert(_src.type() == _dst.type());
 
 	if (M.depth() != CV_64F)
@@ -1297,6 +1177,8 @@ void CV_WarpPerspective_Test::warpPerspective(const Mat& _src, Mat& _dst)
     mapx.create(dsize, CV_16SC2);
     if (inter != INTER_NEAREST)
         mapy.create(dsize, CV_16SC1);
+    else
+        mapy = Mat();
 
     double* tM = M.ptr<double>(0);
     for (int dy = 0; dy < dsize.height; ++dy)
@@ -1326,6 +1208,7 @@ void CV_WarpPerspective_Test::warpPerspective(const Mat& _src, Mat& _dst)
         }
     }
     
+    CV_Assert(mapx.type() == CV_16SC2 && ((inter == INTER_NEAREST && !mapy.data) || mapy.type() == CV_16SC1));
     cv::remap(_src, _dst, mapx, mapy, inter, borderType, borderValue);
 }
 
@@ -1334,6 +1217,6 @@ void CV_WarpPerspective_Test::warpPerspective(const Mat& _src, Mat& _dst)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 TEST(Imgproc_Resize_Test, accuracy) { CV_Resize_Test test; test.safe_run(); }
-// TEST(Imgproc_Remap_Test, accuracy) { CV_Remap_Test test; test.safe_run(); }
+TEST(Imgproc_Remap_Test, accuracy) { CV_Remap_Test test; test.safe_run(); }
 TEST(Imgproc_WarpAffine_Test, accuracy) { CV_WarpAffine_Test test; test.safe_run(); }
 TEST(Imgproc_WarpPerspective_Test, accuracy) { CV_WarpPerspective_Test test; test.safe_run(); }

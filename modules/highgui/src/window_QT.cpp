@@ -2878,8 +2878,7 @@ QSize DefaultViewPort::sizeHint() const
 void DefaultViewPort::draw2D(QPainter *painter)
 {
     image2Draw_qt = QImage(image2Draw_mat->data.ptr, image2Draw_mat->cols, image2Draw_mat->rows,image2Draw_mat->step,QImage::Format_RGB888);
-    image2Draw_qt_resized = image2Draw_qt.scaled(viewport()->width(),viewport()->height(),Qt::IgnoreAspectRatio,Qt::FastTransformation);//Qt::SmoothTransformation);
-    painter->drawImage(0,0,image2Draw_qt_resized);
+    painter->drawImage(QRect(0,0,viewport()->width(),viewport()->height()), image2Draw_qt, QRect(0,0, image2Draw_qt.width(), image2Draw_qt.height()) );
 }
 
 //only if CV_8UC1 or CV_8UC3

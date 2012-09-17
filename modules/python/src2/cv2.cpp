@@ -121,6 +121,7 @@ typedef vector<vector<DMatch> > vector_vector_DMatch;
 typedef Ptr<Algorithm> Ptr_Algorithm;
 typedef Ptr<FeatureDetector> Ptr_FeatureDetector;
 typedef Ptr<DescriptorExtractor> Ptr_DescriptorExtractor;
+typedef Ptr<Feature2D> Ptr_Feature2D;
 typedef Ptr<DescriptorMatcher> Ptr_DescriptorMatcher;
 
 typedef SimpleBlobDetector::Params SimpleBlobDetector_Params;

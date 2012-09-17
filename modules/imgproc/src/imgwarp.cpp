@@ -1825,9 +1825,12 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
             
         // in case of scale_x && scale_y is equal to 2 
         // INTER_AREA (fast) also is equal to INTER_LINEAR
-        if ( interpolation == INTER_LINEAR &&
-            scale_x >= 1 && scale_y >= 1 && is_area_fast)
+        if ( interpolation == INTER_LINEAR && std::abs(scale_x - 2.0) < DBL_EPSILON &&
+            std::abs(scale_y - 2.0) < DBL_EPSILON)
+        {
             interpolation = INTER_AREA;
+            is_area_fast = true;
+        }
 
         // true "area" interpolation is only implemented for the case (scale_x <= 1 && scale_y <= 1).
         // In other cases it is emulated using some variant of bilinear interpolation

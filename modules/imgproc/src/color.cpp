@@ -934,6 +934,11 @@ struct HSV2RGB_f
                     do h -= 6; while( h >= 6 );
                 sector = cvFloor(h);
                 h -= sector;
+                if( (unsigned)sector >= 6u )
+                {
+                    sector = 0;
+                    h = 0.f;
+                }
 
                 tab[0] = v;
                 tab[1] = v*(1.f - s);

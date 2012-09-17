@@ -818,23 +818,23 @@ Performs linear blending of two images.
     :param result: Destination image.
 
     :param stream: Stream for the asynchronous version.
-    
-    
+
+
 gpu::bilateralFilter
--------------------
+--------------------
 Performs bilateral filtering of passed image
 
-.. ocv:function:: void gpu::bilateralFilter(const GpuMat& src, GpuMat& dst, int kernel_size, float sigma_color, float sigma_spatial, int borderMode, Stream& stream = Stream::Null());
-    
+.. ocv:function:: void gpu::bilateralFilter(const GpuMat& src, GpuMat& dst, int kernel_size, float sigma_color, float sigma_spatial, int borderMode, Stream& stream = Stream::Null())
+
     :param src: Source image. Supports only (channles != 2 && depth() != CV_8S && depth() != CV_32S && depth() != CV_64F).
 
     :param dst: Destination imagwe.
 
     :param kernel_size: Kernel window size.
 
-    :param sigma_color: Filter sigma in the color space. 
-    
-    :param sigma_spatial:  Filter sigma in the coordinate space. 
+    :param sigma_color: Filter sigma in the color space.
+
+    :param sigma_spatial:  Filter sigma in the coordinate space.
 
     :param borderMode:  Border type. See :ocv:func:`borderInterpolate` for details. ``BORDER_REFLECT101`` , ``BORDER_REPLICATE`` , ``BORDER_CONSTANT`` , ``BORDER_REFLECT`` and ``BORDER_WRAP`` are supported for now.
 
@@ -843,24 +843,24 @@ Performs bilateral filtering of passed image
 .. seealso::
 
     :ocv:func:`bilateralFilter`,
-    
-    
+
+
 gpu::nonLocalMeans
 -------------------
 Performs pure non local means denoising without any simplification, and thus it is not fast.
 
-.. ocv:function:: void nonLocalMeans(const GpuMat& src, GpuMat& dst, float h, int search_widow_size = 11, int block_size = 7, int borderMode = BORDER_DEFAULT, Stream& s = Stream::Null());
-    
+.. ocv:function:: void nonLocalMeans(const GpuMat& src, GpuMat& dst, float h, int search_widow_size = 11, int block_size = 7, int borderMode = BORDER_DEFAULT, Stream& s = Stream::Null())
+
     :param src: Source image. Supports only CV_8UC1, CV_8UC3.
 
     :param dst: Destination imagwe.
 
-    :param h: Filter sigma regulating filter strength for color. 
-    
+    :param h: Filter sigma regulating filter strength for color.
+
     :param search_widow_size: Size of search window.
 
-    :param block_size: Size of block used for computing weights. 
-        
+    :param block_size: Size of block used for computing weights.
+
     :param borderMode:  Border type. See :ocv:func:`borderInterpolate` for details. ``BORDER_REFLECT101`` , ``BORDER_REPLICATE`` , ``BORDER_CONSTANT`` , ``BORDER_REFLECT`` and ``BORDER_WRAP`` are supported for now.
 
     :param stream: Stream for the asynchronous version.
@@ -868,7 +868,7 @@ Performs pure non local means denoising without any simplification, and thus it 
 .. seealso::
 
     :ocv:func:`fastNlMeansDenoising`
-    
+
 gpu::alphaComp
 -------------------
 Composites two images using alpha opacity values contained in each image.

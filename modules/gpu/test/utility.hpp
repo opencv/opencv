@@ -42,14 +42,6 @@
 #ifndef __OPENCV_TEST_UTILITY_HPP__
 #define __OPENCV_TEST_UTILITY_HPP__
 
-#include <vector>
-#include <string>
-#include "opencv2/core/core.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/gpu/gpu.hpp"
-#include "opencv2/ts/ts.hpp"
-#include "opencv2/ts/ts_perf.hpp"
-
 //////////////////////////////////////////////////////////////////////
 // random generators
 

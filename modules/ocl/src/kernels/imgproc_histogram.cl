@@ -8,6 +8,7 @@
 // @Authors
 //    Niko Li, newlife20080214@gmail.com
 //    Jia Haipeng, jiahaipeng95@gmail.com
+//    Xu Pang, pangxu010@163.com
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
 //
@@ -33,89 +34,127 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //
-#define PARTITAL_HISTGRAM256_COUNT     (256) 
+#define PARTIAL_HISTOGRAM256_COUNT     (256) 
 #define HISTOGRAM256_BIN_COUNT         (256)
 
-#define HISTGRAM256_WORK_GROUP_SIZE     (256)
-#define HISTGRAM256_LOCAL_MEM_SIZE      (HISTOGRAM256_BIN_COUNT)
+#define HISTOGRAM256_WORK_GROUP_SIZE     (256)
+#define HISTOGRAM256_LOCAL_MEM_SIZE      (HISTOGRAM256_BIN_COUNT)
 
-__kernel __attribute__((reqd_work_group_size(256,1,1)))void calc_sub_hist_D0(__global const uchar4* src, 
-							   int src_step, 
-							   int src_offset,
-                               __global int*   buf,
-                               int data_count, 
-							   int cols, 
-							   int inc_x, 
-							   int inc_y,
-							   int dst_offset)
+#define NBANKS (16)
+#define NBANKS_BIT (4)
+
+
+__kernel __attribute__((reqd_work_group_size(HISTOGRAM256_BIN_COUNT,1,1)))void calc_sub_hist_D0(
+                                                                      __global const uint4* src, 
+							              int src_step, int src_offset,
+                                                                      __global int* globalHist,
+                                                                      int dataCount,  int cols, 
+							              int inc_x, int inc_y,
+							              int hist_step)
 {
-    int x  = get_global_id(0);
-    int lx = get_local_id(0);
-    int gx = get_group_id(0);
-    int total_threads = get_global_size(0);
-    src +=  src_offset;
-    __local int s_hist[HISTGRAM256_LOCAL_MEM_SIZE];
-    s_hist[lx] = 0;
-
-    int pos_y = x / cols;
-    int pos_x = x - mul24(pos_y, cols);
-    barrier(CLK_LOCAL_MEM_FENCE);
-    for(int pos = x; pos < data_count; pos += total_threads)
-    {
-        int4 data = convert_int4(src[mad24(pos_y,src_step,pos_x)]);
-        atomic_inc(s_hist + data.x);
-        atomic_inc(s_hist + data.y);
-        atomic_inc(s_hist + data.z);
-        atomic_inc(s_hist + data.w);
-		
-        pos_x +=inc_x;
-        int off = (pos_x >= cols ? -1 : 0);
-        pos_x =  mad24(off,cols,pos_x);
-        pos_y += inc_y - off;
-		
-        //pos_x = pos_x > cols ? pos_x - cols : pos_x;
-        //pos_y = pos_x > cols ? pos_y + 1 : pos_y;
-    }
-    barrier(CLK_LOCAL_MEM_FENCE);
-    buf[ mad24(gx, dst_offset, lx)] = s_hist[lx];
+        __local int subhist[(HISTOGRAM256_BIN_COUNT << NBANKS_BIT)]; // NBINS*NBANKS
+        int gid = get_global_id(0);
+        int lid = get_local_id(0);
+        int gx  = get_group_id(0);
+        int gsize = get_global_size(0);
+        int lsize  = get_local_size(0);
+        const int shift = 8;
+        const int mask = HISTOGRAM256_BIN_COUNT-1;
+        int offset = (lid & (NBANKS-1));// lid % NBANKS
+        uint4 data, temp1, temp2, temp3, temp4;
+        src += src_offset;
+    
+        //clear LDS
+        for(int i=0, idx=lid; i<(NBANKS >> 2); i++, idx += lsize)
+        {
+            subhist[idx] = 0;
+            subhist[idx+=lsize] = 0;
+            subhist[idx+=lsize] = 0;
+            subhist[idx+=lsize] = 0;
+        }
+        barrier(CLK_LOCAL_MEM_FENCE);
+        
+        //read and scatter
+        int y = gid/cols;
+        int x = gid - mul24(y, cols);
+        for(int idx=gid; idx<dataCount; idx+=gsize)
+        {
+              data = src[mad24(y, src_step, x)];
+              temp1 = ((data & mask) << NBANKS_BIT) + offset;
+              data >>= shift;
+              temp2 = ((data & mask) << NBANKS_BIT) + offset;
+              data >>= shift;
+              temp3 = ((data & mask) << NBANKS_BIT) + offset;
+              data >>= shift;
+              temp4 = ((data & mask) << NBANKS_BIT) + offset;
+   
+              atomic_inc(subhist + temp1.x); 
+              atomic_inc(subhist + temp1.y); 
+              atomic_inc(subhist + temp1.z); 
+              atomic_inc(subhist + temp1.w); 
+   
+              atomic_inc(subhist + temp2.x); 
+              atomic_inc(subhist + temp2.y); 
+              atomic_inc(subhist + temp2.z); 
+              atomic_inc(subhist + temp2.w); 
+   
+              atomic_inc(subhist + temp3.x); 
+              atomic_inc(subhist + temp3.y); 
+              atomic_inc(subhist + temp3.z); 
+              atomic_inc(subhist + temp3.w); 
+    
+              atomic_inc(subhist + temp4.x); 
+              atomic_inc(subhist + temp4.y); 
+              atomic_inc(subhist + temp4.z); 
+              atomic_inc(subhist + temp4.w);
+   
+              x += inc_x;
+              int off = ((x>=cols) ? -1 : 0);
+              x = mad24(off, cols, x);
+              y += inc_y - off;
+        }
+        barrier(CLK_LOCAL_MEM_FENCE);
+        
+        //reduce local banks to single histogram per workgroup 
+        int bin1=0, bin2=0, bin3=0, bin4=0;
+        for(int i=0; i<NBANKS; i+=4)
+        {
+             bin1 += subhist[(lid << NBANKS_BIT) + i];
+             bin2 += subhist[(lid << NBANKS_BIT) + i+1];
+             bin3 += subhist[(lid << NBANKS_BIT) + i+2];
+             bin4 += subhist[(lid << NBANKS_BIT) + i+3];
+        }
+   
+        globalHist[mad24(gx, hist_step, lid)] = bin1+bin2+bin3+bin4;
 }
 
-__kernel void __attribute__((reqd_work_group_size(1,256,1)))calc_sub_hist2_D0( __global const uchar* src, 
-				 int src_step, 
-				 int src_offset,
-                 __global int*   buf,
-                 int left_col, 
-				 int cols,
-				 int rows,
-				 int dst_offset)
+__kernel void __attribute__((reqd_work_group_size(1,HISTOGRAM256_BIN_COUNT,1)))calc_sub_hist_border_D0(
+                                                                      __global const uchar* src, 
+				                                      int src_step,  int src_offset,
+                                                                      __global int* globalHist,
+                                                                      int left_col,  int cols,
+				                                      int rows,	 int hist_step)
 {
 	int gidx = get_global_id(0);
 	int gidy = get_global_id(1);
-	int gx = get_group_id(0);
-	int gy = get_group_id(1);
-	int gnum = get_num_groups(0);
-	int output_row = mad24(gy,gnum,gx);
-	//int lidx = get_local_id(0);
-	int lidy = get_local_id(1);
+        int lidy = get_local_id(1);
+        int gx = get_group_id(0);
+        int gy = get_group_id(1);
+        int gn = get_num_groups(0);
+        int rowIndex = mad24(gy, gn, gx);
+        rowIndex &= (PARTIAL_HISTOGRAM256_COUNT - 1);
 
-    __local int s_hist[HISTGRAM256_LOCAL_MEM_SIZE+1];
-    s_hist[lidy] = 0;
-	//mem_fence(CLK_LOCAL_MEM_FENCE);
+        __local int subhist[HISTOGRAM256_BIN_COUNT + 1];
+        subhist[lidy] = 0;
+        barrier(CLK_LOCAL_MEM_FENCE);
 
+        gidx = ((gidx>left_col) ? (gidx+cols) : gidx);
+        int src_index = src_offset + mad24(gidy, src_step, gidx);
+        int p = (int)src[src_index];
+        atomic_inc(subhist + p);
+        barrier(CLK_LOCAL_MEM_FENCE);
 
-	//clamp(gidx,mask,cols-1);
-	gidx = gidx >= left_col ? cols+gidx : gidx;
-	//gidy = gidy >= rows?rows-1:gidy;
-
-	int src_index = src_offset + mad24(gidy,src_step,gidx);	
-	//int dst_index = dst_offset + mad24(gidy,dst_step,gidx);
-	//uchar4 p,q;
-	barrier(CLK_LOCAL_MEM_FENCE);
-	int p = (int)src[src_index];
-	p = gidy >= rows ? HISTGRAM256_LOCAL_MEM_SIZE : p;
-	atomic_inc(s_hist + p);
-    barrier(CLK_LOCAL_MEM_FENCE);
-    buf[ mad24(output_row, dst_offset, lidy)] += s_hist[lidy];
+        globalHist[mad24(rowIndex, hist_step, lidy)] += subhist[lidy];
 }
 __kernel __attribute__((reqd_work_group_size(256,1,1)))void merge_hist(__global int* buf,  
 				__global int* hist,
@@ -126,13 +165,13 @@ __kernel __attribute__((reqd_work_group_size(256,1,1)))void merge_hist(__global 
 
     int sum = 0;
 
-    for(int i = lx; i < PARTITAL_HISTGRAM256_COUNT; i += HISTGRAM256_WORK_GROUP_SIZE)
+    for(int i = lx; i < PARTIAL_HISTOGRAM256_COUNT; i += HISTOGRAM256_WORK_GROUP_SIZE)
         sum += buf[ mad24(i, src_step, gx)];
 
-    __local int data[HISTGRAM256_WORK_GROUP_SIZE];
+    __local int data[HISTOGRAM256_WORK_GROUP_SIZE];
     data[lx] = sum;
 
-    for(int stride = HISTGRAM256_WORK_GROUP_SIZE /2; stride > 0; stride >>= 1)
+    for(int stride = HISTOGRAM256_WORK_GROUP_SIZE /2; stride > 0; stride >>= 1)
     {
         barrier(CLK_LOCAL_MEM_FENCE);
         if(lx < stride)

@@ -34,7 +34,8 @@
 //
 //
 #define F float
-
+#define F2 float2
+#define F4 float4
 __kernel void convert_to_S4_C1_D0(
 		__global const int* restrict srcMat,
 		__global uchar* dstMat,
@@ -56,17 +57,41 @@ __kernel void convert_to_S4_C1_D0(
 		int dst_addr_start = mad24(y,dstStep_in_pixel,dstoffset_in_pixel);
 		int dst_addr_end = mad24(y,dstStep_in_pixel,cols+dstoffset_in_pixel);
 		int dstidx = mad24(y,dstStep_in_pixel,x+ dstoffset_in_pixel & (int)0xfffffffc);
-
-		if ( (x < cols + off_src) & (y < rows) )
+		if(x+3<cols && y<rows && off_src==0)
 		{
-			float4 temp_src = convert_float4(vload4(0,srcMat+srcidx));				
-			uchar4 temp_dst = *(__global uchar4*)(dstMat+dstidx);		
-			//int trans_src[10] = {temp_src1.y,temp_src1.z,temp_src1.w,temp_src.x,temp_src.y,temp_src.z,temp_src.w,temp_src2.x,temp_src2.y,temp_src2.z};		
-			temp_dst.x = (dstidx>=dst_addr_start)&(dstidx<dst_addr_end) ? convert_uchar_sat(temp_src.x*alpha+beta) : temp_dst.x;
-			temp_dst.y = (dstidx+1>=dst_addr_start)&(dstidx+1<dst_addr_end) ? convert_uchar_sat(temp_src.y*alpha+beta) : temp_dst.y;
-			temp_dst.z = (dstidx+2>=dst_addr_start)&(dstidx+2<dst_addr_end) ? convert_uchar_sat(temp_src.z*alpha+beta) : temp_dst.z;
-			temp_dst.w = (dstidx+3>=dst_addr_start)&(dstidx+3<dst_addr_end) ? convert_uchar_sat(temp_src.w*alpha+beta) : temp_dst.w;
-			*(__global uchar4*)(dstMat+dstidx) = temp_dst;
+			float4 temp_src = convert_float4(vload4(0,srcMat+srcidx));
+			*(__global uchar4*)(dstMat+dstidx) = convert_uchar4_sat(temp_src*(F4)alpha+(F4)beta);
+		}
+		else
+		{
+			if(x+3<cols && y<rows)
+			{
+				float4 temp_src = convert_float4(vload4(0,srcMat+srcidx));
+				uchar4 temp_dst = convert_uchar4_sat(temp_src*(F4)alpha+(F4)beta);
+				dstMat[dstidx] = temp_dst.x;
+				dstMat[dstidx+1] = temp_dst.y;
+				dstMat[dstidx+2] = temp_dst.z;
+				dstMat[dstidx+3] = temp_dst.w;
+			}
+			else if(x+2<cols && y<rows)
+			{
+				float4 temp_src = convert_float4(vload4(0,srcMat+srcidx));
+				uchar4 temp_dst = convert_uchar4_sat(temp_src*(F4)alpha+(F4)beta);
+				dstMat[dstidx] = temp_dst.x;
+				dstMat[dstidx+1] = temp_dst.y;
+				dstMat[dstidx+2] = temp_dst.z;			
+			}
+			else if(x+1<cols && y<rows)
+			{
+				float2 temp_src = convert_float2(vload2(0,srcMat+srcidx));
+				uchar2 temp_dst = convert_uchar2_sat(temp_src*(F2)alpha+(F2)beta);
+				dstMat[dstidx] = temp_dst.x;
+				dstMat[dstidx+1] = temp_dst.y;		
+			}	
+			else if(x<cols && y<rows)
+			{
+				dstMat[dstidx] = convert_uchar_sat(convert_float(srcMat[srcidx])*alpha+beta);;	
+			}				
 		}
 }
 
@@ -114,17 +139,41 @@ __kernel void convert_to_S5_C1_D0(
 		int dst_addr_start = mad24(y,dstStep_in_pixel,dstoffset_in_pixel);
 		int dst_addr_end = mad24(y,dstStep_in_pixel,cols+dstoffset_in_pixel);
 		int dstidx = mad24(y,dstStep_in_pixel,x+ dstoffset_in_pixel & (int)0xfffffffc);
-
-		if ( (x < cols + off_src) & (y < rows) )
+		if(x+3<cols && y<rows && off_src==0)
 		{
-			float4 temp_src = vload4(0,srcMat+srcidx);				
-			uchar4 temp_dst = *(__global uchar4*)(dstMat+dstidx);		
-			//int trans_src[10] = {temp_src1.y,temp_src1.z,temp_src1.w,temp_src.x,temp_src.y,temp_src.z,temp_src.w,temp_src2.x,temp_src2.y,temp_src2.z};		
-			temp_dst.x = (dstidx>=dst_addr_start)&(dstidx<dst_addr_end) ? convert_uchar_sat(temp_src.x*alpha+beta) : temp_dst.x;
-			temp_dst.y = (dstidx+1>=dst_addr_start)&(dstidx+1<dst_addr_end) ? convert_uchar_sat(temp_src.y*alpha+beta) : temp_dst.y;
-			temp_dst.z = (dstidx+2>=dst_addr_start)&(dstidx+2<dst_addr_end) ? convert_uchar_sat(temp_src.z*alpha+beta) : temp_dst.z;
-			temp_dst.w = (dstidx+3>=dst_addr_start)&(dstidx+3<dst_addr_end) ? convert_uchar_sat(temp_src.w*alpha+beta) : temp_dst.w;
-			*(__global uchar4*)(dstMat+dstidx) = temp_dst;
+			float4 temp_src = vload4(0,srcMat+srcidx);
+			*(__global uchar4*)(dstMat+dstidx) = convert_uchar4_sat(temp_src*(F4)alpha+(F4)beta);
+		}
+		else
+		{
+			if(x+3<cols && y<rows)
+			{
+				float4 temp_src = vload4(0,srcMat+srcidx);
+				uchar4 temp_dst = convert_uchar4_sat(temp_src*(F4)alpha+(F4)beta);
+				dstMat[dstidx] = temp_dst.x;
+				dstMat[dstidx+1] = temp_dst.y;
+				dstMat[dstidx+2] = temp_dst.z;
+				dstMat[dstidx+3] = temp_dst.w;
+			}
+			else if(x+2<cols && y<rows)
+			{
+				float4 temp_src = vload4(0,srcMat+srcidx);
+				uchar4 temp_dst = convert_uchar4_sat(temp_src*(F4)alpha+(F4)beta);
+				dstMat[dstidx] = temp_dst.x;
+				dstMat[dstidx+1] = temp_dst.y;
+				dstMat[dstidx+2] = temp_dst.z;			
+			}
+			else if(x+1<cols && y<rows)
+			{
+				float2 temp_src = vload2(0,srcMat+srcidx);
+				uchar2 temp_dst = convert_uchar2_sat(temp_src*(F2)alpha+(F2)beta);
+				dstMat[dstidx] = temp_dst.x;
+				dstMat[dstidx+1] = temp_dst.y;		
+			}	
+			else if(x<cols && y<rows)
+			{
+				dstMat[dstidx] = convert_uchar_sat(srcMat[srcidx]*alpha+beta);;	
+			}				
 		}
 }
 __kernel void convert_to_S5_C4_D0(

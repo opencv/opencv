@@ -406,8 +406,6 @@ Calculates the covariance matrix of a set of vectors.
 
     :param ctype: type of the matrixl; it equals 'CV_64F' by default.
 
-    :param cov_mat: output covariance matrix (specific to C syntax).
-
     :param mean: input or output (depending on the flags) array as the average value of the input vectors.
 
     :param vects: a set of vectors.
@@ -544,8 +542,6 @@ Performs the per-element comparison of two arrays or an array and scalar value.
             * **CMP_LT** ``src1`` is less than ``src2``.
             * **CMP_LE** ``src1`` is less than or equal to ``src2``.
             * **CMP_NE** ``src1`` is unequal to ``src2``.
-
-    :param cmp_op: a flag, that specifies correspondence between the arrays (specific to C syntax; for possible values see 'cmpop above).
 
 The function compares:
 
@@ -1004,7 +1000,7 @@ All of the above improvements have been implemented in :ocv:func:`matchTemplate`
 
 
 divide
-----------
+------
 Performs per-element division of two arrays or a scalar by an array.
 
 .. ocv:function:: void divide(InputArray src1, InputArray src2, OutputArray dst, double scale=1, int dtype=-1)
@@ -1164,7 +1160,7 @@ To extract a channel from a new-style matrix, use
 
 
 insertImageCOI
----------------
+--------------
 Copies the selected image channel from a new-style C++ matrix to the old-style C array.
 
 .. ocv:function:: void insertImageCOI( InputArray coiimg, CvArr* arr, int coi=-1 )
@@ -1196,7 +1192,7 @@ To insert a channel to a new-style matrix, use
 
 
 flip
---------
+----
 Flips a 2D array around vertical, horizontal, or both axes.
 
 .. ocv:function:: void flip(InputArray src, OutputArray dst, int flipCode)
@@ -2267,7 +2263,7 @@ The sample below is the function that takes two matrices. The first function sto
 
 
 PCA::PCA
-------------
+--------
 PCA constructors
 
 .. ocv:function:: PCA::PCA()
@@ -2535,7 +2531,7 @@ http://en.wikipedia.org/wiki/Ziggurat_algorithm
 
 
 RNG::RNG
-------------
+--------
 The constructors
 
 .. ocv:function:: RNG::RNG()
@@ -2549,7 +2545,7 @@ These are the RNG constructors. The first form sets the state to some pre-define
 
 
 RNG::next
--------------
+---------
 Returns the next random number.
 
 .. ocv:function:: unsigned RNG::next()
@@ -2583,7 +2579,7 @@ Each of the methods updates the state using the MWC algorithm and returns the ne
 
 
 RNG::operator ()
---------------------
+----------------
 Returns the next random number.
 
 .. ocv:function:: unsigned RNG::operator ()()
@@ -2598,7 +2594,7 @@ The methods transform the state using the MWC algorithm and return the next rand
 
 
 RNG::uniform
-----------------
+------------
 Returns the next random number sampled from the uniform distribution.
 
 .. ocv:function:: int RNG::uniform(int a, int b)
@@ -2637,7 +2633,7 @@ The compiler does not take into account the type of the variable to which you as
 
 
 RNG::gaussian
------------------
+-------------
 Returns the next random number sampled from the Gaussian distribution.
 
 .. ocv:function:: double RNG::gaussian(double sigma)
@@ -2649,7 +2645,7 @@ The method transforms the state using the MWC algorithm and returns the next ran
 
 
 RNG::fill
--------------
+---------
 Fills arrays with random numbers.
 
 .. ocv:function:: void RNG::fill( InputOutputArray mat, int distType, InputArray a, InputArray b, bool saturateRange=false )
@@ -2952,7 +2948,7 @@ If ``DECOMP_LU`` or ``DECOMP_CHOLESKY`` method is used, the function returns 1 i
 
 
 solveCubic
---------------
+----------
 Finds the real roots of a cubic equation.
 
 .. ocv:function:: int solveCubic( InputArray coeffs, OutputArray roots )

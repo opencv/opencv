@@ -109,10 +109,10 @@ __kernel void resizeLN_C1_D0(__global uchar * dst, __global uchar const * restri
     int4 val1, val2, val;
     int4 sdata1, sdata2, sdata3, sdata4;
 
-    int4 pos1 = mad24(y, srcstep_in_pixel, x+srcoffset_in_pixel);
-    int4 pos2 = mad24(y, srcstep_in_pixel, x_+srcoffset_in_pixel);
-    int4 pos3 = mad24(y_, srcstep_in_pixel, x+srcoffset_in_pixel);
-    int4 pos4 = mad24(y_, srcstep_in_pixel, x_+srcoffset_in_pixel);
+    int4 pos1 = mad24((int4)y, (int4)srcstep_in_pixel, x+(int4)srcoffset_in_pixel);
+    int4 pos2 = mad24((int4)y, (int4)srcstep_in_pixel, x_+(int4)srcoffset_in_pixel);
+    int4 pos3 = mad24((int4)y_, (int4)srcstep_in_pixel, x+(int4)srcoffset_in_pixel);
+    int4 pos4 = mad24((int4)y_, (int4)srcstep_in_pixel, x_+(int4)srcoffset_in_pixel);
 
     sdata1.s0 = src[pos1.s0];
     sdata1.s1 = src[pos1.s1];
@@ -136,7 +136,7 @@ __kernel void resizeLN_C1_D0(__global uchar * dst, __global uchar const * restri
 
     val1 = mul24(U1 , sdata1) + mul24(U , sdata2);
     val2 = mul24(U1 , sdata3) + mul24(U , sdata4);
-    val = mul24(V1 , val1) + mul24(V , val2);
+    val = mul24((int4)V1 , val1) + mul24((int4)V , val2);
     
     //__global uchar4* d = (__global uchar4*)(dst + dstoffset_in_pixel + dy * dststep_in_pixel + gx);
     //uchar4 dVal = *d;
@@ -205,8 +205,8 @@ __kernel void resizeLN_C4_D0(__global uchar4 * dst, __global uchar4 * src,
     int4 data1 = convert_int4(src[srcpos.y]);
     int4 data2 = convert_int4(src[srcpos.z]);
     int4 data3 = convert_int4(src[srcpos.w]);
-    int4 val = mul24(mul24(U1, V1) ,  data0) + mul24(mul24(U, V1) ,  data1)
-               +mul24(mul24(U1, V) ,  data2)+mul24(mul24(U, V) ,  data3);
+    int4 val = mul24((int4)mul24(U1, V1) ,  data0) + mul24((int4)mul24(U, V1) ,  data1)
+               +mul24((int4)mul24(U1, V) ,  data2)+mul24((int4)mul24(U, V) ,  data3);
 	int dstpos = mad24(dy, dststep_in_pixel, dx+dstoffset_in_pixel);
     uchar4 uval =   convert_uchar4((val + (1<<(CAST_BITS-1)))>>CAST_BITS);
     if(dx>=0 && dx<dst_cols && dy>=0 && dy<dst_rows)
@@ -314,7 +314,7 @@ __kernel void resizeNN_C1_D0(__global uchar * dst, __global uchar * src,
     sy = min((int)floor(s5), src_rows-1);
     
     uchar4 val;
-    int4 pos = mad24(sy, srcstep_in_pixel, sx+srcoffset_in_pixel);
+    int4 pos = mad24((int4)sy, (int4)srcstep_in_pixel, sx+(int4)srcoffset_in_pixel);
     val.s0 = src[pos.s0];
     val.s1 = src[pos.s1];
     val.s2 = src[pos.s2];

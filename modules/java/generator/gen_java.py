@@ -462,8 +462,10 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1getTextSize
 
         env->SetDoubleArrayRegion(result, 0, 2, fill);
 
-        if (baseLine != NULL)
-            env->SetIntArrayRegion(baseLine, 0, 1, pbaseLine);
+        if (baseLine != NULL) {
+            jint jbaseLine = (jint)(*pbaseLine);
+            env->SetIntArrayRegion(baseLine, 0, 1, &jbaseLine);
+        }
 
         return result;
 
@@ -871,13 +873,17 @@ public class %(jc)s {
 
 #include "converters.h"
 
-#ifdef DEBUG
-#include <android/log.h>
-#define MODULE_LOG_TAG "OpenCV.%(m)s"
-#define LOGD(...) ((void)__android_log_print(ANDROID_LOG_DEBUG, MODULE_LOG_TAG, __VA_ARGS__))
+#if defined DEBUG && defined ANDROID
+#  include <android/log.h>
+#  define MODULE_LOG_TAG "OpenCV.%(m)s"
+#  define LOGD(...) ((void)__android_log_print(ANDROID_LOG_DEBUG, MODULE_LOG_TAG, __VA_ARGS__))
 #else //DEBUG
-#define LOGD(...)
+#  define LOGD(...)
 #endif //DEBUG
+
+#ifdef _MSC_VER
+#  pragma warning(disable:4800 4244)
+#endif
 
 #include "opencv2/%(m)s/%(m)s.hpp"
 
@@ -987,14 +993,14 @@ extern "C" {
             msg = "// Return type '%s' is not supported, skipping the function\n\n" % fi.ctype
             self.skipped_func_list.append(c_decl + "\n" + msg)
             j_code.write( " "*4 + msg )
-            print "SKIP:", c_decl, "\n\tdue to RET type", fi.ctype
+            print "SKIP:", c_decl.strip(), "\t due to RET type", fi.ctype
             return
         for a in fi.args:
             if a.ctype not in type_dict:
                 msg = "// Unknown type '%s' (%s), skipping the function\n\n" % (a.ctype, a.out or "I")
                 self.skipped_func_list.append(c_decl + "\n" + msg)
                 j_code.write( " "*4 + msg )
-                print "SKIP:", c_decl, "\n\tdue to ARG type", a.ctype, "/" + (a.out or "I")
+                print "SKIP:", c_decl.strip(), "\t due to ARG type", a.ctype, "/" + (a.out or "I")
                 return
 
         self.ported_func_list.append(c_decl)

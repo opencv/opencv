@@ -222,7 +222,6 @@ class JavadocGenerator(object):
         return (doc + " */").replace("::",".")
 
     def printSummary(self):
-        print
         print "Javadoc Generator Summary:"
         print "  Total markers:        %s" % self.markers_processed
         print "  Undocumented markers: %s" % (self.markers_processed - self.markers_documented)
@@ -256,7 +255,6 @@ if __name__ == "__main__":
         parser.print_help()
         exit(0)
 
-    print "Parsing documentation..."
     parser = rst_parser.RstParser(hdr_parser.CppHeaderParser())
     for m in options.modules:
         parser.parse(m, os.path.join(selfpath, "../../" + m))
@@ -268,7 +266,6 @@ if __name__ == "__main__":
     generator.show_warnings = options.warnings
     generator.show_errors = options.errors
 
-    print "Generating javadoc comments for " + ", ".join(options.modules)
     for path in args:
         folder = os.path.abspath(path)
         for jfile in [f for f in glob.glob(os.path.join(folder,"*.java")) if not f.endswith("-jdoc.java")]:

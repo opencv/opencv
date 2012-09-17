@@ -54,6 +54,8 @@ IMPLEMENT_PARAM_CLASS(TemplateSize, cv::Size);
 
 const char* TEMPLATE_METHOD_NAMES[6] = {"TM_SQDIFF", "TM_SQDIFF_NORMED", "TM_CCORR", "TM_CCORR_NORMED", "TM_CCOEFF", "TM_CCOEFF_NORMED"};
 
+#define MTEMP_SIZES testing::Values(cv::Size(128, 256), cv::Size(1024, 768))
+
 PARAM_TEST_CASE(MatchTemplate8U, cv::Size, TemplateSize, Channels, TemplateMethod)
 {
     cv::Size size;
@@ -157,7 +159,7 @@ TEST_P(MatchTemplate32F, Accuracy)
 
 INSTANTIATE_TEST_CASE_P(GPU_ImgProc, MatchTemplate8U, 
 	testing::Combine(
-    DIFFERENT_SIZES,
+    MTEMP_SIZES,
     testing::Values(TemplateSize(cv::Size(5, 5)), TemplateSize(cv::Size(16, 16))/*, TemplateSize(cv::Size(30, 30))*/),
     testing::Values(Channels(1), Channels(3),Channels(4)),
 	ALL_TEMPLATE_METHODS
@@ -165,7 +167,7 @@ INSTANTIATE_TEST_CASE_P(GPU_ImgProc, MatchTemplate8U,
 );
 
 INSTANTIATE_TEST_CASE_P(GPU_ImgProc, MatchTemplate32F, testing::Combine(
-    DIFFERENT_SIZES,
+    MTEMP_SIZES,
     testing::Values(TemplateSize(cv::Size(5, 5)), TemplateSize(cv::Size(16, 16))/*, TemplateSize(cv::Size(30, 30))*/),
     testing::Values(Channels(1), Channels(3),Channels(4)),
     testing::Values(TemplateMethod(cv::TM_SQDIFF), TemplateMethod(cv::TM_CCORR))));

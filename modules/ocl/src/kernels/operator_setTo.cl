@@ -40,24 +40,40 @@ __kernel void set_to_without_mask_C1_D0(uchar scalar,__global uchar * dstMat,
 {
 		int x=get_global_id(0)<<2;
 		int y=get_global_id(1);
-		int addr_start = mad24(y,dstStep_in_pixel,offset_in_pixel);
-		int addr_end = mad24(y,dstStep_in_pixel,cols+offset_in_pixel);
-		int idx = mad24(y,dstStep_in_pixel,(int)(x+ offset_in_pixel & (int)0xfffffffc));
+		//int addr_start = mad24(y,dstStep_in_pixel,offset_in_pixel);
+		//int addr_end = mad24(y,dstStep_in_pixel,cols+offset_in_pixel);
+		int idx = mad24(y,dstStep_in_pixel,x+ offset_in_pixel);
 		uchar4 out;
 		out.x = out.y = out.z = out.w = scalar;
 	
-		if ( (idx>=addr_start)&(idx+3 < addr_end) & (y < rows))
+		if ( (x+3 < cols) && (y < rows)&& ((offset_in_pixel&3) == 0))
 		{
 			*(__global uchar4*)(dstMat+idx) = out;
 		}
-		else if(y < rows)
+		else
 		{
-			uchar4 temp = *(__global uchar4*)(dstMat+idx);
-			temp.x = (idx>=addr_start)&(idx < addr_end)? out.x : temp.x;
-			temp.y = (idx+1>=addr_start)&(idx+1 < addr_end)? out.y : temp.y;
-			temp.z = (idx+2>=addr_start)&(idx+2 < addr_end)? out.z : temp.z;
-			temp.w = (idx+3>=addr_start)&(idx+3 < addr_end)? out.w : temp.w;
-			*(__global uchar4*)(dstMat+idx) = temp;
+			 if((x+3 < cols) && (y < rows))
+			 {
+				dstMat[idx] = out.x;
+				dstMat[idx+1] = out.y;
+				dstMat[idx+2] = out.z;
+				dstMat[idx+3] = out.w;
+			 }		
+			 if((x+2 < cols) && (y < rows))
+			 {
+				dstMat[idx] = out.x;
+				dstMat[idx+1] = out.y;
+				dstMat[idx+2] = out.z;
+			 }
+			 else if((x+1 < cols) && (y < rows))
+			 {
+				dstMat[idx] = out.x;
+				dstMat[idx+1] = out.y;
+			 }
+			 else if((x < cols) && (y < rows))
+			 {
+				dstMat[idx] = out.x;
+			 }
 		}
 }
 

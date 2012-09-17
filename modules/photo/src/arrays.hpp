@@ -47,20 +47,20 @@ template <class T> struct Array2d {
     int n1,n2;
     bool needToDeallocArray;
 
-    Array2d(const Array2d& array2d): 
-        a(array2d.a), n1(array2d.n1), n2(array2d.n2), needToDeallocArray(false) 
+    Array2d(const Array2d& array2d):
+        a(array2d.a), n1(array2d.n1), n2(array2d.n2), needToDeallocArray(false)
     {
         if (array2d.needToDeallocArray) {
             // copy constructor for self allocating arrays not supported
             throw new exception();
         }
     }
-  
-    Array2d(T* _a, int _n1, int _n2): 
+
+    Array2d(T* _a, int _n1, int _n2):
         a(_a), n1(_n1), n2(_n2), needToDeallocArray(false) {}
 
-    Array2d(int _n1, int _n2): 
-        n1(_n1), n2(_n2), needToDeallocArray(true) 
+    Array2d(int _n1, int _n2):
+        n1(_n1), n2(_n2), needToDeallocArray(true)
     {
         a = new T[n1*n2];
     }
@@ -74,7 +74,7 @@ template <class T> struct Array2d {
     T* operator [] (int i) {
         return a + i*n2;
     }
-    
+
     inline T* row_ptr(int i) {
         return (*this)[i];
     }
@@ -84,12 +84,12 @@ template <class T> struct Array3d {
     T* a;
     int n1,n2,n3;
     bool needToDeallocArray;
-    
-    Array3d(T* _a, int _n1, int _n2, int _n3): 
+
+    Array3d(T* _a, int _n1, int _n2, int _n3):
         a(_a), n1(_n1), n2(_n2), n3(_n3), needToDeallocArray(false) {}
 
-    Array3d(int _n1, int _n2, int _n3): 
-        n1(_n1), n2(_n2), n3(_n3), needToDeallocArray(true) 
+    Array3d(int _n1, int _n2, int _n3):
+        n1(_n1), n2(_n2), n3(_n3), needToDeallocArray(true)
     {
         a = new T[n1*n2*n3];
     }
@@ -115,25 +115,25 @@ template <class T> struct Array4d {
     int n1,n2,n3,n4;
     bool needToDeallocArray;
     int steps[4];
-    
+
     void init_steps() {
-        steps[0] = n2*n3*n4;   
-        steps[1] = n3*n4;   
-        steps[2] = n4;   
-        steps[3] = 1;  
+        steps[0] = n2*n3*n4;
+        steps[1] = n3*n4;
+        steps[2] = n4;
+        steps[3] = 1;
     }
 
-    Array4d(T* _a, int _n1, int _n2, int _n3, int _n4): 
-        a(_a), n1(_n1), n2(_n2), n3(_n3), n4(_n4), needToDeallocArray(false) 
+    Array4d(T* _a, int _n1, int _n2, int _n3, int _n4):
+        a(_a), n1(_n1), n2(_n2), n3(_n3), n4(_n4), needToDeallocArray(false)
      {
-        init_steps();        
+        init_steps();
      }
 
-    Array4d(int _n1, int _n2, int _n3, int _n4): 
-        n1(_n1), n2(_n2), n3(_n3), n4(_n4), needToDeallocArray(true) 
+    Array4d(int _n1, int _n2, int _n3, int _n4):
+        n1(_n1), n2(_n2), n3(_n3), n4(_n4), needToDeallocArray(true)
     {
-        a = new T[n1*n2*n3*n4];  
-        init_steps();        
+        a = new T[n1*n2*n3*n4];
+        init_steps();
    }
 
     ~Array4d() {

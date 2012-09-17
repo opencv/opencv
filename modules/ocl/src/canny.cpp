@@ -66,7 +66,7 @@ namespace cv
     }
 }
 
-cv::ocl::CannyBuf::CannyBuf(const oclMat& dx_, const oclMat& dy_) : dx(dx_), dy(dy_)
+cv::ocl::CannyBuf::CannyBuf(const oclMat& dx_, const oclMat& dy_) : dx(dx_), dy(dy_), counter(NULL)
 {
     CV_Assert(dx_.type() == CV_32SC1 && dy_.type() == CV_32SC1 && dx_.size() == dy_.size());
 
@@ -102,6 +102,10 @@ void cv::ocl::CannyBuf::create(const Size& image_size, int apperture_size)
 
     float counter_f [1] = { 0 };
     int err = 0;
+    if(counter)
+    {
+        openCLFree(counter);
+    }
     counter = clCreateBuffer( Context::getContext()->impl->clContext, CL_MEM_COPY_HOST_PTR, sizeof(float), counter_f, &err );
     openCLSafeCall(err);
 }
@@ -167,10 +171,10 @@ void cv::ocl::Canny(const oclMat& src, CannyBuf& buf, oclMat& dst, double low_th
         std::swap( low_thresh, high_thresh );
 
     dst.create(src.size(), CV_8U);
-    //dst.setTo(Scalar::all(0));
+    dst.setTo(Scalar::all(0));
 
     buf.create(src.size(), apperture_size);
-    //buf.edgeBuf.setTo(Scalar::all(0));
+    buf.edgeBuf.setTo(Scalar::all(0));
 
     if (apperture_size == 3)
     {
@@ -203,11 +207,11 @@ void cv::ocl::Canny(const oclMat& dx, const oclMat& dy, CannyBuf& buf, oclMat& d
         std::swap( low_thresh, high_thresh);
 
     dst.create(dx.size(), CV_8U);
-    //dst.setTo(Scalar::all(0));
+    dst.setTo(Scalar::all(0));
 
     buf.dx = dx; buf.dy = dy;
     buf.create(dx.size(), -1);
-    //buf.edgeBuf.setTo(Scalar::all(0));
+    buf.edgeBuf.setTo(Scalar::all(0));
     calcMagnitude_gpu(buf.dx, buf.dy, buf.edgeBuf, dx.rows, dx.cols, L2gradient);
 
     CannyCaller(buf, dst, static_cast<float>(low_thresh), static_cast<float>(high_thresh));
@@ -322,15 +326,11 @@ void canny::calcMap_gpu(oclMat& dx, oclMat& dy, oclMat& mag, oclMat& map, int ro
     args.push_back( make_pair( sizeof(cl_int), (void *)&map.step));
     args.push_back( make_pair( sizeof(cl_int), (void *)&map.offset));
 
-#if CALCMAP_FIXED
+
     size_t globalThreads[3] = {cols, rows, 1};
     string kernelName = "calcMap";
     size_t localThreads[3]  = {16, 16, 1};
-#else
-    size_t globalThreads[3] = {cols, rows, 1};
-    string kernelName = "calcMap_2";
-    size_t localThreads[3]  = {256, 1, 1};
-#endif
+
     openCLExecuteKernel(clCxt, &imgproc_canny, kernelName, globalThreads, localThreads, args, -1, -1);
 }
 
@@ -367,7 +367,6 @@ void canny::edgesHysteresisGlobal_gpu(oclMat& map, oclMat& st1, oclMat& st2, voi
 
     while(count > 0)
     {
-        //counter.setTo(0);
         args.clear();
         size_t globalThreads[3] = {std::min(count, 65535u) * 128, DIVUP(count, 65535), 1};
         args.push_back( make_pair( sizeof(cl_mem), (void *)&map.data));

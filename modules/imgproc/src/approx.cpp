@@ -642,13 +642,17 @@ icvApproxPolyDP( CvSeq* src_contour, int header_size,
     new_count = count = dst_contour->total;
     for( i = !is_closed; i < count - !is_closed && new_count > 2; i++ )
     {
-        double dx, dy, dist;
+        double dx, dy, dist, successive_inner_product;
         CV_READ_SEQ_ELEM( end_pt, reader );
 
         dx = end_pt.x - start_pt.x;
         dy = end_pt.y - start_pt.y;
         dist = fabs((pt.x - start_pt.x)*dy - (pt.y - start_pt.y)*dx);
-        if( dist * dist <= 0.5*eps*(dx*dx + dy*dy) && dx != 0 && dy != 0 )
+        successive_inner_product = (pt.x - start_pt.x) * (end_pt.x - pt.x) + 
+            (pt.y - start_pt.y) * (end_pt.y - pt.y);
+
+        if( dist * dist <= 0.5*eps*(dx*dx + dy*dy) && dx != 0 && dy != 0 &&
+            successive_inner_product >= 0 )
         {
             new_count--;
             *((PT*)reader2.ptr) = start_pt = end_pt;

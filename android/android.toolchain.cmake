@@ -250,6 +250,9 @@ set( CMAKE_SYSTEM_NAME Linux )
 # this one not so much
 set( CMAKE_SYSTEM_VERSION 1 )
 
+# rpath makes low sence for Android
+set( CMAKE_SKIP_RPATH TRUE CACHE BOOL "If set, runtime paths are not added when using shared libraries." )
+
 set( ANDROID_SUPPORTED_NDK_VERSIONS ${ANDROID_EXTRA_NDK_VERSIONS} -r8b -r8 -r7c -r7b -r7 -r6b -r6 -r5c -r5b -r5 "" )
 if(NOT DEFINED ANDROID_NDK_SEARCH_PATHS)
  if( CMAKE_HOST_WIN32 )
@@ -471,7 +474,7 @@ elseif( ANDROID_STANDALONE_TOOLCHAIN )
  set( BUILD_WITH_STANDALONE_TOOLCHAIN True )
 else()
  list(GET ANDROID_NDK_SEARCH_PATHS 0 ANDROID_NDK_SEARCH_PATH)
- message( FATAL_ERROR "Could not find neither Android NDK nor Android standalone toolcahin.
+ message( FATAL_ERROR "Could not find neither Android NDK nor Android standalone toolchain.
     You should either set an environment variable:
       export ANDROID_NDK=~/my-android-ndk
     or
@@ -770,6 +773,27 @@ You are strongly recommended to switch to another NDK release.
 " )
 endif()
 
+if( NOT _CMAKE_IN_TRY_COMPILE AND X86 AND ANDROID_STL MATCHES "gnustl" AND ANDROID_NDK_RELEASE STREQUAL "r6" )
+  message( WARNING  "The x86 system header file from NDK r6 has incorrect definition for ptrdiff_t. You are recommended to upgrade to a newer NDK release or manually patch the header:
+See https://android.googlesource.com/platform/development.git f907f4f9d4e56ccc8093df6fee54454b8bcab6c2
+  diff --git a/ndk/platforms/android-9/arch-x86/include/machine/_types.h b/ndk/platforms/android-9/arch-x86/include/machine/_types.h
+  index 5e28c64..65892a1 100644
+  --- a/ndk/platforms/android-9/arch-x86/include/machine/_types.h
+  +++ b/ndk/platforms/android-9/arch-x86/include/machine/_types.h
+  @@ -51,7 +51,11 @@ typedef long int       ssize_t;
+   #endif
+   #ifndef _PTRDIFF_T
+   #define _PTRDIFF_T
+  -typedef long           ptrdiff_t;
+  +#  ifdef __ANDROID__
+  +     typedef int            ptrdiff_t;
+  +#  else
+  +     typedef long           ptrdiff_t;
+  +#  endif
+   #endif
+" )
+endif()
+
 # setup paths and STL for NDK
 if( BUILD_WITH_ANDROID_NDK )
  set( ANDROID_TOOLCHAIN_ROOT "${ANDROID_NDK}/toolchains/${ANDROID_TOOLCHAIN_NAME}/prebuilt/${ANDROID_NDK_HOST_SYSTEM_NAME}" )
@@ -949,20 +973,6 @@ if( APPLE )
  mark_as_advanced( CMAKE_INSTALL_NAME_TOOL )
 endif()
 
-# flags and definitions
-remove_definitions( -DANDROID )
-add_definitions( -DANDROID )
-
-if(ANDROID_SYSROOT MATCHES "[ ;\"]")
- set( ANDROID_CXX_FLAGS "--sysroot=\"${ANDROID_SYSROOT}\"" )
- if( NOT _CMAKE_IN_TRY_COMPILE )
-  # quotes will break try_compile and compiler identification
-  message(WARNING "Your Android system root has non-alphanumeric symbols. It can break compiler features detection and the whole build.")
- endif()
-else()
- set( ANDROID_CXX_FLAGS "--sysroot=${ANDROID_SYSROOT}" )
-endif()
-
 # Force set compilers because standard identification works badly for us
 include( CMakeForceCompiler )
 CMAKE_FORCE_C_COMPILER( "${CMAKE_C_COMPILER}" GNU )
@@ -983,60 +993,54 @@ set( CMAKE_ASM_COMPILER_FORCED TRUE )
 set( CMAKE_COMPILER_IS_GNUASM 1)
 set( CMAKE_ASM_SOURCE_FILE_EXTENSIONS s S asm )
 
-# NDK flags
-if( ARMEABI OR ARMEABI_V7A )
- # NDK also defines -ffunction-sections -funwind-tables but they result in worse OpenCV performance
- set( _CMAKE_CXX_FLAGS "-fPIC -Wno-psabi" )
- set( _CMAKE_C_FLAGS "-fPIC -Wno-psabi" )
- remove_definitions( -D__ARM_ARCH_5__ -D__ARM_ARCH_5T__ -D__ARM_ARCH_5E__ -D__ARM_ARCH_5TE__ )
- add_definitions( -D__ARM_ARCH_5__ -D__ARM_ARCH_5T__ -D__ARM_ARCH_5E__ -D__ARM_ARCH_5TE__ )
- # extra arm-specific flags
- set( ANDROID_CXX_FLAGS "${ANDROID_CXX_FLAGS} -fsigned-char" )
-elseif( X86 )
- set( _CMAKE_CXX_FLAGS "-funwind-tables" )
- set( _CMAKE_C_FLAGS "-funwind-tables" )
-elseif( MIPS )
- set( _CMAKE_CXX_FLAGS "-fpic -Wno-psabi -fno-strict-aliasing -finline-functions -ffunction-sections -funwind-tables -fmessage-length=0 -fno-inline-functions-called-once -fgcse-after-reload -frerun-cse-after-loop -frename-registers" )
- set( _CMAKE_C_FLAGS "-fpic -Wno-psabi -fno-strict-aliasing -finline-functions -ffunction-sections -funwind-tables -fmessage-length=0 -fno-inline-functions-called-once -fgcse-after-reload -frerun-cse-after-loop -frename-registers" )
- set( ANDROID_CXX_FLAGS "${ANDROID_CXX_FLAGS} -fsigned-char" )
+# flags and definitions
+remove_definitions( -DANDROID )
+add_definitions( -DANDROID )
+
+if(ANDROID_SYSROOT MATCHES "[ ;\"]")
+ set( ANDROID_CXX_FLAGS "--sysroot=\"${ANDROID_SYSROOT}\"" )
+ if( NOT _CMAKE_IN_TRY_COMPILE )
+  # quotes will break try_compile and compiler identification
+  message(WARNING "Your Android system root has non-alphanumeric symbols. It can break compiler features detection and the whole build.")
+ endif()
 else()
- set( _CMAKE_CXX_FLAGS "" )
- set( _CMAKE_C_FLAGS "" )
+ set( ANDROID_CXX_FLAGS "--sysroot=${ANDROID_SYSROOT}" )
 endif()
 
-# release and debug flags
+# NDK flags
 if( ARMEABI OR ARMEABI_V7A )
+ set( ANDROID_CXX_FLAGS "${ANDROID_CXX_FLAGS} -fpic -D__ARM_ARCH_5__ -D__ARM_ARCH_5T__ -D__ARM_ARCH_5E__ -D__ARM_ARCH_5TE__" )
  if( NOT ANDROID_FORCE_ARM_BUILD AND NOT ARMEABI_V6 )
   # It is recommended to use the -mthumb compiler flag to force the generation
   # of 16-bit Thumb-1 instructions (the default being 32-bit ARM ones).
-  # O3 instead of O2/Os in release mode - like cmake sets for desktop gcc
-  set( _CMAKE_CXX_FLAGS_RELEASE "-mthumb -O3" )
-  set( _CMAKE_C_FLAGS_RELEASE   "-mthumb -O3" )
-  set( _CMAKE_CXX_FLAGS_DEBUG "-marm -Os -finline-limit=64" )
-  set( _CMAKE_C_FLAGS_DEBUG   "-marm -Os -finline-limit=64" )
+  set( ANDROID_CXX_FLAGS_RELEASE "-mthumb" )
+  set( ANDROID_CXX_FLAGS_DEBUG   "-marm -finline-limit=64" )
  else()
   # always compile ARMEABI_V6 in arm mode; otherwise there is no difference from ARMEABI
   # O3 instead of O2/Os in release mode - like cmake sets for desktop gcc
-  set( _CMAKE_CXX_FLAGS_RELEASE "-marm -O3 -fstrict-aliasing" )
-  set( _CMAKE_C_FLAGS_RELEASE   "-marm -O3 -fstrict-aliasing" )
-  set( _CMAKE_CXX_FLAGS_DEBUG "-marm -O0 -finline-limit=300" )
-  set( _CMAKE_C_FLAGS_DEBUG   "-marm -O0 -finline-limit=300" )
+  set( ANDROID_CXX_FLAGS_RELEASE "-marm" )
+  set( ANDROID_CXX_FLAGS_DEBUG   "-marm -finline-limit=300" )
  endif()
 elseif( X86 )
- set( _CMAKE_CXX_FLAGS_RELEASE "-O3 -fstrict-aliasing" )
- set( _CMAKE_C_FLAGS_RELEASE   "-O3 -fstrict-aliasing" )
- set( _CMAKE_CXX_FLAGS_DEBUG "-O0 -finline-limit=300" )
- set( _CMAKE_C_FLAGS_DEBUG   "-O0 -finline-limit=300" )
+ set( ANDROID_CXX_FLAGS         "${ANDROID_CXX_FLAGS} -funwind-tables" )
+ set( ANDROID_CXX_FLAGS_RELEASE "" )
+ set( ANDROID_CXX_FLAGS_DEBUG   "-finline-limit=300" )
 elseif( MIPS )
- set( _CMAKE_CXX_FLAGS_RELEASE "-O3 -funswitch-loops -finline-limit=300" )
- set( _CMAKE_C_FLAGS_RELEASE   "-O3 -funswitch-loops -finline-limit=300" )
- set( _CMAKE_CXX_FLAGS_DEBUG "-O0 -g" )
- set( _CMAKE_C_FLAGS_DEBUG   "-O0 -g" )
+ set( ANDROID_CXX_FLAGS         "${ANDROID_CXX_FLAGS} -fpic -funwind-tables -fmessage-length=0 -fno-inline-functions-called-once -frename-registers" )
+ set( ANDROID_CXX_FLAGS_RELEASE "-finline-limit=300 -fno-strict-aliasing" )
+ set( ANDROID_CXX_FLAGS_DEBUG   "-finline-functions -fgcse-after-reload -frerun-cse-after-loop" )
+elseif()
+ set( ANDROID_CXX_FLAGS_RELEASE "" )
+ set( ANDROID_CXX_FLAGS_DEBUG   "" )
 endif()
-set( _CMAKE_CXX_FLAGS_RELEASE "${_CMAKE_CXX_FLAGS_RELEASE} -fomit-frame-pointer -DNDEBUG" )
-set( _CMAKE_C_FLAGS_RELEASE   "${_CMAKE_C_FLAGS_RELEASE}   -fomit-frame-pointer -DNDEBUG" )
-set( _CMAKE_CXX_FLAGS_DEBUG "${_CMAKE_CXX_FLAGS_DEBUG} -fno-strict-aliasing -fno-omit-frame-pointer -DDEBUG -D_DEBUG" )
-set( _CMAKE_C_FLAGS_DEBUG   "${_CMAKE_C_FLAGS_DEBUG}   -fno-strict-aliasing -fno-omit-frame-pointer -DDEBUG -D_DEBUG" )
+
+if( NOT X86 )
+ set( ANDROID_CXX_FLAGS         "-Wno-psabi ${ANDROID_CXX_FLAGS}" )
+endif()
+
+set( ANDROID_CXX_FLAGS "${ANDROID_CXX_FLAGS} -fsigned-char" ) # good/necessary when porting desktop libraries
+set( ANDROID_CXX_FLAGS_RELEASE "${ANDROID_CXX_FLAGS_RELEASE} -fomit-frame-pointer" )
+set( ANDROID_CXX_FLAGS_DEBUG   "${ANDROID_CXX_FLAGS_DEBUG} -fno-strict-aliasing -fno-omit-frame-pointer" )
 
 # ABI-specific flags
 if( ARMEABI_V7A )
@@ -1052,134 +1056,156 @@ elseif( ARMEABI_V6 )
  set( ANDROID_CXX_FLAGS "${ANDROID_CXX_FLAGS} -march=armv6 -mfloat-abi=softfp -mfpu=vfp" )
 elseif( ARMEABI )
  set( ANDROID_CXX_FLAGS "${ANDROID_CXX_FLAGS} -march=armv5te -mtune=xscale -msoft-float" )
-elseif( X86 )
- set( ANDROID_CXX_FLAGS "${ANDROID_CXX_FLAGS}" )#sse?
 endif()
 
 # STL
-if( 0 AND EXISTS "${__libstl}" OR EXISTS "${__libsupcxx}" )
- # use gcc as a C++ linker to avoid automatic picking of libsdtc++
- set( CMAKE_CXX_CREATE_SHARED_LIBRARY "<CMAKE_C_COMPILER> <CMAKE_SHARED_LIBRARY_CXX_FLAGS> <LANGUAGE_COMPILE_FLAGS> <LINK_FLAGS> <CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS> <CMAKE_SHARED_LIBRARY_SONAME_CXX_FLAG><TARGET_SONAME> -o <TARGET> <OBJECTS> <LINK_LIBRARIES>")
- set( CMAKE_CXX_CREATE_SHARED_MODULE  "<CMAKE_C_COMPILER> <CMAKE_SHARED_LIBRARY_CXX_FLAGS> <LANGUAGE_COMPILE_FLAGS> <LINK_FLAGS> <CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS> <CMAKE_SHARED_LIBRARY_SONAME_CXX_FLAG><TARGET_SONAME> -o <TARGET> <OBJECTS> <LINK_LIBRARIES>")
- set( CMAKE_CXX_LINK_EXECUTABLE       "<CMAKE_C_COMPILER> <FLAGS> <CMAKE_CXX_LINK_FLAGS> <LINK_FLAGS> <OBJECTS> -o <TARGET> <LINK_LIBRARIES>" )
+if( EXISTS "${__libstl}" OR EXISTS "${__libsupcxx}" )
+ if( ANDROID_STL MATCHES "gnustl" )
+  set( CMAKE_CXX_CREATE_SHARED_LIBRARY "<CMAKE_C_COMPILER> <CMAKE_SHARED_LIBRARY_CXX_FLAGS> <LANGUAGE_COMPILE_FLAGS> <LINK_FLAGS> <CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS> <CMAKE_SHARED_LIBRARY_SONAME_CXX_FLAG><TARGET_SONAME> -o <TARGET> <OBJECTS> <LINK_LIBRARIES>" )
+  set( CMAKE_CXX_CREATE_SHARED_MODULE  "<CMAKE_C_COMPILER> <CMAKE_SHARED_LIBRARY_CXX_FLAGS> <LANGUAGE_COMPILE_FLAGS> <LINK_FLAGS> <CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS> <CMAKE_SHARED_LIBRARY_SONAME_CXX_FLAG><TARGET_SONAME> -o <TARGET> <OBJECTS> <LINK_LIBRARIES>" )
+  set( CMAKE_CXX_LINK_EXECUTABLE       "<CMAKE_C_COMPILER> <FLAGS> <CMAKE_CXX_LINK_FLAGS> <LINK_FLAGS> <OBJECTS> -o <TARGET> <LINK_LIBRARIES>" )
+ else()
+  set( CMAKE_CXX_CREATE_SHARED_LIBRARY "<CMAKE_CXX_COMPILER> <CMAKE_SHARED_LIBRARY_CXX_FLAGS> <LANGUAGE_COMPILE_FLAGS> <LINK_FLAGS> <CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS> <CMAKE_SHARED_LIBRARY_SONAME_CXX_FLAG><TARGET_SONAME> -o <TARGET> <OBJECTS> <LINK_LIBRARIES>" )
+  set( CMAKE_CXX_CREATE_SHARED_MODULE  "<CMAKE_CXX_COMPILER> <CMAKE_SHARED_LIBRARY_CXX_FLAGS> <LANGUAGE_COMPILE_FLAGS> <LINK_FLAGS> <CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS> <CMAKE_SHARED_LIBRARY_SONAME_CXX_FLAG><TARGET_SONAME> -o <TARGET> <OBJECTS> <LINK_LIBRARIES>" )
+  set( CMAKE_CXX_LINK_EXECUTABLE       "<CMAKE_CXX_COMPILER> <FLAGS> <CMAKE_CXX_LINK_FLAGS> <LINK_FLAGS> <OBJECTS> -o <TARGET> <LINK_LIBRARIES>" )
+ endif()
+ if ( X86 AND ANDROID_STL MATCHES "gnustl" AND ANDROID_NDK_RELEASE STREQUAL "r6" )
+  # workaround "undefined reference to `__dso_handle'" problem
+  set( CMAKE_CXX_CREATE_SHARED_LIBRARY "${CMAKE_CXX_CREATE_SHARED_LIBRARY} \"${ANDROID_SYSROOT}/usr/lib/crtbegin_so.o\"" )
+  set( CMAKE_CXX_CREATE_SHARED_MODULE  "${CMAKE_CXX_CREATE_SHARED_MODULE} \"${ANDROID_SYSROOT}/usr/lib/crtbegin_so.o\"" )
+ endif()
  if( EXISTS "${__libstl}" )
-  set( CMAKE_CXX_CREATE_SHARED_LIBRARY "${CMAKE_CXX_CREATE_SHARED_LIBRARY} \"${__libstl}\"")
-  set( CMAKE_CXX_CREATE_SHARED_MODULE  "${CMAKE_CXX_CREATE_SHARED_MODULE} \"${__libstl}\"")
-  set( CMAKE_CXX_LINK_EXECUTABLE       "${CMAKE_CXX_LINK_EXECUTABLE} \"${__libstl}\"")
+  set( CMAKE_CXX_CREATE_SHARED_LIBRARY "${CMAKE_CXX_CREATE_SHARED_LIBRARY} \"${__libstl}\"" )
+  set( CMAKE_CXX_CREATE_SHARED_MODULE  "${CMAKE_CXX_CREATE_SHARED_MODULE} \"${__libstl}\"" )
+  set( CMAKE_CXX_LINK_EXECUTABLE       "${CMAKE_CXX_LINK_EXECUTABLE} \"${__libstl}\"" )
  endif()
  if( EXISTS "${__libsupcxx}" )
-  set( CMAKE_CXX_CREATE_SHARED_LIBRARY "${CMAKE_CXX_CREATE_SHARED_LIBRARY} \"${__libsupcxx}\"")
-  set( CMAKE_CXX_CREATE_SHARED_MODULE  "${CMAKE_CXX_CREATE_SHARED_MODULE} \"${__libsupcxx}\"")
-  set( CMAKE_CXX_LINK_EXECUTABLE       "${CMAKE_CXX_LINK_EXECUTABLE} \"${__libsupcxx}\"")
+  set( CMAKE_CXX_CREATE_SHARED_LIBRARY "${CMAKE_CXX_CREATE_SHARED_LIBRARY} \"${__libsupcxx}\"" )
+  set( CMAKE_CXX_CREATE_SHARED_MODULE  "${CMAKE_CXX_CREATE_SHARED_MODULE} \"${__libsupcxx}\"" )
+  set( CMAKE_CXX_LINK_EXECUTABLE       "${CMAKE_CXX_LINK_EXECUTABLE} \"${__libsupcxx}\"" )
   # C objects:
   set( CMAKE_C_CREATE_SHARED_LIBRARY "<CMAKE_C_COMPILER> <CMAKE_SHARED_LIBRARY_C_FLAGS> <LANGUAGE_COMPILE_FLAGS> <LINK_FLAGS> <CMAKE_SHARED_LIBRARY_CREATE_C_FLAGS> <CMAKE_SHARED_LIBRARY_SONAME_C_FLAG><TARGET_SONAME> -o <TARGET> <OBJECTS> <LINK_LIBRARIES>" )
   set( CMAKE_C_CREATE_SHARED_MODULE  "<CMAKE_C_COMPILER> <CMAKE_SHARED_LIBRARY_C_FLAGS> <LANGUAGE_COMPILE_FLAGS> <LINK_FLAGS> <CMAKE_SHARED_LIBRARY_CREATE_C_FLAGS> <CMAKE_SHARED_LIBRARY_SONAME_C_FLAG><TARGET_SONAME> -o <TARGET> <OBJECTS> <LINK_LIBRARIES>" )
   set( CMAKE_C_LINK_EXECUTABLE       "<CMAKE_C_COMPILER> <FLAGS> <CMAKE_C_LINK_FLAGS> <LINK_FLAGS> <OBJECTS> -o <TARGET> <LINK_LIBRARIES>" )
-  set( CMAKE_C_CREATE_SHARED_LIBRARY "${CMAKE_C_CREATE_SHARED_LIBRARY} \"${__libsupcxx}\"")
-  set( CMAKE_C_CREATE_SHARED_MODULE  "${CMAKE_C_CREATE_SHARED_MODULE} \"${__libsupcxx}\"")
-  set( CMAKE_C_LINK_EXECUTABLE       "${CMAKE_C_LINK_EXECUTABLE} \"${__libsupcxx}\"")
+  set( CMAKE_C_CREATE_SHARED_LIBRARY "${CMAKE_C_CREATE_SHARED_LIBRARY} \"${__libsupcxx}\"" )
+  set( CMAKE_C_CREATE_SHARED_MODULE  "${CMAKE_C_CREATE_SHARED_MODULE} \"${__libsupcxx}\"" )
+  set( CMAKE_C_LINK_EXECUTABLE       "${CMAKE_C_LINK_EXECUTABLE} \"${__libsupcxx}\"" )
  endif()
 endif()
+
+# variables controlling optional build flags
+if (ANDROID_NDK_RELEASE STRLESS "r7")
+ # libGLESv2.so in NDK's prior to r7 refers to missing external symbols.
+ # So this flag option is required for all projects using OpenGL from native.
+ __INIT_VARIABLE( ANDROID_SO_UNDEFINED                      VALUES ON )
+else()
+ __INIT_VARIABLE( ANDROID_SO_UNDEFINED                      VALUES OFF )
+endif()
+__INIT_VARIABLE( ANDROID_NO_UNDEFINED OBSOLETE_NO_UNDEFINED VALUES ON )
+__INIT_VARIABLE( ANDROID_FUNCTION_LEVEL_LINKING             VALUES ON )
+__INIT_VARIABLE( ANDROID_GOLD_LINKER                        VALUES ON )
+__INIT_VARIABLE( ANDROID_NOEXECSTACK                        VALUES ON )
+__INIT_VARIABLE( ANDROID_RELRO                              VALUES ON )
+
+set( ANDROID_NO_UNDEFINED           ${ANDROID_NO_UNDEFINED}           CACHE BOOL "Show all undefined symbols as linker errors" )
+set( ANDROID_SO_UNDEFINED           ${ANDROID_SO_UNDEFINED}           CACHE BOOL "Allows or disallows undefined symbols in shared libraries" )
+set( ANDROID_FUNCTION_LEVEL_LINKING ${ANDROID_FUNCTION_LEVEL_LINKING} CACHE BOOL "Allows or disallows undefined symbols in shared libraries" )
+set( ANDROID_GOLD_LINKER            ${ANDROID_GOLD_LINKER}            CACHE BOOL "Enables gold linker (only avaialble for NDK r8b for ARM and x86 architectures on linux-86 and darwin-x86 hosts)" )
+set( ANDROID_NOEXECSTACK            ${ANDROID_NOEXECSTACK}            CACHE BOOL "Allows or disallows undefined symbols in shared libraries" )
+set( ANDROID_RELRO                  ${ANDROID_RELRO}                  CACHE BOOL "Enables RELRO - a memory corruption mitigation technique" )
+mark_as_advanced( ANDROID_NO_UNDEFINED ANDROID_SO_UNDEFINED ANDROID_FUNCTION_LEVEL_LINKING ANDROID_GOLD_LINKER ANDROID_NOEXECSTACK ANDROID_RELRO )
 
 # linker flags
 set( ANDROID_LINKER_FLAGS "" )
 
-__INIT_VARIABLE( ANDROID_NO_UNDEFINED OBSOLETE_NO_UNDEFINED VALUES ON )
-set( ANDROID_NO_UNDEFINED ${ANDROID_NO_UNDEFINED} CACHE BOOL "Show all undefined symbols as linker errors" FORCE )
-mark_as_advanced( ANDROID_NO_UNDEFINED )
+if( ARMEABI_V7A )
+ # this is *required* to use the following linker flags that routes around
+ # a CPU bug in some Cortex-A8 implementations:
+ set( ANDROID_LINKER_FLAGS "${ANDROID_LINKER_FLAGS} -Wl,--fix-cortex-a8" )
+endif()
+
 if( ANDROID_NO_UNDEFINED )
- set( ANDROID_LINKER_FLAGS "-Wl,--no-undefined ${ANDROID_LINKER_FLAGS}" )
+ set( ANDROID_LINKER_FLAGS "${ANDROID_LINKER_FLAGS} -Wl,--no-undefined" )
 endif()
 
-if (ANDROID_NDK_RELEASE STRLESS "r7")
- # libGLESv2.so in NDK's prior to r7 refers to missing external symbols.
- # So this flag option is required for all projects using OpenGL from native.
- __INIT_VARIABLE( ANDROID_SO_UNDEFINED VALUES ON )
-else()
- __INIT_VARIABLE( ANDROID_SO_UNDEFINED VALUES OFF )
-endif()
-
-set( ANDROID_SO_UNDEFINED ${ANDROID_SO_UNDEFINED} CACHE BOOL "Allows or disallows undefined symbols in shared libraries" FORCE )
-mark_as_advanced( ANDROID_SO_UNDEFINED )
 if( ANDROID_SO_UNDEFINED )
  set( ANDROID_LINKER_FLAGS "${ANDROID_LINKER_FLAGS} -Wl,-allow-shlib-undefined" )
 endif()
 
-__INIT_VARIABLE( ANDROID_FUNCTION_LEVEL_LINKING VALUES ON )
-set( ANDROID_FUNCTION_LEVEL_LINKING ${ANDROID_FUNCTION_LEVEL_LINKING} CACHE BOOL "Allows or disallows undefined symbols in shared libraries" FORCE )
-mark_as_advanced( ANDROID_FUNCTION_LEVEL_LINKING )
 if( ANDROID_FUNCTION_LEVEL_LINKING )
- set( ANDROID_CXX_FLAGS "${ANDROID_CXX_FLAGS} -fdata-sections -ffunction-sections" )
- set( ANDROID_LINKER_FLAGS "-Wl,--gc-sections ${ANDROID_LINKER_FLAGS}" )
+ set( ANDROID_CXX_FLAGS    "${ANDROID_CXX_FLAGS} -fdata-sections -ffunction-sections" )
+ set( ANDROID_LINKER_FLAGS "${ANDROID_LINKER_FLAGS} -Wl,--gc-sections" )
 endif()
 
-if( ARMEABI_V7A )
- # this is *required* to use the following linker flags that routes around
- # a CPU bug in some Cortex-A8 implementations:
- set( ANDROID_LINKER_FLAGS "-Wl,--fix-cortex-a8 ${ANDROID_LINKER_FLAGS}" )
+if( ANDROID_GOLD_LINKER AND CMAKE_HOST_UNIX AND (ARMEABI OR ARMEABI_V7A OR X86) AND ANDROID_COMPILER_VERSION VERSION_EQUAL "4.6" )
+ set( ANDROID_LINKER_FLAGS "${ANDROID_LINKER_FLAGS} -fuse-ld=gold" )
+elseif( ANDROID_NDK_RELEASE STREQUAL "r8b" AND ARMEABI AND ANDROID_COMPILER_VERSION VERSION_EQUAL "4.6" AND NOT _CMAKE_IN_TRY_COMPILE )
+ message( WARNING "The default bfd linker from arm GCC 4.6 toolchain can fail with 'unresolvable R_ARM_THM_CALL relocation' error message. See https://code.google.com/p/android/issues/detail?id=35342
+  On Linux and OS X host platform you can workaround this problem using gold linker (default).
+  Rerun cmake with -DANDROID_GOLD_LINKER=ON option.
+" )
 endif()
 
-if( CMAKE_HOST_UNIX AND ANDROID_COMPILER_VERSION VERSION_EQUAL "4.6" AND (ARMEABI_V7A OR X86) )
- __INIT_VARIABLE( ANDROID_USE_GOLD_LINKER VALUES ON )
- set( ANDROID_USE_GOLD_LINKER ${ANDROID_USE_GOLD_LINKER} CACHE BOOL "Enables gold linker" FORCE )
- mark_as_advanced( ANDROID_USE_GOLD_LINKER )
- if( ANDROID_USE_GOLD_LINKER )
-  set( ANDROID_LINKER_FLAGS "${ANDROID_LINKER_FLAGS} -fuse-ld=gold" )
- endif()
+if( ANDROID_NOEXECSTACK )
+ set( ANDROID_CXX_FLAGS    "${ANDROID_CXX_FLAGS} -Wa,--noexecstack" )
+ set( ANDROID_LINKER_FLAGS "${ANDROID_LINKER_FLAGS} -Wl,-z,noexecstack" )
+endif()
+
+if( ANDROID_RELRO )
+ set( ANDROID_LINKER_FLAGS "${ANDROID_LINKER_FLAGS} -Wl,-z,relro -Wl,-z,now" )
 endif()
 
 # cache flags
-set( CMAKE_CXX_FLAGS "${_CMAKE_CXX_FLAGS}" CACHE STRING "c++ flags" )
-set( CMAKE_C_FLAGS "${_CMAKE_C_FLAGS}" CACHE STRING "c flags" )
-set( CMAKE_CXX_FLAGS_RELEASE "${_CMAKE_CXX_FLAGS_RELEASE}" CACHE STRING "c++ Release flags" )
-set( CMAKE_C_FLAGS_RELEASE "${_CMAKE_C_FLAGS_RELEASE}" CACHE STRING "c Release flags" )
-set( CMAKE_CXX_FLAGS_DEBUG "${_CMAKE_CXX_FLAGS_DEBUG}" CACHE STRING "c++ Debug flags" )
-set( CMAKE_C_FLAGS_DEBUG "${_CMAKE_C_FLAGS_DEBUG}" CACHE STRING "c Debug flags" )
-set( CMAKE_SHARED_LINKER_FLAGS "" CACHE STRING "linker flags" )
-set( CMAKE_MODULE_LINKER_FLAGS "" CACHE STRING "linker flags" )
-set( CMAKE_EXE_LINKER_FLAGS "-Wl,-z,nocopyreloc" CACHE STRING "linker flags" )
+set( CMAKE_CXX_FLAGS           ""                        CACHE STRING "c++ flags" )
+set( CMAKE_C_FLAGS             ""                        CACHE STRING "c flags" )
+set( CMAKE_CXX_FLAGS_RELEASE   "-O3 -DNDEBUG"            CACHE STRING "c++ Release flags" )
+set( CMAKE_C_FLAGS_RELEASE     "-O3 -DNDEBUG"            CACHE STRING "c Release flags" )
+set( CMAKE_CXX_FLAGS_DEBUG     "-O0 -g -DDEBUG -D_DEBUG" CACHE STRING "c++ Debug flags" )
+set( CMAKE_C_FLAGS_DEBUG       "-O0 -g -DDEBUG -D_DEBUG" CACHE STRING "c Debug flags" )
+set( CMAKE_SHARED_LINKER_FLAGS ""                        CACHE STRING "shared linker flags" )
+set( CMAKE_MODULE_LINKER_FLAGS ""                        CACHE STRING "module linker flags" )
+set( CMAKE_EXE_LINKER_FLAGS    "-Wl,-z,nocopyreloc"      CACHE STRING "executable linker flags" )
 
 # finish flags
-set( ANDROID_CXX_FLAGS    "${ANDROID_CXX_FLAGS}"    CACHE INTERNAL "Extra Android compiler flags" )
-set( ANDROID_LINKER_FLAGS "${ANDROID_LINKER_FLAGS}" CACHE INTERNAL "Extra Android linker flags" )
 set( CMAKE_CXX_FLAGS           "${ANDROID_CXX_FLAGS} ${CMAKE_CXX_FLAGS}" )
 set( CMAKE_C_FLAGS             "${ANDROID_CXX_FLAGS} ${CMAKE_C_FLAGS}" )
+set( CMAKE_CXX_FLAGS_RELEASE   "${ANDROID_CXX_FLAGS_RELEASE} ${CMAKE_CXX_FLAGS_RELEASE}" )
+set( CMAKE_C_FLAGS_RELEASE     "${ANDROID_CXX_FLAGS_RELEASE} ${CMAKE_C_FLAGS_RELEASE}" )
+set( CMAKE_CXX_FLAGS_DEBUG     "${ANDROID_CXX_FLAGS_DEBUG} ${CMAKE_CXX_FLAGS_DEBUG}" )
+set( CMAKE_C_FLAGS_DEBUG       "${ANDROID_CXX_FLAGS_DEBUG} ${CMAKE_C_FLAGS_DEBUG}" )
+set( CMAKE_SHARED_LINKER_FLAGS "${ANDROID_LINKER_FLAGS} ${CMAKE_SHARED_LINKER_FLAGS}" )
+set( CMAKE_MODULE_LINKER_FLAGS "${ANDROID_LINKER_FLAGS} ${CMAKE_MODULE_LINKER_FLAGS}" )
+set( CMAKE_EXE_LINKER_FLAGS    "${ANDROID_LINKER_FLAGS} ${CMAKE_EXE_LINKER_FLAGS}" )
+
 if( MIPS AND BUILD_WITH_ANDROID_NDK AND ANDROID_NDK_RELEASE STREQUAL "r8" )
- set( CMAKE_SHARED_LINKER_FLAGS "-Wl,-T,${ANDROID_NDK}/toolchains/${ANDROID_TOOLCHAIN_NAME}/mipself.xsc ${ANDROID_LINKER_FLAGS} ${CMAKE_SHARED_LINKER_FLAGS}" )
- set( CMAKE_MODULE_LINKER_FLAGS "-Wl,-T,${ANDROID_NDK}/toolchains/${ANDROID_TOOLCHAIN_NAME}/mipself.xsc ${ANDROID_LINKER_FLAGS} ${CMAKE_MODULE_LINKER_FLAGS}" )
- set( CMAKE_EXE_LINKER_FLAGS    "-Wl,-T,${ANDROID_NDK}/toolchains/${ANDROID_TOOLCHAIN_NAME}/mipself.x ${ANDROID_LINKER_FLAGS} ${CMAKE_EXE_LINKER_FLAGS}" )
-else()
- set( CMAKE_SHARED_LINKER_FLAGS "${ANDROID_LINKER_FLAGS} ${CMAKE_SHARED_LINKER_FLAGS}" )
- set( CMAKE_MODULE_LINKER_FLAGS "${ANDROID_LINKER_FLAGS} ${CMAKE_MODULE_LINKER_FLAGS}" )
- set( CMAKE_EXE_LINKER_FLAGS    "${ANDROID_LINKER_FLAGS} ${CMAKE_EXE_LINKER_FLAGS}" )
+ set( CMAKE_SHARED_LINKER_FLAGS "-Wl,-T,${ANDROID_NDK}/toolchains/${ANDROID_TOOLCHAIN_NAME}/mipself.xsc ${CMAKE_SHARED_LINKER_FLAGS}" )
+ set( CMAKE_MODULE_LINKER_FLAGS "-Wl,-T,${ANDROID_NDK}/toolchains/${ANDROID_TOOLCHAIN_NAME}/mipself.xsc ${CMAKE_MODULE_LINKER_FLAGS}" )
+ set( CMAKE_EXE_LINKER_FLAGS    "-Wl,-T,${ANDROID_NDK}/toolchains/${ANDROID_TOOLCHAIN_NAME}/mipself.x ${CMAKE_EXE_LINKER_FLAGS}" )
 endif()
 
 # configure rtti
 if( DEFINED ANDROID_RTTI AND ANDROID_STL_FORCE_FEATURES )
  if( ANDROID_RTTI )
-  set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -frtti" )
+  set( CMAKE_CXX_FLAGS "-frtti ${CMAKE_CXX_FLAGS}" )
  else()
-  set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti" )
+  set( CMAKE_CXX_FLAGS "-fno-rtti ${CMAKE_CXX_FLAGS}" )
  endif()
 endif()
 
 # configure exceptios
 if( DEFINED ANDROID_EXCEPTIONS AND ANDROID_STL_FORCE_FEATURES )
  if( ANDROID_EXCEPTIONS )
-  set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fexceptions" )
-  set( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fexceptions" )
+  set( CMAKE_CXX_FLAGS "-fexceptions ${CMAKE_CXX_FLAGS}" )
+  set( CMAKE_C_FLAGS "-fexceptions ${CMAKE_C_FLAGS}" )
  else()
-  set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-exceptions" )
-  set( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fno-exceptions" )
+  set( CMAKE_CXX_FLAGS "-fno-exceptions ${CMAKE_CXX_FLAGS}" )
+  set( CMAKE_C_FLAGS "-fno-exceptions ${CMAKE_C_FLAGS}" )
  endif()
 endif()
 
 # global includes and link directories
-if( ANDROID_STL_INCLUDE_DIRS )
- include_directories( SYSTEM ${ANDROID_STL_INCLUDE_DIRS} )
-endif()
+include_directories( SYSTEM "${ANDROID_SYSROOT}/usr/include" ${ANDROID_STL_INCLUDE_DIRS} )
 link_directories( "${CMAKE_INSTALL_PREFIX}/libs/${ANDROID_NDK_ABI_NAME}" )
-
 
 # set these global flags for cmake client scripts to change behavior
 set( ANDROID True )
@@ -1242,11 +1268,13 @@ macro( ANDROID_GET_ABI_RAWNAME TOOLCHAIN_FLAG VAR )
  if( "${TOOLCHAIN_FLAG}" STREQUAL "ARMEABI" )
   set( ${VAR} "armeabi" )
  elseif( "${TOOLCHAIN_FLAG}" STREQUAL "ARMEABI_V7A" )
-    set( ${VAR} "armeabi-v7a" )
+  set( ${VAR} "armeabi-v7a" )
  elseif( "${TOOLCHAIN_FLAG}" STREQUAL "X86" )
-    set( ${VAR} "x86" )
+  set( ${VAR} "x86" )
+ elseif( "${TOOLCHAIN_FLAG}" STREQUAL "MIPS" )
+  set( ${VAR} "mips" )
  else()
-    set( ${VAR} "unknown" )
+  set( ${VAR} "unknown" )
  endif()
 endmacro()
 
@@ -1254,10 +1282,22 @@ endmacro()
 # export toolchain settings for the try_compile() command
 if( NOT PROJECT_NAME STREQUAL "CMAKE_TRY_COMPILE" )
  set( __toolchain_config "")
- foreach( __var NDK_CCACHE ANDROID_ABI ANDROID_FORCE_ARM_BUILD ANDROID_NATIVE_API_LEVEL ANDROID_NO_UNDEFINED
-                ANDROID_SO_UNDEFINED ANDROID_SET_OBSOLETE_VARIABLES LIBRARY_OUTPUT_PATH_ROOT ANDROID_STL
-                ANDROID_STL_FORCE_FEATURES ANDROID_FORBID_SYGWIN ANDROID_NDK ANDROID_STANDALONE_TOOLCHAIN
-                ANDROID_FUNCTION_LEVEL_LINKING ANDROID_USE_GOLD_LINKER )
+ foreach( __var NDK_CCACHE  LIBRARY_OUTPUT_PATH_ROOT  ANDROID_FORBID_SYGWIN  ANDROID_SET_OBSOLETE_VARIABLES
+                ANDROID_NDK
+                ANDROID_STANDALONE_TOOLCHAIN
+                ANDROID_TOOLCHAIN_NAME
+                ANDROID_ABI
+                ANDROID_NATIVE_API_LEVEL
+                ANDROID_STL
+                ANDROID_STL_FORCE_FEATURES
+                ANDROID_FORCE_ARM_BUILD
+                ANDROID_NO_UNDEFINED
+                ANDROID_SO_UNDEFINED
+                ANDROID_FUNCTION_LEVEL_LINKING
+                ANDROID_GOLD_LINKER
+                ANDROID_NOEXECSTACK
+                ANDROID_RELRO
+                )
   if( DEFINED ${__var} )
    if( "${__var}" MATCHES " ")
     set( __toolchain_config "${__toolchain_config}set( ${__var} \"${${__var}}\" CACHE INTERNAL \"\" )\n" )
@@ -1289,7 +1329,9 @@ endif()
 #   ANDROID_NO_UNDEFINED : ON/OFF
 #   ANDROID_SO_UNDEFINED : OFF/ON  (default depends on NDK version)
 #   ANDROID_FUNCTION_LEVEL_LINKING : ON/OFF
-#   ANDROID_USE_GOLD_LINKER : ON/OFF   (default depends on NDK version and host & target platforms)
+#   ANDROID_GOLD_LINKER : ON/OFF
+#   ANDROID_NOEXECSTACK : ON/OFF
+#   ANDROID_RELRO : ON/OFF
 # Variables that takes effect only at first run:
 #   ANDROID_FORCE_ARM_BUILD : ON/OFF
 #   ANDROID_STL : gnustl_static/gnustl_shared/stlport_static/stlport_shared/gabi++_static/gabi++_shared/system_re/system/none

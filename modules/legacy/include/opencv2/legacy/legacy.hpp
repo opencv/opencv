@@ -1787,7 +1787,6 @@ public:
 
     virtual float predict( const CvMat* sample, CV_OUT CvMat* probs ) const;
 
-#ifndef SWIG
     CV_WRAP CvEM( const cv::Mat& samples, const cv::Mat& sampleIdx=cv::Mat(),
                   CvEMParams params=CvEMParams() );
 
@@ -1806,7 +1805,6 @@ public:
     CV_WRAP cv::Mat getProbs() const;
 
     CV_WRAP inline double getLikelihood() const { return emObj.isTrained() ? logLikelihood : DBL_MAX; }
-#endif
 
     CV_WRAP virtual void clear();
 

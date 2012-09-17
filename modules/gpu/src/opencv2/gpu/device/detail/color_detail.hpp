@@ -1140,6 +1140,12 @@ namespace cv { namespace gpu { namespace device
                 int sector = __float2int_rd(h);
                 h -= sector;
 
+                if ( (unsigned)sector >= 6u )
+                {
+                    sector = 0;
+                    h = 0.f;
+                }
+
                 float tab[4];
                 tab[0] = v;
                 tab[1] = v * (1.f - s);

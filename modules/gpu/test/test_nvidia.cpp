@@ -41,12 +41,12 @@
 
 #include "test_precomp.hpp"
 
-OutputLevel nvidiaTestOutputLevel = OutputLevelCompact;
-
 #ifdef HAVE_CUDA
 
 using namespace cvtest;
 using namespace testing;
+
+OutputLevel nvidiaTestOutputLevel = OutputLevelCompact;
 
 struct NVidiaTest : TestWithParam<cv::gpu::DeviceInfo>
 {

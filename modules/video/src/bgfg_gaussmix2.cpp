@@ -562,18 +562,15 @@ void BackgroundSubtractorMOG2::operator()(InputArray _image, OutputArray _fgmask
     learningRate = learningRate >= 0 && nframes > 1 ? learningRate : 1./min( 2*nframes, history );
     CV_Assert(learningRate >= 0);
     
-    if (learningRate > 0)
-    {
-        parallel_for(BlockedRange(0, image.rows),
-                     MOG2Invoker(image, fgmask,
-                                 (GMM*)bgmodel.data,
-                                 (float*)(bgmodel.data + sizeof(GMM)*nmixtures*image.rows*image.cols),
-                                 bgmodelUsedModes.data, nmixtures, (float)learningRate,
-                                 (float)varThreshold,
-                                 backgroundRatio, varThresholdGen,
-                                 fVarInit, fVarMin, fVarMax, float(-learningRate*fCT), fTau,
-                                 bShadowDetection, nShadowDetection));
-    }
+    parallel_for(BlockedRange(0, image.rows),
+                 MOG2Invoker(image, fgmask,
+                             (GMM*)bgmodel.data,
+                             (float*)(bgmodel.data + sizeof(GMM)*nmixtures*image.rows*image.cols),
+                             bgmodelUsedModes.data, nmixtures, (float)learningRate,
+                             (float)varThreshold,
+                             backgroundRatio, varThresholdGen,
+                             fVarInit, fVarMin, fVarMax, float(-learningRate*fCT), fTau,
+                             bShadowDetection, nShadowDetection));
 }
 
 void BackgroundSubtractorMOG2::getBackgroundImage(OutputArray backgroundImage) const

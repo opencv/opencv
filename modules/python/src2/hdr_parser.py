@@ -155,6 +155,8 @@ class CppHeaderParser(object):
             elif angle_stack:
                 arg_type += w
                 angle_stack[-1] += 1
+            elif arg_type == "struct":
+                arg_type += " " + w
             elif arg_type and arg_type != "~":
                 arg_name = " ".join(word_list[wi:])
                 break
@@ -429,7 +431,7 @@ class CppHeaderParser(object):
                 decl_start = decl_start[0:-2].rstrip() + " ()"
 
         # constructor/destructor case
-        if bool(re.match(r'(\w+::)*(?P<x>\w+)::~?(?P=x)', decl_start)):
+        if bool(re.match(r'^(\w+::)*(?P<x>\w+)::~?(?P=x)$', decl_start)):
             decl_start = "void " + decl_start
 
         rettype, funcname, modlist, argno = self.parse_arg(decl_start, -1)
@@ -441,10 +443,14 @@ class CppHeaderParser(object):
             else:
                 if bool(re.match('\w+\s+\(\*\w+\)\s*\(.*\)', decl_str)):
                     return [] # function typedef
+                elif bool(re.match('\w+\s+\(\w+::\*\w+\)\s*\(.*\)', decl_str)):
+                    return [] # class method typedef
                 elif bool(re.match('[A-Z_]+', decl_start)):
                     return [] # it seems to be a macro instantiation
                 elif "__declspec" == decl_start:
                     return []
+                elif bool(re.match(r'\w+\s+\(\*\w+\)\[\d+\]', decl_str)):
+                    return [] # exotic - dynamic 2d array
                 else:
                     #print rettype, funcname, modlist, argno
                     print "Error at %s:%d the function/method name is missing: '%s'" % (self.hname, self.lineno, decl_start)
@@ -799,6 +805,10 @@ class CppHeaderParser(object):
                 stmt = " ".join(stmt.split()) # normalize the statement
                 stack_top = self.block_stack[-1]
 
+                if stmt.startswith("@"):
+                    # Objective C ?
+                    break
+
                 decl = None
                 if stack_top[self.PROCESS_FLAG]:
                     # even if stack_top[PUBLIC_SECTION] is False, we still try to process the statement,
@@ -850,5 +860,7 @@ if __name__ == '__main__':
     decls = []
     for hname in opencv_hdr_list:
         decls += parser.parse(hname)
+    #for hname in sys.argv[1:]:
+        #decls += parser.parse(hname, wmode=False)
     parser.print_decls(decls)
     print len(decls)

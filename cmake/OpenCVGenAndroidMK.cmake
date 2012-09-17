@@ -82,8 +82,8 @@ if(ANDROID)
   # -------------------------------------------------------------------------------------------
   set(OPENCV_INCLUDE_DIRS_CONFIGCMAKE "\"${OPENCV_CONFIG_FILE_INCLUDE_DIR}\" \"${OpenCV_SOURCE_DIR}/include\" \"${OpenCV_SOURCE_DIR}/include/opencv\"")
   set(OPENCV_BASE_INCLUDE_DIR_CONFIGCMAKE "\"${OpenCV_SOURCE_DIR}\"")
-  set(OPENCV_LIBS_DIR_CONFIGCMAKE "\$(OPENCV_THIS_DIR)/lib/\$(TARGET_ARCH_ABI)")
-  set(OPENCV_3RDPARTY_LIBS_DIR_CONFIGCMAKE "\$(OPENCV_THIS_DIR)/3rdparty/lib/\$(TARGET_ARCH_ABI)")
+  set(OPENCV_LIBS_DIR_CONFIGCMAKE "\$(OPENCV_THIS_DIR)/lib/\$(OPENCV_TARGET_ARCH_ABI)")
+  set(OPENCV_3RDPARTY_LIBS_DIR_CONFIGCMAKE "\$(OPENCV_THIS_DIR)/3rdparty/lib/\$(OPENCV_TARGET_ARCH_ABI)")
 
   configure_file("${OpenCV_SOURCE_DIR}/cmake/templates/OpenCV.mk.in" "${CMAKE_BINARY_DIR}/OpenCV.mk" IMMEDIATE @ONLY)
 
@@ -92,8 +92,8 @@ if(ANDROID)
   # -------------------------------------------------------------------------------------------
   set(OPENCV_INCLUDE_DIRS_CONFIGCMAKE "\"\$(LOCAL_PATH)/\$(OPENCV_THIS_DIR)/include/opencv\" \"\$(LOCAL_PATH)/\$(OPENCV_THIS_DIR)/include\"")
   set(OPENCV_BASE_INCLUDE_DIR_CONFIGCMAKE "")
-  set(OPENCV_LIBS_DIR_CONFIGCMAKE "\$(OPENCV_THIS_DIR)/../libs/\$(TARGET_ARCH_ABI)")
-  set(OPENCV_3RDPARTY_LIBS_DIR_CONFIGCMAKE "\$(OPENCV_THIS_DIR)/../3rdparty/libs/\$(TARGET_ARCH_ABI)")
+  set(OPENCV_LIBS_DIR_CONFIGCMAKE "\$(OPENCV_THIS_DIR)/../libs/\$(OPENCV_TARGET_ARCH_ABI)")
+  set(OPENCV_3RDPARTY_LIBS_DIR_CONFIGCMAKE "\$(OPENCV_THIS_DIR)/../3rdparty/libs/\$(OPENCV_TARGET_ARCH_ABI)")
 
   configure_file("${OpenCV_SOURCE_DIR}/cmake/templates/OpenCV.mk.in" "${CMAKE_BINARY_DIR}/unix-install/OpenCV.mk" IMMEDIATE @ONLY)
   install(FILES ${CMAKE_BINARY_DIR}/unix-install/OpenCV.mk DESTINATION ${OPENCV_CONFIG_INSTALL_PATH})

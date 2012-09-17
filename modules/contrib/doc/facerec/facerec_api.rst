@@ -19,19 +19,19 @@ a unified access to all face recongition algorithms in OpenCV. ::
 
       // Trains a FaceRecognizer.
       virtual void train(InputArray src, InputArray labels) = 0;
-      
+
       // Updates a FaceRecognizer.
       virtual void update(InputArrayOfArrays src, InputArray labels);
-      
+
       // Gets a prediction from a FaceRecognizer.
       virtual int predict(InputArray src) const = 0;
-      
+
       // Predicts the label and confidence for a given sample.
       virtual void predict(InputArray src, int &label, double &confidence) const = 0;
 
       // Serializes this object to a given filename.
       virtual void save(const string& filename) const;
-      
+
       // Deserializes this object from a given filename.
       virtual void load(const string& filename);
 
@@ -58,7 +58,7 @@ I'll go a bit more into detail explaining :ocv:class:`FaceRecognizer`, because i
 
 Moreover every :ocv:class:`FaceRecognizer` supports the:
 
-* **Training** of a :ocv:class:`FaceRecognizer` with :ocv:func:`FaceRecognizer::train` on a given set of images (your face database!). 
+* **Training** of a :ocv:class:`FaceRecognizer` with :ocv:func:`FaceRecognizer::train` on a given set of images (your face database!).
 
 * **Prediction** of a given sample image, that means a face. The image is given as a :ocv:class:`Mat`.
 
@@ -111,7 +111,7 @@ Since every :ocv:class:`FaceRecognizer` is a :ocv:class:`Algorithm`, you can use
 .. code-block:: cpp
 
     // Create a FaceRecognizer:
-    Ptr<FaceRecognizer> model = createEigenFaceRecognizer();        
+    Ptr<FaceRecognizer> model = createEigenFaceRecognizer();
     // And here's how to get its name:
     std::string name = model->name();
 
@@ -121,7 +121,7 @@ FaceRecognizer::train
 
 Trains a FaceRecognizer with given data and associated labels.
 
-.. ocv:function:: void FaceRecognizer::train(InputArray src, InputArray labels)
+.. ocv:function:: void FaceRecognizer::train( InputArrayOfArrays src, InputArray labels ) = 0
 
     :param src: The training images, that means the faces you want to learn. The data has to be given as a ``vector<Mat>``.
 
@@ -166,7 +166,7 @@ FaceRecognizer::update
 
 Updates a FaceRecognizer with given data and associated labels.
 
-.. ocv:function:: void FaceRecognizer::update(InputArray src, InputArray labels)
+.. ocv:function:: void FaceRecognizer::update( InputArrayOfArrays src, InputArray labels )
 
     :param src: The training images, that means the faces you want to learn. The data has to be given as a ``vector<Mat>``.
 
@@ -193,7 +193,7 @@ This method updates a (probably trained) :ocv:class:`FaceRecognizer`, but only i
     //
     // Now updating the model is as easy as calling:
     model->update(newImages,newLabels);
-    // This will preserve the old model data and extend the existing model 
+    // This will preserve the old model data and extend the existing model
     // with the new features extracted from newImages!
 
 Calling update on an Eigenfaces model (see :ocv:func:`createEigenFaceRecognizer`), which doesn't support updating, will throw an error similar to:
@@ -203,8 +203,8 @@ Calling update on an Eigenfaces model (see :ocv:func:`createEigenFaceRecognizer`
     OpenCV Error: The function/feature is not implemented (This FaceRecognizer (FaceRecognizer.Eigenfaces) does not support updating, you have to use FaceRecognizer::train to update it.) in update, file /home/philipp/git/opencv/modules/contrib/src/facerec.cpp, line 305
     terminate called after throwing an instance of 'cv::Exception'
 
-Please note: The :ocv:class:`FaceRecognizer` does not store your training images, because this would be very memory intense and it's not the responsibility of te :ocv:class:`FaceRecognizer` to do so. The caller is responsible for maintaining the dataset, he want to work with. 
- 
+Please note: The :ocv:class:`FaceRecognizer` does not store your training images, because this would be very memory intense and it's not the responsibility of te :ocv:class:`FaceRecognizer` to do so. The caller is responsible for maintaining the dataset, he want to work with.
+
 FaceRecognizer::predict
 -----------------------
 

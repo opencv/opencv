@@ -179,6 +179,10 @@ div.body p, div.body dd, div.body li {
     margin-bottom: 1em;
 }
 
+div.toctree-wrapper li, ul.simple li {
+    margin:0;
+}
+
 div.body h1,
 div.body h2,
 div.body h3,

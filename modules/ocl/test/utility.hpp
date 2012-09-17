@@ -237,6 +237,4 @@ void  run_perf_test();
 IMPLEMENT_PARAM_CLASS(Channels, int)
 #endif // IMPLEMENT_PARAM_CLASS
 
-	cv::ocl::oclMat createMat(cv::Size size,int type,bool useRoi);
-	cv::ocl::oclMat loadMat(const cv::Mat& m, bool useRoi);
 #endif // __OPENCV_TEST_UTILITY_HPP__

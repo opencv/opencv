@@ -3,6 +3,8 @@
 #include "opencv2/core/core.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 
+#ifdef ANDROID
+
 #include <android/bitmap.h>
 
 #include <android/log.h>
@@ -165,3 +167,5 @@ JNIEXPORT void JNICALL Java_org_opencv_android_Utils_nMatToBitmap
 }
 
 } // extern "C"
+
+#endif //ANDROID

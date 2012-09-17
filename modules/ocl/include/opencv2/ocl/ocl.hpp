@@ -370,11 +370,11 @@ namespace cv
         CV_EXPORTS Scalar sum(const oclMat &m);
 
         //! finds global minimum and maximum array elements and returns their values
-        // support all types
+        // support all C1 types
         CV_EXPORTS void minMax(const oclMat &src, double *minVal, double *maxVal = 0, const oclMat &mask = oclMat());
 
         //! finds global minimum and maximum array elements and returns their values with locations
-        // support all types
+        // support all C1 types
         CV_EXPORTS void minMaxLoc(const oclMat &src, double *minVal, double *maxVal = 0, Point *minLoc = 0, Point *maxLoc = 0,
                 const oclMat &mask = oclMat());
 
@@ -440,6 +440,9 @@ namespace cv
         // supports all types
         CV_EXPORTS void bitwise_xor(const oclMat &src1, const oclMat &src2, oclMat &dst, const oclMat &mask = oclMat());
         CV_EXPORTS void bitwise_xor(const oclMat &src1, const Scalar &s, oclMat &dst, const oclMat &mask = oclMat());
+        //! computes convolution of two images 
+		    //! support only CV_32FC1 type
+	 	    CV_EXPORTS void convolve(const oclMat& image,const oclMat& temp1, oclMat& result);
 
         //! Logical operators
         CV_EXPORTS oclMat operator ~ (const oclMat &src);
@@ -644,11 +647,11 @@ namespace cv
         // supports CV_8UC1, CV_8UC4, CV_32FC1 and CV_32FC4 types
         CV_EXPORTS void resize(const oclMat &src, oclMat &dst, Size dsize, double fx = 0, double fy = 0, int interpolation = INTER_LINEAR);
 
-        //! Applies a generic geometrical transformation to an image.
-            // Supports INTER_NEAREST, INTER_LINEAR.
-            // Map1 supports CV_16SC2, CV_32FC2  types.
-        // Src supports CV_8UC1, CV_8UC2, CV_8UC4.
-        CV_EXPORTS void remap(const oclMat& src, oclMat& dst, oclMat& map1, oclMat& map2, int interpolation, int bordertype, const Scalar& value = Scalar());
+    //! Applies a generic geometrical transformation to an image.
+		// Supports INTER_NEAREST, INTER_LINEAR.
+		// Map1 supports CV_16SC2, CV_32FC2  types.
+    // Src supports CV_8UC1, CV_8UC2, CV_8UC4.
+    CV_EXPORTS void remap(const oclMat& src, oclMat& dst, oclMat& map1, oclMat& map2, int interpolation, int bordertype, const Scalar& value = Scalar());
         //! copies 2D array to a larger destination array and pads borders with user-specifiable constant
         // supports CV_8UC1, CV_8UC4, CV_32SC1 types
         CV_EXPORTS void copyMakeBorder(const oclMat &src, oclMat &dst, int top, int bottom, int left, int right, int boardtype, const Scalar &value = Scalar());
@@ -675,158 +678,6 @@ namespace cv
         CV_EXPORTS void cornerHarris(const oclMat &src, oclMat &dst, int blockSize, int ksize, double k, int bordertype = cv::BORDER_DEFAULT);
         CV_EXPORTS void cornerMinEigenVal(const oclMat &src, oclMat &dst, int blockSize, int ksize, int bordertype = cv::BORDER_DEFAULT);
 
-
-        //////////////////////////////// StereoBM_GPU ////////////////////////////////
-        class CV_EXPORTS StereoBM_GPU
-        {
-        public:
-            enum { BASIC_PRESET = 0, PREFILTER_XSOBEL = 1 };
-
-            enum { DEFAULT_NDISP = 64, DEFAULT_WINSZ = 19 };
-
-            //! the default constructor
-            StereoBM_GPU();
-            //! the full constructor taking the camera-specific preset, number of disparities and the SAD window size. ndisparities must be multiple of 8.
-            StereoBM_GPU(int preset, int ndisparities = DEFAULT_NDISP, int winSize = DEFAULT_WINSZ);
-
-            //! the stereo correspondence operator. Finds the disparity for the specified rectified stereo pair
-            //! Output disparity has CV_8U type.
-            void operator() ( const oclMat &left, const oclMat &right, oclMat &disparity);
-
-            //! Some heuristics that tries to estmate
-            // if current GPU will be faster then CPU in this algorithm.
-            // It queries current active device.
-            static bool checkIfGpuCallReasonable();
-
-            int preset;
-            int ndisp;
-            int winSize;
-
-            // If avergeTexThreshold  == 0 => post procesing is disabled
-            // If avergeTexThreshold != 0 then disparity is set 0 in each point (x,y) where for left image
-            // SumOfHorizontalGradiensInWindow(x, y, winSize) < (winSize * winSize) * avergeTexThreshold
-            // i.e. input left image is low textured.
-            float avergeTexThreshold;
-        private:
-            oclMat minSSD, leBuf, riBuf;
-        };
-
-        ////////////////////////// StereoBeliefPropagation ///////////////////////////
-        // "Efficient Belief Propagation for Early Vision"
-        // P.Felzenszwalb
-
-        class CV_EXPORTS StereoBeliefPropagation
-        {
-        public:
-            enum { DEFAULT_NDISP  = 64 };
-            enum { DEFAULT_ITERS  = 5  };
-            enum { DEFAULT_LEVELS = 5  };
-
-            static void estimateRecommendedParams(int width, int height, int &ndisp, int &iters, int &levels);
-
-            //! the default constructor
-            explicit StereoBeliefPropagation(int ndisp  = DEFAULT_NDISP,
-                    int iters  = DEFAULT_ITERS,
-                    int levels = DEFAULT_LEVELS,
-                    int msg_type = CV_16S);
-
-            //! the full constructor taking the number of disparities, number of BP iterations on each level,
-            //! number of levels, truncation of data cost, data weight,
-            //! truncation of discontinuity cost and discontinuity single jump
-            //! DataTerm = data_weight * min(fabs(I2-I1), max_data_term)
-            //! DiscTerm = min(disc_single_jump * fabs(f1-f2), max_disc_term)
-            //! please see paper for more details
-            StereoBeliefPropagation(int ndisp, int iters, int levels,
-                    float max_data_term, float data_weight,
-                    float max_disc_term, float disc_single_jump,
-                    int msg_type = CV_32F);
-
-            //! the stereo correspondence operator. Finds the disparity for the specified rectified stereo pair,
-            //! if disparity is empty output type will be CV_16S else output type will be disparity.type().
-            void operator()(const oclMat &left, const oclMat &right, oclMat &disparity);
-
-            //! version for user specified data term
-            void operator()(const oclMat &data, oclMat &disparity);
-
-            int ndisp;
-
-            int iters;
-            int levels;
-
-            float max_data_term;
-            float data_weight;
-            float max_disc_term;
-            float disc_single_jump;
-
-            int msg_type;
-        private:
-            oclMat u, d, l, r, u2, d2, l2, r2;
-            std::vector<oclMat> datas;
-            oclMat out;
-        };
-
-        /////////////////////////// StereoConstantSpaceBP ///////////////////////////
-        // "A Constant-Space Belief Propagation Algorithm for Stereo Matching"
-        // Qingxiong Yang, Liang Wangï¿? Narendra Ahuja
-        // http://vision.ai.uiuc.edu/~qyang6/
-
-        class CV_EXPORTS StereoConstantSpaceBP
-        {
-        public:
-            enum { DEFAULT_NDISP    = 128 };
-            enum { DEFAULT_ITERS    = 8   };
-            enum { DEFAULT_LEVELS   = 4   };
-            enum { DEFAULT_NR_PLANE = 4   };
-
-            static void estimateRecommendedParams(int width, int height, int &ndisp, int &iters, int &levels, int &nr_plane);
-
-            //! the default constructor
-            explicit StereoConstantSpaceBP(int ndisp    = DEFAULT_NDISP,
-                    int iters    = DEFAULT_ITERS,
-                    int levels   = DEFAULT_LEVELS,
-                    int nr_plane = DEFAULT_NR_PLANE,
-                    int msg_type = CV_32F);
-
-            //! the full constructor taking the number of disparities, number of BP iterations on each level,
-            //! number of levels, number of active disparity on the first level, truncation of data cost, data weight,
-            //! truncation of discontinuity cost, discontinuity single jump and minimum disparity threshold
-            StereoConstantSpaceBP(int ndisp, int iters, int levels, int nr_plane,
-                    float max_data_term, float data_weight, float max_disc_term, float disc_single_jump,
-                    int min_disp_th = 0,
-                    int msg_type = CV_32F);
-
-            //! the stereo correspondence operator. Finds the disparity for the specified rectified stereo pair,
-            //! if disparity is empty output type will be CV_16S else output type will be disparity.type().
-            void operator()(const oclMat &left, const oclMat &right, oclMat &disparity);
-
-            int ndisp;
-
-            int iters;
-            int levels;
-
-            int nr_plane;
-
-            float max_data_term;
-            float data_weight;
-            float max_disc_term;
-            float disc_single_jump;
-
-            int min_disp_th;
-
-            int msg_type;
-
-            bool use_local_init_data_cost;
-        private:
-            oclMat u[2], d[2], l[2], r[2];
-            oclMat disp_selected_pyr[2];
-
-            oclMat data_cost;
-            oclMat data_cost_selected;
-
-            oclMat temp;
-
-            oclMat out;
-        };
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         ///////////////////////////////////////////CascadeClassifier//////////////////////////////////////////////////////////////////
         ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -877,6 +728,7 @@ namespace cv
 		// Supports TM_SQDIFF, TM_CCORR for type 32FC1 and 32FC4
 		CV_EXPORTS void matchTemplate(const oclMat& image, const oclMat& templ, oclMat& result, int method, MatchTemplateBuf& buf);
 
+		
 		///////////////////////////////////////////// Canny /////////////////////////////////////////////
 		struct CV_EXPORTS CannyBuf;
 
@@ -889,8 +741,12 @@ namespace cv
 
 		struct CV_EXPORTS CannyBuf
 		{
-			CannyBuf() {}
-			explicit CannyBuf(const Size& image_size, int apperture_size = 3) {create(image_size, apperture_size);}
+			CannyBuf() : counter(NULL) {}
+            ~CannyBuf() { release(); }
+			explicit CannyBuf(const Size& image_size, int apperture_size = 3) : counter(NULL)
+            {
+                create(image_size, apperture_size);
+            }
 			CannyBuf(const oclMat& dx_, const oclMat& dy_);
 
 			void create(const Size& image_size, int apperture_size = 3);
@@ -1090,6 +946,246 @@ namespace cv
             oclMat maxPosBuffer;
 
         };
+		////////////////////////////////// BruteForceMatcher //////////////////////////////////
+
+		class CV_EXPORTS BruteForceMatcher_OCL_base
+		{
+		public:
+			enum DistType {L1Dist = 0, L2Dist, HammingDist};
+
+			explicit BruteForceMatcher_OCL_base(DistType distType = L2Dist);
+
+			// Add descriptors to train descriptor collection
+			void add(const std::vector<oclMat>& descCollection);
+
+			// Get train descriptors collection
+			const std::vector<oclMat>& getTrainDescriptors() const;
+
+			// Clear train descriptors collection
+			void clear();
+
+			// Return true if there are not train descriptors in collection
+			bool empty() const;
+
+			// Return true if the matcher supports mask in match methods
+			bool isMaskSupported() const;
+
+			// Find one best match for each query descriptor
+			void matchSingle(const oclMat& query, const oclMat& train,
+				oclMat& trainIdx, oclMat& distance,
+				const oclMat& mask = oclMat());
+
+			// Download trainIdx and distance and convert it to CPU vector with DMatch
+			static void matchDownload(const oclMat& trainIdx, const oclMat& distance, std::vector<DMatch>& matches);
+			// Convert trainIdx and distance to vector with DMatch
+			static void matchConvert(const Mat& trainIdx, const Mat& distance, std::vector<DMatch>& matches);
+
+			// Find one best match for each query descriptor
+			void match(const oclMat& query, const oclMat& train, std::vector<DMatch>& matches, const oclMat& mask = oclMat());
+
+			// Make gpu collection of trains and masks in suitable format for matchCollection function
+			void makeGpuCollection(oclMat& trainCollection, oclMat& maskCollection, const std::vector<oclMat>& masks = std::vector<oclMat>());
+
+			// Find one best match from train collection for each query descriptor
+			void matchCollection(const oclMat& query, const oclMat& trainCollection,
+				oclMat& trainIdx, oclMat& imgIdx, oclMat& distance,
+				const oclMat& masks = oclMat());
+
+			// Download trainIdx, imgIdx and distance and convert it to vector with DMatch
+			static void matchDownload(const oclMat& trainIdx, const oclMat& imgIdx, const oclMat& distance, std::vector<DMatch>& matches);
+			// Convert trainIdx, imgIdx and distance to vector with DMatch
+			static void matchConvert(const Mat& trainIdx, const Mat& imgIdx, const Mat& distance, std::vector<DMatch>& matches);
+
+			// Find one best match from train collection for each query descriptor.
+			void match(const oclMat& query, std::vector<DMatch>& matches, const std::vector<oclMat>& masks = std::vector<oclMat>());
+
+			// Find k best matches for each query descriptor (in increasing order of distances)
+			void knnMatchSingle(const oclMat& query, const oclMat& train,
+				oclMat& trainIdx, oclMat& distance, oclMat& allDist, int k,
+				const oclMat& mask = oclMat());
+
+			// Download trainIdx and distance and convert it to vector with DMatch
+			// compactResult is used when mask is not empty. If compactResult is false matches
+			// vector will have the same size as queryDescriptors rows. If compactResult is true
+			// matches vector will not contain matches for fully masked out query descriptors.
+			static void knnMatchDownload(const oclMat& trainIdx, const oclMat& distance,
+				std::vector< std::vector<DMatch> >& matches, bool compactResult = false);
+			// Convert trainIdx and distance to vector with DMatch
+			static void knnMatchConvert(const Mat& trainIdx, const Mat& distance,
+				std::vector< std::vector<DMatch> >& matches, bool compactResult = false);
+
+			// Find k best matches for each query descriptor (in increasing order of distances).
+			// compactResult is used when mask is not empty. If compactResult is false matches
+			// vector will have the same size as queryDescriptors rows. If compactResult is true
+			// matches vector will not contain matches for fully masked out query descriptors.
+			void knnMatch(const oclMat& query, const oclMat& train,
+				std::vector< std::vector<DMatch> >& matches, int k, const oclMat& mask = oclMat(),
+				bool compactResult = false);
+
+			// Find k best matches from train collection for each query descriptor (in increasing order of distances)
+			void knnMatch2Collection(const oclMat& query, const oclMat& trainCollection,
+				oclMat& trainIdx, oclMat& imgIdx, oclMat& distance,
+				const oclMat& maskCollection = oclMat());
+
+			// Download trainIdx and distance and convert it to vector with DMatch
+			// compactResult is used when mask is not empty. If compactResult is false matches
+			// vector will have the same size as queryDescriptors rows. If compactResult is true
+			// matches vector will not contain matches for fully masked out query descriptors.
+			static void knnMatch2Download(const oclMat& trainIdx, const oclMat& imgIdx, const oclMat& distance,
+				std::vector< std::vector<DMatch> >& matches, bool compactResult = false);
+			// Convert trainIdx and distance to vector with DMatch
+			static void knnMatch2Convert(const Mat& trainIdx, const Mat& imgIdx, const Mat& distance,
+				std::vector< std::vector<DMatch> >& matches, bool compactResult = false);
+
+			// Find k best matches  for each query descriptor (in increasing order of distances).
+			// compactResult is used when mask is not empty. If compactResult is false matches
+			// vector will have the same size as queryDescriptors rows. If compactResult is true
+			// matches vector will not contain matches for fully masked out query descriptors.
+			void knnMatch(const oclMat& query, std::vector< std::vector<DMatch> >& matches, int k,
+				const std::vector<oclMat>& masks = std::vector<oclMat>(), bool compactResult = false);
+
+			// Find best matches for each query descriptor which have distance less than maxDistance.
+			// nMatches.at<int>(0, queryIdx) will contain matches count for queryIdx.
+			// carefully nMatches can be greater than trainIdx.cols - it means that matcher didn't find all matches,
+			// because it didn't have enough memory.
+			// If trainIdx is empty, then trainIdx and distance will be created with size nQuery x max((nTrain / 100), 10),
+			// otherwize user can pass own allocated trainIdx and distance with size nQuery x nMaxMatches
+			// Matches doesn't sorted.
+			void radiusMatchSingle(const oclMat& query, const oclMat& train,
+				oclMat& trainIdx, oclMat& distance, oclMat& nMatches, float maxDistance,
+				const oclMat& mask = oclMat());
+
+			// Download trainIdx, nMatches and distance and convert it to vector with DMatch.
+			// matches will be sorted in increasing order of distances.
+			// compactResult is used when mask is not empty. If compactResult is false matches
+			// vector will have the same size as queryDescriptors rows. If compactResult is true
+			// matches vector will not contain matches for fully masked out query descriptors.
+			static void radiusMatchDownload(const oclMat& trainIdx, const oclMat& distance, const oclMat& nMatches,
+				std::vector< std::vector<DMatch> >& matches, bool compactResult = false);
+			// Convert trainIdx, nMatches and distance to vector with DMatch.
+			static void radiusMatchConvert(const Mat& trainIdx, const Mat& distance, const Mat& nMatches,
+				std::vector< std::vector<DMatch> >& matches, bool compactResult = false);
+
+			// Find best matches for each query descriptor which have distance less than maxDistance
+			// in increasing order of distances).
+			void radiusMatch(const oclMat& query, const oclMat& train,
+				std::vector< std::vector<DMatch> >& matches, float maxDistance,
+				const oclMat& mask = oclMat(), bool compactResult = false);
+
+			// Find best matches for each query descriptor which have distance less than maxDistance.
+			// If trainIdx is empty, then trainIdx and distance will be created with size nQuery x max((nQuery / 100), 10),
+			// otherwize user can pass own allocated trainIdx and distance with size nQuery x nMaxMatches
+			// Matches doesn't sorted.
+			void radiusMatchCollection(const oclMat& query, oclMat& trainIdx, oclMat& imgIdx, oclMat& distance, oclMat& nMatches, float maxDistance,
+				const std::vector<oclMat>& masks = std::vector<oclMat>());
+
+			// Download trainIdx, imgIdx, nMatches and distance and convert it to vector with DMatch.
+			// matches will be sorted in increasing order of distances.
+			// compactResult is used when mask is not empty. If compactResult is false matches
+			// vector will have the same size as queryDescriptors rows. If compactResult is true
+			// matches vector will not contain matches for fully masked out query descriptors.
+			static void radiusMatchDownload(const oclMat& trainIdx, const oclMat& imgIdx, const oclMat& distance, const oclMat& nMatches,
+				std::vector< std::vector<DMatch> >& matches, bool compactResult = false);
+			// Convert trainIdx, nMatches and distance to vector with DMatch.
+			static void radiusMatchConvert(const Mat& trainIdx, const Mat& imgIdx, const Mat& distance, const Mat& nMatches,
+				std::vector< std::vector<DMatch> >& matches, bool compactResult = false);
+
+			// Find best matches from train collection for each query descriptor which have distance less than
+			// maxDistance (in increasing order of distances).
+			void radiusMatch(const oclMat& query, std::vector< std::vector<DMatch> >& matches, float maxDistance,
+				const std::vector<oclMat>& masks = std::vector<oclMat>(), bool compactResult = false);
+
+			DistType distType;
+
+		private:
+			std::vector<oclMat> trainDescCollection;
+		};
+
+		template <class Distance>
+		class CV_EXPORTS BruteForceMatcher_OCL;
+
+		template <typename T>
+		class CV_EXPORTS BruteForceMatcher_OCL< L1<T> > : public BruteForceMatcher_OCL_base
+		{
+		public:
+			explicit BruteForceMatcher_OCL() : BruteForceMatcher_OCL_base(L1Dist) {}
+			explicit BruteForceMatcher_OCL(L1<T> /*d*/) : BruteForceMatcher_OCL_base(L1Dist) {}
+		};
+		template <typename T>
+		class CV_EXPORTS BruteForceMatcher_OCL< L2<T> > : public BruteForceMatcher_OCL_base
+		{
+		public:
+			explicit BruteForceMatcher_OCL() : BruteForceMatcher_OCL_base(L2Dist) {}
+			explicit BruteForceMatcher_OCL(L2<T> /*d*/) : BruteForceMatcher_OCL_base(L2Dist) {}
+		};
+		template <> class CV_EXPORTS BruteForceMatcher_OCL< Hamming > : public BruteForceMatcher_OCL_base
+		{
+		public:
+			explicit BruteForceMatcher_OCL() : BruteForceMatcher_OCL_base(HammingDist) {}
+			explicit BruteForceMatcher_OCL(Hamming /*d*/) : BruteForceMatcher_OCL_base(HammingDist) {}
+		};
+
+		/////////////////////////////// PyrLKOpticalFlow /////////////////////////////////////
+		class CV_EXPORTS PyrLKOpticalFlow
+		{
+		public:
+			PyrLKOpticalFlow()
+			{
+				winSize = Size(21, 21);
+				maxLevel = 3;
+				iters = 30;
+				derivLambda = 0.5;
+				useInitialFlow = false;
+				minEigThreshold = 1e-4f;
+				getMinEigenVals = false;
+				isDeviceArch11_ = false;
+			}
+
+			void sparse(const oclMat& prevImg, const oclMat& nextImg, const oclMat& prevPts, oclMat& nextPts,
+				oclMat& status, oclMat* err = 0);
+
+			void dense(const oclMat& prevImg, const oclMat& nextImg, oclMat& u, oclMat& v, oclMat* err = 0);
+
+			Size winSize;
+			int maxLevel;
+			int iters;
+			double derivLambda;
+			bool useInitialFlow;
+			float minEigThreshold;
+			bool getMinEigenVals;
+
+			void releaseMemory()
+			{
+				dx_calcBuf_.release();
+				dy_calcBuf_.release();
+
+				prevPyr_.clear();
+				nextPyr_.clear();
+
+				dx_buf_.release();
+				dy_buf_.release();
+			}
+
+		private:
+			void calcSharrDeriv(const oclMat& src, oclMat& dx, oclMat& dy);
+
+			void buildImagePyramid(const oclMat& img0, vector<oclMat>& pyr, bool withBorder);
+
+			oclMat dx_calcBuf_;
+			oclMat dy_calcBuf_;
+
+			vector<oclMat> prevPyr_;
+			vector<oclMat> nextPyr_;
+
+			oclMat dx_buf_;
+			oclMat dy_buf_;
+
+			oclMat uPyr_[2];
+			oclMat vPyr_[2];
+
+			bool isDeviceArch11_;
+		};
+
     }
 }
 #include "opencv2/ocl/matrix_operations.hpp"

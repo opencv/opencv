@@ -4,6 +4,7 @@
 USER_LOCAL_PATH:=$(LOCAL_PATH)
 LOCAL_PATH:=$(subst ?,,$(firstword ?$(subst \, ,$(subst /, ,$(call my-dir)))))
 
+OPENCV_TARGET_ARCH_ABI:=$(TARGET_ARCH_ABI)
 OPENCV_THIS_DIR:=$(patsubst $(LOCAL_PATH)\\%,%,$(patsubst $(LOCAL_PATH)/%,%,$(call my-dir)))
 OPENCV_MK_DIR:=$(dir $(lastword $(MAKEFILE_LIST)))
 OPENCV_LIBS_DIR:=@OPENCV_LIBS_DIR_CONFIGCMAKE@

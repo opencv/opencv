@@ -770,11 +770,11 @@ CV_EXPORTS void blendLinear(const GpuMat& img1, const GpuMat& img2, const GpuMat
                             GpuMat& result, Stream& stream = Stream::Null());
 
 //! Performa bilateral filtering of passsed image
-CV_EXPORTS void bilateralFilter(const GpuMat& src, GpuMat& dst, int kernel_size, float sigma_color, float sigma_spatial, 
+CV_EXPORTS void bilateralFilter(const GpuMat& src, GpuMat& dst, int kernel_size, float sigma_color, float sigma_spatial,
                                 int borderMode = BORDER_DEFAULT, Stream& stream = Stream::Null());
 
 //! Brute force non-local means algorith (slow but universal)
-CV_EXPORTS void nonLocalMeans(const GpuMat& src, GpuMat& dst, float h, 
+CV_EXPORTS void nonLocalMeans(const GpuMat& src, GpuMat& dst, float h,
                               int search_widow_size = 11, int block_size = 7, int borderMode = BORDER_DEFAULT, Stream& s = Stream::Null());
 
 
@@ -853,6 +853,38 @@ struct HoughCirclesBuf
 CV_EXPORTS void HoughCircles(const GpuMat& src, GpuMat& circles, int method, float dp, float minDist, int cannyThreshold, int votesThreshold, int minRadius, int maxRadius, int maxCircles = 4096);
 CV_EXPORTS void HoughCircles(const GpuMat& src, GpuMat& circles, HoughCirclesBuf& buf, int method, float dp, float minDist, int cannyThreshold, int votesThreshold, int minRadius, int maxRadius, int maxCircles = 4096);
 CV_EXPORTS void HoughCirclesDownload(const GpuMat& d_circles, OutputArray h_circles);
+
+//! finds arbitrary template in the grayscale image using Generalized Hough Transform
+//! Ballard, D.H. (1981). Generalizing the Hough transform to detect arbitrary shapes. Pattern Recognition 13 (2): 111-122.
+//! Guil, N., González-Linares, J.M. and Zapata, E.L. (1999). Bidimensional shape detection using an invariant approach. Pattern Recognition 32 (6): 1025-1038.
+class CV_EXPORTS GeneralizedHough_GPU : public Algorithm
+{
+public:
+    static Ptr<GeneralizedHough_GPU> create(int method);
+
+    virtual ~GeneralizedHough_GPU();
+
+    //! set template to search
+    void setTemplate(const GpuMat& templ, int cannyThreshold = 100, Point templCenter = Point(-1, -1));
+    void setTemplate(const GpuMat& edges, const GpuMat& dx, const GpuMat& dy, Point templCenter = Point(-1, -1));
+
+    //! find template on image
+    void detect(const GpuMat& image, GpuMat& positions, int cannyThreshold = 100);
+    void detect(const GpuMat& edges, const GpuMat& dx, const GpuMat& dy, GpuMat& positions);
+
+    void download(const GpuMat& d_positions, OutputArray h_positions, OutputArray h_votes = noArray());
+
+    void release();
+
+protected:
+    virtual void setTemplateImpl(const GpuMat& edges, const GpuMat& dx, const GpuMat& dy, Point templCenter) = 0;
+    virtual void detectImpl(const GpuMat& edges, const GpuMat& dx, const GpuMat& dy, GpuMat& positions) = 0;
+    virtual void releaseImpl() = 0;
+
+private:
+    GpuMat edges_;
+    CannyBuf cannyBuf_;
+};
 
 ////////////////////////////// Matrix reductions //////////////////////////////
 
