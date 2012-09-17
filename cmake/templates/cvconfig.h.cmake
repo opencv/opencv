@@ -25,6 +25,9 @@
 /* V4L/V4L2 capturing support via libv4l */
 #cmakedefine HAVE_LIBV4L
 
+/* ioctl takes unsigned long request rather than int */
+#cmakedefine HAVE_IOCTL_ULONG
+
 /* Carbon windowing environment */
 #cmakedefine HAVE_CARBON
 

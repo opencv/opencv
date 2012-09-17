@@ -354,17 +354,18 @@ static int icvSetVideoSize( CvCaptureCAM_V4L* capture, int w, int h);
 static int numCameras = 0;
 static int indexList = 0;
 
+#ifdef HAVE_IOCTL_ULONG
+static int xioctl( int fd, unsigned long request, void *arg)
+#else
 static int xioctl( int fd, int request, void *arg)
+#endif
 {
-
   int r;
-
 
   do r = ioctl (fd, request, arg);
   while (-1 == r && EINTR == errno);
 
   return r;
-
 }
 
 /* Simple test program: Find number of Video Sources available.
