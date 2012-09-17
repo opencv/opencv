@@ -175,7 +175,7 @@ void CV_ImageWarpBaseTest::generate_test_data()
     interpolation = rng.uniform(0, CV_INTER_LANCZOS4 + 1);
     
     // generating the dst matrix structure
-    double scale_x = 2, scale_y = 2;
+    double scale_x, scale_y;
     if (interpolation == INTER_AREA)
     {
         bool area_fast = rng.uniform(0., 1.) > 0.5;
@@ -202,6 +202,9 @@ void CV_ImageWarpBaseTest::generate_test_data()
     
     dst = Mat::zeros(dsize, src.type());
     reference_dst = Mat::zeros(dst.size(), CV_MAKE_TYPE(CV_32F, dst.channels()));
+    
+    scale_x = src.cols / static_cast<double>(dst.cols);
+    scale_y = src.rows / static_cast<double>(dst.rows);
     
     if (interpolation == INTER_AREA && (scale_x < 1.0 || scale_y < 1.0))
         interpolation = INTER_LINEAR;
