@@ -1494,7 +1494,7 @@ TEST(Imgproc_resize_area, regression)
     cv::Mat expected(5,5,CV_16UC1, expected_data);
     cv::Mat actual(expected.size(), expected.type());
 
-    cv::resize(src, actual, actual.size(), 0.0, 0.0, INTER_AREA);
+    cv::resize(src, actual, cv::Size(), 0.3, 0.3, INTER_AREA);
 
     ASSERT_EQ(actual.type(), expected.type());
     ASSERT_EQ(actual.size(), expected.size());
@@ -1504,12 +1504,13 @@ TEST(Imgproc_resize_area, regression)
     
     int elem_diff = 1.0f;
     Size dsize = actual.size();
-    for (int dy = 0; dy < dsize.height; ++dy)
+    bool next = true;
+    for (int dy = 0; dy < dsize.height && next; ++dy)
     {
         ushort* eD = expected.ptr<ushort>(dy);
         ushort* aD = actual.ptr<ushort>(dy);
         
-        for (int dx = 0; dx < dsize.width; ++dx)
+        for (int dx = 0; dx < dsize.width && next; ++dx)
             if (fabs(static_cast<float>(aD[dx] - eD[dx])) > elem_diff)
             {
                 cvtest::TS::ptr()->printf(cvtest::TS::SUMMARY, "Inf norm: %f\n", static_cast<float>(norm(actual, expected, NORM_INF)));
@@ -1521,6 +1522,8 @@ TEST(Imgproc_resize_area, regression)
                 
                 std::cout << "actual result:\n" << actual(Range(rmin, rmax), Range(cmin, cmax)) << std::endl;
                 std::cout << "expected result:\n" << expected(Range(rmin, rmax), Range(cmin, cmax)) << std::endl;
+                
+                next = false;
             }
     }
     
