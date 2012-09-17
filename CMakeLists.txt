@@ -60,7 +60,7 @@ endif()
 
 project(OpenCV CXX C)
 
-include(cmake/OpenCVUtils.cmake REQUIRED)
+include(cmake/OpenCVUtils.cmake)
 
 # ----------------------------------------------------------------------------
 # Break in case of popular CMake configuration mistakes
@@ -73,7 +73,7 @@ endif()
 # ----------------------------------------------------------------------------
 # Detect compiler and target platform architecture
 # ----------------------------------------------------------------------------
-include(cmake/OpenCVDetectCXXCompiler.cmake REQUIRED)
+include(cmake/OpenCVDetectCXXCompiler.cmake)
 
 # Add these standard paths to the search paths for FIND_LIBRARY
 # to find libraries from these locations first
@@ -159,7 +159,6 @@ OCV_OPTION(BUILD_FAT_JAVA_LIB       "Create fat java wrapper containing the whol
 OCV_OPTION(BUILD_ANDROID_SERVICE    "Build OpenCV Manager for Google Play" OFF IF ANDROID AND ANDROID_USE_STLPORT AND ANDROID_SOURCE_TREE )
 OCV_OPTION(BUILD_ANDROID_PACKAGE    "Build platform-specific package for Google Play" OFF IF ANDROID )
 
-
 # 3rd party libs
 OCV_OPTION(BUILD_ZLIB               "Build zlib from source"         WIN32 OR APPLE )
 OCV_OPTION(BUILD_TIFF               "Build libtiff from source"      WIN32 OR ANDROID OR APPLE )
@@ -168,24 +167,19 @@ OCV_OPTION(BUILD_JPEG               "Build libjpeg from source"      WIN32 OR AN
 OCV_OPTION(BUILD_PNG                "Build libpng from source"       WIN32 OR ANDROID OR APPLE )
 OCV_OPTION(BUILD_OPENEXR            "Build openexr from source"      WIN32 OR ANDROID OR APPLE )
 
+
 # OpenCV installation options
 # ===================================================
 OCV_OPTION(INSTALL_C_EXAMPLES       "Install C examples"        OFF )
 OCV_OPTION(INSTALL_PYTHON_EXAMPLES  "Install Python examples"   OFF )
-OCV_OPTION(INSTALL_ANDROID_EXAMPLES "Install Android examples"  OFF  IF ANDROID )
+OCV_OPTION(INSTALL_ANDROID_EXAMPLES "Install Android examples"  OFF IF ANDROID )
 OCV_OPTION(INSTALL_TO_MANGLED_PATHS "Enables mangled install paths, that help with side by side installs." OFF IF (UNIX AND NOT ANDROID AND NOT IOS AND BUILD_SHARED_LIBS) )
 
-
-if(MSVC_IDE OR CMAKE_GENERATOR MATCHES Xcode)
-  set(ENABLE_SOLUTION_FOLDERS0 ON)
-else()
-  set(ENABLE_SOLUTION_FOLDERS0 OFF)
-endif()
 
 # OpenCV build options
 # ===================================================
 OCV_OPTION(ENABLE_PRECOMPILED_HEADERS "Use precompiled headers"                                  ON   IF (NOT IOS) )
-OCV_OPTION(ENABLE_SOLUTION_FOLDERS    "Solution folder in Visual Studio or in other IDEs"        ${ENABLE_SOLUTION_FOLDERS0} IF (CMAKE_VERSION VERSION_GREATER "2.8.0") )
+OCV_OPTION(ENABLE_SOLUTION_FOLDERS    "Solution folder in Visual Studio or in other IDEs"        (MSVC_IDE OR CMAKE_GENERATOR MATCHES Xcode) IF (CMAKE_VERSION VERSION_GREATER "2.8.0") )
 OCV_OPTION(ENABLE_PROFILING           "Enable profiling in the GCC compiler (Add flags: -g -pg)" OFF  IF CMAKE_COMPILER_IS_GNUCXX )
 OCV_OPTION(ENABLE_OMIT_FRAME_POINTER  "Enable -fomit-frame-pointer for GCC"                      ON   IF CMAKE_COMPILER_IS_GNUCXX )
 OCV_OPTION(ENABLE_POWERPC             "Enable PowerPC for GCC"                                   ON   IF (CMAKE_COMPILER_IS_GNUCXX AND CMAKE_SYSTEM_PROCESSOR MATCHES powerpc.*) )
@@ -196,6 +190,7 @@ OCV_OPTION(ENABLE_SSE3                "Enable SSE3 instructions"                
 OCV_OPTION(ENABLE_SSSE3               "Enable SSSE3 instructions"                                OFF  IF (CMAKE_COMPILER_IS_GNUCXX AND (X86 OR X86_64)) )
 OCV_OPTION(ENABLE_SSE41               "Enable SSE4.1 instructions"                               OFF  IF ((CV_ICC OR CMAKE_COMPILER_IS_GNUCXX) AND (X86 OR X86_64)) )
 OCV_OPTION(ENABLE_SSE42               "Enable SSE4.2 instructions"                               OFF  IF (CMAKE_COMPILER_IS_GNUCXX AND (X86 OR X86_64)) )
+OCV_OPTION(ENABLE_AVX                 "Enable AVX instructions"                                  OFF  IF ((MSVC OR CMAKE_COMPILER_IS_GNUCXX) AND (X86 OR X86_64)) )
 OCV_OPTION(ENABLE_NOISY_WARNINGS      "Show all warnings even if they are too noisy"             OFF )
 OCV_OPTION(OPENCV_WARNINGS_ARE_ERRORS "Treat warnings as errors"                                 OFF )
 
@@ -212,7 +207,7 @@ include(cmake/OpenCVLegacyOptions.cmake OPTIONAL)
 # ----------------------------------------------------------------------------
 #  Get actual OpenCV version number from sources
 # ----------------------------------------------------------------------------
-include(cmake/OpenCVVersion.cmake REQUIRED)
+include(cmake/OpenCVVersion.cmake)
 
 
 # ----------------------------------------------------------------------------
@@ -223,33 +218,33 @@ include(cmake/OpenCVVersion.cmake REQUIRED)
 set(EXECUTABLE_OUTPUT_PATH "${CMAKE_BINARY_DIR}/bin" CACHE PATH "Output directory for applications" )
 
 if(ANDROID OR WIN32)
-    set(OPENCV_DOC_INSTALL_PATH doc)
+  set(OPENCV_DOC_INSTALL_PATH doc)
 elseif(INSTALL_TO_MANGLED_PATHS)
-    set(OPENCV_DOC_INSTALL_PATH share/OpenCV-${OPENCV_VERSION}/doc)
+  set(OPENCV_DOC_INSTALL_PATH share/OpenCV-${OPENCV_VERSION}/doc)
 else()
-    set(OPENCV_DOC_INSTALL_PATH share/OpenCV/doc)
+  set(OPENCV_DOC_INSTALL_PATH share/OpenCV/doc)
 endif()
 
 if(ANDROID)
-    set(LIBRARY_OUTPUT_PATH         "${OpenCV_BINARY_DIR}/lib/${ANDROID_NDK_ABI_NAME}")
-    set(3P_LIBRARY_OUTPUT_PATH      "${OpenCV_BINARY_DIR}/3rdparty/lib/${ANDROID_NDK_ABI_NAME}")
-    set(OPENCV_LIB_INSTALL_PATH     sdk/native/libs/${ANDROID_NDK_ABI_NAME})
-    set(OPENCV_3P_LIB_INSTALL_PATH  sdk/native/3rdparty/libs/${ANDROID_NDK_ABI_NAME})
-    set(OPENCV_CONFIG_INSTALL_PATH  sdk/native/jni)
-    set(OPENCV_INCLUDE_INSTALL_PATH sdk/native/jni/include)
+  set(LIBRARY_OUTPUT_PATH         "${OpenCV_BINARY_DIR}/lib/${ANDROID_NDK_ABI_NAME}")
+  set(3P_LIBRARY_OUTPUT_PATH      "${OpenCV_BINARY_DIR}/3rdparty/lib/${ANDROID_NDK_ABI_NAME}")
+  set(OPENCV_LIB_INSTALL_PATH     sdk/native/libs/${ANDROID_NDK_ABI_NAME})
+  set(OPENCV_3P_LIB_INSTALL_PATH  sdk/native/3rdparty/libs/${ANDROID_NDK_ABI_NAME})
+  set(OPENCV_CONFIG_INSTALL_PATH  sdk/native/jni)
+  set(OPENCV_INCLUDE_INSTALL_PATH sdk/native/jni/include)
 else()
-    set(LIBRARY_OUTPUT_PATH         "${OpenCV_BINARY_DIR}/lib")
-    set(3P_LIBRARY_OUTPUT_PATH      "${OpenCV_BINARY_DIR}/3rdparty/lib${LIB_SUFFIX}")
-    set(OPENCV_LIB_INSTALL_PATH     lib${LIB_SUFFIX})
-    set(OPENCV_3P_LIB_INSTALL_PATH  share/OpenCV/3rdparty/${OPENCV_LIB_INSTALL_PATH})
-    set(OPENCV_INCLUDE_INSTALL_PATH include)
+  set(LIBRARY_OUTPUT_PATH         "${OpenCV_BINARY_DIR}/lib")
+  set(3P_LIBRARY_OUTPUT_PATH      "${OpenCV_BINARY_DIR}/3rdparty/lib${LIB_SUFFIX}")
+  set(OPENCV_LIB_INSTALL_PATH     lib${LIB_SUFFIX})
+  set(OPENCV_3P_LIB_INSTALL_PATH  share/OpenCV/3rdparty/${OPENCV_LIB_INSTALL_PATH})
+  set(OPENCV_INCLUDE_INSTALL_PATH include)
 
-    math(EXPR SIZEOF_VOID_P_BITS "8 * ${CMAKE_SIZEOF_VOID_P}")
-    if(LIB_SUFFIX AND NOT SIZEOF_VOID_P_BITS EQUAL LIB_SUFFIX)
-      set(OPENCV_CONFIG_INSTALL_PATH lib${LIB_SUFFIX}/cmake/opencv)
-    else()
-      set(OPENCV_CONFIG_INSTALL_PATH share/OpenCV)
-    endif()
+  math(EXPR SIZEOF_VOID_P_BITS "8 * ${CMAKE_SIZEOF_VOID_P}")
+  if(LIB_SUFFIX AND NOT SIZEOF_VOID_P_BITS EQUAL LIB_SUFFIX)
+    set(OPENCV_CONFIG_INSTALL_PATH lib${LIB_SUFFIX}/cmake/opencv)
+  else()
+    set(OPENCV_CONFIG_INSTALL_PATH share/OpenCV)
+  endif()
 endif()
 
 set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${OPENCV_LIB_INSTALL_PATH}")
@@ -329,7 +324,7 @@ if(CMAKE_GENERATOR MATCHES "Makefiles|Ninja" AND "${CMAKE_BUILD_TYPE}" STREQUAL 
   set(CMAKE_BUILD_TYPE Release)
 endif()
 
-include(cmake/OpenCVCompilerOptions.cmake REQUIRED)
+include(cmake/OpenCVCompilerOptions.cmake)
 
 
 # ----------------------------------------------------------------------------
@@ -337,7 +332,7 @@ include(cmake/OpenCVCompilerOptions.cmake REQUIRED)
 # Default: dynamic
 # ----------------------------------------------------------------------------
 if(MSVC)
-  include(cmake/OpenCVCRTLinkage.cmake REQUIRED)
+  include(cmake/OpenCVCRTLinkage.cmake)
 endif(MSVC)
 
 if(WIN32 AND NOT MINGW)
@@ -370,17 +365,17 @@ if(UNIX)
   endif()
 endif()
 
-include(cmake/OpenCVPCHSupport.cmake REQUIRED)
-include(cmake/OpenCVModule.cmake REQUIRED)
+include(cmake/OpenCVPCHSupport.cmake)
+include(cmake/OpenCVModule.cmake)
 
 # ----------------------------------------------------------------------------
 #  Detect 3rd-party libraries
 # ----------------------------------------------------------------------------
 
-include(cmake/OpenCVFindLibsGrfmt.cmake REQUIRED)
-include(cmake/OpenCVFindLibsGUI.cmake   REQUIRED)
-include(cmake/OpenCVFindLibsVideo.cmake REQUIRED)
-include(cmake/OpenCVFindLibsPerf.cmake  REQUIRED)
+include(cmake/OpenCVFindLibsGrfmt.cmake)
+include(cmake/OpenCVFindLibsGUI.cmake)
+include(cmake/OpenCVFindLibsVideo.cmake)
+include(cmake/OpenCVFindLibsPerf.cmake)
 
 
 # ----------------------------------------------------------------------------
@@ -389,21 +384,23 @@ include(cmake/OpenCVFindLibsPerf.cmake  REQUIRED)
 
 # --- LATEX for pdf documentation ---
 if(BUILD_DOCS)
-  include(cmake/OpenCVFindLATEX.cmake REQUIRED)
+  include(cmake/OpenCVFindLATEX.cmake)
 endif(BUILD_DOCS)
 
 # --- Python Support ---
-include(cmake/OpenCVDetectPython.cmake REQUIRED)
+include(cmake/OpenCVDetectPython.cmake)
 
 # --- Java Support ---
+include(cmake/OpenCVDetectApacheAnt.cmake)
 if(ANDROID)
-  include(cmake/OpenCVDetectApacheAnt.cmake REQUIRED)
-  include(cmake/OpenCVDetectAndroidSDK.cmake REQUIRED)
+  include(cmake/OpenCVDetectAndroidSDK.cmake)
 
   if(NOT ANDROID_TOOLS_Pkg_Revision GREATER 13)
     message(WARNING "OpenCV requires Android SDK tools revision 14 or newer. Otherwise tests and samples will no be compiled.")
   endif()
-endif(ANDROID)
+elseif(ANT_EXECUTABLE)
+  find_package(JNI)
+endif()
 
 if(ANDROID AND ANDROID_EXECUTABLE AND ANT_EXECUTABLE AND (ANT_VERSION VERSION_GREATER 1.7) AND (ANDROID_TOOLS_Pkg_Revision GREATER 13))
   SET(CAN_BUILD_ANDROID_PROJECTS TRUE)
@@ -413,7 +410,7 @@ endif()
 
 # --- OpenCL ---
 if(WITH_OPENCL)
-  include(cmake/OpenCVDetectOpenCL.cmake REQUIRED)
+  include(cmake/OpenCVDetectOpenCL.cmake)
   if(OPENCL_FOUND)
     set(HAVE_OPENCL 1)
   endif()
@@ -434,7 +431,7 @@ if(ENABLE_SOLUTION_FOLDERS)
 endif()
 
 # Extra OpenCV targets: uninstall, package_source, perf, etc.
-include(cmake/OpenCVExtraTargets.cmake REQUIRED)
+include(cmake/OpenCVExtraTargets.cmake)
 
 
 # ----------------------------------------------------------------------------
@@ -475,16 +472,16 @@ endif()
 ocv_track_build_dependencies()
 
 # Generate platform-dependent and configuration-dependent headers
-include(cmake/OpenCVGenHeaders.cmake REQUIRED)
+include(cmake/OpenCVGenHeaders.cmake)
 
 # Generate opencv.pc for pkg-config command
-include(cmake/OpenCVGenPkgconfig.cmake REQUIRED)
+include(cmake/OpenCVGenPkgconfig.cmake)
 
 # Generate OpenCV.mk for ndk-build (Android build tool)
-include(cmake/OpenCVGenAndroidMK.cmake REQUIRED)
+include(cmake/OpenCVGenAndroidMK.cmake)
 
 # Generate OpenCVСonfig.cmake and OpenCVConfig-version.cmake for cmake projects
-include(cmake/OpenCVGenConfig.cmake REQUIRED)
+include(cmake/OpenCVGenConfig.cmake)
 
 
 # ----------------------------------------------------------------------------
@@ -760,7 +757,7 @@ status("    Use Clp:"   HAVE_CLP   THEN YES ELSE NO)
 
 if(HAVE_CUDA)
   status("")
-  status("  NVIDIA CUDA:"            "(ver ${CUDA_VERSION_STRING})")
+  status("  NVIDIA CUDA")
 
   status("    Use CUFFT:"            HAVE_CUFFT  THEN YES ELSE NO)
   status("    Use CUBLAS:"           HAVE_CUBLAS THEN YES ELSE NO)
@@ -774,9 +771,9 @@ status("  Python:")
 status("    Interpreter:"   PYTHON_EXECUTABLE     THEN "${PYTHON_EXECUTABLE} (ver ${PYTHON_VERSION_FULL})"         ELSE NO)
 if(BUILD_opencv_python)
   if(PYTHONLIBS_VERSION_STRING)
-    status("    Libraries:"     HAVE_opencv_python  THEN  "${PYTHON_LIBRARIES} (ver ${PYTHONLIBS_VERSION_STRING})" ELSE NO)
+    status("    Libraries:"   HAVE_opencv_python  THEN  "${PYTHON_LIBRARIES} (ver ${PYTHONLIBS_VERSION_STRING})"   ELSE NO)
   else()
-    status("    Libraries:"     HAVE_opencv_python  THEN  ${PYTHON_LIBRARIES}                                      ELSE NO)
+    status("    Libraries:"   HAVE_opencv_python  THEN  ${PYTHON_LIBRARIES}                                        ELSE NO)
   endif()
   status("    numpy:"         PYTHON_USE_NUMPY    THEN "${PYTHON_NUMPY_INCLUDE_DIR} (ver ${PYTHON_NUMPY_VERSION})" ELSE "NO (Python wrappers can not be generated)")
   status("    packages path:" PYTHON_EXECUTABLE   THEN "${PYTHON_PACKAGES_PATH}"                                   ELSE "-")
