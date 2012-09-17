@@ -202,7 +202,7 @@ make & enjoy!
 
 #include "precomp.hpp"
 
-#if !defined WIN32 && defined HAVE_CAMV4L && defined HAVE_CAMV4L2
+#if !defined WIN32 && ((defined HAVE_CAMV4L && defined HAVE_CAMV4L2) || defined HAVE_VIDEOIO)
 
 #define CLEAR(x) memset (&(x), 0, sizeof (x))
 
@@ -225,6 +225,11 @@ make & enjoy!
 
 #ifdef HAVE_CAMV4L2
 #include <linux/videodev2.h>
+#endif
+
+#ifdef HAVE_VIDEOIO
+#include <sys/videoio.h>
+#define HAVE_CAMV4L2
 #endif
 
 /* Defaults - If your board can do better, set it here.  Set for the most common type inputs. */
