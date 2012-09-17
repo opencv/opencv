@@ -56,17 +56,15 @@ using namespace cv;
 
 template <typename T>
 struct FastNlMeansDenoisingInvoker {
-    public:     
-        FastNlMeansDenoisingInvoker(const Mat& src, Mat& dst, 
+    public:
+        FastNlMeansDenoisingInvoker(const Mat& src, Mat& dst,
             int template_window_size, int search_window_size, const double h);
 
         void operator() (const BlockedRange& range) const;
 
-		void operator= (const FastNlMeansDenoisingInvoker&) {
-			CV_Error(CV_StsNotImplemented, "Assigment operator is not implemented");
-		}
-
     private:
+        void operator= (const FastNlMeansDenoisingInvoker&);
+
         const Mat& src_;
         Mat& dst_;
 
@@ -80,41 +78,48 @@ struct FastNlMeansDenoisingInvoker {
         int search_window_half_size_;
 
         int fixed_point_mult_;
-        int almost_template_window_size_sq_bin_shift;
-        vector<int> almost_dist2weight;
+        int almost_template_window_size_sq_bin_shift_;
+        vector<int> almost_dist2weight_;
 
         void calcDistSumsForFirstElementInRow(
-            int i, 
-            Array2d<int>& dist_sums, 
-            Array3d<int>& col_dist_sums, 
-            Array3d<int>& up_col_dist_sums) const; 
+            int i,
+            Array2d<int>& dist_sums,
+            Array3d<int>& col_dist_sums,
+            Array3d<int>& up_col_dist_sums) const;
 
         void calcDistSumsForElementInFirstRow(
             int i,
-            int j, 
+            int j,
             int first_col_num,
-            Array2d<int>& dist_sums, 
-            Array3d<int>& col_dist_sums, 
-            Array3d<int>& up_col_dist_sums) const;         
+            Array2d<int>& dist_sums,
+            Array3d<int>& col_dist_sums,
+            Array3d<int>& up_col_dist_sums) const;
 };
+
+inline int getNearestPowerOf2(int value)
+{
+    int p = 0;
+    while( 1 << p < value) ++p;
+    return p;
+}
 
 template <class T>
 FastNlMeansDenoisingInvoker<T>::FastNlMeansDenoisingInvoker(
-    const cv::Mat& src, 
-    cv::Mat& dst, 
-    int template_window_size, 
-    int search_window_size, 
+    const cv::Mat& src,
+    cv::Mat& dst,
+    int template_window_size,
+    int search_window_size,
     const double h) : src_(src), dst_(dst)
 {
-    CV_Assert(src.channels() <= 3);
+    CV_Assert(src.channels() == sizeof(T)); //T is Vec1b or Vec2b or Vec3b
 
     template_window_half_size_ = template_window_size / 2;
-    search_window_half_size_ = search_window_size / 2;
-    template_window_size_ = template_window_half_size_ * 2 + 1;
-    search_window_size_ = search_window_half_size_ * 2 + 1;
+    search_window_half_size_   = search_window_size   / 2;
+    template_window_size_      = template_window_half_size_ * 2 + 1;
+    search_window_size_        = search_window_half_size_   * 2 + 1;
 
     border_size_ = search_window_half_size_ + template_window_half_size_;
-    copyMakeBorder(src_, extended_src_, 
+    copyMakeBorder(src_, extended_src_,
         border_size_, border_size_, border_size_, border_size_, cv::BORDER_DEFAULT);
 
     const int max_estimate_sum_value = search_window_size_ * search_window_size_ * 255;
@@ -122,19 +127,15 @@ FastNlMeansDenoisingInvoker<T>::FastNlMeansDenoisingInvoker(
 
     // precalc weight for every possible l2 dist between blocks
     // additional optimization of precalced weights to replace division(averaging) by binary shift
+
+    CV_Assert(template_window_size_ <= 46340 ); // sqrt(INT_MAX)
     int template_window_size_sq = template_window_size_ * template_window_size_;
-    almost_template_window_size_sq_bin_shift = 0;
-    while (1 << almost_template_window_size_sq_bin_shift < template_window_size_sq) {
-        almost_template_window_size_sq_bin_shift++;
-    }
-    
-    int almost_template_window_size_sq = 1 << almost_template_window_size_sq_bin_shift;
-    double almost_dist2actual_dist_multiplier = 
-        ((double) almost_template_window_size_sq) / template_window_size_sq;
+    almost_template_window_size_sq_bin_shift_ = getNearestPowerOf2(template_window_size_sq);
+    double almost_dist2actual_dist_multiplier = ((double)(1 << almost_template_window_size_sq_bin_shift_)) / template_window_size_sq;
 
     int max_dist = 256 * 256 * src_.channels();
     int almost_max_dist = (int) (max_dist / almost_dist2actual_dist_multiplier + 1);
-    almost_dist2weight.resize(almost_max_dist);
+    almost_dist2weight_.resize(almost_max_dist);
 
     const double WEIGHT_THRESHOLD = 0.001;
     for (int almost_dist = 0; almost_dist < almost_max_dist; almost_dist++) {
@@ -145,7 +146,7 @@ FastNlMeansDenoisingInvoker<T>::FastNlMeansDenoisingInvoker(
             weight = 0;
         }
 
-        almost_dist2weight[almost_dist] = weight;
+        almost_dist2weight_[almost_dist] = weight;
     }
     // additional optimization init end
 
@@ -160,10 +161,10 @@ void FastNlMeansDenoisingInvoker<T>::operator() (const BlockedRange& range) cons
     int row_to = range.end() - 1;
 
     Array2d<int> dist_sums(search_window_size_, search_window_size_);
-    
+
     // for lazy calc optimization
     Array3d<int> col_dist_sums(template_window_size_, search_window_size_, search_window_size_);
-    
+
     int first_col_num = -1;
     Array3d<int> up_col_dist_sums(src_.cols, search_window_size_, search_window_size_);
 
@@ -179,17 +180,17 @@ void FastNlMeansDenoisingInvoker<T>::operator() (const BlockedRange& range) cons
 
             } else { // calc cur dist_sums using previous dist_sums
                 if (i == row_from) {
-                    calcDistSumsForElementInFirstRow(i, j, first_col_num, 
-                        dist_sums, col_dist_sums, up_col_dist_sums);    
+                    calcDistSumsForElementInFirstRow(i, j, first_col_num,
+                        dist_sums, col_dist_sums, up_col_dist_sums);
 
                 } else {
-                    int ay = border_size_ + i; 
+                    int ay = border_size_ + i;
                     int ax = border_size_ + j + template_window_half_size_;
 
-                    int start_by = 
+                    int start_by =
                         border_size_ + i - search_window_half_size_;
 
-                    int start_bx = 
+                    int start_bx =
                         border_size_ + j - search_window_half_size_ + template_window_half_size_;
 
                     T a_up = extended_src_.at<T>(ay - template_window_half_size_ - 1, ax);
@@ -200,64 +201,64 @@ void FastNlMeansDenoisingInvoker<T>::operator() (const BlockedRange& range) cons
 
                     for (int y = 0; y < search_window_size; y++) {
                         int* dist_sums_row = dist_sums.row_ptr(y);
-                        
+
                         int* col_dist_sums_row = col_dist_sums.row_ptr(first_col_num,y);
-                        
+
                         int* up_col_dist_sums_row = up_col_dist_sums.row_ptr(j, y);
 
-                        const T* b_up_ptr = 
+                        const T* b_up_ptr =
                             extended_src_.ptr<T>(start_by - template_window_half_size_ - 1 + y);
 
-                        const T* b_down_ptr = 
+                        const T* b_down_ptr =
                             extended_src_.ptr<T>(start_by + template_window_half_size_ + y);
-                        
+
                         for (int x = 0; x < search_window_size; x++) {
                             dist_sums_row[x] -= col_dist_sums_row[x];
-                        
-                            col_dist_sums_row[x] = 
-                                up_col_dist_sums_row[x] + 
+
+                            col_dist_sums_row[x] =
+                                up_col_dist_sums_row[x] +
                                 calcUpDownDist(
-                                    a_up, a_down, 
+                                    a_up, a_down,
                                     b_up_ptr[start_bx + x], b_down_ptr[start_bx + x]
                                 );
 
                             dist_sums_row[x] += col_dist_sums_row[x];
-                            
+
                             up_col_dist_sums_row[x] = col_dist_sums_row[x];
-                            
+
                         }
                     }
                 }
-                
+
                 first_col_num = (first_col_num + 1) % template_window_size_;
             }
 
             // calc weights
             int weights_sum = 0;
-            
-            int estimation[3];            
+
+            int estimation[3];
             for (int channel_num = 0; channel_num < src_.channels(); channel_num++) {
                 estimation[channel_num] = 0;
             }
-            
+
             for (int y = 0; y < search_window_size_; y++) {
                 const T* cur_row_ptr = extended_src_.ptr<T>(border_size_ + search_window_y + y);
                 int* dist_sums_row = dist_sums.row_ptr(y);
                 for (int x = 0; x < search_window_size_; x++) {
-                    int almostAvgDist = 
-                        dist_sums_row[x] >> almost_template_window_size_sq_bin_shift;
+                    int almostAvgDist =
+                        dist_sums_row[x] >> almost_template_window_size_sq_bin_shift_;
 
-                    int weight = almost_dist2weight[almostAvgDist];
+                    int weight = almost_dist2weight_[almostAvgDist];
                     weights_sum += weight;
-                    
+
                     T p = cur_row_ptr[border_size_ + search_window_x + x];
                     incWithWeight(estimation, weight, p);
                 }
             }
-            
+
             if (weights_sum > 0) {
                 for (int channel_num = 0; channel_num < src_.channels(); channel_num++) {
-                    estimation[channel_num] = 
+                    estimation[channel_num] =
                         cvRound(((double)estimation[channel_num]) / weights_sum);
                 }
 
@@ -272,9 +273,9 @@ void FastNlMeansDenoisingInvoker<T>::operator() (const BlockedRange& range) cons
 
 template <class T>
 inline void FastNlMeansDenoisingInvoker<T>::calcDistSumsForFirstElementInRow(
-    int i, 
-    Array2d<int>& dist_sums, 
-    Array3d<int>& col_dist_sums, 
+    int i,
+    Array2d<int>& dist_sums,
+    Array3d<int>& col_dist_sums,
     Array3d<int>& up_col_dist_sums) const
 {
     int j = 0;
@@ -291,7 +292,7 @@ inline void FastNlMeansDenoisingInvoker<T>::calcDistSumsForFirstElementInRow(
 
             for (int ty = -template_window_half_size_; ty <= template_window_half_size_; ty++) {
                 for (int tx = -template_window_half_size_; tx <= template_window_half_size_; tx++) {
-                    int dist = calcDist<T>(extended_src_, 
+                    int dist = calcDist<T>(extended_src_,
                         border_size_ + i + ty, border_size_ + j + tx,
                         border_size_ + start_y + ty, border_size_ + start_x + tx);
 
@@ -310,29 +311,29 @@ inline void FastNlMeansDenoisingInvoker<T>::calcDistSumsForElementInFirstRow(
     int i,
     int j,
     int first_col_num,
-    Array2d<int>& dist_sums, 
-    Array3d<int>& col_dist_sums, 
+    Array2d<int>& dist_sums,
+    Array3d<int>& col_dist_sums,
     Array3d<int>& up_col_dist_sums) const
 {
-    int ay = border_size_ + i; 
+    int ay = border_size_ + i;
     int ax = border_size_ + j + template_window_half_size_;
 
     int start_by = border_size_ + i - search_window_half_size_;
     int start_bx = border_size_ + j - search_window_half_size_ + template_window_half_size_;
-    
+
     int new_last_col_num = first_col_num;
 
     for (int y = 0; y < search_window_size_; y++) {
         for (int x = 0; x < search_window_size_; x++) {
             dist_sums[y][x] -= col_dist_sums[first_col_num][y][x];
-        
-            col_dist_sums[new_last_col_num][y][x] = 0;                      
-            int by = start_by + y; 
+
+            col_dist_sums[new_last_col_num][y][x] = 0;
+            int by = start_by + y;
             int bx = start_bx + x;
             for (int ty = -template_window_half_size_; ty <= template_window_half_size_; ty++) {
-                col_dist_sums[new_last_col_num][y][x] += 
+                col_dist_sums[new_last_col_num][y][x] +=
                     calcDist<T>(extended_src_, ay + ty, ax, by + ty, bx);
-            }   
+            }
 
             dist_sums[y][x] += col_dist_sums[new_last_col_num][y][x];
 

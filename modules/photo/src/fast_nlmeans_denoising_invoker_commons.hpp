@@ -65,7 +65,7 @@ template <> inline int calcDist(const Vec3b a, const Vec3b b) {
 
 template <typename T> static inline int calcDist(const Mat& m, int i1, int j1, int i2, int j2) {
     const T a = m.at<T>(i1, j1);
-    const T b = m.at<T>(i2, j2);  
+    const T b = m.at<T>(i2, j2);
     return calcDist<T>(a,b);
 }
 
@@ -108,7 +108,7 @@ template <> inline Vec2b saturateCastFromArray(int* estimation) {
     res[1] = saturate_cast<uchar>(estimation[1]);
     return res;
 }
- 
+
 template <> inline Vec3b saturateCastFromArray(int* estimation) {
     Vec3b res;
     res[0] = saturate_cast<uchar>(estimation[0]);
