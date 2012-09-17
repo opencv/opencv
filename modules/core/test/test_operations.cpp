@@ -958,6 +958,10 @@ bool CV_OperationsTest::operations1()
         if( !(minidx[0] == 31 && minidx[1] == 0 && maxidx[0] == 12 && maxidx[1] == 0 &&
               minval == -7 && maxval == 12))
             throw test_excep();
+        
+        Matx33f b(1.f, 2.f, 3.f, 4.f, 5.f, 6.f, 7.f, 8.f, 9.f), c;
+        add(Mat::zeros(3, 3, CV_32F), b, c);
+        CV_Assert( norm(b, c, CV_C) == 0 );
     }
     catch(const test_excep&)
     {
