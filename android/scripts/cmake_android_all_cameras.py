@@ -50,5 +50,7 @@ for s in ConfFile.readlines():
 	    print("Building %s for %s\t[OK]" % (MakeTarget, Arch));
 	except:
 	    print("Building %s for %s\t[FAILED]" % (MakeTarget, Arch));
+    else:
+	print("Building %s for %s\t[FAILED]" % (MakeTarget, Arch));
 ConfFile.close()
 
