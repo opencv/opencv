@@ -1423,20 +1423,20 @@ public:
         dsize.width *= cn;
         AutoBuffer<WT> _buffer(dsize.width*2);
         WT *buf = _buffer, *sum = buf + dsize.width;
-        int k, sy, dx, cur_dy = 0, num = sizeof(WT) * dsize.width;
+        int k, sy, dx, cur_dy = 0;
         WT scale_y = (WT)scale_y_;
-
+        
         CV_Assert( cn <= 4 );
-        memset(buf, 0, num * 2);
+        for( dx = 0; dx < dsize.width; dx++ )
+            buf[dx] = sum[dx] = 0;
         
 #ifdef HAVE_TBB
         sy = yofs[range.start];
         cur_dy = cur_dy_ofs[sy];
-        for( ; sy < range.start; sy++ )
-        {
-            const T* S = (const T*)(src.data + src.step * sy);
-            memset(buf, 0, num);
         
+        for ( ; sy < range.start; sy++ )
+        {
+            const T* S = (const T*)(src.data + src.step*sy);
             if( cn == 1 )
                 for( k = 0; k < xofs_count; k++ )
                 {
@@ -1460,11 +1460,9 @@ public:
                     int sxn = xofs[k].si;
                     int dxn = xofs[k].di;
                     WT alpha = xofs[k].alpha;
-                    
                     WT t0 = buf[dxn] + S[sxn]*alpha;
                     WT t1 = buf[dxn+1] + S[sxn+1]*alpha;
                     WT t2 = buf[dxn+2] + S[sxn+2]*alpha;
-                    
                     buf[dxn] = t0; buf[dxn+1] = t1; buf[dxn+2] = t2;
                 }
             else
@@ -1473,30 +1471,30 @@ public:
                     int sxn = xofs[k].si;
                     int dxn = xofs[k].di;
                     WT alpha = xofs[k].alpha;
-                    
                     WT t0 = buf[dxn] + S[sxn]*alpha;
                     WT t1 = buf[dxn+1] + S[sxn+1]*alpha;
-                    
                     buf[dxn] = t0; buf[dxn+1] = t1;
-                    
                     t0 = buf[dxn+2] + S[sxn+2]*alpha;
                     t1 = buf[dxn+3] + S[sxn+3]*alpha;
-                    
                     buf[dxn+2] = t0; buf[dxn+3] = t1;
                 }
-                 
+            
             if( (cur_dy + 1)*scale_y <= sy + 1 || sy == ssize.height - 1 )
             {
-                WT beta = std::max(sy + 1 - (cur_dy + 1) * scale_y, (WT)0); 
+                WT beta = std::max(sy + 1 - (cur_dy+1)*scale_y, (WT)0);
                 if( fabs(beta) < 1e-3 )
                 {
                     if(cur_dy >= dsize.height)
                         break;
-                    memset(sum, 0, num);
+                    for( dx = 0; dx < dsize.width; dx++ )
+                        sum[dx] = buf[dx] = 0;
                 }
                 else
                     for( dx = 0; dx < dsize.width; dx++ )
-                        sum[dx] = buf[dx] * beta;
+                    {
+                        sum[dx] = buf[dx]*beta;
+                        buf[dx] = 0;
+                    }
                 cur_dy++;
             }
             else
@@ -1506,18 +1504,20 @@ public:
                     WT t0 = sum[dx] + buf[dx];
                     WT t1 = sum[dx+1] + buf[dx+1];
                     sum[dx] = t0; sum[dx+1] = t1;
+                    buf[dx] = buf[dx+1] = 0;
                 }
                 for( ; dx < dsize.width; dx++ )
+                {
                     sum[dx] += buf[dx];
+                    buf[dx] = 0;
+                }
             }
         }
 #endif
         
         for( sy = range.start; sy < range.end; sy++ )
         {
-            const T* S = (const T*)(src.data + src.step * sy);
-            memset(buf, 0, num);
-        
+            const T* S = (const T*)(src.data + src.step*sy);
             if( cn == 1 )
                 for( k = 0; k < xofs_count; k++ )
                 {
@@ -1541,11 +1541,9 @@ public:
                     int sxn = xofs[k].si;
                     int dxn = xofs[k].di;
                     WT alpha = xofs[k].alpha;
-                    
                     WT t0 = buf[dxn] + S[sxn]*alpha;
                     WT t1 = buf[dxn+1] + S[sxn+1]*alpha;
                     WT t2 = buf[dxn+2] + S[sxn+2]*alpha;
-                    
                     buf[dxn] = t0; buf[dxn+1] = t1; buf[dxn+2] = t2;
                 }
             else
@@ -1554,51 +1552,51 @@ public:
                     int sxn = xofs[k].si;
                     int dxn = xofs[k].di;
                     WT alpha = xofs[k].alpha;
-                    
                     WT t0 = buf[dxn] + S[sxn]*alpha;
                     WT t1 = buf[dxn+1] + S[sxn+1]*alpha;
-                    
                     buf[dxn] = t0; buf[dxn+1] = t1;
-                    
                     t0 = buf[dxn+2] + S[sxn+2]*alpha;
                     t1 = buf[dxn+3] + S[sxn+3]*alpha;
-                    
                     buf[dxn+2] = t0; buf[dxn+3] = t1;
                 }
             
             if( (cur_dy + 1)*scale_y <= sy + 1 || sy == ssize.height - 1 )
             {
-                WT beta = std::max(sy + 1 - (cur_dy + 1) * scale_y, (WT)0); 
-                T* D = (T*)(dst.data + dst.step*cur_dy); 
+                WT beta = std::max(sy + 1 - (cur_dy+1)*scale_y, (WT)0);
+                WT beta1 = 1 - beta;
+                T* D = (T*)(dst.data + dst.step*cur_dy);
                 if( fabs(beta) < 1e-3 )
                 {
-                    if(cur_dy >= dsize.height)
-                        return;
-                    for( dx = 0; dx < dsize.width; dx++ )
-                        D[dx] = saturate_cast<T>((sum[dx] + buf[dx]) / min(scale_y, src.rows - cur_dy * scale_y));
-                    memset(sum, 0, num);
-                }
-                else
-                {
-                    WT beta1 = 1 - beta;
+                    if(cur_dy >= dsize.height) return;
                     for( dx = 0; dx < dsize.width; dx++ )
                     {
-                        D[dx] = saturate_cast<T>((sum[dx] + buf[dx] * beta1)/ min(scale_y, src.rows - cur_dy * scale_y));
-                        sum[dx] = buf[dx] * beta;
+                        D[dx] = saturate_cast<T>((sum[dx] + buf[dx]) / min(scale_y, src.rows - cur_dy * scale_y));
+                        sum[dx] = buf[dx] = 0;
                     }
                 }
+                else
+                    for( dx = 0; dx < dsize.width; dx++ )
+                    {
+                        D[dx] = saturate_cast<T>((sum[dx] + buf[dx]* beta1)/ min(scale_y, src.rows - cur_dy*scale_y));
+                        sum[dx] = buf[dx]*beta;
+                        buf[dx] = 0;
+                    }
                 cur_dy++;
             }
             else
             {
                 for( dx = 0; dx <= dsize.width - 2; dx += 2 )
                 {
-                    WT t0 = sum[dx] + buf[dx]; 
-                    WT t1 = sum[dx+1] + buf[dx+1]; 
-                    sum[dx] = t0; sum[dx+1] = t1; 
+                    WT t0 = sum[dx] + buf[dx];
+                    WT t1 = sum[dx+1] + buf[dx+1];
+                    sum[dx] = t0; sum[dx+1] = t1;
+                    buf[dx] = buf[dx+1] = 0;
                 }
                 for( ; dx < dsize.width; dx++ )
-                    sum[dx] += buf[dx]; 
+                {
+                    sum[dx] += buf[dx];
+                    buf[dx] = 0;
+                }
             }
         }
     }
@@ -1629,12 +1627,12 @@ static void resizeArea_( const Mat& src, Mat& dst, const DecimateAlpha* xofs, in
     {
         bool reset = false;
         cur_dy_ofs[sy] = cur_dy;
-        if( (cur_dy + 1)*scale_y_ <= sy + 1 || sy == ssize.height - 1 )
+        if ((cur_dy + 1) * scale_y_ <= sy + 1 || sy == ssize.height - 1 )
         {
-            WT beta = (WT)std::max(sy + 1 - (cur_dy+1)*scale_y_, 0.);
-            if( fabs(beta) < 1e-3 )
+            WT beta = (WT)std::max(sy + 1 - (cur_dy + 1) * scale_y_, 0.);
+            if (fabs(beta) < 1e-3 )
             {
-                if(cur_dy >= dsize.height)
+                if (cur_dy >= dsize.height)
                     break;
                 reset = true;
             }
