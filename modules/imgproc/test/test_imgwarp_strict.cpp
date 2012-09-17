@@ -261,11 +261,18 @@ void CV_ImageWarpBaseTest::validate_results() const
                 PRINT_TO_LOG("Dsize: (%d, %d)\n", dsize.width / cn, dsize.height);
                 PRINT_TO_LOG("Ssize: (%d, %d)\n", src.cols, src.rows);
                 
-                float scale_x = static_cast<float>(ssize.width) / dsize.width,
-                scale_y = static_cast<float>(ssize.height) / dsize.height;
-                PRINT_TO_LOG("Interpolation: %s\n", interpolation_to_string(interpolation == INTER_AREA &&
-                     fabs(scale_x - cvRound(scale_x)) < FLT_EPSILON &&
-                     fabs(scale_y - cvRound(scale_y)) < FLT_EPSILON ? INTER_LANCZOS4 + 1 : interpolation));
+                double scale_x = static_cast<double>(ssize.width) / dsize.width;
+                double scale_y = static_cast<double>(ssize.height) / dsize.height;
+                bool area_fast = interpolation == INTER_AREA &&
+                    fabs(scale_x - cvRound(scale_x)) < FLT_EPSILON &&
+                    fabs(scale_y - cvRound(scale_y)) < FLT_EPSILON;
+                if (area_fast)
+                {
+                    scale_y = cvRound(scale_y);
+                    scale_x = cvRound(scale_x);
+                }
+                
+                PRINT_TO_LOG("Interpolation: %s\n", interpolation_to_string(area_fast ? INTER_LANCZOS4 + 1 : interpolation));
                 PRINT_TO_LOG("Scale (x, y): (%lf, %lf)\n", scale_x, scale_y);
                 PRINT_TO_LOG("Elemsize: %d\n", src.elemSize1());
                 PRINT_TO_LOG("Channels: %d\n", cn);
