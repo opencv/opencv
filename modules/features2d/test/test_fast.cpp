@@ -112,11 +112,12 @@ void CV_FastTest::run( int )
 
     // We only have testing data for 9_16 but it actually works equally well for 7_12
     if ((type==1) || (type==2)){
-    if ( 0 != norm(exp_kps1, kps1, NORM_L2) || 0 != norm(exp_kps2, kps2, NORM_L2))
-    {
-        ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
-        return;
-    }
+        if ( exp_kps1.size != kps1.size || 0 != norm(exp_kps1, kps1, NORM_L2) ||
+             exp_kps2.size != kps2.size || 0 != norm(exp_kps2, kps2, NORM_L2))
+        {
+            ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
+            return;
+        }
     }
 
     /*cv::namedWindow("Img1"); cv::imshow("Img1", image1);
