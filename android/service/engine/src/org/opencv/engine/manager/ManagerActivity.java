@@ -185,7 +185,7 @@ public class ManagerActivity extends Activity
         filter.addAction(Intent.ACTION_PACKAGE_INSTALL);
         filter.addAction(Intent.ACTION_PACKAGE_REMOVED);
         filter.addAction(Intent.ACTION_PACKAGE_REPLACED);
-
+        
         registerReceiver(mPackageChangeReciever, filter);
     }
 
@@ -199,7 +199,11 @@ public class ManagerActivity extends Activity
     protected void onResume() {
     	super.onResume();
     	Log.d(TAG, "Filling package list on resume");
-    	FillPackageList();
+        if (!bindService(new Intent("org.opencv.engine.BIND"), mServiceConnection, Context.BIND_AUTO_CREATE))
+        {
+        	TextView EngineVersionView = (TextView)findViewById(R.id.EngineVersionValue);
+        	EngineVersionView.setText("not avaliable");
+        }
     }
 
     protected SimpleAdapter mInstalledPacksAdapter;
@@ -218,9 +222,13 @@ public class ManagerActivity extends Activity
 
 		@Override
 		public void onReceive(Context context, Intent intent) {
-			Log.d("OpenCV Manager/Reciever", "Bradcast message " + intent.getAction() + " reciever");
-			Log.d("OpenCV Manager/Reciever", "Filling package list on broadcast message");
-			FillPackageList();
+			Log.d("OpenCVManager/Reciever", "Bradcast message " + intent.getAction() + " reciever");
+			Log.d("OpenCVManager/Reciever", "Filling package list on broadcast message");
+	        if (!bindService(new Intent("org.opencv.engine.BIND"), mServiceConnection, Context.BIND_AUTO_CREATE))
+	        {
+	        	TextView EngineVersionView = (TextView)findViewById(R.id.EngineVersionValue);
+	        	EngineVersionView.setText("not avaliable");
+	        }
 		}
 	};
 

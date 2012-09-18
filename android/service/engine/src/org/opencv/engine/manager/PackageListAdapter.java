@@ -23,7 +23,6 @@ public class PackageListAdapter extends SimpleAdapter {
 	  View view = super.getView(position, convertView, parent);
 	  @SuppressWarnings("unchecked")
 	  Map<String, String> item = (Map<String, String>)getItem(position);
-	  Log.d("PackageListAdapter", item.get("Activity"));
 	  if (item.get("Activity") == "y")
 	  {
 		  view.setBackgroundColor(0x50ffffff);
