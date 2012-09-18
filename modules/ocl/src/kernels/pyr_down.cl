@@ -57,14 +57,7 @@ uchar round_uchar_int(int v)
 }
 
 uchar round_uchar_float(float v)
-{ 
-	if(v - convert_int_sat_rte(v) > 1e-6 || v - convert_int_sat_rte(v) < -1e-6)
-	{
-		if(((int)v + 1) - (v + 0.5f) < 1e-6 && ((int)v + 1) - (v + 0.5f) > -1e-6)
-		{
-			v = (int)v + 0.51f;
-		}
-	}
+{
     int iv = convert_int_sat_rte(v);
     return round_uchar_int(iv); 
 }
@@ -85,35 +78,7 @@ uchar4 round_uchar4_int4(int4 v)
 }
 
 uchar4 round_uchar4_float4(float4 v)
-{ 
-	if(v.x - convert_int_sat_rte(v.x) > 1e-6 || v.x - convert_int_sat_rte(v.x) < -1e-6)
-	{
-		if(((int)(v.x) + 1) - (v.x + 0.5f) < 1e-6 && ((int)(v.x) + 1) - (v.x + 0.5f) > -1e-6)
-		{
-			v.x = (int)(v.x) + 0.51f;
-		}
-	}
-	if(v.y - convert_int_sat_rte(v.y) > 1e-6 || v.y - convert_int_sat_rte(v.y) < -1e-6)
-	{
-		if(((int)(v.y) + 1) - (v.y + 0.5f) < 1e-6 && ((int)(v.y) + 1) - (v.y + 0.5f) > -1e-6)
-		{
-			v.y = (int)(v.y) + 0.51f;
-		}
-	}
-	if(v.z - convert_int_sat_rte(v.z) > 1e-6 || v.z - convert_int_sat_rte(v.z) < -1e-6)
-	{
-		if(((int)(v.z) + 1) - (v.z + 0.5f) < 1e-6 && ((int)(v.z) + 1) - (v.z + 0.5f) > -1e-6)
-		{
-			v.z = (int)(v.z) + 0.51f;
-		}
-	}
-	if(v.w - convert_int_sat_rte(v.w) > 1e-6 || v.w - convert_int_sat_rte(v.w) < -1e-6)
-	{
-		if(((int)(v.w) + 1) - (v.w + 0.5f) < 1e-6 && ((int)(v.w) + 1) - (v.w + 0.5f) > -1e-6)
-		{
-			v.w = (int)(v.w) + 0.51f;
-		}
-	}
+{
     int4 iv = convert_int4_sat_rte(v);
     return round_uchar4_int4(iv); 
 }
@@ -123,33 +88,13 @@ uchar4 round_uchar4_float4(float4 v)
 
 int idx_row_low(int y, int last_row)
 {
-	if(y < 0)
-	{
-		y = -y;
-	}
-    return y % (last_row + 1);
+    return abs(y) % (last_row + 1);
 }
 
 int idx_row_high(int y, int last_row) 
 {
-	int i;
-	int j;
-	if(last_row - y < 0)
-	{
-		i = (y - last_row);
-	}
-	else
-	{
-		i = (last_row - y);
-	}
-	if(last_row - i < 0)
-	{
-		j = i - last_row;
-	}
-	else
-	{
-		j = last_row - i;
-	}
+	int i=abs_diff(y,last_row);
+	int j=abs_diff(i,last_row);
     return j % (last_row + 1);
 }
 
@@ -160,33 +105,14 @@ int idx_row(int y, int last_row)
 
 int idx_col_low(int x, int last_col)
 {
-	if(x < 0)
-	{
-		x = -x;
-	}
-    return x % (last_col + 1);
+    return abs(x) % (last_col + 1);
 }
 
 int idx_col_high(int x, int last_col) 
 {
-	int i;
-	int j;
-	if(last_col - x < 0)
-	{
-		i = (x - last_col);
-	}
-	else
-	{
-		i = (last_col - x);
-	}
-	if(last_col - i < 0)
-	{
-		j = i - last_col;
-	}
-	else
-	{
-		j = last_col - i;
-	}
+	
+	int i=abs_diff(x,last_col);
+	int j=abs_diff(i,last_col);
     return j % (last_col + 1);
 }
 
@@ -194,6 +120,7 @@ int idx_col(int x, int last_col)
 {
     return idx_col_low(idx_col_high(x, last_col), last_col);
 }
+
 
 __kernel void pyrDown_C1_D0(__global uchar * srcData, int srcStep, int srcOffset, int srcRows, int srcCols, __global uchar *dst, int dstStep, int dstOffset, int dstCols)
 {
@@ -210,11 +137,11 @@ __kernel void pyrDown_C1_D0(__global uchar * srcData, int srcStep, int srcOffset
 
     sum = 0;
 
-    sum = sum + 0.0625f * round_uchar_uchar(((__global uchar*)((__global char*)srcData + idx_row(src_y - 2, last_row) * srcStep))[idx_col(x, last_col)]);
-    sum = sum + 0.25f   * round_uchar_uchar(((__global uchar*)((__global char*)srcData + idx_row(src_y - 1, last_row) * srcStep))[idx_col(x, last_col)]);
-    sum = sum + 0.375f  * round_uchar_uchar(((__global uchar*)((__global char*)srcData + idx_row(src_y    , last_row) * srcStep))[idx_col(x, last_col)]);
-    sum = sum + 0.25f   * round_uchar_uchar(((__global uchar*)((__global char*)srcData + idx_row(src_y + 1, last_row) * srcStep))[idx_col(x, last_col)]);
-    sum = sum + 0.0625f * round_uchar_uchar(((__global uchar*)((__global char*)srcData + idx_row(src_y + 2, last_row) * srcStep))[idx_col(x, last_col)]);
+    sum = sum + 0.0625f * (((srcData + idx_row(src_y - 2, last_row) * srcStep))[idx_col(x, last_col)]);
+    sum = sum + 0.25f   * (((srcData + idx_row(src_y - 1, last_row) * srcStep))[idx_col(x, last_col)]);
+    sum = sum + 0.375f  * (((srcData + idx_row(src_y    , last_row) * srcStep))[idx_col(x, last_col)]);
+    sum = sum + 0.25f   * (((srcData + idx_row(src_y + 1, last_row) * srcStep))[idx_col(x, last_col)]);
+    sum = sum + 0.0625f * (((srcData + idx_row(src_y + 2, last_row) * srcStep))[idx_col(x, last_col)]);
 
     smem[2 + get_local_id(0)] = sum;
 
@@ -224,11 +151,11 @@ __kernel void pyrDown_C1_D0(__global uchar * srcData, int srcStep, int srcOffset
 
         sum = 0;
 
-        sum = sum + 0.0625f * round_uchar_uchar(((__global uchar*)((__global char*)srcData + idx_row(src_y - 2, last_row) * srcStep))[idx_col(left_x, last_col)]);
-		sum = sum + 0.25f   * round_uchar_uchar(((__global uchar*)((__global char*)srcData + idx_row(src_y - 1, last_row) * srcStep))[idx_col(left_x, last_col)]);
-		sum = sum + 0.375f  * round_uchar_uchar(((__global uchar*)((__global char*)srcData + idx_row(src_y    , last_row) * srcStep))[idx_col(left_x, last_col)]);
-		sum = sum + 0.25f   * round_uchar_uchar(((__global uchar*)((__global char*)srcData + idx_row(src_y + 1, last_row) * srcStep))[idx_col(left_x, last_col)]);
-		sum = sum + 0.0625f * round_uchar_uchar(((__global uchar*)((__global char*)srcData + idx_row(src_y + 2, last_row) * srcStep))[idx_col(left_x, last_col)]);
+        sum = sum + 0.0625f * (((srcData + idx_row(src_y - 2, last_row) * srcStep))[idx_col(left_x, last_col)]);
+		sum = sum + 0.25f   * (((srcData + idx_row(src_y - 1, last_row) * srcStep))[idx_col(left_x, last_col)]);
+		sum = sum + 0.375f  * (((srcData + idx_row(src_y    , last_row) * srcStep))[idx_col(left_x, last_col)]);
+		sum = sum + 0.25f   * (((srcData + idx_row(src_y + 1, last_row) * srcStep))[idx_col(left_x, last_col)]);
+		sum = sum + 0.0625f * (((srcData + idx_row(src_y + 2, last_row) * srcStep))[idx_col(left_x, last_col)]);
 
         smem[get_local_id(0)] = sum;
     }
@@ -239,11 +166,11 @@ __kernel void pyrDown_C1_D0(__global uchar * srcData, int srcStep, int srcOffset
 
         sum = 0;
 
-        sum = sum + 0.0625f * round_uchar_uchar(((__global uchar*)((__global char*)srcData + idx_row(src_y - 2, last_row) * srcStep))[idx_col(right_x, last_col)]);
-		sum = sum + 0.25f   * round_uchar_uchar(((__global uchar*)((__global char*)srcData + idx_row(src_y - 1, last_row) * srcStep))[idx_col(right_x, last_col)]);
-		sum = sum + 0.375f  * round_uchar_uchar(((__global uchar*)((__global char*)srcData + idx_row(src_y    , last_row) * srcStep))[idx_col(right_x, last_col)]);
-		sum = sum + 0.25f   * round_uchar_uchar(((__global uchar*)((__global char*)srcData + idx_row(src_y + 1, last_row) * srcStep))[idx_col(right_x, last_col)]);
-		sum = sum + 0.0625f * round_uchar_uchar(((__global uchar*)((__global char*)srcData + idx_row(src_y + 2, last_row) * srcStep))[idx_col(right_x, last_col)]);
+        sum = sum + 0.0625f * (((srcData + idx_row(src_y - 2, last_row) * srcStep))[idx_col(right_x, last_col)]);
+		sum = sum + 0.25f   * (((srcData + idx_row(src_y - 1, last_row) * srcStep))[idx_col(right_x, last_col)]);
+		sum = sum + 0.375f  * (((srcData + idx_row(src_y    , last_row) * srcStep))[idx_col(right_x, last_col)]);
+		sum = sum + 0.25f   * (((srcData + idx_row(src_y + 1, last_row) * srcStep))[idx_col(right_x, last_col)]);
+		sum = sum + 0.0625f * (((srcData + idx_row(src_y + 2, last_row) * srcStep))[idx_col(right_x, last_col)]);
 
         smem[4 + get_local_id(0)] = sum;
     }
@@ -288,11 +215,11 @@ __kernel void pyrDown_C4_D0(__global uchar4 * srcData, int srcStep, int srcOffse
 
     sum = 0;
 
-	sum = sum + co3 * convert_float4(round_uchar4_uchar4(((__global uchar4*)((__global char4*)srcData + idx_row(src_y - 2, last_row) * srcStep / 4))[idx_col(x, last_col)]));
-	sum = sum + co2   * convert_float4(round_uchar4_uchar4(((__global uchar4*)((__global char4*)srcData + idx_row(src_y - 1, last_row) * srcStep / 4))[idx_col(x, last_col)]));
-	sum = sum + co1  * convert_float4(round_uchar4_uchar4(((__global uchar4*)((__global char4*)srcData + idx_row(src_y    , last_row) * srcStep / 4))[idx_col(x, last_col)]));
-	sum = sum + co2   * convert_float4(round_uchar4_uchar4(((__global uchar4*)((__global char4*)srcData + idx_row(src_y + 1, last_row) * srcStep / 4))[idx_col(x, last_col)]));
-	sum = sum + co3 * convert_float4(round_uchar4_uchar4(((__global uchar4*)((__global char4*)srcData + idx_row(src_y + 2, last_row) * srcStep / 4))[idx_col(x, last_col)]));
+	sum = sum + co3 * convert_float4((((srcData + idx_row(src_y - 2, last_row) * srcStep / 4))[idx_col(x, last_col)]));
+	sum = sum + co2   * convert_float4((((srcData + idx_row(src_y - 1, last_row) * srcStep / 4))[idx_col(x, last_col)]));
+	sum = sum + co1  * convert_float4((((srcData + idx_row(src_y    , last_row) * srcStep / 4))[idx_col(x, last_col)]));
+	sum = sum + co2   * convert_float4((((srcData + idx_row(src_y + 1, last_row) * srcStep / 4))[idx_col(x, last_col)]));
+	sum = sum + co3 * convert_float4((((srcData + idx_row(src_y + 2, last_row) * srcStep / 4))[idx_col(x, last_col)]));
 
 	smem[2 + get_local_id(0)] = sum;
 
@@ -302,11 +229,11 @@ __kernel void pyrDown_C4_D0(__global uchar4 * srcData, int srcStep, int srcOffse
 
 		sum = 0;
 
-		sum = sum + co3 * convert_float4(round_uchar4_uchar4(((__global uchar4*)((__global char4*)srcData + idx_row(src_y - 2, last_row) * srcStep / 4))[idx_col(left_x, last_col)]));
-		sum = sum + co2   * convert_float4(round_uchar4_uchar4(((__global uchar4*)((__global char4*)srcData + idx_row(src_y - 1, last_row) * srcStep / 4))[idx_col(left_x, last_col)]));
-		sum = sum + co1  * convert_float4(round_uchar4_uchar4(((__global uchar4*)((__global char4*)srcData + idx_row(src_y    , last_row) * srcStep / 4))[idx_col(left_x, last_col)]));
-		sum = sum + co2   * convert_float4(round_uchar4_uchar4(((__global uchar4*)((__global char4*)srcData + idx_row(src_y + 1, last_row) * srcStep / 4))[idx_col(left_x, last_col)]));
-		sum = sum + co3 * convert_float4(round_uchar4_uchar4(((__global uchar4*)((__global char4*)srcData + idx_row(src_y + 2, last_row) * srcStep / 4))[idx_col(left_x, last_col)]));
+		sum = sum + co3 * convert_float4((((srcData + idx_row(src_y - 2, last_row) * srcStep / 4))[idx_col(left_x, last_col)]));
+		sum = sum + co2   * convert_float4((((srcData + idx_row(src_y - 1, last_row) * srcStep / 4))[idx_col(left_x, last_col)]));
+		sum = sum + co1  * convert_float4((((srcData + idx_row(src_y    , last_row) * srcStep / 4))[idx_col(left_x, last_col)]));
+		sum = sum + co2   * convert_float4((((srcData + idx_row(src_y + 1, last_row) * srcStep / 4))[idx_col(left_x, last_col)]));
+		sum = sum + co3 * convert_float4((((srcData + idx_row(src_y + 2, last_row) * srcStep / 4))[idx_col(left_x, last_col)]));
 
 		smem[get_local_id(0)] = sum;
 	}
@@ -317,11 +244,11 @@ __kernel void pyrDown_C4_D0(__global uchar4 * srcData, int srcStep, int srcOffse
 
 		sum = 0;
 
-		sum = sum + co3 * convert_float4(round_uchar4_uchar4(((__global uchar4*)((__global char4*)srcData + idx_row(src_y - 2, last_row) * srcStep / 4))[idx_col(right_x, last_col)]));
-		sum = sum + co2   * convert_float4(round_uchar4_uchar4(((__global uchar4*)((__global char4*)srcData + idx_row(src_y - 1, last_row) * srcStep / 4))[idx_col(right_x, last_col)]));
-		sum = sum + co1  * convert_float4(round_uchar4_uchar4(((__global uchar4*)((__global char4*)srcData + idx_row(src_y    , last_row) * srcStep / 4))[idx_col(right_x, last_col)]));
-		sum = sum + co2   * convert_float4(round_uchar4_uchar4(((__global uchar4*)((__global char4*)srcData + idx_row(src_y + 1, last_row) * srcStep / 4))[idx_col(right_x, last_col)]));
-		sum = sum + co3 * convert_float4(round_uchar4_uchar4(((__global uchar4*)((__global char4*)srcData + idx_row(src_y + 2, last_row) * srcStep / 4))[idx_col(right_x, last_col)]));
+		sum = sum + co3 * convert_float4((((srcData + idx_row(src_y - 2, last_row) * srcStep / 4))[idx_col(right_x, last_col)]));
+		sum = sum + co2   * convert_float4((((srcData + idx_row(src_y - 1, last_row) * srcStep / 4))[idx_col(right_x, last_col)]));
+		sum = sum + co1  * convert_float4((((srcData + idx_row(src_y    , last_row) * srcStep / 4))[idx_col(right_x, last_col)]));
+		sum = sum + co2   * convert_float4((((srcData + idx_row(src_y + 1, last_row) * srcStep / 4))[idx_col(right_x, last_col)]));
+		sum = sum + co3 * convert_float4((((srcData + idx_row(src_y + 2, last_row) * srcStep / 4))[idx_col(right_x, last_col)]));
 
 		smem[4 + get_local_id(0)] = sum;
 	}
