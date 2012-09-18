@@ -308,10 +308,19 @@ public class ManagerActivity extends Activity
 	           	ActivePackagePath = mActivePackageMap.get(OpenCVersion);
 	            Log.d(TAG, OpenCVersion + " -> " + ActivePackagePath);
 
-	            if (null != ActivePackagePath && ActivePackagePath.indexOf(mInstalledPackageInfo[i].packageName) >= 0)
+	            if (null != ActivePackagePath)
 	            {
-	            	temp.put("Activity", "y");
-	            	PublicName += " (in use)";
+	            	int start = ActivePackagePath.indexOf(mInstalledPackageInfo[i].packageName);
+	            	int stop = start + mInstalledPackageInfo[i].packageName.length();
+	            	if (start >= 0 && ActivePackagePath.charAt(stop) == '/')
+	            	{
+	            		temp.put("Activity", "y");
+	            		PublicName += " (in use)";
+	            	}
+	            	else
+	            	{
+	            		temp.put("Activity", "n");
+	            	}
 	            }
 	            else
 	            {
