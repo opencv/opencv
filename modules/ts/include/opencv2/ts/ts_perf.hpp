@@ -36,11 +36,13 @@ const cv::Size szVGA = cv::Size(640, 480);
 const cv::Size szSVGA = cv::Size(800, 600);
 const cv::Size szXGA = cv::Size(1024, 768);
 const cv::Size szSXGA = cv::Size(1280, 1024);
+const cv::Size szWQHD = cv::Size(2560, 1440);
 
 const cv::Size sznHD = cv::Size(640, 360);
 const cv::Size szqHD = cv::Size(960, 540);
 const cv::Size sz720p = cv::Size(1280, 720);
 const cv::Size sz1080p = cv::Size(1920, 1080);
+const cv::Size sz1440p = szWQHD;
 const cv::Size sz2160p = cv::Size(3840, 2160);//UHDTV1 4K
 const cv::Size sz4320p = cv::Size(7680, 4320);//UHDTV2 8K
 
