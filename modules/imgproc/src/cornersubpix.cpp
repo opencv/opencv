@@ -48,8 +48,7 @@ cvFindCornerSubPix( const void* srcarr, CvPoint2D32f* corners,
     cv::AutoBuffer<float> buffer;
     
     const int MAX_ITERS = 100;
-    const float drv_x[] = { -1.f, 0.f, 1.f };
-    const float drv_y[] = { 0.f, 0.5f, 0.f };
+    const float drv[] = { -1.f, 0.f, 1.f };
     float *maskX;
     float *maskY;
     float *mask;
@@ -187,13 +186,12 @@ cvFindCornerSubPix( const void* srcarr, CvPoint2D32f* corners,
                                         cvSize( win_w + 2, win_h + 2 ), cI ));
 
             /* calc derivatives */
-            icvSepConvSmall3_32f( src_buffer, src_buf_size.width * sizeof(src_buffer[0]),
-                                  gx_buffer, win_w * sizeof(gx_buffer[0]),
-                                  src_buf_size, drv_x, drv_y, buffer );
-
-            icvSepConvSmall3_32f( src_buffer, src_buf_size.width * sizeof(src_buffer[0]),
-                                  gy_buffer, win_w * sizeof(gy_buffer[0]),
-                                  src_buf_size, drv_y, drv_x, buffer );
+            icvSepConvSmall3_32f( src_buffer+src_buf_size.width, src_buf_size.width * sizeof(src_buffer[0]),
+                                 gx_buffer, win_w * sizeof(gx_buffer[0]),
+                                 src_buf_size, drv, NULL, NULL );
+            icvSepConvSmall3_32f( src_buffer+1, src_buf_size.width * sizeof(src_buffer[0]),
+                                 gy_buffer, win_w * sizeof(gy_buffer[0]),
+                                 src_buf_size, NULL, drv, NULL );
 
             a = b = c = bb1 = bb2 = 0;
 
@@ -221,21 +219,17 @@ cvFindCornerSubPix( const void* srcarr, CvPoint2D32f* corners,
                 }
             }
 
+            double det=a*c-b*b;
+            if( fabs( det ) > DBL_EPSILON*DBL_EPSILON )
             {
-                double A[4];
-                double InvA[4];
-                CvMat matA, matInvA;
-
-                A[0] = a;
-                A[1] = A[2] = b;
-                A[3] = c;
-
-                cvInitMatHeader( &matA, 2, 2, CV_64F, A );
-                cvInitMatHeader( &matInvA, 2, 2, CV_64FC1, InvA );
-
-                cvInvert( &matA, &matInvA, CV_SVD );
-                cI2.x = (float)(cI.x + InvA[0]*bb1 + InvA[1]*bb2);
-                cI2.y = (float)(cI.y + InvA[2]*bb1 + InvA[3]*bb2);
+                // 2x2 matrix inversion
+                double scale=1.0/det;
+                cI2.x = (float)(cI.x + c*scale*bb1 - b*scale*bb2);
+                cI2.y = (float)(cI.y - b*scale*bb1 + a*scale*bb2);
+            }
+            else
+            {
+                cI2 = cI;
             }
 
             err = (cI2.x - cI.x) * (cI2.x - cI.x) + (cI2.y - cI.y) * (cI2.y - cI.y);
