@@ -55,7 +55,7 @@ TEST(SoftCascade, detect)
     cv::SoftCascade cascade;
     ASSERT_TRUE(cascade.load(xml));
 
-    cv::Mat colored = cv::imread(cvtest::TS::ptr()->get_data_path() + "cascadeandhog/bahnhof/image_00000006_0.png");
+    cv::Mat colored = cv::imread(cvtest::TS::ptr()->get_data_path() + "cascadeandhog/bahnhof/image_00000000_0.png");
     ASSERT_FALSE(colored.empty());
 
     std::vector<cv::Rect> objectBoxes;
