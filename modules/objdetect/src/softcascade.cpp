@@ -232,122 +232,6 @@ int qangle6(float dfdx, float dfdy)
     return index;
 }
 
-//ToDo
-void calcHistBins(const cv::Mat& grey, cv::Mat& magIntegral, std::vector<cv::Mat>& histInts,
-                  const int bins, int shrinkage)
-{
-    static const float magnitudeScaling = 1.f / sqrt(2);
-
-    CV_Assert( grey.type() == CV_8U);
-
-    float scale = 1.f / shrinkage;
-
-    const int rows = grey.rows + 1;
-    const int cols = grey.cols + 1;
-
-    cv::Mat df_dx(grey.rows, grey.cols, CV_32F),
-    df_dy(grey.rows, grey.cols, CV_32F), mag, angle;
-    // cv::Sobel(grey, df_dx, CV_32F, 1, 0);
-    // cv::Sobel(grey, df_dy, CV_32F, 0, 1);
-
-    for (int y = 1; y < grey.rows -1; ++y)
-    {
-        float* dx = df_dx.ptr<float>(y);
-        float* dy = df_dy.ptr<float>(y);
-
-        const uchar* gr = grey.ptr<uchar>(y);
-        const uchar* gr_down = grey.ptr<uchar>(y - 1);
-        const uchar* gr_up = grey.ptr<uchar>(y + 1);
-        for (int x = 1; x < grey.cols - 1; ++x)
-        {
-            float dx_a = gr[x + 1];
-            float dx_b = gr[x - 1];
-            dx[x] = dx_a - dx_b;
-
-            float dy_a = gr_up[x];
-            float dy_b = gr_down[x];
-            dy[x] = dy_a - dy_b;
-        }
-    }
-
-    cv::cartToPolar(df_dx, df_dy, mag, angle, true);
-
-    mag *= magnitudeScaling;
-
-    cv::Mat saturatedMag(grey.rows, grey.cols, CV_8UC1);
-    for (int y = 0; y < grey.rows; ++y)
-    {
-        float* rm = mag.ptr<float>(y);
-        uchar* mg = saturatedMag.ptr<uchar>(y);
-        for (int x = 0; x < grey.cols; ++x)
-        {
-            mg[x] =  cv::saturate_cast<uchar>(rm[x]);
-        }
-    }
-
-    mag = saturatedMag;
-
-    histInts.clear();
-    std::vector<cv::Mat> hist;
-    for (int bin = 0; bin < bins; ++bin)
-    {
-        hist.push_back(cv::Mat(rows, cols, CV_8UC1));
-    }
-
-    for (int h = 0; h < saturatedMag.rows; ++h)
-    {
-        uchar* magnitude = saturatedMag.ptr<uchar>(h);
-        float* dfdx = df_dx.ptr<float>(h);
-        float* dfdy = df_dy.ptr<float>(h);
-
-        for (int w = 0; w < saturatedMag.cols; ++w)
-        {
-            hist[ qangle6(dfdx[w], dfdy[w]) ].ptr<uchar>(h)[w] = magnitude[w];
-        }
-    }
-
-    angle /= 60;
-
-
-    // for (int h = 0; h < saturatedMag.rows; ++h)
-    // {
-    //     uchar* magnitude = saturatedMag.ptr<uchar>(h);
-    //     float* ang = angle.ptr<float>(h);
-
-    //     for (int w = 0; w < saturatedMag.cols; ++w)
-    //     {
-    //         hist[ (int)ang[w] ].ptr<uchar>(h)[w] = magnitude[w];
-    //     }
-    // }
-    char buffer[33];
-
-    for (int bin = 0; bin < bins; ++bin)
-    {
-        cv::Mat shrunk, sum;
-        cv::imshow(std::string("hist[bin]") + itoa(bin, buffer, 10), hist[bin]);
-        cv::resize(hist[bin], shrunk, cv::Size(), scale, scale, cv::INTER_AREA);
-        cv::imshow(std::string("shrunk") + itoa(bin, buffer, 10), shrunk);
-        cv::integral(shrunk, sum);
-        cv::imshow(std::string("sum") + itoa(bin, buffer, 10), sum);
-        histInts.push_back(sum);
-
-        // std::cout << shrunk << std::endl << std::endl;
-    }
-
-    cv::Mat shrMag;
-    cv::imshow("mag", mag);
-    cv::resize(mag, shrMag, cv::Size(), scale, scale, cv::INTER_AREA);
-
-    cv::FileStorage fs("/home/kellan/actualChannels.xml", cv::FileStorage::WRITE);
-    cv::imshow("shrunk_channel", shrMag);
-    fs << "shrunk_channel6" << shrMag;
-
-    // cv::imshow("shrMag", shrMag);
-    cv::integral(shrMag, magIntegral, mag.depth());
-    // cv::imshow("magIntegral", magIntegral);
-    histInts.push_back(magIntegral);
-}
-
 template< typename T>
 struct Decimate {
     int shrinkage;
@@ -362,8 +246,6 @@ struct Decimate {
 
         CV_Assert(cols * shrinkage == in.cols);
         CV_Assert(rows * shrinkage == in.rows);
-
-        std::cout << "type: " << out.type() << std::endl;
 
         for (int outIdx_y = 0; outIdx_y < rows; ++outIdx_y)
         {
@@ -387,7 +269,7 @@ struct Decimate {
 
 };
 
-#define USE_REFERENCE_VALUES
+// #define USE_REFERENCE_VALUES
 
 struct ChannelStorage
 {
@@ -405,6 +287,13 @@ struct ChannelStorage
 #if defined USE_REFERENCE_VALUES
         cv::FileStorage imgs("/home/kellan/testInts.xml", cv::FileStorage::READ);
         char buff[33];
+
+        for(int i = 0; i < HOG_LUV_BINS; ++i)
+        {
+            cv::Mat channel;
+            imgs[std::string("channel") + itoa(i, buff, 10)] >> channel;
+            hog.push_back(channel);
+        }
 #else
         // add gauss
         cv::Mat gauss;
@@ -483,22 +372,15 @@ struct ChannelStorage
             }
         }
 
-#endif
-        for(int i = 0; i < 6; ++i)
+        for(int i = 0; i < HOG_BINS; ++i)
         {
-            cv::Mat channel, shrunk, sum;
+            cv::Mat shrunk, sum;
 
-#if defined USE_REFERENCE_VALUES
-            imgs[std::string("channel") + itoa(i, buff, 10)] >> channel;
-            hog.push_back(channel);
-#else
             decimate(hist[i], shrunk);
             cv::integral(shrunk, sum, cv::noArray(), CV_32S);
             hog.push_back(sum);
-#endif
         }
 
-#if !defined USE_REFERENCE_VALUES
         hog.push_back(mag);
         hog.insert(hog.end(), luvs.begin(), luvs.end());
         CV_Assert(hog.size() == 10);
