@@ -387,14 +387,11 @@ struct Decimate {
 
 };
 
-//#define USE_REFERENCE_VALUES
+#define USE_REFERENCE_VALUES
 
 struct ChannelStorage
 {
     std::vector<cv::Mat> hog;
-    cv::Mat magnitude;
-    cv::Mat luv;
-
     int shrinkage;
 
     enum {HOG_BINS = 6, HOG_LUV_BINS = 10};
@@ -407,8 +404,8 @@ struct ChannelStorage
 
 #if defined USE_REFERENCE_VALUES
         cv::FileStorage imgs("/home/kellan/testInts.xml", cv::FileStorage::READ);
+        char buff[33];
 #else
-
         // add gauss
         cv::Mat gauss;
         cv::GaussianBlur(colored, gauss, cv::Size(3,3), 0 ,0);
@@ -430,79 +427,84 @@ struct ChannelStorage
              luvs.push_back(sum);
         }
 
-        // calculate magnitude
-        static const float magnitudeScaling = 1.f / sqrt(2);
+        // convert to grey
         cv::Mat grey;
         cv::cvtColor(colored, grey, CV_RGB2GRAY);
 
-        // channels
-        cv::FileStorage imgs("/home/kellan/testImgs.xml", cv::FileStorage::READ);
-#endif
+        // get derivative
+        cv::Mat df_dx, df_dy, mag, angle;
+        cv::Sobel(grey, df_dx, CV_32F, 1, 0);
+        cv::Sobel(grey, df_dy, CV_32F, 0, 1);
 
-        char buff[33];
-        for(int i = 0; i < 7; ++i)
+        // normalize
+        df_dx /= 4;
+        df_dy /= 4;
+
+        // calculate magnitude
+        cv::cartToPolar(df_dx, df_dy, mag, angle, true);
+
+        // normalize to avoid uchar overflow
+        static const float magnitudeScaling = 1.f / sqrt(2);
+        mag *= magnitudeScaling;
+
+        // convert to uchar
+        cv::Mat saturatedMag(grey.rows, grey.cols, CV_8UC1), shrMag;
+        for (int y = 0; y < grey.rows; ++y)
+        {
+            float* rm = mag.ptr<float>(y);
+            uchar* mg = saturatedMag.ptr<uchar>(y);
+            for (int x = 0; x < grey.cols; ++x)
+            {
+                mg[x] =  cv::saturate_cast<uchar>(rm[x]);
+            }
+        }
+
+        // srink and integrate
+        decimate(saturatedMag, shrMag);
+        cv::integral(shrMag, mag, cv::noArray(), CV_32S);
+
+        // create hog channels
+        angle /= 60;
+
+        std::vector<cv::Mat> hist;
+        for (int bin = 0; bin < 6; ++bin)
+        {
+            hist.push_back(cv::Mat(colored.rows, colored.cols, CV_8UC1));
+        }
+
+        for (int y = 0; y < saturatedMag.rows; ++y)
+        {
+            uchar* magnitude = saturatedMag.ptr<uchar>(y);
+            float* ang = angle.ptr<float>(y);
+
+            for (int x = 0; x < saturatedMag.cols; ++x)
+            {
+                hist[ (int)ang[x] ].ptr<uchar>(y)[x] = magnitude[x];
+            }
+        }
+
+#endif
+        for(int i = 0; i < 6; ++i)
         {
             cv::Mat channel, shrunk, sum;
-            imgs[std::string("channel") + itoa(i, buff, 10)] >> channel;
 
 #if defined USE_REFERENCE_VALUES
+            imgs[std::string("channel") + itoa(i, buff, 10)] >> channel;
             hog.push_back(channel);
 #else
-
-            decimate(channel, shrunk);
-            // cv::resize(channel, shrunk, cv::Size(), 1.f / shr, 1.f / shr, cv::INTER_AREA);
+            decimate(hist[i], shrunk);
             cv::integral(shrunk, sum, cv::noArray(), CV_32S);
-
             hog.push_back(sum);
 #endif
         }
 
 #if !defined USE_REFERENCE_VALUES
+        hog.push_back(mag);
         hog.insert(hog.end(), luvs.begin(), luvs.end());
         CV_Assert(hog.size() == 10);
 #endif
         // exit(10);
     }
-    // {
-    //     // add gauss
-    //     cv::Mat gauss;
-    //     cv::GaussianBlur(colored, gauss, cv::Size(3,3), 0 ,0);
-
-    //     colored = gauss;
-    //     // cv::imshow("colored", colored);
-
-    //     cv::Mat _luv, shrLuv;
-    //     cv::cvtColor(colored, _luv, CV_BGR2Luv);
-
-    //     // cv::imshow("_luv", _luv);
-
-    //     cv::resize(_luv, shrLuv, cv::Size(), 1.f / shr, 1.f / shr, cv::INTER_AREA);
-
-    //     // cv::imshow("shrLuv", shrLuv);
-
-    //     cv::integral(shrLuv, luv);
-
-    //     // cv::imshow("luv", luv);
-
-    //     std::vector<cv::Mat> splited;
-    //     split(luv, splited);
-
-    //     char buffer[33];
-
-    //     for (int i = 0; i < (int)splited.size(); i++)
-    //     {
-    //         // cv::imshow(itoa(i,buffer,10), splited[i]);
-    //     }
-
-    //     cv::Mat grey;
-    //     cv::cvtColor(colored, grey, CV_RGB2GRAY);
-
-    //     // cv::imshow("grey", grey);
-
-    //     calcHistBins(grey, magnitude, hog, HOG_BINS, shrinkage);
-
-    //     hog.insert(hog.end(), splited.begin(), splited.end());
-    // }
 
     float get(const int x, const int y, const int channel, const cv::Rect& area) const
     {
