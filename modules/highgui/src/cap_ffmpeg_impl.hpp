@@ -140,6 +140,10 @@ extern "C" {
 #define AV_NOPTS_VALUE_ ((int64_t)AV_NOPTS_VALUE)
 #endif
 
+#ifndef AVERROR_EOF
+#define AVERROR_EOF (-MKTAG( 'E','O','F',' '))
+#endif
+
 static int get_number_of_cpus(void)
 {
 #if LIBAVFORMAT_BUILD < CALC_FFMPEG_VERSION(52, 111, 0)
