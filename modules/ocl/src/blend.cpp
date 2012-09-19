@@ -72,8 +72,8 @@ void cv::ocl::blendLinear(const oclMat& img1, const oclMat& img2, const oclMat& 
 	int depth = img1.depth();
 	int rows = img1.rows;
 	int cols = img1.cols;
-	int istep = img1.step;
-	int wstep = weights1.step;
+	int istep = img1.step1();
+	int wstep = weights1.step1();
 	size_t globalSize[] = {cols * channels, rows, 1};
 	size_t localSize[] = {16, 16, 1};
 

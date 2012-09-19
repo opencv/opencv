@@ -58,8 +58,8 @@ __kernel void BlendLinear_C1_D0(
 	int idy = get_global_id(1);
 	if (idx < cols && idy < rows)
 	{
-		int pos = idy * istep + idx;
-		int wpos = idy * (wstep /sizeof(float)) + idx;
+		int pos = mad24(idy,istep,idx);
+		int wpos = mad24(idy,wstep,idx);
 		float w1 = weight1[wpos];
 		float w2 = weight2[wpos];
 		dst[pos] = (img1[pos] * w1 + img2[pos] * w2) / (w1 + w2 + 1e-5f);
@@ -85,8 +85,8 @@ __kernel void BlendLinear_C4_D0(
 	int y = idy;
 	if (x < cols && y < rows)
 	{
-		int pos = idy * istep + idx;
-		int wpos = idy * (wstep /sizeof(float)) + x;
+		int pos = mad24(idy,istep,idx);
+		int wpos = mad24(idy,wstep,x);
 		float w1 = weight1[wpos];
 		float w2 = weight2[wpos];
 		dst[pos] = (img1[pos] * w1 + img2[pos] * w2) / (w1 + w2 + 1e-5f);
@@ -109,8 +109,8 @@ __kernel void BlendLinear_C1_D5(
 	int idy = get_global_id(1);
 	if (idx < cols && idy < rows)
 	{
-		int pos = idy * (istep / sizeof(float)) + idx;
-		int wpos = idy * (wstep /sizeof(float)) + idx;
+		int pos = mad24(idy,istep,idx);
+		int wpos = mad24(idy,wstep,idx);
 		float w1 = weight1[wpos];
 		float w2 = weight2[wpos];
 		dst[pos] = (img1[pos] * w1 + img2[pos] * w2) / (w1 + w2 + 1e-5f);
@@ -135,8 +135,8 @@ __kernel void BlendLinear_C4_D5(
 	int y = idy;
 	if (x < cols && y < rows)
 	{
-		int pos = idy * (istep / sizeof(float)) + idx;
-		int wpos = idy * (wstep /sizeof(float)) + x;
+		int pos = mad24(idy,istep,idx);
+		int wpos = mad24(idy,wstep,x);
 		float w1 = weight1[wpos];
 		float w2 = weight2[wpos];
 		dst[pos] = (img1[pos] * w1 + img2[pos] * w2) / (w1 + w2 + 1e-5f);
