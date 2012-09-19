@@ -52,7 +52,7 @@ using namespace std;
 #ifdef DUMP_RESULTS
 #  define DUMP(image, path) imwrite(path, image)
 #else
-#  define FUMP(image, path)
+#  define DUMP(image, path)
 #endif
 
 
