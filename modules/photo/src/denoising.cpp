@@ -45,8 +45,8 @@
 #include "fast_nlmeans_denoising_invoker.hpp"
 #include "fast_nlmeans_multi_denoising_invoker.hpp"
 
-void cv::fastNlMeansDenoising( InputArray _src, OutputArray _dst,
-                               int templateWindowSize, int searchWindowSize, int h)
+void cv::fastNlMeansDenoising( InputArray _src, OutputArray _dst, int h,
+                               int templateWindowSize, int searchWindowSize)
 {
     Mat src = _src.getMat();
     _dst.create(src.size(), src.type());
@@ -75,8 +75,8 @@ void cv::fastNlMeansDenoising( InputArray _src, OutputArray _dst,
 }
 
 void cv::fastNlMeansDenoisingColored( InputArray _src, OutputArray _dst,
-                                      int templateWindowSize, int searchWindowSize,
-                                      int h, int hForColorComponents)
+                                      int h, int hForColorComponents,
+                                      int templateWindowSize, int searchWindowSize)
 {
     Mat src = _src.getMat();
     _dst.create(src.size(), src.type());
@@ -96,8 +96,8 @@ void cv::fastNlMeansDenoisingColored( InputArray _src, OutputArray _dst,
     int from_to[] = { 0,0, 1,1, 2,2 };
     mixChannels(&src_lab, 1, l_ab, 2, from_to, 3);
 
-    fastNlMeansDenoising(l, l, templateWindowSize, searchWindowSize, h);
-    fastNlMeansDenoising(ab, ab, templateWindowSize, searchWindowSize, hForColorComponents);
+    fastNlMeansDenoising(l, l, h, templateWindowSize, searchWindowSize);
+    fastNlMeansDenoising(ab, ab, hForColorComponents, templateWindowSize, searchWindowSize);
 
     Mat l_ab_denoised[] = { l, ab };
     Mat dst_lab(src.size(), src.type());
@@ -138,10 +138,9 @@ static void fastNlMeansDenoisingMultiCheckPreconditions(
     }
 }
 
-void cv::fastNlMeansDenoisingMulti( InputArrayOfArrays _srcImgs,
+void cv::fastNlMeansDenoisingMulti( InputArrayOfArrays _srcImgs, OutputArray _dst,
                                     int imgToDenoiseIndex, int temporalWindowSize,
-                                    OutputArray _dst,
-                                    int templateWindowSize, int searchWindowSize, int h)
+                                    int h, int templateWindowSize, int searchWindowSize)
 {
     vector<Mat> srcImgs;
     _srcImgs.getMatVector(srcImgs);
@@ -178,11 +177,10 @@ void cv::fastNlMeansDenoisingMulti( InputArrayOfArrays _srcImgs,
     }
 }
 
-void cv::fastNlMeansDenoisingColoredMulti( InputArrayOfArrays _srcImgs,
+void cv::fastNlMeansDenoisingColoredMulti( InputArrayOfArrays _srcImgs, OutputArray _dst,
                                            int imgToDenoiseIndex, int temporalWindowSize,
-                                           OutputArray _dst,
-                                           int templateWindowSize, int searchWindowSize,
-                                           int h, int hForColorComponents)
+                                           int h, int hForColorComponents,
+                                           int templateWindowSize, int searchWindowSize)
 {
     vector<Mat> srcImgs;
     _srcImgs.getMatVector(srcImgs);
@@ -222,12 +220,12 @@ void cv::fastNlMeansDenoisingColoredMulti( InputArrayOfArrays _srcImgs,
     Mat dst_ab;
 
     fastNlMeansDenoisingMulti(
-        l, imgToDenoiseIndex, temporalWindowSize,
-        dst_l, templateWindowSize, searchWindowSize, h);
+        l, dst_l, imgToDenoiseIndex, temporalWindowSize,
+        h, templateWindowSize, searchWindowSize);
 
     fastNlMeansDenoisingMulti(
-        ab, imgToDenoiseIndex, temporalWindowSize,
-        dst_ab, templateWindowSize, searchWindowSize, hForColorComponents);
+        ab, dst_ab, imgToDenoiseIndex, temporalWindowSize,
+        hForColorComponents, templateWindowSize, searchWindowSize);
 
     Mat l_ab_denoised[] = { dst_l, dst_ab };
     Mat dst_lab(srcImgs[0].size(), srcImgs[0].type());

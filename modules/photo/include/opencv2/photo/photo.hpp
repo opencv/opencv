@@ -68,26 +68,24 @@ CV_EXPORTS_W void inpaint( InputArray src, InputArray inpaintMask,
                            OutputArray dst, double inpaintRadius, int flags );
 
 
-CV_EXPORTS_W void fastNlMeansDenoising( InputArray src, OutputArray dst,
-                                        int templateWindowSize, int searchWindowSize, int h);
+CV_EXPORTS_W void fastNlMeansDenoising( InputArray src, OutputArray dst, int h = 3,
+                                        int templateWindowSize = 7, int searchWindowSize = 21);
 
 CV_EXPORTS_W void fastNlMeansDenoisingColored( InputArray src, OutputArray dst,
-                                               int templateWindowSize, int searchWindowSize,
-                                               int h, int hForColorComponents);
+                                               int h = 3, int hColor = 3,
+                                               int templateWindowSize = 7, int searchWindowSize = 21);
 
-CV_EXPORTS_W void fastNlMeansDenoisingMulti( InputArrayOfArrays srcImgs,
+CV_EXPORTS_W void fastNlMeansDenoisingMulti( InputArrayOfArrays srcImgs, OutputArray dst,
                                              int imgToDenoiseIndex, int temporalWindowSize,
-                                             OutputArray dst,
-                                             int templateWindowSize, int searchWindowSize, int h);
+                                             int h = 3, int templateWindowSize = 7, int searchWindowSize = 21);
 
-CV_EXPORTS_W void fastNlMeansDenoisingColoredMulti( InputArrayOfArrays srcImgs,
+CV_EXPORTS_W void fastNlMeansDenoisingColoredMulti( InputArrayOfArrays srcImgs, OutputArray dst,
                                                     int imgToDenoiseIndex, int temporalWindowSize,
-                                                    OutputArray dst,
-                                                    int templateWindowSize, int searchWindowSize,
-                                                    int h, int hForColorComponents);
+                                                    int h = 3, int hColor = 3,
+                                                    int templateWindowSize = 7, int searchWindowSize = 21);
 
 }
 
-#endif
+#endif //__cplusplus
 
 #endif

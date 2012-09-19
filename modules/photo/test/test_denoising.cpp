@@ -47,167 +47,102 @@
 using namespace cv;
 using namespace std;
 
-class CV_DenoisingGrayscaleTest : public cvtest::BaseTest
+//#define DUMP_RESULTS
+
+#ifdef DUMP_RESULTS
+#  define DUMP(image, path) imwrite(path, image)
+#else
+#  define FUMP(image, path)
+#endif
+
+
+TEST(Imgproc_DenoisingGrayscale, regression)
 {
-public:
-    CV_DenoisingGrayscaleTest();
-    ~CV_DenoisingGrayscaleTest();
-protected:
-    void run(int);
-};
+    string folder = string(cvtest::TS::ptr()->get_data_path()) + "denoising/";
+    string original_path = folder + "lena_noised_gaussian_sigma=10.png";
+    string expected_path = folder + "lena_noised_denoised_grayscale_tw=7_sw=21_h=10.png";
 
-CV_DenoisingGrayscaleTest::CV_DenoisingGrayscaleTest() {}
-CV_DenoisingGrayscaleTest::~CV_DenoisingGrayscaleTest() {}
+    Mat original = imread(original_path, CV_LOAD_IMAGE_GRAYSCALE);
+    Mat expected = imread(expected_path, CV_LOAD_IMAGE_GRAYSCALE);
 
-void CV_DenoisingGrayscaleTest::run( int )
-{
-    string folder = string(ts->get_data_path()) + "denoising/";
-    Mat orig = imread(folder + "lena_noised_gaussian_sigma=10.png", 0);
-    Mat exp = imread(folder + "lena_noised_denoised_grayscale_tw=7_sw=21_h=10.png", 0);
+    ASSERT_FALSE(original.empty()) << "Could not load input image " << original_path;
+    ASSERT_FALSE(expected.empty()) << "Could not load reference image " << expected_path;
 
-    if (orig.empty() || exp.empty())
-    {
-        ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_TEST_DATA );
-        return;
-    }
+    Mat result;
+    fastNlMeansDenoising(original, result, 10);
 
-    Mat res;
-    fastNlMeansDenoising(orig, res, 7, 21, 10);
+    DUMP(result, expected_path + ".res.png");
 
-    if (norm(res - exp) > 0) {        
-        ts->set_failed_test_info( cvtest::TS::FAIL_MISMATCH );
-    } else {
-        ts->set_failed_test_info(cvtest::TS::OK);
-    }
+    ASSERT_EQ(0, norm(result != expected));
 }
 
-class CV_DenoisingColoredTest : public cvtest::BaseTest
+TEST(Imgproc_DenoisingColored, regression)
 {
-public:
-    CV_DenoisingColoredTest();
-    ~CV_DenoisingColoredTest();
-protected:
-    void run(int);
-};
+    string folder = string(cvtest::TS::ptr()->get_data_path()) + "denoising/";
+    string original_path = folder + "lena_noised_gaussian_sigma=10.png";
+    string expected_path = folder + "lena_noised_denoised_lab12_tw=7_sw=21_h=10_h2=10.png";
 
-CV_DenoisingColoredTest::CV_DenoisingColoredTest() {}
-CV_DenoisingColoredTest::~CV_DenoisingColoredTest() {}
+    Mat original = imread(original_path, CV_LOAD_IMAGE_COLOR);
+    Mat expected = imread(expected_path, CV_LOAD_IMAGE_COLOR);
 
-void CV_DenoisingColoredTest::run( int )
-{
-    string folder = string(ts->get_data_path()) + "denoising/";
-    Mat orig = imread(folder + "lena_noised_gaussian_sigma=10.png", 1);
-    Mat exp = imread(folder + "lena_noised_denoised_lab12_tw=7_sw=21_h=10_h2=10.png", 1);
+    ASSERT_FALSE(original.empty()) << "Could not load input image " << original_path;
+    ASSERT_FALSE(expected.empty()) << "Could not load reference image " << expected_path;
 
-    if (orig.empty() || exp.empty())
-    {
-        ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_TEST_DATA );
-        return;
-    }
+    Mat result;
+    fastNlMeansDenoisingColored(original, result, 10, 10);
 
-    Mat res;
-    fastNlMeansDenoisingColored(orig, res, 7, 21, 10, 10);
+    DUMP(result, expected_path + ".res.png");
 
-    if (norm(res - exp) > 0) {        
-        ts->set_failed_test_info( cvtest::TS::FAIL_MISMATCH );
-    } else {
-        ts->set_failed_test_info(cvtest::TS::OK);
-    }
+    ASSERT_EQ(0, norm(result != expected));
 }
 
-class CV_DenoisingGrayscaleMultiTest : public cvtest::BaseTest
+TEST(Imgproc_DenoisingGrayscaleMulti, regression)
 {
-public:
-    CV_DenoisingGrayscaleMultiTest();
-    ~CV_DenoisingGrayscaleMultiTest();
-protected:
-    void run(int);
-};
-
-CV_DenoisingGrayscaleMultiTest::CV_DenoisingGrayscaleMultiTest() {}
-CV_DenoisingGrayscaleMultiTest::~CV_DenoisingGrayscaleMultiTest() {}
-
-void CV_DenoisingGrayscaleMultiTest::run( int )
-{        
-    string folder = string(ts->get_data_path()) + "denoising/";
-
     const int imgs_count = 3;
-    vector<Mat> src_imgs(imgs_count);
-    src_imgs[0] = imread(folder + "lena_noised_gaussian_sigma=20_multi_0.png", 0);
-    src_imgs[1] = imread(folder + "lena_noised_gaussian_sigma=20_multi_1.png", 0);
-    src_imgs[2] = imread(folder + "lena_noised_gaussian_sigma=20_multi_2.png", 0);
-    
-    Mat exp = imread(folder + "lena_noised_denoised_multi_tw=7_sw=21_h=15.png", 0);
+    string folder = string(cvtest::TS::ptr()->get_data_path()) + "denoising/";
 
-    bool have_empty_src = false;
-    for (int i = 0; i < imgs_count; i++) {
-        have_empty_src |= src_imgs[i].empty();
-    }
+    string expected_path = folder + "lena_noised_denoised_multi_tw=7_sw=21_h=15.png";
+    Mat expected = imread(expected_path, CV_LOAD_IMAGE_GRAYSCALE);
+    ASSERT_FALSE(expected.empty()) << "Could not load reference image " << expected_path;
 
-    if (have_empty_src || exp.empty())
+    vector<Mat> original(imgs_count);
+    for (int i = 0; i < imgs_count; i++)
     {
-        ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_TEST_DATA );
-        return;
+        string original_path = format("%slena_noised_gaussian_sigma=20_multi_%d.png", folder.c_str(), i);
+        original[i] = imread(original_path, CV_LOAD_IMAGE_GRAYSCALE);
+        ASSERT_FALSE(original[i].empty()) << "Could not load input image " << original_path;
     }
 
-    Mat res;
-    fastNlMeansDenoisingMulti(src_imgs, imgs_count / 2, imgs_count, res, 7, 21, 15);
+    Mat result;
+    fastNlMeansDenoisingMulti(original, result, imgs_count / 2, imgs_count, 15);
 
-    if (norm(res - exp) > 0) {        
-        ts->set_failed_test_info( cvtest::TS::FAIL_MISMATCH );
-    } else {
-        ts->set_failed_test_info(cvtest::TS::OK);
-    }
+    DUMP(result, expected_path + ".res.png");
+
+    ASSERT_EQ(0, norm(result != expected));
 }
 
-class CV_DenoisingColoredMultiTest : public cvtest::BaseTest
+TEST(Imgproc_DenoisingColoredMulti, regression)
 {
-public:
-    CV_DenoisingColoredMultiTest();
-    ~CV_DenoisingColoredMultiTest();
-protected:
-    void run(int);
-};
-
-CV_DenoisingColoredMultiTest::CV_DenoisingColoredMultiTest() {}
-CV_DenoisingColoredMultiTest::~CV_DenoisingColoredMultiTest() {}
-
-void CV_DenoisingColoredMultiTest::run( int )
-{        
-    string folder = string(ts->get_data_path()) + "denoising/";
-
     const int imgs_count = 3;
-    vector<Mat> src_imgs(imgs_count);
-    src_imgs[0] = imread(folder + "lena_noised_gaussian_sigma=20_multi_0.png", 1);
-    src_imgs[1] = imread(folder + "lena_noised_gaussian_sigma=20_multi_1.png", 1);
-    src_imgs[2] = imread(folder + "lena_noised_gaussian_sigma=20_multi_2.png", 1);
-    
-    Mat exp = imread(folder + "lena_noised_denoised_multi_lab12_tw=7_sw=21_h=10_h2=15.png", 1);
-    
-    bool have_empty_src = false;
-    for (int i = 0; i < imgs_count; i++) {
-        have_empty_src |= src_imgs[i].empty();
-    }
+    string folder = string(cvtest::TS::ptr()->get_data_path()) + "denoising/";
 
-    if (have_empty_src || exp.empty())
+    string expected_path = folder + "lena_noised_denoised_multi_lab12_tw=7_sw=21_h=10_h2=15.png";
+    Mat expected = imread(expected_path, CV_LOAD_IMAGE_COLOR);
+    ASSERT_FALSE(expected.empty()) << "Could not load reference image " << expected_path;
+
+    vector<Mat> original(imgs_count);
+    for (int i = 0; i < imgs_count; i++)
     {
-        ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_TEST_DATA );
-        return;
+        string original_path = format("%slena_noised_gaussian_sigma=20_multi_%d.png", folder.c_str(), i);
+        original[i] = imread(original_path, CV_LOAD_IMAGE_COLOR);
+        ASSERT_FALSE(original[i].empty()) << "Could not load input image " << original_path;
     }
 
-    Mat res;
-    fastNlMeansDenoisingColoredMulti(src_imgs, imgs_count / 2, imgs_count, res, 7, 21, 10, 15);
+    Mat result;
+    fastNlMeansDenoisingColoredMulti(original, result, imgs_count / 2, imgs_count, 10, 15);
 
-    if (norm(res - exp) > 0) {        
-        ts->set_failed_test_info( cvtest::TS::FAIL_MISMATCH );
-    } else {
-        ts->set_failed_test_info(cvtest::TS::OK);
-    }
+    DUMP(result, expected_path + ".res.png");
+
+    ASSERT_EQ(0, norm(result != expected));
 }
-
-
-TEST(Imgproc_DenoisingGrayscale, regression) { CV_DenoisingGrayscaleTest test; test.safe_run(); }
-TEST(Imgproc_DenoisingColored, regression) { CV_DenoisingColoredTest test; test.safe_run(); }
-TEST(Imgproc_DenoisingGrayscaleMulti, regression) { CV_DenoisingGrayscaleMultiTest test; test.safe_run(); }
-TEST(Imgproc_DenoisingColoredMulti, regression) { CV_DenoisingColoredMultiTest test; test.safe_run(); }
 
