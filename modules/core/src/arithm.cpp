@@ -1224,7 +1224,7 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     bool haveMask = !_mask.empty();
     bool reallocate = false;
 
-    if( kind1 == kind2 && src1.dims <= 2 && src2.dims <= 2 &&
+    if( (kind1 == kind2 || src1.channels() == 1) && src1.dims <= 2 && src2.dims <= 2 &&
         src1.size() == src2.size() && src1.type() == src2.type() &&
         !haveMask && ((!_dst.fixedType() && (dtype < 0 || CV_MAT_DEPTH(dtype) == src1.depth())) ||
                        (_dst.fixedType() && _dst.type() == _src1.type())) )
@@ -1238,8 +1238,7 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
 
     bool haveScalar = false, swapped12 = false;
 
-    if( (kind1 == _InputArray::MATX) + (kind2 == _InputArray::MATX) == 1 ||
-        src1.size != src2.size || src1.channels() != src2.channels() )
+    if( src1.size != src2.size || src1.channels() != src2.channels() )
     {
         if( checkScalar(src1, src2.type(), kind1, kind2) )
         {
