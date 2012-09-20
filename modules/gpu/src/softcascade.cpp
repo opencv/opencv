@@ -74,7 +74,7 @@ struct cv::gpu::SoftCascade::Filds
     GpuMat features;
     GpuMat levels;
 
-    // preallocated buffer 640x480x10
+    // preallocated buffer 640x480x10 + 640x480
     GpuMat dmem;
     // 160x120x10
     GpuMat shrunk;
@@ -85,9 +85,6 @@ struct cv::gpu::SoftCascade::Filds
 
     icf::Cascade cascade;
     icf::ChannelStorage storage;
-
-    bool fill(const FileNode &root, const float mins, const float maxs);
-    void detect() const {}
 
     enum { BOOST = 0 };
     enum
@@ -101,6 +98,12 @@ struct cv::gpu::SoftCascade::Filds
         HOG_BINS           = 6,
         HOG_LUV_BINS       = 10
     };
+
+    bool fill(const FileNode &root, const float mins, const float maxs);
+    void detect() const
+    {
+        cascade.detect(hogluv);
+    }
 
 private:
     void calcLevels(const std::vector<icf::Octave>& octs,
@@ -278,7 +281,7 @@ inline bool cv::gpu::SoftCascade::Filds::fill(const FileNode &root, const float 
     cascade = icf::Cascade(octaves, stages, nodes, leaves, features, levels);
 
     // allocate buffers
-    dmem.create(FRAME_HEIGHT * HOG_LUV_BINS, FRAME_WIDTH, CV_8UC1);
+    dmem.create(FRAME_HEIGHT * (HOG_LUV_BINS + 1), FRAME_WIDTH, CV_8UC1);
     shrunk.create(FRAME_HEIGHT / shrinkage * HOG_LUV_BINS, FRAME_WIDTH / shrinkage, CV_8UC1);
     hogluv.create( (FRAME_HEIGHT / shrinkage * HOG_LUV_BINS) + 1, (FRAME_WIDTH / shrinkage) + 1, CV_16UC1);
 
@@ -395,7 +398,7 @@ void cv::gpu::SoftCascade::detectMultiScale(const GpuMat& image, const GpuMat& /
                                 GpuMat& /*objects*/, const int /*rejectfactor*/, Stream /*stream*/)
 {
     // only color images are supperted
-    CV_Assert(image.type() == CV_8UC3);
+    CV_Assert(image.type() == CV_8UC4);
 
     // only this window size allowed
     CV_Assert(image.cols == 640 && image.rows == 480);

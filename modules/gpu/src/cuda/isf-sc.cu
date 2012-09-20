@@ -41,3 +41,14 @@
 //M*/
 
 #include <icf.hpp>
+
+void icf::Cascade::detect(const cv::gpu::PtrStepSzb& hogluv) const
+{
+    // detection kernel
+}
+
+void icf::ChannelStorage::frame(const cv::gpu::PtrStepSz<uchar4>& image)
+{
+    // color convertin kernel
+    // hog calculation kernel
+}

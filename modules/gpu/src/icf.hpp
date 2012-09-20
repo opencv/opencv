@@ -64,6 +64,8 @@ struct Cascade
         const cv::gpu::PtrStepSzf& lvs, const cv::gpu::PtrStepSzb& fts, const cv::gpu::PtrStepSzb& lls)
     : octaves(octs), stages(sts), nodes(nds), leaves(lvs), features(fts), levels(lls) {}
 
+    void detect(const cv::gpu::PtrStepSzb& hogluv) const;
+
     PtrStepSzb octaves;
     PtrStepSzf stages;
     PtrStepSzb nodes;
@@ -81,7 +83,7 @@ struct ChannelStorage
         const cv::gpu::PtrStepSzb& itg, const int s)
     : dmem (buff), shrunk(shr), hogluv(itg), shrinkage(s) {}
 
-    void frame(const cv::gpu::PtrStepSzb& image) {}
+    void frame(const cv::gpu::PtrStepSz<uchar4>& image);
 
     PtrStepSzb dmem;
     PtrStepSzb shrunk;
