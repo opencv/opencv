@@ -1554,9 +1554,14 @@ public:
 
     virtual ~SoftCascade();
 
-    //! return vector of bounding boxes. Each box contains one detected object
+    //! detect specific objects on in the input frame for all scales computed flom minScale and maxscale values
+    //! Param image is input frame for detector. Cascade will be applied to it.
+    //! Param rois is a mask
+    //! Param objects 4-channel matrix thet contain detected rectangles
+    //! Param rejectfactor used for final object box computing
+    //! Param stream
     virtual void detectMultiScale(const GpuMat& image, const GpuMat& rois, GpuMat& objects,
-    int rejectfactor = 1, Stream stream = Stream::Null()); // ToDo store objects in GPU mem
+    int rejectfactor = 1, Stream stream = Stream::Null());
 
 protected:
     enum { BOOST = 0 };
