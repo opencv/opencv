@@ -72,14 +72,14 @@ static void from_str(const string& str, int type, void* dst)
     else if( type == Param::STRING )
         ss >> *(string*)dst;
     else
-        CV_Error(CV_StsBadArg, "unknown/unsupported parameter type");
+        throw cv::Exception(CV_StsBadArg, "unknown/unsupported parameter type", __func__, __FILE__, __LINE__);
     
     if (ss.fail())
     {
         string err_msg = "can not convert: [" + str +
         + "] to [" + get_type_name(type) + "]";
         
-        CV_Error(CV_StsBadArg, err_msg);
+        throw cv::Exception(CV_StsBadArg, err_msg, __func__, __FILE__, __LINE__);
     }
 }
 
@@ -417,14 +417,15 @@ vector<string> CommandLineParser::Impl::split_range_string(const string& _str, c
         {
             if (begin == true)
             {
-                CV_Error(CV_StsParseError,
+                throw cv::Exception(CV_StsParseError,
                          string("error in split_range_string(")
                          + str
                          + string(", ")
                          + string(1, fs)
                          + string(", ")
                          + string(1, ss)
-                         + string(")")
+                         + string(")"),
+                         __func__, __FILE__, __LINE__
                          );
             }
             begin = true;
@@ -436,14 +437,15 @@ vector<string> CommandLineParser::Impl::split_range_string(const string& _str, c
         {
             if (begin == false)
             {
-                CV_Error(CV_StsParseError,
+                throw cv::Exception(CV_StsParseError,
                          string("error in split_range_string(")
                          + str
                          + string(", ")
                          + string(1, fs)
                          + string(", ")
                          + string(1, ss)
-                         + string(")")
+                         + string(")"),
+                         __func__, __FILE__, __LINE__
                          );
             }
             begin = false;
@@ -459,15 +461,16 @@ vector<string> CommandLineParser::Impl::split_range_string(const string& _str, c
 
     if (begin == true)
     {
-        CV_Error(CV_StsParseError,
+        throw cv::Exception(CV_StsParseError,
                  string("error in split_range_string(")
                  + str
                  + string(", ")
                  + string(1, fs)
                  + string(", ")
                  + string(1, ss)
-                 + string(")")
-                 );
+                 + string(")"),
+                 __func__, __FILE__, __LINE__
+                );
     }
 
     return vec;
