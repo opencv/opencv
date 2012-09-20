@@ -53,8 +53,8 @@ void cv::gpu::ORB_GPU::operator()(const GpuMat&, const GpuMat&, std::vector<KeyP
 void cv::gpu::ORB_GPU::operator()(const GpuMat&, const GpuMat&, GpuMat&) { throw_nogpu(); }
 void cv::gpu::ORB_GPU::operator()(const GpuMat&, const GpuMat&, std::vector<KeyPoint>&, GpuMat&) { throw_nogpu(); }
 void cv::gpu::ORB_GPU::operator()(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&) { throw_nogpu(); }
-void cv::gpu::ORB_GPU::downloadKeyPoints(GpuMat&, std::vector<KeyPoint>&) { throw_nogpu(); }
-void cv::gpu::ORB_GPU::convertKeyPoints(Mat&, std::vector<KeyPoint>&) { throw_nogpu(); }
+void cv::gpu::ORB_GPU::downloadKeyPoints(const GpuMat&, std::vector<KeyPoint>&) { throw_nogpu(); }
+void cv::gpu::ORB_GPU::convertKeyPoints(const Mat&, std::vector<KeyPoint>&) { throw_nogpu(); }
 void cv::gpu::ORB_GPU::release() { throw_nogpu(); }
 void cv::gpu::ORB_GPU::buildScalePyramids(const GpuMat&, const GpuMat&) { throw_nogpu(); }
 void cv::gpu::ORB_GPU::computeKeyPointsPyramid() { throw_nogpu(); }
@@ -685,7 +685,7 @@ void cv::gpu::ORB_GPU::mergeKeyPoints(GpuMat& keypoints)
     }
 }
 
-void cv::gpu::ORB_GPU::downloadKeyPoints(GpuMat& d_keypoints, std::vector<KeyPoint>& keypoints)
+void cv::gpu::ORB_GPU::downloadKeyPoints(const GpuMat &d_keypoints, std::vector<KeyPoint>& keypoints)
 {
     if (d_keypoints.empty())
     {
@@ -698,7 +698,7 @@ void cv::gpu::ORB_GPU::downloadKeyPoints(GpuMat& d_keypoints, std::vector<KeyPoi
     convertKeyPoints(h_keypoints, keypoints);
 }
 
-void cv::gpu::ORB_GPU::convertKeyPoints(Mat& d_keypoints, std::vector<KeyPoint>& keypoints)
+void cv::gpu::ORB_GPU::convertKeyPoints(const Mat &d_keypoints, std::vector<KeyPoint>& keypoints)
 {
     if (d_keypoints.empty())
     {
@@ -708,12 +708,12 @@ void cv::gpu::ORB_GPU::convertKeyPoints(Mat& d_keypoints, std::vector<KeyPoint>&
 
     CV_Assert(d_keypoints.type() == CV_32FC1 && d_keypoints.rows == ROWS_COUNT);
 
-    float* x_ptr = d_keypoints.ptr<float>(X_ROW);
-    float* y_ptr = d_keypoints.ptr<float>(Y_ROW);
-    float* response_ptr = d_keypoints.ptr<float>(RESPONSE_ROW);
-    float* angle_ptr = d_keypoints.ptr<float>(ANGLE_ROW);
-    float* octave_ptr = d_keypoints.ptr<float>(OCTAVE_ROW);
-    float* size_ptr = d_keypoints.ptr<float>(SIZE_ROW);
+    const float* x_ptr = d_keypoints.ptr<float>(X_ROW);
+    const float* y_ptr = d_keypoints.ptr<float>(Y_ROW);
+    const float* response_ptr = d_keypoints.ptr<float>(RESPONSE_ROW);
+    const float* angle_ptr = d_keypoints.ptr<float>(ANGLE_ROW);
+    const float* octave_ptr = d_keypoints.ptr<float>(OCTAVE_ROW);
+    const float* size_ptr = d_keypoints.ptr<float>(SIZE_ROW);
 
     keypoints.resize(d_keypoints.cols);
 

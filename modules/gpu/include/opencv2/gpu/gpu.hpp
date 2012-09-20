@@ -1690,9 +1690,9 @@ public:
     void operator()(const GpuMat& image, const GpuMat& mask, GpuMat& keypoints, GpuMat& descriptors);
 
     //! download keypoints from device to host memory
-    static void downloadKeyPoints(GpuMat& d_keypoints, std::vector<KeyPoint>& keypoints);
+    static void downloadKeyPoints(const GpuMat& d_keypoints, std::vector<KeyPoint>& keypoints);
     //! convert keypoints to KeyPoint vector
-    static void convertKeyPoints(Mat& d_keypoints, std::vector<KeyPoint>& keypoints);
+    static void convertKeyPoints(const Mat& d_keypoints, std::vector<KeyPoint>& keypoints);
 
     //! returns the descriptor size in bytes
     inline int descriptorSize() const { return kBytes; }
