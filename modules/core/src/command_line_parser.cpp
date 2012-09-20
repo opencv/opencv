@@ -72,14 +72,14 @@ static void from_str(const string& str, int type, void* dst)
     else if( type == Param::STRING )
         ss >> *(string*)dst;
     else
-        throw cv::Exception(CV_StsBadArg, "unknown/unsupported parameter type", __func__, __FILE__, __LINE__);
+        throw cv::Exception(CV_StsBadArg, "unknown/unsupported parameter type", "", __FILE__, __LINE__);
     
     if (ss.fail())
     {
         string err_msg = "can not convert: [" + str +
         + "] to [" + get_type_name(type) + "]";
         
-        throw cv::Exception(CV_StsBadArg, err_msg, __func__, __FILE__, __LINE__);
+        throw cv::Exception(CV_StsBadArg, err_msg, "", __FILE__, __LINE__);
     }
 }
 
@@ -425,7 +425,7 @@ vector<string> CommandLineParser::Impl::split_range_string(const string& _str, c
                          + string(", ")
                          + string(1, ss)
                          + string(")"),
-                         __func__, __FILE__, __LINE__
+                         "", __FILE__, __LINE__
                          );
             }
             begin = true;
@@ -445,7 +445,7 @@ vector<string> CommandLineParser::Impl::split_range_string(const string& _str, c
                          + string(", ")
                          + string(1, ss)
                          + string(")"),
-                         __func__, __FILE__, __LINE__
+                         "", __FILE__, __LINE__
                          );
             }
             begin = false;
@@ -469,7 +469,7 @@ vector<string> CommandLineParser::Impl::split_range_string(const string& _str, c
                  + string(", ")
                  + string(1, ss)
                  + string(")"),
-                 __func__, __FILE__, __LINE__
+                 "", __FILE__, __LINE__
                 );
     }
 
