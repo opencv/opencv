@@ -1216,6 +1216,24 @@ void cv::min(const Mat& src1, double src2, Mat& dst)
 namespace cv
 {
 
+int actualScalarDepth(const Mat& src)
+{
+    double min = MIN(MIN(*((double*)src.data), *((double*)src.data+1)), MIN(*((double*)src.data+2), (*((double*)src.data+3))));
+    double max = MAX(MAX(*((double*)src.data), *((double*)src.data+1)), MAX(*((double*)src.data+2), (*((double*)src.data+3))));
+    int depth = CV_64F;
+    if(min >= 0 && max <= UCHAR_MAX)
+        depth = CV_8U;
+    else if(min >= SCHAR_MIN && max <= SCHAR_MAX)
+        depth = CV_8S;
+    else if(min >= 0 && max <= USHRT_MAX)
+        depth = CV_16U;
+    else if(min >= SHRT_MIN && max <= SHRT_MAX)
+        depth = CV_16S;
+    else if(min >= INT_MIN && max <= INT_MAX)
+        depth = CV_32S;
+    return depth;
+}
+
 static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
                InputArray _mask, int dtype, BinaryFunc* tab, bool muldiv=false, void* usrdata=0)
 {
@@ -1237,7 +1255,7 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     }
 
     bool haveScalar = false, swapped12 = false;
-
+    int depth2 = src2.depth();
     if( src1.size != src2.size || src1.channels() != src2.channels() )
     {
         if( checkScalar(src1, src2.type(), kind1, kind2) )
@@ -1251,9 +1269,11 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
                      "The operation is neither 'array op array' (where arrays have the same size and the same number of channels), "
                      "nor 'array op scalar', nor 'scalar op array'" );
         haveScalar = true;
+        CV_Assert(src2.type() == CV_64F && src2.rows == 4);
+        depth2 = actualScalarDepth(src2);
     }
 
-    int cn = src1.channels(), depth1 = src1.depth(), depth2 = src2.depth(), wtype;
+    int cn = src1.channels(), depth1 = src1.depth(), wtype;
     BinaryFunc cvtsrc1 = 0, cvtsrc2 = 0, cvtdst = 0;
 
     if( dtype < 0 )
@@ -1501,6 +1521,18 @@ void cv::subtract( InputArray src1, InputArray src2, OutputArray dst,
     {
         Mat _dst = dst.getMat();
         if(tegra::subtract_8u8u16s(src1.getMat(), src2.getMat(), _dst))
+            return;
+    }
+    if(mask.empty() && src1.depth() == CV_8U && src2.depth() == CV_8U && dst.depth() == CV_32F)
+    {
+        Mat _dst = dst.getMat();
+        if(tegra::subtract_8u8u32f(src1.getMat(), src2.getMat(), _dst))
+            return;
+    }
+    if(mask.empty() && src1.depth() == CV_8U && src2.depth() == CV_8U && dst.depth() == CV_8S)
+    {
+        Mat _dst = dst.getMat();
+        if(tegra::subtract_8u8u8s(src1.getMat(), src2.getMat(), _dst))
             return;
     }
 #endif
