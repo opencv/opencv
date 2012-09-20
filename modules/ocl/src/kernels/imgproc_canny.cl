@@ -601,7 +601,7 @@ __kernel
     {
         int n;
 
-#pragma unroll
+        #pragma unroll
         for (int k = 0; k < 16; ++k)
         {
             n = 0;
@@ -685,12 +685,6 @@ __kernel
     __local unsigned int s_ind;
 
     __local ushort2 s_st[stack_size];
-
-    if(gidx + gidy == 0)
-    {
-        *counter = 0;
-    }
-    barrier(CLK_GLOBAL_MEM_FENCE);
 
     if(lidx == 0)
     {

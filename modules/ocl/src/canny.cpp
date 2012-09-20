@@ -75,13 +75,13 @@ cv::ocl::CannyBuf::CannyBuf(const oclMat& dx_, const oclMat& dy_) : dx(dx_), dy(
 
 void cv::ocl::CannyBuf::create(const Size& image_size, int apperture_size)
 {
-    dx.create(image_size, CV_32SC1);
-    dy.create(image_size, CV_32SC1);
+    ensureSizeIsEnough(image_size, CV_32SC1, dx);
+    ensureSizeIsEnough(image_size, CV_32SC1, dy);
 
     if(apperture_size == 3)
     {
-        dx_buf.create(image_size, CV_32SC1);
-        dy_buf.create(image_size, CV_32SC1);
+        ensureSizeIsEnough(image_size, CV_32SC1, dx_buf);
+        ensureSizeIsEnough(image_size, CV_32SC1, dy_buf);
     }
     else if(apperture_size > 0)
     {
@@ -95,18 +95,18 @@ void cv::ocl::CannyBuf::create(const Size& image_size, int apperture_size)
             filterDY = createDerivFilter_GPU(CV_8U, CV_32S, 0, 1, apperture_size, BORDER_REPLICATE);
         }
     }
-    edgeBuf.create(image_size.height + 2, image_size.width + 2, CV_32FC1);
+    ensureSizeIsEnough(image_size.height + 2, image_size.width + 2, CV_32FC1, edgeBuf);
 
-    trackBuf1.create(1, image_size.width * image_size.height, CV_16UC2);
-    trackBuf2.create(1, image_size.width * image_size.height, CV_16UC2);
+    ensureSizeIsEnough(1, image_size.width * image_size.height, CV_16UC2, trackBuf1);
+    ensureSizeIsEnough(1, image_size.width * image_size.height, CV_16UC2, trackBuf2);
 
-    float counter_f [1] = { 0 };
+    int counter_i [1] = { 0 };
     int err = 0;
     if(counter)
     {
         openCLFree(counter);
     }
-    counter = clCreateBuffer( Context::getContext()->impl->clContext, CL_MEM_COPY_HOST_PTR, sizeof(float), counter_f, &err );
+    counter = clCreateBuffer( Context::getContext()->impl->clContext, CL_MEM_COPY_HOST_PTR, sizeof(int), counter_i, &err );
     openCLSafeCall(err);
 }
 
@@ -357,16 +357,18 @@ void canny::edgesHysteresisLocal_gpu(oclMat& map, oclMat& st1, void * counter, i
 void canny::edgesHysteresisGlobal_gpu(oclMat& map, oclMat& st1, oclMat& st2, void * counter, int rows, int cols)
 {
     unsigned int count;
-    openCLSafeCall(clEnqueueReadBuffer(Context::getContext()->impl->clCmdQueue, (cl_mem)counter, 1, 0, sizeof(float), &count, NULL, NULL, NULL));
+    openCLSafeCall(clEnqueueReadBuffer(Context::getContext()->impl->clCmdQueue, (cl_mem)counter, 1, 0, sizeof(float), &count, 0, NULL, NULL));
     Context *clCxt = map.clCxt;
     string kernelName = "edgesHysteresisGlobal";
     vector< pair<size_t, const void *> > args;
     size_t localThreads[3]  = {128, 1, 1};
 
 #define DIVUP(a, b) ((a)+(b)-1)/(b)
-
+    int count_i[1] = {0};
     while(count > 0)
     {
+        openCLSafeCall(clEnqueueWriteBuffer(Context::getContext()->impl->clCmdQueue, (cl_mem)counter, 1, 0, sizeof(int), &count_i, 0, NULL, NULL));
+
         args.clear();
         size_t globalThreads[3] = {std::min(count, 65535u) * 128, DIVUP(count, 65535), 1};
         args.push_back( make_pair( sizeof(cl_mem), (void *)&map.data));
@@ -380,7 +382,7 @@ void canny::edgesHysteresisGlobal_gpu(oclMat& map, oclMat& st1, oclMat& st2, voi
         args.push_back( make_pair( sizeof(cl_int), (void *)&map.offset));
 
         openCLExecuteKernel(clCxt, &imgproc_canny, kernelName, globalThreads, localThreads, args, -1, -1);
-        openCLSafeCall(clEnqueueReadBuffer(Context::getContext()->impl->clCmdQueue, (cl_mem)counter, 1, 0, sizeof(float), &count, NULL, NULL, NULL));
+        openCLSafeCall(clEnqueueReadBuffer(Context::getContext()->impl->clCmdQueue, (cl_mem)counter, 1, 0, sizeof(int), &count, 0, NULL, NULL));
         std::swap(st1, st2);
     }
 #undef DIVUP

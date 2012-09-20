@@ -44,7 +44,7 @@
 //M*/
 #include <iomanip>
 #include "precomp.hpp"
-
+#include "opencv2/highgui/highgui.hpp"
 
 using namespace cv;
 using namespace cv::ocl;
@@ -72,195 +72,197 @@ namespace cv { namespace ocl
     extern const char * nonfree_surf;
 }}
 
-namespace 
+
+static inline int divUp(int total, int grain)
 {
-    static inline int divUp(int total, int grain)
-    {
-        return (total + grain - 1) / grain;
-    }
-    static inline int calcSize(int octave, int layer)
-    {
-        /* Wavelet size at first layer of first octave. */
-        const int HAAR_SIZE0 = 9;
-
-        /* Wavelet size increment between layers. This should be an even number,
-        such that the wavelet sizes in an octave are either all even or all odd.
-        This ensures that when looking for the neighbours of a sample, the layers
-
-        above and below are aligned correctly. */
-        const int HAAR_SIZE_INC = 6;
-
-        return (HAAR_SIZE0 + HAAR_SIZE_INC * layer) << octave;
-    }
-
-    class SURF_OCL_Invoker
-    {
-    public:
-        // facilities
-        void bindImgTex(const oclMat& img);
-        void bindSumTex(const oclMat& sum);
-        void bindMaskSumTex(const oclMat& maskSum);
-
-        //void loadGlobalConstants(int maxCandidates, int maxFeatures, int img_rows, int img_cols, int nOctaveLayers, float hessianThreshold);
-        //void loadOctaveConstants(int octave, int layer_rows, int layer_cols);
-
-        // kernel callers declearations
-        void icvCalcLayerDetAndTrace_gpu(oclMat& det, oclMat& trace, int octave, int nOctaveLayers, int layer_rows);
-
-        void icvFindMaximaInLayer_gpu(const oclMat& det, const oclMat& trace, oclMat& maxPosBuffer, oclMat& maxCounter, int counterOffset,
-            int octave, bool use_mask, int nLayers, int layer_rows, int layer_cols);
-
-        void icvInterpolateKeypoint_gpu(const oclMat& det, const oclMat& maxPosBuffer, unsigned int maxCounter,
-            oclMat& keypoints, oclMat& counters, int octave, int layer_rows, int maxFeatures);
-
-        void icvCalcOrientation_gpu(const oclMat& keypoints, int nFeatures);
-
-        void compute_descriptors_gpu(const oclMat& descriptors, const oclMat& keypoints, int nFeatures);
-        // end of kernel callers declearations
-
-
-        SURF_OCL_Invoker(SURF_OCL& surf, const oclMat& img, const oclMat& mask) :
-        surf_(surf),
-            img_cols(img.cols), img_rows(img.rows),
-            use_mask(!mask.empty()),
-			imgTex(NULL), sumTex(NULL), maskSumTex(NULL)
-        {
-            CV_Assert(!img.empty() && img.type() == CV_8UC1);
-            CV_Assert(mask.empty() || (mask.size() == img.size() && mask.type() == CV_8UC1));
-            CV_Assert(surf_.nOctaves > 0 && surf_.nOctaveLayers > 0);
-
-            const int min_size = calcSize(surf_.nOctaves - 1, 0);
-            CV_Assert(img_rows - min_size >= 0);
-            CV_Assert(img_cols - min_size >= 0);
-
-            const int layer_rows = img_rows >> (surf_.nOctaves - 1);
-            const int layer_cols = img_cols >> (surf_.nOctaves - 1);
-            const int min_margin = ((calcSize((surf_.nOctaves - 1), 2) >> 1) >> (surf_.nOctaves - 1)) + 1;
-            CV_Assert(layer_rows - 2 * min_margin > 0);
-            CV_Assert(layer_cols - 2 * min_margin > 0);
-
-            maxFeatures   = std::min(static_cast<int>(img.size().area() * surf.keypointsRatio), 65535);
-            maxCandidates = std::min(static_cast<int>(1.5 * maxFeatures), 65535);
-
-            CV_Assert(maxFeatures > 0);
-
-            counters.create(1, surf_.nOctaves + 1, CV_32SC1);
-            counters.setTo(Scalar::all(0));
-
-            //loadGlobalConstants(maxCandidates, maxFeatures, img_rows, img_cols, surf_.nOctaveLayers, static_cast<float>(surf_.hessianThreshold));
-
-            bindImgTex(img);
-            integral(img, surf_.sum); // the two argumented integral version is incorrect
-
-            bindSumTex(surf_.sum);
-            maskSumTex = 0;
-
-            if (use_mask)
-            {
-                throw std::exception();
-                //!FIXME
-                // temp fix for missing min overload
-                oclMat temp(mask.size(), mask.type());
-                temp.setTo(Scalar::all(1.0));
-                //cv::ocl::min(mask, temp, surf_.mask1);           ///////// disable this 
-                integral(surf_.mask1, surf_.maskSum);
-                bindMaskSumTex(surf_.maskSum);
-            }
-        }
-
-        void detectKeypoints(oclMat& keypoints)
-        {
-            // create image pyramid buffers
-            // different layers have same sized buffers, but they are sampled from gaussin kernel.
-            surf_.det.create(img_rows * (surf_.nOctaveLayers + 2), img_cols, CV_32FC1);  
-            surf_.trace.create(img_rows * (surf_.nOctaveLayers + 2), img_cols, CV_32FC1);
-
-            surf_.maxPosBuffer.create(1, maxCandidates, CV_32SC4);
-            keypoints.create(SURF_OCL::ROWS_COUNT, maxFeatures, CV_32FC1);
-            keypoints.setTo(Scalar::all(0));
-
-            for (int octave = 0; octave < surf_.nOctaves; ++octave)
-            {
-                const int layer_rows = img_rows >> octave;
-                const int layer_cols = img_cols >> octave;
-
-                //loadOctaveConstants(octave, layer_rows, layer_cols);
-
-                icvCalcLayerDetAndTrace_gpu(surf_.det, surf_.trace, octave, surf_.nOctaveLayers, layer_rows);
-
-                icvFindMaximaInLayer_gpu(surf_.det, surf_.trace, surf_.maxPosBuffer, counters, 1 + octave,
-                    octave, use_mask, surf_.nOctaveLayers, layer_rows, layer_cols);
-
-                unsigned int maxCounter = Mat(counters).at<unsigned int>(1 + octave);
-                maxCounter = std::min(maxCounter, static_cast<unsigned int>(maxCandidates));
-
-                if (maxCounter > 0)
-                {
-                    icvInterpolateKeypoint_gpu(surf_.det, surf_.maxPosBuffer, maxCounter,
-                        keypoints, counters, octave, layer_rows, maxFeatures);
-                }
-            }
-            unsigned int featureCounter = Mat(counters).at<unsigned int>(0);
-            featureCounter = std::min(featureCounter, static_cast<unsigned int>(maxFeatures));
-
-            keypoints.cols = featureCounter;
-
-            if (surf_.upright)
-                keypoints.row(SURF_OCL::ANGLE_ROW).setTo(Scalar::all(90.0));
-            else
-                findOrientation(keypoints);
-        }
-
-        void findOrientation(oclMat& keypoints)
-        {
-            const int nFeatures = keypoints.cols;
-            if (nFeatures > 0)
-            {
-                icvCalcOrientation_gpu(keypoints, nFeatures);
-            }
-        }
-
-        void computeDescriptors(const oclMat& keypoints, oclMat& descriptors, int descriptorSize)
-        {
-            const int nFeatures = keypoints.cols;
-            if (nFeatures > 0)
-            {
-                descriptors.create(nFeatures, descriptorSize, CV_32F);
-                compute_descriptors_gpu(descriptors, keypoints, nFeatures);
-            }
-        }
-
-        ~SURF_OCL_Invoker()
-        {
-            if(imgTex)
-                openCLFree(imgTex);
-            if(sumTex)
-                openCLFree(sumTex);
-            if(maskSumTex)
-                openCLFree(maskSumTex);
-            additioalParamBuffer.release();
-        }
-
-    private:
-        SURF_OCL& surf_;
-
-        int img_cols, img_rows;
-
-        bool use_mask;
-
-        int maxCandidates;
-        int maxFeatures;
-
-        oclMat counters;
-
-        // texture buffers
-        cl_mem imgTex;
-        cl_mem sumTex;
-        cl_mem maskSumTex;
-
-        oclMat additioalParamBuffer;
-    };
+    return (total + grain - 1) / grain;
 }
+static inline int calcSize(int octave, int layer)
+{
+    /* Wavelet size at first layer of first octave. */
+    const int HAAR_SIZE0 = 9;
+
+    /* Wavelet size increment between layers. This should be an even number,
+    such that the wavelet sizes in an octave are either all even or all odd.
+    This ensures that when looking for the neighbours of a sample, the layers
+
+    above and below are aligned correctly. */
+    const int HAAR_SIZE_INC = 6;
+
+    return (HAAR_SIZE0 + HAAR_SIZE_INC * layer) << octave;
+}
+
+class SURF_OCL_Invoker
+{
+public:
+    // facilities
+    void bindImgTex(const oclMat& img, cl_mem & texture);
+
+    //void loadGlobalConstants(int maxCandidates, int maxFeatures, int img_rows, int img_cols, int nOctaveLayers, float hessianThreshold);
+    //void loadOctaveConstants(int octave, int layer_rows, int layer_cols);
+
+    // kernel callers declearations
+    void icvCalcLayerDetAndTrace_gpu(oclMat& det, oclMat& trace, int octave, int nOctaveLayers, int layer_rows);
+
+    void icvFindMaximaInLayer_gpu(const oclMat& det, const oclMat& trace, oclMat& maxPosBuffer, oclMat& maxCounter, int counterOffset,
+        int octave, bool use_mask, int nLayers, int layer_rows, int layer_cols);
+
+    void icvInterpolateKeypoint_gpu(const oclMat& det, const oclMat& maxPosBuffer, unsigned int maxCounter,
+        oclMat& keypoints, oclMat& counters, int octave, int layer_rows, int maxFeatures);
+
+    void icvCalcOrientation_gpu(const oclMat& keypoints, int nFeatures);
+
+    void compute_descriptors_gpu(const oclMat& descriptors, const oclMat& keypoints, int nFeatures);
+    // end of kernel callers declearations
+
+
+    SURF_OCL_Invoker(SURF_OCL& surf, const oclMat& img, const oclMat& mask) :
+    surf_(surf),
+        img_cols(img.cols), img_rows(img.rows),
+        use_mask(!mask.empty()),
+        imgTex(NULL), sumTex(NULL), maskSumTex(NULL)
+    {
+        CV_Assert(!img.empty() && img.type() == CV_8UC1);
+        CV_Assert(mask.empty() || (mask.size() == img.size() && mask.type() == CV_8UC1));
+        CV_Assert(surf_.nOctaves > 0 && surf_.nOctaveLayers > 0);
+
+        const int min_size = calcSize(surf_.nOctaves - 1, 0);
+        CV_Assert(img_rows - min_size >= 0);
+        CV_Assert(img_cols - min_size >= 0);
+
+        const int layer_rows = img_rows >> (surf_.nOctaves - 1);
+        const int layer_cols = img_cols >> (surf_.nOctaves - 1);
+        const int min_margin = ((calcSize((surf_.nOctaves - 1), 2) >> 1) >> (surf_.nOctaves - 1)) + 1;
+        CV_Assert(layer_rows - 2 * min_margin > 0);
+        CV_Assert(layer_cols - 2 * min_margin > 0);
+
+        maxFeatures   = std::min(static_cast<int>(img.size().area() * surf.keypointsRatio), 65535);
+        maxCandidates = std::min(static_cast<int>(1.5 * maxFeatures), 65535);
+
+        CV_Assert(maxFeatures > 0);
+
+        counters.create(1, surf_.nOctaves + 1, CV_32SC1);
+        counters.setTo(Scalar::all(0));
+
+        //loadGlobalConstants(maxCandidates, maxFeatures, img_rows, img_cols, surf_.nOctaveLayers, static_cast<float>(surf_.hessianThreshold));
+
+        bindImgTex(img, imgTex);
+        integral(img, surf_.sum); // the two argumented integral version is incorrect
+
+        bindImgTex(surf_.sum, sumTex);
+        maskSumTex = 0;
+
+        if (use_mask)
+        {
+            throw std::exception();
+            //!FIXME
+            // temp fix for missing min overload
+            oclMat temp(mask.size(), mask.type());
+            temp.setTo(Scalar::all(1.0));
+            //cv::ocl::min(mask, temp, surf_.mask1);           ///////// disable this 
+            integral(surf_.mask1, surf_.maskSum);
+            bindImgTex(surf_.maskSum, maskSumTex);
+        }
+    }
+
+    void detectKeypoints(oclMat& keypoints)
+    {
+        // create image pyramid buffers
+        // different layers have same sized buffers, but they are sampled from gaussin kernel.
+        ensureSizeIsEnough(img_rows * (surf_.nOctaveLayers + 2), img_cols, CV_32FC1, surf_.det);
+        ensureSizeIsEnough(img_rows * (surf_.nOctaveLayers + 2), img_cols, CV_32FC1, surf_.trace);
+
+        ensureSizeIsEnough(1, maxCandidates, CV_32SC4, surf_.maxPosBuffer);
+        ensureSizeIsEnough(SURF_OCL::ROWS_COUNT, maxFeatures, CV_32FC1, keypoints);
+        keypoints.setTo(Scalar::all(0));
+
+        for (int octave = 0; octave < surf_.nOctaves; ++octave)
+        {
+            const int layer_rows = img_rows >> octave;
+            const int layer_cols = img_cols >> octave;
+
+            //loadOctaveConstants(octave, layer_rows, layer_cols);
+
+            icvCalcLayerDetAndTrace_gpu(surf_.det, surf_.trace, octave, surf_.nOctaveLayers, layer_rows);
+
+            icvFindMaximaInLayer_gpu(surf_.det, surf_.trace, surf_.maxPosBuffer, counters, 1 + octave,
+                octave, use_mask, surf_.nOctaveLayers, layer_rows, layer_cols);
+
+            unsigned int maxCounter = Mat(counters).at<unsigned int>(1 + octave);
+            maxCounter = std::min(maxCounter, static_cast<unsigned int>(maxCandidates));
+
+            if (maxCounter > 0)
+            {
+                icvInterpolateKeypoint_gpu(surf_.det, surf_.maxPosBuffer, maxCounter,
+                    keypoints, counters, octave, layer_rows, maxFeatures);
+            }
+        }
+        unsigned int featureCounter = Mat(counters).at<unsigned int>(0);
+        featureCounter = std::min(featureCounter, static_cast<unsigned int>(maxFeatures));
+
+        keypoints.cols = featureCounter;
+
+        if (surf_.upright)
+            keypoints.row(SURF_OCL::ANGLE_ROW).setTo(Scalar::all(90.0));
+        else
+            findOrientation(keypoints);
+    }
+
+    void findOrientation(oclMat& keypoints)
+    {
+        const int nFeatures = keypoints.cols;
+        if (nFeatures > 0)
+        {
+            icvCalcOrientation_gpu(keypoints, nFeatures);
+        }
+    }
+
+    void computeDescriptors(const oclMat& keypoints, oclMat& descriptors, int descriptorSize)
+    {
+        const int nFeatures = keypoints.cols;
+        if (nFeatures > 0)
+        {
+            ensureSizeIsEnough(nFeatures, descriptorSize, CV_32F, descriptors);
+            compute_descriptors_gpu(descriptors, keypoints, nFeatures);
+        }
+    }
+
+    ~SURF_OCL_Invoker()
+    {
+        if(imgTex)
+            openCLFree(imgTex);
+        if(sumTex)
+            openCLFree(sumTex);
+        if(maskSumTex)
+            openCLFree(maskSumTex);
+        additioalParamBuffer.release();
+    }
+
+private:
+    SURF_OCL& surf_;
+
+    int img_cols, img_rows;
+
+    bool use_mask;
+
+    int maxCandidates;
+    int maxFeatures;
+
+    oclMat counters;
+
+    // texture buffers
+    cl_mem imgTex;
+    cl_mem sumTex;
+    cl_mem maskSumTex;
+
+    oclMat additioalParamBuffer;
+
+    SURF_OCL_Invoker& operator= (const SURF_OCL_Invoker& right)
+    { 
+        (*this) = right;
+        return *this;
+    } // remove warning C4512
+};
 
 cv::ocl::SURF_OCL::SURF_OCL()
 {
@@ -274,7 +276,7 @@ cv::ocl::SURF_OCL::SURF_OCL()
 
 cv::ocl::SURF_OCL::SURF_OCL(double _threshold, int _nOctaves, int _nOctaveLayers, bool _extended, float _keypointsRatio, bool _upright)
 {
-    hessianThreshold = _threshold;
+    hessianThreshold = saturate_cast<float>(_threshold);
     extended = _extended;
     nOctaves = _nOctaves;
     nOctaveLayers = _nOctaveLayers;
@@ -440,150 +442,77 @@ void cv::ocl::SURF_OCL::releaseMemory()
     maxPosBuffer.release();
 }
 
-// Facilities
 
-//// load SURF constants into device memory
-//void SURF_OCL_Invoker::loadGlobalConstants(int maxCandidates, int maxFeatures, int img_rows, int img_cols, int nOctaveLayers, float hessianThreshold)
-//{
-//	Mat tmp(1, 9, CV_32FC1);
-//	float * tmp_data = tmp.ptr<float>();
-//	*tmp_data        = maxCandidates;
-//	*(++tmp_data)    = maxFeatures;
-//	*(++tmp_data)    = img_rows;
-//	*(++tmp_data)    = img_cols;
-//	*(++tmp_data)    = nOctaveLayers;
-//	*(++tmp_data)    = hessianThreshold;
-//	additioalParamBuffer = tmp;
-//}
-//void SURF_OCL_Invoker::loadOctaveConstants(int octave, int layer_rows, int layer_cols)
-//{
-//	Mat tmp = additioalParamBuffer;
-//	float * tmp_data = tmp.ptr<float>();
-//	tmp_data += 6;
-//	*tmp_data        = octave;
-//	*(++tmp_data)    = layer_rows;
-//	*(++tmp_data)    = layer_cols;
-//	additioalParamBuffer = tmp;
-//}
-
-// create and bind source buffer to image oject.
-void SURF_OCL_Invoker::bindImgTex(const oclMat& img)
+// bind source buffer to image oject.
+void SURF_OCL_Invoker::bindImgTex(const oclMat& img, cl_mem& texture)
 {
-    Mat cpu_img(img); // time consuming
     cl_image_format format;
     int err;
+    int depth    = img.depth();
+    int channels = img.channels();
 
-    format.image_channel_data_type = CL_UNSIGNED_INT8;
-    format.image_channel_order     = CL_R;
-
-    if(imgTex)
+    switch(depth)
     {
-        openCLFree(imgTex);
+    case CV_8U:
+        format.image_channel_data_type = CL_UNSIGNED_INT8;
+        break;
+    case CV_32S:
+        format.image_channel_data_type = CL_UNSIGNED_INT32;
+        break;
+    case CV_32F:
+        format.image_channel_data_type = CL_FLOAT;
+        break;
+    default:
+        throw std::exception();
+        break;
+    }
+    switch(channels)
+    {
+    case 1:
+        format.image_channel_order     = CL_R;
+        break;
+    case 3:
+        format.image_channel_order     = CL_RGB;
+        break;
+    case 4:
+        format.image_channel_order     = CL_RGBA;
+        break;
+    default:
+        throw std::exception();
+        break;
+    }
+    if(texture)
+    {
+        openCLFree(texture);
     }
 
 #if CL_VERSION_1_2
     cl_image_desc desc;
     desc.image_type       = CL_MEM_OBJECT_IMAGE2D;
-    desc.image_width      = cpu_img.cols;
-    desc.image_height     = cpu_img.rows;
-    desc.image_depth      = NULL;
+    desc.image_width      = img.step / img.elemSize();
+    desc.image_height     = img.rows;
+    desc.image_depth      = 0;
     desc.image_array_size = 1;
-    desc.image_row_pitch  = cpu_img.step;
+    desc.image_row_pitch  = 0;
     desc.image_slice_pitch= 0;
     desc.buffer           = NULL;
     desc.num_mip_levels   = 0;
     desc.num_samples      = 0;
-    imgTex = clCreateImage(img.clCxt->impl->clContext, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, &format, &desc, cpu_img.data, &err);
+    texture = clCreateImage(Context::getContext()->impl->clContext, CL_MEM_READ_WRITE, &format, &desc, NULL, &err); 
 #else
-    imgTex = clCreateImage2D(
-        img.clCxt->impl->clContext, 
-        CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, 
+    texture = clCreateImage2D(
+        Context::getContext()->impl->clContext, 
+        CL_MEM_READ_WRITE, 
         &format, 
-        cpu_img.cols, 
-        cpu_img.rows, 
-        cpu_img.step, 
-        cpu_img.data, 
+        img.step / img.elemSize(), 
+        img.rows, 
+        0, 
+        NULL, 
         &err);
 #endif
-    openCLSafeCall(err);
-}
-
-void SURF_OCL_Invoker::bindSumTex(const oclMat& sum)
-{
-    Mat cpu_img(sum); // time consuming
-    cl_image_format format;
-    int err;
-    format.image_channel_data_type = CL_UNSIGNED_INT32;
-    format.image_channel_order     = CL_R;
-
-    if(sumTex)
-    {
-        openCLFree(sumTex);
-    }
-
-#if CL_VERSION_1_2
-    cl_image_desc desc;
-    desc.image_type       = CL_MEM_OBJECT_IMAGE2D;
-    desc.image_width      = cpu_img.cols;
-    desc.image_height     = cpu_img.rows;
-    desc.image_depth      = NULL;
-    desc.image_array_size = 1;
-    desc.image_row_pitch  = cpu_img.step;
-    desc.image_slice_pitch= 0;
-    desc.buffer           = NULL;
-    desc.num_mip_levels   = 0;
-    desc.num_samples      = 0;
-    sumTex = clCreateImage(sum.clCxt->impl->clContext, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, &format, &desc, cpu_img.data, &err);
-#else
-    sumTex = clCreateImage2D(
-        sum.clCxt->impl->clContext, 
-        CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, 
-        &format, 
-        cpu_img.cols, 
-        cpu_img.rows, 
-        cpu_img.step, 
-        cpu_img.data, 
-        &err);
-#endif
-    openCLSafeCall(err);
-}
-void SURF_OCL_Invoker::bindMaskSumTex(const oclMat& maskSum)
-{
-    Mat cpu_img(maskSum); // time consuming
-    cl_image_format format;
-    int err;
-    format.image_channel_data_type = CL_UNSIGNED_INT32;
-    format.image_channel_order     = CL_R;
-
-    if(maskSumTex)
-    {
-        openCLFree(maskSumTex);
-    }
-
-#if CL_VERSION_1_2
-    cl_image_desc desc;
-    desc.image_type       = CL_MEM_OBJECT_IMAGE2D;
-    desc.image_width      = cpu_img.cols;
-    desc.image_height     = cpu_img.rows;
-    desc.image_depth      = NULL;
-    desc.image_array_size = 1;
-    desc.image_row_pitch  = cpu_img.step;
-    desc.image_slice_pitch= 0;
-    desc.buffer           = NULL;
-    desc.num_mip_levels   = 0;
-    desc.num_samples      = 0;
-    maskSumTex = clCreateImage(maskSum.clCxt->impl->clContext, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, &format, &desc, cpu_img.data, &err);
-#else
-    maskSumTex = clCreateImage2D(
-        maskSum.clCxt->impl->clContext, 
-        CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, 
-        &format, 
-        cpu_img.cols, 
-        cpu_img.rows, 
-        cpu_img.step, 
-        cpu_img.data, 
-        &err);
-#endif
+    size_t origin[] = { 0, 0, 0 }; 
+    size_t region[] = { img.step/img.elemSize(), img.rows, 1 }; 
+    clEnqueueCopyBufferToImage(img.clCxt->impl->clCmdQueue, (cl_mem)img.data, texture, 0, origin, region, 0, NULL, 0);
     openCLSafeCall(err);
 }
 
@@ -676,7 +605,7 @@ void SURF_OCL_Invoker::icvInterpolateKeypoint_gpu(const oclMat& det, const oclMa
     args.push_back( make_pair( sizeof(cl_int), (void *)&maxFeatures));
 
     size_t localThreads[3]  = {3, 3, 3};
-    size_t globalThreads[3] = {maxCounter * localThreads[0], 1, 1};
+    size_t globalThreads[3] = {maxCounter * localThreads[0], localThreads[1], 1};
 
     openCLExecuteKernel(clCxt, &nonfree_surf, kernelName, globalThreads, localThreads, args, -1, -1);
 }

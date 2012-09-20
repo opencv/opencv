@@ -114,7 +114,7 @@ namespace cv { namespace ocl
     //////////////////////////////////////////////////////////////////////
     // SQDIFF
     void matchTemplate_SQDIFF(
-        const oclMat& image, const oclMat& templ, oclMat& result, MatchTemplateBuf &buf)
+        const oclMat& image, const oclMat& templ, oclMat& result, MatchTemplateBuf &)
     {
         result.create(image.rows - templ.rows + 1, image.cols - templ.cols + 1, CV_32F);
         if (templ.size().area() < getTemplateThreshold(CV_TM_SQDIFF, image.depth()))
@@ -167,10 +167,11 @@ namespace cv { namespace ocl
     }
 
     void matchTemplateNaive_SQDIFF(
-        const oclMat& image, const oclMat& templ, oclMat& result, int cn)
+        const oclMat& image, const oclMat& templ, oclMat& result, int)
     {
         CV_Assert((image.depth() == CV_8U && templ.depth() == CV_8U )
-            || (image.depth() == CV_32F && templ.depth() == CV_32F) && result.depth() == CV_32F);
+            || ((image.depth() == CV_32F && templ.depth() == CV_32F) && result.depth() == CV_32F) 
+        );
         CV_Assert(image.channels() == templ.channels() && (image.channels() == 1 || image.channels() == 4) && result.channels() == 1);
         CV_Assert(result.rows == image.rows - templ.rows + 1 && result.cols == image.cols - templ.cols + 1);
 
@@ -263,10 +264,11 @@ namespace cv { namespace ocl
     }
 
     void matchTemplateNaive_CCORR(
-        const oclMat& image, const oclMat& templ, oclMat& result, int cn)
+        const oclMat& image, const oclMat& templ, oclMat& result, int)
     {
         CV_Assert((image.depth() == CV_8U && templ.depth() == CV_8U )
-            || (image.depth() == CV_32F && templ.depth() == CV_32F) && result.depth() == CV_32F);
+            || ((image.depth() == CV_32F && templ.depth() == CV_32F) && result.depth() == CV_32F)
+        );
         CV_Assert(image.channels() == templ.channels() && (image.channels() == 1 || image.channels() == 4) && result.channels() == 1);
         CV_Assert(result.rows == image.rows - templ.rows + 1 && result.cols == image.cols - templ.cols + 1);
 
@@ -341,6 +343,7 @@ namespace cv { namespace ocl
             templ_sum = sum(templ) / templ.size().area();
             buf.image_sums.resize(buf.images.size());
 
+
             for(int i = 0; i < image.channels(); i ++)
             {
                 integral(buf.images[i], buf.image_sums[i]);
@@ -408,7 +411,7 @@ namespace cv { namespace ocl
 #else
             oclMat templ_sqr = templ;
             multiply(templ,templ, templ_sqr);
-            templ_sqsum  = sum(templ_sqr)[0];
+            templ_sqsum  = saturate_cast<float>(sum(templ_sqr)[0]);
 #endif //SQRSUM_FIXED
             templ_sqsum -= scale * templ_sum * templ_sum;
             templ_sum   *= scale;
