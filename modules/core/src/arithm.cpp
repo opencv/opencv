@@ -1216,7 +1216,7 @@ void cv::min(const Mat& src1, double src2, Mat& dst)
 namespace cv
 {
 
-int actualScalarDepth(const Mat& src)
+static int actualScalarDepth(const Mat& src)
 {
     double min = MIN(MIN(*((double*)src.data), *((double*)src.data+1)), MIN(*((double*)src.data+2), (*((double*)src.data+3))));
     double max = MAX(MAX(*((double*)src.data), *((double*)src.data+1)), MAX(*((double*)src.data+2), (*((double*)src.data+3))));
