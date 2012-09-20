@@ -84,9 +84,10 @@ struct cv::gpu::SoftCascade::Filds
     std::vector<float> scales;
 
     icf::Cascade cascade;
+    icf::ChannelStorage storage;
 
     bool fill(const FileNode &root, const float mins, const float maxs);
-    void detect(const icf::ChannelStorage& /*channels*/) const {}
+    void detect() const {}
 
     enum { BOOST = 0 };
     enum
@@ -281,6 +282,7 @@ inline bool cv::gpu::SoftCascade::Filds::fill(const FileNode &root, const float 
     shrunk.create(FRAME_HEIGHT / shrinkage * HOG_LUV_BINS, FRAME_WIDTH / shrinkage, CV_8UC1);
     hogluv.create( (FRAME_HEIGHT / shrinkage * HOG_LUV_BINS) + 1, (FRAME_WIDTH / shrinkage) + 1, CV_16UC1);
 
+    storage = icf::ChannelStorage(dmem, shrunk, hogluv, shrinkage);
     return true;
 }
 
@@ -398,13 +400,10 @@ void cv::gpu::SoftCascade::detectMultiScale(const GpuMat& image, const GpuMat& /
     // only this window size allowed
     CV_Assert(image.cols == 640 && image.rows == 480);
 
+    Filds& flds = *filds;
 
-    // ToDo: add shrincage in whole cascade.
-    const int shrincage = 4;
-    icf::ChannelStorage storage(image, shrincage);
-
-    const Filds& flds = *filds;
-    flds.detect(storage);
+    flds.storage.frame(image);
+    flds.detect();
 }
 
 #endif

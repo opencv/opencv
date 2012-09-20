@@ -54,79 +54,93 @@
 
 namespace icf {
 
-    struct Cascade
+using cv::gpu::PtrStepSzb;
+using cv::gpu::PtrStepSzf;
+
+struct Cascade
+{
+    Cascade() {}
+    Cascade(const cv::gpu::PtrStepSzb& octs, const cv::gpu::PtrStepSzf& sts, const cv::gpu::PtrStepSzb& nds,
+        const cv::gpu::PtrStepSzf& lvs, const cv::gpu::PtrStepSzb& fts, const cv::gpu::PtrStepSzb& lls)
+    : octaves(octs), stages(sts), nodes(nds), leaves(lvs), features(fts), levels(lls) {}
+
+    PtrStepSzb octaves;
+    PtrStepSzf stages;
+    PtrStepSzb nodes;
+    PtrStepSzf leaves;
+    PtrStepSzb features;
+
+    PtrStepSzb levels;
+
+};
+
+struct ChannelStorage
+{
+    ChannelStorage(){}
+    ChannelStorage(const cv::gpu::PtrStepSzb& buff, const cv::gpu::PtrStepSzb& shr,
+        const cv::gpu::PtrStepSzb& itg, const int s)
+    : dmem (buff), shrunk(shr), hogluv(itg), shrinkage(s) {}
+
+    void frame(const cv::gpu::PtrStepSzb& image) {}
+
+    PtrStepSzb dmem;
+    PtrStepSzb shrunk;
+    PtrStepSzb hogluv;
+
+    int shrinkage;
+};
+
+struct __align__(16) Octave
+{
+    ushort index;
+    ushort stages;
+    ushort shrinkage;
+    ushort2 size;
+    float scale;
+
+    Octave(const ushort i, const ushort s, const ushort sh, const ushort2 sz, const float sc)
+    : index(i), stages(s), shrinkage(sh), size(sz), scale(sc) {}
+};
+
+struct __align__(8) Node
+{
+    int feature;
+    float threshold;
+
+    Node(const int f, const float t) : feature(f), threshold(t) {}
+};
+
+struct __align__(8) Feature
+{
+    int channel;
+    uchar4 rect;
+
+    Feature(const int c, const uchar4 r) : channel(c), rect(r) {}
+};
+
+struct __align__(8) Level //is actually 24 bytes
+{
+    int octave;
+
+    // float origScale; //not actually used
+    float relScale;
+    float shrScale;   // used for marking detection
+    float scaling[2]; // calculated according to Dollal paper
+
+    // for 640x480 we can not get overflow
+    uchar2 workRect;
+    uchar2 objSize;
+
+    Level(int idx, const Octave& oct, const float scale, const int w, const int h)
+    :  octave(idx), relScale(scale / oct.scale), shrScale (relScale / (float)oct.shrinkage)
     {
-        Cascade() {}
-        Cascade(const cv::gpu::PtrStepSzb& octs, const cv::gpu::PtrStepSzf& sts, const cv::gpu::PtrStepSzb& nds,
-            const cv::gpu::PtrStepSzf& lvs, const cv::gpu::PtrStepSzb& fts, const cv::gpu::PtrStepSzb& lls)
-        : octaves(octs), stages(sts), nodes(nds), leaves(lvs), features(fts), levels(lls) {}
+        workRect.x = round(w / (float)oct.shrinkage);
+        workRect.y = round(h / (float)oct.shrinkage);
 
-        cv::gpu::PtrStepSzb octaves;
-        cv::gpu::PtrStepSzf stages;
-        cv::gpu::PtrStepSzb nodes;
-        cv::gpu::PtrStepSzf leaves;
-        cv::gpu::PtrStepSzb features;
-
-        cv::gpu::PtrStepSzb levels;
-
-    };
-
-    struct ChannelStorage
-    {
-        ChannelStorage(const cv::gpu::PtrStepSzb& /*f*/, const int /*shrinkage*/) {}
-    };
-
-    struct __align__(16) Octave
-    {
-        ushort index;
-        ushort stages;
-        ushort shrinkage;
-        ushort2 size;
-        float scale;
-
-        Octave(const ushort i, const ushort s, const ushort sh, const ushort2 sz, const float sc)
-        : index(i), stages(s), shrinkage(sh), size(sz), scale(sc) {}
-    };
-
-    struct __align__(8) Node
-    {
-        int feature;
-        float threshold;
-
-        Node(const int f, const float t) : feature(f), threshold(t) {}
-    };
-
-    struct __align__(8) Feature
-    {
-        int channel;
-        uchar4 rect;
-
-        Feature(const int c, const uchar4 r) : channel(c), rect(r) {}
-    };
-
-    struct __align__(8) Level //is actually 24 bytes
-    {
-        int octave;
-
-        // float origScale; //not actually used
-        float relScale;
-        float shrScale;   // used for marking detection
-        float scaling[2]; // calculated according to Dollal paper
-
-        // for 640x480 we can not get overflow
-        uchar2 workRect;
-        uchar2 objSize;
-
-        Level(int idx, const Octave& oct, const float scale, const int w, const int h)
-        :  octave(idx), relScale(scale / oct.scale), shrScale (relScale / (float)oct.shrinkage)
-        {
-            workRect.x = round(w / (float)oct.shrinkage);
-            workRect.y = round(h / (float)oct.shrinkage);
-
-            objSize.x  = round(oct.size.x * relScale);
-            objSize.y  = round(oct.size.y * relScale);
-        }
-    };
+        objSize.x  = round(oct.size.x * relScale);
+        objSize.y  = round(oct.size.y * relScale);
+    }
+};
 }
 
 #endif
