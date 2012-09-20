@@ -59,18 +59,15 @@ struct FastNlMeansMultiDenoisingInvoker {
     public:
         FastNlMeansMultiDenoisingInvoker(
             const std::vector<Mat>& srcImgs, int imgToDenoiseIndex, int temporalWindowSize,
-            Mat& dst, int template_window_size, int search_window_size, const double h);
+            Mat& dst, int template_window_size, int search_window_size, const float h);
 
         void operator() (const BlockedRange& range) const;
 
-        void operator= (const FastNlMeansMultiDenoisingInvoker&) {
-            CV_Error(CV_StsNotImplemented, "Assigment operator is not implemented");
-        }
-
     private:
+        void operator= (const FastNlMeansMultiDenoisingInvoker&);
+
         int rows_;
         int cols_;
-        int channels_count_;
 
         Mat& dst_;
 
@@ -113,14 +110,13 @@ FastNlMeansMultiDenoisingInvoker<T>::FastNlMeansMultiDenoisingInvoker(
     cv::Mat& dst,
     int template_window_size,
     int search_window_size,
-    const double h) : dst_(dst), extended_srcs_(srcImgs.size())
+    const float h) : dst_(dst), extended_srcs_(srcImgs.size())
 {
     CV_Assert(srcImgs.size() > 0);
-    CV_Assert(srcImgs[0].channels() <= 3);
+    CV_Assert(srcImgs[0].channels() == sizeof(T));
 
     rows_ = srcImgs[0].rows;
     cols_ = srcImgs[0].cols;
-    channels_count_ = srcImgs[0].channels();
 
     template_window_half_size_ = template_window_size / 2;
     search_window_half_size_ = search_window_size / 2;
@@ -155,14 +151,14 @@ FastNlMeansMultiDenoisingInvoker<T>::FastNlMeansMultiDenoisingInvoker(
     double almost_dist2actual_dist_multiplier =
         ((double) almost_template_window_size_sq) / template_window_size_sq;
 
-    int max_dist = 256 * 256 * channels_count_;
+    int max_dist = 255 * 255 * sizeof(T);
     int almost_max_dist = (int) (max_dist / almost_dist2actual_dist_multiplier + 1);
     almost_dist2weight.resize(almost_max_dist);
 
     const double WEIGHT_THRESHOLD = 0.001;
     for (int almost_dist = 0; almost_dist < almost_max_dist; almost_dist++) {
         double dist = almost_dist * almost_dist2actual_dist_multiplier;
-        int weight = cvRound(fixed_point_mult_ * std::exp(- dist / (h * h * channels_count_)));
+        int weight = cvRound(fixed_point_mult_ * std::exp(-dist / (h * h * sizeof(T))));
 
         if (weight < WEIGHT_THRESHOLD * fixed_point_mult_) {
             weight = 0;
@@ -170,6 +166,7 @@ FastNlMeansMultiDenoisingInvoker<T>::FastNlMeansMultiDenoisingInvoker(
 
         almost_dist2weight[almost_dist] = weight;
     }
+    CV_Assert(almost_dist2weight[0] == fixed_point_mult_);
     // additional optimization init end
 
     if (dst_.empty()) {
@@ -266,7 +263,7 @@ void FastNlMeansMultiDenoisingInvoker<T>::operator() (const BlockedRange& range)
             int weights_sum = 0;
 
             int estimation[3];
-            for (int channel_num = 0; channel_num < channels_count_; channel_num++) {
+            for (size_t channel_num = 0; channel_num < sizeof(T); channel_num++) {
                 estimation[channel_num] = 0;
             }
             for (int d = 0; d < temporal_window_size_; d++) {
@@ -289,16 +286,11 @@ void FastNlMeansMultiDenoisingInvoker<T>::operator() (const BlockedRange& range)
                 }
             }
 
-            if (weights_sum > 0) {
-                for (int channel_num = 0; channel_num < channels_count_; channel_num++)
-                    estimation[channel_num] = (estimation[channel_num] + weights_sum / 2) / weights_sum;
+            for (size_t channel_num = 0; channel_num < sizeof(T); channel_num++)
+                estimation[channel_num] = (estimation[channel_num] + weights_sum / 2) / weights_sum;
 
-                dst_.at<T>(i,j) = saturateCastFromArray<T>(estimation);
+            dst_.at<T>(i,j) = saturateCastFromArray<T>(estimation);
 
-            } else { // weights_sum == 0
-                const Mat& esrc = extended_srcs_[temporal_window_half_size_];
-                dst_.at<T>(i,j) = esrc.at<T>(i,j);
-            }
         }
     }
 }

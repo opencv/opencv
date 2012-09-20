@@ -68,20 +68,20 @@ CV_EXPORTS_W void inpaint( InputArray src, InputArray inpaintMask,
                            OutputArray dst, double inpaintRadius, int flags );
 
 
-CV_EXPORTS_W void fastNlMeansDenoising( InputArray src, OutputArray dst, int h = 3,
+CV_EXPORTS_W void fastNlMeansDenoising( InputArray src, OutputArray dst, float h = 3,
                                         int templateWindowSize = 7, int searchWindowSize = 21);
 
 CV_EXPORTS_W void fastNlMeansDenoisingColored( InputArray src, OutputArray dst,
-                                               int h = 3, int hColor = 3,
+                                               float h = 3, float hColor = 3,
                                                int templateWindowSize = 7, int searchWindowSize = 21);
 
 CV_EXPORTS_W void fastNlMeansDenoisingMulti( InputArrayOfArrays srcImgs, OutputArray dst,
                                              int imgToDenoiseIndex, int temporalWindowSize,
-                                             int h = 3, int templateWindowSize = 7, int searchWindowSize = 21);
+                                             float h = 3, int templateWindowSize = 7, int searchWindowSize = 21);
 
 CV_EXPORTS_W void fastNlMeansDenoisingColoredMulti( InputArrayOfArrays srcImgs, OutputArray dst,
                                                     int imgToDenoiseIndex, int temporalWindowSize,
-                                                    int h = 3, int hColor = 3,
+                                                    float h = 3, float hColor = 3,
                                                     int templateWindowSize = 7, int searchWindowSize = 21);
 
 }
