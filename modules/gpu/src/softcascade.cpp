@@ -252,6 +252,40 @@ inline bool cv::gpu::SoftCascade::Filds::fill(const FileNode &root, const float 
     return true;
 }
 
+namespace {
+    struct CascadeIntrinsics
+    {
+        static const float lambda = 1.099f, a = 0.89f;
+
+        static float getFor(int channel, float scaling)
+        {
+            CV_Assert(channel < 10);
+
+            if (fabs(scaling - 1.f) < FLT_EPSILON)
+                return 1.f;
+
+            // according to R. Benenson, M. Mathias, R. Timofte and L. Van Gool's and Dallal's papers
+            static const float A[2][2] =
+            {   //channel <= 6, otherwise
+                {        0.89f, 1.f}, // down
+                {        1.00f, 1.f}  // up
+            };
+
+            static const float B[2][2] =
+            {   //channel <= 6,  otherwise
+                { 1.099f / log(2), 2.f}, // down
+                {             0.f, 2.f}  // up
+            };
+
+            float a = A[(int)(scaling >= 1)][(int)(channel > 6)];
+            float b = B[(int)(scaling >= 1)][(int)(channel > 6)];
+
+            printf("!!! scaling: %f %f %f -> %f\n", scaling, a, b, a * pow(scaling, b));
+            return a * pow(scaling, b);
+        }
+    };
+}
+
 inline void cv::gpu::SoftCascade::Filds::calcLevels(const std::vector<icf::Octave>& octs,
                                                     int frameW, int frameH, int nscales)
 {
@@ -270,6 +304,8 @@ inline void cv::gpu::SoftCascade::Filds::calcLevels(const std::vector<icf::Octav
         int fit = fitOctave(octs, logScale);
 
         icf::Level level(fit, octs[fit], scale, width, height);
+        level.scaling[0] = CascadeIntrinsics::getFor(0, level.relScale);
+        level.scaling[1] = CascadeIntrinsics::getFor(9, level.relScale);
 
         if (!width || !height)
             break;
