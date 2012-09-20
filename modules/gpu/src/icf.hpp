@@ -40,6 +40,8 @@
 //
 //M*/
 
+#include <opencv2/gpu/device/common.hpp>
+
 #ifndef __OPENCV_ICF_HPP__
 #define __OPENCV_ICF_HPP__
 
@@ -54,12 +56,24 @@ namespace icf {
 
     struct Cascade
     {
+        Cascade() {}
+        Cascade(const cv::gpu::PtrStepSzb& octs, const cv::gpu::PtrStepSzf& sts, const cv::gpu::PtrStepSzb& nds,
+            const cv::gpu::PtrStepSzf& lvs, const cv::gpu::PtrStepSzb& fts, const cv::gpu::PtrStepSzb& lls)
+        : octaves(octs), stages(sts), nodes(nds), leaves(lvs), features(fts), levels(lls) {}
+
+        cv::gpu::PtrStepSzb octaves;
+        cv::gpu::PtrStepSzf stages;
+        cv::gpu::PtrStepSzb nodes;
+        cv::gpu::PtrStepSzf leaves;
+        cv::gpu::PtrStepSzb features;
+
+        cv::gpu::PtrStepSzb levels;
 
     };
 
     struct ChannelStorage
     {
-
+        ChannelStorage(const cv::gpu::PtrStepSzb& /*f*/, const int /*shrinkage*/) {}
     };
 
     struct __align__(16) Octave
