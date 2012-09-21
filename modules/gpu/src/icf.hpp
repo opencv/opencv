@@ -46,16 +46,18 @@
 #define __OPENCV_ICF_HPP__
 
 #if defined __CUDACC__
-# define __hd__ __host__ __device__ __forceinline__
+# define __device __device__ __forceinline__
 #else
-# define __hd__
+# define __device
 #endif
 
 
-namespace icf {
+namespace cv { namespace gpu { namespace icf {
 
 using cv::gpu::PtrStepSzb;
 using cv::gpu::PtrStepSzf;
+
+typedef unsigned char uchar;
 
 struct Cascade
 {
@@ -64,7 +66,8 @@ struct Cascade
         const cv::gpu::PtrStepSzf& lvs, const cv::gpu::PtrStepSzb& fts, const cv::gpu::PtrStepSzb& lls)
     : octaves(octs), stages(sts), nodes(nds), leaves(lvs), features(fts), levels(lls) {}
 
-    void detect(const cv::gpu::PtrStepSzb& hogluv) const;
+    void detect(const cv::gpu::PtrStepSzb& hogluv, cudaStream_t stream) const;
+    void __device detectAt() const;
 
     PtrStepSzb octaves;
     PtrStepSzf stages;
@@ -83,11 +86,23 @@ struct ChannelStorage
         const cv::gpu::PtrStepSzb& itg, const int s)
     : dmem (buff), shrunk(shr), hogluv(itg), shrinkage(s) {}
 
-    void frame(const cv::gpu::PtrStepSz<uchar4>& image);
+    void frame(const cv::gpu::PtrStepSz<uchar3>& rgb, cudaStream_t stream);
 
     PtrStepSzb dmem;
     PtrStepSzb shrunk;
     PtrStepSzb hogluv;
+
+    enum
+    {
+        FRAME_WIDTH        = 640,
+        FRAME_HEIGHT       = 480,
+        TOTAL_SCALES       = 55,
+        CLASSIFIERS        = 5,
+        ORIG_OBJECT_WIDTH  = 64,
+        ORIG_OBJECT_HEIGHT = 128,
+        HOG_BINS           = 6,
+        HOG_LUV_BINS       = 10
+    };
 
     int shrinkage;
 };
@@ -143,6 +158,6 @@ struct __align__(8) Level //is actually 24 bytes
         objSize.y  = round(oct.size.y * relScale);
     }
 };
-}
+}}}
 
 #endif

@@ -100,9 +100,9 @@ struct cv::gpu::SoftCascade::Filds
     };
 
     bool fill(const FileNode &root, const float mins, const float maxs);
-    void detect() const
+    void detect(cudaStream_t stream) const
     {
-        cascade.detect(hogluv);
+        cascade.detect(hogluv, stream);
     }
 
 private:
@@ -394,18 +394,20 @@ bool cv::gpu::SoftCascade::load( const string& filename, const float minScale, c
 }
 
 void cv::gpu::SoftCascade::detectMultiScale(const GpuMat& image, const GpuMat& /*rois*/,
-                                GpuMat& /*objects*/, const int /*rejectfactor*/, Stream /*stream*/)
+                                GpuMat& /*objects*/, const int /*rejectfactor*/, Stream s)
 {
     // only color images are supperted
-    CV_Assert(image.type() == CV_8UC4);
+    CV_Assert(image.type() == CV_8UC3);
 
     // only this window size allowed
     CV_Assert(image.cols == 640 && image.rows == 480);
 
     Filds& flds = *filds;
 
-    flds.storage.frame(image);
-    flds.detect();
+    cudaStream_t stream = StreamAccessor::getStream(s);
+
+    flds.storage.frame(image, stream);
+    flds.detect(stream);
 }
 
 #endif

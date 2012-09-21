@@ -42,13 +42,90 @@
 
 #include <icf.hpp>
 
-void icf::Cascade::detect(const cv::gpu::PtrStepSzb& hogluv) const
+namespace cv { namespace gpu {
+
+
+ namespace device {
+
+__global__ void rgb2grayluv(const uchar3* __restrict__ rgb, uchar* __restrict__ hog,
+                            const int rgbPitch, const int hogPitch)
 {
-    // detection kernel
 }
 
-void icf::ChannelStorage::frame(const cv::gpu::PtrStepSz<uchar4>& image)
+__global__ void gray2hog(const uchar* __restrict__ gray, uchar* __restrict__ hog,
+                         const int pitch)
+{
+}
+
+__global__ void decimate(const uchar* __restrict__ hogluv, uchar* __restrict__ shrank,
+                        const int inPitch, const int outPitch )
+{
+}
+
+__global__ void intRow(const uchar* __restrict__ hogluv, ushort* __restrict__ sum,
+                       const int inPitch, const int outPitch)
+{
+
+}
+
+__global__ void intCol(ushort* __restrict__ sum, const int pitch)
+{
+
+}
+
+
+__global__ void detect(const cv::gpu::icf::Cascade cascade, const uchar* __restrict__ hogluv, const int pitch)
+{
+    cascade.detectAt();
+}
+
+}
+
+void __device icf::Cascade::detectAt() const
+{
+
+}
+
+void icf::Cascade::detect(const cv::gpu::PtrStepSzb& hogluv, cudaStream_t stream) const
+{
+    // detection kernel
+
+}
+
+void icf::ChannelStorage::frame(const cv::gpu::PtrStepSz<uchar3>& rgb, cudaStream_t stream)
 {
     // color convertin kernel
+    dim3 block(32, 8);
+    dim3 grid(FRAME_WIDTH / 32, FRAME_HEIGHT / 8);
+
+    uchar * channels = (uchar*)dmem.ptr(FRAME_HEIGHT * HOG_BINS);
+    device::rgb2grayluv<<<grid, block, 0, stream>>>((uchar3*)rgb.ptr(), channels, rgb.step, dmem.step);
+    cudaSafeCall( cudaGetLastError());
+
     // hog calculation kernel
+    channels = (uchar*)dmem.ptr(FRAME_HEIGHT * HOG_LUV_BINS);
+    device::gray2hog<<<grid, block, 0, stream>>>(channels, (uchar*)dmem.ptr(), dmem.step);
+    cudaSafeCall( cudaGetLastError() );
+
+    const int shrWidth  = FRAME_WIDTH / shrinkage;
+    const int shrHeight = FRAME_HEIGHT / shrinkage;
+
+    // decimate kernel
+    grid = dim3(shrWidth / 32, shrHeight / 8);
+    device::decimate<<<grid, block, 0, stream>>>((uchar*)dmem.ptr(), (uchar*)shrunk.ptr(), dmem.step, shrunk.step);
+    cudaSafeCall( cudaGetLastError() );
+
+    // integrate rows
+    block = dim3(shrWidth, 1);
+    grid = dim3(shrHeight * HOG_LUV_BINS, 1);
+    device::intRow<<<grid, block, 0, stream>>>((uchar*)shrunk.ptr(), (ushort*)hogluv.ptr(), shrunk.step, hogluv.step);
+    cudaSafeCall( cudaGetLastError() );
+
+    // integrate cols
+    block = dim3(128, 1);
+    grid = dim3(shrWidth * HOG_LUV_BINS, 1);
+    device::intCol<<<grid, block, 0, stream>>>((ushort*)hogluv.ptr(), hogluv.step);
+    cudaSafeCall( cudaGetLastError() );
 }
+
+}}
