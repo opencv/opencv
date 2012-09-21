@@ -1491,18 +1491,21 @@ TEST(Imgproc_resize_area, regression)
     };
 
     cv::Mat src(16, 16, CV_16UC1, input_data);
-    cv::Mat expected(5,5,CV_16UC1, expected_data);
+    cv::Mat expected(5, 5, CV_16UC1, expected_data);
     cv::Mat actual(expected.size(), expected.type());
 
     cv::resize(src, actual, cv::Size(), 0.3, 0.3, INTER_AREA);
 
     ASSERT_EQ(actual.type(), expected.type());
     ASSERT_EQ(actual.size(), expected.size());
+    
     Mat diff;
     absdiff(actual, expected, diff);
-    Mat one_channel_diff = diff.reshape(1);
+    std::cout << "Abs diff:" << std::endl << diff << std::endl;
     
-    int elem_diff = 1;
+    Mat one_channel_diff = diff; //.reshape(1);
+    
+    float elem_diff = 1.0f;
     Size dsize = actual.size();
     bool next = true;
     for (int dy = 0; dy < dsize.height && next; ++dy)
@@ -1527,7 +1530,7 @@ TEST(Imgproc_resize_area, regression)
             }
     }
     
-    ASSERT_EQ(norm(one_channel_diff, cv::NORM_INF),0);
+    ASSERT_EQ(norm(one_channel_diff, cv::NORM_INF), 0);
 }
 
 

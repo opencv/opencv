@@ -1423,7 +1423,7 @@ public:
         dsize.width *= cn;
         AutoBuffer<WT> _buffer(dsize.width*2);
         WT *buf = _buffer, *sum = buf + dsize.width;
-        int k, sy, dx, cur_dy = 0;
+        int k = -1000, sy = -1000, dx = -1000, cur_dy = -1000;
         WT scale_y = (WT)scale_y_;
         
         CV_Assert( cn <= 4 );
@@ -1567,7 +1567,8 @@ public:
                 T* D = (T*)(dst.data + dst.step*cur_dy);
                 if( fabs(beta) < 1e-3 )
                 {
-                    if(cur_dy >= dsize.height) return;
+                    if(cur_dy >= dsize.height)
+                        return;
                     for( dx = 0; dx < dsize.width; dx++ )
                     {
                         D[dx] = saturate_cast<T>((sum[dx] + buf[dx]) / min(scale_y, src.rows - cur_dy * scale_y));
@@ -1614,19 +1615,23 @@ private:
     resizeArea_Invoker& operator=(const resizeArea_Invoker&);
 };
 
-template<typename T, typename WT>
+template <typename T, typename WT>
 static void resizeArea_( const Mat& src, Mat& dst, const DecimateAlpha* xofs, int xofs_count, double scale_y_)
 {
 #ifdef HAVE_TBB
     Size ssize = src.size(), dsize = dst.size();
     AutoBuffer<int> _yofs(2 * ssize.height);
     int *yofs = _yofs, *cur_dy_ofs = _yofs + ssize.height;
-    int index = 0, cur_dy = 0, sy;
+    int index = 0, cur_dy = 0;
     
-    for( sy = 0; sy < ssize.height; sy++ )
+    // cur_dy_ofs - dy for the current sy
+    // yofs - a starting row for calculating a band according to the current sy
+    
+    for (int sy = 0; sy < ssize.height; sy++)
     {
-        bool reset = false;
         cur_dy_ofs[sy] = cur_dy;
+        yofs[sy] = index;
+        
         if ((cur_dy + 1) * scale_y_ <= sy + 1 || sy == ssize.height - 1 )
         {
             WT beta = (WT)std::max(sy + 1 - (cur_dy + 1) * scale_y_, 0.);
@@ -1634,13 +1639,10 @@ static void resizeArea_( const Mat& src, Mat& dst, const DecimateAlpha* xofs, in
             {
                 if (cur_dy >= dsize.height)
                     break;
-                reset = true;
+                index = sy + 1;
             }
             cur_dy++;
         }
-        yofs[sy] = index;
-        if (reset)
-            index = sy + 1;
     }
 #endif
     
