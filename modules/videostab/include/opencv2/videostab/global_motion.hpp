@@ -66,9 +66,6 @@ CV_EXPORTS Mat estimateGlobalMotionLeastSquares(
         InputOutputArray points0, InputOutputArray points1, int model = MM_AFFINE,
         float *rmse = 0);
 
-CV_EXPORTS Mat estimateGlobalMotionMedian(
-        InputArray points0, InputArray points1, int model, int size, int niters);
-
 CV_EXPORTS Mat estimateGlobalMotionRansac(
         InputArray points0, InputArray points1, int model = MM_AFFINE,
         const RansacParams &params = RansacParams::default2dMotion(MM_AFFINE),
