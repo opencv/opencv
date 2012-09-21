@@ -3,6 +3,11 @@ if(${CMAKE_VERSION} VERSION_LESS "2.8.3")
   return()
 endif()
 
+if (NOT MSVC AND NOT CMAKE_COMPILER_IS_GNUCXX OR MINGW)
+  message(STATUS "CUDA compilation was disabled (due to unsuppoted host compiler).")
+  return()
+endif()
+
 find_package(CUDA 4.1)
 
 if(CUDA_FOUND)
