@@ -48,7 +48,7 @@ using cv::gpu::GpuMat;
 
 TEST(SoftCascade, readCascade)
 {
-    std::string xml = cvtest::TS::ptr()->get_data_path() + "cascadeandhog/icf-template.xml";
+    std::string xml = cvtest::TS::ptr()->get_data_path() + "../cv/cascadeandhog/icf-template.xml";
     cv::gpu::SoftCascade cascade;
     ASSERT_TRUE(cascade.load(xml));
 
@@ -56,11 +56,12 @@ TEST(SoftCascade, readCascade)
 
 TEST(SoftCascade, detect)
 {
-    std::string xml =  cvtest::TS::ptr()->get_data_path() + "cascadeandhog/sc_cvpr_2012_to_opencv.xml";
+    std::string xml =  cvtest::TS::ptr()->get_data_path() + "../cv/cascadeandhog/sc_cvpr_2012_to_opencv.xml";
     cv::gpu::SoftCascade cascade;
     ASSERT_TRUE(cascade.load(xml));
 
-    cv::Mat coloredCpu = cv::imread(cvtest::TS::ptr()->get_data_path() + "cascadeandhog/bahnhof/image_00000000_0.png");
+    cv::Mat coloredCpu = cv::imread(cvtest::TS::ptr()->get_data_path()
+        + "../cv/cascadeandhog/bahnhof/image_00000000_0.png");
     ASSERT_FALSE(coloredCpu.empty());
     GpuMat colored(coloredCpu), objectBoxes, rois;
 

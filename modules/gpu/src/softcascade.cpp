@@ -198,11 +198,11 @@ inline bool cv::gpu::SoftCascade::Filds::fill(const FileNode &root, const float 
         FileNode fns = *it;
         float scale = (float)fns[SC_OCT_SCALE];
         scales.push_back(scale);
-        ushort nstages = saturate_cast<ushort>((int)fn[SC_OCT_STAGES]);
+        ushort nstages = saturate_cast<ushort>((int)fns[SC_OCT_STAGES]);
         ushort2 size;
         size.x = cvRound(ORIG_OBJECT_WIDTH * scale);
         size.y = cvRound(ORIG_OBJECT_HEIGHT * scale);
-        shrinkage = saturate_cast<ushort>((int)fn[SC_OCT_SHRINKAGE]);
+        shrinkage = saturate_cast<ushort>((int)fns[SC_OCT_SHRINKAGE]);
 
         icf::Octave octave(octIndex, nstages, shrinkage, size, scale);
         CV_Assert(octave.stages > 0);
@@ -219,7 +219,7 @@ inline bool cv::gpu::SoftCascade::Filds::fill(const FileNode &root, const float 
         for (; st != st_end; ++st )
         {
             fns = *st;
-            vstages.push_back((float)fn[SC_STAGE_THRESHOLD]);
+            vstages.push_back((float)fns[SC_STAGE_THRESHOLD]);
 
             fns = fns[SC_WEEK];
             FileNodeIterator ftr = fns.begin(), ft_end = fns.end();
@@ -230,7 +230,8 @@ inline bool cv::gpu::SoftCascade::Filds::fill(const FileNode &root, const float 
                 for (; inIt != inIt_end;)
                 {
                     int feature = (int)(*(inIt +=2)++) + feature_offset;
-                    vnodes.push_back(icf::Node(feature, (float)(*(inIt++))));
+                    float th = (float)(*(inIt++));
+                    vnodes.push_back(icf::Node(feature, th));
                 }
 
                 fns = (*ftr)[SC_LEAF];
@@ -277,7 +278,7 @@ inline bool cv::gpu::SoftCascade::Filds::fill(const FileNode &root, const float 
     calcLevels(voctaves, FRAME_WIDTH, FRAME_HEIGHT, TOTAL_SCALES);
     CV_Assert(!levels.empty());
 
-    // init Cascade
+    //init Cascade
     cascade = icf::Cascade(octaves, stages, nodes, leaves, features, levels);
 
     // allocate buffers
@@ -317,7 +318,7 @@ namespace {
             float a = A[(int)(scaling >= 1)][(int)(channel > 6)];
             float b = B[(int)(scaling >= 1)][(int)(channel > 6)];
 
-            printf("!!! scaling: %f %f %f -> %f\n", scaling, a, b, a * pow(scaling, b));
+            // printf("!!! scaling: %f %f %f -> %f\n", scaling, a, b, a * pow(scaling, b));
             return a * pow(scaling, b);
         }
     };
@@ -352,19 +353,17 @@ inline void cv::gpu::SoftCascade::Filds::calcLevels(const std::vector<icf::Octav
         if (::fabs(scale - maxScale) < FLT_EPSILON) break;
         scale = ::std::min(maxScale, ::expf(::log(scale) + logFactor));
 
-        levels.upload(cv::Mat(1, vlevels.size() * sizeof(icf::Level), CV_8UC1, (uchar*)&(vlevels[0]) ));
-
-        // std::cout << "level " << sc << " scale "
-        //           << levels[sc].origScale
+        // std::cout << "level " << sc
         //           << " octeve "
-        //           << levels[sc].octave->scale
-        //           << " "
-        //           << levels[sc].relScale
-        //           << " " << levels[sc].shrScale
-        //           << " [" << levels[sc].objSize.width
-        //           << " " << levels[sc].objSize.height << "] ["
-        // << levels[sc].workRect.width << " " << levels[sc].workRect.height << "]" << std::endl;
+        //           << vlevels[sc].octave
+        //           << " relScale "
+        //           << vlevels[sc].relScale
+        //           << " " << vlevels[sc].shrScale
+        //           << " [" << (int)vlevels[sc].objSize.x
+        //           << " " <<  (int)vlevels[sc].objSize.y << "] ["
+        // <<  (int)vlevels[sc].workRect.x << " " <<  (int)vlevels[sc].workRect.y << "]" << std::endl;
     }
+    levels.upload(cv::Mat(1, vlevels.size() * sizeof(icf::Level), CV_8UC1, (uchar*)&(vlevels[0]) ));
 }
 
 cv::gpu::SoftCascade::SoftCascade() : filds(0) {}
