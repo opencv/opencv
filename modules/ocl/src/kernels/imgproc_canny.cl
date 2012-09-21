@@ -43,7 +43,6 @@
 //
 //M*/
 
-#pragma OPENCL EXTENSION cl_amd_printf : enable
 #pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics : enable
 #pragma OPENCL EXTENSION cl_khr_local_int32_base_atomics : enable
 
@@ -651,7 +650,7 @@ __kernel
 }
 
 __constant int c_dx[8] = {-1,  0,  1, -1, 1, -1, 0, 1};
-__constant c_dy[8] = {-1, -1, -1,  0, 0,  1, 1, 1};
+__constant int c_dy[8] = {-1, -1, -1,  0, 0,  1, 1, 1};
 
 #define stack_size 512
 __kernel

@@ -180,14 +180,26 @@ TEST_P(Merge, Accuracy)
 
         std::vector<cv::Mat> dev_src;
         dev_src.push_back(mat1_roi);
-        dev_src.push_back(mat2_roi);
-        dev_src.push_back(mat3_roi);
-        dev_src.push_back(mat4_roi);
+
+        if(channels >= 2)
+            dev_src.push_back(mat2_roi);
+
+        if(channels >= 3)
+            dev_src.push_back(mat3_roi);
+
+        if(channels >= 4)
+            dev_src.push_back(mat4_roi);
 
         std::vector<cv::ocl::oclMat> dev_gsrc;
         dev_gsrc.push_back(gmat1);
+
+        if(channels >= 2)
         dev_gsrc.push_back(gmat2);
+
+        if(channels >= 3)
         dev_gsrc.push_back(gmat3);
+
+        if(channels >= 4)
         dev_gsrc.push_back(gmat4);
 
         cv::merge(dev_src, dst_roi);
@@ -355,9 +367,16 @@ TEST_P(Split, Accuracy)
         char sss[1024];
         sprintf(sss, "roicols=%d,roirows=%d,dst1x =%d,dsty=%d,dst2x =%d,dst2y=%d,dst3x =%d,dst3y=%d,dst4x =%d,dst4y=%d,srcx=%d,srcy=%d", roicols, roirows, dst1x , dst1y, dst2x , dst2y, dst3x , dst3y, dst4x , dst4y, srcx, srcy);
 
+        if(channels >= 1)
         EXPECT_MAT_NEAR(dst1, cpu_dst1, 0.0, sss);
+
+        if(channels >= 2)
         EXPECT_MAT_NEAR(dst2, cpu_dst2, 0.0, sss);
+
+        if(channels >= 3)
         EXPECT_MAT_NEAR(dst3, cpu_dst3, 0.0, sss);
+
+        if(channels >= 4)
         EXPECT_MAT_NEAR(dst4, cpu_dst4, 0.0, sss);
     }
 }

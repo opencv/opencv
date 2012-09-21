@@ -1065,22 +1065,12 @@ TEST_P(Sum, MAT)
         sprintf(sss, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,maskx=%d,masky=%d,src2x=%d,src2y=%d", roicols, roirows, src1x, src1y, dstx, dsty, maskx, masky, src2x, src2y);
 
         //check results
-        EXPECT_DOUBLE_EQ(cpures[0], gpures[0]) << sss;
-        EXPECT_DOUBLE_EQ(cpures[1], gpures[1]) << sss;
-        EXPECT_DOUBLE_EQ(cpures[2], gpures[2]) << sss;
-        EXPECT_DOUBLE_EQ(cpures[3], gpures[3]) << sss;
+        EXPECT_NEAR(cpures[0], gpures[0], 0.1) << sss;
+        EXPECT_NEAR(cpures[1], gpures[1], 0.1) << sss;
+        EXPECT_NEAR(cpures[2], gpures[2], 0.1) << sss;
+        EXPECT_NEAR(cpures[3], gpures[3], 0.1) << sss;
     }
 }
-
-//TEST_P(Sum, MASK)
-//{
-//	for(int j=0; j<LOOP_TIMES; j++)
-//	{
-//		random_roi();
-//
-//	}
-//}
-
 
 
 struct CountNonZero : ArithmTestBase {};

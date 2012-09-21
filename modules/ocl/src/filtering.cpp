@@ -539,8 +539,12 @@ Ptr<FilterEngine_GPU> cv::ocl::createMorphologyFilter_GPU(int op, int type, cons
 
 namespace
 {
-    void morphOp(int op, const oclMat &src, oclMat &dst, const Mat &_kernel, Point anchor, int iterations)
+    void morphOp(int op, const oclMat &src, oclMat &dst, const Mat &_kernel, Point anchor, int iterations,int borderType,const Scalar& borderValue)
     {
+		if((borderType != cv::BORDER_CONSTANT) || (borderValue!=morphologyDefaultBorderValue()))
+		{
+			CV_Error(CV_StsBadArg,"unsupported border type");
+		}
         Mat kernel;
         Size ksize = _kernel.data ? _kernel.size() : Size(3, 3);
 
@@ -576,7 +580,8 @@ namespace
     }
 }
 
-void cv::ocl::erode( const oclMat &src, oclMat &dst, const Mat &kernel, Point anchor, int iterations)
+void cv::ocl::erode( const oclMat &src, oclMat &dst, const Mat &kernel, Point anchor, int iterations,
+	int borderType,const Scalar& borderValue)
 {
     bool allZero = true;
     for(int i = 0; i < kernel.rows * kernel.cols; ++i)
@@ -586,46 +591,48 @@ void cv::ocl::erode( const oclMat &src, oclMat &dst, const Mat &kernel, Point an
     {
         kernel.data[0] = 1;
     }
-    morphOp(MORPH_ERODE, src, dst, kernel, anchor, iterations);
+    morphOp(MORPH_ERODE, src, dst, kernel, anchor, iterations,borderType, borderValue);
 }
 
-void cv::ocl::dilate( const oclMat &src, oclMat &dst, const Mat &kernel, Point anchor, int iterations)
+void cv::ocl::dilate( const oclMat &src, oclMat &dst, const Mat &kernel, Point anchor, int iterations,
+	int borderType,const Scalar& borderValue)
 {
-    morphOp(MORPH_DILATE, src, dst, kernel, anchor, iterations);
+    morphOp(MORPH_DILATE, src, dst, kernel, anchor, iterations,borderType, borderValue);
 }
 
-void cv::ocl::morphologyEx( const oclMat &src, oclMat &dst, int op, const Mat &kernel, Point anchor, int iterations)
+void cv::ocl::morphologyEx( const oclMat &src, oclMat &dst, int op, const Mat &kernel, Point anchor, int iterations,
+	int borderType,const Scalar& borderValue)
 {
     oclMat temp;
     switch( op )
     {
     case MORPH_ERODE:
-        erode( src, dst, kernel, anchor, iterations);
+        erode( src, dst, kernel, anchor, iterations,borderType, borderValue);
         break;
     case MORPH_DILATE:
-        dilate( src, dst, kernel, anchor, iterations);
+        dilate( src, dst, kernel, anchor, iterations,borderType, borderValue);
         break;
     case MORPH_OPEN:
-        erode( src, temp, kernel, anchor, iterations);
-        dilate( temp, dst, kernel, anchor, iterations);
+        erode( src, temp, kernel, anchor, iterations,borderType, borderValue);
+        dilate( temp, dst, kernel, anchor, iterations,borderType, borderValue);
         break;
     case CV_MOP_CLOSE:
-        dilate( src, temp, kernel, anchor, iterations);
-        erode( temp, dst, kernel, anchor, iterations);
+        dilate( src, temp, kernel, anchor, iterations,borderType, borderValue);
+        erode( temp, dst, kernel, anchor, iterations,borderType, borderValue);
         break;
     case CV_MOP_GRADIENT:
-        erode( src, temp, kernel, anchor, iterations);
-        dilate( src, dst, kernel, anchor, iterations);
+        erode( src, temp, kernel, anchor, iterations,borderType, borderValue);
+        dilate( src, dst, kernel, anchor, iterations,borderType, borderValue);
         subtract(dst, temp, dst);
         break;
     case CV_MOP_TOPHAT:
-        erode( src, dst, kernel, anchor, iterations);
-        dilate( dst, temp, kernel, anchor, iterations);
+        erode( src, dst, kernel, anchor, iterations,borderType, borderValue);
+        dilate( dst, temp, kernel, anchor, iterations,borderType, borderValue);
         subtract(src, temp, dst);
         break;
     case CV_MOP_BLACKHAT:
-        dilate( src, dst, kernel, anchor, iterations);
-        erode( dst, temp, kernel, anchor, iterations);
+        dilate( src, dst, kernel, anchor, iterations,borderType, borderValue);
+        erode( dst, temp, kernel, anchor, iterations,borderType, borderValue);
         subtract(temp, src, dst);
         break;
     default:
@@ -1434,6 +1441,18 @@ Ptr<FilterEngine_GPU> cv::ocl::createSeparableLinearFilter_GPU(int srcType, int 
 
 void cv::ocl::sepFilter2D(const oclMat &src, oclMat &dst, int ddepth, const Mat &kernelX, const Mat &kernelY, Point anchor, double delta, int bordertype)
 {
+	if((dst.cols!=dst.wholecols) || (dst.rows!=dst.wholerows))//has roi
+	{
+		if((bordertype & cv::BORDER_ISOLATED) != 0)
+		{
+			bordertype &= ~cv::BORDER_ISOLATED;
+			if((bordertype != cv::BORDER_CONSTANT) &&
+			(bordertype != cv::BORDER_REPLICATE))
+			{
+				CV_Error(CV_StsBadArg,"unsupported border type");
+			}
+		}
+	}
     if( ddepth < 0 )
         ddepth = src.depth();
     //CV_Assert(ddepth == src.depth());
@@ -1557,7 +1576,18 @@ void cv::ocl::GaussianBlur(const oclMat &src, oclMat &dst, Size ksize, double si
         src.copyTo(dst);
         return;
     }
-
+	if((dst.cols!=dst.wholecols) || (dst.rows!=dst.wholerows))//has roi
+	{
+		if((bordertype & cv::BORDER_ISOLATED) != 0)
+		{
+			bordertype &= ~cv::BORDER_ISOLATED;
+			if((bordertype != cv::BORDER_CONSTANT) &&
+			(bordertype != cv::BORDER_REPLICATE))
+			{
+				CV_Error(CV_StsBadArg,"unsupported border type");
+			}
+		}
+	}
     dst.create(src.size(), src.type());
     if( bordertype != BORDER_CONSTANT )
     {

@@ -488,8 +488,8 @@ TEST_P(bilateralFilter, Mat)
     int radius = 9;
     int d = 2 * radius + 1;
     double sigmaspace = 20.0;
-    int bordertype[] = {cv::BORDER_CONSTANT, cv::BORDER_REPLICATE/*,BORDER_REFLECT,BORDER_WRAP,BORDER_REFLECT_101*/};
-    //const char* borderstr[]={"BORDER_CONSTANT", "BORDER_REPLICATE"/*, "BORDER_REFLECT","BORDER_WRAP","BORDER_REFLECT_101"*/};
+    int bordertype[] = {cv::BORDER_CONSTANT, cv::BORDER_REPLICATE,cv::BORDER_REFLECT,cv::BORDER_WRAP,cv::BORDER_REFLECT_101};
+    const char* borderstr[]={"BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT","BORDER_WRAP","BORDER_REFLECT_101"};
 
     if (mat1.type() != CV_8UC1 || mat1.type() != dst.type())
     {
@@ -502,15 +502,47 @@ TEST_P(bilateralFilter, Mat)
             for(int j = 0; j < LOOP_TIMES; j++)
             {
                 random_roi();
-                cv::bilateralFilter(mat1_roi, dst_roi, d, sigmacolor, sigmaspace, bordertype[i]);
-                cv::ocl::bilateralFilter(clmat1_roi, cldst_roi, d, sigmacolor, sigmaspace, bordertype[i]);
+				#ifdef RANDOMROI
+				if(((bordertype[i]!=cv::BORDER_CONSTANT) && (bordertype[i]!=cv::BORDER_REPLICATE))&&(mat1_roi.cols<=radius) || (mat1_roi.cols<=radius) || (mat1_roi.rows <= radius) || (mat1_roi.rows <= radius))
+				{
+					continue;
+				}
+				if((dstx>=radius) && (dsty >= radius) && (dstx+cldst_roi.cols+radius <=cldst_roi.wholecols) && (dsty+cldst_roi.rows+radius <= cldst_roi.wholerows))
+				{
+					dst_roi.adjustROI(radius, radius, radius, radius);
+					cldst_roi.adjustROI(radius, radius, radius, radius);
+				}
+				else
+				{
+					continue;
+				}
+				#endif
+                cv::bilateralFilter(mat1_roi, dst_roi, d, sigmacolor, sigmaspace, bordertype[i]|cv::BORDER_ISOLATED);
+                cv::ocl::bilateralFilter(clmat1_roi, cldst_roi, d, sigmacolor, sigmaspace, bordertype[i]|cv::BORDER_ISOLATED);
 
                 cv::Mat cpu_cldst;
-                cldst.download(cpu_cldst);
-                char sss[1024];
-                sprintf(sss, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,dst1x=%d,dst1y=%d,maskx=%d,masky=%d,src2x=%d,src2y=%d", roicols, roirows, src1x, src1y, dstx, dsty, dst1x, dst1y, maskx, masky, src2x, src2y);
+				#ifndef RANDOMROI
+                cldst_roi.download(cpu_cldst);
+				#else
+				cldst.download(cpu_cldst);
+				#endif
 
-                EXPECT_MAT_NEAR(dst, cpu_cldst, 0.0, sss);
+                char sss[1024];
+                sprintf(sss, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,radius=%d,boredertype=%s", roicols, roirows, src1x, src1y, dstx, dsty, radius, borderstr[i]);
+
+				#ifndef RANDOMROI
+                EXPECT_MAT_NEAR(dst_roi, cpu_cldst, 0.0, sss);
+				#else
+				//for(int i=0;i<dst_roi.rows;i++)
+				//{
+				//	for(int j=0;j<dst_roi.cols;j++)
+				//	{
+				//		cout<< (int)dst_roi.at<uchar>(i,j)<<" "<< (int)cpu_cldst.at<uchar>(i,j)<<"  ";
+				//	}
+				//	cout<<endl;
+				//}
+				EXPECT_MAT_NEAR(dst, cpu_cldst, 0.0, sss);
+				#endif
             }
     }
 }
@@ -523,10 +555,14 @@ struct CopyMakeBorder : ImgprocTestBase {};
 
 TEST_P(CopyMakeBorder, Mat)
 {
-    int bordertype[] = {cv::BORDER_CONSTANT, cv::BORDER_REPLICATE/*,BORDER_REFLECT,BORDER_WRAP,BORDER_REFLECT_101*/};
-    //const char* borderstr[]={"BORDER_CONSTANT", "BORDER_REPLICATE"/*, "BORDER_REFLECT","BORDER_WRAP","BORDER_REFLECT_101"*/};
-
-    if ((mat1.type() != CV_8UC1 && mat1.type() != CV_8UC4 && mat1.type() != CV_32SC1) || mat1.type() != dst.type())
+    int bordertype[] = {cv::BORDER_CONSTANT, cv::BORDER_REPLICATE,cv::BORDER_REFLECT,cv::BORDER_WRAP,cv::BORDER_REFLECT_101};
+    const char* borderstr[]={"BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT","BORDER_WRAP","BORDER_REFLECT_101"};
+	cv::RNG &rng = TS::ptr()->get_rng();
+	int top = rng.uniform(0, 10);
+	int bottom = rng.uniform(0, 10);
+	int left = rng.uniform(0, 10);
+	int right = rng.uniform(0, 10);
+    if (mat1.type() != dst.type())
     {
         cout << "Unsupported type" << endl;
         EXPECT_DOUBLE_EQ(0.0, 0.0);
@@ -537,15 +573,45 @@ TEST_P(CopyMakeBorder, Mat)
             for(int j = 0; j < LOOP_TIMES; j++)
             {
                 random_roi();
-                cv::copyMakeBorder(mat1_roi, dst_roi, 7, 5, 5, 7, bordertype[i], cv::Scalar(1.0));
-                cv::ocl::copyMakeBorder(clmat1_roi, cldst_roi, 7, 5, 5, 7,  bordertype[i], cv::Scalar(1.0));
+				#ifdef RANDOMROI
+				if(((bordertype[i]!=cv::BORDER_CONSTANT) && (bordertype[i]!=cv::BORDER_REPLICATE))&&(mat1_roi.cols<=left) || (mat1_roi.cols<=right) || (mat1_roi.rows <= top) || (mat1_roi.rows <= bottom))
+				{
+					continue;
+				}
+				if((dstx>=left) && (dsty >= top) && (dstx+cldst_roi.cols+right <=cldst_roi.wholecols) && (dsty+cldst_roi.rows+bottom <= cldst_roi.wholerows))
+				{
+					dst_roi.adjustROI(top, bottom, left, right);
+					cldst_roi.adjustROI(top, bottom, left, right);
+				}
+				else
+				{
+					continue;
+				}
+				#endif
+                cv::copyMakeBorder(mat1_roi, dst_roi, top, bottom, left, right, bordertype[i]| cv::BORDER_ISOLATED, cv::Scalar(1.0));
+                cv::ocl::copyMakeBorder(clmat1_roi, cldst_roi, top, bottom, left, right,  bordertype[i]| cv::BORDER_ISOLATED, cv::Scalar(1.0));
 
                 cv::Mat cpu_cldst;
-                cldst.download(cpu_cldst);
+				#ifndef RANDOMROI
+                cldst_roi.download(cpu_cldst);
+				#else
+				cldst.download(cpu_cldst);
+				#endif
                 char sss[1024];
-                sprintf(sss, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,dst1x=%d,dst1y=%d,maskx=%d,masky=%d,src2x=%d,src2y=%d", roicols, roirows, src1x, src1y, dstx, dsty, dst1x, dst1y, maskx, masky, src2x, src2y);
-
-                EXPECT_MAT_NEAR(dst, cpu_cldst, 0.0, sss);
+                sprintf(sss, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,dst1x=%d,dst1y=%d,top=%d,bottom=%d,left=%d,right=%d, bordertype=%s", roicols, roirows, src1x, src1y, dstx, dsty, dst1x, dst1y, top, bottom, left, right,borderstr[i]);
+				#ifndef RANDOMROI
+                EXPECT_MAT_NEAR(dst_roi, cpu_cldst, 0.0, sss);
+				#else
+				//for(int i=0;i<dst.rows;i++)
+				//{
+				//for(int j=0;j<dst.cols;j++)
+				//{
+				//	cout<< (int)dst.at<uchar>(i,j)<<" ";
+				//}
+				//cout<<endl;
+				//}
+				EXPECT_MAT_NEAR(dst, cpu_cldst, 0.0, sss);
+				#endif
             }
     }
 }
@@ -562,7 +628,7 @@ TEST_P(cornerMinEigenVal, Mat)
     {
 
         random_roi();
-        int blockSize = 7, apertureSize = 3;//1 + 2 * (rand() % 4);
+        int blockSize = 3, apertureSize = 3;//1 + 2 * (rand() % 4);
         //int borderType = cv::BORDER_CONSTANT;
         //int borderType = cv::BORDER_REPLICATE;
         int borderType = cv::BORDER_REFLECT;
@@ -591,7 +657,7 @@ TEST_P(cornerHarris, Mat)
     {
 
         random_roi();
-        int blockSize = 7, apertureSize = 3; //1 + 2 * (rand() % 4);
+        int blockSize = 3, apertureSize = 3; //1 + 2 * (rand() % 4);
         double k = 2;
         //int borderType = cv::BORDER_CONSTANT;
         //int borderType = cv::BORDER_REPLICATE;
@@ -1045,8 +1111,8 @@ PARAM_TEST_CASE(Resize, MatType, cv::Size, double, double, int)
 		cv::RNG &rng = TS::ptr()->get_rng();
         src_roicols = rng.uniform(1, mat1.cols);
         src_roirows = rng.uniform(1, mat1.rows);
-        dst_roicols = rng.uniform(1, dst.cols);
-        dst_roirows = rng.uniform(1, dst.rows);
+        dst_roicols = (int)(src_roicols*fx);
+        dst_roirows = (int)(src_roirows*fy);
         src1x   = rng.uniform(0, mat1.cols - src_roicols);
         src1y   = rng.uniform(0, mat1.rows - src_roirows);
         dstx    = rng.uniform(0, dst.cols  - dst_roicols);
@@ -1061,13 +1127,16 @@ PARAM_TEST_CASE(Resize, MatType, cv::Size, double, double, int)
         dstx    = 0;
         dsty    = 0;
 #endif
-
+        dsize.width = dst_roicols;
+        dsize.height = dst_roirows;
         mat1_roi = mat1(Rect(src1x, src1y, src_roicols, src_roirows));
         dst_roi  = dst(Rect(dstx, dsty, dst_roicols, dst_roirows));
 
         gdst_whole = dst;
         gdst = gdst_whole(Rect(dstx, dsty, dst_roicols, dst_roirows));
 
+        dsize.width = (int)(mat1_roi.size().width * fx);
+        dsize.height = (int)(mat1_roi.size().height * fy);
 
         gmat1 = mat1_roi;
     }
@@ -1082,7 +1151,7 @@ TEST_P(Resize, Mat)
 
         // cv::resize(mat1_roi, dst_roi, dsize, fx, fy, interpolation);
         // cv::ocl::resize(gmat1, gdst, dsize, fx, fy, interpolation);
-
+        if(dst_roicols<1||dst_roirows<1) continue;
         cv::resize(mat1_roi, dst_roi, dsize, fx, fy, interpolation);
         cv::ocl::resize(gmat1, gdst, dsize, fx, fy, interpolation);
 
@@ -1592,15 +1661,15 @@ INSTANTIATE_TEST_CASE_P(ImgprocTestBase, equalizeHist, Combine(
 //	NULL_TYPE,
 //	NULL_TYPE,
 //	Values(false))); // Values(false) is the reserved parameter
-//
-//
-//INSTANTIATE_TEST_CASE_P(ImgprocTestBase, CopyMakeBorder, Combine(
-//	Values(CV_8UC1, CV_8UC3,CV_8UC4, CV_32SC1),
-//	NULL_TYPE,
-//	Values(CV_8UC1,CV_8UC3,CV_8UC4,CV_32SC1),
-//	NULL_TYPE,
-//	NULL_TYPE,
-//	Values(false))); // Values(false) is the reserved parameter
+
+
+INSTANTIATE_TEST_CASE_P(ImgprocTestBase, CopyMakeBorder, Combine(
+	Values(CV_8UC1, CV_8UC4,CV_32SC1, CV_32SC4,CV_32FC1, CV_32FC4),
+	NULL_TYPE,
+	Values(CV_8UC1,CV_8UC4,CV_32SC1, CV_32SC4,CV_32FC1, CV_32FC4),
+	NULL_TYPE,
+	NULL_TYPE,
+	Values(false))); // Values(false) is the reserved parameter
 
 INSTANTIATE_TEST_CASE_P(ImgprocTestBase, cornerMinEigenVal, Combine(
 	Values(CV_8UC1,CV_32FC1),
@@ -1669,11 +1738,11 @@ INSTANTIATE_TEST_CASE_P(Imgproc, meanShiftProc, Combine(
        Values(cv::TermCriteria(cv::TermCriteria::COUNT+cv::TermCriteria::EPS, 5, 1))
 ));
 
-//INSTANTIATE_TEST_CASE_P(Imgproc, Remap, Combine(
-//            Values(CV_8UC1, CV_8UC3,CV_8UC4, CV_32FC1, CV_32FC4),
-//            Values(CV_32FC1, CV_16SC2, CV_32FC2),Values(-1,CV_32FC1),
-//            Values((int)cv::INTER_NEAREST, (int)cv::INTER_LINEAR), 
-//            Values((int)cv::BORDER_CONSTANT)));
+INSTANTIATE_TEST_CASE_P(Imgproc, Remap, Combine(
+            Values(CV_8UC1, CV_8UC3,CV_8UC4, CV_32FC1, CV_32FC4),
+            Values(CV_32FC1, CV_16SC2, CV_32FC2),Values(-1,CV_32FC1),
+            Values((int)cv::INTER_NEAREST, (int)cv::INTER_LINEAR), 
+            Values((int)cv::BORDER_CONSTANT)));
 
 
 INSTANTIATE_TEST_CASE_P(histTestBase, calcHist, Combine(

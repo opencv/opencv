@@ -615,14 +615,17 @@ namespace cv
 
         //! erodes the image (applies the local minimum operator)
         // supports data type: CV_8UC1, CV_8UC4, CV_32FC1 and CV_32FC4
-        CV_EXPORTS void erode( const oclMat &src, oclMat &dst, const Mat &kernel, Point anchor = Point(-1, -1), int iterations = 1);
+        CV_EXPORTS void erode( const oclMat &src, oclMat &dst, const Mat &kernel, Point anchor = Point(-1, -1), int iterations = 1,
+			int borderType=BORDER_CONSTANT,const Scalar& borderValue=morphologyDefaultBorderValue());
 
         //! dilates the image (applies the local maximum operator)
         // supports data type: CV_8UC1, CV_8UC4, CV_32FC1 and CV_32FC4
-        CV_EXPORTS void dilate( const oclMat &src, oclMat &dst, const Mat &kernel, Point anchor = Point(-1, -1), int iterations = 1);
+        CV_EXPORTS void dilate( const oclMat &src, oclMat &dst, const Mat &kernel, Point anchor = Point(-1, -1), int iterations = 1,
+                         int borderType=BORDER_CONSTANT,const Scalar& borderValue=morphologyDefaultBorderValue());
 
         //! applies an advanced morphological operation to the image
-        CV_EXPORTS void morphologyEx( const oclMat &src, oclMat &dst, int op, const Mat &kernel, Point anchor = Point(-1, -1), int iterations = 1);
+        CV_EXPORTS void morphologyEx( const oclMat &src, oclMat &dst, int op, const Mat &kernel, Point anchor = Point(-1, -1), int iterations = 1,
+			int borderType=BORDER_CONSTANT,const Scalar& borderValue=morphologyDefaultBorderValue());
 
         ////////////////////////////// Image processing //////////////////////////////
         //! Does mean shift filtering on GPU.

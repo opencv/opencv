@@ -112,14 +112,14 @@ namespace cv
                                 size_t *globalThreads, size_t *localThreads);
         void openCLExecuteKernel(Context *clCxt , const char **source, string kernelName, vector< std::pair<size_t, const void *> > &args,
                                  int globalcols , int globalrows, size_t blockSize = 16, int kernel_expand_depth = -1, int kernel_expand_channel = -1);
-        void openCLExecuteKernel(Context *clCxt , const char **source, string kernelName,
+        void openCLExecuteKernel_(Context *clCxt , const char **source, string kernelName,
                                  size_t globalThreads[3], size_t localThreads[3],
-                                 vector< pair<size_t, const void *> > &args, int channels, int depth, char *build_options);
+                                 vector< pair<size_t, const void *> > &args, int channels, int depth, const char *build_options);
         void openCLExecuteKernel(Context *clCxt , const char **source, string kernelName, size_t globalThreads[3],
                                  size_t localThreads[3],  vector< pair<size_t, const void *> > &args, int channels, int depth);
         void openCLExecuteKernel(Context *clCxt , const char **source, string kernelName, size_t globalThreads[3],
                                  size_t localThreads[3],  vector< pair<size_t, const void *> > &args, int channels,
-                                 int depth, char *build_options);
+                                 int depth, const char *build_options);
 
         cl_mem load_constant(cl_context context, cl_command_queue command_queue, const void *value,
                              const size_t size);

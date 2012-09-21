@@ -138,17 +138,14 @@ __kernel void resizeLN_C1_D0(__global uchar * dst, __global uchar const * restri
     val2 = mul24(U1 , sdata3) + mul24(U , sdata4);
     val = mul24((int4)V1 , val1) + mul24((int4)V , val2);
     
-    //__global uchar4* d = (__global uchar4*)(dst + dstoffset_in_pixel + dy * dststep_in_pixel + gx);
-    //uchar4 dVal = *d;
-    //int4 con = ( DX >= 0 && DX < dst_cols && dy >= 0 && dy < dst_rows);
     val = ((val + (1<<(CAST_BITS-1))) >> CAST_BITS);
-    //*d = convert_uchar4(con != 0) ? convert_uchar4_sat(val) : dVal;
 
 	pos4 = mad24(dy, dststep_in_pixel, gx+dstoffset_in_pixel);
 	pos4.y++;
 	pos4.z+=2;
+	pos4.w+=3;
 	uchar4 uval = convert_uchar4_sat(val);
-    int con = (gx >= 0 && gx+3 < dst_cols && dy >= 0 && dy < dst_rows);
+        int con = (gx >= 0 && gx+3 < dst_cols && dy >= 0 && dy < dst_rows && (dstoffset_in_pixel&3)==0);
 	if(con)
 	{
 		*(__global uchar4*)(dst + pos4.x)=uval;
@@ -166,6 +163,10 @@ __kernel void resizeLN_C1_D0(__global uchar * dst, __global uchar const * restri
 		if(gx+2 >= 0 && gx+2 < dst_cols && dy >= 0 && dy < dst_rows)
 		{
 			dst[pos4.z]=uval.z;
+		}
+		if(gx+3 >= 0 && gx+3 < dst_cols && dy >= 0 && dy < dst_rows)
+		{
+			dst[pos4.w]=uval.w;
 		}
 	}
 }
@@ -325,8 +326,9 @@ __kernel void resizeNN_C1_D0(__global uchar * dst, __global uchar * src,
 	pos = mad24(dy, dststep_in_pixel, gx+dstoffset_in_pixel);
 	pos.y++;
 	pos.z+=2;
+	pos.w+=3;
 
-    int con = (gx >= 0 && gx+3 < dst_cols && dy >= 0 && dy < dst_rows);
+        int con = (gx >= 0 && gx+3 < dst_cols && dy >= 0 && dy < dst_rows && (dstoffset_in_pixel&3)==0);
 	if(con)
 	{
 		*(__global uchar4*)(dst + pos.x)=val;
@@ -344,6 +346,10 @@ __kernel void resizeNN_C1_D0(__global uchar * dst, __global uchar * src,
 		if(gx+2 >= 0 && gx+2 < dst_cols && dy >= 0 && dy < dst_rows)
 		{
 			dst[pos.z]=val.z;
+		}
+		if(gx+3 >= 0 && gx+3 < dst_cols && dy >= 0 && dy < dst_rows)
+		{
+			dst[pos.w]=val.w;
 		}
 	}
 }

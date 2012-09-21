@@ -167,7 +167,7 @@ void  run_perf_test();
 #define ALL_TYPES testing::ValuesIn(all_types())
 #define TYPES(depth_start, depth_end, cn_start, cn_end) testing::ValuesIn(types(depth_start, depth_end, cn_start, cn_end))
 
-#define DIFFERENT_SIZES testing::Values(cv::Size(128, 128), cv::Size(113, 113))
+#define DIFFERENT_SIZES testing::Values(cv::Size(128, 128), cv::Size(113, 113), cv::Size(1300, 1300))
 
 #define DIRECT_INVERSE testing::Values(Inverse(false), Inverse(true))
 
@@ -212,11 +212,6 @@ void  run_perf_test();
     } catch( ... ) { std::cout << "||||| Exception catched! |||||\n"; return; }
 
 //////// Utility
-#ifndef DIFFERENT_SIZES
-#else
-#undef DIFFERENT_SIZES
-#endif
-#define DIFFERENT_SIZES testing::Values(cv::Size(256, 256), cv::Size(3000, 3000))
 
 #define IMAGE_CHANNELS testing::Values(Channels(1), Channels(3), Channels(4))
 #ifndef IMPLEMENT_PARAM_CLASS

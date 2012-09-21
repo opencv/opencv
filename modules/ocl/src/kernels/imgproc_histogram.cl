@@ -142,15 +142,17 @@ __kernel void __attribute__((reqd_work_group_size(1,HISTOGRAM256_BIN_COUNT,1)))c
         int gy = get_group_id(1);
         int gn = get_num_groups(0);
         int rowIndex = mad24(gy, gn, gx);
-        rowIndex &= (PARTIAL_HISTOGRAM256_COUNT - 1);
+//        rowIndex &= (PARTIAL_HISTOGRAM256_COUNT - 1);
 
-        __local int subhist[HISTOGRAM256_BIN_COUNT + 1];
+        __local int subhist[HISTOGRAM256_LOCAL_MEM_SIZE + 1];
         subhist[lidy] = 0;
         barrier(CLK_LOCAL_MEM_FENCE);
 
-        gidx = ((gidx>left_col) ? (gidx+cols) : gidx);
+        gidx = ((gidx>=left_col) ? (gidx+cols) : gidx);
         int src_index = src_offset + mad24(gidy, src_step, gidx);
+	barrier(CLK_LOCAL_MEM_FENCE);
         int p = (int)src[src_index];
+	p = gidy >= rows ? HISTOGRAM256_LOCAL_MEM_SIZE : p;
         atomic_inc(subhist + p);
         barrier(CLK_LOCAL_MEM_FENCE);
 

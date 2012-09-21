@@ -98,8 +98,8 @@ namespace cv
         }
         
         inline oclMat::oclMat(int _rows, int _cols, int _type, void *_data, size_t _step)
-            : flags(Mat::MAGIC_VAL + (_type &TYPE_MASK)), rows(_rows), cols(_cols), step(_step), data((uchar *)_data), refcount(0),
-              datastart((uchar *)_data), dataend((uchar *)_data), offset(0), wholerows(_rows), wholecols(_cols), download_channels(CV_MAT_CN(_type))
+            : flags(0), rows(0), cols(0), step(0), data(0), refcount(0),
+              datastart(0), dataend(0), offset(0), wholerows(0), wholecols(0), download_channels(0)
         {
 			cv::Mat m(_rows,_cols,_type,_data,_step);
 			upload(m);
@@ -119,9 +119,9 @@ namespace cv
         }
         
         inline oclMat::oclMat(Size _size, int _type, void *_data, size_t _step)
-            : flags(Mat::MAGIC_VAL + (_type &TYPE_MASK)), rows(_size.height), cols(_size.width),
-              step(_step), data((uchar *)_data), refcount(0),
-              datastart((uchar *)_data), dataend((uchar *)_data), offset(0), wholerows(_size.height), wholecols(_size.width), download_channels(CV_MAT_CN(_type))
+            : flags(0), rows(0), cols(0),
+              step(0), data(0), refcount(0),
+              datastart(0), dataend(0), offset(0), wholerows(0), wholecols(0), download_channels(0)
         {
 			cv::Mat m(_size,_type,_data,_step);
 			upload(m);
@@ -327,6 +327,7 @@ namespace cv
             std::swap( dataend, b.dataend );
             std::swap( refcount, b.refcount );
             std::swap( offset, b.offset );
+			std::swap( clCxt,  b.clCxt );
             std::swap( wholerows, b.wholerows );
             std::swap( wholecols, b.wholecols );
 			std::swap( download_channels, b.download_channels);

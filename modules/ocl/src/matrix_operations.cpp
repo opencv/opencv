@@ -499,7 +499,7 @@ void set_to_withoutmask_run(const oclMat &dst, const Scalar &scalar, string kern
 	}val;
     switch(dst.depth())
     {
-    case 0:
+    case CV_8U:
 		val.uval.s[0] = saturate_cast<uchar>(scalar.val[0]);
 		val.uval.s[1] = saturate_cast<uchar>(scalar.val[1]);
 		val.uval.s[2] = saturate_cast<uchar>(scalar.val[2]);
@@ -518,7 +518,7 @@ void set_to_withoutmask_run(const oclMat &dst, const Scalar &scalar, string kern
 			CV_Error(CV_StsUnsupportedFormat,"unsupported channels");
 		}
         break;
-    case 1:
+    case CV_8S:
 		val.cval.s[0] = saturate_cast<char>(scalar.val[0]);
 		val.cval.s[1] = saturate_cast<char>(scalar.val[1]);
 		val.cval.s[2] = saturate_cast<char>(scalar.val[2]);
@@ -537,7 +537,7 @@ void set_to_withoutmask_run(const oclMat &dst, const Scalar &scalar, string kern
 			CV_Error(CV_StsUnsupportedFormat,"unsupported channels");
 		}
         break;
-    case 2:
+    case CV_16U:
 		val.usval.s[0] = saturate_cast<ushort>(scalar.val[0]);
 		val.usval.s[1] = saturate_cast<ushort>(scalar.val[1]);
 		val.usval.s[2] = saturate_cast<ushort>(scalar.val[2]);
@@ -556,7 +556,7 @@ void set_to_withoutmask_run(const oclMat &dst, const Scalar &scalar, string kern
 			CV_Error(CV_StsUnsupportedFormat,"unsupported channels");
 		}
         break;
-    case 3:
+    case CV_16S:
 		val.shval.s[0] = saturate_cast<short>(scalar.val[0]);
 		val.shval.s[1] = saturate_cast<short>(scalar.val[1]);
 		val.shval.s[2] = saturate_cast<short>(scalar.val[2]);
@@ -575,7 +575,7 @@ void set_to_withoutmask_run(const oclMat &dst, const Scalar &scalar, string kern
 			CV_Error(CV_StsUnsupportedFormat,"unsupported channels");
 		}
         break;
-    case 4:
+    case CV_32S:
 		val.ival.s[0] = saturate_cast<int>(scalar.val[0]);
 		val.ival.s[1] = saturate_cast<int>(scalar.val[1]);
 		val.ival.s[2] = saturate_cast<int>(scalar.val[2]);
@@ -601,7 +601,7 @@ void set_to_withoutmask_run(const oclMat &dst, const Scalar &scalar, string kern
 			CV_Error(CV_StsUnsupportedFormat,"unsupported channels");
 		}
         break;
-    case 5:
+    case CV_32F:
 		val.fval.s[0] = scalar.val[0];
 		val.fval.s[1] = scalar.val[1];
 		val.fval.s[2] = scalar.val[2];
@@ -620,7 +620,7 @@ void set_to_withoutmask_run(const oclMat &dst, const Scalar &scalar, string kern
 			CV_Error(CV_StsUnsupportedFormat,"unsupported channels");
 		}
         break;
-    case 6:
+    case CV_64F:
 		val.dval.s[0] = scalar.val[0];
 		val.dval.s[1] = scalar.val[1];
 		val.dval.s[2] = scalar.val[2];

@@ -56,7 +56,7 @@
 #define GET_CONFLICT_OFFSET(lid) ((lid) >> LOG_NUM_BANKS)
 
 
-kernel void integral_cols(__global uchar4 *src,__global int *sum ,
+kernel void integral_sum_cols(__global uchar4 *src,__global int *sum ,
                           int src_offset,int pre_invalid,int rows,int cols,int src_step,int dst_step)
 {
     unsigned int lid = get_local_id(0);
@@ -136,7 +136,7 @@ kernel void integral_cols(__global uchar4 *src,__global int *sum ,
 }
 
 
-kernel void integral_rows(__global int4 *srcsum,__global int *sum ,
+kernel void integral_sum_rows(__global int4 *srcsum,__global int *sum ,
                           int rows,int cols,int src_step,int sum_step,
                           int sum_offset)
 {

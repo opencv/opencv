@@ -46,65 +46,65 @@
 /**************************************PUBLICFUNC*************************************/
 #if defined (DOUBLE_SUPPORT)
 #pragma OPENCL EXTENSION cl_khr_fp64:enable
-#define RES_TYPE double8
-#define CONVERT_RES_TYPE convert_double8
+#define RES_TYPE double4
+#define CONVERT_RES_TYPE convert_double4
 #else
-#define RES_TYPE float8
-#define CONVERT_RES_TYPE convert_float8
+#define RES_TYPE float4
+#define CONVERT_RES_TYPE convert_float4
 #endif
 
 #if defined (DEPTH_0)
-#define VEC_TYPE uchar8
-#define VEC_TYPE_LOC int8
-#define CONVERT_TYPE convert_uchar8
-#define CONDITION_FUNC(a,b,c) (convert_int8(a) ? b : c)
+#define VEC_TYPE uchar4
+#define VEC_TYPE_LOC int4
+#define CONVERT_TYPE convert_uchar4
+#define CONDITION_FUNC(a,b,c) (convert_int4(a) ? b : c)
 #define MIN_VAL 0
 #define MAX_VAL 255
 #endif
 #if defined (DEPTH_1)
-#define VEC_TYPE char8
-#define VEC_TYPE_LOC int8
-#define CONVERT_TYPE convert_char8
-#define CONDITION_FUNC(a,b,c) (convert_int8(a) ? b : c)
+#define VEC_TYPE char4
+#define VEC_TYPE_LOC int4
+#define CONVERT_TYPE convert_char4
+#define CONDITION_FUNC(a,b,c) (convert_int4(a) ? b : c)
 #define MIN_VAL -128 
 #define MAX_VAL 127
 #endif
 #if defined (DEPTH_2)
-#define VEC_TYPE ushort8
-#define VEC_TYPE_LOC int8
-#define CONVERT_TYPE convert_ushort8
-#define CONDITION_FUNC(a,b,c) (convert_int8(a) ? b : c)
+#define VEC_TYPE ushort4
+#define VEC_TYPE_LOC int4
+#define CONVERT_TYPE convert_ushort4
+#define CONDITION_FUNC(a,b,c) (convert_int4(a) ? b : c)
 #define MIN_VAL 0 
 #define MAX_VAL 65535
 #endif
 #if defined (DEPTH_3)
-#define VEC_TYPE short8
-#define VEC_TYPE_LOC int8
-#define CONVERT_TYPE convert_short8
-#define CONDITION_FUNC(a,b,c) (convert_int8(a) ? b : c)
+#define VEC_TYPE short4
+#define VEC_TYPE_LOC int4
+#define CONVERT_TYPE convert_short4
+#define CONDITION_FUNC(a,b,c) (convert_int4(a) ? b : c)
 #define MIN_VAL -32768 
 #define MAX_VAL 32767
 #endif
 #if defined (DEPTH_4)
-#define VEC_TYPE int8
-#define VEC_TYPE_LOC int8
-#define CONVERT_TYPE convert_int8
+#define VEC_TYPE int4
+#define VEC_TYPE_LOC int4
+#define CONVERT_TYPE convert_int4
 #define CONDITION_FUNC(a,b,c) ((a) ? b : c)
 #define MIN_VAL INT_MIN 
 #define MAX_VAL INT_MAX
 #endif
 #if defined (DEPTH_5)
-#define VEC_TYPE float8
-#define VEC_TYPE_LOC float8
-#define CONVERT_TYPE convert_float8
+#define VEC_TYPE float4
+#define VEC_TYPE_LOC float4
+#define CONVERT_TYPE convert_float4
 #define CONDITION_FUNC(a,b,c) ((a) ? b : c)
 #define MIN_VAL (-FLT_MAX) 
 #define MAX_VAL FLT_MAX
 #endif
 #if defined (DEPTH_6)
-#define VEC_TYPE double8
-#define VEC_TYPE_LOC double8
-#define CONVERT_TYPE convert_double8
+#define VEC_TYPE double4
+#define VEC_TYPE_LOC double4
+#define CONVERT_TYPE convert_double4
 #define CONDITION_FUNC(a,b,c) ((a) ? b : c)
 #define MIN_VAL (-DBL_MAX) 
 #define MAX_VAL DBL_MAX
@@ -122,43 +122,21 @@
 #if defined (REPEAT_S3)
 #define repeat_s(a) a.s0 = a.s3;a.s1 = a.s3;a.s2 = a.s3;
 #endif
-#if defined (REPEAT_S4)
-#define repeat_s(a) a.s0 = a.s4;a.s1 = a.s4;a.s2 = a.s4;a.s3 = a.s4;
-#endif
-#if defined (REPEAT_S5)
-#define repeat_s(a) a.s0 = a.s5;a.s1 = a.s5;a.s2 = a.s5;a.s3 = a.s5;a.s4 = a.s5;
-#endif
-#if defined (REPEAT_S6)
-#define repeat_s(a) a.s0 = a.s6;a.s1 = a.s6;a.s2 = a.s6;a.s3 = a.s6;a.s4 = a.s6;a.s5 = a.s6;
-#endif
-#if defined (REPEAT_S7)
-#define repeat_s(a) a.s0 = a.s7;a.s1 = a.s7;a.s2 = a.s7;a.s3 = a.s7;a.s4 = a.s7;a.s5 = a.s7;a.s6 = a.s7;
-#endif
+
 
 #if defined (REPEAT_E0)
 #define repeat_e(a) a=a; 
 #endif
 #if defined (REPEAT_E1)
-#define repeat_e(a) a.s7 = a.s6;
+#define repeat_e(a) a.s3 = a.s2;
 #endif
 #if defined (REPEAT_E2)
-#define repeat_e(a) a.s7 = a.s5;a.s6 = a.s5;
+#define repeat_e(a) a.s3 = a.s1;a.s2 = a.s1;
 #endif
 #if defined (REPEAT_E3)
-#define repeat_e(a) a.s7 = a.s4;a.s6 = a.s4;a.s5 = a.s4;
+#define repeat_e(a) a.s3 = a.s0;a.s2 = a.s0;a.s1 = a.s0;
 #endif
-#if defined (REPEAT_E4)
-#define repeat_e(a) a.s7 = a.s3;a.s6 = a.s3;a.s5 = a.s3;a.s4 = a.s3;
-#endif
-#if defined (REPEAT_E5)
-#define repeat_e(a) a.s7 = a.s2;a.s6 = a.s2;a.s5 = a.s2;a.s4 = a.s2;a.s3 = a.s2;
-#endif
-#if defined (REPEAT_E6)
-#define repeat_e(a) a.s7 = a.s1;a.s6 = a.s1;a.s5 = a.s1;a.s4 = a.s1;a.s3 = a.s1;a.s2 = a.s1;
-#endif
-#if defined (REPEAT_E7)
-#define repeat_e(a) a.s7 = a.s0;a.s6 = a.s0;a.s5 = a.s0;a.s4 = a.s0;a.s3 = a.s0;a.s2 = a.s0;a.s1 = a.s0;
-#endif
+
 
 #pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics:enable
 #pragma OPENCL EXTENSION cl_khr_global_int32_extended_atomics:enable
@@ -179,8 +157,8 @@ __kernel void arithm_op_minMaxLoc (int cols,int invalid_cols,int offset,int elem
    if(id < elemnum)
    {
        temp = src[idx];
-       idx_c = idx << 3;
-       temploc = (VEC_TYPE_LOC)(idx_c,idx_c+1,idx_c+2,idx_c+3,idx_c+4,idx_c+5,idx_c+6,idx_c+7);
+       idx_c = idx << 2;
+       temploc = (VEC_TYPE_LOC)(idx_c,idx_c+1,idx_c+2,idx_c+3);
        if(id % cols == 0 ) 
        {
            repeat_s(temp);
@@ -203,13 +181,13 @@ __kernel void arithm_op_minMaxLoc (int cols,int invalid_cols,int offset,int elem
        minloc = negative;
        maxloc = negative;
    }
-   float8 aaa;
+   float4 aaa;
    for(id=id + (groupnum << 8); id < elemnum;id = id + (groupnum << 8))
    {
        idx = offset + id + (id / cols) * invalid_cols;
        temp = src[idx];
-       idx_c = idx << 3;
-       temploc = (VEC_TYPE_LOC)(idx_c,idx_c+1,idx_c+2,idx_c+3,idx_c+4,idx_c+5,idx_c+6,idx_c+7);
+       idx_c = idx << 2;
+       temploc = (VEC_TYPE_LOC)(idx_c,idx_c+1,idx_c+2,idx_c+3);
        if(id % cols == 0 ) 
        {
                repeat_s(temp);
@@ -224,8 +202,8 @@ __kernel void arithm_op_minMaxLoc (int cols,int invalid_cols,int offset,int elem
        maxval = max(maxval,temp);
        minloc = CONDITION_FUNC(minval == temp, temploc , minloc);
        maxloc = CONDITION_FUNC(maxval == temp, temploc , maxloc);
-       aaa= convert_float8(maxval == temp);
-       maxloc = convert_int8(aaa) ? temploc : maxloc;
+       aaa= convert_float4(maxval == temp);
+       maxloc = convert_int4(aaa) ? temploc : maxloc;
    }
    if(lid > 127)
    {
@@ -278,47 +256,25 @@ __kernel void arithm_op_minMaxLoc (int cols,int invalid_cols,int offset,int elem
 #if defined (REPEAT_S3)
 #define repeat_ms(a) a.s0 = 0;a.s1 = 0;a.s2 = 0;
 #endif
-#if defined (REPEAT_S4)
-#define repeat_ms(a) a.s0 = 0;a.s1 = 0;a.s2 = 0;a.s3 = 0;
-#endif
-#if defined (REPEAT_S5)
-#define repeat_ms(a) a.s0 = 0;a.s1 = 0;a.s2 = 0;a.s3 = 0;a.s4 = 0;
-#endif
-#if defined (REPEAT_S6)
-#define repeat_ms(a) a.s0 = 0;a.s1 = 0;a.s2 = 0;a.s3 = 0;a.s4 = 0;a.s5 = 0;
-#endif
-#if defined (REPEAT_S7)
-#define repeat_ms(a) a.s0 = 0;a.s1 = 0;a.s2 = 0;a.s3 = 0;a.s4 = 0;a.s5 = 0;a.s6 = 0;
-#endif
 
 #if defined (REPEAT_E0)
 #define repeat_me(a) a = a;
 #endif
 #if defined (REPEAT_E1)
-#define repeat_me(a) a.s7 = 0;
+#define repeat_me(a) a.s3 = 0;
 #endif
 #if defined (REPEAT_E2)
-#define repeat_me(a) a.s7 = 0;a.s6 = 0;
+#define repeat_me(a) a.s3 = 0;a.s2 = 0;
 #endif
 #if defined (REPEAT_E3)
-#define repeat_me(a) a.s7 = 0;a.s6 = 0;a.s5 = 0;
-#endif
-#if defined (REPEAT_E4)
-#define repeat_me(a) a.s7 = 0;a.s6 = 0;a.s5 = 0;a.s4 = 0;
-#endif
-#if defined (REPEAT_E5)
-#define repeat_me(a) a.s7 = 0;a.s6 = 0;a.s5 = 0;a.s4 = 0;a.s3 = 0;
-#endif
-#if defined (REPEAT_E6)
-#define repeat_me(a) a.s7 = 0;a.s6 = 0;a.s5 = 0;a.s4 = 0;a.s3 = 0;a.s2 = 0;
-#endif
-#if defined (REPEAT_E7)
-#define repeat_me(a) a.s7 = 0;a.s6 = 0;a.s5 = 0;a.s4 = 0;a.s3 = 0;a.s2 = 0;a.s1 = 0;
+#define repeat_me(a) a.s3 = 0;a.s2 = 0;a.s1 = 0;
 #endif
 
+
 /**************************************Array minMaxLoc mask**************************************/
+/*
 __kernel void arithm_op_minMaxLoc_mask (int cols,int invalid_cols,int offset,int elemnum,int groupnum,__global VEC_TYPE *src,
-                                        int minvalid_cols,int moffset,__global uchar8 *mask,__global RES_TYPE  *dst)
+                                        int minvalid_cols,int moffset,__global uchar4 *mask,__global RES_TYPE  *dst)
 {
    unsigned int lid = get_local_id(0);
    unsigned int gid = get_group_id(0);
@@ -333,8 +289,8 @@ __kernel void arithm_op_minMaxLoc_mask (int cols,int invalid_cols,int offset,int
    {
        temp = src[idx];
        m_temp = CONVERT_TYPE(mask[midx]);
-       int idx_c = idx << 3;
-       temploc = (VEC_TYPE_LOC)(idx_c,idx_c+1,idx_c+2,idx_c+3,idx_c+4,idx_c+5,idx_c+6,idx_c+7);
+       int idx_c = idx << 2;
+       temploc = (VEC_TYPE_LOC)(idx_c,idx_c+1,idx_c+2,idx_c+3);
        if(id % cols == 0 ) 
        {
            repeat_ms(m_temp);
@@ -363,8 +319,8 @@ __kernel void arithm_op_minMaxLoc_mask (int cols,int invalid_cols,int offset,int
        midx = moffset + id + (id / cols) * minvalid_cols;
        temp = src[idx];
        m_temp = CONVERT_TYPE(mask[midx]);
-       int idx_c = idx << 3;
-       temploc = (VEC_TYPE_LOC)(idx_c,idx_c+1,idx_c+2,idx_c+3,idx_c+4,idx_c+5,idx_c+6,idx_c+7);
+       int idx_c = idx << 2;
+       temploc = (VEC_TYPE_LOC)(idx_c,idx_c+1,idx_c+2,idx_c+3);
        if(id % cols == 0 ) 
        {
            repeat_ms(m_temp);
@@ -421,3 +377,4 @@ __kernel void arithm_op_minMaxLoc_mask (int cols,int invalid_cols,int offset,int
    }
 }
 
+*/

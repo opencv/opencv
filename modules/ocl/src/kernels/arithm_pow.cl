@@ -45,13 +45,19 @@
 
 #if defined (DOUBLE_SUPPORT)
 #pragma OPENCL EXTENSION cl_khr_fp64:enable
+typedef double F;
+typedef double4 F4;
+#define convert_F4 convert_double4;
+#else
+typedef float F;
+typedef float4 F4;
+#define convert_F4 convert_float4;
 #endif
 /************************************** pow **************************************/
-#if defined (DOUBLE_SUPPORT)
 __kernel void arithm_pow_D5 (__global float *src1, int src1_step, int src1_offset,
                              __global float *dst,  int dst_step,  int dst_offset,
                              int rows, int cols, int dst_step1,
-                             double p)
+                             F p)
 {
 
     int x = get_global_id(0);
@@ -69,14 +75,12 @@ __kernel void arithm_pow_D5 (__global float *src1, int src1_step, int src1_offse
     }
 
 }
-#endif
-
 
 #if defined (DOUBLE_SUPPORT)
 __kernel void arithm_pow_D6 (__global double *src1, int src1_step, int src1_offset,
                              __global double *dst,  int dst_step,  int dst_offset,
                              int rows, int cols, int dst_step1,
-                             double p)
+                             F p)
 {
 
     int x = get_global_id(0);
@@ -94,4 +98,3 @@ __kernel void arithm_pow_D6 (__global double *src1, int src1_step, int src1_offs
 
 }
 #endif
-

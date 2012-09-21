@@ -123,7 +123,6 @@ __kernel void convertC4C3(__global const GENTYPE4 * restrict src, __global GENTY
 	int4 outaddr = mul24(id>>2 , 3);
 	outaddr.y++;
 	outaddr.z+=2;
-	//printf("%d    ",outaddr.z);
 	if(outaddr.z <= pixel_end)
 	{
 		dst[outaddr.x] = pixel0;

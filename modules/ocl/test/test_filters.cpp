@@ -490,8 +490,8 @@ TEST_P(Dilate, Mat)
         //      cv::erode(mat1_roi, dst_roi, kernel, Point(-1, -1), iterations);
         //      cv::ocl::erode(gmat1, gdst, kernel, Point(-1, -1), iterations);
 
-        //cv::dilate(mat1_roi, dst_roi, kernel);
-        //cv::ocl::dilate(gmat1, gdst, kernel);
+        cv::dilate(mat1_roi, dst_roi, kernel);
+        cv::ocl::dilate(gmat1, gdst, kernel);
 
         cv::Mat cpu_dst;
         gdst_whole.download(cpu_dst);
@@ -833,11 +833,11 @@ INSTANTIATE_TEST_CASE_P(Filters, Laplacian, Combine(
 
 //INSTANTIATE_TEST_CASE_P(Filter, ErodeDilate, Combine(Values(CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4), Values(1, 2, 3)));
 
-INSTANTIATE_TEST_CASE_P(Filter, Erode, Combine(Values(CV_8UC1, CV_8UC3,CV_8UC4, CV_32FC1, CV_32FC4), Values(false)));
+INSTANTIATE_TEST_CASE_P(Filter, Erode, Combine(Values(CV_8UC1, CV_8UC1), Values(false)));
 
 //INSTANTIATE_TEST_CASE_P(Filter, ErodeDilate, Combine(Values(CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4), Values(1, 2, 3)));
 
-INSTANTIATE_TEST_CASE_P(Filter, Dilate, Combine(Values(CV_8UC1, CV_8UC3,CV_8UC4, CV_32FC1, CV_32FC4), Values(false)));
+INSTANTIATE_TEST_CASE_P(Filter, Dilate, Combine(Values(CV_8UC1, CV_8UC1), Values(false)));
 
 
 INSTANTIATE_TEST_CASE_P(Filter, Sobel, Combine(Values(CV_8UC1, CV_8UC3,CV_8UC4, CV_32FC1, CV_32FC4),

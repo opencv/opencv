@@ -653,7 +653,7 @@ namespace cv
 #endif
         void openCLExecuteKernel_(Context *clCxt , const char **source, string kernelName, size_t globalThreads[3],
                 size_t localThreads[3],  vector< pair<size_t, const void *> > &args, int channels,
-                int depth, char *build_options)
+                int depth, const char *build_options)
         {
             //construct kernel name
             //The rule is functionName_Cn_Dn, C represent Channels, D Represent DataType Depth, n represent an integer number
@@ -727,7 +727,7 @@ namespace cv
         }
         void openCLExecuteKernel(Context *clCxt , const char **source, string kernelName,
                 size_t globalThreads[3], size_t localThreads[3],
-                vector< pair<size_t, const void *> > &args, int channels, int depth, char *build_options)
+                vector< pair<size_t, const void *> > &args, int channels, int depth, const char *build_options)
 
         {
 #ifndef PRINT_KERNEL_RUN_TIME

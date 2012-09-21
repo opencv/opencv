@@ -92,8 +92,17 @@ __kernel void arithm_mul_D0 (__global uchar *src1, int src1_step, int src1_offse
         int dst_end    = mad24(y, dst_step, dst_offset + dst_step1);
         int dst_index  = mad24(y, dst_step, dst_offset + x & (int)0xfffffffc);
 
-        uchar4 src1_data = vload4(0, src1 + src1_index);
-        uchar4 src2_data = vload4(0, src2 + src2_index);
+		uchar4 src1_data ,src2_data;
+
+		src1_data.x= src1_index+0 >= 0 ? src1[src1_index+0] : 0;
+		src1_data.y= src1_index+1 >= 0 ? src1[src1_index+1] : 0;
+		src1_data.z= src1_index+2 >= 0 ? src1[src1_index+2] : 0;
+		src1_data.w= src1_index+3 >= 0 ? src1[src1_index+3] : 0;
+
+		src2_data.x= src2_index+0 >= 0 ? src2[src2_index+0] : 0;
+		src2_data.y= src2_index+1 >= 0 ? src2[src2_index+1] : 0;
+		src2_data.z= src2_index+2 >= 0 ? src2[src2_index+2] : 0;
+		src2_data.w= src2_index+3 >= 0 ? src2[src2_index+3] : 0;
 
         uchar4 dst_data = *((__global uchar4 *)(dst + dst_index));
         int4 tmp      = convert_int4_sat(src1_data) * convert_int4_sat(src2_data);

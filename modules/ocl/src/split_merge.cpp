@@ -197,19 +197,29 @@ namespace cv
                 args.push_back( make_pair( sizeof(cl_mem), (void *)&mat_src[1].data));
                 args.push_back( make_pair( sizeof(cl_int), (void *)&mat_src[1].step));
                 args.push_back( make_pair( sizeof(cl_int), (void *)&mat_src[1].offset));
-                if(n >= 3)
+
+                if(channels == 4)
                 {
                     args.push_back( make_pair( sizeof(cl_mem), (void *)&mat_src[2].data));
                     args.push_back( make_pair( sizeof(cl_int), (void *)&mat_src[2].step));
                     args.push_back( make_pair( sizeof(cl_int), (void *)&mat_src[2].offset));
+
+                    // if channel == 3, then the matrix will convert to channel =4
+                    //if(n == 3)
+                     //   args.push_back( make_pair( sizeof(cl_int), (void *)&offset_cols));
+
                     if(n == 3)
-                        args.push_back( make_pair( sizeof(cl_int), (void *)&offset_cols));
-                }
-                if(n >= 4)
-                {
-                    args.push_back( make_pair( sizeof(cl_mem), (void *)&mat_src[3].data));
-                    args.push_back( make_pair( sizeof(cl_int), (void *)&mat_src[3].step));
-                    args.push_back( make_pair( sizeof(cl_int), (void *)&mat_src[3].offset));
+                    {
+                        args.push_back( make_pair( sizeof(cl_mem), (void *)&mat_src[2].data));
+                        args.push_back( make_pair( sizeof(cl_int), (void *)&mat_src[2].step));
+                        args.push_back( make_pair( sizeof(cl_int), (void *)&mat_src[2].offset));
+                    }
+                    else if( n== 4)
+                    {
+                        args.push_back( make_pair( sizeof(cl_mem), (void *)&mat_src[3].data));
+                        args.push_back( make_pair( sizeof(cl_int), (void *)&mat_src[3].step));
+                        args.push_back( make_pair( sizeof(cl_int), (void *)&mat_src[3].offset));
+                    }
                 }
 
                 args.push_back( make_pair( sizeof(cl_int), (void *)&mat_dst.rows));
@@ -268,9 +278,9 @@ namespace cv
                 int cols = divUp(mat_src.cols, index);
                 size_t localThreads[3]  = { 64, 4, 1 };
                 size_t globalThreads[3] = { divUp(cols, localThreads[0]) * localThreads[0],
-                                            divUp(mat_src.rows, localThreads[1]) * localThreads[1],
-                                            1
-                                          };
+                    divUp(mat_src.rows, localThreads[1]) * localThreads[1],
+                    1
+                };
 
                 vector<pair<size_t , const void *> > args;
                 args.push_back( make_pair( sizeof(cl_mem), (void *)&mat_src.data));

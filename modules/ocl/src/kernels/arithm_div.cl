@@ -48,12 +48,12 @@
 typedef double F ;
 typedef double4 F4;
 #define convert_F4 convert_double4
-#define convert_F  convert_double
+#define convert_F  double
 #else 
 typedef float F;
 typedef float4 F4;
 #define convert_F4 convert_float4
-#define convert_F  convert_float
+#define convert_F  float
 #endif
 
 uchar round2_uchar(F v){
@@ -229,7 +229,7 @@ __kernel void arithm_div_D4 (__global int *src1, int src1_step, int src1_offset,
         int data1 = *((__global int *)((__global char *)src1 + src1_index));
         int data2 = *((__global int *)((__global char *)src2 + src2_index));
 
-        F tmp  = convert_F(data1) * scalar;
+        F tmp  = (convert_F)(data1) * scalar;
         int tmp_data = (tmp == 0 || data2 == 0) ? 0 : round2_int(tmp / (convert_F)(data2));
 
         *((__global int *)((__global char *)dst + dst_index)) =tmp_data;
@@ -253,7 +253,7 @@ __kernel void arithm_div_D5 (__global float *src1, int src1_step, int src1_offse
         float data1 = *((__global float *)((__global char *)src1 + src1_index));
         float data2 = *((__global float *)((__global char *)src2 + src2_index));
 
-        F tmp  = convert_F(data1) * scalar;
+        F tmp  = (convert_F)(data1) * scalar;
         float tmp_data = (tmp == 0 || data2 == 0) ? 0 : convert_float(tmp / (convert_F)(data2));
 
         *((__global float *)((__global char *)dst + dst_index)) = tmp_data;

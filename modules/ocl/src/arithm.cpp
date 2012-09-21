@@ -698,7 +698,7 @@ void compare_run(const oclMat &src1, const oclMat &src2, oclMat &dst, string ker
 
 void cv::ocl::compare(const oclMat &src1, const oclMat &src2, oclMat &dst , int cmpOp)
 {
-    if(src1.clCxt -> impl -> double_support ==0)
+    if(src1.clCxt -> impl -> double_support ==0 && src1.type()==CV_64F)
     {
         cout << "Selected device do not support double" << endl;
         return;
@@ -1591,7 +1591,7 @@ void arithmetic_minMaxLoc(const oclMat &src, double *minVal, double *maxVal,
    	size_t groupnum = src.clCxt->impl->maxComputeUnits;
     CV_Assert(groupnum != 0);
     int minloc = -1 , maxloc = -1;
-    int vlen = 8, dbsize = groupnum * vlen * 4 * sizeof(T) , status;
+    int vlen = 4, dbsize = groupnum * vlen * 4 * sizeof(T) , status;
     Context *clCxt = src.clCxt;
     cl_mem dstBuffer = openCLCreateBuffer(clCxt,CL_MEM_WRITE_ONLY,dbsize);
     *minVal = std::numeric_limits<double>::max() , *maxVal = -std::numeric_limits<double>::max();
@@ -1979,7 +1979,7 @@ void bitwise_scalar(const oclMat &src1, const Scalar &src2, oclMat &dst, const o
 
 void cv::ocl::bitwise_not(const oclMat &src, oclMat &dst)
 {
-    if(src.clCxt -> impl -> double_support ==0)
+    if(src.clCxt -> impl -> double_support ==0 && src.type()==CV_64F)
     {
         cout << "Selected device do not support double" << endl;
         return;
@@ -1992,7 +1992,7 @@ void cv::ocl::bitwise_not(const oclMat &src, oclMat &dst)
 void cv::ocl::bitwise_or(const oclMat &src1, const oclMat &src2, oclMat &dst, const oclMat &mask)
 {
     // dst.create(src1.size(),src1.type());
-    if(src1.clCxt -> impl -> double_support ==0)
+    if(src1.clCxt -> impl -> double_support ==0 && src1.type()==CV_64F)
     {
         cout << "Selected device do not support double" << endl;
         return;
@@ -2008,7 +2008,7 @@ void cv::ocl::bitwise_or(const oclMat &src1, const oclMat &src2, oclMat &dst, co
 
 void cv::ocl::bitwise_or(const oclMat &src1, const Scalar &src2, oclMat &dst, const oclMat &mask)
 {
-    if(src1.clCxt -> impl -> double_support ==0)
+    if(src1.clCxt -> impl -> double_support ==0 && src1.type()==CV_64F)
     {
         cout << "Selected device do not support double" << endl;
         return;
@@ -2023,7 +2023,7 @@ void cv::ocl::bitwise_or(const oclMat &src1, const Scalar &src2, oclMat &dst, co
 void cv::ocl::bitwise_and(const oclMat &src1, const oclMat &src2, oclMat &dst, const oclMat &mask)
 {
     //    dst.create(src1.size(),src1.type());
-    if(src1.clCxt -> impl -> double_support ==0)
+    if(src1.clCxt -> impl -> double_support ==0 && src1.type()==CV_64F)
     {
         cout << "Selected device do not support double" << endl;
         return;
@@ -2040,7 +2040,7 @@ void cv::ocl::bitwise_and(const oclMat &src1, const oclMat &src2, oclMat &dst, c
 
 void cv::ocl::bitwise_and(const oclMat &src1, const Scalar &src2, oclMat &dst, const oclMat &mask)
 {
-    if(src1.clCxt -> impl -> double_support ==0)
+    if(src1.clCxt -> impl -> double_support ==0 && src1.type()==CV_64F)
     {
         cout << "Selected device do not support double" << endl;
         return;
@@ -2054,7 +2054,7 @@ void cv::ocl::bitwise_and(const oclMat &src1, const Scalar &src2, oclMat &dst, c
 
 void cv::ocl::bitwise_xor(const oclMat &src1, const oclMat &src2, oclMat &dst, const oclMat &mask)
 {
-    if(src1.clCxt -> impl -> double_support ==0)
+    if(src1.clCxt -> impl -> double_support ==0 && src1.type()==CV_64F)
     {
         cout << "Selected device do not support double" << endl;
         return;
@@ -2073,7 +2073,7 @@ void cv::ocl::bitwise_xor(const oclMat &src1, const oclMat &src2, oclMat &dst, c
 void cv::ocl::bitwise_xor(const oclMat &src1, const Scalar &src2, oclMat &dst, const oclMat &mask)
 {
 
-    if(src1.clCxt -> impl -> double_support ==0)
+    if(src1.clCxt -> impl -> double_support ==0 && src1.type()==CV_64F)
     {
         cout << "Selected device do not support double" << endl;
         return;
@@ -2224,9 +2224,10 @@ void cv::ocl::addWeighted(const oclMat &src1, double alpha, const oclMat &src2, 
     }
     else
     {
-        args.push_back( make_pair( sizeof(cl_float), (void *)&alpha ));
-        args.push_back( make_pair( sizeof(cl_float), (void *)&beta ));
-        args.push_back( make_pair( sizeof(cl_float), (void *)&gama ));
+        float alpha_f=alpha,beta_f=beta,gama_f=gama;
+        args.push_back( make_pair( sizeof(cl_float), (void *)&alpha_f ));
+        args.push_back( make_pair( sizeof(cl_float), (void *)&beta_f ));
+        args.push_back( make_pair( sizeof(cl_float), (void *)&gama_f ));
     } 
 
     args.push_back( make_pair( sizeof(cl_mem), (void *)&dst.data ));
@@ -2363,13 +2364,19 @@ void arithmetic_pow_run(const oclMat &src1, double p, oclMat &dst, string kernel
     args.push_back( make_pair( sizeof(cl_int), (void *)&dst.rows ));
     args.push_back( make_pair( sizeof(cl_int), (void *)&cols ));
     args.push_back( make_pair( sizeof(cl_int), (void *)&dst_step1 ));
-    args.push_back( make_pair( sizeof(cl_double), (void *)&p ));
+    if(src1.clCxt -> impl -> double_support ==0)
+    {
+	float pf = p;
+    	args.push_back( make_pair( sizeof(cl_float), (void *)&pf ));
+    }
+    else
+	args.push_back( make_pair( sizeof(cl_double), (void *)&p ));
 
     openCLExecuteKernel(clCxt, kernelString, kernelName, globalThreads, localThreads, args, -1, depth);
 }
 void cv::ocl::pow(const oclMat &x, double p, oclMat &y)
 {
-    if(x.clCxt -> impl -> double_support ==0)
+    if(x.clCxt -> impl -> double_support ==0 && x.type()==CV_64F)
     {
         cout << "Selected device do not support double" << endl;
         return;

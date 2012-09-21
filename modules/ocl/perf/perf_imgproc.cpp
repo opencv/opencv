@@ -432,10 +432,13 @@ struct CopyMakeBorder : ImgprocTestBase {};
 
 TEST_P(CopyMakeBorder, Mat) 
 {    
-	int bordertype[] = {cv::BORDER_CONSTANT,cv::BORDER_REPLICATE/*,BORDER_REFLECT,BORDER_WRAP,BORDER_REFLECT_101*/};
+	int bordertype[] = {cv::BORDER_CONSTANT,cv::BORDER_REPLICATE,cv::BORDER_REFLECT,cv::BORDER_WRAP,cv::BORDER_REFLECT_101};
 	//const char* borderstr[]={"BORDER_CONSTANT", "BORDER_REPLICATE"/*, "BORDER_REFLECT","BORDER_WRAP","BORDER_REFLECT_101"*/};
-
-	if ((mat1.type() != CV_8UC1 && mat1.type() != CV_8UC4 && mat1.type() != CV_32SC1) || mat1.type() != dst.type())
+	int top=5;
+	int bottom=5;
+	int left=6;
+	int right=6;
+	if (mat1.type() != dst.type())
 	{
 		cout<<"Unsupported type"<<endl;
 		EXPECT_DOUBLE_EQ(0.0, 0.0);
@@ -459,7 +462,7 @@ TEST_P(CopyMakeBorder, Mat)
 					Has_roi(k);       
 
 					t0 = (double)cvGetTickCount();//cpu start
-					cv::copyMakeBorder(mat1_roi, dst_roi, 7,5,5,7, bordertype[i],cv::Scalar(1.0));
+					cv::copyMakeBorder(mat1_roi, dst_roi, top,bottom,left,right, bordertype[i]| cv::BORDER_ISOLATED,cv::Scalar(1.0));
 					t0 = (double)cvGetTickCount() - t0;//cpu end
 
 					t1 = (double)cvGetTickCount();//gpu start1		
@@ -468,7 +471,7 @@ TEST_P(CopyMakeBorder, Mat)
 						clmat1_roi = clmat1(Rect(src1x,src1y,roicols,roirows));
 					}
 					t2=(double)cvGetTickCount();//kernel
-					cv::ocl::copyMakeBorder(clmat1_roi, cldst_roi,7,5,5,7,  bordertype[i],cv::Scalar(1.0));
+					cv::ocl::copyMakeBorder(clmat1_roi, cldst_roi,top,bottom,left,right,  bordertype[i]| cv::BORDER_ISOLATED,cv::Scalar(1.0));
 					t2 = (double)cvGetTickCount() - t2;//kernel
 					cv::Mat cpu_cldst;
 					cldst.download(cpu_cldst);//download
@@ -496,7 +499,7 @@ TEST_P(CopyMakeBorder, Mat)
 					clmat1_roi = clmat1(Rect(src1x,src1y,roicols,roirows));
 				};
 				if(j==0){cout<<"no roi:";}else{cout<<"\nwith roi:";};
-				cv::ocl::copyMakeBorder(clmat1_roi, cldst_roi,7,5,5,7,  bordertype[i],cv::Scalar(1.0));
+				cv::ocl::copyMakeBorder(clmat1_roi, cldst_roi,top,bottom,left,right,  bordertype[i]| cv::BORDER_ISOLATED,cv::Scalar(1.0));
 			};
 #endif
 		};
@@ -523,7 +526,7 @@ TEST_P(cornerMinEigenVal, Mat)
 		for(int j = 0; j < LOOP_TIMES+1; j ++)
 		{
 			Has_roi(k);       
-			int blockSize = 7, apertureSize= 1 + 2 * (rand() % 4);
+			int blockSize = 7, apertureSize= 3;//1 + 2 * (rand() % 4);
 			int borderType = cv::BORDER_REFLECT;
 			t0 = (double)cvGetTickCount();//cpu start
 			cv::cornerMinEigenVal(mat1_roi, dst_roi, blockSize, apertureSize, borderType); 
@@ -1842,14 +1845,13 @@ INSTANTIATE_TEST_CASE_P(ImgprocTestBase, equalizeHist, Combine(
 //	Values(false))); // Values(false) is the reserved parameter
 //
 //
-//INSTANTIATE_TEST_CASE_P(ImgprocTestBase, CopyMakeBorder, Combine(
-//	Values(CV_8UC1, CV_8UC4/*, CV_32SC1*/),
-//	NULL_TYPE,
-//	Values(CV_8UC1,CV_8UC4/*,CV_32SC1*/),
-//	NULL_TYPE,
-//	NULL_TYPE,
-//	Values(false))); // Values(false) is the reserved parameter
-
+INSTANTIATE_TEST_CASE_P(ImgprocTestBase, CopyMakeBorder, Combine(
+	Values(CV_8UC1, CV_8UC4/*, CV_32SC1*/),
+	NULL_TYPE,
+	Values(CV_8UC1,CV_8UC4/*,CV_32SC1*/),
+	NULL_TYPE,
+	NULL_TYPE,
+	Values(false))); // Values(false) is the reserved parameter
 INSTANTIATE_TEST_CASE_P(ImgprocTestBase, cornerMinEigenVal, Combine(
 	Values(CV_8UC1,CV_32FC1),
 	NULL_TYPE,
