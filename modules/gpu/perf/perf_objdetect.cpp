@@ -97,12 +97,12 @@ PERF_TEST_P(SoftCascade, detect, Values<pair_string>(make_pair("cv/cascadeandhog
 {
     if (runOnGpu)
     {
-        cv::Mat cpu = readImage(GetParam().second);
+        cv::Mat cpu = readImage (GetParam().second);
         ASSERT_FALSE(cpu.empty());
         cv::gpu::GpuMat colored(cpu);
 
         cv::gpu::SoftCascade cascade;
-        ASSERT_TRUE(cascade.load(GetParam().first));
+        ASSERT_TRUE(cascade.load(perf::TestBase::getDataPath(GetParam().first)));
 
         cv::gpu::GpuMat rois, objectBoxes;
         cascade.detectMultiScale(colored, rois, objectBoxes);
