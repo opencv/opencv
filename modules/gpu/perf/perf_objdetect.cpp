@@ -89,6 +89,45 @@ PERF_TEST_P(HOG, CalTech, Values<string>("gpu/caltech/image_00000009_0.png", "gp
     SANITY_CHECK(found_locations);
 }
 
+typedef pair<string, string> pair_string;
+DEF_PARAM_TEST_1(SoftCascade, pair_string);
+
+PERF_TEST_P(SoftCascade, detect, Values<pair_string>(make_pair("cv/cascadeandhog/sc_cvpr_2012_to_opencv.xml",
+                                                              "cv/cascadeandhog/bahnhof/image_00000000_0.png")))
+{
+    if (runOnGpu)
+    {
+        cv::Mat cpu = readImage(GetParam().second);
+        ASSERT_FALSE(cpu.empty());
+        cv::gpu::GpuMat colored(cpu);
+
+        cv::gpu::SoftCascade cascade;
+        ASSERT_TRUE(cascade.load(GetParam().first));
+
+        cv::gpu::GpuMat rois, objectBoxes;
+        cascade.detectMultiScale(colored, rois, objectBoxes);
+
+        TEST_CYCLE()
+        {
+            cascade.detectMultiScale(colored, rois, objectBoxes);
+        }
+    } else
+    {
+        cv::Mat colored = readImage(GetParam().second);
+        ASSERT_FALSE(colored.empty());
+
+        cv::SoftCascade cascade;
+        ASSERT_TRUE(cascade.load(GetParam().first));
+
+        std::vector<cv::Rect> rois, objectBoxes;
+        cascade.detectMultiScale(colored, rois, objectBoxes);
+
+        TEST_CYCLE()
+        {
+            cascade.detectMultiScale(colored, rois, objectBoxes);
+        }
+    }
+}
 
 ///////////////////////////////////////////////////////////////
 // HaarClassifier
