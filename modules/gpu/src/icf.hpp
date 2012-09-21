@@ -105,6 +105,7 @@ struct ChannelStorage
     };
 
     int shrinkage;
+    static const float magnitudeScaling = 1.f ;// / sqrt(2);
 };
 
 struct __align__(16) Octave
