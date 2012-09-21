@@ -730,7 +730,7 @@ namespace
             GHT_Ballard_Pos_calcHist_gpu(edgePointList.ptr<unsigned int>(0), edgePointList.ptr<float>(1), edgePointList.cols,
                                          r_table, r_sizes.ptr<int>(),
                                          hist,
-                                         dp, levels);
+                                         (float)dp, levels);
         }
     }
 
@@ -742,7 +742,7 @@ namespace
 
         ensureSizeIsEnough(2, maxSize, CV_32FC4, outBuf);
 
-        posCount = GHT_Ballard_Pos_findPosInHist_gpu(hist, outBuf.ptr<float4>(0), outBuf.ptr<int3>(1), maxSize, dp, votesThreshold);
+        posCount = GHT_Ballard_Pos_findPosInHist_gpu(hist, outBuf.ptr<float4>(0), outBuf.ptr<int3>(1), maxSize, (float)dp, votesThreshold);
     }
 
     /////////////////////////////////////
@@ -813,7 +813,7 @@ namespace
             GHT_Ballard_PosScale_calcHist_gpu(edgePointList.ptr<unsigned int>(0), edgePointList.ptr<float>(1), edgePointList.cols,
                                               r_table, r_sizes.ptr<int>(),
                                               hist, rows, cols,
-                                              minScale, scaleStep, scaleRange, dp, levels);
+                                              (float)minScale, (float)scaleStep, scaleRange, (float)dp, levels);
         }
     }
 
@@ -830,7 +830,7 @@ namespace
 
         ensureSizeIsEnough(2, maxSize, CV_32FC4, outBuf);
 
-        posCount =  GHT_Ballard_PosScale_findPosInHist_gpu(hist, rows, cols, scaleRange, outBuf.ptr<float4>(0), outBuf.ptr<int3>(1), maxSize, minScale, scaleStep, dp, votesThreshold);
+        posCount =  GHT_Ballard_PosScale_findPosInHist_gpu(hist, rows, cols, scaleRange, outBuf.ptr<float4>(0), outBuf.ptr<int3>(1), maxSize, (float)minScale, (float)scaleStep, (float)dp, votesThreshold);
     }
 
     /////////////////////////////////////
@@ -901,7 +901,7 @@ namespace
             GHT_Ballard_PosRotation_calcHist_gpu(edgePointList.ptr<unsigned int>(0), edgePointList.ptr<float>(1), edgePointList.cols,
                                                  r_table, r_sizes.ptr<int>(),
                                                  hist, rows, cols,
-                                                 minAngle, angleStep, angleRange, dp, levels);
+                                                 (float)minAngle, (float)angleStep, angleRange, (float)dp, levels);
         }
     }
 
@@ -918,7 +918,7 @@ namespace
 
         ensureSizeIsEnough(2, maxSize, CV_32FC4, outBuf);
 
-        posCount = GHT_Ballard_PosRotation_findPosInHist_gpu(hist, rows, cols, angleRange, outBuf.ptr<float4>(0), outBuf.ptr<int3>(1), maxSize, minAngle, angleStep, dp, votesThreshold);
+        posCount = GHT_Ballard_PosRotation_findPosInHist_gpu(hist, rows, cols, angleRange, outBuf.ptr<float4>(0), outBuf.ptr<int3>(1), maxSize, (float)minAngle, (float)angleStep, (float)dp, votesThreshold);
     }
 
     /////////////////////////////////////////
@@ -1205,7 +1205,7 @@ namespace
         if (edgePointList.cols > 0)
         {
             build_func(edgePointList.ptr<unsigned int>(0), edgePointList.ptr<float>(1), edgePointList.cols,
-                features.sizes.ptr<int>(), maxSize, xi, angleEpsilon, levels, make_float2(center.x, center.y), maxDist);
+                features.sizes.ptr<int>(), maxSize, (float)xi, (float)angleEpsilon, levels, make_float2((float)center.x, (float)center.y), (float)maxDist);
         }
     }
 
@@ -1218,7 +1218,7 @@ namespace
 
         hist.setTo(Scalar::all(0));
         GHT_Guil_Full_calcOHist_gpu(templFeatures.sizes.ptr<int>(), imageFeatures.sizes.ptr<int>(0),
-            hist.ptr<int>(), minAngle, maxAngle, angleStep, angleRange, levels, templFeatures.maxSize);
+            hist.ptr<int>(), (float)minAngle, (float)maxAngle, (float)angleStep, angleRange, levels, templFeatures.maxSize);
         cudaSafeCall( cudaMemcpy(&h_buf[0], hist.data, h_buf.size() * sizeof(int), cudaMemcpyDeviceToHost) );
 
         angles.clear();
@@ -1242,7 +1242,7 @@ namespace
 
         hist.setTo(Scalar::all(0));
         GHT_Guil_Full_calcSHist_gpu(templFeatures.sizes.ptr<int>(), imageFeatures.sizes.ptr<int>(0),
-            hist.ptr<int>(), angle, angleEpsilon, minScale, maxScale, iScaleStep, scaleRange, levels, templFeatures.maxSize);
+            hist.ptr<int>(), (float)angle, (float)angleEpsilon, (float)minScale, (float)maxScale, (float)iScaleStep, scaleRange, levels, templFeatures.maxSize);
         cudaSafeCall( cudaMemcpy(&h_buf[0], hist.data, h_buf.size() * sizeof(int), cudaMemcpyDeviceToHost) );
 
         scales.clear();
@@ -1263,10 +1263,10 @@ namespace
 
         hist.setTo(Scalar::all(0));
         GHT_Guil_Full_calcPHist_gpu(templFeatures.sizes.ptr<int>(), imageFeatures.sizes.ptr<int>(0),
-            hist, angle, angleEpsilon, scale, dp, levels, templFeatures.maxSize);
+            hist,(float) (float)angle, (float)angleEpsilon, (float)scale, (float)dp, levels, templFeatures.maxSize);
 
         posCount = GHT_Guil_Full_findPosInHist_gpu(hist, outBuf.ptr<float4>(0), outBuf.ptr<int3>(1),
-            posCount, maxSize, angle, angleVotes, scale, scaleVotes, dp, posThresh);
+            posCount, maxSize, (float)angle, angleVotes, (float)scale, scaleVotes, (float)dp, posThresh);
     }
 }
 

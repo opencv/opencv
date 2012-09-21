@@ -972,7 +972,7 @@ namespace
                     f.p1 = p1;
                     f.p2 = p2;
 
-                    f.alpha12 = clampAngle(fastAtan2(d.y, d.x) - p1.theta);
+                    f.alpha12 = clampAngle(fastAtan2((float)d.y, (float)d.x) - p1.theta);
                     f.d12 = norm(d);
 
                     if (f.d12 > maxDist)

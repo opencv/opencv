@@ -1502,7 +1502,7 @@ TEST(Imgproc_resize_area, regression)
     absdiff(actual, expected, diff);
     Mat one_channel_diff = diff.reshape(1);
     
-    int elem_diff = 1.0f;
+    int elem_diff = 1;
     Size dsize = actual.size();
     bool next = true;
     for (int dy = 0; dy < dsize.height && next; ++dy)
