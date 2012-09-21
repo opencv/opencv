@@ -1405,25 +1405,29 @@ public:
     resizeArea_Invoker(const Mat& _src, Mat& _dst, const DecimateAlpha* _xofs, 
         int _xofs_count, double _scale_y_
 #ifdef HAVE_TBB
-        , const int* _yofs, const int* _cur_dy_ofs
+        , const int* _cur_dy_ofs, const std::vector<std::pair<int, int> >& _bands
 #endif
         ) :
         ParallelLoopBody(), src(_src), dst(_dst), xofs(_xofs), 
         xofs_count(_xofs_count), scale_y_(_scale_y_)
 #ifdef HAVE_TBB
-        , yofs(_yofs), cur_dy_ofs(_cur_dy_ofs)
+        , cur_dy_ofs(_cur_dy_ofs), bands(_bands)
 #endif
     {
     }
     
+#ifdef HAVE_TBB
+    void resize_signle_band(const Range& range) const 
+#else
     virtual void operator() (const Range& range) const
+#endif
     {
         Size ssize = src.size(), dsize = dst.size();
         int cn = src.channels();
         dsize.width *= cn;
         AutoBuffer<WT> _buffer(dsize.width*2);
         WT *buf = _buffer, *sum = buf + dsize.width;
-        int k = -1000, sy = -1000, dx = -1000, cur_dy = -1000;
+        int k = 0, sy = 0, dx = 0, cur_dy = 0;
         WT scale_y = (WT)scale_y_;
         
         CV_Assert( cn <= 4 );
@@ -1431,90 +1435,8 @@ public:
             buf[dx] = sum[dx] = 0;
         
 #ifdef HAVE_TBB
-        sy = yofs[range.start];
-        cur_dy = cur_dy_ofs[sy];
-        
-        for ( ; sy < range.start; sy++ )
-        {
-            const T* S = (const T*)(src.data + src.step*sy);
-            if( cn == 1 )
-                for( k = 0; k < xofs_count; k++ )
-                {
-                    int dxn = xofs[k].di;
-                    WT alpha = xofs[k].alpha;
-                    buf[dxn] += S[xofs[k].si]*alpha;
-                }
-            else if( cn == 2 )
-                for( k = 0; k < xofs_count; k++ )
-                {
-                    int sxn = xofs[k].si;
-                    int dxn = xofs[k].di;
-                    WT alpha = xofs[k].alpha;
-                    WT t0 = buf[dxn] + S[sxn]*alpha;
-                    WT t1 = buf[dxn+1] + S[sxn+1]*alpha;
-                    buf[dxn] = t0; buf[dxn+1] = t1;
-                }
-            else if( cn == 3 )
-                for( k = 0; k < xofs_count; k++ )
-                {
-                    int sxn = xofs[k].si;
-                    int dxn = xofs[k].di;
-                    WT alpha = xofs[k].alpha;
-                    WT t0 = buf[dxn] + S[sxn]*alpha;
-                    WT t1 = buf[dxn+1] + S[sxn+1]*alpha;
-                    WT t2 = buf[dxn+2] + S[sxn+2]*alpha;
-                    buf[dxn] = t0; buf[dxn+1] = t1; buf[dxn+2] = t2;
-                }
-            else
-                for( k = 0; k < xofs_count; k++ )
-                {
-                    int sxn = xofs[k].si;
-                    int dxn = xofs[k].di;
-                    WT alpha = xofs[k].alpha;
-                    WT t0 = buf[dxn] + S[sxn]*alpha;
-                    WT t1 = buf[dxn+1] + S[sxn+1]*alpha;
-                    buf[dxn] = t0; buf[dxn+1] = t1;
-                    t0 = buf[dxn+2] + S[sxn+2]*alpha;
-                    t1 = buf[dxn+3] + S[sxn+3]*alpha;
-                    buf[dxn+2] = t0; buf[dxn+3] = t1;
-                }
-            
-            if( (cur_dy + 1)*scale_y <= sy + 1 || sy == ssize.height - 1 )
-            {
-                WT beta = std::max(sy + 1 - (cur_dy+1)*scale_y, (WT)0);
-                if( fabs(beta) < 1e-3 )
-                {
-                    if(cur_dy >= dsize.height)
-                        break;
-                    for( dx = 0; dx < dsize.width; dx++ )
-                        sum[dx] = buf[dx] = 0;
-                }
-                else
-                    for( dx = 0; dx < dsize.width; dx++ )
-                    {
-                        sum[dx] = buf[dx]*beta;
-                        buf[dx] = 0;
-                    }
-                cur_dy++;
-            }
-            else
-            {
-                for( dx = 0; dx <= dsize.width - 2; dx += 2 )
-                {
-                    WT t0 = sum[dx] + buf[dx];
-                    WT t1 = sum[dx+1] + buf[dx+1];
-                    sum[dx] = t0; sum[dx+1] = t1;
-                    buf[dx] = buf[dx+1] = 0;
-                }
-                for( ; dx < dsize.width; dx++ )
-                {
-                    sum[dx] += buf[dx];
-                    buf[dx] = 0;
-                }
-            }
-        }
+        cur_dy = cur_dy_ofs[range.start];
 #endif
-        
         for( sy = range.start; sy < range.end; sy++ )
         {
             const T* S = (const T*)(src.data + src.step*sy);
@@ -1602,6 +1524,17 @@ public:
         }
     }
     
+#ifdef HAVE_TBB
+    virtual void operator() (const Range& range) const
+    {
+        for (int i = range.start; i < range.end; ++i)
+        {
+            Range band_range(bands[i].first, bands[i].second);
+            resize_signle_band(band_range);
+        }
+    }
+#endif
+    
 private:
     const Mat src;
     Mat dst;
@@ -1609,7 +1542,8 @@ private:
     const int xofs_count;
     const double scale_y_;
 #ifdef HAVE_TBB
-    const int *yofs, *cur_dy_ofs;
+    const int *cur_dy_ofs;
+    std::vector<std::pair<int, int> > bands;
 #endif
     resizeArea_Invoker(const resizeArea_Invoker&);
     resizeArea_Invoker& operator=(const resizeArea_Invoker&);
@@ -1620,9 +1554,10 @@ static void resizeArea_( const Mat& src, Mat& dst, const DecimateAlpha* xofs, in
 {
 #ifdef HAVE_TBB
     Size ssize = src.size(), dsize = dst.size();
-    AutoBuffer<int> _yofs(2 * ssize.height);
-    int *yofs = _yofs, *cur_dy_ofs = _yofs + ssize.height;
-    int index = 0, cur_dy = 0;
+    AutoBuffer<int> _yofs(ssize.height);
+    int *cur_dy_ofs = _yofs;
+    int cur_dy = 0, index = 0;
+    std::vector<std::pair<int, int> > bands;
     
     // cur_dy_ofs - dy for the current sy
     // yofs - a starting row for calculating a band according to the current sy
@@ -1630,7 +1565,6 @@ static void resizeArea_( const Mat& src, Mat& dst, const DecimateAlpha* xofs, in
     for (int sy = 0; sy < ssize.height; sy++)
     {
         cur_dy_ofs[sy] = cur_dy;
-        yofs[sy] = index;
         
         if ((cur_dy + 1) * scale_y_ <= sy + 1 || sy == ssize.height - 1 )
         {
@@ -1639,19 +1573,22 @@ static void resizeArea_( const Mat& src, Mat& dst, const DecimateAlpha* xofs, in
             {
                 if (cur_dy >= dsize.height)
                     break;
+                bands.push_back(std::make_pair(index, sy + 1));
                 index = sy + 1;
             }
             cur_dy++;
         }
     }
+    bands.push_back(std::make_pair(index, ssize.height));
 #endif
     
-    Range range(0, src.rows);
-    resizeArea_Invoker<T, WT> invoker(src, dst, xofs, xofs_count, scale_y_
 #ifdef HAVE_TBB
-        , yofs, cur_dy_ofs
+    Range range(0, bands.size());
+    resizeArea_Invoker<T, WT> invoker(src, dst, xofs, xofs_count, scale_y_, cur_dy_ofs, bands);
+#else
+    Range range(0, src.rows);
+    resizeArea_Invoker<T, WT> invoker(src, dst, xofs, xofs_count, scale_y_);
 #endif
-        );
     parallel_for_(range, invoker);
 }
 
