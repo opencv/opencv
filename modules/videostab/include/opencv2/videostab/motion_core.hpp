@@ -55,11 +55,12 @@ enum MotionModel
 {
     MM_TRANSLATION = 0,
     MM_TRANSLATION_AND_SCALE = 1,
-    MM_RIGID = 2,
-    MM_SIMILARITY = 3,
-    MM_AFFINE = 4,
-    MM_HOMOGRAPHY = 5,
-    MM_UNKNOWN = 6
+    MM_ROTATION = 2,
+    MM_RIGID = 3,
+    MM_SIMILARITY = 4,
+    MM_AFFINE = 5,
+    MM_HOMOGRAPHY = 6,
+    MM_UNKNOWN = 7
 };
 
 struct CV_EXPORTS RansacParams
@@ -85,6 +86,8 @@ struct CV_EXPORTS RansacParams
             return RansacParams(1, 0.5f, 0.5f, 0.99f);
         if (model == MM_TRANSLATION_AND_SCALE)
             return RansacParams(2, 0.5f, 0.5f, 0.99f);
+        if (model == MM_ROTATION)
+            return RansacParams(1, 0.5f, 0.5f, 0.99f);
         if (model == MM_RIGID)
             return RansacParams(2, 0.5f, 0.5f, 0.99f);
         if (model == MM_SIMILARITY)

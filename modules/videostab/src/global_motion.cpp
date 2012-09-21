@@ -151,8 +151,51 @@ static Mat estimateGlobMotionLeastSquaresTranslationAndScale(
     return T1.inv() * M * T0;
 }
 
+static Mat estimateGlobMotionLeastSquaresRotation(
+        int npoints, Point2f *points0, Point2f *points1, float *rmse)
+{
+    Point2f p0, p1;
+    float A(0), B(0);
+    for(int i=0; i<npoints; ++i)
+    {
+        p0 = points0[i];
+        p1 = points1[i];
 
-static Mat estimateGlobMotionLeastSquaresRigid(
+        A += p0.x*p1.x + p0.y*p1.y;
+        B += p0.x*p1.y - p1.x*p0.y;
+    }
+
+    // A*sin(alpha) + B*cos(alpha) = 0
+    float C = sqrt(A*A + B*B);
+    Mat_<float> M = Mat::eye(3, 3, CV_32F);
+    if ( C != 0 )
+    {
+        float sinAlpha = - B / C;
+        float cosAlpha = A / C;
+
+        M(0,0) = cosAlpha;
+        M(1,1) = M(0,0);
+        M(0,1) = sinAlpha;
+        M(1,0) = - M(0,1);
+    }
+
+    if (rmse)
+    {
+        *rmse = 0;
+        for (int i = 0; i < npoints; ++i)
+        {
+            p0 = points0[i];
+            p1 = points1[i];
+            *rmse += sqr(p1.x - M(0,0)*p0.x - M(0,1)*p0.y) +
+                     sqr(p1.y - M(1,0)*p0.x - M(1,1)*p0.y);
+        }
+        *rmse = sqrt(*rmse / npoints);
+    }
+
+    return M;
+}
+
+static Mat  estimateGlobMotionLeastSquaresRigid(
         int npoints, Point2f *points0, Point2f *points1, float *rmse)
 {
     Point2f mean0(0.f, 0.f);
@@ -294,6 +337,7 @@ Mat estimateGlobalMotionLeastSquares(
     typedef Mat (*Impl)(int, Point2f*, Point2f*, float*);
     static Impl impls[] = { estimateGlobMotionLeastSquaresTranslation,
                             estimateGlobMotionLeastSquaresTranslationAndScale,
+                            estimateGlobMotionLeastSquaresRotation,
                             estimateGlobMotionLeastSquaresRigid,
                             estimateGlobMotionLeastSquaresSimilarity,
                             estimateGlobMotionLeastSquaresAffine };
