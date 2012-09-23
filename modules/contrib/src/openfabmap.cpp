@@ -202,14 +202,13 @@ void FabMap::compare(const vector<Mat>& queryImgDescriptors,
 void FabMap::compare(const vector<Mat>& queryImgDescriptors,
         const vector<Mat>& _testImgDescriptors,
         vector<IMatch>& matches, const Mat& /*mask*/) {
-    if (_testImgDescriptors[0].data != this->testImgDescriptors[0].data) {
-        CV_Assert(!(flags & MOTION_MODEL));
-        for (size_t i = 0; i < _testImgDescriptors.size(); i++) {
-            CV_Assert(!_testImgDescriptors[i].empty());
-            CV_Assert(_testImgDescriptors[i].rows == 1);
-            CV_Assert(_testImgDescriptors[i].cols == clTree.cols);
-            CV_Assert(_testImgDescriptors[i].type() == CV_32F);
-        }
+
+    CV_Assert(!(flags & MOTION_MODEL));
+    for (size_t i = 0; i < _testImgDescriptors.size(); i++) {
+        CV_Assert(!_testImgDescriptors[i].empty());
+        CV_Assert(_testImgDescriptors[i].rows == 1);
+        CV_Assert(_testImgDescriptors[i].cols == clTree.cols);
+        CV_Assert(_testImgDescriptors[i].type() == CV_32F);
     }
 
     for (size_t i = 0; i < queryImgDescriptors.size(); i++) {

@@ -3,7 +3,7 @@ openFABMAP
 
 .. highlight:: cpp
 
-The openFABMAP package has been integrated into OpenCV from the openFABMAP <http://code.google.com/p/openfabmap/> project. OpenFABMAP is an open and modifiable code-source which implements the Fast Appearance-based Mapping algorithm (FAB-MAP) developed by Mark Cummins and Paul Newman. The algorithms used in openFABMAP were developed using only the relevant FAB-MAP publications.
+The openFABMAP package has been integrated into OpenCV from the openFABMAP <http://code.google.com/p/openfabmap/> project [ICRA2011]_. OpenFABMAP is an open and modifiable code-source which implements the Fast Appearance-based Mapping algorithm (FAB-MAP) developed by Mark Cummins and Paul Newman. The algorithms used in openFABMAP were developed using only the relevant FAB-MAP publications.
 
 FAB-MAP is an approach to appearance-based place recognition. FAB-MAP compares images of locations that have been visited and determines the probability of re-visiting a location, as well as providing a measure of the probability of being at a new, previously unvisited location. Camera images form the sole input to the system, from which visual bag-of-words models are formed through the extraction of appearance-based (e.g. SURF) features.
 
