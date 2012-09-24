@@ -59,6 +59,42 @@ using cv::gpu::PtrStepSzf;
 
 typedef unsigned char uchar;
 
+struct __align__(16) Octave
+{
+    ushort index;
+    ushort stages;
+    ushort shrinkage;
+    ushort2 size;
+    float scale;
+
+    Octave(const ushort i, const ushort s, const ushort sh, const ushort2 sz, const float sc)
+    : index(i), stages(s), shrinkage(sh), size(sz), scale(sc) {}
+};
+
+struct __align__(8) Level //is actually 24 bytes
+{
+    int octave;
+
+    // float origScale; //not actually used
+    float relScale;
+    float shrScale;   // used for marking detection
+    float scaling[2]; // calculated according to Dollal paper
+
+    // for 640x480 we can not get overflow
+    uchar2 workRect;
+    uchar2 objSize;
+
+    Level(int idx, const Octave& oct, const float scale, const int w, const int h)
+    :  octave(idx), relScale(scale / oct.scale), shrScale (relScale / (float)oct.shrinkage)
+    {
+        workRect.x = round(w / (float)oct.shrinkage);
+        workRect.y = round(h / (float)oct.shrinkage);
+
+        objSize.x  = round(oct.size.x * relScale);
+        objSize.y  = round(oct.size.y * relScale);
+    }
+};
+
 struct Cascade
 {
     Cascade() {}
@@ -66,8 +102,10 @@ struct Cascade
         const cv::gpu::PtrStepSzf& lvs, const cv::gpu::PtrStepSzb& fts, const cv::gpu::PtrStepSzb& lls)
     : octaves(octs), stages(sts), nodes(nds), leaves(lvs), features(fts), levels(lls) {}
 
-    void detect(const cv::gpu::PtrStepSzb& hogluv, cudaStream_t stream) const;
-    void __device detectAt() const;
+    void detect(const cv::gpu::PtrStepSzb& hogluv, cv::gpu::PtrStepSz<uchar4> objects, cudaStream_t stream) const;
+    void __device detectAt(const uchar* __restrict__ hogluv, const int pitch, PtrStepSz<uchar4>& objects) const;
+    float __device rescale(const icf::Level& level, uchar4& scaledRect,
+                           const int channel, const float threshold) const;
 
     PtrStepSzb octaves;
     PtrStepSzf stages;
@@ -108,18 +146,6 @@ struct ChannelStorage
     static const float magnitudeScaling = 1.f ;// / sqrt(2);
 };
 
-struct __align__(16) Octave
-{
-    ushort index;
-    ushort stages;
-    ushort shrinkage;
-    ushort2 size;
-    float scale;
-
-    Octave(const ushort i, const ushort s, const ushort sh, const ushort2 sz, const float sc)
-    : index(i), stages(s), shrinkage(sh), size(sz), scale(sc) {}
-};
-
 struct __align__(8) Node
 {
     int feature;
@@ -134,30 +160,6 @@ struct __align__(8) Feature
     uchar4 rect;
 
     Feature(const int c, const uchar4 r) : channel(c), rect(r) {}
-};
-
-struct __align__(8) Level //is actually 24 bytes
-{
-    int octave;
-
-    // float origScale; //not actually used
-    float relScale;
-    float shrScale;   // used for marking detection
-    float scaling[2]; // calculated according to Dollal paper
-
-    // for 640x480 we can not get overflow
-    uchar2 workRect;
-    uchar2 objSize;
-
-    Level(int idx, const Octave& oct, const float scale, const int w, const int h)
-    :  octave(idx), relScale(scale / oct.scale), shrScale (relScale / (float)oct.shrinkage)
-    {
-        workRect.x = round(w / (float)oct.shrinkage);
-        workRect.y = round(h / (float)oct.shrinkage);
-
-        objSize.x  = round(oct.size.x * relScale);
-        objSize.y  = round(oct.size.y * relScale);
-    }
 };
 }}}
 

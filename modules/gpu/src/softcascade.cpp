@@ -41,6 +41,7 @@
 //M*/
 
 #include <precomp.hpp>
+#include "opencv2/highgui/highgui.hpp"
 
 #if !defined (HAVE_CUDA)
 
@@ -57,6 +58,12 @@ void cv::gpu::SoftCascade::detectMultiScale(const GpuMat&, const GpuMat&, GpuMat
 #else
 
 #include <icf.hpp>
+
+namespace cv { namespace gpu { namespace device {
+namespace icf {
+    void fillBins(cv::gpu::PtrStepSzb hogluv,const cv::gpu::PtrStepSzf& nangle);
+}
+}}}
 
 struct cv::gpu::SoftCascade::Filds
 {
@@ -81,6 +88,16 @@ struct cv::gpu::SoftCascade::Filds
     // 161x121x10
     GpuMat hogluv;
 
+    // will be removed in final version
+    // temporial mat for cvtColor
+    GpuMat luv;
+
+    // temporial mat for integrall
+    GpuMat integralBuffer;
+
+    // temp matrix for sobel and cartToPolar
+    GpuMat dfdx, dfdy, angle, mag, nmag, nangle;
+
     std::vector<float> scales;
 
     icf::Cascade cascade;
@@ -100,9 +117,9 @@ struct cv::gpu::SoftCascade::Filds
     };
 
     bool fill(const FileNode &root, const float mins, const float maxs);
-    void detect(cudaStream_t stream) const
+    void detect(cv::gpu::GpuMat objects, cudaStream_t stream) const
     {
-        cascade.detect(hogluv, stream);
+        cascade.detect(hogluv, objects, stream);
     }
 
 private:
@@ -284,7 +301,18 @@ inline bool cv::gpu::SoftCascade::Filds::fill(const FileNode &root, const float 
     // allocate buffers
     dmem.create(FRAME_HEIGHT * (HOG_LUV_BINS + 1), FRAME_WIDTH, CV_8UC1);
     shrunk.create(FRAME_HEIGHT / shrinkage * HOG_LUV_BINS, FRAME_WIDTH / shrinkage, CV_8UC1);
-    hogluv.create( (FRAME_HEIGHT / shrinkage * HOG_LUV_BINS) + 1, (FRAME_WIDTH / shrinkage) + 1, CV_16UC1);
+    // hogluv.create( (FRAME_HEIGHT / shrinkage + 1) * HOG_LUV_BINS, (FRAME_WIDTH / shrinkage + 1), CV_16UC1);
+    hogluv.create( (FRAME_HEIGHT / shrinkage + 1) * HOG_LUV_BINS, (FRAME_WIDTH / shrinkage + 1), CV_32SC1);
+    luv.create(FRAME_HEIGHT, FRAME_WIDTH, CV_8UC3);
+    integralBuffer.create(shrunk.rows + 1 * HOG_LUV_BINS, shrunk.cols + 1, CV_32SC1);
+
+    dfdx.create(FRAME_HEIGHT, FRAME_WIDTH, CV_32FC1);
+    dfdy.create(FRAME_HEIGHT, FRAME_WIDTH, CV_32FC1);
+    angle.create(FRAME_HEIGHT, FRAME_WIDTH, CV_32FC1);
+    mag.create(FRAME_HEIGHT, FRAME_WIDTH, CV_32FC1);
+
+    nmag.create(FRAME_HEIGHT, FRAME_WIDTH, CV_32FC1);
+    nangle.create(FRAME_HEIGHT, FRAME_WIDTH, CV_32FC1);
 
     storage = icf::ChannelStorage(dmem, shrunk, hogluv, shrinkage);
     return true;
@@ -393,21 +421,71 @@ bool cv::gpu::SoftCascade::load( const string& filename, const float minScale, c
     return true;
 }
 
-void cv::gpu::SoftCascade::detectMultiScale(const GpuMat& image, const GpuMat& /*rois*/,
-                                GpuMat& /*objects*/, const int /*rejectfactor*/, Stream s)
+void cv::gpu::SoftCascade::detectMultiScale(const GpuMat& colored, const GpuMat& /*rois*/,
+                                GpuMat& objects, const int /*rejectfactor*/, Stream s)
 {
     // only color images are supperted
-    CV_Assert(image.type() == CV_8UC3);
+    CV_Assert(colored.type() == CV_8UC3);
 
-    // only this window size allowed
-    CV_Assert(image.cols == 640 && image.rows == 480);
+    // // only this window size allowed
+    CV_Assert(colored.cols == 640 && colored.rows == 480);
 
     Filds& flds = *filds;
+    GpuMat& dmem = flds.dmem;
+    cudaMemset(dmem.data, 0, dmem.step * dmem.rows);
+    GpuMat& shrunk = flds.shrunk;
+    int w = shrunk.cols;
+    int h = colored.rows / flds.storage.shrinkage;
 
     cudaStream_t stream = StreamAccessor::getStream(s);
 
-    flds.storage.frame(image, stream);
-    flds.detect(stream);
+    std::vector<GpuMat> splited;
+    for(int i = 0; i < 3; ++i)
+    {
+        splited.push_back(GpuMat(dmem, cv::Rect(0, colored.rows * (7 + i), colored.cols, colored.rows)));
+    }
+
+    GpuMat gray(dmem, cv::Rect(0, colored.rows * 10, colored.cols, colored.rows) );
+
+    cv::gpu::cvtColor(colored, gray, CV_RGB2GRAY);
+
+    //create hog
+    cv::gpu::Sobel(gray, flds.dfdx, CV_32F, 1, 0, 3, 0.25);
+    cv::gpu::Sobel(gray, flds.dfdy, CV_32F, 0, 1, 3, 0.25);
+
+    cv::gpu::cartToPolar(flds.dfdx, flds.dfdy, flds.mag, flds.angle, true);
+
+    cv::gpu::multiply(flds.mag, cv::Scalar::all(1.0 / ::log(2)), flds.nmag);
+    cv::gpu::multiply(flds.angle, cv::Scalar::all(1.0 / 60.0), flds.nangle);
+
+    GpuMat magCannel(dmem, cv::Rect(0, colored.rows * 6, colored.cols, colored.rows));
+    flds.nmag.convertTo(magCannel, CV_8UC1);
+    device::icf::fillBins(dmem, flds.nangle);
+
+    // create luv
+    cv::gpu::cvtColor(colored, flds.luv, CV_BGR2Luv);
+    cv::gpu::split(flds.luv, splited);
+
+    GpuMat plane(dmem, cv::Rect(0, 0, colored.cols, colored.rows * Filds::HOG_LUV_BINS));
+    cv::gpu::resize(plane, flds.shrunk, cv::Size(), 0.25, 0.25, CV_INTER_AREA);
+    // cv::Mat cpu(plane);
+    // cv::imshow("channels", cpu);
+    // cv::waitKey(0);
+
+    // fer debug purpose
+    // cudaMemset(flds.hogluv.data, 0, flds.hogluv.step * flds.hogluv.rows);
+
+    for(int i = 0; i < Filds::HOG_LUV_BINS; ++i)
+    {
+        GpuMat channel(shrunk, cv::Rect(0, h  * i, w, h ));
+        GpuMat sum(flds.hogluv, cv::Rect(0, (h + 1) * i, w + 1, h + 1));
+        cv::gpu::integralBuffered(channel, sum, flds.integralBuffer);
+    }
+
+    // detection
+    flds.detect(objects, stream);
+
+    // flds.storage.frame(colored, stream);
 }
 
 #endif

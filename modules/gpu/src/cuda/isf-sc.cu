@@ -42,11 +42,48 @@
 
 #include <icf.hpp>
 #include <opencv2/gpu/device/saturate_cast.hpp>
+#include <stdio.h>
+#include <float.h>
 
-namespace cv { namespace gpu {
+namespace cv { namespace gpu { namespace device {
 
+namespace icf {
 
- namespace device {
+    enum {
+        HOG_BINS = 6,
+        HOG_LUV_BINS = 10,
+        WIDTH = 640,
+        HEIGHT = 480,
+        GREY_OFFSET = HEIGHT * HOG_LUV_BINS
+    };
+
+    __global__ void magToHist(const uchar* __restrict__ mag,
+                              const float* __restrict__ angle, const int angPitch,
+                                    uchar* __restrict__ hog,   const int hogPitch)
+    {
+        const int y = blockIdx.y * blockDim.y + threadIdx.y;
+        const int x = blockIdx.x * blockDim.x + threadIdx.x;
+
+        const int bin = (int)(angle[y * angPitch + x]);
+        const uchar val = mag[y * angPitch + x];
+
+        hog[((HEIGHT * bin) + y) * hogPitch + x] = val;
+    }
+
+    void fillBins(cv::gpu::PtrStepSzb hogluv, const cv::gpu::PtrStepSzf& nangle)
+    {
+        const uchar* mag = (const uchar*)hogluv.ptr(HEIGHT * HOG_BINS);
+        uchar* hog = (uchar*)hogluv.ptr();
+        const float* angle = (const float*)nangle.ptr();
+
+        dim3 block(32, 8);
+        dim3 grid(WIDTH / 32, HEIGHT / 8);
+
+        magToHist<<<grid, block>>>(mag, angle, nangle.step / sizeof(float), hog, hogluv.step);
+        cudaSafeCall( cudaGetLastError() );
+        cudaSafeCall( cudaDeviceSynchronize() );
+    }
+}
 
 enum {
     HOG_BINS = 6,
@@ -185,65 +222,175 @@ __global__ void intCol(ushort* __restrict__ sum, const int pitch)
 }
 
 
-__global__ void detect(const cv::gpu::icf::Cascade cascade, const uchar* __restrict__ hogluv, const int pitch)
+__global__ void detect(const cv::gpu::icf::Cascade cascade, const uchar* __restrict__ hogluv, const int pitch,
+    PtrStepSz<uchar4> objects)
 {
-    cascade.detectAt();
+    cascade.detectAt(hogluv, pitch, objects);
 }
 
 }
 
-void __device icf::Cascade::detectAt() const
+float __device icf::Cascade::rescale(const icf::Level& level, uchar4& scaledRect,
+                                     const int channel, const float threshold) const
 {
+    float relScale = level.relScale;
+    float farea = (scaledRect.z - scaledRect.x) * (scaledRect.w - scaledRect.y);
 
+    // rescale
+    scaledRect.x = __float2int_rn(relScale * scaledRect.x);
+    scaledRect.y = __float2int_rn(relScale * scaledRect.y);
+    scaledRect.z = __float2int_rn(relScale * scaledRect.z);
+    scaledRect.w = __float2int_rn(relScale * scaledRect.w);
+
+    float sarea = (scaledRect.z - scaledRect.x) * (scaledRect.w - scaledRect.y);
+
+    float approx = 1.f;
+    if (fabs(farea - 0.f) > FLT_EPSILON && fabs(farea - 0.f) > FLT_EPSILON)
+    {
+        const float expected_new_area = farea * relScale * relScale;
+        approx = expected_new_area / sarea;
+    }
+
+    // compensation areas rounding
+    float rootThreshold = threshold / approx;
+    rootThreshold *= level.scaling[(int)(channel > 6)];
+
+    return rootThreshold;
 }
 
-void icf::Cascade::detect(const cv::gpu::PtrStepSzb& hogluv, cudaStream_t stream) const
+typedef unsigned char uchar;
+float __device get(const uchar* __restrict__ hogluv, const int pitch,
+                   const int x, const int y, int channel, uchar4 area)
+{
+    const uchar* curr = hogluv + ((channel * 121) + y) * pitch;
+
+    int a = curr[area.y * pitch + x + area.x];
+    int b = curr[area.y * pitch + x + area.z];
+    int c = curr[area.w * pitch + x + area.z];
+    int d = curr[area.w * pitch + x + area.x];
+
+    return (a - b + c - d);
+}
+
+
+void __device icf::Cascade::detectAt(const uchar* __restrict__ hogluv, const int pitch,
+                                    PtrStepSz<uchar4>& objects) const
+{
+    const icf::Level* lls = (const icf::Level*)levels.ptr();
+    Level level = lls[0];
+
+    const int y = blockIdx.y * blockDim.y + threadIdx.y;
+    const int x = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if (x >= level.workRect.x || y >= level.workRect.y) return;
+
+    const Octave octave = ((const Octave*)octaves.ptr())[level.octave];
+    const int stBegin = octave.index * octave.stages, stEnd = stBegin + octave.stages;
+
+    float detectionScore = 0.f;
+
+    int st = stBegin;
+    for(; st < stEnd; ++st)
+    {
+        const float stage = stages(0, st);
+        {
+            const int nId = st * 3;
+
+            // work with root node
+            const Node node = ((const Node*)nodes.ptr())[nId];
+            const Feature feature = ((const Feature*)features.ptr())[node.feature];
+
+            uchar4 scaledRect = feature.rect;
+            float threshold = rescale(level, scaledRect, feature.channel, node.threshold);
+
+            float sum = get(hogluv,pitch, x, y, feature.channel, scaledRect);
+
+            int next = 1 + (int)(sum >= threshold);
+
+            // leaves
+            const Node leaf = ((const Node*)nodes.ptr())[nId + next];
+            const Feature fLeaf = ((const Feature*)features.ptr())[leaf.feature];
+
+            scaledRect = fLeaf.rect;
+            threshold = rescale(level, scaledRect, feature.channel, node.threshold);
+            sum = get(hogluv, pitch, x, y, fLeaf.channel, scaledRect);
+
+            const int lShift = (next - 1) * 2 + (int)(sum >= threshold);
+            float impact = leaves(0, (st * 4) + lShift);
+
+            detectionScore += impact;
+        }
+
+        if (detectionScore <= stage) break;
+    }
+
+    // if (!threadIdx.x && !threadIdx.y)// printf("%f %d\n", detectionScore, st);
+    //     printf("x %d y %d: %d\n", x, y, st);
+
+    if (st == stEnd)
+    {
+        // printf("  got %d\n", st);
+        uchar4 a;
+        a.x = level.workRect.x;
+        a.y = level.workRect.y;
+        objects(0, threadIdx.x) = a;
+    }
+}
+
+void icf::Cascade::detect(const cv::gpu::PtrStepSzb& hogluv, PtrStepSz<uchar4> objects,
+                          cudaStream_t stream) const
 {
     // detection kernel
     dim3 block(32, 8, 1);
-    dim3 grid(32 * ChannelStorage::FRAME_WIDTH / 32, ChannelStorage::FRAME_HEIGHT / 8, 64);
-    device::detect<<<grid, block, 0, stream>>>(*this, hogluv, hogluv.step / sizeof(ushort));
+    // dim3 grid(32 * ChannelStorage::FRAME_WIDTH / 32, ChannelStorage::FRAME_HEIGHT / 8, 1);
+    dim3 grid(ChannelStorage::FRAME_WIDTH / 32, ChannelStorage::FRAME_HEIGHT / 8, 1);
+    device::detect<<<grid, block, 0, stream>>>(*this, hogluv, hogluv.step / sizeof(ushort), objects);
+    cudaSafeCall( cudaGetLastError() );
     if (!stream)
         cudaSafeCall( cudaDeviceSynchronize() );
 
 }
 
+////////////////////////////////////////////////////
+
+
+
 void icf::ChannelStorage::frame(const cv::gpu::PtrStepSz<uchar3>& rgb, cudaStream_t stream)
 {
-    // color convertin kernel
-    dim3 block(32, 8);
-    dim3 grid(FRAME_WIDTH / 32, FRAME_HEIGHT / 8);
+//     // // color convertin kernel
+//     // dim3 block(32, 8);
+//     // dim3 grid(FRAME_WIDTH / 32, FRAME_HEIGHT / 8);
 
-    uchar * channels = (uchar*)dmem.ptr(FRAME_HEIGHT * HOG_BINS);
-    device::rgb2grayluv<<<grid, block, 0, stream>>>((uchar3*)rgb.ptr(), channels,
-                                                    rgb.step / sizeof(uchar3), dmem.step);
-    cudaSafeCall( cudaGetLastError());
+//     // uchar * channels = (uchar*)dmem.ptr(FRAME_HEIGHT * HOG_BINS);
+//     // device::rgb2grayluv<<<grid, block, 0, stream>>>((uchar3*)rgb.ptr(), channels,
+//     //                                                 rgb.step / sizeof(uchar3), dmem.step);
+//     // cudaSafeCall( cudaGetLastError());
 
-    // hog calculation kernel
-    channels = (uchar*)dmem.ptr(FRAME_HEIGHT * HOG_LUV_BINS);
-    device::gray2hog<<<grid, block, 0, stream>>>(channels, (uchar*)dmem.ptr(), dmem.step, magnitudeScaling);
-    cudaSafeCall( cudaGetLastError() );
+//     // // hog calculation kernel
+//     // channels = (uchar*)dmem.ptr(FRAME_HEIGHT * HOG_LUV_BINS);
+//     // device::gray2hog<<<grid, block, 0, stream>>>(channels, (uchar*)dmem.ptr(), dmem.step, magnitudeScaling);
+//     // cudaSafeCall( cudaGetLastError() );
 
-    const int shrWidth  = FRAME_WIDTH / shrinkage;
-    const int shrHeight = FRAME_HEIGHT / shrinkage;
+//     // const int shrWidth  = FRAME_WIDTH / shrinkage;
+//     // const int shrHeight = FRAME_HEIGHT / shrinkage;
 
-    // decimate kernel
-    grid = dim3(shrWidth / 32, shrHeight / 8);
-    device::decimate<4><<<grid, block, 0, stream>>>((uchar*)dmem.ptr(), (uchar*)shrunk.ptr(), dmem.step, shrunk.step);
-    cudaSafeCall( cudaGetLastError() );
+//     // // decimate kernel
+//     // grid = dim3(shrWidth / 32, shrHeight / 8);
+//     // device::decimate<4><<<grid, block, 0, stream>>>((uchar*)dmem.ptr(), (uchar*)shrunk.ptr(), dmem.step, shrunk.step);
+//     // cudaSafeCall( cudaGetLastError() );
 
-    // integrate rows
-    block = dim3(shrWidth, 1);
-    grid = dim3(shrHeight * HOG_LUV_BINS, 1);
-    device::intRow<<<grid, block, 0, stream>>>((uchar*)shrunk.ptr(), (ushort*)hogluv.ptr(),
-        shrunk.step, hogluv.step / sizeof(ushort));
-    cudaSafeCall( cudaGetLastError() );
+//     // // integrate rows
+//     // block = dim3(shrWidth, 1);
+//     // grid = dim3(shrHeight * HOG_LUV_BINS, 1);
+//     // device::intRow<<<grid, block, 0, stream>>>((uchar*)shrunk.ptr(), (ushort*)hogluv.ptr(),
+//     //     shrunk.step, hogluv.step / sizeof(ushort));
+//     // cudaSafeCall( cudaGetLastError() );
 
-    // integrate cols
-    block = dim3(128, 1);
-    grid = dim3(shrWidth * HOG_LUV_BINS, 1);
-    device::intCol<<<grid, block, 0, stream>>>((ushort*)hogluv.ptr(), hogluv.step / hogluv.step / sizeof(ushort));
-    cudaSafeCall( cudaGetLastError() );
+//     // // integrate cols
+//     // block = dim3(128, 1);
+//     // grid = dim3(shrWidth * HOG_LUV_BINS, 1);
+//     // device::intCol<<<grid, block, 0, stream>>>((ushort*)hogluv.ptr(), hogluv.step / hogluv.step / sizeof(ushort));
+//     // cudaSafeCall( cudaGetLastError() );
 }
 
 }}
