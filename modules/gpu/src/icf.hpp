@@ -124,7 +124,7 @@ struct ChannelStorage
         const cv::gpu::PtrStepSzb& itg, const int s)
     : dmem (buff), shrunk(shr), hogluv(itg), shrinkage(s) {}
 
-    void frame(const cv::gpu::PtrStepSz<uchar3>& rgb, cudaStream_t stream);
+    void frame(const cv::gpu::PtrStepSz<uchar3>& rgb, cudaStream_t stream){}
 
     PtrStepSzb dmem;
     PtrStepSzb shrunk;
