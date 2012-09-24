@@ -45,6 +45,25 @@
 
 //#pragma OPENCL EXTENSION cl_amd_printf : enable
 
+__kernel void arithm_muls_D5 (__global float *src1, int src1_step, int src1_offset,
+                             __global float *dst,  int dst_step,  int dst_offset,
+                             int rows, int cols, int dst_step1, float scalar)
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+
+    if (x < cols && y < rows)
+    {
+        int src1_index = mad24(y, src1_step, (x << 2) + src1_offset);
+        int dst_index  = mad24(y, dst_step,  (x << 2) + dst_offset);
+
+        float data1 = *((__global float *)((__global char *)src1 + src1_index));
+        float tmp = data1 * scalar;
+
+        *((__global float *)((__global char *)dst + dst_index)) = tmp;
+    }
+}
+
 
 __kernel void calcSharrDeriv_vertical_C1_D0(__global const uchar* src, int srcStep, int rows, int cols, int cn, __global short* dx_buf, int dx_bufStep, __global short* dy_buf, int dy_bufStep)
 {

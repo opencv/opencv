@@ -66,7 +66,6 @@ namespace cv
 //////////////////////////////////////////////////////////////////////////////
 /////////////////////// add subtract multiply divide /////////////////////////
 //////////////////////////////////////////////////////////////////////////////
-template<typename T>
 void pyrdown_run(const oclMat &src, const oclMat &dst)
 {
 
@@ -95,51 +94,13 @@ void pyrdown_run(const oclMat &src, const oclMat &dst)
     vector<pair<size_t , const void *> > args;
     args.push_back( make_pair( sizeof(cl_mem), (void *)&src.data ));
     args.push_back( make_pair( sizeof(cl_int), (void *)&src.step ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src.offset ));
     args.push_back( make_pair( sizeof(cl_int), (void *)&src.rows));
     args.push_back( make_pair( sizeof(cl_int), (void *)&src.cols));
     args.push_back( make_pair( sizeof(cl_mem), (void *)&dst.data ));
     args.push_back( make_pair( sizeof(cl_int), (void *)&dst.step ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&dst.offset ));
     args.push_back( make_pair( sizeof(cl_int), (void *)&dst.cols));
 
     openCLExecuteKernel(clCxt, &pyr_down, kernelName, globalThreads, localThreads, args, src.channels(), src.depth());
-}
-void pyrdown_run(const oclMat &src, const oclMat &dst)
-{
-	switch(src.depth())
-	{
-	case 0:
-	    pyrdown_run<unsigned char>(src, dst);
-		break;
-
-	case 1:
-	    pyrdown_run<char>(src, dst);
-		break;
-
-	case 2:
-	    pyrdown_run<unsigned short>(src, dst);
-		break;
-
-	case 3:
-	    pyrdown_run<short>(src, dst);
-		break;
-
-	case 4:
-	    pyrdown_run<int>(src, dst);
-		break;
-
-	case 5:
-	    pyrdown_run<float>(src, dst);
-		break;
-
-	case 6:
-	    pyrdown_run<double>(src, dst);
-		break;
-
-	default:
-		break;
-	}
 }
 //////////////////////////////////////////////////////////////////////////////
 // pyrDown
@@ -148,11 +109,9 @@ void cv::ocl::pyrDown(const oclMat& src, oclMat& dst)
 {
     CV_Assert(src.depth() <= CV_32F && src.channels() <= 4);
 
-	//src.step = src.rows;
-
     dst.create((src.rows + 1) / 2, (src.cols + 1) / 2, src.type());
 
-	dst.download_channels = src.download_channels;
+	dst.download_channels=src.download_channels;
 
     pyrdown_run(src, dst);
 }
