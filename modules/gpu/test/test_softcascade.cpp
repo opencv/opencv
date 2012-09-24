@@ -63,7 +63,7 @@ TEST(SoftCascade, detect)
     cv::Mat coloredCpu = cv::imread(cvtest::TS::ptr()->get_data_path()
         + "../cv/cascadeandhog/bahnhof/image_00000000_0.png");
     ASSERT_FALSE(coloredCpu.empty());
-    GpuMat colored(coloredCpu), objectBoxes, rois;
+    GpuMat colored(coloredCpu), objectBoxes(1, 1000, CV_8UC1), rois;
 
     // ASSERT_NO_THROW(
     // {
