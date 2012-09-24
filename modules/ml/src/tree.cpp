@@ -291,12 +291,12 @@ void CvDTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
 
     if ( is_buf_16u )
     {
-        CV_CALL( buf = cvCreateMat( buf_count, buf_size, CV_16UC1 ));
+        CV_CALL( buf = cvCreateMat( buf_count * sample_count, buf_size / sample_count, CV_16UC1 ));
         CV_CALL( pair16u32s_ptr = (CvPair16u32s*)cvAlloc( sample_count*sizeof(pair16u32s_ptr[0]) ));
     }
     else
     {
-        CV_CALL( buf = cvCreateMat( buf_count, buf_size, CV_32SC1 ));
+        CV_CALL( buf = cvCreateMat( buf_count * sample_count, buf_size / sample_count, CV_32SC1 ));
         CV_CALL( int_ptr = (int**)cvAlloc( sample_count*sizeof(int_ptr[0]) ));
     }
 
@@ -751,7 +751,7 @@ CvDTreeNode* CvDTreeTrainData::subsample_data( const CvMat* _subsample_idx )
 
                 if (is_buf_16u)
                 {
-                    unsigned short* udst = (unsigned short*)(buf->data.s + root->buf_idx*buf->cols +
+                    unsigned short* udst = (unsigned short*)(buf->data.s + root->buf_idx*sample_count *(work_var_count + 1) +
                         vi*sample_count + root->offset);
                     for( i = 0; i < count; i++ )
                     {
@@ -762,7 +762,7 @@ CvDTreeNode* CvDTreeTrainData::subsample_data( const CvMat* _subsample_idx )
                 }
                 else
                 {
-                    int* idst = buf->data.i + root->buf_idx*buf->cols +
+                    int* idst = buf->data.i + root->buf_idx*sample_count *(work_var_count + 1) +
                         vi*sample_count + root->offset;
                     for( i = 0; i < count; i++ )
                     {
@@ -788,7 +788,7 @@ CvDTreeNode* CvDTreeTrainData::subsample_data( const CvMat* _subsample_idx )
 
                 if (is_buf_16u)
                 {
-                    unsigned short* udst_idx = (unsigned short*)(buf->data.s + root->buf_idx*buf->cols +
+                    unsigned short* udst_idx = (unsigned short*)(buf->data.s + root->buf_idx*sample_count *(work_var_count + 1) +
                         vi*sample_count + data_root->offset);
                     for( i = 0; i < num_valid; i++ )
                     {
@@ -812,7 +812,7 @@ CvDTreeNode* CvDTreeTrainData::subsample_data( const CvMat* _subsample_idx )
                 }
                 else
                 {
-                    int* idst_idx = buf->data.i + root->buf_idx*buf->cols +
+                    int* idst_idx = buf->data.i + root->buf_idx*sample_count *(work_var_count + 1) +
                         vi*sample_count + root->offset;
                     for( i = 0; i < num_valid; i++ )
                     {
@@ -840,14 +840,14 @@ CvDTreeNode* CvDTreeTrainData::subsample_data( const CvMat* _subsample_idx )
         const int* sample_idx_src = get_sample_indices(data_root, (int*)(uchar*)inn_buf);
         if (is_buf_16u)
         {
-            unsigned short* sample_idx_dst = (unsigned short*)(buf->data.s + root->buf_idx*buf->cols +
+            unsigned short* sample_idx_dst = (unsigned short*)(buf->data.s + root->buf_idx*sample_count *(work_var_count + 1) +
                 workVarCount*sample_count + root->offset);
             for (i = 0; i < count; i++)
                 sample_idx_dst[i] = (unsigned short)sample_idx_src[sidx[i]];
         }
         else
         {
-            int* sample_idx_dst = buf->data.i + root->buf_idx*buf->cols +
+            int* sample_idx_dst = buf->data.i + root->buf_idx*sample_count *(work_var_count + 1) +
                 workVarCount*sample_count + root->offset;
             for (i = 0; i < count; i++)
                 sample_idx_dst[i] = sample_idx_src[sidx[i]];
@@ -1158,10 +1158,10 @@ void CvDTreeTrainData::get_ord_var_data( CvDTreeNode* n, int vi, float* ord_valu
     const int* sample_indices = get_sample_indices(n, sample_indices_buf);
 
     if( !is_buf_16u )
-        *sorted_indices = buf->data.i + n->buf_idx*buf->cols +
+        *sorted_indices = buf->data.i + n->buf_idx*sample_count *(work_var_count + 1) +
         vi*sample_count + n->offset;
     else {
-        const unsigned short* short_indices = (const unsigned short*)(buf->data.s + n->buf_idx*buf->cols +
+        const unsigned short* short_indices = (const unsigned short*)(buf->data.s + n->buf_idx*sample_count *(work_var_count + 1) +
             vi*sample_count + n->offset );
         for( int i = 0; i < node_sample_count; i++ )
             sorted_indices_buf[i] = short_indices[i];
@@ -1232,10 +1232,10 @@ const int* CvDTreeTrainData::get_cat_var_data( CvDTreeNode* n, int vi, int* cat_
 {
     const int* cat_values = 0;
     if( !is_buf_16u )
-        cat_values = buf->data.i + n->buf_idx*buf->cols +
+        cat_values = buf->data.i + n->buf_idx*sample_count *(work_var_count + 1) +
             vi*sample_count + n->offset;
     else {
-        const unsigned short* short_values = (const unsigned short*)(buf->data.s + n->buf_idx*buf->cols +
+        const unsigned short* short_values = (const unsigned short*)(buf->data.s + n->buf_idx*sample_count *(work_var_count + 1) +
             vi*sample_count + n->offset);
         for( int i = 0; i < n->sample_count; i++ )
             cat_values_buf[i] = short_values[i];
@@ -3049,7 +3049,7 @@ void CvDTree::split_node_data( CvDTreeNode* node )
         {
             unsigned short *ldst, *rdst, *ldst0, *rdst0;
             //unsigned short tl, tr;
-            ldst0 = ldst = (unsigned short*)(buf->data.s + left->buf_idx*buf->cols +
+            ldst0 = ldst = (unsigned short*)(buf->data.s + left->buf_idx*data->sample_count *(data->work_var_count + 1) +
                 vi*scount + left->offset);
             rdst0 = rdst = (unsigned short*)(ldst + nl);
 
@@ -3095,9 +3095,9 @@ void CvDTree::split_node_data( CvDTreeNode* node )
         else
         {
             int *ldst0, *ldst, *rdst0, *rdst;
-            ldst0 = ldst = buf->data.i + left->buf_idx*buf->cols +
+            ldst0 = ldst = buf->data.i + left->buf_idx*data->sample_count *(data->work_var_count + 1) +
                 vi*scount + left->offset;
-            rdst0 = rdst = buf->data.i + right->buf_idx*buf->cols +
+            rdst0 = rdst = buf->data.i + right->buf_idx*data->sample_count *(data->work_var_count + 1) +
                 vi*scount + right->offset;
 
             // split sorted
@@ -3158,9 +3158,9 @@ void CvDTree::split_node_data( CvDTreeNode* node )
 
         if (data->is_buf_16u)
         {
-            unsigned short *ldst = (unsigned short *)(buf->data.s + left->buf_idx*buf->cols +
+            unsigned short *ldst = (unsigned short *)(buf->data.s + left->buf_idx*data->sample_count *(data->work_var_count + 1) +
                 vi*scount + left->offset);
-            unsigned short *rdst = (unsigned short *)(buf->data.s + right->buf_idx*buf->cols +
+            unsigned short *rdst = (unsigned short *)(buf->data.s + right->buf_idx*data->sample_count *(data->work_var_count + 1) +
                 vi*scount + right->offset);
 
             for( i = 0; i < n; i++ )
@@ -3188,9 +3188,9 @@ void CvDTree::split_node_data( CvDTreeNode* node )
         }
         else
         {
-            int *ldst = buf->data.i + left->buf_idx*buf->cols +
+            int *ldst = buf->data.i + left->buf_idx*data->sample_count *(data->work_var_count + 1) +
                 vi*scount + left->offset;
-            int *rdst = buf->data.i + right->buf_idx*buf->cols +
+            int *rdst = buf->data.i + right->buf_idx*data->sample_count *(data->work_var_count + 1) +
                 vi*scount + right->offset;
 
             for( i = 0; i < n; i++ )
@@ -3230,9 +3230,9 @@ void CvDTree::split_node_data( CvDTreeNode* node )
     int pos = data->get_work_var_count();
     if (data->is_buf_16u)
     {
-        unsigned short* ldst = (unsigned short*)(buf->data.s + left->buf_idx*buf->cols +
+        unsigned short* ldst = (unsigned short*)(buf->data.s + left->buf_idx*data->sample_count *(data->work_var_count + 1) +
             pos*scount + left->offset);
-        unsigned short* rdst = (unsigned short*)(buf->data.s + right->buf_idx*buf->cols +
+        unsigned short* rdst = (unsigned short*)(buf->data.s + right->buf_idx*data->sample_count *(data->work_var_count + 1) +
             pos*scount + right->offset);
         for (i = 0; i < n; i++)
         {
@@ -3252,9 +3252,9 @@ void CvDTree::split_node_data( CvDTreeNode* node )
     }
     else
     {
-        int* ldst = buf->data.i + left->buf_idx*buf->cols +
+        int* ldst = buf->data.i + left->buf_idx*data->sample_count *(data->work_var_count + 1) +
             pos*scount + left->offset;
-        int* rdst = buf->data.i + right->buf_idx*buf->cols +
+        int* rdst = buf->data.i + right->buf_idx*data->sample_count *(data->work_var_count + 1) +
             pos*scount + right->offset;
         for (i = 0; i < n; i++)
         {
