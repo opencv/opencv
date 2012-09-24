@@ -1399,6 +1399,12 @@ struct DecimateAlpha
     float alpha;
 };
 
+#ifdef __APPLE__ 
+    #define HAVE_TBB HAVE_GDC
+#elif defined _MSC_VER && _MSC_VER >= 1600
+    #define HABE_TBB HAVE_CONCURRENCY 
+#endif
+
 template <typename T, typename WT>
 class resizeArea_Invoker :
     public ParallelLoopBody
@@ -1416,8 +1422,8 @@ public:
         , cur_dy_ofs(_cur_dy_ofs), bands(_bands)
 #endif
     {
-        if (src.size() == Size(16, 16) && dst.size() == Size(5, 5))
-            std::cout << "scale_y = " << scale_y_ << std::endl << std::endl; 
+//         if (src.size() == Size(16, 16) && dst.size() == Size(5, 5))
+//             std::cout << "scale_y = " << scale_y_ << std::endl << std::endl; 
     }
     
 #ifdef HAVE_TBB
@@ -1488,8 +1494,8 @@ public:
             
             if( (cur_dy + 1)*scale_y <= sy + 1 || sy == ssize.height - 1 )
             {
-                if (dsize == Size(5, 5) && ssize == Size(16, 16))
-                    std::cout << "Band: (" << range.start << ", " << range.end << ")" << std::endl;
+//                 if (dsize == Size(5, 5) && ssize == Size(16, 16))
+//                     std::cout << "Band: (" << range.start << ", " << range.end << ")" << std::endl;
                 
                 WT beta = std::max(sy + 1 - (cur_dy+1)*scale_y, (WT)0);
                 WT beta1 = 1 - beta;
@@ -1501,14 +1507,14 @@ public:
                     for( dx = 0; dx < dsize.width; dx++ )
                     {
                         D[dx] = saturate_cast<T>((sum[dx] + buf[dx]) / min(scale_y, src.rows - cur_dy * scale_y)); //
-                        if (dsize == Size(5, 5) && ssize == Size(16, 16))
-                        {
-                            std::cout << "sum[" << dx << "] = " << sum[dx] << std::endl;
-                            std::cout << "buf[" << dx << "] = " << buf[dx] << std::endl;
-                            std::cout << "min(scale_y, src.rows - cur_dy * scale_y) = " << min(scale_y, src.rows - cur_dy * scale_y) << std::endl;
-                            std::cout << "D[" << dx << "] = " << D[dx] << std::endl;
-                            std::cout << std::endl;
-                        }
+//                         if (dsize == Size(5, 5) && ssize == Size(16, 16))
+//                         {
+//                             std::cout << "sum[" << dx << "] = " << sum[dx] << std::endl;
+//                             std::cout << "buf[" << dx << "] = " << buf[dx] << std::endl;
+//                             std::cout << "min(scale_y, src.rows - cur_dy * scale_y) = " << min(scale_y, src.rows - cur_dy * scale_y) << std::endl;
+//                             std::cout << "D[" << dx << "] = " << D[dx] << std::endl;
+//                             std::cout << std::endl;
+//                         }
                         sum[dx] = buf[dx] = 0;
                     }
                 }
@@ -1516,15 +1522,15 @@ public:
                     for( dx = 0; dx < dsize.width; dx++ )
                     {                        
                         D[dx] = saturate_cast<T>((sum[dx] + buf[dx]* beta1)/ min(scale_y, src.rows - cur_dy*scale_y)); //
-                        if (dsize == Size(5, 5) && ssize == Size(16, 16))
-                        {
-                            std::cout << "sum[" << dx << "] = " << sum[dx] << std::endl;
-                            std::cout << "buf[" << dx << "] = " << buf[dx] << std::endl;
-                            std::cout << "beta1 = " << beta1 << std::endl;
-                            std::cout << "min(scale_y, src.rows - cur_dy * scale_y) = " << min(scale_y, src.rows - cur_dy * scale_y) << std::endl;
-                            std::cout << "D[" << dx << "] = " << D[dx] << std::endl;
-                            std::cout << std::endl;
-                        }
+//                         if (dsize == Size(5, 5) && ssize == Size(16, 16))
+//                         {
+//                             std::cout << "sum[" << dx << "] = " << sum[dx] << std::endl;
+//                             std::cout << "buf[" << dx << "] = " << buf[dx] << std::endl;
+//                             std::cout << "beta1 = " << beta1 << std::endl;
+//                             std::cout << "min(scale_y, src.rows - cur_dy * scale_y) = " << min(scale_y, src.rows - cur_dy * scale_y) << std::endl;
+//                             std::cout << "D[" << dx << "] = " << D[dx] << std::endl;
+//                             std::cout << std::endl;
+//                         }
                         sum[dx] = buf[dx]*beta;
                         buf[dx] = 0;
                     }
@@ -1605,17 +1611,17 @@ static void resizeArea_( const Mat& src, Mat& dst, const DecimateAlpha* xofs, in
     }
 //     bands.push_back(std::make_pair(index, ssize.height));
 #endif
-    
+
 #ifdef HAVE_TBB
     Range range(0, bands.size());
     
-    if (dsize == Size(5, 5) && ssize == Size(16, 16))
-    {
-        std::cout << "Bands" << std::endl;
-        for (std::vector<std::pair<int, int> >::const_iterator i = bands.begin(), end = bands.end(); i != end; ++i)
-            std::cout << i->first << " " << i->second << std::endl;
-        std::cout << std::endl;
-    }
+//     if (dsize == Size(5, 5) && ssize == Size(16, 16))
+//     {
+//         std::cout << "Bands" << std::endl;
+//         for (std::vector<std::pair<int, int> >::const_iterator i = bands.begin(), end = bands.end(); i != end; ++i)
+//             std::cout << i->first << " " << i->second << std::endl;
+//         std::cout << std::endl;
+//     }
     
     resizeArea_Invoker<T, WT> invoker(src, dst, xofs, xofs_count, scale_y_, cur_dy_ofs, bands);
 #else
