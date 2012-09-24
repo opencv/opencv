@@ -1,6 +1,6 @@
 /* jconfig.h.  Generated automatically by configure.  */
 /* jconfig.cfg --- source file edited by configure script */
-/* see jconfig.txt for explanations */
+/* see jconfig.doc for explanations */
 
 #define HAVE_PROTOTYPES 
 #define HAVE_UNSIGNED_CHAR 
@@ -9,7 +9,7 @@
 /*#undef const*/
 #undef CHAR_IS_UNSIGNED
 
-#if defined __MINGW__ || defined __MINGW32__ || (!defined WIN32 && !defined _WIN32)
+#if !defined WIN32 && !defined _WIN32
 #define HAVE_STDDEF_H
 #define HAVE_STDLIB_H 
 #endif
