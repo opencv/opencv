@@ -53,7 +53,7 @@ typedef unsigned char uchar;
 typedef unsigned short ushort;
 
 //////////////////////////////////////////////////////////////////////////////////
-/// Non local means denosings
+//// Non Local Means Denosing
 
 namespace cv { namespace gpu { namespace device
 {
@@ -80,24 +80,51 @@ namespace cv { namespace gpu { namespace device
             value_type sum1 = VecTraits<value_type>::all(0);
             float sum2 = 0.f;
 
-            for(float cy = -search_radius; cy <= search_radius; ++cy)
-                for(float cx = -search_radius; cx <= search_radius; ++cx)
-                {
-                    float color2 = 0;
-                    for(float by = -block_radius; by <= block_radius; ++by)
-                        for(float bx = -block_radius; bx <= block_radius; ++bx)
-                        {
-                            value_type v1 = saturate_cast<value_type>(src(y + by, x + bx));
-                            value_type v2 = saturate_cast<value_type>(src(y + cy + by, x + cx + bx));
-                            color2 += norm2(v1 - v2);
-                        }
+            if (x - search_radius - block_radius >=0        && y - search_radius - block_radius >=0 &&
+                x + search_radius + block_radius < src.cols && y + search_radius + block_radius < src.rows)
+            {
 
-                    float dist2 = cx * cx + cy * cy;
-                    float w = __expf(color2 * h2_inv_half + dist2 * block_radius2_inv);
-                    
-                    sum1 = sum1 + saturate_cast<value_type>(src(y + cy, x + cy)) * w;
-                    sum2 += w;
-                }
+                for(float cy = -search_radius; cy <= search_radius; ++cy)
+                    for(float cx = -search_radius; cx <= search_radius; ++cx)
+                    {
+                        float color2 = 0;
+                        for(float by = -block_radius; by <= block_radius; ++by)
+                            for(float bx = -block_radius; bx <= block_radius; ++bx)
+                            {
+                                value_type v1 = saturate_cast<value_type>(src(y +      by, x +      bx));
+                                value_type v2 = saturate_cast<value_type>(src(y + cy + by, x + cx + bx));
+                                color2 += norm2(v1 - v2);
+                            }
+
+                        float dist2 = cx * cx + cy * cy;
+                        float w = __expf(color2 * h2_inv_half + dist2 * block_radius2_inv);
+
+                        sum1 = sum1 + saturate_cast<value_type>(src(y + cy, x + cy)) * w;
+                        sum2 += w;
+                    }
+            }
+            else
+            {
+                for(float cy = -search_radius; cy <= search_radius; ++cy)
+                    for(float cx = -search_radius; cx <= search_radius; ++cx)
+                    {
+                        float color2 = 0;
+                        for(float by = -block_radius; by <= block_radius; ++by)
+                            for(float bx = -block_radius; bx <= block_radius; ++bx)
+                            {
+                                value_type v1 = saturate_cast<value_type>(b.at(y +      by, x +      bx, src.data, src.step));
+                                value_type v2 = saturate_cast<value_type>(b.at(y + cy + by, x + cx + bx, src.data, src.step));
+                                color2 += norm2(v1 - v2);
+                            }
+
+                        float dist2 = cx * cx + cy * cy;
+                        float w = __expf(color2 * h2_inv_half + dist2 * block_radius2_inv);
+
+                        sum1 = sum1 + saturate_cast<value_type>(b.at(y + cy, x + cy, src.data, src.step)) * w;
+                        sum2 += w;
+                    }
+
+            }
 
             dst(y, x) = saturate_cast<T>(sum1 / sum2);
 
