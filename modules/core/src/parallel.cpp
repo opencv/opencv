@@ -43,31 +43,29 @@
 #include "precomp.hpp"
 
 #if !defined HAVE_TBB && !defined HAVE_OPENMP && !defined HAVE_GCD && !defined HAVE_CONCURRENCY
-
-#ifdef __APPLE__
-#define HAVE_GCD
-#elif defined _MSC_VER && _MSC_VER >= 1600
-#define HAVE_CONCURRENCY
-#endif
-
+    #ifdef __APPLE__
+        //#define HAVE_GDC
+    #elif defined _MSC_VER && _MSC_VER >= 1600
+        #define HAVE_CONCURRENCY
+    #endif
 #endif
 
 #ifdef HAVE_CONCURRENCY
-#  include <ppl.h>
+    #include <ppl.h>
 #elif defined HAVE_OPENMP
-#  include <omp.h>
+    #include <omp.h>
 #elif defined HAVE_GCD
-#  include <dispatch/dispatch.h>
+    #include <dispatch/dispatch.h>
 #elif defined HAVE_TBB
-#  include "tbb/tbb_stddef.h"
-#  if TBB_VERSION_MAJOR*100 + TBB_VERSION_MINOR >= 202
-#    include "tbb/tbb.h"
-#    include "tbb/task.h"
-#    undef min
-#    undef max
-#  else
-#    undef HAVE_TBB
-#  endif // end TBB version
+    #include "tbb/tbb_stddef.h"
+    #if TBB_VERSION_MAJOR*100 + TBB_VERSION_MINOR >= 202
+        #include "tbb/tbb.h"
+        #include "tbb/task.h"
+        #undef min
+        #undef max
+    #else
+        #undef HAVE_TBB
+    #endif // end TBB version
 #endif // HAVE_CONCURRENCY
 
 /*
