@@ -44,7 +44,7 @@
 
 #if !defined HAVE_TBB && !defined HAVE_OPENMP && !defined HAVE_GCD && !defined HAVE_CONCURRENCY
     #ifdef __APPLE__
-        //#define HAVE_GDC
+        #define HAVE_GCD
     #elif defined _MSC_VER && _MSC_VER >= 1600
         #define HAVE_CONCURRENCY
     #endif
