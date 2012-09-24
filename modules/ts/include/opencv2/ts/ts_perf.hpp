@@ -40,6 +40,7 @@ const cv::Size szWQHD = cv::Size(2560, 1440);
 
 const cv::Size sznHD = cv::Size(640, 360);
 const cv::Size szqHD = cv::Size(960, 540);
+const cv::Size sz240p = szQVGA;
 const cv::Size sz720p = cv::Size(1280, 720);
 const cv::Size sz1080p = cv::Size(1920, 1080);
 const cv::Size sz1440p = szWQHD;
