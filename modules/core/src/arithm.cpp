@@ -1218,18 +1218,23 @@ namespace cv
 
 static int actualScalarDepth(const Mat& src)
 {
-    double min = MIN(MIN(*((double*)src.data), *((double*)src.data+1)), MIN(*((double*)src.data+2), (*((double*)src.data+3))));
-    double max = MAX(MAX(*((double*)src.data), *((double*)src.data+1)), MAX(*((double*)src.data+2), (*((double*)src.data+3))));
+    const double* data = (const double*)src.data;
+    double minval = MIN(data[0], data[1]);
+    minval = MIN(minval, data[2]);
+    minval = MIN(minval, data[3]);
+    double maxval = MAX(data[0], data[1]);
+    maxval = MAX(maxval, data[2]);
+    maxval = MAX(maxval, data[3]);
     int depth = CV_64F;
-    if(min >= 0 && max <= UCHAR_MAX)
+    if(minval >= 0 && maxval <= UCHAR_MAX)
         depth = CV_8U;
-    else if(min >= SCHAR_MIN && max <= SCHAR_MAX)
+    else if(minval >= SCHAR_MIN && maxval <= SCHAR_MAX)
         depth = CV_8S;
-    else if(min >= 0 && max <= USHRT_MAX)
+    else if(minval >= 0 && maxval <= USHRT_MAX)
         depth = CV_16U;
-    else if(min >= SHRT_MIN && max <= SHRT_MAX)
+    else if(minval >= SHRT_MIN && maxval <= SHRT_MAX)
         depth = CV_16S;
-    else if(min >= INT_MIN && max <= INT_MAX)
+    else if(minval >= INT_MIN && maxval <= INT_MAX)
         depth = CV_32S;
     return depth;
 }
@@ -1269,7 +1274,7 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
                      "The operation is neither 'array op array' (where arrays have the same size and the same number of channels), "
                      "nor 'array op scalar', nor 'scalar op array'" );
         haveScalar = true;
-        CV_Assert(src2.type() == CV_64F && src2.rows == 4);
+        CV_Assert(src2.type() == CV_64F && (src2.rows == 4 || src2.rows == 1));
         depth2 = actualScalarDepth(src2);
     }
 
