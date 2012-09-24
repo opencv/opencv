@@ -1399,40 +1399,21 @@ struct DecimateAlpha
     float alpha;
 };
 
-#ifdef __APPLE__ 
-    #define HAVE_GCD
-#elif defined _MSC_VER && _MSC_VER >= 1600
-    #define HAVE_CONCURRENCY 
-#endif
-
-#if defined(HAVE_TBB) || defined(HAVE_OPENMP) || defined(HAVE_GCD) || defined(HAVE_CONCURRENCY)
-    #define HAVE_PARALLEL
-#endif
-
 template <typename T, typename WT>
 class resizeArea_Invoker :
     public ParallelLoopBody
 {
 public:
     resizeArea_Invoker(const Mat& _src, Mat& _dst, const DecimateAlpha* _xofs, 
-        int _xofs_count, double _scale_y_
-#ifdef HAVE_PARALLEL
-        , const int* _cur_dy_ofs, const std::vector<std::pair<int, int> >& _bands
-#endif
-        ) :
+        int _xofs_count, double _scale_y_, const int* _cur_dy_ofs, 
+        const std::vector<std::pair<int, int> >& _bands) :
         ParallelLoopBody(), src(_src), dst(_dst), xofs(_xofs), 
-        xofs_count(_xofs_count), scale_y_(_scale_y_)
-#ifdef HAVE_PARALLEL
-        , cur_dy_ofs(_cur_dy_ofs), bands(_bands)
-#endif
+        xofs_count(_xofs_count), scale_y_(_scale_y_),
+        cur_dy_ofs(_cur_dy_ofs), bands(_bands)
     {
     }
     
-#ifdef HAVE_PARALLEL
     void resize_signle_band(const Range& range) const 
-#else
-    virtual void operator() (const Range& range) const
-#endif
     {
         Size ssize = src.size(), dsize = dst.size();
         int cn = src.channels();
@@ -1446,9 +1427,7 @@ public:
         for( dx = 0; dx < dsize.width; dx++ )
             buf[dx] = sum[dx] = 0;
         
-#ifdef HAVE_PARALLEL
         cur_dy = cur_dy_ofs[range.start];
-#endif
         for (sy = range.start; sy < range.end; sy++)
         {
             const T* S = (const T*)(src.data + src.step*sy);
@@ -1536,7 +1515,6 @@ public:
         }
     }
     
-#ifdef HAVE_PARALLEL
     virtual void operator() (const Range& range) const
     {
         for (int i = range.start; i < range.end; ++i)
@@ -1545,7 +1523,6 @@ public:
             resize_signle_band(band_range);
         }
     }
-#endif
     
 private:
     const Mat src;
@@ -1553,10 +1530,9 @@ private:
     const DecimateAlpha* xofs;
     const int xofs_count;
     const double scale_y_;
-#ifdef HAVE_PARALLEL
     const int *cur_dy_ofs;
     std::vector<std::pair<int, int> > bands;
-#endif
+    
     resizeArea_Invoker(const resizeArea_Invoker&);
     resizeArea_Invoker& operator=(const resizeArea_Invoker&);
 };
@@ -1564,14 +1540,11 @@ private:
 template <typename T, typename WT>
 static void resizeArea_( const Mat& src, Mat& dst, const DecimateAlpha* xofs, int xofs_count, double scale_y_)
 {
-#ifdef HAVE_PARALLEL
     Size ssize = src.size(), dsize = dst.size();
     AutoBuffer<int> _yofs(ssize.height);
     int *cur_dy_ofs = _yofs;
     int cur_dy = 0, index = 0;
     std::vector<std::pair<int, int> > bands;
-    
-    // cur_dy_ofs - dy for the current sy
     
     for (int sy = 0; sy < ssize.height; sy++)
     {
@@ -1590,15 +1563,9 @@ static void resizeArea_( const Mat& src, Mat& dst, const DecimateAlpha* xofs, in
             cur_dy++;
         }
     }
-#endif
 
-#ifdef HAVE_PARALLEL
     Range range(0, bands.size());
     resizeArea_Invoker<T, WT> invoker(src, dst, xofs, xofs_count, scale_y_, cur_dy_ofs, bands);
-#else
-    Range range(0, src.rows);
-    resizeArea_Invoker<T, WT> invoker(src, dst, xofs, xofs_count, scale_y_);
-#endif
     parallel_for_(range, invoker);
 }
 
