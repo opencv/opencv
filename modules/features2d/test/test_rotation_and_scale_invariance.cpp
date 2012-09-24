@@ -597,7 +597,7 @@ TEST(Features2d_RotationInvariance_Detector_BRISK, regression)
 {
     DetectorRotationInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.BRISK"),
                                         0.32f,
-                                        0.81f);
+                                        0.76f);
     test.safe_run();
 }
 
@@ -648,7 +648,7 @@ TEST(Features2d_ScaleInvariance_Detector_BRISK, regression)
 {
     DetectorScaleInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.BRISK"),
                                      0.08f,
-                                     0.54f);
+                                     0.49f);
     test.safe_run();
 }
 
