@@ -381,6 +381,9 @@ inline void cv::gpu::SoftCascade::Filds::calcLevels(const std::vector<icf::Octav
         if (::fabs(scale - maxScale) < FLT_EPSILON) break;
         scale = ::std::min(maxScale, ::expf(::log(scale) + logFactor));
 
+        // printf("level: %d (%f %f) [%f %f] (%d %d) (%d %d)\n", level.octave, level.relScale, level.shrScale,
+        //     level.scaling[0], level.scaling[1], level.workRect.x, level.workRect.y, level.objSize.x, level.objSize.y);
+
         // std::cout << "level " << sc
         //           << " octeve "
         //           << vlevels[sc].octave
@@ -421,6 +424,15 @@ bool cv::gpu::SoftCascade::load( const string& filename, const float minScale, c
     return true;
 }
 
+namespace {
+    char *itoa(long i, char* s, int /*dummy_radix*/)
+    {
+        sprintf(s, "%ld", i);
+        return s;
+    }
+}
+
+#define USE_REFERENCE_VALUES
 void cv::gpu::SoftCascade::detectMultiScale(const GpuMat& colored, const GpuMat& /*rois*/,
                                 GpuMat& objects, const int /*rejectfactor*/, Stream s)
 {
@@ -431,13 +443,25 @@ void cv::gpu::SoftCascade::detectMultiScale(const GpuMat& colored, const GpuMat&
     CV_Assert(colored.cols == 640 && colored.rows == 480);
 
     Filds& flds = *filds;
+
+#if defined USE_REFERENCE_VALUES
+    cudaMemset(flds.hogluv.data, 0, flds.hogluv.step * flds.hogluv.rows);
+    cv::FileStorage imgs("/home/kellan/testInts.xml", cv::FileStorage::READ);
+    char buff[33];
+
+    for(int i = 0; i < Filds::HOG_LUV_BINS; ++i)
+    {
+        cv::Mat channel;
+        imgs[std::string("channel") + itoa(i, buff, 10)] >> channel;
+        GpuMat gchannel(flds.hogluv, cv::Rect(0, 121 * i, 161, 121));
+        gchannel.upload(channel);
+    }
+#else
     GpuMat& dmem = flds.dmem;
     cudaMemset(dmem.data, 0, dmem.step * dmem.rows);
     GpuMat& shrunk = flds.shrunk;
     int w = shrunk.cols;
     int h = colored.rows / flds.storage.shrinkage;
-
-    cudaStream_t stream = StreamAccessor::getStream(s);
 
     std::vector<GpuMat> splited;
     for(int i = 0; i < 3; ++i)
@@ -468,9 +492,6 @@ void cv::gpu::SoftCascade::detectMultiScale(const GpuMat& colored, const GpuMat&
 
     GpuMat plane(dmem, cv::Rect(0, 0, colored.cols, colored.rows * Filds::HOG_LUV_BINS));
     cv::gpu::resize(plane, flds.shrunk, cv::Size(), 0.25, 0.25, CV_INTER_AREA);
-    // cv::Mat cpu(plane);
-    // cv::imshow("channels", cpu);
-    // cv::waitKey(0);
 
     // fer debug purpose
     // cudaMemset(flds.hogluv.data, 0, flds.hogluv.step * flds.hogluv.rows);
@@ -482,6 +503,9 @@ void cv::gpu::SoftCascade::detectMultiScale(const GpuMat& colored, const GpuMat&
         cv::gpu::integralBuffered(channel, sum, flds.integralBuffer);
     }
 
+#endif
+
+    cudaStream_t stream = StreamAccessor::getStream(s);
     // detection
     flds.detect(objects, stream);
 

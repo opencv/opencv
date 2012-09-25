@@ -102,8 +102,8 @@ struct Cascade
         const cv::gpu::PtrStepSzf& lvs, const cv::gpu::PtrStepSzb& fts, const cv::gpu::PtrStepSzb& lls)
     : octaves(octs), stages(sts), nodes(nds), leaves(lvs), features(fts), levels(lls) {}
 
-    void detect(const cv::gpu::PtrStepSzb& hogluv, cv::gpu::PtrStepSz<uchar4> objects, cudaStream_t stream) const;
-    void __device detectAt(const uchar* __restrict__ hogluv, const int pitch, PtrStepSz<uchar4>& objects) const;
+    void detect(const cv::gpu::PtrStepSzi& hogluv, cv::gpu::PtrStepSz<uchar4> objects, cudaStream_t stream) const;
+    void __device detectAt(const int* __restrict__ hogluv, const int pitch, PtrStepSz<uchar4>& objects) const;
     float __device rescale(const icf::Level& level, uchar4& scaledRect,
                            const int channel, const float threshold) const;
 
