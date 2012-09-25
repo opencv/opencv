@@ -47,8 +47,8 @@
 #include <vector>
 #include <string>
 #include <iostream>
-#include <string>
 #include <cstdio>
+#include <stdarg.h>
 
 namespace {
 
@@ -60,6 +60,13 @@ char *itoa(long i, char* s, int /*dummy_radix*/)
 
 // used for noisy printfs
 // #define WITH_DEBUG_OUT
+
+#if defined WITH_DEBUG_OUT
+# define dprintf(format, ...) \
+            do { printf(format, __VA_ARGS__); } while (0)
+#else
+# define dprintf(format, ...)
+#endif
 
 struct Octave
 {
@@ -169,9 +176,6 @@ struct CascadeIntrinsics
     static float getFor(int channel, float scaling)
     {
         CV_Assert(channel < 10);
-#if defined WITH_DEBUG_OUT
-        printf("QQQQQQQQQQQQQQQq: %f %f\n", scaling, fabs(scaling - 1.f));
-#endif
 
         if (fabs(scaling - 1.f) < FLT_EPSILON)
         // if (scaling == 1.f)
@@ -193,9 +197,7 @@ struct CascadeIntrinsics
         float a = A[(int)(scaling >= 1)][(int)(channel > 6)];
         float b = B[(int)(scaling >= 1)][(int)(channel > 6)];
 
-#if defined WITH_DEBUG_OUT
-        printf("!!! scaling: %f %f %f %f\n", scaling, a, b, a * pow(scaling, b));
-#endif
+        dprintf("scaling: %f %f %f %f\n", scaling, a, b, a * pow(scaling, b));
         return a * pow(scaling, b);
     }
 };
@@ -269,6 +271,7 @@ struct Decimate {
 
 };
 
+// use previous stored integrals for regression testing
 // #define USE_REFERENCE_VALUES
 
 struct ChannelStorage
@@ -279,14 +282,14 @@ struct ChannelStorage
     enum {HOG_BINS = 6, HOG_LUV_BINS = 10};
 
     ChannelStorage() {}
-    ChannelStorage(cv::Mat& colored, int shr) : shrinkage(shr)
+    ChannelStorage(const cv::Mat& colored, int shr) : shrinkage(shr)
     {
         hog.clear();
         Decimate<uchar> decimate(shr);
 
 #if defined USE_REFERENCE_VALUES
-        cv::FileStorage imgs("/home/kellan/testInts.xml", cv::FileStorage::READ);
         char buff[33];
+        cv::FileStorage imgs("/home/kellan/testInts.xml", cv::FileStorage::READ);
 
         for(int i = 0; i < HOG_LUV_BINS; ++i)
         {
@@ -310,10 +313,10 @@ struct ChannelStorage
         // shrink and integrate
         for (int i = 0; i < (int)splited.size(); i++)
         {
-             cv::Mat shrunk, sum;
-             decimate(splited[i], shrunk);
-             cv::integral(shrunk, sum, cv::noArray(), CV_32S);
-             luvs.push_back(sum);
+            cv::Mat shrunk, sum;
+            decimate(splited[i], shrunk);
+            cv::integral(shrunk, sum, cv::noArray(), CV_32S);
+            luvs.push_back(sum);
         }
 
         // convert to grey
@@ -353,12 +356,12 @@ struct ChannelStorage
         cv::integral(shrMag, mag, cv::noArray(), CV_32S);
 
         // create hog channels
-        angle /= 60;
+        angle /= 60.f;
 
         std::vector<cv::Mat> hist;
-        for (int bin = 0; bin < 6; ++bin)
+        for (int bin = 0; bin < HOG_BINS; ++bin)
         {
-            hist.push_back(cv::Mat(colored.rows, colored.cols, CV_8UC1));
+            hist.push_back(cv::Mat::zeros(saturatedMag.rows, saturatedMag.cols, CV_8UC1));
         }
 
         for (int y = 0; y < saturatedMag.rows; ++y)
@@ -375,7 +378,6 @@ struct ChannelStorage
         for(int i = 0; i < HOG_BINS; ++i)
         {
             cv::Mat shrunk, sum;
-
             decimate(hist[i], shrunk);
             cv::integral(shrunk, sum, cv::noArray(), CV_32S);
             hog.push_back(sum);
@@ -385,7 +387,6 @@ struct ChannelStorage
         hog.insert(hog.end(), luvs.begin(), luvs.end());
         CV_Assert(hog.size() == 10);
 #endif
-        // exit(10);
     }
 
     float get(const int x, const int y, const int channel, const cv::Rect& area) const
@@ -393,26 +394,23 @@ struct ChannelStorage
         CV_Assert(channel < HOG_LUV_BINS);
         const cv::Mat m = hog[channel];
 
-#if defined WITH_DEBUG_OUT
-        printf("feature box %d %d %d %d ", area.x, area.y, area.width, area.height);
-        printf("get for channel %d\n", channel);
-        printf("!! %d\n", m.depth());
+        dprintf("feature box %d %d %d %d ", area.x, area.y, area.width, area.height);
+        dprintf("get for channel %d\n", channel);
+        dprintf("!! %d\n", m.depth());
 
-        printf("extract feature for: [%d %d] [%d %d] [%d %d] [%d %d]\n",
+        dprintf("extract feature for: [%d %d] [%d %d] [%d %d] [%d %d]\n",
             x + area.x, y + area.y,  x + area.width,y + area.y,  x + area.width,y + area.height,
             x + area.x, y + area.height);
 
-        printf("at point %d %d with offset %d\n", x, y, 0);
-#endif
+        dprintf("at point %d %d with offset %d\n", x, y, 0);
 
         int a = m.ptr<int>(y + area.y)[x + area.x];
         int b = m.ptr<int>(y + area.y)[x + area.width];
         int c = m.ptr<int>(y + area.height)[x + area.width];
         int d = m.ptr<int>(y + area.height)[x + area.x];
 
-#if defined WITH_DEBUG_OUT
-        printf("    retruved integral values: %d %d %d %d\n", a, b, c, d);
-#endif
+        dprintf("    retruved integral values: %d %d %d %d\n", a, b, c, d);
+
         return (a - b + c - d);
     }
 };
@@ -444,12 +442,10 @@ struct cv::SoftCascade::Filds
         float scaling = CascadeIntrinsics::getFor(feature.channel, relScale);
         scaledRect = feature.rect;
 
-#if defined WITH_DEBUG_OUT
-        printf("feature %d box %d %d %d %d\n", feature.channel, scaledRect.x, scaledRect.y,
+        dprintf("feature %d box %d %d %d %d\n", feature.channel, scaledRect.x, scaledRect.y,
         scaledRect.width, scaledRect.height);
 
-        std::cout << "rescale: " << feature.channel << " " << relScale << " " << scaling << std::endl;
-#endif
+        dprintf("rescale: %d %f %f\n",feature.channel, relScale, scaling);
 
         float farea = (scaledRect.width - scaledRect.x) * (scaledRect.height - scaledRect.y);
         // rescale
@@ -458,13 +454,8 @@ struct cv::SoftCascade::Filds
         scaledRect.width  = cvRound(relScale * scaledRect.width);
         scaledRect.height = cvRound(relScale * scaledRect.height);
 
-#if defined WITH_DEBUG_OUT
-        printf("feature %d box %d %d %d %d\n", feature.channel, scaledRect.x, scaledRect.y,
+        dprintf("feature %d box %d %d %d %d\n", feature.channel, scaledRect.x, scaledRect.y,
         scaledRect.width, scaledRect.height);
-
-        std::cout << " new rect: " << scaledRect.x << " " << scaledRect.y
-        << " " << scaledRect.width << " " << scaledRect.height << " ";
-#endif
 
         float sarea = (scaledRect.width - scaledRect.x) * (scaledRect.height - scaledRect.y);
 
@@ -474,20 +465,14 @@ struct cv::SoftCascade::Filds
             const float expected_new_area = farea * relScale * relScale;
             approx = expected_new_area / sarea;
 
-#if defined WITH_DEBUG_OUT
-            std::cout << " rel areas " << expected_new_area << " " << sarea << std::endl;
-#endif
-
+            dprintf(" rel areas %f %f\n", expected_new_area, sarea);
         }
 
         // compensation areas rounding
         float rootThreshold = threshold / approx;
         rootThreshold *= scaling;
 
-#if defined WITH_DEBUG_OUT
-        std::cout << "approximation " << approx << " " << threshold << " -> " << rootThreshold
-        << " " << scaling << std::endl;
-#endif
+        dprintf("approximation %f %f -> %f %f\n", approx, threshold, rootThreshold, scaling);
 
         return rootThreshold;
     }
@@ -495,26 +480,21 @@ struct cv::SoftCascade::Filds
     void detectAt(const Level& level, const int dx, const int dy, const ChannelStorage& storage,
                   std::vector<Object>& detections) const
     {
-#if defined WITH_DEBUG_OUT
-        std::cout << "detect at: " << dx << " " << dy << std::endl;
-#endif
+        dprintf("detect at: %d %d\n", dx, dy);
+
         float detectionScore = 0.f;
 
         const Octave& octave = *(level.octave);
         int stBegin = octave.index * octave.stages, stEnd = stBegin + octave.stages;
 
-#if defined WITH_DEBUG_OUT
-        std::cout << "  octave stages: " << stBegin << " to " << stEnd << " index " << octave.index << " "
-        << octave.scale << " level " << level.origScale << std::endl;
-#endif
+        dprintf("  octave stages: %d to %d index %d %f level %f\n",
+            stBegin, stEnd, octave.index, octave.scale, level.origScale);
 
         int st = stBegin;
         for(; st < stEnd; ++st)
         {
 
-#if defined WITH_DEBUG_OUT
-            printf("index: %d\n", st);
-#endif
+            dprintf("index: %d\n", st);
 
             const Stage& stage = stages[st];
             {
@@ -529,15 +509,11 @@ struct cv::SoftCascade::Filds
 
                 float sum = storage.get(dx, dy, feature.channel, scaledRect);
 
-#if defined WITH_DEBUG_OUT
-                printf("root feature %d %f\n",feature.channel, sum);
-#endif
+                dprintf("root feature %d %f\n",feature.channel, sum);
 
                 int next = (sum >= threshold)? 2 : 1;
 
-#if defined WITH_DEBUG_OUT
-                printf("go: %d (%f >= %f)\n\n" ,next, sum, threshold);
-#endif
+                dprintf("go: %d (%f >= %f)\n\n" ,next, sum, threshold);
 
                 // leaves
                 const Node& leaf = nodes[nId + next];
@@ -549,23 +525,24 @@ struct cv::SoftCascade::Filds
 
                 int lShift = (next - 1) * 2 + ((sum >= threshold) ? 1 : 0);
                 float impact = leaves[(st * 4) + lShift];
-#if defined WITH_DEBUG_OUT
-                printf("decided: %d (%f >= %f) %d %f\n\n" ,next, sum, threshold, lShift, impact);
-#endif
+
+                dprintf("decided: %d (%f >= %f) %d %f\n\n" ,next, sum, threshold, lShift, impact);
+
                 detectionScore += impact;
             }
 
+            dprintf("extracted stage:\n");
+            dprintf("ct %f\n", stage.threshold);
+            dprintf("computed score %f\n\n", detectionScore);
+
 #if defined WITH_DEBUG_OUT
-            printf("extracted stage:\n");
-            printf("ct %f\n", stage.threshold);
-            printf("computed score %f\n\n", detectionScore);
             if (st - stBegin > 50   ) break;
 #endif
 
             if (detectionScore <= stage.threshold) break;
         }
 
-        printf("x %d y %d: %d\n", dx, dy, st - stBegin);
+        dprintf("x %d y %d: %d\n", dx, dy, st - stBegin);
 
         if (st == stEnd)
         {
@@ -793,7 +770,7 @@ void cv::SoftCascade::detectMultiScale(const Mat& image, const std::vector<cv::R
     const Filds& fld = *filds;
 
     cv::Mat image1;
-    cv::cvtColor(image, image1, CV_RGB2RGBA);
+    cv::cvtColor(image, image1, CV_BGR2RGB);
 
 #if defined DEBUG_STORE_IMAGES
     cv::FileStorage fs("/home/kellan/opencvInputImage.xml", cv::FileStorage::WRITE);
@@ -812,8 +789,11 @@ void cv::SoftCascade::detectMultiScale(const Mat& image, const std::vector<cv::R
 
 #endif
 
+    cv::imshow("!!", image1);
+    cv::waitKey(0);
+
     // create integrals
-    ChannelStorage storage(image1, fld.shrinkage);
+    ChannelStorage storage(image, fld.shrinkage);
 
     // object candidates
     std::vector<Object> detections;
@@ -826,6 +806,8 @@ void cv::SoftCascade::detectMultiScale(const Mat& image, const std::vector<cv::R
 
 #if defined WITH_DEBUG_OUT
         std::cout << "================================ " << l++ << std::endl;
+#else
+    (void)l;
 #endif
         // int dx = 79; int dy = 76;
         for (int dy = 0; dy < level.workRect.height; ++dy)
@@ -834,9 +816,7 @@ void cv::SoftCascade::detectMultiScale(const Mat& image, const std::vector<cv::R
             {
                 fld.detectAt(level, dx, dy, storage, detections);
                 total++;
-                // break;
             }
-            // break;
         }
     cv::Mat out = image.clone();
 
