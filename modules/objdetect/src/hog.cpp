@@ -939,12 +939,13 @@ void HOGDescriptor::detect(const Mat& img, vector<Point>& hits, double hitThresh
     detect(img, hits, weightsV, hitThreshold, winStride, padding, locations);
 }
 
-struct HOGInvoker
+class HOGInvoker : public ParallelLoopBody
 {
+public:
     HOGInvoker( const HOGDescriptor* _hog, const Mat& _img,
                 double _hitThreshold, Size _winStride, Size _padding,
-                const double* _levelScale, ConcurrentRectVector* _vec, 
-                ConcurrentDoubleVector* _weights=0, ConcurrentDoubleVector* _scales=0 ) 
+                const double* _levelScale, std::vector<Rect> * _vec, Mutex* _mtx,
+                std::vector<double>* _weights=0, std::vector<double>* _scales=0 )
     {
         hog = _hog;
         img = _img;
@@ -955,11 +956,12 @@ struct HOGInvoker
         vec = _vec;
         weights = _weights;
         scales = _scales;
+        mtx = _mtx;
     }
 
-    void operator()( const BlockedRange& range ) const
+    void operator()( const Range& range ) const
     {
-        int i, i1 = range.begin(), i2 = range.end();
+        int i, i1 = range.start, i2 = range.end;
         double minScale = i1 > 0 ? levelScale[i1] : i2 > 1 ? levelScale[i1+1] : std::max(img.cols, img.rows);
         Size maxSz(cvCeil(img.cols/minScale), cvCeil(img.rows/minScale));
         Mat smallerImgBuf(maxSz, img.type());
@@ -977,23 +979,29 @@ struct HOGInvoker
                 resize(img, smallerImg, sz);
             hog->detect(smallerImg, locations, hitsWeights, hitThreshold, winStride, padding);
             Size scaledWinSize = Size(cvRound(hog->winSize.width*scale), cvRound(hog->winSize.height*scale));
+
+            mtx->lock();
             for( size_t j = 0; j < locations.size(); j++ )
             {
                 vec->push_back(Rect(cvRound(locations[j].x*scale),
                                     cvRound(locations[j].y*scale),
                                     scaledWinSize.width, scaledWinSize.height));
-                if (scales) {
+                if (scales)
+                {
                     scales->push_back(scale);
                 }
             }
-            
+            mtx->unlock();
+
             if (weights && (!hitsWeights.empty()))
             {
+                mtx->lock();
                 for (size_t j = 0; j < locations.size(); j++)
                 {
                     weights->push_back(hitsWeights[j]);
                 }
-            }        
+                mtx->unlock();
+            }
         }
     }
 
@@ -1003,9 +1011,10 @@ struct HOGInvoker
     Size winStride;
     Size padding;
     const double* levelScale;
-    ConcurrentRectVector* vec;
-    ConcurrentDoubleVector* weights;
-    ConcurrentDoubleVector* scales;
+    std::vector<Rect>* vec;
+    std::vector<double>* weights;
+    std::vector<double>* scales;
+    Mutex* mtx;
 };
 
 
@@ -1030,13 +1039,14 @@ void HOGDescriptor::detectMultiScale(
     levels = std::max(levels, 1);
     levelScale.resize(levels);
 
-    ConcurrentRectVector allCandidates;
-    ConcurrentDoubleVector tempScales;
-    ConcurrentDoubleVector tempWeights;
-    vector<double> foundScales;
-    
-    parallel_for(BlockedRange(0, (int)levelScale.size()),
-                 HOGInvoker(this, img, hitThreshold, winStride, padding, &levelScale[0], &allCandidates, &tempWeights, &tempScales));
+    std::vector<Rect> allCandidates;
+    std::vector<double> tempScales;
+    std::vector<double> tempWeights;
+    std::vector<double> foundScales;
+    Mutex mtx;
+
+    parallel_for_(Range(0, (int)levelScale.size()),
+                 HOGInvoker(this, img, hitThreshold, winStride, padding, &levelScale[0], &allCandidates, &mtx, &tempWeights, &tempScales));
 
     std::copy(tempScales.begin(), tempScales.end(), back_inserter(foundScales));
     foundLocations.clear();
@@ -2382,12 +2392,13 @@ vector<float> HOGDescriptor::getDaimlerPeopleDetector()
         return vector<float>(detector, detector + sizeof(detector)/sizeof(detector[0]));
 }
 
-struct HOGConfInvoker
+class HOGConfInvoker : public ParallelLoopBody
 {
+public:
        HOGConfInvoker( const HOGDescriptor* _hog, const Mat& _img,
                                double _hitThreshold, Size _padding,
                                std::vector<DetectionROI>* locs,
-                               ConcurrentRectVector* _vec )
+                               std::vector<Rect>* _vec, Mutex* _mtx )
        {
                hog = _hog;
                img = _img;
@@ -2395,11 +2406,12 @@ struct HOGConfInvoker
                padding = _padding;
                locations = locs;
                vec = _vec;
+               mtx = _mtx;
        }
 
-       void operator()( const BlockedRange& range ) const
+       void operator()( const Range& range ) const
        {
-               int i, i1 = range.begin(), i2 = range.end();
+               int i, i1 = range.start, i2 = range.end;
 
                Size maxSz(cvCeil(img.cols/(*locations)[0].scale), cvCeil(img.rows/(*locations)[0].scale));
                Mat smallerImgBuf(maxSz, img.type());
@@ -2419,10 +2431,14 @@ struct HOGConfInvoker
 
                        hog->detectROI(smallerImg, (*locations)[i].locations, dets, (*locations)[i].confidences, hitThreshold, Size(), padding);
                        Size scaledWinSize = Size(cvRound(hog->winSize.width*scale), cvRound(hog->winSize.height*scale));
+                       mtx->lock();
                        for( size_t j = 0; j < dets.size(); j++ )
+                       {
                                vec->push_back(Rect(cvRound(dets[j].x*scale),
                                                                        cvRound(dets[j].y*scale),
                                                                        scaledWinSize.width, scaledWinSize.height));
+                       }
+                       mtx->unlock();
                }
        }
 
@@ -2431,7 +2447,8 @@ struct HOGConfInvoker
        double hitThreshold;
        std::vector<DetectionROI>* locations;
        Size padding;
-       ConcurrentRectVector* vec;
+       std::vector<Rect>* vec;
+       Mutex* mtx;
 };
 
 void HOGDescriptor::detectROI(const cv::Mat& img, const vector<cv::Point> &locations,
@@ -2516,10 +2533,11 @@ void HOGDescriptor::detectMultiScaleROI(const cv::Mat& img,
                                                            double hitThreshold,
                                                            int groupThreshold) const
 {
-   ConcurrentRectVector allCandidates;
+   std::vector<Rect> allCandidates;
+   Mutex mtx;
 
-   parallel_for(BlockedRange(0, (int)locations.size()),
-                        HOGConfInvoker(this, img, hitThreshold, Size(8, 8), &locations, &allCandidates));
+   parallel_for_(Range(0, (int)locations.size()),
+                        HOGConfInvoker(this, img, hitThreshold, Size(8, 8), &locations, &allCandidates, &mtx));
 
    foundLocations.resize(allCandidates.size());
    std::copy(allCandidates.begin(), allCandidates.end(), foundLocations.begin());

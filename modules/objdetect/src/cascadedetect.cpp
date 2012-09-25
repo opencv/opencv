@@ -943,10 +943,11 @@ void CascadeClassifier::setFaceDetectionMaskGenerator()
 #endif
 }
 
-struct CascadeClassifierInvoker
+class CascadeClassifierInvoker : public ParallelLoopBody
 {
+public:
     CascadeClassifierInvoker( CascadeClassifier& _cc, Size _sz1, int _stripSize, int _yStep, double _factor,
-        ConcurrentRectVector& _vec, vector<int>& _levels, vector<double>& _weights, bool outputLevels, const Mat& _mask)
+        vector<Rect>& _vec, vector<int>& _levels, vector<double>& _weights, bool outputLevels, const Mat& _mask, Mutex* _mtx)
     {
         classifier = &_cc;
         processingRectSize = _sz1;
@@ -954,19 +955,20 @@ struct CascadeClassifierInvoker
         yStep = _yStep;
         scalingFactor = _factor;
         rectangles = &_vec;
-        rejectLevels  = outputLevels ? &_levels : 0;
-        levelWeights  = outputLevels ? &_weights : 0;
-        mask=_mask;
+        rejectLevels = outputLevels ? &_levels : 0;
+        levelWeights = outputLevels ? &_weights : 0;
+        mask = _mask;
+        mtx = _mtx;
     }
 
-    void operator()(const BlockedRange& range) const
+    void operator()(const Range& range) const
     {
         Ptr<FeatureEvaluator> evaluator = classifier->featureEvaluator->clone();
 
         Size winSize(cvRound(classifier->data.origWinSize.width * scalingFactor), cvRound(classifier->data.origWinSize.height * scalingFactor));
 
-        int y1 = range.begin() * stripSize;
-        int y2 = min(range.end() * stripSize, processingRectSize.height);
+        int y1 = range.start * stripSize;
+        int y2 = min(range.end * stripSize, processingRectSize.height);
         for( int y = y1; y < y2; y += yStep )
         {
             for( int x = 0; x < processingRectSize.width; x += yStep )
@@ -988,14 +990,20 @@ struct CascadeClassifierInvoker
                         result =  -(int)classifier->data.stages.size();
                     if( classifier->data.stages.size() + result < 4 )
                     {
+                        mtx->lock();
                         rectangles->push_back(Rect(cvRound(x*scalingFactor), cvRound(y*scalingFactor), winSize.width, winSize.height));
+                        mtx->unlock();
                         rejectLevels->push_back(-result);
                         levelWeights->push_back(gypWeight);
                     }
                 }
                 else if( result > 0 )
+                {
+                    mtx->lock();
                     rectangles->push_back(Rect(cvRound(x*scalingFactor), cvRound(y*scalingFactor),
                                                winSize.width, winSize.height));
+                    mtx->unlock();
+                }
                 if( result == 0 )
                     x += yStep;
             }
@@ -1003,13 +1011,14 @@ struct CascadeClassifierInvoker
     }
 
     CascadeClassifier* classifier;
-    ConcurrentRectVector* rectangles;
+    vector<Rect>* rectangles;
     Size processingRectSize;
     int stripSize, yStep;
     double scalingFactor;
     vector<int> *rejectLevels;
     vector<double> *levelWeights;
     Mat mask;
+    Mutex* mtx;
 };
 
 struct getRect { Rect operator ()(const CvAvgComp& e) const { return e.rect; } };
@@ -1031,22 +1040,23 @@ bool CascadeClassifier::detectSingleScale( const Mat& image, int stripCount, Siz
         currentMask=maskGenerator->generateMask(image);
     }
 
-    ConcurrentRectVector concurrentCandidates;
+    vector<Rect> candidatesVector;
     vector<int> rejectLevels;
     vector<double> levelWeights;
+    Mutex mtx;
     if( outputRejectLevels )
     {
-        parallel_for(BlockedRange(0, stripCount), CascadeClassifierInvoker( *this, processingRectSize, stripSize, yStep, factor,
-            concurrentCandidates, rejectLevels, levelWeights, true, currentMask));
+        parallel_for_(Range(0, stripCount), CascadeClassifierInvoker( *this, processingRectSize, stripSize, yStep, factor,
+            candidatesVector, rejectLevels, levelWeights, true, currentMask, &mtx));
         levels.insert( levels.end(), rejectLevels.begin(), rejectLevels.end() );
         weights.insert( weights.end(), levelWeights.begin(), levelWeights.end() );
     }
     else
     {
-         parallel_for(BlockedRange(0, stripCount), CascadeClassifierInvoker( *this, processingRectSize, stripSize, yStep, factor,
-            concurrentCandidates, rejectLevels, levelWeights, false, currentMask));
+         parallel_for_(Range(0, stripCount), CascadeClassifierInvoker( *this, processingRectSize, stripSize, yStep, factor,
+            candidatesVector, rejectLevels, levelWeights, false, currentMask, &mtx));
     }
-    candidates.insert( candidates.end(), concurrentCandidates.begin(), concurrentCandidates.end() );
+    candidates.insert( candidates.end(), candidatesVector.begin(), candidatesVector.end() );
 
 #if defined (LOG_CASCADE_STATISTIC)
     logger.write();
