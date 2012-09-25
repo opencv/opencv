@@ -46,58 +46,39 @@ The references are:
 namespace cv
 {
 
-void makeOffsets(int pixel[25], int row_stride, int patternSize)
+void makeOffsets(int pixel[25], int rowStride, int patternSize)
 {
-    CV_Assert(pixel != 0);
-    switch(patternSize) {
-      case 16:
-        pixel[0] = 0 + row_stride * 3;
-        pixel[1] = 1 + row_stride * 3;
-        pixel[2] = 2 + row_stride * 2;
-        pixel[3] = 3 + row_stride * 1;
-        pixel[4] = 3 + row_stride * 0;
-        pixel[5] = 3 + row_stride * -1;
-        pixel[6] = 2 + row_stride * -2;
-        pixel[7] = 1 + row_stride * -3;
-        pixel[8] = 0 + row_stride * -3;
-        pixel[9] = -1 + row_stride * -3;
-        pixel[10] = -2 + row_stride * -2;
-        pixel[11] = -3 + row_stride * -1;
-        pixel[12] = -3 + row_stride * 0;
-        pixel[13] = -3 + row_stride * 1;
-        pixel[14] = -2 + row_stride * 2;
-        pixel[15] = -1 + row_stride * 3;
-        break;
-      case 12:
-        pixel[0] = 0 + row_stride * 2;
-        pixel[1] = 1 + row_stride * 2;
-        pixel[2] = 2 + row_stride * 1;
-        pixel[3] = 2 + row_stride * 0;
-        pixel[4] = 2 + row_stride * -1;
-        pixel[5] = 1 + row_stride * -2;
-        pixel[6] = 0 + row_stride * -2;
-        pixel[7] = -1 + row_stride * -2;
-        pixel[8] = -2 + row_stride * -1;
-        pixel[9] = -2 + row_stride * 0;
-        pixel[10] = -2 + row_stride * 1;
-        pixel[11] = -1 + row_stride * 2;
-        break;
-      case 8:
-        pixel[0] = 0 + row_stride * 1;
-        pixel[1] = 1 + row_stride * 1;
-        pixel[2] = 1 + row_stride * 0;
-        pixel[3] = 1 + row_stride * -1;
-        pixel[4] = 0 + row_stride * -1;
-        pixel[5] = -1 + row_stride * -1;
-        pixel[6] = 0 + row_stride * 0;
-        pixel[7] = 1 + row_stride * 1;
-        break;
-    }
-    for(int k = patternSize; k < 25; k++)
-      pixel[k] = pixel[k - patternSize];
+    static const int offsets16[][2] =
+    {
+        {0,  3}, { 1,  3}, { 2,  2}, { 3,  1}, { 3, 0}, { 3, -1}, { 2, -2}, { 1, -3},
+        {0, -3}, {-1, -3}, {-2, -2}, {-3, -1}, {-3, 0}, {-3,  1}, {-2,  2}, {-1,  3}
+    };
+    
+    static const int offsets12[][2] =
+    {
+        {0,  2}, { 1,  2}, { 2,  1}, { 2, 0}, { 2, -1}, { 1, -2},
+        {0, -2}, {-1, -2}, {-2, -1}, {-2, 0}, {-2,  1}, {-1,  2}
+    };
+    
+    static const int offsets8[][2] =
+    {
+        {0, 1},  { 1,  1}, { 1, 0}, { 1, -1},
+        {0, -1}, {-1, -1}, {-1, 0}, {-1,  1}
+    };
+        
+    const int (*offsets)[2] = patternSize == 16 ? offsets16 :
+        patternSize == 12 ? offsets12 : patternSize == 8 ? offsets8 : 0;
+        
+    CV_Assert(pixel != 0 && offsets);
+    
+    int k = 0;
+    for( ; k < patternSize; k++ )
+        pixel[k] = offsets[k][0] + offsets[k][1]*rowStride;
+    for( ; k < 25; k++ )
+        pixel[k] = pixel[k - patternSize];
 }
 
-/*static void testCorner(const uchar* ptr, const int pixel[], int K, int N, int threshold) {
+static void testCorner(const uchar* ptr, const int pixel[], int K, int N, int threshold) {
     // check that with the computed "threshold" the pixel is still a corner
     // and that with the increased-by-1 "threshold" the pixel is not a corner anymore
     for( int delta = 0; delta <= 1; delta++ )
@@ -129,12 +110,12 @@ void makeOffsets(int pixel[25], int row_stride, int patternSize)
         CV_Assert( (delta == 0 && std::max(c0, c1) > K) ||
                    (delta == 1 && std::max(c0, c1) <= K) );
     }
-}*/
+}
 
 template<>
 int cornerScore<16>(const uchar* ptr, const int pixel[], int threshold)
 {
-    const int K = 8, N = 16 + K + 1;
+    const int K = 8, N = K*3 + 1;
     int k, v = ptr[0];
     short d[N];
     for( k = 0; k < N; k++ )
@@ -224,7 +205,7 @@ int cornerScore<16>(const uchar* ptr, const int pixel[], int threshold)
 template<>
 int cornerScore<12>(const uchar* ptr, const int pixel[], int threshold)
 {
-    const int K = 6, N = 12 + K + 1;
+    const int K = 6, N = K*3 + 1;
     int k, v = ptr[0];
     short d[N];
     for( k = 0; k < N; k++ )
@@ -304,7 +285,7 @@ int cornerScore<12>(const uchar* ptr, const int pixel[], int threshold)
 template<>
 int cornerScore<8>(const uchar* ptr, const int pixel[], int threshold)
 {
-    const int K = 4, N = 8 + K + 1;
+    const int K = 4, N = K*3 + 1;
     int k, v = ptr[0];
     short d[N];
     for( k = 0; k < N; k++ )

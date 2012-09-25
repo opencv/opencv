@@ -61,7 +61,7 @@ void CV_FastTest::run( int )
   for(int type=0; type <= 2; ++type) {
     Mat image1 = imread(string(ts->get_data_path()) + "inpaint/orig.jpg");
     Mat image2 = imread(string(ts->get_data_path()) + "cameracalibration/chess9.jpg");
-    string xml = string(ts->get_data_path()) + "fast/result.xml";
+    string xml = string(ts->get_data_path()) + format("fast/result%d.xml", type);
 
     if (image1.empty() || image2.empty())
     {
@@ -76,7 +76,7 @@ void CV_FastTest::run( int )
     vector<KeyPoint> keypoints1;
     vector<KeyPoint> keypoints2;
     FAST(gray1, keypoints1, 30, true, type);
-    FAST(gray2, keypoints2, 30, true, type);
+    FAST(gray2, keypoints2, (type > 0 ? 30 : 20), true, type);
 
     for(size_t i = 0; i < keypoints1.size(); ++i)
     {
@@ -97,27 +97,32 @@ void CV_FastTest::run( int )
     if (!fs.isOpened())
     {
         fs.open(xml, FileStorage::WRITE);
+        if (!fs.isOpened())
+        {
+            ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_TEST_DATA);
+            return;
+        }
         fs << "exp_kps1" << kps1;
         fs << "exp_kps2" << kps2;
         fs.release();
-    }
-
-    if (!fs.isOpened())
         fs.open(xml, FileStorage::READ);
+        if (!fs.isOpened())
+        {
+            ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_TEST_DATA);
+            return;
+        }
+    }
 
     Mat exp_kps1, exp_kps2;
     read( fs["exp_kps1"], exp_kps1, Mat() );
     read( fs["exp_kps2"], exp_kps2, Mat() );
     fs.release();
 
-    // We only have testing data for 9_16 but it actually works equally well for 7_12
-    if ((type==1) || (type==2)){
-        if ( exp_kps1.size != kps1.size || 0 != norm(exp_kps1, kps1, NORM_L2) ||
-             exp_kps2.size != kps2.size || 0 != norm(exp_kps2, kps2, NORM_L2))
-        {
-            ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
-            return;
-        }
+    if ( exp_kps1.size != kps1.size || 0 != norm(exp_kps1, kps1, NORM_L2) ||
+         exp_kps2.size != kps2.size || 0 != norm(exp_kps2, kps2, NORM_L2))
+    {
+        ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
+        return;
     }
 
     /*cv::namedWindow("Img1"); cv::imshow("Img1", image1);

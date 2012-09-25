@@ -89,7 +89,7 @@ void FAST_t(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bo
         if( i < img.rows - 3 )
         {
             j = 3;
-    #if CV_SSE2
+    #if 0 //CV_SSE2
             for(; j < img.cols - 16 - 3; j += 16, ptr += 16)
             {
                 __m128i m0, m1;
