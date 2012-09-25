@@ -381,7 +381,16 @@ Stitcher::Status Stitcher::matchImages()
         if (rois_.empty())
             (*features_finder_)(img, features_[i]);
         else
-            (*features_finder_)(img, features_[i], rois_[i]);
+        {
+            vector<Rect> rois(rois_[i].size());
+            for (size_t j = 0; j < rois_[i].size(); ++j)
+            {
+                Point tl(cvRound(rois_[i][j].x * work_scale_), cvRound(rois_[i][j].y * work_scale_));
+                Point br(cvRound(rois_[i][j].br().x * work_scale_), cvRound(rois_[i][j].br().y * work_scale_));
+                rois[j] = Rect(tl, br);
+            }
+            (*features_finder_)(img, features_[i], rois);
+        }
         features_[i].img_idx = (int)i;
         LOGLN("Features in image #" << i+1 << ": " << features_[i].keypoints.size());
 
