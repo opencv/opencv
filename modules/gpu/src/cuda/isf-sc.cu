@@ -47,6 +47,13 @@
 
 //#define LOG_CUDA_CASCADE
 
+#if defined LOG_CUDA_CASCADE
+# define dprintf(format, ...) \
+            do { printf(format, __VA_ARGS__); } while (0)
+#else
+# define dprintf(format, ...)
+#endif
+
 namespace cv { namespace gpu { namespace device {
 
 namespace icf {
@@ -98,10 +105,8 @@ __global__ void detect(const cv::gpu::icf::Cascade cascade, const int* __restric
 float __device icf::Cascade::rescale(const icf::Level& level, uchar4& scaledRect,
                                      const int channel, const float threshold) const
 {
-#if defined LOG_CUDA_CASCADE
-    printf("feature %d box %d %d %d %d\n", channel, scaledRect.x, scaledRect.y, scaledRect.z, scaledRect.w);
-    printf("rescale: %f [%f %f]\n",level.relScale, level.scaling[0], level.scaling[1]);
-#endif
+    dprintf("feature %d box %d %d %d %d\n", channel, scaledRect.x, scaledRect.y, scaledRect.z, scaledRect.w);
+    dprintf("rescale: %f [%f %f]\n",level.relScale, level.scaling[0], level.scaling[1]);
 
     float relScale = level.relScale;
     float farea = (scaledRect.z - scaledRect.x) * (scaledRect.w - scaledRect.y);
@@ -122,19 +127,15 @@ float __device icf::Cascade::rescale(const icf::Level& level, uchar4& scaledRect
         approx = expected_new_area / sarea;
     }
 
-#if defined LOG_CUDA_CASCADE
-    printf("new rect: %d box %d %d %d %d  rel areas %f %f\n", channel,
+    dprintf("new rect: %d box %d %d %d %d  rel areas %f %f\n", channel,
         scaledRect.x, scaledRect.y, scaledRect.z, scaledRect.w, farea * relScale * relScale, sarea);
-#endif
 
     // compensation areas rounding
     float rootThreshold = threshold / approx;
     // printf("    approx %f\n", rootThreshold);
     rootThreshold *= level.scaling[(int)(channel > 6)];
 
-#if defined LOG_CUDA_CASCADE
-    printf("approximation %f %f -> %f %f\n", approx, threshold, rootThreshold, level.scaling[(int)(channel > 6)]);
-#endif
+    dprintf("approximation %f %f -> %f %f\n", approx, threshold, rootThreshold, level.scaling[(int)(channel > 6)]);
 
     return rootThreshold;
 }
@@ -143,14 +144,12 @@ typedef unsigned char uchar;
 float __device get(const int* __restrict__ hogluv, const int pitch,
                    const int x, const int y, int channel, uchar4 area)
 {
-#if defined LOG_CUDA_CASCADE
-    printf("feature box %d %d %d %d ", area.x, area.y, area.z, area.w);
-    printf("get for channel %d\n", channel);
-    printf("extract feature for: [%d %d] [%d %d] [%d %d] [%d %d]\n",
+    dprintf("feature box %d %d %d %d ", area.x, area.y, area.z, area.w);
+    dprintf("get for channel %d\n", channel);
+    dprintf("extract feature for: [%d %d] [%d %d] [%d %d] [%d %d]\n",
         x + area.x, y + area.y,  x + area.z, y + area.y,  x + area.z,y + area.w,
         x + area.x, y + area.w);
-    printf("at point %d %d with offset %d\n", x, y, 0);
-#endif
+    dprintf("at point %d %d with offset %d\n", x, y, 0);
 
     const int* curr = hogluv + ((channel * 121) + y) * pitch;
 
@@ -159,9 +158,7 @@ float __device get(const int* __restrict__ hogluv, const int pitch,
     int c = curr[area.w * pitch + x + area.z];
     int d = curr[area.w * pitch + x + area.x];
 
-#if defined LOG_CUDA_CASCADE
-    printf("    retruved integral values: %d %d %d %d\n", a, b, c, d);
-#endif
+    dprintf("    retruved integral values: %d %d %d %d\n", a, b, c, d);
 
     return (a - b + c - d);
 }
@@ -176,13 +173,11 @@ void __device icf::Cascade::detectAt(const int* __restrict__ hogluv, const int p
     const int x = blockIdx.x * blockDim.x + threadIdx.x;
     // if (x > 0 || y > 0) return;
 
-    Level level = lls[0];
+    Level level = lls[blockIdx.z];
     if (x >= level.workRect.x || y >= level.workRect.y) return;
 
-#if defined LOG_CUDA_CASCADE
-    printf("level: %d (%f %f) [%f %f] (%d %d) (%d %d)\n", level.octave, level.relScale, level.shrScale,
+    dprintf("level: %d (%f %f) [%f %f] (%d %d) (%d %d)\n", level.octave, level.relScale, level.shrScale,
         level.scaling[0], level.scaling[1], level.workRect.x, level.workRect.y, level.objSize.x, level.objSize.y);
-#endif
 
     const Octave octave = ((const Octave*)octaves.ptr())[level.octave];
     // printf("Octave: %d %d %d (%d %d) %f\n", octave.index, octave.stages,
@@ -196,17 +191,15 @@ void __device icf::Cascade::detectAt(const int* __restrict__ hogluv, const int p
     for(; st < stEnd; ++st)
     {
         const float stage = stages(0, st);
-#if defined LOG_CUDA_CASCADE
-        printf("Stage: %f\n", stage);
-#endif
+        dprintf("Stage: %f\n", stage);
         {
             const int nId = st * 3;
 
             // work with root node
             const Node node = ((const Node*)nodes.ptr())[nId];
-#if defined LOG_CUDA_CASCADE
-            printf("Node: %d %f\n", node.feature, node.threshold);
-#endif
+
+            dprintf("Node: %d %f\n", node.feature, node.threshold);
+
             const Feature feature = ((const Feature*)features.ptr())[node.feature];
 
             uchar4 scaledRect = feature.rect;
@@ -214,14 +207,12 @@ void __device icf::Cascade::detectAt(const int* __restrict__ hogluv, const int p
 
             float sum = get(hogluv,pitch, x, y, feature.channel, scaledRect);
 
-#if defined LOG_CUDA_CASCADE
-            printf("root feature %d %f\n",feature.channel, sum);
-#endif
+            dprintf("root feature %d %f\n",feature.channel, sum);
+
             int next = 1 + (int)(sum >= threshold);
 
-#if defined LOG_CUDA_CASCADE
-            printf("go: %d (%f >= %f)\n\n" ,next, sum, threshold);
-#endif
+            dprintf("go: %d (%f >= %f)\n\n" ,next, sum, threshold);
+
             // leaves
             const Node leaf = ((const Node*)nodes.ptr())[nId + next];
             const Feature fLeaf = ((const Feature*)features.ptr())[leaf.feature];
@@ -235,22 +226,17 @@ void __device icf::Cascade::detectAt(const int* __restrict__ hogluv, const int p
 
             detectionScore += impact;
 
-#if defined LOG_CUDA_CASCADE
-            printf("decided: %d (%f >= %f) %d %f\n\n" ,next, sum, threshold, lShift, impact);
-            printf("extracted stage:\n");
-            printf("ct %f\n", stage);
-            printf("computed score %f\n\n", detectionScore);
-            printf("\n\n");
-#endif
-
+            dprintf("decided: %d (%f >= %f) %d %f\n\n" ,next, sum, threshold, lShift, impact);
+            dprintf("extracted stage:\n");
+            dprintf("ct %f\n", stage);
+            dprintf("computed score %f\n\n", detectionScore);
+            dprintf("\n\n");
         }
 
-        if (detectionScore <= stage) break;
+        if (detectionScore <= stage || st - stBegin == 100) break;
     }
 
-#if defined LOG_CUDA_CASCADE
-    // printf("x %d y %d: %d\n", x, y, st - stBegin);
-#endif
+    dprintf("x %d y %d: %d\n", x, y, st - stBegin);
 
     if (st == stEnd)
     {
@@ -264,7 +250,7 @@ void __device icf::Cascade::detectAt(const int* __restrict__ hogluv, const int p
 void icf::Cascade::detect(const cv::gpu::PtrStepSzi& hogluv, PtrStepSz<uchar4> objects, cudaStream_t stream) const
 {
     dim3 block(32, 8, 1);
-    dim3 grid(ChannelStorage::FRAME_WIDTH / 32, ChannelStorage::FRAME_HEIGHT / 8, 1);
+    dim3 grid(ChannelStorage::FRAME_WIDTH / 32, ChannelStorage::FRAME_HEIGHT / 8, 47);
     device::detect<<<grid, block, 0, stream>>>(*this, hogluv, hogluv.step / sizeof(int), objects);
     cudaSafeCall( cudaGetLastError() );
     if (!stream)
