@@ -40,127 +40,127 @@
 //
 //M*/
 
-#include <opencv2/gpu/device/common.hpp>
+// #include <opencv2/gpu/device/common.hpp>
 
-#ifndef __OPENCV_ICF_HPP__
-#define __OPENCV_ICF_HPP__
+// #ifndef __OPENCV_ICF_HPP__
+// #define __OPENCV_ICF_HPP__
 
-#if defined __CUDACC__
-# define __device __device__ __forceinline__
-#else
-# define __device
-#endif
+// #if defined __CUDACC__
+// # define __device __device__ __forceinline__
+// #else
+// # define __device
+// #endif
 
 
-namespace cv { namespace gpu { namespace icf {
+// namespace cv { namespace gpu { namespace icf {
 
-using cv::gpu::PtrStepSzb;
-using cv::gpu::PtrStepSzf;
+// using cv::gpu::PtrStepSzb;
+// using cv::gpu::PtrStepSzf;
 
-typedef unsigned char uchar;
+// typedef unsigned char uchar;
 
-struct __align__(16) Octave
-{
-    ushort index;
-    ushort stages;
-    ushort shrinkage;
-    ushort2 size;
-    float scale;
+// struct __align__(16) Octave
+// {
+//     ushort index;
+//     ushort stages;
+//     ushort shrinkage;
+//     ushort2 size;
+//     float scale;
 
-    Octave(const ushort i, const ushort s, const ushort sh, const ushort2 sz, const float sc)
-    : index(i), stages(s), shrinkage(sh), size(sz), scale(sc) {}
-};
+//     Octave(const ushort i, const ushort s, const ushort sh, const ushort2 sz, const float sc)
+//     : index(i), stages(s), shrinkage(sh), size(sz), scale(sc) {}
+// };
 
-struct __align__(8) Level //is actually 24 bytes
-{
-    int octave;
+// struct __align__(8) Level //is actually 24 bytes
+// {
+//     int octave;
 
-    // float origScale; //not actually used
-    float relScale;
-    float shrScale;   // used for marking detection
-    float scaling[2]; // calculated according to Dollal paper
+//     // float origScale; //not actually used
+//     float relScale;
+//     float shrScale;   // used for marking detection
+//     float scaling[2]; // calculated according to Dollal paper
 
-    // for 640x480 we can not get overflow
-    uchar2 workRect;
-    uchar2 objSize;
+//     // for 640x480 we can not get overflow
+//     uchar2 workRect;
+//     uchar2 objSize;
 
-    Level(int idx, const Octave& oct, const float scale, const int w, const int h)
-    :  octave(idx), relScale(scale / oct.scale), shrScale (relScale / (float)oct.shrinkage)
-    {
-        workRect.x = round(w / (float)oct.shrinkage);
-        workRect.y = round(h / (float)oct.shrinkage);
+//     Level(int idx, const Octave& oct, const float scale, const int w, const int h)
+//     :  octave(idx), relScale(scale / oct.scale), shrScale (relScale / (float)oct.shrinkage)
+//     {
+//         workRect.x = round(w / (float)oct.shrinkage);
+//         workRect.y = round(h / (float)oct.shrinkage);
 
-        objSize.x  = round(oct.size.x * relScale);
-        objSize.y  = round(oct.size.y * relScale);
-    }
-};
+//         objSize.x  = round(oct.size.x * relScale);
+//         objSize.y  = round(oct.size.y * relScale);
+//     }
+// };
 
-struct Cascade
-{
-    Cascade() {}
-    Cascade(const cv::gpu::PtrStepSzb& octs, const cv::gpu::PtrStepSzf& sts, const cv::gpu::PtrStepSzb& nds,
-        const cv::gpu::PtrStepSzf& lvs, const cv::gpu::PtrStepSzb& fts, const cv::gpu::PtrStepSzb& lls)
-    : octaves(octs), stages(sts), nodes(nds), leaves(lvs), features(fts), levels(lls) {}
+// struct Cascade
+// {
+//     Cascade() {}
+//     Cascade(const cv::gpu::PtrStepSzb& octs, const cv::gpu::PtrStepSzf& sts, const cv::gpu::PtrStepSzb& nds,
+//         const cv::gpu::PtrStepSzf& lvs, const cv::gpu::PtrStepSzb& fts, const cv::gpu::PtrStepSzb& lls)
+//     : octaves(octs), stages(sts), nodes(nds), leaves(lvs), features(fts), levels(lls) {}
 
-    void detect(const cv::gpu::PtrStepSzi& hogluv, cv::gpu::PtrStepSz<uchar4> objects, cudaStream_t stream) const;
-    void __device detectAt(const int* __restrict__ hogluv, const int pitch, PtrStepSz<uchar4>& objects) const;
-    float __device rescale(const icf::Level& level, uchar4& scaledRect,
-                           const int channel, const float threshold) const;
+//     void detect(const cv::gpu::PtrStepSzi& hogluv, cv::gpu::PtrStepSz<uchar4> objects, cudaStream_t stream) const;
+//     void __device detectAt(const int* __restrict__ hogluv, const int pitch, PtrStepSz<uchar4>& objects) const;
+//     float __device rescale(const icf::Level& level, uchar4& scaledRect,
+//                            const int channel, const float threshold) const;
 
-    PtrStepSzb octaves;
-    PtrStepSzf stages;
-    PtrStepSzb nodes;
-    PtrStepSzf leaves;
-    PtrStepSzb features;
+//     PtrStepSzb octaves;
+//     PtrStepSzf stages;
+//     PtrStepSzb nodes;
+//     PtrStepSzf leaves;
+//     PtrStepSzb features;
 
-    PtrStepSzb levels;
+//     PtrStepSzb levels;
 
-};
+// };
 
-struct ChannelStorage
-{
-    ChannelStorage(){}
-    ChannelStorage(const cv::gpu::PtrStepSzb& buff, const cv::gpu::PtrStepSzb& shr,
-        const cv::gpu::PtrStepSzb& itg, const int s)
-    : dmem (buff), shrunk(shr), hogluv(itg), shrinkage(s) {}
+// struct ChannelStorage
+// {
+//     ChannelStorage(){}
+//     ChannelStorage(const cv::gpu::PtrStepSzb& buff, const cv::gpu::PtrStepSzb& shr,
+//         const cv::gpu::PtrStepSzb& itg, const int s)
+//     : dmem (buff), shrunk(shr), hogluv(itg), shrinkage(s) {}
 
-    void frame(const cv::gpu::PtrStepSz<uchar3>& rgb, cudaStream_t stream){}
+//     void frame(const cv::gpu::PtrStepSz<uchar3>& rgb, cudaStream_t stream){}
 
-    PtrStepSzb dmem;
-    PtrStepSzb shrunk;
-    PtrStepSzb hogluv;
+//     PtrStepSzb dmem;
+//     PtrStepSzb shrunk;
+//     PtrStepSzb hogluv;
 
-    enum
-    {
-        FRAME_WIDTH        = 640,
-        FRAME_HEIGHT       = 480,
-        TOTAL_SCALES       = 55,
-        CLASSIFIERS        = 5,
-        ORIG_OBJECT_WIDTH  = 64,
-        ORIG_OBJECT_HEIGHT = 128,
-        HOG_BINS           = 6,
-        HOG_LUV_BINS       = 10
-    };
+//     enum
+//     {
+//         FRAME_WIDTH        = 640,
+//         FRAME_HEIGHT       = 480,
+//         TOTAL_SCALES       = 55,
+//         CLASSIFIERS        = 5,
+//         ORIG_OBJECT_WIDTH  = 64,
+//         ORIG_OBJECT_HEIGHT = 128,
+//         HOG_BINS           = 6,
+//         HOG_LUV_BINS       = 10
+//     };
 
-    int shrinkage;
-    static const float magnitudeScaling = 1.f ;// / sqrt(2);
-};
+//     int shrinkage;
+//     static const float magnitudeScaling = 1.f ;// / sqrt(2);
+// };
 
-struct __align__(8) Node
-{
-    int feature;
-    float threshold;
+// struct __align__(8) Node
+// {
+//     int feature;
+//     float threshold;
 
-    Node(const int f, const float t) : feature(f), threshold(t) {}
-};
+//     Node(const int f, const float t) : feature(f), threshold(t) {}
+// };
 
-struct __align__(8) Feature
-{
-    int channel;
-    uchar4 rect;
+// struct __align__(8) Feature
+// {
+//     int channel;
+//     uchar4 rect;
 
-    Feature(const int c, const uchar4 r) : channel(c), rect(r) {}
-};
-}}}
+//     Feature(const int c, const uchar4 r) : channel(c), rect(r) {}
+// };
+// }}}
 
-#endif
+// #endif
