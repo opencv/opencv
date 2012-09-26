@@ -2,7 +2,6 @@
  * jpegint.h
  *
  * Copyright (C) 1991-1997, Thomas G. Lane.
- * Modified 1997-2011 by Guido Vollbeding.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
@@ -100,16 +99,14 @@ struct jpeg_downsampler {
 };
 
 /* Forward DCT (also controls coefficient quantization) */
-typedef JMETHOD(void, forward_DCT_ptr,
-		(j_compress_ptr cinfo, jpeg_component_info * compptr,
-		 JSAMPARRAY sample_data, JBLOCKROW coef_blocks,
-		 JDIMENSION start_row, JDIMENSION start_col,
-		 JDIMENSION num_blocks));
-
 struct jpeg_forward_dct {
   JMETHOD(void, start_pass, (j_compress_ptr cinfo));
-  /* It is useful to allow each component to have a separate FDCT method. */
-  forward_DCT_ptr forward_DCT[MAX_COMPONENTS];
+  /* perhaps this should be an array??? */
+  JMETHOD(void, forward_DCT, (j_compress_ptr cinfo,
+			      jpeg_component_info * compptr,
+			      JSAMPARRAY sample_data, JBLOCKROW coef_blocks,
+			      JDIMENSION start_row, JDIMENSION start_col,
+			      JDIMENSION num_blocks));
 };
 
 /* Entropy encoding */
@@ -213,6 +210,10 @@ struct jpeg_entropy_decoder {
   JMETHOD(void, start_pass, (j_decompress_ptr cinfo));
   JMETHOD(boolean, decode_mcu, (j_decompress_ptr cinfo,
 				JBLOCKROW *MCU_data));
+
+  /* This is here to share code between baseline and progressive decoders; */
+  /* other modules probably should not use it */
+  boolean insufficient_data;	/* set TRUE after emitting warning */
 };
 
 /* Inverse DCT (also performs dequantization) */
@@ -302,7 +303,7 @@ struct jpeg_color_quantizer {
 #define jinit_downsampler	jIDownsampler
 #define jinit_forward_dct	jIFDCT
 #define jinit_huff_encoder	jIHEncoder
-#define jinit_arith_encoder	jIAEncoder
+#define jinit_phuff_encoder	jIPHEncoder
 #define jinit_marker_writer	jIMWriter
 #define jinit_master_decompress	jIDMaster
 #define jinit_d_main_controller	jIDMainC
@@ -311,7 +312,7 @@ struct jpeg_color_quantizer {
 #define jinit_input_controller	jIInCtlr
 #define jinit_marker_reader	jIMReader
 #define jinit_huff_decoder	jIHDecoder
-#define jinit_arith_decoder	jIADecoder
+#define jinit_phuff_decoder	jIPHDecoder
 #define jinit_inverse_dct	jIIDCT
 #define jinit_upsampler		jIUpsampler
 #define jinit_color_deconverter	jIDColor
@@ -321,39 +322,12 @@ struct jpeg_color_quantizer {
 #define jinit_memory_mgr	jIMemMgr
 #define jdiv_round_up		jDivRound
 #define jround_up		jRound
-#define jzero_far		jZeroFar
 #define jcopy_sample_rows	jCopySamples
 #define jcopy_block_row		jCopyBlocks
+#define jzero_far		jZeroFar
 #define jpeg_zigzag_order	jZIGTable
 #define jpeg_natural_order	jZAGTable
-#define jpeg_natural_order7	jZAG7Table
-#define jpeg_natural_order6	jZAG6Table
-#define jpeg_natural_order5	jZAG5Table
-#define jpeg_natural_order4	jZAG4Table
-#define jpeg_natural_order3	jZAG3Table
-#define jpeg_natural_order2	jZAG2Table
-#define jpeg_aritab		jAriTab
 #endif /* NEED_SHORT_EXTERNAL_NAMES */
-
-
-/* On normal machines we can apply MEMCOPY() and MEMZERO() to sample arrays
- * and coefficient-block arrays.  This won't work on 80x86 because the arrays
- * are FAR and we're assuming a small-pointer memory model.  However, some
- * DOS compilers provide far-pointer versions of memcpy() and memset() even
- * in the small-model libraries.  These will be used if USE_FMEM is defined.
- * Otherwise, the routines in jutils.c do it the hard way.
- */
-
-#ifndef NEED_FAR_POINTERS	/* normal case, same as regular macro */
-#define FMEMZERO(target,size)	MEMZERO(target,size)
-#else				/* 80x86 case */
-#ifdef USE_FMEM
-#define FMEMZERO(target,size)	_fmemset((void FAR *)(target), 0, (size_t)(size))
-#else
-EXTERN(void) jzero_far JPP((void FAR * target, size_t bytestozero));
-#define FMEMZERO(target,size)	jzero_far(target, size)
-#endif
-#endif
 
 
 /* Compression module initialization routines */
@@ -370,7 +344,7 @@ EXTERN(void) jinit_color_converter JPP((j_compress_ptr cinfo));
 EXTERN(void) jinit_downsampler JPP((j_compress_ptr cinfo));
 EXTERN(void) jinit_forward_dct JPP((j_compress_ptr cinfo));
 EXTERN(void) jinit_huff_encoder JPP((j_compress_ptr cinfo));
-EXTERN(void) jinit_arith_encoder JPP((j_compress_ptr cinfo));
+EXTERN(void) jinit_phuff_encoder JPP((j_compress_ptr cinfo));
 EXTERN(void) jinit_marker_writer JPP((j_compress_ptr cinfo));
 /* Decompression module initialization routines */
 EXTERN(void) jinit_master_decompress JPP((j_decompress_ptr cinfo));
@@ -383,7 +357,7 @@ EXTERN(void) jinit_d_post_controller JPP((j_decompress_ptr cinfo,
 EXTERN(void) jinit_input_controller JPP((j_decompress_ptr cinfo));
 EXTERN(void) jinit_marker_reader JPP((j_decompress_ptr cinfo));
 EXTERN(void) jinit_huff_decoder JPP((j_decompress_ptr cinfo));
-EXTERN(void) jinit_arith_decoder JPP((j_decompress_ptr cinfo));
+EXTERN(void) jinit_phuff_decoder JPP((j_decompress_ptr cinfo));
 EXTERN(void) jinit_inverse_dct JPP((j_decompress_ptr cinfo));
 EXTERN(void) jinit_upsampler JPP((j_decompress_ptr cinfo));
 EXTERN(void) jinit_color_deconverter JPP((j_decompress_ptr cinfo));
@@ -401,20 +375,12 @@ EXTERN(void) jcopy_sample_rows JPP((JSAMPARRAY input_array, int source_row,
 				    int num_rows, JDIMENSION num_cols));
 EXTERN(void) jcopy_block_row JPP((JBLOCKROW input_row, JBLOCKROW output_row,
 				  JDIMENSION num_blocks));
+EXTERN(void) jzero_far JPP((void FAR * target, size_t bytestozero));
 /* Constant tables in jutils.c */
 #if 0				/* This table is not actually needed in v6a */
 extern const int jpeg_zigzag_order[]; /* natural coef order to zigzag order */
 #endif
 extern const int jpeg_natural_order[]; /* zigzag coef order to natural order */
-extern const int jpeg_natural_order7[]; /* zz to natural order for 7x7 block */
-extern const int jpeg_natural_order6[]; /* zz to natural order for 6x6 block */
-extern const int jpeg_natural_order5[]; /* zz to natural order for 5x5 block */
-extern const int jpeg_natural_order4[]; /* zz to natural order for 4x4 block */
-extern const int jpeg_natural_order3[]; /* zz to natural order for 3x3 block */
-extern const int jpeg_natural_order2[]; /* zz to natural order for 2x2 block */
-
-/* Arithmetic coding probability estimation tables in jaricom.c */
-extern const INT32 jpeg_aritab[];
 
 /* Suppress undefined-structure complaints if necessary. */
 

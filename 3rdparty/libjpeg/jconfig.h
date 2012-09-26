@@ -1,6 +1,6 @@
 /* jconfig.h.  Generated automatically by configure.  */
 /* jconfig.cfg --- source file edited by configure script */
-/* see jconfig.txt for explanations */
+/* see jconfig.doc for explanations */
 
 #define HAVE_PROTOTYPES 
 #define HAVE_UNSIGNED_CHAR 

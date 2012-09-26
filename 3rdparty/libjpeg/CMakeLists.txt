@@ -9,12 +9,6 @@ ocv_include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 file(GLOB lib_srcs *.c)
 file(GLOB lib_hdrs *.h)
 
-if(ANDROID OR IOS)
-  ocv_list_filterout(lib_srcs jmemansi.c)
-else()
-  ocv_list_filterout(lib_srcs jmemnobs.c)
-endif()
-
 # ----------------------------------------------------------------------------------
 #         Define the library target:
 # ----------------------------------------------------------------------------------
@@ -31,8 +25,7 @@ if(CMAKE_COMPILER_IS_GNUCXX)
   set_source_files_properties(jcdctmgr.c PROPERTIES COMPILE_FLAGS "-O1")
 endif()
 
-ocv_warnings_disable(CMAKE_C_FLAGS -Wcast-align -Wshadow -Wunused -Wmain -Wimplicit-function-declaration)
-ocv_warnings_disable(CMAKE_C_FLAGS /wd4013 /wd4244 /wd4267) # vs2005
+ocv_warnings_disable(CMAKE_C_FLAGS -Wcast-align -Wshadow -Wunused)
 
 set_target_properties(${JPEG_LIBRARY}
   PROPERTIES OUTPUT_NAME ${JPEG_LIBRARY}
