@@ -1,4 +1,4 @@
-/*M///////////////////////////////////////////////////////////////////////////////////////
+//M///////////////////////////////////////////////////////////////////////////////////////
 //
 //  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
 //
@@ -38,12 +38,12 @@
 // or tort (including negligence or otherwise) arising in any way out of
 // the use of this software, even if advised of the possibility of such damage.
 //
-//M*/
+//M
 
-// #include <opencv2/gpu/device/common.hpp>
+#include <opencv2/gpu/device/common.hpp>
 
-// #ifndef __OPENCV_ICF_HPP__
-// #define __OPENCV_ICF_HPP__
+#ifndef __OPENCV_ICF_HPP__
+#define __OPENCV_ICF_HPP__
 
 // #if defined __CUDACC__
 // # define __device __device__ __forceinline__
@@ -52,49 +52,62 @@
 // #endif
 
 
-// namespace cv { namespace gpu { namespace icf {
+namespace cv { namespace gpu { namespace device {
+namespace icf {
 
-// using cv::gpu::PtrStepSzb;
-// using cv::gpu::PtrStepSzf;
+struct __align__(16) Octave
+{
+    ushort index;
+    ushort stages;
+    ushort shrinkage;
+    ushort2 size;
+    float scale;
 
-// typedef unsigned char uchar;
+    Octave(const ushort i, const ushort s, const ushort sh, const ushort2 sz, const float sc)
+    : index(i), stages(s), shrinkage(sh), size(sz), scale(sc) {}
+};
 
-// struct __align__(16) Octave
-// {
-//     ushort index;
-//     ushort stages;
-//     ushort shrinkage;
-//     ushort2 size;
-//     float scale;
+struct __align__(8) Level //is actually 24 bytes
+{
+    int octave;
 
-//     Octave(const ushort i, const ushort s, const ushort sh, const ushort2 sz, const float sc)
-//     : index(i), stages(s), shrinkage(sh), size(sz), scale(sc) {}
-// };
+    float relScale;
+    float shrScale;   // used for marking detection
+    float scaling[2]; // calculated according to Dollal paper
 
-// struct __align__(8) Level //is actually 24 bytes
-// {
-//     int octave;
+    // for 640x480 we can not get overflow
+    uchar2 workRect;
+    uchar2 objSize;
 
-//     // float origScale; //not actually used
-//     float relScale;
-//     float shrScale;   // used for marking detection
-//     float scaling[2]; // calculated according to Dollal paper
+    Level(int idx, const Octave& oct, const float scale, const int w, const int h)
+    :  octave(idx), relScale(scale / oct.scale), shrScale (relScale / (float)oct.shrinkage)
+    {
+        workRect.x = round(w / (float)oct.shrinkage);
+        workRect.y = round(h / (float)oct.shrinkage);
 
-//     // for 640x480 we can not get overflow
-//     uchar2 workRect;
-//     uchar2 objSize;
+        objSize.x  = round(oct.size.x * relScale);
+        objSize.y  = round(oct.size.y * relScale);
+    }
+};
 
-//     Level(int idx, const Octave& oct, const float scale, const int w, const int h)
-//     :  octave(idx), relScale(scale / oct.scale), shrScale (relScale / (float)oct.shrinkage)
-//     {
-//         workRect.x = round(w / (float)oct.shrinkage);
-//         workRect.y = round(h / (float)oct.shrinkage);
+struct __align__(8) Node
+{
+    // int feature;
+    uchar4 rect;
+    float threshold;
 
-//         objSize.x  = round(oct.size.x * relScale);
-//         objSize.y  = round(oct.size.y * relScale);
-//     }
-// };
+    Node(const uchar4 c, const int t) : rect(c), threshold(t) {}
+};
 
+struct __align__(8) Feature
+{
+    int channel;
+    uchar4 rect;
+
+    Feature(const int c, const uchar4 r) : channel(c), rect(r) {}
+};
+}
+}}}
 // struct Cascade
 // {
 //     Cascade() {}
@@ -146,21 +159,6 @@
 //     static const float magnitudeScaling = 1.f ;// / sqrt(2);
 // };
 
-// struct __align__(8) Node
-// {
-//     int feature;
-//     float threshold;
-
-//     Node(const int f, const float t) : feature(f), threshold(t) {}
-// };
-
-// struct __align__(8) Feature
-// {
-//     int channel;
-//     uchar4 rect;
-
-//     Feature(const int c, const uchar4 r) : channel(c), rect(r) {}
-// };
 // }}}
 
-// #endif
+#endif

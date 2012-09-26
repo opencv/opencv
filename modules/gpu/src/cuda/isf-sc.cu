@@ -41,9 +41,9 @@
 //M*/
 
 #include <opencv2/gpu/device/common.hpp>
-// #include <icf.hpp>
+#include <icf.hpp>
 // #include <opencv2/gpu/device/saturate_cast.hpp>
-// #include <stdio.h>
+#include <stdio.h>
 // #include <float.h>
 
 // //#define LOG_CUDA_CASCADE
@@ -92,6 +92,58 @@ namespace icf {
         magToHist<<<grid, block>>>(mag, angle, nangle.step / sizeof(float), hog, hogluv.step, fh);
         cudaSafeCall( cudaGetLastError() );
         cudaSafeCall( cudaDeviceSynchronize() );
+    }
+
+    texture<float2,  cudaTextureType1D, cudaReadModeElementType> tnode;
+    __global__ void test_kernel(const Level* levels, const Octave* octaves, const float* stages,
+        const Node* nodes,
+        PtrStepSz<uchar4> objects)
+    {
+        const int y = blockIdx.y * blockDim.y + threadIdx.y;
+        const int x = blockIdx.x * blockDim.x + threadIdx.x;
+        Level level = levels[blockIdx.z];
+        if(x >= level.workRect.x || y >= level.workRect.y) return;
+
+        Octave octave = octaves[level.octave];
+        int st = octave.index * octave.stages;
+        const int stEnd = st + 1000;//octave.stages;
+
+        float confidence = 0.f;
+
+#pragma unroll 8
+        for(; st < stEnd; ++st)
+        {
+            const int nId = st * 3;
+            const Node node = nodes[nId];
+
+            const float stage = stages[st];
+            confidence += node.rect.x * stage;
+        }
+
+        uchar4 val;
+        val.x = (int)confidence;
+        if (x == y) objects(0, threadIdx.x) = val;
+
+    }
+
+    void detect(const PtrStepSzb& levels, const PtrStepSzb& octaves, const PtrStepSzf& stages,
+        const PtrStepSzb& nodes, const PtrStepSzb& features,
+        PtrStepSz<uchar4> objects)
+    {
+        int fw = 160;
+        int fh = 120;
+        dim3 block(32, 8);
+        dim3 grid(fw / 32, fh / 8, 47);
+        const Level* l = (const Level*)levels.ptr();
+        const Octave* oct = ((const Octave*)octaves.ptr());
+        const float* st = (const float*)stages.ptr();
+        const Node* nd = (const Node*)nodes.ptr();
+        // cudaSafeCall( cudaBindTexture(0, tnode, nodes.data, rgb.cols / size) );
+
+        test_kernel<<<grid, block>>>(l, oct, st, nd, objects);
+
+        cudaSafeCall( cudaGetLastError());
+        cudaSafeCall( cudaDeviceSynchronize());
     }
 }
 }}}
