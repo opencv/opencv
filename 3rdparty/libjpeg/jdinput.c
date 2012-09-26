@@ -2,13 +2,14 @@
  * jdinput.c
  *
  * Copyright (C) 1991-1997, Thomas G. Lane.
+ * Modified 2002-2009 by Guido Vollbeding.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
  * This file contains input control logic for the JPEG decompressor.
  * These routines are concerned with controlling the decompressor's input
  * processing (marker reading and coefficient decoding).  The actual input
- * reading is done in jdmarker.c, jdhuff.c, and jdphuff.c.
+ * reading is done in jdmarker.c, jdhuff.c, and jdarith.c.
  */
 
 #define JPEG_INTERNALS
@@ -21,7 +22,7 @@
 typedef struct {
   struct jpeg_input_controller pub; /* public fields */
 
-  boolean inheaders;		/* TRUE until first SOS is reached */
+  int inheaders;		/* Nonzero until first SOS is reached */
 } my_input_controller;
 
 typedef my_input_controller * my_inputctl_ptr;
@@ -34,6 +35,174 @@ METHODDEF(int) consume_markers JPP((j_decompress_ptr cinfo));
 /*
  * Routines to calculate various quantities related to the size of the image.
  */
+
+
+/*
+ * Compute output image dimensions and related values.
+ * NOTE: this is exported for possible use by application.
+ * Hence it mustn't do anything that can't be done twice.
+ */
+
+GLOBAL(void)
+jpeg_core_output_dimensions (j_decompress_ptr cinfo)
+/* Do computations that are needed before master selection phase.
+ * This function is used for transcoding and full decompression.
+ */
+{
+#ifdef IDCT_SCALING_SUPPORTED
+  int ci;
+  jpeg_component_info *compptr;
+
+  /* Compute actual output image dimensions and DCT scaling choices. */
+  if (cinfo->scale_num * cinfo->block_size <= cinfo->scale_denom) {
+    /* Provide 1/block_size scaling */
+    cinfo->output_width = (JDIMENSION)
+      jdiv_round_up((long) cinfo->image_width, (long) cinfo->block_size);
+    cinfo->output_height = (JDIMENSION)
+      jdiv_round_up((long) cinfo->image_height, (long) cinfo->block_size);
+    cinfo->min_DCT_h_scaled_size = 1;
+    cinfo->min_DCT_v_scaled_size = 1;
+  } else if (cinfo->scale_num * cinfo->block_size <= cinfo->scale_denom * 2) {
+    /* Provide 2/block_size scaling */
+    cinfo->output_width = (JDIMENSION)
+      jdiv_round_up((long) cinfo->image_width * 2L, (long) cinfo->block_size);
+    cinfo->output_height = (JDIMENSION)
+      jdiv_round_up((long) cinfo->image_height * 2L, (long) cinfo->block_size);
+    cinfo->min_DCT_h_scaled_size = 2;
+    cinfo->min_DCT_v_scaled_size = 2;
+  } else if (cinfo->scale_num * cinfo->block_size <= cinfo->scale_denom * 3) {
+    /* Provide 3/block_size scaling */
+    cinfo->output_width = (JDIMENSION)
+      jdiv_round_up((long) cinfo->image_width * 3L, (long) cinfo->block_size);
+    cinfo->output_height = (JDIMENSION)
+      jdiv_round_up((long) cinfo->image_height * 3L, (long) cinfo->block_size);
+    cinfo->min_DCT_h_scaled_size = 3;
+    cinfo->min_DCT_v_scaled_size = 3;
+  } else if (cinfo->scale_num * cinfo->block_size <= cinfo->scale_denom * 4) {
+    /* Provide 4/block_size scaling */
+    cinfo->output_width = (JDIMENSION)
+      jdiv_round_up((long) cinfo->image_width * 4L, (long) cinfo->block_size);
+    cinfo->output_height = (JDIMENSION)
+      jdiv_round_up((long) cinfo->image_height * 4L, (long) cinfo->block_size);
+    cinfo->min_DCT_h_scaled_size = 4;
+    cinfo->min_DCT_v_scaled_size = 4;
+  } else if (cinfo->scale_num * cinfo->block_size <= cinfo->scale_denom * 5) {
+    /* Provide 5/block_size scaling */
+    cinfo->output_width = (JDIMENSION)
+      jdiv_round_up((long) cinfo->image_width * 5L, (long) cinfo->block_size);
+    cinfo->output_height = (JDIMENSION)
+      jdiv_round_up((long) cinfo->image_height * 5L, (long) cinfo->block_size);
+    cinfo->min_DCT_h_scaled_size = 5;
+    cinfo->min_DCT_v_scaled_size = 5;
+  } else if (cinfo->scale_num * cinfo->block_size <= cinfo->scale_denom * 6) {
+    /* Provide 6/block_size scaling */
+    cinfo->output_width = (JDIMENSION)
+      jdiv_round_up((long) cinfo->image_width * 6L, (long) cinfo->block_size);
+    cinfo->output_height = (JDIMENSION)
+      jdiv_round_up((long) cinfo->image_height * 6L, (long) cinfo->block_size);
+    cinfo->min_DCT_h_scaled_size = 6;
+    cinfo->min_DCT_v_scaled_size = 6;
+  } else if (cinfo->scale_num * cinfo->block_size <= cinfo->scale_denom * 7) {
+    /* Provide 7/block_size scaling */
+    cinfo->output_width = (JDIMENSION)
+      jdiv_round_up((long) cinfo->image_width * 7L, (long) cinfo->block_size);
+    cinfo->output_height = (JDIMENSION)
+      jdiv_round_up((long) cinfo->image_height * 7L, (long) cinfo->block_size);
+    cinfo->min_DCT_h_scaled_size = 7;
+    cinfo->min_DCT_v_scaled_size = 7;
+  } else if (cinfo->scale_num * cinfo->block_size <= cinfo->scale_denom * 8) {
+    /* Provide 8/block_size scaling */
+    cinfo->output_width = (JDIMENSION)
+      jdiv_round_up((long) cinfo->image_width * 8L, (long) cinfo->block_size);
+    cinfo->output_height = (JDIMENSION)
+      jdiv_round_up((long) cinfo->image_height * 8L, (long) cinfo->block_size);
+    cinfo->min_DCT_h_scaled_size = 8;
+    cinfo->min_DCT_v_scaled_size = 8;
+  } else if (cinfo->scale_num * cinfo->block_size <= cinfo->scale_denom * 9) {
+    /* Provide 9/block_size scaling */
+    cinfo->output_width = (JDIMENSION)
+      jdiv_round_up((long) cinfo->image_width * 9L, (long) cinfo->block_size);
+    cinfo->output_height = (JDIMENSION)
+      jdiv_round_up((long) cinfo->image_height * 9L, (long) cinfo->block_size);
+    cinfo->min_DCT_h_scaled_size = 9;
+    cinfo->min_DCT_v_scaled_size = 9;
+  } else if (cinfo->scale_num * cinfo->block_size <= cinfo->scale_denom * 10) {
+    /* Provide 10/block_size scaling */
+    cinfo->output_width = (JDIMENSION)
+      jdiv_round_up((long) cinfo->image_width * 10L, (long) cinfo->block_size);
+    cinfo->output_height = (JDIMENSION)
+      jdiv_round_up((long) cinfo->image_height * 10L, (long) cinfo->block_size);
+    cinfo->min_DCT_h_scaled_size = 10;
+    cinfo->min_DCT_v_scaled_size = 10;
+  } else if (cinfo->scale_num * cinfo->block_size <= cinfo->scale_denom * 11) {
+    /* Provide 11/block_size scaling */
+    cinfo->output_width = (JDIMENSION)
+      jdiv_round_up((long) cinfo->image_width * 11L, (long) cinfo->block_size);
+    cinfo->output_height = (JDIMENSION)
+      jdiv_round_up((long) cinfo->image_height * 11L, (long) cinfo->block_size);
+    cinfo->min_DCT_h_scaled_size = 11;
+    cinfo->min_DCT_v_scaled_size = 11;
+  } else if (cinfo->scale_num * cinfo->block_size <= cinfo->scale_denom * 12) {
+    /* Provide 12/block_size scaling */
+    cinfo->output_width = (JDIMENSION)
+      jdiv_round_up((long) cinfo->image_width * 12L, (long) cinfo->block_size);
+    cinfo->output_height = (JDIMENSION)
+      jdiv_round_up((long) cinfo->image_height * 12L, (long) cinfo->block_size);
+    cinfo->min_DCT_h_scaled_size = 12;
+    cinfo->min_DCT_v_scaled_size = 12;
+  } else if (cinfo->scale_num * cinfo->block_size <= cinfo->scale_denom * 13) {
+    /* Provide 13/block_size scaling */
+    cinfo->output_width = (JDIMENSION)
+      jdiv_round_up((long) cinfo->image_width * 13L, (long) cinfo->block_size);
+    cinfo->output_height = (JDIMENSION)
+      jdiv_round_up((long) cinfo->image_height * 13L, (long) cinfo->block_size);
+    cinfo->min_DCT_h_scaled_size = 13;
+    cinfo->min_DCT_v_scaled_size = 13;
+  } else if (cinfo->scale_num * cinfo->block_size <= cinfo->scale_denom * 14) {
+    /* Provide 14/block_size scaling */
+    cinfo->output_width = (JDIMENSION)
+      jdiv_round_up((long) cinfo->image_width * 14L, (long) cinfo->block_size);
+    cinfo->output_height = (JDIMENSION)
+      jdiv_round_up((long) cinfo->image_height * 14L, (long) cinfo->block_size);
+    cinfo->min_DCT_h_scaled_size = 14;
+    cinfo->min_DCT_v_scaled_size = 14;
+  } else if (cinfo->scale_num * cinfo->block_size <= cinfo->scale_denom * 15) {
+    /* Provide 15/block_size scaling */
+    cinfo->output_width = (JDIMENSION)
+      jdiv_round_up((long) cinfo->image_width * 15L, (long) cinfo->block_size);
+    cinfo->output_height = (JDIMENSION)
+      jdiv_round_up((long) cinfo->image_height * 15L, (long) cinfo->block_size);
+    cinfo->min_DCT_h_scaled_size = 15;
+    cinfo->min_DCT_v_scaled_size = 15;
+  } else {
+    /* Provide 16/block_size scaling */
+    cinfo->output_width = (JDIMENSION)
+      jdiv_round_up((long) cinfo->image_width * 16L, (long) cinfo->block_size);
+    cinfo->output_height = (JDIMENSION)
+      jdiv_round_up((long) cinfo->image_height * 16L, (long) cinfo->block_size);
+    cinfo->min_DCT_h_scaled_size = 16;
+    cinfo->min_DCT_v_scaled_size = 16;
+  }
+
+  /* Recompute dimensions of components */
+  for (ci = 0, compptr = cinfo->comp_info; ci < cinfo->num_components;
+       ci++, compptr++) {
+    compptr->DCT_h_scaled_size = cinfo->min_DCT_h_scaled_size;
+    compptr->DCT_v_scaled_size = cinfo->min_DCT_v_scaled_size;
+  }
+
+#else /* !IDCT_SCALING_SUPPORTED */
+
+  /* Hardwire it to "no scaling" */
+  cinfo->output_width = cinfo->image_width;
+  cinfo->output_height = cinfo->image_height;
+  /* jdinput.c has already initialized DCT_scaled_size,
+   * and has computed unscaled downsampled_width and downsampled_height.
+   */
+
+#endif /* IDCT_SCALING_SUPPORTED */
+}
+
 
 LOCAL(void)
 initial_setup (j_decompress_ptr cinfo)
@@ -70,23 +239,121 @@ initial_setup (j_decompress_ptr cinfo)
 				   compptr->v_samp_factor);
   }
 
-  /* We initialize DCT_scaled_size and min_DCT_scaled_size to DCTSIZE.
-   * In the full decompressor, this will be overridden by jdmaster.c;
-   * but in the transcoder, jdmaster.c is not used, so we must do it here.
+  /* Derive block_size, natural_order, and lim_Se */
+  if (cinfo->is_baseline || (cinfo->progressive_mode &&
+      cinfo->comps_in_scan)) { /* no pseudo SOS marker */
+    cinfo->block_size = DCTSIZE;
+    cinfo->natural_order = jpeg_natural_order;
+    cinfo->lim_Se = DCTSIZE2-1;
+  } else
+    switch (cinfo->Se) {
+    case (1*1-1):
+      cinfo->block_size = 1;
+      cinfo->natural_order = jpeg_natural_order; /* not needed */
+      cinfo->lim_Se = cinfo->Se;
+      break;
+    case (2*2-1):
+      cinfo->block_size = 2;
+      cinfo->natural_order = jpeg_natural_order2;
+      cinfo->lim_Se = cinfo->Se;
+      break;
+    case (3*3-1):
+      cinfo->block_size = 3;
+      cinfo->natural_order = jpeg_natural_order3;
+      cinfo->lim_Se = cinfo->Se;
+      break;
+    case (4*4-1):
+      cinfo->block_size = 4;
+      cinfo->natural_order = jpeg_natural_order4;
+      cinfo->lim_Se = cinfo->Se;
+      break;
+    case (5*5-1):
+      cinfo->block_size = 5;
+      cinfo->natural_order = jpeg_natural_order5;
+      cinfo->lim_Se = cinfo->Se;
+      break;
+    case (6*6-1):
+      cinfo->block_size = 6;
+      cinfo->natural_order = jpeg_natural_order6;
+      cinfo->lim_Se = cinfo->Se;
+      break;
+    case (7*7-1):
+      cinfo->block_size = 7;
+      cinfo->natural_order = jpeg_natural_order7;
+      cinfo->lim_Se = cinfo->Se;
+      break;
+    case (8*8-1):
+      cinfo->block_size = 8;
+      cinfo->natural_order = jpeg_natural_order;
+      cinfo->lim_Se = DCTSIZE2-1;
+      break;
+    case (9*9-1):
+      cinfo->block_size = 9;
+      cinfo->natural_order = jpeg_natural_order;
+      cinfo->lim_Se = DCTSIZE2-1;
+      break;
+    case (10*10-1):
+      cinfo->block_size = 10;
+      cinfo->natural_order = jpeg_natural_order;
+      cinfo->lim_Se = DCTSIZE2-1;
+      break;
+    case (11*11-1):
+      cinfo->block_size = 11;
+      cinfo->natural_order = jpeg_natural_order;
+      cinfo->lim_Se = DCTSIZE2-1;
+      break;
+    case (12*12-1):
+      cinfo->block_size = 12;
+      cinfo->natural_order = jpeg_natural_order;
+      cinfo->lim_Se = DCTSIZE2-1;
+      break;
+    case (13*13-1):
+      cinfo->block_size = 13;
+      cinfo->natural_order = jpeg_natural_order;
+      cinfo->lim_Se = DCTSIZE2-1;
+      break;
+    case (14*14-1):
+      cinfo->block_size = 14;
+      cinfo->natural_order = jpeg_natural_order;
+      cinfo->lim_Se = DCTSIZE2-1;
+      break;
+    case (15*15-1):
+      cinfo->block_size = 15;
+      cinfo->natural_order = jpeg_natural_order;
+      cinfo->lim_Se = DCTSIZE2-1;
+      break;
+    case (16*16-1):
+      cinfo->block_size = 16;
+      cinfo->natural_order = jpeg_natural_order;
+      cinfo->lim_Se = DCTSIZE2-1;
+      break;
+    default:
+      ERREXIT4(cinfo, JERR_BAD_PROGRESSION,
+	       cinfo->Ss, cinfo->Se, cinfo->Ah, cinfo->Al);
+      break;
+    }
+
+  /* We initialize DCT_scaled_size and min_DCT_scaled_size to block_size.
+   * In the full decompressor,
+   * this will be overridden by jpeg_calc_output_dimensions in jdmaster.c;
+   * but in the transcoder,
+   * jpeg_calc_output_dimensions is not used, so we must do it here.
    */
-  cinfo->min_DCT_scaled_size = DCTSIZE;
+  cinfo->min_DCT_h_scaled_size = cinfo->block_size;
+  cinfo->min_DCT_v_scaled_size = cinfo->block_size;
 
   /* Compute dimensions of components */
   for (ci = 0, compptr = cinfo->comp_info; ci < cinfo->num_components;
        ci++, compptr++) {
-    compptr->DCT_scaled_size = DCTSIZE;
+    compptr->DCT_h_scaled_size = cinfo->block_size;
+    compptr->DCT_v_scaled_size = cinfo->block_size;
     /* Size in DCT blocks */
     compptr->width_in_blocks = (JDIMENSION)
       jdiv_round_up((long) cinfo->image_width * (long) compptr->h_samp_factor,
-		    (long) (cinfo->max_h_samp_factor * DCTSIZE));
+		    (long) (cinfo->max_h_samp_factor * cinfo->block_size));
     compptr->height_in_blocks = (JDIMENSION)
       jdiv_round_up((long) cinfo->image_height * (long) compptr->v_samp_factor,
-		    (long) (cinfo->max_v_samp_factor * DCTSIZE));
+		    (long) (cinfo->max_v_samp_factor * cinfo->block_size));
     /* downsampled_width and downsampled_height will also be overridden by
      * jdmaster.c if we are doing full decompression.  The transcoder library
      * doesn't use these values, but the calling application might.
@@ -107,7 +374,7 @@ initial_setup (j_decompress_ptr cinfo)
   /* Compute number of fully interleaved MCU rows. */
   cinfo->total_iMCU_rows = (JDIMENSION)
     jdiv_round_up((long) cinfo->image_height,
-		  (long) (cinfo->max_v_samp_factor*DCTSIZE));
+	          (long) (cinfo->max_v_samp_factor * cinfo->block_size));
 
   /* Decide whether file contains multiple scans */
   if (cinfo->comps_in_scan < cinfo->num_components || cinfo->progressive_mode)
@@ -138,7 +405,7 @@ per_scan_setup (j_decompress_ptr cinfo)
     compptr->MCU_width = 1;
     compptr->MCU_height = 1;
     compptr->MCU_blocks = 1;
-    compptr->MCU_sample_width = compptr->DCT_scaled_size;
+    compptr->MCU_sample_width = compptr->DCT_h_scaled_size;
     compptr->last_col_width = 1;
     /* For noninterleaved scans, it is convenient to define last_row_height
      * as the number of block rows present in the last iMCU row.
@@ -161,10 +428,10 @@ per_scan_setup (j_decompress_ptr cinfo)
     /* Overall image size in MCUs */
     cinfo->MCUs_per_row = (JDIMENSION)
       jdiv_round_up((long) cinfo->image_width,
-		    (long) (cinfo->max_h_samp_factor*DCTSIZE));
+		    (long) (cinfo->max_h_samp_factor * cinfo->block_size));
     cinfo->MCU_rows_in_scan = (JDIMENSION)
       jdiv_round_up((long) cinfo->image_height,
-		    (long) (cinfo->max_v_samp_factor*DCTSIZE));
+		    (long) (cinfo->max_v_samp_factor * cinfo->block_size));
     
     cinfo->blocks_in_MCU = 0;
     
@@ -174,7 +441,7 @@ per_scan_setup (j_decompress_ptr cinfo)
       compptr->MCU_width = compptr->h_samp_factor;
       compptr->MCU_height = compptr->v_samp_factor;
       compptr->MCU_blocks = compptr->MCU_width * compptr->MCU_height;
-      compptr->MCU_sample_width = compptr->MCU_width * compptr->DCT_scaled_size;
+      compptr->MCU_sample_width = compptr->MCU_width * compptr->DCT_h_scaled_size;
       /* Figure number of non-dummy blocks in last MCU column & row */
       tmp = (int) (compptr->width_in_blocks % compptr->MCU_width);
       if (tmp == 0) tmp = compptr->MCU_width;
@@ -282,6 +549,10 @@ finish_input_pass (j_decompress_ptr cinfo)
  * The consume_input method pointer points either here or to the
  * coefficient controller's consume_data routine, depending on whether
  * we are reading a compressed data segment or inter-segment markers.
+ *
+ * Note: This function should NOT return a pseudo SOS marker (with zero
+ * component number) to the caller.  A pseudo marker received by
+ * read_markers is processed and then skipped for other markers.
  */
 
 METHODDEF(int)
@@ -293,41 +564,50 @@ consume_markers (j_decompress_ptr cinfo)
   if (inputctl->pub.eoi_reached) /* After hitting EOI, read no further */
     return JPEG_REACHED_EOI;
 
-  val = (*cinfo->marker->read_markers) (cinfo);
+  for (;;) {			/* Loop to pass pseudo SOS marker */
+    val = (*cinfo->marker->read_markers) (cinfo);
 
-  switch (val) {
-  case JPEG_REACHED_SOS:	/* Found SOS */
-    if (inputctl->inheaders) {	/* 1st SOS */
-      initial_setup(cinfo);
-      inputctl->inheaders = FALSE;
-      /* Note: start_input_pass must be called by jdmaster.c
-       * before any more input can be consumed.  jdapimin.c is
-       * responsible for enforcing this sequencing.
-       */
-    } else {			/* 2nd or later SOS marker */
-      if (! inputctl->pub.has_multiple_scans)
-	ERREXIT(cinfo, JERR_EOI_EXPECTED); /* Oops, I wasn't expecting this! */
-      start_input_pass(cinfo);
+    switch (val) {
+    case JPEG_REACHED_SOS:	/* Found SOS */
+      if (inputctl->inheaders) { /* 1st SOS */
+	if (inputctl->inheaders == 1)
+	  initial_setup(cinfo);
+	if (cinfo->comps_in_scan == 0) { /* pseudo SOS marker */
+	  inputctl->inheaders = 2;
+	  break;
+	}
+	inputctl->inheaders = 0;
+	/* Note: start_input_pass must be called by jdmaster.c
+	 * before any more input can be consumed.  jdapimin.c is
+	 * responsible for enforcing this sequencing.
+	 */
+      } else {			/* 2nd or later SOS marker */
+	if (! inputctl->pub.has_multiple_scans)
+	  ERREXIT(cinfo, JERR_EOI_EXPECTED); /* Oops, I wasn't expecting this! */
+	if (cinfo->comps_in_scan == 0) /* unexpected pseudo SOS marker */
+	  break;
+	start_input_pass(cinfo);
+      }
+      return val;
+    case JPEG_REACHED_EOI:	/* Found EOI */
+      inputctl->pub.eoi_reached = TRUE;
+      if (inputctl->inheaders) { /* Tables-only datastream, apparently */
+	if (cinfo->marker->saw_SOF)
+	  ERREXIT(cinfo, JERR_SOF_NO_SOS);
+      } else {
+	/* Prevent infinite loop in coef ctlr's decompress_data routine
+	 * if user set output_scan_number larger than number of scans.
+	 */
+	if (cinfo->output_scan_number > cinfo->input_scan_number)
+	  cinfo->output_scan_number = cinfo->input_scan_number;
+      }
+      return val;
+    case JPEG_SUSPENDED:
+      return val;
+    default:
+      return val;
     }
-    break;
-  case JPEG_REACHED_EOI:	/* Found EOI */
-    inputctl->pub.eoi_reached = TRUE;
-    if (inputctl->inheaders) {	/* Tables-only datastream, apparently */
-      if (cinfo->marker->saw_SOF)
-	ERREXIT(cinfo, JERR_SOF_NO_SOS);
-    } else {
-      /* Prevent infinite loop in coef ctlr's decompress_data routine
-       * if user set output_scan_number larger than number of scans.
-       */
-      if (cinfo->output_scan_number > cinfo->input_scan_number)
-	cinfo->output_scan_number = cinfo->input_scan_number;
-    }
-    break;
-  case JPEG_SUSPENDED:
-    break;
   }
-
-  return val;
 }
 
 
@@ -343,7 +623,7 @@ reset_input_controller (j_decompress_ptr cinfo)
   inputctl->pub.consume_input = consume_markers;
   inputctl->pub.has_multiple_scans = FALSE; /* "unknown" would be better */
   inputctl->pub.eoi_reached = FALSE;
-  inputctl->inheaders = TRUE;
+  inputctl->inheaders = 1;
   /* Reset other modules */
   (*cinfo->err->reset_error_mgr) ((j_common_ptr) cinfo);
   (*cinfo->marker->reset_marker_reader) (cinfo);
@@ -377,5 +657,5 @@ jinit_input_controller (j_decompress_ptr cinfo)
    */
   inputctl->pub.has_multiple_scans = FALSE; /* "unknown" would be better */
   inputctl->pub.eoi_reached = FALSE;
-  inputctl->inheaders = TRUE;
+  inputctl->inheaders = 1;
 }

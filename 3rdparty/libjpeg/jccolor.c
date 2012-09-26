@@ -2,6 +2,7 @@
  * jccolor.c
  *
  * Copyright (C) 1991-1996, Thomas G. Lane.
+ * Modified 2011 by Guido Vollbeding.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
@@ -301,6 +302,39 @@ grayscale_convert (j_compress_ptr cinfo,
 
 /*
  * Convert some rows of samples to the JPEG colorspace.
+ * No colorspace conversion, but change from interleaved
+ * to separate-planes representation.
+ */
+
+METHODDEF(void)
+rgb_convert (j_compress_ptr cinfo,
+	     JSAMPARRAY input_buf, JSAMPIMAGE output_buf,
+	     JDIMENSION output_row, int num_rows)
+{
+  register JSAMPROW inptr;
+  register JSAMPROW outptr0, outptr1, outptr2;
+  register JDIMENSION col;
+  JDIMENSION num_cols = cinfo->image_width;
+
+  while (--num_rows >= 0) {
+    inptr = *input_buf++;
+    outptr0 = output_buf[0][output_row];
+    outptr1 = output_buf[1][output_row];
+    outptr2 = output_buf[2][output_row];
+    output_row++;
+    for (col = 0; col < num_cols; col++) {
+      /* We can dispense with GETJSAMPLE() here */
+      outptr0[col] = inptr[RGB_RED];
+      outptr1[col] = inptr[RGB_GREEN];
+      outptr2[col] = inptr[RGB_BLUE];
+      inptr += RGB_PIXELSIZE;
+    }
+  }
+}
+
+
+/*
+ * Convert some rows of samples to the JPEG colorspace.
  * This version handles multi-component colorspaces without conversion.
  * We assume input_components == num_components.
  */
@@ -368,11 +402,9 @@ jinit_color_converter (j_compress_ptr cinfo)
     break;
 
   case JCS_RGB:
-#if RGB_PIXELSIZE != 3
     if (cinfo->input_components != RGB_PIXELSIZE)
       ERREXIT(cinfo, JERR_BAD_IN_COLORSPACE);
     break;
-#endif /* else share code with YCbCr */
 
   case JCS_YCbCr:
     if (cinfo->input_components != 3)
@@ -396,22 +428,21 @@ jinit_color_converter (j_compress_ptr cinfo)
   case JCS_GRAYSCALE:
     if (cinfo->num_components != 1)
       ERREXIT(cinfo, JERR_BAD_J_COLORSPACE);
-    if (cinfo->in_color_space == JCS_GRAYSCALE)
+    if (cinfo->in_color_space == JCS_GRAYSCALE ||
+	cinfo->in_color_space == JCS_YCbCr)
       cconvert->pub.color_convert = grayscale_convert;
     else if (cinfo->in_color_space == JCS_RGB) {
       cconvert->pub.start_pass = rgb_ycc_start;
       cconvert->pub.color_convert = rgb_gray_convert;
-    } else if (cinfo->in_color_space == JCS_YCbCr)
-      cconvert->pub.color_convert = grayscale_convert;
-    else
+    } else
       ERREXIT(cinfo, JERR_CONVERSION_NOTIMPL);
     break;
 
   case JCS_RGB:
     if (cinfo->num_components != 3)
       ERREXIT(cinfo, JERR_BAD_J_COLORSPACE);
-    if (cinfo->in_color_space == JCS_RGB && RGB_PIXELSIZE == 3)
-      cconvert->pub.color_convert = null_convert;
+    if (cinfo->in_color_space == JCS_RGB)
+      cconvert->pub.color_convert = rgb_convert;
     else
       ERREXIT(cinfo, JERR_CONVERSION_NOTIMPL);
     break;

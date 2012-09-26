@@ -62,6 +62,15 @@ typedef struct {
 
   /* Downsampling method pointers, one per component */
   downsample1_ptr methods[MAX_COMPONENTS];
+
+  /* Height of an output row group for each component. */
+  int rowgroup_height[MAX_COMPONENTS];
+
+  /* These arrays save pixel expansion factors so that int_downsample need not
+   * recompute them each time.  They are unused for other downsampling methods.
+   */
+  UINT8 h_expand[MAX_COMPONENTS];
+  UINT8 v_expand[MAX_COMPONENTS];
 } my_downsampler;
 
 typedef my_downsampler * my_downsample_ptr;
@@ -123,7 +132,8 @@ sep_downsample (j_compress_ptr cinfo,
   for (ci = 0, compptr = cinfo->comp_info; ci < cinfo->num_components;
        ci++, compptr++) {
     in_ptr = input_buf[ci] + in_row_index;
-    out_ptr = output_buf[ci] + (out_row_group_index * compptr->v_samp_factor);
+    out_ptr = output_buf[ci] +
+	      (out_row_group_index * downsample->rowgroup_height[ci]);
     (*downsample->methods[ci]) (cinfo, compptr, in_ptr, out_ptr);
   }
 }
@@ -140,14 +150,15 @@ METHODDEF(void)
 int_downsample (j_compress_ptr cinfo, jpeg_component_info * compptr,
 		JSAMPARRAY input_data, JSAMPARRAY output_data)
 {
+  my_downsample_ptr downsample = (my_downsample_ptr) cinfo->downsample;
   int inrow, outrow, h_expand, v_expand, numpix, numpix2, h, v;
   JDIMENSION outcol, outcol_h;	/* outcol_h == outcol*h_expand */
-  JDIMENSION output_cols = compptr->width_in_blocks * DCTSIZE;
+  JDIMENSION output_cols = compptr->width_in_blocks * compptr->DCT_h_scaled_size;
   JSAMPROW inptr, outptr;
   INT32 outvalue;
 
-  h_expand = cinfo->max_h_samp_factor / compptr->h_samp_factor;
-  v_expand = cinfo->max_v_samp_factor / compptr->v_samp_factor;
+  h_expand = downsample->h_expand[compptr->component_index];
+  v_expand = downsample->v_expand[compptr->component_index];
   numpix = h_expand * v_expand;
   numpix2 = numpix/2;
 
@@ -158,8 +169,8 @@ int_downsample (j_compress_ptr cinfo, jpeg_component_info * compptr,
   expand_right_edge(input_data, cinfo->max_v_samp_factor,
 		    cinfo->image_width, output_cols * h_expand);
 
-  inrow = 0;
-  for (outrow = 0; outrow < compptr->v_samp_factor; outrow++) {
+  inrow = outrow = 0;
+  while (inrow < cinfo->max_v_samp_factor) {
     outptr = output_data[outrow];
     for (outcol = 0, outcol_h = 0; outcol < output_cols;
 	 outcol++, outcol_h += h_expand) {
@@ -173,6 +184,7 @@ int_downsample (j_compress_ptr cinfo, jpeg_component_info * compptr,
       *outptr++ = (JSAMPLE) ((outvalue + numpix2) / numpix);
     }
     inrow += v_expand;
+    outrow++;
   }
 }
 
@@ -191,8 +203,8 @@ fullsize_downsample (j_compress_ptr cinfo, jpeg_component_info * compptr,
   jcopy_sample_rows(input_data, 0, output_data, 0,
 		    cinfo->max_v_samp_factor, cinfo->image_width);
   /* Edge-expand */
-  expand_right_edge(output_data, cinfo->max_v_samp_factor,
-		    cinfo->image_width, compptr->width_in_blocks * DCTSIZE);
+  expand_right_edge(output_data, cinfo->max_v_samp_factor, cinfo->image_width,
+		    compptr->width_in_blocks * compptr->DCT_h_scaled_size);
 }
 
 
@@ -212,9 +224,9 @@ METHODDEF(void)
 h2v1_downsample (j_compress_ptr cinfo, jpeg_component_info * compptr,
 		 JSAMPARRAY input_data, JSAMPARRAY output_data)
 {
-  int outrow;
+  int inrow;
   JDIMENSION outcol;
-  JDIMENSION output_cols = compptr->width_in_blocks * DCTSIZE;
+  JDIMENSION output_cols = compptr->width_in_blocks * compptr->DCT_h_scaled_size;
   register JSAMPROW inptr, outptr;
   register int bias;
 
@@ -225,9 +237,9 @@ h2v1_downsample (j_compress_ptr cinfo, jpeg_component_info * compptr,
   expand_right_edge(input_data, cinfo->max_v_samp_factor,
 		    cinfo->image_width, output_cols * 2);
 
-  for (outrow = 0; outrow < compptr->v_samp_factor; outrow++) {
-    outptr = output_data[outrow];
-    inptr = input_data[outrow];
+  for (inrow = 0; inrow < cinfo->max_v_samp_factor; inrow++) {
+    outptr = output_data[inrow];
+    inptr = input_data[inrow];
     bias = 0;			/* bias = 0,1,0,1,... for successive samples */
     for (outcol = 0; outcol < output_cols; outcol++) {
       *outptr++ = (JSAMPLE) ((GETJSAMPLE(*inptr) + GETJSAMPLE(inptr[1])
@@ -251,7 +263,7 @@ h2v2_downsample (j_compress_ptr cinfo, jpeg_component_info * compptr,
 {
   int inrow, outrow;
   JDIMENSION outcol;
-  JDIMENSION output_cols = compptr->width_in_blocks * DCTSIZE;
+  JDIMENSION output_cols = compptr->width_in_blocks * compptr->DCT_h_scaled_size;
   register JSAMPROW inptr0, inptr1, outptr;
   register int bias;
 
@@ -262,8 +274,8 @@ h2v2_downsample (j_compress_ptr cinfo, jpeg_component_info * compptr,
   expand_right_edge(input_data, cinfo->max_v_samp_factor,
 		    cinfo->image_width, output_cols * 2);
 
-  inrow = 0;
-  for (outrow = 0; outrow < compptr->v_samp_factor; outrow++) {
+  inrow = outrow = 0;
+  while (inrow < cinfo->max_v_samp_factor) {
     outptr = output_data[outrow];
     inptr0 = input_data[inrow];
     inptr1 = input_data[inrow+1];
@@ -276,6 +288,7 @@ h2v2_downsample (j_compress_ptr cinfo, jpeg_component_info * compptr,
       inptr0 += 2; inptr1 += 2;
     }
     inrow += 2;
+    outrow++;
   }
 }
 
@@ -294,7 +307,7 @@ h2v2_smooth_downsample (j_compress_ptr cinfo, jpeg_component_info * compptr,
 {
   int inrow, outrow;
   JDIMENSION colctr;
-  JDIMENSION output_cols = compptr->width_in_blocks * DCTSIZE;
+  JDIMENSION output_cols = compptr->width_in_blocks * compptr->DCT_h_scaled_size;
   register JSAMPROW inptr0, inptr1, above_ptr, below_ptr, outptr;
   INT32 membersum, neighsum, memberscale, neighscale;
 
@@ -321,8 +334,8 @@ h2v2_smooth_downsample (j_compress_ptr cinfo, jpeg_component_info * compptr,
   memberscale = 16384 - cinfo->smoothing_factor * 80; /* scaled (1-5*SF)/4 */
   neighscale = cinfo->smoothing_factor * 16; /* scaled SF/4 */
 
-  inrow = 0;
-  for (outrow = 0; outrow < compptr->v_samp_factor; outrow++) {
+  inrow = outrow = 0;
+  while (inrow < cinfo->max_v_samp_factor) {
     outptr = output_data[outrow];
     inptr0 = input_data[inrow];
     inptr1 = input_data[inrow+1];
@@ -378,6 +391,7 @@ h2v2_smooth_downsample (j_compress_ptr cinfo, jpeg_component_info * compptr,
     *outptr = (JSAMPLE) ((membersum + 32768) >> 16);
 
     inrow += 2;
+    outrow++;
   }
 }
 
@@ -392,9 +406,9 @@ METHODDEF(void)
 fullsize_smooth_downsample (j_compress_ptr cinfo, jpeg_component_info *compptr,
 			    JSAMPARRAY input_data, JSAMPARRAY output_data)
 {
-  int outrow;
+  int inrow;
   JDIMENSION colctr;
-  JDIMENSION output_cols = compptr->width_in_blocks * DCTSIZE;
+  JDIMENSION output_cols = compptr->width_in_blocks * compptr->DCT_h_scaled_size;
   register JSAMPROW inptr, above_ptr, below_ptr, outptr;
   INT32 membersum, neighsum, memberscale, neighscale;
   int colsum, lastcolsum, nextcolsum;
@@ -415,11 +429,11 @@ fullsize_smooth_downsample (j_compress_ptr cinfo, jpeg_component_info *compptr,
   memberscale = 65536L - cinfo->smoothing_factor * 512L; /* scaled 1-8*SF */
   neighscale = cinfo->smoothing_factor * 64; /* scaled SF */
 
-  for (outrow = 0; outrow < compptr->v_samp_factor; outrow++) {
-    outptr = output_data[outrow];
-    inptr = input_data[outrow];
-    above_ptr = input_data[outrow-1];
-    below_ptr = input_data[outrow+1];
+  for (inrow = 0; inrow < cinfo->max_v_samp_factor; inrow++) {
+    outptr = output_data[inrow];
+    inptr = input_data[inrow];
+    above_ptr = input_data[inrow-1];
+    below_ptr = input_data[inrow+1];
 
     /* Special case for first column */
     colsum = GETJSAMPLE(*above_ptr++) + GETJSAMPLE(*below_ptr++) +
@@ -467,6 +481,7 @@ jinit_downsampler (j_compress_ptr cinfo)
   int ci;
   jpeg_component_info * compptr;
   boolean smoothok = TRUE;
+  int h_in_group, v_in_group, h_out_group, v_out_group;
 
   downsample = (my_downsample_ptr)
     (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
@@ -482,8 +497,17 @@ jinit_downsampler (j_compress_ptr cinfo)
   /* Verify we can handle the sampling factors, and set up method pointers */
   for (ci = 0, compptr = cinfo->comp_info; ci < cinfo->num_components;
        ci++, compptr++) {
-    if (compptr->h_samp_factor == cinfo->max_h_samp_factor &&
-	compptr->v_samp_factor == cinfo->max_v_samp_factor) {
+    /* Compute size of an "output group" for DCT scaling.  This many samples
+     * are to be converted from max_h_samp_factor * max_v_samp_factor pixels.
+     */
+    h_out_group = (compptr->h_samp_factor * compptr->DCT_h_scaled_size) /
+		  cinfo->min_DCT_h_scaled_size;
+    v_out_group = (compptr->v_samp_factor * compptr->DCT_v_scaled_size) /
+		  cinfo->min_DCT_v_scaled_size;
+    h_in_group = cinfo->max_h_samp_factor;
+    v_in_group = cinfo->max_v_samp_factor;
+    downsample->rowgroup_height[ci] = v_out_group; /* save for use later */
+    if (h_in_group == h_out_group && v_in_group == v_out_group) {
 #ifdef INPUT_SMOOTHING_SUPPORTED
       if (cinfo->smoothing_factor) {
 	downsample->methods[ci] = fullsize_smooth_downsample;
@@ -491,12 +515,12 @@ jinit_downsampler (j_compress_ptr cinfo)
       } else
 #endif
 	downsample->methods[ci] = fullsize_downsample;
-    } else if (compptr->h_samp_factor * 2 == cinfo->max_h_samp_factor &&
-	       compptr->v_samp_factor == cinfo->max_v_samp_factor) {
+    } else if (h_in_group == h_out_group * 2 &&
+	       v_in_group == v_out_group) {
       smoothok = FALSE;
       downsample->methods[ci] = h2v1_downsample;
-    } else if (compptr->h_samp_factor * 2 == cinfo->max_h_samp_factor &&
-	       compptr->v_samp_factor * 2 == cinfo->max_v_samp_factor) {
+    } else if (h_in_group == h_out_group * 2 &&
+	       v_in_group == v_out_group * 2) {
 #ifdef INPUT_SMOOTHING_SUPPORTED
       if (cinfo->smoothing_factor) {
 	downsample->methods[ci] = h2v2_smooth_downsample;
@@ -504,10 +528,12 @@ jinit_downsampler (j_compress_ptr cinfo)
       } else
 #endif
 	downsample->methods[ci] = h2v2_downsample;
-    } else if ((cinfo->max_h_samp_factor % compptr->h_samp_factor) == 0 &&
-	       (cinfo->max_v_samp_factor % compptr->v_samp_factor) == 0) {
+    } else if ((h_in_group % h_out_group) == 0 &&
+	       (v_in_group % v_out_group) == 0) {
       smoothok = FALSE;
       downsample->methods[ci] = int_downsample;
+      downsample->h_expand[ci] = (UINT8) (h_in_group / h_out_group);
+      downsample->v_expand[ci] = (UINT8) (v_in_group / v_out_group);
     } else
       ERREXIT(cinfo, JERR_FRACT_SAMPLE_NOTIMPL);
   }
