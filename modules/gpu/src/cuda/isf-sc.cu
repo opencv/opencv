@@ -40,6 +40,7 @@
 //
 //M*/
 
+#include <opencv2/gpu/device/common.hpp>
 // #include <icf.hpp>
 // #include <opencv2/gpu/device/saturate_cast.hpp>
 // #include <stdio.h>
@@ -54,9 +55,8 @@
 // # define dprintf(format, ...)
 // #endif
 
-// namespace cv { namespace gpu { namespace device {
-
-// namespace icf {
+namespace cv { namespace gpu { namespace device {
+namespace icf {
 
 //     enum {
 //         HOG_BINS = 6,
@@ -66,33 +66,35 @@
 //         GREY_OFFSET = HEIGHT * HOG_LUV_BINS
 //     };
 
-//     __global__ void magToHist(const uchar* __restrict__ mag,
-//                               const float* __restrict__ angle, const int angPitch,
-//                                     uchar* __restrict__ hog,   const int hogPitch)
-//     {
-//         const int y = blockIdx.y * blockDim.y + threadIdx.y;
-//         const int x = blockIdx.x * blockDim.x + threadIdx.x;
+    // ToDo: use textures or ancached load instruction.
+    __global__ void magToHist(const uchar* __restrict__ mag,
+                              const float* __restrict__ angle, const int angPitch,
+                                    uchar* __restrict__ hog,   const int hogPitch, const int fh)
+    {
+        const int y = blockIdx.y * blockDim.y + threadIdx.y;
+        const int x = blockIdx.x * blockDim.x + threadIdx.x;
 
-//         const int bin = (int)(angle[y * angPitch + x]);
-//         const uchar val = mag[y * angPitch + x];
+        const int bin = (int)(angle[y * angPitch + x]);
+        const uchar val = mag[y * hogPitch + x];
+        hog[((fh * bin) + y) * hogPitch + x] = val;
+    }
 
-//         hog[((HEIGHT * bin) + y) * hogPitch + x] = val;
-//     }
+    void fillBins(cv::gpu::PtrStepSzb hogluv, const cv::gpu::PtrStepSzf& nangle,
+                  const int fw,  const int fh, const int bins)
+    {
+        const uchar* mag = (const uchar*)hogluv.ptr(fh * bins);
+        uchar* hog = (uchar*)hogluv.ptr();
+        const float* angle = (const float*)nangle.ptr();
 
-//     void fillBins(cv::gpu::PtrStepSzb hogluv, const cv::gpu::PtrStepSzf& nangle)
-//     {
-//         const uchar* mag = (const uchar*)hogluv.ptr(HEIGHT * HOG_BINS);
-//         uchar* hog = (uchar*)hogluv.ptr();
-//         const float* angle = (const float*)nangle.ptr();
+        dim3 block(32, 8);
+        dim3 grid(fw / 32, fh / 8);
 
-//         dim3 block(32, 8);
-//         dim3 grid(WIDTH / 32, HEIGHT / 8);
-
-//         magToHist<<<grid, block>>>(mag, angle, nangle.step / sizeof(float), hog, hogluv.step);
-//         cudaSafeCall( cudaGetLastError() );
-//         cudaSafeCall( cudaDeviceSynchronize() );
-//     }
-// }
+        magToHist<<<grid, block>>>(mag, angle, nangle.step / sizeof(float), hog, hogluv.step, fh);
+        cudaSafeCall( cudaGetLastError() );
+        cudaSafeCall( cudaDeviceSynchronize() );
+    }
+}
+}}}
 
 // __global__ void detect(const cv::gpu::icf::Cascade cascade, const int* __restrict__ hogluv, const int pitch,
 //     PtrStepSz<uchar4> objects)

@@ -49,17 +49,18 @@ cv::gpu::SoftCascade::SoftCascade() : filds(0) { throw_nogpu(); }
 cv::gpu::SoftCascade::SoftCascade( const string&, const float, const float) : filds(0) { throw_nogpu(); }
 cv::gpu::SoftCascade::~SoftCascade() { throw_nogpu(); }
 bool cv::gpu::SoftCascade::load( const string&, const float, const float) { throw_nogpu(); return false; }
-void cv::gpu::SoftCascade::detectMultiScale(const GpuMat&, const GpuMat&, GpuMat&, const int, Stream) { throw_nogpu(); }
+void cv::gpu::SoftCascade::detectMultiScale(const GpuMat&, const GpuMat&, GpuMat&, const int, Stream) { throw_nogpu();}
 
 #else
 
 // #include <icf.hpp>
 
-// namespace cv { namespace gpu { namespace device {
-// namespace icf {
-//     void fillBins(cv::gpu::PtrStepSzb hogluv,const cv::gpu::PtrStepSzf& nangle);
-// }
-// }}}
+namespace cv { namespace gpu { namespace device {
+namespace icf {
+    void fillBins(cv::gpu::PtrStepSzb hogluv, const cv::gpu::PtrStepSzf& nangle,
+        const int fw, const int fh, const int bins);
+}
+}}}
 
 // namespace {
 //     char *itoa(long i, char* s, int /*dummy_radix*/)
@@ -71,6 +72,16 @@ void cv::gpu::SoftCascade::detectMultiScale(const GpuMat&, const GpuMat&, GpuMat
 
 struct cv::gpu::SoftCascade::Filds
 {
+
+    Filds()
+    {
+        plane.create(FRAME_HEIGHT * (HOG_LUV_BINS + 1), FRAME_WIDTH, CV_8UC1);
+        fplane.create(FRAME_HEIGHT * 6, FRAME_WIDTH, CV_32FC1);
+        luv.create(FRAME_HEIGHT, FRAME_WIDTH, CV_8UC3);
+        shrunk.create(FRAME_HEIGHT / 4 * HOG_LUV_BINS, FRAME_WIDTH / 4, CV_8UC1);
+        integralBuffer.create(shrunk.rows + 1 * HOG_LUV_BINS, shrunk.cols + 1, CV_32SC1);
+        hogluv.create((FRAME_HEIGHT / 4 + 1) * HOG_LUV_BINS, FRAME_WIDTH / 4 + 1, CV_32SC1);
+    }
 //     // scales range
 //     float minScale;
 //     float maxScale;
@@ -85,19 +96,26 @@ struct cv::gpu::SoftCascade::Filds
 //     GpuMat features;
 //     GpuMat levels;
 
-//     // preallocated buffer 640x480x10 + 640x480
-//     GpuMat dmem;
-//     // 160x120x10
-//     GpuMat shrunk;
-//     // 161x121x10
-//     GpuMat hogluv;
+    // preallocated buffer 640x480x10 for hogluv + 640x480 got gray
+    GpuMat plane;
+
+    // preallocated buffer for floating point operations
+    GpuMat fplane;
+
+    // temporial mat for cvtColor
+    GpuMat luv;
+
+    // 160x120x10
+    GpuMat shrunk;
+
+    // temporial mat for integrall
+    GpuMat integralBuffer;
+
+    // 161x121x10
+    GpuMat hogluv;
 
 //     // will be removed in final version
-//     // temporial mat for cvtColor
-//     GpuMat luv;
 
-//     // temporial mat for integrall
-//     GpuMat integralBuffer;
 
 //     // temp matrix for sobel and cartToPolar
 //     GpuMat dfdx, dfdy, angle, mag, nmag, nangle;
@@ -108,17 +126,18 @@ struct cv::gpu::SoftCascade::Filds
 //     icf::ChannelStorage storage;
 
 //     enum { BOOST = 0 };
-//     enum
-//     {
-//         FRAME_WIDTH        = 640,
-//         FRAME_HEIGHT       = 480,
+    enum
+    {
+        FRAME_WIDTH        = 640,
+        FRAME_HEIGHT       = 480,
 //         TOTAL_SCALES       = 55,
 //         CLASSIFIERS        = 5,
 //         ORIG_OBJECT_WIDTH  = 64,
 //         ORIG_OBJECT_HEIGHT = 128,
-//         HOG_BINS           = 6,
-//         HOG_LUV_BINS       = 10
-//     };
+        HOG_BINS           = 6,
+        LUV_BINS           = 3,
+        HOG_LUV_BINS       = 10
+    };
 
 //     bool fill(const FileNode &root, const float mins, const float maxs);
 //     void detect(cv::gpu::GpuMat objects, cudaStream_t stream) const
@@ -386,7 +405,8 @@ struct cv::gpu::SoftCascade::Filds
 //         scale = ::std::min(maxScale, ::expf(::log(scale) + logFactor));
 
 //         // printf("level: %d (%f %f) [%f %f] (%d %d) (%d %d)\n", level.octave, level.relScale, level.shrScale,
-//         //     level.scaling[0], level.scaling[1], level.workRect.x, level.workRect.y, level.objSize.x, level.objSize.y);
+//         //     level.scaling[0], level.scaling[1], level.workRect.x, level.workRect.y, level.objSize.x,
+//level.objSize.y);
 
 //         // std::cout << "level " << sc
 //         //           << " octeve "
@@ -423,8 +443,8 @@ bool cv::gpu::SoftCascade::load( const string& filename, const float minScale, c
     if (!fs.isOpened()) return false;
 
     filds = new Filds;
-//     Filds& flds = *filds;
-//     if (!flds.fill(fs.getFirstTopLevelNode(), minScale, maxScale)) return false;
+    Filds& flds = *filds;
+    // if (!flds.fill(fs.getFirstTopLevelNode(), minScale, maxScale)) return false;
     return true;
 }
 
@@ -432,15 +452,15 @@ bool cv::gpu::SoftCascade::load( const string& filename, const float minScale, c
 void cv::gpu::SoftCascade::detectMultiScale(const GpuMat& colored, const GpuMat& /*rois*/,
                                 GpuMat& objects, const int /*rejectfactor*/, Stream s)
 {
-//     // only color images are supperted
-//     CV_Assert(colored.type() == CV_8UC3);
+    // only color images are supperted
+    CV_Assert(colored.type() == CV_8UC3);
 
-//     // // only this window size allowed
-//     CV_Assert(colored.cols == 640 && colored.rows == 480);
+    // only this window size allowed
+    CV_Assert(colored.cols == Filds::FRAME_WIDTH && colored.rows == Filds::FRAME_HEIGHT);
 
-//     Filds& flds = *filds;
+    Filds& flds = *filds;
 
-// #if defined USE_REFERENCE_VALUES
+#if defined USE_REFERENCE_VALUES
 //     cudaMemset(flds.hogluv.data, 0, flds.hogluv.step * flds.hogluv.rows);
 //     cv::FileStorage imgs("/home/kellan/testInts.xml", cv::FileStorage::READ);
 //     char buff[33];
@@ -452,57 +472,72 @@ void cv::gpu::SoftCascade::detectMultiScale(const GpuMat& colored, const GpuMat&
 //         GpuMat gchannel(flds.hogluv, cv::Rect(0, 121 * i, 161, 121));
 //         gchannel.upload(channel);
 //     }
-// #else
-//     GpuMat& dmem = flds.dmem;
-//     cudaMemset(dmem.data, 0, dmem.step * dmem.rows);
-//     GpuMat& shrunk = flds.shrunk;
-//     int w = shrunk.cols;
-//     int h = colored.rows / flds.storage.shrinkage;
+#else
+    GpuMat& plane = flds.plane;
+    GpuMat& shrunk = flds.shrunk;
+    cudaMemset(plane.data, 0, plane.step * plane.rows);
 
-//     std::vector<GpuMat> splited;
-//     for(int i = 0; i < 3; ++i)
-//     {
-//         splited.push_back(GpuMat(dmem, cv::Rect(0, colored.rows * (7 + i), colored.cols, colored.rows)));
-//     }
+    int fw = Filds::FRAME_WIDTH;
+    int fh = Filds::FRAME_HEIGHT;
 
-//     GpuMat gray(dmem, cv::Rect(0, colored.rows * 10, colored.cols, colored.rows) );
+    GpuMat gray(plane, cv::Rect(0, fh * Filds::HOG_LUV_BINS, fw, fh));
 
-//     cv::gpu::cvtColor(colored, gray, CV_RGB2GRAY);
+    //cv::gpu::cvtColor(colored, gray, CV_RGB2GRAY);
+    cv::gpu::cvtColor(colored, gray, CV_BGR2GRAY);
 
-//     //create hog
-//     cv::gpu::Sobel(gray, flds.dfdx, CV_32F, 1, 0, 3, 0.25);
-//     cv::gpu::Sobel(gray, flds.dfdy, CV_32F, 0, 1, 3, 0.25);
+    //create hog
+    GpuMat dfdx(flds.fplane, cv::Rect(0,  0, fw, fh));
+    GpuMat dfdy(flds.fplane, cv::Rect(0, fh, fw, fh));
 
-//     cv::gpu::cartToPolar(flds.dfdx, flds.dfdy, flds.mag, flds.angle, true);
+    cv::gpu::Sobel(gray, dfdx, CV_32F, 1, 0, 3, 0.125f);
+    cv::gpu::Sobel(gray, dfdy, CV_32F, 0, 1, 3, 0.125f);
 
-//     cv::gpu::multiply(flds.mag, cv::Scalar::all(1.0 / ::log(2)), flds.nmag);
-//     cv::gpu::multiply(flds.angle, cv::Scalar::all(1.0 / 60.0), flds.nangle);
+    GpuMat mag(flds.fplane, cv::Rect(0, 2 * fh, fw, fh));
+    GpuMat ang(flds.fplane, cv::Rect(0, 3 * fh, fw, fh));
 
-//     GpuMat magCannel(dmem, cv::Rect(0, colored.rows * 6, colored.cols, colored.rows));
-//     flds.nmag.convertTo(magCannel, CV_8UC1);
-//     device::icf::fillBins(dmem, flds.nangle);
+    cv::gpu::cartToPolar(dfdx, dfdy, mag, ang, true);
 
-//     // create luv
-//     cv::gpu::cvtColor(colored, flds.luv, CV_BGR2Luv);
-//     cv::gpu::split(flds.luv, splited);
+    // normolize magnitude to uchar interval and angles to 6 bins
 
-//     GpuMat plane(dmem, cv::Rect(0, 0, colored.cols, colored.rows * Filds::HOG_LUV_BINS));
-//     cv::gpu::resize(plane, flds.shrunk, cv::Size(), 0.25, 0.25, CV_INTER_AREA);
+    GpuMat nmag(flds.fplane, cv::Rect(0, 4 * fh, fw, fh));
+    GpuMat nang(flds.fplane, cv::Rect(0, 5 * fh, fw, fh));
 
-//     // fer debug purpose
-//     // cudaMemset(flds.hogluv.data, 0, flds.hogluv.step * flds.hogluv.rows);
+    cv::gpu::multiply(mag, cv::Scalar::all(1.f / ::log(2)), nmag);
+    cv::gpu::multiply(ang, cv::Scalar::all(1.f / 60.f),     nang);
 
-//     for(int i = 0; i < Filds::HOG_LUV_BINS; ++i)
-//     {
-//         GpuMat channel(shrunk, cv::Rect(0, h  * i, w, h ));
-//         GpuMat sum(flds.hogluv, cv::Rect(0, (h + 1) * i, w + 1, h + 1));
-//         cv::gpu::integralBuffered(channel, sum, flds.integralBuffer);
-    // }
+    //create uchar magnitude
+    GpuMat cmag(plane, cv::Rect(0, fh * Filds::HOG_BINS, fw, fh));
+    nmag.convertTo(cmag, CV_8UC1);
 
-// #endif
+    // create luv
+    cv::gpu::cvtColor(colored, flds.luv, CV_BGR2Luv);
 
-//     cudaStream_t stream = StreamAccessor::getStream(s);
-//     // detection
+    std::vector<GpuMat> splited;
+    for(int i = 0; i < Filds::LUV_BINS; ++i)
+    {
+        splited.push_back(GpuMat(plane, cv::Rect(0, fh * (7 + i), fw, fh)));
+    }
+
+    cv::gpu::split(flds.luv, splited);
+
+    device::icf::fillBins(plane, nang, fw, fh, Filds::HOG_BINS);
+
+    GpuMat hogluv(plane, cv::Rect(0, 0, fw, fh * Filds::HOG_LUV_BINS));
+    cv::gpu::resize(hogluv, flds.shrunk, cv::Size(), 0.25, 0.25, CV_INTER_AREA);
+
+    fw /= 4;
+    fh /= 4;
+    for(int i = 0; i < Filds::HOG_LUV_BINS; ++i)
+    {
+        GpuMat channel(shrunk, cv::Rect(0, fh  * i, fw, fh ));
+        GpuMat sum(flds.hogluv, cv::Rect(0, (fh + 1) * i, fw + 1, fh + 1));
+        cv::gpu::integralBuffered(channel, sum, flds.integralBuffer);
+    }
+
+#endif
+
+    cudaStream_t stream = StreamAccessor::getStream(s);
+    // detection
 //     flds.detect(objects, stream);
 
 //     // flds.storage.frame(colored, stream);
