@@ -94,7 +94,7 @@ namespace
 
 bool cv::gpu::TargetArchs::builtWith(cv::gpu::FeatureSet feature_set)
 {
-#if defined HAVE_CUDA && !defined(CUDA_DISABLER)
+#if defined (HAVE_CUDA)
     return ::compareToSet(CUDA_ARCH_FEATURES, feature_set, std::greater_equal<int>());
 #else
     (void)feature_set;
@@ -109,7 +109,7 @@ bool cv::gpu::TargetArchs::has(int major, int minor)
 
 bool cv::gpu::TargetArchs::hasPtx(int major, int minor)
 {
-#if defined HAVE_CUDA && !defined(CUDA_DISABLER)
+#if defined (HAVE_CUDA)
     return ::compareToSet(CUDA_ARCH_PTX, major * 10 + minor, std::equal_to<int>());
 #else
     (void)major;
@@ -120,7 +120,7 @@ bool cv::gpu::TargetArchs::hasPtx(int major, int minor)
 
 bool cv::gpu::TargetArchs::hasBin(int major, int minor)
 {
-#if defined (HAVE_CUDA) && !defined(CUDA_DISABLER)
+#if defined (HAVE_CUDA)
     return ::compareToSet(CUDA_ARCH_BIN, major * 10 + minor, std::equal_to<int>());
 #else
     (void)major;
@@ -131,7 +131,7 @@ bool cv::gpu::TargetArchs::hasBin(int major, int minor)
 
 bool cv::gpu::TargetArchs::hasEqualOrLessPtx(int major, int minor)
 {
-#if defined HAVE_CUDA && !defined(CUDA_DISABLER)
+#if defined (HAVE_CUDA)
     return ::compareToSet(CUDA_ARCH_PTX, major * 10 + minor,
                      std::less_equal<int>());
 #else
@@ -149,9 +149,8 @@ bool cv::gpu::TargetArchs::hasEqualOrGreater(int major, int minor)
 
 bool cv::gpu::TargetArchs::hasEqualOrGreaterPtx(int major, int minor)
 {
-#if defined HAVE_CUDA && !defined(CUDA_DISABLER)
-    return ::compareToSet(CUDA_ARCH_PTX, major * 10 + minor,
-                     std::greater_equal<int>());
+#if defined (HAVE_CUDA)
+    return ::compareToSet(CUDA_ARCH_PTX, major * 10 + minor, std::greater_equal<int>());
 #else
     (void)major;
     (void)minor;
@@ -161,7 +160,7 @@ bool cv::gpu::TargetArchs::hasEqualOrGreaterPtx(int major, int minor)
 
 bool cv::gpu::TargetArchs::hasEqualOrGreaterBin(int major, int minor)
 {
-#if defined HAVE_CUDA && !defined(CUDA_DISABLER)
+#if defined (HAVE_CUDA)
     return ::compareToSet(CUDA_ARCH_BIN, major * 10 + minor,
                      std::greater_equal<int>());
 #else
@@ -171,7 +170,7 @@ bool cv::gpu::TargetArchs::hasEqualOrGreaterBin(int major, int minor)
 #endif
 }
 
-#if !defined HAVE_CUDA || defined(CUDA_DISABLER)
+#if !defined (HAVE_CUDA)
 
 #define throw_nogpu CV_Error(CV_GpuNotSupported, "The library is compiled without CUDA support")
 
@@ -728,7 +727,7 @@ namespace
     };
 }
 
-#if !defined HAVE_CUDA || defined(CUDA_DISABLER)
+#if !defined HAVE_CUDA || defined(CUDA_DISABLER_)
 
 namespace
 {

@@ -39,8 +39,6 @@
 //
 //M*/
 
-#if !defined CUDA_DISABLER
-
 
 #include <iostream>
 #include <string>
@@ -76,6 +74,8 @@ void ncvSetDebugOutputHandler(NCVDebugOutputHandler *func)
 {
     debugOutputHandler = func;
 }
+
+#if !defined CUDA_DISABLER
 
 
 //==============================================================================

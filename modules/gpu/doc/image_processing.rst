@@ -851,7 +851,7 @@ Performs pure non local means denoising without any simplification, and thus it 
 
 .. ocv:function:: void nonLocalMeans(const GpuMat& src, GpuMat& dst, float h, int search_widow_size = 11, int block_size = 7, int borderMode = BORDER_DEFAULT, Stream& s = Stream::Null())
 
-    :param src: Source image. Supports only CV_8UC1, CV_8UC3.
+    :param src: Source image. Supports only CV_8UC1, CV_8UC2 and CV_8UC3.
 
     :param dst: Destination imagwe.
 

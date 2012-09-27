@@ -26,6 +26,7 @@
 #include "opencv2/video/video.hpp"
 #include "opencv2/nonfree/nonfree.hpp"
 #include "opencv2/legacy/legacy.hpp"
+#include "opencv2/photo/photo.hpp"
 
 #include "utility.hpp"
 

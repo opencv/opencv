@@ -721,7 +721,11 @@ bool cv::gpu::CascadeClassifier_GPU::load(const string& filename)
     return !this->empty();
 }
 
+#endif
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////
+
+#if defined (HAVE_CUDA)
 
 struct RectConvert
 {

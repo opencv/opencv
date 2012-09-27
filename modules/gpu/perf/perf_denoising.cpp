@@ -96,3 +96,50 @@ PERF_TEST_P(Sz_Depth_Cn_WinSz_BlockSz, Denoising_NonLocalMeans,
         FAIL();
     }
 }
+
+
+//////////////////////////////////////////////////////////////////////
+// fastNonLocalMeans
+
+DEF_PARAM_TEST(Sz_Depth_Cn_WinSz_BlockSz, cv::Size, MatDepth , int, int, int);
+
+PERF_TEST_P(Sz_Depth_Cn_WinSz_BlockSz, Denoising_FastNonLocalMeans, 
+            Combine(GPU_TYPICAL_MAT_SIZES, Values<MatDepth>(CV_8U), Values(1), Values(21), Values(5, 7)))
+{
+    declare.time(30.0);
+
+    cv::Size size = GET_PARAM(0);
+    int depth = GET_PARAM(1);
+    int channels = GET_PARAM(2);
+    
+    int search_widow_size = GET_PARAM(3);
+    int block_size = GET_PARAM(4);
+
+    float h = 10;       
+    int type = CV_MAKE_TYPE(depth, channels);
+
+    cv::Mat src(size, type);
+    fillRandom(src);
+
+    if (runOnGpu)
+    {
+        cv::gpu::GpuMat d_src(src);
+        cv::gpu::GpuMat d_dst;        
+        cv::gpu::fastNlMeansDenoising(d_src, d_dst, h, search_widow_size/2, block_size/2); 
+
+        TEST_CYCLE()
+        {
+            cv::gpu::fastNlMeansDenoising(d_src, d_dst, h, search_widow_size/2, block_size/2); 
+        }
+    }
+    else
+    {
+        cv::Mat dst;
+        cv::fastNlMeansDenoising(src, dst, h, block_size, search_widow_size);
+
+        TEST_CYCLE()
+        {
+            cv::fastNlMeansDenoising(src, dst, h, block_size, search_widow_size);
+        }
+    }
+}

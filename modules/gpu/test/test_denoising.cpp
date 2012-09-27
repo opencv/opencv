@@ -96,7 +96,7 @@ INSTANTIATE_TEST_CASE_P(GPU_Denoising, BilateralFilter, testing::Combine(
 ////////////////////////////////////////////////////////
 // Brute Force Non local means
 
-struct NonLocalMeans: testing::TestWithParam<cv::gpu::DeviceInfo>
+struct BruteForceNonLocalMeans: testing::TestWithParam<cv::gpu::DeviceInfo>
 {
     cv::gpu::DeviceInfo devInfo;
 
@@ -107,7 +107,7 @@ struct NonLocalMeans: testing::TestWithParam<cv::gpu::DeviceInfo>
     }
 };
 
-TEST_P(NonLocalMeans, Regression)
+TEST_P(BruteForceNonLocalMeans, Regression)
 {
     using cv::gpu::GpuMat;
 
@@ -134,7 +134,52 @@ TEST_P(NonLocalMeans, Regression)
     EXPECT_MAT_NEAR(gray_gold, dgray, 1e-4);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Denoising, NonLocalMeans, ALL_DEVICES);
+INSTANTIATE_TEST_CASE_P(GPU_Denoising, BruteForceNonLocalMeans, ALL_DEVICES);
+
+
+
+////////////////////////////////////////////////////////
+// Fast Force Non local means
+
+struct FastNonLocalMeans: testing::TestWithParam<cv::gpu::DeviceInfo>
+{
+    cv::gpu::DeviceInfo devInfo;
+
+    virtual void SetUp()
+    {
+        devInfo = GetParam();
+        cv::gpu::setDevice(devInfo.deviceID());
+    }
+};
+
+TEST_P(FastNonLocalMeans, Regression)
+{
+    using cv::gpu::GpuMat;
+
+    cv::Mat bgr  = readImage("denoising/lena_noised_gaussian_sigma=20_multi_0.png", cv::IMREAD_COLOR);
+    ASSERT_FALSE(bgr.empty());
+
+    cv::Mat gray;
+    cv::cvtColor(bgr, gray, CV_BGR2GRAY);
+
+    GpuMat dbgr, dgray;
+    cv::gpu::fastNlMeansDenoising(GpuMat(gray),  dgray, 10);
+
+#if 0
+    //dumpImage("denoising/fnlm_denoised_lena_bgr.png", cv::Mat(dbgr));
+    dumpImage("denoising/fnlm_denoised_lena_gray.png", cv::Mat(dgray));
+#endif
+
+    //cv::Mat bgr_gold  = readImage("denoising/denoised_lena_bgr.png", cv::IMREAD_COLOR);
+    cv::Mat gray_gold  = readImage("denoising/fnlm_denoised_lena_gray.png", cv::IMREAD_GRAYSCALE);
+    ASSERT_FALSE(/*bgr_gold.empty() || */gray_gold.empty());
+
+    //EXPECT_MAT_NEAR(bgr_gold, dbgr, 1e-4);
+    EXPECT_MAT_NEAR(gray_gold, dgray, 1e-4);
+
+}
+
+INSTANTIATE_TEST_CASE_P(GPU_Denoising, FastNonLocalMeans, ALL_DEVICES);
 
 
 #endif // HAVE_CUDA

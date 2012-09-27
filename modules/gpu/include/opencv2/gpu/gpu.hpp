@@ -777,6 +777,8 @@ CV_EXPORTS void bilateralFilter(const GpuMat& src, GpuMat& dst, int kernel_size,
 CV_EXPORTS void nonLocalMeans(const GpuMat& src, GpuMat& dst, float h,
                               int search_widow_size = 11, int block_size = 7, int borderMode = BORDER_DEFAULT, Stream& s = Stream::Null());
 
+//! Fast (but approximate)version of non-local means algorith similar to CPU function (running sums technique)
+CV_EXPORTS void fastNlMeansDenoising( const GpuMat& src, GpuMat& dst, float h, int search_radius = 10, int block_radius = 3, Stream& s = Stream::Null());
 
 struct CV_EXPORTS CannyBuf;
 

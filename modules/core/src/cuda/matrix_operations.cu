@@ -40,7 +40,6 @@
 //
 //M*/
 
-#if !defined CUDA_DISABLER
 
 #include "opencv2/gpu/device/saturate_cast.hpp"
 #include "opencv2/gpu/device/transform.hpp"
@@ -342,5 +341,3 @@ namespace cv { namespace gpu { namespace device
 # pragma clang diagnostic pop
 #endif
 }}} // namespace cv { namespace gpu { namespace device
-
-#endif /* CUDA_DISABLER */

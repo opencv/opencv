@@ -64,7 +64,7 @@ CV_EXPORTS cudaStream_t cv::gpu::StreamAccessor::getStream(const Stream& stream)
 #endif /* !defined (HAVE_CUDA) */
 
 
-#if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
+#if !defined (HAVE_CUDA)
 
 void cv::gpu::Stream::create() { throw_nogpu(); }
 void cv::gpu::Stream::release() { throw_nogpu(); }

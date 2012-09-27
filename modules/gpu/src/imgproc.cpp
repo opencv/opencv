@@ -1110,31 +1110,6 @@ namespace
     }
 }
 
-bool cv::gpu::tryConvertToGpuBorderType(int cpuBorderType, int& gpuBorderType)
-{
-    switch (cpuBorderType)
-    {
-    case cv::BORDER_REFLECT101:
-        gpuBorderType = cv::gpu::BORDER_REFLECT101_GPU;
-        return true;
-    case cv::BORDER_REPLICATE:
-        gpuBorderType = cv::gpu::BORDER_REPLICATE_GPU;
-        return true;
-    case cv::BORDER_CONSTANT:
-        gpuBorderType = cv::gpu::BORDER_CONSTANT_GPU;
-        return true;
-    case cv::BORDER_REFLECT:
-        gpuBorderType = cv::gpu::BORDER_REFLECT_GPU;
-        return true;
-    case cv::BORDER_WRAP:
-        gpuBorderType = cv::gpu::BORDER_WRAP_GPU;
-        return true;
-    default:
-        return false;
-    };
-    return false;
-}
-
 void cv::gpu::cornerHarris(const GpuMat& src, GpuMat& dst, int blockSize, int ksize, double k, int borderType)
 {
     GpuMat Dx, Dy;
