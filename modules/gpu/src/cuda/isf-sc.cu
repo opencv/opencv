@@ -123,7 +123,6 @@ namespace icf {
     {
 
         dprintf("feature box %d %d %d %d ", area.x, area.y, area.z, area.w);
-        dprintf("get for channel %d\n", channel);
         dprintf("extract feature for: [%d %d] [%d %d] [%d %d] [%d %d]\n",
             x + area.x, y + area.y,  x + area.z, y + area.y,  x + area.z,y + area.w,
             x + area.x, y + area.w);
@@ -140,13 +139,13 @@ namespace icf {
     }
 
     __global__ void test_kernel(const Level* levels, const Octave* octaves, const float* stages,
-        const Node* nodes, const float* leaves, PtrStepSz<uchar4> objects, uint* ctr)
+        const Node* nodes, const float* leaves, Detection* objects, const uint ndetections, uint* ctr)
     {
         const int y = blockIdx.y * blockDim.y + threadIdx.y;
         const int x = blockIdx.x * blockDim.x + threadIdx.x;
         Level level = levels[blockIdx.z];
 
-        // if (x > 0 || y > 0 || blockIdx.z > 0) return;
+        // if (blockIdx.z != 31) return;
         if(x >= level.workRect.x || y >= level.workRect.y) return;
 
         Octave octave = octaves[level.octave];
@@ -191,10 +190,10 @@ namespace icf {
 
         if(st == stEnd)
         {
-            int idx = atomicInc(ctr, objects.cols);
-            uchar4 val;
-            val.x = x * 4;
-            objects(0, idx) = val;
+            int idx = atomicInc(ctr, ndetections);
+            // store detection
+            objects[idx] = Detection(__float2int_rn(x * octave.shrinkage),
+                __float2int_rn(y * octave.shrinkage), level.objSize.x, level.objSize.y, confidence);
         }
     }
 
@@ -214,11 +213,13 @@ namespace icf {
         const Node* nd = (const Node*)nodes.ptr();
         const float* lf = (const float*)leaves.ptr();
         uint* ctr = (uint*)counter.ptr();
+        Detection* det = (Detection*)objects.ptr();
+        uint max_det = objects.cols / sizeof(Detection);
 
         cudaChannelFormatDesc desc = cudaCreateChannelDesc<int>();
         cudaSafeCall( cudaBindTexture2D(0, thogluv, hogluv.data, desc, hogluv.cols, hogluv.rows, hogluv.step));
 
-        test_kernel<<<grid, block>>>(l, oct, st, nd, lf, objects, ctr);
+        test_kernel<<<grid, block>>>(l, oct, st, nd, lf, det, max_det, ctr);
 
         cudaSafeCall( cudaGetLastError());
         cudaSafeCall( cudaDeviceSynchronize());

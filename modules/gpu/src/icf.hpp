@@ -47,11 +47,11 @@
 #include <opencv2/gpu/device/common.hpp>
 #include <stdio.h>
 
-// #if defined __CUDACC__
-// # define __device __device__ __forceinline__
-// #else
-// # define __device
-// #endif
+#if defined __CUDACC__
+# define __device __device__ __forceinline__
+#else
+# define __device
+#endif
 
 
 namespace cv { namespace gpu { namespace device {
@@ -108,66 +108,21 @@ struct __align__(8) Node
     }
 };
 
-// struct __align__(8) Feature
-// {
-//     int channel;
-//     uchar4 rect;
+struct __align__(16) Detection
+{
+    ushort x;
+    ushort y;
+    ushort w;
+    ushort h;
+    float confidence;
+    int kind;
 
-//     Feature(const int c, const uchar4 r) : channel(c), rect(r) {}
-// };
+    Detection(){}
+    __device Detection(int _x, int _y, uchar _w, uchar _h, float c)
+    : x(_x), y(_y), w(_w), h(_h), confidence(c), kind(0) {};
+};
+
 }
 }}}
-// struct Cascade
-// {
-//     Cascade() {}
-//     Cascade(const cv::gpu::PtrStepSzb& octs, const cv::gpu::PtrStepSzf& sts, const cv::gpu::PtrStepSzb& nds,
-//         const cv::gpu::PtrStepSzf& lvs, const cv::gpu::PtrStepSzb& fts, const cv::gpu::PtrStepSzb& lls)
-//     : octaves(octs), stages(sts), nodes(nds), leaves(lvs), features(fts), levels(lls) {}
-
-//     void detect(const cv::gpu::PtrStepSzi& hogluv, cv::gpu::PtrStepSz<uchar4> objects, cudaStream_t stream) const;
-//     void __device detectAt(const int* __restrict__ hogluv, const int pitch, PtrStepSz<uchar4>& objects) const;
-//     float __device rescale(const icf::Level& level, uchar4& scaledRect,
-//                            const int channel, const float threshold) const;
-
-//     PtrStepSzb octaves;
-//     PtrStepSzf stages;
-//     PtrStepSzb nodes;
-//     PtrStepSzf leaves;
-//     PtrStepSzb features;
-
-//     PtrStepSzb levels;
-
-// };
-
-// struct ChannelStorage
-// {
-//     ChannelStorage(){}
-//     ChannelStorage(const cv::gpu::PtrStepSzb& buff, const cv::gpu::PtrStepSzb& shr,
-//         const cv::gpu::PtrStepSzb& itg, const int s)
-//     : dmem (buff), shrunk(shr), hogluv(itg), shrinkage(s) {}
-
-//     void frame(const cv::gpu::PtrStepSz<uchar3>& rgb, cudaStream_t stream){}
-
-//     PtrStepSzb dmem;
-//     PtrStepSzb shrunk;
-//     PtrStepSzb hogluv;
-
-//     enum
-//     {
-//         FRAME_WIDTH        = 640,
-//         FRAME_HEIGHT       = 480,
-//         TOTAL_SCALES       = 55,
-//         CLASSIFIERS        = 5,
-//         ORIG_OBJECT_WIDTH  = 64,
-//         ORIG_OBJECT_HEIGHT = 128,
-//         HOG_BINS           = 6,
-//         HOG_LUV_BINS       = 10
-//     };
-
-//     int shrinkage;
-//     static const float magnitudeScaling = 1.f ;// / sqrt(2);
-// };
-
-// }}}
 
 #endif
