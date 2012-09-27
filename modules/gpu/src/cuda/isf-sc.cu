@@ -57,14 +57,6 @@
 namespace cv { namespace gpu { namespace device {
 namespace icf {
 
-//     enum {
-//         HOG_BINS = 6,
-//         HOG_LUV_BINS = 10,
-//         WIDTH = 640,
-//         HEIGHT = 480,
-//         GREY_OFFSET = HEIGHT * HOG_LUV_BINS
-//     };
-
     // ToDo: use textures or ancached load instruction.
     __global__ void magToHist(const uchar* __restrict__ mag,
                               const float* __restrict__ angle, const int angPitch,
@@ -94,13 +86,6 @@ namespace icf {
     }
 
     texture<int,  cudaTextureType2D, cudaReadModeElementType> thogluv;
-    // ToDo: do it in load time
-    // __device__ __forceinline__ float rescale(const Level& level, uchar4& scaledRect, const Node& node)
-    // {
-    //     scaledRect = node.rect;
-    //     return (float)(node.threshold & 0x0FFFFFFFU);
-    // }
-
     __device__ __forceinline__ float rescale(const Level& level, uchar4& scaledRect, const Node& node)
     {
         float relScale = level.relScale;
@@ -119,16 +104,11 @@ namespace icf {
 
         float sarea = (scaledRect.z - scaledRect.x) * (scaledRect.w - scaledRect.y);
 
-        float approx = 1.f;
-        // if (fabs(farea - 0.f) > FLT_EPSILON && fabs(farea - 0.f) > FLT_EPSILON)
-        {
-            const float expected_new_area = farea * relScale * relScale;
-            approx =  sarea / expected_new_area;
-        }
+        const float expected_new_area = farea * relScale * relScale;
+        float approx =  sarea / expected_new_area;
 
         dprintf("new rect: %d box %d %d %d %d  rel areas %f %f\n", (node.threshold >> 28),
         scaledRect.x, scaledRect.y, scaledRect.z, scaledRect.w, farea * relScale * relScale, sarea);
-
 
         float rootThreshold = (node.threshold & 0x0FFFFFFFU) * approx;
         rootThreshold *= level.scaling[(node.threshold >> 28) > 6];
@@ -139,7 +119,7 @@ namespace icf {
         return rootThreshold;
     }
 
-    __device__ __forceinline__ int get(const int x, int y, int channel, uchar4 area)
+    __device__ __forceinline__ int get(const int x, int y, uchar4 area)
     {
 
         dprintf("feature box %d %d %d %d ", area.x, area.y, area.z, area.w);
@@ -148,9 +128,6 @@ namespace icf {
             x + area.x, y + area.y,  x + area.z, y + area.y,  x + area.z,y + area.w,
             x + area.x, y + area.w);
         dprintf("at point %d %d with offset %d\n", x, y, 0);
-
-        int offset = channel * 121;
-        y += offset;
 
         int a = tex2D(thogluv, x + area.x, y + area.y);
         int b = tex2D(thogluv, x + area.z, y + area.y);
@@ -163,7 +140,7 @@ namespace icf {
     }
 
     __global__ void test_kernel(const Level* levels, const Octave* octaves, const float* stages,
-        const Node* nodes, const float* leaves, PtrStepSz<uchar4> objects)
+        const Node* nodes, const float* leaves, PtrStepSz<uchar4> objects, uint* ctr)
     {
         const int y = blockIdx.y * blockDim.y + threadIdx.y;
         const int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -179,7 +156,7 @@ namespace icf {
 
         float confidence = 0.f;
 
-// #pragma unroll 8
+// #pragma unroll 2
         for(; st < stEnd; ++st)
         {
             dprintf("\n\nstage: %d\n", st);
@@ -190,7 +167,7 @@ namespace icf {
                 node.threshold >> 28, node.threshold & 0x0FFFFFFFU);
 
             float threshold = rescale(level, node.rect, node);
-            int sum = get(x, y, (node.threshold >> 28), node.rect);
+            int sum = get(x, y + (node.threshold >> 28) * 121, node.rect);
 
             dprintf("Node: [%d %d %d %d] %f\n", node.rect.x, node.rect.y, node.rect.z,
                 node.rect.w, threshold);
@@ -200,29 +177,30 @@ namespace icf {
 
             node = nodes[nId + next];
             threshold = rescale(level, node.rect, node);
-            sum = get(x, y, (node.threshold >> 28), node.rect);
+            sum = get(x, y + (node.threshold >> 28) * 121, node.rect);
 
             const int lShift = (next - 1) * 2 + (int)(sum >= threshold);
             float impact = leaves[st * 4 + lShift];
             confidence += impact;
 
-            if (confidence <= stages[st]) st = stEnd + 1;
+            if (confidence <= stages[st]) st = stEnd + 10;
             dprintf("decided: %d (%d >= %f) %d %f\n\n" ,next, sum, threshold, lShift, impact);
             dprintf("extracted stage: %f\n", stages[st]);
             dprintf("computed  score: %f\n\n", confidence);
         }
 
-        // if (st == stEnd)
-        //     printf("%d %d %d\n", x, y, st);
-
-        uchar4 val;
-        val.x = (int)confidence;
-        if (x == y) objects(0, threadIdx.x) = val;
-
+        if(st == stEnd)
+        {
+            int idx = atomicInc(ctr, objects.cols);
+            uchar4 val;
+            val.x = x * 4;
+            objects(0, idx) = val;
+        }
     }
 
     void detect(const PtrStepSzb& levels, const PtrStepSzb& octaves, const PtrStepSzf& stages,
-        const PtrStepSzb& nodes, const PtrStepSzf& leaves, const PtrStepSzi& hogluv, PtrStepSz<uchar4> objects)
+                const PtrStepSzb& nodes,  const PtrStepSzf& leaves,  const PtrStepSzi& hogluv,
+                PtrStepSz<uchar4> objects, PtrStepSzi counter)
     {
         int fw = 160;
         int fh = 120;
@@ -235,11 +213,12 @@ namespace icf {
         const float* st = (const float*)stages.ptr();
         const Node* nd = (const Node*)nodes.ptr();
         const float* lf = (const float*)leaves.ptr();
+        uint* ctr = (uint*)counter.ptr();
 
         cudaChannelFormatDesc desc = cudaCreateChannelDesc<int>();
         cudaSafeCall( cudaBindTexture2D(0, thogluv, hogluv.data, desc, hogluv.cols, hogluv.rows, hogluv.step));
 
-        test_kernel<<<grid, block>>>(l, oct, st, nd, lf, objects);
+        test_kernel<<<grid, block>>>(l, oct, st, nd, lf, objects, ctr);
 
         cudaSafeCall( cudaGetLastError());
         cudaSafeCall( cudaDeviceSynchronize());

@@ -60,7 +60,8 @@ namespace icf {
     void fillBins(cv::gpu::PtrStepSzb hogluv, const cv::gpu::PtrStepSzf& nangle,
         const int fw, const int fh, const int bins);
     void detect(const PtrStepSzb& levels, const PtrStepSzb& octaves, const PtrStepSzf& stages,
-        const PtrStepSzb& nodes, const PtrStepSzf& leaves, const PtrStepSzi& hogluv, PtrStepSz<uchar4> objects);
+        const PtrStepSzb& nodes, const PtrStepSzf& leaves, const PtrStepSzi& hogluv, PtrStepSz<uchar4> objects,
+        PtrStepSzi counter);
 }
 }}}
 
@@ -75,6 +76,7 @@ struct cv::gpu::SoftCascade::Filds
         shrunk.create(FRAME_HEIGHT / 4 * HOG_LUV_BINS, FRAME_WIDTH / 4, CV_8UC1);
         integralBuffer.create(shrunk.rows + 1 * HOG_LUV_BINS, shrunk.cols + 1, CV_32SC1);
         hogluv.create((FRAME_HEIGHT / 4 + 1) * HOG_LUV_BINS, FRAME_WIDTH / 4 + 1, CV_32SC1);
+        detCounter.create(1,1, CV_32SC1);
     }
 
     // scales range
@@ -89,6 +91,8 @@ struct cv::gpu::SoftCascade::Filds
     GpuMat nodes;
     GpuMat leaves;
     GpuMat levels;
+
+    GpuMat detCounter;
 
     // preallocated buffer 640x480x10 for hogluv + 640x480 got gray
     GpuMat plane;
@@ -127,7 +131,8 @@ struct cv::gpu::SoftCascade::Filds
     bool fill(const FileNode &root, const float mins, const float maxs);
     void detect(cv::gpu::GpuMat objects, cudaStream_t stream) const
     {
-        device::icf::detect(levels, octaves, stages, nodes, leaves, hogluv, objects);
+        cudaMemset(detCounter.data, 0, detCounter.step * detCounter.rows * sizeof(int));
+        device::icf::detect(levels, octaves, stages, nodes, leaves, hogluv, objects , detCounter);
     }
 
 private:
@@ -506,14 +511,13 @@ void cv::gpu::SoftCascade::detectMultiScale(const GpuMat& colored, const GpuMat&
         GpuMat sum(flds.hogluv, cv::Rect(0, (fh + 1) * i, fw + 1, fh + 1));
         cv::gpu::integralBuffered(channel, sum, flds.integralBuffer);
     }
-
 #endif
 
     cudaStream_t stream = StreamAccessor::getStream(s);
-    // detection
     flds.detect(objects, stream);
 
-//     // flds.storage.frame(colored, stream);
+        //     cv::Mat out(flds.detCounter);
+        // std::cout << out << std::endl;
 }
 
 #endif
