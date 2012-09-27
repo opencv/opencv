@@ -104,7 +104,7 @@ PERF_TEST_P(SoftCascade, detect, Values<pair_string>(make_pair("cv/cascadeandhog
         cv::gpu::SoftCascade cascade;
         ASSERT_TRUE(cascade.load(perf::TestBase::getDataPath(GetParam().first)));
 
-        cv::gpu::GpuMat rois, objectBoxes(1, 1000, CV_8UC4);
+        cv::gpu::GpuMat rois, objectBoxes(1, 16384, CV_8UC1);
         cascade.detectMultiScale(colored, rois, objectBoxes);
 
         TEST_CYCLE()
