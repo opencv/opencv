@@ -42,18 +42,17 @@
 
 #include <opencv2/gpu/device/common.hpp>
 #include <icf.hpp>
-// #include <opencv2/gpu/device/saturate_cast.hpp>
 #include <stdio.h>
-// #include <float.h>
+#include <float.h>
 
-// //#define LOG_CUDA_CASCADE
+// #define LOG_CUDA_CASCADE
 
-// #if defined LOG_CUDA_CASCADE
-// # define dprintf(format, ...) \
-//             do { printf(format, __VA_ARGS__); } while (0)
-// #else
-// # define dprintf(format, ...)
-// #endif
+#if defined LOG_CUDA_CASCADE
+# define dprintf(format, ...) \
+            do { printf(format, __VA_ARGS__); } while (0)
+#else
+# define dprintf(format, ...)
+#endif
 
 namespace cv { namespace gpu { namespace device {
 namespace icf {
@@ -94,31 +93,127 @@ namespace icf {
         cudaSafeCall( cudaDeviceSynchronize() );
     }
 
-    texture<float2,  cudaTextureType1D, cudaReadModeElementType> tnode;
+    texture<int,  cudaTextureType2D, cudaReadModeElementType> thogluv;
+    // ToDo: do it in load time
+    // __device__ __forceinline__ float rescale(const Level& level, uchar4& scaledRect, const Node& node)
+    // {
+    //     scaledRect = node.rect;
+    //     return (float)(node.threshold & 0x0FFFFFFFU);
+    // }
+
+    __device__ __forceinline__ float rescale(const Level& level, uchar4& scaledRect, const Node& node)
+    {
+        float relScale = level.relScale;
+        float farea = (scaledRect.z - scaledRect.x) * (scaledRect.w - scaledRect.y);
+
+        dprintf("feature %d box %d %d %d %d\n", (node.threshold >> 28), scaledRect.x, scaledRect.y,
+            scaledRect.z, scaledRect.w);
+        dprintf("rescale: %f [%f %f] selected %f\n",level.relScale, level.scaling[0], level.scaling[1],
+            level.scaling[(node.threshold >> 28) > 6]);
+
+        // rescale
+        scaledRect.x = __float2int_rn(relScale * scaledRect.x);
+        scaledRect.y = __float2int_rn(relScale * scaledRect.y);
+        scaledRect.z = __float2int_rn(relScale * scaledRect.z);
+        scaledRect.w = __float2int_rn(relScale * scaledRect.w);
+
+        float sarea = (scaledRect.z - scaledRect.x) * (scaledRect.w - scaledRect.y);
+
+        float approx = 1.f;
+        // if (fabs(farea - 0.f) > FLT_EPSILON && fabs(farea - 0.f) > FLT_EPSILON)
+        {
+            const float expected_new_area = farea * relScale * relScale;
+            approx =  sarea / expected_new_area;
+        }
+
+        dprintf("new rect: %d box %d %d %d %d  rel areas %f %f\n", (node.threshold >> 28),
+        scaledRect.x, scaledRect.y, scaledRect.z, scaledRect.w, farea * relScale * relScale, sarea);
+
+
+        float rootThreshold = (node.threshold & 0x0FFFFFFFU) * approx;
+        rootThreshold *= level.scaling[(node.threshold >> 28) > 6];
+
+        dprintf("approximation %f %d -> %f %f\n", approx, (node.threshold & 0x0FFFFFFFU), rootThreshold,
+            level.scaling[(node.threshold >> 28) > 6]);
+
+        return rootThreshold;
+    }
+
+    __device__ __forceinline__ int get(const int x, int y, int channel, uchar4 area)
+    {
+
+        dprintf("feature box %d %d %d %d ", area.x, area.y, area.z, area.w);
+        dprintf("get for channel %d\n", channel);
+        dprintf("extract feature for: [%d %d] [%d %d] [%d %d] [%d %d]\n",
+            x + area.x, y + area.y,  x + area.z, y + area.y,  x + area.z,y + area.w,
+            x + area.x, y + area.w);
+        dprintf("at point %d %d with offset %d\n", x, y, 0);
+
+        int offset = channel * 121;
+        y += offset;
+
+        int a = tex2D(thogluv, x + area.x, y + area.y);
+        int b = tex2D(thogluv, x + area.z, y + area.y);
+        int c = tex2D(thogluv, x + area.z, y + area.w);
+        int d = tex2D(thogluv, x + area.x, y + area.w);
+
+        dprintf("    retruved integral values: %d %d %d %d\n", a, b, c, d);
+
+        return (a - b + c - d);
+    }
+
     __global__ void test_kernel(const Level* levels, const Octave* octaves, const float* stages,
-        const Node* nodes,
-        PtrStepSz<uchar4> objects)
+        const Node* nodes, const float* leaves, PtrStepSz<uchar4> objects)
     {
         const int y = blockIdx.y * blockDim.y + threadIdx.y;
         const int x = blockIdx.x * blockDim.x + threadIdx.x;
         Level level = levels[blockIdx.z];
+
+        // if (x > 0 || y > 0 || blockIdx.z > 0) return;
         if(x >= level.workRect.x || y >= level.workRect.y) return;
 
         Octave octave = octaves[level.octave];
+
         int st = octave.index * octave.stages;
         const int stEnd = st + 1000;//octave.stages;
 
         float confidence = 0.f;
 
-#pragma unroll 8
+// #pragma unroll 8
         for(; st < stEnd; ++st)
         {
+            dprintf("\n\nstage: %d\n", st);
             const int nId = st * 3;
-            const Node node = nodes[nId];
+            Node node = nodes[nId];
 
-            const float stage = stages[st];
-            confidence += node.rect.x * stage;
+            dprintf("Node: [%d %d %d %d] %d %d\n", node.rect.x, node.rect.y, node.rect.z, node.rect.w,
+                node.threshold >> 28, node.threshold & 0x0FFFFFFFU);
+
+            float threshold = rescale(level, node.rect, node);
+            int sum = get(x, y, (node.threshold >> 28), node.rect);
+
+            dprintf("Node: [%d %d %d %d] %f\n", node.rect.x, node.rect.y, node.rect.z,
+                node.rect.w, threshold);
+
+            int next = 1 + (int)(sum >= threshold);
+            dprintf("go: %d (%d >= %f)\n\n" ,next, sum, threshold);
+
+            node = nodes[nId + next];
+            threshold = rescale(level, node.rect, node);
+            sum = get(x, y, (node.threshold >> 28), node.rect);
+
+            const int lShift = (next - 1) * 2 + (int)(sum >= threshold);
+            float impact = leaves[st * 4 + lShift];
+            confidence += impact;
+
+            if (confidence <= stages[st]) st = stEnd + 1;
+            dprintf("decided: %d (%d >= %f) %d %f\n\n" ,next, sum, threshold, lShift, impact);
+            dprintf("extracted stage: %f\n", stages[st]);
+            dprintf("computed  score: %f\n\n", confidence);
         }
+
+        // if (st == stEnd)
+        //     printf("%d %d %d\n", x, y, st);
 
         uchar4 val;
         val.x = (int)confidence;
@@ -127,188 +222,27 @@ namespace icf {
     }
 
     void detect(const PtrStepSzb& levels, const PtrStepSzb& octaves, const PtrStepSzf& stages,
-        const PtrStepSzb& nodes, const PtrStepSzb& features,
-        PtrStepSz<uchar4> objects)
+        const PtrStepSzb& nodes, const PtrStepSzf& leaves, const PtrStepSzi& hogluv, PtrStepSz<uchar4> objects)
     {
         int fw = 160;
         int fh = 120;
+
         dim3 block(32, 8);
         dim3 grid(fw / 32, fh / 8, 47);
+
         const Level* l = (const Level*)levels.ptr();
         const Octave* oct = ((const Octave*)octaves.ptr());
         const float* st = (const float*)stages.ptr();
         const Node* nd = (const Node*)nodes.ptr();
-        // cudaSafeCall( cudaBindTexture(0, tnode, nodes.data, rgb.cols / size) );
+        const float* lf = (const float*)leaves.ptr();
 
-        test_kernel<<<grid, block>>>(l, oct, st, nd, objects);
+        cudaChannelFormatDesc desc = cudaCreateChannelDesc<int>();
+        cudaSafeCall( cudaBindTexture2D(0, thogluv, hogluv.data, desc, hogluv.cols, hogluv.rows, hogluv.step));
+
+        test_kernel<<<grid, block>>>(l, oct, st, nd, lf, objects);
 
         cudaSafeCall( cudaGetLastError());
         cudaSafeCall( cudaDeviceSynchronize());
     }
 }
 }}}
-
-// __global__ void detect(const cv::gpu::icf::Cascade cascade, const int* __restrict__ hogluv, const int pitch,
-//     PtrStepSz<uchar4> objects)
-// {
-//     cascade.detectAt(hogluv, pitch, objects);
-// }
-
-// }
-
-// float __device icf::Cascade::rescale(const icf::Level& level, uchar4& scaledRect,
-//                                      const int channel, const float threshold) const
-// {
-//     dprintf("feature %d box %d %d %d %d\n", channel, scaledRect.x, scaledRect.y, scaledRect.z, scaledRect.w);
-//     dprintf("rescale: %f [%f %f]\n",level.relScale, level.scaling[0], level.scaling[1]);
-
-//     float relScale = level.relScale;
-//     float farea = (scaledRect.z - scaledRect.x) * (scaledRect.w - scaledRect.y);
-
-//     // rescale
-//     scaledRect.x = __float2int_rn(relScale * scaledRect.x);
-//     scaledRect.y = __float2int_rn(relScale * scaledRect.y);
-//     scaledRect.z = __float2int_rn(relScale * scaledRect.z);
-//     scaledRect.w = __float2int_rn(relScale * scaledRect.w);
-
-//     float sarea = (scaledRect.z - scaledRect.x) * (scaledRect.w - scaledRect.y);
-
-
-//     float approx = 1.f;
-//     if (fabs(farea - 0.f) > FLT_EPSILON && fabs(farea - 0.f) > FLT_EPSILON)
-//     {
-//         const float expected_new_area = farea * relScale * relScale;
-//         approx = expected_new_area / sarea;
-//     }
-
-//     dprintf("new rect: %d box %d %d %d %d  rel areas %f %f\n", channel,
-//         scaledRect.x, scaledRect.y, scaledRect.z, scaledRect.w, farea * relScale * relScale, sarea);
-
-//     // compensation areas rounding
-//     float rootThreshold = threshold / approx;
-//     // printf("    approx %f\n", rootThreshold);
-//     rootThreshold *= level.scaling[(int)(channel > 6)];
-
-//     dprintf("approximation %f %f -> %f %f\n", approx, threshold, rootThreshold, level.scaling[(int)(channel > 6)]);
-
-//     return rootThreshold;
-// }
-
-// typedef unsigned char uchar;
-// float __device get(const int* __restrict__ hogluv, const int pitch,
-//                    const int x, const int y, int channel, uchar4 area)
-// {
-//     dprintf("feature box %d %d %d %d ", area.x, area.y, area.z, area.w);
-//     dprintf("get for channel %d\n", channel);
-//     dprintf("extract feature for: [%d %d] [%d %d] [%d %d] [%d %d]\n",
-//         x + area.x, y + area.y,  x + area.z, y + area.y,  x + area.z,y + area.w,
-//         x + area.x, y + area.w);
-//     dprintf("at point %d %d with offset %d\n", x, y, 0);
-
-//     const int* curr = hogluv + ((channel * 121) + y) * pitch;
-
-//     int a = curr[area.y * pitch + x + area.x];
-//     int b = curr[area.y * pitch + x + area.z];
-//     int c = curr[area.w * pitch + x + area.z];
-//     int d = curr[area.w * pitch + x + area.x];
-
-//     dprintf("    retruved integral values: %d %d %d %d\n", a, b, c, d);
-
-//     return (a - b + c - d);
-// }
-
-
-// void __device icf::Cascade::detectAt(const int* __restrict__ hogluv, const int pitch,
-//                                     PtrStepSz<uchar4>& objects) const
-// {
-//     const icf::Level* lls = (const icf::Level*)levels.ptr();
-
-//     const int y = blockIdx.y * blockDim.y + threadIdx.y;
-//     const int x = blockIdx.x * blockDim.x + threadIdx.x;
-//     // if (x > 0 || y > 0) return;
-
-//     Level level = lls[blockIdx.z];
-//     if (x >= level.workRect.x || y >= level.workRect.y) return;
-
-//     dprintf("level: %d (%f %f) [%f %f] (%d %d) (%d %d)\n", level.octave, level.relScale, level.shrScale,
-//         level.scaling[0], level.scaling[1], level.workRect.x, level.workRect.y, level.objSize.x, level.objSize.y);
-
-//     const Octave octave = ((const Octave*)octaves.ptr())[level.octave];
-//     // printf("Octave: %d %d %d (%d %d) %f\n", octave.index, octave.stages,
-//     //     octave.shrinkage, octave.size.x, octave.size.y, octave.scale);
-
-//     const int stBegin = octave.index * octave.stages, stEnd = stBegin + octave.stages;
-
-//     float detectionScore = 0.f;
-
-//     int st = stBegin;
-//     for(; st < stEnd; ++st)
-//     {
-//         const float stage = stages(0, st);
-//         dprintf("Stage: %f\n", stage);
-//         {
-//             const int nId = st * 3;
-
-//             // work with root node
-//             const Node node = ((const Node*)nodes.ptr())[nId];
-
-//             dprintf("Node: %d %f\n", node.feature, node.threshold);
-
-//             const Feature feature = ((const Feature*)features.ptr())[node.feature];
-
-//             uchar4 scaledRect = feature.rect;
-//             float threshold = rescale(level, scaledRect, feature.channel, node.threshold);
-
-//             float sum = get(hogluv,pitch, x, y, feature.channel, scaledRect);
-
-//             dprintf("root feature %d %f\n",feature.channel, sum);
-
-//             int next = 1 + (int)(sum >= threshold);
-
-//             dprintf("go: %d (%f >= %f)\n\n" ,next, sum, threshold);
-
-//             // leaves
-//             const Node leaf = ((const Node*)nodes.ptr())[nId + next];
-//             const Feature fLeaf = ((const Feature*)features.ptr())[leaf.feature];
-
-//             scaledRect = fLeaf.rect;
-//             threshold = rescale(level, scaledRect, fLeaf.channel, leaf.threshold);
-//             sum = get(hogluv, pitch, x, y, fLeaf.channel, scaledRect);
-
-//             const int lShift = (next - 1) * 2 + (int)(sum >= threshold);
-//             float impact = leaves(0, (st * 4) + lShift);
-
-//             detectionScore += impact;
-
-//             dprintf("decided: %d (%f >= %f) %d %f\n\n" ,next, sum, threshold, lShift, impact);
-//             dprintf("extracted stage:\n");
-//             dprintf("ct %f\n", stage);
-//             dprintf("computed score %f\n\n", detectionScore);
-//             dprintf("\n\n");
-//         }
-
-//         if (detectionScore <= stage || st - stBegin == 100) break;
-//     }
-
-//     dprintf("x %d y %d: %d\n", x, y, st - stBegin);
-
-//     if (st == stEnd)
-//     {
-//         uchar4 a;
-//         a.x = level.workRect.x;
-//         a.y = level.workRect.y;
-//         objects(0, threadIdx.x) = a;
-//     }
-// }
-
-// void icf::Cascade::detect(const cv::gpu::PtrStepSzi& hogluv, PtrStepSz<uchar4> objects, cudaStream_t stream) const
-// {
-//     dim3 block(32, 8, 1);
-//     dim3 grid(ChannelStorage::FRAME_WIDTH / 32, ChannelStorage::FRAME_HEIGHT / 8, 47);
-//     device::detect<<<grid, block, 0, stream>>>(*this, hogluv, hogluv.step / sizeof(int), objects);
-//     cudaSafeCall( cudaGetLastError() );
-//     if (!stream)
-//         cudaSafeCall( cudaDeviceSynchronize() );
-// }
-
-// }}

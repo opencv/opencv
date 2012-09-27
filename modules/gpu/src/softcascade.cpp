@@ -60,18 +60,9 @@ namespace icf {
     void fillBins(cv::gpu::PtrStepSzb hogluv, const cv::gpu::PtrStepSzf& nangle,
         const int fw, const int fh, const int bins);
     void detect(const PtrStepSzb& levels, const PtrStepSzb& octaves, const PtrStepSzf& stages,
-        const PtrStepSzb& nodes, const PtrStepSzb& features,
-        PtrStepSz<uchar4> objects);
+        const PtrStepSzb& nodes, const PtrStepSzf& leaves, const PtrStepSzi& hogluv, PtrStepSz<uchar4> objects);
 }
 }}}
-
-// namespace {
-//     char *itoa(long i, char* s, int /*dummy_radix*/)
-//     {
-//         sprintf(s, "%ld", i);
-//         return s;
-//     }
-// }
 
 struct cv::gpu::SoftCascade::Filds
 {
@@ -97,7 +88,6 @@ struct cv::gpu::SoftCascade::Filds
     GpuMat stages;
     GpuMat nodes;
     GpuMat leaves;
-    GpuMat features;
     GpuMat levels;
 
     // preallocated buffer 640x480x10 for hogluv + 640x480 got gray
@@ -137,7 +127,7 @@ struct cv::gpu::SoftCascade::Filds
     bool fill(const FileNode &root, const float mins, const float maxs);
     void detect(cv::gpu::GpuMat objects, cudaStream_t stream) const
     {
-        device::icf::detect(levels, octaves, stages, nodes, features, objects);
+        device::icf::detect(levels, octaves, stages, nodes, leaves, hogluv, objects);
     }
 
 private:
@@ -216,10 +206,9 @@ inline bool cv::gpu::SoftCascade::Filds::fill(const FileNode &root, const float 
         if (fn.empty()) return false;
 
     std::vector<Octave>  voctaves;
-    std::vector<float>        vstages;
+    std::vector<float>   vstages;
     std::vector<Node>    vnodes;
-    std::vector<float>        vleaves;
-    std::vector<Feature> vfeatures;
+    std::vector<float>   vleaves;
     scales.clear();
 
     FileNodeIterator it = fn.begin(), it_end = fn.end();
@@ -245,6 +234,8 @@ inline bool cv::gpu::SoftCascade::Filds::fill(const FileNode &root, const float 
         FileNode ffs = fns[SC_FEATURES];
         if (ffs.empty()) return false;
 
+        FileNodeIterator ftrs = ffs.begin();
+
         fns = fns[SC_STAGES];
         if (fn.empty()) return false;
 
@@ -263,10 +254,21 @@ inline bool cv::gpu::SoftCascade::Filds::fill(const FileNode &root, const float 
                 FileNodeIterator inIt = fns.begin(), inIt_end = fns.end();
                 for (; inIt != inIt_end;)
                 {
-                    int feature = (int)(*(inIt +=2)++) + feature_offset;
-                    float th = (float)(*(inIt++));
+                    // int feature = (int)(*(inIt +=2)) + feature_offset;
+                    inIt +=3;
+                    // extract feature, Todo:check it
+                    uint th = saturate_cast<uint>((float)(*(inIt++)));
+                    cv::FileNode ftn = (*ftrs)[SC_F_RECT];
+                    cv::FileNodeIterator r_it = ftn.begin();
                     uchar4 rect;
-                    vnodes.push_back(Node(rect, th));
+                    rect.x = saturate_cast<uchar>((int)*(r_it++));
+                    rect.y = saturate_cast<uchar>((int)*(r_it++));
+                    rect.z = saturate_cast<uchar>((int)*(r_it++));
+                    rect.w = saturate_cast<uchar>((int)*(r_it++));
+
+                    uint channel = saturate_cast<uint>((int)(*ftrs)[SC_F_CHANNEL]);
+                    vnodes.push_back(Node(rect, channel, th));
+                    ++ftrs;
                 }
 
                 fns = (*ftr)[SC_LEAF];
@@ -274,19 +276,6 @@ inline bool cv::gpu::SoftCascade::Filds::fill(const FileNode &root, const float 
                 for (; inIt != inIt_end; ++inIt)
                     vleaves.push_back((float)(*inIt));
             }
-        }
-
-        st = ffs.begin(), st_end = ffs.end();
-        for (; st != st_end; ++st )
-        {
-            cv::FileNode rn = (*st)[SC_F_RECT];
-            cv::FileNodeIterator r_it = rn.begin();
-            uchar4 rect;
-            rect.x = saturate_cast<uchar>((int)*(r_it++));
-            rect.y = saturate_cast<uchar>((int)*(r_it++));
-            rect.z = saturate_cast<uchar>((int)*(r_it++));
-            rect.w = saturate_cast<uchar>((int)*(r_it++));
-            vfeatures.push_back(Feature((int)(*st)[SC_F_CHANNEL], rect));
         }
 
         feature_offset += octave.stages * 3;
@@ -305,9 +294,6 @@ inline bool cv::gpu::SoftCascade::Filds::fill(const FileNode &root, const float 
 
     leaves.upload(cv::Mat(vleaves).reshape(1,1));
     CV_Assert(!leaves.empty());
-
-    features.upload(cv::Mat(1, vfeatures.size() * sizeof(Feature), CV_8UC1, (uchar*)&(vfeatures[0]) ));
-    CV_Assert(!features.empty());
 
     // compute levels
     calcLevels(voctaves, FRAME_WIDTH, FRAME_HEIGHT, TOTAL_SCALES);
@@ -425,7 +411,14 @@ bool cv::gpu::SoftCascade::load( const string& filename, const float minScale, c
     return true;
 }
 
-// #define USE_REFERENCE_VALUES
+#define USE_REFERENCE_VALUES
+namespace {
+    char *itoa(long i, char* s, int /*dummy_radix*/)
+    {
+        sprintf(s, "%ld", i);
+        return s;
+    }
+}
 void cv::gpu::SoftCascade::detectMultiScale(const GpuMat& colored, const GpuMat& /*rois*/,
                                 GpuMat& objects, const int /*rejectfactor*/, Stream s)
 {
@@ -438,17 +431,20 @@ void cv::gpu::SoftCascade::detectMultiScale(const GpuMat& colored, const GpuMat&
     Filds& flds = *filds;
 
 #if defined USE_REFERENCE_VALUES
-//     cudaMemset(flds.hogluv.data, 0, flds.hogluv.step * flds.hogluv.rows);
-//     cv::FileStorage imgs("/home/kellan/testInts.xml", cv::FileStorage::READ);
-//     char buff[33];
+    cudaMemset(flds.hogluv.data, 0, flds.hogluv.step * flds.hogluv.rows);
 
-//     for(int i = 0; i < Filds::HOG_LUV_BINS; ++i)
-//     {
-//         cv::Mat channel;
-//         imgs[std::string("channel") + itoa(i, buff, 10)] >> channel;
-//         GpuMat gchannel(flds.hogluv, cv::Rect(0, 121 * i, 161, 121));
-//         gchannel.upload(channel);
-//     }
+    cv::FileStorage imgs("/home/kellan/testInts.xml", cv::FileStorage::READ);
+    char buff[33];
+
+    for(int i = 0; i < Filds::HOG_LUV_BINS; ++i)
+    {
+        cv::Mat channel;
+        imgs[std::string("channel") + itoa(i, buff, 10)] >> channel;
+
+        // std::cout << "channel " << i << std::endl << channel << std::endl;
+        GpuMat gchannel(flds.hogluv, cv::Rect(0, 121 * i, 161, 121));
+        gchannel.upload(channel);
+    }
 #else
     GpuMat& plane = flds.plane;
     GpuMat& shrunk = flds.shrunk;
