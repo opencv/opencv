@@ -619,13 +619,13 @@ private:
             if (checks>=maxChecks) {
                 if (result.full()) return;
             }
-            checks += node->size;
             for (int i=0; i<node->size; ++i) {
                 int index = node->indices[i];
                 if (!checked[index]) {
                     DistanceType dist = distance(dataset[index], vec, veclen_);
                     result.addPoint(dist, index);
                     checked[index] = true;
+                    ++checks;
                 }
             }
         }
