@@ -52,3 +52,26 @@ PERF_TEST_P(ImageName_MinSize, CascadeClassifierLBPFrontalFace,
     std::sort(faces.begin(), faces.end(), comparators::RectLess());
     SANITY_CHECK(faces, 3.001 * faces.size());
 }
+
+typedef std::tr1::tuple<std::string, std::string> fixture;
+typedef perf::TestBaseWithParam<fixture> detect;
+
+PERF_TEST_P(detect, SoftCascade,
+    testing::Combine(testing::Values(std::string("cv/cascadeandhog/sc_cvpr_2012_to_opencv.xml")),
+    testing::Values(std::string("cv/cascadeandhog/bahnhof/image_00000000_0.png"))))
+{
+    cv::Mat colored = imread(getDataPath(get<1>(GetParam())));
+    ASSERT_FALSE(colored.empty());
+
+    cv::SoftCascade cascade;
+    ASSERT_TRUE(cascade.load(getDataPath(get<0>(GetParam()))));
+
+    std::vector<cv::Rect> rois, objectBoxes;
+    cascade.detectMultiScale(colored, rois, objectBoxes);
+
+    TEST_CYCLE()
+    {
+        cascade.detectMultiScale(colored, rois, objectBoxes);
+    }
+    SANITY_CHECK(objectBoxes);
+}
