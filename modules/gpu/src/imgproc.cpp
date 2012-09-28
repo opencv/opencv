@@ -548,12 +548,16 @@ void cv::gpu::integralBuffered(const GpuMat& src, GpuMat& sum, GpuMat& buffer, S
     cudaStream_t stream = StreamAccessor::getStream(s);
 
     DeviceInfo info;
+    cv::Size whole;
+    cv::Point offset;
 
-    if (info.supports(WARP_SHUFFLE_FUNCTIONS))
+    src.locateROI(whole, offset);
+
+    if (info.supports(WARP_SHUFFLE_FUNCTIONS) )
     {
         GpuMat srcAlligned;
 
-        if (src.cols % 16 == 0 && src.rows % 8 == 0)
+        if (src.cols % 16 == 0 && src.rows % 8 == 0 && offset.x % 16 == 0 && offset.y % 8 == 0)
             srcAlligned = src;
         else
         {
@@ -575,19 +579,18 @@ void cv::gpu::integralBuffered(const GpuMat& src, GpuMat& sum, GpuMat& buffer, S
             srcAlligned = buffer;
         }
 
-        sum.create(srcAlligned.rows + 1, srcAlligned.cols + 1, CV_32SC1);
+        sum.create(srcAlligned.rows + 1, srcAlligned.cols + 4, CV_32SC1);
 
         if (s)
             s.enqueueMemSet(sum, Scalar::all(0));
         else
             sum.setTo(Scalar::all(0));
 
-        GpuMat inner = sum(Rect(1, 1, srcAlligned.cols, srcAlligned.rows));
+        GpuMat inner = sum(Rect(4, 1, srcAlligned.cols, srcAlligned.rows));
 
         cv::gpu::device::imgproc::shfl_integral_gpu(srcAlligned, inner, stream);
 
-        if (srcAlligned.data != src.data)
-            sum = sum(Rect(0, 0, src.cols + 1, src.rows + 1));
+            sum = sum(Rect(3, 0, src.cols + 1, src.rows + 1));
     }
     else
     {
