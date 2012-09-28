@@ -365,6 +365,11 @@ void Index::build(InputArray _data, const IndexParams& params, flann_distance_t 
     index = 0;
     featureType = data.type();
     distType = _distType;
+    
+    if ( algo == FLANN_INDEX_LSH) 
+    {
+        distType = FLANN_DIST_HAMMING;
+    }
 
     switch( distType )
     {
