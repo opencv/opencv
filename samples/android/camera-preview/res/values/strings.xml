@@ -1,0 +1,7 @@
+<resources>
+
+    <string name="app_name">CameraWriter</string>
+    <string name="menu_settings">Settings</string>
+    <string name="title_activity_camera_writer">CameraWriterActivity</string>
+
+</resources>
