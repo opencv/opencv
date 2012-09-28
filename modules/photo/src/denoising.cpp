@@ -52,6 +52,11 @@ void cv::fastNlMeansDenoising( InputArray _src, OutputArray _dst, float h,
     _dst.create(src.size(), src.type());
     Mat dst = _dst.getMat();
 
+#ifdef HAVE_TEGRA_OPTIMIZATION
+    if(tegra::fastNlMeansDenoising(src, dst, h, templateWindowSize, searchWindowSize))
+        return;
+#endif
+
     switch (src.type()) {
         case CV_8U:
             parallel_for(cv::BlockedRange(0, src.rows),
