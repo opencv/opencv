@@ -764,7 +764,7 @@ vector<int> leaveBiggestComponent(vector<ImageFeatures> &features,  vector<Match
     for (size_t i = 1; i < indices_removed.size(); ++i)
         LOG(", " << indices_removed[i]+1);
     LOGLN(").");
-    LOGLN("Try to decrease --match_conf value and/or check if you're stitching duplicates.");
+    LOGLN("Try to decrease the match confidence threshold and/or check if you're stitching duplicates.");
 
     features = features_subset;
     pairwise_matches = pairwise_matches_subset;
