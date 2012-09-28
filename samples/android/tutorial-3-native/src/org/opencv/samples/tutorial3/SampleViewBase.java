@@ -218,6 +218,7 @@ public abstract class SampleViewBase extends SurfaceView implements SurfaceHolde
             if (bmp != null) {
                 Canvas canvas = mHolder.lockCanvas();
                 if (canvas != null) {
+                    canvas.drawColor(0, android.graphics.PorterDuff.Mode.CLEAR);
                     canvas.drawBitmap(bmp, (canvas.getWidth() - getFrameWidth()) / 2, (canvas.getHeight() - getFrameHeight()) / 2, null);
                     mHolder.unlockCanvasAndPost(canvas);
                 }
