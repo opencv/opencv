@@ -50,6 +50,11 @@
 #include <cstdio>
 #include <stdarg.h>
 
+// use previous stored integrals for regression testing
+// #define USE_REFERENCE_VALUES
+
+#if defined USE_REFERENCE_VALUES
+
 namespace {
 
 char *itoa(long i, char* s, int /*dummy_radix*/)
@@ -57,6 +62,8 @@ char *itoa(long i, char* s, int /*dummy_radix*/)
     sprintf(s, "%ld", i);
     return s;
 }
+
+#endif
 
 // used for noisy printfs
 // #define WITH_DEBUG_OUT
@@ -67,6 +74,8 @@ char *itoa(long i, char* s, int /*dummy_radix*/)
 #else
 # define dprintf(format, ...)
 #endif
+
+namespace {
 
 struct Octave
 {
@@ -143,32 +152,6 @@ struct Object
     Object(const cv::Rect& r, const float c, Class dt = PEDESTRIAN) : rect(r), confidence(c), detType(dt) {}
 };
 
-struct Level
-{
-    const Octave* octave;
-
-    float origScale;
-    float relScale;
-    float shrScale; // used for marking detection
-
-    cv::Size workRect;
-    cv::Size objSize;
-
-    Level(const Octave& oct, const float scale, const int shrinkage, const int w, const int h)
-    :  octave(&oct), origScale(scale), relScale(scale / oct.scale), shrScale (relScale / (float)shrinkage),
-       workRect(cv::Size(cvRound(w / (float)shrinkage),cvRound(h / (float)shrinkage))),
-       objSize(cv::Size(cvRound(oct.size.width * relScale), cvRound(oct.size.height * relScale)))
-    {}
-
-    void markDetection(const int x, const int y, float confidence, std::vector<Object>& detections) const
-    {
-        int shrinkage = (*octave).shrinkage;
-        cv::Rect rect(cvRound(x * shrinkage), cvRound(y * shrinkage), objSize.width, objSize.height);
-
-        detections.push_back(Object(rect, confidence));
-    }
-};
-
 struct CascadeIntrinsics
 {
     static const float lambda = 1.099f, a = 0.89f;
@@ -202,37 +185,36 @@ struct CascadeIntrinsics
     }
 };
 
-
-int qangle6(float dfdx, float dfdy)
+struct Level
 {
-    static const float vectors[6][2] =
+    const Octave* octave;
+
+    float origScale;
+    float relScale;
+    float shrScale; // used for marking detection
+
+    cv::Size workRect;
+    cv::Size objSize;
+
+    float scaling[2];
+
+    Level(const Octave& oct, const float scale, const int shrinkage, const int w, const int h)
+    :  octave(&oct), origScale(scale), relScale(scale / oct.scale), shrScale (relScale / (float)shrinkage),
+       workRect(cv::Size(cvRound(w / (float)shrinkage),cvRound(h / (float)shrinkage))),
+       objSize(cv::Size(cvRound(oct.size.width * relScale), cvRound(oct.size.height * relScale)))
     {
-        {std::cos(0),                std::sin(0)               },
-        {std::cos(M_PI / 6.f),       std::sin(M_PI / 6.f)      },
-        {std::cos(M_PI / 3.f),       std::sin(M_PI / 3.f)      },
-
-        {std::cos(M_PI / 2.f),       std::sin(M_PI / 2.f)      },
-        {std::cos(2.f * M_PI / 3.f), std::sin(2.f * M_PI / 3.f)},
-        {std::cos(5.f * M_PI / 6.f), std::sin(5.f * M_PI / 6.f)}
-    };
-
-    int index = 0;
-
-    float dot = fabs(dfdx * vectors[0][0] + dfdy * vectors[0][1]);
-
-    for(int i = 1; i < 6; ++i)
-    {
-        const float curr = fabs(dfdx * vectors[i][0] + dfdy * vectors[i][1]);
-
-        if(curr > dot)
-        {
-            dot = curr;
-            index = i;
-        }
+        scaling[0] = CascadeIntrinsics::getFor(0, relScale);
+        scaling[1] = CascadeIntrinsics::getFor(9, relScale);
     }
 
-    return index;
-}
+    void markDetection(const int x, const int y, float confidence, std::vector<Object>& detections) const
+    {
+        int shrinkage = (*octave).shrinkage;
+        cv::Rect rect(cvRound(x * shrinkage), cvRound(y * shrinkage), objSize.width, objSize.height);
+
+        detections.push_back(Object(rect, confidence));
+    }
+};
 
 template< typename T>
 struct Decimate {
@@ -270,9 +252,6 @@ struct Decimate {
     }
 
 };
-
-// use previous stored integrals for regression testing
-// #define USE_REFERENCE_VALUES
 
 struct ChannelStorage
 {
@@ -437,9 +416,10 @@ struct cv::SoftCascade::Filds
 
     typedef std::vector<Octave>::iterator  octIt_t;
 
-    float rescale(const Feature& feature, const float relScale, cv::Rect& scaledRect, const float threshold) const
+    float rescale(const Feature& feature, const float scaling, const float relScale,
+        cv::Rect& scaledRect, const float threshold) const
     {
-        float scaling = CascadeIntrinsics::getFor(feature.channel, relScale);
+        // float scaling = CascadeIntrinsics::getFor(feature.channel, relScale);
         scaledRect = feature.rect;
 
         dprintf("feature %d box %d %d %d %d\n", feature.channel, scaledRect.x, scaledRect.y,
@@ -460,16 +440,16 @@ struct cv::SoftCascade::Filds
         float sarea = (scaledRect.width - scaledRect.x) * (scaledRect.height - scaledRect.y);
 
         float approx = 1.f;
-        if (fabs(farea - 0.f) > FLT_EPSILON && fabs(farea - 0.f) > FLT_EPSILON)
+        // if (fabs(farea - 0.f) > FLT_EPSILON && fabs(farea - 0.f) > FLT_EPSILON)
         {
             const float expected_new_area = farea * relScale * relScale;
-            approx = expected_new_area / sarea;
+            approx = sarea / expected_new_area;
 
             dprintf(" rel areas %f %f\n", expected_new_area, sarea);
         }
 
         // compensation areas rounding
-        float rootThreshold = threshold / approx;
+        float rootThreshold = threshold * approx;
         rootThreshold *= scaling;
 
         dprintf("approximation %f %f -> %f %f\n", approx, threshold, rootThreshold, scaling);
@@ -504,7 +484,8 @@ struct cv::SoftCascade::Filds
                 const Node& node = nodes[nId];
                 const Feature& feature = features[node.feature];
                 cv::Rect scaledRect;
-                float threshold = rescale(feature, level.relScale, scaledRect, node.threshold);
+                float threshold = rescale(feature, level.scaling[(int)(feature.channel > 6)],
+                    level.relScale, scaledRect, node.threshold);
 
 
                 float sum = storage.get(dx, dy, feature.channel, scaledRect);
@@ -519,7 +500,8 @@ struct cv::SoftCascade::Filds
                 const Node& leaf = nodes[nId + next];
                 const Feature& fLeaf = features[leaf.feature];
 
-                threshold = rescale(fLeaf, level.relScale, scaledRect, leaf.threshold);
+                threshold = rescale(fLeaf, level.scaling[(int)(fLeaf.channel > 6)],
+                    level.relScale, scaledRect, leaf.threshold);
                 sum = storage.get(dx, dy, fLeaf.channel, scaledRect);
 
 
@@ -546,7 +528,7 @@ struct cv::SoftCascade::Filds
 
         if (st == stEnd)
         {
-            std::cout << "  got " << st << std::endl;
+            dprintf("  got %d\n", st);
             level.markDetection(dx, dy, detectionScore, detections);
         }
     }
@@ -701,25 +683,6 @@ struct cv::SoftCascade::Filds
         }
 
         shrinkage = octaves[0].shrinkage;
-
-        //debug print
-        // std::cout << "collected " << stages.size() << " stages" << std::endl;
-        // for (int i = 0; i < (int)stages.size(); ++i)
-        // {
-        //     std::cout << "stage " << i << ": " << stages[i].threshold << std::endl;
-        // }
-
-        // std::cout << "collected " << nodes.size() << " nodes" << std::endl;
-        // for (int i = 0; i < (int)nodes.size(); ++i)
-        // {
-        //     std::cout << "node " << i << ": " << nodes[i].threshold << " " << nodes[i].feature << std::endl;
-        // }
-
-        // std::cout << "collected " << leaves.size() << " leaves" << std::endl;
-        // for (int i = 0; i < (int)leaves.size(); ++i)
-        // {
-        //     std::cout << "leaf " << i << ": " << leaves[i] << std::endl;
-        // }
         return true;
     }
 };
@@ -752,8 +715,7 @@ bool cv::SoftCascade::load( const string& filename, const float minScale, const 
     return true;
 }
 
-// #define DEBUG_STORE_IMAGES
-#define DEBUG_SHOW_RESULT
+// #define DEBUG_SHOW_RESULT
 
 void cv::SoftCascade::detectMultiScale(const Mat& image, const std::vector<cv::Rect>& /*rois*/,
                                        std::vector<cv::Rect>& objects, const int /*rejectfactor*/)
@@ -771,26 +733,6 @@ void cv::SoftCascade::detectMultiScale(const Mat& image, const std::vector<cv::R
 
     cv::Mat image1;
     cv::cvtColor(image, image1, CV_BGR2RGB);
-
-#if defined DEBUG_STORE_IMAGES
-    cv::FileStorage fs("/home/kellan/opencvInputImage.xml", cv::FileStorage::WRITE);
-    cv::imwrite("/home/kellan/opencvInputImage.jpg", image1);
-    fs << "opencvInputImage" << image1;
-
-    cv::Mat doppia;
-    cv::FileStorage fsr("/home/kellan/befireGause.xml", cv::FileStorage::READ);
-    fsr["input_gpu_mat"] >> doppia;
-
-    cv::Mat diff;
-    cv::absdiff(image1, doppia, diff);
-
-    fs << "absdiff" << diff;
-    fs.release();
-
-#endif
-
-    cv::imshow("!!", image1);
-    cv::waitKey(0);
 
     // create integrals
     ChannelStorage storage(image, fld.shrinkage);
@@ -831,9 +773,9 @@ void cv::SoftCascade::detectMultiScale(const Mat& image, const std::vector<cv::R
 
         cv::imshow("out", out);
         cv::waitKey(0);
+        std::cout << "work rect: " << level.workRect.width << " " << level.workRect.height << std::endl;
 #endif
 
-        std::cout << "work rect: " << level.workRect.width << " " << level.workRect.height << std::endl;
         detections.clear();
     }
 
