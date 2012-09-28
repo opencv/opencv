@@ -156,24 +156,44 @@ template<> struct ColorChannel<float>
 
 ///////////////////////////// Top-level template function ////////////////////////////////
 
-template<class Cvt> void CvtColorLoop(const Mat& srcmat, Mat& dstmat, const Cvt& cvt)
+template <typename Cvt>
+class CvtColorLoop_Invoker : 
+    public ParallelLoopBody
 {
     typedef typename Cvt::channel_type _Tp;
-    Size sz = srcmat.size();
-    const uchar* src = srcmat.data;
-    uchar* dst = dstmat.data;
-    size_t srcstep = srcmat.step, dststep = dstmat.step;
-
-    if( srcmat.isContinuous() && dstmat.isContinuous() )
+public:
+    
+    CvtColorLoop_Invoker(const Mat& _src, Mat& _dst, const Cvt& _cvt) :
+        ParallelLoopBody(), src(_src), dst(_dst), cvt(_cvt)
     {
-        sz.width *= sz.height;
-        sz.height = 1;
     }
+    
+    virtual void operator()(const Range& range) const
+    {
+        int i = range.start;
+        const uchar* yS = src.data + src.step * i;
+        uchar* yD = dst.data + dst.step * i;
 
-    for( ; sz.height--; src += srcstep, dst += dststep )
-        cvt((const _Tp*)src, (_Tp*)dst, sz.width);
+        for ( ; i < range.end; ++i, yS += src.step, yD += dst.step )
+            cvt((const _Tp*)yS, (_Tp*)yD, src.cols);
+    }
+    
+private:
+    const Mat src;
+    Mat dst;
+    const Cvt cvt;
+    
+    CvtColorLoop_Invoker(const CvtColorLoop_Invoker&);
+    const CvtColorLoop_Invoker& operator= (const CvtColorLoop_Invoker&);
+};
+
+template <typename Cvt> 
+void CvtColorLoop(const Mat& src, Mat& dst, const Cvt& cvt)
+{
+    Range range(0, src.rows);
+    CvtColorLoop_Invoker<Cvt> invoker(src, dst, cvt);
+    parallel_for_(range, invoker);
 }
-
 
 ////////////////// Various 3/4-channel to 3/4-channel RGB transformations /////////////////
 
