@@ -50,10 +50,10 @@ namespace cv { namespace gpu { namespace device
         __device__ uchar4 int_to_uchar4(unsigned int in)
         {
             uchar4 bytes;
-            bytes.x = (in && 0x000000ff) >>  0;
-            bytes.y = (in && 0x0000ff00) >>  8;
-            bytes.z = (in && 0x00ff0000) >> 16;
-            bytes.w = (in && 0xff000000) >> 24;
+            bytes.x = (in & 0x000000ff) >>  0;
+            bytes.y = (in & 0x0000ff00) >>  8;
+            bytes.z = (in & 0x00ff0000) >> 16;
+            bytes.w = (in & 0xff000000) >> 24;
             return bytes;
         }
 
