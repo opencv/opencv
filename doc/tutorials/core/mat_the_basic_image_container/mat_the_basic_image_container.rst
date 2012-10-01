@@ -174,17 +174,18 @@ Although *Mat* is a great class as image container it is also a general matrix c
         :alt: Demo image of the matrix output
         :align: center
 
-Print out formatting
-====================
-
 .. note:: 
 
-   You can fill out a matrix with random values using the :operationsOnArrays:`randu() <randu>` function. You need to give the lover and upper value between what you want the random values:
+   You can fill out a matrix with random values using the :operationsOnArrays:`randu() <randu>` function. You need to give the lower and upper value between what you want the random values:
 
    .. literalinclude:: ../../../../samples/cpp/tutorial_code/core/mat_the_basic_image_container/mat_the_basic_image_container.cpp
       :language: cpp
       :tab-width: 4
       :lines:  57-58
+
+
+Print out formatting
+====================
 
 In the above examples you could see the default formatting option. Nevertheless, OpenCV allows you to format your matrix output format to fit the rules of: 
 
