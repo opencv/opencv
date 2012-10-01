@@ -9,7 +9,7 @@ using std::tr1::get;
 
 CV_ENUM(MatrixType, CV_16UC1, CV_16SC1, CV_32FC1)
 CV_ENUM(MapType, CV_16SC2, CV_32FC1, CV_32FC2)
-CV_ENUM(InterType, INTER_LINEAR, INTER_CUBIC, INTER_LANCZOS4, INTER_NEAREST)
+CV_ENUM(InterType, INTER_NEAREST, INTER_LINEAR, INTER_CUBIC, INTER_LANCZOS4)
 
 typedef TestBaseWithParam< tr1::tuple<Size, MatrixType, MapType, InterType> > TestRemap;
 
@@ -30,11 +30,14 @@ PERF_TEST_P( TestRemap, Remap,
     map1_type  = get<2>(GetParam());
     inter_type = get<3>(GetParam());
 
-    Mat src(sz, src_type);
-    Mat map1(sz, map1_type);
-    Mat dst(sz, src_type);
-    
-    Mat map2(map1_type == CV_32FC1 ? sz : Size(), CV_32FC1);
+    Mat src(sz, src_type), dst(sz, src_type), map1(sz, map1_type), map2;
+    if (map1_type == CV_32FC1)
+        map2.create(sz, CV_32FC1);
+    else if (inter_type != INTER_NEAREST && map1_type == CV_16SC2)
+    {
+        map2.create(sz, CV_16UC1);
+        map2 = Scalar::all(0);
+    }
         
     RNG rng;
     rng.fill(src, RNG::UNIFORM, 0, 256);
