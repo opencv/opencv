@@ -1432,7 +1432,7 @@ move_420_block(int yTL, int yTR, int yBL, int yBR, int u, int v,
 
 static inline void
 move_411_block(int yTL, int yTR, int yBL, int yBR, int u, int v,
-           int rowPixels, unsigned char * rgb)
+           int /*rowPixels*/, unsigned char * rgb)
 {
     const int rvScale = 91881;
     const int guScale = -22553;

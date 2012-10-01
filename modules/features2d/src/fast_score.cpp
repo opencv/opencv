@@ -78,6 +78,7 @@ void makeOffsets(int pixel[25], int rowStride, int patternSize)
         pixel[k] = pixel[k - patternSize];
 }
 
+#if 0
 static void testCorner(const uchar* ptr, const int pixel[], int K, int N, int threshold) {
     // check that with the computed "threshold" the pixel is still a corner
     // and that with the increased-by-1 "threshold" the pixel is not a corner anymore
@@ -111,6 +112,7 @@ static void testCorner(const uchar* ptr, const int pixel[], int K, int N, int th
                    (delta == 1 && std::max(c0, c1) <= K) );
     }
 }
+#endif
 
 template<>
 int cornerScore<16>(const uchar* ptr, const int pixel[], int threshold)

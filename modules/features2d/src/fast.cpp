@@ -89,7 +89,9 @@ void FAST_t(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bo
         if( i < img.rows - 3 )
         {
             j = 3;
-    #if 0 //CV_SSE2
+    #if CV_SSE2
+            if( patternSize == 16 )
+            {
             for(; j < img.cols - 16 - 3; j += 16, ptr += 16)
             {
                 __m128i m0, m1;
@@ -144,6 +146,7 @@ void FAST_t(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bo
                         if(nonmax_suppression)
                             curr[j+k] = (uchar)cornerScore<patternSize>(ptr+k, pixel, threshold);
                     }
+            }
             }
     #endif
             for( ; j < img.cols - 3; j++, ptr++ )
