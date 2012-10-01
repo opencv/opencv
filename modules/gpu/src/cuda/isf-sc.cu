@@ -138,65 +138,7 @@ namespace icf {
         return (a - b + c - d);
     }
 
-//     __global__ void test_kernel(const Level* levels, const Octave* octaves, const float* stages,
-//         const Node* nodes, const float* leaves, Detection* objects, const uint ndetections, uint* ctr)
-//     {
-//         const int y = blockIdx.y * blockDim.y + threadIdx.y;
-//         const int x = blockIdx.x * blockDim.x + threadIdx.x;
-//         Level level = levels[blockIdx.z];
-
-//         // if (blockIdx.z != 31) return;
-//         if(x >= level.workRect.x || y >= level.workRect.y) return;
-
-//         Octave octave = octaves[level.octave];
-
-//         int st = octave.index * octave.stages;
-//         const int stEnd = st + 1000;//octave.stages;
-
-//         float confidence = 0.f;
-
-// // #pragma unroll 2
-//         for(; st < stEnd; ++st)
-//         {
-//             dprintf("\n\nstage: %d\n", st);
-//             const int nId = st * 3;
-//             Node node = nodes[nId];
-
-//             dprintf("Node: [%d %d %d %d] %d %d\n", node.rect.x, node.rect.y, node.rect.z, node.rect.w,
-//                 node.threshold >> 28, node.threshold & 0x0FFFFFFFU);
-
-//             float threshold = rescale(level, node.rect, node);
-//             int sum = get(x, y + (node.threshold >> 28) * 121, node.rect);
-
-//             dprintf("Node: [%d %d %d %d] %f\n", node.rect.x, node.rect.y, node.rect.z,
-//                 node.rect.w, threshold);
-
-//             int next = 1 + (int)(sum >= threshold);
-//             dprintf("go: %d (%d >= %f)\n\n" ,next, sum, threshold);
-
-//             node = nodes[nId + next];
-//             threshold = rescale(level, node.rect, node);
-//             sum = get(x, y + (node.threshold >> 28) * 121, node.rect);
-
-//             const int lShift = (next - 1) * 2 + (int)(sum >= threshold);
-//             float impact = leaves[st * 4 + lShift];
-//             confidence += impact;
-
-//             if (confidence <= stages[st]) st = stEnd + 10;
-//             dprintf("decided: %d (%d >= %f) %d %f\n\n" ,next, sum, threshold, lShift, impact);
-//             dprintf("extracted stage: %f\n", stages[st]);
-//             dprintf("computed  score: %f\n\n", confidence);
-//         }
-
-//         if(st == stEnd)
-//         {
-//             int idx = atomicInc(ctr, ndetections);
-//             // store detection
-//             objects[idx] = Detection(__float2int_rn(x * octave.shrinkage),
-//                 __float2int_rn(y * octave.shrinkage), level.objSize.x, level.objSize.y, confidence);
-//         }
-//     }
-
+#if defined __CUDA_ARCH__ && __CUDA_ARCH__ >= 300
     __global__ void test_kernel_warp(const Level* levels, const Octave* octaves, const float* stages,
         const Node* nodes, const float* leaves, Detection* objects, const uint ndetections, uint* ctr,
         const int downscales)
@@ -261,6 +203,66 @@ namespace icf {
                 __float2int_rn(y * octave.shrinkage), level.objSize.x, level.objSize.y, confidence);
         }
     }
+#else
+    __global__ void test_kernel_warp(const Level* levels, const Octave* octaves, const float* stages,
+        const Node* nodes, const float* leaves, Detection* objects, const uint ndetections, uint* ctr,
+        const int downscales)
+    {
+        const int y = blockIdx.y * blockDim.y + threadIdx.y;
+        const int x = blockIdx.x * blockDim.x + threadIdx.x;
+        Level level = levels[blockIdx.z];
+
+        // if (blockIdx.z != 31) return;
+        if(x >= level.workRect.x || y >= level.workRect.y) return;
+
+        Octave octave = octaves[level.octave];
+
+        int st = octave.index * octave.stages;
+        const int stEnd = st + 1000;//octave.stages;
+
+        float confidence = 0.f;
+
+        for(; st < stEnd; ++st)
+        {
+            dprintf("\n\nstage: %d\n", st);
+            const int nId = st * 3;
+            Node node = nodes[nId];
+
+            dprintf("Node: [%d %d %d %d] %d %d\n", node.rect.x, node.rect.y, node.rect.z, node.rect.w,
+                node.threshold >> 28, node.threshold & 0x0FFFFFFFU);
+
+            float threshold = rescale(level, node.rect, node);
+            int sum = get(x, y + (node.threshold >> 28) * 121, node.rect);
+
+            dprintf("Node: [%d %d %d %d] %f\n", node.rect.x, node.rect.y, node.rect.z,
+                node.rect.w, threshold);
+
+            int next = 1 + (int)(sum >= threshold);
+            dprintf("go: %d (%d >= %f)\n\n" ,next, sum, threshold);
+
+            node = nodes[nId + next];
+            threshold = rescale(level, node.rect, node);
+            sum = get(x, y + (node.threshold >> 28) * 121, node.rect);
+
+            const int lShift = (next - 1) * 2 + (int)(sum >= threshold);
+            float impact = leaves[st * 4 + lShift];
+            confidence += impact;
+
+            if (confidence <= stages[st]) st = stEnd + 10;
+            dprintf("decided: %d (%d >= %f) %d %f\n\n" ,next, sum, threshold, lShift, impact);
+            dprintf("extracted stage: %f\n", stages[st]);
+            dprintf("computed  score: %f\n\n", confidence);
+        }
+
+        if(st == stEnd)
+        {
+            int idx = atomicInc(ctr, ndetections);
+            // store detection
+            objects[idx] = Detection(__float2int_rn(x * octave.shrinkage),
+                __float2int_rn(y * octave.shrinkage), level.objSize.x, level.objSize.y, confidence);
+        }
+    }
+#endif
 
     void detect(const PtrStepSzb& levels, const PtrStepSzb& octaves, const PtrStepSzf& stages,
                 const PtrStepSzb& nodes,  const PtrStepSzf& leaves,  const PtrStepSzi& hogluv,
