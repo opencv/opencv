@@ -9,6 +9,8 @@
  * agreement from NVIDIA Corporation is strictly prohibited.
  */
 
+#if !defined CUDA_DISABLER
+
 #include <math.h>
 
 #include "TestRectStdDev.h"
@@ -178,3 +180,5 @@ bool TestRectStdDev::deinit()
 {
     return true;
 }
+
+#endif /* CUDA_DISABLER */

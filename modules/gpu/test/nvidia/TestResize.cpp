@@ -9,6 +9,8 @@
  * agreement from NVIDIA Corporation is strictly prohibited.
  */
 
+#if !defined CUDA_DISABLER
+
 #include <math.h>
 
 #include "TestResize.h"
@@ -159,3 +161,5 @@ bool TestResize<T>::deinit()
 
 template class TestResize<Ncv32u>;
 template class TestResize<Ncv64u>;
+
+#endif /* CUDA_DISABLER */

@@ -39,6 +39,7 @@
 //
 //M*/
 
+#if !defined CUDA_DISABLER
 
 #include <cuda_runtime.h>
 #include <stdio.h>
@@ -600,3 +601,5 @@ template class NCVImagePyramid<float3>;
 template class NCVImagePyramid<float4>;
 
 #endif //_WIN32
+
+#endif /* CUDA_DISABLER */

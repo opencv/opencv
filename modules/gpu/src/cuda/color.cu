@@ -40,6 +40,8 @@
 //
 //M*/
 
+#if !defined CUDA_DISABLER
+
 #include <internal_shared.hpp>
 #include <opencv2/gpu/device/transform.hpp>
 #include <opencv2/gpu/device/color.hpp>
@@ -378,3 +380,5 @@ namespace cv { namespace gpu { namespace device
     #undef OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL
     #undef OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F
 }}} // namespace cv { namespace gpu { namespace device
+
+#endif /* CUDA_DISABLER */

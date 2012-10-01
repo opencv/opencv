@@ -41,6 +41,8 @@
 //
 //M*/
 
+#if !defined CUDA_DISABLER
+
 #include "thrust/device_ptr.h"
 #include "thrust/remove.h"
 #include "thrust/functional.h"
@@ -113,3 +115,6 @@ void calcWobbleSuppressionMaps(
 }
 
 }}}}
+
+
+#endif /* CUDA_DISABLER */

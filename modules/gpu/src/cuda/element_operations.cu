@@ -40,6 +40,8 @@
 //
 //M*/
 
+#if !defined CUDA_DISABLER
+
 #include "internal_shared.hpp"
 #include "opencv2/gpu/device/functional.hpp"
 #include "opencv2/gpu/device/vec_math.hpp"
@@ -2367,3 +2369,5 @@ namespace cv { namespace gpu { namespace device
     template void addWeighted_gpu<double, double, float>(const PtrStepSzb& src1, double alpha, const PtrStepSzb& src2, double beta, double gamma, const PtrStepSzb& dst, cudaStream_t stream);
     template void addWeighted_gpu<double, double, double>(const PtrStepSzb& src1, double alpha, const PtrStepSzb& src2, double beta, double gamma, const PtrStepSzb& dst, cudaStream_t stream);
 }}} // namespace cv { namespace gpu { namespace device
+
+#endif /* CUDA_DISABLER */

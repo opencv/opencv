@@ -9,6 +9,8 @@
  * agreement from NVIDIA Corporation is strictly prohibited.
  */
 
+#if !defined CUDA_DISABLER
+
 #include "TestIntegralImageSquared.h"
 
 
@@ -115,3 +117,5 @@ bool TestIntegralImageSquared::deinit()
 {
     return true;
 }
+
+#endif /* CUDA_DISABLER */

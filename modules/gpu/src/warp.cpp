@@ -42,7 +42,7 @@
 
 #include "precomp.hpp"
 
-#ifndef HAVE_CUDA
+#if !defined HAVE_CUDA || defined(CUDA_DISABLER)
 
 
 void cv::gpu::warpAffine(const GpuMat&, GpuMat&, const Mat&, Size, int, int, Scalar, Stream&) { throw_nogpu(); }

@@ -9,6 +9,8 @@
  * agreement from NVIDIA Corporation is strictly prohibited.
  */
 
+#if !defined CUDA_DISABLER
+
 #include <float.h>
 
 #if defined(__GNUC__) && !defined(__APPLE__)
@@ -299,3 +301,5 @@ bool TestHaarCascadeApplication::deinit()
 {
     return true;
 }
+
+#endif /* CUDA_DISABLER */

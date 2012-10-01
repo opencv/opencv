@@ -9,6 +9,8 @@
  * agreement from NVIDIA Corporation is strictly prohibited.
  */
 
+#if !defined CUDA_DISABLER
+
 #include "TestCompact.h"
 
 
@@ -127,3 +129,5 @@ bool TestCompact::deinit()
 {
     return true;
 }
+
+#endif /* CUDA_DISABLER */

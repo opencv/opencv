@@ -40,6 +40,8 @@
 //
 //M*/
 
+#if !defined CUDA_DISABLER
+
 #include <thrust/sort.h>
 #include "opencv2/gpu/device/common.hpp"
 #include "opencv2/gpu/device/emulation.hpp"
@@ -1505,3 +1507,6 @@ namespace cv { namespace gpu { namespace device
         }
     }
 }}}
+
+
+#endif /* CUDA_DISABLER */

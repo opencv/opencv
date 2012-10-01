@@ -42,7 +42,7 @@
 
 #include "precomp.hpp"
 
-#ifndef HAVE_CUDA
+#if !defined HAVE_CUDA || defined(CUDA_DISABLER)
 
 cv::gpu::MOG_GPU::MOG_GPU(int) { throw_nogpu(); }
 void cv::gpu::MOG_GPU::initialize(cv::Size, int) { throw_nogpu(); }

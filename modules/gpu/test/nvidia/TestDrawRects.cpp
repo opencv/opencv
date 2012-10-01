@@ -9,6 +9,8 @@
  * agreement from NVIDIA Corporation is strictly prohibited.
  */
 
+#if !defined CUDA_DISABLER
+
 #include "TestDrawRects.h"
 #include "NCVHaarObjectDetection.hpp"
 
@@ -162,3 +164,5 @@ bool TestDrawRects<T>::deinit()
 
 template class TestDrawRects<Ncv8u>;
 template class TestDrawRects<Ncv32u>;
+
+#endif /* CUDA_DISABLER */

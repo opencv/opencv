@@ -40,6 +40,8 @@
 //
 //M*/
 
+#if !defined CUDA_DISABLER
+
 #include "internal_shared.hpp"
 #include "opencv2/gpu/device/vec_math.hpp"
 
@@ -909,3 +911,6 @@ namespace cv { namespace gpu { namespace device
         }
     } //namespace match_template
 }}} // namespace cv { namespace gpu { namespace device
+
+
+#endif /* CUDA_DISABLER */

@@ -46,7 +46,7 @@ using namespace std;
 using namespace cv;
 using namespace cv::gpu;
 
-#ifndef HAVE_CUDA
+#if !defined HAVE_CUDA || defined(CUDA_DISABLER)
 
 void cv::gpu::compactPoints(GpuMat&, GpuMat&, const GpuMat&) { throw_nogpu(); }
 void cv::gpu::calcWobbleSuppressionMaps(

@@ -40,6 +40,8 @@
 //
 //M*/
 
+#if !defined CUDA_DISABLER
+
 #include "internal_shared.hpp"
 #include "opencv2/gpu/device/saturate_cast.hpp"
 #include "opencv2/gpu/device/limits.hpp"
@@ -532,3 +534,5 @@ namespace cv { namespace gpu { namespace device
         template void output_gpu<float>(const PtrStepSzb& u, const PtrStepSzb& d, const PtrStepSzb& l, const PtrStepSzb& r, const PtrStepSzb& data, const PtrStepSz<short>& disp, cudaStream_t stream);
     } // namespace stereobp
 }}} // namespace cv { namespace gpu { namespace device
+
+#endif /* CUDA_DISABLER */

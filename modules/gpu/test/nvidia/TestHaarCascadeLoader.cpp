@@ -9,6 +9,8 @@
  * agreement from NVIDIA Corporation is strictly prohibited.
  */
 
+#if !defined CUDA_DISABLER
+
 #include "TestHaarCascadeLoader.h"
 #include "NCVHaarObjectDetection.hpp"
 
@@ -121,3 +123,5 @@ bool TestHaarCascadeLoader::deinit()
 {
     return true;
 }
+
+#endif /* CUDA_DISABLER */

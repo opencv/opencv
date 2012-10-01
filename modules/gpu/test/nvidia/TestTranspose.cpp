@@ -9,6 +9,8 @@
  * agreement from NVIDIA Corporation is strictly prohibited.
  */
 
+#if !defined CUDA_DISABLER
+
 #include <math.h>
 
 #include "TestTranspose.h"
@@ -146,3 +148,5 @@ bool TestTranspose<T>::deinit()
 
 template class TestTranspose<Ncv32u>;
 template class TestTranspose<Ncv64u>;
+
+#endif /* CUDA_DISABLER */

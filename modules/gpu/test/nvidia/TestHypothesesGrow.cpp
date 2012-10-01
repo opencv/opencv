@@ -9,6 +9,8 @@
  * agreement from NVIDIA Corporation is strictly prohibited.
  */
 
+#if !defined CUDA_DISABLER
+
 #include "TestHypothesesGrow.h"
 #include "NCVHaarObjectDetection.hpp"
 
@@ -132,3 +134,5 @@ bool TestHypothesesGrow::deinit()
 {
     return true;
 }
+
+#endif /* CUDA_DISABLER */

@@ -41,6 +41,8 @@
 //
 //M*/
 
+#if !defined CUDA_DISABLER
+
 #include "internal_shared.hpp"
 
 #include "opencv2/gpu/device/vec_traits.hpp"
@@ -168,3 +170,5 @@ namespace cv { namespace gpu { namespace device
         template void nlm_bruteforce_gpu<uchar3>(const PtrStepSzb&, PtrStepSzb, int, int, float, int, cudaStream_t);
     }
 }}}
+
+#endif /* CUDA_DISABLER */

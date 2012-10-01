@@ -40,6 +40,8 @@
 //
 //M*/
 
+#if !defined CUDA_DISABLER
+
 #include <opencv2/gpu/device/common.hpp>
 #include <opencv2/gpu/device/vec_traits.hpp>
 #include <opencv2/gpu/device/vec_math.hpp>
@@ -325,3 +327,5 @@ namespace cv { namespace gpu {
         template void Bayer2BGR_16u_gpu<4>(PtrStepSzb src, PtrStepSzb dst, bool blue_last, bool start_with_green, cudaStream_t stream);
     }
 }}
+
+#endif /* CUDA_DISABLER */

@@ -39,6 +39,7 @@
 //
 //M*/
 
+#if !defined CUDA_DISABLER
 
 #include <vector>
 #include <cuda_runtime.h>
@@ -2576,3 +2577,5 @@ NCVStatus nppiStResize_32f_C1R(const Ncv32f *pSrc,
 
     return status;
 }
+
+#endif /* CUDA_DISABLER */

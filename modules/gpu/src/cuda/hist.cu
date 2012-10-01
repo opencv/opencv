@@ -41,6 +41,8 @@
 //
 //M*/
 
+#if !defined CUDA_DISABLER
+
 #include "internal_shared.hpp"
 #include "opencv2/gpu/device/utility.hpp"
 #include "opencv2/gpu/device/saturate_cast.hpp"
@@ -217,3 +219,6 @@ namespace cv { namespace gpu { namespace device
         }
     } // namespace hist
 }}} // namespace cv { namespace gpu { namespace device
+
+
+#endif /* CUDA_DISABLER */

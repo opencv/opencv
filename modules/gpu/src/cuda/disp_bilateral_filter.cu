@@ -40,6 +40,8 @@
 //
 //M*/
 
+#if !defined CUDA_DISABLER
+
 #include "internal_shared.hpp"
 #include "opencv2/gpu/device/limits.hpp"
 
@@ -217,3 +219,5 @@ namespace cv { namespace gpu { namespace device
         template void disp_bilateral_filter<short>(PtrStepSz<short> disp, PtrStepSzb img, int channels, int iters, cudaStream_t stream);
     } // namespace bilateral_filter
 }}} // namespace cv { namespace gpu { namespace device
+
+#endif /* CUDA_DISABLER */

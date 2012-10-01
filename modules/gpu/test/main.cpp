@@ -74,7 +74,7 @@ void printOsInfo()
 
 void printCudaInfo()
 {
-#ifndef HAVE_CUDA
+#if !defined HAVE_CUDA || defined(CUDA_DISABLER)
     cout << "OpenCV was built without CUDA support \n" << endl;
 #else
     int driver;

@@ -40,6 +40,8 @@
 //
 //M*/
 
+#if !defined CUDA_DISABLER
+
 #include "internal_shared.hpp"
 #include "opencv2/gpu/device/border_interpolate.hpp"
 #include "opencv2/gpu/device/vec_traits.hpp"
@@ -190,3 +192,5 @@ namespace cv { namespace gpu { namespace device
         template void pyrUp_gpu<float4>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
     } // namespace imgproc
 }}} // namespace cv { namespace gpu { namespace device
+
+#endif /* CUDA_DISABLER */

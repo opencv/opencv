@@ -42,7 +42,7 @@
 
 #include "precomp.hpp"
 
-#if !defined (HAVE_CUDA)
+#if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
 cv::gpu::HOGDescriptor::HOGDescriptor(Size, Size, Size, Size, int, double, double, bool, int) { throw_nogpu(); }
 size_t cv::gpu::HOGDescriptor::getDescriptorSize() const { throw_nogpu(); return 0; }

@@ -45,7 +45,7 @@
 using namespace cv;
 using namespace cv::gpu;
 
-#if !defined (HAVE_CUDA)
+#if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
 cv::gpu::StereoBM_GPU::StereoBM_GPU() { throw_nogpu(); }
 cv::gpu::StereoBM_GPU::StereoBM_GPU(int, int, int) { throw_nogpu(); }

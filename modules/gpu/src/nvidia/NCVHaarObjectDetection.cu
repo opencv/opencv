@@ -55,6 +55,8 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 
+#if !defined CUDA_DISABLER
+
 #include <algorithm>
 #include <cstdio>
 
@@ -2314,3 +2316,5 @@ NCVStatus ncvHaarStoreNVBIN_host(const std::string &filename,
     fclose(fp);
     return NCV_SUCCESS;
 }
+
+#endif /* CUDA_DISABLER */

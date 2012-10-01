@@ -46,7 +46,7 @@ using namespace cv;
 using namespace cv::gpu;
 using namespace std;
 
-#if !defined (HAVE_CUDA)
+#if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
 cv::gpu::FAST_GPU::FAST_GPU(int, bool, double) { throw_nogpu(); }
 void cv::gpu::FAST_GPU::operator ()(const GpuMat&, const GpuMat&, GpuMat&) { throw_nogpu(); }

@@ -39,6 +39,8 @@
 //
 //M*/
 
+#if !defined CUDA_DISABLER
+
 
 #include <iostream>
 #include <string>
@@ -905,3 +907,5 @@ NCVStatus ncvDrawRects_32u_device(Ncv32u *d_dst,
 {
     return drawRectsWrapperDevice(d_dst, dstStride, dstWidth, dstHeight, d_rects, numRects, color, cuStream);
 }
+
+#endif /* CUDA_DISABLER */

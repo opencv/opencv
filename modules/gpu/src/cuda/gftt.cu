@@ -45,6 +45,8 @@
 //
 //M*/
 
+#if !defined CUDA_DISABLER
+
 #include <thrust/sort.h>
 
 #include "opencv2/gpu/device/common.hpp"
@@ -144,3 +146,6 @@ namespace cv { namespace gpu { namespace device
         }
     } // namespace optical_flow
 }}}
+
+
+#endif /* CUDA_DISABLER */

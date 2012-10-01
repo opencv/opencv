@@ -41,6 +41,8 @@
 //
 //M*/
 
+#if !defined CUDA_DISABLER
+
 #include "internal_shared.hpp"
 
 #include "opencv2/gpu/device/vec_traits.hpp"
@@ -194,3 +196,6 @@ OCV_INSTANTIATE_BILATERAL_FILTER(float)
 //OCV_INSTANTIATE_BILATERAL_FILTER(float2)
 OCV_INSTANTIATE_BILATERAL_FILTER(float3)
 OCV_INSTANTIATE_BILATERAL_FILTER(float4)
+
+
+#endif /* CUDA_DISABLER */

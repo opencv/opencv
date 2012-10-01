@@ -70,7 +70,7 @@ using namespace cv::gpu;
 #else
     #define throw_nogl CV_Error(CV_OpenGlNotSupported, "OpenGL context doesn't exist")
 
-    #ifndef HAVE_CUDA
+    #if !defined HAVE_CUDA || defined(CUDA_DISABLER)
         #define throw_nocuda CV_Error(CV_GpuNotSupported, "The library is compiled without CUDA support")
     #else
         #if defined(__GNUC__)
@@ -162,7 +162,7 @@ void icvSetOpenGlFuncTab(const CvOpenGlFuncTab* tab)
 
 void cv::gpu::setGlDevice(int device)
 {
-#ifndef HAVE_CUDA
+#if !defined HAVE_CUDA || defined(CUDA_DISABLER)
     (void)device;
     throw_nocuda;
 #else
@@ -538,7 +538,7 @@ cv::GlBuffer::GlBuffer(InputArray mat_, Usage _usage) : rows_(0), cols_(0), type
 
     if (kind == _InputArray::GPU_MAT)
     {
-        #ifndef HAVE_CUDA
+        #if !defined HAVE_CUDA || defined(CUDA_DISABLER)
             throw_nocuda;
         #else
             GpuMat d_mat = mat_.getGpuMat();
@@ -609,7 +609,7 @@ void cv::GlBuffer::copyFrom(InputArray mat_)
         }
     case _InputArray::GPU_MAT:
         {
-            #ifndef HAVE_CUDA
+            #if !defined HAVE_CUDA || defined(CUDA_DISABLER)
                 throw_nocuda;
             #else
                 GpuMat d_mat = mat_.getGpuMat();
@@ -670,7 +670,7 @@ GpuMat cv::GlBuffer::mapDevice()
     throw_nogl;
     return GpuMat();
 #else
-    #ifndef HAVE_CUDA
+    #if !defined HAVE_CUDA || defined(CUDA_DISABLER)
         throw_nocuda;
         return GpuMat();
     #else
@@ -684,7 +684,7 @@ void cv::GlBuffer::unmapDevice()
 #ifndef HAVE_OPENGL
     throw_nogl;
 #else
-    #ifndef HAVE_CUDA
+    #if !defined HAVE_CUDA || defined(CUDA_DISABLER)
         throw_nocuda;
     #else
         impl_->unmapDevice();
@@ -976,7 +976,7 @@ cv::GlTexture::GlTexture(InputArray mat_, bool bgra) : rows_(0), cols_(0), type_
         }
     case _InputArray::GPU_MAT:
         {
-            #ifndef HAVE_CUDA
+            #if !defined HAVE_CUDA || defined(CUDA_DISABLER)
                 throw_nocuda;
             #else
                 GpuMat d_mat = mat_.getGpuMat();
@@ -1056,7 +1056,7 @@ void cv::GlTexture::copyFrom(InputArray mat_, bool bgra)
         }
     case _InputArray::GPU_MAT:
         {
-            #ifndef HAVE_CUDA
+            #if !defined HAVE_CUDA || defined(CUDA_DISABLER)
                 throw_nocuda;
             #else
                 GpuMat d_mat = mat_.getGpuMat();

@@ -9,6 +9,8 @@
  * agreement from NVIDIA Corporation is strictly prohibited.
  */
 
+#if !defined CUDA_DISABLER
+
 #include <math.h>
 #include "TestIntegralImage.h"
 
@@ -183,3 +185,5 @@ bool TestIntegralImage<T_in, T_out>::deinit()
 
 template class TestIntegralImage<Ncv8u, Ncv32u>;
 template class TestIntegralImage<Ncv32f, Ncv32f>;
+
+#endif /* CUDA_DISABLER */

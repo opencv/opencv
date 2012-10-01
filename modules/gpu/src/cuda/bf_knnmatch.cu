@@ -40,6 +40,8 @@
 //
 //M*/
 
+#if !defined CUDA_DISABLER
+
 #include "internal_shared.hpp"
 #include "opencv2/gpu/device/limits.hpp"
 #include "opencv2/gpu/device/vec_distance.hpp"
@@ -1160,3 +1162,6 @@ namespace cv { namespace gpu { namespace device
         template void match2Hamming_gpu<int   >(const PtrStepSzb& query, const PtrStepSzb& trains, const PtrStepSz<PtrStepb>& masks, const PtrStepSzb& trainIdx, const PtrStepSzb& imgIdx, const PtrStepSzb& distance, int cc, cudaStream_t stream);
     } // namespace bf_knnmatch
 }}} // namespace cv { namespace gpu { namespace device {
+
+
+#endif /* CUDA_DISABLER */

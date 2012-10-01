@@ -40,6 +40,8 @@
 //
 //M*/
 
+#if !defined CUDA_DISABLER
+
 #include "internal_shared.hpp"
 
 namespace cv { namespace gpu { namespace device
@@ -114,3 +116,6 @@ namespace cv { namespace gpu { namespace device
         }
     } // namespace blend
 }}} // namespace cv { namespace gpu { namespace device
+
+
+#endif /* CUDA_DISABLER */

@@ -31,7 +31,7 @@ void printOsInfo()
 
 void printCudaInfo()
 {
-#ifndef HAVE_CUDA
+#if !defined HAVE_CUDA || defined(CUDA_DISABLER)
     cout << "OpenCV was built without CUDA support \n" << endl;
 #else
     int driver;
@@ -99,7 +99,7 @@ int main(int argc, char** argv)
 
     int device = cmd.get<int>("device");
     bool cpu   = cmd.has("cpu");
-#ifndef HAVE_CUDA
+#if !defined HAVE_CUDA || defined(CUDA_DISABLER)
     cpu = true;
 #endif
 

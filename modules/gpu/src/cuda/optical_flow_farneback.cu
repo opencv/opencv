@@ -40,6 +40,8 @@
 //
 //M*/
 
+#if !defined CUDA_DISABLER
+
 #include <stdio.h>
 #include "internal_shared.hpp"
 #include "opencv2/gpu/device/common.hpp"
@@ -645,3 +647,5 @@ namespace cv { namespace gpu { namespace device { namespace optflow_farneback
 
 }}}} // namespace cv { namespace gpu { namespace device { namespace optflow_farneback
 
+
+#endif /* CUDA_DISABLER */

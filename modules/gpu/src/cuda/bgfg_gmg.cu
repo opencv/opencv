@@ -40,6 +40,8 @@
 //
 //M*/
 
+#if !defined CUDA_DISABLER
+
 #include "opencv2/gpu/device/common.hpp"
 #include "opencv2/gpu/device/vec_traits.hpp"
 #include "opencv2/gpu/device/limits.hpp"
@@ -251,3 +253,6 @@ namespace cv { namespace gpu { namespace device {
         template void update_gpu<float4 >(PtrStepSzb frame, PtrStepb fgmask, PtrStepSzi colors, PtrStepf weights, PtrStepi nfeatures, int frameNum, float learningRate, bool updateBackgroundModel, cudaStream_t stream);
     }
 }}}
+
+
+#endif /* CUDA_DISABLER */

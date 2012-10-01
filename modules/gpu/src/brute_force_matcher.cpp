@@ -46,7 +46,7 @@ using namespace cv;
 using namespace cv::gpu;
 using namespace std;
 
-#if !defined (HAVE_CUDA)
+#if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
 cv::gpu::BFMatcher_GPU::BFMatcher_GPU(int) { throw_nogpu(); }
 void cv::gpu::BFMatcher_GPU::add(const vector<GpuMat>&) { throw_nogpu(); }

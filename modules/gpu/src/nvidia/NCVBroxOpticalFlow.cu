@@ -56,6 +56,8 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 
+#if !defined CUDA_DISABLER
+
 #include <iostream>
 #include <vector>
 #include <memory>
@@ -1160,3 +1162,5 @@ NCVStatus NCVBroxOpticalFlow(const NCVBroxOpticalFlowDescriptor desc,
 
     return NCV_SUCCESS;
 }
+
+#endif /* CUDA_DISABLER */
