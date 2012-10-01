@@ -411,7 +411,7 @@ protected:
     enum { DO_CANNY_PRUNING = 1, SCALE_IMAGE = 2,
            FIND_BIGGEST_OBJECT = 4, DO_ROUGH_SEARCH = 8 };
 
-    friend struct CascadeClassifierInvoker;
+    friend class CascadeClassifierInvoker;
 
     template<class FEval>
     friend int predictOrdered( CascadeClassifier& cascade, Ptr<FeatureEvaluator> &featureEvaluator, double& weight);

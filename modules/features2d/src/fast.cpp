@@ -54,6 +54,7 @@ void FAST_t(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bo
     const int K = patternSize/2, N = patternSize + K + 1;
 #if CV_SSE2
     const int quarterPatternSize = patternSize/4;
+    (void)quarterPatternSize;
 #endif
     int i, j, k, pixel[25];
     makeOffsets(pixel, (int)img.step, patternSize);
@@ -64,6 +65,9 @@ void FAST_t(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bo
 
 #if CV_SSE2
     __m128i delta = _mm_set1_epi8(-128), t = _mm_set1_epi8((char)threshold), K16 = _mm_set1_epi8((char)K);
+    (void)K16;
+    (void)delta;
+    (void)t;
 #endif
     uchar threshold_tab[512];
     for( i = -255; i <= 255; i++ )
