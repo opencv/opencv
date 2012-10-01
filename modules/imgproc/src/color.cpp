@@ -192,7 +192,8 @@ void CvtColorLoop(const Mat& src, Mat& dst, const Cvt& cvt)
 {
     Range range(0, src.rows);
     CvtColorLoop_Invoker<Cvt> invoker(src, dst, cvt);
-    parallel_for_(range, invoker);
+    invoker(range);
+//     parallel_for_(range, invoker);
 }
 
 ////////////////// Various 3/4-channel to 3/4-channel RGB transformations /////////////////
