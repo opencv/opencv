@@ -500,6 +500,7 @@ bool  TiffEncoder::writeLibTiff( const Mat& img, const vector<int>& /*params*/)
                     icvCvt_BGRA2RGBA_8u_C4R( img.data + img.step*y, 0, buffer, 0, cvSize(width,1) );
                 else
                     icvCvt_BGRA2RGBA_16u_C4R( (const ushort*)(img.data + img.step*y), 0, (ushort*)buffer, 0, cvSize(width,1) );
+                break;
             }
 
             default:
