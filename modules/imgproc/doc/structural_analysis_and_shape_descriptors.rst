@@ -162,7 +162,7 @@ Finds contours in a binary image.
 The function retrieves contours from the binary image using the algorithm
 [Suzuki85]_. The contours are a useful tool for shape analysis and object detection and recognition. See ``squares.c`` in the OpenCV sample directory.
 
-.. note:: Source ``image`` is modified by this function.
+.. note:: Source ``image`` is modified by this function. Also, the function does not take into account 1-pixel border of the image (it's filled with 0's and used for neighbor analysis in the algorithm), therefore the contours touching the image border will be clipped.
 
 .. note:: If you use the new Python interface then the ``CV_`` prefix has to be omitted in contour retrieval mode and contour approximation method parameters (for example, use ``cv2.RETR_LIST`` and ``cv2.CHAIN_APPROX_NONE`` parameters). If you use the old Python interface then these parameters have the ``CV_`` prefix (for example, use ``cv.CV_RETR_LIST`` and ``cv.CV_CHAIN_APPROX_NONE``).
 
