@@ -86,8 +86,11 @@ namespace icf {
     }
 
     texture<int,  cudaTextureType2D, cudaReadModeElementType> thogluv;
-    __device__ __forceinline__ float rescale(const Level& level, uchar4& scaledRect, const Node& node)
+
+    template<bool isUp>
+    __device__ __forceinline__ float rescale(const Level& level, Node& node)
     {
+        uchar4& scaledRect = node.rect;
         float relScale = level.relScale;
         float farea = (scaledRect.z - scaledRect.x) * (scaledRect.w - scaledRect.y);
 
@@ -119,7 +122,44 @@ namespace icf {
         return rootThreshold;
     }
 
-    __device__ __forceinline__ int get(const int x, int y, uchar4 area)
+    template<>
+    __device__ __forceinline__ float rescale<true>(const Level& level, Node& node)
+    {
+        uchar4& scaledRect = node.rect;
+        float relScale = level.relScale;
+        float farea = scaledRect.z * scaledRect.w;
+
+        dprintf("%d: feature %d box %d %d %d %d\n",threadIdx.x, (node.threshold >> 28), scaledRect.x, scaledRect.y,
+            scaledRect.z, scaledRect.w);
+        dprintf("%d: rescale: %f [%f %f] selected %f\n",threadIdx.x, level.relScale, level.scaling[0], level.scaling[1],
+            level.scaling[(node.threshold >> 28) > 6]);
+
+        // rescale
+        scaledRect.x = __float2int_rn(relScale * scaledRect.x);
+        scaledRect.y = __float2int_rn(relScale * scaledRect.y);
+        scaledRect.z = __float2int_rn(relScale * scaledRect.z);
+        scaledRect.w = __float2int_rn(relScale * scaledRect.w);
+
+        float sarea = scaledRect.z * scaledRect.w;
+
+        const float expected_new_area = farea * relScale * relScale;
+        float approx = __fdividef(sarea, expected_new_area);
+
+        dprintf("%d: new rect: %d box %d %d %d %d  rel areas %f %f\n",threadIdx.x, (node.threshold >> 28),
+        scaledRect.x, scaledRect.y, scaledRect.z, scaledRect.w, farea * relScale * relScale, sarea);
+
+        float rootThreshold = (node.threshold & 0x0FFFFFFFU) * approx;
+
+        rootThreshold *= level.scaling[(node.threshold >> 28) > 6];
+
+        dprintf("%d: approximation %f %d -> %f %f\n",threadIdx.x, approx, (node.threshold & 0x0FFFFFFFU), rootThreshold,
+            level.scaling[(node.threshold >> 28) > 6]);
+
+        return rootThreshold;
+    }
+
+    template<bool isUp>
+    __device__ __forceinline__ int get(int x, int y, uchar4 area)
     {
 
         dprintf("%d: feature box %d %d %d %d\n",threadIdx.x, area.x, area.y, area.z, area.w);
@@ -138,7 +178,30 @@ namespace icf {
         return (a - b + c - d);
     }
 
+    template<>
+    __device__ __forceinline__ int get<true>(int x, int y, uchar4 area)
+    {
+
+        dprintf("%d: feature box %d %d %d %d\n",threadIdx.x, area.x, area.y, area.z, area.w);
+        dprintf("%d: extract feature for: [%d %d] [%d %d] [%d %d] [%d %d]\n",threadIdx.x,
+            x + area.x, y + area.y,  x + area.z, y + area.y,  x + area.z,y + area.w,
+            x + area.x, y + area.w);
+        dprintf("%d: at point %d %d with offset %d\n", x, y, 0);
+
+        x += area.x;
+        y += area.y;
+        int a = tex2D(thogluv, x, y);
+        int b = tex2D(thogluv, x + area.z, y);
+        int c = tex2D(thogluv, x + area.z, y + area.w);
+        int d = tex2D(thogluv, x, y + area.w);
+
+        dprintf("%d   retruved integral values: %d %d %d %d\n",threadIdx.x, a, b, c, d);
+
+        return (a - b + c - d);
+    }
+
 #if defined __CUDA_ARCH__ && __CUDA_ARCH__ >= 300
+    template<bool isUp>
     __global__ void test_kernel_warp(const Level* levels, const Octave* octaves, const float* stages,
         const Node* nodes, const float* leaves, Detection* objects, const uint ndetections, uint* ctr,
         const int downscales)
@@ -163,15 +226,15 @@ namespace icf {
             dprintf("\n\n%d: stage: %d %d\n",threadIdx.x, st, nId);
             Node node = nodes[nId];
 
-            float threshold = rescale(level, node.rect, node);
-            int sum = get(x, y + (node.threshold >> 28) * 121, node.rect);
+            float threshold = rescale<isUp>(level, node);
+            int sum = get<isUp>(x, y + (node.threshold >> 28) * 121, node.rect);
 
             int next = 1 + (int)(sum >= threshold);
             dprintf("%d: go: %d (%d >= %f)\n\n" ,threadIdx.x, next, sum, threshold);
 
             node = nodes[nId + next];
-            threshold = rescale(level, node.rect, node);
-            sum = get(x, y + (node.threshold >> 28) * 121, node.rect);
+            threshold = rescale<isUp>(level, node);
+            sum = get<isUp>(x, y + (node.threshold >> 28) * 121, node.rect);
 
             const int lShift = (next - 1) * 2 + (int)(sum >= threshold);
             float impact = leaves[(st + threadIdx.x) * 4 + lShift];
@@ -192,7 +255,7 @@ namespace icf {
             dprintf("%d: impact scaned %f\n" ,threadIdx.x, impact);
 
             confidence += impact;
-            if(__any((confidence <= stages[(st + threadIdx.x)]))) break;
+            if(__any((confidence <= stages[(st + threadIdx.x)]))) st += stEnd;
         }
 
         if(st == stEnd && !threadIdx.x)
@@ -204,6 +267,7 @@ namespace icf {
         }
     }
 #else
+    template<bool isUp>
     __global__ void test_kernel_warp(const Level* levels, const Octave* octaves, const float* stages,
         const Node* nodes, const float* leaves, Detection* objects, const uint ndetections, uint* ctr,
         const int downscales)
@@ -231,8 +295,8 @@ namespace icf {
             dprintf("Node: [%d %d %d %d] %d %d\n", node.rect.x, node.rect.y, node.rect.z, node.rect.w,
                 node.threshold >> 28, node.threshold & 0x0FFFFFFFU);
 
-            float threshold = rescale(level, node.rect, node);
-            int sum = get(x, y + (node.threshold >> 28) * 121, node.rect);
+            float threshold = rescale<isUp>(level, node);
+            int sum = get<isUp>(x, y + (node.threshold >> 28) * 121, node.rect);
 
             dprintf("Node: [%d %d %d %d] %f\n", node.rect.x, node.rect.y, node.rect.z,
                 node.rect.w, threshold);
@@ -241,8 +305,8 @@ namespace icf {
             dprintf("go: %d (%d >= %f)\n\n" ,next, sum, threshold);
 
             node = nodes[nId + next];
-            threshold = rescale(level, node.rect, node);
-            sum = get(x, y + (node.threshold >> 28) * 121, node.rect);
+            threshold = rescale<isUp>(level, node);
+            sum = get<isUp>(x, y + (node.threshold >> 28) * 121, node.rect);
 
             const int lShift = (next - 1) * 2 + (int)(sum >= threshold);
             float impact = leaves[st * 4 + lShift];
@@ -286,18 +350,18 @@ namespace icf {
         cudaChannelFormatDesc desc = cudaCreateChannelDesc<int>();
         cudaSafeCall( cudaBindTexture2D(0, thogluv, hogluv.data, desc, hogluv.cols, hogluv.rows, hogluv.step));
 
-        test_kernel_warp<<<grid, block>>>(l, oct, st, nd, lf, det, max_det, ctr, 0);
+        test_kernel_warp<false><<<grid, block>>>(l, oct, st, nd, lf, det, max_det, ctr, 0);
         cudaSafeCall( cudaGetLastError());
 
         grid = dim3(fw, fh / 8, 47 - downscales);
-        test_kernel_warp<<<grid, block>>>(l, oct, st, nd, lf, det, max_det, ctr, downscales);
+        test_kernel_warp<true><<<grid, block>>>(l, oct, st, nd, lf, det, max_det, ctr, downscales);
         cudaSafeCall( cudaGetLastError());
         cudaSafeCall( cudaDeviceSynchronize());
     }
 
     void detectAtScale(const int scale, const PtrStepSzb& levels, const PtrStepSzb& octaves, const PtrStepSzf& stages,
         const PtrStepSzb& nodes, const PtrStepSzf& leaves, const PtrStepSzi& hogluv, PtrStepSz<uchar4> objects,
-        PtrStepSzi counter)
+        PtrStepSzi counter, const int downscales)
     {
         int fw = 160;
         int fh = 120;
@@ -317,7 +381,11 @@ namespace icf {
         cudaChannelFormatDesc desc = cudaCreateChannelDesc<int>();
         cudaSafeCall( cudaBindTexture2D(0, thogluv, hogluv.data, desc, hogluv.cols, hogluv.rows, hogluv.step));
 
-        test_kernel_warp<<<grid, block>>>(l, oct, st, nd, lf, det, max_det, ctr, scale);
+        if (scale >= downscales)
+            test_kernel_warp<true><<<grid, block>>>(l, oct, st, nd, lf, det, max_det, ctr, scale);
+        else
+            test_kernel_warp<false><<<grid, block>>>(l, oct, st, nd, lf, det, max_det, ctr, scale);
+
         cudaSafeCall( cudaGetLastError());
         cudaSafeCall( cudaDeviceSynchronize());
     }

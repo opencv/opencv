@@ -68,7 +68,7 @@ namespace icf {
         PtrStepSzi counter, const int downscales);
     void detectAtScale(const int scale, const PtrStepSzb& levels, const PtrStepSzb& octaves, const PtrStepSzf& stages,
         const PtrStepSzb& nodes, const PtrStepSzf& leaves, const PtrStepSzi& hogluv, PtrStepSz<uchar4> objects,
-        PtrStepSzi counter);
+        PtrStepSzi counter, const int downscales);
 }
 }}}
 
@@ -147,7 +147,7 @@ struct cv::gpu::SoftCascade::Filds
     {
         cudaMemset(detCounter.data, 0, detCounter.step * detCounter.rows * sizeof(int));
         device::icf::detectAtScale(scale, levels, octaves, stages, nodes, leaves, hogluv, objects,
-            detCounter);
+            detCounter, downscales);
     }
 
 private:
@@ -240,6 +240,9 @@ bool cv::gpu::SoftCascade::Filds::fill(const FileNode &root, const float mins, c
     {
         FileNode fns = *it;
         float scale = (float)fns[SC_OCT_SCALE];
+
+        bool isUPOctave = scale >= 1;
+
         scales.push_back(scale);
         ushort nstages = saturate_cast<ushort>((int)fns[SC_OCT_STAGES]);
         ushort2 size;
@@ -285,6 +288,12 @@ bool cv::gpu::SoftCascade::Filds::fill(const FileNode &root, const float mins, c
                     rect.y = saturate_cast<uchar>((int)*(r_it++));
                     rect.z = saturate_cast<uchar>((int)*(r_it++));
                     rect.w = saturate_cast<uchar>((int)*(r_it++));
+
+                    if (isUPOctave)
+                    {
+                        rect.z -= rect.x;
+                        rect.w -= rect.y;
+                    }
 
                     uint channel = saturate_cast<uint>((int)(*ftrs)[SC_F_CHANNEL]);
                     vnodes.push_back(Node(rect, channel, th));
