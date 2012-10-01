@@ -49,7 +49,11 @@ cv::gpu::SoftCascade::SoftCascade() : filds(0) { throw_nogpu(); }
 cv::gpu::SoftCascade::SoftCascade( const string&, const float, const float) : filds(0) { throw_nogpu(); }
 cv::gpu::SoftCascade::~SoftCascade() { throw_nogpu(); }
 bool cv::gpu::SoftCascade::load( const string&, const float, const float) { throw_nogpu(); return false; }
-void cv::gpu::SoftCascade::detectMultiScale(const GpuMat&, const GpuMat&, GpuMat&, const int, Stream) { throw_nogpu();}
+void cv::gpu::SoftCascade::detectMultiScale(const GpuMat&, const GpuMat&, GpuMat&, const int, int) { throw_nogpu();}
+void cv::gpu::SoftCascade::detectMultiScale(const GpuMat&, const GpuMat&, GpuMat&, int, GpuMat&, Stream)
+{
+    throw_nogpu();
+}
 
 #else
 
@@ -60,6 +64,9 @@ namespace icf {
     void fillBins(cv::gpu::PtrStepSzb hogluv, const cv::gpu::PtrStepSzf& nangle,
         const int fw, const int fh, const int bins);
     void detect(const PtrStepSzb& levels, const PtrStepSzb& octaves, const PtrStepSzf& stages,
+        const PtrStepSzb& nodes, const PtrStepSzf& leaves, const PtrStepSzi& hogluv, PtrStepSz<uchar4> objects,
+        PtrStepSzi counter, const int downscales);
+    void detectAtScale(const int scale, const PtrStepSzb& levels, const PtrStepSzb& octaves, const PtrStepSzf& stages,
         const PtrStepSzb& nodes, const PtrStepSzf& leaves, const PtrStepSzi& hogluv, PtrStepSz<uchar4> objects,
         PtrStepSzi counter);
 }
@@ -85,6 +92,8 @@ struct cv::gpu::SoftCascade::Filds
 
     int origObjWidth;
     int origObjHeight;
+
+    int downscales;
 
     GpuMat octaves;
     GpuMat stages;
@@ -120,7 +129,6 @@ struct cv::gpu::SoftCascade::Filds
         FRAME_WIDTH        = 640,
         FRAME_HEIGHT       = 480,
         TOTAL_SCALES       = 55,
-//         CLASSIFIERS        = 5,
         ORIG_OBJECT_WIDTH  = 64,
         ORIG_OBJECT_HEIGHT = 128,
         HOG_BINS           = 6,
@@ -132,7 +140,14 @@ struct cv::gpu::SoftCascade::Filds
     void detect(cv::gpu::GpuMat objects, cudaStream_t stream) const
     {
         cudaMemset(detCounter.data, 0, detCounter.step * detCounter.rows * sizeof(int));
-        device::icf::detect(levels, octaves, stages, nodes, leaves, hogluv, objects , detCounter);
+        device::icf::detect(levels, octaves, stages, nodes, leaves, hogluv, objects , detCounter, downscales);
+    }
+
+    void detectAtScale(int scale, cv::gpu::GpuMat objects, cudaStream_t stream) const
+    {
+        cudaMemset(detCounter.data, 0, detCounter.step * detCounter.rows * sizeof(int));
+        device::icf::detectAtScale(scale, levels, octaves, stages, nodes, leaves, hogluv, objects,
+            detCounter);
     }
 
 private:
@@ -160,7 +175,7 @@ private:
     }
 };
 
-inline bool cv::gpu::SoftCascade::Filds::fill(const FileNode &root, const float mins, const float maxs)
+bool cv::gpu::SoftCascade::Filds::fill(const FileNode &root, const float mins, const float maxs)
 {
     using namespace device::icf;
     minScale = mins;
@@ -351,6 +366,7 @@ inline void cv::gpu::SoftCascade::Filds::calcLevels(const std::vector<device::ic
     float logFactor = (::log(maxScale) - ::log(minScale)) / (nscales -1);
 
     float scale = minScale;
+    downscales = 0;
     for (int sc = 0; sc < nscales; ++sc)
     {
         int width  = ::std::max(0.0f, frameW - (origObjWidth  * scale));
@@ -366,7 +382,10 @@ inline void cv::gpu::SoftCascade::Filds::calcLevels(const std::vector<device::ic
         if (!width || !height)
             break;
         else
+        {
             vlevels.push_back(level);
+            if (octs[fit].scale < 1) ++downscales;
+        }
 
         if (::fabs(scale - maxScale) < FLT_EPSILON) break;
         scale = ::std::min(maxScale, ::expf(::log(scale) + logFactor));
@@ -424,8 +443,11 @@ namespace {
         return s;
     }
 }
+
+//================================== synchronous version ============================================================//
+
 void cv::gpu::SoftCascade::detectMultiScale(const GpuMat& colored, const GpuMat& /*rois*/,
-                                GpuMat& objects, const int /*rejectfactor*/, Stream s)
+                                GpuMat& objects, const int /*rejectfactor*/, int specificScale)
 {
     // only color images are supperted
     CV_Assert(colored.type() == CV_8UC3);
@@ -513,11 +535,21 @@ void cv::gpu::SoftCascade::detectMultiScale(const GpuMat& colored, const GpuMat&
     }
 #endif
 
-    cudaStream_t stream = StreamAccessor::getStream(s);
-    flds.detect(objects, stream);
+    if (specificScale == -1)
+        flds.detect(objects, 0);
+    else
+        flds.detectAtScale(specificScale, objects, 0);
 
-        //     cv::Mat out(flds.detCounter);
-        // std::cout << out << std::endl;
+    cv::Mat out(flds.detCounter);
+    int ndetections = *(out.data);
+
+    objects = GpuMat(objects, cv::Rect(0, 0, ndetections * sizeof(Detection), 1));
 }
+
+void cv::gpu::SoftCascade::detectMultiScale(const GpuMat&, const GpuMat&, GpuMat&, int, GpuMat&, Stream)
+{
+    // cudaStream_t stream = StreamAccessor::getStream(s);
+}
+
 
 #endif

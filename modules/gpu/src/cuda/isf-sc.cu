@@ -105,7 +105,7 @@ namespace icf {
         float sarea = (scaledRect.z - scaledRect.x) * (scaledRect.w - scaledRect.y);
 
         const float expected_new_area = farea * relScale * relScale;
-        float approx =  sarea / expected_new_area;
+        float approx = __fdividef(sarea, expected_new_area);
 
         dprintf("%d: new rect: %d box %d %d %d %d  rel areas %f %f\n",threadIdx.x, (node.threshold >> 28),
         scaledRect.x, scaledRect.y, scaledRect.z, scaledRect.w, farea * relScale * relScale, sarea);
@@ -198,12 +198,13 @@ namespace icf {
 //     }
 
     __global__ void test_kernel_warp(const Level* levels, const Octave* octaves, const float* stages,
-        const Node* nodes, const float* leaves, Detection* objects, const uint ndetections, uint* ctr)
+        const Node* nodes, const float* leaves, Detection* objects, const uint ndetections, uint* ctr,
+        const int downscales)
     {
         const int y = blockIdx.y * blockDim.y + threadIdx.y;
         const int x = blockIdx.x;
 
-        Level level = levels[blockIdx.z];
+        Level level = levels[downscales + blockIdx.z];
 
         if(x >= level.workRect.x || y >= level.workRect.y) return;
 
@@ -236,7 +237,7 @@ namespace icf {
             dprintf("%d: decided: %d (%d >= %f) %d %f\n\n" ,threadIdx.x, next, sum, threshold, lShift, impact);
             dprintf("%d: extracted stage: %f\n",threadIdx.x, stages[(st + threadIdx.x)]);
             dprintf("%d: computed  score: %f\n",threadIdx.x, impact);
-
+#pragma unroll
             // scan on shuffl functions
             for (int i = 1; i < 32; i *= 2)
             {
@@ -263,13 +264,13 @@ namespace icf {
 
     void detect(const PtrStepSzb& levels, const PtrStepSzb& octaves, const PtrStepSzf& stages,
                 const PtrStepSzb& nodes,  const PtrStepSzf& leaves,  const PtrStepSzi& hogluv,
-                PtrStepSz<uchar4> objects, PtrStepSzi counter)
+                PtrStepSz<uchar4> objects, PtrStepSzi counter, const int downscales)
     {
         int fw = 160;
         int fh = 120;
 
         dim3 block(32, 8);
-        dim3 grid(fw, fh / 8, 47);
+        dim3 grid(fw, fh / 8, downscales);
 
         const Level* l = (const Level*)levels.ptr();
         const Octave* oct = ((const Octave*)octaves.ptr());
@@ -283,8 +284,38 @@ namespace icf {
         cudaChannelFormatDesc desc = cudaCreateChannelDesc<int>();
         cudaSafeCall( cudaBindTexture2D(0, thogluv, hogluv.data, desc, hogluv.cols, hogluv.rows, hogluv.step));
 
-        test_kernel_warp<<<grid, block>>>(l, oct, st, nd, lf, det, max_det, ctr);
+        test_kernel_warp<<<grid, block>>>(l, oct, st, nd, lf, det, max_det, ctr, 0);
+        cudaSafeCall( cudaGetLastError());
 
+        grid = dim3(fw, fh / 8, 47 - downscales);
+        test_kernel_warp<<<grid, block>>>(l, oct, st, nd, lf, det, max_det, ctr, downscales);
+        cudaSafeCall( cudaGetLastError());
+        cudaSafeCall( cudaDeviceSynchronize());
+    }
+
+    void detectAtScale(const int scale, const PtrStepSzb& levels, const PtrStepSzb& octaves, const PtrStepSzf& stages,
+        const PtrStepSzb& nodes, const PtrStepSzf& leaves, const PtrStepSzi& hogluv, PtrStepSz<uchar4> objects,
+        PtrStepSzi counter)
+    {
+        int fw = 160;
+        int fh = 120;
+
+        dim3 block(32, 8);
+        dim3 grid(fw, fh / 8, 1);
+
+        const Level* l = (const Level*)levels.ptr();
+        const Octave* oct = ((const Octave*)octaves.ptr());
+        const float* st = (const float*)stages.ptr();
+        const Node* nd = (const Node*)nodes.ptr();
+        const float* lf = (const float*)leaves.ptr();
+        uint* ctr = (uint*)counter.ptr();
+        Detection* det = (Detection*)objects.ptr();
+        uint max_det = objects.cols / sizeof(Detection);
+
+        cudaChannelFormatDesc desc = cudaCreateChannelDesc<int>();
+        cudaSafeCall( cudaBindTexture2D(0, thogluv, hogluv.data, desc, hogluv.cols, hogluv.rows, hogluv.step));
+
+        test_kernel_warp<<<grid, block>>>(l, oct, st, nd, lf, det, max_det, ctr, scale);
         cudaSafeCall( cudaGetLastError());
         cudaSafeCall( cudaDeviceSynchronize());
     }

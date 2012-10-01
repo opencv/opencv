@@ -1537,6 +1537,18 @@ public:
 class CV_EXPORTS SoftCascade
 {
 public:
+
+    struct CV_EXPORTS Detection
+    {
+        ushort x;
+        ushort y;
+        ushort w;
+        ushort h;
+        float confidence;
+        int kind;
+
+        enum {PEDESTRIAN = 0};
+    };
     //! An empty cascade will be created.
     SoftCascade();
 
@@ -1559,9 +1571,19 @@ public:
     //! Param rois is a mask
     //! Param objects 4-channel matrix thet contain detected rectangles
     //! Param rejectfactor used for final object box computing
-    //! Param stream
     virtual void detectMultiScale(const GpuMat& image, const GpuMat& rois, GpuMat& objects,
-    int rejectfactor = 1, Stream stream = Stream::Null());
+    int rejectfactor = 1, int specificScale = -1);
+
+    //! detect specific objects on in the input frame for all scales computed flom minScale and maxscale values.
+    //! asynchronous version.
+    //! Param image is input frame for detector. Cascade will be applied to it.
+    //! Param rois is a mask
+    //! Param objects 4-channel matrix thet contain detected rectangles
+    //! Param rejectfactor used for final object box computing
+    //! Param ndet retrieves number of detections
+    //! Param stream wrapper for CUDA stream
+    virtual void detectMultiScale(const GpuMat& image, const GpuMat& rois, GpuMat& objects,
+    int rejectfactor, GpuMat& ndet, Stream stream);
 
 private:
     struct Filds;
