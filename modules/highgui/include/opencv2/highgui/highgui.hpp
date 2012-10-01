@@ -189,6 +189,7 @@ CV_EXPORTS_W Mat imread( const string& filename, int flags=1 );
 CV_EXPORTS_W bool imwrite( const string& filename, InputArray img,
               const vector<int>& params=vector<int>());
 CV_EXPORTS_W Mat imdecode( InputArray buf, int flags );
+CV_EXPORTS Mat imdecode( InputArray buf, int flags, Mat* dst );
 CV_EXPORTS_W bool imencode( const string& ext, InputArray img,
                             CV_OUT vector<uchar>& buf,
                             const vector<int>& params=vector<int>());
