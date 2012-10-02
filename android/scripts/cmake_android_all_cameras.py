@@ -32,6 +32,8 @@ for s in ConfFile.readlines():
     shutil.rmtree(os.path.join(AndroidTreeRoot, "out", "target", "product", "generic", "system"), ignore_errors=True)
     if (Arch == "x86"):
 	shutil.copytree(os.path.join(AndroidTreeRoot, "bin_x86", "system"), os.path.join(AndroidTreeRoot, "out", "target", "product", "generic", "system"))
+    elif (Arch == "mips"):
+	shutil.copytree(os.path.join(AndroidTreeRoot, "bin_mips", "system"), os.path.join(AndroidTreeRoot, "out", "target", "product", "generic", "system"))
     else:
 	shutil.copytree(os.path.join(AndroidTreeRoot, "bin_arm", "system"), os.path.join(AndroidTreeRoot, "out", "target", "product", "generic", "system"))
     os.chdir(BuildDir)
