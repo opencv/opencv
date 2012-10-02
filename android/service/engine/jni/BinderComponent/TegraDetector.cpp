@@ -34,7 +34,7 @@ int DetectTegra()
 		result = 2;
 		break;
 	    }
-	    
+
 	    if (0 == strncmp(tmpbuf, tegra3_config, len3))
 	    {
 		result = 3;
@@ -48,6 +48,6 @@ int DetectTegra()
     {
 	result = TEGRA_DETECTOR_ERROR;
     }
-    
+
     return result;
 }

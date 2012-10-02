@@ -19,14 +19,14 @@ int main(int argc, char *argv[])
     LOGI("OpenCVEngine native service starting");
     IPackageManager* PackageManager = new NativePackageManager();
     sp<IBinder> Engine = new OpenCVEngine(PackageManager);
-    
+
     defaultServiceManager()->addService(IOpenCVEngine::descriptor, Engine);
     LOGI("OpenCVEngine native service started successfully");
     ProcessState::self()->startThreadPool();
     IPCThreadState::self()->joinThreadPool();
     LOGI("OpenCVEngine native service finished");
-    
+
     delete PackageManager;
-    
+
     return 0;
 }

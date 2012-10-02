@@ -6,23 +6,25 @@
 #include <assert.h>
 #include <vector>
 #include <utils/Log.h>
+#include <dlfcn.h>
 
 using namespace std;
 
 map<int, string> PackageInfo::InitPlatformNameMap()
 {
     map<int, string> result;
-    
+
     // TODO: Do not forget to add Platrfom constant to HardwareDetector.h
     result[PLATFORM_TEGRA] = PLATFORM_TEGRA_NAME;
     result[PLATFORM_TEGRA2] = PLATFORM_TEGRA2_NAME;
     result[PLATFORM_TEGRA3] = PLATFORM_TEGRA3_NAME;
-    
+
     return result;
 }
 
 const map<int, string> PackageInfo::PlatformNameMap = InitPlatformNameMap();
 const string PackageInfo::BasePackageName = "org.opencv.lib";
+const string  DEFAULT_ENGINE_INSTALL_PATH = "/data/data/org.opencv.engine";
 
 inline string JoinARMFeatures(int cpu_id)
 {
@@ -32,7 +34,7 @@ inline string JoinARMFeatures(int cpu_id)
     {
 	if (!((ARCH_ARMv5 & cpu_id) || (ARCH_ARMv6 & cpu_id) ||(ARCH_ARMv7 & cpu_id)))
 	    result = string(FEATURES_HAS_NEON2_NAME);
-    }    
+    }
     else if (FEATURES_HAS_NEON & cpu_id)
     {
 	if (!((ARCH_ARMv5 & cpu_id) || (ARCH_ARMv6 & cpu_id)))
@@ -48,14 +50,14 @@ inline string JoinARMFeatures(int cpu_id)
 	if ((ARCH_ARMv5 & cpu_id) || (ARCH_ARMv6 & cpu_id))
 	    result = string(FEATURES_HAS_VFPv3d16_NAME);
     }
-    
+
     return result;
 }
 
 inline int SplitARMFeatures(const vector<string>& features)
 {
     int result = 0;
-    
+
     for (size_t i = 3; i < features.size(); i++)
     {
 	if (FEATURES_HAS_VFPv3_NAME == features[i])
@@ -75,14 +77,14 @@ inline int SplitARMFeatures(const vector<string>& features)
 	    result |= FEATURES_HAS_NEON2;
 	}
     }
-    
+
     return result;
 }
 
 inline string JoinIntelFeatures(int cpu_id)
 {
     string result;
-    
+
     if (FEATURES_HAS_SSSE3 & cpu_id)
     {
 	result = FEATURES_HAS_SSSE3_NAME;
@@ -95,14 +97,14 @@ inline string JoinIntelFeatures(int cpu_id)
     {
 	result = FEATURES_HAS_SSE_NAME;
     }
-    
+
     return result;
 }
 
 inline int SplitIntelFeatures(const vector<string>& features)
 {
     int result = 0;
-    
+
     for (size_t i = 3; i < features.size(); i++)
     {
 	if (FEATURES_HAS_SSSE3_NAME == features[i])
@@ -117,15 +119,15 @@ inline int SplitIntelFeatures(const vector<string>& features)
 	{
 	    result |= FEATURES_HAS_SSE;
 	}
-    }    
-    
+    }
+
     return result;
 }
 
 inline string SplitVersion(const vector<string>& features, const string& package_version)
 {
     string result;
-    
+
     if ((features.size() > 1) && ('v' == features[1][0]))
     {
 	result = features[1].substr(1);
@@ -135,7 +137,7 @@ inline string SplitVersion(const vector<string>& features, const string& package
     {
 	// TODO: Report package name format error
     }
-    
+
     return result;
 }
 
@@ -143,17 +145,17 @@ inline string JoinPlatform(int platform)
 {
     string result;
     map<int, string>::const_iterator it = PackageInfo::PlatformNameMap.find(platform);
-    
+
     assert(PackageInfo::PlatformNameMap.end() != it);
     result = it->second;
-    
+
     return result;
 }
 
 inline int SplitPlatfrom(const vector<string>& features)
 {
     int result = 0;
-    
+
     if (features.size() > 2)
     {
 	string tmp = features[2];
@@ -174,7 +176,7 @@ inline int SplitPlatfrom(const vector<string>& features)
     {
 	// TODO: Report package name format error
     }
-	
+
     return result;
 }
 
@@ -185,7 +187,7 @@ inline int SplitPlatfrom(const vector<string>& features)
  * If platform is known third part is platform name
  * If platform is unknown it is defined by hardware capabilities using pattern: <arch>_<floating point and vectorization features>_<other features>
  * Example: armv7_neon, armv5_vfpv3
- */ 
+ */
 PackageInfo::PackageInfo(const string& version, int platform, int cpu_id, std::string install_path):
     Version(version),
     Platform(platform),
@@ -284,6 +286,12 @@ PackageInfo::PackageInfo(const string& version, int platform, int cpu_id, std::s
 		//    FullName += string("_") + features;
 		//}
 	    }
+#ifdef __SUPPORT_MIPS
+	    else if (ARCH_MIPS & CpuID)
+	    {
+		FullName += string("_") + ARCH_MIPS_NAME;
+	    }
+#endif
 	    else
 	    {
 		LOGD("PackageInfo::PackageInfo: package arch unknown");
@@ -300,24 +308,77 @@ PackageInfo::PackageInfo(const string& version, int platform, int cpu_id, std::s
 	    Platform = PLATFORM_UNKNOWN;
 	}
     }
-    
+
     if (!FullName.empty())
     {
 	InstallPath = install_path + FullName + "/lib";
     }
 }
 
-PackageInfo::PackageInfo(const string& fullname, const string& install_path, const string& package_version):
+PackageInfo::PackageInfo(const string& fullname, const string& install_path, string package_version):
     FullName(fullname),
     InstallPath(install_path)
 {
     LOGD("PackageInfo::PackageInfo(\"%s\", \"%s\", \"%s\")", fullname.c_str(), install_path.c_str(), package_version.c_str());
-    
+
     assert(!fullname.empty());
     assert(!install_path.empty());
-    
+
+    if (OPENCV_ENGINE_PACKAGE == fullname)
+    {
+	// Science version 1.7 OpenCV Manager has it's own version of OpenCV inside
+	// Load libopencv_info.so to understand OpenCV version, platform and other features
+	std::string tmp;
+	if (install_path.empty())
+	{
+	    tmp = std::string(DEFAULT_ENGINE_INSTALL_PATH) + "/" + LIB_OPENCV_INFO_NAME;
+	}
+	else
+	{
+	    tmp = install_path + "/" + LIB_OPENCV_INFO_NAME;
+	}
+
+	LOGD("Trying to load info library \"%s\"", tmp.c_str());
+
+	void* handle;
+	const char* (*name_func)();
+	const char* (*revision_func)();
+
+	handle = dlopen(tmp.c_str(), RTLD_LAZY);
+	if (handle)
+	{
+	    const char* error;
+
+	    dlerror();
+	    *(void **) (&name_func) = dlsym(handle, "GetPackageName");
+	    *(void **) (&revision_func) = dlsym(handle, "GetRevision");
+	    error = dlerror();
+
+	    if (!error && revision_func && name_func)
+	    {
+		FullName = std::string((*name_func)());
+		package_version = std::string((*revision_func)());
+		dlclose(handle);
+		LOGI("OpenCV package \"%s\" revision \"%s\" found", FullName.c_str(), package_version.c_str());
+	    }
+	    else
+	    {
+		LOGE("Library loading error (%x, %x): \"%s\"", name_func, revision_func, error);
+	    }
+	}
+	else
+	{
+	    LOGI("Info library not found in package");
+	    LOGI("OpenCV Manager package does not contain any verison of OpenCV library");
+	    Version.clear();
+	    CpuID = ARCH_UNKNOWN;
+	    Platform = PLATFORM_UNKNOWN;
+	    return;
+	}
+    }
+
     vector<string> features = SplitStringVector(FullName, '_');
-    
+
     if (!features.empty() && (BasePackageName == features[0])) 
     {
 	Version = SplitVersion(features, package_version);
@@ -363,6 +424,12 @@ PackageInfo::PackageInfo(const string& fullname, const string& install_path, con
 	    {
 		CpuID = ARCH_X64 | SplitIntelFeatures(features);
 	    }
+#ifdef __SUPPORT_MIPS
+	    else if (ARCH_MIPS_NAME == features[2])
+	    {
+		CpuID = ARCH_MIPS;
+	    }
+#endif
 	    else
 	    {
 		LOGD("It is not OpenCV library package for this platform");

@@ -96,6 +96,15 @@ TEST(PackageInfo, FullNameX86SSE2)
 #endif
 }
 
+#ifdef __SUPPORT_MIPS
+TEST(PackageInfo, FullNameMips)
+{
+    PackageInfo info("243", PLATFORM_UNKNOWN, ARCH_MIPS);
+    string name = info.GetFullName();
+    EXPECT_STREQ("org.opencv.lib_v24_mips", name.c_str());
+}
+#endif
+
 TEST(PackageInfo, Armv7NeonFromFullName)
 {
     PackageInfo info("org.opencv.lib_v23_armv7a_neon", "/data/data/org.opencv.lib_v23_armv7_neon");
@@ -139,6 +148,15 @@ TEST(PackageInfo, Tegra3FromFullName)
     EXPECT_EQ(PLATFORM_TEGRA3, info.GetPlatform());
 }
 
+#ifdef __SUPPORT_MIPS
+TEST(PackageInfo, MipsFromFullName)
+{
+    PackageInfo info("org.opencv.lib_v24_mips", "/data/data/org.opencv.lib_v24_mips");
+    EXPECT_EQ("240", info.GetVersion());
+    EXPECT_EQ(ARCH_MIPS, info.GetCpuID());
+}
+#endif
+
 TEST(PackageInfo, Comparator1)
 {
     PackageInfo info1("240", PLATFORM_UNKNOWN, ARCH_X86);
@@ -168,3 +186,4 @@ TEST(PackageInfo, Comparator3)
     EXPECT_EQ(info1, info2);
 }
 #endif
+

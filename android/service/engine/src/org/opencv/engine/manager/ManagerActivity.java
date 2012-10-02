@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.StringTokenizer;
 
+import org.opencv.engine.HardwareDetector;
 import org.opencv.engine.MarketConnector;
 import org.opencv.engine.OpenCVEngineInterface;
 import org.opencv.engine.R;
@@ -45,13 +46,12 @@ public class ManagerActivity extends Activity
         OsVersionView.setText(Build.VERSION.CODENAME + " (" + Build.VERSION.RELEASE + "), API " + Build.VERSION.SDK_INT);
 
         try {
-			PackageInfo packageInfo = getPackageManager().getPackageInfo(this.getPackageName(), 0);
-			ManagerVersion = packageInfo.versionName;
-		} catch (NameNotFoundException e) {
-			// TODO Auto-generated catch block
-			ManagerVersion = "N/A";
-			e.printStackTrace();
-		}
+        	PackageInfo packageInfo = getPackageManager().getPackageInfo(this.getPackageName(), 0);
+        	ManagerVersion = packageInfo.versionName;
+        } catch (NameNotFoundException e) {
+        	ManagerVersion = "N/A";
+        	e.printStackTrace();
+        }
 
         mInstalledPackageView = (ListView)findViewById(R.id.InstalledPackageList);
 
@@ -112,6 +112,10 @@ public class ManagerActivity extends Activity
         	{
         		HardwarePlatformView.setText("ARM v8 " + JoinArmFeatures(CpuId));
         	}
+        	else if ((CpuId & HardwareDetector.ARCH_MIPS) == HardwareDetector.ARCH_MIPS)
+        	{
+        		HardwarePlatformView.setText("MIPS");
+        	}
         	else
         	{
         		HardwarePlatformView.setText("not detected");
@@ -120,41 +124,41 @@ public class ManagerActivity extends Activity
 
         mUpdateEngineButton = (Button)findViewById(R.id.CheckEngineUpdate);
         mUpdateEngineButton.setOnClickListener(new OnClickListener() {
-			
-			public void onClick(View v) {
-				if (!mMarket.InstallAppFromMarket("org.opencv.engine"))
-				{
-					Toast toast = Toast.makeText(getApplicationContext(), "Google Play is not avaliable", Toast.LENGTH_SHORT);
-					toast.show();
-				}
-			}
-		});
+
+        	public void onClick(View v) {
+        		if (!mMarket.InstallAppFromMarket("org.opencv.engine"))
+        		{
+        			Toast toast = Toast.makeText(getApplicationContext(), "Google Play is not avaliable", Toast.LENGTH_SHORT);
+        			toast.show();
+        		}
+        	}
+        });
 
         mActionDialog = new AlertDialog.Builder(this).create();
 
         mActionDialog.setTitle("Choose action");
         mActionDialog.setButton("Update", new DialogInterface.OnClickListener() {
-			
-			public void onClick(DialogInterface dialog, int which) {
-				int index = (Integer)mInstalledPackageView.getTag();
-				if (!mMarket.InstallAppFromMarket(mInstalledPackageInfo[index].packageName))
-				{
-					Toast toast = Toast.makeText(getApplicationContext(), "Google Play is not avaliable", Toast.LENGTH_SHORT);
-					toast.show();
-				}
-			}
-		});
+
+        	public void onClick(DialogInterface dialog, int which) {
+        		int index = (Integer)mInstalledPackageView.getTag();
+        		if (!mMarket.InstallAppFromMarket(mInstalledPackageInfo[index].packageName))
+        		{
+        			Toast toast = Toast.makeText(getApplicationContext(), "Google Play is not avaliable", Toast.LENGTH_SHORT);
+        			toast.show();
+        		}
+        	}
+        });
 
         mActionDialog.setButton3("Remove", new DialogInterface.OnClickListener() {
-			
-			public void onClick(DialogInterface dialog, int which) {
-				int index = (Integer)mInstalledPackageView.getTag();
-				if (!mMarket.RemoveAppFromMarket(mInstalledPackageInfo[index].packageName, true))
-				{
-					Toast toast = Toast.makeText(getApplicationContext(), "Google Play is not avaliable", Toast.LENGTH_SHORT);
-					toast.show();
-				}
-			}
+
+        	public void onClick(DialogInterface dialog, int which) {
+        		int index = (Integer)mInstalledPackageView.getTag();
+        		if (!mMarket.RemoveAppFromMarket(mInstalledPackageInfo[index].packageName, true))
+        		{
+        			Toast toast = Toast.makeText(getApplicationContext(), "Google Play is not avaliable", Toast.LENGTH_SHORT);
+        			toast.show();
+        		}
+        	}
 		});
 
         mActionDialog.setButton2("Return", new DialogInterface.OnClickListener() {
@@ -165,19 +169,12 @@ public class ManagerActivity extends Activity
 		});
 
         mInstalledPackageView.setOnItemClickListener(new OnItemClickListener() {
-
-			public void onItemClick(AdapterView<?> arg0, View arg1, int arg2, long id) {
-
-		        mInstalledPackageView.setTag(Integer.valueOf((int)id));
-		        mActionDialog.show();
-			}
+        	
+        	public void onItemClick(AdapterView<?> arg0, View arg1, int arg2, long id) {
+        		mInstalledPackageView.setTag(Integer.valueOf((int)id));
+        		mActionDialog.show();
+        	}
         });
-
-        if (!bindService(new Intent("org.opencv.engine.BIND"), mServiceConnection, Context.BIND_AUTO_CREATE))
-        {
-        	TextView EngineVersionView = (TextView)findViewById(R.id.EngineVersionValue);
-        	EngineVersionView.setText("not avaliable");
-        }
 
         IntentFilter filter = new IntentFilter();
         filter.addAction(Intent.ACTION_PACKAGE_ADDED);
@@ -185,7 +182,7 @@ public class ManagerActivity extends Activity
         filter.addAction(Intent.ACTION_PACKAGE_INSTALL);
         filter.addAction(Intent.ACTION_PACKAGE_REMOVED);
         filter.addAction(Intent.ACTION_PACKAGE_REPLACED);
-        
+
         registerReceiver(mPackageChangeReciever, filter);
     }
 
@@ -272,6 +269,7 @@ public class ManagerActivity extends Activity
 	protected void FillPackageList()
 	{
 		synchronized (mListViewItems) {
+			mMarket.mIncludeManager = false;
 			mInstalledPackageInfo = mMarket.GetInstalledOpenCVPackages();
 	        mListViewItems.clear();
 
@@ -328,11 +326,11 @@ public class ManagerActivity extends Activity
 	            }
 
 	            temp.put("Name", PublicName);
-            	temp.put("Version", NormalizeVersion(OpenCVersion, mInstalledPackageInfo[i].versionName));
+	            temp.put("Version", NormalizeVersion(OpenCVersion, mInstalledPackageInfo[i].versionName));
 	        	temp.put("Hardware", HardwareName);
 	        	mListViewItems.add(temp);
 	        }
-	        
+
 	        mInstalledPacksAdapter.notifyDataSetChanged();
 		}
 	}

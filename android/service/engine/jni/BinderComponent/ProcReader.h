@@ -20,6 +20,8 @@
 
 #define CPU_INFO_ARCH_X86_STR "x86"
 
+#define CPU_INFO_ARCH_MIPS_STR "MIPS"
+
 
 // public part
 std::map<std::string, std::string> GetCpuInfo();

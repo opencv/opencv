@@ -10,7 +10,7 @@ bool NativePackageManager::InstallPackage(const PackageInfo& package)
 vector<PackageInfo> NativePackageManager::GetInstalledPackages()
 {
     vector<PackageInfo> result;
-    
+
     return result;
 }
 

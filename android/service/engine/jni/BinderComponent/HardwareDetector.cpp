@@ -13,7 +13,7 @@ int GetCpuID()
     map<string, string> cpu_info = GetCpuInfo();
     map<string, string>::const_iterator it;
     
-#ifdef __i386__
+#if defined(__i386__)
     LOGD("Using X86 HW detector");
     result |= ARCH_X86;
     it = cpu_info.find("flags");
@@ -33,6 +33,12 @@ int GetCpuID()
 	    result |= FEATURES_HAS_SSSE3;
 	}
     }
+#elif defined(__mips)
+    #ifdef __SUPPORT_MIPS
+	result |= ARCH_MIPS;
+    #else
+	result = ARCH_UNKNOWN;
+    #endif
 #else
     LOGD("Using ARM HW detector");
     it = cpu_info.find("Processor");
@@ -64,7 +70,6 @@ int GetCpuID()
 		    {
 			result |= ARCH_ARMv5;
 		    }
-		    
 		}
 	    }
 	}
@@ -108,27 +113,27 @@ string GetPlatformName()
     map<string, string> cpu_info = GetCpuInfo();
     string hardware_name = "";
     map<string, string>::const_iterator hw_iterator = cpu_info.find("Hardware");
-    
+
     if (cpu_info.end() != hw_iterator)
     {
 	hardware_name = hw_iterator->second;
     }
-    
-    return hardware_name;   
+
+    return hardware_name;
 }
 
 int GetProcessorCount()
-{ 
+{
     FILE* cpuPossible = fopen("/sys/devices/system/cpu/possible", "r");
     if(!cpuPossible)
 	return 1;
-    
+
     char buf[2000]; //big enough for 1000 CPUs in worst possible configuration
     char* pbuf = fgets(buf, sizeof(buf), cpuPossible);
     fclose(cpuPossible);
     if(!pbuf)
 	return 1;
-    
+
     //parse string of form "0-1,3,5-7,10,13-15"
 	int cpusAvailable = 0;
 	
@@ -157,7 +162,7 @@ int GetProcessorCount()
 int DetectKnownPlatforms()
 {
     int tegra_status = DetectTegra();
-    
+
     if (3 == tegra_status)
     {
 	return PLATFORM_TEGRA3;
@@ -166,7 +171,7 @@ int DetectKnownPlatforms()
     {
 	return PLATFORM_UNKNOWN;
     }
-    
+
     // NOTE: Uncomment when all Tegras will be supported
     /*if (tegra_status > 0)
     {

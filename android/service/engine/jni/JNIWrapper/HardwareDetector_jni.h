@@ -10,35 +10,35 @@ extern "C" {
 #endif
 
 /*
- * Class:     org_opencv_engine_manager_HardwareDetector
+ * Class:     org_opencv_engine_HardwareDetector
  * Method:    GetCpuID
  * Signature: ()I
  */
-JNIEXPORT jint JNICALL Java_org_opencv_engine_manager_HardwareDetector_GetCpuID
+JNIEXPORT jint JNICALL Java_org_opencv_engine_HardwareDetector_GetCpuID
 (JNIEnv *, jclass);
 
 /*
- * Class:     org_opencv_engine_manager_HardwareDetector
+ * Class:     org_opencv_engine_HardwareDetector
  * Method:    GetPlatformName
  * Signature: ()Ljava/lang/String;
  */
-JNIEXPORT jstring JNICALL Java_org_opencv_engine_manager_HardwareDetector_GetPlatformName
+JNIEXPORT jstring JNICALL Java_org_opencv_engine_HardwareDetector_GetPlatformName
 (JNIEnv *, jclass);
 
 /*
- * Class:     org_opencv_engine_manager_HardwareDetector
+ * Class:     org_opencv_engine_HardwareDetector
  * Method:    GetProcessorCount
  * Signature: ()I
  */
-JNIEXPORT jint JNICALL Java_org_opencv_engine_manager_HardwareDetector_GetProcessorCount
+JNIEXPORT jint JNICALL Java_org_opencv_engine_HardwareDetector_GetProcessorCount
 (JNIEnv *, jclass);
 
 /*
- * Class:     org_opencv_engine_manager_HardwareDetector
+ * Class:     org_opencv_engine_HardwareDetector
  * Method:    DetectKnownPlatforms
  * Signature: ()I
  */
-JNIEXPORT jint JNICALL Java_org_opencv_engine_manager_HardwareDetector_DetectKnownPlatforms
+JNIEXPORT jint JNICALL Java_org_opencv_engine_HardwareDetector_DetectKnownPlatforms
 (JNIEnv *, jclass);
   
 #ifdef __cplusplus
