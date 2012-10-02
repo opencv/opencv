@@ -63,12 +63,13 @@ TEST(SoftCascade, detect)
     cv::Mat coloredCpu = cv::imread(cvtest::TS::ptr()->get_data_path()
         + "../cv/cascadeandhog/bahnhof/image_00000000_0.png");
     ASSERT_FALSE(coloredCpu.empty());
-    GpuMat colored(coloredCpu), objectBoxes(1, 100000, CV_8UC1), rois;
 
-    // ASSERT_NO_THROW(
-    // {
-        cascade.detectMultiScale(colored, rois, objectBoxes);
-    // });
+    GpuMat colored(coloredCpu), objectBoxes(1, 100000, CV_8UC1), rois(cascade.getRoiSize(), CV_8UC1);
+    rois.setTo(0);
+    GpuMat sub(rois, cv::Rect(rois.cols / 4, rois.rows / 4,rois.cols / 2, rois.rows / 2));
+    sub.setTo(cv::Scalar::all(1));
+
+    cascade.detectMultiScale(colored, rois, objectBoxes);
 }
 
 class SCSpecific : public ::testing::TestWithParam<std::tr1::tuple<std::string, int> > {
@@ -93,7 +94,10 @@ TEST_P(SCSpecific, detect)
     cv::Mat coloredCpu = cv::imread(cvtest::TS::ptr()->get_data_path() + path);
 
     ASSERT_FALSE(coloredCpu.empty());
-    GpuMat colored(coloredCpu), objectBoxes(1, 1000, CV_8UC1), rois;
+    GpuMat colored(coloredCpu), objectBoxes(1, 1000, CV_8UC1), rois(cascade.getRoiSize(), CV_8UC1);
+    rois.setTo(0);
+    GpuMat sub(rois, cv::Rect(rois.cols / 4, rois.rows / 4,rois.cols / 2, rois.rows / 2));
+    sub.setTo(cv::Scalar::all(1));
 
     int level = GET_PARAM(1);
     cascade.detectMultiScale(colored, rois, objectBoxes, 1, level);

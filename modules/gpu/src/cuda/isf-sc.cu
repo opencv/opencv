@@ -86,6 +86,7 @@ namespace icf {
     }
 
     texture<int,  cudaTextureType2D, cudaReadModeElementType> thogluv;
+    texture<char,  cudaTextureType2D, cudaReadModeElementType> troi;
 
     template<bool isUp>
     __device__ __forceinline__ float rescale(const Level& level, Node& node)
@@ -213,6 +214,8 @@ namespace icf {
 
         if(x >= level.workRect.x || y >= level.workRect.y) return;
 
+        if (!tex2D(troi, x, y)) return;
+
         Octave octave = octaves[level.octave];
         int st = octave.index * octave.stages;
         const int stEnd = st + 1024;
@@ -279,6 +282,10 @@ namespace icf {
         // if (blockIdx.z != 31) return;
         if(x >= level.workRect.x || y >= level.workRect.y) return;
 
+        int roi = tex2D(troi, x, y);
+        printf("%d\n", roi);
+        if (!roi) return;
+
         Octave octave = octaves[level.octave];
 
         int st = octave.index * octave.stages;
@@ -328,7 +335,7 @@ namespace icf {
     }
 #endif
 
-    void detect(const PtrStepSzb& levels, const PtrStepSzb& octaves, const PtrStepSzf& stages,
+    void detect(const PtrStepSzb& roi, const PtrStepSzb& levels, const PtrStepSzb& octaves, const PtrStepSzf& stages,
                 const PtrStepSzb& nodes,  const PtrStepSzf& leaves,  const PtrStepSzi& hogluv,
                 PtrStepSz<uchar4> objects, PtrStepSzi counter, const int downscales)
     {
@@ -350,6 +357,9 @@ namespace icf {
         cudaChannelFormatDesc desc = cudaCreateChannelDesc<int>();
         cudaSafeCall( cudaBindTexture2D(0, thogluv, hogluv.data, desc, hogluv.cols, hogluv.rows, hogluv.step));
 
+        cudaChannelFormatDesc desc_roi = cudaCreateChannelDesc<char>();
+        cudaSafeCall( cudaBindTexture2D(0, troi, roi.data, desc_roi, roi.cols, roi.rows, roi.step));
+
         test_kernel_warp<false><<<grid, block>>>(l, oct, st, nd, lf, det, max_det, ctr, 0);
         cudaSafeCall( cudaGetLastError());
 
@@ -359,9 +369,9 @@ namespace icf {
         cudaSafeCall( cudaDeviceSynchronize());
     }
 
-    void detectAtScale(const int scale, const PtrStepSzb& levels, const PtrStepSzb& octaves, const PtrStepSzf& stages,
-        const PtrStepSzb& nodes, const PtrStepSzf& leaves, const PtrStepSzi& hogluv, PtrStepSz<uchar4> objects,
-        PtrStepSzi counter, const int downscales)
+    void detectAtScale(const int scale, const PtrStepSzb& roi, const PtrStepSzb& levels, const PtrStepSzb& octaves,
+        const PtrStepSzf& stages, const PtrStepSzb& nodes, const PtrStepSzf& leaves, const PtrStepSzi& hogluv,
+        PtrStepSz<uchar4> objects, PtrStepSzi counter, const int downscales)
     {
         int fw = 160;
         int fh = 120;
@@ -380,6 +390,9 @@ namespace icf {
 
         cudaChannelFormatDesc desc = cudaCreateChannelDesc<int>();
         cudaSafeCall( cudaBindTexture2D(0, thogluv, hogluv.data, desc, hogluv.cols, hogluv.rows, hogluv.step));
+
+        cudaChannelFormatDesc desc_roi = cudaCreateChannelDesc<char>();
+        cudaSafeCall( cudaBindTexture2D(0, troi, roi.data, desc_roi, roi.cols, roi.rows, roi.step));
 
         if (scale >= downscales)
             test_kernel_warp<true><<<grid, block>>>(l, oct, st, nd, lf, det, max_det, ctr, scale);
