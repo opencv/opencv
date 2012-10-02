@@ -49,11 +49,17 @@ cv::gpu::SoftCascade::SoftCascade() : filds(0) { throw_nogpu(); }
 cv::gpu::SoftCascade::SoftCascade( const string&, const float, const float) : filds(0) { throw_nogpu(); }
 cv::gpu::SoftCascade::~SoftCascade() { throw_nogpu(); }
 bool cv::gpu::SoftCascade::load( const string&, const float, const float) { throw_nogpu(); return false; }
-void cv::gpu::SoftCascade::detectMultiScale(const GpuMat&, const GpuMat&, GpuMat&, const int, int) { throw_nogpu();}
-void cv::gpu::SoftCascade::detectMultiScale(const GpuMat&, const GpuMat&, GpuMat&, int, GpuMat&, Stream)
+void cv::gpu::SoftCascade::detectMultiScale(const GpuMat&, const GpuMat&, GpuMat&, const int, int) const
 {
     throw_nogpu();
 }
+
+void cv::gpu::SoftCascade::detectMultiScale(const GpuMat&, const GpuMat&, GpuMat&, int, GpuMat&, Stream) const
+{
+    throw_nogpu();
+}
+
+cv::Size cv::gpu::SoftCascade::getRoiSize() const { throw_nogpu(); return cv::Size();}
 
 #else
 
@@ -455,8 +461,8 @@ namespace {
 
 //================================== synchronous version ============================================================//
 
-void cv::gpu::SoftCascade::detectMultiScale(const GpuMat& colored, const GpuMat& /*rois*/,
-                                GpuMat& objects, const int /*rejectfactor*/, int specificScale)
+void cv::gpu::SoftCascade::detectMultiScale(const GpuMat& colored, const GpuMat& rois,
+                                GpuMat& objects, const int /*rejectfactor*/, int specificScale) const
 {
     // only color images are supperted
     CV_Assert(colored.type() == CV_8UC3);
@@ -555,9 +561,14 @@ void cv::gpu::SoftCascade::detectMultiScale(const GpuMat& colored, const GpuMat&
     objects = GpuMat(objects, cv::Rect(0, 0, ndetections * sizeof(Detection), 1));
 }
 
-void cv::gpu::SoftCascade::detectMultiScale(const GpuMat&, const GpuMat&, GpuMat&, int, GpuMat&, Stream)
+void cv::gpu::SoftCascade::detectMultiScale(const GpuMat&, const GpuMat&, GpuMat&, int, GpuMat&, Stream) const
 {
     // cudaStream_t stream = StreamAccessor::getStream(s);
+}
+
+cv::Size cv::gpu::SoftCascade::getRoiSize() const
+{
+    return cv::Size(Filds::FRAME_WIDTH / 4, Filds::FRAME_HEIGHT / 4);
 }
 
 

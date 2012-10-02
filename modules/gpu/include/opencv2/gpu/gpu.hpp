@@ -1572,7 +1572,7 @@ public:
     //! Param objects 4-channel matrix thet contain detected rectangles
     //! Param rejectfactor used for final object box computing
     virtual void detectMultiScale(const GpuMat& image, const GpuMat& rois, GpuMat& objects,
-    int rejectfactor = 1, int specificScale = -1);
+    int rejectfactor = 1, int specificScale = -1) const;
 
     //! detect specific objects on in the input frame for all scales computed flom minScale and maxscale values.
     //! asynchronous version.
@@ -1583,7 +1583,9 @@ public:
     //! Param ndet retrieves number of detections
     //! Param stream wrapper for CUDA stream
     virtual void detectMultiScale(const GpuMat& image, const GpuMat& rois, GpuMat& objects,
-    int rejectfactor, GpuMat& ndet, Stream stream);
+    int rejectfactor, GpuMat& ndet, Stream stream) const;
+
+    cv::Size getRoiSize() const;
 
 private:
     struct Filds;
