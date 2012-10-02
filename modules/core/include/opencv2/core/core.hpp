@@ -1372,6 +1372,7 @@ public:
     template<typename _Tp> _OutputArray(Mat_<_Tp>& m);
     template<typename _Tp, int m, int n> _OutputArray(Matx<_Tp, m, n>& matx);
     template<typename _Tp> _OutputArray(_Tp* vec, int n);
+    _OutputArray(gpu::GpuMat& d_mat);
 
     _OutputArray(const Mat& m);
     template<typename _Tp> _OutputArray(const vector<_Tp>& vec);
@@ -1381,11 +1382,13 @@ public:
     template<typename _Tp> _OutputArray(const Mat_<_Tp>& m);
     template<typename _Tp, int m, int n> _OutputArray(const Matx<_Tp, m, n>& matx);
     template<typename _Tp> _OutputArray(const _Tp* vec, int n);
+    _OutputArray(const gpu::GpuMat& d_mat);
 
     virtual bool fixedSize() const;
     virtual bool fixedType() const;
     virtual bool needed() const;
     virtual Mat& getMatRef(int i=-1) const;
+    virtual gpu::GpuMat& getGpuMatRef() const;
     virtual void create(Size sz, int type, int i=-1, bool allowTransposed=false, int fixedDepthMask=0) const;
     virtual void create(int rows, int cols, int type, int i=-1, bool allowTransposed=false, int fixedDepthMask=0) const;
     virtual void create(int dims, const int* size, int type, int i=-1, bool allowTransposed=false, int fixedDepthMask=0) const;
@@ -2257,10 +2260,10 @@ CV_EXPORTS_W bool solve(InputArray src1, InputArray src2,
 
 enum
 {
-	SORT_EVERY_ROW=0,
-	SORT_EVERY_COLUMN=1,
-	SORT_ASCENDING=0,
-	SORT_DESCENDING=16
+    SORT_EVERY_ROW=0,
+    SORT_EVERY_COLUMN=1,
+    SORT_ASCENDING=0,
+    SORT_DESCENDING=16
 };
 
 //! sorts independently each matrix row or each matrix column
@@ -2283,12 +2286,12 @@ CV_EXPORTS_W bool eigen(InputArray src, bool computeEigenvectors,
 
 enum
 {
-	COVAR_SCRAMBLED=0,
-	COVAR_NORMAL=1,
-	COVAR_USE_AVG=2,
-	COVAR_SCALE=4,
-	COVAR_ROWS=8,
-	COVAR_COLS=16
+    COVAR_SCRAMBLED=0,
+    COVAR_NORMAL=1,
+    COVAR_USE_AVG=2,
+    COVAR_SCALE=4,
+    COVAR_ROWS=8,
+    COVAR_COLS=16
 };
 
 //! computes covariation matrix of a set of samples
@@ -4509,15 +4512,15 @@ template<> struct ParamType<float>
 {
     typedef float const_param_type;
     typedef float member_type;
-    
+
     enum { type = Param::FLOAT };
 };
-    
+
 template<> struct ParamType<unsigned>
 {
     typedef unsigned const_param_type;
     typedef unsigned member_type;
-    
+
     enum { type = Param::UNSIGNED_INT };
 };
 
@@ -4525,7 +4528,7 @@ template<> struct ParamType<uint64>
 {
     typedef uint64 const_param_type;
     typedef uint64 member_type;
-    
+
     enum { type = Param::UINT64 };
 };
 
@@ -4556,20 +4559,20 @@ public:
         getByIndex(index, space_delete, ParamType<T>::type, (void*)&val);
         return val;
     }
-    
+
     bool has(const string& name) const;
-    
+
     bool check() const;
-    
+
     void about(const string& message);
-    
+
     void printMessage() const;
     void printErrors() const;
 
 protected:
     void getByName(const string& name, bool space_delete, int type, void* dst) const;
     void getByIndex(int index, bool space_delete, int type, void* dst) const;
-    
+
     struct Impl;
     Impl* impl;
 };
@@ -4595,11 +4598,11 @@ public:
     ~Mutex();
     Mutex(const Mutex& m);
     Mutex& operator = (const Mutex& m);
-    
+
     void lock();
     bool trylock();
     void unlock();
-    
+
     struct Impl;
 protected:
     Impl* impl;
@@ -4607,10 +4610,10 @@ protected:
 
 class CV_EXPORTS AutoLock
 {
-public:    
+public:
     AutoLock(Mutex& m) : mutex(&m) { mutex->lock(); }
     ~AutoLock() { mutex->unlock(); }
-protected:    
+protected:
     Mutex* mutex;
 };
 

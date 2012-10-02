@@ -1284,9 +1284,11 @@ _OutputArray::_OutputArray() {}
 _OutputArray::~_OutputArray() {}
 _OutputArray::_OutputArray(Mat& m) : _InputArray(m) {}
 _OutputArray::_OutputArray(vector<Mat>& vec) : _InputArray(vec) {}
+_OutputArray::_OutputArray(gpu::GpuMat& d_mat) : _InputArray(d_mat) {}
 
 _OutputArray::_OutputArray(const Mat& m) : _InputArray(m) {flags |= FIXED_SIZE|FIXED_TYPE;}
 _OutputArray::_OutputArray(const vector<Mat>& vec) : _InputArray(vec) {flags |= FIXED_SIZE;}
+_OutputArray::_OutputArray(const gpu::GpuMat& d_mat) : _InputArray(d_mat) {flags |= FIXED_SIZE|FIXED_TYPE;}
 
 
 bool _OutputArray::fixedSize() const
@@ -1309,6 +1311,13 @@ void _OutputArray::create(Size _sz, int mtype, int i, bool allowTransposed, int 
         ((Mat*)obj)->create(_sz, mtype);
         return;
     }
+    if( k == GPU_MAT && i < 0 && !allowTransposed && fixedDepthMask == 0 )
+    {
+        CV_Assert(!fixedSize() || ((gpu::GpuMat*)obj)->size() == _sz);
+        CV_Assert(!fixedType() || ((gpu::GpuMat*)obj)->type() == mtype);
+        ((gpu::GpuMat*)obj)->create(_sz, mtype);
+        return;
+    }
     int sizes[] = {_sz.height, _sz.width};
     create(2, sizes, mtype, i, allowTransposed, fixedDepthMask);
 }
@@ -1321,6 +1330,13 @@ void _OutputArray::create(int rows, int cols, int mtype, int i, bool allowTransp
         CV_Assert(!fixedSize() || ((Mat*)obj)->size.operator()() == Size(cols, rows));
         CV_Assert(!fixedType() || ((Mat*)obj)->type() == mtype);
         ((Mat*)obj)->create(rows, cols, mtype);
+        return;
+    }
+    if( k == GPU_MAT && i < 0 && !allowTransposed && fixedDepthMask == 0 )
+    {
+        CV_Assert(!fixedSize() || ((gpu::GpuMat*)obj)->size() == Size(cols, rows));
+        CV_Assert(!fixedType() || ((gpu::GpuMat*)obj)->type() == mtype);
+        ((gpu::GpuMat*)obj)->create(rows, cols, mtype);
         return;
     }
     int sizes[] = {rows, cols};
@@ -1536,6 +1552,12 @@ void _OutputArray::release() const
         return;
     }
 
+    if( k == GPU_MAT )
+    {
+        ((gpu::GpuMat*)obj)->release();
+        return;
+    }
+
     if( k == NONE )
         return;
 
@@ -1592,6 +1614,13 @@ Mat& _OutputArray::getMatRef(int i) const
         CV_Assert( i < (int)v.size() );
         return v[i];
     }
+}
+
+gpu::GpuMat& _OutputArray::getGpuMatRef() const
+{
+    int k = kind();
+    CV_Assert( k == GPU_MAT );
+    return *(gpu::GpuMat*)obj;
 }
 
 static _OutputArray _none;
