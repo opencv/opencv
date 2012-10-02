@@ -30,9 +30,9 @@ PERF_TEST_P(stitch, a123, TEST_DETECTORS)
     Mat pano;
 
     vector<Mat> imgs;
-    imgs.push_back( imread( getDataPath("stitching/a1.jpg") ) );
-    imgs.push_back( imread( getDataPath("stitching/a2.jpg") ) );
-    imgs.push_back( imread( getDataPath("stitching/a3.jpg") ) );
+    imgs.push_back( imread( getDataPath("stitching/a1.png") ) );
+    imgs.push_back( imread( getDataPath("stitching/a2.png") ) );
+    imgs.push_back( imread( getDataPath("stitching/a3.png") ) );
 
     Ptr<detail::FeaturesFinder> featuresFinder = GetParam() == "orb"
             ? (detail::FeaturesFinder*)new detail::OrbFeaturesFinder()
@@ -63,8 +63,8 @@ PERF_TEST_P(stitch, b12, TEST_DETECTORS)
     Mat pano;
 
     vector<Mat> imgs;
-    imgs.push_back( imread( getDataPath("stitching/b1.jpg") ) );
-    imgs.push_back( imread( getDataPath("stitching/b2.jpg") ) );
+    imgs.push_back( imread( getDataPath("stitching/b1.png") ) );
+    imgs.push_back( imread( getDataPath("stitching/b2.png") ) );
 
     Ptr<detail::FeaturesFinder> featuresFinder = GetParam() == "orb"
             ? (detail::FeaturesFinder*)new detail::OrbFeaturesFinder()
@@ -92,8 +92,8 @@ PERF_TEST_P(stitch, b12, TEST_DETECTORS)
 
 PERF_TEST_P( match, bestOf2Nearest, TEST_DETECTORS)
 {
-    Mat img1, img1_full = imread( getDataPath("stitching/b1.jpg") );
-    Mat img2, img2_full = imread( getDataPath("stitching/b2.jpg") );
+    Mat img1, img1_full = imread( getDataPath("stitching/b1.png") );
+    Mat img2, img2_full = imread( getDataPath("stitching/b2.png") );
     float scale1 = (float)std::min(1.0, sqrt(WORK_MEGAPIX * 1e6 / img1_full.total()));
     float scale2 = (float)std::min(1.0, sqrt(WORK_MEGAPIX * 1e6 / img2_full.total()));
     resize(img1_full, img1, Size(), scale1, scale1);
@@ -140,8 +140,8 @@ PERF_TEST_P( matchVector, bestOf2NearestVectorFeatures, testing::Combine(
                  testing::Values(2, 4, 6, 8))
              )
 {
-    Mat img1, img1_full = imread( getDataPath("stitching/b1.jpg") );
-    Mat img2, img2_full = imread( getDataPath("stitching/b2.jpg") );
+    Mat img1, img1_full = imread( getDataPath("stitching/b1.png") );
+    Mat img2, img2_full = imread( getDataPath("stitching/b2.png") );
     float scale1 = (float)std::min(1.0, sqrt(WORK_MEGAPIX * 1e6 / img1_full.total()));
     float scale2 = (float)std::min(1.0, sqrt(WORK_MEGAPIX * 1e6 / img2_full.total()));
     resize(img1_full, img1, Size(), scale1, scale1);

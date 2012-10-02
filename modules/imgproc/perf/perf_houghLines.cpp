@@ -13,7 +13,7 @@ typedef perf::TestBaseWithParam<Image_RhoStep_ThetaStep_Threshold_t> Image_RhoSt
 
 PERF_TEST_P(Image_RhoStep_ThetaStep_Threshold, HoughLines,
             testing::Combine(
-                testing::Values( "cv/shared/pic5.png", "stitching/a1.jpg" ),
+                testing::Values( "cv/shared/pic5.png", "stitching/a1.png" ),
                 testing::Values( 1, 10 ),
                 testing::Values( 0.01, 0.1 ),
                 testing::Values( 300, 500 )            

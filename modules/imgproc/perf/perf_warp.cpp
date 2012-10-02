@@ -33,7 +33,7 @@ PERF_TEST_P( TestWarpAffine, WarpAffine,
     borderMode = get<1>(GetParam());
     interType  = get<2>(GetParam());
 
-    Mat src, img = imread(getDataPath("cv/shared/fruits.jpg"));
+    Mat src, img = imread(getDataPath("cv/shared/fruits.png"));
     cvtColor(img, src, COLOR_BGR2RGBA, 4);
     Mat warpMat = getRotationMatrix2D(Point2f(src.cols/2.f, src.rows/2.f), 30., 2.2);
     Mat dst(sz, CV_8UC4);
@@ -61,7 +61,7 @@ PERF_TEST_P( TestWarpPerspective, WarpPerspective,
     interType  = get<2>(GetParam());
 
 
-    Mat src, img = imread(getDataPath("cv/shared/fruits.jpg"));
+    Mat src, img = imread(getDataPath("cv/shared/fruits.png"));
     cvtColor(img, src, COLOR_BGR2RGBA, 4);
     Mat rotMat = getRotationMatrix2D(Point2f(src.cols/2.f, src.rows/2.f), 30., 2.2);
     Mat warpMat(3, 3, CV_64FC1);

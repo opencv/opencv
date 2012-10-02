@@ -76,7 +76,7 @@ bool CV_LatentSVMDetectorTest::isEqual(CvRect r1, CvRect r2, int eps)
 
 void CV_LatentSVMDetectorTest::run( int /* start_from */)
 {
-    string img_path = string(ts->get_data_path()) + "latentsvmdetector/cat.jpg";
+    string img_path = string(ts->get_data_path()) + "latentsvmdetector/cat.png";
     string model_path = string(ts->get_data_path()) + "latentsvmdetector/models_VOC2007/cat.xml";
     int numThreads = -1;
 
@@ -204,8 +204,8 @@ bool compareResults( const vector<LatentSvmDetector::ObjectDetection>& calc, con
 
 void LatentSVMDetectorTest::run( int /* start_from */)
 {
-    string img_path_cat = string(ts->get_data_path()) + "latentsvmdetector/cat.jpg";
-    string img_path_cars = string(ts->get_data_path()) + "latentsvmdetector/cars.jpg";
+    string img_path_cat = string(ts->get_data_path()) + "latentsvmdetector/cat.png";
+    string img_path_cars = string(ts->get_data_path()) + "latentsvmdetector/cars.png";
 
     string model_path_cat = string(ts->get_data_path()) + "latentsvmdetector/models_VOC2007/cat.xml";
     string model_path_car = string(ts->get_data_path()) + "latentsvmdetector/models_VOC2007/car.xml";
@@ -263,17 +263,17 @@ void LatentSVMDetectorTest::run( int /* start_from */)
 
         if( !compareResults(detections1_cat, true_detections1_cat, 1, score_thr) )
         {
-            std::cerr << "Results of detector1 are invalid on image cat.jpg" << std::endl;
+            std::cerr << "Results of detector1 are invalid on image cat.png" << std::endl;
             ts->set_failed_test_info( cvtest::TS::FAIL_MISMATCH );
         }
         if( !compareResults(detections12_cat, true_detections12_cat, 1, score_thr) )
         {
-            std::cerr << "Results of detector12 are invalid on image cat.jpg" << std::endl;
+            std::cerr << "Results of detector12 are invalid on image cat.png" << std::endl;
             ts->set_failed_test_info( cvtest::TS::FAIL_MISMATCH );
         }
         if( !compareResults(detections12_cars, true_detections12_cars, 1, score_thr) )
         {
-            std::cerr << "Results of detector12 are invalid on image cars.jpg" << std::endl;
+            std::cerr << "Results of detector12 are invalid on image cars.png" << std::endl;
             ts->set_failed_test_info( cvtest::TS::FAIL_MISMATCH );
         }
     }

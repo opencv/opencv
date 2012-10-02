@@ -645,7 +645,7 @@ PERF_TEST_P(Sz, ImgProc_ColumnSum, GPU_TYPICAL_MAT_SIZES)
 DEF_PARAM_TEST(Image_AppertureSz_L2gradient, string, int, bool);
 
 PERF_TEST_P(Image_AppertureSz_L2gradient, ImgProc_Canny, Combine(
-    Values("perf/800x600.jpg", "perf/1280x1024.jpg", "perf/1680x1050.jpg"),
+    Values("perf/800x600.png", "perf/1280x1024.png", "perf/1680x1050.png"),
     Values(3, 5),
     Bool()))
 {

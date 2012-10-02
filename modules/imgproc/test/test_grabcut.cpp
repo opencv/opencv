@@ -76,7 +76,7 @@ void CV_GrabcutTest::run( int /* start_from */)
 {
     cvtest::DefaultRngAuto defRng;
 
-    Mat img = imread(string(ts->get_data_path()) + "shared/airplane.jpg");
+    Mat img = imread(string(ts->get_data_path()) + "shared/airplane.png");
     Mat mask_prob = imread(string(ts->get_data_path()) + "grabcut/mask_prob.png", 0);
     Mat exp_mask1 = imread(string(ts->get_data_path()) + "grabcut/exp_mask1.png", 0);
     Mat exp_mask2 = imread(string(ts->get_data_path()) + "grabcut/exp_mask2.png", 0);

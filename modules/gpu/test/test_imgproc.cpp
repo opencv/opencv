@@ -808,10 +808,10 @@ struct MatchTemplate_CanFindBigTemplate : testing::TestWithParam<cv::gpu::Device
 
 TEST_P(MatchTemplate_CanFindBigTemplate, SQDIFF_NORMED)
 {
-    cv::Mat scene = readImage("matchtemplate/scene.jpg");
+    cv::Mat scene = readImage("matchtemplate/scene.png");
     ASSERT_FALSE(scene.empty());
 
-    cv::Mat templ = readImage("matchtemplate/template.jpg");
+    cv::Mat templ = readImage("matchtemplate/template.png");
     ASSERT_FALSE(templ.empty());
 
     cv::gpu::GpuMat d_result;
@@ -831,10 +831,10 @@ TEST_P(MatchTemplate_CanFindBigTemplate, SQDIFF_NORMED)
 
 TEST_P(MatchTemplate_CanFindBigTemplate, SQDIFF)
 {
-    cv::Mat scene = readImage("matchtemplate/scene.jpg");
+    cv::Mat scene = readImage("matchtemplate/scene.png");
     ASSERT_FALSE(scene.empty());
 
-    cv::Mat templ = readImage("matchtemplate/template.jpg");
+    cv::Mat templ = readImage("matchtemplate/template.png");
     ASSERT_FALSE(templ.empty());
 
     cv::gpu::GpuMat d_result;

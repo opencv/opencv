@@ -145,7 +145,7 @@ PERF_TEST_P(ImagePair, Video_CreateOpticalFlowNeedleMap, Values<pair_string>(mak
 
 DEF_PARAM_TEST(Image_MinDistance, string, double);
 
-PERF_TEST_P(Image_MinDistance, Video_GoodFeaturesToTrack, Combine(Values<string>("gpu/perf/aloe.jpg"), Values(0.0, 3.0)))
+PERF_TEST_P(Image_MinDistance, Video_GoodFeaturesToTrack, Combine(Values<string>("gpu/perf/aloe.png"), Values(0.0, 3.0)))
 {
     string fileName = GET_PARAM(0);
     double minDistance = GET_PARAM(1);

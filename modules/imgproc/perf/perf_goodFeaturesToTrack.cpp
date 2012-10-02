@@ -11,7 +11,7 @@ typedef perf::TestBaseWithParam<Image_MaxCorners_QualityLevel_MinDistance_BlockS
 
 PERF_TEST_P(Image_MaxCorners_QualityLevel_MinDistance_BlockSize_UseHarris, goodFeaturesToTrack,
             testing::Combine(
-                testing::Values( "stitching/a1.jpg", "cv/shared/pic5.png"),
+                testing::Values( "stitching/a1.png", "cv/shared/pic5.png"),
                 testing::Values( 100, 500 ),
                 testing::Values( 0.1, 0.01 ),
                 testing::Values( 3, 5 ),

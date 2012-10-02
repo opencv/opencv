@@ -29,7 +29,7 @@ void FormTrackingPointsArray(vector<Point2f>& points, int width, int height, int
 }
 
 PERF_TEST_P(Path_Idx_Cn_NPoints_WSize, OpticalFlowPyrLK_full, testing::Combine(
-                testing::Values<std::string>("cv/optflow/frames/VGA_%02d.png", "cv/optflow/frames/720p_%02d.jpg"),
+                testing::Values<std::string>("cv/optflow/frames/VGA_%02d.png", "cv/optflow/frames/720p_%02d.png"),
                 testing::Range(1, 3),
                 testing::Values(1, 3, 4),
                 testing::Values(make_tuple(9, 9), make_tuple(15, 15)),
@@ -97,7 +97,7 @@ typedef tr1::tuple<std::string, int, int, tr1::tuple<int,int>, int, bool> Path_I
 typedef TestBaseWithParam<Path_Idx_Cn_NPoints_WSize_Deriv_t> Path_Idx_Cn_NPoints_WSize_Deriv;
 
 PERF_TEST_P(Path_Idx_Cn_NPoints_WSize_Deriv, OpticalFlowPyrLK_self, testing::Combine(
-                testing::Values<std::string>("cv/optflow/frames/VGA_%02d.png", "cv/optflow/frames/720p_%02d.jpg"),
+                testing::Values<std::string>("cv/optflow/frames/VGA_%02d.png", "cv/optflow/frames/720p_%02d.png"),
                 testing::Range(1, 3),
                 testing::Values(1, 3, 4),
                 testing::Values(make_tuple(9, 9), make_tuple(15, 15)),
@@ -173,7 +173,7 @@ typedef tr1::tuple<std::string, int, bool, PyrBorderMode, bool> Path_Win_Deriv_B
 typedef TestBaseWithParam<Path_Win_Deriv_Border_Reuse_t> Path_Win_Deriv_Border_Reuse;
 
 PERF_TEST_P(Path_Win_Deriv_Border_Reuse, OpticalFlowPyrLK_pyr, testing::Combine(
-                testing::Values<std::string>("cv/optflow/frames/720p_01.jpg"),
+                testing::Values<std::string>("cv/optflow/frames/720p_01.png"),
                 testing::Values(7, 11),
                 testing::Bool(),
                 testing::ValuesIn(PyrBorderMode::all()),

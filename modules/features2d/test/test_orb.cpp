@@ -49,7 +49,7 @@ TEST(Features2D_ORB, _1996)
     Ptr<FeatureDetector> fd = FeatureDetector::create("ORB");
     Ptr<DescriptorExtractor> de = DescriptorExtractor::create("ORB");
 
-    Mat image = imread(string(cvtest::TS::ptr()->get_data_path()) + "shared/lena.jpg");
+    Mat image = imread(string(cvtest::TS::ptr()->get_data_path()) + "shared/lena.png");
     ASSERT_FALSE(image.empty());
 
     Mat roi(image.size(), CV_8UC1, Scalar(0));

@@ -20,7 +20,7 @@ static pair_string make_string_pair(const string& a, const string& b)
 #endif    
 }
 
-PERF_TEST_P(ImagePair, Calib3D_StereoBM, Values(make_string_pair("gpu/perf/aloe.jpg", "gpu/perf/aloeR.jpg")))
+PERF_TEST_P(ImagePair, Calib3D_StereoBM, Values(make_string_pair("gpu/perf/aloe.png", "gpu/perf/aloeR.png")))
 {
     declare.time(5.0);
 

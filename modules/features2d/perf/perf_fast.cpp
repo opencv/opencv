@@ -10,7 +10,7 @@ typedef perf::TestBaseWithParam<std::string> fast;
 
 #define FAST_IMAGES \
     "cv/detectors_descriptors_evaluation/images_datasets/leuven/img1.png",\
-    "stitching/a3.jpg"
+    "stitching/a3.png"
 
 PERF_TEST_P(fast, detectForORB, testing::Values(FAST_IMAGES))
 {

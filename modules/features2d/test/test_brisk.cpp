@@ -58,8 +58,8 @@ CV_BRISKTest::~CV_BRISKTest() {}
 
 void CV_BRISKTest::run( int )
 {
-  Mat image1 = imread(string(ts->get_data_path()) + "inpaint/orig.jpg");
-  Mat image2 = imread(string(ts->get_data_path()) + "cameracalibration/chess9.jpg");
+  Mat image1 = imread(string(ts->get_data_path()) + "inpaint/orig.png");
+  Mat image2 = imread(string(ts->get_data_path()) + "cameracalibration/chess9.png");
 
   if (image1.empty() || image2.empty())
     {
