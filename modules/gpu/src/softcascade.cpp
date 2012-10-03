@@ -422,19 +422,15 @@ inline void cv::gpu::SoftCascade::Filds::calcLevels(const std::vector<device::ic
         if (::fabs(scale - maxScale) < FLT_EPSILON) break;
         scale = ::std::min(maxScale, ::expf(::log(scale) + logFactor));
 
-        // printf("level: %d (%f %f) [%f %f] (%d %d) (%d %d)\n", level.octave, level.relScale, level.shrScale,
-        //     level.scaling[0], level.scaling[1], level.workRect.x, level.workRect.y, level.objSize.x,
-        //level.objSize.y);
-
-        std::cout << "level " << sc
-                  << " octeve "
-                  << vlevels[sc].octave
-                  << " relScale "
-                  << vlevels[sc].relScale
-                  << " " << vlevels[sc].shrScale
-                  << " [" << (int)vlevels[sc].objSize.x
-                  << " " <<  (int)vlevels[sc].objSize.y << "] ["
-        <<  (int)vlevels[sc].workRect.x << " " <<  (int)vlevels[sc].workRect.y << "]" << std::endl;
+        // std::cout << "level " << sc
+        //           << " octeve "
+        //           << vlevels[sc].octave
+        //           << " relScale "
+        //           << vlevels[sc].relScale
+        //           << " " << vlevels[sc].shrScale
+        //           << " [" << (int)vlevels[sc].objSize.x
+        //           << " " <<  (int)vlevels[sc].objSize.y << "] ["
+        // <<  (int)vlevels[sc].workRect.x << " " <<  (int)vlevels[sc].workRect.y << "]" << std::endl;
     }
 
     levels.upload(cv::Mat(1, vlevels.size() * sizeof(Level), CV_8UC1, (uchar*)&(vlevels[0]) ));
@@ -578,7 +574,10 @@ void cv::gpu::SoftCascade::detectMultiScale(const GpuMat& colored, const GpuMat&
     cv::Mat out(flds.detCounter);
     int ndetections = *(out.data);
 
-    objects = GpuMat(objects, cv::Rect(0, 0, ndetections * sizeof(Detection), 1));
+    if (! ndetections)
+        objects = GpuMat();
+    else
+        objects = GpuMat(objects, cv::Rect(0, 0, ndetections * sizeof(Detection), 1));
 }
 
 void cv::gpu::SoftCascade::detectMultiScale(const GpuMat&, const GpuMat&, GpuMat&, int, GpuMat&, Stream) const
