@@ -197,12 +197,14 @@ bool  TiffDecoder::readData( Mat& img )
             }
         }
 
-        if( (!is_tiled &&
-            TIFFGetField( tif, TIFFTAG_ROWSPERSTRIP, &tile_height0 )) ||
+        if( (!is_tiled) ||
             (is_tiled &&
             TIFFGetField( tif, TIFFTAG_TILEWIDTH, &tile_width0 ) &&
             TIFFGetField( tif, TIFFTAG_TILELENGTH, &tile_height0 )))
         {
+            if(!is_tiled)
+                TIFFGetField( tif, TIFFTAG_ROWSPERSTRIP, &tile_height0 );
+                
             if( tile_width0 <= 0 )
                 tile_width0 = m_width;
 
