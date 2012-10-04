@@ -774,11 +774,24 @@ CV_EXPORTS void bilateralFilter(const GpuMat& src, GpuMat& dst, int kernel_size,
                                 int borderMode = BORDER_DEFAULT, Stream& stream = Stream::Null());
 
 //! Brute force non-local means algorith (slow but universal)
-CV_EXPORTS void nonLocalMeans(const GpuMat& src, GpuMat& dst, float h,
-                              int search_widow_size = 11, int block_size = 7, int borderMode = BORDER_DEFAULT, Stream& s = Stream::Null());
+CV_EXPORTS void nonLocalMeans(const GpuMat& src, GpuMat& dst, float h, int search_window = 21, int block_size = 7, int borderMode = BORDER_DEFAULT, Stream& s = Stream::Null());
 
 //! Fast (but approximate)version of non-local means algorith similar to CPU function (running sums technique)
-CV_EXPORTS void fastNlMeansDenoising( const GpuMat& src, GpuMat& dst, float h, int search_radius = 10, int block_radius = 3, Stream& s = Stream::Null());
+class CV_EXPORTS FastNonLocalMeansDenoising
+{
+public:
+    //! Simple method, recommended for grayscale images (though it supports multichannel images)
+    void simpleMethod(const GpuMat& src, GpuMat& dst, float h, int search_window = 21, int block_size = 7, Stream& s = Stream::Null());
+
+    //! Processes luminance and color components separatelly
+    void labMethod(const GpuMat& src, GpuMat& dst, float h_luminance, float h_color, int search_window = 21, int block_size = 7, Stream& s = Stream::Null());
+    
+private:
+    
+    GpuMat buffer, extended_src_buffer;    
+    GpuMat lab, l, ab;
+};
+
 
 struct CV_EXPORTS CannyBuf;
 

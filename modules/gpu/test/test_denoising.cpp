@@ -72,9 +72,7 @@ PARAM_TEST_CASE(BilateralFilter, cv::gpu::DeviceInfo, cv::Size, MatType)
 TEST_P(BilateralFilter, Accuracy)
 {
     cv::Mat src = randomMat(size, type);
-    //cv::Mat src = readImage("hog/road.png", cv::IMREAD_GRAYSCALE);
-    //cv::Mat src = readImage("csstereobp/aloe-R.png", cv::IMREAD_GRAYSCALE);
-
+    
     src.convertTo(src, type);
     cv::gpu::GpuMat dst;
 
@@ -118,16 +116,16 @@ TEST_P(BruteForceNonLocalMeans, Regression)
     cv::cvtColor(bgr, gray, CV_BGR2GRAY);
 
     GpuMat dbgr, dgray;
-    cv::gpu::nonLocalMeans(GpuMat(bgr),  dbgr, 10);
-    cv::gpu::nonLocalMeans(GpuMat(gray), dgray, 10);
+    cv::gpu::nonLocalMeans(GpuMat(bgr),  dbgr, 20);
+    cv::gpu::nonLocalMeans(GpuMat(gray), dgray, 20);
 
 #if 0
-    dumpImage("denoising/denoised_lena_bgr.png", cv::Mat(dbgr));
-    dumpImage("denoising/denoised_lena_gray.png", cv::Mat(dgray));
+    dumpImage("denoising/nlm_denoised_lena_bgr.png", cv::Mat(dbgr));
+    dumpImage("denoising/nlm_denoised_lena_gray.png", cv::Mat(dgray));
 #endif
 
-    cv::Mat bgr_gold  = readImage("denoising/denoised_lena_bgr.png", cv::IMREAD_COLOR);
-    cv::Mat gray_gold  = readImage("denoising/denoised_lena_gray.png", cv::IMREAD_GRAYSCALE);
+    cv::Mat bgr_gold  = readImage("denoising/nlm_denoised_lena_bgr.png", cv::IMREAD_COLOR);
+    cv::Mat gray_gold  = readImage("denoising/nlm_denoised_lena_gray.png", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(bgr_gold.empty() || gray_gold.empty());
 
     EXPECT_MAT_NEAR(bgr_gold, dbgr, 1e-4);
@@ -156,27 +154,29 @@ TEST_P(FastNonLocalMeans, Regression)
 {
     using cv::gpu::GpuMat;
 
-    cv::Mat bgr  = readImage("denoising/lena_noised_gaussian_sigma=20_multi_0.png", cv::IMREAD_COLOR);
+    cv::Mat bgr  = readImage("denoising/lena_noised_gaussian_sigma=20_multi_0.png", cv::IMREAD_COLOR);    
     ASSERT_FALSE(bgr.empty());
 
     cv::Mat gray;
     cv::cvtColor(bgr, gray, CV_BGR2GRAY);
 
     GpuMat dbgr, dgray;
-    cv::gpu::fastNlMeansDenoising(GpuMat(gray),  dgray, 10);
+    cv::gpu::FastNonLocalMeansDenoising fnlmd;
+
+    fnlmd.simpleMethod(GpuMat(gray),  dgray, 20);
+    fnlmd.labMethod(GpuMat(bgr),  dbgr, 20, 10);
 
 #if 0
     //dumpImage("denoising/fnlm_denoised_lena_bgr.png", cv::Mat(dbgr));
-    dumpImage("denoising/fnlm_denoised_lena_gray.png", cv::Mat(dgray));
+    //dumpImage("denoising/fnlm_denoised_lena_gray.png", cv::Mat(dgray));
 #endif
 
-    //cv::Mat bgr_gold  = readImage("denoising/denoised_lena_bgr.png", cv::IMREAD_COLOR);
+    cv::Mat bgr_gold  = readImage("denoising/fnlm_denoised_lena_bgr.png", cv::IMREAD_COLOR);
     cv::Mat gray_gold  = readImage("denoising/fnlm_denoised_lena_gray.png", cv::IMREAD_GRAYSCALE);
-    ASSERT_FALSE(/*bgr_gold.empty() || */gray_gold.empty());
+    ASSERT_FALSE(bgr_gold.empty() || gray_gold.empty());
 
-    //EXPECT_MAT_NEAR(bgr_gold, dbgr, 1e-4);
-    EXPECT_MAT_NEAR(gray_gold, dgray, 1e-4);
-
+    EXPECT_MAT_NEAR(bgr_gold, dbgr, 1);
+    EXPECT_MAT_NEAR(gray_gold, dgray, 1);
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_Denoising, FastNonLocalMeans, ALL_DEVICES);

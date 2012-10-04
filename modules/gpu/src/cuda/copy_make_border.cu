@@ -97,7 +97,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         template void copyMakeBorder_gpu<uchar, 1>(const PtrStepSzb& src, const PtrStepSzb& dst, int top, int left, int borderMode, const uchar* borderValue, cudaStream_t stream);
-        //template void copyMakeBorder_gpu<uchar, 2>(const PtrStepSzb& src, const PtrStepSzb& dst, int top, int left, int borderMode, const uchar* borderValue, cudaStream_t stream);
+        template void copyMakeBorder_gpu<uchar, 2>(const PtrStepSzb& src, const PtrStepSzb& dst, int top, int left, int borderMode, const uchar* borderValue, cudaStream_t stream);
         template void copyMakeBorder_gpu<uchar, 3>(const PtrStepSzb& src, const PtrStepSzb& dst, int top, int left, int borderMode, const uchar* borderValue, cudaStream_t stream);
         template void copyMakeBorder_gpu<uchar, 4>(const PtrStepSzb& src, const PtrStepSzb& dst, int top, int left, int borderMode, const uchar* borderValue, cudaStream_t stream);
 

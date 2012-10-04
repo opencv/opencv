@@ -3,16 +3,18 @@
 using namespace std;
 using namespace testing;
 
+#define GPU_DENOISING_IMAGE_SIZES testing::Values(perf::szVGA, perf::szXGA, perf::sz720p, perf::sz1080p)
+
 
 //////////////////////////////////////////////////////////////////////
 // BilateralFilter
 
-DEF_PARAM_TEST(Sz_Depth_Cn_KernelSz, cv::Size, MatDepth , int, int);
+DEF_PARAM_TEST(Sz_Depth_Cn_KernelSz, cv::Size, MatDepth, int, int);
 
 PERF_TEST_P(Sz_Depth_Cn_KernelSz, Denoising_BilateralFilter, 
-            Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8U, CV_16U, CV_32F), GPU_CHANNELS_1_3_4, Values(3, 5, 9)))
+            Combine(GPU_DENOISING_IMAGE_SIZES, Values(CV_8U, CV_32F), testing::Values(1, 3), Values(3, 5, 9)))
 {
-    declare.time(30.0);
+    declare.time(60.0);
 
     cv::Size size = GET_PARAM(0);
     int depth = GET_PARAM(1);
@@ -57,16 +59,16 @@ PERF_TEST_P(Sz_Depth_Cn_KernelSz, Denoising_BilateralFilter,
 //////////////////////////////////////////////////////////////////////
 // nonLocalMeans
 
-DEF_PARAM_TEST(Sz_Depth_Cn_WinSz_BlockSz, cv::Size, MatDepth , int, int, int);
+DEF_PARAM_TEST(Sz_Depth_Cn_WinSz_BlockSz, cv::Size, MatDepth, int, int, int);
 
 PERF_TEST_P(Sz_Depth_Cn_WinSz_BlockSz, Denoising_NonLocalMeans, 
-            Combine(GPU_TYPICAL_MAT_SIZES, Values<MatDepth>(CV_8U), Values(1), Values(21), Values(5, 7)))
+            Combine(GPU_DENOISING_IMAGE_SIZES, Values<MatDepth>(CV_8U), Values(1, 3), Values(21), Values(5, 7)))
 {
-    declare.time(30.0);
+    declare.time(60.0);
 
     cv::Size size = GET_PARAM(0);
-    int depth = GET_PARAM(1);
-    int channels = GET_PARAM(2);
+    int depth = GET_PARAM(1);    
+    int channels = GET_PARAM(2);    
     
     int search_widow_size = GET_PARAM(3);
     int block_size = GET_PARAM(4);
@@ -101,22 +103,21 @@ PERF_TEST_P(Sz_Depth_Cn_WinSz_BlockSz, Denoising_NonLocalMeans,
 //////////////////////////////////////////////////////////////////////
 // fastNonLocalMeans
 
-DEF_PARAM_TEST(Sz_Depth_Cn_WinSz_BlockSz, cv::Size, MatDepth , int, int, int);
+DEF_PARAM_TEST(Sz_Depth_WinSz_BlockSz, cv::Size, MatDepth, int, int);
 
-PERF_TEST_P(Sz_Depth_Cn_WinSz_BlockSz, Denoising_FastNonLocalMeans, 
-            Combine(GPU_TYPICAL_MAT_SIZES, Values<MatDepth>(CV_8U), Values(1), Values(21), Values(5, 7)))
+PERF_TEST_P(Sz_Depth_WinSz_BlockSz, Denoising_FastNonLocalMeans, 
+            Combine(GPU_DENOISING_IMAGE_SIZES, Values<MatDepth>(CV_8U), Values(21), Values(7)))
 {
-    declare.time(30.0);
-
-    cv::Size size = GET_PARAM(0);
-    int depth = GET_PARAM(1);
-    int channels = GET_PARAM(2);
+    declare.time(150.0);
     
-    int search_widow_size = GET_PARAM(3);
-    int block_size = GET_PARAM(4);
-
-    float h = 10;       
-    int type = CV_MAKE_TYPE(depth, channels);
+    cv::Size size = GET_PARAM(0);
+    int depth = GET_PARAM(1);    
+    
+    int search_widow_size = GET_PARAM(2);
+    int block_size = GET_PARAM(3);
+    
+    float h = 10;           
+    int type = CV_MAKE_TYPE(depth, 1);    
 
     cv::Mat src(size, type);
     fillRandom(src);
@@ -124,12 +125,14 @@ PERF_TEST_P(Sz_Depth_Cn_WinSz_BlockSz, Denoising_FastNonLocalMeans,
     if (runOnGpu)
     {
         cv::gpu::GpuMat d_src(src);
-        cv::gpu::GpuMat d_dst;        
-        cv::gpu::fastNlMeansDenoising(d_src, d_dst, h, search_widow_size/2, block_size/2); 
+        cv::gpu::GpuMat d_dst;
+        cv::gpu::FastNonLocalMeansDenoising fnlmd;
+
+        fnlmd.simpleMethod(d_src, d_dst, h, search_widow_size, block_size); 
 
         TEST_CYCLE()
         {
-            cv::gpu::fastNlMeansDenoising(d_src, d_dst, h, search_widow_size/2, block_size/2); 
+            fnlmd.simpleMethod(d_src, d_dst, h, search_widow_size, block_size); 
         }
     }
     else
@@ -140,6 +143,52 @@ PERF_TEST_P(Sz_Depth_Cn_WinSz_BlockSz, Denoising_FastNonLocalMeans,
         TEST_CYCLE()
         {
             cv::fastNlMeansDenoising(src, dst, h, block_size, search_widow_size);
+        }
+    }
+}
+
+//////////////////////////////////////////////////////////////////////
+// fastNonLocalMeans (colored)
+
+
+PERF_TEST_P(Sz_Depth_WinSz_BlockSz, Denoising_FastNonLocalMeansColored, 
+            Combine(GPU_DENOISING_IMAGE_SIZES, Values<MatDepth>(CV_8U), Values(21), Values(7)))
+{
+    declare.time(350.0);
+    
+    cv::Size size = GET_PARAM(0);
+    int depth = GET_PARAM(1);
+    
+    int search_widow_size = GET_PARAM(2);
+    int block_size = GET_PARAM(3);
+
+    float h = 10;       
+    int type = CV_MAKE_TYPE(depth, 3);
+
+    cv::Mat src(size, type);
+    fillRandom(src);
+
+    if (runOnGpu)
+    {
+        cv::gpu::GpuMat d_src(src);
+        cv::gpu::GpuMat d_dst;
+        cv::gpu::FastNonLocalMeansDenoising fnlmd;
+
+        fnlmd.labMethod(d_src, d_dst, h, h, search_widow_size, block_size); 
+
+        TEST_CYCLE()
+        {
+            fnlmd.labMethod(d_src, d_dst, h, h, search_widow_size, block_size); 
+        }
+    }
+    else
+    {
+        cv::Mat dst;
+        cv::fastNlMeansDenoisingColored(src, dst, h, h, block_size, search_widow_size);
+
+        TEST_CYCLE()
+        {
+            cv::fastNlMeansDenoisingColored(src, dst, h, h, block_size, search_widow_size);
         }
     }
 }

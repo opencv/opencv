@@ -104,7 +104,7 @@ void cv::gpu::bilateralFilter(const GpuMat& src, GpuMat& dst, int kernel_size, f
     func(src, dst, kernel_size, sigma_spatial, sigma_color, gpuBorderType, StreamAccessor::getStream(s));
 }
 
-void cv::gpu::nonLocalMeans(const GpuMat& src, GpuMat& dst, float h, int search_window_size, int block_size, int borderMode, Stream& s)
+void cv::gpu::nonLocalMeans(const GpuMat& src, GpuMat& dst, float h, int search_window, int block_window, int borderMode, Stream& s)
 {
     using cv::gpu::device::imgproc::nlm_bruteforce_gpu;
     typedef void (*func_t)(const PtrStepSzb& src, PtrStepSzb dst, int search_radius, int block_radius, float h, int borderMode, cudaStream_t stream);
@@ -121,12 +121,9 @@ void cv::gpu::nonLocalMeans(const GpuMat& src, GpuMat& dst, float h, int search_
 
     int gpuBorderType;
     CV_Assert(tryConvertToGpuBorderType(borderMode, gpuBorderType));
-
-    int search_radius = search_window_size/2;
-    int block_radius = block_size/2;
-
+    
     dst.create(src.size(), src.type());
-    func(src, dst, search_radius, block_radius, h, gpuBorderType, StreamAccessor::getStream(s));
+    func(src, dst, search_window/2, block_window/2, h, gpuBorderType, StreamAccessor::getStream(s));
 }
 
 
@@ -143,220 +140,76 @@ namespace cv { namespace gpu { namespace device
         template<typename T>
         void nlm_fast_gpu(const PtrStepSzb& src, PtrStepSzb dst, PtrStepi buffer,
                           int search_window, int block_window, float h, cudaStream_t stream);
-
-    }
+        
+        void fnlm_split_channels(const PtrStepSz<uchar3>& lab, PtrStepb l, PtrStep<uchar2> ab, cudaStream_t stream);
+        void fnlm_merge_channels(const PtrStepb& l, const PtrStep<uchar2>& ab, PtrStepSz<uchar3> lab, cudaStream_t stream);
+     }
 }}}
 
-
-
-//class CV_EXPORTS FastNonLocalMeansDenoising
-//{
-//public:
-//    FastNonLocalMeansDenoising(float h, int search_radius, int block_radius, const Size& image_size = Size())
-//    {
-//        if (size.area() != 0)
-//            allocate_buffers(image_size);
-//    }
-
-//    void operator()(const GpuMat& src, GpuMat& dst);
-
-//private:
-//    void allocate_buffers(const Size& image_size)
-//    {
-//        col_dist_sums.create(block_window_, search_window_ * search_window_, CV_32S);
-//        up_col_dist_sums.create(image_size.width, search_window_ * search_window_, CV_32S);
-//    }
-
-//    int search_radius_;
-//    int block_radius;
-//    GpuMat col_dist_sums_;
-//    GpuMat up_col_dist_sums_;
-//};
-
-void cv::gpu::fastNlMeansDenoising( const GpuMat& src, GpuMat& dst, float h, int search_radius, int block_radius, Stream& s)
+void cv::gpu::FastNonLocalMeansDenoising::simpleMethod(const GpuMat& src, GpuMat& dst, float h, int search_window, int block_window, Stream& s)
 {
-    dst.create(src.size(), src.type());
     CV_Assert(src.depth() == CV_8U && src.channels() < 4);
+            
+    int border_size = search_window/2 + block_window/2;    
+    Size esize = src.size() + Size(border_size, border_size) * 2;
 
-    GpuMat extended_src, src_hdr;
-    int border_size = search_radius + block_radius;
+    cv::gpu::ensureSizeIsEnough(esize, CV_8UC3, extended_src_buffer);    
+    GpuMat extended_src(esize, src.type(), extended_src_buffer.ptr(), extended_src_buffer.step);
+
     cv::gpu::copyMakeBorder(src, extended_src, border_size, border_size, border_size, border_size, cv::BORDER_DEFAULT, Scalar(), s);
-    src_hdr = extended_src(Rect(Point2i(border_size, border_size), src.size()));
+    GpuMat src_hdr = extended_src(Rect(Point2i(border_size, border_size), src.size()));
+    
+    int bcols, brows;
+    device::imgproc::nln_fast_get_buffer_size(src_hdr, search_window, block_window, bcols, brows);
+    buffer.create(brows, bcols, CV_32S);
 
     using namespace cv::gpu::device::imgproc;
     typedef void (*nlm_fast_t)(const PtrStepSzb&, PtrStepSzb, PtrStepi, int, int, float, cudaStream_t);
-    static const nlm_fast_t funcs[] = { nlm_fast_gpu<uchar>, nlm_fast_gpu<uchar2>, nlm_fast_gpu<uchar3>, 0 };
-
-    int search_window = 2 * search_radius + 1;
-    int block_window = 2 * block_radius + 1;
-        
-    int bcols, brows;
-    nln_fast_get_buffer_size(src_hdr, search_window, block_window, bcols, brows);
-
-    //GpuMat col_dist_sums(block_window * gx, search_window * search_window * gy, CV_32S);
-    //GpuMat up_col_dist_sums(src.cols, search_window * search_window * gy, CV_32S);
-    GpuMat buffer(brows, bcols, CV_32S);
-
+    static const nlm_fast_t funcs[] = { nlm_fast_gpu<uchar>, nlm_fast_gpu<uchar2>, nlm_fast_gpu<uchar3>, 0};            
+    
+    dst.create(src.size(), src.type());
     funcs[src.channels()-1](src_hdr, dst, buffer, search_window, block_window, h, StreamAccessor::getStream(s));
 }
 
-//void cv::gpu::fastNlMeansDenoisingColored( const GpuMat& src, GpuMat& dst, float h, float hForColorComponents, int templateWindowSize, int searchWindowSize)
-//{
-//    Mat src = _src.getMat();
-//    _dst.create(src.size(), src.type());
-//    Mat dst = _dst.getMat();
+void cv::gpu::FastNonLocalMeansDenoising::labMethod( const GpuMat& src, GpuMat& dst, float h_luminance, float h_color, int search_window, int block_window, Stream& s)
+{   
+#if (CUDA_VERSION < 5000)
+    (void)src;
+    (void)dst;
+    (void)h_luminance;
+    (void)h_color;
+    (void)search_window;
+    (void)block_window;
+    (void)s;            
+            
+    CV_Error( CV_GpuApiCallError, "Lab method required CUDA 5.0 and higher" );
+#else
 
-//    if (src.type() != CV_8UC3) {
-//        CV_Error(CV_StsBadArg, "Type of input image should be CV_8UC3!");
-//        return;
-//    }
 
-//    Mat src_lab;
-//    cvtColor(src, src_lab, CV_LBGR2Lab);
+    CV_Assert(src.type() == CV_8UC3);
+    
+    lab.create(src.size(), src.type());
+    cv::gpu::cvtColor(src, lab, CV_BGR2Lab, 0, s);
 
-//    Mat l(src.size(), CV_8U);
-//    Mat ab(src.size(), CV_8UC2);
-//    Mat l_ab[] = { l, ab };
-//    int from_to[] = { 0,0, 1,1, 2,2 };
-//    mixChannels(&src_lab, 1, l_ab, 2, from_to, 3);
+    /*Mat t;
+    cv::cvtColor(Mat(src), t, CV_BGR2Lab);
+    lab.upload(t);*/
 
-//    fastNlMeansDenoising(l, l, h, templateWindowSize, searchWindowSize);
-//    fastNlMeansDenoising(ab, ab, hForColorComponents, templateWindowSize, searchWindowSize);
+    l.create(src.size(), CV_8U);
+    ab.create(src.size(), CV_8UC2);
+    device::imgproc::fnlm_split_channels(lab, l, ab, StreamAccessor::getStream(s));
+        
+    simpleMethod(l, l, h_luminance, search_window, block_window, s);
+    simpleMethod(ab, ab, h_color, search_window, block_window, s);
 
-//    Mat l_ab_denoised[] = { l, ab };
-//    Mat dst_lab(src.size(), src.type());
-//    mixChannels(l_ab_denoised, 2, &dst_lab, 1, from_to, 3);
+    device::imgproc::fnlm_merge_channels(l, ab, lab, StreamAccessor::getStream(s));
+    cv::gpu::cvtColor(lab, dst, CV_Lab2BGR, 0, s);
 
-//    cvtColor(dst_lab, dst, CV_Lab2LBGR);
-//}
+    /*cv::cvtColor(Mat(lab), t, CV_Lab2BGR);
+    dst.upload(t);*/
 
-//static void fastNlMeansDenoisingMultiCheckPreconditions(
-//                               const std::vector<Mat>& srcImgs,
-//                               int imgToDenoiseIndex, int temporalWindowSize,
-//                               int templateWindowSize, int searchWindowSize)
-//{
-//    int src_imgs_size = (int)srcImgs.size();
-//    if (src_imgs_size == 0) {
-//        CV_Error(CV_StsBadArg, "Input images vector should not be empty!");
-//    }
-
-//    if (temporalWindowSize % 2 == 0 ||
-//        searchWindowSize % 2 == 0 ||
-//        templateWindowSize % 2 == 0) {
-//        CV_Error(CV_StsBadArg, "All windows sizes should be odd!");
-//    }
-
-//    int temporalWindowHalfSize = temporalWindowSize / 2;
-//    if (imgToDenoiseIndex - temporalWindowHalfSize < 0 ||
-//        imgToDenoiseIndex + temporalWindowHalfSize >= src_imgs_size)
-//    {
-//        CV_Error(CV_StsBadArg,
-//            "imgToDenoiseIndex and temporalWindowSize "
-//            "should be choosen corresponding srcImgs size!");
-//    }
-
-//    for (int i = 1; i < src_imgs_size; i++) {
-//        if (srcImgs[0].size() != srcImgs[i].size() || srcImgs[0].type() != srcImgs[i].type()) {
-//            CV_Error(CV_StsBadArg, "Input images should have the same size and type!");
-//        }
-//    }
-//}
-
-//void cv::fastNlMeansDenoisingMulti( InputArrayOfArrays _srcImgs, OutputArray _dst,
-//                                    int imgToDenoiseIndex, int temporalWindowSize,
-//                                    float h, int templateWindowSize, int searchWindowSize)
-//{
-//    vector<Mat> srcImgs;
-//    _srcImgs.getMatVector(srcImgs);
-
-//    fastNlMeansDenoisingMultiCheckPreconditions(
-//        srcImgs, imgToDenoiseIndex,
-//        temporalWindowSize, templateWindowSize, searchWindowSize
-//    );
-//    _dst.create(srcImgs[0].size(), srcImgs[0].type());
-//    Mat dst = _dst.getMat();
-
-//    switch (srcImgs[0].type()) {
-//        case CV_8U:
-//            parallel_for(cv::BlockedRange(0, srcImgs[0].rows),
-//                FastNlMeansMultiDenoisingInvoker<uchar>(
-//                    srcImgs, imgToDenoiseIndex, temporalWindowSize,
-//                    dst, templateWindowSize, searchWindowSize, h));
-//            break;
-//        case CV_8UC2:
-//            parallel_for(cv::BlockedRange(0, srcImgs[0].rows),
-//                FastNlMeansMultiDenoisingInvoker<cv::Vec2b>(
-//                    srcImgs, imgToDenoiseIndex, temporalWindowSize,
-//                    dst, templateWindowSize, searchWindowSize, h));
-//            break;
-//        case CV_8UC3:
-//            parallel_for(cv::BlockedRange(0, srcImgs[0].rows),
-//                FastNlMeansMultiDenoisingInvoker<cv::Vec3b>(
-//                    srcImgs, imgToDenoiseIndex, temporalWindowSize,
-//                    dst, templateWindowSize, searchWindowSize, h));
-//            break;
-//        default:
-//            CV_Error(CV_StsBadArg,
-//                "Unsupported matrix format! Only uchar, Vec2b, Vec3b are supported");
-//    }
-//}
-
-//void cv::fastNlMeansDenoisingColoredMulti( InputArrayOfArrays _srcImgs, OutputArray _dst,
-//                                           int imgToDenoiseIndex, int temporalWindowSize,
-//                                           float h, float hForColorComponents,
-//                                           int templateWindowSize, int searchWindowSize)
-//{
-//    vector<Mat> srcImgs;
-//    _srcImgs.getMatVector(srcImgs);
-
-//    fastNlMeansDenoisingMultiCheckPreconditions(
-//        srcImgs, imgToDenoiseIndex,
-//        temporalWindowSize, templateWindowSize, searchWindowSize
-//    );
-
-//    _dst.create(srcImgs[0].size(), srcImgs[0].type());
-//    Mat dst = _dst.getMat();
-
-//    int src_imgs_size = (int)srcImgs.size();
-
-//    if (srcImgs[0].type() != CV_8UC3) {
-//        CV_Error(CV_StsBadArg, "Type of input images should be CV_8UC3!");
-//        return;
-//    }
-
-//    int from_to[] = { 0,0, 1,1, 2,2 };
-
-//    // TODO convert only required images
-//    vector<Mat> src_lab(src_imgs_size);
-//    vector<Mat> l(src_imgs_size);
-//    vector<Mat> ab(src_imgs_size);
-//    for (int i = 0; i < src_imgs_size; i++) {
-//        src_lab[i] = Mat::zeros(srcImgs[0].size(), CV_8UC3);
-//        l[i] = Mat::zeros(srcImgs[0].size(), CV_8UC1);
-//        ab[i] = Mat::zeros(srcImgs[0].size(), CV_8UC2);
-//        cvtColor(srcImgs[i], src_lab[i], CV_LBGR2Lab);
-
-//        Mat l_ab[] = { l[i], ab[i] };
-//        mixChannels(&src_lab[i], 1, l_ab, 2, from_to, 3);
-//    }
-
-//    Mat dst_l;
-//    Mat dst_ab;
-
-//    fastNlMeansDenoisingMulti(
-//        l, dst_l, imgToDenoiseIndex, temporalWindowSize,
-//        h, templateWindowSize, searchWindowSize);
-
-//    fastNlMeansDenoisingMulti(
-//        ab, dst_ab, imgToDenoiseIndex, temporalWindowSize,
-//        hForColorComponents, templateWindowSize, searchWindowSize);
-
-//    Mat l_ab_denoised[] = { dst_l, dst_ab };
-//    Mat dst_lab(srcImgs[0].size(), srcImgs[0].type());
-//    mixChannels(l_ab_denoised, 2, &dst_lab, 1, from_to, 3);
-
-//    cvtColor(dst_lab, dst, CV_Lab2LBGR);
-//}
+#endif
+}
 
 
 #endif

@@ -68,68 +68,70 @@ namespace cv { namespace gpu { namespace device
         __device__ __forceinline__ float norm2(const float4& v) { return v.x*v.x + v.y*v.y + v.z*v.z  + v.w*v.w; }
 
         template<typename T, typename B>
-        __global__ void nlm_kernel(const PtrStepSz<T> src, PtrStep<T> dst, const B b, int search_radius, int block_radius, float h2_inv_half)
+        __global__ void nlm_kernel(const PtrStep<T> src, PtrStepSz<T> dst, const B b, int search_radius, int block_radius, float noise_mult)
         {
             typedef typename TypeVec<float, VecTraits<T>::cn>::vec_type value_type;
 
-            const int x = blockDim.x * blockIdx.x + threadIdx.x;
-            const int y = blockDim.y * blockIdx.y + threadIdx.y;
-
-            if (x >= src.cols || y >= src.rows)
+            const int i = blockDim.y * blockIdx.y + threadIdx.y;
+            const int j = blockDim.x * blockIdx.x + threadIdx.x;
+            
+            if (j >= dst.cols || i >= dst.rows)
                 return;
-
-            float block_radius2_inv = -1.f/(block_radius * block_radius);
+                                                
+            int bsize = search_radius + block_radius;
+            int search_window = 2 * search_radius + 1;                        
+            float minus_search_window2_inv = -1.f/(search_window * search_window);
 
             value_type sum1 = VecTraits<value_type>::all(0);
             float sum2 = 0.f;
 
-            if (x - search_radius - block_radius >=0        && y - search_radius - block_radius >=0 &&
-                x + search_radius + block_radius < src.cols && y + search_radius + block_radius < src.rows)
+            if (j - bsize >= 0 && j + bsize < dst.cols && i - bsize >= 0 && i + bsize < dst.rows)
             {
-
-                for(float cy = -search_radius; cy <= search_radius; ++cy)
-                    for(float cx = -search_radius; cx <= search_radius; ++cx)
-                    {
-                        float color2 = 0;
-                        for(float by = -block_radius; by <= block_radius; ++by)
-                            for(float bx = -block_radius; bx <= block_radius; ++bx)
+                for(float y = -search_radius; y <= search_radius; ++y)                
+                    for(float x = -search_radius; x <= search_radius; ++x)
+                    {                    
+                        float dist2 = 0;
+                        for(float ty = -block_radius; ty <= block_radius; ++ty)
+                            for(float tx = -block_radius; tx <= block_radius; ++tx)
                             {
-                                value_type v1 = saturate_cast<value_type>(src(y +      by, x +      bx));
-                                value_type v2 = saturate_cast<value_type>(src(y + cy + by, x + cx + bx));
-                                color2 += norm2(v1 - v2);
+                                value_type bv = saturate_cast<value_type>(src(i + y + ty, j + x + tx));
+                                value_type av = saturate_cast<value_type>(src(i +     ty, j +     tx));
+                                
+                                dist2 += norm2(av - bv);
                             }
 
-                        float dist2 = cx * cx + cy * cy;
-                        float w = __expf(color2 * h2_inv_half + dist2 * block_radius2_inv);
+                        float w = __expf(dist2 * noise_mult + (x * x + y * y) * minus_search_window2_inv);
 
-                        sum1 = sum1 + saturate_cast<value_type>(src(y + cy, x + cy)) * w;
+                        /*if (i == 255 && j == 255)
+                            printf("%f %f\n", w, dist2 * minus_h2_inv + (x * x + y * y) * minus_search_window2_inv);*/
+
+                        sum1 = sum1 + w * saturate_cast<value_type>(src(i + y, j + x));
                         sum2 += w;
                     }
             }
             else
             {
-                for(float cy = -search_radius; cy <= search_radius; ++cy)
-                    for(float cx = -search_radius; cx <= search_radius; ++cx)
+                for(float y = -search_radius; y <= search_radius; ++y)
+                    for(float x = -search_radius; x <= search_radius; ++x)
                     {
-                        float color2 = 0;
-                        for(float by = -block_radius; by <= block_radius; ++by)
-                            for(float bx = -block_radius; bx <= block_radius; ++bx)
+                        float dist2 = 0;
+                        for(float ty = -block_radius; ty <= block_radius; ++ty)
+                            for(float tx = -block_radius; tx <= block_radius; ++tx)
                             {
-                                value_type v1 = saturate_cast<value_type>(b.at(y +      by, x +      bx, src.data, src.step));
-                                value_type v2 = saturate_cast<value_type>(b.at(y + cy + by, x + cx + bx, src.data, src.step));
-                                color2 += norm2(v1 - v2);
+                                value_type bv = saturate_cast<value_type>(b.at(i + y + ty, j + x + tx, src));
+                                value_type av = saturate_cast<value_type>(b.at(i +     ty, j +     tx, src));                                
+                                dist2 += norm2(av - bv);
                             }
+                        
+                        float w = __expf(dist2 * noise_mult + (x * x + y * y) * minus_search_window2_inv);
 
-                        float dist2 = cx * cx + cy * cy;
-                        float w = __expf(color2 * h2_inv_half + dist2 * block_radius2_inv);
-
-                        sum1 = sum1 + saturate_cast<value_type>(b.at(y + cy, x + cy, src.data, src.step)) * w;
+                        sum1 = sum1 + w * saturate_cast<value_type>(b.at(i + y, j + x, src));
                         sum2 += w;
                     }
 
             }
 
-            dst(y, x) = saturate_cast<T>(sum1 / sum2);
+            dst(i, j) = saturate_cast<T>(sum1 / sum2);
 
         }
 
@@ -141,10 +143,12 @@ namespace cv { namespace gpu { namespace device
 
             B<T> b(src.rows, src.cols);
 
-            float h2_inv_half = -0.5f/(h * h * VecTraits<T>::cn);
-
+            int block_window = 2 * block_radius + 1;
+            float minus_h2_inv = -1.f/(h * h * VecTraits<T>::cn);            
+            float noise_mult = minus_h2_inv/(block_window * block_window);
+            
             cudaSafeCall( cudaFuncSetCacheConfig (nlm_kernel<T, B<T> >, cudaFuncCachePreferL1) );
-            nlm_kernel<<<grid, block>>>((PtrStepSz<T>)src, (PtrStepSz<T>)dst, b, search_radius, block_radius, h2_inv_half);
+            nlm_kernel<<<grid, block>>>((PtrStepSz<T>)src, (PtrStepSz<T>)dst, b, search_radius, block_radius, noise_mult);
             cudaSafeCall ( cudaGetLastError () );
 
             if (stream == 0)
@@ -184,18 +188,13 @@ namespace cv { namespace gpu { namespace device
         __device__ __forceinline__ int calcDist(const uchar2& a, const uchar2& b) { return (a.x-b.x)*(a.x-b.x) + (a.y-b.y)*(a.y-b.y); }
         __device__ __forceinline__ int calcDist(const uchar3& a, const uchar3& b) { return (a.x-b.x)*(a.x-b.x) + (a.y-b.y)*(a.y-b.y) + (a.z-b.z)*(a.z-b.z); }
 
-
-
         template <class T> struct FastNonLocalMenas
         {
             enum
             {
-                CTA_SIZE = 256,
-
-                //TILE_COLS = 256,
-                //TILE_ROWS = 32,
-
-                TILE_COLS = 256,
+                CTA_SIZE = 128,
+              
+                TILE_COLS = 128,
                 TILE_ROWS = 32,
 
                 STRIDE = CTA_SIZE
@@ -203,7 +202,7 @@ namespace cv { namespace gpu { namespace device
 
             struct plus
             {
-                __device__ __forceinline float operator()(float v1, float v2) const { return v1 + v2; }
+                __device__ __forceinline__ float operator()(float v1, float v2) const { return v1 + v2; }
             };
 
             int search_radius;
@@ -219,14 +218,14 @@ namespace cv { namespace gpu { namespace device
             PtrStep<T> src;
             mutable PtrStepi buffer;
             
-            __device__ __forceinline__ void initSums_TileFistColumn(int i, int j, int* dist_sums, PtrStepi& col_dist_sums, PtrStepi& up_col_dist_sums) const
+            __device__ __forceinline__ void initSums_BruteForce(int i, int j, int* dist_sums, PtrStepi& col_sums, PtrStepi& up_col_sums) const
             {
                 for(int index = threadIdx.x; index < search_window * search_window; index += STRIDE)
                 {
                     dist_sums[index] = 0;
 
                     for(int tx = 0; tx < block_window; ++tx)
-                        col_dist_sums(tx, index) = 0;
+                        col_sums(tx, index) = 0;
 
                     int y = index / search_window;
                     int x = index - y * search_window;
@@ -240,17 +239,15 @@ namespace cv { namespace gpu { namespace device
 #if 1
                     for (int tx = -block_radius; tx <= block_radius; ++tx)
                     {
-                        int col_dist_sums_tx_block_radius_index = 0;
-
+                        int col_sum = 0;
                         for (int ty = -block_radius; ty <= block_radius; ++ty)
                         {
                             int dist = calcDist(src(ay + ty, ax + tx), src(by + ty, bx + tx));
 
                             dist_sums[index] += dist;
-                            col_dist_sums_tx_block_radius_index += dist;
+                            col_sum += dist;
                         }
-
-                        col_dist_sums(tx + block_radius, index) = col_dist_sums_tx_block_radius_index;
+                        col_sums(tx + block_radius, index) = col_sum;
                     }
 #else
                     for (int ty = -block_radius; ty <= block_radius; ++ty)
@@ -259,16 +256,16 @@ namespace cv { namespace gpu { namespace device
                             int dist = calcDist(src(ay + ty, ax + tx), src(by + ty, bx + tx));
 
                             dist_sums[index] += dist;
-                            col_dist_sums(tx + block_radius, index) += dist;                            
+                            col_sums(tx + block_radius, index) += dist;                            
                         }
 #endif
 
-                    up_col_dist_sums(j, index) = col_dist_sums(block_window - 1, index);
+                    up_col_sums(j, index) = col_sums(block_window - 1, index);
                 }
             }
 
-            __device__ __forceinline__ void shiftLeftSums_TileFirstRow(int i, int j, int first_col, int* dist_sums, PtrStepi& col_dist_sums, PtrStepi& up_col_dist_sums) const
-            {              
+            __device__ __forceinline__ void shiftRight_FirstRow(int i, int j, int first, int* dist_sums, PtrStepi& col_sums, PtrStepi& up_col_sums) const
+            {                          
                 for(int index = threadIdx.x; index < search_window * search_window; index += STRIDE)
                 {                                        
                     int y = index / search_window;
@@ -280,54 +277,46 @@ namespace cv { namespace gpu { namespace device
                     int by = i + y - search_radius;
                     int bx = j + x - search_radius + block_radius;
 
-                    int col_dist_sum = 0;
+                    int col_sum = 0;
 
                     for (int ty = -block_radius; ty <= block_radius; ++ty)
-                        col_dist_sum += calcDist(src(ay + ty, ax), src(by + ty, bx));                  
-
-                    int old_dist_sums = dist_sums[index];
-                    int old_col_sum = col_dist_sums(first_col, index);
-                    dist_sums[index] += col_dist_sum - old_col_sum;
-
+                        col_sum += calcDist(src(ay + ty, ax), src(by + ty, bx));                  
                     
-                    col_dist_sums(first_col, index) = col_dist_sum;
-                    up_col_dist_sums(j, index) = col_dist_sum;
+                    dist_sums[index] += col_sum - col_sums(first, index);
+
+                    col_sums(first, index) = col_sum;
+                    up_col_sums(j, index) = col_sum;
                 }
             }
 
-            __device__ __forceinline__ void shiftLeftSums_UsingUpSums(int i, int j, int first_col, int* dist_sums, PtrStepi& col_dist_sums, PtrStepi& up_col_dist_sums) const
+            __device__ __forceinline__ void shiftRight_UpSums(int i, int j, int first, int* dist_sums, PtrStepi& col_sums, PtrStepi& up_col_sums) const
             {
                 int ay = i;
                 int ax = j + block_radius;
-
-                int start_by = i - search_radius;
-                int start_bx = j - search_radius + block_radius;
 
                 T a_up   = src(ay - block_radius - 1, ax);
                 T a_down = src(ay + block_radius, ax);
 
                 for(int index = threadIdx.x; index < search_window * search_window; index += STRIDE)
-                {
-                    dist_sums[index] -= col_dist_sums(first_col, index);
-
+                {                    
                     int y = index / search_window;
                     int x = index - y * search_window;
 
-                    int by = start_by + y;
-                    int bx = start_bx + x;
+                    int by = i + y - search_radius;
+                    int bx = j + x - search_radius + block_radius;
 
                     T b_up   = src(by - block_radius - 1, bx);
                     T b_down = src(by + block_radius, bx);
 
-                    int col_dist_sums_first_col_index = up_col_dist_sums(j, index) + calcDist(a_down, b_down) - calcDist(a_up, b_up);
-
-                    col_dist_sums(first_col, index) = col_dist_sums_first_col_index;
-                    dist_sums[index] += col_dist_sums_first_col_index;
-                    up_col_dist_sums(j, index) = col_dist_sums_first_col_index;
+                    int col_sum = up_col_sums(j, index) + calcDist(a_down, b_down) - calcDist(a_up, b_up);
+                  
+                    dist_sums[index] += col_sum  - col_sums(first, index);
+                    col_sums(first, index) = col_sum;                    
+                    up_col_sums(j, index) = col_sum;
                 }
             }
 
-            __device__ __forceinline__ void convolve_search_window(int i, int j, const int* dist_sums, PtrStepi& col_dist_sums, PtrStepi& up_col_dist_sums, T& dst) const
+            __device__ __forceinline__ void convolve_window(int i, int j, const int* dist_sums, PtrStepi& col_sums, PtrStepi& up_col_sums, T& dst) const
             {
                 typedef typename TypeVec<float, VecTraits<T>::cn>::vec_type sum_type;
 
@@ -336,8 +325,8 @@ namespace cv { namespace gpu { namespace device
 
                 float bw2_inv = 1.f/(block_window * block_window);
 
-                int start_x = j - search_radius;
-                int start_y = i - search_radius;
+                int sx = j - search_radius;
+                int sy = i - search_radius;
 
                 for(int index = threadIdx.x; index < search_window * search_window; index += STRIDE)
                 {
@@ -348,7 +337,7 @@ namespace cv { namespace gpu { namespace device
                     float weight = __expf(avg_dist * minus_h2_inv);
                     weights_sum += weight;
 
-                    sum = sum + weight * saturate_cast<sum_type>(src(start_y + y, start_x + x));
+                    sum = sum + weight * saturate_cast<sum_type>(src(sy + y, sx + x));
                 }
                 
                 volatile __shared__ float cta_buffer[CTA_SIZE];
@@ -357,21 +346,19 @@ namespace cv { namespace gpu { namespace device
 
                 cta_buffer[tid] = weights_sum;
                 __syncthreads();
-                Block::reduce<CTA_SIZE>(cta_buffer, plus());
-
-                if (tid == 0)
-                    weights_sum = cta_buffer[0];
+                Block::reduce<CTA_SIZE>(cta_buffer, plus());                                
+                weights_sum = cta_buffer[0];
 
                 __syncthreads();
+
 
                 for(int n = 0; n < VecTraits<T>::cn; ++n)
                 {
                     cta_buffer[tid] = reinterpret_cast<float*>(&sum)[n];
                     __syncthreads();
-                    Block::reduce<CTA_SIZE>(cta_buffer, plus());
-                    
-                    if (tid == 0)
-                      reinterpret_cast<float*>(&sum)[n] = cta_buffer[0];
+                    Block::reduce<CTA_SIZE>(cta_buffer, plus());                                                    
+                    reinterpret_cast<float*>(&sum)[n] = cta_buffer[0];
+
                     __syncthreads();
                 }
 
@@ -387,17 +374,17 @@ namespace cv { namespace gpu { namespace device
                 int tex = ::min(tbx + TILE_COLS, dst.cols);
                 int tey = ::min(tby + TILE_ROWS, dst.rows);
 
-                PtrStepi col_dist_sums;
-                col_dist_sums.data = buffer.ptr(dst.cols + blockIdx.x * block_window) + blockIdx.y * search_window * search_window;
-                col_dist_sums.step = buffer.step;
+                PtrStepi col_sums;
+                col_sums.data = buffer.ptr(dst.cols + blockIdx.x * block_window) + blockIdx.y * search_window * search_window;
+                col_sums.step = buffer.step;
 
-                PtrStepi up_col_dist_sums;
-                up_col_dist_sums.data = buffer.data + blockIdx.y * search_window * search_window;
-                up_col_dist_sums.step = buffer.step;
+                PtrStepi up_col_sums;
+                up_col_sums.data = buffer.data + blockIdx.y * search_window * search_window;
+                up_col_sums.step = buffer.step;
 
                 extern __shared__ int dist_sums[]; //search_window * search_window
 
-                int first_col = -1;
+                int first = 0;
 
                 for (int i = tby; i < tey; ++i)
                     for (int j = tbx; j < tex; ++j)
@@ -406,22 +393,22 @@ namespace cv { namespace gpu { namespace device
 
                         if (j == tbx)
                         {
-                            initSums_TileFistColumn(i, j, dist_sums, col_dist_sums, up_col_dist_sums);
-                            first_col = 0;
+                            initSums_BruteForce(i, j, dist_sums, col_sums, up_col_sums);
+                            first = 0;
                         }
                         else
                         {                            
                             if (i == tby)
-                              shiftLeftSums_TileFirstRow(i, j, first_col, dist_sums, col_dist_sums, up_col_dist_sums);
+                              shiftRight_FirstRow(i, j, first, dist_sums, col_sums, up_col_sums);
                             else
-                              shiftLeftSums_UsingUpSums(i, j, first_col, dist_sums, col_dist_sums, up_col_dist_sums);
+                              shiftRight_UpSums(i, j, first, dist_sums, col_sums, up_col_sums);
 
-                            first_col = (first_col + 1) % block_window;
+                            first = (first + 1) % block_window;
                         }
 
                         __syncthreads();
                         
-                        convolve_search_window(i, j, dist_sums, col_dist_sums, up_col_dist_sums, dst(i, j));
+                        convolve_window(i, j, dist_sums, col_sums, up_col_sums, dst(i, j));
                     }
             }
 
@@ -463,6 +450,55 @@ namespace cv { namespace gpu { namespace device
         template void nlm_fast_gpu<uchar>(const PtrStepSzb&, PtrStepSzb, PtrStepi, int, int, float,  cudaStream_t);
         template void nlm_fast_gpu<uchar2>(const PtrStepSzb&, PtrStepSzb, PtrStepi, int, int, float, cudaStream_t);
         template void nlm_fast_gpu<uchar3>(const PtrStepSzb&, PtrStepSzb, PtrStepi, int, int, float, cudaStream_t);
+
+        
+
+        __global__ void fnlm_split_kernel(const PtrStepSz<uchar3> lab, PtrStepb l, PtrStep<uchar2> ab)
+        {
+            int x = threadIdx.x + blockIdx.x * blockDim.x;
+            int y = threadIdx.y + blockIdx.y * blockDim.y;
+
+            if (x < lab.cols && y < lab.rows)
+            {
+                uchar3 p = lab(y, x);
+                ab(y,x) = make_uchar2(p.y, p.z);
+                l(y,x) = p.x;                
+            }
+        }
+        
+        void fnlm_split_channels(const PtrStepSz<uchar3>& lab, PtrStepb l, PtrStep<uchar2> ab, cudaStream_t stream)
+        {
+            dim3 b(32, 8);
+            dim3 g(divUp(lab.cols, b.x), divUp(lab.rows, b.y));
+
+            fnlm_split_kernel<<<g, b>>>(lab, l, ab);
+            cudaSafeCall ( cudaGetLastError () );
+            if (stream == 0)
+                cudaSafeCall( cudaDeviceSynchronize() );
+        }
+
+        __global__ void fnlm_merge_kernel(const PtrStepb l, const PtrStep<uchar2> ab, PtrStepSz<uchar3> lab)
+        {
+            int x = threadIdx.x + blockIdx.x * blockDim.x;
+            int y = threadIdx.y + blockIdx.y * blockDim.y;
+
+            if (x < lab.cols && y < lab.rows)
+            {
+                uchar2 p = ab(y, x);
+                lab(y, x) = make_uchar3(l(y, x), p.x, p.y);          
+            }
+        }
+
+        void fnlm_merge_channels(const PtrStepb& l, const PtrStep<uchar2>& ab, PtrStepSz<uchar3> lab, cudaStream_t stream)
+        {
+            dim3 b(32, 8);
+            dim3 g(divUp(lab.cols, b.x), divUp(lab.rows, b.y));
+
+            fnlm_merge_kernel<<<g, b>>>(l, ab, lab);
+            cudaSafeCall ( cudaGetLastError () );
+            if (stream == 0)
+                cudaSafeCall( cudaDeviceSynchronize() );
+        }
     }
 }}}
 
