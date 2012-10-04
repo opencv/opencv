@@ -487,6 +487,8 @@ string tempfile( const char* suffix )
     if(0 == ::GetTempFileNameA(temp_dir, "ocv", 0, temp_file))
         return string();
 
+    DeleteFileA(temp_file);
+
     string name = temp_file;
     if(suffix)
     {
