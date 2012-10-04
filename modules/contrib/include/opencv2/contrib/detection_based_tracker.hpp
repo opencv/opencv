@@ -90,6 +90,26 @@ class DetectionBasedTracker
         virtual void getObjects(std::vector<cv::Rect>& result) const;
         virtual void getObjects(std::vector<Object>& result) const;
 
+        enum ObjectStatus
+        {
+            DETECTED_NOT_SHOWN_YET,
+            DETECTED,
+            DETECTED_TEMPORARY_LOST,
+            WRONG_OBJECT
+        };
+        struct ExtObject
+        {
+            int id;
+            cv::Rect location;
+            ObjectStatus status;
+            ExtObject(int _id, cv::Rect _location, ObjectStatus _status)
+                :id(_id), location(_location), status(_status)
+            {
+            }
+        };
+        virtual void getObjects(std::vector<ExtObject>& result) const;
+
+
         virtual int addObject(const cv::Rect& location); //returns id of the new object
 
     protected:
@@ -146,6 +166,7 @@ class DetectionBasedTracker
 
         void updateTrackedObjects(const std::vector<cv::Rect>& detectedObjects);
         cv::Rect calcTrackedObjectPositionToShow(int i) const;
+        cv::Rect calcTrackedObjectPositionToShow(int i, ObjectStatus& status) const;
         void detectInRegion(const cv::Mat& img, const cv::Rect& r, std::vector<cv::Rect>& detectedObjectsInRegions);
 };
 } //end of cv namespace
