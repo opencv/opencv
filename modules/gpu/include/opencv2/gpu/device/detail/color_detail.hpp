@@ -1535,6 +1535,8 @@ namespace cv { namespace gpu { namespace device
             return functor_type(); \
         } \
     };
+
+    #undef CV_DESCALE
 }}} // namespace cv { namespace gpu { namespace device
 
 #endif // __OPENCV_GPU_COLOR_DETAIL_HPP__

@@ -60,8 +60,6 @@ namespace cv { namespace gpu
             __OPENCV_GPU_HOST_DEVICE__ static void check() {};
         };
     }
-
-    using ::cv::gpu::device::Static;
 }}
 
 #undef __OPENCV_GPU_HOST_DEVICE__
