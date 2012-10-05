@@ -47,7 +47,7 @@
 #include "../vec_traits.hpp"
 #include "../functional.hpp"
 
-namespace cv { namespace gpu { namespace device 
+namespace cv { namespace gpu { namespace device
 {
     namespace transform_detail
     {
@@ -203,7 +203,7 @@ namespace cv { namespace gpu { namespace device
         };
 
         template <typename T, typename D, typename UnOp, typename Mask>
-        __global__ static void transformSmart(const PtrStepSz<T> src_, PtrStep<D> dst_, const Mask mask, const UnOp op)
+        static __global__ void transformSmart(const PtrStepSz<T> src_, PtrStep<D> dst_, const Mask mask, const UnOp op)
         {
             typedef TransformFunctorTraits<UnOp> ft;
             typedef typename UnaryReadWriteTraits<T, D, ft::smart_shift>::read_type read_type;
@@ -239,10 +239,10 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <typename T, typename D, typename UnOp, typename Mask>
-        static __global__ void transformSimple(const PtrStepSz<T> src, PtrStep<D> dst, const Mask mask, const UnOp op)
+        __global__ static void transformSimple(const PtrStepSz<T> src, PtrStep<D> dst, const Mask mask, const UnOp op)
         {
-	        const int x = blockDim.x * blockIdx.x + threadIdx.x;
-	        const int y = blockDim.y * blockIdx.y + threadIdx.y;
+            const int x = blockDim.x * blockIdx.x + threadIdx.x;
+            const int y = blockDim.y * blockIdx.y + threadIdx.y;
 
             if (x < src.cols && y < src.rows && mask(y, x))
             {
@@ -251,7 +251,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <typename T1, typename T2, typename D, typename BinOp, typename Mask>
-        __global__ static void transformSmart(const PtrStepSz<T1> src1_, const PtrStep<T2> src2_, PtrStep<D> dst_, 
+        static __global__ void transformSmart(const PtrStepSz<T1> src1_, const PtrStep<T2> src2_, PtrStep<D> dst_,
             const Mask mask, const BinOp op)
         {
             typedef TransformFunctorTraits<BinOp> ft;
@@ -274,7 +274,7 @@ namespace cv { namespace gpu { namespace device
                     const read_type1 src1_n_el = ((const read_type1*)src1)[x];
                     const read_type2 src2_n_el = ((const read_type2*)src2)[x];
                     write_type dst_n_el = ((const write_type*)dst)[x];
-                    
+
                     OpUnroller<ft::smart_shift>::unroll(src1_n_el, src2_n_el, dst_n_el, mask, op, x_shifted, y);
 
                     ((write_type*)dst)[x] = dst_n_el;
@@ -291,11 +291,11 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <typename T1, typename T2, typename D, typename BinOp, typename Mask>
-        static __global__ void transformSimple(const PtrStepSz<T1> src1, const PtrStep<T2> src2, PtrStep<D> dst, 
+        static __global__ void transformSimple(const PtrStepSz<T1> src1, const PtrStep<T2> src2, PtrStep<D> dst,
             const Mask mask, const BinOp op)
         {
-	        const int x = blockDim.x * blockIdx.x + threadIdx.x;
-	        const int y = blockDim.y * blockIdx.y + threadIdx.y;
+            const int x = blockDim.x * blockIdx.x + threadIdx.x;
+            const int y = blockDim.y * blockIdx.y + threadIdx.y;
 
             if (x < src1.cols && y < src1.rows && mask(y, x))
             {
@@ -314,13 +314,13 @@ namespace cv { namespace gpu { namespace device
                 typedef TransformFunctorTraits<UnOp> ft;
 
                 const dim3 threads(ft::simple_block_dim_x, ft::simple_block_dim_y, 1);
-                const dim3 grid(divUp(src.cols, threads.x), divUp(src.rows, threads.y), 1);     
+                const dim3 grid(divUp(src.cols, threads.x), divUp(src.rows, threads.y), 1);
 
                 transformSimple<T, D><<<grid, threads, 0, stream>>>(src, dst, mask, op);
                 cudaSafeCall( cudaGetLastError() );
 
                 if (stream == 0)
-                    cudaSafeCall( cudaDeviceSynchronize() ); 
+                    cudaSafeCall( cudaDeviceSynchronize() );
             }
 
             template <typename T1, typename T2, typename D, typename BinOp, typename Mask>
@@ -329,13 +329,13 @@ namespace cv { namespace gpu { namespace device
                 typedef TransformFunctorTraits<BinOp> ft;
 
                 const dim3 threads(ft::simple_block_dim_x, ft::simple_block_dim_y, 1);
-                const dim3 grid(divUp(src1.cols, threads.x), divUp(src1.rows, threads.y), 1);     
+                const dim3 grid(divUp(src1.cols, threads.x), divUp(src1.rows, threads.y), 1);
 
                 transformSimple<T1, T2, D><<<grid, threads, 0, stream>>>(src1, src2, dst, mask, op);
                 cudaSafeCall( cudaGetLastError() );
 
                 if (stream == 0)
-                    cudaSafeCall( cudaDeviceSynchronize() );            
+                    cudaSafeCall( cudaDeviceSynchronize() );
             }
         };
         template<> struct TransformDispatcher<true>
@@ -347,7 +347,7 @@ namespace cv { namespace gpu { namespace device
 
                 StaticAssert<ft::smart_shift != 1>::check();
 
-                if (!isAligned(src.data, ft::smart_shift * sizeof(T)) || !isAligned(src.step, ft::smart_shift * sizeof(T)) || 
+                if (!isAligned(src.data, ft::smart_shift * sizeof(T)) || !isAligned(src.step, ft::smart_shift * sizeof(T)) ||
                     !isAligned(dst.data, ft::smart_shift * sizeof(D)) || !isAligned(dst.step, ft::smart_shift * sizeof(D)))
                 {
                     TransformDispatcher<false>::call(src, dst, op, mask, stream);
@@ -355,7 +355,7 @@ namespace cv { namespace gpu { namespace device
                 }
 
                 const dim3 threads(ft::smart_block_dim_x, ft::smart_block_dim_y, 1);
-                const dim3 grid(divUp(src.cols, threads.x * ft::smart_shift), divUp(src.rows, threads.y), 1);      
+                const dim3 grid(divUp(src.cols, threads.x * ft::smart_shift), divUp(src.rows, threads.y), 1);
 
                 transformSmart<T, D><<<grid, threads, 0, stream>>>(src, dst, mask, op);
                 cudaSafeCall( cudaGetLastError() );
@@ -380,15 +380,15 @@ namespace cv { namespace gpu { namespace device
                 }
 
                 const dim3 threads(ft::smart_block_dim_x, ft::smart_block_dim_y, 1);
-                const dim3 grid(divUp(src1.cols, threads.x * ft::smart_shift), divUp(src1.rows, threads.y), 1);    
+                const dim3 grid(divUp(src1.cols, threads.x * ft::smart_shift), divUp(src1.rows, threads.y), 1);
 
                 transformSmart<T1, T2, D><<<grid, threads, 0, stream>>>(src1, src2, dst, mask, op);
                 cudaSafeCall( cudaGetLastError() );
 
                 if (stream == 0)
-                    cudaSafeCall( cudaDeviceSynchronize() );            
+                    cudaSafeCall( cudaDeviceSynchronize() );
             }
-        };        
+        };
     } // namespace transform_detail
 }}} // namespace cv { namespace gpu { namespace device
 

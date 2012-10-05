@@ -43,124 +43,129 @@
 #ifndef __OPENCV_GPU_SCAN_HPP__
 #define __OPENCV_GPU_SCAN_HPP__
 
-        enum ScanKind { EXCLUSIVE = 0,  INCLUSIVE = 1 };
+#include "common.hpp"
 
-        template <ScanKind Kind, typename T, typename F> struct WarpScan
+namespace cv { namespace gpu { namespace device
+{
+    enum ScanKind { EXCLUSIVE = 0,  INCLUSIVE = 1 };
+
+    template <ScanKind Kind, typename T, typename F> struct WarpScan
+    {
+        __device__ __forceinline__ WarpScan() {}
+        __device__ __forceinline__ WarpScan(const WarpScan& other) { (void)other; }
+
+        __device__ __forceinline__ T operator()( volatile T *ptr , const unsigned int idx)
         {
-            __device__ __forceinline__ WarpScan() {}
-            __device__ __forceinline__ WarpScan(const WarpScan& other) { (void)other; }
+            const unsigned int lane = idx & 31;
+            F op;
 
-            __device__ __forceinline__ T operator()( volatile T *ptr , const unsigned int idx)
-            {
-                const unsigned int lane = idx & 31;
-                F op;
+            if ( lane >=  1) ptr [idx ] = op(ptr [idx -  1], ptr [idx]);
+            if ( lane >=  2) ptr [idx ] = op(ptr [idx -  2], ptr [idx]);
+            if ( lane >=  4) ptr [idx ] = op(ptr [idx -  4], ptr [idx]);
+            if ( lane >=  8) ptr [idx ] = op(ptr [idx -  8], ptr [idx]);
+            if ( lane >= 16) ptr [idx ] = op(ptr [idx - 16], ptr [idx]);
 
-                if ( lane >=  1) ptr [idx ] = op(ptr [idx -  1], ptr [idx]);
-                if ( lane >=  2) ptr [idx ] = op(ptr [idx -  2], ptr [idx]);
-                if ( lane >=  4) ptr [idx ] = op(ptr [idx -  4], ptr [idx]);
-                if ( lane >=  8) ptr [idx ] = op(ptr [idx -  8], ptr [idx]);
-                if ( lane >= 16) ptr [idx ] = op(ptr [idx - 16], ptr [idx]);
+            if( Kind == INCLUSIVE )
+                return ptr [idx];
+            else
+                return (lane > 0) ? ptr [idx - 1] : 0;
+        }
 
-                if( Kind == INCLUSIVE )
-                    return ptr [idx];
-                else
-                    return (lane > 0) ? ptr [idx - 1] : 0;
-            }
-
-            __device__ __forceinline__ unsigned int index(const unsigned int tid)
-            {
-                return tid;
-            }
-
-            __device__ __forceinline__ void init(volatile T *ptr){}
-
-            static const int warp_offset      = 0;
-
-            typedef WarpScan<INCLUSIVE, T, F>  merge;
-        };
-
-        template <ScanKind Kind , typename T, typename F> struct WarpScanNoComp
+        __device__ __forceinline__ unsigned int index(const unsigned int tid)
         {
-            __device__ __forceinline__ WarpScanNoComp() {}
-            __device__ __forceinline__ WarpScanNoComp(const WarpScanNoComp& other) { (void)other; }
+            return tid;
+        }
 
-            __device__ __forceinline__ T operator()( volatile T *ptr , const unsigned int idx)
-            {
-                const unsigned int lane = threadIdx.x & 31;
-                F op;
+        __device__ __forceinline__ void init(volatile T *ptr){}
 
-                ptr [idx ] = op(ptr [idx -  1], ptr [idx]);
-                ptr [idx ] = op(ptr [idx -  2], ptr [idx]);
-                ptr [idx ] = op(ptr [idx -  4], ptr [idx]);
-                ptr [idx ] = op(ptr [idx -  8], ptr [idx]);
-                ptr [idx ] = op(ptr [idx - 16], ptr [idx]);
+        static const int warp_offset      = 0;
 
-                if( Kind == INCLUSIVE )
-                    return ptr [idx];
-                else
-                    return (lane > 0) ? ptr [idx - 1] : 0;
-            }
+        typedef WarpScan<INCLUSIVE, T, F>  merge;
+    };
 
-            __device__ __forceinline__ unsigned int index(const unsigned int tid)
-            {
-                return (tid >> warp_log) * warp_smem_stride + 16 + (tid & warp_mask);
-            }
+    template <ScanKind Kind , typename T, typename F> struct WarpScanNoComp
+    {
+        __device__ __forceinline__ WarpScanNoComp() {}
+        __device__ __forceinline__ WarpScanNoComp(const WarpScanNoComp& other) { (void)other; }
 
-            __device__ __forceinline__ void init(volatile T *ptr)
-            {
-                ptr[threadIdx.x] = 0;
-            }
-
-            static const int warp_smem_stride = 32 + 16 + 1;
-            static const int warp_offset      = 16;
-            static const int warp_log         = 5;
-            static const int warp_mask        = 31;
-
-            typedef WarpScanNoComp<INCLUSIVE, T, F> merge;
-        };
-
-        template <ScanKind Kind , typename T, typename Sc, typename F> struct BlockScan
+        __device__ __forceinline__ T operator()( volatile T *ptr , const unsigned int idx)
         {
-            __device__ __forceinline__ BlockScan() {}
-            __device__ __forceinline__ BlockScan(const BlockScan& other) { (void)other; }
+            const unsigned int lane = threadIdx.x & 31;
+            F op;
 
-            __device__ __forceinline__ T operator()(volatile T *ptr)
-            {
-                const unsigned int tid  = threadIdx.x;
-                const unsigned int lane = tid & warp_mask;
-                const unsigned int warp = tid >> warp_log;
+            ptr [idx ] = op(ptr [idx -  1], ptr [idx]);
+            ptr [idx ] = op(ptr [idx -  2], ptr [idx]);
+            ptr [idx ] = op(ptr [idx -  4], ptr [idx]);
+            ptr [idx ] = op(ptr [idx -  8], ptr [idx]);
+            ptr [idx ] = op(ptr [idx - 16], ptr [idx]);
 
-                Sc scan;
-                typename Sc::merge merge_scan;
-                const unsigned int idx = scan.index(tid);
+            if( Kind == INCLUSIVE )
+                return ptr [idx];
+            else
+                return (lane > 0) ? ptr [idx - 1] : 0;
+        }
 
-                T val = scan(ptr, idx);
-                __syncthreads ();
+        __device__ __forceinline__ unsigned int index(const unsigned int tid)
+        {
+            return (tid >> warp_log) * warp_smem_stride + 16 + (tid & warp_mask);
+        }
 
-                if( warp == 0)
-                    scan.init(ptr);
-                __syncthreads ();
+        __device__ __forceinline__ void init(volatile T *ptr)
+        {
+            ptr[threadIdx.x] = 0;
+        }
 
-                if( lane == 31 )
-                    ptr [scan.warp_offset + warp ] = (Kind == INCLUSIVE) ? val : ptr [idx];
-                __syncthreads ();
+        static const int warp_smem_stride = 32 + 16 + 1;
+        static const int warp_offset      = 16;
+        static const int warp_log         = 5;
+        static const int warp_mask        = 31;
 
-                if( warp == 0 )
-                    merge_scan(ptr, idx);
-                __syncthreads();
+        typedef WarpScanNoComp<INCLUSIVE, T, F> merge;
+    };
 
-                if ( warp > 0)
-                    val = ptr [scan.warp_offset + warp - 1] + val;
-                __syncthreads ();
+    template <ScanKind Kind , typename T, typename Sc, typename F> struct BlockScan
+    {
+        __device__ __forceinline__ BlockScan() {}
+        __device__ __forceinline__ BlockScan(const BlockScan& other) { (void)other; }
 
-                ptr[idx] = val;
-                __syncthreads ();
+        __device__ __forceinline__ T operator()(volatile T *ptr)
+        {
+            const unsigned int tid  = threadIdx.x;
+            const unsigned int lane = tid & warp_mask;
+            const unsigned int warp = tid >> warp_log;
 
-                return val ;
-            }
+            Sc scan;
+            typename Sc::merge merge_scan;
+            const unsigned int idx = scan.index(tid);
 
-            static const int warp_log  = 5;
-            static const int warp_mask = 31;
-        };
+            T val = scan(ptr, idx);
+            __syncthreads ();
 
-#endif
+            if( warp == 0)
+                scan.init(ptr);
+            __syncthreads ();
+
+            if( lane == 31 )
+                ptr [scan.warp_offset + warp ] = (Kind == INCLUSIVE) ? val : ptr [idx];
+            __syncthreads ();
+
+            if( warp == 0 )
+                merge_scan(ptr, idx);
+            __syncthreads();
+
+            if ( warp > 0)
+                val = ptr [scan.warp_offset + warp - 1] + val;
+            __syncthreads ();
+
+            ptr[idx] = val;
+            __syncthreads ();
+
+            return val ;
+        }
+
+        static const int warp_log  = 5;
+        static const int warp_mask = 31;
+    };
+}}}
+
+#endif // __OPENCV_GPU_SCAN_HPP__
