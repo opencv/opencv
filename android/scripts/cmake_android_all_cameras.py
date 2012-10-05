@@ -49,10 +49,10 @@ for s in ConfFile.readlines():
     if (os.path.exists(CameraLib)):
 	try:
 	    shutil.copyfile(CameraLib, os.path.join("..", "3rdparty", "lib", Arch, "lib" + MakeTarget + ".so"))
-	    print("Building %s for %s\t[OK]" % (MakeTarget, Arch));
+	    print("Building %s for %s\t[\033[92mOK\033[0m]" % (MakeTarget, Arch));
 	except:
-	    print("Building %s for %s\t[FAILED]" % (MakeTarget, Arch));
+	    print("Building %s for %s\t[\033[91mFAILED\033[0m]" % (MakeTarget, Arch));
     else:
-	print("Building %s for %s\t[FAILED]" % (MakeTarget, Arch));
+	print("Building %s for %s\t[\033[91mFAILED\033[0m]" % (MakeTarget, Arch));
 ConfFile.close()
 
