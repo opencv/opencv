@@ -283,7 +283,7 @@ struct ChannelStorage
 
         // convert to luv
         cv::Mat luv;
-        cv::cvtColor(colored, luv, CV_RGB2Luv);
+        cv::cvtColor(colored, luv, CV_BGR2Luv);
 
         // split to 3 one channel matrix
         std::vector<cv::Mat> splited, luvs;
@@ -300,7 +300,7 @@ struct ChannelStorage
 
         // convert to grey
         cv::Mat grey;
-        cv::cvtColor(colored, grey, CV_RGB2GRAY);
+        cv::cvtColor(colored, grey, CV_BGR2GRAY);
 
         // get derivative
         cv::Mat df_dx, df_dy, mag, angle;
@@ -371,7 +371,7 @@ struct ChannelStorage
     float get(const int x, const int y, const int channel, const cv::Rect& area) const
     {
         CV_Assert(channel < HOG_LUV_BINS);
-        const cv::Mat m = hog[channel];
+        const cv::Mat& m = hog[channel];
 
         dprintf("feature box %d %d %d %d ", area.x, area.y, area.width, area.height);
         dprintf("get for channel %d\n", channel);
@@ -730,9 +730,6 @@ void cv::SoftCascade::detectMultiScale(const Mat& image, const std::vector<cv::R
     objects.clear();
 
     const Filds& fld = *filds;
-
-    cv::Mat image1;
-    cv::cvtColor(image, image1, CV_BGR2RGB);
 
     // create integrals
     ChannelStorage storage(image, fld.shrinkage);
