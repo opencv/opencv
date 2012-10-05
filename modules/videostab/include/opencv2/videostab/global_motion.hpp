@@ -111,7 +111,7 @@ class CV_EXPORTS MotionEstimatorL1 : public MotionEstimatorBase
 public:
     MotionEstimatorL1(MotionModel model = MM_AFFINE);
 
-    virtual Mat estimate(InputArray points0, InputArray points1, bool *ok);
+    virtual Mat estimate(InputArray points0, InputArray points1, bool *ok = 0);
 
 private:
     std::vector<double> obj_, collb_, colub_;
