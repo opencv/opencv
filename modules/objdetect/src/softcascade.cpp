@@ -204,6 +204,7 @@ struct Level
     enum { R_SHIFT = 1 << 15 };
 
     float scaling[2];
+    typedef cv::SoftCascade::Detection detection_t;
 
     Level(const Octave& oct, const float scale, const int shrinkage, const int w, const int h)
     :  octave(&oct), origScale(scale), relScale(scale / oct.scale), shrScale (relScale / (float)shrinkage),
@@ -215,12 +216,12 @@ struct Level
         scaleshift = relScale * (1 << 16);
     }
 
-    void markDetection(const int x, const int y, float confidence, std::vector<Object>& detections) const
+    void markDetection(const int x, const int y, float confidence, std::vector<detection_t>& detections) const
     {
         int shrinkage = (*octave).shrinkage;
         cv::Rect rect(cvRound(x * shrinkage), cvRound(y * shrinkage), objSize.width, objSize.height);
 
-        detections.push_back(Object(rect, confidence));
+        detections.push_back(detection_t(rect, confidence));
     }
 
     float rescale(cv::Rect& scaledRect, const float threshold, int idx) const
@@ -432,7 +433,8 @@ struct cv::SoftCascade::Filds
 
     typedef std::vector<Octave>::iterator  octIt_t;
 
-    void detectAt(const int dx, const int dy, const Level& level, const ChannelStorage& storage, std::vector<Object>& detections) const
+    void detectAt(const int dx, const int dy, const Level& level, const ChannelStorage& storage,
+        std::vector<Detection>& detections) const
     {
         dprintf("detect at: %d %d\n", dx, dy);
 
@@ -685,12 +687,11 @@ bool cv::SoftCascade::load( const string& filename, const float minScale, const 
     return true;
 }
 
-#define DEBUG_SHOW_RESULT
-
 void cv::SoftCascade::detectMultiScale(const Mat& image, const std::vector<cv::Rect>& /*rois*/,
                                        std::vector<Detection>& objects, const int /*rejectfactor*/) const
 {
     typedef std::vector<cv::Rect>::const_iterator RIter_t;
+
     // only color images are supperted
     CV_Assert(image.type() == CV_8UC3);
 
@@ -704,49 +705,20 @@ void cv::SoftCascade::detectMultiScale(const Mat& image, const std::vector<cv::R
     // create integrals
     ChannelStorage storage(image, fld.shrinkage);
 
-    // object candidates
-    std::vector<Object> detections;
-
     typedef std::vector<Level>::const_iterator lIt;
-    int total = 0, l = 0;
+
     for (lIt it = fld.levels.begin(); it != fld.levels.end(); ++it)
     {
         const Level& level = *it;
 
-#if defined WITH_DEBUG_OUT
-        std::cout << "================================ " << l++ << std::endl;
-#else
-    (void)l;
-#endif
-        // int dx = 79; int dy = 76;
         for (int dy = 0; dy < level.workRect.height; ++dy)
         {
             for (int dx = 0; dx < level.workRect.width; ++dx)
             {
                 storage.offset = dy * storage.step + dx;
-                fld.detectAt(dx, dy, level, storage, detections);
-
-                total++;
+                fld.detectAt(dx, dy, level, storage, objects);
             }
         }
-
-#if defined DEBUG_SHOW_RESULT
-        cv::Mat out = image.clone();
-
-        printf("TOTAL: %d from %d\n", (int)detections.size(),total) ;
-
-        for(int i = 0; i < (int)detections.size(); ++i)
-        {
-            cv::rectangle(out, detections[i].rect, cv::Scalar(255, 0, 0, 255), 1);
-        }
-
-        cv::imshow("out", out);
-        cv::waitKey(0);
-        std::cout << "work rect: " << level.workRect.width << " " << level.workRect.height << std::endl;
-#endif
-
-        detections.clear();
     }
 
-    // std::swap(detections, objects);
 }

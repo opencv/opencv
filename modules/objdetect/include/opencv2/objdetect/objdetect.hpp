@@ -501,6 +501,8 @@ public:
         int kind;
 
         enum {PEDESTRIAN = 0};
+
+        Detection(const cv::Rect& r, const float c, int k = PEDESTRIAN) : rect(r), confidence(c), kind(k) {}
     };
 
     //! An empty cascade will be created.
