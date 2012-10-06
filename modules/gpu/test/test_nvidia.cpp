@@ -42,7 +42,7 @@
 #include "test_precomp.hpp"
 
 #if defined HAVE_CUDA
-  OutputLevel nvidiaTestOutputLevel = OutputLevelCompact;
+  OutputLevel nvidiaTestOutputLevel = OutputLevelNone;
 #endif
 
 #if defined HAVE_CUDA && !defined(CUDA_DISABLER)

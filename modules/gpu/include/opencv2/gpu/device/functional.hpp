@@ -43,7 +43,7 @@
 #ifndef __OPENCV_GPU_FUNCTIONAL_HPP__
 #define __OPENCV_GPU_FUNCTIONAL_HPP__
 
-#include <thrust/functional.h>
+#include <functional>
 #include "saturate_cast.hpp"
 #include "vec_traits.hpp"
 #include "type_traits.hpp"
@@ -52,9 +52,8 @@
 namespace cv { namespace gpu { namespace device
 {
     // Function Objects
-
-    using thrust::unary_function;
-    using thrust::binary_function;
+    template<typename Argument, typename Result> struct unary_function : public std::unary_function<Argument, Result> {};
+    template<typename Argument1, typename Argument2, typename Result> struct binary_function : public std::binary_function<Argument1, Argument2, Result> {};
 
     // Arithmetic Operations
     template <typename T> struct plus : binary_function<T, T, T>

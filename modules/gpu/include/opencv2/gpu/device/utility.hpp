@@ -45,7 +45,7 @@
 
 #include "saturate_cast.hpp"
 #include "datamov_utils.hpp"
-#include "detail/utility_detail.hpp"
+#include "detail/reduction_detail.hpp"
 
 namespace cv { namespace gpu { namespace device
 {

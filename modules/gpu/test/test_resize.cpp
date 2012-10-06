@@ -226,10 +226,8 @@ PARAM_TEST_CASE(ResizeNPP, cv::gpu::DeviceInfo, MatType, double, Interpolation)
 
 TEST_P(ResizeNPP, Accuracy)
 {
-    if (type == CV_8UC1 && interpolation == cv::INTER_CUBIC)
-        return;
-
     cv::Mat src = readImageType("stereobp/aloe-L.png", type);
+    ASSERT_FALSE(src.empty());
 
     cv::gpu::GpuMat dst;
     cv::gpu::resize(loadMat(src), dst, cv::Size(), coeff, coeff, interpolation);
@@ -244,6 +242,6 @@ INSTANTIATE_TEST_CASE_P(GPU_ImgProc, ResizeNPP, testing::Combine(
     ALL_DEVICES,
     testing::Values(MatType(CV_8UC1), MatType(CV_8UC4)),
     testing::Values(0.3, 0.5, 1.5, 2.0),
-    testing::Values(Interpolation(cv::INTER_NEAREST), Interpolation(cv::INTER_LINEAR), Interpolation(cv::INTER_CUBIC))));
+    testing::Values(Interpolation(cv::INTER_NEAREST), Interpolation(cv::INTER_LINEAR))));
 
 #endif // HAVE_CUDA

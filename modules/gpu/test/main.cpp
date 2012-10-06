@@ -119,10 +119,10 @@ int main(int argc, char** argv)
     try
     {
         const std::string keys =
-                "{ h help ?            |         | Print help}"
-                "{ i info              |         | Print information about system and exit }"
-                "{ device              | -1      | Device on which tests will be executed (-1 means all devices) }"
-                "{ nvtest_output_level | compact | NVidia test verbosity level (none, compact, full) }"
+                "{ h help ?            |      | Print help}"
+                "{ i info              |      | Print information about system and exit }"
+                "{ device              | -1   | Device on which tests will be executed (-1 means all devices) }"
+                "{ nvtest_output_level | none | NVidia test verbosity level (none, compact, full) }"
                 ;
 
         CommandLineParser cmd(argc, (const char**)argv, keys);

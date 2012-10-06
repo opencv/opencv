@@ -41,12 +41,12 @@ func    png_read_filter_row_sub4_neon, export=1
         ldr             r3,  [r0, #4]           @ rowbytes
         vmov.i8         d3,  #0
 1:
-        vld4.32         {d4[],d5[],d6[],d7[]},    [r1,:128]
+        vld4.32         {d4[],d5[],d6[],d7[]},    [r1]
         vadd.u8         d0,  d3,  d4
         vadd.u8         d1,  d0,  d5
         vadd.u8         d2,  d1,  d6
         vadd.u8         d3,  d2,  d7
-        vst4.32         {d0[0],d1[0],d2[0],d3[0]},[r1,:128]!
+        vst4.32         {d0[0],d1[0],d2[0],d3[0]},[r1]!
         subs            r3,  r3,  #16
         bgt             1b
 
@@ -67,7 +67,7 @@ func    png_read_filter_row_sub3_neon, export=1
         vadd.u8         d1,  d0,  d5
         vext.8          d7,  d23, d23, #1
         vld1.8          {q11},    [r0], r12
-        vst1.32         {d0[0]},  [r1,:32], r2
+        vst1.32         {d0[0]},  [r1], r2
         vadd.u8         d2,  d1,  d6
         vst1.32         {d1[0]},  [r1], r2
         vadd.u8         d3,  d2,  d7
@@ -82,10 +82,10 @@ endfunc
 func    png_read_filter_row_up_neon, export=1
         ldr             r3,  [r0, #4]           @ rowbytes
 1:
-        vld1.8          {q0}, [r1,:128]
-        vld1.8          {q1}, [r2,:128]!
+        vld1.8          {q0}, [r1]
+        vld1.8          {q1}, [r2]!
         vadd.u8         q0,  q0,  q1
-        vst1.8          {q0}, [r1,:128]!
+        vst1.8          {q0}, [r1]!
         subs            r3,  r3,  #16
         bgt             1b
 
@@ -96,8 +96,8 @@ func    png_read_filter_row_avg4_neon, export=1
         ldr             r12, [r0, #4]           @ rowbytes
         vmov.i8         d3,  #0
 1:
-        vld4.32         {d4[],d5[],d6[],d7[]},    [r1,:128]
-        vld4.32         {d16[],d17[],d18[],d19[]},[r2,:128]!
+        vld4.32         {d4[],d5[],d6[],d7[]},    [r1]
+        vld4.32         {d16[],d17[],d18[],d19[]},[r2]!
         vhadd.u8        d0,  d3,  d16
         vadd.u8         d0,  d0,  d4
         vhadd.u8        d1,  d0,  d17
@@ -106,7 +106,7 @@ func    png_read_filter_row_avg4_neon, export=1
         vadd.u8         d2,  d2,  d6
         vhadd.u8        d3,  d2,  d19
         vadd.u8         d3,  d3,  d7
-        vst4.32         {d0[0],d1[0],d2[0],d3[0]},[r1,:128]!
+        vst4.32         {d0[0],d1[0],d2[0],d3[0]},[r1]!
         subs            r12, r12, #16
         bgt             1b
 
@@ -133,7 +133,7 @@ func    png_read_filter_row_avg3_neon, export=1
         vadd.u8         d1,  d1,  d5
         vext.8          d7,  d23, d23, #1
         vld1.8          {q11},    [r0], lr
-        vst1.32         {d0[0]},  [r1,:32], r4
+        vst1.32         {d0[0]},  [r1], r4
         vhadd.u8        d2,  d1,  d18
         vst1.32         {d1[0]},  [r1], r4
         vext.8          d19, d21, d21, #1
@@ -169,8 +169,8 @@ func    png_read_filter_row_paeth4_neon, export=1
         vmov.i8         d3,  #0
         vmov.i8         d20, #0
 1:
-        vld4.32         {d4[],d5[],d6[],d7[]},    [r1,:128]
-        vld4.32         {d16[],d17[],d18[],d19[]},[r2,:128]!
+        vld4.32         {d4[],d5[],d6[],d7[]},    [r1]
+        vld4.32         {d16[],d17[],d18[],d19[]},[r2]!
         paeth           d0,  d3,  d16, d20
         vadd.u8         d0,  d0,  d4
         paeth           d1,  d0,  d17, d16
@@ -180,7 +180,7 @@ func    png_read_filter_row_paeth4_neon, export=1
         paeth           d3,  d2,  d19, d18
         vmov            d20, d19
         vadd.u8         d3,  d3,  d7
-        vst4.32         {d0[0],d1[0],d2[0],d3[0]},[r1,:128]!
+        vst4.32         {d0[0],d1[0],d2[0],d3[0]},[r1]!
         subs            r12, r12, #16
         bgt             1b
 
@@ -203,7 +203,7 @@ func    png_read_filter_row_paeth3_neon, export=1
         vadd.u8         d0,  d0,  d22
         vext.8          d17, d20, d21, #3
         paeth           d1,  d0,  d17, d20
-        vst1.32         {d0[0]},  [r1,:32], r4
+        vst1.32         {d0[0]},  [r1], r4
         vext.8          d6,  d22, d23, #6
         vadd.u8         d1,  d1,  d5
         vext.8          d18, d20, d21, #6
