@@ -126,6 +126,7 @@ struct Feature
 {
     int channel;
     cv::Rect rect;
+    float rarea;
 
     static const char * const SC_F_CHANNEL;
     static const char * const SC_F_RECT;
@@ -136,6 +137,9 @@ struct Feature
         cv::FileNode rn = fn[SC_F_RECT];
         cv::FileNodeIterator r_it = rn.end();
         rect = cv::Rect(*(--r_it), *(--r_it), *(--r_it), *(--r_it));
+
+        // 1 / area
+        rarea = 1.f / ((rect.width - rect.x) * (rect.height - rect.y));
     }
 };
 
@@ -192,9 +196,12 @@ struct Level
     float origScale;
     float relScale;
     float shrScale; // used for marking detection
+    int scaleshift;
 
     cv::Size workRect;
     cv::Size objSize;
+
+    enum { R_SHIFT = 1 << 15 };
 
     float scaling[2];
 
@@ -203,8 +210,9 @@ struct Level
        workRect(cv::Size(cvRound(w / (float)shrinkage),cvRound(h / (float)shrinkage))),
        objSize(cv::Size(cvRound(oct.size.width * relScale), cvRound(oct.size.height * relScale)))
     {
-        scaling[0] = CascadeIntrinsics::getFor(0, relScale);
-        scaling[1] = CascadeIntrinsics::getFor(9, relScale);
+        scaling[0] = CascadeIntrinsics::getFor(0, relScale) / (relScale * relScale);
+        scaling[1] = CascadeIntrinsics::getFor(9, relScale) / (relScale * relScale);
+        scaleshift = relScale * (1 << 16);
     }
 
     void markDetection(const int x, const int y, float confidence, std::vector<Object>& detections) const
@@ -213,6 +221,25 @@ struct Level
         cv::Rect rect(cvRound(x * shrinkage), cvRound(y * shrinkage), objSize.width, objSize.height);
 
         detections.push_back(Object(rect, confidence));
+    }
+
+    float rescale(cv::Rect& scaledRect, const float threshold, int idx) const
+    {
+        // rescale
+        // scaledRect.x      = cvRound(relScale * scaledRect.x);
+        // scaledRect.y      = cvRound(relScale * scaledRect.y);
+        // scaledRect.width  = cvRound(relScale * scaledRect.width);
+        // scaledRect.height = cvRound(relScale * scaledRect.height);
+
+        scaledRect.x      = (scaleshift * scaledRect.x + R_SHIFT) >> 16;
+        scaledRect.y      = (scaleshift * scaledRect.y + R_SHIFT) >> 16;
+        scaledRect.width  = (scaleshift * scaledRect.width + R_SHIFT) >> 16;
+        scaledRect.height = (scaleshift * scaledRect.height + R_SHIFT) >> 16;
+
+        float sarea = (scaledRect.width - scaledRect.x) * (scaledRect.height - scaledRect.y);
+
+        // compensation areas rounding
+        return (threshold * scaling[idx] * sarea);
     }
 };
 
@@ -416,41 +443,6 @@ struct cv::SoftCascade::Filds
 
     typedef std::vector<Octave>::iterator  octIt_t;
 
-    float rescale(const Feature& feature, const float scaling, const float relScale,
-        cv::Rect& scaledRect, const float threshold) const
-    {
-        scaledRect = feature.rect;
-
-        dprintf("feature %d box %d %d %d %d\n", feature.channel, scaledRect.x, scaledRect.y,
-        scaledRect.width, scaledRect.height);
-
-        dprintf("rescale: %d %f %f\n",feature.channel, relScale, scaling);
-
-        float farea = (scaledRect.width - scaledRect.x) * (scaledRect.height - scaledRect.y);
-        // rescale
-        scaledRect.x      = cvRound(relScale * scaledRect.x);
-        scaledRect.y      = cvRound(relScale * scaledRect.y);
-        scaledRect.width  = cvRound(relScale * scaledRect.width);
-        scaledRect.height = cvRound(relScale * scaledRect.height);
-
-        dprintf("feature %d box %d %d %d %d\n", feature.channel, scaledRect.x, scaledRect.y,
-        scaledRect.width, scaledRect.height);
-
-        float sarea = (scaledRect.width - scaledRect.x) * (scaledRect.height - scaledRect.y);
-
-        const float expected_new_area = farea * relScale * relScale;
-        float approx = sarea / expected_new_area;
-
-        dprintf(" rel areas %f %f\n", expected_new_area, sarea);
-
-        // compensation areas rounding
-        float rootThreshold = threshold * approx * scaling;
-
-        dprintf("approximation %f %f -> %f %f\n", approx, threshold, rootThreshold, scaling);
-
-        return rootThreshold;
-    }
-
     void detectAt(const Level& level, const int dx, const int dy, const ChannelStorage& storage,
                   std::vector<Object>& detections) const
     {
@@ -477,10 +469,9 @@ struct cv::SoftCascade::Filds
                 // work with root node
                 const Node& node = nodes[nId];
                 const Feature& feature = features[node.feature];
-                cv::Rect scaledRect;
-                float threshold = rescale(feature, level.scaling[(int)(feature.channel > 6)],
-                    level.relScale, scaledRect, node.threshold);
+                cv::Rect scaledRect(feature.rect);
 
+                float threshold = level.rescale(scaledRect, node.threshold,(int)(feature.channel > 6)) * feature.rarea;
 
                 float sum = storage.get(dx, dy, feature.channel, scaledRect);
 
@@ -494,10 +485,10 @@ struct cv::SoftCascade::Filds
                 const Node& leaf = nodes[nId + next];
                 const Feature& fLeaf = features[leaf.feature];
 
-                threshold = rescale(fLeaf, level.scaling[(int)(fLeaf.channel > 6)],
-                    level.relScale, scaledRect, leaf.threshold);
-                sum = storage.get(dx, dy, fLeaf.channel, scaledRect);
+                scaledRect = fLeaf.rect;
+                threshold = level.rescale(scaledRect, leaf.threshold, (int)(fLeaf.channel > 6)) * fLeaf.rarea;
 
+                sum = storage.get(dx, dy, fLeaf.channel, scaledRect);
 
                 int lShift = (next - 1) * 2 + ((sum >= threshold) ? 1 : 0);
                 float impact = leaves[(st * 4) + lShift];
