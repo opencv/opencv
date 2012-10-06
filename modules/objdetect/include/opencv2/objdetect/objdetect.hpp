@@ -493,6 +493,16 @@ protected:
 class CV_EXPORTS SoftCascade
 {
 public:
+
+    struct CV_EXPORTS Detection
+    {
+        cv::Rect rect;
+        float confidence;
+        int kind;
+
+        enum {PEDESTRIAN = 0};
+    };
+
     //! An empty cascade will be created.
     SoftCascade();
 
@@ -511,7 +521,7 @@ public:
     virtual ~SoftCascade();
 
     //! return vector of bounding boxes. Each box contains one detected object
-    virtual void detectMultiScale(const Mat& image, const std::vector<cv::Rect>& rois, std::vector<cv::Rect>& objects,
+    virtual void detectMultiScale(const Mat& image, const std::vector<cv::Rect>& rois, std::vector<Detection>& objects,
     int rejectfactor = 1) const;
 
 protected:

@@ -60,13 +60,15 @@ PERF_TEST_P(detect, SoftCascade,
     testing::Combine(testing::Values(std::string("cv/cascadeandhog/sc_cvpr_2012_to_opencv.xml")),
     testing::Values(std::string("cv/cascadeandhog/bahnhof/image_00000000_0.png"))))
 {
+    typedef cv::SoftCascade::Detection detection_t;
     cv::Mat colored = imread(getDataPath(get<1>(GetParam())));
     ASSERT_FALSE(colored.empty());
 
     cv::SoftCascade cascade;
     ASSERT_TRUE(cascade.load(getDataPath(get<0>(GetParam()))));
 
-    std::vector<cv::Rect> rois, objectBoxes;
+    std::vector<cv::Rect> rois;
+    std::vector<detection_t> objectBoxes;
     cascade.detectMultiScale(colored, rois, objectBoxes);
 
     TEST_CYCLE()

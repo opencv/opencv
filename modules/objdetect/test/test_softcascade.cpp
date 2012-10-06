@@ -51,6 +51,7 @@ TEST(SoftCascade, readCascade)
 
 TEST(SoftCascade, detect)
 {
+    typedef cv::SoftCascade::Detection detection_t;
     std::string xml =  cvtest::TS::ptr()->get_data_path() + "cascadeandhog/sc_cvpr_2012_to_opencv.xml";
     cv::SoftCascade cascade;
     ASSERT_TRUE(cascade.load(xml));
@@ -58,7 +59,7 @@ TEST(SoftCascade, detect)
     cv::Mat colored = cv::imread(cvtest::TS::ptr()->get_data_path() + "cascadeandhog/bahnhof/image_00000000_0.png");
     ASSERT_FALSE(colored.empty());
 
-    std::vector<cv::Rect> objectBoxes;
+    std::vector<detection_t> objectBoxes;
     std::vector<cv::Rect> rois;
     rois.push_back(cv::Rect(0, 0, 640, 480));
     // ASSERT_NO_THROW(

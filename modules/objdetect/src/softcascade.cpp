@@ -685,10 +685,10 @@ bool cv::SoftCascade::load( const string& filename, const float minScale, const 
     return true;
 }
 
-//#define DEBUG_SHOW_RESULT
+#define DEBUG_SHOW_RESULT
 
 void cv::SoftCascade::detectMultiScale(const Mat& image, const std::vector<cv::Rect>& /*rois*/,
-                                       std::vector<cv::Rect>& objects, const int /*rejectfactor*/) const
+                                       std::vector<Detection>& objects, const int /*rejectfactor*/) const
 {
     typedef std::vector<cv::Rect>::const_iterator RIter_t;
     // only color images are supperted
