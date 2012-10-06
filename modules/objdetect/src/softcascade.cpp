@@ -226,11 +226,6 @@ struct Level
     float rescale(cv::Rect& scaledRect, const float threshold, int idx) const
     {
         // rescale
-        // scaledRect.x      = cvRound(relScale * scaledRect.x);
-        // scaledRect.y      = cvRound(relScale * scaledRect.y);
-        // scaledRect.width  = cvRound(relScale * scaledRect.width);
-        // scaledRect.height = cvRound(relScale * scaledRect.height);
-
         scaledRect.x      = (scaleshift * scaledRect.x + R_SHIFT) >> 16;
         scaledRect.y      = (scaleshift * scaledRect.y + R_SHIFT) >> 16;
         scaledRect.width  = (scaleshift * scaledRect.width + R_SHIFT) >> 16;
@@ -284,6 +279,8 @@ struct ChannelStorage
 {
     std::vector<cv::Mat> hog;
     int shrinkage;
+    int offset;
+    int step;
 
     enum {HOG_BINS = 6, HOG_LUV_BINS = 10};
 
@@ -391,31 +388,23 @@ struct ChannelStorage
 
         hog.push_back(mag);
         hog.insert(hog.end(), luvs.begin(), luvs.end());
-        CV_Assert(hog.size() == 10);
+
+        step = hog[0].cols;
+
+        // CV_Assert(hog.size() == 10);
 #endif
     }
 
-    float get(const int x, const int y, const int channel, const cv::Rect& area) const
+    float get(const int channel, const cv::Rect& area) const
     {
-        CV_Assert(channel < HOG_LUV_BINS);
+        // CV_Assert(channel < HOG_LUV_BINS);
         const cv::Mat& m = hog[channel];
+        int *ptr = ((int*)(m.data)) + offset;
 
-        dprintf("feature box %d %d %d %d ", area.x, area.y, area.width, area.height);
-        dprintf("get for channel %d\n", channel);
-        dprintf("!! %d\n", m.depth());
-
-        dprintf("extract feature for: [%d %d] [%d %d] [%d %d] [%d %d]\n",
-            x + area.x, y + area.y,  x + area.width,y + area.y,  x + area.width,y + area.height,
-            x + area.x, y + area.height);
-
-        dprintf("at point %d %d with offset %d\n", x, y, 0);
-
-        int a = m.ptr<int>(y + area.y)[x + area.x];
-        int b = m.ptr<int>(y + area.y)[x + area.width];
-        int c = m.ptr<int>(y + area.height)[x + area.width];
-        int d = m.ptr<int>(y + area.height)[x + area.x];
-
-        dprintf("    retruved integral values: %d %d %d %d\n", a, b, c, d);
+        int a = ptr[area.y * step + area.x];
+        int b = ptr[area.y * step + area.width];
+        int c = ptr[area.height * step + area.width];
+        int d = ptr[area.height * step + area.x];
 
         return (a - b + c - d);
     }
@@ -443,8 +432,7 @@ struct cv::SoftCascade::Filds
 
     typedef std::vector<Octave>::iterator  octIt_t;
 
-    void detectAt(const Level& level, const int dx, const int dy, const ChannelStorage& storage,
-                  std::vector<Object>& detections) const
+    void detectAt(const int dx, const int dy, const Level& level, const ChannelStorage& storage, std::vector<Object>& detections) const
     {
         dprintf("detect at: %d %d\n", dx, dy);
 
@@ -473,7 +461,7 @@ struct cv::SoftCascade::Filds
 
                 float threshold = level.rescale(scaledRect, node.threshold,(int)(feature.channel > 6)) * feature.rarea;
 
-                float sum = storage.get(dx, dy, feature.channel, scaledRect);
+                float sum = storage.get(feature.channel, scaledRect);
 
                 dprintf("root feature %d %f\n",feature.channel, sum);
 
@@ -488,7 +476,7 @@ struct cv::SoftCascade::Filds
                 scaledRect = fLeaf.rect;
                 threshold = level.rescale(scaledRect, leaf.threshold, (int)(fLeaf.channel > 6)) * fLeaf.rarea;
 
-                sum = storage.get(dx, dy, fLeaf.channel, scaledRect);
+                sum = storage.get(fLeaf.channel, scaledRect);
 
                 int lShift = (next - 1) * 2 + ((sum >= threshold) ? 1 : 0);
                 float impact = leaves[(st * 4) + lShift];
@@ -506,16 +494,13 @@ struct cv::SoftCascade::Filds
             if (st - stBegin > 50   ) break;
 #endif
 
-            if (detectionScore <= stage.threshold) break;
+            if (detectionScore <= stage.threshold) return;
         }
 
         dprintf("x %d y %d: %d\n", dx, dy, st - stBegin);
+        dprintf("  got %d\n", st);
 
-        if (st == stEnd)
-        {
-            dprintf("  got %d\n", st);
-            level.markDetection(dx, dy, detectionScore, detections);
-        }
+        level.markDetection(dx, dy, detectionScore, detections);
     }
 
     octIt_t fitOctave(const float& logFactor)
@@ -738,13 +723,15 @@ void cv::SoftCascade::detectMultiScale(const Mat& image, const std::vector<cv::R
         {
             for (int dx = 0; dx < level.workRect.width; ++dx)
             {
-                fld.detectAt(level, dx, dy, storage, detections);
+                storage.offset = dy * storage.step + dx;
+                fld.detectAt(dx, dy, level, storage, detections);
+
                 total++;
             }
         }
-    cv::Mat out = image.clone();
 
 #if defined DEBUG_SHOW_RESULT
+        cv::Mat out = image.clone();
 
         printf("TOTAL: %d from %d\n", (int)detections.size(),total) ;
 
