@@ -165,11 +165,13 @@ static void histPrepareImages( const Mat* images, int nimages, const int* channe
         deltas[dims*2 + 1] = (int)(mask.step/mask.elemSize1());
     }
 
+#ifndef HAVE_TBB
     if( isContinuous )
     {
         imsize.width *= imsize.height;
         imsize.height = 1;
     }
+#endif
 
     if( !ranges )
     {
@@ -207,6 +209,538 @@ static void histPrepareImages( const Mat* images, int nimages, const int* channe
 
 
 ////////////////////////////////// C A L C U L A T E    H I S T O G R A M ////////////////////////////////////
+#ifdef HAVE_TBB
+enum {one = 1, two, three}; // array elements number
+
+template<typename T>
+class calcHist1D_Invoker
+{
+public:
+    calcHist1D_Invoker( const vector<uchar*>& _ptrs, const vector<int>& _deltas,
+                        Mat& hist, const double* _uniranges, int sz, int dims,
+                        Size& imageSize )
+        : mask_(_ptrs[dims]),
+          mstep_(_deltas[dims*2 + 1]),
+          imageWidth_(imageSize.width),
+          histogramSize_(hist.size()), histogramType_(hist.type()),
+          globalHistogram_((tbb::atomic<int>*)hist.data)
+    {
+        p_[0] = ((T**)&_ptrs[0])[0];
+        step_[0] = (&_deltas[0])[1];
+        d_[0] = (&_deltas[0])[0];
+        a_[0] = (&_uniranges[0])[0];
+        b_[0] = (&_uniranges[0])[1];
+        size_[0] = sz;
+    }
+
+    void operator()( const BlockedRange& range ) const
+    {
+        T* p0 = p_[0] + range.begin() * (step_[0] + imageWidth_*d_[0]);
+        uchar* mask = mask_ + range.begin()*mstep_;
+
+        for( int row = range.begin(); row < range.end(); row++, p0 += step_[0] )
+        {
+            if( !mask_ )
+            {
+                for( int x = 0; x < imageWidth_; x++, p0 += d_[0] )
+                {
+                    int idx = cvFloor(*p0*a_[0] + b_[0]);
+                    if( (unsigned)idx < (unsigned)size_[0] )
+                    {
+                        globalHistogram_[idx].fetch_and_add(1);
+                    }
+                }
+            }
+            else
+            {
+                for( int x = 0; x < imageWidth_; x++, p0 += d_[0] )
+                {
+                    if( mask[x] )
+                    {
+                        int idx = cvFloor(*p0*a_[0] + b_[0]);
+                        if( (unsigned)idx < (unsigned)size_[0] )
+                        {
+                            globalHistogram_[idx].fetch_and_add(1);
+                        }
+                    }
+                }
+                mask += mstep_;
+            }
+        }
+    }
+
+private:
+    T* p_[one];
+    uchar* mask_;
+    int step_[one];
+    int d_[one];
+    int mstep_;
+    double a_[one];
+    double b_[one];
+    int size_[one];
+    int imageWidth_;
+    Size histogramSize_;
+    int histogramType_;
+    tbb::atomic<int>* globalHistogram_;
+};
+
+template<typename T>
+class calcHist2D_Invoker
+{
+public:
+    calcHist2D_Invoker( const vector<uchar*>& _ptrs, const vector<int>& _deltas,
+                        Mat& hist, const double* _uniranges, const int* size,
+                        int dims, Size& imageSize, size_t* hstep )
+        : mask_(_ptrs[dims]),
+          mstep_(_deltas[dims*2 + 1]),
+          imageWidth_(imageSize.width),
+          histogramSize_(hist.size()), histogramType_(hist.type()),
+          globalHistogram_(hist.data)
+    {
+        p_[0] = ((T**)&_ptrs[0])[0]; p_[1] = ((T**)&_ptrs[0])[1];
+        step_[0] = (&_deltas[0])[1]; step_[1] = (&_deltas[0])[3];
+        d_[0] = (&_deltas[0])[0];    d_[1] = (&_deltas[0])[2];
+        a_[0] = (&_uniranges[0])[0]; a_[1] = (&_uniranges[0])[2];
+        b_[0] = (&_uniranges[0])[1]; b_[1] = (&_uniranges[0])[3];
+        size_[0] = size[0];          size_[1] = size[1];
+        hstep_[0] = hstep[0];
+    }
+
+    void operator()(const BlockedRange& range) const
+    {
+        T* p0 = p_[0] + range.begin()*(step_[0] + imageWidth_*d_[0]);
+        T* p1 = p_[1] + range.begin()*(step_[1] + imageWidth_*d_[1]);
+        uchar* mask = mask_ + range.begin()*mstep_;
+
+        for( int row = range.begin(); row < range.end(); row++, p0 += step_[0], p1 += step_[1] )
+        {
+            if( !mask_ )
+            {
+                for( int x = 0; x < imageWidth_; x++, p0 += d_[0], p1 += d_[1] )
+                {
+                    int idx0 = cvFloor(*p0*a_[0] + b_[0]);
+                    int idx1 = cvFloor(*p1*a_[1] + b_[1]);
+                    if( (unsigned)idx0 < (unsigned)size_[0] && (unsigned)idx1 < (unsigned)size_[1] )
+                        ( (tbb::atomic<int>*)(globalHistogram_ + hstep_[0]*idx0) )[idx1].fetch_and_add(1);
+                }
+            }
+            else
+            {
+                for( int x = 0; x < imageWidth_; x++, p0 += d_[0], p1 += d_[1] )
+                {
+                    if( mask[x] )
+                    {
+                        int idx0 = cvFloor(*p0*a_[0] + b_[0]);
+                        int idx1 = cvFloor(*p1*a_[1] + b_[1]);
+                        if( (unsigned)idx0 < (unsigned)size_[0] && (unsigned)idx1 < (unsigned)size_[1] )
+                            ((tbb::atomic<int>*)(globalHistogram_ + hstep_[0]*idx0))[idx1].fetch_and_add(1);
+                    }
+                }
+                mask += mstep_;
+            }
+        }
+    }
+
+private:
+    T* p_[two];
+    uchar* mask_;
+    int step_[two];
+    int d_[two];
+    int mstep_;
+    double a_[two];
+    double b_[two];
+    int size_[two];
+    const int imageWidth_;
+    size_t hstep_[one];
+    Size histogramSize_;
+    int histogramType_;
+    uchar* globalHistogram_;
+};
+
+
+template<typename T>
+class calcHist3D_Invoker
+{
+public:
+    calcHist3D_Invoker( const vector<uchar*>& _ptrs, const vector<int>& _deltas,
+                        Size imsize, Mat& hist, const double* uniranges, int _dims,
+                        size_t* hstep, int* size )
+        : mask_(_ptrs[_dims]),
+          mstep_(_deltas[_dims*2 + 1]),
+          imageWidth_(imsize.width),
+          globalHistogram_(hist.data)
+    {
+        p_[0] = ((T**)&_ptrs[0])[0]; p_[1] = ((T**)&_ptrs[0])[1]; p_[2] = ((T**)&_ptrs[0])[2];
+        step_[0] = (&_deltas[0])[1]; step_[1] = (&_deltas[0])[3]; step_[2] = (&_deltas[0])[5];
+        d_[0] = (&_deltas[0])[0];    d_[1] = (&_deltas[0])[2];    d_[2] = (&_deltas[0])[4];
+        a_[0] = uniranges[0];        a_[1] = uniranges[2];        a_[2] = uniranges[4];
+        b_[0] = uniranges[1];        b_[1] = uniranges[3];        b_[2] = uniranges[5];
+        size_[0] = size[0];          size_[1] = size[1];          size_[2] = size[2];
+        hstep_[0] = hstep[0];        hstep_[1] = hstep[1];
+    }
+
+    void operator()( const BlockedRange& range ) const
+    {
+        T* p0 = p_[0] + range.begin()*(imageWidth_*d_[0] + step_[0]);
+        T* p1 = p_[1] + range.begin()*(imageWidth_*d_[1] + step_[1]);
+        T* p2 = p_[2] + range.begin()*(imageWidth_*d_[2] + step_[2]);
+        uchar* mask = mask_ + range.begin()*mstep_;
+
+        for( int i = range.begin(); i < range.end(); i++, p0 += step_[0], p1 += step_[1], p2 += step_[2] )
+        {
+            if( !mask_ )
+            {
+                for( int x = 0; x < imageWidth_; x++, p0 += d_[0], p1 += d_[1], p2 += d_[2] )
+                {
+                    int idx0 = cvFloor(*p0*a_[0] + b_[0]);
+                    int idx1 = cvFloor(*p1*a_[1] + b_[1]);
+                    int idx2 = cvFloor(*p2*a_[2] + b_[2]);
+                    if( (unsigned)idx0 < (unsigned)size_[0] &&
+                            (unsigned)idx1 < (unsigned)size_[1] &&
+                            (unsigned)idx2 < (unsigned)size_[2] )
+                    {
+                        ( (tbb::atomic<int>*)(globalHistogram_ + hstep_[0]*idx0 + hstep_[1]*idx1) )[idx2].fetch_and_add(1);
+                    }
+                }
+            }
+            else
+            {
+                for( int x = 0; x < imageWidth_; x++, p0 += d_[0], p1 += d_[1], p2 += d_[2] )
+                {
+                    if( mask[x] )
+                    {
+                        int idx0 = cvFloor(*p0*a_[0] + b_[0]);
+                        int idx1 = cvFloor(*p1*a_[1] + b_[1]);
+                        int idx2 = cvFloor(*p2*a_[2] + b_[2]);
+                        if( (unsigned)idx0 < (unsigned)size_[0] &&
+                                (unsigned)idx1 < (unsigned)size_[1] &&
+                                (unsigned)idx2 < (unsigned)size_[2] )
+                        {
+                            ( (tbb::atomic<int>*)(globalHistogram_ + hstep_[0]*idx0 + hstep_[1]*idx1) )[idx2].fetch_and_add(1);
+                        }
+                    }
+                }
+                mask += mstep_;
+            }
+        }
+    }
+
+    static bool isFit( const Mat& histogram, const Size imageSize )
+    {
+        return ( imageSize.width * imageSize.height >= 320*240
+                 && histogram.total() >= 8*8*8 );
+    }
+
+private:
+    T* p_[three];
+    uchar* mask_;
+    int step_[three];
+    int d_[three];
+    const int mstep_;
+    double a_[three];
+    double b_[three];
+    int size_[three];
+    int imageWidth_;
+    size_t hstep_[two];
+    uchar* globalHistogram_;
+};
+
+class CalcHist1D_8uInvoker
+{
+public:
+    CalcHist1D_8uInvoker( const vector<uchar*>& ptrs, const vector<int>& deltas,
+                          Size imsize, Mat& hist, int dims, const vector<size_t>& tab,
+                          tbb::mutex* lock )
+        : mask_(ptrs[dims]),
+          mstep_(deltas[dims*2 + 1]),
+          imageWidth_(imsize.width),
+          imageSize_(imsize),
+          histSize_(hist.size()), histType_(hist.type()),
+          tab_((size_t*)&tab[0]),
+          histogramWriteLock_(lock),
+          globalHistogram_(hist.data)
+    {
+        p_[0] = (&ptrs[0])[0];
+        step_[0] = (&deltas[0])[1];
+        d_[0] = (&deltas[0])[0];
+    }
+
+    void operator()( const BlockedRange& range ) const
+    {
+        int localHistogram[256] = { 0, };
+        uchar* mask = mask_;
+        uchar* p0 = p_[0];
+        int x;
+        tbb::mutex::scoped_lock lock;
+
+        if( !mask_ )
+        {
+            int n = (imageWidth_ - 4) / 4 + 1;
+            int tail = imageWidth_ - n*4;
+
+            int xN = 4*n;
+            p0 += (xN*d_[0] + tail*d_[0] + step_[0]) * range.begin();
+        }
+        else
+        {
+            p0 += (imageWidth_*d_[0] + step_[0]) * range.begin();
+            mask += mstep_*range.begin();
+        }
+
+        for( int i = range.begin(); i < range.end(); i++, p0 += step_[0] )
+        {
+            if( !mask_ )
+            {
+                if( d_[0] == 1 )
+                {
+                    for( x = 0; x <= imageWidth_ - 4; x += 4 )
+                    {
+                        int t0 = p0[x], t1 = p0[x+1];
+                        localHistogram[t0]++; localHistogram[t1]++;
+                        t0 = p0[x+2]; t1 = p0[x+3];
+                        localHistogram[t0]++; localHistogram[t1]++;
+                    }
+                    p0 += x;
+                }
+                else
+                {
+                    for( x = 0; x <= imageWidth_ - 4; x += 4 )
+                    {
+                        int t0 = p0[0], t1 = p0[d_[0]];
+                        localHistogram[t0]++; localHistogram[t1]++;
+                        p0 += d_[0]*2;
+                        t0 = p0[0]; t1 = p0[d_[0]];
+                        localHistogram[t0]++; localHistogram[t1]++;
+                        p0 += d_[0]*2;
+                    }
+                }
+
+                for( ; x < imageWidth_; x++, p0 += d_[0] )
+                {
+                    localHistogram[*p0]++;
+                }
+            }
+            else
+            {
+                for( x = 0; x < imageWidth_; x++, p0 += d_[0] )
+                {
+                    if( mask[x] )
+                    {
+                        localHistogram[*p0]++;
+                    }
+                }
+                mask += mstep_;
+            }
+        }
+
+        lock.acquire(*histogramWriteLock_);
+        for(int i = 0; i < 256; i++ )
+        {
+            size_t hidx = tab_[i];
+            if( hidx < OUT_OF_RANGE )
+            {
+                *(int*)((globalHistogram_ + hidx)) += localHistogram[i];
+            }
+        }
+        lock.release();
+    }
+
+    static bool isFit( const Mat& histogram, const Size imageSize )
+    {
+        return ( histogram.total() >= 8
+                && imageSize.width * imageSize.height >= 160*120 );
+    }
+
+private:
+    uchar* p_[one];
+    uchar* mask_;
+    int mstep_;
+    int step_[one];
+    int d_[one];
+    int imageWidth_;
+    Size imageSize_;
+    Size histSize_;
+    int histType_;
+    size_t* tab_;
+    tbb::mutex* histogramWriteLock_;
+    uchar* globalHistogram_;
+};
+
+class CalcHist2D_8uInvoker
+{
+public:
+    CalcHist2D_8uInvoker( const vector<uchar*>& _ptrs, const vector<int>& _deltas,
+                          Size imsize, Mat& hist, int dims, const vector<size_t>& _tab,
+                          tbb::mutex* lock )
+        : mask_(_ptrs[dims]),
+          mstep_(_deltas[dims*2 + 1]),
+          imageWidth_(imsize.width),
+          histSize_(hist.size()), histType_(hist.type()),
+          tab_((size_t*)&_tab[0]),
+          histogramWriteLock_(lock),
+          globalHistogram_(hist.data)
+    {
+        p_[0] = (uchar*)(&_ptrs[0])[0]; p_[1] = (uchar*)(&_ptrs[0])[1];
+        step_[0] = (&_deltas[0])[1];    step_[1] = (&_deltas[0])[3];
+        d_[0] = (&_deltas[0])[0];       d_[1] = (&_deltas[0])[2];
+    }
+
+    void operator()( const BlockedRange& range ) const
+    {
+        uchar* p0 = p_[0] + range.begin()*(step_[0] + imageWidth_*d_[0]);
+        uchar* p1 = p_[1] + range.begin()*(step_[1] + imageWidth_*d_[1]);
+        uchar* mask = mask_ + range.begin()*mstep_;
+
+        Mat localHist = Mat::zeros(histSize_, histType_);
+        uchar* localHistData = localHist.data;
+        tbb::mutex::scoped_lock lock;
+
+        for(int i = range.begin(); i < range.end(); i++, p0 += step_[0], p1 += step_[1])
+        {
+            if( !mask_ )
+            {
+                for( int x = 0; x < imageWidth_; x++, p0 += d_[0], p1 += d_[1] )
+                {
+                    size_t idx = tab_[*p0] + tab_[*p1 + 256];
+                    if( idx < OUT_OF_RANGE )
+                    {
+                        ++*(int*)(localHistData + idx);
+                    }
+                }
+            }
+            else
+            {
+                for( int x = 0; x < imageWidth_; x++, p0 += d_[0], p1 += d_[1] )
+                {
+                    size_t idx;
+                    if( mask[x] && (idx = tab_[*p0] + tab_[*p1 + 256]) < OUT_OF_RANGE )
+                    {
+                        ++*(int*)(localHistData + idx);
+                    }
+                }
+                mask += mstep_;
+            }
+        }
+
+        lock.acquire(*histogramWriteLock_);
+        for(int i = 0; i < histSize_.width*histSize_.height; i++)
+        {
+            ((int*)globalHistogram_)[i] += ((int*)localHistData)[i];
+        }
+        lock.release();
+    }
+
+    static bool isFit( const Mat& histogram, const Size imageSize )
+    {
+        return ( (histogram.total() > 4*4 &&  histogram.total() <= 116*116
+                  && imageSize.width * imageSize.height >= 320*240)
+                 || (histogram.total() > 116*116 && imageSize.width * imageSize.height >= 1280*720) );
+    }
+
+private:
+    uchar* p_[two];
+    uchar* mask_;
+    int step_[two];
+    int d_[two];
+    int mstep_;
+    int imageWidth_;
+    Size histSize_;
+    int histType_;
+    size_t* tab_;
+    tbb::mutex* histogramWriteLock_;
+    uchar* globalHistogram_;
+};
+
+class CalcHist3D_8uInvoker
+{
+public:
+    CalcHist3D_8uInvoker( const vector<uchar*>& _ptrs, const vector<int>& _deltas,
+                          Size imsize, Mat& hist, int dims, const vector<size_t>& tab )
+        : mask_(_ptrs[dims]),
+          mstep_(_deltas[dims*2 + 1]),
+          histogramSize_(hist.size.p), histogramType_(hist.type()),
+          imageWidth_(imsize.width),
+          tab_((size_t*)&tab[0]),
+          globalHistogram_(hist.data)
+    {
+        p_[0] = (uchar*)(&_ptrs[0])[0]; p_[1] = (uchar*)(&_ptrs[0])[1]; p_[2] = (uchar*)(&_ptrs[0])[2];
+        step_[0] = (&_deltas[0])[1];    step_[1] = (&_deltas[0])[3];    step_[2] = (&_deltas[0])[5];
+        d_[0] = (&_deltas[0])[0];       d_[1] = (&_deltas[0])[2];       d_[2] = (&_deltas[0])[4];
+    }
+
+    void operator()( const BlockedRange& range ) const
+    {
+        uchar* p0 = p_[0] + range.begin()*(step_[0] + imageWidth_*d_[0]);
+        uchar* p1 = p_[1] + range.begin()*(step_[1] + imageWidth_*d_[1]);
+        uchar* p2 = p_[2] + range.begin()*(step_[2] + imageWidth_*d_[2]);
+        uchar* mask = mask_ + range.begin()*mstep_;
+
+        for(int i = range.begin(); i < range.end(); i++, p0 += step_[0], p1 += step_[1], p2 += step_[2] )
+        {
+            if( !mask_ )
+            {
+                for( int x = 0; x < imageWidth_; x++, p0 += d_[0], p1 += d_[1], p2 += d_[2] )
+                {
+                    size_t idx = tab_[*p0] + tab_[*p1 + 256] + tab_[*p2 + 512];
+                    if( idx < OUT_OF_RANGE )
+                    {
+                        ( *(tbb::atomic<int>*)(globalHistogram_ + idx) ).fetch_and_add(1);
+                    }
+                }
+            }
+            else
+            {
+                for( int x = 0; x < imageWidth_; x++, p0 += d_[0], p1 += d_[1], p2 += d_[2] )
+                {
+                    size_t idx;
+                    if( mask[x] && (idx = tab_[*p0] + tab_[*p1 + 256] + tab_[*p2 + 512]) < OUT_OF_RANGE )
+                    {
+                        (*(tbb::atomic<int>*)(globalHistogram_ + idx)).fetch_and_add(1);
+                    }
+                }
+                mask += mstep_;
+            }
+        }
+    }
+
+    static bool isFit( const Mat& histogram, const Size imageSize )
+    {
+        return ( histogram.total() >= 128*128*128
+                 && imageSize.width * imageSize.width >= 320*240 );
+    }
+
+private:
+    uchar* p_[three];
+    uchar* mask_;
+    int mstep_;
+    int step_[three];
+    int d_[three];
+    int* histogramSize_;
+    int histogramType_;
+    int imageWidth_;
+    size_t* tab_;
+    uchar* globalHistogram_;
+};
+
+static void
+callCalcHist2D_8u( vector<uchar*>& _ptrs, const vector<int>& _deltas,
+                   Size imsize, Mat& hist, int dims,  vector<size_t>& _tab )
+{
+    int grainSize = imsize.height / tbb::task_scheduler_init::default_num_threads();
+    tbb::mutex histogramWriteLock;
+
+    CalcHist2D_8uInvoker body(_ptrs, _deltas, imsize, hist, dims, _tab, &histogramWriteLock);
+    parallel_for(BlockedRange(0, imsize.height, grainSize), body);
+}
+
+static void
+callCalcHist3D_8u( vector<uchar*>& _ptrs, const vector<int>& _deltas,
+                   Size imsize, Mat& hist, int dims,  vector<size_t>& _tab )
+{
+    CalcHist3D_8uInvoker body(_ptrs, _deltas, imsize, hist, dims, _tab);
+    parallel_for(BlockedRange(0, imsize.height), body);
+}
+#endif
 
 template<typename T> static void
 calcHist_( vector<uchar*>& _ptrs, const vector<int>& _deltas,
@@ -234,6 +768,11 @@ calcHist_( vector<uchar*>& _ptrs, const vector<int>& _deltas,
 
         if( dims == 1 )
         {
+#ifdef HAVE_TBB
+            calcHist1D_Invoker<T> body(_ptrs, _deltas, hist, _uniranges, size[0], dims, imsize);
+            parallel_for(BlockedRange(0, imsize.height), body);
+            return;
+#endif
             double a = uniranges[0], b = uniranges[1];
             int sz = size[0], d0 = deltas[0], step0 = deltas[1];
             const T* p0 = (const T*)ptrs[0];
@@ -259,6 +798,11 @@ calcHist_( vector<uchar*>& _ptrs, const vector<int>& _deltas,
         }
         else if( dims == 2 )
         {
+#ifdef HAVE_TBB
+            calcHist2D_Invoker<T> body(_ptrs, _deltas, hist, _uniranges, size, dims, imsize, hstep);
+            parallel_for(BlockedRange(0, imsize.height), body);
+            return;
+#endif
             double a0 = uniranges[0], b0 = uniranges[1], a1 = uniranges[2], b1 = uniranges[3];
             int sz0 = size[0], sz1 = size[1];
             int d0 = deltas[0], step0 = deltas[1],
@@ -290,6 +834,14 @@ calcHist_( vector<uchar*>& _ptrs, const vector<int>& _deltas,
         }
         else if( dims == 3 )
         {
+#ifdef HAVE_TBB
+            if( calcHist3D_Invoker<T>::isFit(hist, imsize) )
+            {
+                calcHist3D_Invoker<T> body(_ptrs, _deltas, imsize, hist, uniranges, dims, hstep, size);
+                parallel_for(BlockedRange(0, imsize.height), body);
+                return;
+            }
+#endif
             double a0 = uniranges[0], b0 = uniranges[1],
                    a1 = uniranges[2], b1 = uniranges[3],
                    a2 = uniranges[4], b2 = uniranges[5];
@@ -441,8 +993,20 @@ calcHist_8u( vector<uchar*>& _ptrs, const vector<int>& _deltas,
 
     if( dims == 1 )
     {
+#ifdef HAVE_TBB
+        if( CalcHist1D_8uInvoker::isFit(hist, imsize) )
+        {
+            int treadsNumber = tbb::task_scheduler_init::default_num_threads();
+            int grainSize = imsize.height/treadsNumber;
+            tbb::mutex histogramWriteLock;
+
+            CalcHist1D_8uInvoker body(_ptrs, _deltas, imsize, hist, dims, _tab, &histogramWriteLock);
+            parallel_for(BlockedRange(0, imsize.height, grainSize), body);
+            return;
+        }
+#endif
         int d0 = deltas[0], step0 = deltas[1];
-        int matH[256] = {0};
+        int matH[256] = { 0, };
         const uchar* p0 = (const uchar*)ptrs[0];
 
         for( ; imsize.height--; p0 += step0, mask += mstep )
@@ -489,6 +1053,13 @@ calcHist_8u( vector<uchar*>& _ptrs, const vector<int>& _deltas,
     }
     else if( dims == 2 )
     {
+#ifdef HAVE_TBB
+        if( CalcHist2D_8uInvoker::isFit(hist, imsize) )
+        {
+            callCalcHist2D_8u(_ptrs, _deltas, imsize, hist, dims, _tab);
+            return;
+        }
+#endif
         int d0 = deltas[0], step0 = deltas[1],
             d1 = deltas[2], step1 = deltas[3];
         const uchar* p0 = (const uchar*)ptrs[0];
@@ -514,6 +1085,13 @@ calcHist_8u( vector<uchar*>& _ptrs, const vector<int>& _deltas,
     }
     else if( dims == 3 )
     {
+#ifdef HAVE_TBB
+        if( CalcHist3D_8uInvoker::isFit(hist, imsize) )
+        {
+            callCalcHist3D_8u(_ptrs, _deltas, imsize, hist, dims, _tab);
+            return;
+        }
+#endif
         int d0 = deltas[0], step0 = deltas[1],
             d1 = deltas[2], step1 = deltas[3],
             d2 = deltas[4], step2 = deltas[5];
