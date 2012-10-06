@@ -419,7 +419,6 @@ struct cv::SoftCascade::Filds
     float rescale(const Feature& feature, const float scaling, const float relScale,
         cv::Rect& scaledRect, const float threshold) const
     {
-        // float scaling = CascadeIntrinsics::getFor(feature.channel, relScale);
         scaledRect = feature.rect;
 
         dprintf("feature %d box %d %d %d %d\n", feature.channel, scaledRect.x, scaledRect.y,
@@ -439,18 +438,13 @@ struct cv::SoftCascade::Filds
 
         float sarea = (scaledRect.width - scaledRect.x) * (scaledRect.height - scaledRect.y);
 
-        float approx = 1.f;
-        // if (fabs(farea - 0.f) > FLT_EPSILON && fabs(farea - 0.f) > FLT_EPSILON)
-        {
-            const float expected_new_area = farea * relScale * relScale;
-            approx = sarea / expected_new_area;
+        const float expected_new_area = farea * relScale * relScale;
+        float approx = sarea / expected_new_area;
 
-            dprintf(" rel areas %f %f\n", expected_new_area, sarea);
-        }
+        dprintf(" rel areas %f %f\n", expected_new_area, sarea);
 
         // compensation areas rounding
-        float rootThreshold = threshold * approx;
-        rootThreshold *= scaling;
+        float rootThreshold = threshold * approx * scaling;
 
         dprintf("approximation %f %f -> %f %f\n", approx, threshold, rootThreshold, scaling);
 
@@ -715,10 +709,10 @@ bool cv::SoftCascade::load( const string& filename, const float minScale, const 
     return true;
 }
 
-// #define DEBUG_SHOW_RESULT
+//#define DEBUG_SHOW_RESULT
 
 void cv::SoftCascade::detectMultiScale(const Mat& image, const std::vector<cv::Rect>& /*rois*/,
-                                       std::vector<cv::Rect>& objects, const int /*rejectfactor*/)
+                                       std::vector<cv::Rect>& objects, const int /*rejectfactor*/) const
 {
     typedef std::vector<cv::Rect>::const_iterator RIter_t;
     // only color images are supperted

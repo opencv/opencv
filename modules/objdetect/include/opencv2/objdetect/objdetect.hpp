@@ -512,7 +512,7 @@ public:
 
     //! return vector of bounding boxes. Each box contains one detected object
     virtual void detectMultiScale(const Mat& image, const std::vector<cv::Rect>& rois, std::vector<cv::Rect>& objects,
-    int rejectfactor = 1);
+    int rejectfactor = 1) const;
 
 protected:
     enum { BOOST = 0 };
