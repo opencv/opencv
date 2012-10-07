@@ -1654,7 +1654,21 @@ inline bool operator!=(const GTEST_10_TUPLE_(T)& t,
 #   undef _TR1_FUNCTIONAL  // Allows the user to #include
                         // <tr1/functional> if he chooses to.
 #  else
+#  if defined (__cplusplus) && __cplusplus > 199711L
+#   include <tuple>
+namespace std {
+    namespace tr1 {
+        using std::tuple;
+        using std::tuple_element;
+        using std::get;
+        using std::tuple_size;
+        using std::make_tuple;
+    }
+}
+#  else
 #   include <tr1/tuple>  // NOLINT
+#  endif
+
 #  endif  // !GTEST_HAS_RTTI && GTEST_GCC_VER_ < 40302
 
 # else
