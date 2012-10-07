@@ -13,8 +13,10 @@ endif()
 
 if(NOT OpenCV_CUDA_CC)
   set(OpenCV_CUDA_CC_CONFIGCMAKE "\"\"")
+  set(OpenCV_CUDA_VERSION "")
 else()
   set(OpenCV_CUDA_CC_CONFIGCMAKE "${OpenCV_CUDA_CC}")
+  set(OpenCV_CUDA_VERSION ${CUDA_VERSION_STRING})
 endif()
 
 if(NOT ANDROID_NATIVE_API_LEVEL)
@@ -64,10 +66,17 @@ macro(ocv_generate_dependencies_map_configcmake suffix configuration)
       string(REGEX REPLACE "${CMAKE_SHARED_LIBRARY_SUFFIX}$" "${OPENCV_LINK_LIBRARY_SUFFIX}" __libname "${__libname}")
     endif()
 
+    if (CUDA_FOUND AND WIN32)
+      if(${__ocv_lib}_EXTRA_DEPS_${suffix})
+        list(REMOVE_ITEM ${__ocv_lib}_EXTRA_DEPS_${suffix} ${CUDA_LIBRARIES} ${CUDA_CUFFT_LIBRARIES} ${CUDA_CUBLAS_LIBRARIES} ${CUDA_npp_LIBRARY} ${CUDA_nvcuvid_LIBRARY} ${CUDA_nvcuvenc_LIBRARY})
+      endif()
+    endif()
+
     string(REPLACE " " "\\ " __mod_deps "${${__ocv_lib}_MODULE_DEPS_${suffix}}")
     string(REPLACE " " "\\ " __ext_deps "${${__ocv_lib}_EXTRA_DEPS_${suffix}}")
     string(REPLACE "\"" "\\\"" __mod_deps "${__mod_deps}")
     string(REPLACE "\"" "\\\"" __ext_deps "${__ext_deps}")
+
 
     set(OPENCV_DEPENDENCIES_MAP_${suffix} "${OPENCV_DEPENDENCIES_MAP_${suffix}}set(OpenCV_${__ocv_lib}_LIBNAME_${suffix} \"${__libname}\")\n")
     set(OPENCV_DEPENDENCIES_MAP_${suffix} "${OPENCV_DEPENDENCIES_MAP_${suffix}}set(OpenCV_${__ocv_lib}_DEPS_${suffix} ${__mod_deps})\n")
