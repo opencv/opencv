@@ -94,11 +94,6 @@ namespace icf {
         float relScale = level.relScale;
         float farea = (scaledRect.z - scaledRect.x) * (scaledRect.w - scaledRect.y);
 
-        dprintf("%d: feature %d box %d %d %d %d\n",threadIdx.x, (node.threshold >> 28), scaledRect.x, scaledRect.y,
-            scaledRect.z, scaledRect.w);
-        dprintf("%d: rescale: %f [%f %f] selected %f\n",threadIdx.x, level.relScale, level.scaling[0], level.scaling[1],
-            level.scaling[(node.threshold >> 28) > 6]);
-
         // rescale
         scaledRect.x = __float2int_rn(relScale * scaledRect.x);
         scaledRect.y = __float2int_rn(relScale * scaledRect.y);
@@ -110,14 +105,7 @@ namespace icf {
         const float expected_new_area = farea * relScale * relScale;
         float approx = __fdividef(sarea, expected_new_area);
 
-        dprintf("%d: new rect: %d box %d %d %d %d  rel areas %f %f\n",threadIdx.x, (node.threshold >> 28),
-        scaledRect.x, scaledRect.y, scaledRect.z, scaledRect.w, farea * relScale * relScale, sarea);
-
-        float rootThreshold = (node.threshold & 0x0FFFFFFFU) * approx;
-        rootThreshold *= level.scaling[(node.threshold >> 28) > 6];
-
-        dprintf("%d: approximation %f %d -> %f %f\n",threadIdx.x, approx, (node.threshold & 0x0FFFFFFFU), rootThreshold,
-            level.scaling[(node.threshold >> 28) > 6]);
+        float rootThreshold = (node.threshold & 0x0FFFFFFFU) * approx * level.scaling[(node.threshold >> 28) > 6];
 
         return rootThreshold;
     }
@@ -179,18 +167,20 @@ namespace icf {
         const int y = blockIdx.y * blockDim.y + threadIdx.y;
         const int x = blockIdx.x;
 
-        __shared__ volatile char roiCache[8];
+        // load Lavel
+        __shared__ Level level;
 
+        // check POI
+        __shared__ volatile char roiCache[8];
         if (!threadIdx.y && !threadIdx.x)
-        {
             ((float2*)roiCache)[threadIdx.x] = tex2D(troi, blockIdx.y, x);
-        }
 
         __syncthreads();
 
         if (!roiCache[threadIdx.y]) return;
 
-        Level level = levels[downscales + blockIdx.z];
+        if (!threadIdx.x)
+            level = levels[downscales + blockIdx.z];
 
         if(x >= level.workRect.x || y >= level.workRect.y) return;
 

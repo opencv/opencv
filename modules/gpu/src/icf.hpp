@@ -90,6 +90,8 @@ struct __align__(8) Level //is actually 24 bytes
         objSize.x  = round(oct.size.x * relScale);
         objSize.y  = round(oct.size.y * relScale);
     }
+
+    __device Level(){}
 };
 
 struct __align__(8) Node
