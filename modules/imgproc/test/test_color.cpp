@@ -1697,21 +1697,27 @@ TEST(Imgproc_ColorBayerVNG, regression)
     cvtest::TS& ts = *cvtest::TS::ptr();
 
     Mat given = imread(string(ts.get_data_path()) + "/cvtcolor/bayer_input.png", CV_LOAD_IMAGE_GRAYSCALE);
-    Mat gold = imread(string(ts.get_data_path()) + "/cvtcolor/bayerVNG_gold.png", CV_LOAD_IMAGE_UNCHANGED);
+    string goldfname = string(ts.get_data_path()) + "/cvtcolor/bayerVNG_gold.png"; 
+    Mat gold = imread(goldfname, CV_LOAD_IMAGE_UNCHANGED);
     Mat result;
 
     CV_Assert(given.data != NULL);
     
     cvtColor(given, result, CV_BayerBG2BGR_VNG, 3);
     
-    EXPECT_EQ(gold.type(), result.type());
-    EXPECT_EQ(gold.cols, result.cols);
-    EXPECT_EQ(gold.rows, result.rows);
+    if (gold.empty())
+        imwrite(goldfname, result);
+    else
+    {
+        EXPECT_EQ(gold.type(), result.type());
+        EXPECT_EQ(gold.cols, result.cols);
+        EXPECT_EQ(gold.rows, result.rows);
 
-    Mat diff;
-    absdiff(gold, result, diff);
+        Mat diff;
+        absdiff(gold, result, diff);
 
-    EXPECT_EQ(0, countNonZero(diff.reshape(1) > 1));
+        EXPECT_EQ(0, countNonZero(diff.reshape(1) > 1));
+    }
 }
 
 TEST(Imgproc_ColorBayerVNG_Strict, regression)
@@ -1719,7 +1725,7 @@ TEST(Imgproc_ColorBayerVNG_Strict, regression)
     cvtest::TS& ts = *cvtest::TS::ptr();
     const char pattern[][3] = { "bg", "gb", "rg", "gr" };
     const std::string image_name = "lena.png";
-    const std::string parent_path = string(ts.get_data_path()) + "./cvtcolor_strict/";
+    const std::string parent_path = string(ts.get_data_path()) + "/cvtcolor_strict/";
 
     Mat src, dst, bayer, reference;
     std::string full_path = parent_path + image_name;
@@ -1730,6 +1736,7 @@ TEST(Imgproc_ColorBayerVNG_Strict, regression)
     {
         ts.set_failed_test_info(cvtest::TS::FAIL_MISSING_TEST_DATA);
         ts.printf(cvtest::TS::SUMMARY, "No input image\n");
+        ts.set_gtest_status();
         return;
     }
     
