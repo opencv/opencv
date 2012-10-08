@@ -97,11 +97,16 @@ PERF_TEST_P(Size_MatType, absdiff, TYPICAL_MATS_CORE_ARITHM)
 
     declare.in(a, b, WARMUP_RNG).out(c);
 
+    if (CV_MAT_DEPTH(type) == CV_32S)
+    {
+        //see ticket 1529: absdiff can be without saturation on 32S
+        a /= 2;
+        b /= 2;
+    }
+
     TEST_CYCLE() absdiff(a, b, c);
 
-    //see ticket 1529: absdiff can be without saturation on 32S
-    if (CV_MAT_DEPTH(type) != CV_32S)
-        SANITY_CHECK(c, 1e-8);
+    SANITY_CHECK(c, 1e-8);
 }
 
 PERF_TEST_P(Size_MatType, absdiffScalar, TYPICAL_MATS_CORE_ARITHM)
@@ -114,11 +119,16 @@ PERF_TEST_P(Size_MatType, absdiffScalar, TYPICAL_MATS_CORE_ARITHM)
 
     declare.in(a, b, WARMUP_RNG).out(c);
 
+    if (CV_MAT_DEPTH(type) == CV_32S)
+    {
+        //see ticket 1529: absdiff can be without saturation on 32S
+        a /= 2;
+        b /= 2;
+    }
+
     TEST_CYCLE() absdiff(a, b, c);
 
-    //see ticket 1529: absdiff can be without saturation on 32S
-    if (CV_MAT_DEPTH(type) != CV_32S)
-        SANITY_CHECK(c, 1e-8);
+    SANITY_CHECK(c, 1e-8);
 }
 
 PERF_TEST_P(Size_MatType, add, TYPICAL_MATS_CORE_ARITHM)
@@ -131,11 +141,16 @@ PERF_TEST_P(Size_MatType, add, TYPICAL_MATS_CORE_ARITHM)
 
     declare.in(a, b, WARMUP_RNG).out(c);
 
+    if (CV_MAT_DEPTH(type) == CV_32S)
+    {
+        //see ticket 1529: add can be without saturation on 32S
+        a /= 2;
+        b /= 2;
+    }
+
     TEST_CYCLE() add(a, b, c);
 
-    //see ticket 1529: add can be without saturation on 32S
-    if (CV_MAT_DEPTH(type) != CV_32S)
-        SANITY_CHECK(c, 1e-8);
+    SANITY_CHECK(c, 1e-8);
 }
 
 PERF_TEST_P(Size_MatType, addScalar, TYPICAL_MATS_CORE_ARITHM)
@@ -148,11 +163,16 @@ PERF_TEST_P(Size_MatType, addScalar, TYPICAL_MATS_CORE_ARITHM)
 
     declare.in(a, b, WARMUP_RNG).out(c);
 
+    if (CV_MAT_DEPTH(type) == CV_32S)
+    {
+        //see ticket 1529: add can be without saturation on 32S
+        a /= 2;
+        b /= 2;
+    }
+
     TEST_CYCLE() add(a, b, c);
 
-    //see ticket 1529: add can be without saturation on 32S
-    if (CV_MAT_DEPTH(type) != CV_32S)
-        SANITY_CHECK(c, 1e-8);
+    SANITY_CHECK(c, 1e-8);
 }
 
 PERF_TEST_P(Size_MatType, subtract, TYPICAL_MATS_CORE_ARITHM)
@@ -165,11 +185,16 @@ PERF_TEST_P(Size_MatType, subtract, TYPICAL_MATS_CORE_ARITHM)
 
     declare.in(a, b, WARMUP_RNG).out(c);
 
+    if (CV_MAT_DEPTH(type) == CV_32S)
+    {
+        //see ticket 1529: subtract can be without saturation on 32S
+        a /= 2;
+        b /= 2;
+    }
+
     TEST_CYCLE() subtract(a, b, c);
 
-    //see ticket 1529: subtract can be without saturation on 32S
-    if (CV_MAT_DEPTH(type) != CV_32S)
-        SANITY_CHECK(c, 1e-8);
+    SANITY_CHECK(c, 1e-8);
 }
 
 PERF_TEST_P(Size_MatType, subtractScalar, TYPICAL_MATS_CORE_ARITHM)
@@ -182,9 +207,14 @@ PERF_TEST_P(Size_MatType, subtractScalar, TYPICAL_MATS_CORE_ARITHM)
 
     declare.in(a, b, WARMUP_RNG).out(c);
 
+    if (CV_MAT_DEPTH(type) == CV_32S)
+    {
+        //see ticket 1529: subtract can be without saturation on 32S
+        a /= 2;
+        b /= 2;
+    }
+
     TEST_CYCLE() subtract(a, b, c);
 
-    //see ticket 1529: subtract can be without saturation on 32S
-    if (CV_MAT_DEPTH(type) != CV_32S)
-        SANITY_CHECK(c, 1e-8);
+    SANITY_CHECK(c, 1e-8);
 }
