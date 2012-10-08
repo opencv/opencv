@@ -9,9 +9,9 @@ using std::tr1::get;
 
 enum{HALF_SIZE=0, UPSIDE_DOWN, REFLECTION_X, REFLECTION_BOTH};
 
-CV_ENUM(BorderMode, BORDER_CONSTANT, BORDER_REPLICATE);
-CV_ENUM(InterType, INTER_NEAREST, INTER_LINEAR);
-CV_ENUM(RemapMode, HALF_SIZE, UPSIDE_DOWN, REFLECTION_X, REFLECTION_BOTH);
+CV_ENUM(BorderMode, BORDER_CONSTANT, BORDER_REPLICATE)
+CV_ENUM(InterType, INTER_NEAREST, INTER_LINEAR)
+CV_ENUM(RemapMode, HALF_SIZE, UPSIDE_DOWN, REFLECTION_X, REFLECTION_BOTH)
 
 typedef TestBaseWithParam< tr1::tuple<Size, InterType, BorderMode> > TestWarpAffine;
 typedef TestBaseWithParam< tr1::tuple<Size, InterType, BorderMode> > TestWarpPerspective;
@@ -164,5 +164,7 @@ PERF_TEST(Transform, getPerspectiveTransform)
     {
         transformCoefficient = getPerspectiveTransform(source, destination);
     }
+
+    SANITY_CHECK(transformCoefficient, 1e-5);
 }
 

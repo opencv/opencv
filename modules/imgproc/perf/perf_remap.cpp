@@ -7,18 +7,16 @@ using namespace testing;
 using std::tr1::make_tuple;
 using std::tr1::get;
 
-CV_ENUM(MatrixType, CV_16UC1, CV_16SC1, CV_32FC1)
-CV_ENUM(MapType, CV_16SC2, CV_32FC1, CV_32FC2)
 CV_ENUM(InterType, INTER_NEAREST, INTER_LINEAR, INTER_CUBIC, INTER_LANCZOS4)
 
-typedef TestBaseWithParam< tr1::tuple<Size, MatrixType, MapType, InterType> > TestRemap;
+typedef TestBaseWithParam< tr1::tuple<Size, MatType, MatType, InterType> > TestRemap;
 
 PERF_TEST_P( TestRemap, Remap,
              Combine(
-                Values( szVGA, sz1080p ), 
-                ValuesIn( MatrixType::all() ), 
-                ValuesIn( MapType::all() ), 
-                ValuesIn( InterType::all() ) 
+                Values( szVGA, sz1080p ),
+                Values( CV_16UC1, CV_16SC1, CV_32FC1 ),
+                Values( CV_16SC2, CV_32FC1, CV_32FC2 ),
+                ValuesIn( InterType::all() )
              )
 )
 {
@@ -38,10 +36,10 @@ PERF_TEST_P( TestRemap, Remap,
         map2.create(sz, CV_16UC1);
         map2 = Scalar::all(0);
     }
-        
+
     RNG rng;
     rng.fill(src, RNG::UNIFORM, 0, 256);
-    
+
     for (int j = 0; j < map1.rows; ++j)
         for (int i = 0; i < map1.cols; ++i)
             switch (map1_type)
