@@ -1216,15 +1216,16 @@ void cv::min(const Mat& src1, double src2, Mat& dst)
 namespace cv
 {
 
-static int actualScalarDepth(const Mat& src)
+static int actualScalarDepth(const double* data, int len)
 {
-    const double* data = (const double*)src.data;
-    double minval = MIN(data[0], data[1]);
-    minval = MIN(minval, data[2]);
-    minval = MIN(minval, data[3]);
-    double maxval = MAX(data[0], data[1]);
-    maxval = MAX(maxval, data[2]);
-    maxval = MAX(maxval, data[3]);
+    double minval = data[0];
+    double maxval = data[0];
+    for(int i = 1; i < len; ++i)
+    {
+        minval = MIN(minval, data[i]);
+        maxval = MAX(maxval, data[i]);
+    }
+
     int depth = CV_64F;
     if(minval >= 0 && maxval <= UCHAR_MAX)
         depth = CV_8U;
@@ -1236,6 +1237,8 @@ static int actualScalarDepth(const Mat& src)
         depth = CV_16S;
     else if(minval >= INT_MIN && maxval <= INT_MAX)
         depth = CV_32S;
+    else if(minval >= -FLT_MAX && maxval <= FLT_MAX)
+        depth = CV_32F;
     return depth;
 }
 
@@ -1275,7 +1278,7 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
                      "nor 'array op scalar', nor 'scalar op array'" );
         haveScalar = true;
         CV_Assert(src2.type() == CV_64F && (src2.rows == 4 || src2.rows == 1));
-        depth2 = actualScalarDepth(src2);
+        depth2 = MAX(src1.depth(), actualScalarDepth(src2.ptr<double>(), src1.channels()));
     }
 
     int cn = src1.channels(), depth1 = src1.depth(), wtype;
@@ -1522,23 +1525,32 @@ void cv::subtract( InputArray src1, InputArray src2, OutputArray dst,
                InputArray mask, int dtype )
 {
 #ifdef HAVE_TEGRA_OPTIMIZATION
-    if(mask.empty() && src1.depth() == CV_8U && src2.depth() == CV_8U && (dtype == CV_16S || (dtype == -1 && dst.fixedType() && dst.depth() == CV_16S)))
+    if (mask.empty() && src1.depth() == CV_8U && src2.depth() == CV_8U)
     {
-        Mat _dst = dst.getMat();
-        if(tegra::subtract_8u8u16s(src1.getMat(), src2.getMat(), _dst))
-            return;
-    }
-    if(mask.empty() && src1.depth() == CV_8U && src2.depth() == CV_8U && dst.depth() == CV_32F)
-    {
-        Mat _dst = dst.getMat();
-        if(tegra::subtract_8u8u32f(src1.getMat(), src2.getMat(), _dst))
-            return;
-    }
-    if(mask.empty() && src1.depth() == CV_8U && src2.depth() == CV_8U && dst.depth() == CV_8S)
-    {
-        Mat _dst = dst.getMat();
-        if(tegra::subtract_8u8u8s(src1.getMat(), src2.getMat(), _dst))
-            return;
+        if (dtype == -1 && dst.fixedType())
+            dtype = dst.depth();
+
+        if (!dst.fixedType() || dtype == dst.depth())
+        {
+            if (dtype == CV_16S)
+            {
+                Mat _dst = dst.getMat();
+                if(tegra::subtract_8u8u16s(src1.getMat(), src2.getMat(), _dst))
+                    return;
+            }
+            else if (dtype == CV_32F)
+            {
+                Mat _dst = dst.getMat();
+                if(tegra::subtract_8u8u32f(src1.getMat(), src2.getMat(), _dst))
+                    return;
+            }
+            else if (dtype == CV_8S)
+            {
+                Mat _dst = dst.getMat();
+                if(tegra::subtract_8u8u8s(src1.getMat(), src2.getMat(), _dst))
+                    return;
+            }
+        }
     }
 #endif
     arithm_op(src1, src2, dst, mask, dtype, subTab );
