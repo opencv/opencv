@@ -16,12 +16,13 @@ using perf::MatDepth;
 
 CV_ENUM(BorderMode, cv::BORDER_REFLECT101, cv::BORDER_REPLICATE, cv::BORDER_CONSTANT, cv::BORDER_REFLECT, cv::BORDER_WRAP)
 #define ALL_BORDER_MODES testing::ValuesIn(BorderMode::all())
+
 CV_ENUM(Interpolation, cv::INTER_NEAREST, cv::INTER_LINEAR, cv::INTER_CUBIC, cv::INTER_AREA)
 #define ALL_INTERPOLATIONS testing::ValuesIn(Interpolation::all())
 CV_ENUM(NormType, cv::NORM_INF, cv::NORM_L1, cv::NORM_L2, cv::NORM_HAMMING)
 
-enum { Gray = 1, TwoChannel = 2, BGR = 3, BGRA = 4 };
-CV_ENUM(MatCn, Gray, TwoChannel, BGR, BGRA)
+const int Gray = 1, TwoChannel = 2, BGR = 3, BGRA = 4;
+CV_FLAGS(MatCn, Gray, TwoChannel, BGR, BGRA)
 #define GPU_CHANNELS_1_3_4 testing::Values(Gray, BGR, BGRA)
 #define GPU_CHANNELS_1_3 testing::Values(Gray, BGR)
 
@@ -43,7 +44,7 @@ void PrintTo(const CvtColorInfo& info, std::ostream* os);
 DEF_PARAM_TEST_1(Sz, cv::Size);
 typedef perf::Size_MatType Sz_Type;
 DEF_PARAM_TEST(Sz_Depth, cv::Size, MatDepth);
-DEF_PARAM_TEST(Sz_Depth_Cn, cv::Size, MatDepth, int);
+DEF_PARAM_TEST(Sz_Depth_Cn, cv::Size, MatDepth, MatCn);
 
 #define GPU_TYPICAL_MAT_SIZES testing::Values(perf::sz720p, perf::szSXGA, perf::sz1080p)
 
