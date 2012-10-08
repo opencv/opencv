@@ -90,7 +90,7 @@ private:
 \*****************************************************************************************/
 
 #define CV_ENUM(class_name, ...) \
-class CV_EXPORTS class_name {\
+namespace { class CV_EXPORTS class_name {\
 public:\
   class_name(int val = 0) : _val(val) {}\
   operator int() const {return _val;}\
@@ -116,12 +116,12 @@ public:\
     private: class_name *_begin, *_end;\
   };\
   static Container all(){\
-    static class_name vals[] = {__VA_ARGS__};\
-    return Container(vals, sizeof(vals)/sizeof(vals[0]));\
+    static int vals[] = {__VA_ARGS__};\
+    return Container((class_name*)vals, sizeof(vals)/sizeof(vals[0]));\
   }\
 private: int _val;\
 };\
-inline void PrintTo(const class_name& t, std::ostream* os) { t.PrintTo(os); }
+inline void PrintTo(const class_name& t, std::ostream* os) { t.PrintTo(os); } }
 
 #define CV_FLAGS(class_name, ...) \
 class CV_EXPORTS class_name {\
