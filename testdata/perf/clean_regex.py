@@ -25,8 +25,10 @@ def process(filename, expr, save_results):
 
     if save_results:
         xmlstr = log.toxml()
-        xmlstr = re.sub(r"\n+", "\n", xmlstr)
-        xmlstr = re.sub(r"(\r\n)+", "\r\n", xmlstr)
+        xmlstr = re.sub(r"(\s*\n)+", "\n", xmlstr)
+        xmlstr = re.sub(r"(\s*\r\n)+", "\r\n", xmlstr)
+        xmlstr = re.sub(r"<(\w*)/>", "<\\1></\\1>", xmlstr)
+        xmlstr = xmlstr.replace("&quot;", "\"")
         f = open(filename, 'w')
         f.write(xmlstr)
         f.close()

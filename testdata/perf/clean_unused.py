@@ -25,6 +25,8 @@ def processLogFile(outname, inname, tests):
     xmlstr = log.toxml()
     xmlstr = re.sub(r"(\s*\n)+", "\n", xmlstr)
     xmlstr = re.sub(r"(\s*\r\n)+", "\r\n", xmlstr)
+    xmlstr = re.sub(r"<(\w*)/>", "<\\1></\\1>", xmlstr)
+    xmlstr = xmlstr.replace("&quot;", "\"")
     f = open(outname, 'w')
     f.write(xmlstr)
     f.close()
