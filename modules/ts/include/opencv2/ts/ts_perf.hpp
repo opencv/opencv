@@ -27,6 +27,7 @@
 
 namespace perf
 {
+class TestBase;
 
 /*****************************************************************************************\
 *                Predefined typical frame sizes and typical test parameters               *
@@ -163,7 +164,7 @@ enum ERROR_TYPE
 class CV_EXPORTS Regression
 {
 public:
-    static Regression& add(const std::string& name, cv::InputArray array, double eps = DBL_EPSILON, ERROR_TYPE err = ERROR_ABSOLUTE);
+    static Regression& add(TestBase* test, const std::string& name, cv::InputArray array, double eps = DBL_EPSILON, ERROR_TYPE err = ERROR_ABSOLUTE);
     static void Init(const std::string& testSuitName, const std::string& ext = ".xml");
 
     Regression& operator() (const std::string& name, cv::InputArray array, double eps = DBL_EPSILON, ERROR_TYPE err = ERROR_ABSOLUTE);
@@ -183,6 +184,7 @@ private:
     cv::FileStorage storageOut;
     cv::FileNode rootIn;
     std::string currentTestNodeName;
+
     cv::FileStorage& write();
 
     static std::string getCurrentTestNodeName();
@@ -196,7 +198,7 @@ private:
     void verify(cv::FileNode node, cv::Mat actual, double eps, std::string argname, ERROR_TYPE err);
 };
 
-#define SANITY_CHECK(array, ...) ::perf::Regression::add(#array, array , ## __VA_ARGS__)
+#define SANITY_CHECK(array, ...) ::perf::Regression::add(this, #array, array , ## __VA_ARGS__)
 
 
 /*****************************************************************************************\
@@ -322,12 +324,14 @@ private:
         friend class TestBase;
     };
     friend class _declareHelper;
+    friend class Regression;
 
 #ifdef HAVE_TBB
     cv::Ptr<tbb::task_scheduler_init> p_tbb_initializer;
 #else
     cv::Ptr<int> fixme;
 #endif
+    bool verified;
 
 public:
     _declareHelper declare;

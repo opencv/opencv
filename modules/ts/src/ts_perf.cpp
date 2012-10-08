@@ -97,8 +97,9 @@ Regression& Regression::instance()
     return single;
 }
 
-Regression& Regression::add(const std::string& name, cv::InputArray array, double eps, ERROR_TYPE err)
+Regression& Regression::add(TestBase* test, const std::string& name, cv::InputArray array, double eps, ERROR_TYPE err)
 {
+    if(test) test->verified = true;
     return instance()(name, array, eps, err);
 }
 
@@ -493,6 +494,7 @@ Regression& Regression::operator() (const std::string& name, cv::InputArray arra
         else
             verify(this_arg, array, eps, err);
     }
+
     return *this;
 }
 
@@ -914,6 +916,7 @@ void TestBase::SetUp()
     if (param_affinity_mask)
         setCurrentThreadAffinityMask(param_affinity_mask);
 #endif
+    verified = false;
     lastTime = 0;
     totalTime = 0;
     runsPerIteration = 1;
@@ -926,6 +929,9 @@ void TestBase::SetUp()
 
 void TestBase::TearDown()
 {
+    if (!HasFailure() && !verified)
+        ADD_FAILURE() << "The test has no sanity checks. There should be at least one check at the end of performance test.";
+
     validateMetrics();
     if (HasFailure())
         reportMetrics(false);
