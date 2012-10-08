@@ -22,7 +22,7 @@ CV_ENUM(Interpolation, cv::INTER_NEAREST, cv::INTER_LINEAR, cv::INTER_CUBIC, cv:
 CV_ENUM(NormType, cv::NORM_INF, cv::NORM_L1, cv::NORM_L2, cv::NORM_HAMMING)
 
 const int Gray = 1, TwoChannel = 2, BGR = 3, BGRA = 4;
-CV_FLAGS(MatCn, Gray, TwoChannel, BGR, BGRA)
+CV_ENUM(MatCn, Gray, TwoChannel, BGR, BGRA)
 #define GPU_CHANNELS_1_3_4 testing::Values(Gray, BGR, BGRA)
 #define GPU_CHANNELS_1_3 testing::Values(Gray, BGR)
 
