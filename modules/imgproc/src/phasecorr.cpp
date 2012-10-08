@@ -568,6 +568,10 @@ cv::Point2d cv::phaseCorrelate(InputArray _src1, InputArray _src2, InputArray _w
     return (center - t);
 }
 
+cv::Point2d cv::phaseCorrelate(InputArray _src1, InputArray _src2, InputArray _window)
+{
+    return phaseCorrelate(_src1, _src2, _window, 0);
+}
 
 void cv::createHanningWindow(OutputArray _dst, cv::Size winSize, int type)
 {

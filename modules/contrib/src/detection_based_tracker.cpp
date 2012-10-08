@@ -60,15 +60,12 @@ static inline cv::Rect scale_rect(const cv::Rect& r, float scale)
     return cv::Rect(x, y, cvRound(width), cvRound(height));
 }
 
-namespace cv
-{
-    void* workcycleObjectDetectorFunction(void* p);
-}
+void* workcycleObjectDetectorFunction(void* p);
 
-class cv::DetectionBasedTracker::SeparateDetectionWork
+class DetectionBasedTracker::SeparateDetectionWork
 {
     public:
-        SeparateDetectionWork(cv::DetectionBasedTracker& _detectionBasedTracker, cv::Ptr<DetectionBasedTracker::IDetector> _detector);
+        SeparateDetectionWork(DetectionBasedTracker& _detectionBasedTracker, cv::Ptr<DetectionBasedTracker::IDetector> _detector);
         virtual ~SeparateDetectionWork();
         bool communicateWithDetectingThread(const Mat& imageGray, vector<Rect>& rectsWhereRegions);
         bool run();
@@ -119,7 +116,7 @@ class cv::DetectionBasedTracker::SeparateDetectionWork
         long long  timeWhenDetectingThreadStartedWork;
 };
 
-cv::DetectionBasedTracker::SeparateDetectionWork::SeparateDetectionWork(DetectionBasedTracker& _detectionBasedTracker, cv::Ptr<DetectionBasedTracker::IDetector> _detector)
+DetectionBasedTracker::SeparateDetectionWork::SeparateDetectionWork(DetectionBasedTracker& _detectionBasedTracker, cv::Ptr<DetectionBasedTracker::IDetector> _detector)
     :detectionBasedTracker(_detectionBasedTracker),
     cascadeInThread(),
     isObjectDetectingReady(false),
@@ -152,7 +149,7 @@ cv::DetectionBasedTracker::SeparateDetectionWork::SeparateDetectionWork(Detectio
     }
 }
 
-cv::DetectionBasedTracker::SeparateDetectionWork::~SeparateDetectionWork()
+DetectionBasedTracker::SeparateDetectionWork::~SeparateDetectionWork()
 {
     if(stateThread!=STATE_THREAD_STOPPED) {
         LOGE("\n\n\nATTENTION!!! dangerous algorithm error: destructor DetectionBasedTracker::DetectionBasedTracker::~SeparateDetectionWork is called before stopping the workthread");
@@ -162,7 +159,7 @@ cv::DetectionBasedTracker::SeparateDetectionWork::~SeparateDetectionWork()
     pthread_cond_destroy(&objectDetectorRun);
     pthread_mutex_destroy(&mutex);
 }
-bool cv::DetectionBasedTracker::SeparateDetectionWork::run()
+bool DetectionBasedTracker::SeparateDetectionWork::run()
 {
     LOGD("DetectionBasedTracker::SeparateDetectionWork::run() --- start");
     pthread_mutex_lock(&mutex);
@@ -211,18 +208,18 @@ do {                                                                            
 } while(0)
 #endif
 
-void* cv::workcycleObjectDetectorFunction(void* p)
+void* workcycleObjectDetectorFunction(void* p)
 {
-    CATCH_ALL_AND_LOG({ ((cv::DetectionBasedTracker::SeparateDetectionWork*)p)->workcycleObjectDetector(); });
+    CATCH_ALL_AND_LOG({ ((DetectionBasedTracker::SeparateDetectionWork*)p)->workcycleObjectDetector(); });
     try{
-        ((cv::DetectionBasedTracker::SeparateDetectionWork*)p)->stateThread = cv::DetectionBasedTracker::SeparateDetectionWork::STATE_THREAD_STOPPED;
+        ((DetectionBasedTracker::SeparateDetectionWork*)p)->stateThread = DetectionBasedTracker::SeparateDetectionWork::STATE_THREAD_STOPPED;
     } catch(...) {
         LOGE0("DetectionBasedTracker: workcycleObjectDetectorFunction: ERROR concerning pointer, received as the function parameter");
     }
     return NULL;
 }
 
-void cv::DetectionBasedTracker::SeparateDetectionWork::workcycleObjectDetector()
+void DetectionBasedTracker::SeparateDetectionWork::workcycleObjectDetector()
 {
     static double freq = getTickFrequency();
     LOGD("DetectionBasedTracker::SeparateDetectionWork::workcycleObjectDetector() --- start");
@@ -346,7 +343,7 @@ void cv::DetectionBasedTracker::SeparateDetectionWork::workcycleObjectDetector()
     LOGI("DetectionBasedTracker::SeparateDetectionWork::workcycleObjectDetector: Returning");
 }
 
-void cv::DetectionBasedTracker::SeparateDetectionWork::stop()
+void DetectionBasedTracker::SeparateDetectionWork::stop()
 {
     //FIXME: TODO: should add quickStop functionality
     pthread_mutex_lock(&mutex);
@@ -363,7 +360,7 @@ void cv::DetectionBasedTracker::SeparateDetectionWork::stop()
     pthread_mutex_unlock(&mutex);
 }
 
-void cv::DetectionBasedTracker::SeparateDetectionWork::resetTracking()
+void DetectionBasedTracker::SeparateDetectionWork::resetTracking()
 {
     LOGD("DetectionBasedTracker::SeparateDetectionWork::resetTracking");
     pthread_mutex_lock(&mutex);
@@ -384,7 +381,7 @@ void cv::DetectionBasedTracker::SeparateDetectionWork::resetTracking()
 
 }
 
-bool cv::DetectionBasedTracker::SeparateDetectionWork::communicateWithDetectingThread(const Mat& imageGray, vector<Rect>& rectsWhereRegions)
+bool DetectionBasedTracker::SeparateDetectionWork::communicateWithDetectingThread(const Mat& imageGray, vector<Rect>& rectsWhereRegions)
 {
     static double freq = getTickFrequency();
 
@@ -434,13 +431,13 @@ bool cv::DetectionBasedTracker::SeparateDetectionWork::communicateWithDetectingT
     return shouldHandleResult;
 }
 
-cv::DetectionBasedTracker::Parameters::Parameters()
+DetectionBasedTracker::Parameters::Parameters()
 {
     maxTrackLifetime=5;
     minDetectionPeriod=0;
 }
 
-cv::DetectionBasedTracker::InnerParameters::InnerParameters()
+DetectionBasedTracker::InnerParameters::InnerParameters()
 {
     numLastPositionsToTrack=4;
     numStepsToWaitBeforeFirstShow=6;
@@ -453,7 +450,7 @@ cv::DetectionBasedTracker::InnerParameters::InnerParameters()
 
 }
 
-cv::DetectionBasedTracker::DetectionBasedTracker(cv::Ptr<IDetector> mainDetector, cv::Ptr<IDetector> trackingDetector, const Parameters& params)
+DetectionBasedTracker::DetectionBasedTracker(cv::Ptr<IDetector> mainDetector, cv::Ptr<IDetector> trackingDetector, const Parameters& params)
     :separateDetectionWork(),
     parameters(params),
     innerParameters(),
@@ -474,7 +471,7 @@ cv::DetectionBasedTracker::DetectionBasedTracker(cv::Ptr<IDetector> mainDetector
     weightsSizesSmoothing.push_back(0.2);
 }
 
-cv::DetectionBasedTracker::~DetectionBasedTracker()
+DetectionBasedTracker::~DetectionBasedTracker()
 {
 }
 
@@ -547,7 +544,7 @@ void DetectionBasedTracker::process(const Mat& imageGray)
     updateTrackedObjects(detectedObjectsInRegions);
 }
 
-void cv::DetectionBasedTracker::getObjects(std::vector<cv::Rect>& result) const
+void DetectionBasedTracker::getObjects(std::vector<cv::Rect>& result) const
 {
     result.clear();
 
@@ -561,7 +558,7 @@ void cv::DetectionBasedTracker::getObjects(std::vector<cv::Rect>& result) const
     }
 }
 
-void cv::DetectionBasedTracker::getObjects(std::vector<Object>& result) const
+void DetectionBasedTracker::getObjects(std::vector<Object>& result) const
 {
     result.clear();
 
@@ -574,7 +571,7 @@ void cv::DetectionBasedTracker::getObjects(std::vector<Object>& result) const
         LOGD("DetectionBasedTracker::process: found a object with SIZE %d x %d, rect={%d, %d, %d x %d}", r.width, r.height, r.x, r.y, r.width, r.height);
     }
 }
-void cv::DetectionBasedTracker::getObjects(std::vector<ExtObject>& result) const
+void DetectionBasedTracker::getObjects(std::vector<ExtObject>& result) const
 {
     result.clear();
 
@@ -586,7 +583,7 @@ void cv::DetectionBasedTracker::getObjects(std::vector<ExtObject>& result) const
     }
 }
 
-bool cv::DetectionBasedTracker::run()
+bool DetectionBasedTracker::run()
 {
     if (!separateDetectionWork.empty()) {
         return separateDetectionWork->run();
@@ -594,14 +591,14 @@ bool cv::DetectionBasedTracker::run()
     return false;
 }
 
-void cv::DetectionBasedTracker::stop()
+void DetectionBasedTracker::stop()
 {
     if (!separateDetectionWork.empty()) {
         separateDetectionWork->stop();
     }
 }
 
-void cv::DetectionBasedTracker::resetTracking()
+void DetectionBasedTracker::resetTracking()
 {
     if (!separateDetectionWork.empty()) {
         separateDetectionWork->resetTracking();
@@ -609,7 +606,7 @@ void cv::DetectionBasedTracker::resetTracking()
     trackedObjects.clear();
 }
 
-void cv::DetectionBasedTracker::updateTrackedObjects(const vector<Rect>& detectedObjects)
+void DetectionBasedTracker::updateTrackedObjects(const vector<Rect>& detectedObjects)
 {
     enum {
         NEW_RECTANGLE=-1,
@@ -730,7 +727,7 @@ void cv::DetectionBasedTracker::updateTrackedObjects(const vector<Rect>& detecte
     }
 }
 
-int cv::DetectionBasedTracker::addObject(const Rect& location)
+int DetectionBasedTracker::addObject(const Rect& location)
 {
     LOGD("DetectionBasedTracker::addObject: new object {%d, %d %dx%d}",location.x, location.y, location.width, location.height);
     trackedObjects.push_back(TrackedObject(location));
@@ -739,12 +736,12 @@ int cv::DetectionBasedTracker::addObject(const Rect& location)
     return newId;
 }
 
-Rect cv::DetectionBasedTracker::calcTrackedObjectPositionToShow(int i) const
+Rect DetectionBasedTracker::calcTrackedObjectPositionToShow(int i) const
 {
     ObjectStatus status;
     return calcTrackedObjectPositionToShow(i, status);
 }
-Rect cv::DetectionBasedTracker::calcTrackedObjectPositionToShow(int i, ObjectStatus& status) const
+Rect DetectionBasedTracker::calcTrackedObjectPositionToShow(int i, ObjectStatus& status) const
 {
     if ( (i < 0) || (i >= (int)trackedObjects.size()) ) {
         LOGE("DetectionBasedTracker::calcTrackedObjectPositionToShow: ERROR: wrong i=%d", i);
@@ -830,7 +827,7 @@ Rect cv::DetectionBasedTracker::calcTrackedObjectPositionToShow(int i, ObjectSta
     return res;
 }
 
-void cv::DetectionBasedTracker::detectInRegion(const Mat& img, const Rect& r, vector<Rect>& detectedObjectsInRegions)
+void DetectionBasedTracker::detectInRegion(const Mat& img, const Rect& r, vector<Rect>& detectedObjectsInRegions)
 {
     Rect r0(Point(), img.size());
     Rect r1 = scale_rect(r, innerParameters.coeffTrackingWindowSize);
@@ -867,7 +864,7 @@ void cv::DetectionBasedTracker::detectInRegion(const Mat& img, const Rect& r, ve
     }
 }
 
-bool cv::DetectionBasedTracker::setParameters(const Parameters& params)
+bool DetectionBasedTracker::setParameters(const Parameters& params)
 {
     if ( params.maxTrackLifetime < 0 )
     {
@@ -885,7 +882,7 @@ bool cv::DetectionBasedTracker::setParameters(const Parameters& params)
     return true;
 }
 
-const cv::DetectionBasedTracker::Parameters& DetectionBasedTracker::getParameters() const
+const DetectionBasedTracker::Parameters& DetectionBasedTracker::getParameters() const
 {
     return parameters;
 }

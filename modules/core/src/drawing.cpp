@@ -1730,7 +1730,7 @@ void fillPoly( Mat& img, const Point** pts, const int* npts, int ncontours,
 }
 
 
-void polylines( Mat& img, const Point* const* pts, const int* npts, int ncontours, bool isClosed,
+void polylines( Mat& img, const Point** pts, const int* npts, int ncontours, bool isClosed,
                 const Scalar& color, int thickness, int line_type, int shift )
 {
     if( line_type == CV_AA && img.depth() != CV_8U )

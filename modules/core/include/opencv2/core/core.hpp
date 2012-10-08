@@ -2124,11 +2124,15 @@ CV_EXPORTS_W void reduce(InputArray src, OutputArray dst, int dim, int rtype, in
 
 //! makes multi-channel array out of several single-channel arrays
 CV_EXPORTS void merge(const Mat* mv, size_t count, OutputArray dst);
+CV_EXPORTS void merge(const vector<Mat>& mv, OutputArray dst );
+
 //! makes multi-channel array out of several single-channel arrays
 CV_EXPORTS_W void merge(InputArrayOfArrays mv, OutputArray dst);
 
 //! copies each plane of a multi-channel array to a dedicated array
 CV_EXPORTS void split(const Mat& src, Mat* mvbegin);
+CV_EXPORTS void split(const Mat& src, vector<Mat>& mv );
+    
 //! copies each plane of a multi-channel array to a dedicated array
 CV_EXPORTS_W void split(InputArray m, OutputArrayOfArrays mv);
 
@@ -2547,7 +2551,7 @@ CV_EXPORTS_W void fillPoly(InputOutputArray img, InputArrayOfArrays pts,
                            Point offset=Point() );
 
 //! draws one or more polygonal curves
-CV_EXPORTS void polylines(Mat& img, const Point* const* pts, const int* npts,
+CV_EXPORTS void polylines(Mat& img, const Point** pts, const int* npts,
                           int ncontours, bool isClosed, const Scalar& color,
                           int thickness=1, int lineType=8, int shift=0 );
 
@@ -3995,7 +3999,7 @@ public:
     //! closes the file and releases all the memory buffers
     CV_WRAP virtual void release();
     //! closes the file, releases all the memory buffers and returns the text string
-    CV_WRAP virtual string releaseAndGetString();
+    CV_WRAP string releaseAndGetString();
 
     //! returns the first element of the top-level mapping
     CV_WRAP FileNode getFirstTopLevelNode() const;
@@ -4538,6 +4542,7 @@ template<> struct ParamType<uint64>
 class CV_EXPORTS CommandLineParser
 {
 public:
+    CommandLineParser(int argc, const char* const argv[], const char* keys);
     CommandLineParser(int argc, const char* const argv[], const string& keys);
     CommandLineParser(const CommandLineParser& parser);
     CommandLineParser& operator = (const CommandLineParser& parser);
@@ -4559,17 +4564,18 @@ public:
         getByIndex(index, space_delete, ParamType<T>::type, (void*)&val);
         return val;
     }
-
-    bool has(const string& name) const;
-
+    
+    bool has(const string& name);
     bool check() const;
 
     void about(const string& message);
 
     void printMessage() const;
     void printErrors() const;
+    void printParams();
 
 protected:
+    string getString(const string& name);
     void getByName(const string& name, bool space_delete, int type, void* dst) const;
     void getByIndex(int index, bool space_delete, int type, void* dst) const;
 
