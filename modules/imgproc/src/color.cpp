@@ -2168,7 +2168,7 @@ static void Bayer2RGB_VNG_8u( const Mat& srcmat, Mat& dstmat, int code )
 
     bayer += bstep*2;
 
-#ifdef CV_SSE2
+#if CV_SSE2
     bool haveSSE = cv::checkHardwareSupport(CV_CPU_SSE2);
     #define _mm_absdiff_epu16(a,b) _mm_adds_epu16(_mm_subs_epu16(a, b), _mm_subs_epu16(b, a))
 #endif
@@ -2188,7 +2188,7 @@ static void Bayer2RGB_VNG_8u( const Mat& srcmat, Mat& dstmat, int code )
 
             i = 1;
 
-#ifdef CV_SSE2
+#if CV_SSE2
             if( haveSSE )
             {
                 __m128i z = _mm_setzero_si128();
@@ -2263,7 +2263,7 @@ static void Bayer2RGB_VNG_8u( const Mat& srcmat, Mat& dstmat, int code )
         bool greenCell = greenCell0;
 
         i = 2;
-#ifdef CV_SSE2
+#if CV_SSE2
         int limit = !haveSSE ? N-2 : greenCell ? std::min(3, N-2) : 2;
 #else
         int limit = N - 2;
@@ -2431,7 +2431,7 @@ static void Bayer2RGB_VNG_8u( const Mat& srcmat, Mat& dstmat, int code )
                 greenCell = !greenCell;
             }
 
-#ifdef CV_SSE2
+#if CV_SSE2
             if( !haveSSE )
                 break;
 
