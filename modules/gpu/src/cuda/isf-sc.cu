@@ -86,7 +86,6 @@ namespace icf {
     }
 
     texture<int,  cudaTextureType2D, cudaReadModeElementType> thogluv;
-    texture<char,  cudaTextureType2D, cudaReadModeElementType> troi;
 
     template<bool isUp>
     __device__ __forceinline__ float rescale(const Level& level, Node& node)
@@ -130,11 +129,6 @@ namespace icf {
         float relScale = level.relScale;
         float farea = scaledRect.z * scaledRect.w;
 
-        dprintf("%d: feature %d box %d %d %d %d\n",threadIdx.x, (node.threshold >> 28), scaledRect.x, scaledRect.y,
-            scaledRect.z, scaledRect.w);
-        dprintf("%d: rescale: %f [%f %f] selected %f\n",threadIdx.x, level.relScale, level.scaling[0], level.scaling[1],
-            level.scaling[(node.threshold >> 28) > 6]);
-
         // rescale
         scaledRect.x = __float2int_rn(relScale * scaledRect.x);
         scaledRect.y = __float2int_rn(relScale * scaledRect.y);
@@ -146,15 +140,7 @@ namespace icf {
         const float expected_new_area = farea * relScale * relScale;
         float approx = __fdividef(sarea, expected_new_area);
 
-        dprintf("%d: new rect: %d box %d %d %d %d  rel areas %f %f\n",threadIdx.x, (node.threshold >> 28),
-        scaledRect.x, scaledRect.y, scaledRect.z, scaledRect.w, farea * relScale * relScale, sarea);
-
-        float rootThreshold = (node.threshold & 0x0FFFFFFFU) * approx;
-
-        rootThreshold *= level.scaling[(node.threshold >> 28) > 6];
-
-        dprintf("%d: approximation %f %d -> %f %f\n",threadIdx.x, approx, (node.threshold & 0x0FFFFFFFU), rootThreshold,
-            level.scaling[(node.threshold >> 28) > 6]);
+        float rootThreshold = (node.threshold & 0x0FFFFFFFU) * approx * level.scaling[(node.threshold >> 28) > 6];
 
         return rootThreshold;
     }
@@ -162,19 +148,10 @@ namespace icf {
     template<bool isUp>
     __device__ __forceinline__ int get(int x, int y, uchar4 area)
     {
-
-        dprintf("%d: feature box %d %d %d %d\n",threadIdx.x, area.x, area.y, area.z, area.w);
-        dprintf("%d: extract feature for: [%d %d] [%d %d] [%d %d] [%d %d]\n",threadIdx.x,
-            x + area.x, y + area.y,  x + area.z, y + area.y,  x + area.z,y + area.w,
-            x + area.x, y + area.w);
-        dprintf("%d: at point %d %d with offset %d\n", x, y, 0);
-
         int a = tex2D(thogluv, x + area.x, y + area.y);
         int b = tex2D(thogluv, x + area.z, y + area.y);
         int c = tex2D(thogluv, x + area.z, y + area.w);
         int d = tex2D(thogluv, x + area.x, y + area.w);
-
-        dprintf("%d   retruved integral values: %d %d %d %d\n",threadIdx.x, a, b, c, d);
 
         return (a - b + c - d);
     }
@@ -182,13 +159,6 @@ namespace icf {
     template<>
     __device__ __forceinline__ int get<true>(int x, int y, uchar4 area)
     {
-
-        dprintf("%d: feature box %d %d %d %d\n",threadIdx.x, area.x, area.y, area.z, area.w);
-        dprintf("%d: extract feature for: [%d %d] [%d %d] [%d %d] [%d %d]\n",threadIdx.x,
-            x + area.x, y + area.y,  x + area.z, y + area.y,  x + area.z,y + area.w,
-            x + area.x, y + area.w);
-        dprintf("%d: at point %d %d with offset %d\n", x, y, 0);
-
         x += area.x;
         y += area.y;
         int a = tex2D(thogluv, x, y);
@@ -196,11 +166,10 @@ namespace icf {
         int c = tex2D(thogluv, x + area.z, y + area.w);
         int d = tex2D(thogluv, x, y + area.w);
 
-        dprintf("%d   retruved integral values: %d %d %d %d\n",threadIdx.x, a, b, c, d);
-
         return (a - b + c - d);
     }
 
+    texture<float2,  cudaTextureType2D, cudaReadModeElementType> troi;
 #if defined __CUDA_ARCH__ && __CUDA_ARCH__ >= 300
     template<bool isUp>
     __global__ void test_kernel_warp(const Level* levels, const Octave* octaves, const float* stages,
@@ -210,11 +179,20 @@ namespace icf {
         const int y = blockIdx.y * blockDim.y + threadIdx.y;
         const int x = blockIdx.x;
 
+        __shared__ volatile char roiCache[8];
+
+        if (!threadIdx.y && !threadIdx.x)
+        {
+            ((float2*)roiCache)[threadIdx.x] = tex2D(troi, blockIdx.y, x);
+        }
+
+        __syncthreads();
+
+        if (!roiCache[threadIdx.y]) return;
+
         Level level = levels[downscales + blockIdx.z];
 
         if(x >= level.workRect.x || y >= level.workRect.y) return;
-
-        if (!tex2D(troi, x, y)) return;
 
         Octave octave = octaves[level.octave];
         int st = octave.index * octave.stages;
@@ -282,9 +260,9 @@ namespace icf {
         // if (blockIdx.z != 31) return;
         if(x >= level.workRect.x || y >= level.workRect.y) return;
 
-        int roi = tex2D(troi, x, y);
-        printf("%d\n", roi);
-        if (!roi) return;
+        // int roi = tex2D(troi, x, y);
+        // printf("%d\n", roi);
+        // if (!roi) return;
 
         Octave octave = octaves[level.octave];
 
@@ -357,8 +335,8 @@ namespace icf {
         cudaChannelFormatDesc desc = cudaCreateChannelDesc<int>();
         cudaSafeCall( cudaBindTexture2D(0, thogluv, hogluv.data, desc, hogluv.cols, hogluv.rows, hogluv.step));
 
-        cudaChannelFormatDesc desc_roi = cudaCreateChannelDesc<char>();
-        cudaSafeCall( cudaBindTexture2D(0, troi, roi.data, desc_roi, roi.cols, roi.rows, roi.step));
+        cudaChannelFormatDesc desc_roi = cudaCreateChannelDesc<float2>();
+        cudaSafeCall( cudaBindTexture2D(0, troi, roi.data, desc_roi, roi.cols / 8, roi.rows, roi.step));
 
         test_kernel_warp<false><<<grid, block>>>(l, oct, st, nd, lf, det, max_det, ctr, 0);
         cudaSafeCall( cudaGetLastError());
@@ -391,8 +369,8 @@ namespace icf {
         cudaChannelFormatDesc desc = cudaCreateChannelDesc<int>();
         cudaSafeCall( cudaBindTexture2D(0, thogluv, hogluv.data, desc, hogluv.cols, hogluv.rows, hogluv.step));
 
-        cudaChannelFormatDesc desc_roi = cudaCreateChannelDesc<char>();
-        cudaSafeCall( cudaBindTexture2D(0, troi, roi.data, desc_roi, roi.cols, roi.rows, roi.step));
+        cudaChannelFormatDesc desc_roi = cudaCreateChannelDesc<float2>();
+        cudaSafeCall( cudaBindTexture2D(0, troi, roi.data, desc_roi, roi.cols / 8, roi.rows, roi.step));
 
         if (scale >= downscales)
             test_kernel_warp<true><<<grid, block>>>(l, oct, st, nd, lf, det, max_det, ctr, scale);

@@ -47,7 +47,7 @@
 using cv::gpu::GpuMat;
 
 // show detection results on input image with cv::imshow
-//#define SHOW_DETECTIONS
+#define SHOW_DETECTIONS
 
 #if defined SHOW_DETECTIONS
 # define SHOW(res)           \
@@ -154,26 +154,30 @@ GPU_TEST_P(SoftCascadeTest, detectInROI,
     cv::gpu::SoftCascade cascade;
     ASSERT_TRUE(cascade.load(cvtest::TS::ptr()->get_data_path() + GET_PARAM(0)));
 
-    GpuMat colored(coloredCpu), objectBoxes(1, 16384, CV_8UC1), rois(cascade.getRoiSize(), CV_8UC1);
+    GpuMat colored(coloredCpu), objectBoxes(1, 16384, CV_8UC1), rois(cascade.getRoiSize(), CV_8UC1), trois;
     rois.setTo(0);
 
     int nroi = GET_PARAM(2);
+    cv::Mat result(coloredCpu);
     cv::RNG rng;
     for (int i = 0; i < nroi; ++i)
     {
         cv::Rect r = getFromTable(rng(10));
         GpuMat sub(rois, r);
         sub.setTo(1);
+        r.x *= 4; r.y *= 4; r.width *= 4; r.height *= 4;
+        cv::rectangle(result, r, cv::Scalar(0, 0, 255, 255), 1);
     }
 
-    cascade.detectMultiScale(colored, rois, objectBoxes);
+    cv::gpu::transpose(rois, trois);
+
+    cascade.detectMultiScale(colored, trois, objectBoxes);
 
     ///
     cv::Mat dt(objectBoxes);
     typedef cv::gpu::SoftCascade::Detection detection_t;
 
     detection_t* dts = (detection_t*)dt.data;
-    cv::Mat result(coloredCpu);
 
     printTotal(std::cout, dt.cols);
     for (int i = 0; i  < (int)(dt.cols / sizeof(detection_t)); ++i)
@@ -204,8 +208,11 @@ GPU_TEST_P(SoftCascadeTest, detectInLevel,
     GpuMat colored(coloredCpu), objectBoxes(1, 100 * sizeof(detection_t), CV_8UC1), rois(cascade.getRoiSize(), CV_8UC1);
     rois.setTo(1);
 
+    cv::gpu::GpuMat trois;
+    cv::gpu::transpose(rois, trois);
+
     int level = GET_PARAM(2);
-    cascade.detectMultiScale(colored, rois, objectBoxes, 1, level);
+    cascade.detectMultiScale(colored, trois, objectBoxes, 1, level);
 
     cv::Mat dt(objectBoxes);
 
@@ -246,6 +253,9 @@ TEST(SoftCascadeTest, detect)
     GpuMat sub(rois, cv::Rect(rois.cols / 4, rois.rows / 4,rois.cols / 2, rois.rows / 2));
     sub.setTo(cv::Scalar::all(1));
 
-    cascade.detectMultiScale(colored, rois, objectBoxes);
+    cv::gpu::GpuMat trois;
+    cv::gpu::transpose(rois, trois);
+
+    cascade.detectMultiScale(colored, trois, objectBoxes);
 }
 #endif

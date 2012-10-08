@@ -481,7 +481,7 @@ void cv::gpu::SoftCascade::detectMultiScale(const GpuMat& colored, const GpuMat&
     CV_Assert(colored.type() == CV_8UC3);
 
     // we guess user knows about shrincage
-    CV_Assert((rois.size() == getRoiSize()) && (rois.type() == CV_8UC1));
+    CV_Assert((rois.size().width == getRoiSize().height) && (rois.type() == CV_8UC1));
 
     // only this window size allowed
     CV_Assert(colored.cols == Filds::FRAME_WIDTH && colored.rows == Filds::FRAME_HEIGHT);

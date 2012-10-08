@@ -176,33 +176,35 @@ PERF_TEST_P(SoftCascadeTest, detect,
 {
     if (runOnGpu)
     {
-        cv::Mat cpu = readImage (GetParam().second);
+        cv::Mat cpu = readImage (GET_PARAM(1));
         ASSERT_FALSE(cpu.empty());
         cv::gpu::GpuMat colored(cpu);
 
         cv::gpu::SoftCascade cascade;
-        ASSERT_TRUE(cascade.load(perf::TestBase::getDataPath(GetParam().first)));
+        ASSERT_TRUE(cascade.load(perf::TestBase::getDataPath(GET_PARAM(0))));
 
-        cv::gpu::GpuMat objectBoxes(1, 16384, CV_8UC1), rois(cascade.getRoiSize(), CV_8UC1);
-
-        rois.setTo(0);
-        cv::gpu::GpuMat sub(rois, cv::Rect(rois.cols / 4, rois.rows / 4,rois.cols / 2, rois.rows / 2));
-        sub.setTo(cv::Scalar::all(1));
-        cascade.detectMultiScale(colored, rois, objectBoxes);
+        cv::gpu::GpuMat objectBoxes(1, 16384, CV_8UC1), rois(cascade.getRoiSize(), CV_8UC1), trois;
+        rois.setTo(1);
+        cv::gpu::transpose(rois, trois);
+        cascade.detectMultiScale(colored, trois, objectBoxes);
 
         TEST_CYCLE()
         {
-            cascade.detectMultiScale(colored, rois, objectBoxes);
+            cascade.detectMultiScale(colored, trois, objectBoxes);
         }
-    } else
+    }
+    else
     {
-        cv::Mat colored = readImage(GetParam().second);
+        cv::Mat colored = readImage(GET_PARAM(1));
         ASSERT_FALSE(colored.empty());
 
         cv::SoftCascade cascade;
-        ASSERT_TRUE(cascade.load(getDataPath(GetParam().first)));
+        ASSERT_TRUE(cascade.load(getDataPath(GET_PARAM(0))));
 
-        std::vector<cv::Rect> rois, objectBoxes;
+        std::vector<cv::Rect> rois;
+
+        typedef cv::SoftCascade::Detection Detection;
+        std::vector<Detection>objectBoxes;
         cascade.detectMultiScale(colored, rois, objectBoxes);
 
         TEST_CYCLE()
@@ -262,13 +264,16 @@ PERF_TEST_P(SoftCascadeTestRoi, detectInRoi,
             sub.setTo(1);
         }
 
+        cv::gpu::GpuMat trois;
+        cv::gpu::transpose(rois, trois);
+
         cv::gpu::GpuMat curr = objectBoxes;
-        cascade.detectMultiScale(colored, rois, curr);
+        cascade.detectMultiScale(colored, trois, curr);
 
         TEST_CYCLE()
         {
             curr = objectBoxes;
-            cascade.detectMultiScale(colored, rois, curr);
+            cascade.detectMultiScale(colored, trois, curr);
         }
     }
     else
@@ -301,7 +306,10 @@ PERF_TEST_P(SoftCascadeTestRoi, detectEachRoi,
         sub.setTo(1);
 
         cv::gpu::GpuMat curr = objectBoxes;
-        cascade.detectMultiScale(colored, rois, curr);
+        cv::gpu::GpuMat trois;
+        cv::gpu::transpose(rois, trois);
+
+        cascade.detectMultiScale(colored, trois, curr);
 
         TEST_CYCLE()
         {
@@ -372,7 +380,7 @@ PERF_TEST_P(ImageAndCascade, ObjDetect_LBPClassifier,
     cv::Mat img = readImage(GetParam().first, cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(img.empty());
 
-    if (PERF_RUN_GPU())
+    if (runOnGpu)
     {
         cv::gpu::CascadeClassifier_GPU d_cascade;
         ASSERT_TRUE(d_cascade.load(perf::TestBase::getDataPath(GetParam().second)));
