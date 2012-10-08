@@ -511,14 +511,25 @@ void DpSeamFinder::resolveConflicts(
 
 void DpSeamFinder::computeGradients(const Mat &image1, const Mat &image2)
 {
+    CV_Assert(image1.channels() == 3 || image1.channels() == 4);
+    CV_Assert(image2.channels() == 3 || image2.channels() == 4);
     CV_Assert(costFunction() == COLOR_GRAD);
 
     Mat gray;
-    cvtColor(image1, gray, CV_BGR2GRAY);
+
+    if (image1.channels() == 3)
+        cvtColor(image1, gray, CV_BGR2GRAY);
+    else if (image1.channels() == 4)
+        cvtColor(image1, gray, CV_BGRA2GRAY);
+
     Sobel(gray, gradx1_, CV_32F, 1, 0);
     Sobel(gray, grady1_, CV_32F, 0, 1);
 
-    cvtColor(image2, gray, CV_BGR2GRAY);
+    if (image2.channels() == 3)
+        cvtColor(image2, gray, CV_BGR2GRAY);
+    else if (image2.channels() == 4)
+        cvtColor(image2, gray, CV_BGRA2GRAY);
+
     Sobel(gray, gradx2_, CV_32F, 1, 0);
     Sobel(gray, grady2_, CV_32F, 0, 1);
 }
@@ -662,12 +673,22 @@ namespace
 {
 
 template <typename T>
-float diffL2Square(const Mat &image1, int y1, int x1, const Mat &image2, int y2, int x2)
+float diffL2Square3(const Mat &image1, int y1, int x1, const Mat &image2, int y2, int x2)
 {
     const T *r1 = image1.ptr<T>(y1);
     const T *r2 = image2.ptr<T>(y2);
     return static_cast<float>(sqr(r1[3*x1] - r2[3*x2]) + sqr(r1[3*x1+1] - r2[3*x2+1]) +
                               sqr(r1[3*x1+2] - r2[3*x2+2]));
+}
+
+
+template <typename T>
+float diffL2Square4(const Mat &image1, int y1, int x1, const Mat &image2, int y2, int x2)
+{
+    const T *r1 = image1.ptr<T>(y1);
+    const T *r2 = image2.ptr<T>(y2);
+    return static_cast<float>(sqr(r1[4*x1] - r2[4*x2]) + sqr(r1[4*x1+1] - r2[4*x2+1]) +
+                              sqr(r1[4*x1+2] - r2[4*x2+2]));
 }
 
 } // namespace
@@ -683,11 +704,15 @@ void DpSeamFinder::computeCosts(
 
     float (*diff)(const Mat&, int, int, const Mat&, int, int) = 0;
     if (image1.type() == CV_32FC3 && image2.type() == CV_32FC3)
-        diff = diffL2Square<float>;
+        diff = diffL2Square3<float>;
     else if (image1.type() == CV_8UC3 && image2.type() == CV_8UC3)
-        diff = diffL2Square<uchar>;
+        diff = diffL2Square3<uchar>;
+    else if (image1.type() == CV_32FC4 && image2.type() == CV_32FC4)
+        diff = diffL2Square4<float>;
+    else if (image1.type() == CV_8UC4 && image2.type() == CV_8UC4)
+        diff = diffL2Square4<uchar>;
     else
-        CV_Error(CV_StsBadArg, "both images must have CV_32FC3 or CV_8UC3 type");
+        CV_Error(CV_StsBadArg, "both images must have CV_32FC3(4) or CV_8UC3(4) type");
 
     int l = comp+1;
     Rect roi(tls_[comp], brs_[comp]);
