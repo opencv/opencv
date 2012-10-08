@@ -2168,11 +2168,11 @@ static void Bayer2RGB_VNG_8u( const Mat& srcmat, Mat& dstmat, int code )
 
     bayer += bstep*2;
 
-#if CV_SSE2
+#ifdef CV_SSE2
     bool haveSSE = cv::checkHardwareSupport(CV_CPU_SSE2);
     #define _mm_absdiff_epu16(a,b) _mm_adds_epu16(_mm_subs_epu16(a, b), _mm_subs_epu16(b, a))
 #endif
-
+    
     for( int y = 2; y < size.height - 4; y++ )
     {
         uchar* dstrow = dst + dststep*y + 6;
@@ -2188,7 +2188,7 @@ static void Bayer2RGB_VNG_8u( const Mat& srcmat, Mat& dstmat, int code )
 
             i = 1;
 
-#if CV_SSE2
+#ifdef CV_SSE2
             if( haveSSE )
             {
                 __m128i z = _mm_setzero_si128();
@@ -2263,7 +2263,7 @@ static void Bayer2RGB_VNG_8u( const Mat& srcmat, Mat& dstmat, int code )
         bool greenCell = greenCell0;
 
         i = 2;
-#if CV_SSE2
+#ifdef CV_SSE2
         int limit = !haveSSE ? N-2 : greenCell ? std::min(3, N-2) : 2;
 #else
         int limit = N - 2;
@@ -2431,12 +2431,13 @@ static void Bayer2RGB_VNG_8u( const Mat& srcmat, Mat& dstmat, int code )
                 greenCell = !greenCell;
             }
 
-#if CV_SSE2
+#ifdef CV_SSE2
             if( !haveSSE )
                 break;
 
             __m128i emask    = _mm_set1_epi32(0x0000ffff),
                     omask    = _mm_set1_epi32(0xffff0000),
+                    smask    = _mm_set1_epi16(0x7fff), // Get rid of sign bit in u16's
                     z        = _mm_setzero_si128();
             __m128 _0_5      = _mm_set1_ps(0.5f);
 
@@ -2658,6 +2659,11 @@ static void Bayer2RGB_VNG_8u( const Mat& srcmat, Mat& dstmat, int code )
                 x2 = _mm_merge_epi16(t0, x0);
 
                 uchar R[8], G[8], B[8];
+                
+                // Make sure there is no sign bit in the 16 bit values so they can saturate correctly
+                x1 = _mm_and_si128(x1, smask);
+                x2 = _mm_and_si128(x2, smask);
+                t1 = _mm_and_si128(t1, smask);
 
                 _mm_storel_epi64(blueIdx ? (__m128i*)B : (__m128i*)R, _mm_packus_epi16(x1, z));
                 _mm_storel_epi64((__m128i*)G, _mm_packus_epi16(x2, z));
@@ -3548,7 +3554,7 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             if(dcn <= 0) dcn = 1;
             CV_Assert( scn == 1 && dcn == 1 );
 
-            _dst.create(sz, depth);
+            _dst.create(sz, CV_MAKETYPE(depth, dcn));
             dst = _dst.getMat();
 
             if( depth == CV_8U )
@@ -3561,26 +3567,29 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
 
         case CV_BayerBG2BGR: case CV_BayerGB2BGR: case CV_BayerRG2BGR: case CV_BayerGR2BGR:
         case CV_BayerBG2BGR_VNG: case CV_BayerGB2BGR_VNG: case CV_BayerRG2BGR_VNG: case CV_BayerGR2BGR_VNG:
-            if(dcn <= 0) dcn = 3;
-            CV_Assert( scn == 1 && dcn == 3 );
-
-            _dst.create(sz, CV_MAKETYPE(depth, dcn));
-            dst = _dst.getMat();
-
-            if( code == CV_BayerBG2BGR || code == CV_BayerGB2BGR ||
-                code == CV_BayerRG2BGR || code == CV_BayerGR2BGR )
             {
-                if( depth == CV_8U )
-                    Bayer2RGB_<uchar, SIMDBayerInterpolator_8u>(src, dst, code);
-                else if( depth == CV_16U )
-                    Bayer2RGB_<ushort, SIMDBayerStubInterpolator_<ushort> >(src, dst, code);
+                if (dcn <= 0) 
+                    dcn = 3;
+                CV_Assert( scn == 1 && dcn == 3 );
+
+                _dst.create(sz, CV_MAKE_TYPE(depth, dcn));
+                Mat dst_ = _dst.getMat();
+
+                if( code == CV_BayerBG2BGR || code == CV_BayerGB2BGR ||
+                    code == CV_BayerRG2BGR || code == CV_BayerGR2BGR )
+                {
+                    if( depth == CV_8U )
+                        Bayer2RGB_<uchar, SIMDBayerInterpolator_8u>(src, dst_, code);
+                    else if( depth == CV_16U )
+                        Bayer2RGB_<ushort, SIMDBayerStubInterpolator_<ushort> >(src, dst_, code);
+                    else
+                        CV_Error(CV_StsUnsupportedFormat, "Bayer->RGB demosaicing only supports 8u and 16u types");
+                }
                 else
-                    CV_Error(CV_StsUnsupportedFormat, "Bayer->RGB demosaicing only supports 8u and 16u types");
-            }
-            else
-            {
-                CV_Assert( depth == CV_8U );
-                Bayer2RGB_VNG_8u(src, dst, code);
+                {
+                    CV_Assert( depth == CV_8U );
+                    Bayer2RGB_VNG_8u(src, dst_, code);
+                }
             }
             break;
         case CV_YUV2BGR_NV21:  case CV_YUV2RGB_NV21:  case CV_YUV2BGR_NV12:  case CV_YUV2RGB_NV12:

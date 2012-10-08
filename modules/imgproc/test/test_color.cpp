@@ -1700,8 +1700,10 @@ TEST(Imgproc_ColorBayerVNG, regression)
     Mat gold = imread(string(ts.get_data_path()) + "/cvtcolor/bayerVNG_gold.png", CV_LOAD_IMAGE_UNCHANGED);
     Mat result;
 
+    CV_Assert(given.data != NULL);
+    
     cvtColor(given, result, CV_BayerBG2BGR_VNG, 3);
-
+    
     EXPECT_EQ(gold.type(), result.type());
     EXPECT_EQ(gold.cols, result.cols);
     EXPECT_EQ(gold.rows, result.rows);
@@ -1710,4 +1712,129 @@ TEST(Imgproc_ColorBayerVNG, regression)
     absdiff(gold, result, diff);
 
     EXPECT_EQ(0, countNonZero(diff.reshape(1) > 1));
+}
+
+TEST(Imgproc_ColorBayerVNG_Strict, regression)
+{
+    cvtest::TS& ts = *cvtest::TS::ptr();
+    const char pattern[][3] = { "bg", "gb", "rg", "gr" };
+    const std::string image_name = "lena.png";
+    const std::string parent_path = string(ts.get_data_path()) + "./cvtcolor_strict/";
+
+    Mat src, dst, bayer, reference;
+    std::string full_path = parent_path + image_name;
+    src = imread(full_path, CV_LOAD_IMAGE_UNCHANGED);
+    Size ssize = src.size();
+
+    if (src.data == NULL)
+    {
+        ts.set_failed_test_info(cvtest::TS::FAIL_MISSING_TEST_DATA);
+        ts.printf(cvtest::TS::SUMMARY, "No input image\n");
+        return;
+    }
+    
+    int type = -1;
+    for (int i = 0; i < 4; ++i)
+    {
+        // creating Bayer pattern
+        bayer.create(ssize, CV_MAKETYPE(src.depth(), 1));
+
+        if (!strcmp(pattern[i], "bg"))
+        {
+            for (int y = 0; y < ssize.height; ++y)
+                for (int x = 0; x < ssize.width; ++x)
+                {
+                    if ((x + y) % 2)
+                        bayer.at<uchar>(y, x) = src.at<Vec3b>(y, x)[1];
+                    else if (x % 2)
+                        bayer.at<uchar>(y, x) = src.at<Vec3b>(y, x)[0];
+                    else
+                        bayer.at<uchar>(y, x) = src.at<Vec3b>(y, x)[2];
+                }
+            type = CV_BayerBG2BGR_VNG;
+        }
+        else if (!strcmp(pattern[i], "gb"))
+        {
+            for (int y = 0; y < ssize.height; ++y)
+                for (int x = 0; x < ssize.width; ++x)
+                {
+                    if ((x + y) % 2 == 0)
+                        bayer.at<uchar>(y, x) = src.at<Vec3b>(y, x)[1];
+                    else if (x % 2 == 0)
+                        bayer.at<uchar>(y, x) = src.at<Vec3b>(y, x)[0];
+                    else
+                        bayer.at<uchar>(y, x) = src.at<Vec3b>(y, x)[2];
+                }
+            type = CV_BayerGB2BGR_VNG;
+        }
+        else if (!strcmp(pattern[i], "rg"))
+        {
+            for (int y = 0; y < ssize.height; ++y)
+                for (int x = 0; x < ssize.width; ++x)
+                {
+                    if ((x + y) % 2)
+                        bayer.at<uchar>(y, x) = src.at<Vec3b>(y, x)[1];
+                    else if (x % 2 == 0)
+                        bayer.at<uchar>(y, x) = src.at<Vec3b>(y, x)[0];
+                    else
+                        bayer.at<uchar>(y, x) = src.at<Vec3b>(y, x)[2];
+                }
+            type = CV_BayerRG2BGR_VNG;
+        }
+        else
+        {
+            for (int y = 0; y < ssize.height; ++y)
+                for (int x = 0; x < ssize.width; ++x)
+                {
+                    if ((x + y) % 2 == 0)
+                        bayer.at<uchar>(y, x) = src.at<Vec3b>(y, x)[1];
+                    else if (x % 2)
+                        bayer.at<uchar>(y, x) = src.at<Vec3b>(y, x)[0];
+                    else
+                        bayer.at<uchar>(y, x) = src.at<Vec3b>(y, x)[2];
+                }
+            type = CV_BayerGR2BGR_VNG;
+        }
+
+        // calculating a dst image
+        cvtColor(bayer, dst, type);
+        
+        // reading a reference image
+        full_path = parent_path + pattern[i] + image_name;
+        reference = imread(full_path, CV_LOAD_IMAGE_UNCHANGED);
+        if (reference.data == NULL)
+        {
+            imwrite(full_path, dst);
+            continue;
+        }
+        
+        if (reference.depth() != dst.depth() || reference.channels() != dst.channels() ||
+            reference.size() != dst.size())
+        {
+            ts.set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
+            ts.printf(cvtest::TS::SUMMARY, "\nReference channels: %d\n"
+                "Actual channels: %d\n", reference.channels(), dst.channels());
+            ts.printf(cvtest::TS::SUMMARY, "\nReference depth: %d\n"
+                "Actual depth: %d\n", reference.depth(), dst.depth());
+            ts.printf(cvtest::TS::SUMMARY, "\nReference rows: %d\n"
+                "Actual rows: %d\n", reference.rows, dst.rows);
+            ts.printf(cvtest::TS::SUMMARY, "\nReference cols: %d\n"
+                "Actual cols: %d\n", reference.cols, dst.cols);
+            ts.set_gtest_status();
+            
+            return;
+        }
+        
+        Mat diff;
+        absdiff(reference, dst, diff);
+        
+        int nonZero = countNonZero(diff.reshape(1) > 1);
+        if (nonZero != 0)
+        {
+            ts.set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
+            ts.printf(cvtest::TS::SUMMARY, "\nCount non zero in absdiff: %d\n", nonZero);
+            ts.set_gtest_status();
+            return;
+        }
+    }
 }
