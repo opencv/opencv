@@ -556,7 +556,7 @@ template<> struct ColumnSum<int, ushort> : public BaseColumnFilter
 						__m128i _res = _mm_cvtps_epi32(_mm_mul_ps(scale4, _mm_cvtepi32_ps(_s0)));
                         
                         _res = _mm_sub_epi32(_res, delta0);
-                        _res = _mm_add_epi16(_mm_packs_epi16(_res, _res), delta1);
+                        _res = _mm_add_epi16(_mm_packs_epi32(_res, _res), delta1);
 						 
 						_mm_storel_epi64((__m128i*)(D+i), _res);
 						_mm_storeu_si128((__m128i*)(SUM+i), _mm_sub_epi32(_s0,_sm));
@@ -586,7 +586,7 @@ template<> struct ColumnSum<int, ushort> : public BaseColumnFilter
                                                       _mm_loadu_si128((const __m128i*)(Sp+i)));
 
 						__m128i _res = _mm_sub_epi32(_s0, delta0);
-                        _res = _mm_add_epi16(_mm_packs_epi16(_res, _res), delta1);
+                        _res = _mm_add_epi16(_mm_packs_epi32(_res, _res), delta1);
 						
 						_mm_storel_epi64((__m128i*)(D+i), _res);
 						_mm_storeu_si128((__m128i*)(SUM+i), _mm_sub_epi32(_s0,_sm));

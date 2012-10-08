@@ -110,6 +110,11 @@ void CV_FilterBaseTest::get_minmax_bounds( int i, int j, int type, Scalar& low, 
                 high = Scalar::all(2);
             }
         }
+        else if( CV_MAT_DEPTH(type) == CV_16U )
+        {
+            low = Scalar::all(0.);
+            high = Scalar::all(40000.);
+        }
         else if( CV_MAT_DEPTH(type) == CV_32F )
         {
             low = Scalar::all(-10.);
@@ -678,10 +683,13 @@ void CV_BlurTest::get_test_array_types_and_sizes( int test_case_idx,
 {
     RNG& rng = ts->get_rng();
     CV_SmoothBaseTest::get_test_array_types_and_sizes( test_case_idx, sizes, types );
+    int depth = cvtest::randInt(rng) % 4;
+    int cn = (cvtest::randInt(rng) % 4) + 1;
+    depth = depth == 0 ? CV_8U : depth == 1 ? CV_16U : depth == 2 ? CV_16S : CV_32F;
+    types[OUTPUT][0] = types[REF_OUTPUT][0] = types[INPUT][0] = CV_MAKETYPE(depth, cn);
     normalize = cvtest::randInt(rng) % 2 != 0;
     if( !normalize )
     {
-        int depth = CV_MAT_DEPTH(types[INPUT][0]);
         types[INPUT][0] = CV_MAKETYPE(depth, 1);
         types[OUTPUT][0] = types[REF_OUTPUT][0] = CV_MAKETYPE(depth==CV_8U?CV_16S:CV_32F,1);
     }
