@@ -227,6 +227,8 @@ private:
     tbb::mutex* kptLock_;
 #endif
 
+    GridAdaptedFeatureDetectorInvoker& operator=(const GridAdaptedFeatureDetectorInvoker&); // to quiet MSVC
+
 public:
 
     GridAdaptedFeatureDetectorInvoker(const Ptr<FeatureDetector>& detector, const Mat& image, const Mat& mask, vector<KeyPoint>& keypoints, int maxPerCell, int gridRows, int gridCols
