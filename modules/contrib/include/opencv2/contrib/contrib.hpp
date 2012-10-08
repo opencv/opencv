@@ -916,9 +916,6 @@ namespace cv
         // Trains a FaceRecognizer.
         CV_WRAP virtual void train(InputArrayOfArrays src, InputArray labels) = 0;
 
-        // Updates a FaceRecognizer.
-        CV_WRAP virtual void update(InputArrayOfArrays src, InputArray labels);
-
         // Gets a prediction from a FaceRecognizer.
         virtual int predict(InputArray src) const = 0;
 
@@ -936,7 +933,9 @@ namespace cv
 
         // Deserializes this object from a given cv::FileStorage.
         virtual void load(const FileStorage& fs) = 0;
-
+        
+        // Updates a FaceRecognizer.
+        CV_WRAP virtual void update(InputArrayOfArrays src, InputArray labels);
     };
 
     CV_EXPORTS_W Ptr<FaceRecognizer> createEigenFaceRecognizer(int num_components = 0, double threshold = DBL_MAX);
