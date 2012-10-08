@@ -24,11 +24,6 @@ public abstract class BaseLoaderCallback implements LoaderCallbackInterface {
             {
                 /** Application must override this method to handle successful library initialization. **/
             } break;
-            /** OpenCV Manager or library package installation is in progress. Restart the application. **/
-            case LoaderCallbackInterface.RESTART_REQUIRED:
-            {
-            Log.d(TAG, "OpenCV downloading. App restart is needed!");
-            } break;
             /** OpenCV loader can not start Google Play Market. **/
             case LoaderCallbackInterface.MARKET_ERROR:
             {

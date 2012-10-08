@@ -85,10 +85,8 @@ class AsyncServiceHelper
                     if (result)
                     {
                         mServiceInstallationProgress = true;
-                        int Status = LoaderCallbackInterface.RESTART_REQUIRED;
-                        Log.d(TAG, "Init finished with status " + Status);
-                        Log.d(TAG, "Calling using callback");
-                        mUserAppCallback.onManagerConnected(Status);
+                        Log.d(TAG, "Package installation started");
+
                     }
                     else
                     {
@@ -195,28 +193,34 @@ class AsyncServiceHelper
                                 }
                                 public void install() {
                                     Log.d(TAG, "Trying to install OpenCV lib via Google Play");
+                                    boolean result;
                                     try
                                     {
                                         if (mEngineService.installVersion(mOpenCVersion))
                                         {
                                             mLibraryInstallationProgress = true;
-                                            mStatus = LoaderCallbackInterface.RESTART_REQUIRED;
+                                            result = true;
+                                            Log.d(TAG, "Package installation statred");
                                         }
                                         else
                                         {
+                                            result = false;
                                             Log.d(TAG, "OpenCV package was not installed!");
                                             mStatus = LoaderCallbackInterface.MARKET_ERROR;
                                         }
                                     } catch (RemoteException e) {
                                         e.printStackTrace();
+                                        result = false;
                                         mStatus = LoaderCallbackInterface.INIT_FAILED;
                                     }
-
-                                    Log.d(TAG, "Init finished with status " + mStatus);
-                                    Log.d(TAG, "Unbind from service");
-                                    mAppContext.unbindService(mServiceConnection);
-                                    Log.d(TAG, "Calling using callback");
-                                    mUserAppCallback.onManagerConnected(mStatus);
+                                    if (!result)
+                                    {
+                                        Log.d(TAG, "Init finished with status " + mStatus);
+                                        Log.d(TAG, "Unbind from service");
+                                        mAppContext.unbindService(mServiceConnection);
+                                        Log.d(TAG, "Calling using callback");
+                                        mUserAppCallback.onManagerConnected(mStatus);
+                                    }
                                 }
                                 public void cancel() {
                                     Log.d(TAG, "OpenCV library installation was canceled");
@@ -260,11 +264,7 @@ class AsyncServiceHelper
                                     Log.d(TAG, "Waiting for current installation");
                                     try
                                     {
-                                        if (mEngineService.installVersion(mOpenCVersion))
-                                        {
-                                            mStatus = LoaderCallbackInterface.RESTART_REQUIRED;
-                                        }
-                                        else
+                                        if (!mEngineService.installVersion(mOpenCVersion))
                                         {
                                             Log.d(TAG, "OpenCV package was not installed!");
                                             mStatus = LoaderCallbackInterface.MARKET_ERROR;

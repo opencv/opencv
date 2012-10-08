@@ -15,7 +15,7 @@ class StaticHelper {
 
         try
         {
-            System.loadLibrary("opencvinfo");
+            System.loadLibrary("opencv_info");
             libs = getLibraryList();
         }
         catch(UnsatisfiedLinkError e)

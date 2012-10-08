@@ -99,10 +99,10 @@ public class Utils {
      * @param mat is a valid output Mat object, it will be reallocated if needed, so Mat may be empty.
      */
     public static void bitmapToMat(Bitmap bmp, Mat mat) {
-    	bitmapToMat(bmp, mat, false);
+        bitmapToMat(bmp, mat, false);
     }
 
-    
+
     /**
      * Converts OpenCV Mat to Android Bitmap.
      * <p>
@@ -129,10 +129,10 @@ public class Utils {
      * @param bmp is a valid Bitmap object of the same size as the Mat and of type 'ARGB_8888' or 'RGB_565'.
      */
     public static void matToBitmap(Mat mat, Bitmap bmp) {
-    	matToBitmap(mat, bmp, false);
+        matToBitmap(mat, bmp, false);
     }
-    
-    
+
+
     private static native void nBitmapToMat2(Bitmap b, long m_addr, boolean unPremultiplyAlpha);
 
     private static native void nMatToBitmap2(long m_addr, Bitmap b, boolean premultiplyAlpha);
