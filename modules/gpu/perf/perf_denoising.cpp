@@ -9,10 +9,10 @@ using namespace testing;
 //////////////////////////////////////////////////////////////////////
 // BilateralFilter
 
-DEF_PARAM_TEST(Sz_Depth_Cn_KernelSz, cv::Size, MatDepth, int, int);
+DEF_PARAM_TEST(Sz_Depth_Cn_KernelSz, cv::Size, MatDepth, MatCn, int);
 
 PERF_TEST_P(Sz_Depth_Cn_KernelSz, Denoising_BilateralFilter, 
-            Combine(GPU_DENOISING_IMAGE_SIZES, Values(CV_8U, CV_32F), testing::Values(1, 3), Values(3, 5, 9)))
+            Combine(GPU_DENOISING_IMAGE_SIZES, Values(CV_8U, CV_32F), GPU_CHANNELS_1_3, Values(3, 5, 9)))
 {
     declare.time(60.0);
 
@@ -59,10 +59,10 @@ PERF_TEST_P(Sz_Depth_Cn_KernelSz, Denoising_BilateralFilter,
 //////////////////////////////////////////////////////////////////////
 // nonLocalMeans
 
-DEF_PARAM_TEST(Sz_Depth_Cn_WinSz_BlockSz, cv::Size, MatDepth, int, int, int);
+DEF_PARAM_TEST(Sz_Depth_Cn_WinSz_BlockSz, cv::Size, MatDepth, MatCn, int, int);
 
 PERF_TEST_P(Sz_Depth_Cn_WinSz_BlockSz, Denoising_NonLocalMeans, 
-            Combine(GPU_DENOISING_IMAGE_SIZES, Values<MatDepth>(CV_8U), Values(1, 3), Values(21), Values(5, 7)))
+            Combine(GPU_DENOISING_IMAGE_SIZES, Values<MatDepth>(CV_8U), GPU_CHANNELS_1_3, Values(21), Values(5, 7)))
 {
     declare.time(60.0);
 
@@ -103,10 +103,10 @@ PERF_TEST_P(Sz_Depth_Cn_WinSz_BlockSz, Denoising_NonLocalMeans,
 //////////////////////////////////////////////////////////////////////
 // fastNonLocalMeans
 
-DEF_PARAM_TEST(Sz_Depth_WinSz_BlockSz, cv::Size, MatDepth, int, int);
+DEF_PARAM_TEST(Sz_Depth_Cn_WinSz_BlockSz, cv::Size, MatDepth, MatCn, int, int);
 
-PERF_TEST_P(Sz_Depth_WinSz_BlockSz, Denoising_FastNonLocalMeans, 
-            Combine(GPU_DENOISING_IMAGE_SIZES, Values<MatDepth>(CV_8U), Values(21), Values(7)))
+PERF_TEST_P(Sz_Depth_Cn_WinSz_BlockSz, Denoising_FastNonLocalMeans, 
+            Combine(GPU_DENOISING_IMAGE_SIZES, Values<MatDepth>(CV_8U), GPU_CHANNELS_1_3, Values(21), Values(7)))
 {
     declare.time(150.0);
     
@@ -150,6 +150,7 @@ PERF_TEST_P(Sz_Depth_WinSz_BlockSz, Denoising_FastNonLocalMeans,
 //////////////////////////////////////////////////////////////////////
 // fastNonLocalMeans (colored)
 
+DEF_PARAM_TEST(Sz_Depth_WinSz_BlockSz, cv::Size, MatDepth, int, int);
 
 PERF_TEST_P(Sz_Depth_WinSz_BlockSz, Denoising_FastNonLocalMeansColored, 
             Combine(GPU_DENOISING_IMAGE_SIZES, Values<MatDepth>(CV_8U), Values(21), Values(7)))

@@ -1456,7 +1456,7 @@ enum {FLIP_BOTH = 0, FLIP_X = 1, FLIP_Y = -1};
 CV_ENUM(FlipCode, FLIP_BOTH, FLIP_X, FLIP_Y)
 #define ALL_FLIP_CODES ValuesIn(FlipCode::all())
 
-DEF_PARAM_TEST(Sz_Depth_Cn_Code, cv::Size, MatDepth, int, FlipCode);
+DEF_PARAM_TEST(Sz_Depth_Cn_Code, cv::Size, MatDepth, MatCn, FlipCode);
 
 PERF_TEST_P(Sz_Depth_Cn_Code, Core_Flip, Combine(
     GPU_TYPICAL_MAT_SIZES,
@@ -2204,7 +2204,7 @@ enum {Rows = 0, Cols = 1};
 CV_ENUM(ReduceDim, Rows, Cols)
 #define ALL_REDUCE_DIMS ValuesIn(ReduceDim::all())
 
-DEF_PARAM_TEST(Sz_Depth_Cn_Code_Dim, cv::Size, MatDepth, int, ReduceCode, ReduceDim);
+DEF_PARAM_TEST(Sz_Depth_Cn_Code_Dim, cv::Size, MatDepth, MatCn, ReduceCode, ReduceDim);
 
 PERF_TEST_P(Sz_Depth_Cn_Code_Dim, Core_Reduce, Combine(
     GPU_TYPICAL_MAT_SIZES,

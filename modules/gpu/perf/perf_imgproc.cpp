@@ -49,7 +49,7 @@ void generateMap(cv::Mat& map_x, cv::Mat& map_y, int remapMode)
     }
 }
 
-DEF_PARAM_TEST(Sz_Depth_Cn_Inter_Border_Mode, cv::Size, MatDepth, int, Interpolation, BorderMode, RemapMode);
+DEF_PARAM_TEST(Sz_Depth_Cn_Inter_Border_Mode, cv::Size, MatDepth, MatCn, Interpolation, BorderMode, RemapMode);
 
 PERF_TEST_P(Sz_Depth_Cn_Inter_Border_Mode, ImgProc_Remap, Combine(
     GPU_TYPICAL_MAT_SIZES,
@@ -108,7 +108,7 @@ PERF_TEST_P(Sz_Depth_Cn_Inter_Border_Mode, ImgProc_Remap, Combine(
 //////////////////////////////////////////////////////////////////////
 // Resize
 
-DEF_PARAM_TEST(Sz_Depth_Cn_Inter_Scale, cv::Size, MatDepth, int, Interpolation, double);
+DEF_PARAM_TEST(Sz_Depth_Cn_Inter_Scale, cv::Size, MatDepth, MatCn, Interpolation, double);
 
 PERF_TEST_P(Sz_Depth_Cn_Inter_Scale, ImgProc_Resize, Combine(
     GPU_TYPICAL_MAT_SIZES,
@@ -158,7 +158,7 @@ PERF_TEST_P(Sz_Depth_Cn_Inter_Scale, ImgProc_Resize, Combine(
 //////////////////////////////////////////////////////////////////////
 // ResizeArea
 
-DEF_PARAM_TEST(Sz_Depth_Cn_Scale, cv::Size, MatDepth, int, double);
+DEF_PARAM_TEST(Sz_Depth_Cn_Scale, cv::Size, MatDepth, MatCn, double);
 
 PERF_TEST_P(Sz_Depth_Cn_Scale, ImgProc_ResizeArea, Combine(
     GPU_TYPICAL_MAT_SIZES,
@@ -207,7 +207,7 @@ PERF_TEST_P(Sz_Depth_Cn_Scale, ImgProc_ResizeArea, Combine(
 //////////////////////////////////////////////////////////////////////
 // WarpAffine
 
-DEF_PARAM_TEST(Sz_Depth_Cn_Inter_Border, cv::Size, MatDepth, int, Interpolation, BorderMode);
+DEF_PARAM_TEST(Sz_Depth_Cn_Inter_Border, cv::Size, MatDepth, MatCn, Interpolation, BorderMode);
 
 PERF_TEST_P(Sz_Depth_Cn_Inter_Border, ImgProc_WarpAffine, Combine(
     GPU_TYPICAL_MAT_SIZES,
@@ -316,7 +316,7 @@ PERF_TEST_P(Sz_Depth_Cn_Inter_Border, ImgProc_WarpPerspective, Combine(
 //////////////////////////////////////////////////////////////////////
 // CopyMakeBorder
 
-DEF_PARAM_TEST(Sz_Depth_Cn_Border, cv::Size, MatDepth, int, BorderMode);
+DEF_PARAM_TEST(Sz_Depth_Cn_Border, cv::Size, MatDepth, MatCn, BorderMode);
 
 PERF_TEST_P(Sz_Depth_Cn_Border, ImgProc_CopyMakeBorder, Combine(
     GPU_TYPICAL_MAT_SIZES,
@@ -882,7 +882,7 @@ PERF_TEST_P(Sz_KernelSz_Ccorr, ImgProc_Convolve, Combine(GPU_TYPICAL_MAT_SIZES, 
 CV_ENUM(TemplateMethod, cv::TM_SQDIFF, cv::TM_SQDIFF_NORMED, cv::TM_CCORR, cv::TM_CCORR_NORMED, cv::TM_CCOEFF, cv::TM_CCOEFF_NORMED)
 #define ALL_TEMPLATE_METHODS ValuesIn(TemplateMethod::all())
 
-DEF_PARAM_TEST(Sz_TemplateSz_Cn_Method, cv::Size, cv::Size, int, TemplateMethod);
+DEF_PARAM_TEST(Sz_TemplateSz_Cn_Method, cv::Size, cv::Size, MatCn, TemplateMethod);
 
 PERF_TEST_P(Sz_TemplateSz_Cn_Method, ImgProc_MatchTemplate8U, Combine(
     GPU_TYPICAL_MAT_SIZES,
@@ -1282,7 +1282,7 @@ PERF_TEST_P(Sz, ImgProc_BuildWarpSphericalMaps, GPU_TYPICAL_MAT_SIZES)
 //////////////////////////////////////////////////////////////////////
 // Rotate
 
-DEF_PARAM_TEST(Sz_Depth_Cn_Inter, cv::Size, MatDepth, int, Interpolation);
+DEF_PARAM_TEST(Sz_Depth_Cn_Inter, cv::Size, MatDepth, MatCn, Interpolation);
 
 PERF_TEST_P(Sz_Depth_Cn_Inter, ImgProc_Rotate, Combine(
     GPU_TYPICAL_MAT_SIZES,

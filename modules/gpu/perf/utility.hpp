@@ -20,6 +20,11 @@ CV_ENUM(Interpolation, cv::INTER_NEAREST, cv::INTER_LINEAR, cv::INTER_CUBIC, cv:
 #define ALL_INTERPOLATIONS testing::ValuesIn(Interpolation::all())
 CV_ENUM(NormType, cv::NORM_INF, cv::NORM_L1, cv::NORM_L2, cv::NORM_HAMMING)
 
+enum { Gray = 1, TwoChannel = 2, BGR = 3, BGRA = 4 };
+CV_ENUM(MatCn, Gray, TwoChannel, BGR, BGRA)
+#define GPU_CHANNELS_1_3_4 testing::Values(Gray, BGR, BGRA)
+#define GPU_CHANNELS_1_3 testing::Values(Gray, BGR)
+
 struct CvtColorInfo
 {
     int scn;
@@ -41,6 +46,6 @@ DEF_PARAM_TEST(Sz_Depth, cv::Size, MatDepth);
 DEF_PARAM_TEST(Sz_Depth_Cn, cv::Size, MatDepth, int);
 
 #define GPU_TYPICAL_MAT_SIZES testing::Values(perf::sz720p, perf::szSXGA, perf::sz1080p)
-#define GPU_CHANNELS_1_3_4 testing::Values(1, 3, 4)
+
 
 #endif // __OPENCV_PERF_GPU_UTILITY_HPP__

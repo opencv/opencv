@@ -421,7 +421,7 @@ PERF_TEST_P(Video, Video_FGDStatModel, Values("gpu/video/768x576.avi", "gpu/vide
 //////////////////////////////////////////////////////
 // MOG
 
-DEF_PARAM_TEST(Video_Cn_LearningRate, string, int, double);
+DEF_PARAM_TEST(Video_Cn_LearningRate, string, MatCn, double);
 
 PERF_TEST_P(Video_Cn_LearningRate, Video_MOG, Combine(Values("gpu/video/768x576.avi", "gpu/video/1920x1080.avi"), GPU_CHANNELS_1_3_4, Values(0.0, 0.01)))
 {
@@ -737,7 +737,7 @@ PERF_TEST_P(Video_Cn, Video_VIBE, Combine(Values("gpu/video/768x576.avi", "gpu/v
 //////////////////////////////////////////////////////
 // GMG
 
-DEF_PARAM_TEST(Video_Cn_MaxFeatures, string, int, int);
+DEF_PARAM_TEST(Video_Cn_MaxFeatures, string, MatCn, int);
 
 PERF_TEST_P(Video_Cn_MaxFeatures, Video_GMG, Combine(Values("gpu/video/768x576.avi", "gpu/video/1920x1080.avi"), GPU_CHANNELS_1_3_4, Values(20, 40, 60)))
 {
