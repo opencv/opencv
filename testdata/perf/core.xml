@@ -16995,7 +16995,6 @@
       <dt>d</dt>
       <data>
         2.3495987590520335e+03 0. 0. 0.</data></val></dev></Size_MatType_meanStdDev_mask--meanStdDev_mask---127x61--32FC1->
- 
 <MatType_Length_dot--dot---8UC1--32->
   <product>
     <kind>131072</kind>
@@ -17176,7 +17175,6 @@
       <dt>d</dt>
       <data>
         2.7513693756119637e+09</data></val></product></MatType_Length_dot--dot---32FC1--1024->
- <!-- resumed -->
 <Size_MatType_min--min---640x480--16SC1->
   <c>
     <kind>65536</kind>
@@ -29879,18 +29877,6 @@
       <dt>d</dt>
       <data>
         7747.</data></val></cnt></Size_MatType_countNonZero--countNonZero---127x61--64FC1->
-<convert--cvRound>
-  <result>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        26000000.</data></val></result></convert--cvRound>
- <!-- resumed -->
-
 <Size_MatType_Mat_Eye--Mat_Eye---640x480--8UC1->
   <diagonalMatrix>
     <kind>65536</kind>
@@ -31854,8 +31840,6 @@
       <y>746</y>
       <cn>3</cn>
       <val>-2147483648.</val></rng2></dst></Size_MatType_addWeighted--addWeighted---1920x1080--32SC4->
- <!-- resumed -->
-
 <Size_MatType_absdiff--absdiff---640x480--32SC1->
   <c>
     <kind>65536</kind>

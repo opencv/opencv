@@ -13,27 +13,27 @@ def parseLogFile(filename):
         tests.append(case.nodeName)
     return tests
 
-def processLogFile(filename, tests):
-    log = parse(filename)
+def processLogFile(outname, inname, tests):
+    log = parse(inname)
     fstorage = log.firstChild
     for case in fstorage.childNodes:
         if case.nodeName == "#text":
             continue
         if not case.nodeName in tests:
             fstorage.removeChild(case)
-    
+
     xmlstr = log.toxml()
-    xmlstr = re.sub(r"\n+", "\n", xmlstr)
-    xmlstr = re.sub(r"(\r\n)+", "\r\n", xmlstr)
-    f = open(filename, 'w')
+    xmlstr = re.sub(r"(\s*\n)+", "\n", xmlstr)
+    xmlstr = re.sub(r"(\s*\r\n)+", "\r\n", xmlstr)
+    f = open(outname, 'w')
     f.write(xmlstr)
     f.close()
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:
-        print "Usage:\n", os.path.basename(sys.argv[0]), "<old_log_name>.xml <new_log_name>.xml"
+        print "Usage:\n", os.path.basename(sys.argv[0]), "<log_name>.xml <log_name>.backup.xml"
         exit(0)
 
-    tests = parseLogFile(sys.argv[2])
-    processLogFile(sys.argv[1], tests)
+    tests = parseLogFile(sys.argv[1])
+    processLogFile(sys.argv[1], sys.argv[2], tests)
 
