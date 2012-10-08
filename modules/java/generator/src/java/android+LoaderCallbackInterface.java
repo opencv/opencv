@@ -40,5 +40,5 @@ public interface LoaderCallbackInterface
      * Callback method, called in case the package installation is needed.
      * @param callback answer object with approve and cancel methods and the package description.
      */
-    public void onPackageInstall(InstallCallbackInterface callback);
+    public void onPackageInstall(final int operation, InstallCallbackInterface callback);
 };

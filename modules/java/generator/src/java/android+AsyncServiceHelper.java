@@ -33,8 +33,7 @@ class AsyncServiceHelper
         }
     }
 
-    protected AsyncServiceHelper(String Version, Context AppContext,
-            LoaderCallbackInterface Callback)
+    protected AsyncServiceHelper(String Version, Context AppContext, LoaderCallbackInterface Callback)
     {
         mOpenCVersion = Version;
         mUserAppCallback = Callback;
@@ -48,62 +47,109 @@ class AsyncServiceHelper
     protected String mOpenCVersion;
     protected Context mAppContext;
     protected int mStatus = LoaderCallbackInterface.SUCCESS;
+    protected static boolean mServiceInstallationProgress = false;
+    protected static boolean mLibraryInstallationProgress = false;
 
-    private static void InstallService(final Context AppContext, final LoaderCallbackInterface Callback)
+    protected static boolean InstallServiceQuiet(Context context)
     {
-        InstallCallbackInterface InstallQuery = new InstallCallbackInterface() {
-            private Context mAppContext = AppContext;
-            private LoaderCallbackInterface mUserAppCallback = Callback;
-        	public String getPackageName()
-            {
-                return "OpenCV Manager";
-            }
-            public void install() {
-                Log.d(TAG, "Trying to install OpenCV Manager via Google Play");
+        boolean result = true;
+        try
+        {
+            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(OPEN_CV_SERVICE_URL));
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            context.startActivity(intent);
+        }
+        catch(Exception e)
+        {
+            result = false;
+        }
 
-                boolean result = true;
-                try
-                {
-                    Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(OPEN_CV_SERVICE_URL));
-                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                    mAppContext.startActivity(intent);
-                }
-                catch(Exception e)
-                {
-                    result = false;
-                }
-
-                if (result)
-                {
-                    int Status = LoaderCallbackInterface.RESTART_REQUIRED;
-                    Log.d(TAG, "Init finished with status " + Status);
-                    Log.d(TAG, "Calling using callback");
-                    mUserAppCallback.onManagerConnected(Status);
-                }
-                else
-                {
-                    Log.d(TAG, "OpenCV package was not installed!");
-                    int Status = LoaderCallbackInterface.MARKET_ERROR;
-                    Log.d(TAG, "Init finished with status " + Status);
-                    Log.d(TAG, "Unbind from service");
-                    Log.d(TAG, "Calling using callback");
-                    mUserAppCallback.onManagerConnected(Status);
-                }
-            }
-
-            public void cancel()
-            {
-                Log.d(TAG, "OpenCV library installation was canceled");
-                int Status = LoaderCallbackInterface.INSTALL_CANCELED;
-                Log.d(TAG, "Init finished with status " + Status);
-                Log.d(TAG, "Calling using callback");
-                mUserAppCallback.onManagerConnected(Status);
-            }
-        };
-
-        Callback.onPackageInstall(InstallQuery);
+        return result;
     }
-    
+
+    protected static void InstallService(final Context AppContext, final LoaderCallbackInterface Callback)
+    {
+        if (!mServiceInstallationProgress)
+        {
+                Log.d(TAG, "Request new service installation");
+                InstallCallbackInterface InstallQuery = new InstallCallbackInterface() {
+                private LoaderCallbackInterface mUserAppCallback = Callback;
+                public String getPackageName()
+                {
+                    return "OpenCV Manager";
+                }
+                public void install() {
+                    Log.d(TAG, "Trying to install OpenCV Manager via Google Play");
+
+                    boolean result = InstallServiceQuiet(AppContext);
+                    if (result)
+                    {
+                        mServiceInstallationProgress = true;
+                        int Status = LoaderCallbackInterface.RESTART_REQUIRED;
+                        Log.d(TAG, "Init finished with status " + Status);
+                        Log.d(TAG, "Calling using callback");
+                        mUserAppCallback.onManagerConnected(Status);
+                    }
+                    else
+                    {
+                        Log.d(TAG, "OpenCV package was not installed!");
+                        int Status = LoaderCallbackInterface.MARKET_ERROR;
+                        Log.d(TAG, "Init finished with status " + Status);
+                        Log.d(TAG, "Unbind from service");
+                        Log.d(TAG, "Calling using callback");
+                        mUserAppCallback.onManagerConnected(Status);
+                    }
+                }
+
+                public void cancel()
+                {
+                    Log.d(TAG, "OpenCV library installation was canceled");
+                    int Status = LoaderCallbackInterface.INSTALL_CANCELED;
+                    Log.d(TAG, "Init finished with status " + Status);
+                    Log.d(TAG, "Calling using callback");
+                    mUserAppCallback.onManagerConnected(Status);
+                }
+
+                public void wait_install()
+                {
+                    Log.e(TAG, "Instalation was not started! Nothing to wait!");
+                }
+            };
+
+            Callback.onPackageInstall(InstallCallbackInterface.NEW_INSTALLATION, InstallQuery);
+        }
+        else
+        {
+            Log.d(TAG, "Wating current installation process");
+            InstallCallbackInterface WaitQuery = new InstallCallbackInterface() {
+                private LoaderCallbackInterface mUserAppCallback = Callback;
+                public String getPackageName()
+                {
+                    return "OpenCV Manager";
+                }
+                public void install()
+                {
+                    Log.e(TAG, "Nothing to install we just wait current installation");
+                }
+                public void cancel()
+                {
+                    Log.d(TAG, "Wating for OpenCV canceled by user");
+                    mServiceInstallationProgress = false;
+                    int Status = LoaderCallbackInterface.INSTALL_CANCELED;
+                    Log.d(TAG, "Init finished with status " + Status);
+                    Log.d(TAG, "Calling using callback");
+                    mUserAppCallback.onManagerConnected(Status);
+                }
+                public void wait_install()
+                {
+                     InstallServiceQuiet(AppContext);
+                }
+            };
+
+            Callback.onPackageInstall(InstallCallbackInterface.INSTALLATION_PROGRESS, WaitQuery);
+        }
+    }
+
     /**
      *  URL of OpenCV Manager page on Google Play Market.
      */
@@ -122,6 +168,7 @@ class AsyncServiceHelper
             }
             else
             {
+                mServiceInstallationProgress = false;
                 try
                 {
                     if (mEngineService.getEngineVersion() < MINIMUM_ENGINE_VERSION)
@@ -177,9 +224,12 @@ class AsyncServiceHelper
                                 Log.d(TAG, "Calling using callback");
                                 mUserAppCallback.onManagerConnected(mStatus);
                             }
+                            public void wait_install() {
+                                Log.e(TAG, "Instalation was not started! Nothing to wait!");
+                            }
                         };
 
-                        mUserAppCallback.onPackageInstall(InstallQuery);
+                        mUserAppCallback.onPackageInstall(InstallCallbackInterface.NEW_INSTALLATION, InstallQuery);
                         return;
                     }
                     else
@@ -218,13 +268,13 @@ class AsyncServiceHelper
                 }
             }
         }
-        
+
         public void onServiceDisconnected(ComponentName className)
         {
             mEngineService = null;
         }
     };
-    
+
     private boolean loadLibrary(String AbsPath)
     {
         boolean result = true;
