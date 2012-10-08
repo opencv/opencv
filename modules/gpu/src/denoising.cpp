@@ -49,10 +49,9 @@ using namespace cv::gpu;
 
 void cv::gpu::bilateralFilter(const GpuMat&, GpuMat&, int, float, float, int, Stream&) { throw_nogpu(); }
 void cv::gpu::nonLocalMeans(const GpuMat&, GpuMat&, float, int, int, int, Stream&) { throw_nogpu(); }
-void cv::gpu::fastNlMeansDenoising( const GpuMat&, GpuMat&, float, int, int, Stream&) { throw_nogpu(); }
 
 void cv::gpu::FastNonLocalMeansDenoising::simpleMethod(const GpuMat&, GpuMat&, float, int, int, Stream&) { throw_nogpu(); }
-void cv::gpu::FastNonLocalMeansDenoising::labMethod( const GpuMat&, GpuMat, float, float, int, int, Stream&) { throw_nogpu(); }
+void cv::gpu::FastNonLocalMeansDenoising::labMethod( const GpuMat&, GpuMat&, float, float, int, int, Stream&) { throw_nogpu(); }
 
 
 #else

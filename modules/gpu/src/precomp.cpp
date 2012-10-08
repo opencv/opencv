@@ -41,10 +41,12 @@
 
 #include "precomp.hpp"
 
-
-
 bool cv::gpu::tryConvertToGpuBorderType(int cpuBorderType, int& gpuBorderType)
 {
+#if !defined (HAVE_CUDA)
+    (void)cpuBorderType;
+    (void)gpuBorderType;
+#else
     switch (cpuBorderType)
     {
     case cv::BORDER_REFLECT101:
@@ -65,10 +67,9 @@ bool cv::gpu::tryConvertToGpuBorderType(int cpuBorderType, int& gpuBorderType)
     default:
         return false;
     };
+#endif
     return false;
 }
-
-
 
 /* End of file. */
 
