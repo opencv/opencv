@@ -53,8 +53,6 @@ namespace cv
 
 void makeOffsets(int pixel[25], int row_stride, int patternSize);
 
-//static void testCorner(const uchar* ptr, const int pixel[], int K, int N, int threshold);
-
 template<int patternSize>
 int cornerScore(const uchar* ptr, const int pixel[], int threshold);
 

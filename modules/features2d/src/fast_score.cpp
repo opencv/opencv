@@ -43,42 +43,42 @@ The references are:
 
 #include "fast_score.hpp"
 
-namespace cv
-{
+#define VERIFY_CORNERS 0
 
-void makeOffsets(int pixel[25], int rowStride, int patternSize)
+void cv::makeOffsets(int pixel[25], int rowStride, int patternSize)
 {
     static const int offsets16[][2] =
     {
         {0,  3}, { 1,  3}, { 2,  2}, { 3,  1}, { 3, 0}, { 3, -1}, { 2, -2}, { 1, -3},
         {0, -3}, {-1, -3}, {-2, -2}, {-3, -1}, {-3, 0}, {-3,  1}, {-2,  2}, {-1,  3}
     };
-    
+
     static const int offsets12[][2] =
     {
         {0,  2}, { 1,  2}, { 2,  1}, { 2, 0}, { 2, -1}, { 1, -2},
         {0, -2}, {-1, -2}, {-2, -1}, {-2, 0}, {-2,  1}, {-1,  2}
     };
-    
+
     static const int offsets8[][2] =
     {
-        {0, 1},  { 1,  1}, { 1, 0}, { 1, -1},
+        {0,  1}, { 1,  1}, { 1, 0}, { 1, -1},
         {0, -1}, {-1, -1}, {-1, 0}, {-1,  1}
     };
-        
+
     const int (*offsets)[2] = patternSize == 16 ? offsets16 :
-        patternSize == 12 ? offsets12 : patternSize == 8 ? offsets8 : 0;
-        
-    CV_Assert(pixel != 0 && offsets);
-    
+                              patternSize == 12 ? offsets12 :
+                              patternSize == 8  ? offsets8  : 0;
+
+    CV_Assert(pixel && offsets);
+
     int k = 0;
     for( ; k < patternSize; k++ )
-        pixel[k] = offsets[k][0] + offsets[k][1]*rowStride;
+        pixel[k] = offsets[k][0] + offsets[k][1] * rowStride;
     for( ; k < 25; k++ )
         pixel[k] = pixel[k - patternSize];
 }
 
-#if 0
+#if VERIFY_CORNERS
 static void testCorner(const uchar* ptr, const int pixel[], int K, int N, int threshold) {
     // check that with the computed "threshold" the pixel is still a corner
     // and that with the increased-by-1 "threshold" the pixel is not a corner anymore
@@ -115,7 +115,7 @@ static void testCorner(const uchar* ptr, const int pixel[], int K, int N, int th
 #endif
 
 template<>
-int cornerScore<16>(const uchar* ptr, const int pixel[], int threshold)
+int cv::cornerScore<16>(const uchar* ptr, const int pixel[], int threshold)
 {
     const int K = 8, N = K*3 + 1;
     int k, v = ptr[0];
@@ -198,20 +198,24 @@ int cornerScore<16>(const uchar* ptr, const int pixel[], int threshold)
     threshold = -b0-1;
 #endif
 
-#if 0
+#if VERIFY_CORNERS
     testCorner(ptr, pixel, K, N, threshold);
 #endif
     return threshold;
 }
 
 template<>
-int cornerScore<12>(const uchar* ptr, const int pixel[], int threshold)
+int cv::cornerScore<12>(const uchar* ptr, const int pixel[], int threshold)
 {
     const int K = 6, N = K*3 + 1;
     int k, v = ptr[0];
-    short d[N];
+    short d[N + 4];
     for( k = 0; k < N; k++ )
         d[k] = (short)(v - ptr[pixel[k]]);
+#if CV_SSE2
+    for( k = 0; k < 4; k++ )
+        d[N+k] = d[k];
+#endif
 
 #if CV_SSE2
     __m128i q0 = _mm_set1_epi16(-1000), q1 = _mm_set1_epi16(1000);
@@ -278,14 +282,14 @@ int cornerScore<12>(const uchar* ptr, const int pixel[], int threshold)
     threshold = -b0-1;
 #endif
 
-#if 0
+#if VERIFY_CORNERS
     testCorner(ptr, pixel, K, N, threshold);
 #endif
     return threshold;
 }
 
 template<>
-int cornerScore<8>(const uchar* ptr, const int pixel[], int threshold)
+int cv::cornerScore<8>(const uchar* ptr, const int pixel[], int threshold)
 {
     const int K = 4, N = K*3 + 1;
     int k, v = ptr[0];
@@ -294,26 +298,22 @@ int cornerScore<8>(const uchar* ptr, const int pixel[], int threshold)
         d[k] = (short)(v - ptr[pixel[k]]);
 
 #if CV_SSE2
-    __m128i q0 = _mm_set1_epi16(-1000), q1 = _mm_set1_epi16(1000);
-    for( k = 0; k < 16; k += 8 )
-    {
-        __m128i v0 = _mm_loadu_si128((__m128i*)(d+k+1));
-        __m128i v1 = _mm_loadu_si128((__m128i*)(d+k+2));
-        __m128i a = _mm_min_epi16(v0, v1);
-        __m128i b = _mm_max_epi16(v0, v1);
-        v0 = _mm_loadu_si128((__m128i*)(d+k+3));
-        a = _mm_min_epi16(a, v0);
-        b = _mm_max_epi16(b, v0);
-        v0 = _mm_loadu_si128((__m128i*)(d+k+4));
-        a = _mm_min_epi16(a, v0);
-        b = _mm_max_epi16(b, v0);
-        v0 = _mm_loadu_si128((__m128i*)(d+k));
-        q0 = _mm_max_epi16(q0, _mm_min_epi16(a, v0));
-        q1 = _mm_min_epi16(q1, _mm_max_epi16(b, v0));
-        v0 = _mm_loadu_si128((__m128i*)(d+k+5));
-        q0 = _mm_max_epi16(q0, _mm_min_epi16(a, v0));
-        q1 = _mm_min_epi16(q1, _mm_max_epi16(b, v0));
-    }
+    __m128i v0 = _mm_loadu_si128((__m128i*)(d+1));
+    __m128i v1 = _mm_loadu_si128((__m128i*)(d+2));
+    __m128i a = _mm_min_epi16(v0, v1);
+    __m128i b = _mm_max_epi16(v0, v1);
+    v0 = _mm_loadu_si128((__m128i*)(d+3));
+    a = _mm_min_epi16(a, v0);
+    b = _mm_max_epi16(b, v0);
+    v0 = _mm_loadu_si128((__m128i*)(d+4));
+    a = _mm_min_epi16(a, v0);
+    b = _mm_max_epi16(b, v0);
+    v0 = _mm_loadu_si128((__m128i*)(d));
+    __m128i q0 = _mm_min_epi16(a, v0);
+    __m128i q1 = _mm_max_epi16(b, v0);
+    v0 = _mm_loadu_si128((__m128i*)(d+5));
+    q0 = _mm_max_epi16(q0, _mm_min_epi16(a, v0));
+    q1 = _mm_min_epi16(q1, _mm_max_epi16(b, v0));
     q0 = _mm_max_epi16(q0, _mm_sub_epi16(_mm_setzero_si128(), q1));
     q0 = _mm_max_epi16(q0, _mm_unpackhi_epi64(q0, q0));
     q0 = _mm_max_epi16(q0, _mm_srli_si128(q0, 4));
@@ -348,10 +348,9 @@ int cornerScore<8>(const uchar* ptr, const int pixel[], int threshold)
     threshold = -b0-1;
 #endif
 
-#if 0
+#if VERIFY_CORNERS
     testCorner(ptr, pixel, K, N, threshold);
 #endif
     return threshold;
 }
 
-}
