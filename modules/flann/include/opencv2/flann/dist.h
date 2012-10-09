@@ -382,7 +382,7 @@ struct HammingLUT
 
     /** this will count the bits in a ^ b
      */
-    ResultType operator()(const unsigned char* a, const unsigned char* b, int size) const
+    ResultType operator()(const unsigned char* a, const unsigned char* b, size_t size) const
     {
         static const uchar popCountTable[] = 
         {
@@ -396,7 +396,7 @@ struct HammingLUT
             3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7, 4, 5, 5, 6, 5, 6, 6, 7, 5, 6, 6, 7, 6, 7, 7, 8
         };
         ResultType result = 0;
-        for (int i = 0; i < size; i++) {
+        for (size_t i = 0; i < size; i++) {
             result += popCountTable[a[i] ^ b[i]];
         }
         return result;
