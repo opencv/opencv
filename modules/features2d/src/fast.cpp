@@ -272,7 +272,7 @@ FastFeatureDetector::FastFeatureDetector( int _threshold, bool _nonmaxSuppressio
 {}
 
 FastFeatureDetector::FastFeatureDetector( int _threshold, bool _nonmaxSuppression, int _type )
-: threshold(_threshold), nonmaxSuppression(_nonmaxSuppression), type(_type)
+: threshold(_threshold), nonmaxSuppression(_nonmaxSuppression), type((short)_type)
 {}
 
 void FastFeatureDetector::detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask ) const

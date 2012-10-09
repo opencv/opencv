@@ -1368,7 +1368,7 @@ public:
     }
     
 private:
-    const Mat src;
+    Mat src;
     Mat dst;
     int scale_x, scale_y;
     const int *ofs, *xofs;
@@ -1552,7 +1552,7 @@ static void resizeArea_( const Mat& src, Mat& dst, const DecimateAlpha* xofs, in
         }
     }
 
-    Range range(0, bands.size());
+    Range range(0, (int)bands.size());
     resizeArea_Invoker<T, WT> invoker(src, dst, xofs, xofs_count, scale_y_, cur_dy_ofs, bands);
     //parallel_for_(range, invoker);
     invoker(Range(range.start, range.end));
