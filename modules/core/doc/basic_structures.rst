@@ -2187,14 +2187,14 @@ The class ``SparseMat`` represents multi-dimensional sparse numerical arrays. Su
             for(; it != it_end; ++it)
             {
                 // print element indices and the element value
-                const Node* n = it.node();
-                printf("(")
+                const SparseMat::Node* n = it.node();
+                printf("(");
                 for(int i = 0; i < dims; i++)
-                    printf("
-                printf(":
+                    printf("%d%s", n->idx[i], i < dims-1 ? ", " : ")");
+                printf(": %g\n", it.value<float>());
                 s += *it;
             }
-            printf("Element sum is
+            printf("Element sum is %g\n", s);
 
     ..
 
