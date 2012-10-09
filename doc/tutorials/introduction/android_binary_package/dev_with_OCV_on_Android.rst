@@ -54,13 +54,19 @@ Using async initialization is a **recommended** way for application development.
         :alt: Add dependency from OpenCV library
         :align: center
 
-To run OpenCV Manager-based application the first time you need to install packages with the `OpenCV Manager` and `OpenCV binary pack` for you platform.
+To run OpenCV Manager-based application for the first time you need to install package with the `OpenCV Manager` for your platform. Armeabi, Armeabi-v7a with NEON, x86 and MIPS achitectures supported.
 You can do it using Google Play Market or manually with ``adb`` tool:
 
 .. code-block:: sh
     :linenos:
 
     <Android SDK path>/platform-tools/adb install <OpenCV4Android SDK path>/apk/OpenCV_2.4.2_Manager.apk
+
+For rare cases if NEON instruction set is not supported you need to install aditional OpenCV Library package:
+
+.. code-block:: sh
+    :linenos:
+
     <Android SDK path>/platform-tools/adb install <OpenCV4Android SDK path>/apk/OpenCV_2.4.2_binary_pack_armv7a.apk
 
 There is a very base code snippet implementing the async initialization. It shows basic principles. See the "15-puzzle" OpenCV sample for details.
@@ -71,9 +77,9 @@ There is a very base code snippet implementing the async initialization. It show
     public class MyActivity extends Activity implements HelperCallbackInterface
     {
     private BaseLoaderCallback mOpenCVCallBack = new BaseLoaderCallback(this) {
-    @Override
-    public void onManagerConnected(int status) {
-       switch (status) {
+       @Override
+       public void onManagerConnected(int status) {
+         switch (status) {
            case LoaderCallbackInterface.SUCCESS:
            {
               Log.i(TAG, "OpenCV loaded successfully");
@@ -85,25 +91,22 @@ There is a very base code snippet implementing the async initialization. It show
            {
               super.onManagerConnected(status);
            } break;
+         }
        }
-        }
     };
 
-    /** Called when the activity is first created. */
+    /** Call on every application resume **/
     @Override
-    public void onCreate(Bundle savedInstanceState)
+    protected void onResume()
     {
-        Log.i(TAG, "onCreate");
-        super.onCreate(savedInstanceState);
+        Log.i(TAG, "called onResume");
+        super.onResume();
 
         Log.i(TAG, "Trying to load OpenCV library");
         if (!OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_2, this, mOpenCVCallBack))
         {
-          Log.e(TAG, "Cannot connect to OpenCV Manager");
+            Log.e(TAG, "Cannot connect to OpenCV Manager");
         }
-    }
-
-    // ...
     }
 
 It this case application works with OpenCV Manager in asynchronous fashion. ``OnManagerConnected`` callback will be called in UI thread, when initialization finishes.

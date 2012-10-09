@@ -30,11 +30,7 @@ Initialization status constants
 
 .. data:: SUCCESS
 
-    OpenCV initialization finished successfully.
-
-.. data:: RESTART_REQUIRED
-
-    OpenCV library installation via Google Play service was initialized. Application restart is required
+    OpenCV initialization finished successfully
 
 .. data:: MARKET_ERROR
 

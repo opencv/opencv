@@ -29,3 +29,10 @@ void cancel()
 .. method:: void cancel()
 
     Installation if package has been canceled.
+
+void wait_install()
+-------------------
+
+.. method:: void wait_install()
+
+    Wait for package installation.

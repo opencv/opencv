@@ -24,7 +24,7 @@ First OpenCV app\:
 #. Any OpenCV-dependent app is installed from Google Play marketplace or manually;
 #. At the first launch, it suggests installing OpenCV Manager;
 #. Then OpenCV Manager is downloaded and installed, using Google Play marketplace service.
-#. When started, the application suggests installing OpenCV library for the target device trough Google Play marketplace;
+#. When Manager has ben started, the application suggests installing OpenCV library for the target device trough Google Play marketplace if it is necessary;
 #. After installation is finished, the app may be launched to perform common tasks.
 
 Next OpenCV app\:

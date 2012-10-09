@@ -1,5 +1,5 @@
 *******************************************
-Engine use Cases
+Manager Workflow
 *******************************************
 
 First application start
@@ -9,10 +9,10 @@ There is no OpenCV Manager or OpenCV libraries:
 
 .. image:: img/NoService.png
 
-Second application start
-------------------------
+Aditional library package installation
+--------------------------------------
 
-There is an OpenCV Manager service, but there is no OpenCV library.
+There is an OpenCV Manager service, but there is no apropriate OpenCV library.
 If OpenCV library installation has been approved\:
 
 .. image:: img/LibInstallAproved.png
