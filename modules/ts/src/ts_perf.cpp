@@ -392,30 +392,42 @@ void Regression::verify(cv::FileNode node, cv::InputArray array, double eps, ERR
             cv::Mat expected;
             valnode >> expected;
 
-            ASSERT_EQ(expected.size(), actual.size())
-                    << "  " << node.name() << "[" <<  idx<< "] has unexpected size";
-
-            cv::Mat diff;
-            cv::absdiff(expected, actual, diff);
-
-            if (err == ERROR_ABSOLUTE)
+            if(expected.empty())
             {
-                if (!cv::checkRange(diff, true, 0, 0, eps))
-                {
-                    double max;
-                    cv::minMaxLoc(diff.reshape(1), 0, &max);
-                    FAIL() << "  Absolute difference (=" << max << ") between argument \""
-                           << node.name() << "[" <<  idx << "]\" and expected value is bugger than " << eps;
-                }
+                ASSERT_TRUE(actual.empty())
+                    << "  expected empty " << node.name() << "[" <<  idx<< "]";
             }
-            else if (err == ERROR_RELATIVE)
+            else
             {
-                double maxv, maxa;
-                int violations = countViolations(expected, actual, diff, eps, &maxv, &maxa);
-                if (violations > 0)
+                ASSERT_EQ(expected.size(), actual.size())
+                        << "  " << node.name() << "[" <<  idx<< "] has unexpected size";
+
+                cv::Mat diff;
+                cv::absdiff(expected, actual, diff);
+
+                if (err == ERROR_ABSOLUTE)
                 {
-                    FAIL() << "  Relative difference (" << maxv << " of " << maxa << " allowed) between argument \""
-                           << node.name() << "[" <<  idx << "]\" and expected value is bugger than " << eps << " in " << violations << " points";
+                    if (!cv::checkRange(diff, true, 0, 0, eps))
+                    {
+                        if(expected.total() * expected.channels() < 12)
+                            std::cout << " Expected: " << std::endl << expected << std::endl << " Actual:" << std::endl << actual << std::endl;
+
+                        double max;
+                        cv::minMaxLoc(diff.reshape(1), 0, &max);
+
+                        FAIL() << "  Absolute difference (=" << max << ") between argument \""
+                               << node.name() << "[" <<  idx << "]\" and expected value is bugger than " << eps;
+                    }
+                }
+                else if (err == ERROR_RELATIVE)
+                {
+                    double maxv, maxa;
+                    int violations = countViolations(expected, actual, diff, eps, &maxv, &maxa);
+                    if (violations > 0)
+                    {
+                        FAIL() << "  Relative difference (" << maxv << " of " << maxa << " allowed) between argument \""
+                               << node.name() << "[" <<  idx << "]\" and expected value is bugger than " << eps << " in " << violations << " points";
+                    }
                 }
             }
         }
@@ -434,30 +446,42 @@ void Regression::verify(cv::FileNode node, cv::InputArray array, double eps, ERR
             valnode >> expected;
             cv::Mat actual = array.getMat();
 
-            ASSERT_EQ(expected.size(), actual.size())
-                    << "  Argument \"" << node.name() << "\" has unexpected size";
-
-            cv::Mat diff;
-            cv::absdiff(expected, actual, diff);
-
-            if (err == ERROR_ABSOLUTE)
+            if(expected.empty())
             {
-                if (!cv::checkRange(diff, true, 0, 0, eps))
-                {
-                    double max;
-                    cv::minMaxLoc(diff.reshape(1), 0, &max);
-                    FAIL() << "  Difference (=" << max << ") between argument \"" << node.name()
-                           << "\" and expected value is bugger than " << eps;
-                }
+                ASSERT_TRUE(actual.empty())
+                    << "  expected empty " << node.name();
             }
-            else if (err == ERROR_RELATIVE)
+            else
             {
-                double maxv, maxa;
-                int violations = countViolations(expected, actual, diff, eps, &maxv, &maxa);
-                if (violations > 0)
+                ASSERT_EQ(expected.size(), actual.size())
+                        << "  Argument \"" << node.name() << "\" has unexpected size";
+
+                cv::Mat diff;
+                cv::absdiff(expected, actual, diff);
+
+                if (err == ERROR_ABSOLUTE)
                 {
-                    FAIL() << "  Relative difference (" << maxv << " of " << maxa << " allowed) between argument \"" << node.name()
-                           << "\" and expected value is bugger than " << eps << " in " << violations << " points";
+                    if (!cv::checkRange(diff, true, 0, 0, eps))
+                    {
+                        if(expected.total() * expected.channels() < 12)
+                            std::cout << " Expected: " << std::endl << expected << std::endl << " Actual:" << std::endl << actual << std::endl;
+
+                        double max;
+                        cv::minMaxLoc(diff.reshape(1), 0, &max);
+
+                        FAIL() << "  Difference (=" << max << ") between argument1 \"" << node.name()
+                               << "\" and expected value is bugger than " << eps;
+                    }
+                }
+                else if (err == ERROR_RELATIVE)
+                {
+                    double maxv, maxa;
+                    int violations = countViolations(expected, actual, diff, eps, &maxv, &maxa);
+                    if (violations > 0)
+                    {
+                        FAIL() << "  Relative difference (" << maxv << " of " << maxa << " allowed) between argument \"" << node.name()
+                               << "\" and expected value is bugger than " << eps << " in " << violations << " points";
+                    }
                 }
             }
         }
