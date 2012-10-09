@@ -125,4 +125,7 @@ PERF_TEST_P(PointsNum, SolvePnPRansac, testing::Values(4, 3*9, 7*13))
     {
         solvePnPRansac(object, image, camera_mat, dist_coef, rvec, tvec);
     }
+
+    SANITY_CHECK(rvec, 1e-6);
+    SANITY_CHECK(tvec, 1e-6);
 }
