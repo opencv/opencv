@@ -77,6 +77,8 @@ struct Accumulator<short>  { typedef float Type; };
 template<>
 struct Accumulator<int> { typedef float Type; };
 
+#undef True
+#undef False
 
 class True
 {
