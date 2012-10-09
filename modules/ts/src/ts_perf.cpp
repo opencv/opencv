@@ -103,6 +103,24 @@ Regression& Regression::add(TestBase* test, const std::string& name, cv::InputAr
     return instance()(name, array, eps, err);
 }
 
+Regression& Regression::addKeypoints(TestBase* test, const std::string& name, const std::vector<cv::KeyPoint>& array, double eps, ERROR_TYPE err)
+{
+    int len = (int)array.size();
+    cv::Mat pt      (len, 1, CV_32FC2, (void*)&array[0].pt,       sizeof(cv::KeyPoint));
+    cv::Mat size    (len, 1, CV_32FC1, (void*)&array[0].size,     sizeof(cv::KeyPoint));
+    cv::Mat angle   (len, 1, CV_32FC1, (void*)&array[0].angle,    sizeof(cv::KeyPoint));
+    cv::Mat response(len, 1, CV_32FC1, (void*)&array[0].response, sizeof(cv::KeyPoint));
+    cv::Mat octave  (len, 1, CV_32SC1, (void*)&array[0].octave,   sizeof(cv::KeyPoint));
+    cv::Mat class_id(len, 1, CV_32SC1, (void*)&array[0].class_id, sizeof(cv::KeyPoint));
+
+    return Regression::add(test, name + "-pt",       pt,       eps, ERROR_ABSOLUTE)
+                                (name + "-size",     size,     eps, ERROR_ABSOLUTE)
+                                (name + "-angle",    angle,    eps, ERROR_ABSOLUTE)
+                                (name + "-response", response, eps, err)
+                                (name + "-octave",   octave,   eps, ERROR_ABSOLUTE)
+                                (name + "-class_id", class_id, eps, ERROR_ABSOLUTE);
+}
+
 void Regression::Init(const std::string& testSuitName, const std::string& ext)
 {
     instance().init(testSuitName, ext);
@@ -490,6 +508,12 @@ void Regression::verify(cv::FileNode node, cv::InputArray array, double eps, ERR
 
 Regression& Regression::operator() (const std::string& name, cv::InputArray array, double eps, ERROR_TYPE err)
 {
+    if(!array.empty() && array.depth() == CV_USRTYPE1)
+    {
+        ADD_FAILURE() << "  Can not check regression for CV_USRTYPE1 data type for " << name;
+        return *this;
+    }
+
     std::string nodename = getCurrentTestNodeName();
 
     cv::FileNode n = rootIn[nodename];
@@ -674,6 +698,8 @@ cv::Size TestBase::getSize(cv::InputArray a)
 bool TestBase::next()
 {
     bool has_next = ++currentIter < nIters && totalTime < timeLimit;
+    cv::theRNG().state = param_seed; //this rng should generate same numbers for each run
+
 #ifdef ANDROID
     if (log_power_checkpoints)
     {
@@ -948,7 +974,6 @@ void TestBase::SetUp()
     currentIter = (unsigned int)-1;
     timeLimit = timeLimitDefault;
     times.clear();
-    cv::theRNG().state = param_seed;//this rng should generate same numbers for each run
 }
 
 void TestBase::TearDown()

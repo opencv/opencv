@@ -581,7 +581,7 @@ function(ocv_add_perf_tests)
     __ocv_parse_test_sources(PERF ${ARGN})
 
     # opencv_highgui is required for imread/imwrite
-    set(perf_deps ${the_module} opencv_ts opencv_highgui ${OPENCV_PERF_${the_module}_DEPS})
+    set(perf_deps ${the_module} opencv_ts opencv_highgui ${OPENCV_PERF_${the_module}_DEPS} ${OPENCV_MODULE_opencv_ts_DEPS})
     ocv_check_dependencies(${perf_deps})
 
     if(OCV_DEPENDENCIES_FOUND)
@@ -632,7 +632,7 @@ function(ocv_add_accuracy_tests)
     __ocv_parse_test_sources(TEST ${ARGN})
 
     # opencv_highgui is required for imread/imwrite
-    set(test_deps ${the_module} opencv_ts opencv_highgui ${OPENCV_TEST_${the_module}_DEPS})
+    set(test_deps ${the_module} opencv_ts opencv_highgui ${OPENCV_TEST_${the_module}_DEPS} ${OPENCV_MODULE_opencv_ts_DEPS})
     ocv_check_dependencies(${test_deps})
 
     if(OCV_DEPENDENCIES_FOUND)
