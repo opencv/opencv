@@ -74,7 +74,9 @@ void GainCompensator::feed(const vector<Point> &corners, const vector<Mat> &imag
                            const vector<pair<Mat,uchar> > &masks)
 {
     LOGLN("Exposure compensation...");
+#if ENABLE_LOG
     int64 t = getTickCount();
+#endif
 
     CV_Assert(corners.size() == images.size() && images.size() == masks.size());
 

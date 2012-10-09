@@ -52,10 +52,12 @@ void PairwiseSeamFinder::find(const vector<Mat> &src, const vector<Point> &corne
                               vector<Mat> &masks)
 {
     LOGLN("Finding seams...");
-    if (src.size() == 0) 
+    if (src.size() == 0)
         return;
 
+#if ENABLE_LOG
     int64 t = getTickCount();
+#endif
 
     images_ = src;
     sizes_.resize(src.size());
@@ -87,10 +89,12 @@ void VoronoiSeamFinder::find(const vector<Size> &sizes, const vector<Point> &cor
                              vector<Mat> &masks)
 {
     LOGLN("Finding seams...");
-    if (sizes.size() == 0) 
+    if (sizes.size() == 0)
         return;
 
+#if ENABLE_LOG
     int64 t = getTickCount();
+#endif
 
     sizes_ = sizes;
     corners_ = corners;
@@ -161,7 +165,9 @@ DpSeamFinder::DpSeamFinder(CostFunction costFunc) : costFunc_(costFunc) {}
 void DpSeamFinder::find(const vector<Mat> &src, const vector<Point> &corners, vector<Mat> &masks)
 {
     LOGLN("Finding seams...");
+#if ENABLE_LOG
     int64 t = getTickCount();
+#endif
 
     if (src.size() == 0)
         return;
@@ -700,7 +706,7 @@ void DpSeamFinder::computeCosts(
 {
     CV_Assert(states_[comp] & INTERS);
 
-    // compute costs    
+    // compute costs
 
     float (*diff)(const Mat&, int, int, const Mat&, int, int) = 0;
     if (image1.type() == CV_32FC3 && image2.type() == CV_32FC3)
@@ -1055,10 +1061,10 @@ public:
     void findInPair(size_t first, size_t second, Rect roi);
 
 private:
-    void setGraphWeightsColor(const Mat &img1, const Mat &img2, 
+    void setGraphWeightsColor(const Mat &img1, const Mat &img2,
                               const Mat &mask1, const Mat &mask2, GCGraph<float> &graph);
-    void setGraphWeightsColorGrad(const Mat &img1, const Mat &img2, const Mat &dx1, const Mat &dx2, 
-                                  const Mat &dy1, const Mat &dy2, const Mat &mask1, const Mat &mask2, 
+    void setGraphWeightsColorGrad(const Mat &img1, const Mat &img2, const Mat &dx1, const Mat &dx2,
+                                  const Mat &dy1, const Mat &dy2, const Mat &mask1, const Mat &mask2,
                                   GCGraph<float> &graph);
 
     vector<Mat> dx_, dy_;
@@ -1148,8 +1154,8 @@ void GraphCutSeamFinder::Impl::setGraphWeightsColor(const Mat &img1, const Mat &
 
 
 void GraphCutSeamFinder::Impl::setGraphWeightsColorGrad(
-        const Mat &img1, const Mat &img2, const Mat &dx1, const Mat &dx2, 
-        const Mat &dy1, const Mat &dy2, const Mat &mask1, const Mat &mask2, 
+        const Mat &img1, const Mat &img2, const Mat &dx1, const Mat &dx2,
+        const Mat &dy1, const Mat &dy2, const Mat &mask1, const Mat &mask2,
         GCGraph<float> &graph)
 {
     const Size img_size = img1.size();
@@ -1177,7 +1183,7 @@ void GraphCutSeamFinder::Impl::setGraphWeightsColorGrad(
                 float grad = dx1.at<float>(y, x) + dx1.at<float>(y, x + 1) +
                              dx2.at<float>(y, x) + dx2.at<float>(y, x + 1) + weight_eps;
                 float weight = (normL2(img1.at<Point3f>(y, x), img2.at<Point3f>(y, x)) +
-                                normL2(img1.at<Point3f>(y, x + 1), img2.at<Point3f>(y, x + 1))) / grad + 
+                                normL2(img1.at<Point3f>(y, x + 1), img2.at<Point3f>(y, x + 1))) / grad +
                                weight_eps;
                 if (!mask1.at<uchar>(y, x) || !mask1.at<uchar>(y, x + 1) ||
                     !mask2.at<uchar>(y, x) || !mask2.at<uchar>(y, x + 1))
@@ -1186,10 +1192,10 @@ void GraphCutSeamFinder::Impl::setGraphWeightsColorGrad(
             }
             if (y < img_size.height - 1)
             {
-                float grad = dy1.at<float>(y, x) + dy1.at<float>(y + 1, x) + 
+                float grad = dy1.at<float>(y, x) + dy1.at<float>(y + 1, x) +
                              dy2.at<float>(y, x) + dy2.at<float>(y + 1, x) + weight_eps;
-                float weight = (normL2(img1.at<Point3f>(y, x), img2.at<Point3f>(y, x)) + 
-                                normL2(img1.at<Point3f>(y + 1, x), img2.at<Point3f>(y + 1, x))) / grad + 
+                float weight = (normL2(img1.at<Point3f>(y, x), img2.at<Point3f>(y, x)) +
+                                normL2(img1.at<Point3f>(y + 1, x), img2.at<Point3f>(y + 1, x))) / grad +
                                weight_eps;
                 if (!mask1.at<uchar>(y, x) || !mask1.at<uchar>(y + 1, x) ||
                     !mask2.at<uchar>(y, x) || !mask2.at<uchar>(y + 1, x))
@@ -1271,7 +1277,7 @@ void GraphCutSeamFinder::Impl::findInPair(size_t first, size_t second, Rect roi)
         setGraphWeightsColor(subimg1, subimg2, submask1, submask2, graph);
         break;
     case GraphCutSeamFinder::COST_COLOR_GRAD:
-        setGraphWeightsColorGrad(subimg1, subimg2, subdx1, subdx2, subdy1, subdy2, 
+        setGraphWeightsColorGrad(subimg1, subimg2, subdx1, subdx2, subdy1, subdy2,
                                  submask1, submask2, graph);
         break;
     default:
@@ -1402,17 +1408,17 @@ void GraphCutSeamFinderGpu::findInPair(size_t first, size_t second, Rect roi)
             }
         }
     }
-    
+
     Mat terminals, leftT, rightT, top, bottom;
 
     switch (cost_type_)
     {
     case GraphCutSeamFinder::COST_COLOR:
-        setGraphWeightsColor(subimg1, subimg2, submask1, submask2, 
+        setGraphWeightsColor(subimg1, subimg2, submask1, submask2,
                              terminals, leftT, rightT, top, bottom);
         break;
     case GraphCutSeamFinder::COST_COLOR_GRAD:
-        setGraphWeightsColorGrad(subimg1, subimg2, subdx1, subdx2, subdy1, subdy2, 
+        setGraphWeightsColorGrad(subimg1, subimg2, subdx1, subdx2, subdy1, subdy2,
                                  submask1, submask2, terminals, leftT, rightT, top, bottom);
         break;
     default:
@@ -1448,7 +1454,7 @@ void GraphCutSeamFinderGpu::findInPair(size_t first, size_t second, Rect roi)
 }
 
 
-void GraphCutSeamFinderGpu::setGraphWeightsColor(const Mat &img1, const Mat &img2, const Mat &mask1, const Mat &mask2, 
+void GraphCutSeamFinderGpu::setGraphWeightsColor(const Mat &img1, const Mat &img2, const Mat &mask1, const Mat &mask2,
                                                  Mat &terminals, Mat &leftT, Mat &rightT, Mat &top, Mat &bottom)
 {
     const Size img_size = img1.size();
@@ -1540,7 +1546,7 @@ void GraphCutSeamFinderGpu::setGraphWeightsColor(const Mat &img1, const Mat &img
 
 void GraphCutSeamFinderGpu::setGraphWeightsColorGrad(
         const Mat &img1, const Mat &img2, const Mat &dx1, const Mat &dx2,
-        const Mat &dy1, const Mat &dy2, const Mat &mask1, const Mat &mask2, 
+        const Mat &dy1, const Mat &dy2, const Mat &mask1, const Mat &mask2,
         Mat &terminals, Mat &leftT, Mat &rightT, Mat &top, Mat &bottom)
 {
     const Size img_size = img1.size();

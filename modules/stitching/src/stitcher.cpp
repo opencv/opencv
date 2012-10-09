@@ -152,7 +152,9 @@ Stitcher::Status Stitcher::composePanorama(InputArray images, OutputArray pano)
 
     Mat &pano_ = pano.getMatRef();
 
+#if ENABLE_LOG
     int64 t = getTickCount();
+#endif
 
     vector<Point> corners(imgs_.size());
     vector<Mat> masks_warped(imgs_.size());
@@ -201,7 +203,9 @@ Stitcher::Status Stitcher::composePanorama(InputArray images, OutputArray pano)
     masks.clear();
 
     LOGLN("Compositing...");
+#if ENABLE_LOG
     t = getTickCount();
+#endif
 
     Mat img_warped, img_warped_s;
     Mat dilated_mask, seam_mask, mask, mask_warped;
@@ -349,7 +353,9 @@ Stitcher::Status Stitcher::matchImages()
     full_img_sizes_.resize(imgs_.size());
 
     LOGLN("Finding features...");
+#if ENABLE_LOG
     int64 t = getTickCount();
+#endif
 
     for (size_t i = 0; i < imgs_.size(); ++i)
     {
@@ -406,7 +412,9 @@ Stitcher::Status Stitcher::matchImages()
     LOGLN("Finding features, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
     LOG("Pairwise matching");
+#if ENABLE_LOG
     t = getTickCount();
+#endif
     (*features_matcher_)(features_, pairwise_matches_, matching_mask_);
     features_matcher_->collectGarbage();
     LOGLN("Pairwise matching, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
