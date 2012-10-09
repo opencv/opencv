@@ -1572,13 +1572,9 @@ cvHaarDetectObjectsForROC( const CvArr* _img,
             cvIntegral( &img1, &sum1, &sqsum1, _tilted );
 
             int ystep = factor > 2 ? 1 : 2;
-        #ifdef HAVE_TBB
             const int LOCS_PER_THREAD = 1000;
             int stripCount = ((sz1.width/ystep)*(sz1.height + ystep-1)/ystep + LOCS_PER_THREAD/2)/LOCS_PER_THREAD;
             stripCount = std::min(std::max(stripCount, 1), 100);
-        #else
-            const int stripCount = 1;
-        #endif
 
 #ifdef HAVE_IPP
             if( use_ipp )

@@ -2069,6 +2069,7 @@ protected:
 
     char delimiter;
     char miss_ch;
+    short header_lines_number;
     //char flt_separator;
 
     CvMat* values;
@@ -2093,8 +2094,6 @@ protected:
     int* sample_idx; // data of train_sample_idx and test_sample_idx
 
     cv::RNG* rng;
-    
-    int header_lines_number;
 };
 
 

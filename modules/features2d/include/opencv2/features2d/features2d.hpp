@@ -586,7 +586,7 @@ protected:
 
     int threshold;
     bool nonmaxSuppression;
-    int type;
+    short type;
 };
 
 

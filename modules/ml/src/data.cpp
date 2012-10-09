@@ -121,7 +121,7 @@ void CvMLData::clear()
 
 void CvMLData::set_header_lines_number( int idx )
 {
-	header_lines_number = std::max(0, idx);
+	header_lines_number = (short)std::max(0, idx);
 }
 
 int CvMLData::get_header_lines_number() const

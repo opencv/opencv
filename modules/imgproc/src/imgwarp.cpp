@@ -1192,15 +1192,12 @@ public:
     }
     
 private:
-    const Mat src;
+    Mat src;
     Mat dst;
     const int* xofs, *yofs;
     const AT* alpha, *_beta;
-    const Size ssize, dsize;
-    const int ksize, xmin, xmax;
-
-    resizeGeneric_Invoker(const resizeGeneric_Invoker&);
-    resizeGeneric_Invoker& operator=(const resizeGeneric_Invoker&);
+    Size ssize, dsize;
+    int ksize, xmin, xmax;
 };
 
 template<class HResize, class VResize>
@@ -1236,10 +1233,10 @@ struct ResizeAreaFastNoVec
     int operator() (const T* /*S*/, T* /*D*/, int /*w*/) const { return 0; }
 };
 
-template <typename T, typename WT>
-struct ResizeAreaFast_2x2_8u
+template<typename T>
+struct ResizeAreaFastVec
 {
-    ResizeAreaFast_2x2_8u(int _scale_x, int _scale_y, int _cn, int _step/*, const int* _ofs*/) :
+    ResizeAreaFastVec(int _scale_x, int _scale_y, int _cn, int _step/*, const int* _ofs*/) :
         scale_x(_scale_x), scale_y(_scale_y), cn(_cn), step(_step)/*, ofs(_ofs)*/
     { 
         fast_mode = scale_x == 2 && scale_y == 2 && (cn == 1 || cn == 3 || cn == 4); 
@@ -1250,47 +1247,44 @@ struct ResizeAreaFast_2x2_8u
         if( !fast_mode )
             return 0;
         
-        const T* nextS = S + step;
+        const T* nextS = (const T*)((const uchar*)S + step);
         int dx = 0;
         
         if (cn == 1)
-        for( ; dx < w; ++dx )
-        {
-            int index = dx*2;
-            D[dx] = (S[index] + S[index+1] + nextS[index] + nextS[index+1] + 2) >> 2;
-        }
-        else if (cn == 3)
-        for( ; dx < w; dx += 3 )
-        {
-            int index = dx*2;
-            D[dx] = (S[index] + S[index+3] + nextS[index] + nextS[index+3] + 2) >> 2;
-            D[dx+1] = (S[index+1] + S[index+4] + nextS[index+1] + nextS[index+4] + 2) >> 2;
-            D[dx+2] = (S[index+2] + S[index+5] + nextS[index+2] + nextS[index+5] + 2) >> 2;
-        }
-        else
-        {
-            assert(cn == 4);
-            for( ; dx < w; dx += 4 )
+            for( ; dx < w; ++dx )
             {
                 int index = dx*2;
-                D[dx] = (S[index] + S[index+4] + nextS[index] + nextS[index+4] + 2) >> 2;
-                D[dx+1] = (S[index+1] + S[index+5] + nextS[index+1] + nextS[index+5] + 2) >> 2;
-                D[dx+2] = (S[index+2] + S[index+6] + nextS[index+2] + nextS[index+6] + 2) >> 2;
-                D[dx+3] = (S[index+3] + S[index+7] + nextS[index+3] + nextS[index+7] + 2) >> 2;
+                D[dx] = (T)((S[index] + S[index+1] + nextS[index] + nextS[index+1] + 2) >> 2);
             }
-        }
+        else if (cn == 3)
+            for( ; dx < w; dx += 3 )
+            {
+                int index = dx*2;
+                D[dx] = (T)((S[index] + S[index+3] + nextS[index] + nextS[index+3] + 2) >> 2);
+                D[dx+1] = (T)((S[index+1] + S[index+4] + nextS[index+1] + nextS[index+4] + 2) >> 2);
+                D[dx+2] = (T)((S[index+2] + S[index+5] + nextS[index+2] + nextS[index+5] + 2) >> 2);
+            }
+        else
+            {
+                assert(cn == 4);
+                for( ; dx < w; dx += 4 )
+                {
+                    int index = dx*2;
+                    D[dx] = (T)((S[index] + S[index+4] + nextS[index] + nextS[index+4] + 2) >> 2);
+                    D[dx+1] = (T)((S[index+1] + S[index+5] + nextS[index+1] + nextS[index+5] + 2) >> 2);
+                    D[dx+2] = (T)((S[index+2] + S[index+6] + nextS[index+2] + nextS[index+6] + 2) >> 2);
+                    D[dx+3] = (T)((S[index+3] + S[index+7] + nextS[index+3] + nextS[index+7] + 2) >> 2);
+                }
+            }
         
         return dx;
     }
     
 private:
-    const int scale_x, scale_y;
-    const int cn;
+    int scale_x, scale_y;
+    int cn;
     bool fast_mode;
-    const int step;
-
-    ResizeAreaFast_2x2_8u(const ResizeAreaFast_2x2_8u&);
-    ResizeAreaFast_2x2_8u& operator=(const ResizeAreaFast_2x2_8u&);
+    int step;
 };
 
 template <typename T, typename WT, typename VecOp>
@@ -1376,11 +1370,8 @@ public:
 private:
     const Mat src;
     Mat dst;
-    const int scale_x, scale_y;
+    int scale_x, scale_y;
     const int *ofs, *xofs;
-
-    resizeAreaFast_Invoker(const resizeAreaFast_Invoker&);
-    resizeAreaFast_Invoker& operator=(const resizeAreaFast_Invoker&);
 };
 
 template<typename T, typename WT, typename VecOp>
@@ -1413,7 +1404,7 @@ public:
     {
     }
     
-    void resize_signle_band(const Range& range) const 
+    void resize_single_band(const Range& range) const 
     {
         Size ssize = src.size(), dsize = dst.size();
         int cn = src.channels();
@@ -1520,21 +1511,18 @@ public:
         for (int i = range.start; i < range.end; ++i)
         {
             Range band_range(bands[i].first, bands[i].second);
-            resize_signle_band(band_range);
+            resize_single_band(band_range);
         }
     }
     
 private:
-    const Mat src;
+    Mat src;
     Mat dst;
     const DecimateAlpha* xofs;
-    const int xofs_count;
-    const double scale_y_;
+    int xofs_count;
+    double scale_y_;
     const int *cur_dy_ofs;
     std::vector<std::pair<int, int> > bands;
-    
-    resizeArea_Invoker(const resizeArea_Invoker&);
-    resizeArea_Invoker& operator=(const resizeArea_Invoker&);
 };
 
 template <typename T, typename WT>
@@ -1566,7 +1554,8 @@ static void resizeArea_( const Mat& src, Mat& dst, const DecimateAlpha* xofs, in
 
     Range range(0, bands.size());
     resizeArea_Invoker<T, WT> invoker(src, dst, xofs, xofs_count, scale_y_, cur_dy_ofs, bands);
-    parallel_for_(range, invoker);
+    //parallel_for_(range, invoker);
+    invoker(Range(range.start, range.end));
 }
 
 
@@ -1678,10 +1667,10 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
 
     static ResizeAreaFastFunc areafast_tab[] =
     {
-        resizeAreaFast_<uchar, int, ResizeAreaFast_2x2_8u<uchar, int> >, 
+        resizeAreaFast_<uchar, int, ResizeAreaFastVec<uchar> >, 
         0,
-        resizeAreaFast_<ushort, float, ResizeAreaFastNoVec<ushort, float> >,
-        resizeAreaFast_<short, float, ResizeAreaFastNoVec<short, float> >,
+        resizeAreaFast_<ushort, float, ResizeAreaFastVec<ushort> >,
+        resizeAreaFast_<short, float, ResizeAreaFastVec<short> >,
         0,
         resizeAreaFast_<float, float, ResizeAreaFastNoVec<float, float> >,
         resizeAreaFast_<double, double, ResizeAreaFastNoVec<double, double> >,
@@ -1739,11 +1728,9 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
             
         // in case of scale_x && scale_y is equal to 2 
         // INTER_AREA (fast) also is equal to INTER_LINEAR
-        if ( interpolation == INTER_LINEAR && std::abs(scale_x - 2.0) < DBL_EPSILON &&
-            std::abs(scale_y - 2.0) < DBL_EPSILON)
+        if( interpolation == INTER_LINEAR && is_area_fast && iscale_x == 2 && iscale_y == 2 )
         {
             interpolation = INTER_AREA;
-            is_area_fast = true;
         }
 
         // true "area" interpolation is only implemented for the case (scale_x <= 1 && scale_y <= 1).
@@ -2882,18 +2869,16 @@ public:
     }
     
 private:
-    const Mat src;
+    Mat src;
     Mat dst;
-    const Mat map1, map2, *m1, *m2;
+    Mat map1, map2;
+    const Mat *m1, *m2;
     int interpolation, borderType;
-    const Scalar borderValue;
+    Scalar borderValue;
     int planar_input;
     RemapNNFunc nnfunc;
     RemapFunc ifunc;
     const void *ctab;
-
-    remapInvoker(const remapInvoker&);
-    remapInvoker& operator=(const remapInvoker&);
 };
 
 }
@@ -3252,15 +3237,12 @@ public:
     }
     
 private:
-    const Mat src;
+    Mat src;
     Mat dst;
     int interpolation, borderType;
-    const Scalar borderValue;
+    Scalar borderValue;
     int *adelta, *bdelta;
     double *M;
-
-    warpAffineInvoker(const warpAffineInvoker&);
-    warpAffineInvoker& operator=(const warpAffineInvoker&);
 };
 
 }
@@ -3409,13 +3391,11 @@ public:
     }
     
 private:
-    const Mat src;
+    Mat src;
     Mat dst;
     double* M;
     int interpolation, borderType;
-    const Scalar borderValue;
-    warpPerspectiveInvoker(const warpPerspectiveInvoker&);
-    warpPerspectiveInvoker& operator=(const warpPerspectiveInvoker&);
+    Scalar borderValue;
 };
     
 }
