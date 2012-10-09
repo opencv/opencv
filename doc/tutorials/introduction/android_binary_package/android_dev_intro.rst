@@ -323,7 +323,7 @@ We recommend the approach based on Eclipse :abbr:`CDT(C/C++ Development Tooling)
   :alt: Eclipse About
   :align: center
 
-.. important:: OpenCV for Android 2.4.2 package contains sample projects pre-configured CDT Builders. For your own projects follow the steps below.
+.. important:: OpenCV for Android package since version 2.4.2 contains sample projects pre-configured CDT Builders. For your own projects follow the steps below.
 
 #. Define the ``NDKROOT`` environment variable containing the path to Android NDK in your system (e.g. ``"X:\\Apps\\android-ndk-r8"`` or ``"/opt/android-ndk-r8"``).
     **On Windows** an environment variable can be set via :guilabel:`My Computer -> Properties -> Advanced -> Environment variables` and restarting Eclipse.

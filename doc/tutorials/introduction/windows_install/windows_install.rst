@@ -16,7 +16,7 @@ Installation by using the pre-built libraries
 
 1. Open up a web browser and go to: http://sourceforge.net/projects/opencvlibrary/files/opencv-win/
 
-#. Open the folder for the latest version (currently this is 2.4.2).
+#. Open the folder for the latest version (currently this is |release|).
 
 #. Choose a build you want to use and download it. The naming conventions used will show what kind of support they offer. For example:
 
