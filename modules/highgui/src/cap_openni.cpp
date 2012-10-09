@@ -1112,6 +1112,16 @@ bool CvCapture_OpenNI::setImageGeneratorProperty( int propIdx, double propValue 
             mode.nYRes = XN_SXGA_Y_RES;
             mode.nFPS = 30;
             break;
+        case CV_CAP_OPENNI_QVGA_30HZ :
+             mode.nXRes = XN_QVGA_X_RES;
+             mode.nYRes = XN_QVGA_Y_RES;
+             mode.nFPS = 30;
+             break;
+        case CV_CAP_OPENNI_QVGA_60HZ :
+             mode.nXRes = XN_QVGA_X_RES;
+             mode.nYRes = XN_QVGA_Y_RES;
+             mode.nFPS = 60;
+             break;
         default :
             CV_Error( CV_StsBadArg, "Unsupported image generator output mode.\n");
         }
