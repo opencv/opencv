@@ -306,8 +306,9 @@ Mat& Mat::operator = (const Scalar& s)
     uchar* dptr;
     NAryMatIterator it(arrays, &dptr, 1);
     size_t elsize = it.size*elemSize();
+    const int64* is = (const int64*)&s.val[0];
 
-    if( s[0] == 0 && s[1] == 0 && s[2] == 0 && s[3] == 0 )
+    if( is[0] == 0 && is[1] == 0 && is[2] == 0 && is[3] == 0 )
     {
         for( size_t i = 0; i < it.nplanes; i++, ++it )
             memset( dptr, 0, elsize );
