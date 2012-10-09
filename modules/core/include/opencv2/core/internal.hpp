@@ -67,6 +67,7 @@
 #  undef small
 #  undef min
 #  undef max
+#  undef abs
 #else
 #  include <pthread.h>
 #endif

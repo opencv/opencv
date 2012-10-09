@@ -75,16 +75,9 @@
     #endif
   #endif
 
-#elif defined WIN32 || defined _WIN32
-  #define WIN32_MEAN_AND_LEAN
-  #ifndef _WIN32_WINNT           // This is needed for the declaration of TryEnterCriticalSection in winbase.h with Visual Studio 2005 (and older?)
-    #define _WIN32_WINNT 0x0400  // http://msdn.microsoft.com/en-us/library/ms686857(VS.85).aspx
-  #endif
-  #include <windows.h>
-  #undef min
-  #undef max
-  #undef abs
-  #define CV_XADD(addr,delta) InterlockedExchangeAdd((long volatile*)(addr), (delta))
+#elif defined WIN32 || defined _WIN32 || defined WINCE
+  namespace cv { CV_EXPORTS int _interlockedExchangeAdd(int* addr, int delta); }
+  #define CV_XADD cv::_interlockedExchangeAdd
 
 #else
   static inline int CV_XADD(int* addr, int delta)

@@ -947,6 +947,15 @@ struct Mutex::Impl
     CRITICAL_SECTION cs;
     int refcount;
 };
+    
+int _interlockedExchangeAdd(int* addr, int delta)
+{
+#if defined _MSC_VER && _MSC_VER >= 1500
+    return (int)_InterlockedExchangeAdd((long volatile*)addr, delta);
+#else
+    return (int)InterlockedExchangeAdd((long volatile*)addr, delta);
+#endif
+}
 
 #elif defined __APPLE__
 
