@@ -38,17 +38,20 @@ PERF_TEST_P(ImageName_MinSize, CascadeClassifierLBPFrontalFace,
     if (img.empty())
         FAIL() << "Can't load source image";
 
-    vector<Rect> res;
+    vector<Rect> faces;
 
     equalizeHist(img, img);
     declare.in(img);
 
     while(next())
     {
-        res.clear();
+        faces.clear();
 
         startTimer();
-        cc.detectMultiScale(img, res, 1.1, 3, 0, minSize);
+        cc.detectMultiScale(img, faces, 1.1, 3, 0, minSize);
         stopTimer();
     }
+
+    std::sort(faces.begin(), faces.end(), comparators::RectLess());
+    SANITY_CHECK(faces);
 }

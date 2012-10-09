@@ -473,10 +473,26 @@ int main(int argc, char **argv)\
 #define TEST_CYCLE() for(; startTimer(), next(); stopTimer())
 #define TEST_CYCLE_MULTIRUN(runsNum) for(declare.runs(runsNum); startTimer(), next(); stopTimer()) for(int r = 0; r < runsNum; ++r)
 
-//flags
 namespace perf
 {
-//GTEST_DECLARE_int32_(allowed_outliers);
+namespace comparators
+{
+
+template<typename T>
+struct CV_EXPORTS RectLess_
+{
+  bool operator()(const cv::Rect_<T>& r1, const cv::Rect_<T>& r2) const
+  {
+    return r1.x < r2.x
+      || (r1.x == r2.x && r1.y < r2.y)
+      || (r1.x == r2.x && r1.y == r2.y && r1.width < r2.width)
+      || (r1.x == r2.x && r1.y == r2.y && r1.width == r2.width && r1.height < r2.height);
+  }
+};
+
+typedef RectLess_<int> RectLess;
+
+} //namespace comparators
 } //namespace perf
 
 #endif //__OPENCV_TS_PERF_HPP__
