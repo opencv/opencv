@@ -1,4 +1,5 @@
 #include "perf_precomp.hpp"
+#include "opencv2/core/internal.hpp"
 
 using namespace std;
 using namespace cv;
@@ -48,7 +49,10 @@ PERF_TEST_P(PointsNum_Algo, solvePnP,
 
     declare.in(points3d, points2d);
 
-    TEST_CYCLE_N(1000) solvePnP(points3d, points2d, intrinsics, distortion, rvec, tvec, false, algo);
+    TEST_CYCLE_N(1000)
+    {
+        solvePnP(points3d, points2d, intrinsics, distortion, rvec, tvec, false, algo);
+    }
 
     SANITY_CHECK(rvec, 1e-6);
     SANITY_CHECK(tvec, 1e-6);
@@ -83,7 +87,10 @@ PERF_TEST(PointsNum_Algo, solveP3P)
 
     declare.in(points3d, points2d);
 
-    TEST_CYCLE_N(1000) solvePnP(points3d, points2d, intrinsics, distortion, rvec, tvec, false, CV_P3P);
+    TEST_CYCLE_N(1000)
+    {
+        solvePnP(points3d, points2d, intrinsics, distortion, rvec, tvec, false, CV_P3P);
+    }
 
     SANITY_CHECK(rvec, 1e-6);
     SANITY_CHECK(tvec, 1e-6);
@@ -117,9 +124,10 @@ PERF_TEST_P(PointsNum, SolvePnPRansac, testing::Values(4, 3*9, 7*13))
     Mat rvec;
     Mat tvec;
 
-    solvePnPRansac(object, image, camera_mat, dist_coef, rvec, tvec);
-
-    declare.time(3.0);
+#ifdef HAVE_TBB
+    // limit concurrency to get determenistic result
+    cv::Ptr<tbb::task_scheduler_init> one_thread = new tbb::task_scheduler_init(1);
+#endif
 
     TEST_CYCLE()
     {

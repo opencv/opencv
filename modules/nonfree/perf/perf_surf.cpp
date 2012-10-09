@@ -26,6 +26,8 @@ PERF_TEST_P(surf, detect, testing::Values(SURF_IMAGES))
     vector<KeyPoint> points;
 
     TEST_CYCLE() detector(frame, mask, points);
+
+    SANITY_CHECK_KEYPOINTS(points);
 }
 
 PERF_TEST_P(surf, extract, testing::Values(SURF_IMAGES))
@@ -45,6 +47,8 @@ PERF_TEST_P(surf, extract, testing::Values(SURF_IMAGES))
     detector(frame, mask, points);
 
     TEST_CYCLE() detector(frame, mask, points, descriptors, true);
+
+    SANITY_CHECK(descriptors, 1e-4);
 }
 
 PERF_TEST_P(surf, full, testing::Values(SURF_IMAGES))
@@ -62,4 +66,7 @@ PERF_TEST_P(surf, full, testing::Values(SURF_IMAGES))
     vector<float> descriptors;
 
     TEST_CYCLE() detector(frame, mask, points, descriptors, false);
+
+    SANITY_CHECK_KEYPOINTS(points);
+    SANITY_CHECK(descriptors, 1e-4);
 }

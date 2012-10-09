@@ -57,13 +57,12 @@ PROJECT_NAME = sys.argv[2]
 
 CLASS_PATH = os.path.join(INSTALL_DIRECTORY, "sdk/java/bin/classes")
 if (not os.path.exists(CLASS_PATH)):
-    print("Error: no java classes found in \"%s\"", CLASS_PATH)
+    print("Error: no java classes found in \"%s\"" % CLASS_PATH)
     exit(-2)
 
 if (os.environ.has_key("NDK_ROOT")):
     ANDROID_NDK_PATH = os.environ["NDK_ROOT"];
     print("Using Android NDK from NDK_ROOT (\"%s\")" % ANDROID_NDK_PATH)
-    
 
 if (not ANDROID_NDK_PATH):
     pipe = os.popen("which ndk-build")
@@ -112,13 +111,14 @@ outputFile.write("\n\t" + "\n\t".join(cppHeaders))
 outputFile.write("\n\t" + "\n\t".join(jniHeaders))
 outputFile.write("\n</headers>\n\n")
 
-includes = []
+includes = [os.path.join(INSTALL_DIRECTORY, "sdk", "native", "jni", "include"),
+    os.path.join(INSTALL_DIRECTORY, "sdk", "native", "jni", "include", "opencv"),
+    os.path.join(INSTALL_DIRECTORY, "sdk", "native", "jni", "include", "opencv2")]
+
 for inc in SYS_INCLUDES:
     includes.append(os.path.join(ANDROID_NDK_PATH, inc))
 
-outputFile.write("<include_paths>\n\tOpenCV-2.4.2-branch/sdk/native/jni/include\n\tOpenCV-2.4.2-branch/sdk/native/jni/include/opencv\n\tOpenCV-2.4.2-branch/sdk/native/jni/include/opencv2\n")
-
-outputFile.write("\t%s\n</include_paths>\n\n" % "\n\t".join(includes))
+outputFile.write("<include_paths>\n\t%s\n</include_paths>\n\n" % "\n\t".join(includes))
 
 libraries = []
 for lib in TARGET_LIBS:

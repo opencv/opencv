@@ -56,6 +56,8 @@ PERF_TEST_P(stitch, a123, TEST_DETECTORS)
         stitcher.stitch(imgs, pano);
         stopTimer();
     }
+
+    SANITY_CHECK(pano, 2);
 }
 
 PERF_TEST_P(stitch, b12, TEST_DETECTORS)
@@ -88,6 +90,8 @@ PERF_TEST_P(stitch, b12, TEST_DETECTORS)
         stitcher.stitch(imgs, pano);
         stopTimer();
     }
+
+    SANITY_CHECK(pano, 2);
 }
 
 PERF_TEST_P( match, bestOf2Nearest, TEST_DETECTORS)
@@ -122,8 +126,7 @@ PERF_TEST_P( match, bestOf2Nearest, TEST_DETECTORS)
 
     detail::MatchesInfo pairwise_matches;
 
-    declare.in(features1.descriptors, features2.descriptors)
-            .iterations(100);
+    declare.in(features1.descriptors, features2.descriptors);
 
     while(next())
     {
@@ -133,6 +136,8 @@ PERF_TEST_P( match, bestOf2Nearest, TEST_DETECTORS)
         stopTimer();
         matcher->collectGarbage();
     }
+
+    SANITY_CHECK_MATCHES(pairwise_matches.matches);
 }
 
 PERF_TEST_P( matchVector, bestOf2NearestVectorFeatures, testing::Combine(
@@ -186,4 +191,8 @@ PERF_TEST_P( matchVector, bestOf2NearestVectorFeatures, testing::Combine(
         stopTimer();
         matcher->collectGarbage();
     }
+
+
+    std::vector<DMatch>& matches = pairwise_matches[0].matches;
+    SANITY_CHECK_MATCHES(matches);
 }

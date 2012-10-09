@@ -25,5 +25,6 @@ PERF_TEST_P(VideoWriter_Writing, WriteFrame,
 
   TEST_CYCLE() { Mat image = imread(filename, 1); writer << image; }
 
-  SANITY_CHECK(writer.isOpened());
+  bool dummy = writer.isOpened();
+  SANITY_CHECK(dummy);
 }

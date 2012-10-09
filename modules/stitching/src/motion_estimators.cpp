@@ -105,7 +105,9 @@ void HomographyBasedEstimator::estimate(const vector<ImageFeatures> &features, c
                                         vector<CameraParams> &cameras)
 {
     LOGLN("Estimating rotations...");
+#if ENABLE_LOG
     int64 t = getTickCount();
+#endif
 
     const int num_images = static_cast<int>(features.size());
 
@@ -172,7 +174,9 @@ void BundleAdjusterBase::estimate(const vector<ImageFeatures> &features,
                                   vector<CameraParams> &cameras)
 {
     LOG_CHAT("Bundle adjustment");
+#if ENABLE_LOG
     int64 t = getTickCount();
+#endif
 
     num_images_ = static_cast<int>(features.size());
     features_ = &features[0];
@@ -582,7 +586,9 @@ void BundleAdjusterRay::calcJacobian(Mat &jac)
 void waveCorrect(vector<Mat> &rmats, WaveCorrectKind kind)
 {
     LOGLN("Wave correcting...");
+#if ENABLE_LOG
     int64 t = getTickCount();
+#endif
 
     Mat moment = Mat::zeros(3, 3, CV_32F);
     for (size_t i = 0; i < rmats.size(); ++i)

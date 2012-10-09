@@ -23,5 +23,6 @@ PERF_TEST_P(VideoCapture_Reading, ReadFile,
 
   TEST_CYCLE() cap.open(filename);
 
-  SANITY_CHECK(cap.isOpened());
+  bool dummy = cap.isOpened();
+  SANITY_CHECK(dummy);
 }
