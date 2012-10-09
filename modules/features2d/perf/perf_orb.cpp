@@ -26,6 +26,8 @@ PERF_TEST_P(orb, detect, testing::Values(ORB_IMAGES))
     vector<KeyPoint> points;
 
     TEST_CYCLE() detector(frame, mask, points);
+
+    SANITY_CHECK_KEYPOINTS(points);
 }
 
 PERF_TEST_P(orb, extract, testing::Values(ORB_IMAGES))
@@ -46,6 +48,8 @@ PERF_TEST_P(orb, extract, testing::Values(ORB_IMAGES))
     Mat descriptors;
 
     TEST_CYCLE() detector(frame, mask, points, descriptors, true);
+
+    SANITY_CHECK(descriptors);
 }
 
 PERF_TEST_P(orb, full, testing::Values(ORB_IMAGES))
@@ -64,4 +68,7 @@ PERF_TEST_P(orb, full, testing::Values(ORB_IMAGES))
     Mat descriptors;
 
     TEST_CYCLE() detector(frame, mask, points, descriptors, false);
+
+    SANITY_CHECK_KEYPOINTS(points);
+    SANITY_CHECK(descriptors);
 }

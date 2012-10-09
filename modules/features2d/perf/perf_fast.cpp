@@ -35,6 +35,6 @@ PERF_TEST_P(fast, detect, testing::Combine(
 
     TEST_CYCLE() fd.detect(frame, points);
 
-    SANITY_CHECK(points);
+    SANITY_CHECK_KEYPOINTS(points);
 }
 
