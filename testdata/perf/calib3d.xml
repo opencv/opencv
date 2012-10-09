@@ -146,69 +146,6 @@
       <data>
         -5.7995756265965952e+01 3.0867063283341408e+03
         1.7246145875107627e+03</data></val></tvec></PointsNum_Algo_solvePnP--solvePnP---91--CV_EPNP->
-<PointsNum_SolvePnPRansac--SolvePnPRansac--4>
-  <rvec>
-    <kind>65536</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>3</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        2.6989618875200089e-02 1.7548548334127070e+00
-        3.2910765205514174e+00</data></val></rvec>
-  <tvec>
-    <kind>65536</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>3</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        -1.2216497380421021e+00 4.3882005964701065e+01
-        8.9845725598257587e+01</data></val></tvec></PointsNum_SolvePnPRansac--SolvePnPRansac--4>
-<PointsNum_SolvePnPRansac--SolvePnPRansac--27>
-  <rvec>
-    <kind>65536</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>3</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        1.2521672396093550e+01 -1.2298030460290251e+01
-        -2.1151049678743558e+01</data></val></rvec>
-  <tvec>
-    <kind>65536</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>3</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        -7.9117133389382666e-01 -3.1243493163948481e+00
-        1.1049107523100260e+02</data></val></tvec></PointsNum_SolvePnPRansac--SolvePnPRansac--27>
-<PointsNum_SolvePnPRansac--SolvePnPRansac--91>
-  <rvec>
-    <kind>65536</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>3</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        -1.4123645880178003e+11 -1.3439166806235434e+11
-        -2.6471089941405447e+11</data></val></rvec>
-  <tvec>
-    <kind>65536</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>3</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        8.9512288183702808e+11 -1.3896294034640732e+12
-        3.6000128671647866e+12</data></val></tvec></PointsNum_SolvePnPRansac--SolvePnPRansac--91>
 <String_Size_asymm_circles_grid--asymm_circles_grid----cv-cameracalibration-asymmetric_circles-acircles1-png---7x13->
   <ptvec>
     <kind>196608</kind>
@@ -383,4 +320,68 @@
       <x>8</x>
       <y>0</y>
       <val>3.3780123901367188e+02</val></rng2></ptvec></String_Size_asymm_circles_grid--asymm_circles_grid----cv-cameracalibration-asymmetric_circles-acircles9-png---3x9->
+ <!-- resumed -->
+<PointsNum_SolvePnPRansac--SolvePnPRansac--4>
+  <rvec>
+    <kind>65536</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>3</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        2.6989618875200089e-02 1.7548548334127070e+00
+        3.2910765205514174e+00</data></val></rvec>
+  <tvec>
+    <kind>65536</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>3</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        -1.2216497380421021e+00 4.3882005964701065e+01
+        8.9845725598257587e+01</data></val></tvec></PointsNum_SolvePnPRansac--SolvePnPRansac--4>
+<PointsNum_SolvePnPRansac--SolvePnPRansac--27>
+  <rvec>
+    <kind>65536</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>3</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        8.4628053847779083e-01 -1.6986123377462841e+00
+        -1.2835083034760035e+00</data></val></rvec>
+  <tvec>
+    <kind>65536</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>3</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        -2.3897319812195573e+01 3.1193723524974054e+01
+        1.1591688732897232e+02</data></val></tvec></PointsNum_SolvePnPRansac--SolvePnPRansac--27>
+<PointsNum_SolvePnPRansac--SolvePnPRansac--91>
+  <rvec>
+    <kind>65536</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>3</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        8.5029381143706431e+01 4.3481508464543857e+01
+        2.1691684457848762e+01</data></val></rvec>
+  <tvec>
+    <kind>65536</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>3</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.6323631145448424e+01 -1.4986142900449511e+02
+        4.0261972870888013e+02</data></val></tvec></PointsNum_SolvePnPRansac--SolvePnPRansac--91>
 </opencv_storage>
