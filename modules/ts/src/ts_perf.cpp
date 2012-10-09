@@ -121,6 +121,20 @@ Regression& Regression::addKeypoints(TestBase* test, const std::string& name, co
                                 (name + "-class_id", class_id, eps, ERROR_ABSOLUTE);
 }
 
+Regression& Regression::addMatches(TestBase* test, const std::string& name, const std::vector<cv::DMatch>& array, double eps, ERROR_TYPE err)
+{
+    int len = (int)array.size();
+    cv::Mat queryIdx(len, 1, CV_32SC1, (void*)&array[0].queryIdx, sizeof(cv::DMatch));
+    cv::Mat trainIdx(len, 1, CV_32SC1, (void*)&array[0].trainIdx, sizeof(cv::DMatch));
+    cv::Mat imgIdx  (len, 1, CV_32SC1, (void*)&array[0].imgIdx,   sizeof(cv::DMatch));
+    cv::Mat distance(len, 1, CV_32FC1, (void*)&array[0].distance, sizeof(cv::DMatch));
+
+    return Regression::add(test, name + "-queryIdx", queryIdx, DBL_EPSILON, ERROR_ABSOLUTE)
+                                (name + "-trainIdx", trainIdx, DBL_EPSILON, ERROR_ABSOLUTE)
+                                (name + "-imgIdx",   imgIdx,   DBL_EPSILON, ERROR_ABSOLUTE)
+                                (name + "-distance", distance, eps, err);
+}
+
 void Regression::Init(const std::string& testSuitName, const std::string& ext)
 {
     instance().init(testSuitName, ext);
