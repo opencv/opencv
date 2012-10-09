@@ -27,6 +27,7 @@ class DetectionBasedTracker
                     minNeighbours(2),
                     scaleFactor(1.1f)
                 {}
+                virtual ~IDetector() {}
 
                 virtual void detect(const cv::Mat& image, std::vector<cv::Rect>& objects) = 0;
 
@@ -62,7 +63,6 @@ class DetectionBasedTracker
                 {
                     minNeighbours = value;
                 }
-                virtual ~IDetector() {}
 
             protected:
                 cv::Size minObjSize;
@@ -106,7 +106,6 @@ class DetectionBasedTracker
             }
         };
         virtual void getObjects(std::vector<ExtObject>& result) const;
-
 
         virtual int addObject(const cv::Rect& location); //returns id of the new object
 
@@ -170,7 +169,7 @@ class DetectionBasedTracker
 
 namespace cv
 {
-    typedef ::DetectionBasedTracker DetectionBasedTracker;
-    
+    using ::DetectionBasedTracker;
 } //end of cv namespace
+
 #endif
