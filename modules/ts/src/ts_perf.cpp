@@ -674,6 +674,8 @@ cv::Size TestBase::getSize(cv::InputArray a)
 bool TestBase::next()
 {
     bool has_next = ++currentIter < nIters && totalTime < timeLimit;
+    cv::theRNG().state = param_seed; //this rng should generate same numbers for each run
+
 #ifdef ANDROID
     if (log_power_checkpoints)
     {
@@ -948,7 +950,6 @@ void TestBase::SetUp()
     currentIter = (unsigned int)-1;
     timeLimit = timeLimitDefault;
     times.clear();
-    cv::theRNG().state = param_seed;//this rng should generate same numbers for each run
 }
 
 void TestBase::TearDown()

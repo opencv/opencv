@@ -260,6 +260,8 @@ namespace cv
             {
                 rvec.copyTo(initRvec);
                 tvec.copyTo(initTvec);
+
+                generator.state = theRNG().state; //to control it somehow...
             }
         private:
             PnPSolver& operator=(const PnPSolver&);
