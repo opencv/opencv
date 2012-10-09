@@ -20,182 +20,6 @@
       <data>
         2.6848658541541377e+03 -3.9480105965740959e+03
         3.3993544109564232e+03</data></val></tvec></PointsNum_Algo--solveP3P>
-<String_Size_asymm_circles_grid--asymm_circles_grid----cv-cameracalibration-asymmetric_circles-acircles1-jpg---7x13->
-  <ptvec>
-    <kind>196608</kind>
-    <type>13</type>
-    <min>9.4336730957031250e+01</min>
-    <max>4.7849752807617188e+02</max>
-    <last>
-      <x>90</x>
-      <y>0</y>
-      <val>1.0000583648681641e+02</val></last>
-    <rng1>
-      <x>73</x>
-      <y>0</y>
-      <val>3.3704412841796875e+02</val></rng1>
-    <rng2>
-      <x>35</x>
-      <y>0</y>
-      <val>4.3528192138671875e+02</val></rng2></ptvec></String_Size_asymm_circles_grid--asymm_circles_grid----cv-cameracalibration-asymmetric_circles-acircles1-jpg---7x13->
-<String_Size_asymm_circles_grid--asymm_circles_grid----cv-cameracalibration-asymmetric_circles-acircles2-jpg---7x13->
-  <ptvec>
-    <kind>196608</kind>
-    <type>13</type>
-    <min>4.5381984710693359e+01</min>
-    <max>5.2131433105468750e+02</max>
-    <last>
-      <x>90</x>
-      <y>0</y>
-      <val>2.1497082519531250e+02</val></last>
-    <rng1>
-      <x>6</x>
-      <y>0</y>
-      <cn>1</cn>
-      <val>4.9172473907470703e+01</val></rng1>
-    <rng2>
-      <x>18</x>
-      <y>0</y>
-      <cn>1</cn>
-      <val>1.3973101806640625e+02</val></rng2></ptvec></String_Size_asymm_circles_grid--asymm_circles_grid----cv-cameracalibration-asymmetric_circles-acircles2-jpg---7x13->
-<String_Size_asymm_circles_grid--asymm_circles_grid----cv-cameracalibration-asymmetric_circles-acircles3-jpg---7x13->
-  <ptvec>
-    <kind>196608</kind>
-    <type>13</type>
-    <min>6.1023143768310547e+01</min>
-    <max>5.4771752929687500e+02</max>
-    <last>
-      <x>90</x>
-      <y>0</y>
-      <val>2.3222872924804688e+02</val></last>
-    <rng1>
-      <x>69</x>
-      <y>0</y>
-      <cn>1</cn>
-      <val>2.7857217407226562e+02</val></rng1>
-    <rng2>
-      <x>32</x>
-      <y>0</y>
-      <cn>1</cn>
-      <val>2.7506857299804688e+02</val></rng2></ptvec></String_Size_asymm_circles_grid--asymm_circles_grid----cv-cameracalibration-asymmetric_circles-acircles3-jpg---7x13->
-<String_Size_asymm_circles_grid--asymm_circles_grid----cv-cameracalibration-asymmetric_circles-acircles4-jpg---5x5->
-  <ptvec>
-    <kind>196608</kind>
-    <type>13</type>
-    <min>2.7361404418945312e+02</min>
-    <max>4.5659356689453125e+02</max>
-    <last>
-      <x>24</x>
-      <y>0</y>
-      <val>3.5508132934570312e+02</val></last>
-    <rng1>
-      <x>9</x>
-      <y>0</y>
-      <cn>1</cn>
-      <val>3.0617932128906250e+02</val></rng1>
-    <rng2>
-      <x>5</x>
-      <y>0</y>
-      <cn>1</cn>
-      <val>2.9142279052734375e+02</val></rng2></ptvec></String_Size_asymm_circles_grid--asymm_circles_grid----cv-cameracalibration-asymmetric_circles-acircles4-jpg---5x5->
-<String_Size_asymm_circles_grid--asymm_circles_grid----cv-cameracalibration-asymmetric_circles-acircles5-jpg---5x5->
-  <ptvec>
-    <kind>196608</kind>
-    <type>13</type>
-    <min>2.1598440551757812e+02</min>
-    <max>3.9439779663085938e+02</max>
-    <last>
-      <x>24</x>
-      <y>0</y>
-      <val>2.6440426635742188e+02</val></last>
-    <rng1>
-      <x>19</x>
-      <y>0</y>
-      <cn>1</cn>
-      <val>2.4325559997558594e+02</val></rng1>
-    <rng2>
-      <x>20</x>
-      <y>0</y>
-      <val>2.8598208618164062e+02</val></rng2></ptvec></String_Size_asymm_circles_grid--asymm_circles_grid----cv-cameracalibration-asymmetric_circles-acircles5-jpg---5x5->
-<String_Size_asymm_circles_grid--asymm_circles_grid----cv-cameracalibration-asymmetric_circles-acircles6-jpg---5x5->
-  <ptvec>
-    <kind>196608</kind>
-    <type>13</type>
-    <min>2.8240158081054688e+02</min>
-    <max>4.1960284423828125e+02</max>
-    <last>
-      <x>24</x>
-      <y>0</y>
-      <val>3.0906362915039062e+02</val></last>
-    <rng1>
-      <x>1</x>
-      <y>0</y>
-      <cn>1</cn>
-      <val>3.8146224975585938e+02</val></rng1>
-    <rng2>
-      <x>17</x>
-      <y>0</y>
-      <cn>1</cn>
-      <val>3.3129412841796875e+02</val></rng2></ptvec></String_Size_asymm_circles_grid--asymm_circles_grid----cv-cameracalibration-asymmetric_circles-acircles6-jpg---5x5->
-<String_Size_asymm_circles_grid--asymm_circles_grid----cv-cameracalibration-asymmetric_circles-acircles7-jpg---3x9->
-  <ptvec>
-    <kind>196608</kind>
-    <type>13</type>
-    <min>2.3744476318359375e+02</min>
-    <max>5.1825677490234375e+02</max>
-    <last>
-      <x>26</x>
-      <y>0</y>
-      <val>2.8389642333984375e+02</val></last>
-    <rng1>
-      <x>24</x>
-      <y>0</y>
-      <val>4.2180493164062500e+02</val></rng1>
-    <rng2>
-      <x>19</x>
-      <y>0</y>
-      <cn>1</cn>
-      <val>2.6209133911132812e+02</val></rng2></ptvec></String_Size_asymm_circles_grid--asymm_circles_grid----cv-cameracalibration-asymmetric_circles-acircles7-jpg---3x9->
-<String_Size_asymm_circles_grid--asymm_circles_grid----cv-cameracalibration-asymmetric_circles-acircles8-jpg---3x9->
-  <ptvec>
-    <kind>196608</kind>
-    <type>13</type>
-    <min>2.2886637878417969e+02</min>
-    <max>4.0411233520507812e+02</max>
-    <last>
-      <x>26</x>
-      <y>0</y>
-      <val>4.0411233520507812e+02</val></last>
-    <rng1>
-      <x>22</x>
-      <y>0</y>
-      <cn>1</cn>
-      <val>3.8090258789062500e+02</val></rng1>
-    <rng2>
-      <x>18</x>
-      <y>0</y>
-      <cn>1</cn>
-      <val>3.4262170410156250e+02</val></rng2></ptvec></String_Size_asymm_circles_grid--asymm_circles_grid----cv-cameracalibration-asymmetric_circles-acircles8-jpg---3x9->
-<String_Size_asymm_circles_grid--asymm_circles_grid----cv-cameracalibration-asymmetric_circles-acircles9-jpg---3x9->
-  <ptvec>
-    <kind>196608</kind>
-    <type>13</type>
-    <min>2.2652360534667969e+02</min>
-    <max>4.2250006103515625e+02</max>
-    <last>
-      <x>26</x>
-      <y>0</y>
-      <val>2.4186732482910156e+02</val></last>
-    <rng1>
-      <x>13</x>
-      <y>0</y>
-      <cn>1</cn>
-      <val>2.7632495117187500e+02</val></rng1>
-    <rng2>
-      <x>24</x>
-      <y>0</y>
-      <cn>1</cn>
-      <val>3.0216027832031250e+02</val></rng2></ptvec></String_Size_asymm_circles_grid--asymm_circles_grid----cv-cameracalibration-asymmetric_circles-acircles9-jpg---3x9->
 <PointsNum_Algo_solvePnP--solvePnP---4--CV_ITERATIVE->
   <rvec>
     <kind>65536</kind>
@@ -322,4 +146,241 @@
       <data>
         -5.7995756265965952e+01 3.0867063283341408e+03
         1.7246145875107627e+03</data></val></tvec></PointsNum_Algo_solvePnP--solvePnP---91--CV_EPNP->
+<PointsNum_SolvePnPRansac--SolvePnPRansac--4>
+  <rvec>
+    <kind>65536</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>3</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        2.6989618875200089e-02 1.7548548334127070e+00
+        3.2910765205514174e+00</data></val></rvec>
+  <tvec>
+    <kind>65536</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>3</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        -1.2216497380421021e+00 4.3882005964701065e+01
+        8.9845725598257587e+01</data></val></tvec></PointsNum_SolvePnPRansac--SolvePnPRansac--4>
+<PointsNum_SolvePnPRansac--SolvePnPRansac--27>
+  <rvec>
+    <kind>65536</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>3</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.2521672396093550e+01 -1.2298030460290251e+01
+        -2.1151049678743558e+01</data></val></rvec>
+  <tvec>
+    <kind>65536</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>3</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        -7.9117133389382666e-01 -3.1243493163948481e+00
+        1.1049107523100260e+02</data></val></tvec></PointsNum_SolvePnPRansac--SolvePnPRansac--27>
+<PointsNum_SolvePnPRansac--SolvePnPRansac--91>
+  <rvec>
+    <kind>65536</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>3</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        -1.4123645880178003e+11 -1.3439166806235434e+11
+        -2.6471089941405447e+11</data></val></rvec>
+  <tvec>
+    <kind>65536</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>3</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        8.9512288183702808e+11 -1.3896294034640732e+12
+        3.6000128671647866e+12</data></val></tvec></PointsNum_SolvePnPRansac--SolvePnPRansac--91>
+<String_Size_asymm_circles_grid--asymm_circles_grid----cv-cameracalibration-asymmetric_circles-acircles1-png---7x13->
+  <ptvec>
+    <kind>196608</kind>
+    <type>13</type>
+    <min>9.4336730957031250e+01</min>
+    <max>4.7849752807617188e+02</max>
+    <last>
+      <x>90</x>
+      <y>0</y>
+      <val>1.0000583648681641e+02</val></last>
+    <rng1>
+      <x>54</x>
+      <y>0</y>
+      <cn>1</cn>
+      <val>2.0213621520996094e+02</val></rng1>
+    <rng2>
+      <x>86</x>
+      <y>0</y>
+      <cn>1</cn>
+      <val>9.6797500610351562e+01</val></rng2></ptvec></String_Size_asymm_circles_grid--asymm_circles_grid----cv-cameracalibration-asymmetric_circles-acircles1-png---7x13->
+<String_Size_asymm_circles_grid--asymm_circles_grid----cv-cameracalibration-asymmetric_circles-acircles2-png---7x13->
+  <ptvec>
+    <kind>196608</kind>
+    <type>13</type>
+    <min>4.5381984710693359e+01</min>
+    <max>5.2131433105468750e+02</max>
+    <last>
+      <x>90</x>
+      <y>0</y>
+      <val>2.1497082519531250e+02</val></last>
+    <rng1>
+      <x>43</x>
+      <y>0</y>
+      <val>2.9789639282226562e+02</val></rng1>
+    <rng2>
+      <x>69</x>
+      <y>0</y>
+      <cn>1</cn>
+      <val>1.5589173889160156e+02</val></rng2></ptvec></String_Size_asymm_circles_grid--asymm_circles_grid----cv-cameracalibration-asymmetric_circles-acircles2-png---7x13->
+<String_Size_asymm_circles_grid--asymm_circles_grid----cv-cameracalibration-asymmetric_circles-acircles3-png---7x13->
+  <ptvec>
+    <kind>196608</kind>
+    <type>13</type>
+    <min>6.1023143768310547e+01</min>
+    <max>5.4771752929687500e+02</max>
+    <last>
+      <x>90</x>
+      <y>0</y>
+      <val>2.3222872924804688e+02</val></last>
+    <rng1>
+      <x>72</x>
+      <y>0</y>
+      <val>3.4382427978515625e+02</val></rng1>
+    <rng2>
+      <x>29</x>
+      <y>0</y>
+      <cn>1</cn>
+      <val>1.9262422180175781e+02</val></rng2></ptvec></String_Size_asymm_circles_grid--asymm_circles_grid----cv-cameracalibration-asymmetric_circles-acircles3-png---7x13->
+<String_Size_asymm_circles_grid--asymm_circles_grid----cv-cameracalibration-asymmetric_circles-acircles4-png---5x5->
+  <ptvec>
+    <kind>196608</kind>
+    <type>13</type>
+    <min>2.7361404418945312e+02</min>
+    <max>4.5659356689453125e+02</max>
+    <last>
+      <x>24</x>
+      <y>0</y>
+      <val>3.5508132934570312e+02</val></last>
+    <rng1>
+      <x>24</x>
+      <y>0</y>
+      <cn>1</cn>
+      <val>3.5508132934570312e+02</val></rng1>
+    <rng2>
+      <x>4</x>
+      <y>0</y>
+      <cn>1</cn>
+      <val>2.8804776000976562e+02</val></rng2></ptvec></String_Size_asymm_circles_grid--asymm_circles_grid----cv-cameracalibration-asymmetric_circles-acircles4-png---5x5->
+<String_Size_asymm_circles_grid--asymm_circles_grid----cv-cameracalibration-asymmetric_circles-acircles5-png---5x5->
+  <ptvec>
+    <kind>196608</kind>
+    <type>13</type>
+    <min>2.1598440551757812e+02</min>
+    <max>3.9439779663085938e+02</max>
+    <last>
+      <x>24</x>
+      <y>0</y>
+      <val>2.6440426635742188e+02</val></last>
+    <rng1>
+      <x>22</x>
+      <y>0</y>
+      <cn>1</cn>
+      <val>3.3108300781250000e+02</val></rng1>
+    <rng2>
+      <x>4</x>
+      <y>0</y>
+      <cn>1</cn>
+      <val>2.4997789001464844e+02</val></rng2></ptvec></String_Size_asymm_circles_grid--asymm_circles_grid----cv-cameracalibration-asymmetric_circles-acircles5-png---5x5->
+<String_Size_asymm_circles_grid--asymm_circles_grid----cv-cameracalibration-asymmetric_circles-acircles6-png---5x5->
+  <ptvec>
+    <kind>196608</kind>
+    <type>13</type>
+    <min>2.8240158081054688e+02</min>
+    <max>4.1960284423828125e+02</max>
+    <last>
+      <x>24</x>
+      <y>0</y>
+      <val>3.0906362915039062e+02</val></last>
+    <rng1>
+      <x>3</x>
+      <y>0</y>
+      <cn>1</cn>
+      <val>3.7128540039062500e+02</val></rng1>
+    <rng2>
+      <x>24</x>
+      <y>0</y>
+      <val>3.0597109985351562e+02</val></rng2></ptvec></String_Size_asymm_circles_grid--asymm_circles_grid----cv-cameracalibration-asymmetric_circles-acircles6-png---5x5->
+<String_Size_asymm_circles_grid--asymm_circles_grid----cv-cameracalibration-asymmetric_circles-acircles7-png---3x9->
+  <ptvec>
+    <kind>196608</kind>
+    <type>13</type>
+    <min>2.3744476318359375e+02</min>
+    <max>5.1825677490234375e+02</max>
+    <last>
+      <x>26</x>
+      <y>0</y>
+      <val>2.8389642333984375e+02</val></last>
+    <rng1>
+      <x>16</x>
+      <y>0</y>
+      <cn>1</cn>
+      <val>2.7426248168945312e+02</val></rng1>
+    <rng2>
+      <x>10</x>
+      <y>0</y>
+      <val>4.7911111450195312e+02</val></rng2></ptvec></String_Size_asymm_circles_grid--asymm_circles_grid----cv-cameracalibration-asymmetric_circles-acircles7-png---3x9->
+<String_Size_asymm_circles_grid--asymm_circles_grid----cv-cameracalibration-asymmetric_circles-acircles8-png---3x9->
+  <ptvec>
+    <kind>196608</kind>
+    <type>13</type>
+    <min>2.2886637878417969e+02</min>
+    <max>4.0411233520507812e+02</max>
+    <last>
+      <x>26</x>
+      <y>0</y>
+      <val>4.0411233520507812e+02</val></last>
+    <rng1>
+      <x>16</x>
+      <y>0</y>
+      <val>2.9988107299804688e+02</val></rng1>
+    <rng2>
+      <x>26</x>
+      <y>0</y>
+      <cn>1</cn>
+      <val>4.0411233520507812e+02</val></rng2></ptvec></String_Size_asymm_circles_grid--asymm_circles_grid----cv-cameracalibration-asymmetric_circles-acircles8-png---3x9->
+<String_Size_asymm_circles_grid--asymm_circles_grid----cv-cameracalibration-asymmetric_circles-acircles9-png---3x9->
+  <ptvec>
+    <kind>196608</kind>
+    <type>13</type>
+    <min>2.2652360534667969e+02</min>
+    <max>4.2250006103515625e+02</max>
+    <last>
+      <x>26</x>
+      <y>0</y>
+      <val>2.4186732482910156e+02</val></last>
+    <rng1>
+      <x>4</x>
+      <y>0</y>
+      <cn>1</cn>
+      <val>2.6248535156250000e+02</val></rng1>
+    <rng2>
+      <x>8</x>
+      <y>0</y>
+      <val>3.3780123901367188e+02</val></rng2></ptvec></String_Size_asymm_circles_grid--asymm_circles_grid----cv-cameracalibration-asymmetric_circles-acircles9-png---3x9->
 </opencv_storage>
