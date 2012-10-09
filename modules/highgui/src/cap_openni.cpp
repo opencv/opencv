@@ -970,6 +970,12 @@ double CvCapture_OpenNI::getDepthGeneratorProperty( int propIdx )
     case CV_CAP_PROP_OPENNI_REGISTRATION :
         propValue = depthGenerator.GetAlternativeViewPointCap().IsViewPointAs(imageGenerator) ? 1.0 : 0.0;
         break;
+    case CV_CAP_PROP_POS_MSEC :
+        propValue = depthGenerator.GetTimestamp();
+        break;
+    case CV_CAP_PROP_POS_FRAMES :
+        propValue = depthGenerator.GetFrameID();
+        break;
     default :
     {
         std::stringstream ss;
@@ -1059,6 +1065,12 @@ double CvCapture_OpenNI::getImageGeneratorProperty( int propIdx )
     case CV_CAP_PROP_FPS :
         if( imageGenerator.GetMapOutputMode(mode) == XN_STATUS_OK )
             propValue = mode.nFPS;
+        break;
+    case CV_CAP_PROP_POS_MSEC :
+        propValue = imageGenerator.GetTimestamp();
+        break;
+    case CV_CAP_PROP_POS_FRAMES :
+        propValue = imageGenerator.GetFrameID();
         break;
     default :
     {
