@@ -489,39 +489,37 @@ cvFloodFill( CvArr* arr, CvPoint seed_point,
 
     if( is_simple )
     {
-        /*int elem_size = CV_ELEM_SIZE(type);
+        int elem_size = CV_ELEM_SIZE(type);
         const uchar* seed_ptr = img->data.ptr + img->step*seed_point.y + elem_size*seed_point.x;
 
-        // check if the new value is different from the current value at the seed point.
-        // if they are exactly the same, use the generic version with mask to avoid infinite loops.
-        for( i = 0; i < elem_size; i++ )
-            if( seed_ptr[i] != ((uchar*)nv_buf)[i] )
+        for(i = 0; i < elem_size; i++)
+            if (seed_ptr[i] != nv_buf.b[i])
                 break;
 
-        if( i == elem_size )
-            return;*/
-
-        if( type == CV_8UC1 )
-            icvFloodFill_CnIR(img->data.ptr, img->step, size, seed_point, nv_buf.b[0],
-                              comp, flags, buffer, buffer_size);
-        else if( type == CV_8UC3 )
-            icvFloodFill_CnIR(img->data.ptr, img->step, size, seed_point, cv::Vec3b(nv_buf.b),
-                              comp, flags, buffer, buffer_size);
-        else if( type == CV_32SC1 )
-            icvFloodFill_CnIR(img->data.ptr, img->step, size, seed_point, nv_buf.i[0],
-                              comp, flags, buffer, buffer_size);
-        else if( type == CV_32FC1 )
-            icvFloodFill_CnIR(img->data.ptr, img->step, size, seed_point, nv_buf.f[0],
-                              comp, flags, buffer, buffer_size);
-        else if( type == CV_32SC3 )
-            icvFloodFill_CnIR(img->data.ptr, img->step, size, seed_point, cv::Vec3i(nv_buf.i),
-                              comp, flags, buffer, buffer_size);
-        else if( type == CV_32FC3 )
-            icvFloodFill_CnIR(img->data.ptr, img->step, size, seed_point, cv::Vec3f(nv_buf.f),
-                              comp, flags, buffer, buffer_size);
-        else
-            CV_Error( CV_StsUnsupportedFormat, "" );
-        return;
+        if (i != elem_size)
+        {
+            if( type == CV_8UC1 )
+                icvFloodFill_CnIR(img->data.ptr, img->step, size, seed_point, nv_buf.b[0],
+                                  comp, flags, buffer, buffer_size);
+            else if( type == CV_8UC3 )
+                icvFloodFill_CnIR(img->data.ptr, img->step, size, seed_point, cv::Vec3b(nv_buf.b),
+                                  comp, flags, buffer, buffer_size);
+            else if( type == CV_32SC1 )
+                icvFloodFill_CnIR(img->data.ptr, img->step, size, seed_point, nv_buf.i[0],
+                                  comp, flags, buffer, buffer_size);
+            else if( type == CV_32FC1 )
+                icvFloodFill_CnIR(img->data.ptr, img->step, size, seed_point, nv_buf.f[0],
+                                  comp, flags, buffer, buffer_size);
+            else if( type == CV_32SC3 )
+                icvFloodFill_CnIR(img->data.ptr, img->step, size, seed_point, cv::Vec3i(nv_buf.i),
+                                  comp, flags, buffer, buffer_size);
+            else if( type == CV_32FC3 )
+                icvFloodFill_CnIR(img->data.ptr, img->step, size, seed_point, cv::Vec3f(nv_buf.f),
+                                  comp, flags, buffer, buffer_size);
+            else
+                CV_Error( CV_StsUnsupportedFormat, "" );
+            return;
+        }
     }
 
     if( !mask )
