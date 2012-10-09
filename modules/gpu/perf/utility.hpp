@@ -53,4 +53,15 @@ namespace ts {
     void printCudaInfo();
 }
 
+#define GPU_SANITY_CHECK(dmat, ...) \
+    do{ \
+        cv::Mat d##dmat(dmat); \
+        SANITY_CHECK(d##dmat, ## __VA_ARGS__); \
+    } while(0);
+
+#define CPU_SANITY_CHECK(cmat, ...) \
+    do{ \
+        SANITY_CHECK(cmat, ## __VA_ARGS__); \
+    } while(0);
+
 #endif // __OPENCV_PERF_GPU_UTILITY_HPP__

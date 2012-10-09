@@ -26,6 +26,9 @@ const std::string command_line_keys =
     #endif
     "{   perf_max_deviation  |1.0      |}"
     "{   help h              |         |print help info}"
+    #ifdef HAVE_CUDA
+    "{   perf_run_cpu        |false    |run GPU performance tests for analogy CPU functions}"
+    #endif
 ;
 
 static double       param_max_outliers;
@@ -36,9 +39,14 @@ static uint64       param_seed;
 static double       param_time_limit;
 static int          param_tbb_nthreads;
 static bool         param_write_sanity;
+#ifdef HAVE_CUDA
+static bool         param_run_cpu;
+#endif
 #ifdef ANDROID
 static int          param_affinity_mask;
 static bool         log_power_checkpoints;
+
+
 
 #include <sys/syscall.h>
 #include <pthread.h>
@@ -606,6 +614,10 @@ void TestBase::Init(int argc, const char* const argv[])
 #ifdef ANDROID
     param_affinity_mask   = args.get<int>("perf_affinity_mask");
     log_power_checkpoints = args.has("perf_log_power_checkpoints");
+#endif
+
+#ifdef HAVE_CUDA
+    param_run_cpu         = args.has("perf_run_cpu");
 #endif
 
     if (!args.check())
@@ -1184,6 +1196,17 @@ TestBase::_declareHelper& TestBase::_declareHelper::out(cv::InputOutputArray a1,
 TestBase::_declareHelper::_declareHelper(TestBase* t) : test(t)
 {
 }
+
+/*****************************************************************************************\
+*                                  ::perf::GpuPerf
+\*****************************************************************************************/
+#ifdef HAVE_CUDA
+bool perf::GpuPerf::targetDevice()
+{
+    return !param_run_cpu;
+}
+#endif
+
 
 /*****************************************************************************************\
 *                                  ::perf::PrintTo
