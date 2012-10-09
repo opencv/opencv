@@ -1281,6 +1281,8 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
 
         if (usrdata == 0) // hack to filter out multiply and divide
             depth2 = actualScalarDepth(src2.ptr<double>(), src1.channels());
+        else
+            depth2 = CV_64F;
     }
 
     int cn = src1.channels(), depth1 = src1.depth(), wtype;
