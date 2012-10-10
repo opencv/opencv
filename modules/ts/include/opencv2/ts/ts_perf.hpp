@@ -205,6 +205,18 @@ private:
 #define SANITY_CHECK_KEYPOINTS(array, ...) ::perf::Regression::addKeypoints(this, #array, array , ## __VA_ARGS__)
 #define SANITY_CHECK_MATCHES(array, ...) ::perf::Regression::addMatches(this, #array, array , ## __VA_ARGS__)
 
+#ifdef HAVE_CUDA
+class CV_EXPORTS GpuPerf
+{
+public:
+  static bool targetDevice();
+};
+
+# define PERF_RUN_GPU()  ::perf::GpuPerf::targetDevice()
+#else
+# define PERF_RUN_GPU()  false
+#endif
+
 
 /*****************************************************************************************\
 *                            Container for performance metrics                            *
@@ -465,9 +477,10 @@ CV_EXPORTS void PrintTo(const Size& sz, ::std::ostream* os);
     void fixture##_##name::PerfTestBody()
 
 
-#define CV_PERF_TEST_MAIN(testsuitname) \
+#define CV_PERF_TEST_MAIN(testsuitname, ...) \
 int main(int argc, char **argv)\
 {\
+    __VA_ARGS__;\
     ::perf::Regression::Init(#testsuitname);\
     ::perf::TestBase::Init(argc, argv);\
     ::testing::InitGoogleTest(&argc, argv);\

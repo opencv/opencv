@@ -78,7 +78,7 @@ PERF_TEST_P(Sz_Depth_Cn_Inter_Border_Mode, ImgProc_Remap, Combine(
 
     generateMap(xmap, ymap, remapMode);
 
-    if (runOnGpu)
+    if (PERF_RUN_GPU())
     {
         cv::gpu::GpuMat d_src(src);
         cv::gpu::GpuMat d_xmap(xmap);
@@ -91,6 +91,8 @@ PERF_TEST_P(Sz_Depth_Cn_Inter_Border_Mode, ImgProc_Remap, Combine(
         {
             cv::gpu::remap(d_src, d_dst, d_xmap, d_ymap, interpolation, borderMode);
         }
+
+        GPU_SANITY_CHECK(d_dst);
     }
     else
     {
@@ -130,7 +132,7 @@ PERF_TEST_P(Sz_Depth_Cn_Inter_Scale, ImgProc_Resize, Combine(
     cv::Mat src(size, type);
     fillRandom(src);
 
-    if (runOnGpu)
+    if (PERF_RUN_GPU())
     {
         cv::gpu::GpuMat d_src(src);
         cv::gpu::GpuMat d_dst;
@@ -141,6 +143,8 @@ PERF_TEST_P(Sz_Depth_Cn_Inter_Scale, ImgProc_Resize, Combine(
         {
             cv::gpu::resize(d_src, d_dst, cv::Size(), f, f, interpolation);
         }
+
+        GPU_SANITY_CHECK(d_dst);
     }
     else
     {
@@ -179,7 +183,7 @@ PERF_TEST_P(Sz_Depth_Cn_Scale, ImgProc_ResizeArea, Combine(
     cv::Mat src(size, type);
     fillRandom(src);
 
-    if (runOnGpu)
+    if (PERF_RUN_GPU())
     {
         cv::gpu::GpuMat d_src(src);
         cv::gpu::GpuMat d_dst;
@@ -190,6 +194,8 @@ PERF_TEST_P(Sz_Depth_Cn_Scale, ImgProc_ResizeArea, Combine(
         {
             cv::gpu::resize(d_src, d_dst, cv::Size(), f, f, interpolation);
         }
+
+        GPU_SANITY_CHECK(d_dst);
     }
     else
     {
@@ -234,7 +240,7 @@ PERF_TEST_P(Sz_Depth_Cn_Inter_Border, ImgProc_WarpAffine, Combine(
                          {std::sin(aplha),  std::cos(aplha), 0}};
     cv::Mat M(2, 3, CV_64F, (void*) mat);
 
-    if (runOnGpu)
+    if (PERF_RUN_GPU())
     {
         cv::gpu::GpuMat d_src(src);
         cv::gpu::GpuMat d_dst;
@@ -245,6 +251,8 @@ PERF_TEST_P(Sz_Depth_Cn_Inter_Border, ImgProc_WarpAffine, Combine(
         {
             cv::gpu::warpAffine(d_src, d_dst, M, size, interpolation, borderMode);
         }
+
+        GPU_SANITY_CHECK(d_dst);
     }
     else
     {
@@ -288,7 +296,7 @@ PERF_TEST_P(Sz_Depth_Cn_Inter_Border, ImgProc_WarpPerspective, Combine(
                          {0.0,              0.0,             1.0}};
     cv::Mat M(3, 3, CV_64F, (void*) mat);
 
-    if (runOnGpu)
+    if (PERF_RUN_GPU())
     {
         cv::gpu::GpuMat d_src(src);
         cv::gpu::GpuMat d_dst;
@@ -299,6 +307,8 @@ PERF_TEST_P(Sz_Depth_Cn_Inter_Border, ImgProc_WarpPerspective, Combine(
         {
             cv::gpu::warpPerspective(d_src, d_dst, M, size, interpolation, borderMode);
         }
+
+        GPU_SANITY_CHECK(d_dst);
     }
     else
     {
@@ -334,7 +344,7 @@ PERF_TEST_P(Sz_Depth_Cn_Border, ImgProc_CopyMakeBorder, Combine(
     cv::Mat src(size, type);
     fillRandom(src);
 
-    if (runOnGpu)
+    if (PERF_RUN_GPU())
     {
         cv::gpu::GpuMat d_src(src);
         cv::gpu::GpuMat d_dst;
@@ -345,6 +355,8 @@ PERF_TEST_P(Sz_Depth_Cn_Border, ImgProc_CopyMakeBorder, Combine(
         {
             cv::gpu::copyMakeBorder(d_src, d_dst, 5, 5, 5, 5, borderMode);
         }
+
+        GPU_SANITY_CHECK(d_dst);
     }
     else
     {
@@ -379,7 +391,7 @@ PERF_TEST_P(Sz_Depth_Op, ImgProc_Threshold, Combine(
     cv::Mat src(size, depth);
     fillRandom(src);
 
-    if (runOnGpu)
+    if (PERF_RUN_GPU())
     {
         cv::gpu::GpuMat d_src(src);
         cv::gpu::GpuMat d_dst;
@@ -390,6 +402,8 @@ PERF_TEST_P(Sz_Depth_Op, ImgProc_Threshold, Combine(
         {
             cv::gpu::threshold(d_src, d_dst, 100.0, 255.0, threshOp);
         }
+
+        GPU_SANITY_CHECK(d_dst);
     }
     else
     {
@@ -414,7 +428,7 @@ PERF_TEST_P(Sz, ImgProc_Integral, GPU_TYPICAL_MAT_SIZES)
     cv::Mat src(size, CV_8UC1);
     fillRandom(src);
 
-    if (runOnGpu)
+    if (PERF_RUN_GPU())
     {
         cv::gpu::GpuMat d_src(src);
         cv::gpu::GpuMat d_dst;
@@ -426,6 +440,8 @@ PERF_TEST_P(Sz, ImgProc_Integral, GPU_TYPICAL_MAT_SIZES)
         {
             cv::gpu::integralBuffered(d_src, d_dst, d_buf);
         }
+
+        GPU_SANITY_CHECK(d_dst);
     }
     else
     {
@@ -450,7 +466,7 @@ PERF_TEST_P(Sz, ImgProc_IntegralSqr, GPU_TYPICAL_MAT_SIZES)
     cv::Mat src(size, CV_8UC1);
     fillRandom(src);
 
-    if (runOnGpu)
+    if (PERF_RUN_GPU())
     {
         cv::gpu::GpuMat d_src(src);
         cv::gpu::GpuMat d_dst;
@@ -461,10 +477,12 @@ PERF_TEST_P(Sz, ImgProc_IntegralSqr, GPU_TYPICAL_MAT_SIZES)
         {
             cv::gpu::sqrIntegral(d_src, d_dst);
         }
+
+        GPU_SANITY_CHECK(d_dst);
     }
     else
     {
-        FAIL();
+        FAIL() << "No such CPU implementation analogy";
     }
 }
 
@@ -479,7 +497,7 @@ PERF_TEST_P(Sz_Depth, ImgProc_HistEvenC1, Combine(GPU_TYPICAL_MAT_SIZES, Values(
     cv::Mat src(size, depth);
     fillRandom(src);
 
-    if (runOnGpu)
+    if (PERF_RUN_GPU())
     {
         cv::gpu::GpuMat d_src(src);
         cv::gpu::GpuMat d_hist;
@@ -491,6 +509,8 @@ PERF_TEST_P(Sz_Depth, ImgProc_HistEvenC1, Combine(GPU_TYPICAL_MAT_SIZES, Values(
         {
             cv::gpu::histEven(d_src, d_hist, d_buf, 30, 0, 180);
         }
+
+        GPU_SANITY_CHECK(d_hist);
     }
     else
     {
@@ -526,11 +546,11 @@ PERF_TEST_P(Sz_Depth, ImgProc_HistEvenC4, Combine(GPU_TYPICAL_MAT_SIZES, Values(
     int lowerLevel[] = {0, 0, 0, 0};
     int upperLevel[] = {180, 180, 180, 180};
 
-    if (runOnGpu)
+    if (PERF_RUN_GPU())
     {
         cv::gpu::GpuMat d_src(src);
         cv::gpu::GpuMat d_hist[4];
-        cv::gpu::GpuMat d_buf;
+        cv::gpu::GpuMat d_buf, d_hist0;
 
         cv::gpu::histEven(d_src, d_hist, d_buf, histSize, lowerLevel, upperLevel);
 
@@ -538,10 +558,12 @@ PERF_TEST_P(Sz_Depth, ImgProc_HistEvenC4, Combine(GPU_TYPICAL_MAT_SIZES, Values(
         {
             cv::gpu::histEven(d_src, d_hist, d_buf, histSize, lowerLevel, upperLevel);
         }
+
+        GPU_SANITY_CHECK(d_hist0);
     }
     else
     {
-        FAIL();
+        FAIL() << "No such CPU implementation analogy";
     }
 }
 
@@ -555,7 +577,7 @@ PERF_TEST_P(Sz, ImgProc_CalcHist, GPU_TYPICAL_MAT_SIZES)
     cv::Mat src(size, CV_8UC1);
     fillRandom(src);
 
-    if (runOnGpu)
+    if (PERF_RUN_GPU())
     {
         cv::gpu::GpuMat d_src(src);
         cv::gpu::GpuMat d_hist;
@@ -567,10 +589,12 @@ PERF_TEST_P(Sz, ImgProc_CalcHist, GPU_TYPICAL_MAT_SIZES)
         {
             cv::gpu::calcHist(d_src, d_hist, d_buf);
         }
+
+        GPU_SANITY_CHECK(d_hist);
     }
     else
     {
-        FAIL();
+        FAIL() << "No such CPU implementation analogy";
     }
 }
 
@@ -584,7 +608,7 @@ PERF_TEST_P(Sz, ImgProc_EqualizeHist, GPU_TYPICAL_MAT_SIZES)
     cv::Mat src(size, CV_8UC1);
     fillRandom(src);
 
-    if (runOnGpu)
+    if (PERF_RUN_GPU())
     {
         cv::gpu::GpuMat d_src(src);
         cv::gpu::GpuMat d_dst;
@@ -597,6 +621,8 @@ PERF_TEST_P(Sz, ImgProc_EqualizeHist, GPU_TYPICAL_MAT_SIZES)
         {
             cv::gpu::equalizeHist(d_src, d_dst, d_hist, d_buf);
         }
+
+        GPU_SANITY_CHECK(d_hist);
     }
     else
     {
@@ -621,7 +647,7 @@ PERF_TEST_P(Sz, ImgProc_ColumnSum, GPU_TYPICAL_MAT_SIZES)
     cv::Mat src(size, CV_32FC1);
     fillRandom(src);
 
-    if (runOnGpu)
+    if (PERF_RUN_GPU())
     {
         cv::gpu::GpuMat d_src(src);
         cv::gpu::GpuMat d_dst;
@@ -632,10 +658,12 @@ PERF_TEST_P(Sz, ImgProc_ColumnSum, GPU_TYPICAL_MAT_SIZES)
         {
             cv::gpu::columnSum(d_src, d_dst);
         }
+
+        GPU_SANITY_CHECK(d_dst);
     }
     else
     {
-        FAIL();
+        FAIL() << "No such CPU implementation analogy";
     }
 }
 
@@ -656,7 +684,7 @@ PERF_TEST_P(Image_AppertureSz_L2gradient, ImgProc_Canny, Combine(
     cv::Mat image = readImage(fileName, cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(image.empty());
 
-    if (runOnGpu)
+    if (PERF_RUN_GPU())
     {
         cv::gpu::GpuMat d_image(image);
         cv::gpu::GpuMat d_dst;
@@ -668,6 +696,8 @@ PERF_TEST_P(Image_AppertureSz_L2gradient, ImgProc_Canny, Combine(
         {
             cv::gpu::Canny(d_image, d_buf, d_dst, 50.0, 100.0, apperture_size, useL2gradient);
         }
+
+        GPU_SANITY_CHECK(d_dst);
     }
     else
     {
@@ -697,7 +727,7 @@ PERF_TEST_P(Image, ImgProc_MeanShiftFiltering, Values<string>("gpu/meanshift/con
     cv::Mat rgba;
     cv::cvtColor(img, rgba, cv::COLOR_BGR2BGRA);
 
-    if (runOnGpu)
+    if (PERF_RUN_GPU())
     {
         cv::gpu::GpuMat d_src(rgba);
         cv::gpu::GpuMat d_dst;
@@ -708,6 +738,8 @@ PERF_TEST_P(Image, ImgProc_MeanShiftFiltering, Values<string>("gpu/meanshift/con
         {
             cv::gpu::meanShiftFiltering(d_src, d_dst, 50, 50);
         }
+
+        GPU_SANITY_CHECK(d_dst);
     }
     else
     {
@@ -735,7 +767,7 @@ PERF_TEST_P(Image, ImgProc_MeanShiftProc, Values<string>("gpu/meanshift/cones.pn
     cv::Mat rgba;
     cv::cvtColor(img, rgba, cv::COLOR_BGR2BGRA);
 
-    if (runOnGpu)
+    if (PERF_RUN_GPU())
     {
         cv::gpu::GpuMat d_src(rgba);
         cv::gpu::GpuMat d_dstr;
@@ -747,10 +779,12 @@ PERF_TEST_P(Image, ImgProc_MeanShiftProc, Values<string>("gpu/meanshift/cones.pn
         {
             cv::gpu::meanShiftProc(d_src, d_dstr, d_dstsp, 50, 50);
         }
+
+        GPU_SANITY_CHECK(d_dstr);
     }
     else
     {
-        FAIL();
+        FAIL() << "No such CPU implementation analogy";
     }
 }
 
@@ -769,7 +803,7 @@ PERF_TEST_P(Image, ImgProc_MeanShiftSegmentation, Values<string>("gpu/meanshift/
 
     cv::Mat dst;
 
-    if (runOnGpu)
+    if (PERF_RUN_GPU())
     {
         cv::gpu::GpuMat d_src(rgba);
 
@@ -779,10 +813,12 @@ PERF_TEST_P(Image, ImgProc_MeanShiftSegmentation, Values<string>("gpu/meanshift/
         {
             cv::gpu::meanShiftSegmentation(d_src, dst, 10, 10, 20);
         }
+
+        GPU_SANITY_CHECK(dst);
     }
     else
     {
-        FAIL();
+        FAIL() << "No such CPU implementation analogy";
     }
 }
 
@@ -803,7 +839,7 @@ PERF_TEST_P(Sz_Depth_Cn, ImgProc_BlendLinear, Combine(GPU_TYPICAL_MAT_SIZES, Val
     cv::Mat img2(size, type);
     fillRandom(img2);
 
-    if (runOnGpu)
+    if (PERF_RUN_GPU())
     {
         cv::gpu::GpuMat d_img1(img1);
         cv::gpu::GpuMat d_img2(img2);
@@ -817,10 +853,12 @@ PERF_TEST_P(Sz_Depth_Cn, ImgProc_BlendLinear, Combine(GPU_TYPICAL_MAT_SIZES, Val
         {
             cv::gpu::blendLinear(d_img1, d_img2, d_weights1, d_weights2, d_dst);
         }
+
+        GPU_SANITY_CHECK(d_dst);
     }
     else
     {
-        FAIL();
+        FAIL() << "No such CPU implementation analogy";
     }
 }
 
@@ -843,7 +881,7 @@ PERF_TEST_P(Sz_KernelSz_Ccorr, ImgProc_Convolve, Combine(GPU_TYPICAL_MAT_SIZES, 
     cv::Mat templ(templ_size, templ_size, CV_32FC1);
     templ.setTo(1.0);
 
-    if (runOnGpu)
+    if (PERF_RUN_GPU())
     {
         cv::gpu::GpuMat d_image = cv::gpu::createContinuous(size, CV_32FC1);
         d_image.upload(image);
@@ -860,6 +898,8 @@ PERF_TEST_P(Sz_KernelSz_Ccorr, ImgProc_Convolve, Combine(GPU_TYPICAL_MAT_SIZES, 
         {
             cv::gpu::convolve(d_image, d_templ, d_dst, ccorr, d_buf);
         }
+
+        GPU_SANITY_CHECK(d_dst);
     }
     else
     {
@@ -873,6 +913,8 @@ PERF_TEST_P(Sz_KernelSz_Ccorr, ImgProc_Convolve, Combine(GPU_TYPICAL_MAT_SIZES, 
         {
             cv::filter2D(image, dst, image.depth(), templ);
         }
+
+        CPU_SANITY_CHECK(dst);
     }
 }
 
@@ -901,7 +943,7 @@ PERF_TEST_P(Sz_TemplateSz_Cn_Method, ImgProc_MatchTemplate8U, Combine(
     cv::Mat templ(templ_size, CV_MAKE_TYPE(CV_8U, cn));
     fillRandom(templ);
 
-    if (runOnGpu)
+    if (PERF_RUN_GPU())
     {
         cv::gpu::GpuMat d_image(image);
         cv::gpu::GpuMat d_templ(templ);
@@ -913,6 +955,8 @@ PERF_TEST_P(Sz_TemplateSz_Cn_Method, ImgProc_MatchTemplate8U, Combine(
         {
             cv::gpu::matchTemplate(d_image, d_templ, d_dst, method);
         }
+
+        GPU_SANITY_CHECK(d_dst);
     }
     else
     {
@@ -924,6 +968,8 @@ PERF_TEST_P(Sz_TemplateSz_Cn_Method, ImgProc_MatchTemplate8U, Combine(
         {
             cv::matchTemplate(image, templ, dst, method);
         }
+
+        CPU_SANITY_CHECK(dst);
     }
 };
 
@@ -947,7 +993,7 @@ PERF_TEST_P(Sz_TemplateSz_Cn_Method, ImgProc_MatchTemplate32F, Combine(
     cv::Mat templ(templ_size, CV_MAKE_TYPE(CV_32F, cn));
     fillRandom(templ);
 
-    if (runOnGpu)
+    if (PERF_RUN_GPU())
     {
         cv::gpu::GpuMat d_image(image);
         cv::gpu::GpuMat d_templ(templ);
@@ -959,6 +1005,8 @@ PERF_TEST_P(Sz_TemplateSz_Cn_Method, ImgProc_MatchTemplate32F, Combine(
         {
             cv::gpu::matchTemplate(d_image, d_templ, d_dst, method);
         }
+
+        GPU_SANITY_CHECK(d_dst);
     }
     else
     {
@@ -970,6 +1018,8 @@ PERF_TEST_P(Sz_TemplateSz_Cn_Method, ImgProc_MatchTemplate32F, Combine(
         {
             cv::matchTemplate(image, templ, dst, method);
         }
+
+        CPU_SANITY_CHECK(dst);
     }
 };
 
@@ -993,7 +1043,7 @@ PERF_TEST_P(Sz_Flags, ImgProc_MulSpectrums, Combine(
     cv::Mat b(size, CV_32FC2);
     fillRandom(b, 0, 100);
 
-    if (runOnGpu)
+    if (PERF_RUN_GPU())
     {
         cv::gpu::GpuMat d_a(a);
         cv::gpu::GpuMat d_b(b);
@@ -1005,6 +1055,8 @@ PERF_TEST_P(Sz_Flags, ImgProc_MulSpectrums, Combine(
         {
             cv::gpu::mulSpectrums(d_a, d_b, d_dst, flag);
         }
+
+        GPU_SANITY_CHECK(d_dst);
     }
     else
     {
@@ -1016,6 +1068,8 @@ PERF_TEST_P(Sz_Flags, ImgProc_MulSpectrums, Combine(
         {
             cv::mulSpectrums(a, b, dst, flag);
         }
+
+        CPU_SANITY_CHECK(dst);
     }
 }
 
@@ -1034,7 +1088,7 @@ PERF_TEST_P(Sz, ImgProc_MulAndScaleSpectrums, GPU_TYPICAL_MAT_SIZES)
     cv::Mat src2(size, CV_32FC2);
     fillRandom(src2, 0, 100);
 
-    if (runOnGpu)
+    if (PERF_RUN_GPU())
     {
         cv::gpu::GpuMat d_src1(src1);
         cv::gpu::GpuMat d_src2(src2);
@@ -1046,10 +1100,12 @@ PERF_TEST_P(Sz, ImgProc_MulAndScaleSpectrums, GPU_TYPICAL_MAT_SIZES)
         {
             cv::gpu::mulAndScaleSpectrums(d_src1, d_src2, d_dst, cv::DFT_ROWS, scale, false);
         }
+
+        GPU_SANITY_CHECK(d_dst);
     }
     else
     {
-        FAIL();
+        FAIL() << "No such CPU implementation analogy";
     }
 }
 
@@ -1068,7 +1124,7 @@ PERF_TEST_P(Sz_Flags, ImgProc_Dft, Combine(
     cv::Mat src(size, CV_32FC2);
     fillRandom(src, 0, 100);
 
-    if (runOnGpu)
+    if (PERF_RUN_GPU())
     {
         cv::gpu::GpuMat d_src(src);
         cv::gpu::GpuMat d_dst;
@@ -1079,6 +1135,8 @@ PERF_TEST_P(Sz_Flags, ImgProc_Dft, Combine(
         {
             cv::gpu::dft(d_src, d_dst, size, flag);
         }
+
+        GPU_SANITY_CHECK(d_dst);
     }
     else
     {
@@ -1090,6 +1148,8 @@ PERF_TEST_P(Sz_Flags, ImgProc_Dft, Combine(
         {
             cv::dft(src, dst, flag);
         }
+
+        CPU_SANITY_CHECK(dst);
     }
 }
 
@@ -1117,7 +1177,7 @@ PERF_TEST_P(Image_Type_Border_BlockSz_ApertureSz, ImgProc_CornerHarris, Combine(
 
     double k = 0.5;
 
-    if (runOnGpu)
+    if (PERF_RUN_GPU())
     {
         cv::gpu::GpuMat d_img(img);
         cv::gpu::GpuMat d_dst;
@@ -1131,6 +1191,8 @@ PERF_TEST_P(Image_Type_Border_BlockSz_ApertureSz, ImgProc_CornerHarris, Combine(
         {
             cv::gpu::cornerHarris(d_img, d_dst, d_Dx, d_Dy, d_buf, blockSize, apertureSize, k, borderMode);
         }
+
+        GPU_SANITY_CHECK(d_dst);
     }
     else
     {
@@ -1142,6 +1204,8 @@ PERF_TEST_P(Image_Type_Border_BlockSz_ApertureSz, ImgProc_CornerHarris, Combine(
         {
             cv::cornerHarris(img, dst, blockSize, apertureSize, k, borderMode);
         }
+
+        CPU_SANITY_CHECK(dst);
     }
 }
 
@@ -1166,7 +1230,7 @@ PERF_TEST_P(Image_Type_Border_BlockSz_ApertureSz, ImgProc_CornerMinEigenVal, Com
 
     img.convertTo(img, type, type == CV_32F ? 1.0 / 255.0 : 1.0);
 
-    if (runOnGpu)
+    if (PERF_RUN_GPU())
     {
         cv::gpu::GpuMat d_img(img);
         cv::gpu::GpuMat d_dst;
@@ -1180,6 +1244,8 @@ PERF_TEST_P(Image_Type_Border_BlockSz_ApertureSz, ImgProc_CornerMinEigenVal, Com
         {
             cv::gpu::cornerMinEigenVal(d_img, d_dst, d_Dx, d_Dy, d_buf, blockSize, apertureSize, borderMode);
         }
+
+        GPU_SANITY_CHECK(d_dst);
     }
     else
     {
@@ -1191,6 +1257,8 @@ PERF_TEST_P(Image_Type_Border_BlockSz_ApertureSz, ImgProc_CornerMinEigenVal, Com
         {
             cv::cornerMinEigenVal(img, dst, blockSize, apertureSize, borderMode);
         }
+
+        CPU_SANITY_CHECK(dst);
     }
 }
 
@@ -1205,7 +1273,7 @@ PERF_TEST_P(Sz, ImgProc_BuildWarpPlaneMaps, GPU_TYPICAL_MAT_SIZES)
     cv::Mat R = cv::Mat::ones(3, 3, CV_32FC1);
     cv::Mat T = cv::Mat::zeros(1, 3, CV_32F);
 
-    if (runOnGpu)
+    if (PERF_RUN_GPU())
     {
         cv::gpu::GpuMat d_map_x;
         cv::gpu::GpuMat d_map_y;
@@ -1216,10 +1284,13 @@ PERF_TEST_P(Sz, ImgProc_BuildWarpPlaneMaps, GPU_TYPICAL_MAT_SIZES)
         {
             cv::gpu::buildWarpPlaneMaps(size, cv::Rect(0, 0, size.width, size.height), K, R, T, 1.0, d_map_x, d_map_y);
         }
+
+        GPU_SANITY_CHECK(d_map_x);
+        GPU_SANITY_CHECK(d_map_y);
     }
     else
     {
-        FAIL();
+        FAIL() << "No such CPU implementation analogy";
     }
 }
 
@@ -1233,7 +1304,7 @@ PERF_TEST_P(Sz, ImgProc_BuildWarpCylindricalMaps, GPU_TYPICAL_MAT_SIZES)
     cv::Mat K = cv::Mat::eye(3, 3, CV_32FC1);
     cv::Mat R = cv::Mat::ones(3, 3, CV_32FC1);
 
-    if (runOnGpu)
+    if (PERF_RUN_GPU())
     {
         cv::gpu::GpuMat d_map_x;
         cv::gpu::GpuMat d_map_y;
@@ -1244,10 +1315,13 @@ PERF_TEST_P(Sz, ImgProc_BuildWarpCylindricalMaps, GPU_TYPICAL_MAT_SIZES)
         {
             cv::gpu::buildWarpCylindricalMaps(size, cv::Rect(0, 0, size.width, size.height), K, R, 1.0, d_map_x, d_map_y);
         }
+
+        GPU_SANITY_CHECK(d_map_x);
+        GPU_SANITY_CHECK(d_map_y);
     }
     else
     {
-        FAIL();
+        FAIL() << "No such CPU implementation analogy";
     }
 }
 
@@ -1261,7 +1335,7 @@ PERF_TEST_P(Sz, ImgProc_BuildWarpSphericalMaps, GPU_TYPICAL_MAT_SIZES)
     cv::Mat K = cv::Mat::eye(3, 3, CV_32FC1);
     cv::Mat R = cv::Mat::ones(3, 3, CV_32FC1);
 
-    if (runOnGpu)
+    if (PERF_RUN_GPU())
     {
         cv::gpu::GpuMat d_map_x;
         cv::gpu::GpuMat d_map_y;
@@ -1272,10 +1346,14 @@ PERF_TEST_P(Sz, ImgProc_BuildWarpSphericalMaps, GPU_TYPICAL_MAT_SIZES)
         {
             cv::gpu::buildWarpSphericalMaps(size, cv::Rect(0, 0, size.width, size.height), K, R, 1.0, d_map_x, d_map_y);
         }
+
+        GPU_SANITY_CHECK(d_map_x);
+        GPU_SANITY_CHECK(d_map_y);
+
     }
     else
     {
-        FAIL();
+        FAIL() << "No such CPU implementation analogy";
     }
 }
 
@@ -1300,7 +1378,7 @@ PERF_TEST_P(Sz_Depth_Cn_Inter, ImgProc_Rotate, Combine(
     cv::Mat src(size, type);
     fillRandom(src);
 
-    if (runOnGpu)
+    if (PERF_RUN_GPU())
     {
         cv::gpu::GpuMat d_src(src);
         cv::gpu::GpuMat d_dst;
@@ -1311,10 +1389,12 @@ PERF_TEST_P(Sz_Depth_Cn_Inter, ImgProc_Rotate, Combine(
         {
             cv::gpu::rotate(d_src, d_dst, size, 30.0, 0, 0, interpolation);
         }
+
+        GPU_SANITY_CHECK(d_dst);
     }
     else
     {
-        FAIL();
+        FAIL() << "No such CPU implementation analogy";
     }
 }
 
@@ -1335,7 +1415,7 @@ PERF_TEST_P(Sz_Depth_Cn, ImgProc_PyrDown, Combine(
     cv::Mat src(size, type);
     fillRandom(src);
 
-    if (runOnGpu)
+    if (PERF_RUN_GPU())
     {
         cv::gpu::GpuMat d_src(src);
         cv::gpu::GpuMat d_dst;
@@ -1346,6 +1426,8 @@ PERF_TEST_P(Sz_Depth_Cn, ImgProc_PyrDown, Combine(
         {
             cv::gpu::pyrDown(d_src, d_dst);
         }
+
+        GPU_SANITY_CHECK(d_dst);
     }
     else
     {
@@ -1357,6 +1439,8 @@ PERF_TEST_P(Sz_Depth_Cn, ImgProc_PyrDown, Combine(
         {
             cv::pyrDown(src, dst);
         }
+
+        CPU_SANITY_CHECK(dst);
     }
 }
 
@@ -1377,7 +1461,7 @@ PERF_TEST_P(Sz_Depth_Cn, ImgProc_PyrUp, Combine(
     cv::Mat src(size, type);
     fillRandom(src);
 
-    if (runOnGpu)
+    if (PERF_RUN_GPU())
     {
         cv::gpu::GpuMat d_src(src);
         cv::gpu::GpuMat d_dst;
@@ -1388,6 +1472,8 @@ PERF_TEST_P(Sz_Depth_Cn, ImgProc_PyrUp, Combine(
         {
             cv::gpu::pyrUp(d_src, d_dst);
         }
+
+        GPU_SANITY_CHECK(d_dst);
     }
     else
     {
@@ -1399,6 +1485,8 @@ PERF_TEST_P(Sz_Depth_Cn, ImgProc_PyrUp, Combine(
         {
             cv::pyrUp(src, dst);
         }
+
+        CPU_SANITY_CHECK(dst);
     }
 }
 
@@ -1444,7 +1532,7 @@ PERF_TEST_P(Sz_Depth_Code, ImgProc_CvtColor, Combine(
     cv::Mat src(size, CV_MAKETYPE(depth, info.scn));
     fillRandom(src);
 
-    if (runOnGpu)
+    if (PERF_RUN_GPU())
     {
         cv::gpu::GpuMat d_src(src);
         cv::gpu::GpuMat d_dst;
@@ -1455,6 +1543,8 @@ PERF_TEST_P(Sz_Depth_Code, ImgProc_CvtColor, Combine(
         {
             cv::gpu::cvtColor(d_src, d_dst, info.code, info.dcn);
         }
+
+        GPU_SANITY_CHECK(d_dst);
     }
     else
     {
@@ -1466,6 +1556,8 @@ PERF_TEST_P(Sz_Depth_Code, ImgProc_CvtColor, Combine(
         {
             cv::cvtColor(src, dst, info.code, info.dcn);
         }
+
+        CPU_SANITY_CHECK(dst);
     }
 }
 
@@ -1481,7 +1573,7 @@ PERF_TEST_P(Sz, ImgProc_SwapChannels, GPU_TYPICAL_MAT_SIZES)
 
     const int dstOrder[] = {2, 1, 0, 3};
 
-    if (runOnGpu)
+    if (PERF_RUN_GPU())
     {
         cv::gpu::GpuMat d_src(src);
 
@@ -1491,10 +1583,12 @@ PERF_TEST_P(Sz, ImgProc_SwapChannels, GPU_TYPICAL_MAT_SIZES)
         {
             cv::gpu::swapChannels(d_src, dstOrder);
         }
+
+        GPU_SANITY_CHECK(d_src);
     }
     else
     {
-        FAIL();
+        FAIL() << "No such CPU implementation analogy";
     }
 }
 
@@ -1518,7 +1612,7 @@ PERF_TEST_P(Sz_Type_Op, ImgProc_AlphaComp, Combine(GPU_TYPICAL_MAT_SIZES, Values
     cv::Mat img2(size, type);
     fillRandom(img2);
 
-    if (runOnGpu)
+    if (PERF_RUN_GPU())
     {
         cv::gpu::GpuMat d_img1(img1);
         cv::gpu::GpuMat d_img2(img2);
@@ -1530,10 +1624,12 @@ PERF_TEST_P(Sz_Type_Op, ImgProc_AlphaComp, Combine(GPU_TYPICAL_MAT_SIZES, Values
         {
             cv::gpu::alphaComp(d_img1, d_img2, d_dst, alpha_op);
         }
+
+        GPU_SANITY_CHECK(d_dst);
     }
     else
     {
-        FAIL();
+        FAIL() << "No such CPU implementation analogy";
     }
 }
 
@@ -1551,7 +1647,7 @@ PERF_TEST_P(Sz_Depth_Cn, ImgProc_ImagePyramidBuild, Combine(GPU_TYPICAL_MAT_SIZE
     cv::Mat src(size, type);
     fillRandom(src);
 
-    if (runOnGpu)
+    if (PERF_RUN_GPU())
     {
         cv::gpu::GpuMat d_src(src);
 
@@ -1563,10 +1659,12 @@ PERF_TEST_P(Sz_Depth_Cn, ImgProc_ImagePyramidBuild, Combine(GPU_TYPICAL_MAT_SIZE
         {
             d_pyr.build(d_src, 5);
         }
+
+        GPU_SANITY_CHECK(d_src);
     }
     else
     {
-        FAIL();
+        FAIL() << "No such CPU implementation analogy";
     }
 }
 
@@ -1586,7 +1684,7 @@ PERF_TEST_P(Sz_Depth_Cn, ImgProc_ImagePyramidGetLayer, Combine(GPU_TYPICAL_MAT_S
 
     cv::Size dstSize(size.width / 2 + 10, size.height / 2 + 10);
 
-    if (runOnGpu)
+    if (PERF_RUN_GPU())
     {
         cv::gpu::GpuMat d_src(src);
         cv::gpu::GpuMat d_dst;
@@ -1599,17 +1697,19 @@ PERF_TEST_P(Sz_Depth_Cn, ImgProc_ImagePyramidGetLayer, Combine(GPU_TYPICAL_MAT_S
         {
             d_pyr.getLayer(d_dst, dstSize);
         }
+
+        GPU_SANITY_CHECK(d_dst);
     }
     else
     {
-        FAIL();
+        FAIL() << "No such CPU implementation analogy";
     }
 }
 
 //////////////////////////////////////////////////////////////////////
 // HoughLines
 
-PERF_TEST_P(Sz, ImgProc_HoughLines, GPU_TYPICAL_MAT_SIZES)
+PERF_TEST_P(Sz, DISABLED_ImgProc_HoughLines, GPU_TYPICAL_MAT_SIZES)
 {
     declare.time(30.0);
 
@@ -1631,7 +1731,7 @@ PERF_TEST_P(Sz, ImgProc_HoughLines, GPU_TYPICAL_MAT_SIZES)
         cv::line(src, p1, p2, cv::Scalar::all(255), 2);
     }
 
-    if (runOnGpu)
+    if (PERF_RUN_GPU())
     {
         cv::gpu::GpuMat d_src(src);
         cv::gpu::GpuMat d_lines;
@@ -1643,6 +1743,8 @@ PERF_TEST_P(Sz, ImgProc_HoughLines, GPU_TYPICAL_MAT_SIZES)
         {
             cv::gpu::HoughLines(d_src, d_lines, d_buf, rho, theta, threshold);
         }
+
+        GPU_SANITY_CHECK(d_lines);
     }
     else
     {
@@ -1653,6 +1755,8 @@ PERF_TEST_P(Sz, ImgProc_HoughLines, GPU_TYPICAL_MAT_SIZES)
         {
             cv::HoughLines(src, lines, rho, theta, threshold);
         }
+
+        CPU_SANITY_CHECK(lines);
     }
 }
 
@@ -1687,7 +1791,7 @@ PERF_TEST_P(Sz_Dp_MinDist, ImgProc_HoughCircles, Combine(GPU_TYPICAL_MAT_SIZES, 
         cv::circle(src, center, radius, cv::Scalar::all(255), -1);
     }
 
-    if (runOnGpu)
+    if (PERF_RUN_GPU())
     {
         cv::gpu::GpuMat d_src(src);
         cv::gpu::GpuMat d_circles;
@@ -1699,6 +1803,8 @@ PERF_TEST_P(Sz_Dp_MinDist, ImgProc_HoughCircles, Combine(GPU_TYPICAL_MAT_SIZES, 
         {
             cv::gpu::HoughCircles(d_src, d_circles, d_buf, CV_HOUGH_GRADIENT, dp, minDist, cannyThreshold, votesThreshold, minRadius, maxRadius);
         }
+
+        GPU_SANITY_CHECK(d_circles);
     }
     else
     {
@@ -1710,6 +1816,8 @@ PERF_TEST_P(Sz_Dp_MinDist, ImgProc_HoughCircles, Combine(GPU_TYPICAL_MAT_SIZES, 
         {
             cv::HoughCircles(src, circles, CV_HOUGH_GRADIENT, dp, minDist, cannyThreshold, votesThreshold, minRadius, maxRadius);
         }
+
+        CPU_SANITY_CHECK(circles);
     }
 }
 
@@ -1762,7 +1870,7 @@ PERF_TEST_P(Method_Sz, ImgProc_GeneralizedHough, Combine(
     cv::Sobel(image, dx, CV_32F, 1, 0);
     cv::Sobel(image, dy, CV_32F, 0, 1);
 
-    if (runOnGpu)
+    if (PERF_RUN_GPU())
     {
         cv::gpu::GpuMat d_edges(edges);
         cv::gpu::GpuMat d_dx(dx);
@@ -1784,6 +1892,8 @@ PERF_TEST_P(Method_Sz, ImgProc_GeneralizedHough, Combine(
         {
             d_hough->detect(d_edges, d_dx, d_dy, d_position);
         }
+
+        GPU_SANITY_CHECK(d_position);
     }
     else
     {
@@ -1804,6 +1914,9 @@ PERF_TEST_P(Method_Sz, ImgProc_GeneralizedHough, Combine(
         {
             hough->detect(edges, dx, dy, positions);
         }
+
+        CPU_SANITY_CHECK(dx);
+        CPU_SANITY_CHECK(dy);
     }
 }
 
