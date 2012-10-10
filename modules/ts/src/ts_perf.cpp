@@ -1012,6 +1012,8 @@ void TestBase::reportMetrics(bool toJUnitXML)
 
 void TestBase::SetUp()
 {
+    cv::theRNG().state = param_seed; // this rng should generate same numbers for each run
+
 #ifdef HAVE_TBB
     if (param_tbb_nthreads > 0) {
         p_tbb_initializer.release();
