@@ -655,6 +655,8 @@ def mathReplace(match):
     m = match.group(1)
 
     m = m.replace("\n", "<BR>")
+    m = m.replace("<", "&lt")
+    m = m.replace(">", "&gt")
     m = re.sub(r"\\text(tt|rm)?{(.*?)}", "\\2", m)
     m = re.sub(r"\\mbox{(.*?)}", "\\1", m)
     m = re.sub(r"\\mathrm{(.*?)}", "\\1", m)
