@@ -58,9 +58,12 @@ namespace cv { namespace gpu { namespace device
 
         __constant__ float c_kernel[MAX_KERNEL_SIZE];
 
-        void loadKernel(const float kernel[], int ksize)
+        void loadKernel(const float* kernel, int ksize, cudaStream_t stream)
         {
-            cudaSafeCall( cudaMemcpyToSymbol(c_kernel, kernel, ksize * sizeof(float)) );
+            if (stream == 0)
+                cudaSafeCall( cudaMemcpyToSymbol(c_kernel, kernel, ksize * sizeof(float), 0, cudaMemcpyDeviceToDevice) );
+            else
+                cudaSafeCall( cudaMemcpyToSymbolAsync(c_kernel, kernel, ksize * sizeof(float), 0, cudaMemcpyDeviceToDevice, stream) );
         }
 
         template <int KSIZE, typename T, typename D, typename B>
@@ -184,7 +187,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <typename T, typename D>
-        void linearRowFilter_gpu(PtrStepSzb src, PtrStepSzb dst, const float kernel[], int ksize, int anchor, int brd_type, int cc, cudaStream_t stream)
+        void linearRowFilter_gpu(PtrStepSzb src, PtrStepSzb dst, const float* kernel, int ksize, int anchor, int brd_type, int cc, cudaStream_t stream)
         {
             typedef void (*caller_t)(PtrStepSz<T> src, PtrStepSz<D> dst, int anchor, int cc, cudaStream_t stream);
 
@@ -367,16 +370,16 @@ namespace cv { namespace gpu { namespace device
                 }
             };
 
-            loadKernel(kernel, ksize);
+            loadKernel(kernel, ksize, stream);
 
             callers[brd_type][ksize]((PtrStepSz<T>)src, (PtrStepSz<D>)dst, anchor, cc, stream);
         }
 
-        template void linearRowFilter_gpu<uchar , float >(PtrStepSzb src, PtrStepSzb dst, const float kernel[], int ksize, int anchor, int brd_type, int cc, cudaStream_t stream);
-        template void linearRowFilter_gpu<uchar4, float4>(PtrStepSzb src, PtrStepSzb dst, const float kernel[], int ksize, int anchor, int brd_type, int cc, cudaStream_t stream);
-        template void linearRowFilter_gpu<short3, float3>(PtrStepSzb src, PtrStepSzb dst, const float kernel[], int ksize, int anchor, int brd_type, int cc, cudaStream_t stream);
-        template void linearRowFilter_gpu<int   , float >(PtrStepSzb src, PtrStepSzb dst, const float kernel[], int ksize, int anchor, int brd_type, int cc, cudaStream_t stream);
-        template void linearRowFilter_gpu<float , float >(PtrStepSzb src, PtrStepSzb dst, const float kernel[], int ksize, int anchor, int brd_type, int cc, cudaStream_t stream);
+        template void linearRowFilter_gpu<uchar , float >(PtrStepSzb src, PtrStepSzb dst, const float* kernel, int ksize, int anchor, int brd_type, int cc, cudaStream_t stream);
+        template void linearRowFilter_gpu<uchar4, float4>(PtrStepSzb src, PtrStepSzb dst, const float* kernel, int ksize, int anchor, int brd_type, int cc, cudaStream_t stream);
+        template void linearRowFilter_gpu<short3, float3>(PtrStepSzb src, PtrStepSzb dst, const float* kernel, int ksize, int anchor, int brd_type, int cc, cudaStream_t stream);
+        template void linearRowFilter_gpu<int   , float >(PtrStepSzb src, PtrStepSzb dst, const float* kernel, int ksize, int anchor, int brd_type, int cc, cudaStream_t stream);
+        template void linearRowFilter_gpu<float , float >(PtrStepSzb src, PtrStepSzb dst, const float* kernel, int ksize, int anchor, int brd_type, int cc, cudaStream_t stream);
     } // namespace row_filter
 }}} // namespace cv { namespace gpu { namespace device
 

@@ -146,7 +146,7 @@ PERF_TEST_P(ImagePair, Video_CreateOpticalFlowNeedleMap,
         }
 
         GPU_SANITY_CHECK(d_vertex);
-        GPU_SANITY_CHECK(d_colors)
+        GPU_SANITY_CHECK(d_colors);
     }
     else
     {
