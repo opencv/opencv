@@ -2578,6 +2578,8 @@ public:
     }
 
 private:
+    KMeansDistanceComputer& operator=(const KMeansDistanceComputer&); // to quiet MSVC
+
     double *distances;
     int *labels;
     const Mat& data;
