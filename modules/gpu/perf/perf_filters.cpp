@@ -21,7 +21,7 @@ PERF_TEST_P(Sz_Type_KernelSz, Filters_Blur, Combine(GPU_TYPICAL_MAT_SIZES, Value
     cv::Mat src(size, type);
     fillRandom(src);
 
-    if (runOnGpu)
+    if (PERF_RUN_GPU())
     {
         cv::gpu::GpuMat d_src(src);
         cv::gpu::GpuMat d_dst;
@@ -32,6 +32,8 @@ PERF_TEST_P(Sz_Type_KernelSz, Filters_Blur, Combine(GPU_TYPICAL_MAT_SIZES, Value
         {
             cv::gpu::blur(d_src, d_dst, cv::Size(ksize, ksize));
         }
+
+        GPU_SANITY_CHECK(d_dst);
     }
     else
     {
@@ -43,6 +45,8 @@ PERF_TEST_P(Sz_Type_KernelSz, Filters_Blur, Combine(GPU_TYPICAL_MAT_SIZES, Value
         {
             cv::blur(src, dst, cv::Size(ksize, ksize));
         }
+
+        CPU_SANITY_CHECK(dst);
     }
 }
 
@@ -60,7 +64,7 @@ PERF_TEST_P(Sz_Type_KernelSz, Filters_Sobel, Combine(GPU_TYPICAL_MAT_SIZES, Valu
     cv::Mat src(size, type);
     fillRandom(src);
 
-    if (runOnGpu)
+    if (PERF_RUN_GPU())
     {
         cv::gpu::GpuMat d_src(src);
         cv::gpu::GpuMat d_dst;
@@ -72,6 +76,8 @@ PERF_TEST_P(Sz_Type_KernelSz, Filters_Sobel, Combine(GPU_TYPICAL_MAT_SIZES, Valu
         {
             cv::gpu::Sobel(d_src, d_dst, -1, 1, 1, d_buf, ksize);
         }
+
+        GPU_SANITY_CHECK(d_dst);
     }
     else
     {
@@ -83,6 +89,8 @@ PERF_TEST_P(Sz_Type_KernelSz, Filters_Sobel, Combine(GPU_TYPICAL_MAT_SIZES, Valu
         {
             cv::Sobel(src, dst, -1, 1, 1, ksize);
         }
+
+        CPU_SANITY_CHECK(dst);
     }
 }
 
@@ -99,7 +107,7 @@ PERF_TEST_P(Sz_Type, Filters_Scharr, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8U
     cv::Mat src(size, type);
     fillRandom(src);
 
-    if (runOnGpu)
+    if (PERF_RUN_GPU())
     {
         cv::gpu::GpuMat d_src(src);
         cv::gpu::GpuMat d_dst;
@@ -111,6 +119,8 @@ PERF_TEST_P(Sz_Type, Filters_Scharr, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8U
         {
             cv::gpu::Scharr(d_src, d_dst, -1, 1, 0, d_buf);
         }
+
+        GPU_SANITY_CHECK(d_dst);
     }
     else
     {
@@ -122,6 +132,8 @@ PERF_TEST_P(Sz_Type, Filters_Scharr, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8U
         {
             cv::Scharr(src, dst, -1, 1, 0);
         }
+
+        CPU_SANITY_CHECK(dst);
     }
 }
 
@@ -139,7 +151,7 @@ PERF_TEST_P(Sz_Type_KernelSz, Filters_GaussianBlur, Combine(GPU_TYPICAL_MAT_SIZE
     cv::Mat src(size, type);
     fillRandom(src);
 
-    if (runOnGpu)
+    if (PERF_RUN_GPU())
     {
         cv::gpu::GpuMat d_src(src);
         cv::gpu::GpuMat d_dst;
@@ -151,6 +163,8 @@ PERF_TEST_P(Sz_Type_KernelSz, Filters_GaussianBlur, Combine(GPU_TYPICAL_MAT_SIZE
         {
             cv::gpu::GaussianBlur(d_src, d_dst, cv::Size(ksize, ksize), d_buf, 0.5);
         }
+
+        GPU_SANITY_CHECK(d_dst);
     }
     else
     {
@@ -162,6 +176,8 @@ PERF_TEST_P(Sz_Type_KernelSz, Filters_GaussianBlur, Combine(GPU_TYPICAL_MAT_SIZE
         {
             cv::GaussianBlur(src, dst, cv::Size(ksize, ksize), 0.5);
         }
+
+        CPU_SANITY_CHECK(dst);
     }
 }
 
@@ -179,7 +195,7 @@ PERF_TEST_P(Sz_Type_KernelSz, Filters_Laplacian, Combine(GPU_TYPICAL_MAT_SIZES, 
     cv::Mat src(size, type);
     fillRandom(src);
 
-    if (runOnGpu)
+    if (PERF_RUN_GPU())
     {
         cv::gpu::GpuMat d_src(src);
         cv::gpu::GpuMat d_dst;
@@ -190,6 +206,8 @@ PERF_TEST_P(Sz_Type_KernelSz, Filters_Laplacian, Combine(GPU_TYPICAL_MAT_SIZES, 
         {
             cv::gpu::Laplacian(d_src, d_dst, -1, ksize);
         }
+
+        GPU_SANITY_CHECK(d_dst);
     }
     else
     {
@@ -201,6 +219,8 @@ PERF_TEST_P(Sz_Type_KernelSz, Filters_Laplacian, Combine(GPU_TYPICAL_MAT_SIZES, 
         {
             cv::Laplacian(src, dst, -1, ksize);
         }
+
+        CPU_SANITY_CHECK(dst);
     }
 }
 
@@ -219,7 +239,7 @@ PERF_TEST_P(Sz_Type, Filters_Erode, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8UC
 
     cv::Mat ker = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(3, 3));
 
-    if (runOnGpu)
+    if (PERF_RUN_GPU())
     {
         cv::gpu::GpuMat d_src(src);
         cv::gpu::GpuMat d_dst;
@@ -231,6 +251,8 @@ PERF_TEST_P(Sz_Type, Filters_Erode, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8UC
         {
             cv::gpu::erode(d_src, d_dst, ker, d_buf);
         }
+
+        GPU_SANITY_CHECK(d_dst);
     }
     else
     {
@@ -242,6 +264,8 @@ PERF_TEST_P(Sz_Type, Filters_Erode, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8UC
         {
             cv::erode(src, dst, ker);
         }
+
+        CPU_SANITY_CHECK(dst);
     }
 }
 
@@ -260,7 +284,7 @@ PERF_TEST_P(Sz_Type, Filters_Dilate, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8U
 
     cv::Mat ker = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(3, 3));
 
-    if (runOnGpu)
+    if (PERF_RUN_GPU())
     {
         cv::gpu::GpuMat d_src(src);
         cv::gpu::GpuMat d_dst;
@@ -272,6 +296,8 @@ PERF_TEST_P(Sz_Type, Filters_Dilate, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8U
         {
             cv::gpu::dilate(d_src, d_dst, ker, d_buf);
         }
+
+        GPU_SANITY_CHECK(d_dst);
     }
     else
     {
@@ -283,6 +309,8 @@ PERF_TEST_P(Sz_Type, Filters_Dilate, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8U
         {
             cv::dilate(src, dst, ker);
         }
+
+        CPU_SANITY_CHECK(dst);
     }
 }
 
@@ -307,7 +335,7 @@ PERF_TEST_P(Sz_Type_Op, Filters_MorphologyEx, Combine(GPU_TYPICAL_MAT_SIZES, Val
 
     cv::Mat ker = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(3, 3));
 
-    if (runOnGpu)
+    if (PERF_RUN_GPU())
     {
         cv::gpu::GpuMat d_src(src);
         cv::gpu::GpuMat d_dst;
@@ -320,6 +348,8 @@ PERF_TEST_P(Sz_Type_Op, Filters_MorphologyEx, Combine(GPU_TYPICAL_MAT_SIZES, Val
         {
             cv::gpu::morphologyEx(d_src, d_dst, morphOp, ker, d_buf1, d_buf2);
         }
+
+        GPU_SANITY_CHECK(d_dst);
     }
     else
     {
@@ -331,6 +361,8 @@ PERF_TEST_P(Sz_Type_Op, Filters_MorphologyEx, Combine(GPU_TYPICAL_MAT_SIZES, Val
         {
             cv::morphologyEx(src, dst, morphOp, ker);
         }
+
+        CPU_SANITY_CHECK(dst);
     }
 }
 
@@ -351,7 +383,7 @@ PERF_TEST_P(Sz_Type_KernelSz, Filters_Filter2D, Combine(GPU_TYPICAL_MAT_SIZES, V
     cv::Mat kernel(ksize, ksize, CV_32FC1);
     fillRandom(kernel, 0.0, 1.0);
 
-    if (runOnGpu)
+    if (PERF_RUN_GPU())
     {
         cv::gpu::GpuMat d_src(src);
         cv::gpu::GpuMat d_dst;
@@ -362,6 +394,8 @@ PERF_TEST_P(Sz_Type_KernelSz, Filters_Filter2D, Combine(GPU_TYPICAL_MAT_SIZES, V
         {
             cv::gpu::filter2D(d_src, d_dst, -1, kernel);
         }
+
+        GPU_SANITY_CHECK(d_dst);
     }
     else
     {
@@ -373,6 +407,8 @@ PERF_TEST_P(Sz_Type_KernelSz, Filters_Filter2D, Combine(GPU_TYPICAL_MAT_SIZES, V
         {
             cv::filter2D(src, dst, -1, kernel);
         }
+
+        CPU_SANITY_CHECK(dst);
     }
 }
 
