@@ -18,7 +18,7 @@ PERF_TEST_P(Sz_Depth_Cn, MatOp_SetTo, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8
 
     cv::Scalar val(1, 2, 3, 4);
 
-    if (runOnGpu)
+    if (PERF_RUN_GPU())
     {
         cv::gpu::GpuMat d_src(size, type);
 
@@ -28,6 +28,8 @@ PERF_TEST_P(Sz_Depth_Cn, MatOp_SetTo, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8
         {
             d_src.setTo(val);
         }
+
+        GPU_SANITY_CHECK(d_src);
     }
     else
     {
@@ -39,6 +41,8 @@ PERF_TEST_P(Sz_Depth_Cn, MatOp_SetTo, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8
         {
             src.setTo(val);
         }
+
+        CPU_SANITY_CHECK(src);
     }
 }
 
@@ -61,7 +65,7 @@ PERF_TEST_P(Sz_Depth_Cn, MatOp_SetToMasked, Combine(GPU_TYPICAL_MAT_SIZES, Value
 
     cv::Scalar val(1, 2, 3, 4);
 
-    if (runOnGpu)
+    if (PERF_RUN_GPU())
     {
         cv::gpu::GpuMat d_src(src);
         cv::gpu::GpuMat d_mask(mask);
@@ -72,6 +76,8 @@ PERF_TEST_P(Sz_Depth_Cn, MatOp_SetToMasked, Combine(GPU_TYPICAL_MAT_SIZES, Value
         {
             d_src.setTo(val, d_mask);
         }
+
+        GPU_SANITY_CHECK(d_src);
     }
     else
     {
@@ -81,6 +87,8 @@ PERF_TEST_P(Sz_Depth_Cn, MatOp_SetToMasked, Combine(GPU_TYPICAL_MAT_SIZES, Value
         {
             src.setTo(val, mask);
         }
+
+        CPU_SANITY_CHECK(src);
     }
 }
 
@@ -101,7 +109,7 @@ PERF_TEST_P(Sz_Depth_Cn, MatOp_CopyToMasked, Combine(GPU_TYPICAL_MAT_SIZES, Valu
     cv::Mat mask(size, CV_8UC1);
     fillRandom(mask, 0, 2);
 
-    if (runOnGpu)
+    if (PERF_RUN_GPU())
     {
         cv::gpu::GpuMat d_src(src);
         cv::gpu::GpuMat d_mask(mask);
@@ -113,6 +121,8 @@ PERF_TEST_P(Sz_Depth_Cn, MatOp_CopyToMasked, Combine(GPU_TYPICAL_MAT_SIZES, Valu
         {
             d_src.copyTo(d_dst, d_mask);
         }
+
+        GPU_SANITY_CHECK(d_dst);
     }
     else
     {
@@ -124,6 +134,8 @@ PERF_TEST_P(Sz_Depth_Cn, MatOp_CopyToMasked, Combine(GPU_TYPICAL_MAT_SIZES, Valu
         {
             src.copyTo(dst, mask);
         }
+
+        CPU_SANITY_CHECK(dst);
     }
 }
 
@@ -141,7 +153,7 @@ PERF_TEST_P(Sz_2Depth, MatOp_ConvertTo, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV
     cv::Mat src(size, depth1);
     fillRandom(src);
 
-    if (runOnGpu)
+    if (PERF_RUN_GPU())
     {
         cv::gpu::GpuMat d_src(src);
         cv::gpu::GpuMat d_dst;
@@ -152,6 +164,8 @@ PERF_TEST_P(Sz_2Depth, MatOp_ConvertTo, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV
         {
             d_src.convertTo(d_dst, depth2, 0.5, 1.0);
         }
+
+        GPU_SANITY_CHECK(d_dst);
     }
     else
     {
@@ -163,6 +177,8 @@ PERF_TEST_P(Sz_2Depth, MatOp_ConvertTo, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV
         {
             src.convertTo(dst, depth2, 0.5, 1.0);
         }
+
+        CPU_SANITY_CHECK(dst);
     }
 }
 
