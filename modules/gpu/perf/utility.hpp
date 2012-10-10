@@ -46,21 +46,16 @@ DEF_PARAM_TEST(Sz_Depth_Cn, cv::Size, MatDepth, MatCn);
 
 #define GPU_TYPICAL_MAT_SIZES testing::Values(perf::sz720p, perf::szSXGA, perf::sz1080p)
 
-namespace ts {
-    void printOsInfo();
-    void printCudaInfo();
-}
-
 #define GPU_SANITY_CHECK(dmat, ...) \
     do{ \
         cv::Mat d##dmat(dmat); \
         SANITY_CHECK(d##dmat, ## __VA_ARGS__); \
-    } while(0);
+    } while(0)
 
 #define CPU_SANITY_CHECK(cmat, ...) \
     do{ \
         SANITY_CHECK(cmat, ## __VA_ARGS__); \
-    } while(0);
+    } while(0)
 
 #define GPU_SANITY_CHECK_KEYPOINTS(alg, dmat, ...)                                          \
     do{                                                                                     \
@@ -75,13 +70,13 @@ namespace ts {
         ::perf::Regression::add(this, std::string(#dmat) + "-angle-row",    __angle,    ## __VA_ARGS__); \
         ::perf::Regression::add(this, std::string(#dmat) + "octave-row",    __octave,   ## __VA_ARGS__); \
         ::perf::Regression::add(this, std::string(#dmat) + "-pt-size-row",  __size,     ## __VA_ARGS__); \
-    } while(0);
+    } while(0)
 
 #define GPU_SANITY_CHECK_RESPONSE(alg, dmat, ...) \
     do{                                                                                     \
         cv::Mat d##dmat(dmat);                                                              \
         cv::Mat __response  = d##dmat.row(cv::gpu::alg##_GPU::RESPONSE_ROW);                \
         ::perf::Regression::add(this, std::string(#dmat) + "-response-row", __response, ## __VA_ARGS__); \
-    } while(0);
+    } while(0)
 
 #endif // __OPENCV_PERF_GPU_UTILITY_HPP__

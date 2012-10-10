@@ -17,18 +17,20 @@ const std::string command_line_keys =
     "{   perf_seed           |809564   |seed for random numbers generator}"
     "{   perf_tbb_nthreads   |-1       |if TBB is enabled, the number of TBB threads}"
     "{   perf_write_sanity   |         |allow to create new records for sanity checks}"
-    #ifdef ANDROID
+#ifdef ANDROID
     "{   perf_time_limit     |6.0      |default time limit for a single test (in seconds)}"
     "{   perf_affinity_mask  |0        |set affinity mask for the main thread}"
     "{   perf_log_power_checkpoints  | |additional xml logging for power measurement}"
-    #else
+#else
     "{   perf_time_limit     |3.0      |default time limit for a single test (in seconds)}"
-    #endif
+#endif
     "{   perf_max_deviation  |1.0      |}"
     "{   help h              |         |print help info}"
-    #ifdef HAVE_CUDA
-    "{   perf_run_cpu        |false    |run GPU performance tests for analogy CPU functions}"
-    #endif
+#ifdef HAVE_CUDA
+    "{   perf_run_cpu        |false    |run GPU performance tests for analogical CPU functions}"
+    "{   perf_cuda_device    |0        |run GPU test suite onto specific CUDA capable device}"
+    "{   perf_cuda_info_only |false    |print an information about system and an available CUDA devices and then exit.}"
+#endif
 ;
 
 static double       param_max_outliers;
@@ -41,6 +43,7 @@ static int          param_tbb_nthreads;
 static bool         param_write_sanity;
 #ifdef HAVE_CUDA
 static bool         param_run_cpu;
+static int          param_cuda_device;
 #endif
 #ifdef ANDROID
 static int          param_affinity_mask;
@@ -62,6 +65,10 @@ static void setCurrentThreadAffinityMask(int mask)
     }
 }
 
+#endif
+
+#ifdef HAVE_CUDA
+# include <opencv2/core/gpumat.hpp>
 #endif
 
 static void randu(cv::Mat& m)
@@ -617,12 +624,30 @@ void TestBase::Init(int argc, const char* const argv[])
 #endif
 
 #ifdef HAVE_CUDA
+
+    bool printOnly        = args.has("perf_cuda_info_only");
+
+    if (printOnly)
+        exit(0);
+
     param_run_cpu         = args.has("perf_run_cpu");
+    param_cuda_device      = std::max(0, std::min(cv::gpu::getCudaEnabledDeviceCount(), args.get<int>("perf_cuda_device")));
 
     if (param_run_cpu)
         printf("[----------]\n[ GPU INFO ] \tRun test suite on CPU.\n[----------]\n"), fflush(stdout);
     else
-        printf("[----------]\n[ GPU INFO ] \tRun test suite on GPU.\n[----------]\n"), fflush(stdout);
+    {
+        cv::gpu::DeviceInfo info(param_cuda_device);
+        if (!info.isCompatible())
+        {
+            printf("[----------]\n[ FAILURE  ] \tDevice %s is NOT compatible with current GPU module build.\n[----------]\n", info.name().c_str()), fflush(stdout);
+            exit(-1);
+        }
+
+        cv::gpu::setDevice(param_cuda_device);
+
+        printf("[----------]\n[ GPU INFO ] \tRun test suite on %s GPU.\n[----------]\n", info.name().c_str()), fflush(stdout);
+    }
 #endif
 
     if (!args.check())
@@ -1211,7 +1236,6 @@ bool perf::GpuPerf::targetDevice()
     return !param_run_cpu;
 }
 #endif
-
 
 /*****************************************************************************************\
 *                                  ::perf::PrintTo
