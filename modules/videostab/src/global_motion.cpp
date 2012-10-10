@@ -756,7 +756,7 @@ Mat KeypointBasedMotionEstimatorGpu::estimate(const gpu::GpuMat &frame0, const g
         grayFrame0 = frame0;
     else
     {
-        gpu::cvtColor(frame0_, grayFrame0_, CV_BGR2GRAY);
+        gpu::cvtColor(frame0, grayFrame0_, CV_BGR2GRAY);
         grayFrame0 = grayFrame0_;
     }
 
