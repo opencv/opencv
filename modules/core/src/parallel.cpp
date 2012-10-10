@@ -42,7 +42,7 @@
 
 #include "precomp.hpp"
 
-#if !defined HAVE_TBB && !defined HAVE_OPENMP && !defined HAVE_GCD && !defined HAVE_CONCURRENCY
+#if !defined HAVE_TBB && !defined HAVE_OPENMP && !defined HAVE_GCD && !defined HAVE_CONCURRENCY && !defined HAVE_CSTRIPES
     #ifdef __APPLE__
         #define HAVE_GCD
     #elif defined _MSC_VER && _MSC_VER >= 1600
@@ -66,7 +66,10 @@
     #else
         #undef HAVE_TBB
     #endif // end TBB version
-#endif // HAVE_CONCURRENCY
+#elif defined HAVE_CSTRIPES
+    #include "C=.h"
+    #undef shared
+#endif
 
 /*
     HAVE_TBB - using TBB
@@ -137,10 +140,21 @@ namespace cv
         for (int i = range.start; i < range.end; ++i)
             body(Range(i, i + 1));
 
-#elif defined (HAVE_GCD)
+#elif defined HAVE_GCD
 
         dispatch_queue_t concurrent_queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
         dispatch_apply_f(range.end - range.start, concurrent_queue, &const_cast<ParallelLoopBody&>(body), block_function);
+
+#elif defined HAVE_CSTRIPES
+
+        parallel()
+        {
+            int offset = range.start;
+            int len = range.end - offset;
+            Range r(offset + CPX_RANGE_START(len), offset + CPX_RANGE_END(len));
+            body(r);
+            barrier();
+        }
 
 #else
 

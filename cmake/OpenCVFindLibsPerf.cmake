@@ -7,6 +7,11 @@ if(WITH_TBB)
   include("${OpenCV_SOURCE_DIR}/cmake/OpenCVDetectTBB.cmake")
 endif(WITH_TBB)
 
+# --- C= ---
+if(WITH_CSTRIPES)
+  include("${OpenCV_SOURCE_DIR}/cmake/OpenCVDetectCStripes.cmake")
+endif(WITH_CSTRIPES)
+
 # --- IPP ---
 ocv_clear_vars(IPP_FOUND)
 if(WITH_IPP)

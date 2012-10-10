@@ -132,6 +132,7 @@ OCV_OPTION(WITH_PVAPI          "Include Prosilica GigE support"              ON 
 OCV_OPTION(WITH_QT             "Build with Qt Backend support"               OFF  IF (NOT ANDROID AND NOT IOS) )
 OCV_OPTION(WITH_QUICKTIME      "Use QuickTime for Video I/O insted of QTKit" OFF  IF APPLE )
 OCV_OPTION(WITH_TBB            "Include Intel TBB support"                   OFF  IF (NOT IOS) )
+OCV_OPTION(WITH_CSTRIPES       "Include C= support"                          OFF  IF WIN32 )
 OCV_OPTION(WITH_TIFF           "Include TIFF support"                        ON   IF (NOT IOS) )
 OCV_OPTION(WITH_UNICAP         "Include Unicap support (GPL)"                OFF  IF (UNIX AND NOT APPLE AND NOT ANDROID) )
 OCV_OPTION(WITH_V4L            "Include Video 4 Linux support"               ON   IF (UNIX AND NOT APPLE AND NOT ANDROID) )
@@ -745,6 +746,10 @@ endif(DEFINED WITH_IPP)
 if(DEFINED WITH_TBB)
   status("    Use TBB:"   HAVE_TBB   THEN "YES (ver ${TBB_VERSION_MAJOR}.${TBB_VERSION_MINOR} interface ${TBB_INTERFACE_VERSION})" ELSE NO)
 endif(DEFINED WITH_TBB)
+
+if(DEFINED WITH_CSTRIPES)
+  status("    Use C=:"   HAVE_CSTRIPES   THEN YES ELSE NO)
+endif(DEFINED WITH_CSTRIPES)
 
 if(DEFINED WITH_CUDA)
   status("    Use Cuda:"  HAVE_CUDA  THEN "YES (ver ${CUDA_VERSION_STRING})" ELSE NO)

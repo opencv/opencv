@@ -730,11 +730,6 @@ double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double m
     _dst.create( src.size(), src.type() );
     Mat dst = _dst.getMat();
 
-    int nStripes = 1;
-#if defined HAVE_TBB && defined ANDROID
-    nStripes = 4;
-#endif
-
     if( src.depth() == CV_8U )
     {
         int ithresh = cvFloor(thresh);
@@ -793,8 +788,10 @@ double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double m
         ;
     else
         CV_Error( CV_StsUnsupportedFormat, "" );
-        
-    parallel_for_(Range(0, nStripes),
+    
+    size_t nStripes = (src.total() + (1<<15)) >> 16;
+    nStripes = MAX(MIN(nStripes, (size_t)4), (size_t)1);
+    parallel_for_(Range(0, (int)nStripes),
                   ThresholdRunner(src, dst, nStripes, thresh, maxval, type));
     return thresh;
 }

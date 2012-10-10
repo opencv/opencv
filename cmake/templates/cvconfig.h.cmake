@@ -166,6 +166,9 @@
 /* Intel Threading Building Blocks */
 #cmakedefine  HAVE_TBB
 
+/* C= */
+#cmakedefine  HAVE_CSTRIPES
+
 /* Eigen Matrix & Linear Algebra Library */
 #cmakedefine  HAVE_EIGEN
 
