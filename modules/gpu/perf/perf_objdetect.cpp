@@ -17,7 +17,7 @@ PERF_TEST_P(Image, ObjDetect_HOG, Values<string>("gpu/hog/road.png"))
 
     std::vector<cv::Rect> found_locations;
 
-    if (runOnGpu)
+    if (PERF_RUN_GPU())
     {
         cv::gpu::GpuMat d_img(img);
 
@@ -43,6 +43,8 @@ PERF_TEST_P(Image, ObjDetect_HOG, Values<string>("gpu/hog/road.png"))
             hog.detectMultiScale(img, found_locations);
         }
     }
+
+    SANITY_CHECK(found_locations);
 }
 
 //===========test for CalTech data =============//
@@ -57,7 +59,7 @@ PERF_TEST_P(HOG, CalTech, Values<string>("gpu/caltech/image_00000009_0.png", "gp
 
     std::vector<cv::Rect> found_locations;
 
-    if (runOnGpu)
+    if (PERF_RUN_GPU())
     {
         cv::gpu::GpuMat d_img(img);
 
@@ -83,6 +85,8 @@ PERF_TEST_P(HOG, CalTech, Values<string>("gpu/caltech/image_00000009_0.png", "gp
             hog.detectMultiScale(img, found_locations);
         }
     }
+
+    SANITY_CHECK(found_locations);
 }
 
 
@@ -98,7 +102,7 @@ PERF_TEST_P(ImageAndCascade, ObjDetect_HaarClassifier,
     cv::Mat img = readImage(GetParam().first, cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(img.empty());
 
-    if (runOnGpu)
+    if (PERF_RUN_GPU())
     {
         cv::gpu::CascadeClassifier_GPU d_cascade;
         ASSERT_TRUE(d_cascade.load(perf::TestBase::getDataPath(GetParam().second)));
@@ -112,6 +116,8 @@ PERF_TEST_P(ImageAndCascade, ObjDetect_HaarClassifier,
         {
             d_cascade.detectMultiScale(d_img, d_objects_buffer);
         }
+
+        GPU_SANITY_CHECK(d_objects_buffer);
     }
     else
     {
@@ -126,6 +132,8 @@ PERF_TEST_P(ImageAndCascade, ObjDetect_HaarClassifier,
         {
             cascade.detectMultiScale(img, rects);
         }
+
+        CPU_SANITY_CHECK(rects);
     }
 }
 
@@ -138,7 +146,7 @@ PERF_TEST_P(ImageAndCascade, ObjDetect_LBPClassifier,
     cv::Mat img = readImage(GetParam().first, cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(img.empty());
 
-    if (runOnGpu)
+    if (PERF_RUN_GPU())
     {
         cv::gpu::CascadeClassifier_GPU d_cascade;
         ASSERT_TRUE(d_cascade.load(perf::TestBase::getDataPath(GetParam().second)));
@@ -152,6 +160,8 @@ PERF_TEST_P(ImageAndCascade, ObjDetect_LBPClassifier,
         {
             d_cascade.detectMultiScale(d_img, d_gpu_rects);
         }
+
+        GPU_SANITY_CHECK(d_gpu_rects);
     }
     else
     {
@@ -166,6 +176,8 @@ PERF_TEST_P(ImageAndCascade, ObjDetect_LBPClassifier,
         {
             cascade.detectMultiScale(img, rects);
         }
+
+        CPU_SANITY_CHECK(rects);
     }
 }
 
