@@ -45,7 +45,9 @@ The references are:
 
 #define VERIFY_CORNERS 0
 
-void cv::makeOffsets(int pixel[25], int rowStride, int patternSize)
+namespace cv {
+
+void makeOffsets(int pixel[25], int rowStride, int patternSize)
 {
     static const int offsets16[][2] =
     {
@@ -115,7 +117,7 @@ static void testCorner(const uchar* ptr, const int pixel[], int K, int N, int th
 #endif
 
 template<>
-int cv::cornerScore<16>(const uchar* ptr, const int pixel[], int threshold)
+int cornerScore<16>(const uchar* ptr, const int pixel[], int threshold)
 {
     const int K = 8, N = K*3 + 1;
     int k, v = ptr[0];
@@ -205,7 +207,7 @@ int cv::cornerScore<16>(const uchar* ptr, const int pixel[], int threshold)
 }
 
 template<>
-int cv::cornerScore<12>(const uchar* ptr, const int pixel[], int threshold)
+int cornerScore<12>(const uchar* ptr, const int pixel[], int threshold)
 {
     const int K = 6, N = K*3 + 1;
     int k, v = ptr[0];
@@ -289,7 +291,7 @@ int cv::cornerScore<12>(const uchar* ptr, const int pixel[], int threshold)
 }
 
 template<>
-int cv::cornerScore<8>(const uchar* ptr, const int pixel[], int threshold)
+int cornerScore<8>(const uchar* ptr, const int pixel[], int threshold)
 {
     const int K = 4, N = K*3 + 1;
     int k, v = ptr[0];
@@ -353,4 +355,6 @@ int cv::cornerScore<8>(const uchar* ptr, const int pixel[], int threshold)
 #endif
     return threshold;
 }
+
+} // namespace cv
 
