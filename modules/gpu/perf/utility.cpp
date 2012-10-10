@@ -4,8 +4,6 @@ using namespace std;
 using namespace cv;
 using namespace cv::gpu;
 
-bool runOnGpu = true;
-
 void fillRandom(Mat& m, double a, double b)
 {
     RNG rng(123456789);

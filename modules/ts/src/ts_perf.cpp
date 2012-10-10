@@ -618,6 +618,11 @@ void TestBase::Init(int argc, const char* const argv[])
 
 #ifdef HAVE_CUDA
     param_run_cpu         = args.has("perf_run_cpu");
+
+    if (param_run_cpu)
+        printf("[----------]\n[ GPU INFO ] \tRun test suite on CPU.\n[----------]\n"), fflush(stdout);
+    else
+        printf("[----------]\n[ GPU INFO ] \tRun test suite on GPU.\n[----------]\n"), fflush(stdout);
 #endif
 
     if (!args.check())

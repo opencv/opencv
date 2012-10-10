@@ -6,8 +6,6 @@
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/ts/ts_perf.hpp"
 
-extern bool runOnGpu;
-
 void fillRandom(cv::Mat& m, double a = 0.0, double b = 255.0);
 cv::Mat readImage(const std::string& fileName, int flags = cv::IMREAD_COLOR);
 
