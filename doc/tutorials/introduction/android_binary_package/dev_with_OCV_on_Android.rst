@@ -112,6 +112,8 @@ There is a very base code snippet implementing the async initialization. It show
 It this case application works with OpenCV Manager in asynchronous fashion. ``OnManagerConnected`` callback will be called in UI thread, when initialization finishes.
 Please note, that it is not allowed to use OpenCV calls or load OpenCV-dependent native libs before invoking this callback.
 Load your own native libraries that depend on OpenCV after the successful OpenCV initialization.
+Default BaseLoaderCallback implementation treat application context as Activity and calls Activity.finish() method to exit in case of initialization failure.
+To override this behavior you need to override finish() method of BaseLoaderCallback class and implement your own finalization method.
 
 Application development with static initialization
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

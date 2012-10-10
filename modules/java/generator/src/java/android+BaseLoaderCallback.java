@@ -2,6 +2,7 @@ package org.opencv.android;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.DialogInterface.OnClickListener;
 import android.util.Log;
@@ -11,7 +12,7 @@ import android.util.Log;
  */
 public abstract class BaseLoaderCallback implements LoaderCallbackInterface {
 
-    public BaseLoaderCallback(Activity AppContext) {
+    public BaseLoaderCallback(Context AppContext) {
         mAppContext = AppContext;
     }
 
@@ -34,7 +35,7 @@ public abstract class BaseLoaderCallback implements LoaderCallbackInterface {
                 MarketErrorMessage.setCancelable(false); // This blocks the 'BACK' button
                 MarketErrorMessage.setButton(AlertDialog.BUTTON_POSITIVE, "OK", new OnClickListener() {
                     public void onClick(DialogInterface dialog, int which) {
-                        mAppContext.finish();
+                        finish();
                     }
                 });
                 MarketErrorMessage.show();
@@ -43,7 +44,7 @@ public abstract class BaseLoaderCallback implements LoaderCallbackInterface {
             case LoaderCallbackInterface.INSTALL_CANCELED:
             {
                 Log.d(TAG, "OpenCV library instalation was canceled by user");
-                mAppContext.finish();
+                finish();
             } break;
             /** Application is incompatible with this version of OpenCV Manager. Possibly, a service update is required. **/
             case LoaderCallbackInterface.INCOMPATIBLE_MANAGER_VERSION:
@@ -55,7 +56,7 @@ public abstract class BaseLoaderCallback implements LoaderCallbackInterface {
                 IncomatibilityMessage.setCancelable(false); // This blocks the 'BACK' button
                 IncomatibilityMessage.setButton(AlertDialog.BUTTON_POSITIVE, "OK", new OnClickListener() {
                     public void onClick(DialogInterface dialog, int which) {
-                        mAppContext.finish();
+                        finish();
                     }
                 });
                 IncomatibilityMessage.show();
@@ -71,7 +72,7 @@ public abstract class BaseLoaderCallback implements LoaderCallbackInterface {
                 InitFailedDialog.setButton(AlertDialog.BUTTON_POSITIVE, "OK", new OnClickListener() {
 
                     public void onClick(DialogInterface dialog, int which) {
-                        mAppContext.finish();
+                        finish();
                     }
                 });
 
@@ -130,6 +131,11 @@ public abstract class BaseLoaderCallback implements LoaderCallbackInterface {
         }
     }
 
-    protected Activity mAppContext;
+    void finish()
+    {
+        ((Activity) mAppContext).finish();
+    }
+
+    protected Context mAppContext;
     private final static String TAG = "OpenCVLoader/BaseLoaderCallback";
 }
