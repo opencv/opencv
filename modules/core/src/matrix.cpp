@@ -2456,6 +2456,8 @@ public:
     }
 
 private:
+    KMeansPPDistanceComputer& operator=(const KMeansPPDistanceComputer&); // to quiet MSVC
+
     float *tdist2;
     const float *data;
     const float *dist;
