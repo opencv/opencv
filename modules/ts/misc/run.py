@@ -265,7 +265,8 @@ class RunInfo(object):
                     self.error = "Could not run adb command: %s (for %s)" % (self.error, self.path)
                     self.adb = []
                 else:
-                    connected_devices = re.findall(r"^[^ \t]+[ \t]+device\r?$", adb_res, re.MULTILINE)
+                    # assume here that device name may consists of any characters except newline
+                    connected_devices = re.findall(r"^[^\n]+[ \t]+device\r?$", adb_res, re.MULTILINE)
                     if len(connected_devices) != 1:
                         self.error = "Too many (%s) devices are connected. Please specify single device using --serial option" % (len(connected_devices))
                         self.adb = []
