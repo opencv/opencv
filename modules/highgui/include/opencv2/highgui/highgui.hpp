@@ -54,7 +54,6 @@ struct CvVideoWriter;
 namespace cv
 {
 
-#if defined(ANDROID) && defined(HAVE_ANDROID_UI)
 enum { 
     // Flags for namedWindow
     WINDOW_NORMAL   = CV_WINDOW_NORMAL,   // the user can resize the window (no constraint) / also use to switch a fullscreen window to a normal size
@@ -155,8 +154,6 @@ typedef void (CV_CDECL *ButtonCallback)(int state, void* userdata);
 CV_EXPORTS int createButton( const string& bar_name, ButtonCallback on_change,
                              void* userdata=NULL, int type=CV_PUSH_BUTTON,
                              bool initial_button_state=0);
-
-#endif
 
 //-------------------------
 
