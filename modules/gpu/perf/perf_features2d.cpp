@@ -17,7 +17,7 @@ PERF_TEST_P(Image, Features2D_SURF, Values<string>("gpu/perf/aloe.png"))
     cv::Mat img = readImage(GetParam(), cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(img.empty());
 
-    if (runOnGpu)
+    if (PERF_RUN_GPU())
     {
         cv::gpu::SURF_GPU d_surf;
 
@@ -30,6 +30,9 @@ PERF_TEST_P(Image, Features2D_SURF, Values<string>("gpu/perf/aloe.png"))
         {
             d_surf(d_img, cv::gpu::GpuMat(), d_keypoints, d_descriptors);
         }
+
+        GPU_SANITY_CHECK(d_descriptors, 1e-4);
+        GPU_SANITY_CHECK_KEYPOINTS(SURF, d_keypoints);
     }
     else
     {
@@ -45,6 +48,9 @@ PERF_TEST_P(Image, Features2D_SURF, Values<string>("gpu/perf/aloe.png"))
             keypoints.clear();
             surf(img, cv::noArray(), keypoints, descriptors);
         }
+
+        SANITY_CHECK_KEYPOINTS(keypoints);
+        SANITY_CHECK(descriptors, 1e-4);
     }
 }
 
@@ -56,7 +62,7 @@ PERF_TEST_P(Image, Features2D_FAST, Values<string>("gpu/perf/aloe.png"))
     cv::Mat img = readImage(GetParam(), cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(img.empty());
 
-    if (runOnGpu)
+    if (PERF_RUN_GPU())
     {
         cv::gpu::FAST_GPU d_fast(20);
 
@@ -69,6 +75,8 @@ PERF_TEST_P(Image, Features2D_FAST, Values<string>("gpu/perf/aloe.png"))
         {
             d_fast(d_img, cv::gpu::GpuMat(), d_keypoints);
         }
+
+        GPU_SANITY_CHECK_RESPONSE(FAST, d_keypoints);
     }
     else
     {
@@ -81,6 +89,8 @@ PERF_TEST_P(Image, Features2D_FAST, Values<string>("gpu/perf/aloe.png"))
             keypoints.clear();
             cv::FAST(img, keypoints, 20);
         }
+
+        SANITY_CHECK_KEYPOINTS(keypoints);
     }
 }
 
@@ -92,7 +102,7 @@ PERF_TEST_P(Image, Features2D_ORB, Values<string>("gpu/perf/aloe.png"))
     cv::Mat img = readImage(GetParam(), cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(img.empty());
 
-    if (runOnGpu)
+    if (PERF_RUN_GPU())
     {
         cv::gpu::ORB_GPU d_orb(4000);
 
@@ -105,6 +115,9 @@ PERF_TEST_P(Image, Features2D_ORB, Values<string>("gpu/perf/aloe.png"))
         {
             d_orb(d_img, cv::gpu::GpuMat(), d_keypoints, d_descriptors);
         }
+
+        GPU_SANITY_CHECK_KEYPOINTS(ORB, d_keypoints);
+        GPU_SANITY_CHECK(d_descriptors);
     }
     else
     {
@@ -120,6 +133,9 @@ PERF_TEST_P(Image, Features2D_ORB, Values<string>("gpu/perf/aloe.png"))
             keypoints.clear();
             orb(img, cv::noArray(), keypoints, descriptors);
         }
+
+        SANITY_CHECK_KEYPOINTS(keypoints);
+        SANITY_CHECK(descriptors);
     }
 }
 
@@ -143,7 +159,7 @@ PERF_TEST_P(DescSize_Norm, Features2D_BFMatch, Combine(Values(64, 128, 256), Val
     cv::Mat train(3000, desc_size, type);
     fillRandom(train);
 
-    if (runOnGpu)
+    if (PERF_RUN_GPU())
     {
         cv::gpu::BFMatcher_GPU d_matcher(normType);
 
@@ -157,6 +173,9 @@ PERF_TEST_P(DescSize_Norm, Features2D_BFMatch, Combine(Values(64, 128, 256), Val
         {
             d_matcher.matchSingle(d_query, d_train, d_trainIdx, d_distance);
         }
+
+        GPU_SANITY_CHECK(d_trainIdx);
+        GPU_SANITY_CHECK(d_distance);
     }
     else
     {
@@ -170,6 +189,8 @@ PERF_TEST_P(DescSize_Norm, Features2D_BFMatch, Combine(Values(64, 128, 256), Val
         {
             matcher.match(query, train, matches);
         }
+
+        SANITY_CHECK(matches);
     }
 }
 
@@ -197,7 +218,7 @@ PERF_TEST_P(DescSize_K_Norm, Features2D_BFKnnMatch, Combine(
     cv::Mat train(3000, desc_size, type);
     fillRandom(train);
 
-    if (runOnGpu)
+    if (PERF_RUN_GPU())
     {
         cv::gpu::BFMatcher_GPU d_matcher(normType);
 
@@ -211,6 +232,9 @@ PERF_TEST_P(DescSize_K_Norm, Features2D_BFKnnMatch, Combine(
         {
             d_matcher.knnMatchSingle(d_query, d_train, d_trainIdx, d_distance, d_allDist, k);
         }
+
+        GPU_SANITY_CHECK(d_trainIdx);
+        GPU_SANITY_CHECK(d_distance);
     }
     else
     {
@@ -224,6 +248,8 @@ PERF_TEST_P(DescSize_K_Norm, Features2D_BFKnnMatch, Combine(
         {
             matcher.knnMatch(query, train, matches, k);
         }
+
+        SANITY_CHECK(matches);
     }
 }
 
@@ -245,7 +271,7 @@ PERF_TEST_P(DescSize_Norm, Features2D_BFRadiusMatch, Combine(Values(64, 128, 256
     cv::Mat train(3000, desc_size, type);
     fillRandom(train, 0.0, 1.0);
 
-    if (runOnGpu)
+    if (PERF_RUN_GPU())
     {
         cv::gpu::BFMatcher_GPU d_matcher(normType);
 
@@ -259,6 +285,9 @@ PERF_TEST_P(DescSize_Norm, Features2D_BFRadiusMatch, Combine(Values(64, 128, 256
         {
             d_matcher.radiusMatchSingle(d_query, d_train, d_trainIdx, d_distance, d_nMatches, 2.0);
         }
+
+        GPU_SANITY_CHECK(d_trainIdx);
+        GPU_SANITY_CHECK(d_distance);
     }
     else
     {
@@ -272,6 +301,8 @@ PERF_TEST_P(DescSize_Norm, Features2D_BFRadiusMatch, Combine(Values(64, 128, 256
         {
             matcher.radiusMatch(query, train, matches, 2.0);
         }
+
+        SANITY_CHECK(matches);
     }
 }
 

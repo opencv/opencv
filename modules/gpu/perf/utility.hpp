@@ -64,4 +64,26 @@ namespace ts {
         SANITY_CHECK(cmat, ## __VA_ARGS__); \
     } while(0);
 
+#define GPU_SANITY_CHECK_KEYPOINTS(alg, dmat, ...)                                          \
+    do{                                                                                     \
+        cv::Mat d##dmat(dmat);                                                              \
+        cv::Mat __pt_x      = d##dmat.row(cv::gpu::alg##_GPU::X_ROW);                       \
+        cv::Mat __pt_y      = d##dmat.row(cv::gpu::alg##_GPU::Y_ROW);                       \
+        cv::Mat __angle     = d##dmat.row(cv::gpu::alg##_GPU::ANGLE_ROW);                   \
+        cv::Mat __octave    = d##dmat.row(cv::gpu::alg##_GPU::OCTAVE_ROW);                               \
+        cv::Mat __size      = d##dmat.row(cv::gpu::alg##_GPU::SIZE_ROW);                                 \
+        ::perf::Regression::add(this, std::string(#dmat) + "-pt-x-row",     __pt_x,     ## __VA_ARGS__); \
+        ::perf::Regression::add(this, std::string(#dmat) + "-pt-y-row",     __pt_y,     ## __VA_ARGS__); \
+        ::perf::Regression::add(this, std::string(#dmat) + "-angle-row",    __angle,    ## __VA_ARGS__); \
+        ::perf::Regression::add(this, std::string(#dmat) + "octave-row",    __octave,   ## __VA_ARGS__); \
+        ::perf::Regression::add(this, std::string(#dmat) + "-pt-size-row",  __size,     ## __VA_ARGS__); \
+    } while(0);
+
+#define GPU_SANITY_CHECK_RESPONSE(alg, dmat, ...) \
+    do{                                                                                     \
+        cv::Mat d##dmat(dmat);                                                              \
+        cv::Mat __response  = d##dmat.row(cv::gpu::alg##_GPU::RESPONSE_ROW);                \
+        ::perf::Regression::add(this, std::string(#dmat) + "-response-row", __response, ## __VA_ARGS__); \
+    } while(0);
+
 #endif // __OPENCV_PERF_GPU_UTILITY_HPP__
