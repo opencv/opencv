@@ -1709,7 +1709,7 @@ PERF_TEST_P(Sz_Depth_Cn, ImgProc_ImagePyramidGetLayer, Combine(GPU_TYPICAL_MAT_S
 //////////////////////////////////////////////////////////////////////
 // HoughLines
 
-PERF_TEST_P(Sz, ImgProc_HoughLines, GPU_TYPICAL_MAT_SIZES)
+PERF_TEST_P(Sz, DISABLED_ImgProc_HoughLines, GPU_TYPICAL_MAT_SIZES)
 {
     declare.time(30.0);
 
