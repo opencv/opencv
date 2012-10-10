@@ -2428,6 +2428,41 @@ static void generateRandomCenter(const vector<Vec2f>& box, float* center, RNG& r
         center[j] = ((float)rng*(1.f+margin*2.f)-margin)*(box[j][1] - box[j][0]) + box[j][0];
 }
 
+class KMeansPPDistanceComputer
+{
+public:
+    KMeansPPDistanceComputer( float *_tdist2,
+                              const float *_data,
+                              const float *_dist,
+                              int _dims,
+                              size_t _step,
+                              size_t _stepci )
+        : tdist2(_tdist2),
+          data(_data),
+          dist(_dist),
+          dims(_dims),
+          step(_step),
+          stepci(_stepci) { }
+
+    void operator()( const cv::BlockedRange& range ) const
+    {
+        const int begin = range.begin();
+        const int end = range.end();
+
+        for ( int i = begin; i<end; i++ )
+        {
+            tdist2[i] = std::min(normL2Sqr_(data + step*i, data + stepci, dims), dist[i]);
+        }
+    }
+
+private:
+    float *tdist2;
+    const float *data;
+    const float *dist;
+    const int dims;
+    const size_t step;
+    const size_t stepci;
+};
 
 /*
 k-means center initialization using the following algorithm:
@@ -2465,9 +2500,11 @@ static void generateCentersPP(const Mat& _data, Mat& _out_centers,
                 if( (p -= dist[i]) <= 0 )
                     break;
             int ci = i;
+
+            parallel_for(BlockedRange(0, N),
+                         KMeansPPDistanceComputer(tdist2, data, dist, dims, step, step*ci));
             for( i = 0; i < N; i++ )
             {
-                tdist2[i] = std::min(normL2Sqr_(data + step*i, data + step*ci, dims), dist[i]);
                 s += tdist2[i];
             }
 
@@ -2491,6 +2528,59 @@ static void generateCentersPP(const Mat& _data, Mat& _out_centers,
             dst[j] = src[j];
     }
 }
+
+class KMeansDistanceComputer
+{
+public:
+    KMeansDistanceComputer( double *_distances,
+                            int *_labels,
+                            const Mat& _data,
+                            const Mat& _centers )
+        : distances(_distances),
+          labels(_labels),
+          data(_data),
+          centers(_centers)
+    {
+        CV_DbgAssert(centers.cols == data.cols);
+    }
+
+    void operator()( const BlockedRange& range ) const
+    {
+        const int begin = range.begin();
+        const int end = range.end();
+        const int K = centers.rows;
+        const int dims = centers.cols;
+
+        const float *sample;
+        for( int i = begin; i<end; ++i)
+        {
+            sample = data.ptr<float>(i);
+            int k_best = 0;
+            double min_dist = DBL_MAX;
+
+            for( int k = 0; k < K; k++ )
+            {
+                const float* center = centers.ptr<float>(k);
+                const double dist = normL2Sqr_(sample, center, dims);
+
+                if( min_dist > dist )
+                {
+                    min_dist = dist;
+                    k_best = k;
+                }
+            }
+
+            distances[i] = min_dist;
+            labels[i] = k_best;
+        }
+    }
+
+private:
+    double *distances;
+    int *labels;
+    const Mat& data;
+    const Mat& centers;
+};
 
 }
 
@@ -2536,7 +2626,6 @@ double cv::kmeans( InputArray _data, int K,
     vector<int> counters(K);
     vector<Vec2f> _box(dims);
     Vec2f* box = &_box[0];
-
     double best_compactness = DBL_MAX, compactness = 0;
     RNG& rng = theRNG();
     int a, iter, i, j, k;
@@ -2711,27 +2800,14 @@ double cv::kmeans( InputArray _data, int K,
                 break;
 
             // assign labels
+            Mat dists(1, N, CV_64F);
+            double* dist = dists.ptr<double>(0);
+            parallel_for(BlockedRange(0, N),
+                         KMeansDistanceComputer(dist, labels, data, centers));
             compactness = 0;
             for( i = 0; i < N; i++ )
             {
-                sample = data.ptr<float>(i);
-                int k_best = 0;
-                double min_dist = DBL_MAX;
-
-                for( k = 0; k < K; k++ )
-                {
-                    const float* center = centers.ptr<float>(k);
-                    double dist = normL2Sqr_(sample, center, dims);
-
-                    if( min_dist > dist )
-                    {
-                        min_dist = dist;
-                        k_best = k;
-                    }
-                }
-
-                compactness += min_dist;
-                labels[i] = k_best;
+                compactness += dist[i];
             }
         }
 
