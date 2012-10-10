@@ -78,6 +78,14 @@ if(CUDA_FOUND)
   set(OpenCV_CUDA_CC "${NVCC_FLAGS_EXTRA}")
 
   message(STATUS "CUDA NVCC target flags: ${CUDA_NVCC_FLAGS}")
+  
+  OCV_OPTION(CUDA_FAST_MATH  "Enable --use_fast_math for CUDA compiler " OFF)
+  
+  if(ENABLE_CUDA_MATH)
+    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} --use_fast_math)    
+  endif()
+  
+  mark_as_advanced(CUDA_BUILD_CUBIN CUDA_BUILD_EMULATION CUDA_VERBOSE_BUILD CUDA_SDK_ROOT_DIR)
 
   unset(CUDA_npp_LIBRARY CACHE)
   find_cuda_helper_libs(npp)
