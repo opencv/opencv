@@ -70,6 +70,8 @@ set(highgui_srcs
 
 file(GLOB highgui_ext_hdrs "include/opencv2/${name}/*.hpp" "include/opencv2/${name}/*.h")
 
+add_definitions(-DHAVE_ANDROID_UI)
+
 if(HAVE_QT)
   if (HAVE_QT_OPENGL)
     set(QT_USE_QTOPENGL TRUE)
