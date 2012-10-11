@@ -167,4 +167,10 @@ private:
 
 } // namespace cv
 
+// Auto linking by "#pragma comment(lib)" syntax
+#include "opencv2/core/pragma_lib.hpp"
+#if PRAGMA_COMMENT_SUPPORT && OPENCV_AUTO_LINK
+#pragma OPENCV_COMMENT_LIB_FNAME("stitching")
+#endif // PRAGMA_COMMENT_SUPPORT && OPENCV_AUTO_LINK
+
 #endif // __OPENCV_STITCHING_STITCHER_HPP__
