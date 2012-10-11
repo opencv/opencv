@@ -254,7 +254,8 @@ __kernel void boxFilter_C4_D0(__global const uchar4 * restrict src, __global uch
         //ss = convert_uint4(src[cur_addr]); 
 
         int cur_col = clamp(startX + col, 0, src_whole_cols);
-        ss = convert_uint4(src[(startY+i)*(src_step>>2) + cur_col]); 
+        if(con)
+          ss = convert_uint4(src[(startY+i)*(src_step>>2) + cur_col]); 
 
         data[i] = con ? ss : 0;
     }
@@ -268,6 +269,7 @@ __kernel void boxFilter_C4_D0(__global const uchar4 * restrict src, __global uch
 
           selected_col = ADDR_L(startX+col, 0, src_whole_cols);
           selected_col = ADDR_R(startX+col, src_whole_cols, selected_col);
+          
           
           data[i] = convert_uint4(src[selected_row * (src_step>>2) + selected_col]);
    }
@@ -334,11 +336,12 @@ __kernel void boxFilter_C1_D5(__global const float *restrict src, __global float
     for(int i=0; i < ksY+1; i++)
     {
         con = startX+col >= 0 && startX+col < src_whole_cols && startY+i >= 0 && startY+i < src_whole_rows;
-	    //	int cur_addr = clamp((startY+i)*(src_step>>2)+(startX+col),0,end_addr);		
-       // ss = src[cur_addr]; 
-
+	      //int cur_addr = clamp((startY+i)*(src_step>>2)+(startX+col),0,end_addr);		
+        //ss = src[cur_addr]; 
+         
         int cur_col = clamp(startX + col, 0, src_whole_cols);
-        ss = src[(startY+i)*(src_step>>2) + cur_col]; 
+        //ss = src[(startY+i)*(src_step>>2) + cur_col]; 
+        ss = (startY+i)<src_whole_rows&&(startY+i)>=0&&cur_col>=0&&cur_col<src_whole_cols?src[(startY+i)*(src_step>>2) + cur_col]:0;
 
         data[i] = con ? ss : 0.f;
     }
@@ -422,7 +425,8 @@ __kernel void boxFilter_C4_D5(__global const float4 *restrict src, __global floa
         //ss = src[cur_addr]; 
 
         int cur_col = clamp(startX + col, 0, src_whole_cols);
-        ss = src[(startY+i)*(src_step>>4) + cur_col]; 
+        //ss = src[(startY+i)*(src_step>>4) + cur_col]; 
+        ss = (startY+i)<src_whole_rows&&(startY+i)>=0&&cur_col>=0&&cur_col<src_whole_cols?src[(startY+i)*(src_step>>4) + cur_col]:0;
 
         data[i] = con ? ss : (float4)(0.0,0.0,0.0,0.0);
     }

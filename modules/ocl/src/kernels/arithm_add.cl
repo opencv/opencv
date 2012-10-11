@@ -71,10 +71,22 @@ __kernel void arithm_add_D0 (__global uchar *src1, int src1_step, int src1_offse
         int dst_start  = mad24(y, dst_step, dst_offset);
         int dst_end    = mad24(y, dst_step, dst_offset + dst_step1);
         int dst_index  = mad24(y, dst_step, dst_offset + x & (int)0xfffffffc);
-
-        uchar4 src1_data = vload4(0, src1 + src1_index);
-        uchar4 src2_data = vload4(0, src2 + src2_index);
-
+		int src1_index_fix = src1_index < 0 ? 0 : src1_index;
+		int src2_index_fix = src2_index < 0 ? 0 : src2_index;
+        uchar4 src1_data = vload4(0, src1 + src1_index_fix);
+        uchar4 src2_data = vload4(0, src2 + src2_index_fix);
+		if(src1_index < 0)
+		{
+			uchar4 tmp;
+			tmp.xyzw = (src1_index == -2) ? src1_data.zwxy:src1_data.yzwx;
+			src1_data.xyzw = (src1_index == -1) ? src1_data.wxyz:tmp.xyzw;
+		}
+		if(src2_index < 0)
+		{
+			uchar4 tmp;
+			tmp.xyzw = (src2_index == -2) ? src2_data.zwxy:src2_data.yzwx;
+			src2_data.xyzw = (src2_index == -1) ? src2_data.wxyz:tmp.xyzw;
+		}		
         uchar4 dst_data = *((__global uchar4 *)(dst + dst_index));
         short4 tmp      = convert_short4_sat(src1_data) + convert_short4_sat(src2_data);
         uchar4 tmp_data = convert_uchar4_sat(tmp);
@@ -248,11 +260,31 @@ __kernel void arithm_add_with_mask_C1_D0 (__global uchar *src1, int src1_step, i
         int dst_start  = mad24(y, dst_step, dst_offset);
         int dst_end    = mad24(y, dst_step, dst_offset + dst_step1);
         int dst_index  = mad24(y, dst_step, dst_offset + x & (int)0xfffffffc);
-
-        uchar4 src1_data = vload4(0, src1 + src1_index);
-        uchar4 src2_data = vload4(0, src2 + src2_index);
-        uchar4 mask_data = vload4(0, mask + mask_index);
-
+		int src1_index_fix = src1_index < 0 ? 0 : src1_index;
+		int src2_index_fix = src2_index < 0 ? 0 : src2_index;
+		int mask_index_fix = mask_index < 0 ? 0 : mask_index;	
+        uchar4 src1_data = vload4(0, src1 + src1_index_fix);
+        uchar4 src2_data = vload4(0, src2 + src2_index_fix);
+        uchar4 mask_data = vload4(0, mask + mask_index_fix);		
+		if(src1_index < 0)
+		{
+			uchar4 tmp;
+			tmp.xyzw = (src1_index == -2) ? src1_data.zwxy:src1_data.yzwx;
+			src1_data.xyzw = (src1_index == -1) ? src1_data.wxyz:tmp.xyzw;
+		}
+		if(src2_index < 0)
+		{
+			uchar4 tmp;
+			tmp.xyzw = (src2_index == -2) ? src2_data.zwxy:src2_data.yzwx;
+			src2_data.xyzw = (src2_index == -1) ? src2_data.wxyz:tmp.xyzw;
+		}	
+		if(mask_index < 0)
+		{
+			uchar4 tmp;
+			tmp.xyzw = (mask_index == -2) ? mask_data.zwxy:mask_data.yzwx;
+			mask_data.xyzw = (mask_index == -1) ? mask_data.wxyz:tmp.xyzw;
+		}	
+		
         uchar4 data = *((__global uchar4 *)(dst + dst_index));
         short4 tmp = convert_short4_sat(src1_data) + convert_short4_sat(src2_data);
         uchar4 tmp_data = convert_uchar4_sat(tmp);

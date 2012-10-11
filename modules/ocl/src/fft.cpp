@@ -52,43 +52,50 @@ using namespace cv::ocl;
 using namespace std;
 
 #if !defined (HAVE_OPENCL)
-void cv::ocl::dft(const oclMat& src, oclMat& dst, int flags) { throw_nogpu(); }
+void cv::ocl::dft(const oclMat &src, oclMat &dst, int flags)
+{
+    throw_nogpu();
+}
 #else
 
 #include <clAmdFft.h>
 
-namespace cv{ namespace ocl {
-    enum FftType
+namespace cv
+{
+    namespace ocl
     {
-        C2R = 1, // complex to complex
-        R2C = 2, // real to opencl HERMITIAN_INTERLEAVED
-        C2C = 3  // opencl HERMITIAN_INTERLEAVED to real
-    };
-    struct FftPlan
-    {
-        friend void fft_setup();
-        friend void fft_teardown();
-        ~FftPlan();
-    protected:
-        FftPlan(Size _dft_size, int _src_step, int _dst_step, int _flags, FftType _type);
-        const Size dft_size;
-        const int src_step, dst_step;
-        const int flags;
-        const FftType type;
-        clAmdFftPlanHandle plHandle;
-        static vector<FftPlan*> planStore;
-        static bool started;
-        static clAmdFftSetupData * setupData;
-    public:
-        // return a baked plan-> 
-        // if there is one matched plan, return it
-        // if not, bake a new one, put it into the planStore and return it.
-        static clAmdFftPlanHandle getPlan(Size _dft_size, int _src_step, int _dst_step, int _flags, FftType _type);
-    };
-}}
+        enum FftType
+        {
+            C2R = 1, // complex to complex
+            R2C = 2, // real to opencl HERMITIAN_INTERLEAVED
+            C2C = 3  // opencl HERMITIAN_INTERLEAVED to real
+        };
+        struct FftPlan
+        {
+            friend void fft_setup();
+            friend void fft_teardown();
+            ~FftPlan();
+        protected:
+            FftPlan(Size _dft_size, int _src_step, int _dst_step, int _flags, FftType _type);
+            const Size dft_size;
+            const int src_step, dst_step;
+            const int flags;
+            const FftType type;
+            clAmdFftPlanHandle plHandle;
+            static vector<FftPlan *> planStore;
+            static bool started;
+            static clAmdFftSetupData *setupData;
+        public:
+            // return a baked plan->
+            // if there is one matched plan, return it
+            // if not, bake a new one, put it into the planStore and return it.
+            static clAmdFftPlanHandle getPlan(Size _dft_size, int _src_step, int _dst_step, int _flags, FftType _type);
+        };
+    }
+}
 bool cv::ocl::FftPlan::started = false;
-vector<cv::ocl::FftPlan*> cv::ocl::FftPlan::planStore = vector<cv::ocl::FftPlan*>();
-clAmdFftSetupData * cv::ocl::FftPlan::setupData = 0;
+vector<cv::ocl::FftPlan *> cv::ocl::FftPlan::planStore = vector<cv::ocl::FftPlan *>();
+clAmdFftSetupData *cv::ocl::FftPlan::setupData = 0;
 
 void cv::ocl::fft_setup()
 {
@@ -134,9 +141,9 @@ cv::ocl::FftPlan::FftPlan(Size _dft_size, int _src_step, int _dst_step, int _fla
     clAmdFftResultLocation	place;
     clAmdFftLayout			inLayout;
     clAmdFftLayout			outLayout;
-    clAmdFftDim				dim = is_1d_input||is_row_dft ? CLFFT_1D : CLFFT_2D;
+    clAmdFftDim				dim = is_1d_input || is_row_dft ? CLFFT_1D : CLFFT_2D;
 
-    size_t batchSize		 = is_row_dft?dft_size.height : 1;
+    size_t batchSize		 = is_row_dft ? dft_size.height : 1;
     size_t clLengthsIn[ 3 ]  = {1, 1, 1};
     size_t clStridesIn[ 3 ]  = {1, 1, 1};
     size_t clLengthsOut[ 3 ] = {1, 1, 1};
@@ -195,7 +202,7 @@ cv::ocl::FftPlan::~FftPlan()
     {
         if(planStore[i]->plHandle == plHandle)
         {
-            planStore.erase(planStore.begin()+ i);
+            planStore.erase(planStore.begin() + i);
         }
     }
     openCLSafeCall( clAmdFftDestroyPlan( &plHandle ) );
@@ -206,15 +213,15 @@ clAmdFftPlanHandle cv::ocl::FftPlan::getPlan(Size _dft_size, int _src_step, int 
     // go through search
     for(int i = 0; i < planStore.size(); i ++)
     {
-        FftPlan * plan = planStore[i];
+        FftPlan *plan = planStore[i];
         if(
-            plan->dft_size.width == _dft_size.width && 
+            plan->dft_size.width == _dft_size.width &&
             plan->dft_size.height == _dft_size.height &&
             plan->flags == _flags &&
             plan->src_step == _src_step &&
             plan->dst_step == _dst_step &&
             plan->type == _type
-            )
+        )
         {
             return plan->plHandle;
         }
@@ -225,9 +232,9 @@ clAmdFftPlanHandle cv::ocl::FftPlan::getPlan(Size _dft_size, int _src_step, int 
     return newPlan->plHandle;
 }
 
-void cv::ocl::dft(const oclMat& src, oclMat& dst, Size dft_size, int flags) 
+void cv::ocl::dft(const oclMat &src, oclMat &dst, Size dft_size, int flags)
 {
-    if(dft_size == Size(0,0))
+    if(dft_size == Size(0, 0))
     {
         dft_size = src.size();
     }
@@ -258,7 +265,7 @@ void cv::ocl::dft(const oclMat& src, oclMat& dst, Size dft_size, int flags)
         break;
     case R2C:
         CV_Assert(!is_row_dft); // this is not supported yet
-        dst.create(src.rows, src.cols/2 + 1, CV_32FC2);
+        dst.create(src.rows, src.cols / 2 + 1, CV_32FC2);
         break;
     case C2R:
         CV_Assert(dft_size.width / 2 + 1 == src.cols && dft_size.height == src.rows);
@@ -274,23 +281,23 @@ void cv::ocl::dft(const oclMat& src, oclMat& dst, Size dft_size, int flags)
     clAmdFftPlanHandle plHandle = FftPlan::getPlan(dft_size, src.step, dst.step, flags, type);
 
     //get the buffersize
-    size_t buffersize=0;
+    size_t buffersize = 0;
     openCLSafeCall( clAmdFftGetTmpBufSize(plHandle, &buffersize ) );
 
-    //allocate the intermediate buffer	
-    cl_mem clMedBuffer=NULL;
+    //allocate the intermediate buffer
+    cl_mem clMedBuffer = NULL;
     if (buffersize)
     {
         cl_int medstatus;
         clMedBuffer = clCreateBuffer ( src.clCxt->impl->clContext, CL_MEM_READ_WRITE, buffersize, 0, &medstatus);
         openCLSafeCall( medstatus );
     }
-    openCLSafeCall( clAmdFftEnqueueTransform( plHandle, 
-        is_inverse?CLFFT_BACKWARD:CLFFT_FORWARD, 
-        1, 
-        &src.clCxt->impl->clCmdQueue, 
-        0, NULL, NULL, 
-        (cl_mem*)&src.data, (cl_mem*)&dst.data, clMedBuffer ) );
+    openCLSafeCall( clAmdFftEnqueueTransform( plHandle,
+                    is_inverse ? CLFFT_BACKWARD : CLFFT_FORWARD,
+                    1,
+                    &src.clCxt->impl->clCmdQueue,
+                    0, NULL, NULL,
+                    (cl_mem *)&src.data, (cl_mem *)&dst.data, clMedBuffer ) );
     openCLSafeCall( clFinish(src.clCxt->impl->clCmdQueue) );
     if(clMedBuffer)
     {

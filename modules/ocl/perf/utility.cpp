@@ -75,13 +75,13 @@ using namespace cvtest;
 
 int randomInt(int minVal, int maxVal)
 {
-    RNG& rng = TS::ptr()->get_rng();
+    RNG &rng = TS::ptr()->get_rng();
     return rng.uniform(minVal, maxVal);
 }
 
 double randomDouble(double minVal, double maxVal)
 {
-    RNG& rng = TS::ptr()->get_rng();
+    RNG &rng = TS::ptr()->get_rng();
     return rng.uniform(minVal, maxVal);
 }
 
@@ -170,7 +170,7 @@ const vector<DeviceInfo>& devices()
 vector<DeviceInfo> devices(FeatureSet feature)
 {
     const vector<DeviceInfo>& d = devices();
-    
+
     vector<DeviceInfo> devs_filtered;
 
     if (TargetArchs::builtWith(feature))
@@ -207,19 +207,19 @@ vector<MatType> types(int depth_start, int depth_end, int cn_start, int cn_end)
     return v;
 }
 
-const vector<MatType>& all_types()
+const vector<MatType> &all_types()
 {
     static vector<MatType> v = types(CV_8U, CV_64F, 1, 4);
 
     return v;
 }
 
-Mat readImage(const string& fileName, int flags)
+Mat readImage(const string &fileName, int flags)
 {
     return imread(string(cvtest::TS::ptr()->get_data_path()) + fileName, flags);
 }
 
-Mat readImageType(const string& fname, int type)
+Mat readImageType(const string &fname, int type)
 {
     Mat src = readImage(fname, CV_MAT_CN(type) == 1 ? IMREAD_GRAYSCALE : IMREAD_COLOR);
     if (CV_MAT_CN(type) == 4)
@@ -232,17 +232,17 @@ Mat readImageType(const string& fname, int type)
     return src;
 }
 
-double checkNorm(const Mat& m)
+double checkNorm(const Mat &m)
 {
     return norm(m, NORM_INF);
 }
 
-double checkNorm(const Mat& m1, const Mat& m2)
+double checkNorm(const Mat &m1, const Mat &m2)
 {
     return norm(m1, m2, NORM_INF);
 }
 
-double checkSimilarity(const Mat& m1, const Mat& m2)
+double checkSimilarity(const Mat &m1, const Mat &m2)
 {
     Mat diff;
     matchTemplate(m1, m2, diff, CV_TM_CCORR_NORMED);
@@ -256,7 +256,7 @@ void cv::ocl::PrintTo(const DeviceInfo& info, ostream* os)
 }
 */
 
-void PrintTo(const Inverse& inverse, std::ostream* os)
+void PrintTo(const Inverse &inverse, std::ostream *os)
 {
     if (inverse)
         (*os) << "inverse";

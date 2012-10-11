@@ -56,37 +56,37 @@ using namespace std;
 
 PARAM_TEST_CASE(PyrUp, MatType, int)
 {
-	int type;
-	int channels;
-	//std::vector<cv::ocl::Info> oclinfo;
+    int type;
+    int channels;
+    //std::vector<cv::ocl::Info> oclinfo;
 
-	virtual void SetUp()
-	{
-		//int devnums = cv::ocl::getDevice(oclinfo, OPENCV_DEFAULT_OPENCL_DEVICE);
-		//CV_Assert(devnums > 0);
-		type = GET_PARAM(0);
-		channels = GET_PARAM(1);
-	}
+    virtual void SetUp()
+    {
+        //int devnums = cv::ocl::getDevice(oclinfo, OPENCV_DEFAULT_OPENCL_DEVICE);
+        //CV_Assert(devnums > 0);
+        type = GET_PARAM(0);
+        channels = GET_PARAM(1);
+    }
 };
 
-TEST_P(PyrUp,Accuracy)
+TEST_P(PyrUp, Accuracy)
 {
-	for(int j = 0; j < LOOP_TIMES; j++)
+    for(int j = 0; j < LOOP_TIMES; j++)
     {
-		Size size(MWIDTH, MHEIGHT);
-		Mat src = randomMat(size,CV_MAKETYPE(type, channels));	
-		Mat dst_gold;
-		pyrUp(src,dst_gold);
-		ocl::oclMat dst;
-		ocl::oclMat srcMat(src);
-		ocl::pyrUp(srcMat,dst);
-		Mat cpu_dst;
-		dst.download(cpu_dst);
-		char s[100]={0};
+        Size size(MWIDTH, MHEIGHT);
+        Mat src = randomMat(size, CV_MAKETYPE(type, channels));
+        Mat dst_gold;
+        pyrUp(src, dst_gold);
+        ocl::oclMat dst;
+        ocl::oclMat srcMat(src);
+        ocl::pyrUp(srcMat, dst);
+        Mat cpu_dst;
+        dst.download(cpu_dst);
+        char s[100] = {0};
 
-		EXPECT_MAT_NEAR(dst_gold, cpu_dst, (src.depth() == CV_32F ? 1e-4f : 1.0),s);	
-	}
-	
+        EXPECT_MAT_NEAR(dst_gold, cpu_dst, (src.depth() == CV_32F ? 1e-4f : 1.0), s);
+    }
+
 }
 
 

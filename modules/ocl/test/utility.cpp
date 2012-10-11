@@ -207,7 +207,7 @@ vector<MatType> types(int depth_start, int depth_end, int cn_start, int cn_end)
     return v;
 }
 
-const vector<MatType>& all_types()
+const vector<MatType> &all_types()
 {
     static vector<MatType> v = types(CV_8U, CV_64F, 1, 4);
 

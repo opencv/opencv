@@ -112,7 +112,7 @@ using perf::MatType;
 std::vector<MatType> types(int depth_start, int depth_end, int cn_start, int cn_end);
 
 //! return vector with all types (depth: CV_8U-CV_64F, channels: 1-4).
-const std::vector<MatType>& all_types();
+const std::vector<MatType> &all_types();
 
 class Inverse
 {

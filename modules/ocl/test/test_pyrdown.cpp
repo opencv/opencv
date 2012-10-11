@@ -58,13 +58,13 @@ using namespace std;
 
 PARAM_TEST_CASE(PyrDown, MatType, int)
 {
-	int type;
-	int channels;
+    int type;
+    int channels;
 
     virtual void SetUp()
     {
         type = GET_PARAM(0);
-		channels = GET_PARAM(1);
+        channels = GET_PARAM(1);
 
         //int devnums = getDevice(oclinfo);
         //CV_Assert(devnums > 0);
@@ -72,9 +72,9 @@ PARAM_TEST_CASE(PyrDown, MatType, int)
         ////setDevice(oclinfo[0]);
     }
 
-	void Cleanup()
-	{
-	}
+    void Cleanup()
+    {
+    }
 
 };
 
@@ -84,21 +84,21 @@ TEST_P(PyrDown, Mat)
     for(int j = 0; j < LOOP_TIMES; j++)
     {
         cv::Size size(MWIDTH, MHEIGHT);
-		cv::RNG &rng = TS::ptr()->get_rng();
-		cv::Mat src=randomMat(rng, size, CV_MAKETYPE(type, channels), 0, 100, false);
+        cv::RNG &rng = TS::ptr()->get_rng();
+        cv::Mat src = randomMat(rng, size, CV_MAKETYPE(type, channels), 0, 100, false);
 
-		cv::ocl::oclMat gsrc(src), gdst;
-		cv::Mat dst_cpu;
-		cv::pyrDown(src, dst_cpu);
-		cv::ocl::pyrDown(gsrc, gdst);
+        cv::ocl::oclMat gsrc(src), gdst;
+        cv::Mat dst_cpu;
+        cv::pyrDown(src, dst_cpu);
+        cv::ocl::pyrDown(gsrc, gdst);
 
         cv::Mat dst;
         gdst.download(dst);
-		char s[1024]={0};
+        char s[1024] = {0};
 
-		EXPECT_MAT_NEAR(dst, dst_cpu, dst.depth() == CV_32F ? 1e-4f : 1.0f, s);
+        EXPECT_MAT_NEAR(dst, dst_cpu, dst.depth() == CV_32F ? 1e-4f : 1.0f, s);
 
-		Cleanup();
+        Cleanup();
     }
 }
 

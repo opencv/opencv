@@ -81,9 +81,9 @@ namespace
     void RGB2Gray_caller(const oclMat &src, oclMat &dst, int bidx)
     {
         vector<pair<size_t , const void *> > args;
-        int channels = src.channels();
+        int channels = src.oclchannels();
         char build_options[50];
-        //printf("depth:%d,channels:%d,bidx:%d\n",src.depth(),src.channels(),bidx);
+        //printf("depth:%d,channels:%d,bidx:%d\n",src.depth(),src.oclchannels(),bidx);
         sprintf(build_options, "-D DEPTH_%d", src.depth());
         args.push_back( make_pair( sizeof(cl_int) , (void *)&src.cols));
         args.push_back( make_pair( sizeof(cl_int) , (void *)&src.rows));
@@ -99,7 +99,7 @@ namespace
     void cvtColor_caller(const oclMat &src, oclMat &dst, int code, int dcn)
     {
         Size sz = src.size();
-        int scn = src.channels(), depth = src.depth(), bidx;
+        int scn = src.oclchannels(), depth = src.depth(), bidx;
 
         CV_Assert(depth == CV_8U || depth == CV_16U);
 

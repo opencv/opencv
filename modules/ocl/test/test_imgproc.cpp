@@ -125,7 +125,7 @@ COOR do_meanShift(int x0, int y0, uchar *sptr, uchar *dptr, int sstep, cv::Size 
             {
                 int t0, t1, t2;
                 t0 = ptr[0], t1 = ptr[1], t2 = ptr[2];
-                if(tab[t0-c0+255] + tab[t1-c1+255] + tab[t2-c2+255] <= isr2)
+                if(tab[t0 - c0 + 255] + tab[t1 - c1 + 255] + tab[t2 - c2 + 255] <= isr2)
                 {
                     s0 += t0;
                     s1 += t1;
@@ -134,7 +134,7 @@ COOR do_meanShift(int x0, int y0, uchar *sptr, uchar *dptr, int sstep, cv::Size 
                     rowCount++;
                 }
                 t0 = ptr[4], t1 = ptr[5], t2 = ptr[6];
-                if(tab[t0-c0+255] + tab[t1-c1+255] + tab[t2-c2+255] <= isr2)
+                if(tab[t0 - c0 + 255] + tab[t1 - c1 + 255] + tab[t2 - c2 + 255] <= isr2)
                 {
                     s0 += t0;
                     s1 += t1;
@@ -143,7 +143,7 @@ COOR do_meanShift(int x0, int y0, uchar *sptr, uchar *dptr, int sstep, cv::Size 
                     rowCount++;
                 }
                 t0 = ptr[8], t1 = ptr[9], t2 = ptr[10];
-                if(tab[t0-c0+255] + tab[t1-c1+255] + tab[t2-c2+255] <= isr2)
+                if(tab[t0 - c0 + 255] + tab[t1 - c1 + 255] + tab[t2 - c2 + 255] <= isr2)
                 {
                     s0 += t0;
                     s1 += t1;
@@ -152,7 +152,7 @@ COOR do_meanShift(int x0, int y0, uchar *sptr, uchar *dptr, int sstep, cv::Size 
                     rowCount++;
                 }
                 t0 = ptr[12], t1 = ptr[13], t2 = ptr[14];
-                if(tab[t0-c0+255] + tab[t1-c1+255] + tab[t2-c2+255] <= isr2)
+                if(tab[t0 - c0 + 255] + tab[t1 - c1 + 255] + tab[t2 - c2 + 255] <= isr2)
                 {
                     s0 += t0;
                     s1 += t1;
@@ -165,7 +165,7 @@ COOR do_meanShift(int x0, int y0, uchar *sptr, uchar *dptr, int sstep, cv::Size 
             for(; x <= maxx; x++, ptr += 4)
             {
                 int t0 = ptr[0], t1 = ptr[1], t2 = ptr[2];
-                if(tab[t0-c0+255] + tab[t1-c1+255] + tab[t2-c2+255] <= isr2)
+                if(tab[t0 - c0 + 255] + tab[t1 - c1 + 255] + tab[t2 - c2 + 255] <= isr2)
                 {
                     s0 += t0;
                     s1 += t1;
@@ -191,7 +191,7 @@ COOR do_meanShift(int x0, int y0, uchar *sptr, uchar *dptr, int sstep, cv::Size 
         s2 = cvFloor(s2 * icount);
 
         bool stopFlag = (x0 == x1 && y0 == y1) || (abs(x1 - x0) + abs(y1 - y0) +
-                        tab[s0-c0+255] + tab[s1-c1+255] + tab[s2-c2+255] <= eps);
+                        tab[s0 - c0 + 255] + tab[s1 - c1 + 255] + tab[s2 - c2 + 255] <= eps);
 
         //revise the pointer corresponding to the new (y0,x0)
         revx = x1 - x0;
@@ -388,10 +388,10 @@ PARAM_TEST_CASE(ImgprocTestBase, MatType, MatType, MatType, MatType, MatType, bo
     }
 
     void random_roi()
-    {     
+    {
 #ifdef RANDOMROI
         //randomize ROI
-		cv::RNG &rng = TS::ptr()->get_rng();
+        cv::RNG &rng = TS::ptr()->get_rng();
         roicols = rng.uniform(1, mat1.cols);
         roirows = rng.uniform(1, mat1.rows);
         src1x   = rng.uniform(0, mat1.cols - roicols);
@@ -488,10 +488,10 @@ TEST_P(bilateralFilter, Mat)
     int radius = 9;
     int d = 2 * radius + 1;
     double sigmaspace = 20.0;
-    int bordertype[] = {cv::BORDER_CONSTANT, cv::BORDER_REPLICATE,cv::BORDER_REFLECT,cv::BORDER_WRAP,cv::BORDER_REFLECT_101};
-    const char* borderstr[]={"BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT","BORDER_WRAP","BORDER_REFLECT_101"};
+    int bordertype[] = {cv::BORDER_CONSTANT, cv::BORDER_REPLICATE, cv::BORDER_REFLECT, cv::BORDER_WRAP, cv::BORDER_REFLECT_101};
+    const char *borderstr[] = {"BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", "BORDER_WRAP", "BORDER_REFLECT_101"};
 
-    if (mat1.type() != CV_8UC1 || mat1.type() != dst.type())
+    if (mat1.depth() != CV_8U || mat1.type() != dst.type())
     {
         cout << "Unsupported type" << endl;
         EXPECT_DOUBLE_EQ(0.0, 0.0);
@@ -502,47 +502,41 @@ TEST_P(bilateralFilter, Mat)
             for(int j = 0; j < LOOP_TIMES; j++)
             {
                 random_roi();
-				#ifdef RANDOMROI
-				if(((bordertype[i]!=cv::BORDER_CONSTANT) && (bordertype[i]!=cv::BORDER_REPLICATE))&&(mat1_roi.cols<=radius) || (mat1_roi.cols<=radius) || (mat1_roi.rows <= radius) || (mat1_roi.rows <= radius))
-				{
-					continue;
-				}
-				if((dstx>=radius) && (dsty >= radius) && (dstx+cldst_roi.cols+radius <=cldst_roi.wholecols) && (dsty+cldst_roi.rows+radius <= cldst_roi.wholerows))
-				{
-					dst_roi.adjustROI(radius, radius, radius, radius);
-					cldst_roi.adjustROI(radius, radius, radius, radius);
-				}
-				else
-				{
-					continue;
-				}
-				#endif
-                cv::bilateralFilter(mat1_roi, dst_roi, d, sigmacolor, sigmaspace, bordertype[i]|cv::BORDER_ISOLATED);
-                cv::ocl::bilateralFilter(clmat1_roi, cldst_roi, d, sigmacolor, sigmaspace, bordertype[i]|cv::BORDER_ISOLATED);
+                if(((bordertype[i] != cv::BORDER_CONSTANT) && (bordertype[i] != cv::BORDER_REPLICATE)) && (mat1_roi.cols <= radius) || (mat1_roi.cols <= radius) || (mat1_roi.rows <= radius) || (mat1_roi.rows <= radius))
+                {
+                    continue;
+                }
+                //if((dstx>=radius) && (dsty >= radius) && (dstx+cldst_roi.cols+radius <=cldst_roi.wholecols) && (dsty+cldst_roi.rows+radius <= cldst_roi.wholerows))
+                //{
+                //	dst_roi.adjustROI(radius, radius, radius, radius);
+                //	cldst_roi.adjustROI(radius, radius, radius, radius);
+                //}
+                //else
+                //{
+                //	continue;
+                //}
+
+                cv::bilateralFilter(mat1_roi, dst_roi, d, sigmacolor, sigmaspace, bordertype[i] | cv::BORDER_ISOLATED);
+                cv::ocl::bilateralFilter(clmat1_roi, cldst_roi, d, sigmacolor, sigmaspace, bordertype[i] | cv::BORDER_ISOLATED);
 
                 cv::Mat cpu_cldst;
-				#ifndef RANDOMROI
-                cldst_roi.download(cpu_cldst);
-				#else
-				cldst.download(cpu_cldst);
-				#endif
+                cldst.download(cpu_cldst);
+
 
                 char sss[1024];
                 sprintf(sss, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,radius=%d,boredertype=%s", roicols, roirows, src1x, src1y, dstx, dsty, radius, borderstr[i]);
+                //for(int i=0;i<dst.rows;i++)
+                //{
+                //	for(int j=0;j<dst.cols*dst.channels();j++)
+                //	{
+                //		if(dst.at<uchar>(i,j)!=cpu_cldst.at<uchar>(i,j))
+                //		cout<< i <<" "<< j <<" "<< (int)dst.at<uchar>(i,j)<<" "<< (int)cpu_cldst.at<uchar>(i,j)<<"  ";
+                //	}
+                //	cout<<endl;
+                //}
 
-				#ifndef RANDOMROI
-                EXPECT_MAT_NEAR(dst_roi, cpu_cldst, 0.0, sss);
-				#else
-				//for(int i=0;i<dst_roi.rows;i++)
-				//{
-				//	for(int j=0;j<dst_roi.cols;j++)
-				//	{
-				//		cout<< (int)dst_roi.at<uchar>(i,j)<<" "<< (int)cpu_cldst.at<uchar>(i,j)<<"  ";
-				//	}
-				//	cout<<endl;
-				//}
-				EXPECT_MAT_NEAR(dst, cpu_cldst, 0.0, sss);
-				#endif
+                EXPECT_MAT_NEAR(dst, cpu_cldst, 1.0, sss);
+
             }
     }
 }
@@ -555,13 +549,13 @@ struct CopyMakeBorder : ImgprocTestBase {};
 
 TEST_P(CopyMakeBorder, Mat)
 {
-    int bordertype[] = {cv::BORDER_CONSTANT, cv::BORDER_REPLICATE,cv::BORDER_REFLECT,cv::BORDER_WRAP,cv::BORDER_REFLECT_101};
-    const char* borderstr[]={"BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT","BORDER_WRAP","BORDER_REFLECT_101"};
-	cv::RNG &rng = TS::ptr()->get_rng();
-	int top = rng.uniform(0, 10);
-	int bottom = rng.uniform(0, 10);
-	int left = rng.uniform(0, 10);
-	int right = rng.uniform(0, 10);
+    int bordertype[] = {cv::BORDER_CONSTANT, cv::BORDER_REPLICATE, cv::BORDER_REFLECT, cv::BORDER_WRAP, cv::BORDER_REFLECT_101};
+    const char *borderstr[] = {"BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", "BORDER_WRAP", "BORDER_REFLECT_101"};
+    cv::RNG &rng = TS::ptr()->get_rng();
+    int top = rng.uniform(0, 10);
+    int bottom = rng.uniform(0, 10);
+    int left = rng.uniform(0, 10);
+    int right = rng.uniform(0, 10);
     if (mat1.type() != dst.type())
     {
         cout << "Unsupported type" << endl;
@@ -573,45 +567,45 @@ TEST_P(CopyMakeBorder, Mat)
             for(int j = 0; j < LOOP_TIMES; j++)
             {
                 random_roi();
-				#ifdef RANDOMROI
-				if(((bordertype[i]!=cv::BORDER_CONSTANT) && (bordertype[i]!=cv::BORDER_REPLICATE))&&(mat1_roi.cols<=left) || (mat1_roi.cols<=right) || (mat1_roi.rows <= top) || (mat1_roi.rows <= bottom))
-				{
-					continue;
-				}
-				if((dstx>=left) && (dsty >= top) && (dstx+cldst_roi.cols+right <=cldst_roi.wholecols) && (dsty+cldst_roi.rows+bottom <= cldst_roi.wholerows))
-				{
-					dst_roi.adjustROI(top, bottom, left, right);
-					cldst_roi.adjustROI(top, bottom, left, right);
-				}
-				else
-				{
-					continue;
-				}
-				#endif
-                cv::copyMakeBorder(mat1_roi, dst_roi, top, bottom, left, right, bordertype[i]| cv::BORDER_ISOLATED, cv::Scalar(1.0));
-                cv::ocl::copyMakeBorder(clmat1_roi, cldst_roi, top, bottom, left, right,  bordertype[i]| cv::BORDER_ISOLATED, cv::Scalar(1.0));
+#ifdef RANDOMROI
+                if(((bordertype[i] != cv::BORDER_CONSTANT) && (bordertype[i] != cv::BORDER_REPLICATE)) && (mat1_roi.cols <= left) || (mat1_roi.cols <= right) || (mat1_roi.rows <= top) || (mat1_roi.rows <= bottom))
+                {
+                    continue;
+                }
+                if((dstx >= left) && (dsty >= top) && (dstx + cldst_roi.cols + right <= cldst_roi.wholecols) && (dsty + cldst_roi.rows + bottom <= cldst_roi.wholerows))
+                {
+                    dst_roi.adjustROI(top, bottom, left, right);
+                    cldst_roi.adjustROI(top, bottom, left, right);
+                }
+                else
+                {
+                    continue;
+                }
+#endif
+                cv::copyMakeBorder(mat1_roi, dst_roi, top, bottom, left, right, bordertype[i] | cv::BORDER_ISOLATED, cv::Scalar(1.0));
+                cv::ocl::copyMakeBorder(clmat1_roi, cldst_roi, top, bottom, left, right,  bordertype[i] | cv::BORDER_ISOLATED, cv::Scalar(1.0));
 
                 cv::Mat cpu_cldst;
-				#ifndef RANDOMROI
+#ifndef RANDOMROI
                 cldst_roi.download(cpu_cldst);
-				#else
-				cldst.download(cpu_cldst);
-				#endif
+#else
+                cldst.download(cpu_cldst);
+#endif
                 char sss[1024];
-                sprintf(sss, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,dst1x=%d,dst1y=%d,top=%d,bottom=%d,left=%d,right=%d, bordertype=%s", roicols, roirows, src1x, src1y, dstx, dsty, dst1x, dst1y, top, bottom, left, right,borderstr[i]);
-				#ifndef RANDOMROI
+                sprintf(sss, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,dst1x=%d,dst1y=%d,top=%d,bottom=%d,left=%d,right=%d, bordertype=%s", roicols, roirows, src1x, src1y, dstx, dsty, dst1x, dst1y, top, bottom, left, right, borderstr[i]);
+#ifndef RANDOMROI
                 EXPECT_MAT_NEAR(dst_roi, cpu_cldst, 0.0, sss);
-				#else
-				//for(int i=0;i<dst.rows;i++)
-				//{
-				//for(int j=0;j<dst.cols;j++)
-				//{
-				//	cout<< (int)dst.at<uchar>(i,j)<<" ";
-				//}
-				//cout<<endl;
-				//}
-				EXPECT_MAT_NEAR(dst, cpu_cldst, 0.0, sss);
-				#endif
+#else
+                //for(int i=0;i<dst.rows;i++)
+                //{
+                //for(int j=0;j<dst.cols;j++)
+                //{
+                //	cout<< (int)dst.at<uchar>(i,j)<<" ";
+                //}
+                //cout<<endl;
+                //}
+                EXPECT_MAT_NEAR(dst, cpu_cldst, 0.0, sss);
+#endif
             }
     }
 }
@@ -754,10 +748,10 @@ PARAM_TEST_CASE(WarpTestBase, MatType, int)
     }
 
     void random_roi()
-    {       
+    {
 #ifdef RANDOMROI
         //randomize ROI
-		cv::RNG &rng = TS::ptr()->get_rng();
+        cv::RNG &rng = TS::ptr()->get_rng();
         src_roicols = rng.uniform(1, mat1.cols);
         src_roirows = rng.uniform(1, mat1.rows);
         dst_roicols = rng.uniform(1, dst.cols);
@@ -872,7 +866,7 @@ PARAM_TEST_CASE(Remap, MatType, MatType, MatType, int, int)
     cv::Mat map2;
 
     //std::vector<cv::ocl::Info> oclinfo;
-    
+
     int src_roicols;
     int src_roirows;
     int dst_roicols;
@@ -915,7 +909,7 @@ PARAM_TEST_CASE(Remap, MatType, MatType, MatType, int, int)
         //int devnums = getDevice(oclinfo, OPENCV_DEFAULT_OPENCL_DEVICE);
         //CV_Assert(devnums > 0);
 
-        cv::RNG& rng = TS::ptr()->get_rng();
+        cv::RNG &rng = TS::ptr()->get_rng();
         cv::Size srcSize = cv::Size(MWIDTH, MHEIGHT);
         cv::Size dstSize = cv::Size(MWIDTH, MHEIGHT);
         cv::Size map1Size = cv::Size(MWIDTH, MHEIGHT);
@@ -937,31 +931,31 @@ PARAM_TEST_CASE(Remap, MatType, MatType, MatType, int, int)
 
         else
         {
-            cout<<"The wrong input type"<<endl;
+            cout << "The wrong input type" << endl;
             return;
         }
 
         dst = randomMat(rng, map1Size, srcType, min, max, false);
         switch (src.channels())
         {
-            case 1:
-                val = cv::Scalar(rng.uniform(0.0, 10.0), 0, 0, 0);
-                break;
-            case 2:
-                val = cv::Scalar(rng.uniform(0.0, 10.0), rng.uniform(0.0, 10.0), 0, 0);
-                break;
-            case 3:
-                val = cv::Scalar(rng.uniform(0.0, 10.0), rng.uniform(0.0, 10.0), rng.uniform(0.0, 10.0), 0);
-                break;
-            case 4:
-                val = cv::Scalar(rng.uniform(0.0, 10.0), rng.uniform(0.0, 10.0), rng.uniform(0.0, 10.0), rng.uniform(0.0, 10.0));
-                break;
+        case 1:
+            val = cv::Scalar(rng.uniform(0.0, 10.0), 0, 0, 0);
+            break;
+        case 2:
+            val = cv::Scalar(rng.uniform(0.0, 10.0), rng.uniform(0.0, 10.0), 0, 0);
+            break;
+        case 3:
+            val = cv::Scalar(rng.uniform(0.0, 10.0), rng.uniform(0.0, 10.0), rng.uniform(0.0, 10.0), 0);
+            break;
+        case 4:
+            val = cv::Scalar(rng.uniform(0.0, 10.0), rng.uniform(0.0, 10.0), rng.uniform(0.0, 10.0), rng.uniform(0.0, 10.0));
+            break;
         }
 
     }
     void random_roi()
     {
-        cv::RNG& rng = TS::ptr()->get_rng();
+        cv::RNG &rng = TS::ptr()->get_rng();
 
         dst_roicols = rng.uniform(1, dst.cols);
         dst_roirows = rng.uniform(1, dst.rows);
@@ -969,7 +963,7 @@ PARAM_TEST_CASE(Remap, MatType, MatType, MatType, int, int)
         src_roicols = rng.uniform(1, src.cols);
         src_roirows = rng.uniform(1, src.rows);
 
-         
+
         srcx = rng.uniform(0, src.cols - src_roicols);
         srcy = rng.uniform(0, src.rows - src_roirows);
         dstx = rng.uniform(0, dst.cols - dst_roicols);
@@ -985,19 +979,19 @@ PARAM_TEST_CASE(Remap, MatType, MatType, MatType, int, int)
 
         if((map1Type == CV_16SC2 && map2Type == nulltype) || (map1Type == CV_32FC2 && map2Type == nulltype))
         {
-            map1_roi = map1(Rect(map1x,map1y,map1_roicols,map1_roirows));
+            map1_roi = map1(Rect(map1x, map1y, map1_roicols, map1_roirows));
             gmap1_roi = map1_roi;
         }
 
         else if (map1Type == CV_32FC1 && map2Type == CV_32FC1)
         {
-            map1_roi = map1(Rect(map1x,map1y,map1_roicols,map1_roirows));
+            map1_roi = map1(Rect(map1x, map1y, map1_roicols, map1_roirows));
             gmap1_roi = map1_roi;
-            map2_roi = map2(Rect(map2x,map2y,map2_roicols,map2_roirows));
+            map2_roi = map2(Rect(map2x, map2y, map2_roicols, map2_roirows));
             gmap2_roi = map2_roi;
         }
-        src_roi = src(Rect(srcx,srcy,src_roicols,src_roirows));
-        dst_roi = dst(Rect(dstx, dsty, dst_roicols, dst_roirows)); 
+        src_roi = src(Rect(srcx, srcy, src_roicols, src_roirows));
+        dst_roi = dst(Rect(dstx, dsty, dst_roicols, dst_roirows));
         gsrc_roi = src_roi;
         gdst = dst;
         gdst_roi = gdst(Rect(dstx, dsty, dst_roicols, dst_roirows));
@@ -1006,15 +1000,15 @@ PARAM_TEST_CASE(Remap, MatType, MatType, MatType, int, int)
 
 TEST_P(Remap, Mat)
 {
-    if((interpolation == 1 && map1Type == CV_16SC2) ||(map1Type == CV_32FC1 && map2Type == nulltype) || (map1Type == CV_16SC2 && map2Type == CV_32FC1) || (map1Type == CV_32FC2 && map2Type == CV_32FC1))
+    if((interpolation == 1 && map1Type == CV_16SC2) || (map1Type == CV_32FC1 && map2Type == nulltype) || (map1Type == CV_16SC2 && map2Type == CV_32FC1) || (map1Type == CV_32FC2 && map2Type == CV_32FC1))
     {
         cout << "Don't support the dataType" << endl;
-        return;                
+        return;
     }
-    int bordertype[] = {cv::BORDER_CONSTANT,cv::BORDER_REPLICATE/*,BORDER_REFLECT,BORDER_WRAP,BORDER_REFLECT_101*/};
-    const char* borderstr[]={"BORDER_CONSTANT", "BORDER_REPLICATE"/*, "BORDER_REFLECT","BORDER_WRAP","BORDER_REFLECT_101"*/};
+    int bordertype[] = {cv::BORDER_CONSTANT, cv::BORDER_REPLICATE/*,BORDER_REFLECT,BORDER_WRAP,BORDER_REFLECT_101*/};
+    const char *borderstr[] = {"BORDER_CONSTANT", "BORDER_REPLICATE"/*, "BORDER_REFLECT","BORDER_WRAP","BORDER_REFLECT_101"*/};
     // for(int i = 0; i < sizeof(bordertype)/sizeof(int); i++)
-    for(int j=0; j<100; j++)
+    for(int j = 0; j < 100; j++)
     {
         random_roi();
         cv::remap(src_roi, dst_roi, map1_roi, map2_roi, interpolation, bordertype[0], val);
@@ -1025,11 +1019,11 @@ TEST_P(Remap, Mat)
         char sss[1024];
         sprintf(sss, "src_roicols=%d,src_roirows=%d,dst_roicols=%d,dst_roirows=%d,src1x =%d,src1y=%d,dstx=%d,dsty=%d", src_roicols, src_roirows, dst_roicols, dst_roirows, srcx, srcy, dstx, dsty);
 
-   
+
         if(interpolation == 0)
             EXPECT_MAT_NEAR(dst, cpu_dst, 1.0, sss);
         EXPECT_MAT_NEAR(dst, cpu_dst, 2.0, sss);
- 
+
     }
 }
 
@@ -1105,14 +1099,14 @@ PARAM_TEST_CASE(Resize, MatType, cv::Size, double, double, int)
     }
 
     void random_roi()
-    {        
+    {
 #ifdef RANDOMROI
         //randomize ROI
-		cv::RNG &rng = TS::ptr()->get_rng();
+        cv::RNG &rng = TS::ptr()->get_rng();
         src_roicols = rng.uniform(1, mat1.cols);
         src_roirows = rng.uniform(1, mat1.rows);
-        dst_roicols = (int)(src_roicols*fx);
-        dst_roirows = (int)(src_roirows*fy);
+        dst_roicols = (int)(src_roicols * fx);
+        dst_roirows = (int)(src_roirows * fy);
         src1x   = rng.uniform(0, mat1.cols - src_roicols);
         src1y   = rng.uniform(0, mat1.rows - src_roirows);
         dstx    = rng.uniform(0, dst.cols  - dst_roicols);
@@ -1151,7 +1145,7 @@ TEST_P(Resize, Mat)
 
         // cv::resize(mat1_roi, dst_roi, dsize, fx, fy, interpolation);
         // cv::ocl::resize(gmat1, gdst, dsize, fx, fy, interpolation);
-        if(dst_roicols<1||dst_roirows<1) continue;
+        if(dst_roicols < 1 || dst_roirows < 1) continue;
         cv::resize(mat1_roi, dst_roi, dsize, fx, fy, interpolation);
         cv::ocl::resize(gmat1, gdst, dsize, fx, fy, interpolation);
 
@@ -1215,10 +1209,10 @@ PARAM_TEST_CASE(Threshold, MatType, ThreshOp)
     }
 
     void random_roi()
-    {       
+    {
 #ifdef RANDOMROI
         //randomize ROI
-		cv::RNG &rng = TS::ptr()->get_rng();
+        cv::RNG &rng = TS::ptr()->get_rng();
         roicols = rng.uniform(1, mat1.cols);
         roirows = rng.uniform(1, mat1.rows);
         src1x   = rng.uniform(0, mat1.cols - roicols);
@@ -1411,15 +1405,15 @@ TEST_P(meanShiftProc, Mat)
 
 ///////////////////////////////////////////////////////////////////////////////////////
 //hist
-void calcHistGold(const cv::Mat& src, cv::Mat& hist)
+void calcHistGold(const cv::Mat &src, cv::Mat &hist)
 {
     hist.create(1, 256, CV_32SC1);
     hist.setTo(cv::Scalar::all(0));
 
-    int* hist_row = hist.ptr<int>();
+    int *hist_row = hist.ptr<int>();
     for (int y = 0; y < src.rows; ++y)
     {
-        const uchar* src_row = src.ptr(y);
+        const uchar *src_row = src.ptr(y);
 
         for (int x = 0; x < src.cols; ++x)
             ++hist_row[src_row[x]];
@@ -1444,19 +1438,19 @@ PARAM_TEST_CASE(histTestBase, MatType, MatType)
     cv::ocl::oclMat gdst_hist;
     //ocl mat with roi
     cv::ocl::oclMat gsrc_roi;
-//    std::vector<cv::ocl::Info> oclinfo;
+    //    std::vector<cv::ocl::Info> oclinfo;
 
     virtual void SetUp()
     {
         type_src   = GET_PARAM(0);
-        
+
         cv::RNG &rng = TS::ptr()->get_rng();
         cv::Size size = cv::Size(MWIDTH, MHEIGHT);
 
         src = randomMat(rng, size, type_src, 0, 256, false);
 
-//        int devnums = getDevice(oclinfo);
-//        CV_Assert(devnums > 0);
+        //        int devnums = getDevice(oclinfo);
+        //        CV_Assert(devnums > 0);
         //if you want to use undefault device, set it here
         //setDevice(oclinfo[0]);
     }
@@ -1596,45 +1590,45 @@ void conv2( cv::Mat x, cv::Mat y, cv::Mat z)
     int N2 = y.rows;
     int M2 = y.cols;
 
-    int i,j;
-    int m,n;
-    
+    int i, j;
+    int m, n;
+
 
     float *kerneldata = (float *)(x.data);
     float *srcdata = (float *)(y.data);
     float *dstdata = (float *)(z.data);
 
-    for(i=0;i<N2;i++)
-        for(j=0;j<M2;j++)
+    for(i = 0; i < N2; i++)
+        for(j = 0; j < M2; j++)
         {
-            float temp =0;
-            for(m=0;m<N1;m++)
-                for(n=0;n<M1;n++)
+            float temp = 0;
+            for(m = 0; m < N1; m++)
+                for(n = 0; n < M1; n++)
                 {
                     int r, c;
-                    r = min(max((i-N1/2+m), 0), N2-1);
-                    c = min(max((j-M1/2+n), 0), M2-1);
-                        temp += kerneldata[m*(x.step>>2)+n]*srcdata[r*(y.step>>2)+c];
+                    r = min(max((i - N1 / 2 + m), 0), N2 - 1);
+                    c = min(max((j - M1 / 2 + n), 0), M2 - 1);
+                    temp += kerneldata[m * (x.step >> 2) + n] * srcdata[r * (y.step >> 2) + c];
                 }
-            dstdata[i*(z.step >> 2)+j]=temp;
+            dstdata[i * (z.step >> 2) + j] = temp;
         }
 }
 TEST_P(Convolve, Mat)
 {
-    if(mat1.type()!=CV_32FC1)
+    if(mat1.type() != CV_32FC1)
     {
-        cout<<"\tUnsupported type\t\n";
+        cout << "\tUnsupported type\t\n";
     }
-    for(int j=0;j<LOOP_TIMES;j++)
+    for(int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
         cv::ocl::oclMat temp1;
-        cv::Mat kernel_cpu= mat2(Rect(0,0,7,7));
+        cv::Mat kernel_cpu = mat2(Rect(0, 0, 7, 7));
         temp1 = kernel_cpu;
 
-        conv2(kernel_cpu,mat1_roi,dst_roi);
-        cv::ocl::convolve(gmat1,temp1,gdst);
-       
+        conv2(kernel_cpu, mat1_roi, dst_roi);
+        cv::ocl::convolve(gmat1, temp1, gdst);
+
         cv::Mat cpu_dst;
         gdst_whole.download(cpu_dst);
 
@@ -1661,31 +1655,38 @@ INSTANTIATE_TEST_CASE_P(ImgprocTestBase, equalizeHist, Combine(
 //	NULL_TYPE,
 //	NULL_TYPE,
 //	Values(false))); // Values(false) is the reserved parameter
+INSTANTIATE_TEST_CASE_P(ImgprocTestBase, bilateralFilter, Combine(
+                            Values(CV_8UC1, CV_8UC3),
+                            NULL_TYPE,
+                            Values(CV_8UC1, CV_8UC3),
+                            NULL_TYPE,
+                            NULL_TYPE,
+                            Values(false))); // Values(false) is the reserved parameter
 
 
 INSTANTIATE_TEST_CASE_P(ImgprocTestBase, CopyMakeBorder, Combine(
-	Values(CV_8UC1, CV_8UC4,CV_32SC1, CV_32SC4,CV_32FC1, CV_32FC4),
-	NULL_TYPE,
-	Values(CV_8UC1,CV_8UC4,CV_32SC1, CV_32SC4,CV_32FC1, CV_32FC4),
-	NULL_TYPE,
-	NULL_TYPE,
-	Values(false))); // Values(false) is the reserved parameter
+                            Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32SC1, CV_32SC3, CV_32SC4, CV_32FC1, CV_32FC3, CV_32FC4),
+                            NULL_TYPE,
+                            Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32SC1, CV_32SC3, CV_32SC4, CV_32FC1, CV_32FC3, CV_32FC4),
+                            NULL_TYPE,
+                            NULL_TYPE,
+                            Values(false))); // Values(false) is the reserved parameter
 
 INSTANTIATE_TEST_CASE_P(ImgprocTestBase, cornerMinEigenVal, Combine(
-	Values(CV_8UC1,CV_32FC1),
-	NULL_TYPE,
-	ONE_TYPE(CV_32FC1),
-	NULL_TYPE,
-	NULL_TYPE,
-	Values(false))); // Values(false) is the reserved parameter
+                            Values(CV_8UC1, CV_32FC1),
+                            NULL_TYPE,
+                            ONE_TYPE(CV_32FC1),
+                            NULL_TYPE,
+                            NULL_TYPE,
+                            Values(false))); // Values(false) is the reserved parameter
 
 INSTANTIATE_TEST_CASE_P(ImgprocTestBase, cornerHarris, Combine(
-	Values(CV_8UC1,CV_32FC1),
-	NULL_TYPE,
-	ONE_TYPE(CV_32FC1),
-	NULL_TYPE,
-	NULL_TYPE,
-	Values(false))); // Values(false) is the reserved parameter
+                            Values(CV_8UC1, CV_32FC1),
+                            NULL_TYPE,
+                            ONE_TYPE(CV_32FC1),
+                            NULL_TYPE,
+                            NULL_TYPE,
+                            Values(false))); // Values(false) is the reserved parameter
 
 
 INSTANTIATE_TEST_CASE_P(ImgprocTestBase, integral, Combine(
@@ -1697,21 +1698,21 @@ INSTANTIATE_TEST_CASE_P(ImgprocTestBase, integral, Combine(
                             Values(false))); // Values(false) is the reserved parameter
 
 INSTANTIATE_TEST_CASE_P(Imgproc, WarpAffine, Combine(
-                            Values(CV_8UC1, CV_8UC3,CV_8UC4, CV_32FC1, CV_32FC4),
+                            Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4),
                             Values((MatType)cv::INTER_NEAREST, (MatType)cv::INTER_LINEAR,
-                                    (MatType)cv::INTER_CUBIC, (MatType)(cv::INTER_NEAREST | cv::WARP_INVERSE_MAP),
-                                    (MatType)(cv::INTER_LINEAR | cv::WARP_INVERSE_MAP), (MatType)(cv::INTER_CUBIC | cv::WARP_INVERSE_MAP))));
+                                   (MatType)cv::INTER_CUBIC, (MatType)(cv::INTER_NEAREST | cv::WARP_INVERSE_MAP),
+                                   (MatType)(cv::INTER_LINEAR | cv::WARP_INVERSE_MAP), (MatType)(cv::INTER_CUBIC | cv::WARP_INVERSE_MAP))));
 
 
 INSTANTIATE_TEST_CASE_P(Imgproc, WarpPerspective, Combine
-                        (Values(CV_8UC1, CV_8UC3,CV_8UC4, CV_32FC1, CV_32FC4),
+                        (Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4),
                          Values((MatType)cv::INTER_NEAREST, (MatType)cv::INTER_LINEAR,
                                 (MatType)cv::INTER_CUBIC, (MatType)(cv::INTER_NEAREST | cv::WARP_INVERSE_MAP),
                                 (MatType)(cv::INTER_LINEAR | cv::WARP_INVERSE_MAP), (MatType)(cv::INTER_CUBIC | cv::WARP_INVERSE_MAP))));
 
 
 INSTANTIATE_TEST_CASE_P(Imgproc, Resize, Combine(
-                            Values(CV_8UC1, CV_8UC3,CV_8UC4, CV_32FC1, CV_32FC4),  Values(cv::Size()),
+                            Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4),  Values(cv::Size()),
                             Values(0.5, 1.5, 2), Values(0.5, 1.5, 2), Values((MatType)cv::INTER_NEAREST, (MatType)cv::INTER_LINEAR)));
 
 
@@ -1728,27 +1729,27 @@ INSTANTIATE_TEST_CASE_P(Imgproc, meanShiftFiltering, Combine(
                             Values(6),
                             Values(cv::TermCriteria(cv::TermCriteria::COUNT + cv::TermCriteria::EPS, 5, 1))
                         ));
-                        
+
 
 INSTANTIATE_TEST_CASE_P(Imgproc, meanShiftProc, Combine(
-       ONE_TYPE(CV_8UC4),
-       ONE_TYPE(CV_16SC2),
-       Values(5),
-       Values(6),
-       Values(cv::TermCriteria(cv::TermCriteria::COUNT+cv::TermCriteria::EPS, 5, 1))
-));
+                            ONE_TYPE(CV_8UC4),
+                            ONE_TYPE(CV_16SC2),
+                            Values(5),
+                            Values(6),
+                            Values(cv::TermCriteria(cv::TermCriteria::COUNT + cv::TermCriteria::EPS, 5, 1))
+                        ));
 
 INSTANTIATE_TEST_CASE_P(Imgproc, Remap, Combine(
-            Values(CV_8UC1, CV_8UC3,CV_8UC4, CV_32FC1, CV_32FC4),
-            Values(CV_32FC1, CV_16SC2, CV_32FC2),Values(-1,CV_32FC1),
-            Values((int)cv::INTER_NEAREST, (int)cv::INTER_LINEAR), 
-            Values((int)cv::BORDER_CONSTANT)));
+                            Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC4),
+                            Values(CV_32FC1, CV_16SC2, CV_32FC2), Values(-1, CV_32FC1),
+                            Values((int)cv::INTER_NEAREST, (int)cv::INTER_LINEAR),
+                            Values((int)cv::BORDER_CONSTANT)));
 
 
 INSTANTIATE_TEST_CASE_P(histTestBase, calcHist, Combine(
-                               ONE_TYPE(CV_8UC1),
-                               ONE_TYPE(CV_32SC1) //no use
-));
+                            ONE_TYPE(CV_8UC1),
+                            ONE_TYPE(CV_32SC1) //no use
+                        ));
 
 INSTANTIATE_TEST_CASE_P(ConvolveTestBase, Convolve, Combine(
                             Values(CV_32FC1, CV_32FC1),

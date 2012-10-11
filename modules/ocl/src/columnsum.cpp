@@ -53,41 +53,44 @@ using namespace std;
 
 #if !defined(HAVE_OPENCL)
 
-void cv::ocl::columnSum(const oclMat& src,oclMat& dst){ throw_nogpu(); }
+void cv::ocl::columnSum(const oclMat &src, oclMat &dst)
+{
+    throw_nogpu();
+}
 
 #else /*!HAVE_OPENCL */
 
-namespace cv 
-{ 
-	namespace ocl
-	{
-		extern const char* imgproc_columnsum;
-	}
-}
-
-void cv::ocl::columnSum(const oclMat& src,oclMat& dst)
+namespace cv
 {
-	CV_Assert(src.type() == CV_32FC1);
+    namespace ocl
+    {
+        extern const char *imgproc_columnsum;
+    }
+}
 
-	dst.create(src.size(), src.type());
+void cv::ocl::columnSum(const oclMat &src, oclMat &dst)
+{
+    CV_Assert(src.type() == CV_32FC1);
 
-	Context *clCxt = src.clCxt;                                        
-		       
-	const std::string kernelName = "columnSum";
-		
-	std::vector< pair<size_t, const void *> > args;
+    dst.create(src.size(), src.type());
 
-	args.push_back( make_pair( sizeof(cl_mem), (void *)&src.data));		
-	args.push_back( make_pair( sizeof(cl_mem), (void *)&dst.data));			
-	args.push_back( make_pair( sizeof(cl_int), (void *)&src.cols));		
-	args.push_back( make_pair( sizeof(cl_int), (void *)&src.rows));			
-	args.push_back( make_pair( sizeof(cl_int), (void *)&src.step));		
-	args.push_back( make_pair( sizeof(cl_int), (void *)&dst.step));		
+    Context *clCxt = src.clCxt;
 
-	size_t globalThreads[3] = {dst.cols, 1, 1};					
-	size_t localThreads[3]  = {16, 16, 1};		
+    const std::string kernelName = "columnSum";
 
-	openCLExecuteKernel(clCxt, &imgproc_columnsum, kernelName, globalThreads, localThreads, args, src.channels(), src.depth());
+    std::vector< pair<size_t, const void *> > args;
+
+    args.push_back( make_pair( sizeof(cl_mem), (void *)&src.data));
+    args.push_back( make_pair( sizeof(cl_mem), (void *)&dst.data));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&src.cols));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&src.rows));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&src.step));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&dst.step));
+
+    size_t globalThreads[3] = {dst.cols, 1, 1};
+    size_t localThreads[3]  = {16, 16, 1};
+
+    openCLExecuteKernel(clCxt, &imgproc_columnsum, kernelName, globalThreads, localThreads, args, src.channels(), src.depth());
 
 }
-#endif 
+#endif

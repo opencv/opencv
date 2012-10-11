@@ -52,10 +52,22 @@ using namespace cv::ocl;
 using namespace std;
 
 #if !defined (HAVE_OPENCL)
-void cv::ocl::Canny(const oclMat& image, oclMat& edges, double low_thresh, double high_thresh, int apperture_size = 3, bool L2gradient = false) { throw_nogpu(); }
-void cv::ocl::Canny(const oclMat& image, CannyBuf& buf, oclMat& edges, double low_thresh, double high_thresh, int apperture_size = 3, bool L2gradient = false){ throw_nogpu(); }
-void cv::ocl::Canny(const oclMat& dx, const oclMat& dy, oclMat& edges, double low_thresh, double high_thresh, bool L2gradient = false){ throw_nogpu(); }
-void cv::ocl::Canny(const oclMat& dx, const oclMat& dy, CannyBuf& buf, oclMat& edges, double low_thresh, double high_thresh, bool L2gradient = false){ throw_nogpu(); }
+void cv::ocl::Canny(const oclMat &image, oclMat &edges, double low_thresh, double high_thresh, int apperture_size = 3, bool L2gradient = false)
+{
+    throw_nogpu();
+}
+void cv::ocl::Canny(const oclMat &image, CannyBuf &buf, oclMat &edges, double low_thresh, double high_thresh, int apperture_size = 3, bool L2gradient = false)
+{
+    throw_nogpu();
+}
+void cv::ocl::Canny(const oclMat &dx, const oclMat &dy, oclMat &edges, double low_thresh, double high_thresh, bool L2gradient = false)
+{
+    throw_nogpu();
+}
+void cv::ocl::Canny(const oclMat &dx, const oclMat &dy, CannyBuf &buf, oclMat &edges, double low_thresh, double high_thresh, bool L2gradient = false)
+{
+    throw_nogpu();
+}
 #else
 
 namespace cv
@@ -67,14 +79,14 @@ namespace cv
     }
 }
 
-cv::ocl::CannyBuf::CannyBuf(const oclMat& dx_, const oclMat& dy_) : dx(dx_), dy(dy_), counter(NULL)
+cv::ocl::CannyBuf::CannyBuf(const oclMat &dx_, const oclMat &dy_) : dx(dx_), dy(dy_), counter(NULL)
 {
     CV_Assert(dx_.type() == CV_32SC1 && dy_.type() == CV_32SC1 && dx_.size() == dy_.size());
 
     create(dx_.size(), -1);
 }
 
-void cv::ocl::CannyBuf::create(const Size& image_size, int apperture_size)
+void cv::ocl::CannyBuf::create(const Size &image_size, int apperture_size)
 {
     ensureSizeIsEnough(image_size, CV_32SC1, dx);
     ensureSizeIsEnough(image_size, CV_32SC1, dy);
@@ -123,27 +135,31 @@ void cv::ocl::CannyBuf::release()
     openCLFree(counter);
 }
 
-namespace cv { namespace ocl {
-    namespace canny
+namespace cv
+{
+    namespace ocl
     {
-        void calcSobelRowPass_gpu(const oclMat& src, oclMat& dx_buf, oclMat& dy_buf, int rows, int cols);
+        namespace canny
+        {
+            void calcSobelRowPass_gpu(const oclMat &src, oclMat &dx_buf, oclMat &dy_buf, int rows, int cols);
 
-        void calcMagnitude_gpu(const oclMat& dx_buf, const oclMat& dy_buf, oclMat& dx, oclMat& dy, oclMat& mag, int rows, int cols, bool L2Grad);
-        void calcMagnitude_gpu(const oclMat& dx, const oclMat& dy, oclMat& mag, int rows, int cols, bool L2Grad);
+            void calcMagnitude_gpu(const oclMat &dx_buf, const oclMat &dy_buf, oclMat &dx, oclMat &dy, oclMat &mag, int rows, int cols, bool L2Grad);
+            void calcMagnitude_gpu(const oclMat &dx, const oclMat &dy, oclMat &mag, int rows, int cols, bool L2Grad);
 
-        void calcMap_gpu(oclMat& dx, oclMat& dy, oclMat& mag, oclMat& map, int rows, int cols, float low_thresh, float high_thresh);
+            void calcMap_gpu(oclMat &dx, oclMat &dy, oclMat &mag, oclMat &map, int rows, int cols, float low_thresh, float high_thresh);
 
-        void edgesHysteresisLocal_gpu(oclMat& map, oclMat& st1, void * counter, int rows, int cols);
+            void edgesHysteresisLocal_gpu(oclMat &map, oclMat &st1, void *counter, int rows, int cols);
 
-        void edgesHysteresisGlobal_gpu(oclMat& map, oclMat& st1, oclMat& st2, void * counter, int rows, int cols);
+            void edgesHysteresisGlobal_gpu(oclMat &map, oclMat &st1, oclMat &st2, void *counter, int rows, int cols);
 
-        void getEdges_gpu(oclMat& map, oclMat& dst, int rows, int cols);
+            void getEdges_gpu(oclMat &map, oclMat &dst, int rows, int cols);
+        }
     }
-}}// cv::ocl
+}// cv::ocl
 
 namespace
 {
-    void CannyCaller(CannyBuf& buf, oclMat& dst, float low_thresh, float high_thresh)
+    void CannyCaller(CannyBuf &buf, oclMat &dst, float low_thresh, float high_thresh)
     {
         using namespace ::cv::ocl::canny;
         calcMap_gpu(buf.dx, buf.dy, buf.edgeBuf, buf.edgeBuf, dst.rows, dst.cols, low_thresh, high_thresh);
@@ -156,13 +172,13 @@ namespace
     }
 }
 
-void cv::ocl::Canny(const oclMat& src, oclMat& dst, double low_thresh, double high_thresh, int apperture_size, bool L2gradient)
+void cv::ocl::Canny(const oclMat &src, oclMat &dst, double low_thresh, double high_thresh, int apperture_size, bool L2gradient)
 {
     CannyBuf buf(src.size(), apperture_size);
     Canny(src, buf, dst, low_thresh, high_thresh, apperture_size, L2gradient);
 }
 
-void cv::ocl::Canny(const oclMat& src, CannyBuf& buf, oclMat& dst, double low_thresh, double high_thresh, int apperture_size, bool L2gradient)
+void cv::ocl::Canny(const oclMat &src, CannyBuf &buf, oclMat &dst, double low_thresh, double high_thresh, int apperture_size, bool L2gradient)
 {
     using namespace ::cv::ocl::canny;
 
@@ -192,13 +208,13 @@ void cv::ocl::Canny(const oclMat& src, CannyBuf& buf, oclMat& dst, double low_th
     }
     CannyCaller(buf, dst, static_cast<float>(low_thresh), static_cast<float>(high_thresh));
 }
-void cv::ocl::Canny(const oclMat& dx, const oclMat& dy, oclMat& dst, double low_thresh, double high_thresh, bool L2gradient)
+void cv::ocl::Canny(const oclMat &dx, const oclMat &dy, oclMat &dst, double low_thresh, double high_thresh, bool L2gradient)
 {
     CannyBuf buf(dx, dy);
     Canny(dx, dy, buf, dst, low_thresh, high_thresh, L2gradient);
 }
 
-void cv::ocl::Canny(const oclMat& dx, const oclMat& dy, CannyBuf& buf, oclMat& dst, double low_thresh, double high_thresh, bool L2gradient)
+void cv::ocl::Canny(const oclMat &dx, const oclMat &dy, CannyBuf &buf, oclMat &dst, double low_thresh, double high_thresh, bool L2gradient)
 {
     using namespace ::cv::ocl::canny;
 
@@ -210,7 +226,8 @@ void cv::ocl::Canny(const oclMat& dx, const oclMat& dy, CannyBuf& buf, oclMat& d
     dst.create(dx.size(), CV_8U);
     dst.setTo(Scalar::all(0));
 
-    buf.dx = dx; buf.dy = dy;
+    buf.dx = dx;
+    buf.dy = dy;
     buf.create(dx.size(), -1);
     buf.edgeBuf.setTo(Scalar::all(0));
     calcMagnitude_gpu(buf.dx, buf.dy, buf.edgeBuf, dx.rows, dx.cols, L2gradient);
@@ -218,7 +235,7 @@ void cv::ocl::Canny(const oclMat& dx, const oclMat& dy, CannyBuf& buf, oclMat& d
     CannyCaller(buf, dst, static_cast<float>(low_thresh), static_cast<float>(high_thresh));
 }
 
-void canny::calcSobelRowPass_gpu(const oclMat& src, oclMat& dx_buf, oclMat& dy_buf, int rows, int cols)
+void canny::calcSobelRowPass_gpu(const oclMat &src, oclMat &dx_buf, oclMat &dy_buf, int rows, int cols)
 {
     Context *clCxt = src.clCxt;
     string kernelName = "calcSobelRowPass";
@@ -241,7 +258,7 @@ void canny::calcSobelRowPass_gpu(const oclMat& src, oclMat& dx_buf, oclMat& dy_b
     openCLExecuteKernel2(clCxt, &imgproc_canny, kernelName, globalThreads, localThreads, args, -1, -1);
 }
 
-void canny::calcMagnitude_gpu(const oclMat& dx_buf, const oclMat& dy_buf, oclMat& dx, oclMat& dy, oclMat& mag, int rows, int cols, bool L2Grad)
+void canny::calcMagnitude_gpu(const oclMat &dx_buf, const oclMat &dy_buf, oclMat &dx, oclMat &dy, oclMat &mag, int rows, int cols, bool L2Grad)
 {
     Context *clCxt = dx_buf.clCxt;
     string kernelName = "calcMagnitude_buf";
@@ -275,7 +292,7 @@ void canny::calcMagnitude_gpu(const oclMat& dx_buf, const oclMat& dy_buf, oclMat
     }
     openCLExecuteKernel2(clCxt, &imgproc_canny, kernelName, globalThreads, localThreads, args, -1, -1, build_options);
 }
-void canny::calcMagnitude_gpu(const oclMat& dx, const oclMat& dy, oclMat& mag, int rows, int cols, bool L2Grad)
+void canny::calcMagnitude_gpu(const oclMat &dx, const oclMat &dy, oclMat &mag, int rows, int cols, bool L2Grad)
 {
     Context *clCxt = dx.clCxt;
     string kernelName = "calcMagnitude";
@@ -304,7 +321,7 @@ void canny::calcMagnitude_gpu(const oclMat& dx, const oclMat& dy, oclMat& mag, i
     openCLExecuteKernel2(clCxt, &imgproc_canny, kernelName, globalThreads, localThreads, args, -1, -1, build_options);
 }
 
-void canny::calcMap_gpu(oclMat& dx, oclMat& dy, oclMat& mag, oclMat& map, int rows, int cols, float low_thresh, float high_thresh)
+void canny::calcMap_gpu(oclMat &dx, oclMat &dy, oclMat &mag, oclMat &map, int rows, int cols, float low_thresh, float high_thresh)
 {
     Context *clCxt = dx.clCxt;
 
@@ -335,7 +352,7 @@ void canny::calcMap_gpu(oclMat& dx, oclMat& dy, oclMat& mag, oclMat& map, int ro
     openCLExecuteKernel2(clCxt, &imgproc_canny, kernelName, globalThreads, localThreads, args, -1, -1);
 }
 
-void canny::edgesHysteresisLocal_gpu(oclMat& map, oclMat& st1, void * counter, int rows, int cols)
+void canny::edgesHysteresisLocal_gpu(oclMat &map, oclMat &st1, void *counter, int rows, int cols)
 {
     Context *clCxt = map.clCxt;
     string kernelName = "edgesHysteresisLocal";
@@ -355,7 +372,7 @@ void canny::edgesHysteresisLocal_gpu(oclMat& map, oclMat& st1, void * counter, i
     openCLExecuteKernel2(clCxt, &imgproc_canny, kernelName, globalThreads, localThreads, args, -1, -1);
 }
 
-void canny::edgesHysteresisGlobal_gpu(oclMat& map, oclMat& st1, oclMat& st2, void * counter, int rows, int cols)
+void canny::edgesHysteresisGlobal_gpu(oclMat &map, oclMat &st1, oclMat &st2, void *counter, int rows, int cols)
 {
     unsigned int count;
     openCLSafeCall(clEnqueueReadBuffer(Context::getContext()->impl->clCmdQueue, (cl_mem)counter, 1, 0, sizeof(float), &count, 0, NULL, NULL));
@@ -389,7 +406,7 @@ void canny::edgesHysteresisGlobal_gpu(oclMat& map, oclMat& st1, oclMat& st2, voi
 #undef DIVUP
 }
 
-void canny::getEdges_gpu(oclMat& map, oclMat& dst, int rows, int cols)
+void canny::getEdges_gpu(oclMat &map, oclMat &dst, int rows, int cols)
 {
     Context *clCxt = map.clCxt;
     string kernelName = "getEdges";
