@@ -80,7 +80,7 @@ public:
         DYNAMIC_BRISK      = DYNAMICDETECTOR + BRISK
     };
 
-    //supported: FAST STAR SIFT SURF ORB MSER GFTT HARRIS Grid(XXXX) Pyramid(XXXX) Dynamic(XXXX)
+    //supported: FAST STAR SIFT SURF ORB MSER GFTT HARRIS BRISK Grid(XXXX) Pyramid(XXXX) Dynamic(XXXX)
     //not supported: SimpleBlob, Dense
     CV_WRAP static javaFeatureDetector* create( int detectorType )
     {
@@ -290,7 +290,7 @@ public:
         OPPONENT_FREAK = OPPONENTEXTRACTOR + FREAK
     };
 
-    //supported SIFT, SURF, ORB, BRIEF, Opponent(XXXX)
+    //supported SIFT, SURF, ORB, BRIEF, BRISK, FREAK, Opponent(XXXX)
     //not supported: Calonder
     CV_WRAP static javaDescriptorExtractor* create( int extractorType )
     {
