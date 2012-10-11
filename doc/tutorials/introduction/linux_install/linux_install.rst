@@ -1,63 +1,59 @@
 .. _Linux-Installation:
 
 Installation in Linux
-***********************
-These steps have been tested for Ubuntu 10.04 but should work with other distros.
+*********************
+These steps have been tested for Ubuntu 10.04 but should work with other distros as well.
 
-Required packages
-==================
+Required Packages
+=================
 
-  * GCC 4.4.x or later. This can be installed with
+  * GCC 4.4.x or later. This can be installed with:
 
     .. code-block:: bash
 
        sudo apt-get install build-essential 
  
-  * CMake 2.6 or higher
-  * Subversion (SVN) client
-  * GTK+2.x or higher, including headers (libgtk2.0-dev)
-  * pkgconfig
-  * Python 2.6 or later and Numpy 1.5 or later with developer packages (python-dev, python-numpy)
-  * ffmpeg or libav development packages: libavcodec-dev, libavformat-dev, libswscale-dev
-  * [optional] libdc1394 2.x 
+  * CMake 2.6 or higher;
+  * Git;
+  * GTK+2.x or higher, including headers (libgtk2.0-dev);
+  * pkgconfig;
+  * Python 2.6 or later and Numpy 1.5 or later with developer packages (python-dev, python-numpy);
+  * ffmpeg or libav development packages: libavcodec-dev, libavformat-dev, libswscale-dev;
+  * [optional] libdc1394 2.x;
   * [optional] libjpeg-dev, libpng-dev, libtiff-dev, libjasper-dev.
 
-All the libraries above can be installed via Terminal or by using Synaptic Manager
+All the libraries above can be installed via Terminal or by using Synaptic Manager.
 
-Getting OpenCV source code 
-============================
+Getting OpenCV Source Code
+==========================
 
-You can use the latest stable OpenCV version available in *sourceforge* or you can grab the latest snapshot from the `SVN repository <http://code.opencv.org/svn/opencv/>`_.
+You can use the latest stable OpenCV version available in *sourceforge* or you can grab the latest snapshot from our `Git repository <https://github.com/Itseez/opencv.git>`_.
 
-Getting the latest stable OpenCV version
-------------------------------------------
+Getting the Latest Stable OpenCV Version
+----------------------------------------
 
-* Go to http://sourceforge.net/projects/opencvlibrary
+* Go to our `page on Sourceforge <http://sourceforge.net/projects/opencvlibrary>`_;
 
-* Download the source tarball and unpack it
+* Download the source tarball and unpack it.
 
 
-Getting the cutting-edge OpenCV from SourceForge SVN repository
------------------------------------------------------------------
+Getting the Cutting-edge OpenCV from the Git Repository
+-------------------------------------------------------
 
-Launch SVN client and checkout either
+Launch Git client and clone `OpenCV repository <http://github.com/itseez/opencv>`_
 
-a. the current OpenCV snapshot from here: http://code.opencv.org/svn/opencv/trunk
-
-#. or the latest tested OpenCV snapshot from here: http://code.opencv.org/svn/opencv/tags/latest_tested_snapshot
-
-In Ubuntu it can be done using the following command, e.g.:
+In Linux it can be achieved with the following command in Terminal:
 
 .. code-block:: bash
 
    cd ~/<my_working _directory>
-   svn co http://code.opencv.org/svn/opencv/trunk  
+   git clone https://github.com/Itseez/opencv.git
  
 
-Building OpenCV from source using CMake, using the command line
-================================================================
+Building OpenCV from Source Using CMake, Using the Command Line
+===============================================================
 
-#. Create a temporary directory, which we denote as <cmake_binary_dir>, where you want to put the generated Makefiles, project files as well the object filees and output binaries
+#. Create a temporary directory, which we denote as <cmake_binary_dir>, where you want to put the generated Makefiles, project files as well the object files and output binaries.
 
 #. Enter the <cmake_binary_dir> and type
 
