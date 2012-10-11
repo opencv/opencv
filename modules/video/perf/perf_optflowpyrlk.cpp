@@ -92,9 +92,9 @@ PERF_TEST_P(Path_Idx_Cn_NPoints_WSize, OpticalFlowPyrLK_full, testing::Combine(
                              flags, minEigThreshold);
     }
 
-    SANITY_CHECK(outPoints);
+    SANITY_CHECK(outPoints, 0.3);
     SANITY_CHECK(status);
-    SANITY_CHECK(err, 1e-5);
+    SANITY_CHECK(err, 2);
 }
 
 typedef tr1::tuple<std::string, int, int, tr1::tuple<int,int>, int, bool> Path_Idx_Cn_NPoints_WSize_Deriv_t;
@@ -171,9 +171,9 @@ PERF_TEST_P(Path_Idx_Cn_NPoints_WSize_Deriv, OpticalFlowPyrLK_self, testing::Com
                              flags, minEigThreshold);
     }
 
-    SANITY_CHECK(outPoints);
+    SANITY_CHECK(outPoints, 0.3);
     SANITY_CHECK(status);
-    SANITY_CHECK(err, 1e-5);
+    SANITY_CHECK(err, 2);
 }
 
 CV_ENUM(PyrBorderMode, BORDER_DEFAULT, BORDER_TRANSPARENT);
