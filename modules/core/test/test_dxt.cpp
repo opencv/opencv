@@ -838,8 +838,8 @@ protected:
         RNG& rng = theRNG();
         for( int i = 0; i < 10; i++ )
         {
-            int m = rng.uniform(2, 11) & -2;
-            int n = rng.uniform(2, 11) & -2;
+            int m = rng.uniform(2, 11);
+            int n = rng.uniform(2, 11);
             int depth = rng.uniform(0, 2) + CV_32F;
             Mat src8u(m, n, depth), src(m, n, depth), dst(m, n, CV_MAKETYPE(depth, 2));
             Mat z = Mat::zeros(m, n, depth), dstz;
