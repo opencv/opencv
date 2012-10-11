@@ -181,7 +181,6 @@ private:
     Mat& dst;
     const Cvt& cvt;
 
-    CvtColorLoop_Invoker(const CvtColorLoop_Invoker&);
     const CvtColorLoop_Invoker& operator= (const CvtColorLoop_Invoker&);
 };
 
