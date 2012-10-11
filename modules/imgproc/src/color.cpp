@@ -124,8 +124,8 @@ template<typename _Tp> static void splineBuild(const _Tp* f, int n, _Tp* tab)
 // interpolates value of a function at x, 0 <= x <= n using a cubic spline.
 template<typename _Tp> static inline _Tp splineInterpolate(_Tp x, const _Tp* tab, int n)
 {
-    int ix = cvFloor(x);
-    ix = std::min(std::max(ix, 0), n-1);
+    // don't touch this function without urgent need - some versions of gcc fail to inline it correctly
+    int ix = std::min(std::max(int(x), 0), n-1);
     x -= ix;
     tab += ix*4;
     return ((tab[3]*x + tab[2])*x + tab[1])*x + tab[0];
