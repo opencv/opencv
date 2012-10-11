@@ -124,6 +124,33 @@ struct __align__(16) Detection
     : x(_x), y(_y), w(_w), h(_h), confidence(c), kind(0) {};
 };
 
+struct CascadePolicy
+{
+    enum {STA_X = 32, STA_Y = 8};
+};
+
+template<typename Policy>
+struct CascadeInvoker
+{
+    CascadeInvoker(): levels(0), octaves(0), stages(0), nodes(0), leaves(0) {}
+    CascadeInvoker(const PtrStepSzb& _levels, const PtrStepSzb& _octaves, const PtrStepSzf& _stages,
+                   const PtrStepSzb& _nodes,  const PtrStepSzf& _leaves)
+    : levels((const Level*)_levels.ptr()), octaves((const Octave*)_octaves.ptr()), stages((const float*)_stages.ptr()),
+       nodes((const Node*)_nodes.ptr()), leaves((const float*)_leaves.ptr())
+    {}
+
+    const Level*  levels;
+    const Octave* octaves;
+
+    const float*  stages;
+
+    const Node*   nodes;
+    const float*  leaves;
+
+    void operator()(const PtrStepSzb& roi, const PtrStepSzi& hogluv, PtrStepSz<uchar4> objects,
+        PtrStepSzi counter, const int downscales, const int csale = -1) const;
+};
+
 }
 }}}
 

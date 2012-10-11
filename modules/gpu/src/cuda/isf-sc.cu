@@ -303,21 +303,16 @@ namespace icf {
     }
 #endif
 
-    void detect(const PtrStepSzb& roi, const PtrStepSzb& levels, const PtrStepSzb& octaves, const PtrStepSzf& stages,
-                const PtrStepSzb& nodes,  const PtrStepSzf& leaves,  const PtrStepSzi& hogluv,
-                PtrStepSz<uchar4> objects, PtrStepSzi counter, const int downscales)
+    template<>
+    void CascadeInvoker<CascadePolicy>::operator()(const PtrStepSzb& roi, const PtrStepSzi& hogluv,
+        PtrStepSz<uchar4> objects, PtrStepSzi counter, const int downscales, const int scale) const
     {
         int fw = 160;
         int fh = 120;
 
         dim3 block(32, 8);
-        dim3 grid(fw, fh / 8, downscales);
+        dim3 grid(fw, fh / 8, (scale == -1) ? downscales : 1);
 
-        const Level* l = (const Level*)levels.ptr();
-        const Octave* oct = ((const Octave*)octaves.ptr());
-        const float* st = (const float*)stages.ptr();
-        const Node* nd = (const Node*)nodes.ptr();
-        const float* lf = (const float*)leaves.ptr();
         uint* ctr = (uint*)counter.ptr();
         Detection* det = (Detection*)objects.ptr();
         uint max_det = objects.cols / sizeof(Detection);
@@ -328,44 +323,21 @@ namespace icf {
         cudaChannelFormatDesc desc_roi = cudaCreateChannelDesc<float2>();
         cudaSafeCall( cudaBindTexture2D(0, troi, roi.data, desc_roi, roi.cols / 8, roi.rows, roi.step));
 
-        test_kernel_warp<false><<<grid, block>>>(l, oct, st, nd, lf, det, max_det, ctr, 0);
-        cudaSafeCall( cudaGetLastError());
+        if (scale == -1)
+        {
+            test_kernel_warp<false><<<grid, block>>>(levels, octaves, stages, nodes, leaves, det, max_det, ctr, 0);
+            cudaSafeCall( cudaGetLastError());
 
-        grid = dim3(fw, fh / 8, 47 - downscales);
-        test_kernel_warp<true><<<grid, block>>>(l, oct, st, nd, lf, det, max_det, ctr, downscales);
-        cudaSafeCall( cudaGetLastError());
-        cudaSafeCall( cudaDeviceSynchronize());
-    }
-
-    void detectAtScale(const int scale, const PtrStepSzb& roi, const PtrStepSzb& levels, const PtrStepSzb& octaves,
-        const PtrStepSzf& stages, const PtrStepSzb& nodes, const PtrStepSzf& leaves, const PtrStepSzi& hogluv,
-        PtrStepSz<uchar4> objects, PtrStepSzi counter, const int downscales)
-    {
-        int fw = 160;
-        int fh = 120;
-
-        dim3 block(32, 8);
-        dim3 grid(fw, fh / 8, 1);
-
-        const Level* l = (const Level*)levels.ptr();
-        const Octave* oct = ((const Octave*)octaves.ptr());
-        const float* st = (const float*)stages.ptr();
-        const Node* nd = (const Node*)nodes.ptr();
-        const float* lf = (const float*)leaves.ptr();
-        uint* ctr = (uint*)counter.ptr();
-        Detection* det = (Detection*)objects.ptr();
-        uint max_det = objects.cols / sizeof(Detection);
-
-        cudaChannelFormatDesc desc = cudaCreateChannelDesc<int>();
-        cudaSafeCall( cudaBindTexture2D(0, thogluv, hogluv.data, desc, hogluv.cols, hogluv.rows, hogluv.step));
-
-        cudaChannelFormatDesc desc_roi = cudaCreateChannelDesc<float2>();
-        cudaSafeCall( cudaBindTexture2D(0, troi, roi.data, desc_roi, roi.cols / 8, roi.rows, roi.step));
-
-        if (scale >= downscales)
-            test_kernel_warp<true><<<grid, block>>>(l, oct, st, nd, lf, det, max_det, ctr, scale);
+            grid = dim3(fw, fh / 8, 47 - downscales);
+            test_kernel_warp<true><<<grid, block>>>(levels, octaves, stages, nodes, leaves, det, max_det, ctr, downscales);
+        }
         else
-            test_kernel_warp<false><<<grid, block>>>(l, oct, st, nd, lf, det, max_det, ctr, scale);
+        {
+            if (scale >= downscales)
+                test_kernel_warp<true><<<grid, block>>>(levels, octaves, stages, nodes, leaves, det, max_det, ctr, scale);
+            else
+                test_kernel_warp<false><<<grid, block>>>(levels, octaves, stages, nodes, leaves, det, max_det, ctr, scale);
+        }
 
         cudaSafeCall( cudaGetLastError());
         cudaSafeCall( cudaDeviceSynchronize());

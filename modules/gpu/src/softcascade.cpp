@@ -69,29 +69,6 @@ namespace cv { namespace gpu { namespace device {
 namespace icf {
     void fillBins(cv::gpu::PtrStepSzb hogluv, const cv::gpu::PtrStepSzf& nangle,
         const int fw, const int fh, const int bins);
-
-    void detect(const PtrStepSzb& rois,
-                const PtrStepSzb& levels,
-                const PtrStepSzb& octaves,
-                const PtrStepSzf& stages,
-                const PtrStepSzb& nodes,
-                const PtrStepSzf& leaves,
-                const PtrStepSzi& hogluv,
-                PtrStepSz<uchar4> objects,
-                PtrStepSzi counter,
-                const int downscales);
-
-    void detectAtScale(const int scale,
-                       const PtrStepSzb& rois,
-                       const PtrStepSzb& levels,
-                       const PtrStepSzb& octaves,
-                       const PtrStepSzf& stages,
-                       const PtrStepSzb& nodes,
-                       const PtrStepSzf& leaves,
-                       const PtrStepSzi& hogluv,
-                       PtrStepSz<uchar4> objects,
-                       PtrStepSzi counter,
-                       const int downscales);
 }
 namespace imgproc
 {
@@ -150,6 +127,8 @@ struct cv::gpu::SoftCascade::Filds
 
     std::vector<float> scales;
 
+    device::icf::CascadeInvoker<device::icf::CascadePolicy> invoker;
+
     static const int shrinkage = 4;
 
     enum { BOOST = 0 };
@@ -166,17 +145,11 @@ struct cv::gpu::SoftCascade::Filds
     };
 
     bool fill(const FileNode &root, const float mins, const float maxs);
-    void detect(const cv::gpu::GpuMat& roi, cv::gpu::GpuMat& objects, cudaStream_t stream) const
+    void detect(int scale, const cv::gpu::GpuMat& roi, cv::gpu::GpuMat& objects, cudaStream_t stream) const
     {
         cudaMemset(detCounter.data, 0, detCounter.step * detCounter.rows * sizeof(int));
-        device::icf::detect(roi, levels, octaves, stages, nodes, leaves, hogluv, objects , detCounter, downscales);
-    }
-
-    void detectAtScale(int scale, const cv::gpu::GpuMat& roi, cv::gpu::GpuMat& objects, cudaStream_t stream) const
-    {
-        cudaMemset(detCounter.data, 0, detCounter.step * detCounter.rows * sizeof(int));
-        device::icf::detectAtScale(scale, roi, levels, octaves, stages, nodes, leaves, hogluv, objects,
-            detCounter, downscales);
+        // device::icf::CascadeInvoker<device::icf::CascadePolicy> invoker(levels, octaves, stages, nodes, leaves);
+        invoker(roi, hogluv, objects, detCounter, downscales, scale);
     }
 
     void preprocess(const cv::gpu::GpuMat& colored)
@@ -439,6 +412,8 @@ bool cv::gpu::SoftCascade::Filds::fill(const FileNode &root, const float mins, c
     calcLevels(voctaves, FRAME_WIDTH, FRAME_HEIGHT, TOTAL_SCALES);
     CV_Assert(!levels.empty());
 
+    invoker = device::icf::CascadeInvoker<device::icf::CascadePolicy>(levels, octaves, stages, nodes, leaves);
+
     return true;
 }
 
@@ -569,10 +544,7 @@ void cv::gpu::SoftCascade::detectMultiScale(const GpuMat& colored, const GpuMat&
 
     flds.preprocess(colored);
 
-    if (specificScale == -1)
-        flds.detect(rois,objects, 0);
-    else
-        flds.detectAtScale(specificScale, rois, objects, 0);
+    flds.detect(specificScale, rois, objects, 0);
 
     cv::Mat out(flds.detCounter);
     int ndetections = *(out.data);
