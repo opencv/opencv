@@ -5,46 +5,38 @@ Installation in Windows
 
 .. include:: <isonum.txt>
 
-The description here was tested by the author using the Windows 7 SP1 **o**\ perating **s**\ ystem (*OS*). Nevertheless, it should also work on any other Windows OS too. If you encounter errors after following the steps described here feel free to contact us via our :opencv_group:`user group <>` and we will try to fix your problem.
+The description here was tested on Windows 7 SP1. Nevertheless, it should also work on any other relatively modern version of Windows OS. If you encounter errors after following the steps described below, feel free to contact us via our `OpenCV Q&A forum <http://answers.opencv.org>`_. We'll do our best to help you out.
 
-.. note:: To use the OpenCV library you have two options: :ref:`Windows_Install_Prebuild` or :ref:`CppTutWindowsMakeOwn`. While the first one is easier to complete, it only works if you are coding inside the latest Microsoft Visual Studio  **i**\ ntegrated **d**\ evelopment **e**\ nvironments (*IDE*) and doesn't takes advantage of the most novel technologies we integrate into our library.
+.. note:: To use the OpenCV library you have two options: :ref:`Windows_Install_Prebuild` or :ref:`CppTutWindowsMakeOwn`. While the first one is easier to complete, it only works if you are coding with the latest Microsoft Visual Studio IDE and doesn't take advantage of the most advanced technologies we integrate into our library.
 
 .. _Windows_Install_Prebuild:
 
-Installation by using the pre-built libraries
+Installation by Using the Pre-built Libraries
 =============================================
 
-1. Open up a web browser and go to: http://sourceforge.net/projects/opencvlibrary/files/opencv-win/
+#. Launch a web browser of choice and go to our `page on Sourceforge <http://sourceforge.net/projects/opencvlibrary/files/opencv-win/>`_
 
-#. Open the folder for the latest version (currently this is |release|).
+#. Choose a build you want to use and download it.
 
-#. Choose a build you want to use and download it. The naming conventions used will show what kind of support they offer. For example:
+   .. If you downloaded the source files present here see :ref:`CppTutWindowsMakeOwn`.
 
-   .. container:: enumeratevisibleitemswithsquare
+#. Make sure you have admin rights. Start the setup and follow the wizard.
 
-      * *vs2010* means the Visual Studio
-      * *win32* means that it is for 32 bit applications in the OS
-      * *gpu* means that it includes the support for using your GPU in order to further increase the performance of the library).
+#. While adding the OpenCV library to the system path is a good decision for a better control, we will do it manually for the sake of this tutorial. Make sure you do not set this option.
 
-   If you downloaded the source files present here see :ref:`CppTutWindowsMakeOwn`.
-
-#. Make sure you have admin rights. Start the setup and follow the wizard. Agree to the \" License Agreement \" .
-
-#. While adding the OpenCV library to the system path is a good decision for a better control of this we will do it manually. Therefore, make sure you do not set this option.
-
-#. Most of the time it is a good idea to install the source files as this will allow for you to debug into the OpenCV library, if it is necessary. Therefore, just follow the default settings of the wizard and finish the installation.
+#. Most of the time it is a good idea to install the source files too, as this will allow for you to debug into the OpenCV library, if it is necessary. Follow the default settings of the wizard and finish the installation.
 
 #. You can check the installation at the chosen path as you can see below.
 
    .. image:: images/OpenCV_Install_Directory.png
-      :alt: An example of how the installation directory should look in case of success.
+      :alt: An example of how the installation directory should look in case of successful install.
       :align: center
 
 #. To finalize the installation go to the :ref:`WindowsSetPathAndEnviromentVariable` section.
 
 .. _CppTutWindowsMakeOwn:
 
-Installation by making your own libraries from the source files
+Installation by Making Your Own Libraries from the Source Files
 ===============================================================
 
 You may find the content of this tutorial also inside the following videos: `Part 1 <https://www.youtube.com/watch?v=NnovZ1cTlMs>`_ and `Part 2 <https://www.youtube.com/watch?v=qGNWMcfWwPU>`_, hosted on YouTube.
@@ -56,21 +48,16 @@ You may find the content of this tutorial also inside the following videos: `Par
   <iframe title="Install OpenCV by using its source files - Part 2" width="560" height="349" src="http://www.youtube.com/embed/qGNWMcfWwPU?rel=0&loop=1" frameborder="0" allowfullscreen align="middle"></iframe>
   </div>
 
-If you are building your own libraries you can take either the source files from our latest:
+.. warning:: These videos above are long-obsolete and contain inaccurate information. Be careful, since solutions described in those videos are no longer supported and may even break your install.
 
-   .. container:: enumeratevisibleitemswithsquare
-
-      + stable and tested build - http://code.opencv.org/svn/opencv/tags/2.4.2 (the number at the end will change with every new realease, so change it to that)
-      + development build - http://code.opencv.org/svn/opencv/trunk/
-
-While the later one may contain a couple of new and experimental algorithms, performance increases and interface improvements, be aware, that it may also contain some bugs. Using the first one is recommended in most of the cases. That is unless you are extending the OpenCV library itself or really need the most up to date version of it.
+If you are building your own libraries you can take the source files from our `Git repository <https://github.com/Itseez/opencv.git>`_.
 
 Building the OpenCV library from scratch requires a couple of tools installed beforehand:
 
 .. |CMake| replace:: CMake
 .. _CMake: http://www.cmake.org/cmake/resources/software.html
-.. |TortoiseSVN| replace:: TortoiseSVN
-.. _TortoiseSVN: http://tortoisesvn.net/downloads.html
+.. |TortoiseGit| replace:: TortoiseGit
+.. _TortoiseGit: http://code.google.com/p/tortoisegit/wiki/Download
 .. |Python_Libraries| replace:: Python libraries
 .. _Python_Libraries: http://www.python.org/getit/
 .. |Numpy| replace:: Numpy
@@ -96,29 +83,29 @@ Building the OpenCV library from scratch requires a couple of tools installed be
 
 .. container:: enumeratevisibleitemswithsquare
 
-   + An **I**\ ntegrated **D**\ eveloper **E**\ nviroment (*IDE*) preferably, or just a C\C++ compiler that will actually make the binary files. Here I will use the `Microsoft Visual Studio <https://www.microsoft.com/visualstudio/en-us>`_. Nevertheless, you can use any other *IDE* that has a valid C\\C++ compiler.
+   + An IDE of choice (preferably), or just a C\C++ compiler that will actually make the binary files. Here we will use the `Microsoft Visual Studio <https://www.microsoft.com/visualstudio/en-us>`_. However, you can use any other IDE that has a valid C\C++ compiler.
 
-   + Then |CMake|_ is a neat tool that will make the project files (for your choosen *IDE*) from the OpenCV source files. It will also allow an easy configuration of the OpenCV build files, in order to make binary files that fits exactly to your needs.
+   + |CMake|_, which is a neat tool to make the project files (for your choosen IDE) from the OpenCV source files. It will also allow an easy configuration of the OpenCV build files, in order to make binary files that fits exactly to your needs.
 
-   + A **S**\ ubversion **C**\ ontrol **S**\ ystem (*SVN*) to acquire the OpenCV source files. A good tool for this is |TortoiseSVN|_. Alternatively, you can just download an archived version of the source files from the `Sourceforge OpenCV page <http://sourceforge.net/projects/opencvlibrary/files/opencv-win/>`_.
+   + Git to acquire the OpenCV source files. A good tool for this is |TortoiseGit|_. Alternatively, you can just download an archived version of the source files from our `page on Sourceforge <http://sourceforge.net/projects/opencvlibrary/files/opencv-win/>`_
 
-OpenCV may come in multiple flavors. There is a "core" section that will work on its own. Nevertheless, they are a couple of tools, libraries made by other organizations (so called 3rd parties) that offer services of which the OpenCV may take advantage. These will improve in many ways its capabilities. In order to use any of them, you need to download and install them on your system.
+OpenCV may come in multiple flavors. There is a "core" section that will work on its own. Nevertheless, there is a couple of tools, libraries made by 3rd parties that offer services of which the OpenCV may take advantage. These will improve its capabilities in many ways. In order to use any of them, you need to download and install them on your system.
 
 .. container:: enumeratevisibleitemswithsquare
 
-   + The |Python_Libraries|_ are required to build the *Python interface* of OpenCV. For now use the version :file:`2.7.{x}`. This is also a must have if you want to build the *OpenCV documentation*.
+   + The |Python_Libraries|_ are required to build the *Python interface* of OpenCV. For now use the version :file:`2.7.{x}`. This is also a must if you want to build the *OpenCV documentation*.
 
    + |Numpy|_ is a scientific computing package for Python. Required for the *Python interface*.
 
    + |IntelTBB|_ is used inside OpenCV for parallel code snippets. Using this will make sure that the OpenCV library will take advantage of all the cores you have in your systems CPU.
 
-   + |IntelIIP|_ may be used to improve the performance of color conversion, Haar training and DFT functions of the OpenCV library. Watch out as this isn't a *free* service.
+   + |IntelIIP|_ may be used to improve the performance of color conversion, Haar training and DFT functions of the OpenCV library. Watch out, since this isn't a free service.
 
    + OpenCV offers a somewhat fancier and more useful graphical user interface, than the default one by using the |qtframework|_. For a quick overview of what this has to offer look into the documentations *highgui* module, under the *Qt New Functions* section. Version 4.6 or later of the framework is required.
 
    + |Eigen|_ is a C++ template library for linear algebra.
 
-   + The latest |CUDA_Toolkit|_ will allow you to use the power lying inside your GPU.  This will drastically improve performance for some of the algorithms, like the HOG descriptor. Getting to work more and more of our algorithms on the GPUs is a constant effort of the OpenCV team.
+   + The latest |CUDA_Toolkit|_ will allow you to use the power lying inside your GPU. This will drastically improve performance for some algorithms (e.g the HOG descriptor). Getting more and more of our algorithms to work on the GPUs is a constant effort of the OpenCV team.
 
    + |OpenEXR|_ source files are required for the library to work with this high dynamic range (HDR) image file format.
 
@@ -126,9 +113,9 @@ OpenCV may come in multiple flavors. There is a "core" section that will work on
 
    + |Miktex|_ is the best `TEX <https://secure.wikimedia.org/wikipedia/en/wiki/TeX>`_ implementation on the Windows OS. It is required to build the *OpenCV documentation*.
 
-   + |Sphinx|_ is a python documentation generator and is the tool that will actually create the *OpenCV documentation*. This on its own requires a couple of tools installed, I will cover this in depth at the :ref:`How to Install Sphinx <HereInstallSphinx>` section.
+   + |Sphinx|_ is a python documentation generator and is the tool that will actually create the *OpenCV documentation*. This on its own requires a couple of tools installed, We will cover this in depth at the :ref:`How to Install Sphinx <HereInstallSphinx>` section.
 
-Now I will describe the steps to follow for a full build (using all the above frameworks, tools and libraries). If you do not need the support for some of these you can just freely skip those parts.
+Now we will describe the steps to follow for a full build (using all the above frameworks, tools and libraries). If you do not need the support for some of these you can just freely skip this section.
 
 .. _WindowsBuildLibrary:
 
@@ -137,29 +124,17 @@ Building the library
 
 1. Make sure you have a working IDE with a valid compiler. In case of the Microsoft Visual Studio just install it and make sure it starts up.
 
-#. Install |CMake|_. Simply follow the wizard, no need to add it to the path. The default install options are great. No need to change them.
+#. Install |CMake|_. Simply follow the wizard, no need to add it to the path. The default install options are OK.
 
-#. Install |TortoiseSVN|_. Choose the 32 or 64 bit version according to the type of OS you work in. Again follow the wizard, default options are good. Restart of your system is required.
+#. Download and install an up-to-date version of msysgit from its `official site <http://code.google.com/p/msysgit/downloads/list>`_. There is also the portable version, which you need only to unpack to get access to the console version of Git. Supposing that for some of us it could be quite enough.
 
-#. Choose a directory in your file system where you will download the OpenCV libraries. I recommend creating a new one that has short path and no special charachters in it, for example :file:`D:/OpenCV`. During this tutorial I'll suppose you've done so. If you use a different directory just change this front part of the path in my future examples. Then, :menuselection:`Right Click --> SVN Checkout...` in the directory.
+#. Install |TortoiseGit|_. Choose the 32 or 64 bit version according to the type of OS you work in. While installing, locate your msysgit (if it doesn't do that automatically). Follow the wizard -- the default options are OK for the most part.
 
-   .. image:: images/TortoiseSVNCheckout.png
-      :alt: The TortoiseSVN Checkout Menu
-      :align: center
+#. Choose a directory in your file system, where you will download the OpenCV libraries to. I recommend creating a new one that has short path and no special charachters in it, for example :file:`D:/OpenCV`. For this tutorial I'll suggest you do so. If you use your own path and know, what you're doing -- it's OK. 
 
-   A window will appear where you can select from what repository you want to download source files (1) and to which directory (2):
+   a) Clone the repository to the selected directory. After clicking *Clone* button, a window will appear where you can select from what repository you want to download source files (https://github.com/Itseez/opencv.git) and to what directory (:file:`D:/OpenCV`).
 
-   .. image:: images/TortoiseSVNCheckoutWindow.png
-      :alt: The TortoiseSVN Checkout Window
-      :align: center
-
-   Add here either ones of the versions described above. Then push the OK button and be patient as the repository currently is over 330MB to download. It will take some time until it is finished depending on your Internet connection.
-
-   .. image:: images/SVNCheckOutProgress.png
-      :alt: The TortoiseSVN Checkout Progress
-      :align: center
-
-   When you are done you should have a *opencv* and an *opencv_extra* directory as seen at (3).
+   #) Push the OK button and be patient as the repository is quite a heavy download. It will take some time depending on your Internet connection.
 
 #. In this section I will cover installing the 3rd party libraries.
 
