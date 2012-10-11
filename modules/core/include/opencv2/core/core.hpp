@@ -2102,6 +2102,9 @@ CV_EXPORTS_W void LUT(InputArray src, InputArray lut, OutputArray dst,
 CV_EXPORTS_AS(sumElems) Scalar sum(InputArray src);
 //! computes the number of nonzero array elements
 CV_EXPORTS_W int countNonZero( InputArray src );
+//! returns the list of locations of non-zero pixels
+CV_EXPORTS_W void findNonZero( InputArray src, OutputArray idx );
+    
 //! computes mean value of selected array elements
 CV_EXPORTS_W Scalar mean(InputArray src, InputArray mask=noArray());
 //! computes mean value and standard deviation of all or selected array elements

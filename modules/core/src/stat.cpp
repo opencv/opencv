@@ -1904,6 +1904,28 @@ void cv::batchDistance( InputArray _src1, InputArray _src2,
 }
 
 
+void cv::findNonZero( InputArray _src, OutputArray _idx )
+{
+    Mat src = _src.getMat();
+    CV_Assert( src.type() == CV_8UC1 );
+    int n = countNonZero(src);
+    if( _idx.kind() == _InputArray::MAT && !_idx.getMatRef().isContinuous() )
+        _idx.release();
+    _idx.create(n, 1, CV_32SC2);
+    Mat idx = _idx.getMat();
+    CV_Assert(idx.isContinuous());
+    Point* idx_ptr = (Point*)idx.data;
+    
+    for( int i = 0; i < src.rows; i++ )
+    {
+        const uchar* bin_ptr = src.ptr(i);
+        for( int j = 0; j < src.cols; j++ )
+            if( bin_ptr[j] )
+                *idx_ptr++ = Point(j, i);
+    }
+}
+
+
 CV_IMPL CvScalar cvSum( const CvArr* srcarr )
 {
     cv::Scalar sum = cv::sum(cv::cvarrToMat(srcarr, false, true, 1));
