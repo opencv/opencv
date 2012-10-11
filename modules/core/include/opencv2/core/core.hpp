@@ -1107,6 +1107,18 @@ public:
            type = CV_MAKETYPE(depth, channels) };
 };
 
+template<typename _Tp, int m, int n> class DataType<Matx<_Tp, m, n> >
+{
+public:
+    typedef Matx<_Tp, m, n> value_type;
+    typedef Matx<typename DataType<_Tp>::work_type, m, n> work_type;
+    typedef _Tp channel_type;
+    typedef value_type vec_type;
+    enum { generic_type = 0, depth = DataDepth<channel_type>::value, channels = m*n,
+        fmt = ((channels-1)<<8) + DataDepth<channel_type>::fmt,
+        type = CV_MAKETYPE(depth, channels) };
+};
+    
 template<typename _Tp, int cn> class DataType<Vec<_Tp, cn> >
 {
 public:

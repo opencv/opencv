@@ -69,6 +69,7 @@ protected:
 
     bool SomeMatFunctions();
     bool TestMat();
+    template<typename _Tp> void TestType(Size sz, _Tp value=_Tp(1.f));
     bool TestTemplateMat();
     bool TestMatND();
     bool TestSparseMat();
@@ -105,6 +106,19 @@ CV_OperationsTest::~CV_OperationsTest() {}
 #else
 #define MSVC_OLD 0
 #endif
+
+template<typename _Tp> void CV_OperationsTest::TestType(Size sz, _Tp value)
+{
+    cv::Mat_<_Tp> m(sz);
+    CV_Assert(m.cols == sz.width && m.rows == sz.height && m.depth() == DataType<_Tp>::depth &&
+              m.channels() == DataType<_Tp>::channels &&
+              m.elemSize() == sizeof(_Tp) && m.step == m.elemSize()*m.cols);
+    for( int y = 0; y < sz.height; y++ )
+        for( int x = 0; x < sz.width; x++ )
+            m(y, x) = value;
+    
+    CV_Assert( sum(m.reshape(1,1))[0] == (double)sz.width*sz.height );
+}
 
 bool CV_OperationsTest::TestMat()
 {
@@ -779,6 +793,16 @@ bool CV_OperationsTest::TestTemplateMat()
             badarg_catched = true;
         }
         CV_Assert( badarg_catched );
+        
+#include <iostream>
+#include <opencv2/core/core.hpp>
+        
+        Size size(2, 5);
+        TestType<float>(size);
+        TestType<cv::Vec3f>(size);
+        TestType<cv::Matx31f>(size);
+        TestType<cv::Matx41f>(size);
+        TestType<cv::Matx32f>(size);
     }
     catch (const test_excep& e)
     {
