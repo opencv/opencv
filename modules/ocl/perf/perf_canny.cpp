@@ -85,70 +85,70 @@ IMPLEMENT_PARAM_CLASS(L2gradient, bool);
 
 PARAM_TEST_CASE(Canny1, AppertureSize, L2gradient)
 {
-	int apperture_size;
-	bool useL2gradient;
-	//std::vector<cv::ocl::Info> oclinfo;
+    int apperture_size;
+    bool useL2gradient;
+    //std::vector<cv::ocl::Info> oclinfo;
 
-	virtual void SetUp()
-	{
-		apperture_size = GET_PARAM(0);
-		useL2gradient = GET_PARAM(1);
-		
-		//int devnums = getDevice(oclinfo);
-		//CV_Assert(devnums > 0);
-	}
+    virtual void SetUp()
+    {
+        apperture_size = GET_PARAM(0);
+        useL2gradient = GET_PARAM(1);
+
+        //int devnums = getDevice(oclinfo);
+        //CV_Assert(devnums > 0);
+    }
 };
 
 TEST_P(Canny1, Performance)
 {
-	cv::Mat img = readImage(FILTER_IMAGE,cv::IMREAD_GRAYSCALE);
-	ASSERT_FALSE(img.empty());
+    cv::Mat img = readImage(FILTER_IMAGE, cv::IMREAD_GRAYSCALE);
+    ASSERT_FALSE(img.empty());
 
-	double low_thresh = 100.0;
-	double high_thresh = 150.0;
+    double low_thresh = 100.0;
+    double high_thresh = 150.0;
 
-	cv::Mat edges_gold;
-	cv::ocl::oclMat edges;
+    cv::Mat edges_gold;
+    cv::ocl::oclMat edges;
 
-    double totalgputick=0;
-	double totalgputick_kernel=0;
-	
-	double t1=0;
-	double t2=0;
-	for(int j = 0; j < LOOP_TIMES+1; j ++)
-	{
+    double totalgputick = 0;
+    double totalgputick_kernel = 0;
 
-		t1 = (double)cvGetTickCount();//gpu start1		
-			
-		cv::ocl::oclMat ocl_img = cv::ocl::oclMat(img);//upload
-			
-		t2=(double)cvGetTickCount();//kernel
-		cv::ocl::Canny(ocl_img, edges, low_thresh, high_thresh, apperture_size, useL2gradient);
-		t2 = (double)cvGetTickCount() - t2;//kernel
-			
-		cv::Mat cpu_dst;
-		edges.download (cpu_dst);//download
-			
-		t1 = (double)cvGetTickCount() - t1;//gpu end1
+    double t1 = 0;
+    double t2 = 0;
+    for(int j = 0; j < LOOP_TIMES + 1; j ++)
+    {
 
-		if(j == 0)
-			continue;
+        t1 = (double)cvGetTickCount();//gpu start1
 
-		totalgputick=t1+totalgputick;
+        cv::ocl::oclMat ocl_img = cv::ocl::oclMat(img);//upload
 
-		totalgputick_kernel=t2+totalgputick_kernel;	
+        t2 = (double)cvGetTickCount(); //kernel
+        cv::ocl::Canny(ocl_img, edges, low_thresh, high_thresh, apperture_size, useL2gradient);
+        t2 = (double)cvGetTickCount() - t2;//kernel
 
-	}
+        cv::Mat cpu_dst;
+        edges.download (cpu_dst);//download
 
-	cout << "average gpu runtime is  " << totalgputick/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
-	cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
+        t1 = (double)cvGetTickCount() - t1;//gpu end1
+
+        if(j == 0)
+            continue;
+
+        totalgputick = t1 + totalgputick;
+
+        totalgputick_kernel = t2 + totalgputick_kernel;
+
+    }
+
+    cout << "average gpu runtime is  " << totalgputick / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
+    cout << "average gpu runtime without data transfer is  " << totalgputick_kernel / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
 
 
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_ImgProc, Canny1, testing::Combine(
-						testing::Values(AppertureSize(3), AppertureSize(5)),
-						testing::Values(L2gradient(false), L2gradient(true))));
+                            testing::Values(AppertureSize(3), AppertureSize(5)),
+                            testing::Values(L2gradient(false), L2gradient(true))));
 
 
 

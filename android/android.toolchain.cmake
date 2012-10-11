@@ -231,6 +231,12 @@
 #     [+] added NDK release name detection (see ANDROID_NDK_RELEASE)
 #     [+] added support for all C++ runtimes from NDK
 #         (system, gabi++, stlport, gnustl)
+#     [+] improved warnings on known issues of NDKs
+#     [~] use gold linker as default if available (NDK r8b)
+#     [~] globally turned off rpath
+#     [~] compiler options are aligned with NDK r8b
+#   - modified October 2012
+#     [~] fixed C++ linking: explicitly link with math library (OpenCV #2426)
 # ------------------------------------------------------------------------------
 
 cmake_minimum_required( VERSION 2.6.3 )
@@ -1090,6 +1096,11 @@ if( EXISTS "${__libstl}" OR EXISTS "${__libsupcxx}" )
   set( CMAKE_C_CREATE_SHARED_LIBRARY "${CMAKE_C_CREATE_SHARED_LIBRARY} \"${__libsupcxx}\"" )
   set( CMAKE_C_CREATE_SHARED_MODULE  "${CMAKE_C_CREATE_SHARED_MODULE} \"${__libsupcxx}\"" )
   set( CMAKE_C_LINK_EXECUTABLE       "${CMAKE_C_LINK_EXECUTABLE} \"${__libsupcxx}\"" )
+ endif()
+ if( ANDROID_STL MATCHES "gnustl" )
+  set( CMAKE_CXX_CREATE_SHARED_LIBRARY "${CMAKE_CXX_CREATE_SHARED_LIBRARY} -lm" )
+  set( CMAKE_CXX_CREATE_SHARED_MODULE  "${CMAKE_CXX_CREATE_SHARED_MODULE} -lm" )
+  set( CMAKE_CXX_LINK_EXECUTABLE       "${CMAKE_CXX_LINK_EXECUTABLE} -lm" )
  endif()
 endif()
 

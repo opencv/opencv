@@ -72,7 +72,7 @@ PARAM_TEST_CASE(Sparse, bool, bool)
     virtual void SetUp()
     {
         UseSmart = GET_PARAM(0);
-		useGray = GET_PARAM(0);
+        useGray = GET_PARAM(0);
     }
 };
 
@@ -94,28 +94,28 @@ TEST_P(Sparse, Mat)
     cv::goodFeaturesToTrack(gray_frame, pts, 1000, 0.01, 0.0);
 
     cv::ocl::oclMat d_pts;
-    cv::Mat pts_mat(1, (int)pts.size(), CV_32FC2, (void*)&pts[0]);
+    cv::Mat pts_mat(1, (int)pts.size(), CV_32FC2, (void *)&pts[0]);
     d_pts.upload(pts_mat);
 
     cv::ocl::PyrLKOpticalFlow pyrLK;
 
-	cv::ocl::oclMat oclFrame0;
-	cv::ocl::oclMat oclFrame1;
+    cv::ocl::oclMat oclFrame0;
+    cv::ocl::oclMat oclFrame1;
     cv::ocl::oclMat d_nextPts;
     cv::ocl::oclMat d_status;
     cv::ocl::oclMat d_err;
 
-	oclFrame0 = frame0;
-	oclFrame1 = frame1;
+    oclFrame0 = frame0;
+    oclFrame1 = frame1;
 
     pyrLK.sparse(oclFrame0, oclFrame1, d_pts, d_nextPts, d_status, &d_err);
 
     std::vector<cv::Point2f> nextPts(d_nextPts.cols);
-    cv::Mat nextPts_mat(1, d_nextPts.cols, CV_32FC2, (void*)&nextPts[0]);
+    cv::Mat nextPts_mat(1, d_nextPts.cols, CV_32FC2, (void *)&nextPts[0]);
     d_nextPts.download(nextPts_mat);
 
     std::vector<unsigned char> status(d_status.cols);
-    cv::Mat status_mat(1, d_status.cols, CV_8UC1, (void*)&status[0]);
+    cv::Mat status_mat(1, d_status.cols, CV_8UC1, (void *)&status[0]);
     d_status.download(status_mat);
 
     //std::vector<float> err(d_err.cols);
@@ -156,12 +156,12 @@ TEST_P(Sparse, Mat)
     double bad_ratio = static_cast<double>(mistmatch) / (nextPts.size() * 2);
 
     ASSERT_LE(bad_ratio, 0.05f);
-	
+
 }
 
 INSTANTIATE_TEST_CASE_P(Video, Sparse, Combine(
-    Values(false, true),   
-	Values(false)));
+                            Values(false, true),
+                            Values(false)));
 
 #endif // HAVE_OPENCL
 

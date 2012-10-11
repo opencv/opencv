@@ -827,4 +827,39 @@ TEST(Core_DCT, accuracy) { CxCore_DCTTest test; test.safe_run(); }
 TEST(Core_DFT, accuracy) { CxCore_DFTTest test; test.safe_run(); }
 TEST(Core_MulSpectrums, accuracy) { CxCore_MulSpectrumsTest test; test.safe_run(); }
 
+class Core_DFTComplexOutputTest : public cvtest::BaseTest
+{
+public:
+    Core_DFTComplexOutputTest() {}
+    ~Core_DFTComplexOutputTest() {}
+protected:
+    void run(int)
+    {
+        RNG& rng = theRNG();
+        for( int i = 0; i < 10; i++ )
+        {
+            int m = rng.uniform(2, 11);
+            int n = rng.uniform(2, 11);
+            int depth = rng.uniform(0, 2) + CV_32F;
+            Mat src8u(m, n, depth), src(m, n, depth), dst(m, n, CV_MAKETYPE(depth, 2));
+            Mat z = Mat::zeros(m, n, depth), dstz;
+            randu(src8u, Scalar::all(0), Scalar::all(10));
+            src8u.convertTo(src, src.type());
+            dst = Scalar::all(123);
+            Mat mv[] = {src, z}, srcz;
+            merge(mv, 2, srcz);
+            dft(srcz, dstz);
+            dft(src, dst, DFT_COMPLEX_OUTPUT);
+            if(norm(dst, dstz, NORM_INF) > 1e-3)
+            {
+                cout << "actual:\n" << dst << endl << endl;
+                cout << "reference:\n" << dstz << endl << endl;
+                CV_Error(CV_StsError, "");
+            }
+        }
+    }
+};
+
+TEST(Core_DFT, complex_output) { Core_DFTComplexOutputTest test; test.safe_run(); }
+
 

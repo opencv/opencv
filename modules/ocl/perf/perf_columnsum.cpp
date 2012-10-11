@@ -16,7 +16,7 @@
 //
 // @Authors
 //	   Fangfang Bai fangfang@multicorewareinc.com
-//    
+//
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -63,53 +63,53 @@ using namespace std;
 
 PARAM_TEST_CASE(ColumnSum)
 {
-	cv::Mat src;
-	//std::vector<cv::ocl::Info> oclinfo;
+    cv::Mat src;
+    //std::vector<cv::ocl::Info> oclinfo;
 
-	virtual void SetUp()
-	{
-		//int devnums = getDevice(oclinfo);
-		//CV_Assert(devnums > 0);
-	}
+    virtual void SetUp()
+    {
+        //int devnums = getDevice(oclinfo);
+        //CV_Assert(devnums > 0);
+    }
 };
 
 TEST_F(ColumnSum, Performance)
 {
-	cv::Size size(MWIDTH,MHEIGHT);
+    cv::Size size(MWIDTH, MHEIGHT);
     cv::Mat src = randomMat(size, CV_32FC1);
     cv::ocl::oclMat d_dst;
 
-	double totalgputick=0;
-	double totalgputick_kernel=0;
-	double t1=0;
-	double t2=0;
+    double totalgputick = 0;
+    double totalgputick_kernel = 0;
+    double t1 = 0;
+    double t2 = 0;
 
-	for(int j = 0; j < LOOP_TIMES+1; j ++)
-	{
+    for(int j = 0; j < LOOP_TIMES + 1; j ++)
+    {
 
-		t1 = (double)cvGetTickCount();//gpu start1
+        t1 = (double)cvGetTickCount();//gpu start1
 
-        cv::ocl::oclMat d_src(src);		
+        cv::ocl::oclMat d_src(src);
 
-		t2=(double)cvGetTickCount();//kernel
-		cv::ocl::columnSum(d_src,d_dst);
-		t2 = (double)cvGetTickCount() - t2;//kernel
+        t2 = (double)cvGetTickCount(); //kernel
+        cv::ocl::columnSum(d_src, d_dst);
+        t2 = (double)cvGetTickCount() - t2;//kernel
 
-		cv::Mat cpu_dst;
-		d_dst.download (cpu_dst);//download
+        cv::Mat cpu_dst;
+        d_dst.download (cpu_dst);//download
 
-		t1 = (double)cvGetTickCount() - t1;//gpu end1
+        t1 = (double)cvGetTickCount() - t1;//gpu end1
 
-		if(j == 0)
-			continue;
+        if(j == 0)
+            continue;
 
-		totalgputick=t1+totalgputick;
-		totalgputick_kernel=t2+totalgputick_kernel;	
+        totalgputick = t1 + totalgputick;
+        totalgputick_kernel = t2 + totalgputick_kernel;
 
-	}
+    }
 
-	cout << "average gpu runtime is  " << totalgputick/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
-	cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
+    cout << "average gpu runtime is  " << totalgputick / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
+    cout << "average gpu runtime without data transfer is  " << totalgputick_kernel / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
 
 
 
@@ -117,4 +117,4 @@ TEST_F(ColumnSum, Performance)
 
 
 
-#endif 
+#endif

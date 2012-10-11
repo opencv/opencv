@@ -17,7 +17,7 @@
 // @Authors
 //		Dachuan Zhao, dachuan@multicorewareinc.com
 //		Yao Wang, yao@multicorewareinc.com
-//    
+//
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -100,18 +100,16 @@ void pyrdown_run(const oclMat &src, const oclMat &dst)
     args.push_back( make_pair( sizeof(cl_int), (void *)&dst.step ));
     args.push_back( make_pair( sizeof(cl_int), (void *)&dst.cols));
 
-    openCLExecuteKernel(clCxt, &pyr_down, kernelName, globalThreads, localThreads, args, src.channels(), src.depth());
+    openCLExecuteKernel(clCxt, &pyr_down, kernelName, globalThreads, localThreads, args, src.oclchannels(), src.depth());
 }
 //////////////////////////////////////////////////////////////////////////////
 // pyrDown
 
-void cv::ocl::pyrDown(const oclMat& src, oclMat& dst)
+void cv::ocl::pyrDown(const oclMat &src, oclMat &dst)
 {
     CV_Assert(src.depth() <= CV_32F && src.channels() <= 4);
 
     dst.create((src.rows + 1) / 2, (src.cols + 1) / 2, src.type());
-
-	dst.download_channels=src.download_channels;
 
     pyrdown_run(src, dst);
 }

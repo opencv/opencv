@@ -73,7 +73,7 @@ cv::Mat cv::getGaborKernel( Size ksize, double sigma, double theta,
     CV_Assert( ktype == CV_32F || ktype == CV_64F );
     
     Mat kernel(ymax - ymin + 1, xmax - xmin + 1, ktype);
-    double scale = 1/(2*CV_PI*sigma_x*sigma_y);
+    double scale = 1;
     double ex = -0.5/(sigma_x*sigma_x);
     double ey = -0.5/(sigma_y*sigma_y);
     double cscale = CV_PI*2/lambd;
@@ -90,7 +90,7 @@ cv::Mat cv::getGaborKernel( Size ksize, double sigma, double theta,
             else
                 kernel.at<double>(ymax - y, xmax - x) = v;
         }
-    
+
     return kernel;
 }
 

@@ -305,9 +305,9 @@ inline int divUp(int total, int grain)
 template<typename T>
 void arithmetic_run(const oclMat &src1, const oclMat &src2, oclMat &dst, string kernelName, const char **kernelString, void *_scalar)
 {
-    if(src1.clCxt -> impl -> double_support ==0 && src1.type() == CV_64F)
+    if(src1.clCxt -> impl -> double_support == 0 && src1.type() == CV_64F)
     {
-        CV_Error(CV_GpuNotSupported,"Selected device don't support double\r\n");
+        CV_Error(CV_GpuNotSupported, "Selected device don't support double\r\n");
         return;
     }
 
@@ -319,7 +319,7 @@ void arithmetic_run(const oclMat &src1, const oclMat &src2, oclMat &dst, string 
     CV_Assert(src1.depth() != CV_8S);
 
     Context  *clCxt = src1.clCxt;
-    int channels = dst.channels();
+    int channels = dst.oclchannels();
     int depth = dst.depth();
 
     int vector_lengths[4][7] = {{4, 0, 4, 4, 1, 1, 1},
@@ -328,13 +328,13 @@ void arithmetic_run(const oclMat &src1, const oclMat &src2, oclMat &dst, string 
         {4, 0, 4, 4, 1, 1, 1}
     };
 
-    size_t vector_length = vector_lengths[channels-1][depth];
+    size_t vector_length = vector_lengths[channels - 1][depth];
     int offset_cols = (dst.offset / dst.elemSize1()) & (vector_length - 1);
     int cols = divUp(dst.cols * channels + offset_cols, vector_length);
 
     size_t localThreads[3]  = { 64, 4, 1 };
-    size_t globalThreads[3] = { divUp(cols, localThreads[0]) * localThreads[0],
-                                divUp(dst.rows, localThreads[1]) * localThreads[1],
+    size_t globalThreads[3] = { divUp(cols, localThreads[0]) *localThreads[0],
+                                divUp(dst.rows, localThreads[1]) *localThreads[1],
                                 1
                               };
 
@@ -352,11 +352,11 @@ void arithmetic_run(const oclMat &src1, const oclMat &src2, oclMat &dst, string 
     args.push_back( make_pair( sizeof(cl_int), (void *)&src1.rows ));
     args.push_back( make_pair( sizeof(cl_int), (void *)&cols ));
     args.push_back( make_pair( sizeof(cl_int), (void *)&dst_step1 ));
-
+    T scalar;
     if(_scalar != NULL)
     {
         double scalar1 = *((double *)_scalar);
-        T scalar = (T)scalar1;
+        scalar = (T)scalar1;
         args.push_back( make_pair( sizeof(T), (void *)&scalar ));
     }
 
@@ -368,9 +368,9 @@ void arithmetic_run(const oclMat &src1, const oclMat &src2, oclMat &dst, string 
 }
 void arithmetic_run(const oclMat &src1, const oclMat &src2, oclMat &dst, const oclMat &mask, string kernelName, const char **kernelString)
 {
-    if(src1.clCxt -> impl -> double_support ==0 && src1.type() == CV_64F)
+    if(src1.clCxt -> impl -> double_support == 0 && src1.type() == CV_64F)
     {
-        CV_Error(CV_GpuNotSupported,"Selected device don't support double\r\n");
+        CV_Error(CV_GpuNotSupported, "Selected device don't support double\r\n");
         return;
     }
 
@@ -384,7 +384,7 @@ void arithmetic_run(const oclMat &src1, const oclMat &src2, oclMat &dst, const o
     CV_Assert(mask.type() == CV_8U);
 
     Context  *clCxt = src1.clCxt;
-    int channels = dst.channels();
+    int channels = dst.oclchannels();
     int depth = dst.depth();
 
     int vector_lengths[4][7] = {{4, 4, 2, 2, 1, 1, 1},
@@ -393,13 +393,13 @@ void arithmetic_run(const oclMat &src1, const oclMat &src2, oclMat &dst, const o
         {1, 1, 1, 1, 1, 1, 1}
     };
 
-    size_t vector_length = vector_lengths[channels-1][depth];
+    size_t vector_length = vector_lengths[channels - 1][depth];
     int offset_cols = ((dst.offset % dst.step) / dst.elemSize()) & (vector_length - 1);
     int cols = divUp(dst.cols + offset_cols, vector_length);
 
     size_t localThreads[3]  = { 64, 4, 1 };
-    size_t globalThreads[3] = { divUp(cols, localThreads[0]) * localThreads[0],
-                                divUp(dst.rows, localThreads[1]) * localThreads[1],
+    size_t globalThreads[3] = { divUp(cols, localThreads[0]) *localThreads[0],
+                                divUp(dst.rows, localThreads[1]) *localThreads[1],
                                 1
                               };
 
@@ -445,36 +445,33 @@ typedef void (*MulDivFunc)(const oclMat &src1, const oclMat &src2, oclMat &dst, 
 
 void cv::ocl::multiply(const oclMat &src1, const oclMat &src2, oclMat &dst, double scalar)
 {
-    static MulDivFunc tab[] =
-    {
-        arithmetic_run<float>, 0, arithmetic_run<float>, arithmetic_run<float>,
-        arithmetic_run<float>, arithmetic_run<float>, arithmetic_run<double>,
-    };
-
-    tab[src1.depth()](src1, src2, dst, "arithm_mul", &arithm_mul, (void *)(&scalar));
+    if((src1.clCxt -> impl -> double_support != 0) && (src1.depth() == CV_64F))
+        arithmetic_run<double>(src1, src2, dst, "arithm_mul", &arithm_mul, (void *)(&scalar));
+    else
+        arithmetic_run<float>(src1, src2, dst, "arithm_mul", &arithm_mul, (void *)(&scalar));
 }
 void cv::ocl::divide(const oclMat &src1, const oclMat &src2, oclMat &dst, double scalar)
 {
 
-    if(src1.clCxt -> impl -> double_support !=0)
+    if(src1.clCxt -> impl -> double_support != 0)
         arithmetic_run<double>(src1, src2, dst, "arithm_div", &arithm_div, (void *)(&scalar));
     else
         arithmetic_run<float>(src1, src2, dst, "arithm_div", &arithm_div, (void *)(&scalar));
 
 }
-    template <typename WT ,typename CL_WT>
+template <typename WT , typename CL_WT>
 void arithmetic_scalar_run(const oclMat &src1, const Scalar &src2, oclMat &dst, const oclMat &mask, string kernelName, const char **kernelString, int isMatSubScalar)
 {
-    if(src1.clCxt -> impl -> double_support ==0 && src1.type() == CV_64F)
+    if(src1.clCxt -> impl -> double_support == 0 && src1.type() == CV_64F)
     {
-        CV_Error(CV_GpuNotSupported,"Selected device don't support double\r\n");
+        CV_Error(CV_GpuNotSupported, "Selected device don't support double\r\n");
         return;
     }
 
     dst.create(src1.size(), src1.type());
 
     CV_Assert(src1.cols == dst.cols && src1.rows == dst.rows &&
-            src1.type() == dst.type());
+              src1.type() == dst.type());
 
     //CV_Assert(src1.depth() != CV_8S);
 
@@ -482,12 +479,12 @@ void arithmetic_scalar_run(const oclMat &src1, const Scalar &src2, oclMat &dst, 
         CV_Assert(mask.type() == CV_8U && src1.rows == mask.rows && src1.cols == mask.cols);
 
     Context  *clCxt = src1.clCxt;
-    int channels = dst.channels();
+    int channels = dst.oclchannels();
     int depth = dst.depth();
 
     WT s[4] = { saturate_cast<WT>(src2.val[0]), saturate_cast<WT>(src2.val[1]),
-        saturate_cast<WT>(src2.val[2]), saturate_cast<WT>(src2.val[3])
-    };
+                saturate_cast<WT>(src2.val[2]), saturate_cast<WT>(src2.val[3])
+              };
 
     int vector_lengths[4][7] = {{4, 0, 2, 2, 1, 1, 1},
         {2, 0, 1, 1, 1, 1, 1},
@@ -495,15 +492,15 @@ void arithmetic_scalar_run(const oclMat &src1, const Scalar &src2, oclMat &dst, 
         {1, 0, 1, 1, 1, 1, 1}
     };
 
-    size_t vector_length = vector_lengths[channels-1][depth];
+    size_t vector_length = vector_lengths[channels - 1][depth];
     int offset_cols = ((dst.offset % dst.step) / dst.elemSize()) & (vector_length - 1);
     int cols = divUp(dst.cols + offset_cols, vector_length);
 
     size_t localThreads[3]  = { 64, 4, 1 };
-    size_t globalThreads[3] = { divUp(cols, localThreads[0]) * localThreads[0],
-        divUp(dst.rows, localThreads[1]) * localThreads[1],
-        1
-    };
+    size_t globalThreads[3] = { divUp(cols, localThreads[0]) *localThreads[0],
+                                divUp(dst.rows, localThreads[1]) *localThreads[1],
+                                1
+                              };
 
     int dst_step1 = dst.cols * dst.elemSize();
     vector<pair<size_t , const void *> > args;
@@ -535,9 +532,9 @@ void arithmetic_scalar_run(const oclMat &src1, const Scalar &src2, oclMat &dst, 
 
 void arithmetic_scalar_run(const oclMat &src, oclMat &dst, string kernelName, const char **kernelString, double scalar)
 {
-    if(src.clCxt -> impl -> double_support ==0 && src.type() == CV_64F)
+    if(src.clCxt -> impl -> double_support == 0 && src.type() == CV_64F)
     {
-        CV_Error(CV_GpuNotSupported,"Selected device don't support double\r\n");
+        CV_Error(CV_GpuNotSupported, "Selected device don't support double\r\n");
         return;
     }
 
@@ -548,7 +545,7 @@ void arithmetic_scalar_run(const oclMat &src, oclMat &dst, string kernelName, co
     CV_Assert(src.depth() != CV_8S);
 
     Context  *clCxt = src.clCxt;
-    int channels = dst.channels();
+    int channels = dst.oclchannels();
     int depth = dst.depth();
 
     int vector_lengths[4][7] = {{4, 0, 4, 4, 1, 1, 1},
@@ -557,15 +554,15 @@ void arithmetic_scalar_run(const oclMat &src, oclMat &dst, string kernelName, co
         {4, 0, 4, 4, 1, 1, 1}
     };
 
-    size_t vector_length = vector_lengths[channels-1][depth];
+    size_t vector_length = vector_lengths[channels - 1][depth];
     int offset_cols = (dst.offset / dst.elemSize1()) & (vector_length - 1);
     int cols = divUp(dst.cols * channels + offset_cols, vector_length);
 
     size_t localThreads[3]  = { 64, 4, 1 };
-    size_t globalThreads[3] = { divUp(cols, localThreads[0]) * localThreads[0],
-        divUp(dst.rows, localThreads[1]) * localThreads[1],
-        1
-    };
+    size_t globalThreads[3] = { divUp(cols, localThreads[0]) *localThreads[0],
+                                divUp(dst.rows, localThreads[1]) *localThreads[1],
+                                1
+                              };
 
     int dst_step1 = dst.cols * dst.elemSize();
     vector<pair<size_t , const void *> > args;
@@ -579,7 +576,7 @@ void arithmetic_scalar_run(const oclMat &src, oclMat &dst, string kernelName, co
     args.push_back( make_pair( sizeof(cl_int), (void *)&cols ));
     args.push_back( make_pair( sizeof(cl_int), (void *)&dst_step1 ));
 
-    if(src.clCxt -> impl -> double_support !=0)
+    if(src.clCxt -> impl -> double_support != 0)
         args.push_back( make_pair( sizeof(cl_double), (void *)&scalar ));
     else
     {
@@ -638,9 +635,9 @@ void cv::ocl::subtract(const Scalar &src2, const oclMat &src1, oclMat &dst, cons
 }
 void cv::ocl::divide(double scalar, const oclMat &src,  oclMat &dst)
 {
-    if(src.clCxt -> impl -> double_support ==0)
+    if(src.clCxt -> impl -> double_support == 0)
     {
-        CV_Error(CV_GpuNotSupported,"Selected device don't support double\r\n");
+        CV_Error(CV_GpuNotSupported, "Selected device don't support double\r\n");
         return;
     }
 
@@ -666,7 +663,7 @@ void cv::ocl::absdiff(const oclMat &src1, const Scalar &src2, oclMat &dst)
 void compare_run(const oclMat &src1, const oclMat &src2, oclMat &dst, string kernelName, const char **kernelString)
 {
     dst.create(src1.size(), CV_8UC1);
-    CV_Assert(src1.channels() == 1);
+    CV_Assert(src1.oclchannels() == 1);
     CV_Assert(src1.type() == src2.type());
     Context  *clCxt = src1.clCxt;
     int depth = src1.depth();
@@ -675,10 +672,10 @@ void compare_run(const oclMat &src1, const oclMat &src2, oclMat &dst, string ker
     int offset_cols = (dst.offset / dst.elemSize1()) & (vector_length - 1);
     int cols = divUp(dst.cols  + offset_cols, vector_length);
     size_t localThreads[3]  = { 64, 4, 1 };
-    size_t globalThreads[3] = { divUp(cols, localThreads[0]) * localThreads[0],
-        divUp(dst.rows, localThreads[1]) * localThreads[1],
-        1
-    };
+    size_t globalThreads[3] = { divUp(cols, localThreads[0]) *localThreads[0],
+                                divUp(dst.rows, localThreads[1]) *localThreads[1],
+                                1
+                              };
     int dst_step1 = dst.cols * dst.elemSize();
     vector<pair<size_t , const void *> > args;
     args.push_back( make_pair( sizeof(cl_mem), (void *)&src1.data ));
@@ -698,7 +695,7 @@ void compare_run(const oclMat &src1, const oclMat &src2, oclMat &dst, string ker
 
 void cv::ocl::compare(const oclMat &src1, const oclMat &src2, oclMat &dst , int cmpOp)
 {
-    if(src1.clCxt -> impl -> double_support ==0 && src1.type()==CV_64F)
+    if(src1.clCxt -> impl -> double_support == 0 && src1.type() == CV_64F)
     {
         cout << "Selected device do not support double" << endl;
         return;
@@ -752,7 +749,7 @@ void arithmetic_sum_buffer_run(const oclMat &src, cl_mem &dst, int vlen , int gr
     int cols = all_cols - invalid_cols , elemnum = cols * src.rows;;
     int offset = src.offset / (vlen * src.elemSize1());
     int repeat_s = src.offset / src.elemSize1() - offset * vlen;
-    int repeat_e = (offset + cols) * vlen - src.offset / src.elemSize1() - src.cols * src.channels();
+    int repeat_e = (offset + cols) * vlen - src.offset / src.elemSize1() - src.cols * src.oclchannels();
     char build_options[512];
     CV_Assert(type == 0 || type == 1 || type == 2);
     sprintf(build_options, "-D DEPTH_%d -D REPEAT_S%d -D REPEAT_E%d -D FUNC_TYPE_%d", src.depth(), repeat_s, repeat_e, type);
@@ -764,33 +761,33 @@ void arithmetic_sum_buffer_run(const oclMat &src, cl_mem &dst, int vlen , int gr
     args.push_back( make_pair( sizeof(cl_mem) , (void *)&src.data));
     args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst ));
     size_t gt[3] = {groupnum * 256, 1, 1}, lt[3] = {256, 1, 1};
-    if(src.channels() != 3)
+    if(src.oclchannels() != 3)
         openCLExecuteKernel(src.clCxt, &arithm_sum, "arithm_op_sum", gt, lt, args, -1, -1, build_options);
     else
         openCLExecuteKernel(src.clCxt, &arithm_sum_3, "arithm_op_sum_3", gt, lt, args, -1, -1, build_options);
 }
 
 template <typename T>
-Scalar arithmetic_sum(const oclMat &src)
+Scalar arithmetic_sum(const oclMat &src, int type = 0)
 {
     size_t groupnum = src.clCxt->impl->maxComputeUnits;
     CV_Assert(groupnum != 0);
-    int vlen = src.channels() == 3 ? 12 : 8, dbsize = groupnum * vlen, status;
+    int vlen = src.oclchannels() == 3 ? 12 : 8, dbsize = groupnum * vlen, status;
     Context *clCxt = src.clCxt;
     T *p = new T[dbsize];
-    cl_mem dstBuffer = openCLCreateBuffer(clCxt,CL_MEM_WRITE_ONLY,dbsize*sizeof(T));
+    cl_mem dstBuffer = openCLCreateBuffer(clCxt, CL_MEM_WRITE_ONLY, dbsize * sizeof(T));
     Scalar s;
     s.val[0] = 0.0;
     s.val[1] = 0.0;
     s.val[2] = 0.0;
     s.val[3] = 0.0;
-    arithmetic_sum_buffer_run(src, dstBuffer, vlen, groupnum);
+    arithmetic_sum_buffer_run(src, dstBuffer, vlen, groupnum, type);
 
     memset(p, 0, dbsize * sizeof(T));
-    openCLReadBuffer(clCxt,dstBuffer,(void *)p,dbsize*sizeof(T));
+    openCLReadBuffer(clCxt, dstBuffer, (void *)p, dbsize * sizeof(T));
     for(int i = 0; i < dbsize;)
     {
-        for(int j = 0; j < src.channels(); j++, i++)
+        for(int j = 0; j < src.oclchannels(); j++, i++)
             s.val[j] += p[i];
     }
     delete[] p;
@@ -798,12 +795,12 @@ Scalar arithmetic_sum(const oclMat &src)
     return s;
 }
 
-typedef Scalar (*sumFunc)(const oclMat &src);
+typedef Scalar (*sumFunc)(const oclMat &src, int type);
 Scalar cv::ocl::sum(const oclMat &src)
 {
-    if(src.clCxt->impl->double_support==0 && src.depth()==CV_64F)
+    if(src.clCxt->impl->double_support == 0 && src.depth() == CV_64F)
     {
-        CV_Error(CV_GpuNotSupported,"select device don't support double");
+        CV_Error(CV_GpuNotSupported, "select device don't support double");
     }
     static sumFunc functab[2] =
     {
@@ -813,7 +810,25 @@ Scalar cv::ocl::sum(const oclMat &src)
 
     sumFunc func;
     func = functab[src.clCxt->impl->double_support];
-    return func(src);
+    return func(src, 0);
+}
+
+
+Scalar cv::ocl::sqrSum(const oclMat &src)
+{
+    if(src.clCxt->impl->double_support == 0 && src.depth() == CV_64F)
+    {
+        CV_Error(CV_GpuNotSupported, "select device don't support double");
+    }
+    static sumFunc functab[2] =
+    {
+        arithmetic_sum<float>,
+        arithmetic_sum<double>
+    };
+
+    sumFunc func;
+    func = functab[src.clCxt->impl->double_support];
+    return func(src, 2);
 }
 //////////////////////////////////////////////////////////////////////////////
 //////////////////////////////// meanStdDev //////////////////////////////////
@@ -822,7 +837,7 @@ void cv::ocl::meanStdDev(const oclMat &src, Scalar &mean, Scalar &stddev)
 {
     CV_Assert(src.depth() <= CV_32S);
     cv::Size sz(1, 1);
-    int channels = src.channels();
+    int channels = src.oclchannels();
     Mat m1(sz, CV_MAKETYPE(CV_32S, channels), cv::Scalar::all(0)),
         m2(sz, CV_MAKETYPE(CV_32S, channels), cv::Scalar::all(0));
     oclMat dst1(m1), dst2(m2);
@@ -851,7 +866,7 @@ void arithmetic_minMax_run(const oclMat &src, const oclMat &mask, cl_mem &dst, i
     int cols = all_cols - invalid_cols , elemnum = cols * src.rows;;
     int offset = src.offset / (vlen * src.elemSize1());
     int repeat_s = src.offset / src.elemSize1() - offset * vlen;
-    int repeat_e = (offset + cols) * vlen - src.offset / src.elemSize1() - src.cols * src.channels();
+    int repeat_e = (offset + cols) * vlen - src.offset / src.elemSize1() - src.cols * src.oclchannels();
     char build_options[50];
     sprintf(build_options, "-D DEPTH_%d -D REPEAT_S%d -D REPEAT_E%d", src.depth(), repeat_s, repeat_e);
     args.push_back( make_pair( sizeof(cl_int) , (void *)&cols ));
@@ -883,7 +898,7 @@ void arithmetic_minMax_mask_run(const oclMat &src, const oclMat &mask, cl_mem &d
     vector<pair<size_t , const void *> > args;
     size_t gt[3] = {groupnum * 256, 1, 1}, lt[3] = {256, 1, 1};
     char build_options[50];
-    if(src.channels() == 1)
+    if(src.oclchannels() == 1)
     {
         int cols = (src.cols - 1) / vlen + 1;
         int invalid_cols = src.step / (vlen * src.elemSize1()) - cols;
@@ -917,7 +932,7 @@ template <typename T> void arithmetic_minMax(const oclMat &src, double *minVal, 
     int vlen = 8;
     int dbsize = groupnum * 2 * vlen * sizeof(T) , status;
     Context *clCxt = src.clCxt;
-    cl_mem dstBuffer = openCLCreateBuffer(clCxt,CL_MEM_WRITE_ONLY,dbsize);
+    cl_mem dstBuffer = openCLCreateBuffer(clCxt, CL_MEM_WRITE_ONLY, dbsize);
     *minVal = std::numeric_limits<double>::max() , *maxVal = -std::numeric_limits<double>::max();
     if (mask.empty())
     {
@@ -929,7 +944,7 @@ template <typename T> void arithmetic_minMax(const oclMat &src, double *minVal, 
     }
     T *p = new T[groupnum * vlen * 2];
     memset(p, 0, dbsize);
-    openCLReadBuffer(clCxt,dstBuffer,(void *)p,dbsize);
+    openCLReadBuffer(clCxt, dstBuffer, (void *)p, dbsize);
     for(int i = 0; i < vlen * groupnum; i++)
     {
         *minVal = *minVal < p[i] ? *minVal : p[i];
@@ -945,10 +960,10 @@ template <typename T> void arithmetic_minMax(const oclMat &src, double *minVal, 
 typedef void (*minMaxFunc)(const oclMat &src, double *minVal, double *maxVal, const oclMat &mask);
 void cv::ocl::minMax(const oclMat &src, double *minVal, double *maxVal, const oclMat &mask)
 {
-    CV_Assert(src.channels() == 1);
-    if(src.clCxt->impl->double_support==0 && src.depth()==CV_64F)
+    CV_Assert(src.oclchannels() == 1);
+    if(src.clCxt->impl->double_support == 0 && src.depth() == CV_64F)
     {
-        CV_Error(CV_GpuNotSupported,"select device don't support double");
+        CV_Error(CV_GpuNotSupported, "select device don't support double");
     }
     static minMaxFunc functab[8] =
     {
@@ -979,7 +994,7 @@ double cv::ocl::norm(const oclMat &src1, const oclMat &src2, int normType)
     bool isRelative = (normType & NORM_RELATIVE) != 0;
     normType &= 7;
     CV_Assert(src1.depth() <= CV_32S && src1.type() == src2.type() && ( normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2));
-    int channels = src1.channels(), i = 0, *p;
+    int channels = src1.oclchannels(), i = 0, *p;
     double r = 0;
     oclMat gm1(src1.size(), src1.type());
     int min_int = (normType == NORM_INF ? CL_INT_MIN : 0);
@@ -1030,9 +1045,9 @@ double cv::ocl::norm(const oclMat &src1, const oclMat &src2, int normType)
 //////////////////////////////////////////////////////////////////////////////
 void arithmetic_flip_rows_run(const oclMat &src, oclMat &dst, string kernelName)
 {
-    if(src.clCxt -> impl -> double_support ==0 && src.type() == CV_64F)
+    if(src.clCxt -> impl -> double_support == 0 && src.type() == CV_64F)
     {
-        CV_Error(CV_GpuNotSupported,"Selected device don't support double\r\n");
+        CV_Error(CV_GpuNotSupported, "Selected device don't support double\r\n");
         return;
     }
 
@@ -1041,7 +1056,7 @@ void arithmetic_flip_rows_run(const oclMat &src, oclMat &dst, string kernelName)
     CV_Assert(src.type() == dst.type());
 
     Context  *clCxt = src.clCxt;
-    int channels = dst.channels();
+    int channels = dst.oclchannels();
     int depth = dst.depth();
 
     int vector_lengths[4][7] = {{4, 4, 4, 4, 1, 1, 1},
@@ -1050,15 +1065,15 @@ void arithmetic_flip_rows_run(const oclMat &src, oclMat &dst, string kernelName)
         {4, 4, 4, 4, 1, 1, 1}
     };
 
-    size_t vector_length = vector_lengths[channels-1][depth];
+    size_t vector_length = vector_lengths[channels - 1][depth];
     int offset_cols = ((dst.offset % dst.step) / dst.elemSize1()) & (vector_length - 1);
 
     int cols = divUp(dst.cols * channels + offset_cols, vector_length);
     int rows = divUp(dst.rows, 2);
 
     size_t localThreads[3]  = { 64, 4, 1 };
-    size_t globalThreads[3] = { divUp(cols, localThreads[0]) * localThreads[0],
-                                divUp(rows, localThreads[1]) * localThreads[1],
+    size_t globalThreads[3] = { divUp(cols, localThreads[0]) *localThreads[0],
+                                divUp(rows, localThreads[1]) *localThreads[1],
                                 1
                               };
 
@@ -1079,9 +1094,9 @@ void arithmetic_flip_rows_run(const oclMat &src, oclMat &dst, string kernelName)
 }
 void arithmetic_flip_cols_run(const oclMat &src, oclMat &dst, string kernelName, bool isVertical)
 {
-    if(src.clCxt -> impl -> double_support ==0 && src.type() == CV_64F)
+    if(src.clCxt -> impl -> double_support == 0 && src.type() == CV_64F)
     {
-        CV_Error(CV_GpuNotSupported,"Selected device don't support double\r\n");
+        CV_Error(CV_GpuNotSupported, "Selected device don't support double\r\n");
         return;
     }
 
@@ -1089,7 +1104,7 @@ void arithmetic_flip_cols_run(const oclMat &src, oclMat &dst, string kernelName,
     CV_Assert(src.type() == dst.type());
 
     Context  *clCxt = src.clCxt;
-    int channels = dst.channels();
+    int channels = dst.oclchannels();
     int depth = dst.depth();
 
     int vector_lengths[4][7] = {{1, 1, 1, 1, 1, 1, 1},
@@ -1098,15 +1113,15 @@ void arithmetic_flip_cols_run(const oclMat &src, oclMat &dst, string kernelName,
         {1, 1, 1, 1, 1, 1, 1}
     };
 
-    size_t vector_length = vector_lengths[channels-1][depth];
+    size_t vector_length = vector_lengths[channels - 1][depth];
     int offset_cols = ((dst.offset % dst.step) / dst.elemSize()) & (vector_length - 1);
     int cols = divUp(dst.cols + offset_cols, vector_length);
     cols = isVertical ? cols : divUp(cols, 2);
     int rows = isVertical ?  divUp(dst.rows, 2) : dst.rows;
 
     size_t localThreads[3]  = { 64, 4, 1 };
-    size_t globalThreads[3] = { divUp(cols, localThreads[0]) * localThreads[0],
-                                divUp(rows, localThreads[1]) * localThreads[1],
+    size_t globalThreads[3] = { divUp(cols, localThreads[0]) *localThreads[0],
+                                divUp(rows, localThreads[1]) *localThreads[1],
                                 1
                               };
 
@@ -1130,7 +1145,7 @@ void arithmetic_flip_cols_run(const oclMat &src, oclMat &dst, string kernelName,
 
     const char **kernelString = isVertical ? &arithm_flip_rc : &arithm_flip;
 
-    openCLExecuteKernel(clCxt, kernelString, kernelName, globalThreads, localThreads, args, src.channels(), depth);
+    openCLExecuteKernel(clCxt, kernelString, kernelName, globalThreads, localThreads, args, src.oclchannels(), depth);
 }
 void cv::ocl::flip(const oclMat &src, oclMat &dst, int flipCode)
 {
@@ -1151,21 +1166,21 @@ void cv::ocl::flip(const oclMat &src, oclMat &dst, int flipCode)
 void arithmetic_lut_run(const oclMat &src1, const oclMat &src2, oclMat &dst, string kernelName)
 {
     Context *clCxt = src1.clCxt;
-    int channels = src1.channels();
+    int channels = src1.oclchannels();
     int rows = src1.rows;
     int cols = src1.cols;
     //int step = src1.step;
-    int src_step = src1.step/ src1.elemSize();
-    int dst_step = dst.step/ dst.elemSize();
+    int src_step = src1.step / src1.elemSize();
+    int dst_step = dst.step / dst.elemSize();
     int whole_rows = src1.wholerows;
     int whole_cols = src1.wholecols;
-    int src_offset = src1.offset/ src1.elemSize();
-    int dst_offset = dst.offset/ dst.elemSize();
-    int lut_offset = src2.offset/ src2.elemSize();
+    int src_offset = src1.offset / src1.elemSize();
+    int dst_offset = dst.offset / dst.elemSize();
+    int lut_offset = src2.offset / src2.elemSize();
     int left_col = 0, right_col = 0;
     size_t localSize[] = {16, 16, 1};
     //cl_kernel kernel = openCLGetKernelFromSource(clCxt,&arithm_LUT,kernelName);
-    size_t globalSize[] = {(cols + localSize[0] - 1) / localSize[0]*localSize[0], (rows + localSize[1] - 1) / localSize[1]*localSize[1], 1};
+    size_t globalSize[] = {(cols + localSize[0] - 1) / localSize[0] *localSize[0], (rows + localSize[1] - 1) / localSize[1] *localSize[1], 1};
     if(channels == 1 && cols > 6)
     {
         left_col = 4 - (dst_offset & 3);
@@ -1187,7 +1202,7 @@ void arithmetic_lut_run(const oclMat &src1, const oclMat &src2, oclMat &dst, str
     CV_Assert(clCxt == dst.clCxt);
     CV_Assert(src1.cols == dst.cols);
     CV_Assert(src1.rows == dst.rows);
-    CV_Assert(src1.channels() == dst.channels());
+    CV_Assert(src1.oclchannels() == dst.oclchannels());
     //  CV_Assert(src1.step == dst.step);
     vector<pair<size_t , const void *> > args;
 
@@ -1206,7 +1221,7 @@ void arithmetic_lut_run(const oclMat &src1, const oclMat &src2, oclMat &dst, str
         args.push_back( make_pair( sizeof(cl_int), (void *)&lut_offset ));
         args.push_back( make_pair( sizeof(cl_int), (void *)&src_step ));
         args.push_back( make_pair( sizeof(cl_int), (void *)&dst_step ));
-        openCLExecuteKernel(clCxt, &arithm_LUT, kernelName, globalSize, localSize, args, src1.channels(), src1.depth());
+        openCLExecuteKernel(clCxt, &arithm_LUT, kernelName, globalSize, localSize, args, src1.oclchannels(), src1.depth());
     }
     if(channels == 1 && (left_col != 0 || right_col != 0))
     {
@@ -1231,7 +1246,7 @@ void arithmetic_lut_run(const oclMat &src1, const oclMat &src2, oclMat &dst, str
         args.push_back( make_pair( sizeof(cl_int), (void *)&lut_offset ));
         args.push_back( make_pair( sizeof(cl_int), (void *)&src_step ));
         args.push_back( make_pair( sizeof(cl_int), (void *)&dst_step ));
-        openCLExecuteKernel(clCxt, &arithm_LUT, "LUT2", globalSize, localSize, args, src1.channels(), src1.depth());
+        openCLExecuteKernel(clCxt, &arithm_LUT, "LUT2", globalSize, localSize, args, src1.oclchannels(), src1.depth());
     }
 }
 
@@ -1239,7 +1254,7 @@ void cv::ocl::LUT(const oclMat &src, const oclMat &lut, oclMat &dst)
 {
     int cn = src.channels();
     CV_Assert(src.depth() == CV_8U);
-    CV_Assert((lut.channels() == 1 || lut.channels() == cn) && lut.rows == 1 && lut.cols == 256);
+    CV_Assert((lut.oclchannels() == 1 || lut.oclchannels() == cn) && lut.rows == 1 && lut.cols == 256);
     dst.create(src.size(), CV_MAKETYPE(lut.depth(), cn));
     //oclMat _lut(lut);
     string kernelName = "LUT";
@@ -1259,17 +1274,17 @@ void arithmetic_exp_log_run(const oclMat &src, oclMat &dst, string kernelName, c
     CV_Assert( src.type() == CV_32F || src.type() == CV_64F);
 
     Context  *clCxt = src.clCxt;
-	if(clCxt -> impl -> double_support ==0 && src.type() == CV_64F)
+    if(clCxt -> impl -> double_support == 0 && src.type() == CV_64F)
     {
-        CV_Error(CV_GpuNotSupported,"Selected device don't support double\r\n");
+        CV_Error(CV_GpuNotSupported, "Selected device don't support double\r\n");
         return;
     }
-    //int channels = dst.channels();
+    //int channels = dst.oclchannels();
     int depth = dst.depth();
 
     size_t localThreads[3]  = { 64, 4, 1 };
-    size_t globalThreads[3] = { divUp(dst.cols, localThreads[0]) * localThreads[0],
-                                divUp(dst.rows, localThreads[1]) * localThreads[1],
+    size_t globalThreads[3] = { divUp(dst.cols, localThreads[0]) *localThreads[0],
+                                divUp(dst.rows, localThreads[1]) *localThreads[1],
                                 1
                               };
 
@@ -1300,14 +1315,14 @@ void cv::ocl::log(const oclMat &src, oclMat &dst)
 //////////////////////////////////////////////////////////////////////////////
 void arithmetic_magnitude_phase_run(const oclMat &src1, const oclMat &src2, oclMat &dst, string kernelName)
 {
-    if(src1.clCxt -> impl -> double_support ==0 && src1.type() == CV_64F)
+    if(src1.clCxt -> impl -> double_support == 0 && src1.type() == CV_64F)
     {
-        CV_Error(CV_GpuNotSupported,"Selected device don't support double\r\n");
+        CV_Error(CV_GpuNotSupported, "Selected device don't support double\r\n");
         return;
     }
 
     Context  *clCxt = src1.clCxt;
-    int channels = dst.channels();
+    int channels = dst.oclchannels();
     int depth = dst.depth();
 
     size_t vector_length = 1;
@@ -1316,8 +1331,8 @@ void arithmetic_magnitude_phase_run(const oclMat &src1, const oclMat &src2, oclM
     int rows = dst.rows;
 
     size_t localThreads[3]  = { 64, 4, 1 };
-    size_t globalThreads[3] = { divUp(cols, localThreads[0]) * localThreads[0],
-                                divUp(rows, localThreads[1]) * localThreads[1],
+    size_t globalThreads[3] = { divUp(cols, localThreads[0]) *localThreads[0],
+                                divUp(rows, localThreads[1]) *localThreads[1],
                                 1
                               };
 
@@ -1348,9 +1363,9 @@ void cv::ocl::magnitude(const oclMat &src1, const oclMat &src2, oclMat &dst)
 
 void arithmetic_phase_run(const oclMat &src1, const oclMat &src2, oclMat &dst, string kernelName, const char **kernelString)
 {
-    if(src1.clCxt -> impl -> double_support ==0 && src1.type() == CV_64F)
+    if(src1.clCxt -> impl -> double_support == 0 && src1.type() == CV_64F)
     {
-        CV_Error(CV_GpuNotSupported,"Selected device don't support double\r\n");
+        CV_Error(CV_GpuNotSupported, "Selected device don't support double\r\n");
         return;
     }
 
@@ -1358,7 +1373,7 @@ void arithmetic_phase_run(const oclMat &src1, const oclMat &src2, oclMat &dst, s
     CV_Assert(src1.type() == src2.type() && src1.type() == dst.type());
 
     Context  *clCxt = src1.clCxt;
-    int channels = dst.channels();
+    int channels = dst.oclchannels();
     int depth = dst.depth();
 
     size_t vector_length = 1;
@@ -1367,8 +1382,8 @@ void arithmetic_phase_run(const oclMat &src1, const oclMat &src2, oclMat &dst, s
     int rows = dst.rows;
 
     size_t localThreads[3]  = { 64, 4, 1 };
-    size_t globalThreads[3] = { divUp(cols, localThreads[0]) * localThreads[0],
-                                divUp(rows, localThreads[1]) * localThreads[1],
+    size_t globalThreads[3] = { divUp(cols, localThreads[0]) *localThreads[0],
+                                divUp(rows, localThreads[1]) *localThreads[1],
                                 1
                               };
 
@@ -1412,22 +1427,22 @@ void cv::ocl::phase(const oclMat &x, const oclMat &y, oclMat &Angle , bool angle
 void arithmetic_cartToPolar_run(const oclMat &src1, const oclMat &src2, oclMat &dst_mag, oclMat &dst_cart,
                                 string kernelName, bool angleInDegrees)
 {
-    if(src1.clCxt -> impl -> double_support ==0 && src1.type() == CV_64F)
+    if(src1.clCxt -> impl -> double_support == 0 && src1.type() == CV_64F)
     {
-        CV_Error(CV_GpuNotSupported,"Selected device don't support double\r\n");
+        CV_Error(CV_GpuNotSupported, "Selected device don't support double\r\n");
         return;
     }
 
     Context  *clCxt = src1.clCxt;
-    int channels = src1.channels();
+    int channels = src1.oclchannels();
     int depth = src1.depth();
 
     int cols = src1.cols * channels;
     int rows = src1.rows;
 
     size_t localThreads[3]  = { 64, 4, 1 };
-    size_t globalThreads[3] = { divUp(cols, localThreads[0]) * localThreads[0],
-                                divUp(rows, localThreads[1]) * localThreads[1],
+    size_t globalThreads[3] = { divUp(cols, localThreads[0]) *localThreads[0],
+                                divUp(rows, localThreads[1]) *localThreads[1],
                                 1
                               };
 
@@ -1467,22 +1482,22 @@ void cv::ocl::cartToPolar(const oclMat &x, const oclMat &y, oclMat &mag, oclMat 
 void arithmetic_ptc_run(const oclMat &src1, const oclMat &src2, oclMat &dst1, oclMat &dst2, bool angleInDegrees,
                         string kernelName)
 {
-    if(src1.clCxt -> impl -> double_support ==0 && src1.type() == CV_64F)
+    if(src1.clCxt -> impl -> double_support == 0 && src1.type() == CV_64F)
     {
-        CV_Error(CV_GpuNotSupported,"Selected device don't support double\r\n");
+        CV_Error(CV_GpuNotSupported, "Selected device don't support double\r\n");
         return;
     }
 
     Context  *clCxt = src2.clCxt;
-    int channels = src2.channels();
+    int channels = src2.oclchannels();
     int depth = src2.depth();
 
     int cols = src2.cols * channels;
     int rows = src2.rows;
 
     size_t localThreads[3]  = { 64, 4, 1 };
-    size_t globalThreads[3] = { divUp(cols, localThreads[0]) * localThreads[0],
-                                divUp(rows, localThreads[1]) * localThreads[1],
+    size_t globalThreads[3] = { divUp(cols, localThreads[0]) *localThreads[0],
+                                divUp(rows, localThreads[1]) *localThreads[1],
                                 1
                               };
 
@@ -1558,7 +1573,7 @@ void arithmetic_minMaxLoc_mask_run(const oclMat &src, const oclMat &mask, cl_mem
     vector<pair<size_t , const void *> > args;
     size_t gt[3] = {groupnum * 256, 1, 1}, lt[3] = {256, 1, 1};
     char build_options[50];
-    if(src.channels() == 1)
+    if(src.oclchannels() == 1)
     {
         int cols = (src.cols - 1) / vlen + 1;
         int invalid_cols = src.step / (vlen * src.elemSize1()) - cols;
@@ -1585,15 +1600,15 @@ void arithmetic_minMaxLoc_mask_run(const oclMat &src, const oclMat &mask, cl_mem
 }
 template<typename T>
 void arithmetic_minMaxLoc(const oclMat &src, double *minVal, double *maxVal,
-                        Point *minLoc, Point *maxLoc, const oclMat &mask)
+                          Point *minLoc, Point *maxLoc, const oclMat &mask)
 {
-    CV_Assert(src.channels() == 1);
-   	size_t groupnum = src.clCxt->impl->maxComputeUnits;
+    CV_Assert(src.oclchannels() == 1);
+    size_t groupnum = src.clCxt->impl->maxComputeUnits;
     CV_Assert(groupnum != 0);
     int minloc = -1 , maxloc = -1;
     int vlen = 4, dbsize = groupnum * vlen * 4 * sizeof(T) , status;
     Context *clCxt = src.clCxt;
-    cl_mem dstBuffer = openCLCreateBuffer(clCxt,CL_MEM_WRITE_ONLY,dbsize);
+    cl_mem dstBuffer = openCLCreateBuffer(clCxt, CL_MEM_WRITE_ONLY, dbsize);
     *minVal = std::numeric_limits<double>::max() , *maxVal = -std::numeric_limits<double>::max();
     if (mask.empty())
     {
@@ -1605,16 +1620,16 @@ void arithmetic_minMaxLoc(const oclMat &src, double *minVal, double *maxVal,
     }
     T *p = new T[groupnum * vlen * 4];
     memset(p, 0, dbsize);
-    openCLReadBuffer(clCxt,dstBuffer,(void *)p,dbsize);
+    openCLReadBuffer(clCxt, dstBuffer, (void *)p, dbsize);
     for(int i = 0; i < vlen * groupnum; i++)
     {
-        *minVal = (*minVal < p[i] || p[i + 2 * vlen *groupnum] == -1) ? *minVal : p[i];
-        minloc = (*minVal < p[i] || p[i + 2 * vlen *groupnum] == -1) ? minloc : p[i + 2 * vlen * groupnum];
+        *minVal = (*minVal < p[i] || p[i + 2 * vlen * groupnum] == -1) ? *minVal : p[i];
+        minloc = (*minVal < p[i] || p[i + 2 * vlen * groupnum] == -1) ? minloc : p[i + 2 * vlen * groupnum];
     }
     for(int i = vlen * groupnum; i < 2 * vlen * groupnum; i++)
     {
-        *maxVal = (*maxVal > p[i] || p[i + 2 * vlen *groupnum] == -1) ? *maxVal : p[i];
-        maxloc = (*maxVal > p[i] || p[i + 2 * vlen *groupnum] == -1) ? maxloc : p[i + 2 * vlen * groupnum];
+        *maxVal = (*maxVal > p[i] || p[i + 2 * vlen * groupnum] == -1) ? *maxVal : p[i];
+        maxloc = (*maxVal > p[i] || p[i + 2 * vlen * groupnum] == -1) ? maxloc : p[i + 2 * vlen * groupnum];
     }
 
     int pre_rows = src.offset / src.step;
@@ -1645,13 +1660,13 @@ void arithmetic_minMaxLoc(const oclMat &src, double *minVal, double *maxVal,
 }
 
 typedef void (*minMaxLocFunc)(const oclMat &src, double *minVal, double *maxVal,
-                        Point *minLoc, Point *maxLoc, const oclMat &mask);
+                              Point *minLoc, Point *maxLoc, const oclMat &mask);
 void cv::ocl::minMaxLoc(const oclMat &src, double *minVal, double *maxVal,
                         Point *minLoc, Point *maxLoc, const oclMat &mask)
 {
-    if(src.clCxt->impl->double_support==0 && src.depth()==CV_64F)
+    if(src.clCxt->impl->double_support == 0 && src.depth() == CV_64F)
     {
-        CV_Error(CV_GpuNotSupported,"select device don't support double");
+        CV_Error(CV_GpuNotSupported, "select device don't support double");
     }
     static minMaxLocFunc functab[2] =
     {
@@ -1661,7 +1676,7 @@ void cv::ocl::minMaxLoc(const oclMat &src, double *minVal, double *maxVal,
 
     minMaxLocFunc func;
     func = functab[src.clCxt->impl->double_support];
-    func(src,minVal,maxVal,minLoc,maxLoc,mask);
+    func(src, minVal, maxVal, minLoc, maxLoc, mask);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1677,7 +1692,7 @@ void arithmetic_countNonZero_run(const oclMat &src, cl_mem &dst, int vlen , int 
     int cols = all_cols - invalid_cols , elemnum = cols * src.rows;;
     int offset = src.offset / (vlen * src.elemSize1());
     int repeat_s = src.offset / src.elemSize1() - offset * vlen;
-    int repeat_e = (offset + cols) * vlen - src.offset / src.elemSize1() - src.cols * src.channels();
+    int repeat_e = (offset + cols) * vlen - src.offset / src.elemSize1() - src.cols * src.oclchannels();
 
     char build_options[50];
     sprintf(build_options, "-D DEPTH_%d -D REPEAT_S%d -D REPEAT_E%d", src.depth(), repeat_s, repeat_e);
@@ -1696,9 +1711,9 @@ void arithmetic_countNonZero_run(const oclMat &src, cl_mem &dst, int vlen , int 
 int cv::ocl::countNonZero(const oclMat &src)
 {
     size_t groupnum = src.clCxt->impl->maxComputeUnits;
-    if(src.clCxt->impl->double_support == 0 && src.depth()==CV_64F)
+    if(src.clCxt->impl->double_support == 0 && src.depth() == CV_64F)
     {
-        CV_Error(CV_GpuNotSupported,"select device don't support double");
+        CV_Error(CV_GpuNotSupported, "select device don't support double");
     }
     CV_Assert(groupnum != 0);
     groupnum = groupnum * 2;
@@ -1707,11 +1722,11 @@ int cv::ocl::countNonZero(const oclMat &src)
     Context *clCxt = src.clCxt;
     string kernelName = "arithm_op_nonzero";
     int *p = new int[dbsize], nonzero = 0;
-    cl_mem dstBuffer = openCLCreateBuffer(clCxt,CL_MEM_WRITE_ONLY,dbsize*sizeof(int));
+    cl_mem dstBuffer = openCLCreateBuffer(clCxt, CL_MEM_WRITE_ONLY, dbsize * sizeof(int));
     arithmetic_countNonZero_run(src, dstBuffer, vlen, groupnum, kernelName);
 
     memset(p, 0, dbsize * sizeof(int));
-    openCLReadBuffer(clCxt,dstBuffer,(void *)p,dbsize*sizeof(int));
+    openCLReadBuffer(clCxt, dstBuffer, (void *)p, dbsize * sizeof(int));
     for(int i = 0; i < dbsize; i++)
     {
         nonzero += p[i];
@@ -1730,7 +1745,7 @@ void bitwise_run(const oclMat &src1, oclMat &dst, string kernelName, const char 
 
 
     Context  *clCxt = src1.clCxt;
-    int channels = dst.channels();
+    int channels = dst.oclchannels();
     int depth = dst.depth();
 
     int vector_lengths[4][7] = {{4, 4, 4, 4, 1, 1, 1},
@@ -1739,13 +1754,13 @@ void bitwise_run(const oclMat &src1, oclMat &dst, string kernelName, const char 
         {4, 4, 4, 4, 1, 1, 1}
     };
 
-    size_t vector_length = vector_lengths[channels-1][depth];
+    size_t vector_length = vector_lengths[channels - 1][depth];
     int offset_cols = (dst.offset / dst.elemSize1()) & (vector_length - 1);
     int cols = divUp(dst.cols * channels + offset_cols, vector_length);
 
     size_t localThreads[3]  = { 64, 4, 1 };
-    size_t globalThreads[3] = { divUp(cols, localThreads[0]) * localThreads[0],
-                                divUp(dst.rows, localThreads[1]) * localThreads[1],
+    size_t globalThreads[3] = { divUp(cols, localThreads[0]) *localThreads[0],
+                                divUp(dst.rows, localThreads[1]) *localThreads[1],
                                 1
                               };
 
@@ -1775,7 +1790,7 @@ void bitwise_run(const oclMat &src1, const oclMat &src2, oclMat &dst, string ker
     CV_Assert(src1.type() == src2.type() && src1.type() == dst.type());
 
     Context  *clCxt = src1.clCxt;
-    int channels = dst.channels();
+    int channels = dst.oclchannels();
     int depth = dst.depth();
 
     int vector_lengths[4][7] = {{4, 4, 4, 4, 1, 1, 1},
@@ -1784,13 +1799,13 @@ void bitwise_run(const oclMat &src1, const oclMat &src2, oclMat &dst, string ker
         {4, 4, 4, 4, 1, 1, 1}
     };
 
-    size_t vector_length = vector_lengths[channels-1][depth];
+    size_t vector_length = vector_lengths[channels - 1][depth];
     int offset_cols = (dst.offset / dst.elemSize1()) & (vector_length - 1);
     int cols = divUp(dst.cols * channels + offset_cols, vector_length);
 
     size_t localThreads[3]  = { 64, 4, 1 };
-    size_t globalThreads[3] = { divUp(cols, localThreads[0]) * localThreads[0],
-                                divUp(dst.rows, localThreads[1]) * localThreads[1],
+    size_t globalThreads[3] = { divUp(cols, localThreads[0]) *localThreads[0],
+                                divUp(dst.rows, localThreads[1]) *localThreads[1],
                                 1
                               };
 
@@ -1833,7 +1848,7 @@ void bitwise_run(const oclMat &src1, const oclMat &src2, oclMat &dst, const oclM
     CV_Assert(mask.type() == CV_8U);
 
     Context  *clCxt = src1.clCxt;
-    int channels = dst.channels();
+    int channels = dst.oclchannels();
     int depth = dst.depth();
 
     int vector_lengths[4][7] = {{4, 4, 2, 2, 1, 1, 1},
@@ -1842,13 +1857,13 @@ void bitwise_run(const oclMat &src1, const oclMat &src2, oclMat &dst, const oclM
         {1, 1, 1, 1, 1, 1, 1}
     };
 
-    size_t vector_length = vector_lengths[channels-1][depth];
+    size_t vector_length = vector_lengths[channels - 1][depth];
     int offset_cols = ((dst.offset % dst.step) / dst.elemSize()) & (vector_length - 1);
     int cols = divUp(dst.cols + offset_cols, vector_length);
 
     size_t localThreads[3]  = { 64, 4, 1 };
-    size_t globalThreads[3] = { divUp(cols, localThreads[0]) * localThreads[0],
-                                divUp(dst.rows, localThreads[1]) * localThreads[1],
+    size_t globalThreads[3] = { divUp(cols, localThreads[0]) *localThreads[0],
+                                divUp(dst.rows, localThreads[1]) *localThreads[1],
                                 1
                               };
 
@@ -1874,7 +1889,7 @@ void bitwise_run(const oclMat &src1, const oclMat &src2, oclMat &dst, const oclM
 }
 
 
-template <typename WT ,typename CL_WT>
+template <typename WT , typename CL_WT>
 void bitwise_scalar_run(const oclMat &src1, const Scalar &src2, oclMat &dst, const oclMat &mask, string kernelName, const char **kernelString, int isMatSubScalar)
 {
     dst.create(src1.size(), src1.type());
@@ -1887,7 +1902,7 @@ void bitwise_scalar_run(const oclMat &src1, const Scalar &src2, oclMat &dst, con
         CV_Assert(mask.type() == CV_8U && src1.rows == mask.rows && src1.cols == mask.cols);
 
     Context  *clCxt = src1.clCxt;
-    int channels = dst.channels();
+    int channels = dst.oclchannels();
     int depth = dst.depth();
 
     WT s[4] = { saturate_cast<WT>(src2.val[0]), saturate_cast<WT>(src2.val[1]),
@@ -1900,13 +1915,13 @@ void bitwise_scalar_run(const oclMat &src1, const Scalar &src2, oclMat &dst, con
         {1, 1, 1, 1, 1, 1, 1}
     };
 
-    size_t vector_length = vector_lengths[channels-1][depth];
+    size_t vector_length = vector_lengths[channels - 1][depth];
     int offset_cols = ((dst.offset % dst.step) / dst.elemSize()) & (vector_length - 1);
     int cols = divUp(dst.cols + offset_cols, vector_length);
 
     size_t localThreads[3]  = { 64, 4, 1 };
-    size_t globalThreads[3] = { divUp(cols, localThreads[0]) * localThreads[0],
-                                divUp(dst.rows, localThreads[1]) * localThreads[1],
+    size_t globalThreads[3] = { divUp(cols, localThreads[0]) *localThreads[0],
+                                divUp(dst.rows, localThreads[1]) *localThreads[1],
                                 1
                               };
 
@@ -1957,13 +1972,13 @@ void bitwise_scalar(const oclMat &src1, const Scalar &src2, oclMat &dst, const o
         0
 #else
 
-        bitwise_scalar_run<unsigned char,cl_uchar4>,
-        bitwise_scalar_run<char,cl_char4>,
-        bitwise_scalar_run<unsigned short,cl_ushort4>,
-        bitwise_scalar_run<short,cl_short4>,
-        bitwise_scalar_run<int,cl_int4>,
-        bitwise_scalar_run<float,cl_float4>,
-        bitwise_scalar_run<double,cl_double4>,
+        bitwise_scalar_run<unsigned char, cl_uchar4>,
+        bitwise_scalar_run<char, cl_char4>,
+        bitwise_scalar_run<unsigned short, cl_ushort4>,
+        bitwise_scalar_run<short, cl_short4>,
+        bitwise_scalar_run<int, cl_int4>,
+        bitwise_scalar_run<float, cl_float4>,
+        bitwise_scalar_run<double, cl_double4>,
         0
 #endif
     };
@@ -1979,7 +1994,7 @@ void bitwise_scalar(const oclMat &src1, const Scalar &src2, oclMat &dst, const o
 
 void cv::ocl::bitwise_not(const oclMat &src, oclMat &dst)
 {
-    if(src.clCxt -> impl -> double_support ==0 && src.type()==CV_64F)
+    if(src.clCxt -> impl -> double_support == 0 && src.type() == CV_64F)
     {
         cout << "Selected device do not support double" << endl;
         return;
@@ -1992,7 +2007,7 @@ void cv::ocl::bitwise_not(const oclMat &src, oclMat &dst)
 void cv::ocl::bitwise_or(const oclMat &src1, const oclMat &src2, oclMat &dst, const oclMat &mask)
 {
     // dst.create(src1.size(),src1.type());
-    if(src1.clCxt -> impl -> double_support ==0 && src1.type()==CV_64F)
+    if(src1.clCxt -> impl -> double_support == 0 && src1.type() == CV_64F)
     {
         cout << "Selected device do not support double" << endl;
         return;
@@ -2008,7 +2023,7 @@ void cv::ocl::bitwise_or(const oclMat &src1, const oclMat &src2, oclMat &dst, co
 
 void cv::ocl::bitwise_or(const oclMat &src1, const Scalar &src2, oclMat &dst, const oclMat &mask)
 {
-    if(src1.clCxt -> impl -> double_support ==0 && src1.type()==CV_64F)
+    if(src1.clCxt -> impl -> double_support == 0 && src1.type() == CV_64F)
     {
         cout << "Selected device do not support double" << endl;
         return;
@@ -2023,7 +2038,7 @@ void cv::ocl::bitwise_or(const oclMat &src1, const Scalar &src2, oclMat &dst, co
 void cv::ocl::bitwise_and(const oclMat &src1, const oclMat &src2, oclMat &dst, const oclMat &mask)
 {
     //    dst.create(src1.size(),src1.type());
-    if(src1.clCxt -> impl -> double_support ==0 && src1.type()==CV_64F)
+    if(src1.clCxt -> impl -> double_support == 0 && src1.type() == CV_64F)
     {
         cout << "Selected device do not support double" << endl;
         return;
@@ -2040,7 +2055,7 @@ void cv::ocl::bitwise_and(const oclMat &src1, const oclMat &src2, oclMat &dst, c
 
 void cv::ocl::bitwise_and(const oclMat &src1, const Scalar &src2, oclMat &dst, const oclMat &mask)
 {
-    if(src1.clCxt -> impl -> double_support ==0 && src1.type()==CV_64F)
+    if(src1.clCxt -> impl -> double_support == 0 && src1.type() == CV_64F)
     {
         cout << "Selected device do not support double" << endl;
         return;
@@ -2054,7 +2069,7 @@ void cv::ocl::bitwise_and(const oclMat &src1, const Scalar &src2, oclMat &dst, c
 
 void cv::ocl::bitwise_xor(const oclMat &src1, const oclMat &src2, oclMat &dst, const oclMat &mask)
 {
-    if(src1.clCxt -> impl -> double_support ==0 && src1.type()==CV_64F)
+    if(src1.clCxt -> impl -> double_support == 0 && src1.type() == CV_64F)
     {
         cout << "Selected device do not support double" << endl;
         return;
@@ -2073,7 +2088,7 @@ void cv::ocl::bitwise_xor(const oclMat &src1, const oclMat &src2, oclMat &dst, c
 void cv::ocl::bitwise_xor(const oclMat &src1, const Scalar &src2, oclMat &dst, const oclMat &mask)
 {
 
-    if(src1.clCxt -> impl -> double_support ==0 && src1.type()==CV_64F)
+    if(src1.clCxt -> impl -> double_support == 0 && src1.type() == CV_64F)
     {
         cout << "Selected device do not support double" << endl;
         return;
@@ -2120,16 +2135,16 @@ cv::ocl::oclMat cv::ocl::operator ^ (const oclMat &src1, const oclMat &src2)
 #define BLOCK_ROWS    (256/TILE_DIM)
 void transpose_run(const oclMat &src, oclMat &dst, string kernelName)
 {
-    if(src.clCxt -> impl -> double_support ==0 && src.type() == CV_64F)
+    if(src.clCxt -> impl -> double_support == 0 && src.type() == CV_64F)
     {
-        CV_Error(CV_GpuNotSupported,"Selected device don't support double\r\n");
+        CV_Error(CV_GpuNotSupported, "Selected device don't support double\r\n");
         return;
     }
 
     CV_Assert(src.cols == dst.rows && src.rows == dst.cols);
 
     Context  *clCxt = src.clCxt;
-    int channels = src.channels();
+    int channels = src.oclchannels();
     int depth = src.depth();
 
     int vector_lengths[4][7] = {{1, 0, 0, 0, 1, 1, 0},
@@ -2138,13 +2153,13 @@ void transpose_run(const oclMat &src, oclMat &dst, string kernelName)
         {1, 1, 0, 0, 0, 0, 0}
     };
 
-    size_t vector_length = vector_lengths[channels-1][depth];
+    size_t vector_length = vector_lengths[channels - 1][depth];
     int offset_cols = ((dst.offset % dst.step) / dst.elemSize()) & (vector_length - 1);
     int cols = divUp(src.cols + offset_cols, vector_length);
 
     size_t localThreads[3]  = { TILE_DIM, BLOCK_ROWS, 1 };
-    size_t globalThreads[3] = { divUp(cols, TILE_DIM) * localThreads[0],
-                                divUp(src.rows, TILE_DIM) * localThreads[1],
+    size_t globalThreads[3] = { divUp(cols, TILE_DIM) *localThreads[0],
+                                divUp(src.rows, TILE_DIM) *localThreads[1],
                                 1
                               };
 
@@ -2163,7 +2178,7 @@ void transpose_run(const oclMat &src, oclMat &dst, string kernelName)
 
 void cv::ocl::transpose(const oclMat &src, oclMat &dst)
 {
-    CV_Assert(src.type() == CV_8UC1  || src.type() == CV_8UC4  || src.type() == CV_8SC4  ||
+    CV_Assert(src.type() == CV_8UC1  || src.type() == CV_8UC3 || src.type() == CV_8UC4  || src.type() == CV_8SC3  || src.type() == CV_8SC4  ||
               src.type() == CV_16UC2 || src.type() == CV_16SC2 || src.type() == CV_32SC1 || src.type() == CV_32FC1);
 
     stringstream idxstr;
@@ -2186,7 +2201,7 @@ void cv::ocl::addWeighted(const oclMat &src1, double alpha, const oclMat &src2, 
     CV_Assert(src1.type() == src2.type() && src1.type() == dst.type());
 
     Context *clCxt = src1.clCxt;
-    int channels = dst.channels();
+    int channels = dst.oclchannels();
     int depth = dst.depth();
 
 
@@ -2197,15 +2212,15 @@ void cv::ocl::addWeighted(const oclMat &src1, double alpha, const oclMat &src2, 
     };
 
 
-    size_t vector_length = vector_lengths[channels-1][depth];
+    size_t vector_length = vector_lengths[channels - 1][depth];
     int offset_cols = (dst.offset / dst.elemSize1()) & (vector_length - 1);
     int cols = divUp(dst.cols * channels + offset_cols, vector_length);
 
     size_t localThreads[3]  = { 256, 1, 1 };
-    size_t globalThreads[3] = { divUp(cols, localThreads[0]) * localThreads[0],
-        divUp(dst.rows, localThreads[1]) * localThreads[1],
-        1
-    };
+    size_t globalThreads[3] = { divUp(cols, localThreads[0]) *localThreads[0],
+                                divUp(dst.rows, localThreads[1]) *localThreads[1],
+                                1
+                              };
 
     int dst_step1 = dst.cols * dst.elemSize();
     vector<pair<size_t , const void *> > args;
@@ -2224,11 +2239,11 @@ void cv::ocl::addWeighted(const oclMat &src1, double alpha, const oclMat &src2, 
     }
     else
     {
-        float alpha_f=alpha,beta_f=beta,gama_f=gama;
+        float alpha_f = alpha, beta_f = beta, gama_f = gama;
         args.push_back( make_pair( sizeof(cl_float), (void *)&alpha_f ));
         args.push_back( make_pair( sizeof(cl_float), (void *)&beta_f ));
         args.push_back( make_pair( sizeof(cl_float), (void *)&gama_f ));
-    } 
+    }
 
     args.push_back( make_pair( sizeof(cl_mem), (void *)&dst.data ));
     args.push_back( make_pair( sizeof(cl_int), (void *)&dst.step ));
@@ -2243,13 +2258,13 @@ void cv::ocl::addWeighted(const oclMat &src1, double alpha, const oclMat &src2, 
 void cv::ocl::magnitudeSqr(const oclMat &src1, const oclMat &src2, oclMat &dst)
 {
     CV_Assert(src1.type() == src2.type() && src1.size() == src2.size() &&
-            (src1.depth() == CV_32F ));
+              (src1.depth() == CV_32F ));
 
     dst.create(src1.size(), src1.type());
 
 
     Context *clCxt = src1.clCxt;
-    int channels = dst.channels();
+    int channels = dst.oclchannels();
     int depth = dst.depth();
 
 
@@ -2260,15 +2275,15 @@ void cv::ocl::magnitudeSqr(const oclMat &src1, const oclMat &src2, oclMat &dst)
     };
 
 
-    size_t vector_length = vector_lengths[channels-1][depth];
+    size_t vector_length = vector_lengths[channels - 1][depth];
     int offset_cols = (dst.offset / dst.elemSize1()) & (vector_length - 1);
     int cols = divUp(dst.cols * channels + offset_cols, vector_length);
 
     size_t localThreads[3]  = { 256, 1, 1 };
-    size_t globalThreads[3] = { divUp(cols, localThreads[0]) * localThreads[0],
-        divUp(dst.rows, localThreads[1]) * localThreads[1],
-        1
-    };
+    size_t globalThreads[3] = { divUp(cols, localThreads[0]) *localThreads[0],
+                                divUp(dst.rows, localThreads[1]) *localThreads[1],
+                                1
+                              };
 
     int dst_step1 = dst.cols * dst.elemSize();
     vector<pair<size_t , const void *> > args;
@@ -2297,7 +2312,7 @@ void cv::ocl::magnitudeSqr(const oclMat &src1, oclMat &dst)
 
 
     Context *clCxt = src1.clCxt;
-    int channels = dst.channels();
+    int channels = dst.oclchannels();
     int depth = dst.depth();
 
 
@@ -2308,15 +2323,15 @@ void cv::ocl::magnitudeSqr(const oclMat &src1, oclMat &dst)
     };
 
 
-    size_t vector_length = vector_lengths[channels-1][depth];
+    size_t vector_length = vector_lengths[channels - 1][depth];
     int offset_cols = (dst.offset / dst.elemSize1()) & (vector_length - 1);
     int cols = divUp(dst.cols * channels + offset_cols, vector_length);
 
     size_t localThreads[3]  = { 256, 1, 1 };
-    size_t globalThreads[3] = { divUp(cols, localThreads[0]) * localThreads[0],
-        divUp(dst.rows, localThreads[1]) * localThreads[1],
-        1
-    };
+    size_t globalThreads[3] = { divUp(cols, localThreads[0]) *localThreads[0],
+                                divUp(dst.rows, localThreads[1]) *localThreads[1],
+                                1
+                              };
 
     int dst_step1 = dst.cols * dst.elemSize();
     vector<pair<size_t , const void *> > args;
@@ -2339,7 +2354,7 @@ void arithmetic_pow_run(const oclMat &src1, double p, oclMat &dst, string kernel
     CV_Assert(src1.type() == dst.type());
 
     Context  *clCxt = src1.clCxt;
-    int channels = dst.channels();
+    int channels = dst.oclchannels();
     int depth = dst.depth();
 
     size_t vector_length = 1;
@@ -2348,10 +2363,10 @@ void arithmetic_pow_run(const oclMat &src1, double p, oclMat &dst, string kernel
     int rows = dst.rows;
 
     size_t localThreads[3]  = { 64, 4, 1 };
-    size_t globalThreads[3] = { divUp(cols, localThreads[0]) * localThreads[0],
-        divUp(rows, localThreads[1]) * localThreads[1],
-        1
-    };
+    size_t globalThreads[3] = { divUp(cols, localThreads[0]) *localThreads[0],
+                                divUp(rows, localThreads[1]) *localThreads[1],
+                                1
+                              };
 
     int dst_step1 = dst.cols * dst.elemSize();
     vector<pair<size_t , const void *> > args;
@@ -2364,19 +2379,19 @@ void arithmetic_pow_run(const oclMat &src1, double p, oclMat &dst, string kernel
     args.push_back( make_pair( sizeof(cl_int), (void *)&dst.rows ));
     args.push_back( make_pair( sizeof(cl_int), (void *)&cols ));
     args.push_back( make_pair( sizeof(cl_int), (void *)&dst_step1 ));
-    if(src1.clCxt -> impl -> double_support ==0)
+    if(src1.clCxt -> impl -> double_support == 0)
     {
-	float pf = p;
-    	args.push_back( make_pair( sizeof(cl_float), (void *)&pf ));
+        float pf = p;
+        args.push_back( make_pair( sizeof(cl_float), (void *)&pf ));
     }
     else
-	args.push_back( make_pair( sizeof(cl_double), (void *)&p ));
+        args.push_back( make_pair( sizeof(cl_double), (void *)&p ));
 
     openCLExecuteKernel(clCxt, kernelString, kernelName, globalThreads, localThreads, args, -1, depth);
 }
 void cv::ocl::pow(const oclMat &x, double p, oclMat &y)
 {
-    if(x.clCxt -> impl -> double_support ==0 && x.type()==CV_64F)
+    if(x.clCxt -> impl -> double_support == 0 && x.type() == CV_64F)
     {
         cout << "Selected device do not support double" << endl;
         return;

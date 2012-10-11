@@ -84,9 +84,9 @@ PARAM_TEST_CASE(HOG, WinSizw48, bool)
 {
     bool is48;
     vector<float> detector;
-	virtual void SetUp()
-	{
-		is48 = GET_PARAM(0);
+    virtual void SetUp()
+    {
+        is48 = GET_PARAM(0);
         if(is48)
         {
             detector = cv::ocl::HOGDescriptor::getPeopleDetector48x96();
@@ -95,12 +95,12 @@ PARAM_TEST_CASE(HOG, WinSizw48, bool)
         {
             detector = cv::ocl::HOGDescriptor::getPeopleDetector64x128();
         }
-	}
+    }
 };
 
 TEST_P(HOG, Performance)
 {
-    cv::Mat img = readImage(FILTER_IMAGE,cv::IMREAD_GRAYSCALE);
+    cv::Mat img = readImage(FILTER_IMAGE, cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(img.empty());
 
     // define HOG related arguments
@@ -110,7 +110,7 @@ TEST_P(HOG, Performance)
     float hit_threshold = 1.4;
     bool hit_threshold_auto = true;
 
-    int win_width = is48? 48 : 64;
+    int win_width = is48 ? 48 : 64;
     int win_stride_width = 8;
     int win_stride_height = 8;
 
@@ -120,27 +120,27 @@ TEST_P(HOG, Performance)
     Size win_stride(win_stride_width, win_stride_height);
 
     cv::ocl::HOGDescriptor gpu_hog(win_size, Size(16, 16), Size(8, 8), Size(8, 8), 9,
-        cv::ocl::HOGDescriptor::DEFAULT_WIN_SIGMA, 0.2, gamma_corr,
-        cv::ocl::HOGDescriptor::DEFAULT_NLEVELS);
+                                   cv::ocl::HOGDescriptor::DEFAULT_WIN_SIGMA, 0.2, gamma_corr,
+                                   cv::ocl::HOGDescriptor::DEFAULT_NLEVELS);
 
     gpu_hog.setSVMDetector(detector);
 
-    double totalgputick=0;
-    double totalgputick_kernel=0;
+    double totalgputick = 0;
+    double totalgputick_kernel = 0;
 
-    double t1=0;
-    double t2=0;
-    for(int j = 0; j < LOOP_TIMES+1; j ++)
+    double t1 = 0;
+    double t2 = 0;
+    for(int j = 0; j < LOOP_TIMES + 1; j ++)
     {
-        t1 = (double)cvGetTickCount();//gpu start1		
+        t1 = (double)cvGetTickCount();//gpu start1
 
         ocl::oclMat d_src(img);//upload
 
-        t2=(double)cvGetTickCount();//kernel
+        t2 = (double)cvGetTickCount(); //kernel
 
         vector<Rect> found;
         gpu_hog.detectMultiScale(d_src, found, hit_threshold, win_stride,
-            Size(0, 0), scale, gr_threshold);
+                                 Size(0, 0), scale, gr_threshold);
 
         t2 = (double)cvGetTickCount() - t2;//kernel
 
@@ -151,14 +151,14 @@ TEST_P(HOG, Performance)
         if(j == 0)
             continue;
 
-        totalgputick=t1+totalgputick;
+        totalgputick = t1 + totalgputick;
 
-        totalgputick_kernel=t2+totalgputick_kernel;	
+        totalgputick_kernel = t2 + totalgputick_kernel;
 
     }
 
-    cout << "average gpu runtime is  " << totalgputick/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
-    cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
+    cout << "average gpu runtime is  " << totalgputick / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
+    cout << "average gpu runtime without data transfer is  " << totalgputick_kernel / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
 }
 
 

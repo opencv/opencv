@@ -49,15 +49,15 @@ using namespace std;
 #ifdef HAVE_OPENCL
 
 
-PARAM_TEST_CASE(HOG,cv::Size,int)
+PARAM_TEST_CASE(HOG, cv::Size, int)
 {
-	cv::Size winSize;
-	int type;
-	virtual void SetUp()
-	{
-		winSize = GET_PARAM(0);
-		type = GET_PARAM(1);
-	}
+    cv::Size winSize;
+    int type;
+    virtual void SetUp()
+    {
+        winSize = GET_PARAM(0);
+        type = GET_PARAM(1);
+    }
 };
 
 TEST_P(HOG, GetDescriptors)
@@ -114,7 +114,7 @@ TEST_P(HOG, GetDescriptors)
 bool match_rect(cv::Rect r1, cv::Rect r2, int threshold)
 {
     return ((abs(r1.x - r2.x) < threshold) && (abs(r1.y - r2.y) < threshold) &&
-        (abs(r1.width - r2.width) < threshold) && (abs(r1.height - r2.height) < threshold));
+            (abs(r1.width - r2.width) < threshold) && (abs(r1.height - r2.height) < threshold));
 }
 
 TEST_P(HOG, Detect)
@@ -166,21 +166,21 @@ TEST_P(HOG, Detect)
 
     // OpenCL detection
     std::vector<cv::Rect> d_found;
-    ocl_hog.detectMultiScale(d_img, d_found, 0, cv::Size(8,8), cv::Size(0,0), 1.05, 2);
-    
+    ocl_hog.detectMultiScale(d_img, d_found, 0, cv::Size(8, 8), cv::Size(0, 0), 1.05, 2);
+
     // CPU detection
     std::vector<cv::Rect> found;
     switch (type)
     {
     case CV_8UC1:
-        hog.detectMultiScale(img, found, 0, cv::Size(8,8), cv::Size(0,0), 1.05, 2);
+        hog.detectMultiScale(img, found, 0, cv::Size(8, 8), cv::Size(0, 0), 1.05, 2);
         break;
     case CV_8UC4:
     default:
-        hog.detectMultiScale(img_rgb, found, 0, cv::Size(8,8), cv::Size(0,0), 1.05, 2);
+        hog.detectMultiScale(img_rgb, found, 0, cv::Size(8, 8), cv::Size(0, 0), 1.05, 2);
         break;
     }
-    
+
     // Ground-truth rectangular people window
     cv::Rect win1_64x128(231, 190, 72, 144);
     cv::Rect win2_64x128(621, 156, 97, 194);
@@ -240,14 +240,14 @@ TEST_P(HOG, Detect)
         }
     }
 
-    char s[100]={0};
+    char s[100] = {0};
     EXPECT_MAT_NEAR(cv::Mat(d_comp), cv::Mat(comp), 3, s);
 }
 
 
 INSTANTIATE_TEST_CASE_P(GPU_ImgProc, HOG, testing::Combine(
-                        testing::Values(cv::Size(64, 128), cv::Size(48, 96)),
-                        testing::Values(MatType(CV_8UC1), MatType(CV_8UC4))));
+                            testing::Values(cv::Size(64, 128), cv::Size(48, 96)),
+                            testing::Values(MatType(CV_8UC1), MatType(CV_8UC4))));
 
 
 #endif //HAVE_OPENCL

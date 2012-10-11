@@ -308,8 +308,7 @@ imdecode_( const Mat& buf, int flags, int hdrtype, Mat* mat=0 )
     IplImage* image = 0;
     CvMat *matrix = 0;
     Mat temp, *data = &temp;
-    string filename = tempfile();
-    bool removeTempFile = false;
+    string filename;
 
     ImageDecoder decoder = findDecoder(buf);
     if( decoder.empty() )
@@ -317,10 +316,10 @@ imdecode_( const Mat& buf, int flags, int hdrtype, Mat* mat=0 )
 
     if( !decoder->setSource(buf) )
     {
+        filename = tempfile();
         FILE* f = fopen( filename.c_str(), "wb" );
         if( !f )
             return 0;
-        removeTempFile = true;
         size_t bufSize = buf.cols*buf.rows*buf.elemSize();
         fwrite( &buf.data[0], 1, bufSize, f );
         fclose(f);
@@ -329,7 +328,7 @@ imdecode_( const Mat& buf, int flags, int hdrtype, Mat* mat=0 )
 
     if( !decoder->readHeader() )
     {
-        if( removeTempFile )
+        if( !filename.empty() )
             remove(filename.c_str());
         return 0;
     }
@@ -371,7 +370,7 @@ imdecode_( const Mat& buf, int flags, int hdrtype, Mat* mat=0 )
     }
 
     bool code = decoder->readData( *data );
-    if( removeTempFile )
+    if( !filename.empty() )
         remove(filename.c_str());
 
     if( !code )

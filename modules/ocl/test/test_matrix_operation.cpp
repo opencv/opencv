@@ -98,10 +98,10 @@ PARAM_TEST_CASE(ConvertToTestBase, MatType, MatType)
     }
 
     void random_roi()
-    {        
+    {
 #ifdef RANDOMROI
         //randomize ROI
-		cv::RNG &rng = TS::ptr()->get_rng();
+        cv::RNG &rng = TS::ptr()->get_rng();
         roicols = rng.uniform(1, mat.cols);
         roirows = rng.uniform(1, mat.rows);
         srcx   = rng.uniform(0, mat.cols - roicols);
@@ -204,10 +204,10 @@ PARAM_TEST_CASE(CopyToTestBase, MatType, bool)
     }
 
     void random_roi()
-    {       
+    {
 #ifdef RANDOMROI
         //randomize ROI
-		cv::RNG &rng = TS::ptr()->get_rng();
+        cv::RNG &rng = TS::ptr()->get_rng();
         roicols = rng.uniform(1, mat.cols);
         roirows = rng.uniform(1, mat.rows);
         srcx   = rng.uniform(0, mat.cols - roicols);
@@ -329,10 +329,10 @@ PARAM_TEST_CASE(SetToTestBase, MatType, bool)
     }
 
     void random_roi()
-    {        
+    {
 #ifdef RANDOMROI
         //randomize ROI
-		cv::RNG &rng = TS::ptr()->get_rng();
+        cv::RNG &rng = TS::ptr()->get_rng();
         roicols = rng.uniform(1, mat.cols);
         roirows = rng.uniform(1, mat.rows);
         srcx   = rng.uniform(0, mat.cols - roicols);
@@ -440,10 +440,10 @@ PARAM_TEST_CASE(convertC3C4, MatType, cv::Size)
     }
 
     void random_roi()
-    {      
+    {
 #ifdef RANDOMROI
         //randomize ROI
-		cv::RNG &rng = TS::ptr()->get_rng();
+        cv::RNG &rng = TS::ptr()->get_rng();
         roicols = rng.uniform(2, mat1.cols);
         roirows = rng.uniform(2, mat1.rows);
         src1x   = rng.uniform(0, mat1.cols - roicols);
@@ -477,12 +477,12 @@ TEST_P(convertC3C4, Accuracy)
     for(int j = 0; j < LOOP_TIMES; j++)
     {
         //random_roi();
-		int width = rng.uniform(2, MWIDTH);
-		int height = rng.uniform(2, MHEIGHT);
+        int width = rng.uniform(2, MWIDTH);
+        int height = rng.uniform(2, MHEIGHT);
         cv::Size size(width, height);
 
         mat1 = randomMat(rng, size, type, 0, 40, false);
-		gmat1 = mat1;
+        gmat1 = mat1;
         cv::Mat cpu_dst;
         gmat1.download(cpu_dst);
         char sss[1024];
@@ -493,18 +493,18 @@ TEST_P(convertC3C4, Accuracy)
 }
 
 INSTANTIATE_TEST_CASE_P(MatrixOperation, ConvertTo, Combine(
-                            Values(CV_8UC1, CV_8UC3,CV_8UC4, CV_32SC1, CV_32SC4, CV_32FC1, CV_32FC4),
-                            Values(CV_8UC1, CV_8UC3,CV_8UC4, CV_32SC1, CV_32SC4, CV_32FC1, CV_32FC4)));
+                            Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32SC1, CV_32SC4, CV_32FC1, CV_32FC4),
+                            Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32SC1, CV_32SC4, CV_32FC1, CV_32FC4)));
 
 INSTANTIATE_TEST_CASE_P(MatrixOperation, CopyTo, Combine(
-                            Values(CV_8UC1, CV_8UC3,CV_8UC4, CV_32SC1, CV_32SC4, CV_32FC1, CV_32FC4),
+                            Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32SC1, CV_32SC3, CV_32SC4, CV_32FC1, CV_32FC3, CV_32FC4),
                             Values(false))); // Values(false) is the reserved parameter
 
 INSTANTIATE_TEST_CASE_P(MatrixOperation, SetTo, Combine(
-                            Values(CV_8UC1, CV_8UC3,CV_8UC4, CV_32SC1, CV_32SC4, CV_32FC1, CV_32FC4),
+                            Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32SC1, CV_32SC3, CV_32SC4, CV_32FC1, CV_32FC3, CV_32FC4),
                             Values(false))); // Values(false) is the reserved parameter
 
 INSTANTIATE_TEST_CASE_P(MatrixOperation, convertC3C4, Combine(
                             Values(CV_8UC3,  CV_32SC3,  CV_32FC3),
-                            Values(cv::Size())));                          
+                            Values(cv::Size())));
 #endif

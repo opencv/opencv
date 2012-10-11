@@ -125,7 +125,7 @@ PERF_TEST_P(Norm_CrossCheck, batchDistance_32F,
                       normType, knn, Mat(), 0, isCrossCheck);
     }
 
-    SANITY_CHECK(dist);
+    SANITY_CHECK(dist, 1e-4);
     if (isCrossCheck) SANITY_CHECK(ndix);
 }
 

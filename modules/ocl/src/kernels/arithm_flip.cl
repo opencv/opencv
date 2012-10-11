@@ -71,9 +71,22 @@ __kernel void arithm_flip_rows_D0 (__global uchar *src, int src_step, int src_of
         int dst_end_1    = mad24(rows - y - 1, dst_step, dst_offset + dst_step1);
         int dst_index_0  = mad24(y,            dst_step, dst_offset + x & (int)0xfffffffc);
         int dst_index_1  = mad24(rows - y - 1, dst_step, dst_offset + x & (int)0xfffffffc);
-
-        uchar4 src_data_0 = vload4(0, src + src_index_0);
-        uchar4 src_data_1 = vload4(0, src + src_index_1);
+		int src1_index_fix = src_index_0 < 0 ? 0 : src_index_0;
+		int src2_index_fix = src_index_1 < 0 ? 0 : src_index_1;
+        uchar4 src_data_0 = vload4(0, src + src1_index_fix);
+        uchar4 src_data_1 = vload4(0, src + src2_index_fix);
+		if(src_index_0 < 0)
+		{
+			uchar4 tmp;
+			tmp.xyzw = (src_index_0 == -2) ? src_data_0.zwxy:src_data_0.yzwx;
+			src_data_0.xyzw = (src_index_0 == -1) ? src_data_0.wxyz:tmp.xyzw;
+		}
+		if(src_index_1 < 0)
+		{
+			uchar4 tmp;
+			tmp.xyzw = (src_index_1 == -2) ? src_data_1.zwxy:src_data_1.yzwx;
+			src_data_1.xyzw = (src_index_1 == -1) ? src_data_1.wxyz:tmp.xyzw;
+		}
 
         uchar4 dst_data_0 = *((__global uchar4 *)(dst + dst_index_0));
         uchar4 dst_data_1 = *((__global uchar4 *)(dst + dst_index_1));

@@ -97,13 +97,13 @@ namespace cv
                                size_t widthInBytes, size_t height);
         void openCLMemcpy2D(Context *clCxt, void *dst, size_t dpitch,
                             const void *src, size_t spitch,
-                            size_t width, size_t height, enum openCLMemcpyKind kind, int channels=-1);
+                            size_t width, size_t height, enum openCLMemcpyKind kind, int channels = -1);
         void openCLCopyBuffer2D(Context *clCxt, void *dst, size_t dpitch, int dst_offset,
                                 const void *src, size_t spitch,
                                 size_t width, size_t height, int src_offset, enum openCLMemcpyKind kind);
         void openCLFree(void *devPtr);
-        cl_mem openCLCreateBuffer(Context *clCxt,size_t flag, size_t size);
-        void openCLReadBuffer(Context *clCxt, cl_mem dst_buffer, void* host_buffer, size_t size);
+        cl_mem openCLCreateBuffer(Context *clCxt, size_t flag, size_t size);
+        void openCLReadBuffer(Context *clCxt, cl_mem dst_buffer, void *host_buffer, size_t size);
         cl_kernel openCLGetKernelFromSource(const Context *clCxt,
                                             const char **source, string kernelName);
         cl_kernel openCLGetKernelFromSource(const Context *clCxt,
@@ -113,8 +113,8 @@ namespace cv
         void openCLExecuteKernel(Context *clCxt , const char **source, string kernelName, vector< std::pair<size_t, const void *> > &args,
                                  int globalcols , int globalrows, size_t blockSize = 16, int kernel_expand_depth = -1, int kernel_expand_channel = -1);
         void openCLExecuteKernel_(Context *clCxt , const char **source, string kernelName,
-                                 size_t globalThreads[3], size_t localThreads[3],
-                                 vector< pair<size_t, const void *> > &args, int channels, int depth, const char *build_options);
+                                  size_t globalThreads[3], size_t localThreads[3],
+                                  vector< pair<size_t, const void *> > &args, int channels, int depth, const char *build_options);
         void openCLExecuteKernel(Context *clCxt , const char **source, string kernelName, size_t globalThreads[3],
                                  size_t localThreads[3],  vector< pair<size_t, const void *> > &args, int channels, int depth);
         void openCLExecuteKernel(Context *clCxt , const char **source, string kernelName, size_t globalThreads[3],
@@ -128,14 +128,14 @@ namespace cv
 
         //void openCLMemcpy2DWithNoPadding(cl_command_queue command_queue, cl_mem buffer, size_t size, size_t offset, void *ptr,
         //                                 enum openCLMemcpyKind kind, cl_bool blocking_write);
-		int savetofile(const Context *clcxt,  cl_program &program, const char *fileName);
-		struct Context::Impl
-		{
+        int savetofile(const Context *clcxt,  cl_program &program, const char *fileName);
+        struct Context::Impl
+        {
             //Information of the OpenCL context
             cl_context clContext;
             cl_command_queue clCmdQueue;
             cl_device_id *devices;
-			string devName;
+            string devName;
             cl_uint maxDimensions;
             size_t maxWorkGroupSize;
             size_t *maxWorkItemSizes;
@@ -143,8 +143,8 @@ namespace cv
             int double_support;
             //extra options to recognize vendor specific fp64 extensions
             char *extra_options;
-			string Binpath;
-		};
+            string Binpath;
+        };
     }
 }
 

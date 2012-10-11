@@ -220,7 +220,6 @@ source_group("Include" FILES ${highgui_ext_hdrs})
 ocv_set_module_sources(HEADERS ${highgui_ext_hdrs} SOURCES ${highgui_srcs} ${highgui_hdrs} ${grfmt_srcs} ${grfmt_hdrs})
 ocv_module_include_directories()
 
-ocv_list_unique(HIGHGUI_LIBRARIES)
 ocv_create_module(${GRFMT_LIBS} ${HIGHGUI_LIBRARIES})
 
 if(BUILD_SHARED_LIBS)

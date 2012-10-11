@@ -326,42 +326,53 @@ void Regression::verify(cv::FileNode node, cv::Mat actual, double _eps, std::str
     double actual_min, actual_max;
     cv::minMaxLoc(actual, &actual_min, &actual_max);
 
-    double eps = evalEps((double)node["min"], actual_min, _eps, err);
-    ASSERT_NEAR((double)node["min"], actual_min, eps)
-            << "  " << argname << " has unexpected minimal value";
+    double expect_min = (double)node["min"];
+    double eps = evalEps(expect_min, actual_min, _eps, err);
+    ASSERT_NEAR(expect_min, actual_min, eps)
+            << argname << " has unexpected minimal value" << std::endl;
 
-    eps = evalEps((double)node["max"], actual_max, _eps, err);
-    ASSERT_NEAR((double)node["max"], actual_max, eps)
-            << "  " << argname << " has unexpected maximal value";
+    double expect_max = (double)node["max"];
+    eps = evalEps(expect_max, actual_max, _eps, err);
+    ASSERT_NEAR(expect_max, actual_max, eps)
+            << argname << " has unexpected maximal value" << std::endl;
 
     cv::FileNode last = node["last"];
-    double actualLast = getElem(actual, actual.rows - 1, actual.cols - 1, actual.channels() - 1);
-    ASSERT_EQ((int)last["x"], actual.cols - 1)
-            << "  " << argname << " has unexpected number of columns";
-    ASSERT_EQ((int)last["y"], actual.rows - 1)
-            << "  " << argname << " has unexpected number of rows";
+    double actual_last = getElem(actual, actual.rows - 1, actual.cols - 1, actual.channels() - 1);
+    int expect_cols = (int)last["x"] + 1;
+    int expect_rows = (int)last["y"] + 1;
+    ASSERT_EQ(expect_cols, actual.cols)
+            << argname << " has unexpected number of columns" << std::endl;
+    ASSERT_EQ(expect_rows, actual.rows)
+            << argname << " has unexpected number of rows" << std::endl;
 
-    eps = evalEps((double)last["val"], actualLast, _eps, err);
-    ASSERT_NEAR((double)last["val"], actualLast, eps)
-            << "  " << argname << " has unexpected value of last element";
+    double expect_last = (double)last["val"];
+    eps = evalEps(expect_last, actual_last, _eps, err);
+    ASSERT_NEAR(expect_last, actual_last, eps)
+            << argname << " has unexpected value of the last element" << std::endl;
 
     cv::FileNode rng1 = node["rng1"];
     int x1 = rng1["x"];
     int y1 = rng1["y"];
     int cn1 = rng1["cn"];
 
-    eps = evalEps((double)rng1["val"], getElem(actual, y1, x1, cn1), _eps, err);
-    ASSERT_NEAR((double)rng1["val"], getElem(actual, y1, x1, cn1), eps)
-            << "  " << argname << " has unexpected value of ["<< x1 << ":" << y1 << ":" << cn1 <<"] element";
+    double expect_rng1 = (double)rng1["val"];
+    double actual_rng1 = getElem(actual, y1, x1, cn1);
+
+    eps = evalEps(expect_rng1, actual_rng1, _eps, err);
+    ASSERT_NEAR(expect_rng1, actual_rng1, eps)
+            << argname << " has unexpected value of the ["<< x1 << ":" << y1 << ":" << cn1 <<"] element" << std::endl;
 
     cv::FileNode rng2 = node["rng2"];
     int x2 = rng2["x"];
     int y2 = rng2["y"];
     int cn2 = rng2["cn"];
 
-    eps = evalEps((double)rng2["val"], getElem(actual, y2, x2, cn2), _eps, err);
-    ASSERT_NEAR((double)rng2["val"], getElem(actual, y2, x2, cn2), eps)
-            << "  " << argname << " has unexpected value of ["<< x2 << ":" << y2 << ":" << cn2 <<"] element";
+    double expect_rng2 = (double)rng2["val"];
+    double actual_rng2 = getElem(actual, y2, x2, cn2);
+
+    eps = evalEps(expect_rng2, actual_rng2, _eps, err);
+    ASSERT_NEAR(expect_rng2, actual_rng2, eps)
+            << argname << " has unexpected value of the ["<< x2 << ":" << y2 << ":" << cn2 <<"] element" << std::endl;
 }
 
 void Regression::write(cv::InputArray array)
@@ -417,13 +428,16 @@ static int countViolations(const cv::Mat& expected, const cv::Mat& actual, const
 
 void Regression::verify(cv::FileNode node, cv::InputArray array, double eps, ERROR_TYPE err)
 {
-    ASSERT_EQ((int)node["kind"], array.kind()) << "  Argument \"" << node.name() << "\" has unexpected kind";
-    ASSERT_EQ((int)node["type"], array.type()) << "  Argument \"" << node.name() << "\" has unexpected type";
+    int expected_kind = (int)node["kind"];
+    int expected_type = (int)node["type"];
+    ASSERT_EQ(expected_kind, array.kind()) << "  Argument \"" << node.name() << "\" has unexpected kind";
+    ASSERT_EQ(expected_type, array.type()) << "  Argument \"" << node.name() << "\" has unexpected type";
 
     cv::FileNode valnode = node["val"];
     if (isVector(array))
     {
-        ASSERT_EQ((int)node["len"], (int)array.total()) << "  Vector \"" << node.name() << "\" has unexpected length";
+        int expected_length = (int)node["len"];
+        ASSERT_EQ(expected_length, (int)array.total()) << "  Vector \"" << node.name() << "\" has unexpected length";
         int idx = node["idx"];
 
         cv::Mat actual = array.getMat(idx);
@@ -485,7 +499,7 @@ void Regression::verify(cv::FileNode node, cv::InputArray array, double eps, ERR
         {
             ASSERT_LE((size_t)26, array.total() * (size_t)array.channels())
                     << "  Argument \"" << node.name() << "\" has unexpected number of elements";
-            verify(node, array.getMat(), eps, "Argument " + node.name(), err);
+            verify(node, array.getMat(), eps, "Argument \"" + node.name() + "\"", err);
         }
         else
         {
@@ -537,6 +551,9 @@ void Regression::verify(cv::FileNode node, cv::InputArray array, double eps, ERR
 
 Regression& Regression::operator() (const std::string& name, cv::InputArray array, double eps, ERROR_TYPE err)
 {
+    // exit if current test is already failed
+    if(::testing::UnitTest::GetInstance()->current_test_info()->result()->Failed()) return *this;
+
     if(!array.empty() && array.depth() == CV_USRTYPE1)
     {
         ADD_FAILURE() << "  Can not check regression for CV_USRTYPE1 data type for " << name;
@@ -1230,6 +1247,51 @@ TestBase::_declareHelper::_declareHelper(TestBase* t) : test(t)
 }
 
 /*****************************************************************************************\
+*                                  miscellaneous
+\*****************************************************************************************/
+
+namespace {
+struct KeypointComparator
+{
+    std::vector<cv::KeyPoint>& pts_;
+    comparators::KeypointGreater cmp;
+
+    KeypointComparator(std::vector<cv::KeyPoint>& pts) : pts_(pts), cmp() {}
+
+    bool operator()(int idx1, int idx2) const
+    {
+        return cmp(pts_[idx1], pts_[idx2]);
+    }
+};
+}//namespace
+
+void perf::sort(std::vector<cv::KeyPoint>& pts, cv::InputOutputArray descriptors)
+{
+    cv::Mat desc = descriptors.getMat();
+
+    CV_Assert(pts.size() == (size_t)desc.rows);
+    cv::AutoBuffer<int> idxs(desc.rows);
+
+    for (int i = 0; i < desc.rows; ++i)
+        idxs[i] = i;
+
+    std::sort((int*)idxs, (int*)idxs + desc.rows, KeypointComparator(pts));
+
+    std::vector<cv::KeyPoint> spts(pts.size());
+    cv::Mat sdesc(desc.size(), desc.type());
+
+    for(int j = 0; j < desc.rows; ++j)
+    {
+        spts[j] = pts[idxs[j]];
+        cv::Mat row = sdesc.row(j);
+        desc.row(idxs[j]).copyTo(row);
+    }
+
+    spts.swap(pts);
+    sdesc.copyTo(desc);
+}
+
+/*****************************************************************************************\
 *                                  ::perf::GpuPerf
 \*****************************************************************************************/
 #ifdef HAVE_CUDA
@@ -1276,7 +1338,3 @@ void PrintTo(const Size& sz, ::std::ostream* os)
 
 }  // namespace cv
 
-
-/*****************************************************************************************\
-*                                  ::cv::PrintTo
-\*****************************************************************************************/

@@ -50,46 +50,46 @@ using namespace cvtest;
 using namespace testing;
 
 void print_info()
-{    
+{
     printf("\n");
 #if defined _WIN32
 #   if defined _WIN64
-        puts("OS: Windows 64");
+    puts("OS: Windows 64");
 #   else
-        puts("OS: Windows 32");
+    puts("OS: Windows 32");
 #   endif
 #elif defined linux
 #   if defined _LP64
-        puts("OS: Linux 64");
+    puts("OS: Linux 64");
 #   else
-        puts("OS: Linux 32");
+    puts("OS: Linux 32");
 #   endif
 #elif defined __APPLE__
 #   if defined _LP64
-        puts("OS: Apple 64");
+    puts("OS: Apple 64");
 #   else
-        puts("OS: Apple 32");
+    puts("OS: Apple 32");
 #   endif
 #endif
 
 }
 
-int main(int argc, char** argv)
+int main(int argc, char **argv)
 {
-	std::vector<cv::ocl::Info> oclinfo;
+    std::vector<cv::ocl::Info> oclinfo;
     TS::ptr()->init("ocl");
     InitGoogleTest(&argc, argv);
 
     print_info();
-	int devnums = getDevice(oclinfo);
-	if(devnums<1)
-	{
-		std::cout << "no device found\n";
-		return -1;
-	}
-	//if you want to use undefault device, set it here
-	//setDevice(oclinfo[0]);
-	setBinpath(CLBINPATH);
+    int devnums = getDevice(oclinfo);
+    if(devnums < 1)
+    {
+        std::cout << "no device found\n";
+        return -1;
+    }
+    //if you want to use undefault device, set it here
+    //setDevice(oclinfo[0]);
+    setBinpath(CLBINPATH);
     return RUN_ALL_TESTS();
 }
 

@@ -1,18 +1,18 @@
 .. _iOS-Installation:
 
 Installation in iOS
-***********************
+*******************
 
-Required packages
-==================
+Required Packages
+=================
 
   * CMake 2.8.8 or higher
   * Xcode 4.2 or higher
 
-Getting the cutting-edge OpenCV from GIT repository
+Getting the Cutting-edge OpenCV from Git Repository
 ---------------------------------------------------
 
-Launch GIT client and clone OpenCV repository from here: http://github.com/itseez/opencv
+Launch GIT client and clone OpenCV repository from `here <http://github.com/itseez/opencv>`_
 
 In MacOS it can be done using the following command in Terminal:
 
@@ -22,8 +22,8 @@ In MacOS it can be done using the following command in Terminal:
    git clone https://github.com/Itseez/opencv.git
  
 
-Building OpenCV from source using CMake, using the command line
-================================================================
+Building OpenCV from Source, using CMake and Command Line
+=========================================================
 
 #. Make symbolic link for Xcode to let OpenCV build scripts find the compiler, header files etc.
 
@@ -32,7 +32,7 @@ Building OpenCV from source using CMake, using the command line
        cd /
        sudo ln -s /Applications/Xcode.app/Contents/Developer Developer
        
-#. Build OpenCV framework
+#. Build OpenCV framework:
 
     .. code-block:: bash
 
@@ -41,7 +41,6 @@ Building OpenCV from source using CMake, using the command line
 
 If everything's fine, a few minutes later you will get ~/<my_working_directory>/ios/opencv2.framework. You can add this framework to your Xcode projects.
 
-
 Further Reading
-=====================
-You can find several OpenCV+iOS tutorials here :ref:`Table-Of-Content-iOS`
+===============
+You can find several OpenCV+iOS tutorials here :ref:`Table-Of-Content-iOS`.

@@ -196,7 +196,7 @@ public class ManagerActivity extends Activity
     protected void onResume() {
     	super.onResume();
     	Log.d(TAG, "Filling package list on resume");
-        if (!bindService(new Intent("org.opencv.engine.BIND"), mServiceConnection, Context.BIND_AUTO_CREATE))
+        if (!bindService(new Intent("org.opencv.engine.BIND"), new OpenCVEngineServiceConnection(), Context.BIND_AUTO_CREATE))
         {
         	TextView EngineVersionView = (TextView)findViewById(R.id.EngineVersionValue);
         	EngineVersionView.setText("not avaliable");
@@ -221,7 +221,7 @@ public class ManagerActivity extends Activity
 		public void onReceive(Context context, Intent intent) {
 			Log.d("OpenCVManager/Reciever", "Bradcast message " + intent.getAction() + " reciever");
 			Log.d("OpenCVManager/Reciever", "Filling package list on broadcast message");
-	        if (!bindService(new Intent("org.opencv.engine.BIND"), mServiceConnection, Context.BIND_AUTO_CREATE))
+	        if (!bindService(new Intent("org.opencv.engine.BIND"), new OpenCVEngineServiceConnection(), Context.BIND_AUTO_CREATE))
 	        {
 	        	TextView EngineVersionView = (TextView)findViewById(R.id.EngineVersionValue);
 	        	EngineVersionView.setText("not avaliable");
@@ -229,8 +229,8 @@ public class ManagerActivity extends Activity
 		}
 	};
 
-    protected ServiceConnection mServiceConnection = new ServiceConnection() {
-
+    protected class OpenCVEngineServiceConnection implements ServiceConnection
+    {
 		public void onServiceDisconnected(ComponentName name) {
 			// TODO Auto-generated method stub
 			
@@ -262,11 +262,11 @@ public class ManagerActivity extends Activity
 			Log.d(TAG, "Filling package list on service connection");
 			FillPackageList();
 
-			unbindService(mServiceConnection);
+			unbindService(this);
 		}
 	};
 	
-	protected void FillPackageList()
+	synchronized protected void FillPackageList()
 	{
 		synchronized (mListViewItems) {
 			mMarket.mIncludeManager = false;

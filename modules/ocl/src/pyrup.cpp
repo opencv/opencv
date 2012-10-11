@@ -17,7 +17,7 @@
 // @Authors
 //		Zhang Chunpeng chunpeng@multicorewareinc.com
 //		Yao Wang, yao@multicorewareinc.com
-//    
+//
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -55,36 +55,43 @@ using namespace cv::ocl;
 using namespace std;
 
 #ifndef HAVE_OPENCL
-void cv::ocl::pyrUp(const oclMat&, GpuMat&, oclMat&) { throw_nogpu(); }
+void cv::ocl::pyrUp(const oclMat &, GpuMat &, oclMat &)
+{
+    throw_nogpu();
+}
 #else
 
-namespace cv { namespace ocl 
-{ 
-	extern const char *pyr_up;
-	void pyrUp(const cv::ocl::oclMat& src,cv::ocl::oclMat& dst)
-	{		
-		dst.create(src.rows * 2, src.cols * 2, src.type());
-		dst.download_channels=src.download_channels;
-		Context *clCxt = src.clCxt;
-		
-		const std::string kernelName = "pyrUp";
-  
-		std::vector< pair<size_t, const void *> > args;
-		args.push_back( make_pair( sizeof(cl_mem), (void *)&src.data));
-		args.push_back( make_pair( sizeof(cl_mem), (void *)&dst.data));
-		args.push_back( make_pair( sizeof(cl_int), (void *)&src.rows));
-		args.push_back( make_pair( sizeof(cl_int), (void *)&dst.rows));
-		args.push_back( make_pair( sizeof(cl_int), (void *)&src.cols));
-		args.push_back( make_pair( sizeof(cl_int), (void *)&dst.cols));
-		args.push_back( make_pair( sizeof(cl_int), (void *)&src.offset));
-		args.push_back( make_pair( sizeof(cl_int), (void *)&dst.offset));
-		args.push_back( make_pair( sizeof(cl_int), (void *)&src.step));
-		args.push_back( make_pair( sizeof(cl_int), (void *)&dst.step));
-		
-		size_t globalThreads[3] = {dst.cols, dst.rows, 1};
-		size_t localThreads[3]  = {16, 16, 1};
-	    
-		openCLExecuteKernel(clCxt, &pyr_up, kernelName, globalThreads, localThreads, args, src.channels(), src.depth());
-	}
-}};
+namespace cv
+{
+    namespace ocl
+    {
+        extern const char *pyr_up;
+        void pyrUp(const cv::ocl::oclMat &src, cv::ocl::oclMat &dst)
+        {
+            dst.create(src.rows * 2, src.cols * 2, src.type());
+
+            Context *clCxt = src.clCxt;
+
+            const std::string kernelName = "pyrUp";
+
+            std::vector< pair<size_t, const void *> > args;
+            args.push_back( make_pair( sizeof(cl_mem), (void *)&src.data));
+            args.push_back( make_pair( sizeof(cl_mem), (void *)&dst.data));
+            args.push_back( make_pair( sizeof(cl_int), (void *)&src.rows));
+            args.push_back( make_pair( sizeof(cl_int), (void *)&dst.rows));
+            args.push_back( make_pair( sizeof(cl_int), (void *)&src.cols));
+            args.push_back( make_pair( sizeof(cl_int), (void *)&dst.cols));
+            args.push_back( make_pair( sizeof(cl_int), (void *)&src.offset));
+            args.push_back( make_pair( sizeof(cl_int), (void *)&dst.offset));
+            args.push_back( make_pair( sizeof(cl_int), (void *)&src.step));
+            args.push_back( make_pair( sizeof(cl_int), (void *)&dst.step));
+
+            size_t globalThreads[3] = {dst.cols, dst.rows, 1};
+            size_t localThreads[3]  = {16, 16, 1};
+
+
+            openCLExecuteKernel(clCxt, &pyr_up, kernelName, globalThreads, localThreads, args, src.oclchannels(), src.depth());
+        }
+    }
+};
 #endif // HAVE_OPENCL

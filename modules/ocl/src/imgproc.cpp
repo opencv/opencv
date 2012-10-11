@@ -77,7 +77,10 @@ void cv::ocl::resize(const oclMat &, oclMat &, Size, double, double, int)
 {
     throw_nogpu();
 }
-void cv::ocl::remap(const oclMat&, oclMat&, oclMat&, oclMat&, int, int ,const Scalar&) { throw_nogpu(); }
+void cv::ocl::remap(const oclMat &, oclMat &, oclMat &, oclMat &, int, int , const Scalar &)
+{
+    throw_nogpu();
+}
 
 void cv::ocl::copyMakeBorder(const oclMat &, oclMat &, int, int, int, int, const Scalar &)
 {
@@ -103,7 +106,7 @@ void cv::ocl::bilateralFilter(const oclMat &, oclMat &, int, double, double, int
 {
     throw_nogpu();
 }
-void cv::ocl::convolve(const oclMat&, const oclMat&, oclMat&)
+void cv::ocl::convolve(const oclMat &, const oclMat &, oclMat &)
 {
     throw_nogpu();
 }
@@ -130,7 +133,7 @@ namespace cv
         extern const char *imgproc_bilateral;
         extern const char *imgproc_calcHarris;
         extern const char *imgproc_calcMinEigenVal;
-	    extern const char *imgproc_convolve;
+        extern const char *imgproc_convolve;
         ////////////////////////////////////OpenCL call wrappers////////////////////////////
 
         template <typename T> struct index_and_sizeof;
@@ -196,7 +199,7 @@ namespace cv
             args.push_back( make_pair(sizeof(cl_uchar), (void *)&thresh_uchar));
             args.push_back( make_pair(sizeof(cl_uchar), (void *)&max_val));
             args.push_back( make_pair(sizeof(cl_int), (void *)&type));
-            openCLExecuteKernel(clCxt, &imgproc_threshold, kernelName, globalThreads, localThreads, args, src.channels(), src.depth());
+            openCLExecuteKernel(clCxt, &imgproc_threshold, kernelName, globalThreads, localThreads, args, src.oclchannels(), src.depth());
         }
 
         void threshold_32f(const oclMat &src, oclMat &dst, double thresh, double maxVal, int type)
@@ -233,7 +236,7 @@ namespace cv
             args.push_back( make_pair(sizeof(cl_float), (void *)&thresh_f));
             args.push_back( make_pair(sizeof(cl_float), (void *)&max_val));
             args.push_back( make_pair(sizeof(cl_int), (void *)&type));
-            openCLExecuteKernel(clCxt, &imgproc_threshold, kernelName, globalThreads, localThreads, args, src.channels(), src.depth());
+            openCLExecuteKernel(clCxt, &imgproc_threshold, kernelName, globalThreads, localThreads, args, src.oclchannels(), src.depth());
 
         }
 
@@ -252,17 +255,17 @@ namespace cv
 
             return thresh;
         }
-    ////////////////////////////////////////////////////////////////////////////////////////////
-    ///////////////////////////////   remap   //////////////////////////////////////////////////
-    ////////////////////////////////////////////////////////////////////////////////////////////
+        ////////////////////////////////////////////////////////////////////////////////////////////
+        ///////////////////////////////   remap   //////////////////////////////////////////////////
+        ////////////////////////////////////////////////////////////////////////////////////////////
 
-        void remap( const oclMat& src, oclMat& dst, oclMat& map1, oclMat& map2, int interpolation, int borderType, const Scalar& borderValue )
+        void remap( const oclMat &src, oclMat &dst, oclMat &map1, oclMat &map2, int interpolation, int borderType, const Scalar &borderValue )
         {
             Context *clCxt = src.clCxt;
-            CV_Assert(interpolation == INTER_LINEAR || interpolation == INTER_NEAREST 
-                    || interpolation == INTER_CUBIC || interpolation== INTER_LANCZOS4);
-            CV_Assert((map1.type() == CV_16SC2 && !map2.data) || (map1.type()== CV_32FC2 && !map2.data) || (map1.type() == CV_32FC1 && map2.type() == CV_32FC1));
-            CV_Assert(!map2.data || map2.size()== map1.size());
+            CV_Assert(interpolation == INTER_LINEAR || interpolation == INTER_NEAREST
+                      || interpolation == INTER_CUBIC || interpolation == INTER_LANCZOS4);
+            CV_Assert((map1.type() == CV_16SC2 && !map2.data) || (map1.type() == CV_32FC2 && !map2.data) || (map1.type() == CV_32FC1 && map2.type() == CV_32FC1));
+            CV_Assert(!map2.data || map2.size() == map1.size());
             CV_Assert(dst.size() == map1.size());
 
             dst.create(map1.size(), src.type());
@@ -285,7 +288,7 @@ namespace cv
                     kernelName = "remapNNSConstant";
 
             }
-            else if(map1.type() == CV_32FC1 && map2.type() == CV_32FC1) 
+            else if(map1.type() == CV_32FC1 && map2.type() == CV_32FC1)
             {
                 if(interpolation == INTER_LINEAR && borderType == BORDER_CONSTANT)
                     kernelName = "remapLNF1Constant";
@@ -293,37 +296,37 @@ namespace cv
                     kernelName = "remapNNF1Constant";
             }
 
-            int channels = dst.channels();
+            int channels = dst.oclchannels();
             int depth = dst.depth();
-               int type = src.type();
-                  size_t blkSizeX = 16, blkSizeY = 16;
-                  size_t glbSizeX;
+            int type = src.type();
+            size_t blkSizeX = 16, blkSizeY = 16;
+            size_t glbSizeX;
             int cols = dst.cols;
-             if(src.type() == CV_8UC1) 
+            if(src.type() == CV_8UC1)
             {
-                cols = (dst.cols + dst.offset%4 + 3)/4;
-                glbSizeX = cols %blkSizeX==0 ? cols : (cols/blkSizeX+1)*blkSizeX;
-             
+                cols = (dst.cols + dst.offset % 4 + 3) / 4;
+                glbSizeX = cols % blkSizeX == 0 ? cols : (cols / blkSizeX + 1) * blkSizeX;
+
             }
-            else if(src.type() == CV_8UC4 || src.type() == CV_32FC1) 
+            else if(src.type() == CV_8UC3 || src.type() == CV_8UC4 || src.type() == CV_32FC1)
             {
-                cols = (dst.cols + (dst.offset>>2)%4 + 3)/4;
-                glbSizeX = cols %blkSizeX==0 ? cols : (cols/blkSizeX+1)*blkSizeX;
+                cols = (dst.cols + (dst.offset >> 2) % 4 + 3) / 4;
+                glbSizeX = cols % blkSizeX == 0 ? cols : (cols / blkSizeX + 1) * blkSizeX;
             }
             else
             {
-                glbSizeX = dst.cols%blkSizeX==0 ? dst.cols : (dst.cols/blkSizeX+1)*blkSizeX;
-                
+                glbSizeX = dst.cols % blkSizeX == 0 ? dst.cols : (dst.cols / blkSizeX + 1) * blkSizeX;
+
             }
 
-            size_t glbSizeY = dst.rows%blkSizeY==0 ? dst.rows : (dst.rows/blkSizeY+1)*blkSizeY;
-            size_t globalThreads[3] = {glbSizeX,glbSizeY,1};
-            size_t localThreads[3] = {blkSizeX,blkSizeY,1};
+            size_t glbSizeY = dst.rows % blkSizeY == 0 ? dst.rows : (dst.rows / blkSizeY + 1) * blkSizeY;
+            size_t globalThreads[3] = {glbSizeX, glbSizeY, 1};
+            size_t localThreads[3] = {blkSizeX, blkSizeY, 1};
             /*
             /////////////////////////////
             //using the image buffer
             /////////////////////////////
-            
+
             size_t image_row_pitch = 0;
             cl_int err1, err2, err3;
             cl_mem_flags flags1 = CL_MEM_READ_ONLY;
@@ -366,8 +369,8 @@ namespace cv
                 printf("Error code %d \n", err3);
                 return;
             }
-           // clWaitForEvents(1, &BtoI_event);
-            
+            // clWaitForEvents(1, &BtoI_event);
+
             cl_int ret;
             Mat test(src.rows, src.cols, CV_8UC1);
             memset(test.data, 0, src.rows*src.cols);
@@ -391,66 +394,66 @@ namespace cv
             vector< pair<size_t, const void *> > args;
             if(map1.channels() == 2)
             {
-                args.push_back( make_pair(sizeof(cl_mem),(void*)&dst.data));
-                args.push_back( make_pair(sizeof(cl_mem),(void*)&src.data));
+                args.push_back( make_pair(sizeof(cl_mem), (void *)&dst.data));
+                args.push_back( make_pair(sizeof(cl_mem), (void *)&src.data));
                 // args.push_back( make_pair(sizeof(cl_mem),(void*)&srcImage));  //imageBuffer
-                args.push_back( make_pair(sizeof(cl_mem),(void*)&map1.data));
-                args.push_back( make_pair(sizeof(cl_int),(void*)&dst.offset));
-                args.push_back( make_pair(sizeof(cl_int),(void*)&src.offset));
-                args.push_back( make_pair(sizeof(cl_int),(void*)&map1.offset));
-                args.push_back( make_pair(sizeof(cl_int),(void*)&dst.step));
-                args.push_back( make_pair(sizeof(cl_int),(void*)&src.step));
-                args.push_back( make_pair(sizeof(cl_int),(void*)&map1.step));
-                args.push_back( make_pair(sizeof(cl_int),(void*)&src.cols));
-                args.push_back( make_pair(sizeof(cl_int),(void*)&src.rows));
-                args.push_back( make_pair(sizeof(cl_int),(void*)&dst.cols));
-                args.push_back( make_pair(sizeof(cl_int),(void*)&dst.rows));
-                args.push_back( make_pair(sizeof(cl_int),(void*)&map1.cols));
-                args.push_back( make_pair(sizeof(cl_int),(void*)&map1.rows));
+                args.push_back( make_pair(sizeof(cl_mem), (void *)&map1.data));
+                args.push_back( make_pair(sizeof(cl_int), (void *)&dst.offset));
+                args.push_back( make_pair(sizeof(cl_int), (void *)&src.offset));
+                args.push_back( make_pair(sizeof(cl_int), (void *)&map1.offset));
+                args.push_back( make_pair(sizeof(cl_int), (void *)&dst.step));
+                args.push_back( make_pair(sizeof(cl_int), (void *)&src.step));
+                args.push_back( make_pair(sizeof(cl_int), (void *)&map1.step));
+                args.push_back( make_pair(sizeof(cl_int), (void *)&src.cols));
+                args.push_back( make_pair(sizeof(cl_int), (void *)&src.rows));
+                args.push_back( make_pair(sizeof(cl_int), (void *)&dst.cols));
+                args.push_back( make_pair(sizeof(cl_int), (void *)&dst.rows));
+                args.push_back( make_pair(sizeof(cl_int), (void *)&map1.cols));
+                args.push_back( make_pair(sizeof(cl_int), (void *)&map1.rows));
                 args.push_back( make_pair(sizeof(cl_int), (void *)&cols));
                 if(src.clCxt -> impl -> double_support != 0)
                 {
-                    args.push_back( make_pair(sizeof(cl_double4),(void*)&borderValue));
+                    args.push_back( make_pair(sizeof(cl_double4), (void *)&borderValue));
                 }
                 else
                 {
-                    float borderFloat[4] = {(float)borderValue[0], (float)borderValue[1], (float)borderValue[2], (float)borderValue[3]};  
-                    args.push_back( make_pair(sizeof(cl_float4),(void*)&borderFloat));
+                    float borderFloat[4] = {(float)borderValue[0], (float)borderValue[1], (float)borderValue[2], (float)borderValue[3]};
+                    args.push_back( make_pair(sizeof(cl_float4), (void *)&borderFloat));
                 }
             }
             if(map1.channels() == 1)
             {
-                args.push_back( make_pair(sizeof(cl_mem),(void*)&dst.data));
-                args.push_back( make_pair(sizeof(cl_mem),(void*)&src.data));
+                args.push_back( make_pair(sizeof(cl_mem), (void *)&dst.data));
+                args.push_back( make_pair(sizeof(cl_mem), (void *)&src.data));
                 // args.push_back( make_pair(sizeof(cl_mem),(void*)&srcImage));  //imageBuffer
-                args.push_back( make_pair(sizeof(cl_mem),(void*)&map1.data));
-                args.push_back( make_pair(sizeof(cl_mem),(void*)&map2.data));
-                args.push_back( make_pair(sizeof(cl_int),(void*)&dst.offset));
-                args.push_back( make_pair(sizeof(cl_int),(void*)&src.offset));
-                args.push_back( make_pair(sizeof(cl_int),(void*)&map1.offset));
-                args.push_back( make_pair(sizeof(cl_int),(void*)&dst.step));
-                args.push_back( make_pair(sizeof(cl_int),(void*)&src.step));
-                args.push_back( make_pair(sizeof(cl_int),(void*)&map1.step));
-                args.push_back( make_pair(sizeof(cl_int),(void*)&src.cols));
-                args.push_back( make_pair(sizeof(cl_int),(void*)&src.rows));
-                args.push_back( make_pair(sizeof(cl_int),(void*)&dst.cols));
-                args.push_back( make_pair(sizeof(cl_int),(void*)&dst.rows));
-                args.push_back( make_pair(sizeof(cl_int),(void*)&map1.cols));
-                args.push_back( make_pair(sizeof(cl_int),(void*)&map1.rows));
+                args.push_back( make_pair(sizeof(cl_mem), (void *)&map1.data));
+                args.push_back( make_pair(sizeof(cl_mem), (void *)&map2.data));
+                args.push_back( make_pair(sizeof(cl_int), (void *)&dst.offset));
+                args.push_back( make_pair(sizeof(cl_int), (void *)&src.offset));
+                args.push_back( make_pair(sizeof(cl_int), (void *)&map1.offset));
+                args.push_back( make_pair(sizeof(cl_int), (void *)&dst.step));
+                args.push_back( make_pair(sizeof(cl_int), (void *)&src.step));
+                args.push_back( make_pair(sizeof(cl_int), (void *)&map1.step));
+                args.push_back( make_pair(sizeof(cl_int), (void *)&src.cols));
+                args.push_back( make_pair(sizeof(cl_int), (void *)&src.rows));
+                args.push_back( make_pair(sizeof(cl_int), (void *)&dst.cols));
+                args.push_back( make_pair(sizeof(cl_int), (void *)&dst.rows));
+                args.push_back( make_pair(sizeof(cl_int), (void *)&map1.cols));
+                args.push_back( make_pair(sizeof(cl_int), (void *)&map1.rows));
                 args.push_back( make_pair(sizeof(cl_int), (void *)&cols));
                 if(src.clCxt -> impl -> double_support != 0)
                 {
-                    args.push_back( make_pair(sizeof(cl_double4),(void*)&borderValue));
+                    args.push_back( make_pair(sizeof(cl_double4), (void *)&borderValue));
                 }
                 else
                 {
-                    float borderFloat[4] = {(float)borderValue[0], (float)borderValue[1], (float)borderValue[2], (float)borderValue[3]};  
-                    args.push_back( make_pair(sizeof(cl_float4),(void*)&borderFloat));
+                    float borderFloat[4] = {(float)borderValue[0], (float)borderValue[1], (float)borderValue[2], (float)borderValue[3]};
+                    args.push_back( make_pair(sizeof(cl_float4), (void *)&borderFloat));
                 }
             }
-            openCLExecuteKernel(clCxt,&imgproc_remap,kernelName,globalThreads,localThreads,args,src.channels(),src.depth());
-    }	
-    
+            openCLExecuteKernel(clCxt, &imgproc_remap, kernelName, globalThreads, localThreads, args, src.oclchannels(), src.depth());
+        }
+
         ////////////////////////////////////////////////////////////////////////////////////////////
         // resize
 
@@ -462,11 +465,11 @@ namespace cv
             float ify = 1. / fy;
             double ifx_d = 1. / fx;
             double ify_d = 1. / fy;
-			int srcStep_in_pixel = src.step1() / src.channels();
-			int srcoffset_in_pixel = src.offset / src.elemSize();
-			int dstStep_in_pixel = dst.step1() / dst.channels();
-			int dstoffset_in_pixel = dst.offset / dst.elemSize();
-			//printf("%d %d\n",src.step1() , dst.elemSize());
+            int srcStep_in_pixel = src.step1() / src.oclchannels();
+            int srcoffset_in_pixel = src.offset / src.elemSize();
+            int dstStep_in_pixel = dst.step1() / dst.oclchannels();
+            int dstoffset_in_pixel = dst.offset / dst.elemSize();
+            //printf("%d %d\n",src.step1() , dst.elemSize());
             string kernelName;
             if(interpolation == INTER_LINEAR)
                 kernelName = "resizeLN";
@@ -479,13 +482,13 @@ namespace cv
             if(src.type() == CV_8UC1)
             {
                 size_t cols = (dst.cols + dst.offset % 4 + 3) / 4;
-                glbSizeX = cols % blkSizeX == 0 && cols != 0? cols : (cols / blkSizeX + 1) * blkSizeX;
+                glbSizeX = cols % blkSizeX == 0 && cols != 0 ? cols : (cols / blkSizeX + 1) * blkSizeX;
             }
             else
             {
-                glbSizeX = dst.cols % blkSizeX == 0 && dst.cols !=0? dst.cols : (dst.cols / blkSizeX + 1) * blkSizeX;
+                glbSizeX = dst.cols % blkSizeX == 0 && dst.cols != 0 ? dst.cols : (dst.cols / blkSizeX + 1) * blkSizeX;
             }
-            size_t glbSizeY = dst.rows % blkSizeY == 0 && dst.rows != 0? dst.rows : (dst.rows / blkSizeY + 1) * blkSizeY;
+            size_t glbSizeY = dst.rows % blkSizeY == 0 && dst.rows != 0 ? dst.rows : (dst.rows / blkSizeY + 1) * blkSizeY;
             size_t globalThreads[3] = {glbSizeX, glbSizeY, 1};
             size_t localThreads[3] = {blkSizeX, blkSizeY, 1};
 
@@ -504,13 +507,13 @@ namespace cv
                 args.push_back( make_pair(sizeof(cl_int), (void *)&dst.rows));
                 if(src.clCxt -> impl -> double_support != 0)
                 {
-					args.push_back( make_pair(sizeof(cl_double), (void *)&ifx_d));
-					args.push_back( make_pair(sizeof(cl_double), (void *)&ify_d));
+                    args.push_back( make_pair(sizeof(cl_double), (void *)&ifx_d));
+                    args.push_back( make_pair(sizeof(cl_double), (void *)&ify_d));
                 }
                 else
                 {
-					args.push_back( make_pair(sizeof(cl_float), (void *)&ifx));
-					args.push_back( make_pair(sizeof(cl_float), (void *)&ify));
+                    args.push_back( make_pair(sizeof(cl_float), (void *)&ifx));
+                    args.push_back( make_pair(sizeof(cl_float), (void *)&ify));
                 }
             }
             else
@@ -529,15 +532,15 @@ namespace cv
                 args.push_back( make_pair(sizeof(cl_float), (void *)&ify));
             }
 
-            openCLExecuteKernel(clCxt, &imgproc_resize, kernelName, globalThreads, localThreads, args, src.channels(), src.depth());
+            openCLExecuteKernel(clCxt, &imgproc_resize, kernelName, globalThreads, localThreads, args, src.oclchannels(), src.depth());
         }
 
 
         void resize(const oclMat &src, oclMat &dst, Size dsize,
                     double fx, double fy, int interpolation)
         {
-            CV_Assert(src.type() == CV_8UC1 || src.type() == CV_8UC4
-                      || src.type() == CV_32FC1 || src.type() == CV_32FC4);
+            CV_Assert(src.type() == CV_8UC1 || src.type() == CV_8UC3 || src.type() == CV_8UC4
+                      || src.type() == CV_32FC1 || src.type() == CV_32FC3 || src.type() == CV_32FC4);
             CV_Assert(interpolation == INTER_LINEAR || interpolation == INTER_NEAREST);
             CV_Assert( src.size().area() > 0 );
             CV_Assert( !(dsize == Size()) || (fx > 0 && fy > 0) );
@@ -546,7 +549,7 @@ namespace cv
             {
                 if(dsize.width != (int)(src.cols * fx) || dsize.height != (int)(src.rows * fy))
                 {
-					CV_Error(CV_StsUnmatchedSizes,"invalid dsize and fx, fy!");
+                    CV_Error(CV_StsUnmatchedSizes, "invalid dsize and fx, fy!");
                 }
             }
             if( dsize == Size() )
@@ -585,10 +588,10 @@ namespace cv
                 return medianFilter(src1, dst, m);
             }
 
-            int srcStep = src.step1() / src.channels();
-            int dstStep = dst.step1() / dst.channels();
-            int srcOffset = src.offset / src.channels() / src.elemSize1();
-            int dstOffset = dst.offset / dst.channels() / dst.elemSize1();
+            int srcStep = src.step1() / src.oclchannels();
+            int dstStep = dst.step1() / dst.oclchannels();
+            int srcOffset = src.offset / src.oclchannels() / src.elemSize1();
+            int dstOffset = dst.offset / dst.oclchannels() / dst.elemSize1();
 
             Context *clCxt = src.clCxt;
             string kernelName = "medianFilter";
@@ -610,12 +613,12 @@ namespace cv
             if(m == 3)
             {
                 string kernelName = "medianFilter3";
-                openCLExecuteKernel(clCxt, &imgproc_median, kernelName, globalThreads, localThreads, args, src.channels(), src.depth());
+                openCLExecuteKernel(clCxt, &imgproc_median, kernelName, globalThreads, localThreads, args, src.oclchannels(), src.depth());
             }
             else if(m == 5)
             {
                 string kernelName = "medianFilter5";
-                openCLExecuteKernel(clCxt, &imgproc_median, kernelName, globalThreads, localThreads, args, src.channels(), src.depth());
+                openCLExecuteKernel(clCxt, &imgproc_median, kernelName, globalThreads, localThreads, args, src.oclchannels(), src.depth());
             }
             else
             {
@@ -623,7 +626,7 @@ namespace cv
                 //string kernelName = "medianFilter";
                 //args.push_back( make_pair( sizeof(cl_int),(void*)&m));
 
-                //openCLExecuteKernel(clCxt,&imgproc_median,kernelName,globalThreads,localThreads,args,src.channels(),-1);
+                //openCLExecuteKernel(clCxt,&imgproc_median,kernelName,globalThreads,localThreads,args,src.oclchannels(),-1);
             }
 
         }
@@ -632,48 +635,49 @@ namespace cv
         // copyMakeBorder
         void copyMakeBorder(const oclMat &src, oclMat &dst, int top, int bottom, int left, int right, int bordertype, const Scalar &scalar)
         {
-            //CV_Assert(src.channels() != 2);
+            //CV_Assert(src.oclchannels() != 2);
             CV_Assert(top >= 0 && bottom >= 0 && left >= 0 && right >= 0);
-			if((dst.cols!=dst.wholecols) || (dst.rows!=dst.wholerows))//has roi
-			{
-				if(((bordertype & cv::BORDER_ISOLATED) == 0) &&
-					(bordertype != cv::BORDER_CONSTANT) &&
-					(bordertype != cv::BORDER_REPLICATE))
-				{
-					CV_Error(CV_StsBadArg,"unsupported border type");
-				}
-			}
-			bordertype &= ~cv::BORDER_ISOLATED;
-			if((bordertype == cv::BORDER_REFLECT) || (bordertype == cv::BORDER_WRAP))
-			{
-				CV_Assert((src.cols>=left) && (src.cols>=right) && (src.rows >= top) && (src.rows >= bottom));
-			}
-			if(bordertype == cv::BORDER_REFLECT_101)
-			{
-				CV_Assert((src.cols>left) && (src.cols>right) && (src.rows > top) && (src.rows > bottom));
-			}
+            if((dst.cols != dst.wholecols) || (dst.rows != dst.wholerows)) //has roi
+            {
+                if(((bordertype & cv::BORDER_ISOLATED) == 0) &&
+                        (bordertype != cv::BORDER_CONSTANT) &&
+                        (bordertype != cv::BORDER_REPLICATE))
+                {
+                    CV_Error(CV_StsBadArg, "unsupported border type");
+                }
+            }
+            bordertype &= ~cv::BORDER_ISOLATED;
+            if((bordertype == cv::BORDER_REFLECT) || (bordertype == cv::BORDER_WRAP))
+            {
+                CV_Assert((src.cols >= left) && (src.cols >= right) && (src.rows >= top) && (src.rows >= bottom));
+            }
+            if(bordertype == cv::BORDER_REFLECT_101)
+            {
+                CV_Assert((src.cols > left) && (src.cols > right) && (src.rows > top) && (src.rows > bottom));
+            }
             dst.create(src.rows + top + bottom, src.cols + left + right, src.type());
-            int srcStep = src.step1() / src.channels();
-            int dstStep = dst.step1() / dst.channels();
+            int srcStep = src.step1() / src.oclchannels();
+            int dstStep = dst.step1() / dst.oclchannels();
             int srcOffset = src.offset / src.elemSize();
             int dstOffset = dst.offset / dst.elemSize();
-			int __bordertype[] = {cv::BORDER_CONSTANT, cv::BORDER_REPLICATE,BORDER_REFLECT,BORDER_WRAP,BORDER_REFLECT_101};
-			const char* borderstr[]={"BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT","BORDER_WRAP","BORDER_REFLECT_101"};
-			int bordertype_index;
-			for(bordertype_index=0;bordertype_index<sizeof(__bordertype) / sizeof(int); bordertype_index++)
-			{
-				if(__bordertype[bordertype_index]==bordertype)
-					break;
-			}
-			if(bordertype_index==sizeof(__bordertype) / sizeof(int))
-			{
-				CV_Error(CV_StsBadArg,"unsupported border type");
-			}
+            int __bordertype[] = {cv::BORDER_CONSTANT, cv::BORDER_REPLICATE, BORDER_REFLECT, BORDER_WRAP, BORDER_REFLECT_101};
+            const char *borderstr[] = {"BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", "BORDER_WRAP", "BORDER_REFLECT_101"};
+            int bordertype_index;
+            for(bordertype_index = 0; bordertype_index < sizeof(__bordertype) / sizeof(int); bordertype_index++)
+            {
+                if(__bordertype[bordertype_index] == bordertype)
+                    break;
+            }
+            if(bordertype_index == sizeof(__bordertype) / sizeof(int))
+            {
+                CV_Error(CV_StsBadArg, "unsupported border type");
+            }
             string kernelName = "copymakeborder";
-			size_t localThreads[3] = {16, 16, 1};
-            size_t globalThreads[3] = {(dst.cols + localThreads[0]-1) / localThreads[0] * localThreads[0], 
-				(dst.rows + localThreads[1]-1) / localThreads[1] * localThreads[1], 1};
-            
+            size_t localThreads[3] = {16, 16, 1};
+            size_t globalThreads[3] = {(dst.cols + localThreads[0] - 1) / localThreads[0] *localThreads[0],
+                                       (dst.rows + localThreads[1] - 1) / localThreads[1] *localThreads[1], 1
+                                      };
+
             vector< pair<size_t, const void *> > args;
             args.push_back( make_pair( sizeof(cl_mem), (void *)&src.data));
             args.push_back( make_pair( sizeof(cl_mem), (void *)&dst.data));
@@ -683,186 +687,186 @@ namespace cv
             args.push_back( make_pair( sizeof(cl_int), (void *)&src.rows));
             args.push_back( make_pair( sizeof(cl_int), (void *)&srcStep));
             args.push_back( make_pair( sizeof(cl_int), (void *)&srcOffset));
-			args.push_back( make_pair( sizeof(cl_int), (void *)&dstStep));
+            args.push_back( make_pair( sizeof(cl_int), (void *)&dstStep));
             args.push_back( make_pair( sizeof(cl_int), (void *)&dstOffset));
             args.push_back( make_pair( sizeof(cl_int), (void *)&top));
             args.push_back( make_pair( sizeof(cl_int), (void *)&left));
-			char compile_option[64];
-			union sc
-			{
-				cl_uchar4 uval;
-				cl_char4  cval;
-				cl_ushort4 usval;
-				cl_short4 shval;
-				cl_int4 ival;
-				cl_float4 fval;
-				cl_double4 dval;
-			}val;
-			switch(dst.depth())
-			{
-			case CV_8U:
-				val.uval.s[0] = saturate_cast<uchar>(scalar.val[0]);
-				val.uval.s[1] = saturate_cast<uchar>(scalar.val[1]);
-				val.uval.s[2] = saturate_cast<uchar>(scalar.val[2]);
-				val.uval.s[3] = saturate_cast<uchar>(scalar.val[3]);
-				switch(dst.channels())
-				{
-				case 1:
-					sprintf(compile_option, "-D GENTYPE=uchar -D %s",borderstr[bordertype_index]);
-					args.push_back( make_pair( sizeof(cl_uchar) , (void *)&val.uval.s[0] ));
-					if(((dst.offset & 3) ==0) && ((dst.cols & 3) == 0))
-					{
-						kernelName = "copymakeborder_C1_D0";
-						globalThreads[0] = (dst.cols/4 + localThreads[0]-1) / localThreads[0] * localThreads[0];
-					}
-					break;
-				case 4:
-					sprintf(compile_option, "-D GENTYPE=uchar4 -D %s",borderstr[bordertype_index]);
-					args.push_back( make_pair( sizeof(cl_uchar4) , (void *)&val.uval ));
-					break;
-				default:
-					CV_Error(CV_StsUnsupportedFormat,"unsupported channels");
-				}
-				break;
-			case CV_8S:
-				val.cval.s[0] = saturate_cast<char>(scalar.val[0]);
-				val.cval.s[1] = saturate_cast<char>(scalar.val[1]);
-				val.cval.s[2] = saturate_cast<char>(scalar.val[2]);
-				val.cval.s[3] = saturate_cast<char>(scalar.val[3]);
-				switch(dst.channels())
-				{
-				case 1:
-					sprintf(compile_option, "-D GENTYPE=char -D %s",borderstr[bordertype_index]);
-					args.push_back( make_pair( sizeof(cl_char) , (void *)&val.cval.s[0] ));
-					break;
-				case 4:
-					sprintf(compile_option, "-D GENTYPE=char4 -D %s",borderstr[bordertype_index]);
-					args.push_back( make_pair( sizeof(cl_char4) , (void *)&val.cval ));
-					break;
-				default:
-					CV_Error(CV_StsUnsupportedFormat,"unsupported channels");
-				}
-				break;
-			case CV_16U:
-				val.usval.s[0] = saturate_cast<ushort>(scalar.val[0]);
-				val.usval.s[1] = saturate_cast<ushort>(scalar.val[1]);
-				val.usval.s[2] = saturate_cast<ushort>(scalar.val[2]);
-				val.usval.s[3] = saturate_cast<ushort>(scalar.val[3]);
-				switch(dst.channels())
-				{
-				case 1:
-					sprintf(compile_option, "-D GENTYPE=ushort -D %s",borderstr[bordertype_index]);
-					args.push_back( make_pair( sizeof(cl_ushort) , (void *)&val.usval.s[0] ));
-					break;
-				case 4:
-					sprintf(compile_option, "-D GENTYPE=ushort4 -D %s",borderstr[bordertype_index]);
-					args.push_back( make_pair( sizeof(cl_ushort4) , (void *)&val.usval ));
-					break;
-				default:
-					CV_Error(CV_StsUnsupportedFormat,"unsupported channels");
-				}
-				break;
-			case CV_16S:
-				val.shval.s[0] = saturate_cast<short>(scalar.val[0]);
-				val.shval.s[1] = saturate_cast<short>(scalar.val[1]);
-				val.shval.s[2] = saturate_cast<short>(scalar.val[2]);
-				val.shval.s[3] = saturate_cast<short>(scalar.val[3]);
-				switch(dst.channels())
-				{
-				case 1:
-					sprintf(compile_option, "-D GENTYPE=short -D %s",borderstr[bordertype_index]);
-					args.push_back( make_pair( sizeof(cl_short) , (void *)&val.shval.s[0] ));
-					break;
-				case 4:
-					sprintf(compile_option, "-D GENTYPE=short4 -D %s",borderstr[bordertype_index]);
-					args.push_back( make_pair( sizeof(cl_short4) , (void *)&val.shval ));
-					break;
-				default:
-					CV_Error(CV_StsUnsupportedFormat,"unsupported channels");
-				}
-				break;
-			case CV_32S:
-				val.ival.s[0] = saturate_cast<int>(scalar.val[0]);
-				val.ival.s[1] = saturate_cast<int>(scalar.val[1]);
-				val.ival.s[2] = saturate_cast<int>(scalar.val[2]);
-				val.ival.s[3] = saturate_cast<int>(scalar.val[3]);
-				switch(dst.channels())
-				{
-				case 1:
-					sprintf(compile_option, "-D GENTYPE=int -D %s",borderstr[bordertype_index]);
-					args.push_back( make_pair( sizeof(cl_int) , (void *)&val.ival.s[0] ));
-					break;
-				case 2:
-					sprintf(compile_option, "-D GENTYPE=int2 -D %s",borderstr[bordertype_index]);
-					cl_int2 i2val;
-					i2val.s[0] = val.ival.s[0];
-					i2val.s[1] = val.ival.s[1];
-					args.push_back( make_pair( sizeof(cl_int2) , (void *)&i2val ));
-					break;
-				case 4:
-					sprintf(compile_option, "-D GENTYPE=int4 -D %s",borderstr[bordertype_index]);
-					args.push_back( make_pair( sizeof(cl_int4) , (void *)&val.ival ));
-					break;
-				default:
-					CV_Error(CV_StsUnsupportedFormat,"unsupported channels");
-				}
-				break;
-			case CV_32F:
-				val.fval.s[0] = scalar.val[0];
-				val.fval.s[1] = scalar.val[1];
-				val.fval.s[2] = scalar.val[2];
-				val.fval.s[3] = scalar.val[3];		
-				switch(dst.channels())
-				{
-				case 1:
-					sprintf(compile_option, "-D GENTYPE=float -D %s",borderstr[bordertype_index]);
-					args.push_back( make_pair( sizeof(cl_float) , (void *)&val.fval.s[0] ));
-					break;
-				case 4:
-					sprintf(compile_option, "-D GENTYPE=float4 -D %s",borderstr[bordertype_index]);
-					args.push_back( make_pair( sizeof(cl_float4) , (void *)&val.fval ));
-					break;
-				default:
-					CV_Error(CV_StsUnsupportedFormat,"unsupported channels");
-				}
-				break;
-			case CV_64F:
-				val.dval.s[0] = scalar.val[0];
-				val.dval.s[1] = scalar.val[1];
-				val.dval.s[2] = scalar.val[2];
-				val.dval.s[3] = scalar.val[3];
-				switch(dst.channels())
-				{
-				case 1:
-					sprintf(compile_option, "-D GENTYPE=double -D %s",borderstr[bordertype_index]);
-					args.push_back( make_pair( sizeof(cl_double) , (void *)&val.dval.s[0] ));
-					break;
-				case 4:
-					sprintf(compile_option, "-D GENTYPE=double4 -D %s",borderstr[bordertype_index]);
-					args.push_back( make_pair( sizeof(cl_double4) , (void *)&val.dval ));
-					break;
-				default:
-					CV_Error(CV_StsUnsupportedFormat,"unsupported channels");
-				}
-				break;
-			default:
-				CV_Error(CV_StsUnsupportedFormat,"unknown depth");
-			}
+            char compile_option[64];
+            union sc
+            {
+                cl_uchar4 uval;
+                cl_char4  cval;
+                cl_ushort4 usval;
+                cl_short4 shval;
+                cl_int4 ival;
+                cl_float4 fval;
+                cl_double4 dval;
+            } val;
+            switch(dst.depth())
+            {
+            case CV_8U:
+                val.uval.s[0] = saturate_cast<uchar>(scalar.val[0]);
+                val.uval.s[1] = saturate_cast<uchar>(scalar.val[1]);
+                val.uval.s[2] = saturate_cast<uchar>(scalar.val[2]);
+                val.uval.s[3] = saturate_cast<uchar>(scalar.val[3]);
+                switch(dst.oclchannels())
+                {
+                case 1:
+                    sprintf(compile_option, "-D GENTYPE=uchar -D %s", borderstr[bordertype_index]);
+                    args.push_back( make_pair( sizeof(cl_uchar) , (void *)&val.uval.s[0] ));
+                    if(((dst.offset & 3) == 0) && ((dst.cols & 3) == 0))
+                    {
+                        kernelName = "copymakeborder_C1_D0";
+                        globalThreads[0] = (dst.cols / 4 + localThreads[0] - 1) / localThreads[0] * localThreads[0];
+                    }
+                    break;
+                case 4:
+                    sprintf(compile_option, "-D GENTYPE=uchar4 -D %s", borderstr[bordertype_index]);
+                    args.push_back( make_pair( sizeof(cl_uchar4) , (void *)&val.uval ));
+                    break;
+                default:
+                    CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
+                }
+                break;
+            case CV_8S:
+                val.cval.s[0] = saturate_cast<char>(scalar.val[0]);
+                val.cval.s[1] = saturate_cast<char>(scalar.val[1]);
+                val.cval.s[2] = saturate_cast<char>(scalar.val[2]);
+                val.cval.s[3] = saturate_cast<char>(scalar.val[3]);
+                switch(dst.oclchannels())
+                {
+                case 1:
+                    sprintf(compile_option, "-D GENTYPE=char -D %s", borderstr[bordertype_index]);
+                    args.push_back( make_pair( sizeof(cl_char) , (void *)&val.cval.s[0] ));
+                    break;
+                case 4:
+                    sprintf(compile_option, "-D GENTYPE=char4 -D %s", borderstr[bordertype_index]);
+                    args.push_back( make_pair( sizeof(cl_char4) , (void *)&val.cval ));
+                    break;
+                default:
+                    CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
+                }
+                break;
+            case CV_16U:
+                val.usval.s[0] = saturate_cast<ushort>(scalar.val[0]);
+                val.usval.s[1] = saturate_cast<ushort>(scalar.val[1]);
+                val.usval.s[2] = saturate_cast<ushort>(scalar.val[2]);
+                val.usval.s[3] = saturate_cast<ushort>(scalar.val[3]);
+                switch(dst.oclchannels())
+                {
+                case 1:
+                    sprintf(compile_option, "-D GENTYPE=ushort -D %s", borderstr[bordertype_index]);
+                    args.push_back( make_pair( sizeof(cl_ushort) , (void *)&val.usval.s[0] ));
+                    break;
+                case 4:
+                    sprintf(compile_option, "-D GENTYPE=ushort4 -D %s", borderstr[bordertype_index]);
+                    args.push_back( make_pair( sizeof(cl_ushort4) , (void *)&val.usval ));
+                    break;
+                default:
+                    CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
+                }
+                break;
+            case CV_16S:
+                val.shval.s[0] = saturate_cast<short>(scalar.val[0]);
+                val.shval.s[1] = saturate_cast<short>(scalar.val[1]);
+                val.shval.s[2] = saturate_cast<short>(scalar.val[2]);
+                val.shval.s[3] = saturate_cast<short>(scalar.val[3]);
+                switch(dst.oclchannels())
+                {
+                case 1:
+                    sprintf(compile_option, "-D GENTYPE=short -D %s", borderstr[bordertype_index]);
+                    args.push_back( make_pair( sizeof(cl_short) , (void *)&val.shval.s[0] ));
+                    break;
+                case 4:
+                    sprintf(compile_option, "-D GENTYPE=short4 -D %s", borderstr[bordertype_index]);
+                    args.push_back( make_pair( sizeof(cl_short4) , (void *)&val.shval ));
+                    break;
+                default:
+                    CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
+                }
+                break;
+            case CV_32S:
+                val.ival.s[0] = saturate_cast<int>(scalar.val[0]);
+                val.ival.s[1] = saturate_cast<int>(scalar.val[1]);
+                val.ival.s[2] = saturate_cast<int>(scalar.val[2]);
+                val.ival.s[3] = saturate_cast<int>(scalar.val[3]);
+                switch(dst.oclchannels())
+                {
+                case 1:
+                    sprintf(compile_option, "-D GENTYPE=int -D %s", borderstr[bordertype_index]);
+                    args.push_back( make_pair( sizeof(cl_int) , (void *)&val.ival.s[0] ));
+                    break;
+                case 2:
+                    sprintf(compile_option, "-D GENTYPE=int2 -D %s", borderstr[bordertype_index]);
+                    cl_int2 i2val;
+                    i2val.s[0] = val.ival.s[0];
+                    i2val.s[1] = val.ival.s[1];
+                    args.push_back( make_pair( sizeof(cl_int2) , (void *)&i2val ));
+                    break;
+                case 4:
+                    sprintf(compile_option, "-D GENTYPE=int4 -D %s", borderstr[bordertype_index]);
+                    args.push_back( make_pair( sizeof(cl_int4) , (void *)&val.ival ));
+                    break;
+                default:
+                    CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
+                }
+                break;
+            case CV_32F:
+                val.fval.s[0] = scalar.val[0];
+                val.fval.s[1] = scalar.val[1];
+                val.fval.s[2] = scalar.val[2];
+                val.fval.s[3] = scalar.val[3];
+                switch(dst.oclchannels())
+                {
+                case 1:
+                    sprintf(compile_option, "-D GENTYPE=float -D %s", borderstr[bordertype_index]);
+                    args.push_back( make_pair( sizeof(cl_float) , (void *)&val.fval.s[0] ));
+                    break;
+                case 4:
+                    sprintf(compile_option, "-D GENTYPE=float4 -D %s", borderstr[bordertype_index]);
+                    args.push_back( make_pair( sizeof(cl_float4) , (void *)&val.fval ));
+                    break;
+                default:
+                    CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
+                }
+                break;
+            case CV_64F:
+                val.dval.s[0] = scalar.val[0];
+                val.dval.s[1] = scalar.val[1];
+                val.dval.s[2] = scalar.val[2];
+                val.dval.s[3] = scalar.val[3];
+                switch(dst.oclchannels())
+                {
+                case 1:
+                    sprintf(compile_option, "-D GENTYPE=double -D %s", borderstr[bordertype_index]);
+                    args.push_back( make_pair( sizeof(cl_double) , (void *)&val.dval.s[0] ));
+                    break;
+                case 4:
+                    sprintf(compile_option, "-D GENTYPE=double4 -D %s", borderstr[bordertype_index]);
+                    args.push_back( make_pair( sizeof(cl_double4) , (void *)&val.dval ));
+                    break;
+                default:
+                    CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
+                }
+                break;
+            default:
+                CV_Error(CV_StsUnsupportedFormat, "unknown depth");
+            }
 
-			openCLExecuteKernel(src.clCxt, &imgproc_copymakeboder, kernelName, globalThreads, localThreads, args, -1, -1,compile_option);
-		//uchar* cputemp=new uchar[32*dst.wholerows];
-		////int* cpudata=new int[this->step*this->wholerows/sizeof(int)];
-		//openCLSafeCall(clEnqueueReadBuffer(src.clCxt->impl->clCmdQueue, (cl_mem)dst.data, CL_TRUE,
-		//						0, 32*dst.wholerows, cputemp, 0, NULL, NULL));
-		//for(int i=0;i<dst.wholerows;i++)
-		//{
-		//	for(int j=0;j<dst.wholecols;j++)
-		//	{
-		//		cout<< (int)cputemp[i*32+j]<<" ";
-		//	}
-		//	cout<<endl;
-		//}
-		//delete []cputemp;
+            openCLExecuteKernel(src.clCxt, &imgproc_copymakeboder, kernelName, globalThreads, localThreads, args, -1, -1, compile_option);
+            //uchar* cputemp=new uchar[32*dst.wholerows];
+            ////int* cpudata=new int[this->step*this->wholerows/sizeof(int)];
+            //openCLSafeCall(clEnqueueReadBuffer(src.clCxt->impl->clCmdQueue, (cl_mem)dst.data, CL_TRUE,
+            //						0, 32*dst.wholerows, cputemp, 0, NULL, NULL));
+            //for(int i=0;i<dst.wholerows;i++)
+            //{
+            //	for(int j=0;j<dst.wholecols;j++)
+            //	{
+            //		cout<< (int)cputemp[i*32+j]<<" ";
+            //	}
+            //	cout<<endl;
+            //}
+            //delete []cputemp;
         }
 
         ////////////////////////////////////////////////////////////////////////
@@ -931,34 +935,36 @@ namespace cv
 
             void warpAffine_gpu(const oclMat &src, oclMat &dst, F coeffs[2][3], int interpolation)
             {
-                 CV_Assert( (src.channels() == dst.channels()) );
+                CV_Assert( (src.oclchannels() == dst.oclchannels()) );
                 int srcStep = src.step1();
                 int dstStep = dst.step1();
-				float float_coeffs[2][3];
-				cl_mem coeffs_cm;
+                float float_coeffs[2][3];
+                cl_mem coeffs_cm;
 
                 Context *clCxt = src.clCxt;
                 string s[3] = {"NN", "Linear", "Cubic"};
                 string kernelName = "warpAffine" + s[interpolation];
 
 
-				if(src.clCxt -> impl -> double_support != 0)
-				{
-					cl_int st;
-					coeffs_cm = clCreateBuffer( clCxt->impl->clContext, CL_MEM_READ_WRITE, sizeof(F) * 2 * 3, NULL, &st );
-					openCLVerifyCall(st);
-					openCLSafeCall(clEnqueueWriteBuffer(clCxt->impl->clCmdQueue, (cl_mem)coeffs_cm, 1, 0, sizeof(F) * 2 * 3, coeffs, 0, 0, 0));
-				}else{
-					cl_int st;
-                    for(int m=0;m<2;m++)
-					for(int n=0;n<3;n++)
-					{
-					  float_coeffs[m][n]=coeffs[m][n];
-					}
-					coeffs_cm = clCreateBuffer( clCxt->impl->clContext, CL_MEM_READ_WRITE, sizeof(float) * 2 * 3, NULL, &st );
-					openCLSafeCall(clEnqueueWriteBuffer(clCxt->impl->clCmdQueue, (cl_mem)coeffs_cm, 1, 0, sizeof(float) * 2 * 3, float_coeffs, 0, 0, 0));
+                if(src.clCxt -> impl -> double_support != 0)
+                {
+                    cl_int st;
+                    coeffs_cm = clCreateBuffer( clCxt->impl->clContext, CL_MEM_READ_WRITE, sizeof(F) * 2 * 3, NULL, &st );
+                    openCLVerifyCall(st);
+                    openCLSafeCall(clEnqueueWriteBuffer(clCxt->impl->clCmdQueue, (cl_mem)coeffs_cm, 1, 0, sizeof(F) * 2 * 3, coeffs, 0, 0, 0));
+                }
+                else
+                {
+                    cl_int st;
+                    for(int m = 0; m < 2; m++)
+                        for(int n = 0; n < 3; n++)
+                        {
+                            float_coeffs[m][n] = coeffs[m][n];
+                        }
+                    coeffs_cm = clCreateBuffer( clCxt->impl->clContext, CL_MEM_READ_WRITE, sizeof(float) * 2 * 3, NULL, &st );
+                    openCLSafeCall(clEnqueueWriteBuffer(clCxt->impl->clCmdQueue, (cl_mem)coeffs_cm, 1, 0, sizeof(float) * 2 * 3, float_coeffs, 0, 0, 0));
 
-				}
+                }
                 //TODO: improve this kernel
                 size_t blkSizeX = 16, blkSizeY = 16;
                 size_t glbSizeX;
@@ -993,39 +999,41 @@ namespace cv
                 args.push_back(make_pair(sizeof(cl_mem), (void *)&coeffs_cm));
                 args.push_back(make_pair(sizeof(cl_int), (void *)&cols));
 
-                openCLExecuteKernel(clCxt, &imgproc_warpAffine, kernelName, globalThreads, localThreads, args, src.channels(), src.depth());
+                openCLExecuteKernel(clCxt, &imgproc_warpAffine, kernelName, globalThreads, localThreads, args, src.oclchannels(), src.depth());
                 openCLSafeCall(clReleaseMemObject(coeffs_cm));
             }
 
 
             void warpPerspective_gpu(const oclMat &src, oclMat &dst, double coeffs[3][3], int interpolation)
             {
-                 CV_Assert( (src.channels() == dst.channels()) );
+                CV_Assert( (src.oclchannels() == dst.oclchannels()) );
                 int srcStep = src.step1();
                 int dstStep = dst.step1();
-				float float_coeffs[3][3];
-				cl_mem coeffs_cm;
+                float float_coeffs[3][3];
+                cl_mem coeffs_cm;
 
                 Context *clCxt = src.clCxt;
                 string s[3] = {"NN", "Linear", "Cubic"};
                 string kernelName = "warpPerspective" + s[interpolation];
 
-				if(src.clCxt -> impl -> double_support != 0)
-				{
-					cl_int st;
-					coeffs_cm = clCreateBuffer( clCxt->impl->clContext, CL_MEM_READ_WRITE, sizeof(double) * 3 * 3, NULL, &st );
-					openCLVerifyCall(st);
-					openCLSafeCall(clEnqueueWriteBuffer(clCxt->impl->clCmdQueue, (cl_mem)coeffs_cm, 1, 0, sizeof(double) * 3 * 3, coeffs, 0, 0, 0));
-				}else{
-					cl_int st;
-					for(int m=0;m<3;m++)
-						for(int n=0;n<3;n++)
-							float_coeffs[m][n]=coeffs[m][n];
+                if(src.clCxt -> impl -> double_support != 0)
+                {
+                    cl_int st;
+                    coeffs_cm = clCreateBuffer( clCxt->impl->clContext, CL_MEM_READ_WRITE, sizeof(double) * 3 * 3, NULL, &st );
+                    openCLVerifyCall(st);
+                    openCLSafeCall(clEnqueueWriteBuffer(clCxt->impl->clCmdQueue, (cl_mem)coeffs_cm, 1, 0, sizeof(double) * 3 * 3, coeffs, 0, 0, 0));
+                }
+                else
+                {
+                    cl_int st;
+                    for(int m = 0; m < 3; m++)
+                        for(int n = 0; n < 3; n++)
+                            float_coeffs[m][n] = coeffs[m][n];
 
-					coeffs_cm = clCreateBuffer( clCxt->impl->clContext, CL_MEM_READ_WRITE, sizeof(float) * 3 * 3, NULL, &st );
-					openCLVerifyCall(st);
-					openCLSafeCall(clEnqueueWriteBuffer(clCxt->impl->clCmdQueue, (cl_mem)coeffs_cm, 1, 0, sizeof(float) * 3 * 3, float_coeffs, 0, 0, 0));
-				}
+                    coeffs_cm = clCreateBuffer( clCxt->impl->clContext, CL_MEM_READ_WRITE, sizeof(float) * 3 * 3, NULL, &st );
+                    openCLVerifyCall(st);
+                    openCLSafeCall(clEnqueueWriteBuffer(clCxt->impl->clCmdQueue, (cl_mem)coeffs_cm, 1, 0, sizeof(float) * 3 * 3, float_coeffs, 0, 0, 0));
+                }
                 //TODO: improve this kernel
                 size_t blkSizeX = 16, blkSizeY = 16;
                 size_t glbSizeX;
@@ -1061,7 +1069,7 @@ namespace cv
                 args.push_back(make_pair(sizeof(cl_mem), (void *)&coeffs_cm));
                 args.push_back(make_pair(sizeof(cl_int), (void *)&cols));
 
-                openCLExecuteKernel(clCxt, &imgproc_warpPerspective, kernelName, globalThreads, localThreads, args, src.channels(), src.depth());
+                openCLExecuteKernel(clCxt, &imgproc_warpPerspective, kernelName, globalThreads, localThreads, args, src.oclchannels(), src.depth());
                 openCLSafeCall(clReleaseMemObject(coeffs_cm));
             }
         }
@@ -1070,7 +1078,7 @@ namespace cv
         {
             int interpolation = flags & INTER_MAX;
 
-            CV_Assert((src.depth() == CV_8U  || src.depth() == CV_32F) && src.channels() != 2 && src.channels() != 3);
+            CV_Assert((src.depth() == CV_8U  || src.depth() == CV_32F) && src.oclchannels() != 2 && src.oclchannels() != 3);
             CV_Assert(interpolation == INTER_NEAREST || interpolation == INTER_LINEAR || interpolation == INTER_CUBIC);
 
             dst.create(dsize, src.type());
@@ -1092,7 +1100,7 @@ namespace cv
         {
             int interpolation = flags & INTER_MAX;
 
-            CV_Assert((src.depth() == CV_8U  || src.depth() == CV_32F) && src.channels() != 2 && src.channels() != 3);
+            CV_Assert((src.depth() == CV_8U  || src.depth() == CV_32F) && src.oclchannels() != 2 && src.oclchannels() != 3);
             CV_Assert(interpolation == INTER_NEAREST || interpolation == INTER_LINEAR || interpolation == INTER_CUBIC);
 
             dst.create(dsize, src.type());
@@ -1119,9 +1127,9 @@ namespace cv
         void integral(const oclMat &src, oclMat &sum, oclMat &sqsum)
         {
             CV_Assert(src.type() == CV_8UC1);
-            if(src.clCxt->impl->double_support == 0 && src.depth() ==CV_64F)
+            if(src.clCxt->impl->double_support == 0 && src.depth() == CV_64F)
             {
-                CV_Error(CV_GpuNotSupported,"select device don't support double");
+                CV_Error(CV_GpuNotSupported, "select device don't support double");
             }
             int vlen = 4;
             int offset = src.offset / vlen;
@@ -1213,10 +1221,13 @@ namespace cv
             if (ksize < 0)
                 scale *= 2.;
 
-            if (src.depth() == CV_8U){
+            if (src.depth() == CV_8U)
+            {
                 scale *= 255.;
                 scale = 1. / scale;
-            }else{
+            }
+            else
+            {
                 scale = 1. / scale;
             }
             if (ksize > 0)
@@ -1290,11 +1301,11 @@ namespace cv
         void cornerHarris(const oclMat &src, oclMat &dst, int blockSize, int ksize,
                           double k, int borderType)
         {
-            if(src.clCxt->impl->double_support == 0 && src.depth() ==CV_64F)
+            if(src.clCxt->impl->double_support == 0 && src.depth() == CV_64F)
             {
-                CV_Error(CV_GpuNotSupported,"select device don't support double");
+                CV_Error(CV_GpuNotSupported, "select device don't support double");
             }
-            CV_Assert(src.cols >= blockSize/2 && src.rows >= blockSize/2);
+            CV_Assert(src.cols >= blockSize / 2 && src.rows >= blockSize / 2);
             oclMat Dx, Dy;
             CV_Assert(borderType == cv::BORDER_CONSTANT || borderType == cv::BORDER_REFLECT101 || borderType == cv::BORDER_REPLICATE || borderType == cv::BORDER_REFLECT);
             extractCovData(src, Dx, Dy, blockSize, ksize, borderType);
@@ -1304,11 +1315,11 @@ namespace cv
 
         void cornerMinEigenVal(const oclMat &src, oclMat &dst, int blockSize, int ksize, int borderType)
         {
-            if(src.clCxt->impl->double_support == 0 && src.depth() ==CV_64F)
+            if(src.clCxt->impl->double_support == 0 && src.depth() == CV_64F)
             {
-                CV_Error(CV_GpuNotSupported,"select device don't support double");
+                CV_Error(CV_GpuNotSupported, "select device don't support double");
             }
-			CV_Assert(src.cols >= blockSize/2 && src.rows >= blockSize/2);
+            CV_Assert(src.cols >= blockSize / 2 && src.rows >= blockSize / 2);
             oclMat Dx, Dy;
             CV_Assert(borderType == cv::BORDER_CONSTANT || borderType == cv::BORDER_REFLECT101 || borderType == cv::BORDER_REPLICATE || borderType == cv::BORDER_REFLECT);
             extractCovData(src, Dx, Dy, blockSize, ksize, borderType);
@@ -1355,7 +1366,7 @@ namespace cv
             if( src.empty() )
                 CV_Error( CV_StsBadArg, "The input image is empty" );
 
-            if( src.depth() != CV_8U || src.channels() != 4 )
+            if( src.depth() != CV_8U || src.oclchannels() != 4 )
                 CV_Error( CV_StsUnsupportedFormat, "Only 8-bit, 4-channel images are supported" );
 
             if(src.clCxt->impl->double_support == 0)
@@ -1423,7 +1434,7 @@ namespace cv
             if( src.empty() )
                 CV_Error( CV_StsBadArg, "The input image is empty" );
 
-            if( src.depth() != CV_8U || src.channels() != 4 )
+            if( src.depth() != CV_8U || src.oclchannels() != 4 )
                 CV_Error( CV_StsUnsupportedFormat, "Only 8-bit, 4-channel images are supported" );
 
             if(src.clCxt->impl->double_support == 0)
@@ -1472,47 +1483,47 @@ namespace cv
             int dataWidth_bits = 4;
             int mask = dataWidth - 1;
 
-            int cols = mat_src.cols * mat_src.channels();
+            int cols = mat_src.cols * mat_src.oclchannels();
             int src_offset = mat_src.offset;
             int hist_step = mat_sub_hist.step >> 2;
             int left_col = 0, right_col = 0;
 
-            if(cols >= dataWidth*2 -1)
+            if(cols >= dataWidth * 2 - 1)
             {
-                  left_col = dataWidth - (src_offset & mask);
-                  left_col &= mask;
-                  src_offset += left_col;
-                  cols -= left_col;
-                  right_col = cols & mask;
-                  cols -= right_col;
+                left_col = dataWidth - (src_offset & mask);
+                left_col &= mask;
+                src_offset += left_col;
+                cols -= left_col;
+                right_col = cols & mask;
+                cols -= right_col;
             }
             else
             {
-                  left_col = cols;
-                  right_col = 0;
-                  cols = 0;
-                  globalThreads[0] = 0;
+                left_col = cols;
+                right_col = 0;
+                cols = 0;
+                globalThreads[0] = 0;
             }
 
             vector<pair<size_t , const void *> > args;
             if(globalThreads[0] != 0)
             {
-                  int tempcols = cols >> dataWidth_bits;
-                  int inc_x = globalThreads[0] % tempcols;
-                  int inc_y = globalThreads[0] / tempcols;
-                  src_offset >>= dataWidth_bits;
-                  int src_step = mat_src.step >> dataWidth_bits;
-                  int datacount = tempcols * mat_src.rows;
-                  args.push_back( make_pair( sizeof(cl_mem), (void *)&mat_src.data));
-                  args.push_back( make_pair( sizeof(cl_int), (void *)&src_step));
-                  args.push_back( make_pair( sizeof(cl_int), (void *)&src_offset));
-                  args.push_back( make_pair( sizeof(cl_mem), (void *)&mat_sub_hist.data));
-                  args.push_back( make_pair( sizeof(cl_int), (void *)&datacount));
-                  args.push_back( make_pair( sizeof(cl_int), (void *)&tempcols));
-                  args.push_back( make_pair( sizeof(cl_int), (void *)&inc_x));
-                  args.push_back( make_pair( sizeof(cl_int), (void *)&inc_y));
-                  args.push_back( make_pair( sizeof(cl_int), (void *)&hist_step));
-                  openCLExecuteKernel(clCxt, &imgproc_histogram, kernelName, globalThreads, localThreads, args, -1, depth);
+                int tempcols = cols >> dataWidth_bits;
+                int inc_x = globalThreads[0] % tempcols;
+                int inc_y = globalThreads[0] / tempcols;
+                src_offset >>= dataWidth_bits;
+                int src_step = mat_src.step >> dataWidth_bits;
+                int datacount = tempcols * mat_src.rows;
+                args.push_back( make_pair( sizeof(cl_mem), (void *)&mat_src.data));
+                args.push_back( make_pair( sizeof(cl_int), (void *)&src_step));
+                args.push_back( make_pair( sizeof(cl_int), (void *)&src_offset));
+                args.push_back( make_pair( sizeof(cl_mem), (void *)&mat_sub_hist.data));
+                args.push_back( make_pair( sizeof(cl_int), (void *)&datacount));
+                args.push_back( make_pair( sizeof(cl_int), (void *)&tempcols));
+                args.push_back( make_pair( sizeof(cl_int), (void *)&inc_x));
+                args.push_back( make_pair( sizeof(cl_int), (void *)&inc_y));
+                args.push_back( make_pair( sizeof(cl_int), (void *)&hist_step));
+                openCLExecuteKernel(clCxt, &imgproc_histogram, kernelName, globalThreads, localThreads, args, -1, depth);
             }
             if(left_col != 0 || right_col != 0)
             {
@@ -1522,7 +1533,7 @@ namespace cv
                 localThreads[1] = 256;
                 globalThreads[0] = left_col + right_col;
                 globalThreads[1] = (mat_src.rows + localThreads[1] - 1) / localThreads[1] * localThreads[1];
-                
+
                 args.clear();
                 args.push_back( make_pair( sizeof(cl_mem), (void *)&mat_src.data));
                 args.push_back( make_pair( sizeof(cl_int), (void *)&mat_src.step));
@@ -1586,93 +1597,101 @@ namespace cv
             LUT(mat_src, lut, mat_dst);
         }
         //////////////////////////////////bilateralFilter////////////////////////////////////////////////////
-static void
-oclbilateralFilter_8u( const oclMat& src, oclMat& dst, int d,
-                    double sigma_color, double sigma_space,
-                    int borderType )
-{
-    int cn = src.channels();
-    int i, j, k, maxk, radius;
-    Size size = src.size();
-
-	CV_Assert( (src.type() == CV_8UC1 || src.download_channels == 3) &&
-        src.type() == dst.type() && src.size() == dst.size() &&
-        src.data != dst.data );
-
-    if( sigma_color <= 0 )
-        sigma_color = 1;
-    if( sigma_space <= 0 )
-        sigma_space = 1;
-    
-    double gauss_color_coeff = -0.5/(sigma_color*sigma_color);
-    double gauss_space_coeff = -0.5/(sigma_space*sigma_space);
-
-    if( d <= 0 )
-        radius = cvRound(sigma_space*1.5);
-    else
-        radius = d/2;
-    radius = MAX(radius, 1);
-    d = radius*2 + 1;
-
-    oclMat temp;
-    copyMakeBorder( src, temp, radius, radius, radius, radius, borderType );
-
-    vector<float> _color_weight(cn*256);
-    vector<float> _space_weight(d*d);
-    vector<int> _space_ofs(d*d);
-    float* color_weight = &_color_weight[0];
-    float* space_weight = &_space_weight[0];
-    int* space_ofs = &_space_ofs[0];
-
-    // initialize color-related bilateral filter coefficients
-    for( i = 0; i < 256*cn; i++ )
-        color_weight[i] = (float)std::exp(i*i*gauss_color_coeff);
-
-    // initialize space-related bilateral filter coefficients
-    for( i = -radius, maxk = 0; i <= radius; i++ )
-        for( j = -radius; j <= radius; j++ )
+        static void
+        oclbilateralFilter_8u( const oclMat &src, oclMat &dst, int d,
+                               double sigma_color, double sigma_space,
+                               int borderType )
         {
-            double r = std::sqrt((double)i*i + (double)j*j);
-            if( r > radius )
-                continue;
-            space_weight[maxk] = (float)std::exp(r*r*gauss_space_coeff);
-            space_ofs[maxk++] = (int)(i*temp.step + j*cn);
-        }
-		oclMat oclcolor_weight(1,cn*256,CV_32FC1,color_weight);
-		oclMat oclspace_weight(1,d*d,CV_32FC1,space_weight);
-		oclMat oclspace_ofs(1,d*d,CV_32SC1,space_ofs);
+            int cn = src.channels();
+            int i, j, k, maxk, radius;
+            Size size = src.size();
 
-		string kernelName = "bilateral";
-		size_t localThreads[3]  = { 16, 16, 1 };
-		size_t globalThreads[3] = { (dst.cols+ localThreads[0]-1)/localThreads[0] * localThreads[0], 
-									(dst.rows+ localThreads[1]-1)/localThreads[1]* localThreads[1],
-									1};
-		vector<pair<size_t ,const void *> > args;
-		args.push_back( make_pair( sizeof(cl_mem), (void *)&dst.data ));
-		args.push_back( make_pair( sizeof(cl_mem), (void *)&temp.data ));
-		args.push_back( make_pair( sizeof(cl_int), (void *)&dst.rows ));
-		args.push_back( make_pair( sizeof(cl_int), (void *)&dst.cols ));
-		args.push_back( make_pair( sizeof(cl_int), (void *)&maxk ));
-		args.push_back( make_pair( sizeof(cl_int), (void *)&radius ));
-		args.push_back( make_pair( sizeof(cl_int), (void *)&dst.step ));
-		args.push_back( make_pair( sizeof(cl_int), (void *)&dst.offset ));
-		args.push_back( make_pair( sizeof(cl_int), (void *)&temp.step ));
-		args.push_back( make_pair( sizeof(cl_int), (void *)&temp.rows ));
-		args.push_back( make_pair( sizeof(cl_int), (void *)&temp.cols ));
-		args.push_back( make_pair( sizeof(cl_mem), (void *)&oclcolor_weight.data ));
-		args.push_back( make_pair( sizeof(cl_mem), (void *)&oclspace_weight.data ));
-		args.push_back( make_pair( sizeof(cl_mem), (void *)&oclspace_ofs.data ));
-		openCLExecuteKernel(src.clCxt, &imgproc_bilateral, kernelName, globalThreads, localThreads, args, -1, -1);
-}
+            CV_Assert( (src.channels() == 1 || src.channels() == 3) &&
+                       src.type() == dst.type() && src.size() == dst.size() &&
+                       src.data != dst.data );
+
+            if( sigma_color <= 0 )
+                sigma_color = 1;
+            if( sigma_space <= 0 )
+                sigma_space = 1;
+
+            double gauss_color_coeff = -0.5 / (sigma_color * sigma_color);
+            double gauss_space_coeff = -0.5 / (sigma_space * sigma_space);
+
+            if( d <= 0 )
+                radius = cvRound(sigma_space * 1.5);
+            else
+                radius = d / 2;
+            radius = MAX(radius, 1);
+            d = radius * 2 + 1;
+
+            oclMat temp;
+            copyMakeBorder( src, temp, radius, radius, radius, radius, borderType );
+
+            vector<float> _color_weight(cn * 256);
+            vector<float> _space_weight(d * d);
+            vector<int> _space_ofs(d * d);
+            float *color_weight = &_color_weight[0];
+            float *space_weight = &_space_weight[0];
+            int *space_ofs = &_space_ofs[0];
+            int dst_step_in_pixel = dst.step / dst.elemSize();
+            int dst_offset_in_pixel = dst.offset / dst.elemSize();
+            int temp_step_in_pixel = temp.step / temp.elemSize();
+            // initialize color-related bilateral filter coefficients
+            for( i = 0; i < 256 * cn; i++ )
+                color_weight[i] = (float)std::exp(i * i * gauss_color_coeff);
+
+            // initialize space-related bilateral filter coefficients
+            for( i = -radius, maxk = 0; i <= radius; i++ )
+                for( j = -radius; j <= radius; j++ )
+                {
+                    double r = std::sqrt((double)i * i + (double)j * j);
+                    if( r > radius )
+                        continue;
+                    space_weight[maxk] = (float)std::exp(r * r * gauss_space_coeff);
+                    space_ofs[maxk++] = (int)(i * temp_step_in_pixel + j);
+                }
+            oclMat oclcolor_weight(1, cn * 256, CV_32FC1, color_weight);
+            oclMat oclspace_weight(1, d * d, CV_32FC1, space_weight);
+            oclMat oclspace_ofs(1, d * d, CV_32SC1, space_ofs);
+
+            string kernelName = "bilateral";
+            size_t localThreads[3]  = { 16, 16, 1 };
+            size_t globalThreads[3] = { (dst.cols + localThreads[0] - 1) / localThreads[0] *localThreads[0],
+                                        (dst.rows + localThreads[1] - 1) / localThreads[1] *localThreads[1],
+                                        1
+                                      };
+            if((dst.type() == CV_8UC1) && ((dst.offset & 3) == 0) && ((dst.cols & 3) == 0))
+            {
+                kernelName = "bilateral2";
+                globalThreads[0] = (dst.cols / 4 + localThreads[0] - 1) / localThreads[0] * localThreads[0];
+            }
+            vector<pair<size_t , const void *> > args;
+            args.push_back( make_pair( sizeof(cl_mem), (void *)&dst.data ));
+            args.push_back( make_pair( sizeof(cl_mem), (void *)&temp.data ));
+            args.push_back( make_pair( sizeof(cl_int), (void *)&dst.rows ));
+            args.push_back( make_pair( sizeof(cl_int), (void *)&dst.cols ));
+            args.push_back( make_pair( sizeof(cl_int), (void *)&maxk ));
+            args.push_back( make_pair( sizeof(cl_int), (void *)&radius ));
+            args.push_back( make_pair( sizeof(cl_int), (void *)&dst_step_in_pixel ));
+            args.push_back( make_pair( sizeof(cl_int), (void *)&dst_offset_in_pixel ));
+            args.push_back( make_pair( sizeof(cl_int), (void *)&temp_step_in_pixel ));
+            args.push_back( make_pair( sizeof(cl_int), (void *)&temp.rows ));
+            args.push_back( make_pair( sizeof(cl_int), (void *)&temp.cols ));
+            args.push_back( make_pair( sizeof(cl_mem), (void *)&oclcolor_weight.data ));
+            args.push_back( make_pair( sizeof(cl_mem), (void *)&oclspace_weight.data ));
+            args.push_back( make_pair( sizeof(cl_mem), (void *)&oclspace_ofs.data ));
+            openCLExecuteKernel(src.clCxt, &imgproc_bilateral, kernelName, globalThreads, localThreads, args, dst.oclchannels(), dst.depth());
+        }
         void bilateralFilter(const oclMat &src, oclMat &dst, int radius, double sigmaclr, double sigmaspc, int borderType)
         {
 
-			dst.create( src.size(), src.type() );   
-			if( src.depth() == CV_8U )
-				oclbilateralFilter_8u( src, dst, radius, sigmaclr, sigmaspc, borderType );
-			else
-				CV_Error( CV_StsUnsupportedFormat,
-				"Bilateral filtering is only implemented for 8uimages" );
+            dst.create( src.size(), src.type() );
+            if( src.depth() == CV_8U )
+                oclbilateralFilter_8u( src, dst, radius, sigmaclr, sigmaspc, borderType );
+            else
+                CV_Error( CV_StsUnsupportedFormat,
+                          "Bilateral filtering is only implemented for 8uimages" );
         }
 
     }
@@ -1682,32 +1701,33 @@ inline int divUp(int total, int grain)
 {
     return (total + grain - 1) / grain;
 }
-void convolve_run(const oclMat &src, const oclMat &temp1,oclMat &dst,string kernelName,const char** kernelString)
+void convolve_run(const oclMat &src, const oclMat &temp1, oclMat &dst, string kernelName, const char **kernelString)
 {
     CV_Assert(src.depth() == CV_32FC1);
     CV_Assert(temp1.depth() == CV_32F);
-    CV_Assert(temp1.cols <= 17 && temp1.rows <=17);
+    CV_Assert(temp1.cols <= 17 && temp1.rows <= 17);
 
-    dst.create(src.size(),src.type());
+    dst.create(src.size(), src.type());
 
     CV_Assert(src.cols == dst.cols && src.rows == dst.rows);
     CV_Assert(src.type() == dst.type());
 
     Context  *clCxt = src.clCxt;
-    int channels = dst.channels();
+    int channels = dst.oclchannels();
     int depth = dst.depth();
 
-    size_t vector_length =1; 
-    int offset_cols = ((dst.offset % dst.step) / dst.elemSize1()) & (vector_length-1);
+    size_t vector_length = 1;
+    int offset_cols = ((dst.offset % dst.step) / dst.elemSize1()) & (vector_length - 1);
     int cols = divUp(dst.cols * channels + offset_cols, vector_length);
     int rows = dst.rows;
 
     size_t localThreads[3]  = { 16, 16, 1 };
-    size_t globalThreads[3] = { divUp(cols, localThreads[0]) * localThreads[0], 
-                                divUp(rows, localThreads[1]) * localThreads[1],
-                                1};
+    size_t globalThreads[3] = { divUp(cols, localThreads[0]) *localThreads[0],
+                                divUp(rows, localThreads[1]) *localThreads[1],
+                                1
+                              };
 
-    vector<pair<size_t ,const void *> > args;
+    vector<pair<size_t , const void *> > args;
     args.push_back( make_pair( sizeof(cl_mem), (void *)&src.data ));
     args.push_back( make_pair( sizeof(cl_mem), (void *)&temp1.data ));
     args.push_back( make_pair( sizeof(cl_mem), (void *)&dst.data ));
@@ -1721,14 +1741,14 @@ void convolve_run(const oclMat &src, const oclMat &temp1,oclMat &dst,string kern
 
     openCLExecuteKernel(clCxt, kernelString, kernelName, globalThreads, localThreads, args, -1, depth);
 }
-void cv::ocl::convolve(const oclMat& x, const oclMat& t, oclMat& y)
+void cv::ocl::convolve(const oclMat &x, const oclMat &t, oclMat &y)
 {
     CV_Assert(x.depth() == CV_32F);
     CV_Assert(t.depth() == CV_32F);
     CV_Assert(x.type() == y.type() && x.size() == y.size());
-    y.create(x.size(),x.type());
+    y.create(x.size(), x.type());
     string kernelName = "convolve";
-    
+
     convolve_run(x, t, y, kernelName, &imgproc_convolve);
 }
 #endif /* !defined (HAVE_OPENCL) */

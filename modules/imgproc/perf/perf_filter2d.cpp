@@ -11,7 +11,7 @@ using std::tr1::get;
 CV_ENUM(BorderMode, BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT_101);
 
 typedef TestBaseWithParam< tr1::tuple<Size, int, BorderMode> > TestFilter2d;
-
+typedef TestBaseWithParam< tr1::tuple<String, int> > Image_KernelSize;
 
 PERF_TEST_P( TestFilter2d, Filter2d,
              Combine(
@@ -40,6 +40,37 @@ PERF_TEST_P( TestFilter2d, Filter2d,
     TEST_CYCLE() filter2D(src, dst, CV_8UC4, kernel, Point(1, 1), 0., borderMode);
 
     SANITY_CHECK(dst);
+}
+
+PERF_TEST_P( Image_KernelSize, GaborFilter2d,
+             Combine(
+                 Values("stitching/a1.png", "cv/shared/pic5.png"),
+                 Values(16, 32, 64) )
+             )
+{
+    String fileName = getDataPath(get<0>(GetParam()));
+    Mat sourceImage = imread(fileName, IMREAD_GRAYSCALE);
+    if( sourceImage.empty() )
+    {
+        FAIL() << "Unable to load source image" << fileName;
+    }
+
+    int kernelSize = get<1>(GetParam());
+    double sigma = 4;
+    double lambda = 11;
+    double theta = 47;
+    double gamma = 0.5;
+    Mat gaborKernel = getGaborKernel(Size(kernelSize, kernelSize), sigma, theta, lambda, gamma);
+    Mat filteredImage;
+
+    declare.in(sourceImage);
+
+    TEST_CYCLE()
+    {
+        filter2D(sourceImage, filteredImage, CV_32F, gaborKernel);
+    }
+
+    SANITY_CHECK(filteredImage);
 }
 
 

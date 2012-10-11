@@ -55,22 +55,22 @@ namespace cv
         //////////////////////////////// oclMat ////////////////////////////////
         ////////////////////////////////////////////////////////////////////////
 
-        inline oclMat::oclMat() : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0), offset(0), wholerows(0), wholecols(0), download_channels(0) {}
+        inline oclMat::oclMat() : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0), offset(0), wholerows(0), wholecols(0) {}
 
-        inline oclMat::oclMat(int _rows, int _cols, int _type) : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0), offset(0), wholerows(0), wholecols(0), download_channels(0)
+        inline oclMat::oclMat(int _rows, int _cols, int _type) : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0), offset(0), wholerows(0), wholecols(0)
         {
             if( _rows > 0 && _cols > 0 )
                 create( _rows, _cols, _type );
         }
 
-        inline oclMat::oclMat(Size _size, int _type) : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0), offset(0), wholerows(0), wholecols(0), download_channels(0)
+        inline oclMat::oclMat(Size _size, int _type) : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0), offset(0), wholerows(0), wholecols(0)
         {
             if( _size.height > 0 && _size.width > 0 )
                 create( _size.height, _size.width, _type );
         }
 
         inline oclMat::oclMat(int _rows, int _cols, int _type, const Scalar &_s)
-            : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0), offset(0), wholerows(0), wholecols(0), download_channels(0)
+            : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0), offset(0), wholerows(0), wholecols(0)
         {
             if(_rows > 0 && _cols > 0)
             {
@@ -80,7 +80,7 @@ namespace cv
         }
 
         inline oclMat::oclMat(Size _size, int _type, const Scalar &_s)
-            : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0), offset(0), wholerows(0), wholecols(0), download_channels(0)
+            : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0), offset(0), wholerows(0), wholecols(0)
         {
             if( _size.height > 0 && _size.width > 0 )
             {
@@ -91,18 +91,18 @@ namespace cv
 
         inline oclMat::oclMat(const oclMat &m)
             : flags(m.flags), rows(m.rows), cols(m.cols), step(m.step), data(m.data),
-			refcount(m.refcount), datastart(m.datastart), dataend(m.dataend), clCxt(m.clCxt), offset(m.offset), wholerows(m.wholerows), wholecols(m.wholecols), download_channels(m.download_channels)
+              refcount(m.refcount), datastart(m.datastart), dataend(m.dataend), clCxt(m.clCxt), offset(m.offset), wholerows(m.wholerows), wholecols(m.wholecols)
         {
             if( refcount )
                 CV_XADD(refcount, 1);
         }
-        
+
         inline oclMat::oclMat(int _rows, int _cols, int _type, void *_data, size_t _step)
             : flags(0), rows(0), cols(0), step(0), data(0), refcount(0),
-              datastart(0), dataend(0), offset(0), wholerows(0), wholecols(0), download_channels(0)
+              datastart(0), dataend(0), offset(0), wholerows(0), wholecols(0)
         {
-			cv::Mat m(_rows,_cols,_type,_data,_step);
-			upload(m);
+            cv::Mat m(_rows, _cols, _type, _data, _step);
+            upload(m);
             //size_t minstep = cols * elemSize();
             //if( step == Mat::AUTO_STEP )
             //{
@@ -117,14 +117,14 @@ namespace cv
             //}
             //dataend += step * (rows - 1) + minstep;
         }
-        
+
         inline oclMat::oclMat(Size _size, int _type, void *_data, size_t _step)
             : flags(0), rows(0), cols(0),
               step(0), data(0), refcount(0),
-              datastart(0), dataend(0), offset(0), wholerows(0), wholecols(0), download_channels(0)
+              datastart(0), dataend(0), offset(0), wholerows(0), wholecols(0)
         {
-			cv::Mat m(_size,_type,_data,_step);
-			upload(m);
+            cv::Mat m(_size, _type, _data, _step);
+            upload(m);
             //size_t minstep = cols * elemSize();
             //if( step == Mat::AUTO_STEP )
             //{
@@ -152,7 +152,6 @@ namespace cv
             wholerows = m.wholerows;
             wholecols = m.wholecols;
             offset = m.offset;
-			download_channels = m.download_channels;
             if( rowRange == Range::all() )
                 rows = m.rows;
             else
@@ -184,7 +183,7 @@ namespace cv
         inline oclMat::oclMat(const oclMat &m, const Rect &roi)
             : flags(m.flags), rows(roi.height), cols(roi.width),
               step(m.step), data(m.data), refcount(m.refcount),
-			  datastart(m.datastart), dataend(m.dataend), clCxt(m.clCxt), offset(m.offset), wholerows(m.wholerows), wholecols(m.wholecols), download_channels(m.download_channels)
+              datastart(m.datastart), dataend(m.dataend), clCxt(m.clCxt), offset(m.offset), wholerows(m.wholerows), wholecols(m.wholecols)
         {
             flags &= roi.width < m.cols ? ~Mat::CONTINUOUS_FLAG : -1;
             offset += roi.y * step + roi.x * elemSize();
@@ -197,7 +196,7 @@ namespace cv
         }
 
         inline oclMat::oclMat(const Mat &m)
-            : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0) , offset(0), wholerows(0), wholecols(0), download_channels(0)
+            : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0) , offset(0), wholerows(0), wholecols(0)
         {
             //clCxt = Context::getContext();
             upload(m);
@@ -227,7 +226,6 @@ namespace cv
                 wholerows = m.wholerows;
                 wholecols = m.wholecols;
                 refcount = m.refcount;
-				download_channels = m.download_channels;
             }
             return *this;
         }
@@ -327,10 +325,9 @@ namespace cv
             std::swap( dataend, b.dataend );
             std::swap( refcount, b.refcount );
             std::swap( offset, b.offset );
-			std::swap( clCxt,  b.clCxt );
+            std::swap( clCxt,  b.clCxt );
             std::swap( wholerows, b.wholerows );
             std::swap( wholecols, b.wholecols );
-			std::swap( download_channels, b.download_channels);
         }
 
         inline void oclMat::locateROI( Size &wholeSize, Point &ofs ) const
@@ -366,7 +363,7 @@ namespace cv
             offset += (row1 - ofs.y) * step + (col1 - ofs.x) * esz;
             rows = row2 - row1;
             cols = col2 - col1;
-            if( esz *cols == step || rows == 1 )
+            if( esz * cols == step || rows == 1 )
                 flags |= Mat::CONTINUOUS_FLAG;
             else
                 flags &= ~Mat::CONTINUOUS_FLAG;
@@ -388,7 +385,7 @@ namespace cv
         }
         inline size_t oclMat::elemSize() const
         {
-            return CV_ELEM_SIZE(flags);
+            return CV_ELEM_SIZE((CV_MAKE_TYPE(type(), oclchannels())));
         }
         inline size_t oclMat::elemSize1() const
         {
@@ -398,6 +395,10 @@ namespace cv
         {
             return CV_MAT_TYPE(flags);
         }
+        inline int oclMat::ocltype() const
+        {
+            return CV_MAKE_TYPE(depth(), oclchannels());
+        }
         inline int oclMat::depth() const
         {
             return CV_MAT_DEPTH(flags);
@@ -405,6 +406,10 @@ namespace cv
         inline int oclMat::channels() const
         {
             return CV_MAT_CN(flags);
+        }
+        inline int oclMat::oclchannels() const
+        {
+            return (CV_MAT_CN(flags)) == 3 ? 4 : (CV_MAT_CN(flags));
         }
         inline size_t oclMat::step1() const
         {
@@ -420,32 +425,32 @@ namespace cv
         }
 
 
-        
+
         inline uchar *oclMat::ptr(int y)
         {
             CV_DbgAssert( (unsigned)y < (unsigned)rows );
-			CV_Error(CV_GpuNotSupported,"This function hasn't been supported yet.\n");
+            CV_Error(CV_GpuNotSupported, "This function hasn't been supported yet.\n");
             return data + step * y;
         }
 
         inline const uchar *oclMat::ptr(int y) const
         {
             CV_DbgAssert( (unsigned)y < (unsigned)rows );
-			CV_Error(CV_GpuNotSupported,"This function hasn't been supported yet.\n");
+            CV_Error(CV_GpuNotSupported, "This function hasn't been supported yet.\n");
             return data + step * y;
         }
 
         template<typename _Tp> inline _Tp *oclMat::ptr(int y)
         {
             CV_DbgAssert( (unsigned)y < (unsigned)rows );
-			CV_Error(CV_GpuNotSupported,"This function hasn't been supported yet.\n");
+            CV_Error(CV_GpuNotSupported, "This function hasn't been supported yet.\n");
             return (_Tp *)(data + step * y);
         }
 
         template<typename _Tp> inline const _Tp *oclMat::ptr(int y) const
         {
             CV_DbgAssert( (unsigned)y < (unsigned)rows );
-			CV_Error(CV_GpuNotSupported,"This function hasn't been supported yet.\n");
+            CV_Error(CV_GpuNotSupported, "This function hasn't been supported yet.\n");
             return (const _Tp *)(data + step * y);
         }
 
@@ -461,18 +466,20 @@ namespace cv
             a.swap(b);
         }
 
-		inline void ensureSizeIsEnough(int rows, int cols, int type, oclMat& m)
-		{
-			if (m.type() == type && m.rows >= rows && m.cols >= cols)
-				m = m(Rect(0, 0, cols, rows));
-			else
-				m.create(rows, cols, type);
-		}
+        inline void ensureSizeIsEnough(int rows, int cols, int type, oclMat &m)
+        {
+            if (m.type() == type && m.rows >= rows && m.cols >= cols)
+                m = m(Rect(0, 0, cols, rows));
+            else
+                m.create(rows, cols, type);
+        }
 
-		inline void ensureSizeIsEnough(Size size, int type, oclMat& m)
-		{
-			ensureSizeIsEnough(size.height, size.width, type, m);
-		}
+        inline void ensureSizeIsEnough(Size size, int type, oclMat &m)
+        {
+            ensureSizeIsEnough(size.height, size.width, type, m);
+        }
+
+
     } /* end of namespace ocl */
 
 } /* end of namespace cv */

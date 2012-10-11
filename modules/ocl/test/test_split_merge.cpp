@@ -119,10 +119,10 @@ PARAM_TEST_CASE(MergeTestBase, MatType, int)
     }
 
     void random_roi()
-    {        
+    {
 #ifdef RANDOMROI
         //randomize ROI
-		cv::RNG &rng = TS::ptr()->get_rng();
+        cv::RNG &rng = TS::ptr()->get_rng();
         roicols = rng.uniform(1, mat1.cols);
         roirows = rng.uniform(1, mat1.rows);
         src1x   = rng.uniform(0, mat1.cols - roicols);
@@ -130,8 +130,8 @@ PARAM_TEST_CASE(MergeTestBase, MatType, int)
         src2x   = rng.uniform(0, mat2.cols - roicols);
         src2y   = rng.uniform(0, mat2.rows - roirows);
         src3x   = rng.uniform(0, mat3.cols - roicols);
-        src3y   = rng.uniform(0, mat3.cols - roirows);
-        src4x   = rng.uniform(0, mat4.rows - roicols);
+        src3y   = rng.uniform(0, mat3.rows - roirows);
+        src4x   = rng.uniform(0, mat4.cols - roicols);
         src4y   = rng.uniform(0, mat4.rows - roirows);
         dstx    = rng.uniform(0, dst.cols  - roicols);
         dsty    = rng.uniform(0, dst.rows  - roirows);
@@ -194,13 +194,13 @@ TEST_P(Merge, Accuracy)
         dev_gsrc.push_back(gmat1);
 
         if(channels >= 2)
-        dev_gsrc.push_back(gmat2);
+            dev_gsrc.push_back(gmat2);
 
         if(channels >= 3)
-        dev_gsrc.push_back(gmat3);
+            dev_gsrc.push_back(gmat3);
 
         if(channels >= 4)
-        dev_gsrc.push_back(gmat4);
+            dev_gsrc.push_back(gmat4);
 
         cv::merge(dev_src, dst_roi);
         cv::ocl::merge(dev_gsrc, gdst);
@@ -287,10 +287,10 @@ PARAM_TEST_CASE(SplitTestBase, MatType, int)
     }
 
     void random_roi()
-    {        
+    {
 #ifdef RANDOMROI
         //randomize ROI
-		cv::RNG &rng = TS::ptr()->get_rng();
+        cv::RNG &rng = TS::ptr()->get_rng();
         roicols = rng.uniform(1, mat.cols);
         roirows = rng.uniform(1, mat.rows);
         srcx    = rng.uniform(0, mat.cols - roicols);
@@ -368,26 +368,26 @@ TEST_P(Split, Accuracy)
         sprintf(sss, "roicols=%d,roirows=%d,dst1x =%d,dsty=%d,dst2x =%d,dst2y=%d,dst3x =%d,dst3y=%d,dst4x =%d,dst4y=%d,srcx=%d,srcy=%d", roicols, roirows, dst1x , dst1y, dst2x , dst2y, dst3x , dst3y, dst4x , dst4y, srcx, srcy);
 
         if(channels >= 1)
-        EXPECT_MAT_NEAR(dst1, cpu_dst1, 0.0, sss);
+            EXPECT_MAT_NEAR(dst1, cpu_dst1, 0.0, sss);
 
         if(channels >= 2)
-        EXPECT_MAT_NEAR(dst2, cpu_dst2, 0.0, sss);
+            EXPECT_MAT_NEAR(dst2, cpu_dst2, 0.0, sss);
 
         if(channels >= 3)
-        EXPECT_MAT_NEAR(dst3, cpu_dst3, 0.0, sss);
+            EXPECT_MAT_NEAR(dst3, cpu_dst3, 0.0, sss);
 
         if(channels >= 4)
-        EXPECT_MAT_NEAR(dst4, cpu_dst4, 0.0, sss);
+            EXPECT_MAT_NEAR(dst4, cpu_dst4, 0.0, sss);
     }
 }
 
 
 INSTANTIATE_TEST_CASE_P(SplitMerge, Merge, Combine(
-                            Values(CV_8U, CV_32S, CV_32F), Values(1, 3,4)));
+                            Values(CV_8U, CV_32S, CV_32F), Values(1, 3, 4)));
 
 
 INSTANTIATE_TEST_CASE_P(SplitMerge, Split , Combine(
-                            Values(CV_8U, CV_32S, CV_32F), Values(1, 3,4)));
-                           
+                            Values(CV_8U, CV_32S, CV_32F), Values(1, 3, 4)));
+
 
 #endif // HAVE_OPENCL

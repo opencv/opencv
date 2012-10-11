@@ -81,14 +81,14 @@ int main(int argc, char **argv)
 
     print_info();
 
-	std::vector<cv::ocl::Info> oclinfo;
-	int devnums = getDevice(oclinfo);
-	if(devnums<1)
-	{
-		std::cout << "no device found\n";
-		return -1;
-	}
-	//setDevice(oclinfo[2]);
+    std::vector<cv::ocl::Info> oclinfo;
+    int devnums = getDevice(oclinfo);
+    if(devnums < 1)
+    {
+        std::cout << "no device found\n";
+        return -1;
+    }
+    //setDevice(oclinfo[1]);
     return RUN_ALL_TESTS();
 }
 

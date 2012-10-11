@@ -42,7 +42,7 @@
 #ifndef __OPENCV_TEST_INTERPOLATION_HPP__
 #define __OPENCV_TEST_INTERPOLATION_HPP__
 
-template <typename T> T readVal(const cv::Mat& src, int y, int x, int c, int border_type, cv::Scalar borderVal = cv::Scalar())
+template <typename T> T readVal(const cv::Mat &src, int y, int x, int c, int border_type, cv::Scalar borderVal = cv::Scalar())
 {
     if (border_type == cv::BORDER_CONSTANT)
         return (y >= 0 && y < src.rows && x >= 0 && x < src.cols) ? src.at<T>(y, x * src.channels() + c) : cv::saturate_cast<T>(borderVal.val[c]);
@@ -52,7 +52,7 @@ template <typename T> T readVal(const cv::Mat& src, int y, int x, int c, int bor
 
 template <typename T> struct NearestInterpolator
 {
-    static T getValue(const cv::Mat& src, float y, float x, int c, int border_type, cv::Scalar borderVal = cv::Scalar())
+    static T getValue(const cv::Mat &src, float y, float x, int c, int border_type, cv::Scalar borderVal = cv::Scalar())
     {
         return readVal<T>(src, cvFloor(y), cvFloor(x), c, border_type, borderVal);
     }
@@ -60,7 +60,7 @@ template <typename T> struct NearestInterpolator
 
 template <typename T> struct LinearInterpolator
 {
-    static T getValue(const cv::Mat& src, float y, float x, int c, int border_type, cv::Scalar borderVal = cv::Scalar())
+    static T getValue(const cv::Mat &src, float y, float x, int c, int border_type, cv::Scalar borderVal = cv::Scalar())
     {
         x -= 0.5f;
         y -= 0.5f;
@@ -85,7 +85,7 @@ template <typename T> struct CubicInterpolator
 {
     static float getValue(float p[4], float x)
     {
-        return p[1] + 0.5 * x * (p[2] - p[0] + x*(2.0*p[0] - 5.0*p[1] + 4.0*p[2] - p[3] + x*(3.0*(p[1] - p[2]) + p[3] - p[0])));
+        return p[1] + 0.5 * x * (p[2] - p[0] + x * (2.0 * p[0] - 5.0 * p[1] + 4.0 * p[2] - p[3] + x * (3.0 * (p[1] - p[2]) + p[3] - p[0])));
     }
 
     static float getValue(float p[4][4], float x, float y)
@@ -100,7 +100,7 @@ template <typename T> struct CubicInterpolator
         return getValue(arr, y);
     }
 
-    static T getValue(const cv::Mat& src, float y, float x, int c, int border_type, cv::Scalar borderVal = cv::Scalar())
+    static T getValue(const cv::Mat &src, float y, float x, int c, int border_type, cv::Scalar borderVal = cv::Scalar())
     {
         int ix = cvRound(x);
         int iy = cvRound(y);

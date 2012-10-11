@@ -56,7 +56,7 @@ int randomInt(int minVal, int maxVal);
 double randomDouble(double minVal, double maxVal);
 
 //std::string generateVarList(int first,...);
-std::string generateVarList(int& p1,int& p2);
+std::string generateVarList(int &p1, int &p2);
 cv::Size randomSize(int minVal, int maxVal);
 cv::Scalar randomScalar(double minVal, double maxVal);
 cv::Mat randomMat(cv::Size size, int type, double minVal = 0.0, double maxVal = 255.0);
@@ -72,12 +72,12 @@ void showDiff(cv::InputArray gold, cv::InputArray actual, double eps);
 //std::vector<cv::ocl::DeviceInfo> devices(cv::gpu::FeatureSet feature);
 
 //! read image from testdata folder.
-cv::Mat readImage(const std::string& fileName, int flags = cv::IMREAD_COLOR);
-cv::Mat readImageType(const std::string& fname, int type);
+cv::Mat readImage(const std::string &fileName, int flags = cv::IMREAD_COLOR);
+cv::Mat readImageType(const std::string &fname, int type);
 
-double checkNorm(const cv::Mat& m);
-double checkNorm(const cv::Mat& m1, const cv::Mat& m2);
-double checkSimilarity(const cv::Mat& m1, const cv::Mat& m2);
+double checkNorm(const cv::Mat &m);
+double checkNorm(const cv::Mat &m1, const cv::Mat &m2);
+double checkSimilarity(const cv::Mat &m1, const cv::Mat &m2);
 
 #define EXPECT_MAT_NORM(mat, eps) \
 { \
@@ -105,9 +105,9 @@ double checkSimilarity(const cv::Mat& m1, const cv::Mat& m2);
     EXPECT_LE(checkSimilarity(cv::Mat(mat1), cv::Mat(mat2)), eps); \
 }
 
-namespace cv 
-{ 
-    namespace ocl 
+namespace cv
+{
+    namespace ocl
     {
         // void PrintTo(const DeviceInfo& info, std::ostream* os);
     }
@@ -120,31 +120,34 @@ using perf::MatType;
 std::vector<MatType> types(int depth_start, int depth_end, int cn_start, int cn_end);
 
 //! return vector with all types (depth: CV_8U-CV_64F, channels: 1-4).
-const std::vector<MatType>& all_types();
+const std::vector<MatType> &all_types();
 
 class Inverse
 {
-    public:
-        inline Inverse(bool val = false) : val_(val) {}
+public:
+    inline Inverse(bool val = false) : val_(val) {}
 
-        inline operator bool() const { return val_; }
+    inline operator bool() const
+    {
+        return val_;
+    }
 
-    private:
-        bool val_;
+private:
+    bool val_;
 };
 
-void PrintTo(const Inverse& useRoi, std::ostream* os);
+void PrintTo(const Inverse &useRoi, std::ostream *os);
 
 CV_ENUM(CmpCode, cv::CMP_EQ, cv::CMP_GT, cv::CMP_GE, cv::CMP_LT, cv::CMP_LE, cv::CMP_NE)
 
 CV_ENUM(NormCode, cv::NORM_INF, cv::NORM_L1, cv::NORM_L2, cv::NORM_TYPE_MASK, cv::NORM_RELATIVE, cv::NORM_MINMAX)
 
-    enum {FLIP_BOTH = 0, FLIP_X = 1, FLIP_Y = -1};
+enum {FLIP_BOTH = 0, FLIP_X = 1, FLIP_Y = -1};
 CV_ENUM(FlipCode, FLIP_BOTH, FLIP_X, FLIP_Y)
 
 CV_ENUM(ReduceOp, CV_REDUCE_SUM, CV_REDUCE_AVG, CV_REDUCE_MAX, CV_REDUCE_MIN)
 
-    CV_FLAGS(GemmFlags, cv::GEMM_1_T, cv::GEMM_2_T, cv::GEMM_3_T);
+CV_FLAGS(GemmFlags, cv::GEMM_1_T, cv::GEMM_2_T, cv::GEMM_3_T);
 
 CV_ENUM(MorphOp, cv::MORPH_OPEN, cv::MORPH_CLOSE, cv::MORPH_GRADIENT, cv::MORPH_TOPHAT, cv::MORPH_BLACKHAT)
 

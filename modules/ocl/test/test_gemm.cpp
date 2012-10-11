@@ -48,38 +48,38 @@ using namespace std;
 #ifdef HAVE_CLAMDBLAS
 ////////////////////////////////////////////////////////////////////////////
 // GEMM
-PARAM_TEST_CASE(Gemm, int, cv::Size, int) 
+PARAM_TEST_CASE(Gemm, int, cv::Size, int)
 {
-	int      type;
-	cv::Size mat_size;
-	int		 flags;
-	//vector<cv::ocl::Info> info;
+    int      type;
+    cv::Size mat_size;
+    int		 flags;
+    //vector<cv::ocl::Info> info;
     virtual void SetUp()
     {
-		type     = GET_PARAM(0);
-		mat_size = GET_PARAM(1);
-		flags    = GET_PARAM(2);
-		//cv::ocl::getDevice(info);
+        type     = GET_PARAM(0);
+        mat_size = GET_PARAM(1);
+        flags    = GET_PARAM(2);
+        //cv::ocl::getDevice(info);
     }
 };
 
 TEST_P(Gemm, Accuracy)
 {
-	cv::Mat a = randomMat(mat_size, type, 0.0, 10.0);
-	cv::Mat b = randomMat(mat_size, type, 0.0, 10.0);
-	cv::Mat c = randomMat(mat_size, type, 0.0, 10.0);
+    cv::Mat a = randomMat(mat_size, type, 0.0, 10.0);
+    cv::Mat b = randomMat(mat_size, type, 0.0, 10.0);
+    cv::Mat c = randomMat(mat_size, type, 0.0, 10.0);
 
-	cv::Mat dst;
-	cv::ocl::oclMat ocl_dst;
+    cv::Mat dst;
+    cv::ocl::oclMat ocl_dst;
 
-	cv::gemm(a, b, 1.0, c, 1.0, dst, flags);
-	cv::ocl::gemm(cv::ocl::oclMat(a), cv::ocl::oclMat(b), 1.0, cv::ocl::oclMat(c), 1.0, ocl_dst, flags);
+    cv::gemm(a, b, 1.0, c, 1.0, dst, flags);
+    cv::ocl::gemm(cv::ocl::oclMat(a), cv::ocl::oclMat(b), 1.0, cv::ocl::oclMat(c), 1.0, ocl_dst, flags);
 
-	EXPECT_MAT_NEAR(dst, ocl_dst, mat_size.area() * 1e-4, "");
+    EXPECT_MAT_NEAR(dst, ocl_dst, mat_size.area() * 1e-4, "");
 }
 
 INSTANTIATE_TEST_CASE_P(ocl_gemm, Gemm, testing::Combine(
-	testing::Values(CV_32FC1, CV_32FC2/*, CV_64FC1, CV_64FC2*/),
-    testing::Values(cv::Size(20, 20), cv::Size(300, 300)),
-    testing::Values(0, cv::GEMM_1_T, cv::GEMM_2_T, cv::GEMM_1_T + cv::GEMM_2_T)));
+                            testing::Values(CV_32FC1, CV_32FC2/*, CV_64FC1, CV_64FC2*/),
+                            testing::Values(cv::Size(20, 20), cv::Size(300, 300)),
+                            testing::Values(0, cv::GEMM_1_T, cv::GEMM_2_T, cv::GEMM_1_T + cv::GEMM_2_T)));
 #endif

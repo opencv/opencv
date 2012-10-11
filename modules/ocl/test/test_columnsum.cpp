@@ -16,7 +16,7 @@
 //
 // @Authors
 //	   Chunpeng Zhang chunpeng@multicorewareinc.com
-//    
+//
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -59,13 +59,13 @@ PARAM_TEST_CASE(ColumnSum, cv::Size, bool )
 {
     cv::Size size;
     cv::Mat src;
-	bool useRoi;
-	//std::vector<cv::ocl::Info> oclinfo;
+    bool useRoi;
+    //std::vector<cv::ocl::Info> oclinfo;
 
     virtual void SetUp()
     {
         size = GET_PARAM(0);
-		useRoi = GET_PARAM(1);
+        useRoi = GET_PARAM(1);
         //int devnums = getDevice(oclinfo, OPENCV_DEFAULT_OPENCL_DEVICE);
         //CV_Assert(devnums > 0);
     }
@@ -74,10 +74,10 @@ PARAM_TEST_CASE(ColumnSum, cv::Size, bool )
 TEST_P(ColumnSum, Accuracy)
 {
     cv::Mat src = randomMat(size, CV_32FC1);
-	cv::ocl::oclMat d_dst;
-	cv::ocl::oclMat d_src(src);	
+    cv::ocl::oclMat d_dst;
+    cv::ocl::oclMat d_src(src);
 
-    cv::ocl::columnSum(d_src,d_dst);
+    cv::ocl::columnSum(d_src, d_dst);
 
     cv::Mat dst(d_dst);
 
@@ -100,7 +100,7 @@ TEST_P(ColumnSum, Accuracy)
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_ImgProc, ColumnSum, testing::Combine(
-						DIFFERENT_SIZES,testing::Values(Inverse(false),Inverse(true))));
+                            DIFFERENT_SIZES, testing::Values(Inverse(false), Inverse(true))));
 
 
-#endif 
+#endif

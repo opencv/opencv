@@ -45,7 +45,7 @@
 
 #include "precomp.hpp"
 
-#define ALIGN 32 
+#define ALIGN 32
 #define GPU_MATRIX_MALLOC_STEP(step) (((step) + ALIGN - 1) / ALIGN) * ALIGN
 
 using namespace cv;
@@ -62,32 +62,32 @@ namespace cv
 {
     namespace ocl
     {
-        void oclMat::upload(const Mat& /*m*/)
+        void oclMat::upload(const Mat & /*m*/)
         {
             throw_nogpu();
         }
-        void oclMat::download(cv::Mat& /*m*/) const
+        void oclMat::download(cv::Mat & /*m*/) const
         {
             throw_nogpu();
         }
-        void oclMat::copyTo( oclMat& /*m*/ ) const
+        void oclMat::copyTo( oclMat & /*m*/ ) const
         {
             throw_nogpu();
         }
-        void oclMat::copyTo( oclMat& /*m*/, const oclMat&/* mask */) const
+        void oclMat::copyTo( oclMat & /*m*/, const oclMat &/* mask */) const
         {
             throw_nogpu();
         }
-        void oclMat::convertTo( oclMat& /*m*/, int /*rtype*/, double /*alpha*/, double /*beta*/ ) const
+        void oclMat::convertTo( oclMat & /*m*/, int /*rtype*/, double /*alpha*/, double /*beta*/ ) const
         {
             throw_nogpu();
         }
-        oclMat &oclMat::operator = (const Scalar& /*s*/)
+        oclMat &oclMat::operator = (const Scalar & /*s*/)
         {
             throw_nogpu();
             return *this;
         }
-        oclMat &oclMat::setTo(const Scalar& /*s*/, const oclMat& /*mask*/)
+        oclMat &oclMat::setTo(const Scalar & /*s*/, const oclMat & /*mask*/)
         {
             throw_nogpu();
             return *this;
@@ -120,7 +120,7 @@ namespace cv
         extern const char *operator_convertTo;
         extern const char *operator_setTo;
         extern const char *operator_setToM;
-		extern const char *convertC3C4;
+        extern const char *convertC3C4;
     }
 }
 
@@ -128,11 +128,11 @@ namespace cv
 // convert_C3C4
 void convert_C3C4(const cl_mem &src, oclMat &dst, int srcStep)
 {
-    int dstStep_in_pixel = dst.step1() / dst.channels();
-	int pixel_end = dst.wholecols * dst.wholerows -1;
+    int dstStep_in_pixel = dst.step1() / dst.oclchannels();
+    int pixel_end = dst.wholecols * dst.wholerows - 1;
     Context *clCxt = dst.clCxt;
     string kernelName = "convertC3C4";
-	char compile_option[32];
+    char compile_option[32];
     switch(dst.depth())
     {
     case 0:
@@ -156,8 +156,8 @@ void convert_C3C4(const cl_mem &src, oclMat &dst, int srcStep)
     case 6:
         sprintf(compile_option, "-D GENTYPE4=double4");
         break;
-	default:
-		CV_Error(CV_StsUnsupportedFormat,"unknown depth");
+    default:
+        CV_Error(CV_StsUnsupportedFormat, "unknown depth");
     }
     vector< pair<size_t, const void *> > args;
     args.push_back( make_pair( sizeof(cl_mem), (void *)&src));
@@ -167,20 +167,20 @@ void convert_C3C4(const cl_mem &src, oclMat &dst, int srcStep)
     args.push_back( make_pair( sizeof(cl_int), (void *)&dstStep_in_pixel));
     args.push_back( make_pair( sizeof(cl_int), (void *)&pixel_end));
 
-    size_t globalThreads[3] = {((dst.wholecols *dst.wholerows+3)/4 + 255) / 256 * 256, 1, 1};
+    size_t globalThreads[3] = {((dst.wholecols * dst.wholerows + 3) / 4 + 255) / 256 * 256, 1, 1};
     size_t localThreads[3] = {256, 1, 1};
 
-    openCLExecuteKernel(clCxt, &convertC3C4, kernelName, globalThreads, localThreads, args, -1, -1,compile_option);
+    openCLExecuteKernel(clCxt, &convertC3C4, kernelName, globalThreads, localThreads, args, -1, -1, compile_option);
 }
 ////////////////////////////////////////////////////////////////////////
 // convert_C4C3
 void convert_C4C3(const oclMat &src, cl_mem &dst, int dstStep)
 {
-    int srcStep_in_pixel = src.step1() / src.channels();
-	int pixel_end = src.wholecols*src.wholerows -1;
+    int srcStep_in_pixel = src.step1() / src.oclchannels();
+    int pixel_end = src.wholecols * src.wholerows - 1;
     Context *clCxt = src.clCxt;
     string kernelName = "convertC4C3";
-	char compile_option[32];
+    char compile_option[32];
     switch(src.depth())
     {
     case 0:
@@ -204,8 +204,8 @@ void convert_C4C3(const oclMat &src, cl_mem &dst, int dstStep)
     case 6:
         sprintf(compile_option, "-D GENTYPE4=double4");
         break;
-	default:
-		CV_Error(CV_StsUnsupportedFormat,"unknown depth");
+    default:
+        CV_Error(CV_StsUnsupportedFormat, "unknown depth");
     }
 
     vector< pair<size_t, const void *> > args;
@@ -216,10 +216,10 @@ void convert_C4C3(const oclMat &src, cl_mem &dst, int dstStep)
     args.push_back( make_pair( sizeof(cl_int), (void *)&srcStep_in_pixel));
     args.push_back( make_pair( sizeof(cl_int), (void *)&pixel_end));
 
-    size_t globalThreads[3] = {((src.wholecols *src.wholerows+3)/4 + 255) / 256 * 256, 1, 1};
+    size_t globalThreads[3] = {((src.wholecols * src.wholerows + 3) / 4 + 255) / 256 * 256, 1, 1};
     size_t localThreads[3] = {256, 1, 1};
 
-    openCLExecuteKernel(clCxt, &convertC3C4, kernelName, globalThreads, localThreads, args, -1, -1,compile_option);
+    openCLExecuteKernel(clCxt, &convertC3C4, kernelName, globalThreads, localThreads, args, -1, -1, compile_option);
 }
 
 void cv::ocl::oclMat::upload(const Mat &m)
@@ -228,100 +228,100 @@ void cv::ocl::oclMat::upload(const Mat &m)
     Size wholeSize;
     Point ofs;
     m.locateROI(wholeSize, ofs);
-    int type = m.type();
-    if(m.channels() == 3)
-	{
-		type = CV_MAKETYPE(m.depth(), 4);
-	}
-    create(wholeSize, type);
+    //   int type = m.type();
+    //   if(m.oclchannels() == 3)
+    //{
+    //	type = CV_MAKETYPE(m.depth(), 4);
+    //}
+    create(wholeSize, m.type());
 
     if(m.channels() == 3)
     {
-		int pitch = wholeSize.width * 3 * m.elemSize1();
-		int tail_padding = m.elemSize1()*3072;
-		int err;
-		cl_mem temp = clCreateBuffer(clCxt->impl->clContext,CL_MEM_READ_WRITE,
-		(pitch*wholeSize.height+tail_padding-1)/tail_padding*tail_padding,0,&err);
-		openCLVerifyCall(err);
+        int pitch = wholeSize.width * 3 * m.elemSize1();
+        int tail_padding = m.elemSize1() * 3072;
+        int err;
+        cl_mem temp = clCreateBuffer(clCxt->impl->clContext, CL_MEM_READ_WRITE,
+                                     (pitch * wholeSize.height + tail_padding - 1) / tail_padding * tail_padding, 0, &err);
+        openCLVerifyCall(err);
 
-		openCLMemcpy2D(clCxt,temp,pitch,m.datastart,m.step,wholeSize.width*m.elemSize(),wholeSize.height,clMemcpyHostToDevice,3);
-		convert_C3C4(temp, *this, pitch);
-		//int* cputemp=new int[wholeSize.height*wholeSize.width * 3];
-		//int* cpudata=new int[this->step*this->wholerows/sizeof(int)];
-		//openCLSafeCall(clEnqueueReadBuffer(clCxt->impl->clCmdQueue, temp, CL_TRUE,
-		//						0, wholeSize.height*wholeSize.width * 3* sizeof(int), cputemp, 0, NULL, NULL));
-		//openCLSafeCall(clEnqueueReadBuffer(clCxt->impl->clCmdQueue, (cl_mem)data, CL_TRUE,
-		//						0, this->step*this->wholerows, cpudata, 0, NULL, NULL));
-		//for(int i=0;i<wholeSize.height;i++)
-		//{
-		//	int *a = cputemp+i*wholeSize.width * 3,*b = cpudata + i*this->step/sizeof(int);
-		//	for(int j=0;j<wholeSize.width;j++)
-		//	{
-		//		if((a[3*j] != b[4*j])||(a[3*j+1] != b[4*j+1])||(a[3*j+2] != b[4*j+2]))
-		//			printf("rows=%d,cols=%d,cputtemp=%d,%d,%d;cpudata=%d,%d,%d\n",
-		//			i,j,a[3*j],a[3*j+1],a[3*j+2],b[4*j],b[4*j+1],b[4*j+2]);
-		//	}
-		//}
-		//delete []cputemp;
-		//delete []cpudata;
-		openCLSafeCall(clReleaseMemObject(temp));
+        openCLMemcpy2D(clCxt, temp, pitch, m.datastart, m.step, wholeSize.width * m.elemSize(), wholeSize.height, clMemcpyHostToDevice, 3);
+        convert_C3C4(temp, *this, pitch);
+        //int* cputemp=new int[wholeSize.height*wholeSize.width * 3];
+        //int* cpudata=new int[this->step*this->wholerows/sizeof(int)];
+        //openCLSafeCall(clEnqueueReadBuffer(clCxt->impl->clCmdQueue, temp, CL_TRUE,
+        //						0, wholeSize.height*wholeSize.width * 3* sizeof(int), cputemp, 0, NULL, NULL));
+        //openCLSafeCall(clEnqueueReadBuffer(clCxt->impl->clCmdQueue, (cl_mem)data, CL_TRUE,
+        //						0, this->step*this->wholerows, cpudata, 0, NULL, NULL));
+        //for(int i=0;i<wholeSize.height;i++)
+        //{
+        //	int *a = cputemp+i*wholeSize.width * 3,*b = cpudata + i*this->step/sizeof(int);
+        //	for(int j=0;j<wholeSize.width;j++)
+        //	{
+        //		if((a[3*j] != b[4*j])||(a[3*j+1] != b[4*j+1])||(a[3*j+2] != b[4*j+2]))
+        //			printf("rows=%d,cols=%d,cputtemp=%d,%d,%d;cpudata=%d,%d,%d\n",
+        //			i,j,a[3*j],a[3*j+1],a[3*j+2],b[4*j],b[4*j+1],b[4*j+2]);
+        //	}
+        //}
+        //delete []cputemp;
+        //delete []cpudata;
+        openCLSafeCall(clReleaseMemObject(temp));
     }
     else
-	{
-		openCLMemcpy2D(clCxt, data, step, m.datastart, m.step, wholeSize.width * elemSize(), wholeSize.height, clMemcpyHostToDevice);
-	}
+    {
+        openCLMemcpy2D(clCxt, data, step, m.datastart, m.step, wholeSize.width * elemSize(), wholeSize.height, clMemcpyHostToDevice);
+    }
 
     rows = m.rows;
     cols = m.cols;
     offset = ofs.y * step + ofs.x * elemSize();
-    download_channels = m.channels();
+    //download_channels = m.channels();
 }
 
 void cv::ocl::oclMat::download(cv::Mat &m) const
 {
     CV_DbgAssert(!this->empty());
-    int t = type();
-    if(download_channels == 3)
-	{
-		t = CV_MAKETYPE(depth(), 3);
-	}
-    m.create(wholerows, wholecols, t);
+    //   int t = type();
+    //   if(download_channels == 3)
+    //{
+    //	t = CV_MAKETYPE(depth(), 3);
+    //}
+    m.create(wholerows, wholecols, type());
 
-    if(download_channels == 3)
+    if(m.channels() == 3)
     {
-		int pitch = wholecols * 3 * m.elemSize1();
-		int tail_padding = m.elemSize1()*3072;
-		int err;
-		cl_mem temp = clCreateBuffer(clCxt->impl->clContext,CL_MEM_READ_WRITE,
-		(pitch*wholerows+tail_padding-1)/tail_padding*tail_padding,0,&err);
-		openCLVerifyCall(err);
+        int pitch = wholecols * 3 * m.elemSize1();
+        int tail_padding = m.elemSize1() * 3072;
+        int err;
+        cl_mem temp = clCreateBuffer(clCxt->impl->clContext, CL_MEM_READ_WRITE,
+                                     (pitch * wholerows + tail_padding - 1) / tail_padding * tail_padding, 0, &err);
+        openCLVerifyCall(err);
 
-		convert_C4C3(*this, temp, pitch/m.elemSize1());
-		openCLMemcpy2D(clCxt,m.data,m.step,temp,pitch,wholecols*m.elemSize(),wholerows,clMemcpyDeviceToHost,3);
-		//int* cputemp=new int[wholecols*wholerows * 3];
-		//int* cpudata=new int[this->step*this->wholerows/sizeof(int)];
-		//openCLSafeCall(clEnqueueReadBuffer(clCxt->impl->clCmdQueue, temp, CL_TRUE,
-		//						0, wholecols*wholerows * 3* sizeof(int), cputemp, 0, NULL, NULL));
-		//openCLSafeCall(clEnqueueReadBuffer(clCxt->impl->clCmdQueue, (cl_mem)data, CL_TRUE,
-		//						0, this->step*this->wholerows, cpudata, 0, NULL, NULL));
-		//for(int i=0;i<wholerows;i++)
-		//{
-		//	int *a = cputemp+i*wholecols * 3,*b = cpudata + i*this->step/sizeof(int);
-		//	for(int j=0;j<wholecols;j++)
-		//	{
-		//		if((a[3*j] != b[4*j])||(a[3*j+1] != b[4*j+1])||(a[3*j+2] != b[4*j+2]))
-		//			printf("rows=%d,cols=%d,cputtemp=%d,%d,%d;cpudata=%d,%d,%d\n",
-		//			i,j,a[3*j],a[3*j+1],a[3*j+2],b[4*j],b[4*j+1],b[4*j+2]);
-		//	}
-		//}
-		//delete []cputemp;
-		//delete []cpudata;
-		openCLSafeCall(clReleaseMemObject(temp));
+        convert_C4C3(*this, temp, pitch / m.elemSize1());
+        openCLMemcpy2D(clCxt, m.data, m.step, temp, pitch, wholecols * m.elemSize(), wholerows, clMemcpyDeviceToHost, 3);
+        //int* cputemp=new int[wholecols*wholerows * 3];
+        //int* cpudata=new int[this->step*this->wholerows/sizeof(int)];
+        //openCLSafeCall(clEnqueueReadBuffer(clCxt->impl->clCmdQueue, temp, CL_TRUE,
+        //						0, wholecols*wholerows * 3* sizeof(int), cputemp, 0, NULL, NULL));
+        //openCLSafeCall(clEnqueueReadBuffer(clCxt->impl->clCmdQueue, (cl_mem)data, CL_TRUE,
+        //						0, this->step*this->wholerows, cpudata, 0, NULL, NULL));
+        //for(int i=0;i<wholerows;i++)
+        //{
+        //	int *a = cputemp+i*wholecols * 3,*b = cpudata + i*this->step/sizeof(int);
+        //	for(int j=0;j<wholecols;j++)
+        //	{
+        //		if((a[3*j] != b[4*j])||(a[3*j+1] != b[4*j+1])||(a[3*j+2] != b[4*j+2]))
+        //			printf("rows=%d,cols=%d,cputtemp=%d,%d,%d;cpudata=%d,%d,%d\n",
+        //			i,j,a[3*j],a[3*j+1],a[3*j+2],b[4*j],b[4*j+1],b[4*j+2]);
+        //	}
+        //}
+        //delete []cputemp;
+        //delete []cpudata;
+        openCLSafeCall(clReleaseMemObject(temp));
     }
     else
-	{
-		openCLMemcpy2D(clCxt, m.data, m.step, data, step, wholecols * elemSize(), wholerows, clMemcpyDeviceToHost);
-	}
+    {
+        openCLMemcpy2D(clCxt, m.data, m.step, data, step, wholecols * elemSize(), wholerows, clMemcpyDeviceToHost);
+    }
     Size wholesize;
     Point ofs;
     locateROI(wholesize, ofs);
@@ -340,7 +340,7 @@ void copy_to_with_mask(const oclMat &src, oclMat &dst, const oclMat &mask, strin
 {
     CV_DbgAssert( dst.rows == mask.rows && dst.cols == mask.cols &&
                   src.rows == dst.rows && src.cols == dst.cols
-				  && mask.type() == CV_8UC1);
+                  && mask.type() == CV_8UC1);
 
     vector<pair<size_t , const void *> > args;
 
@@ -349,8 +349,8 @@ void copy_to_with_mask(const oclMat &src, oclMat &dst, const oclMat &mask, strin
         {"uchar3", "char3", "ushort3", "short3", "int3", "float3", "double3"},
         {"uchar4", "char4", "ushort4", "short4", "int4", "float4", "double4"}
     };
-	char compile_option[32];
-	sprintf(compile_option, "-D GENTYPE=%s", string_types[dst.channels()-1][dst.depth()].c_str());
+    char compile_option[32];
+    sprintf(compile_option, "-D GENTYPE=%s", string_types[dst.oclchannels() - 1][dst.depth()].c_str());
     size_t localThreads[3] = {16, 16, 1};
     size_t globalThreads[3];
 
@@ -374,7 +374,7 @@ void copy_to_with_mask(const oclMat &src, oclMat &dst, const oclMat &mask, strin
     args.push_back( make_pair( sizeof(cl_int) , (void *)&mask.offset ));
 
     openCLExecuteKernel(dst.clCxt , &operator_copyToM, kernelName, globalThreads,
-                        localThreads, args, -1, -1,compile_option);
+                        localThreads, args, -1, -1, compile_option);
 }
 
 void cv::ocl::oclMat::copyTo( oclMat &m ) const
@@ -432,7 +432,7 @@ void convert_run(const oclMat &src, oclMat &dst, double alpha, double beta)
     args.push_back( make_pair( sizeof(cl_float) , (void *)&alpha_f ));
     args.push_back( make_pair( sizeof(cl_float) , (void *)&beta_f ));
     openCLExecuteKernel(dst.clCxt , &operator_convertTo, kernelName, globalThreads,
-                        localThreads, args, dst.channels(), dst.depth());
+                        localThreads, args, dst.oclchannels(), dst.depth());
 }
 void cv::ocl::oclMat::convertTo( oclMat &dst, int rtype, double alpha, double beta ) const
 {
@@ -486,177 +486,177 @@ void set_to_withoutmask_run(const oclMat &dst, const Scalar &scalar, string kern
     {
         globalThreads[0] = ((dst.cols + 4) / 4 + localThreads[0] - 1) / localThreads[0] * localThreads[0];
     }
-	char compile_option[32];
-	union sc
-	{
-		cl_uchar4 uval;
-		cl_char4  cval;
-		cl_ushort4 usval;
-		cl_short4 shval;
-		cl_int4 ival;
-		cl_float4 fval;
-		cl_double4 dval;
-	}val;
+    char compile_option[32];
+    union sc
+    {
+        cl_uchar4 uval;
+        cl_char4  cval;
+        cl_ushort4 usval;
+        cl_short4 shval;
+        cl_int4 ival;
+        cl_float4 fval;
+        cl_double4 dval;
+    } val;
     switch(dst.depth())
     {
     case CV_8U:
-		val.uval.s[0] = saturate_cast<uchar>(scalar.val[0]);
-		val.uval.s[1] = saturate_cast<uchar>(scalar.val[1]);
-		val.uval.s[2] = saturate_cast<uchar>(scalar.val[2]);
-		val.uval.s[3] = saturate_cast<uchar>(scalar.val[3]);
-		switch(dst.channels())
-		{
-		case 1:
-			sprintf(compile_option, "-D GENTYPE=uchar");
-			args.push_back( make_pair( sizeof(cl_uchar) , (void *)&val.uval.s[0] ));
-			break;
-		case 4:
-			sprintf(compile_option, "-D GENTYPE=uchar4");
-			args.push_back( make_pair( sizeof(cl_uchar4) , (void *)&val.uval ));
-			break;
-		default:
-			CV_Error(CV_StsUnsupportedFormat,"unsupported channels");
-		}
+        val.uval.s[0] = saturate_cast<uchar>(scalar.val[0]);
+        val.uval.s[1] = saturate_cast<uchar>(scalar.val[1]);
+        val.uval.s[2] = saturate_cast<uchar>(scalar.val[2]);
+        val.uval.s[3] = saturate_cast<uchar>(scalar.val[3]);
+        switch(dst.oclchannels())
+        {
+        case 1:
+            sprintf(compile_option, "-D GENTYPE=uchar");
+            args.push_back( make_pair( sizeof(cl_uchar) , (void *)&val.uval.s[0] ));
+            break;
+        case 4:
+            sprintf(compile_option, "-D GENTYPE=uchar4");
+            args.push_back( make_pair( sizeof(cl_uchar4) , (void *)&val.uval ));
+            break;
+        default:
+            CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
+        }
         break;
     case CV_8S:
-		val.cval.s[0] = saturate_cast<char>(scalar.val[0]);
-		val.cval.s[1] = saturate_cast<char>(scalar.val[1]);
-		val.cval.s[2] = saturate_cast<char>(scalar.val[2]);
-		val.cval.s[3] = saturate_cast<char>(scalar.val[3]);
-		switch(dst.channels())
-		{
-		case 1:
-			sprintf(compile_option, "-D GENTYPE=char");
-			args.push_back( make_pair( sizeof(cl_char) , (void *)&val.cval.s[0] ));
-			break;
-		case 4:
-			sprintf(compile_option, "-D GENTYPE=char4");
-			args.push_back( make_pair( sizeof(cl_char4) , (void *)&val.cval ));
-			break;
-		default:
-			CV_Error(CV_StsUnsupportedFormat,"unsupported channels");
-		}
+        val.cval.s[0] = saturate_cast<char>(scalar.val[0]);
+        val.cval.s[1] = saturate_cast<char>(scalar.val[1]);
+        val.cval.s[2] = saturate_cast<char>(scalar.val[2]);
+        val.cval.s[3] = saturate_cast<char>(scalar.val[3]);
+        switch(dst.oclchannels())
+        {
+        case 1:
+            sprintf(compile_option, "-D GENTYPE=char");
+            args.push_back( make_pair( sizeof(cl_char) , (void *)&val.cval.s[0] ));
+            break;
+        case 4:
+            sprintf(compile_option, "-D GENTYPE=char4");
+            args.push_back( make_pair( sizeof(cl_char4) , (void *)&val.cval ));
+            break;
+        default:
+            CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
+        }
         break;
     case CV_16U:
-		val.usval.s[0] = saturate_cast<ushort>(scalar.val[0]);
-		val.usval.s[1] = saturate_cast<ushort>(scalar.val[1]);
-		val.usval.s[2] = saturate_cast<ushort>(scalar.val[2]);
-		val.usval.s[3] = saturate_cast<ushort>(scalar.val[3]);
-		switch(dst.channels())
-		{
-		case 1:
-			sprintf(compile_option, "-D GENTYPE=ushort");
-			args.push_back( make_pair( sizeof(cl_ushort) , (void *)&val.usval.s[0] ));
-			break;
-		case 4:
-			sprintf(compile_option, "-D GENTYPE=ushort4");
-			args.push_back( make_pair( sizeof(cl_ushort4) , (void *)&val.usval ));
-			break;
-		default:
-			CV_Error(CV_StsUnsupportedFormat,"unsupported channels");
-		}
+        val.usval.s[0] = saturate_cast<ushort>(scalar.val[0]);
+        val.usval.s[1] = saturate_cast<ushort>(scalar.val[1]);
+        val.usval.s[2] = saturate_cast<ushort>(scalar.val[2]);
+        val.usval.s[3] = saturate_cast<ushort>(scalar.val[3]);
+        switch(dst.oclchannels())
+        {
+        case 1:
+            sprintf(compile_option, "-D GENTYPE=ushort");
+            args.push_back( make_pair( sizeof(cl_ushort) , (void *)&val.usval.s[0] ));
+            break;
+        case 4:
+            sprintf(compile_option, "-D GENTYPE=ushort4");
+            args.push_back( make_pair( sizeof(cl_ushort4) , (void *)&val.usval ));
+            break;
+        default:
+            CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
+        }
         break;
     case CV_16S:
-		val.shval.s[0] = saturate_cast<short>(scalar.val[0]);
-		val.shval.s[1] = saturate_cast<short>(scalar.val[1]);
-		val.shval.s[2] = saturate_cast<short>(scalar.val[2]);
-		val.shval.s[3] = saturate_cast<short>(scalar.val[3]);
-		switch(dst.channels())
-		{
-		case 1:
-			sprintf(compile_option, "-D GENTYPE=short");
-			args.push_back( make_pair( sizeof(cl_short) , (void *)&val.shval.s[0] ));
-			break;
-		case 4:
-			sprintf(compile_option, "-D GENTYPE=short4");
-			args.push_back( make_pair( sizeof(cl_short4) , (void *)&val.shval ));
-			break;
-		default:
-			CV_Error(CV_StsUnsupportedFormat,"unsupported channels");
-		}
+        val.shval.s[0] = saturate_cast<short>(scalar.val[0]);
+        val.shval.s[1] = saturate_cast<short>(scalar.val[1]);
+        val.shval.s[2] = saturate_cast<short>(scalar.val[2]);
+        val.shval.s[3] = saturate_cast<short>(scalar.val[3]);
+        switch(dst.oclchannels())
+        {
+        case 1:
+            sprintf(compile_option, "-D GENTYPE=short");
+            args.push_back( make_pair( sizeof(cl_short) , (void *)&val.shval.s[0] ));
+            break;
+        case 4:
+            sprintf(compile_option, "-D GENTYPE=short4");
+            args.push_back( make_pair( sizeof(cl_short4) , (void *)&val.shval ));
+            break;
+        default:
+            CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
+        }
         break;
     case CV_32S:
-		val.ival.s[0] = saturate_cast<int>(scalar.val[0]);
-		val.ival.s[1] = saturate_cast<int>(scalar.val[1]);
-		val.ival.s[2] = saturate_cast<int>(scalar.val[2]);
-		val.ival.s[3] = saturate_cast<int>(scalar.val[3]);
-		switch(dst.channels())
-		{
-		case 1:
-			sprintf(compile_option, "-D GENTYPE=int");
-			args.push_back( make_pair( sizeof(cl_int) , (void *)&val.ival.s[0] ));
-			break;
-		case 2:
-			sprintf(compile_option, "-D GENTYPE=int2");
-			cl_int2 i2val;
-			i2val.s[0] = val.ival.s[0];
-			i2val.s[1] = val.ival.s[1];
-			args.push_back( make_pair( sizeof(cl_int2) , (void *)&i2val ));
-			break;
-		case 4:
-			sprintf(compile_option, "-D GENTYPE=int4");
-			args.push_back( make_pair( sizeof(cl_int4) , (void *)&val.ival ));
-			break;
-		default:
-			CV_Error(CV_StsUnsupportedFormat,"unsupported channels");
-		}
+        val.ival.s[0] = saturate_cast<int>(scalar.val[0]);
+        val.ival.s[1] = saturate_cast<int>(scalar.val[1]);
+        val.ival.s[2] = saturate_cast<int>(scalar.val[2]);
+        val.ival.s[3] = saturate_cast<int>(scalar.val[3]);
+        switch(dst.oclchannels())
+        {
+        case 1:
+            sprintf(compile_option, "-D GENTYPE=int");
+            args.push_back( make_pair( sizeof(cl_int) , (void *)&val.ival.s[0] ));
+            break;
+        case 2:
+            sprintf(compile_option, "-D GENTYPE=int2");
+            cl_int2 i2val;
+            i2val.s[0] = val.ival.s[0];
+            i2val.s[1] = val.ival.s[1];
+            args.push_back( make_pair( sizeof(cl_int2) , (void *)&i2val ));
+            break;
+        case 4:
+            sprintf(compile_option, "-D GENTYPE=int4");
+            args.push_back( make_pair( sizeof(cl_int4) , (void *)&val.ival ));
+            break;
+        default:
+            CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
+        }
         break;
     case CV_32F:
-		val.fval.s[0] = scalar.val[0];
-		val.fval.s[1] = scalar.val[1];
-		val.fval.s[2] = scalar.val[2];
-		val.fval.s[3] = scalar.val[3];		
-		switch(dst.channels())
-		{
-		case 1:
-			sprintf(compile_option, "-D GENTYPE=float");
-			args.push_back( make_pair( sizeof(cl_float) , (void *)&val.fval.s[0] ));
-			break;
-		case 4:
-			sprintf(compile_option, "-D GENTYPE=float4");
-			args.push_back( make_pair( sizeof(cl_float4) , (void *)&val.fval ));
-			break;
-		default:
-			CV_Error(CV_StsUnsupportedFormat,"unsupported channels");
-		}
+        val.fval.s[0] = scalar.val[0];
+        val.fval.s[1] = scalar.val[1];
+        val.fval.s[2] = scalar.val[2];
+        val.fval.s[3] = scalar.val[3];
+        switch(dst.oclchannels())
+        {
+        case 1:
+            sprintf(compile_option, "-D GENTYPE=float");
+            args.push_back( make_pair( sizeof(cl_float) , (void *)&val.fval.s[0] ));
+            break;
+        case 4:
+            sprintf(compile_option, "-D GENTYPE=float4");
+            args.push_back( make_pair( sizeof(cl_float4) , (void *)&val.fval ));
+            break;
+        default:
+            CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
+        }
         break;
     case CV_64F:
-		val.dval.s[0] = scalar.val[0];
-		val.dval.s[1] = scalar.val[1];
-		val.dval.s[2] = scalar.val[2];
-		val.dval.s[3] = scalar.val[3];
-		switch(dst.channels())
-		{
-		case 1:
-			sprintf(compile_option, "-D GENTYPE=double");
-			args.push_back( make_pair( sizeof(cl_double) , (void *)&val.dval.s[0] ));
-			break;
-		case 4:
-			sprintf(compile_option, "-D GENTYPE=double4");
-			args.push_back( make_pair( sizeof(cl_double4) , (void *)&val.dval ));
-			break;
-		default:
-			CV_Error(CV_StsUnsupportedFormat,"unsupported channels");
-		}
+        val.dval.s[0] = scalar.val[0];
+        val.dval.s[1] = scalar.val[1];
+        val.dval.s[2] = scalar.val[2];
+        val.dval.s[3] = scalar.val[3];
+        switch(dst.oclchannels())
+        {
+        case 1:
+            sprintf(compile_option, "-D GENTYPE=double");
+            args.push_back( make_pair( sizeof(cl_double) , (void *)&val.dval.s[0] ));
+            break;
+        case 4:
+            sprintf(compile_option, "-D GENTYPE=double4");
+            args.push_back( make_pair( sizeof(cl_double4) , (void *)&val.dval ));
+            break;
+        default:
+            CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
+        }
         break;
-	default:
-		CV_Error(CV_StsUnsupportedFormat,"unknown depth");
+    default:
+        CV_Error(CV_StsUnsupportedFormat, "unknown depth");
     }
 #if CL_VERSION_1_2
-	if(dst.offset==0 && dst.cols==dst.wholecols)
-	{
-		clEnqueueFillBuffer(dst.clCxt->impl->clCmdQueue,(cl_mem)dst.data,args[0].second,args[0].first,0,dst.step*dst.rows,0,NULL,NULL);
-	}
-	else
-	{
-		args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst.data ));
-		args.push_back( make_pair( sizeof(cl_int) , (void *)&dst.cols ));
-		args.push_back( make_pair( sizeof(cl_int) , (void *)&dst.rows ));
-		args.push_back( make_pair( sizeof(cl_int) , (void *)&step_in_pixel ));
-		args.push_back( make_pair( sizeof(cl_int) , (void *)&offset_in_pixel));
-		openCLExecuteKernel(dst.clCxt , &operator_setTo, kernelName, globalThreads,
-							localThreads, args, -1, -1,compile_option);
-	}
+    if(dst.offset == 0 && dst.cols == dst.wholecols)
+    {
+        clEnqueueFillBuffer(dst.clCxt->impl->clCmdQueue, (cl_mem)dst.data, args[0].second, args[0].first, 0, dst.step * dst.rows, 0, NULL, NULL);
+    }
+    else
+    {
+        args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst.data ));
+        args.push_back( make_pair( sizeof(cl_int) , (void *)&dst.cols ));
+        args.push_back( make_pair( sizeof(cl_int) , (void *)&dst.rows ));
+        args.push_back( make_pair( sizeof(cl_int) , (void *)&step_in_pixel ));
+        args.push_back( make_pair( sizeof(cl_int) , (void *)&offset_in_pixel));
+        openCLExecuteKernel(dst.clCxt , &operator_setTo, kernelName, globalThreads,
+                            localThreads, args, -1, -1, compile_option);
+    }
 #else
     args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst.data ));
     args.push_back( make_pair( sizeof(cl_int) , (void *)&dst.cols ));
@@ -664,7 +664,7 @@ void set_to_withoutmask_run(const oclMat &dst, const Scalar &scalar, string kern
     args.push_back( make_pair( sizeof(cl_int) , (void *)&step_in_pixel ));
     args.push_back( make_pair( sizeof(cl_int) , (void *)&offset_in_pixel));
     openCLExecuteKernel(dst.clCxt , &operator_setTo, kernelName, globalThreads,
-                        localThreads, args, -1, -1,compile_option);
+                        localThreads, args, -1, -1, compile_option);
 #endif
 }
 
@@ -678,154 +678,154 @@ void set_to_withmask_run(const oclMat &dst, const Scalar &scalar, const oclMat &
     globalThreads[1] = (dst.rows + localThreads[1] - 1) / localThreads[1] * localThreads[1];
     globalThreads[2] = 1;
     int step_in_pixel = dst.step / dst.elemSize(), offset_in_pixel = dst.offset / dst.elemSize();
-	char compile_option[32];
-	union sc
-	{
-		cl_uchar4 uval;
-		cl_char4  cval;
-		cl_ushort4 usval;
-		cl_short4 shval;
-		cl_int4 ival;
-		cl_float4 fval;
-		cl_double4 dval;
-	}val;
+    char compile_option[32];
+    union sc
+    {
+        cl_uchar4 uval;
+        cl_char4  cval;
+        cl_ushort4 usval;
+        cl_short4 shval;
+        cl_int4 ival;
+        cl_float4 fval;
+        cl_double4 dval;
+    } val;
     switch(dst.depth())
     {
     case CV_8U:
-		val.uval.s[0] = saturate_cast<uchar>(scalar.val[0]);
-		val.uval.s[1] = saturate_cast<uchar>(scalar.val[1]);
-		val.uval.s[2] = saturate_cast<uchar>(scalar.val[2]);
-		val.uval.s[3] = saturate_cast<uchar>(scalar.val[3]);
-		switch(dst.channels())
-		{
-		case 1:
-			sprintf(compile_option, "-D GENTYPE=uchar");
-			args.push_back( make_pair( sizeof(cl_uchar) , (void *)&val.uval.s[0] ));
-			break;
-		case 4:
-			sprintf(compile_option, "-D GENTYPE=uchar4");
-			args.push_back( make_pair( sizeof(cl_uchar4) , (void *)&val.uval ));
-			break;
-		default:
-			CV_Error(CV_StsUnsupportedFormat,"unsupported channels");
-		}
+        val.uval.s[0] = saturate_cast<uchar>(scalar.val[0]);
+        val.uval.s[1] = saturate_cast<uchar>(scalar.val[1]);
+        val.uval.s[2] = saturate_cast<uchar>(scalar.val[2]);
+        val.uval.s[3] = saturate_cast<uchar>(scalar.val[3]);
+        switch(dst.oclchannels())
+        {
+        case 1:
+            sprintf(compile_option, "-D GENTYPE=uchar");
+            args.push_back( make_pair( sizeof(cl_uchar) , (void *)&val.uval.s[0] ));
+            break;
+        case 4:
+            sprintf(compile_option, "-D GENTYPE=uchar4");
+            args.push_back( make_pair( sizeof(cl_uchar4) , (void *)&val.uval ));
+            break;
+        default:
+            CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
+        }
         break;
     case CV_8S:
-		val.cval.s[0] = saturate_cast<char>(scalar.val[0]);
-		val.cval.s[1] = saturate_cast<char>(scalar.val[1]);
-		val.cval.s[2] = saturate_cast<char>(scalar.val[2]);
-		val.cval.s[3] = saturate_cast<char>(scalar.val[3]);
-		switch(dst.channels())
-		{
-		case 1:
-			sprintf(compile_option, "-D GENTYPE=char");
-			args.push_back( make_pair( sizeof(cl_char) , (void *)&val.cval.s[0] ));
-			break;
-		case 4:
-			sprintf(compile_option, "-D GENTYPE=char4");
-			args.push_back( make_pair( sizeof(cl_char4) , (void *)&val.cval ));
-			break;
-		default:
-			CV_Error(CV_StsUnsupportedFormat,"unsupported channels");
-		}
+        val.cval.s[0] = saturate_cast<char>(scalar.val[0]);
+        val.cval.s[1] = saturate_cast<char>(scalar.val[1]);
+        val.cval.s[2] = saturate_cast<char>(scalar.val[2]);
+        val.cval.s[3] = saturate_cast<char>(scalar.val[3]);
+        switch(dst.oclchannels())
+        {
+        case 1:
+            sprintf(compile_option, "-D GENTYPE=char");
+            args.push_back( make_pair( sizeof(cl_char) , (void *)&val.cval.s[0] ));
+            break;
+        case 4:
+            sprintf(compile_option, "-D GENTYPE=char4");
+            args.push_back( make_pair( sizeof(cl_char4) , (void *)&val.cval ));
+            break;
+        default:
+            CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
+        }
         break;
     case CV_16U:
-		val.usval.s[0] = saturate_cast<ushort>(scalar.val[0]);
-		val.usval.s[1] = saturate_cast<ushort>(scalar.val[1]);
-		val.usval.s[2] = saturate_cast<ushort>(scalar.val[2]);
-		val.usval.s[3] = saturate_cast<ushort>(scalar.val[3]);
-		switch(dst.channels())
-		{
-		case 1:
-			sprintf(compile_option, "-D GENTYPE=ushort");
-			args.push_back( make_pair( sizeof(cl_ushort) , (void *)&val.usval.s[0] ));
-			break;
-		case 4:
-			sprintf(compile_option, "-D GENTYPE=ushort4");
-			args.push_back( make_pair( sizeof(cl_ushort4) , (void *)&val.usval ));
-			break;
-		default:
-			CV_Error(CV_StsUnsupportedFormat,"unsupported channels");
-		}
+        val.usval.s[0] = saturate_cast<ushort>(scalar.val[0]);
+        val.usval.s[1] = saturate_cast<ushort>(scalar.val[1]);
+        val.usval.s[2] = saturate_cast<ushort>(scalar.val[2]);
+        val.usval.s[3] = saturate_cast<ushort>(scalar.val[3]);
+        switch(dst.oclchannels())
+        {
+        case 1:
+            sprintf(compile_option, "-D GENTYPE=ushort");
+            args.push_back( make_pair( sizeof(cl_ushort) , (void *)&val.usval.s[0] ));
+            break;
+        case 4:
+            sprintf(compile_option, "-D GENTYPE=ushort4");
+            args.push_back( make_pair( sizeof(cl_ushort4) , (void *)&val.usval ));
+            break;
+        default:
+            CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
+        }
         break;
     case CV_16S:
-		val.shval.s[0] = saturate_cast<short>(scalar.val[0]);
-		val.shval.s[1] = saturate_cast<short>(scalar.val[1]);
-		val.shval.s[2] = saturate_cast<short>(scalar.val[2]);
-		val.shval.s[3] = saturate_cast<short>(scalar.val[3]);
-		switch(dst.channels())
-		{
-		case 1:
-			sprintf(compile_option, "-D GENTYPE=short");
-			args.push_back( make_pair( sizeof(cl_short) , (void *)&val.shval.s[0] ));
-			break;
-		case 4:
-			sprintf(compile_option, "-D GENTYPE=short4");
-			args.push_back( make_pair( sizeof(cl_short4) , (void *)&val.shval ));
-			break;
-		default:
-			CV_Error(CV_StsUnsupportedFormat,"unsupported channels");
-		}
+        val.shval.s[0] = saturate_cast<short>(scalar.val[0]);
+        val.shval.s[1] = saturate_cast<short>(scalar.val[1]);
+        val.shval.s[2] = saturate_cast<short>(scalar.val[2]);
+        val.shval.s[3] = saturate_cast<short>(scalar.val[3]);
+        switch(dst.oclchannels())
+        {
+        case 1:
+            sprintf(compile_option, "-D GENTYPE=short");
+            args.push_back( make_pair( sizeof(cl_short) , (void *)&val.shval.s[0] ));
+            break;
+        case 4:
+            sprintf(compile_option, "-D GENTYPE=short4");
+            args.push_back( make_pair( sizeof(cl_short4) , (void *)&val.shval ));
+            break;
+        default:
+            CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
+        }
         break;
     case CV_32S:
-		val.ival.s[0] = saturate_cast<int>(scalar.val[0]);
-		val.ival.s[1] = saturate_cast<int>(scalar.val[1]);
-		val.ival.s[2] = saturate_cast<int>(scalar.val[2]);
-		val.ival.s[3] = saturate_cast<int>(scalar.val[3]);
-		switch(dst.channels())
-		{
-		case 1:
-			sprintf(compile_option, "-D GENTYPE=int");
-			args.push_back( make_pair( sizeof(cl_int) , (void *)&val.ival.s[0] ));
-			break;
-		case 4:
-			sprintf(compile_option, "-D GENTYPE=int4");
-			args.push_back( make_pair( sizeof(cl_int4) , (void *)&val.ival ));
-			break;
-		default:
-			CV_Error(CV_StsUnsupportedFormat,"unsupported channels");
-		}
+        val.ival.s[0] = saturate_cast<int>(scalar.val[0]);
+        val.ival.s[1] = saturate_cast<int>(scalar.val[1]);
+        val.ival.s[2] = saturate_cast<int>(scalar.val[2]);
+        val.ival.s[3] = saturate_cast<int>(scalar.val[3]);
+        switch(dst.oclchannels())
+        {
+        case 1:
+            sprintf(compile_option, "-D GENTYPE=int");
+            args.push_back( make_pair( sizeof(cl_int) , (void *)&val.ival.s[0] ));
+            break;
+        case 4:
+            sprintf(compile_option, "-D GENTYPE=int4");
+            args.push_back( make_pair( sizeof(cl_int4) , (void *)&val.ival ));
+            break;
+        default:
+            CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
+        }
         break;
     case CV_32F:
-		val.fval.s[0] = scalar.val[0];
-		val.fval.s[1] = scalar.val[1];
-		val.fval.s[2] = scalar.val[2];
-		val.fval.s[3] = scalar.val[3];		
-		switch(dst.channels())
-		{
-		case 1:
-			sprintf(compile_option, "-D GENTYPE=float");
-			args.push_back( make_pair( sizeof(cl_float) , (void *)&val.fval.s[0] ));
-			break;
-		case 4:
-			sprintf(compile_option, "-D GENTYPE=float4");
-			args.push_back( make_pair( sizeof(cl_float4) , (void *)&val.fval ));
-			break;
-		default:
-			CV_Error(CV_StsUnsupportedFormat,"unsupported channels");
-		}
+        val.fval.s[0] = scalar.val[0];
+        val.fval.s[1] = scalar.val[1];
+        val.fval.s[2] = scalar.val[2];
+        val.fval.s[3] = scalar.val[3];
+        switch(dst.oclchannels())
+        {
+        case 1:
+            sprintf(compile_option, "-D GENTYPE=float");
+            args.push_back( make_pair( sizeof(cl_float) , (void *)&val.fval.s[0] ));
+            break;
+        case 4:
+            sprintf(compile_option, "-D GENTYPE=float4");
+            args.push_back( make_pair( sizeof(cl_float4) , (void *)&val.fval ));
+            break;
+        default:
+            CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
+        }
         break;
     case CV_64F:
-		val.dval.s[0] = scalar.val[0];
-		val.dval.s[1] = scalar.val[1];
-		val.dval.s[2] = scalar.val[2];
-		val.dval.s[3] = scalar.val[3];
-		switch(dst.channels())
-		{
-		case 1:
-			sprintf(compile_option, "-D GENTYPE=double");
-			args.push_back( make_pair( sizeof(cl_double) , (void *)&val.dval.s[0] ));
-			break;
-		case 4:
-			sprintf(compile_option, "-D GENTYPE=double4");
-			args.push_back( make_pair( sizeof(cl_double4) , (void *)&val.dval ));
-			break;
-		default:
-			CV_Error(CV_StsUnsupportedFormat,"unsupported channels");
-		}
+        val.dval.s[0] = scalar.val[0];
+        val.dval.s[1] = scalar.val[1];
+        val.dval.s[2] = scalar.val[2];
+        val.dval.s[3] = scalar.val[3];
+        switch(dst.oclchannels())
+        {
+        case 1:
+            sprintf(compile_option, "-D GENTYPE=double");
+            args.push_back( make_pair( sizeof(cl_double) , (void *)&val.dval.s[0] ));
+            break;
+        case 4:
+            sprintf(compile_option, "-D GENTYPE=double4");
+            args.push_back( make_pair( sizeof(cl_double4) , (void *)&val.dval ));
+            break;
+        default:
+            CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
+        }
         break;
-	default:
-		CV_Error(CV_StsUnsupportedFormat,"unknown depth");
+    default:
+        CV_Error(CV_StsUnsupportedFormat, "unknown depth");
     }
     args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst.data ));
     args.push_back( make_pair( sizeof(cl_int) , (void *)&dst.cols ));
@@ -836,7 +836,7 @@ void set_to_withmask_run(const oclMat &dst, const Scalar &scalar, const oclMat &
     args.push_back( make_pair( sizeof(cl_int) , (void *)&mask.step ));
     args.push_back( make_pair( sizeof(cl_int) , (void *)&mask.offset ));
     openCLExecuteKernel(dst.clCxt , &operator_setToM, kernelName, globalThreads,
-                        localThreads, args, -1, -1,compile_option);
+                        localThreads, args, -1, -1, compile_option);
 }
 
 oclMat &cv::ocl::oclMat::setTo(const Scalar &scalar, const oclMat &mask)
@@ -855,18 +855,18 @@ oclMat &cv::ocl::oclMat::setTo(const Scalar &scalar, const oclMat &mask)
     //                   (cl_mem)mem,1,0,sizeof(double)*4,s,0,0,0));
     if (mask.empty())
     {
-		if(type()==CV_8UC1)
-		{
-			set_to_withoutmask_run(*this, scalar, "set_to_without_mask_C1_D0");
-		}
-		else
-		{
-			set_to_withoutmask_run(*this, scalar, "set_to_without_mask");
-		}
+        if(type() == CV_8UC1)
+        {
+            set_to_withoutmask_run(*this, scalar, "set_to_without_mask_C1_D0");
+        }
+        else
+        {
+            set_to_withoutmask_run(*this, scalar, "set_to_without_mask");
+        }
     }
     else
     {
-		set_to_withmask_run(*this, scalar, mask, "set_to_with_mask");
+        set_to_withmask_run(*this, scalar, mask, "set_to_with_mask");
     }
 
     return *this;
@@ -874,50 +874,91 @@ oclMat &cv::ocl::oclMat::setTo(const Scalar &scalar, const oclMat &mask)
 
 oclMat cv::ocl::oclMat::reshape(int new_cn, int new_rows) const
 {
-	if( new_rows != 0 && new_rows != rows)
-	{
-		 CV_Error( CV_StsBadFunc,
-            "oclMat's number of rows can not be changed for current version" );
-	}
+    if( new_rows != 0 && new_rows != rows)
 
-	oclMat hdr = *this;
+    {
 
-    int cn = channels();
+        CV_Error( CV_StsBadFunc,
+
+                  "oclMat's number of rows can not be changed for current version" );
+
+    }
+
+    oclMat hdr = *this;
+
+    int cn = oclchannels();
+
     if (new_cn == 0)
+
         new_cn = cn;
+
+
 
     int total_width = cols * cn;
 
+
+
     if ((new_cn > total_width || total_width % new_cn != 0) && new_rows == 0)
+
         new_rows = rows * total_width / new_cn;
 
+
+
     if (new_rows != 0 && new_rows != rows)
+
     {
+
         int total_size = total_width * rows;
 
+
+
         if (!isContinuous())
+
             CV_Error(CV_BadStep, "The matrix is not continuous, thus its number of rows can not be changed");
 
+
+
         if ((unsigned)new_rows > (unsigned)total_size)
+
             CV_Error(CV_StsOutOfRange, "Bad new number of rows");
+
+
 
         total_width = total_size / new_rows;
 
+
+
         if (total_width * new_rows != total_size)
+
             CV_Error(CV_StsBadArg, "The total number of matrix elements is not divisible by the new number of rows");
 
+
+
         hdr.rows = new_rows;
+
         hdr.step = total_width * elemSize1();
+
     }
+
+
 
     int new_width = total_width / new_cn;
 
+
+
     if (new_width * new_cn != total_width)
+
         CV_Error(CV_BadNumChannels, "The total width is not divisible by the new number of channels");
 
+
+
     hdr.cols = new_width;
-	hdr.wholecols = new_width;
+
+    hdr.wholecols = new_width;
+
     hdr.flags = (hdr.flags & ~CV_MAT_CN_MASK) | ((new_cn - 1) << CV_CN_SHIFT);
+
+
 
     return hdr;
 
@@ -926,15 +967,13 @@ oclMat cv::ocl::oclMat::reshape(int new_cn, int new_rows) const
 void cv::ocl::oclMat::create(int _rows, int _cols, int _type)
 {
     clCxt = Context::getContext();
-    //cout << "cv::ocl::oclMat::create()." << endl;
-
     /* core logic */
     _type &= TYPE_MASK;
-	download_channels = CV_MAT_CN(_type);
-	if(download_channels==3)
-	{
-		_type = CV_MAKE_TYPE((CV_MAT_DEPTH(_type)),4);
-	}
+    //download_channels = CV_MAT_CN(_type);
+    //if(download_channels==3)
+    //{
+    //	_type = CV_MAKE_TYPE((CV_MAT_DEPTH(_type)),4);
+    //}
     if( rows == _rows && cols == _cols && type() == _type && data )
         return;
     if( data )
@@ -953,7 +992,7 @@ void cv::ocl::oclMat::create(int _rows, int _cols, int _type)
         openCLMallocPitch(clCxt, &dev_ptr, &step, GPU_MATRIX_MALLOC_STEP(esz * cols), rows);
         //openCLMallocPitch(clCxt,&dev_ptr, &step, esz * cols, rows);
 
-        if (esz *cols == step)
+        if (esz * cols == step)
             flags |= Mat::CONTINUOUS_FLAG;
 
         int64 _nettosize = (int64)step * rows;
@@ -979,7 +1018,6 @@ void cv::ocl::oclMat::release()
     step = rows = cols = 0;
     offset = wholerows = wholecols = 0;
     refcount = 0;
-	download_channels=0;
 }
 
 #endif /* !defined (HAVE_OPENCL) */

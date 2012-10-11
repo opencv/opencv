@@ -31,84 +31,8 @@
 // and on any theory of liability, whether in contract, strict liability,
 // or tort (including negligence or otherwise) arising in any way out of
 // the use of this software, even if advised of the possibility of such damage.
-//
-//
 
-
-//#pragma OPENCL EXTENSION cl_amd_printf :enable
-__kernel
-void bilateral4(__global uchar4 *dst,
-		__global uchar4 *src,
-		int rows,
-		int cols,
-		int channels,
-		int radius,
-		int wholerows,
-		int wholecols,
-		int src_step,
-		int dst_step,
-		int src_offset,
-		int dst_offset,
-		__constant float *sigClr,
-		__constant float *sigSpc)
-{
-	uint lidx = get_local_id(0);
-	uint lidy = get_local_id(1);
-	
-	uint gdx = get_global_id(0);
-	uint gdy = get_global_id(1);
-
-	uint gidx = gdx >=cols?cols-1:gdx;
-	uint gidy = gdy >=rows?rows-1:gdy;
-
-	uchar4 p,q,tmp;
-
-	float4 pf = 0,pq = 0,pd = 0;
-        float wt =0;
-
-	int r = radius;
-	int ij = 0;
-	int ct = 0;
-
-	uint index_src = src_offset/4 + gidy*src_step/4 + gidx;
-	uint index_dst = dst_offset/4 + gidy*dst_step/4 + gidx;
-
-	p = src[index_src];
-
-	uint gx,gy;
-	uint src_index,dst_index;
-
-	for(int ii = -r;ii<r+1;ii++)
-	{
-		for(int jj =-r;jj<r+1;jj++)
-			{
-					ij = ii*ii+jj*jj;
-					if(ij > mul24(radius,radius)) continue;
-					gx = gidx + jj;
-					gy = gidy + ii;
-
-					src_index = src_offset/4 + gy *	 src_step/4 + gx;
-					q = src[src_index];
-					
-
-					ct = abs(p.x-q.x)+abs(p.y-q.y)+abs(p.z-q.z);
-					wt =sigClr[ct]*sigSpc[(ii+radius)*(2*radius+1)+jj+radius];
-
-				        pf.x += q.x*wt;
-					pf.y += q.y*wt;
-					pf.z += q.z*wt;
-//					pf.w += q.w*wt;
-
-					pq += wt;
-
-			}
-	}
-
-	pd = pf/pq;
-	dst[index_dst] = convert_uchar4_rte(pd);
-}
-
-__kernel void bilateral(__global uchar *dst,
+__kernel void bilateral_C1_D0(__global uchar *dst,
 		__global const uchar *src,
 		const int dst_rows,
 		const int dst_cols,
@@ -128,8 +52,8 @@ __kernel void bilateral(__global uchar *dst,
 	if((gidy<dst_rows) && (gidx<dst_cols))
 	{
 		int src_addr = mad24(gidy+radius,src_step,gidx+radius);
-		int dst_addr = mad24(gidy,src_step,gidx+dst_offset);
-		float sum = 0, wsum = 0;
+		int dst_addr = mad24(gidy,dst_step,gidx+dst_offset);
+		float sum = 0.f, wsum = 0.f;
 
 		int val0 = (int)src[src_addr];
 		for(int k = 0; k < maxk; k++ )
@@ -142,4 +66,73 @@ __kernel void bilateral(__global uchar *dst,
 		dst[dst_addr] = convert_uchar_rtz(sum/wsum+0.5f);
 	}
 }
+__kernel void bilateral2_C1_D0(__global uchar *dst,
+		__global const uchar *src,
+		const int dst_rows,
+		const int dst_cols,
+		const int maxk,
+		const int radius,
+		const int dst_step,
+		const int dst_offset,
+		const int src_step,
+		const int src_rows,
+		const int src_cols,
+		__constant float *color_weight,
+		__constant float *space_weight,
+		__constant int *space_ofs)
+{	
+	int gidx = get_global_id(0)<<2;
+	int gidy = get_global_id(1);
+	if((gidy<dst_rows) && (gidx<dst_cols))
+	{
+		int src_addr = mad24(gidy+radius,src_step,gidx+radius);
+		int dst_addr = mad24(gidy,dst_step,gidx+dst_offset);
+		float4 sum = (float4)(0.f), wsum = (float4)(0.f);
 
+		int4 val0 = convert_int4(vload4(0,src+src_addr));
+		for(int k = 0; k < maxk; k++ )
+		{
+			int4 val = convert_int4(vload4(0,src+src_addr + space_ofs[k]));
+			float4 w = (float4)(space_weight[k])*(float4)(color_weight[abs(val.x - val0.x)],color_weight[abs(val.y - val0.y)],color_weight[abs(val.z - val0.z)],color_weight[abs(val.w - val0.w)]);
+			sum += convert_float4(val)*w;
+			wsum += w;
+		}
+		*(__global uchar4*)(dst+dst_addr) = convert_uchar4_rtz(sum/wsum+0.5f);
+	}
+}
+__kernel void bilateral_C4_D0(__global uchar4 *dst,
+		__global const uchar4 *src,
+		const int dst_rows,
+		const int dst_cols,
+		const int maxk,
+		const int radius,
+		const int dst_step,
+		const int dst_offset,
+		const int src_step,
+		const int src_rows,
+		const int src_cols,
+		__constant float *color_weight,
+		__constant float *space_weight,
+		__constant int *space_ofs)
+{	
+	int gidx = get_global_id(0);
+	int gidy = get_global_id(1);
+	if((gidy<dst_rows) && (gidx<dst_cols))
+	{
+		int src_addr = mad24(gidy+radius,src_step,gidx+radius);
+		int dst_addr = mad24(gidy,dst_step,gidx+dst_offset);
+		float4 sum = (float4)0.f;
+		float wsum = 0.f;
+
+		int4 val0 = convert_int4(src[src_addr]);
+		for(int k = 0; k < maxk; k++ )
+		{
+			int4 val = convert_int4(src[src_addr + space_ofs[k]]);
+			float w = space_weight[k]*color_weight[abs(val.x - val0.x)+abs(val.y - val0.y)+abs(val.z - val0.z)];
+			sum += convert_float4(val)*(float4)w;
+			wsum += w;
+		}
+		wsum=1.f/wsum;
+		dst[dst_addr] = convert_uchar4_rtz(sum*(float4)wsum+(float4)0.5f);
+	}
+}
