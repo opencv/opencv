@@ -26,8 +26,8 @@ double myShiTomasi_minVal; double myShiTomasi_maxVal;
 
 RNG rng(12345);
 
-char* myHarris_window = "My Harris corner detector";
-char* myShiTomasi_window = "My Shi Tomasi corner detector";
+string myHarris_window = "My Harris corner detector";
+string myShiTomasi_window = "My Shi Tomasi corner detector";
 
 /// Function headers
 void myShiTomasi_function( int, void* );
@@ -51,12 +51,16 @@ int main( int argc, char** argv )
 
   cornerEigenValsAndVecs( src_gray, myHarris_dst, blockSize, apertureSize, BORDER_DEFAULT );
 
+  float* fHarrisPtr;
   /* calculate Mc */ 
   for( int j = 0; j < src_gray.rows; j++ )
      { for( int i = 0; i < src_gray.cols; i++ )
           {
-            float lambda_1 = myHarris_dst.at<float>( j, i, 0 );
-            float lambda_2 = myHarris_dst.at<float>( j, i, 1 );
+            //float lambda_1 = myHarris_dst.at<float>( j, i, 0 );
+            //float lambda_2 = myHarris_dst.at<float>( j, i, 1 );
+            fHarrisPtr = (float*)myHarris_dst.ptr(j,i);
+            float lambda_1 = *fHarrisPtr;
+            float lambda_2 = *(fHarrisPtr+1);
             Mc.at<float>(j,i) = lambda_1*lambda_2 - 0.04*pow( ( lambda_1 + lambda_2 ), 2 );
           }
      }
