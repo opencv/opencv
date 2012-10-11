@@ -119,7 +119,7 @@ namespace cv
 
         void operator ()(const tbb::blocked_range<int>& range) const
         {
-            ParallelLoopBodyWrapper::operator()(Range(range.begin(), range.end()));
+            this->ParallelLoopBodyWrapper::operator()(Range(range.begin(), range.end()));
         }
     };
 #elif defined HAVE_GCD
@@ -141,9 +141,9 @@ namespace cv
         
         void operator ()(int i) const
         {
-            ParallelLoopBody::operator()(Range(i, i + 1));
+            this->ParallelLoopBodyWrapper::operator()(Range(i, i + 1));
         }
-    }
+    };
 #else
     typedef ParallelLoopBodyWrapper ProxyLoopBody;
 #endif
