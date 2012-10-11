@@ -463,15 +463,6 @@ bool cv::gpu::SoftCascade::load( const string& filename, const float minScale, c
     return true;
 }
 
-#define USE_REFERENCE_VALUES
-namespace {
-    char *itoa(long i, char* s, int /*dummy_radix*/)
-    {
-        sprintf(s, "%ld", i);
-        return s;
-    }
-}
-
 //================================== synchronous version ============================================================//
 
 void cv::gpu::SoftCascade::detectMultiScale(const GpuMat& colored, const GpuMat& rois,
@@ -488,22 +479,6 @@ void cv::gpu::SoftCascade::detectMultiScale(const GpuMat& colored, const GpuMat&
 
     Filds& flds = *filds;
 
-#if defined USE_REFERENCE_VALUES
-    cudaMemset(flds.hogluv.data, 0, flds.hogluv.step * flds.hogluv.rows);
-
-    cv::FileStorage imgs("/home/kellan/testInts.xml", cv::FileStorage::READ);
-    char buff[33];
-
-    for(int i = 0; i < Filds::HOG_LUV_BINS; ++i)
-    {
-        cv::Mat channel;
-        imgs[std::string("channel") + itoa(i, buff, 10)] >> channel;
-
-        // std::cout << "channel " << i << std::endl << channel << std::endl;
-        GpuMat gchannel(flds.hogluv, cv::Rect(0, 121 * i, 161, 121));
-        gchannel.upload(channel);
-    }
-#else
     GpuMat& plane = flds.plane;
     GpuMat& shrunk = flds.shrunk;
     cudaMemset(plane.data, 0, plane.step * plane.rows);
@@ -512,8 +487,6 @@ void cv::gpu::SoftCascade::detectMultiScale(const GpuMat& colored, const GpuMat&
     int fh = Filds::FRAME_HEIGHT;
 
     GpuMat gray(plane, cv::Rect(0, fh * Filds::HOG_LUV_BINS, fw, fh));
-
-    //cv::gpu::cvtColor(colored, gray, CV_RGB2GRAY);
     cv::gpu::cvtColor(colored, gray, CV_BGR2GRAY);
 
     //create hog
@@ -564,7 +537,6 @@ void cv::gpu::SoftCascade::detectMultiScale(const GpuMat& colored, const GpuMat&
         GpuMat sum(flds.hogluv, cv::Rect(0, (fh + 1) * i, fw + 1, fh + 1));
         cv::gpu::integralBuffered(channel, sum, flds.integralBuffer);
     }
-#endif
 
     if (specificScale == -1)
         flds.detect(rois,objects, 0);
