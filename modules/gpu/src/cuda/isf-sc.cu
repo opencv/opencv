@@ -103,7 +103,7 @@ namespace icf {
         float sarea = (scaledRect.z - scaledRect.x) * (scaledRect.w - scaledRect.y);
 
         const float expected_new_area = farea * relScale * relScale;
-        float approx = __fdividef(sarea, expected_new_area);
+        float approx = (sarea == 0)? 1: __fdividef(sarea, expected_new_area);
 
         float rootThreshold = (node.threshold & 0x0FFFFFFFU) * approx * level.scaling[(node.threshold >> 28) > 6];
 
@@ -226,7 +226,7 @@ namespace icf {
             dprintf("%d: impact scaned %f\n" ,threadIdx.x, impact);
 
             confidence += impact;
-            if(__any((confidence <= stages[(st + threadIdx.x)]))) st += stEnd;
+            if(__any((confidence <= stages[(st + threadIdx.x)]))) st += 2048;
         }
 
         if(st == stEnd && !threadIdx.x)
