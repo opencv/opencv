@@ -186,11 +186,14 @@ PERF_TEST_P(SoftCascadeTest, detect,
         cv::gpu::GpuMat objectBoxes(1, 16384, CV_8UC1), rois(cascade.getRoiSize(), CV_8UC1), trois;
         rois.setTo(1);
         cv::gpu::transpose(rois, trois);
-        cascade.detectMultiScale(colored, trois, objectBoxes);
+
+        cv::gpu::GpuMat curr = objectBoxes;
+        cascade.detectMultiScale(colored, trois, curr);
 
         TEST_CYCLE()
         {
-            cascade.detectMultiScale(colored, trois, objectBoxes);
+            curr = objectBoxes;
+            cascade.detectMultiScale(colored, trois, curr);
         }
     }
     else
