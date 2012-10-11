@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef _OPENCV_FLANN_HPP_
-#define _OPENCV_FLANN_HPP_
+#ifndef __OPENCV_FLANN_HPP__
+#define __OPENCV_FLANN_HPP__
 
 #ifdef __cplusplus
 
@@ -423,5 +423,11 @@ FLANN_DEPRECATED int hierarchicalClustering(const Mat& features, Mat& centers, c
 } } // namespace cv::flann
 
 #endif // __cplusplus
+
+// Auto linking by "#pragma comment(lib)" syntax
+#include "opencv2/core/pragma_lib.hpp"
+#if PRAGMA_COMMENT_SUPPORT && OPENCV_AUTO_LINK
+#pragma OPENCV_COMMENT_LIB_FNAME("flann")
+#endif // PRAGMA_COMMENT_SUPPORT && OPENCV_AUTO_LINK
 
 #endif

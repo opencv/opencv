@@ -1898,4 +1898,10 @@ CV_EXPORTS void createOpticalFlowNeedleMap(const GpuMat& u, const GpuMat& v, Gpu
 
 } // namespace cv
 
+// Auto linking by "#pragma comment(lib)" syntax
+#include "opencv2/core/pragma_lib.hpp"
+#if PRAGMA_COMMENT_SUPPORT && OPENCV_AUTO_LINK
+#pragma OPENCV_COMMENT_LIB_FNAME("gpu")
+#endif // PRAGMA_COMMENT_SUPPORT && OPENCV_AUTO_LINK
+
 #endif /* __OPENCV_GPU_HPP__ */
