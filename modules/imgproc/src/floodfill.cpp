@@ -55,29 +55,32 @@ CvFFillSegment;
 #define UP 1
 #define DOWN -1
 
-#define ICV_PUSH( Y, L, R, PREV_L, PREV_R, DIR )\
-{                                               \
-    tail->y = (ushort)(Y);                      \
-    tail->l = (ushort)(L);                      \
-    tail->r = (ushort)(R);                      \
-    tail->prevl = (ushort)(PREV_L);             \
-    tail->prevr = (ushort)(PREV_R);             \
-    tail->dir = (short)(DIR);                   \
-    if( ++tail >= buffer_end )                  \
-        tail = buffer;                          \
+#define ICV_PUSH( Y, L, R, PREV_L, PREV_R, DIR )  \
+{                                                 \
+    tail->y = (ushort)(Y);                        \
+    tail->l = (ushort)(L);                        \
+    tail->r = (ushort)(R);                        \
+    tail->prevl = (ushort)(PREV_L);               \
+    tail->prevr = (ushort)(PREV_R);               \
+    tail->dir = (short)(DIR);                     \
+    if( ++tail == buffer_end )                    \
+    {                                             \
+        buffer->resize(buffer->size() * 2);       \
+        tail = &buffer->front() + (tail - head);  \
+        head = &buffer->front();                  \
+        buffer_end = head + buffer->size();       \
+    }                                             \
 }
 
-
-#define ICV_POP( Y, L, R, PREV_L, PREV_R, DIR ) \
-{                                               \
-    Y = head->y;                                \
-    L = head->l;                                \
-    R = head->r;                                \
-    PREV_L = head->prevl;                       \
-    PREV_R = head->prevr;                       \
-    DIR = head->dir;                            \
-    if( ++head >= buffer_end )                  \
-        head = buffer;                          \
+#define ICV_POP( Y, L, R, PREV_L, PREV_R, DIR )   \
+{                                                 \
+    --tail;                                       \
+    Y = tail->y;                                  \
+    L = tail->l;                                  \
+    R = tail->r;                                  \
+    PREV_L = tail->prevl;                         \
+    PREV_R = tail->prevr;                         \
+    DIR = tail->dir;                              \
 }
 
 /****************************************************************************************\
@@ -88,7 +91,7 @@ template<typename _Tp>
 static void
 icvFloodFill_CnIR( uchar* pImage, int step, CvSize roi, CvPoint seed,
                    _Tp newVal, CvConnectedComp* region, int flags,
-                   CvFFillSegment* buffer, int buffer_size )
+                   std::vector<CvFFillSegment>* buffer )
 {
     typedef typename cv::DataType<_Tp>::channel_type _CTp;
     _Tp* img = (_Tp*)(pImage + step * seed.y);
@@ -96,7 +99,7 @@ icvFloodFill_CnIR( uchar* pImage, int step, CvSize roi, CvPoint seed,
     int area = 0;
     int XMin, XMax, YMin = seed.y, YMax = seed.y;
     int _8_connectivity = (flags & 255) == 8;
-    CvFFillSegment* buffer_end = buffer + buffer_size, *head = buffer, *tail = buffer;
+    CvFFillSegment* buffer_end = &buffer->front() + buffer->size(), *head = &buffer->front(), *tail = &buffer->front();
 
     L = R = XMin = XMax = seed.x;
 
@@ -111,6 +114,7 @@ icvFloodFill_CnIR( uchar* pImage, int step, CvSize roi, CvPoint seed,
 
     XMax = --R;
     XMin = ++L;
+
     ICV_PUSH( seed.y, L, R, R + 1, R, UP );
 
     while( head != tail )
@@ -246,7 +250,7 @@ static void
 icvFloodFillGrad_CnIR( uchar* pImage, int step, uchar* pMask, int maskStep,
                        CvSize /*roi*/, CvPoint seed, _Tp newVal, Diff diff,
                        CvConnectedComp* region, int flags,
-                       CvFFillSegment* buffer, int buffer_size )
+                       std::vector<CvFFillSegment>* buffer )
 {
     typedef typename cv::DataType<_Tp>::channel_type _CTp;
     _Tp* img = (_Tp*)(pImage + step*seed.y);
@@ -259,7 +263,7 @@ icvFloodFillGrad_CnIR( uchar* pImage, int step, uchar* pMask, int maskStep,
     int fixedRange = flags & CV_FLOODFILL_FIXED_RANGE;
     int fillImage = (flags & CV_FLOODFILL_MASK_ONLY) == 0;
     uchar newMaskVal = (uchar)(flags & 0xff00 ? flags >> 8 : 1);
-    CvFFillSegment* buffer_end = buffer + buffer_size, *head = buffer, *tail = buffer;
+    CvFFillSegment* buffer_end = &buffer->front() + buffer->size(), *head = &buffer->front(), *tail = &buffer->front();
 
     L = R = seed.x;
     if( mask[L] )
@@ -287,6 +291,7 @@ icvFloodFillGrad_CnIR( uchar* pImage, int step, uchar* pMask, int maskStep,
 
     XMax = R;
     XMin = L;
+
     ICV_PUSH( seed.y, L, R, R + 1, R, UP );
 
     while( head != tail )
@@ -426,12 +431,12 @@ icvFloodFillGrad_CnIR( uchar* pImage, int step, uchar* pMask, int maskStep,
 
 typedef  void (*CvFloodFillFunc)(
                void* img, int step, CvSize size, CvPoint seed, void* newval,
-               CvConnectedComp* comp, int flags, void* buffer, int buffer_size, int cn );
+               CvConnectedComp* comp, int flags, void* buffer, int cn );
 
 typedef  void (*CvFloodFillGradFunc)(
                void* img, int step, uchar* mask, int maskStep, CvSize size,
                CvPoint seed, void* newval, void* d_lw, void* d_up, void* ccomp,
-               int flags, void* buffer, int buffer_size, int cn );
+               int flags, void* buffer, int cn );
 
 CV_IMPL void
 cvFloodFill( CvArr* arr, CvPoint seed_point,
@@ -439,7 +444,7 @@ cvFloodFill( CvArr* arr, CvPoint seed_point,
              CvConnectedComp* comp, int flags, CvArr* maskarr )
 {
     cv::Ptr<CvMat> tempMask;
-    cv::AutoBuffer<CvFFillSegment> buffer;
+    std::vector<CvFFillSegment> buffer;
 
     if( comp )
         memset( comp, 0, sizeof(*comp) );
@@ -484,8 +489,8 @@ cvFloodFill( CvArr* arr, CvPoint seed_point,
         CV_Error( CV_StsOutOfRange, "Seed point is outside of image" );
 
     cvScalarToRawData( &newVal, &nv_buf, type, 0 );
-    buffer_size = MAX( size.width, size.height )*2;
-    buffer.allocate( buffer_size );
+    buffer_size = MAX( size.width, size.height ) * 2;
+    buffer.resize( buffer_size );
 
     if( is_simple )
     {
@@ -500,22 +505,22 @@ cvFloodFill( CvArr* arr, CvPoint seed_point,
         {
             if( type == CV_8UC1 )
                 icvFloodFill_CnIR(img->data.ptr, img->step, size, seed_point, nv_buf.b[0],
-                                  comp, flags, buffer, buffer_size);
+                                  comp, flags, &buffer);
             else if( type == CV_8UC3 )
                 icvFloodFill_CnIR(img->data.ptr, img->step, size, seed_point, cv::Vec3b(nv_buf.b),
-                                  comp, flags, buffer, buffer_size);
+                                  comp, flags, &buffer);
             else if( type == CV_32SC1 )
                 icvFloodFill_CnIR(img->data.ptr, img->step, size, seed_point, nv_buf.i[0],
-                                  comp, flags, buffer, buffer_size);
+                                  comp, flags, &buffer);
             else if( type == CV_32FC1 )
                 icvFloodFill_CnIR(img->data.ptr, img->step, size, seed_point, nv_buf.f[0],
-                                  comp, flags, buffer, buffer_size);
+                                  comp, flags, &buffer);
             else if( type == CV_32SC3 )
                 icvFloodFill_CnIR(img->data.ptr, img->step, size, seed_point, cv::Vec3i(nv_buf.i),
-                                  comp, flags, buffer, buffer_size);
+                                  comp, flags, &buffer);
             else if( type == CV_32FC3 )
                 icvFloodFill_CnIR(img->data.ptr, img->step, size, seed_point, cv::Vec3f(nv_buf.f),
-                                  comp, flags, buffer, buffer_size);
+                                  comp, flags, &buffer);
             else
                 CV_Error( CV_StsUnsupportedFormat, "" );
             return;
@@ -581,37 +586,37 @@ cvFloodFill( CvArr* arr, CvPoint seed_point,
                               img->data.ptr, img->step, mask->data.ptr, mask->step,
                               size, seed_point, nv_buf.b[0],
                               Diff8uC1(ld_buf.b[0], ud_buf.b[0]),
-                              comp, flags, buffer, buffer_size);
+                              comp, flags, &buffer);
     else if( type == CV_8UC3 )
         icvFloodFillGrad_CnIR<cv::Vec3b, cv::Vec3i, Diff8uC3>(
                               img->data.ptr, img->step, mask->data.ptr, mask->step,
                               size, seed_point, cv::Vec3b(nv_buf.b),
                               Diff8uC3(ld_buf.b, ud_buf.b),
-                              comp, flags, buffer, buffer_size);
+                              comp, flags, &buffer);
     else if( type == CV_32SC1 )
         icvFloodFillGrad_CnIR<int, int, Diff32sC1>(
                               img->data.ptr, img->step, mask->data.ptr, mask->step,
                               size, seed_point, nv_buf.i[0],
                               Diff32sC1(ld_buf.i[0], ud_buf.i[0]),
-                              comp, flags, buffer, buffer_size);
+                              comp, flags, &buffer);
     else if( type == CV_32SC3 )
         icvFloodFillGrad_CnIR<cv::Vec3i, cv::Vec3i, Diff32sC3>(
                               img->data.ptr, img->step, mask->data.ptr, mask->step,
                               size, seed_point, cv::Vec3i(nv_buf.i),
                               Diff32sC3(ld_buf.i, ud_buf.i),
-                              comp, flags, buffer, buffer_size);
+                              comp, flags, &buffer);
     else if( type == CV_32FC1 )
         icvFloodFillGrad_CnIR<float, float, Diff32fC1>(
                               img->data.ptr, img->step, mask->data.ptr, mask->step,
                               size, seed_point, nv_buf.f[0],
                               Diff32fC1(ld_buf.f[0], ud_buf.f[0]),
-                              comp, flags, buffer, buffer_size);
+                              comp, flags, &buffer);
     else if( type == CV_32FC3 )
         icvFloodFillGrad_CnIR<cv::Vec3f, cv::Vec3f, Diff32fC3>(
                               img->data.ptr, img->step, mask->data.ptr, mask->step,
                               size, seed_point, cv::Vec3f(nv_buf.f),
                               Diff32fC3(ld_buf.f, ud_buf.f),
-                              comp, flags, buffer, buffer_size);
+                              comp, flags, &buffer);
     else
         CV_Error(CV_StsUnsupportedFormat, "");
 }
