@@ -33,6 +33,7 @@ public:
         HARRIS        = 8,
         SIMPLEBLOB    = 9,
         DENSE         = 10,
+	BRISK         = 11,
 
 
         GRIDDETECTOR = 1000,
@@ -47,6 +48,7 @@ public:
         GRID_HARRIS        = GRIDDETECTOR + HARRIS,
         GRID_SIMPLEBLOB    = GRIDDETECTOR + SIMPLEBLOB,
         GRID_DENSE         = GRIDDETECTOR + DENSE,
+        GRID_BRISK         = GRIDDETECTOR + BRISK,
 
 
         PYRAMIDDETECTOR = 2000,
@@ -61,6 +63,7 @@ public:
         PYRAMID_HARRIS     = PYRAMIDDETECTOR + HARRIS,
         PYRAMID_SIMPLEBLOB = PYRAMIDDETECTOR + SIMPLEBLOB,
         PYRAMID_DENSE      = PYRAMIDDETECTOR + DENSE,
+        PYRAMID_BRISK      = PYRAMIDDETECTOR + BRISK,
 
         DYNAMICDETECTOR = 3000,
 
@@ -73,7 +76,8 @@ public:
         DYNAMIC_GFTT       = DYNAMICDETECTOR + GFTT,
         DYNAMIC_HARRIS     = DYNAMICDETECTOR + HARRIS,
         DYNAMIC_SIMPLEBLOB = DYNAMICDETECTOR + SIMPLEBLOB,
-        DYNAMIC_DENSE      = DYNAMICDETECTOR + DENSE
+        DYNAMIC_DENSE      = DYNAMICDETECTOR + DENSE,
+        DYNAMIC_BRISK      = DYNAMICDETECTOR + BRISK
     };
 
     //supported: FAST STAR SIFT SURF ORB MSER GFTT HARRIS Grid(XXXX) Pyramid(XXXX) Dynamic(XXXX)
@@ -128,6 +132,9 @@ public:
             break;
         case DENSE:
             name += "Dense";
+            break;
+        case BRISK:
+            name += "BRISK";
             break;
         default:
             CV_Error( CV_StsBadArg, "Specified feature detector type is not supported." );
@@ -267,6 +274,8 @@ public:
         SURF  = 2,
         ORB   = 3,
         BRIEF = 4,
+	BRISK = 5,
+	FREAK = 6,
 
 
         OPPONENTEXTRACTOR = 1000,
@@ -276,7 +285,9 @@ public:
         OPPONENT_SIFT  = OPPONENTEXTRACTOR + SIFT,
         OPPONENT_SURF  = OPPONENTEXTRACTOR + SURF,
         OPPONENT_ORB   = OPPONENTEXTRACTOR + ORB,
-        OPPONENT_BRIEF = OPPONENTEXTRACTOR + BRIEF
+        OPPONENT_BRIEF = OPPONENTEXTRACTOR + BRIEF,
+        OPPONENT_BRISK = OPPONENTEXTRACTOR + BRISK,
+        OPPONENT_FREAK = OPPONENTEXTRACTOR + FREAK
     };
 
     //supported SIFT, SURF, ORB, BRIEF, Opponent(XXXX)
@@ -304,6 +315,12 @@ public:
             break;
         case BRIEF:
             name += "BRIEF";
+            break;
+        case BRISK:
+            name += "BRISK";
+            break;
+        case FREAK:
+            name += "FREAK";
             break;
         default:
             CV_Error( CV_StsBadArg, "Specified descriptor extractor type is not supported." );
