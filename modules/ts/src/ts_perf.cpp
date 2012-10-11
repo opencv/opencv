@@ -1247,6 +1247,51 @@ TestBase::_declareHelper::_declareHelper(TestBase* t) : test(t)
 }
 
 /*****************************************************************************************\
+*                                  miscellaneous
+\*****************************************************************************************/
+
+namespace {
+struct KeypointComparator
+{
+    std::vector<cv::KeyPoint>& pts_;
+    comparators::KeypointGreater cmp;
+
+    KeypointComparator(std::vector<cv::KeyPoint>& pts) : pts_(pts), cmp() {}
+
+    bool operator()(int idx1, int idx2) const
+    {
+        return cmp(pts_[idx1], pts_[idx2]);
+    }
+};
+}//namespace
+
+void perf::sort(std::vector<cv::KeyPoint>& pts, cv::InputOutputArray descriptors)
+{
+    cv::Mat desc = descriptors.getMat();
+
+    CV_Assert(pts.size() == (size_t)desc.rows);
+    cv::AutoBuffer<int> idxs(desc.rows);
+
+    for (int i = 0; i < desc.rows; ++i)
+        idxs[i] = i;
+
+    std::sort((int*)idxs, (int*)idxs + desc.rows, KeypointComparator(pts));
+
+    std::vector<cv::KeyPoint> spts(pts.size());
+    cv::Mat sdesc(desc.size(), desc.type());
+
+    for(int j = 0; j < desc.rows; ++j)
+    {
+        spts[j] = pts[idxs[j]];
+        cv::Mat row = sdesc.row(j);
+        desc.row(idxs[j]).copyTo(row);
+    }
+
+    spts.swap(pts);
+    sdesc.copyTo(desc);
+}
+
+/*****************************************************************************************\
 *                                  ::perf::GpuPerf
 \*****************************************************************************************/
 #ifdef HAVE_CUDA
@@ -1293,7 +1338,3 @@ void PrintTo(const Size& sz, ::std::ostream* os)
 
 }  // namespace cv
 
-
-/*****************************************************************************************\
-*                                  ::cv::PrintTo
-\*****************************************************************************************/
