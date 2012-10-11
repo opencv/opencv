@@ -415,7 +415,7 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
             // thus we shift the pointers by 8 (8*sizeof(short) == 16 - ideal alignment)
             Lr[k] = pixDiff + costBufSize + LrSize*k + NRD2*LrBorder + 8;
             memset( Lr[k] - LrBorder*NRD2 - 8, 0, LrSize*sizeof(CostType) );
-            minLr[k] = pixDiff + costBufSize + LrSize*NLR + minLrSize*k + NR2*2;
+            minLr[k] = pixDiff + costBufSize + LrSize*NLR + minLrSize*k + NR2*LrBorder;
             memset( minLr[k] - LrBorder*NR2, 0, minLrSize*sizeof(CostType) );
         }
 
