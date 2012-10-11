@@ -357,7 +357,7 @@ resizeNN( const Mat& src, Mat& dst, double fx, double fy )
     
     Range range(0, dsize.height);
     resizeNNInvoker invoker(src, dst, x_ofs, pix_size4, ify);
-    parallel_for_(range, invoker);
+    parallel_for_(range, invoker, dst.total()/(double)(1<<16));
 }
 
 
@@ -1222,7 +1222,7 @@ static void resizeGeneric_( const Mat& src, Mat& dst,
     Range range(0, dsize.height);
     resizeGeneric_Invoker<HResize, VResize> invoker(src, dst, xofs, yofs, (const AT*)_alpha, beta,
         ssize, dsize, ksize, xmin, xmax);
-    parallel_for_(range, invoker);
+    parallel_for_(range, invoker, dst.total()/(double)(1<<16));
 }
 
 template <typename T, typename WT>
@@ -1381,7 +1381,7 @@ static void resizeAreaFast_( const Mat& src, Mat& dst, const int* ofs, const int
     Range range(0, dst.rows);
     resizeAreaFast_Invoker<T, WT, VecOp> invoker(src, dst, scale_x, 
         scale_y, ofs, xofs);
-    parallel_for_(range, invoker);
+    parallel_for_(range, invoker, dst.total()/(double)(1<<16));
 }
 
 struct DecimateAlpha
@@ -2680,14 +2680,14 @@ typedef void (*RemapFunc)(const Mat& _src, Mat& _dst, const Mat& _xy,
                           const Mat& _fxy, const void* _wtab,
                           int borderType, const Scalar& _borderValue);
 
-class remapInvoker :
+class RemapInvoker :
     public ParallelLoopBody
 {
 public:
-    remapInvoker(const Mat& _src, Mat _dst, const Mat& _map1, const Mat& _map2, const Mat *_m1, 
+    RemapInvoker(const Mat& _src, Mat& _dst, const Mat *_m1, 
                  const Mat *_m2, int _interpolation, int _borderType, const Scalar &_borderValue,
                  int _planar_input, RemapNNFunc _nnfunc, RemapFunc _ifunc, const void *_ctab) :
-        ParallelLoopBody(), src(_src), dst(_dst), map1(_map1), map2(_map2), m1(_m1), m2(_m2),
+        ParallelLoopBody(), src(&_src), dst(&_dst), m1(_m1), m2(_m2),
         interpolation(_interpolation), borderType(_borderType), borderValue(_borderValue), 
         planar_input(_planar_input), nnfunc(_nnfunc), ifunc(_ifunc), ctab(_ctab)
     {    
@@ -2697,9 +2697,9 @@ public:
     {
         int x, y, x1, y1;
         const int buf_size = 1 << 14;
-        int brows0 = std::min(128, dst.rows), map_depth = map1.depth();
-        int bcols0 = std::min(buf_size/brows0, dst.cols);
-        brows0 = std::min(buf_size/bcols0, dst.rows);
+        int brows0 = std::min(128, dst->rows), map_depth = m1->depth();
+        int bcols0 = std::min(buf_size/brows0, dst->cols);
+        brows0 = std::min(buf_size/bcols0, dst->rows);
     #if CV_SSE2
         bool useSIMD = checkHardwareSupport(CV_CPU_SSE2);
     #endif
@@ -2710,17 +2710,17 @@ public:
 
         for( y = range.start; y < range.end; y += brows0 )
         {
-            for( x = 0; x < dst.cols; x += bcols0 )
+            for( x = 0; x < dst->cols; x += bcols0 )
             {
                 int brows = std::min(brows0, range.end - y);
-                int bcols = std::min(bcols0, dst.cols - x);
-                Mat dpart(dst, Rect(x, y, bcols, brows));
+                int bcols = std::min(bcols0, dst->cols - x);
+                Mat dpart(*dst, Rect(x, y, bcols, brows));
                 Mat bufxy(_bufxy, Rect(0, 0, bcols, brows));
 
                 if( nnfunc )
                 {
-                    if( map1.type() == CV_16SC2 && !map2.data ) // the data is already in the right format
-                        bufxy = map1(Rect(x, y, bcols, brows));
+                    if( m1->type() == CV_16SC2 && !m2->data ) // the data is already in the right format
+                        bufxy = (*m1)(Rect(x, y, bcols, brows));
                     else if( map_depth != CV_32F )
                     {
                         for( y1 = 0; y1 < brows; y1++ )
@@ -2738,14 +2738,14 @@ public:
                         }
                     }
                     else if( !planar_input )
-                        map1(Rect(x, y, bcols, brows)).convertTo(bufxy, bufxy.depth());
+                        (*m1)(Rect(x, y, bcols, brows)).convertTo(bufxy, bufxy.depth());
                     else
                     {
                         for( y1 = 0; y1 < brows; y1++ )
                         {
                             short* XY = (short*)(bufxy.data + bufxy.step*y1);
-                            const float* sX = (const float*)(map1.data + map1.step*(y+y1)) + x;
-                            const float* sY = (const float*)(map2.data + map2.step*(y+y1)) + x;
+                            const float* sX = (const float*)(m1->data + m1->step*(y+y1)) + x;
+                            const float* sY = (const float*)(m2->data + m2->step*(y+y1)) + x;
                             x1 = 0;
 
                         #if CV_SSE2
@@ -2778,7 +2778,7 @@ public:
                             }
                         }
                     }
-                    nnfunc( src, dpart, bufxy, borderType, borderValue );
+                    nnfunc( *src, dpart, bufxy, borderType, borderValue );
                     continue;
                 }
 
@@ -2788,16 +2788,15 @@ public:
                     short* XY = (short*)(bufxy.data + bufxy.step*y1);
                     ushort* A = (ushort*)(bufa.data + bufa.step*y1);
 
-                    if( (map1.type() == CV_16SC2 && (map2.type() == CV_16UC1 || map2.type() == CV_16SC1)) ||
-                        (map2.type() == CV_16SC2 && (map1.type() == CV_16UC1 || map1.type() == CV_16SC1)) )
+                    if( m1->type() == CV_16SC2 && (m2->type() == CV_16UC1 || m2->type() == CV_16SC1) )
                     {
-                        bufxy = m1->operator()(Rect(x, y, bcols, brows));
-                        bufa = m2->operator()(Rect(x, y, bcols, brows));
+                        bufxy = (*m1)(Rect(x, y, bcols, brows));
+                        bufa = (*m2)(Rect(x, y, bcols, brows));
                     }
                     else if( planar_input )
                     {
-                        const float* sX = (const float*)(map1.data + map1.step*(y+y1)) + x;
-                        const float* sY = (const float*)(map2.data + map2.step*(y+y1)) + x;
+                        const float* sX = (const float*)(m1->data + m1->step*(y+y1)) + x;
+                        const float* sY = (const float*)(m2->data + m2->step*(y+y1)) + x;
 
                         x1 = 0;
                     #if CV_SSE2
@@ -2850,7 +2849,7 @@ public:
                     }
                     else
                     {
-                        const float* sXY = (const float*)(map1.data + map1.step*(y+y1)) + x*2;
+                        const float* sXY = (const float*)(m1->data + m1->step*(y+y1)) + x*2;
 
                         for( x1 = 0; x1 < bcols; x1++ )
                         {
@@ -2863,15 +2862,14 @@ public:
                         }
                     }
                 }
-                ifunc(src, dpart, bufxy, bufa, ctab, borderType, borderValue);
+                ifunc(*src, dpart, bufxy, bufa, ctab, borderType, borderValue);
             }
         }
     }
     
 private:
-    Mat src;
-    Mat dst;
-    Mat map1, map2;
+    const Mat* src;
+    Mat* dst;
     const Mat *m1, *m2;
     int interpolation, borderType;
     Scalar borderValue;
@@ -2961,8 +2959,8 @@ void cv::remap( InputArray _src, OutputArray _dst,
 
     const Mat *m1 = &map1, *m2 = &map2;
 
-    if( (map1.type() == CV_16SC2 && (map2.type() == CV_16UC1 || map2.type() == CV_16SC1)) ||
-        (map2.type() == CV_16SC2 && (map1.type() == CV_16UC1 || map1.type() == CV_16SC1)) )
+    if( (map1.type() == CV_16SC2 && (map2.type() == CV_16UC1 || map2.type() == CV_16SC1 || !map2.data)) ||
+        (map2.type() == CV_16SC2 && (map1.type() == CV_16UC1 || map1.type() == CV_16SC1 || !map1.data)) )
     {
         if( map1.type() != CV_16SC2 )
             std::swap(m1, m2);
@@ -2974,11 +2972,10 @@ void cv::remap( InputArray _src, OutputArray _dst,
         planar_input = map1.channels() == 1;
     }
 
-    Range range(0, dst.rows);
-    remapInvoker invoker(src, dst, map1, map2, m1, m2, interpolation, 
+    RemapInvoker invoker(src, dst, m1, m2, interpolation, 
                          borderType, borderValue, planar_input, nnfunc, ifunc,
                          ctab);
-    parallel_for_(range, invoker);
+    parallel_for_(Range(0, dst.rows), invoker, dst.total()/(double)(1<<16));
 }
 
 
@@ -3300,7 +3297,7 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
     Range range(0, dst.rows);
     warpAffineInvoker invoker(src, dst, interpolation, borderType,
                               borderValue, adelta, bdelta, M);
-    parallel_for_(range, invoker);
+    parallel_for_(range, invoker, dst.total()/(double)(1<<16));
 }
 
 
@@ -3430,7 +3427,7 @@ void cv::warpPerspective( InputArray _src, OutputArray _dst, InputArray _M0,
 
     Range range(0, dst.rows);
     warpPerspectiveInvoker invoker(src, dst, M, interpolation, borderType, borderValue);
-    parallel_for_(range, invoker);
+    parallel_for_(range, invoker, dst.total()/(double)(1<<16));
 }
 
 

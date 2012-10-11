@@ -187,7 +187,7 @@ private:
 template <typename Cvt>
 void CvtColorLoop(const Mat& src, Mat& dst, const Cvt& cvt)
 {
-    parallel_for_(Range(0, src.rows), CvtColorLoop_Invoker<Cvt>(src, dst, cvt));
+    parallel_for_(Range(0, src.rows), CvtColorLoop_Invoker<Cvt>(src, dst, cvt), src.total()/(double)(1<<16) );
 }
 
 ////////////////// Various 3/4-channel to 3/4-channel RGB transformations /////////////////

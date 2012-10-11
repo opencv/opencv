@@ -664,12 +664,10 @@ getThreshVal_Otsu_8u( const Mat& _src )
 class ThresholdRunner : public ParallelLoopBody
 {
 public:
-    ThresholdRunner(Mat _src, Mat _dst, int _nStripes, double _thresh, double _maxval, int _thresholdType)
+    ThresholdRunner(Mat _src, Mat _dst, double _thresh, double _maxval, int _thresholdType)
     {
         src = _src;
         dst = _dst;
-
-        nStripes = _nStripes;
 
         thresh = _thresh;
         maxval = _maxval;
@@ -678,13 +676,8 @@ public:
 
     void operator () ( const Range& range ) const
     {
-        int row0 = std::min(cvRound(range.start * src.rows / nStripes), src.rows);
-        int row1 = range.end >= nStripes ? src.rows :
-            std::min(cvRound(range.end * src.rows / nStripes), src.rows);
-
-        /*if(0)
-            printf("Size = (%d, %d), range[%d,%d), row0 = %d, row1 = %d\n",
-                   src.rows, src.cols, range.begin(), range.end(), row0, row1);*/
+        int row0 = range.start;
+        int row1 = range.end;
 
         Mat srcStripe = src.rowRange(row0, row1);
         Mat dstStripe = dst.rowRange(row0, row1);
@@ -789,10 +782,9 @@ double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double m
     else
         CV_Error( CV_StsUnsupportedFormat, "" );
     
-    size_t nStripes = (src.total() + (1<<15)) >> 16;
-    nStripes = MAX(MIN(nStripes, (size_t)4), (size_t)1);
-    parallel_for_(Range(0, (int)nStripes),
-                  ThresholdRunner(src, dst, nStripes, thresh, maxval, type));
+    parallel_for_(Range(0, dst.rows),
+                  ThresholdRunner(src, dst, thresh, maxval, type),
+                  dst.total()/(double)(1<<16));
     return thresh;
 }
 

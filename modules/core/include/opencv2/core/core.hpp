@@ -4614,11 +4614,11 @@ protected:
 class CV_EXPORTS ParallelLoopBody
 {
 public:
-    virtual void operator() (const Range& range) const = 0;
     virtual ~ParallelLoopBody();
+    virtual void operator() (const Range& range) const = 0;
 };
 
-CV_EXPORTS void parallel_for_(const Range& range, const ParallelLoopBody& body);
+CV_EXPORTS void parallel_for_(const Range& range, const ParallelLoopBody& body, double nstripes=-1.);
 
 /////////////////////////// Synchronization Primitives ///////////////////////////////
 

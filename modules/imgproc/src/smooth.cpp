@@ -1919,7 +1919,7 @@ bilateralFilter_8u( const Mat& src, Mat& dst, int d,
     }
     
     BilateralFilter_8u_Invoker body(dst, temp, radius, maxk, space_ofs, space_weight, color_weight);
-    parallel_for_(Range(0, size.height), body);
+    parallel_for_(Range(0, size.height), body, dst.total()/(double)(1<<16));
 }
 
 
@@ -2189,7 +2189,7 @@ bilateralFilter_32f( const Mat& src, Mat& dst, int d,
     // parallel_for usage
 
     BilateralFilter_32f_Invoker body(cn, radius, maxk, space_ofs, temp, dst, scale_index, space_weight, expLUT);
-    parallel_for_(Range(0, size.height), body);
+    parallel_for_(Range(0, size.height), body, dst.total()/(double)(1<<16));
 }
 
 }
