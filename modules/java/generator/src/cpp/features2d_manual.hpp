@@ -33,7 +33,7 @@ public:
         HARRIS        = 8,
         SIMPLEBLOB    = 9,
         DENSE         = 10,
-	BRISK         = 11,
+        BRISK         = 11,
 
 
         GRIDDETECTOR = 1000,
@@ -274,8 +274,8 @@ public:
         SURF  = 2,
         ORB   = 3,
         BRIEF = 4,
-	BRISK = 5,
-	FREAK = 6,
+        BRISK = 5,
+        FREAK = 6,
 
 
         OPPONENTEXTRACTOR = 1000,
