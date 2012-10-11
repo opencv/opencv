@@ -183,61 +183,16 @@ struct cv::gpu::SoftCascade::Filds
     {
         cudaMemset(plane.data, 0, plane.step * plane.rows);
 
-        int fw = Filds::FRAME_WIDTH;
-        int fh = Filds::FRAME_HEIGHT;
+        static const int fw = Filds::FRAME_WIDTH;
+        static const int fh = Filds::FRAME_HEIGHT;
 
         GpuMat gray(plane, cv::Rect(0, fh * Filds::HOG_LUV_BINS, fw, fh));
         cv::gpu::cvtColor(colored, gray, CV_BGR2GRAY);
+        createHogBins(gray);
 
-        //create hog
-        GpuMat dfdx(fplane, cv::Rect(0,  0, fw, fh));
-        GpuMat dfdy(fplane, cv::Rect(0, fh, fw, fh));
+        createLuvBins(colored);
 
-        cv::gpu::Sobel(gray, dfdx, CV_32F, 1, 0, 3, 0.125f);
-        cv::gpu::Sobel(gray, dfdy, CV_32F, 0, 1, 3, 0.125f);
-
-        GpuMat mag(fplane, cv::Rect(0, 2 * fh, fw, fh));
-        GpuMat ang(fplane, cv::Rect(0, 3 * fh, fw, fh));
-
-        cv::gpu::cartToPolar(dfdx, dfdy, mag, ang, true);
-
-        // normolize magnitude to uchar interval and angles to 6 bins
-
-        GpuMat nmag(fplane, cv::Rect(0, 4 * fh, fw, fh));
-        GpuMat nang(fplane, cv::Rect(0, 5 * fh, fw, fh));
-
-        cv::gpu::multiply(mag, cv::Scalar::all(1.f / ::log(2)), nmag);
-        cv::gpu::multiply(ang, cv::Scalar::all(1.f / 60.f),     nang);
-
-        //create uchar magnitude
-        GpuMat cmag(plane, cv::Rect(0, fh * Filds::HOG_BINS, fw, fh));
-        nmag.convertTo(cmag, CV_8UC1);
-
-        // create luv
-        cv::gpu::cvtColor(colored, luv, CV_BGR2Luv);
-
-        std::vector<GpuMat> splited;
-        for(int i = 0; i < Filds::LUV_BINS; ++i)
-        {
-            splited.push_back(GpuMat(plane, cv::Rect(0, fh * (7 + i), fw, fh)));
-        }
-
-        cv::gpu::split(luv, splited);
-
-        device::icf::fillBins(plane, nang, fw, fh, Filds::HOG_BINS);
-
-        GpuMat channels(plane, cv::Rect(0, 0, fw, fh * Filds::HOG_LUV_BINS));
-        cv::gpu::resize(channels, shrunk, cv::Size(), 0.25, 0.25, CV_INTER_AREA);
-
-        fw /= shrinkage;
-        fh /= shrinkage;
-
-        for(int i = 0; i < Filds::HOG_LUV_BINS; ++i)
-        {
-            GpuMat channel(shrunk, cv::Rect(0, fh  * i, fw, fh ));
-            GpuMat sum(hogluv, cv::Rect(0, (fh + 1) * i, fw + 1, fh + 1));
-            cv::gpu::integralBuffered(channel, sum, integralBuffer);
-        }
+        integrate();
     }
 
 private:
@@ -262,6 +217,72 @@ private:
             }
         }
         return res;
+    }
+
+    void createHogBins(const cv::gpu::GpuMat& gray)
+    {
+        static const int fw = Filds::FRAME_WIDTH;
+        static const int fh = Filds::FRAME_HEIGHT;
+
+        GpuMat dfdx(fplane, cv::Rect(0,  0, fw, fh));
+        GpuMat dfdy(fplane, cv::Rect(0, fh, fw, fh));
+
+        cv::gpu::Sobel(gray, dfdx, CV_32F, 1, 0, 3, 0.125f);
+        cv::gpu::Sobel(gray, dfdy, CV_32F, 0, 1, 3, 0.125f);
+
+        GpuMat mag(fplane, cv::Rect(0, 2 * fh, fw, fh));
+        GpuMat ang(fplane, cv::Rect(0, 3 * fh, fw, fh));
+
+        cv::gpu::cartToPolar(dfdx, dfdy, mag, ang, true);
+
+        // normolize magnitude to uchar interval and angles to 6 bins
+
+        GpuMat nmag(fplane, cv::Rect(0, 4 * fh, fw, fh));
+        GpuMat nang(fplane, cv::Rect(0, 5 * fh, fw, fh));
+
+        cv::gpu::multiply(mag, cv::Scalar::all(1.f / ::log(2)), nmag);
+        cv::gpu::multiply(ang, cv::Scalar::all(1.f / 60.f),     nang);
+
+        //create uchar magnitude
+        GpuMat cmag(plane, cv::Rect(0, fh * Filds::HOG_BINS, fw, fh));
+        nmag.convertTo(cmag, CV_8UC1);
+
+        device::icf::fillBins(plane, nang, fw, fh, Filds::HOG_BINS);
+    }
+
+    void createLuvBins(const cv::gpu::GpuMat& colored)
+    {
+        static const int fw = Filds::FRAME_WIDTH;
+        static const int fh = Filds::FRAME_HEIGHT;
+
+        cv::gpu::cvtColor(colored, luv, CV_BGR2Luv);
+
+        std::vector<GpuMat> splited;
+        for(int i = 0; i < Filds::LUV_BINS; ++i)
+        {
+            splited.push_back(GpuMat(plane, cv::Rect(0, fh * (7 + i), fw, fh)));
+        }
+
+        cv::gpu::split(luv, splited);
+    }
+
+    void integrate()
+    {
+        int fw = Filds::FRAME_WIDTH;
+        int fh = Filds::FRAME_HEIGHT;
+
+        GpuMat channels(plane, cv::Rect(0, 0, fw, fh * Filds::HOG_LUV_BINS));
+        cv::gpu::resize(channels, shrunk, cv::Size(), 0.25, 0.25, CV_INTER_AREA);
+
+        fw /= shrinkage;
+        fh /= shrinkage;
+
+        for(int i = 0; i < Filds::HOG_LUV_BINS; ++i)
+        {
+            GpuMat channel(shrunk, cv::Rect(0, fh  * i, fw, fh ));
+            GpuMat sum(hogluv, cv::Rect(0, (fh + 1) * i, fw + 1, fh + 1));
+            cv::gpu::integralBuffered(channel, sum, integralBuffer);
+        }
     }
 };
 
@@ -571,6 +592,5 @@ cv::Size cv::gpu::SoftCascade::getRoiSize() const
 {
     return cv::Size(Filds::FRAME_WIDTH / 4, Filds::FRAME_HEIGHT / 4);
 }
-
 
 #endif
