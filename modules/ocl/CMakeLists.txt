@@ -11,11 +11,19 @@ ocv_module_include_directories()
 file(GLOB CL_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/kernels/*.cl")
 set(kernels_cpp "${CMAKE_CURRENT_BINARY_DIR}/kernels.cpp")
 set(cl2cpp_script "${CMAKE_CURRENT_SOURCE_DIR}/cl2cpp.py")
+set(cl2cpp_script_W32 "${CMAKE_CURRENT_SOURCE_DIR}/cl2cpp.js")
 
-add_custom_command(
+IF(WIN32)
+   add_custom_command(
+   OUTPUT ${kernels_cpp}
+   COMMAND wscript.exe ${cl2cpp_script_W32} "${CMAKE_CURRENT_SOURCE_DIR}/src/kernels" ${kernels_cpp}
+   DEPENDS ${CL_FILES} ${cl2cpp_script_W32})
+else()
+   add_custom_command(
    OUTPUT ${kernels_cpp}
    COMMAND ${PYTHON_EXECUTABLE} ${cl2cpp_script} "${CMAKE_CURRENT_SOURCE_DIR}/src/kernels" ${kernels_cpp}
    DEPENDS ${CL_FILES} ${cl2cpp_script})
+ENDIF()
 
 file(GLOB lib_hdrs     "include/opencv2/${name}/*.hpp" "include/opencv2/${name}/*.h")
 file(GLOB lib_srcs     "src/*.cpp")
