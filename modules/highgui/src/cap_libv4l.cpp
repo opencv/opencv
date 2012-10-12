@@ -1111,7 +1111,7 @@ static void mainloop_v4l2(CvCaptureCAM_V4L* capture) {
             FD_SET (capture->deviceHandle, &fds);
 
             /* Timeout. */
-            tv.tv_sec = 2;
+            tv.tv_sec = 10;
             tv.tv_usec = 0;
 
             r = select (capture->deviceHandle+1, &fds, NULL, NULL, &tv);
