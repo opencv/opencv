@@ -81,7 +81,7 @@ if(CUDA_FOUND)
   
   OCV_OPTION(CUDA_FAST_MATH  "Enable --use_fast_math for CUDA compiler " OFF)
   
-  if(ENABLE_CUDA_MATH)
+  if(CUDA_FAST_MATH)
     set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} --use_fast_math)    
   endif()
   
