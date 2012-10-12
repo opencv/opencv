@@ -79,4 +79,6 @@ DEF_PARAM_TEST(Sz_Depth_Cn, cv::Size, MatDepth, MatCn);
         ::perf::Regression::add(this, std::string(#dmat) + "-response-row", __response, ## __VA_ARGS__); \
     } while(0)
 
+#define FAIL_NO_CPU()   FAIL() << "No such CPU implementation analogy"
+
 #endif // __OPENCV_PERF_GPU_UTILITY_HPP__
