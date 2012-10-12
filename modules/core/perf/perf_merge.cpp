@@ -28,7 +28,7 @@ PERF_TEST_P( Size_SrcDepth_DstChannels, merge,
         mv.push_back( Mat(sz, CV_MAKETYPE(srcDepth, 1)) );
         randu(mv[i], 0, 255);
     }
-    
+
     Mat dst;
     TEST_CYCLE() merge( (vector<Mat> &)mv, dst );
 
