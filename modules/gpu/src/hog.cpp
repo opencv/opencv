@@ -311,50 +311,51 @@ void cv::gpu::HOGDescriptor::computeConfidenceMultiScale(const GpuMat& img, vect
                             double hit_threshold, Size win_stride, Size padding,
                             vector<HOGConfidence> &conf_out, int group_threshold)
 {
-  vector<double> level_scale;
-  double scale = 1.;
-  int levels = 0;
+    vector<double> level_scale;
+    double scale = 1.;
+    int levels = 0;
 
-  for (levels = 0; levels < (int)conf_out.size(); levels++)
+    for (levels = 0; levels < (int)conf_out.size(); levels++)
     {
-      scale = conf_out[levels].scale;
-      level_scale.push_back(scale);
-      if (cvRound(img.cols/scale) < win_size.width ||
-     cvRound(img.rows/scale) < win_size.height)
-   break;
+        scale = conf_out[levels].scale;
+        level_scale.push_back(scale);
+        if (cvRound(img.cols/scale) < win_size.width || cvRound(img.rows/scale) < win_size.height)
+            break;
     }
 
-  levels = std::max(levels, 1);
-  level_scale.resize(levels);
+    levels = std::max(levels, 1);
+    level_scale.resize(levels);
 
-  std::vector<Rect> all_candidates;
-  vector<Point> locations;
+    std::vector<Rect> all_candidates;
+    vector<Point> locations;
 
-  for (size_t i = 0; i < level_scale.size(); i++)
+    for (size_t i = 0; i < level_scale.size(); i++)
     {
-      double _scale = level_scale[i];
-      Size sz(cvRound(img.cols / _scale), cvRound(img.rows / _scale));
-      GpuMat smaller_img;
+        scale = level_scale[i];
+        Size sz(cvRound(img.cols / scale), cvRound(img.rows / scale));
+        GpuMat smaller_img;
 
-      if (sz == img.size())
-   smaller_img = img;
-      else
-   {
-     smaller_img.create(sz, img.type());
-     switch (img.type()) {
-     case CV_8UC1: hog::resize_8UC1(img, smaller_img); break;
-     case CV_8UC4: hog::resize_8UC4(img, smaller_img); break;
-     }
-   }
+        if (sz == img.size())
+            smaller_img = img;
+        else
+        {
+            smaller_img.create(sz, img.type());
+            switch (img.type())
+            {
+            case CV_8UC1: hog::resize_8UC1(img, smaller_img); break;
+            case CV_8UC4: hog::resize_8UC4(img, smaller_img); break;
+            }
+        }
 
-      computeConfidence(smaller_img, locations, hit_threshold, win_stride, padding, conf_out[i].locations, conf_out[i].confidences);
+        computeConfidence(smaller_img, locations, hit_threshold, win_stride, padding, conf_out[i].locations, conf_out[i].confidences);
 
-      Size scaled_win_size(cvRound(win_size.width * scale), cvRound(win_size.height * scale));
-      for (size_t j = 0; j < locations.size(); j++)
-   all_candidates.push_back(Rect(Point2d((CvPoint)locations[j]) * scale, scaled_win_size));
+        Size scaled_win_size(cvRound(win_size.width * scale), cvRound(win_size.height * scale));
+        for (size_t j = 0; j < locations.size(); j++)
+            all_candidates.push_back(Rect(Point2d((CvPoint)locations[j]) * scale, scaled_win_size));
     }
-  found_locations.assign(all_candidates.begin(), all_candidates.end());
-  groupRectangles(found_locations, group_threshold, 0.2/*magic number copied from CPU version*/);
+
+    found_locations.assign(all_candidates.begin(), all_candidates.end());
+    groupRectangles(found_locations, group_threshold, 0.2/*magic number copied from CPU version*/);
 }
 
 
