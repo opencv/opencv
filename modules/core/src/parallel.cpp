@@ -106,7 +106,7 @@ namespace cv
         Range wholeRange;
         int nstripes;
     };
-    
+
     ParallelLoopBody::~ParallelLoopBody() {}
 
 #if defined HAVE_TBB
@@ -131,14 +131,14 @@ namespace cv
         ProxyLoopBody* ptr_body = static_cast<ProxyLoopBody*>(context);
         (*ptr_body)(Range(index, index + 1));
     }
-#elif defined HAVE_CONCURRENCY    
+#elif defined HAVE_CONCURRENCY
     class ProxyLoopBody : public ParallelLoopBodyWrapper
     {
     public:
         ProxyLoopBody(const ParallelLoopBody& _body, const Range& _r, double _nstripes)
         : ParallelLoopBodyWrapper(_body, _r, _nstripes)
         {}
-        
+
         void operator ()(int i) const
         {
             this->ParallelLoopBodyWrapper::operator()(Range(i, i + 1));
@@ -152,7 +152,7 @@ namespace cv
     {
         ProxyLoopBody pbody(body, range, nstripes);
         Range stripeRange = pbody.stripeRange();
-        
+
 #if defined HAVE_TBB
 
         tbb::parallel_for(tbb::blocked_range<int>(stripeRange.start, stripeRange.end), pbody);
@@ -191,3 +191,145 @@ namespace cv
     }
 
 } // namespace cv
+
+
+static int numThreads = 0;
+static int numProcs   = 0;
+
+int cv::getNumThreads(void)
+{
+    if( !numProcs )
+        setNumThreads(0);
+    return numThreads;
+}
+
+void cv::setNumThreads( int
+#ifdef _OPENMP
+                             threads
+#endif
+                  )
+{
+    if( !numProcs )
+    {
+#ifdef _OPENMP
+        numProcs = omp_get_num_procs();
+#else
+        numProcs = 1;
+#endif
+    }
+
+#ifdef _OPENMP
+    if( threads <= 0 )
+        threads = numProcs;
+    else
+        threads = MIN( threads, numProcs );
+
+    numThreads = threads;
+#else
+    numThreads = 1;
+#endif
+}
+
+
+int cv::getThreadNum(void)
+{
+#ifdef _OPENMP
+    return omp_get_thread_num();
+#else
+    return 0;
+#endif
+}
+
+#ifdef ANDROID
+static inline int getNumberOfCPUsImpl()
+{
+   FILE* cpuPossible = fopen("/sys/devices/system/cpu/possible", "r");
+   if(!cpuPossible)
+       return 1;
+
+   char buf[2000]; //big enough for 1000 CPUs in worst possible configuration
+   char* pbuf = fgets(buf, sizeof(buf), cpuPossible);
+   fclose(cpuPossible);
+   if(!pbuf)
+      return 1;
+
+   //parse string of form "0-1,3,5-7,10,13-15"
+   int cpusAvailable = 0;
+
+   while(*pbuf)
+   {
+      const char* pos = pbuf;
+      bool range = false;
+      while(*pbuf && *pbuf != ',')
+      {
+          if(*pbuf == '-') range = true;
+          ++pbuf;
+      }
+      if(*pbuf) *pbuf++ = 0;
+      if(!range)
+        ++cpusAvailable;
+      else
+      {
+          int rstart = 0, rend = 0;
+          sscanf(pos, "%d-%d", &rstart, &rend);
+          cpusAvailable += rend - rstart + 1;
+      }
+
+   }
+   return cpusAvailable ? cpusAvailable : 1;
+}
+#endif
+
+int cv::getNumberOfCPUs(void)
+{
+#if defined WIN32 || defined _WIN32
+    SYSTEM_INFO sysinfo;
+    GetSystemInfo( &sysinfo );
+
+    return (int)sysinfo.dwNumberOfProcessors;
+#elif defined ANDROID
+    static int ncpus = getNumberOfCPUsImpl();
+    return ncpus;
+#elif defined __linux__
+    return (int)sysconf( _SC_NPROCESSORS_ONLN );
+#elif defined __APPLE__
+    int numCPU=0;
+    int mib[4];
+    size_t len = sizeof(numCPU);
+
+    /* set the mib for hw.ncpu */
+    mib[0] = CTL_HW;
+    mib[1] = HW_AVAILCPU;  // alternatively, try HW_NCPU;
+
+    /* get the number of CPUs from the system */
+    sysctl(mib, 2, &numCPU, &len, NULL, 0);
+
+    if( numCPU < 1 )
+    {
+        mib[1] = HW_NCPU;
+        sysctl( mib, 2, &numCPU, &len, NULL, 0 );
+
+        if( numCPU < 1 )
+            numCPU = 1;
+    }
+
+    return (int)numCPU;
+#else
+    return 1;
+#endif
+}
+
+CV_IMPL void cvSetNumThreads(int nt)
+{
+    cv::setNumThreads(nt);
+}
+
+CV_IMPL int cvGetNumThreads()
+{
+    return cv::getNumThreads();
+}
+
+CV_IMPL int cvGetThreadNum()
+{
+    return cv::getThreadNum();
+}
