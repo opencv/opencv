@@ -187,6 +187,7 @@ private:
     cv::FileStorage storageOut;
     cv::FileNode rootIn;
     std::string currentTestNodeName;
+    std::string suiteName;
 
     cv::FileStorage& write();
 
