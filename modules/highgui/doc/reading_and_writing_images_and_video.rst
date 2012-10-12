@@ -4,7 +4,7 @@ Reading and Writing Images and Video
 .. highlight:: cpp
 
 imdecode
-------------
+--------
 Reads an image from a buffer in memory.
 
 .. ocv:function:: Mat imdecode( InputArray buf,  int flags )
@@ -32,7 +32,7 @@ See
 .. note:: In the case of color images, the decoded images will have the channels stored in ``B G R`` order.
 
 imencode
-------------
+--------
 Encodes an image into a memory buffer.
 
 .. ocv:function:: bool imencode( const string& ext, InputArray img, vector<uchar>& buf, const vector<int>& params=vector<int>())
@@ -56,7 +56,7 @@ See
 .. note:: ``cvEncodeImage`` returns single-row matrix of type ``CV_8UC1`` that contains encoded image as array of bytes.
 
 imread
-----------
+------
 Loads an image from a file.
 
 .. ocv:function:: Mat imread( const string& filename, int flags=1 )
@@ -85,7 +85,8 @@ Loads an image from a file.
 
         * **=0**  Return a grayscale image
 
-        * **<0**  Return the loaded image as is. Note that in the current implementation the alpha channel, if any, is stripped from the output image. For example, a 4-channel RGBA image is loaded as RGB if  :math:`flags\ge0` .
+        * **<0**  Return the loaded image as is. 
+            .. note:: In the current implementation the alpha channel, if any, is stripped from the output image.
 
 The function ``imread`` loads an image from the specified file and returns it. If the image cannot be read (because of missing file, improper permissions, unsupported or invalid format), the function returns an empty matrix ( ``Mat::data==NULL`` ). Currently, the following file formats are supported:
 

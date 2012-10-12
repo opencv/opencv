@@ -150,6 +150,9 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
 #ifdef HAVE_AVFOUNDATION
         CV_CAP_AVFOUNDATION,
 #endif
+#ifdef HAVE_GIGE_API
+        CV_CAP_GIGANETIX,
+#endif
         -1
     };
 
@@ -182,6 +185,7 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
     defined(HAVE_XIMEA)        || \
     defined(HAVE_AVFOUNDATION) || \
     defined(HAVE_ANDROID_NATIVE_CAMERA) || \
+    defined(HAVE_GIGE_API) || \
     (0)
         // local variable to memorize the captured device
         CvCapture *capture;
@@ -317,6 +321,14 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
             if (capture)
                 return capture;
         break;
+#endif
+
+#ifdef HAVE_GIGE_API
+        case CV_CAP_GIGANETIX:
+            capture = cvCreateCameraCapture_Giganetix (index);
+            if (capture)
+                return capture;
+        break; // CV_CAP_GIGANETIX
 #endif
         }
     }

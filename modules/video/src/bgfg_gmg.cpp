@@ -298,7 +298,7 @@ namespace
 
 void cv::BackgroundSubtractorGMG::operator ()(InputArray _frame, OutputArray _fgmask, double newLearningRate)
 {
-    cv::Mat frame = _frame.getMat();
+    Mat frame = _frame.getMat();
 
     CV_Assert(frame.depth() == CV_8U || frame.depth() == CV_16U || frame.depth() == CV_32F);
     CV_Assert(frame.channels() == 1 || frame.channels() == 3 || frame.channels() == 4);
@@ -313,16 +313,16 @@ void cv::BackgroundSubtractorGMG::operator ()(InputArray _frame, OutputArray _fg
         initialize(frame.size(), 0.0, frame.depth() == CV_8U ? 255.0 : frame.depth() == CV_16U ? std::numeric_limits<ushort>::max() : 1.0);
 
     _fgmask.create(frameSize_, CV_8UC1);
-    cv::Mat fgmask = _fgmask.getMat();
+    Mat fgmask = _fgmask.getMat();
 
     GMG_LoopBody body(frame, fgmask, nfeatures_, colors_, weights_,
                       maxFeatures, learningRate, numInitializationFrames, quantizationLevels, backgroundPrior, decisionThreshold,
                       maxVal_, minVal_, frameNum_, updateBackgroundModel);
-    cv::parallel_for_(cv::Range(0, frame.rows), body);
+    parallel_for_(Range(0, frame.rows), body, frame.total()/(double)(1<<16));
 
     if (smoothingRadius > 0)
     {
-        cv::medianBlur(fgmask, buf_, smoothingRadius);
+        medianBlur(fgmask, buf_, smoothingRadius);
         cv::swap(fgmask, buf_);
     }
 

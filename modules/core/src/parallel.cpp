@@ -80,87 +80,114 @@
 
 namespace cv
 {
-    ParallelLoopBody::~ParallelLoopBody() { }
-
-#ifdef HAVE_TBB
-    class TbbProxyLoopBody
+    class ParallelLoopBodyWrapper
     {
     public:
-        TbbProxyLoopBody(const ParallelLoopBody& _body) :
-            body(&_body)
-        { }
+        ParallelLoopBodyWrapper(const ParallelLoopBody& _body, const Range& _r, double _nstripes)
+        {
+            body = &_body;
+            wholeRange = _r;
+            double len = wholeRange.end - wholeRange.start;
+            nstripes = cvRound(_nstripes < 0 ? len : MIN(MAX(_nstripes, 1.), len));
+        }
+        void operator()(const Range& sr) const
+        {
+            Range r;
+            r.start = (int)(wholeRange.start +
+                            ((size_t)sr.start*(wholeRange.end - wholeRange.start) + nstripes/2)/nstripes);
+            r.end = sr.end >= nstripes ? wholeRange.end : (int)(wholeRange.start +
+                            ((size_t)sr.end*(wholeRange.end - wholeRange.start) + nstripes/2)/nstripes);
+            (*body)(r);
+        }
+        Range stripeRange() const { return Range(0, nstripes); }
+
+    protected:
+        const ParallelLoopBody* body;
+        Range wholeRange;
+        int nstripes;
+    };
+    
+    ParallelLoopBody::~ParallelLoopBody() {}
+
+#if defined HAVE_TBB
+    class ProxyLoopBody : public ParallelLoopBodyWrapper
+    {
+    public:
+        ProxyLoopBody(const ParallelLoopBody& _body, const Range& _r, double _nstripes)
+        : ParallelLoopBodyWrapper(_body, _r, _nstripes)
+        {}
 
         void operator ()(const tbb::blocked_range<int>& range) const
         {
-            body->operator()(Range(range.begin(), range.end()));
+            this->ParallelLoopBodyWrapper::operator()(Range(range.begin(), range.end()));
         }
-
-    private:
-        const ParallelLoopBody* body;
     };
-#endif // end HAVE_TBB
+#elif defined HAVE_GCD
 
-#ifdef HAVE_GCD
+    typedef ParallelLoopBodyWrapper ProxyLoopBody;
     static
     void block_function(void* context, size_t index)
     {
-        ParallelLoopBody* ptr_body = static_cast<ParallelLoopBody*>(context);
-        ptr_body->operator()(Range(index, index + 1));
+        ProxyLoopBody* ptr_body = static_cast<ProxyLoopBody*>(context);
+        (*ptr_body)(Range(index, index + 1));
     }
-#endif // HAVE_GCD
-
-    void parallel_for_(const Range& range, const ParallelLoopBody& body)
+#elif defined HAVE_CONCURRENCY    
+    class ProxyLoopBody : public ParallelLoopBodyWrapper
     {
-#ifdef HAVE_TBB
+    public:
+        ProxyLoopBody(const ParallelLoopBody& _body, const Range& _r, double _nstripes)
+        : ParallelLoopBodyWrapper(_body, _r, _nstripes)
+        {}
+        
+        void operator ()(int i) const
+        {
+            this->ParallelLoopBodyWrapper::operator()(Range(i, i + 1));
+        }
+    };
+#else
+    typedef ParallelLoopBodyWrapper ProxyLoopBody;
+#endif
 
-        tbb::parallel_for(tbb::blocked_range<int>(range.start, range.end), TbbProxyLoopBody(body));
+    void parallel_for_(const Range& range, const ParallelLoopBody& body, double nstripes)
+    {
+        ProxyLoopBody pbody(body, range, nstripes);
+        Range stripeRange = pbody.stripeRange();
+        
+#if defined HAVE_TBB
+
+        tbb::parallel_for(tbb::blocked_range<int>(stripeRange.start, stripeRange.end), pbody);
 
 #elif defined HAVE_CONCURRENCY
 
-        class ConcurrencyProxyLoopBody
-        {
-        public:
-            ConcurrencyProxyLoopBody(const ParallelLoopBody& body) : _body(body) {}
-
-            void operator ()(int i) const
-            {
-                _body(Range(i, i + 1));
-            }
-
-        private:
-            const ParallelLoopBody& _body;
-            ConcurrencyProxyLoopBody& operator=(const ConcurrencyProxyLoopBody&) {return *this;}
-        } proxy(body);
-
-        Concurrency::parallel_for(range.start, range.end, proxy);
+        Concurrency::parallel_for(stripeRange.start, stripeRange.end, pbody);
 
 #elif defined HAVE_OPENMP
 
 #pragma omp parallel for schedule(dynamic)
-        for (int i = range.start; i < range.end; ++i)
-            body(Range(i, i + 1));
+        for (int i = stripeRange.start; i < stripeRange.end; ++i)
+            pbody(Range(i, i + 1));
 
 #elif defined HAVE_GCD
 
         dispatch_queue_t concurrent_queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
-        dispatch_apply_f(range.end - range.start, concurrent_queue, &const_cast<ParallelLoopBody&>(body), block_function);
+        dispatch_apply_f(stripeRange.end - stripeRange.start, concurrent_queue, &pbody, block_function);
 
 #elif defined HAVE_CSTRIPES
 
         parallel()
         {
-            int offset = range.start;
-            int len = range.end - offset;
+            int offset = stripeRange.start;
+            int len = stripeRange.end - offset;
             Range r(offset + CPX_RANGE_START(len), offset + CPX_RANGE_END(len));
-            body(r);
+            pbody(r);
             barrier();
         }
 
 #else
 
-        body(range);
+        pbody(stripeRange);
 
-#endif // end HAVE_TBB
+#endif
     }
 
 } // namespace cv

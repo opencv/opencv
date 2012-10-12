@@ -1102,7 +1102,7 @@ cv::Mat cv::findFundamentalMat( InputArray _points1, InputArray _points2,
     CV_Assert( npoints >= 0 && points2.checkVector(2) == npoints &&
               points1.type() == points2.type());
     
-    Mat F(3, 3, CV_64F);
+    Mat F(method == CV_FM_7POINT ? 9 : 3, 3, CV_64F);
     CvMat _pt1 = points1, _pt2 = points2;
     CvMat matF = F, c_mask, *p_mask = 0;
     if( _mask.needed() )
@@ -1113,6 +1113,8 @@ cv::Mat cv::findFundamentalMat( InputArray _points1, InputArray _points2,
     int n = cvFindFundamentalMat( &_pt1, &_pt2, &matF, method, param1, param2, p_mask );
     if( n <= 0 )
         F = Scalar(0);
+    if( n == 1 )
+        F = F.rowRange(0, 3);
     return F;
 }
 

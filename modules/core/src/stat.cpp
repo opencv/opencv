@@ -1845,7 +1845,7 @@ void cv::batchDistance( InputArray _src1, InputArray _src2,
                 int d = tdist.at<int>(i), d0 = dist.at<int>(idx);
                 if( d < d0 )
                 {
-                    dist.at<int>(idx) = d0;
+                    dist.at<int>(idx) = d;
                     nidx.at<int>(idx) = i + update;
                 }
             }
@@ -1858,7 +1858,7 @@ void cv::batchDistance( InputArray _src1, InputArray _src2,
                 float d = tdist.at<float>(i), d0 = dist.at<float>(idx);
                 if( d < d0 )
                 {
-                    dist.at<float>(idx) = d0;
+                    dist.at<float>(idx) = d;
                     nidx.at<int>(idx) = i + update;
                 }
             }
@@ -1901,6 +1901,28 @@ void cv::batchDistance( InputArray _src1, InputArray _src2,
 
     parallel_for(BlockedRange(0, src1.rows),
                  BatchDistInvoker(src1, src2, dist, nidx, K, mask, update, func));
+}
+
+
+void cv::findNonZero( InputArray _src, OutputArray _idx )
+{
+    Mat src = _src.getMat();
+    CV_Assert( src.type() == CV_8UC1 );
+    int n = countNonZero(src);
+    if( _idx.kind() == _InputArray::MAT && !_idx.getMatRef().isContinuous() )
+        _idx.release();
+    _idx.create(n, 1, CV_32SC2);
+    Mat idx = _idx.getMat();
+    CV_Assert(idx.isContinuous());
+    Point* idx_ptr = (Point*)idx.data;
+    
+    for( int i = 0; i < src.rows; i++ )
+    {
+        const uchar* bin_ptr = src.ptr(i);
+        for( int j = 0; j < src.cols; j++ )
+            if( bin_ptr[j] )
+                *idx_ptr++ = Point(j, i);
+    }
 }
 
 
