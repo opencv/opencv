@@ -49,6 +49,8 @@ const cv::Size sz1440p = szWQHD;
 const cv::Size sz2160p = cv::Size(3840, 2160);//UHDTV1 4K
 const cv::Size sz4320p = cv::Size(7680, 4320);//UHDTV2 8K
 
+const cv::Size sz3MP = cv::Size(2048, 1536);
+const cv::Size sz5MP = cv::Size(2592, 1944);
 const cv::Size sz2K = cv::Size(2048, 2048);
 
 const cv::Size szODD = cv::Size(127, 61);
