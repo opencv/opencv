@@ -1671,6 +1671,30 @@ TEST(Imgproc_ColorLuv, accuracy) { CV_ColorLuvTest test; test.safe_run(); }
 TEST(Imgproc_ColorRGB, accuracy) { CV_ColorRGBTest test; test.safe_run(); }
 TEST(Imgproc_ColorBayer, accuracy) { CV_ColorBayerTest test; test.safe_run(); }
 
+TEST(Imgproc_ImreadVSCvtColor, regression)
+{
+    cvtest::TS& ts = *cvtest::TS::ptr();
+
+    const int MAX_MEAN_DIFF = 3;
+    const int MAX_ABS_DIFF = 10;
+
+    string imgName = string(ts.get_data_path()) + "/shared/lena.jpg";
+    Mat original_image = imread(imgName);
+    Mat gray_by_codec = imread(imgName, 0);
+    Mat gray_by_cvt;
+
+    cvtColor(original_image, gray_by_cvt, CV_BGR2GRAY);
+
+    Mat diff;
+    absdiff(gray_by_codec, gray_by_cvt, diff);
+
+    double actual_avg_diff = (double)sum(diff)[0] / countNonZero(diff);
+    double actual_maxval, actual_minval;
+    minMaxLoc(diff, &actual_minval, &actual_maxval);
+
+    EXPECT_LT(actual_avg_diff, MAX_MEAN_DIFF);
+    EXPECT_LT(actual_maxval, MAX_ABS_DIFF);
+}
 
 TEST(Imgproc_ColorBayer, regression)
 {
