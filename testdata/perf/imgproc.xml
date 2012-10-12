@@ -43294,24 +43294,6 @@
       <x>607</x>
       <y>493</y>
       <val>0.</val></rng2></edges></Img_Aperture_L2_thresholds_canny--canny----stitching-b1-png---5--true---100--120-->
-<TestRemap_Remap--Remap---640x480--16UC1--16SC2--INTER_NEAREST->
-  <dst>
-    <kind>65536</kind>
-    <type>2</type>
-    <min>0.</min>
-    <max>65535.</max>
-    <last>
-      <x>639</x>
-      <y>479</y>
-      <val>6430.</val></last>
-    <rng1>
-      <x>594</x>
-      <y>401</y>
-      <val>12531.</val></rng1>
-    <rng2>
-      <x>226</x>
-      <y>211</y>
-      <val>33233.</val></rng2></dst></TestRemap_Remap--Remap---640x480--16UC1--16SC2--INTER_NEAREST->
 <TestRemap_Remap--Remap---640x480--16UC1--16SC2--INTER_LINEAR->
   <dst>
     <kind>65536</kind>
@@ -43366,24 +43348,6 @@
       <x>32</x>
       <y>103</y>
       <val>54570.</val></rng2></dst></TestRemap_Remap--Remap---640x480--16UC1--16SC2--INTER_LANCZOS4->
-<TestRemap_Remap--Remap---640x480--16UC1--32FC1--INTER_NEAREST->
-  <dst>
-    <kind>65536</kind>
-    <type>2</type>
-    <min>0.</min>
-    <max>65535.</max>
-    <last>
-      <x>639</x>
-      <y>479</y>
-      <val>6430.</val></last>
-    <rng1>
-      <x>71</x>
-      <y>395</y>
-      <val>42851.</val></rng1>
-    <rng2>
-      <x>625</x>
-      <y>103</y>
-      <val>59246.</val></rng2></dst></TestRemap_Remap--Remap---640x480--16UC1--32FC1--INTER_NEAREST->
 <TestRemap_Remap--Remap---640x480--16UC1--32FC1--INTER_LINEAR->
   <dst>
     <kind>65536</kind>
@@ -43438,24 +43402,6 @@
       <x>132</x>
       <y>287</y>
       <val>34926.</val></rng2></dst></TestRemap_Remap--Remap---640x480--16UC1--32FC1--INTER_LANCZOS4->
-<TestRemap_Remap--Remap---640x480--16UC1--32FC2--INTER_NEAREST->
-  <dst>
-    <kind>65536</kind>
-    <type>2</type>
-    <min>6.</min>
-    <max>65526.</max>
-    <last>
-      <x>639</x>
-      <y>479</y>
-      <val>41013.</val></last>
-    <rng1>
-      <x>610</x>
-      <y>39</y>
-      <val>18520.</val></rng1>
-    <rng2>
-      <x>197</x>
-      <y>198</y>
-      <val>60137.</val></rng2></dst></TestRemap_Remap--Remap---640x480--16UC1--32FC2--INTER_NEAREST->
 <TestRemap_Remap--Remap---640x480--16UC1--32FC2--INTER_LINEAR->
   <dst>
     <kind>65536</kind>
@@ -43510,24 +43456,6 @@
       <x>331</x>
       <y>137</y>
       <val>13667.</val></rng2></dst></TestRemap_Remap--Remap---640x480--16UC1--32FC2--INTER_LANCZOS4->
-<TestRemap_Remap--Remap---640x480--16SC1--16SC2--INTER_NEAREST->
-  <dst>
-    <kind>65536</kind>
-    <type>3</type>
-    <min>-32768.</min>
-    <max>32767.</max>
-    <last>
-      <x>639</x>
-      <y>479</y>
-      <val>6430.</val></last>
-    <rng1>
-      <x>613</x>
-      <y>26</y>
-      <val>19928.</val></rng1>
-    <rng2>
-      <x>423</x>
-      <y>112</y>
-      <val>-22954.</val></rng2></dst></TestRemap_Remap--Remap---640x480--16SC1--16SC2--INTER_NEAREST->
 <TestRemap_Remap--Remap---640x480--16SC1--16SC2--INTER_LINEAR->
   <dst>
     <kind>65536</kind>
@@ -43582,24 +43510,6 @@
       <x>218</x>
       <y>171</y>
       <val>-19426.</val></rng2></dst></TestRemap_Remap--Remap---640x480--16SC1--16SC2--INTER_LANCZOS4->
-<TestRemap_Remap--Remap---640x480--16SC1--32FC1--INTER_NEAREST->
-  <dst>
-    <kind>65536</kind>
-    <type>3</type>
-    <min>-32768.</min>
-    <max>32767.</max>
-    <last>
-      <x>639</x>
-      <y>479</y>
-      <val>6430.</val></last>
-    <rng1>
-      <x>320</x>
-      <y>70</y>
-      <val>-16179.</val></rng1>
-    <rng2>
-      <x>332</x>
-      <y>122</y>
-      <val>-18107.</val></rng2></dst></TestRemap_Remap--Remap---640x480--16SC1--32FC1--INTER_NEAREST->
 <TestRemap_Remap--Remap---640x480--16SC1--32FC1--INTER_LINEAR->
   <dst>
     <kind>65536</kind>
@@ -43654,24 +43564,6 @@
       <x>413</x>
       <y>18</y>
       <val>32513.</val></rng2></dst></TestRemap_Remap--Remap---640x480--16SC1--32FC1--INTER_LANCZOS4->
-<TestRemap_Remap--Remap---640x480--16SC1--32FC2--INTER_NEAREST->
-  <dst>
-    <kind>65536</kind>
-    <type>3</type>
-    <min>-32768.</min>
-    <max>32766.</max>
-    <last>
-      <x>639</x>
-      <y>479</y>
-      <val>-24523.</val></last>
-    <rng1>
-      <x>386</x>
-      <y>102</y>
-      <val>-30946.</val></rng1>
-    <rng2>
-      <x>260</x>
-      <y>469</y>
-      <val>-18563.</val></rng2></dst></TestRemap_Remap--Remap---640x480--16SC1--32FC2--INTER_NEAREST->
 <TestRemap_Remap--Remap---640x480--16SC1--32FC2--INTER_LINEAR->
   <dst>
     <kind>65536</kind>
@@ -43726,24 +43618,6 @@
       <x>320</x>
       <y>449</y>
       <val>5415.</val></rng2></dst></TestRemap_Remap--Remap---640x480--16SC1--32FC2--INTER_LANCZOS4->
-<TestRemap_Remap--Remap---640x480--32FC1--16SC2--INTER_NEAREST->
-  <dst>
-    <kind>65536</kind>
-    <type>5</type>
-    <min>-4.0949680175781250e+03</min>
-    <max>4.0948154296875000e+03</max>
-    <last>
-      <x>639</x>
-      <y>479</y>
-      <val>-2.0982082519531250e+03</val></last>
-    <rng1>
-      <x>466</x>
-      <y>18</y>
-      <val>2.9084040527343750e+03</val></rng1>
-    <rng2>
-      <x>639</x>
-      <y>290</y>
-      <val>4.0519038085937500e+03</val></rng2></dst></TestRemap_Remap--Remap---640x480--32FC1--16SC2--INTER_NEAREST->
 <TestRemap_Remap--Remap---640x480--32FC1--16SC2--INTER_LINEAR->
   <dst>
     <kind>65536</kind>
@@ -43798,24 +43672,6 @@
       <x>360</x>
       <y>219</y>
       <val>-2.8919199218750000e+03</val></rng2></dst></TestRemap_Remap--Remap---640x480--32FC1--16SC2--INTER_LANCZOS4->
-<TestRemap_Remap--Remap---640x480--32FC1--32FC1--INTER_NEAREST->
-  <dst>
-    <kind>65536</kind>
-    <type>5</type>
-    <min>-4.0949680175781250e+03</min>
-    <max>4.0948154296875000e+03</max>
-    <last>
-      <x>639</x>
-      <y>479</y>
-      <val>-2.0982082519531250e+03</val></last>
-    <rng1>
-      <x>106</x>
-      <y>320</y>
-      <val>-2.7877546386718750e+03</val></rng1>
-    <rng2>
-      <x>564</x>
-      <y>381</y>
-      <val>-2.9373786621093750e+03</val></rng2></dst></TestRemap_Remap--Remap---640x480--32FC1--32FC1--INTER_NEAREST->
 <TestRemap_Remap--Remap---640x480--32FC1--32FC1--INTER_LINEAR->
   <dst>
     <kind>65536</kind>
@@ -43870,24 +43726,6 @@
       <x>439</x>
       <y>381</y>
       <val>-3.0094256591796875e+02</val></rng2></dst></TestRemap_Remap--Remap---640x480--32FC1--32FC1--INTER_LANCZOS4->
-<TestRemap_Remap--Remap---640x480--32FC1--32FC2--INTER_NEAREST->
-  <dst>
-    <kind>65536</kind>
-    <type>5</type>
-    <min>-4.0942600097656250e+03</min>
-    <max>4.0948154296875000e+03</max>
-    <last>
-      <x>639</x>
-      <y>479</y>
-      <val>2.2439873046875000e+03</val></last>
-    <rng1>
-      <x>359</x>
-      <y>406</y>
-      <val>-3.3535781250000000e+03</val></rng1>
-    <rng2>
-      <x>247</x>
-      <y>394</y>
-      <val>4.0276020507812500e+03</val></rng2></dst></TestRemap_Remap--Remap---640x480--32FC1--32FC2--INTER_NEAREST->
 <TestRemap_Remap--Remap---640x480--32FC1--32FC2--INTER_LINEAR->
   <dst>
     <kind>65536</kind>
@@ -43942,24 +43780,6 @@
       <x>334</x>
       <y>400</y>
       <val>2.0252281494140625e+03</val></rng2></dst></TestRemap_Remap--Remap---640x480--32FC1--32FC2--INTER_LANCZOS4->
-<TestRemap_Remap--Remap---1920x1080--16UC1--16SC2--INTER_NEAREST->
-  <dst>
-    <kind>65536</kind>
-    <type>2</type>
-    <min>0.</min>
-    <max>65535.</max>
-    <last>
-      <x>1919</x>
-      <y>1079</y>
-      <val>18943.</val></last>
-    <rng1>
-      <x>809</x>
-      <y>1064</y>
-      <val>62536.</val></rng1>
-    <rng2>
-      <x>241</x>
-      <y>109</y>
-      <val>52346.</val></rng2></dst></TestRemap_Remap--Remap---1920x1080--16UC1--16SC2--INTER_NEAREST->
 <TestRemap_Remap--Remap---1920x1080--16UC1--16SC2--INTER_LINEAR->
   <dst>
     <kind>65536</kind>
@@ -44014,24 +43834,6 @@
       <x>1312</x>
       <y>478</y>
       <val>10287.</val></rng2></dst></TestRemap_Remap--Remap---1920x1080--16UC1--16SC2--INTER_LANCZOS4->
-<TestRemap_Remap--Remap---1920x1080--16UC1--32FC1--INTER_NEAREST->
-  <dst>
-    <kind>65536</kind>
-    <type>2</type>
-    <min>0.</min>
-    <max>65535.</max>
-    <last>
-      <x>1919</x>
-      <y>1079</y>
-      <val>18943.</val></last>
-    <rng1>
-      <x>1432</x>
-      <y>582</y>
-      <val>34236.</val></rng1>
-    <rng2>
-      <x>574</x>
-      <y>622</y>
-      <val>21210.</val></rng2></dst></TestRemap_Remap--Remap---1920x1080--16UC1--32FC1--INTER_NEAREST->
 <TestRemap_Remap--Remap---1920x1080--16UC1--32FC1--INTER_LINEAR->
   <dst>
     <kind>65536</kind>
@@ -44086,24 +43888,6 @@
       <x>1605</x>
       <y>1051</y>
       <val>17750.</val></rng2></dst></TestRemap_Remap--Remap---1920x1080--16UC1--32FC1--INTER_LANCZOS4->
-<TestRemap_Remap--Remap---1920x1080--16UC1--32FC2--INTER_NEAREST->
-  <dst>
-    <kind>65536</kind>
-    <type>2</type>
-    <min>3.</min>
-    <max>65531.</max>
-    <last>
-      <x>1919</x>
-      <y>1079</y>
-      <val>4673.</val></last>
-    <rng1>
-      <x>471</x>
-      <y>959</y>
-      <val>48161.</val></rng1>
-    <rng2>
-      <x>421</x>
-      <y>314</y>
-      <val>18312.</val></rng2></dst></TestRemap_Remap--Remap---1920x1080--16UC1--32FC2--INTER_NEAREST->
 <TestRemap_Remap--Remap---1920x1080--16UC1--32FC2--INTER_LINEAR->
   <dst>
     <kind>65536</kind>
@@ -44158,24 +43942,6 @@
       <x>566</x>
       <y>52</y>
       <val>64901.</val></rng2></dst></TestRemap_Remap--Remap---1920x1080--16UC1--32FC2--INTER_LANCZOS4->
-<TestRemap_Remap--Remap---1920x1080--16SC1--16SC2--INTER_NEAREST->
-  <dst>
-    <kind>65536</kind>
-    <type>3</type>
-    <min>-32768.</min>
-    <max>32767.</max>
-    <last>
-      <x>1919</x>
-      <y>1079</y>
-      <val>18943.</val></last>
-    <rng1>
-      <x>1693</x>
-      <y>574</y>
-      <val>-22265.</val></rng1>
-    <rng2>
-      <x>1596</x>
-      <y>942</y>
-      <val>-15901.</val></rng2></dst></TestRemap_Remap--Remap---1920x1080--16SC1--16SC2--INTER_NEAREST->
 <TestRemap_Remap--Remap---1920x1080--16SC1--16SC2--INTER_LINEAR->
   <dst>
     <kind>65536</kind>
@@ -44230,24 +43996,6 @@
       <x>1391</x>
       <y>941</y>
       <val>19927.</val></rng2></dst></TestRemap_Remap--Remap---1920x1080--16SC1--16SC2--INTER_LANCZOS4->
-<TestRemap_Remap--Remap---1920x1080--16SC1--32FC1--INTER_NEAREST->
-  <dst>
-    <kind>65536</kind>
-    <type>3</type>
-    <min>-32768.</min>
-    <max>32767.</max>
-    <last>
-      <x>1919</x>
-      <y>1079</y>
-      <val>18943.</val></last>
-    <rng1>
-      <x>1521</x>
-      <y>95</y>
-      <val>-30568.</val></rng1>
-    <rng2>
-      <x>1845</x>
-      <y>991</y>
-      <val>20784.</val></rng2></dst></TestRemap_Remap--Remap---1920x1080--16SC1--32FC1--INTER_NEAREST->
 <TestRemap_Remap--Remap---1920x1080--16SC1--32FC1--INTER_LINEAR->
   <dst>
     <kind>65536</kind>
@@ -44302,24 +44050,6 @@
       <x>357</x>
       <y>693</y>
       <val>-21626.</val></rng2></dst></TestRemap_Remap--Remap---1920x1080--16SC1--32FC1--INTER_LANCZOS4->
-<TestRemap_Remap--Remap---1920x1080--16SC1--32FC2--INTER_NEAREST->
-  <dst>
-    <kind>65536</kind>
-    <type>3</type>
-    <min>-32767.</min>
-    <max>32767.</max>
-    <last>
-      <x>1919</x>
-      <y>1079</y>
-      <val>4673.</val></last>
-    <rng1>
-      <x>1139</x>
-      <y>734</y>
-      <val>-9648.</val></rng1>
-    <rng2>
-      <x>1185</x>
-      <y>980</y>
-      <val>-32713.</val></rng2></dst></TestRemap_Remap--Remap---1920x1080--16SC1--32FC2--INTER_NEAREST->
 <TestRemap_Remap--Remap---1920x1080--16SC1--32FC2--INTER_LINEAR->
   <dst>
     <kind>65536</kind>
@@ -44374,24 +44104,6 @@
       <x>1117</x>
       <y>556</y>
       <val>-7691.</val></rng2></dst></TestRemap_Remap--Remap---1920x1080--16SC1--32FC2--INTER_LANCZOS4->
-<TestRemap_Remap--Remap---1920x1080--32FC1--16SC2--INTER_NEAREST->
-  <dst>
-    <kind>65536</kind>
-    <type>5</type>
-    <min>-4.0949975585937500e+03</min>
-    <max>4.0949975585937500e+03</max>
-    <last>
-      <x>1919</x>
-      <y>1079</y>
-      <val>-5.1768511962890625e+02</val></last>
-    <rng1>
-      <x>0</x>
-      <y>1010</y>
-      <val>-2.6494240722656250e+03</val></rng1>
-    <rng2>
-      <x>542</x>
-      <y>927</y>
-      <val>-4.0916396484375000e+03</val></rng2></dst></TestRemap_Remap--Remap---1920x1080--32FC1--16SC2--INTER_NEAREST->
 <TestRemap_Remap--Remap---1920x1080--32FC1--16SC2--INTER_LINEAR->
   <dst>
     <kind>65536</kind>
@@ -44446,24 +44158,6 @@
       <x>1432</x>
       <y>285</y>
       <val>1.6823565673828125e+03</val></rng2></dst></TestRemap_Remap--Remap---1920x1080--32FC1--16SC2--INTER_LANCZOS4->
-<TestRemap_Remap--Remap---1920x1080--32FC1--32FC1--INTER_NEAREST->
-  <dst>
-    <kind>65536</kind>
-    <type>5</type>
-    <min>-4.0949975585937500e+03</min>
-    <max>4.0949975585937500e+03</max>
-    <last>
-      <x>1919</x>
-      <y>1079</y>
-      <val>-5.1768511962890625e+02</val></last>
-    <rng1>
-      <x>102</x>
-      <y>843</y>
-      <val>-2.4313931274414062e+02</val></rng1>
-    <rng2>
-      <x>352</x>
-      <y>1073</y>
-      <val>-1.3649995117187500e+03</val></rng2></dst></TestRemap_Remap--Remap---1920x1080--32FC1--32FC1--INTER_NEAREST->
 <TestRemap_Remap--Remap---1920x1080--32FC1--32FC1--INTER_LINEAR->
   <dst>
     <kind>65536</kind>
@@ -44518,24 +44212,6 @@
       <x>1489</x>
       <y>187</y>
       <val>3.1002204589843750e+03</val></rng2></dst></TestRemap_Remap--Remap---1920x1080--32FC1--32FC1--INTER_LANCZOS4->
-<TestRemap_Remap--Remap---1920x1080--32FC1--32FC2--INTER_NEAREST->
-  <dst>
-    <kind>65536</kind>
-    <type>5</type>
-    <min>-4.0942683105468750e+03</min>
-    <max>4.0948154296875000e+03</max>
-    <last>
-      <x>1919</x>
-      <y>1079</y>
-      <val>-3.9928154296875000e+03</val></last>
-    <rng1>
-      <x>1861</x>
-      <y>469</y>
-      <val>5.2025158691406250e+02</val></rng1>
-    <rng2>
-      <x>1835</x>
-      <y>299</y>
-      <val>-1.8070430908203125e+03</val></rng2></dst></TestRemap_Remap--Remap---1920x1080--32FC1--32FC2--INTER_NEAREST->
 <TestRemap_Remap--Remap---1920x1080--32FC1--32FC2--INTER_LINEAR->
   <dst>
     <kind>65536</kind>
@@ -45774,4 +45450,329 @@
       <x>151</x>
       <y>753</y>
       <val>6.9775799056515098e-04</val></rng2></l1></Img_BlockSize_ApertureSize_BorderType_cornerEigenValsAndVecs--cornerEigenValsAndVecs----stitching-a1-png---5--5--BORDER_REFLECT_101->
+ <!-- resumed -->
+<TestRemap_Remap--Remap---640x480--16UC1--16SC2--INTER_NEAREST->
+  <dst>
+    <kind>65536</kind>
+    <type>2</type>
+    <min>0.</min>
+    <max>65535.</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>6430.</val></last>
+    <rng1>
+      <x>272</x>
+      <y>234</y>
+      <val>23981.</val></rng1>
+    <rng2>
+      <x>480</x>
+      <y>217</y>
+      <val>43239.</val></rng2></dst></TestRemap_Remap--Remap---640x480--16UC1--16SC2--INTER_NEAREST->
+<TestRemap_Remap--Remap---640x480--16UC1--32FC1--INTER_NEAREST->
+  <dst>
+    <kind>65536</kind>
+    <type>2</type>
+    <min>0.</min>
+    <max>65535.</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>6430.</val></last>
+    <rng1>
+      <x>591</x>
+      <y>381</y>
+      <val>26367.</val></rng1>
+    <rng2>
+      <x>57</x>
+      <y>67</y>
+      <val>42208.</val></rng2></dst></TestRemap_Remap--Remap---640x480--16UC1--32FC1--INTER_NEAREST->
+<TestRemap_Remap--Remap---640x480--16UC1--32FC2--INTER_NEAREST->
+  <dst>
+    <kind>65536</kind>
+    <type>2</type>
+    <min>0.</min>
+    <max>65535.</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>6430.</val></last>
+    <rng1>
+      <x>510</x>
+      <y>410</y>
+      <val>3911.</val></rng1>
+    <rng2>
+      <x>130</x>
+      <y>49</y>
+      <val>30242.</val></rng2></dst></TestRemap_Remap--Remap---640x480--16UC1--32FC2--INTER_NEAREST->
+<TestRemap_Remap--Remap---640x480--16SC1--16SC2--INTER_NEAREST->
+  <dst>
+    <kind>65536</kind>
+    <type>3</type>
+    <min>-32768.</min>
+    <max>32767.</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>6430.</val></last>
+    <rng1>
+      <x>0</x>
+      <y>416</y>
+      <val>-25732.</val></rng1>
+    <rng2>
+      <x>466</x>
+      <y>337</y>
+      <val>-15274.</val></rng2></dst></TestRemap_Remap--Remap---640x480--16SC1--16SC2--INTER_NEAREST->
+<TestRemap_Remap--Remap---640x480--16SC1--32FC1--INTER_NEAREST->
+  <dst>
+    <kind>65536</kind>
+    <type>3</type>
+    <min>-32768.</min>
+    <max>32767.</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>6430.</val></last>
+    <rng1>
+      <x>319</x>
+      <y>370</y>
+      <val>-6916.</val></rng1>
+    <rng2>
+      <x>561</x>
+      <y>87</y>
+      <val>-13479.</val></rng2></dst></TestRemap_Remap--Remap---640x480--16SC1--32FC1--INTER_NEAREST->
+<TestRemap_Remap--Remap---640x480--16SC1--32FC2--INTER_NEAREST->
+  <dst>
+    <kind>65536</kind>
+    <type>3</type>
+    <min>-32768.</min>
+    <max>32767.</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>6430.</val></last>
+    <rng1>
+      <x>423</x>
+      <y>460</y>
+      <val>1288.</val></rng1>
+    <rng2>
+      <x>218</x>
+      <y>307</y>
+      <val>20859.</val></rng2></dst></TestRemap_Remap--Remap---640x480--16SC1--32FC2--INTER_NEAREST->
+<TestRemap_Remap--Remap---640x480--32FC1--16SC2--INTER_NEAREST->
+  <dst>
+    <kind>65536</kind>
+    <type>5</type>
+    <min>-4.0949680175781250e+03</min>
+    <max>4.0948154296875000e+03</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>-2.0982082519531250e+03</val></last>
+    <rng1>
+      <x>295</x>
+      <y>220</y>
+      <val>1.3069180908203125e+03</val></rng1>
+    <rng2>
+      <x>87</x>
+      <y>14</y>
+      <val>5.7091461181640625e+02</val></rng2></dst></TestRemap_Remap--Remap---640x480--32FC1--16SC2--INTER_NEAREST->
+<TestRemap_Remap--Remap---640x480--32FC1--32FC1--INTER_NEAREST->
+  <dst>
+    <kind>65536</kind>
+    <type>5</type>
+    <min>-4.0949680175781250e+03</min>
+    <max>4.0948154296875000e+03</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>-2.0982082519531250e+03</val></last>
+    <rng1>
+      <x>473</x>
+      <y>224</y>
+      <val>-7.9736999511718750e+02</val></rng1>
+    <rng2>
+      <x>450</x>
+      <y>84</y>
+      <val>3.7771665039062500e+03</val></rng2></dst></TestRemap_Remap--Remap---640x480--32FC1--32FC1--INTER_NEAREST->
+<TestRemap_Remap--Remap---640x480--32FC1--32FC2--INTER_NEAREST->
+  <dst>
+    <kind>65536</kind>
+    <type>5</type>
+    <min>-4.0949680175781250e+03</min>
+    <max>4.0948154296875000e+03</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>-2.0982082519531250e+03</val></last>
+    <rng1>
+      <x>243</x>
+      <y>261</y>
+      <val>1.3971646728515625e+03</val></rng1>
+    <rng2>
+      <x>482</x>
+      <y>392</y>
+      <val>2.8873349609375000e+03</val></rng2></dst></TestRemap_Remap--Remap---640x480--32FC1--32FC2--INTER_NEAREST->
+<TestRemap_Remap--Remap---1920x1080--16UC1--16SC2--INTER_NEAREST->
+  <dst>
+    <kind>65536</kind>
+    <type>2</type>
+    <min>0.</min>
+    <max>65535.</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>18943.</val></last>
+    <rng1>
+      <x>678</x>
+      <y>876</y>
+      <val>4373.</val></rng1>
+    <rng2>
+      <x>870</x>
+      <y>1018</y>
+      <val>23879.</val></rng2></dst></TestRemap_Remap--Remap---1920x1080--16UC1--16SC2--INTER_NEAREST->
+<TestRemap_Remap--Remap---1920x1080--16UC1--32FC1--INTER_NEAREST->
+  <dst>
+    <kind>65536</kind>
+    <type>2</type>
+    <min>0.</min>
+    <max>65535.</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>18943.</val></last>
+    <rng1>
+      <x>700</x>
+      <y>166</y>
+      <val>9084.</val></rng1>
+    <rng2>
+      <x>721</x>
+      <y>665</y>
+      <val>28561.</val></rng2></dst></TestRemap_Remap--Remap---1920x1080--16UC1--32FC1--INTER_NEAREST->
+<TestRemap_Remap--Remap---1920x1080--16UC1--32FC2--INTER_NEAREST->
+  <dst>
+    <kind>65536</kind>
+    <type>2</type>
+    <min>0.</min>
+    <max>65535.</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>18943.</val></last>
+    <rng1>
+      <x>1863</x>
+      <y>629</y>
+      <val>57686.</val></rng1>
+    <rng2>
+      <x>1649</x>
+      <y>355</y>
+      <val>58188.</val></rng2></dst></TestRemap_Remap--Remap---1920x1080--16UC1--32FC2--INTER_NEAREST->
+<TestRemap_Remap--Remap---1920x1080--16SC1--16SC2--INTER_NEAREST->
+  <dst>
+    <kind>65536</kind>
+    <type>3</type>
+    <min>-32768.</min>
+    <max>32767.</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>18943.</val></last>
+    <rng1>
+      <x>1036</x>
+      <y>432</y>
+      <val>-3609.</val></rng1>
+    <rng2>
+      <x>433</x>
+      <y>1063</y>
+      <val>5314.</val></rng2></dst></TestRemap_Remap--Remap---1920x1080--16SC1--16SC2--INTER_NEAREST->
+<TestRemap_Remap--Remap---1920x1080--16SC1--32FC1--INTER_NEAREST->
+  <dst>
+    <kind>65536</kind>
+    <type>3</type>
+    <min>-32768.</min>
+    <max>32767.</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>18943.</val></last>
+    <rng1>
+      <x>111</x>
+      <y>901</y>
+      <val>-4107.</val></rng1>
+    <rng2>
+      <x>549</x>
+      <y>228</y>
+      <val>13776.</val></rng2></dst></TestRemap_Remap--Remap---1920x1080--16SC1--32FC1--INTER_NEAREST->
+<TestRemap_Remap--Remap---1920x1080--16SC1--32FC2--INTER_NEAREST->
+  <dst>
+    <kind>65536</kind>
+    <type>3</type>
+    <min>-32768.</min>
+    <max>32767.</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>18943.</val></last>
+    <rng1>
+      <x>801</x>
+      <y>273</y>
+      <val>-26690.</val></rng1>
+    <rng2>
+      <x>258</x>
+      <y>870</y>
+      <val>-30942.</val></rng2></dst></TestRemap_Remap--Remap---1920x1080--16SC1--32FC2--INTER_NEAREST->
+<TestRemap_Remap--Remap---1920x1080--32FC1--16SC2--INTER_NEAREST->
+  <dst>
+    <kind>65536</kind>
+    <type>5</type>
+    <min>-4.0949975585937500e+03</min>
+    <max>4.0949975585937500e+03</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>-5.1768511962890625e+02</val></last>
+    <rng1>
+      <x>755</x>
+      <y>940</y>
+      <val>-3.6978093261718750e+03</val></rng1>
+    <rng2>
+      <x>1666</x>
+      <y>17</y>
+      <val>-2.4994006347656250e+03</val></rng2></dst></TestRemap_Remap--Remap---1920x1080--32FC1--16SC2--INTER_NEAREST->
+<TestRemap_Remap--Remap---1920x1080--32FC1--32FC1--INTER_NEAREST->
+  <dst>
+    <kind>65536</kind>
+    <type>5</type>
+    <min>-4.0949975585937500e+03</min>
+    <max>4.0949975585937500e+03</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>-5.1768511962890625e+02</val></last>
+    <rng1>
+      <x>1100</x>
+      <y>564</y>
+      <val>-3.9754599609375000e+03</val></rng1>
+    <rng2>
+      <x>1826</x>
+      <y>649</y>
+      <val>4.0807180175781250e+03</val></rng2></dst></TestRemap_Remap--Remap---1920x1080--32FC1--32FC1--INTER_NEAREST->
+<TestRemap_Remap--Remap---1920x1080--32FC1--32FC2--INTER_NEAREST->
+  <dst>
+    <kind>65536</kind>
+    <type>5</type>
+    <min>-4.0949975585937500e+03</min>
+    <max>4.0949975585937500e+03</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>-5.1768511962890625e+02</val></last>
+    <rng1>
+      <x>1880</x>
+      <y>688</y>
+      <val>-2.3361184082031250e+03</val></rng1>
+    <rng2>
+      <x>67</x>
+      <y>465</y>
+      <val>8.4813610839843750e+02</val></rng2></dst></TestRemap_Remap--Remap---1920x1080--32FC1--32FC2--INTER_NEAREST->
 </opencv_storage>
