@@ -82,7 +82,8 @@ int main(int, char**)
             line( img, statePt, measPt, Scalar(0,0,255), 3, CV_AA, 0 );
             line( img, statePt, predictPt, Scalar(0,255,255), 3, CV_AA, 0 );
 
-            KF.correct(measurement);
+            if(theRNG().uniform(0,4) != 0)
+                KF.correct(measurement);
 
             randn( processNoise, Scalar(0), Scalar::all(sqrt(KF.processNoiseCov.at<float>(0, 0))));
             state = KF.transitionMatrix*state + processNoise;
