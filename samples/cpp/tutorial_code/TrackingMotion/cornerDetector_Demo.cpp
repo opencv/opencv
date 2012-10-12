@@ -15,7 +15,7 @@ using namespace std;
 /// Global variables
 Mat src, src_gray;
 Mat myHarris_dst; Mat myHarris_copy; Mat Mc;
-Mat myShiTomasi_dst; Mat myShiTomasi_copy; 
+Mat myShiTomasi_dst; Mat myShiTomasi_copy;
 
 int myShiTomasi_qualityLevel = 50;
 int myHarris_qualityLevel = 50;
@@ -51,34 +51,34 @@ int main( int argc, char** argv )
 
   cornerEigenValsAndVecs( src_gray, myHarris_dst, blockSize, apertureSize, BORDER_DEFAULT );
 
-  /* calculate Mc */ 
+  /* calculate Mc */
   for( int j = 0; j < src_gray.rows; j++ )
      { for( int i = 0; i < src_gray.cols; i++ )
           {
-            float lambda_1 = myHarris_dst.at<float>( j, i, 0 );
-            float lambda_2 = myHarris_dst.at<float>( j, i, 1 );
+            float lambda_1 = myHarris_dst.at<Vec6f>(j, i)[0];
+            float lambda_2 = myHarris_dst.at<Vec6f>(j, i)[1];
             Mc.at<float>(j,i) = lambda_1*lambda_2 - 0.04*pow( ( lambda_1 + lambda_2 ), 2 );
           }
      }
 
   minMaxLoc( Mc, &myHarris_minVal, &myHarris_maxVal, 0, 0, Mat() );
-  
+
   /* Create Window and Trackbar */
   namedWindow( myHarris_window, CV_WINDOW_AUTOSIZE );
-  createTrackbar( " Quality Level:", myHarris_window, &myHarris_qualityLevel, max_qualityLevel, myHarris_function );  
+  createTrackbar( " Quality Level:", myHarris_window, &myHarris_qualityLevel, max_qualityLevel, myHarris_function );
   myHarris_function( 0, 0 );
 
   /// My Shi-Tomasi -- Using cornerMinEigenVal
-  myShiTomasi_dst = Mat::zeros( src_gray.size(), CV_32FC1 );  
+  myShiTomasi_dst = Mat::zeros( src_gray.size(), CV_32FC1 );
   cornerMinEigenVal( src_gray, myShiTomasi_dst, blockSize, apertureSize, BORDER_DEFAULT );
 
   minMaxLoc( myShiTomasi_dst, &myShiTomasi_minVal, &myShiTomasi_maxVal, 0, 0, Mat() );
 
   /* Create Window and Trackbar */
-  namedWindow( myShiTomasi_window, CV_WINDOW_AUTOSIZE );   
-  createTrackbar( " Quality Level:", myShiTomasi_window, &myShiTomasi_qualityLevel, max_qualityLevel, myShiTomasi_function );  
+  namedWindow( myShiTomasi_window, CV_WINDOW_AUTOSIZE );
+  createTrackbar( " Quality Level:", myShiTomasi_window, &myShiTomasi_qualityLevel, max_qualityLevel, myShiTomasi_function );
   myShiTomasi_function( 0, 0 );
-  
+
   waitKey(0);
   return(0);
 }
