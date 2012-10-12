@@ -2281,7 +2281,7 @@ static void Bayer2RGB_VNG_8u( const Mat& srcmat, Mat& dstmat, int code )
 
                     minGrad = std::min(std::min(std::min(std::min(minGrad, gradNE), gradSW), gradNW), gradSE);
                     maxGrad = std::max(std::max(std::max(std::max(maxGrad, gradNE), gradSW), gradNW), gradSE);
-                    int T = minGrad + maxGrad/2;
+                    int T = minGrad + MAX(maxGrad/2, 1);
 
                     int Rs = 0, Gs = 0, Bs = 0, ng = 0;
                     if( gradN < T )
@@ -2353,7 +2353,7 @@ static void Bayer2RGB_VNG_8u( const Mat& srcmat, Mat& dstmat, int code )
 
                     minGrad = std::min(std::min(std::min(std::min(minGrad, gradNE), gradSW), gradNW), gradSE);
                     maxGrad = std::max(std::max(std::max(std::max(maxGrad, gradNE), gradSW), gradNW), gradSE);
-                    int T = minGrad + maxGrad/2;
+                    int T = minGrad + MAX(maxGrad/2, 1);
 
                     int Rs = 0, Gs = 0, Bs = 0, ng = 0;
                     if( gradN < T )
@@ -2428,8 +2428,8 @@ static void Bayer2RGB_VNG_8u( const Mat& srcmat, Mat& dstmat, int code )
 
             __m128i emask    = _mm_set1_epi32(0x0000ffff),
                     omask    = _mm_set1_epi32(0xffff0000),
-                    smask    = _mm_set1_epi16(0x7fff), // Get rid of sign bit in u16's
-                    z        = _mm_setzero_si128();
+                    z        = _mm_setzero_si128(),
+                    one      = _mm_set1_epi16(1);
             __m128 _0_5      = _mm_set1_ps(0.5f);
 
             #define _mm_merge_epi16(a, b) _mm_or_si128(_mm_and_si128(a, emask), _mm_and_si128(b, omask)) //(aA_aA_aA_aA) * (bB_bB_bB_bB) => (bA_bA_bA_bA)
@@ -2494,7 +2494,7 @@ static void Bayer2RGB_VNG_8u( const Mat& srcmat, Mat& dstmat, int code )
                 maxGrad = _mm_max_epi16(_mm_max_epi16(maxGrad, gradNW), gradSE);
 
                 //int T = minGrad + maxGrad/2;
-                __m128i T = _mm_adds_epi16(_mm_srli_epi16(maxGrad, 1), minGrad);
+                __m128i T = _mm_adds_epi16(_mm_max_epi16(_mm_srli_epi16(maxGrad, 1), one), minGrad);
 
                 __m128i RGs = z, GRs = z, Bs = z, ng = z;
 
@@ -2630,13 +2630,12 @@ static void Bayer2RGB_VNG_8u( const Mat& srcmat, Mat& dstmat, int code )
                 // Bs  += {srow[-bstep-1]*2; (srow[-bstep]+srow[-bstep-2])} * (T>gradNW)
                 Bs  = _mm_adds_epi16(Bs, _mm_and_si128(_mm_merge_epi16(_mm_slli_epi16(x5, 1),_mm_adds_epi16(x3,x16)), mask));
 
-                __m128 ngf0, ngf1;
-                ngf0 = _mm_div_ps(_0_5, _mm_cvtloepi16_ps(ng));
-                ngf1 = _mm_div_ps(_0_5, _mm_cvthiepi16_ps(ng));
+                __m128 ngf0 = _mm_div_ps(_0_5, _mm_cvtloepi16_ps(ng));
+                __m128 ngf1 = _mm_div_ps(_0_5, _mm_cvthiepi16_ps(ng));
 
                 // now interpolate r, g & b
-                t0 = _mm_sub_epi16(GRs, RGs);
-                t1 = _mm_sub_epi16(Bs, RGs);
+                t0 = _mm_subs_epi16(GRs, RGs);
+                t1 = _mm_subs_epi16(Bs, RGs);
 
                 t0 = _mm_add_epi16(x0, _mm_packs_epi32(
                                                        _mm_cvtps_epi32(_mm_mul_ps(_mm_cvtloepi16_ps(t0), ngf0)),
@@ -2650,11 +2649,6 @@ static void Bayer2RGB_VNG_8u( const Mat& srcmat, Mat& dstmat, int code )
                 x2 = _mm_merge_epi16(t0, x0);
 
                 uchar R[8], G[8], B[8];
-
-                // Make sure there is no sign bit in the 16 bit values so they can saturate correctly
-                x1 = _mm_and_si128(x1, smask);
-                x2 = _mm_and_si128(x2, smask);
-                t1 = _mm_and_si128(t1, smask);
 
                 _mm_storel_epi64(blueIdx ? (__m128i*)B : (__m128i*)R, _mm_packus_epi16(x1, z));
                 _mm_storel_epi64((__m128i*)G, _mm_packus_epi16(x2, z));
