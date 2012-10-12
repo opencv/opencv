@@ -1845,7 +1845,7 @@ void cv::batchDistance( InputArray _src1, InputArray _src2,
                 int d = tdist.at<int>(i), d0 = dist.at<int>(idx);
                 if( d < d0 )
                 {
-                    dist.at<int>(idx) = d0;
+                    dist.at<int>(idx) = d;
                     nidx.at<int>(idx) = i + update;
                 }
             }
@@ -1858,7 +1858,7 @@ void cv::batchDistance( InputArray _src1, InputArray _src2,
                 float d = tdist.at<float>(i), d0 = dist.at<float>(idx);
                 if( d < d0 )
                 {
-                    dist.at<float>(idx) = d0;
+                    dist.at<float>(idx) = d;
                     nidx.at<int>(idx) = i + update;
                 }
             }
