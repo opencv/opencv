@@ -31,6 +31,7 @@
     defined(HAVE_OPENNI)       || \
     defined(HAVE_XIMEA)        || \
     defined(HAVE_AVFOUNDATION) || \
+    defined(HAVE_GIGE_API) || \
     (0)
     //defined(HAVE_ANDROID_NATIVE_CAMERA) ||   - enable after #1193
 #  define BUILD_WITH_CAMERA_SUPPORT 1
