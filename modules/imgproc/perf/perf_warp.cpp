@@ -120,8 +120,6 @@ PERF_TEST_P( TestWarpPerspective, WarpPerspectiveLarge,
         warpPerspective( src, dst, warpMat, sz, interType, borderMode, Scalar::all(150) );
 
     SANITY_CHECK(dst);
-
-    //imwrite("/home/kir/temp/dst" + resolution + ".png", dst);
 }
 
 PERF_TEST_P( TestRemap, remap,
