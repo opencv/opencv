@@ -39,6 +39,14 @@
 //
 //M*/
 
+
+// inserted by HS:
+// void cv::adjustWindowPos(const string& winname, int xp, int xwp, int yp, int yhp) {...}
+// int  cv::getButtonBarContent(const string& winname, int idx, char * txt) {...}
+// int  cv::setButtonBarContent(const string& winname, int etype, int idx, char * txt)  {...}
+// bool cv::getCommandVec(const string& winname, vector<string> & stringVec, string & cmd) {...}
+
+
 #include "precomp.hpp"
 #include "opencv2/core/opengl_interop.hpp"
 
@@ -176,6 +184,55 @@ void cv::moveWindow( const string& winname, int x, int y )
 {
     cvMoveWindow( winname.c_str(), x, y );
 }
+
+// ---------------------------------- inserted by HS:
+
+void cv::adjustWindowPos( const string& winname, int xp, int xwp, int yp, int yhp )
+{
+   #ifdef _WIN32
+      int cx,cy;
+      cx = GetSystemMetrics(SM_CXSCREEN);
+      cy = GetSystemMetrics(SM_CYSCREEN);
+      int    x = 0.01 * ( xp * cx );
+      int    y = 0.01 * ( yp * cy );
+      int neww = 0.01 * (xwp * cx );
+      int newh = 0.01 * (yhp * cy );
+      cvMoveWindow( winname.c_str(), x, y );
+      cvResizeWindow( winname.c_str(),neww, newh );
+   #else
+       #if defined(HAVE_QT)
+          cvAdjustWindowPos_Qt( winname.c_str(),  xp, xwp, yp,  yhp );
+       #endif
+       #if defined(HAVE_GTK)
+          // todo.. 
+       #endif
+   #endif
+}
+
+void cv::dispInfoBox( const string& winname, char* caption, const string& text ) 
+{
+      #if defined(HAVE_QT)
+	cvDispInfoBox_Qt( winname.c_str(), caption, text.c_str() );
+      #endif
+}
+
+int cv::getButtonBarContent(const string& winname, int idx, char * txt )
+{
+   #if defined(HAVE_QT)
+       return cvGetButtonBarContent( winname.c_str(), idx, txt );
+   #endif
+   return 0;
+}
+
+int cv::setButtonBarContent(const string& winname, int etype, int idx, char * txt )
+{
+   #if defined(HAVE_QT)
+       return cvSetButtonBarContent( winname.c_str(), etype, idx,  txt );
+   #endif
+   return 0;
+}
+// ----------------------------------
+
 
 void cv::setWindowProperty(const string& winname, int prop_id, double prop_value)
 {
@@ -571,10 +628,42 @@ int cv::createButton(const string& button_name, ButtonCallback on_change, void* 
     return cvCreateButton(button_name.c_str(), on_change, userdata, button_type , initial_button_state );
 }
 
+
+//-------------------------------- processing of *.cfg 
+
+
+bool cv::getCommandVec( const string& winname, vector<string> & stringVec,  char * cmd )
+{
+    stringVec.clear();
+    
+    if ( cmd != NULL ) cvGetCommand( winname.c_str(), cmd );
+	
+    char buffer[512];
+    int idx = 0;
+    int iRet = 1;
+    while ( iRet == 1 ) 
+    {
+      iRet = cvGetButtonBarContent( winname.c_str(), idx, buffer );
+      if ( iRet == 1 ) stringVec.push_back( string(buffer) );
+      idx++;
+    }
+    return true;
+}
+
+
+#else
+
+bool cv::getCommandVec( const string& winname, vector<string> & stringVec,  char* cmd )
+{
+    return false;
+}
+
 #endif
 
 #if   defined WIN32 || defined _WIN32         // see window_w32.cpp
 #elif defined (HAVE_GTK)      // see window_gtk.cpp
+
+
 #elif defined (HAVE_COCOA)   // see window_carbon.cpp
 #elif defined (HAVE_CARBON)
 #elif defined (HAVE_QT) //YV see window_QT.cpp
@@ -740,6 +829,23 @@ CV_IMPL int cvCreateButton(const char*, void (*)(int, void*), void*, int, int)
     return -1;
 }
 
+CV_IMPL int cvGetButtonBarContent(const char *, int, char * )
+{
+    // CV_NO_GUI_ERROR("cvGetButtonBarContent");
+    return -1;
+}
+
+CV_IMPL int cvSetButtonBarContent(const char *, int, int, char * )
+{
+    // CV_NO_GUI_ERROR("cvSetButtonBarContent");
+    return -1;
+}
+
+CV_IMPL int cvDispInfoBox_Qt( char*, char* , const char * )
+{
+    // CV_NO_GUI_ERROR("cvDispInfoBox_Qt");
+    return -1;
+}
 
 #endif
 
