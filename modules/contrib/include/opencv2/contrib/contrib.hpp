@@ -971,5 +971,11 @@ namespace cv
 
 #endif
 
+// Auto linking by "#pragma comment(lib)" syntax
+#include "opencv2/core/pragma_lib.hpp"
+#if PRAGMA_COMMENT_SUPPORT && OPENCV_AUTO_LINK
+#pragma OPENCV_COMMENT_LIB_FNAME("contrib")
+#endif // PRAGMA_COMMENT_SUPPORT && OPENCV_AUTO_LINK
+
 #endif
 

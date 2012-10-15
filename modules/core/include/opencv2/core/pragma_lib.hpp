@@ -1,3 +1,6 @@
+/*! \file pragma_include.hpp
+    \brief #pragmas for auto library linking
+ */
 /*M///////////////////////////////////////////////////////////////////////////////////////
 //
 //  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
@@ -11,7 +14,7 @@
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
-// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2009-2011, Willow Garage Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -40,25 +43,49 @@
 //
 //M*/
 
-#ifndef __OPENCV_VIDEO_HPP__
-#define __OPENCV_VIDEO_HPP__
+#ifndef __OPENCV_PRAGMA_LIB_HPP__
+#define __OPENCV_PRAGMA_LIB_HPP__ 1
 
-#include "opencv2/video/tracking.hpp"
-#include "opencv2/video/background_segm.hpp"
-
-#ifdef __cplusplus
-namespace cv
-{
-
-CV_EXPORTS bool initModule_video(void);
-
-}
+#if (defined(_MSC_VER) && !defined(PRAGMA_COMMENT_SUPPORT)) \
+  && !defined(CVAPI_EXPORTS)
+#define PRAGMA_COMMENT_SUPPORT 1
+#elif !defined(PRAGMA_COMMENT_SUPPORT)
+#define PRAGMA_COMMENT_SUPPORT 0
 #endif
 
-// Auto linking by "#pragma comment(lib)" syntax
-#include "opencv2/core/pragma_lib.hpp"
-#if PRAGMA_COMMENT_SUPPORT && OPENCV_AUTO_LINK
-#pragma OPENCV_COMMENT_LIB_FNAME("video")
-#endif // PRAGMA_COMMENT_SUPPORT && OPENCV_AUTO_LINK
+#ifndef CV_MAJOR_VERSION
+#pragma message("WARM: Any OpenCV header included before pragma_lib.hpp")
+#include "opencv2/core/version.hpp"
+#endif
 
-#endif //__OPENCV_VIDEO_HPP__
+// version string which contains in library's file name such as "232"
+#define OPENCV_LIBVERSTR \
+  CVAUX_STR(CV_MAJOR_VERSION) \
+  CVAUX_STR(CV_MINOR_VERSION) \
+  CVAUX_STR(CV_SUBMINOR_VERSION)
+
+// generate #pragma arguments string
+#ifndef _DEBUG // Release
+#define OPENCV_COMMENT_LIB_FNAME(name) \
+comment(lib, "opencv_" name OPENCV_LIBVERSTR ".lib")
+#else          // Debug
+#define OPENCV_COMMENT_LIB_FNAME(name) \
+comment(lib, "opencv_" name OPENCV_LIBVERSTR "d.lib")
+#endif
+
+// defined macro search,
+// OPENCV_DEFINE_SEARCH(modulename) is only true
+// when header file of modulename is included.
+#define OPENCV_DEFINE_SEARCH(modulename) \
+  ( \
+  defined( __OPENCV_##modulename##_HPP__ )        || \
+  defined(  _OPENCV_##modulename##_HPP_ )         || \
+  defined( __OPENCV_##modulename##_H__ )          || \
+  defined( __OPENCV_##modulename##_##name##_C_H ) \
+  )
+
+#ifndef OPENCV_AUTO_LINK
+#define OPENCV_AUTO_LINK 1
+#endif
+
+#endif // #ifndef __OPENCV_PRAGMA_LIB_HPP__
