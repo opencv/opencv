@@ -5,7 +5,7 @@
      public:\
       fixture##_##name() {}\
      protected:\
-             virtual void __cpu();\
+        virtual void __cpu();\
         virtual void __gpu();\
       virtual void PerfTestBody();\
     };\
@@ -21,6 +21,44 @@
 
 #define FAIL_NO_CPU(fixture, name)\
 void fixture##_##name::__cpu() { FAIL() << "No such CPU implementation analogy";}
+
+namespace {
+    struct DetectionLess
+    {
+        bool operator()(const cv::gpu::SoftCascade::Detection& a,
+            const cv::gpu::SoftCascade::Detection& b) const
+        {
+            if (a.x != b.x) return a.x < b.x;
+            else if (a.y != b.y) return a.y < b.y;
+            else if (a.w != b.w) return a.w < b.w;
+            else return a.h < b.h;
+        }
+
+        bool operator()(const cv::SoftCascade::Detection& a,
+            const cv::SoftCascade::Detection& b) const
+        {
+            const cv::Rect& ra = a.rect;
+            const cv::Rect& rb = b.rect;
+
+            if (ra.x != rb.x) return ra.x < rb.x;
+            else if (ra.y != rb.y) return ra.y < rb.y;
+            else if (ra.width != rb.width) return ra.width < rb.width;
+            else return ra.height < rb.height;
+        }
+    };
+
+    cv::Mat sortDetections(cv::gpu::GpuMat& objects)
+    {
+        cv::Mat detections(objects);
+
+        typedef cv::gpu::SoftCascade::Detection Detection;
+        Detection* begin = (Detection*)(detections.ptr<char>(0));
+        Detection* end = (Detection*)(detections.ptr<char>(0) + detections.cols);
+        std::sort(begin, end, DetectionLess());
+
+        return detections;
+    }
+}
 
 
 typedef std::tr1::tuple<std::string, std::string> fixture_t;
@@ -41,7 +79,7 @@ RUN_GPU(SoftCascadeTest, detect)
     cv::gpu::SoftCascade cascade;
     ASSERT_TRUE(cascade.load(perf::TestBase::getDataPath(GET_PARAM(0))));
 
-    cv::gpu::GpuMat objectBoxes(1, 16384, CV_8UC1), rois(cascade.getRoiSize(), CV_8UC1), trois;
+    cv::gpu::GpuMat objectBoxes(1, 10000 * sizeof(cv::gpu::SoftCascade::Detection), CV_8UC1), rois(cascade.getRoiSize(), CV_8UC1), trois;
     rois.setTo(1);
     cv::gpu::transpose(rois, trois);
 
@@ -53,6 +91,8 @@ RUN_GPU(SoftCascadeTest, detect)
         curr = objectBoxes;
         cascade.detectMultiScale(colored, trois, curr);
     }
+
+    SANITY_CHECK(sortDetections(curr));
 }
 
 RUN_CPU(SoftCascadeTest, detect)
@@ -66,13 +106,16 @@ RUN_CPU(SoftCascadeTest, detect)
     std::vector<cv::Rect> rois;
 
     typedef cv::SoftCascade::Detection Detection;
-    std::vector<Detection>objectBoxes;
-    cascade.detectMultiScale(colored, rois, objectBoxes);
+    std::vector<Detection>objects;
+    cascade.detectMultiScale(colored, rois, objects);
 
     TEST_CYCLE()
     {
-        cascade.detectMultiScale(colored, rois, objectBoxes);
+        cascade.detectMultiScale(colored, rois, objects);
     }
+
+    std::sort(objects.begin(), objects.end(), DetectionLess());
+    SANITY_CHECK(objects);
 }
 
 static cv::Rect getFromTable(int idx)
@@ -137,6 +180,8 @@ RUN_GPU(SoftCascadeTestRoi, detectInRoi)
         curr = objectBoxes;
         cascade.detectMultiScale(colored, trois, curr);
     }
+
+    SANITY_CHECK(sortDetections(curr));
 }
 
 FAIL_NO_CPU(SoftCascadeTestRoi, detectInRoi)
@@ -177,6 +222,8 @@ RUN_GPU(SoftCascadeTestRoi, detectEachRoi)
         curr = objectBoxes;
         cascade.detectMultiScale(colored, trois, curr);
     }
+
+    SANITY_CHECK(sortDetections(curr));
 }
 
 FAIL_NO_CPU(SoftCascadeTestRoi, detectEachRoi)
