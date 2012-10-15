@@ -14,7 +14,7 @@ The description here was tested on Windows 7 SP1. Nevertheless, it should also w
 Installation by Using the Pre-built Libraries
 =============================================
 
-#. Launch a web browser of choice and go to our `page on Sourceforge <http://sourceforge.net/projects/opencvlibrary/files/opencv-win/>`_
+#. Launch a web browser of choice and go to our `page on Sourceforge <http://sourceforge.net/projects/opencvlibrary/files/opencv-win/>`_.
 
 #. Choose a build you want to use and download it.
 
