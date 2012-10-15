@@ -85,6 +85,7 @@
         #include <omp.h>
     #elif defined HAVE_GCD
         #include <dispatch/dispatch.h>
+        #include <sys/sysctl.h>
         #include <pthread.h>
     #elif defined HAVE_CONCURRENCY
         #include <ppl.h>
@@ -371,7 +372,7 @@ int cv::getThreadNum(void)
 #elif defined HAVE_OPENMP
     return omp_get_thread_num();
 #elif defined HAVE_GCD
-    return statc_cast<int>(pthread_self()); // no zero-based indexing
+    return (int)(size_t)(void*)pthread_self(); // no zero-based indexing
 #elif defined HAVE_CONCURRENCY
     return std::max(0, (int)Concurrency::Context::VirtualProcessorId()); // zero for master thread, unique number for others but not necessary 1,2,3,...
 #else
