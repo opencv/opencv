@@ -81,16 +81,7 @@ struct __align__(8) Level //is actually 24 bytes
     uchar2 workRect;
     uchar2 objSize;
 
-    Level(int idx, const Octave& oct, const float scale, const int w, const int h)
-    :  octave(idx), relScale(scale / oct.scale), shrScale (relScale / (float)oct.shrinkage)
-    {
-        workRect.x = round(w / (float)oct.shrinkage);
-        workRect.y = round(h / (float)oct.shrinkage);
-
-        objSize.x  = round(oct.size.x * relScale);
-        objSize.y  = round(oct.size.y * relScale);
-    }
-
+    Level(int idx, const Octave& oct, const float scale, const int w, const int h);
     __device Level(){}
 };
 

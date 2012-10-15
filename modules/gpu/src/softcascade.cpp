@@ -65,6 +65,16 @@ cv::Size cv::gpu::SoftCascade::getRoiSize() const { throw_nogpu(); return cv::Si
 
 #include <icf.hpp>
 
+cv::gpu::device::icf::Level::Level(int idx, const Octave& oct, const float scale, const int w, const int h)
+:  octave(idx), relScale(scale / oct.scale), shrScale (relScale / (float)oct.shrinkage)
+{
+    workRect.x = round(w / (float)oct.shrinkage);
+    workRect.y = round(h / (float)oct.shrinkage);
+
+    objSize.x  = cv::saturate_cast<uchar>(oct.size.x * relScale);
+    objSize.y  = cv::saturate_cast<uchar>(oct.size.y * relScale);
+}
+
 namespace cv { namespace gpu { namespace device {
 namespace icf {
     void fillBins(cv::gpu::PtrStepSzb hogluv, const cv::gpu::PtrStepSzf& nangle,
@@ -72,7 +82,7 @@ namespace icf {
 }
 namespace imgproc
 {
-    void meanShiftFiltering_gpu(const PtrStepSzb& src, PtrStepSzb dst, int sp, int sr, int maxIter, float eps, cudaStream_t stream);
+    void shfl_integral_gpu(PtrStepSzb img, PtrStepSz<unsigned int> integral, cudaStream_t stream);
 }
 }}}
 
