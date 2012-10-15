@@ -1088,9 +1088,6 @@ void TestBase::TearDown()
         if (type_param)  printf("[ TYPE     ] \t%s\n", type_param), fflush(stdout);
         reportMetrics(true);
     }
-#ifdef HAVE_TBB
-    p_tbb_initializer.release();
-#endif
 }
 
 std::string TestBase::getDataPath(const std::string& relativePath)
