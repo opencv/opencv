@@ -114,8 +114,6 @@ namespace cv { namespace gpu
 
         int multiProcessorCount() const { return multi_processor_count_; }
 
-        size_t sharedMemPerBlock() const { return sharedMemPerBlock_; }
-
         size_t freeMemory() const;
         size_t totalMemory() const;
 
@@ -137,7 +135,6 @@ namespace cv { namespace gpu
         int multi_processor_count_;
         int majorVersion_;
         int minorVersion_;
-        size_t sharedMemPerBlock_;
     };
 
     CV_EXPORTS void printCudaDeviceInfo(int device);
@@ -273,6 +270,7 @@ namespace cv { namespace gpu
 
         // Deprecated function
         __CV_GPU_DEPR_BEFORE__ template <typename _Tp> operator DevMem2D_<_Tp>() const __CV_GPU_DEPR_AFTER__;
+        __CV_GPU_DEPR_BEFORE__ template <typename _Tp> operator PtrStep_<_Tp>() const __CV_GPU_DEPR_AFTER__;
         #undef __CV_GPU_DEPR_BEFORE__
         #undef __CV_GPU_DEPR_AFTER__
 
@@ -519,6 +517,11 @@ namespace cv { namespace gpu
     template <class T> inline GpuMat::operator DevMem2D_<T>() const
     {
         return DevMem2D_<T>(rows, cols, (T*)data, step);
+    }
+
+    template <class T> inline GpuMat::operator PtrStep_<T>() const
+    {
+        return PtrStep_<T>(static_cast< DevMem2D_<T> >(*this));
     }
 
     inline GpuMat createContinuous(int rows, int cols, int type)

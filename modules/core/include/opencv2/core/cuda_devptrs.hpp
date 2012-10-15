@@ -123,7 +123,7 @@ namespace cv
         typedef PtrStep<int> PtrStepi;
 
 
-#if defined __GNUC__ 
+#if defined __GNUC__
     #define __CV_GPU_DEPR_BEFORE__
     #define __CV_GPU_DEPR_AFTER__ __attribute__ ((deprecated))
 #elif defined(__MSVC__) //|| defined(__CUDACC__)
@@ -140,7 +140,7 @@ namespace cv
             DevMem2D_() {}
             DevMem2D_(int rows_, int cols_, T* data_, size_t step_) : PtrStepSz<T>(rows_, cols_, data_, step_) {}
 
-            template <typename U> 
+            template <typename U>
             explicit __CV_GPU_DEPR_BEFORE__ DevMem2D_(const DevMem2D_<U>& d) : PtrStepSz<T>(d.rows, d.cols, (T*)d.data, d.step) {}
         } __CV_GPU_DEPR_AFTER__ ;
 
@@ -148,6 +148,31 @@ namespace cv
         typedef DevMem2Db DevMem2D;
         typedef DevMem2D_<float> DevMem2Df;
         typedef DevMem2D_<int> DevMem2Di;
+
+        template<typename T> struct PtrElemStep_ : public PtrStep<T>
+        {
+            PtrElemStep_(const DevMem2D_<T>& mem) : PtrStep<T>(mem.data, mem.step)
+            {
+                StaticAssert<256 % sizeof(T) == 0>::check();
+
+                PtrStep<T>::step /= PtrStep<T>::elem_size;
+            }
+            __CV_GPU_HOST_DEVICE__ T* ptr(int y = 0) { return PtrStep<T>::data + y * PtrStep<T>::step; }
+            __CV_GPU_HOST_DEVICE__ const T* ptr(int y = 0) const { return PtrStep<T>::data + y * PtrStep<T>::step; }
+
+            __CV_GPU_HOST_DEVICE__ T& operator ()(int y, int x) { return ptr(y)[x]; }
+            __CV_GPU_HOST_DEVICE__ const T& operator ()(int y, int x) const { return ptr(y)[x]; }
+        };
+
+        template<typename T> struct PtrStep_ : public PtrStep<T>
+        {
+            PtrStep_() {}
+            PtrStep_(const DevMem2D_<T>& mem) : PtrStep<T>(mem.data, mem.step) {}
+        };
+
+        typedef PtrElemStep_<unsigned char> PtrElemStep;
+        typedef PtrElemStep_<float> PtrElemStepf;
+        typedef PtrElemStep_<int> PtrElemStepi;
 
 //#undef __CV_GPU_DEPR_BEFORE__
 //#undef __CV_GPU_DEPR_AFTER__
