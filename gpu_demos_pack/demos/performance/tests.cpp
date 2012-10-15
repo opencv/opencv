@@ -5,12 +5,13 @@
 #include "opencv2/video/video.hpp"
 #include "opencv2/gpu/gpu.hpp"
 #include "opencv2/nonfree/nonfree.hpp"
+#include "opencv2/legacy/legacy.hpp"
 #include "performance.h"
 
 using namespace std;
 using namespace cv;
 
-void InitMatchTemplate()
+static void InitMatchTemplate()
 {
     Mat src; gen(src, 500, 500, CV_32F, 0, 1);
     Mat templ; gen(templ, 500, 500, CV_32F, 0, 1);
@@ -80,7 +81,7 @@ TEST(remap)
 {
     Mat src, dst, xmap, ymap;
     gpu::GpuMat d_src, d_dst, d_xmap, d_ymap;
-    
+
     int interpolation = INTER_LINEAR;
     int borderMode = BORDER_REPLICATE;
 
@@ -268,8 +269,8 @@ TEST(meanShift)
 
 TEST(SURF)
 {
-    Mat src = imread(abspath("stereo_matching/aloeL.jpg"), CV_LOAD_IMAGE_GRAYSCALE);
-    if (src.empty()) throw runtime_error("can't open aloeL.jpg");
+    Mat src = imread(abspath("stereo_matching/aloeL.png"), CV_LOAD_IMAGE_GRAYSCALE);
+    if (src.empty()) throw runtime_error("can't open aloeL.png");
 
     SURF surf;
     vector<KeyPoint> keypoints;
@@ -296,8 +297,8 @@ TEST(SURF)
 
 TEST(FAST)
 {
-    Mat src = imread(abspath("stereo_matching/aloeL.jpg"), CV_LOAD_IMAGE_GRAYSCALE);
-    if (src.empty()) throw runtime_error("can't open aloeL.jpg");
+    Mat src = imread(abspath("stereo_matching/aloeL.png"), CV_LOAD_IMAGE_GRAYSCALE);
+    if (src.empty()) throw runtime_error("can't open aloeL.png");
 
     vector<KeyPoint> keypoints;
 
@@ -321,8 +322,8 @@ TEST(FAST)
 
 TEST(ORB)
 {
-    Mat src = imread(abspath("stereo_matching/aloeL.jpg"), CV_LOAD_IMAGE_GRAYSCALE);
-    if (src.empty()) throw runtime_error("can't open aloeL.jpg");
+    Mat src = imread(abspath("stereo_matching/aloeL.png"), CV_LOAD_IMAGE_GRAYSCALE);
+    if (src.empty()) throw runtime_error("can't open aloeL.png");
 
     ORB orb(4000);
     vector<KeyPoint> keypoints;
@@ -355,15 +356,15 @@ TEST(BruteForceMatcher)
 
     BFMatcher matcher(NORM_L2);
 
-    Mat query; 
+    Mat query;
     gen(query, 3000, desc_len, CV_32F, 0, 1);
-    
-    Mat train; 
+
+    Mat train;
     gen(train, 3000, desc_len, CV_32F, 0, 1);
 
     // Init GPU matcher
 
-    gpu::BruteForceMatcher_GPU< L2<float> > d_matcher;
+    gpu::BFMatcher_GPU d_matcher(NORM_L2);
 
     gpu::GpuMat d_query(query);
     gpu::GpuMat d_train(train);
@@ -594,17 +595,17 @@ TEST(cvtColor)
 
     gen(src, 4000, 4000, CV_8UC1, 0, 255);
     d_src.upload(src);
-    
+
     SUBTEST << "4000x4000, 8UC1, CV_GRAY2BGRA";
-    
+
     cvtColor(src, dst, CV_GRAY2BGRA, 4);
 
     CPU_ON;
     cvtColor(src, dst, CV_GRAY2BGRA, 4);
     CPU_OFF;
-    
+
     gpu::cvtColor(d_src, d_dst, CV_GRAY2BGRA, 4);
-    
+
     GPU_ON;
     gpu::cvtColor(d_src, d_dst, CV_GRAY2BGRA, 4);
     GPU_OFF;
@@ -613,104 +614,104 @@ TEST(cvtColor)
     d_src.swap(d_dst);
 
     SUBTEST << "4000x4000, 8UC3 vs 8UC4, CV_BGR2YCrCb";
-    
+
     cvtColor(src, dst, CV_BGR2YCrCb);
 
     CPU_ON;
     cvtColor(src, dst, CV_BGR2YCrCb);
     CPU_OFF;
-    
+
     gpu::cvtColor(d_src, d_dst, CV_BGR2YCrCb, 4);
-        
+
     GPU_ON;
     gpu::cvtColor(d_src, d_dst, CV_BGR2YCrCb, 4);
     GPU_OFF;
-    
+
     cv::swap(src, dst);
     d_src.swap(d_dst);
 
     SUBTEST << "4000x4000, 8UC4, CV_YCrCb2BGR";
-    
+
     cvtColor(src, dst, CV_YCrCb2BGR, 4);
 
     CPU_ON;
     cvtColor(src, dst, CV_YCrCb2BGR, 4);
     CPU_OFF;
-    
+
     gpu::cvtColor(d_src, d_dst, CV_YCrCb2BGR, 4);
-        
+
     GPU_ON;
     gpu::cvtColor(d_src, d_dst, CV_YCrCb2BGR, 4);
     GPU_OFF;
-    
+
     cv::swap(src, dst);
     d_src.swap(d_dst);
 
     SUBTEST << "4000x4000, 8UC3 vs 8UC4, CV_BGR2XYZ";
-    
+
     cvtColor(src, dst, CV_BGR2XYZ);
 
     CPU_ON;
     cvtColor(src, dst, CV_BGR2XYZ);
     CPU_OFF;
-    
+
     gpu::cvtColor(d_src, d_dst, CV_BGR2XYZ, 4);
-        
+
     GPU_ON;
     gpu::cvtColor(d_src, d_dst, CV_BGR2XYZ, 4);
     GPU_OFF;
-    
+
     cv::swap(src, dst);
     d_src.swap(d_dst);
 
     SUBTEST << "4000x4000, 8UC4, CV_XYZ2BGR";
-    
+
     cvtColor(src, dst, CV_XYZ2BGR, 4);
 
     CPU_ON;
     cvtColor(src, dst, CV_XYZ2BGR, 4);
     CPU_OFF;
-    
+
     gpu::cvtColor(d_src, d_dst, CV_XYZ2BGR, 4);
-        
+
     GPU_ON;
     gpu::cvtColor(d_src, d_dst, CV_XYZ2BGR, 4);
     GPU_OFF;
-    
+
     cv::swap(src, dst);
     d_src.swap(d_dst);
 
     SUBTEST << "4000x4000, 8UC3 vs 8UC4, CV_BGR2HSV";
-    
+
     cvtColor(src, dst, CV_BGR2HSV);
 
     CPU_ON;
     cvtColor(src, dst, CV_BGR2HSV);
     CPU_OFF;
-    
+
     gpu::cvtColor(d_src, d_dst, CV_BGR2HSV, 4);
-        
+
     GPU_ON;
     gpu::cvtColor(d_src, d_dst, CV_BGR2HSV, 4);
     GPU_OFF;
-    
+
     cv::swap(src, dst);
     d_src.swap(d_dst);
 
     SUBTEST << "4000x4000, 8UC4, CV_HSV2BGR";
-    
+
     cvtColor(src, dst, CV_HSV2BGR, 4);
 
     CPU_ON;
     cvtColor(src, dst, CV_HSV2BGR, 4);
     CPU_OFF;
-    
+
     gpu::cvtColor(d_src, d_dst, CV_HSV2BGR, 4);
-        
+
     GPU_ON;
     gpu::cvtColor(d_src, d_dst, CV_HSV2BGR, 4);
     GPU_OFF;
-    
+
     cv::swap(src, dst);
     d_src.swap(d_dst);
 }
@@ -757,7 +758,7 @@ TEST(threshold)
 
         threshold(src, dst, 50.0, 0.0, THRESH_BINARY);
 
-        CPU_ON; 
+        CPU_ON;
         threshold(src, dst, 50.0, 0.0, THRESH_BINARY);
         CPU_OFF;
 
@@ -778,7 +779,7 @@ TEST(threshold)
 
         threshold(src, dst, 50.0, 0.0, THRESH_TRUNC);
 
-        CPU_ON; 
+        CPU_ON;
         threshold(src, dst, 50.0, 0.0, THRESH_TRUNC);
         CPU_OFF;
 
@@ -857,7 +858,7 @@ TEST(projectPoints)
 }
 
 
-void InitSolvePnpRansac()
+static void InitSolvePnpRansac()
 {
     Mat object; gen(object, 1, 4, CV_32FC3, Scalar::all(0), Scalar::all(100));
     Mat image; gen(image, 1, 4, CV_32FC2, Scalar::all(0), Scalar::all(100));
@@ -906,7 +907,7 @@ TEST(GaussianBlur)
         SUBTEST << size << 'x' << size << ", 8UC4";
 
         Mat src, dst;
-        
+
         gen(src, size, size, CV_8UC4, 0, 256);
 
         GaussianBlur(src, dst, Size(3, 3), 1);
@@ -933,11 +934,11 @@ TEST(filter2D)
     {
         Mat src;
         gen(src, size, size, CV_8UC4, 0, 256);
-                
+
         for (int ksize = 3; ksize <= 16; ksize += 2)
-        {        
+        {
             SUBTEST << "ksize = " << ksize << ", " << size << 'x' << size << ", 8UC4";
-            
+
             Mat kernel;
             gen(kernel, ksize, ksize, CV_32FC1, 0.0, 1.0);
 
@@ -966,7 +967,7 @@ TEST(pyrDown)
     {
         SUBTEST << size << 'x' << size << ", 8UC4";
 
-        Mat src, dst; 
+        Mat src, dst;
         gen(src, size, size, CV_8UC4, 0, 256);
 
         pyrDown(src, dst);
@@ -992,7 +993,7 @@ TEST(pyrUp)
     {
         SUBTEST << size << 'x' << size << ", 8UC4";
 
-        Mat src, dst; 
+        Mat src, dst;
 
         gen(src, size, size, CV_8UC4, 0, 256);
 
@@ -1046,16 +1047,15 @@ TEST(equalizeHist)
 
 TEST(Canny)
 {
-    Mat img = imread(abspath("stereo_matching/aloeL.jpg"), CV_LOAD_IMAGE_GRAYSCALE);
-
-    if (img.empty()) throw runtime_error("can't open aloeL.jpg");
+    Mat img = imread(abspath("stereo_matching/aloeL.png"), CV_LOAD_IMAGE_GRAYSCALE);
+    if (img.empty()) throw runtime_error("can't open aloeL.png");
 
     Mat edges(img.size(), CV_8UC1);
 
     CPU_ON;
     Canny(img, edges, 50.0, 100.0);
     CPU_OFF;
-    
+
     gpu::GpuMat d_img(img);
     gpu::GpuMat d_edges;
     gpu::CannyBuf d_buf;
@@ -1146,8 +1146,8 @@ TEST(gemm)
 
 TEST(GoodFeaturesToTrack)
 {
-    Mat src = imread(abspath("stereo_matching/aloeL.jpg"), IMREAD_GRAYSCALE);
-    if (src.empty()) throw runtime_error("can't open aloeL.jpg");
+    Mat src = imread(abspath("stereo_matching/aloeL.png"), IMREAD_GRAYSCALE);
+    if (src.empty()) throw runtime_error("can't open aloeL.png");
 
     vector<Point2f> pts;
 
@@ -1171,15 +1171,15 @@ TEST(GoodFeaturesToTrack)
 
 TEST(PyrLKOpticalFlow)
 {
-    Mat frame0 = imread(abspath("optical_flow/rubberwhale1.png"));
-    if (frame0.empty()) throw runtime_error("can't open rubberwhale1.png");
+    Mat frame0 = imread(abspath("optical_flow/army1.png"));
+    if (frame0.empty()) throw runtime_error("can't open army1.png");
 
-    Mat frame1 = imread(abspath("optical_flow/rubberwhale2.png"));
-    if (frame1.empty()) throw runtime_error("can't open rubberwhale2.png");
-    
+    Mat frame1 = imread(abspath("optical_flow/army2.png"));
+    if (frame1.empty()) throw runtime_error("can't open army2.png");
+
     Mat gray_frame;
     cvtColor(frame0, gray_frame, COLOR_BGR2GRAY);
-    
+
     for (int points = 1000; points <= 8000; points *= 2)
     {
         SUBTEST << points;
@@ -1222,7 +1222,7 @@ TEST(PyrLKOpticalFlow)
 
 TEST(FarnebackOpticalFlow)
 {
-    const string datasets[] = {"rubberwhale", "basketball"};
+    const string datasets[] = {"army", "basketball"};
     for (size_t i = 0; i < sizeof(datasets)/sizeof(*datasets); ++i) {
     for (int fastPyramids = 0; fastPyramids < 2; ++fastPyramids) {
     for (int useGaussianBlur = 0; useGaussianBlur < 2; ++useGaussianBlur) {
@@ -1248,4 +1248,167 @@ TEST(FarnebackOpticalFlow)
     CPU_OFF;
 
     }}}
+}
+
+namespace cv
+{
+    template<> void Ptr<CvBGStatModel>::delete_obj()
+    {
+        cvReleaseBGStatModel(&obj);
+    }
+}
+
+TEST(FGDStatModel)
+{
+    const std::string inputFile = abspath("pedestrian_detect/mitsubishi.avi");
+
+    cv::VideoCapture cap(inputFile);
+    if (!cap.isOpened()) throw runtime_error("can't open pedestrian_detect/mitsubishi.avi");
+
+    cv::Mat frame;
+    cap >> frame;
+
+    IplImage ipl_frame = frame;
+    cv::Ptr<CvBGStatModel> model(cvCreateFGDStatModel(&ipl_frame));
+
+    while (!TestSystem::instance().stop())
+    {
+        cap >> frame;
+        ipl_frame = frame;
+
+        TestSystem::instance().cpuOn();
+
+        cvUpdateBGStatModel(&ipl_frame, model);
+
+        TestSystem::instance().cpuOff();
+    }
+    TestSystem::instance().cpuComplete();
+
+    cap.open(inputFile);
+
+    cap >> frame;
+
+    cv::gpu::GpuMat d_frame(frame);
+    cv::gpu::FGDStatModel d_model(d_frame);
+
+    while (!TestSystem::instance().stop())
+    {
+        cap >> frame;
+        d_frame.upload(frame);
+
+        TestSystem::instance().gpuOn();
+
+        d_model.update(d_frame);
+
+        TestSystem::instance().gpuOff();
+    }
+    TestSystem::instance().gpuComplete();
+}
+
+TEST(MOG)
+{
+    const std::string inputFile = abspath("pedestrian_detect/mitsubishi.avi");
+
+    cv::VideoCapture cap(inputFile);
+    if (!cap.isOpened()) throw runtime_error("can't open pedestrian_detect/mitsubishi.avi");
+
+    cv::Mat frame;
+    cap >> frame;
+
+    cv::BackgroundSubtractorMOG mog;
+    cv::Mat foreground;
+
+    mog(frame, foreground, 0.01);
+
+    while (!TestSystem::instance().stop())
+    {
+        cap >> frame;
+
+        TestSystem::instance().cpuOn();
+
+        mog(frame, foreground, 0.01);
+
+        TestSystem::instance().cpuOff();
+    }
+    TestSystem::instance().cpuComplete();
+
+    cap.open(inputFile);
+
+    cap >> frame;
+
+    cv::gpu::GpuMat d_frame(frame);
+    cv::gpu::MOG_GPU d_mog;
+    cv::gpu::GpuMat d_foreground;
+
+    d_mog(d_frame, d_foreground, 0.01);
+
+    while (!TestSystem::instance().stop())
+    {
+        cap >> frame;
+        d_frame.upload(frame);
+
+        TestSystem::instance().gpuOn();
+
+        d_mog(d_frame, d_foreground, 0.01);
+
+        TestSystem::instance().gpuOff();
+    }
+    TestSystem::instance().gpuComplete();
+}
+
+TEST(MOG2)
+{
+    const std::string inputFile = abspath("pedestrian_detect/mitsubishi.avi");
+
+    cv::VideoCapture cap(inputFile);
+    if (!cap.isOpened()) throw runtime_error("can't open pedestrian_detect/mitsubishi.avi");
+
+    cv::Mat frame;
+    cap >> frame;
+
+    cv::BackgroundSubtractorMOG2 mog2;
+    cv::Mat foreground;
+    cv::Mat background;
+
+    mog2(frame, foreground);
+    mog2.getBackgroundImage(background);
+
+    while (!TestSystem::instance().stop())
+    {
+        cap >> frame;
+
+        TestSystem::instance().cpuOn();
+
+        mog2(frame, foreground);
+        mog2.getBackgroundImage(background);
+
+        TestSystem::instance().cpuOff();
+    }
+    TestSystem::instance().cpuComplete();
+
+    cap.open(inputFile);
+
+    cap >> frame;
+
+    cv::gpu::GpuMat d_frame(frame);
+    cv::gpu::MOG2_GPU d_mog2;
+    cv::gpu::GpuMat d_foreground;
+    cv::gpu::GpuMat d_background;
+
+    d_mog2(d_frame, d_foreground);
+    d_mog2.getBackgroundImage(d_background);
+
+    while (!TestSystem::instance().stop())
+    {
+        cap >> frame;
+        d_frame.upload(frame);
+
+        TestSystem::instance().gpuOn();
+
+        d_mog2(d_frame, d_foreground);
+        d_mog2.getBackgroundImage(d_background);
+
+        TestSystem::instance().gpuOff();
+    }
+    TestSystem::instance().gpuComplete();
 }

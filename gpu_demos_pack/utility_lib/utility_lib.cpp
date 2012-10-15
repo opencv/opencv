@@ -19,8 +19,26 @@ void ImageSource::next(Mat& frame)
     frame = img_; 
 }
 
+
+void ImagesVideoSource::next(Mat& frame)
+{
+    if (! looped)
+    {
+        vc_ >> frame;
+        if (frame.empty())
+        {
+            vc_.open(path_);
+            vc_ >> frame;
+        }
+    }
+    if (!(prev < 1))
+        looped = true;
+
+    prev = vc_.get(CV_CAP_PROP_POS_AVI_RATIO);
+}
+
 VideoSource::VideoSource(const string& path) : vc_(path), path_(path)
-{ 
+{
     CV_Assert(vc_.isOpened()); 
 }
 
@@ -143,10 +161,9 @@ void makeGray(const Mat& src, Mat& dst)
     }
 }
 
-void printText(Mat& img, const string& msg, int lineOffsY, Scalar fontColor)
+void printText(Mat& img, const string& msg, int lineOffsY, Scalar fontColor, double fontScale)
 {
     int fontFace = FONT_HERSHEY_DUPLEX;
-    double fontScale = 0.8;
     int fontThickness = 2;
 
     Size fontSize = getTextSize("T[]", fontFace, fontScale, fontThickness, 0);
@@ -155,7 +172,7 @@ void printText(Mat& img, const string& msg, int lineOffsY, Scalar fontColor)
     org.x = 1;
     org.y = 3 * fontSize.height * (lineOffsY + 1) / 2;
 
-    putText(img, msg, org, fontFace, fontScale, Scalar::all(0), 5 * fontThickness / 2, 16);
+    putText(img, msg, org, fontFace, fontScale, Scalar(0,0,0,255), 5 * fontThickness / 2, 16);
     putText(img, msg, org, fontFace, fontScale, fontColor, fontThickness, 16);
 }
 
@@ -169,6 +186,9 @@ void BaseApp::run(int argc, const char* argv[])
         if (parseFrameSourcesCmdArgs(i, argc, argv))
             continue;
 
+        if (parseGpuDeviceCmdArgs(i, argc, argv))
+            continue;
+
         if (parseHelpCmdArg(i, argc, argv))
             return;
 
@@ -177,8 +197,29 @@ void BaseApp::run(int argc, const char* argv[])
         throw runtime_error(msg.str());
     }
 
-    if (gpu::getCudaEnabledDeviceCount() == 0)
-        throw runtime_error("No GPU found or the library is compiled without GPU support"); 
+    int num_devices = gpu::getCudaEnabledDeviceCount();
+    if (num_devices == 0)
+        throw runtime_error("No GPU found or the library is compiled without GPU support");
+
+    if (device_ < 0 || device_ >= num_devices)
+        throw runtime_error("Incorrect device ID");
+
+    gpu::DeviceInfo dev_info(device_);
+    if (!dev_info.isCompatible())
+    {
+        ostringstream msg;
+        msg << "GPU module isn't built for GPU #" << device_ << " " << dev_info.name() << ", CC " << dev_info.majorVersion() << '.' << dev_info.minorVersion();
+        throw runtime_error(msg.str());
+    }
+
+    cout << "Initializing device...\n" << endl;
+    gpu::setDevice(device_);
+    gpu::GpuMat m(10, 10, CV_8U);
+    m.release();
+
+    gpu::printShortCudaDeviceInfo(device_);
+
+    cout << endl;
 
     process();
 }
@@ -198,7 +239,9 @@ void BaseApp::printHelp()
          << "  -c <device_ID>\n"
          << "       Camera device ID\n"
          << "  -w <camera_frame_width>\n"
-         << "  -h <camera_frame_height>\n";
+         << "  -h <camera_frame_height>\n"
+         << "\nDevice Flags:\n"
+         << "  -d <device_id>\n";
 }
 
 bool BaseApp::processKey(int key)
@@ -275,6 +318,25 @@ bool BaseApp::parseFrameSourcesCmdArgs(int& i, int argc, const char* argv[])
             throw runtime_error("Missing value after -c");
 
         sources.push_back(new CameraSource(atoi(argv[i]), frame_width, frame_height));
+    }
+    else 
+        return false;
+
+    return true;
+}
+
+bool BaseApp::parseGpuDeviceCmdArgs(int& i, int argc, const char* argv[])
+{
+    string arg(argv[i]);
+
+    if (arg == "-d") 
+    {
+        ++i;
+
+        if (i >= argc)
+            throw runtime_error("Missing value after -d");
+
+        device_ = atoi(argv[i]);
     }
     else 
         return false;

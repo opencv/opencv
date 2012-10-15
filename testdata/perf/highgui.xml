@@ -1,0 +1,173 @@
+<?xml version="1.0" ?><opencv_storage>
+<VideoWriter_Writing_WriteFrame--WriteFrame----python-images-QCIF_00-bmp---false->
+  <dummy>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.</data></val></dummy></VideoWriter_Writing_WriteFrame--WriteFrame----python-images-QCIF_00-bmp---false->
+<VideoWriter_Writing_WriteFrame--WriteFrame----python-images-QCIF_00-bmp---true->
+  <dummy>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.</data></val></dummy></VideoWriter_Writing_WriteFrame--WriteFrame----python-images-QCIF_00-bmp---true->
+<VideoWriter_Writing_WriteFrame--WriteFrame----python-images-QCIF_01-bmp---false->
+  <dummy>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.</data></val></dummy></VideoWriter_Writing_WriteFrame--WriteFrame----python-images-QCIF_01-bmp---false->
+<VideoWriter_Writing_WriteFrame--WriteFrame----python-images-QCIF_01-bmp---true->
+  <dummy>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.</data></val></dummy></VideoWriter_Writing_WriteFrame--WriteFrame----python-images-QCIF_01-bmp---true->
+<VideoWriter_Writing_WriteFrame--WriteFrame----python-images-QCIF_02-bmp---false->
+  <dummy>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.</data></val></dummy></VideoWriter_Writing_WriteFrame--WriteFrame----python-images-QCIF_02-bmp---false->
+<VideoWriter_Writing_WriteFrame--WriteFrame----python-images-QCIF_02-bmp---true->
+  <dummy>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.</data></val></dummy></VideoWriter_Writing_WriteFrame--WriteFrame----python-images-QCIF_02-bmp---true->
+<VideoWriter_Writing_WriteFrame--WriteFrame----python-images-QCIF_03-bmp---false->
+  <dummy>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.</data></val></dummy></VideoWriter_Writing_WriteFrame--WriteFrame----python-images-QCIF_03-bmp---false->
+<VideoWriter_Writing_WriteFrame--WriteFrame----python-images-QCIF_03-bmp---true->
+  <dummy>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.</data></val></dummy></VideoWriter_Writing_WriteFrame--WriteFrame----python-images-QCIF_03-bmp---true->
+<VideoWriter_Writing_WriteFrame--WriteFrame----python-images-QCIF_04-bmp---false->
+  <dummy>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.</data></val></dummy></VideoWriter_Writing_WriteFrame--WriteFrame----python-images-QCIF_04-bmp---false->
+<VideoWriter_Writing_WriteFrame--WriteFrame----python-images-QCIF_04-bmp---true->
+  <dummy>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.</data></val></dummy></VideoWriter_Writing_WriteFrame--WriteFrame----python-images-QCIF_04-bmp---true->
+<VideoWriter_Writing_WriteFrame--WriteFrame----python-images-QCIF_05-bmp---false->
+  <dummy>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.</data></val></dummy></VideoWriter_Writing_WriteFrame--WriteFrame----python-images-QCIF_05-bmp---false->
+<VideoWriter_Writing_WriteFrame--WriteFrame----python-images-QCIF_05-bmp---true->
+  <dummy>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.</data></val></dummy></VideoWriter_Writing_WriteFrame--WriteFrame----python-images-QCIF_05-bmp---true->
+ <!-- resumed -->
+<VideoCapture_Reading_ReadFile--ReadFile---highgui-video-big_buck_bunny-avi->
+  <dummy>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.</data></val></dummy></VideoCapture_Reading_ReadFile--ReadFile---highgui-video-big_buck_bunny-avi->
+<VideoCapture_Reading_ReadFile--ReadFile---highgui-video-big_buck_bunny-mov->
+  <dummy>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.</data></val></dummy></VideoCapture_Reading_ReadFile--ReadFile---highgui-video-big_buck_bunny-mov->
+<VideoCapture_Reading_ReadFile--ReadFile---highgui-video-big_buck_bunny-mp4->
+  <dummy>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.</data></val></dummy></VideoCapture_Reading_ReadFile--ReadFile---highgui-video-big_buck_bunny-mp4->
+<VideoCapture_Reading_ReadFile--ReadFile---highgui-video-big_buck_bunny-mpg->
+  <dummy>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.</data></val></dummy></VideoCapture_Reading_ReadFile--ReadFile---highgui-video-big_buck_bunny-mpg->
+<VideoCapture_Reading_ReadFile--ReadFile---highgui-video-big_buck_bunny-wmv->
+  <dummy>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.</data></val></dummy></VideoCapture_Reading_ReadFile--ReadFile---highgui-video-big_buck_bunny-wmv->
+</opencv_storage>

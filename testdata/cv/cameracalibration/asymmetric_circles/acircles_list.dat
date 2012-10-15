@@ -1,13 +1,13 @@
 <?xml version="1.0"?>
 <opencv_storage>
 <boards>
-"acircles1.jpg" "acircles_corners1.dat"
-"acircles2.jpg" "acircles_corners2.dat"
-"acircles3.jpg" "acircles_corners3.dat"
-"acircles4.jpg" "acircles_corners4.dat"
-"acircles5.jpg" "acircles_corners5.dat"
-"acircles6.jpg" "acircles_corners6.dat"
-"acircles7.jpg" "acircles_corners7.dat"
-"acircles8.jpg" "acircles_corners8.dat"
-"acircles9.jpg" "acircles_corners9.dat"
+"acircles1.png" "acircles_corners1.dat"
+"acircles2.png" "acircles_corners2.dat"
+"acircles3.png" "acircles_corners3.dat"
+"acircles4.png" "acircles_corners4.dat"
+"acircles5.png" "acircles_corners5.dat"
+"acircles6.png" "acircles_corners6.dat"
+"acircles7.png" "acircles_corners7.dat"
+"acircles8.png" "acircles_corners8.dat"
+"acircles9.png" "acircles_corners9.dat"
 </boards></opencv_storage>

@@ -127,8 +127,10 @@ private:
     std::stringstream cur_subtest_description_;
     bool cur_subtest_is_empty_;
 
-    int64 cpu_started_, cpu_elapsed_;
-    int64 gpu_started_, gpu_elapsed_;
+    int64 cpu_started_;
+    int64 gpu_started_;
+    double cpu_elapsed_;
+    double gpu_elapsed_;
 
     double speedup_total_;
     int num_subtests_called_;
