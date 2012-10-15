@@ -2026,9 +2026,6 @@ public:
     const CvMat* get_responses();
     const CvMat* get_missing() const;
 
-    void set_header_lines_number( int n );
-    int get_header_lines_number() const;
-
     void set_response_idx( int idx ); // old response become predictors, new response_idx = idx
                                       // if idx < 0 there will be no response
     int get_response_idx() const;
@@ -2069,7 +2066,6 @@ protected:
 
     char delimiter;
     char miss_ch;
-    short header_lines_number;
     //char flt_separator;
 
     CvMat* values;
@@ -2080,8 +2076,6 @@ protected:
     CvMat* response_out; // header
     CvMat* var_idx_out; // mat
     CvMat* var_types_out; // mat
-
-    int header_lines_number;
 
     int response_idx;
 
