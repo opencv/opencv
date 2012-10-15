@@ -245,7 +245,7 @@ void FAST_t(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bo
     }
 }
 
-void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool nonmax_suppression, int type)
+void FASTX(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool nonmax_suppression, int type)
 {
   switch(type) {
     case FastFeatureDetector::TYPE_5_8:
@@ -262,24 +262,37 @@ void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool
 
 void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool nonmax_suppression)
 {
-    FAST(_img, keypoints, threshold, nonmax_suppression, FastFeatureDetector::TYPE_9_16);
+    FASTX(_img, keypoints, threshold, nonmax_suppression, FastFeatureDetector::TYPE_9_16);
 }
+
 /*
  *   FastFeatureDetector
  */
 FastFeatureDetector::FastFeatureDetector( int _threshold, bool _nonmaxSuppression )
-    : threshold(_threshold), nonmaxSuppression(_nonmaxSuppression), type(FastFeatureDetector::TYPE_9_16)
+    : threshold(_threshold), nonmaxSuppression(_nonmaxSuppression)
 {}
 
-FastFeatureDetector::FastFeatureDetector( int _threshold, bool _nonmaxSuppression, int _type )
-: threshold(_threshold), nonmaxSuppression(_nonmaxSuppression), type((short)_type)
+FastFeatureDetector2::FastFeatureDetector2( int _threshold, bool _nonmaxSuppression )
+    : FastFeatureDetector(_threshold, _nonmaxSuppression), type(FastFeatureDetector::TYPE_9_16)
+{}
+
+FastFeatureDetector2::FastFeatureDetector2( int _threshold, bool _nonmaxSuppression, int _type )
+    : FastFeatureDetector(_threshold, _nonmaxSuppression), type((short)_type)
 {}
 
 void FastFeatureDetector::detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask ) const
 {
     Mat grayImage = image;
     if( image.type() != CV_8U ) cvtColor( image, grayImage, CV_BGR2GRAY );
-    FAST( grayImage, keypoints, threshold, nonmaxSuppression, type );
+    FAST( grayImage, keypoints, threshold, nonmaxSuppression );
+    KeyPointsFilter::runByPixelsMask( keypoints, mask );
+}
+
+void FastFeatureDetector2::detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask ) const
+{
+    Mat grayImage = image;
+    if( image.type() != CV_8U ) cvtColor( image, grayImage, CV_BGR2GRAY );
+    FASTX( grayImage, keypoints, threshold, nonmaxSuppression, type );
     KeyPointsFilter::runByPixelsMask( keypoints, mask );
 }
 

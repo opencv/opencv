@@ -41,6 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "fast_score.hpp"
 
 using namespace cv;
 
@@ -68,6 +69,10 @@ CV_INIT_ALGORITHM(BriefDescriptorExtractor, "Feature2D.BRIEF",
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 CV_INIT_ALGORITHM(FastFeatureDetector, "Feature2D.FAST",
+                  obj.info()->addParam(obj, "threshold", obj.threshold);
+                  obj.info()->addParam(obj, "nonmaxSuppression", obj.nonmaxSuppression));
+
+CV_INIT_ALGORITHM(FastFeatureDetector2, "Feature2D.FASTX",
                   obj.info()->addParam(obj, "threshold", obj.threshold);
                   obj.info()->addParam(obj, "nonmaxSuppression", obj.nonmaxSuppression);
                   obj.info()->addParam(obj, "type", obj.type));
@@ -167,6 +172,7 @@ bool cv::initModule_features2d(void)
     all &= !BriefDescriptorExtractor_info_auto.name().empty();
     all &= !BRISK_info_auto.name().empty();
     all &= !FastFeatureDetector_info_auto.name().empty();
+    all &= !FastFeatureDetector2_info_auto.name().empty();
     all &= !StarDetector_info_auto.name().empty();
     all &= !MSER_info_auto.name().empty();
     all &= !FREAK_info_auto.name().empty();
