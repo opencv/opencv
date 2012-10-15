@@ -426,6 +426,79 @@ CvChainPtReader;
      (deltas)[6] =  (step), (deltas)[7] =  (step) + (nch))
 
 
+/****************************************************************************************\
+*                              Planar subdivisions                                       *
+\****************************************************************************************/
+
+typedef size_t CvSubdiv2DEdge;
+
+#define CV_QUADEDGE2D_FIELDS()     \
+    int flags;                     \
+    struct CvSubdiv2DPoint* pt[4]; \
+    CvSubdiv2DEdge  next[4];
+
+#define CV_SUBDIV2D_POINT_FIELDS()\
+    int            flags;      \
+    CvSubdiv2DEdge first;      \
+    CvPoint2D32f   pt;         \
+    int id;
+
+#define CV_SUBDIV2D_VIRTUAL_POINT_FLAG (1 << 30)
+
+typedef struct CvQuadEdge2D
+{
+    CV_QUADEDGE2D_FIELDS()
+}
+CvQuadEdge2D;
+
+typedef struct CvSubdiv2DPoint
+{
+    CV_SUBDIV2D_POINT_FIELDS()
+}
+CvSubdiv2DPoint;
+
+#define CV_SUBDIV2D_FIELDS()    \
+    CV_GRAPH_FIELDS()           \
+    int  quad_edges;            \
+    int  is_geometry_valid;     \
+    CvSubdiv2DEdge recent_edge; \
+    CvPoint2D32f  topleft;      \
+    CvPoint2D32f  bottomright;
+
+typedef struct CvSubdiv2D
+{
+    CV_SUBDIV2D_FIELDS()
+}
+CvSubdiv2D;
+
+
+typedef enum CvSubdiv2DPointLocation
+{
+    CV_PTLOC_ERROR = -2,
+    CV_PTLOC_OUTSIDE_RECT = -1,
+    CV_PTLOC_INSIDE = 0,
+    CV_PTLOC_VERTEX = 1,
+    CV_PTLOC_ON_EDGE = 2
+}
+CvSubdiv2DPointLocation;
+
+typedef enum CvNextEdgeType
+{
+    CV_NEXT_AROUND_ORG   = 0x00,
+    CV_NEXT_AROUND_DST   = 0x22,
+    CV_PREV_AROUND_ORG   = 0x11,
+    CV_PREV_AROUND_DST   = 0x33,
+    CV_NEXT_AROUND_LEFT  = 0x13,
+    CV_NEXT_AROUND_RIGHT = 0x31,
+    CV_PREV_AROUND_LEFT  = 0x20,
+    CV_PREV_AROUND_RIGHT = 0x02
+}
+CvNextEdgeType;
+
+/* get the next edge with the same origin point (counterwise) */
+#define  CV_SUBDIV2D_NEXT_EDGE( edge )  (((CvQuadEdge2D*)((edge) & ~3))->next[(edge)&3])
+
+
 /* Contour approximation algorithms */
 enum
 {
