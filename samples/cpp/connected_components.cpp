@@ -45,14 +45,14 @@ static void help()
 
 const char* keys =
 {
-    "{@image |stuff.jpg|image for converting to a grayscale}"
+    "{1| |stuff.jpg|image for converting to a grayscale}"
 };
 
 int main( int argc, const char** argv )
 {
     help();
     CommandLineParser parser(argc, argv, keys);
-    string inputImage = parser.get<string>(1);
+    string inputImage = parser.get<string>("1");
     img = imread(inputImage.c_str(), 0);
 
     if(img.empty())

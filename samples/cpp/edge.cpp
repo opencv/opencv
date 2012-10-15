@@ -31,7 +31,7 @@ static void help()
 
 const char* keys =
 {
-    "{@image |fruits.jpg|input image name}"
+    "{1| |fruits.jpg|input image name}"
 };
 
 int main( int argc, const char** argv )
@@ -39,7 +39,7 @@ int main( int argc, const char** argv )
     help();
 
     CommandLineParser parser(argc, argv, keys);
-    string filename = parser.get<string>(1);
+    string filename = parser.get<string>("1");
 
     image = imread(filename, 1);
     if(image.empty())

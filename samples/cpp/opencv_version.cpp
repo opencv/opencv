@@ -3,23 +3,19 @@
 
 const char* keys = 
 {
-    "{ b build | | print complete build info }"
-    "{ h help  | | print this help           }"
+    "{ b |build |false | print complete build info }"
+    "{ h |help  |false | print this help           }"
 };
 
 int main(int argc, const char* argv[])
 {
     cv::CommandLineParser parser(argc, argv, keys);
 
-    if (parser.has("help"))
+    if (parser.get<bool>("help"))
     {
-        parser.printMessage();
+        parser.printParams();
     }
-    else if (!parser.check())
-    {
-        parser.printErrors();
-    }
-    else if (parser.has("build"))
+    else if (parser.get<bool>("build"))
     {
         std::cout << cv::getBuildInformation() << std::endl;
     }

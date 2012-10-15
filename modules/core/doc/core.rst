@@ -6,7 +6,6 @@ core. The Core Functionality
     :maxdepth: 2
 
     basic_structures
-    command_line_parser
     old_basic_structures
     dynamic_structures
     operations_on_arrays

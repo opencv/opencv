@@ -53,8 +53,8 @@ static void help()
 
 const char* keys = 
 {
-    "{@first_image  | box.png          | the first image}"
-    "{@second_image | box_in_scene.png | the second image}"
+	"{1|  |box.png               |the first image}"
+	"{2|  |box_in_scene.png|the second image}"
 };
 
 int main(int argc, const char ** argv)
@@ -62,8 +62,8 @@ int main(int argc, const char ** argv)
 
   help();
   CommandLineParser parser(argc, argv, keys);
-  string im1_name = parser.get<string>(1);
-  string im2_name = parser.get<string>(2);
+  string im1_name = parser.get<string>("1");
+  string im2_name = parser.get<string>("2");
 
   Mat im1 = imread(im1_name, CV_LOAD_IMAGE_GRAYSCALE);
   Mat im2 = imread(im2_name, CV_LOAD_IMAGE_GRAYSCALE);
@@ -72,7 +72,7 @@ int main(int argc, const char ** argv)
   {
     cout << "could not open one of the images..." << endl;
     cout << "the cmd parameters have next current value: " << endl;
-    parser.printMessage();
+	parser.printParams();
     return 1;
   }
 

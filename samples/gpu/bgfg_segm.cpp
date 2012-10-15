@@ -21,19 +21,20 @@ enum Method
 int main(int argc, const char** argv)
 {
     cv::CommandLineParser cmd(argc, argv,
-        "{ c camera |             | use camera }"
-        "{ f file   | 768x576.avi | input video file }"
-        "{ m method | mog         | method (fgd, mog, mog2, vibe, gmg) }"
-        "{ h help   |             | print help message }");
+        "{ c | camera | false       | use camera }"
+        "{ f | file   | 768x576.avi | input video file }"
+        "{ m | method | mog         | method (fgd, mog, mog2, vibe, gmg) }"
+        "{ h | help   | false       | print help message }");
 
-    if (cmd.has("help") || !cmd.check())
+    if (cmd.get<bool>("help"))
     {
-        cmd.printMessage();
-        cmd.printErrors();
+        cout << "Usage : bgfg_segm [options]" << endl;
+        cout << "Avaible options:" << endl;
+        cmd.printParams();
         return 0;
     }
 
-    bool useCamera = cmd.has("camera");
+    bool useCamera = cmd.get<bool>("camera");
     string file = cmd.get<string>("file");
     string method = cmd.get<string>("method");
 
