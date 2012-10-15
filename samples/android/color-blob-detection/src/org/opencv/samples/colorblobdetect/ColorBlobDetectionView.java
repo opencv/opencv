@@ -116,7 +116,7 @@ public class ColorBlobDetectionView extends SampleCvViewBase implements OnTouchL
             mDetector.process(mRgba);
             List<MatOfPoint> contours = mDetector.getContours();
             Log.e(TAG, "Contours count: " + contours.size());
-            Core.drawContours(mRgba, contours, -1, CONTOUR_COLOR);
+            Imgproc.drawContours(mRgba, contours, -1, CONTOUR_COLOR);
 
             Mat colorLabel = mRgba.submat(2, 34, 2, 34);
             colorLabel.setTo(mBlobColorRgba);
