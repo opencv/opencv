@@ -917,7 +917,9 @@ void scalarToRawData(const Scalar& s, void* _buf, int type, int unroll_to)
 \*************************************************************************************************/
 
 _InputArray::_InputArray() : flags(0), obj(0) {}
+#ifdef OPENCV_CAN_BREAK_BINARY_COMPATIBILITY
 _InputArray::~_InputArray() {}
+#endif
 _InputArray::_InputArray(const Mat& m) : flags(MAT), obj((void*)&m) {}
 _InputArray::_InputArray(const vector<Mat>& vec) : flags(STD_VECTOR_MAT), obj((void*)&vec) {}
 _InputArray::_InputArray(const double& val) : flags(FIXED_TYPE + FIXED_SIZE + MATX + CV_64F), obj((void*)&val), sz(Size(1,1)) {}
@@ -1281,7 +1283,9 @@ bool _InputArray::empty() const
 
 
 _OutputArray::_OutputArray() {}
+#ifdef OPENCV_CAN_BREAK_BINARY_COMPATIBILITY
 _OutputArray::~_OutputArray() {}
+#endif
 _OutputArray::_OutputArray(Mat& m) : _InputArray(m) {}
 _OutputArray::_OutputArray(vector<Mat>& vec) : _InputArray(vec) {}
 _OutputArray::_OutputArray(gpu::GpuMat& d_mat) : _InputArray(d_mat) {}

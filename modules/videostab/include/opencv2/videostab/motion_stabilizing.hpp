@@ -56,7 +56,9 @@ namespace videostab
 class CV_EXPORTS IMotionStabilizer
 {
 public:
+#ifdef OPENCV_CAN_BREAK_BINARY_COMPATIBILITY
     virtual ~IMotionStabilizer() {}
+#endif
 
     // assumes that [0, size-1) is in or equals to [range.first, range.second)
     virtual void stabilize(

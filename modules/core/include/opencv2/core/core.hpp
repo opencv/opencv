@@ -1345,7 +1345,9 @@ public:
     virtual int channels(int i=-1) const;
     virtual bool empty() const;
 
-    /*virtual*/ ~_InputArray();
+#ifdef OPENCV_CAN_BREAK_BINARY_COMPATIBILITY
+    virtual ~_InputArray();
+#endif
 
     int flags;
     void* obj;
@@ -1407,7 +1409,9 @@ public:
     virtual void release() const;
     virtual void clear() const;
 
-    /*virtual*/ ~_OutputArray();
+#ifdef OPENCV_CAN_BREAK_BINARY_COMPATIBILITY
+    virtual ~_OutputArray();
+#endif
 };
 
 typedef const _InputArray& InputArray;
