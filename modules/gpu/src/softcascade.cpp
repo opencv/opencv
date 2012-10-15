@@ -526,17 +526,24 @@ void cv::gpu::SoftCascade::detectMultiScale(const GpuMat& colored, const GpuMat&
                                 GpuMat& objects, const int /*rejectfactor*/, int specificScale) const
 {
     // only color images are supperted
-    CV_Assert(colored.type() == CV_8UC3);
+    CV_Assert(colored.type() == CV_8UC3 || colored.type() == CV_32SC1);
 
     // we guess user knows about shrincage
     CV_Assert((rois.size().width == getRoiSize().height) && (rois.type() == CV_8UC1));
 
-    // only this window size allowed
-    CV_Assert(colored.cols == Filds::FRAME_WIDTH && colored.rows == Filds::FRAME_HEIGHT);
 
     Filds& flds = *filds;
 
-    flds.preprocess(colored);
+    if (colored.type() == CV_8UC3)
+    {
+        // only this window size allowed
+        CV_Assert(colored.cols == Filds::FRAME_WIDTH && colored.rows == Filds::FRAME_HEIGHT);
+        flds.preprocess(colored);
+    }
+    else
+    {
+        colored.copyTo(flds.hogluv);
+    }
 
     flds.detect(specificScale, rois, objects, 0);
 

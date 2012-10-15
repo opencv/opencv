@@ -262,4 +262,37 @@ TEST(SoftCascadeTest, detect)
     cv::Mat detections(objectBoxes);
     ASSERT_EQ(detections.cols / sizeof(Detection) ,3670U);
 }
+
+TEST(SoftCascadeTest, detectOnIntegral)
+{
+    std::string xml =  cvtest::TS::ptr()->get_data_path() + "../cv/cascadeandhog/sc_cvpr_2012_to_opencv.xml";
+    cv::gpu::SoftCascade cascade;
+    ASSERT_TRUE(cascade.load(xml));
+
+    std::string intPath = cvtest::TS::ptr()->get_data_path() + "../cv/cascadeandhog/integrals.xml";
+    cv::FileStorage fs(intPath, cv::FileStorage::READ);
+    ASSERT_TRUE(fs.isOpened());
+
+    GpuMat hogluv(121 * 10, 161, CV_32SC1);
+    for (int i = 0; i < 10; ++i)
+    {
+        cv::Mat channel;
+        fs[std::string("channel") + SoftCascadeTest::itoa(i)] >> channel;
+        GpuMat gchannel(hogluv, cv::Rect(0, 121 * i, 161, 121));
+        gchannel.upload(channel);
+    }
+
+    GpuMat objectBoxes(1, 100000, CV_8UC1), rois(cascade.getRoiSize(), CV_8UC1);
+    rois.setTo(1);
+
+    cv::gpu::GpuMat trois;
+    cv::gpu::transpose(rois, trois);
+
+    cascade.detectMultiScale(hogluv, trois, objectBoxes);
+
+    typedef cv::gpu::SoftCascade::Detection Detection;
+    cv::Mat detections(objectBoxes);
+
+    ASSERT_EQ(detections.cols / sizeof(Detection) ,2042U);
+}
 #endif

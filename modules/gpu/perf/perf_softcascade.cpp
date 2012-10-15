@@ -9,7 +9,7 @@
         virtual void __gpu();\
       virtual void PerfTestBody();\
     };\
-    TEST_P(fixture##_##name, name /*perf*/){ RunPerfTestBody(); if (runOnGpu) __gpu(); else __cpu();}\
+    TEST_P(fixture##_##name, name /*perf*/){ RunPerfTestBody(); if (PERF_RUN_GPU()) __gpu(); else __cpu();}\
     INSTANTIATE_TEST_CASE_P(/*none*/, fixture##_##name, params);\
     void fixture##_##name::PerfTestBody()
 
@@ -19,7 +19,7 @@
 #define RUN_GPU(fixture, name)\
     void fixture##_##name::__gpu()
 
-#define FAIL_NO_CPU(fixture, name)\
+#define NO_CPU(fixture, name)\
 void fixture##_##name::__cpu() { FAIL() << "No such CPU implementation analogy";}
 
 namespace {
@@ -184,7 +184,7 @@ RUN_GPU(SoftCascadeTestRoi, detectInRoi)
     SANITY_CHECK(sortDetections(curr));
 }
 
-FAIL_NO_CPU(SoftCascadeTestRoi, detectInRoi)
+NO_CPU(SoftCascadeTestRoi, detectInRoi)
 
 
 GPU_PERF_TEST_P(SoftCascadeTestRoi, detectEachRoi,
@@ -226,4 +226,52 @@ RUN_GPU(SoftCascadeTestRoi, detectEachRoi)
     SANITY_CHECK(sortDetections(curr));
 }
 
-FAIL_NO_CPU(SoftCascadeTestRoi, detectEachRoi)
+NO_CPU(SoftCascadeTestRoi, detectEachRoi)
+
+GPU_PERF_TEST_P(SoftCascadeTest, detectOnIntegral,
+    testing::Combine(
+        testing::Values(std::string("cv/cascadeandhog/sc_cvpr_2012_to_opencv.xml")),
+        testing::Values(std::string("cv/cascadeandhog/integrals.xml"))))
+{ }
+
+    static std::string itoa(long i)
+    {
+        static char s[65];
+        sprintf(s, "%ld", i);
+        return std::string(s);
+    }
+
+RUN_GPU(SoftCascadeTest, detectOnIntegral)
+{
+    cv::FileStorage fs(perf::TestBase::getDataPath(GET_PARAM(1)), cv::FileStorage::READ);
+    ASSERT_TRUE(fs.isOpened());
+
+    cv::gpu::GpuMat hogluv(121 * 10, 161, CV_32SC1);
+    for (int i = 0; i < 10; ++i)
+    {
+        cv::Mat channel;
+        fs[std::string("channel") + itoa(i)] >> channel;
+        cv::gpu::GpuMat gchannel(hogluv, cv::Rect(0, 121 * i, 161, 121));
+        gchannel.upload(channel);
+    }
+
+    cv::gpu::SoftCascade cascade;
+    ASSERT_TRUE(cascade.load(perf::TestBase::getDataPath(GET_PARAM(0))));
+
+    cv::gpu::GpuMat objectBoxes(1, 10000 * sizeof(cv::gpu::SoftCascade::Detection), CV_8UC1), rois(cascade.getRoiSize(), CV_8UC1), trois;
+    rois.setTo(1);
+    cv::gpu::transpose(rois, trois);
+
+    cv::gpu::GpuMat curr = objectBoxes;
+    cascade.detectMultiScale(hogluv, trois, curr);
+
+    TEST_CYCLE()
+    {
+        curr = objectBoxes;
+        cascade.detectMultiScale(hogluv, trois, curr);
+    }
+
+    SANITY_CHECK(sortDetections(curr));
+}
+
+NO_CPU(SoftCascadeTest, detectOnIntegral)
