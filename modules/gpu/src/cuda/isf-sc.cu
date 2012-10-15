@@ -313,7 +313,7 @@ namespace icf {
         dim3 block(32, 8);
         dim3 grid(fw, fh / 8, (scale == -1) ? downscales : 1);
 
-        uint* ctr = (uint*)counter.ptr();
+        uint* ctr = (uint*)(counter.ptr(0));
         Detection* det = (Detection*)objects.ptr();
         uint max_det = objects.cols / sizeof(Detection);
 

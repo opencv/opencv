@@ -541,7 +541,7 @@ void cv::gpu::SoftCascade::detectMultiScale(const GpuMat& colored, const GpuMat&
     flds.detect(specificScale, rois, objects, 0);
 
     cv::Mat out(flds.detCounter);
-    int ndetections = *(out.data);
+    int ndetections = *(out.ptr<int>(0));
 
     if (! ndetections)
         objects = GpuMat();

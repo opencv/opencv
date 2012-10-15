@@ -257,5 +257,9 @@ TEST(SoftCascadeTest, detect)
     cv::gpu::transpose(rois, trois);
 
     cascade.detectMultiScale(colored, trois, objectBoxes);
+
+    typedef cv::gpu::SoftCascade::Detection Detection;
+    cv::Mat detections(objectBoxes);
+    ASSERT_EQ(detections.cols / sizeof(Detection) ,3670U);
 }
 #endif
