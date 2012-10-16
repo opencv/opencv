@@ -1257,7 +1257,7 @@ cv::GlFont::GlFont(const string& _family, int _height, Weight _weight, Style _st
 #endif
 }
 
-void cv::GlFont::draw(const char* str, int len) const
+void cv::GlFont::draw(const char* str, size_t len) const
 {
 #ifndef HAVE_OPENGL
     (void)str;
@@ -1409,7 +1409,7 @@ void cv::render(const string& str, const Ptr<GlFont>& font, Scalar color, Point2
 
     glRasterPos2d(2.0 * (viewport[0] + pos.x) / viewport[2] - 1.0, 1.0 - 2.0 * (viewport[1] + pos.y + font->height()) / viewport[3]);
 
-    font->draw(str.c_str(), (int)str.length());
+    font->draw(str.c_str(), str.length());
 
     glPopAttrib();
 #endif

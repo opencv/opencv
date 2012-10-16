@@ -7,6 +7,8 @@
 
 #include <vector>
 
+namespace cv
+{
 class DetectionBasedTracker
 {
     public:
@@ -167,10 +169,5 @@ class DetectionBasedTracker
         cv::Rect calcTrackedObjectPositionToShow(int i, ObjectStatus& status) const;
         void detectInRegion(const cv::Mat& img, const cv::Rect& r, std::vector<cv::Rect>& detectedObjectsInRegions);
 };
-
-namespace cv
-{
-    typedef ::DetectionBasedTracker DetectionBasedTracker;
-    
 } //end of cv namespace
 #endif
