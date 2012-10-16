@@ -37,6 +37,7 @@ public:
 
 
         GRIDDETECTOR = 1000,
+        GRIDRETECTOR = 1000,
 
         GRID_FAST          = GRIDDETECTOR + FAST,
         GRID_STAR          = GRIDDETECTOR + STAR,
