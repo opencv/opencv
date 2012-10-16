@@ -596,22 +596,21 @@ public:
     CV_PROP int nlevels;
 
 
-    // evaluate specified ROI and return confidence value for each location
-    void detectROI(const cv::Mat& img, const vector<cv::Point> &locations,
-                   CV_OUT std::vector<cv::Point>& foundLocations,
-                   CV_OUT std::vector<double>& confidences,
-                   double hitThreshold = 0, cv::Size winStride = Size(),
-                   cv::Size padding = Size()) const;
+   // evaluate specified ROI and return confidence value for each location
+   virtual void detectROI(const cv::Mat& img, const vector<cv::Point> &locations,
+                                   CV_OUT std::vector<cv::Point>& foundLocations, CV_OUT std::vector<double>& confidences,
+                                   double hitThreshold = 0, cv::Size winStride = Size(),
+                                   cv::Size padding = Size()) const;
 
-    // evaluate specified ROI and return confidence value for each location in multiple scales
-    void detectMultiScaleROI(const cv::Mat& img,
-                             CV_OUT std::vector<cv::Rect>& foundLocations,
-                             std::vector<DetectionROI>& locations,
-                             double hitThreshold = 0,
-                             int groupThreshold = 0) const;
+   // evaluate specified ROI and return confidence value for each location in multiple scales
+   virtual void detectMultiScaleROI(const cv::Mat& img,
+                                                       CV_OUT std::vector<cv::Rect>& foundLocations,
+                                                       std::vector<DetectionROI>& locations,
+                                                       double hitThreshold = 0,
+                                                       int groupThreshold = 0) const;
 
-    // read/parse Dalal's alt model file
-    void readALTModel(std::string modelfile);
+   // read/parse Dalal's alt model file
+   void readALTModel(std::string modelfile);
 };
 
 
