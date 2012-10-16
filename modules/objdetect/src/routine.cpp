@@ -2,7 +2,7 @@
 #include "_lsvm_routine.h"
 
 int allocFilterObject(CvLSVMFilterObject **obj, const int sizeX,
-                      const int sizeY, const int numFeatures) 
+                      const int sizeY, const int numFeatures)
 {
     int i;
     (*obj) = (CvLSVMFilterObject *)malloc(sizeof(CvLSVMFilterObject));
@@ -16,7 +16,7 @@ int allocFilterObject(CvLSVMFilterObject **obj, const int sizeX,
     (*obj)->V.x         = 0;
     (*obj)->V.y         = 0;
     (*obj)->V.l         = 0;
-    (*obj)->H = (float *) malloc(sizeof (float) * 
+    (*obj)->H = (float *) malloc(sizeof (float) *
                                 (sizeX * sizeY  * numFeatures));
     for(i = 0; i < sizeX * sizeY * numFeatures; i++)
     {
@@ -33,7 +33,7 @@ int freeFilterObject (CvLSVMFilterObject **obj)
     return LATENT_SVM_OK;
 }
 
-int allocFeatureMapObject(CvLSVMFeatureMap **obj, const int sizeX, 
+int allocFeatureMapObject(CvLSVMFeatureMap **obj, const int sizeX,
                           const int sizeY, const int numFeatures)
 {
     int i;
@@ -41,7 +41,7 @@ int allocFeatureMapObject(CvLSVMFeatureMap **obj, const int sizeX,
     (*obj)->sizeX       = sizeX;
     (*obj)->sizeY       = sizeY;
     (*obj)->numFeatures = numFeatures;
-    (*obj)->map = (float *) malloc(sizeof (float) * 
+    (*obj)->map = (float *) malloc(sizeof (float) *
                                   (sizeX * sizeY  * numFeatures));
     for(i = 0; i < sizeX * sizeY * numFeatures; i++)
     {
@@ -59,7 +59,7 @@ int freeFeatureMapObject (CvLSVMFeatureMap **obj)
 }
 
 int allocFeaturePyramidObject(CvLSVMFeaturePyramid **obj,
-                              const int numLevels) 
+                              const int numLevels)
 {
     (*obj) = (CvLSVMFeaturePyramid *)malloc(sizeof(CvLSVMFeaturePyramid));
     (*obj)->numLevels = numLevels;
@@ -70,7 +70,7 @@ int allocFeaturePyramidObject(CvLSVMFeaturePyramid **obj,
 
 int freeFeaturePyramidObject (CvLSVMFeaturePyramid **obj)
 {
-    int i; 
+    int i;
     if(*obj == NULL) return LATENT_SVM_MEM_NULL;
     for(i = 0; i < (*obj)->numLevels; i++)
     {

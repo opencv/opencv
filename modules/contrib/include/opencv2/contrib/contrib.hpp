@@ -557,15 +557,15 @@ namespace cv
         void* user_data;
     };
 
-    CV_EXPORTS int chamerMatching( Mat& img, Mat& templ,
-                                  vector<vector<Point> >& results, vector<float>& cost,
+    CV_EXPORTS_W int chamerMatching( Mat& img, Mat& templ,
+                                  CV_OUT vector<vector<Point> >& results, CV_OUT vector<float>& cost,
                                   double templScale=1, int maxMatches = 20,
                                   double minMatchDistance = 1.0, int padX = 3,
                                   int padY = 3, int scales = 5, double minScale = 0.6, double maxScale = 1.6,
                                   double orientationWeight = 0.5, double truncate = 20);
 
 
-    class CV_EXPORTS StereoVar
+    class CV_EXPORTS_W StereoVar
     {
     public:
         // Flags
@@ -872,7 +872,7 @@ namespace cv
         // Optimization Criterion on given data in src and corresponding labels
         // in labels. If 0 (or less) number of components are given, they are
         // automatically determined for given data in computation.
-        LDA(InputArray src, InputArray labels,
+        LDA(InputArrayOfArrays src, InputArray labels,
                 int num_components = 0) :
                     _num_components(num_components)
         {
@@ -895,7 +895,7 @@ namespace cv
         ~LDA() {}
 
         //! Compute the discriminants for data in src and labels.
-        void compute(InputArray src, InputArray labels);
+        void compute(InputArrayOfArrays src, InputArray labels);
 
         // Projects samples into the LDA subspace.
         Mat project(InputArray src);
@@ -915,29 +915,32 @@ namespace cv
         Mat _eigenvectors;
         Mat _eigenvalues;
 
-        void lda(InputArray src, InputArray labels);
+        void lda(InputArrayOfArrays src, InputArray labels);
     };
 
-    class CV_EXPORTS FaceRecognizer : public Algorithm
+    class CV_EXPORTS_W FaceRecognizer : public Algorithm
     {
     public:
         //! virtual destructor
         virtual ~FaceRecognizer() {}
 
         // Trains a FaceRecognizer.
-        virtual void train(InputArray src, InputArray labels) = 0;
+        CV_WRAP virtual void train(InputArrayOfArrays src, InputArray labels) = 0;
+
+        // Updates a FaceRecognizer.
+        CV_WRAP void update(InputArrayOfArrays src, InputArray labels);
 
         // Gets a prediction from a FaceRecognizer.
         virtual int predict(InputArray src) const = 0;
 
         // Predicts the label and confidence for a given sample.
-        virtual void predict(InputArray src, int &label, double &dist) const = 0;
+        CV_WRAP virtual void predict(InputArray src, CV_OUT int &label, CV_OUT double &confidence) const = 0;
 
         // Serializes this object to a given filename.
-        virtual void save(const string& filename) const;
+        CV_WRAP virtual void save(const string& filename) const;
 
         // Deserializes this object from a given filename.
-        virtual void load(const string& filename);
+        CV_WRAP virtual void load(const string& filename);
 
         // Serializes this object to a given cv::FileStorage.
         virtual void save(FileStorage& fs) const = 0;
@@ -947,9 +950,9 @@ namespace cv
 
     };
 
-    CV_EXPORTS Ptr<FaceRecognizer> createEigenFaceRecognizer(int num_components = 0, double threshold = DBL_MAX);
-    CV_EXPORTS Ptr<FaceRecognizer> createFisherFaceRecognizer(int num_components = 0, double threshold = DBL_MAX);
-    CV_EXPORTS Ptr<FaceRecognizer> createLBPHFaceRecognizer(int radius=1, int neighbors=8,
+    CV_EXPORTS_W Ptr<FaceRecognizer> createEigenFaceRecognizer(int num_components = 0, double threshold = DBL_MAX);
+    CV_EXPORTS_W Ptr<FaceRecognizer> createFisherFaceRecognizer(int num_components = 0, double threshold = DBL_MAX);
+    CV_EXPORTS_W Ptr<FaceRecognizer> createLBPHFaceRecognizer(int radius=1, int neighbors=8,
                                                             int grid_x=8, int grid_y=8, double threshold = DBL_MAX);
 
     enum
@@ -968,13 +971,14 @@ namespace cv
         COLORMAP_HOT = 11
     };
 
-    CV_EXPORTS void applyColorMap(InputArray src, OutputArray dst, int colormap);
+    CV_EXPORTS_W void applyColorMap(InputArray src, OutputArray dst, int colormap);
 
     CV_EXPORTS bool initModule_contrib();
 }
 
-
 #include "opencv2/contrib/retina.hpp"
+
+#include "opencv2/contrib/openfabmap.hpp"
 
 #endif
 

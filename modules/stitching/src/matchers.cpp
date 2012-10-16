@@ -219,7 +219,7 @@ void GpuMatcher::match(const ImageFeatures &features1, const ImageFeatures &feat
     descriptors1_.upload(features1.descriptors);
     descriptors2_.upload(features2.descriptors);
 
-    BruteForceMatcher_GPU< L2<float> > matcher;
+    BruteForceMatcher_GPU_base matcher(BruteForceMatcher_GPU_base::L2Dist);
     MatchesSet matches;
 
     // Find 1->2 matches

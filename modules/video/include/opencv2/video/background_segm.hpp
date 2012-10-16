@@ -44,13 +44,13 @@
 #define __OPENCV_BACKGROUND_SEGM_HPP__
 
 #include "opencv2/core/core.hpp"
-
+#include <list>
 namespace cv
 {
 
 /*!
  The Base Class for Background/Foreground Segmentation
- 
+
  The class is only used to define the common interface for
  the whole family of background/foreground segmentation algorithms.
 */
@@ -70,13 +70,13 @@ public:
 
 /*!
  Gaussian Mixture-based Backbround/Foreground Segmentation Algorithm
- 
+
  The class implements the following algorithm:
  "An improved adaptive background mixture model for real-time tracking with shadow detection"
  P. KadewTraKuPong and R. Bowden,
  Proc. 2nd European Workshp on Advanced Video-Based Surveillance Systems, 2001."
  http://personal.ee.surrey.ac.uk/Personal/R.Bowden/publications/avbs01/avbs01.pdf
- 
+
 */
 class CV_EXPORTS_W BackgroundSubtractorMOG : public BackgroundSubtractor
 {
@@ -89,13 +89,13 @@ public:
     virtual ~BackgroundSubtractorMOG();
     //! the update operator
     virtual void operator()(InputArray image, OutputArray fgmask, double learningRate=0);
-    
+
     //! re-initiaization method
     virtual void initialize(Size frameSize, int frameType);
-    
+
     virtual AlgorithmInfo* info() const;
 
-protected:    
+protected:
     Size frameSize;
     int frameType;
     Mat bgmodel;
@@ -105,7 +105,7 @@ protected:
     double varThreshold;
     double backgroundRatio;
     double noiseSigma;
-};	
+};
 
 
 /*!
@@ -126,16 +126,16 @@ public:
     virtual ~BackgroundSubtractorMOG2();
     //! the update operator
     virtual void operator()(InputArray image, OutputArray fgmask, double learningRate=-1);
-    
+
     //! computes a background image which are the mean of all background gaussians
     virtual void getBackgroundImage(OutputArray backgroundImage) const;
-    
+
     //! re-initiaization method
     virtual void initialize(Size frameSize, int frameType);
-    
+
     virtual AlgorithmInfo* info() const;
-    
-protected:    
+
+protected:
     Size frameSize;
     int frameType;
     Mat bgmodel;
@@ -150,7 +150,7 @@ protected:
     // by the background model or not. Related to Cthr from the paper.
     // This does not influence the update of the background. A typical value could be 4 sigma
     // and that is varThreshold=4*4=16; Corresponds to Tb in the paper.
-    
+
     /////////////////////////
     // less important parameters - things you might change but be carefull
     ////////////////////////
@@ -179,7 +179,7 @@ protected:
     //this is related to the number of samples needed to accept that a component
     //actually exists. We use CT=0.05 of all the samples. By setting CT=0 you get
     //the standard Stauffer&Grimson algorithm (maybe not exact but very similar)
-    
+
     //shadow detection parameters
     bool bShadowDetection;//default 1 - do shadow detection
     unsigned char nShadowDetection;//do shadow detection - insert this value as the detection result - 127 default value
@@ -188,8 +188,75 @@ protected:
     //version of the background. Tau is a threshold on how much darker the shadow can be.
     //Tau= 0.5 means that if pixel is more than 2 times darker then it is not shadow
     //See: Prati,Mikic,Trivedi,Cucchiarra,"Detecting Moving Shadows...",IEEE PAMI,2003.
-};	    
-    
+};
+
+/**
+ * Background Subtractor module. Takes a series of images and returns a sequence of mask (8UC1)
+ * images of the same size, where 255 indicates Foreground and 0 represents Background.
+ * This class implements an algorithm described in "Visual Tracking of Human Visitors under
+ * Variable-Lighting Conditions for a Responsive Audio Art Installation," A. Godbehere,
+ * A. Matsukawa, K. Goldberg, American Control Conference, Montreal, June 2012.
+ */
+class CV_EXPORTS BackgroundSubtractorGMG: public cv::BackgroundSubtractor
+{
+public:
+    BackgroundSubtractorGMG();
+    virtual ~BackgroundSubtractorGMG();
+    virtual AlgorithmInfo* info() const;
+
+    /**
+     * Validate parameters and set up data structures for appropriate image size.
+     * Must call before running on data.
+     * @param frameSize input frame size
+     * @param min       minimum value taken on by pixels in image sequence. Usually 0
+     * @param max       maximum value taken on by pixels in image sequence. e.g. 1.0 or 255
+     */
+    void initialize(cv::Size frameSize, double min, double max);
+
+    /**
+     * Performs single-frame background subtraction and builds up a statistical background image
+     * model.
+     * @param image Input image
+     * @param fgmask Output mask image representing foreground and background pixels
+     */
+    virtual void operator()(InputArray image, OutputArray fgmask, double learningRate=-1.0);
+
+    /**
+     * Releases all inner buffers.
+     */
+    void release();
+
+    //! Total number of distinct colors to maintain in histogram.
+    int     maxFeatures;
+    //! Set between 0.0 and 1.0, determines how quickly features are "forgotten" from histograms.
+    double  learningRate;
+    //! Number of frames of video to use to initialize histograms.
+    int     numInitializationFrames;
+    //! Number of discrete levels in each channel to be used in histograms.
+    int     quantizationLevels;
+    //! Prior probability that any given pixel is a background pixel. A sensitivity parameter.
+    double  backgroundPrior;
+    //! Value above which pixel is determined to be FG.
+    double  decisionThreshold;
+    //! Smoothing radius, in pixels, for cleaning up FG image.
+    int     smoothingRadius;
+    //! Perform background model update
+    bool updateBackgroundModel;
+
+private:
+    double maxVal_;
+    double minVal_;
+
+    cv::Size frameSize_;
+    int frameNum_;
+
+    cv::Mat_<int> nfeatures_;
+    cv::Mat_<unsigned int> colors_;
+    cv::Mat_<float> weights_;
+
+    cv::Mat buf_;
+};
+
 }
 
 #endif

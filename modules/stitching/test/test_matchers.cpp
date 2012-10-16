@@ -50,7 +50,7 @@ using namespace std;
 TEST(SurfFeaturesFinder, CanFindInROIs)
 {
     Ptr<detail::FeaturesFinder> finder = new detail::SurfFeaturesFinder();
-    Mat img  = imread(string(cvtest::TS::ptr()->get_data_path()) + "cv/shared/lena.jpg");
+    Mat img  = imread(string(cvtest::TS::ptr()->get_data_path()) + "cv/shared/lena.png");
 
     vector<Rect> rois;
     rois.push_back(Rect(0, 0, img.cols / 2, img.rows / 2));

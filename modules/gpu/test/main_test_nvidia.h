@@ -1,14 +1,14 @@
 #ifndef __main_test_nvidia_h__
 #define __main_test_nvidia_h__
 
-#include<string>
-
 enum OutputLevel
 {
     OutputLevelNone,
     OutputLevelCompact,
     OutputLevelFull
 };
+
+extern OutputLevel nvidiaTestOutputLevel;
 
 bool nvidia_NPPST_Integral_Image(const std::string& test_data_path, OutputLevel outputLevel);
 bool nvidia_NPPST_Squared_Integral_Image(const std::string& test_data_path, OutputLevel outputLevel);

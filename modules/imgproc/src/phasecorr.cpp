@@ -406,7 +406,7 @@ static void fftShift(InputOutputArray _out)
     merge(planes, out);
 }
 
-static Point2d weightedCentroid(InputArray _src, cv::Point peakLocation, cv::Size weightBoxSize)
+static Point2d weightedCentroid(InputArray _src, cv::Point peakLocation, cv::Size weightBoxSize, double* response)
 {
     Mat src = _src.getMat();
 
@@ -475,6 +475,9 @@ static Point2d weightedCentroid(InputArray _src, cv::Point peakLocation, cv::Siz
         }
     }
 
+    if(response)
+        *response = sumIntensity;
+
     sumIntensity += DBL_EPSILON; // prevent div0 problems...
 
     centroid.x /= sumIntensity;
@@ -485,7 +488,7 @@ static Point2d weightedCentroid(InputArray _src, cv::Point peakLocation, cv::Siz
 
 }
 
-cv::Point2d cv::phaseCorrelate(InputArray _src1, InputArray _src2, InputArray _window)
+cv::Point2d cv::phaseCorrelateRes(InputArray _src1, InputArray _src2, InputArray _window, double* response)
 {
     Mat src1 = _src1.getMat();
     Mat src2 = _src2.getMat();
@@ -553,7 +556,11 @@ cv::Point2d cv::phaseCorrelate(InputArray _src1, InputArray _src2, InputArray _w
 
     // get the phase shift with sub-pixel accuracy, 5x5 window seems about right here...
     Point2d t;
-    t = weightedCentroid(C, peakLoc, Size(5, 5));
+    t = weightedCentroid(C, peakLoc, Size(5, 5), response);
+
+    // max response is M*N (not exactly, might be slightly larger due to rounding errors)
+    if(response)
+        *response /= M*N;
 
     // adjust shift relative to image center...
     Point2d center((double)padded1.cols / 2.0, (double)padded1.rows / 2.0);
@@ -561,6 +568,10 @@ cv::Point2d cv::phaseCorrelate(InputArray _src1, InputArray _src2, InputArray _w
     return (center - t);
 }
 
+cv::Point2d cv::phaseCorrelate(InputArray _src1, InputArray _src2, InputArray _window)
+{
+    return phaseCorrelateRes(_src1, _src2, _window, 0);
+}
 
 void cv::createHanningWindow(OutputArray _dst, cv::Size winSize, int type)
 {

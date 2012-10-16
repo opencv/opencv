@@ -19,15 +19,15 @@ public:
 protected:
     static std::vector<std::pair<int, int> > ArmRating;
     static std::vector<std::pair<int, int> > IntelRating;
-    
+
     static std::vector<std::pair<int, int> > InitArmRating();
     static std::vector<std::pair<int, int> > InitIntelRating();
-    
+
     bool IsVersionCompatible(const std::string& target_version, const std::string& package_version);
     int GetHardwareRating(int platform, int cpu_id, const std::vector<std::pair<int, int> >& group);
-    
+
     virtual bool InstallPackage(const PackageInfo& package) = 0;
-    virtual std::vector<PackageInfo> GetInstalledPackages() = 0;   
+    virtual std::vector<PackageInfo> GetInstalledPackages() = 0;
 };
 
 

@@ -45,6 +45,8 @@
 //
 //M*/
 
+#if !defined CUDA_DISABLER
+
 #include "opencv2/gpu/device/common.hpp"
 #include "opencv2/gpu/device/utility.hpp"
 #include "opencv2/gpu/device/functional.hpp"
@@ -82,7 +84,7 @@ namespace cv { namespace gpu { namespace device
             smem3[tid] = val3;
             __syncthreads();
 
-#if __CUDA_ARCH__ > 110
+#if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ > 110)
             if (tid < 128)
             {
                 smem1[tid] = val1 += smem1[tid + 128];
@@ -138,7 +140,7 @@ namespace cv { namespace gpu { namespace device
             smem2[tid] = val2;
             __syncthreads();
 
-#if __CUDA_ARCH__ > 110
+#if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ > 110)
             if (tid < 128)
             {
                 smem1[tid] = val1 += smem1[tid + 128];
@@ -184,7 +186,7 @@ namespace cv { namespace gpu { namespace device
             smem1[tid] = val1;
             __syncthreads();
 
-#if __CUDA_ARCH__ > 110
+#if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ > 110)
             if (tid < 128)
             {
                 smem1[tid] = val1 += smem1[tid + 128];
@@ -271,7 +273,7 @@ namespace cv { namespace gpu { namespace device
         template <int cn, int PATCH_X, int PATCH_Y, bool calcErr>
         __global__ void lkSparse(const float2* prevPts, float2* nextPts, uchar* status, float* err, const int level, const int rows, const int cols)
         {
-#if __CUDA_ARCH__ <= 110
+#if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ <= 110)
             __shared__ float smem1[128];
             __shared__ float smem2[128];
             __shared__ float smem3[128];
@@ -458,7 +460,7 @@ namespace cv { namespace gpu { namespace device
                 cudaSafeCall( cudaDeviceSynchronize() );
         }
 
-        void lkSparse1_gpu(DevMem2Df I, DevMem2Df J, const float2* prevPts, float2* nextPts, uchar* status, float* err, int ptcount,
+        void lkSparse1_gpu(PtrStepSzf I, PtrStepSzf J, const float2* prevPts, float2* nextPts, uchar* status, float* err, int ptcount,
             int level, dim3 block, dim3 patch, cudaStream_t stream)
         {
             typedef void (*func_t)(int rows, int cols, const float2* prevPts, float2* nextPts, uchar* status, float* err, int ptcount,
@@ -480,7 +482,7 @@ namespace cv { namespace gpu { namespace device
                 level, block, stream);
         }
 
-        void lkSparse4_gpu(DevMem2D_<float4> I, DevMem2D_<float4> J, const float2* prevPts, float2* nextPts, uchar* status, float* err, int ptcount,
+        void lkSparse4_gpu(PtrStepSz<float4> I, PtrStepSz<float4> J, const float2* prevPts, float2* nextPts, uchar* status, float* err, int ptcount,
             int level, dim3 block, dim3 patch, cudaStream_t stream)
         {
             typedef void (*func_t)(int rows, int cols, const float2* prevPts, float2* nextPts, uchar* status, float* err, int ptcount,
@@ -648,8 +650,8 @@ namespace cv { namespace gpu { namespace device
             }
         }
 
-        void lkDense_gpu(DevMem2Db I, DevMem2Df J, DevMem2Df u, DevMem2Df v, DevMem2Df prevU, DevMem2Df prevV,
-                         DevMem2Df err, int2 winSize, cudaStream_t stream)
+        void lkDense_gpu(PtrStepSzb I, PtrStepSzf J, PtrStepSzf u, PtrStepSzf v, PtrStepSzf prevU, PtrStepSzf prevV,
+                         PtrStepSzf err, int2 winSize, cudaStream_t stream)
         {
             dim3 block(16, 16);
             dim3 grid(divUp(I.cols, block.x), divUp(I.rows, block.y));
@@ -678,3 +680,5 @@ namespace cv { namespace gpu { namespace device
         }
     }
 }}}
+
+#endif /* CUDA_DISABLER */

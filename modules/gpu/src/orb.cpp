@@ -46,7 +46,7 @@ using namespace std;
 using namespace cv;
 using namespace cv::gpu;
 
-#if !defined (HAVE_CUDA)
+#if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
 cv::gpu::ORB_GPU::ORB_GPU(int, float, int, int, int, int, int, int) : fastDetector_(20) { throw_nogpu(); }
 void cv::gpu::ORB_GPU::operator()(const GpuMat&, const GpuMat&, std::vector<KeyPoint>&) { throw_nogpu(); }
@@ -69,11 +69,11 @@ namespace cv { namespace gpu { namespace device
     {
         int cull_gpu(int* loc, float* response, int size, int n_points);
 
-        void HarrisResponses_gpu(DevMem2Db img, const short2* loc, float* response, const int npoints, int blockSize, float harris_k, cudaStream_t stream);
+        void HarrisResponses_gpu(PtrStepSzb img, const short2* loc, float* response, const int npoints, int blockSize, float harris_k, cudaStream_t stream);
 
         void loadUMax(const int* u_max, int count);
 
-        void IC_Angle_gpu(DevMem2Db image, const short2* loc, float* angle, int npoints, int half_k, cudaStream_t stream);
+        void IC_Angle_gpu(PtrStepSzb image, const short2* loc, float* angle, int npoints, int half_k, cudaStream_t stream);
 
         void computeOrbDescriptor_gpu(PtrStepb img, const short2* loc, const float* angle, const int npoints,
             const int* pattern_x, const int* pattern_y, PtrStepb desc, int dsize, int WTA_K, cudaStream_t stream);
@@ -401,6 +401,8 @@ cv::gpu::ORB_GPU::ORB_GPU(int nFeatures, float scaleFactor, int nLevels, int edg
     scoreType_(scoreType), patchSize_(patchSize),
     fastDetector_(DEFAULT_FAST_THRESHOLD)
 {
+    CV_Assert(patchSize_ >= 2);
+
     // fill the extractors and descriptors for the corresponding scales
     float factor = 1.0f / scaleFactor_;
     float n_desired_features_per_scale = nFeatures_ * (1.0f - factor) / (1.0f - std::pow(factor, nLevels_));
@@ -417,7 +419,7 @@ cv::gpu::ORB_GPU::ORB_GPU(int nFeatures, float scaleFactor, int nLevels, int edg
 
     // pre-compute the end of a row in a circular patch
     int half_patch_size = patchSize_ / 2;
-    vector<int> u_max(half_patch_size + 1);
+    vector<int> u_max(half_patch_size + 2);
     for (int v = 0; v <= half_patch_size * std::sqrt(2.f) / 2 + 1; ++v)
         u_max[v] = cvRound(std::sqrt(static_cast<float>(half_patch_size * half_patch_size - v * v)));
 
@@ -683,7 +685,7 @@ void cv::gpu::ORB_GPU::mergeKeyPoints(GpuMat& keypoints)
     }
 }
 
-void cv::gpu::ORB_GPU::downloadKeyPoints(GpuMat& d_keypoints, std::vector<KeyPoint>& keypoints)
+void cv::gpu::ORB_GPU::downloadKeyPoints(GpuMat &d_keypoints, std::vector<KeyPoint>& keypoints)
 {
     if (d_keypoints.empty())
     {
@@ -696,7 +698,7 @@ void cv::gpu::ORB_GPU::downloadKeyPoints(GpuMat& d_keypoints, std::vector<KeyPoi
     convertKeyPoints(h_keypoints, keypoints);
 }
 
-void cv::gpu::ORB_GPU::convertKeyPoints(Mat& d_keypoints, std::vector<KeyPoint>& keypoints)
+void cv::gpu::ORB_GPU::convertKeyPoints(Mat &d_keypoints, std::vector<KeyPoint>& keypoints)
 {
     if (d_keypoints.empty())
     {
@@ -706,12 +708,12 @@ void cv::gpu::ORB_GPU::convertKeyPoints(Mat& d_keypoints, std::vector<KeyPoint>&
 
     CV_Assert(d_keypoints.type() == CV_32FC1 && d_keypoints.rows == ROWS_COUNT);
 
-    float* x_ptr = d_keypoints.ptr<float>(X_ROW);
-    float* y_ptr = d_keypoints.ptr<float>(Y_ROW);
-    float* response_ptr = d_keypoints.ptr<float>(RESPONSE_ROW);
-    float* angle_ptr = d_keypoints.ptr<float>(ANGLE_ROW);
-    float* octave_ptr = d_keypoints.ptr<float>(OCTAVE_ROW);
-    float* size_ptr = d_keypoints.ptr<float>(SIZE_ROW);
+    const float* x_ptr = d_keypoints.ptr<float>(X_ROW);
+    const float* y_ptr = d_keypoints.ptr<float>(Y_ROW);
+    const float* response_ptr = d_keypoints.ptr<float>(RESPONSE_ROW);
+    const float* angle_ptr = d_keypoints.ptr<float>(ANGLE_ROW);
+    const float* octave_ptr = d_keypoints.ptr<float>(OCTAVE_ROW);
+    const float* size_ptr = d_keypoints.ptr<float>(SIZE_ROW);
 
     keypoints.resize(d_keypoints.cols);
 

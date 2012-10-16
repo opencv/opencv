@@ -70,7 +70,7 @@ using namespace cv::gpu;
 #else
     #define throw_nogl CV_Error(CV_OpenGlNotSupported, "OpenGL context doesn't exist")
 
-    #ifndef HAVE_CUDA
+    #if !defined HAVE_CUDA || defined(CUDA_DISABLER)
         #define throw_nocuda CV_Error(CV_GpuNotSupported, "The library is compiled without CUDA support")
     #else
         #if defined(__GNUC__)
@@ -113,13 +113,13 @@ namespace
 
     const CvOpenGlFuncTab* g_glFuncTab = 0;
 
-//#ifdef HAVE_CUDA
+#if defined HAVE_CUDA || defined HAVE_OPENGL
     const CvOpenGlFuncTab* glFuncTab()
     {
         static EmptyGlFuncTab empty;
         return g_glFuncTab ? g_glFuncTab : &empty;
     }
-//#endif
+#endif
 }
 
 CvOpenGlFuncTab::~CvOpenGlFuncTab()
@@ -162,7 +162,7 @@ void icvSetOpenGlFuncTab(const CvOpenGlFuncTab* tab)
 
 void cv::gpu::setGlDevice(int device)
 {
-#ifndef HAVE_CUDA
+#if !defined HAVE_CUDA || defined(CUDA_DISABLER)
     (void)device;
     throw_nocuda;
 #else
@@ -538,7 +538,7 @@ cv::GlBuffer::GlBuffer(InputArray mat_, Usage _usage) : rows_(0), cols_(0), type
 
     if (kind == _InputArray::GPU_MAT)
     {
-        #ifndef HAVE_CUDA
+        #if !defined HAVE_CUDA || defined(CUDA_DISABLER)
             throw_nocuda;
         #else
             GpuMat d_mat = mat_.getGpuMat();
@@ -609,7 +609,7 @@ void cv::GlBuffer::copyFrom(InputArray mat_)
         }
     case _InputArray::GPU_MAT:
         {
-            #ifndef HAVE_CUDA
+            #if !defined HAVE_CUDA || defined(CUDA_DISABLER)
                 throw_nocuda;
             #else
                 GpuMat d_mat = mat_.getGpuMat();
@@ -670,7 +670,7 @@ GpuMat cv::GlBuffer::mapDevice()
     throw_nogl;
     return GpuMat();
 #else
-    #ifndef HAVE_CUDA
+    #if !defined HAVE_CUDA || defined(CUDA_DISABLER)
         throw_nocuda;
         return GpuMat();
     #else
@@ -684,7 +684,7 @@ void cv::GlBuffer::unmapDevice()
 #ifndef HAVE_OPENGL
     throw_nogl;
 #else
-    #ifndef HAVE_CUDA
+    #if !defined HAVE_CUDA || defined(CUDA_DISABLER)
         throw_nocuda;
     #else
         impl_->unmapDevice();
@@ -976,7 +976,7 @@ cv::GlTexture::GlTexture(InputArray mat_, bool bgra) : rows_(0), cols_(0), type_
         }
     case _InputArray::GPU_MAT:
         {
-            #ifndef HAVE_CUDA
+            #if !defined HAVE_CUDA || defined(CUDA_DISABLER)
                 throw_nocuda;
             #else
                 GpuMat d_mat = mat_.getGpuMat();
@@ -1056,7 +1056,7 @@ void cv::GlTexture::copyFrom(InputArray mat_, bool bgra)
         }
     case _InputArray::GPU_MAT:
         {
-            #ifndef HAVE_CUDA
+            #if !defined HAVE_CUDA || defined(CUDA_DISABLER)
                 throw_nocuda;
             #else
                 GpuMat d_mat = mat_.getGpuMat();
@@ -1260,8 +1260,8 @@ cv::GlFont::GlFont(const string& _family, int _height, Weight _weight, Style _st
 void cv::GlFont::draw(const char* str, int len) const
 {
 #ifndef HAVE_OPENGL
-	(void)str;
-	(void)len;
+    (void)str;
+    (void)len;
     throw_nogl;
 #else
     if (base_ && len > 0)
@@ -1409,7 +1409,7 @@ void cv::render(const string& str, const Ptr<GlFont>& font, Scalar color, Point2
 
     glRasterPos2d(2.0 * (viewport[0] + pos.x) / viewport[2] - 1.0, 1.0 - 2.0 * (viewport[1] + pos.y + font->height()) / viewport[3]);
 
-    font->draw(str.c_str(), str.length());
+    font->draw(str.c_str(), (int)str.length());
 
     glPopAttrib();
 #endif

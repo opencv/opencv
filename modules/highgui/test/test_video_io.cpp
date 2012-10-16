@@ -118,7 +118,7 @@ public:
 
 void CV_HighGuiTest::ImageTest(const string& dir)
 {
-    string _name = dir + string("../cv/shared/baboon.jpg");
+    string _name = dir + string("../cv/shared/baboon.png");
     ts->printf(ts->LOG, "reading image : %s\n", _name.c_str());
 
     Mat image = imread(_name);
@@ -143,7 +143,7 @@ void CV_HighGuiTest::ImageTest(const string& dir)
 #ifdef HAVE_JASPER
         "jp2",
 #endif
-#ifdef HAVE_OPENEXR
+#if defined HAVE_OPENEXR && !defined __APPLE__
         "exr",
 #endif
         "bmp",

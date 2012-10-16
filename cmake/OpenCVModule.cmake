@@ -422,8 +422,8 @@ endmacro()
 # Usage:
 # ocv_glob_module_sources(<extra sources&headers in the same format as used in ocv_set_module_sources>)
 macro(ocv_glob_module_sources)
-  file(GLOB lib_srcs "src/*.cpp")
-  file(GLOB lib_int_hdrs "src/*.hpp" "src/*.h")
+  file(GLOB_RECURSE lib_srcs "src/*.cpp")
+  file(GLOB_RECURSE lib_int_hdrs "src/*.hpp" "src/*.h")
   file(GLOB lib_hdrs "include/opencv2/${name}/*.hpp" "include/opencv2/${name}/*.h")
   file(GLOB lib_hdrs_detail "include/opencv2/${name}/detail/*.hpp" "include/opencv2/${name}/detail/*.h")
 
@@ -509,8 +509,6 @@ endmacro()
 macro(ocv_add_precompiled_headers the_target)
   if("${the_target}" MATCHES "^opencv_test_.*$")
     SET(pch_path "test/test_")
-  elseif("${the_target}" MATCHES "opencv_perf_gpu_cpu")
-    SET(pch_path "perf_cpu/perf_cpu_")
   elseif("${the_target}" MATCHES "^opencv_perf_.*$")
     SET(pch_path "perf/perf_")
   else()
@@ -583,7 +581,7 @@ function(ocv_add_perf_tests)
     __ocv_parse_test_sources(PERF ${ARGN})
 
     # opencv_highgui is required for imread/imwrite
-    set(perf_deps ${the_module} opencv_ts opencv_highgui ${OPENCV_PERF_${the_module}_DEPS})
+    set(perf_deps ${the_module} opencv_ts opencv_highgui ${OPENCV_PERF_${the_module}_DEPS} ${OPENCV_MODULE_opencv_ts_DEPS})
     ocv_check_dependencies(${perf_deps})
 
     if(OCV_DEPENDENCIES_FOUND)
@@ -634,7 +632,7 @@ function(ocv_add_accuracy_tests)
     __ocv_parse_test_sources(TEST ${ARGN})
 
     # opencv_highgui is required for imread/imwrite
-    set(test_deps ${the_module} opencv_ts opencv_highgui ${OPENCV_TEST_${the_module}_DEPS})
+    set(test_deps ${the_module} opencv_ts opencv_highgui ${OPENCV_TEST_${the_module}_DEPS} ${OPENCV_MODULE_opencv_ts_DEPS})
     ocv_check_dependencies(${test_deps})
 
     if(OCV_DEPENDENCIES_FOUND)

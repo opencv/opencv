@@ -11,11 +11,11 @@ typedef perf::TestBaseWithParam<Image_MaxCorners_QualityLevel_MinDistance_BlockS
 
 PERF_TEST_P(Image_MaxCorners_QualityLevel_MinDistance_BlockSize_UseHarris, goodFeaturesToTrack,
             testing::Combine(
-                testing::Values( "stitching/a1.jpg", "cv/shared/pic5.png"),
+                testing::Values( "stitching/a1.png", "cv/shared/pic5.png"),
                 testing::Values( 100, 500 ),
                 testing::Values( 0.1, 0.01 ),
                 testing::Values( 3, 5 ),
-                testing::Bool()             
+                testing::Bool()
                 )
           )
 {
@@ -28,11 +28,14 @@ PERF_TEST_P(Image_MaxCorners_QualityLevel_MinDistance_BlockSize_UseHarris, goodF
     Mat image = imread(filename, IMREAD_GRAYSCALE);
     if (image.empty())
         FAIL() << "Unable to load source image" << filename;
-    
+
     std::vector<Point2f> corners;
 
     double minDistance = 1;
     TEST_CYCLE() goodFeaturesToTrack(image, corners, maxCorners, qualityLevel, minDistance, noArray(), blockSize, useHarrisDetector);
 
-    //SANITY_CHECK(corners);
+    if (corners.size() > 50)
+        corners.erase(corners.begin() + 50, corners.end());
+
+    SANITY_CHECK(corners);
 }

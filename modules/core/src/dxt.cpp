@@ -1362,38 +1362,44 @@ CopyTo2Columns( const uchar* _src0, const uchar* _src1,
 
 
 static void
-ExpandCCS( uchar* _ptr, int len, int elem_size )
+ExpandCCS( uchar* _ptr, int n, int elem_size )
 {
     int i;
-    _ptr -= elem_size;
-    memcpy( _ptr, _ptr + elem_size, elem_size );
-    memset( _ptr + elem_size, 0, elem_size );
-    if( (len & 1) == 0 )
-        memset( _ptr + (len+1)*elem_size, 0, elem_size );
-
-    if( elem_size == sizeof(float) )
+    if( elem_size == (int)sizeof(float) )
     {
-        Complex<float>* ptr = (Complex<float>*)_ptr;
-
-        for( i = 1; i < (len+1)/2; i++ )
+        float* p = (float*)_ptr;
+        for( i = 1; i < (n+1)/2; i++ )
         {
-            Complex<float> t;
-            t.re = ptr[i].re;
-            t.im = -ptr[i].im;
-            ptr[len-i] = t;
+            p[(n-i)*2] = p[i*2-1];
+            p[(n-i)*2+1] = -p[i*2];
         }
+        if( (n & 1) == 0 )
+        {
+            p[n] = p[n-1];
+            p[n+1] = 0.f;
+            n--;
+        }
+        for( i = n-1; i > 0; i-- )
+            p[i+1] = p[i];
+        p[1] = 0.f;
     }
     else
     {
-        Complex<double>* ptr = (Complex<double>*)_ptr;
-
-        for( i = 1; i < (len+1)/2; i++ )
+        double* p = (double*)_ptr;
+        for( i = 1; i < (n+1)/2; i++ )
         {
-            Complex<double> t;
-            t.re = ptr[i].re;
-            t.im = -ptr[i].im;
-            ptr[len-i] = t;
+            p[(n-i)*2] = p[i*2-1];
+            p[(n-i)*2+1] = -p[i*2];
         }
+        if( (n & 1) == 0 )
+        {
+            p[n] = p[n-1];
+            p[n+1] = 0.f;
+            n--;
+        }
+        for( i = n-1; i > 0; i-- )
+            p[i+1] = p[i];
+        p[1] = 0.f;
     }
 }
 
@@ -1723,13 +1729,13 @@ void cv::dft( InputArray _src0, OutputArray _dst, int flags, int nonzero_rows )
                 }
                 else if( src.channels() == 1 )
                 {
-                    CopyColumn( sptr0, src.step, buf0 + elem_size, elem_size, len, elem_size );
-                    ExpandCCS( buf0 + elem_size, len, elem_size );
+                    CopyColumn( sptr0, src.step, buf0, elem_size, len, elem_size );
+                    ExpandCCS( buf0, len, elem_size );
                     if( even )
                     {
                         CopyColumn( sptr0 + (count-1)*elem_size, src.step,
-                                       buf1 + elem_size, elem_size, len, elem_size );
-                        ExpandCCS( buf1 + elem_size, len, elem_size );
+                                    buf1, elem_size, len, elem_size );
+                        ExpandCCS( buf1, len, elem_size );
                     }
                     sptr0 += elem_size;
                 }
@@ -1814,7 +1820,45 @@ void cv::dft( InputArray _src0, OutputArray _dst, int flags, int nonzero_rows )
             }
 
             if( stage != 0 )
+            {
+                if( !inv && real_transform && dst.channels() == 2 && len > 1 )
+                {
+                    int n = dst.cols;
+                    if( elem_size == (int)sizeof(float) )
+                    {
+                        float* p0 = (float*)dst.data;
+                        size_t dstep = dst.step/sizeof(p0[0]);
+                        for( i = 0; i < len; i++ )
+                        {
+                            float* p = p0 + dstep*i;
+                            float* q = i == 0 || i*2 == len ? p : p0 + dstep*(len-i);
+                            
+                            for( int j = 1; j < (n+1)/2; j++ )
+                            {
+                                p[(n-j)*2] = q[j*2];
+                                p[(n-j)*2+1] = -q[j*2+1];
+                            }
+                        }
+                    }
+                    else
+                    {
+                        double* p0 = (double*)dst.data;
+                        size_t dstep = dst.step/sizeof(p0[0]);
+                        for( i = 0; i < len; i++ )
+                        {
+                            double* p = p0 + dstep*i;
+                            double* q = i == 0 || i*2 == len ? p : p0 + dstep*(len-i);
+                            
+                            for( int j = 1; j < (n+1)/2; j++ )
+                            {
+                                p[(n-j)*2] = q[j*2];
+                                p[(n-j)*2+1] = -q[j*2+1];
+                            }
+                        }
+                    }
+                }
                 break;
+            }
             src = dst;
         }
     }

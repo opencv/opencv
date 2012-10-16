@@ -7,19 +7,19 @@ Face Recognition in Videos with OpenCV
 Introduction
 ------------
 
-Whenever you hear the term *face recognition*, you instantly think of surveillance in videos. So performing face recognition in videos (e.g. webcam) is one of the most requested features I got. I have heard your cries, so here it is. For face detection we'll use the awesome :ocv:class:`CascadeClassifier`, and we'll use :ocv:class:`FaceRecognizer` for face recognition. This example uses the Fisherfaces method for face recognition, because it is robust against large changes in illumination.
+Whenever you hear the term *face recognition*, you instantly think of surveillance in videos. So performing face recognition in videos (e.g. webcam) is one of the most requested features I have got. I have heard your cries, so here it is. An application, that shows you how to do face recognition in videos! For the face detection part we'll use the awesome :ocv:class:`CascadeClassifier` and we'll use :ocv:class:`FaceRecognizer` for face recognition. This example uses the Fisherfaces method for face recognition, because it is robust against large changes in illumination.
 
-Here is what the final application looks like, as you can see I am only writing the id of the recognized person (by the way this id is Arnold Schwarzenegger for my data set) above the detected face.
+Here is what the final application looks like. As you can see I am only writing the id of the recognized person above the detected face (by the way this id is Arnold Schwarzenegger for my data set):
 
 .. image:: ../img/tutorial/facerec_video/facerec_video.png
     :align: center
     :scale: 70%
 
-This demo is a basis for your research, and it shows you how to implement face recognition in videos. You probably want to extend the application and make it more sophisticated: You could combine the id with the name, show the confidence of the prediction, recognize the emotion... and and and. But before you send mails, asking what these Haar-Cascade thing is or what a CSV is... Make sure you have read the entire tutorial. It's all explained in here. If you just want to scroll down to the code, please note:
+This demo is a basis for your research and it shows you how to implement face recognition in videos. You probably want to extend the application and make it more sophisticated: You could combine the id with the name, then show the confidence of the prediction, recognize the emotion... and and and. But before you send mails, asking what these Haar-Cascade thing is or what a CSV is: Make sure you have read the entire tutorial. It's all explained in here. If you just want to scroll down to the code, please note:
 
-* The available Haar-Cascades are located in the ``data`` folder of your OpenCV installation! One of the available Haar-Cascades for face detection is for example ``data/haarcascades/haarcascade_frontalface_default.xml``.
+* The available Haar-Cascades for face detection are located in the ``data`` folder of your OpenCV installation! One of the available Haar-Cascades for face detection is for example ``/path/to/opencv/data/haarcascades/haarcascade_frontalface_default.xml``.
 
-I encourage you to experiment with the application. Play around with the available :ocv:class:`FaceRecognizer`, try the available cascades in OpenCV and see if you can improve your results!
+I encourage you to experiment with the application. Play around with the available :ocv:class:`FaceRecognizer` implementations, try the available cascades in OpenCV and see if you can improve your results!
 
 Prerequisites
 --------------
@@ -74,7 +74,11 @@ All images for this example were chosen to have a frontal face perspective. They
 Face Recongition from Videos
 -----------------------------
 
-The source code for the demo is available in the ``samples/cpp`` folder of your OpenCV installation. If you have built OpenCV with samples turned on, chances are good you have the executable already. This demo uses the :ocv:class:`CascadeClassifier`:
+The source code for the demo is available in the ``src`` folder coming with this documentation:
+
+* :download:`src/facerec_video.cpp <../src/facerec_video.cpp>`
+
+This demo uses the :ocv:class:`CascadeClassifier`:
 
 .. literalinclude:: ../src/facerec_video.cpp
    :language: cpp
@@ -99,13 +103,15 @@ If you are in Linux, then simply start the demo by running:
 
 .. code-block:: none
 
-    ./facerec_video </path/to/your/haar_cascade.xml> <C:/path/to/your/csv.ext> <video device>
+    ./facerec_video </path/to/your/haar_cascade.xml> </path/to/your/csv.ext> <video device>
 
-So if the haar-cascade is at ``C:/opencv/data/haarcascades/haarcascade_frontalface_default.xml``, the CSV file at ``C:/facerec/data/celebrities.txt`` and i have a webcam with deviceId ``1``, then I would call the demo with:
+An example. If the haar-cascade is at ``C:/opencv/data/haarcascades/haarcascade_frontalface_default.xml``, the CSV file is at ``C:/facerec/data/celebrities.txt`` and I have a webcam with deviceId ``1``, then I would call the demo with:
 
 .. code-block:: none
 
     facerec_video.exe C:/opencv/data/haarcascades/haarcascade_frontalface_default.xml C:/facerec/data/celebrities.txt 1
+
+That's it. 
 
 Results
 -------

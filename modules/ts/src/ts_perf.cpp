@@ -10,24 +10,28 @@ int64 TestBase::timeLimitDefault = 0;
 unsigned int TestBase::iterationsLimitDefault = (unsigned int)(-1);
 int64 TestBase::_timeadjustment = 0;
 
-const char *command_line_keys =
-{
+const std::string command_line_keys =
     "{   |perf_max_outliers   |8        |percent of allowed outliers}"
     "{   |perf_min_samples    |10       |minimal required numer of samples}"
     "{   |perf_force_samples  |100      |force set maximum number of samples for all tests}"
     "{   |perf_seed           |809564   |seed for random numbers generator}"
-    "{   |perf_tbb_nthreads   |-1       |if TBB is enabled, the number of TBB threads}"
-    "{   |perf_write_sanity   |false    |allow to create new records for sanity checks}"
-    #ifdef ANDROID
+    "{   |perf_threads        |-1       |the number of worker threads, if parallel execution is enabled}"
+    "{   |perf_write_sanity   |         |allow to create new records for sanity checks}"
+#ifdef ANDROID
     "{   |perf_time_limit     |6.0      |default time limit for a single test (in seconds)}"
     "{   |perf_affinity_mask  |0        |set affinity mask for the main thread}"
-    "{   |perf_log_power_checkpoints  |false    |additional xml logging for power measurement}"
-    #else
+    "{   |perf_log_power_checkpoints  | |additional xml logging for power measurement}"
+#else
     "{   |perf_time_limit     |3.0      |default time limit for a single test (in seconds)}"
-    #endif
+#endif
     "{   |perf_max_deviation  |1.0      |}"
-    "{h  |help                |false    |}"
-};
+    "{h  |help                |         |print help info}"
+#ifdef HAVE_CUDA
+    "{   |perf_run_cpu        |false    |run GPU performance tests for analogical CPU functions}"
+    "{   |perf_cuda_device    |0        |run GPU test suite onto specific CUDA capable device}"
+    "{   |perf_cuda_info_only |false    |print an information about system and an available CUDA devices and then exit.}"
+#endif
+;
 
 static double       param_max_outliers;
 static double       param_max_deviation;
@@ -35,8 +39,14 @@ static unsigned int param_min_samples;
 static unsigned int param_force_samples;
 static uint64       param_seed;
 static double       param_time_limit;
-static int          param_tbb_nthreads;
+static int          param_threads;
 static bool         param_write_sanity;
+#ifdef HAVE_CUDA
+static bool         param_run_cpu;
+static int          param_cuda_device;
+#endif
+
+
 #ifdef ANDROID
 static int          param_affinity_mask;
 static bool         log_power_checkpoints;
@@ -54,8 +64,24 @@ static void setCurrentThreadAffinityMask(int mask)
         LOGE("Error in the syscall setaffinity: mask=%d=0x%x err=%d=0x%x", mask, mask, err, err);
     }
 }
-
 #endif
+
+#ifdef HAVE_CUDA
+# include <opencv2/core/gpumat.hpp>
+#endif
+
+namespace {
+
+class PerfEnvironment: public ::testing::Environment
+{
+public:
+    void TearDown()
+    {
+        cv::setNumThreads(-1);
+    }
+};
+
+} // namespace
 
 static void randu(cv::Mat& m)
 {
@@ -98,9 +124,42 @@ Regression& Regression::instance()
     return single;
 }
 
-Regression& Regression::add(const std::string& name, cv::InputArray array, double eps, ERROR_TYPE err)
+Regression& Regression::add(TestBase* test, const std::string& name, cv::InputArray array, double eps, ERROR_TYPE err)
 {
+    if(test) test->verified = true;
     return instance()(name, array, eps, err);
+}
+
+Regression& Regression::addKeypoints(TestBase* test, const std::string& name, const std::vector<cv::KeyPoint>& array, double eps, ERROR_TYPE err)
+{
+    int len = (int)array.size();
+    cv::Mat pt      (len, 1, CV_32FC2, (void*)&array[0].pt,       sizeof(cv::KeyPoint));
+    cv::Mat size    (len, 1, CV_32FC1, (void*)&array[0].size,     sizeof(cv::KeyPoint));
+    cv::Mat angle   (len, 1, CV_32FC1, (void*)&array[0].angle,    sizeof(cv::KeyPoint));
+    cv::Mat response(len, 1, CV_32FC1, (void*)&array[0].response, sizeof(cv::KeyPoint));
+    cv::Mat octave  (len, 1, CV_32SC1, (void*)&array[0].octave,   sizeof(cv::KeyPoint));
+    cv::Mat class_id(len, 1, CV_32SC1, (void*)&array[0].class_id, sizeof(cv::KeyPoint));
+
+    return Regression::add(test, name + "-pt",       pt,       eps, ERROR_ABSOLUTE)
+                                (name + "-size",     size,     eps, ERROR_ABSOLUTE)
+                                (name + "-angle",    angle,    eps, ERROR_ABSOLUTE)
+                                (name + "-response", response, eps, err)
+                                (name + "-octave",   octave,   eps, ERROR_ABSOLUTE)
+                                (name + "-class_id", class_id, eps, ERROR_ABSOLUTE);
+}
+
+Regression& Regression::addMatches(TestBase* test, const std::string& name, const std::vector<cv::DMatch>& array, double eps, ERROR_TYPE err)
+{
+    int len = (int)array.size();
+    cv::Mat queryIdx(len, 1, CV_32SC1, (void*)&array[0].queryIdx, sizeof(cv::DMatch));
+    cv::Mat trainIdx(len, 1, CV_32SC1, (void*)&array[0].trainIdx, sizeof(cv::DMatch));
+    cv::Mat imgIdx  (len, 1, CV_32SC1, (void*)&array[0].imgIdx,   sizeof(cv::DMatch));
+    cv::Mat distance(len, 1, CV_32FC1, (void*)&array[0].distance, sizeof(cv::DMatch));
+
+    return Regression::add(test, name + "-queryIdx", queryIdx, DBL_EPSILON, ERROR_ABSOLUTE)
+                                (name + "-trainIdx", trainIdx, DBL_EPSILON, ERROR_ABSOLUTE)
+                                (name + "-imgIdx",   imgIdx,   DBL_EPSILON, ERROR_ABSOLUTE)
+                                (name + "-distance", distance, eps, err);
 }
 
 void Regression::Init(const std::string& testSuitName, const std::string& ext)
@@ -136,6 +195,8 @@ void Regression::init(const std::string& testSuitName, const std::string& ext)
         storageInPath = testSuitName + ext;
         storageOutPath = testSuitName;
     }
+
+    suiteName = testSuitName;
 
     try
     {
@@ -279,42 +340,53 @@ void Regression::verify(cv::FileNode node, cv::Mat actual, double _eps, std::str
     double actual_min, actual_max;
     cv::minMaxLoc(actual, &actual_min, &actual_max);
 
-    double eps = evalEps((double)node["min"], actual_min, _eps, err);
-    ASSERT_NEAR((double)node["min"], actual_min, eps)
-            << "  " << argname << " has unexpected minimal value";
+    double expect_min = (double)node["min"];
+    double eps = evalEps(expect_min, actual_min, _eps, err);
+    ASSERT_NEAR(expect_min, actual_min, eps)
+            << argname << " has unexpected minimal value" << std::endl;
 
-    eps = evalEps((double)node["max"], actual_max, _eps, err);
-    ASSERT_NEAR((double)node["max"], actual_max, eps)
-            << "  " << argname << " has unexpected maximal value";
+    double expect_max = (double)node["max"];
+    eps = evalEps(expect_max, actual_max, _eps, err);
+    ASSERT_NEAR(expect_max, actual_max, eps)
+            << argname << " has unexpected maximal value" << std::endl;
 
     cv::FileNode last = node["last"];
-    double actualLast = getElem(actual, actual.rows - 1, actual.cols - 1, actual.channels() - 1);
-    ASSERT_EQ((int)last["x"], actual.cols - 1)
-            << "  " << argname << " has unexpected number of columns";
-    ASSERT_EQ((int)last["y"], actual.rows - 1)
-            << "  " << argname << " has unexpected number of rows";
+    double actual_last = getElem(actual, actual.rows - 1, actual.cols - 1, actual.channels() - 1);
+    int expect_cols = (int)last["x"] + 1;
+    int expect_rows = (int)last["y"] + 1;
+    ASSERT_EQ(expect_cols, actual.cols)
+            << argname << " has unexpected number of columns" << std::endl;
+    ASSERT_EQ(expect_rows, actual.rows)
+            << argname << " has unexpected number of rows" << std::endl;
 
-    eps = evalEps((double)last["val"], actualLast, _eps, err);
-    ASSERT_NEAR((double)last["val"], actualLast, eps)
-            << "  " << argname << " has unexpected value of last element";
+    double expect_last = (double)last["val"];
+    eps = evalEps(expect_last, actual_last, _eps, err);
+    ASSERT_NEAR(expect_last, actual_last, eps)
+            << argname << " has unexpected value of the last element" << std::endl;
 
     cv::FileNode rng1 = node["rng1"];
     int x1 = rng1["x"];
     int y1 = rng1["y"];
     int cn1 = rng1["cn"];
 
-    eps = evalEps((double)rng1["val"], getElem(actual, y1, x1, cn1), _eps, err);
-    ASSERT_NEAR((double)rng1["val"], getElem(actual, y1, x1, cn1), eps)
-            << "  " << argname << " has unexpected value of ["<< x1 << ":" << y1 << ":" << cn1 <<"] element";
+    double expect_rng1 = (double)rng1["val"];
+    double actual_rng1 = getElem(actual, y1, x1, cn1);
+
+    eps = evalEps(expect_rng1, actual_rng1, _eps, err);
+    ASSERT_NEAR(expect_rng1, actual_rng1, eps)
+            << argname << " has unexpected value of the ["<< x1 << ":" << y1 << ":" << cn1 <<"] element" << std::endl;
 
     cv::FileNode rng2 = node["rng2"];
     int x2 = rng2["x"];
     int y2 = rng2["y"];
     int cn2 = rng2["cn"];
 
-    eps = evalEps((double)rng2["val"], getElem(actual, y2, x2, cn2), _eps, err);
-    ASSERT_NEAR((double)rng2["val"], getElem(actual, y2, x2, cn2), eps)
-            << "  " << argname << " has unexpected value of ["<< x2 << ":" << y2 << ":" << cn2 <<"] element";
+    double expect_rng2 = (double)rng2["val"];
+    double actual_rng2 = getElem(actual, y2, x2, cn2);
+
+    eps = evalEps(expect_rng2, actual_rng2, _eps, err);
+    ASSERT_NEAR(expect_rng2, actual_rng2, eps)
+            << argname << " has unexpected value of the ["<< x2 << ":" << y2 << ":" << cn2 <<"] element" << std::endl;
 }
 
 void Regression::write(cv::InputArray array)
@@ -370,13 +442,16 @@ static int countViolations(const cv::Mat& expected, const cv::Mat& actual, const
 
 void Regression::verify(cv::FileNode node, cv::InputArray array, double eps, ERROR_TYPE err)
 {
-    ASSERT_EQ((int)node["kind"], array.kind()) << "  Argument \"" << node.name() << "\" has unexpected kind";
-    ASSERT_EQ((int)node["type"], array.type()) << "  Argument \"" << node.name() << "\" has unexpected type";
+    int expected_kind = (int)node["kind"];
+    int expected_type = (int)node["type"];
+    ASSERT_EQ(expected_kind, array.kind()) << "  Argument \"" << node.name() << "\" has unexpected kind";
+    ASSERT_EQ(expected_type, array.type()) << "  Argument \"" << node.name() << "\" has unexpected type";
 
     cv::FileNode valnode = node["val"];
     if (isVector(array))
     {
-        ASSERT_EQ((int)node["len"], (int)array.total()) << "  Vector \"" << node.name() << "\" has unexpected length";
+        int expected_length = (int)node["len"];
+        ASSERT_EQ(expected_length, (int)array.total()) << "  Vector \"" << node.name() << "\" has unexpected length";
         int idx = node["idx"];
 
         cv::Mat actual = array.getMat(idx);
@@ -392,30 +467,42 @@ void Regression::verify(cv::FileNode node, cv::InputArray array, double eps, ERR
             cv::Mat expected;
             valnode >> expected;
 
-            ASSERT_EQ(expected.size(), actual.size())
-                    << "  " << node.name() << "[" <<  idx<< "] has unexpected size";
-
-            cv::Mat diff;
-            cv::absdiff(expected, actual, diff);
-
-            if (err == ERROR_ABSOLUTE)
+            if(expected.empty())
             {
-                if (!cv::checkRange(diff, true, 0, 0, eps))
-                {
-                    double max;
-                    cv::minMaxLoc(diff.reshape(1), 0, &max);
-                    FAIL() << "  Absolute difference (=" << max << ") between argument \""
-                           << node.name() << "[" <<  idx << "]\" and expected value is bugger than " << eps;
-                }
+                ASSERT_TRUE(actual.empty())
+                    << "  expected empty " << node.name() << "[" <<  idx<< "]";
             }
-            else if (err == ERROR_RELATIVE)
+            else
             {
-                double maxv, maxa;
-                int violations = countViolations(expected, actual, diff, eps, &maxv, &maxa);
-                if (violations > 0)
+                ASSERT_EQ(expected.size(), actual.size())
+                        << "  " << node.name() << "[" <<  idx<< "] has unexpected size";
+
+                cv::Mat diff;
+                cv::absdiff(expected, actual, diff);
+
+                if (err == ERROR_ABSOLUTE)
                 {
-                    FAIL() << "  Relative difference (" << maxv << " of " << maxa << " allowed) between argument \""
-                           << node.name() << "[" <<  idx << "]\" and expected value is bugger than " << eps << " in " << violations << " points";
+                    if (!cv::checkRange(diff, true, 0, 0, eps))
+                    {
+                        if(expected.total() * expected.channels() < 12)
+                            std::cout << " Expected: " << std::endl << expected << std::endl << " Actual:" << std::endl << actual << std::endl;
+
+                        double max;
+                        cv::minMaxLoc(diff.reshape(1), 0, &max);
+
+                        FAIL() << "  Absolute difference (=" << max << ") between argument \""
+                               << node.name() << "[" <<  idx << "]\" and expected value is bugger than " << eps;
+                    }
+                }
+                else if (err == ERROR_RELATIVE)
+                {
+                    double maxv, maxa;
+                    int violations = countViolations(expected, actual, diff, eps, &maxv, &maxa);
+                    if (violations > 0)
+                    {
+                        FAIL() << "  Relative difference (" << maxv << " of " << maxa << " allowed) between argument \""
+                               << node.name() << "[" <<  idx << "]\" and expected value is bugger than " << eps << " in " << violations << " points";
+                    }
                 }
             }
         }
@@ -426,7 +513,7 @@ void Regression::verify(cv::FileNode node, cv::InputArray array, double eps, ERR
         {
             ASSERT_LE((size_t)26, array.total() * (size_t)array.channels())
                     << "  Argument \"" << node.name() << "\" has unexpected number of elements";
-            verify(node, array.getMat(), eps, "Argument " + node.name(), err);
+            verify(node, array.getMat(), eps, "Argument \"" + node.name() + "\"", err);
         }
         else
         {
@@ -434,30 +521,42 @@ void Regression::verify(cv::FileNode node, cv::InputArray array, double eps, ERR
             valnode >> expected;
             cv::Mat actual = array.getMat();
 
-            ASSERT_EQ(expected.size(), actual.size())
-                    << "  Argument \"" << node.name() << "\" has unexpected size";
-
-            cv::Mat diff;
-            cv::absdiff(expected, actual, diff);
-
-            if (err == ERROR_ABSOLUTE)
+            if(expected.empty())
             {
-                if (!cv::checkRange(diff, true, 0, 0, eps))
-                {
-                    double max;
-                    cv::minMaxLoc(diff.reshape(1), 0, &max);
-                    FAIL() << "  Difference (=" << max << ") between argument \"" << node.name()
-                           << "\" and expected value is bugger than " << eps;
-                }
+                ASSERT_TRUE(actual.empty())
+                    << "  expected empty " << node.name();
             }
-            else if (err == ERROR_RELATIVE)
+            else
             {
-                double maxv, maxa;
-                int violations = countViolations(expected, actual, diff, eps, &maxv, &maxa);
-                if (violations > 0)
+                ASSERT_EQ(expected.size(), actual.size())
+                        << "  Argument \"" << node.name() << "\" has unexpected size";
+
+                cv::Mat diff;
+                cv::absdiff(expected, actual, diff);
+
+                if (err == ERROR_ABSOLUTE)
                 {
-                    FAIL() << "  Relative difference (" << maxv << " of " << maxa << " allowed) between argument \"" << node.name()
-                           << "\" and expected value is bugger than " << eps << " in " << violations << " points";
+                    if (!cv::checkRange(diff, true, 0, 0, eps))
+                    {
+                        if(expected.total() * expected.channels() < 12)
+                            std::cout << " Expected: " << std::endl << expected << std::endl << " Actual:" << std::endl << actual << std::endl;
+
+                        double max;
+                        cv::minMaxLoc(diff.reshape(1), 0, &max);
+
+                        FAIL() << "  Difference (=" << max << ") between argument1 \"" << node.name()
+                               << "\" and expected value is bugger than " << eps;
+                    }
+                }
+                else if (err == ERROR_RELATIVE)
+                {
+                    double maxv, maxa;
+                    int violations = countViolations(expected, actual, diff, eps, &maxv, &maxa);
+                    if (violations > 0)
+                    {
+                        FAIL() << "  Relative difference (" << maxv << " of " << maxa << " allowed) between argument \"" << node.name()
+                               << "\" and expected value is bugger than " << eps << " in " << violations << " points";
+                    }
                 }
             }
         }
@@ -466,7 +565,22 @@ void Regression::verify(cv::FileNode node, cv::InputArray array, double eps, ERR
 
 Regression& Regression::operator() (const std::string& name, cv::InputArray array, double eps, ERROR_TYPE err)
 {
+    // exit if current test is already failed
+    if(::testing::UnitTest::GetInstance()->current_test_info()->result()->Failed()) return *this;
+
+    if(!array.empty() && array.depth() == CV_USRTYPE1)
+    {
+        ADD_FAILURE() << "  Can not check regression for CV_USRTYPE1 data type for " << name;
+        return *this;
+    }
+
     std::string nodename = getCurrentTestNodeName();
+
+#ifdef HAVE_CUDA
+    static const std::string prefix = (param_run_cpu)? "CPU_" : "GPU_";
+    if(suiteName == "gpu")
+    	nodename = prefix + nodename;
+#endif
 
     cv::FileNode n = rootIn[nodename];
     if(n.isNone())
@@ -494,6 +608,7 @@ Regression& Regression::operator() (const std::string& name, cv::InputArray arra
         else
             verify(this_arg, array, eps, err);
     }
+
     return *this;
 }
 
@@ -525,26 +640,61 @@ performance_metrics::performance_metrics()
 
 void TestBase::Init(int argc, const char* const argv[])
 {
-    cv::CommandLineParser args(argc, argv, command_line_keys);
-    param_max_outliers = std::min(100., std::max(0., args.get<double>("perf_max_outliers")));
-    param_min_samples  = std::max(1u, args.get<unsigned int>("perf_min_samples"));
-    param_max_deviation = std::max(0., args.get<double>("perf_max_deviation"));
-    param_seed = args.get<uint64>("perf_seed");
-    param_time_limit = std::max(0., args.get<double>("perf_time_limit"));
-    param_force_samples = args.get<unsigned int>("perf_force_samples");
-    param_write_sanity = args.get<bool>("perf_write_sanity");
-    param_tbb_nthreads  = args.get<int>("perf_tbb_nthreads");
-#ifdef ANDROID
-    param_affinity_mask = args.get<int>("perf_affinity_mask");
-    log_power_checkpoints = args.get<bool>("perf_log_power_checkpoints");
-#endif
-
+    cv::CommandLineParser args(argc, argv, command_line_keys.c_str());
     if (args.get<bool>("help"))
     {
         args.printParams();
         printf("\n\n");
         return;
     }
+
+    ::testing::AddGlobalTestEnvironment(new PerfEnvironment);
+
+    param_max_outliers  = std::min(100., std::max(0., args.get<double>("perf_max_outliers")));
+    param_min_samples   = std::max(1u, args.get<unsigned int>("perf_min_samples"));
+    param_max_deviation = std::max(0., args.get<double>("perf_max_deviation"));
+    param_seed          = args.get<uint64>("perf_seed");
+    param_time_limit    = std::max(0., args.get<double>("perf_time_limit"));
+    param_force_samples = args.get<unsigned int>("perf_force_samples");
+    param_write_sanity  = args.get<bool>("perf_write_sanity");
+    param_threads  = args.get<int>("perf_threads");
+#ifdef ANDROID
+    param_affinity_mask   = args.get<int>("perf_affinity_mask");
+    log_power_checkpoints = args.get<bool>("perf_log_power_checkpoints");
+#endif
+
+#ifdef HAVE_CUDA
+
+    bool printOnly        = args.get<bool>("perf_cuda_info_only");
+
+    if (printOnly)
+        exit(0);
+
+    param_run_cpu         = args.get<bool>("perf_run_cpu");
+    param_cuda_device      = std::max(0, std::min(cv::gpu::getCudaEnabledDeviceCount(), args.get<int>("perf_cuda_device")));
+
+    if (param_run_cpu)
+        printf("[----------]\n[ GPU INFO ] \tRun test suite on CPU.\n[----------]\n"), fflush(stdout);
+    else
+    {
+        cv::gpu::DeviceInfo info(param_cuda_device);
+        if (!info.isCompatible())
+        {
+            printf("[----------]\n[ FAILURE  ] \tDevice %s is NOT compatible with current GPU module build.\n[----------]\n", info.name().c_str()), fflush(stdout);
+            exit(-1);
+        }
+
+        cv::gpu::setDevice(param_cuda_device);
+
+        printf("[----------]\n[ GPU INFO ] \tRun test suite on %s GPU.\n[----------]\n", info.name().c_str()), fflush(stdout);
+    }
+#endif
+
+//    if (!args.check())
+//    {
+//        args.printErrors();
+//        return;
+//    }
 
     timeLimitDefault = param_time_limit == 0.0 ? 1 : (int64)(param_time_limit * cv::getTickFrequency());
     iterationsLimitDefault = param_force_samples == 0 ? (unsigned)(-1) : param_force_samples;
@@ -644,6 +794,8 @@ cv::Size TestBase::getSize(cv::InputArray a)
 bool TestBase::next()
 {
     bool has_next = ++currentIter < nIters && totalTime < timeLimit;
+    cv::theRNG().state = param_seed; //this rng should generate same numbers for each run
+
 #ifdef ANDROID
     if (log_power_checkpoints)
     {
@@ -739,7 +891,7 @@ performance_metrics& TestBase::calcMetrics()
     int n = 0;
     for(TimeVector::const_iterator i = times.begin(); i != times.end(); ++i)
     {
-        double x = (double)*i;
+        double x = static_cast<double>(*i)/runsPerIteration;
         if (x < DBL_EPSILON) continue;
         double lx = log(x);
 
@@ -759,14 +911,14 @@ performance_metrics& TestBase::calcMetrics()
     int offset = 0;
     if (gstddev > DBL_EPSILON)
     {
-        double minout = exp(gmean - 3 * gstddev);
-        double maxout = exp(gmean + 3 * gstddev);
+        double minout = exp(gmean - 3 * gstddev) * runsPerIteration;
+        double maxout = exp(gmean + 3 * gstddev) * runsPerIteration;
         while(*start < minout) ++start, ++metrics.outliers, ++offset;
         do --end, ++metrics.outliers; while(*end > maxout);
         ++end, --metrics.outliers;
     }
 
-    metrics.min = (double)*start;
+    metrics.min = static_cast<double>(*start)/runsPerIteration;
     //calc final metrics
     n = 0;
     gmean = 0;
@@ -776,7 +928,7 @@ performance_metrics& TestBase::calcMetrics()
     int m = 0;
     for(; start != end; ++start)
     {
-        double x = (double)*start;
+        double x = static_cast<double>(*start)/runsPerIteration;
         if (x > DBL_EPSILON)
         {
             double lx = log(x);
@@ -798,6 +950,8 @@ performance_metrics& TestBase::calcMetrics()
     metrics.median = n % 2
             ? (double)times[offset + n / 2]
             : 0.5 * (times[offset + n / 2] + times[offset + n / 2 - 1]);
+
+    metrics.median /= runsPerIteration;
 
     return metrics;
 }
@@ -898,27 +1052,31 @@ void TestBase::reportMetrics(bool toJUnitXML)
 
 void TestBase::SetUp()
 {
-#ifdef HAVE_TBB
-    if (param_tbb_nthreads > 0) {
-        p_tbb_initializer.release();
-        p_tbb_initializer=new tbb::task_scheduler_init(param_tbb_nthreads);
-    }
-#endif
+    cv::theRNG().state = param_seed; // this rng should generate same numbers for each run
+
+    if (param_threads >= 0)
+        cv::setNumThreads(param_threads);
+
 #ifdef ANDROID
     if (param_affinity_mask)
         setCurrentThreadAffinityMask(param_affinity_mask);
 #endif
+
+    verified = false;
     lastTime = 0;
     totalTime = 0;
+    runsPerIteration = 1;
     nIters = iterationsLimitDefault;
     currentIter = (unsigned int)-1;
     timeLimit = timeLimitDefault;
     times.clear();
-    cv::theRNG().state = param_seed;//this rng should generate same numbers for each run
 }
 
 void TestBase::TearDown()
 {
+    if (!HasFailure() && !verified)
+        ADD_FAILURE() << "The test has no sanity checks. There should be at least one check at the end of performance test.";
+
     validateMetrics();
     if (HasFailure())
         reportMetrics(false);
@@ -931,9 +1089,6 @@ void TestBase::TearDown()
         if (type_param)  printf("[ TYPE     ] \t%s\n", type_param), fflush(stdout);
         reportMetrics(true);
     }
-#ifdef HAVE_TBB
-    p_tbb_initializer.release();
-#endif
 }
 
 std::string TestBase::getDataPath(const std::string& relativePath)
@@ -1022,12 +1177,13 @@ TestBase::_declareHelper& TestBase::_declareHelper::time(double timeLimitSecs)
 
 TestBase::_declareHelper& TestBase::_declareHelper::tbb_threads(int n)
 {
-#ifdef HAVE_TBB
-    test->p_tbb_initializer.release();
-    if (n > 0)
-        test->p_tbb_initializer=new tbb::task_scheduler_init(n);
-#endif
-    (void)n;
+    cv::setNumThreads(n);
+    return *this;
+}
+
+TestBase::_declareHelper& TestBase::_declareHelper::runs(unsigned int runsNumber)
+{
+    test->runsPerIteration = runsNumber;
     return *this;
 }
 
@@ -1104,6 +1260,63 @@ TestBase::_declareHelper::_declareHelper(TestBase* t) : test(t)
 }
 
 /*****************************************************************************************\
+*                                  miscellaneous
+\*****************************************************************************************/
+
+namespace {
+struct KeypointComparator
+{
+    std::vector<cv::KeyPoint>& pts_;
+    comparators::KeypointGreater cmp;
+
+    KeypointComparator(std::vector<cv::KeyPoint>& pts) : pts_(pts), cmp() {}
+
+    bool operator()(int idx1, int idx2) const
+    {
+        return cmp(pts_[idx1], pts_[idx2]);
+    }
+private:
+    const KeypointComparator& operator=(const KeypointComparator&); // quiet MSVC
+};
+}//namespace
+
+void perf::sort(std::vector<cv::KeyPoint>& pts, cv::InputOutputArray descriptors)
+{
+    cv::Mat desc = descriptors.getMat();
+
+    CV_Assert(pts.size() == (size_t)desc.rows);
+    cv::AutoBuffer<int> idxs(desc.rows);
+
+    for (int i = 0; i < desc.rows; ++i)
+        idxs[i] = i;
+
+    std::sort((int*)idxs, (int*)idxs + desc.rows, KeypointComparator(pts));
+
+    std::vector<cv::KeyPoint> spts(pts.size());
+    cv::Mat sdesc(desc.size(), desc.type());
+
+    for(int j = 0; j < desc.rows; ++j)
+    {
+        spts[j] = pts[idxs[j]];
+        cv::Mat row = sdesc.row(j);
+        desc.row(idxs[j]).copyTo(row);
+    }
+
+    spts.swap(pts);
+    sdesc.copyTo(desc);
+}
+
+/*****************************************************************************************\
+*                                  ::perf::GpuPerf
+\*****************************************************************************************/
+#ifdef HAVE_CUDA
+bool perf::GpuPerf::targetDevice()
+{
+    return !param_run_cpu;
+}
+#endif
+
+/*****************************************************************************************\
 *                                  ::perf::PrintTo
 \*****************************************************************************************/
 namespace perf
@@ -1140,7 +1353,3 @@ void PrintTo(const Size& sz, ::std::ostream* os)
 
 }  // namespace cv
 
-
-/*****************************************************************************************\
-*                                  ::cv::PrintTo
-\*****************************************************************************************/

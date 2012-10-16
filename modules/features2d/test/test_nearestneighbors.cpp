@@ -200,7 +200,7 @@ int CV_KDTreeTest_CPP::checkGetPoins( const Mat& data )
 
 int CV_KDTreeTest_CPP::checkFindBoxed()
 {
-    vector<float> min( dims, minValue), max(dims, maxValue);
+    vector<float> min( dims, static_cast<float>(minValue)), max(dims, static_cast<float>(maxValue));
     vector<int> indices;
     tr->findOrthoRange( min, max, indices );
     // TODO check indices
@@ -214,8 +214,8 @@ int CV_KDTreeTest_CPP::findNeighbors( Mat& points, Mat& neighbors )
     const int emax = 20;
     Mat neighbors2( neighbors.size(), CV_32SC1 );
     int j;
-    vector<float> min(points.cols, minValue);
-    vector<float> max(points.cols, maxValue);
+    vector<float> min(points.cols, static_cast<float>(minValue));
+    vector<float> max(points.cols, static_cast<float>(maxValue));
     for( int pi = 0; pi < points.rows; pi++ )
     {
         // 1st way

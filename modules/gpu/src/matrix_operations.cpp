@@ -178,7 +178,7 @@ bool cv::gpu::CudaMem::empty() const
     return data == 0; 
 }
 
-#if !defined (HAVE_CUDA)
+#if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
 void cv::gpu::registerPageLocked(Mat&) { throw_nogpu(); }
 void cv::gpu::unregisterPageLocked(Mat&) { throw_nogpu(); }

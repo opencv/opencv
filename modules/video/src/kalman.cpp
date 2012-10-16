@@ -171,6 +171,9 @@ cvKalmanPredict( CvKalman* kalman, const CvMat* control )
     /* P'(k) = temp1*At + Q */
     cvGEMM( kalman->temp1, kalman->transition_matrix, 1, kalman->process_noise_cov, 1,
                      kalman->error_cov_pre, CV_GEMM_B_T );
+    
+    /* handle the case when there will be measurement before the next predict */
+    cvCopy(kalman->state_pre, kalman->state_post);
 
     return kalman->state_pre;
 }
@@ -260,6 +263,9 @@ const Mat& KalmanFilter::predict(const Mat& control)
 
     // P'(k) = temp1*At + Q
     gemm(temp1, transitionMatrix, 1, processNoiseCov, 1, errorCovPre, GEMM_2_T);
+    
+    // handle the case when there will be measurement before the next predict.
+    statePre.copyTo(statePost);
 
     return statePre;
 }
@@ -291,3 +297,5 @@ const Mat& KalmanFilter::correct(const Mat& measurement)
 }
     
 };
+
+

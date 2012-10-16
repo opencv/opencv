@@ -54,19 +54,19 @@ endif()
 # Detect GNU version:
 # ----------------------------------------------------------------------------
 if(CMAKE_COMPILER_IS_GNUCXX)
-    execute_process(COMMAND ${CMAKE_CXX_COMPILER} --version
+    execute_process(COMMAND ${CMAKE_CXX_COMPILER} ${CMAKE_CXX_COMPILER_ARG1} --version
                   OUTPUT_VARIABLE CMAKE_OPENCV_GCC_VERSION_FULL
                   OUTPUT_STRIP_TRAILING_WHITESPACE)
 
-    execute_process(COMMAND ${CMAKE_CXX_COMPILER} -v
+    execute_process(COMMAND ${CMAKE_CXX_COMPILER} ${CMAKE_CXX_COMPILER_ARG1} -v
                   ERROR_VARIABLE CMAKE_OPENCV_GCC_INFO_FULL
                   OUTPUT_STRIP_TRAILING_WHITESPACE)
 
     # Typical output in CMAKE_OPENCV_GCC_VERSION_FULL: "c+//0 (whatever) 4.2.3 (...)"
     # Look for the version number
-    string(REGEX MATCH "[0-9]+.[0-9]+.[0-9]+" CMAKE_GCC_REGEX_VERSION "${CMAKE_OPENCV_GCC_VERSION_FULL}")
+    string(REGEX MATCH "[0-9]+\\.[0-9]+\\.[0-9]+" CMAKE_GCC_REGEX_VERSION "${CMAKE_OPENCV_GCC_VERSION_FULL}")
     if(NOT CMAKE_GCC_REGEX_VERSION)
-      string(REGEX MATCH "[0-9]+.[0-9]+" CMAKE_GCC_REGEX_VERSION "${CMAKE_OPENCV_GCC_VERSION_FULL}")
+      string(REGEX MATCH "[0-9]+\\.[0-9]+" CMAKE_GCC_REGEX_VERSION "${CMAKE_OPENCV_GCC_VERSION_FULL}")
     endif()
 
     # Split the three parts:
@@ -89,8 +89,8 @@ if(CMAKE_COMPILER_IS_GNUCXX)
     endif()
 endif()
 
-if(CMAKE_SYSTEM_PROCESSOR MATCHES amd64.*|x86_64.* OR CMAKE_GENERATOR MATCHES "Visual Studio.*Win64")
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "amd64.*|x86_64.*|AMD64.*" OR CMAKE_GENERATOR MATCHES "Visual Studio.*Win64")
     set(X86_64 1)
-elseif(CMAKE_SYSTEM_PROCESSOR MATCHES i686.*|i386.*|x86.*)
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "i686.*|i386.*|x86.*|amd64.*|AMD64.*")
     set(X86 1)
 endif()

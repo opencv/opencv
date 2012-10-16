@@ -633,7 +633,7 @@ static void computeKeyPoints(const vector<Mat>& imagePyramid,
 
     // pre-compute the end of a row in a circular patch
     int halfPatchSize = patchSize / 2;
-    vector<int> umax(halfPatchSize + 1);
+    vector<int> umax(halfPatchSize + 2);
 
     int v, v0, vmax = cvFloor(halfPatchSize * sqrt(2.f) / 2 + 1);
     int vmin = cvCeil(halfPatchSize * sqrt(2.f) / 2);
@@ -643,7 +643,7 @@ static void computeKeyPoints(const vector<Mat>& imagePyramid,
     // Make sure we are symmetric
     for (v = halfPatchSize, v0 = 0; v >= vmin; --v)
     {
-       while (umax[v0] == umax[v0 + 1])
+        while (umax[v0] == umax[v0 + 1])
             ++v0;
         umax[v] = v0;
         ++v0;
@@ -723,6 +723,8 @@ static void computeDescriptors(const Mat& image, vector<KeyPoint>& keypoints, Ma
 void ORB::operator()( InputArray _image, InputArray _mask, vector<KeyPoint>& _keypoints,
                       OutputArray _descriptors, bool useProvidedKeypoints) const
 {
+    CV_Assert(patchSize >= 2);
+
     bool do_keypoints = !useProvidedKeypoints;
     bool do_descriptors = _descriptors.needed();
 

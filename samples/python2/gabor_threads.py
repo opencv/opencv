@@ -14,7 +14,6 @@ gabor_threads.py [image filename]
 
 import numpy as np
 import cv2
-from threading import Lock
 from multiprocessing.pool import ThreadPool
             
 
@@ -36,13 +35,11 @@ def process(img, filters):
 
 def process_threaded(img, filters, threadn = 8):
     accum = np.zeros_like(img)
-    accum_lock = Lock()
     def f(kern):
-        fimg = cv2.filter2D(img, cv2.CV_8UC3, kern)
-        with accum_lock:
-            np.maximum(accum, fimg, accum)
+        return cv2.filter2D(img, cv2.CV_8UC3, kern)
     pool = ThreadPool(processes=threadn)
-    pool.map(f, filters)
+    for fimg in pool.imap_unordered(f, filters):
+        np.maximum(accum, fimg, accum)
     return accum
 
 if __name__ == '__main__':

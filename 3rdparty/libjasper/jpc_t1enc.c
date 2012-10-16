@@ -219,7 +219,7 @@ int jpc_enc_enccblk(jpc_enc_t *enc, jas_stream_t *out, jpc_enc_tcmpt_t *tcmpt, j
 
 	cblk->numpasses = (cblk->numbps > 0) ? (3 * cblk->numbps - 2) : 0;
 	if (cblk->numpasses > 0) {
-		cblk->passes = jas_malloc(cblk->numpasses * sizeof(jpc_enc_pass_t));
+		cblk->passes = jas_alloc2(cblk->numpasses, sizeof(jpc_enc_pass_t));
 		assert(cblk->passes);
 	} else {
 		cblk->passes = 0;

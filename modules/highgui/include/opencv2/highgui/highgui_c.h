@@ -217,6 +217,7 @@ enum
     CV_IMWRITE_JPEG_QUALITY =1,
     CV_IMWRITE_PNG_COMPRESSION =16,
     CV_IMWRITE_PNG_STRATEGY =17,
+	CV_IMWRITE_PNG_BILEVEL =18,
     CV_IMWRITE_PNG_STRATEGY_DEFAULT =0,
     CV_IMWRITE_PNG_STRATEGY_FILTERED =1,
     CV_IMWRITE_PNG_STRATEGY_HUFFMAN_ONLY =2,
@@ -306,7 +307,9 @@ enum
 
     CV_CAP_XIAPI    =1100,   // XIMEA Camera API
 
-    CV_CAP_AVFOUNDATION = 1200  // AVFoundation framework for iOS (OS X Lion will have the same API)
+    CV_CAP_AVFOUNDATION = 1200,  // AVFoundation framework for iOS (OS X Lion will have the same API)
+
+    CV_CAP_GIGANETIX = 1300  // Smartek Giganetix GigEVisionSDK
 };
 
 /* start capturing frames from camera: index = camera_index + domain_offset (CV_CAP_*) */
@@ -453,6 +456,15 @@ enum
     CV_CAP_PROP_IOS_DEVICE_FLASH = 9003,
     CV_CAP_PROP_IOS_DEVICE_WHITEBALANCE = 9004,
     CV_CAP_PROP_IOS_DEVICE_TORCH = 9005
+
+    // Properties of cameras available through Smartek Giganetix Ethernet Vision interface
+    /* --- Vladimir Litvinenko (litvinenko.vladimir@gmail.com) --- */
+    ,CV_CAP_PROP_GIGA_FRAME_OFFSET_X = 10001,
+    CV_CAP_PROP_GIGA_FRAME_OFFSET_Y = 10002,
+    CV_CAP_PROP_GIGA_FRAME_WIDTH_MAX = 10003,
+    CV_CAP_PROP_GIGA_FRAME_HEIGH_MAX = 10004,
+    CV_CAP_PROP_GIGA_FRAME_SENS_WIDTH = 10005,
+    CV_CAP_PROP_GIGA_FRAME_SENS_HEIGH = 10006
 };
 
 enum
@@ -474,22 +486,25 @@ enum
 {
     CV_CAP_OPENNI_VGA_30HZ     = 0,
     CV_CAP_OPENNI_SXGA_15HZ    = 1,
-    CV_CAP_OPENNI_SXGA_30HZ    = 2
+    CV_CAP_OPENNI_SXGA_30HZ    = 2,
+    CV_CAP_OPENNI_QVGA_30HZ    = 3,
+    CV_CAP_OPENNI_QVGA_60HZ    = 4
 };
 
 //supported by Android camera output formats
 enum
 {
-  CV_CAP_ANDROID_COLOR_FRAME_BGR = 0, //BGR
-  CV_CAP_ANDROID_COLOR_FRAME = CV_CAP_ANDROID_COLOR_FRAME_BGR,
-  CV_CAP_ANDROID_GREY_FRAME  = 1,  //Y
-  CV_CAP_ANDROID_COLOR_FRAME_RGB = 2,
-  CV_CAP_ANDROID_COLOR_FRAME_BGRA = 3,
-  CV_CAP_ANDROID_COLOR_FRAME_RGBA = 4
+    CV_CAP_ANDROID_COLOR_FRAME_BGR = 0, //BGR
+    CV_CAP_ANDROID_COLOR_FRAME = CV_CAP_ANDROID_COLOR_FRAME_BGR,
+    CV_CAP_ANDROID_GREY_FRAME  = 1,  //Y
+    CV_CAP_ANDROID_COLOR_FRAME_RGB = 2,
+    CV_CAP_ANDROID_COLOR_FRAME_BGRA = 3,
+    CV_CAP_ANDROID_COLOR_FRAME_RGBA = 4
 };
 
 // supported Android camera flash modes
-enum {
+enum
+{
     CV_CAP_ANDROID_FLASH_MODE_AUTO = 0,
     CV_CAP_ANDROID_FLASH_MODE_OFF,
     CV_CAP_ANDROID_FLASH_MODE_ON,
@@ -498,7 +513,8 @@ enum {
 };
 
 // supported Android camera focus modes
-enum {
+enum
+{
     CV_CAP_ANDROID_FOCUS_MODE_AUTO = 0,
     CV_CAP_ANDROID_FOCUS_MODE_CONTINUOUS_VIDEO,
     CV_CAP_ANDROID_FOCUS_MODE_EDOF,
@@ -508,7 +524,8 @@ enum {
 };
 
 // supported Android camera white balance modes
-enum {
+enum
+{
     CV_CAP_ANDROID_WHITE_BALANCE_AUTO = 0,
     CV_CAP_ANDROID_WHITE_BALANCE_CLOUDY_DAYLIGHT,
     CV_CAP_ANDROID_WHITE_BALANCE_DAYLIGHT,
@@ -520,7 +537,8 @@ enum {
 };
 
 // supported Android camera antibanding modes
-enum {
+enum
+{
     CV_CAP_ANDROID_ANTIBANDING_50HZ = 0,
     CV_CAP_ANDROID_ANTIBANDING_60HZ,
     CV_CAP_ANDROID_ANTIBANDING_AUTO,

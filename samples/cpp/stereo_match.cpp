@@ -189,6 +189,9 @@ int main(int argc, char** argv)
         fs["D1"] >> D1;
         fs["M2"] >> M2;
         fs["D2"] >> D2;
+        
+        M1 *= scale;
+        M2 *= scale;
 
         fs.open(extrinsic_filename, CV_STORAGE_READ);
         if(!fs.isOpened())

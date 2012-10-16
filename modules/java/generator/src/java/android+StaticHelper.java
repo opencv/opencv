@@ -15,7 +15,7 @@ class StaticHelper {
 
         try
         {
-            System.loadLibrary("opencvinfo");
+            System.loadLibrary("opencv_info");
             libs = getLibraryList();
         }
         catch(UnsatisfiedLinkError e)
@@ -76,7 +76,7 @@ class StaticHelper {
         }
         else
         {
-            // If dependencies list is not defined or empty
+            // If dependencies list is not defined or empty.
             result &= loadLibrary("opencv_java");
         }
 

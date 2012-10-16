@@ -166,11 +166,23 @@
 /* Intel Threading Building Blocks */
 #cmakedefine  HAVE_TBB
 
+/* C= */
+#cmakedefine  HAVE_CSTRIPES
+
 /* Eigen Matrix & Linear Algebra Library */
 #cmakedefine  HAVE_EIGEN
 
 /* NVidia Cuda Runtime API*/
 #cmakedefine HAVE_CUDA
+
+/* OpenCL Support */
+#cmakedefine HAVE_OPENCL
+
+/* AMD's OpenCL Fast Fourier Transform Library*/ 
+#cmakedefine HAVE_CLAMDFFT
+
+/* AMD's Basic Linear Algebra Subprograms Library*/
+#cmakedefine HAVE_CLAMDBLAS
 
 /* NVidia Cuda Fast Fourier Transform (FFT) API*/
 #cmakedefine HAVE_CUFFT
@@ -198,3 +210,6 @@
 
 /* OpenGL support*/
 #cmakedefine HAVE_OPENGL
+
+/* Clp support */
+#cmakedefine HAVE_CLP

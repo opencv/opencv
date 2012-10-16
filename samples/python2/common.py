@@ -1,3 +1,7 @@
+'''
+This module contais some common routines used by other samples.
+'''
+
 import numpy as np
 import cv2
 import os
@@ -5,6 +9,12 @@ from contextlib import contextmanager
 import itertools as it
 
 image_extensions = ['.bmp', '.jpg', '.jpeg', '.png', '.tif', '.tiff', '.pbm', '.pgm', '.ppm']
+
+class Bunch(object):
+    def __init__(self, **kw):
+        self.__dict__.update(kw)
+    def __str__(self):
+        return str(self.__dict__)
 
 def splitfn(fn):
     path, fn = os.path.split(fn)
@@ -151,12 +161,9 @@ class RectSelector:
             self.drag_start = (x, y)
         if self.drag_start: 
             if flags & cv2.EVENT_FLAG_LBUTTON:
-                #h, w = self.frame.shape[:2]
                 xo, yo = self.drag_start
                 x0, y0 = np.minimum([xo, yo], [x, y])
                 x1, y1 = np.maximum([xo, yo], [x, y])
-                #x0, y0 = np.maximum(0, np.minimum([xo, yo], [x, y]))
-                #x1, y1 = np.minimum([w, h], np.maximum([xo, yo], [x, y]))
                 self.drag_rect = None
                 if x1-x0 > 0 and y1-y0 > 0:
                     self.drag_rect = (x0, y0, x1, y1)
@@ -168,9 +175,13 @@ class RectSelector:
                     self.callback(rect)
     def draw(self, vis):
         if not self.drag_rect:
-            return
+            return False
         x0, y0, x1, y1 = self.drag_rect
         cv2.rectangle(vis, (x0, y0), (x1, y1), (0, 255, 0), 2)
+        return True
+    @property
+    def dragging(self):
+        return self.drag_rect is not None
 
 
 def grouper(n, iterable, fillvalue=None):
@@ -194,3 +205,12 @@ def mosaic(w, imgs):
 def getsize(img):
     h, w = img.shape[:2]
     return w, h
+
+def mdot(*args):
+    return reduce(np.dot, args)
+
+def draw_keypoints(vis, keypoints, color = (0, 255, 255)):
+    for kp in keypoints:
+            x, y = kp.pt
+            cv2.circle(vis, (int(x), int(y)), 2, color)
+

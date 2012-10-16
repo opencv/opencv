@@ -97,7 +97,7 @@ static void displayState(Mat &canvas, bool bHelp, bool bGpu, bool bLargestFace, 
 
 
 int main(int argc, const char *argv[])
-{	
+{
     if (argc == 1)
     {
         help();

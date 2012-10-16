@@ -2296,7 +2296,8 @@ icvCreateTrackbar( const char* trackbar_name, const char* window_name,
     trackbar->maxval = count;
 
     /* Adjust slider parameters */
-    SendMessage(trackbar->hwnd, TBM_SETRANGE, (WPARAM)TRUE, (LPARAM)MAKELONG(0, count));
+    SendMessage(trackbar->hwnd, TBM_SETRANGEMIN, (WPARAM)TRUE, (LPARAM)0);
+    SendMessage(trackbar->hwnd, TBM_SETRANGEMAX, (WPARAM)TRUE, (LPARAM)count);
     SendMessage(trackbar->hwnd, TBM_SETTICFREQ, (WPARAM)1, (LPARAM)0 );
     if( val )
         pos = *val;

@@ -2,6 +2,7 @@
 #define __OPENCV_TS_PERF_HPP__
 
 #include "opencv2/core/core.hpp"
+#include "opencv2/features2d/features2d.hpp"
 #include "ts_gtest.h"
 
 #ifdef HAVE_TBB
@@ -27,6 +28,7 @@
 
 namespace perf
 {
+class TestBase;
 
 /*****************************************************************************************\
 *                Predefined typical frame sizes and typical test parameters               *
@@ -36,14 +38,19 @@ const cv::Size szVGA = cv::Size(640, 480);
 const cv::Size szSVGA = cv::Size(800, 600);
 const cv::Size szXGA = cv::Size(1024, 768);
 const cv::Size szSXGA = cv::Size(1280, 1024);
+const cv::Size szWQHD = cv::Size(2560, 1440);
 
 const cv::Size sznHD = cv::Size(640, 360);
 const cv::Size szqHD = cv::Size(960, 540);
+const cv::Size sz240p = szQVGA;
 const cv::Size sz720p = cv::Size(1280, 720);
 const cv::Size sz1080p = cv::Size(1920, 1080);
+const cv::Size sz1440p = szWQHD;
 const cv::Size sz2160p = cv::Size(3840, 2160);//UHDTV1 4K
 const cv::Size sz4320p = cv::Size(7680, 4320);//UHDTV2 8K
 
+const cv::Size sz3MP = cv::Size(2048, 1536);
+const cv::Size sz5MP = cv::Size(2592, 1944);
 const cv::Size sz2K = cv::Size(2048, 2048);
 
 const cv::Size szODD = cv::Size(127, 61);
@@ -86,7 +93,7 @@ private:
 \*****************************************************************************************/
 
 #define CV_ENUM(class_name, ...) \
-class CV_EXPORTS class_name {\
+namespace { class CV_EXPORTS class_name {\
 public:\
   class_name(int val = 0) : _val(val) {}\
   operator int() const {return _val;}\
@@ -112,12 +119,12 @@ public:\
     private: class_name *_begin, *_end;\
   };\
   static Container all(){\
-    static class_name vals[] = {__VA_ARGS__};\
-    return Container(vals, sizeof(vals)/sizeof(vals[0]));\
+    static int vals[] = {__VA_ARGS__};\
+    return Container((class_name*)vals, sizeof(vals)/sizeof(vals[0]));\
   }\
 private: int _val;\
 };\
-inline void PrintTo(const class_name& t, std::ostream* os) { t.PrintTo(os); }
+inline void PrintTo(const class_name& t, std::ostream* os) { t.PrintTo(os); } }
 
 #define CV_FLAGS(class_name, ...) \
 class CV_EXPORTS class_name {\
@@ -160,7 +167,9 @@ enum ERROR_TYPE
 class CV_EXPORTS Regression
 {
 public:
-    static Regression& add(const std::string& name, cv::InputArray array, double eps = DBL_EPSILON, ERROR_TYPE err = ERROR_ABSOLUTE);
+    static Regression& add(TestBase* test, const std::string& name, cv::InputArray array, double eps = DBL_EPSILON, ERROR_TYPE err = ERROR_ABSOLUTE);
+    static Regression& addKeypoints(TestBase* test, const std::string& name, const std::vector<cv::KeyPoint>& array, double eps = DBL_EPSILON, ERROR_TYPE err = ERROR_ABSOLUTE);
+    static Regression& addMatches(TestBase* test, const std::string& name, const std::vector<cv::DMatch>& array, double eps = DBL_EPSILON, ERROR_TYPE err = ERROR_ABSOLUTE);
     static void Init(const std::string& testSuitName, const std::string& ext = ".xml");
 
     Regression& operator() (const std::string& name, cv::InputArray array, double eps = DBL_EPSILON, ERROR_TYPE err = ERROR_ABSOLUTE);
@@ -180,6 +189,8 @@ private:
     cv::FileStorage storageOut;
     cv::FileNode rootIn;
     std::string currentTestNodeName;
+    std::string suiteName;
+
     cv::FileStorage& write();
 
     static std::string getCurrentTestNodeName();
@@ -193,7 +204,21 @@ private:
     void verify(cv::FileNode node, cv::Mat actual, double eps, std::string argname, ERROR_TYPE err);
 };
 
-#define SANITY_CHECK(array, ...) ::perf::Regression::add(#array, array , ## __VA_ARGS__)
+#define SANITY_CHECK(array, ...) ::perf::Regression::add(this, #array, array , ## __VA_ARGS__)
+#define SANITY_CHECK_KEYPOINTS(array, ...) ::perf::Regression::addKeypoints(this, #array, array , ## __VA_ARGS__)
+#define SANITY_CHECK_MATCHES(array, ...) ::perf::Regression::addMatches(this, #array, array , ## __VA_ARGS__)
+
+#ifdef HAVE_CUDA
+class CV_EXPORTS GpuPerf
+{
+public:
+  static bool targetDevice();
+};
+
+# define PERF_RUN_GPU()  ::perf::GpuPerf::targetDevice()
+#else
+# define PERF_RUN_GPU()  false
+#endif
 
 
 /*****************************************************************************************\
@@ -281,6 +306,7 @@ private:
 
     unsigned int nIters;
     unsigned int currentIter;
+    unsigned int runsPerIteration;
 
     performance_metrics metrics;
     void validateMetrics();
@@ -309,6 +335,7 @@ private:
         _declareHelper& iterations(unsigned int n);
         _declareHelper& time(double timeLimitSecs);
         _declareHelper& tbb_threads(int n = -1);
+        _declareHelper& runs(unsigned int runsNumber);
     private:
         TestBase* test;
         _declareHelper(TestBase* t);
@@ -317,12 +344,9 @@ private:
         friend class TestBase;
     };
     friend class _declareHelper;
+    friend class Regression;
 
-#ifdef HAVE_TBB
-    cv::Ptr<tbb::task_scheduler_init> p_tbb_initializer;
-#else
-    cv::Ptr<int> fixme;
-#endif
+    bool verified;
 
 public:
     _declareHelper declare;
@@ -440,7 +464,7 @@ CV_EXPORTS void PrintTo(const Size& sz, ::std::ostream* os);
 //     SANITY_CHECK(c);
 //   }
 #define PERF_TEST_P(fixture, name, params)  \
-    class fixture##_##name : public ::fixture {\
+    class fixture##_##name : public fixture {\
      public:\
       fixture##_##name() {}\
      protected:\
@@ -451,9 +475,10 @@ CV_EXPORTS void PrintTo(const Size& sz, ::std::ostream* os);
     void fixture##_##name::PerfTestBody()
 
 
-#define CV_PERF_TEST_MAIN(testsuitname) \
+#define CV_PERF_TEST_MAIN(testsuitname, ...) \
 int main(int argc, char **argv)\
 {\
+    __VA_ARGS__;\
     ::perf::Regression::Init(#testsuitname);\
     ::perf::TestBase::Init(argc, argv);\
     ::testing::InitGoogleTest(&argc, argv);\
@@ -462,11 +487,46 @@ int main(int argc, char **argv)\
 
 #define TEST_CYCLE_N(n) for(declare.iterations(n); startTimer(), next(); stopTimer())
 #define TEST_CYCLE() for(; startTimer(), next(); stopTimer())
+#define TEST_CYCLE_MULTIRUN(runsNum) for(declare.runs(runsNum); startTimer(), next(); stopTimer()) for(int r = 0; r < runsNum; ++r)
 
-//flags
 namespace perf
 {
-//GTEST_DECLARE_int32_(allowed_outliers);
+namespace comparators
+{
+
+template<typename T>
+struct CV_EXPORTS RectLess_
+{
+  bool operator()(const cv::Rect_<T>& r1, const cv::Rect_<T>& r2) const
+  {
+    return r1.x < r2.x
+      || (r1.x == r2.x && r1.y < r2.y)
+      || (r1.x == r2.x && r1.y == r2.y && r1.width < r2.width)
+      || (r1.x == r2.x && r1.y == r2.y && r1.width == r2.width && r1.height < r2.height);
+  }
+};
+
+typedef RectLess_<int> RectLess;
+
+struct CV_EXPORTS KeypointGreater
+{
+    bool operator()(const cv::KeyPoint& kp1, const cv::KeyPoint& kp2) const
+    {
+        if(kp1.response > kp2.response) return true;
+        if(kp1.response < kp2.response) return false;
+        if(kp1.size > kp2.size) return true;
+        if(kp1.size < kp2.size) return false;
+        if(kp1.octave > kp2.octave) return true;
+        if(kp1.octave < kp2.octave) return false;
+        if(kp1.pt.y < kp2.pt.y) return false;
+        if(kp1.pt.y > kp2.pt.y) return true;
+        return kp1.pt.x < kp2.pt.x;
+    }
+};
+
+} //namespace comparators
+
+void CV_EXPORTS sort(std::vector<cv::KeyPoint>& pts, cv::InputOutputArray descriptors);
 } //namespace perf
 
 #endif //__OPENCV_TS_PERF_HPP__

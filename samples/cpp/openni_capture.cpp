@@ -215,6 +215,13 @@ int main( int argc, char* argv[] )
             case 2:
                 modeRes = capture.set( CV_CAP_OPENNI_IMAGE_GENERATOR_OUTPUT_MODE, CV_CAP_OPENNI_SXGA_30HZ );
                 break;
+                //The following modes are only supported by the Xtion Pro Live
+            case 3:
+                modeRes = capture.set( CV_CAP_OPENNI_IMAGE_GENERATOR_OUTPUT_MODE, CV_CAP_OPENNI_QVGA_30HZ );
+                break;
+            case 4:
+                modeRes = capture.set( CV_CAP_OPENNI_IMAGE_GENERATOR_OUTPUT_MODE, CV_CAP_OPENNI_QVGA_60HZ );
+                break;
             default:
                 CV_Error( CV_StsBadArg, "Unsupported image mode property.\n");
         }

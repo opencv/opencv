@@ -856,8 +856,8 @@ bool DepthNormalPyramid::extractTemplate(Template& templ) const
   std::stable_sort(candidates.begin(), candidates.end());
 
   // Use heuristic based on object area for initial distance threshold
-  int area = static_cast<int>(no_mask ? normal.total() : countNonZero(local_mask));
-  float distance = sqrtf(static_cast<float>(area)) / sqrtf(static_cast<float>(num_features)) + 1.5f;
+  float area = no_mask ? (float)normal.total() : (float)countNonZero(local_mask);
+  float distance = sqrtf(area) / sqrtf((float)num_features) + 1.5f;
   selectScatteredFeatures(candidates, templ.features, num_features, distance);
 
   // Size determined externally, needs to match templates for other modalities

@@ -40,6 +40,8 @@
 //
 //M*/
 
+#if !defined CUDA_DISABLER
+
 #include "internal_shared.hpp"
 #include "opencv2/gpu/device/border_interpolate.hpp"
 #include "opencv2/gpu/device/vec_traits.hpp"
@@ -53,7 +55,7 @@ namespace cv { namespace gpu { namespace device
 {
     namespace imgproc
     {
-        template <typename Ptr2D, typename T> __global__ void resize(const Ptr2D src, float fx, float fy, DevMem2D_<T> dst)
+        template <typename Ptr2D, typename T> __global__ void resize(const Ptr2D src, float fx, float fy, PtrStepSz<T> dst)
         {
             const int x = blockDim.x * blockIdx.x + threadIdx.x;
             const int y = blockDim.y * blockIdx.y + threadIdx.y;
@@ -67,7 +69,7 @@ namespace cv { namespace gpu { namespace device
             }
         }
 
-        template <typename Ptr2D, typename T> __global__ void resize_area(const Ptr2D src, float fx, float fy, DevMem2D_<T> dst)
+        template <typename Ptr2D, typename T> __global__ void resize_area(const Ptr2D src, float fx, float fy, PtrStepSz<T> dst)
         {
             const int x = blockDim.x * blockIdx.x + threadIdx.x;
             const int y = blockDim.y * blockIdx.y + threadIdx.y;
@@ -80,7 +82,7 @@ namespace cv { namespace gpu { namespace device
 
         template <template <typename> class Filter, typename T> struct ResizeDispatcherStream
         {
-            static void call(DevMem2D_<T> src, float fx, float fy, DevMem2D_<T> dst, cudaStream_t stream)
+            static void call(PtrStepSz<T> src, float fx, float fy, PtrStepSz<T> dst, cudaStream_t stream)
             {
                 dim3 block(32, 8);
                 dim3 grid(divUp(dst.cols, block.x), divUp(dst.rows, block.y));
@@ -96,7 +98,7 @@ namespace cv { namespace gpu { namespace device
 
         template <typename T> struct ResizeDispatcherStream<AreaFilter, T>
         {
-            static void call(DevMem2D_<T> src, float fx, float fy, DevMem2D_<T> dst, cudaStream_t stream)
+            static void call(PtrStepSz<T> src, float fx, float fy, PtrStepSz<T> dst, cudaStream_t stream)
             {
                 dim3 block(32, 8);
                 dim3 grid(divUp(dst.cols, block.x), divUp(dst.rows, block.y));
@@ -113,11 +115,10 @@ namespace cv { namespace gpu { namespace device
 
         template <typename T> struct ResizeDispatcherStream<IntegerAreaFilter, T>
         {
-            static void call(DevMem2D_<T> src, float fx, float fy, DevMem2D_<T> dst, cudaStream_t stream)
+            static void call(PtrStepSz<T> src, float fx, float fy, PtrStepSz<T> dst, cudaStream_t stream)
             {
                 dim3 block(32, 8);
                 dim3 grid(divUp(dst.cols, block.x), divUp(dst.rows, block.y));
-
                 BrdConstant<T> brd(src.rows, src.cols);
                 BorderReader< PtrStep<T>, BrdConstant<T> > brdSrc(src, brd);
                 IntegerAreaFilter< BorderReader< PtrStep<T>, BrdConstant<T> > > filteredSrc(brdSrc, fx, fy);
@@ -130,7 +131,7 @@ namespace cv { namespace gpu { namespace device
 
         template <template <typename> class Filter, typename T> struct ResizeDispatcherNonStream
         {
-            static void call(DevMem2D_<T> src, DevMem2D_<T> srcWhole, int xoff, int yoff, float fx, float fy, DevMem2D_<T> dst)
+            static void call(PtrStepSz<T> src, PtrStepSz<T> srcWhole, int xoff, int yoff, float fx, float fy, PtrStepSz<T> dst)
             {
                 (void)srcWhole;
                 (void)xoff;
@@ -166,7 +167,7 @@ namespace cv { namespace gpu { namespace device
             }; \
             template <template <typename> class Filter> struct ResizeDispatcherNonStream<Filter, type > \
             { \
-                static void call(DevMem2D_< type > src, DevMem2D_< type > srcWhole, int xoff, int yoff, float fx, float fy, DevMem2D_< type > dst) \
+                static void call(PtrStepSz< type > src, PtrStepSz< type > srcWhole, int xoff, int yoff, float fx, float fy, PtrStepSz< type > dst) \
                 { \
                     dim3 block(32, 8); \
                     dim3 grid(divUp(dst.cols, block.x), divUp(dst.rows, block.y)); \
@@ -211,7 +212,7 @@ namespace cv { namespace gpu { namespace device
 
         template <template <typename> class Filter, typename T> struct ResizeDispatcher
         {
-            static void call(DevMem2D_<T> src, DevMem2D_<T> srcWhole, int xoff, int yoff, float fx, float fy, DevMem2D_<T> dst, cudaStream_t stream)
+            static void call(PtrStepSz<T> src, PtrStepSz<T> srcWhole, int xoff, int yoff, float fx, float fy, PtrStepSz<T> dst, cudaStream_t stream)
             {
                 if (stream == 0)
                     ResizeDispatcherNonStream<Filter, T>::call(src, srcWhole, xoff, yoff, fx, fy, dst);
@@ -222,13 +223,13 @@ namespace cv { namespace gpu { namespace device
 
         template <typename T> struct ResizeDispatcher<AreaFilter, T>
         {
-            static void call(DevMem2D_<T> src, DevMem2D_<T> srcWhole, int xoff, int yoff, float fx, float fy, DevMem2D_<T> dst, cudaStream_t stream)
+            static void call(PtrStepSz<T> src, PtrStepSz<T> srcWhole, int xoff, int yoff, float fx, float fy, PtrStepSz<T> dst, cudaStream_t stream)
             {
                 (void)srcWhole;
                 (void)xoff;
                 (void)yoff;
-                int iscale_x = round(fx);
-                int iscale_y = round(fy);
+                int iscale_x = (int)round(fx);
+                int iscale_y = (int)round(fy);
 
                 if( std::abs(fx - iscale_x) < FLT_MIN && std::abs(fy - iscale_y) < FLT_MIN)
                     ResizeDispatcherStream<IntegerAreaFilter, T>::call(src, fx, fy, dst, stream);
@@ -237,10 +238,10 @@ namespace cv { namespace gpu { namespace device
             }
         };
 
-        template <typename T> void resize_gpu(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, float fx, float fy,
-            DevMem2Db dst, int interpolation, cudaStream_t stream)
+        template <typename T> void resize_gpu(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, float fx, float fy,
+            PtrStepSzb dst, int interpolation, cudaStream_t stream)
         {
-            typedef void (*caller_t)(DevMem2D_<T> src, DevMem2D_<T> srcWhole, int xoff, int yoff, float fx, float fy, DevMem2D_<T> dst, cudaStream_t stream);
+            typedef void (*caller_t)(PtrStepSz<T> src, PtrStepSz<T> srcWhole, int xoff, int yoff, float fx, float fy, PtrStepSz<T> dst, cudaStream_t stream);
 
             static const caller_t callers[4] =
             {
@@ -253,38 +254,49 @@ namespace cv { namespace gpu { namespace device
             if (interpolation == 3 && (fx <= 1.f || fy <= 1.f))
                 interpolation = 1;
 
-            callers[interpolation](static_cast< DevMem2D_<T> >(src), static_cast< DevMem2D_<T> >(srcWhole), xoff, yoff, fx, fy,
-                static_cast< DevMem2D_<T> >(dst), stream);
+            callers[interpolation](static_cast< PtrStepSz<T> >(src), static_cast< PtrStepSz<T> >(srcWhole), xoff, yoff, fx, fy,
+                static_cast< PtrStepSz<T> >(dst), stream);
         }
 
-        template void resize_gpu<uchar >(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, float fx, float fy, DevMem2Db dst, int interpolation, cudaStream_t stream);
-        //template void resize_gpu<uchar2>(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, float fx, float fy, DevMem2Db dst, int interpolation, cudaStream_t stream);
-        template void resize_gpu<uchar3>(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, float fx, float fy, DevMem2Db dst, int interpolation, cudaStream_t stream);
-        template void resize_gpu<uchar4>(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, float fx, float fy, DevMem2Db dst, int interpolation, cudaStream_t stream);
+        template void resize_gpu<uchar >(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, float fx, float fy, PtrStepSzb dst, int interpolation, cudaStream_t stream);
+        //template void resize_gpu<uchar2>(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, float fx, float fy, PtrStepSzb dst, int interpolation, cudaStream_t stream);
+        template void resize_gpu<uchar3>(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, float fx, float fy, PtrStepSzb dst, int interpolation, cudaStream_t stream);
+        template void resize_gpu<uchar4>(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, float fx, float fy, PtrStepSzb dst, int interpolation, cudaStream_t stream);
 
-        //template void resize_gpu<schar>(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, float fx, float fy, DevMem2Db dst, int interpolation, cudaStream_t stream);
-        //template void resize_gpu<char2>(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, float fx, float fy, DevMem2Db dst, int interpolation, cudaStream_t stream);
-        //template void resize_gpu<char3>(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, float fx, float fy, DevMem2Db dst, int interpolation, cudaStream_t stream);
-        //template void resize_gpu<char4>(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, float fx, float fy, DevMem2Db dst, int interpolation, cudaStream_t stream);
+        //template void resize_gpu<schar>(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, float fx, float fy, PtrStepSzb dst, int interpolation, cudaStream_t stream);
+        //template void resize_gpu<char2>(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, float fx, float fy, PtrStepSzb dst, int interpolation, cudaStream_t stream);
+        //template void resize_gpu<char3>(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, float fx, float fy, PtrStepSzb dst, int interpolation, cudaStream_t stream);
+        //template void resize_gpu<char4>(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, float fx, float fy, PtrStepSzb dst, int interpolation, cudaStream_t stream);
 
-        template void resize_gpu<ushort >(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, float fx, float fy, DevMem2Db dst, int interpolation, cudaStream_t stream);
-        //template void resize_gpu<ushort2>(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, float fx, float fy, DevMem2Db dst, int interpolation, cudaStream_t stream);
-        template void resize_gpu<ushort3>(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, float fx, float fy, DevMem2Db dst, int interpolation, cudaStream_t stream);
-        template void resize_gpu<ushort4>(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, float fx, float fy, DevMem2Db dst, int interpolation, cudaStream_t stream);
+        template void resize_gpu<ushort >(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, float fx, float fy, PtrStepSzb dst, int interpolation, cudaStream_t stream);
+        //template void resize_gpu<ushort2>(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, float fx, float fy, PtrStepSzb dst, int interpolation, cudaStream_t stream);
+        template void resize_gpu<ushort3>(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, float fx, float fy, PtrStepSzb dst, int interpolation, cudaStream_t stream);
+        template void resize_gpu<ushort4>(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, float fx, float fy, PtrStepSzb dst, int interpolation, cudaStream_t stream);
 
-        template void resize_gpu<short >(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, float fx, float fy, DevMem2Db dst, int interpolation, cudaStream_t stream);
-        //template void resize_gpu<short2>(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, float fx, float fy, DevMem2Db dst, int interpolation, cudaStream_t stream);
-        template void resize_gpu<short3>(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, float fx, float fy, DevMem2Db dst, int interpolation, cudaStream_t stream);
-        template void resize_gpu<short4>(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, float fx, float fy, DevMem2Db dst, int interpolation, cudaStream_t stream);
+        template void resize_gpu<short >(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, float fx, float fy, PtrStepSzb dst, int interpolation, cudaStream_t stream);
+        //template void resize_gpu<short2>(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, float fx, float fy, PtrStepSzb dst, int interpolation, cudaStream_t stream);
+        template void resize_gpu<short3>(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, float fx, float fy, PtrStepSzb dst, int interpolation, cudaStream_t stream);
+        template void resize_gpu<short4>(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, float fx, float fy, PtrStepSzb dst, int interpolation, cudaStream_t stream);
 
-        //template void resize_gpu<int >(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, float fx, float fy, DevMem2Db dst, int interpolation, cudaStream_t stream);
-        //template void resize_gpu<int2>(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, float fx, float fy, DevMem2Db dst, int interpolation, cudaStream_t stream);
-        //template void resize_gpu<int3>(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, float fx, float fy, DevMem2Db dst, int interpolation, cudaStream_t stream);
-        //template void resize_gpu<int4>(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, float fx, float fy, DevMem2Db dst, int interpolation, cudaStream_t stream);
+        //template void resize_gpu<int >(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, float fx, float fy, PtrStepSzb dst, int interpolation, cudaStream_t stream);
+        //template void resize_gpu<int2>(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, float fx, float fy, PtrStepSzb dst, int interpolation, cudaStream_t stream);
+        //template void resize_gpu<int3>(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, float fx, float fy, PtrStepSzb dst, int interpolation, cudaStream_t stream);
+        //template void resize_gpu<int4>(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, float fx, float fy, PtrStepSzb dst, int interpolation, cudaStream_t stream);
 
-        template void resize_gpu<float >(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, float fx, float fy, DevMem2Db dst, int interpolation, cudaStream_t stream);
-        //template void resize_gpu<float2>(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, float fx, float fy, DevMem2Db dst, int interpolation, cudaStream_t stream);
-        template void resize_gpu<float3>(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, float fx, float fy, DevMem2Db dst, int interpolation, cudaStream_t stream);
-        template void resize_gpu<float4>(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, float fx, float fy, DevMem2Db dst, int interpolation, cudaStream_t stream);
+        template void resize_gpu<float >(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, float fx, float fy, PtrStepSzb dst, int interpolation, cudaStream_t stream);
+        //template void resize_gpu<float2>(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, float fx, float fy, PtrStepSzb dst, int interpolation, cudaStream_t stream);
+        template void resize_gpu<float3>(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, float fx, float fy, PtrStepSzb dst, int interpolation, cudaStream_t stream);
+        template void resize_gpu<float4>(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, float fx, float fy, PtrStepSzb dst, int interpolation, cudaStream_t stream);
+
+        template<typename T> struct scan_traits{};
+
+        template<> struct scan_traits<uchar>
+        {
+            typedef float scan_line_type;
+        };
+
     } // namespace imgproc
 }}} // namespace cv { namespace gpu { namespace device
+
+
+#endif /* CUDA_DISABLER */

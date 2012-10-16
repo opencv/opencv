@@ -82,7 +82,7 @@ if(UNIX)
   endif()
 endif()
 
-ocv_warnings_disable(CMAKE_C_FLAGS /wd4013 -Wattributes -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations)
+ocv_warnings_disable(CMAKE_C_FLAGS -Wattributes -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations)
 
 set_target_properties(${ZLIB_LIBRARY} PROPERTIES
         OUTPUT_NAME ${ZLIB_LIBRARY}

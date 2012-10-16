@@ -40,4 +40,4 @@
 //
 //M*/
 
-#include "opencv2/core/devmem2d.hpp"
+#include "opencv2/core/cuda_devptrs.hpp"

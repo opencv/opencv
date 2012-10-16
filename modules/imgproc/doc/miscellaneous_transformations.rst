@@ -71,7 +71,7 @@ The function can process the image in-place.
 
 
 cvtColor
-------------
+--------
 Converts an image from one color space to another.
 
 .. ocv:function:: void cvtColor( InputArray src, OutputArray dst, int code, int dstCn=0 )
@@ -81,13 +81,13 @@ Converts an image from one color space to another.
 .. ocv:cfunction:: void cvCvtColor( const CvArr* src, CvArr* dst, int code )
 .. ocv:pyoldfunction:: cv.CvtColor(src, dst, code)-> None
 
-    :param src: Source image: 8-bit unsigned, 16-bit unsigned ( ``CV_16UC...`` ), or single-precision floating-point.
+    :param src: input image: 8-bit unsigned, 16-bit unsigned ( ``CV_16UC...`` ), or single-precision floating-point.
 
-    :param dst: Destination image of the same size and depth as  ``src`` .
+    :param dst: output image of the same size and depth as ``src``.
 
-    :param code: Color space conversion code. See the description below.
+    :param code: color space conversion code (see the description below).
 
-    :param dstCn: Number of channels in the destination image. If the parameter is 0, the number of the channels is derived automatically from  ``src``  and   ``code`` .
+    :param dstCn: number of channels in the destination image; if the parameter is 0, the number of the channels is derived automatically from  ``src``  and   ``code`` .
 
 The function converts an input image from one color
 space to another. In case of a transformation to-from RGB color space, the order of the channels should be specified explicitly (RGB or BGR).
@@ -408,7 +408,7 @@ The function can do the following transformations:
 
 
 distanceTransform
----------------------
+-----------------
 Calculates the distance to the closest zero pixel for each pixel of the source image.
 
 .. ocv:function:: void distanceTransform( InputArray src, OutputArray dst, int distanceType, int maskSize )
@@ -481,7 +481,7 @@ That is, the function provides a very fast way to compute the Voronoi diagram fo
 Currently, the second variant can use only the approximate distance transform algorithm, i.e. ``maskSize=CV_DIST_MASK_PRECISE`` is not supported yet.
 
 floodFill
--------------
+---------
 Fills a connected component with the given color.
 
 .. ocv:function:: int floodFill( InputOutputArray image, Point seedPoint, Scalar newVal, Rect* rect=0, Scalar loDiff=Scalar(), Scalar upDiff=Scalar(), int flags=4 )
@@ -586,7 +586,7 @@ Use these functions to either mark a connected component with the specified colo
 
 
 integral
-------------
+--------
 Calculates the integral of an image.
 
 .. ocv:function:: void integral( InputArray src, OutputArray sum, int sdepth=-1 )
@@ -605,15 +605,15 @@ Calculates the integral of an image.
 
 .. ocv:pyoldfunction:: cv.Integral(image, sum, sqsum=None, tiltedSum=None)-> None
 
-    :param image: Source image as :math:`W \times H` , 8-bit or floating-point (32f or 64f).
+    :param image: input image as :math:`W \times H`, 8-bit or floating-point (32f or 64f).
 
-    :param sum: Integral image as  :math:`(W+1)\times (H+1)` , 32-bit integer or floating-point (32f or 64f).
+    :param sum: integral image as  :math:`(W+1)\times (H+1)` , 32-bit integer or floating-point (32f or 64f).
 
-    :param sqsum: Integral image for squared pixel values. It is :math:`(W+1)\times (H+1)`, double-precision floating-point (64f) array.
+    :param sqsum: integral image for squared pixel values; it is :math:`(W+1)\times (H+1)`, double-precision floating-point (64f) array.
 
-    :param tilted: Integral for the image rotated by 45 degrees. It is :math:`(W+1)\times (H+1)` array  with the same data type as ``sum``.
+    :param tilted: integral for the image rotated by 45 degrees; it is :math:`(W+1)\times (H+1)` array  with the same data type as ``sum``.
 
-    :param sdepth: Desired depth of the integral and the tilted integral images,  ``CV_32S``, ``CV_32F``,  or  ``CV_64F``.
+    :param sdepth: desired depth of the integral and the tilted integral images,  ``CV_32S``, ``CV_32F``,  or  ``CV_64F``.
 
 The functions calculate one or more integral images for the source image as follows:
 
@@ -646,7 +646,7 @@ As a practical example, the next figure shows the calculation of the integral of
 
 
 threshold
--------------
+---------
 Applies a fixed-level threshold to each array element.
 
 .. ocv:function:: double threshold( InputArray src, OutputArray dst, double thresh, double maxval, int type )
@@ -657,15 +657,15 @@ Applies a fixed-level threshold to each array element.
 
 .. ocv:pyoldfunction:: cv.Threshold(src, dst, threshold, maxValue, thresholdType)-> None
 
-    :param src: Source array (single-channel, 8-bit or 32-bit floating point).
+    :param src: input array (single-channel, 8-bit or 32-bit floating point).
 
-    :param dst: Destination array of the same size and type as  ``src`` .
+    :param dst: output array of the same size and type as ``src``.
 
-    :param thresh: Threshold value.
+    :param thresh: treshold value.
 
-    :param maxval: Maximum value to use with the  ``THRESH_BINARY``  and  ``THRESH_BINARY_INV``  thresholding types.
+    :param maxval: maximum value to use with the ``THRESH_BINARY`` and ``THRESH_BINARY_INV`` thresholding types.
 
-    :param type: Thresholding type (see the details below).
+    :param type: thresholding type (see the details below).
 
 The function applies fixed-level thresholding
 to a single-channel array. The function is typically used to get a
@@ -724,7 +724,7 @@ Currently, the Otsu's method is implemented only for 8-bit images.
 
 
 watershed
--------------
+---------
 Performs a marker-based image segmentation using the watershed algorithm.
 
 .. ocv:function:: void watershed( InputArray image, InputOutputArray markers )

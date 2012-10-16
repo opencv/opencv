@@ -1,7 +1,7 @@
 /*M///////////////////////////////////////////////////////////////////////////////////////
 //
-// IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING. 
-// 
+// IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
+//
 //  By downloading, copying, installing or using the software you agree to this license.
 //  If you do not agree to this license, do not download, install,
 //  copy or use the software.
@@ -47,38 +47,38 @@
 #include "NCV.hpp"
 
 template<typename TBase> inline __host__ __device__ TBase _pixMaxVal();
-template<> static inline __host__ __device__ Ncv8u _pixMaxVal<Ncv8u>() {return UCHAR_MAX;}
+template<> static inline __host__ __device__ Ncv8u  _pixMaxVal<Ncv8u>()  {return UCHAR_MAX;}
 template<> static inline __host__ __device__ Ncv16u _pixMaxVal<Ncv16u>() {return USHRT_MAX;}
-template<> static inline __host__ __device__ Ncv32u _pixMaxVal<Ncv32u>() {return UINT_MAX;}
-template<> static inline __host__ __device__ Ncv8s _pixMaxVal<Ncv8s>() {return CHAR_MAX;}
-template<> static inline __host__ __device__ Ncv16s _pixMaxVal<Ncv16s>() {return SHRT_MAX;}
-template<> static inline __host__ __device__ Ncv32s _pixMaxVal<Ncv32s>() {return INT_MAX;}
-template<> static inline __host__ __device__ Ncv32f _pixMaxVal<Ncv32f>() {return FLT_MAX;}
-template<> static inline __host__ __device__ Ncv64f _pixMaxVal<Ncv64f>() {return DBL_MAX;}
+template<> static inline __host__ __device__ Ncv32u _pixMaxVal<Ncv32u>() {return  UINT_MAX;}
+template<> static inline __host__ __device__ Ncv8s  _pixMaxVal<Ncv8s>()  {return  CHAR_MAX;}
+template<> static inline __host__ __device__ Ncv16s _pixMaxVal<Ncv16s>() {return  SHRT_MAX;}
+template<> static inline __host__ __device__ Ncv32s _pixMaxVal<Ncv32s>() {return   INT_MAX;}
+template<> static inline __host__ __device__ Ncv32f _pixMaxVal<Ncv32f>() {return   FLT_MAX;}
+template<> static inline __host__ __device__ Ncv64f _pixMaxVal<Ncv64f>() {return   DBL_MAX;}
 
 template<typename TBase> inline __host__ __device__ TBase _pixMinVal();
-template<> static inline __host__ __device__ Ncv8u _pixMinVal<Ncv8u>() {return 0;}
+template<> static inline __host__ __device__ Ncv8u  _pixMinVal<Ncv8u>()  {return 0;}
 template<> static inline __host__ __device__ Ncv16u _pixMinVal<Ncv16u>() {return 0;}
 template<> static inline __host__ __device__ Ncv32u _pixMinVal<Ncv32u>() {return 0;}
-template<> static inline __host__ __device__ Ncv8s _pixMinVal<Ncv8s>() {return CHAR_MIN;}
+template<> static inline __host__ __device__ Ncv8s  _pixMinVal<Ncv8s>()  {return CHAR_MIN;}
 template<> static inline __host__ __device__ Ncv16s _pixMinVal<Ncv16s>() {return SHRT_MIN;}
 template<> static inline __host__ __device__ Ncv32s _pixMinVal<Ncv32s>() {return INT_MIN;}
 template<> static inline __host__ __device__ Ncv32f _pixMinVal<Ncv32f>() {return FLT_MIN;}
 template<> static inline __host__ __device__ Ncv64f _pixMinVal<Ncv64f>() {return DBL_MIN;}
 
 template<typename Tvec> struct TConvVec2Base;
-template<> struct TConvVec2Base<uchar1> {typedef Ncv8u TBase;};
-template<> struct TConvVec2Base<uchar3> {typedef Ncv8u TBase;};
-template<> struct TConvVec2Base<uchar4> {typedef Ncv8u TBase;};
+template<> struct TConvVec2Base<uchar1>  {typedef Ncv8u TBase;};
+template<> struct TConvVec2Base<uchar3>  {typedef Ncv8u TBase;};
+template<> struct TConvVec2Base<uchar4>  {typedef Ncv8u TBase;};
 template<> struct TConvVec2Base<ushort1> {typedef Ncv16u TBase;};
 template<> struct TConvVec2Base<ushort3> {typedef Ncv16u TBase;};
 template<> struct TConvVec2Base<ushort4> {typedef Ncv16u TBase;};
-template<> struct TConvVec2Base<uint1> {typedef Ncv32u TBase;};
-template<> struct TConvVec2Base<uint3> {typedef Ncv32u TBase;};
-template<> struct TConvVec2Base<uint4> {typedef Ncv32u TBase;};
-template<> struct TConvVec2Base<float1> {typedef Ncv32f TBase;};
-template<> struct TConvVec2Base<float3> {typedef Ncv32f TBase;};
-template<> struct TConvVec2Base<float4> {typedef Ncv32f TBase;};
+template<> struct TConvVec2Base<uint1>   {typedef Ncv32u TBase;};
+template<> struct TConvVec2Base<uint3>   {typedef Ncv32u TBase;};
+template<> struct TConvVec2Base<uint4>   {typedef Ncv32u TBase;};
+template<> struct TConvVec2Base<float1>  {typedef Ncv32f TBase;};
+template<> struct TConvVec2Base<float3>  {typedef Ncv32f TBase;};
+template<> struct TConvVec2Base<float4>  {typedef Ncv32f TBase;};
 template<> struct TConvVec2Base<double1> {typedef Ncv64f TBase;};
 template<> struct TConvVec2Base<double3> {typedef Ncv64f TBase;};
 template<> struct TConvVec2Base<double4> {typedef Ncv64f TBase;};
@@ -86,9 +86,9 @@ template<> struct TConvVec2Base<double4> {typedef Ncv64f TBase;};
 #define NC(T)       (sizeof(T) / sizeof(TConvVec2Base<T>::TBase))
 
 template<typename TBase, Ncv32u NC> struct TConvBase2Vec;
-template<> struct TConvBase2Vec<Ncv8u, 1> {typedef uchar1 TVec;};
-template<> struct TConvBase2Vec<Ncv8u, 3> {typedef uchar3 TVec;};
-template<> struct TConvBase2Vec<Ncv8u, 4> {typedef uchar4 TVec;};
+template<> struct TConvBase2Vec<Ncv8u, 1>  {typedef uchar1 TVec;};
+template<> struct TConvBase2Vec<Ncv8u, 3>  {typedef uchar3 TVec;};
+template<> struct TConvBase2Vec<Ncv8u, 4>  {typedef uchar4 TVec;};
 template<> struct TConvBase2Vec<Ncv16u, 1> {typedef ushort1 TVec;};
 template<> struct TConvBase2Vec<Ncv16u, 3> {typedef ushort3 TVec;};
 template<> struct TConvBase2Vec<Ncv16u, 4> {typedef ushort4 TVec;};

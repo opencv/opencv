@@ -197,12 +197,14 @@ bool  TiffDecoder::readData( Mat& img )
             }
         }
 
-        if( (!is_tiled &&
-            TIFFGetField( tif, TIFFTAG_ROWSPERSTRIP, &tile_height0 )) ||
+        if( (!is_tiled) ||
             (is_tiled &&
             TIFFGetField( tif, TIFFTAG_TILEWIDTH, &tile_width0 ) &&
             TIFFGetField( tif, TIFFTAG_TILELENGTH, &tile_height0 )))
         {
+            if(!is_tiled)
+                TIFFGetField( tif, TIFFTAG_ROWSPERSTRIP, &tile_height0 );
+
             if( tile_width0 <= 0 )
                 tile_width0 = m_width;
 
@@ -500,6 +502,7 @@ bool  TiffEncoder::writeLibTiff( const Mat& img, const vector<int>& /*params*/)
                     icvCvt_BGRA2RGBA_8u_C4R( img.data + img.step*y, 0, buffer, 0, cvSize(width,1) );
                 else
                     icvCvt_BGRA2RGBA_16u_C4R( (const ushort*)(img.data + img.step*y), 0, (ushort*)buffer, 0, cvSize(width,1) );
+                break;
             }
 
             default:

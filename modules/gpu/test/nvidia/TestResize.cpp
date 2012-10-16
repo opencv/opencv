@@ -9,16 +9,18 @@
  * agreement from NVIDIA Corporation is strictly prohibited.
  */
 
+#if !defined CUDA_DISABLER
+
 #include <math.h>
 
 #include "TestResize.h"
 
 
 template <class T>
-TestResize<T>::TestResize(std::string testName, NCVTestSourceProvider<T> &src_,
+TestResize<T>::TestResize(std::string testName_, NCVTestSourceProvider<T> &src_,
                           Ncv32u width_, Ncv32u height_, Ncv32u scaleFactor_, NcvBool bTextureCache_)
     :
-    NCVTestProvider(testName),
+    NCVTestProvider(testName_),
     src(src_),
     width(width_),
     height(height_),
@@ -159,3 +161,5 @@ bool TestResize<T>::deinit()
 
 template class TestResize<Ncv32u>;
 template class TestResize<Ncv64u>;
+
+#endif /* CUDA_DISABLER */

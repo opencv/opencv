@@ -3,15 +3,15 @@ if(ANDROID OR IOS)
 endif()
 
 set(the_description "GPU-accelerated Computer Vision")
-ocv_add_module(gpu opencv_imgproc opencv_calib3d opencv_objdetect opencv_video opencv_nonfree)
+ocv_add_module(gpu opencv_imgproc opencv_calib3d opencv_objdetect opencv_video opencv_nonfree opencv_photo opencv_legacy)
 
-ocv_module_include_directories("${CMAKE_CURRENT_SOURCE_DIR}/src/cuda")
+ocv_module_include_directories("${CMAKE_CURRENT_SOURCE_DIR}/src/cuda" "${CMAKE_CURRENT_SOURCE_DIR}/../highgui/src")
 
-file(GLOB lib_hdrs               "include/opencv2/${name}/*.hpp" "include/opencv2/${name}/*.h")
-file(GLOB lib_int_hdrs           "src/*.hpp" "src/*.h")
+file(GLOB lib_hdrs               "include/opencv2/${name}/*.hpp"               "include/opencv2/${name}/*.h")
+file(GLOB lib_device_hdrs        "include/opencv2/${name}/device/*.hpp"        "include/opencv2/${name}/device/*.h")
+file(GLOB lib_device_hdrs_detail "include/opencv2/${name}/device/detail/*.hpp" "include/opencv2/${name}/device/detail/*.h")
+file(GLOB lib_int_hdrs           "src/*.hpp"      "src/*.h")
 file(GLOB lib_cuda_hdrs          "src/cuda/*.hpp" "src/cuda/*.h")
-file(GLOB lib_device_hdrs        "src/opencv2/gpu/device/*.hpp" "src/opencv2/gpu/device/*.h")
-file(GLOB lib_device_hdrs_detail "src/opencv2/gpu/device/detail/*.hpp" "src/opencv2/gpu/device/detail/*.h")
 file(GLOB lib_srcs               "src/*.cpp")
 file(GLOB lib_cuda               "src/cuda/*.cu*")
 
@@ -44,11 +44,28 @@ if (HAVE_CUDA)
       set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -Xcompiler /wd4251)
     endif()
   endif()
-
+  
   ocv_cuda_compile(cuda_objs ${lib_cuda} ${ncv_cuda})
+
   #CUDA_BUILD_CLEAN_TARGET()
 
   set(cuda_link_libs ${CUDA_LIBRARIES} ${CUDA_npp_LIBRARY})
+
+  if(NOT APPLE)
+    unset(CUDA_nvcuvid_LIBRARY CACHE)
+    find_cuda_helper_libs(nvcuvid)
+    set(cuda_link_libs ${cuda_link_libs} ${CUDA_nvcuvid_LIBRARY})
+  endif()
+
+  if(WIN32)
+    unset(CUDA_nvcuvenc_LIBRARY CACHE)
+    find_cuda_helper_libs(nvcuvenc)
+    set(cuda_link_libs ${cuda_link_libs} ${CUDA_nvcuvenc_LIBRARY})
+  endif()
+
+  if(NOT APPLE AND WITH_FFMPEG)
+    set(cuda_link_libs ${cuda_link_libs} ${HIGHGUI_LIBRARIES})
+  endif()
 else()
   set(lib_cuda "")
   set(cuda_objs "")
@@ -57,8 +74,8 @@ else()
 endif()
 
 ocv_set_module_sources(
-  HEADERS ${lib_hdrs}
-  SOURCES ${lib_int_hdrs} ${lib_cuda_hdrs} ${lib_device_hdrs} ${lib_device_hdrs_detail} ${lib_srcs} ${lib_cuda} ${ncv_files} ${cuda_objs}
+  HEADERS ${lib_hdrs} ${lib_device_hdrs} ${lib_device_hdrs_detail}
+  SOURCES ${lib_int_hdrs} ${lib_cuda_hdrs} ${lib_srcs} ${lib_cuda} ${ncv_files} ${cuda_objs}
   )
 
 ocv_create_module(${cuda_link_libs})

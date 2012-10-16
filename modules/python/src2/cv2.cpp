@@ -9,6 +9,7 @@
 #include "numpy/ndarrayobject.h"
 
 #include "opencv2/core/core.hpp"
+#include "opencv2/contrib/contrib.hpp"
 #include "opencv2/flann/miniflann.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/calib3d/calib3d.hpp"
@@ -21,11 +22,10 @@
 #include "opencv2/highgui/highgui.hpp"
 
 #include "opencv2/opencv_modules.hpp"
-#ifdef HAVE_OPENCV_NONFREE
-#include "opencv2/nonfree/nonfree.hpp"
-static bool makeUseOfNonfree = cv::initModule_nonfree();
-#endif
 
+#ifdef HAVE_OPENCV_NONFREE
+#  include "opencv2/nonfree/nonfree.hpp"
+#endif
 
 using cv::flann::IndexParams;
 using cv::flann::SearchParams;
@@ -44,6 +44,20 @@ static int failmsg(const char *fmt, ...)
     PyErr_SetString(PyExc_TypeError, str);
     return 0;
 }
+
+struct ArgInfo
+{
+    const char * name;
+    bool outputarg;
+    // more fields may be added if necessary
+
+    ArgInfo(const char * name_, bool outputarg_) 
+        : name(name_)
+        , outputarg(outputarg_) {}
+
+    // to match with older pyopencv_to function signature
+    operator const char *() const { return name; }
+};
 
 class PyAllowThreads
 {
@@ -107,6 +121,7 @@ typedef vector<vector<DMatch> > vector_vector_DMatch;
 typedef Ptr<Algorithm> Ptr_Algorithm;
 typedef Ptr<FeatureDetector> Ptr_FeatureDetector;
 typedef Ptr<DescriptorExtractor> Ptr_DescriptorExtractor;
+typedef Ptr<Feature2D> Ptr_Feature2D;
 typedef Ptr<DescriptorMatcher> Ptr_DescriptorMatcher;
 
 typedef SimpleBlobDetector::Params SimpleBlobDetector_Params;
@@ -115,6 +130,9 @@ typedef cvflann::flann_distance_t cvflann_flann_distance_t;
 typedef cvflann::flann_algorithm_t cvflann_flann_algorithm_t;
 typedef Ptr<flann::IndexParams> Ptr_flann_IndexParams;
 typedef Ptr<flann::SearchParams> Ptr_flann_SearchParams;
+
+typedef Ptr<FaceRecognizer> Ptr_FaceRecognizer;
+typedef vector<Scalar> vector_Scalar;
 
 static PyObject* failmsgp(const char *fmt, ...)
 {
@@ -196,7 +214,8 @@ NumpyAllocator g_numpyAllocator;
 
 enum { ARG_NONE = 0, ARG_MAT = 1, ARG_SCALAR = 2 };
 
-static int pyopencv_to(const PyObject* o, Mat& m, const char* name = "<unknown>", bool allowND=true)
+// special case, when the convertor needs full ArgInfo structure
+static int pyopencv_to(const PyObject* o, Mat& m, const ArgInfo info, bool allowND=true)
 {
     if(!o || o == Py_None)
     {
@@ -207,27 +226,39 @@ static int pyopencv_to(const PyObject* o, Mat& m, const char* name = "<unknown>"
 
     if( !PyArray_Check(o) )
     {
-        failmsg("%s is not a numpy array", name);
+        failmsg("%s is not a numpy array", info.name);
         return false;
     }
 
-    int typenum = PyArray_TYPE(o);
-    int type = typenum == NPY_UBYTE ? CV_8U : typenum == NPY_BYTE ? CV_8S :
-               typenum == NPY_USHORT ? CV_16U : typenum == NPY_SHORT ? CV_16S :
-               typenum == NPY_INT || typenum == NPY_LONG ? CV_32S :
+    bool needcopy = false, needcast = false;
+    int typenum = PyArray_TYPE(o), new_typenum = typenum;
+    int type = typenum == NPY_UBYTE ? CV_8U :
+               typenum == NPY_BYTE ? CV_8S :
+               typenum == NPY_USHORT ? CV_16U :
+               typenum == NPY_SHORT ? CV_16S :
+               typenum == NPY_INT32 ? CV_32S :
                typenum == NPY_FLOAT ? CV_32F :
                typenum == NPY_DOUBLE ? CV_64F : -1;
 
     if( type < 0 )
     {
-        failmsg("%s data type = %d is not supported", name, typenum);
-        return false;
+        if( typenum == NPY_INT64 || typenum == NPY_UINT64 || type == NPY_LONG )
+        {
+            needcopy = needcast = true;
+            new_typenum = NPY_INT32;
+            type = CV_32S;
+        }
+        else
+        {
+            failmsg("%s data type = %d is not supported", info.name, typenum);
+            return false;
+        }
     }
 
     int ndims = PyArray_NDIM(o);
     if(ndims >= CV_MAX_DIM)
     {
-        failmsg("%s dimensionality (=%d) is too high", name, ndims);
+        failmsg("%s dimensionality (=%d) is too high", info.name, ndims);
         return false;
     }
 
@@ -235,7 +266,32 @@ static int pyopencv_to(const PyObject* o, Mat& m, const char* name = "<unknown>"
     size_t step[CV_MAX_DIM+1], elemsize = CV_ELEM_SIZE1(type);
     const npy_intp* _sizes = PyArray_DIMS(o);
     const npy_intp* _strides = PyArray_STRIDES(o);
-    bool transposed = false;
+    bool ismultichannel = ndims == 3 && _sizes[2] <= CV_CN_MAX;
+
+    for( int i = ndims-1; i >= 0 && !needcopy; i-- )
+    {
+        // these checks handle cases of
+        //  a) multi-dimensional (ndims > 2) arrays, as well as simpler 1- and 2-dimensional cases
+        //  b) transposed arrays, where _strides[] elements go in non-descending order
+        //  c) flipped arrays, where some of _strides[] elements are negative
+        if( (i == ndims-1 && (size_t)_strides[i] != elemsize) ||
+            (i < ndims-1 && _strides[i] < _strides[i+1]) )
+            needcopy = true;
+    }
+    
+    if (needcopy)
+    {
+        if (info.outputarg)
+        {
+            failmsg("output array %s is not row-contiguous (step[ndims-1] != elemsize)", info.name);
+            return false;
+        }
+        if( needcast )
+            o = (PyObject*)PyArray_Cast((PyArrayObject*)o, new_typenum);
+        else
+            o = (PyObject*)PyArray_GETCONTIGUOUS((PyArrayObject*)o);
+        _strides = PyArray_STRIDES(o);
+    }
 
     for(int i = 0; i < ndims; i++)
     {
@@ -243,20 +299,14 @@ static int pyopencv_to(const PyObject* o, Mat& m, const char* name = "<unknown>"
         step[i] = (size_t)_strides[i];
     }
 
-    if( ndims == 0 || step[ndims-1] > elemsize ) {
+    // handle degenerate case
+    if( ndims == 0) {
         size[ndims] = 1;
         step[ndims] = elemsize;
         ndims++;
     }
 
-    if( ndims >= 2 && step[0] < step[1] )
-    {
-        std::swap(size[0], size[1]);
-        std::swap(step[0], step[1]);
-        transposed = true;
-    }
-
-    if( ndims == 3 && size[2] <= CV_CN_MAX && step[1] == elemsize*size[2] )
+    if( ismultichannel )
     {
         ndims--;
         type |= CV_MAKETYPE(0, size[2]);
@@ -264,7 +314,7 @@ static int pyopencv_to(const PyObject* o, Mat& m, const char* name = "<unknown>"
 
     if( ndims > 2 && !allowND )
     {
-        failmsg("%s has more than 2 dimensions", name);
+        failmsg("%s has more than 2 dimensions", info.name);
         return false;
     }
 
@@ -273,18 +323,14 @@ static int pyopencv_to(const PyObject* o, Mat& m, const char* name = "<unknown>"
     if( m.data )
     {
         m.refcount = refcountFromPyObject(o);
-        m.addref(); // protect the original numpy array from deallocation
-                    // (since Mat destructor will decrement the reference counter)
+        if (!needcopy)
+        {
+            m.addref(); // protect the original numpy array from deallocation
+                        // (since Mat destructor will decrement the reference counter)
+        }
     };
     m.allocator = &g_numpyAllocator;
 
-    if( transposed )
-    {
-        Mat tmp;
-        tmp.allocator = &g_numpyAllocator;
-        transpose(m, tmp);
-        m = tmp;
-    }
     return true;
 }
 
@@ -590,7 +636,7 @@ static inline PyObject* pyopencv_from(const Point2d& p)
 
 template<typename _Tp> struct pyopencvVecConverter
 {
-    static bool to(PyObject* obj, vector<_Tp>& value, const char* name="<unknown>")
+    static bool to(PyObject* obj, vector<_Tp>& value, const ArgInfo info)
     {
         typedef typename DataType<_Tp>::channel_type _Cp;
         if(!obj || obj == Py_None)
@@ -598,12 +644,12 @@ template<typename _Tp> struct pyopencvVecConverter
         if (PyArray_Check(obj))
         {
             Mat m;
-            pyopencv_to(obj, m, name);
+            pyopencv_to(obj, m, info);
             m.copyTo(value);
         }
         if (!PySequence_Check(obj))
             return false;
-        PyObject *seq = PySequence_Fast(obj, name);
+        PyObject *seq = PySequence_Fast(obj, info.name);
         if (seq == NULL)
             return false;
         int i, j, n = (int)PySequence_Fast_GET_SIZE(seq);
@@ -632,7 +678,7 @@ template<typename _Tp> struct pyopencvVecConverter
                 if( PyArray_Check(item))
                 {
                     Mat src;
-                    pyopencv_to(item, src, name);
+                    pyopencv_to(item, src, info);
                     if( src.dims != 2 || src.channels() != 1 ||
                        ((src.cols != 1 || src.rows != channels) &&
                         (src.cols != channels || src.rows != 1)))
@@ -644,7 +690,7 @@ template<typename _Tp> struct pyopencvVecConverter
                     continue;
                 }
 
-                seq_i = PySequence_Fast(item, name);
+                seq_i = PySequence_Fast(item, info.name);
                 if( !seq_i || (int)PySequence_Fast_GET_SIZE(seq_i) != channels )
                 {
                     Py_XDECREF(seq_i);
@@ -691,9 +737,9 @@ template<typename _Tp> struct pyopencvVecConverter
 };
 
 
-template<typename _Tp> static inline bool pyopencv_to(PyObject* obj, vector<_Tp>& value, const char* name="<unknown>")
+template<typename _Tp> static inline bool pyopencv_to(PyObject* obj, vector<_Tp>& value, const ArgInfo info)
 {
-    return pyopencvVecConverter<_Tp>::to(obj, value, name);
+    return pyopencvVecConverter<_Tp>::to(obj, value, info);
 }
 
 template<typename _Tp> static inline PyObject* pyopencv_from(const vector<_Tp>& value)
@@ -704,13 +750,13 @@ template<typename _Tp> static inline PyObject* pyopencv_from(const vector<_Tp>& 
 static PyObject* pyopencv_from(const KeyPoint&);
 static PyObject* pyopencv_from(const DMatch&);
 
-template<typename _Tp> static inline bool pyopencv_to_generic_vec(PyObject* obj, vector<_Tp>& value, const char* name="<unknown>")
+template<typename _Tp> static inline bool pyopencv_to_generic_vec(PyObject* obj, vector<_Tp>& value, const ArgInfo info)
 {
     if(!obj || obj == Py_None)
        return true;
     if (!PySequence_Check(obj))
         return false;
-    PyObject *seq = PySequence_Fast(obj, name);
+    PyObject *seq = PySequence_Fast(obj, info.name);
     if (seq == NULL)
         return false;
     int i, n = (int)PySequence_Fast_GET_SIZE(seq);
@@ -721,7 +767,7 @@ template<typename _Tp> static inline bool pyopencv_to_generic_vec(PyObject* obj,
     for( i = 0; i < n; i++ )
     {
         PyObject* item = items[i];
-        if(!pyopencv_to(item, value[i], name))
+        if(!pyopencv_to(item, value[i], info))
             break;
     }
     Py_DECREF(seq);
@@ -763,9 +809,9 @@ template<typename _Tp> struct pyopencvVecConverter<vector<_Tp> >
 
 template<> struct pyopencvVecConverter<Mat>
 {
-    static bool to(PyObject* obj, vector<Mat>& value, const char* name="<unknown>")
+    static bool to(PyObject* obj, vector<Mat>& value, const ArgInfo info)
     {
-        return pyopencv_to_generic_vec(obj, value, name);
+        return pyopencv_to_generic_vec(obj, value, info);
     }
 
     static PyObject* from(const vector<Mat>& value)
@@ -776,9 +822,9 @@ template<> struct pyopencvVecConverter<Mat>
 
 template<> struct pyopencvVecConverter<KeyPoint>
 {
-    static bool to(PyObject* obj, vector<KeyPoint>& value, const char* name="<unknown>")
+    static bool to(PyObject* obj, vector<KeyPoint>& value, const ArgInfo info)
     {
-        return pyopencv_to_generic_vec(obj, value, name);
+        return pyopencv_to_generic_vec(obj, value, info);
     }
 
     static PyObject* from(const vector<KeyPoint>& value)
@@ -789,9 +835,9 @@ template<> struct pyopencvVecConverter<KeyPoint>
 
 template<> struct pyopencvVecConverter<DMatch>
 {
-    static bool to(PyObject* obj, vector<DMatch>& value, const char* name="<unknown>")
+    static bool to(PyObject* obj, vector<DMatch>& value, const ArgInfo info)
     {
-        return pyopencv_to_generic_vec(obj, value, name);
+        return pyopencv_to_generic_vec(obj, value, info);
     }
 
     static PyObject* from(const vector<DMatch>& value)
@@ -802,9 +848,9 @@ template<> struct pyopencvVecConverter<DMatch>
 
 template<> struct pyopencvVecConverter<string>
 {
-    static bool to(PyObject* obj, vector<string>& value, const char* name="<unknown>")
+    static bool to(PyObject* obj, vector<string>& value, const ArgInfo info)
     {
-        return pyopencv_to_generic_vec(obj, value, name);
+        return pyopencv_to_generic_vec(obj, value, info);
     }
 
     static PyObject* from(const vector<string>& value)

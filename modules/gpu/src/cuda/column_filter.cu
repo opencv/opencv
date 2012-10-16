@@ -41,6 +41,8 @@
 //
 //M*/
 
+#if !defined CUDA_DISABLER
+
 #include "internal_shared.hpp"
 #include "opencv2/gpu/device/saturate_cast.hpp"
 #include "opencv2/gpu/device/vec_math.hpp"
@@ -56,15 +58,18 @@ namespace cv { namespace gpu { namespace device
 
         __constant__ float c_kernel[MAX_KERNEL_SIZE];
 
-        void loadKernel(const float kernel[], int ksize)
+        void loadKernel(const float* kernel, int ksize, cudaStream_t stream)
         {
-            cudaSafeCall( cudaMemcpyToSymbol(c_kernel, kernel, ksize * sizeof(float)) );
+            if (stream == 0)
+                cudaSafeCall( cudaMemcpyToSymbol(c_kernel, kernel, ksize * sizeof(float), 0, cudaMemcpyDeviceToDevice) );
+            else
+                cudaSafeCall( cudaMemcpyToSymbolAsync(c_kernel, kernel, ksize * sizeof(float), 0, cudaMemcpyDeviceToDevice, stream) );
         }
 
         template <int KSIZE, typename T, typename D, typename B>
-        __global__ void linearColumnFilter(const DevMem2D_<T> src, PtrStep<D> dst, const int anchor, const B brd)
+        __global__ void linearColumnFilter(const PtrStepSz<T> src, PtrStep<D> dst, const int anchor, const B brd)
         {
-            #if __CUDA_ARCH__ >= 200
+            #if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ >= 200)
                 const int BLOCK_DIM_X = 16;
                 const int BLOCK_DIM_Y = 16;
                 const int PATCH_PER_BLOCK = 4;
@@ -89,20 +94,45 @@ namespace cv { namespace gpu { namespace device
 
             const int yStart = blockIdx.y * (BLOCK_DIM_Y * PATCH_PER_BLOCK) + threadIdx.y;
 
-            //Upper halo
-            #pragma unroll
-            for (int j = 0; j < HALO_SIZE; ++j)
-                smem[threadIdx.y + j * BLOCK_DIM_Y][threadIdx.x] = saturate_cast<sum_t>(brd.at_low(yStart - (HALO_SIZE - j) * BLOCK_DIM_Y, src_col, src.step));
+            if (blockIdx.y > 0)
+            {
+                //Upper halo
+                #pragma unroll
+                for (int j = 0; j < HALO_SIZE; ++j)
+                    smem[threadIdx.y + j * BLOCK_DIM_Y][threadIdx.x] = saturate_cast<sum_t>(src(yStart - (HALO_SIZE - j) * BLOCK_DIM_Y, x));
+            }
+            else
+            {
+                //Upper halo
+                #pragma unroll
+                for (int j = 0; j < HALO_SIZE; ++j)
+                    smem[threadIdx.y + j * BLOCK_DIM_Y][threadIdx.x] = saturate_cast<sum_t>(brd.at_low(yStart - (HALO_SIZE - j) * BLOCK_DIM_Y, src_col, src.step));
+            }
 
-            //Main data
-            #pragma unroll
-            for (int j = 0; j < PATCH_PER_BLOCK; ++j)
-                smem[threadIdx.y + HALO_SIZE * BLOCK_DIM_Y + j * BLOCK_DIM_Y][threadIdx.x] = saturate_cast<sum_t>(brd.at_high(yStart + j * BLOCK_DIM_Y, src_col, src.step));
+            if (blockIdx.y + 2 < gridDim.y)
+            {
+                //Main data
+                #pragma unroll
+                for (int j = 0; j < PATCH_PER_BLOCK; ++j)
+                    smem[threadIdx.y + HALO_SIZE * BLOCK_DIM_Y + j * BLOCK_DIM_Y][threadIdx.x] = saturate_cast<sum_t>(src(yStart + j * BLOCK_DIM_Y, x));
 
-            //Lower halo
-            #pragma unroll
-            for (int j = 0; j < HALO_SIZE; ++j)
-                smem[threadIdx.y + (PATCH_PER_BLOCK + HALO_SIZE) * BLOCK_DIM_Y + j * BLOCK_DIM_Y][threadIdx.x] = saturate_cast<sum_t>(brd.at_high(yStart + (PATCH_PER_BLOCK + j) * BLOCK_DIM_Y, src_col, src.step));
+                //Lower halo
+                #pragma unroll
+                for (int j = 0; j < HALO_SIZE; ++j)
+                    smem[threadIdx.y + (PATCH_PER_BLOCK + HALO_SIZE) * BLOCK_DIM_Y + j * BLOCK_DIM_Y][threadIdx.x] = saturate_cast<sum_t>(src(yStart + (PATCH_PER_BLOCK + j) * BLOCK_DIM_Y, x));
+            }
+            else
+            {
+                //Main data
+                #pragma unroll
+                for (int j = 0; j < PATCH_PER_BLOCK; ++j)
+                    smem[threadIdx.y + HALO_SIZE * BLOCK_DIM_Y + j * BLOCK_DIM_Y][threadIdx.x] = saturate_cast<sum_t>(brd.at_high(yStart + j * BLOCK_DIM_Y, src_col, src.step));
+
+                //Lower halo
+                #pragma unroll
+                for (int j = 0; j < HALO_SIZE; ++j)
+                    smem[threadIdx.y + (PATCH_PER_BLOCK + HALO_SIZE) * BLOCK_DIM_Y + j * BLOCK_DIM_Y][threadIdx.x] = saturate_cast<sum_t>(brd.at_high(yStart + (PATCH_PER_BLOCK + j) * BLOCK_DIM_Y, src_col, src.step));
+            }
 
             __syncthreads();
 
@@ -125,7 +155,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <int KSIZE, typename T, typename D, template<typename> class B>
-        void linearColumnFilter_caller(DevMem2D_<T> src, DevMem2D_<D> dst, int anchor, int cc, cudaStream_t stream)
+        void linearColumnFilter_caller(PtrStepSz<T> src, PtrStepSz<D> dst, int anchor, int cc, cudaStream_t stream)
         {
             int BLOCK_DIM_X;
             int BLOCK_DIM_Y;
@@ -158,9 +188,9 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <typename T, typename D>
-        void linearColumnFilter_gpu(DevMem2Db src, DevMem2Db dst, const float kernel[], int ksize, int anchor, int brd_type, int cc, cudaStream_t stream)
+        void linearColumnFilter_gpu(PtrStepSzb src, PtrStepSzb dst, const float* kernel, int ksize, int anchor, int brd_type, int cc, cudaStream_t stream)
         {
-            typedef void (*caller_t)(DevMem2D_<T> src, DevMem2D_<D> dst, int anchor, int cc, cudaStream_t stream);
+            typedef void (*caller_t)(PtrStepSz<T> src, PtrStepSz<D> dst, int anchor, int cc, cudaStream_t stream);
 
             static const caller_t callers[5][33] =
             {
@@ -341,15 +371,18 @@ namespace cv { namespace gpu { namespace device
                 }
             };
 
-            loadKernel(kernel, ksize);
+            loadKernel(kernel, ksize, stream);
 
-            callers[brd_type][ksize]((DevMem2D_<T>)src, (DevMem2D_<D>)dst, anchor, cc, stream);
+            callers[brd_type][ksize]((PtrStepSz<T>)src, (PtrStepSz<D>)dst, anchor, cc, stream);
         }
 
-        template void linearColumnFilter_gpu<float , uchar >(DevMem2Db src, DevMem2Db dst, const float kernel[], int ksize, int anchor, int brd_type, int cc, cudaStream_t stream);
-        template void linearColumnFilter_gpu<float4, uchar4>(DevMem2Db src, DevMem2Db dst, const float kernel[], int ksize, int anchor, int brd_type, int cc, cudaStream_t stream);
-        template void linearColumnFilter_gpu<float3, short3>(DevMem2Db src, DevMem2Db dst, const float kernel[], int ksize, int anchor, int brd_type, int cc, cudaStream_t stream);
-        template void linearColumnFilter_gpu<float , int   >(DevMem2Db src, DevMem2Db dst, const float kernel[], int ksize, int anchor, int brd_type, int cc, cudaStream_t stream);
-        template void linearColumnFilter_gpu<float , float >(DevMem2Db src, DevMem2Db dst, const float kernel[], int ksize, int anchor, int brd_type, int cc, cudaStream_t stream);
+        template void linearColumnFilter_gpu<float , uchar >(PtrStepSzb src, PtrStepSzb dst, const float* kernel, int ksize, int anchor, int brd_type, int cc, cudaStream_t stream);
+        template void linearColumnFilter_gpu<float4, uchar4>(PtrStepSzb src, PtrStepSzb dst, const float* kernel, int ksize, int anchor, int brd_type, int cc, cudaStream_t stream);
+        template void linearColumnFilter_gpu<float3, short3>(PtrStepSzb src, PtrStepSzb dst, const float* kernel, int ksize, int anchor, int brd_type, int cc, cudaStream_t stream);
+        template void linearColumnFilter_gpu<float , int   >(PtrStepSzb src, PtrStepSzb dst, const float* kernel, int ksize, int anchor, int brd_type, int cc, cudaStream_t stream);
+        template void linearColumnFilter_gpu<float , float >(PtrStepSzb src, PtrStepSzb dst, const float* kernel, int ksize, int anchor, int brd_type, int cc, cudaStream_t stream);
     } // namespace column_filter
 }}} // namespace cv { namespace gpu { namespace device
+
+
+#endif /* CUDA_DISABLER */

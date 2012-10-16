@@ -41,6 +41,8 @@
 //
 //M*/
 
+#if !defined CUDA_DISABLER
+
 #include "internal_shared.hpp"
 #include "opencv2/gpu/device/utility.hpp"
 #include "opencv2/gpu/device/saturate_cast.hpp"
@@ -63,7 +65,7 @@ namespace cv { namespace gpu { namespace device
 
     #define MERGE_THREADBLOCK_SIZE 256
 
-    #define USE_SMEM_ATOMICS (__CUDA_ARCH__ >= 120)
+    #define USE_SMEM_ATOMICS (defined (__CUDA_ARCH__) && (__CUDA_ARCH__ >= 120))
 
     namespace hist
     {
@@ -169,10 +171,10 @@ namespace cv { namespace gpu { namespace device
                 d_Histogram[blockIdx.x] = saturate_cast<int>(data[0]);
         }
 
-        void histogram256_gpu(DevMem2Db src, int* hist, uint* buf, cudaStream_t stream)
+        void histogram256_gpu(PtrStepSzb src, int* hist, uint* buf, cudaStream_t stream)
         {
             histogram256<<<PARTIAL_HISTOGRAM256_COUNT, HISTOGRAM256_THREADBLOCK_SIZE, 0, stream>>>(
-                DevMem2D_<uint>(src),
+                PtrStepSz<uint>(src),
                 buf,
                 static_cast<uint>(src.rows * src.step / sizeof(uint)),
                 src.cols);
@@ -189,7 +191,7 @@ namespace cv { namespace gpu { namespace device
 
         __constant__ int c_lut[256];
 
-        __global__ void equalizeHist(const DevMem2Db src, PtrStepb dst)
+        __global__ void equalizeHist(const PtrStepSzb src, PtrStepb dst)
         {
             const int x = blockIdx.x * blockDim.x + threadIdx.x;
             const int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -202,7 +204,7 @@ namespace cv { namespace gpu { namespace device
             }
         }
 
-        void equalizeHist_gpu(DevMem2Db src, DevMem2Db dst, const int* lut, cudaStream_t stream)
+        void equalizeHist_gpu(PtrStepSzb src, PtrStepSzb dst, const int* lut, cudaStream_t stream)
         {
             dim3 block(16, 16);
             dim3 grid(divUp(src.cols, block.x), divUp(src.rows, block.y));
@@ -217,3 +219,6 @@ namespace cv { namespace gpu { namespace device
         }
     } // namespace hist
 }}} // namespace cv { namespace gpu { namespace device
+
+
+#endif /* CUDA_DISABLER */

@@ -222,7 +222,40 @@ static int countNonZero_(const T* src, int len )
 }
 
 static int countNonZero8u( const uchar* src, int len )
-{ return countNonZero_(src, len); }
+{
+    int i=0, nz = 0;
+#if CV_SSE2
+    if(USE_SSE2)//5x-6x
+    {
+        __m128i pattern = _mm_setzero_si128 ();
+        static uchar tab[256];
+        static volatile bool initialized = false;
+        if( !initialized )
+        {
+            // we compute inverse popcount table,
+            // since we pass (img[x] == 0) mask as index in the table.
+            for( int j = 0; j < 256; j++ )
+            {
+                int val = 0;
+                for( int mask = 1; mask < 256; mask += mask )
+                    val += (j & mask) == 0;
+                tab[j] = (uchar)val;
+            }
+            initialized = true;
+        }
+        
+        for (; i<=len-16; i+=16)
+        {
+            __m128i r0 = _mm_loadu_si128((const __m128i*)(src+i));
+            int val = _mm_movemask_epi8(_mm_cmpeq_epi8(r0, pattern));
+            nz += tab[val & 255] + tab[val >> 8];
+        }
+    }
+#endif
+    for( ; i < len; i++ )
+        nz += src[i] != 0;
+    return nz;
+}
 
 static int countNonZero16u( const ushort* src, int len )
 { return countNonZero_(src, len); }
@@ -1812,7 +1845,7 @@ void cv::batchDistance( InputArray _src1, InputArray _src2,
                 int d = tdist.at<int>(i), d0 = dist.at<int>(idx);
                 if( d < d0 )
                 {
-                    dist.at<int>(idx) = d0;
+                    dist.at<int>(idx) = d;
                     nidx.at<int>(idx) = i + update;
                 }
             }
@@ -1825,7 +1858,7 @@ void cv::batchDistance( InputArray _src1, InputArray _src2,
                 float d = tdist.at<float>(i), d0 = dist.at<float>(idx);
                 if( d < d0 )
                 {
-                    dist.at<float>(idx) = d0;
+                    dist.at<float>(idx) = d;
                     nidx.at<int>(idx) = i + update;
                 }
             }
@@ -1868,6 +1901,28 @@ void cv::batchDistance( InputArray _src1, InputArray _src2,
 
     parallel_for(BlockedRange(0, src1.rows),
                  BatchDistInvoker(src1, src2, dist, nidx, K, mask, update, func));
+}
+
+
+void cv::findNonZero( InputArray _src, OutputArray _idx )
+{
+    Mat src = _src.getMat();
+    CV_Assert( src.type() == CV_8UC1 );
+    int n = countNonZero(src);
+    if( _idx.kind() == _InputArray::MAT && !_idx.getMatRef().isContinuous() )
+        _idx.release();
+    _idx.create(n, 1, CV_32SC2);
+    Mat idx = _idx.getMat();
+    CV_Assert(idx.isContinuous());
+    Point* idx_ptr = (Point*)idx.data;
+    
+    for( int i = 0; i < src.rows; i++ )
+    {
+        const uchar* bin_ptr = src.ptr(i);
+        for( int j = 0; j < src.cols; j++ )
+            if( bin_ptr[j] )
+                *idx_ptr++ = Point(j, i);
+    }
 }
 
 

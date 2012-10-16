@@ -100,6 +100,12 @@ struct CV_EXPORTS AutotunedIndexParams : public IndexParams
                          float memory_weight = 0, float sample_fraction = 0.1);
 };
     
+struct CV_EXPORTS HierarchicalClusteringIndexParams : public IndexParams
+{
+    HierarchicalClusteringIndexParams(int branching = 32, 
+                      cvflann::flann_centers_init_t centers_init = cvflann::FLANN_CENTERS_RANDOM, int trees = 4, int leaf_size = 100 );
+};
+
 struct CV_EXPORTS KMeansIndexParams : public IndexParams
 {
     KMeansIndexParams(int branching = 32, int iterations = 11,

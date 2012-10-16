@@ -79,7 +79,7 @@ OpenCVEngine::OpenCVEngine(IPackageManager* PkgManager):
 
 int32_t OpenCVEngine::GetVersion()
 {
-    return OPEN_CV_ENGINE_VERSION; 
+    return OPEN_CV_ENGINE_VERSION;
 }
 
 String16 OpenCVEngine::GetLibPathByVersion(android::String16 version)
@@ -124,24 +124,24 @@ android::String16 OpenCVEngine::GetLibraryList(android::String16 version)
 	std::string tmp = PackageManager->GetPackagePathByVersion(norm_version, Platform, CpuID);
 	if (!tmp.empty())
 	{
-	    tmp += "/libopencvinfo.so";
-	    
+	    tmp += (std::string("/") + LIB_OPENCV_INFO_NAME);
+
 	    LOGD("Trying to load info library \"%s\"", tmp.c_str());
-	    
-	    void *handle;
+
+	    void* handle;
 	    char* (*info_func)();
-	    
+
 	    handle = dlopen(tmp.c_str(), RTLD_LAZY);
 	    if (handle)
 	    {
-		const char *error;
-		
-		dlerror(); 
+		const char* error;
+
+		dlerror();
 		*(void **) (&info_func) = dlsym(handle, "GetLibraryList");
 		if ((error = dlerror()) == NULL)
 		{
 		    result = String16((*info_func)());
-		    dlclose(handle);   
+		    dlclose(handle);
 		}
 		else
 		{

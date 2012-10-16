@@ -1,13 +1,15 @@
 /*
  * Copyright 1993-2010 NVIDIA Corporation.  All rights reserved.
  *
- * NVIDIA Corporation and its licensors retain all intellectual 
- * property and proprietary rights in and to this software and 
- * related documentation and any modifications thereto.  
- * Any use, reproduction, disclosure, or distribution of this 
- * software and related documentation without an express license 
+ * NVIDIA Corporation and its licensors retain all intellectual
+ * property and proprietary rights in and to this software and
+ * related documentation and any modifications thereto.
+ * Any use, reproduction, disclosure, or distribution of this
+ * software and related documentation without an express license
  * agreement from NVIDIA Corporation is strictly prohibited.
  */
+
+#if !defined CUDA_DISABLER
 
 #include <float.h>
 
@@ -19,14 +21,14 @@
 #include "NCVHaarObjectDetection.hpp"
 
 
-TestHaarCascadeApplication::TestHaarCascadeApplication(std::string testName, NCVTestSourceProvider<Ncv8u> &src,
-                                                       std::string cascadeName, Ncv32u width, Ncv32u height)
+TestHaarCascadeApplication::TestHaarCascadeApplication(std::string testName_, NCVTestSourceProvider<Ncv8u> &src_,
+                                                       std::string cascadeName_, Ncv32u width_, Ncv32u height_)
     :
-    NCVTestProvider(testName),
-    src(src),
-    cascadeName(cascadeName),
-    width(width),
-    height(height)
+    NCVTestProvider(testName_),
+    src(src_),
+    cascadeName(cascadeName_),
+    width(width_),
+    height(height_)
 {
 }
 
@@ -204,7 +206,7 @@ bool TestHaarCascadeApplication::process()
     ncvAssertReturn(cudaSuccess == cudaStreamSynchronize(0), false);
 
 #if !defined(__APPLE__)
-	
+
 #if defined(__GNUC__)
     //http://www.christian-seiler.de/projekte/fpmath/
 
@@ -239,14 +241,14 @@ bool TestHaarCascadeApplication::process()
     _controlfp_s(&fpu_cw, fpu_oldcw, _MCW_PC);
 #endif
 #endif
-	
+
 #endif
     NCV_SKIP_COND_END
 
     int devId;
     ncvAssertCUDAReturn(cudaGetDevice(&devId), false);
-    cudaDeviceProp devProp;
-    ncvAssertCUDAReturn(cudaGetDeviceProperties(&devProp, devId), false);
+    cudaDeviceProp _devProp;
+    ncvAssertCUDAReturn(cudaGetDeviceProperties(&_devProp, devId), false);
 
     ncvStat = ncvApplyHaarClassifierCascade_device(
         d_integralImage, d_rectStdDev, d_pixelMask,
@@ -254,7 +256,7 @@ bool TestHaarCascadeApplication::process()
         haar, h_HaarStages, d_HaarStages, d_HaarNodes, d_HaarFeatures, false,
         searchRoiU, 1, 1.0f,
         *this->allocatorGPU.get(), *this->allocatorCPU.get(),
-        devProp, 0);
+        _devProp, 0);
     ncvAssertReturn(ncvStat == NCV_SUCCESS, false);
 
     NCVMatrixAlloc<Ncv32u> h_pixelMask_d(*this->allocatorCPU.get(), this->width, this->height);
@@ -299,3 +301,5 @@ bool TestHaarCascadeApplication::deinit()
 {
     return true;
 }
+
+#endif /* CUDA_DISABLER */

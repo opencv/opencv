@@ -1,7 +1,7 @@
-import os, sys, glob, re
+import os, sys, fnmatch, re
 
 sys.path.append("../modules/python/src2/")
-sys.path.append("../modules/java/")
+sys.path.append("../modules/java/generator")
 
 import hdr_parser as hp
 import rst_parser as rp
@@ -31,7 +31,7 @@ doc_signatures_whitelist = [
 # templates
 "Matx", "Vec", "SparseMat_", "Scalar_", "Mat_", "Ptr", "Size_", "Point_", "Rect_", "Point3_",
 "DataType", "detail::RotationWarperBase", "flann::Index_", "CalonderDescriptorExtractor",
-"gpu::DevMem2D_", "gpu::PtrStep_", "gpu::PtrElemStep_", "gpu::BruteForceMatcher_GPU",
+"gpu::PtrStepSz", "gpu::PtrStep", "gpu::PtrElemStep_",
 # black boxes
 "CvArr", "CvFileStorage",
 # other
@@ -185,11 +185,13 @@ def process_module(module, path):
     rstparser.parse(module, path)
     rst = rstparser.definitions
 
-    hdrlist = glob.glob(os.path.join(path, "include", "opencv2", module, "*.h*"))
-    hdrlist.extend(glob.glob(os.path.join(path, "include", "opencv2", module, "detail", "*.h*")))
+    hdrlist = []
+    for root, dirs, files in os.walk(os.path.join(path, "include")):
+        for filename in fnmatch.filter(files, "*.h*"):
+            hdrlist.append(os.path.join(root, filename))
 
     if module == "gpu":
-        hdrlist.append(os.path.join(path, "..", "core", "include", "opencv2", "core", "devmem2d.hpp"))
+        hdrlist.append(os.path.join(path, "..", "core", "include", "opencv2", "core", "cuda_devptrs.hpp"))
         hdrlist.append(os.path.join(path, "..", "core", "include", "opencv2", "core", "gpumat.hpp"))
 
     decls = []
@@ -310,7 +312,7 @@ def process_module(module, path):
             if namespace:
                 name = name[len(namespace) + 1:]
         #print namespace, parent, name, fn[0]
-        if not namespace and not parent and not name.startswith("cv") and not name.startswith("CV_"):
+        if not namespace and not parent and not name.startswith("cv") and not name.startswith("icv") and not name.startswith("CV_"):
             logerror(ERROR_004_MISSEDNAMESPACE, "function " + name + " from opencv_" + module + " is placed in global namespace but violates C-style naming convention")
         else:
             fdescr = (namespace, parent, name, fn)

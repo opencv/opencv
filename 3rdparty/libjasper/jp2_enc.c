@@ -5,6 +5,11 @@
  * All rights reserved.
  */
 
+/*
+ * Modified by Andrey Kiselev <dron@remotesensing.org> to handle UUID
+ * box properly.
+ */
+
 /* __START_OF_JASPER_LICENSE__
  * 
  * JasPer License Version 2.0
@@ -86,7 +91,7 @@ static int clrspctojp2(jas_clrspc_t clrspc);
 * Functions.
 \******************************************************************************/
 
-int jp2_encode(jas_image_t *image, jas_stream_t *out, char *optstr)
+int jp2_write_header(jas_image_t *image, jas_stream_t *out)
 {
 	jp2_box_t *box;
 	jp2_ftyp_t *ftyp;
@@ -97,8 +102,6 @@ int jp2_encode(jas_image_t *image, jas_stream_t *out, char *optstr)
 	long len;
 	uint_fast16_t cmptno;
 	jp2_colr_t *colr;
-	char buf[4096];
-	uint_fast32_t overhead;
 	jp2_cdefchan_t *cdefchanent;
 	jp2_cdef_t *cdef;
 	int i;
@@ -191,7 +194,7 @@ int sgnd;
 		}
 		bpcc = &box->data.bpcc;
 		bpcc->numcmpts = jas_image_numcmpts(image);
-		if (!(bpcc->bpcs = jas_malloc(bpcc->numcmpts *
+		if (!(bpcc->bpcs = jas_alloc2(bpcc->numcmpts,
 		  sizeof(uint_fast8_t)))) {
 			goto error;
 		}
@@ -285,7 +288,7 @@ int sgnd;
 		}
 		cdef = &box->data.cdef;
 		cdef->numchans = jas_image_numcmpts(image);
-		cdef->ents = jas_malloc(cdef->numchans * sizeof(jp2_cdefchan_t));
+		cdef->ents = jas_alloc2(cdef->numchans, sizeof(jp2_cdefchan_t));
 		for (i = 0; i < jas_image_numcmpts(image); ++i) {
 			cdefchanent = &cdef->ents[i];
 			cdefchanent->channo = i;
@@ -326,6 +329,26 @@ int sgnd;
 	jas_stream_close(tmpstream);
 	tmpstream = 0;
 
+	return 0;
+	abort();
+
+error:
+
+	if (box) {
+		jp2_box_destroy(box);
+	}
+	if (tmpstream) {
+		jas_stream_close(tmpstream);
+	}
+	return -1;
+}
+
+int jp2_write_codestream(jas_image_t *image, jas_stream_t *out, char *optstr)
+{
+	jp2_box_t *box;
+	char buf[4096];
+	uint_fast32_t overhead;
+
 	/*
 	 * Output the contiguous code stream box.
 	 */
@@ -358,10 +381,32 @@ error:
 	if (box) {
 		jp2_box_destroy(box);
 	}
-	if (tmpstream) {
-		jas_stream_close(tmpstream);
-	}
 	return -1;
+}
+
+int jp2_encode(jas_image_t *image, jas_stream_t *out, char *optstr)
+{
+	if (jp2_write_header(image, out) < 0)
+		return -1;
+	if (jp2_write_codestream(image, out, optstr) < 0)
+		return -1;
+
+	return 0;
+}
+
+int jp2_encode_uuid(jas_image_t *image, jas_stream_t *out,
+		    char *optstr, jp2_box_t *uuid)
+{
+	if (jp2_write_header(image, out) < 0)
+		return -1;
+	if (uuid) {
+		if (jp2_box_put(uuid, out))
+			return -1;
+	}
+	if (jp2_write_codestream(image, out, optstr) < 0)
+		return -1;
+
+	return 0;
 }
 
 static uint_fast32_t jp2_gettypeasoc(int colorspace, int ctype)

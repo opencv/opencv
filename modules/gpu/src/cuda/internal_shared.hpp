@@ -60,11 +60,7 @@ namespace cv { namespace gpu
         BORDER_REFLECT_GPU,
         BORDER_WRAP_GPU
     };
-
-    // Converts CPU border extrapolation mode into GPU internal analogue.
-    // Returns true if the GPU analogue exists, false otherwise.
-    bool tryConvertToGpuBorderType(int cpuBorderType, int& gpuBorderType);
-
+  
     class NppStreamHandler
     {
     public:

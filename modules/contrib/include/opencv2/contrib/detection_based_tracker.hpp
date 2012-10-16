@@ -98,5 +98,9 @@ class DetectionBasedTracker
         void detectInRegion(const cv::Mat& img, const cv::Rect& r, std::vector<cv::Rect>& detectedObjectsInRegions);
 };
 
-#endif
+namespace cv
+{
+    using ::DetectionBasedTracker;
+} //end of cv namespace
 
+#endif

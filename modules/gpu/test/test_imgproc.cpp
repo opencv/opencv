@@ -39,7 +39,9 @@
 //
 //M*/
 
-#include "precomp.hpp"
+#include "test_precomp.hpp"
+
+#ifdef HAVE_CUDA
 
 namespace {
 
@@ -806,10 +808,10 @@ struct MatchTemplate_CanFindBigTemplate : testing::TestWithParam<cv::gpu::Device
 
 TEST_P(MatchTemplate_CanFindBigTemplate, SQDIFF_NORMED)
 {
-    cv::Mat scene = readImage("matchtemplate/scene.jpg");
+    cv::Mat scene = readImage("matchtemplate/scene.png");
     ASSERT_FALSE(scene.empty());
 
-    cv::Mat templ = readImage("matchtemplate/template.jpg");
+    cv::Mat templ = readImage("matchtemplate/template.png");
     ASSERT_FALSE(templ.empty());
 
     cv::gpu::GpuMat d_result;
@@ -829,10 +831,10 @@ TEST_P(MatchTemplate_CanFindBigTemplate, SQDIFF_NORMED)
 
 TEST_P(MatchTemplate_CanFindBigTemplate, SQDIFF)
 {
-    cv::Mat scene = readImage("matchtemplate/scene.jpg");
+    cv::Mat scene = readImage("matchtemplate/scene.png");
     ASSERT_FALSE(scene.empty());
 
-    cv::Mat templ = readImage("matchtemplate/template.jpg");
+    cv::Mat templ = readImage("matchtemplate/template.png");
     ASSERT_FALSE(templ.empty());
 
     cv::gpu::GpuMat d_result;
@@ -1125,3 +1127,5 @@ INSTANTIATE_TEST_CASE_P(GPU_ImgProc, CornerMinEigen, testing::Combine(
     testing::Values(ApertureSize(0), ApertureSize(3), ApertureSize(5), ApertureSize(7))));
 
 } // namespace
+
+#endif // HAVE_CUDA

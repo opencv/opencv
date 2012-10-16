@@ -62,7 +62,7 @@ CV_InpaintTest::~CV_InpaintTest() {}
 void CV_InpaintTest::run( int )
 {
     string folder = string(ts->get_data_path()) + "inpaint/";
-    Mat orig = imread(folder + "orig.jpg");
+    Mat orig = imread(folder + "orig.png");
     Mat exp1 = imread(folder + "exp1.png");
     Mat exp2 = imread(folder + "exp2.png");
     Mat mask = imread(folder + "mask.png");

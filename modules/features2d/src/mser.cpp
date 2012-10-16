@@ -1288,15 +1288,17 @@ void MserFeatureDetector::detectImpl( const Mat& image, vector<KeyPoint>& keypoi
     (*this)(image, msers, mask);
     
     vector<vector<Point> >::const_iterator contour_it = msers.begin();
+    Rect r(0, 0, image.cols, image.rows);
     for( ; contour_it != msers.end(); ++contour_it )
     {
         // TODO check transformation from MSER region to KeyPoint
         RotatedRect rect = fitEllipse(Mat(*contour_it));
         float diam = sqrt(rect.size.height*rect.size.width);
         
-        if( diam > std::numeric_limits<float>::epsilon() )
-            keypoints.push_back( KeyPoint( rect.center, diam, rect.angle) );
+        if( diam > std::numeric_limits<float>::epsilon() && r.contains(rect.center) )
+            keypoints.push_back( KeyPoint(rect.center, diam) );
     }
+
 }
     
 }

@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
       package="org.opencv"
-      android:versionCode="242"
-      android:versionName="2.4.2">
-</manifest> 
+      android:versionCode="@OPENCV_VERSION_MAJOR@@OPENCV_VERSION_MINOR@@OPENCV_VERSION_PATCH@"
+      android:versionName="@OPENCV_VERSION_MAJOR@.@OPENCV_VERSION_MINOR@.@OPENCV_VERSION_PATCH@">
+
+    <uses-sdk android:minSdkVersion="8" />
+</manifest>

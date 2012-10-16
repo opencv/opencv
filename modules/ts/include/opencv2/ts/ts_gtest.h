@@ -1654,7 +1654,21 @@ inline bool operator!=(const GTEST_10_TUPLE_(T)& t,
 #   undef _TR1_FUNCTIONAL  // Allows the user to #include
                         // <tr1/functional> if he chooses to.
 #  else
+#  if defined (__cplusplus) && __cplusplus > 199711L
+#   include <tuple>
+namespace std {
+    namespace tr1 {
+        using std::tuple;
+        using std::tuple_element;
+        using std::get;
+        using std::tuple_size;
+        using std::make_tuple;
+    }
+}
+#  else
 #   include <tr1/tuple>  // NOLINT
+#  endif
+
 #  endif  // !GTEST_HAS_RTTI && GTEST_GCC_VER_ < 40302
 
 # else
@@ -1702,6 +1716,8 @@ inline bool operator!=(const GTEST_10_TUPLE_(T)& t,
      GTEST_OS_OPENBSD || GTEST_OS_QNX)
 # define GTEST_HAS_DEATH_TEST 1
 # include <vector>  // NOLINT
+#else
+# define GTEST_HAS_DEATH_TEST 0
 #endif
 
 // We don't support MSVC 7.1 with exceptions disabled now.  Therefore

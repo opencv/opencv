@@ -39,7 +39,7 @@
 //
 //M*/
 
-#include "precomp.hpp"
+#include "test_precomp.hpp"
 
 #ifdef HAVE_CUDA
 
@@ -184,8 +184,6 @@ PARAM_TEST_CASE(WarpPerspective, cv::gpu::DeviceInfo, cv::Size, MatType, Inverse
     int interpolation;
     int borderType;
     bool useRoi;
-
-    cv::Mat M;
 
     virtual void SetUp()
     {

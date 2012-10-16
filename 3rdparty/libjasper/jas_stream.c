@@ -212,7 +212,7 @@ jas_stream_t *jas_stream_memopen(char *buf, int bufsize)
 	if (buf) {
 		obj->buf_ = (unsigned char *) buf;
 	} else {
-		obj->buf_ = jas_malloc(obj->bufsize_ * sizeof(char));
+		obj->buf_ = jas_malloc(obj->bufsize_);
 		obj->myalloc_ = 1;
 	}
 	if (!obj->buf_) {
@@ -361,9 +361,9 @@ jas_stream_t *jas_stream_tmpfile()
 	}
 	obj->fd = -1;
 	obj->flags = 0;
-	obj->pathname[0] = '\0';
 	stream->obj_ = obj;
 
+#ifdef _WIN32
 	/* Choose a file name. */
 	tmpnam(obj->pathname);
 
@@ -373,16 +373,22 @@ jas_stream_t *jas_stream_tmpfile()
 		jas_stream_destroy(stream);
 		return 0;
 	}
+#else
+	/* Choose a file name. */
+	snprintf(obj->pathname, L_tmpnam, "%s/tmp.XXXXXXXXXX", P_tmpdir);
+
+	/* Open the underlying file. */
+	if ((obj->fd = mkstemp(obj->pathname)) < 0) {
+		jas_stream_destroy(stream);
+		return 0;
+	}
+#endif
 
 	/* Unlink the file so that it will disappear if the program
 	terminates abnormally. */
-	/* Under UNIX, one can unlink an open file and continue to do I/O
-	on it.  Not all operating systems support this functionality, however.
-	For example, under Microsoft Windows the unlink operation will fail,
-	since the file is open. */
 	if (unlink(obj->pathname)) {
-		/* We will try unlinking the file again after it is closed. */
-		obj->flags |= JAS_STREAM_FILEOBJ_DELONCLOSE;
+		jas_stream_destroy(stream);
+		return 0;
 	}
 
 	/* Use full buffering. */
@@ -553,7 +559,7 @@ int jas_stream_printf(jas_stream_t *stream, const char *fmt, ...)
 	int ret;
 
 	va_start(ap, fmt);
-	ret = vsprintf(buf, fmt, ap);
+	ret = vsnprintf(buf, sizeof buf, fmt, ap);
 	jas_stream_puts(stream, buf);
 	va_end(ap);
 	return ret;
@@ -992,7 +998,7 @@ static int mem_resize(jas_stream_memobj_t *m, int bufsize)
 	unsigned char *buf;
 
 	assert(m->buf_);
-	if (!(buf = jas_realloc(m->buf_, bufsize * sizeof(unsigned char)))) {
+	if (!(buf = jas_realloc(m->buf_, bufsize))) {
 		return -1;
 	}
 	m->buf_ = buf;

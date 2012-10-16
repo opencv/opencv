@@ -1,4 +1,5 @@
 #include "perf_precomp.hpp"
+#include "opencv2/core/internal.hpp"
 
 using namespace std;
 using namespace cv;
@@ -10,6 +11,8 @@ CV_ENUM(pnpAlgo, CV_ITERATIVE, CV_EPNP /*, CV_P3P*/)
 
 typedef std::tr1::tuple<int, pnpAlgo> PointsNum_Algo_t;
 typedef perf::TestBaseWithParam<PointsNum_Algo_t> PointsNum_Algo;
+
+typedef perf::TestBaseWithParam<int> PointsNum;
 
 PERF_TEST_P(PointsNum_Algo, solvePnP,
             testing::Combine(
@@ -46,7 +49,10 @@ PERF_TEST_P(PointsNum_Algo, solvePnP,
 
     declare.in(points3d, points2d);
 
-    TEST_CYCLE_N(1000) solvePnP(points3d, points2d, intrinsics, distortion, rvec, tvec, false, algo);
+    TEST_CYCLE_N(1000)
+    {
+        solvePnP(points3d, points2d, intrinsics, distortion, rvec, tvec, false, algo);
+    }
 
     SANITY_CHECK(rvec, 1e-6);
     SANITY_CHECK(tvec, 1e-6);
@@ -81,7 +87,52 @@ PERF_TEST(PointsNum_Algo, solveP3P)
 
     declare.in(points3d, points2d);
 
-    TEST_CYCLE_N(1000) solvePnP(points3d, points2d, intrinsics, distortion, rvec, tvec, false, CV_P3P);
+    TEST_CYCLE_N(1000)
+    {
+        solvePnP(points3d, points2d, intrinsics, distortion, rvec, tvec, false, CV_P3P);
+    }
+
+    SANITY_CHECK(rvec, 1e-6);
+    SANITY_CHECK(tvec, 1e-6);
+}
+
+PERF_TEST_P(PointsNum, SolvePnPRansac, testing::Values(4, 3*9, 7*13))
+{
+    int count = GetParam();
+
+    Mat object(1, count, CV_32FC3);
+    randu(object, -100, 100);
+
+    Mat camera_mat(3, 3, CV_32FC1);
+    randu(camera_mat, 0.5, 1);
+    camera_mat.at<float>(0, 1) = 0.f;
+    camera_mat.at<float>(1, 0) = 0.f;
+    camera_mat.at<float>(2, 0) = 0.f;
+    camera_mat.at<float>(2, 1) = 0.f;
+
+    Mat dist_coef(1, 8, CV_32F, cv::Scalar::all(0));
+
+    vector<cv::Point2f> image_vec;
+    Mat rvec_gold(1, 3, CV_32FC1);
+    randu(rvec_gold, 0, 1);
+    Mat tvec_gold(1, 3, CV_32FC1);
+    randu(tvec_gold, 0, 1);
+    projectPoints(object, rvec_gold, tvec_gold, camera_mat, dist_coef, image_vec);
+
+    Mat image(1, count, CV_32FC2, &image_vec[0]);
+
+    Mat rvec;
+    Mat tvec;
+
+#ifdef HAVE_TBB
+    // limit concurrency to get determenistic result
+    cv::Ptr<tbb::task_scheduler_init> one_thread = new tbb::task_scheduler_init(1);
+#endif
+
+    TEST_CYCLE()
+    {
+        solvePnPRansac(object, image, camera_mat, dist_coef, rvec, tvec);
+    }
 
     SANITY_CHECK(rvec, 1e-6);
     SANITY_CHECK(tvec, 1e-6);

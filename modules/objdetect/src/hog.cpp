@@ -39,7 +39,7 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-
+#include <stdio.h>
 #include "precomp.hpp"
 #include <iterator>
 #ifdef HAVE_IPP
@@ -939,12 +939,13 @@ void HOGDescriptor::detect(const Mat& img, vector<Point>& hits, double hitThresh
     detect(img, hits, weightsV, hitThreshold, winStride, padding, locations);
 }
 
-struct HOGInvoker
+class HOGInvoker : public ParallelLoopBody
 {
+public:
     HOGInvoker( const HOGDescriptor* _hog, const Mat& _img,
                 double _hitThreshold, Size _winStride, Size _padding,
-                const double* _levelScale, ConcurrentRectVector* _vec, 
-                ConcurrentDoubleVector* _weights=0, ConcurrentDoubleVector* _scales=0 ) 
+                const double* _levelScale, std::vector<Rect> * _vec, Mutex* _mtx,
+                std::vector<double>* _weights=0, std::vector<double>* _scales=0 )
     {
         hog = _hog;
         img = _img;
@@ -955,11 +956,12 @@ struct HOGInvoker
         vec = _vec;
         weights = _weights;
         scales = _scales;
+        mtx = _mtx;
     }
 
-    void operator()( const BlockedRange& range ) const
+    void operator()( const Range& range ) const
     {
-        int i, i1 = range.begin(), i2 = range.end();
+        int i, i1 = range.start, i2 = range.end;
         double minScale = i1 > 0 ? levelScale[i1] : i2 > 1 ? levelScale[i1+1] : std::max(img.cols, img.rows);
         Size maxSz(cvCeil(img.cols/minScale), cvCeil(img.rows/minScale));
         Mat smallerImgBuf(maxSz, img.type());
@@ -977,23 +979,29 @@ struct HOGInvoker
                 resize(img, smallerImg, sz);
             hog->detect(smallerImg, locations, hitsWeights, hitThreshold, winStride, padding);
             Size scaledWinSize = Size(cvRound(hog->winSize.width*scale), cvRound(hog->winSize.height*scale));
+
+            mtx->lock();
             for( size_t j = 0; j < locations.size(); j++ )
             {
                 vec->push_back(Rect(cvRound(locations[j].x*scale),
                                     cvRound(locations[j].y*scale),
                                     scaledWinSize.width, scaledWinSize.height));
-                if (scales) {
+                if (scales)
+                {
                     scales->push_back(scale);
                 }
             }
-            
+            mtx->unlock();
+
             if (weights && (!hitsWeights.empty()))
             {
+                mtx->lock();
                 for (size_t j = 0; j < locations.size(); j++)
                 {
                     weights->push_back(hitsWeights[j]);
                 }
-            }        
+                mtx->unlock();
+            }
         }
     }
 
@@ -1003,9 +1011,10 @@ struct HOGInvoker
     Size winStride;
     Size padding;
     const double* levelScale;
-    ConcurrentRectVector* vec;
-    ConcurrentDoubleVector* weights;
-    ConcurrentDoubleVector* scales;
+    std::vector<Rect>* vec;
+    std::vector<double>* weights;
+    std::vector<double>* scales;
+    Mutex* mtx;
 };
 
 
@@ -1030,13 +1039,14 @@ void HOGDescriptor::detectMultiScale(
     levels = std::max(levels, 1);
     levelScale.resize(levels);
 
-    ConcurrentRectVector allCandidates;
-    ConcurrentDoubleVector tempScales;
-    ConcurrentDoubleVector tempWeights;
-    vector<double> foundScales;
-    
-    parallel_for(BlockedRange(0, (int)levelScale.size()),
-                 HOGInvoker(this, img, hitThreshold, winStride, padding, &levelScale[0], &allCandidates, &tempWeights, &tempScales));
+    std::vector<Rect> allCandidates;
+    std::vector<double> tempScales;
+    std::vector<double> tempWeights;
+    std::vector<double> foundScales;
+    Mutex mtx;
+
+    parallel_for_(Range(0, (int)levelScale.size()),
+                 HOGInvoker(this, img, hitThreshold, winStride, padding, &levelScale[0], &allCandidates, &mtx, &tempWeights, &tempScales));
 
     std::copy(tempScales.begin(), tempScales.end(), back_inserter(foundScales));
     foundLocations.clear();
@@ -2380,6 +2390,248 @@ vector<float> HOGDescriptor::getDaimlerPeopleDetector()
         -0.049869f, -0.039151f, -0.022279f, -0.065380f,
         -9.063785f};
         return vector<float>(detector, detector + sizeof(detector)/sizeof(detector[0]));
+}
+
+class HOGConfInvoker : public ParallelLoopBody
+{
+public:
+       HOGConfInvoker( const HOGDescriptor* _hog, const Mat& _img,
+                               double _hitThreshold, Size _padding,
+                               std::vector<DetectionROI>* locs,
+                               std::vector<Rect>* _vec, Mutex* _mtx )
+       {
+               hog = _hog;
+               img = _img;
+               hitThreshold = _hitThreshold;
+               padding = _padding;
+               locations = locs;
+               vec = _vec;
+               mtx = _mtx;
+       }
+
+       void operator()( const Range& range ) const
+       {
+               int i, i1 = range.start, i2 = range.end;
+
+               Size maxSz(cvCeil(img.cols/(*locations)[0].scale), cvCeil(img.rows/(*locations)[0].scale));
+               Mat smallerImgBuf(maxSz, img.type());
+               vector<Point> dets;
+
+               for( i = i1; i < i2; i++ )
+               {
+                       double scale = (*locations)[i].scale;
+
+                       Size sz(cvRound(img.cols / scale), cvRound(img.rows / scale));
+                       Mat smallerImg(sz, img.type(), smallerImgBuf.data);
+
+                       if( sz == img.size() )
+                               smallerImg = Mat(sz, img.type(), img.data, img.step);
+                       else
+                               resize(img, smallerImg, sz);
+
+                       hog->detectROI(smallerImg, (*locations)[i].locations, dets, (*locations)[i].confidences, hitThreshold, Size(), padding);
+                       Size scaledWinSize = Size(cvRound(hog->winSize.width*scale), cvRound(hog->winSize.height*scale));
+                       mtx->lock();
+                       for( size_t j = 0; j < dets.size(); j++ )
+                       {
+                               vec->push_back(Rect(cvRound(dets[j].x*scale),
+                                                                       cvRound(dets[j].y*scale),
+                                                                       scaledWinSize.width, scaledWinSize.height));
+                       }
+                       mtx->unlock();
+               }
+       }
+
+       const HOGDescriptor* hog;
+       Mat img;
+       double hitThreshold;
+       std::vector<DetectionROI>* locations;
+       Size padding;
+       std::vector<Rect>* vec;
+       Mutex* mtx;
+};
+
+void HOGDescriptor::detectROI(const cv::Mat& img, const vector<cv::Point> &locations,
+                                       CV_OUT std::vector<cv::Point>& foundLocations, CV_OUT std::vector<double>& confidences,
+                                       double hitThreshold, cv::Size winStride,
+                                       cv::Size padding) const
+{
+   foundLocations.clear();
+
+   confidences.clear();
+
+   if( svmDetector.empty() )
+       return;
+
+   if( locations.empty() )
+       return;
+
+   if( winStride == Size() )
+       winStride = cellSize;
+
+   Size cacheStride(gcd(winStride.width, blockStride.width),
+                                    gcd(winStride.height, blockStride.height));
+
+   size_t nwindows = locations.size();
+   padding.width = (int)alignSize(std::max(padding.width, 0), cacheStride.width);
+   padding.height = (int)alignSize(std::max(padding.height, 0), cacheStride.height);
+   Size paddedImgSize(img.cols + padding.width*2, img.rows + padding.height*2);
+
+   // HOGCache cache(this, img, padding, padding, nwindows == 0, cacheStride);
+   HOGCache cache(this, img, padding, padding, true, cacheStride);
+   if( !nwindows )
+           nwindows = cache.windowsInImage(paddedImgSize, winStride).area();
+
+   const HOGCache::BlockData* blockData = &cache.blockData[0];
+
+   int nblocks = cache.nblocks.area();
+   int blockHistogramSize = cache.blockHistogramSize;
+   size_t dsize = getDescriptorSize();
+
+   double rho = svmDetector.size() > dsize ? svmDetector[dsize] : 0;
+   vector<float> blockHist(blockHistogramSize);
+
+   for( size_t i = 0; i < nwindows; i++ )
+   {
+           Point pt0;
+           pt0 = locations[i];
+           if( pt0.x < -padding.width || pt0.x > img.cols + padding.width - winSize.width ||
+                   pt0.y < -padding.height || pt0.y > img.rows + padding.height - winSize.height )
+           {
+               // out of image
+               confidences.push_back(-10.0);
+               continue;
+           }
+
+           double s = rho;
+           const float* svmVec = &svmDetector[0];
+           int j, k;
+
+           for( j = 0; j < nblocks; j++, svmVec += blockHistogramSize )
+           {
+                   const HOGCache::BlockData& bj = blockData[j];
+                   Point pt = pt0 + bj.imgOffset;
+                   // need to devide this into 4 parts!
+                   const float* vec = cache.getBlock(pt, &blockHist[0]);
+                   for( k = 0; k <= blockHistogramSize - 4; k += 4 )
+                           s += vec[k]*svmVec[k] + vec[k+1]*svmVec[k+1] +
+                                   vec[k+2]*svmVec[k+2] + vec[k+3]*svmVec[k+3];
+                   for( ; k < blockHistogramSize; k++ )
+                           s += vec[k]*svmVec[k];
+           }
+           // cv::waitKey();
+           confidences.push_back(s);
+
+           if( s >= hitThreshold )
+                   foundLocations.push_back(pt0);
+   }
+ }
+
+void HOGDescriptor::detectMultiScaleROI(const cv::Mat& img,
+                                                           CV_OUT std::vector<cv::Rect>& foundLocations,
+                                                           std::vector<DetectionROI>& locations,
+                                                           double hitThreshold,
+                                                           int groupThreshold) const
+{
+   std::vector<Rect> allCandidates;
+   Mutex mtx;
+
+   parallel_for_(Range(0, (int)locations.size()),
+                        HOGConfInvoker(this, img, hitThreshold, Size(8, 8), &locations, &allCandidates, &mtx));
+
+   foundLocations.resize(allCandidates.size());
+   std::copy(allCandidates.begin(), allCandidates.end(), foundLocations.begin());
+   cv::groupRectangles(foundLocations, groupThreshold, 0.2);
+}
+
+void HOGDescriptor::readALTModel(std::string modelfile)
+{
+   // read model from SVMlight format..
+   FILE *modelfl;
+   if ((modelfl = fopen(modelfile.c_str(), "rb")) == NULL)
+   {
+       std::string eerr("file not exist");
+       std::string efile(__FILE__);
+       std::string efunc(__FUNCTION__);
+       throw Exception(CV_StsError, eerr, efile, efunc, __LINE__);
+   }
+   char version_buffer[10];
+   if (!fread (&version_buffer,sizeof(char),10,modelfl))
+   {
+       std::string eerr("version?");
+       std::string efile(__FILE__);
+       std::string efunc(__FUNCTION__);
+       throw Exception(CV_StsError, eerr, efile, efunc, __LINE__);
+   }
+   if(strcmp(version_buffer,"V6.01")) {
+       std::string eerr("version doesnot match");
+       std::string efile(__FILE__);
+       std::string efunc(__FUNCTION__);
+       throw Exception(CV_StsError, eerr, efile, efunc, __LINE__);
+   }
+   /* read version number */
+   int version = 0;
+   if (!fread (&version,sizeof(int),1,modelfl))
+   { throw Exception(); }
+   if (version < 200)
+   {
+       std::string eerr("version doesnot match");
+       std::string efile(__FILE__);
+       std::string efunc(__FUNCTION__);
+       throw Exception();
+   }
+   int kernel_type;
+   size_t nread;
+   nread=fread(&(kernel_type),sizeof(int),1,modelfl);
+
+   {// ignore these
+       int poly_degree;
+       nread=fread(&(poly_degree),sizeof(int),1,modelfl);
+
+       double rbf_gamma;
+       nread=fread(&(rbf_gamma),sizeof(double), 1, modelfl);
+       double coef_lin;
+       nread=fread(&(coef_lin),sizeof(double),1,modelfl);
+       double coef_const;
+       nread=fread(&(coef_const),sizeof(double),1,modelfl);
+       int l;
+       nread=fread(&l,sizeof(int),1,modelfl);
+       char* custom = new char[l];
+       nread=fread(custom,sizeof(char),l,modelfl);
+       delete[] custom;
+   }
+   int totwords;
+   nread=fread(&(totwords),sizeof(int),1,modelfl);
+   {// ignore these
+       int totdoc;
+       nread=fread(&(totdoc),sizeof(int),1,modelfl);
+       int sv_num;
+       nread=fread(&(sv_num), sizeof(int),1,modelfl);
+   }
+
+   double linearbias;
+   nread=fread(&linearbias, sizeof(double), 1, modelfl);
+
+   std::vector<float> detector;
+   detector.clear();
+   if(kernel_type == 0) { /* linear kernel */
+       /* save linear wts also */
+       double *linearwt = new double[totwords+1];
+       int length = totwords;
+       nread = fread(linearwt, sizeof(double), totwords + 1, modelfl);
+       if(nread != static_cast<size_t>(length) + 1)
+           throw Exception();
+
+       for(int i = 0; i < length; i++)
+           detector.push_back((float)linearwt[i]);
+
+       detector.push_back((float)-linearbias);
+       setSVMDetector(detector);
+       delete linearwt;
+   } else {
+       throw Exception();
+   }
+   fclose(modelfl);
 }
 
 }

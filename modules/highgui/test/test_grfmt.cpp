@@ -217,11 +217,68 @@ public:
     }
 };
 
+
 #ifdef HAVE_PNG
-TEST(Highgui_Image, write_big) { CV_GrfmtWriteBigImageTest      test; test.safe_run(); }
+TEST(Highgui_Image, write_big) { CV_GrfmtWriteBigImageTest test; test.safe_run(); }
 #endif
 
 TEST(Highgui_Image, write_imageseq) { CV_GrfmtWriteSequenceImageTest test; test.safe_run(); }
 
 TEST(Highgui_Image, read_bmp_rle8) { CV_GrfmtReadBMPRLE8Test test; test.safe_run(); }
+
+#ifdef HAVE_PNG
+class CV_GrfmtPNGEncodeTest : public cvtest::BaseTest
+{
+public:
+    void run(int)
+    {
+        try
+        {
+            vector<uchar> buff;
+            Mat im = Mat::zeros(1000,1000, CV_8U);
+            //randu(im, 0, 256);
+            vector<int> param;
+            param.push_back(CV_IMWRITE_PNG_COMPRESSION);
+            param.push_back(3); //default(3) 0-9.
+            cv::imencode(".png" ,im ,buff, param);
+
+            // hangs
+            Mat im2 = imdecode(buff,CV_LOAD_IMAGE_ANYDEPTH);
+        }
+        catch(...)
+        {
+            ts->set_failed_test_info(cvtest::TS::FAIL_EXCEPTION);
+        }
+        ts->set_failed_test_info(cvtest::TS::OK);
+    }
+};
+
+TEST(Highgui_Image, encode_png) { CV_GrfmtPNGEncodeTest test; test.safe_run(); }
+
+TEST(Highgui_ImreadVSCvtColor, regression)
+{
+    cvtest::TS& ts = *cvtest::TS::ptr();
+
+    const int MAX_MEAN_DIFF = 1;
+    const int MAX_ABS_DIFF = 10;
+
+    string imgName = string(ts.get_data_path()) + "/../cv/shared/lena.png";
+    Mat original_image = imread(imgName);
+    Mat gray_by_codec = imread(imgName, 0);
+    Mat gray_by_cvt;
+
+    cvtColor(original_image, gray_by_cvt, CV_BGR2GRAY);
+
+    Mat diff;
+    absdiff(gray_by_codec, gray_by_cvt, diff);
+
+    double actual_avg_diff = (double)mean(diff)[0];
+    double actual_maxval, actual_minval;
+    minMaxLoc(diff, &actual_minval, &actual_maxval);
+	//printf("actual avg = %g, actual maxdiff = %g, npixels = %d\n", actual_avg_diff, actual_maxval, (int)diff.total());
+
+    EXPECT_LT(actual_avg_diff, MAX_MEAN_DIFF);
+    EXPECT_LT(actual_maxval, MAX_ABS_DIFF);
+}
+#endif
 

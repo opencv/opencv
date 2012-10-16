@@ -213,25 +213,56 @@ static void keepStrongest( int N, vector<KeyPoint>& keypoints )
     }
 }
 
-void GridAdaptedFeatureDetector::detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask ) const
+namespace {
+class GridAdaptedFeatureDetectorInvoker
 {
-    keypoints.reserve(maxTotalKeypoints);
+private:
+    int gridRows_, gridCols_;
+    int maxPerCell_;
+    vector<KeyPoint>& keypoints_;
+    const Mat& image_;
+    const Mat& mask_;
+    const Ptr<FeatureDetector>& detector_;
+#ifdef HAVE_TBB
+    tbb::mutex* kptLock_;
+#endif
 
-    int maxPerCell = maxTotalKeypoints / (gridRows * gridCols);
-    for( int i = 0; i < gridRows; ++i )
+    GridAdaptedFeatureDetectorInvoker& operator=(const GridAdaptedFeatureDetectorInvoker&); // to quiet MSVC
+
+public:
+
+    GridAdaptedFeatureDetectorInvoker(const Ptr<FeatureDetector>& detector, const Mat& image, const Mat& mask, vector<KeyPoint>& keypoints, int maxPerCell, int gridRows, int gridCols
+#ifdef HAVE_TBB
+        , tbb::mutex* kptLock
+#endif
+        ) : gridRows_(gridRows), gridCols_(gridCols), maxPerCell_(maxPerCell),
+            keypoints_(keypoints), image_(image), mask_(mask), detector_(detector)
+#ifdef HAVE_TBB
+            , kptLock_(kptLock)
+#endif
     {
-        Range row_range((i*image.rows)/gridRows, ((i+1)*image.rows)/gridRows);
-        for( int j = 0; j < gridCols; ++j )
+    }
+
+    void operator() (const BlockedRange& range) const
+    {
+        for (int i = range.begin(); i < range.end(); ++i)
         {
-            Range col_range((j*image.cols)/gridCols, ((j+1)*image.cols)/gridCols);
-            Mat sub_image = image(row_range, col_range);
+            int celly = i / gridCols_;
+            int cellx = i - celly * gridCols_;
+
+            Range row_range((celly*image_.rows)/gridRows_, ((celly+1)*image_.rows)/gridRows_);
+            Range col_range((cellx*image_.cols)/gridCols_, ((cellx+1)*image_.cols)/gridCols_);
+
+            Mat sub_image = image_(row_range, col_range);
             Mat sub_mask;
-            if( !mask.empty() )
-                sub_mask = mask(row_range, col_range);
+            if (!mask_.empty()) sub_mask = mask_(row_range, col_range);
 
             vector<KeyPoint> sub_keypoints;
-            detector->detect( sub_image, sub_keypoints, sub_mask );
-            keepStrongest( maxPerCell, sub_keypoints );
+            sub_keypoints.reserve(maxPerCell_);
+
+            detector_->detect( sub_image, sub_keypoints, sub_mask );
+            keepStrongest( maxPerCell_, sub_keypoints );
+
             std::vector<cv::KeyPoint>::iterator it = sub_keypoints.begin(),
                                                 end = sub_keypoints.end();
             for( ; it != end; ++it )
@@ -239,10 +270,32 @@ void GridAdaptedFeatureDetector::detectImpl( const Mat& image, vector<KeyPoint>&
                 it->pt.x += col_range.start;
                 it->pt.y += row_range.start;
             }
-
-            keypoints.insert( keypoints.end(), sub_keypoints.begin(), sub_keypoints.end() );
+#ifdef HAVE_TBB
+            tbb::mutex::scoped_lock join_keypoints(*kptLock_);
+#endif
+            keypoints_.insert( keypoints_.end(), sub_keypoints.begin(), sub_keypoints.end() );
         }
     }
+};
+} // namepace
+
+void GridAdaptedFeatureDetector::detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask ) const
+{
+    if (image.empty() || maxTotalKeypoints < gridRows * gridCols)
+    {
+        keypoints.clear();
+        return;
+    }
+    keypoints.reserve(maxTotalKeypoints);
+    int maxPerCell = maxTotalKeypoints / (gridRows * gridCols);
+
+#ifdef HAVE_TBB
+    tbb::mutex kptLock;
+    cv::parallel_for(cv::BlockedRange(0, gridRows * gridCols),
+        GridAdaptedFeatureDetectorInvoker(detector, image, mask, keypoints, maxPerCell, gridRows, gridCols, &kptLock));
+#else
+    GridAdaptedFeatureDetectorInvoker(detector, image, mask, keypoints, maxPerCell, gridRows, gridCols)(cv::BlockedRange(0, gridRows * gridCols));
+#endif
 }
 
 /*

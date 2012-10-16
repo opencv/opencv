@@ -16,6 +16,8 @@ using std::tr1::get;
 
 typedef TestBaseWithParam<String> stitch;
 typedef TestBaseWithParam<String> match;
+typedef std::tr1::tuple<String, int> matchVector_t;
+typedef TestBaseWithParam<matchVector_t> matchVector;
 
 #ifdef HAVE_OPENCV_NONFREE
 #define TEST_DETECTORS testing::Values("surf", "orb")
@@ -28,9 +30,9 @@ PERF_TEST_P(stitch, a123, TEST_DETECTORS)
     Mat pano;
 
     vector<Mat> imgs;
-    imgs.push_back( imread( getDataPath("stitching/a1.jpg") ) );
-    imgs.push_back( imread( getDataPath("stitching/a2.jpg") ) );
-    imgs.push_back( imread( getDataPath("stitching/a3.jpg") ) );
+    imgs.push_back( imread( getDataPath("stitching/a1.png") ) );
+    imgs.push_back( imread( getDataPath("stitching/a2.png") ) );
+    imgs.push_back( imread( getDataPath("stitching/a3.png") ) );
 
     Ptr<detail::FeaturesFinder> featuresFinder = GetParam() == "orb"
             ? (detail::FeaturesFinder*)new detail::OrbFeaturesFinder()
@@ -54,6 +56,8 @@ PERF_TEST_P(stitch, a123, TEST_DETECTORS)
         stitcher.stitch(imgs, pano);
         stopTimer();
     }
+
+    SANITY_CHECK(pano, 2);
 }
 
 PERF_TEST_P(stitch, b12, TEST_DETECTORS)
@@ -61,8 +65,8 @@ PERF_TEST_P(stitch, b12, TEST_DETECTORS)
     Mat pano;
 
     vector<Mat> imgs;
-    imgs.push_back( imread( getDataPath("stitching/b1.jpg") ) );
-    imgs.push_back( imread( getDataPath("stitching/b2.jpg") ) );
+    imgs.push_back( imread( getDataPath("stitching/b1.png") ) );
+    imgs.push_back( imread( getDataPath("stitching/b2.png") ) );
 
     Ptr<detail::FeaturesFinder> featuresFinder = GetParam() == "orb"
             ? (detail::FeaturesFinder*)new detail::OrbFeaturesFinder()
@@ -86,12 +90,14 @@ PERF_TEST_P(stitch, b12, TEST_DETECTORS)
         stitcher.stitch(imgs, pano);
         stopTimer();
     }
+
+    SANITY_CHECK(pano, 2);
 }
 
 PERF_TEST_P( match, bestOf2Nearest, TEST_DETECTORS)
 {
-    Mat img1, img1_full = imread( getDataPath("stitching/b1.jpg") );
-    Mat img2, img2_full = imread( getDataPath("stitching/b2.jpg") );
+    Mat img1, img1_full = imread( getDataPath("stitching/b1.png") );
+    Mat img2, img2_full = imread( getDataPath("stitching/b2.png") );
     float scale1 = (float)std::min(1.0, sqrt(WORK_MEGAPIX * 1e6 / img1_full.total()));
     float scale2 = (float)std::min(1.0, sqrt(WORK_MEGAPIX * 1e6 / img2_full.total()));
     resize(img1_full, img1, Size(), scale1, scale1);
@@ -120,8 +126,7 @@ PERF_TEST_P( match, bestOf2Nearest, TEST_DETECTORS)
 
     detail::MatchesInfo pairwise_matches;
 
-    declare.in(features1.descriptors, features2.descriptors)
-            .iterations(100);
+    declare.in(features1.descriptors, features2.descriptors);
 
     while(next())
     {
@@ -131,4 +136,63 @@ PERF_TEST_P( match, bestOf2Nearest, TEST_DETECTORS)
         stopTimer();
         matcher->collectGarbage();
     }
+
+    SANITY_CHECK_MATCHES(pairwise_matches.matches);
+}
+
+PERF_TEST_P( matchVector, bestOf2NearestVectorFeatures, testing::Combine(
+                 TEST_DETECTORS,
+                 testing::Values(2, 4, 6, 8))
+             )
+{
+    Mat img1, img1_full = imread( getDataPath("stitching/b1.png") );
+    Mat img2, img2_full = imread( getDataPath("stitching/b2.png") );
+    float scale1 = (float)std::min(1.0, sqrt(WORK_MEGAPIX * 1e6 / img1_full.total()));
+    float scale2 = (float)std::min(1.0, sqrt(WORK_MEGAPIX * 1e6 / img2_full.total()));
+    resize(img1_full, img1, Size(), scale1, scale1);
+    resize(img2_full, img2, Size(), scale2, scale2);
+
+    Ptr<detail::FeaturesFinder> finder;
+    Ptr<detail::FeaturesMatcher> matcher;
+    String detectorName = get<0>(GetParam());
+    int featuresVectorSize = get<1>(GetParam());
+    if (detectorName == "surf")
+    {
+        finder = new detail::SurfFeaturesFinder();
+        matcher = new detail::BestOf2NearestMatcher(false, SURF_MATCH_CONFIDENCE);
+    }
+    else if (detectorName == "orb")
+    {
+        finder = new detail::OrbFeaturesFinder();
+        matcher = new detail::BestOf2NearestMatcher(false, ORB_MATCH_CONFIDENCE);
+    }
+    else
+    {
+        FAIL() << "Unknown 2D features type: " << get<0>(GetParam());
+    }
+
+    detail::ImageFeatures features1, features2;
+    (*finder)(img1, features1);
+    (*finder)(img2, features2);
+    vector<detail::ImageFeatures> features;
+    vector<detail::MatchesInfo> pairwise_matches;
+    for(int i = 0; i < featuresVectorSize/2; i++)
+    {
+        features.push_back(features1);
+        features.push_back(features2);
+    }
+
+    declare.time(200);
+    while(next())
+    {
+        cvflann::seed_random(42);//for predictive FlannBasedMatcher
+        startTimer();
+        (*matcher)(features, pairwise_matches);
+        stopTimer();
+        matcher->collectGarbage();
+    }
+
+
+    std::vector<DMatch>& matches = pairwise_matches[0].matches;
+    SANITY_CHECK_MATCHES(matches);
 }

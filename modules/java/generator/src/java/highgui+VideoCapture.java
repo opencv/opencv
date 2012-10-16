@@ -47,14 +47,14 @@ public class VideoCapture {
     //
 
 /**
- * Returns the specified "VideoCapture" property
+ * Returns the specified "VideoCapture" property.
  *
  * Note: When querying a property that is not supported by the backend used by
  * the "VideoCapture" class, value 0 is returned.
  *
- * @param propId Property identifier. It can be one of the following:
- *   * CV_CAP_PROP_FRAME_WIDTH Width of the frames in the video stream.
- *   * CV_CAP_PROP_FRAME_HEIGHT Height of the frames in the video stream.
+ * @param propId property identifier; it can be one of the following:
+ *   * CV_CAP_PROP_FRAME_WIDTH width of the frames in the video stream.
+ *   * CV_CAP_PROP_FRAME_HEIGHT height of the frames in the video stream.
  *
  * @see <a href="http://opencv.itseez.com/modules/highgui/doc/reading_and_writing_images_and_video.html#videocapture-get">org.opencv.highgui.VideoCapture.get</a>
  */
@@ -173,10 +173,10 @@ public class VideoCapture {
 /**
  * Sets a property in the "VideoCapture".
  *
- * @param propId Property identifier. It can be one of the following:
- *   * CV_CAP_PROP_FRAME_WIDTH Width of the frames in the video stream.
- *   * CV_CAP_PROP_FRAME_HEIGHT Height of the frames in the video stream.
- * @param value Value of the property.
+ * @param propId property identifier; it can be one of the following:
+ *   * CV_CAP_PROP_FRAME_WIDTH width of the frames in the video stream.
+ *   * CV_CAP_PROP_FRAME_HEIGHT height of the frames in the video stream.
+ * @param value value of the property.
  *
  * @see <a href="http://opencv.itseez.com/modules/highgui/doc/reading_and_writing_images_and_video.html#videocapture-set">org.opencv.highgui.VideoCapture.set</a>
  */

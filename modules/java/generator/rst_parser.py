@@ -1,5 +1,5 @@
-import os, sys, re, string, glob
-allmodules = ["core", "flann", "imgproc", "ml", "highgui", "video", "features2d", "calib3d", "objdetect", "legacy", "contrib", "gpu", "androidcamera", "java", "python", "stitching", "ts", "photo", "nonfree", "videostab"]
+import os, sys, re, string, fnmatch
+allmodules = ["core", "flann", "imgproc", "ml", "highgui", "video", "features2d", "calib3d", "objdetect", "legacy", "contrib", "gpu", "androidcamera", "java", "python", "stitching", "ts", "photo", "nonfree", "videostab", "ocl"]
 verbose = False
 show_warnings = True
 show_errors = True
@@ -46,6 +46,8 @@ params_mapping = {
         "pGrid" : "\\*Grid"
     }
 }
+
+known_text_sections_names = ["Appendix", "Results", "Prerequisites", "Introduction", "Description"]
 
 class DeclarationParser(object):
     def __init__(self, line=None):
@@ -125,7 +127,12 @@ class RstParser(object):
     def parse(self, module_name, module_path=None):
         if module_path is None:
             module_path = "../" + module_name
-        doclist = glob.glob(os.path.join(module_path,"doc/*.rst"))
+
+        doclist = []
+        for root, dirs, files in os.walk(os.path.join(module_path,"doc")):
+            for filename in fnmatch.filter(files, "*.rst"):
+                doclist.append(os.path.join(root, filename))
+
         for doc in doclist:
             self.parse_rst_file(module_name, doc)
 
@@ -141,7 +148,7 @@ class RstParser(object):
         self.sections_total += 1
         # skip sections having whitespace in name
         #if section_name.find(" ") >= 0 and section_name.find("::operator") < 0:
-        if section_name.find(" ") >= 0 and not bool(re.match(r"(\w+::)*operator\s*(\w+|>>|<<|\(\)|->|\+\+|--|=|==|\+=|-=)", section_name)):
+        if (section_name.find(" ") >= 0 and not bool(re.match(r"(\w+::)*operator\s*(\w+|>>|<<|\(\)|->|\+\+|--|=|==|\+=|-=)", section_name)) ) or section_name.endswith(":"):
             if show_errors:
                 print >> sys.stderr, "RST parser warning W%03d:  SKIPPED: \"%s\" File: %s:%s" % (WARNING_002_HDRWHITESPACE, section_name, file_name, lineno)
             self.sections_skipped += 1
@@ -165,6 +172,7 @@ class RstParser(object):
         capturing_seealso = False
         skip_code_lines = False
         expected_brief = True
+        was_code_line = False
         fdecl = DeclarationParser()
         pdecl = ParamParser()
 
@@ -194,17 +202,21 @@ class RstParser(object):
 
             # skip lines if line-skipping mode is activated
             if skip_code_lines:
-                if not l or l.startswith(" "):
-                    continue
+		if not l:
+		    continue
+                if l.startswith(" "):
+                    None
                 else:
                     skip_code_lines = False
 
             if ll.startswith(".. code-block::") or ll.startswith(".. image::"):
                 skip_code_lines = True
+                
                 continue
 
             # todo: parse structure members; skip them for now
             if ll.startswith(".. ocv:member::"):
+		#print ll
                 skip_code_lines = True
                 continue
 
@@ -216,6 +228,7 @@ class RstParser(object):
                 expected_brief = False
             elif ll.endswith("::"):
                 # turn on line-skipping mode for code fragments
+                #print ll
                 skip_code_lines = True
                 ll = ll[:len(ll)-2]
 
@@ -279,9 +292,20 @@ class RstParser(object):
                 continue
 
             # record other lines as long description
-            func["long"] = func.get("long", "") + "\n" + ll
-            if skip_code_lines:
-                func["long"] = func.get("long", "") + "\n"
+            if (skip_code_lines):
+		ll = ll.replace("/*", "/ *")
+		ll = ll.replace("*/", "* /")
+		if (was_code_line):
+		    func["long"] = func.get("long", "") + "\n" + ll + "\n"
+		else:
+		    was_code_line = True;
+		    func["long"] = func.get("long", "") + ll +"\n<code>\n\n // C++ code:\n\n"
+	    else:
+		if (was_code_line):
+		    func["long"] = func.get("long", "") + "\n" + ll + "\n</code>\n";
+		    was_code_line = False;
+		else:
+		    func["long"] = func.get("long", "") + "\n" + ll
         # endfor l in lines
 
         if fdecl.balance != 0:
@@ -301,7 +325,11 @@ class RstParser(object):
             if verbose:
                 self.print_info(func)
         elif func:
-            if show_errors:
+            if func["name"] in known_text_sections_names:
+                if show_errors:
+                    print >> sys.stderr, "RST parser warning W%03d:  SKIPPED: \"%s\" File: %s:%s" % (WARNING_002_HDRWHITESPACE, section_name, file_name, lineno)
+                self.sections_skipped += 1
+            elif show_errors:
                 self.print_info(func, True, sys.stderr)
 
     def parse_rst_file(self, module_name, doc):
@@ -331,7 +359,7 @@ class RstParser(object):
                 continue
 
             ll = l.rstrip()
-            if len(prev_line) > 0 and len(ll) >= len(prev_line) and ll == "-" * len(ll):
+            if len(prev_line) > 0 and len(ll) >= len(prev_line) and (ll == "-" * len(ll) or ll == "+" * len(ll) or ll == "=" * len(ll)):
                 # new function candidate
                 if len(lines) > 1:
                     self.parse_section_safe(module_name, fname, doc, flineno, lines[:len(lines)-1])
@@ -601,7 +629,6 @@ class RstParser(object):
         return s
 
     def printSummary(self):
-        print
         print "RST Parser Summary:"
         print "  Total sections:   %s" % self.sections_total
         print "  Skipped sections: %s" % self.sections_skipped
@@ -645,6 +672,8 @@ def mathReplace(match):
     m = match.group(1)
 
     m = m.replace("\n", "<BR>")
+    m = m.replace("<", "&lt")
+    m = m.replace(">", "&gt")
     m = re.sub(r"\\text(tt|rm)?{(.*?)}", "\\2", m)
     m = re.sub(r"\\mbox{(.*?)}", "\\1", m)
     m = re.sub(r"\\mathrm{(.*?)}", "\\1", m)

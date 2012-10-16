@@ -40,6 +40,8 @@
 //
 //M*/
 
+#if !defined CUDA_DISABLER
+
 #include "internal_shared.hpp"
 
 namespace cv { namespace gpu { namespace device
@@ -308,7 +310,7 @@ namespace cv { namespace gpu { namespace device
         }
 
 
-        template<int RADIUS> void kernel_caller(const DevMem2Db& left, const DevMem2Db& right, const DevMem2Db& disp, int maxdisp, cudaStream_t & stream)
+        template<int RADIUS> void kernel_caller(const PtrStepSzb& left, const PtrStepSzb& right, const PtrStepSzb& disp, int maxdisp, cudaStream_t & stream)
         {
             dim3 grid(1,1,1);
             dim3 threads(BLOCK_W, 1, 1);
@@ -326,7 +328,7 @@ namespace cv { namespace gpu { namespace device
                 cudaSafeCall( cudaDeviceSynchronize() );
         };
 
-        typedef void (*kernel_caller_t)(const DevMem2Db& left, const DevMem2Db& right, const DevMem2Db& disp, int maxdisp, cudaStream_t & stream);
+        typedef void (*kernel_caller_t)(const PtrStepSzb& left, const PtrStepSzb& right, const PtrStepSzb& disp, int maxdisp, cudaStream_t & stream);
 
         const static kernel_caller_t callers[] =
         {
@@ -341,7 +343,7 @@ namespace cv { namespace gpu { namespace device
         };
         const int calles_num = sizeof(callers)/sizeof(callers[0]);
 
-        void stereoBM_GPU(const DevMem2Db& left, const DevMem2Db& right, const DevMem2Db& disp, int maxdisp, int winsz, const DevMem2D_<unsigned int>& minSSD_buf, cudaStream_t& stream)
+        void stereoBM_GPU(const PtrStepSzb& left, const PtrStepSzb& right, const PtrStepSzb& disp, int maxdisp, int winsz, const PtrStepSz<unsigned int>& minSSD_buf, cudaStream_t& stream)
         {
             int winsz2 = winsz >> 1;
 
@@ -370,7 +372,7 @@ namespace cv { namespace gpu { namespace device
 
         texture<unsigned char, 2, cudaReadModeElementType> texForSobel;
 
-        __global__ void prefilter_kernel(DevMem2Db output, int prefilterCap)
+        __global__ void prefilter_kernel(PtrStepSzb output, int prefilterCap)
         {
             int x = blockDim.x * blockIdx.x + threadIdx.x;
             int y = blockDim.y * blockIdx.y + threadIdx.y;
@@ -387,7 +389,7 @@ namespace cv { namespace gpu { namespace device
             }
         }
 
-        void prefilter_xsobel(const DevMem2Db& input, const DevMem2Db& output, int prefilterCap, cudaStream_t & stream)
+        void prefilter_xsobel(const PtrStepSzb& input, const PtrStepSzb& output, int prefilterCap, cudaStream_t & stream)
         {
             cudaChannelFormatDesc desc = cudaCreateChannelDesc<unsigned char>();
             cudaSafeCall( cudaBindTexture2D( 0, texForSobel, input.data, desc, input.cols, input.rows, input.step ) );
@@ -446,7 +448,7 @@ namespace cv { namespace gpu { namespace device
 
         #define RpT (2 * ROWSperTHREAD)  // got experimentally
 
-        __global__ void textureness_kernel(DevMem2Db disp, int winsz, float threshold)
+        __global__ void textureness_kernel(PtrStepSzb disp, int winsz, float threshold)
         {
             int winsz2 = winsz/2;
             int n_dirty_pixels = (winsz2) * 2;
@@ -505,7 +507,7 @@ namespace cv { namespace gpu { namespace device
             }
         }
 
-        void postfilter_textureness(const DevMem2Db& input, int winsz, float avgTexturenessThreshold, const DevMem2Db& disp, cudaStream_t & stream)
+        void postfilter_textureness(const PtrStepSzb& input, int winsz, float avgTexturenessThreshold, const PtrStepSzb& disp, cudaStream_t & stream)
         {
             avgTexturenessThreshold *= winsz * winsz;
 
@@ -533,3 +535,6 @@ namespace cv { namespace gpu { namespace device
         }
     } // namespace stereobm
 }}} // namespace cv { namespace gpu { namespace device
+
+
+#endif /* CUDA_DISABLER */

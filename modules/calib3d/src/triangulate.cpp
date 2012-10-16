@@ -415,6 +415,12 @@ void cv::triangulatePoints( InputArray _projMatr1, InputArray _projMatr2,
     Mat matr1 = _projMatr1.getMat(), matr2 = _projMatr2.getMat();
     Mat points1 = _projPoints1.getMat(), points2 = _projPoints2.getMat();
 
+    if((points1.rows == 1 || points1.cols == 1) && points1.channels() == 2)
+        points1 = points1.reshape(1, static_cast<int>(points1.total())).t();
+
+    if((points2.rows == 1 || points2.cols == 1) && points2.channels() == 2)
+        points2 = points2.reshape(1, static_cast<int>(points2.total())).t();
+
     CvMat cvMatr1 = matr1, cvMatr2 = matr2;
     CvMat cvPoints1 = points1, cvPoints2 = points2;
 
@@ -429,6 +435,7 @@ void cv::correctMatches( InputArray _F, InputArray _points1, InputArray _points2
 {
     Mat F = _F.getMat();
     Mat points1 = _points1.getMat(), points2 = _points2.getMat();
+
     CvMat cvPoints1 = points1, cvPoints2 = points2;
     CvMat cvF = F;
 

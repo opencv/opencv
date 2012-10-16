@@ -39,20 +39,16 @@
 //
 //M*/
 
-#include <main_test_nvidia.h>
-#include "precomp.hpp"
+#include "test_precomp.hpp"
 
-#ifdef HAVE_CUDA
+#if defined HAVE_CUDA
+  OutputLevel nvidiaTestOutputLevel = OutputLevelNone;
+#endif
+
+#if defined HAVE_CUDA && !defined(CUDA_DISABLER)
 
 using namespace cvtest;
 using namespace testing;
-
-//enum OutputLevel
-//{
-//    OutputLevelNone,
-//    OutputLevelCompact,
-//    OutputLevelFull
-//};
 
 struct NVidiaTest : TestWithParam<cv::gpu::DeviceInfo>
 {
@@ -72,8 +68,6 @@ struct NVidiaTest : TestWithParam<cv::gpu::DeviceInfo>
 
 struct NPPST : NVidiaTest {};
 struct NCV : NVidiaTest {};
-
-OutputLevel nvidiaTestOutputLevel = OutputLevelCompact;
 
 //TEST_P(NPPST, Integral)
 //{

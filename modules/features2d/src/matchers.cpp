@@ -41,6 +41,7 @@
 
 #include "precomp.hpp"
 
+#include "opencv2/core/internal.hpp"
 #if defined(HAVE_EIGEN) && EIGEN_WORLD_VERSION == 2
 #include <Eigen/Array>
 #endif
@@ -269,7 +270,7 @@ void DescriptorMatcher::knnMatch( const Mat& queryDescriptors, vector<vector<DMa
         return;
 
     CV_Assert( knn > 0 );
-	
+
     checkMasks( masks, queryDescriptors.rows );
 
     train();
@@ -284,7 +285,7 @@ void DescriptorMatcher::radiusMatch( const Mat& queryDescriptors, vector<vector<
         return;
 
     CV_Assert( maxDistance > std::numeric_limits<float>::epsilon() );
-	
+
     checkMasks( masks, queryDescriptors.rows );
 
     train();
@@ -314,9 +315,9 @@ bool DescriptorMatcher::isMaskedOut( const vector<Mat>& masks, int queryIdx )
     return !masks.empty() && outCount == masks.size() ;
 }
 
-    
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
-    
+
 BFMatcher::BFMatcher( int _normType, bool _crossCheck )
 {
     normType = _normType;
@@ -341,24 +342,24 @@ void BFMatcher::knnMatchImpl( const Mat& queryDescriptors, vector<vector<DMatch>
 {
     const int IMGIDX_SHIFT = 18;
     const int IMGIDX_ONE = (1 << IMGIDX_SHIFT);
-    
+
     if( queryDescriptors.empty() || trainDescCollection.empty() )
     {
         matches.clear();
         return;
     }
     CV_Assert( queryDescriptors.type() == trainDescCollection[0].type() );
-    
+
     matches.reserve(queryDescriptors.rows);
-    
+
     Mat dist, nidx;
-    
+
     int iIdx, imgCount = (int)trainDescCollection.size(), update = 0;
     int dtype = normType == NORM_HAMMING || normType == NORM_HAMMING2 ||
         (normType == NORM_L1 && queryDescriptors.type() == CV_8U) ? CV_32S : CV_32F;
-    
+
     CV_Assert( (int64)imgCount*IMGIDX_ONE < INT_MAX );
-    
+
     for( iIdx = 0; iIdx < imgCount; iIdx++ )
     {
         CV_Assert( trainDescCollection[iIdx].rows < IMGIDX_ONE );
@@ -366,23 +367,23 @@ void BFMatcher::knnMatchImpl( const Mat& queryDescriptors, vector<vector<DMatch>
                       normType, knn, masks.empty() ? Mat() : masks[iIdx], update, crossCheck);
         update += IMGIDX_ONE;
     }
-    
+
     if( dtype == CV_32S )
     {
         Mat temp;
         dist.convertTo(temp, CV_32F);
         dist = temp;
     }
-    
+
     for( int qIdx = 0; qIdx < queryDescriptors.rows; qIdx++ )
     {
         const float* distptr = dist.ptr<float>(qIdx);
         const int* nidxptr = nidx.ptr<int>(qIdx);
-        
+
         matches.push_back( vector<DMatch>() );
         vector<DMatch>& mq = matches.back();
         mq.reserve(knn);
-        
+
         for( int k = 0; k < nidx.cols; k++ )
         {
             if( nidxptr[k] < 0 )
@@ -390,13 +391,13 @@ void BFMatcher::knnMatchImpl( const Mat& queryDescriptors, vector<vector<DMatch>
             mq.push_back( DMatch(qIdx, nidxptr[k] & (IMGIDX_ONE - 1),
                           nidxptr[k] >> IMGIDX_SHIFT, distptr[k]) );
         }
-        
+
         if( mq.empty() && compactResult )
             matches.pop_back();
     }
 }
 
-    
+
 void BFMatcher::radiusMatchImpl( const Mat& queryDescriptors, vector<vector<DMatch> >& matches,
                                  float maxDistance, const vector<Mat>& masks, bool compactResult )
 {
@@ -406,14 +407,14 @@ void BFMatcher::radiusMatchImpl( const Mat& queryDescriptors, vector<vector<DMat
         return;
     }
     CV_Assert( queryDescriptors.type() == trainDescCollection[0].type() );
-    
+
     matches.resize(queryDescriptors.rows);
     Mat dist, distf;
-    
+
     int iIdx, imgCount = (int)trainDescCollection.size();
     int dtype = normType == NORM_HAMMING ||
         (normType == NORM_L1 && queryDescriptors.type() == CV_8U) ? CV_32S : CV_32F;
-    
+
     for( iIdx = 0; iIdx < imgCount; iIdx++ )
     {
         batchDistance(queryDescriptors, trainDescCollection[iIdx], dist, dtype, noArray(),
@@ -422,36 +423,36 @@ void BFMatcher::radiusMatchImpl( const Mat& queryDescriptors, vector<vector<DMat
             dist.convertTo(distf, CV_32F);
         else
             distf = dist;
-        
+
         for( int qIdx = 0; qIdx < queryDescriptors.rows; qIdx++ )
         {
-            const float* distptr = dist.ptr<float>(qIdx);
-            
+            const float* distptr = distf.ptr<float>(qIdx);
+
             vector<DMatch>& mq = matches[qIdx];
-            for( int k = 0; k < dist.cols; k++ )
+            for( int k = 0; k < distf.cols; k++ )
             {
                 if( distptr[k] <= maxDistance )
                     mq.push_back( DMatch(qIdx, k, iIdx, distptr[k]) );
             }
         }
     }
-    
+
     int qIdx0 = 0;
     for( int qIdx = 0; qIdx < queryDescriptors.rows; qIdx++ )
     {
         if( matches[qIdx].empty() && compactResult )
             continue;
-        
+
         if( qIdx0 < qIdx )
             std::swap(matches[qIdx], matches[qIdx0]);
-        
+
         std::sort( matches[qIdx0].begin(), matches[qIdx0].end() );
         qIdx0++;
     }
 }
-    
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
-    
+
 /*
  * Factory function for DescriptorMatcher creating
  */
@@ -1024,7 +1025,7 @@ void GenericDescriptorMatcher::knnMatch( const Mat& queryImage, vector<KeyPoint>
 
     KeyPointsFilter::runByImageBorder( queryKeypoints, queryImage.size(), 0 );
     KeyPointsFilter::runByKeypointSize( queryKeypoints, std::numeric_limits<float>::epsilon() );
-    
+
     train();
     knnMatchImpl( queryImage, queryKeypoints, matches, knn, masks, compactResult );
 }
@@ -1040,7 +1041,7 @@ void GenericDescriptorMatcher::radiusMatch( const Mat& queryImage, vector<KeyPoi
 
     KeyPointsFilter::runByImageBorder( queryKeypoints, queryImage.size(), 0 );
     KeyPointsFilter::runByKeypointSize( queryKeypoints, std::numeric_limits<float>::epsilon() );
-	
+
     train();
     radiusMatchImpl( queryImage, queryKeypoints, matches, maxDistance, masks, compactResult );
 }
@@ -1064,7 +1065,7 @@ Ptr<GenericDescriptorMatcher> GenericDescriptorMatcher::create( const string& ge
 {
     Ptr<GenericDescriptorMatcher> descriptorMatcher =
         Algorithm::create<GenericDescriptorMatcher>("DescriptorMatcher." + genericDescritptorMatcherType);
-    
+
     if( !paramsFilename.empty() && !descriptorMatcher.empty() )
     {
         FileStorage fs = FileStorage( paramsFilename, FileStorage::READ );

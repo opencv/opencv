@@ -51,6 +51,7 @@ void icvSepConvSmall3_32f( float* src, int src_step, float* dst, int dst_step,
 {
     int  dst_width, buffer_step = 0;
     int  x, y;
+    bool fast_kx = true, fast_ky = true;
 
     assert( src && dst && src_size.width > 2 && src_size.height > 2 &&
             (src_step & 3) == 0 && (dst_step & 3) == 0 &&
@@ -71,35 +72,51 @@ void icvSepConvSmall3_32f( float* src, int src_step, float* dst, int dst_step,
         buffer = dst;
         dst_width = 0;
     }
+    else
+        fast_kx = kx[1] == 0.f && kx[0] == -kx[2] && kx[0] == -1.f;
 
     assert( src_step >= src_size.width && dst_step >= dst_width );
 
-    src_size.height -= 3;
+    src_size.height -= 2;
     if( !ky )
     {
         /* set vars, so that vertical convolution won't run and
            horizontal convolution will write results into destination ROI */
-        src_size.height += 3;
+        src_size.height += 2;
         buffer_step = src_step;
         buffer = src;
         src_size.width = 0;
     }
+    else
+        fast_ky = ky[1] == 0.f && ky[0] == -ky[2] && ky[0] == -1.f;
 
-    for( y = 0; y <= src_size.height; y++, src += src_step,
-                                           dst += dst_step,
-                                           buffer += buffer_step )
+    for( y = 0; y < src_size.height; y++, src += src_step,
+                                          dst += dst_step,
+                                          buffer += buffer_step )
     {
         float* src2 = src + src_step;
         float* src3 = src + src_step*2;
-        for( x = 0; x < src_size.width; x++ )
-        {
-            buffer[x] = (float)(ky[0]*src[x] + ky[1]*src2[x] + ky[2]*src3[x]);
-        }
+        if( fast_ky )
+            for( x = 0; x < src_size.width; x++ )
+            {
+                buffer[x] = (float)(src3[x] - src[x]);
+            }
+        else
+            for( x = 0; x < src_size.width; x++ )
+            {
+                buffer[x] = (float)(ky[0]*src[x] + ky[1]*src2[x] + ky[2]*src3[x]);
+            }
 
-        for( x = 0; x < dst_width; x++ )
-        {
-            dst[x] = (float)(kx[0]*buffer[x] + kx[1]*buffer[x+1] + kx[2]*buffer[x+2]);
-        }
+        if( fast_kx )
+            for( x = 0; x < dst_width; x++ )
+            {
+                dst[x] = (float)(buffer[x+2] - buffer[x]);
+            }
+        else
+            for( x = 0; x < dst_width; x++ )
+            {
+                dst[x] = (float)(kx[0]*buffer[x] + kx[1]*buffer[x+1] + kx[2]*buffer[x+2]);
+            }
     }
 }
 
@@ -560,6 +577,18 @@ void cv::Laplacian( InputArray _src, OutputArray _dst, int ddepth, int ksize,
         ddepth = src.depth();
     _dst.create( src.size(), CV_MAKETYPE(ddepth, src.channels()) );
     Mat dst = _dst.getMat();
+    
+#ifdef HAVE_TEGRA_OPTIMIZATION
+    if (scale == 1.0 && delta == 0)
+    {
+		if (ksize == 1 && tegra::laplace1(src, dst, borderType))
+            return;
+		if (ksize == 3 && tegra::laplace3(src, dst, borderType))
+            return;
+		if (ksize == 5 && tegra::laplace5(src, dst, borderType))
+            return;
+    }
+#endif
     
     if( ksize == 1 || ksize == 3 )
     {

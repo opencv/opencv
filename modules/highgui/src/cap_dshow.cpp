@@ -1819,7 +1819,7 @@ bool videoInput::setVideoSettingCamera(int deviceID, long Property, long lValue,
         hr = getDevice(&VDList[deviceID]->pVideoInputFilter, deviceID, VDList[deviceID]->wDeviceName, VDList[deviceID]->nDeviceName);
 
         char propStr[16];
-        getVideoPropertyAsString(Property,propStr);
+        getCameraPropertyAsString(Property,propStr);
 
         if (verbose) printf("Setting video setting %s.\n", propStr);
         hr = VDList[deviceID]->pVideoInputFilter->QueryInterface(IID_IAMCameraControl, (void**)&pIAMCameraControl);
@@ -1876,7 +1876,7 @@ bool videoInput::getVideoSettingCamera(int deviceID, long Property, long &min, l
     }
 
     char propStr[16];
-    getVideoPropertyAsString(Property,propStr);
+    getCameraPropertyAsString(Property,propStr);
     if (verbose) printf("Setting video setting %s.\n", propStr);
 
     pIAMCameraControl->GetRange(Property, &min, &max, &SteppingDelta, &defaultValue, &flags);

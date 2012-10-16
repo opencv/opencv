@@ -6,7 +6,7 @@ FaceRecognizer
 FaceRecognizer
 --------------
 
-.. ocv:class:: FaceRecognizer
+.. ocv:class:: FaceRecognizer : public Algorithm
 
 All face recognition models in OpenCV are derived from the abstract base class :ocv:class:`FaceRecognizer`, which provides
 a unified access to all face recongition algorithms in OpenCV. ::
@@ -19,6 +19,9 @@ a unified access to all face recongition algorithms in OpenCV. ::
 
       // Trains a FaceRecognizer.
       virtual void train(InputArray src, InputArray labels) = 0;
+
+      // Updates a FaceRecognizer.
+      virtual void update(InputArrayOfArrays src, InputArray labels);
 
       // Gets a prediction from a FaceRecognizer.
       virtual int predict(InputArray src) const = 0;
@@ -40,23 +43,29 @@ a unified access to all face recongition algorithms in OpenCV. ::
   };
 
 
+Description
++++++++++++
+
 I'll go a bit more into detail explaining :ocv:class:`FaceRecognizer`, because it doesn't look like a powerful interface at first sight. But: Every :ocv:class:`FaceRecognizer` is an :ocv:class:`Algorithm`, so you can easily get/set all model internals (if allowed by the implementation). :ocv:class:`Algorithm` is a relatively new OpenCV concept, which is available since the 2.4 release. I suggest you take a look at its description.
 
 :ocv:class:`Algorithm` provides the following features for all derived classes:
 
-    * So called “virtual constructor”. That is, each Algorithm derivative is registered at program start and you can get the list of registered algorithms and create instance of a particular algorithm by its name (see :ocv:func:`Algorithm::create`). If you plan to add your own algorithms, it is good practice to add a unique prefix to your algorithms to distinguish them from other algorithms.
+* So called “virtual constructor”. That is, each Algorithm derivative is registered at program start and you can get the list of registered algorithms and create instance of a particular algorithm by its name (see :ocv:func:`Algorithm::create`). If you plan to add your own algorithms, it is good practice to add a unique prefix to your algorithms to distinguish them from other algorithms.
 
-    * Setting/Retrieving algorithm parameters by name. If you used video capturing functionality from OpenCV highgui module, you are probably familar with :ocv:cfunc:`cvSetCaptureProperty`, :ocv:cfunc:`cvGetCaptureProperty`, :ocv:func:`VideoCapture::set` and :ocv:func:`VideoCapture::get`. :ocv:class:`Algorithm` provides similar method where instead of integer id's you specify the parameter names as text strings. See :ocv:func:`Algorithm::set` and :ocv:func:`Algorithm::get` for details.
+* Setting/Retrieving algorithm parameters by name. If you used video capturing functionality from OpenCV highgui module, you are probably familar with :ocv:cfunc:`cvSetCaptureProperty`, :ocv:cfunc:`cvGetCaptureProperty`, :ocv:func:`VideoCapture::set` and :ocv:func:`VideoCapture::get`. :ocv:class:`Algorithm` provides similar method where instead of integer id's you specify the parameter names as text strings. See :ocv:func:`Algorithm::set` and :ocv:func:`Algorithm::get` for details.
 
-    * Reading and writing parameters from/to XML or YAML files. Every Algorithm derivative can store all its parameters and then read them back. There is no need to re-implement it each time.
+* Reading and writing parameters from/to XML or YAML files. Every Algorithm derivative can store all its parameters and then read them back. There is no need to re-implement it each time.
 
 Moreover every :ocv:class:`FaceRecognizer` supports the:
 
-    * **Training** of a :ocv:class:`FaceRecognizer` with :ocv:func:`FaceRecognizer::train` on a given set of images (your face database!).
+* **Training** of a :ocv:class:`FaceRecognizer` with :ocv:func:`FaceRecognizer::train` on a given set of images (your face database!).
 
-    * **Prediction** of a given sample image, that means a face. The image is given as a :ocv:class:`Mat`.
+* **Prediction** of a given sample image, that means a face. The image is given as a :ocv:class:`Mat`.
 
-    * **Loading/Saving** the model state from/to a given XML or YAML.
+* **Loading/Saving** the model state from/to a given XML or YAML.
+
+Setting the Thresholds
++++++++++++++++++++++++
 
 Sometimes you run into the situation, when you want to apply a threshold on the prediction. A common scenario in face recognition is to tell, wether a face belongs to the training dataset or if it is unknown. You might wonder, why there's no public API in :ocv:class:`FaceRecognizer` to set the threshold for the prediction, but rest assured: It's supported. It just means there's no generic way in an abstract class to provide an interface for setting/getting the thresholds of *every possible* :ocv:class:`FaceRecognizer` algorithm. The appropriate place to set the thresholds is in the constructor of the specific :ocv:class:`FaceRecognizer` and since every :ocv:class:`FaceRecognizer` is a :ocv:class:`Algorithm` (see above), you can get/set the thresholds at runtime!
 
@@ -94,18 +103,31 @@ If you've set the threshold to ``0.0`` as we did above, then:
 
 is going to yield ``-1`` as predicted label, which states this face is unknown.
 
+Getting the name of a FaceRecognizer
++++++++++++++++++++++++++++++++++++++
+
+Since every :ocv:class:`FaceRecognizer` is a :ocv:class:`Algorithm`, you can use :ocv:func:`Algorithm::name` to get the name of a :ocv:class:`FaceRecognizer`:
+
+.. code-block:: cpp
+
+    // Create a FaceRecognizer:
+    Ptr<FaceRecognizer> model = createEigenFaceRecognizer();
+    // And here's how to get its name:
+    std::string name = model->name();
+
+
 FaceRecognizer::train
 ---------------------
 
 Trains a FaceRecognizer with given data and associated labels.
 
-.. ocv:function:: void FaceRecognizer::train(InputArray src, InputArray labels)
+.. ocv:function:: void FaceRecognizer::train( InputArrayOfArrays src, InputArray labels ) = 0
 
     :param src: The training images, that means the faces you want to learn. The data has to be given as a ``vector<Mat>``.
 
     :param labels: The labels corresponding to the images have to be given either as a ``vector<int>`` or a
 
-The following source code snippet shows you how to learn a Fisherfaces model on a given set of images. The images are read with ocv:func:`imread` and pushed into a `std::vector<Mat>`. The labels of each image are stored within a ``std::vector<int>`` (you could also use a :ocv:class:`Mat` of type `CV_32SC1`). Think of the label as the subject (the person) this image belongs to, so same subjects (persons) should have the same label. For the available :ocv:class:`FaceRecognizer` you don't have to pay any attention to the order of the labels, just make sure same persons have the same label:
+The following source code snippet shows you how to learn a Fisherfaces model on a given set of images. The images are read with :ocv:func:`imread` and pushed into a ``std::vector<Mat>``. The labels of each image are stored within a ``std::vector<int>`` (you could also use a :ocv:class:`Mat` of type `CV_32SC1`). Think of the label as the subject (the person) this image belongs to, so same subjects (persons) should have the same label. For the available :ocv:class:`FaceRecognizer` you don't have to pay any attention to the order of the labels, just make sure same persons have the same label:
 
 .. code-block:: cpp
 
@@ -120,7 +142,6 @@ The following source code snippet shows you how to learn a Fisherfaces model on 
     images.push_back(imread("person1/0.jpg", CV_LOAD_IMAGE_GRAYSCALE)); labels.push_back(1);
     images.push_back(imread("person1/1.jpg", CV_LOAD_IMAGE_GRAYSCALE)); labels.push_back(1);
     images.push_back(imread("person1/2.jpg", CV_LOAD_IMAGE_GRAYSCALE)); labels.push_back(1);
-
 
 Now that you have read some images, we can create a new :ocv:class:`FaceRecognizer`. In this example I'll create a Fisherfaces model and decide to keep all of the possible Fisherfaces:
 
@@ -140,25 +161,61 @@ And finally train it on the given dataset (the face images and labels):
     //
     model->train(images, labels);
 
+FaceRecognizer::update
+----------------------
+
+Updates a FaceRecognizer with given data and associated labels.
+
+.. ocv:function:: void FaceRecognizer::update( InputArrayOfArrays src, InputArray labels )
+
+    :param src: The training images, that means the faces you want to learn. The data has to be given as a ``vector<Mat>``.
+
+    :param labels: The labels corresponding to the images have to be given either as a ``vector<int>`` or a
+
+This method updates a (probably trained) :ocv:class:`FaceRecognizer`, but only if the algorithm supports it. The Local Binary Patterns Histograms (LBPH) recognizer (see :ocv:func:`createLBPHFaceRecognizer`) can be updated. For the Eigenfaces and Fisherfaces method, this is algorithmically not possible and you have to re-estimate the model with :ocv:func:`FaceRecognizer::train`. In any case, a call to train empties the existing model and learns a new model, while update does not delete any model data.
+
+.. code-block:: cpp
+
+    // Create a new LBPH model (it can be updated) and use the default parameters,
+    // this is the most common usage of this specific FaceRecognizer:
+    //
+    Ptr<FaceRecognizer> model =  createLBPHFaceRecognizer();
+    // This is the common interface to train all of the available cv::FaceRecognizer
+    // implementations:
+    //
+    model->train(images, labels);
+    // Some containers to hold new image:
+    vector<Mat> newImages;
+    vector<int> newLabels;
+    // You should add some images to the containers:
+    //
+    // ...
+    //
+    // Now updating the model is as easy as calling:
+    model->update(newImages,newLabels);
+    // This will preserve the old model data and extend the existing model
+    // with the new features extracted from newImages!
+
+Calling update on an Eigenfaces model (see :ocv:func:`createEigenFaceRecognizer`), which doesn't support updating, will throw an error similar to:
+
+.. code-block:: none
+
+    OpenCV Error: The function/feature is not implemented (This FaceRecognizer (FaceRecognizer.Eigenfaces) does not support updating, you have to use FaceRecognizer::train to update it.) in update, file /home/philipp/git/opencv/modules/contrib/src/facerec.cpp, line 305
+    terminate called after throwing an instance of 'cv::Exception'
+
+Please note: The :ocv:class:`FaceRecognizer` does not store your training images, because this would be very memory intense and it's not the responsibility of te :ocv:class:`FaceRecognizer` to do so. The caller is responsible for maintaining the dataset, he want to work with.
+
 FaceRecognizer::predict
 -----------------------
 
-.. ocv:function:: int FaceRecognizer::predict(InputArray src) const
-
-    Predicts a label for a given input image.
-
-    :param src: Sample image to get a prediction from.
-
-
-.. ocv:function:: void predict(InputArray src, int &label, double &confidence) const
+.. ocv:function:: int FaceRecognizer::predict( InputArray src ) const = 0
+.. ocv:function:: void FaceRecognizer::predict( InputArray src, int & label, double & confidence ) const = 0
 
     Predicts a label and associated confidence (e.g. distance) for a given input image.
 
     :param src: Sample image to get a prediction from.
     :param label: The predicted label for the given image.
     :param confidence: Associated confidence (e.g. distance) for the predicted label.
-
-
 
 The suffix ``const`` means that prediction does not affect the internal model
 state, so the method can be safely called from within different threads.
@@ -219,8 +276,8 @@ FaceRecognizer::load
 
 Loads a :ocv:class:`FaceRecognizer` and its model state.
 
-.. ocv:function:: void FaceRecognizer::load(const string& filename)
-.. ocv:function:: void FaceRecognizer::load(FileStorage& fs)
+.. ocv:function:: void FaceRecognizer::load( const string& filename )
+.. ocv:function:: void FaceRecognizer::load( const FileStorage& fs ) = 0
 
 Loads a persisted model and state from a given XML or YAML file . Every
 :ocv:class:`FaceRecognizer` has to overwrite ``FaceRecognizer::load(FileStorage& fs)``
@@ -240,19 +297,20 @@ createEigenFaceRecognizer
 Notes:
 ++++++
 
-    * Training and prediction must be done on grayscale images, use :ocv:func:`cvtColor` to convert between the color spaces.
-    * **THE EIGENFACES METHOD MAKES THE ASSUMPTION, THAT THE TRAINING AND TEST IMAGES ARE OF EQUAL SIZE.** (caps-lock, because I got so many mails asking for this). You have to make sure your input data has the correct shape, else a meaningful exception is thrown. Use :ocv:func:`resize` to resize the images.
+* Training and prediction must be done on grayscale images, use :ocv:func:`cvtColor` to convert between the color spaces.
+* **THE EIGENFACES METHOD MAKES THE ASSUMPTION, THAT THE TRAINING AND TEST IMAGES ARE OF EQUAL SIZE.** (caps-lock, because I got so many mails asking for this). You have to make sure your input data has the correct shape, else a meaningful exception is thrown. Use :ocv:func:`resize` to resize the images.
+* This model does not support updating.
 
 Model internal data:
 ++++++++++++++++++++
 
-    * ``num_components`` see :ocv:func:`createEigenFaceRecognizer`.
-    * ``threshold`` see :ocv:func:`createEigenFaceRecognizer`.
-    * ``eigenvalues`` The eigenvalues for this Principal Component Analysis (ordered descending).
-    * ``eigenvectors`` The eigenvectors for this Principal Component Analysis (ordered by their eigenvalue).
-    * ``mean`` The sample mean calculated from the training data.
-    * ``projections`` The projections of the training data.
-    * ``labels`` The threshold applied in the prediction. If the distance to the nearest neighbor is larger than the threshold, this method returns -1.
+* ``num_components`` see :ocv:func:`createEigenFaceRecognizer`.
+* ``threshold`` see :ocv:func:`createEigenFaceRecognizer`.
+* ``eigenvalues`` The eigenvalues for this Principal Component Analysis (ordered descending).
+* ``eigenvectors`` The eigenvectors for this Principal Component Analysis (ordered by their eigenvalue).
+* ``mean`` The sample mean calculated from the training data.
+* ``projections`` The projections of the training data.
+* ``labels`` The threshold applied in the prediction. If the distance to the nearest neighbor is larger than the threshold, this method returns -1.
 
 createFisherFaceRecognizer
 --------------------------
@@ -266,19 +324,20 @@ createFisherFaceRecognizer
 Notes:
 ++++++
 
-    * Training and prediction must be done on grayscale images, use :ocv:func:`cvtColor` to convert between the color spaces.
-    * **THE FISHERFACES METHOD MAKES THE ASSUMPTION, THAT THE TRAINING AND TEST IMAGES ARE OF EQUAL SIZE.** (caps-lock, because I got so many mails asking for this). You have to make sure your input data has the correct shape, else a meaningful exception is thrown. Use :ocv:func:`resize` to resize the images.
+* Training and prediction must be done on grayscale images, use :ocv:func:`cvtColor` to convert between the color spaces.
+* **THE FISHERFACES METHOD MAKES THE ASSUMPTION, THAT THE TRAINING AND TEST IMAGES ARE OF EQUAL SIZE.** (caps-lock, because I got so many mails asking for this). You have to make sure your input data has the correct shape, else a meaningful exception is thrown. Use :ocv:func:`resize` to resize the images.
+* This model does not support updating.
 
 Model internal data:
 ++++++++++++++++++++
 
-    * ``num_components`` see :ocv:func:`createFisherFaceRecognizer`.
-    * ``threshold`` see :ocv:func:`createFisherFaceRecognizer`.
-    * ``eigenvalues`` The eigenvalues for this Linear Discriminant Analysis (ordered descending).
-    * ``eigenvectors`` The eigenvectors for this Linear Discriminant Analysis (ordered by their eigenvalue).
-    * ``mean`` The sample mean calculated from the training data.
-    * ``projections`` The projections of the training data.
-    * ``labels`` The labels corresponding to the projections.
+* ``num_components`` see :ocv:func:`createFisherFaceRecognizer`.
+* ``threshold`` see :ocv:func:`createFisherFaceRecognizer`.
+* ``eigenvalues`` The eigenvalues for this Linear Discriminant Analysis (ordered descending).
+* ``eigenvectors`` The eigenvectors for this Linear Discriminant Analysis (ordered by their eigenvalue).
+* ``mean`` The sample mean calculated from the training data.
+* ``projections`` The projections of the training data.
+* ``labels`` The labels corresponding to the projections.
 
 
 createLBPHFaceRecognizer
@@ -295,15 +354,16 @@ createLBPHFaceRecognizer
 Notes:
 ++++++
 
-    * The Circular Local Binary Patterns (used in training and prediction) expect the data given as grayscale images, use :ocv:func:`cvtColor` to convert between the color spaces.
+* The Circular Local Binary Patterns (used in training and prediction) expect the data given as grayscale images, use :ocv:func:`cvtColor` to convert between the color spaces.
+* This model supports updating.
 
 Model internal data:
 ++++++++++++++++++++
 
-    * ``radius`` see :ocv:func:`createLBPHFaceRecognizer`.
-    * ``neighbors`` see :ocv:func:`createLBPHFaceRecognizer`.
-    * ``grid_x`` see :ocv:func:`createLBPHFaceRecognizer`.
-    * ``grid_y`` see :ocv:func:`createLBPHFaceRecognizer`.
-    * ``threshold see :ocv:func:`createLBPHFaceRecognizer`.``
-    * ``histograms`` Local Binary Patterns Histograms calculated from the given training data (empty if none was given).
-    * ``labels`` Labels corresponding to the calculated Local Binary Patterns Histograms.
+* ``radius`` see :ocv:func:`createLBPHFaceRecognizer`.
+* ``neighbors`` see :ocv:func:`createLBPHFaceRecognizer`.
+* ``grid_x`` see :ocv:func:`createLBPHFaceRecognizer`.
+* ``grid_y`` see :ocv:func:`createLBPHFaceRecognizer`.
+* ``threshold`` see :ocv:func:`createLBPHFaceRecognizer`.
+* ``histograms`` Local Binary Patterns Histograms calculated from the given training data (empty if none was given).
+* ``labels`` Labels corresponding to the calculated Local Binary Patterns Histograms.

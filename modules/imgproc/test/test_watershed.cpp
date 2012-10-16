@@ -62,7 +62,7 @@ void CV_WatershedTest::run( int /* start_from */)
 {
     string exp_path = string(ts->get_data_path()) + "watershed/wshed_exp.png";
     Mat exp = imread(exp_path, 0);
-    Mat orig = imread(string(ts->get_data_path()) + "inpaint/orig.jpg");
+    Mat orig = imread(string(ts->get_data_path()) + "inpaint/orig.png");
     FileStorage fs(string(ts->get_data_path()) + "watershed/comp.xml", FileStorage::READ);
 
     if (orig.empty() || !fs.isOpened())

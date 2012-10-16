@@ -1,4 +1,4 @@
-if(ANDROID)
+if(ANDROID AND NOT MIPS)
   add_subdirectory("${OpenCV_SOURCE_DIR}/3rdparty/tbb")
   include_directories(SYSTEM ${TBB_INCLUDE_DIRS})
   set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} tbb)
@@ -21,7 +21,12 @@ elseif(UNIX AND NOT APPLE)
 endif()
 
 if(NOT HAVE_TBB)
-  set(TBB_DEFAULT_INCLUDE_DIRS "/opt/intel/tbb" "/usr/local/include" "/usr/include" "C:/Program Files/Intel/TBB" "C:/Program Files (x86)/Intel/TBB" "C:/Program Files (x86)/TBB" "${CMAKE_INSTALL_PREFIX}/include")
+  set(TBB_DEFAULT_INCLUDE_DIRS
+    "/opt/intel/tbb" "/usr/local/include" "/usr/include"
+    "C:/Program Files/Intel/TBB" "C:/Program Files (x86)/Intel/TBB"
+    "C:/Program Files (x86)/tbb/include"
+    "C:/Program Files (x86)/tbb/include"
+    "${CMAKE_INSTALL_PREFIX}/include")
 
   find_path(TBB_INCLUDE_DIRS "tbb/tbb.h" PATHS ${TBB_INCLUDE_DIR} ${TBB_DEFAULT_INCLUDE_DIRS} DOC "The path to TBB headers")
   if(TBB_INCLUDE_DIRS)
@@ -74,6 +79,7 @@ endif(NOT HAVE_TBB)
 # get TBB version
 if(HAVE_TBB)
   find_file(TBB_STDDEF_PATH tbb/tbb_stddef.h "${TBB_INCLUDE_DIRS}")
+  mark_as_advanced(TBB _STDDEF_PATH)
 endif()
 if(HAVE_TBB AND TBB_STDDEF_PATH)
   ocv_parse_header("${TBB_STDDEF_PATH}" TBB_VERSION_LINES TBB_VERSION_MAJOR TBB_VERSION_MINOR TBB_INTERFACE_VERSION)

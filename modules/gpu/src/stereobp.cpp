@@ -46,7 +46,7 @@ using namespace cv;
 using namespace cv::gpu;
 using namespace std;
 
-#if !defined (HAVE_CUDA)
+#if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
 void cv::gpu::StereoBeliefPropagation::estimateRecommendedParams(int, int, int&, int&, int&) { throw_nogpu(); }
 
@@ -65,17 +65,17 @@ namespace cv { namespace gpu { namespace device
     {
         void load_constants(int ndisp, float max_data_term, float data_weight, float max_disc_term, float disc_single_jump);
         template<typename T, typename D>
-        void comp_data_gpu(const DevMem2Db& left, const DevMem2Db& right, const DevMem2Db& data, cudaStream_t stream);
+        void comp_data_gpu(const PtrStepSzb& left, const PtrStepSzb& right, const PtrStepSzb& data, cudaStream_t stream);
         template<typename T>
-        void data_step_down_gpu(int dst_cols, int dst_rows, int src_rows, const DevMem2Db& src, const DevMem2Db& dst, cudaStream_t stream);
+        void data_step_down_gpu(int dst_cols, int dst_rows, int src_rows, const PtrStepSzb& src, const PtrStepSzb& dst, cudaStream_t stream);
         template <typename T>
-        void level_up_messages_gpu(int dst_idx, int dst_cols, int dst_rows, int src_rows, DevMem2Db* mus, DevMem2Db* mds, DevMem2Db* mls, DevMem2Db* mrs, cudaStream_t stream);
+        void level_up_messages_gpu(int dst_idx, int dst_cols, int dst_rows, int src_rows, PtrStepSzb* mus, PtrStepSzb* mds, PtrStepSzb* mls, PtrStepSzb* mrs, cudaStream_t stream);
         template <typename T>
-        void calc_all_iterations_gpu(int cols, int rows, int iters, const DevMem2Db& u, const DevMem2Db& d, 
-            const DevMem2Db& l, const DevMem2Db& r, const DevMem2Db& data, cudaStream_t stream);
+        void calc_all_iterations_gpu(int cols, int rows, int iters, const PtrStepSzb& u, const PtrStepSzb& d, 
+            const PtrStepSzb& l, const PtrStepSzb& r, const PtrStepSzb& data, cudaStream_t stream);
         template <typename T>
-        void output_gpu(const DevMem2Db& u, const DevMem2Db& d, const DevMem2Db& l, const DevMem2Db& r, const DevMem2Db& data, 
-            const DevMem2D_<short>& disp, cudaStream_t stream);
+        void output_gpu(const PtrStepSzb& u, const PtrStepSzb& d, const PtrStepSzb& l, const PtrStepSzb& r, const PtrStepSzb& data, 
+            const PtrStepSz<short>& disp, cudaStream_t stream);
     }
 }}}
 
@@ -137,7 +137,7 @@ namespace
 
         void operator()(const GpuMat& left, const GpuMat& right, GpuMat& disp, Stream& stream)
         {
-            typedef void (*comp_data_t)(const DevMem2Db& left, const DevMem2Db& right, const DevMem2Db& data, cudaStream_t stream);
+            typedef void (*comp_data_t)(const PtrStepSzb& left, const PtrStepSzb& right, const PtrStepSzb& data, cudaStream_t stream);
             static const comp_data_t comp_data_callers[2][5] = 
             {
                 {0, comp_data_gpu<unsigned char, short>, 0, comp_data_gpu<uchar3, short>, comp_data_gpu<uchar4, short>},
@@ -253,25 +253,25 @@ namespace
 
         void calcBP(GpuMat& disp, Stream& stream)
         {
-            typedef void (*data_step_down_t)(int dst_cols, int dst_rows, int src_rows, const DevMem2Db& src, const DevMem2Db& dst, cudaStream_t stream);
+            typedef void (*data_step_down_t)(int dst_cols, int dst_rows, int src_rows, const PtrStepSzb& src, const PtrStepSzb& dst, cudaStream_t stream);
             static const data_step_down_t data_step_down_callers[2] = 
             {
                 data_step_down_gpu<short>, data_step_down_gpu<float>
             };
             
-            typedef void (*level_up_messages_t)(int dst_idx, int dst_cols, int dst_rows, int src_rows, DevMem2Db* mus, DevMem2Db* mds, DevMem2Db* mls, DevMem2Db* mrs, cudaStream_t stream);
+            typedef void (*level_up_messages_t)(int dst_idx, int dst_cols, int dst_rows, int src_rows, PtrStepSzb* mus, PtrStepSzb* mds, PtrStepSzb* mls, PtrStepSzb* mrs, cudaStream_t stream);
             static const level_up_messages_t level_up_messages_callers[2] = 
             {
                 level_up_messages_gpu<short>, level_up_messages_gpu<float>
             };
 
-            typedef void (*calc_all_iterations_t)(int cols, int rows, int iters, const DevMem2Db& u, const DevMem2Db& d, const DevMem2Db& l, const DevMem2Db& r, const DevMem2Db& data, cudaStream_t stream);
+            typedef void (*calc_all_iterations_t)(int cols, int rows, int iters, const PtrStepSzb& u, const PtrStepSzb& d, const PtrStepSzb& l, const PtrStepSzb& r, const PtrStepSzb& data, cudaStream_t stream);
             static const calc_all_iterations_t calc_all_iterations_callers[2] = 
             {
                 calc_all_iterations_gpu<short>, calc_all_iterations_gpu<float>
             };
 
-            typedef void (*output_t)(const DevMem2Db& u, const DevMem2Db& d, const DevMem2Db& l, const DevMem2Db& r, const DevMem2Db& data, const DevMem2D_<short>& disp, cudaStream_t stream);
+            typedef void (*output_t)(const PtrStepSzb& u, const PtrStepSzb& d, const PtrStepSzb& l, const PtrStepSzb& r, const PtrStepSzb& data, const PtrStepSz<short>& disp, cudaStream_t stream);
             static const output_t output_callers[2] = 
             {
                 output_gpu<short>, output_gpu<float>
@@ -291,10 +291,10 @@ namespace
                 data_step_down_callers[funcIdx](cols_all[i], rows_all[i], rows_all[i-1], datas[i-1], datas[i], cudaStream);
             }
 
-            DevMem2Db mus[] = {u, u2};
-            DevMem2Db mds[] = {d, d2};
-            DevMem2Db mrs[] = {r, r2};
-            DevMem2Db mls[] = {l, l2};
+            PtrStepSzb mus[] = {u, u2};
+            PtrStepSzb mds[] = {d, d2};
+            PtrStepSzb mrs[] = {r, r2};
+            PtrStepSzb mls[] = {l, l2};
 
             int mem_idx = (rthis.levels & 1) ? 0 : 1;
 

@@ -9,23 +9,25 @@
  * agreement from NVIDIA Corporation is strictly prohibited.
  */
 
+#if !defined CUDA_DISABLER
+
 #include "TestHypothesesGrow.h"
 #include "NCVHaarObjectDetection.hpp"
 
 
-TestHypothesesGrow::TestHypothesesGrow(std::string testName, NCVTestSourceProvider<Ncv32u> &src,
-                                       Ncv32u rectWidth, Ncv32u rectHeight, Ncv32f rectScale, 
-                                       Ncv32u maxLenSrc, Ncv32u lenSrc, Ncv32u maxLenDst, Ncv32u lenDst)
+TestHypothesesGrow::TestHypothesesGrow(std::string testName_, NCVTestSourceProvider<Ncv32u> &src_,
+                                       Ncv32u rectWidth_, Ncv32u rectHeight_, Ncv32f rectScale_,
+                                       Ncv32u maxLenSrc_, Ncv32u lenSrc_, Ncv32u maxLenDst_, Ncv32u lenDst_)
     :
-    NCVTestProvider(testName),
-    src(src),
-    rectWidth(rectWidth),
-    rectHeight(rectHeight),
-    rectScale(rectScale),
-    maxLenSrc(maxLenSrc),
-    lenSrc(lenSrc),
-    maxLenDst(maxLenDst),
-    lenDst(lenDst)
+    NCVTestProvider(testName_),
+    src(src_),
+    rectWidth(rectWidth_),
+    rectHeight(rectHeight_),
+    rectScale(rectScale_),
+    maxLenSrc(maxLenSrc_),
+    lenSrc(lenSrc_),
+    maxLenDst(maxLenDst_),
+    lenDst(lenDst_)
 {
 }
 
@@ -132,3 +134,5 @@ bool TestHypothesesGrow::deinit()
 {
     return true;
 }
+
+#endif /* CUDA_DISABLER */

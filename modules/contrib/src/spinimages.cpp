@@ -85,7 +85,10 @@ namespace
     };
     size_t colors_mum = sizeof(colors)/sizeof(colors[0]);
 
+#if defined __cplusplus  && __cplusplus > 199711L
+#else
 template<class FwIt, class T> void iota(FwIt first, FwIt last, T value) { while(first != last) *first++ = value++; }
+#endif
 
 void computeNormals( const Octree& Octree, const vector<Point3f>& centers, vector<Point3f>& normals,
                     vector<uchar>& mask, float normalRadius, int minNeighbors = 20)

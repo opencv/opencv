@@ -9,19 +9,21 @@
  * agreement from NVIDIA Corporation is strictly prohibited.
  */
 
+#if !defined CUDA_DISABLER
+
 #include <math.h>
 
 #include "TestTranspose.h"
 
 
 template <class T>
-TestTranspose<T>::TestTranspose(std::string testName, NCVTestSourceProvider<T> &src,
-                                Ncv32u width, Ncv32u height)
+TestTranspose<T>::TestTranspose(std::string testName_, NCVTestSourceProvider<T> &src_,
+                                Ncv32u width_, Ncv32u height_)
     :
-    NCVTestProvider(testName),
-    src(src),
-    width(width),
-    height(height)
+    NCVTestProvider(testName_),
+    src(src_),
+    width(width_),
+    height(height_)
 {
 }
 
@@ -146,3 +148,5 @@ bool TestTranspose<T>::deinit()
 
 template class TestTranspose<Ncv32u>;
 template class TestTranspose<Ncv64u>;
+
+#endif /* CUDA_DISABLER */

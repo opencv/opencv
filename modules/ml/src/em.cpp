@@ -105,7 +105,7 @@ bool EM::trainE(InputArray samples,
     Mat means0 = _means0.getMat(), weights0 = _weights0.getMat();
 
     setTrainData(START_E_STEP, samplesMat, 0, !_means0.empty() ? &means0 : 0,
-                 !_covs0.empty() ? &covs0 : 0, _weights0.empty() ? &weights0 : 0);
+                 !_covs0.empty() ? &covs0 : 0, !_weights0.empty() ? &weights0 : 0);
     return doTrain(START_E_STEP, logLikelihoods, labels, probs);
 }
 
@@ -386,7 +386,8 @@ void EM::computeLogWeightDivDet()
     for(int clusterIndex = 0; clusterIndex < nclusters; clusterIndex++)
     {
         double logDetCov = 0.;
-        for(int di = 0; di < covsEigenValues[clusterIndex].cols; di++)
+        const int evalCount = static_cast<int>(covsEigenValues[clusterIndex].total());
+        for(int di = 0; di < evalCount; di++)
             logDetCov += std::log(covsEigenValues[clusterIndex].at<double>(covMatType != EM::COV_MAT_SPHERICAL ? di : 0));
 
         logWeightDivDet.at<double>(clusterIndex) = logWeights.at<double>(clusterIndex) - 0.5 * logDetCov;

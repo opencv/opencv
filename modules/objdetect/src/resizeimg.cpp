@@ -53,13 +53,13 @@ IplImage* resize_opencv(IplImage* img, float scale)
 //}
 //// resize along each column
 //// result is transposed, so we can apply it twice for a complete resize
-//void resize1dtran(float *src, int sheight, float *dst, int dheight, 
+//void resize1dtran(float *src, int sheight, float *dst, int dheight,
 //		  int width, int chan) {
 //  alphainfo *ofs;
 //  float scale = (float)dheight/(float)sheight;
 //  float invscale = (float)sheight/(float)dheight;
-//  
-//  // we cache the interpolation values since they can be 
+//
+//  // we cache the interpolation values since they can be
 //  // shared among different columns
 //  int len = (int)ceilf(dheight*invscale) + 2*dheight;
 //  int k = 0;
@@ -126,7 +126,7 @@ IplImage* resize_opencv(IplImage* img, float scale)
 //	int index;
 //    int widthStep;
 //    int tW, tH;
-//    
+//
 //    W = (float)img->width;
 //    H = (float)img->height;
 //    channels  = img->nChannels;
@@ -149,16 +149,16 @@ IplImage* resize_opencv(IplImage* img, float scale)
 //			}
 //		}
 //	}
-//	
+//
 //    imgTmp = cvCreateImage(cvSize(tW , tH), IPL_DEPTH_32F, channels);
 //
 //    dst = (float *)malloc(sizeof(float) * (int)(tH * tW) * channels);
 //    tmp = (float *)malloc(sizeof(float) * (int)(tH *  W) * channels);
 //
 //    resize1dtran(src, (int)H, tmp, (int)tH, (int)W , 3);
-//	
+//
 //    resize1dtran(tmp, (int)W, dst, (int)tW, (int)tH, 3);
-//    
+//
 //	index = 0;
 //	//dataf = (float*)imgTmp->imageData;
 //	for (kk = 0; kk < channels; kk++)
@@ -188,7 +188,7 @@ IplImage* resize_opencv(IplImage* img, float scale)
 //	int index;
 //	int widthStep;
 //    int tW, tH;
-//    
+//
 //    W = (float)img->width;
 //    H = (float)img->height;
 //    channels  = img->nChannels;
@@ -210,16 +210,16 @@ IplImage* resize_opencv(IplImage* img, float scale)
 //			}
 //		}
 //	}
-//	
+//
 //    imgTmp = cvCreateImage(cvSize(tW , tH), IPL_DEPTH_32F, channels);
 //
 //    dst = (float *)malloc(sizeof(float) * (int)(tH * tW) * channels);
 //    tmp = (float *)malloc(sizeof(float) * (int)(tH *  W) * channels);
 //
 //    resize1dtran(src, (int)H, tmp, (int)tH, (int)W , 3);
-//	
+//
 //    resize1dtran(tmp, (int)W, dst, (int)tW, (int)tH, 3);
-//	
+//
 //	index = 0;
 //	for (kk = 0; kk < channels; kk++)
 //	{
@@ -232,7 +232,7 @@ IplImage* resize_opencv(IplImage* img, float scale)
 //			}
 //		}
 //	}
-// 
+//
 //    free(src);
 //    free(dst);
 //    free(tmp);

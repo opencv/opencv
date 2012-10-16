@@ -156,7 +156,7 @@ void CV_ChessboardSubpixelTest::run( int )
         if(!result)
         {
 #if 0
-            ts->printf(cvtest::TS::LOG, "Warning: chessboard was not detected! Writing image to test.jpg\n");
+            ts->printf(cvtest::TS::LOG, "Warning: chessboard was not detected! Writing image to test.png\n");
             ts->printf(cvtest::TS::LOG, "Size = %d, %d\n", pattern_size.width, pattern_size.height);
             ts->printf(cvtest::TS::LOG, "Intrinsic params: fx = %f, fy = %f, cx = %f, cy = %f\n",
                        intrinsic_matrix_.at<double>(0, 0), intrinsic_matrix_.at<double>(1, 1),
@@ -166,7 +166,7 @@ void CV_ChessboardSubpixelTest::run( int )
                        distortion_coeffs_.at<double>(0, 2), distortion_coeffs_.at<double>(0, 3),
                        distortion_coeffs_.at<double>(0, 4));
 
-            imwrite("test.jpg", chessboard_image);
+            imwrite("test.png", chessboard_image);
 #endif
             continue;
         }

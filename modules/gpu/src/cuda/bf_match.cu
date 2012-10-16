@@ -40,6 +40,8 @@
 //
 //M*/
 
+#if !defined CUDA_DISABLER
+
 #include "internal_shared.hpp"
 #include "opencv2/gpu/device/limits.hpp"
 #include "opencv2/gpu/device/vec_distance.hpp"
@@ -86,7 +88,7 @@ namespace cv { namespace gpu { namespace device
         // Match Unrolled Cached
 
         template <int BLOCK_SIZE, int MAX_DESC_LEN, typename T, typename U>
-        __device__ void loadQueryToSmem(int queryIdx, const DevMem2D_<T>& query, U* s_query)
+        __device__ void loadQueryToSmem(int queryIdx, const PtrStepSz<T>& query, U* s_query)
         {
             #pragma unroll
             for (int i = 0; i < MAX_DESC_LEN / BLOCK_SIZE; ++i)
@@ -97,7 +99,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <int BLOCK_SIZE, int MAX_DESC_LEN, typename Dist, typename T, typename Mask>
-        __device__ void loopUnrolledCached(int queryIdx, const DevMem2D_<T>& query,volatile int imgIdx, const DevMem2D_<T>& train, const Mask& mask,
+        __device__ void loopUnrolledCached(int queryIdx, const PtrStepSz<T>& query,volatile int imgIdx, const PtrStepSz<T>& train, const Mask& mask,
                                            typename Dist::value_type* s_query, typename Dist::value_type* s_train,
                                            float& bestDistance, int& bestTrainIdx, int& bestImgIdx)
         {
@@ -143,7 +145,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <int BLOCK_SIZE, int MAX_DESC_LEN, typename Dist, typename T, typename Mask>
-        __global__ void matchUnrolledCached(const DevMem2D_<T> query, const DevMem2D_<T> train, const Mask mask, int* bestTrainIdx, float* bestDistance)
+        __global__ void matchUnrolledCached(const PtrStepSz<T> query, const PtrStepSz<T> train, const Mask mask, int* bestTrainIdx, float* bestDistance)
         {
             extern __shared__ int smem[];
 
@@ -174,8 +176,8 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <int BLOCK_SIZE, int MAX_DESC_LEN, typename Dist, typename T, typename Mask>
-        void matchUnrolledCached(const DevMem2D_<T>& query, const DevMem2D_<T>& train, const Mask& mask,
-                                 const DevMem2Di& trainIdx, const DevMem2Df& distance,
+        void matchUnrolledCached(const PtrStepSz<T>& query, const PtrStepSz<T>& train, const Mask& mask,
+                                 const PtrStepSzi& trainIdx, const PtrStepSzf& distance,
                                  cudaStream_t stream)
         {
             const dim3 block(BLOCK_SIZE, BLOCK_SIZE);
@@ -191,7 +193,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <int BLOCK_SIZE, int MAX_DESC_LEN, typename Dist, typename T, typename Mask>
-        __global__ void matchUnrolledCached(const DevMem2D_<T> query, const DevMem2D_<T>* trains, int n, const Mask mask,
+        __global__ void matchUnrolledCached(const PtrStepSz<T> query, const PtrStepSz<T>* trains, int n, const Mask mask,
                                             int* bestTrainIdx, int* bestImgIdx, float* bestDistance)
         {
             extern __shared__ int smem[];
@@ -211,7 +213,7 @@ namespace cv { namespace gpu { namespace device
 
             for (int imgIdx = 0; imgIdx < n; ++imgIdx)
             {
-                const DevMem2D_<T> train = trains[imgIdx];
+                const PtrStepSz<T> train = trains[imgIdx];
                 m.next();
                 loopUnrolledCached<BLOCK_SIZE, MAX_DESC_LEN, Dist>(queryIdx, query, imgIdx, train, m, s_query, s_train, myBestDistance, myBestTrainIdx, myBestImgIdx);
             }
@@ -233,8 +235,8 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <int BLOCK_SIZE, int MAX_DESC_LEN, typename Dist, typename T, typename Mask>
-        void matchUnrolledCached(const DevMem2D_<T>& query, const DevMem2D_<T>* trains, int n, const Mask& mask,
-                                 const DevMem2Di& trainIdx, const DevMem2Di& imgIdx, const DevMem2Df& distance,
+        void matchUnrolledCached(const PtrStepSz<T>& query, const PtrStepSz<T>* trains, int n, const Mask& mask,
+                                 const PtrStepSzi& trainIdx, const PtrStepSzi& imgIdx, const PtrStepSzf& distance,
                                  cudaStream_t stream)
         {
             const dim3 block(BLOCK_SIZE, BLOCK_SIZE);
@@ -253,7 +255,7 @@ namespace cv { namespace gpu { namespace device
         // Match Unrolled
 
         template <int BLOCK_SIZE, int MAX_DESC_LEN, typename Dist, typename T, typename Mask>
-        __device__ void loopUnrolled(int queryIdx, const DevMem2D_<T>& query,volatile int imgIdx, const DevMem2D_<T>& train, const Mask& mask,
+        __device__ void loopUnrolled(int queryIdx, const PtrStepSz<T>& query,volatile int imgIdx, const PtrStepSz<T>& train, const Mask& mask,
                                      typename Dist::value_type* s_query, typename Dist::value_type* s_train,
                                      float& bestDistance, int& bestTrainIdx, int& bestImgIdx)
         {
@@ -303,7 +305,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <int BLOCK_SIZE, int MAX_DESC_LEN, typename Dist, typename T, typename Mask>
-        __global__ void matchUnrolled(const DevMem2D_<T> query, const DevMem2D_<T> train, const Mask mask, int* bestTrainIdx, float* bestDistance)
+        __global__ void matchUnrolled(const PtrStepSz<T> query, const PtrStepSz<T> train, const Mask mask, int* bestTrainIdx, float* bestDistance)
         {
             extern __shared__ int smem[];
 
@@ -332,8 +334,8 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <int BLOCK_SIZE, int MAX_DESC_LEN, typename Dist, typename T, typename Mask>
-        void matchUnrolled(const DevMem2D_<T>& query, const DevMem2D_<T>& train, const Mask& mask,
-                           const DevMem2Di& trainIdx, const DevMem2Df& distance,
+        void matchUnrolled(const PtrStepSz<T>& query, const PtrStepSz<T>& train, const Mask& mask,
+                           const PtrStepSzi& trainIdx, const PtrStepSzf& distance,
                            cudaStream_t stream)
         {
             const dim3 block(BLOCK_SIZE, BLOCK_SIZE);
@@ -349,7 +351,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <int BLOCK_SIZE, int MAX_DESC_LEN, typename Dist, typename T, typename Mask>
-        __global__ void matchUnrolled(const DevMem2D_<T> query, const DevMem2D_<T>* trains, int n, const Mask mask,
+        __global__ void matchUnrolled(const PtrStepSz<T> query, const PtrStepSz<T>* trains, int n, const Mask mask,
                                       int* bestTrainIdx, int* bestImgIdx, float* bestDistance)
         {
             extern __shared__ int smem[];
@@ -367,7 +369,7 @@ namespace cv { namespace gpu { namespace device
 
             for (int imgIdx = 0; imgIdx < n; ++imgIdx)
             {
-                const DevMem2D_<T> train = trains[imgIdx];
+                const PtrStepSz<T> train = trains[imgIdx];
                 m.next();
                 loopUnrolled<BLOCK_SIZE, MAX_DESC_LEN, Dist>(queryIdx, query, imgIdx, train, m, s_query, s_train, myBestDistance, myBestTrainIdx, myBestImgIdx);
             }
@@ -389,8 +391,8 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <int BLOCK_SIZE, int MAX_DESC_LEN, typename Dist, typename T, typename Mask>
-        void matchUnrolled(const DevMem2D_<T>& query, const DevMem2D_<T>* trains, int n, const Mask& mask,
-                           const DevMem2Di& trainIdx, const DevMem2Di& imgIdx, const DevMem2Df& distance,
+        void matchUnrolled(const PtrStepSz<T>& query, const PtrStepSz<T>* trains, int n, const Mask& mask,
+                           const PtrStepSzi& trainIdx, const PtrStepSzi& imgIdx, const PtrStepSzf& distance,
                            cudaStream_t stream)
         {
             const dim3 block(BLOCK_SIZE, BLOCK_SIZE);
@@ -409,7 +411,7 @@ namespace cv { namespace gpu { namespace device
         // Match
 
         template <int BLOCK_SIZE, typename Dist, typename T, typename Mask>
-        __device__ void loop(int queryIdx, const DevMem2D_<T>& query, volatile int imgIdx, const DevMem2D_<T>& train, const Mask& mask,
+        __device__ void loop(int queryIdx, const PtrStepSz<T>& query, volatile int imgIdx, const PtrStepSz<T>& train, const Mask& mask,
                              typename Dist::value_type* s_query, typename Dist::value_type* s_train,
                              float& bestDistance, int& bestTrainIdx, int& bestImgIdx)
         {
@@ -458,7 +460,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <int BLOCK_SIZE, typename Dist, typename T, typename Mask>
-        __global__ void match(const DevMem2D_<T> query, const DevMem2D_<T> train, const Mask mask, int* bestTrainIdx, float* bestDistance)
+        __global__ void match(const PtrStepSz<T> query, const PtrStepSz<T> train, const Mask mask, int* bestTrainIdx, float* bestDistance)
         {
             extern __shared__ int smem[];
 
@@ -487,8 +489,8 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <int BLOCK_SIZE, typename Dist, typename T, typename Mask>
-        void match(const DevMem2D_<T>& query, const DevMem2D_<T>& train, const Mask& mask,
-                   const DevMem2Di& trainIdx, const DevMem2Df& distance,
+        void match(const PtrStepSz<T>& query, const PtrStepSz<T>& train, const Mask& mask,
+                   const PtrStepSzi& trainIdx, const PtrStepSzf& distance,
                    cudaStream_t stream)
         {
             const dim3 block(BLOCK_SIZE, BLOCK_SIZE);
@@ -504,7 +506,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <int BLOCK_SIZE, typename Dist, typename T, typename Mask>
-        __global__ void match(const DevMem2D_<T> query, const DevMem2D_<T>* trains, int n, const Mask mask,
+        __global__ void match(const PtrStepSz<T> query, const PtrStepSz<T>* trains, int n, const Mask mask,
                               int* bestTrainIdx, int* bestImgIdx, float* bestDistance)
         {
             extern __shared__ int smem[];
@@ -521,7 +523,7 @@ namespace cv { namespace gpu { namespace device
             Mask m = mask;
             for (int imgIdx = 0; imgIdx < n; ++imgIdx)
             {
-                const DevMem2D_<T> train = trains[imgIdx];
+                const PtrStepSz<T> train = trains[imgIdx];
                 m.next();
                 loop<BLOCK_SIZE, Dist>(queryIdx, query, imgIdx, train, m, s_query, s_train, myBestDistance, myBestTrainIdx, myBestImgIdx);
             }
@@ -543,8 +545,8 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <int BLOCK_SIZE, typename Dist, typename T, typename Mask>
-        void match(const DevMem2D_<T>& query, const DevMem2D_<T>* trains, int n, const Mask& mask,
-                   const DevMem2Di& trainIdx, const DevMem2Di& imgIdx, const DevMem2Df& distance,
+        void match(const PtrStepSz<T>& query, const PtrStepSz<T>* trains, int n, const Mask& mask,
+                   const PtrStepSzi& trainIdx, const PtrStepSzi& imgIdx, const PtrStepSzf& distance,
                    cudaStream_t stream)
         {
             const dim3 block(BLOCK_SIZE, BLOCK_SIZE);
@@ -563,8 +565,8 @@ namespace cv { namespace gpu { namespace device
         // Match dispatcher
 
         template <typename Dist, typename T, typename Mask>
-        void matchDispatcher(const DevMem2D_<T>& query, const DevMem2D_<T>& train, const Mask& mask,
-                             const DevMem2Di& trainIdx, const DevMem2Df& distance,
+        void matchDispatcher(const PtrStepSz<T>& query, const PtrStepSz<T>& train, const Mask& mask,
+                             const PtrStepSzi& trainIdx, const PtrStepSzf& distance,
                              int cc, cudaStream_t stream)
         {
             (void)cc;
@@ -595,8 +597,8 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <typename Dist, typename T, typename Mask>
-        void matchDispatcher(const DevMem2D_<T>& query, const DevMem2D_<T>* trains, int n, const Mask& mask,
-                             const DevMem2Di& trainIdx, const DevMem2Di& imgIdx, const DevMem2Df& distance,
+        void matchDispatcher(const PtrStepSz<T>& query, const PtrStepSz<T>* trains, int n, const Mask& mask,
+                             const PtrStepSzi& trainIdx, const PtrStepSzi& imgIdx, const PtrStepSzf& distance,
                              int cc, cudaStream_t stream)
         {
             (void)cc;
@@ -629,152 +631,155 @@ namespace cv { namespace gpu { namespace device
         ///////////////////////////////////////////////////////////////////////////////
         // Match caller
 
-        template <typename T> void matchL1_gpu(const DevMem2Db& query, const DevMem2Db& train, const DevMem2Db& mask,
-                                               const DevMem2Di& trainIdx, const DevMem2Df& distance,
+        template <typename T> void matchL1_gpu(const PtrStepSzb& query, const PtrStepSzb& train, const PtrStepSzb& mask,
+                                               const PtrStepSzi& trainIdx, const PtrStepSzf& distance,
                                                int cc, cudaStream_t stream)
         {
             if (mask.data)
             {
-                matchDispatcher< L1Dist<T> >(static_cast< DevMem2D_<T> >(query), static_cast< DevMem2D_<T> >(train), SingleMask(mask),
+                matchDispatcher< L1Dist<T> >(static_cast< PtrStepSz<T> >(query), static_cast< PtrStepSz<T> >(train), SingleMask(mask),
                     trainIdx, distance,
                     cc, stream);
             }
             else
             {
-                matchDispatcher< L1Dist<T> >(static_cast< DevMem2D_<T> >(query), static_cast< DevMem2D_<T> >(train), WithOutMask(),
+                matchDispatcher< L1Dist<T> >(static_cast< PtrStepSz<T> >(query), static_cast< PtrStepSz<T> >(train), WithOutMask(),
                     trainIdx, distance,
                     cc, stream);
             }
         }
 
-        template void matchL1_gpu<uchar >(const DevMem2Db& queryDescs, const DevMem2Db& trainDescs, const DevMem2Db& mask, const DevMem2Di& trainIdx, const DevMem2Df& distance, int cc, cudaStream_t stream);
-        //template void matchL1_gpu<schar >(const DevMem2Db& queryDescs, const DevMem2Db& trainDescs, const DevMem2Db& mask, const DevMem2Di& trainIdx, const DevMem2Df& distance, int cc, cudaStream_t stream);
-        template void matchL1_gpu<ushort>(const DevMem2Db& queryDescs, const DevMem2Db& trainDescs, const DevMem2Db& mask, const DevMem2Di& trainIdx, const DevMem2Df& distance, int cc, cudaStream_t stream);
-        template void matchL1_gpu<short >(const DevMem2Db& queryDescs, const DevMem2Db& trainDescs, const DevMem2Db& mask, const DevMem2Di& trainIdx, const DevMem2Df& distance, int cc, cudaStream_t stream);
-        template void matchL1_gpu<int   >(const DevMem2Db& queryDescs, const DevMem2Db& trainDescs, const DevMem2Db& mask, const DevMem2Di& trainIdx, const DevMem2Df& distance, int cc, cudaStream_t stream);
-        template void matchL1_gpu<float >(const DevMem2Db& queryDescs, const DevMem2Db& trainDescs, const DevMem2Db& mask, const DevMem2Di& trainIdx, const DevMem2Df& distance, int cc, cudaStream_t stream);
+        template void matchL1_gpu<uchar >(const PtrStepSzb& queryDescs, const PtrStepSzb& trainDescs, const PtrStepSzb& mask, const PtrStepSzi& trainIdx, const PtrStepSzf& distance, int cc, cudaStream_t stream);
+        //template void matchL1_gpu<schar >(const PtrStepSzb& queryDescs, const PtrStepSzb& trainDescs, const PtrStepSzb& mask, const PtrStepSzi& trainIdx, const PtrStepSzf& distance, int cc, cudaStream_t stream);
+        template void matchL1_gpu<ushort>(const PtrStepSzb& queryDescs, const PtrStepSzb& trainDescs, const PtrStepSzb& mask, const PtrStepSzi& trainIdx, const PtrStepSzf& distance, int cc, cudaStream_t stream);
+        template void matchL1_gpu<short >(const PtrStepSzb& queryDescs, const PtrStepSzb& trainDescs, const PtrStepSzb& mask, const PtrStepSzi& trainIdx, const PtrStepSzf& distance, int cc, cudaStream_t stream);
+        template void matchL1_gpu<int   >(const PtrStepSzb& queryDescs, const PtrStepSzb& trainDescs, const PtrStepSzb& mask, const PtrStepSzi& trainIdx, const PtrStepSzf& distance, int cc, cudaStream_t stream);
+        template void matchL1_gpu<float >(const PtrStepSzb& queryDescs, const PtrStepSzb& trainDescs, const PtrStepSzb& mask, const PtrStepSzi& trainIdx, const PtrStepSzf& distance, int cc, cudaStream_t stream);
 
-        template <typename T> void matchL2_gpu(const DevMem2Db& query, const DevMem2Db& train, const DevMem2Db& mask,
-                                               const DevMem2Di& trainIdx, const DevMem2Df& distance,
+        template <typename T> void matchL2_gpu(const PtrStepSzb& query, const PtrStepSzb& train, const PtrStepSzb& mask,
+                                               const PtrStepSzi& trainIdx, const PtrStepSzf& distance,
                                                int cc, cudaStream_t stream)
         {
             if (mask.data)
             {
-                matchDispatcher<L2Dist>(static_cast< DevMem2D_<T> >(query), static_cast< DevMem2D_<T> >(train), SingleMask(mask),
+                matchDispatcher<L2Dist>(static_cast< PtrStepSz<T> >(query), static_cast< PtrStepSz<T> >(train), SingleMask(mask),
                     trainIdx, distance,
                     cc, stream);
             }
             else
             {
-                matchDispatcher<L2Dist>(static_cast< DevMem2D_<T> >(query), static_cast< DevMem2D_<T> >(train), WithOutMask(),
+                matchDispatcher<L2Dist>(static_cast< PtrStepSz<T> >(query), static_cast< PtrStepSz<T> >(train), WithOutMask(),
                     trainIdx, distance,
                     cc, stream);
             }
         }
 
-        //template void matchL2_gpu<uchar >(const DevMem2Db& queryDescs, const DevMem2Db& trainDescs, const DevMem2Db& mask, const DevMem2Di& trainIdx, const DevMem2Df& distance, int cc, cudaStream_t stream);
-        //template void matchL2_gpu<schar >(const DevMem2Db& queryDescs, const DevMem2Db& trainDescs, const DevMem2Db& mask, const DevMem2Di& trainIdx, const DevMem2Df& distance, int cc, cudaStream_t stream);
-        //template void matchL2_gpu<ushort>(const DevMem2Db& queryDescs, const DevMem2Db& trainDescs, const DevMem2Db& mask, const DevMem2Di& trainIdx, const DevMem2Df& distance, int cc, cudaStream_t stream);
-        //template void matchL2_gpu<short >(const DevMem2Db& queryDescs, const DevMem2Db& trainDescs, const DevMem2Db& mask, const DevMem2Di& trainIdx, const DevMem2Df& distance, int cc, cudaStream_t stream);
-        //template void matchL2_gpu<int   >(const DevMem2Db& queryDescs, const DevMem2Db& trainDescs, const DevMem2Db& mask, const DevMem2Di& trainIdx, const DevMem2Df& distance, int cc, cudaStream_t stream);
-        template void matchL2_gpu<float >(const DevMem2Db& queryDescs, const DevMem2Db& trainDescs, const DevMem2Db& mask, const DevMem2Di& trainIdx, const DevMem2Df& distance, int cc, cudaStream_t stream);
+        //template void matchL2_gpu<uchar >(const PtrStepSzb& queryDescs, const PtrStepSzb& trainDescs, const PtrStepSzb& mask, const PtrStepSzi& trainIdx, const PtrStepSzf& distance, int cc, cudaStream_t stream);
+        //template void matchL2_gpu<schar >(const PtrStepSzb& queryDescs, const PtrStepSzb& trainDescs, const PtrStepSzb& mask, const PtrStepSzi& trainIdx, const PtrStepSzf& distance, int cc, cudaStream_t stream);
+        //template void matchL2_gpu<ushort>(const PtrStepSzb& queryDescs, const PtrStepSzb& trainDescs, const PtrStepSzb& mask, const PtrStepSzi& trainIdx, const PtrStepSzf& distance, int cc, cudaStream_t stream);
+        //template void matchL2_gpu<short >(const PtrStepSzb& queryDescs, const PtrStepSzb& trainDescs, const PtrStepSzb& mask, const PtrStepSzi& trainIdx, const PtrStepSzf& distance, int cc, cudaStream_t stream);
+        //template void matchL2_gpu<int   >(const PtrStepSzb& queryDescs, const PtrStepSzb& trainDescs, const PtrStepSzb& mask, const PtrStepSzi& trainIdx, const PtrStepSzf& distance, int cc, cudaStream_t stream);
+        template void matchL2_gpu<float >(const PtrStepSzb& queryDescs, const PtrStepSzb& trainDescs, const PtrStepSzb& mask, const PtrStepSzi& trainIdx, const PtrStepSzf& distance, int cc, cudaStream_t stream);
 
-        template <typename T> void matchHamming_gpu(const DevMem2Db& query, const DevMem2Db& train, const DevMem2Db& mask,
-                                                    const DevMem2Di& trainIdx, const DevMem2Df& distance,
+        template <typename T> void matchHamming_gpu(const PtrStepSzb& query, const PtrStepSzb& train, const PtrStepSzb& mask,
+                                                    const PtrStepSzi& trainIdx, const PtrStepSzf& distance,
                                                     int cc, cudaStream_t stream)
         {
             if (mask.data)
             {
-                matchDispatcher<HammingDist>(static_cast< DevMem2D_<T> >(query), static_cast< DevMem2D_<T> >(train), SingleMask(mask),
+                matchDispatcher<HammingDist>(static_cast< PtrStepSz<T> >(query), static_cast< PtrStepSz<T> >(train), SingleMask(mask),
                     trainIdx, distance,
                     cc, stream);
             }
             else
             {
-                matchDispatcher<HammingDist>(static_cast< DevMem2D_<T> >(query), static_cast< DevMem2D_<T> >(train), WithOutMask(),
+                matchDispatcher<HammingDist>(static_cast< PtrStepSz<T> >(query), static_cast< PtrStepSz<T> >(train), WithOutMask(),
                     trainIdx, distance,
                     cc, stream);
             }
         }
 
-        template void matchHamming_gpu<uchar >(const DevMem2Db& queryDescs, const DevMem2Db& trainDescs, const DevMem2Db& mask, const DevMem2Di& trainIdx, const DevMem2Df& distance, int cc, cudaStream_t stream);
-        //template void matchHamming_gpu<schar >(const DevMem2Db& queryDescs, const DevMem2Db& trainDescs, const DevMem2Db& mask, const DevMem2Di& trainIdx, const DevMem2Df& distance, int cc, cudaStream_t stream);
-        template void matchHamming_gpu<ushort>(const DevMem2Db& queryDescs, const DevMem2Db& trainDescs, const DevMem2Db& mask, const DevMem2Di& trainIdx, const DevMem2Df& distance, int cc, cudaStream_t stream);
-        //template void matchHamming_gpu<short >(const DevMem2Db& queryDescs, const DevMem2Db& trainDescs, const DevMem2Db& mask, const DevMem2Di& trainIdx, const DevMem2Df& distance, int cc, cudaStream_t stream);
-        template void matchHamming_gpu<int   >(const DevMem2Db& queryDescs, const DevMem2Db& trainDescs, const DevMem2Db& mask, const DevMem2Di& trainIdx, const DevMem2Df& distance, int cc, cudaStream_t stream);
+        template void matchHamming_gpu<uchar >(const PtrStepSzb& queryDescs, const PtrStepSzb& trainDescs, const PtrStepSzb& mask, const PtrStepSzi& trainIdx, const PtrStepSzf& distance, int cc, cudaStream_t stream);
+        //template void matchHamming_gpu<schar >(const PtrStepSzb& queryDescs, const PtrStepSzb& trainDescs, const PtrStepSzb& mask, const PtrStepSzi& trainIdx, const PtrStepSzf& distance, int cc, cudaStream_t stream);
+        template void matchHamming_gpu<ushort>(const PtrStepSzb& queryDescs, const PtrStepSzb& trainDescs, const PtrStepSzb& mask, const PtrStepSzi& trainIdx, const PtrStepSzf& distance, int cc, cudaStream_t stream);
+        //template void matchHamming_gpu<short >(const PtrStepSzb& queryDescs, const PtrStepSzb& trainDescs, const PtrStepSzb& mask, const PtrStepSzi& trainIdx, const PtrStepSzf& distance, int cc, cudaStream_t stream);
+        template void matchHamming_gpu<int   >(const PtrStepSzb& queryDescs, const PtrStepSzb& trainDescs, const PtrStepSzb& mask, const PtrStepSzi& trainIdx, const PtrStepSzf& distance, int cc, cudaStream_t stream);
 
-        template <typename T> void matchL1_gpu(const DevMem2Db& query, const DevMem2Db& trains, const DevMem2D_<PtrStepb>& masks,
-                                               const DevMem2Di& trainIdx, const DevMem2Di& imgIdx, const DevMem2Df& distance,
+        template <typename T> void matchL1_gpu(const PtrStepSzb& query, const PtrStepSzb& trains, const PtrStepSz<PtrStepb>& masks,
+                                               const PtrStepSzi& trainIdx, const PtrStepSzi& imgIdx, const PtrStepSzf& distance,
                                                int cc, cudaStream_t stream)
         {
             if (masks.data)
             {
-                matchDispatcher< L1Dist<T> >(static_cast< DevMem2D_<T> >(query), (const DevMem2D_<T>*)trains.ptr(), trains.cols, MaskCollection(masks.data),
+                matchDispatcher< L1Dist<T> >(static_cast< PtrStepSz<T> >(query), (const PtrStepSz<T>*)trains.ptr(), trains.cols, MaskCollection(masks.data),
                     trainIdx, imgIdx, distance,
                     cc, stream);
             }
             else
             {
-                matchDispatcher< L1Dist<T> >(static_cast< DevMem2D_<T> >(query), (const DevMem2D_<T>*)trains.ptr(), trains.cols, WithOutMask(),
+                matchDispatcher< L1Dist<T> >(static_cast< PtrStepSz<T> >(query), (const PtrStepSz<T>*)trains.ptr(), trains.cols, WithOutMask(),
                     trainIdx, imgIdx, distance,
                     cc, stream);
             }
         }
 
-        template void matchL1_gpu<uchar >(const DevMem2Db& query, const DevMem2Db& trains, const DevMem2D_<PtrStepb>& masks, const DevMem2Di& trainIdx, const DevMem2Di& imgIdx, const DevMem2Df& distance, int cc, cudaStream_t stream);
-        //template void matchL1_gpu<schar >(const DevMem2Db& query, const DevMem2Db& trains, const DevMem2D_<PtrStepb>& masks, const DevMem2Di& trainIdx, const DevMem2Di& imgIdx, const DevMem2Df& distance, int cc, cudaStream_t stream);
-        template void matchL1_gpu<ushort>(const DevMem2Db& query, const DevMem2Db& trains, const DevMem2D_<PtrStepb>& masks, const DevMem2Di& trainIdx, const DevMem2Di& imgIdx, const DevMem2Df& distance, int cc, cudaStream_t stream);
-        template void matchL1_gpu<short >(const DevMem2Db& query, const DevMem2Db& trains, const DevMem2D_<PtrStepb>& masks, const DevMem2Di& trainIdx, const DevMem2Di& imgIdx, const DevMem2Df& distance, int cc, cudaStream_t stream);
-        template void matchL1_gpu<int   >(const DevMem2Db& query, const DevMem2Db& trains, const DevMem2D_<PtrStepb>& masks, const DevMem2Di& trainIdx, const DevMem2Di& imgIdx, const DevMem2Df& distance, int cc, cudaStream_t stream);
-        template void matchL1_gpu<float >(const DevMem2Db& query, const DevMem2Db& trains, const DevMem2D_<PtrStepb>& masks, const DevMem2Di& trainIdx, const DevMem2Di& imgIdx, const DevMem2Df& distance, int cc, cudaStream_t stream);
+        template void matchL1_gpu<uchar >(const PtrStepSzb& query, const PtrStepSzb& trains, const PtrStepSz<PtrStepb>& masks, const PtrStepSzi& trainIdx, const PtrStepSzi& imgIdx, const PtrStepSzf& distance, int cc, cudaStream_t stream);
+        //template void matchL1_gpu<schar >(const PtrStepSzb& query, const PtrStepSzb& trains, const PtrStepSz<PtrStepb>& masks, const PtrStepSzi& trainIdx, const PtrStepSzi& imgIdx, const PtrStepSzf& distance, int cc, cudaStream_t stream);
+        template void matchL1_gpu<ushort>(const PtrStepSzb& query, const PtrStepSzb& trains, const PtrStepSz<PtrStepb>& masks, const PtrStepSzi& trainIdx, const PtrStepSzi& imgIdx, const PtrStepSzf& distance, int cc, cudaStream_t stream);
+        template void matchL1_gpu<short >(const PtrStepSzb& query, const PtrStepSzb& trains, const PtrStepSz<PtrStepb>& masks, const PtrStepSzi& trainIdx, const PtrStepSzi& imgIdx, const PtrStepSzf& distance, int cc, cudaStream_t stream);
+        template void matchL1_gpu<int   >(const PtrStepSzb& query, const PtrStepSzb& trains, const PtrStepSz<PtrStepb>& masks, const PtrStepSzi& trainIdx, const PtrStepSzi& imgIdx, const PtrStepSzf& distance, int cc, cudaStream_t stream);
+        template void matchL1_gpu<float >(const PtrStepSzb& query, const PtrStepSzb& trains, const PtrStepSz<PtrStepb>& masks, const PtrStepSzi& trainIdx, const PtrStepSzi& imgIdx, const PtrStepSzf& distance, int cc, cudaStream_t stream);
 
-        template <typename T> void matchL2_gpu(const DevMem2Db& query, const DevMem2Db& trains, const DevMem2D_<PtrStepb>& masks,
-                                               const DevMem2Di& trainIdx, const DevMem2Di& imgIdx, const DevMem2Df& distance,
+        template <typename T> void matchL2_gpu(const PtrStepSzb& query, const PtrStepSzb& trains, const PtrStepSz<PtrStepb>& masks,
+                                               const PtrStepSzi& trainIdx, const PtrStepSzi& imgIdx, const PtrStepSzf& distance,
                                                int cc, cudaStream_t stream)
         {
             if (masks.data)
             {
-                matchDispatcher<L2Dist>(static_cast< DevMem2D_<T> >(query), (const DevMem2D_<T>*)trains.ptr(), trains.cols, MaskCollection(masks.data),
+                matchDispatcher<L2Dist>(static_cast< PtrStepSz<T> >(query), (const PtrStepSz<T>*)trains.ptr(), trains.cols, MaskCollection(masks.data),
                     trainIdx, imgIdx, distance,
                     cc, stream);
             }
             else
             {
-                matchDispatcher<L2Dist>(static_cast< DevMem2D_<T> >(query), (const DevMem2D_<T>*)trains.ptr(), trains.cols, WithOutMask(),
+                matchDispatcher<L2Dist>(static_cast< PtrStepSz<T> >(query), (const PtrStepSz<T>*)trains.ptr(), trains.cols, WithOutMask(),
                     trainIdx, imgIdx, distance,
                     cc, stream);
             }
         }
 
-        //template void matchL2_gpu<uchar >(const DevMem2Db& query, const DevMem2Db& trains, const DevMem2D_<PtrStepb>& masks, const DevMem2Di& trainIdx, const DevMem2Di& imgIdx, const DevMem2Df& distance, int cc, cudaStream_t stream);
-        //template void matchL2_gpu<schar >(const DevMem2Db& query, const DevMem2Db& trains, const DevMem2D_<PtrStepb>& masks, const DevMem2Di& trainIdx, const DevMem2Di& imgIdx, const DevMem2Df& distance, int cc, cudaStream_t stream);
-        //template void matchL2_gpu<ushort>(const DevMem2Db& query, const DevMem2Db& trains, const DevMem2D_<PtrStepb>& masks, const DevMem2Di& trainIdx, const DevMem2Di& imgIdx, const DevMem2Df& distance, int cc, cudaStream_t stream);
-        //template void matchL2_gpu<short >(const DevMem2Db& query, const DevMem2Db& trains, const DevMem2D_<PtrStepb>& masks, const DevMem2Di& trainIdx, const DevMem2Di& imgIdx, const DevMem2Df& distance, int cc, cudaStream_t stream);
-        //template void matchL2_gpu<int   >(const DevMem2Db& query, const DevMem2Db& trains, const DevMem2D_<PtrStepb>& masks, const DevMem2Di& trainIdx, const DevMem2Di& imgIdx, const DevMem2Df& distance, int cc, cudaStream_t stream);
-        template void matchL2_gpu<float >(const DevMem2Db& query, const DevMem2Db& trains, const DevMem2D_<PtrStepb>& maskCollection, const DevMem2Di& trainIdx, const DevMem2Di& imgIdx, const DevMem2Df& distance, int cc, cudaStream_t stream);
+        //template void matchL2_gpu<uchar >(const PtrStepSzb& query, const PtrStepSzb& trains, const PtrStepSz<PtrStepb>& masks, const PtrStepSzi& trainIdx, const PtrStepSzi& imgIdx, const PtrStepSzf& distance, int cc, cudaStream_t stream);
+        //template void matchL2_gpu<schar >(const PtrStepSzb& query, const PtrStepSzb& trains, const PtrStepSz<PtrStepb>& masks, const PtrStepSzi& trainIdx, const PtrStepSzi& imgIdx, const PtrStepSzf& distance, int cc, cudaStream_t stream);
+        //template void matchL2_gpu<ushort>(const PtrStepSzb& query, const PtrStepSzb& trains, const PtrStepSz<PtrStepb>& masks, const PtrStepSzi& trainIdx, const PtrStepSzi& imgIdx, const PtrStepSzf& distance, int cc, cudaStream_t stream);
+        //template void matchL2_gpu<short >(const PtrStepSzb& query, const PtrStepSzb& trains, const PtrStepSz<PtrStepb>& masks, const PtrStepSzi& trainIdx, const PtrStepSzi& imgIdx, const PtrStepSzf& distance, int cc, cudaStream_t stream);
+        //template void matchL2_gpu<int   >(const PtrStepSzb& query, const PtrStepSzb& trains, const PtrStepSz<PtrStepb>& masks, const PtrStepSzi& trainIdx, const PtrStepSzi& imgIdx, const PtrStepSzf& distance, int cc, cudaStream_t stream);
+        template void matchL2_gpu<float >(const PtrStepSzb& query, const PtrStepSzb& trains, const PtrStepSz<PtrStepb>& maskCollection, const PtrStepSzi& trainIdx, const PtrStepSzi& imgIdx, const PtrStepSzf& distance, int cc, cudaStream_t stream);
 
-        template <typename T> void matchHamming_gpu(const DevMem2Db& query, const DevMem2Db& trains, const DevMem2D_<PtrStepb>& masks,
-                                                    const DevMem2Di& trainIdx, const DevMem2Di& imgIdx, const DevMem2Df& distance,
+        template <typename T> void matchHamming_gpu(const PtrStepSzb& query, const PtrStepSzb& trains, const PtrStepSz<PtrStepb>& masks,
+                                                    const PtrStepSzi& trainIdx, const PtrStepSzi& imgIdx, const PtrStepSzf& distance,
                                                     int cc, cudaStream_t stream)
         {
             if (masks.data)
             {
-                matchDispatcher<HammingDist>(static_cast< DevMem2D_<T> >(query), (const DevMem2D_<T>*)trains.ptr(), trains.cols, MaskCollection(masks.data),
+                matchDispatcher<HammingDist>(static_cast< PtrStepSz<T> >(query), (const PtrStepSz<T>*)trains.ptr(), trains.cols, MaskCollection(masks.data),
                     trainIdx, imgIdx, distance,
                     cc, stream);
             }
             else
             {
-                matchDispatcher<HammingDist>(static_cast< DevMem2D_<T> >(query), (const DevMem2D_<T>*)trains.ptr(), trains.cols, WithOutMask(),
+                matchDispatcher<HammingDist>(static_cast< PtrStepSz<T> >(query), (const PtrStepSz<T>*)trains.ptr(), trains.cols, WithOutMask(),
                     trainIdx, imgIdx, distance,
                     cc, stream);
             }
         }
 
-        template void matchHamming_gpu<uchar >(const DevMem2Db& query, const DevMem2Db& trains, const DevMem2D_<PtrStepb>& masks, const DevMem2Di& trainIdx, const DevMem2Di& imgIdx, const DevMem2Df& distance, int cc, cudaStream_t stream);
-        //template void matchHamming_gpu<schar >(const DevMem2Db& query, const DevMem2Db& trains, const DevMem2D_<PtrStepb>& masks, const DevMem2Di& trainIdx, const DevMem2Di& imgIdx, const DevMem2Df& distance, int cc, cudaStream_t stream);
-        template void matchHamming_gpu<ushort>(const DevMem2Db& query, const DevMem2Db& trains, const DevMem2D_<PtrStepb>& masks, const DevMem2Di& trainIdx, const DevMem2Di& imgIdx, const DevMem2Df& distance, int cc, cudaStream_t stream);
-        //template void matchHamming_gpu<short >(const DevMem2Db& query, const DevMem2Db& trains, const DevMem2D_<PtrStepb>& masks, const DevMem2Di& trainIdx, const DevMem2Di& imgIdx, const DevMem2Df& distance, int cc, cudaStream_t stream);
-        template void matchHamming_gpu<int   >(const DevMem2Db& query, const DevMem2Db& trains, const DevMem2D_<PtrStepb>& masks, const DevMem2Di& trainIdx, const DevMem2Di& imgIdx, const DevMem2Df& distance, int cc, cudaStream_t stream);
+        template void matchHamming_gpu<uchar >(const PtrStepSzb& query, const PtrStepSzb& trains, const PtrStepSz<PtrStepb>& masks, const PtrStepSzi& trainIdx, const PtrStepSzi& imgIdx, const PtrStepSzf& distance, int cc, cudaStream_t stream);
+        //template void matchHamming_gpu<schar >(const PtrStepSzb& query, const PtrStepSzb& trains, const PtrStepSz<PtrStepb>& masks, const PtrStepSzi& trainIdx, const PtrStepSzi& imgIdx, const PtrStepSzf& distance, int cc, cudaStream_t stream);
+        template void matchHamming_gpu<ushort>(const PtrStepSzb& query, const PtrStepSzb& trains, const PtrStepSz<PtrStepb>& masks, const PtrStepSzi& trainIdx, const PtrStepSzi& imgIdx, const PtrStepSzf& distance, int cc, cudaStream_t stream);
+        //template void matchHamming_gpu<short >(const PtrStepSzb& query, const PtrStepSzb& trains, const PtrStepSz<PtrStepb>& masks, const PtrStepSzi& trainIdx, const PtrStepSzi& imgIdx, const PtrStepSzf& distance, int cc, cudaStream_t stream);
+        template void matchHamming_gpu<int   >(const PtrStepSzb& query, const PtrStepSzb& trains, const PtrStepSz<PtrStepb>& masks, const PtrStepSzi& trainIdx, const PtrStepSzi& imgIdx, const PtrStepSzf& distance, int cc, cudaStream_t stream);
     } // namespace bf_match
 }}} // namespace cv { namespace gpu { namespace device {
+
+
+#endif /* CUDA_DISABLER */

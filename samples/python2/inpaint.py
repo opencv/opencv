@@ -1,8 +1,11 @@
-import numpy as np
-import cv2
-from common import Sketcher
+'''
+Inpainting sample.
 
-help_message = '''USAGE: inpaint.py [<image>]
+Inpainting repairs damage to images by floodfilling 
+the damage with surrounding image areas.
+
+Usage: 
+  inpaint.py [<image>]
 
 Keys:
   SPACE - inpaint
@@ -10,11 +13,15 @@ Keys:
   ESC   - exit
 '''
 
+import numpy as np
+import cv2
+from common import Sketcher
+
 if __name__ == '__main__':
     import sys
     try: fn = sys.argv[1]
     except: fn = '../cpp/fruits.jpg'
-    print help_message
+    print __doc__
 
     img = cv2.imread(fn)
     img_mark = img.copy()

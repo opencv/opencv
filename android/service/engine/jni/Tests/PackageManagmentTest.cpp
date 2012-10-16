@@ -39,6 +39,14 @@ TEST(PackageManager, InstallVersion)
     EXPECT_TRUE(pm.CheckVersionInstalled("240", PLATFORM_UNKNOWN, ARCH_ARMv5));
 }
 
+TEST(PackageManager, GetPackagePathForArmv5)
+{
+    PackageManagerStub pm;
+    EXPECT_TRUE(pm.InstallVersion("243", PLATFORM_UNKNOWN, ARCH_ARMv5));
+    string path = pm.GetPackagePathByVersion("243", PLATFORM_UNKNOWN, ARCH_ARMv5);
+    EXPECT_STREQ("/data/data/org.opencv.lib_v24_armv5/lib", path.c_str());
+}
+
 TEST(PackageManager, GetPackagePathForArmv7)
 {
     PackageManagerStub pm;
@@ -52,9 +60,9 @@ TEST(PackageManager, GetPackagePathForArmv7Neon)
     PackageManagerStub pm;
     EXPECT_TRUE(pm.InstallVersion("230", PLATFORM_UNKNOWN, ARCH_ARMv7 | FEATURES_HAS_NEON));
     string path = pm.GetPackagePathByVersion("230", PLATFORM_UNKNOWN, ARCH_ARMv7 | FEATURES_HAS_NEON);
-#ifdef __SUPPORT_ARMEABI_V7A_FEATURES   
+#ifdef __SUPPORT_ARMEABI_V7A_FEATURES
     EXPECT_STREQ("/data/data/org.opencv.lib_v23_armv7a_neon/lib", path.c_str());
-#else    
+#else
     EXPECT_STREQ("/data/data/org.opencv.lib_v23_armv7a/lib", path.c_str());
 #endif
 }
@@ -72,9 +80,9 @@ TEST(PackageManager, GetPackagePathForX86SSE2)
     PackageManagerStub pm;
     EXPECT_TRUE(pm.InstallVersion("230", PLATFORM_UNKNOWN, ARCH_X86 | FEATURES_HAS_SSE2));
     string path = pm.GetPackagePathByVersion("230", PLATFORM_UNKNOWN, ARCH_X86 | FEATURES_HAS_SSE2);
-#ifdef __SUPPORT_INTEL_FEATURES    
+#ifdef __SUPPORT_INTEL_FEATURES
     EXPECT_STREQ("/data/data/org.opencv.lib_v23_x86_sse2/lib", path.c_str());
-#else    
+#else
     EXPECT_STREQ("/data/data/org.opencv.lib_v23_x86/lib", path.c_str());
 #endif
 }
@@ -94,6 +102,16 @@ TEST(PackageManager, GetPackagePathForTegra3)
 #endif
 #endif
 }
+
+#ifdef __SUPPORT_MIPS
+TEST(PackageManager, GetPackagePathForMips)
+{
+    PackageManagerStub pm;
+    EXPECT_TRUE(pm.InstallVersion("243", PLATFORM_UNKNOWN, ARCH_MIPS));
+    string path = pm.GetPackagePathByVersion("243", PLATFORM_UNKNOWN, ARCH_MIPS);
+    EXPECT_STREQ("/data/data/org.opencv.lib_v24_mips/lib", path.c_str());
+}
+#endif
 
 // TODO: Enable tests if seporate package will be exists
 // TEST(PackageManager, GetPackagePathForTegra2)

@@ -8,14 +8,17 @@ ScriptHome = os.path.split(sys.argv[0])[0]
 ConfFile = open(os.path.join(ScriptHome, "camera_build.conf"), "rt")
 HomeDir = os.getcwd()
 for s in ConfFile.readlines():
+    s = s[0:s.find("#")]
+    if (not s):
+	continue
     keys = s.split(";")
     if (len(keys) < 4):
 	print("Error: invalid config line: \"%s\"" % s)
 	continue
-    MakeTarget = keys[0]
-    Arch = keys[1]
-    NativeApiLevel = keys[2]
-    AndroidTreeRoot = keys[3]
+    MakeTarget = str.strip(keys[0])
+    Arch = str.strip(keys[1])
+    NativeApiLevel = str.strip(keys[2])
+    AndroidTreeRoot = str.strip(keys[3])
     AndroidTreeRoot = str.strip(AndroidTreeRoot, "\n")
     print("Building %s for %s" % (MakeTarget, Arch))
     BuildDir = os.path.join(HomeDir, MakeTarget + "_" + Arch)
@@ -29,6 +32,8 @@ for s in ConfFile.readlines():
     shutil.rmtree(os.path.join(AndroidTreeRoot, "out", "target", "product", "generic", "system"), ignore_errors=True)
     if (Arch == "x86"):
 	shutil.copytree(os.path.join(AndroidTreeRoot, "bin_x86", "system"), os.path.join(AndroidTreeRoot, "out", "target", "product", "generic", "system"))
+    elif (Arch == "mips"):
+	shutil.copytree(os.path.join(AndroidTreeRoot, "bin_mips", "system"), os.path.join(AndroidTreeRoot, "out", "target", "product", "generic", "system"))
     else:
 	shutil.copytree(os.path.join(AndroidTreeRoot, "bin_arm", "system"), os.path.join(AndroidTreeRoot, "out", "target", "product", "generic", "system"))
     os.chdir(BuildDir)
@@ -44,8 +49,10 @@ for s in ConfFile.readlines():
     if (os.path.exists(CameraLib)):
 	try:
 	    shutil.copyfile(CameraLib, os.path.join("..", "3rdparty", "lib", Arch, "lib" + MakeTarget + ".so"))
-	    print("Building %s for %s\t[OK]" % (MakeTarget, Arch));
+	    print("Building %s for %s\t[\033[92mOK\033[0m]" % (MakeTarget, Arch));
 	except:
-	    print("Building %s for %s\t[FAILED]" % (MakeTarget, Arch));
+	    print("Building %s for %s\t[\033[91mFAILED\033[0m]" % (MakeTarget, Arch));
+    else:
+	print("Building %s for %s\t[\033[91mFAILED\033[0m]" % (MakeTarget, Arch));
 ConfFile.close()
 

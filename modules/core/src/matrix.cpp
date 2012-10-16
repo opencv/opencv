@@ -1288,9 +1288,11 @@ _OutputArray::~_OutputArray() {}
 #endif
 _OutputArray::_OutputArray(Mat& m) : _InputArray(m) {}
 _OutputArray::_OutputArray(vector<Mat>& vec) : _InputArray(vec) {}
+_OutputArray::_OutputArray(gpu::GpuMat& d_mat) : _InputArray(d_mat) {}
 
 _OutputArray::_OutputArray(const Mat& m) : _InputArray(m) {flags |= FIXED_SIZE|FIXED_TYPE;}
 _OutputArray::_OutputArray(const vector<Mat>& vec) : _InputArray(vec) {flags |= FIXED_SIZE;}
+_OutputArray::_OutputArray(const gpu::GpuMat& d_mat) : _InputArray(d_mat) {flags |= FIXED_SIZE|FIXED_TYPE;}
 
 
 bool _OutputArray::fixedSize() const
@@ -1313,6 +1315,13 @@ void _OutputArray::create(Size _sz, int mtype, int i, bool allowTransposed, int 
         ((Mat*)obj)->create(_sz, mtype);
         return;
     }
+    if( k == GPU_MAT && i < 0 && !allowTransposed && fixedDepthMask == 0 )
+    {
+        CV_Assert(!fixedSize() || ((gpu::GpuMat*)obj)->size() == _sz);
+        CV_Assert(!fixedType() || ((gpu::GpuMat*)obj)->type() == mtype);
+        ((gpu::GpuMat*)obj)->create(_sz, mtype);
+        return;
+    }
     int sizes[] = {_sz.height, _sz.width};
     create(2, sizes, mtype, i, allowTransposed, fixedDepthMask);
 }
@@ -1325,6 +1334,13 @@ void _OutputArray::create(int rows, int cols, int mtype, int i, bool allowTransp
         CV_Assert(!fixedSize() || ((Mat*)obj)->size.operator()() == Size(cols, rows));
         CV_Assert(!fixedType() || ((Mat*)obj)->type() == mtype);
         ((Mat*)obj)->create(rows, cols, mtype);
+        return;
+    }
+    if( k == GPU_MAT && i < 0 && !allowTransposed && fixedDepthMask == 0 )
+    {
+        CV_Assert(!fixedSize() || ((gpu::GpuMat*)obj)->size() == Size(cols, rows));
+        CV_Assert(!fixedType() || ((gpu::GpuMat*)obj)->type() == mtype);
+        ((gpu::GpuMat*)obj)->create(rows, cols, mtype);
         return;
     }
     int sizes[] = {rows, cols};
@@ -1540,6 +1556,12 @@ void _OutputArray::release() const
         return;
     }
 
+    if( k == GPU_MAT )
+    {
+        ((gpu::GpuMat*)obj)->release();
+        return;
+    }
+
     if( k == NONE )
         return;
 
@@ -1596,6 +1618,13 @@ Mat& _OutputArray::getMatRef(int i) const
         CV_Assert( i < (int)v.size() );
         return v[i];
     }
+}
+
+gpu::GpuMat& _OutputArray::getGpuMatRef() const
+{
+    int k = kind();
+    CV_Assert( k == GPU_MAT );
+    return *(gpu::GpuMat*)obj;
 }
 
 static _OutputArray _none;
@@ -2403,6 +2432,43 @@ static void generateRandomCenter(const vector<Vec2f>& box, float* center, RNG& r
         center[j] = ((float)rng*(1.f+margin*2.f)-margin)*(box[j][1] - box[j][0]) + box[j][0];
 }
 
+class KMeansPPDistanceComputer
+{
+public:
+    KMeansPPDistanceComputer( float *_tdist2,
+                              const float *_data,
+                              const float *_dist,
+                              int _dims,
+                              size_t _step,
+                              size_t _stepci )
+        : tdist2(_tdist2),
+          data(_data),
+          dist(_dist),
+          dims(_dims),
+          step(_step),
+          stepci(_stepci) { }
+
+    void operator()( const cv::BlockedRange& range ) const
+    {
+        const int begin = range.begin();
+        const int end = range.end();
+
+        for ( int i = begin; i<end; i++ )
+        {
+            tdist2[i] = std::min(normL2Sqr_(data + step*i, data + stepci, dims), dist[i]);
+        }
+    }
+
+private:
+    KMeansPPDistanceComputer& operator=(const KMeansPPDistanceComputer&); // to quiet MSVC
+
+    float *tdist2;
+    const float *data;
+    const float *dist;
+    const int dims;
+    const size_t step;
+    const size_t stepci;
+};
 
 /*
 k-means center initialization using the following algorithm:
@@ -2440,9 +2506,11 @@ static void generateCentersPP(const Mat& _data, Mat& _out_centers,
                 if( (p -= dist[i]) <= 0 )
                     break;
             int ci = i;
+
+            parallel_for(BlockedRange(0, N),
+                         KMeansPPDistanceComputer(tdist2, data, dist, dims, step, step*ci));
             for( i = 0; i < N; i++ )
             {
-                tdist2[i] = std::min(normL2Sqr_(data + step*i, data + step*ci, dims), dist[i]);
                 s += tdist2[i];
             }
 
@@ -2466,6 +2534,61 @@ static void generateCentersPP(const Mat& _data, Mat& _out_centers,
             dst[j] = src[j];
     }
 }
+
+class KMeansDistanceComputer
+{
+public:
+    KMeansDistanceComputer( double *_distances,
+                            int *_labels,
+                            const Mat& _data,
+                            const Mat& _centers )
+        : distances(_distances),
+          labels(_labels),
+          data(_data),
+          centers(_centers)
+    {
+        CV_DbgAssert(centers.cols == data.cols);
+    }
+
+    void operator()( const BlockedRange& range ) const
+    {
+        const int begin = range.begin();
+        const int end = range.end();
+        const int K = centers.rows;
+        const int dims = centers.cols;
+
+        const float *sample;
+        for( int i = begin; i<end; ++i)
+        {
+            sample = data.ptr<float>(i);
+            int k_best = 0;
+            double min_dist = DBL_MAX;
+
+            for( int k = 0; k < K; k++ )
+            {
+                const float* center = centers.ptr<float>(k);
+                const double dist = normL2Sqr_(sample, center, dims);
+
+                if( min_dist > dist )
+                {
+                    min_dist = dist;
+                    k_best = k;
+                }
+            }
+
+            distances[i] = min_dist;
+            labels[i] = k_best;
+        }
+    }
+
+private:
+    KMeansDistanceComputer& operator=(const KMeansDistanceComputer&); // to quiet MSVC
+
+    double *distances;
+    int *labels;
+    const Mat& data;
+    const Mat& centers;
+};
 
 }
 
@@ -2511,7 +2634,6 @@ double cv::kmeans( InputArray _data, int K,
     vector<int> counters(K);
     vector<Vec2f> _box(dims);
     Vec2f* box = &_box[0];
-
     double best_compactness = DBL_MAX, compactness = 0;
     RNG& rng = theRNG();
     int a, iter, i, j, k;
@@ -2686,27 +2808,14 @@ double cv::kmeans( InputArray _data, int K,
                 break;
 
             // assign labels
+            Mat dists(1, N, CV_64F);
+            double* dist = dists.ptr<double>(0);
+            parallel_for(BlockedRange(0, N),
+                         KMeansDistanceComputer(dist, labels, data, centers));
             compactness = 0;
             for( i = 0; i < N; i++ )
             {
-                sample = data.ptr<float>(i);
-                int k_best = 0;
-                double min_dist = DBL_MAX;
-
-                for( k = 0; k < K; k++ )
-                {
-                    const float* center = centers.ptr<float>(k);
-                    double dist = normL2Sqr_(sample, center, dims);
-
-                    if( min_dist > dist )
-                    {
-                        min_dist = dist;
-                        k_best = k;
-                    }
-                }
-
-                compactness += min_dist;
-                labels[i] = k_best;
+                compactness += dist[i];
             }
         }
 
@@ -3266,7 +3375,7 @@ convertScaleData_(const void* _from, void* _to, int cn, double alpha, double bet
             to[i] = saturate_cast<T2>(from[i]*alpha + beta);
 }
 
-static ConvertData getConvertData(int fromType, int toType)
+ConvertData getConvertElem(int fromType, int toType)
 {
     static ConvertData tab[][8] =
     {{ convertData_<uchar, uchar>, convertData_<uchar, schar>,
@@ -3311,7 +3420,7 @@ static ConvertData getConvertData(int fromType, int toType)
     return func;
 }
 
-static ConvertScaleData getConvertScaleData(int fromType, int toType)
+ConvertScaleData getConvertScaleElem(int fromType, int toType)
 {
     static ConvertScaleData tab[][8] =
     {{ convertScaleData_<uchar, uchar>, convertScaleData_<uchar, schar>,
@@ -3541,7 +3650,7 @@ void SparseMat::convertTo( SparseMat& m, int rtype, double alpha ) const
 
     if( alpha == 1 )
     {
-        ConvertData cvtfunc = getConvertData(type(), rtype);
+        ConvertData cvtfunc = getConvertElem(type(), rtype);
         for( i = 0; i < N; i++, ++from )
         {
             const Node* n = from.node();
@@ -3551,7 +3660,7 @@ void SparseMat::convertTo( SparseMat& m, int rtype, double alpha ) const
     }
     else
     {
-        ConvertScaleData cvtfunc = getConvertScaleData(type(), rtype);
+        ConvertScaleData cvtfunc = getConvertScaleElem(type(), rtype);
         for( i = 0; i < N; i++, ++from )
         {
             const Node* n = from.node();
@@ -3578,7 +3687,7 @@ void SparseMat::convertTo( Mat& m, int rtype, double alpha, double beta ) const
 
     if( alpha == 1 && beta == 0 )
     {
-        ConvertData cvtfunc = getConvertData(type(), rtype);
+        ConvertData cvtfunc = getConvertElem(type(), rtype);
         for( i = 0; i < N; i++, ++from )
         {
             const Node* n = from.node();
@@ -3588,7 +3697,7 @@ void SparseMat::convertTo( Mat& m, int rtype, double alpha, double beta ) const
     }
     else
     {
-        ConvertScaleData cvtfunc = getConvertScaleData(type(), rtype);
+        ConvertScaleData cvtfunc = getConvertScaleElem(type(), rtype);
         for( i = 0; i < N; i++, ++from )
         {
             const Node* n = from.node();

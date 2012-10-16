@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.StringTokenizer;
 
+import org.opencv.engine.HardwareDetector;
 import org.opencv.engine.MarketConnector;
 import org.opencv.engine.OpenCVEngineInterface;
 import org.opencv.engine.R;
@@ -17,6 +18,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager.NameNotFoundException;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
@@ -39,28 +41,36 @@ public class ManagerActivity extends Activity
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
-        
+
         TextView OsVersionView = (TextView)findViewById(R.id.OsVersionValue);
         OsVersionView.setText(Build.VERSION.CODENAME + " (" + Build.VERSION.RELEASE + "), API " + Build.VERSION.SDK_INT);
-        
+
+        try {
+        	PackageInfo packageInfo = getPackageManager().getPackageInfo(this.getPackageName(), 0);
+        	ManagerVersion = packageInfo.versionName;
+        } catch (NameNotFoundException e) {
+        	ManagerVersion = "N/A";
+        	e.printStackTrace();
+        }
+
         mInstalledPackageView = (ListView)findViewById(R.id.InstalledPackageList);
-        
+
         mMarket = new MarketConnector(this);
-        
-        mInstalledPacksAdapter = new SimpleAdapter(
+
+        mInstalledPacksAdapter = new PackageListAdapter(
         	    this,
         	    mListViewItems,
         	    R.layout.info,
-        	    new String[] {"Name", "Version", "Hardware"},
+        	    new String[] {"Name", "Version", "Hardware", "Activity"},
         	    new int[] {R.id.InfoName,R.id.InfoVersion, R.id.InfoHardware}
         	    );
-        
+
         mInstalledPackageView.setAdapter(mInstalledPacksAdapter);
-        
+
         TextView HardwarePlatformView = (TextView)findViewById(R.id.HardwareValue);
         int Platfrom = HardwareDetector.DetectKnownPlatforms();
         int CpuId = HardwareDetector.GetCpuID();
-        
+
         if (HardwareDetector.PLATFORM_UNKNOWN != Platfrom)
         {
         	if (HardwareDetector.PLATFORM_TEGRA == Platfrom)
@@ -102,193 +112,248 @@ public class ManagerActivity extends Activity
         	{
         		HardwarePlatformView.setText("ARM v8 " + JoinArmFeatures(CpuId));
         	}
+        	else if ((CpuId & HardwareDetector.ARCH_MIPS) == HardwareDetector.ARCH_MIPS)
+        	{
+        		HardwarePlatformView.setText("MIPS");
+        	}
         	else
         	{
         		HardwarePlatformView.setText("not detected");
         	}
         }
-        
+
         mUpdateEngineButton = (Button)findViewById(R.id.CheckEngineUpdate);
         mUpdateEngineButton.setOnClickListener(new OnClickListener() {
-			
-			public void onClick(View v) {
-				if (!mMarket.InstallAppFromMarket("org.opencv.engine"))
-				{
-					Toast toast = Toast.makeText(getApplicationContext(), "Google Play is not avaliable", Toast.LENGTH_SHORT);
-					toast.show();
-				}
-			}
-		});
-        
+
+        	public void onClick(View v) {
+        		if (!mMarket.InstallAppFromMarket("org.opencv.engine"))
+        		{
+        			Toast toast = Toast.makeText(getApplicationContext(), "Google Play is not avaliable", Toast.LENGTH_SHORT);
+        			toast.show();
+        		}
+        	}
+        });
+
         mActionDialog = new AlertDialog.Builder(this).create();
-        
+
         mActionDialog.setTitle("Choose action");
         mActionDialog.setButton("Update", new DialogInterface.OnClickListener() {
-			
-			public void onClick(DialogInterface dialog, int which) {
-				int index = (Integer)mInstalledPackageView.getTag();
-				if (!mMarket.InstallAppFromMarket(mInstalledPackageInfo[index].packageName))
-				{
-					Toast toast = Toast.makeText(getApplicationContext(), "Google Play is not avaliable", Toast.LENGTH_SHORT);
-					toast.show();
-				}
-			}
-		});
-        
+
+        	public void onClick(DialogInterface dialog, int which) {
+        		int index = (Integer)mInstalledPackageView.getTag();
+        		if (!mMarket.InstallAppFromMarket(mInstalledPackageInfo[index].packageName))
+        		{
+        			Toast toast = Toast.makeText(getApplicationContext(), "Google Play is not avaliable", Toast.LENGTH_SHORT);
+        			toast.show();
+        		}
+        	}
+        });
+
         mActionDialog.setButton3("Remove", new DialogInterface.OnClickListener() {
-			
-			public void onClick(DialogInterface dialog, int which) {
-				int index = (Integer)mInstalledPackageView.getTag();
-				if (!mMarket.RemoveAppFromMarket(mInstalledPackageInfo[index].packageName, true))
-				{
-					Toast toast = Toast.makeText(getApplicationContext(), "Google Play is not avaliable", Toast.LENGTH_SHORT);
-					toast.show();
-				}				
-			}
+
+        	public void onClick(DialogInterface dialog, int which) {
+        		int index = (Integer)mInstalledPackageView.getTag();
+        		if (!mMarket.RemoveAppFromMarket(mInstalledPackageInfo[index].packageName, true))
+        		{
+        			Toast toast = Toast.makeText(getApplicationContext(), "Google Play is not avaliable", Toast.LENGTH_SHORT);
+        			toast.show();
+        		}
+        	}
 		});
-        
+
         mActionDialog.setButton2("Return", new DialogInterface.OnClickListener() {
-			
+
 			public void onClick(DialogInterface dialog, int which) {
 				// nothing
 			}
 		});
-        
-        mInstalledPackageView.setOnItemClickListener(new OnItemClickListener() {
 
-			public void onItemClick(AdapterView<?> arg0, View arg1, int arg2, long id) {
-				
-		        mInstalledPackageView.setTag(new Integer((int)id));
-		        mActionDialog.show();
-			}		
+        mInstalledPackageView.setOnItemClickListener(new OnItemClickListener() {
+        	
+        	public void onItemClick(AdapterView<?> arg0, View arg1, int arg2, long id) {
+        		mInstalledPackageView.setTag(Integer.valueOf((int)id));
+        		mActionDialog.show();
+        	}
         });
-        
-        if (!bindService(new Intent("org.opencv.engine.BIND"), mServiceConnection, Context.BIND_AUTO_CREATE))
-        {
-        	TextView EngineVersionView = (TextView)findViewById(R.id.EngineVersionValue);
-        	EngineVersionView.setText("not avaliable");
-        }
-        
+
         IntentFilter filter = new IntentFilter();
         filter.addAction(Intent.ACTION_PACKAGE_ADDED);
         filter.addAction(Intent.ACTION_PACKAGE_CHANGED);
         filter.addAction(Intent.ACTION_PACKAGE_INSTALL);
         filter.addAction(Intent.ACTION_PACKAGE_REMOVED);
         filter.addAction(Intent.ACTION_PACKAGE_REPLACED);
-        
+
         registerReceiver(mPackageChangeReciever, filter);
     }
-    
+
     @Override
     protected void onDestroy() {
     	super.onDestroy();
     	unregisterReceiver(mPackageChangeReciever);
     }
-    
+
     @Override
     protected void onResume() {
     	super.onResume();
-    	FillPackageList();
+    	Log.d(TAG, "Filling package list on resume");
+        if (!bindService(new Intent("org.opencv.engine.BIND"), new OpenCVEngineServiceConnection(), Context.BIND_AUTO_CREATE))
+        {
+        	TextView EngineVersionView = (TextView)findViewById(R.id.EngineVersionValue);
+        	EngineVersionView.setText("not avaliable");
+        }
     }
-    
+
     protected SimpleAdapter mInstalledPacksAdapter;
     protected ListView mInstalledPackageView;
     protected Button mUpdateEngineButton;
     protected PackageInfo[] mInstalledPackageInfo;
-    protected static final ArrayList<HashMap<String,String>> mListViewItems = new ArrayList<HashMap<String,String>>();
+    protected final ArrayList<HashMap<String,String>> mListViewItems = new ArrayList<HashMap<String,String>>();
+    protected static final String TAG = "OpenCV_Manager/Activity";
     protected MarketConnector mMarket;
-    AlertDialog mActionDialog;
-    
+    protected AlertDialog mActionDialog;
+    protected HashMap<String,String> mActivePackageMap = new HashMap<String, String>();
+    protected int ManagerApiLevel = 0;
+    protected String ManagerVersion;
+
     protected BroadcastReceiver mPackageChangeReciever = new BroadcastReceiver() {
-		
+
 		@Override
 		public void onReceive(Context context, Intent intent) {
-			Log.d("OpenCV Manager/Reciever", "Bradcast message " + intent.getAction() + " reciever");
-			FillPackageList();
+			Log.d("OpenCVManager/Reciever", "Bradcast message " + intent.getAction() + " reciever");
+			Log.d("OpenCVManager/Reciever", "Filling package list on broadcast message");
+	        if (!bindService(new Intent("org.opencv.engine.BIND"), new OpenCVEngineServiceConnection(), Context.BIND_AUTO_CREATE))
+	        {
+	        	TextView EngineVersionView = (TextView)findViewById(R.id.EngineVersionValue);
+	        	EngineVersionView.setText("not avaliable");
+	        }
 		}
 	};
-    
-    protected ServiceConnection mServiceConnection = new ServiceConnection() {
-		
+
+    protected class OpenCVEngineServiceConnection implements ServiceConnection
+    {
 		public void onServiceDisconnected(ComponentName name) {
 			// TODO Auto-generated method stub
 			
 		}
-		
+
 		public void onServiceConnected(ComponentName name, IBinder service) {
-			TextView EngineVersionView = (TextView)findViewById(R.id.EngineVersionValue);
 			OpenCVEngineInterface EngineService = OpenCVEngineInterface.Stub.asInterface(service);
 			try {
-				EngineVersionView.setText("" + EngineService.getEngineVersion());
+				ManagerApiLevel = EngineService.getEngineVersion();
 			} catch (RemoteException e) {
-				EngineVersionView.setText("not avaliable");
 				e.printStackTrace();
 			}
-			unbindService(mServiceConnection);
+
+			TextView EngineVersionView = (TextView)findViewById(R.id.EngineVersionValue);
+			EngineVersionView.setText(ManagerVersion);
+
+			try {
+				String path = EngineService.getLibPathByVersion("2.4");
+				Log.d(TAG, "2.4 -> " + path);
+				mActivePackageMap.put("24", path);
+				path = EngineService.getLibPathByVersion("2.5");
+				Log.d(TAG, "2.5 -> " + path);
+				mActivePackageMap.put("25", path);
+			} catch (RemoteException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+
+			Log.d(TAG, "Filling package list on service connection");
+			FillPackageList();
+
+			unbindService(this);
 		}
 	};
 	
-	protected void FillPackageList()
+	synchronized protected void FillPackageList()
 	{
-        mInstalledPackageInfo = mMarket.GetInstalledOpenCVPackages();
-        mListViewItems.clear();
-        
-        for (int i = 0; i < mInstalledPackageInfo.length; i++)
-        {
-        	// Convert to Items for package list view
-        	HashMap<String,String> temp = new HashMap<String,String>();
-        	temp.put("Name", mMarket.GetApplicationName(mInstalledPackageInfo[i].applicationInfo));
+		synchronized (mListViewItems) {
+			mMarket.mIncludeManager = false;
+			mInstalledPackageInfo = mMarket.GetInstalledOpenCVPackages();
+	        mListViewItems.clear();
 
-            int idx = 0;
-            String OpenCVersion = "unknown";
-            String HardwareName = "";
-            StringTokenizer tokenizer = new StringTokenizer(mInstalledPackageInfo[i].packageName, "_");
-            while (tokenizer.hasMoreTokens())
-            {
-            	if (idx == 1)
-            	{
-            		// version of OpenCV
-            		OpenCVersion = tokenizer.nextToken().substring(1);
-            	}
-            	else if (idx >= 2)
-            	{
-            		// hardware options
-            		HardwareName += tokenizer.nextToken() + " ";
-            	}
-            	else
-            	{
-            		tokenizer.nextToken();
-            	}
-            	idx++;
-            }
-            
-        	temp.put("Version", NormalizeVersion(OpenCVersion, mInstalledPackageInfo[i].versionName));
-        	temp.put("Hardware", HardwareName);
-        	mListViewItems.add(temp);
-        }
-        
-        mInstalledPacksAdapter.notifyDataSetChanged();
+	        for (int i = 0; i < mInstalledPackageInfo.length; i++)
+	        {
+	        	// Convert to Items for package list view
+	        	HashMap<String,String> temp = new HashMap<String,String>();
+	        	String PublicName = mMarket.GetApplicationName(mInstalledPackageInfo[i].applicationInfo);
+
+	            int idx = 0;
+	            String OpenCVersion = "unknown";
+	            String HardwareName = "";
+	            StringTokenizer tokenizer = new StringTokenizer(mInstalledPackageInfo[i].packageName, "_");
+	            while (tokenizer.hasMoreTokens())
+	            {
+	            	if (idx == 1)
+	            	{
+	            		// version of OpenCV
+	            		OpenCVersion = tokenizer.nextToken().substring(1);
+	            	}
+	            	else if (idx >= 2)
+	            	{
+	            		// hardware options
+	            		HardwareName += tokenizer.nextToken() + " ";
+	            	}
+	            	else
+	            	{
+	            		tokenizer.nextToken();
+	            	}
+	            	idx++;
+	            }
+
+	            String ActivePackagePath;
+	           	ActivePackagePath = mActivePackageMap.get(OpenCVersion);
+	            Log.d(TAG, OpenCVersion + " -> " + ActivePackagePath);
+
+	            if (null != ActivePackagePath)
+	            {
+	            	int start = ActivePackagePath.indexOf(mInstalledPackageInfo[i].packageName);
+	            	int stop = start + mInstalledPackageInfo[i].packageName.length();
+	            	if (start >= 0 && ActivePackagePath.charAt(stop) == '/')
+	            	{
+	            		temp.put("Activity", "y");
+	            		PublicName += " (in use)";
+	            	}
+	            	else
+	            	{
+	            		temp.put("Activity", "n");
+	            	}
+	            }
+	            else
+	            {
+	            	temp.put("Activity", "n");
+	            }
+
+	            temp.put("Name", PublicName);
+	            temp.put("Version", NormalizeVersion(OpenCVersion, mInstalledPackageInfo[i].versionName));
+	        	temp.put("Hardware", HardwareName);
+	        	mListViewItems.add(temp);
+	        }
+
+	        mInstalledPacksAdapter.notifyDataSetChanged();
+		}
 	}
-    
+
 	protected String NormalizeVersion(String OpenCVersion, String PackageVersion)
 	{
 		int dot = PackageVersion.indexOf(".");
-		return OpenCVersion.substring(0,  OpenCVersion.length()-1) + "." + 
-			OpenCVersion.toCharArray()[OpenCVersion.length()-1] + "." + 
-			PackageVersion.substring(0, dot) + " rev " + PackageVersion.substring(dot+1);		
+		return OpenCVersion.substring(0,  OpenCVersion.length()-1) + "." +
+			OpenCVersion.toCharArray()[OpenCVersion.length()-1] + "." +
+			PackageVersion.substring(0, dot) + " rev " + PackageVersion.substring(dot+1);
 	}
-	
+
     protected String ConvertPackageName(String Name, String Version)
     {
     	return Name + " rev " + Version;
     }
-    
+
     protected String JoinIntelFeatures(int features)
     {
     	// TODO: update if package will be published
     	return "";
     }
-    
+
     protected String JoinArmFeatures(int features)
     {
     	// TODO: update if package will be published

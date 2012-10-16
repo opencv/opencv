@@ -276,9 +276,13 @@ Compares elements of two matrices.
 
 .. ocv:function:: void gpu::compare( const GpuMat& a, const GpuMat& b, GpuMat& c, int cmpop, Stream& stream=Stream::Null() )
 
+.. ocv:function:: void gpu::compare(const GpuMat& a, Scalar sc, GpuMat& c, int cmpop, Stream& stream = Stream::Null())
+
     :param a: First source matrix.
 
     :param b: Second source matrix with the same size and type as ``a`` .
+
+    :param sc: A scalar to be compared with ``a`` .
 
     :param c: Destination matrix with the same size as ``a`` and the ``CV_8UC1`` type.
 

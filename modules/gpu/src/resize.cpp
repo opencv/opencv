@@ -42,7 +42,7 @@
 
 #include "precomp.hpp"
 
-#ifndef HAVE_CUDA
+#if !defined HAVE_CUDA || defined(CUDA_DISABLER)
 
 void cv::gpu::resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx, double fy, int interpolation, Stream& s)
 {
@@ -64,8 +64,8 @@ namespace cv { namespace gpu { namespace device
     namespace imgproc
     {
         template <typename T>
-        void resize_gpu(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, float fx, float fy,
-                        DevMem2Db dst, int interpolation, cudaStream_t stream);
+        void resize_gpu(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, float fx, float fy,
+                        PtrStepSzb dst, int interpolation, cudaStream_t stream);
     }
 }}}
 
@@ -83,8 +83,8 @@ void cv::gpu::resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx, doub
         fx = static_cast<double>(dsize.width) / src.cols;
         fy = static_cast<double>(dsize.height) / src.rows;
     }
-
-    dst.create(dsize, src.type());
+    if (dsize != dst.size())
+        dst.create(dsize, src.type());
 
     if (dsize == src.size())
     {
@@ -102,7 +102,7 @@ void cv::gpu::resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx, doub
     src.locateROI(wholeSize, ofs);
 
     bool useNpp = (src.type() == CV_8UC1 || src.type() == CV_8UC4);
-    useNpp = useNpp && (interpolation == INTER_NEAREST || interpolation == INTER_LINEAR || (src.type() == CV_8UC4 && interpolation != INTER_AREA));
+    useNpp = useNpp && (interpolation == INTER_NEAREST || interpolation == INTER_LINEAR);
 
     if (useNpp)
     {
@@ -139,7 +139,7 @@ void cv::gpu::resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx, doub
     {
         using namespace ::cv::gpu::device::imgproc;
 
-        typedef void (*func_t)(DevMem2Db src, DevMem2Db srcWhole, int xoff, int yoff, float fx, float fy, DevMem2Db dst, int interpolation, cudaStream_t stream);
+        typedef void (*func_t)(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, float fx, float fy, PtrStepSzb dst, int interpolation, cudaStream_t stream);
 
         static const func_t funcs[6][4] =
         {
@@ -154,7 +154,7 @@ void cv::gpu::resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx, doub
         const func_t func = funcs[src.depth()][src.channels() - 1];
         CV_Assert(func != 0);
 
-        func(src, DevMem2Db(wholeSize.height, wholeSize.width, src.datastart, src.step), ofs.x, ofs.y,
+        func(src, PtrStepSzb(wholeSize.height, wholeSize.width, src.datastart, src.step), ofs.x, ofs.y,
             static_cast<float>(1.0 / fx), static_cast<float>(1.0 / fy), dst, interpolation, stream);
     }
 }

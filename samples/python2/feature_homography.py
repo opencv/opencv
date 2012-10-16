@@ -3,94 +3,86 @@ Feature homography
 ==================
 
 Example of using features2d framework for interactive video homography matching.
+ORB features and FLANN matcher are used. The actual tracking is implemented by
+PlaneTracker class in plane_tracker.py
+
+Inspired by http://www.youtube.com/watch?v=-ZNYoL8rzPY
+
+video: http://www.youtube.com/watch?v=FirtmYcC0Vc
 
 Usage
 -----
 feature_homography.py [<video source>]
 
-Keys
-----
-SPACE - set reference frame
-ESC   - exit
-'''
+Keys:
+   SPACE  -  pause video
 
+Select a textured planar object to track by drawing a box with a mouse.
+'''
 
 import numpy as np
 import cv2
 import video
-from common import draw_str, clock
-import sys
+import common
+from common import getsize, draw_keypoints
+from plane_tracker import PlaneTracker
 
 
-detector = cv2.FastFeatureDetector(16, True)
-detector = cv2.GridAdaptedFeatureDetector(detector)
-extractor = cv2.DescriptorExtractor_create('ORB')
+class App:
+    def __init__(self, src):
+        self.cap = video.create_capture(src)
+        self.frame = None
+        self.paused = False
+        self.tracker = PlaneTracker()
 
-FLANN_INDEX_KDTREE = 1
-FLANN_INDEX_LSH    = 6
-flann_params= dict(algorithm = FLANN_INDEX_LSH,
-                   table_number = 6, # 12
-                   key_size = 12,     # 20
-                   multi_probe_level = 1) #2
-matcher = cv2.FlannBasedMatcher(flann_params, {})  # bug : need to pass empty dict (#1329)
+        cv2.namedWindow('plane')
+        self.rect_sel = common.RectSelector('plane', self.on_rect)
+    
+    def on_rect(self, rect):
+        self.tracker.clear()
+        self.tracker.add_target(self.frame, rect)
 
-green, red = (0, 255, 0), (0, 0, 255)
+    def run(self):
+        while True:
+            playing = not self.paused and not self.rect_sel.dragging
+            if playing or self.frame is None:
+                ret, frame = self.cap.read()
+                if not ret:
+                    break
+                self.frame = frame.copy()
+            
+            w, h = getsize(self.frame)
+            vis = np.zeros((h, w*2, 3), np.uint8)
+            vis[:h,:w] = self.frame
+            if len(self.tracker.targets) > 0:
+                target = self.tracker.targets[0]
+                vis[:,w:] = target.image
+                draw_keypoints(vis[:,w:], target.keypoints)
+                x0, y0, x1, y1 = target.rect
+                cv2.rectangle(vis, (x0+w, y0), (x1+w, y1), (0, 255, 0), 2)
+
+            if playing:
+                tracked = self.tracker.track(self.frame)
+                if len(tracked) > 0:
+                    tracked = tracked[0]
+                    cv2.polylines(vis, [np.int32(tracked.quad)], True, (255, 255, 255), 2)
+                    for (x0, y0), (x1, y1) in zip(np.int32(tracked.p0), np.int32(tracked.p1)):
+                        cv2.line(vis, (x0+w, y0), (x1, y1), (0, 255, 0))
+            draw_keypoints(vis, self.tracker.frame_points)
+
+            self.rect_sel.draw(vis)
+            cv2.imshow('plane', vis)
+            ch = cv2.waitKey(1)
+            if ch == ord(' '):
+                self.paused = not self.paused
+            if ch == 27:
+                break
 
 
 if __name__ == '__main__':
     print __doc__
 
-    try: src = sys.argv[1]
-    except: src = 0
-    cap = video.create_capture(src)
-
-    ref_kp = None
-
-    while True:
-        ret, img = cap.read()
-        vis = img.copy()
-        kp = detector.detect(img)
-        kp, desc = extractor.compute(img, kp)
-
-        for p in kp:
-            x, y = np.int32(p.pt)
-            r = int(0.5*p.size)
-            cv2.circle(vis, (x, y), r, (0, 255, 0))
-        draw_str(vis, (20, 20), 'feature_n: %d' % len(kp))
-        
-        if ref_kp is not None:
-            raw_matches = matcher.knnMatch(desc, 2)
-            matches = []
-            for m in raw_matches:
-                if len(m) == 2:
-                    m1, m2 = m
-                    if m1.distance < m2.distance * 0.7:
-                        matches.append((m1.trainIdx, m1.queryIdx))
-            match_n = len(matches)
-
-            inlier_n = 0
-            if match_n > 10:
-                p0 = np.float32( [ref_kp[i].pt for i, j in matches] )
-                p1 = np.float32( [kp[j].pt for i, j in matches] )
-
-                H, status = cv2.findHomography(p0, p1, cv2.RANSAC, 10.0)
-                inlier_n = sum(status)
-                if inlier_n > 10:
-                    for (x1, y1), (x2, y2), inlier in zip(np.int32(p0), np.int32(p1), status):
-                        cv2.line(vis, (x1, y1), (x2, y2), (red, green)[inlier])
-
-                    h, w = img.shape[:2]
-                    overlay = cv2.warpPerspective(ref_img, H, (w, h))
-                    vis = cv2.addWeighted(vis, 0.5, overlay, 0.5, 0.0)
-            draw_str(vis, (20, 40), 'matched: %d ( %d outliers )' % (match_n, match_n-inlier_n))
-        
-        cv2.imshow('img', vis)
-        ch = 0xFF & cv2.waitKey(1)
-        if ch == ord(' '):
-            matcher.clear()
-            matcher.add([desc])
-            ref_kp = kp
-            ref_img = img.copy()
-        if ch == 27:
-            break
-    cv2.destroyAllWindows() 			
+    import sys
+    try: video_src = sys.argv[1]
+    except: video_src = 0
+    App(video_src).run()

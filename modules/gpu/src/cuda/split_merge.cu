@@ -40,6 +40,8 @@
 //
 //M*/
 
+#if !defined CUDA_DISABLER
+
 #include "internal_shared.hpp"
 
 namespace cv { namespace gpu { namespace device
@@ -91,8 +93,8 @@ namespace cv { namespace gpu { namespace device
             //typedef double4 type3;
         };
 
-        typedef void (*MergeFunction)(const DevMem2Db* src, DevMem2Db& dst, const cudaStream_t& stream);
-        typedef void (*SplitFunction)(const DevMem2Db& src, DevMem2Db* dst, const cudaStream_t& stream);
+        typedef void (*MergeFunction)(const PtrStepSzb* src, PtrStepSzb& dst, const cudaStream_t& stream);
+        typedef void (*SplitFunction)(const PtrStepSzb& src, PtrStepSzb* dst, const cudaStream_t& stream);
 
         //------------------------------------------------------------
         // Merge
@@ -226,7 +228,7 @@ namespace cv { namespace gpu { namespace device
 
 
         template <typename T>
-        static void mergeC2_(const DevMem2Db* src, DevMem2Db& dst, const cudaStream_t& stream)
+        static void mergeC2_(const PtrStepSzb* src, PtrStepSzb& dst, const cudaStream_t& stream)
         {
             dim3 block(32, 8);
             dim3 grid(divUp(dst.cols, block.x), divUp(dst.rows, block.y));
@@ -242,7 +244,7 @@ namespace cv { namespace gpu { namespace device
 
 
         template <typename T>
-        static void mergeC3_(const DevMem2Db* src, DevMem2Db& dst, const cudaStream_t& stream)
+        static void mergeC3_(const PtrStepSzb* src, PtrStepSzb& dst, const cudaStream_t& stream)
         {
             dim3 block(32, 8);
             dim3 grid(divUp(dst.cols, block.x), divUp(dst.rows, block.y));
@@ -259,7 +261,7 @@ namespace cv { namespace gpu { namespace device
 
 
         template <typename T>
-        static void mergeC4_(const DevMem2Db* src, DevMem2Db& dst, const cudaStream_t& stream)
+        static void mergeC4_(const PtrStepSzb* src, PtrStepSzb& dst, const cudaStream_t& stream)
         {
             dim3 block(32, 8);
             dim3 grid(divUp(dst.cols, block.x), divUp(dst.rows, block.y));
@@ -276,7 +278,7 @@ namespace cv { namespace gpu { namespace device
         }
 
 
-        void merge_caller(const DevMem2Db* src, DevMem2Db& dst,
+        void merge_caller(const PtrStepSzb* src, PtrStepSzb& dst,
                                      int total_channels, size_t elem_size,
                                      const cudaStream_t& stream)
         {
@@ -435,7 +437,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <typename T>
-        static void splitC2_(const DevMem2Db& src, DevMem2Db* dst, const cudaStream_t& stream)
+        static void splitC2_(const PtrStepSzb& src, PtrStepSzb* dst, const cudaStream_t& stream)
         {
             dim3 block(32, 8);
             dim3 grid(divUp(src.cols, block.x), divUp(src.rows, block.y));
@@ -451,7 +453,7 @@ namespace cv { namespace gpu { namespace device
 
 
         template <typename T>
-        static void splitC3_(const DevMem2Db& src, DevMem2Db* dst, const cudaStream_t& stream)
+        static void splitC3_(const PtrStepSzb& src, PtrStepSzb* dst, const cudaStream_t& stream)
         {
             dim3 block(32, 8);
             dim3 grid(divUp(src.cols, block.x), divUp(src.rows, block.y));
@@ -468,7 +470,7 @@ namespace cv { namespace gpu { namespace device
 
 
         template <typename T>
-        static void splitC4_(const DevMem2Db& src, DevMem2Db* dst, const cudaStream_t& stream)
+        static void splitC4_(const PtrStepSzb& src, PtrStepSzb* dst, const cudaStream_t& stream)
         {
             dim3 block(32, 8);
             dim3 grid(divUp(src.cols, block.x), divUp(src.rows, block.y));
@@ -485,7 +487,7 @@ namespace cv { namespace gpu { namespace device
         }
 
 
-        void split_caller(const DevMem2Db& src, DevMem2Db* dst, int num_channels, size_t elem_size1, const cudaStream_t& stream)
+        void split_caller(const PtrStepSzb& src, PtrStepSzb* dst, int num_channels, size_t elem_size1, const cudaStream_t& stream)
         {
             static SplitFunction split_func_tbl[] =
             {
@@ -504,3 +506,6 @@ namespace cv { namespace gpu { namespace device
         }
     } // namespace split_merge
 }}} // namespace cv { namespace gpu { namespace device
+
+
+#endif /* CUDA_DISABLER */

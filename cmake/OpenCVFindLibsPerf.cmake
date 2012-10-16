@@ -4,8 +4,13 @@
 
 # --- TBB ---
 if(WITH_TBB)
-  include("${OpenCV_SOURCE_DIR}/cmake/OpenCVDetectTBB.cmake" REQUIRED)
+  include("${OpenCV_SOURCE_DIR}/cmake/OpenCVDetectTBB.cmake")
 endif(WITH_TBB)
+
+# --- C= ---
+if(WITH_CSTRIPES)
+  include("${OpenCV_SOURCE_DIR}/cmake/OpenCVDetectCStripes.cmake")
+endif(WITH_CSTRIPES)
 
 # --- IPP ---
 ocv_clear_vars(IPP_FOUND)
@@ -21,7 +26,7 @@ endif(WITH_IPP)
 
 # --- CUDA ---
 if(WITH_CUDA)
-  include("${OpenCV_SOURCE_DIR}/cmake/OpenCVDetectCUDA.cmake" REQUIRED)
+  include("${OpenCV_SOURCE_DIR}/cmake/OpenCVDetectCUDA.cmake")
 endif(WITH_CUDA)
 
 # --- Eigen ---
@@ -29,7 +34,8 @@ if(WITH_EIGEN)
   find_path(EIGEN_INCLUDE_PATH "Eigen/Core"
             PATHS /usr/local /opt /usr ENV ProgramFiles ENV ProgramW6432
             PATH_SUFFIXES include/eigen3 include/eigen2 Eigen/include/eigen3 Eigen/include/eigen2
-            DOC "The path to Eigen3/Eigen2 headers")
+            DOC "The path to Eigen3/Eigen2 headers"
+            CMAKE_FIND_ROOT_PATH_BOTH)
 
   if(EIGEN_INCLUDE_PATH)
     ocv_include_directories(${EIGEN_INCLUDE_PATH})

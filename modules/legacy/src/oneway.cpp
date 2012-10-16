@@ -661,7 +661,7 @@ namespace cv{
         for(int i = 0; i < m_pose_count; i++)
         {
             char buf[1024];
-            sprintf(buf, "%s/patch_%04d.jpg", path, i);
+            sprintf(buf, "%s/patch_%04d.png", path, i);
             IplImage* patch = cvCreateImage(cvSize(m_samples[i]->width, m_samples[i]->height), IPL_DEPTH_8U, m_samples[i]->nChannels);
 
             double maxval;

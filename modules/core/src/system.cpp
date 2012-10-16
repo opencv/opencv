@@ -178,7 +178,7 @@ struct HWFeatures
             f.have[CV_CPU_SSE4_1] = (cpuid_data[2] & (1<<19)) != 0;
             f.have[CV_CPU_SSE4_2] = (cpuid_data[2] & (1<<20)) != 0;
             f.have[CV_CPU_POPCNT] = (cpuid_data[2] & (1<<23)) != 0;
-            f.have[CV_CPU_AVX]    = (cpuid_data[2] & (1<<28)) != 0;
+            f.have[CV_CPU_AVX]    = (((cpuid_data[2] & (1<<28)) != 0)&&((cpuid_data[2] & (1<<27)) != 0));//OS uses XSAVE_XRSTORE and CPU support AVX
         }
 
         return f;
@@ -209,6 +209,8 @@ IPPInitializer ippInitializer;
 #endif
 
 volatile bool USE_SSE2 = featuresEnabled.have[CV_CPU_SSE2];
+volatile bool USE_SSE4_2 = featuresEnabled.have[CV_CPU_SSE4_2];
+volatile bool USE_AVX = featuresEnabled.have[CV_CPU_AVX];
 
 void setUseOptimized( bool flag )
 {
@@ -330,134 +332,6 @@ int64 getCPUTickCount(void)
 
 #endif
 
-
-static int numThreads = 0;
-static int numProcs   = 0;
-
-int getNumThreads(void)
-{
-    if( !numProcs )
-        setNumThreads(0);
-    return numThreads;
-}
-
-void setNumThreads( int
-#ifdef _OPENMP
-                             threads
-#endif
-                  )
-{
-    if( !numProcs )
-    {
-#ifdef _OPENMP
-        numProcs = omp_get_num_procs();
-#else
-        numProcs = 1;
-#endif
-    }
-
-#ifdef _OPENMP
-    if( threads <= 0 )
-        threads = numProcs;
-    else
-        threads = MIN( threads, numProcs );
-
-    numThreads = threads;
-#else
-    numThreads = 1;
-#endif
-}
-
-
-int getThreadNum(void)
-{
-#ifdef _OPENMP
-    return omp_get_thread_num();
-#else
-    return 0;
-#endif
-}
-
-#ifdef ANDROID
-static inline int getNumberOfCPUsImpl()
-{
-   FILE* cpuPossible = fopen("/sys/devices/system/cpu/possible", "r");
-   if(!cpuPossible)
-       return 1;
-
-   char buf[2000]; //big enough for 1000 CPUs in worst possible configuration
-   char* pbuf = fgets(buf, sizeof(buf), cpuPossible);
-   fclose(cpuPossible);
-   if(!pbuf)
-      return 1;
-
-   //parse string of form "0-1,3,5-7,10,13-15"
-   int cpusAvailable = 0;
-
-   while(*pbuf)
-   {
-      const char* pos = pbuf;
-      bool range = false;
-      while(*pbuf && *pbuf != ',')
-      {
-          if(*pbuf == '-') range = true;
-          ++pbuf;
-      }
-      if(*pbuf) *pbuf++ = 0;
-      if(!range)
-        ++cpusAvailable;
-      else
-      {
-          int rstart = 0, rend = 0;
-          sscanf(pos, "%d-%d", &rstart, &rend);
-          cpusAvailable += rend - rstart + 1;
-      }
-
-   }
-   return cpusAvailable ? cpusAvailable : 1;
-}
-#endif
-
-int getNumberOfCPUs(void)
-{
-#if defined WIN32 || defined _WIN32
-    SYSTEM_INFO sysinfo;
-    GetSystemInfo( &sysinfo );
-
-    return (int)sysinfo.dwNumberOfProcessors;
-#elif defined ANDROID
-    static int ncpus = getNumberOfCPUsImpl();
-    printf("CPUS= %d\n", ncpus);
-    return ncpus;
-#elif defined __linux__
-    return (int)sysconf( _SC_NPROCESSORS_ONLN );
-#elif defined __APPLE__
-    int numCPU=0;
-    int mib[4];
-    size_t len = sizeof(numCPU);
-
-    /* set the mib for hw.ncpu */
-    mib[0] = CTL_HW;
-    mib[1] = HW_AVAILCPU;  // alternatively, try HW_NCPU;
-
-    /* get the number of CPUs from the system */
-    sysctl(mib, 2, &numCPU, &len, NULL, 0);
-
-    if( numCPU < 1 )
-    {
-        mib[1] = HW_NCPU;
-        sysctl( mib, 2, &numCPU, &len, NULL, 0 );
-
-        if( numCPU < 1 )
-            numCPU = 1;
-    }
-
-    return (int)numCPU;
-#else
-    return 1;
-#endif
-}
-
 const std::string& getBuildInformation()
 {
     static std::string build_info =
@@ -484,6 +358,8 @@ string tempfile( const char* suffix )
     ::GetTempPathA(sizeof(temp_dir), temp_dir);
     if(0 == ::GetTempFileNameA(temp_dir, "ocv", 0, temp_file))
         return string();
+
+    DeleteFileA(temp_file);
 
     string name = temp_file;
     if(suffix)
@@ -644,22 +520,6 @@ CV_IMPL double cvGetTickFrequency(void)
 {
     return cv::getTickFrequency()*1e-6;
 }
-
-CV_IMPL void cvSetNumThreads(int nt)
-{
-    cv::setNumThreads(nt);
-}
-
-CV_IMPL int cvGetNumThreads()
-{
-    return cv::getNumThreads();
-}
-
-CV_IMPL int cvGetThreadNum()
-{
-    return cv::getThreadNum();
-}
-
 
 CV_IMPL CvErrorCallback
 cvRedirectError( CvErrorCallback errCallback, void* userdata, void** prevUserdata)
@@ -927,5 +787,114 @@ BOOL WINAPI DllMain( HINSTANCE, DWORD  fdwReason, LPVOID )
     return TRUE;
 }
 #endif
+
+namespace cv
+{
+
+#if defined WIN32 || defined _WIN32 || defined WINCE
+
+struct Mutex::Impl
+{
+    Impl() { InitializeCriticalSection(&cs); refcount = 1; }
+    ~Impl() { DeleteCriticalSection(&cs); }
+
+    void lock() { EnterCriticalSection(&cs); }
+    bool trylock() { return TryEnterCriticalSection(&cs) != 0; }
+    void unlock() { LeaveCriticalSection(&cs); }
+
+    CRITICAL_SECTION cs;
+    int refcount;
+};
+    
+int _interlockedExchangeAdd(int* addr, int delta)
+{
+#if defined _MSC_VER && _MSC_VER >= 1500
+    return (int)_InterlockedExchangeAdd((long volatile*)addr, delta);
+#else
+    return (int)InterlockedExchangeAdd((long volatile*)addr, delta);
+#endif
+}
+
+#elif defined __APPLE__
+
+#include <libkern/OSAtomic.h>
+
+struct Mutex::Impl
+{
+    Impl() { sl = OS_SPINLOCK_INIT; refcount = 1; }
+    ~Impl() {}
+
+    void lock() { OSSpinLockLock(&sl); }
+    bool trylock() { return OSSpinLockTry(&sl); }
+    void unlock() { OSSpinLockUnlock(&sl); }
+
+    OSSpinLock sl;
+    int refcount;
+};
+
+#elif defined __linux__ && !defined ANDROID
+
+struct Mutex::Impl
+{
+    Impl() { pthread_spin_init(&sl, 0); refcount = 1; }
+    ~Impl() { pthread_spin_destroy(&sl); }
+
+    void lock() { pthread_spin_lock(&sl); }
+    bool trylock() { return pthread_spin_trylock(&sl) == 0; }
+    void unlock() { pthread_spin_unlock(&sl); }
+
+    pthread_spinlock_t sl;
+    int refcount;
+};
+
+#else
+
+struct Mutex::Impl
+{
+    Impl() { pthread_mutex_init(&sl, 0); refcount = 1; }
+    ~Impl() { pthread_mutex_destroy(&sl); }
+
+    void lock() { pthread_mutex_lock(&sl); }
+    bool trylock() { return pthread_mutex_trylock(&sl) == 0; }
+    void unlock() { pthread_mutex_unlock(&sl); }
+
+    pthread_mutex_t sl;
+    int refcount;
+};
+
+#endif
+
+Mutex::Mutex()
+{
+    impl = new Mutex::Impl;
+}
+
+Mutex::~Mutex()
+{
+    if( CV_XADD(&impl->refcount, -1) == 1 )
+        delete impl;
+    impl = 0;
+}
+
+Mutex::Mutex(const Mutex& m)
+{
+    impl = m.impl;
+    CV_XADD(&impl->refcount, 1);
+}
+
+Mutex& Mutex::operator = (const Mutex& m)
+{
+    CV_XADD(&m.impl->refcount, 1);
+    if( CV_XADD(&impl->refcount, -1) == 1 )
+        delete impl;
+    impl = m.impl;
+    return *this;
+}
+
+void Mutex::lock() { impl->lock(); }
+void Mutex::unlock() { impl->unlock(); }
+bool Mutex::trylock() { return impl->trylock(); }
+
+}
 
 /* End of file. */

@@ -277,11 +277,6 @@ void FREAK::computeImpl( const Mat& image, std::vector<KeyPoint>& keypoints, Mat
         descriptors = cv::Mat::zeros((int)keypoints.size(), FREAK_NB_PAIRS/8, CV_8U);
 #if CV_SSE2
         __m128i* ptr= (__m128i*) (descriptors.data+(keypoints.size()-1)*descriptors.step[0]);
-        // binary: 10000000 => char: 128 or hex: 0x80
-        const __m128i binMask = _mm_set_epi8('\x80', '\x80', '\x80', '\x80',
-                                             '\x80', '\x80', '\x80', '\x80',
-                                             '\x80', '\x80', '\x80', '\x80',
-                                             '\x80', '\x80', '\x80', '\x80');
 #else
         std::bitset<FREAK_NB_PAIRS>* ptr = (std::bitset<FREAK_NB_PAIRS>*) (descriptors.data+(keypoints.size()-1)*descriptors.step[0]);
 #endif
@@ -364,7 +359,7 @@ void FREAK::computeImpl( const Mat& image, std::vector<KeyPoint>& keypoints, Mat
                     __m128i workReg = _mm_min_epu8(operand1, operand2); // emulated "not less than" for 8-bit UNSIGNED integers
                     workReg = _mm_cmpeq_epi8(workReg, operand2);        // emulated "not less than" for 8-bit UNSIGNED integers
 
-                    workReg = _mm_and_si128(_mm_srli_epi16(binMask, m), workReg); // merge the last 16 bits with the 128bits std::vector until full
+                    workReg = _mm_and_si128(_mm_set1_epi16(short(0x8080 >> m)), workReg); // merge the last 16 bits with the 128bits std::vector until full
                     result128 = _mm_or_si128(result128, workReg);
                 }
                 (*ptr) = result128;
@@ -460,7 +455,6 @@ uchar FREAK::meanIntensity( const cv::Mat& image, const cv::Mat& integral,
     const float radius = FreakPoint.sigma;
 
     // calculate output:
-    int ret_val;
     if( radius < 0.5 ) {
         // interpolation multipliers:
         const int r_x = static_cast<int>((xf-x)*1024);
@@ -468,6 +462,7 @@ uchar FREAK::meanIntensity( const cv::Mat& image, const cv::Mat& integral,
         const int r_x_1 = (1024-r_x);
         const int r_y_1 = (1024-r_y);
         uchar* ptr = image.data+x+y*imagecols;
+        unsigned int ret_val;
         // linear interpolation:
         ret_val = (r_x_1*r_y_1*int(*ptr));
         ptr++;
@@ -476,7 +471,9 @@ uchar FREAK::meanIntensity( const cv::Mat& image, const cv::Mat& integral,
         ret_val += (r_x*r_y*int(*ptr));
         ptr--;
         ret_val += (r_x_1*r_y*int(*ptr));
-        return static_cast<uchar>((ret_val+512)/1024);
+        //return the rounded mean
+        ret_val += 2 * 1024 * 1024;
+        return static_cast<uchar>(ret_val / (4 * 1024 * 1024));
     }
 
     // expected case:
@@ -486,6 +483,7 @@ uchar FREAK::meanIntensity( const cv::Mat& image, const cv::Mat& integral,
     const int y_top = int(yf-radius+0.5);
     const int x_right = int(xf+radius+1.5);//integral image is 1px wider
     const int y_bottom = int(yf+radius+1.5);//integral image is 1px higher
+    int ret_val;
 
     ret_val = integral.at<int>(y_bottom,x_right);//bottom right corner
     ret_val -= integral.at<int>(y_bottom,x_left);

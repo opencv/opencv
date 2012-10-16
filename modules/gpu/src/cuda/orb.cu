@@ -45,6 +45,8 @@
 //
 //M*/
 
+#if !defined CUDA_DISABLER
+
 #include <thrust/sort.h>
 
 #include "opencv2/gpu/device/common.hpp"
@@ -122,7 +124,7 @@ namespace cv { namespace gpu { namespace device
             }
         }
 
-        void HarrisResponses_gpu(DevMem2Db img, const short2* loc, float* response, const int npoints, int blockSize, float harris_k, cudaStream_t stream)
+        void HarrisResponses_gpu(PtrStepSzb img, const short2* loc, float* response, const int npoints, int blockSize, float harris_k, cudaStream_t stream)
         {
             dim3 block(32, 8);
 
@@ -201,7 +203,7 @@ namespace cv { namespace gpu { namespace device
             }
         }
 
-        void IC_Angle_gpu(DevMem2Db image, const short2* loc, float* angle, int npoints, int half_k, cudaStream_t stream)
+        void IC_Angle_gpu(PtrStepSzb image, const short2* loc, float* angle, int npoints, int half_k, cudaStream_t stream)
         {
             dim3 block(32, 8);
 
@@ -416,3 +418,5 @@ namespace cv { namespace gpu { namespace device
         }
     }
 }}}
+
+#endif /* CUDA_DISABLER */

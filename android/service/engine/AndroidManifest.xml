@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="org.opencv.engine"
-    android:versionCode="13"
-    android:versionName="1.3" >
+    android:versionCode="17"
+    android:versionName="1.7" >
 
     <uses-sdk android:minSdkVersion="8" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false"/>
@@ -16,13 +16,16 @@
     		<action android:name="org.opencv.engine.BIND"></action>
     	</intent-filter>
     </service>
-    
-    <activity android:name="org.opencv.engine.manager.ManagerActivity" android:label="@string/app_name" >
+
+    <activity
+        android:name="org.opencv.engine.manager.ManagerActivity"
+        android:label="@string/app_name"
+        android:screenOrientation="portrait">
         <intent-filter>
         	<action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
         </intent-filter>
     </activity>
-    
+
 </application>
 </manifest>

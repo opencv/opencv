@@ -1166,8 +1166,8 @@ static void morphOp( int op, InputArray _src, OutputArray _dst,
     {
         anchor = Point(anchor.x*iterations, anchor.y*iterations);
         kernel = getStructuringElement(MORPH_RECT,
-                                       Size(ksize.width + iterations*(ksize.width-1),
-                                            ksize.height + iterations*(ksize.height-1)),
+                                       Size(ksize.width + (iterations-1)*(ksize.width-1),
+                                            ksize.height + (iterations-1)*(ksize.height-1)),
                                        anchor);
         iterations = 1;
     }

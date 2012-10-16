@@ -252,27 +252,6 @@ CVAPI(void)  cvCalcImageHomography( float* line, CvPoint3D32f* center,
                                     float* intrinsic, float* homography );
 
 /****************************************************************************************\
-*                           Additional operations on Subdivisions                        *
-\****************************************************************************************/
-
-// paints voronoi diagram: just demo function
-CVAPI(void)  icvDrawMosaic( CvSubdiv2D* subdiv, IplImage* src, IplImage* dst );
-
-// checks planar subdivision for correctness. It is not an absolute check,
-// but it verifies some relations between quad-edges
-CVAPI(int)   icvSubdiv2DCheck( CvSubdiv2D* subdiv );
-
-// returns squared distance between two 2D points with floating-point coordinates.
-CV_INLINE double icvSqDist2D32f( CvPoint2D32f pt1, CvPoint2D32f pt2 )
-{
-    double dx = pt1.x - pt2.x;
-    double dy = pt1.y - pt2.y;
-
-    return dx*dx + dy*dy;
-}
-
-
-/****************************************************************************************\
 *                           More operations on sequences                                 *
 \****************************************************************************************/
 
@@ -1808,7 +1787,6 @@ public:
 
     virtual float predict( const CvMat* sample, CV_OUT CvMat* probs ) const;
 
-#ifndef SWIG
     CV_WRAP CvEM( const cv::Mat& samples, const cv::Mat& sampleIdx=cv::Mat(),
                   CvEMParams params=CvEMParams() );
 
@@ -1827,7 +1805,6 @@ public:
     CV_WRAP cv::Mat getProbs() const;
 
     CV_WRAP inline double getLikelihood() const { return emObj.isTrained() ? logLikelihood : DBL_MAX; }
-#endif
 
     CV_WRAP virtual void clear();
 
@@ -3028,6 +3005,28 @@ CV_INLINE  CvSubdiv2DPoint*  cvSubdiv2DEdgeDst( CvSubdiv2DEdge edge )
     CvQuadEdge2D* e = (CvQuadEdge2D*)(edge & ~3);
     return (CvSubdiv2DPoint*)e->pt[(edge + 2) & 3];
 }
+
+/****************************************************************************************\
+*                           Additional operations on Subdivisions                        *
+\****************************************************************************************/
+
+// paints voronoi diagram: just demo function
+CVAPI(void)  icvDrawMosaic( CvSubdiv2D* subdiv, IplImage* src, IplImage* dst );
+
+// checks planar subdivision for correctness. It is not an absolute check,
+// but it verifies some relations between quad-edges
+CVAPI(int)   icvSubdiv2DCheck( CvSubdiv2D* subdiv );
+
+// returns squared distance between two 2D points with floating-point coordinates.
+CV_INLINE double icvSqDist2D32f( CvPoint2D32f pt1, CvPoint2D32f pt2 )
+{
+    double dx = pt1.x - pt2.x;
+    double dy = pt1.y - pt2.y;
+
+    return dx*dx + dy*dy;
+}
+
+
 
 
 CV_INLINE  double  cvTriangleArea( CvPoint2D32f a, CvPoint2D32f b, CvPoint2D32f c )

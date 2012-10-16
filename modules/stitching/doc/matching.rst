@@ -204,11 +204,11 @@ This method must implement matching logic in order to make the wrappers `detail:
 
 .. ocv:function:: void detail::FeaturesMatcher::match(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo& matches_info)
 
-    :param features1: First image features
+    :param features1: first image features
 
-    :param features2: Second image features
+    :param features2: second image features
 
-    :param matches_info: Found matches
+    :param matches_info: found matches
 
 detail::BestOf2NearestMatcher
 -----------------------------

@@ -1,30 +1,32 @@
 /*
  * Copyright 1993-2010 NVIDIA Corporation.  All rights reserved.
  *
- * NVIDIA Corporation and its licensors retain all intellectual 
- * property and proprietary rights in and to this software and 
- * related documentation and any modifications thereto.  
- * Any use, reproduction, disclosure, or distribution of this 
- * software and related documentation without an express license 
+ * NVIDIA Corporation and its licensors retain all intellectual
+ * property and proprietary rights in and to this software and
+ * related documentation and any modifications thereto.
+ * Any use, reproduction, disclosure, or distribution of this
+ * software and related documentation without an express license
  * agreement from NVIDIA Corporation is strictly prohibited.
  */
+
+#if !defined CUDA_DISABLER
 
 #include <math.h>
 
 #include "TestRectStdDev.h"
 
 
-TestRectStdDev::TestRectStdDev(std::string testName, NCVTestSourceProvider<Ncv8u> &src,
-                               Ncv32u width, Ncv32u height, NcvRect32u rect, Ncv32f scaleFactor,
-                               NcvBool bTextureCache)
+TestRectStdDev::TestRectStdDev(std::string testName_, NCVTestSourceProvider<Ncv8u> &src_,
+                               Ncv32u width_, Ncv32u height_, NcvRect32u rect_, Ncv32f scaleFactor_,
+                               NcvBool bTextureCache_)
     :
-    NCVTestProvider(testName),
-    src(src),
-    width(width),
-    height(height),
-    rect(rect),
-    scaleFactor(scaleFactor),
-    bTextureCache(bTextureCache)
+    NCVTestProvider(testName_),
+    src(src_),
+    width(width_),
+    height(height_),
+    rect(rect_),
+    scaleFactor(scaleFactor_),
+    bTextureCache(bTextureCache_)
 {
 }
 
@@ -178,3 +180,5 @@ bool TestRectStdDev::deinit()
 {
     return true;
 }
+
+#endif /* CUDA_DISABLER */

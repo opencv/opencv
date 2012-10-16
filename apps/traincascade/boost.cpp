@@ -1257,6 +1257,7 @@ bool CvCascadeBoost::train( const CvFeatureEvaluator* _featureEvaluator,
                            int _precalcValBufSize, int _precalcIdxBufSize,
                            const CvCascadeBoostParams& _params )
 {
+    bool isTrained = false;
     CV_Assert( !data );
     clear();
     data = new CvCascadeBoostTrainData( _featureEvaluator, _numSamples,
@@ -1291,9 +1292,16 @@ bool CvCascadeBoost::train( const CvFeatureEvaluator* _featureEvaluator,
     }
     while( !isErrDesired() && (weak->total < params.weak_count) );
 
-    data->is_classifier = true;
-    data->free_train_data();
-    return true;
+    if(weak->total > 0)
+    {
+        data->is_classifier = true;
+        data->free_train_data();
+        isTrained = true;
+    }
+    else
+        clear();
+
+    return isTrained;
 }
 
 float CvCascadeBoost::predict( int sampleIdx, bool returnSum ) const

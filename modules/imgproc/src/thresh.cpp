@@ -661,29 +661,23 @@ getThreshVal_Otsu_8u( const Mat& _src )
     return max_val;
 }
 
-class ThresholdRunner
+class ThresholdRunner : public ParallelLoopBody
 {
 public:
-    ThresholdRunner(Mat _src, Mat _dst, int _nStripes, double _thresh, double _maxval, int _thresholdType)
+    ThresholdRunner(Mat _src, Mat _dst, double _thresh, double _maxval, int _thresholdType)
     {
         src = _src;
         dst = _dst;
-
-        nStripes = _nStripes;
 
         thresh = _thresh;
         maxval = _maxval;
         thresholdType = _thresholdType;
     }
 
-    void operator () ( const BlockedRange& range ) const
+    void operator () ( const Range& range ) const
     {
-        int row0 = std::min(cvRound(range.begin() * src.rows / nStripes), src.rows);
-        int row1 = std::min(cvRound(range.end() * src.rows / nStripes), src.rows);
-
-        /*if(0)
-            printf("Size = (%d, %d), range[%d,%d), row0 = %d, row1 = %d\n",
-                   src.rows, src.cols, range.begin(), range.end(), row0, row1);*/
+        int row0 = range.start;
+        int row1 = range.end;
 
         Mat srcStripe = src.rowRange(row0, row1);
         Mat dstStripe = dst.rowRange(row0, row1);
@@ -729,11 +723,6 @@ double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double m
     _dst.create( src.size(), src.type() );
     Mat dst = _dst.getMat();
 
-    int nStripes = 1;
-#if defined HAVE_TBB && defined ANDROID
-    nStripes = 4;
-#endif
-
     if( src.depth() == CV_8U )
     {
         int ithresh = cvFloor(thresh);
@@ -756,12 +745,10 @@ double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double m
             }
             else
                 src.copyTo(dst);
+            return thresh;
         }
-        else
-        {
-            parallel_for(BlockedRange(0, nStripes),
-                         ThresholdRunner(src, dst, nStripes, (uchar)ithresh, (uchar)imaxval, type));
-        }
+        thresh = ithresh;
+        maxval = imaxval;
     }
     else if( src.depth() == CV_16S )
     {
@@ -785,21 +772,19 @@ double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double m
             }
             else
                 src.copyTo(dst);
+            return thresh;
         }
-        else
-        {
-            parallel_for(BlockedRange(0, nStripes),
-                         ThresholdRunner(src, dst, nStripes, (short)ithresh, (short)imaxval, type));
-        }
+        thresh = ithresh;
+        maxval = imaxval;
     }
     else if( src.depth() == CV_32F )
-    {
-        parallel_for(BlockedRange(0, nStripes),
-                     ThresholdRunner(src, dst, nStripes, (float)thresh, (float)maxval, type));
-    }
+        ;
     else
         CV_Error( CV_StsUnsupportedFormat, "" );
-
+    
+    parallel_for_(Range(0, dst.rows),
+                  ThresholdRunner(src, dst, thresh, maxval, type),
+                  dst.total()/(double)(1<<16));
     return thresh;
 }
 

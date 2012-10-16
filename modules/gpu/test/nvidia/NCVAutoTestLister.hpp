@@ -1,11 +1,11 @@
 /*
  * Copyright 1993-2010 NVIDIA Corporation.  All rights reserved.
  *
- * NVIDIA Corporation and its licensors retain all intellectual 
- * property and proprietary rights in and to this software and 
- * related documentation and any modifications thereto.  
- * Any use, reproduction, disclosure, or distribution of this 
- * software and related documentation without an express license 
+ * NVIDIA Corporation and its licensors retain all intellectual
+ * property and proprietary rights in and to this software and
+ * related documentation and any modifications thereto.
+ * Any use, reproduction, disclosure, or distribution of this
+ * software and related documentation without an express license
  * agreement from NVIDIA Corporation is strictly prohibited.
  */
 #ifndef _ncvautotestlister_hpp_
@@ -26,11 +26,11 @@ class NCVAutoTestLister
 {
 public:
 
-    NCVAutoTestLister(std::string testSuiteName, OutputLevel outputLevel = OutputLevelCompact, NcvBool bStopOnFirstFail=false)
+    NCVAutoTestLister(std::string testSuiteName_, OutputLevel outputLevel_ = OutputLevelCompact, NcvBool bStopOnFirstFail_=false)
         :
-    testSuiteName(testSuiteName),
-    outputLevel(outputLevel),
-    bStopOnFirstFail(bStopOnFirstFail)
+    testSuiteName(testSuiteName_),
+    outputLevel(outputLevel_),
+    bStopOnFirstFail(bStopOnFirstFail_)
     {
     }
 
@@ -47,7 +47,7 @@ public:
 
         if (outputLevel == OutputLevelCompact)
         {
-            printf("Test suite '%s' with %d tests\n", 
+            printf("Test suite '%s' with %d tests\n",
                 testSuiteName.c_str(),
                 (int)(this->tests.size()));
         }
@@ -109,7 +109,7 @@ public:
 
         if (outputLevel != OutputLevelNone)
         {
-            printf("Test suite '%s' complete: %d total, %d passed, %d memory errors, %d failed\n\n", 
+            printf("Test suite '%s' complete: %d total, %d passed, %d memory errors, %d failed\n\n",
                 testSuiteName.c_str(),
                 (int)(this->tests.size()),
                 nPassed,

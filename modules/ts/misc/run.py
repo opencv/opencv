@@ -56,6 +56,7 @@ parse_patterns = (
   {'name': "tests_dir",                'default': None,       'pattern': re.compile("^EXECUTABLE_OUTPUT_PATH:PATH=(.+)$")},
   {'name': "build_type",               'default': "Release",  'pattern': re.compile("^CMAKE_BUILD_TYPE:STRING=(.*)$")},
   {'name': "svnversion_path",          'default': None,       'pattern': re.compile("^SVNVERSION_PATH:FILEPATH=(.*)$")},
+  {'name': "git_executable",           'default': None,       'pattern': re.compile("^GIT_EXECUTABLE:FILEPATH=(.*)$")},
   {'name': "cxx_flags",                'default': "",         'pattern': re.compile("^CMAKE_CXX_FLAGS:STRING=(.*)$")},
   {'name': "cxx_flags_debug",          'default': "",         'pattern': re.compile("^CMAKE_CXX_FLAGS_DEBUG:STRING=(.*)$")},
   {'name': "cxx_flags_release",        'default': "",         'pattern': re.compile("^CMAKE_CXX_FLAGS_RELEASE:STRING=(.*)$")},
@@ -264,7 +265,8 @@ class RunInfo(object):
                     self.error = "Could not run adb command: %s (for %s)" % (self.error, self.path)
                     self.adb = []
                 else:
-                    connected_devices = re.findall(r"^[^ \t]+[ \t]+device\r?$", adb_res, re.MULTILINE)
+                    # assume here that device name may consists of any characters except newline
+                    connected_devices = re.findall(r"^[^\n]+[ \t]+device\r?$", adb_res, re.MULTILINE)
                     if len(connected_devices) != 1:
                         self.error = "Too many (%s) devices are connected. Please specify single device using --serial option" % (len(connected_devices))
                         self.adb = []
@@ -303,13 +305,15 @@ class RunInfo(object):
         # detect target arch
         if self.targetos == "android":
             if "armeabi-v7a" in self.android_abi:
-                self.targetarch = "ARMv7a"
+                self.targetarch = "armv7a"
             elif "armeabi-v6" in self.android_abi:
-                self.targetarch = "ARMv6"
+                self.targetarch = "armv6"
             elif "armeabi" in self.android_abi:
-                self.targetarch = "ARMv5te"
+                self.targetarch = "armv5te"
             elif "x86" in self.android_abi:
                 self.targetarch = "x86"
+            elif "mips" in self.android_abi:
+                self.targetarch = "mips"
             else:
                 self.targetarch = "ARM"
         elif self.is_x64 and hostmachine in ["AMD64", "x86_64"]:
@@ -327,20 +331,40 @@ class RunInfo(object):
 
         self.hardware = None
 
-        self.getSvnVersion(self.cmake_home, "cmake_home_svn")
+        self.cmake_home_vcver = self.getVCVersion(self.cmake_home)
         if self.opencv_home == self.cmake_home:
-            self.opencv_home_svn = self.cmake_home_svn
+            self.opencv_home_vcver = self.cmake_home_vcver
         else:
-            self.getSvnVersion(self.opencv_home, "opencv_home_svn")
+            self.opencv_home_vcver = self.getVCVersion(self.opencv_home)
 
         self.tests = self.getAvailableTestApps()
 
-    def getSvnVersion(self, path, name):
+    def getVCVersion(self, root_path):
+        if not root_path:
+            return None
+        if os.path.isdir(os.path.join(root_path, ".svn")):
+            return self.getSvnVersion(root_path)
+        elif os.path.isdir(os.path.join(root_path, ".git")):
+            return self.getGitHash(root_path)
+        return None
+
+    def getGitHash(self, path):
+        if not path or not self.git_executable:
+            return None
+        try:
+            output = Popen([self.git_executable, "rev-parse", "--short", "HEAD"], stdout=PIPE, stderr=PIPE, cwd = path).communicate()
+            if not output[1]:
+                return output[0].strip()
+            else:
+                return None
+        except OSError:
+            return None
+
+    def getSvnVersion(self, path):
         if not path:
-            setattr(self, name, None)
-            return
-        if not self.svnversion_path and hostos == 'nt':
-            self.tryGetSvnVersionWithTortoise(path, name)
+            val = None
+        elif not self.svnversion_path and hostos == 'nt':
+            val = self.tryGetSvnVersionWithTortoise(path)
         else:
             svnversion = self.svnversion_path
             if not svnversion:
@@ -348,13 +372,16 @@ class RunInfo(object):
             try:
                 output = Popen([svnversion, "-n", path], stdout=PIPE, stderr=PIPE).communicate()
                 if not output[1]:
-                    setattr(self, name, output[0])
+                    val = output[0]
                 else:
-                    setattr(self, name, None)
+                    val = None
             except OSError:
-                setattr(self, name, None)
+                val = None
+        if val:
+            val = val.replace(" ", "_")
+        return val
 
-    def tryGetSvnVersionWithTortoise(self, path, name):
+    def tryGetSvnVersionWithTortoise(self, path):
         try:
             wcrev = "SubWCRev.exe"
             dir = tempfile.mkdtemp()
@@ -371,9 +398,9 @@ class RunInfo(object):
                 tmpfile = open(tmpfilename2, "r")
                 version = tmpfile.read()
                 tmpfile.close()
-            setattr(self, name, version)
+            return version
         except:
-            setattr(self, name, None)
+            return None
         finally:
             if dir:
                 shutil.rmtree(dir)
@@ -406,13 +433,13 @@ class RunInfo(object):
         if app.startswith(self.nameprefix):
             app = app[len(self.nameprefix):]
 
-        if self.cmake_home_svn:
-            if self.cmake_home_svn == self.opencv_home_svn:
-                rev = self.cmake_home_svn
-            elif self.opencv_home_svn:
-                rev = self.cmake_home_svn + "-" + self.opencv_home_svn
+        if self.cmake_home_vcver:
+            if self.cmake_home_vcver == self.opencv_home_vcver:
+                rev = self.cmake_home_vcver
+            elif self.opencv_home_vcver:
+                rev = self.cmake_home_vcver + "-" + self.opencv_home_vcver
             else:
-                rev = self.cmake_home_svn
+                rev = self.cmake_home_vcver
         else:
             rev = None
         if rev:
@@ -484,7 +511,6 @@ class RunInfo(object):
                     else:
                         prev_option = prev_option + " " + opt
                 options.append(tmpfile[1])
-                print options
                 output = Popen(options, stdout=PIPE, stderr=PIPE).communicate()
                 compiler_output = output[1]
                 os.remove(tmpfile[1])
@@ -506,7 +532,7 @@ class RunInfo(object):
                 hw = "CUDA_"
             else:
                 hw = ""
-            tstamp = timestamp.strftime("%Y-%m-%d--%H-%M-%S")
+            tstamp = timestamp.strftime("%Y%m%d-%H%M%S")
             return "%s_%s_%s_%s%s%s.xml" % (app, self.targetos, self.targetarch, hw, rev, tstamp)
 
     def getTest(self, name):

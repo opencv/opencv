@@ -40,6 +40,8 @@
 //
 //M*/
 
+#if !defined CUDA_DISABLER
+
 #include "internal_shared.hpp"
 #include "opencv2/gpu/device/vec_traits.hpp"
 #include "opencv2/gpu/device/vec_math.hpp"
@@ -143,7 +145,7 @@ namespace cv { namespace gpu { namespace device
             }
         }
 
-        void meanShiftFiltering_gpu(const DevMem2Db& src, DevMem2Db dst, int sp, int sr, int maxIter, float eps, cudaStream_t stream)
+        void meanShiftFiltering_gpu(const PtrStepSzb& src, PtrStepSzb dst, int sp, int sr, int maxIter, float eps, cudaStream_t stream)
         {
             dim3 grid(1, 1, 1);
             dim3 threads(32, 8, 1);
@@ -162,7 +164,7 @@ namespace cv { namespace gpu { namespace device
             //cudaSafeCall( cudaUnbindTexture( tex_meanshift ) );
         }
 
-        void meanShiftProc_gpu(const DevMem2Db& src, DevMem2Db dstr, DevMem2Db dstsp, int sp, int sr, int maxIter, float eps, cudaStream_t stream)
+        void meanShiftProc_gpu(const PtrStepSzb& src, PtrStepSzb dstr, PtrStepSzb dstsp, int sp, int sr, int maxIter, float eps, cudaStream_t stream)
         {
             dim3 grid(1, 1, 1);
             dim3 threads(32, 8, 1);
@@ -284,7 +286,7 @@ namespace cv { namespace gpu { namespace device
         }
 
 
-        void drawColorDisp_gpu(const DevMem2Db& src, const DevMem2Db& dst, int ndisp, const cudaStream_t& stream)
+        void drawColorDisp_gpu(const PtrStepSzb& src, const PtrStepSzb& dst, int ndisp, const cudaStream_t& stream)
         {
             dim3 threads(16, 16, 1);
             dim3 grid(1, 1, 1);
@@ -298,7 +300,7 @@ namespace cv { namespace gpu { namespace device
                 cudaSafeCall( cudaDeviceSynchronize() );
         }
 
-        void drawColorDisp_gpu(const DevMem2D_<short>& src, const DevMem2Db& dst, int ndisp, const cudaStream_t& stream)
+        void drawColorDisp_gpu(const PtrStepSz<short>& src, const PtrStepSzb& dst, int ndisp, const cudaStream_t& stream)
         {
             dim3 threads(32, 8, 1);
             dim3 grid(1, 1, 1);
@@ -317,7 +319,7 @@ namespace cv { namespace gpu { namespace device
         __constant__ float cq[16];
 
         template <typename T, typename D>
-        __global__ void reprojectImageTo3D(const DevMem2D_<T> disp, PtrStep<D> xyz)
+        __global__ void reprojectImageTo3D(const PtrStepSz<T> disp, PtrStep<D> xyz)
         {
             const int x = blockIdx.x * blockDim.x + threadIdx.x;
             const int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -343,31 +345,31 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <typename T, typename D>
-        void reprojectImageTo3D_gpu(const DevMem2Db disp, DevMem2Db xyz, const float* q, cudaStream_t stream)
+        void reprojectImageTo3D_gpu(const PtrStepSzb disp, PtrStepSzb xyz, const float* q, cudaStream_t stream)
         {
             dim3 block(32, 8);
             dim3 grid(divUp(disp.cols, block.x), divUp(disp.rows, block.y));
 
             cudaSafeCall( cudaMemcpyToSymbol(cq, q, 16 * sizeof(float)) );
 
-            reprojectImageTo3D<T, D><<<grid, block, 0, stream>>>((DevMem2D_<T>)disp, (DevMem2D_<D>)xyz);
+            reprojectImageTo3D<T, D><<<grid, block, 0, stream>>>((PtrStepSz<T>)disp, (PtrStepSz<D>)xyz);
             cudaSafeCall( cudaGetLastError() );
 
             if (stream == 0)
                 cudaSafeCall( cudaDeviceSynchronize() );
         }
 
-        template void reprojectImageTo3D_gpu<uchar, float3>(const DevMem2Db disp, DevMem2Db xyz, const float* q, cudaStream_t stream);
-        template void reprojectImageTo3D_gpu<uchar, float4>(const DevMem2Db disp, DevMem2Db xyz, const float* q, cudaStream_t stream);
-        template void reprojectImageTo3D_gpu<short, float3>(const DevMem2Db disp, DevMem2Db xyz, const float* q, cudaStream_t stream);
-        template void reprojectImageTo3D_gpu<short, float4>(const DevMem2Db disp, DevMem2Db xyz, const float* q, cudaStream_t stream);
+        template void reprojectImageTo3D_gpu<uchar, float3>(const PtrStepSzb disp, PtrStepSzb xyz, const float* q, cudaStream_t stream);
+        template void reprojectImageTo3D_gpu<uchar, float4>(const PtrStepSzb disp, PtrStepSzb xyz, const float* q, cudaStream_t stream);
+        template void reprojectImageTo3D_gpu<short, float3>(const PtrStepSzb disp, PtrStepSzb xyz, const float* q, cudaStream_t stream);
+        template void reprojectImageTo3D_gpu<short, float4>(const PtrStepSzb disp, PtrStepSzb xyz, const float* q, cudaStream_t stream);
 
         /////////////////////////////////////////// Corner Harris /////////////////////////////////////////////////
 
         texture<float, cudaTextureType2D, cudaReadModeElementType> harrisDxTex(0, cudaFilterModePoint, cudaAddressModeClamp);
         texture<float, cudaTextureType2D, cudaReadModeElementType> harrisDyTex(0, cudaFilterModePoint, cudaAddressModeClamp);
 
-        __global__ void cornerHarris_kernel(const int block_size, const float k, DevMem2Df dst)
+        __global__ void cornerHarris_kernel(const int block_size, const float k, PtrStepSzf dst)
         {
             const int x = blockIdx.x * blockDim.x + threadIdx.x;
             const int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -401,7 +403,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         template <typename BR, typename BC>
-        __global__ void cornerHarris_kernel(const int block_size, const float k, DevMem2Df dst, const BR border_row, const BC border_col)
+        __global__ void cornerHarris_kernel(const int block_size, const float k, PtrStepSzf dst, const BR border_row, const BC border_col)
         {
             const int x = blockIdx.x * blockDim.x + threadIdx.x;
             const int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -438,7 +440,7 @@ namespace cv { namespace gpu { namespace device
             }
         }
 
-        void cornerHarris_gpu(int block_size, float k, DevMem2Df Dx, DevMem2Df Dy, DevMem2Df dst, int border_type, cudaStream_t stream)
+        void cornerHarris_gpu(int block_size, float k, PtrStepSzf Dx, PtrStepSzf Dy, PtrStepSzf dst, int border_type, cudaStream_t stream)
         {
             dim3 block(32, 8);
             dim3 grid(divUp(Dx.cols, block.x), divUp(Dx.rows, block.y));
@@ -472,7 +474,7 @@ namespace cv { namespace gpu { namespace device
         texture<float, cudaTextureType2D, cudaReadModeElementType> minEigenValDxTex(0, cudaFilterModePoint, cudaAddressModeClamp);
         texture<float, cudaTextureType2D, cudaReadModeElementType> minEigenValDyTex(0, cudaFilterModePoint, cudaAddressModeClamp);
 
-        __global__ void cornerMinEigenVal_kernel(const int block_size, DevMem2Df dst)
+        __global__ void cornerMinEigenVal_kernel(const int block_size, PtrStepSzf dst)
         {
             const int x = blockIdx.x * blockDim.x + threadIdx.x;
             const int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -510,7 +512,7 @@ namespace cv { namespace gpu { namespace device
 
 
         template <typename BR, typename BC>
-        __global__ void cornerMinEigenVal_kernel(const int block_size, DevMem2Df dst, const BR border_row, const BC border_col)
+        __global__ void cornerMinEigenVal_kernel(const int block_size, PtrStepSzf dst, const BR border_row, const BC border_col)
         {
             const int x = blockIdx.x * blockDim.x + threadIdx.x;
             const int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -550,7 +552,7 @@ namespace cv { namespace gpu { namespace device
             }
         }
 
-        void cornerMinEigenVal_gpu(int block_size, DevMem2Df Dx, DevMem2Df Dy, DevMem2Df dst, int border_type, cudaStream_t stream)
+        void cornerMinEigenVal_gpu(int block_size, PtrStepSzf Dx, PtrStepSzf Dy, PtrStepSzf dst, int border_type, cudaStream_t stream)
         {
             dim3 block(32, 8);
             dim3 grid(divUp(Dx.cols, block.x), divUp(Dx.rows, block.y));
@@ -602,7 +604,7 @@ namespace cv { namespace gpu { namespace device
         }
 
 
-        void columnSum_32F(const DevMem2Db src, const DevMem2Db dst)
+        void columnSum_32F(const PtrStepSzb src, const PtrStepSzb dst)
         {
             dim3 threads(256);
             dim3 grid(divUp(src.cols, threads.x));
@@ -617,7 +619,7 @@ namespace cv { namespace gpu { namespace device
         //////////////////////////////////////////////////////////////////////////
         // mulSpectrums
 
-        __global__ void mulSpectrumsKernel(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, DevMem2D_<cufftComplex> c)
+        __global__ void mulSpectrumsKernel(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, PtrStepSz<cufftComplex> c)
         {
             const int x = blockIdx.x * blockDim.x + threadIdx.x;
             const int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -629,7 +631,7 @@ namespace cv { namespace gpu { namespace device
         }
 
 
-        void mulSpectrums(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, DevMem2D_<cufftComplex> c, cudaStream_t stream)
+        void mulSpectrums(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, PtrStepSz<cufftComplex> c, cudaStream_t stream)
         {
             dim3 threads(256);
             dim3 grid(divUp(c.cols, threads.x), divUp(c.rows, threads.y));
@@ -645,7 +647,7 @@ namespace cv { namespace gpu { namespace device
         //////////////////////////////////////////////////////////////////////////
         // mulSpectrums_CONJ
 
-        __global__ void mulSpectrumsKernel_CONJ(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, DevMem2D_<cufftComplex> c)
+        __global__ void mulSpectrumsKernel_CONJ(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, PtrStepSz<cufftComplex> c)
         {
             const int x = blockIdx.x * blockDim.x + threadIdx.x;
             const int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -657,7 +659,7 @@ namespace cv { namespace gpu { namespace device
         }
 
 
-        void mulSpectrums_CONJ(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, DevMem2D_<cufftComplex> c, cudaStream_t stream)
+        void mulSpectrums_CONJ(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, PtrStepSz<cufftComplex> c, cudaStream_t stream)
         {
             dim3 threads(256);
             dim3 grid(divUp(c.cols, threads.x), divUp(c.rows, threads.y));
@@ -673,7 +675,7 @@ namespace cv { namespace gpu { namespace device
         //////////////////////////////////////////////////////////////////////////
         // mulAndScaleSpectrums
 
-        __global__ void mulAndScaleSpectrumsKernel(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, float scale, DevMem2D_<cufftComplex> c)
+        __global__ void mulAndScaleSpectrumsKernel(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, float scale, PtrStepSz<cufftComplex> c)
         {
             const int x = blockIdx.x * blockDim.x + threadIdx.x;
             const int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -686,7 +688,7 @@ namespace cv { namespace gpu { namespace device
         }
 
 
-        void mulAndScaleSpectrums(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, float scale, DevMem2D_<cufftComplex> c, cudaStream_t stream)
+        void mulAndScaleSpectrums(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, float scale, PtrStepSz<cufftComplex> c, cudaStream_t stream)
         {
             dim3 threads(256);
             dim3 grid(divUp(c.cols, threads.x), divUp(c.rows, threads.y));
@@ -702,7 +704,7 @@ namespace cv { namespace gpu { namespace device
         //////////////////////////////////////////////////////////////////////////
         // mulAndScaleSpectrums_CONJ
 
-        __global__ void mulAndScaleSpectrumsKernel_CONJ(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, float scale, DevMem2D_<cufftComplex> c)
+        __global__ void mulAndScaleSpectrumsKernel_CONJ(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, float scale, PtrStepSz<cufftComplex> c)
         {
             const int x = blockIdx.x * blockDim.x + threadIdx.x;
             const int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -715,7 +717,7 @@ namespace cv { namespace gpu { namespace device
         }
 
 
-        void mulAndScaleSpectrums_CONJ(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, float scale, DevMem2D_<cufftComplex> c, cudaStream_t stream)
+        void mulAndScaleSpectrums_CONJ(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, float scale, PtrStepSz<cufftComplex> c, cudaStream_t stream)
         {
             dim3 threads(256);
             dim3 grid(divUp(c.cols, threads.x), divUp(c.rows, threads.y));
@@ -830,7 +832,7 @@ namespace cv { namespace gpu { namespace device
         }
 
 
-        void buildWarpPlaneMaps(int tl_u, int tl_v, DevMem2Df map_x, DevMem2Df map_y,
+        void buildWarpPlaneMaps(int tl_u, int tl_v, PtrStepSzf map_x, PtrStepSzf map_y,
                                 const float k_rinv[9], const float r_kinv[9], const float t[3],
                                 float scale, cudaStream_t stream)
         {
@@ -852,7 +854,7 @@ namespace cv { namespace gpu { namespace device
         }
 
 
-        void buildWarpCylindricalMaps(int tl_u, int tl_v, DevMem2Df map_x, DevMem2Df map_y,
+        void buildWarpCylindricalMaps(int tl_u, int tl_v, PtrStepSzf map_x, PtrStepSzf map_y,
                                       const float k_rinv[9], const float r_kinv[9], float scale,
                                       cudaStream_t stream)
         {
@@ -873,7 +875,7 @@ namespace cv { namespace gpu { namespace device
         }
 
 
-        void buildWarpSphericalMaps(int tl_u, int tl_v, DevMem2Df map_x, DevMem2Df map_y,
+        void buildWarpSphericalMaps(int tl_u, int tl_v, PtrStepSzf map_x, PtrStepSzf map_y,
                                     const float k_rinv[9], const float r_kinv[9], float scale,
                                     cudaStream_t stream)
         {
@@ -901,7 +903,7 @@ namespace cv { namespace gpu { namespace device
         __constant__ float c_filter2DKernel[FILTER2D_MAX_KERNEL_SIZE * FILTER2D_MAX_KERNEL_SIZE];
 
         template <class SrcT, typename D>
-        __global__ void filter2D(const SrcT src, DevMem2D_<D> dst, const int kWidth, const int kHeight, const int anchorX, const int anchorY)
+        __global__ void filter2D(const SrcT src, PtrStepSz<D> dst, const int kWidth, const int kHeight, const int anchorX, const int anchorY)
         {
             typedef typename TypeVec<float, VecTraits<D>::cn>::vec_type sum_t;
 
@@ -941,7 +943,7 @@ namespace cv { namespace gpu { namespace device
             }; \
             template <typename D, template <typename> class Brd> struct Filter2DCaller< type , D, Brd> \
             { \
-                static void call(const DevMem2D_< type > srcWhole, int xoff, int yoff, DevMem2D_<D> dst, \
+                static void call(const PtrStepSz< type > srcWhole, int xoff, int yoff, PtrStepSz<D> dst, \
                     int kWidth, int kHeight, int anchorX, int anchorY, const float* borderValue, cudaStream_t stream) \
                 { \
                     typedef typename TypeVec<float, VecTraits< type >::cn>::vec_type work_type; \
@@ -970,11 +972,11 @@ namespace cv { namespace gpu { namespace device
         #undef IMPLEMENT_FILTER2D_TEX_READER
 
         template <typename T, typename D>
-        void filter2D_gpu(DevMem2Db srcWhole, int ofsX, int ofsY, DevMem2Db dst,
+        void filter2D_gpu(PtrStepSzb srcWhole, int ofsX, int ofsY, PtrStepSzb dst,
                           int kWidth, int kHeight, int anchorX, int anchorY, const float* kernel,
                           int borderMode, const float* borderValue, cudaStream_t stream)
         {
-            typedef void (*func_t)(const DevMem2D_<T> srcWhole, int xoff, int yoff, DevMem2D_<D> dst, int kWidth, int kHeight, int anchorX, int anchorY, const float* borderValue, cudaStream_t stream);
+            typedef void (*func_t)(const PtrStepSz<T> srcWhole, int xoff, int yoff, PtrStepSz<D> dst, int kWidth, int kHeight, int anchorX, int anchorY, const float* borderValue, cudaStream_t stream);
             static const func_t funcs[] =
             {
                 Filter2DCaller<T, D, BrdReflect101>::call,
@@ -984,16 +986,22 @@ namespace cv { namespace gpu { namespace device
                 Filter2DCaller<T, D, BrdWrap>::call
             };
 
-            cudaSafeCall(cudaMemcpyToSymbol(c_filter2DKernel, kernel, kWidth * kHeight * sizeof(float), 0, cudaMemcpyDeviceToDevice) );
+            if (stream == 0)
+                cudaSafeCall( cudaMemcpyToSymbol(c_filter2DKernel, kernel, kWidth * kHeight * sizeof(float), 0, cudaMemcpyDeviceToDevice) );
+            else
+                cudaSafeCall( cudaMemcpyToSymbolAsync(c_filter2DKernel, kernel, kWidth * kHeight * sizeof(float), 0, cudaMemcpyDeviceToDevice, stream) );
 
-            funcs[borderMode](static_cast< DevMem2D_<T> >(srcWhole), ofsX, ofsY, static_cast< DevMem2D_<D> >(dst), kWidth, kHeight, anchorX, anchorY, borderValue, stream);
+            funcs[borderMode](static_cast< PtrStepSz<T> >(srcWhole), ofsX, ofsY, static_cast< PtrStepSz<D> >(dst), kWidth, kHeight, anchorX, anchorY, borderValue, stream);
         }
 
-        template void filter2D_gpu<uchar, uchar>(DevMem2Db srcWhole, int ofsX, int ofsY, DevMem2Db dst, int kWidth, int kHeight, int anchorX, int anchorY, const float* kernel, int borderMode, const float* borderValue, cudaStream_t stream);
-        template void filter2D_gpu<uchar4, uchar4>(DevMem2Db srcWhole, int ofsX, int ofsY, DevMem2Db dst, int kWidth, int kHeight, int anchorX, int anchorY, const float* kernel, int borderMode, const float* borderValue, cudaStream_t stream);
-        template void filter2D_gpu<ushort, ushort>(DevMem2Db srcWhole, int ofsX, int ofsY, DevMem2Db dst, int kWidth, int kHeight, int anchorX, int anchorY, const float* kernel, int borderMode, const float* borderValue, cudaStream_t stream);
-        template void filter2D_gpu<ushort4, ushort4>(DevMem2Db srcWhole, int ofsX, int ofsY, DevMem2Db dst, int kWidth, int kHeight, int anchorX, int anchorY, const float* kernel, int borderMode, const float* borderValue, cudaStream_t stream);
-        template void filter2D_gpu<float, float>(DevMem2Db srcWhole, int ofsX, int ofsY, DevMem2Db dst, int kWidth, int kHeight, int anchorX, int anchorY, const float* kernel, int borderMode, const float* borderValue, cudaStream_t stream);
-        template void filter2D_gpu<float4, float4>(DevMem2Db srcWhole, int ofsX, int ofsY, DevMem2Db dst, int kWidth, int kHeight, int anchorX, int anchorY, const float* kernel, int borderMode, const float* borderValue, cudaStream_t stream);
+        template void filter2D_gpu<uchar, uchar>(PtrStepSzb srcWhole, int ofsX, int ofsY, PtrStepSzb dst, int kWidth, int kHeight, int anchorX, int anchorY, const float* kernel, int borderMode, const float* borderValue, cudaStream_t stream);
+        template void filter2D_gpu<uchar4, uchar4>(PtrStepSzb srcWhole, int ofsX, int ofsY, PtrStepSzb dst, int kWidth, int kHeight, int anchorX, int anchorY, const float* kernel, int borderMode, const float* borderValue, cudaStream_t stream);
+        template void filter2D_gpu<ushort, ushort>(PtrStepSzb srcWhole, int ofsX, int ofsY, PtrStepSzb dst, int kWidth, int kHeight, int anchorX, int anchorY, const float* kernel, int borderMode, const float* borderValue, cudaStream_t stream);
+        template void filter2D_gpu<ushort4, ushort4>(PtrStepSzb srcWhole, int ofsX, int ofsY, PtrStepSzb dst, int kWidth, int kHeight, int anchorX, int anchorY, const float* kernel, int borderMode, const float* borderValue, cudaStream_t stream);
+        template void filter2D_gpu<float, float>(PtrStepSzb srcWhole, int ofsX, int ofsY, PtrStepSzb dst, int kWidth, int kHeight, int anchorX, int anchorY, const float* kernel, int borderMode, const float* borderValue, cudaStream_t stream);
+        template void filter2D_gpu<float4, float4>(PtrStepSzb srcWhole, int ofsX, int ofsY, PtrStepSzb dst, int kWidth, int kHeight, int anchorX, int anchorY, const float* kernel, int borderMode, const float* borderValue, cudaStream_t stream);
     } // namespace imgproc
 }}} // namespace cv { namespace gpu { namespace device {
+
+
+#endif /* CUDA_DISABLER */

@@ -46,7 +46,7 @@ using namespace cv;
 using namespace cv::gpu;
 using namespace std;
 
-#if !defined (HAVE_CUDA)
+#if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
 void cv::gpu::BroxOpticalFlow::operator ()(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
 void cv::gpu::interpolateFrames(const GpuMat&, const GpuMat&, const GpuMat&, const GpuMat&, const GpuMat&, const GpuMat&, float, GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
@@ -193,8 +193,8 @@ namespace cv { namespace gpu { namespace device
 {
     namespace optical_flow
     {
-        void NeedleMapAverage_gpu(DevMem2Df u, DevMem2Df v, DevMem2Df u_avg, DevMem2Df v_avg);
-        void CreateOpticalFlowNeedleMap_gpu(DevMem2Df u_avg, DevMem2Df v_avg, float* vertex_buffer, float* color_data, float max_flow, float xscale, float yscale);
+        void NeedleMapAverage_gpu(PtrStepSzf u, PtrStepSzf v, PtrStepSzf u_avg, PtrStepSzf v_avg);
+        void CreateOpticalFlowNeedleMap_gpu(PtrStepSzf u_avg, PtrStepSzf v_avg, float* vertex_buffer, float* color_data, float max_flow, float xscale, float yscale);
     }
 }}}
 

@@ -10,6 +10,7 @@
 #define ARCH_ARMv6 134217728L
 #define ARCH_ARMv7 268435456L
 #define ARCH_ARMv8 536870912L
+#define ARCH_MIPS 1073741824L
 
 #define FEATURES_HAS_VFPv3d16 1L
 #define FEATURES_HAS_VFPv3 2L
@@ -20,7 +21,7 @@
 #define FEATURES_HAS_SSSE3 4L
 #define FEATURES_HAS_GPU 65536L
 
-// TODO: Do not forget to add Platrfom name to PackageInfo::PlatformNameMap 
+// TODO: Do not forget to add Platrfom name to PackageInfo::PlatformNameMap
 // in method PackageInfo::InitPlatformNameMap()
 #define PLATFORM_UNKNOWN 0L
 #define PLATFORM_TEGRA 1L

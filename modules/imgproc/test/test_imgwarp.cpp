@@ -1491,17 +1491,46 @@ TEST(Imgproc_resize_area, regression)
     };
 
     cv::Mat src(16, 16, CV_16UC1, input_data);
-    cv::Mat actual;
-    cv::Mat expected(5,5,CV_16UC1, expected_data);
+    cv::Mat expected(5, 5, CV_16UC1, expected_data);
+    cv::Mat actual(expected.size(), expected.type());
 
     cv::resize(src, actual, cv::Size(), 0.3, 0.3, INTER_AREA);
 
     ASSERT_EQ(actual.type(), expected.type());
     ASSERT_EQ(actual.size(), expected.size());
+    
     Mat diff;
     absdiff(actual, expected, diff);
-    Mat one_channel_diff = diff.reshape(1);
-    ASSERT_EQ(norm(one_channel_diff, cv::NORM_INF),0);
+    
+    Mat one_channel_diff = diff; //.reshape(1);
+    
+    float elem_diff = 1.0f;
+    Size dsize = actual.size();
+    bool next = true;
+    for (int dy = 0; dy < dsize.height && next; ++dy)
+    {
+        ushort* eD = expected.ptr<ushort>(dy);
+        ushort* aD = actual.ptr<ushort>(dy);
+        
+        for (int dx = 0; dx < dsize.width && next; ++dx)
+            if (fabs(static_cast<float>(aD[dx] - eD[dx])) > elem_diff)
+            {
+                cvtest::TS::ptr()->printf(cvtest::TS::SUMMARY, "Inf norm: %f\n", static_cast<float>(norm(actual, expected, NORM_INF)));
+                cvtest::TS::ptr()->printf(cvtest::TS::SUMMARY, "Error in : (%d, %d)\n", dx, dy);
+                
+                const int radius = 3;
+                int rmin = MAX(dy - radius, 0), rmax = MIN(dy + radius, dsize.height);
+                int cmin = MAX(dx - radius, 0), cmax = MIN(dx + radius, dsize.width);
+                
+                std::cout << "Abs diff:" << std::endl << diff << std::endl;
+                std::cout << "actual result:\n" << actual(Range(rmin, rmax), Range(cmin, cmax)) << std::endl;
+                std::cout << "expected result:\n" << expected(Range(rmin, rmax), Range(cmin, cmax)) << std::endl;
+                
+                next = false;
+            }
+    }
+    
+    ASSERT_EQ(norm(one_channel_diff, cv::NORM_INF), 0);
 }
 
 

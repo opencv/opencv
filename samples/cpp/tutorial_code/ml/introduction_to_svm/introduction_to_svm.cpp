@@ -12,10 +12,10 @@ int main()
 
     // Set up training data
     float labels[4] = {1.0, -1.0, -1.0, -1.0};
-    Mat labelsMat(3, 1, CV_32FC1, labels);
+    Mat labelsMat(4, 1, CV_32FC1, labels);
 
     float trainingData[4][2] = { {501, 10}, {255, 10}, {501, 255}, {10, 501} };
-    Mat trainingDataMat(3, 2, CV_32FC1, trainingData);
+    Mat trainingDataMat(4, 2, CV_32FC1, trainingData);
 
     // Set up SVM's parameters
     CvSVMParams params;
@@ -26,7 +26,7 @@ int main()
     // Train the SVM
     CvSVM SVM;
     SVM.train(trainingDataMat, labelsMat, Mat(), Mat(), params);
-    
+
     Vec3b green(0,255,0), blue (255,0,0);
     // Show the decision regions given by the SVM
     for (int i = 0; i < image.rows; ++i)
@@ -37,7 +37,7 @@ int main()
 
             if (response == 1)
                 image.at<Vec3b>(j, i)  = green;
-            else if (response == -1) 
+            else if (response == -1)
                  image.at<Vec3b>(j, i)  = blue;
         }
 
@@ -60,7 +60,7 @@ int main()
         circle(	image,  Point( (int) v[0], (int) v[1]),   6,  Scalar(128, 128, 128), thickness, lineType);
     }
 
-    imwrite("result.png", image);        // save the image 
+    imwrite("result.png", image);        // save the image
 
     imshow("SVM Simple Example", image); // show it to the user
     waitKey(0);

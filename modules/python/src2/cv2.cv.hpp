@@ -256,7 +256,7 @@ static PyObject *iplimage_tostring(PyObject *self, PyObject *args)
   cv::Mat img(i);
   size_t esz = img.elemSize();
   int nrows = img.rows, ncols = img.cols;
-    
+
   if( !img.isContinuous() )
       img = img.clone();
   return PyString_FromStringAndSize((char*)img.data, (Py_ssize_t)(esz*nrows*ncols));
@@ -338,7 +338,7 @@ static void cvmat_dealloc(PyObject *self)
 {
   cvmat_t *pc = (cvmat_t*)self;
   Py_XDECREF(pc->data);
-  //cvDecRefData(pc->a);  
+  //cvDecRefData(pc->a);
   cvFree(&pc->a);
   PyObject_Del(self);
 }
@@ -656,7 +656,7 @@ static void cvmatnd_dealloc(PyObject *self)
 {
   cvmatnd_t *pc = (cvmatnd_t*)self;
   Py_XDECREF(pc->data);
-  cvDecRefData(pc->a);  
+  cvDecRefData(pc->a);
   cvFree(&pc->a);
   PyObject_Del(self);
 }
@@ -1186,7 +1186,7 @@ static PyObject* cvseq_map_getitem(PyObject *o, PyObject *item)
   }
 }
 
-static 
+static
 PySequenceMethods cvseq_sequence = {
   cvseq_seq_length,
   NULL,
@@ -1606,8 +1606,8 @@ static int convert_to_CvMat(PyObject *o, CvMat **dst, const char *name)
       *dst = m->a;
       return 1;
     } else if (m->data && m->a->data.ptr){
-      *dst = m->a;  
-      return 1;   
+      *dst = m->a;
+      return 1;
     }
     else {
       return failmsg("CvMat argument '%s' has no data", name);
@@ -2174,7 +2174,7 @@ static int convert_to_CvSubdiv2DEdge(PyObject *o, CvSubdiv2DEdge *dst, const cha
 
 static PyObject *pythonize_CvMat(cvmat_t *m)
 {
-  // Need to make this CvMat look like any other, with a Python 
+  // Need to make this CvMat look like any other, with a Python
   // buffer object as its data.
   CvMat *mat = m->a;
   assert(mat->step != 0);
@@ -2204,9 +2204,9 @@ static PyObject *pythonize_CvMat(cvmat_t *m)
 
 static PyObject *pythonize_IplImage(iplimage_t *cva)
 {
-  // Need to make this iplimage look like any other, with a Python 
+  // Need to make this iplimage look like any other, with a Python
   // string as its data.
-  // So copy the image data into a Python string object, then release 
+  // So copy the image data into a Python string object, then release
   // it.
 
   IplImage *ipl = (IplImage*)(cva->a);
@@ -2233,7 +2233,7 @@ static PyObject *pythonize_IplImage(iplimage_t *cva)
 static PyObject *pythonize_CvMatND(cvmatnd_t *m, PyObject *backing = NULL)
 {
   //
-  // Need to make this CvMatND look like any other, with a Python 
+  // Need to make this CvMatND look like any other, with a Python
   // buffer object as its data.
   //
 
@@ -2341,9 +2341,9 @@ static PyObject *FROM_CvSeqOfCvConvexityDefectPTR(CvSeqOfCvConvexityDefect *r)
   for (int i = 0; i < r->total; i++) {
     CvConvexityDefect *pd = CV_GET_SEQ_ELEM(CvConvexityDefect, r, i);
     PyList_SetItem(pr, i, Py_BuildValue("(ii)(ii)(ii)f",
-                                        pd->start->x, pd->start->y, 
-                                        pd->end->x, pd->end->y, 
-                                        pd->depth_point->x, pd->depth_point->y, 
+                                        pd->start->x, pd->start->y,
+                                        pd->end->x, pd->end->y,
+                                        pd->depth_point->x, pd->depth_point->y,
                                         pd->depth));
   }
   // This function has copied the CvSeq data into a list.  Hence the
@@ -2360,8 +2360,8 @@ static PyObject *FROM_CvSeqOfCvAvgCompPTR(CvSeqOfCvAvgComp *r)
   for (int i = 0; i < r->total; i++) {
     CvAvgComp *pd = CV_GET_SEQ_ELEM(CvAvgComp, r, i);
     PyList_SetItem(pr, i, Py_BuildValue("(iiii)i",
-                                        pd->rect.x, pd->rect.y, 
-                                        pd->rect.width, pd->rect.height, 
+                                        pd->rect.x, pd->rect.y,
+                                        pd->rect.width, pd->rect.height,
                                         pd->neighbors));
   }
   // This function has copied the CvSeq data into a list.  Hence the
@@ -2378,7 +2378,7 @@ static PyObject *FROM_CvSeqOfCvStarKeypointPTR(CvSeqOfCvStarKeypoint *r)
   for (int i = 0; i < r->total; i++) {
     CvStarKeypoint *pd = CV_GET_SEQ_ELEM(CvStarKeypoint, r, i);
     PyList_SetItem(pr, i, Py_BuildValue("(ii)if",
-                                        pd->pt.x, pd->pt.y, 
+                                        pd->pt.x, pd->pt.y,
                                         pd->size,
                                         pd->response));
   }
@@ -2396,7 +2396,7 @@ static PyObject *FROM_CvSeqOfCvSURFPointPTR(CvSeqOfCvSURFPoint *r)
   for (int i = 0; i < r->total; i++) {
     CvSURFPoint *pd = CV_GET_SEQ_ELEM(CvSURFPoint, r, i);
     PyList_SetItem(pr, i, Py_BuildValue("(ff)iiff",
-                                        pd->pt.x, pd->pt.y, 
+                                        pd->pt.x, pd->pt.y,
                                         pd->laplacian,
                                         pd->size,
                                         pd->dir,
@@ -2587,7 +2587,7 @@ static PyObject *FROM_CvPoints(CvPoints src)
 
 /************************************************************************/
 
-/* A few functions are too odd to be generated, 
+/* A few functions are too odd to be generated,
  * so are handwritten here */
 
 static PyObject *pycvWaitKey(PyObject *self, PyObject *args, PyObject *kw)
@@ -2808,7 +2808,7 @@ static PyObject *fromarray(PyObject *o, int allowND)
     else if (pai->itemsize == 8)
       type = CV_64FC1;
     break;
-    
+
   }
   if (type == -1) {
      PyErr_SetString(PyExc_TypeError, "the array type is not supported by OpenCV");
@@ -2826,20 +2826,20 @@ static PyObject *fromarray(PyObject *o, int allowND)
       m->a->step = (int)pai->strides[0];
     } else if (pai->nd == 3) {
       if (pai->shape[2] > CV_CN_MAX) {
-        Py_DECREF(ao);  
+        Py_DECREF(ao);
         return failmsg("cv.fromarray too many channels, see allowND argument"), (PyObject*)0;
       }
       ERRWRAP(m->a = cvCreateMatHeader((int)pai->shape[0], (int)pai->shape[1], type + ((int)(pai->shape[2] - 1) << CV_CN_SHIFT)));
       m->a->step = (int)pai->strides[0];
     } else {
-      Py_DECREF(ao);   
+      Py_DECREF(ao);
       return failmsg("cv.fromarray array can be 2D or 3D only, see allowND argument"), (PyObject*)0;
     }
     m->a->data.ptr = (uchar*)pai->data;
     //retval = pythonize_foreign_CvMat(m);
-    m->data = o;  
-    m->offset = 0;  
-    retval = (PyObject*)m;  
+    m->data = o;
+    m->offset = 0;
+    retval = (PyObject*)m;
   } else {
     int dims[CV_MAX_DIM];
     int i;
@@ -2848,13 +2848,13 @@ static PyObject *fromarray(PyObject *o, int allowND)
     cvmatnd_t *m = PyObject_NEW(cvmatnd_t, &cvmatnd_Type);
     ERRWRAP(m->a = cvCreateMatNDHeader(pai->nd, dims, type));
     m->a->data.ptr = (uchar*)pai->data;
-    m->data = o;  
-    m->offset = 0;  
-    retval = (PyObject*)m;  
+    m->data = o;
+    m->offset = 0;
+    retval = (PyObject*)m;
     //retval = pythonize_CvMatND(m, ao);
   }
   Py_DECREF(ao);
-  Py_INCREF(o);  
+  Py_INCREF(o);
   return retval;
 }
 #endif
@@ -2875,7 +2875,7 @@ public:
     rr = new float*[len];
     for (Py_ssize_t i = 0; i < len; i++) {
       PyObject *item = PySequence_Fast_GET_ITEM(fi, i);
-      floats ff;
+      floats ff; ff.f = 0;
       if (!convert_to_floats(item, &ff))
         return 0;
       rr[i] = ff.f;
@@ -3878,10 +3878,51 @@ static PyMethodDef old_methods[] = {
 /************************************************************************/
 /* Module init */
 
+#include "opencv2/opencv_modules.hpp"
+
+#ifdef HAVE_OPENCV_NONFREE
+#  include "opencv2/nonfree/nonfree.hpp"
+#endif
+
+#ifdef HAVE_OPENCV_FEATURES2D
+#  include "opencv2/features2d/features2d.hpp"
+#endif
+
+#ifdef HAVE_OPENCV_VIDEO
+#  include "opencv2/video/video.hpp"
+#endif
+
+#ifdef HAVE_OPENCV_ML
+#  include "opencv2/ml/ml.hpp"
+#endif
+
+#ifdef HAVE_OPENCV_CONTRIB
+#  include "opencv2/contrib/contrib.hpp"
+#endif
+
 static PyObject* init_cv()
 {
   PyObject *m, *d;
   cvSetErrMode(CV_ErrModeParent);
+
+    bool init = true;
+#ifdef HAVE_OPENCV_NONFREE
+    init &= cv::initModule_nonfree();
+#endif
+#ifdef HAVE_OPENCV_FEATURES2D
+    init &= cv::initModule_features2d();
+#endif
+#ifdef HAVE_OPENCV_VIDEO
+    init &= cv::initModule_video();
+#endif
+#ifdef HAVE_OPENCV_ML
+    init &= cv::initModule_ml();
+#endif
+    #ifdef HAVE_OPENCV_CONTRIB
+    init &= cv::initModule_contrib();
+#endif
+  if(!init)
+    return 0;
 
   #define MKTYPE(NAME)  NAME##_specials(); to_ok(&NAME##_Type)
 
@@ -3999,13 +4040,13 @@ static PyObject* init_cv()
   PUBLISH(GC_INIT_WITH_RECT);
   PUBLISH(GC_INIT_WITH_MASK);
   PUBLISH(GC_EVAL);
-  
+
 #include "generated2.i"
 
 #undef PUBLISH
 #undef PUBLISHU
-#undef PUBLISH2    
-    
+#undef PUBLISH2
+
   return m;
 }
 

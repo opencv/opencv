@@ -411,7 +411,7 @@ protected:
     enum { DO_CANNY_PRUNING = 1, SCALE_IMAGE = 2,
            FIND_BIGGEST_OBJECT = 4, DO_ROUGH_SEARCH = 8 };
 
-    friend struct CascadeClassifierInvoker;
+    friend class CascadeClassifierInvoker;
 
     template<class FEval>
     friend int predictOrdered( CascadeClassifier& cascade, Ptr<FeatureEvaluator> &featureEvaluator, double& weight);
@@ -490,6 +490,17 @@ protected:
 
 
 //////////////// HOG (Histogram-of-Oriented-Gradients) Descriptor and Object Detector //////////////
+
+// struct for detection region of interest (ROI)
+struct DetectionROI
+{
+   // scale(size) of the bounding box
+   double scale;
+   // set of requrested locations to be evaluated
+   vector<cv::Point> locations;
+   // vector that will contain confidence values for each location
+   vector<double> confidences;
+};
 
 struct CV_EXPORTS_W HOGDescriptor
 {
@@ -583,6 +594,23 @@ public:
     CV_PROP bool gammaCorrection;
     CV_PROP vector<float> svmDetector;
     CV_PROP int nlevels;
+
+
+   // evaluate specified ROI and return confidence value for each location
+   void detectROI(const cv::Mat& img, const vector<cv::Point> &locations,
+                                   CV_OUT std::vector<cv::Point>& foundLocations, CV_OUT std::vector<double>& confidences,
+                                   double hitThreshold = 0, cv::Size winStride = Size(),
+                                   cv::Size padding = Size()) const;
+
+   // evaluate specified ROI and return confidence value for each location in multiple scales
+   void detectMultiScaleROI(const cv::Mat& img,
+                                                       CV_OUT std::vector<cv::Rect>& foundLocations,
+                                                       std::vector<DetectionROI>& locations,
+                                                       double hitThreshold = 0,
+                                                       int groupThreshold = 0) const;
+
+   // read/parse Dalal's alt model file
+   void readALTModel(std::string modelfile);
 };
 
 

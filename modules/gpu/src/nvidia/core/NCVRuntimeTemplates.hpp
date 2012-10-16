@@ -1,7 +1,7 @@
 /*M///////////////////////////////////////////////////////////////////////////////////////
 //
-// IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING. 
-// 
+// IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
+//
 //  By downloading, copying, installing or using the software you agree to this license.
 //  If you do not agree to this license, do not download, install,
 //  copy or use the software.
@@ -54,14 +54,14 @@
 // The Loki Library
 // Copyright (c) 2001 by Andrei Alexandrescu
 // This code accompanies the book:
-// Alexandrescu, Andrei. "Modern C++ Design: Generic Programming and Design 
+// Alexandrescu, Andrei. "Modern C++ Design: Generic Programming and Design
 //     Patterns Applied". Copyright (c) 2001. Addison-Wesley.
-// Permission to use, copy, modify, distribute and sell this software for any 
-//     purpose is hereby granted without fee, provided that the above copyright 
-//     notice appear in all copies and that both that copyright notice and this 
+// Permission to use, copy, modify, distribute and sell this software for any
+//     purpose is hereby granted without fee, provided that the above copyright
+//     notice appear in all copies and that both that copyright notice and this
 //     permission notice appear in supporting documentation.
-// The author or Addison-Welsey Longman make no representations about the 
-//     suitability of this software for any purpose. It is provided "as is" 
+// The author or Addison-Welsey Longman make no representations about the
+//     suitability of this software for any purpose. It is provided "as is"
 //     without express or implied warranty.
 // http://loki-lib.sourceforge.net/index.php?n=Main.License
 ////////////////////////////////////////////////////////////////////////////////
@@ -71,7 +71,7 @@ namespace Loki
     //==============================================================================
     // class NullType
     // Used as a placeholder for "no type here"
-    // Useful as an end marker in typelists 
+    // Useful as an end marker in typelists
     //==============================================================================
 
     class NullType {};
@@ -110,7 +110,7 @@ namespace Loki
         //==============================================================================
         // class template TypeAt
         // Finds the type at a given index in a typelist
-        // Invocation (TList is a typelist and index is a compile-time integral 
+        // Invocation (TList is a typelist and index is a compile-time integral
         //     constant):
         // TypeAt<TList, index>::Result
         // returns the type in position 'index' in TList

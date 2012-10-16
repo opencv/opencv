@@ -42,6 +42,7 @@
 #include "test_precomp.hpp"
 #include "test_chessboardgenerator.hpp"
 
+#include <functional>
 #include <limits>
 #include <numeric>
 

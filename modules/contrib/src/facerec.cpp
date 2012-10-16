@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011. Philipp Wagner <bytefish[at]gmx[dot]de>.
+ * Copyright (c) 2011,2012. Philipp Wagner <bytefish[at]gmx[dot]de>.
  * Released to public domain under terms of the BSD Simplified license.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -124,7 +124,7 @@ public:
     // Initializes and computes an Eigenfaces model with images in src and
     // corresponding labels in labels. num_components will be kept for
     // classification.
-    Eigenfaces(InputArray src, InputArray labels,
+    Eigenfaces(InputArrayOfArrays src, InputArray labels,
             int num_components = 0, double threshold = DBL_MAX) :
         _num_components(num_components),
         _threshold(threshold) {
@@ -133,7 +133,7 @@ public:
 
     // Computes an Eigenfaces model with images in src and corresponding labels
     // in labels.
-    void train(InputArray src, InputArray labels);
+    void train(InputArrayOfArrays src, InputArray labels);
 
     // Predicts the label of a query image in src.
     int predict(InputArray src) const;
@@ -177,7 +177,7 @@ public:
     // Initializes and computes a Fisherfaces model with images in src and
     // corresponding labels in labels. num_components will be kept for
     // classification.
-    Fisherfaces(InputArray src, InputArray labels,
+    Fisherfaces(InputArrayOfArrays src, InputArray labels,
             int num_components = 0, double threshold = DBL_MAX) :
         _num_components(num_components),
         _threshold(threshold) {
@@ -188,7 +188,7 @@ public:
 
     // Computes a Fisherfaces model with images in src and corresponding labels
     // in labels.
-    void train(InputArray src, InputArray labels);
+    void train(InputArrayOfArrays src, InputArray labels);
 
     // Predicts the label of a query image in src.
     int predict(InputArray src) const;
@@ -197,10 +197,10 @@ public:
     void predict(InputArray _src, int &label, double &dist) const;
 
     // See FaceRecognizer::load.
-    virtual void load(const FileStorage& fs);
+    void load(const FileStorage& fs);
 
     // See FaceRecognizer::save.
-    virtual void save(FileStorage& fs) const;
+    void save(FileStorage& fs) const;
 
     AlgorithmInfo* info() const;
 };
@@ -222,6 +222,12 @@ private:
 
     vector<Mat> _histograms;
     Mat _labels;
+
+    // Computes a LBPH model with images in src and
+    // corresponding labels in labels, possibly preserving
+    // old model data.
+    void train(InputArrayOfArrays src, InputArray labels, bool preserveData);
+
 
 public:
     using FaceRecognizer::save;
@@ -246,7 +252,7 @@ public:
     //
     // (radius=1), (neighbors=8) are used in the local binary patterns creation.
     // (grid_x=8), (grid_y=8) controls the grid size of the spatial histograms.
-    LBPH(InputArray src,
+    LBPH(InputArrayOfArrays src,
             InputArray labels,
             int radius_=1, int neighbors_=8,
             int gridx=8, int gridy=8,
@@ -263,7 +269,11 @@ public:
 
     // Computes a LBPH model with images in src and
     // corresponding labels in labels.
-    void train(InputArray src, InputArray labels);
+    void train(InputArrayOfArrays src, InputArray labels);
+
+    // Updates this LBPH model with images in src and
+    // corresponding labels in labels.
+    void update(InputArrayOfArrays src, InputArray labels);
 
     // Predicts the label of a query image in src.
     int predict(InputArray src) const;
@@ -290,6 +300,11 @@ public:
 //------------------------------------------------------------------------------
 // FaceRecognizer
 //------------------------------------------------------------------------------
+void FaceRecognizer::update(InputArrayOfArrays, InputArray) {
+    string error_msg = format("This FaceRecognizer (%s) does not support updating, you have to use FaceRecognizer::train to update it.", this->name().c_str());
+    CV_Error(CV_StsNotImplemented, error_msg);
+}
+
 void FaceRecognizer::save(const string& filename) const {
     FileStorage fs(filename, FileStorage::WRITE);
     if (!fs.isOpened())
@@ -306,11 +321,10 @@ void FaceRecognizer::load(const string& filename) {
     fs.release();
 }
 
-
 //------------------------------------------------------------------------------
 // Eigenfaces
 //------------------------------------------------------------------------------
-void Eigenfaces::train(InputArray _src, InputArray _local_labels) {
+void Eigenfaces::train(InputArrayOfArrays _src, InputArray _local_labels) {
     if(_src.total() == 0) {
         string error_message = format("Empty training data was given. You'll need more than one sample to learn a model.");
         CV_Error(CV_StsBadArg, error_message);
@@ -331,6 +345,7 @@ void Eigenfaces::train(InputArray _src, InputArray _local_labels) {
     Mat labels = _local_labels.getMat();
     // observations in row
     Mat data = asRowMatrix(_src, CV_64FC1);
+   
     // number of samples
    int n = data.rows;
     // assert there are as much samples as labels
@@ -338,16 +353,21 @@ void Eigenfaces::train(InputArray _src, InputArray _local_labels) {
         string error_message = format("The number of samples (src) must equal the number of labels (labels)! len(src)=%d, len(labels)=%d.", n, labels.total());
         CV_Error(CV_StsBadArg, error_message);
     }
+    // clear existing model data
+    _labels.release();
+    _projections.clear();
     // clip number of components to be valid
     if((_num_components <= 0) || (_num_components > n))
         _num_components = n;
+    
     // perform the PCA
     PCA pca(data, Mat(), CV_PCA_DATA_AS_ROW, _num_components);
     // copy the PCA results
     _mean = pca.mean.reshape(1,1); // store the mean vector
     _eigenvalues = pca.eigenvalues.clone(); // eigenvalues by row
     transpose(pca.eigenvectors, _eigenvectors); // eigenvectors by column
-    labels.copyTo(_labels); // store labels for prediction
+    // store labels for prediction
+    _labels = labels.clone();
     // save projections
     for(int sampleIdx = 0; sampleIdx < data.rows; sampleIdx++) {
         Mat p = subspaceProject(_eigenvectors, _mean, data.row(sampleIdx));
@@ -413,7 +433,7 @@ void Eigenfaces::save(FileStorage& fs) const {
 //------------------------------------------------------------------------------
 // Fisherfaces
 //------------------------------------------------------------------------------
-void Fisherfaces::train(InputArray src, InputArray _lbls) {
+void Fisherfaces::train(InputArrayOfArrays src, InputArray _lbls) {
     if(src.total() == 0) {
         string error_message = format("Empty training data was given. You'll need more than one sample to learn a model.");
         CV_Error(CV_StsBadArg, error_message);
@@ -443,9 +463,15 @@ void Fisherfaces::train(InputArray src, InputArray _lbls) {
         string error_message = format("Expected the labels in a matrix with one row or column! Given dimensions are rows=%s, cols=%d.", labels.rows, labels.cols);
        CV_Error(CV_StsBadArg, error_message);
     }
-    // Get the number of unique classes (provide a cv::Mat overloaded version?)
+    // clear existing model data
+    _labels.release();
+    _projections.clear();
+    // safely copy from cv::Mat to std::vector
     vector<int> ll;
-    labels.copyTo(ll);
+    for(unsigned int i = 0; i < labels.total(); i++) {
+        ll.push_back(labels.at<int>(i));
+    }
+    // get the number of unique classes
     int C = (int) remove_dups(ll).size();
     // clip number of components to be a valid number
     if((_num_components <= 0) || (_num_components > (C-1)))
@@ -457,12 +483,12 @@ void Fisherfaces::train(InputArray src, InputArray _lbls) {
     // store the total mean vector
     _mean = pca.mean.reshape(1,1);
     // store labels
-    labels.copyTo(_labels);
+    _labels = labels.clone();
     // store the eigenvalues of the discriminants
     lda.eigenvalues().convertTo(_eigenvalues, CV_64FC1);
     // Now calculate the projection matrix as pca.eigenvectors * lda.eigenvectors.
     // Note: OpenCV stores the eigenvectors by row, so we need to transpose it!
-    gemm(pca.eigenvectors, lda.eigenvectors(), 1.0, Mat(), 0.0, _eigenvectors, CV_GEMM_A_T);
+    gemm(pca.eigenvectors, lda.eigenvectors(), 1.0, Mat(), 0.0, _eigenvectors, GEMM_1_T);
     // store the projections of the original data
     for(int sampleIdx = 0; sampleIdx < data.rows; sampleIdx++) {
         Mat p = subspaceProject(_eigenvectors, _mean, data.row(sampleIdx));
@@ -525,6 +551,7 @@ void Fisherfaces::save(FileStorage& fs) const {
     writeFileNodeList(fs, "projections", _projections);
     fs << "labels" << _labels;
 }
+
 //------------------------------------------------------------------------------
 // LBPH
 //------------------------------------------------------------------------------
@@ -555,7 +582,6 @@ void olbp_(InputArray _src, OutputArray _dst) {
         }
     }
 }
-
 
 //------------------------------------------------------------------------------
 // cv::elbp
@@ -600,15 +626,19 @@ inline void elbp_(InputArray _src, OutputArray _dst, int radius, int neighbors) 
 
 static void elbp(InputArray src, OutputArray dst, int radius, int neighbors)
 {
-    switch (src.type()) {
-        case CV_8SC1:   elbp_<char>(src,dst, radius, neighbors); break;
-        case CV_8UC1:   elbp_<unsigned char>(src, dst, radius, neighbors); break;
-        case CV_16SC1:  elbp_<short>(src,dst, radius, neighbors); break;
-        case CV_16UC1:  elbp_<unsigned short>(src,dst, radius, neighbors); break;
-        case CV_32SC1:  elbp_<int>(src,dst, radius, neighbors); break;
-        case CV_32FC1:  elbp_<float>(src,dst, radius, neighbors); break;
-        case CV_64FC1:  elbp_<double>(src,dst, radius, neighbors); break;
-        default: break;
+    int type = src.type();
+    switch (type) {
+    case CV_8SC1:   elbp_<char>(src,dst, radius, neighbors); break;
+    case CV_8UC1:   elbp_<unsigned char>(src, dst, radius, neighbors); break;
+    case CV_16SC1:  elbp_<short>(src,dst, radius, neighbors); break;
+    case CV_16UC1:  elbp_<unsigned short>(src,dst, radius, neighbors); break;
+    case CV_32SC1:  elbp_<int>(src,dst, radius, neighbors); break;
+    case CV_32FC1:  elbp_<float>(src,dst, radius, neighbors); break;
+    case CV_64FC1:  elbp_<double>(src,dst, radius, neighbors); break;
+    default:
+        string error_msg = format("Using Original Local Binary Patterns for feature extraction only works on single-channel images (given %d). Please pass the image data as a grayscale image!", type);
+        CV_Error(CV_StsNotImplemented, error_msg);
+        break;
     }
 }
 
@@ -720,28 +750,49 @@ void LBPH::save(FileStorage& fs) const {
     fs << "labels" << _labels;
 }
 
-void LBPH::train(InputArray _src, InputArray _lbls) {
-    if(_src.kind() != _InputArray::STD_VECTOR_MAT && _src.kind() != _InputArray::STD_VECTOR_VECTOR) {
+void LBPH::train(InputArrayOfArrays _in_src, InputArray _in_labels) {
+    this->train(_in_src, _in_labels, false);
+}
+
+void LBPH::update(InputArrayOfArrays _in_src, InputArray _in_labels) {
+    // got no data, just return
+    if(_in_src.total() == 0)
+        return;
+
+    this->train(_in_src, _in_labels, true);
+}
+
+void LBPH::train(InputArrayOfArrays _in_src, InputArray _in_labels, bool preserveData) {
+    if(_in_src.kind() != _InputArray::STD_VECTOR_MAT && _in_src.kind() != _InputArray::STD_VECTOR_VECTOR) {
         string error_message = "The images are expected as InputArray::STD_VECTOR_MAT (a std::vector<Mat>) or _InputArray::STD_VECTOR_VECTOR (a std::vector< vector<...> >).";
         CV_Error(CV_StsBadArg, error_message);
-    } else  if(_src.total() == 0) {
+    }
+    if(_in_src.total() == 0) {
         string error_message = format("Empty training data was given. You'll need more than one sample to learn a model.");
         CV_Error(CV_StsUnsupportedFormat, error_message);
-    } else if(_lbls.getMat().type() != CV_32SC1) {
-        string error_message = format("Labels must be given as integer (CV_32SC1). Expected %d, but was %d.", CV_32SC1, _lbls.type());
+    } else if(_in_labels.getMat().type() != CV_32SC1) {
+        string error_message = format("Labels must be given as integer (CV_32SC1). Expected %d, but was %d.", CV_32SC1, _in_labels.type());
         CV_Error(CV_StsUnsupportedFormat, error_message);
     }
     // get the vector of matrices
     vector<Mat> src;
-    _src.getMatVector(src);
-    // turn the label matrix into a vector
-    Mat labels = _lbls.getMat();
-    CV_Assert( labels.type() == CV_32S && (labels.cols == 1 || labels.rows == 1));
+    _in_src.getMatVector(src);
+    // get the label matrix
+    Mat labels = _in_labels.getMat();
+    // check if data is well- aligned
     if(labels.total() != src.size()) {
-        CV_Error(CV_StsUnsupportedFormat, "The number of labels must equal the number of samples.");
+        string error_message = format("The number of samples (src) must equal the number of labels (labels). Was len(samples)=%d, len(labels)=%d.", src.size(), _labels.total());
+        CV_Error(CV_StsBadArg, error_message);
     }
-    // store given labels
-    labels.copyTo(_labels);
+    // if this model should be trained without preserving old data, delete old model data
+    if(!preserveData) {
+        _labels.release();
+        _histograms.clear();
+    }
+    // append labels to _labels matrix
+    for(size_t labelIdx = 0; labelIdx < labels.total(); labelIdx++) {
+        _labels.push_back(labels.at<int>((int)labelIdx));
+    }
     // store the spatial histograms of the original data
     for(size_t sampleIdx = 0; sampleIdx < src.size(); sampleIdx++) {
         // calculate lbp image
@@ -759,6 +810,11 @@ void LBPH::train(InputArray _src, InputArray _lbls) {
 }
 
 void LBPH::predict(InputArray _src, int &minClass, double &minDist) const {
+    if(_histograms.empty()) {
+        // throw error if no data (or simply return -1?)
+        string error_message = "This LBPH model is not computed yet. Did you call the train method?";
+        CV_Error(CV_StsBadArg, error_message);
+    }
     Mat src = _src.getMat();
     // get the spatial histogram from input image
     Mat lbp_image = elbp(src, _radius, _neighbors);
@@ -775,7 +831,7 @@ void LBPH::predict(InputArray _src, int &minClass, double &minDist) const {
         double dist = compareHist(_histograms[sampleIdx], query, CV_COMP_CHISQR);
         if((dist < minDist) && (dist < _threshold)) {
             minDist = dist;
-            minClass = _labels.at<int>((int)sampleIdx);
+            minClass = _labels.at<int>((int) sampleIdx);
         }
     }
 }

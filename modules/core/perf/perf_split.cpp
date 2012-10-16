@@ -22,7 +22,7 @@ PERF_TEST_P( Size_Depth_Channels, split,
     int depth = get<1>(GetParam());
     int channels = get<2>(GetParam());
 
-    Mat m(sz, CV_MAKETYPE(depth, channels));    
+    Mat m(sz, CV_MAKETYPE(depth, channels));
     randu(m, 0, 255);
 
     vector<Mat> mv;

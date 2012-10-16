@@ -53,7 +53,7 @@ public class ColorBlobDetectionActivity extends Activity {
                     MarketErrorMessage.setCancelable(false); // This blocks the 'BACK' button
                     MarketErrorMessage.setButton(AlertDialog.BUTTON_POSITIVE, "OK", new DialogInterface.OnClickListener() {
                         public void onClick(DialogInterface dialog, int which) {
-                            mAppContext.finish();
+                            finish();
                         }
                     });
                     MarketErrorMessage.show();

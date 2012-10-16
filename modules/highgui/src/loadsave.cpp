@@ -54,101 +54,6 @@
 namespace cv
 {
 
-static vector<ImageDecoder> decoders;
-static vector<ImageEncoder> encoders;
-
-static ImageDecoder findDecoder( const string& filename )
-{
-    size_t i, maxlen = 0;
-    for( i = 0; i < decoders.size(); i++ )
-    {
-        size_t len = decoders[i]->signatureLength();
-        maxlen = std::max(maxlen, len);
-    }
-
-    FILE* f= fopen( filename.c_str(), "rb" );
-    if( !f )
-        return ImageDecoder();
-    string signature(maxlen, ' ');
-    maxlen = fread( &signature[0], 1, maxlen, f );
-    fclose(f);
-    signature = signature.substr(0, maxlen);
-
-    for( i = 0; i < decoders.size(); i++ )
-    {
-        if( decoders[i]->checkSignature(signature) )
-            return decoders[i]->newDecoder();
-    }
-
-    return ImageDecoder();
-}
-
-static ImageDecoder findDecoder( const Mat& buf )
-{
-    size_t i, maxlen = 0;
-
-    if( buf.rows*buf.cols < 1 || !buf.isContinuous() )
-        return ImageDecoder();
-
-    for( i = 0; i < decoders.size(); i++ )
-    {
-        size_t len = decoders[i]->signatureLength();
-        maxlen = std::max(maxlen, len);
-    }
-
-    size_t bufSize = buf.rows*buf.cols*buf.elemSize();
-    maxlen = std::min(maxlen, bufSize);
-    string signature(maxlen, ' ');
-    memcpy( &signature[0], buf.data, maxlen );
-
-    for( i = 0; i < decoders.size(); i++ )
-    {
-        if( decoders[i]->checkSignature(signature) )
-            return decoders[i]->newDecoder();
-    }
-
-    return ImageDecoder();
-}
-
-static ImageEncoder findEncoder( const string& _ext )
-{
-    if( _ext.size() <= 1 )
-        return ImageEncoder();
-
-    const char* ext = strrchr( _ext.c_str(), '.' );
-    if( !ext )
-        return ImageEncoder();
-    int len = 0;
-    for( ext++; isalnum(ext[len]) && len < 128; len++ )
-        ;
-
-    for( size_t i = 0; i < encoders.size(); i++ )
-    {
-        string description = encoders[i]->getDescription();
-        const char* descr = strchr( description.c_str(), '(' );
-
-        while( descr )
-        {
-            descr = strchr( descr + 1, '.' );
-            if( !descr )
-                break;
-            int j = 0;
-            for( descr++; isalnum(descr[j]) && j < len; j++ )
-            {
-                int c1 = tolower(ext[j]);
-                int c2 = tolower(descr[j]);
-                if( c1 != c2 )
-                    break;
-            }
-            if( j == len && !isalnum(descr[j]))
-                return encoders[i]->newEncoder();
-            descr += j;
-        }
-    }
-
-    return ImageEncoder();
-}
-
 struct ImageCodecInitializer
 {
     ImageCodecInitializer()
@@ -186,10 +91,104 @@ struct ImageCodecInitializer
         encoders.push_back( new ImageIOEncoder );
     #endif
     }
+
+    vector<ImageDecoder> decoders;
+    vector<ImageEncoder> encoders;
 };
 
-static ImageCodecInitializer initialize_codecs;
+static ImageCodecInitializer codecs;
 
+static ImageDecoder findDecoder( const string& filename )
+{
+    size_t i, maxlen = 0;
+    for( i = 0; i < codecs.decoders.size(); i++ )
+    {
+        size_t len = codecs.decoders[i]->signatureLength();
+        maxlen = std::max(maxlen, len);
+    }
+
+    FILE* f= fopen( filename.c_str(), "rb" );
+    if( !f )
+        return ImageDecoder();
+    string signature(maxlen, ' ');
+    maxlen = fread( &signature[0], 1, maxlen, f );
+    fclose(f);
+    signature = signature.substr(0, maxlen);
+
+    for( i = 0; i < codecs.decoders.size(); i++ )
+    {
+        if( codecs.decoders[i]->checkSignature(signature) )
+            return codecs.decoders[i]->newDecoder();
+    }
+
+    return ImageDecoder();
+}
+
+static ImageDecoder findDecoder( const Mat& buf )
+{
+    size_t i, maxlen = 0;
+
+    if( buf.rows*buf.cols < 1 || !buf.isContinuous() )
+        return ImageDecoder();
+
+    for( i = 0; i < codecs.decoders.size(); i++ )
+    {
+        size_t len = codecs.decoders[i]->signatureLength();
+        maxlen = std::max(maxlen, len);
+    }
+
+    size_t bufSize = buf.rows*buf.cols*buf.elemSize();
+    maxlen = std::min(maxlen, bufSize);
+    string signature(maxlen, ' ');
+    memcpy( &signature[0], buf.data, maxlen );
+
+    for( i = 0; i < codecs.decoders.size(); i++ )
+    {
+        if( codecs.decoders[i]->checkSignature(signature) )
+            return codecs.decoders[i]->newDecoder();
+    }
+
+    return ImageDecoder();
+}
+
+static ImageEncoder findEncoder( const string& _ext )
+{
+    if( _ext.size() <= 1 )
+        return ImageEncoder();
+
+    const char* ext = strrchr( _ext.c_str(), '.' );
+    if( !ext )
+        return ImageEncoder();
+    int len = 0;
+    for( ext++; isalnum(ext[len]) && len < 128; len++ )
+        ;
+
+    for( size_t i = 0; i < codecs.encoders.size(); i++ )
+    {
+        string description = codecs.encoders[i]->getDescription();
+        const char* descr = strchr( description.c_str(), '(' );
+
+        while( descr )
+        {
+            descr = strchr( descr + 1, '.' );
+            if( !descr )
+                break;
+            int j = 0;
+            for( descr++; isalnum(descr[j]) && j < len; j++ )
+            {
+                int c1 = tolower(ext[j]);
+                int c2 = tolower(descr[j]);
+                if( c1 != c2 )
+                    break;
+            }
+            if( j == len && !isalnum(descr[j]))
+                return codecs.encoders[i]->newEncoder();
+            descr += j;
+        }
+    }
+
+    return ImageEncoder();
+}
 
 enum { LOAD_CVMAT=0, LOAD_IMAGE=1, LOAD_MAT=2 };
 
@@ -309,8 +308,7 @@ imdecode_( const Mat& buf, int flags, int hdrtype, Mat* mat=0 )
     IplImage* image = 0;
     CvMat *matrix = 0;
     Mat temp, *data = &temp;
-    string filename = tempfile();
-    bool removeTempFile = false;
+    string filename;
 
     ImageDecoder decoder = findDecoder(buf);
     if( decoder.empty() )
@@ -318,10 +316,10 @@ imdecode_( const Mat& buf, int flags, int hdrtype, Mat* mat=0 )
 
     if( !decoder->setSource(buf) )
     {
+        filename = tempfile();
         FILE* f = fopen( filename.c_str(), "wb" );
         if( !f )
             return 0;
-        removeTempFile = true;
         size_t bufSize = buf.cols*buf.rows*buf.elemSize();
         fwrite( &buf.data[0], 1, bufSize, f );
         fclose(f);
@@ -330,7 +328,7 @@ imdecode_( const Mat& buf, int flags, int hdrtype, Mat* mat=0 )
 
     if( !decoder->readHeader() )
     {
-        if( removeTempFile )
+        if( !filename.empty() )
             remove(filename.c_str());
         return 0;
     }
@@ -372,7 +370,7 @@ imdecode_( const Mat& buf, int flags, int hdrtype, Mat* mat=0 )
     }
 
     bool code = decoder->readData( *data );
-    if( removeTempFile )
+    if( !filename.empty() )
         remove(filename.c_str());
 
     if( !code )
@@ -396,6 +394,14 @@ Mat imdecode( InputArray _buf, int flags )
     return img;
 }
 
+Mat imdecode( InputArray _buf, int flags, Mat* dst )
+{
+    Mat buf = _buf.getMat(), img;
+    dst = dst ? dst : &img;
+    imdecode_( buf, flags, LOAD_MAT, dst );
+    return *dst;
+}
+    
 bool imencode( const string& ext, InputArray _image,
                vector<uchar>& buf, const vector<int>& params )
 {

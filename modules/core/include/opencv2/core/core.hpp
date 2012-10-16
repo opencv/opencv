@@ -221,7 +221,7 @@ CV_EXPORTS void setNumThreads(int nthreads);
 CV_EXPORTS int getNumThreads();
 CV_EXPORTS int getThreadNum();
 
-CV_EXPORTS_W const std::string& getBuildInformation();
+CV_EXPORTS_W const string& getBuildInformation();
 
 //! Returns the number of ticks.
 
@@ -440,7 +440,7 @@ template<typename _Tp, int m, int n> class CV_EXPORTS Matx
 {
 public:
     typedef _Tp value_type;
-    typedef Matx<_Tp, MIN(m, n), 1> diag_type;
+    typedef Matx<_Tp, (m < n ? m : n), 1> diag_type;
     typedef Matx<_Tp, m, n> mat_type;
     enum { depth = DataDepth<_Tp>::value, rows = m, cols = n, channels = rows*cols,
            type = CV_MAKETYPE(depth, channels) };
@@ -1107,6 +1107,18 @@ public:
            type = CV_MAKETYPE(depth, channels) };
 };
 
+template<typename _Tp, int m, int n> class DataType<Matx<_Tp, m, n> >
+{
+public:
+    typedef Matx<_Tp, m, n> value_type;
+    typedef Matx<typename DataType<_Tp>::work_type, m, n> work_type;
+    typedef _Tp channel_type;
+    typedef value_type vec_type;
+    enum { generic_type = 0, depth = DataDepth<channel_type>::value, channels = m*n,
+        fmt = ((channels-1)<<8) + DataDepth<channel_type>::fmt,
+        type = CV_MAKETYPE(depth, channels) };
+};
+    
 template<typename _Tp, int cn> class DataType<Vec<_Tp, cn> >
 {
 public:
@@ -1374,6 +1386,7 @@ public:
     template<typename _Tp> _OutputArray(Mat_<_Tp>& m);
     template<typename _Tp, int m, int n> _OutputArray(Matx<_Tp, m, n>& matx);
     template<typename _Tp> _OutputArray(_Tp* vec, int n);
+    _OutputArray(gpu::GpuMat& d_mat);
 
     _OutputArray(const Mat& m);
     template<typename _Tp> _OutputArray(const vector<_Tp>& vec);
@@ -1383,11 +1396,13 @@ public:
     template<typename _Tp> _OutputArray(const Mat_<_Tp>& m);
     template<typename _Tp, int m, int n> _OutputArray(const Matx<_Tp, m, n>& matx);
     template<typename _Tp> _OutputArray(const _Tp* vec, int n);
+    _OutputArray(const gpu::GpuMat& d_mat);
 
     virtual bool fixedSize() const;
     virtual bool fixedType() const;
     virtual bool needed() const;
     virtual Mat& getMatRef(int i=-1) const;
+    /*virtual*/ gpu::GpuMat& getGpuMatRef() const;
     virtual void create(Size sz, int type, int i=-1, bool allowTransposed=false, int fixedDepthMask=0) const;
     virtual void create(int rows, int cols, int type, int i=-1, bool allowTransposed=false, int fixedDepthMask=0) const;
     virtual void create(int dims, const int* size, int type, int i=-1, bool allowTransposed=false, int fixedDepthMask=0) const;
@@ -2091,6 +2106,9 @@ CV_EXPORTS_W void LUT(InputArray src, InputArray lut, OutputArray dst,
 CV_EXPORTS_AS(sumElems) Scalar sum(InputArray src);
 //! computes the number of nonzero array elements
 CV_EXPORTS_W int countNonZero( InputArray src );
+//! returns the list of locations of non-zero pixels
+CV_EXPORTS_W void findNonZero( InputArray src, OutputArray idx );
+    
 //! computes mean value of selected array elements
 CV_EXPORTS_W Scalar mean(InputArray src, InputArray mask=noArray());
 //! computes mean value and standard deviation of all or selected array elements
@@ -2125,13 +2143,17 @@ CV_EXPORTS_W void reduce(InputArray src, OutputArray dst, int dim, int rtype, in
 
 //! makes multi-channel array out of several single-channel arrays
 CV_EXPORTS void merge(const Mat* mv, size_t count, OutputArray dst);
+CV_EXPORTS void merge(const vector<Mat>& mv, OutputArray dst );
+
 //! makes multi-channel array out of several single-channel arrays
-CV_EXPORTS_W void merge(const vector<Mat>& mv, OutputArray dst);
+CV_EXPORTS_W void merge(InputArrayOfArrays mv, OutputArray dst);
 
 //! copies each plane of a multi-channel array to a dedicated array
 CV_EXPORTS void split(const Mat& src, Mat* mvbegin);
+CV_EXPORTS void split(const Mat& m, vector<Mat>& mv );
+    
 //! copies each plane of a multi-channel array to a dedicated array
-CV_EXPORTS_W void split(const Mat& m, CV_OUT vector<Mat>& mv);
+CV_EXPORTS_W void split(InputArray m, OutputArrayOfArrays mv);
 
 //! copies selected channels from the input arrays to the selected channels of the output arrays
 CV_EXPORTS void mixChannels(const Mat* src, size_t nsrcs, Mat* dst, size_t ndsts,
@@ -2261,10 +2283,10 @@ CV_EXPORTS_W bool solve(InputArray src1, InputArray src2,
 
 enum
 {
-  SORT_EVERY_ROW=0,
-  SORT_EVERY_COLUMN=1,
-  SORT_ASCENDING=0,
-  SORT_DESCENDING=16
+    SORT_EVERY_ROW=0,
+    SORT_EVERY_COLUMN=1,
+    SORT_ASCENDING=0,
+    SORT_DESCENDING=16
 };
 
 //! sorts independently each matrix row or each matrix column
@@ -2287,12 +2309,12 @@ CV_EXPORTS_W bool eigen(InputArray src, bool computeEigenvectors,
 
 enum
 {
-  COVAR_SCRAMBLED=0,
-  COVAR_NORMAL=1,
-  COVAR_USE_AVG=2,
-  COVAR_SCALE=4,
-  COVAR_ROWS=8,
-  COVAR_COLS=16
+    COVAR_SCRAMBLED=0,
+    COVAR_NORMAL=1,
+    COVAR_USE_AVG=2,
+    COVAR_SCALE=4,
+    COVAR_ROWS=8,
+    COVAR_COLS=16
 };
 
 //! computes covariation matrix of a set of samples
@@ -2363,8 +2385,10 @@ public:
     PCA();
     //! the constructor that performs PCA
     PCA(InputArray data, InputArray mean, int flags, int maxComponents=0);
+    PCA(InputArray data, InputArray mean, int flags, double retainedVariance);
     //! operator that performs PCA. The previously stored data, if any, is released
     PCA& operator()(InputArray data, InputArray mean, int flags, int maxComponents=0);
+    PCA& computeVar(InputArray data, InputArray mean, int flags, double retainedVariance);
     //! projects vector from the original space to the principal components subspace
     Mat project(InputArray vec) const;
     //! projects vector from the original space to the principal components subspace
@@ -2381,6 +2405,9 @@ public:
 
 CV_EXPORTS_W void PCACompute(InputArray data, CV_OUT InputOutputArray mean,
                              OutputArray eigenvectors, int maxComponents=0);
+
+CV_EXPORTS_W void PCAComputeVar(InputArray data, CV_OUT InputOutputArray mean,
+                             OutputArray eigenvectors, double retainedVariance);
 
 CV_EXPORTS_W void PCAProject(InputArray data, InputArray mean,
                              InputArray eigenvectors, OutputArray result);
@@ -2496,32 +2523,32 @@ CV_EXPORTS void randShuffle(InputOutputArray dst, double iterFactor=1., RNG* rng
 CV_EXPORTS_AS(randShuffle) void randShuffle_(InputOutputArray dst, double iterFactor=1.);
 
 //! draws the line segment (pt1, pt2) in the image
-CV_EXPORTS_W void line(Mat& img, Point pt1, Point pt2, const Scalar& color,
+CV_EXPORTS_W void line(CV_IN_OUT Mat& img, Point pt1, Point pt2, const Scalar& color,
                      int thickness=1, int lineType=8, int shift=0);
 
 //! draws the rectangle outline or a solid rectangle with the opposite corners pt1 and pt2 in the image
-CV_EXPORTS_W void rectangle(Mat& img, Point pt1, Point pt2,
+CV_EXPORTS_W void rectangle(CV_IN_OUT Mat& img, Point pt1, Point pt2,
                           const Scalar& color, int thickness=1,
                           int lineType=8, int shift=0);
 
 //! draws the rectangle outline or a solid rectangle covering rec in the image
-CV_EXPORTS void rectangle(Mat& img, Rect rec,
+CV_EXPORTS void rectangle(CV_IN_OUT Mat& img, Rect rec,
                           const Scalar& color, int thickness=1,
                           int lineType=8, int shift=0);
 
 //! draws the circle outline or a solid circle in the image
-CV_EXPORTS_W void circle(Mat& img, Point center, int radius,
+CV_EXPORTS_W void circle(CV_IN_OUT Mat& img, Point center, int radius,
                        const Scalar& color, int thickness=1,
                        int lineType=8, int shift=0);
 
 //! draws an elliptic arc, ellipse sector or a rotated ellipse in the image
-CV_EXPORTS_W void ellipse(Mat& img, Point center, Size axes,
+CV_EXPORTS_W void ellipse(CV_IN_OUT Mat& img, Point center, Size axes,
                         double angle, double startAngle, double endAngle,
                         const Scalar& color, int thickness=1,
                         int lineType=8, int shift=0);
 
 //! draws a rotated ellipse in the image
-CV_EXPORTS_W void ellipse(Mat& img, const RotatedRect& box, const Scalar& color,
+CV_EXPORTS_W void ellipse(CV_IN_OUT Mat& img, const RotatedRect& box, const Scalar& color,
                         int thickness=1, int lineType=8);
 
 //! draws a filled convex polygon in the image
@@ -4378,6 +4405,11 @@ public:
                   void (Algorithm::*setter)(int)=0,
                   const string& help=string());
     void addParam(Algorithm& algo, const char* name,
+                  short& value, bool readOnly=false,
+                  int (Algorithm::*getter)()=0,
+                  void (Algorithm::*setter)(int)=0,
+                  const string& help=string());
+    void addParam(Algorithm& algo, const char* name,
                   bool& value, bool readOnly=false,
                   int (Algorithm::*getter)()=0,
                   void (Algorithm::*setter)(int)=0,
@@ -4426,7 +4458,7 @@ protected:
 
 struct CV_EXPORTS Param
 {
-    enum { INT=0, BOOLEAN=1, REAL=2, STRING=3, MAT=4, MAT_VECTOR=5, ALGORITHM=6 };
+    enum { INT=0, BOOLEAN=1, REAL=2, STRING=3, MAT=4, MAT_VECTOR=5, ALGORITHM=6, FLOAT=7, UNSIGNED_INT=8, UINT64=9, SHORT=10 };
 
     Param();
     Param(int _type, bool _readonly, int _offset,
@@ -4457,6 +4489,14 @@ template<> struct ParamType<int>
     enum { type = Param::INT };
 };
 
+template<> struct ParamType<short>
+{
+    typedef int const_param_type;
+    typedef int member_type;
+    
+    enum { type = Param::SHORT };
+};    
+    
 template<> struct ParamType<double>
 {
     typedef double const_param_type;
@@ -4495,6 +4535,30 @@ template<> struct ParamType<Algorithm>
     typedef Ptr<Algorithm> member_type;
 
     enum { type = Param::ALGORITHM };
+};
+
+template<> struct ParamType<float>
+{
+    typedef float const_param_type;
+    typedef float member_type;
+
+    enum { type = Param::FLOAT };
+};
+
+template<> struct ParamType<unsigned>
+{
+    typedef unsigned const_param_type;
+    typedef unsigned member_type;
+
+    enum { type = Param::UNSIGNED_INT };
+};
+
+template<> struct ParamType<uint64>
+{
+    typedef uint64 const_param_type;
+    typedef uint64 member_type;
+
+    enum { type = Param::UINT64 };
 };
 
 
@@ -4604,6 +4668,47 @@ float CommandLineParser::analyzeValue<float>(const std::string& str, bool space_
 
 template<> CV_EXPORTS
 double CommandLineParser::analyzeValue<double>(const std::string& str, bool space_delete);
+
+
+/////////////////////////////// Parallel Primitives //////////////////////////////////
+
+// a base body class
+class CV_EXPORTS ParallelLoopBody
+{
+public:
+    virtual ~ParallelLoopBody();
+    virtual void operator() (const Range& range) const = 0;
+};
+
+CV_EXPORTS void parallel_for_(const Range& range, const ParallelLoopBody& body, double nstripes=-1.);
+
+/////////////////////////// Synchronization Primitives ///////////////////////////////
+
+class CV_EXPORTS Mutex
+{
+public:
+    Mutex();
+    ~Mutex();
+    Mutex(const Mutex& m);
+    Mutex& operator = (const Mutex& m);
+
+    void lock();
+    bool trylock();
+    void unlock();
+
+    struct Impl;
+protected:
+    Impl* impl;
+};
+
+class CV_EXPORTS AutoLock
+{
+public:
+    AutoLock(Mutex& m) : mutex(&m) { mutex->lock(); }
+    ~AutoLock() { mutex->unlock(); }
+protected:
+    Mutex* mutex;
+};
 
 }
 

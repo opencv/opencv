@@ -1229,7 +1229,7 @@ static void mainloop_v4l2(CvCaptureCAM_V4L* capture) {
             FD_SET (capture->deviceHandle, &fds);
 
             /* Timeout. */
-            tv.tv_sec = 2;
+            tv.tv_sec = 10;
             tv.tv_usec = 0;
 
             r = select (capture->deviceHandle+1, &fds, NULL, NULL, &tv);
@@ -1432,7 +1432,7 @@ move_420_block(int yTL, int yTR, int yBL, int yBR, int u, int v,
 
 static inline void
 move_411_block(int yTL, int yTR, int yBL, int yBR, int u, int v,
-           int rowPixels, unsigned char * rgb)
+           int /*rowPixels*/, unsigned char * rgb)
 {
     const int rvScale = 91881;
     const int guScale = -22553;

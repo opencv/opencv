@@ -5,6 +5,7 @@
 #include "opencv2/video/video.hpp"
 #include "opencv2/gpu/gpu.hpp"
 #include "opencv2/nonfree/nonfree.hpp"
+#include "opencv2/legacy/legacy.hpp"
 #include "performance.h"
 
 using namespace std;
@@ -363,7 +364,7 @@ TEST(BruteForceMatcher)
 
     // Init GPU matcher
 
-    gpu::BruteForceMatcher_GPU< L2<float> > d_matcher;
+    gpu::BruteForceMatcher_GPU_base d_matcher(gpu::BruteForceMatcher_GPU_base::L2Dist);
 
     gpu::GpuMat d_query(query);
     gpu::GpuMat d_train(train);
@@ -1248,4 +1249,167 @@ TEST(FarnebackOpticalFlow)
     CPU_OFF;
 
     }}}
+}
+
+namespace cv
+{
+    template<> void Ptr<CvBGStatModel>::delete_obj()
+    {
+        cvReleaseBGStatModel(&obj);
+    }
+}
+
+TEST(FGDStatModel)
+{
+    const std::string inputFile = abspath("768x576.avi");
+
+    cv::VideoCapture cap(inputFile);
+    if (!cap.isOpened()) throw runtime_error("can't open 768x576.avi");
+
+    cv::Mat frame;
+    cap >> frame;
+
+    IplImage ipl_frame = frame;
+    cv::Ptr<CvBGStatModel> model(cvCreateFGDStatModel(&ipl_frame));
+
+    while (!TestSystem::instance().stop())
+    {
+        cap >> frame;
+        ipl_frame = frame;
+
+        TestSystem::instance().cpuOn();
+
+        cvUpdateBGStatModel(&ipl_frame, model);
+
+        TestSystem::instance().cpuOff();
+    }
+    TestSystem::instance().cpuComplete();
+
+    cap.open(inputFile);
+
+    cap >> frame;
+
+    cv::gpu::GpuMat d_frame(frame);
+    cv::gpu::FGDStatModel d_model(d_frame);
+
+    while (!TestSystem::instance().stop())
+    {
+        cap >> frame;
+        d_frame.upload(frame);
+
+        TestSystem::instance().gpuOn();
+
+        d_model.update(d_frame);
+
+        TestSystem::instance().gpuOff();
+    }
+    TestSystem::instance().gpuComplete();
+}
+
+TEST(MOG)
+{
+    const std::string inputFile = abspath("768x576.avi");
+
+    cv::VideoCapture cap(inputFile);
+    if (!cap.isOpened()) throw runtime_error("can't open 768x576.avi");
+
+    cv::Mat frame;
+    cap >> frame;
+
+    cv::BackgroundSubtractorMOG mog;
+    cv::Mat foreground;
+
+    mog(frame, foreground, 0.01);
+
+    while (!TestSystem::instance().stop())
+    {
+        cap >> frame;
+
+        TestSystem::instance().cpuOn();
+
+        mog(frame, foreground, 0.01);
+
+        TestSystem::instance().cpuOff();
+    }
+    TestSystem::instance().cpuComplete();
+
+    cap.open(inputFile);
+
+    cap >> frame;
+
+    cv::gpu::GpuMat d_frame(frame);
+    cv::gpu::MOG_GPU d_mog;
+    cv::gpu::GpuMat d_foreground;
+
+    d_mog(d_frame, d_foreground, 0.01f);
+
+    while (!TestSystem::instance().stop())
+    {
+        cap >> frame;
+        d_frame.upload(frame);
+
+        TestSystem::instance().gpuOn();
+
+        d_mog(d_frame, d_foreground, 0.01f);
+
+        TestSystem::instance().gpuOff();
+    }
+    TestSystem::instance().gpuComplete();
+}
+
+TEST(MOG2)
+{
+    const std::string inputFile = abspath("768x576.avi");
+
+    cv::VideoCapture cap(inputFile);
+    if (!cap.isOpened()) throw runtime_error("can't open 768x576.avi");
+
+    cv::Mat frame;
+    cap >> frame;
+
+    cv::BackgroundSubtractorMOG2 mog2;
+    cv::Mat foreground;
+    cv::Mat background;
+
+    mog2(frame, foreground);
+    mog2.getBackgroundImage(background);
+
+    while (!TestSystem::instance().stop())
+    {
+        cap >> frame;
+
+        TestSystem::instance().cpuOn();
+
+        mog2(frame, foreground);
+        mog2.getBackgroundImage(background);
+
+        TestSystem::instance().cpuOff();
+    }
+    TestSystem::instance().cpuComplete();
+
+    cap.open(inputFile);
+
+    cap >> frame;
+
+    cv::gpu::GpuMat d_frame(frame);
+    cv::gpu::MOG2_GPU d_mog2;
+    cv::gpu::GpuMat d_foreground;
+    cv::gpu::GpuMat d_background;
+
+    d_mog2(d_frame, d_foreground);
+    d_mog2.getBackgroundImage(d_background);
+
+    while (!TestSystem::instance().stop())
+    {
+        cap >> frame;
+        d_frame.upload(frame);
+
+        TestSystem::instance().gpuOn();
+
+        d_mog2(d_frame, d_foreground);
+        d_mog2.getBackgroundImage(d_background);
+
+        TestSystem::instance().gpuOff();
+    }
+    TestSystem::instance().gpuComplete();
 }

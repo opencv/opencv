@@ -46,7 +46,7 @@ using namespace cv;
 using namespace cv::gpu;
 using namespace std;
 
-#if !defined (HAVE_CUDA)
+#if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
 cv::gpu::FAST_GPU::FAST_GPU(int, bool, double) { throw_nogpu(); }
 void cv::gpu::FAST_GPU::operator ()(const GpuMat&, const GpuMat&, GpuMat&) { throw_nogpu(); }
@@ -113,8 +113,8 @@ namespace cv { namespace gpu { namespace device
 {
     namespace fast
     {
-        int calcKeypoints_gpu(DevMem2Db img, DevMem2Db mask, short2* kpLoc, int maxKeypoints, DevMem2Di score, int threshold);
-        int nonmaxSupression_gpu(const short2* kpLoc, int count, DevMem2Di score, short2* loc, float* response);
+        int calcKeypoints_gpu(PtrStepSzb img, PtrStepSzb mask, short2* kpLoc, int maxKeypoints, PtrStepSzi score, int threshold);
+        int nonmaxSupression_gpu(const short2* kpLoc, int count, PtrStepSzi score, short2* loc, float* response);
     }
 }}}
 
@@ -138,7 +138,7 @@ int cv::gpu::FAST_GPU::calcKeyPointsLocation(const GpuMat& img, const GpuMat& ma
         score_.setTo(Scalar::all(0));
     }
 
-    count_ = calcKeypoints_gpu(img, mask, kpLoc_.ptr<short2>(), maxKeypoints, nonmaxSupression ? score_ : DevMem2Di(), threshold);
+    count_ = calcKeypoints_gpu(img, mask, kpLoc_.ptr<short2>(), maxKeypoints, nonmaxSupression ? score_ : PtrStepSzi(), threshold);
     count_ = std::min(count_, maxKeypoints);
 
     return count_;

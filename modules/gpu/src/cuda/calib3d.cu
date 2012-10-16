@@ -40,6 +40,8 @@
 //
 //M*/
 
+#if !defined CUDA_DISABLER
+
 #include "internal_shared.hpp"
 #include "opencv2/gpu/device/transform.hpp"
 #include "opencv2/gpu/device/functional.hpp"
@@ -66,8 +68,8 @@ namespace cv { namespace gpu { namespace device
             }
         };
 
-        void call(const DevMem2D_<float3> src, const float* rot,
-                  const float* transl, DevMem2D_<float3> dst,
+        void call(const PtrStepSz<float3> src, const float* rot,
+                  const float* transl, PtrStepSz<float3> dst,
                   cudaStream_t stream)
         {
             cudaSafeCall(cudaMemcpyToSymbol(crot0, rot, sizeof(float) * 3));
@@ -103,8 +105,8 @@ namespace cv { namespace gpu { namespace device
             }
         };
 
-        void call(const DevMem2D_<float3> src, const float* rot,
-                  const float* transl, const float* proj, DevMem2D_<float2> dst,
+        void call(const PtrStepSz<float3> src, const float* rot,
+                  const float* transl, const float* proj, PtrStepSz<float2> dst,
                   cudaStream_t stream)
         {
             cudaSafeCall(cudaMemcpyToSymbol(crot0, rot, sizeof(float) * 3));
@@ -189,3 +191,6 @@ namespace cv { namespace gpu { namespace device
         }
     } // namespace solvepnp_ransac
 }}} // namespace cv { namespace gpu { namespace device
+
+
+#endif /* CUDA_DISABLER */

@@ -142,7 +142,7 @@ jas_image_t *jas_image_create(int numcmpts, jas_image_cmptparm_t *cmptparms,
 	image->inmem_ = true;
 
 	/* Allocate memory for the per-component information. */
-	if (!(image->cmpts_ = jas_malloc(image->maxcmpts_ *
+	if (!(image->cmpts_ = jas_alloc2(image->maxcmpts_,
 	  sizeof(jas_image_cmpt_t *)))) {
 		jas_image_destroy(image);
 		return 0;
@@ -774,8 +774,7 @@ static int jas_image_growcmpts(jas_image_t *image, int maxcmpts)
 	jas_image_cmpt_t **newcmpts;
 	int cmptno;
 
-	newcmpts = (!image->cmpts_) ? jas_malloc(maxcmpts * sizeof(jas_image_cmpt_t *)) :
-	  jas_realloc(image->cmpts_, maxcmpts * sizeof(jas_image_cmpt_t *));
+	newcmpts = jas_realloc2(image->cmpts_, maxcmpts, sizeof(jas_image_cmpt_t *));
 	if (!newcmpts) {
 		return -1;
 	}

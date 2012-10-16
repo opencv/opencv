@@ -124,8 +124,8 @@ template<typename _Tp> static void splineBuild(const _Tp* f, int n, _Tp* tab)
 // interpolates value of a function at x, 0 <= x <= n using a cubic spline.
 template<typename _Tp> static inline _Tp splineInterpolate(_Tp x, const _Tp* tab, int n)
 {
-    int ix = cvFloor(x);
-    ix = std::min(std::max(ix, 0), n-1);
+    // don't touch this function without urgent need - some versions of gcc fail to inline it correctly
+    int ix = std::min(std::max(int(x), 0), n-1);
     x -= ix;
     tab += ix*4;
     return ((tab[3]*x + tab[2])*x + tab[1])*x + tab[0];
@@ -156,24 +156,39 @@ template<> struct ColorChannel<float>
 
 ///////////////////////////// Top-level template function ////////////////////////////////
 
-template<class Cvt> void CvtColorLoop(const Mat& srcmat, Mat& dstmat, const Cvt& cvt)
+template <typename Cvt>
+class CvtColorLoop_Invoker : public ParallelLoopBody
 {
     typedef typename Cvt::channel_type _Tp;
-    Size sz = srcmat.size();
-    const uchar* src = srcmat.data;
-    uchar* dst = dstmat.data;
-    size_t srcstep = srcmat.step, dststep = dstmat.step;
+public:
 
-    if( srcmat.isContinuous() && dstmat.isContinuous() )
+    CvtColorLoop_Invoker(const Mat& _src, Mat& _dst, const Cvt& _cvt) :
+        ParallelLoopBody(), src(_src), dst(_dst), cvt(_cvt)
     {
-        sz.width *= sz.height;
-        sz.height = 1;
     }
 
-    for( ; sz.height--; src += srcstep, dst += dststep )
-        cvt((const _Tp*)src, (_Tp*)dst, sz.width);
-}
+    virtual void operator()(const Range& range) const
+    {
+        const uchar* yS = src.ptr<uchar>(range.start);
+        uchar* yD = dst.ptr<uchar>(range.start);
 
+        for( int i = range.start; i < range.end; ++i, yS += src.step, yD += dst.step )
+            cvt((const _Tp*)yS, (_Tp*)yD, src.cols);
+    }
+
+private:
+    const Mat& src;
+    Mat& dst;
+    const Cvt& cvt;
+
+    const CvtColorLoop_Invoker& operator= (const CvtColorLoop_Invoker&);
+};
+
+template <typename Cvt>
+void CvtColorLoop(const Mat& src, Mat& dst, const Cvt& cvt)
+{
+    parallel_for_(Range(0, src.rows), CvtColorLoop_Invoker<Cvt>(src, dst, cvt), src.total()/(double)(1<<16) );
+}
 
 ////////////////// Various 3/4-channel to 3/4-channel RGB transformations /////////////////
 
@@ -934,6 +949,11 @@ struct HSV2RGB_f
                     do h -= 6; while( h >= 6 );
                 sector = cvFloor(h);
                 h -= sector;
+                if( (unsigned)sector >= 6u )
+                {
+                    sector = 0;
+                    h = 0.f;
+                }
 
                 tab[0] = v;
                 tab[1] = v*(1.f - s);
@@ -1324,6 +1344,9 @@ struct RGB2Lab_b
 };
 
 
+#define clip(value) \
+    value < 0.0f ? 0.0f : value > 1.0f ? 1.0f : value;
+
 struct RGB2Lab_f
 {
     typedef float channel_type;
@@ -1335,17 +1358,22 @@ struct RGB2Lab_f
         volatile int _3 = 3;
         initLabTabs();
 
-        if(!_coeffs) _coeffs = sRGB2XYZ_D65;
-        if(!_whitept) _whitept = D65;
-        float scale[] = { LabCbrtTabScale/_whitept[0], LabCbrtTabScale, LabCbrtTabScale/_whitept[2] };
+        if (!_coeffs)
+            _coeffs = sRGB2XYZ_D65;
+        if (!_whitept)
+            _whitept = D65;
+        
+        float scale[] = { 1.0f / _whitept[0], 1.0f, 1.0f / _whitept[2] };
 
         for( int i = 0; i < _3; i++ )
         {
-            coeffs[i*3+(blueIdx^2)] = _coeffs[i*3]*scale[i];
-            coeffs[i*3+1] = _coeffs[i*3+1]*scale[i];
-            coeffs[i*3+blueIdx] = _coeffs[i*3+2]*scale[i];
-            CV_Assert( coeffs[i*3] >= 0 && coeffs[i*3+1] >= 0 && coeffs[i*3+2] >= 0 &&
-                       coeffs[i*3] + coeffs[i*3+1] + coeffs[i*3+2] < 1.5f*LabCbrtTabScale );
+            int j = i * 3;
+            coeffs[j + (blueIdx ^ 2)] = _coeffs[j] * scale[i];
+            coeffs[j + 1] = _coeffs[j + 1] * scale[i];
+            coeffs[j + blueIdx] = _coeffs[j + 2] * scale[i];
+            
+            CV_Assert( coeffs[j] >= 0 && coeffs[j + 1] >= 0 && coeffs[j + 2] >= 0 &&
+                       coeffs[j] + coeffs[j + 1] + coeffs[j + 2] < 1.5f*LabCbrtTabScale );
         }
     }
 
@@ -1359,24 +1387,39 @@ struct RGB2Lab_f
               C6 = coeffs[6], C7 = coeffs[7], C8 = coeffs[8];
         n *= 3;
 
-        for( i = 0; i < n; i += 3, src += scn )
+        static const float _1_3 = 1.0 / 3.0;
+        static const double _a = 16.0 / 116;
+        for (i = 0; i < n; i += 3, src += scn )
         {
-            float R = src[0], G = src[1], B = src[2];
-            if( gammaTab )
+            float R = clip(src[0]);
+            float G = clip(src[1]);
+            float B = clip(src[2]);
+            
+//            CV_Assert(R >= 0.0f && R <= 1.0f);
+//            CV_Assert(G >= 0.0f && G <= 1.0f);
+//            CV_Assert(B >= 0.0f && B <= 1.0f);
+            
+            if (gammaTab)
             {
-                R = splineInterpolate(R*gscale, gammaTab, GAMMA_TAB_SIZE);
-                G = splineInterpolate(G*gscale, gammaTab, GAMMA_TAB_SIZE);
-                B = splineInterpolate(B*gscale, gammaTab, GAMMA_TAB_SIZE);
+                R = splineInterpolate(R * gscale, gammaTab, GAMMA_TAB_SIZE);
+                G = splineInterpolate(G * gscale, gammaTab, GAMMA_TAB_SIZE);
+                B = splineInterpolate(B * gscale, gammaTab, GAMMA_TAB_SIZE);
             }
-            float fX = splineInterpolate(R*C0 + G*C1 + B*C2, LabCbrtTab, LAB_CBRT_TAB_SIZE);
-            float fY = splineInterpolate(R*C3 + G*C4 + B*C5, LabCbrtTab, LAB_CBRT_TAB_SIZE);
-            float fZ = splineInterpolate(R*C6 + G*C7 + B*C8, LabCbrtTab, LAB_CBRT_TAB_SIZE);
-
-            float L = 116.f*fY - 16.f;
-            float a = 500.f*(fX - fY);
-            float b = 200.f*(fY - fZ);
-
-            dst[i] = L; dst[i+1] = a; dst[i+2] = b;
+            float X = R*C0 + G*C1 + B*C2;
+            float Y = R*C3 + G*C4 + B*C5;
+            float Z = R*C6 + G*C7 + B*C8;
+            
+            float FX = X > 0.008856 ? pow(X, _1_3) : (7.787f * X + _a);
+            float FY = Y > 0.008856 ? pow(Y, _1_3) : (7.787f * Y + _a);
+            float FZ = Z > 0.008856 ? pow(Z, _1_3) : (7.787f * Z + _a);
+            
+            float L = Y > 0.008856 ? (116.f * FY - 16.f) : (903.3 * Y);
+            float a = 500.f * (FX - FY);
+            float b = 200.f * (FY - FZ);
+            
+            dst[i] = L;
+            dst[i + 1] = a;
+            dst[i + 2] = b;
         }
     }
 
@@ -1384,21 +1427,22 @@ struct RGB2Lab_f
     float coeffs[9];
     bool srgb;
 };
-
-
+    
 struct Lab2RGB_f
 {
     typedef float channel_type;
-
+    
     Lab2RGB_f( int _dstcn, int blueIdx, const float* _coeffs,
-               const float* _whitept, bool _srgb )
-    : dstcn(_dstcn), srgb(_srgb)
+              const float* _whitept, bool _srgb )
+    : dstcn(_dstcn), srgb(_srgb), blueInd(blueIdx)
     {
         initLabTabs();
-
-        if(!_coeffs) _coeffs = XYZ2sRGB_D65;
-        if(!_whitept) _whitept = D65;
-
+        
+        if(!_coeffs)
+            _coeffs = XYZ2sRGB_D65;
+        if(!_whitept)
+            _whitept = D65;
+        
         for( int i = 0; i < 3; i++ )
         {
             coeffs[i+(blueIdx^2)*3] = _coeffs[i]*_whitept[i];
@@ -1406,50 +1450,76 @@ struct Lab2RGB_f
             coeffs[i+blueIdx*3] = _coeffs[i+6]*_whitept[i];
         }
     }
-
+    
     void operator()(const float* src, float* dst, int n) const
     {
         int i, dcn = dstcn;
         const float* gammaTab = srgb ? sRGBInvGammaTab : 0;
         float gscale = GammaTabScale;
         float C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2],
-              C3 = coeffs[3], C4 = coeffs[4], C5 = coeffs[5],
-              C6 = coeffs[6], C7 = coeffs[7], C8 = coeffs[8];
+        C3 = coeffs[3], C4 = coeffs[4], C5 = coeffs[5],
+        C6 = coeffs[6], C7 = coeffs[7], C8 = coeffs[8];
         float alpha = ColorChannel<float>::max();
         n *= 3;
-
-        for( i = 0; i < n; i += 3, dst += dcn )
+        
+        static const float lThresh = 0.008856f * 903.3f;
+        static const float fThresh = 7.787f * 0.008856f + 16.0f / 116.0f;
+        for (i = 0; i < n; i += 3, dst += dcn)
         {
-            float L = src[i], a = src[i+1], b = src[i+2];
-            float Y = (L + 16.f)*(1.f/116.f);
-            float X = (Y + a*0.002f);
-            float Z = (Y - b*0.005f);
-            Y = Y*Y*Y;
-            X = X*X*X;
-            Z = Z*Z*Z;
-
-            float R = X*C0 + Y*C1 + Z*C2;
-            float G = X*C3 + Y*C4 + Z*C5;
-            float B = X*C6 + Y*C7 + Z*C8;
-
-            if( gammaTab )
+            float li = src[i];
+            float ai = src[i + 1];
+            float bi = src[i + 2];
+            
+            float y, fy;
+            if (li <= lThresh)
             {
-                R = splineInterpolate(R*gscale, gammaTab, GAMMA_TAB_SIZE);
-                G = splineInterpolate(G*gscale, gammaTab, GAMMA_TAB_SIZE);
-                B = splineInterpolate(B*gscale, gammaTab, GAMMA_TAB_SIZE);
+                y = li / 903.3f;
+                fy = 7.787f * y + 16.0f / 116.0f;
             }
-
-            dst[0] = R; dst[1] = G; dst[2] = B;
+            else
+            {
+                fy = (li + 16.0f) / 116.0f;
+                y = fy * fy * fy;
+            }
+            
+            float fxz[] = { ai / 500.0f + fy, fy - bi / 200.0f };
+            
+            for (int j = 0; j < 2; j++)
+                if (fxz[j] <= fThresh)
+                    fxz[j] = (fxz[j] - 16.0f / 116.0f) / 7.787f;
+                else
+                    fxz[j] = fxz[j] * fxz[j] * fxz[j];
+            
+            
+            float x = fxz[0], z = fxz[1];
+            float ro = clip(C0 * x + C1 * y + C2 * z);
+            float go = clip(C3 * x + C4 * y + C5 * z);
+            float bo = clip(C6 * x + C7 * y + C8 * z);
+            
+//            CV_Assert(ro >= 0.0f && ro <= 1.0f);
+//            CV_Assert(go >= 0.0f && go <= 1.0f);
+//            CV_Assert(bo >= 0.0f && bo <= 1.0f);
+            
+            if (gammaTab)
+            {
+                ro = splineInterpolate(ro * gscale, gammaTab, GAMMA_TAB_SIZE);
+                go = splineInterpolate(go * gscale, gammaTab, GAMMA_TAB_SIZE);
+                bo = splineInterpolate(bo * gscale, gammaTab, GAMMA_TAB_SIZE);
+            }
+            
+            dst[0] = ro, dst[1] = go, dst[2] = bo;
             if( dcn == 4 )
                 dst[3] = alpha;
         }
     }
-
+    
     int dstcn;
     float coeffs[9];
     bool srgb;
+    int blueInd;
 };
-
+  
+#undef clip
 
 struct Lab2RGB_b
 {
@@ -2261,7 +2331,7 @@ static void Bayer2RGB_VNG_8u( const Mat& srcmat, Mat& dstmat, int code )
 
                     minGrad = std::min(std::min(std::min(std::min(minGrad, gradNE), gradSW), gradNW), gradSE);
                     maxGrad = std::max(std::max(std::max(std::max(maxGrad, gradNE), gradSW), gradNW), gradSE);
-                    int T = minGrad + maxGrad/2;
+                    int T = minGrad + MAX(maxGrad/2, 1);
 
                     int Rs = 0, Gs = 0, Bs = 0, ng = 0;
                     if( gradN < T )
@@ -2333,7 +2403,7 @@ static void Bayer2RGB_VNG_8u( const Mat& srcmat, Mat& dstmat, int code )
 
                     minGrad = std::min(std::min(std::min(std::min(minGrad, gradNE), gradSW), gradNW), gradSE);
                     maxGrad = std::max(std::max(std::max(std::max(maxGrad, gradNE), gradSW), gradNW), gradSE);
-                    int T = minGrad + maxGrad/2;
+                    int T = minGrad + MAX(maxGrad/2, 1);
 
                     int Rs = 0, Gs = 0, Bs = 0, ng = 0;
                     if( gradN < T )
@@ -2408,7 +2478,8 @@ static void Bayer2RGB_VNG_8u( const Mat& srcmat, Mat& dstmat, int code )
 
             __m128i emask    = _mm_set1_epi32(0x0000ffff),
                     omask    = _mm_set1_epi32(0xffff0000),
-                    z        = _mm_setzero_si128();
+                    z        = _mm_setzero_si128(),
+                    one      = _mm_set1_epi16(1);
             __m128 _0_5      = _mm_set1_ps(0.5f);
 
             #define _mm_merge_epi16(a, b) _mm_or_si128(_mm_and_si128(a, emask), _mm_and_si128(b, omask)) //(aA_aA_aA_aA) * (bB_bB_bB_bB) => (bA_bA_bA_bA)
@@ -2473,7 +2544,7 @@ static void Bayer2RGB_VNG_8u( const Mat& srcmat, Mat& dstmat, int code )
                 maxGrad = _mm_max_epi16(_mm_max_epi16(maxGrad, gradNW), gradSE);
 
                 //int T = minGrad + maxGrad/2;
-                __m128i T = _mm_adds_epi16(_mm_srli_epi16(maxGrad, 1), minGrad);
+                __m128i T = _mm_adds_epi16(_mm_max_epi16(_mm_srli_epi16(maxGrad, 1), one), minGrad);
 
                 __m128i RGs = z, GRs = z, Bs = z, ng = z;
 
@@ -2609,13 +2680,12 @@ static void Bayer2RGB_VNG_8u( const Mat& srcmat, Mat& dstmat, int code )
                 // Bs  += {srow[-bstep-1]*2; (srow[-bstep]+srow[-bstep-2])} * (T>gradNW)
                 Bs  = _mm_adds_epi16(Bs, _mm_and_si128(_mm_merge_epi16(_mm_slli_epi16(x5, 1),_mm_adds_epi16(x3,x16)), mask));
 
-                __m128 ngf0, ngf1;
-                ngf0 = _mm_div_ps(_0_5, _mm_cvtloepi16_ps(ng));
-                ngf1 = _mm_div_ps(_0_5, _mm_cvthiepi16_ps(ng));
+                __m128 ngf0 = _mm_div_ps(_0_5, _mm_cvtloepi16_ps(ng));
+                __m128 ngf1 = _mm_div_ps(_0_5, _mm_cvthiepi16_ps(ng));
 
                 // now interpolate r, g & b
-                t0 = _mm_sub_epi16(GRs, RGs);
-                t1 = _mm_sub_epi16(Bs, RGs);
+                t0 = _mm_subs_epi16(GRs, RGs);
+                t1 = _mm_subs_epi16(Bs, RGs);
 
                 t0 = _mm_add_epi16(x0, _mm_packs_epi32(
                                                        _mm_cvtps_epi32(_mm_mul_ps(_mm_cvtloepi16_ps(t0), ngf0)),
@@ -3145,7 +3215,7 @@ struct RGBA2mRGBA
             _Tp v1 = *src++;
             _Tp v2 = *src++;
             _Tp v3 = *src++;
-            
+
             *dst++ = (v0 * v3 + half_val) / max_val;
             *dst++ = (v1 * v3 + half_val) / max_val;
             *dst++ = (v2 * v3 + half_val) / max_val;
@@ -3170,7 +3240,7 @@ struct mRGBA2RGBA
             _Tp v2 = *src++;
             _Tp v3 = *src++;
             _Tp v3_half = v3 / 2;
-            
+
             *dst++ = (v3==0)? 0 : (v0 * max_val + v3_half) / v3;
             *dst++ = (v3==0)? 0 : (v1 * max_val + v3_half) / v3;
             *dst++ = (v3==0)? 0 : (v2 * max_val + v3_half) / v3;
@@ -3519,7 +3589,7 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             if(dcn <= 0) dcn = 1;
             CV_Assert( scn == 1 && dcn == 1 );
 
-            _dst.create(sz, depth);
+            _dst.create(sz, CV_MAKETYPE(depth, dcn));
             dst = _dst.getMat();
 
             if( depth == CV_8U )
@@ -3532,26 +3602,29 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
 
         case CV_BayerBG2BGR: case CV_BayerGB2BGR: case CV_BayerRG2BGR: case CV_BayerGR2BGR:
         case CV_BayerBG2BGR_VNG: case CV_BayerGB2BGR_VNG: case CV_BayerRG2BGR_VNG: case CV_BayerGR2BGR_VNG:
-            if(dcn <= 0) dcn = 3;
-            CV_Assert( scn == 1 && dcn == 3 );
-
-            _dst.create(sz, CV_MAKETYPE(depth, dcn));
-            dst = _dst.getMat();
-
-            if( code == CV_BayerBG2BGR || code == CV_BayerGB2BGR ||
-                code == CV_BayerRG2BGR || code == CV_BayerGR2BGR )
             {
-                if( depth == CV_8U )
-                    Bayer2RGB_<uchar, SIMDBayerInterpolator_8u>(src, dst, code);
-                else if( depth == CV_16U )
-                    Bayer2RGB_<ushort, SIMDBayerStubInterpolator_<ushort> >(src, dst, code);
+                if (dcn <= 0)
+                    dcn = 3;
+                CV_Assert( scn == 1 && dcn == 3 );
+
+                _dst.create(sz, CV_MAKE_TYPE(depth, dcn));
+                Mat dst_ = _dst.getMat();
+
+                if( code == CV_BayerBG2BGR || code == CV_BayerGB2BGR ||
+                    code == CV_BayerRG2BGR || code == CV_BayerGR2BGR )
+                {
+                    if( depth == CV_8U )
+                        Bayer2RGB_<uchar, SIMDBayerInterpolator_8u>(src, dst_, code);
+                    else if( depth == CV_16U )
+                        Bayer2RGB_<ushort, SIMDBayerStubInterpolator_<ushort> >(src, dst_, code);
+                    else
+                        CV_Error(CV_StsUnsupportedFormat, "Bayer->RGB demosaicing only supports 8u and 16u types");
+                }
                 else
-                    CV_Error(CV_StsUnsupportedFormat, "Bayer->RGB demosaicing only supports 8u and 16u types");
-            }
-            else
-            {
-                CV_Assert( depth == CV_8U );
-                Bayer2RGB_VNG_8u(src, dst, code);
+                {
+                    CV_Assert( depth == CV_8U );
+                    Bayer2RGB_VNG_8u(src, dst_, code);
+                }
             }
             break;
         case CV_YUV2BGR_NV21:  case CV_YUV2RGB_NV21:  case CV_YUV2BGR_NV12:  case CV_YUV2RGB_NV12:

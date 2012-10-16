@@ -37,7 +37,7 @@ JNIEXPORT jboolean JNICALL Java_org_opencv_engine_BinderConnector_Init(JNIEnv* e
     if (NULL == PackageManager)
     {
 	JavaVM* jvm;
-	env->GetJavaVM(&jvm);;
+	env->GetJavaVM(&jvm);
 	PackageManager = new JavaBasedPackageManager(jvm, env->NewGlobalRef(market));
     }
     if (PackageManager)

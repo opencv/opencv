@@ -2,16 +2,17 @@ package org.opencv.android;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.DialogInterface.OnClickListener;
 import android.util.Log;
 
 /**
- * Basic implementation of LoaderCallbackInterface
+ * Basic implementation of LoaderCallbackInterface.
  */
 public abstract class BaseLoaderCallback implements LoaderCallbackInterface {
 
-    public BaseLoaderCallback(Activity AppContext) {
+    public BaseLoaderCallback(Context AppContext) {
         mAppContext = AppContext;
     }
 
@@ -22,25 +23,9 @@ public abstract class BaseLoaderCallback implements LoaderCallbackInterface {
             /** OpenCV initialization was successful. **/
             case LoaderCallbackInterface.SUCCESS:
             {
-                /** Application must override this method to handle successful library initialization **/
+                /** Application must override this method to handle successful library initialization. **/
             } break;
-            /** OpenCV Manager or library package installation is in progress. Restart of application is required **/
-            case LoaderCallbackInterface.RESTART_REQUIRED:
-            {
-                Log.d(TAG, "OpenCV downloading. App restart is needed!");
-                AlertDialog RestartMessage = new AlertDialog.Builder(mAppContext).create();
-                RestartMessage.setTitle("OpenCV asks for restart");
-                RestartMessage.setMessage("Please, restart the application to finish installation.");
-                RestartMessage.setCancelable(false); // This blocks the 'BACK' button
-                RestartMessage.setButton(AlertDialog.BUTTON_POSITIVE, "OK", new OnClickListener() {
-                    public void onClick(DialogInterface dialog, int which) {
-                        mAppContext.finish();
-                    }
-                });
-
-                RestartMessage.show();
-            } break;
-            /** OpenCV loader cannot start Google Play **/
+            /** OpenCV loader can not start Google Play Market. **/
             case LoaderCallbackInterface.MARKET_ERROR:
             {
                 Log.d(TAG, "Google Play service is not installed! You can get it here");
@@ -50,33 +35,33 @@ public abstract class BaseLoaderCallback implements LoaderCallbackInterface {
                 MarketErrorMessage.setCancelable(false); // This blocks the 'BACK' button
                 MarketErrorMessage.setButton(AlertDialog.BUTTON_POSITIVE, "OK", new OnClickListener() {
                     public void onClick(DialogInterface dialog, int which) {
-                        mAppContext.finish();
+                        finish();
                     }
                 });
                 MarketErrorMessage.show();
             } break;
-            /** Package installation was canceled **/
+            /** Package installation has been canceled. **/
             case LoaderCallbackInterface.INSTALL_CANCELED:
             {
                 Log.d(TAG, "OpenCV library instalation was canceled by user");
-                mAppContext.finish();
+                finish();
             } break;
-            /** Application is incompatible with this version of OpenCV Manager. Possible Service update is needed **/
+            /** Application is incompatible with this version of OpenCV Manager. Possibly, a service update is required. **/
             case LoaderCallbackInterface.INCOMPATIBLE_MANAGER_VERSION:
             {
                 Log.d(TAG, "OpenCV Manager Service is uncompatible with this app!");
                 AlertDialog IncomatibilityMessage = new AlertDialog.Builder(mAppContext).create();
                 IncomatibilityMessage.setTitle("OpenCV Manager");
-                IncomatibilityMessage.setMessage("OpenCV Manager service is incompatible with this application. Update it!");
+                IncomatibilityMessage.setMessage("OpenCV Manager service is incompatible with this app. Update it!");
                 IncomatibilityMessage.setCancelable(false); // This blocks the 'BACK' button
                 IncomatibilityMessage.setButton(AlertDialog.BUTTON_POSITIVE, "OK", new OnClickListener() {
                     public void onClick(DialogInterface dialog, int which) {
-                        mAppContext.finish();
+                        finish();
                     }
                 });
                 IncomatibilityMessage.show();
             }
-            /** Other status, i.e. INIT_FAILED **/
+            /** Other status, i.e. INIT_FAILED. **/
             default:
             {
                 Log.e(TAG, "OpenCV loading failed!");
@@ -87,7 +72,7 @@ public abstract class BaseLoaderCallback implements LoaderCallbackInterface {
                 InitFailedDialog.setButton(AlertDialog.BUTTON_POSITIVE, "OK", new OnClickListener() {
 
                     public void onClick(DialogInterface dialog, int which) {
-                        mAppContext.finish();
+                        finish();
                     }
                 });
 
@@ -96,31 +81,61 @@ public abstract class BaseLoaderCallback implements LoaderCallbackInterface {
         }
     }
 
-    public void onPackageInstall(final InstallCallbackInterface callback)
+    public void onPackageInstall(final int operation, final InstallCallbackInterface callback)
     {
-        AlertDialog InstallMessage = new AlertDialog.Builder(mAppContext).create();
-        InstallMessage.setTitle("Package not found");
-        InstallMessage.setMessage(callback.getPackageName() + " package was not found! Try to install it?");
-        InstallMessage.setCancelable(false); // This blocks the 'BACK' button
-        InstallMessage.setButton(AlertDialog.BUTTON_POSITIVE, "Yes", new OnClickListener()
+        switch (operation)
         {
-            public void onClick(DialogInterface dialog, int which)
+            case InstallCallbackInterface.NEW_INSTALLATION:
             {
-                callback.install();
-            }
-        });
+                AlertDialog InstallMessage = new AlertDialog.Builder(mAppContext).create();
+                InstallMessage.setTitle("Package not found");
+                InstallMessage.setMessage(callback.getPackageName() + " package was not found! Try to install it?");
+                InstallMessage.setCancelable(false); // This blocks the 'BACK' button
+                InstallMessage.setButton(AlertDialog.BUTTON_POSITIVE, "Yes", new OnClickListener()
+                {
+                    public void onClick(DialogInterface dialog, int which)
+                    {
+                        callback.install();
+                    }
+                });
 
-        InstallMessage.setButton(AlertDialog.BUTTON_NEGATIVE, "No", new OnClickListener() {
+                InstallMessage.setButton(AlertDialog.BUTTON_NEGATIVE, "No", new OnClickListener() {
 
-            public void onClick(DialogInterface dialog, int which)
+                    public void onClick(DialogInterface dialog, int which)
+                    {
+                        callback.cancel();
+                    }
+                });
+
+                InstallMessage.show();
+            } break;
+            case InstallCallbackInterface.INSTALLATION_PROGRESS:
             {
-                callback.cancel();
-            }
-        });
+                AlertDialog WaitMessage = new AlertDialog.Builder(mAppContext).create();
+                WaitMessage.setTitle("OpenCV is not ready");
+                WaitMessage.setMessage("Installation is in progeress. Wait or exit?");
+                WaitMessage.setCancelable(false); // This blocks the 'BACK' button
+                WaitMessage.setButton(AlertDialog.BUTTON_POSITIVE, "Wait", new OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+                        callback.wait_install();
+                    }
+                });
+                WaitMessage.setButton(AlertDialog.BUTTON_NEGATIVE, "Exit", new OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+                        callback.cancel();
+                    }
+                });
 
-        InstallMessage.show();
+                WaitMessage.show();
+            } break;
+        }
     }
 
-    protected Activity mAppContext;
+    void finish()
+    {
+        ((Activity) mAppContext).finish();
+    }
+
+    protected Context mAppContext;
     private final static String TAG = "OpenCVLoader/BaseLoaderCallback";
 }

@@ -2693,7 +2693,7 @@ CV_IMPL int cvStereoRectifyUncalibrated(
                      m2[i].y*lines1[i].y +
                      lines1[i].z) <= threshold )
             {
-                if( j > i )
+                if( j < i )
                 {
                     m1[j] = m1[i];
                     m2[j] = m2[i];

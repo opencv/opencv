@@ -336,7 +336,7 @@ jas_image_t *jp2_decode(jas_stream_t *in, char *optstr)
 	}
 
 	/* Allocate space for the channel-number to component-number LUT. */
-	if (!(dec->chantocmptlut = jas_malloc(dec->numchans * sizeof(uint_fast16_t)))) {
+	if (!(dec->chantocmptlut = jas_alloc2(dec->numchans, sizeof(uint_fast16_t)))) {
 		jas_eprintf("error: no memory\n");
 		goto error;
 	}
@@ -354,7 +354,7 @@ jas_image_t *jp2_decode(jas_stream_t *in, char *optstr)
 			if (cmapent->map == JP2_CMAP_DIRECT) {
 				dec->chantocmptlut[channo] = channo;
 			} else if (cmapent->map == JP2_CMAP_PALETTE) {
-				lutents = jas_malloc(pclrd->numlutents * sizeof(int_fast32_t));
+				lutents = jas_alloc2(pclrd->numlutents, sizeof(int_fast32_t));
 				for (i = 0; i < pclrd->numlutents; ++i) {
 					lutents[i] = pclrd->lutdata[cmapent->pcol + i * pclrd->numchans];
 				}

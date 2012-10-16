@@ -9,4 +9,6 @@
     #define OPEN_CV_ENGINE_VERSION 1
 #endif
 
+#define LIB_OPENCV_INFO_NAME "libopencv_info.so"
+
 #endif

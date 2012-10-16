@@ -41,6 +41,7 @@
 //M*/
 
 #include "test_precomp.hpp"
+#include "opencv2/core/internal.hpp"
 
 using namespace cv;
 using namespace std;
@@ -238,3 +239,68 @@ protected:
 TEST(Calib3d_SolvePnPRansac, accuracy) { CV_solvePnPRansac_Test test; test.safe_run(); }
 TEST(Calib3d_SolvePnP, accuracy) { CV_solvePnP_Test test; test.safe_run(); }
 
+
+#ifdef HAVE_TBB
+
+TEST(DISABLED_Calib3d_SolvePnPRansac, concurrency)
+{
+    int count = 7*13;
+
+    Mat object(1, count, CV_32FC3);
+    randu(object, -100, 100);
+
+    Mat camera_mat(3, 3, CV_32FC1);
+    randu(camera_mat, 0.5, 1);
+    camera_mat.at<float>(0, 1) = 0.f;
+    camera_mat.at<float>(1, 0) = 0.f;
+    camera_mat.at<float>(2, 0) = 0.f;
+    camera_mat.at<float>(2, 1) = 0.f;
+
+    Mat dist_coef(1, 8, CV_32F, cv::Scalar::all(0));
+
+    vector<cv::Point2f> image_vec;
+    Mat rvec_gold(1, 3, CV_32FC1);
+    randu(rvec_gold, 0, 1);
+    Mat tvec_gold(1, 3, CV_32FC1);
+    randu(tvec_gold, 0, 1);
+    projectPoints(object, rvec_gold, tvec_gold, camera_mat, dist_coef, image_vec);
+
+    Mat image(1, count, CV_32FC2, &image_vec[0]);
+
+    Mat rvec1, rvec2;
+    Mat tvec1, tvec2;
+
+    {
+        // limit concurrency to get determenistic result
+        cv::theRNG().state = 20121010;
+        cv::Ptr<tbb::task_scheduler_init> one_thread = new tbb::task_scheduler_init(1);
+        solvePnPRansac(object, image, camera_mat, dist_coef, rvec1, tvec1);
+    }
+
+    if(1)
+    {
+        Mat rvec;
+        Mat tvec;
+        // parallel executions
+        for(int i = 0; i < 10; ++i)
+        {
+            cv::theRNG().state = 20121010;
+            solvePnPRansac(object, image, camera_mat, dist_coef, rvec, tvec);
+        }
+    }
+
+    {
+        // single thread again
+        cv::theRNG().state = 20121010;
+        cv::Ptr<tbb::task_scheduler_init> one_thread = new tbb::task_scheduler_init(1);
+        solvePnPRansac(object, image, camera_mat, dist_coef, rvec2, tvec2);
+    }
+
+    double rnorm = cv::norm(rvec1, rvec2, NORM_INF);
+    double tnorm = cv::norm(tvec1, tvec2, NORM_INF);
+
+    EXPECT_LT(rnorm, 1e-6);
+    EXPECT_LT(tnorm, 1e-6);
+
+}
+#endif

@@ -51,6 +51,7 @@
     #include "cvconfig.h"
 #endif
 
+#include <cstring>
 #include <iostream>
 #include <limits>
 #include <vector>
@@ -60,9 +61,14 @@
 #include <iterator>
 #include <functional>
 #include <utility>
+#include <deque>
+#include <stdexcept>
+#include <memory>
+#include <string>
 
 #include "opencv2/gpu/gpu.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/imgproc/imgproc_c.h"
 #include "opencv2/calib3d/calib3d.hpp"
 #include "opencv2/core/internal.hpp"
 #include "opencv2/video/video.hpp"
@@ -81,6 +87,14 @@
 
     #ifdef HAVE_CUBLAS
         #include <cublas.h>
+    #endif
+
+    #ifndef __APPLE__
+        #include <nvcuvid.h>
+    #endif
+
+    #ifdef WIN32
+        #include <NVEncoderAPI.h>
     #endif
 
     #include "internal_shared.hpp"
@@ -109,9 +123,18 @@
     static inline void throw_nogpu() { CV_Error(CV_StsNotImplemented, "The called functionality is disabled for current build or platform"); }
 
 #else /* defined(HAVE_CUDA) */
-
+    
     static inline void throw_nogpu() { CV_Error(CV_GpuNotSupported, "The library is compiled without GPU support"); }
 
 #endif /* defined(HAVE_CUDA) */
+
+
+namespace cv { namespace gpu 
+{
+    // Converts CPU border extrapolation mode into GPU internal analogue.
+    // Returns true if the GPU analogue exists, false otherwise.
+    bool tryConvertToGpuBorderType(int cpuBorderType, int& gpuBorderType);
+
+}}
 
 #endif /* __OPENCV_PRECOMP_H__ */

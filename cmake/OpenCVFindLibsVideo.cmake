@@ -56,6 +56,19 @@ if(WITH_PVAPI)
   endif(PVAPI_INCLUDE_PATH)
 endif(WITH_PVAPI)
 
+# --- GigEVisionSDK ---
+ocv_clear_vars(HAVE_GIGE_API)
+if(WITH_GIGEAPI)
+  find_path(GIGEAPI_INCLUDE_PATH "GigEVisionSDK.h"
+            PATHS /usr/local /var /opt /usr ENV ProgramFiles ENV ProgramW6432
+            PATH_SUFFIXES include "Smartek Vision Technologies/GigEVisionSDK/gige_cpp" "GigEVisionSDK/gige_cpp" "GigEVisionSDK/gige_c"
+            DOC "The path to Smartek GigEVisionSDK header")
+  FIND_LIBRARY(GIGEAPI_LIBRARIES NAMES GigEVisionSDK)
+  if(GIGEAPI_LIBRARIES AND GIGEAPI_INCLUDE_PATH)
+    set(HAVE_GIGE_API TRUE)
+  endif()
+endif(WITH_GIGEAPI)
+
 # --- Dc1394 ---
 ocv_clear_vars(HAVE_DC1394 HAVE_DC1394_2)
 if(WITH_1394)
@@ -98,7 +111,7 @@ endif(WITH_XIMEA)
 ocv_clear_vars(HAVE_FFMPEG HAVE_FFMPEG_CODEC HAVE_FFMPEG_FORMAT HAVE_FFMPEG_UTIL HAVE_FFMPEG_SWSCALE HAVE_GENTOO_FFMPEG HAVE_FFMPEG_FFMPEG)
 if(WITH_FFMPEG)
   if(WIN32)
-    include("${OpenCV_SOURCE_DIR}/3rdparty/ffmpeg/ffmpeg_version.cmake" REQUIRED)
+    include("${OpenCV_SOURCE_DIR}/3rdparty/ffmpeg/ffmpeg_version.cmake")
   elseif(UNIX)
     CHECK_MODULE(libavcodec HAVE_FFMPEG_CODEC)
     CHECK_MODULE(libavformat HAVE_FFMPEG_FORMAT)
@@ -169,12 +182,11 @@ endif(WITH_VIDEOINPUT)
 
 # --- Extra HighGUI libs on Windows ---
 if(WIN32)
-  list(APPEND HIGHGUI_LIBRARIES comctl32 gdi32 ole32)
-  if(MSVC)
-    list(APPEND HIGHGUI_LIBRARIES vfw32)
-  elseif(MINGW64)
-    list(APPEND HIGHGUI_LIBRARIES msvfw32 avifil32 avicap32 winmm)
+  list(APPEND HIGHGUI_LIBRARIES comctl32 gdi32 ole32 vfw32)
+  if(MINGW64)
+    list(APPEND HIGHGUI_LIBRARIES avifil32 avicap32 winmm msvfw32)
+    list(REMOVE_ITEM HIGHGUI_LIBRARIES vfw32)
   elseif(MINGW)
-    list(APPEND HIGHGUI_LIBRARIES vfw32 winmm)
+    list(APPEND HIGHGUI_LIBRARIES winmm)
   endif()
 endif(WIN32)

@@ -9,16 +9,16 @@ Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions
 are met:
 
-	*Redistributions of source code must retain the above copyright
-	 notice, this list of conditions and the following disclaimer.
+    *Redistributions of source code must retain the above copyright
+     notice, this list of conditions and the following disclaimer.
 
-	*Redistributions in binary form must reproduce the above copyright
-	 notice, this list of conditions and the following disclaimer in the
-	 documentation and/or other materials provided with the distribution.
+    *Redistributions in binary form must reproduce the above copyright
+     notice, this list of conditions and the following disclaimer in the
+     documentation and/or other materials provided with the distribution.
 
-	*Neither the name of the University of Cambridge nor the names of
-	 its contributors may be used to endorse or promote products derived
-	 from this software without specific prior written permission.
+    *Neither the name of the University of Cambridge nor the names of
+     its contributors may be used to endorse or promote products derived
+     from this software without specific prior written permission.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
@@ -42,158 +42,22 @@ The references are:
 */
 
 #include "precomp.hpp"
+#include "fast_score.hpp"
 
 namespace cv
 {
 
-static void makeOffsets(int pixel[], int row_stride)
-{
-    pixel[0] = 0 + row_stride * 3;
-    pixel[1] = 1 + row_stride * 3;
-    pixel[2] = 2 + row_stride * 2;
-    pixel[3] = 3 + row_stride * 1;
-    pixel[4] = 3 + row_stride * 0;
-    pixel[5] = 3 + row_stride * -1;
-    pixel[6] = 2 + row_stride * -2;
-    pixel[7] = 1 + row_stride * -3;
-    pixel[8] = 0 + row_stride * -3;
-    pixel[9] = -1 + row_stride * -3;
-    pixel[10] = -2 + row_stride * -2;
-    pixel[11] = -3 + row_stride * -1;
-    pixel[12] = -3 + row_stride * 0;
-    pixel[13] = -3 + row_stride * 1;
-    pixel[14] = -2 + row_stride * 2;
-    pixel[15] = -1 + row_stride * 3;
-}
-
-static int cornerScore(const uchar* ptr, const int pixel[], int threshold)
-{
-    const int K = 8, N = 16 + K + 1;
-    int k, v = ptr[0];
-    short d[N];
-    for( k = 0; k < N; k++ )
-        d[k] = (short)(v - ptr[pixel[k]]);
-
-#if CV_SSE2
-    __m128i q0 = _mm_set1_epi16(-1000), q1 = _mm_set1_epi16(1000);
-    for( k = 0; k < 16; k += 8 )
-    {
-        __m128i v0 = _mm_loadu_si128((__m128i*)(d+k+1));
-        __m128i v1 = _mm_loadu_si128((__m128i*)(d+k+2));
-        __m128i a = _mm_min_epi16(v0, v1);
-        __m128i b = _mm_max_epi16(v0, v1);
-        v0 = _mm_loadu_si128((__m128i*)(d+k+3));
-        a = _mm_min_epi16(a, v0);
-        b = _mm_max_epi16(b, v0);
-        v0 = _mm_loadu_si128((__m128i*)(d+k+4));
-        a = _mm_min_epi16(a, v0);
-        b = _mm_max_epi16(b, v0);
-        v0 = _mm_loadu_si128((__m128i*)(d+k+5));
-        a = _mm_min_epi16(a, v0);
-        b = _mm_max_epi16(b, v0);
-        v0 = _mm_loadu_si128((__m128i*)(d+k+6));
-        a = _mm_min_epi16(a, v0);
-        b = _mm_max_epi16(b, v0);
-        v0 = _mm_loadu_si128((__m128i*)(d+k+7));
-        a = _mm_min_epi16(a, v0);
-        b = _mm_max_epi16(b, v0);
-        v0 = _mm_loadu_si128((__m128i*)(d+k+8));
-        a = _mm_min_epi16(a, v0);
-        b = _mm_max_epi16(b, v0);
-        v0 = _mm_loadu_si128((__m128i*)(d+k));
-        q0 = _mm_max_epi16(q0, _mm_min_epi16(a, v0));
-        q1 = _mm_min_epi16(q1, _mm_max_epi16(b, v0));
-        v0 = _mm_loadu_si128((__m128i*)(d+k+9));
-        q0 = _mm_max_epi16(q0, _mm_min_epi16(a, v0));
-        q1 = _mm_min_epi16(q1, _mm_max_epi16(b, v0));
-    }
-    q0 = _mm_max_epi16(q0, _mm_sub_epi16(_mm_setzero_si128(), q1));
-    q0 = _mm_max_epi16(q0, _mm_unpackhi_epi64(q0, q0));
-    q0 = _mm_max_epi16(q0, _mm_srli_si128(q0, 4));
-    q0 = _mm_max_epi16(q0, _mm_srli_si128(q0, 2));
-    threshold = (short)_mm_cvtsi128_si32(q0) - 1;
-#else
-    int a0 = threshold;
-    for( k = 0; k < 16; k += 2 )
-    {
-        int a = std::min((int)d[k+1], (int)d[k+2]);
-        a = std::min(a, (int)d[k+3]);
-        if( a <= a0 )
-            continue;
-        a = std::min(a, (int)d[k+4]);
-        a = std::min(a, (int)d[k+5]);
-        a = std::min(a, (int)d[k+6]);
-        a = std::min(a, (int)d[k+7]);
-        a = std::min(a, (int)d[k+8]);
-        a0 = std::max(a0, std::min(a, (int)d[k]));
-        a0 = std::max(a0, std::min(a, (int)d[k+9]));
-    }
-
-    int b0 = -a0;
-    for( k = 0; k < 16; k += 2 )
-    {
-        int b = std::max((int)d[k+1], (int)d[k+2]);
-        b = std::max(b, (int)d[k+3]);
-        b = std::max(b, (int)d[k+4]);
-        b = std::max(b, (int)d[k+5]);
-        if( b >= b0 )
-            continue;
-        b = std::max(b, (int)d[k+6]);
-        b = std::max(b, (int)d[k+7]);
-        b = std::max(b, (int)d[k+8]);
-
-        b0 = std::min(b0, std::max(b, (int)d[k]));
-        b0 = std::min(b0, std::max(b, (int)d[k+9]));
-    }
-
-    threshold = -b0-1;
-#endif
-
-#if 0
-    // check that with the computed "threshold" the pixel is still a corner
-    // and that with the increased-by-1 "threshold" the pixel is not a corner anymore
-    for( int delta = 0; delta <= 1; delta++ )
-    {
-        int v0 = std::min(ptr[0] + threshold + delta, 255);
-        int v1 = std::max(ptr[0] - threshold - delta, 0);
-        int c0 = 0, c1 = 0;
-
-        for( int k = 0; k < N; k++ )
-        {
-            int x = ptr[pixel[k]];
-            if(x > v0)
-            {
-                if( ++c0 > K )
-                    break;
-                c1 = 0;
-            }
-            else if( x < v1 )
-            {
-                if( ++c1 > K )
-                    break;
-                c0 = 0;
-            }
-            else
-            {
-                c0 = c1 = 0;
-            }
-        }
-        CV_Assert( (delta == 0 && std::max(c0, c1) > K) ||
-                   (delta == 1 && std::max(c0, c1) <= K) );
-    }
-#endif
-    return threshold;
-}
-
-
-void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool nonmax_suppression)
+template<int patternSize>
+void FAST_t(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool nonmax_suppression)
 {
     Mat img = _img.getMat();
-    const int K = 8, N = 16 + K + 1;
-    int i, j, k, pixel[N];
-    makeOffsets(pixel, (int)img.step);
-    for(k = 16; k < N; k++)
-        pixel[k] = pixel[k - 16];
+    const int K = patternSize/2, N = patternSize + K + 1;
+#if CV_SSE2
+    const int quarterPatternSize = patternSize/4;
+    (void)quarterPatternSize;
+#endif
+    int i, j, k, pixel[25];
+    makeOffsets(pixel, (int)img.step, patternSize);
 
     keypoints.clear();
 
@@ -201,6 +65,9 @@ void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool
 
 #if CV_SSE2
     __m128i delta = _mm_set1_epi8(-128), t = _mm_set1_epi8((char)threshold), K16 = _mm_set1_epi8((char)K);
+    (void)K16;
+    (void)delta;
+    (void)t;
 #endif
     uchar threshold_tab[512];
     for( i = -255; i <= 255; i++ )
@@ -227,6 +94,8 @@ void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool
         {
             j = 3;
     #if CV_SSE2
+            if( patternSize == 16 )
+            {
             for(; j < img.cols - 16 - 3; j += 16, ptr += 16)
             {
                 __m128i m0, m1;
@@ -235,9 +104,9 @@ void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool
                 v0 = _mm_xor_si128(_mm_adds_epu8(v0, t), delta);
 
                 __m128i x0 = _mm_sub_epi8(_mm_loadu_si128((const __m128i*)(ptr + pixel[0])), delta);
-                __m128i x1 = _mm_sub_epi8(_mm_loadu_si128((const __m128i*)(ptr + pixel[4])), delta);
-                __m128i x2 = _mm_sub_epi8(_mm_loadu_si128((const __m128i*)(ptr + pixel[8])), delta);
-                __m128i x3 = _mm_sub_epi8(_mm_loadu_si128((const __m128i*)(ptr + pixel[12])), delta);
+                __m128i x1 = _mm_sub_epi8(_mm_loadu_si128((const __m128i*)(ptr + pixel[quarterPatternSize])), delta);
+                __m128i x2 = _mm_sub_epi8(_mm_loadu_si128((const __m128i*)(ptr + pixel[2*quarterPatternSize])), delta);
+                __m128i x3 = _mm_sub_epi8(_mm_loadu_si128((const __m128i*)(ptr + pixel[3*quarterPatternSize])), delta);
                 m0 = _mm_and_si128(_mm_cmpgt_epi8(x0, v0), _mm_cmpgt_epi8(x1, v0));
                 m1 = _mm_and_si128(_mm_cmpgt_epi8(v1, x0), _mm_cmpgt_epi8(v1, x1));
                 m0 = _mm_or_si128(m0, _mm_and_si128(_mm_cmpgt_epi8(x1, v0), _mm_cmpgt_epi8(x2, v0)));
@@ -279,8 +148,9 @@ void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool
                     {
                         cornerpos[ncorners++] = j+k;
                         if(nonmax_suppression)
-                            curr[j+k] = (uchar)cornerScore(ptr+k, pixel, threshold);
+                            curr[j+k] = (uchar)cornerScore<patternSize>(ptr+k, pixel, threshold);
                     }
+            }
             }
     #endif
             for( ; j < img.cols - 3; j++, ptr++ )
@@ -317,7 +187,7 @@ void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool
                             {
                                 cornerpos[ncorners++] = j;
                                 if(nonmax_suppression)
-                                    curr[j] = (uchar)cornerScore(ptr, pixel, threshold);
+                                    curr[j] = (uchar)cornerScore<patternSize>(ptr, pixel, threshold);
                                 break;
                             }
                         }
@@ -339,7 +209,7 @@ void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool
                             {
                                 cornerpos[ncorners++] = j;
                                 if(nonmax_suppression)
-                                    curr[j] = (uchar)cornerScore(ptr, pixel, threshold);
+                                    curr[j] = (uchar)cornerScore<patternSize>(ptr, pixel, threshold);
                                 break;
                             }
                         }
@@ -375,12 +245,39 @@ void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool
     }
 }
 
+void FASTX(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool nonmax_suppression, int type)
+{
+  switch(type) {
+    case FastFeatureDetector::TYPE_5_8:
+      FAST_t<8>(_img, keypoints, threshold, nonmax_suppression);
+      break;
+    case FastFeatureDetector::TYPE_7_12:
+      FAST_t<12>(_img, keypoints, threshold, nonmax_suppression);
+      break;
+    case FastFeatureDetector::TYPE_9_16:
+      FAST_t<16>(_img, keypoints, threshold, nonmax_suppression);
+      break;
+  }
+}
+
+void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool nonmax_suppression)
+{
+    FASTX(_img, keypoints, threshold, nonmax_suppression, FastFeatureDetector::TYPE_9_16);
+}
 
 /*
  *   FastFeatureDetector
  */
 FastFeatureDetector::FastFeatureDetector( int _threshold, bool _nonmaxSuppression )
-: threshold(_threshold), nonmaxSuppression(_nonmaxSuppression)
+    : threshold(_threshold), nonmaxSuppression(_nonmaxSuppression)
+{}
+
+FastFeatureDetector2::FastFeatureDetector2( int _threshold, bool _nonmaxSuppression )
+    : FastFeatureDetector(_threshold, _nonmaxSuppression), type(FastFeatureDetector::TYPE_9_16)
+{}
+
+FastFeatureDetector2::FastFeatureDetector2( int _threshold, bool _nonmaxSuppression, int _type )
+    : FastFeatureDetector(_threshold, _nonmaxSuppression), type((short)_type)
 {}
 
 void FastFeatureDetector::detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask ) const
@@ -388,6 +285,14 @@ void FastFeatureDetector::detectImpl( const Mat& image, vector<KeyPoint>& keypoi
     Mat grayImage = image;
     if( image.type() != CV_8U ) cvtColor( image, grayImage, CV_BGR2GRAY );
     FAST( grayImage, keypoints, threshold, nonmaxSuppression );
+    KeyPointsFilter::runByPixelsMask( keypoints, mask );
+}
+
+void FastFeatureDetector2::detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask ) const
+{
+    Mat grayImage = image;
+    if( image.type() != CV_8U ) cvtColor( image, grayImage, CV_BGR2GRAY );
+    FASTX( grayImage, keypoints, threshold, nonmaxSuppression, type );
     KeyPointsFilter::runByPixelsMask( keypoints, mask );
 }
 

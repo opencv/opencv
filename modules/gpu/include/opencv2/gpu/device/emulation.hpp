@@ -1,0 +1,139 @@
+/*M///////////////////////////////////////////////////////////////////////////////////////
+//
+//  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
+//
+//  By downloading, copying, installing or using the software you agree to this license.
+//  If you do not agree to this license, do not download, install,
+//  copy or use the software.
+//
+//
+//                           License Agreement
+//                For Open Source Computer Vision Library
+//
+// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
+// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Third party copyrights are property of their respective owners.
+//
+// Redistribution and use in source and binary forms, with or without modification,
+// are permitted provided that the following conditions are met:
+//
+//   * Redistribution's of source code must retain the above copyright notice,
+//     this list of conditions and the following disclaimer.
+//
+//   * Redistribution's in binary form must reproduce the above copyright notice,
+//     this list of conditions and the following disclaimer in the documentation
+//     and/or other materials provided with the distribution.
+//
+//   * The name of the copyright holders may not be used to endorse or promote products
+//     derived from this software without specific prior written permission.
+//
+// This software is provided by the copyright holders and contributors "as is" and
+// any express or bpied warranties, including, but not limited to, the bpied
+// warranties of merchantability and fitness for a particular purpose are disclaimed.
+// In no event shall the Intel Corporation or contributors be liable for any direct,
+// indirect, incidental, special, exemplary, or consequential damages
+// (including, but not limited to, procurement of substitute goods or services;
+// loss of use, data, or profits; or business interruption) however caused
+// and on any theory of liability, whether in contract, strict liability,
+// or tort (including negligence or otherwise) arising in any way out of
+// the use of this software, even if advised of the possibility of such damage.
+//
+//M*/
+
+#ifndef OPENCV_GPU_EMULATION_HPP_
+#define OPENCV_GPU_EMULATION_HPP_
+
+#include "warp_reduce.hpp"
+#include <stdio.h>
+
+namespace cv { namespace gpu { namespace device
+{
+    struct Emulation
+    {
+
+        static __device__ __forceinline__ int syncthreadsOr(int pred)
+        {
+#if defined (__CUDA_ARCH__) && (__CUDA_ARCH__ < 200)
+                // just campilation stab
+                return 0;
+#else
+                return __syncthreads_or(pred);
+#endif
+        }
+
+        template<int CTA_SIZE>
+        static __forceinline__ __device__ int Ballot(int predicate)
+        {
+#if defined (__CUDA_ARCH__) && (__CUDA_ARCH__ >= 200)
+            return __ballot(predicate);
+#else
+            __shared__ volatile int cta_buffer[CTA_SIZE];
+
+            int tid = threadIdx.x;
+            cta_buffer[tid] = predicate ? (1 << (tid & 31)) : 0;
+            return warp_reduce(cta_buffer);
+#endif
+        }
+
+        struct smem
+        {
+            enum { TAG_MASK = (1U << ( (sizeof(unsigned int) << 3) - 5U)) - 1U };
+
+            template<typename T>
+            static __device__ __forceinline__ T atomicInc(T* address, T val)
+            {
+#if defined (__CUDA_ARCH__) && (__CUDA_ARCH__ < 120)
+                T count;
+                unsigned int tag = threadIdx.x << ( (sizeof(unsigned int) << 3) - 5U);
+                do
+                {
+                    count = *address & TAG_MASK;
+                    count = tag | (count + 1);
+                    *address = count;
+                } while (*address != count);
+
+                return (count & TAG_MASK) - 1;
+#else
+                return ::atomicInc(address, val);
+#endif
+            }
+
+            template<typename T>
+            static __device__ __forceinline__ T atomicAdd(T* address, T val)
+            {
+#if defined (__CUDA_ARCH__) && (__CUDA_ARCH__ < 120)
+                T count;
+                unsigned int tag = threadIdx.x << ( (sizeof(unsigned int) << 3) - 5U);
+                do
+                {
+                    count = *address & TAG_MASK;
+                    count = tag | (count + val);
+                    *address = count;
+                } while (*address != count);
+
+                return (count & TAG_MASK) - val;
+#else
+                return ::atomicAdd(address, val);
+#endif
+            }
+
+            template<typename T>
+            static __device__ __forceinline__ T atomicMin(T* address, T val)
+            {
+#if defined (__CUDA_ARCH__) && (__CUDA_ARCH__ < 120)
+                T count = ::min(*address, val);
+                do
+                {
+                    *address = count;
+                } while (*address > count);
+
+                return count;
+#else
+                return ::atomicMin(address, val);
+#endif
+            }
+        };
+    };
+}}} // namespace cv { namespace gpu { namespace device
+
+#endif /* OPENCV_GPU_EMULATION_HPP_ */

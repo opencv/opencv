@@ -45,7 +45,7 @@
 using namespace cv;
 using namespace cv::gpu;
 
-#if !defined (HAVE_CUDA)
+#if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
 cv::gpu::StereoBM_GPU::StereoBM_GPU() { throw_nogpu(); }
 cv::gpu::StereoBM_GPU::StereoBM_GPU(int, int, int) { throw_nogpu(); }
@@ -59,9 +59,9 @@ namespace cv { namespace gpu { namespace device
 {
     namespace stereobm
     {
-        void stereoBM_GPU(const DevMem2Db& left, const DevMem2Db& right, const DevMem2Db& disp, int ndisp, int winsz, const DevMem2D_<unsigned int>& minSSD_buf, cudaStream_t & stream);
-        void prefilter_xsobel(const DevMem2Db& input, const DevMem2Db& output, int prefilterCap /*= 31*/, cudaStream_t & stream);
-        void postfilter_textureness(const DevMem2Db& input, int winsz, float avgTexturenessThreshold, const DevMem2Db& disp, cudaStream_t & stream);
+        void stereoBM_GPU(const PtrStepSzb& left, const PtrStepSzb& right, const PtrStepSzb& disp, int ndisp, int winsz, const PtrStepSz<unsigned int>& minSSD_buf, cudaStream_t & stream);
+        void prefilter_xsobel(const PtrStepSzb& input, const PtrStepSzb& output, int prefilterCap /*= 31*/, cudaStream_t & stream);
+        void postfilter_textureness(const PtrStepSzb& input, int winsz, float avgTexturenessThreshold, const PtrStepSzb& disp, cudaStream_t & stream);
     }
 }}}
 

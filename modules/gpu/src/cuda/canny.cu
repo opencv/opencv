@@ -40,6 +40,8 @@
 //
 //M*/
 
+#if !defined CUDA_DISABLER
+
 #include <utility>
 #include <algorithm>
 #include "internal_shared.hpp"
@@ -261,7 +263,7 @@ namespace cv { namespace gpu { namespace device
 
         __global__ void edgesHysteresisLocal(PtrStepi map, ushort2* st, int rows, int cols)
         {
-            #if __CUDA_ARCH__ >= 120
+            #if defined (__CUDA_ARCH__) && (__CUDA_ARCH__ >= 120)
 
             __shared__ int smem[18][18];
 
@@ -358,7 +360,7 @@ namespace cv { namespace gpu { namespace device
 
         __global__ void edgesHysteresisGlobal(PtrStepi map, ushort2* st1, ushort2* st2, int rows, int cols, int count)
         {
-            #if __CUDA_ARCH__ >= 120
+            #if defined (__CUDA_ARCH__) && __CUDA_ARCH__ >= 120
 
             const int stack_size = 512;
 
@@ -494,3 +496,6 @@ namespace cv { namespace gpu { namespace device
         }
     } // namespace canny
 }}} // namespace cv { namespace gpu { namespace device
+
+
+#endif /* CUDA_DISABLER */
