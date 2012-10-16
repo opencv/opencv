@@ -364,7 +364,7 @@ TEST(BruteForceMatcher)
 
     // Init GPU matcher
 
-    gpu::BFMatcher_GPU d_matcher(NORM_L2);
+    gpu::BruteForceMatcher_GPU_base d_matcher(gpu::BruteForceMatcher_GPU_base::L2Dist);
 
     gpu::GpuMat d_query(query);
     gpu::GpuMat d_train(train);
