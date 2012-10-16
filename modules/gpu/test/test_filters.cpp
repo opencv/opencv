@@ -152,13 +152,13 @@ TEST_P(Sobel, Accuracy)
     cv::Mat dst_gold;
     cv::Sobel(src, dst_gold, -1, dx, dy, ksize.width, 1.0, 0.0, borderType);
 
-    EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
+    EXPECT_MAT_NEAR(dst_gold, dst, CV_MAT_DEPTH(type) < CV_32F ? 0.0 : 0.1);
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_Filter, Sobel, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
-    testing::Values(MatType(CV_8UC1), MatType(CV_8UC4)),
+    testing::Values(MatType(CV_8UC1), MatType(CV_8UC3), MatType(CV_8UC4), MatType(CV_32FC1), MatType(CV_32FC3), MatType(CV_32FC4)),
     testing::Values(KSize(cv::Size(3, 3)), KSize(cv::Size(5, 5)), KSize(cv::Size(7, 7))),
     testing::Values(Deriv_X(0), Deriv_X(1), Deriv_X(2)),
     testing::Values(Deriv_Y(0), Deriv_Y(1), Deriv_Y(2)),
@@ -208,13 +208,13 @@ TEST_P(Scharr, Accuracy)
     cv::Mat dst_gold;
     cv::Scharr(src, dst_gold, -1, dx, dy, 1.0, 0.0, borderType);
 
-    EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
+    EXPECT_MAT_NEAR(dst_gold, dst, CV_MAT_DEPTH(type) < CV_32F ? 0.0 : 0.1);
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_Filter, Scharr, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
-    testing::Values(MatType(CV_8UC1), MatType(CV_8UC4)),
+    testing::Values(MatType(CV_8UC1), MatType(CV_8UC3), MatType(CV_8UC4), MatType(CV_32FC1), MatType(CV_32FC3), MatType(CV_32FC4)),
     testing::Values(Deriv_X(0), Deriv_X(1)),
     testing::Values(Deriv_Y(0), Deriv_Y(1)),
     testing::Values(BorderType(cv::BORDER_REFLECT101),
@@ -281,7 +281,7 @@ TEST_P(GaussianBlur, Accuracy)
 INSTANTIATE_TEST_CASE_P(GPU_Filter, GaussianBlur, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
-    testing::Values(MatType(CV_8UC1), MatType(CV_8UC4)),
+    testing::Values(MatType(CV_8UC1), MatType(CV_8UC3), MatType(CV_8UC4), MatType(CV_32FC1), MatType(CV_32FC3), MatType(CV_32FC4)),
     testing::Values(KSize(cv::Size(3, 3)),
                     KSize(cv::Size(5, 5)),
                     KSize(cv::Size(7, 7)),
