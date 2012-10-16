@@ -1956,228 +1956,310 @@ typedef SIMDBayerStubInterpolator_<uchar> SIMDBayerInterpolator_8u;
 #endif
 
 template<typename T, class SIMDInterpolator>
-static void Bayer2Gray_( const Mat& srcmat, Mat& dstmat, int code )
+void Bayer2Gray_Iteration( const T* bayer0, T* const dst0, const Size& size, int& startWithGreen,
+                           const int bayerStep, int& redCoeff, int& blueCoeff, const int SHIFT,
+                           const int G2Y, const SIMDInterpolator& vecOp, bool& blueRow )
 {
-    SIMDInterpolator vecOp;
-    const int R2Y = 4899;
-    const int G2Y = 9617;
-    const int B2Y = 1868;
-    const int SHIFT = 14;
+    unsigned t0, t1, t2;
+    const T* bayer = bayer0;
+    T* dst = dst0;
+    const T* bayerEnd = bayer + size.width;
 
-    const T* bayer0 = (const T*)srcmat.data;
-    int bayer_step = (int)(srcmat.step/sizeof(T));
-    T* dst0 = (T*)dstmat.data;
-    int dst_step = (int)(dstmat.step/sizeof(T));
-    Size size = srcmat.size();
-    int bcoeff = B2Y, rcoeff = R2Y;
-    int start_with_green = code == CV_BayerGB2GRAY || code == CV_BayerGR2GRAY;
-    bool brow = true;
-
-    if( code != CV_BayerBG2GRAY && code != CV_BayerGB2GRAY )
+    if( startWithGreen )
     {
-        brow = false;
-        std::swap(bcoeff, rcoeff);
+        t0 = (bayer[1] + bayer[bayerStep*2+1])*redCoeff;
+        t1 = (bayer[bayerStep] + bayer[bayerStep+2])*blueCoeff;
+        t2 = bayer[bayerStep+1]*(2*G2Y);
+
+        dst[0] = (T)CV_DESCALE(t0 + t1 + t2, SHIFT+1);
+        bayer++;
+        dst++;
     }
 
-    dst0 += dst_step + 1;
-    size.height -= 2;
-    size.width -= 2;
+    int delta = vecOp.bayer2Gray(bayer, bayerStep, dst, size.width, blueCoeff, G2Y, redCoeff);
+    bayer += delta;
+    dst += delta;
 
-    for( ; size.height-- > 0; bayer0 += bayer_step, dst0 += dst_step )
+    for( ; bayer <= bayerEnd - 2; bayer += 2, dst += 2 )
     {
-        unsigned t0, t1, t2;
-        const T* bayer = bayer0;
-        T* dst = dst0;
-        const T* bayer_end = bayer + size.width;
+        t0 = (bayer[0] + bayer[2] + bayer[bayerStep*2] + bayer[bayerStep*2+2])*redCoeff;
+        t1 = (bayer[1] + bayer[bayerStep] + bayer[bayerStep+2] + bayer[bayerStep*2+1])*G2Y;
+        t2 = bayer[bayerStep+1]*(4*blueCoeff);
+        dst[0] = (T)CV_DESCALE(t0 + t1 + t2, SHIFT+2);
 
-        if( size.width <= 0 )
-        {
-            dst[-1] = dst[size.width] = 0;
-            continue;
-        }
-
-        if( start_with_green )
-        {
-            t0 = (bayer[1] + bayer[bayer_step*2+1])*rcoeff;
-            t1 = (bayer[bayer_step] + bayer[bayer_step+2])*bcoeff;
-            t2 = bayer[bayer_step+1]*(2*G2Y);
-
-            dst[0] = (T)CV_DESCALE(t0 + t1 + t2, SHIFT+1);
-            bayer++;
-            dst++;
-        }
-
-        int delta = vecOp.bayer2Gray(bayer, bayer_step, dst, size.width, bcoeff, G2Y, rcoeff);
-        bayer += delta;
-        dst += delta;
-
-        for( ; bayer <= bayer_end - 2; bayer += 2, dst += 2 )
-        {
-            t0 = (bayer[0] + bayer[2] + bayer[bayer_step*2] + bayer[bayer_step*2+2])*rcoeff;
-            t1 = (bayer[1] + bayer[bayer_step] + bayer[bayer_step+2] + bayer[bayer_step*2+1])*G2Y;
-            t2 = bayer[bayer_step+1]*(4*bcoeff);
-            dst[0] = (T)CV_DESCALE(t0 + t1 + t2, SHIFT+2);
-
-            t0 = (bayer[2] + bayer[bayer_step*2+2])*rcoeff;
-            t1 = (bayer[bayer_step+1] + bayer[bayer_step+3])*bcoeff;
-            t2 = bayer[bayer_step+2]*(2*G2Y);
-            dst[1] = (T)CV_DESCALE(t0 + t1 + t2, SHIFT+1);
-        }
-
-        if( bayer < bayer_end )
-        {
-            t0 = (bayer[0] + bayer[2] + bayer[bayer_step*2] + bayer[bayer_step*2+2])*rcoeff;
-            t1 = (bayer[1] + bayer[bayer_step] + bayer[bayer_step+2] + bayer[bayer_step*2+1])*G2Y;
-            t2 = bayer[bayer_step+1]*(4*bcoeff);
-            dst[0] = (T)CV_DESCALE(t0 + t1 + t2, SHIFT+2);
-            bayer++;
-            dst++;
-        }
-
-        dst0[-1] = dst0[0];
-        dst0[size.width] = dst0[size.width-1];
-
-        brow = !brow;
-        std::swap(bcoeff, rcoeff);
-        start_with_green = !start_with_green;
+        t0 = (bayer[2] + bayer[bayerStep*2+2])*redCoeff;
+        t1 = (bayer[bayerStep+1] + bayer[bayerStep+3])*blueCoeff;
+        t2 = bayer[bayerStep+2]*(2*G2Y);
+        dst[1] = (T)CV_DESCALE(t0 + t1 + t2, SHIFT+1);
     }
 
-    size = dstmat.size();
-    dst0 = (T*)dstmat.data;
+    if( bayer < bayerEnd )
+    {
+        t0 = (bayer[0] + bayer[2] + bayer[bayerStep*2] + bayer[bayerStep*2+2])*redCoeff;
+        t1 = (bayer[1] + bayer[bayerStep] + bayer[bayerStep+2] + bayer[bayerStep*2+1])*G2Y;
+        t2 = bayer[bayerStep+1]*(4*blueCoeff);
+        dst[0] = (T)CV_DESCALE(t0 + t1 + t2, SHIFT+2);
+        bayer++;
+        dst++;
+    }
+
+    dst0[-1] = dst0[0];
+    dst0[size.width] = dst0[size.width-1];
+
+    blueRow = !blueRow;
+    std::swap(blueCoeff, redCoeff);
+    startWithGreen = !startWithGreen;
+}
+
+template<typename T> void Bayer2Gray_Tail( Mat& dst, const int dstStep )
+{
+    Size size = dst.size();
+    T* dst0 = (T*)dst.data;
+
     if( size.height > 2 )
         for( int i = 0; i < size.width; i++ )
         {
-            dst0[i] = dst0[i + dst_step];
-            dst0[i + (size.height-1)*dst_step] = dst0[i + (size.height-2)*dst_step];
+            dst0[i] = dst0[i + dstStep];
+            dst0[i + (size.height-1)*dstStep] = dst0[i + (size.height-2)*dstStep];
         }
     else
         for( int i = 0; i < size.width; i++ )
         {
-            dst0[i] = dst0[i + (size.height-1)*dst_step] = 0;
+            dst0[i] = dst0[i + (size.height-1)*dstStep] = 0;
         }
 }
 
 template<typename T, class SIMDInterpolator>
-static void Bayer2RGB_( const Mat& srcmat, Mat& dstmat, int code )
+class Bayer2GrayInvoker
 {
-    SIMDInterpolator vecOp;
-    const T* bayer0 = (const T*)srcmat.data;
-    int bayer_step = (int)(srcmat.step/sizeof(T));
-    T* dst0 = (T*)dstmat.data;
-    int dst_step = (int)(dstmat.step/sizeof(T));
-    Size size = srcmat.size();
-    int blue = code == CV_BayerBG2BGR || code == CV_BayerGB2BGR ? -1 : 1;
-    int start_with_green = code == CV_BayerGB2BGR || code == CV_BayerGR2BGR;
+public:
+    Bayer2GrayInvoker( const Mat& src, Mat& dst, const int code )
+        : src_(src), dst_(dst), code_(code) { }
 
-    dst0 += dst_step + 3 + 1;
-    size.height -= 2;
-    size.width -= 2;
-
-    for( ; size.height-- > 0; bayer0 += bayer_step, dst0 += dst_step )
+    void operator()( const BlockedRange& range ) const
     {
-        int t0, t1;
-        const T* bayer = bayer0;
-        T* dst = dst0;
-        const T* bayer_end = bayer + size.width;
+        const int R2Y = 4899;
+        const int G2Y = 9617;
+        const int B2Y = 1868;
+        const int SHIFT = 14;
 
-        if( size.width <= 0 )
+        int bayerStep = (int)(src_.step/sizeof(T));
+        const T* bayer0 = (const T*)src_.data + range.begin()*bayerStep;
+        int dstStep = (int)(dst_.step/sizeof(T));
+        T* dst0 = (T*)dst_.data + (dstStep + 1) + range.begin()*dstStep;
+        int blueCoeff = B2Y, redCoeff = R2Y;
+        int startWithGreen = code_ == CV_BayerGB2GRAY || code_ == CV_BayerGR2GRAY;
+        bool blueRow = true;
+        Size size = src_.size();
+        size.height -= 2;
+        size.width -= 2;
+
+        if( code_ != CV_BayerBG2GRAY && code_ != CV_BayerGB2GRAY )
         {
-            dst[-4] = dst[-3] = dst[-2] = dst[size.width*3-1] =
-            dst[size.width*3] = dst[size.width*3+1] = 0;
-            continue;
+            blueRow = false;
+            std::swap(blueCoeff, redCoeff);
         }
 
-        if( start_with_green )
+        if( range.begin() % 2 == 1 )
         {
-            t0 = (bayer[1] + bayer[bayer_step*2+1] + 1) >> 1;
-            t1 = (bayer[bayer_step] + bayer[bayer_step+2] + 1) >> 1;
-            dst[-blue] = (T)t0;
-            dst[0] = bayer[bayer_step+1];
-            dst[blue] = (T)t1;
-            bayer++;
-            dst += 3;
+            blueRow = !blueRow;
+            std::swap(blueCoeff, redCoeff);
+            startWithGreen = !startWithGreen;
         }
 
-        int delta = vecOp.bayer2RGB(bayer, bayer_step, dst, size.width, blue);
-        bayer += delta;
-        dst += delta*3;
-
-        if( blue > 0 )
+        for( int row = range.begin(); row != range.end(); row++, bayer0 += bayerStep, dst0 += dstStep )
         {
-            for( ; bayer <= bayer_end - 2; bayer += 2, dst += 6 )
-            {
-                t0 = (bayer[0] + bayer[2] + bayer[bayer_step*2] +
-                      bayer[bayer_step*2+2] + 2) >> 2;
-                t1 = (bayer[1] + bayer[bayer_step] +
-                      bayer[bayer_step+2] + bayer[bayer_step*2+1]+2) >> 2;
-                dst[-1] = (T)t0;
-                dst[0] = (T)t1;
-                dst[1] = bayer[bayer_step+1];
-
-                t0 = (bayer[2] + bayer[bayer_step*2+2] + 1) >> 1;
-                t1 = (bayer[bayer_step+1] + bayer[bayer_step+3] + 1) >> 1;
-                dst[2] = (T)t0;
-                dst[3] = bayer[bayer_step+2];
-                dst[4] = (T)t1;
-            }
+            Bayer2Gray_Iteration<T, SIMDInterpolator>(bayer0, dst0, size, startWithGreen,
+                                                      bayerStep, redCoeff, blueCoeff, SHIFT, G2Y,
+                                                      vecOp_, blueRow);
         }
-        else
-        {
-            for( ; bayer <= bayer_end - 2; bayer += 2, dst += 6 )
-            {
-                t0 = (bayer[0] + bayer[2] + bayer[bayer_step*2] +
-                      bayer[bayer_step*2+2] + 2) >> 2;
-                t1 = (bayer[1] + bayer[bayer_step] +
-                      bayer[bayer_step+2] + bayer[bayer_step*2+1]+2) >> 2;
-                dst[1] = (T)t0;
-                dst[0] = (T)t1;
-                dst[-1] = bayer[bayer_step+1];
+    }
+private:
+    const Mat& src_;
+    Mat& dst_;
+    const int code_;
+    SIMDInterpolator vecOp_;
+};
 
-                t0 = (bayer[2] + bayer[bayer_step*2+2] + 1) >> 1;
-                t1 = (bayer[bayer_step+1] + bayer[bayer_step+3] + 1) >> 1;
-                dst[4] = (T)t0;
-                dst[3] = bayer[bayer_step+2];
-                dst[2] = (T)t1;
-            }
-        }
+template<typename T, class SIMDInterpolator>
+static void Bayer2Gray_( const Mat& src, Mat& dst, int code )
+{
+    Size size = src.size();
+    size.height -= 2;
+    const int n = size.height;
 
-        if( bayer < bayer_end )
-        {
-            t0 = (bayer[0] + bayer[2] + bayer[bayer_step*2] +
-                  bayer[bayer_step*2+2] + 2) >> 2;
-            t1 = (bayer[1] + bayer[bayer_step] +
-                  bayer[bayer_step+2] + bayer[bayer_step*2+1]+2) >> 2;
-            dst[-blue] = (T)t0;
-            dst[0] = (T)t1;
-            dst[blue] = bayer[bayer_step+1];
-            bayer++;
-            dst += 3;
-        }
-
-        dst0[-4] = dst0[-1];
-        dst0[-3] = dst0[0];
-        dst0[-2] = dst0[1];
-        dst0[size.width*3-1] = dst0[size.width*3-4];
-        dst0[size.width*3] = dst0[size.width*3-3];
-        dst0[size.width*3+1] = dst0[size.width*3-2];
-
-        blue = -blue;
-        start_with_green = !start_with_green;
+    if( n > 0 )
+    {
+        Bayer2GrayInvoker<T, SIMDInterpolator> body(src, dst, code);
+        parallel_for(BlockedRange(0,n), body);
     }
 
-    size = dstmat.size();
-    dst0 = (T*)dstmat.data;
+    Bayer2Gray_Tail<T>(dst, (int)(dst.step/sizeof(T)));
+}
+
+template<typename T, class SIMDInterpolator>
+void Bayer2RGB_Iteration( const T* bayer0, T* dst0, const Size& size, int& startWithGreen,
+                          const int bayerStep, const SIMDInterpolator& vecOp, int& blue )
+{
+    int t0, t1;
+    const T* bayer = bayer0;
+    T* dst = dst0;
+    const T* bayerEnd = bayer + size.width;
+
+    if( startWithGreen )
+    {
+        t0 = (bayer[1] + bayer[bayerStep*2+1] + 1) >> 1;
+        t1 = (bayer[bayerStep] + bayer[bayerStep+2] + 1) >> 1;
+        dst[-blue] = (T)t0;
+        dst[0] = bayer[bayerStep+1];
+        dst[blue] = (T)t1;
+        bayer++;
+        dst += 3;
+    }
+
+    int delta = vecOp.bayer2RGB(bayer, bayerStep, dst, size.width, blue);
+    bayer += delta;
+    dst += delta*3;
+
+    if( blue > 0 )
+    {
+        for( ; bayer <= bayerEnd - 2; bayer += 2, dst += 6 )
+        {
+            t0 = (bayer[0] + bayer[2] + bayer[bayerStep*2] +
+                  bayer[bayerStep*2+2] + 2) >> 2;
+            t1 = (bayer[1] + bayer[bayerStep] +
+                  bayer[bayerStep+2] + bayer[bayerStep*2+1]+2) >> 2;
+            dst[-1] = (T)t0;
+            dst[0] = (T)t1;
+            dst[1] = bayer[bayerStep+1];
+
+            t0 = (bayer[2] + bayer[bayerStep*2+2] + 1) >> 1;
+            t1 = (bayer[bayerStep+1] + bayer[bayerStep+3] + 1) >> 1;
+            dst[2] = (T)t0;
+            dst[3] = bayer[bayerStep+2];
+            dst[4] = (T)t1;
+        }
+    }
+    else
+    {
+        for( ; bayer <= bayerEnd - 2; bayer += 2, dst += 6 )
+        {
+            t0 = (bayer[0] + bayer[2] + bayer[bayerStep*2] +
+                  bayer[bayerStep*2+2] + 2) >> 2;
+            t1 = (bayer[1] + bayer[bayerStep] +
+                  bayer[bayerStep+2] + bayer[bayerStep*2+1]+2) >> 2;
+            dst[1] = (T)t0;
+            dst[0] = (T)t1;
+            dst[-1] = bayer[bayerStep+1];
+
+            t0 = (bayer[2] + bayer[bayerStep*2+2] + 1) >> 1;
+            t1 = (bayer[bayerStep+1] + bayer[bayerStep+3] + 1) >> 1;
+            dst[4] = (T)t0;
+            dst[3] = bayer[bayerStep+2];
+            dst[2] = (T)t1;
+        }
+    }
+
+    if( bayer < bayerEnd )
+    {
+        t0 = (bayer[0] + bayer[2] + bayer[bayerStep*2] +
+              bayer[bayerStep*2+2] + 2) >> 2;
+        t1 = (bayer[1] + bayer[bayerStep] +
+              bayer[bayerStep+2] + bayer[bayerStep*2+1]+2) >> 2;
+        dst[-blue] = (T)t0;
+        dst[0] = (T)t1;
+        dst[blue] = bayer[bayerStep+1];
+        bayer++;
+        dst += 3;
+    }
+
+    dst0[-4] = dst0[-1];
+    dst0[-3] = dst0[0];
+    dst0[-2] = dst0[1];
+    dst0[size.width*3-1] = dst0[size.width*3-4];
+    dst0[size.width*3] = dst0[size.width*3-3];
+    dst0[size.width*3+1] = dst0[size.width*3-2];
+
+    blue = -blue;
+    startWithGreen = !startWithGreen;
+}
+
+template<typename T>
+void Bayer2RGB_Tail( Mat& dst, const int dstStep )
+{
+    Size size = dst.size();
+    T* dst0 = (T*)dst.data;
     if( size.height > 2 )
         for( int i = 0; i < size.width*3; i++ )
         {
-            dst0[i] = dst0[i + dst_step];
-            dst0[i + (size.height-1)*dst_step] = dst0[i + (size.height-2)*dst_step];
+            dst0[i] = dst0[i + dstStep];
+            dst0[i + (size.height-1)*dstStep] = dst0[i + (size.height-2)*dstStep];
         }
     else
         for( int i = 0; i < size.width*3; i++ )
         {
-            dst0[i] = dst0[i + (size.height-1)*dst_step] = 0;
+            dst0[i] = dst0[i + (size.height-1)*dstStep] = 0;
         }
+}
+
+template<typename T, class SIMDInterpolator>
+class Bayer2RGBInvoker
+{
+public:
+    Bayer2RGBInvoker( const Mat& src, Mat& dst, const int code )
+        : src_(src), dst_(dst), code_(code) { }
+
+    void operator()( const BlockedRange& range ) const
+    {
+        int bayerStep = (int)(src_.step/sizeof(T));
+        const T* bayer0 = (const T*)src_.data + range.begin()*bayerStep;
+        int dstStep = (int)(dst_.step/sizeof(T));
+        T* dst0 = (T*)dst_.data + range.begin()*dstStep;
+        dst0 += dstStep + 3 + 1;
+        int blue = code_ == CV_BayerBG2BGR || code_ == CV_BayerGB2BGR ? -1 : 1;
+        int startWithGreen = code_ == CV_BayerGB2BGR || code_ == CV_BayerGR2BGR;
+        Size size = src_.size();
+        size.height -= 2;
+        size.width -= 2;
+
+        if( range.begin() % 2 == 1 )
+        {
+            blue = -blue;
+            startWithGreen = !startWithGreen;
+        }
+
+        for( int row = range.begin(); row != range.end(); ++row, bayer0 += bayerStep, dst0 += dstStep )
+        {
+            if( size.width <= 0 )
+            {
+                dst0[-4] = dst0[-3] = dst0[-2] = dst0[size.width*3-1] =
+                        dst0[size.width*3] = dst0[size.width*3+1] = 0;
+                continue;
+            }
+            Bayer2RGB_Iteration<T, SIMDInterpolator>(bayer0, dst0, size, startWithGreen, bayerStep, vecOp_, blue);
+        }
+    }
+private:
+    const Mat& src_;
+    Mat& dst_;
+    const int code_;
+    SIMDInterpolator vecOp_;
+};
+
+template<typename T, class SIMDInterpolator>
+static void Bayer2RGB_( const Mat& src, Mat& dst, int code )
+{
+    Size size = src.size();
+    size.height -= 2;
+    const int n = size.height;
+
+    if( size.height > 0 )
+    {
+        Bayer2RGBInvoker<T, SIMDInterpolator> body(src, dst, code);
+        parallel_for(BlockedRange(0,n), body);
+    }
+
+    Bayer2RGB_Tail<T>(dst, (int)(dst.step/sizeof(T)));
 }
 
 
