@@ -1218,28 +1218,21 @@ namespace cv
 
 static int actualScalarDepth(const double* data, int len)
 {
-    double minval = data[0];
-    double maxval = data[0];
-    for(int i = 1; i < len; ++i)
+    int i = 0, minval = INT_MAX, maxval = INT_MIN;
+    for(; i < len; ++i)
     {
-        minval = MIN(minval, data[i]);
-        maxval = MAX(maxval, data[i]);
+        int ival = cvRound(data[i]);
+        if( ival != data[i] )
+            break;
+        minval = MIN(minval, ival);
+        maxval = MAX(maxval, ival);
     }
-
-    int depth = CV_64F;
-    if(minval >= 0 && maxval <= UCHAR_MAX)
-        depth = CV_8U;
-    else if(minval >= SCHAR_MIN && maxval <= SCHAR_MAX)
-        depth = CV_8S;
-    else if(minval >= 0 && maxval <= USHRT_MAX)
-        depth = CV_16U;
-    else if(minval >= SHRT_MIN && maxval <= SHRT_MAX)
-        depth = CV_16S;
-    else if(minval >= INT_MIN && maxval <= INT_MAX)
-        depth = CV_32S;
-    else if(minval >= -FLT_MAX && maxval <= FLT_MAX)
-        depth = CV_32F;
-    return depth;
+    return i < len ? CV_64F :
+        minval >= 0 && maxval <= UCHAR_MAX ? CV_8U :
+        minval >= SCHAR_MIN && maxval <= SCHAR_MAX ? CV_8S :
+        minval >= 0 && maxval <= USHRT_MAX ? CV_16U :
+        minval >= SHRT_MIN && maxval <= SHRT_MAX ? CV_16S :
+        CV_32S;
 }
 
 static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
@@ -1264,7 +1257,9 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
 
     bool haveScalar = false, swapped12 = false;
     int depth2 = src2.depth();
-    if( src1.size != src2.size || src1.channels() != src2.channels() )
+    if( src1.size != src2.size || src1.channels() != src2.channels() ||
+        ((kind1 == _InputArray::MATX || kind2 == _InputArray::MATX) &&
+         src1.cols == 1 && src2.rows == 4) )
     {
         if( checkScalar(src1, src2.type(), kind1, kind2) )
         {
@@ -1279,10 +1274,14 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
         haveScalar = true;
         CV_Assert(src2.type() == CV_64F && (src2.rows == 4 || src2.rows == 1));
 
-        if (usrdata == 0) // hack to filter out multiply and divide
+        if (!muldiv)
+        {
             depth2 = actualScalarDepth(src2.ptr<double>(), src1.channels());
+            if( depth2 == CV_64F && (src1.depth() < CV_32S || src1.depth() == CV_32F) )
+                depth2 = CV_32F;
+        }
         else
-            depth2 = CV_64F;
+            depth2 = src1.depth() < CV_32S || src1.depth() == CV_32F ? CV_32F : CV_64F;
     }
 
     int cn = src1.channels(), depth1 = src1.depth(), wtype;
