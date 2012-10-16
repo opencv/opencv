@@ -53,8 +53,8 @@ void cv::gpu::ORB_GPU::operator()(const GpuMat&, const GpuMat&, std::vector<KeyP
 void cv::gpu::ORB_GPU::operator()(const GpuMat&, const GpuMat&, GpuMat&) { throw_nogpu(); }
 void cv::gpu::ORB_GPU::operator()(const GpuMat&, const GpuMat&, std::vector<KeyPoint>&, GpuMat&) { throw_nogpu(); }
 void cv::gpu::ORB_GPU::operator()(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&) { throw_nogpu(); }
-void cv::gpu::ORB_GPU::downloadKeyPoints(const GpuMat&, std::vector<KeyPoint>&) { throw_nogpu(); }
-void cv::gpu::ORB_GPU::convertKeyPoints(const Mat&, std::vector<KeyPoint>&) { throw_nogpu(); }
+void cv::gpu::ORB_GPU::downloadKeyPoints(GpuMat&, std::vector<KeyPoint>&) { throw_nogpu(); }
+void cv::gpu::ORB_GPU::convertKeyPoints(Mat&, std::vector<KeyPoint>&) { throw_nogpu(); }
 void cv::gpu::ORB_GPU::release() { throw_nogpu(); }
 void cv::gpu::ORB_GPU::buildScalePyramids(const GpuMat&, const GpuMat&) { throw_nogpu(); }
 void cv::gpu::ORB_GPU::computeKeyPointsPyramid() { throw_nogpu(); }
@@ -685,7 +685,7 @@ void cv::gpu::ORB_GPU::mergeKeyPoints(GpuMat& keypoints)
     }
 }
 
-void cv::gpu::ORB_GPU::downloadKeyPoints(const GpuMat &d_keypoints, std::vector<KeyPoint>& keypoints)
+void cv::gpu::ORB_GPU::downloadKeyPoints(GpuMat &d_keypoints, std::vector<KeyPoint>& keypoints)
 {
     if (d_keypoints.empty())
     {
@@ -698,7 +698,7 @@ void cv::gpu::ORB_GPU::downloadKeyPoints(const GpuMat &d_keypoints, std::vector<
     convertKeyPoints(h_keypoints, keypoints);
 }
 
-void cv::gpu::ORB_GPU::convertKeyPoints(const Mat &d_keypoints, std::vector<KeyPoint>& keypoints)
+void cv::gpu::ORB_GPU::convertKeyPoints(Mat &d_keypoints, std::vector<KeyPoint>& keypoints)
 {
     if (d_keypoints.empty())
     {

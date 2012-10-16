@@ -118,7 +118,7 @@ int main(int argc, char** argv)
 {
     try
     {
-        const std::string keys =
+         const char*  keys =
                 "{ h help ?            |      | Print help}"
                 "{ i info              |      | Print information about system and exit }"
                 "{ device              | -1   | Device on which tests will be executed (-1 means all devices) }"
@@ -127,16 +127,16 @@ int main(int argc, char** argv)
 
         CommandLineParser cmd(argc, (const char**)argv, keys);
 
-        if (cmd.has("help"))
+        if (cmd.get<bool>("help"))
         {
-            cmd.printMessage();
+            cmd.printParams();
             return 0;
         }
 
         printOsInfo();
         printCudaInfo();
 
-        if (cmd.has("info"))
+        if (cmd.get<bool>("info"))
         {
             return 0;
         }

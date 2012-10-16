@@ -161,7 +161,8 @@ PERF_TEST_P(DescSize_Norm, Features2D_BFMatch, Combine(Values(64, 128, 256), Val
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::BFMatcher_GPU d_matcher(normType);
+        cv::gpu::BruteForceMatcher_GPU_base d_matcher(
+            cv::gpu::BruteForceMatcher_GPU_base::DistType((normType -2) / 2));
 
         cv::gpu::GpuMat d_query(query);
         cv::gpu::GpuMat d_train(train);
@@ -220,7 +221,8 @@ PERF_TEST_P(DescSize_K_Norm, Features2D_BFKnnMatch, Combine(
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::BFMatcher_GPU d_matcher(normType);
+        cv::gpu::BruteForceMatcher_GPU_base d_matcher(
+            cv::gpu::BruteForceMatcher_GPU_base::DistType((normType -2) / 2));
 
         cv::gpu::GpuMat d_query(query);
         cv::gpu::GpuMat d_train(train);
@@ -273,7 +275,8 @@ PERF_TEST_P(DescSize_Norm, Features2D_BFRadiusMatch, Combine(Values(64, 128, 256
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::BFMatcher_GPU d_matcher(normType);
+        cv::gpu::BruteForceMatcher_GPU_base d_matcher(
+            cv::gpu::BruteForceMatcher_GPU_base::DistType((normType -2) / 2));
 
         cv::gpu::GpuMat d_query(query);
         cv::gpu::GpuMat d_train(train);
