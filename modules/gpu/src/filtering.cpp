@@ -922,7 +922,7 @@ Ptr<BaseRowFilter_GPU> cv::gpu::getLinearRowFilter_GPU(int srcType, int bufType,
     int gpuBorderType;
     CV_Assert(tryConvertToGpuBorderType(borderType, gpuBorderType));
 
-    CV_Assert(srcType == CV_8UC1 || srcType == CV_8UC4 || srcType == CV_16SC3 || srcType == CV_32SC1 || srcType == CV_32FC1);
+    CV_Assert(srcType == CV_8UC1 || srcType == CV_8UC3 || srcType == CV_8UC4 || srcType == CV_16SC3 || srcType == CV_32SC1 || srcType == CV_32FC1 || srcType == CV_32FC3 || srcType == CV_32FC4);
 
     CV_Assert(CV_MAT_DEPTH(bufType) == CV_32F && CV_MAT_CN(srcType) == CV_MAT_CN(bufType));
 
@@ -942,6 +942,9 @@ Ptr<BaseRowFilter_GPU> cv::gpu::getLinearRowFilter_GPU(int srcType, int bufType,
     case CV_8UC1:
         func = linearRowFilter_gpu<uchar, float>;
         break;
+    case CV_8UC3:
+        func = linearRowFilter_gpu<uchar3, float3>;
+        break;
     case CV_8UC4:
         func = linearRowFilter_gpu<uchar4, float4>;
         break;
@@ -953,6 +956,12 @@ Ptr<BaseRowFilter_GPU> cv::gpu::getLinearRowFilter_GPU(int srcType, int bufType,
         break;
     case CV_32FC1:
         func = linearRowFilter_gpu<float, float>;
+        break;
+    case CV_32FC3:
+        func = linearRowFilter_gpu<float3, float3>;
+        break;
+    case CV_32FC4:
+        func = linearRowFilter_gpu<float4, float4>;
         break;
     }
 
@@ -1034,7 +1043,7 @@ Ptr<BaseColumnFilter_GPU> cv::gpu::getLinearColumnFilter_GPU(int bufType, int ds
     int gpuBorderType;
     CV_Assert(tryConvertToGpuBorderType(borderType, gpuBorderType));
 
-    CV_Assert(dstType == CV_8UC1 || dstType == CV_8UC4 || dstType == CV_16SC3 || dstType == CV_32SC1 || dstType == CV_32FC1);
+    CV_Assert(dstType == CV_8UC1 || dstType == CV_8UC3 || dstType == CV_8UC4 || dstType == CV_16SC3 || dstType == CV_32SC1 || dstType == CV_32FC1 || dstType == CV_32FC3 || dstType == CV_32FC4);
 
     CV_Assert(CV_MAT_DEPTH(bufType) == CV_32F && CV_MAT_CN(dstType) == CV_MAT_CN(bufType));
 
@@ -1054,6 +1063,9 @@ Ptr<BaseColumnFilter_GPU> cv::gpu::getLinearColumnFilter_GPU(int bufType, int ds
     case CV_8UC1:
         func = linearColumnFilter_gpu<float, uchar>;
         break;
+    case CV_8UC3:
+        func = linearColumnFilter_gpu<float3, uchar3>;
+        break;
     case CV_8UC4:
         func = linearColumnFilter_gpu<float4, uchar4>;
         break;
@@ -1065,6 +1077,12 @@ Ptr<BaseColumnFilter_GPU> cv::gpu::getLinearColumnFilter_GPU(int bufType, int ds
         break;
     case CV_32FC1:
         func = linearColumnFilter_gpu<float, float>;
+        break;
+    case CV_32FC3:
+        func = linearColumnFilter_gpu<float3, float3>;
+        break;
+    case CV_32FC4:
+        func = linearColumnFilter_gpu<float4, float4>;
         break;
     }
 
