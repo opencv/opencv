@@ -6,11 +6,11 @@
 
 static void help(void)
 {
-	printf("\nThis program demonstrated color pyramid segmentation cvcvPyrSegmentation() which is controlled\n"
-			"by two trhesholds which can be manipulated by a trackbar. It can take an image file name or defaults to 'fruits.jpg'\n"
+    printf("\nThis program demonstrated color pyramid segmentation cvcvPyrSegmentation() which is controlled\n"
+            "by two trhesholds which can be manipulated by a trackbar. It can take an image file name or defaults to 'fruits.jpg'\n"
             "Usage :\n"
-			"./pyaramid_segmentation [image_path_filename -- Defaults to fruits.jpg]\n\n"
-			);
+            "./pyaramid_segmentation [image_path_filename -- Defaults to fruits.jpg]\n\n"
+            );
 }
 
 IplImage*  image[2] = { 0, 0 }, *image0 = 0, *image1 = 0;

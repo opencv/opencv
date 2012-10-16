@@ -567,7 +567,7 @@ void AlgorithmInfo::get(const Algorithm* algo, const char* parameter, int argTyp
         {
             CV_Assert( argType == Param::INT );
             int val = p->getter ? (algo->*f.get_int)() : *(short*)((uchar*)algo + p->offset);
-            
+
             *(int*)value = val;
         }
         else if( p->type == Param::BOOLEAN )
@@ -680,8 +680,8 @@ void AlgorithmInfo::addParam(Algorithm& algo, const char* parameter,
 {
     addParam_(algo, parameter, ParamType<int>::type, &value, readOnly,
               (Algorithm::Getter)getter, (Algorithm::Setter)setter, help);
-}    
-    
+}
+
 void AlgorithmInfo::addParam(Algorithm& algo, const char* parameter,
                              bool& value, bool readOnly,
                              int (Algorithm::*getter)(),

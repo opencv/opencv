@@ -37,7 +37,7 @@ void CannyThreshold(int, void*)
 
     /// Using Canny's output as a mask, we display our result
     dst = Scalar::all(0);
-    
+
     src.copyTo( dst, detected_edges);
     imshow( window_name, dst );
 }

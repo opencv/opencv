@@ -40,25 +40,25 @@
 
 @interface CvAbstractCamera : NSObject
 {
-	AVCaptureSession* captureSession;
-	AVCaptureConnection* videoCaptureConnection;
-	AVCaptureVideoPreviewLayer *captureVideoPreviewLayer;
-	
-	UIDeviceOrientation currentDeviceOrientation;
-	
-	BOOL cameraAvailable;
-	BOOL captureSessionLoaded;
-	BOOL running;
-	BOOL useAVCaptureVideoPreviewLayer;
-	
-	AVCaptureDevicePosition defaultAVCaptureDevicePosition;
-	AVCaptureVideoOrientation defaultAVCaptureVideoOrientation;
-	NSString *const defaultAVCaptureSessionPreset;
-	
-	int defaultFPS;
-	
-	UIView* parentView;
-    
+    AVCaptureSession* captureSession;
+    AVCaptureConnection* videoCaptureConnection;
+    AVCaptureVideoPreviewLayer *captureVideoPreviewLayer;
+
+    UIDeviceOrientation currentDeviceOrientation;
+
+    BOOL cameraAvailable;
+    BOOL captureSessionLoaded;
+    BOOL running;
+    BOOL useAVCaptureVideoPreviewLayer;
+
+    AVCaptureDevicePosition defaultAVCaptureDevicePosition;
+    AVCaptureVideoOrientation defaultAVCaptureVideoOrientation;
+    NSString *const defaultAVCaptureSessionPreset;
+
+    int defaultFPS;
+
+    UIView* parentView;
+
     int imageWidth;
     int imageHeight;
 }
@@ -108,20 +108,20 @@
 
 @interface CvVideoCamera : CvAbstractCamera<AVCaptureVideoDataOutputSampleBufferDelegate>
 {
-	AVCaptureVideoDataOutput *videoDataOutput;
-	
-	dispatch_queue_t videoDataOutputQueue;
-	CALayer *customPreviewLayer;
-	
-	BOOL grayscaleMode;
-    
+    AVCaptureVideoDataOutput *videoDataOutput;
+
+    dispatch_queue_t videoDataOutputQueue;
+    CALayer *customPreviewLayer;
+
+    BOOL grayscaleMode;
+
     BOOL recordVideo;
     AVAssetWriterInput* recordAssetWriterInput;
     AVAssetWriterInputPixelBufferAdaptor* recordPixelBufferAdaptor;
     AVAssetWriter* recordAssetWriter;
 
-	CMTime lastSampleTime;
-    
+    CMTime lastSampleTime;
+
 }
 
 @property (nonatomic, assign) id<CvVideoCameraDelegate> delegate;
@@ -153,7 +153,7 @@
 
 @interface CvPhotoCamera : CvAbstractCamera
 {
-	AVCaptureStillImageOutput *stillImageOutput;
+    AVCaptureStillImageOutput *stillImageOutput;
 }
 
 @property (nonatomic, assign) id<CvPhotoCameraDelegate> delegate;

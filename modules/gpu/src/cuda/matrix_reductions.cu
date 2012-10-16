@@ -218,29 +218,29 @@ namespace cv { namespace gpu { namespace device
                 }
 
             #if defined (__CUDA_ARCH__) && (__CUDA_ARCH__ >= 110)
-		        __shared__ bool is_last;
+                __shared__ bool is_last;
 
-		        if (tid == 0)
-		        {
-			        minval[blockIdx.y * gridDim.x + blockIdx.x] = (T)sminval[0];
+                if (tid == 0)
+                {
+                    minval[blockIdx.y * gridDim.x + blockIdx.x] = (T)sminval[0];
                     maxval[blockIdx.y * gridDim.x + blockIdx.x] = (T)smaxval[0];
-			        __threadfence();
+                    __threadfence();
 
-			        uint ticket = atomicInc(&blocks_finished, gridDim.x * gridDim.y);
-			        is_last = ticket == gridDim.x * gridDim.y - 1;
-		        }
+                    uint ticket = atomicInc(&blocks_finished, gridDim.x * gridDim.y);
+                    is_last = ticket == gridDim.x * gridDim.y - 1;
+                }
 
-		        __syncthreads();
+                __syncthreads();
 
-		        if (is_last)
-		        {
+                if (is_last)
+                {
                     uint idx = ::min(tid, gridDim.x * gridDim.y - 1);
 
                     sminval[tid] = minval[idx];
                     smaxval[tid] = maxval[idx];
                     __syncthreads();
 
-			        findMinMaxInSmem<nthreads, best_type>(sminval, smaxval, tid);
+                    findMinMaxInSmem<nthreads, best_type>(sminval, smaxval, tid);
 
                     if (tid == 0)
                     {
@@ -248,7 +248,7 @@ namespace cv { namespace gpu { namespace device
                         maxval[0] = (T)smaxval[0];
                         blocks_finished = 0;
                     }
-		        }
+                }
             #else
                 if (tid == 0)
                 {
@@ -538,24 +538,24 @@ namespace cv { namespace gpu { namespace device
                 findMinMaxLocInSmem<nthreads, best_type>(sminval, smaxval, sminloc, smaxloc, tid);
 
             #if defined (__CUDA_ARCH__) && (__CUDA_ARCH__ >= 110)
-		        __shared__ bool is_last;
+                __shared__ bool is_last;
 
-		        if (tid == 0)
-		        {
-			        minval[blockIdx.y * gridDim.x + blockIdx.x] = (T)sminval[0];
+                if (tid == 0)
+                {
+                    minval[blockIdx.y * gridDim.x + blockIdx.x] = (T)sminval[0];
                     maxval[blockIdx.y * gridDim.x + blockIdx.x] = (T)smaxval[0];
                     minloc[blockIdx.y * gridDim.x + blockIdx.x] = sminloc[0];
                     maxloc[blockIdx.y * gridDim.x + blockIdx.x] = smaxloc[0];
-			        __threadfence();
+                    __threadfence();
 
-			        uint ticket = atomicInc(&blocks_finished, gridDim.x * gridDim.y);
-			        is_last = ticket == gridDim.x * gridDim.y - 1;
-		        }
+                    uint ticket = atomicInc(&blocks_finished, gridDim.x * gridDim.y);
+                    is_last = ticket == gridDim.x * gridDim.y - 1;
+                }
 
-		        __syncthreads();
+                __syncthreads();
 
-		        if (is_last)
-		        {
+                if (is_last)
+                {
                     uint idx = ::min(tid, gridDim.x * gridDim.y - 1);
 
                     sminval[tid] = minval[idx];
@@ -564,7 +564,7 @@ namespace cv { namespace gpu { namespace device
                     smaxloc[tid] = maxloc[idx];
                     __syncthreads();
 
-			        findMinMaxLocInSmem<nthreads, best_type>(sminval, smaxval, sminloc, smaxloc, tid);
+                    findMinMaxLocInSmem<nthreads, best_type>(sminval, smaxval, sminloc, smaxloc, tid);
 
                     if (tid == 0)
                     {
@@ -574,7 +574,7 @@ namespace cv { namespace gpu { namespace device
                         maxloc[0] = smaxloc[0];
                         blocks_finished = 0;
                     }
-		        }
+                }
             #else
                 if (tid == 0)
                 {
@@ -830,46 +830,46 @@ namespace cv { namespace gpu { namespace device
                 uint y0 = blockIdx.y * blockDim.y * ctheight + threadIdx.y;
                 uint tid = threadIdx.y * blockDim.x + threadIdx.x;
 
-		        uint cnt = 0;
+                uint cnt = 0;
                 for (uint y = 0; y < ctheight && y0 + y * blockDim.y < src.rows; ++y)
                 {
                     const T* ptr = (const T*)src.ptr(y0 + y * blockDim.y);
                     for (uint x = 0; x < ctwidth && x0 + x * blockDim.x < src.cols; ++x)
-				        cnt += ptr[x0 + x * blockDim.x] != 0;
-		        }
+                        cnt += ptr[x0 + x * blockDim.x] != 0;
+                }
 
-		        scount[tid] = cnt;
-		        __syncthreads();
+                scount[tid] = cnt;
+                __syncthreads();
 
                 sumInSmem<nthreads, uint>(scount, tid);
 
             #if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ >= 110)
-		        __shared__ bool is_last;
+                __shared__ bool is_last;
 
-		        if (tid == 0)
-		        {
-			        count[blockIdx.y * gridDim.x + blockIdx.x] = scount[0];
-			        __threadfence();
+                if (tid == 0)
+                {
+                    count[blockIdx.y * gridDim.x + blockIdx.x] = scount[0];
+                    __threadfence();
 
-			        uint ticket = atomicInc(&blocks_finished, gridDim.x * gridDim.y);
-			        is_last = ticket == gridDim.x * gridDim.y - 1;
-		        }
+                    uint ticket = atomicInc(&blocks_finished, gridDim.x * gridDim.y);
+                    is_last = ticket == gridDim.x * gridDim.y - 1;
+                }
 
-		        __syncthreads();
+                __syncthreads();
 
-		        if (is_last)
-		        {
+                if (is_last)
+                {
                     scount[tid] = tid < gridDim.x * gridDim.y ? count[tid] : 0;
                     __syncthreads();
 
-			        sumInSmem<nthreads, uint>(scount, tid);
+                    sumInSmem<nthreads, uint>(scount, tid);
 
-			        if (tid == 0)
+                    if (tid == 0)
                     {
                         count[0] = scount[0];
                         blocks_finished = 0;
                     }
-		        }
+                }
             #else
                 if (tid == 0) count[blockIdx.y * gridDim.x + blockIdx.x] = scount[0];
             #endif

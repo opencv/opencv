@@ -17,7 +17,7 @@ def draw_subdiv_edge( img, edge, color ):
     dst_pt = cv.Subdiv2DEdgeDst(edge);
 
     if org_pt and dst_pt :
-    
+
         org = org_pt.pt;
         dst = dst_pt.pt;
 
@@ -28,7 +28,7 @@ def draw_subdiv_edge( img, edge, color ):
 
 
 def draw_subdiv( img, subdiv, delaunay_color, voronoi_color ):
-    
+
     for edge in subdiv.edges:
         edge_rot = cv.Subdiv2DRotateEdge( edge, 1 )
 
@@ -68,7 +68,7 @@ def draw_subdiv_facet( img, edge ):
     for i in range(count):
         assert t>4
         pt = cv.Subdiv2DEdgeOrg( t );
-        if not pt: 
+        if not pt:
             break;
         buf.append( ( cv.Round(pt.pt[0]), cv.Round(pt.pt[1]) ) );
         t = cv.Subdiv2DGetEdge( t, cv.CV_NEXT_AROUND_LEFT );
@@ -128,7 +128,7 @@ if __name__ == '__main__':
 
         if( cv.WaitKey( 100 ) >= 0 ):
             break;
-    
+
 
     cv.Set( img, bkgnd_color );
     paint_voronoi( subdiv, img );

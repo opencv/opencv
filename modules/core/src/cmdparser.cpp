@@ -53,48 +53,48 @@ void helpParser()
 
 vector<string> split_string(const string& str, const string& delimiters)
 {
-	vector<string> res;
+    vector<string> res;
 
-	string split_str = str;
-	size_t pos_delim = split_str.find(delimiters);
+    string split_str = str;
+    size_t pos_delim = split_str.find(delimiters);
 
-	while ( pos_delim != string::npos)
-	{
-		if (pos_delim == 0)
-		{
-			res.push_back("");
-			split_str.erase(0, 1);
-		}
-		else
-		{
-			res.push_back(split_str.substr(0, pos_delim));
-			split_str.erase(0, pos_delim + 1);
-		}
+    while ( pos_delim != string::npos)
+    {
+        if (pos_delim == 0)
+        {
+            res.push_back("");
+            split_str.erase(0, 1);
+        }
+        else
+        {
+            res.push_back(split_str.substr(0, pos_delim));
+            split_str.erase(0, pos_delim + 1);
+        }
 
-		pos_delim = split_str.find(delimiters);
-	}
+        pos_delim = split_str.find(delimiters);
+    }
 
-	res.push_back(split_str);
+    res.push_back(split_str);
 
-	return res;
+    return res;
 }
 
 string del_space(string name)
 {
-	while ((name.find_first_of(' ') == 0)  && (name.length() > 0))
-		name.erase(0, 1);
+    while ((name.find_first_of(' ') == 0)  && (name.length() > 0))
+        name.erase(0, 1);
 
-	while ((name.find_last_of(' ') == (name.length() - 1)) && (name.length() > 0))
-		name.erase(name.end() - 1, name.end());
+    while ((name.find_last_of(' ') == (name.length() - 1)) && (name.length() > 0))
+        name.erase(name.end() - 1, name.end());
 
-	return name;
+    return name;
 }
 
 }//namespace
 
 CommandLineParser::CommandLineParser(int argc, const char* const argv[], const char* keys)
 {
-	std::string keys_buffer;
+    std::string keys_buffer;
     std::string values_buffer;
     std::string buffer;
     std::string curName;
@@ -125,14 +125,14 @@ CommandLineParser::CommandLineParser(int argc, const char* const argv[], const c
             buffer.erase(flagPosition);
 
         paramVector = split_string(buffer, "|");
-		while (paramVector.size() < 4) paramVector.push_back("");
+        while (paramVector.size() < 4) paramVector.push_back("");
 
-		buffer = paramVector[0];
-		buffer += '|' + paramVector[1];
+        buffer = paramVector[0];
+        buffer += '|' + paramVector[1];
 
-		//if (buffer == "") CV_ERROR(CV_StsBadArg, "In CommandLineParser need set short and full name");
+        //if (buffer == "") CV_ERROR(CV_StsBadArg, "In CommandLineParser need set short and full name");
 
-		paramVector.erase(paramVector.begin(), paramVector.begin() + 2);
+        paramVector.erase(paramVector.begin(), paramVector.begin() + 2);
         data[buffer] = paramVector;
     }
 
@@ -159,14 +159,14 @@ CommandLineParser::CommandLineParser(int argc, const char* const argv[], const c
             buffer.erase(0, (buffer.find('=') + 1));
         }
 
-		values_buffer = del_space(values_buffer);
+        values_buffer = del_space(values_buffer);
 
         for(it = data.begin(); it != data.end(); it++)
         {
             keys_buffer = it->first;
             keysVector = split_string(keys_buffer, "|");
 
-			for (size_t j = 0; j < keysVector.size(); j++) keysVector[j] = del_space(keysVector[j]);
+            for (size_t j = 0; j < keysVector.size(); j++) keysVector[j] = del_space(keysVector[j]);
 
             values_buffer = it->second[0];
             if (((curName == keysVector[0]) || (curName == keysVector[1])) && hasValueThroughEq)
@@ -177,10 +177,10 @@ CommandLineParser::CommandLineParser(int argc, const char* const argv[], const c
             }
 
             if (!hasValueThroughEq && ((curName == keysVector[0]) || (curName == keysVector[1]))
-				&& (
-					values_buffer.find("false") != values_buffer.npos || 
-					values_buffer == ""
-				))
+                && (
+                    values_buffer.find("false") != values_buffer.npos ||
+                    values_buffer == ""
+                ))
             {
                 it->second[0] = "true";
                 //isFound = true;
@@ -223,12 +223,12 @@ bool CommandLineParser::has(const std::string& keys)
     for(it = data.begin(); it != data.end(); it++)
     {
         keysVector = split_string(it->first, "|");
-		for (size_t i = 0; i < keysVector.size(); i++) keysVector[i] = del_space(keysVector[i]);
+        for (size_t i = 0; i < keysVector.size(); i++) keysVector[i] = del_space(keysVector[i]);
 
         if (keysVector.size() == 1) keysVector.push_back("");
 
-		if ((del_space(keys).compare(keysVector[0]) == 0) || 
-			(del_space(keys).compare(keysVector[1]) == 0))
+        if ((del_space(keys).compare(keysVector[0]) == 0) ||
+            (del_space(keys).compare(keysVector[1]) == 0))
             return true;
     }
 
@@ -243,12 +243,12 @@ std::string CommandLineParser::getString(const std::string& keys)
     for(it = data.begin(); it != data.end(); it++)
     {
         valueVector = split_string(it->first, "|");
-		for (size_t i = 0; i < valueVector.size(); i++) valueVector[i] = del_space(valueVector[i]);
+        for (size_t i = 0; i < valueVector.size(); i++) valueVector[i] = del_space(valueVector[i]);
 
         if (valueVector.size() == 1) valueVector.push_back("");
 
-		if ((del_space(keys).compare(valueVector[0]) == 0) || 
-			(del_space(keys).compare(valueVector[1]) == 0))
+        if ((del_space(keys).compare(valueVector[0]) == 0) ||
+            (del_space(keys).compare(valueVector[1]) == 0))
             return it->second[0];
     }
     return string();
@@ -262,68 +262,68 @@ template<typename _Tp>
 
  void CommandLineParser::printParams()
  {
-	int col_p = 30;
-	int col_d = 50;
+    int col_p = 30;
+    int col_d = 50;
 
-	std::map<std::string, std::vector<std::string> >::iterator it;
-	std::vector<string> keysVector;
-	std::string buf;
-	for(it = data.begin(); it != data.end(); it++)
-	{
-		keysVector = split_string(it->first, "|");
-		for (size_t i = 0; i < keysVector.size(); i++) keysVector[i] = del_space(keysVector[i]);
+    std::map<std::string, std::vector<std::string> >::iterator it;
+    std::vector<string> keysVector;
+    std::string buf;
+    for(it = data.begin(); it != data.end(); it++)
+    {
+        keysVector = split_string(it->first, "|");
+        for (size_t i = 0; i < keysVector.size(); i++) keysVector[i] = del_space(keysVector[i]);
 
-		cout << "  ";
-		buf = "";
-		if (keysVector[0] != "")
-		{
-			buf = "-" + keysVector[0];
-			if (keysVector[1] != "") buf += ", --" + keysVector[1];
-		}
-		else if (keysVector[1] != "") buf += "--" + keysVector[1];
-		if (del_space(it->second[0]) != "") buf += "=[" + del_space(it->second[0]) + "]";
+        cout << "  ";
+        buf = "";
+        if (keysVector[0] != "")
+        {
+            buf = "-" + keysVector[0];
+            if (keysVector[1] != "") buf += ", --" + keysVector[1];
+        }
+        else if (keysVector[1] != "") buf += "--" + keysVector[1];
+        if (del_space(it->second[0]) != "") buf += "=[" + del_space(it->second[0]) + "]";
 
-		cout << setw(col_p-2) << left << buf;
+        cout << setw(col_p-2) << left << buf;
 
-		if ((int)buf.length() > col_p-2) 
-		{
-			cout << endl << "  ";
-			cout << setw(col_p-2) << left << " ";
-		}
+        if ((int)buf.length() > col_p-2)
+        {
+            cout << endl << "  ";
+            cout << setw(col_p-2) << left << " ";
+        }
 
-		buf = "";
-		if (del_space(it->second[1]) != "") buf += del_space(it->second[1]);
+        buf = "";
+        if (del_space(it->second[1]) != "") buf += del_space(it->second[1]);
 
-		for(;;)
-		{
-			bool tr = ((int)buf.length() > col_d-2) ? true: false;
-			std::string::size_type pos = 0;
+        for(;;)
+        {
+            bool tr = ((int)buf.length() > col_d-2) ? true: false;
+            std::string::size_type pos = 0;
 
-			if (tr)
-			{
-				pos = buf.find_first_of(' ');
-				for(;;)
-				{
-					if (buf.find_first_of(' ', pos + 1 ) < (std::string::size_type)(col_d-2) &&
+            if (tr)
+            {
+                pos = buf.find_first_of(' ');
+                for(;;)
+                {
+                    if (buf.find_first_of(' ', pos + 1 ) < (std::string::size_type)(col_d-2) &&
                         buf.find_first_of(' ', pos + 1 ) != std::string::npos)
-						pos = buf.find_first_of(' ', pos + 1);
-					else
-						break;
-				}
-				pos++;
-				cout << setw(col_d-2) << left << buf.substr(0, pos) << endl;
-			}
-			else
-			{
-				cout << setw(col_d-2) << left << buf<< endl;
-				break;
-			}
+                        pos = buf.find_first_of(' ', pos + 1);
+                    else
+                        break;
+                }
+                pos++;
+                cout << setw(col_d-2) << left << buf.substr(0, pos) << endl;
+            }
+            else
+            {
+                cout << setw(col_d-2) << left << buf<< endl;
+                break;
+            }
 
-			buf.erase(0, pos);
-			cout << "  ";
-			cout << setw(col_p-2) << left << " ";
-		}
-	}
+            buf.erase(0, pos);
+            cout << "  ";
+            cout << setw(col_p-2) << left << " ";
+        }
+    }
  }
 
 template<>
@@ -331,9 +331,9 @@ bool CommandLineParser::get<bool>(const std::string& name, bool space_delete)
 {
     std::string str_buf = getString(name);
 
-	if (space_delete && str_buf != "")
+    if (space_delete && str_buf != "")
     {
-		str_buf = del_space(str_buf);
+        str_buf = del_space(str_buf);
     }
 
     if (str_buf == "true")
@@ -346,8 +346,8 @@ std::string CommandLineParser::analyzeValue<std::string>(const std::string& str,
 {
     if (space_delete)
     {
-		return del_space(str);
-    } 
+        return del_space(str);
+    }
     return str;
 }
 

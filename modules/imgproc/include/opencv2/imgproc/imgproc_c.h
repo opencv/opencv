@@ -67,7 +67,7 @@ CVAPI(void)  cvMultiplyAcc( const CvArr* image1, const CvArr* image2, CvArr* acc
 /* Adds image to accumulator with weights: acc = acc*(1-alpha) + image*alpha */
 CVAPI(void)  cvRunningAvg( const CvArr* image, CvArr* acc, double alpha,
                           const CvArr* mask CV_DEFAULT(NULL) );
-    
+
 /****************************************************************************************\
 *                                    Image Processing                                    *
 \****************************************************************************************/

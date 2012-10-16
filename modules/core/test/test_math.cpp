@@ -33,11 +33,11 @@ protected:
 Core_MathTest::Core_MathTest()
 {
     optional_mask = false;
-    
+
     test_array[INPUT].push_back(NULL);
     test_array[OUTPUT].push_back(NULL);
     test_array[REF_OUTPUT].push_back(NULL);
-    
+
     test_nd = false;
 }
 
@@ -57,7 +57,7 @@ void Core_MathTest::get_test_array_types_and_sizes( int test_case_idx,
     int cn = cvtest::randInt(rng) % 4 + 1, type = CV_MAKETYPE(depth, cn);
     size_t i, j;
     Base::get_test_array_types_and_sizes( test_case_idx, sizes, types );
-    
+
     for( i = 0; i < test_array.size(); i++ )
     {
         size_t count = test_array[i].size();
@@ -103,7 +103,7 @@ void Core_PowTest::get_test_array_types_and_sizes( int test_case_idx,
     size_t i, j;
     Base::get_test_array_types_and_sizes( test_case_idx, sizes, types );
     depth += depth == CV_8S;
-    
+
     if( depth < CV_32F || cvtest::randInt(rng)%8 == 0 )
         // integer power
         power = (int)(cvtest::randInt(rng)%21 - 10);
@@ -112,7 +112,7 @@ void Core_PowTest::get_test_array_types_and_sizes( int test_case_idx,
         i = cvtest::randInt(rng)%17;
         power = i == 16 ? 1./3 : i == 15 ? 0.5 : i == 14 ? -0.5 : cvtest::randReal(rng)*10 - 5;
     }
-    
+
     for( i = 0; i < test_array.size(); i++ )
     {
         size_t count = test_array[i].size();
@@ -143,7 +143,7 @@ void Core_PowTest::get_minmax_bounds( int /*i*/, int /*j*/, int type, Scalar& lo
         double u1 = pow(mval,1./power)*2;
         u = MIN(u,u1);
     }
-    
+
     l = power == cvRound(power) ? -u : FLT_EPSILON;
     low = Scalar::all(l);
     high = Scalar::all(u);
@@ -157,7 +157,7 @@ void Core_PowTest::run_func()
         if( fabs(power-1./3) <= DBL_EPSILON && test_mat[INPUT][0].depth() == CV_32F )
         {
             Mat a = test_mat[INPUT][0], b = test_mat[OUTPUT][0];
-            
+
             a = a.reshape(1);
             b = b.reshape(1);
             for( int i = 0; i < a.rows; i++ )
@@ -214,17 +214,17 @@ void Core_PowTest::prepare_to_validation( int /*test_case_idx*/ )
 {
     const Mat& a = test_mat[INPUT][0];
     Mat& b = test_mat[REF_OUTPUT][0];
-    
+
     int depth = a.depth();
     int ncols = a.cols*a.channels();
     int ipower = cvRound(power), apower = abs(ipower);
     int i, j;
-    
+
     for( i = 0; i < a.rows; i++ )
     {
         const uchar* a_data = a.ptr(i);
         uchar* b_data = b.ptr(i);
-        
+
         switch( depth )
         {
             case CV_8U:
@@ -379,13 +379,13 @@ Core_MatrixTest::Core_MatrixTest( int in_count, int out_count,
     int i;
     for( i = 0; i < in_count; i++ )
         test_array[INPUT].push_back(NULL);
-    
+
     for( i = 0; i < out_count; i++ )
     {
         test_array[OUTPUT].push_back(NULL);
         test_array[REF_OUTPUT].push_back(NULL);
     }
-    
+
     element_wise_relative_error = false;
 }
 
@@ -398,20 +398,20 @@ void Core_MatrixTest::get_test_array_types_and_sizes( int test_case_idx,
     int depth = cvtest::randInt(rng) % (allow_int ? CV_64F+1 : 2);
     int cn = cvtest::randInt(rng) % max_cn + 1;
     size_t i, j;
-    
+
     if( allow_int )
         depth += depth == CV_8S;
     else
         depth += CV_32F;
-    
+
     Base::get_test_array_types_and_sizes( test_case_idx, sizes, types );
-    
+
     for( i = 0; i < test_array.size(); i++ )
     {
         size_t count = test_array[i].size();
         int flag = (i == OUTPUT || i == REF_OUTPUT) && scalar_output;
         int type = !flag ? CV_MAKETYPE(depth, cn) : CV_64FC1;
-        
+
         for( j = 0; j < count; j++ )
         {
             types[i][j] = type;
@@ -461,7 +461,7 @@ void Core_TraceTest::prepare_to_validation( int )
     Mat diag(count, 1, mat.type(), mat.data, mat.step + mat.elemSize());
     Scalar r = cvtest::mean(diag);
     r *= (double)count;
-    
+
     test_mat[REF_OUTPUT][0].at<Scalar>(0,0) = r;
 }
 
@@ -504,7 +504,7 @@ public:
 protected:
     void get_test_array_types_and_sizes( int test_case_idx,
                                         vector<vector<Size> >& sizes,
-                                        vector<vector<int> >& types );    
+                                        vector<vector<int> >& types );
     void run_func();
     void prepare_to_validation( int test_case_idx );
 };
@@ -523,16 +523,16 @@ void Core_CrossProductTest::get_test_array_types_and_sizes( int,
     int depth = cvtest::randInt(rng) % 2 + CV_32F;
     int cn = cvtest::randInt(rng) & 1 ? 3 : 1, type = CV_MAKETYPE(depth, cn);
     CvSize sz;
-    
+
     types[INPUT][0] = types[INPUT][1] = types[OUTPUT][0] = types[REF_OUTPUT][0] = type;
-    
+
     if( cn == 3 )
         sz = Size(1,1);
     else if( cvtest::randInt(rng) & 1 )
         sz = Size(3,1);
     else
         sz = Size(1,3);
-    
+
     sizes[INPUT][0] = sizes[INPUT][1] = sizes[OUTPUT][0] = sizes[REF_OUTPUT][0] = sz;
 }
 
@@ -546,13 +546,13 @@ void Core_CrossProductTest::run_func()
 void Core_CrossProductTest::prepare_to_validation( int )
 {
     CvScalar a = {{0,0,0,0}}, b = {{0,0,0,0}}, c = {{0,0,0,0}};
-    
+
     if( test_mat[INPUT][0].rows > 1 )
     {
         a.val[0] = cvGetReal2D( test_array[INPUT][0], 0, 0 );
         a.val[1] = cvGetReal2D( test_array[INPUT][0], 1, 0 );
         a.val[2] = cvGetReal2D( test_array[INPUT][0], 2, 0 );
-        
+
         b.val[0] = cvGetReal2D( test_array[INPUT][1], 0, 0 );
         b.val[1] = cvGetReal2D( test_array[INPUT][1], 1, 0 );
         b.val[2] = cvGetReal2D( test_array[INPUT][1], 2, 0 );
@@ -562,7 +562,7 @@ void Core_CrossProductTest::prepare_to_validation( int )
         a.val[0] = cvGetReal1D( test_array[INPUT][0], 0 );
         a.val[1] = cvGetReal1D( test_array[INPUT][0], 1 );
         a.val[2] = cvGetReal1D( test_array[INPUT][0], 2 );
-        
+
         b.val[0] = cvGetReal1D( test_array[INPUT][1], 0 );
         b.val[1] = cvGetReal1D( test_array[INPUT][1], 1 );
         b.val[2] = cvGetReal1D( test_array[INPUT][1], 2 );
@@ -572,11 +572,11 @@ void Core_CrossProductTest::prepare_to_validation( int )
         a = cvGet1D( test_array[INPUT][0], 0 );
         b = cvGet1D( test_array[INPUT][1], 0 );
     }
-    
+
     c.val[2] = a.val[0]*b.val[1] - a.val[1]*b.val[0];
     c.val[1] = -a.val[0]*b.val[2] + a.val[2]*b.val[0];
     c.val[0] = a.val[1]*b.val[2] - a.val[2]*b.val[1];
-    
+
     if( test_mat[REF_OUTPUT][0].rows > 1 )
     {
         cvSetReal2D( test_array[REF_OUTPUT][0], 0, 0, c.val[0] );
@@ -631,9 +631,9 @@ void Core_GEMMTest::get_test_array_types_and_sizes( int test_case_idx, vector<ve
     sizes[INPUT][0] = sizeA;
     sizes[INPUT][2] = sizes[INPUT][3] = Size(1,1);
     types[INPUT][2] = types[INPUT][3] &= ~CV_MAT_CN_MASK;
-    
+
     tabc_flag = cvtest::randInt(rng) & 7;
-    
+
     switch( tabc_flag & (CV_GEMM_A_T|CV_GEMM_B_T) )
     {
         case 0:
@@ -657,9 +657,9 @@ void Core_GEMMTest::get_test_array_types_and_sizes( int test_case_idx, vector<ve
             sizes[OUTPUT][0].width = sizes[INPUT][1].height;
             break;
     }
-    
+
     sizes[REF_OUTPUT][0] = sizes[OUTPUT][0];
-    
+
     if( cvtest::randInt(rng) & 1 )
         sizes[INPUT][4] = Size(0,0);
     else if( !(tabc_flag & CV_GEMM_C_T) )
@@ -735,14 +735,14 @@ void Core_MulTransposedTest::get_test_array_types_and_sizes( int test_case_idx, 
     int bits = cvtest::randInt(rng);
     int src_type = cvtest::randInt(rng) % 5;
     int dst_type = cvtest::randInt(rng) % 2;
-    
+
     src_type = src_type == 0 ? CV_8U : src_type == 1 ? CV_16U : src_type == 2 ? CV_16S :
     src_type == 3 ? CV_32F : CV_64F;
     dst_type = dst_type == 0 ? CV_32F : CV_64F;
     dst_type = MAX( dst_type, src_type );
-    
+
     Core_MatrixTest::get_test_array_types_and_sizes( test_case_idx, sizes, types );
-    
+
     if( bits & 1 )
         sizes[INPUT][1] = Size(0,0);
     else
@@ -753,11 +753,11 @@ void Core_MulTransposedTest::get_test_array_types_and_sizes( int test_case_idx, 
         if( bits & 4 )
             sizes[INPUT][1].width = 1;
     }
-    
+
     sizes[TEMP][0] = sizes[INPUT][0];
     types[INPUT][0] = src_type;
     types[OUTPUT][0] = types[REF_OUTPUT][0] = types[INPUT][1] = types[TEMP][0] = dst_type;
-    
+
     order = (bits & 8) != 0;
     sizes[OUTPUT][0].width = sizes[OUTPUT][0].height = order == 0 ?
     sizes[INPUT][0].height : sizes[INPUT][0].width;
@@ -795,7 +795,7 @@ void Core_MulTransposedTest::prepare_to_validation( int )
     }
     else
         src.convertTo(temp, temp.type());
-    
+
     cvtest::gemm( temp, temp, 1., Mat(), 0, test_mat[REF_OUTPUT][0], order == 0 ? GEMM_2_T : GEMM_1_T );
 }
 
@@ -813,7 +813,7 @@ protected:
     int prepare_test_case( int test_case_idx );
     void run_func();
     void prepare_to_validation( int test_case_idx );
-    
+
     double scale;
     bool diagMtx;
 };
@@ -830,18 +830,18 @@ void Core_TransformTest::get_test_array_types_and_sizes( int test_case_idx, vect
     int bits = cvtest::randInt(rng);
     int depth, dst_cn, mat_cols, mattype;
     Base::get_test_array_types_and_sizes( test_case_idx, sizes, types );
-    
+
     mat_cols = CV_MAT_CN(types[INPUT][0]);
     depth = CV_MAT_DEPTH(types[INPUT][0]);
     dst_cn = cvtest::randInt(rng) % 4 + 1;
     types[OUTPUT][0] = types[REF_OUTPUT][0] = CV_MAKETYPE(depth, dst_cn);
-    
+
     mattype = depth < CV_32S ? CV_32F : depth == CV_64F ? CV_64F : bits & 1 ? CV_32F : CV_64F;
     types[INPUT][1] = mattype;
     types[INPUT][2] = CV_MAKETYPE(mattype, dst_cn);
-    
+
     scale = 1./((cvtest::randInt(rng)%4)*50+1);
-    
+
     if( bits & 2 )
     {
         sizes[INPUT][2] = Size(0,0);
@@ -858,7 +858,7 @@ void Core_TransformTest::get_test_array_types_and_sizes( int test_case_idx, vect
         types[INPUT][2] &= ~CV_MAT_CN_MASK;
     }
     diagMtx = (bits & 16) != 0;
-    
+
     sizes[INPUT][1] = Size(mat_cols,dst_cn);
 }
 
@@ -898,7 +898,7 @@ void Core_TransformTest::prepare_to_validation( int )
 {
     Mat transmat = test_mat[INPUT][1];
     Mat shift = test_mat[INPUT][2];
-    
+
     cvtest::transform( test_mat[INPUT][0], test_mat[REF_OUTPUT][0], transmat, shift );
 }
 
@@ -928,11 +928,11 @@ void Core_PerspectiveTransformTest::get_test_array_types_and_sizes( int test_cas
     int bits = cvtest::randInt(rng);
     int depth, cn, mattype;
     Core_MatrixTest::get_test_array_types_and_sizes( test_case_idx, sizes, types );
-    
+
     cn = CV_MAT_CN(types[INPUT][0]) + 1;
     depth = CV_MAT_DEPTH(types[INPUT][0]);
     types[INPUT][0] = types[OUTPUT][0] = types[REF_OUTPUT][0] = CV_MAKETYPE(depth, cn);
-    
+
     mattype = depth == CV_64F ? CV_64F : bits & 1 ? CV_32F : CV_64F;
     types[INPUT][1] = mattype;
     sizes[INPUT][1] = Size(cn + 1, cn + 1);
@@ -960,15 +960,15 @@ static void cvTsPerspectiveTransform( const CvArr* _src, CvArr* _dst, const CvMa
     int cn, depth, mat_depth;
     CvMat astub, bstub, *a, *b;
     double mat[16];
-    
+
     a = cvGetMat( _src, &astub, 0, 0 );
     b = cvGetMat( _dst, &bstub, 0, 0 );
-    
+
     cn = CV_MAT_CN(a->type);
     depth = CV_MAT_DEPTH(a->type);
     mat_depth = CV_MAT_DEPTH(transmat->type);
     cols = transmat->cols;
-    
+
     // prepare cn x (cn + 1) transform matrix
     if( mat_depth == CV_32F )
     {
@@ -983,16 +983,16 @@ static void cvTsPerspectiveTransform( const CvArr* _src, CvArr* _dst, const CvMa
             for( j = 0; j < cols; j++ )
                 mat[i*cols + j] = ((double*)(transmat->data.ptr + transmat->step*i))[j];
     }
-    
+
     // transform data
     cols = a->cols * cn;
     vector<double> buf(cols);
-    
+
     for( i = 0; i < a->rows; i++ )
     {
         uchar* src = a->data.ptr + i*a->step;
         uchar* dst = b->data.ptr + i*b->step;
-        
+
         switch( depth )
         {
             case CV_32F:
@@ -1006,7 +1006,7 @@ static void cvTsPerspectiveTransform( const CvArr* _src, CvArr* _dst, const CvMa
             default:
                 assert(0);
         }
-        
+
         switch( cn )
         {
             case 2:
@@ -1036,7 +1036,7 @@ static void cvTsPerspectiveTransform( const CvArr* _src, CvArr* _dst, const CvMa
             default:
                 assert(0);
         }
-        
+
         switch( depth )
         {
             case CV_32F:
@@ -1088,12 +1088,12 @@ void Core_MahalanobisTest::get_test_array_types_and_sizes( int test_case_idx, ve
 {
     RNG& rng = ts->get_rng();
     Core_MatrixTest::get_test_array_types_and_sizes( test_case_idx, sizes, types );
-    
+
     if( cvtest::randInt(rng) & 1 )
         sizes[INPUT][0].width = sizes[INPUT][1].width = 1;
     else
         sizes[INPUT][0].height = sizes[INPUT][1].height = 1;
-    
+
     sizes[TEMP][0] = sizes[TEMP][1] = sizes[INPUT][0];
     sizes[INPUT][2].width = sizes[INPUT][2].height = sizes[INPUT][0].width + sizes[INPUT][0].height - 1;
     sizes[TEMP][2] = sizes[INPUT][2];
@@ -1109,7 +1109,7 @@ int Core_MahalanobisTest::prepare_test_case( int test_case_idx )
         cvtest::gemm( test_mat[INPUT][2], test_mat[INPUT][2], 1., Mat(), 0., test_mat[TEMP][2], GEMM_2_T );
         cvtest::copy( test_mat[TEMP][2], test_mat[INPUT][2] );
     }
-    
+
     return code;
 }
 
@@ -1130,7 +1130,7 @@ void Core_MahalanobisTest::prepare_to_validation( int )
     else
         cvtest::gemm( test_mat[INPUT][2], test_mat[TEMP][0], 1.,
                  Mat(), 0., test_mat[TEMP][1], 0 );
-    
+
     test_mat[REF_OUTPUT][0].at<Scalar>(0,0) = cvRealScalar(sqrt(cvtest::crossCorr(test_mat[TEMP][0], test_mat[TEMP][1])));
 }
 
@@ -1170,13 +1170,13 @@ void Core_CovarMatrixTest::get_test_array_types_and_sizes( int test_case_idx, ve
     int bits = cvtest::randInt(rng);
     int i, single_matrix;
     Core_MatrixTest::get_test_array_types_and_sizes( test_case_idx, sizes, types );
-    
+
     flags = bits & (CV_COVAR_NORMAL | CV_COVAR_USE_AVG | CV_COVAR_SCALE | CV_COVAR_ROWS );
     single_matrix = flags & CV_COVAR_ROWS;
     t_flag = (bits & 256) != 0;
-    
+
     const int min_count = 2;
-    
+
     if( !t_flag )
     {
         len = sizes[INPUT][0].width;
@@ -1191,21 +1191,21 @@ void Core_CovarMatrixTest::get_test_array_types_and_sizes( int test_case_idx, ve
         count = MAX(count, min_count);
         sizes[INPUT][0] = Size(count, len);
     }
-    
+
     if( single_matrix && t_flag )
         flags = (flags & ~CV_COVAR_ROWS) | CV_COVAR_COLS;
-    
+
     if( CV_MAT_DEPTH(types[INPUT][0]) == CV_32S )
         types[INPUT][0] = (types[INPUT][0] & ~CV_MAT_DEPTH_MASK) | CV_32F;
-    
+
     sizes[OUTPUT][0] = sizes[REF_OUTPUT][0] = flags & CV_COVAR_NORMAL ? Size(len,len) : Size(count,count);
     sizes[INPUT_OUTPUT][0] = sizes[REF_INPUT_OUTPUT][0] = !t_flag ? Size(len,1) : Size(1,len);
     sizes[TEMP][0] = sizes[INPUT][0];
-    
+
     types[INPUT_OUTPUT][0] = types[REF_INPUT_OUTPUT][0] =
     types[OUTPUT][0] = types[REF_OUTPUT][0] = types[TEMP][0] =
     CV_MAT_DEPTH(types[INPUT][0]) == CV_64F || (bits & 512) ? CV_64F : CV_32F;
-    
+
     are_images = (bits & 1024) != 0;
     for( i = 0; i < (single_matrix ? 1 : count); i++ )
         temp_hdrs.push_back(NULL);
@@ -1220,7 +1220,7 @@ int Core_CovarMatrixTest::prepare_test_case( int test_case_idx )
         int i;
         int single_matrix = flags & (CV_COVAR_ROWS|CV_COVAR_COLS);
         int hdr_size = are_images ? sizeof(IplImage) : sizeof(CvMat);
-        
+
         hdr_data.resize(count*hdr_size);
         uchar* _hdr_data = &hdr_data[0];
         if( single_matrix )
@@ -1236,21 +1236,21 @@ int Core_CovarMatrixTest::prepare_test_case( int test_case_idx )
             {
                 Mat part;
                 void* ptr = _hdr_data + i*hdr_size;
-                
+
                 if( !t_flag )
                     part = test_mat[INPUT][0].row(i);
                 else
                     part = test_mat[INPUT][0].col(i);
-                
+
                 if( !are_images )
                     *((CvMat*)ptr) = part;
                 else
                     *((IplImage*)ptr) = part;
-                
+
                 temp_hdrs[i] = ptr;
             }
     }
-    
+
     return code;
 }
 
@@ -1266,14 +1266,14 @@ void Core_CovarMatrixTest::prepare_to_validation( int )
 {
     Mat& avg = test_mat[REF_INPUT_OUTPUT][0];
     double scale = 1.;
-    
+
     if( !(flags & CV_COVAR_USE_AVG) )
     {
         Mat hdrs0 = cvarrToMat(temp_hdrs[0]);
-        
+
         int i;
         avg = Scalar::all(0);
-        
+
         for( i = 0; i < count; i++ )
         {
             Mat vec;
@@ -1283,22 +1283,22 @@ void Core_CovarMatrixTest::prepare_to_validation( int )
                 vec = hdrs0.col(i);
             else
                 vec = cvarrToMat(temp_hdrs[i]);
-            
+
             cvtest::add(avg, 1, vec, 1, Scalar::all(0), avg, avg.type());
         }
-        
+
         cvtest::add(avg, 1./count, avg, 0., Scalar::all(0), avg, avg.type());
     }
-    
+
     if( flags & CV_COVAR_SCALE )
     {
         scale = 1./count;
     }
-    
+
     Mat& temp0 = test_mat[TEMP][0];
     cv::repeat( avg, temp0.rows/avg.rows, temp0.cols/avg.cols, temp0 );
     cvtest::add( test_mat[INPUT][0], 1, temp0, -1, Scalar::all(0), temp0, temp0.type());
-    
+
     cvtest::gemm( temp0, temp0, scale, Mat(), 0., test_mat[REF_OUTPUT][0],
              t_flag ^ ((flags & CV_COVAR_NORMAL) != 0) ? CV_GEMM_A_T : CV_GEMM_B_T );
     temp_hdrs.clear();
@@ -1310,12 +1310,12 @@ static void cvTsFloodWithZeros( Mat& mat, RNG& rng )
     int k, total = mat.rows*mat.cols, type = mat.type();
     int zero_total = cvtest::randInt(rng) % total;
     CV_Assert( type == CV_32FC1 || type == CV_64FC1 );
-    
+
     for( k = 0; k < zero_total; k++ )
     {
         int i = cvtest::randInt(rng) % mat.rows;
         int j = cvtest::randInt(rng) % mat.cols;
-        
+
         if( type == CV_32FC1 )
             mat.at<float>(i,j) = 0.f;
         else
@@ -1352,7 +1352,7 @@ Core_DetTest::Core_DetTest() : Core_MatrixTest( 1, 1, false, true, 1 )
 void Core_DetTest::get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types )
 {
     Base::get_test_array_types_and_sizes( test_case_idx, sizes, types );
-    
+
     sizes[INPUT][0].width = sizes[INPUT][0].height = sizes[INPUT][0].height;
     sizes[TEMP][0] = sizes[INPUT][0];
     types[TEMP][0] = CV_64FC1;
@@ -1377,7 +1377,7 @@ int Core_DetTest::prepare_test_case( int test_case_idx )
     int code = Core_MatrixTest::prepare_test_case( test_case_idx );
     if( code > 0 )
         cvTsFloodWithZeros( test_mat[INPUT][0], ts->get_rng() );
-    
+
     return code;
 }
 
@@ -1399,13 +1399,13 @@ static double cvTsLU( CvMat* a, CvMat* b=NULL, CvMat* x=NULL, int* rank=0 )
     double t, det = 1.;
     assert( CV_MAT_TYPE(a->type) == CV_64FC1 &&
            (!b || CV_ARE_TYPES_EQ(a,b)) && (!x || CV_ARE_TYPES_EQ(a,x)));
-    
+
     for( i = 0; i < Nm; i++ )
     {
         double max_val = fabs(a0[i*step + i]);
         double *a1, *a2, *b1 = 0, *b2 = 0;
         k = i;
-        
+
         for( j = i+1; j < N; j++ )
         {
             t = fabs(a0[j*step + i]);
@@ -1415,46 +1415,46 @@ static double cvTsLU( CvMat* a, CvMat* b=NULL, CvMat* x=NULL, int* rank=0 )
                 k = j;
             }
         }
-        
+
         if( k != i )
         {
             for( j = i; j < N1; j++ )
                 CV_SWAP( a0[i*step + j], a0[k*step + j], t );
-            
+
             for( j = 0; j < M; j++ )
                 CV_SWAP( b0[i*b_step + j], b0[k*b_step + j], t );
             det = -det;
         }
-        
+
         if( max_val == 0 )
         {
             if( rank )
                 *rank = i;
             return 0.;
         }
-        
+
         a1 = a0 + i*step;
         a2 = a1 + step;
         b1 = b0 + i*b_step;
         b2 = b1 + b_step;
-        
+
         for( j = i+1; j < N; j++, a2 += step, b2 += b_step )
         {
             t = a2[i]/a1[i];
             for( k = i+1; k < N1; k++ )
                 a2[k] -= t*a1[k];
-            
+
             for( k = 0; k < M; k++ )
                 b2[k] -= t*b1[k];
         }
-        
+
         det *= a1[i];
     }
-    
+
     if( x )
     {
         assert( b );
-        
+
         for( i = N-1; i >= 0; i-- )
         {
             double* a1 = a0 + i*step;
@@ -1468,7 +1468,7 @@ static double cvTsLU( CvMat* a, CvMat* b=NULL, CvMat* x=NULL, int* rank=0 )
             }
         }
     }
-    
+
     if( rank )
         *rank = i;
     return det;
@@ -1518,7 +1518,7 @@ void Core_InvertTest::get_test_array_types_and_sizes( int test_case_idx, vector<
     int bits = cvtest::randInt(rng);
     Base::get_test_array_types_and_sizes( test_case_idx, sizes, types );
     int min_size = MIN( sizes[INPUT][0].width, sizes[INPUT][0].height );
-    
+
     if( (bits & 3) == 0 )
     {
         method = CV_SVD;
@@ -1534,7 +1534,7 @@ void Core_InvertTest::get_test_array_types_and_sizes( int test_case_idx, vector<
         method = CV_LU;
         sizes[INPUT][0] = Size(min_size, min_size);
     }
-    
+
     sizes[TEMP][0].width = sizes[INPUT][0].height;
     sizes[TEMP][0].height = sizes[INPUT][0].width;
     sizes[TEMP][1] = sizes[INPUT][0];
@@ -1555,7 +1555,7 @@ int Core_InvertTest::prepare_test_case( int test_case_idx )
     if( code > 0 )
     {
         cvTsFloodWithZeros( test_mat[INPUT][0], ts->get_rng() );
-        
+
         if( method == CV_CHOLESKY )
         {
             cvtest::gemm( test_mat[INPUT][0], test_mat[INPUT][0], 1.,
@@ -1563,7 +1563,7 @@ int Core_InvertTest::prepare_test_case( int test_case_idx )
             cvtest::copy( test_mat[TEMP][0], test_mat[INPUT][0] );
         }
     }
-    
+
     return code;
 }
 
@@ -1588,9 +1588,9 @@ static double cvTsSVDet( CvMat* mat, double* ratio )
     int i, nm = MIN( mat->rows, mat->cols );
     CvMat* w = cvCreateMat( nm, 1, type );
     double det = 1.;
-    
+
     cvSVD( mat, w, 0, 0, 0 );
-    
+
     if( type == CV_32FC1 )
     {
         for( i = 0; i < nm; i++ )
@@ -1603,7 +1603,7 @@ static double cvTsSVDet( CvMat* mat, double* ratio )
             det *= w->data.db[i];
         *ratio = w->data.db[nm-1] < FLT_EPSILON ? 0 : w->data.db[nm-1]/w->data.db[0];
     }
-    
+
     cvReleaseMat( &w );
     return det;
 }
@@ -1618,9 +1618,9 @@ void Core_InvertTest::prepare_to_validation( int )
     CvMat _input = input;
     double ratio = 0, det = cvTsSVDet( &_input, &ratio );
     double threshold = (input.depth() == CV_32F ? FLT_EPSILON : DBL_EPSILON)*1000;
-    
+
     cvtest::convert( input, temp1, temp1.type() );
-    
+
     if( det < threshold ||
        ((method == CV_LU || method == CV_CHOLESKY) && (result == 0 || ratio < threshold)) ||
        ((method == CV_SVD || method == CV_SVD_SYM) && result < threshold) )
@@ -1629,12 +1629,12 @@ void Core_InvertTest::prepare_to_validation( int )
         dst0 = Scalar::all(0);
         return;
     }
-    
+
     if( input.rows >= input.cols )
         cvtest::gemm( temp0, input, 1., Mat(), 0., dst, 0 );
     else
         cvtest::gemm( input, temp0, 1., Mat(), 0., dst, 0 );
-    
+
     cv::setIdentity( dst0, Scalar::all(1) );
 }
 
@@ -1678,7 +1678,7 @@ void Core_SolveTest::get_test_array_types_and_sizes( int test_case_idx, vector<v
     Base::get_test_array_types_and_sizes( test_case_idx, sizes, types );
     sizes[INPUT][0] = in_sz;
     int min_size = MIN( sizes[INPUT][0].width, sizes[INPUT][0].height );
-    
+
     if( (bits & 3) == 0 )
     {
         method = CV_SVD;
@@ -1694,7 +1694,7 @@ void Core_SolveTest::get_test_array_types_and_sizes( int test_case_idx, vector<v
         method = CV_LU;
         sizes[INPUT][0] = Size(min_size, min_size);
     }
-    
+
     sizes[INPUT][1].height = sizes[INPUT][0].height;
     sizes[TEMP][0].width = sizes[INPUT][1].width;
     sizes[TEMP][0].height = sizes[INPUT][0].width;
@@ -1708,14 +1708,14 @@ void Core_SolveTest::get_test_array_types_and_sizes( int test_case_idx, vector<v
 int Core_SolveTest::prepare_test_case( int test_case_idx )
 {
     int code = Core_MatrixTest::prepare_test_case( test_case_idx );
-    
+
     /*if( method == CV_SVD_SYM )
      {
      cvTsGEMM( test_array[INPUT][0], test_array[INPUT][0], 1.,
      0, 0., test_array[TEMP][0], CV_GEMM_B_T );
      cvTsCopy( test_array[TEMP][0], test_array[INPUT][0] );
      }*/
-    
+
     return code;
 }
 
@@ -1744,7 +1744,7 @@ void Core_SolveTest::prepare_to_validation( int )
     Mat& input = test_mat[INPUT][0];
     Mat& dst = test_mat[OUTPUT][0];
     Mat& dst0 = test_mat[REF_OUTPUT][0];
-    
+
     if( method == CV_LU )
     {
         if( result == 0 )
@@ -1757,7 +1757,7 @@ void Core_SolveTest::prepare_to_validation( int )
             dst0 = Scalar::all(det != 0);
             return;
         }
-        
+
         double threshold = (input.type() == CV_32F ? FLT_EPSILON : DBL_EPSILON)*1000;
         CvMat _input = input;
         double ratio = 0, det = cvTsSVDet( &_input, &ratio );
@@ -1768,9 +1768,9 @@ void Core_SolveTest::prepare_to_validation( int )
             return;
         }
     }
-    
+
     Mat* pdst = input.rows <= input.cols ? &test_mat[OUTPUT][0] : &test_mat[INPUT][1];
-    
+
     cvtest::gemm( input, test_mat[TEMP][0], 1., test_mat[INPUT][1], -1., *pdst, 0 );
     if( pdst != &dst )
         cvtest::gemm( input, *pdst, 1., Mat(), 0., dst, CV_GEMM_A_T );
@@ -1816,28 +1816,28 @@ void Core_SVDTest::get_test_array_types_and_sizes( int test_case_idx, vector<vec
     int bits = cvtest::randInt(rng);
     Core_MatrixTest::get_test_array_types_and_sizes( test_case_idx, sizes, types );
     int min_size, i, m, n;
-    
+
     min_size = MIN( sizes[INPUT][0].width, sizes[INPUT][0].height );
-    
+
     flags = bits & (CV_SVD_MODIFY_A+CV_SVD_U_T+CV_SVD_V_T);
     have_u = (bits & 8) != 0;
     have_v = (bits & 16) != 0;
     symmetric = (bits & 32) != 0;
     compact = (bits & 64) != 0;
     vector_w = (bits & 128) != 0;
-    
+
     if( symmetric )
         sizes[INPUT][0] = Size(min_size, min_size);
-    
+
     m = sizes[INPUT][0].height;
     n = sizes[INPUT][0].width;
-    
+
     if( compact )
         sizes[TEMP][0] = Size(min_size, min_size);
     else
         sizes[TEMP][0] = sizes[INPUT][0];
     sizes[TEMP][3] = Size(0,0);
-    
+
     if( vector_w )
     {
         sizes[TEMP][3] = sizes[TEMP][0];
@@ -1846,27 +1846,27 @@ void Core_SVDTest::get_test_array_types_and_sizes( int test_case_idx, vector<vec
         else
             sizes[TEMP][0] = Size(min_size, 1);
     }
-    
+
     if( have_u )
     {
         sizes[TEMP][1] = compact ? Size(min_size, m) : Size(m, m);
-        
+
         if( flags & CV_SVD_U_T )
             CV_SWAP( sizes[TEMP][1].width, sizes[TEMP][1].height, i );
     }
     else
         sizes[TEMP][1] = Size(0,0);
-    
+
     if( have_v )
     {
         sizes[TEMP][2] = compact ? Size(n, min_size) : Size(n, n);
-        
+
         if( !(flags & CV_SVD_V_T) )
             CV_SWAP( sizes[TEMP][2].width, sizes[TEMP][2].height, i );
     }
     else
         sizes[TEMP][2] = Size(0,0);
-    
+
     types[TEMP][0] = types[TEMP][1] = types[TEMP][2] = types[TEMP][3] = types[INPUT][0];
     types[OUTPUT][0] = types[OUTPUT][1] = types[OUTPUT][2] = types[INPUT][0];
     types[OUTPUT][3] = CV_8UC1;
@@ -1874,7 +1874,7 @@ void Core_SVDTest::get_test_array_types_and_sizes( int test_case_idx, vector<vec
     sizes[OUTPUT][1] = !have_u ? Size(0,0) : compact ? Size(min_size,min_size) : Size(m,m);
     sizes[OUTPUT][2] = !have_v ? Size(0,0) : compact ? Size(min_size,min_size) : Size(n,n);
     sizes[OUTPUT][3] = Size(min_size,1);
-    
+
     for( i = 0; i < 4; i++ )
     {
         sizes[REF_OUTPUT][i] = sizes[OUTPUT][i];
@@ -1890,18 +1890,18 @@ int Core_SVDTest::prepare_test_case( int test_case_idx )
     {
         Mat& input = test_mat[INPUT][0];
         cvTsFloodWithZeros( input, ts->get_rng() );
-        
+
         if( symmetric && (have_u || have_v) )
         {
             Mat& temp = test_mat[TEMP][have_u ? 1 : 2];
             cvtest::gemm( input, input, 1., Mat(), 0., temp, CV_GEMM_B_T );
             cvtest::copy( temp, input );
         }
-        
+
         if( (flags & CV_SVD_MODIFY_A) && test_array[OUTPUT][0] )
             cvtest::copy( input, test_mat[OUTPUT][0] );
     }
-    
+
     return code;
 }
 
@@ -1936,7 +1936,7 @@ void Core_SVDTest::prepare_to_validation( int /*test_case_idx*/ )
     int i, m = input.rows, n = input.cols, min_size = MIN(m, n);
     Mat *src, *dst, *w;
     double prev = 0, threshold = depth == CV_32F ? FLT_EPSILON : DBL_EPSILON;
-    
+
     if( have_u )
     {
         src = &test_mat[TEMP][1];
@@ -1944,7 +1944,7 @@ void Core_SVDTest::prepare_to_validation( int /*test_case_idx*/ )
         cvtest::gemm( *src, *src, 1., Mat(), 0., *dst, src->rows == dst->rows ? CV_GEMM_B_T : CV_GEMM_A_T );
         cv::setIdentity( test_mat[REF_OUTPUT][1], Scalar::all(1.) );
     }
-    
+
     if( have_v )
     {
         src = &test_mat[TEMP][2];
@@ -1952,7 +1952,7 @@ void Core_SVDTest::prepare_to_validation( int /*test_case_idx*/ )
         cvtest::gemm( *src, *src, 1., Mat(), 0., *dst, src->rows == dst->rows ? CV_GEMM_B_T : CV_GEMM_A_T );
         cv::setIdentity( test_mat[REF_OUTPUT][2], Scalar::all(1.) );
     }
-    
+
     w = &test_mat[TEMP][0];
     for( i = 0; i < min_size; i++ )
     {
@@ -1966,14 +1966,14 @@ void Core_SVDTest::prepare_to_validation( int /*test_case_idx*/ )
         {
             normval = aii = depth == CV_32F ? w->at<float>(i) : w->at<double>(i);
         }
-        
+
         normval = fabs(normval - aii);
         test_mat[OUTPUT][3].at<uchar>(i) = aii >= 0 && normval < threshold && (i == 0 || aii <= prev);
         prev = aii;
     }
-    
+
     test_mat[REF_OUTPUT][3] = Scalar::all(1);
-    
+
     if( have_u && have_v )
     {
         if( vector_w )
@@ -1986,7 +1986,7 @@ void Core_SVDTest::prepare_to_validation( int /*test_case_idx*/ )
             }
             w = &test_mat[TEMP][3];
         }
-        
+
         if( m >= n )
         {
             cvtest::gemm( test_mat[TEMP][1], *w, 1., Mat(), 0., test_mat[REF_OUTPUT][0],
@@ -2001,7 +2001,7 @@ void Core_SVDTest::prepare_to_validation( int /*test_case_idx*/ )
             cvtest::gemm( test_mat[TEMP][1], test_mat[REF_OUTPUT][0], 1., Mat(), 0.,
                      test_mat[OUTPUT][0], flags & CV_SVD_U_T ? CV_GEMM_A_T : 0 );
         }
-        
+
         cvtest::copy( test_mat[INPUT][0], test_mat[REF_OUTPUT][0] );
     }
 }
@@ -2045,21 +2045,21 @@ void Core_SVBkSbTest::get_test_array_types_and_sizes( int test_case_idx, vector<
     Base::get_test_array_types_and_sizes( test_case_idx, sizes, types );
     int min_size, i, m, n;
     CvSize b_size;
-    
+
     min_size = MIN( sizes[INPUT][0].width, sizes[INPUT][0].height );
-    
+
     flags = bits & (CV_SVD_MODIFY_A+CV_SVD_U_T+CV_SVD_V_T);
     have_b = (bits & 16) != 0;
     symmetric = (bits & 32) != 0;
     compact = (bits & 64) != 0;
     vector_w = (bits & 128) != 0;
-    
+
     if( symmetric )
         sizes[INPUT][0] = Size(min_size, min_size);
-    
+
     m = sizes[INPUT][0].height;
     n = sizes[INPUT][0].width;
-    
+
     sizes[INPUT][1] = Size(0,0);
     b_size = Size(m,m);
     if( have_b )
@@ -2068,12 +2068,12 @@ void Core_SVBkSbTest::get_test_array_types_and_sizes( int test_case_idx, vector<
         sizes[INPUT][1].width = cvtest::randInt(rng) % 100 + 1;
         b_size = sizes[INPUT][1];
     }
-    
+
     if( compact )
         sizes[TEMP][0] = Size(min_size, min_size);
     else
         sizes[TEMP][0] = sizes[INPUT][0];
-    
+
     if( vector_w )
     {
         if( bits & 256 )
@@ -2081,17 +2081,17 @@ void Core_SVBkSbTest::get_test_array_types_and_sizes( int test_case_idx, vector<
         else
             sizes[TEMP][0] = Size(min_size, 1);
     }
-    
+
     sizes[TEMP][1] = compact ? Size(min_size, m) : Size(m, m);
-    
+
     if( flags & CV_SVD_U_T )
         CV_SWAP( sizes[TEMP][1].width, sizes[TEMP][1].height, i );
-    
+
     sizes[TEMP][2] = compact ? Size(n, min_size) : Size(n, n);
-    
+
     if( !(flags & CV_SVD_V_T) )
         CV_SWAP( sizes[TEMP][2].width, sizes[TEMP][2].height, i );
-    
+
     types[TEMP][0] = types[TEMP][1] = types[TEMP][2] = types[INPUT][0];
     types[OUTPUT][0] = types[REF_OUTPUT][0] = types[INPUT][0];
     sizes[OUTPUT][0] = sizes[REF_OUTPUT][0] = Size( b_size.width, n );
@@ -2105,18 +2105,18 @@ int Core_SVBkSbTest::prepare_test_case( int test_case_idx )
     {
         Mat& input = test_mat[INPUT][0];
         cvTsFloodWithZeros( input, ts->get_rng() );
-        
+
         if( symmetric )
         {
             Mat& temp = test_mat[TEMP][1];
             cvtest::gemm( input, input, 1., Mat(), 0., temp, CV_GEMM_B_T );
             cvtest::copy( temp, input );
         }
-        
+
         CvMat _input = input;
         cvSVD( &_input, test_array[TEMP][0], test_array[TEMP][1], test_array[TEMP][2], flags );
     }
-    
+
     return code;
 }
 
@@ -2153,18 +2153,18 @@ void Core_SVBkSbTest::prepare_to_validation( int )
     // use exactly the same threshold as in icvSVD... ,
     // so the changes in the library and here should be synchronized.
     double threshold = cv::sum(w)[0]*(DBL_EPSILON*2);//(is_float ? FLT_EPSILON*10 : DBL_EPSILON*2);
-    
+
     wdb = Scalar::all(0);
     for( i = 0; i < min_size; i++ )
     {
         double wii = vector_w ? cvGetReal1D(&_w,i) : cvGetReal2D(&_w,i,i);
         cvSetReal2D( &_wdb, i, i, wii > threshold ? 1./wii : 0. );
     }
-    
+
     Mat u = test_mat[TEMP][1];
     Mat v = test_mat[TEMP][2];
     Mat b = test_mat[INPUT][1];
-    
+
     if( is_float )
     {
         test_mat[TEMP][1].convertTo(u, CV_64F);
@@ -2172,18 +2172,18 @@ void Core_SVBkSbTest::prepare_to_validation( int )
         if( !b.empty() )
             test_mat[INPUT][1].convertTo(b, CV_64F);
     }
-    
+
     Mat t0, t1;
-    
+
     if( !b.empty() )
         cvtest::gemm( u, b, 1., Mat(), 0., t0, !(flags & CV_SVD_U_T) ? CV_GEMM_A_T : 0 );
     else if( flags & CV_SVD_U_T )
         cvtest::copy( u, t0 );
     else
         cvtest::transpose( u, t0 );
-    
+
     cvtest::gemm( wdb, t0, 1, Mat(), 0, t1, 0 );
-    
+
     cvtest::gemm( v, t1, 1, Mat(), 0, t0, flags & CV_SVD_V_T ? CV_GEMM_A_T : 0 );
     Mat& dst0 = test_mat[REF_OUTPUT][0];
     t0.convertTo(dst0, dst0.type() );
@@ -2227,28 +2227,28 @@ void Core_SolvePolyTest::run( int )
     int fig = 100;
     double range = 50;
     double err_eps = 1e-4;
-    
+
     for (int idx = 0, max_idx = 1000, progress = 0; idx < max_idx; ++idx)
     {
         progress = update_progress(progress, idx-1, max_idx, 0);
         int n = cvtest::randInt(rng) % 13 + 1;
         std::vector<complex_type> r(n), ar(n), c(n + 1, 0);
         std::vector<double> a(n + 1), u(n * 2), ar1(n), ar2(n);
-        
+
         int rr_odds = 3; // odds that we get a real root
         for (int j = 0; j < n;)
         {
             if (cvtest::randInt(rng) % rr_odds == 0 || j == n - 1)
-	            r[j++] = cvtest::randReal(rng) * range;
+                r[j++] = cvtest::randReal(rng) * range;
             else
             {
-	            r[j] = complex_type(cvtest::randReal(rng) * range,
+                r[j] = complex_type(cvtest::randReal(rng) * range,
                                     cvtest::randReal(rng) * range + 1);
-	            r[j + 1] = std::conj(r[j]);
-	            j += 2;
+                r[j + 1] = std::conj(r[j]);
+                j += 2;
             }
         }
-        
+
         for (int j = 0, k = 1 << n, jj, kk; j < k; ++j)
         {
             int p = 0;
@@ -2257,33 +2257,33 @@ void Core_SolvePolyTest::run( int )
                 ;
             for (; jj < n; ++jj, kk <<= 1)
             {
-	            if (j & kk)
-	                v *= -r[jj];
-	            else
-	                ++p;
+                if (j & kk)
+                    v *= -r[jj];
+                else
+                    ++p;
             }
             c[p] += v;
         }
-        
+
         bool pass = false;
         double div = 0, s = 0;
         int cubic_case = idx & 1;
         for (int maxiter = 100; !pass && maxiter < 10000; maxiter *= 2, cubic_case = (cubic_case + 1) % 2)
         {
             for (int j = 0; j < n + 1; ++j)
-	            a[j] = c[j].real();
-            
+                a[j] = c[j].real();
+
             CvMat amat, umat;
             cvInitMatHeader(&amat, n + 1, 1, CV_64FC1, &a[0]);
             cvInitMatHeader(&umat, n, 1, CV_64FC2, &u[0]);
             cvSolvePoly(&amat, &umat, maxiter, fig);
-            
+
             for (int j = 0; j < n; ++j)
-	            ar[j] = complex_type(u[j * 2], u[j * 2 + 1]);
-            
+                ar[j] = complex_type(u[j * 2], u[j * 2 + 1]);
+
             std::sort(r.begin(), r.end(), pred_complex());
             std::sort(ar.begin(), ar.end(), pred_complex());
-            
+
             pass = true;
             if( n == 3 )
             {
@@ -2299,12 +2299,12 @@ void Core_SolvePolyTest::run( int )
                 if(nr2 > 0)
                     std::sort(ar2.begin(), ar2.begin()+nr2, pred_double());
                 ar2.resize(nr2);
-                
+
                 int nr1 = 0;
                 for(int j = 0; j < n; j++)
                     if( fabs(r[j].imag()) < DBL_EPSILON )
                         ar1[nr1++] = r[j].real();
-                
+
                 pass = pass && nr1 == nr2;
                 if( nr2 > 0 )
                 {
@@ -2318,7 +2318,7 @@ void Core_SolvePolyTest::run( int )
                     pass = pass && div < err_eps;
                 }
             }
-            
+
             div = s = 0;
             for (int j = 0; j < n; ++j)
             {
@@ -2328,21 +2328,21 @@ void Core_SolvePolyTest::run( int )
             div /= s;
             pass = pass && div < err_eps;
         }
-        
+
         if (!pass)
         {
             ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
             ts->printf( cvtest::TS::LOG, "too big diff = %g\n", div );
-            
+
             for (size_t j=0;j<ar2.size();++j)
                 ts->printf( cvtest::TS::LOG, "ar2[%d]=%g\n", j, ar2[j]);
             ts->printf(cvtest::TS::LOG, "\n");
-            
+
             for (size_t j=0;j<r.size();++j)
-	            ts->printf( cvtest::TS::LOG, "r[%d]=(%g, %g)\n", j, r[j].real(), r[j].imag());
+                ts->printf( cvtest::TS::LOG, "r[%d]=(%g, %g)\n", j, r[j].real(), r[j].imag());
             ts->printf( cvtest::TS::LOG, "\n" );
             for (size_t j=0;j<ar.size();++j)
-	            ts->printf( cvtest::TS::LOG, "ar[%d]=(%g, %g)\n", j, ar[j].real(), ar[j].imag());
+                ts->printf( cvtest::TS::LOG, "ar[%d]=(%g, %g)\n", j, ar[j].real(), ar[j].imag());
             break;
         }
     }
@@ -2395,7 +2395,7 @@ TYPED_TEST_P(Core_CheckRange, Negative)
     TypeParam data[] = {5, 10, 15, 4, 10 ,2, 8, 12, 14};
     cv::Mat src = cv::Mat(3,3, cv::DataDepth<TypeParam>::value, data);
 
-    cv::Point* bad_pt = new cv::Point(0, 0);  
+    cv::Point* bad_pt = new cv::Point(0, 0);
 
     ASSERT_FALSE(checkRange(src, true, bad_pt, min_bound, max_bound));
     ASSERT_EQ(bad_pt->x,0);
@@ -2412,7 +2412,7 @@ TYPED_TEST_P(Core_CheckRange, Positive)
     TypeParam data[] = {5, 10, 15, 4, 10 ,2, 8, 12, 14};
     cv::Mat src = cv::Mat(3,3, cv::DataDepth<TypeParam>::value, data);
 
-    cv::Point* bad_pt = new cv::Point(0, 0);  
+    cv::Point* bad_pt = new cv::Point(0, 0);
 
     ASSERT_TRUE(checkRange(src, true, bad_pt, min_bound, max_bound));
     ASSERT_EQ(bad_pt->x,0);
@@ -2429,7 +2429,7 @@ TYPED_TEST_P(Core_CheckRange, Bounds)
     TypeParam data[] = {5, 10, 15, 4, 10 ,2, 8, 12, 14};
     cv::Mat src = cv::Mat(3,3, cv::DataDepth<TypeParam>::value, data);
 
-    cv::Point* bad_pt = new cv::Point(0, 0);    
+    cv::Point* bad_pt = new cv::Point(0, 0);
 
     ASSERT_FALSE(checkRange(src, true, bad_pt, min_bound, max_bound));
     ASSERT_EQ(bad_pt->x,0);
@@ -2479,7 +2479,7 @@ class CV_KMeansSingularTest : public cvtest::BaseTest
 {
 public:
     CV_KMeansSingularTest() {}
-    ~CV_KMeansSingularTest() {}   
+    ~CV_KMeansSingularTest() {}
 protected:
     void run(int)
     {
@@ -2497,17 +2497,17 @@ protected:
                 N = rng.uniform(1, MAX_POINTS+1);
                 N0 = rng.uniform(1, MAX(N/10, 2));
                 K = rng.uniform(1, N+1);
-                
+
                 Mat data0(N0, dims, CV_32F);
                 rng.fill(data0, RNG::UNIFORM, -1, 1);
-                
+
                 Mat data(N, dims, CV_32F);
                 for( i = 0; i < N; i++ )
                     data0.row(rng.uniform(0, N0)).copyTo(data.row(i));
-                
+
                 kmeans(data, K, labels, TermCriteria(TermCriteria::MAX_ITER+TermCriteria::EPS, 30, 0),
                        5, KMEANS_PP_CENTERS);
-                
+
                 Mat hist(K, 1, CV_32S, Scalar(0));
                 for( i = 0; i < N; i++ )
                 {

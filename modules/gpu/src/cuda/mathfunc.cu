@@ -84,8 +84,8 @@ namespace cv { namespace gpu { namespace device
         __global__ void cartToPolar(const float* xptr, size_t x_step, const float* yptr, size_t y_step,
                                     float* mag, size_t mag_step, float* angle, size_t angle_step, float scale, int width, int height)
         {
-	        const int x = blockDim.x * blockIdx.x + threadIdx.x;
-	        const int y = blockDim.y * blockIdx.y + threadIdx.y;
+            const int x = blockDim.x * blockIdx.x + threadIdx.x;
+            const int y = blockDim.y * blockIdx.y + threadIdx.y;
 
             if (x < width && y < height)
             {
@@ -115,8 +115,8 @@ namespace cv { namespace gpu { namespace device
         __global__ void polarToCart(const float* mag, size_t mag_step, const float* angle, size_t angle_step, float scale,
             float* xptr, size_t x_step, float* yptr, size_t y_step, int width, int height)
         {
-	        const int x = blockDim.x * blockIdx.x + threadIdx.x;
-	        const int y = blockDim.y * blockIdx.y + threadIdx.y;
+            const int x = blockDim.x * blockIdx.x + threadIdx.x;
+            const int y = blockDim.y * blockIdx.y + threadIdx.y;
 
             if (x < width && y < height)
             {

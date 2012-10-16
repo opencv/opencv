@@ -103,7 +103,7 @@ cvRANSACUpdateNumIters( double p, double ep,
 
     num = log(num);
     denom = log(denom);
-    
+
     return denom >= 0 || -num >= max_iters*(-denom) ?
         max_iters : cvRound(num/denom);
 }
@@ -127,7 +127,7 @@ bool CvModelEstimator2::runRANSAC( const CvMat* m1, const CvMat* m2, CvMat* mode
     models = cvCreateMat( modelSize.height*maxBasicSolutions, modelSize.width, CV_64FC1 );
     err = cvCreateMat( 1, count, CV_32FC1 );
     tmask = cvCreateMat( 1, count, CV_8UC1 );
-    
+
     if( count > modelPoints )
     {
         ms1 = cvCreateMat( 1, modelPoints, m1->type );
@@ -207,7 +207,7 @@ bool CvModelEstimator2::runLMeDS( const CvMat* m1, const CvMat* m2, CvMat* model
 
     models = cvCreateMat( modelSize.height*maxBasicSolutions, modelSize.width, CV_64FC1 );
     err = cvCreateMat( 1, count, CV_32FC1 );
-    
+
     if( count > modelPoints )
     {
         ms1 = cvCreateMat( 1, modelPoints, m1->type );
@@ -323,12 +323,12 @@ bool CvModelEstimator2::checkSubset( const CvMat* m, int count )
     CvPoint2D64f* ptr = (CvPoint2D64f*)m->data.ptr;
 
     assert( CV_MAT_TYPE(m->type) == CV_64FC2 );
-    
+
     if( checkPartialSubsets )
         i0 = i1 = count - 1;
     else
         i0 = 0, i1 = count - 1;
-    
+
     for( i = i0; i <= i1; i++ )
     {
         // check that the i-th selected point does not belong
@@ -362,16 +362,16 @@ class Affine3DEstimator : public CvModelEstimator2
 {
 public:
     Affine3DEstimator() : CvModelEstimator2(4, cvSize(4, 3), 1) {}
-    virtual int runKernel( const CvMat* m1, const CvMat* m2, CvMat* model );     
+    virtual int runKernel( const CvMat* m1, const CvMat* m2, CvMat* model );
 protected:
-    virtual void computeReprojError( const CvMat* m1, const CvMat* m2, const CvMat* model, CvMat* error );      
+    virtual void computeReprojError( const CvMat* m1, const CvMat* m2, const CvMat* model, CvMat* error );
     virtual bool checkSubset( const CvMat* ms1, int count );
 };
 
 }
 
 int cv::Affine3DEstimator::runKernel( const CvMat* m1, const CvMat* m2, CvMat* model )
-{    
+{
     const Point3d* from = reinterpret_cast<const Point3d*>(m1->data.ptr);
     const Point3d* to   = reinterpret_cast<const Point3d*>(m2->data.ptr);
 
@@ -389,7 +389,7 @@ int cv::Affine3DEstimator::runKernel( const CvMat* m1, const CvMat* m2, CvMat* m
             aptr[3] = 1.0;
             *reinterpret_cast<Point3d*>(aptr) = from[i];
             aptr += 16;
-        }                
+        }
     }
 
     CvMat cvA = A;
@@ -397,7 +397,7 @@ int cv::Affine3DEstimator::runKernel( const CvMat* m1, const CvMat* m2, CvMat* m
     CvMat cvX;
     cvReshape(model, &cvX, 1, 12);
     cvSolve(&cvA, &cvB, &cvX, CV_SVD );
-    
+
     return 1;
 }
 
@@ -405,10 +405,10 @@ void cv::Affine3DEstimator::computeReprojError( const CvMat* m1, const CvMat* m2
 {
     int count = m1->rows * m1->cols;
     const Point3d* from = reinterpret_cast<const Point3d*>(m1->data.ptr);
-    const Point3d* to   = reinterpret_cast<const Point3d*>(m2->data.ptr);    
+    const Point3d* to   = reinterpret_cast<const Point3d*>(m2->data.ptr);
     const double* F = model->data.db;
     float* err = error->data.fl;
-    
+
     for(int i = 0; i < count; i++ )
     {
         const Point3d& f = from[i];
@@ -418,7 +418,7 @@ void cv::Affine3DEstimator::computeReprojError( const CvMat* m1, const CvMat* m2
         double b = F[4]*f.x + F[5]*f.y + F[ 6]*f.z + F[ 7] - t.y;
         double c = F[8]*f.x + F[9]*f.y + F[10]*f.z + F[11] - t.z;
 
-        err[i] = (float)sqrt(a*a + b*b + c*c);       
+        err[i] = (float)sqrt(a*a + b*b + c*c);
     }
 }
 
@@ -427,23 +427,23 @@ bool cv::Affine3DEstimator::checkSubset( const CvMat* ms1, int count )
     CV_Assert( CV_MAT_TYPE(ms1->type) == CV_64FC3 );
 
     int j, k, i = count - 1;
-    const Point3d* ptr = reinterpret_cast<const Point3d*>(ms1->data.ptr);    
-    
+    const Point3d* ptr = reinterpret_cast<const Point3d*>(ms1->data.ptr);
+
     // check that the i-th selected point does not belong
     // to a line connecting some previously selected points
-    
+
     for(j = 0; j < i; ++j)
     {
         Point3d d1 = ptr[j] - ptr[i];
         double n1 = norm(d1);
-        
+
         for(k = 0; k < j; ++k)
         {
-            Point3d d2 = ptr[k] - ptr[i];            
+            Point3d d2 = ptr[k] - ptr[i];
             double n = norm(d2) * n1;
 
             if (fabs(d1.dot(d2) / n) > 0.996)
-                break;            
+                break;
         }
         if( k < j )
             break;
@@ -458,12 +458,12 @@ int cv::estimateAffine3D(InputArray _from, InputArray _to,
 {
     Mat from = _from.getMat(), to = _to.getMat();
     int count = from.checkVector(3, CV_32F);
-    
+
     CV_Assert( count >= 0 && to.checkVector(3, CV_32F) == count );
 
     _out.create(3, 4, CV_64F);
     Mat out = _out.getMat();
-    
+
     _inliers.create(count, 1, CV_8U, -1, true);
     Mat inliers = _inliers.getMat();
     inliers = Scalar::all(1);
@@ -471,15 +471,15 @@ int cv::estimateAffine3D(InputArray _from, InputArray _to,
     Mat dFrom, dTo;
     from.convertTo(dFrom, CV_64F);
     to.convertTo(dTo, CV_64F);
-    
+
     CvMat F3x4 = out;
     CvMat mask  = inliers;
     CvMat m1 = dFrom;
     CvMat m2 = dTo;
-    
-    const double epsilon = numeric_limits<double>::epsilon();        
+
+    const double epsilon = numeric_limits<double>::epsilon();
     param1 = param1 <= 0 ? 3 : param1;
     param2 = (param2 < epsilon) ? 0.99 : (param2 > 1 - epsilon) ? 0.99 : param2;
-            
-    return Affine3DEstimator().runRANSAC(&m1, &m2, &F3x4, &mask, param1, param2 );    
+
+    return Affine3DEstimator().runRANSAC(&m1, &m2, &F3x4, &mask, param1, param2 );
 }

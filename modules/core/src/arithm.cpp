@@ -1044,9 +1044,9 @@ static void binary_op(InputArray _src1, InputArray _src2, OutputArray _dst,
 
     _dst.create(src1.dims, src1.size, src1.type());
     Mat dst = _dst.getMat();
-    
+
     // if this is mask operation and dst has been reallocated,
-    // we have to 
+    // we have to
     if( haveMask && reallocate )
         dst = Scalar::all(0);
 
@@ -1071,7 +1071,7 @@ static void binary_op(InputArray _src1, InputArray _src2, OutputArray _dst,
 
         if( blocksize*c > INT_MAX )
             blocksize = INT_MAX/c;
-        
+
         if( haveMask )
         {
             blocksize = std::min(blocksize, blocksize0);
@@ -1352,10 +1352,10 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
 
     _dst.create(src1.dims, src1.size, dtype);
     Mat dst = _dst.getMat();
-    
+
     if( haveMask && reallocate )
         dst = Scalar::all(0);
-    
+
     BinaryFunc func = tab[CV_MAT_DEPTH(wtype)];
 
     if( !haveScalar )
@@ -1585,7 +1585,7 @@ mul_( const T* src1, size_t step1, const T* src2, size_t step2,
         for( ; size.height--; src1 += step1, src2 += step2, dst += step )
         {
             int i=0;
-			#if CV_ENABLE_UNROLLED
+            #if CV_ENABLE_UNROLLED
             for(; i <= size.width - 4; i += 4 )
             {
                 T t0;
@@ -1610,7 +1610,7 @@ mul_( const T* src1, size_t step1, const T* src2, size_t step2,
         for( ; size.height--; src1 += step1, src2 += step2, dst += step )
         {
             int i = 0;
-			#if CV_ENABLE_UNROLLED
+            #if CV_ENABLE_UNROLLED
             for(; i <= size.width - 4; i += 4 )
             {
                 T t0 = saturate_cast<T>(scale*(WT)src1[i]*src2[i]);
@@ -1639,7 +1639,7 @@ div_( const T* src1, size_t step1, const T* src2, size_t step2,
     for( ; size.height--; src1 += step1, src2 += step2, dst += step )
     {
         int i = 0;
-		#if CV_ENABLE_UNROLLED
+        #if CV_ENABLE_UNROLLED
         for( ; i <= size.width - 4; i += 4 )
         {
             if( src2[i] != 0 && src2[i+1] != 0 && src2[i+2] != 0 && src2[i+3] != 0 )
@@ -1685,7 +1685,7 @@ recip_( const T*, size_t, const T* src2, size_t step2,
     for( ; size.height--; src2 += step2, dst += step )
     {
         int i = 0;
-		#if CV_ENABLE_UNROLLED
+        #if CV_ENABLE_UNROLLED
         for( ; i <= size.width - 4; i += 4 )
         {
             if( src2[i] != 0 && src2[i+1] != 0 && src2[i+2] != 0 && src2[i+3] != 0 )
@@ -1710,7 +1710,7 @@ recip_( const T*, size_t, const T* src2, size_t step2,
                 T z1 = src2[i+1] != 0 ? saturate_cast<T>(scale/src2[i+1]) : 0;
                 T z2 = src2[i+2] != 0 ? saturate_cast<T>(scale/src2[i+2]) : 0;
                 T z3 = src2[i+3] != 0 ? saturate_cast<T>(scale/src2[i+3]) : 0;
-                
+
                 dst[i] = z0; dst[i+1] = z1;
                 dst[i+2] = z2; dst[i+3] = z3;
             }
@@ -1757,7 +1757,7 @@ static void mul32f( const float* src1, size_t step1, const float* src2, size_t s
 {
     mul_(src1, step1, src2, step2, dst, step, sz, (float)*(const double*)scale);
 }
-    
+
 static void mul64f( const double* src1, size_t step1, const double* src2, size_t step2,
                     double* dst, size_t step, Size sz, void* scale)
 {
@@ -1914,7 +1914,7 @@ addWeighted_( const T* src1, size_t step1, const T* src2, size_t step2,
     for( ; size.height--; src1 += step1, src2 += step2, dst += step )
     {
         int x = 0;
-		#if CV_ENABLE_UNROLLED
+        #if CV_ENABLE_UNROLLED
         for( ; x <= size.width - 4; x += 4 )
         {
             T t0 = saturate_cast<T>(src1[x]*alpha + src2[x]*beta + gamma);
@@ -1972,7 +1972,7 @@ addWeighted8u( const uchar* src1, size_t step1,
             }
         }
 #endif
-		#if CV_ENABLE_UNROLLED
+        #if CV_ENABLE_UNROLLED
         for( ; x <= size.width - 4; x += 4 )
         {
             float t0, t1;
@@ -2077,7 +2077,7 @@ cmp_(const T* src1, size_t step1, const T* src2, size_t step2,
         for( ; size.height--; src1 += step1, src2 += step2, dst += step )
         {
             int x = 0;
-			#if CV_ENABLE_UNROLLED
+            #if CV_ENABLE_UNROLLED
             for( ; x <= size.width - 4; x += 4 )
             {
                 int t0, t1;
@@ -2091,7 +2091,7 @@ cmp_(const T* src1, size_t step1, const T* src2, size_t step2,
             #endif
             for( ; x < size.width; x++ )
                 dst[x] = (uchar)(-(src1[x] > src2[x]) ^ m);
-			   }
+               }
     }
     else if( code == CMP_EQ || code == CMP_NE )
     {
@@ -2099,7 +2099,7 @@ cmp_(const T* src1, size_t step1, const T* src2, size_t step2,
         for( ; size.height--; src1 += step1, src2 += step2, dst += step )
         {
             int x = 0;
-			#if CV_ENABLE_UNROLLED
+            #if CV_ENABLE_UNROLLED
             for( ; x <= size.width - 4; x += 4 )
             {
                 int t0, t1;
@@ -2122,7 +2122,7 @@ static void cmp8u(const uchar* src1, size_t step1, const uchar* src2, size_t ste
                   uchar* dst, size_t step, Size size, void* _cmpop)
 {
   //vz optimized  cmp_(src1, step1, src2, step2, dst, step, size, *(int*)_cmpop);
-	int code = *(int*)_cmpop;
+    int code = *(int*)_cmpop;
     step1 /= sizeof(src1[0]);
     step2 /= sizeof(src2[0]);
     if( code == CMP_GE || code == CMP_LT )
@@ -2138,47 +2138,47 @@ static void cmp8u(const uchar* src1, size_t step1, const uchar* src2, size_t ste
         for( ; size.height--; src1 += step1, src2 += step2, dst += step )
         {
             int x =0;
-		    #if CV_SSE2
-		    if( USE_SSE2 ){
+            #if CV_SSE2
+            if( USE_SSE2 ){
                 __m128i m128 = code == CMP_GT ? _mm_setzero_si128() : _mm_set1_epi8 (-1);
                 __m128i c128 = _mm_set1_epi8 (-128);
-				for( ; x <= size.width - 16; x += 16 )
-				{
-					__m128i r00 = _mm_loadu_si128((const __m128i*)(src1 + x));
-					__m128i r10 = _mm_loadu_si128((const __m128i*)(src2 + x));
-					// no simd for 8u comparison, that's why we need the trick
-					r00 = _mm_sub_epi8(r00,c128);
-					r10 = _mm_sub_epi8(r10,c128);
+                for( ; x <= size.width - 16; x += 16 )
+                {
+                    __m128i r00 = _mm_loadu_si128((const __m128i*)(src1 + x));
+                    __m128i r10 = _mm_loadu_si128((const __m128i*)(src2 + x));
+                    // no simd for 8u comparison, that's why we need the trick
+                    r00 = _mm_sub_epi8(r00,c128);
+                    r10 = _mm_sub_epi8(r10,c128);
 
-					r00 =_mm_xor_si128(_mm_cmpgt_epi8(r00, r10), m128);
-					_mm_storeu_si128((__m128i*)(dst + x),r00);
-				
-				} 
-			}
+                    r00 =_mm_xor_si128(_mm_cmpgt_epi8(r00, r10), m128);
+                    _mm_storeu_si128((__m128i*)(dst + x),r00);
+
+                }
+            }
            #endif
 
-			for( ; x < size.width; x++ ){
+            for( ; x < size.width; x++ ){
                 dst[x] = (uchar)(-(src1[x] > src2[x]) ^ m);
-			}
+            }
         }
     }
     else if( code == CMP_EQ || code == CMP_NE )
     {
         int m = code == CMP_EQ ? 0 : 255;
-		for( ; size.height--; src1 += step1, src2 += step2, dst += step )
+        for( ; size.height--; src1 += step1, src2 += step2, dst += step )
         {
             int x = 0;
-		    #if CV_SSE2
-		    if( USE_SSE2 ){
+            #if CV_SSE2
+            if( USE_SSE2 ){
                 __m128i m128 =  code == CMP_EQ ? _mm_setzero_si128() : _mm_set1_epi8 (-1);
-				for( ; x <= size.width - 16; x += 16 )
-				{
-					__m128i r00 = _mm_loadu_si128((const __m128i*)(src1 + x));
-					__m128i r10 = _mm_loadu_si128((const __m128i*)(src2 + x));
-					r00 = _mm_xor_si128 ( _mm_cmpeq_epi8 (r00, r10), m128);
-					_mm_storeu_si128((__m128i*)(dst + x), r00);
-				} 
-			}
+                for( ; x <= size.width - 16; x += 16 )
+                {
+                    __m128i r00 = _mm_loadu_si128((const __m128i*)(src1 + x));
+                    __m128i r10 = _mm_loadu_si128((const __m128i*)(src2 + x));
+                    r00 = _mm_xor_si128 ( _mm_cmpeq_epi8 (r00, r10), m128);
+                    _mm_storeu_si128((__m128i*)(dst + x), r00);
+                }
+            }
            #endif
            for( ; x < size.width; x++ )
                 dst[x] = (uchar)(-(src1[x] == src2[x]) ^ m);
@@ -2203,7 +2203,7 @@ static void cmp16s(const short* src1, size_t step1, const short* src2, size_t st
 {
    //vz optimized cmp_(src1, step1, src2, step2, dst, step, size, *(int*)_cmpop);
 
-	int code = *(int*)_cmpop;
+    int code = *(int*)_cmpop;
     step1 /= sizeof(src1[0]);
     step2 /= sizeof(src2[0]);
     if( code == CMP_GE || code == CMP_LT )
@@ -2219,69 +2219,69 @@ static void cmp16s(const short* src1, size_t step1, const short* src2, size_t st
         for( ; size.height--; src1 += step1, src2 += step2, dst += step )
         {
             int x =0;
-		    #if CV_SSE2
-		    if( USE_SSE2){//
+            #if CV_SSE2
+            if( USE_SSE2){//
                 __m128i m128 =  code == CMP_GT ? _mm_setzero_si128() : _mm_set1_epi16 (-1);
-				for( ; x <= size.width - 16; x += 16 )
-				{
-					__m128i r00 = _mm_loadu_si128((const __m128i*)(src1 + x));
-					__m128i r10 = _mm_loadu_si128((const __m128i*)(src2 + x));
-					r00 = _mm_xor_si128 ( _mm_cmpgt_epi16 (r00, r10), m128);
-					__m128i r01 = _mm_loadu_si128((const __m128i*)(src1 + x + 8));
-					__m128i r11 = _mm_loadu_si128((const __m128i*)(src2 + x + 8));
-					r01 = _mm_xor_si128 ( _mm_cmpgt_epi16 (r01, r11), m128);
-					r11 = _mm_packs_epi16(r00, r01);
-					_mm_storeu_si128((__m128i*)(dst + x), r11);
-				} 
-				if( x <= size.width-8) 
-				{
-					__m128i r00 = _mm_loadu_si128((const __m128i*)(src1 + x));
-					__m128i r10 = _mm_loadu_si128((const __m128i*)(src2 + x));
-					r00 = _mm_xor_si128 ( _mm_cmpgt_epi16 (r00, r10), m128);
-					r10 = _mm_packs_epi16(r00, r00);
-					_mm_storel_epi64((__m128i*)(dst + x), r10);
+                for( ; x <= size.width - 16; x += 16 )
+                {
+                    __m128i r00 = _mm_loadu_si128((const __m128i*)(src1 + x));
+                    __m128i r10 = _mm_loadu_si128((const __m128i*)(src2 + x));
+                    r00 = _mm_xor_si128 ( _mm_cmpgt_epi16 (r00, r10), m128);
+                    __m128i r01 = _mm_loadu_si128((const __m128i*)(src1 + x + 8));
+                    __m128i r11 = _mm_loadu_si128((const __m128i*)(src2 + x + 8));
+                    r01 = _mm_xor_si128 ( _mm_cmpgt_epi16 (r01, r11), m128);
+                    r11 = _mm_packs_epi16(r00, r01);
+                    _mm_storeu_si128((__m128i*)(dst + x), r11);
+                }
+                if( x <= size.width-8)
+                {
+                    __m128i r00 = _mm_loadu_si128((const __m128i*)(src1 + x));
+                    __m128i r10 = _mm_loadu_si128((const __m128i*)(src2 + x));
+                    r00 = _mm_xor_si128 ( _mm_cmpgt_epi16 (r00, r10), m128);
+                    r10 = _mm_packs_epi16(r00, r00);
+                    _mm_storel_epi64((__m128i*)(dst + x), r10);
 
-					x += 8;
-				}
-			}
+                    x += 8;
+                }
+            }
            #endif
 
-			for( ; x < size.width; x++ ){
+            for( ; x < size.width; x++ ){
                  dst[x] = (uchar)(-(src1[x] > src2[x]) ^ m);
-			}
+            }
         }
     }
     else if( code == CMP_EQ || code == CMP_NE )
     {
         int m = code == CMP_EQ ? 0 : 255;
-		for( ; size.height--; src1 += step1, src2 += step2, dst += step )
+        for( ; size.height--; src1 += step1, src2 += step2, dst += step )
         {
             int x = 0;
-		    #if CV_SSE2
-		    if( USE_SSE2 ){
+            #if CV_SSE2
+            if( USE_SSE2 ){
                 __m128i m128 =  code == CMP_EQ ? _mm_setzero_si128() : _mm_set1_epi16 (-1);
-				for( ; x <= size.width - 16; x += 16 )
-				{
-					__m128i r00 = _mm_loadu_si128((const __m128i*)(src1 + x));
-					__m128i r10 = _mm_loadu_si128((const __m128i*)(src2 + x));
-					r00 = _mm_xor_si128 ( _mm_cmpeq_epi16 (r00, r10), m128);
-					__m128i r01 = _mm_loadu_si128((const __m128i*)(src1 + x + 8));
-					__m128i r11 = _mm_loadu_si128((const __m128i*)(src2 + x + 8));
-					r01 = _mm_xor_si128 ( _mm_cmpeq_epi16 (r01, r11), m128);
-					r11 = _mm_packs_epi16(r00, r01);
-					_mm_storeu_si128((__m128i*)(dst + x), r11);
-				} 
-				if( x <= size.width - 8) 
-				{
-					__m128i r00 = _mm_loadu_si128((const __m128i*)(src1 + x));
-					__m128i r10 = _mm_loadu_si128((const __m128i*)(src2 + x));
-					r00 = _mm_xor_si128 ( _mm_cmpeq_epi16 (r00, r10), m128);
-					r10 = _mm_packs_epi16(r00, r00);
-					_mm_storel_epi64((__m128i*)(dst + x), r10);
+                for( ; x <= size.width - 16; x += 16 )
+                {
+                    __m128i r00 = _mm_loadu_si128((const __m128i*)(src1 + x));
+                    __m128i r10 = _mm_loadu_si128((const __m128i*)(src2 + x));
+                    r00 = _mm_xor_si128 ( _mm_cmpeq_epi16 (r00, r10), m128);
+                    __m128i r01 = _mm_loadu_si128((const __m128i*)(src1 + x + 8));
+                    __m128i r11 = _mm_loadu_si128((const __m128i*)(src2 + x + 8));
+                    r01 = _mm_xor_si128 ( _mm_cmpeq_epi16 (r01, r11), m128);
+                    r11 = _mm_packs_epi16(r00, r01);
+                    _mm_storeu_si128((__m128i*)(dst + x), r11);
+                }
+                if( x <= size.width - 8)
+                {
+                    __m128i r00 = _mm_loadu_si128((const __m128i*)(src1 + x));
+                    __m128i r10 = _mm_loadu_si128((const __m128i*)(src2 + x));
+                    r00 = _mm_xor_si128 ( _mm_cmpeq_epi16 (r00, r10), m128);
+                    r10 = _mm_packs_epi16(r00, r00);
+                    _mm_storel_epi64((__m128i*)(dst + x), r10);
 
-					x += 8;
-				}
-			}
+                    x += 8;
+                }
+            }
            #endif
            for( ; x < size.width; x++ )
                 dst[x] = (uchar)(-(src1[x] == src2[x]) ^ m);
@@ -2368,13 +2368,13 @@ void cv::compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
         haveScalar = true;
     }
 
-    
+
     int cn = src1.channels(), depth1 = src1.depth(), depth2 = src2.depth();
 
     _dst.create(src1.dims, src1.size, CV_8UC(cn));
     src1 = src1.reshape(1); src2 = src2.reshape(1);
     Mat dst = _dst.getMat().reshape(1);
-    
+
     size_t esz = src1.elemSize();
     size_t blocksize0 = (size_t)(BLOCK_SIZE + esz-1)/esz;
     BinaryFunc func = cmpTab[depth1];
@@ -2467,7 +2467,7 @@ inRange_(const T* src1, size_t step1, const T* src2, size_t step2,
     for( ; size.height--; src1 += step1, src2 += step2, src3 += step3, dst += step )
     {
         int x = 0;
-		#if CV_ENABLE_UNROLLED
+        #if CV_ENABLE_UNROLLED
         for( ; x <= size.width - 4; x += 4 )
         {
             int t0, t1;
@@ -2661,7 +2661,7 @@ void cv::inRange(InputArray _src, InputArray _lowerb,
                 ptrs[idx] += delta;
             }
             func( ptrs[0], 0, lptr, 0, uptr, 0, cn == 1 ? ptrs[1] : mbuf, 0, Size(bsz*cn, 1));
-			if( cn > 1 )
+            if( cn > 1 )
                 inRangeReduce(mbuf, ptrs[1], bsz, cn);
             ptrs[0] += delta;
             ptrs[1] += bsz;

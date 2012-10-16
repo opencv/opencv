@@ -210,7 +210,7 @@ int main(int argc, const char **argv)
         {
             printHelp();
             return 0;
-        }               
+        }
 
         StabilizerBase *stabilizer;
         GaussianMotionFilter *motionFilter = 0;
@@ -255,7 +255,7 @@ int main(int argc, const char **argv)
         cout << "frame count: " << frameSource->frameCount() << endl;
 
         PyrLkRobustMotionEstimator *motionEstimator = new PyrLkRobustMotionEstimator();
-        if (cmd.get<string>("model") == "transl")           
+        if (cmd.get<string>("model") == "transl")
             motionEstimator->setMotionModel(TRANSLATION);
         else if (cmd.get<string>("model") == "transl_and_scale")
             motionEstimator->setMotionModel(TRANSLATION_AND_SCALE);

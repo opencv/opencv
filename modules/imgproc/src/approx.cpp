@@ -648,7 +648,7 @@ icvApproxPolyDP( CvSeq* src_contour, int header_size,
         dx = end_pt.x - start_pt.x;
         dy = end_pt.y - start_pt.y;
         dist = fabs((pt.x - start_pt.x)*dy - (pt.y - start_pt.y)*dx);
-        successive_inner_product = (pt.x - start_pt.x) * (end_pt.x - pt.x) + 
+        successive_inner_product = (pt.x - start_pt.x) * (end_pt.x - pt.x) +
             (pt.y - start_pt.y) * (end_pt.y - pt.y);
 
         if( dist * dist <= 0.5*eps*(dx*dx + dy*dy) && dx != 0 && dy != 0 &&

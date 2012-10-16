@@ -579,7 +579,7 @@ Regression& Regression::operator() (const std::string& name, cv::InputArray arra
 #ifdef HAVE_CUDA
     static const std::string prefix = (param_run_cpu)? "CPU_" : "GPU_";
     if(suiteName == "gpu")
-    	nodename = prefix + nodename;
+        nodename = prefix + nodename;
 #endif
 
     cv::FileNode n = rootIn[nodename];

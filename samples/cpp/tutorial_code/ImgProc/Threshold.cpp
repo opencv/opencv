@@ -43,13 +43,13 @@ int main( int argc, char** argv )
   namedWindow( window_name, CV_WINDOW_AUTOSIZE );
 
   /// Create Trackbar to choose type of Threshold
-  createTrackbar( trackbar_type, 
-		  window_name, &threshold_type, 
-		  max_type, Threshold_Demo );
+  createTrackbar( trackbar_type,
+          window_name, &threshold_type,
+          max_type, Threshold_Demo );
 
   createTrackbar( trackbar_value,
-		  window_name, &threshold_value,
-		  max_value, Threshold_Demo );
+          window_name, &threshold_value,
+          max_value, Threshold_Demo );
 
   /// Call the function to initialize
   Threshold_Demo( 0, 0 );
@@ -60,7 +60,7 @@ int main( int argc, char** argv )
       int c;
       c = waitKey( 20 );
       if( (char)c == 27 )
-	{ break; }
+    { break; }
     }
 
 }

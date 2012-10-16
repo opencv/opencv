@@ -1,6 +1,6 @@
 /*
  *  grfmt_imageio.h
- *  
+ *
  *
  *  Created by Morgan Conbere on 5/17/07.
  *
@@ -16,7 +16,7 @@
 
 #if TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR
 
-#include <MobileCoreServices/MobileCoreServices.h> 
+#include <MobileCoreServices/MobileCoreServices.h>
 #include <ImageIO/ImageIO.h>
 
 #else
@@ -31,21 +31,21 @@ namespace cv
 class ImageIODecoder : public BaseImageDecoder
 {
 public:
-    
+
     ImageIODecoder();
     ~ImageIODecoder();
-    
+
     bool  readData( Mat& img );
     bool  readHeader();
     void  close();
-    
+
     size_t signatureLength() const;
     bool checkSignature( const string& signature ) const;
 
     ImageDecoder newDecoder() const;
 
 protected:
-    
+
     CGImageRef imageRef;
 };
 

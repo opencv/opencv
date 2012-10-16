@@ -70,7 +70,7 @@ __kernel void arithm_pow_D5 (__global float *src1, int src1_step, int src1_offse
 
         float src1_data = *((__global float *)((__global char *)src1 + src1_index));
         float tmp = src1_data > 0 ? exp(p * log(src1_data)) : (src1_data == 0 ? 0 : exp(p * log(fabs(src1_data))));
-        
+
         *((__global float *)((__global char *)dst + dst_index)) = tmp;
     }
 
@@ -92,7 +92,7 @@ __kernel void arithm_pow_D6 (__global double *src1, int src1_step, int src1_offs
         int dst_index  = mad24(y, dst_step,  (x << 3) + dst_offset);
 
         double src1_data = *((__global double *)((__global char *)src1 + src1_index));
-        double tmp = src1_data > 0 ? exp(p * log(src1_data)) : (src1_data == 0 ? 0 : exp(p * log(fabs(src1_data)))); 
+        double tmp = src1_data > 0 ? exp(p * log(src1_data)) : (src1_data == 0 ? 0 : exp(p * log(fabs(src1_data))));
         *((__global double *)((__global char *)dst + dst_index)) = tmp;
     }
 

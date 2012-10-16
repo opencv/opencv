@@ -155,7 +155,7 @@ int main(int ac, char** av)
   //read from string
   {
     cout << "Read data from string\n";
-    string dataString = 
+    string dataString =
         "%YAML:1.0\n"
         "mdata:\n"
         "   A: 97\n"

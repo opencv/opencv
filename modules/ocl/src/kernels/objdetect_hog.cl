@@ -54,10 +54,10 @@
 //----------------------------------------------------------------------------
 // Histogram computation
 
-__kernel void compute_hists_kernel(const int width, const int cblock_stride_x, const int cblock_stride_y, 
-                                   const int cnbins, const int cblock_hist_size, const int img_block_width, 
-                                   const int grad_quadstep, const int qangle_step, 
-                                   __global const float* grad, __global const uchar* qangle, 
+__kernel void compute_hists_kernel(const int width, const int cblock_stride_x, const int cblock_stride_y,
+                                   const int cnbins, const int cblock_hist_size, const int img_block_width,
+                                   const int grad_quadstep, const int qangle_step,
+                                   __global const float* grad, __global const uchar* qangle,
                                    const float scale, __global float* block_hists, __local float* smem)
 {
     const int lidX = get_local_id(0);
@@ -213,10 +213,10 @@ __kernel void classify_hists_kernel(const int cblock_hist_size, const int cdescr
     products[tid] = product;
 
     barrier(CLK_LOCAL_MEM_FENCE);
- 
+
     if (tid < 128) products[tid] = product = product + products[tid + 128];
     barrier(CLK_LOCAL_MEM_FENCE);
-    
+
     if (tid < 64) products[tid] = product = product + products[tid + 64];
     barrier(CLK_LOCAL_MEM_FENCE);
 
@@ -240,12 +240,12 @@ __kernel void classify_hists_kernel(const int cblock_hist_size, const int cdescr
 
 __kernel void extract_descrs_by_rows_kernel(const int cblock_hist_size, const int descriptors_quadstep, const int cdescr_size, const int cdescr_width,
                                             const int img_block_width, const int win_block_stride_x, const int win_block_stride_y,
-									        __global const float* block_hists, __global float* descriptors)
+                                            __global const float* block_hists, __global float* descriptors)
 {
     int tid = get_local_id(0);
     int gidX = get_group_id(0);
     int gidY = get_group_id(1);
-    
+
     // Get left top corner of the window in src
     __global const float* hist = block_hists + (gidY * win_block_stride_y * img_block_width + gidX * win_block_stride_x) * cblock_hist_size;
 
@@ -261,7 +261,7 @@ __kernel void extract_descrs_by_rows_kernel(const int cblock_hist_size, const in
     }
 }
 
-__kernel void extract_descrs_by_cols_kernel(const int cblock_hist_size, const int descriptors_quadstep, const int cdescr_size, 
+__kernel void extract_descrs_by_cols_kernel(const int cblock_hist_size, const int descriptors_quadstep, const int cdescr_size,
                                             const int cnblocks_win_x, const int cnblocks_win_y, const int img_block_width, const int win_block_stride_x,
                                             const int win_block_stride_y, __global const float* block_hists, __global float* descriptors)
 {
@@ -291,8 +291,8 @@ __kernel void extract_descrs_by_cols_kernel(const int cblock_hist_size, const in
 //----------------------------------------------------------------------------
 // Gradients computation
 
-__kernel void compute_gradients_8UC4_kernel(const int height, const int width, const int img_step, const int grad_quadstep, const int qangle_step, 
-                                            const __global uchar4 * img, __global float * grad, __global uchar * qangle, 
+__kernel void compute_gradients_8UC4_kernel(const int height, const int width, const int img_step, const int grad_quadstep, const int qangle_step,
+                                            const __global uchar4 * img, __global float * grad, __global uchar * qangle,
                                             const float angle_scale, const char correct_gamma, const int cnbins)
 {
     const int x = get_global_id(0);
@@ -391,7 +391,7 @@ __kernel void compute_gradients_8UC4_kernel(const int height, const int width, c
 }
 
 __kernel void compute_gradients_8UC1_kernel(const int height, const int width, const int img_step, const int grad_quadstep, const int qangle_step,
-                                            __global const uchar * img, __global float * grad, __global uchar * qangle, 
+                                            __global const uchar * img, __global float * grad, __global uchar * qangle,
                                             const float angle_scale, const char correct_gamma, const int cnbins)
 {
     const int x = get_global_id(0);
@@ -453,37 +453,37 @@ __kernel void compute_gradients_8UC1_kernel(const int height, const int width, c
 // Resize
 
 __kernel void resize_8UC4_kernel(__global uchar4 * dst, __global const uchar4 * src,
-                                 int dst_offset, int src_offset, int dst_step, int src_step, 
+                                 int dst_offset, int src_offset, int dst_step, int src_step,
                                  int src_cols, int src_rows, int dst_cols, int dst_rows, float ifx, float ify )
 {
     int dx = get_global_id(0);
     int dy = get_global_id(1);
-    
+
     int sx = (int)floor(dx*ifx+0.5f);
     int sy = (int)floor(dy*ify+0.5f);
     sx = min(sx, src_cols-1);
     sy = min(sy, src_rows-1);
     int dpos = (dst_offset>>2) + dy * (dst_step>>2) + dx;
     int spos = (src_offset>>2) + sy * (src_step>>2) + sx;
-    
+
     if(dx<dst_cols && dy<dst_rows)
         dst[dpos] = src[spos];
 }
 
 __kernel void resize_8UC1_kernel(__global uchar * dst, __global const uchar * src,
-                                 int dst_offset, int src_offset, int dst_step, int src_step, 
+                                 int dst_offset, int src_offset, int dst_step, int src_step,
                                  int src_cols, int src_rows, int dst_cols, int dst_rows, float ifx, float ify )
 {
     int dx = get_global_id(0);
     int dy = get_global_id(1);
-    
+
     int sx = (int)floor(dx*ifx+0.5f);
     int sy = (int)floor(dy*ify+0.5f);
     sx = min(sx, src_cols-1);
     sy = min(sy, src_rows-1);
     int dpos = dst_offset + dy * dst_step + dx;
     int spos = src_offset + sy * src_step + sx;
-    
+
     if(dx<dst_cols && dy<dst_rows)
         dst[dpos] = src[spos];
 }

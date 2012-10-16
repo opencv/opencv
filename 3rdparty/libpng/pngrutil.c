@@ -3706,7 +3706,7 @@ png_init_filter_functions_neon(png_structp pp, unsigned int bpp)
    {
       pp->read_filter[PNG_FILTER_VALUE_SUB-1] = png_read_filter_row_sub3_neon;
       pp->read_filter[PNG_FILTER_VALUE_AVG-1] = png_read_filter_row_avg3_neon;
-      pp->read_filter[PNG_FILTER_VALUE_PAETH-1] = 
+      pp->read_filter[PNG_FILTER_VALUE_PAETH-1] =
          png_read_filter_row_paeth3_neon;
    }
 

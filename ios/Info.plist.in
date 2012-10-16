@@ -2,17 +2,17 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>CFBundleName</key>
-	<string>OpenCV</string>
-	<key>CFBundleIdentifier</key>
+    <key>CFBundleName</key>
+    <string>OpenCV</string>
+    <key>CFBundleIdentifier</key>
     <string>com.itseez.opencv</string>
-	<key>CFBundleVersion</key>
-	<string>${VERSION}</string>
-	<key>CFBundleShortVersionString</key>
-	<string>${VERSION}</string>
-	<key>CFBundleSignature</key>
-	<string>????</string>
-	<key>CFBundlePackageType</key>
-	<string>FMWK</string>
+    <key>CFBundleVersion</key>
+    <string>${VERSION}</string>
+    <key>CFBundleShortVersionString</key>
+    <string>${VERSION}</string>
+    <key>CFBundleSignature</key>
+    <string>????</string>
+    <key>CFBundlePackageType</key>
+    <string>FMWK</string>
 </dict>
 </plist>

@@ -137,7 +137,7 @@ __kernel void arithm_op_nonzero (int cols,int invalid_cols,int offset,int elemnu
    if(id < elemnum)
    {
        temp = src[idx];
-       if(id % cols == 0 ) 
+       if(id % cols == 0 )
        {
            repeat_s(temp);
        }
@@ -155,7 +155,7 @@ __kernel void arithm_op_nonzero (int cols,int invalid_cols,int offset,int elemnu
    {
        idx = offset + id + (id / cols) * invalid_cols;
        temp = src[idx];
-       if(id % cols == 0 ) 
+       if(id % cols == 0 )
        {
                repeat_s(temp);
        }

@@ -50,7 +50,7 @@ cvSampleLine( const void* img, CvPoint pt1, CvPoint pt2,
               void* _buffer, int connectivity )
 {
     int count = -1;
-    
+
     int i, coi = 0, pix_size;
     CvMat stub, *mat = cvGetMat( img, &stub, &coi );
     CvLineIterator iterator;

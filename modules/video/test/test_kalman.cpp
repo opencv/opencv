@@ -63,15 +63,15 @@ void CV_KalmanTest::run( int )
     const int Steps = 100;
     const double max_init = 1;
     const double max_noise = 0.1;
-    
+
     const double EPSILON = 1.000;
     RNG& rng = ts->get_rng();
     CvKalman* Kalm;
     int i, j;
-    
+
     CvMat* Sample = cvCreateMat(Dim,1,CV_32F);
     CvMat* Temp = cvCreateMat(Dim,1,CV_32F);
-    
+
     Kalm = cvCreateKalman(Dim, Dim);
     CvMat Dyn = cvMat(Dim,Dim,CV_32F,Kalm->DynamMatr);
     CvMat Mes = cvMat(Dim,Dim,CV_32F,Kalm->MeasurementMatr);
@@ -114,7 +114,7 @@ void CV_KalmanTest::run( int )
     cvReleaseMat(&Sample);
     cvReleaseMat(&Temp);
     cvReleaseKalman(&Kalm);
-    
+
     if( code < 0 )
         ts->set_failed_test_info( code );
 }

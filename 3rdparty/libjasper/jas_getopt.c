@@ -2,19 +2,19 @@
  * Copyright (c) 1999-2000, Image Power, Inc. and the University of
  *   British Columbia.
  * Copyright (c) 2001-2002 Michael David Adams.
- * All rights reserved. 
+ * All rights reserved.
  */
 
 /* __START_OF_JASPER_LICENSE__
- * 
+ *
  * JasPer License Version 2.0
- * 
+ *
  * Copyright (c) 2001-2006 Michael David Adams
  * Copyright (c) 1999-2000 Image Power, Inc.
  * Copyright (c) 1999-2000 The University of British Columbia
- * 
+ *
  * All rights reserved.
- * 
+ *
  * Permission is hereby granted, free of charge, to any person (the
  * "User") obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without restriction,
@@ -22,15 +22,15 @@
  * publish, distribute, and/or sell copies of the Software, and to permit
  * persons to whom the Software is furnished to do so, subject to the
  * following conditions:
- * 
+ *
  * 1.  The above copyright notices and this permission notice (which
  * includes the disclaimer below) shall be included in all copies or
  * substantial portions of the Software.
- * 
+ *
  * 2.  The name of a copyright holder shall not be used to endorse or
  * promote products derived from the Software without specific prior
  * written permission.
- * 
+ *
  * THIS DISCLAIMER OF WARRANTY CONSTITUTES AN ESSENTIAL PART OF THIS
  * LICENSE.  NO USE OF THE SOFTWARE IS AUTHORIZED HEREUNDER EXCEPT UNDER
  * THIS DISCLAIMER.  THE SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS
@@ -57,7 +57,7 @@
  * PERSONAL INJURY, OR SEVERE PHYSICAL OR ENVIRONMENTAL DAMAGE ("HIGH
  * RISK ACTIVITIES").  THE COPYRIGHT HOLDERS SPECIFICALLY DISCLAIM ANY
  * EXPRESS OR IMPLIED WARRANTY OF FITNESS FOR HIGH RISK ACTIVITIES.
- * 
+ *
  * __END_OF_JASPER_LICENSE__
  */
 
@@ -91,78 +91,78 @@ char *jas_optarg = 0;
 
 static jas_opt_t *jas_optlookup(jas_opt_t *opts, char *name)
 {
-	jas_opt_t *opt;
+    jas_opt_t *opt;
 
-	for (opt = opts; opt->id >= 0 && opt->name; ++opt) {
-		if (!strcmp(opt->name, name)) {
-			return opt;
-		}
-	}
-	return 0;
+    for (opt = opts; opt->id >= 0 && opt->name; ++opt) {
+        if (!strcmp(opt->name, name)) {
+            return opt;
+        }
+    }
+    return 0;
 }
 
 int jas_getopt(int argc, char **argv, jas_opt_t *opts)
 {
-	char *cp;
-	int id;
-	int hasarg;
-	jas_opt_t *opt;
-	char *s;
+    char *cp;
+    int id;
+    int hasarg;
+    jas_opt_t *opt;
+    char *s;
 
-	if (!jas_optind) {
-		jas_optind = JAS_MIN(1, argc);
-	}
-	while (jas_optind < argc) {
-		s = cp = argv[jas_optind];
-		if (*cp == '-') {
-			/* We are processing an option. */
-			++jas_optind;
-			if (*++cp == '-') {
-				/* We are processing a long option. */
-				++cp;
-				if (*cp == '\0') {
-					/* This is the end of the options. */
-					return JAS_GETOPT_EOF;
-				}
-				if (!(opt = jas_optlookup(opts, cp))) {
-					if (jas_opterr) {
-						jas_eprintf("unknown long option %s\n", s);
-					}
-					return JAS_GETOPT_ERR;
-				}
-				hasarg = (opt->flags & JAS_OPT_HASARG) != 0;
-				id = opt->id;
-			} else {
-				/* We are processing a short option. */
-				if (strlen(cp) != 1 ||
-				  !(opt = jas_optlookup(opts, cp))) {
-					if (jas_opterr) {
-						jas_eprintf("unknown short option %s\n", s);
-					}
-					return JAS_GETOPT_ERR;
-				}
-				hasarg = (opt->flags & JAS_OPT_HASARG) != 0;
-				id = opt->id;
-			}
-			if (hasarg) {
-				/* The option has an argument. */
-				if (jas_optind >= argc) {
-					if (jas_opterr) {
-						jas_eprintf("missing argument for option %s\n", s);
-					}
-					return JAS_GETOPT_ERR;
-				}
-				jas_optarg = argv[jas_optind];
-				++jas_optind;
-			} else {
-				/* The option does not have an argument. */
-				jas_optarg = 0;
-			}
-			return id;
-		} else {
-			/* We are not processing an option. */
-			return JAS_GETOPT_EOF;
-		}
-	}
-	return JAS_GETOPT_EOF;
+    if (!jas_optind) {
+        jas_optind = JAS_MIN(1, argc);
+    }
+    while (jas_optind < argc) {
+        s = cp = argv[jas_optind];
+        if (*cp == '-') {
+            /* We are processing an option. */
+            ++jas_optind;
+            if (*++cp == '-') {
+                /* We are processing a long option. */
+                ++cp;
+                if (*cp == '\0') {
+                    /* This is the end of the options. */
+                    return JAS_GETOPT_EOF;
+                }
+                if (!(opt = jas_optlookup(opts, cp))) {
+                    if (jas_opterr) {
+                        jas_eprintf("unknown long option %s\n", s);
+                    }
+                    return JAS_GETOPT_ERR;
+                }
+                hasarg = (opt->flags & JAS_OPT_HASARG) != 0;
+                id = opt->id;
+            } else {
+                /* We are processing a short option. */
+                if (strlen(cp) != 1 ||
+                  !(opt = jas_optlookup(opts, cp))) {
+                    if (jas_opterr) {
+                        jas_eprintf("unknown short option %s\n", s);
+                    }
+                    return JAS_GETOPT_ERR;
+                }
+                hasarg = (opt->flags & JAS_OPT_HASARG) != 0;
+                id = opt->id;
+            }
+            if (hasarg) {
+                /* The option has an argument. */
+                if (jas_optind >= argc) {
+                    if (jas_opterr) {
+                        jas_eprintf("missing argument for option %s\n", s);
+                    }
+                    return JAS_GETOPT_ERR;
+                }
+                jas_optarg = argv[jas_optind];
+                ++jas_optind;
+            } else {
+                /* The option does not have an argument. */
+                jas_optarg = 0;
+            }
+            return id;
+        } else {
+            /* We are not processing an option. */
+            return JAS_GETOPT_EOF;
+        }
+    }
+    return JAS_GETOPT_EOF;
 }

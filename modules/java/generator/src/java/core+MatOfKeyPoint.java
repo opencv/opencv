@@ -22,8 +22,8 @@ public class MatOfKeyPoint extends Mat {
     }
 
     public static MatOfKeyPoint fromNativeAddr(long addr) {
-		return new MatOfKeyPoint(addr);
-	}
+        return new MatOfKeyPoint(addr);
+    }
 
     public MatOfKeyPoint(Mat m) {
         super(m, Range.all());

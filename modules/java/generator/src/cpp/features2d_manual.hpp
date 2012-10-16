@@ -205,7 +205,7 @@ public:
         matcher.addref();
         return (javaDescriptorMatcher*)((DescriptorMatcher*) matcher);
     }
-    
+
     //supported: FlannBased, BruteForce, BruteForce-L1, BruteForce-Hamming, BruteForce-HammingLUT
     CV_WRAP static javaDescriptorMatcher* create( int matcherType )
     {
@@ -397,7 +397,7 @@ public:
         matcher.addref();
         return (javaGenericDescriptorMatcher*)((GenericDescriptorMatcher*) matcher);
     }
-    
+
     //supported: OneWay, Fern
     //unsupported: Vector
     CV_WRAP static javaGenericDescriptorMatcher* create( int matcherType )
@@ -440,7 +440,7 @@ public:
 #if 0
 //DO NOT REMOVE! The block is required for sources parser
 enum
-{ 
+{
           DRAW_OVER_OUTIMG = 1, // Output image matrix will not be created (Mat::create).
                                 // Matches will be drawn on existing content of output image.
           NOT_DRAW_SINGLE_POINTS = 2, // Single keypoints will not be drawn.
@@ -464,7 +464,7 @@ CV_EXPORTS_AS(drawMatches2) void drawMatches( const Mat& img1, const vector<KeyP
                              const vector<vector<DMatch> >& matches1to2, Mat& outImg,
                              const Scalar& matchColor=Scalar::all(-1), const Scalar& singlePointColor=Scalar::all(-1),
                              const vector<vector<char> >& matchesMask=vector<vector<char> >(), int flags=0);
-                             
+
 #endif
 
 } //cv

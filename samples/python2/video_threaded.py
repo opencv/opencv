@@ -3,10 +3,10 @@ Multithreaded video processing sample.
 Usage:
    video_threaded.py {<video device number>|<video file name>}
 
-   Shows how python threading capabilities can be used 
-   to organize parallel captured frame processing pipeline 
+   Shows how python threading capabilities can be used
+   to organize parallel captured frame processing pipeline
    for smoother playback.
-   
+
 Keyboard shortcuts:
 
    ESC - exit
@@ -22,7 +22,7 @@ from collections import deque
 
 from common import clock, draw_str, StatValue
 import video
-            
+
 
 class DummyTask:
     def __init__(self, data):
@@ -34,14 +34,14 @@ class DummyTask:
 
 if __name__ == '__main__':
     import sys
-    
+
     print __doc__
 
     try: fn = sys.argv[1]
     except: fn = 0
     cap = video.create_capture(fn)
-   
-    
+
+
     def process_frame(frame, t0):
         # some intensive computation...
         frame = cv2.medianBlur(frame, 19)

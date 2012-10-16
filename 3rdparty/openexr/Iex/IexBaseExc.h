@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2002, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-// 
+//
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission. 
-// 
+// from this software without specific prior written permission.
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -129,9 +129,9 @@ class BaseExc: public std::string, public std::exception
     class name: public base				        \
     {							        \
       public:                                                   \
-	name (const char* text=0)      throw(): base (text) {}	\
-	name (const std::string &text) throw(): base (text) {}	\
-	name (std::stringstream &text) throw(): base (text) {}	\
+    name (const char* text=0)      throw(): base (text) {}	\
+    name (const std::string &text) throw(): base (text) {}	\
+    name (std::stringstream &text) throw(): base (text) {}	\
     };
 
 
@@ -142,38 +142,38 @@ class BaseExc: public std::string, public std::exception
 DEFINE_EXC (ArgExc,   BaseExc) 	 // Invalid arguments to a function call
 
 DEFINE_EXC (LogicExc, BaseExc) 	 // General error in a program's logic,
-				 // for example, a function was called
-				 // in a context where the call does
-				 // not make sense.
+                 // for example, a function was called
+                 // in a context where the call does
+                 // not make sense.
 
 DEFINE_EXC (InputExc, BaseExc) 	 // Invalid input data, e.g. from a file
 
 DEFINE_EXC (IoExc, BaseExc) 	 // Input or output operation failed
 
 DEFINE_EXC (MathExc,  BaseExc) 	 // Arithmetic exception; more specific
-				 // exceptions derived from this class
-				 // are defined in ExcMath.h
+                 // exceptions derived from this class
+                 // are defined in ExcMath.h
 
 DEFINE_EXC (ErrnoExc, BaseExc) 	 // Base class for exceptions corresponding
-				 // to errno values (see errno.h); more
-				 // specific exceptions derived from this
-				 // class are defined in ExcErrno.h
+                 // to errno values (see errno.h); more
+                 // specific exceptions derived from this
+                 // class are defined in ExcErrno.h
 
 DEFINE_EXC (NoImplExc, BaseExc)  // Missing method exception e.g. from a
-				 // call to a method that is only partially
-				 // or not at all implemented. A reminder
-				 // to lazy software people to get back
-				 // to work.
+                 // call to a method that is only partially
+                 // or not at all implemented. A reminder
+                 // to lazy software people to get back
+                 // to work.
 
 DEFINE_EXC (NullExc, BaseExc) 	 // A pointer is inappropriately null.
 
 DEFINE_EXC (TypeExc, BaseExc) 	 // An object is an inappropriate type,
-				 // i.e. a dynamnic_cast failed.
+                 // i.e. a dynamnic_cast failed.
 
 
 //----------------------------------------------------------------------
 // Stack-tracing support:
-// 
+//
 // setStackTracer(st)
 //
 //	installs a stack-tracing routine, st, which will be called from
@@ -194,7 +194,7 @@ DEFINE_EXC (TypeExc, BaseExc) 	 // An object is an inappropriate type,
 //
 //	returns a pointer to the current stack-tracing routine, or 0
 //	if there is no current stack stack-tracing routine.
-// 
+//
 //----------------------------------------------------------------------
 
 typedef std::string (* StackTracer) ();

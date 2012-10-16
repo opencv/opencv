@@ -56,26 +56,26 @@ void crossCorr( const Mat& img, const Mat& _templ, Mat& corr,
     int depth = img.depth(), cn = img.channels();
     int tdepth = templ.depth(), tcn = templ.channels();
     int cdepth = CV_MAT_DEPTH(ctype), ccn = CV_MAT_CN(ctype);
-    
+
     CV_Assert( img.dims <= 2 && templ.dims <= 2 && corr.dims <= 2 );
-    
+
     if( depth != tdepth && tdepth != std::max(CV_32F, depth) )
     {
         _templ.convertTo(templ, std::max(CV_32F, depth));
         tdepth = templ.depth();
     }
-    
+
     CV_Assert( depth == tdepth || tdepth == CV_32F);
     CV_Assert( corrsize.height <= img.rows + templ.rows - 1 &&
                corrsize.width <= img.cols + templ.cols - 1 );
-    
+
     CV_Assert( ccn == 1 || delta == 0 );
-    
+
     corr.create(corrsize, ctype);
 
     int maxDepth = depth > CV_8S ? CV_64F : std::max(std::max(CV_32F, tdepth), cdepth);
     Size blocksize, dftsize;
-    
+
     blocksize.width = cvRound(templ.cols*blockScale);
     blocksize.width = std::max( blocksize.width, minBlockSize - templ.cols + 1 );
     blocksize.width = std::min( blocksize.width, corr.cols );
@@ -109,7 +109,7 @@ void crossCorr( const Mat& img, const Mat& _templ, Mat& corr,
         bufSize = std::max( bufSize, blocksize.width*blocksize.height*CV_ELEM_SIZE(cdepth));
 
     buf.resize(bufSize);
-    
+
     // compute DFT of each template plane
     for( k = 0; k < tcn; k++ )
     {
@@ -139,11 +139,11 @@ void crossCorr( const Mat& img, const Mat& _templ, Mat& corr,
     int tileCountX = (corr.cols + blocksize.width - 1)/blocksize.width;
     int tileCountY = (corr.rows + blocksize.height - 1)/blocksize.height;
     int tileCount = tileCountX * tileCountY;
-    
+
     Size wholeSize = img.size();
     Point roiofs(0,0);
     Mat img0 = img;
-    
+
     if( !(borderType & BORDER_ISOLATED) )
     {
         img.locateROI(wholeSize, roiofs);
@@ -151,13 +151,13 @@ void crossCorr( const Mat& img, const Mat& _templ, Mat& corr,
                        roiofs.x, wholeSize.width-img.cols-roiofs.x);
     }
     borderType |= BORDER_ISOLATED;
-    
+
     // calculate correlation by blocks
     for( i = 0; i < tileCount; i++ )
     {
         int x = (i%tileCountX)*blocksize.width;
         int y = (i/tileCountX)*blocksize.height;
-        
+
         Size bsz(std::min(blocksize.width, corr.cols - x),
                  std::min(blocksize.height, corr.rows - y));
         Size dsz(bsz.width + templ.cols - 1, bsz.height + templ.rows - 1);
@@ -169,12 +169,12 @@ void crossCorr( const Mat& img, const Mat& _templ, Mat& corr,
         Mat dst(dftImg, Rect(0, 0, dsz.width, dsz.height));
         Mat dst1(dftImg, Rect(x1-x0, y1-y0, x2-x1, y2-y1));
         Mat cdst(corr, Rect(x, y, bsz.width, bsz.height));
-        
+
         for( k = 0; k < cn; k++ )
         {
             Mat src = src0;
             dftImg = Scalar::all(0);
-            
+
             if( cn > 1 )
             {
                 src = depth == maxDepth ? dst1 : Mat(y2-y1, x2-x1, depth, &buf[0]);
@@ -206,7 +206,7 @@ void crossCorr( const Mat& img, const Mat& _templ, Mat& corr,
                     src = plane;
                 }
                 int pairs[] = {0, k};
-                mixChannels(&src, 1, &cdst, 1, pairs, 1); 
+                mixChannels(&src, 1, &cdst, 1, pairs, 1);
             }
             else
             {
@@ -234,7 +234,7 @@ void crossCorr( const Mat& img, const Mat& _templ, Mat& corr,
 void cv::matchTemplate( InputArray _img, InputArray _templ, OutputArray _result, int method )
 {
     CV_Assert( CV_TM_SQDIFF <= method && method <= CV_TM_CCOEFF_NORMED );
-    
+
     int numType = method == CV_TM_CCORR || method == CV_TM_CCORR_NORMED ? 0 :
                   method == CV_TM_CCOEFF || method == CV_TM_CCOEFF_NORMED ? 1 : 2;
     bool isNormed = method == CV_TM_CCORR_NORMED ||
@@ -244,14 +244,14 @@ void cv::matchTemplate( InputArray _img, InputArray _templ, OutputArray _result,
     Mat img = _img.getMat(), templ = _templ.getMat();
     if( img.rows < templ.rows || img.cols < templ.cols )
         std::swap(img, templ);
-    
+
     CV_Assert( (img.depth() == CV_8U || img.depth() == CV_32F) &&
                img.type() == templ.type() );
 
     Size corrSize(img.cols - templ.cols + 1, img.rows - templ.rows + 1);
     _result.create(corrSize, CV_32F);
     Mat result = _result.getMat();
-    
+
     int cn = img.channels();
     crossCorr( img, templ, result, result.size(), result.type(), Point(0,0), 0, 0);
 
@@ -264,7 +264,7 @@ void cv::matchTemplate( InputArray _img, InputArray _templ, OutputArray _result,
     Scalar templMean, templSdv;
     double *q0 = 0, *q1 = 0, *q2 = 0, *q3 = 0;
     double templNorm = 0, templSum2 = 0;
-    
+
     if( method == CV_TM_CCOEFF )
     {
         integral(img, sum, CV_64F);
@@ -283,7 +283,7 @@ void cv::matchTemplate( InputArray _img, InputArray _templ, OutputArray _result,
             result = Scalar::all(1);
             return;
         }
-        
+
         templSum2 = templNorm +
                      CV_SQR(templMean[0]) + CV_SQR(templMean[1]) +
                      CV_SQR(templMean[2]) + CV_SQR(templMean[3]);
@@ -293,7 +293,7 @@ void cv::matchTemplate( InputArray _img, InputArray _templ, OutputArray _result,
             templMean = Scalar::all(0);
             templNorm = templSum2;
         }
-        
+
         templSum2 /= invArea;
         templNorm = sqrt(templNorm);
         templNorm /= sqrt(invArea); // care of accuracy here
@@ -313,7 +313,7 @@ void cv::matchTemplate( InputArray _img, InputArray _templ, OutputArray _result,
     int sqstep = sqsum.data ? (int)(sqsum.step / sizeof(double)) : 0;
 
     int i, j, k;
-    
+
     for( i = 0; i < result.rows; i++ )
     {
         float* rrow = (float*)(result.data + i*result.step);
@@ -324,7 +324,7 @@ void cv::matchTemplate( InputArray _img, InputArray _templ, OutputArray _result,
         {
             double num = rrow[j], t;
             double wndMean2 = 0, wndSum2 = 0;
-            
+
             if( numType == 1 )
             {
                 for( k = 0; k < cn; k++ )

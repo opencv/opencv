@@ -148,7 +148,7 @@ CV_INLINE float icvRGBDist_Sum( const _CvRGBf& a, const _CvRGBf& b )
     float tr = (float)fabs(a.red - b.red);
     float tg = (float)fabs(a.green - b.green);
     float tb = (float)fabs(a.blue - b.blue);
-    
+
     return (tr + tg + tb);
 }
 
@@ -294,7 +294,7 @@ icvPyrSegmentation8uC1R( uchar * src_image, int src_step,
         cvSetData( &prev_level, pyramida, step );
         cvSetData( &next_level, pyramida, step );
         cvPyrDown( &prev_level, &next_level );
-        
+
         //_CV_CHECK( icvPyrDown_Gauss5x5_32f_C1R( pyramida, step, pyramida, step, size, buff ));
         //_CV_CHECK( icvPyrDownBorder_32f_CnR( pyramida, step, size, pyramida, step, dst_size, 1 ));
         pyram[l] = p_cur;
@@ -436,7 +436,7 @@ icvPyrSegmentation8uC1R( uchar * src_image, int src_step,
                         {
                             p_cur[j].c = p_prev->c;
                         }
-                        
+
                         if( l == 0 )
                             p_prev = _CV_NEXT_BASE_C1(p_prev,2);
                         else
@@ -530,7 +530,7 @@ icvPyrSegmentation8uC1R( uchar * src_image, int src_step,
 
     cvEndWriteSeq( &writer );
 
-/* clusterization segmented components and construction 
+/* clusterization segmented components and construction
    output connected components                            */
     icvSegmentClusterC1( cmp_seq, res_seq, threshold2, pyram[1], roi );
 
@@ -590,7 +590,7 @@ icvPyrSegmentation8uC1R( uchar * src_image, int src_step,
 
 
 /****************************************************************************************\
-    color!!!  image segmentation by pyramid-linking   
+    color!!!  image segmentation by pyramid-linking
 \****************************************************************************************/
 static CvStatus
 icvPyrSegmentation8uC3R( uchar * src_image, int src_step,
@@ -859,7 +859,7 @@ icvPyrSegmentation8uC3R( uchar * src_image, int src_step,
                         {
                             p_cur[j].c = p_prev->c;
                         }
-                        
+
                         if( l == 0 )
                             p_prev = _CV_NEXT_BASE_C3( p_prev, 2 );
                         else
@@ -960,7 +960,7 @@ icvPyrSegmentation8uC3R( uchar * src_image, int src_step,
 
     cvEndWriteSeq( &writer );
 
-/* clusterization segmented components and construction 
+/* clusterization segmented components and construction
    output connected components                            */
     icvSegmentClusterC3( cmp_seq, res_seq, threshold2, pyram[1], roi );
 
@@ -1388,7 +1388,7 @@ static CvStatus icvUpdatePyrLinks_8u_C3
 
 /****************************************************************************************\
 
-    clusterization segmented components    
+    clusterization segmented components
 
 \****************************************************************************************/
 static void
@@ -1564,7 +1564,7 @@ icvSegmentClusterC1( CvSeq * cmp_seq, CvSeq * res_seq,
 
 /****************************************************************************************\
 
-    clusterization segmented components    
+    clusterization segmented components
 
 \****************************************************************************************/
 static void
@@ -1757,7 +1757,7 @@ icvSegmentClusterC3( CvSeq * cmp_seq, CvSeq * res_seq,
 
 /****************************************************************************************\
 
-                 definition of the maximum roi size 
+                 definition of the maximum roi size
 
 \****************************************************************************************/
 void
@@ -1815,7 +1815,7 @@ icvMaxRoi1( _CvRect16u * max_rect, int x, int y )
 //    Name:    cvPyrSegmentation
 //    Purpose:
 //      segments an image using pyramid-linking technique
-//    Context: 
+//    Context:
 //    Parameters:
 //      src - source image
 //      dst - destination image

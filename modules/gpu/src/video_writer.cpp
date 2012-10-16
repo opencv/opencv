@@ -141,7 +141,7 @@ private:
     void initGpuMemory();
     void initCallBacks();
     void createHWEncoder();
-    
+
     cv::Ptr<EncoderCallBack> callback_;
     cv::Size frameSize_;
 
@@ -206,7 +206,7 @@ void cv::gpu::VideoWriter_GPU::Impl::initEncoder(double fps)
 
     // Set codec
 
-    static const unsigned long codecs_id[] = 
+    static const unsigned long codecs_id[] =
     {
         NV_CODEC_TYPE_MPEG1, NV_CODEC_TYPE_MPEG2, NV_CODEC_TYPE_MPEG4, NV_CODEC_TYPE_H264, NV_CODEC_TYPE_VC1
     };
@@ -468,7 +468,7 @@ void cv::gpu::VideoWriter_GPU::Impl::initGpuMemory()
     cuRes = cuvidCtxLockCreate(&cuCtxLock_, cuContext);
     CV_Assert( cuRes == CUDA_SUCCESS );
 
-    // If we are using GPU Device Memory with NVCUVENC, it is necessary to create a 
+    // If we are using GPU Device Memory with NVCUVENC, it is necessary to create a
     // CUDA Context with a Context Lock cuvidCtxLock.  The Context Lock needs to be passed to NVCUVENC
 
     int iUseDeviceMem = 1;
@@ -501,7 +501,7 @@ void cv::gpu::VideoWriter_GPU::Impl::createHWEncoder()
     CV_Assert( err == 0 );
 }
 
-namespace cv { namespace gpu { namespace device 
+namespace cv { namespace gpu { namespace device
 {
     namespace video_encoding
     {
@@ -911,7 +911,7 @@ void cv::gpu::VideoWriter_GPU::write(const cv::gpu::GpuMat& image, bool lastFram
     impl_->write(image, lastFrame);
 }
 
-cv::gpu::VideoWriter_GPU::EncoderParams cv::gpu::VideoWriter_GPU::getParams() const 
+cv::gpu::VideoWriter_GPU::EncoderParams cv::gpu::VideoWriter_GPU::getParams() const
 {
     CV_Assert( isOpened() );
 

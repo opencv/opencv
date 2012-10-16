@@ -394,7 +394,7 @@ static CvStatus  icvFitLine2D( CvPoint2D32f * points, int count, int dist,
         int first = 1;
         for( i = 0; i < count; i++ )
             w[i] = 0.f;
-        
+
         for( i = 0; i < MIN(count,10); )
         {
             j = cvRandInt(&rng) % count;
@@ -542,7 +542,7 @@ icvFitLine3D( CvPoint3D32f * points, int count, int dist,
         int first = 1;
         for( i = 0; i < count; i++ )
             w[i] = 0.f;
-        
+
         for( i = 0; i < MIN(count,10); )
         {
             j = cvRandInt(&rng) % count;

@@ -77,7 +77,7 @@ PERF_TEST_P(Size_AdaptThreshType_AdaptThreshMethod_BlockSize, adaptiveThreshold,
 
     double maxValue = theRNG().uniform(1, 254);
     double C = 10.0;
-    
+
     int type = CV_8UC1;
     Mat src(sz, type);
     Mat dst(sz, type);

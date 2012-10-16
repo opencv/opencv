@@ -99,14 +99,14 @@ void CV_ChessboardDetectorTimingTest::run( int start_from )
         int is_chessboard = cvReadInt((CvFileNode*)cvGetSeqElem(board_list->data.seq,idx*4+1), 0);
         pattern_size.width = cvReadInt((CvFileNode*)cvGetSeqElem(board_list->data.seq,idx*4 + 2), -1);
         pattern_size.height = cvReadInt((CvFileNode*)cvGetSeqElem(board_list->data.seq,idx*4 + 3), -1);
-        
+
         ts->update_context( this, idx-1, true );
 
         /* read the image */
         sprintf( filename, "%s%s", filepath, imgname );
-    
+
         img = cvLoadImage( filename );
-        
+
         if( !img )
         {
             ts->printf( cvtest::TS::LOG, "one of chessboard images can't be read: %s\n", filename );
@@ -123,7 +123,7 @@ void CV_ChessboardDetectorTimingTest::run( int start_from )
         gray = cvCreateImage( cvSize( img->width, img->height ), IPL_DEPTH_8U, 1 );
         thresh = cvCreateImage( cvSize( img->width, img->height ), IPL_DEPTH_8U, 1 );
         cvCvtColor( img, gray, CV_BGR2GRAY );
- 
+
 
         count0 = pattern_size.width*pattern_size.height;
 
@@ -136,29 +136,29 @@ void CV_ChessboardDetectorTimingTest::run( int start_from )
         int64 _time0 = cvGetTickCount();
         result = cvCheckChessboard(gray, pattern_size);
         int64 _time01 = cvGetTickCount();
-        
+
         OPENCV_CALL( result1 = cvFindChessboardCorners(
                  gray, pattern_size, v, &count, 15 ));
         int64 _time1 = cvGetTickCount();
 
         if( result != is_chessboard )
         {
-            ts->printf( cvtest::TS::LOG, "Error: chessboard was %sdetected in the image %s\n", 
+            ts->printf( cvtest::TS::LOG, "Error: chessboard was %sdetected in the image %s\n",
                        result ? "" : "not ", imgname );
             code = cvtest::TS::FAIL_INVALID_OUTPUT;
             goto _exit_;
         }
         if(result != result1)
         {
-            ts->printf( cvtest::TS::LOG, "Warning: results differ cvCheckChessboard %d, cvFindChessboardCorners %d\n", 
+            ts->printf( cvtest::TS::LOG, "Warning: results differ cvCheckChessboard %d, cvFindChessboardCorners %d\n",
                        result, result1);
         }
-                
+
         int num_pixels = gray->width*gray->height;
         float check_chessboard_time = float(_time01 - _time0)/(float)cvGetTickFrequency(); // in us
-        ts->printf(cvtest::TS::LOG, "    cvCheckChessboard time s: %f, us per pixel: %f\n", 
+        ts->printf(cvtest::TS::LOG, "    cvCheckChessboard time s: %f, us per pixel: %f\n",
                    check_chessboard_time*1e-6, check_chessboard_time/num_pixels);
-        
+
         float find_chessboard_time = float(_time1 - _time01)/(float)cvGetTickFrequency();
         ts->printf(cvtest::TS::LOG, "    cvFindChessboard time s: %f, us per pixel: %f\n",
                    find_chessboard_time*1e-6, find_chessboard_time/num_pixels);

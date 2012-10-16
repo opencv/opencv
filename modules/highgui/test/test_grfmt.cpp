@@ -275,7 +275,7 @@ TEST(Highgui_ImreadVSCvtColor, regression)
     double actual_avg_diff = (double)mean(diff)[0];
     double actual_maxval, actual_minval;
     minMaxLoc(diff, &actual_minval, &actual_maxval);
-	//printf("actual avg = %g, actual maxdiff = %g, npixels = %d\n", actual_avg_diff, actual_maxval, (int)diff.total());
+    //printf("actual avg = %g, actual maxdiff = %g, npixels = %d\n", actual_avg_diff, actual_maxval, (int)diff.total());
 
     EXPECT_LT(actual_avg_diff, MAX_MEAN_DIFF);
     EXPECT_LT(actual_maxval, MAX_ABS_DIFF);

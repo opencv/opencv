@@ -322,7 +322,7 @@ typedef struct IDirectDrawGammaControl *LPDIRECTDRAWGAMMACONTROL;
 #define DDSCAPS_OPTIMIZED		0x80000000
 
 typedef struct _DDSCAPS {
-	DWORD	dwCaps;	/* capabilities of surface wanted */
+    DWORD	dwCaps;	/* capabilities of surface wanted */
 } DDSCAPS,*LPDDSCAPS;
 
 /* DDSCAPS2.dwCaps2 */
@@ -368,21 +368,21 @@ typedef struct _DDSCAPS {
 #define DDSCAPS2_STEREOSURFACELEFT      0x00080000
 
 typedef struct _DDSCAPS2 {
-	DWORD	dwCaps;	/* capabilities of surface wanted */
-	DWORD   dwCaps2; /* additional capabilities */
-	DWORD   dwCaps3; /* reserved capabilities */
-	__extension__ union {
-	  DWORD dwCaps4; /* low word is the depth for a volume texture */
-	  DWORD dwVolumeDepth;
-	} DUMMYUNIONNAME1;
+    DWORD	dwCaps;	/* capabilities of surface wanted */
+    DWORD   dwCaps2; /* additional capabilities */
+    DWORD   dwCaps3; /* reserved capabilities */
+    __extension__ union {
+      DWORD dwCaps4; /* low word is the depth for a volume texture */
+      DWORD dwVolumeDepth;
+    } DUMMYUNIONNAME1;
 } DDSCAPS2,*LPDDSCAPS2;
 
 typedef struct _DDSCAPSEX {
     DWORD	dwCaps2;
     DWORD	dwCaps3;
     __extension__ union {
-	DWORD	dwCaps4;
-	DWORD	dwVolumeDepth;
+    DWORD	dwCaps4;
+    DWORD	dwVolumeDepth;
     } DUMMYUNIONNAME1;
 } DDSCAPSEX,*LPDDSCAPSEX;
 
@@ -712,12 +712,12 @@ typedef DDCAPS *LPDDCAPS;
 
 typedef struct _DDCOLORKEY
 {
-	DWORD	dwColorSpaceLowValue;/* low boundary of color space that is to
+    DWORD	dwColorSpaceLowValue;/* low boundary of color space that is to
                                       * be treated as Color Key, inclusive
-				      */
-	DWORD	dwColorSpaceHighValue;/* high boundary of color space that is
+                      */
+    DWORD	dwColorSpaceHighValue;/* high boundary of color space that is
                                        * to be treated as Color Key, inclusive
-				       */
+                       */
 } DDCOLORKEY,*LPDDCOLORKEY;
 
 /* ddCKEYCAPS bits */
@@ -746,40 +746,40 @@ typedef struct _DDPIXELFORMAT {
     DWORD	dwFlags;                /* 4: pixel format flags */
     DWORD	dwFourCC;               /* 8: (FOURCC code) */
     __extension__ union {
-	DWORD	dwRGBBitCount;          /* C: how many bits per pixel */
-	DWORD	dwYUVBitCount;          /* C: how many bits per pixel */
-	DWORD	dwZBufferBitDepth;      /* C: how many bits for z buffers */
-	DWORD	dwAlphaBitDepth;        /* C: how many bits for alpha channels*/
-	DWORD	dwLuminanceBitCount;
-	DWORD	dwBumpBitCount;
+    DWORD	dwRGBBitCount;          /* C: how many bits per pixel */
+    DWORD	dwYUVBitCount;          /* C: how many bits per pixel */
+    DWORD	dwZBufferBitDepth;      /* C: how many bits for z buffers */
+    DWORD	dwAlphaBitDepth;        /* C: how many bits for alpha channels*/
+    DWORD	dwLuminanceBitCount;
+    DWORD	dwBumpBitCount;
     } DUMMYUNIONNAME1;
     __extension__ union {
-	DWORD	dwRBitMask;             /* 10: mask for red bit*/
-	DWORD	dwYBitMask;             /* 10: mask for Y bits*/
-	DWORD	dwStencilBitDepth;
-	DWORD	dwLuminanceBitMask;
-	DWORD	dwBumpDuBitMask;
+    DWORD	dwRBitMask;             /* 10: mask for red bit*/
+    DWORD	dwYBitMask;             /* 10: mask for Y bits*/
+    DWORD	dwStencilBitDepth;
+    DWORD	dwLuminanceBitMask;
+    DWORD	dwBumpDuBitMask;
     } DUMMYUNIONNAME2;
     __extension__ union {
-	DWORD	dwGBitMask;             /* 14: mask for green bits*/
-	DWORD	dwUBitMask;             /* 14: mask for U bits*/
-	DWORD	dwZBitMask;
-	DWORD	dwBumpDvBitMask;
+    DWORD	dwGBitMask;             /* 14: mask for green bits*/
+    DWORD	dwUBitMask;             /* 14: mask for U bits*/
+    DWORD	dwZBitMask;
+    DWORD	dwBumpDvBitMask;
     } DUMMYUNIONNAME3;
     __extension__ union {
-	DWORD   dwBBitMask;             /* 18: mask for blue bits*/
-	DWORD   dwVBitMask;             /* 18: mask for V bits*/
-	DWORD	dwStencilBitMask;
-	DWORD	dwBumpLuminanceBitMask;
+    DWORD   dwBBitMask;             /* 18: mask for blue bits*/
+    DWORD   dwVBitMask;             /* 18: mask for V bits*/
+    DWORD	dwStencilBitMask;
+    DWORD	dwBumpLuminanceBitMask;
     } DUMMYUNIONNAME4;
     __extension__ union {
-    	DWORD	dwRGBAlphaBitMask;	/* 1C: mask for alpha channel */
-    	DWORD	dwYUVAlphaBitMask;	/* 1C: mask for alpha channel */
-	DWORD	dwLuminanceAlphaBitMask;
-	DWORD	dwRGBZBitMask;		/* 1C: mask for Z channel */
-	DWORD	dwYUVZBitMask;		/* 1C: mask for Z channel */
+        DWORD	dwRGBAlphaBitMask;	/* 1C: mask for alpha channel */
+        DWORD	dwYUVAlphaBitMask;	/* 1C: mask for alpha channel */
+    DWORD	dwLuminanceAlphaBitMask;
+    DWORD	dwRGBZBitMask;		/* 1C: mask for Z channel */
+    DWORD	dwYUVZBitMask;		/* 1C: mask for Z channel */
     } DUMMYUNIONNAME5;
-    					/* 20: next structure */
+                        /* 20: next structure */
 } DDPIXELFORMAT,*LPDDPIXELFORMAT;
 
 #ifndef MAKEFOURCC
@@ -980,79 +980,79 @@ typedef struct _DDPIXELFORMAT {
 
 typedef struct _DDSURFACEDESC
 {
-	DWORD	dwSize;		/* 0: size of the DDSURFACEDESC structure*/
-	DWORD	dwFlags;	/* 4: determines what fields are valid*/
-	DWORD	dwHeight;	/* 8: height of surface to be created*/
-	DWORD	dwWidth;	/* C: width of input surface*/
-	__extension__ union {
-		LONG	lPitch;	/* 10: distance to start of next line (return value only)*/
-		DWORD	dwLinearSize;
-	} DUMMYUNIONNAME1;
-	DWORD	dwBackBufferCount;/* 14: number of back buffers requested*/
-	__extension__ union {
-		DWORD	dwMipMapCount;/* 18:number of mip-map levels requested*/
-		DWORD	dwZBufferBitDepth;/*18: depth of Z buffer requested*/
-		DWORD	dwRefreshRate;/* 18:refresh rate (used when display mode is described)*/
-	} DUMMYUNIONNAME2;
-	DWORD	dwAlphaBitDepth;/* 1C:depth of alpha buffer requested*/
-	DWORD	dwReserved;	/* 20:reserved*/
-	LPVOID	lpSurface;	/* 24:pointer to the associated surface memory*/
-	DDCOLORKEY	ddckCKDestOverlay;/* 28: CK for dest overlay use*/
-	DDCOLORKEY	ddckCKDestBlt;	/* 30: CK for destination blt use*/
-	DDCOLORKEY	ddckCKSrcOverlay;/* 38: CK for source overlay use*/
-	DDCOLORKEY	ddckCKSrcBlt;	/* 40: CK for source blt use*/
-	DDPIXELFORMAT	ddpfPixelFormat;/* 48: pixel format description of the surface*/
-	DDSCAPS		ddsCaps;	/* 68: direct draw surface caps */
+    DWORD	dwSize;		/* 0: size of the DDSURFACEDESC structure*/
+    DWORD	dwFlags;	/* 4: determines what fields are valid*/
+    DWORD	dwHeight;	/* 8: height of surface to be created*/
+    DWORD	dwWidth;	/* C: width of input surface*/
+    __extension__ union {
+        LONG	lPitch;	/* 10: distance to start of next line (return value only)*/
+        DWORD	dwLinearSize;
+    } DUMMYUNIONNAME1;
+    DWORD	dwBackBufferCount;/* 14: number of back buffers requested*/
+    __extension__ union {
+        DWORD	dwMipMapCount;/* 18:number of mip-map levels requested*/
+        DWORD	dwZBufferBitDepth;/*18: depth of Z buffer requested*/
+        DWORD	dwRefreshRate;/* 18:refresh rate (used when display mode is described)*/
+    } DUMMYUNIONNAME2;
+    DWORD	dwAlphaBitDepth;/* 1C:depth of alpha buffer requested*/
+    DWORD	dwReserved;	/* 20:reserved*/
+    LPVOID	lpSurface;	/* 24:pointer to the associated surface memory*/
+    DDCOLORKEY	ddckCKDestOverlay;/* 28: CK for dest overlay use*/
+    DDCOLORKEY	ddckCKDestBlt;	/* 30: CK for destination blt use*/
+    DDCOLORKEY	ddckCKSrcOverlay;/* 38: CK for source overlay use*/
+    DDCOLORKEY	ddckCKSrcBlt;	/* 40: CK for source blt use*/
+    DDPIXELFORMAT	ddpfPixelFormat;/* 48: pixel format description of the surface*/
+    DDSCAPS		ddsCaps;	/* 68: direct draw surface caps */
 } DDSURFACEDESC,*LPDDSURFACEDESC;
 
 typedef struct _DDSURFACEDESC2
 {
-	DWORD	dwSize;		/* 0: size of the DDSURFACEDESC2 structure*/
-	DWORD	dwFlags;	/* 4: determines what fields are valid*/
-	DWORD	dwHeight;	/* 8: height of surface to be created*/
-	DWORD	dwWidth;	/* C: width of input surface*/
-	__extension__ union {
-		LONG	lPitch;	      /*10: distance to start of next line (return value only)*/
-		DWORD   dwLinearSize; /*10: formless late-allocated optimized surface size */
-	} DUMMYUNIONNAME1;
-	DWORD	dwBackBufferCount;/* 14: number of back buffers requested*/
-	__extension__ union {
-		DWORD	dwMipMapCount;/* 18:number of mip-map levels requested*/
-		DWORD	dwRefreshRate;/* 18:refresh rate (used when display mode is described)*/
-		DWORD   dwSrcVBHandle;/* 18:source used in VB::Optimize */
-	} DUMMYUNIONNAME2;
-	DWORD	dwAlphaBitDepth;/* 1C:depth of alpha buffer requested*/
-	DWORD	dwReserved;	/* 20:reserved*/
-	LPVOID	lpSurface;	/* 24:pointer to the associated surface memory*/
-	__extension__ union {
-		DDCOLORKEY	ddckCKDestOverlay; /* 28: CK for dest overlay use*/
-		DWORD 		dwEmptyFaceColor;  /* 28: color for empty cubemap faces */
-	} DUMMYUNIONNAME3;
-	DDCOLORKEY	ddckCKDestBlt;	/* 30: CK for destination blt use*/
-	DDCOLORKEY	ddckCKSrcOverlay;/* 38: CK for source overlay use*/
-	DDCOLORKEY	ddckCKSrcBlt;	/* 40: CK for source blt use*/
+    DWORD	dwSize;		/* 0: size of the DDSURFACEDESC2 structure*/
+    DWORD	dwFlags;	/* 4: determines what fields are valid*/
+    DWORD	dwHeight;	/* 8: height of surface to be created*/
+    DWORD	dwWidth;	/* C: width of input surface*/
+    __extension__ union {
+        LONG	lPitch;	      /*10: distance to start of next line (return value only)*/
+        DWORD   dwLinearSize; /*10: formless late-allocated optimized surface size */
+    } DUMMYUNIONNAME1;
+    DWORD	dwBackBufferCount;/* 14: number of back buffers requested*/
+    __extension__ union {
+        DWORD	dwMipMapCount;/* 18:number of mip-map levels requested*/
+        DWORD	dwRefreshRate;/* 18:refresh rate (used when display mode is described)*/
+        DWORD   dwSrcVBHandle;/* 18:source used in VB::Optimize */
+    } DUMMYUNIONNAME2;
+    DWORD	dwAlphaBitDepth;/* 1C:depth of alpha buffer requested*/
+    DWORD	dwReserved;	/* 20:reserved*/
+    LPVOID	lpSurface;	/* 24:pointer to the associated surface memory*/
+    __extension__ union {
+        DDCOLORKEY	ddckCKDestOverlay; /* 28: CK for dest overlay use*/
+        DWORD 		dwEmptyFaceColor;  /* 28: color for empty cubemap faces */
+    } DUMMYUNIONNAME3;
+    DDCOLORKEY	ddckCKDestBlt;	/* 30: CK for destination blt use*/
+    DDCOLORKEY	ddckCKSrcOverlay;/* 38: CK for source overlay use*/
+    DDCOLORKEY	ddckCKSrcBlt;	/* 40: CK for source blt use*/
 
-	__extension__ union {
-		DDPIXELFORMAT	ddpfPixelFormat;/* 48: pixel format description of the surface*/
-		DWORD 		dwFVF;	/* 48: vertex format description of vertex buffers */
-	} DUMMYUNIONNAME4;
-	DDSCAPS2	ddsCaps;  /* 68: DDraw surface caps */
-	DWORD		dwTextureStage; /* 78: stage in multitexture cascade */
+    __extension__ union {
+        DDPIXELFORMAT	ddpfPixelFormat;/* 48: pixel format description of the surface*/
+        DWORD 		dwFVF;	/* 48: vertex format description of vertex buffers */
+    } DUMMYUNIONNAME4;
+    DDSCAPS2	ddsCaps;  /* 68: DDraw surface caps */
+    DWORD		dwTextureStage; /* 78: stage in multitexture cascade */
 } DDSURFACEDESC2,*LPDDSURFACEDESC2;
 
 
 typedef struct _DDARGB {
-	BYTE	blue;
-	BYTE	green;
-	BYTE	red;
-	BYTE	alpha;
+    BYTE	blue;
+    BYTE	green;
+    BYTE	red;
+    BYTE	alpha;
 } DDARGB, *LPDDARGB;
 
 typedef struct _DDRGBA {
-	BYTE	red;
-	BYTE	green;
-	BYTE	blue;
-	BYTE	alpha;
+    BYTE	red;
+    BYTE	green;
+    BYTE	blue;
+    BYTE	alpha;
 } DDRGBA, *LPDDRGBA;
 
 
@@ -1066,22 +1066,22 @@ typedef struct _DDRGBA {
 #define DDCOLOR_COLORENABLE	0x00000040
 
 typedef struct {
-	DWORD	dwSize;
-	DWORD	dwFlags;
-	LONG	lBrightness;
-	LONG	lContrast;
-	LONG	lHue;
-	LONG	lSaturation;
-	LONG	lSharpness;
-	LONG	lGamma;
-	LONG	lColorEnable;
-	DWORD	dwReserved1;
+    DWORD	dwSize;
+    DWORD	dwFlags;
+    LONG	lBrightness;
+    LONG	lContrast;
+    LONG	lHue;
+    LONG	lSaturation;
+    LONG	lSharpness;
+    LONG	lGamma;
+    LONG	lColorEnable;
+    DWORD	dwReserved1;
 } DDCOLORCONTROL,*LPDDCOLORCONTROL;
 
 typedef struct {
-	WORD	red[256];
-	WORD	green[256];
-	WORD	blue[256];
+    WORD	red[256];
+    WORD	green[256];
+    WORD	blue[256];
 } DDGAMMARAMP,*LPDDGAMMARAMP;
 
 typedef BOOL (CALLBACK *LPDDENUMCALLBACKA)(GUID *, LPSTR, LPSTR, LPVOID);
@@ -1161,7 +1161,7 @@ typedef struct _DDBLTFX
     {
         DWORD   dwFillColor;                    /* color in RGB or Palettized */
         DWORD   dwFillDepth;                    /* depth value for z-buffer */
-	DWORD   dwFillPixel;			/* pixel val for RGBA or RGBZ */
+    DWORD   dwFillPixel;			/* pixel val for RGBA or RGBZ */
         LPDIRECTDRAWSURFACE lpDDSPattern;       /* Surface to use as pattern */
     } DUMMYUNIONNAME5;
     DDCOLORKEY  ddckDestColorkey;               /* DestColorkey override */

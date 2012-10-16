@@ -811,7 +811,7 @@ class PythonWrapperGenerator(object):
                     templ = gen_template_type_decl
                 self.code_types.write(templ.substitute(name=name, wname=classinfo.wname, cname=classinfo.cname,
                                       cname1=("cv::Algorithm" if classinfo.isalgorithm else classinfo.cname)))
-                                    
+
         # register classes in the same order as they have been declared.
         # this way, base classes will be registered in Python before their derivatives.
         classlist1 = [(classinfo.decl_idx, name, classinfo) for name, classinfo in classlist]

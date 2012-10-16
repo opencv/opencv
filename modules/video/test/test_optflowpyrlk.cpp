@@ -134,7 +134,7 @@ void CV_OptFlowPyrLKTest::run( int )
         code = cvtest::TS::FAIL_MISSING_TEST_DATA;
         goto _exit_;
     }
-    
+
     n = _u->rows;
     status = (char*)cvAlloc(n*sizeof(status[0]));
 
@@ -178,7 +178,7 @@ void CV_OptFlowPyrLKTest::run( int )
             }
         }
     }
-    
+
     if( pt_exceed > bad_points_max )
     {
         ts->printf( cvtest::TS::LOG,
@@ -200,7 +200,7 @@ _exit_:
     cvReleaseMat( &_u );
     cvReleaseMat( &_v );
     cvReleaseMat( &_v2 );
-    
+
     cvReleaseImage( &imgI );
     cvReleaseImage( &imgJ );
 

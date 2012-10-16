@@ -49,18 +49,18 @@ template<typename T, typename AT> void
 acc_( const T* src, AT* dst, const uchar* mask, int len, int cn )
 {
     int i = 0;
-    
+
     if( !mask )
     {
         len *= cn;
-		#if CV_ENABLE_UNROLLED
+        #if CV_ENABLE_UNROLLED
         for( ; i <= len - 4; i += 4 )
         {
             AT t0, t1;
             t0 = src[i] + dst[i];
             t1 = src[i+1] + dst[i+1];
             dst[i] = t0; dst[i+1] = t1;
-            
+
             t0 = src[i+2] + dst[i+2];
             t1 = src[i+3] + dst[i+3];
             dst[i+2] = t0; dst[i+3] = t1;
@@ -86,7 +86,7 @@ acc_( const T* src, AT* dst, const uchar* mask, int len, int cn )
                 AT t0 = src[0] + dst[0];
                 AT t1 = src[1] + dst[1];
                 AT t2 = src[2] + dst[2];
-                
+
                 dst[0] = t0; dst[1] = t1; dst[2] = t2;
             }
         }
@@ -102,23 +102,23 @@ acc_( const T* src, AT* dst, const uchar* mask, int len, int cn )
     }
 }
 
-    
+
 template<typename T, typename AT> void
 accSqr_( const T* src, AT* dst, const uchar* mask, int len, int cn )
 {
     int i = 0;
-    
+
     if( !mask )
     {
         len *= cn;
-		 #if CV_ENABLE_UNROLLED
+         #if CV_ENABLE_UNROLLED
         for( ; i <= len - 4; i += 4 )
         {
             AT t0, t1;
             t0 = (AT)src[i]*src[i] + dst[i];
             t1 = (AT)src[i+1]*src[i+1] + dst[i+1];
             dst[i] = t0; dst[i+1] = t1;
-            
+
             t0 = (AT)src[i+2]*src[i+2] + dst[i+2];
             t1 = (AT)src[i+3]*src[i+3] + dst[i+3];
             dst[i+2] = t0; dst[i+3] = t1;
@@ -144,7 +144,7 @@ accSqr_( const T* src, AT* dst, const uchar* mask, int len, int cn )
                 AT t0 = (AT)src[0]*src[0] + dst[0];
                 AT t1 = (AT)src[1]*src[1] + dst[1];
                 AT t2 = (AT)src[2]*src[2] + dst[2];
-                
+
                 dst[0] = t0; dst[1] = t1; dst[2] = t2;
             }
         }
@@ -159,24 +159,24 @@ accSqr_( const T* src, AT* dst, const uchar* mask, int len, int cn )
             }
     }
 }
-   
-    
+
+
 template<typename T, typename AT> void
 accProd_( const T* src1, const T* src2, AT* dst, const uchar* mask, int len, int cn )
 {
     int i = 0;
-    
+
     if( !mask )
     {
         len *= cn;
-		#if CV_ENABLE_UNROLLED
+        #if CV_ENABLE_UNROLLED
         for( ; i <= len - 4; i += 4 )
         {
             AT t0, t1;
             t0 = (AT)src1[i]*src2[i] + dst[i];
             t1 = (AT)src1[i+1]*src2[i+1] + dst[i+1];
             dst[i] = t0; dst[i+1] = t1;
-            
+
             t0 = (AT)src1[i+2]*src2[i+2] + dst[i+2];
             t1 = (AT)src1[i+3]*src2[i+3] + dst[i+3];
             dst[i+2] = t0; dst[i+3] = t1;
@@ -202,7 +202,7 @@ accProd_( const T* src1, const T* src2, AT* dst, const uchar* mask, int len, int
                 AT t0 = (AT)src1[0]*src2[0] + dst[0];
                 AT t1 = (AT)src1[1]*src2[1] + dst[1];
                 AT t2 = (AT)src1[2]*src2[2] + dst[2];
-                
+
                 dst[0] = t0; dst[1] = t1; dst[2] = t2;
             }
         }
@@ -218,24 +218,24 @@ accProd_( const T* src1, const T* src2, AT* dst, const uchar* mask, int len, int
     }
 }
 
-    
+
 template<typename T, typename AT> void
 accW_( const T* src, AT* dst, const uchar* mask, int len, int cn, double alpha )
 {
     AT a = (AT)alpha, b = 1 - a;
     int i = 0;
-    
+
     if( !mask )
     {
         len *= cn;
-		#if CV_ENABLE_UNROLLED
+        #if CV_ENABLE_UNROLLED
         for( ; i <= len - 4; i += 4 )
         {
             AT t0, t1;
             t0 = src[i]*a + dst[i]*b;
             t1 = src[i+1]*a + dst[i+1]*b;
             dst[i] = t0; dst[i+1] = t1;
-            
+
             t0 = src[i+2]*a + dst[i+2]*b;
             t1 = src[i+3]*a + dst[i+3]*b;
             dst[i+2] = t0; dst[i+3] = t1;
@@ -261,7 +261,7 @@ accW_( const T* src, AT* dst, const uchar* mask, int len, int cn, double alpha )
                 AT t0 = src[0]*a + dst[0]*b;
                 AT t1 = src[1]*a + dst[1]*b;
                 AT t2 = src[2]*a + dst[2]*b;
-                
+
                 dst[0] = t0; dst[1] = t1; dst[2] = t2;
             }
         }
@@ -303,8 +303,8 @@ DEF_ACC_FUNCS(16u64f, ushort, double)
 DEF_ACC_FUNCS(32f, float, float)
 DEF_ACC_FUNCS(32f64f, float, double)
 DEF_ACC_FUNCS(64f, double, double)
-    
-    
+
+
 typedef void (*AccFunc)(const uchar*, uchar*, const uchar*, int, int);
 typedef void (*AccProdFunc)(const uchar*, const uchar*, uchar*, const uchar*, int, int);
 typedef void (*AccWFunc)(const uchar*, uchar*, const uchar*, int, int, double);
@@ -350,27 +350,27 @@ inline int getAccTabIdx(int sdepth, int ddepth)
            sdepth == CV_32F && ddepth == CV_32F ? 4 :
            sdepth == CV_32F && ddepth == CV_64F ? 5 :
            sdepth == CV_64F && ddepth == CV_64F ? 6 : -1;
-}    
-    
 }
-    
+
+}
+
 void cv::accumulate( InputArray _src, InputOutputArray _dst, InputArray _mask )
 {
     Mat src = _src.getMat(), dst = _dst.getMat(), mask = _mask.getMat();
     int sdepth = src.depth(), ddepth = dst.depth(), cn = src.channels();
-    
+
     CV_Assert( dst.size == src.size && dst.channels() == cn );
     CV_Assert( mask.empty() || (mask.size == src.size && mask.type() == CV_8U) );
-    
+
     int fidx = getAccTabIdx(sdepth, ddepth);
     AccFunc func = fidx >= 0 ? accTab[fidx] : 0;
     CV_Assert( func != 0 );
-    
+
     const Mat* arrays[] = {&src, &dst, &mask, 0};
     uchar* ptrs[3];
     NAryMatIterator it(arrays, ptrs);
     int len = (int)it.size;
-    
+
     for( size_t i = 0; i < it.nplanes; i++, ++it )
         func(ptrs[0], ptrs[1], ptrs[2], len, cn);
 }
@@ -380,19 +380,19 @@ void cv::accumulateSquare( InputArray _src, InputOutputArray _dst, InputArray _m
 {
     Mat src = _src.getMat(), dst = _dst.getMat(), mask = _mask.getMat();
     int sdepth = src.depth(), ddepth = dst.depth(), cn = src.channels();
-    
+
     CV_Assert( dst.size == src.size && dst.channels() == cn );
     CV_Assert( mask.empty() || (mask.size == src.size && mask.type() == CV_8U) );
-    
+
     int fidx = getAccTabIdx(sdepth, ddepth);
     AccFunc func = fidx >= 0 ? accSqrTab[fidx] : 0;
     CV_Assert( func != 0 );
-    
+
     const Mat* arrays[] = {&src, &dst, &mask, 0};
     uchar* ptrs[3];
     NAryMatIterator it(arrays, ptrs);
     int len = (int)it.size;
-    
+
     for( size_t i = 0; i < it.nplanes; i++, ++it )
         func(ptrs[0], ptrs[1], ptrs[2], len, cn);
 }
@@ -402,20 +402,20 @@ void cv::accumulateProduct( InputArray _src1, InputArray _src2,
 {
     Mat src1 = _src1.getMat(), src2 = _src2.getMat(), dst = _dst.getMat(), mask = _mask.getMat();
     int sdepth = src1.depth(), ddepth = dst.depth(), cn = src1.channels();
-    
+
     CV_Assert( src2.size && src1.size && src2.type() == src1.type() );
     CV_Assert( dst.size == src1.size && dst.channels() == cn );
     CV_Assert( mask.empty() || (mask.size == src1.size && mask.type() == CV_8U) );
-    
+
     int fidx = getAccTabIdx(sdepth, ddepth);
     AccProdFunc func = fidx >= 0 ? accProdTab[fidx] : 0;
     CV_Assert( func != 0 );
-    
+
     const Mat* arrays[] = {&src1, &src2, &dst, &mask, 0};
     uchar* ptrs[4];
     NAryMatIterator it(arrays, ptrs);
     int len = (int)it.size;
-    
+
     for( size_t i = 0; i < it.nplanes; i++, ++it )
         func(ptrs[0], ptrs[1], ptrs[2], ptrs[3], len, cn);
 }
@@ -426,19 +426,19 @@ void cv::accumulateWeighted( InputArray _src, InputOutputArray _dst,
 {
     Mat src = _src.getMat(), dst = _dst.getMat(), mask = _mask.getMat();
     int sdepth = src.depth(), ddepth = dst.depth(), cn = src.channels();
-    
+
     CV_Assert( dst.size == src.size && dst.channels() == cn );
     CV_Assert( mask.empty() || (mask.size == src.size && mask.type() == CV_8U) );
-    
+
     int fidx = getAccTabIdx(sdepth, ddepth);
     AccWFunc func = fidx >= 0 ? accWTab[fidx] : 0;
     CV_Assert( func != 0 );
-    
+
     const Mat* arrays[] = {&src, &dst, &mask, 0};
     uchar* ptrs[3];
     NAryMatIterator it(arrays, ptrs);
     int len = (int)it.size;
-    
+
     for( size_t i = 0; i < it.nplanes; i++, ++it )
         func(ptrs[0], ptrs[1], ptrs[2], len, cn, alpha);
 }

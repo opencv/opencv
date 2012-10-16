@@ -805,7 +805,7 @@ struct Mutex::Impl
     CRITICAL_SECTION cs;
     int refcount;
 };
-    
+
 int _interlockedExchangeAdd(int* addr, int delta)
 {
 #if defined _MSC_VER && _MSC_VER >= 1500

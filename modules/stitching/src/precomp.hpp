@@ -43,7 +43,7 @@
 #ifndef __OPENCV_STITCHING_PRECOMP_H__
 #define __OPENCV_STITCHING_PRECOMP_H__
 
-#ifdef HAVE_CVCONFIG_H 
+#ifdef HAVE_CVCONFIG_H
 #include "cvconfig.h"
 #endif
 #include "opencv2/opencv_modules.hpp"

@@ -846,7 +846,7 @@ CvStatus
 icvRank2Constraint( double *F )
 {
     double U[9], V[9], W[3];
-    double aW[3]; 
+    double aW[3];
     int i, i3, j, j3, t;
 
     if( F == 0 )
@@ -1595,17 +1595,17 @@ icvGaussMxN( double *A, double *B, int M, int N, double **solutions )
 /*F///////////////////////////////////////////////////////////////////////////////////////
 //    Name:    icvPoint7
 //    Purpose:
-//      
-//      
+//
+//
 //    Context:
 //    Parameters:
-//     
-//      
-//      
-//     
-//      
-//    
-//     
+//
+//
+//
+//
+//
+//
+//
 //    Returns:
 //      CV_NO_ERR if all Ok or error code
 //    Notes:

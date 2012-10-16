@@ -72,7 +72,7 @@ struct PyrDownVec_32s8u
     {
         if( !checkHardwareSupport(CV_CPU_SSE2) )
             return 0;
-        
+
         int x = 0;
         const int *row0 = src[0], *row1 = src[1], *row2 = src[2], *row3 = src[3], *row4 = src[4];
         __m128i delta = _mm_set1_epi16(128);
@@ -139,7 +139,7 @@ struct PyrDownVec_32f
     {
         if( !checkHardwareSupport(CV_CPU_SSE) )
             return 0;
-        
+
         int x = 0;
         const float *row0 = src[0], *row1 = src[1], *row2 = src[2], *row3 = src[3], *row4 = src[4];
         __m128 _4 = _mm_set1_ps(4.f), _scale = _mm_set1_ps(1.f/256);
@@ -217,7 +217,7 @@ pyrDown_( const Mat& _src, Mat& _dst, int borderType )
             tabR[x*cn + k] = sx1 + k;
         }
     }
-    
+
     ssize.width *= cn;
     dsize.width *= cn;
     width0 *= cn;
@@ -400,7 +400,7 @@ pyrUp_( const Mat& _src, Mat& _dst, int)
 typedef void (*PyrFunc)(const Mat&, Mat&, int);
 
 }
-    
+
 void cv::pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, int borderType )
 {
     Mat src = _src.getMat();
@@ -492,11 +492,11 @@ cvReleasePyramid( CvMat*** _pyramid, int extra_layers )
 {
     if( !_pyramid )
         CV_Error( CV_StsNullPtr, "" );
-    
+
     if( *_pyramid )
         for( int i = 0; i <= extra_layers; i++ )
             cvReleaseMat( &(*_pyramid)[i] );
-    
+
     cvFree( _pyramid );
 }
 

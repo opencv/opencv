@@ -60,7 +60,7 @@ namespace cv { namespace gpu
         BORDER_REFLECT_GPU,
         BORDER_WRAP_GPU
     };
-  
+
     class NppStreamHandler
     {
     public:

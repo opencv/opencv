@@ -76,7 +76,7 @@ public:
     bool read( const FileNode &node );
 
     void printDefaults() const;
-    void printAttrs() const;    
+    void printAttrs() const;
     bool scanAttr( const String prmName, const String val );
 
     int stageType;
@@ -89,8 +89,8 @@ class CvCascadeClassifier
 public:
     bool train( const String _cascadeDirName,
                 const String _posFilename,
-                const String _negFilename, 
-                int _numPos, int _numNeg, 
+                const String _negFilename,
+                int _numPos, int _numNeg,
                 int _precalcValBufSize, int _precalcIdxBufSize,
                 int _numStages,
                 const CvCascadeParams& _cascadeParams,
@@ -109,14 +109,14 @@ private:
     void writeFeatures( FileStorage &fs, const Mat& featureMap ) const;
     bool readParams( const FileNode &node );
     bool readStages( const FileNode &node );
-    
+
     void getUsedFeaturesIdxMap( Mat& featureMap );
 
     CvCascadeParams cascadeParams;
     Ptr<CvFeatureParams> featureParams;
     Ptr<CvCascadeBoostParams> stageParams;
 
-    Ptr<CvFeatureEvaluator> featureEvaluator;    
+    Ptr<CvFeatureEvaluator> featureEvaluator;
     vector< Ptr<CvCascadeBoost> > stageClassifiers;
     CvCascadeImageReader imgReader;
     int numStages, curNumSamples;

@@ -31,7 +31,7 @@ int main( int argc, char** argv )
   //-- And create the image in which we will save our disparities
   Mat imgDisparity16S = Mat( imgLeft.rows, imgLeft.cols, CV_16S );
   Mat imgDisparity8U = Mat( imgLeft.rows, imgLeft.cols, CV_8UC1 );
-  
+
   if( !imgLeft.data || !imgRight.data )
   { std::cout<< " --(!) Error reading images " << std::endl; return -1; }
 
@@ -40,7 +40,7 @@ int main( int argc, char** argv )
   int SADWindowSize = 21; /**< Size of the block window. Must be odd */
 
   StereoBM sbm( StereoBM::BASIC_PRESET,
-								ndisparities, 
+                                ndisparities,
                 SADWindowSize );
 
   //-- 3. Calculate the disparity image

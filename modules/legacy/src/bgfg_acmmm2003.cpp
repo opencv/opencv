@@ -44,7 +44,7 @@
 //
 //     Foreground Object Detection from Videos Containing Complex Background
 //     Li, Huan, Gu, Tian 2003 9p
-//     http://muq.org/~cynbe/bib/foreground-object-detection-from-videos-containing-complex-background.pdf 
+//     http://muq.org/~cynbe/bib/foreground-object-detection-from-videos-containing-complex-background.pdf
 
 
 #include "precomp.hpp"
@@ -61,7 +61,7 @@ static double* _cv_max_element( double* start, double* end )
     for( ; start != end;  ++start) {
 
         if (*p < *start)   p = start;
-    } 
+    }
 
     return p;
 }
@@ -80,11 +80,11 @@ CV_IMPL CvBGStatModel*
 cvCreateFGDStatModel( IplImage* first_frame, CvFGDStatModelParams* parameters )
 {
     CvFGDStatModel* p_model = 0;
-    
+
     CV_FUNCNAME( "cvCreateFGDStatModel" );
 
     __BEGIN__;
-    
+
     int i, j, k, pixel_count, buf_size;
     CvFGDStatModelParams params;
 
@@ -131,11 +131,11 @@ cvCreateFGDStatModel( IplImage* first_frame, CvFGDStatModelParams* parameters )
 
     // Initialize storage pools:
     pixel_count = first_frame->width * first_frame->height;
-    
+
     buf_size = pixel_count*sizeof(p_model->pixel_stat[0]);
     CV_CALL( p_model->pixel_stat = (CvBGPixelStat*)cvAlloc(buf_size) );
     memset( p_model->pixel_stat, 0, buf_size );
-    
+
     buf_size = pixel_count*params.N2c*sizeof(p_model->pixel_stat[0].ctable[0]);
     CV_CALL( p_model->pixel_stat[0].ctable = (CvBGPixelCStatTable*)cvAlloc(buf_size) );
     memset( p_model->pixel_stat[0].ctable, 0, buf_size );
@@ -184,7 +184,7 @@ icvReleaseFGDStatModel( CvFGDStatModel** _model )
     CV_FUNCNAME( "icvReleaseFGDStatModel" );
 
     __BEGIN__;
-    
+
     if( !_model )
         CV_ERROR( CV_StsNullPtr, "" );
 
@@ -248,9 +248,9 @@ cvChangeDetection( IplImage*  prev_frame,
 
         // Create histogram:
 
-        long HISTOGRAM[PIXELRANGE]; 
+        long HISTOGRAM[PIXELRANGE];
         for (i=0 ; i<PIXELRANGE; i++) HISTOGRAM[i]=0;
-        
+
         for (y=0 ; y<curr_frame->height ; y++)
         {
             uchar* rowStart1 = (uchar*)curr_frame->imageData + y * curr_frame->widthStep + b;
@@ -358,7 +358,7 @@ icvUpdateFGDStatModel( IplImage* curr_frame, CvFGDStatModel*  model, double )
         {
             if( ((uchar*)model->Fbd->imageData)[i*mask_step+j] || ((uchar*)model->Ftd->imageData)[i*mask_step+j] )
             {
-	        float Pb  = 0;
+            float Pb  = 0;
                 float Pv  = 0;
                 float Pvb = 0;
 
@@ -366,7 +366,7 @@ icvUpdateFGDStatModel( IplImage* curr_frame, CvFGDStatModel*  model, double )
 
                 CvBGPixelCStatTable*   ctable = stat->ctable;
                 CvBGPixelCCStatTable* cctable = stat->cctable;
-    
+
                 uchar* curr_data = (uchar*)(curr_frame->imageData) + i*curr_frame->widthStep + j*3;
                 uchar* prev_data = (uchar*)(prev_frame->imageData) + i*prev_frame->widthStep + j*3;
 
@@ -375,11 +375,11 @@ icvUpdateFGDStatModel( IplImage* curr_frame, CvFGDStatModel*  model, double )
                 // Is it a motion pixel?
                 if( ((uchar*)model->Ftd->imageData)[i*mask_step+j] )
                 {
-		    if( !stat->is_trained_dyn_model ) {
+            if( !stat->is_trained_dyn_model ) {
 
                         val = 1;
 
-		    } else {
+            } else {
 
                         // Compare with stored CCt vectors:
                         for( k = 0;  PV_CC(k) > model->params.alpha2 && k < model->params.N1cc;  k++ )
@@ -431,17 +431,17 @@ icvUpdateFGDStatModel( IplImage* curr_frame, CvFGDStatModel*  model, double )
         cvMorphologyEx( model->foreground, model->foreground, 0, 0, CV_MOP_OPEN,  model->params.perform_morphing );
         cvMorphologyEx( model->foreground, model->foreground, 0, 0, CV_MOP_CLOSE, model->params.perform_morphing );
     }
-   
-   
+
+
     if( model->params.minArea > 0 || model->params.is_obj_without_holes ){
 
         // Discard under-size foreground regions:
-	//
+    //
         cvFindContours( model->foreground, model->storage, &first_seq, sizeof(CvContour), CV_RETR_LIST );
         for( seq = first_seq; seq; seq = seq->h_next )
         {
             CvContour* cnt = (CvContour*)seq;
-            if( cnt->rect.width * cnt->rect.height < model->params.minArea || 
+            if( cnt->rect.width * cnt->rect.height < model->params.minArea ||
                 (model->params.is_obj_without_holes && CV_IS_SEQ_HOLE(seq)) )
             {
                 // Delete under-size contour:
@@ -461,7 +461,7 @@ icvUpdateFGDStatModel( IplImage* curr_frame, CvFGDStatModel*  model, double )
             {
                 region_count++;
             }
-        }        
+        }
         model->foreground_regions = first_seq;
         cvZero(model->foreground);
         cvDrawContours(model->foreground, first_seq, CV_RGB(0, 0, 255), CV_RGB(0, 0, 255), 10, -1);
@@ -586,7 +586,7 @@ icvUpdateFGDStatModel( IplImage* curr_frame, CvFGDStatModel*  model, double )
                     sum2 += PVB_CC(k);
                 }
                 if( sum1 > model->params.T ) stat->is_trained_dyn_model = 1;
-                
+
                 diff = sum1 - stat->Pbcc * sum2;
                 // Update stat table:
                 if( diff >  model->params.T )
@@ -628,7 +628,7 @@ icvUpdateFGDStatModel( IplImage* curr_frame, CvFGDStatModel*  model, double )
                         PVB_C(k) = 0;
                         continue;
                     }
-                    
+
                     dist = 0;
                     for( l = 0; l < 3; l++ )
                     {
@@ -706,7 +706,7 @@ icvUpdateFGDStatModel( IplImage* curr_frame, CvFGDStatModel*  model, double )
             if( !((uchar*)model->foreground->imageData)[i*mask_step+j])
             {
                 uchar* ptr = ((uchar*)model->background->imageData) + i*model->background->widthStep+j*3;
-                
+
                 if( !((uchar*)model->Ftd->imageData)[i*mask_step+j] &&
                     !((uchar*)model->Fbd->imageData)[i*mask_step+j] )
                 {

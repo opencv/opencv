@@ -51,10 +51,10 @@ static void help()
                     "box.png box_in_scene.png " << endl;
 }
 
-const char* keys = 
+const char* keys =
 {
-	"{1|  |box.png               |the first image}"
-	"{2|  |box_in_scene.png|the second image}"
+    "{1|  |box.png               |the first image}"
+    "{2|  |box_in_scene.png|the second image}"
 };
 
 int main(int argc, const char ** argv)
@@ -72,7 +72,7 @@ int main(int argc, const char ** argv)
   {
     cout << "could not open one of the images..." << endl;
     cout << "the cmd parameters have next current value: " << endl;
-	parser.printParams();
+    parser.printParams();
     return 1;
   }
 

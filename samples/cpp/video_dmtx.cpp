@@ -37,7 +37,7 @@ namespace
         << "  Resize the screen to be large enough for your camera to see, and it should find an read it.\n\n"
         << endl;
     }
-    
+
     int process(VideoCapture& capture)
     {
         int n = 0;
@@ -76,12 +76,12 @@ namespace
         }
         return 0;
     }
-    
+
 }
 
 int main(int ac, char** av)
 {
-    
+
     if (ac != 2)
     {
         help(av);

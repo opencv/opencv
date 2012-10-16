@@ -29,7 +29,7 @@ cv::gpu::detail::CuvidVideoSource::CuvidVideoSource(const std::string& fname)
 }
 
 cv::gpu::VideoReader_GPU::FormatInfo cv::gpu::detail::CuvidVideoSource::format() const
-{ 
+{
     return format_;
 }
 

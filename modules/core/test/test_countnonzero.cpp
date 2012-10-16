@@ -61,18 +61,18 @@ const int INT_TYPE [5] = {CV_8U, CV_8S, CV_16U, CV_16S, CV_32S};
 class CV_CountNonZeroTest: public cvtest::BaseTest
 {
 public:
-	CV_CountNonZeroTest();
-	~CV_CountNonZeroTest();
+    CV_CountNonZeroTest();
+    ~CV_CountNonZeroTest();
 
 protected:
-	void run (int);
+    void run (int);
 
 private:
     float eps_32;
     double eps_64;
     Mat src;
     int current_type;
-	
+
     void generate_src_data(cv::Size size, int type);
     void generate_src_data(cv::Size size, int type, int count_non_zero);
     void generate_src_stat_data(cv::Size size, int type, int distribution);

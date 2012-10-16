@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2004, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-// 
+//
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission. 
-// 
+// from this software without specific prior written permission.
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -54,19 +54,19 @@ isOpenExrFile (const char fileName[], bool &tiled)
 {
     try
     {
-	StdIFStream is (fileName);
+    StdIFStream is (fileName);
 
-	int magic, version;
-	Xdr::read <StreamIO> (is, magic);
-	Xdr::read <StreamIO> (is, version);
+    int magic, version;
+    Xdr::read <StreamIO> (is, magic);
+    Xdr::read <StreamIO> (is, version);
 
-	tiled = isTiled (version);
-	return magic == MAGIC;
+    tiled = isTiled (version);
+    return magic == MAGIC;
     }
     catch (...)
     {
-	tiled = false;
-	return false;
+    tiled = false;
+    return false;
     }
 }
 
@@ -93,25 +93,25 @@ isOpenExrFile (IStream &is, bool &tiled)
 {
     try
     {
-	Int64 pos = is.tellg();
+    Int64 pos = is.tellg();
 
-	if (pos != 0)
-	    is.seekg (0);
+    if (pos != 0)
+        is.seekg (0);
 
-	int magic, version;
-	Xdr::read <StreamIO> (is, magic);
-	Xdr::read <StreamIO> (is, version);
+    int magic, version;
+    Xdr::read <StreamIO> (is, magic);
+    Xdr::read <StreamIO> (is, version);
 
-	is.seekg (pos);
+    is.seekg (pos);
 
-	tiled = isTiled (version);
-	return magic == MAGIC;
+    tiled = isTiled (version);
+    return magic == MAGIC;
     }
     catch (...)
     {
-	is.clear();
-	tiled = false;
-	return false;
+    is.clear();
+    tiled = false;
+    return false;
     }
 }
 

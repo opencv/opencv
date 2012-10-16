@@ -27,15 +27,15 @@ def on_trackbar (position):
 
     # initialisation
     _contours = contours
-    
+
     if levels <= 0:
         # zero or negative value
         # => get to the nearest face to make it look more funny
         _contours = contours.h_next().h_next().h_next()
-        
+
     # first, clear the image where we will draw contours
     cv.SetZero (contours_image)
-    
+
     # draw contours in red and green
     cv.DrawContours (contours_image, _contours,
                        _red, _green,
@@ -57,7 +57,7 @@ if __name__ == '__main__':
     for i in range (6):
         dx = (i % 2) * 250 - 30
         dy = (i / 2) * 150
-        
+
         cv.Ellipse (image,
                        (dx + 150, dy + 100),
                        (100, 70),
@@ -109,7 +109,7 @@ if __name__ == '__main__':
 
     # create the storage area
     storage = cv.CreateMemStorage (0)
-    
+
     # find the contours
     contours = cv.FindContours(image,
                                storage,
@@ -118,10 +118,10 @@ if __name__ == '__main__':
                                (0,0))
 
     # comment this out if you do not want approximation
-    contours = cv.ApproxPoly (contours, 
+    contours = cv.ApproxPoly (contours,
                                 storage,
                                 cv.CV_POLY_APPROX_DP, 3, 1)
-    
+
     # create the window for the contours
     cv.NamedWindow ("contours", 1)
 

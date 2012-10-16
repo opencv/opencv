@@ -62,7 +62,7 @@ CvSeq * cvPostBoostingFindFace(IplImage * Image,CvMemStorage* lpStorage)
     FD.FindFace(Image);
     CvSeq * lpSeq = cvCreateSeq(0,sizeof(*lpSeq),sizeof(CvFace),lpStorage);
     FD.CreateResults(lpSeq);
-    
+
     return lpSeq;
 }//cvPostBoostingFindFace(IplImage * Image)
 

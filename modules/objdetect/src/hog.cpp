@@ -110,7 +110,7 @@ bool HOGDescriptor::read(FileNode& obj)
     obj["L2HysThreshold"] >> L2HysThreshold;
     obj["gammaCorrection"] >> gammaCorrection;
     obj["nlevels"] >> nlevels;
-    
+
     FileNode vecNode = obj["SVMDetector"];
     if( vecNode.isSeq() )
     {
@@ -119,7 +119,7 @@ bool HOGDescriptor::read(FileNode& obj)
     }
     return true;
 }
-    
+
 void HOGDescriptor::write(FileStorage& fs, const String& objName) const
 {
     if( !objName.empty() )
@@ -819,7 +819,7 @@ void HOGDescriptor::compute(const Mat& img, vector<float>& descriptors,
     for( size_t i = 0; i < nwindows; i++ )
     {
         float* descriptor = &descriptors[i*dsize];
-       
+
         Point pt0;
         if( !locations.empty() )
         {
@@ -854,7 +854,7 @@ void HOGDescriptor::compute(const Mat& img, vector<float>& descriptors,
 
 
 void HOGDescriptor::detect(const Mat& img,
-    vector<Point>& hits, vector<double>& weights, double hitThreshold, 
+    vector<Point>& hits, vector<double>& weights, double hitThreshold,
     Size winStride, Size padding, const vector<Point>& locations) const
 {
     hits.clear();
@@ -932,7 +932,7 @@ void HOGDescriptor::detect(const Mat& img,
     }
 }
 
-void HOGDescriptor::detect(const Mat& img, vector<Point>& hits, double hitThreshold, 
+void HOGDescriptor::detect(const Mat& img, vector<Point>& hits, double hitThreshold,
                            Size winStride, Size padding, const vector<Point>& locations) const
 {
     vector<double> weightsV;
@@ -1021,7 +1021,7 @@ public:
 void HOGDescriptor::detectMultiScale(
     const Mat& img, vector<Rect>& foundLocations, vector<double>& foundWeights,
     double hitThreshold, Size winStride, Size padding,
-    double scale0, double finalThreshold, bool useMeanshiftGrouping) const  
+    double scale0, double finalThreshold, bool useMeanshiftGrouping) const
 {
     double scale = 1.;
     int levels = 0;
@@ -1064,12 +1064,12 @@ void HOGDescriptor::detectMultiScale(
     }
 }
 
-void HOGDescriptor::detectMultiScale(const Mat& img, vector<Rect>& foundLocations, 
+void HOGDescriptor::detectMultiScale(const Mat& img, vector<Rect>& foundLocations,
                                      double hitThreshold, Size winStride, Size padding,
-                                     double scale0, double finalThreshold, bool useMeanshiftGrouping) const  
+                                     double scale0, double finalThreshold, bool useMeanshiftGrouping) const
 {
     vector<double> foundWeights;
-    detectMultiScale(img, foundLocations, foundWeights, hitThreshold, winStride, 
+    detectMultiScale(img, foundLocations, foundWeights, hitThreshold, winStride,
                      padding, scale0, finalThreshold, useMeanshiftGrouping);
 }
 
@@ -1888,8 +1888,8 @@ vector<float> HOGDescriptor::getDefaultPeopleDetector()
        -0.02411991f, -0.04229729f, 0.10666174f, -6.66579151f };
     return vector<float>(detector, detector + sizeof(detector)/sizeof(detector[0]));
 }
-//This function renurn 1981 SVM coeffs obtained from daimler's base. 
-//To use these coeffs the detection window size should be (48,96)  
+//This function renurn 1981 SVM coeffs obtained from daimler's base.
+//To use these coeffs the detection window size should be (48,96)
 vector<float> HOGDescriptor::getDaimlerPeopleDetector()
 {
     static const float detector[] = {

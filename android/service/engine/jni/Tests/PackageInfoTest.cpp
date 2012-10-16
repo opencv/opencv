@@ -24,7 +24,7 @@ TEST(PackageInfo, FullNameArmv7Neon)
     EXPECT_STREQ("org.opencv.lib_v24_armv7a_neon", name.c_str());
 #else
     EXPECT_STREQ("org.opencv.lib_v24_armv7a", name.c_str());
-#endif    
+#endif
 }
 
 TEST(PackageInfo, FullNameArmv7VFPv3)
@@ -38,9 +38,9 @@ TEST(PackageInfo, FullNameArmv7VFPv3Neon)
 {
     PackageInfo info("230", PLATFORM_UNKNOWN, ARCH_ARMv7 | FEATURES_HAS_VFPv3 | FEATURES_HAS_NEON);
     string name = info.GetFullName();
-#ifdef __SUPPORT_ARMEABI_V7A_FEATURES    
+#ifdef __SUPPORT_ARMEABI_V7A_FEATURES
     EXPECT_STREQ("org.opencv.lib_v23_armv7a_neon", name.c_str());
-#else    
+#else
     EXPECT_STREQ("org.opencv.lib_v23_armv7a", name.c_str());
 #endif
 }
@@ -63,7 +63,7 @@ TEST(PackageInfo, FullNameArmv6VFPv3)
 {
     PackageInfo info("232", PLATFORM_UNKNOWN, ARCH_ARMv6 | FEATURES_HAS_VFPv3);
     string name = info.GetFullName();
-#ifdef __SUPPORT_ARMEABI_FEATURES    
+#ifdef __SUPPORT_ARMEABI_FEATURES
     EXPECT_STREQ("org.opencv.lib_v23_armv5_vfpv3", name.c_str());
 #else
     EXPECT_STREQ("org.opencv.lib_v23_armv5", name.c_str());
@@ -89,9 +89,9 @@ TEST(PackageInfo, FullNameX86SSE2)
 {
     PackageInfo info("230", PLATFORM_UNKNOWN, ARCH_X86 | FEATURES_HAS_SSE2);
     string name = info.GetFullName();
-#ifdef __SUPPORT_INTEL_FEATURES    
+#ifdef __SUPPORT_INTEL_FEATURES
     EXPECT_STREQ("org.opencv.lib_v23_x86_sse2", name.c_str());
-#else    
+#else
     EXPECT_STREQ("org.opencv.lib_v23_x86", name.c_str());
 #endif
 }
@@ -109,21 +109,21 @@ TEST(PackageInfo, Armv7NeonFromFullName)
 {
     PackageInfo info("org.opencv.lib_v23_armv7a_neon", "/data/data/org.opencv.lib_v23_armv7_neon");
     EXPECT_EQ("230", info.GetVersion());
-    EXPECT_EQ(ARCH_ARMv7 | FEATURES_HAS_NEON, info.GetCpuID());    
+    EXPECT_EQ(ARCH_ARMv7 | FEATURES_HAS_NEON, info.GetCpuID());
 }
 
 TEST(PackageInfo, Armv5FromFullName)
 {
     PackageInfo info("org.opencv.lib_v23_armv5", "/data/data/org.opencv.lib_v23_armv5");
     EXPECT_EQ("230", info.GetVersion());
-    EXPECT_EQ(ARCH_ARMv5, info.GetCpuID());    
+    EXPECT_EQ(ARCH_ARMv5, info.GetCpuID());
 }
 
 TEST(PackageInfo, Armv5VFPv3FromFullName)
 {
     PackageInfo info("org.opencv.lib_v23_armv5_vfpv3", "/data/data/org.opencv.lib_v23_armv5_vfpv3");
     EXPECT_EQ("230", info.GetVersion());
-    EXPECT_EQ(ARCH_ARMv5 | FEATURES_HAS_VFPv3, info.GetCpuID());    
+    EXPECT_EQ(ARCH_ARMv5 | FEATURES_HAS_VFPv3, info.GetCpuID());
 }
 
 TEST(PackageInfo, X86SSE2FromFullName)
@@ -177,7 +177,7 @@ TEST(PackageInfo, Comparator2)
     EXPECT_EQ(info1, info2);
 }
 
-#ifdef __SUPPORT_TEGRA3 
+#ifdef __SUPPORT_TEGRA3
 TEST(PackageInfo, Comparator3)
 {
     PackageInfo info1("230", PLATFORM_TEGRA3, 0);

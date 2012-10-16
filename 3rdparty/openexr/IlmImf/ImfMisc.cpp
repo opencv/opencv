@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2004, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-// 
+//
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission. 
-// 
+// from this software without specific prior written permission.
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -65,23 +65,23 @@ pixelTypeSize (PixelType type)
     switch (type)
     {
       case UINT:
-	
-	size = Xdr::size <unsigned int> ();
-	break;
+
+    size = Xdr::size <unsigned int> ();
+    break;
 
       case HALF:
 
-	size = Xdr::size <half> ();
-	break;
+    size = Xdr::size <half> ();
+    break;
 
       case FLOAT:
 
-	size = Xdr::size <float> ();
-	break;
+    size = Xdr::size <float> ();
+    break;
 
       default:
 
-	throw Iex::ArgExc ("Unknown pixel type.");
+    throw Iex::ArgExc ("Unknown pixel type.");
     }
 
     return size;
@@ -99,7 +99,7 @@ numSamples (int s, int a, int b)
 
 size_t
 bytesPerLineTable (const Header &header,
-		   vector<size_t> &bytesPerLine)
+           vector<size_t> &bytesPerLine)
 {
     const Box2i &dataWindow = header.dataWindow();
     const ChannelList &channels = header.channels();
@@ -107,23 +107,23 @@ bytesPerLineTable (const Header &header,
     bytesPerLine.resize (dataWindow.max.y - dataWindow.min.y + 1);
 
     for (ChannelList::ConstIterator c = channels.begin();
-	 c != channels.end();
-	 ++c)
+     c != channels.end();
+     ++c)
     {
-	int nBytes = pixelTypeSize (c.channel().type) *
-		     (dataWindow.max.x - dataWindow.min.x + 1) /
-		     c.channel().xSampling;
+    int nBytes = pixelTypeSize (c.channel().type) *
+             (dataWindow.max.x - dataWindow.min.x + 1) /
+             c.channel().xSampling;
 
-	for (int y = dataWindow.min.y, i = 0; y <= dataWindow.max.y; ++y, ++i)
-	    if (modp (y, c.channel().ySampling) == 0)
-		bytesPerLine[i] += nBytes;
+    for (int y = dataWindow.min.y, i = 0; y <= dataWindow.max.y; ++y, ++i)
+        if (modp (y, c.channel().ySampling) == 0)
+        bytesPerLine[i] += nBytes;
     }
 
     size_t maxBytesPerLine = 0;
 
     for (int y = dataWindow.min.y, i = 0; y <= dataWindow.max.y; ++y, ++i)
-	if (maxBytesPerLine < bytesPerLine[i])
-	    maxBytesPerLine = bytesPerLine[i];
+    if (maxBytesPerLine < bytesPerLine[i])
+        maxBytesPerLine = bytesPerLine[i];
 
     return maxBytesPerLine;
 }
@@ -131,8 +131,8 @@ bytesPerLineTable (const Header &header,
 
 void
 offsetInLineBufferTable (const vector<size_t> &bytesPerLine,
-			 int linesInLineBuffer,
-			 vector<size_t> &offsetInLineBuffer)
+             int linesInLineBuffer,
+             vector<size_t> &offsetInLineBuffer)
 {
     offsetInLineBuffer.resize (bytesPerLine.size());
 
@@ -140,11 +140,11 @@ offsetInLineBufferTable (const vector<size_t> &bytesPerLine,
 
     for (int i = 0; i < bytesPerLine.size(); ++i)
     {
-	if (i % linesInLineBuffer == 0)
-	    offset = 0;
+    if (i % linesInLineBuffer == 0)
+        offset = 0;
 
-	offsetInLineBuffer[i] = offset;
-	offset += bytesPerLine[i];
+    offsetInLineBuffer[i] = offset;
+    offset += bytesPerLine[i];
     }
 }
 
@@ -179,11 +179,11 @@ numLinesInBuffer (Compressor * compressor)
 
 void
 copyIntoFrameBuffer (const char *& readPtr,
-		     char * writePtr,
-		     char * endPtr,
+             char * writePtr,
+             char * endPtr,
                      size_t xStride,
-		     bool fill,
-		     double fillValue,
+             bool fill,
+             double fillValue,
                      Compressor::Format format,
                      PixelType typeInFrameBuffer,
                      PixelType typeInFile)
@@ -202,8 +202,8 @@ copyIntoFrameBuffer (const char *& readPtr,
 
         switch (typeInFrameBuffer)
         {
-	  case UINT:
-            
+      case UINT:
+
             {
                 unsigned int fillVal = (unsigned int) (fillValue);
 
@@ -259,7 +259,7 @@ copyIntoFrameBuffer (const char *& readPtr,
         switch (typeInFrameBuffer)
         {
           case UINT:
-    
+
             switch (typeInFile)
             {
               case UINT:
@@ -309,7 +309,7 @@ copyIntoFrameBuffer (const char *& readPtr,
                     writePtr += xStride;
                 }
                 break;
-                
+
               case HALF:
 
                 while (writePtr <= endPtr)
@@ -384,7 +384,7 @@ copyIntoFrameBuffer (const char *& readPtr,
         switch (typeInFrameBuffer)
         {
           case UINT:
-    
+
             switch (typeInFile)
             {
               case UINT:
@@ -528,12 +528,12 @@ copyIntoFrameBuffer (const char *& readPtr,
 void
 skipChannel (const char *& readPtr,
              PixelType typeInFile,
-	     size_t xSize)
+         size_t xSize)
 {
     switch (typeInFile)
     {
       case UINT:
-        
+
         Xdr::skip <CharPtrIO> (readPtr, Xdr::size <unsigned int> () * xSize);
         break;
 
@@ -557,40 +557,40 @@ skipChannel (const char *& readPtr,
 void
 convertInPlace (char *& writePtr,
                 const char *& readPtr,
-		PixelType type,
+        PixelType type,
                 size_t numPixels)
 {
     switch (type)
     {
       case UINT:
-    
+
         for (int j = 0; j < numPixels; ++j)
         {
             Xdr::write <CharPtrIO> (writePtr, *(const unsigned int *) readPtr);
             readPtr += sizeof(unsigned int);
         }
         break;
-    
+
       case HALF:
-    
+
         for (int j = 0; j < numPixels; ++j)
-        {               
+        {
             Xdr::write <CharPtrIO> (writePtr, *(const half *) readPtr);
             readPtr += sizeof(half);
         }
         break;
-    
+
       case FLOAT:
-    
+
         for (int j = 0; j < numPixels; ++j)
         {
             Xdr::write <CharPtrIO> (writePtr, *(const float *) readPtr);
             readPtr += sizeof(float);
         }
         break;
-    
+
       default:
-    
+
         throw Iex::ArgExc ("Unknown pixel data type.");
     }
 }
@@ -598,11 +598,11 @@ convertInPlace (char *& writePtr,
 
 void
 copyFromFrameBuffer (char *& writePtr,
-		     const char *& readPtr,
+             const char *& readPtr,
                      const char * endPtr,
-		     size_t xStride,
+             size_t xStride,
                      Compressor::Format format,
-		     PixelType type)
+             PixelType type)
 {
     //
     // Copy a horizontal row of pixels from a frame
@@ -689,7 +689,7 @@ copyFromFrameBuffer (char *& writePtr,
                 readPtr += xStride;
             }
             break;
-            
+
           default:
 
             throw Iex::ArgExc ("Unknown pixel data type.");
@@ -700,9 +700,9 @@ copyFromFrameBuffer (char *& writePtr,
 
 void
 fillChannelWithZeroes (char *& writePtr,
-		       Compressor::Format format,
-		       PixelType type,
-		       size_t xSize)
+               Compressor::Format format,
+               PixelType type,
+               size_t xSize)
 {
     if (format == Compressor::XDR)
     {
@@ -732,7 +732,7 @@ fillChannelWithZeroes (char *& writePtr,
                 Xdr::write <CharPtrIO> (writePtr, (float) 0);
 
             break;
-            
+
           default:
 
             throw Iex::ArgExc ("Unknown pixel data type.");
@@ -776,7 +776,7 @@ fillChannelWithZeroes (char *& writePtr,
                     *writePtr++ = ((char *) &f)[i];
             }
             break;
-            
+
           default:
 
             throw Iex::ArgExc ("Unknown pixel data type.");

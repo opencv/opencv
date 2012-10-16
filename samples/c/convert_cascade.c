@@ -27,7 +27,7 @@ int main( int argc, char** argv )
 
     if( argc != 4 || strncmp( argv[1], size_opt, strlen(size_opt) ) != 0 )
     {
-    	help();
+        help();
         return -1;
     }
 

@@ -51,7 +51,7 @@ icvInitTopBottom( int* temp, int tempstep, CvSize size, int border )
     {
         int* ttop = (int*)(temp + i*tempstep);
         int* tbottom = (int*)(temp + (size.height + border*2 - i - 1)*tempstep);
-        
+
         for( j = 0; j < size.width + border*2; j++ )
         {
             ttop[j] = ICV_INIT_DIST0;
@@ -87,7 +87,7 @@ icvDistanceTransform_3x3_C1R( const uchar* src, int srcstep, int* temp,
 
         for( j = 0; j < BORDER; j++ )
             tmp[-j-1] = tmp[size.width + j] = ICV_INIT_DIST0;
-        
+
         for( j = 0; j < size.width; j++ )
         {
             if( !s[j] )
@@ -111,7 +111,7 @@ icvDistanceTransform_3x3_C1R( const uchar* src, int srcstep, int* temp,
     {
         float* d = (float*)(dist + i*dststep);
         int* tmp = (int*)(temp + (i+BORDER)*step) + BORDER;
-        
+
         for( j = size.width - 1; j >= 0; j-- )
         {
             int t0 = tmp[j];
@@ -160,7 +160,7 @@ icvDistanceTransform_5x5_C1R( const uchar* src, int srcstep, int* temp,
 
         for( j = 0; j < BORDER; j++ )
             tmp[-j-1] = tmp[size.width + j] = ICV_INIT_DIST0;
-        
+
         for( j = 0; j < size.width; j++ )
         {
             if( !s[j] )
@@ -192,7 +192,7 @@ icvDistanceTransform_5x5_C1R( const uchar* src, int srcstep, int* temp,
     {
         float* d = (float*)(dist + i*dststep);
         int* tmp = (int*)(temp + (i+BORDER)*step) + BORDER;
-        
+
         for( j = size.width - 1; j >= 0; j-- )
         {
             int t0 = tmp[j];
@@ -230,7 +230,7 @@ icvDistanceTransformEx_5x5_C1R( const uchar* src, int srcstep, int* temp,
                 CvSize size, const float* metrics )
 {
     const int BORDER = 2;
-    
+
     int i, j;
     const int HV_DIST = CV_FLT_TO_FIX( metrics[0], ICV_DIST_SHIFT );
     const int DIAG_DIST = CV_FLT_TO_FIX( metrics[1], ICV_DIST_SHIFT );
@@ -253,7 +253,7 @@ icvDistanceTransformEx_5x5_C1R( const uchar* src, int srcstep, int* temp,
 
         for( j = 0; j < BORDER; j++ )
             tmp[-j-1] = tmp[size.width + j] = ICV_INIT_DIST0;
-        
+
         for( j = 0; j < size.width; j++ )
         {
             if( !s[j] )
@@ -327,7 +327,7 @@ icvDistanceTransformEx_5x5_C1R( const uchar* src, int srcstep, int* temp,
         float* d = (float*)(dist + i*dststep);
         int* tmp = (int*)(temp + (i+BORDER)*step) + BORDER;
         int* lls = (int*)(labels + i*lstep);
-        
+
         for( j = size.width - 1; j >= 0; j-- )
         {
             int t0 = tmp[j];
@@ -452,7 +452,7 @@ struct DTColumnInvoker
         sat_tab = _sat_tab + src->rows*2 + 1;
         sqr_tab = _sqr_tab;
     }
-    
+
     void operator()( const BlockedRange& range ) const
     {
         int i, i1 = range.begin(), i2 = range.end();
@@ -460,19 +460,19 @@ struct DTColumnInvoker
         size_t sstep = src->step, dstep = dst->step/sizeof(float);
         AutoBuffer<int> _d(m);
         int* d = _d;
-        
+
         for( i = i1; i < i2; i++ )
         {
             const uchar* sptr = src->data.ptr + i + (m-1)*sstep;
             float* dptr = dst->data.fl + i;
             int j, dist = m-1;
-            
+
             for( j = m-1; j >= 0; j--, sptr -= sstep )
             {
                 dist = (dist + 1) & (sptr[0] == 0 ? 0 : -1);
                 d[j] = dist;
             }
-            
+
             dist = m-1;
             for( j = 0; j < m; j++, dptr += dstep )
             {
@@ -482,14 +482,14 @@ struct DTColumnInvoker
             }
         }
     }
-    
+
     const CvMat* src;
     CvMat* dst;
     const int* sat_tab;
     const float* sqr_tab;
 };
-    
-    
+
+
 struct DTRowInvoker
 {
     DTRowInvoker( CvMat* _dst, const float* _sqr_tab, const float* _inv_tab )
@@ -498,7 +498,7 @@ struct DTRowInvoker
         sqr_tab = _sqr_tab;
         inv_tab = _inv_tab;
     }
-    
+
     void operator()( const BlockedRange& range ) const
     {
         const float inf = 1e15f;
@@ -508,22 +508,22 @@ struct DTRowInvoker
         float* f = (float*)(uchar*)_buf;
         float* z = f + n;
         int* v = alignPtr((int*)(z + n + 1), sizeof(int));
-       
+
         for( i = i1; i < i2; i++ )
         {
             float* d = (float*)(dst->data.ptr + i*dst->step);
             int p, q, k;
-            
+
             v[0] = 0;
             z[0] = -inf;
             z[1] = inf;
             f[0] = d[0];
-            
+
             for( q = 1, k = 0; q < n; q++ )
             {
                 float fq = d[q];
                 f[q] = fq;
-                
+
                 for(;;k--)
                 {
                     p = v[k];
@@ -538,7 +538,7 @@ struct DTRowInvoker
                     }
                 }
             }
-            
+
             for( q = 0, k = 0; q < n; q++ )
             {
                 while( z[k+1] < q )
@@ -548,7 +548,7 @@ struct DTRowInvoker
             }
         }
     }
-    
+
     CvMat* dst;
     const float* sqr_tab;
     const float* inv_tab;
@@ -560,7 +560,7 @@ static void
 icvTrueDistTrans( const CvMat* src, CvMat* dst )
 {
     const float inf = 1e15f;
-    
+
     if( !CV_ARE_SIZES_EQ( src, dst ))
         CV_Error( CV_StsUnmatchedSizes, "" );
 
@@ -586,11 +586,11 @@ icvTrueDistTrans( const CvMat* src, CvMat* dst )
     for( ; i <= m*3; i++ )
         sat_tab[i] = i - shift;
 
-    cv::parallel_for(cv::BlockedRange(0, n), cv::DTColumnInvoker(src, dst, sat_tab, sqr_tab)); 
+    cv::parallel_for(cv::BlockedRange(0, n), cv::DTColumnInvoker(src, dst, sat_tab, sqr_tab));
 
     // stage 2: compute modified distance transform for each row
     float* inv_tab = sqr_tab + n;
-    
+
     inv_tab[0] = sqr_tab[0] = 0.f;
     for( i = 1; i < n; i++ )
     {
@@ -634,7 +634,7 @@ icvDistanceATS_L1_8u( const CvMat* src, CvMat* dst )
     int a;
     uchar lut[256];
     int x, y;
-    
+
     const uchar *sbase = src->data.ptr;
     uchar *dbase = dst->data.ptr;
     int srcstep = src->step;
@@ -738,7 +738,7 @@ cvDistTransform( const void* srcarr, void* dstarr,
         icvTrueDistTrans( src, dst );
         return;
     }
-    
+
     if( labels )
     {
         labels = cvGetMat( labels, &lstub );
@@ -789,7 +789,7 @@ cvDistTransform( const void* srcarr, void* dstarr,
         else
         {
             cvZero( labels );
-            
+
             if( labelType == CV_DIST_LABEL_CCOMP )
             {
                 CvSeq *contours = 0;
@@ -799,7 +799,7 @@ cvDistTransform( const void* srcarr, void* dstarr,
                 cvCmpS( src_copy, 0, src_copy, CV_CMP_EQ );
                 cvFindContours( src_copy, st, &contours, sizeof(CvContour),
                                CV_RETR_CCOMP, CV_CHAIN_APPROX_SIMPLE, cvPoint(-border, -border));
-                
+
                 for( int label = 1; contours != 0; contours = contours->h_next, label++ )
                 {
                     CvScalar area_color = cvScalarAll(label);
@@ -813,7 +813,7 @@ cvDistTransform( const void* srcarr, void* dstarr,
                 {
                     const uchar* srcptr = src->data.ptr + src->step*i;
                     int* labelptr = (int*)(labels->data.ptr + labels->step*i);
-                    
+
                     for( int j = 0; j < src->cols; j++ )
                         if( srcptr[j] == 0 )
                             labelptr[j] = k++;

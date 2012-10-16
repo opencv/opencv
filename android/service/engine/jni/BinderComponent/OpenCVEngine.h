@@ -20,17 +20,17 @@ public:
     android::String16 GetLibPathByVersion(android::String16 version);
     virtual android::String16 GetLibraryList(android::String16 version);
     bool InstallVersion(android::String16 version);
-    
+
 protected:
     IPackageManager* PackageManager;
     static const std::set<std::string> KnownVersions;
-    
+
     OpenCVEngine();
     static std::set<std::string> InitKnownOpenCVersions();
     bool ValidateVersionString(const std::string& version);
     std::string NormalizeVersionString(std::string version);
     bool FixPermissions(const std::string& path);
-    
+
     static const int Platform;
     static const int CpuID;
 };

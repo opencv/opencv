@@ -85,7 +85,7 @@ icvFetchLine8uC3R( uchar * src, int src_step,
         for( i = dx; i >= 0; i -= 2, dst += 3 )
         {
             int mask = (err -= dy) < 0 ? -1 : 0;
-            
+
             dst[0] = src[0];
             dst[1] = src[1];
             dst[2] = src[2];
@@ -441,7 +441,7 @@ cvPreWarpImage( int numLines,   /* number of scanlines */
 //    Context:
 //    Parameters:  img        - initial image (in the beginning)
 //
-//    Notes:   
+//    Notes:
 //F*/
 CV_IMPL void
 cvPostWarpImage( int numLines,  /* number of scanlines  */

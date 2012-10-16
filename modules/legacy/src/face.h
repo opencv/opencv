@@ -52,84 +52,84 @@
 class Face
 {
 public:
-	Face(FaceTemplate * lpFaceTemplate);
-	virtual ~Face();
-	
-	inline bool isFeature(void * lpElem);
-	
-	virtual void Show(IplImage * /*Image*/){};
-	virtual	void ShowIdeal(IplImage* /*Image*/){};
-	
-	virtual void CreateFace(void * lpData) = 0;
-	virtual bool CheckElem(void * lpCandidat,void * lpIdeal) = 0;
-	virtual double GetWeight() = 0;
+    Face(FaceTemplate * lpFaceTemplate);
+    virtual ~Face();
+
+    inline bool isFeature(void * lpElem);
+
+    virtual void Show(IplImage * /*Image*/){};
+    virtual	void ShowIdeal(IplImage* /*Image*/){};
+
+    virtual void CreateFace(void * lpData) = 0;
+    virtual bool CheckElem(void * lpCandidat,void * lpIdeal) = 0;
+    virtual double GetWeight() = 0;
 protected:
-	FaceFeature * m_lpIdealFace;             // Ideal face definition.
-	long m_lFaceFeaturesNumber;              // Total number of different face features .
-	long * m_lplFaceFeaturesCount;           // Count of each feature found on this face.
-	FaceFeature ** m_lppFoundedFaceFeatures; // Features found on current face.
-	double m_dWeight;
+    FaceFeature * m_lpIdealFace;             // Ideal face definition.
+    long m_lFaceFeaturesNumber;              // Total number of different face features .
+    long * m_lplFaceFeaturesCount;           // Count of each feature found on this face.
+    FaceFeature ** m_lppFoundedFaceFeatures; // Features found on current face.
+    double m_dWeight;
 };
 
 inline bool Face::isFeature(void * lpElem)
 {
-	for (int i = 0;i < m_lFaceFeaturesNumber;i ++)
-	{
-		void * lpIdeal = m_lpIdealFace[i].GetContour();
-		
-		if ( CheckElem( lpElem,lpIdeal) )
-		{
-			if (m_lplFaceFeaturesCount[i] < 3*MAX_LAYERS)
-			{
-				double dWeight = m_lpIdealFace[i].GetWeight();
-				bool bIsFeature = m_lpIdealFace[i].isFaceFeature();
-				
-				
-				if (bIsFeature)
-				{
-					m_lppFoundedFaceFeatures[i][m_lplFaceFeaturesCount[i]].SetWeight(dWeight);
-					m_lppFoundedFaceFeatures[i][m_lplFaceFeaturesCount[i]].SetContour(lpElem);
-					m_lppFoundedFaceFeatures[i][m_lplFaceFeaturesCount[i]].SetFeature(bIsFeature);
-					m_lplFaceFeaturesCount[i] ++;
-				}
-				
-				m_dWeight += dWeight;
-				
-				if (bIsFeature)
-					return true;
-			}
-		}
-	
-	}
+    for (int i = 0;i < m_lFaceFeaturesNumber;i ++)
+    {
+        void * lpIdeal = m_lpIdealFace[i].GetContour();
 
-	return false;
+        if ( CheckElem( lpElem,lpIdeal) )
+        {
+            if (m_lplFaceFeaturesCount[i] < 3*MAX_LAYERS)
+            {
+                double dWeight = m_lpIdealFace[i].GetWeight();
+                bool bIsFeature = m_lpIdealFace[i].isFaceFeature();
+
+
+                if (bIsFeature)
+                {
+                    m_lppFoundedFaceFeatures[i][m_lplFaceFeaturesCount[i]].SetWeight(dWeight);
+                    m_lppFoundedFaceFeatures[i][m_lplFaceFeaturesCount[i]].SetContour(lpElem);
+                    m_lppFoundedFaceFeatures[i][m_lplFaceFeaturesCount[i]].SetFeature(bIsFeature);
+                    m_lplFaceFeaturesCount[i] ++;
+                }
+
+                m_dWeight += dWeight;
+
+                if (bIsFeature)
+                    return true;
+            }
+        }
+
+    }
+
+    return false;
 }//inline bool RFace::isFeature(void * lpElem);
 
 
 struct FaceData
 {
-	CvRect LeftEyeRect;
-	CvRect RightEyeRect;
-	CvRect MouthRect;
-	double Error;
+    CvRect LeftEyeRect;
+    CvRect RightEyeRect;
+    CvRect MouthRect;
+    double Error;
 };//struct FaceData
 
 class RFace:public Face
 {
 public:
-	RFace(FaceTemplate * lpFaceTemplate);
-	virtual ~RFace();
-	virtual bool CheckElem(void * lpCandidat,void * lpIdeal);
-	virtual void  CreateFace(void * lpData);
-	virtual void Show(IplImage* Image);
-	virtual void ShowIdeal(IplImage* Image);
-	virtual double GetWeight();
+    RFace(FaceTemplate * lpFaceTemplate);
+    virtual ~RFace();
+    virtual bool CheckElem(void * lpCandidat,void * lpIdeal);
+    virtual void  CreateFace(void * lpData);
+    virtual void Show(IplImage* Image);
+    virtual void ShowIdeal(IplImage* Image);
+    virtual double GetWeight();
 private:
-	bool isPointInRect(CvPoint p,CvRect rect);
-	bool m_bIsGenerated;
-	void ResizeRect(CvRect Rect,CvRect * lpRect,long lDir,long lD);
-	void CalculateError(FaceData * lpFaceData);
-}; 
+    bool isPointInRect(CvPoint p,CvRect rect);
+    bool m_bIsGenerated;
+    void ResizeRect(CvRect Rect,CvRect * lpRect,long lDir,long lD);
+    void CalculateError(FaceData * lpFaceData);
+};
 
 
 #endif //__FACE_H__

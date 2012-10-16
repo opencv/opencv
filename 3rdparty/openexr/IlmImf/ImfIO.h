@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2002, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-// 
+//
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission. 
-// 
+// from this software without specific prior written permission.
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -60,8 +60,8 @@ class IStream
     //-----------
 
     virtual ~IStream ();
-    
-    
+
+
     //-------------------------------------------------
     // Does this input stream support memory-mapped IO?
     //
@@ -85,8 +85,8 @@ class IStream
     //------------------------------------------------------
 
     virtual bool	read (char c[/*n*/], int n) = 0;
-    
-    
+
+
     //---------------------------------------------------
     // Read from a memory-mapped stream:
     //
@@ -95,7 +95,7 @@ class IStream
     // returned pointer remains valid until the stream
     // is closed.  If there are less than n byte left to
     // read in the stream or if the stream is not memory-
-    // mapped, readMemoryMapped(n) throws an exception.  
+    // mapped, readMemoryMapped(n) throws an exception.
     //---------------------------------------------------
 
     virtual char *	readMemoryMapped (int n);
@@ -157,7 +157,7 @@ class OStream
     //-----------
 
     virtual ~OStream ();
-  
+
 
     //----------------------------------------------------------
     // Write to the stream:
@@ -216,13 +216,13 @@ struct StreamIO
     static void
     writeChars (OStream &os, const char c[/*n*/], int n)
     {
-	os.write (c, n);
+    os.write (c, n);
     }
 
     static bool
     readChars (IStream &is, char c[/*n*/], int n)
     {
-	return is.read (c, n);
+    return is.read (c, n);
     }
 };
 
@@ -232,17 +232,17 @@ struct CharPtrIO
     static void
     writeChars (char *&op, const char c[/*n*/], int n)
     {
-	while (n--)
-	    *op++ = *c++;
+    while (n--)
+        *op++ = *c++;
     }
 
     static bool
     readChars (const char *&ip, char c[/*n*/], int n)
     {
-	while (n--)
-	    *c++ = *ip++;
+    while (n--)
+        *c++ = *ip++;
 
-	return true;
+    return true;
     }
 };
 

@@ -5,7 +5,7 @@ MSER detector demo
 Usage:
 ------
     mser.py [<video source>]
-  
+
 Keys:
 -----
     ESC   - exit
@@ -27,7 +27,7 @@ if __name__ == '__main__':
         ret, img = cam.read()
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         vis = img.copy()
-        
+
         regions = mser.detect(gray, None)
         hulls = [cv2.convexHull(p.reshape(-1, 1, 2)) for p in regions]
         cv2.polylines(vis, hulls, 1, (0, 255, 0))
@@ -35,4 +35,4 @@ if __name__ == '__main__':
         cv2.imshow('img', vis)
         if 0xFF & cv2.waitKey(5) == 27:
             break
-    cv2.destroyAllWindows() 			
+    cv2.destroyAllWindows()

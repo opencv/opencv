@@ -253,18 +253,18 @@ private:
     /*--------------------- Internal Data Structures --------------------------*/
     struct Node
     {
-    	/**
-    	 * Indices of points in leaf node
-    	 */
-    	int left, right;
-    	/**
-    	 * Dimension used for subdivision.
-    	 */
-    	int divfeat;
-    	/**
-    	 * The values used for subdivision.
-    	 */
-    	DistanceType divlow, divhigh;
+        /**
+         * Indices of points in leaf node
+         */
+        int left, right;
+        /**
+         * Dimension used for subdivision.
+         */
+        int divfeat;
+        /**
+         * The values used for subdivision.
+         */
+        DistanceType divlow, divhigh;
         /**
          * The child nodes.
          */

@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2002, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-// 
+//
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission. 
-// 
+// from this software without specific prior written permission.
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -54,26 +54,26 @@ initELut (unsigned short eLut[])
 {
     for (int i = 0; i < 0x100; i++)
     {
-	int e = (i & 0x0ff) - (127 - 15);
+    int e = (i & 0x0ff) - (127 - 15);
 
-	if (e <= 0 || e >= 30)
-	{
-	    //
-	    // Special case
-	    //
+    if (e <= 0 || e >= 30)
+    {
+        //
+        // Special case
+        //
 
-	    eLut[i]         = 0;
-	    eLut[i | 0x100] = 0;
-	}
-	else
-	{
-	    //
-	    // Common case - normalized half, no exponent overflow possible
-	    //
+        eLut[i]         = 0;
+        eLut[i | 0x100] = 0;
+    }
+    else
+    {
+        //
+        // Common case - normalized half, no exponent overflow possible
+        //
 
-	    eLut[i]         =  (e << 10);
-	    eLut[i | 0x100] = ((e << 10) | 0x8000);
-	}
+        eLut[i]         =  (e << 10);
+        eLut[i | 0x100] = ((e << 10) | 0x8000);
+    }
     }
 }
 
@@ -90,23 +90,23 @@ main ()
     initELut (eLut);
 
     cout << "//\n"
-	    "// This is an automatically generated file.\n"
-	    "// Do not edit.\n"
-	    "//\n\n";
+        "// This is an automatically generated file.\n"
+        "// Do not edit.\n"
+        "//\n\n";
 
     cout << "{\n    ";
 
     for (int i = 0; i < tableSize; i++)
     {
-	cout << setw (5) << eLut[i] << ", ";
+    cout << setw (5) << eLut[i] << ", ";
 
-	if (i % 8 == 7)
-	{
-	    cout << "\n";
+    if (i % 8 == 7)
+    {
+        cout << "\n";
 
-	    if (i < tableSize - 1)
-		cout << "    ";
-	}
+        if (i < tableSize - 1)
+        cout << "    ";
+    }
     }
 
     cout << "};\n";

@@ -83,7 +83,7 @@ public class SizeTest extends OpenCVTestCase {
         assertEquals(2.0, sz1.width);
         assertEquals(4.0, sz1.height);
     }
-    
+
     public void testToString() {
         String actual = sz1.toString();
         String expected = "10x10";

@@ -377,11 +377,11 @@ icvDynamicCorrespondMulti( int lines,   /* number of scanlines */
 
 /*F///////////////////////////////////////////////////////////////////////////////////////
 //    Name: cvDynamicCorrespondMulti
-//    Purpose: The functions 
+//    Purpose: The functions
 //    Context:
-//    Parameters:  
+//    Parameters:
 //
-//    Notes:  
+//    Notes:
 //F*/
 CV_IMPL void
 cvDynamicCorrespondMulti( int lines,    /* number of scanlines */

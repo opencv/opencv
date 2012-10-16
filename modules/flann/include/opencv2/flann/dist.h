@@ -384,7 +384,7 @@ struct HammingLUT
      */
     ResultType operator()(const unsigned char* a, const unsigned char* b, int size) const
     {
-        static const uchar popCountTable[] = 
+        static const uchar popCountTable[] =
         {
             0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4, 1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,
             1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5, 2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
@@ -419,7 +419,7 @@ struct HammingLUT2
      */
     ResultType operator()(const unsigned char* a, const unsigned char* b, size_t size) const
     {
-        static const uchar popCountTable[] = 
+        static const uchar popCountTable[] =
         {
             0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4, 1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,
             1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5, 2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
@@ -549,9 +549,9 @@ struct Hamming2
         ResultType result = 0;
         size /= (sizeof(uint32_t)/sizeof(unsigned char));
         for(size_t i = 0; i < size; ++i ) {
-        	result += popcnt32(*pa ^ *pb);
-        	++pa;
-        	++pb;
+            result += popcnt32(*pa ^ *pb);
+            ++pa;
+            ++pb;
         }
 #endif
         return result;

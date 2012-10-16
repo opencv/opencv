@@ -272,29 +272,29 @@ public class MatTest extends OpenCVTestCase {
         assertEquals(5, Core.countNonZero(eye));
 
     }
-    
+
     public Mat getTestMat(int size, int type) {
-    	Mat m = new Mat(size, size, type);
-    	final int ch = CvType.channels(type);
-    	double buff[] = new double[size*size * ch];
-    	for(int i=0; i<size; i++)
-    		for(int j=0; j<size; j++)
-    			for(int k=0; k<ch; k++) {
-    				buff[i*size*ch + j*ch + k] = 100*i + 10*j + k;
-    			}
-    	m.put(0, 0, buff);
-    	return m;
+        Mat m = new Mat(size, size, type);
+        final int ch = CvType.channels(type);
+        double buff[] = new double[size*size * ch];
+        for(int i=0; i<size; i++)
+            for(int j=0; j<size; j++)
+                for(int k=0; k<ch; k++) {
+                    buff[i*size*ch + j*ch + k] = 100*i + 10*j + k;
+                }
+        m.put(0, 0, buff);
+        return m;
     }
 
     public void testGetIntInt_8U() {
         Mat m = getTestMat(5, CvType.CV_8UC2);
 
-    	// whole Mat
+        // whole Mat
         assertTrue(Arrays.equals(new double[] {0, 1}, m.get(0, 0)));
         assertTrue(Arrays.equals(new double[] {240, 241}, m.get(2, 4)));
         assertTrue(Arrays.equals(new double[] {255, 255}, m.get(4, 4)));
-        
-    	// sub-Mat
+
+        // sub-Mat
         Mat sm = m.submat(2, 4, 3, 5);
         assertTrue(Arrays.equals(new double[] {230, 231}, sm.get(0, 0)));
         assertTrue(Arrays.equals(new double[] {255, 255}, sm.get(1, 1)));
@@ -303,12 +303,12 @@ public class MatTest extends OpenCVTestCase {
     public void testGetIntInt_32S() {
         Mat m = getTestMat(5, CvType.CV_32SC3);
 
-    	// whole Mat
+        // whole Mat
         assertTrue(Arrays.equals(new double[] {0, 1, 2}, m.get(0, 0)));
         assertTrue(Arrays.equals(new double[] {240, 241, 242}, m.get(2, 4)));
         assertTrue(Arrays.equals(new double[] {440, 441, 442}, m.get(4, 4)));
-        
-    	// sub-Mat
+
+        // sub-Mat
         Mat sm = m.submat(2, 4, 3, 5);
         assertTrue(Arrays.equals(new double[] {230, 231, 232}, sm.get(0, 0)));
         assertTrue(Arrays.equals(new double[] {340, 341, 342}, sm.get(1, 1)));
@@ -317,12 +317,12 @@ public class MatTest extends OpenCVTestCase {
     public void testGetIntInt_64F() {
         Mat m = getTestMat(5, CvType.CV_64FC1);
 
-    	// whole Mat
+        // whole Mat
         assertTrue(Arrays.equals(new double[] {0}, m.get(0, 0)));
         assertTrue(Arrays.equals(new double[] {240}, m.get(2, 4)));
         assertTrue(Arrays.equals(new double[] {440}, m.get(4, 4)));
-        
-    	// sub-Mat
+
+        // sub-Mat
         Mat sm = m.submat(2, 4, 3, 5);
         assertTrue(Arrays.equals(new double[] {230}, sm.get(0, 0)));
         assertTrue(Arrays.equals(new double[] {340}, sm.get(1, 1)));
@@ -332,8 +332,8 @@ public class MatTest extends OpenCVTestCase {
         Mat m = getTestMat(5, CvType.CV_8UC3);
         byte[] goodData = new byte[9];
         byte[] badData = new byte[7];
-        
-    	// whole Mat
+
+        // whole Mat
         int bytesNum = m.get(1, 1, goodData);
 
         assertEquals(9, bytesNum);
@@ -362,7 +362,7 @@ public class MatTest extends OpenCVTestCase {
         Mat m = getTestMat(5, CvType.CV_64F);
         double buff[] = new double[4];
 
-    	// whole Mat
+        // whole Mat
         int bytesNum = m.get(1, 1, buff);
 
         assertEquals(32, bytesNum);
@@ -384,7 +384,7 @@ public class MatTest extends OpenCVTestCase {
         Mat m = getTestMat(5, CvType.CV_32F);
         float buff[] = new float[4];
 
-    	// whole Mat
+        // whole Mat
         int bytesNum = m.get(1, 1, buff);
 
         assertEquals(16, bytesNum);
@@ -405,8 +405,8 @@ public class MatTest extends OpenCVTestCase {
     public void testGetIntIntIntArray() {
         Mat m = getTestMat(5, CvType.CV_32SC2);
         int[] buff = new int[6];
-        
-    	// whole Mat
+
+        // whole Mat
         int bytesNum = m.get(1, 1, buff);
 
         assertEquals(24, bytesNum);
@@ -427,8 +427,8 @@ public class MatTest extends OpenCVTestCase {
     public void testGetIntIntShortArray() {
         Mat m = getTestMat(5, CvType.CV_16SC2);
         short[] buff = new short[6];
-        
-    	// whole Mat
+
+        // whole Mat
         int bytesNum = m.get(1, 1, buff);
 
         assertEquals(12, bytesNum);
@@ -570,23 +570,23 @@ public class MatTest extends OpenCVTestCase {
 
     public void testMatMatRect() {
         Mat m = new Mat(7, 6, CvType.CV_32SC1);
-        m.put(0,  0, 
-        		 0,  1,  2,  3,  4,  5,
-        		10, 11, 12, 13, 14, 15,
-        		20, 21, 22, 23, 24, 25,
-        		30, 31, 32, 33, 34, 35,
-        		40, 41, 42, 43, 44, 45,
-        		50, 51, 52, 53, 54, 55,
-        		60, 61, 62, 63, 64, 65 );
+        m.put(0,  0,
+                 0,  1,  2,  3,  4,  5,
+                10, 11, 12, 13, 14, 15,
+                20, 21, 22, 23, 24, 25,
+                30, 31, 32, 33, 34, 35,
+                40, 41, 42, 43, 44, 45,
+                50, 51, 52, 53, 54, 55,
+                60, 61, 62, 63, 64, 65 );
 
         dst = new Mat(m, new Rect(1, 2, 3, 4));
 
         truth = new Mat(4, 3, CvType.CV_32SC1);
-        truth.put(0,  0, 
-	       		21, 22, 23,
-	       		31, 32, 33,
-	       		41, 42, 43,
-	       		51, 52, 53 );
+        truth.put(0,  0,
+                21, 22, 23,
+                31, 32, 33,
+                41, 42, 43,
+                51, 52, 53 );
 
         assertFalse(dst.empty());
         assertMatEqual(truth, dst);
@@ -666,14 +666,14 @@ public class MatTest extends OpenCVTestCase {
         byte[] buff  = new byte[] { 0, 0, 0, 0, 0, 0 };
         byte[] buff0 = new byte[] { 10, 20, 30, 40, 50, 60 };
         byte[] buff1 = new byte[] { -1, -2, -3, -4, -5, -6 };
-        
+
         int bytesNum = m.put(1, 2, buff0);
-        
+
         assertEquals(6, bytesNum);
         bytesNum = m.get(1, 2, buff);
         assertEquals(6, bytesNum);
         assertTrue(Arrays.equals(buff, buff0));
-        
+
         bytesNum = sm.put(0, 0, buff1);
 
         assertEquals(6, bytesNum);
@@ -702,9 +702,9 @@ public class MatTest extends OpenCVTestCase {
         Mat m = new Mat(5, 5, CvType.CV_8UC3, new Scalar(1, 2, 3));
         Mat sm = m.submat(2, 4, 3, 5);
         byte[] buff  = new byte[] { 0, 0, 0, 0, 0, 0 };
-        
+
         int bytesNum = m.put(1, 2, 10, 20, 30, 40, 50, 60);
-        
+
         assertEquals(6, bytesNum);
         bytesNum = m.get(1, 2, buff);
         assertEquals(6, bytesNum);
@@ -747,7 +747,7 @@ public class MatTest extends OpenCVTestCase {
     public void testPutIntIntIntArray() {
         Mat m = new Mat(5, 5, CvType.CV_32SC3, new Scalar(-1, -2, -3));
         int[] elements = new int[] { 10, 20, 30, 40, 50, 60 };
-        
+
         int bytesNum = m.put(0, 4, elements);
 
         assertEquals(elements.length * 4, bytesNum);
@@ -770,13 +770,13 @@ public class MatTest extends OpenCVTestCase {
     public void testPutIntIntShortArray() {
         Mat m = new Mat(5, 5, CvType.CV_16SC3, new Scalar(-1, -2, -3));
         short[] elements = new short[] { 10, 20, 30, 40, 50, 60 };
-        
+
         int bytesNum = m.put(2, 3, elements);
 
         assertEquals(elements.length * 2, bytesNum);
         Mat m1 = m.col(3);
         short buff[] = new short[3];
-    	bytesNum = m1.get(2, 0, buff);
+        bytesNum = m1.get(2, 0, buff);
         assertTrue(Arrays.equals(new short[]{10, 20, 30}, buff));
         assertArrayEquals(new double[]{40, 50, 60}, m.get(2, 4), EPS);
 
@@ -887,8 +887,8 @@ public class MatTest extends OpenCVTestCase {
     }
 
     public void testSetToScalarMask() {
-    	Mat mask = gray0.clone();
-    	mask.put(1, 1, 1, 2, 3);
+        Mat mask = gray0.clone();
+        mask.put(1, 1, 1, 2, 3);
         gray0.setTo(new Scalar(1), mask);
         assertEquals(3, Core.countNonZero(gray0));
         Core.subtract(gray0, mask, gray0);

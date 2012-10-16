@@ -625,8 +625,8 @@ TEST(Features2d_RotationInvariance_Descriptor_BRISK, regression)
 TEST(Features2d_RotationInvariance_Descriptor_ORB, regression)
 {
     DescriptorRotationInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.ORB"),
-										  Algorithm::create<DescriptorExtractor>("Feature2D.ORB"),
-									      NORM_HAMMING,
+                                          Algorithm::create<DescriptorExtractor>("Feature2D.ORB"),
+                                          NORM_HAMMING,
                                           0.99f);
     test.safe_run();
 }

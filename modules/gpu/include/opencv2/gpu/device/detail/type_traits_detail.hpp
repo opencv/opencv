@@ -46,7 +46,7 @@
 #include "../common.hpp"
 #include "../vec_traits.hpp"
 
-namespace cv { namespace gpu { namespace device 
+namespace cv { namespace gpu { namespace device
 {
     namespace type_traits_detail
     {
@@ -123,38 +123,38 @@ namespace cv { namespace gpu { namespace device
         template <class U> struct AddParameterType<U&> { typedef U& type; };
         template <> struct AddParameterType<void> { typedef void type; };
 
-        template <class U> struct ReferenceTraits 
+        template <class U> struct ReferenceTraits
         {
             enum { value = false };
             typedef U type;
-        };        
+        };
         template <class U> struct ReferenceTraits<U&>
         {
             enum { value = true };
             typedef U type;
         };
-               
+
         template <class U> struct PointerTraits
         {
             enum { value = false };
             typedef void type;
-        };        
+        };
         template <class U> struct PointerTraits<U*>
         {
             enum { value = true };
             typedef U type;
-        };        
+        };
         template <class U> struct PointerTraits<U*&>
         {
             enum { value = true };
             typedef U type;
         };
-         
+
         template <class U> struct UnConst
         {
             typedef U type;
             enum { value = 0 };
-        };        
+        };
         template <class U> struct UnConst<const U>
         {
             typedef U type;
@@ -170,7 +170,7 @@ namespace cv { namespace gpu { namespace device
         {
             typedef U type;
             enum { value = 0 };
-        };       
+        };
         template <class U> struct UnVolatile<volatile U>
         {
             typedef U type;

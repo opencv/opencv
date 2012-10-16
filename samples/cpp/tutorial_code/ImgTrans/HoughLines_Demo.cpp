@@ -15,8 +15,8 @@ using namespace std;
 /// Global variables
 
 /** General variables */
-Mat src, edges; 
-Mat src_gray; 
+Mat src, edges;
+Mat src_gray;
 Mat standard_hough, probabilistic_hough;
 int min_threshold = 50;
 int max_trackbar = 150;
@@ -47,7 +47,7 @@ int main( int argc, char** argv )
 
    /// Pass the image to gray
    cvtColor( src, src_gray, CV_RGB2GRAY );
-    		
+
    /// Apply Canny edge detector
    Canny( src_gray, edges, 50, 200, 3 );
 
@@ -88,7 +88,7 @@ void Standard_Hough( int, void* )
   cvtColor( edges, standard_hough, CV_GRAY2BGR );
 
   /// 1. Use Standard Hough Transform
-  HoughLines( edges, s_lines, 1, CV_PI/180, min_threshold + s_trackbar, 0, 0 ); 
+  HoughLines( edges, s_lines, 1, CV_PI/180, min_threshold + s_trackbar, 0, 0 );
 
   /// Show the result
   for( int i = 0; i < s_lines.size(); i++ )
@@ -100,8 +100,8 @@ void Standard_Hough( int, void* )
 
        Point pt1( cvRound(x0 + alpha*(-sin_t)), cvRound(y0 + alpha*cos_t) );
        Point pt2( cvRound(x0 - alpha*(-sin_t)), cvRound(y0 - alpha*cos_t) );
-       line( standard_hough, pt1, pt2, Scalar(255,0,0), 3, CV_AA); 
-     } 
+       line( standard_hough, pt1, pt2, Scalar(255,0,0), 3, CV_AA);
+     }
 
    imshow( standard_name, standard_hough );
 }

@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2004, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-// 
+//
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission. 
-// 
+// from this software without specific prior written permission.
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -81,13 +81,13 @@ struct InputFile::Data: public Mutex
     LineOrder		lineOrder;      // the file's lineorder
     int			minY;           // data window's min y coord
     int			maxY;           // data window's max x coord
-    
+
     FrameBuffer		tFileBuffer;
     FrameBuffer *	cachedBuffer;
-    
+
     int			cachedTileY;
     int                 offset;
-    
+
     int                 numThreads;
 
      Data (bool del, int numThreads);
@@ -116,13 +116,13 @@ InputFile::Data::~Data ()
     delete sFile;
 
     if (deleteStream)
-	delete is;
+    delete is;
 
     deleteCachedBuffer();
 }
 
 
-void	
+void
 InputFile::Data::deleteCachedBuffer()
 {
     //
@@ -132,37 +132,37 @@ InputFile::Data::deleteCachedBuffer()
 
     if (cachedBuffer)
     {
-	for (FrameBuffer::Iterator k = cachedBuffer->begin();
-	     k != cachedBuffer->end();
-	     ++k)
-	{
-	    Slice &s = k.slice();
+    for (FrameBuffer::Iterator k = cachedBuffer->begin();
+         k != cachedBuffer->end();
+         ++k)
+    {
+        Slice &s = k.slice();
 
-	    switch (s.type)
-	    {
-	      case UINT:
+        switch (s.type)
+        {
+          case UINT:
 
-		delete [] (((unsigned int *)s.base) + offset);
-		break;
+        delete [] (((unsigned int *)s.base) + offset);
+        break;
 
-	      case HALF:
+          case HALF:
 
-		delete [] ((half *)s.base + offset);
-		break;
+        delete [] ((half *)s.base + offset);
+        break;
 
-	      case FLOAT:
+          case FLOAT:
 
-		delete [] (((float *)s.base) + offset);
-		break;
-	    }                
-	}
+        delete [] (((float *)s.base) + offset);
+        break;
+        }
+    }
 
-	//
-	// delete the cached frame buffer
-	//
+    //
+    // delete the cached frame buffer
+    //
 
-	delete cachedBuffer;        
-	cachedBuffer = 0;
+    delete cachedBuffer;
+    cachedBuffer = 0;
     }
 }
 
@@ -185,7 +185,7 @@ bufferedReadPixels (InputFile::Data* ifd, int scanLine1, int scanLine2)
     if (minY < ifd->minY || maxY >  ifd->maxY)
     {
         throw Iex::ArgExc ("Tried to read scan line outside "
-			   "the image file's data window.");
+               "the image file's data window.");
     }
 
     //
@@ -220,7 +220,7 @@ bufferedReadPixels (InputFile::Data* ifd, int scanLine1, int scanLine2)
     //
 
     Box2i levelRange = ifd->tFile->dataWindowForLevel(0);
-    
+
     //
     // Read the tiles into our temporary framebuffer and copy them into
     // the user's buffer
@@ -259,24 +259,24 @@ bufferedReadPixels (InputFile::Data* ifd, int scanLine1, int scanLine2)
             char *fromPtr, *toPtr;
             int size = pixelTypeSize (toSlice.type);
 
-	    int xStart = levelRange.min.x;
-	    int yStart = minYThisRow;
+        int xStart = levelRange.min.x;
+        int yStart = minYThisRow;
 
-	    while (modp (xStart, toSlice.xSampling) != 0)
-		++xStart;
+        while (modp (xStart, toSlice.xSampling) != 0)
+        ++xStart;
 
-	    while (modp (yStart, toSlice.ySampling) != 0)
-		++yStart;
+        while (modp (yStart, toSlice.ySampling) != 0)
+        ++yStart;
 
             for (int y = yStart;
-		 y <= maxYThisRow;
-		 y += toSlice.ySampling)
+         y <= maxYThisRow;
+         y += toSlice.ySampling)
             {
-		//
+        //
                 // Set the pointers to the start of the y scanline in
                 // this row of tiles
-		//
-                
+        //
+
                 fromPtr = fromSlice.base +
                           (y - tileRange.min.y) * fromSlice.yStride +
                           xStart * fromSlice.xStride;
@@ -285,19 +285,19 @@ bufferedReadPixels (InputFile::Data* ifd, int scanLine1, int scanLine2)
                         divp (y, toSlice.ySampling) * toSlice.yStride +
                         divp (xStart, toSlice.xSampling) * toSlice.xStride;
 
-		//
+        //
                 // Copy all pixels for the scanline in this row of tiles
-		//
+        //
 
                 for (int x = xStart;
-		     x <= levelRange.max.x;
-		     x += toSlice.xSampling)
+             x <= levelRange.max.x;
+             x += toSlice.xSampling)
                 {
-		    for (size_t i = 0; i < size; ++i)
-			toPtr[i] = fromPtr[i];
+            for (size_t i = 0; i < size; ++i)
+            toPtr[i] = fromPtr[i];
 
-		    fromPtr += fromSlice.xStride * toSlice.xSampling;
-		    toPtr += toSlice.xStride;
+            fromPtr += fromSlice.xStride * toSlice.xSampling;
+            toPtr += toSlice.xStride;
                 }
             }
         }
@@ -313,20 +313,20 @@ InputFile::InputFile (const char fileName[], int numThreads):
 {
     try
     {
-	_data->is = new StdIFStream (fileName);
-	initialize();
+    _data->is = new StdIFStream (fileName);
+    initialize();
     }
     catch (Iex::BaseExc &e)
     {
-	delete _data;
+    delete _data;
 
         REPLACE_EXC (e, "Cannot read image file "
-			"\"" << fileName << "\". " << e);
+            "\"" << fileName << "\". " << e);
         throw;
     }
     catch (...)
     {
-	delete _data;
+    delete _data;
         throw;
     }
 }
@@ -337,20 +337,20 @@ InputFile::InputFile (IStream &is, int numThreads):
 {
     try
     {
-	_data->is = &is;
-	initialize();
+    _data->is = &is;
+    initialize();
     }
     catch (Iex::BaseExc &e)
     {
-	delete _data;
+    delete _data;
 
         REPLACE_EXC (e, "Cannot read image file "
-			"\"" << is.fileName() << "\". " << e);
+            "\"" << is.fileName() << "\". " << e);
         throw;
     }
     catch (...)
     {
-	delete _data;
+    delete _data;
         throw;
     }
 }
@@ -364,25 +364,25 @@ InputFile::initialize ()
 
     if (isTiled (_data->version))
     {
-	_data->lineOrder = _data->header.lineOrder();
+    _data->lineOrder = _data->header.lineOrder();
 
-	//
-	// Save the dataWindow information
-	//
+    //
+    // Save the dataWindow information
+    //
 
-	const Box2i &dataWindow = _data->header.dataWindow();
-	_data->minY = dataWindow.min.y;
-	_data->maxY = dataWindow.max.y;
-    
-	_data->tFile = new TiledInputFile (_data->header,
-					   _data->is,
-					   _data->version,
+    const Box2i &dataWindow = _data->header.dataWindow();
+    _data->minY = dataWindow.min.y;
+    _data->maxY = dataWindow.max.y;
+
+    _data->tFile = new TiledInputFile (_data->header,
+                       _data->is,
+                       _data->version,
                                            _data->numThreads);
     }
     else
     {
-	_data->sFile = new ScanLineInputFile (_data->header,
-					      _data->is,
+    _data->sFile = new ScanLineInputFile (_data->header,
+                          _data->is,
                                               _data->numThreads);
     }
 }
@@ -420,114 +420,114 @@ InputFile::setFrameBuffer (const FrameBuffer &frameBuffer)
 {
     if (isTiled (_data->version))
     {
-	Lock lock (*_data);
+    Lock lock (*_data);
 
-	//
+    //
         // We must invalidate the cached buffer if the new frame
-	// buffer has a different set of channels than the old
-	// frame buffer, or if the type of a channel has changed.
-	//
+    // buffer has a different set of channels than the old
+    // frame buffer, or if the type of a channel has changed.
+    //
 
-	const FrameBuffer &oldFrameBuffer = _data->tFileBuffer;
+    const FrameBuffer &oldFrameBuffer = _data->tFileBuffer;
 
-	FrameBuffer::ConstIterator i = oldFrameBuffer.begin();
-	FrameBuffer::ConstIterator j = frameBuffer.begin();
+    FrameBuffer::ConstIterator i = oldFrameBuffer.begin();
+    FrameBuffer::ConstIterator j = frameBuffer.begin();
 
-	while (i != oldFrameBuffer.end() && j != frameBuffer.end())
-	{
-	    if (strcmp (i.name(), j.name()) || i.slice().type != j.slice().type)
-		break;
+    while (i != oldFrameBuffer.end() && j != frameBuffer.end())
+    {
+        if (strcmp (i.name(), j.name()) || i.slice().type != j.slice().type)
+        break;
 
-	    ++i;
-	    ++j;
-	}
+        ++i;
+        ++j;
+    }
 
-	if (i != oldFrameBuffer.end() || j != frameBuffer.end())
+    if (i != oldFrameBuffer.end() || j != frameBuffer.end())
         {
-	    //
-	    // Invalidate the cached buffer.
-	    //
+        //
+        // Invalidate the cached buffer.
+        //
 
             _data->deleteCachedBuffer ();
-	    _data->cachedTileY = -1;
+        _data->cachedTileY = -1;
 
-	    //
-	    // Create new a cached frame buffer.  It can hold a single
-	    // row of tiles.  The cached buffer can be reused for each
-	    // row of tiles because we set the yTileCoords parameter of
-	    // each Slice to true.
-	    //
+        //
+        // Create new a cached frame buffer.  It can hold a single
+        // row of tiles.  The cached buffer can be reused for each
+        // row of tiles because we set the yTileCoords parameter of
+        // each Slice to true.
+        //
 
-	    const Box2i &dataWindow = _data->header.dataWindow();
-	    _data->cachedBuffer = new FrameBuffer();
-	    _data->offset = dataWindow.min.x;
-	    
-	    int tileRowSize = (dataWindow.max.x - dataWindow.min.x + 1) *
-			      _data->tFile->tileYSize();
+        const Box2i &dataWindow = _data->header.dataWindow();
+        _data->cachedBuffer = new FrameBuffer();
+        _data->offset = dataWindow.min.x;
 
-	    for (FrameBuffer::ConstIterator k = frameBuffer.begin();
-		 k != frameBuffer.end();
-		 ++k)
-	    {
-		Slice s = k.slice();
+        int tileRowSize = (dataWindow.max.x - dataWindow.min.x + 1) *
+                  _data->tFile->tileYSize();
 
-		switch (s.type)
-		{
-		  case UINT:
+        for (FrameBuffer::ConstIterator k = frameBuffer.begin();
+         k != frameBuffer.end();
+         ++k)
+        {
+        Slice s = k.slice();
 
-		    _data->cachedBuffer->insert
-			(k.name(),
-			 Slice (UINT,
-				(char *)(new unsigned int[tileRowSize] - 
-					_data->offset),
-				sizeof (unsigned int),
-				sizeof (unsigned int) *
-				    _data->tFile->levelWidth(0),
-				1, 1,
-				s.fillValue,
-				false, true));
-		    break;
+        switch (s.type)
+        {
+          case UINT:
 
-		  case HALF:
+            _data->cachedBuffer->insert
+            (k.name(),
+             Slice (UINT,
+                (char *)(new unsigned int[tileRowSize] -
+                    _data->offset),
+                sizeof (unsigned int),
+                sizeof (unsigned int) *
+                    _data->tFile->levelWidth(0),
+                1, 1,
+                s.fillValue,
+                false, true));
+            break;
 
-		    _data->cachedBuffer->insert
-			(k.name(),
-			 Slice (HALF,
-				(char *)(new half[tileRowSize] - 
-					_data->offset),
-				sizeof (half),
-				sizeof (half) *
-				    _data->tFile->levelWidth(0),
-				1, 1,
-				s.fillValue,
-				false, true));
-		    break;
+          case HALF:
 
-		  case FLOAT:
+            _data->cachedBuffer->insert
+            (k.name(),
+             Slice (HALF,
+                (char *)(new half[tileRowSize] -
+                    _data->offset),
+                sizeof (half),
+                sizeof (half) *
+                    _data->tFile->levelWidth(0),
+                1, 1,
+                s.fillValue,
+                false, true));
+            break;
 
-		    _data->cachedBuffer->insert
-			(k.name(),
-			 Slice (FLOAT,
-				(char *)(new float[tileRowSize] - 
-					_data->offset),
-				sizeof(float),
-				sizeof(float) *
-				    _data->tFile->levelWidth(0),
-				1, 1,
-				s.fillValue,
-				false, true));
-		    break;
+          case FLOAT:
 
-		  default:
+            _data->cachedBuffer->insert
+            (k.name(),
+             Slice (FLOAT,
+                (char *)(new float[tileRowSize] -
+                    _data->offset),
+                sizeof(float),
+                sizeof(float) *
+                    _data->tFile->levelWidth(0),
+                1, 1,
+                s.fillValue,
+                false, true));
+            break;
 
-		    throw Iex::ArgExc ("Unknown pixel data type.");
-		}
-	    }
+          default:
 
-	    _data->tFile->setFrameBuffer (*_data->cachedBuffer);
+            throw Iex::ArgExc ("Unknown pixel data type.");
+        }
         }
 
-	_data->tFileBuffer = frameBuffer;
+        _data->tFile->setFrameBuffer (*_data->cachedBuffer);
+        }
+
+    _data->tFileBuffer = frameBuffer;
     }
     else
     {
@@ -541,12 +541,12 @@ InputFile::frameBuffer () const
 {
     if (isTiled (_data->version))
     {
-	Lock lock (*_data);
-	return _data->tFileBuffer;
+    Lock lock (*_data);
+    return _data->tFileBuffer;
     }
     else
     {
-	return _data->sFile->frameBuffer();
+    return _data->sFile->frameBuffer();
     }
 }
 
@@ -555,9 +555,9 @@ bool
 InputFile::isComplete () const
 {
     if (isTiled (_data->version))
-	return _data->tFile->isComplete();
+    return _data->tFile->isComplete();
     else
-	return _data->sFile->isComplete();
+    return _data->sFile->isComplete();
 }
 
 
@@ -566,7 +566,7 @@ InputFile::readPixels (int scanLine1, int scanLine2)
 {
     if (isTiled (_data->version))
     {
-	Lock lock (*_data);
+    Lock lock (*_data);
         bufferedReadPixels (_data, scanLine1, scanLine2);
     }
     else
@@ -585,49 +585,49 @@ InputFile::readPixels (int scanLine)
 
 void
 InputFile::rawPixelData (int firstScanLine,
-			 const char *&pixelData,
-			 int &pixelDataSize)
+             const char *&pixelData,
+             int &pixelDataSize)
 {
     try
     {
-	if (isTiled (_data->version))
-	{
-	    throw Iex::ArgExc ("Tried to read a raw scanline "
-			       "from a tiled image.");
-	}
-        
+    if (isTiled (_data->version))
+    {
+        throw Iex::ArgExc ("Tried to read a raw scanline "
+                   "from a tiled image.");
+    }
+
         _data->sFile->rawPixelData (firstScanLine, pixelData, pixelDataSize);
     }
     catch (Iex::BaseExc &e)
     {
-	REPLACE_EXC (e, "Error reading pixel data from image "
-		        "file \"" << fileName() << "\". " << e);
-	throw;
+    REPLACE_EXC (e, "Error reading pixel data from image "
+                "file \"" << fileName() << "\". " << e);
+    throw;
     }
 }
 
 
 void
 InputFile::rawTileData (int &dx, int &dy,
-			int &lx, int &ly,
-			const char *&pixelData,
-			int &pixelDataSize)
+            int &lx, int &ly,
+            const char *&pixelData,
+            int &pixelDataSize)
 {
     try
     {
-	if (!isTiled (_data->version))
-	{
-	    throw Iex::ArgExc ("Tried to read a raw tile "
-			       "from a scanline-based image.");
-	}
-        
+    if (!isTiled (_data->version))
+    {
+        throw Iex::ArgExc ("Tried to read a raw tile "
+                   "from a scanline-based image.");
+    }
+
         _data->tFile->rawTileData (dx, dy, lx, ly, pixelData, pixelDataSize);
     }
     catch (Iex::BaseExc &e)
     {
-	REPLACE_EXC (e, "Error reading tile data from image "
-		        "file \"" << fileName() << "\". " << e);
-	throw;
+    REPLACE_EXC (e, "Error reading tile data from image "
+                "file \"" << fileName() << "\". " << e);
+    throw;
     }
 }
 
@@ -637,8 +637,8 @@ InputFile::tFile()
 {
     if (!isTiled (_data->version))
     {
-	throw Iex::ArgExc ("Cannot get a TiledInputFile pointer "
-			   "from an InputFile that is not tiled.");
+    throw Iex::ArgExc ("Cannot get a TiledInputFile pointer "
+               "from an InputFile that is not tiled.");
     }
 
     return _data->tFile;

@@ -50,7 +50,7 @@
 
 #if defined(HAVE_CUDA) && !defined(__APPLE__)
 
-namespace cv { namespace gpu 
+namespace cv { namespace gpu
 {
     namespace detail
     {

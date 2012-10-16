@@ -42,7 +42,7 @@
 #ifndef _UTILS_H_
 #define _UTILS_H_
 
-struct PaletteEntry 
+struct PaletteEntry
 {
     unsigned char b, g, r, a;
 };

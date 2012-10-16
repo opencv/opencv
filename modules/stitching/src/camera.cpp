@@ -63,7 +63,7 @@ const CameraParams& CameraParams::operator =(const CameraParams &other)
     return *this;
 }
 
-Mat CameraParams::K() const 
+Mat CameraParams::K() const
 {
     Mat_<double> k = Mat::eye(3, 3, CV_64F);
     k(0,0) = focal; k(0,2) = ppx;

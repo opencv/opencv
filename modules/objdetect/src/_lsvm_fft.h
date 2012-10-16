@@ -9,13 +9,13 @@
 // 1-dimensional FFT
 //
 // API
-// int fft(float *x_in, float *x_out, int n, int shift); 
+// int fft(float *x_in, float *x_out, int n, int shift);
 // INPUT
 // x_in              - input signal
 // n                 - number of elements for searching Fourier image
 // shift             - shift between input elements
 // OUTPUT
-// x_out             - output signal (contains 2n elements in order 
+// x_out             - output signal (contains 2n elements in order
                        Re(x_in[0]), Im(x_in[0]), Re(x_in[1]), Im(x_in[1]) and etc.)
 // RESULT
 // Error status
@@ -28,8 +28,8 @@ int fft(float *x_in, float *x_out, int n, int shift);
 // API
 // int fftInverse(float *x_in, float *x_out, int n, int shift);
 // INPUT
-// x_in              - Fourier image of 1d input signal(contains 2n elements 
-                       in order Re(x_in[0]), Im(x_in[0]), 
+// x_in              - Fourier image of 1d input signal(contains 2n elements
+                       in order Re(x_in[0]), Im(x_in[0]),
                        Re(x_in[1]), Im(x_in[1]) and etc.)
 // n                 - number of elements for searching counter FFT image
 // shift             - shift between input elements
@@ -51,7 +51,7 @@ int fftInverse(float *x_in, float *x_out, int n, int shift);
 // numColls          - number of collumns
 // OUTPUT
 // x_out             - output signal (contains (2 * numRows * numColls) elements
-                       in order Re(x_in[0][0]), Im(x_in[0][0]), 
+                       in order Re(x_in[0][0]), Im(x_in[0][0]),
                        Re(x_in[0][1]), Im(x_in[0][1]) and etc.)
 // RESULT
 // Error status
@@ -64,8 +64,8 @@ int fft2d(float *x_in, float *x_out, int numRows, int numColls);
 // API
 // int fftInverse2d(float *x_in, float *x_out, int numRows, int numColls);
 // INPUT
-// x_in              - Fourier image of matrix (contains (2 * numRows * numColls) 
-                       elements in order Re(x_in[0][0]), Im(x_in[0][0]), 
+// x_in              - Fourier image of matrix (contains (2 * numRows * numColls)
+                       elements in order Re(x_in[0][0]), Im(x_in[0][0]),
                        Re(x_in[0][1]), Im(x_in[0][1]) and etc.)
 // numRows           - number of rows
 // numColls          - number of collumns

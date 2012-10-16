@@ -129,25 +129,25 @@ CV_INLINE CvTHaarFeature cvHaarFeature( const char* desc,
 
     strcpy( &(hf.desc[0]), desc );
     hf.tilted = ( hf.desc[0] == 't' );
-    
+
     hf.rect[0].r.x = x0;
     hf.rect[0].r.y = y0;
     hf.rect[0].r.width  = w0;
     hf.rect[0].r.height = h0;
     hf.rect[0].weight   = wt0;
-    
+
     hf.rect[1].r.x = x1;
     hf.rect[1].r.y = y1;
     hf.rect[1].r.width  = w1;
     hf.rect[1].r.height = h1;
     hf.rect[1].weight   = wt1;
-    
+
     hf.rect[2].r.x = x2;
     hf.rect[2].r.y = y2;
     hf.rect[2].r.width  = w2;
     hf.rect[2].r.height = h2;
     hf.rect[2].weight   = wt2;
-    
+
     return hf;
 }
 
@@ -223,7 +223,7 @@ typedef struct CvCARTHaarClassifier
 typedef struct CvStageHaarClassifier
 {
     CV_INT_HAAR_CLASSIFIER_FIELDS()
-        
+
     int count;
     float threshold;
     CvIntHaarClassifier** classifier;
@@ -342,7 +342,7 @@ int icvGetHaarTraininDataFromVecCallback( CvMat* img, void* userdata );
  * icvGetHaarTrainingDataFromVec
  *
  * Fill <data> with samples from .vec file, passed <cascade>
-int icvGetHaarTrainingDataFromVec( CvHaarTrainingData* data, int first, int count,                                   
+int icvGetHaarTrainingDataFromVec( CvHaarTrainingData* data, int first, int count,
                                    CvIntHaarClassifier* cascade,
                                    const char* filename,
                                    int* consumed );

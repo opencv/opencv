@@ -18,7 +18,7 @@ int main( int argc, char** argv )
 {
 
   Mat src, src_gray, dst;
-  int kernel_size = 3; 
+  int kernel_size = 3;
   int scale = 1;
   int delta = 0;
   int ddepth = CV_16S;

@@ -53,8 +53,8 @@
 //BORDER_REPLICATE:     aaaaaa|abcdefgh|hhhhhhh
 #define ADDR_L(i, l_edge, r_edge)  ((i) <  (l_edge) ? (l_edge)   : (i))
 #define ADDR_R(i, r_edge, addr)    ((i) >= (r_edge) ? (r_edge)-1 : (addr))
-#define ADDR_H(i, t_edge, b_edge)  ((i) <  (t_edge) ? (t_edge)   :(i)) 
-#define ADDR_B(i, b_edge, addr)    ((i) >= (b_edge) ? (b_edge)-1 :(addr)) 
+#define ADDR_H(i, t_edge, b_edge)  ((i) <  (t_edge) ? (t_edge)   :(i))
+#define ADDR_B(i, b_edge, addr)    ((i) >= (b_edge) ? (b_edge)-1 :(addr))
 #endif
 
 #ifdef BORDER_REFLECT
@@ -120,10 +120,10 @@ __kernel void calcHarris(__global const float *Dx,__global const float *Dy, __gl
     for(int i=0; i < ksY+1; i++)
     {
         dx_con = dx_startX+col >= 0 && dx_startX+col < dx_whole_cols && dx_startY+i >= 0 && dx_startY+i < dx_whole_rows;
-        dx_s = Dx[(dx_startY+i)*(dx_step>>2)+(dx_startX+col)]; 
+        dx_s = Dx[(dx_startY+i)*(dx_step>>2)+(dx_startX+col)];
         dx_data[i] = dx_con ? dx_s : 0.0;
         dy_con = dy_startX+col >= 0 && dy_startX+col < dy_whole_cols && dy_startY+i >= 0 && dy_startY+i < dy_whole_rows;
-        dy_s = Dy[(dy_startY+i)*(dy_step>>2)+(dy_startX+col)]; 
+        dy_s = Dy[(dy_startY+i)*(dy_step>>2)+(dy_startX+col)];
         dy_data[i] = dy_con ? dy_s : 0.0;
         data[0][i] = dx_data[i] * dx_data[i];
         data[1][i] = dx_data[i] * dy_data[i];
@@ -139,7 +139,7 @@ __kernel void calcHarris(__global const float *Dx,__global const float *Dy, __gl
         dx_selected_col = ADDR_L(dx_startX+col, 0, dx_whole_cols);
         dx_selected_col = ADDR_R(dx_startX+col, dx_whole_cols, dx_selected_col);
         dx_data[i] = Dx[dx_selected_row * (dx_step>>2) + dx_selected_col];
-        
+
         int dy_selected_row;
         int dy_selected_col;
         dy_selected_row = ADDR_H(dy_startY+i, 0, dy_whole_rows);
@@ -147,7 +147,7 @@ __kernel void calcHarris(__global const float *Dx,__global const float *Dy, __gl
         dy_selected_col = ADDR_L(dy_startX+col, 0, dy_whole_cols);
         dy_selected_col = ADDR_R(dy_startX+col, dy_whole_cols, dy_selected_col);
         dy_data[i] = Dy[dy_selected_row * (dy_step>>2) + dy_selected_col];
-       
+
         data[0][i] = dx_data[i] * dx_data[i];
         data[1][i] = dx_data[i] * dy_data[i];
         data[2][i] = dy_data[i] * dy_data[i];
@@ -189,12 +189,12 @@ __kernel void calcHarris(__global const float *Dx,__global const float *Dy, __gl
 
         if(posX < dst_cols && (posY) < dst_rows)
         {
-            dst[(dst_startY+0) * (dst_step>>2)+ dst_startX + col - anX] = 
+            dst[(dst_startY+0) * (dst_step>>2)+ dst_startX + col - anX] =
                     tmp_sum[0] * tmp_sum[4] - tmp_sum[2] * tmp_sum[2] - k * (tmp_sum[0] + tmp_sum[4]) * (tmp_sum[0] + tmp_sum[4]);
         }
         if(posX < dst_cols && (posY + 1) < dst_rows)
         {
-            dst[(dst_startY+1) * (dst_step>>2)+ dst_startX + col - anX] = 
+            dst[(dst_startY+1) * (dst_step>>2)+ dst_startX + col - anX] =
                     tmp_sum[1] * tmp_sum[5] - tmp_sum[3] * tmp_sum[3] - k * (tmp_sum[1] + tmp_sum[5]) * (tmp_sum[1] + tmp_sum[5]);
         }
     }

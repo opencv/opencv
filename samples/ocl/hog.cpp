@@ -233,8 +233,8 @@ App::App(const Args& s)
 
 void App::run()
 {
-	std::vector<ocl::Info> oclinfo;
-	ocl::getDevice(oclinfo);
+    std::vector<ocl::Info> oclinfo;
+    ocl::getDevice(oclinfo);
     running = true;
     cv::VideoWriter video_writer;
 

@@ -8,18 +8,18 @@ if __name__ == "__main__":
     colorlaplace = None
     planes = [ None, None, None ]
     capture = None
-    
+
     if len(sys.argv) == 1:
         capture = cv.CreateCameraCapture(0)
     elif len(sys.argv) == 2 and sys.argv[1].isdigit():
         capture = cv.CreateCameraCapture(int(sys.argv[1]))
     elif len(sys.argv) == 2:
-        capture = cv.CreateFileCapture(sys.argv[1]) 
+        capture = cv.CreateFileCapture(sys.argv[1])
 
     if not capture:
         print "Could not initialize capturing..."
         sys.exit(-1)
-        
+
     cv.NamedWindow("Laplacian", 1)
 
     while True:

@@ -7,7 +7,7 @@
 struct CvLBPFeatureParams : CvFeatureParams
 {
     CvLBPFeatureParams();
-    
+
 };
 
 class CvLBPEvaluator : public CvFeatureEvaluator
@@ -27,7 +27,7 @@ protected:
     {
     public:
         Feature();
-        Feature( int offset, int x, int y, int _block_w, int _block_h  ); 
+        Feature( int offset, int x, int y, int _block_w, int _block_h  );
         uchar calc( const Mat& _sum, size_t y ) const;
         void write( FileStorage &fs ) const;
 

@@ -36,25 +36,25 @@
  * the predictor code can cast tif_data to find its state.
  */
 typedef struct {
-	int             predictor;	/* predictor tag value */
-	tmsize_t        stride;		/* sample stride over data */
-	tmsize_t        rowsize;	/* tile/strip row size */
+    int             predictor;	/* predictor tag value */
+    tmsize_t        stride;		/* sample stride over data */
+    tmsize_t        rowsize;	/* tile/strip row size */
 
-	TIFFCodeMethod  encoderow;	/* parent codec encode/decode row */
-	TIFFCodeMethod  encodestrip;	/* parent codec encode/decode strip */
-	TIFFCodeMethod  encodetile;	/* parent codec encode/decode tile */ 
-	TIFFPostMethod  encodepfunc;	/* horizontal differencer */
+    TIFFCodeMethod  encoderow;	/* parent codec encode/decode row */
+    TIFFCodeMethod  encodestrip;	/* parent codec encode/decode strip */
+    TIFFCodeMethod  encodetile;	/* parent codec encode/decode tile */
+    TIFFPostMethod  encodepfunc;	/* horizontal differencer */
 
-	TIFFCodeMethod  decoderow;	/* parent codec encode/decode row */
-	TIFFCodeMethod  decodestrip;	/* parent codec encode/decode strip */
-	TIFFCodeMethod  decodetile;	/* parent codec encode/decode tile */ 
-	TIFFPostMethod  decodepfunc;	/* horizontal accumulator */
+    TIFFCodeMethod  decoderow;	/* parent codec encode/decode row */
+    TIFFCodeMethod  decodestrip;	/* parent codec encode/decode strip */
+    TIFFCodeMethod  decodetile;	/* parent codec encode/decode tile */
+    TIFFPostMethod  decodepfunc;	/* horizontal accumulator */
 
-	TIFFVGetMethod  vgetparent;	/* super-class method */
-	TIFFVSetMethod  vsetparent;	/* super-class method */
-	TIFFPrintMethod printdir;	/* super-class method */
-	TIFFBoolMethod  setupdecode;	/* super-class method */
-	TIFFBoolMethod  setupencode;	/* super-class method */
+    TIFFVGetMethod  vgetparent;	/* super-class method */
+    TIFFVSetMethod  vsetparent;	/* super-class method */
+    TIFFPrintMethod printdir;	/* super-class method */
+    TIFFBoolMethod  setupdecode;	/* super-class method */
+    TIFFBoolMethod  setupencode;	/* super-class method */
 } TIFFPredictorState;
 
 #if defined(__cplusplus)

@@ -594,15 +594,15 @@ protected:
  */
 TEST(Features2d_RotationInvariance_Detector_SURF, regression)
 {
-    DetectorRotationInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.SURF"), 
+    DetectorRotationInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.SURF"),
                                         0.45f,
-										0.76f);
+                                        0.76f);
     test.safe_run();
 }
 
 TEST(Features2d_RotationInvariance_Detector_SIFT, regression)
 {
-    DetectorRotationInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.SIFT"), 
+    DetectorRotationInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.SIFT"),
                                         0.75f,
                                         0.76f);
     test.safe_run();
@@ -613,18 +613,18 @@ TEST(Features2d_RotationInvariance_Detector_SIFT, regression)
  */
 TEST(Features2d_RotationInvariance_Descriptor_SURF, regression)
 {
-    DescriptorRotationInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.SURF"), 
-										  Algorithm::create<DescriptorExtractor>("Feature2D.SURF"), 
-										  NORM_L1, 
+    DescriptorRotationInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.SURF"),
+                                          Algorithm::create<DescriptorExtractor>("Feature2D.SURF"),
+                                          NORM_L1,
                                           0.83f);
     test.safe_run();
 }
 
 TEST(Features2d_RotationInvariance_Descriptor_SIFT, regression)
 {
-    DescriptorRotationInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.SIFT"), 
-										  Algorithm::create<DescriptorExtractor>("Feature2D.SIFT"), 
-										  NORM_L1, 
+    DescriptorRotationInvarianceTest test(Algorithm::create<FeatureDetector>("Feature2D.SIFT"),
+                                          Algorithm::create<DescriptorExtractor>("Feature2D.SIFT"),
+                                          NORM_L1,
                                           0.98f);
     test.safe_run();
 }

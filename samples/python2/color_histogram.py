@@ -29,7 +29,7 @@ if __name__ == '__main__':
     while True:
         flag, frame = cam.read()
         cv2.imshow('camera', frame)
-        
+
         small = cv2.pyrDown(frame)
 
         hsv = cv2.cvtColor(small, cv2.COLOR_BGR2HSV)
@@ -41,8 +41,8 @@ if __name__ == '__main__':
         h = np.clip(h*0.005*hist_scale, 0, 1)
         vis = hsv_map*h[:,:,np.newaxis] / 255.0
         cv2.imshow('hist', vis)
-        
+
         ch = 0xFF & cv2.waitKey(1)
         if ch == 27:
             break
-    cv2.destroyAllWindows() 			
+    cv2.destroyAllWindows()

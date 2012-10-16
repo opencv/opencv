@@ -11,7 +11,7 @@ public class MatOfByte extends Mat {
     public MatOfByte() {
         super();
     }
-    
+
     protected MatOfByte(long addr) {
         super(addr);
         if(checkVector(_channels, _depth) < 0 )
@@ -51,7 +51,7 @@ public class MatOfByte extends Mat {
     public byte[] toArray() {
         int num = checkVector(_channels, _depth);
         if(num < 0)
-        	throw new RuntimeException("Native Mat has unexpected type or size: " + toString());
+            throw new RuntimeException("Native Mat has unexpected type or size: " + toString());
         byte[] a = new byte[num * _channels];
         if(num == 0)
             return a;

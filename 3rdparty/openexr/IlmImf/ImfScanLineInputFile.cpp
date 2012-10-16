@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2004, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-// 
+//
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission. 
-// 
+// from this software without specific prior written permission.
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -91,25 +91,25 @@ struct InSliceInfo
     double	fillValue;
 
     InSliceInfo (PixelType typeInFrameBuffer = HALF,
-		 PixelType typeInFile = HALF,
-	         char *base = 0,
-	         size_t xStride = 0,
-	         size_t yStride = 0,
-	         int xSampling = 1,
-	         int ySampling = 1,
-	         bool fill = false,
-	         bool skip = false,
-	         double fillValue = 0.0);
+         PixelType typeInFile = HALF,
+             char *base = 0,
+             size_t xStride = 0,
+             size_t yStride = 0,
+             int xSampling = 1,
+             int ySampling = 1,
+             bool fill = false,
+             bool skip = false,
+             double fillValue = 0.0);
 };
 
 
 InSliceInfo::InSliceInfo (PixelType tifb,
-			  PixelType tifl,
-			  char *b,
-			  size_t xs, size_t ys,
-			  int xsm, int ysm,
-			  bool f, bool s,
-			  double fv)
+              PixelType tifl,
+              char *b,
+              size_t xs, size_t ys,
+              int xsm, int ysm,
+              bool f, bool s,
+              double fv)
 :
     typeInFrameBuffer (tifb),
     typeInFile (tifl),
@@ -185,9 +185,9 @@ struct ScanLineInputFile::Data: public Mutex
     int			minY;		    // data window's min y coord
     int			maxY;		    // data window's max x coord
     vector<Int64>	lineOffsets;	    // stores offsets in file for
-					    // each line
+                        // each line
     bool		fileIsComplete;	    // True if no scanlines are missing
-    					    // in the file
+                            // in the file
     int			nextLineBufferMinY; // minimum y of the next linebuffer
     vector<size_t>	bytesPerLine;       // combined size of a line over all
                                             // channels
@@ -195,7 +195,7 @@ struct ScanLineInputFile::Data: public Mutex
                                             // linebuffer
     vector<InSliceInfo>	slices;             // info about channels in file
     IStream *		is;                 // file stream to read from
-    
+
     vector<LineBuffer*> lineBuffers;        // each holds one line buffer
     int			linesInBuffer;      // number of scanlines each buffer
                                             // holds
@@ -203,10 +203,10 @@ struct ScanLineInputFile::Data: public Mutex
 
      Data (IStream *is, int numThreads);
     ~Data ();
-    
+
     inline LineBuffer * getLineBuffer (int number); // hash function from line
-    						    // buffer indices into our
-						    // vector of line buffers
+                                // buffer indices into our
+                            // vector of line buffers
 };
 
 
@@ -241,39 +241,39 @@ namespace {
 
 void
 reconstructLineOffsets (IStream &is,
-			LineOrder lineOrder,
-			vector<Int64> &lineOffsets)
+            LineOrder lineOrder,
+            vector<Int64> &lineOffsets)
 {
     Int64 position = is.tellg();
 
     try
     {
-	for (unsigned int i = 0; i < lineOffsets.size(); i++)
-	{
-	    Int64 lineOffset = is.tellg();
+    for (unsigned int i = 0; i < lineOffsets.size(); i++)
+    {
+        Int64 lineOffset = is.tellg();
 
-	    int y;
-	    Xdr::read <StreamIO> (is, y);
+        int y;
+        Xdr::read <StreamIO> (is, y);
 
-	    int dataSize;
-	    Xdr::read <StreamIO> (is, dataSize);
+        int dataSize;
+        Xdr::read <StreamIO> (is, dataSize);
 
-	    Xdr::skip <StreamIO> (is, dataSize);
+        Xdr::skip <StreamIO> (is, dataSize);
 
-	    if (lineOrder == INCREASING_Y)
-		lineOffsets[i] = lineOffset;
-	    else
-		lineOffsets[lineOffsets.size() - i - 1] = lineOffset;
-	}
+        if (lineOrder == INCREASING_Y)
+        lineOffsets[i] = lineOffset;
+        else
+        lineOffsets[lineOffsets.size() - i - 1] = lineOffset;
+    }
     }
     catch (...)
     {
-	//
-	// Suppress all exceptions.  This functions is
-	// called only to reconstruct the line offset
-	// table for incomplete files, and exceptions
-	// are likely.
-	//
+    //
+    // Suppress all exceptions.  This functions is
+    // called only to reconstruct the line offset
+    // table for incomplete files, and exceptions
+    // are likely.
+    //
     }
 
     is.clear();
@@ -283,47 +283,47 @@ reconstructLineOffsets (IStream &is,
 
 void
 readLineOffsets (IStream &is,
-		 LineOrder lineOrder,
-		 vector<Int64> &lineOffsets,
-		 bool &complete)
+         LineOrder lineOrder,
+         vector<Int64> &lineOffsets,
+         bool &complete)
 {
     for (unsigned int i = 0; i < lineOffsets.size(); i++)
     {
-	Xdr::read <StreamIO> (is, lineOffsets[i]);
+    Xdr::read <StreamIO> (is, lineOffsets[i]);
     }
 
     complete = true;
 
     for (unsigned int i = 0; i < lineOffsets.size(); i++)
     {
-	if (lineOffsets[i] <= 0)
-	{
-	    //
-	    // Invalid data in the line offset table mean that
-	    // the file is probably incomplete (the table is
-	    // the last thing written to the file).  Either
-	    // some process is still busy writing the file,
-	    // or writing the file was aborted.
-	    //
-	    // We should still be able to read the existing
-	    // parts of the file.  In order to do this, we
-	    // have to make a sequential scan over the scan
-	    // line data to reconstruct the line offset table.
-	    //
+    if (lineOffsets[i] <= 0)
+    {
+        //
+        // Invalid data in the line offset table mean that
+        // the file is probably incomplete (the table is
+        // the last thing written to the file).  Either
+        // some process is still busy writing the file,
+        // or writing the file was aborted.
+        //
+        // We should still be able to read the existing
+        // parts of the file.  In order to do this, we
+        // have to make a sequential scan over the scan
+        // line data to reconstruct the line offset table.
+        //
 
-	    complete = false;
-	    reconstructLineOffsets (is, lineOrder, lineOffsets);
-	    break;
-	}
+        complete = false;
+        reconstructLineOffsets (is, lineOrder, lineOffsets);
+        break;
+    }
     }
 }
 
 
 void
 readPixelData (ScanLineInputFile::Data *ifd,
-	       int minY,
-	       char *&buffer,
-	       int &dataSize)
+           int minY,
+           char *&buffer,
+           int &dataSize)
 {
     //
     // Read a single line buffer from the input file.
@@ -335,10 +335,10 @@ readPixelData (ScanLineInputFile::Data *ifd,
     //
 
     Int64 lineOffset =
-	ifd->lineOffsets[(minY - ifd->minY) / ifd->linesInBuffer];
+    ifd->lineOffsets[(minY - ifd->minY) / ifd->linesInBuffer];
 
     if (lineOffset == 0)
-	THROW (Iex::InputExc, "Scan line " << minY << " is missing.");
+    THROW (Iex::InputExc, "Scan line " << minY << " is missing.");
 
     //
     // Seek to the start of the scan line in the file,
@@ -346,7 +346,7 @@ readPixelData (ScanLineInputFile::Data *ifd,
     //
 
     if (ifd->nextLineBufferMinY != minY)
-	ifd->is->seekg (lineOffset);
+    ifd->is->seekg (lineOffset);
 
     //
     // Read the data block's header.
@@ -356,12 +356,12 @@ readPixelData (ScanLineInputFile::Data *ifd,
 
     Xdr::read <StreamIO> (*ifd->is, yInFile);
     Xdr::read <StreamIO> (*ifd->is, dataSize);
-    
+
     if (yInFile != minY)
         throw Iex::InputExc ("Unexpected data block y coordinate.");
 
     if (dataSize > (int) ifd->lineBufferSize)
-	throw Iex::InputExc ("Unexpected data block length.");
+    throw Iex::InputExc ("Unexpected data block length.");
 
     //
     // Read the pixel data.
@@ -379,9 +379,9 @@ readPixelData (ScanLineInputFile::Data *ifd,
     //
 
     if (ifd->lineOrder == INCREASING_Y)
-	ifd->nextLineBufferMinY = minY + ifd->linesInBuffer;
+    ifd->nextLineBufferMinY = minY + ifd->linesInBuffer;
     else
-	ifd->nextLineBufferMinY = minY - ifd->linesInBuffer;
+    ifd->nextLineBufferMinY = minY - ifd->linesInBuffer;
 }
 
 
@@ -396,9 +396,9 @@ class LineBufferTask : public Task
 
     LineBufferTask (TaskGroup *group,
                     ScanLineInputFile::Data *ifd,
-		    LineBuffer *lineBuffer,
+            LineBuffer *lineBuffer,
                     int scanLineMin,
-		    int scanLineMax);
+            int scanLineMax);
 
     virtual ~LineBufferTask ();
 
@@ -448,19 +448,19 @@ LineBufferTask::execute ()
         //
         // Uncompress the data, if necessary
         //
-    
+
         if (_lineBuffer->uncompressedData == 0)
         {
             int uncompressedSize = 0;
             int maxY = min (_lineBuffer->maxY, _ifd->maxY);
-    
+
             for (int i = _lineBuffer->minY - _ifd->minY;
                  i <= maxY - _ifd->minY;
-		 ++i)
-	    {
+         ++i)
+        {
                 uncompressedSize += (int) _ifd->bytesPerLine[i];
-	    }
-    
+        }
+
             if (_lineBuffer->compressor &&
                 _lineBuffer->dataSize < uncompressedSize)
             {
@@ -468,7 +468,7 @@ LineBufferTask::execute ()
 
                 _lineBuffer->dataSize = _lineBuffer->compressor->uncompress
                     (_lineBuffer->buffer, _lineBuffer->dataSize,
-		     _lineBuffer->minY, _lineBuffer->uncompressedData);
+             _lineBuffer->minY, _lineBuffer->uncompressedData);
             }
             else
             {
@@ -476,12 +476,12 @@ LineBufferTask::execute ()
                 // If the line is uncompressed, it's in XDR format,
                 // regardless of the compressor's output format.
                 //
-    
+
                 _lineBuffer->format = Compressor::XDR;
                 _lineBuffer->uncompressedData = _lineBuffer->buffer;
             }
         }
-        
+
         int yStart, yStop, dy;
 
         if (_ifd->lineOrder == INCREASING_Y)
@@ -496,7 +496,7 @@ LineBufferTask::execute ()
             yStop = _scanLineMin - 1;
             dy = -1;
         }
-    
+
         for (int y = yStart; y != yStop; y += dy)
         {
             //
@@ -504,46 +504,46 @@ LineBufferTask::execute ()
             // from the machine-independent representation, and
             // store the result in the frame buffer.
             //
-    
+
             const char *readPtr = _lineBuffer->uncompressedData +
                                   _ifd->offsetInLineBuffer[y - _ifd->minY];
-    
+
             //
             // Iterate over all image channels.
             //
-    
+
             for (unsigned int i = 0; i < _ifd->slices.size(); ++i)
             {
                 //
                 // Test if scan line y of this channel contains any data
-		// (the scan line contains data only if y % ySampling == 0).
+        // (the scan line contains data only if y % ySampling == 0).
                 //
-    
+
                 const InSliceInfo &slice = _ifd->slices[i];
-    
+
                 if (modp (y, slice.ySampling) != 0)
                     continue;
-    
+
                 //
                 // Find the x coordinates of the leftmost and rightmost
                 // sampled pixels (i.e. pixels within the data window
                 // for which x % xSampling == 0).
                 //
-    
+
                 int dMinX = divp (_ifd->minX, slice.xSampling);
                 int dMaxX = divp (_ifd->maxX, slice.xSampling);
-    
+
                 //
-		// Fill the frame buffer with pixel data.
+        // Fill the frame buffer with pixel data.
                 //
-    
+
                 if (slice.skip)
                 {
                     //
                     // The file contains data for this channel, but
                     // the frame buffer contains no slice for this channel.
                     //
-    
+
                     skipChannel (readPtr, slice.typeInFile, dMaxX - dMinX + 1);
                 }
                 else
@@ -551,14 +551,14 @@ LineBufferTask::execute ()
                     //
                     // The frame buffer contains a slice for this channel.
                     //
-    
+
                     char *linePtr  = slice.base +
                                         divp (y, slice.ySampling) *
                                         slice.yStride;
-    
+
                     char *writePtr = linePtr + dMinX * slice.xStride;
                     char *endPtr   = linePtr + dMaxX * slice.xStride;
-                    
+
                     copyIntoFrameBuffer (readPtr, writePtr, endPtr,
                                          slice.xStride, slice.fill,
                                          slice.fillValue, _lineBuffer->format,
@@ -607,52 +607,52 @@ newLineBufferTask
 
     try
     {
-	lineBuffer->wait ();
-	
-	if (lineBuffer->number != number)
-	{
-	    lineBuffer->minY = ifd->minY + number * ifd->linesInBuffer;
-	    lineBuffer->maxY = lineBuffer->minY + ifd->linesInBuffer - 1;
-	    
-	    lineBuffer->number = number;
-	    lineBuffer->uncompressedData = 0;
+    lineBuffer->wait ();
 
-	    readPixelData (ifd, lineBuffer->minY,
-			   lineBuffer->buffer,
-			   lineBuffer->dataSize);
-	}
-    }
-	catch (std::exception &e)
-	{
-	if (!lineBuffer->hasException)
-	{
-		lineBuffer->exception = e.what();
-		lineBuffer->hasException = true;
-	}
-	lineBuffer->number = -1;
-	lineBuffer->post();\
-	throw;
-	}
-	catch (...)
+    if (lineBuffer->number != number)
     {
-	//
-	// Reading from the file caused an exception.
-	// Signal that the line buffer is free, and
-	// re-throw the exception.
-	//
+        lineBuffer->minY = ifd->minY + number * ifd->linesInBuffer;
+        lineBuffer->maxY = lineBuffer->minY + ifd->linesInBuffer - 1;
 
-	lineBuffer->exception = "unrecognized exception";
-	lineBuffer->hasException = true;
-	lineBuffer->number = -1;
-	lineBuffer->post();
-	throw;
+        lineBuffer->number = number;
+        lineBuffer->uncompressedData = 0;
+
+        readPixelData (ifd, lineBuffer->minY,
+               lineBuffer->buffer,
+               lineBuffer->dataSize);
     }
-    
+    }
+    catch (std::exception &e)
+    {
+    if (!lineBuffer->hasException)
+    {
+        lineBuffer->exception = e.what();
+        lineBuffer->hasException = true;
+    }
+    lineBuffer->number = -1;
+    lineBuffer->post();\
+    throw;
+    }
+    catch (...)
+    {
+    //
+    // Reading from the file caused an exception.
+    // Signal that the line buffer is free, and
+    // re-throw the exception.
+    //
+
+    lineBuffer->exception = "unrecognized exception";
+    lineBuffer->hasException = true;
+    lineBuffer->number = -1;
+    lineBuffer->post();
+    throw;
+    }
+
     scanLineMin = max (lineBuffer->minY, scanLineMin);
     scanLineMax = min (lineBuffer->maxY, scanLineMax);
 
     return new LineBufferTask (group, ifd, lineBuffer,
-			       scanLineMin, scanLineMax);
+                   scanLineMin, scanLineMax);
 }
 
 } // namespace
@@ -667,18 +667,18 @@ ScanLineInputFile::ScanLineInputFile
 {
     try
     {
-	_data->header = header;
+    _data->header = header;
 
-	_data->lineOrder = _data->header.lineOrder();
+    _data->lineOrder = _data->header.lineOrder();
 
-	const Box2i &dataWindow = _data->header.dataWindow();
+    const Box2i &dataWindow = _data->header.dataWindow();
 
-	_data->minX = dataWindow.min.x;
-	_data->maxX = dataWindow.max.x;
-	_data->minY = dataWindow.min.y;
-	_data->maxY = dataWindow.max.y;
+    _data->minX = dataWindow.min.x;
+    _data->maxX = dataWindow.max.x;
+    _data->minY = dataWindow.min.y;
+    _data->maxY = dataWindow.max.y;
 
-	size_t maxBytesPerLine = bytesPerLineTable (_data->header,
+    size_t maxBytesPerLine = bytesPerLineTable (_data->header,
                                                     _data->bytesPerLine);
 
         for (size_t i = 0; i < _data->lineBuffers.size(); i++)
@@ -690,7 +690,7 @@ ScanLineInputFile::ScanLineInputFile
         }
 
         _data->linesInBuffer =
-	    numLinesInBuffer (_data->lineBuffers[0]->compressor);
+        numLinesInBuffer (_data->lineBuffers[0]->compressor);
 
         _data->lineBufferSize = maxBytesPerLine * _data->linesInBuffer;
 
@@ -698,26 +698,26 @@ ScanLineInputFile::ScanLineInputFile
             for (size_t i = 0; i < _data->lineBuffers.size(); i++)
                 _data->lineBuffers[i]->buffer = new char[_data->lineBufferSize];
 
-	_data->nextLineBufferMinY = _data->minY - 1;
+    _data->nextLineBufferMinY = _data->minY - 1;
 
-	offsetInLineBufferTable (_data->bytesPerLine,
-				 _data->linesInBuffer,
-				 _data->offsetInLineBuffer);
+    offsetInLineBufferTable (_data->bytesPerLine,
+                 _data->linesInBuffer,
+                 _data->offsetInLineBuffer);
 
-	int lineOffsetSize = (dataWindow.max.y - dataWindow.min.y +
-			      _data->linesInBuffer) / _data->linesInBuffer;
+    int lineOffsetSize = (dataWindow.max.y - dataWindow.min.y +
+                  _data->linesInBuffer) / _data->linesInBuffer;
 
-	_data->lineOffsets.resize (lineOffsetSize);
+    _data->lineOffsets.resize (lineOffsetSize);
 
-	readLineOffsets (*_data->is,
-			 _data->lineOrder,
-			 _data->lineOffsets,
-			 _data->fileIsComplete);
+    readLineOffsets (*_data->is,
+             _data->lineOrder,
+             _data->lineOffsets,
+             _data->fileIsComplete);
     }
     catch (...)
     {
-	delete _data;
-	throw;
+    delete _data;
+    throw;
     }
 }
 
@@ -753,7 +753,7 @@ ScanLineInputFile::version () const
 }
 
 
-void	
+void
 ScanLineInputFile::setFrameBuffer (const FrameBuffer &frameBuffer)
 {
     Lock lock (*_data);
@@ -766,21 +766,21 @@ ScanLineInputFile::setFrameBuffer (const FrameBuffer &frameBuffer)
     const ChannelList &channels = _data->header.channels();
 
     for (FrameBuffer::ConstIterator j = frameBuffer.begin();
-	 j != frameBuffer.end();
-	 ++j)
+     j != frameBuffer.end();
+     ++j)
     {
-	ChannelList::ConstIterator i = channels.find (j.name());
+    ChannelList::ConstIterator i = channels.find (j.name());
 
-	if (i == channels.end())
-	    continue;
+    if (i == channels.end())
+        continue;
 
-	if (i.channel().xSampling != j.slice().xSampling ||
-	    i.channel().ySampling != j.slice().ySampling)
-	    THROW (Iex::ArgExc, "X and/or y subsampling factors "
-				"of \"" << i.name() << "\" channel "
-				"of input file \"" << fileName() << "\" are "
-				"not compatible with the frame buffer's "
-				"subsampling factors.");
+    if (i.channel().xSampling != j.slice().xSampling ||
+        i.channel().ySampling != j.slice().ySampling)
+        THROW (Iex::ArgExc, "X and/or y subsampling factors "
+                "of \"" << i.name() << "\" channel "
+                "of input file \"" << fileName() << "\" are "
+                "not compatible with the frame buffer's "
+                "subsampling factors.");
     }
 
     //
@@ -791,56 +791,56 @@ ScanLineInputFile::setFrameBuffer (const FrameBuffer &frameBuffer)
     ChannelList::ConstIterator i = channels.begin();
 
     for (FrameBuffer::ConstIterator j = frameBuffer.begin();
-	 j != frameBuffer.end();
-	 ++j)
+     j != frameBuffer.end();
+     ++j)
     {
-	while (i != channels.end() && strcmp (i.name(), j.name()) < 0)
-	{
-	    //
-	    // Channel i is present in the file but not
-	    // in the frame buffer; data for channel i
-	    // will be skipped during readPixels().
-	    //
+    while (i != channels.end() && strcmp (i.name(), j.name()) < 0)
+    {
+        //
+        // Channel i is present in the file but not
+        // in the frame buffer; data for channel i
+        // will be skipped during readPixels().
+        //
 
-	    slices.push_back (InSliceInfo (i.channel().type,
-					   i.channel().type,
-					   0, // base
-					   0, // xStride
-					   0, // yStride
-					   i.channel().xSampling,
-					   i.channel().ySampling,
-					   false,  // fill
-					   true, // skip
-					   0.0)); // fillValue
-	    ++i;
-	}
+        slices.push_back (InSliceInfo (i.channel().type,
+                       i.channel().type,
+                       0, // base
+                       0, // xStride
+                       0, // yStride
+                       i.channel().xSampling,
+                       i.channel().ySampling,
+                       false,  // fill
+                       true, // skip
+                       0.0)); // fillValue
+        ++i;
+    }
 
-	bool fill = false;
+    bool fill = false;
 
-	if (i == channels.end() || strcmp (i.name(), j.name()) > 0)
-	{
-	    //
-	    // Channel i is present in the frame buffer, but not in the file.
-	    // In the frame buffer, slice j will be filled with a default value.
-	    //
+    if (i == channels.end() || strcmp (i.name(), j.name()) > 0)
+    {
+        //
+        // Channel i is present in the frame buffer, but not in the file.
+        // In the frame buffer, slice j will be filled with a default value.
+        //
 
-	    fill = true;
-	}
+        fill = true;
+    }
 
-	slices.push_back (InSliceInfo (j.slice().type,
-				       fill? j.slice().type:
-				             i.channel().type,
-				       j.slice().base,
-				       j.slice().xStride,
-				       j.slice().yStride,
-				       j.slice().xSampling,
-				       j.slice().ySampling,
-				       fill,
-				       false, // skip
-				       j.slice().fillValue));
+    slices.push_back (InSliceInfo (j.slice().type,
+                       fill? j.slice().type:
+                             i.channel().type,
+                       j.slice().base,
+                       j.slice().xStride,
+                       j.slice().yStride,
+                       j.slice().xSampling,
+                       j.slice().ySampling,
+                       fill,
+                       false, // skip
+                       j.slice().fillValue));
 
-	if (i != channels.end() && !fill)
-	    ++i;
+    if (i != channels.end() && !fill)
+        ++i;
     }
 
     //
@@ -867,23 +867,23 @@ ScanLineInputFile::isComplete () const
 }
 
 
-void	
+void
 ScanLineInputFile::readPixels (int scanLine1, int scanLine2)
 {
     try
     {
         Lock lock (*_data);
 
-	if (_data->slices.size() == 0)
-	    throw Iex::ArgExc ("No frame buffer specified "
-			       "as pixel data destination.");
+    if (_data->slices.size() == 0)
+        throw Iex::ArgExc ("No frame buffer specified "
+                   "as pixel data destination.");
 
-	int scanLineMin = min (scanLine1, scanLine2);
-	int scanLineMax = max (scanLine1, scanLine2);
+    int scanLineMin = min (scanLine1, scanLine2);
+    int scanLineMax = max (scanLine1, scanLine2);
 
-	if (scanLineMin < _data->minY || scanLineMax > _data->maxY)
-	    throw Iex::ArgExc ("Tried to read scan line outside "
-			       "the image file's data window.");
+    if (scanLineMin < _data->minY || scanLineMax > _data->maxY)
+        throw Iex::ArgExc ("Tried to read scan line outside "
+                   "the image file's data window.");
 
         //
         // We impose a numbering scheme on the lineBuffers where the first
@@ -911,23 +911,23 @@ ScanLineInputFile::readPixels (int scanLine1, int scanLine2)
 
         //
         // Create a task group for all line buffer tasks.  When the
-	// task group goes out of scope, the destructor waits until
-	// all tasks are complete.
+    // task group goes out of scope, the destructor waits until
+    // all tasks are complete.
         //
-        
+
         {
             TaskGroup taskGroup;
-    
+
             //
             // Add the line buffer tasks.
             //
             // The tasks will execute in the order that they are created
             // because we lock the line buffers during construction and the
             // constructors are called by the main thread.  Hence, in order
-	    // for a successive task to execute the previous task which
-	    // used that line buffer must have completed already.
+        // for a successive task to execute the previous task which
+        // used that line buffer must have completed already.
             //
-    
+
             for (int l = start; l != stop; l += dl)
             {
                 ThreadPool::addGlobalTask (newLineBufferTask (&taskGroup,
@@ -935,52 +935,52 @@ ScanLineInputFile::readPixels (int scanLine1, int scanLine2)
                                                               scanLineMin,
                                                               scanLineMax));
             }
-        
-	    //
-            // finish all tasks
-	    //
-        }
-        
-	//
-	// Exeption handling:
-	//
-	// LineBufferTask::execute() may have encountered exceptions, but
-	// those exceptions occurred in another thread, not in the thread
-	// that is executing this call to ScanLineInputFile::readPixels().
-	// LineBufferTask::execute() has caught all exceptions and stored
-	// the exceptions' what() strings in the line buffers.
-	// Now we check if any line buffer contains a stored exception; if
-	// this is the case then we re-throw the exception in this thread.
-	// (It is possible that multiple line buffers contain stored
-	// exceptions.  We re-throw the first exception we find and
-	// ignore all others.)
-	//
 
-	const string *exception = 0;
+        //
+            // finish all tasks
+        //
+        }
+
+    //
+    // Exeption handling:
+    //
+    // LineBufferTask::execute() may have encountered exceptions, but
+    // those exceptions occurred in another thread, not in the thread
+    // that is executing this call to ScanLineInputFile::readPixels().
+    // LineBufferTask::execute() has caught all exceptions and stored
+    // the exceptions' what() strings in the line buffers.
+    // Now we check if any line buffer contains a stored exception; if
+    // this is the case then we re-throw the exception in this thread.
+    // (It is possible that multiple line buffers contain stored
+    // exceptions.  We re-throw the first exception we find and
+    // ignore all others.)
+    //
+
+    const string *exception = 0;
 
         for (int i = 0; i < _data->lineBuffers.size(); ++i)
-	{
+    {
             LineBuffer *lineBuffer = _data->lineBuffers[i];
 
-	    if (lineBuffer->hasException && !exception)
-		exception = &lineBuffer->exception;
+        if (lineBuffer->hasException && !exception)
+        exception = &lineBuffer->exception;
 
-	    lineBuffer->hasException = false;
-	}
+        lineBuffer->hasException = false;
+    }
 
-	if (exception)
-	    throw Iex::IoExc (*exception);
+    if (exception)
+        throw Iex::IoExc (*exception);
     }
     catch (Iex::BaseExc &e)
     {
-	REPLACE_EXC (e, "Error reading pixel data from image "
-		        "file \"" << fileName() << "\". " << e);
-	throw;
+    REPLACE_EXC (e, "Error reading pixel data from image "
+                "file \"" << fileName() << "\". " << e);
+    throw;
     }
 }
 
 
-void	
+void
 ScanLineInputFile::readPixels (int scanLine)
 {
     readPixels (scanLine, scanLine);
@@ -989,32 +989,32 @@ ScanLineInputFile::readPixels (int scanLine)
 
 void
 ScanLineInputFile::rawPixelData (int firstScanLine,
-				 const char *&pixelData,
-				 int &pixelDataSize)
+                 const char *&pixelData,
+                 int &pixelDataSize)
 {
     try
     {
         Lock lock (*_data);
 
-	if (firstScanLine < _data->minY || firstScanLine > _data->maxY)
-	{
-	    throw Iex::ArgExc ("Tried to read scan line outside "
-			       "the image file's data window.");
-	}
+    if (firstScanLine < _data->minY || firstScanLine > _data->maxY)
+    {
+        throw Iex::ArgExc ("Tried to read scan line outside "
+                   "the image file's data window.");
+    }
 
         int minY = lineBufferMinY
-	    (firstScanLine, _data->minY, _data->linesInBuffer);
+        (firstScanLine, _data->minY, _data->linesInBuffer);
 
-	readPixelData
-	    (_data, minY, _data->lineBuffers[0]->buffer, pixelDataSize);
+    readPixelData
+        (_data, minY, _data->lineBuffers[0]->buffer, pixelDataSize);
 
-	pixelData = _data->lineBuffers[0]->buffer;
+    pixelData = _data->lineBuffers[0]->buffer;
     }
     catch (Iex::BaseExc &e)
     {
-	REPLACE_EXC (e, "Error reading pixel data from image "
-		        "file \"" << fileName() << "\". " << e);
-	throw;
+    REPLACE_EXC (e, "Error reading pixel data from image "
+                "file \"" << fileName() << "\". " << e);
+    throw;
     }
 }
 

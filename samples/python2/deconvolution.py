@@ -5,9 +5,9 @@ Sample shows how DFT can be used to perform Weiner deconvolution [1]
 of an image with user-defined point spread function (PSF)
 
 Usage:
-  deconvolution.py  [--circle] 
-      [--angle <degrees>] 
-      [--d <diameter>] 
+  deconvolution.py  [--circle]
+      [--angle <degrees>]
+      [--d <diameter>]
       [--snr <signal/noise ratio in db>]
       [<input image>]
 
@@ -19,11 +19,11 @@ Usage:
 Examples:
   deconvolution.py --angle 135 --d 22  data/licenseplate_motion.jpg
     (image source: http://www.topazlabs.com/infocus/_images/licenseplate_compare.jpg)
-  
+
   deconvolution.py --angle 86 --d 31  data/text_motion.jpg
   deconvolution.py --circle --d 19  data/text_defocus.jpg
     (image source: compact digital photo camera, no artificial distortion)
-  
+
 
 [1] http://en.wikipedia.org/wiki/Wiener_deconvolution
 '''
@@ -56,7 +56,7 @@ def defocus_kernel(d, sz=65):
     cv2.circle(kern, (sz, sz), d, 255, -1, cv2.CV_AA, shift=1)
     kern = np.float32(kern) / 255.0
     return kern
-    
+
 
 if __name__ == '__main__':
     print __doc__
@@ -67,7 +67,7 @@ if __name__ == '__main__':
     except: fn = 'data/licenseplate_motion.jpg'
 
     win = 'deconvolution'
-    
+
     img = cv2.imread(fn, 0)
     img = np.float32(img)/255.0
     cv2.imshow('input', img)

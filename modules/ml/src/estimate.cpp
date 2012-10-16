@@ -149,8 +149,8 @@ int cvCrossValNextStep (CvStatModel* estimateModel)
 // Do checking part of loop  of cross-validations metod.
 ML_IMPL
 void cvCrossValCheckClassifier (CvStatModel*  estimateModel,
-                          const CvStatModel*  model, 
-                          const CvMat*        trainData, 
+                          const CvStatModel*  model,
+                          const CvMat*        trainData,
                                 int           sample_t_flag,
                           const CvMat*        trainClasses)
 {
@@ -194,7 +194,7 @@ void cvCrossValCheckClassifier (CvStatModel*  estimateModel,
     data = crVal->sampleIdxEval->data.i;
 
 // Eval tested feature vectors.
-    CV_CALL (cvStatModelMultiPredict (model, trainData, sample_t_flag, 
+    CV_CALL (cvStatModelMultiPredict (model, trainData, sample_t_flag,
                                          crVal->predict_results, NULL, crVal->sampleIdxEval));
 // Count number if correct results.
     responses_result = crVal->predict_results->data.fl;
@@ -307,12 +307,12 @@ float cvCrossValGetResult (const CvStatModel* estimateModel,
             result = ((float)crVal->sq_error) / crVal->all_results;
             if (correlation)
             {
-                te = crVal->all_results * crVal->sum_cp - 
+                te = crVal->all_results * crVal->sum_cp -
                                              crVal->sum_correct * crVal->sum_predict;
                 te *= te;
-                te1 = (crVal->all_results * crVal->sum_cc - 
+                te1 = (crVal->all_results * crVal->sum_cc -
                                     crVal->sum_correct * crVal->sum_correct) *
-                           (crVal->all_results * crVal->sum_pp - 
+                           (crVal->all_results * crVal->sum_pp -
                                     crVal->sum_predict * crVal->sum_predict);
                 *correlation = (float)(te / te1);
 
@@ -330,7 +330,7 @@ float cvCrossValGetResult (const CvStatModel* estimateModel,
 }
 
 /****************************************************************************************/
-// Reset cross-validation EstimateModel to state the same as it was immidiatly after 
+// Reset cross-validation EstimateModel to state the same as it was immidiatly after
 //   its creating.
 ML_IMPL
 void cvCrossValReset (CvStatModel* estimateModel)
@@ -368,7 +368,7 @@ void cvReleaseCrossValidationModel (CvStatModel** model)
 
         CV_FUNCNAME ("cvReleaseCrossValidationModel");
         __BEGIN__
-    
+
     if (!model)
     {
         CV_ERROR (CV_StsNullPtr, "");
@@ -397,7 +397,7 @@ void cvReleaseCrossValidationModel (CvStatModel** model)
 
 /****************************************************************************************/
 // This function create cross-validation EstimateModel.
-ML_IMPL CvStatModel* 
+ML_IMPL CvStatModel*
 cvCreateCrossValidationEstimateModel(
              int                samples_all,
        const CvStatModelParams* estimateParams,
@@ -413,7 +413,7 @@ cvCreateCrossValidationEstimateModel(
 
     int  i, j, k, s_len;
     int  samples_selected;
-    CvRNG rng; 
+    CvRNG rng;
     CvRNG* prng;
     int* res_s_data;
     int* te_s_data;
@@ -435,7 +435,7 @@ cvCreateCrossValidationEstimateModel(
 
 // Alloc memory and fill standart StatModel's fields.
     CV_CALL (crVal = (CvCrossValidationModel*)cvCreateStatModel (
-                            CV_STAT_MODEL_MAGIC_VAL | CV_CROSSVAL_MAGIC_VAL, 
+                            CV_STAT_MODEL_MAGIC_VAL | CV_CROSSVAL_MAGIC_VAL,
                             sizeof(CvCrossValidationModel),
                             cvReleaseCrossValidationModel,
                             NULL, NULL));
@@ -443,7 +443,7 @@ cvCreateCrossValidationEstimateModel(
     crVal->folds_all       = k_fold;
     if (estimateParams && ((CvCrossValidationParams*)estimateParams)->is_regression)
         crVal->is_regression = 1;
-    else 
+    else
         crVal->is_regression = 0;
     if (estimateParams && ((CvCrossValidationParams*)estimateParams)->rng)
         prng = ((CvCrossValidationParams*)estimateParams)->rng;
@@ -455,7 +455,7 @@ cvCreateCrossValidationEstimateModel(
     {
         int s_step;
         int s_type = 0;
-        
+
         if (!CV_IS_MAT (sampleIdx))
             CV_ERROR (CV_StsBadArg, "Invalid sampleIdx array");
 
@@ -463,7 +463,7 @@ cvCreateCrossValidationEstimateModel(
             CV_ERROR (CV_StsBadSize, "sampleIdx array must be 1-dimensional");
 
         s_len = sampleIdx->rows + sampleIdx->cols - 1;
-        s_step = sampleIdx->rows == 1 ? 
+        s_step = sampleIdx->rows == 1 ?
                                      1 : sampleIdx->step / CV_ELEM_SIZE(sampleIdx->type);
 
         s_type = CV_MAT_TYPE (sampleIdx->type);
@@ -474,13 +474,13 @@ cvCreateCrossValidationEstimateModel(
         case CV_8SC1:
             {
             uchar* s_data = sampleIdx->data.ptr;
-                
+
             // sampleIdx is array of 1's and 0's -
             // i.e. it is a mask of the selected samples
             if( s_len != samples_all )
                 CV_ERROR (CV_StsUnmatchedSizes,
        "Sample mask should contain as many elements as the total number of samples");
-            
+
             samples_selected = 0;
             for (i = 0; i < s_len; i++)
                 samples_selected += s_data[i * s_step] != 0;
@@ -502,7 +502,7 @@ cvCreateCrossValidationEstimateModel(
         }
 
         // Alloc additional memory for internal Idx and fill it.
-/*!!*/  CV_CALL (res_s_data = crVal->sampleIdxAll = 
+/*!!*/  CV_CALL (res_s_data = crVal->sampleIdxAll =
                                                  (int*)cvAlloc (2 * s_len * sizeof(int)));
 
         if (s_type < CV_32SC1)
@@ -529,7 +529,7 @@ cvCreateCrossValidationEstimateModel(
 
             if (out_of_order)
                 qsort (res_s_data, s_len, sizeof(res_s_data[0]), icvCmpIntegers);
-            
+
             if (res_s_data[0] < 0 ||
                 res_s_data[s_len - 1] >= samples_all)
                     CV_ERROR (CV_StsBadArg, "There are out-of-range sample indices");
@@ -548,7 +548,7 @@ cvCreateCrossValidationEstimateModel(
             *res_s_data++ = i;
         }
         res_s_data = crVal->sampleIdxAll;
-    } // if (sampleIdx) ... else 
+    } // if (sampleIdx) ... else
 
 // Resort internal Idx.
     te_s_data = res_s_data + s_len;
@@ -560,7 +560,7 @@ cvCreateCrossValidationEstimateModel(
         res_s_data[j] = k;
     }
 
-// Duplicate resorted internal Idx. 
+// Duplicate resorted internal Idx.
 // It will be used to simplify operation of getting trainIdx.
     te_s_data = res_s_data + s_len;
     for (i = 0; i < s_len; i++)
@@ -573,7 +573,7 @@ cvCreateCrossValidationEstimateModel(
     {
         if (k_fold > s_len)
         {
-            CV_ERROR (CV_StsBadArg, 
+            CV_ERROR (CV_StsBadArg,
                         "Error in parameters of cross-validation ('k_fold' > #samples)!");
         }
         folds = crVal->folds = (int*) cvAlloc ((k_fold + 1) * sizeof (int));
@@ -593,7 +593,7 @@ cvCreateCrossValidationEstimateModel(
         crVal->max_fold_size = k;
         if (k >= s_len)
         {
-            CV_ERROR (CV_StsBadArg, 
+            CV_ERROR (CV_StsBadArg,
                       "Error in parameters of cross-validation (-'k_fold' > #samples)!");
         }
         crVal->folds_all = k = (s_len - 1) / k + 1;
@@ -634,7 +634,7 @@ cvCreateCrossValidationEstimateModel(
 
     return model;
 } // End of cvCreateCrossValidationEstimateModel
-            
+
 
 /****************************************************************************************\
 *                Extended interface with backcalls for models                            *
@@ -643,13 +643,13 @@ ML_IMPL float
 cvCrossValidation (const CvMat*            trueData,
                          int               tflag,
                    const CvMat*            trueClasses,
-                         CvStatModel*     (*createClassifier) (const CvMat*, 
-                                                                     int, 
+                         CvStatModel*     (*createClassifier) (const CvMat*,
+                                                                     int,
                                                                const CvMat*,
                                                                const CvClassifierTrainParams*,
-                                                               const CvMat*, 
-                                                               const CvMat*, 
-                                                               const CvMat*, 
+                                                               const CvMat*,
+                                                               const CvMat*,
+                                                               const CvMat*,
                                                                const CvMat*),
                    const CvClassifierTrainParams*    estimateParams,
                    const CvClassifierTrainParams*    trainParams,
@@ -676,7 +676,7 @@ cvCrossValidation (const CvMat*            trueData,
     }
     if (pCrValModel && *pCrValModel && !CV_IS_CROSSVAL(*pCrValModel))
     {
-        CV_ERROR (CV_StsBadArg, 
+        CV_ERROR (CV_StsBadArg,
            "<pCrValModel> point to not cross-validation model");
     }
 
@@ -698,9 +698,9 @@ cvCrossValidation (const CvMat*            trueData,
 // operation loop
     for (; crVal->nextStep((CvStatModel*)crVal) != 0; )
     {
-        CV_CALL (pClassifier = createClassifier (trueData, tflag, trueClasses, 
+        CV_CALL (pClassifier = createClassifier (trueData, tflag, trueClasses,
                     trainParams, compIdx, trainDataIdx, typeMask, missedMeasurementMask));
-        CV_CALL (crVal->check ((CvStatModel*)crVal, pClassifier, 
+        CV_CALL (crVal->check ((CvStatModel*)crVal, pClassifier,
                                                            trueData, tflag, trueClasses));
 
         pClassifier->release (&pClassifier);

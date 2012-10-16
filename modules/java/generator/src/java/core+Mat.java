@@ -552,8 +552,8 @@ public class Mat {
         double[] wholeSize_out = new double[2];
         double[] ofs_out = new double[2];
         locateROI_0(nativeObj, wholeSize_out, ofs_out);
-        if(wholeSize!=null){ wholeSize.width = wholeSize_out[0]; wholeSize.height = wholeSize_out[1]; } 
-        if(ofs!=null){ ofs.x = ofs_out[0]; ofs.y = ofs_out[1]; } 
+        if(wholeSize!=null){ wholeSize.width = wholeSize_out[0]; wholeSize.height = wholeSize_out[1]; }
+        if(ofs!=null){ ofs.x = ofs_out[0]; ofs.y = ofs_out[1]; }
         return;
     }
 

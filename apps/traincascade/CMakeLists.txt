@@ -22,7 +22,7 @@ set(traincascade_files traincascade.cpp
   HOGfeatures.cpp HOGfeatures.h
   imagestorage.cpp imagestorage.h)
 
-set(the_target opencv_traincascade)    
+set(the_target opencv_traincascade)
 add_executable(${the_target} ${traincascade_files})
 target_link_libraries(${the_target} ${OPENCV_TRAINCASCADE_DEPS} opencv_haartraining_engine)
 
@@ -32,10 +32,10 @@ set_target_properties(${the_target} PROPERTIES
                       RUNTIME_OUTPUT_DIRECTORY ${EXECUTABLE_OUTPUT_PATH}
                       INSTALL_NAME_DIR lib
                       OUTPUT_NAME "opencv_traincascade")
-					  
+
 if(ENABLE_SOLUTION_FOLDERS)
   set_target_properties(${the_target} PROPERTIES FOLDER "applications")
-endif()	
+endif()
 
 install(TARGETS ${the_target} RUNTIME DESTINATION bin COMPONENT main)
 

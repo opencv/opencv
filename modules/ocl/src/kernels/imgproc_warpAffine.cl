@@ -52,7 +52,7 @@
 typedef double F;
 typedef double4 F4;
 #define convert_F4 convert_double4
-#else 
+#else
 typedef float F;
 typedef float4 F4;
 #define convert_F4 convert_float4
@@ -61,9 +61,9 @@ typedef float4 F4;
 
 #define INTER_BITS 5
 #define INTER_TAB_SIZE (1 << INTER_BITS)
-#define INTER_SCALE 1.f/INTER_TAB_SIZE 
-#define AB_BITS max(10, (int)INTER_BITS) 
-#define AB_SCALE (1 << AB_BITS) 
+#define INTER_SCALE 1.f/INTER_TAB_SIZE
+#define AB_BITS max(10, (int)INTER_BITS)
+#define AB_SCALE (1 << AB_BITS)
 #define INTER_REMAP_COEF_BITS 15
 #define INTER_REMAP_COEF_SCALE (1 << INTER_REMAP_COEF_BITS)
 
@@ -81,7 +81,7 @@ inline void interpolateCubic( float x, float* coeffs )
 /**********************************************8UC1*********************************************
 ***********************************************************************************************/
 __kernel void warpAffineNN_C1_D0(__global uchar const * restrict src, __global uchar * dst, int src_cols, int src_rows,
-                            int dst_cols, int dst_rows, int srcStep, int dstStep, 
+                            int dst_cols, int dst_rows, int srcStep, int dstStep,
                             int src_offset, int dst_offset,  __constant F * M, int threadCols )
 {
     int dx = get_global_id(0);
@@ -90,9 +90,9 @@ __kernel void warpAffineNN_C1_D0(__global uchar const * restrict src, __global u
     if( dx < threadCols && dy < dst_rows)
     {
         dx = (dx<<2) - (dst_offset&3);
-    
+
         int round_delta = (AB_SCALE>>1);
-      
+
         int4 X, Y;
         int4 sx, sy;
         int4 DX = (int4)(dx, dx+1, dx+2, dx+3);
@@ -105,13 +105,13 @@ __kernel void warpAffineNN_C1_D0(__global uchar const * restrict src, __global u
         int tmp1, tmp2;
         tmp1 = rint((M[1]*dy + M[2]) * AB_SCALE);
         tmp2 = rint((M[4]*dy + M[5]) * AB_SCALE);
-         
+
         X += tmp1 + round_delta;
         Y += tmp2 + round_delta;
-       
+
         sx = convert_int4(convert_short4(X >> AB_BITS));
         sy = convert_int4(convert_short4(Y >> AB_BITS));
-        
+
         __global uchar4 * d = (__global uchar4 *)(dst+dst_offset+dy*dstStep+dx);
         uchar4 dval = *d;
         DX = (int4)(dx, dx+1, dx+2, dx+3);
@@ -129,7 +129,7 @@ __kernel void warpAffineNN_C1_D0(__global uchar const * restrict src, __global u
 }
 
 __kernel void warpAffineLinear_C1_D0(__global const uchar * restrict src, __global uchar * dst, int src_cols, int src_rows,
-                            int dst_cols, int dst_rows, int srcStep, int dstStep, 
+                            int dst_cols, int dst_rows, int srcStep, int dstStep,
                             int src_offset, int dst_offset,  __constant F * M, int threadCols )
 {
     int dx = get_global_id(0);
@@ -139,9 +139,9 @@ __kernel void warpAffineLinear_C1_D0(__global const uchar * restrict src, __glob
     if( dx < threadCols && dy < dst_rows)
     {
         dx = (dx<<2) - (dst_offset&3);
-         
+
         int round_delta = ((AB_SCALE >> INTER_BITS) >> 1);
-       
+
         int4 X, Y;
         short4  ax, ay;
         int4 sx, sy;
@@ -152,22 +152,22 @@ __kernel void warpAffineLinear_C1_D0(__global const uchar * restrict src, __glob
         M3DX = M[3] * convert_F4(DX);
         X = convert_int4(rint(M0DX));
         Y = convert_int4(rint(M3DX));
-        
+
         int tmp1, tmp2;
         tmp1 = rint((M[1]*dy + M[2]) * AB_SCALE);
         tmp2 = rint((M[4]*dy + M[5]) * AB_SCALE);
-         
+
         X += tmp1 + round_delta;
         Y += tmp2 + round_delta;
-       
+
         X = X >> (AB_BITS - INTER_BITS);
         Y = Y >> (AB_BITS - INTER_BITS);
-       
+
         sx = convert_int4(convert_short4(X >> INTER_BITS));
         sy = convert_int4(convert_short4(Y >> INTER_BITS));
         ax = convert_short4(X & (INTER_TAB_SIZE-1));
         ay = convert_short4(Y & (INTER_TAB_SIZE-1));
-        
+
         uchar4 v0, v1, v2,v3;
         int4 scon0, scon1, scon2, scon3;
         int4 spos0, spos1, spos2, spos3;
@@ -200,12 +200,12 @@ __kernel void warpAffineLinear_C1_D0(__global const uchar * restrict src, __glob
         v1.s3 = scon1.s3 ? src[spos1.s3] : 0;
         v2.s3 = scon2.s3 ? src[spos2.s3] : 0;
         v3.s3 = scon3.s3 ? src[spos3.s3] : 0;
-       
+
         short4 itab0, itab1, itab2, itab3;
         float4 taby, tabx;
         taby = INTER_SCALE * convert_float4(ay);
         tabx = INTER_SCALE * convert_float4(ax);
-     
+
         itab0 = convert_short4_sat(( (1.0f-taby)*(1.0f-tabx) * INTER_REMAP_COEF_SCALE ));
         itab1 = convert_short4_sat(( (1.0f-taby)*tabx * INTER_REMAP_COEF_SCALE ));
         itab2 = convert_short4_sat(( taby*(1.0f-tabx) * INTER_REMAP_COEF_SCALE ));
@@ -214,30 +214,30 @@ __kernel void warpAffineLinear_C1_D0(__global const uchar * restrict src, __glob
 
         int4 val;
         uchar4 tval;
-        val = convert_int4(v0) * convert_int4(itab0) + convert_int4(v1) * convert_int4(itab1) 
+        val = convert_int4(v0) * convert_int4(itab0) + convert_int4(v1) * convert_int4(itab1)
             + convert_int4(v2) * convert_int4(itab2) + convert_int4(v3) * convert_int4(itab3);
         tval = convert_uchar4_sat ( (val + (1 << (INTER_REMAP_COEF_BITS-1))) >> INTER_REMAP_COEF_BITS ) ;
-        
+
         __global uchar4 * d =(__global uchar4 *)(dst+dst_offset+dy*dstStep+dx);
         uchar4 dval = *d;
         DX = (int4)(dx, dx+1, dx+2, dx+3);
         int4 dcon = DX >= 0 && DX < dst_cols && dy >= 0 && dy < dst_rows;
         dval = convert_uchar4(dcon != 0) ? tval : dval;
         *d = dval;
-    } 
+    }
 }
 
 __kernel void warpAffineCubic_C1_D0(__global uchar * src, __global uchar * dst, int src_cols, int src_rows,
-                            int dst_cols, int dst_rows, int srcStep, int dstStep, 
+                            int dst_cols, int dst_rows, int srcStep, int dstStep,
                             int src_offset, int dst_offset,  __constant F * M, int threadCols )
 {
     int dx = get_global_id(0);
     int dy = get_global_id(1);
-    
+
     if( dx < threadCols && dy < dst_rows)
     {
         int round_delta = ((AB_SCALE>>INTER_BITS)>>1);
-        
+
         int X0 = rint(M[0] * dx * AB_SCALE);
         int Y0 = rint(M[3] * dx * AB_SCALE);
         X0 += rint((M[1]*dy + M[2]) * AB_SCALE) + round_delta;
@@ -249,10 +249,10 @@ __kernel void warpAffineCubic_C1_D0(__global uchar * src, __global uchar * dst, 
         short sy = (short)(Y >> INTER_BITS) - 1;
         short ay = (short)(Y & (INTER_TAB_SIZE-1));
         short ax = (short)(X & (INTER_TAB_SIZE-1));
-        
+
         uchar v[16];
         int i, j;
-       
+
 #pragma unroll 4
         for(i=0; i<4;  i++)
         for(j=0; j<4;  j++)
@@ -269,14 +269,14 @@ __kernel void warpAffineCubic_C1_D0(__global uchar * src, __global uchar * dst, 
         interpolateCubic(ayy, tab1y);
         interpolateCubic(axx, tab1x);
         int isum = 0;
-        
+
 #pragma unroll 16
         for( i=0; i<16; i++ )
         {
             F v = tab1y[(i>>2)] * tab1x[(i&3)];
             isum += itab[i] = convert_short_sat( rint( v * INTER_REMAP_COEF_SCALE ) );
         }
-        
+
         if( isum != INTER_REMAP_COEF_SCALE )
         {
             int k1, k2;
@@ -309,16 +309,16 @@ __kernel void warpAffineCubic_C1_D0(__global uchar * src, __global uchar * dst, 
 ***********************************************************************************************/
 
 __kernel void warpAffineNN_C4_D0(__global uchar4 const * restrict src, __global uchar4 * dst, int src_cols, int src_rows,
-                            int dst_cols, int dst_rows, int srcStep, int dstStep, 
+                            int dst_cols, int dst_rows, int srcStep, int dstStep,
                             int src_offset, int dst_offset,  __constant F * M, int threadCols )
 {
     int dx = get_global_id(0);
     int dy = get_global_id(1);
-    
+
     if( dx < threadCols && dy < dst_rows)
     {
         int round_delta = (AB_SCALE >> 1);
-        
+
         int X0 = rint(M[0] * dx * AB_SCALE);
         int Y0 = rint(M[3] * dx * AB_SCALE);
         X0 += rint((M[1]*dy + M[2]) * AB_SCALE) + round_delta;
@@ -326,26 +326,26 @@ __kernel void warpAffineNN_C4_D0(__global uchar4 const * restrict src, __global 
 
         int sx0 = (short)(X0 >> AB_BITS);
         int sy0 = (short)(Y0 >> AB_BITS);
-     
+
         if(dx >= 0 && dx < dst_cols && dy >= 0 && dy < dst_rows)
-            dst[(dst_offset>>2)+dy*(dstStep>>2)+dx]= (sx0>=0 && sx0<src_cols && sy0>=0 && sy0<src_rows) ? src[(src_offset>>2)+sy0*(srcStep>>2)+sx0] : (uchar4)0; 
+            dst[(dst_offset>>2)+dy*(dstStep>>2)+dx]= (sx0>=0 && sx0<src_cols && sy0>=0 && sy0<src_rows) ? src[(src_offset>>2)+sy0*(srcStep>>2)+sx0] : (uchar4)0;
     }
 }
 
 __kernel void warpAffineLinear_C4_D0(__global uchar4 const * restrict src, __global uchar4 * dst, int src_cols, int src_rows,
-                            int dst_cols, int dst_rows, int srcStep, int dstStep, 
+                            int dst_cols, int dst_rows, int srcStep, int dstStep,
                             int src_offset, int dst_offset,  __constant F * M, int threadCols )
 {
     int dx = get_global_id(0);
     int dy = get_global_id(1);
 
-        
+
     if( dx < threadCols && dy < dst_rows)
     {
         int round_delta = AB_SCALE/INTER_TAB_SIZE/2;
-        
+
         src_offset = (src_offset>>2);
-        srcStep = (srcStep>>2); 
+        srcStep = (srcStep>>2);
 
         int tmp = (dx << AB_BITS);
         int X0 = rint(M[0] * tmp);
@@ -359,7 +359,7 @@ __kernel void warpAffineLinear_C4_D0(__global uchar4 const * restrict src, __glo
         short sy0 = (short)(Y0 >> INTER_BITS);
         short ax0 = (short)(X0 & (INTER_TAB_SIZE-1));
         short ay0 = (short)(Y0 & (INTER_TAB_SIZE-1));
-        
+
         int4 v0, v1, v2, v3;
 
         v0 = (sx0 >= 0 && sx0 < src_cols && sy0 >= 0 && sy0 < src_rows) ? convert_int4(src[src_offset+sy0 * srcStep + sx0]) : 0;
@@ -371,36 +371,36 @@ __kernel void warpAffineLinear_C4_D0(__global uchar4 const * restrict src, __glo
         float taby, tabx;
         taby = 1.f/INTER_TAB_SIZE*ay0;
         tabx = 1.f/INTER_TAB_SIZE*ax0;
-        
+
         itab0 = convert_short_sat(rint( (1.0f-taby)*(1.0f-tabx) * INTER_REMAP_COEF_SCALE ));
         itab1 = convert_short_sat(rint( (1.0f-taby)*tabx * INTER_REMAP_COEF_SCALE ));
         itab2 = convert_short_sat(rint( taby*(1.0f-tabx) * INTER_REMAP_COEF_SCALE ));
         itab3 = convert_short_sat(rint( taby*tabx * INTER_REMAP_COEF_SCALE ));
-        
+
         int4 val;
         val = v0 * itab0 +  v1 * itab1 + v2 * itab2 + v3 * itab3;
-            
+
         if(dx >= 0 && dx < dst_cols && dy >= 0 && dy < dst_rows)
             dst[(dst_offset>>2)+dy*(dstStep>>2)+dx] =  convert_uchar4_sat ( (val + (1 << (INTER_REMAP_COEF_BITS-1))) >> INTER_REMAP_COEF_BITS ) ;
     }
 }
 
 __kernel void warpAffineCubic_C4_D0(__global uchar4 const * restrict src, __global uchar4 * dst, int src_cols, int src_rows,
-                            int dst_cols, int dst_rows, int srcStep, int dstStep, 
+                            int dst_cols, int dst_rows, int srcStep, int dstStep,
                             int src_offset, int dst_offset,  __constant F * M, int threadCols )
 {
     int dx = get_global_id(0);
     int dy = get_global_id(1);
-    
+
     if( dx < threadCols && dy < dst_rows)
     {
         int round_delta = ((AB_SCALE>>INTER_BITS)>>1);
-        
+
         src_offset = (src_offset>>2);
-        srcStep = (srcStep>>2); 
+        srcStep = (srcStep>>2);
         dst_offset = (dst_offset>>2);
-        dstStep = (dstStep>>2); 
-       
+        dstStep = (dstStep>>2);
+
         int tmp = (dx << AB_BITS);
         int X0 = rint(M[0] * tmp);
         int Y0 = rint(M[3] * tmp);
@@ -413,7 +413,7 @@ __kernel void warpAffineCubic_C4_D0(__global uchar4 const * restrict src, __glob
         int sy = (short)(Y0 >> INTER_BITS) - 1;
         int ay = (short)(Y0 & (INTER_TAB_SIZE-1));
         int ax = (short)(X0 & (INTER_TAB_SIZE-1));
-        
+
         uchar4 v[16];
         int i,j;
 #pragma unroll 4
@@ -431,7 +431,7 @@ __kernel void warpAffineCubic_C4_D0(__global uchar4 const * restrict src, __glob
         interpolateCubic(ayy, tab1y);
         interpolateCubic(axx, tab1x);
         int isum = 0;
-        
+
 #pragma unroll 16
         for( i=0; i<16; i++ )
         {
@@ -446,17 +446,17 @@ __kernel void warpAffineCubic_C4_D0(__global uchar4 const * restrict src, __glob
             int k1, k2;
             int diff = isum - INTER_REMAP_COEF_SCALE;
             int Mk1=2, Mk2=2, mk1=2, mk2=2;
-            
+
                for( k1 = 2; k1 < 4; k1++ )
                 for( k2 = 2; k2 < 4; k2++ )
                 {
-                    
+
                     if( itab[(k1<<2)+k2] < itab[(mk1<<2)+mk2] )
                         mk1 = k1, mk2 = k2;
                     else if( itab[(k1<<2)+k2] > itab[(Mk1<<2)+Mk2] )
                          Mk1 = k1, Mk2 = k2;
                 }
-                
+
             diff<0 ? (itab[(Mk1<<2)+Mk2]=(short)(itab[(Mk1<<2)+Mk2]-diff)) : (itab[(mk1<<2)+mk2]=(short)(itab[(mk1<<2)+mk2]-diff));
         }
 
@@ -477,16 +477,16 @@ __kernel void warpAffineCubic_C4_D0(__global uchar4 const * restrict src, __glob
 ***********************************************************************************************/
 
 __kernel void warpAffineNN_C1_D5(__global float * src, __global float * dst, int src_cols, int src_rows,
-                            int dst_cols, int dst_rows, int srcStep, int dstStep, 
+                            int dst_cols, int dst_rows, int srcStep, int dstStep,
                             int src_offset, int dst_offset,  __constant F * M, int threadCols )
 {
     int dx = get_global_id(0);
     int dy = get_global_id(1);
-    
+
     if( dx < threadCols && dy < dst_rows)
     {
         int round_delta = AB_SCALE/2;
-        
+
         int X0 = rint(M[0] * dx * AB_SCALE);
         int Y0 = rint(M[3] * dx * AB_SCALE);
         X0 += rint((M[1]*dy + M[2]) * AB_SCALE) + round_delta;
@@ -494,25 +494,25 @@ __kernel void warpAffineNN_C1_D5(__global float * src, __global float * dst, int
 
         short sx0 = (short)(X0 >> AB_BITS);
         short sy0 = (short)(Y0 >> AB_BITS);
-        
+
         if(dx >= 0 && dx < dst_cols && dy >= 0 && dy < dst_rows)
-            dst[(dst_offset>>2)+dy*dstStep+dx]= (sx0>=0 && sx0<src_cols && sy0>=0 && sy0<src_rows) ? src[(src_offset>>2)+sy0*srcStep+sx0] : 0; 
+            dst[(dst_offset>>2)+dy*dstStep+dx]= (sx0>=0 && sx0<src_cols && sy0>=0 && sy0<src_rows) ? src[(src_offset>>2)+sy0*srcStep+sx0] : 0;
     }
 }
 
 __kernel void warpAffineLinear_C1_D5(__global float * src, __global float * dst, int src_cols, int src_rows,
-                            int dst_cols, int dst_rows, int srcStep, int dstStep, 
+                            int dst_cols, int dst_rows, int srcStep, int dstStep,
                             int src_offset, int dst_offset,  __constant F * M, int threadCols )
 {
     int dx = get_global_id(0);
     int dy = get_global_id(1);
-    
+
     if( dx < threadCols && dy < dst_rows)
     {
         int round_delta = AB_SCALE/INTER_TAB_SIZE/2;
-        
+
         src_offset = (src_offset>>2);
-        
+
         int X0 = rint(M[0] * dx * AB_SCALE);
         int Y0 = rint(M[3] * dx * AB_SCALE);
         X0 += rint((M[1]*dy + M[2]) * AB_SCALE) + round_delta;
@@ -524,7 +524,7 @@ __kernel void warpAffineLinear_C1_D5(__global float * src, __global float * dst,
         short sy0 = (short)(Y0 >> INTER_BITS);
         short ax0 = (short)(X0 & (INTER_TAB_SIZE-1));
         short ay0 = (short)(Y0 & (INTER_TAB_SIZE-1));
-        
+
         float v0, v1, v2, v3;
 
         v0 = (sx0 >= 0 && sx0 < src_cols && sy0 >= 0 && sy0 < src_rows) ? src[src_offset+sy0 * srcStep + sx0] : 0;
@@ -538,33 +538,33 @@ __kernel void warpAffineLinear_C1_D5(__global float * src, __global float * dst,
         taby[1] = 1.f/INTER_TAB_SIZE*ay0;
         tabx[0] = 1.0 - 1.f/INTER_TAB_SIZE*ax0;
         tabx[1] = 1.f/INTER_TAB_SIZE*ax0;
-       
+
         tab[0] = taby[0] * tabx[0];
         tab[1] = taby[0] * tabx[1];
         tab[2] = taby[1] * tabx[0];
         tab[3] = taby[1] * tabx[1];
 
         float sum = 0;
-        sum += v0 * tab[0] +  v1 * tab[1] +  v2 * tab[2] +  v3 * tab[3]; 
+        sum += v0 * tab[0] +  v1 * tab[1] +  v2 * tab[2] +  v3 * tab[3];
         if(dx >= 0 && dx < dst_cols && dy >= 0 && dy < dst_rows)
             dst[(dst_offset>>2)+dy*dstStep+dx] = sum;
    }
 }
-    
+
 __kernel void warpAffineCubic_C1_D5(__global float * src, __global float * dst, int src_cols, int src_rows,
-                            int dst_cols, int dst_rows, int srcStep, int dstStep, 
+                            int dst_cols, int dst_rows, int srcStep, int dstStep,
                             int src_offset, int dst_offset,  __constant F * M, int threadCols )
 {
     int dx = get_global_id(0);
     int dy = get_global_id(1);
-    
+
     if( dx < threadCols && dy < dst_rows)
     {
         int round_delta = AB_SCALE/INTER_TAB_SIZE/2;
-            
+
         src_offset = (src_offset>>2);
         dst_offset = (dst_offset>>2);
-        
+
         int X0 = rint(M[0] * dx * AB_SCALE);
         int Y0 = rint(M[3] * dx * AB_SCALE);
         X0 += rint((M[1]*dy + M[2]) * AB_SCALE) + round_delta;
@@ -576,7 +576,7 @@ __kernel void warpAffineCubic_C1_D5(__global float * src, __global float * dst, 
         short sy = (short)(Y0 >> INTER_BITS) - 1;
         short ay = (short)(Y0 & (INTER_TAB_SIZE-1));
         short ax = (short)(X0 & (INTER_TAB_SIZE-1));
-        
+
         float v[16];
         int i;
 
@@ -597,7 +597,7 @@ __kernel void warpAffineCubic_C1_D5(__global float * src, __global float * dst, 
         {
             tab[i] = tab1y[(i>>2)] * tab1x[(i&3)];
         }
-        
+
         if( dx >= 0 && dx < dst_cols && dy >= 0 && dy < dst_rows)
         {
             float sum = 0;
@@ -617,16 +617,16 @@ __kernel void warpAffineCubic_C1_D5(__global float * src, __global float * dst, 
 ***********************************************************************************************/
 
 __kernel void warpAffineNN_C4_D5(__global float4 * src, __global float4 * dst, int src_cols, int src_rows,
-                            int dst_cols, int dst_rows, int srcStep, int dstStep, 
+                            int dst_cols, int dst_rows, int srcStep, int dstStep,
                             int src_offset, int dst_offset,  __constant F * M, int threadCols )
 {
     int dx = get_global_id(0);
     int dy = get_global_id(1);
-    
+
     if( dx < threadCols && dy < dst_rows)
     {
         int round_delta = AB_SCALE/2;
-        
+
         int X0 = rint(M[0] * dx * AB_SCALE);
         int Y0 = rint(M[3] * dx * AB_SCALE);
         X0 += rint((M[1]*dy + M[2]) * AB_SCALE) + round_delta;
@@ -634,28 +634,28 @@ __kernel void warpAffineNN_C4_D5(__global float4 * src, __global float4 * dst, i
 
         short sx0 = (short)(X0 >> AB_BITS);
         short sy0 = (short)(Y0 >> AB_BITS);
-        
+
         if(dx >= 0 && dx < dst_cols && dy >= 0 && dy < dst_rows)
-            dst[(dst_offset>>4)+dy*(dstStep>>2)+dx]= (sx0>=0 && sx0<src_cols && sy0>=0 && sy0<src_rows) ? src[(src_offset>>4)+sy0*(srcStep>>2)+sx0] : 0; 
+            dst[(dst_offset>>4)+dy*(dstStep>>2)+dx]= (sx0>=0 && sx0<src_cols && sy0>=0 && sy0<src_rows) ? src[(src_offset>>4)+sy0*(srcStep>>2)+sx0] : 0;
     }
 }
 
 __kernel void warpAffineLinear_C4_D5(__global float4 * src, __global float4 * dst, int src_cols, int src_rows,
-                            int dst_cols, int dst_rows, int srcStep, int dstStep, 
+                            int dst_cols, int dst_rows, int srcStep, int dstStep,
                             int src_offset, int dst_offset,  __constant F * M, int threadCols )
 {
     int dx = get_global_id(0);
     int dy = get_global_id(1);
-    
+
     if( dx < threadCols && dy < dst_rows)
     {
         int round_delta = AB_SCALE/INTER_TAB_SIZE/2;
-        
+
         src_offset = (src_offset>>4);
         dst_offset = (dst_offset>>4);
         srcStep = (srcStep>>2);
         dstStep = (dstStep>>2);
-        
+
         int X0 = rint(M[0] * dx * AB_SCALE);
         int Y0 = rint(M[3] * dx * AB_SCALE);
         X0 += rint((M[1]*dy + M[2]) * AB_SCALE) + round_delta;
@@ -667,7 +667,7 @@ __kernel void warpAffineLinear_C4_D5(__global float4 * src, __global float4 * ds
         short sy0 = (short)(Y0 >> INTER_BITS);
         short ax0 = (short)(X0 & (INTER_TAB_SIZE-1));
         short ay0 = (short)(Y0 & (INTER_TAB_SIZE-1));
-        
+
         float4 v0, v1, v2, v3;
 
         v0 = (sx0 >= 0 && sx0 < src_cols && sy0 >= 0 && sy0 < src_rows) ? src[src_offset+sy0 * srcStep + sx0] : 0;
@@ -681,35 +681,35 @@ __kernel void warpAffineLinear_C4_D5(__global float4 * src, __global float4 * ds
         taby[1] = 1.f/INTER_TAB_SIZE*ay0;
         tabx[0] = 1.0 - 1.f/INTER_TAB_SIZE*ax0;
         tabx[1] = 1.f/INTER_TAB_SIZE*ax0;
-       
+
         tab[0] = taby[0] * tabx[0];
         tab[1] = taby[0] * tabx[1];
         tab[2] = taby[1] * tabx[0];
         tab[3] = taby[1] * tabx[1];
 
         float4 sum = 0;
-        sum += v0 * tab[0] +  v1 * tab[1] +  v2 * tab[2] +  v3 * tab[3]; 
+        sum += v0 * tab[0] +  v1 * tab[1] +  v2 * tab[2] +  v3 * tab[3];
         if(dx >= 0 && dx < dst_cols && dy >= 0 && dy < dst_rows)
             dst[dst_offset+dy*dstStep+dx] = sum;
   }
 }
-    
+
 __kernel void warpAffineCubic_C4_D5(__global float4 * src, __global float4 * dst, int src_cols, int src_rows,
-                            int dst_cols, int dst_rows, int srcStep, int dstStep, 
+                            int dst_cols, int dst_rows, int srcStep, int dstStep,
                             int src_offset, int dst_offset,  __constant F * M, int threadCols )
 {
     int dx = get_global_id(0);
     int dy = get_global_id(1);
-    
+
     if( dx < threadCols && dy < dst_rows)
     {
         int round_delta = AB_SCALE/INTER_TAB_SIZE/2;
-        
+
         src_offset = (src_offset>>4);
         dst_offset = (dst_offset>>4);
         srcStep = (srcStep>>2);
         dstStep = (dstStep>>2);
-        
+
         int X0 = rint(M[0] * dx * AB_SCALE);
         int Y0 = rint(M[3] * dx * AB_SCALE);
         X0 += rint((M[1]*dy + M[2]) * AB_SCALE) + round_delta;
@@ -721,7 +721,7 @@ __kernel void warpAffineCubic_C4_D5(__global float4 * src, __global float4 * dst
         short sy = (short)(Y0 >> INTER_BITS) - 1;
         short ay = (short)(Y0 & (INTER_TAB_SIZE-1));
         short ax = (short)(X0 & (INTER_TAB_SIZE-1));
-        
+
         float4 v[16];
         int i;
 
@@ -742,7 +742,7 @@ __kernel void warpAffineCubic_C4_D5(__global float4 * src, __global float4 * dst
         {
             tab[i] = tab1y[(i>>2)] * tab1x[(i&3)];
         }
-        
+
         if( dx >= 0 && dx < dst_cols && dy >= 0 && dy < dst_rows)
         {
             float4 sum = 0;

@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2002, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-// 
+//
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission. 
-// 
+// from this software without specific prior written permission.
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -52,16 +52,16 @@ namespace Imath {
 //	template class Frustum<T>
 //
 //	The frustum is always located with the eye point at the
-//	origin facing down -Z. This makes the Frustum class 
+//	origin facing down -Z. This makes the Frustum class
 //	compatable with OpenGL (or anything that assumes a camera
-//	looks down -Z, hence with a right-handed coordinate system) 
+//	looks down -Z, hence with a right-handed coordinate system)
 //	but not with RenderMan which assumes the camera looks down
 //	+Z. Additional functions are provided for conversion from
 //	and from various camera coordinate spaces.
 //
 //      nearPlane/farPlane: near/far are keywords used by Microsoft's
 //      compiler, so we use nearPlane/farPlane instead to avoid
-//      issues.  
+//      issues.
 
 
 template<class T>
@@ -83,7 +83,7 @@ class Frustum
     //--------------------
     //  Operators:  ==, !=
     //--------------------
-    
+
     bool                        operator == (const Frustum<T> &src) const;
     bool                        operator != (const Frustum<T> &src) const;
 
@@ -91,10 +91,10 @@ class Frustum
     //  Set functions change the entire state of the Frustum
     //--------------------------------------------------------
 
-    void		set(T nearPlane, T farPlane, 
-			    T left, T right, 
-			    T top, T bottom, 
-			    bool ortho=false);
+    void		set(T nearPlane, T farPlane,
+                T left, T right,
+                T top, T bottom,
+                bool ortho=false);
 
     void		set(T nearPlane, T farPlane, T fovx, T fovy, T aspect);
 
@@ -108,7 +108,7 @@ class Frustum
     //--------------
     //  Access
     //--------------
-    
+
     bool		orthographic() const	{ return _orthographic; }
     T			nearPlane() const	{ return _nearPlane;	}
     T			hither() const		{ return _nearPlane;	}
@@ -141,10 +141,10 @@ class Frustum
     bool                        degenerate() const;
 
     //-----------------------------------------------------------------------
-    //  Takes a rectangle in the screen space (i.e., -1 <= left <= right <= 1 
+    //  Takes a rectangle in the screen space (i.e., -1 <= left <= right <= 1
     //  and -1 <= bottom <= top <= 1) of this Frustum, and returns a new
     //  Frustum whose near clipping-plane window is that rectangle in local
-    //  space.  
+    //  space.
     //-----------------------------------------------------------------------
 
     Frustum<T>		window(T left, T right, T top, T bottom) const;
@@ -184,12 +184,12 @@ template<class T>
 inline Frustum<T>::Frustum()
 {
     set(T (0.1),
-	T (1000.0),
-	T (-1.0),
-	T (1.0),
-	T (1.0),
-	T (-1.0),
-	false);
+    T (1000.0),
+    T (-1.0),
+    T (1.0),
+    T (1.0),
+    T (-1.0),
+    false);
 }
 
 template<class T>
@@ -268,24 +268,24 @@ void Frustum<T>::modifyNearAndFar(T n, T f)
 {
     if ( _orthographic )
     {
-	_nearPlane = n;
+    _nearPlane = n;
     }
     else
     {
-	Line3<T>  lowerLeft( Vec3<T>(0,0,0), Vec3<T>(_left,_bottom,-_nearPlane) );
-	Line3<T> upperRight( Vec3<T>(0,0,0), Vec3<T>(_right,_top,-_nearPlane) );
-	Plane3<T> nearPlane( Vec3<T>(0,0,-1), n );
+    Line3<T>  lowerLeft( Vec3<T>(0,0,0), Vec3<T>(_left,_bottom,-_nearPlane) );
+    Line3<T> upperRight( Vec3<T>(0,0,0), Vec3<T>(_right,_top,-_nearPlane) );
+    Plane3<T> nearPlane( Vec3<T>(0,0,-1), n );
 
-	Vec3<T> ll,ur;
-	nearPlane.intersect(lowerLeft,ll);
-	nearPlane.intersect(upperRight,ur);
+    Vec3<T> ll,ur;
+    nearPlane.intersect(lowerLeft,ll);
+    nearPlane.intersect(upperRight,ur);
 
-	_left      = ll.x;
-	_right     = ur.x;
-	_top       = ur.y;
-	_bottom    = ll.y;
-	_nearPlane = n;
-	_farPlane  = f;
+    _left      = ll.x;
+    _right     = ur.x;
+    _top       = ur.y;
+    _bottom    = ll.y;
+    _nearPlane = n;
+    _farPlane  = f;
     }
 
     _farPlane = f;
@@ -301,23 +301,23 @@ template<class T>
 void Frustum<T>::set(T nearPlane, T farPlane, T fovx, T fovy, T aspect)
 {
     if (fovx != 0 && fovy != 0)
-	throw Iex::ArgExc ("fovx and fovy cannot both be non-zero.");
+    throw Iex::ArgExc ("fovx and fovy cannot both be non-zero.");
 
     const T two = static_cast<T>(2);
 
     if (fovx != 0)
     {
-	_right	    = nearPlane * Math<T>::tan(fovx / two);
-	_left	    = -_right;
-	_top	    = ((_right - _left) / aspect) / two;
-	_bottom	    = -_top;
+    _right	    = nearPlane * Math<T>::tan(fovx / two);
+    _left	    = -_right;
+    _top	    = ((_right - _left) / aspect) / two;
+    _bottom	    = -_top;
     }
     else
     {
-	_top	    = nearPlane * Math<T>::tan(fovy / two);
-	_bottom	    = -_top;
-	_right	    = (_top - _bottom) * aspect / two;
-	_left	    = -_right;
+    _top	    = nearPlane * Math<T>::tan(fovy / two);
+    _bottom	    = -_top;
+    _right	    = (_top - _bottom) * aspect / two;
+    _left	    = -_right;
     }
     _nearPlane	    = nearPlane;
     _farPlane	    = farPlane;
@@ -343,10 +343,10 @@ T Frustum<T>::aspect() const
     T topMinusBottom = _top-_bottom;
 
     if (abs(topMinusBottom) < 1 &&
-	abs(rightMinusLeft) > limits<T>::max() * abs(topMinusBottom))
+    abs(rightMinusLeft) > limits<T>::max() * abs(topMinusBottom))
     {
-	throw Iex::DivzeroExc ("Bad viewing frustum: "
-			       "aspect ratio cannot be computed.");
+    throw Iex::DivzeroExc ("Bad viewing frustum: "
+                   "aspect ratio cannot be computed.");
     }
 
     return rightMinusLeft / topMinusBottom;
@@ -365,76 +365,76 @@ Matrix44<T> Frustum<T>::projectionMatrix() const
     T farMinusNear   = _farPlane-_nearPlane;
 
     if ((abs(rightMinusLeft) < 1 &&
-	 abs(rightPlusLeft) > limits<T>::max() * abs(rightMinusLeft)) ||
-	(abs(topMinusBottom) < 1 &&
-	 abs(topPlusBottom) > limits<T>::max() * abs(topMinusBottom)) ||
-	(abs(farMinusNear) < 1 &&
-	 abs(farPlusNear) > limits<T>::max() * abs(farMinusNear)))
+     abs(rightPlusLeft) > limits<T>::max() * abs(rightMinusLeft)) ||
+    (abs(topMinusBottom) < 1 &&
+     abs(topPlusBottom) > limits<T>::max() * abs(topMinusBottom)) ||
+    (abs(farMinusNear) < 1 &&
+     abs(farPlusNear) > limits<T>::max() * abs(farMinusNear)))
     {
-	throw Iex::DivzeroExc ("Bad viewing frustum: "
-			       "projection matrix cannot be computed.");
+    throw Iex::DivzeroExc ("Bad viewing frustum: "
+                   "projection matrix cannot be computed.");
     }
 
     if ( _orthographic )
     {
-	T tx = -rightPlusLeft / rightMinusLeft;
-	T ty = -topPlusBottom / topMinusBottom;
-	T tz = -farPlusNear   / farMinusNear;
+    T tx = -rightPlusLeft / rightMinusLeft;
+    T ty = -topPlusBottom / topMinusBottom;
+    T tz = -farPlusNear   / farMinusNear;
 
-	if ((abs(rightMinusLeft) < 1 &&
-	     2 > limits<T>::max() * abs(rightMinusLeft)) ||
-	    (abs(topMinusBottom) < 1 &&
-	     2 > limits<T>::max() * abs(topMinusBottom)) ||
-	    (abs(farMinusNear) < 1 &&
-	     2 > limits<T>::max() * abs(farMinusNear)))
-	{
-	    throw Iex::DivzeroExc ("Bad viewing frustum: "
-				   "projection matrix cannot be computed.");
-	}
+    if ((abs(rightMinusLeft) < 1 &&
+         2 > limits<T>::max() * abs(rightMinusLeft)) ||
+        (abs(topMinusBottom) < 1 &&
+         2 > limits<T>::max() * abs(topMinusBottom)) ||
+        (abs(farMinusNear) < 1 &&
+         2 > limits<T>::max() * abs(farMinusNear)))
+    {
+        throw Iex::DivzeroExc ("Bad viewing frustum: "
+                   "projection matrix cannot be computed.");
+    }
 
-	T A  =  2 / rightMinusLeft;
-	T B  =  2 / topMinusBottom;
-	T C  = -2 / farMinusNear;
+    T A  =  2 / rightMinusLeft;
+    T B  =  2 / topMinusBottom;
+    T C  = -2 / farMinusNear;
 
-	return Matrix44<T>( A,  0,  0,  0,
-			    0,  B,  0,  0,
-			    0,  0,  C,  0,
-			    tx, ty, tz, 1.f );
+    return Matrix44<T>( A,  0,  0,  0,
+                0,  B,  0,  0,
+                0,  0,  C,  0,
+                tx, ty, tz, 1.f );
     }
     else
     {
-	T A =  rightPlusLeft / rightMinusLeft;
-	T B =  topPlusBottom / topMinusBottom;
-	T C = -farPlusNear   / farMinusNear;
+    T A =  rightPlusLeft / rightMinusLeft;
+    T B =  topPlusBottom / topMinusBottom;
+    T C = -farPlusNear   / farMinusNear;
 
-	T farTimesNear = -2 * _farPlane * _nearPlane;
-	if (abs(farMinusNear) < 1 &&
-	    abs(farTimesNear) > limits<T>::max() * abs(farMinusNear))
-	{
-	    throw Iex::DivzeroExc ("Bad viewing frustum: "
-				   "projection matrix cannot be computed.");
-	}
+    T farTimesNear = -2 * _farPlane * _nearPlane;
+    if (abs(farMinusNear) < 1 &&
+        abs(farTimesNear) > limits<T>::max() * abs(farMinusNear))
+    {
+        throw Iex::DivzeroExc ("Bad viewing frustum: "
+                   "projection matrix cannot be computed.");
+    }
 
-	T D = farTimesNear / farMinusNear;
+    T D = farTimesNear / farMinusNear;
 
-	T twoTimesNear = 2 * _nearPlane;
+    T twoTimesNear = 2 * _nearPlane;
 
-	if ((abs(rightMinusLeft) < 1 &&
-	     abs(twoTimesNear) > limits<T>::max() * abs(rightMinusLeft)) ||
-	    (abs(topMinusBottom) < 1 &&
-	     abs(twoTimesNear) > limits<T>::max() * abs(topMinusBottom)))
-	{
-	    throw Iex::DivzeroExc ("Bad viewing frustum: "
-				   "projection matrix cannot be computed.");
-	}
+    if ((abs(rightMinusLeft) < 1 &&
+         abs(twoTimesNear) > limits<T>::max() * abs(rightMinusLeft)) ||
+        (abs(topMinusBottom) < 1 &&
+         abs(twoTimesNear) > limits<T>::max() * abs(topMinusBottom)))
+    {
+        throw Iex::DivzeroExc ("Bad viewing frustum: "
+                   "projection matrix cannot be computed.");
+    }
 
-	T E = twoTimesNear / rightMinusLeft;
-	T F = twoTimesNear / topMinusBottom;
+    T E = twoTimesNear / rightMinusLeft;
+    T F = twoTimesNear / topMinusBottom;
 
-	return Matrix44<T>( E,  0,  0,  0,
-			    0,  F,  0,  0,
-			    A,  B,  C, -1,
-			    0,  0,  D,  0 );
+    return Matrix44<T>( E,  0,  0,  0,
+                0,  F,  0,  0,
+                A,  B,  C, -1,
+                0,  0,  D,  0 );
     }
 }
 
@@ -462,7 +462,7 @@ template<class T>
 Vec2<T> Frustum<T>::screenToLocal(const Vec2<T> &s) const
 {
     return Vec2<T>( _left + (_right-_left) * (1.f+s.x) / 2.f,
-		    _bottom + (_top-_bottom) * (1.f+s.y) / 2.f );
+            _bottom + (_top-_bottom) * (1.f+s.y) / 2.f );
 }
 
 template<class T>
@@ -474,17 +474,17 @@ Vec2<T> Frustum<T>::localToScreen(const Vec2<T> &p) const
     T bottomMinusTop = _bottom-_top;
 
     if ((abs(leftMinusRight) < T (1) &&
-	 abs(leftPlusRight) > limits<T>::max() * abs(leftMinusRight)) ||
-	(abs(bottomMinusTop) < T (1) &&
-	 abs(bottomPlusTop) > limits<T>::max() * abs(bottomMinusTop)))
+     abs(leftPlusRight) > limits<T>::max() * abs(leftMinusRight)) ||
+    (abs(bottomMinusTop) < T (1) &&
+     abs(bottomPlusTop) > limits<T>::max() * abs(bottomMinusTop)))
     {
-	throw Iex::DivzeroExc
-	    ("Bad viewing frustum: "
-	     "local-to-screen transformation cannot be computed");
+    throw Iex::DivzeroExc
+        ("Bad viewing frustum: "
+         "local-to-screen transformation cannot be computed");
     }
 
     return Vec2<T>( leftPlusRight / leftMinusRight,
-		    bottomPlusTop / bottomMinusTop );
+            bottomPlusTop / bottomMinusTop );
 }
 
 template<class T>
@@ -492,20 +492,20 @@ Line3<T> Frustum<T>::projectScreenToRay(const Vec2<T> &p) const
 {
     Vec2<T> point = screenToLocal(p);
     if (orthographic())
-	return Line3<T>( Vec3<T>(point.x,point.y, 0.0),
-			 Vec3<T>(point.x,point.y,-_nearPlane));
+    return Line3<T>( Vec3<T>(point.x,point.y, 0.0),
+             Vec3<T>(point.x,point.y,-_nearPlane));
     else
-	return Line3<T>( Vec3<T>(0, 0, 0), Vec3<T>(point.x,point.y,-_nearPlane));
+    return Line3<T>( Vec3<T>(0, 0, 0), Vec3<T>(point.x,point.y,-_nearPlane));
 }
 
 template<class T>
 Vec2<T> Frustum<T>::projectPointToScreen(const Vec3<T> &point) const
 {
     if (orthographic() || point.z == T (0))
-	return localToScreen( Vec2<T>( point.x, point.y ) );
+    return localToScreen( Vec2<T>( point.x, point.y ) );
     else
-	return localToScreen( Vec2<T>( point.x * _nearPlane / -point.z, 
-				       point.y * _nearPlane / -point.z ) );
+    return localToScreen( Vec2<T>( point.x * _nearPlane / -point.z,
+                       point.y * _nearPlane / -point.z ) );
 }
 
 template<class T>
@@ -515,8 +515,8 @@ T Frustum<T>::ZToDepth(long zval,long zmin,long zmax) const
 
     if (zdiff == 0)
     {
-	throw Iex::DivzeroExc
-	    ("Bad call to Frustum::ZToDepth: zmax == zmin");
+    throw Iex::DivzeroExc
+        ("Bad call to Frustum::ZToDepth: zmax == zmin");
     }
 
     if ( zval > zmax+1 ) zval -= zdiff;
@@ -534,21 +534,21 @@ T Frustum<T>::normalizedZToDepth(T zval) const
     {
         return   -(Zp*(_farPlane-_nearPlane) + (_farPlane+_nearPlane))/2;
     }
-    else 
+    else
     {
-	T farTimesNear = 2 * _farPlane * _nearPlane;
-	T farMinusNear = Zp * (_farPlane - _nearPlane) - _farPlane - _nearPlane;
+    T farTimesNear = 2 * _farPlane * _nearPlane;
+    T farMinusNear = Zp * (_farPlane - _nearPlane) - _farPlane - _nearPlane;
 
-	if (abs(farMinusNear) < 1 &&
-	    abs(farTimesNear) > limits<T>::max() * abs(farMinusNear))
-	{
-	    throw Iex::DivzeroExc
-		("Frustum::normalizedZToDepth cannot be computed.  The "
-		 "near and far clipping planes of the viewing frustum "
-		 "may be too close to each other");
-	}
+    if (abs(farMinusNear) < 1 &&
+        abs(farTimesNear) > limits<T>::max() * abs(farMinusNear))
+    {
+        throw Iex::DivzeroExc
+        ("Frustum::normalizedZToDepth cannot be computed.  The "
+         "near and far clipping planes of the viewing frustum "
+         "may be too close to each other");
+    }
 
-	return farTimesNear / farMinusNear;
+    return farTimesNear / farMinusNear;
     }
 }
 
@@ -560,43 +560,43 @@ long Frustum<T>::DepthToZ(T depth,long zmin,long zmax) const
 
     if ( _orthographic )
     {
-	T farPlusNear = 2*depth + _farPlane + _nearPlane;
+    T farPlusNear = 2*depth + _farPlane + _nearPlane;
 
-	if (abs(farMinusNear) < 1 &&
-	    abs(farPlusNear) > limits<T>::max() * abs(farMinusNear))
-	{
-	    throw Iex::DivzeroExc
-		("Bad viewing frustum: near and far clipping planes "
-		 "are too close to each other");
-	}
-
-	T Zp = -farPlusNear/farMinusNear;
-	return long(0.5*(Zp+1)*zdiff) + zmin;
+    if (abs(farMinusNear) < 1 &&
+        abs(farPlusNear) > limits<T>::max() * abs(farMinusNear))
+    {
+        throw Iex::DivzeroExc
+        ("Bad viewing frustum: near and far clipping planes "
+         "are too close to each other");
     }
-    else 
-    { 
-	// Perspective
 
-	T farTimesNear = 2*_farPlane*_nearPlane;
-	if (abs(depth) < 1 &&
-	    abs(farTimesNear) > limits<T>::max() * abs(depth))
-	{
-	    throw Iex::DivzeroExc
-		("Bad call to DepthToZ function: value of `depth' "
-		 "is too small");
-	}
+    T Zp = -farPlusNear/farMinusNear;
+    return long(0.5*(Zp+1)*zdiff) + zmin;
+    }
+    else
+    {
+    // Perspective
 
-	T farPlusNear = farTimesNear/depth + _farPlane + _nearPlane;
-	if (abs(farMinusNear) < 1 &&
-	    abs(farPlusNear) > limits<T>::max() * abs(farMinusNear))
-	{
-	    throw Iex::DivzeroExc
-		("Bad viewing frustum: near and far clipping planes "
-		 "are too close to each other");
-	}
+    T farTimesNear = 2*_farPlane*_nearPlane;
+    if (abs(depth) < 1 &&
+        abs(farTimesNear) > limits<T>::max() * abs(depth))
+    {
+        throw Iex::DivzeroExc
+        ("Bad call to DepthToZ function: value of `depth' "
+         "is too small");
+    }
 
-	T Zp = farPlusNear/farMinusNear;
-	return long(0.5*(Zp+1)*zdiff) + zmin;
+    T farPlusNear = farTimesNear/depth + _farPlane + _nearPlane;
+    if (abs(farMinusNear) < 1 &&
+        abs(farPlusNear) > limits<T>::max() * abs(farMinusNear))
+    {
+        throw Iex::DivzeroExc
+        ("Bad viewing frustum: near and far clipping planes "
+         "are too close to each other");
+    }
+
+    T Zp = farPlusNear/farMinusNear;
+    return long(0.5*(Zp+1)*zdiff) + zmin;
     }
 }
 
@@ -615,13 +615,13 @@ T Frustum<T>::screenRadius(const Vec3<T> &p, T radius) const
 
     if (abs(p.z) > 1 || abs(-_nearPlane) < limits<T>::max() * abs(p.z))
     {
-	return radius * (-_nearPlane / p.z);
+    return radius * (-_nearPlane / p.z);
     }
     else
     {
-	throw Iex::DivzeroExc
-	    ("Bad call to Frustum::screenRadius: the magnitude of `p' "
-	     "is too small");
+    throw Iex::DivzeroExc
+        ("Bad call to Frustum::screenRadius: the magnitude of `p' "
+         "is too small");
     }
 
     return radius * (-_nearPlane / p.z);
@@ -632,13 +632,13 @@ T Frustum<T>::worldRadius(const Vec3<T> &p, T radius) const
 {
     if (abs(-_nearPlane) > 1 || abs(p.z) < limits<T>::max() * abs(-_nearPlane))
     {
-	return radius * (p.z / -_nearPlane);
+    return radius * (p.z / -_nearPlane);
     }
     else
     {
-	throw Iex::DivzeroExc
-	    ("Bad viewing frustum: the near clipping plane is too "
-	     "close to zero");
+    throw Iex::DivzeroExc
+        ("Bad viewing frustum: the near clipping plane is too "
+         "close to zero");
     }
 }
 

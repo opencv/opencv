@@ -62,7 +62,7 @@ namespace cv { namespace gpu
             void endDecode() { endOfDecode_ = true; }
             bool isEndOfDecode() const { return endOfDecode_ != 0;}
 
-            // Spins until frame becomes available or decoding gets canceled. 
+            // Spins until frame becomes available or decoding gets canceled.
             // If the requested frame is available the method returns true.
             // If decoding was interupted before the requested frame becomes
             // available, the method returns false.
@@ -75,7 +75,7 @@ namespace cv { namespace gpu
             //      displayInfo - New frame info gets placed into this object.
             // Returns:
             //      true, if a new frame was returned,
-            //      false, if the queue was empty and no new frame could be returned. 
+            //      false, if the queue was empty and no new frame could be returned.
             bool dequeue(CUVIDPARSERDISPINFO& displayInfo);
 
             void releaseFrame(const CUVIDPARSERDISPINFO& picParams) { isFrameInUse_[picParams.picture_index] = false; }

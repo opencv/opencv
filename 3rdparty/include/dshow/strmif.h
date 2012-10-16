@@ -2097,12 +2097,12 @@ typedef LONGLONG REFERENCE_TIME;
     DWORD dwMerit;
     union {
       struct {
-	ULONG cPins;
-	const REGFILTERPINS *rgPins;
+    ULONG cPins;
+    const REGFILTERPINS *rgPins;
       };
       struct {
-	ULONG cPins2;
-	const REGFILTERPINS2 *rgPins2;
+    ULONG cPins2;
+    const REGFILTERPINS2 *rgPins2;
       };
     };
   } REGFILTER2;

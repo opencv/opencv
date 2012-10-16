@@ -55,7 +55,7 @@ calcMinEigenVal( const Mat& _cov, Mat& _dst )
 #if CV_SSE
     volatile bool simd = checkHardwareSupport(CV_CPU_SSE);
 #endif
-    
+
     if( _cov.isContinuous() && _dst.isContinuous() )
     {
         size.width *= size.height;
@@ -112,7 +112,7 @@ calcHarris( const Mat& _cov, Mat& _dst, double k )
 #if CV_SSE
     volatile bool simd = checkHardwareSupport(CV_CPU_SSE);
 #endif
-    
+
     if( _cov.isContinuous() && _dst.isContinuous() )
     {
         size.width *= size.height;
@@ -161,7 +161,7 @@ calcHarris( const Mat& _cov, Mat& _dst, double k )
     }
 }
 
-    
+
 void eigen2x2( const float* cov, float* dst, int n )
 {
     for( int j = 0; j < n; j++ )
@@ -169,16 +169,16 @@ void eigen2x2( const float* cov, float* dst, int n )
         double a = cov[j*3];
         double b = cov[j*3+1];
         double c = cov[j*3+2];
-        
+
         double u = (a + c)*0.5;
         double v = std::sqrt((a - c)*(a - c)*0.25 + b*b);
         double l1 = u + v;
         double l2 = u - v;
-        
+
         double x = b;
         double y = l1 - a;
         double e = fabs(x);
-        
+
         if( e + fabs(y) < 1e-4 )
         {
             y = b;
@@ -190,16 +190,16 @@ void eigen2x2( const float* cov, float* dst, int n )
                 x *= e, y *= e;
             }
         }
-        
+
         double d = 1./std::sqrt(x*x + y*y + DBL_EPSILON);
         dst[6*j] = (float)l1;
         dst[6*j + 2] = (float)(x*d);
         dst[6*j + 3] = (float)(y*d);
-        
+
         x = b;
         y = l2 - a;
         e = fabs(x);
-        
+
         if( e + fabs(y) < 1e-4 )
         {
             y = b;
@@ -211,7 +211,7 @@ void eigen2x2( const float* cov, float* dst, int n )
                 x *= e, y *= e;
             }
         }
-        
+
         d = 1./std::sqrt(x*x + y*y + DBL_EPSILON);
         dst[6*j + 1] = (float)l2;
         dst[6*j + 4] = (float)(x*d);
@@ -250,7 +250,7 @@ cornerEigenValsVecs( const Mat& src, Mat& eigenv, int block_size,
 #ifdef HAVE_TEGRA_OPTIMIZATION
     if (tegra::cornerEigenValsVecs(src, eigenv, block_size, aperture_size, op_type, k, borderType))
         return;
-#endif 
+#endif
 
     int depth = src.depth();
     double scale = (double)(1 << ((aperture_size > 0 ? aperture_size : 3) - 1)) * block_size;
@@ -331,7 +331,7 @@ void cv::cornerEigenValsAndVecs( InputArray _src, OutputArray _dst, int blockSiz
     Mat src = _src.getMat();
     Size dsz = _dst.size();
     int dtype = _dst.type();
-    
+
     if( dsz.height != src.rows || dsz.width*CV_MAT_CN(dtype) != src.cols*6 || CV_MAT_DEPTH(dtype) != CV_32F )
         _dst.create( src.size(), CV_32FC(6) );
     Mat dst = _dst.getMat();
@@ -346,7 +346,7 @@ void cv::preCornerDetect( InputArray _src, OutputArray _dst, int ksize, int bord
     CV_Assert( src.type() == CV_8UC1 || src.type() == CV_32FC1 );
     _dst.create( src.size(), CV_32F );
     Mat dst = _dst.getMat();
-    
+
     Sobel( src, Dx, CV_32F, 1, 0, ksize, 1, 0, borderType );
     Sobel( src, Dy, CV_32F, 0, 1, ksize, 1, 0, borderType );
     Sobel( src, D2x, CV_32F, 2, 0, ksize, 1, 0, borderType );
@@ -368,7 +368,7 @@ void cv::preCornerDetect( InputArray _src, OutputArray _dst, int ksize, int bord
         const float* d2xdata = (const float*)(D2x.data + i*D2x.step);
         const float* d2ydata = (const float*)(D2y.data + i*D2y.step);
         const float* dxydata = (const float*)(Dxy.data + i*Dxy.step);
-        
+
         for( j = 0; j < size.width; j++ )
         {
             float dx = dxdata[j];

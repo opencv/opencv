@@ -89,7 +89,7 @@ private:
 class CV_EXPORTS BlocksGainCompensator : public ExposureCompensator
 {
 public:
-    BlocksGainCompensator(int bl_width = 32, int bl_height = 32) 
+    BlocksGainCompensator(int bl_width = 32, int bl_height = 32)
             : bl_width_(bl_width), bl_height_(bl_height) {}
     void feed(const std::vector<Point> &corners, const std::vector<Mat> &images,
               const std::vector<std::pair<Mat,uchar> > &masks);

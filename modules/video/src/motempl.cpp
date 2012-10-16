@@ -73,13 +73,13 @@ cvUpdateMotionHistory( const void* silhouette, void* mhimg,
 #if CV_SSE2
     volatile bool useSIMD = cv::checkHardwareSupport(CV_CPU_SSE2);
 #endif
-    
+
     for( y = 0; y < size.height; y++ )
     {
         const uchar* silhData = silh->data.ptr + silh->step*y;
         float* mhiData = (float*)(mhi->data.ptr + mhi->step*y);
         x = 0;
-        
+
 #if CV_SSE2
         if( useSIMD )
         {
@@ -91,22 +91,22 @@ cvUpdateMotionHistory( const void* silhouette, void* mhimg,
                 __m128 s0 = _mm_cvtepi32_ps(_mm_unpacklo_epi16(s, z)), s1 = _mm_cvtepi32_ps(_mm_unpackhi_epi16(s, z));
                 __m128 v0 = _mm_loadu_ps(mhiData + x), v1 = _mm_loadu_ps(mhiData + x + 4);
                 __m128 fz = _mm_setzero_ps();
-                
+
                 v0 = _mm_and_ps(v0, _mm_cmpge_ps(v0, db4));
                 v1 = _mm_and_ps(v1, _mm_cmpge_ps(v1, db4));
 
                 __m128 m0 = _mm_and_ps(_mm_xor_ps(v0, ts4), _mm_cmpneq_ps(s0, fz));
                 __m128 m1 = _mm_and_ps(_mm_xor_ps(v1, ts4), _mm_cmpneq_ps(s1, fz));
-                
+
                 v0 = _mm_xor_ps(v0, m0);
                 v1 = _mm_xor_ps(v1, m1);
-                
+
                 _mm_storeu_ps(mhiData + x, v0);
                 _mm_storeu_ps(mhiData + x + 4, v1);
             }
         }
 #endif
-        
+
         for( ; x < size.width; x++ )
         {
             float val = mhiData[x];
@@ -209,7 +209,7 @@ cvCalcMotionGradient( const CvArr* mhiimg, CvArr* maskimg,
         dY_max_row.data.ptr = dY_max->data.ptr + y*dY_max->step;
         mask_row.data.ptr = mask->data.ptr + y*mask->step;
         orient_row.data.ptr = orient->data.ptr + y*orient->step;
-        
+
         for( x = 0; x < size.width; x++ )
         {
             float d0 = dY_max_row.data.fl[x] - dX_min_row.data.fl[x];
@@ -370,7 +370,7 @@ cvSegmentMotion( const CvArr* mhiimg, CvArr* segmask, CvMemStorage* storage,
     cvZero( mask );
     components = cvCreateSeq( CV_SEQ_KIND_GENERIC, sizeof(CvSeq),
                               sizeof(CvConnectedComp), storage );
-    
+
     v.f = (float)timestamp; ts = v.i;
     v.f = FLT_MAX*0.1f; stub_val = v.i;
     comp_idx.f = 1;
@@ -478,9 +478,9 @@ void cv::segmentMotion(InputArray _mhi, OutputArray _segmask,
     Seq<CvConnectedComp> comps = cvSegmentMotion(&c_mhi, &c_segmask, storage, timestamp, segThresh);
     Seq<CvConnectedComp>::const_iterator it(comps);
     size_t i, ncomps = comps.size();
-    boundingRects.resize(ncomps); 
+    boundingRects.resize(ncomps);
     for( i = 0; i < ncomps; i++, ++it)
         boundingRects[i] = (*it).rect;
 }
-    
+
 /* End of file. */

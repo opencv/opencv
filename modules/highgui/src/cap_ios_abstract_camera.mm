@@ -81,74 +81,74 @@
 
 - (id)init;
 {
-	self = [super init];
-	if (self) {
-		// react to device orientation notifications
-		[[NSNotificationCenter defaultCenter] addObserver:self
-												 selector:@selector(deviceOrientationDidChange:)
-													 name:UIDeviceOrientationDidChangeNotification
-												   object:nil];
-		[[UIDevice currentDevice] beginGeneratingDeviceOrientationNotifications];
-		currentDeviceOrientation = [[UIDevice currentDevice] orientation];
-		
-		
-		// check if camera available
-		cameraAvailable = [UIImagePickerController isSourceTypeAvailable:UIImagePickerControllerSourceTypeCamera];
-		NSLog(@"camera available: %@", (cameraAvailable == YES ? @"YES" : @"NO") );
-		
-		running = NO;
-		
-		// set camera default configuration
-		self.defaultAVCaptureDevicePosition = AVCaptureDevicePositionFront;
-		self.defaultAVCaptureVideoOrientation = AVCaptureVideoOrientationLandscapeLeft;
-		self.defaultFPS = 15;
-		self.defaultAVCaptureSessionPreset = AVCaptureSessionPreset352x288;
-		
-		self.parentView = nil;
-		self.useAVCaptureVideoPreviewLayer = NO;
+    self = [super init];
+    if (self) {
+        // react to device orientation notifications
+        [[NSNotificationCenter defaultCenter] addObserver:self
+                                                 selector:@selector(deviceOrientationDidChange:)
+                                                     name:UIDeviceOrientationDidChangeNotification
+                                                   object:nil];
+        [[UIDevice currentDevice] beginGeneratingDeviceOrientationNotifications];
+        currentDeviceOrientation = [[UIDevice currentDevice] orientation];
+
+
+        // check if camera available
+        cameraAvailable = [UIImagePickerController isSourceTypeAvailable:UIImagePickerControllerSourceTypeCamera];
+        NSLog(@"camera available: %@", (cameraAvailable == YES ? @"YES" : @"NO") );
+
+        running = NO;
+
+        // set camera default configuration
+        self.defaultAVCaptureDevicePosition = AVCaptureDevicePositionFront;
+        self.defaultAVCaptureVideoOrientation = AVCaptureVideoOrientationLandscapeLeft;
+        self.defaultFPS = 15;
+        self.defaultAVCaptureSessionPreset = AVCaptureSessionPreset352x288;
+
+        self.parentView = nil;
+        self.useAVCaptureVideoPreviewLayer = NO;
     }
-	return self;
+    return self;
 }
 
 
 
 - (id)initWithParentView:(UIView*)parent;
 {
-	self = [super init];
-	if (self) {
-		// react to device orientation notifications
-		[[NSNotificationCenter defaultCenter] addObserver:self
-												 selector:@selector(deviceOrientationDidChange:)
-													 name:UIDeviceOrientationDidChangeNotification
-												   object:nil];
-		[[UIDevice currentDevice] beginGeneratingDeviceOrientationNotifications];
-		currentDeviceOrientation = [[UIDevice currentDevice] orientation];
-		
-		
-		// check if camera available
-		cameraAvailable = [UIImagePickerController isSourceTypeAvailable:UIImagePickerControllerSourceTypeCamera];
-		NSLog(@"camera available: %@", (cameraAvailable == YES ? @"YES" : @"NO") );
-		
-		running = NO;
-		
-		// set camera default configuration
-		self.defaultAVCaptureDevicePosition = AVCaptureDevicePositionFront;
-		self.defaultAVCaptureVideoOrientation = AVCaptureVideoOrientationLandscapeLeft;
-		self.defaultFPS = 15;
-		self.defaultAVCaptureSessionPreset = AVCaptureSessionPreset640x480;
-		
-		self.parentView = parent;
-		self.useAVCaptureVideoPreviewLayer = YES;
-	}
-	return self;
+    self = [super init];
+    if (self) {
+        // react to device orientation notifications
+        [[NSNotificationCenter defaultCenter] addObserver:self
+                                                 selector:@selector(deviceOrientationDidChange:)
+                                                     name:UIDeviceOrientationDidChangeNotification
+                                                   object:nil];
+        [[UIDevice currentDevice] beginGeneratingDeviceOrientationNotifications];
+        currentDeviceOrientation = [[UIDevice currentDevice] orientation];
+
+
+        // check if camera available
+        cameraAvailable = [UIImagePickerController isSourceTypeAvailable:UIImagePickerControllerSourceTypeCamera];
+        NSLog(@"camera available: %@", (cameraAvailable == YES ? @"YES" : @"NO") );
+
+        running = NO;
+
+        // set camera default configuration
+        self.defaultAVCaptureDevicePosition = AVCaptureDevicePositionFront;
+        self.defaultAVCaptureVideoOrientation = AVCaptureVideoOrientationLandscapeLeft;
+        self.defaultFPS = 15;
+        self.defaultAVCaptureSessionPreset = AVCaptureSessionPreset640x480;
+
+        self.parentView = parent;
+        self.useAVCaptureVideoPreviewLayer = YES;
+    }
+    return self;
 }
 
 
 
 - (void)dealloc;
 {
-	[[NSNotificationCenter defaultCenter] removeObserver:self];
-	[[UIDevice currentDevice] endGeneratingDeviceOrientationNotifications];
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
+    [[UIDevice currentDevice] endGeneratingDeviceOrientationNotifications];
 }
 
 
@@ -162,41 +162,41 @@
         [self performSelectorOnMainThread:@selector(start) withObject:nil waitUntilDone:NO];
         return;
     }
-    
-	if (running == YES) {
-		return;
-	}
-	running = YES;
-    
+
+    if (running == YES) {
+        return;
+    }
+    running = YES;
+
     // TOOD update image size data before actually starting (needed for recording)
     [self updateSize];
-    
-	if (cameraAvailable) {
-		[self startCaptureSession];
-	}
+
+    if (cameraAvailable) {
+        [self startCaptureSession];
+    }
 }
 
 
 - (void)pause;
 {
-	running = NO;
-	[self.captureSession stopRunning];
+    running = NO;
+    [self.captureSession stopRunning];
 }
 
 
 
 - (void)stop;
 {
-	running = NO;
-	
-	// Release any retained subviews of the main view.
-	// e.g. self.myOutlet = nil;
-	
-	[self.captureSession stopRunning];
-	self.captureSession = nil;
-	self.captureVideoPreviewLayer = nil;
-	self.videoCaptureConnection = nil;
-	captureSessionLoaded = NO;
+    running = NO;
+
+    // Release any retained subviews of the main view.
+    // e.g. self.myOutlet = nil;
+
+    [self.captureSession stopRunning];
+    self.captureSession = nil;
+    self.captureVideoPreviewLayer = nil;
+    self.videoCaptureConnection = nil;
+    captureSessionLoaded = NO;
 }
 
 
@@ -204,18 +204,18 @@
 // use front/back camera
 - (void)switchCameras;
 {
-	BOOL was_running = self.running;
-	if (was_running) {
-		[self stop];
-	}
-	if (self.defaultAVCaptureDevicePosition == AVCaptureDevicePositionFront) {
-		self.defaultAVCaptureDevicePosition = AVCaptureDevicePositionBack;
-	} else {
-		self.defaultAVCaptureDevicePosition  = AVCaptureDevicePositionFront;
-	}
-	if (was_running) {
-		[self start];
-	}
+    BOOL was_running = self.running;
+    if (was_running) {
+        [self stop];
+    }
+    if (self.defaultAVCaptureDevicePosition == AVCaptureDevicePositionFront) {
+        self.defaultAVCaptureDevicePosition = AVCaptureDevicePositionBack;
+    } else {
+        self.defaultAVCaptureDevicePosition  = AVCaptureDevicePositionFront;
+    }
+    if (was_running) {
+        [self start];
+    }
 }
 
 
@@ -225,25 +225,25 @@
 
 - (void)deviceOrientationDidChange:(NSNotification*)notification
 {
-	UIDeviceOrientation orientation = [UIDevice currentDevice].orientation;
-	
-	switch (orientation)
-	{
-		case UIDeviceOrientationPortrait:
-		case UIDeviceOrientationPortraitUpsideDown:
-		case UIDeviceOrientationLandscapeLeft:
-		case UIDeviceOrientationLandscapeRight:
-			currentDeviceOrientation = orientation;
-			break;
-			
-		case UIDeviceOrientationFaceUp:
-		case UIDeviceOrientationFaceDown:
-		default:
-			break;
-	}
-	NSLog(@"deviceOrientationDidChange: %d", orientation);
-	
-	[self updateOrientation];
+    UIDeviceOrientation orientation = [UIDevice currentDevice].orientation;
+
+    switch (orientation)
+    {
+        case UIDeviceOrientationPortrait:
+        case UIDeviceOrientationPortraitUpsideDown:
+        case UIDeviceOrientationLandscapeLeft:
+        case UIDeviceOrientationLandscapeRight:
+            currentDeviceOrientation = orientation;
+            break;
+
+        case UIDeviceOrientationFaceUp:
+        case UIDeviceOrientationFaceDown:
+        default:
+            break;
+    }
+    NSLog(@"deviceOrientationDidChange: %d", orientation);
+
+    [self updateOrientation];
 }
 
 
@@ -252,41 +252,41 @@
 
 - (void)createCaptureSession;
 {
-	// set a av capture session preset
-	self.captureSession = [[AVCaptureSession alloc] init];
-	if ([self.captureSession canSetSessionPreset:self.defaultAVCaptureSessionPreset]) {
-		[self.captureSession setSessionPreset:self.defaultAVCaptureSessionPreset];
-	} else if ([self.captureSession canSetSessionPreset:AVCaptureSessionPresetLow]) {
-		[self.captureSession setSessionPreset:AVCaptureSessionPresetLow];
-	} else {
-		NSLog(@"[Camera] Error: could not set session preset");
-	}
+    // set a av capture session preset
+    self.captureSession = [[AVCaptureSession alloc] init];
+    if ([self.captureSession canSetSessionPreset:self.defaultAVCaptureSessionPreset]) {
+        [self.captureSession setSessionPreset:self.defaultAVCaptureSessionPreset];
+    } else if ([self.captureSession canSetSessionPreset:AVCaptureSessionPresetLow]) {
+        [self.captureSession setSessionPreset:AVCaptureSessionPresetLow];
+    } else {
+        NSLog(@"[Camera] Error: could not set session preset");
+    }
 }
 
 - (void)createCaptureDevice;
 {
-	// setup the device
-	AVCaptureDevice *device = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
-	[self setDesiredCameraPosition:self.defaultAVCaptureDevicePosition];
-	NSLog(@"[Camera] device connected? %@", device.connected ? @"YES" : @"NO");
-	NSLog(@"[Camera] device position %@", (device.position == AVCaptureDevicePositionBack) ? @"back" : @"front");
+    // setup the device
+    AVCaptureDevice *device = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
+    [self setDesiredCameraPosition:self.defaultAVCaptureDevicePosition];
+    NSLog(@"[Camera] device connected? %@", device.connected ? @"YES" : @"NO");
+    NSLog(@"[Camera] device position %@", (device.position == AVCaptureDevicePositionBack) ? @"back" : @"front");
 }
 
 
 - (void)createVideoPreviewLayer;
 {
-	self.captureVideoPreviewLayer = [[AVCaptureVideoPreviewLayer alloc] initWithSession:self.captureSession];
-	
-	if ([self.captureVideoPreviewLayer isOrientationSupported]) {
-		[self.captureVideoPreviewLayer setOrientation:self.defaultAVCaptureVideoOrientation];
-	}
-	
-	if (parentView != nil) {
-		self.captureVideoPreviewLayer.frame = self.parentView.bounds;
-		self.captureVideoPreviewLayer.videoGravity = AVLayerVideoGravityResizeAspectFill;
-		[self.parentView.layer addSublayer:self.captureVideoPreviewLayer];
-	}
-	NSLog(@"[Camera] created AVCaptureVideoPreviewLayer");
+    self.captureVideoPreviewLayer = [[AVCaptureVideoPreviewLayer alloc] initWithSession:self.captureSession];
+
+    if ([self.captureVideoPreviewLayer isOrientationSupported]) {
+        [self.captureVideoPreviewLayer setOrientation:self.defaultAVCaptureVideoOrientation];
+    }
+
+    if (parentView != nil) {
+        self.captureVideoPreviewLayer.frame = self.parentView.bounds;
+        self.captureVideoPreviewLayer.videoGravity = AVLayerVideoGravityResizeAspectFill;
+        [self.parentView.layer addSublayer:self.captureVideoPreviewLayer];
+    }
+    NSLog(@"[Camera] created AVCaptureVideoPreviewLayer");
 }
 
 
@@ -294,81 +294,81 @@
 
 - (void)setDesiredCameraPosition:(AVCaptureDevicePosition)desiredPosition;
 {
-	for (AVCaptureDevice *device in [AVCaptureDevice devicesWithMediaType:AVMediaTypeVideo]) {
-		if ([device position] == desiredPosition) {
-			[self.captureSession beginConfiguration];
-			
-			NSError* error;
-			AVCaptureDeviceInput *input = [AVCaptureDeviceInput deviceInputWithDevice:device error:&error];
-			if (!input) {
-				NSLog(@"error creating input %@", [error localizedDescription]);
-			}
-			
-			// support for autofocus
-			if ([device isFocusModeSupported:AVCaptureFocusModeContinuousAutoFocus]) {
-				NSError *error = nil;
-				if ([device lockForConfiguration:&error]) {
-					device.focusMode = AVCaptureFocusModeContinuousAutoFocus;
-					[device unlockForConfiguration];
-				} else {
-					NSLog(@"unable to lock device for autofocos configuration %@", [error localizedDescription]);
-				}
-			}
-			[self.captureSession addInput:input];
-			
-			for (AVCaptureInput *oldInput in self.captureSession.inputs) {
-				[self.captureSession removeInput:oldInput];
-			}
-			[self.captureSession addInput:input];
-			[self.captureSession commitConfiguration];
-			
-			break;
-		}
-	}
+    for (AVCaptureDevice *device in [AVCaptureDevice devicesWithMediaType:AVMediaTypeVideo]) {
+        if ([device position] == desiredPosition) {
+            [self.captureSession beginConfiguration];
+
+            NSError* error;
+            AVCaptureDeviceInput *input = [AVCaptureDeviceInput deviceInputWithDevice:device error:&error];
+            if (!input) {
+                NSLog(@"error creating input %@", [error localizedDescription]);
+            }
+
+            // support for autofocus
+            if ([device isFocusModeSupported:AVCaptureFocusModeContinuousAutoFocus]) {
+                NSError *error = nil;
+                if ([device lockForConfiguration:&error]) {
+                    device.focusMode = AVCaptureFocusModeContinuousAutoFocus;
+                    [device unlockForConfiguration];
+                } else {
+                    NSLog(@"unable to lock device for autofocos configuration %@", [error localizedDescription]);
+                }
+            }
+            [self.captureSession addInput:input];
+
+            for (AVCaptureInput *oldInput in self.captureSession.inputs) {
+                [self.captureSession removeInput:oldInput];
+            }
+            [self.captureSession addInput:input];
+            [self.captureSession commitConfiguration];
+
+            break;
+        }
+    }
 }
 
 
 
 - (void)startCaptureSession
 {
-	if (!cameraAvailable) {
-		return;
-	}
-	
-	if (self.captureSessionLoaded == NO) {
-		[self createCaptureSession];
-		[self createCaptureDevice];
-		[self createCaptureOutput];
-		
-		// setup preview layer
-		if (self.useAVCaptureVideoPreviewLayer) {
-			[self createVideoPreviewLayer];
-		} else {
-			[self createCustomVideoPreview];
-		}
-		
-		captureSessionLoaded = YES;
-	}
-	
-	[self.captureSession startRunning];
+    if (!cameraAvailable) {
+        return;
+    }
+
+    if (self.captureSessionLoaded == NO) {
+        [self createCaptureSession];
+        [self createCaptureDevice];
+        [self createCaptureOutput];
+
+        // setup preview layer
+        if (self.useAVCaptureVideoPreviewLayer) {
+            [self createVideoPreviewLayer];
+        } else {
+            [self createCustomVideoPreview];
+        }
+
+        captureSessionLoaded = YES;
+    }
+
+    [self.captureSession startRunning];
 }
 
 
 - (void)createCaptureOutput;
 {
-	[NSException raise:NSInternalInconsistencyException
-				format:@"You must override %@ in a subclass", NSStringFromSelector(_cmd)];
+    [NSException raise:NSInternalInconsistencyException
+                format:@"You must override %@ in a subclass", NSStringFromSelector(_cmd)];
 }
 
 - (void)createCustomVideoPreview;
 {
-	[NSException raise:NSInternalInconsistencyException
-				format:@"You must override %@ in a subclass", NSStringFromSelector(_cmd)];
+    [NSException raise:NSInternalInconsistencyException
+                format:@"You must override %@ in a subclass", NSStringFromSelector(_cmd)];
 }
 
 - (void)updateOrientation;
 {
-	// nothing to do here
+    // nothing to do here
 }
 
 
@@ -385,7 +385,7 @@
     } else if ([self.defaultAVCaptureSessionPreset isEqualToString:AVCaptureSessionPresetMedium]) {
         //TODO: find the correct resolution
         self.imageWidth = 640;
-        self.imageHeight = 480;        
+        self.imageHeight = 480;
     } else if ([self.defaultAVCaptureSessionPreset isEqualToString:AVCaptureSessionPresetLow]) {
         //TODO: find the correct resolution
         self.imageWidth = 640;

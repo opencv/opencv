@@ -59,8 +59,8 @@ __kernel void arithm_compare_ne_D0 (__global uchar *src1, int src1_step, int src
         x = x << 2;
 
         #define dst_align (dst_offset & 3)
-        int src1_index = mad24(y, src1_step, x + src1_offset - dst_align); 
-        int src2_index = mad24(y, src2_step, x + src2_offset - dst_align); 
+        int src1_index = mad24(y, src1_step, x + src1_offset - dst_align);
+        int src2_index = mad24(y, src2_step, x + src2_offset - dst_align);
 
         int dst_start  = mad24(y, dst_step, dst_offset);
         int dst_end    = mad24(y, dst_step, dst_offset + dst_step1);
@@ -97,8 +97,8 @@ __kernel void arithm_compare_ne_D2 (__global ushort *src1, int src1_step, int sr
         x = x << 2;
 
         #define dst_align ((dst_offset >> 1)& 3)
-        int src1_index = mad24(y, src1_step, (x << 1) + src1_offset - (dst_align << 1)); 
-        int src2_index = mad24(y, src2_step, (x << 1) + src2_offset - (dst_align << 1)); 
+        int src1_index = mad24(y, src1_step, (x << 1) + src1_offset - (dst_align << 1));
+        int src2_index = mad24(y, src2_step, (x << 1) + src2_offset - (dst_align << 1));
 
         int dst_start  = mad24(y, dst_step, dst_offset);
         int dst_end    = mad24(y, dst_step, dst_offset + dst_step1);
@@ -135,8 +135,8 @@ __kernel void arithm_compare_ne_D3 (__global short *src1, int src1_step, int src
         x = x << 2;
 
         #define dst_align ((dst_offset >> 1)& 3)
-        int src1_index = mad24(y, src1_step, (x << 1) + src1_offset - (dst_align << 1)); 
-        int src2_index = mad24(y, src2_step, (x << 1) + src2_offset - (dst_align << 1)); 
+        int src1_index = mad24(y, src1_step, (x << 1) + src1_offset - (dst_align << 1));
+        int src2_index = mad24(y, src2_step, (x << 1) + src2_offset - (dst_align << 1));
 
         int dst_start  = mad24(y, dst_step, dst_offset);
         int dst_end    = mad24(y, dst_step, dst_offset + dst_step1);
@@ -169,8 +169,8 @@ __kernel void arithm_compare_ne_D4 (__global int *src1, int src1_step, int src1_
     {
         x = x << 2;
         #define dst_align ((dst_offset >> 2)& 3)
-        int src1_index = mad24(y, src1_step, (x << 2) + src1_offset - (dst_align << 2)); 
-        int src2_index = mad24(y, src2_step, (x << 2) + src2_offset - (dst_align << 2)); 
+        int src1_index = mad24(y, src1_step, (x << 2) + src1_offset - (dst_align << 2));
+        int src2_index = mad24(y, src2_step, (x << 2) + src2_offset - (dst_align << 2));
 
         int dst_start  = mad24(y, dst_step, dst_offset);
         int dst_end    = mad24(y, dst_step, dst_offset + dst_step1);
@@ -202,8 +202,8 @@ __kernel void arithm_compare_ne_D5 (__global float *src1, int src1_step, int src
     {
         x = x << 2;
         #define dst_align ((dst_offset >> 2) & 3)
-        int src1_index = mad24(y, src1_step, (x << 2) + src1_offset - (dst_align << 2)); 
-        int src2_index = mad24(y, src2_step, (x << 2) + src2_offset - (dst_align << 2)); 
+        int src1_index = mad24(y, src1_step, (x << 2) + src1_offset - (dst_align << 2));
+        int src2_index = mad24(y, src2_step, (x << 2) + src2_offset - (dst_align << 2));
 
         int dst_start  = mad24(y, dst_step, dst_offset);
         int dst_end    = mad24(y, dst_step, dst_offset + dst_step1);
@@ -236,8 +236,8 @@ __kernel void arithm_compare_ne_D6 (__global double *src1, int src1_step, int sr
     {
         x = x << 2;
         #define dst_align ((dst_offset >> 3) & 3)
-        int src1_index = mad24(y, src1_step, (x << 3) + src1_offset - (dst_align << 3)); 
-        int src2_index = mad24(y, src2_step, (x << 3) + src2_offset - (dst_align << 3)); 
+        int src1_index = mad24(y, src1_step, (x << 3) + src1_offset - (dst_align << 3));
+        int src2_index = mad24(y, src2_step, (x << 3) + src2_offset - (dst_align << 3));
 
         int dst_start  = mad24(y, dst_step, dst_offset);
         int dst_end    = mad24(y, dst_step, dst_offset + dst_step1);
@@ -258,7 +258,7 @@ __kernel void arithm_compare_ne_D6 (__global double *src1, int src1_step, int sr
 }
 #endif
 
-   
+
 /***********************************Compare LT*******************************/
 __kernel void arithm_compare_lt_D0 (__global uchar *src1, int src1_step, int src1_offset,
                              __global uchar *src2, int src2_step, int src2_offset,
@@ -273,8 +273,8 @@ __kernel void arithm_compare_lt_D0 (__global uchar *src1, int src1_step, int src
         x = x << 2;
 
         #define dst_align (dst_offset & 3)
-        int src1_index = mad24(y, src1_step, x + src1_offset - dst_align); 
-        int src2_index = mad24(y, src2_step, x + src2_offset - dst_align); 
+        int src1_index = mad24(y, src1_step, x + src1_offset - dst_align);
+        int src2_index = mad24(y, src2_step, x + src2_offset - dst_align);
 
         int dst_start  = mad24(y, dst_step, dst_offset);
         int dst_end    = mad24(y, dst_step, dst_offset + dst_step1);
@@ -311,8 +311,8 @@ __kernel void arithm_compare_lt_D2 (__global ushort *src1, int src1_step, int sr
         x = x << 2;
 
         #define dst_align ((dst_offset >> 1) & 3)
-        int src1_index = mad24(y, src1_step, (x << 1) + src1_offset - (dst_align << 1)); 
-        int src2_index = mad24(y, src2_step, (x << 1) + src2_offset - (dst_align << 1)); 
+        int src1_index = mad24(y, src1_step, (x << 1) + src1_offset - (dst_align << 1));
+        int src2_index = mad24(y, src2_step, (x << 1) + src2_offset - (dst_align << 1));
 
         int dst_start  = mad24(y, dst_step, dst_offset);
         int dst_end    = mad24(y, dst_step, dst_offset + dst_step1);
@@ -349,8 +349,8 @@ __kernel void arithm_compare_lt_D3 (__global short *src1, int src1_step, int src
         x = x << 2;
 
         #define dst_align ((dst_offset >> 1) & 3)
-        int src1_index = mad24(y, src1_step, (x << 1) + src1_offset - (dst_align << 1)); 
-        int src2_index = mad24(y, src2_step, (x << 1) + src2_offset - (dst_align << 1)); 
+        int src1_index = mad24(y, src1_step, (x << 1) + src1_offset - (dst_align << 1));
+        int src2_index = mad24(y, src2_step, (x << 1) + src2_offset - (dst_align << 1));
 
         int dst_start  = mad24(y, dst_step, dst_offset);
         int dst_end    = mad24(y, dst_step, dst_offset + dst_step1);
@@ -383,8 +383,8 @@ __kernel void arithm_compare_lt_D4 (__global int *src1, int src1_step, int src1_
     {
         x = x << 2;
         #define dst_align ((dst_offset >> 2) & 3)
-        int src1_index = mad24(y, src1_step, (x << 2) + src1_offset - (dst_align << 2)); 
-        int src2_index = mad24(y, src2_step, (x << 2) + src2_offset - (dst_align << 2)); 
+        int src1_index = mad24(y, src1_step, (x << 2) + src1_offset - (dst_align << 2));
+        int src2_index = mad24(y, src2_step, (x << 2) + src2_offset - (dst_align << 2));
 
         int dst_start  = mad24(y, dst_step, dst_offset);
         int dst_end    = mad24(y, dst_step, dst_offset + dst_step1);
@@ -416,8 +416,8 @@ __kernel void arithm_compare_lt_D5 (__global float *src1, int src1_step, int src
     {
         x = x << 2;
         #define dst_align ((dst_offset >> 2) & 3)
-        int src1_index = mad24(y, src1_step, (x << 2) + src1_offset - (dst_align << 2)); 
-        int src2_index = mad24(y, src2_step, (x << 2) + src2_offset - (dst_align << 2)); 
+        int src1_index = mad24(y, src1_step, (x << 2) + src1_offset - (dst_align << 2));
+        int src2_index = mad24(y, src2_step, (x << 2) + src2_offset - (dst_align << 2));
 
         int dst_start  = mad24(y, dst_step, dst_offset);
         int dst_end    = mad24(y, dst_step, dst_offset + dst_step1);
@@ -450,8 +450,8 @@ __kernel void arithm_compare_lt_D6 (__global double *src1, int src1_step, int sr
     {
         x = x << 2;
         #define dst_align ((dst_offset >> 3) & 3)
-        int src1_index = mad24(y, src1_step, (x << 3) + src1_offset - (dst_align << 3)); 
-        int src2_index = mad24(y, src2_step, (x << 3) + src2_offset - (dst_align << 3)); 
+        int src1_index = mad24(y, src1_step, (x << 3) + src1_offset - (dst_align << 3));
+        int src2_index = mad24(y, src2_step, (x << 3) + src2_offset - (dst_align << 3));
 
         int dst_start  = mad24(y, dst_step, dst_offset);
         int dst_end    = mad24(y, dst_step, dst_offset + dst_step1);
@@ -486,8 +486,8 @@ __kernel void arithm_compare_le_D0 (__global uchar *src1, int src1_step, int src
         x = x << 2;
 
         #define dst_align (dst_offset & 3)
-        int src1_index = mad24(y, src1_step, x + src1_offset - dst_align); 
-        int src2_index = mad24(y, src2_step, x + src2_offset - dst_align); 
+        int src1_index = mad24(y, src1_step, x + src1_offset - dst_align);
+        int src2_index = mad24(y, src2_step, x + src2_offset - dst_align);
 
         int dst_start  = mad24(y, dst_step, dst_offset);
         int dst_end    = mad24(y, dst_step, dst_offset + dst_step1);
@@ -524,8 +524,8 @@ __kernel void arithm_compare_le_D2 (__global ushort *src1, int src1_step, int sr
         x = x << 2;
 
         #define dst_align ((dst_offset >> 1) & 3)
-        int src1_index = mad24(y, src1_step, (x << 1) + src1_offset - (dst_align << 1)); 
-        int src2_index = mad24(y, src2_step, (x << 1) + src2_offset - (dst_align << 1)); 
+        int src1_index = mad24(y, src1_step, (x << 1) + src1_offset - (dst_align << 1));
+        int src2_index = mad24(y, src2_step, (x << 1) + src2_offset - (dst_align << 1));
 
         int dst_start  = mad24(y, dst_step, dst_offset);
         int dst_end    = mad24(y, dst_step, dst_offset + dst_step1);
@@ -562,8 +562,8 @@ __kernel void arithm_compare_le_D3 (__global short *src1, int src1_step, int src
         x = x << 2;
 
         #define dst_align ((dst_offset >> 1) & 3)
-        int src1_index = mad24(y, src1_step, (x << 1) + src1_offset - (dst_align << 1)); 
-        int src2_index = mad24(y, src2_step, (x << 1) + src2_offset - (dst_align << 1)); 
+        int src1_index = mad24(y, src1_step, (x << 1) + src1_offset - (dst_align << 1));
+        int src2_index = mad24(y, src2_step, (x << 1) + src2_offset - (dst_align << 1));
 
         int dst_start  = mad24(y, dst_step, dst_offset);
         int dst_end    = mad24(y, dst_step, dst_offset + dst_step1);
@@ -596,8 +596,8 @@ __kernel void arithm_compare_le_D4 (__global int *src1, int src1_step, int src1_
     {
         x = x << 2;
         #define dst_align ((dst_offset >> 2)& 3)
-        int src1_index = mad24(y, src1_step, (x << 2) + src1_offset - (dst_align << 2)); 
-        int src2_index = mad24(y, src2_step, (x << 2) + src2_offset - (dst_align << 2)); 
+        int src1_index = mad24(y, src1_step, (x << 2) + src1_offset - (dst_align << 2));
+        int src2_index = mad24(y, src2_step, (x << 2) + src2_offset - (dst_align << 2));
 
         int dst_start  = mad24(y, dst_step, dst_offset);
         int dst_end    = mad24(y, dst_step, dst_offset + dst_step1);
@@ -629,8 +629,8 @@ __kernel void arithm_compare_le_D5 (__global float *src1, int src1_step, int src
     {
         x = x << 2;
         #define dst_align ((dst_offset >> 2)& 3)
-        int src1_index = mad24(y, src1_step, (x << 2) + src1_offset - (dst_align << 2)); 
-        int src2_index = mad24(y, src2_step, (x << 2) + src2_offset - (dst_align << 2)); 
+        int src1_index = mad24(y, src1_step, (x << 2) + src1_offset - (dst_align << 2));
+        int src2_index = mad24(y, src2_step, (x << 2) + src2_offset - (dst_align << 2));
 
         int dst_start  = mad24(y, dst_step, dst_offset);
         int dst_end    = mad24(y, dst_step, dst_offset + dst_step1);
@@ -663,8 +663,8 @@ __kernel void arithm_compare_le_D6 (__global double *src1, int src1_step, int sr
     {
         x = x << 2;
         #define dst_align ((dst_offset >> 3)& 3)
-        int src1_index = mad24(y, src1_step, (x << 3) + src1_offset - (dst_align << 3)); 
-        int src2_index = mad24(y, src2_step, (x << 3) + src2_offset - (dst_align << 3)); 
+        int src1_index = mad24(y, src1_step, (x << 3) + src1_offset - (dst_align << 3));
+        int src2_index = mad24(y, src2_step, (x << 3) + src2_offset - (dst_align << 3));
 
         int dst_start  = mad24(y, dst_step, dst_offset);
         int dst_end    = mad24(y, dst_step, dst_offset + dst_step1);

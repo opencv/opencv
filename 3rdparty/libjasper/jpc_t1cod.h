@@ -6,15 +6,15 @@
  */
 
 /* __START_OF_JASPER_LICENSE__
- * 
+ *
  * JasPer License Version 2.0
- * 
+ *
  * Copyright (c) 2001-2006 Michael David Adams
  * Copyright (c) 1999-2000 Image Power, Inc.
  * Copyright (c) 1999-2000 The University of British Columbia
- * 
+ *
  * All rights reserved.
- * 
+ *
  * Permission is hereby granted, free of charge, to any person (the
  * "User") obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without restriction,
@@ -22,15 +22,15 @@
  * publish, distribute, and/or sell copies of the Software, and to permit
  * persons to whom the Software is furnished to do so, subject to the
  * following conditions:
- * 
+ *
  * 1.  The above copyright notices and this permission notice (which
  * includes the disclaimer below) shall be included in all copies or
  * substantial portions of the Software.
- * 
+ *
  * 2.  The name of a copyright holder shall not be used to endorse or
  * promote products derived from the Software without specific prior
  * written permission.
- * 
+ *
  * THIS DISCLAIMER OF WARRANTY CONSTITUTES AN ESSENTIAL PART OF THIS
  * LICENSE.  NO USE OF THE SOFTWARE IS AUTHORIZED HEREUNDER EXCEPT UNDER
  * THIS DISCLAIMER.  THE SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS
@@ -57,7 +57,7 @@
  * PERSONAL INJURY, OR SEVERE PHYSICAL OR ENVIRONMENTAL DAMAGE ("HIGH
  * RISK ACTIVITIES").  THE COPYRIGHT HOLDERS SPECIFICALLY DISCLAIM ANY
  * EXPRESS OR IMPLIED WARRANTY OF FITNESS FOR HIGH RISK ACTIVITIES.
- * 
+ *
  * __END_OF_JASPER_LICENSE__
  */
 
@@ -127,7 +127,7 @@
 #define	JPC_WSIG	0x0080
 /* The significance mask for 8-connected neighbours. */
 #define	JPC_OTHSIGMSK \
-	(JPC_NSIG | JPC_NESIG | JPC_ESIG | JPC_SESIG | JPC_SSIG | JPC_SWSIG | JPC_WSIG | JPC_NWSIG)
+    (JPC_NSIG | JPC_NESIG | JPC_ESIG | JPC_SESIG | JPC_SSIG | JPC_SWSIG | JPC_WSIG | JPC_NWSIG)
 /* The significance mask for 4-connected neighbours. */
 #define	JPC_PRIMSIGMSK	(JPC_NSIG | JPC_ESIG | JPC_SSIG | JPC_WSIG)
 
@@ -201,75 +201,75 @@ void jpc_initctxs(jpc_mqctx_t *ctxs);
 /* Get the zero coding context. */
 int jpc_getzcctxno(int f, int orient);
 #define	JPC_GETZCCTXNO(f, orient) \
-	(jpc_zcctxnolut[((orient) << 8) | ((f) & JPC_OTHSIGMSK)])
+    (jpc_zcctxnolut[((orient) << 8) | ((f) & JPC_OTHSIGMSK)])
 
 /* Get the sign prediction bit. */
 int jpc_getspb(int f);
 #define	JPC_GETSPB(f) \
-	(jpc_spblut[((f) & (JPC_PRIMSIGMSK | JPC_SGNMSK)) >> 4])
+    (jpc_spblut[((f) & (JPC_PRIMSIGMSK | JPC_SGNMSK)) >> 4])
 
 /* Get the sign coding context. */
 int jpc_getscctxno(int f);
 #define	JPC_GETSCCTXNO(f) \
-	(jpc_scctxnolut[((f) & (JPC_PRIMSIGMSK | JPC_SGNMSK)) >> 4])
+    (jpc_scctxnolut[((f) & (JPC_PRIMSIGMSK | JPC_SGNMSK)) >> 4])
 
 /* Get the magnitude context. */
 int jpc_getmagctxno(int f);
 #define	JPC_GETMAGCTXNO(f) \
-	(jpc_magctxnolut[((f) & JPC_OTHSIGMSK) | ((((f) & JPC_REFINE) != 0) << 11)])
+    (jpc_magctxnolut[((f) & JPC_OTHSIGMSK) | ((((f) & JPC_REFINE) != 0) << 11)])
 
 /* Get the normalized MSE reduction for significance passes. */
 #define	JPC_GETSIGNMSEDEC(x, bitpos)	jpc_getsignmsedec_macro(x, bitpos)
 jpc_fix_t jpc_getsignmsedec_func(jpc_fix_t x, int bitpos);
 #define	jpc_getsignmsedec_macro(x, bitpos) \
-	((bitpos > JPC_NMSEDEC_FRACBITS) ? jpc_signmsedec[JPC_ASR(x, bitpos - JPC_NMSEDEC_FRACBITS) & JAS_ONES(JPC_NMSEDEC_BITS)] : \
-	  (jpc_signmsedec0[JPC_ASR(x, bitpos - JPC_NMSEDEC_FRACBITS) & JAS_ONES(JPC_NMSEDEC_BITS)]))
+    ((bitpos > JPC_NMSEDEC_FRACBITS) ? jpc_signmsedec[JPC_ASR(x, bitpos - JPC_NMSEDEC_FRACBITS) & JAS_ONES(JPC_NMSEDEC_BITS)] : \
+      (jpc_signmsedec0[JPC_ASR(x, bitpos - JPC_NMSEDEC_FRACBITS) & JAS_ONES(JPC_NMSEDEC_BITS)]))
 
 /* Get the normalized MSE reduction for refinement passes. */
 #define	JPC_GETREFNMSEDEC(x, bitpos)	jpc_getrefnmsedec_macro(x, bitpos)
 jpc_fix_t jpc_refsignmsedec_func(jpc_fix_t x, int bitpos);
 #define	jpc_getrefnmsedec_macro(x, bitpos) \
-	((bitpos > JPC_NMSEDEC_FRACBITS) ? jpc_refnmsedec[JPC_ASR(x, bitpos - JPC_NMSEDEC_FRACBITS) & JAS_ONES(JPC_NMSEDEC_BITS)] : \
-	  (jpc_refnmsedec0[JPC_ASR(x, bitpos - JPC_NMSEDEC_FRACBITS) & JAS_ONES(JPC_NMSEDEC_BITS)]))
+    ((bitpos > JPC_NMSEDEC_FRACBITS) ? jpc_refnmsedec[JPC_ASR(x, bitpos - JPC_NMSEDEC_FRACBITS) & JAS_ONES(JPC_NMSEDEC_BITS)] : \
+      (jpc_refnmsedec0[JPC_ASR(x, bitpos - JPC_NMSEDEC_FRACBITS) & JAS_ONES(JPC_NMSEDEC_BITS)]))
 
 /* Arithmetic shift right (with ability to shift left also). */
 #define	JPC_ASR(x, n) \
-	(((n) >= 0) ? ((x) >> (n)) : ((x) << (-(n))))
+    (((n) >= 0) ? ((x) >> (n)) : ((x) << (-(n))))
 
 /* Update the per-sample state information. */
 #define	JPC_UPDATEFLAGS4(fp, rowstep, s, vcausalflag) \
 { \
-	register jpc_fix_t *np = (fp) - (rowstep); \
-	register jpc_fix_t *sp = (fp) + (rowstep); \
-	if ((vcausalflag)) { \
-		sp[-1] |= JPC_NESIG; \
-		sp[1] |= JPC_NWSIG; \
-		if (s) { \
-			*sp |= JPC_NSIG | JPC_NSGN; \
-			(fp)[-1] |= JPC_ESIG | JPC_ESGN; \
-			(fp)[1] |= JPC_WSIG | JPC_WSGN; \
-		} else { \
-			*sp |= JPC_NSIG; \
-			(fp)[-1] |= JPC_ESIG; \
-			(fp)[1] |= JPC_WSIG; \
-		} \
-	} else { \
-		np[-1] |= JPC_SESIG; \
-		np[1] |= JPC_SWSIG; \
-		sp[-1] |= JPC_NESIG; \
-		sp[1] |= JPC_NWSIG; \
-		if (s) { \
-			*np |= JPC_SSIG | JPC_SSGN; \
-			*sp |= JPC_NSIG | JPC_NSGN; \
-			(fp)[-1] |= JPC_ESIG | JPC_ESGN; \
-			(fp)[1] |= JPC_WSIG | JPC_WSGN; \
-		} else { \
-			*np |= JPC_SSIG; \
-			*sp |= JPC_NSIG; \
-			(fp)[-1] |= JPC_ESIG; \
-			(fp)[1] |= JPC_WSIG; \
-		} \
-	} \
+    register jpc_fix_t *np = (fp) - (rowstep); \
+    register jpc_fix_t *sp = (fp) + (rowstep); \
+    if ((vcausalflag)) { \
+        sp[-1] |= JPC_NESIG; \
+        sp[1] |= JPC_NWSIG; \
+        if (s) { \
+            *sp |= JPC_NSIG | JPC_NSGN; \
+            (fp)[-1] |= JPC_ESIG | JPC_ESGN; \
+            (fp)[1] |= JPC_WSIG | JPC_WSGN; \
+        } else { \
+            *sp |= JPC_NSIG; \
+            (fp)[-1] |= JPC_ESIG; \
+            (fp)[1] |= JPC_WSIG; \
+        } \
+    } else { \
+        np[-1] |= JPC_SESIG; \
+        np[1] |= JPC_SWSIG; \
+        sp[-1] |= JPC_NESIG; \
+        sp[1] |= JPC_NWSIG; \
+        if (s) { \
+            *np |= JPC_SSIG | JPC_SSGN; \
+            *sp |= JPC_NSIG | JPC_NSGN; \
+            (fp)[-1] |= JPC_ESIG | JPC_ESGN; \
+            (fp)[1] |= JPC_WSIG | JPC_WSGN; \
+        } else { \
+            *np |= JPC_SSIG; \
+            *sp |= JPC_NSIG; \
+            (fp)[-1] |= JPC_ESIG; \
+            (fp)[1] |= JPC_WSIG; \
+        } \
+    } \
 }
 
 /* Initialize the lookup tables used by the codec. */

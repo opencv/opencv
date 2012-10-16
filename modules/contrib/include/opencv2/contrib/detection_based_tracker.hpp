@@ -34,7 +34,7 @@ class DetectionBasedTracker
         bool setParameters(const Parameters& params);
         const Parameters& getParameters();
 
-        
+
         typedef std::pair<cv::Rect, int> Object;
         virtual void getObjects(std::vector<cv::Rect>& result) const;
         virtual void getObjects(std::vector<Object>& result) const;

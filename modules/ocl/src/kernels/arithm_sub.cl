@@ -64,8 +64,8 @@ __kernel void arithm_sub_D0 (__global uchar *src1, int src1_step, int src1_offse
         x = x << 2;
 
         #define dst_align (dst_offset & 3)
-        int src1_index = mad24(y, src1_step, x + src1_offset - dst_align); 
-        int src2_index = mad24(y, src2_step, x + src2_offset - dst_align); 
+        int src1_index = mad24(y, src1_step, x + src1_offset - dst_align);
+        int src2_index = mad24(y, src2_step, x + src2_offset - dst_align);
 
         int dst_start  = mad24(y, dst_step, dst_offset);
         int dst_end    = mad24(y, dst_step, dst_offset + dst_step1);
@@ -99,8 +99,8 @@ __kernel void arithm_sub_D2 (__global ushort *src1, int src1_step, int src1_offs
         x = x << 2;
 
         #define dst_align ((dst_offset >> 1) & 3)
-        int src1_index = mad24(y, src1_step, (x << 1) + src1_offset - (dst_align << 1)); 
-        int src2_index = mad24(y, src2_step, (x << 1) + src2_offset - (dst_align << 1)); 
+        int src1_index = mad24(y, src1_step, (x << 1) + src1_offset - (dst_align << 1));
+        int src2_index = mad24(y, src2_step, (x << 1) + src2_offset - (dst_align << 1));
 
         int dst_start  = mad24(y, dst_step, dst_offset);
         int dst_end    = mad24(y, dst_step, dst_offset + dst_step1);
@@ -134,8 +134,8 @@ __kernel void arithm_sub_D3 (__global short *src1, int src1_step, int src1_offse
         x = x << 2;
 
         #define dst_align ((dst_offset >> 1) & 3)
-        int src1_index = mad24(y, src1_step, (x << 1) + src1_offset - (dst_align << 1)); 
-        int src2_index = mad24(y, src2_step, (x << 1) + src2_offset - (dst_align << 1)); 
+        int src1_index = mad24(y, src1_step, (x << 1) + src1_offset - (dst_align << 1));
+        int src2_index = mad24(y, src2_step, (x << 1) + src2_offset - (dst_align << 1));
 
         int dst_start  = mad24(y, dst_step, dst_offset);
         int dst_end    = mad24(y, dst_step, dst_offset + dst_step1);
@@ -240,8 +240,8 @@ __kernel void arithm_sub_with_mask_C1_D0 (__global uchar *src1, int src1_step, i
         x = x << 2;
 
         #define dst_align (dst_offset & 3)
-        int src1_index = mad24(y, src1_step, x + src1_offset - dst_align); 
-        int src2_index = mad24(y, src2_step, x + src2_offset - dst_align); 
+        int src1_index = mad24(y, src1_step, x + src1_offset - dst_align);
+        int src2_index = mad24(y, src2_step, x + src2_offset - dst_align);
         int mask_index = mad24(y, mask_step, x + mask_offset - dst_align);
 
         int dst_start  = mad24(y, dst_step, dst_offset);
@@ -279,8 +279,8 @@ __kernel void arithm_sub_with_mask_C1_D2 (__global ushort *src1, int src1_step, 
         x = x << 1;
 
         #define dst_align ((dst_offset >> 1) & 1)
-        int src1_index = mad24(y, src1_step, (x << 1) + src1_offset - (dst_align << 1)); 
-        int src2_index = mad24(y, src2_step, (x << 1) + src2_offset - (dst_align << 1)); 
+        int src1_index = mad24(y, src1_step, (x << 1) + src1_offset - (dst_align << 1));
+        int src2_index = mad24(y, src2_step, (x << 1) + src2_offset - (dst_align << 1));
         int mask_index = mad24(y, mask_step, x + mask_offset - dst_align);
 
         int dst_start  = mad24(y, dst_step, dst_offset);
@@ -316,8 +316,8 @@ __kernel void arithm_sub_with_mask_C1_D3 (__global short *src1, int src1_step, i
         x = x << 1;
 
         #define dst_align ((dst_offset >> 1) & 1)
-        int src1_index = mad24(y, src1_step, (x << 1) + src1_offset - (dst_align << 1)); 
-        int src2_index = mad24(y, src2_step, (x << 1) + src2_offset - (dst_align << 1)); 
+        int src1_index = mad24(y, src1_step, (x << 1) + src1_offset - (dst_align << 1));
+        int src2_index = mad24(y, src2_step, (x << 1) + src2_offset - (dst_align << 1));
         int mask_index = mad24(y, mask_step, x + mask_offset - dst_align);
 
         int dst_start  = mad24(y, dst_step, dst_offset);
@@ -362,7 +362,7 @@ __kernel void arithm_sub_with_mask_C1_D4 (__global int   *src1, int src1_step, i
         int dst_data  = *((__global int *)((__global char *)dst  + dst_index));
 
         int data = convert_int_sat((long)src_data1 - (long)src_data2);
-        data = mask_data ? data : dst_data; 
+        data = mask_data ? data : dst_data;
 
         *((__global int *)((__global char *)dst + dst_index)) = data;
     }
@@ -392,7 +392,7 @@ __kernel void arithm_sub_with_mask_C1_D5 (__global float *src1, int src1_step, i
         float dst_data  = *((__global float *)((__global char *)dst  + dst_index));
 
         float data = src_data1 - src_data2;
-        data = mask_data ? data : dst_data; 
+        data = mask_data ? data : dst_data;
 
         *((__global float *)((__global char *)dst + dst_index)) = data;
     }
@@ -424,7 +424,7 @@ __kernel void arithm_sub_with_mask_C1_D6 (__global double *src1, int src1_step, 
         double dst_data  = *((__global double *)((__global char *)dst  + dst_index));
 
         double data = src_data1 - src_data2;
-        data = mask_data ? data : dst_data; 
+        data = mask_data ? data : dst_data;
 
         *((__global double *)((__global char *)dst + dst_index)) = data;
     }
@@ -446,8 +446,8 @@ __kernel void arithm_sub_with_mask_C2_D0 (__global uchar *src1, int src1_step, i
         x = x << 1;
 
         #define dst_align ((dst_offset >> 1) & 1)
-        int src1_index = mad24(y, src1_step, (x << 1) + src1_offset - (dst_align << 1)); 
-        int src2_index = mad24(y, src2_step, (x << 1) + src2_offset - (dst_align << 1)); 
+        int src1_index = mad24(y, src1_step, (x << 1) + src1_offset - (dst_align << 1));
+        int src2_index = mad24(y, src2_step, (x << 1) + src2_offset - (dst_align << 1));
         int mask_index = mad24(y, mask_step, x + mask_offset - dst_align);
 
         int dst_start  = mad24(y, dst_step, dst_offset);
@@ -493,7 +493,7 @@ __kernel void arithm_sub_with_mask_C2_D2 (__global ushort *src1, int src1_step, 
 
         int2    tmp = convert_int2_sat(src_data1) - convert_int2_sat(src_data2);
         ushort2 data = convert_ushort2_sat(tmp);
-        data = mask_data ? data : dst_data; 
+        data = mask_data ? data : dst_data;
 
         *((__global ushort2 *)((__global char *)dst + dst_index)) = data;
     }
@@ -523,7 +523,7 @@ __kernel void arithm_sub_with_mask_C2_D3 (__global short *src1, int src1_step, i
 
         int2    tmp = convert_int2_sat(src_data1) - convert_int2_sat(src_data2);
         short2 data = convert_short2_sat(tmp);
-        data = mask_data ? data : dst_data; 
+        data = mask_data ? data : dst_data;
 
         *((__global short2 *)((__global char *)dst + dst_index)) = data;
     }
@@ -552,7 +552,7 @@ __kernel void arithm_sub_with_mask_C2_D4 (__global int   *src1, int src1_step, i
         int2 dst_data  = *((__global int2 *)((__global char *)dst  + dst_index));
 
         int2 data = convert_int2_sat(convert_long2_sat(src_data1) - convert_long2_sat(src_data2));
-        data = mask_data ? data : dst_data; 
+        data = mask_data ? data : dst_data;
 
         *((__global int2 *)((__global char *)dst + dst_index)) = data;
     }
@@ -581,7 +581,7 @@ __kernel void arithm_sub_with_mask_C2_D5 (__global float *src1, int src1_step, i
         float2 dst_data  = *((__global float2 *)((__global char *)dst  + dst_index));
 
         float2 data = src_data1 - src_data2;
-        data = mask_data ? data : dst_data; 
+        data = mask_data ? data : dst_data;
 
         *((__global float2 *)((__global char *)dst + dst_index)) = data;
     }
@@ -612,7 +612,7 @@ __kernel void arithm_sub_with_mask_C2_D6 (__global double *src1, int src1_step, 
         double2 dst_data  = *((__global double2 *)((__global char *)dst  + dst_index));
 
         double2 data = src_data1 - src_data2;
-        data = mask_data ? data : dst_data; 
+        data = mask_data ? data : dst_data;
 
         *((__global double2 *)((__global char *)dst + dst_index)) = data;
     }
@@ -633,8 +633,8 @@ __kernel void arithm_sub_with_mask_C3_D0 (__global uchar *src1, int src1_step, i
         x = x << 2;
 
         #define dst_align (((dst_offset % dst_step) / 3 ) & 3)
-        int src1_index = mad24(y, src1_step, (x * 3) + src1_offset - (dst_align * 3)); 
-        int src2_index = mad24(y, src2_step, (x * 3) + src2_offset - (dst_align * 3)); 
+        int src1_index = mad24(y, src1_step, (x * 3) + src1_offset - (dst_align * 3));
+        int src2_index = mad24(y, src2_step, (x * 3) + src2_offset - (dst_align * 3));
         int mask_index = mad24(y, mask_step, x + mask_offset - dst_align);
 
         int dst_start  = mad24(y, dst_step, dst_offset);
@@ -660,17 +660,17 @@ __kernel void arithm_sub_with_mask_C3_D0 (__global uchar *src1, int src1_step, i
         uchar4 tmp_data_2 = convert_uchar4_sat(convert_short4_sat(src1_data_2) - convert_short4_sat(src2_data_2));
 
         data_0.xyz = ((mask_data.x) && (dst_index + 0 >= dst_start)) ? tmp_data_0.xyz : data_0.xyz;
-        data_0.w   = ((mask_data.y) && (dst_index + 3 >= dst_start) && (dst_index + 3 < dst_end)) 
+        data_0.w   = ((mask_data.y) && (dst_index + 3 >= dst_start) && (dst_index + 3 < dst_end))
                      ? tmp_data_0.w : data_0.w;
 
-        data_1.xy  = ((mask_data.y) && (dst_index + 3 >= dst_start) && (dst_index + 3 < dst_end)) 
+        data_1.xy  = ((mask_data.y) && (dst_index + 3 >= dst_start) && (dst_index + 3 < dst_end))
                      ? tmp_data_1.xy : data_1.xy;
-        data_1.zw  = ((mask_data.z) && (dst_index + 6 >= dst_start) && (dst_index + 6 < dst_end)) 
+        data_1.zw  = ((mask_data.z) && (dst_index + 6 >= dst_start) && (dst_index + 6 < dst_end))
                      ? tmp_data_1.zw : data_1.zw;
 
-        data_2.x   = ((mask_data.z) && (dst_index + 6 >= dst_start) && (dst_index + 6 < dst_end)) 
+        data_2.x   = ((mask_data.z) && (dst_index + 6 >= dst_start) && (dst_index + 6 < dst_end))
                      ? tmp_data_2.x : data_2.x;
-        data_2.yzw = ((mask_data.w) && (dst_index + 9 >= dst_start) && (dst_index + 9 < dst_end)) 
+        data_2.yzw = ((mask_data.w) && (dst_index + 9 >= dst_start) && (dst_index + 9 < dst_end))
                      ? tmp_data_2.yzw : data_2.yzw;
 
         *((__global uchar4 *)(dst + dst_index + 0)) = data_0;
@@ -693,8 +693,8 @@ __kernel void arithm_sub_with_mask_C3_D2 (__global ushort *src1, int src1_step, 
         x = x << 1;
 
         #define dst_align (((dst_offset % dst_step) / 6 ) & 1)
-        int src1_index = mad24(y, src1_step, (x * 6) + src1_offset - (dst_align * 6)); 
-        int src2_index = mad24(y, src2_step, (x * 6) + src2_offset - (dst_align * 6)); 
+        int src1_index = mad24(y, src1_step, (x * 6) + src1_offset - (dst_align * 6));
+        int src2_index = mad24(y, src2_step, (x * 6) + src2_offset - (dst_align * 6));
         int mask_index = mad24(y, mask_step, x + mask_offset - dst_align);
 
         int dst_start  = mad24(y, dst_step, dst_offset);
@@ -721,12 +721,12 @@ __kernel void arithm_sub_with_mask_C3_D2 (__global ushort *src1, int src1_step, 
 
         data_0.xy = ((mask_data.x) && (dst_index + 0 >= dst_start)) ? tmp_data_0.xy : data_0.xy;
 
-        data_1.x  = ((mask_data.x) && (dst_index + 0 >= dst_start) && (dst_index + 0 < dst_end)) 
+        data_1.x  = ((mask_data.x) && (dst_index + 0 >= dst_start) && (dst_index + 0 < dst_end))
                      ? tmp_data_1.x : data_1.x;
-        data_1.y  = ((mask_data.y) && (dst_index + 6 >= dst_start) && (dst_index + 6 < dst_end)) 
+        data_1.y  = ((mask_data.y) && (dst_index + 6 >= dst_start) && (dst_index + 6 < dst_end))
                      ? tmp_data_1.y : data_1.y;
 
-        data_2.xy = ((mask_data.y) && (dst_index + 6 >= dst_start) && (dst_index + 6 < dst_end)) 
+        data_2.xy = ((mask_data.y) && (dst_index + 6 >= dst_start) && (dst_index + 6 < dst_end))
                      ? tmp_data_2.xy : data_2.xy;
 
        *((__global ushort2 *)((__global char *)dst + dst_index + 0))= data_0;
@@ -749,8 +749,8 @@ __kernel void arithm_sub_with_mask_C3_D3 (__global short *src1, int src1_step, i
         x = x << 1;
 
         #define dst_align (((dst_offset % dst_step) / 6 ) & 1)
-        int src1_index = mad24(y, src1_step, (x * 6) + src1_offset - (dst_align * 6)); 
-        int src2_index = mad24(y, src2_step, (x * 6) + src2_offset - (dst_align * 6)); 
+        int src1_index = mad24(y, src1_step, (x * 6) + src1_offset - (dst_align * 6));
+        int src2_index = mad24(y, src2_step, (x * 6) + src2_offset - (dst_align * 6));
         int mask_index = mad24(y, mask_step, x + mask_offset - dst_align);
 
         int dst_start  = mad24(y, dst_step, dst_offset);
@@ -777,12 +777,12 @@ __kernel void arithm_sub_with_mask_C3_D3 (__global short *src1, int src1_step, i
 
         data_0.xy = ((mask_data.x) && (dst_index + 0 >= dst_start)) ? tmp_data_0.xy : data_0.xy;
 
-        data_1.x  = ((mask_data.x) && (dst_index + 0 >= dst_start) && (dst_index + 0 < dst_end)) 
+        data_1.x  = ((mask_data.x) && (dst_index + 0 >= dst_start) && (dst_index + 0 < dst_end))
                      ? tmp_data_1.x : data_1.x;
-        data_1.y  = ((mask_data.y) && (dst_index + 6 >= dst_start) && (dst_index + 6 < dst_end)) 
+        data_1.y  = ((mask_data.y) && (dst_index + 6 >= dst_start) && (dst_index + 6 < dst_end))
                      ? tmp_data_1.y : data_1.y;
 
-        data_2.xy = ((mask_data.y) && (dst_index + 6 >= dst_start) && (dst_index + 6 < dst_end)) 
+        data_2.xy = ((mask_data.y) && (dst_index + 6 >= dst_start) && (dst_index + 6 < dst_end))
                      ? tmp_data_2.xy : data_2.xy;
 
        *((__global short2 *)((__global char *)dst + dst_index + 0))= data_0;
@@ -802,8 +802,8 @@ __kernel void arithm_sub_with_mask_C3_D4 (__global int   *src1, int src1_step, i
 
     if (x < cols && y < rows)
     {
-        int src1_index = mad24(y, src1_step, (x * 12) + src1_offset); 
-        int src2_index = mad24(y, src2_step, (x * 12) + src2_offset); 
+        int src1_index = mad24(y, src1_step, (x * 12) + src1_offset);
+        int src2_index = mad24(y, src2_step, (x * 12) + src2_offset);
         int mask_index = mad24(y, mask_step, x + mask_offset);
         int dst_index  = mad24(y, dst_step, dst_offset + (x * 12));
 
@@ -846,15 +846,15 @@ __kernel void arithm_sub_with_mask_C3_D5 (__global float *src1, int src1_step, i
 
     if (x < cols && y < rows)
     {
-        int src1_index = mad24(y, src1_step, (x * 12) + src1_offset); 
-        int src2_index = mad24(y, src2_step, (x * 12) + src2_offset); 
+        int src1_index = mad24(y, src1_step, (x * 12) + src1_offset);
+        int src2_index = mad24(y, src2_step, (x * 12) + src2_offset);
         int mask_index = mad24(y, mask_step, x + mask_offset);
         int dst_index  = mad24(y, dst_step, dst_offset + (x * 12));
 
         float src1_data_0 = *((__global float *)((__global char *)src1 + src1_index + 0));
         float src1_data_1 = *((__global float *)((__global char *)src1 + src1_index + 4));
         float src1_data_2 = *((__global float *)((__global char *)src1 + src1_index + 8));
-                                             
+
         float src2_data_0 = *((__global float *)((__global char *)src2 + src2_index + 0));
         float src2_data_1 = *((__global float *)((__global char *)src2 + src2_index + 4));
         float src2_data_2 = *((__global float *)((__global char *)src2 + src2_index + 8));
@@ -892,15 +892,15 @@ __kernel void arithm_sub_with_mask_C3_D6 (__global double *src1, int src1_step, 
 
     if (x < cols && y < rows)
     {
-        int src1_index = mad24(y, src1_step, (x * 24) + src1_offset); 
-        int src2_index = mad24(y, src2_step, (x * 24) + src2_offset); 
+        int src1_index = mad24(y, src1_step, (x * 24) + src1_offset);
+        int src2_index = mad24(y, src2_step, (x * 24) + src2_offset);
         int mask_index = mad24(y, mask_step, x + mask_offset);
         int dst_index  = mad24(y, dst_step, dst_offset + (x * 24));
 
         double src1_data_0 = *((__global double *)((__global char *)src1 + src1_index + 0 ));
         double src1_data_1 = *((__global double *)((__global char *)src1 + src1_index + 8 ));
         double src1_data_2 = *((__global double *)((__global char *)src1 + src1_index + 16));
-                                               
+
         double src2_data_0 = *((__global double *)((__global char *)src2 + src2_index + 0 ));
         double src2_data_1 = *((__global double *)((__global char *)src2 + src2_index + 8 ));
         double src2_data_2 = *((__global double *)((__global char *)src2 + src2_index + 16));
@@ -949,7 +949,7 @@ __kernel void arithm_sub_with_mask_C4_D0 (__global uchar *src1, int src1_step, i
         uchar4 dst_data  = *((__global uchar4 *)(dst  + dst_index));
 
         uchar4 data = convert_uchar4_sat(convert_short4_sat(src_data1) - convert_short4_sat(src_data2));
-        data = mask_data ? data : dst_data; 
+        data = mask_data ? data : dst_data;
 
         *((__global uchar4 *)(dst + dst_index)) = data;
     }
@@ -978,7 +978,7 @@ __kernel void arithm_sub_with_mask_C4_D2 (__global ushort *src1, int src1_step, 
         ushort4 dst_data  = *((__global ushort4 *)((__global char *)dst  + dst_index));
 
         ushort4 data = convert_ushort4_sat(convert_int4_sat(src_data1) - convert_int4_sat(src_data2));
-        data = mask_data ? data : dst_data; 
+        data = mask_data ? data : dst_data;
 
         *((__global ushort4 *)((__global char *)dst + dst_index)) = data;
     }
@@ -1007,7 +1007,7 @@ __kernel void arithm_sub_with_mask_C4_D3 (__global short *src1, int src1_step, i
         short4 dst_data  = *((__global short4 *)((__global char *)dst  + dst_index));
 
         short4 data = convert_short4_sat(convert_int4_sat(src_data1) - convert_int4_sat(src_data2));
-        data = mask_data ? data : dst_data; 
+        data = mask_data ? data : dst_data;
 
         *((__global short4 *)((__global char *)dst + dst_index)) = data;
     }
@@ -1036,7 +1036,7 @@ __kernel void arithm_sub_with_mask_C4_D4 (__global int   *src1, int src1_step, i
         int4 dst_data  = *((__global int4 *)((__global char *)dst  + dst_index));
 
         int4 data = convert_int4_sat(convert_long4_sat(src_data1) - convert_long4_sat(src_data2));
-        data = mask_data ? data : dst_data; 
+        data = mask_data ? data : dst_data;
 
         *((__global int4 *)((__global char *)dst + dst_index)) = data;
     }
@@ -1065,7 +1065,7 @@ __kernel void arithm_sub_with_mask_C4_D5 (__global float *src1, int src1_step, i
         float4 dst_data  = *((__global float4 *)((__global char *)dst  + dst_index));
 
         float4 data = src_data1 - src_data2;
-        data = mask_data ? data : dst_data; 
+        data = mask_data ? data : dst_data;
 
         *((__global float4 *)((__global char *)dst + dst_index)) = data;
     }
@@ -1096,7 +1096,7 @@ __kernel void arithm_sub_with_mask_C4_D6 (__global double *src1, int src1_step, 
         double4 dst_data  = *((__global double4 *)((__global char *)dst  + dst_index));
 
         double4 data = src_data1 - src_data2;
-        data = mask_data ? data : dst_data; 
+        data = mask_data ? data : dst_data;
 
         *((__global double4 *)((__global char *)dst + dst_index)) = data;
     }

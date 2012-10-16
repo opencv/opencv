@@ -68,7 +68,7 @@
 #define VEC_TYPE_LOC int4
 #define CONVERT_TYPE convert_char4
 #define CONDITION_FUNC(a,b,c) (convert_int4(a) ? b : c)
-#define MIN_VAL -128 
+#define MIN_VAL -128
 #define MAX_VAL 127
 #endif
 #if defined (DEPTH_2)
@@ -77,7 +77,7 @@
 #define VEC_TYPE_LOC int4
 #define CONVERT_TYPE convert_ushort4
 #define CONDITION_FUNC(a,b,c) (convert_int4(a) ? b : c)
-#define MIN_VAL 0 
+#define MIN_VAL 0
 #define MAX_VAL 65535
 #endif
 #if defined (DEPTH_3)
@@ -86,7 +86,7 @@
 #define VEC_TYPE_LOC int4
 #define CONVERT_TYPE convert_short4
 #define CONDITION_FUNC(a,b,c) (convert_int4(a) ? b : c)
-#define MIN_VAL -32768 
+#define MIN_VAL -32768
 #define MAX_VAL 32767
 #endif
 #if defined (DEPTH_4)
@@ -95,7 +95,7 @@
 #define VEC_TYPE_LOC int4
 #define CONVERT_TYPE convert_int4
 #define CONDITION_FUNC(a,b,c) ((a) ? b : c)
-#define MIN_VAL INT_MIN 
+#define MIN_VAL INT_MIN
 #define MAX_VAL INT_MAX
 #endif
 #if defined (DEPTH_5)
@@ -104,7 +104,7 @@
 #define VEC_TYPE_LOC float4
 #define CONVERT_TYPE convert_float4
 #define CONDITION_FUNC(a,b,c) ((a) ? b : c)
-#define MIN_VAL (-FLT_MAX) 
+#define MIN_VAL (-FLT_MAX)
 #define MAX_VAL FLT_MAX
 #endif
 #if defined (DEPTH_6)
@@ -113,12 +113,12 @@
 #define VEC_TYPE_LOC double4
 #define CONVERT_TYPE convert_double4
 #define CONDITION_FUNC(a,b,c) ((a) ? b : c)
-#define MIN_VAL (-DBL_MAX) 
+#define MIN_VAL (-DBL_MAX)
 #define MAX_VAL DBL_MAX
 #endif
 
 #if defined (REPEAT_E0)
-#define repeat_e(a) a=a; 
+#define repeat_e(a) a=a;
 #endif
 #if defined (REPEAT_E1)
 #define repeat_e(a) a.s3 = a.s2;
@@ -194,7 +194,7 @@ __kernel void arithm_op_minMaxLoc_mask (int cols,int invalid_cols,int offset,int
        }
        minval = min(minval,m_temp != (VEC_TYPE)0 ? temp : minval);
        maxval = max(maxval,m_temp != (VEC_TYPE)0 ? temp : maxval);
-       
+
        minloc = CONDITION_FUNC((minval == temp) && (m_temp != (VEC_TYPE)0), temploc , minloc);
        maxloc = CONDITION_FUNC((maxval == temp) && (m_temp != (VEC_TYPE)0), temploc , maxloc);
    }
@@ -225,9 +225,9 @@ __kernel void arithm_op_minMaxLoc_mask (int cols,int invalid_cols,int offset,int
            lm_max[lid] = max(lm_max[lid] , lm_max[lid2]);
            VEC_TYPE con_min = CONVERT_TYPE(lm_minloc[lid2] != negative ? one : zero);
            VEC_TYPE con_max = CONVERT_TYPE(lm_maxloc[lid2] != negative ? one : zero);
-           lm_minloc[lid] = 
+           lm_minloc[lid] =
               CONDITION_FUNC((lm_min[lid] == lm_min[lid2]) && (con_min != (VEC_TYPE)0), lm_minloc[lid2] , lm_minloc[lid]);
-           lm_maxloc[lid] = 
+           lm_maxloc[lid] =
               CONDITION_FUNC((lm_max[lid] == lm_max[lid2]) && (con_max != (VEC_TYPE)0), lm_maxloc[lid2] , lm_maxloc[lid]);
        }
        barrier(CLK_LOCAL_MEM_FENCE);

@@ -91,7 +91,7 @@ struct MorphNoVec
 {
     int operator()(uchar**, int, uchar*, int) const { return 0; }
 };
-    
+
 #if CV_SSE2
 
 template<class VecUpdate> struct MorphRowIVec
@@ -103,7 +103,7 @@ template<class VecUpdate> struct MorphRowIVec
     {
         if( !checkHardwareSupport(CV_CPU_SSE2) )
             return 0;
-        
+
         cn *= ESZ;
         int i, k, _ksize = ksize*cn;
         width = (width & -4)*cn;
@@ -145,7 +145,7 @@ template<class VecUpdate> struct MorphRowFVec
     {
         if( !checkHardwareSupport(CV_CPU_SSE) )
             return 0;
-        
+
         int i, k, _ksize = ksize*cn;
         width = (width & -4)*cn;
         VecUpdate updateOp;
@@ -177,7 +177,7 @@ template<class VecUpdate> struct MorphColumnIVec
     {
         if( !checkHardwareSupport(CV_CPU_SSE2) )
             return 0;
-        
+
         int i = 0, k, _ksize = ksize;
         width *= ESZ;
         VecUpdate updateOp;
@@ -281,7 +281,7 @@ template<class VecUpdate> struct MorphColumnFVec
     {
         if( !checkHardwareSupport(CV_CPU_SSE) )
             return 0;
-        
+
         int i = 0, k, _ksize = ksize;
         VecUpdate updateOp;
 
@@ -410,7 +410,7 @@ template<class VecUpdate> struct MorphIVec
     {
         if( !checkHardwareSupport(CV_CPU_SSE2) )
             return 0;
-        
+
         int i, k;
         width *= ESZ;
         VecUpdate updateOp;
@@ -457,7 +457,7 @@ template<class VecUpdate> struct MorphFVec
     {
         if( !checkHardwareSupport(CV_CPU_SSE) )
             return 0;
-        
+
         const float** src = (const float**)_src;
         float* dst = (float*)_dst;
         int i, k;
@@ -707,8 +707,8 @@ template<class Op, class VecOp> struct MorphColumnFilter : public BaseColumnFilt
 
         for( ; _ksize > 1 && count > 1; count -= 2, D += dststep*2, src += 2 )
         {
-			i = i0;
-			#if CV_ENABLE_UNROLLED
+            i = i0;
+            #if CV_ENABLE_UNROLLED
             for( ; i <= width - 4; i += 4 )
             {
                 const T* sptr = src[1] + i;
@@ -748,8 +748,8 @@ template<class Op, class VecOp> struct MorphColumnFilter : public BaseColumnFilt
 
         for( ; count > 0; count--, D += dststep, src++ )
         {
-			i = i0;
-			#if CV_ENABLE_UNROLLED
+            i = i0;
+            #if CV_ENABLE_UNROLLED
             for( ; i <= width - 4; i += 4 )
             {
                 const T* sptr = src[0] + i;
@@ -889,7 +889,7 @@ cv::Ptr<cv::BaseRowFilter> cv::getMorphologyRowFilter(int op, int type, int ksiz
         if( depth == CV_64F )
             return Ptr<BaseRowFilter>(new MorphRowFilter<MaxOp<double>,
                                       DilateRowVec64f>(ksize, anchor));
-    } 
+    }
 
     CV_Error_( CV_StsNotImplemented, ("Unsupported data type (=%d)", type));
     return Ptr<BaseRowFilter>(0);
@@ -1149,7 +1149,7 @@ static void morphOp( int op, InputArray _src, OutputArray _dst,
 
     _dst.create( src.size(), src.type() );
     Mat dst = _dst.getMat();
-    
+
     if( iterations == 0 || kernel.rows*kernel.cols == 1 )
     {
         src.copyTo(dst);
@@ -1219,15 +1219,15 @@ void cv::morphologyEx( InputArray _src, OutputArray _dst, int op,
     Mat src = _src.getMat(), temp;
     _dst.create(src.size(), src.type());
     Mat dst = _dst.getMat();
-    
+
     switch( op )
     {
     case MORPH_ERODE:
         erode( src, dst, kernel, anchor, iterations, borderType, borderValue );
-        break;    
+        break;
     case MORPH_DILATE:
         dilate( src, dst, kernel, anchor, iterations, borderType, borderValue );
-        break;    
+        break;
     case MORPH_OPEN:
         erode( src, dst, kernel, anchor, iterations, borderType, borderValue );
         dilate( dst, dst, kernel, anchor, iterations, borderType, borderValue );
@@ -1355,14 +1355,14 @@ cvMorphologyEx( const void* srcarr, void* dstarr, void*,
     IplConvKernel* temp_element = NULL;
     if (!element)
     {
-    	temp_element = cvCreateStructuringElementEx(3, 3, 1, 1, CV_SHAPE_RECT);
+        temp_element = cvCreateStructuringElementEx(3, 3, 1, 1, CV_SHAPE_RECT);
     } else {
-    	temp_element = element;
+        temp_element = element;
     }
     convertConvKernel( temp_element, kernel, anchor );
     if (!element)
     {
-    	cvReleaseStructuringElement(&temp_element);
+        cvReleaseStructuringElement(&temp_element);
     }
     cv::morphologyEx( src, dst, op, kernel, anchor, iterations, cv::BORDER_REPLICATE );
 }

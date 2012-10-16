@@ -65,7 +65,7 @@ public:
     //methods
     RBaseStream();
     virtual ~RBaseStream();
-    
+
     virtual bool  open( const string& filename );
     virtual bool  open( const Mat& buf );
     virtual void  close();
@@ -73,9 +73,9 @@ public:
     void          setPos( int pos );
     int           getPos();
     void          skip( int bytes );
-    
+
 protected:
-    
+
     bool    m_allocated;
     uchar*  m_start;
     uchar*  m_end;
@@ -97,11 +97,11 @@ class RLByteStream : public RBaseStream
 {
 public:
     virtual ~RLByteStream();
-    
+
     int     getByte();
     int     getBytes( void* buffer, int count );
     int     getWord();
-    int     getDWord(); 
+    int     getDWord();
 };
 
 // class RMBitStream - uchar-oriented stream.
@@ -112,7 +112,7 @@ public:
     virtual ~RMByteStream();
 
     int     getWord();
-    int     getDWord(); 
+    int     getDWord();
 };
 
 // WBaseStream - base class for output streams
@@ -122,15 +122,15 @@ public:
     //methods
     WBaseStream();
     virtual ~WBaseStream();
-    
+
     virtual bool  open( const string& filename );
     virtual bool  open( vector<uchar>& buf );
     virtual void  close();
     bool          isOpened();
     int           getPos();
-    
+
 protected:
-    
+
     uchar*  m_start;
     uchar*  m_end;
     uchar*  m_current;
@@ -139,7 +139,7 @@ protected:
     FILE*   m_file;
     bool    m_is_opened;
     vector<uchar>* m_buf;
-    
+
     virtual void  writeBlock();
     virtual void  release();
     virtual void  allocate();
@@ -156,7 +156,7 @@ public:
     void  putByte( int val );
     void  putBytes( const void* buffer, int count );
     void  putWord( int val );
-    void  putDWord( int val ); 
+    void  putDWord( int val );
 };
 
 
@@ -167,7 +167,7 @@ class WMByteStream : public WLByteStream
 public:
     virtual ~WMByteStream();
     void  putWord( int val );
-    void  putDWord( int val ); 
+    void  putDWord( int val );
 };
 
 inline unsigned BSWAP(unsigned v)

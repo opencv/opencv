@@ -220,7 +220,7 @@ public:
 
 struct CV_EXPORTS CompressedRectilinearProjector : ProjectorBase
 {
-	float a, b;
+    float a, b;
 
     void mapForward(float x, float y, float &u, float &v);
     void mapBackward(float u, float v, float &x, float &y);
@@ -241,7 +241,7 @@ public:
 
 struct CV_EXPORTS CompressedRectilinearPortraitProjector : ProjectorBase
 {
-	float a, b;
+    float a, b;
 
     void mapForward(float x, float y, float &u, float &v);
     void mapBackward(float u, float v, float &x, float &y);
@@ -253,8 +253,8 @@ class CV_EXPORTS CompressedRectilinearPortraitWarper : public RotationWarperBase
 public:
    CompressedRectilinearPortraitWarper(float scale, float A = 1, float B = 1)
    {
-	   projector_.a = A;
-	   projector_.b = B;
+       projector_.a = A;
+       projector_.b = B;
        projector_.scale = scale;
    }
 };
@@ -262,7 +262,7 @@ public:
 
 struct CV_EXPORTS PaniniProjector : ProjectorBase
 {
-	float a, b;
+    float a, b;
 
     void mapForward(float x, float y, float &u, float &v);
     void mapBackward(float u, float v, float &x, float &y);
@@ -274,8 +274,8 @@ class CV_EXPORTS PaniniWarper : public RotationWarperBase<PaniniProjector>
 public:
    PaniniWarper(float scale, float A = 1, float B = 1)
    {
-	   projector_.a = A;
-	   projector_.b = B;
+       projector_.a = A;
+       projector_.b = B;
        projector_.scale = scale;
    }
 };
@@ -283,7 +283,7 @@ public:
 
 struct CV_EXPORTS PaniniPortraitProjector : ProjectorBase
 {
-	float a, b;
+    float a, b;
 
     void mapForward(float x, float y, float &u, float &v);
     void mapBackward(float u, float v, float &x, float &y);
@@ -295,8 +295,8 @@ class CV_EXPORTS PaniniPortraitWarper : public RotationWarperBase<PaniniPortrait
 public:
    PaniniPortraitWarper(float scale, float A = 1, float B = 1)
    {
-	   projector_.a = A;
-	   projector_.b = B;
+       projector_.a = A;
+       projector_.b = B;
        projector_.scale = scale;
    }
 

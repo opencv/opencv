@@ -1,7 +1,7 @@
 '''
 Floodfill sample.
 
-Usage: 
+Usage:
   floodfill.py [<image>]
 
   Click on the image to set seed point
@@ -66,4 +66,4 @@ if __name__ == '__main__':
             connectivity = 12-connectivity
             print 'connectivity =', connectivity
             update()
-    cv2.destroyAllWindows() 			
+    cv2.destroyAllWindows()

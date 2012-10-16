@@ -85,7 +85,7 @@ int main(int argc, char** argv)
 {
     if (argc < 5)
     {
-        printHelp();        
+        printHelp();
         return -1;
     }
 

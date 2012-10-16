@@ -174,7 +174,7 @@ else:
     "#06989a",
     "#d3d7cf",
     "#ffffff",
-    
+
     "#555753",
     "#ef2929",
     "#8ae234",
@@ -190,22 +190,22 @@ def RGB2LAB(r,g,b):
         r /= 255.
         g /= 255.
         b /= 255.
-        
+
     X = (0.412453 * r + 0.357580 * g + 0.180423 * b) / 0.950456
     Y = (0.212671 * r + 0.715160 * g + 0.072169 * b)
     Z = (0.019334 * r + 0.119193 * g + 0.950227 * b) / 1.088754
-    
+
     #[X * 0.950456]   [0.412453 0.357580 0.180423]   [R]
     #[Y           ] = [0.212671 0.715160 0.072169] * [G]
     #[Z * 1.088754]   [0.019334 0.119193 0.950227]   [B]
-    
+
     T = 0.008856 #threshold
-    
+
     if X > T:
         fX = math.pow(X, 1./3.)
     else:
         fX = 7.787 * X + 16./116.
-        
+
     # Compute L
     if Y > T:
         Y3 = math.pow(Y, 1./3.)
@@ -214,16 +214,16 @@ def RGB2LAB(r,g,b):
     else:
         fY = 7.787 * Y + 16./116.
         L  = 903.3 * Y
-        
+
     if Z > T:
         fZ = math.pow(Z, 1./3.)
     else:
         fZ = 7.787 * Z + 16./116.
-    
+
     # Compute a and b
     a = 500. * (fX - fY)
     b = 200. * (fY - fZ)
-    
+
     return (L,a,b)
 
 def colorDistance(r1,g1,b1 = None, r2 = None, g2 = None,b2 = None):
@@ -244,12 +244,12 @@ def colorDistance(r1,g1,b1 = None, r2 = None, g2 = None,b2 = None):
     Kl = 1
     K1 = 0.045
     K2 = 0.015
-    
+
     s1 = dl/Kl
     s2 = dC/(1. + K1 * C1)
     s3 = dH/(1. + K2 * C1)
     return math.sqrt(s1*s1 + s2*s2 + s3*s3)
-    
+
 def parseHexColor(col):
     if len(col) != 4 and len(col) != 7 and not col.startswith("#"):
         return (0,0,0)
@@ -262,7 +262,7 @@ def parseHexColor(col):
         g = col[3:5]
         b = col[5:7]
     return (int(r,16), int(g,16), int(b,16))
-    
+
 def getColor(col):
     if isinstance(col, str):
         if col.lower() in webcolors:
@@ -271,7 +271,7 @@ def getColor(col):
             return parseHexColor(col)
     else:
         return col
-        
+
 def getNearestConsoleColor(col):
     color = getColor(col)
     minidx = 0
@@ -282,13 +282,13 @@ def getNearestConsoleColor(col):
             mindist = dist
             minidx = i
     return minidx
-    
+
 if os.name == 'nt':
     import msvcrt
     from ctypes import windll, Structure, c_short, c_ushort, byref
     SHORT = c_short
     WORD = c_ushort
-    
+
     class COORD(Structure):
         _fields_ = [
             ("X", SHORT),
@@ -300,7 +300,7 @@ if os.name == 'nt':
             ("Top", SHORT),
             ("Right", SHORT),
             ("Bottom", SHORT)]
-    
+
     class CONSOLE_SCREEN_BUFFER_INFO(Structure):
         _fields_ = [
             ("dwSize", COORD),
@@ -314,15 +314,15 @@ if os.name == 'nt':
             self.handle = msvcrt.get_osfhandle(stream.fileno())
             self.default_attrs = 7#self.get_text_attr()
             self.stream = stream
-            
+
         def get_text_attr(self):
             csbi = CONSOLE_SCREEN_BUFFER_INFO()
             windll.kernel32.GetConsoleScreenBufferInfo(self.handle, byref(csbi))
             return csbi.wAttributes
-            
+
         def set_text_attr(self, color):
             windll.kernel32.SetConsoleTextAttribute(self.handle, color)
-            
+
         def write(self, *text, **attrs):
             if not text:
                 return
@@ -335,7 +335,7 @@ if os.name == 'nt':
             if color:
                 self.stream.flush()
                 self.set_text_attr(self.default_attrs)
-                
+
 class dummyColorizer(object):
     def __init__(self, stream):
         self.stream = stream
@@ -343,7 +343,7 @@ class dummyColorizer(object):
     def write(self, *text, **attrs):
         if text:
             self.stream.write(" ".join([str(t) for t in text]))
-            
+
 class asciiSeqColorizer(object):
     RESET_SEQ = "\033[0m"
     #BOLD_SEQ = "\033[1m"
@@ -355,13 +355,13 @@ class asciiSeqColorizer(object):
 
     def __init__(self, stream):
         self.stream = stream
-        
+
     def get_seq(self, code):
         if code > 8:
             return self.__class__.COLOR_SEQ1 % (30 + code - 9)
         else:
             return self.__class__.COLOR_SEQ0 % (30 + code)
-    
+
     def write(self, *text, **attrs):
         if not text:
             return
@@ -372,7 +372,7 @@ class asciiSeqColorizer(object):
         self.stream.write(" ".join([str(t) for t in text]))
         if color:
             self.stream.write(self.__class__.RESET_SEQ)
-        
+
 
 def getColorizer(stream):
     if stream.isatty():

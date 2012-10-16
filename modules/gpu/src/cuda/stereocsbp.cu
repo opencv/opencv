@@ -306,7 +306,7 @@ namespace cv { namespace gpu { namespace device
                 if (winsz >= 256) { if (tid < 128) { dline[tid] += dline[tid + 128]; } __syncthreads(); }
                 if (winsz >= 128) { if (tid <  64) { dline[tid] += dline[tid + 64]; } __syncthreads(); }
 
-		        volatile float* vdline = smem + winsz * threadIdx.z;
+                volatile float* vdline = smem + winsz * threadIdx.z;
 
                 if (winsz >= 64) if (tid < 32) vdline[tid] += vdline[tid + 32];
                 if (winsz >= 32) if (tid < 16) vdline[tid] += vdline[tid + 16];
@@ -505,7 +505,7 @@ namespace cv { namespace gpu { namespace device
                 if (winsz >= 256) { if (tid < 128) { dline[tid] += dline[tid + 128]; } __syncthreads(); }
                 if (winsz >= 128) { if (tid <  64) { dline[tid] += dline[tid +  64]; } __syncthreads(); }
 
-		        volatile float* vdline = smem + winsz * threadIdx.z;
+                volatile float* vdline = smem + winsz * threadIdx.z;
 
                 if (winsz >= 64) if (tid < 32) vdline[tid] += vdline[tid + 32];
                 if (winsz >= 32) if (tid < 16) vdline[tid] += vdline[tid + 16];
@@ -809,7 +809,7 @@ namespace cv { namespace gpu { namespace device
                 compute_message<<<grid, threads, 0, stream>>>(u, d, l, r, data_cost_selected, selected_disp_pyr_cur, h, w, nr_plane, t & 1);
                 cudaSafeCall( cudaGetLastError() );
             }
-			if (stream == 0)
+            if (stream == 0)
                     cudaSafeCall( cudaDeviceSynchronize() );
         };
 
@@ -856,7 +856,7 @@ namespace cv { namespace gpu { namespace device
                         best = saturate_cast<short>(disp_selected[idx]);
                     }
                 }
-				disp(y, x) = best;
+                disp(y, x) = best;
             }
         }
 

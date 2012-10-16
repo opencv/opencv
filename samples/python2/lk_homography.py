@@ -23,11 +23,11 @@ import cv2
 import video
 from common import draw_str
 
-lk_params = dict( winSize  = (19, 19), 
-                  maxLevel = 2, 
-                  criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03))    
+lk_params = dict( winSize  = (19, 19),
+                  maxLevel = 2,
+                  criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03))
 
-feature_params = dict( maxCorners = 1000, 
+feature_params = dict( maxCorners = 1000,
                        qualityLevel = 0.01,
                        minDistance = 8,
                        blockSize = 19 )
@@ -67,7 +67,7 @@ class App:
                 h, w = frame.shape[:2]
                 overlay = cv2.warpPerspective(self.frame0, H, (w, h))
                 vis = cv2.addWeighted(vis, 0.5, overlay, 0.5, 0.0)
-                
+
                 for (x0, y0), (x1, y1), good in zip(self.p0[:,0], self.p1[:,0], status[:,0]):
                     if good:
                         cv2.line(vis, (x0, y0), (x1, y1), (0, 128, 0))
@@ -81,7 +81,7 @@ class App:
                     for x, y in p[:,0]:
                         cv2.circle(vis, (x, y), 2, green, -1)
                     draw_str(vis, (20, 20), 'feature count: %d' % len(p))
-                
+
             cv2.imshow('lk_homography', vis)
 
             ch = 0xFF & cv2.waitKey(1)
@@ -106,7 +106,7 @@ def main():
 
     print __doc__
     App(video_src).run()
-    cv2.destroyAllWindows() 			
+    cv2.destroyAllWindows()
 
 if __name__ == '__main__':
     main()

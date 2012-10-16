@@ -38,7 +38,7 @@ int main( int argc, char** argv )
   namedWindow( source_window, CV_WINDOW_AUTOSIZE );
 
   /// Create Trackbar to set the number of corners
-  createTrackbar( "Max  corners:", source_window, &maxCorners, maxTrackbar, goodFeaturesToTrack_Demo );  
+  createTrackbar( "Max  corners:", source_window, &maxCorners, maxTrackbar, goodFeaturesToTrack_Demo );
 
   imshow( source_window, src );
 
@@ -55,7 +55,7 @@ int main( int argc, char** argv )
 void goodFeaturesToTrack_Demo( int, void* )
 {
   if( maxCorners < 1 ) { maxCorners = 1; }
-  
+
   /// Parameters for Shi-Tomasi algorithm
   vector<Point2f> corners;
   double qualityLevel = 0.01;
@@ -69,16 +69,16 @@ void goodFeaturesToTrack_Demo( int, void* )
   copy = src.clone();
 
   /// Apply corner detection
-  goodFeaturesToTrack( src_gray, 
-		       corners,
-		       maxCorners,
-		       qualityLevel,
-		       minDistance,
-		       Mat(),
-		       blockSize,
-		       useHarrisDetector,
-		       k );
-  
+  goodFeaturesToTrack( src_gray,
+               corners,
+               maxCorners,
+               qualityLevel,
+               minDistance,
+               Mat(),
+               blockSize,
+               useHarrisDetector,
+               k );
+
 
   /// Draw corners detected
   cout<<"** Number of corners detected: "<<corners.size()<<endl;
@@ -88,7 +88,7 @@ void goodFeaturesToTrack_Demo( int, void* )
 
   /// Show what you got
   namedWindow( source_window, CV_WINDOW_AUTOSIZE );
-  imshow( source_window, copy );  
+  imshow( source_window, copy );
 
   /// Set the neeed parameters to find the refined corners
   Size winSize = Size( 5, 5 );
@@ -100,6 +100,6 @@ void goodFeaturesToTrack_Demo( int, void* )
 
   /// Write them down
   for( int i = 0; i < corners.size(); i++ )
-     { cout<<" -- Refined Corner ["<<i<<"]  ("<<corners[i].x<<","<<corners[i].y<<")"<<endl; }	
+     { cout<<" -- Refined Corner ["<<i<<"]  ("<<corners[i].x<<","<<corners[i].y<<")"<<endl; }
 }
 

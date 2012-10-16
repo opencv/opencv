@@ -49,7 +49,7 @@ namespace cv
 {
 
 CV_EXPORTS_W bool initModule_nonfree();
-    
+
 }
 
 #endif

@@ -57,7 +57,7 @@
 
 namespace cv
 {
-    
+
 BackgroundSubtractor::~BackgroundSubtractor() {}
 void BackgroundSubtractor::operator()(InputArray, OutputArray, double)
 {
@@ -73,12 +73,12 @@ static const double defaultBackgroundRatio = 0.7;
 static const double defaultVarThreshold = 2.5*2.5;
 static const double defaultNoiseSigma = 30*0.5;
 static const double defaultInitialWeight = 0.05;
-    
+
 BackgroundSubtractorMOG::BackgroundSubtractorMOG()
 {
     frameSize = Size(0,0);
     frameType = 0;
-    
+
     nframes = 0;
     nmixtures = defaultNMixtures;
     history = defaultHistory;
@@ -86,14 +86,14 @@ BackgroundSubtractorMOG::BackgroundSubtractorMOG()
     backgroundRatio = defaultBackgroundRatio;
     noiseSigma = defaultNoiseSigma;
 }
-    
+
 BackgroundSubtractorMOG::BackgroundSubtractorMOG(int _history, int _nmixtures,
                                                  double _backgroundRatio,
                                                  double _noiseSigma)
 {
     frameSize = Size(0,0);
     frameType = 0;
-    
+
     nframes = 0;
     nmixtures = min(_nmixtures > 0 ? _nmixtures : defaultNMixtures, 8);
     history = _history > 0 ? _history : defaultHistory;
@@ -101,7 +101,7 @@ BackgroundSubtractorMOG::BackgroundSubtractorMOG(int _history, int _nmixtures,
     backgroundRatio = min(_backgroundRatio > 0 ? _backgroundRatio : 0.95, 1.);
     noiseSigma = _noiseSigma <= 0 ? defaultNoiseSigma : _noiseSigma;
 }
-    
+
 BackgroundSubtractorMOG::~BackgroundSubtractorMOG()
 {
 }
@@ -112,10 +112,10 @@ void BackgroundSubtractorMOG::initialize(Size _frameSize, int _frameType)
     frameSize = _frameSize;
     frameType = _frameType;
     nframes = 0;
-    
+
     int nchannels = CV_MAT_CN(frameType);
     CV_Assert( CV_MAT_DEPTH(frameType) == CV_8U );
-    
+
     // for each gaussian mixture of each pixel bg model we store ...
     // the mixture sort key (w/sum_of_variances), the mixture weight (w),
     // the mean (nchannels values) and
@@ -124,7 +124,7 @@ void BackgroundSubtractorMOG::initialize(Size _frameSize, int _frameType)
     bgmodel = Scalar::all(0);
 }
 
-    
+
 template<typename VT> struct MixData
 {
     float sortKey;
@@ -133,7 +133,7 @@ template<typename VT> struct MixData
     VT var;
 };
 
-    
+
 static void process8uC1( const Mat& image, Mat& fgmask, double learningRate,
                          Mat& bgmodel, int nmixtures, double backgroundRatio,
                          double varThreshold, double noiseSigma )
@@ -142,17 +142,17 @@ static void process8uC1( const Mat& image, Mat& fgmask, double learningRate,
     float alpha = (float)learningRate, T = (float)backgroundRatio, vT = (float)varThreshold;
     int K = nmixtures;
     MixData<float>* mptr = (MixData<float>*)bgmodel.data;
-    
+
     const float w0 = (float)defaultInitialWeight;
     const float sk0 = (float)(w0/(defaultNoiseSigma*2));
     const float var0 = (float)(defaultNoiseSigma*defaultNoiseSigma*4);
     const float minVar = (float)(noiseSigma*noiseSigma);
-    
+
     for( y = 0; y < rows; y++ )
     {
         const uchar* src = image.ptr<uchar>(y);
         uchar* dst = fgmask.ptr<uchar>(y);
-        
+
         if( alpha > 0 )
         {
             for( x = 0; x < cols; x++, mptr += K )
@@ -160,7 +160,7 @@ static void process8uC1( const Mat& image, Mat& fgmask, double learningRate,
                 float wsum = 0;
                 float pix = src[x];
                 int kHit = -1, kForeground = -1;
-                
+
                 for( k = 0; k < K; k++ )
                 {
                     float w = mptr[k].weight;
@@ -180,19 +180,19 @@ static void process8uC1( const Mat& image, Mat& fgmask, double learningRate,
                         var = max(var + alpha*(d2 - var), minVar);
                         mptr[k].var = var;
                         mptr[k].sortKey = w/sqrt(var);
-                        
+
                         for( k1 = k-1; k1 >= 0; k1-- )
                         {
                             if( mptr[k1].sortKey >= mptr[k1+1].sortKey )
                                 break;
                             std::swap( mptr[k1], mptr[k1+1] );
                         }
-                        
+
                         kHit = k1+1;
                         break;
                     }
                 }
-                
+
                 if( kHit < 0 ) // no appropriate gaussian mixture found at all, remove the weakest mixture and create a new one
                 {
                     kHit = k = min(k, K-1);
@@ -205,7 +205,7 @@ static void process8uC1( const Mat& image, Mat& fgmask, double learningRate,
                 else
                     for( ; k < K; k++ )
                         wsum += mptr[k].weight;
-                
+
                 float wscale = 1.f/wsum;
                 wsum = 0;
                 for( k = 0; k < K; k++ )
@@ -215,7 +215,7 @@ static void process8uC1( const Mat& image, Mat& fgmask, double learningRate,
                     if( wsum > T && kForeground < 0 )
                         kForeground = k+1;
                 }
-                
+
                 dst[x] = (uchar)(-(kHit >= kForeground));
             }
         }
@@ -225,7 +225,7 @@ static void process8uC1( const Mat& image, Mat& fgmask, double learningRate,
             {
                 float pix = src[x];
                 int kHit = -1, kForeground = -1;
-                
+
                 for( k = 0; k < K; k++ )
                 {
                     if( mptr[k].weight < FLT_EPSILON )
@@ -240,7 +240,7 @@ static void process8uC1( const Mat& image, Mat& fgmask, double learningRate,
                         break;
                     }
                 }
-                
+
                 if( kHit >= 0 )
                 {
                     float wsum = 0;
@@ -254,14 +254,14 @@ static void process8uC1( const Mat& image, Mat& fgmask, double learningRate,
                         }
                     }
                 }
-                
+
                 dst[x] = (uchar)(kHit < 0 || kHit >= kForeground ? 255 : 0);
             }
         }
     }
 }
 
-    
+
 static void process8uC3( const Mat& image, Mat& fgmask, double learningRate,
                          Mat& bgmodel, int nmixtures, double backgroundRatio,
                          double varThreshold, double noiseSigma )
@@ -269,18 +269,18 @@ static void process8uC3( const Mat& image, Mat& fgmask, double learningRate,
     int x, y, k, k1, rows = image.rows, cols = image.cols;
     float alpha = (float)learningRate, T = (float)backgroundRatio, vT = (float)varThreshold;
     int K = nmixtures;
-    
+
     const float w0 = (float)defaultInitialWeight;
     const float sk0 = (float)(w0/(defaultNoiseSigma*2*sqrt(3.)));
     const float var0 = (float)(defaultNoiseSigma*defaultNoiseSigma*4);
     const float minVar = (float)(noiseSigma*noiseSigma);
     MixData<Vec3f>* mptr = (MixData<Vec3f>*)bgmodel.data;
-    
+
     for( y = 0; y < rows; y++ )
     {
         const uchar* src = image.ptr<uchar>(y);
         uchar* dst = fgmask.ptr<uchar>(y);
-        
+
         if( alpha > 0 )
         {
             for( x = 0; x < cols; x++, mptr += K )
@@ -288,7 +288,7 @@ static void process8uC3( const Mat& image, Mat& fgmask, double learningRate,
                 float wsum = 0;
                 Vec3f pix(src[x*3], src[x*3+1], src[x*3+2]);
                 int kHit = -1, kForeground = -1;
-                
+
                 for( k = 0; k < K; k++ )
                 {
                     float w = mptr[k].weight;
@@ -310,19 +310,19 @@ static void process8uC3( const Mat& image, Mat& fgmask, double learningRate,
                                     max(var[2] + alpha*(diff[2]*diff[2] - var[2]), minVar));
                         mptr[k].var = var;
                         mptr[k].sortKey = w/sqrt(var[0] + var[1] + var[2]);
-                        
+
                         for( k1 = k-1; k1 >= 0; k1-- )
                         {
                             if( mptr[k1].sortKey >= mptr[k1+1].sortKey )
                                 break;
                             std::swap( mptr[k1], mptr[k1+1] );
                         }
-                        
+
                         kHit = k1+1;
                         break;
                     }
                 }
-                
+
                 if( kHit < 0 ) // no appropriate gaussian mixture found at all, remove the weakest mixture and create a new one
                 {
                     kHit = k = min(k, K-1);
@@ -335,7 +335,7 @@ static void process8uC3( const Mat& image, Mat& fgmask, double learningRate,
                 else
                     for( ; k < K; k++ )
                         wsum += mptr[k].weight;
-            
+
                 float wscale = 1.f/wsum;
                 wsum = 0;
                 for( k = 0; k < K; k++ )
@@ -345,7 +345,7 @@ static void process8uC3( const Mat& image, Mat& fgmask, double learningRate,
                     if( wsum > T && kForeground < 0 )
                         kForeground = k+1;
                 }
-                
+
                 dst[x] = (uchar)(-(kHit >= kForeground));
             }
         }
@@ -355,7 +355,7 @@ static void process8uC3( const Mat& image, Mat& fgmask, double learningRate,
             {
                 Vec3f pix(src[x*3], src[x*3+1], src[x*3+2]);
                 int kHit = -1, kForeground = -1;
-                
+
                 for( k = 0; k < K; k++ )
                 {
                     if( mptr[k].weight < FLT_EPSILON )
@@ -370,7 +370,7 @@ static void process8uC3( const Mat& image, Mat& fgmask, double learningRate,
                         break;
                     }
                 }
- 
+
                 if( kHit >= 0 )
                 {
                     float wsum = 0;
@@ -384,7 +384,7 @@ static void process8uC3( const Mat& image, Mat& fgmask, double learningRate,
                         }
                     }
                 }
-                
+
                 dst[x] = (uchar)(kHit < 0 || kHit >= kForeground ? 255 : 0);
             }
         }
@@ -395,18 +395,18 @@ void BackgroundSubtractorMOG::operator()(InputArray _image, OutputArray _fgmask,
 {
     Mat image = _image.getMat();
     bool needToInitialize = nframes == 0 || learningRate >= 1 || image.size() != frameSize || image.type() != frameType;
-    
+
     if( needToInitialize )
         initialize(image.size(), image.type());
-    
+
     CV_Assert( image.depth() == CV_8U );
     _fgmask.create( image.size(), CV_8U );
     Mat fgmask = _fgmask.getMat();
-    
+
     ++nframes;
     learningRate = learningRate >= 0 && nframes > 1 ? learningRate : 1./min( nframes, history );
     CV_Assert(learningRate >= 0);
-    
+
     if( image.type() == CV_8UC1 )
         process8uC1( image, fgmask, learningRate, bgmodel, nmixtures, backgroundRatio, varThreshold, noiseSigma );
     else if( image.type() == CV_8UC3 )
@@ -414,7 +414,7 @@ void BackgroundSubtractorMOG::operator()(InputArray _image, OutputArray _fgmask,
     else
         CV_Error( CV_StsUnsupportedFormat, "Only 1- and 3-channel 8-bit images are supported in BackgroundSubtractorMOG" );
 }
-    
+
 }
 
 /* End of file. */

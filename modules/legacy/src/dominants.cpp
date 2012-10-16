@@ -334,14 +334,14 @@ icvFindDominantPointsIPAN( CvSeq * contour,
 //    Name: icvFindDominantPoints
 //    Purpose:
 //      Applies some algorithm to find dominant points ( corners ) of contour
-//     
+//
 //    Context:
 //    Parameters:
 //      contours - pointer to input contour object.
 //      out_numbers - array of dominant points indices
 //      count - length of out_numbers array on input
-//              and numbers of founded dominant points on output   
-//                  
+//              and numbers of founded dominant points on output
+//
 //      method - only CV_DOMINANT_IPAN now
 //      parameters - array of parameters
 //                   for IPAN algorithm
@@ -352,7 +352,7 @@ icvFindDominantPointsIPAN( CvSeq * contour,
 //    Returns:
 //      CV_OK or error code
 //    Notes:
-//      User must allocate out_numbers array. If it is small - function fills array 
+//      User must allocate out_numbers array. If it is small - function fills array
 //      with part of points and returns  error
 //F*/
 CV_IMPL CvSeq*

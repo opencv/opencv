@@ -170,7 +170,7 @@ bool  BmpDecoder::readHeader()
     m_type = iscolor ? CV_8UC3 : CV_8UC1;
     m_origin = m_height > 0 ? IPL_ORIGIN_BL : IPL_ORIGIN_TL;
     m_height = std::abs(m_height);
-    
+
     if( !result )
     {
         m_offset = -1;

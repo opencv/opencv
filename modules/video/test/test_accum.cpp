@@ -151,8 +151,8 @@ void CV_SquareAccTest::prepare_to_validation( int )
     Mat& dst = test_mat[REF_INPUT_OUTPUT][0];
     const Mat& mask = test_array[MASK][0] ? test_mat[MASK][0] : Mat();
     Mat temp;
-    
-    cvtest::convert( src, temp, dst.type() ); 
+
+    cvtest::convert( src, temp, dst.type() );
     cvtest::multiply( temp, temp, temp, 1 );
     cvtest::add( temp, 1, dst, 1, cvScalarAll(0.), temp, dst.depth() );
     cvtest::copy( temp, dst, mask );
@@ -190,10 +190,10 @@ void CV_MultiplyAccTest::prepare_to_validation( int )
     Mat& dst = test_mat[REF_INPUT_OUTPUT][0];
     const Mat& mask = test_array[MASK][0] ? test_mat[MASK][0] : Mat();
     Mat temp1, temp2;
-    
+
     cvtest::convert( src1, temp1, dst.type() );
     cvtest::convert( src2, temp2, dst.type() );
-    
+
     cvtest::multiply( temp1, temp2, temp1, 1 );
     cvtest::add( temp1, 1, dst, 1, cvScalarAll(0.), temp1, dst.depth() );
     cvtest::copy( temp1, dst, mask );

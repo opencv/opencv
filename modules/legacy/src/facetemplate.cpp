@@ -82,5 +82,5 @@ FaceTemplate::~FaceTemplate()
 
 MouthFaceTemplate::~MouthFaceTemplate()
 {
-    
+
 }//RFaceTemplate::~RFaceTemplate()

@@ -27,7 +27,7 @@ for cl in cl_list:
     cl_filename = cl_filename[:cl_filename.rfind(".")]
     kfile.write("const char* %s=" % cl_filename)
     state = 0
-    
+
     for cl_line in cl_file.readlines():
         l = cl_line.strip()
         # skip the leading comments
@@ -37,10 +37,10 @@ for cl in cl_list:
         else:
             if state == 1 or l.find("*/") >= 0:
                 state = 2
-        
+
         if state == 1:
             continue
-        
+
         l = l.replace("\\", "\\\\")
         l = l.replace("\r", "")
         l = l.replace("\"", "\\\"")

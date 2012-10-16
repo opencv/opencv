@@ -48,7 +48,7 @@
 #endif
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////
-/////////////////////////////////////////////flip rows/////////////////////////////////////////////// 
+/////////////////////////////////////////////flip rows///////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 __kernel void arithm_flip_rows_D0 (__global uchar *src, int src_step, int src_offset,
                                    __global uchar *dst, int dst_step, int dst_offset,
@@ -62,8 +62,8 @@ __kernel void arithm_flip_rows_D0 (__global uchar *src, int src_step, int src_of
         x = x << 2;
 
         #define dst_align (dst_offset & 3)
-        int src_index_0 = mad24(y,            src_step, x + src_offset - dst_align); 
-        int src_index_1 = mad24(rows - y - 1, src_step, x + src_offset - dst_align); 
+        int src_index_0 = mad24(y,            src_step, x + src_offset - dst_align);
+        int src_index_1 = mad24(rows - y - 1, src_step, x + src_offset - dst_align);
 
         int dst_start_0  = mad24(y,            dst_step, dst_offset);
         int dst_start_1  = mad24(rows - y - 1, dst_step, dst_offset);
@@ -71,22 +71,22 @@ __kernel void arithm_flip_rows_D0 (__global uchar *src, int src_step, int src_of
         int dst_end_1    = mad24(rows - y - 1, dst_step, dst_offset + dst_step1);
         int dst_index_0  = mad24(y,            dst_step, dst_offset + x & (int)0xfffffffc);
         int dst_index_1  = mad24(rows - y - 1, dst_step, dst_offset + x & (int)0xfffffffc);
-		int src1_index_fix = src_index_0 < 0 ? 0 : src_index_0;
-		int src2_index_fix = src_index_1 < 0 ? 0 : src_index_1;
+        int src1_index_fix = src_index_0 < 0 ? 0 : src_index_0;
+        int src2_index_fix = src_index_1 < 0 ? 0 : src_index_1;
         uchar4 src_data_0 = vload4(0, src + src1_index_fix);
         uchar4 src_data_1 = vload4(0, src + src2_index_fix);
-		if(src_index_0 < 0)
-		{
-			uchar4 tmp;
-			tmp.xyzw = (src_index_0 == -2) ? src_data_0.zwxy:src_data_0.yzwx;
-			src_data_0.xyzw = (src_index_0 == -1) ? src_data_0.wxyz:tmp.xyzw;
-		}
-		if(src_index_1 < 0)
-		{
-			uchar4 tmp;
-			tmp.xyzw = (src_index_1 == -2) ? src_data_1.zwxy:src_data_1.yzwx;
-			src_data_1.xyzw = (src_index_1 == -1) ? src_data_1.wxyz:tmp.xyzw;
-		}
+        if(src_index_0 < 0)
+        {
+            uchar4 tmp;
+            tmp.xyzw = (src_index_0 == -2) ? src_data_0.zwxy:src_data_0.yzwx;
+            src_data_0.xyzw = (src_index_0 == -1) ? src_data_0.wxyz:tmp.xyzw;
+        }
+        if(src_index_1 < 0)
+        {
+            uchar4 tmp;
+            tmp.xyzw = (src_index_1 == -2) ? src_data_1.zwxy:src_data_1.yzwx;
+            src_data_1.xyzw = (src_index_1 == -1) ? src_data_1.wxyz:tmp.xyzw;
+        }
 
         uchar4 dst_data_0 = *((__global uchar4 *)(dst + dst_index_0));
         uchar4 dst_data_1 = *((__global uchar4 *)(dst + dst_index_1));
@@ -117,8 +117,8 @@ __kernel void arithm_flip_rows_D1 (__global char *src, int src_step, int src_off
         x = x << 2;
 
         #define dst_align (dst_offset & 3)
-        int src_index_0 = mad24(y,            src_step, x + src_offset - dst_align); 
-        int src_index_1 = mad24(rows - y - 1, src_step, x + src_offset - dst_align); 
+        int src_index_0 = mad24(y,            src_step, x + src_offset - dst_align);
+        int src_index_1 = mad24(rows - y - 1, src_step, x + src_offset - dst_align);
 
         int dst_start_0  = mad24(y,            dst_step, dst_offset);
         int dst_start_1  = mad24(rows - y - 1, dst_step, dst_offset);
@@ -159,8 +159,8 @@ __kernel void arithm_flip_rows_D2 (__global ushort *src, int src_step, int src_o
         x = x << 2;
 
         #define dst_align (((dst_offset >> 1) & 3) << 1)
-        int src_index_0 = mad24(y,            src_step, (x << 1) + src_offset - dst_align); 
-        int src_index_1 = mad24(rows - y - 1, src_step, (x << 1) + src_offset - dst_align); 
+        int src_index_0 = mad24(y,            src_step, (x << 1) + src_offset - dst_align);
+        int src_index_1 = mad24(rows - y - 1, src_step, (x << 1) + src_offset - dst_align);
 
         int dst_start_0  = mad24(y,            dst_step, dst_offset);
         int dst_start_1  = mad24(rows - y - 1, dst_step, dst_offset);
@@ -201,8 +201,8 @@ __kernel void arithm_flip_rows_D3 (__global short *src, int src_step, int src_of
         x = x << 2;
 
         #define dst_align (((dst_offset >> 1) & 3) << 1)
-        int src_index_0 = mad24(y,            src_step, (x << 1) + src_offset - dst_align); 
-        int src_index_1 = mad24(rows - y - 1, src_step, (x << 1) + src_offset - dst_align); 
+        int src_index_0 = mad24(y,            src_step, (x << 1) + src_offset - dst_align);
+        int src_index_1 = mad24(rows - y - 1, src_step, (x << 1) + src_offset - dst_align);
 
         int dst_start_0  = mad24(y,            dst_step, dst_offset);
         int dst_start_1  = mad24(rows - y - 1, dst_step, dst_offset);
@@ -243,7 +243,7 @@ __kernel void arithm_flip_rows_D4 (__global int *src, int src_step, int src_offs
     {
         int src_index_0 = mad24(y,            src_step, (x << 2) + src_offset);
         int src_index_1 = mad24(rows - y - 1, src_step, (x << 2) + src_offset);
-        
+
         int dst_index_0 = mad24(y,            dst_step, (x << 2) + dst_offset);
         int dst_index_1 = mad24(rows - y - 1, dst_step, (x << 2) + dst_offset);
 
@@ -265,7 +265,7 @@ __kernel void arithm_flip_rows_D5 (__global float *src, int src_step, int src_of
     {
         int src_index_0 = mad24(y,            src_step, (x << 2) + src_offset);
         int src_index_1 = mad24(rows - y - 1, src_step, (x << 2) + src_offset);
-        
+
         int dst_index_0 = mad24(y,            dst_step, (x << 2) + dst_offset);
         int dst_index_1 = mad24(rows - y - 1, dst_step, (x << 2) + dst_offset);
 
@@ -289,7 +289,7 @@ __kernel void arithm_flip_rows_D6 (__global double *src, int src_step, int src_o
     {
         int src_index_0 = mad24(y,            src_step, (x << 3) + src_offset);
         int src_index_1 = mad24(rows - y - 1, src_step, (x << 3) + src_offset);
-        
+
         int dst_index_0 = mad24(y,            dst_step, (x << 3) + dst_offset);
         int dst_index_1 = mad24(rows - y - 1, dst_step, (x << 3) + dst_offset);
 
@@ -302,7 +302,7 @@ __kernel void arithm_flip_rows_D6 (__global double *src, int src_step, int src_o
 }
 #endif
 //////////////////////////////////////////////////////////////////////////////////////////////////////
-/////////////////////////////////////////////flip cols/////////////////////////////////////////////// 
+/////////////////////////////////////////////flip cols///////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 __kernel void arithm_flip_cols_C1_D0 (__global uchar *src, int src_step, int src_offset,
                                       __global uchar *dst, int dst_step, int dst_offset,
@@ -315,7 +315,7 @@ __kernel void arithm_flip_cols_C1_D0 (__global uchar *src, int src_step, int src
     {
         int src_index_0 = mad24(y, src_step, (x)           + src_offset);
         int src_index_1 = mad24(y, src_step, (cols - x -1) + src_offset);
-        
+
         int dst_index_0 = mad24(y, dst_step, (x)           + dst_offset);
         int dst_index_1 = mad24(y, dst_step, (cols - x -1) + dst_offset);
 
@@ -337,7 +337,7 @@ __kernel void arithm_flip_cols_C1_D1 (__global char *src, int src_step, int src_
     {
         int src_index_0 = mad24(y, src_step, (x)           + src_offset);
         int src_index_1 = mad24(y, src_step, (cols - x -1) + src_offset);
-        
+
         int dst_index_0 = mad24(y, dst_step, (x)           + dst_offset);
         int dst_index_1 = mad24(y, dst_step, (cols - x -1) + dst_offset);
 
@@ -359,7 +359,7 @@ __kernel void arithm_flip_cols_C1_D2 (__global ushort *src, int src_step, int sr
     {
         int src_index_0 = mad24(y, src_step, (x << 1)             + src_offset);
         int src_index_1 = mad24(y, src_step, ((cols - x -1) << 1) + src_offset);
-        
+
         int dst_index_0 = mad24(y, dst_step, (x << 1)             + dst_offset);
         int dst_index_1 = mad24(y, dst_step, ((cols - x -1) << 1) + dst_offset);
 
@@ -381,7 +381,7 @@ __kernel void arithm_flip_cols_C1_D3 (__global short *src, int src_step, int src
     {
         int src_index_0 = mad24(y, src_step, (x << 1)             + src_offset);
         int src_index_1 = mad24(y, src_step, ((cols - x -1) << 1) + src_offset);
-        
+
         int dst_index_0 = mad24(y, dst_step, (x << 1)             + dst_offset);
         int dst_index_1 = mad24(y, dst_step, ((cols - x -1) << 1) + dst_offset);
 
@@ -403,7 +403,7 @@ __kernel void arithm_flip_cols_C1_D4 (__global int *src, int src_step, int src_o
     {
         int src_index_0 = mad24(y, src_step, (x << 2)             + src_offset);
         int src_index_1 = mad24(y, src_step, ((cols - x -1) << 2) + src_offset);
-        
+
         int dst_index_0 = mad24(y, dst_step, (x << 2)             + dst_offset);
         int dst_index_1 = mad24(y, dst_step, ((cols - x -1) << 2) + dst_offset);
 
@@ -425,7 +425,7 @@ __kernel void arithm_flip_cols_C1_D5 (__global float *src, int src_step, int src
     {
         int src_index_0 = mad24(y, src_step, (x << 2)             + src_offset);
         int src_index_1 = mad24(y, src_step, ((cols - x -1) << 2) + src_offset);
-        
+
         int dst_index_0 = mad24(y, dst_step, (x << 2)             + dst_offset);
         int dst_index_1 = mad24(y, dst_step, ((cols - x -1) << 2) + dst_offset);
 
@@ -449,7 +449,7 @@ __kernel void arithm_flip_cols_C1_D6 (__global double *src, int src_step, int sr
     {
         int src_index_0 = mad24(y, src_step, (x << 3)             + src_offset);
         int src_index_1 = mad24(y, src_step, ((cols - x -1) << 3) + src_offset);
-        
+
         int dst_index_0 = mad24(y, dst_step, (x << 3)             + dst_offset);
         int dst_index_1 = mad24(y, dst_step, ((cols - x -1) << 3) + dst_offset);
 
@@ -472,7 +472,7 @@ __kernel void arithm_flip_cols_C2_D0 (__global uchar *src, int src_step, int src
     {
         int src_index_0 = mad24(y, src_step, (x << 1)             + src_offset);
         int src_index_1 = mad24(y, src_step, ((cols - x -1) << 1) + src_offset);
-        
+
         int dst_index_0 = mad24(y, dst_step, (x << 1)             + dst_offset);
         int dst_index_1 = mad24(y, dst_step, ((cols - x -1) << 1) + dst_offset);
 
@@ -494,7 +494,7 @@ __kernel void arithm_flip_cols_C2_D1 (__global char *src, int src_step, int src_
     {
         int src_index_0 = mad24(y, src_step, (x << 1)             + src_offset);
         int src_index_1 = mad24(y, src_step, ((cols - x -1) << 1) + src_offset);
-        
+
         int dst_index_0 = mad24(y, dst_step, (x << 1)             + dst_offset);
         int dst_index_1 = mad24(y, dst_step, ((cols - x -1) << 1) + dst_offset);
 
@@ -516,7 +516,7 @@ __kernel void arithm_flip_cols_C2_D2 (__global ushort *src, int src_step, int sr
     {
         int src_index_0 = mad24(y, src_step, (x << 2)             + src_offset);
         int src_index_1 = mad24(y, src_step, ((cols - x -1) << 2) + src_offset);
-        
+
         int dst_index_0 = mad24(y, dst_step, (x << 2)             + dst_offset);
         int dst_index_1 = mad24(y, dst_step, ((cols - x -1) << 2) + dst_offset);
 
@@ -538,7 +538,7 @@ __kernel void arithm_flip_cols_C2_D3 (__global short *src, int src_step, int src
     {
         int src_index_0 = mad24(y, src_step, (x << 2)             + src_offset);
         int src_index_1 = mad24(y, src_step, ((cols - x -1) << 2) + src_offset);
-        
+
         int dst_index_0 = mad24(y, dst_step, (x << 2)             + dst_offset);
         int dst_index_1 = mad24(y, dst_step, ((cols - x -1) << 2) + dst_offset);
 
@@ -560,7 +560,7 @@ __kernel void arithm_flip_cols_C2_D4 (__global int *src, int src_step, int src_o
     {
         int src_index_0 = mad24(y, src_step, (x << 3)             + src_offset);
         int src_index_1 = mad24(y, src_step, ((cols - x -1) << 3) + src_offset);
-        
+
         int dst_index_0 = mad24(y, dst_step, (x << 3)             + dst_offset);
         int dst_index_1 = mad24(y, dst_step, ((cols - x -1) << 3) + dst_offset);
 
@@ -582,7 +582,7 @@ __kernel void arithm_flip_cols_C2_D5 (__global float *src, int src_step, int src
     {
         int src_index_0 = mad24(y, src_step, (x << 3)             + src_offset);
         int src_index_1 = mad24(y, src_step, ((cols - x -1) << 3) + src_offset);
-        
+
         int dst_index_0 = mad24(y, dst_step, (x << 3)             + dst_offset);
         int dst_index_1 = mad24(y, dst_step, ((cols - x -1) << 3) + dst_offset);
 
@@ -606,7 +606,7 @@ __kernel void arithm_flip_cols_C2_D6 (__global double *src, int src_step, int sr
     {
         int src_index_0 = mad24(y, src_step, (x << 4)             + src_offset);
         int src_index_1 = mad24(y, src_step, ((cols - x -1) << 4) + src_offset);
-        
+
         int dst_index_0 = mad24(y, dst_step, (x << 4)             + dst_offset);
         int dst_index_1 = mad24(y, dst_step, ((cols - x -1) << 4) + dst_offset);
 
@@ -630,7 +630,7 @@ __kernel void arithm_flip_cols_C3_D0 (__global uchar *src, int src_step, int src
     {
         int src_index_0 = mad24(y, src_step, (x) * 3           + src_offset);
         int src_index_1 = mad24(y, src_step, (cols - x -1) * 3 + src_offset);
-        
+
         int dst_index_0 = mad24(y, dst_step, (x) * 3           + dst_offset);
         int dst_index_1 = mad24(y, dst_step, (cols - x -1) * 3 + dst_offset);
 
@@ -662,7 +662,7 @@ __kernel void arithm_flip_cols_C3_D1 (__global char *src, int src_step, int src_
     {
         int src_index_0 = mad24(y, src_step, (x) * 3           + src_offset);
         int src_index_1 = mad24(y, src_step, (cols - x -1) * 3 + src_offset);
-        
+
         int dst_index_0 = mad24(y, dst_step, (x) * 3           + dst_offset);
         int dst_index_1 = mad24(y, dst_step, (cols - x -1) * 3 + dst_offset);
 
@@ -694,7 +694,7 @@ __kernel void arithm_flip_cols_C3_D2 (__global ushort *src, int src_step, int sr
     {
         int src_index_0 = mad24(y, src_step, (x * 3 << 1)             + src_offset);
         int src_index_1 = mad24(y, src_step, ((cols - x -1) * 3 << 1) + src_offset);
-        
+
         int dst_index_0 = mad24(y, dst_step, (x * 3 << 1)             + dst_offset);
         int dst_index_1 = mad24(y, dst_step, ((cols - x -1) * 3 << 1) + dst_offset);
 
@@ -726,7 +726,7 @@ __kernel void arithm_flip_cols_C3_D3 (__global short *src, int src_step, int src
     {
         int src_index_0 = mad24(y, src_step, (x * 3 << 1)             + src_offset);
         int src_index_1 = mad24(y, src_step, ((cols - x -1) * 3 << 1) + src_offset);
-        
+
         int dst_index_0 = mad24(y, dst_step, (x * 3 << 1)             + dst_offset);
         int dst_index_1 = mad24(y, dst_step, ((cols - x -1) * 3 << 1) + dst_offset);
 
@@ -758,14 +758,14 @@ __kernel void arithm_flip_cols_C3_D4 (__global int *src, int src_step, int src_o
     {
         int src_index_0 = mad24(y, src_step, (x * 3 << 2)             + src_offset);
         int src_index_1 = mad24(y, src_step, ((cols - x -1) * 3 << 2) + src_offset);
-        
+
         int dst_index_0 = mad24(y, dst_step, (x * 3 << 2)             + dst_offset);
         int dst_index_1 = mad24(y, dst_step, ((cols - x -1) * 3 << 2) + dst_offset);
 
         int data0_0 = *((__global int *)((__global char *)src + src_index_0 + 0));
         int data0_1 = *((__global int *)((__global char *)src + src_index_0 + 4));
         int data0_2 = *((__global int *)((__global char *)src + src_index_0 + 8));
-           
+
         int data1_0 = *((__global int *)((__global char *)src + src_index_1 + 0));
         int data1_1 = *((__global int *)((__global char *)src + src_index_1 + 4));
         int data1_2 = *((__global int *)((__global char *)src + src_index_1 + 8));
@@ -773,7 +773,7 @@ __kernel void arithm_flip_cols_C3_D4 (__global int *src, int src_step, int src_o
         *((__global int *)((__global char *)dst + dst_index_0 + 0)) = data1_0;
         *((__global int *)((__global char *)dst + dst_index_0 + 4)) = data1_1;
         *((__global int *)((__global char *)dst + dst_index_0 + 8)) = data1_2;
-                                                                 
+
         *((__global int *)((__global char *)dst + dst_index_1 + 0)) = data0_0;
         *((__global int *)((__global char *)dst + dst_index_1 + 4)) = data0_1;
         *((__global int *)((__global char *)dst + dst_index_1 + 8)) = data0_2;
@@ -790,14 +790,14 @@ __kernel void arithm_flip_cols_C3_D5 (__global float *src, int src_step, int src
     {
         int src_index_0 = mad24(y, src_step, (x * 3 << 2)             + src_offset);
         int src_index_1 = mad24(y, src_step, ((cols - x -1) * 3 << 2) + src_offset);
-        
+
         int dst_index_0 = mad24(y, dst_step, (x * 3 << 2)             + dst_offset);
         int dst_index_1 = mad24(y, dst_step, ((cols - x -1) * 3 << 2) + dst_offset);
 
         float data0_0 = *((__global float *)((__global char *)src + src_index_0 + 0));
         float data0_1 = *((__global float *)((__global char *)src + src_index_0 + 4));
         float data0_2 = *((__global float *)((__global char *)src + src_index_0 + 8));
-             
+
         float data1_0 = *((__global float *)((__global char *)src + src_index_1 + 0));
         float data1_1 = *((__global float *)((__global char *)src + src_index_1 + 4));
         float data1_2 = *((__global float *)((__global char *)src + src_index_1 + 8));
@@ -805,7 +805,7 @@ __kernel void arithm_flip_cols_C3_D5 (__global float *src, int src_step, int src
         *((__global float *)((__global char *)dst + dst_index_0 + 0)) = data1_0;
         *((__global float *)((__global char *)dst + dst_index_0 + 4)) = data1_1;
         *((__global float *)((__global char *)dst + dst_index_0 + 8)) = data1_2;
-                                                                   
+
         *((__global float *)((__global char *)dst + dst_index_1 + 0)) = data0_0;
         *((__global float *)((__global char *)dst + dst_index_1 + 4)) = data0_1;
         *((__global float *)((__global char *)dst + dst_index_1 + 8)) = data0_2;
@@ -824,14 +824,14 @@ __kernel void arithm_flip_cols_C3_D6 (__global double *src, int src_step, int sr
     {
         int src_index_0 = mad24(y, src_step, (x * 3 << 3)             + src_offset);
         int src_index_1 = mad24(y, src_step, ((cols - x -1) * 3 << 3) + src_offset);
-        
+
         int dst_index_0 = mad24(y, dst_step, (x * 3 << 3)             + dst_offset);
         int dst_index_1 = mad24(y, dst_step, ((cols - x -1) * 3 << 3) + dst_offset);
 
         double data0_0 = *((__global double *)((__global char *)src + src_index_0 + 0));
         double data0_1 = *((__global double *)((__global char *)src + src_index_0 + 8));
         double data0_2 = *((__global double *)((__global char *)src + src_index_0 + 16));
-              
+
         double data1_0 = *((__global double *)((__global char *)src + src_index_1 + 0));
         double data1_1 = *((__global double *)((__global char *)src + src_index_1 + 8));
         double data1_2 = *((__global double *)((__global char *)src + src_index_1 + 16));
@@ -839,7 +839,7 @@ __kernel void arithm_flip_cols_C3_D6 (__global double *src, int src_step, int sr
         *((__global double *)((__global char *)dst + dst_index_0 + 0 )) = data1_0;
         *((__global double *)((__global char *)dst + dst_index_0 + 8 )) = data1_1;
         *((__global double *)((__global char *)dst + dst_index_0 + 16)) = data1_2;
-                                                                    
+
         *((__global double *)((__global char *)dst + dst_index_1 + 0 )) = data0_0;
         *((__global double *)((__global char *)dst + dst_index_1 + 8 )) = data0_1;
         *((__global double *)((__global char *)dst + dst_index_1 + 16)) = data0_2;
@@ -857,7 +857,7 @@ __kernel void arithm_flip_cols_C4_D0 (__global uchar *src, int src_step, int src
     {
         int src_index_0 = mad24(y, src_step, (x << 2)             + src_offset);
         int src_index_1 = mad24(y, src_step, ((cols - x -1) << 2) + src_offset);
-        
+
         int dst_index_0 = mad24(y, dst_step, (x << 2)             + dst_offset);
         int dst_index_1 = mad24(y, dst_step, ((cols - x -1) << 2) + dst_offset);
 
@@ -879,7 +879,7 @@ __kernel void arithm_flip_cols_C4_D1 (__global char *src, int src_step, int src_
     {
         int src_index_0 = mad24(y, src_step, (x << 2)             + src_offset);
         int src_index_1 = mad24(y, src_step, ((cols - x -1) << 2) + src_offset);
-        
+
         int dst_index_0 = mad24(y, dst_step, (x << 2)             + dst_offset);
         int dst_index_1 = mad24(y, dst_step, ((cols - x -1) << 2) + dst_offset);
 
@@ -901,7 +901,7 @@ __kernel void arithm_flip_cols_C4_D2 (__global ushort *src, int src_step, int sr
     {
         int src_index_0 = mad24(y, src_step, (x << 3)             + src_offset);
         int src_index_1 = mad24(y, src_step, ((cols - x -1) << 3) + src_offset);
-        
+
         int dst_index_0 = mad24(y, dst_step, (x << 3)             + dst_offset);
         int dst_index_1 = mad24(y, dst_step, ((cols - x -1) << 3) + dst_offset);
 
@@ -923,7 +923,7 @@ __kernel void arithm_flip_cols_C4_D3 (__global short *src, int src_step, int src
     {
         int src_index_0 = mad24(y, src_step, (x << 3)             + src_offset);
         int src_index_1 = mad24(y, src_step, ((cols - x -1) << 3) + src_offset);
-        
+
         int dst_index_0 = mad24(y, dst_step, (x << 3)             + dst_offset);
         int dst_index_1 = mad24(y, dst_step, ((cols - x -1) << 3) + dst_offset);
 
@@ -946,7 +946,7 @@ __kernel void arithm_flip_cols_C4_D4 (__global int *src, int src_step, int src_o
     {
         int src_index_0 = mad24(y, src_step, (x << 4)             + src_offset);
         int src_index_1 = mad24(y, src_step, ((cols - x -1) << 4) + src_offset);
-        
+
         int dst_index_0 = mad24(y, dst_step, (x << 4)             + dst_offset);
         int dst_index_1 = mad24(y, dst_step, ((cols - x -1) << 4) + dst_offset);
 
@@ -968,7 +968,7 @@ __kernel void arithm_flip_cols_C4_D5 (__global float *src, int src_step, int src
     {
         int src_index_0 = mad24(y, src_step, (x << 4)             + src_offset);
         int src_index_1 = mad24(y, src_step, ((cols - x -1) << 4) + src_offset);
-        
+
         int dst_index_0 = mad24(y, dst_step, (x << 4)             + dst_offset);
         int dst_index_1 = mad24(y, dst_step, ((cols - x -1) << 4) + dst_offset);
 
@@ -991,7 +991,7 @@ __kernel void arithm_flip_cols_C4_D6 (__global double *src, int src_step, int sr
     {
         int src_index_0 = mad24(y, src_step, (x << 5)             + src_offset);
         int src_index_1 = mad24(y, src_step, ((cols - x -1) << 5) + src_offset);
-        
+
         int dst_index_0 = mad24(y, dst_step, (x << 5)             + dst_offset);
         int dst_index_1 = mad24(y, dst_step, ((cols - x -1) << 5) + dst_offset);
 

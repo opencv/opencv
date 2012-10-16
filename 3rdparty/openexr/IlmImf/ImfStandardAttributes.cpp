@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2003, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-// 
+//
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission. 
-// 
+// from this software without specific prior written permission.
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -45,50 +45,50 @@
 #define IMF_STRING(name) #name
 
 #define IMF_STD_ATTRIBUTE_IMP(name,suffix,type)				 \
-									 \
+                                     \
     void								 \
     add##suffix (Header &header, const type &value)			 \
     {									 \
-	header.insert (IMF_STRING (name), TypedAttribute<type> (value)); \
+    header.insert (IMF_STRING (name), TypedAttribute<type> (value)); \
     }									 \
-									 \
+                                     \
     bool								 \
     has##suffix (const Header &header)					 \
     {									 \
-	return header.findTypedAttribute <TypedAttribute <type> >	 \
-		(IMF_STRING (name)) != 0;				 \
+    return header.findTypedAttribute <TypedAttribute <type> >	 \
+        (IMF_STRING (name)) != 0;				 \
     }									 \
-									 \
+                                     \
     const TypedAttribute<type> &					 \
     name##Attribute (const Header &header)				 \
     {									 \
-	return header.typedAttribute <TypedAttribute <type> >		 \
-		(IMF_STRING (name));					 \
+    return header.typedAttribute <TypedAttribute <type> >		 \
+        (IMF_STRING (name));					 \
     }									 \
-									 \
+                                     \
     TypedAttribute<type> &						 \
     name##Attribute (Header &header)					 \
     {									 \
-	return header.typedAttribute <TypedAttribute <type> >		 \
-		(IMF_STRING (name));					 \
+    return header.typedAttribute <TypedAttribute <type> >		 \
+        (IMF_STRING (name));					 \
     }									 \
-									 \
+                                     \
     const type &							 \
     name (const Header &header)						 \
     {									 \
-	return name##Attribute(header).value();				 \
+    return name##Attribute(header).value();				 \
     }									 \
-									 \
+                                     \
     type &								 \
     name (Header &header)						 \
     {									 \
-	return name##Attribute(header).value();				 \
+    return name##Attribute(header).value();				 \
     }
 
 
 namespace Imf {
 
-   
+
 IMF_STD_ATTRIBUTE_IMP (chromaticities, Chromaticities, Chromaticities)
 IMF_STD_ATTRIBUTE_IMP (whiteLuminance, WhiteLuminance, float)
 IMF_STD_ATTRIBUTE_IMP (adoptedNeutral, AdoptedNeutral, Imath::V2f)

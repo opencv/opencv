@@ -40,12 +40,12 @@ if __name__ == '__main__':
             d = cv2.pyrUp(d)
         v = cv2.GaussianBlur(d*d, (3, 3), 0)
         return np.sign(d), v
-        
+
     scale_num = 6
     for frame_i in count():
         a_lods = [a]
         for i in xrange(scale_num):
-            a_lods.append(cv2.pyrDown(a_lods[-1])) 
+            a_lods.append(cv2.pyrDown(a_lods[-1]))
         ms, vs = [], []
         for i in xrange(1, scale_num):
             m, v = process_scale(a_lods, i)
@@ -62,4 +62,4 @@ if __name__ == '__main__':
         cv2.imshow('a', vis)
         if 0xFF & cv2.waitKey(5) == 27:
             break
-    cv2.destroyAllWindows() 			
+    cv2.destroyAllWindows()

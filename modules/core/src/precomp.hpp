@@ -170,7 +170,7 @@ struct NoVec
 };
 
 extern volatile bool USE_SSE2;
-extern volatile bool USE_SSE4_2; 
+extern volatile bool USE_SSE4_2;
 extern volatile bool USE_AVX;
 
 enum { BLOCK_SIZE = 1024 };

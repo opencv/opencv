@@ -1,7 +1,7 @@
 """
 Find Squares in image by finding countours and filtering
 """
-#Results slightly different from C version on same images, but is 
+#Results slightly different from C version on same images, but is
 #otherwise ok
 
 import math
@@ -24,7 +24,7 @@ def is_square(contour):
     Squareness checker
 
     Square contours should:
-        -have 4 vertices after approximation, 
+        -have 4 vertices after approximation,
         -have relatively large area (to filter out noisy contours)
         -be convex.
         -have angles between sides close to 90deg (cos(ang) ~0 )
@@ -45,11 +45,11 @@ def is_square(contour):
             t = math.fabs(angle(pt0, pt1, pt2))
             if s <= t:s = t
 
-        # if cosines of all angles are small (all angles are ~90 degree) 
+        # if cosines of all angles are small (all angles are ~90 degree)
         # then its a square
         if s < 0.3:return True
 
-    return False       
+    return False
 
 def find_squares_from_binary( gray ):
     """
@@ -58,7 +58,7 @@ def find_squares_from_binary( gray ):
     """
     squares = []
     storage = cv.CreateMemStorage(0)
-    contours = cv.FindContours(gray, storage, cv.CV_RETR_TREE, cv.CV_CHAIN_APPROX_SIMPLE, (0,0))  
+    contours = cv.FindContours(gray, storage, cv.CV_RETR_TREE, cv.CV_CHAIN_APPROX_SIMPLE, (0,0))
     storage = cv.CreateMemStorage(0)
     while contours:
         #approximate contour with accuracy proportional to the contour perimeter
@@ -79,7 +79,7 @@ def find_squares4(color_img):
     the edge segments.
     -Threshold the result to binary edge tokens
     -Use cv.FindContours: returns a cv.CvSequence of cv.CvContours
-    -Filter each candidate: use Approx poly, keep only contours with 4 vertices, 
+    -Filter each candidate: use Approx poly, keep only contours with 4 vertices,
     enough area, and ~90deg angles.
 
     Return all squares contours in one flat list of arrays, 4 x,y points each.
@@ -137,7 +137,7 @@ def draw_squares( color_img, squares ):
 
     cv.ShowImage(WNDNAME, color_img)
 
- 
+
 WNDNAME = "Squares Demo"
 def main():
     """Open test color images, create display window, start the search"""
@@ -157,11 +157,11 @@ def main():
 
         # force the image processing
         draw_squares( img, find_squares4( img ) )
-        
+
         # wait for key.
         if cv.WaitKey(-1) % 0x100 == 27:
             break
 
 if __name__ == "__main__":
-    main()    
+    main()
     cv.DestroyAllWindows()

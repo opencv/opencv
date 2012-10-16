@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2004, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-// 
+//
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission. 
-// 
+// from this software without specific prior written permission.
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -79,12 +79,12 @@ class TiledRgbaOutputFile
     //---------------------------------------------------
 
     TiledRgbaOutputFile (const char name[],
-			 const Header &header,
-			 RgbaChannels rgbaChannels,
-			 int tileXSize,
-			 int tileYSize,
-			 LevelMode mode,
-			 LevelRoundingMode rmode = ROUND_DOWN,
+             const Header &header,
+             RgbaChannels rgbaChannels,
+             int tileXSize,
+             int tileYSize,
+             LevelMode mode,
+             LevelRoundingMode rmode = ROUND_DOWN,
                          int numThreads = globalThreadCount ());
 
 
@@ -98,12 +98,12 @@ class TiledRgbaOutputFile
     //---------------------------------------------------
 
     TiledRgbaOutputFile (OStream &os,
-			 const Header &header,
-			 RgbaChannels rgbaChannels,
-			 int tileXSize,
-			 int tileYSize,
-			 LevelMode mode,
-			 LevelRoundingMode rmode = ROUND_DOWN,
+             const Header &header,
+             RgbaChannels rgbaChannels,
+             int tileXSize,
+             int tileYSize,
+             LevelMode mode,
+             LevelRoundingMode rmode = ROUND_DOWN,
                          int numThreads = globalThreadCount ());
 
 
@@ -114,19 +114,19 @@ class TiledRgbaOutputFile
     //------------------------------------------------------
 
     TiledRgbaOutputFile (const char name[],
-			 int tileXSize,
-			 int tileYSize,
-			 LevelMode mode,
-			 LevelRoundingMode rmode,
-			 const Imath::Box2i &displayWindow,
-			 const Imath::Box2i &dataWindow = Imath::Box2i(),
-			 RgbaChannels rgbaChannels = WRITE_RGBA,
-			 float pixelAspectRatio = 1,
-			 const Imath::V2f screenWindowCenter =
-						    Imath::V2f (0, 0),
-			 float screenWindowWidth = 1,
-			 LineOrder lineOrder = INCREASING_Y,
-			 Compression compression = ZIP_COMPRESSION,
+             int tileXSize,
+             int tileYSize,
+             LevelMode mode,
+             LevelRoundingMode rmode,
+             const Imath::Box2i &displayWindow,
+             const Imath::Box2i &dataWindow = Imath::Box2i(),
+             RgbaChannels rgbaChannels = WRITE_RGBA,
+             float pixelAspectRatio = 1,
+             const Imath::V2f screenWindowCenter =
+                            Imath::V2f (0, 0),
+             float screenWindowWidth = 1,
+             LineOrder lineOrder = INCREASING_Y,
+             Compression compression = ZIP_COMPRESSION,
                          int numThreads = globalThreadCount ());
 
 
@@ -137,19 +137,19 @@ class TiledRgbaOutputFile
     //-----------------------------------------------
 
     TiledRgbaOutputFile (const char name[],
-			 int width,
-			 int height,
-			 int tileXSize,
-			 int tileYSize,
-			 LevelMode mode,
-			 LevelRoundingMode rmode = ROUND_DOWN,
-			 RgbaChannels rgbaChannels = WRITE_RGBA,
-			 float pixelAspectRatio = 1,
-			 const Imath::V2f screenWindowCenter =
-						    Imath::V2f (0, 0),
-			 float screenWindowWidth = 1,
-			 LineOrder lineOrder = INCREASING_Y,
-			 Compression compression = ZIP_COMPRESSION,
+             int width,
+             int height,
+             int tileXSize,
+             int tileYSize,
+             LevelMode mode,
+             LevelRoundingMode rmode = ROUND_DOWN,
+             RgbaChannels rgbaChannels = WRITE_RGBA,
+             float pixelAspectRatio = 1,
+             const Imath::V2f screenWindowCenter =
+                            Imath::V2f (0, 0),
+             float screenWindowWidth = 1,
+             LineOrder lineOrder = INCREASING_Y,
+             Compression compression = ZIP_COMPRESSION,
                          int numThreads = globalThreadCount ());
 
 
@@ -165,8 +165,8 @@ class TiledRgbaOutputFile
     //------------------------------------------------
 
     void		setFrameBuffer (const Rgba *base,
-					size_t xStride,
-					size_t yStride);
+                    size_t xStride,
+                    size_t yStride);
 
     //--------------------------
     // Access to the file header
@@ -208,10 +208,10 @@ class TiledRgbaOutputFile
     Imath::Box2i	dataWindowForLevel (int lx, int ly) const;
 
     Imath::Box2i	dataWindowForTile (int dx, int dy,
-					   int l = 0) const;
+                       int l = 0) const;
 
     Imath::Box2i	dataWindowForTile (int dx, int dy,
-					   int lx, int ly) const;
+                       int lx, int ly) const;
 
     //------------------------------------------------------------------
     // Write pixel data:
@@ -270,17 +270,17 @@ class TiledRgbaOutputFile
     //------------------------------------------------
 
     void		breakTile  (int dx, int dy,
-				    int lx, int ly,
-				    int offset,
-				    int length,
-				    char c);
+                    int lx, int ly,
+                    int offset,
+                    int length,
+                    char c);
   private:
 
     //
     // Copy constructor and assignment are not implemented
     //
 
-    TiledRgbaOutputFile (const TiledRgbaOutputFile &);	
+    TiledRgbaOutputFile (const TiledRgbaOutputFile &);
     TiledRgbaOutputFile & operator = (const TiledRgbaOutputFile &);
 
     class ToYa;
@@ -329,12 +329,12 @@ class TiledRgbaInputFile
     //------------------------------------------------------------
 
     TiledRgbaInputFile (const char name[],
-		        const std::string &layerName,
-		        int numThreads = globalThreadCount());
+                const std::string &layerName,
+                int numThreads = globalThreadCount());
 
     TiledRgbaInputFile (IStream &is,
-		        const std::string &layerName,
-		        int numThreads = globalThreadCount());
+                const std::string &layerName,
+                int numThreads = globalThreadCount());
 
     //-----------
     // Destructor
@@ -352,8 +352,8 @@ class TiledRgbaInputFile
     //-----------------------------------------------------
 
     void			setFrameBuffer (Rgba *base,
-						size_t xStride,
-						size_t yStride);
+                        size_t xStride,
+                        size_t yStride);
 
     //-------------------------------------------------------------------
     // Switch to a different layer -- subsequent calls to readTile()
@@ -413,11 +413,11 @@ class TiledRgbaInputFile
     Imath::Box2i	dataWindowForLevel (int lx, int ly) const;
 
     Imath::Box2i	dataWindowForTile (int dx, int dy,
-					   int l = 0) const;
+                       int l = 0) const;
 
     Imath::Box2i	dataWindowForTile (int dx, int dy,
-					   int lx, int ly) const;
-					   
+                       int lx, int ly) const;
+
 
     //----------------------------------------------------------------
     // Read pixel data:

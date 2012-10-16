@@ -34,7 +34,7 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //
-#define PARTIAL_HISTOGRAM256_COUNT     (256) 
+#define PARTIAL_HISTOGRAM256_COUNT     (256)
 #define HISTOGRAM256_BIN_COUNT         (256)
 
 #define HISTOGRAM256_WORK_GROUP_SIZE     (256)
@@ -45,12 +45,12 @@
 
 
 __kernel __attribute__((reqd_work_group_size(HISTOGRAM256_BIN_COUNT,1,1)))void calc_sub_hist_D0(
-                                                                      __global const uint4* src, 
-							              int src_step, int src_offset,
+                                                                      __global const uint4* src,
+                                          int src_step, int src_offset,
                                                                       __global int* globalHist,
-                                                                      int dataCount,  int cols, 
-							              int inc_x, int inc_y,
-							              int hist_step)
+                                                                      int dataCount,  int cols,
+                                          int inc_x, int inc_y,
+                                          int hist_step)
 {
         __local int subhist[(HISTOGRAM256_BIN_COUNT << NBANKS_BIT)]; // NBINS*NBANKS
         int gid = get_global_id(0);
@@ -63,7 +63,7 @@ __kernel __attribute__((reqd_work_group_size(HISTOGRAM256_BIN_COUNT,1,1)))void c
         int offset = (lid & (NBANKS-1));// lid % NBANKS
         uint4 data, temp1, temp2, temp3, temp4;
         src += src_offset;
-    
+
         //clear LDS
         for(int i=0, idx=lid; i<(NBANKS >> 2); i++, idx += lsize)
         {
@@ -73,7 +73,7 @@ __kernel __attribute__((reqd_work_group_size(HISTOGRAM256_BIN_COUNT,1,1)))void c
             subhist[idx+=lsize] = 0;
         }
         barrier(CLK_LOCAL_MEM_FENCE);
-        
+
         //read and scatter
         int y = gid/cols;
         int x = gid - mul24(y, cols);
@@ -87,35 +87,35 @@ __kernel __attribute__((reqd_work_group_size(HISTOGRAM256_BIN_COUNT,1,1)))void c
               temp3 = ((data & mask) << NBANKS_BIT) + offset;
               data >>= shift;
               temp4 = ((data & mask) << NBANKS_BIT) + offset;
-   
-              atomic_inc(subhist + temp1.x); 
-              atomic_inc(subhist + temp1.y); 
-              atomic_inc(subhist + temp1.z); 
-              atomic_inc(subhist + temp1.w); 
-   
-              atomic_inc(subhist + temp2.x); 
-              atomic_inc(subhist + temp2.y); 
-              atomic_inc(subhist + temp2.z); 
-              atomic_inc(subhist + temp2.w); 
-   
-              atomic_inc(subhist + temp3.x); 
-              atomic_inc(subhist + temp3.y); 
-              atomic_inc(subhist + temp3.z); 
-              atomic_inc(subhist + temp3.w); 
-    
-              atomic_inc(subhist + temp4.x); 
-              atomic_inc(subhist + temp4.y); 
-              atomic_inc(subhist + temp4.z); 
+
+              atomic_inc(subhist + temp1.x);
+              atomic_inc(subhist + temp1.y);
+              atomic_inc(subhist + temp1.z);
+              atomic_inc(subhist + temp1.w);
+
+              atomic_inc(subhist + temp2.x);
+              atomic_inc(subhist + temp2.y);
+              atomic_inc(subhist + temp2.z);
+              atomic_inc(subhist + temp2.w);
+
+              atomic_inc(subhist + temp3.x);
+              atomic_inc(subhist + temp3.y);
+              atomic_inc(subhist + temp3.z);
+              atomic_inc(subhist + temp3.w);
+
+              atomic_inc(subhist + temp4.x);
+              atomic_inc(subhist + temp4.y);
+              atomic_inc(subhist + temp4.z);
               atomic_inc(subhist + temp4.w);
-   
+
               x += inc_x;
               int off = ((x>=cols) ? -1 : 0);
               x = mad24(off, cols, x);
               y += inc_y - off;
         }
         barrier(CLK_LOCAL_MEM_FENCE);
-        
-        //reduce local banks to single histogram per workgroup 
+
+        //reduce local banks to single histogram per workgroup
         int bin1=0, bin2=0, bin3=0, bin4=0;
         for(int i=0; i<NBANKS; i+=4)
         {
@@ -124,19 +124,19 @@ __kernel __attribute__((reqd_work_group_size(HISTOGRAM256_BIN_COUNT,1,1)))void c
              bin3 += subhist[(lid << NBANKS_BIT) + i+2];
              bin4 += subhist[(lid << NBANKS_BIT) + i+3];
         }
-   
+
         globalHist[mad24(gx, hist_step, lid)] = bin1+bin2+bin3+bin4;
 }
 
 __kernel void __attribute__((reqd_work_group_size(1,HISTOGRAM256_BIN_COUNT,1)))calc_sub_hist_border_D0(
-                                                                      __global const uchar* src, 
-				                                      int src_step,  int src_offset,
+                                                                      __global const uchar* src,
+                                                      int src_step,  int src_offset,
                                                                       __global int* globalHist,
                                                                       int left_col,  int cols,
-				                                      int rows,	 int hist_step)
+                                                      int rows,	 int hist_step)
 {
-	int gidx = get_global_id(0);
-	int gidy = get_global_id(1);
+    int gidx = get_global_id(0);
+    int gidy = get_global_id(1);
         int lidy = get_local_id(1);
         int gx = get_group_id(0);
         int gy = get_group_id(1);
@@ -160,9 +160,9 @@ __kernel void __attribute__((reqd_work_group_size(1,HISTOGRAM256_BIN_COUNT,1)))c
 
         globalHist[mad24(rowIndex, hist_step, lidy)] += subhist[lidy];
 }
-__kernel __attribute__((reqd_work_group_size(256,1,1)))void merge_hist(__global int* buf,  
-				__global int* hist,
-				int src_step)
+__kernel __attribute__((reqd_work_group_size(256,1,1)))void merge_hist(__global int* buf,
+                __global int* hist,
+                int src_step)
 {
     int lx = get_local_id(0);
     int gx = get_group_id(0);
@@ -183,83 +183,83 @@ __kernel __attribute__((reqd_work_group_size(256,1,1)))void merge_hist(__global 
     }
 
     if(lx == 0)
-        hist[gx] = data[0]; 
+        hist[gx] = data[0];
 }
 
 __kernel __attribute__((reqd_work_group_size(256,1,1)))void calLUT(
-							__global uchar * dst,
-							__constant int * hist,
-							float scale)
+                            __global uchar * dst,
+                            __constant int * hist,
+                            float scale)
 {
-	int lid = get_local_id(0);
-	__local int sumhist[HISTOGRAM256_BIN_COUNT];
-	//__local uchar lut[HISTOGRAM256_BIN_COUNT+1];
+    int lid = get_local_id(0);
+    __local int sumhist[HISTOGRAM256_BIN_COUNT];
+    //__local uchar lut[HISTOGRAM256_BIN_COUNT+1];
 
-	sumhist[lid]=hist[lid];
-	barrier(CLK_LOCAL_MEM_FENCE);
-	if(lid==0)
-	{
-		int sum = 0;
-		for(int i=0;i<HISTOGRAM256_BIN_COUNT;i++)
-		{
-			sum+=sumhist[i];
-			sumhist[i]=sum;
-		}
-	}
-	barrier(CLK_LOCAL_MEM_FENCE);
-	dst[lid]= lid == 0 ? 0 : convert_uchar_sat(convert_float(sumhist[lid])*scale);
+    sumhist[lid]=hist[lid];
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if(lid==0)
+    {
+        int sum = 0;
+        for(int i=0;i<HISTOGRAM256_BIN_COUNT;i++)
+        {
+            sum+=sumhist[i];
+            sumhist[i]=sum;
+        }
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+    dst[lid]= lid == 0 ? 0 : convert_uchar_sat(convert_float(sumhist[lid])*scale);
 }
 /*
 ///////////////////////////////equalizeHist//////////////////////////////////////////////////
 __kernel __attribute__((reqd_work_group_size(256,1,1)))void equalizeHist(
-							__global uchar * src,
-							__global uchar * dst,
-							__constant int * hist,
-							int srcstep,
-							int srcoffset,
-							int dststep,
-							int dstoffset,
-							int width,
-							int height,
-							float scale,
-							int inc_x,
-							int inc_y)
+                            __global uchar * src,
+                            __global uchar * dst,
+                            __constant int * hist,
+                            int srcstep,
+                            int srcoffset,
+                            int dststep,
+                            int dstoffset,
+                            int width,
+                            int height,
+                            float scale,
+                            int inc_x,
+                            int inc_y)
 {
-	int gidx = get_global_id(0);
-	int lid = get_local_id(0);
-	int glb_size = get_global_size(0);
-	src+=srcoffset;
-	dst+=dstoffset;
-	__local int sumhist[HISTOGRAM256_BIN_COUNT];
-	__local uchar lut[HISTOGRAM256_BIN_COUNT+1];
+    int gidx = get_global_id(0);
+    int lid = get_local_id(0);
+    int glb_size = get_global_size(0);
+    src+=srcoffset;
+    dst+=dstoffset;
+    __local int sumhist[HISTOGRAM256_BIN_COUNT];
+    __local uchar lut[HISTOGRAM256_BIN_COUNT+1];
 
-	sumhist[lid]=hist[lid];
-	barrier(CLK_LOCAL_MEM_FENCE);
-	if(lid==0)
-	{
-		int sum = 0;
-		for(int i=0;i<HISTOGRAM256_BIN_COUNT;i++)
-		{
-			sum+=sumhist[i];
-			sumhist[i]=sum;
-		}
-	}
-	barrier(CLK_LOCAL_MEM_FENCE);
-	lut[lid]= convert_uchar_sat(convert_float(sumhist[lid])*scale);
-	lut[0]=0;
+    sumhist[lid]=hist[lid];
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if(lid==0)
+    {
+        int sum = 0;
+        for(int i=0;i<HISTOGRAM256_BIN_COUNT;i++)
+        {
+            sum+=sumhist[i];
+            sumhist[i]=sum;
+        }
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+    lut[lid]= convert_uchar_sat(convert_float(sumhist[lid])*scale);
+    lut[0]=0;
     int pos_y = gidx / width;
     int pos_x = gidx - mul24(pos_y, width);
 
     for(int pos = gidx; pos < mul24(width,height); pos += glb_size)
-	{
-		int inaddr = mad24(pos_y,srcstep,pos_x);
-		int outaddr = mad24(pos_y,dststep,pos_x);
-		dst[outaddr] = lut[src[inaddr]];
-		pos_x +=inc_x;
-		int off = (pos_x >= width ? -1 : 0);
-		pos_x =  mad24(off,width,pos_x);
-		pos_y += inc_y - off;
-	}
+    {
+        int inaddr = mad24(pos_y,srcstep,pos_x);
+        int outaddr = mad24(pos_y,dststep,pos_x);
+        dst[outaddr] = lut[src[inaddr]];
+        pos_x +=inc_x;
+        int off = (pos_x >= width ? -1 : 0);
+        pos_x =  mad24(off,width,pos_x);
+        pos_y += inc_y - off;
+    }
 }
 */
 

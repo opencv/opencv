@@ -781,7 +781,7 @@ double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double m
         ;
     else
         CV_Error( CV_StsUnsupportedFormat, "" );
-    
+
     parallel_for_(Range(0, dst.rows),
                   ThresholdRunner(src, dst, thresh, maxval, type),
                   dst.total()/(double)(1<<16));

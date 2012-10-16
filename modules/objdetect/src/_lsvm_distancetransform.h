@@ -11,8 +11,8 @@
 //      a(y - q2) + b(q2 - y)(q2 - y) + f[q2]
 //
 // API
-// int GetPointOfIntersection(const F_type *f, 
-                              const F_type a, const F_type b,           
+// int GetPointOfIntersection(const F_type *f,
+                              const F_type a, const F_type b,
                               int q1, int q2, F_type *point);
 // INPUT
 // f                - function on the regular grid
@@ -25,8 +25,8 @@
 // RESULT
 // Error status
 */
-int GetPointOfIntersection(const float *f, 
-                           const float a, const float b,           
+int GetPointOfIntersection(const float *f,
+                           const float a, const float b,
                            int q1, int q2, float *point);
 
 /*
@@ -36,9 +36,9 @@ int GetPointOfIntersection(const float *f,
 //
 // API
 // int DistanceTransformOneDimensionalProblem(const F_type *f, const int n,
-                                              const F_type a, const F_type b,                                             
+                                              const F_type a, const F_type b,
                                               F_type *distanceTransform,
-                                              int *points); 
+                                              int *points);
 // INPUT
 // f                 - function on the regular grid
 // n                 - grid dimension
@@ -51,9 +51,9 @@ int GetPointOfIntersection(const float *f,
 // Error status
 */
 int DistanceTransformOneDimensionalProblem(const float *f, const int n,
-                                           const float a, const float b,                                             
+                                           const float a, const float b,
                                            float *distanceTransform,
-                                           int *points); 
+                                           int *points);
 
 /*
 // Computation next cycle element
@@ -106,21 +106,21 @@ void Transpose(float *a, int n, int m);
 /*
 // Decision of two dimensional problem generalized distance transform
 // on the regular grid at all points
-//      min{d2(y' - y) + d4(y' - y)(y' - y) + 
+//      min{d2(y' - y) + d4(y' - y)(y' - y) +
             min(d1(x' - x) + d3(x' - x)(x' - x) + f(x',y'))} (on x', y')
 //
 // API
-// int DistanceTransformTwoDimensionalProblem(const F_type *f, 
+// int DistanceTransformTwoDimensionalProblem(const F_type *f,
                                               const int n, const int m,
-                                              const F_type coeff[4],                                             
+                                              const F_type coeff[4],
                                               F_type *distanceTransform,
-                                              int *pointsX, int *pointsY); 
+                                              int *pointsX, int *pointsY);
 // INPUT
 // f                 - function on the regular grid
 // n                 - number of rows
 // m                 - number of columns
 // coeff             - coefficients of optimizable function
-                       coeff[0] = d1, coeff[1] = d2, 
+                       coeff[0] = d1, coeff[1] = d2,
                        coeff[2] = d3, coeff[3] = d4
 // OUTPUT
 // distanceTransform - values of generalized distance transform
@@ -129,10 +129,10 @@ void Transpose(float *a, int n, int m);
 // RESULT
 // Error status
 */
-int DistanceTransformTwoDimensionalProblem(const float *f, 
+int DistanceTransformTwoDimensionalProblem(const float *f,
                                            const int n, const int m,
-                                           const float coeff[4],                                             
+                                           const float coeff[4],
                                            float *distanceTransform,
-                                           int *pointsX, int *pointsY); 
+                                           int *pointsX, int *pointsY);
 
 #endif

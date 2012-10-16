@@ -13,22 +13,22 @@
 
 void help()
 {
-	printf("\nThis program demonstrates finding the minimum enclosing box or circle of a set\n"
-		"of points using functions: minAreaRect() minEnclosingCircle().\n"
-		"Random points are generated and then enclosed.\n"
-		"Call:\n"
-		"./minarea\n");
+    printf("\nThis program demonstrates finding the minimum enclosing box or circle of a set\n"
+        "of points using functions: minAreaRect() minEnclosingCircle().\n"
+        "Random points are generated and then enclosed.\n"
+        "Call:\n"
+        "./minarea\n");
 }
 
 int main( int argc, char** argv )
 {
     IplImage* img = cvCreateImage( cvSize( 500, 500 ), 8, 3 );
-#if !ARRAY        
+#if !ARRAY
     CvMemStorage* storage = cvCreateMemStorage(0);
 #endif
     help();
     cvNamedWindow( "rect & circle", 1 );
-        
+
     for(;;)
     {
         char key;
@@ -39,7 +39,7 @@ int main( int argc, char** argv )
         CvPoint2D32f center;
         CvPoint icenter;
         float radius;
-#if !ARRAY            
+#if !ARRAY
         CvSeq* ptseq = cvCreateSeq( CV_SEQ_KIND_GENERIC|CV_32SC2, sizeof(CvContour),
                                      sizeof(CvPoint), storage );
         for( i = 0; i < count; i++ )
@@ -71,7 +71,7 @@ int main( int argc, char** argv )
         cvZero( img );
         for( i = 0; i < count; i++ )
         {
-#if !ARRAY                
+#if !ARRAY
             pt0 = *CV_GET_SEQ_ELEM( CvPoint, ptseq, i );
 #else
             pt0 = points[i];
@@ -106,7 +106,7 @@ int main( int argc, char** argv )
         free( points );
 #endif
     }
-    
+
     cvDestroyWindow( "rect & circle" );
     return 0;
 }

@@ -30,15 +30,15 @@ class PatternMaker:
       for y in range(1,self.rows+1):
         dot = SVG("circle", cx=x * spacing, cy=y * spacing, r=r, fill="black")
         self.g.append(dot)
-        
+
   def makeACirclesPattern(self):
     spacing = self.square_size
     r = spacing / 5.0
     for i in range(0,self.rows):
-      for j in range(0,self.cols):  
+      for j in range(0,self.cols):
         dot = SVG("circle", cx= ((j*2 + i%2)*spacing) + spacing, cy=self.height - (i * spacing + spacing), r=r, fill="black")
         self.g.append(dot)
-        
+
   def makeCheckerboardPattern(self):
     spacing = self.square_size
     r = spacing / 5.0
@@ -50,7 +50,7 @@ class PatternMaker:
   def save(self):
     c = canvas(self.g,width="%d%s"%(self.width,self.units),height="%d%s"%(self.height,self.units),viewBox="0 0 %d %d"%(self.width,self.height))
     c.inkview(self.output)
-        
+
 def makePattern(cols,rows,output,p_type,units,square_size,page_width,page_height):
     width = page_width
     spacing = square_size
@@ -64,8 +64,8 @@ def makePattern(cols,rows,output,p_type,units,square_size,page_width,page_height
         g.append(dot)
     c = canvas(g,width="%d%s"%(width,units),height="%d%s"%(height,units),viewBox="0 0 %d %d"%(width,height))
     c.inkview(output)
-    
-    
+
+
 def main():
     # parse command line options, TODO use argparse for better doc
     try:

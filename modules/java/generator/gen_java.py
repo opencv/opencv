@@ -323,11 +323,11 @@ ManualFuncs = {
         public Point minLoc;
         public Point maxLoc;
 
-    	public MinMaxLocResult() {
-    	    minVal=0; maxVal=0;
-    	    minLoc=new Point();
-    	    maxLoc=new Point();
-    	}
+        public MinMaxLocResult() {
+            minVal=0; maxVal=0;
+            minLoc=new Point();
+            maxLoc=new Point();
+        }
     }
 
     // C++: minMaxLoc(Mat src, double* minVal, double* maxVal=0, Point* minLoc=0, Point* maxLoc=0, InputArray mask=noArray())
@@ -394,7 +394,7 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1minMaxLocManual
 
         env->SetDoubleArrayRegion(result, 0, 6, fill);
 
-	return result;
+    return result;
 
     } catch(cv::Exception e) {
         LOGD("Core::n_1minMaxLoc() catched cv::Exception: %s", e.what());

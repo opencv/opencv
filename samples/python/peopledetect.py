@@ -28,7 +28,7 @@ for name in imglist:
         img = LoadImage(n)
     except:
         continue
-    
+
     #ClearMemStorage(storage)
     found = list(HOGDetectMultiScale(img, storage, win_stride=(8,8),
         padding=(32,32), scale=1.05, group_threshold=2))
@@ -46,7 +46,7 @@ for name in imglist:
         tl = (rx + int(rw*0.1), ry + int(rh*0.07))
         br = (rx + int(rw*0.9), ry + int(rh*0.87))
         Rectangle(img, tl, br, (0, 255, 0), 3)
-        
+
     ShowImage("people detection demo", img)
     c = WaitKey(0)
     if c == ord('q'):

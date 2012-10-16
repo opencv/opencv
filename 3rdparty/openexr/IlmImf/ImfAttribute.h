@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2004, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-// 
+//
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission. 
-// 
+// from this software without specific prior written permission.
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -82,11 +82,11 @@ class Attribute
     //----------------------------------------
 
     virtual void		writeValueTo (OStream &os,
-					      int version) const = 0;
+                          int version) const = 0;
 
     virtual void		readValueFrom (IStream &is,
-					       int size,
-					       int version) = 0;
+                           int size,
+                           int version) = 0;
 
     virtual void		copyValueFrom (const Attribute &other) = 0;
 
@@ -113,7 +113,7 @@ class Attribute
     //--------------------------------------------------
 
     static void		registerAttributeType (const char typeName[],
-					       Attribute *(*newAttribute)());
+                           Attribute *(*newAttribute)());
 
     //------------------------------------------------------
     // Un-register an attribute type so that newAttribute()
@@ -157,7 +157,7 @@ class TypedAttribute: public Attribute
     //--------------------------------
 
     virtual const char *		typeName () const;
-    
+
 
     //---------------------------------------------------------
     // Static version of typeName()
@@ -165,7 +165,7 @@ class TypedAttribute: public Attribute
     //---------------------------------------------------------
 
     static const char *			staticTypeName ();
-    
+
 
     //---------------------
     // Make a new attribute
@@ -187,11 +187,11 @@ class TypedAttribute: public Attribute
     //-----------------------------------------------------------------
 
     virtual void		writeValueTo (OStream &os,
-					      int version) const;
+                          int version) const;
 
     virtual void		readValueFrom (IStream &is,
-					       int size,
-					       int version);
+                           int size,
+                           int version);
 
     virtual void		copyValueFrom (const Attribute &other);
 
@@ -289,7 +289,7 @@ TypedAttribute<T>::value () const
 
 
 template <class T>
-const char *	
+const char *
 TypedAttribute<T>::typeName () const
 {
     return staticTypeName();
@@ -315,7 +315,7 @@ TypedAttribute<T>::copy () const
 
 
 template <class T>
-void		
+void
 TypedAttribute<T>::writeValueTo (OStream &os, int) const
 {
     Xdr::write <StreamIO> (os, _value);
@@ -323,7 +323,7 @@ TypedAttribute<T>::writeValueTo (OStream &os, int) const
 
 
 template <class T>
-void		
+void
 TypedAttribute<T>::readValueFrom (IStream &is, int, int)
 {
     Xdr::read <StreamIO> (is, _value);
@@ -331,7 +331,7 @@ TypedAttribute<T>::readValueFrom (IStream &is, int, int)
 
 
 template <class T>
-void		
+void
 TypedAttribute<T>::copyValueFrom (const Attribute &other)
 {
     _value = cast(other)._value;
@@ -343,10 +343,10 @@ TypedAttribute<T> *
 TypedAttribute<T>::cast (Attribute *attribute)
 {
     TypedAttribute<T> *t =
-	dynamic_cast <TypedAttribute<T> *> (attribute);
+    dynamic_cast <TypedAttribute<T> *> (attribute);
 
     if (t == 0)
-	throw Iex::TypeExc ("Unexpected attribute type.");
+    throw Iex::TypeExc ("Unexpected attribute type.");
 
     return t;
 }
@@ -357,17 +357,17 @@ const TypedAttribute<T> *
 TypedAttribute<T>::cast (const Attribute *attribute)
 {
     const TypedAttribute<T> *t =
-	dynamic_cast <const TypedAttribute<T> *> (attribute);
+    dynamic_cast <const TypedAttribute<T> *> (attribute);
 
     if (t == 0)
-	throw Iex::TypeExc ("Unexpected attribute type.");
+    throw Iex::TypeExc ("Unexpected attribute type.");
 
     return t;
 }
 
 
 template <class T>
-inline TypedAttribute<T> &	
+inline TypedAttribute<T> &
 TypedAttribute<T>::cast (Attribute &attribute)
 {
     return *cast (&attribute);
@@ -407,9 +407,9 @@ TypedAttribute<T>::unRegisterAttributeType ()
     #pragma warning (disable : 4275 4661)
 
     #if defined (ILMIMF_EXPORTS)
- 	#define IMF_EXPIMP_TEMPLATE
+    #define IMF_EXPIMP_TEMPLATE
     #else
- 	#define IMF_EXPIMP_TEMPLATE extern
+    #define IMF_EXPIMP_TEMPLATE extern
     #endif
 
     IMF_EXPIMP_TEMPLATE template class Imf::TypedAttribute<float>;

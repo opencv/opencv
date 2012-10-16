@@ -58,7 +58,7 @@ public:
     inline bool isFaceFeature();
     inline void * GetContour();
     inline double GetWeight();
-    inline void SetContour(void * lpContour); 
+    inline void SetContour(void * lpContour);
     inline void SetWeight(double dWeight);
     inline void SetFeature(bool bIsFeature);
 private:
@@ -79,7 +79,7 @@ inline bool FaceFeature::isFaceFeature()
 
 inline void * FaceFeature::GetContour()
 {
-    return m_lpContour; 
+    return m_lpContour;
 }//inline void * FaceFeature::GetContour()
 
 inline double FaceFeature::GetWeight()
@@ -104,12 +104,12 @@ class FaceTemplate
 public:
     FaceTemplate(long lFeatureCount) {m_lFeaturesCount = lFeatureCount;  m_lpFeaturesList = new FaceFeature[lFeatureCount];};
     virtual ~FaceTemplate();
-    
+
     inline long GetCount();
     inline FaceFeature * GetFeatures();
 
 protected:
-    FaceFeature * m_lpFeaturesList; 
+    FaceFeature * m_lpFeaturesList;
 private:
     long m_lFeaturesCount;
 };//class FaceTemplate
@@ -141,10 +141,10 @@ public:
 inline MouthFaceTemplate::MouthFaceTemplate(long lNumber,CvRect rect,double dEyeWidth,double dEyeHeight,
                              double dDistanceBetweenEye,double dDistanceEyeAboveMouth):FaceTemplate(lNumber)
 {
-    
+
     CvRect MouthRect = rect;
-    
-    
+
+
     CvRect LeftEyeRect = cvRect(cvRound(rect.x - (dEyeWidth + dDistanceBetweenEye/(double)2 - (double)rect.width/(double)2)),
                                 cvRound(rect.y - dDistanceEyeAboveMouth - dEyeHeight),
                                 cvRound(dEyeWidth),
@@ -159,11 +159,11 @@ inline MouthFaceTemplate::MouthFaceTemplate(long lNumber,CvRect rect,double dEye
 //                           cvRound(rect.y - (double)rect.width/(double)2 - (double)rect.height/(double)4),
 //                           cvRound((double)rect.width/(double)2),
 //                           cvRound((double)rect.width/(double)2) );
-/*  
+/*
     CvRect CheenRect = cvRect(rect.x,rect.y + 3*rect.height/2,rect.width,rect.height);
-        
-*/  
-    
+
+*/
+
     CvRect * lpMouthRect = new CvRect();
     *lpMouthRect = MouthRect;
     m_lpFeaturesList[0].SetContour(lpMouthRect);
@@ -183,7 +183,7 @@ inline MouthFaceTemplate::MouthFaceTemplate(long lNumber,CvRect rect,double dEye
     m_lpFeaturesList[2].SetWeight(1);
     m_lpFeaturesList[2].SetFeature(true);
 
-    
+
 //  CvRect * lpNoseRect = new CvRect();
 //  *lpNoseRect = NoseRect;
 //  m_lpFeaturesList[3].SetContour(lpNoseRect);
@@ -218,18 +218,18 @@ class Face
 public:
     Face(FaceTemplate * lpFaceTemplate);
     virtual ~Face();
-    
+
     inline bool isFeature(void * lpElem);
-    
+
     virtual void Show(IplImage * /*Image*/){};
     virtual void ShowIdeal(IplImage* /*Image*/){};
-    
+
     virtual void CreateFace(void * lpData) = 0;
     virtual bool CheckElem(void * lpCandidat,void * lpIdeal) = 0;
     virtual double GetWeight() = 0;
 protected:
     FaceFeature * m_lpIdealFace;//ideal face definition
-    long m_lFaceFeaturesNumber; //total number of diferent face features 
+    long m_lFaceFeaturesNumber; //total number of diferent face features
     long * m_lplFaceFeaturesCount;//number of each features fouded for this face
     FaceFeature ** m_lppFoundedFaceFeatures;//founded features of curen face
     double m_dWeight;
@@ -240,15 +240,15 @@ inline bool Face::isFeature(void * lpElem)
     for (int i = 0;i < m_lFaceFeaturesNumber;i ++)
     {
         void * lpIdeal = m_lpIdealFace[i].GetContour();
-        
+
         if ( CheckElem( lpElem,lpIdeal) )
         {
             if (m_lplFaceFeaturesCount[i] < 3*MAX_LAYERS)
             {
                 double dWeight = m_lpIdealFace[i].GetWeight();
                 bool bIsFeature = m_lpIdealFace[i].isFaceFeature();
-                
-                
+
+
                 if (bIsFeature)
                 {
                     m_lppFoundedFaceFeatures[i][m_lplFaceFeaturesCount[i]].SetWeight(dWeight);
@@ -256,14 +256,14 @@ inline bool Face::isFeature(void * lpElem)
                     m_lppFoundedFaceFeatures[i][m_lplFaceFeaturesCount[i]].SetFeature(bIsFeature);
                     m_lplFaceFeaturesCount[i] ++;
                 }
-                
+
                 m_dWeight += dWeight;
-                
+
                 if (bIsFeature)
                     return true;
             }
         }
-    
+
     }
 
     return false;
@@ -293,7 +293,7 @@ private:
     bool m_bIsGenerated;
     void ResizeRect(CvRect Rect,CvRect * lpRect,long lDir,long lD);
     void CalculateError(FaceData * lpFaceData);
-}; 
+};
 
 
 class FaceDetectionListElem
@@ -321,7 +321,7 @@ private:
 };//class FaceDetectionList
 
 
-class FaceDetection  
+class FaceDetection
 {
 public:
     void FindFace(IplImage* img);
@@ -339,7 +339,7 @@ protected:
     CvSeq* m_seqContours[MAX_LAYERS];
     CvMemStorage* m_mstgRects;
     CvSeq* m_seqRects;
-    
+
     bool m_bBoosting;
     FaceDetectionList * m_pFaceList;
 
@@ -355,7 +355,7 @@ protected:
 inline void ReallocImage(IplImage** ppImage, CvSize sz, long lChNum)
 {
     IplImage* pImage;
-    if( ppImage == NULL ) 
+    if( ppImage == NULL )
         return;
     pImage = *ppImage;
     if( pImage != NULL )
@@ -384,7 +384,7 @@ inline BoostingFaceTemplate::BoostingFaceTemplate(long lNumber,CvRect rect):Face
 {
     long EyeWidth = rect.width/5;
     long EyeHeight = EyeWidth;
-    
+
     CvRect LeftEyeRect = cvRect(rect.x + EyeWidth,rect.y + rect.height/2 - EyeHeight,EyeWidth,EyeHeight);
     CvRect RightEyeRect = cvRect(rect.x + 3*EyeWidth,rect.y + rect.height/2 - EyeHeight,EyeWidth,EyeHeight);
     CvRect MouthRect = cvRect(rect.x + 3*EyeWidth/2,rect.y + 3*rect.height/4 - EyeHeight/2,2*EyeWidth,EyeHeight);

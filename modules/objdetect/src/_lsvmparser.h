@@ -52,14 +52,14 @@
 extern "C"
 #endif
     int loadModel(
-             
+
               const char *modelPath,
-             
+
               CvLSVMFilterObject ***filters,
               int *kFilters,
               int *kComponents,
               int **kPartFilters,
               float **b,
-              float *scoreThreshold); 
+              float *scoreThreshold);
 //};
 #endif

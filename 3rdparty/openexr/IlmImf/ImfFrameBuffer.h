@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2002, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-// 
+//
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission. 
-// 
+// from this software without specific prior written permission.
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -97,7 +97,7 @@ struct Slice
 
     //--------------------------------------------
     // Subsampling: pixel (x, y) is present in the
-    // slice only if 
+    // slice only if
     //
     //  x % xSampling == 0 && y % ySampling == 0
     //
@@ -113,7 +113,7 @@ struct Slice
     //----------------------------------------------------------
 
     double		fillValue;
-    
+
 
     //-------------------------------------------------------
     // For tiled files, the xTileCoords and yTileCoords flags
@@ -136,12 +136,12 @@ struct Slice
     //------------
 
     Slice (PixelType type = HALF,
-	   char * base = 0,
-	   size_t xStride = 0,
-	   size_t yStride = 0,
-	   int xSampling = 1,
-	   int ySampling = 1,
-	   double fillValue = 0.0,
+       char * base = 0,
+       size_t xStride = 0,
+       size_t yStride = 0,
+       int xSampling = 1,
+       int ySampling = 1,
+       double fillValue = 0.0,
            bool xTileCoords = false,
            bool yTileCoords = false);
 };
@@ -156,10 +156,10 @@ class FrameBuffer
     //------------
 
     void			insert (const char name[],
-					const Slice &slice);
+                    const Slice &slice);
 
     void			insert (const std::string &name,
-					const Slice &slice);
+                    const Slice &slice);
 
     //----------------------------------------------------------------
     // Access to existing slices:
@@ -280,7 +280,7 @@ FrameBuffer::Iterator::Iterator (const FrameBuffer::SliceMap::iterator &i):
 }
 
 
-inline FrameBuffer::Iterator &		
+inline FrameBuffer::Iterator &
 FrameBuffer::Iterator::operator ++ ()
 {
     ++_i;
@@ -288,7 +288,7 @@ FrameBuffer::Iterator::operator ++ ()
 }
 
 
-inline FrameBuffer::Iterator 	
+inline FrameBuffer::Iterator
 FrameBuffer::Iterator::operator ++ (int)
 {
     Iterator tmp = *this;
@@ -304,7 +304,7 @@ FrameBuffer::Iterator::name () const
 }
 
 
-inline Slice &	
+inline Slice &
 FrameBuffer::Iterator::slice () const
 {
     return _i->second;
@@ -340,7 +340,7 @@ FrameBuffer::ConstIterator::operator ++ ()
 }
 
 
-inline FrameBuffer::ConstIterator 		
+inline FrameBuffer::ConstIterator
 FrameBuffer::ConstIterator::operator ++ (int)
 {
     ConstIterator tmp = *this;
@@ -355,7 +355,7 @@ FrameBuffer::ConstIterator::name () const
     return *_i->first;
 }
 
-inline const Slice &	
+inline const Slice &
 FrameBuffer::ConstIterator::slice () const
 {
     return _i->second;
@@ -364,7 +364,7 @@ FrameBuffer::ConstIterator::slice () const
 
 inline bool
 operator == (const FrameBuffer::ConstIterator &x,
-	     const FrameBuffer::ConstIterator &y)
+         const FrameBuffer::ConstIterator &y)
 {
     return x._i == y._i;
 }
@@ -372,7 +372,7 @@ operator == (const FrameBuffer::ConstIterator &x,
 
 inline bool
 operator != (const FrameBuffer::ConstIterator &x,
-	     const FrameBuffer::ConstIterator &y)
+         const FrameBuffer::ConstIterator &y)
 {
     return !(x == y);
 }

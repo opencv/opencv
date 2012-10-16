@@ -56,12 +56,12 @@ size_t KeyPoint::hash() const
     _Val = (scale * _Val) ^ ((size_t) octave);
     _Val = (scale * _Val) ^ ((size_t) class_id);
     return _Val;
-}    
+}
 
 void write(FileStorage& fs, const string& objname, const vector<KeyPoint>& keypoints)
 {
     WriteStructContext ws(fs, objname, CV_NODE_SEQ + CV_NODE_FLOW);
-    
+
     int i, npoints = (int)keypoints.size();
     for( i = 0; i < npoints; i++ )
     {
@@ -88,7 +88,7 @@ void read(const FileNode& node, vector<KeyPoint>& keypoints)
         keypoints.push_back(kpt);
     }
 }
-    
+
 
 void KeyPoint::convert(const std::vector<KeyPoint>& keypoints, std::vector<Point2f>& points2f,
                        const vector<int>& keypointIndexes)
@@ -115,7 +115,7 @@ void KeyPoint::convert(const std::vector<KeyPoint>& keypoints, std::vector<Point
         }
     }
 }
-    
+
 void KeyPoint::convert( const std::vector<Point2f>& points2f, std::vector<KeyPoint>& keypoints,
                         float size, float response, int octave, int class_id )
 {
@@ -165,8 +165,8 @@ float KeyPoint::overlap( const KeyPoint& kp1, const KeyPoint& kp2 )
 
     return ovrl;
 }
-    
-    
+
+
 struct KeypointResponseGreaterThanThreshold
 {
     KeypointResponseGreaterThanThreshold(float _value) :

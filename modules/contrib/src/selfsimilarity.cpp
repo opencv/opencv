@@ -123,7 +123,7 @@ Size SelfSimDescriptor::getGridSize( Size imgSize, Size winStride ) const
 // TODO: optimized with SSE2
 void SelfSimDescriptor::SSD(const Mat& img, Point pt, Mat& ssd) const
 {
-	int x, y, dx, dy, r0 = largeSize/2, r1 = smallSize/2;
+    int x, y, dx, dy, r0 = largeSize/2, r1 = smallSize/2;
     int step = (int)img.step;
     for( y = -r0; y <= r0; y++ )
     {
@@ -148,7 +148,7 @@ void SelfSimDescriptor::SSD(const Mat& img, Point pt, Mat& ssd) const
 void SelfSimDescriptor::compute(const Mat& img, vector<float>& descriptors, Size winStride,
                                 const vector<Point>& locations) const
 {
-    CV_Assert( img.depth() == CV_8U );  
+    CV_Assert( img.depth() == CV_8U );
 
     winStride.width = std::max(winStride.width, 1);
     winStride.height = std::max(winStride.height, 1);
@@ -189,32 +189,32 @@ void SelfSimDescriptor::compute(const Mat& img, vector<float>& descriptors, Size
 
         SSD(img, pt, ssd);
 
-	    // Determine in the local neighborhood the largest difference and use for normalization
-	    float var_noise = 1000.f;
+        // Determine in the local neighborhood the largest difference and use for normalization
+        float var_noise = 1000.f;
         for( y = -1; y <= 1 ; y++ )
-		    for( x = -1 ; x <= 1 ; x++ )
+            for( x = -1 ; x <= 1 ; x++ )
                 var_noise = std::max(var_noise, ssd.at<float>(largeSize/2+y, largeSize/2+x));
 
         for( j = 0; j <= fsize; j++ )
             feature[j] = FLT_MAX;
 
-	    // Derive feature vector before exp(-x) computation
-	    // Idea: for all  x,a >= 0, a=const.   we have:
-	    //       max [ exp( -x / a) ] = exp ( -min(x) / a )
-	    // Thus, determine min(ssd) and store in feature[...]
-    	for( y = 0; y < ssd.rows; y++ )
+        // Derive feature vector before exp(-x) computation
+        // Idea: for all  x,a >= 0, a=const.   we have:
+        //       max [ exp( -x / a) ] = exp ( -min(x) / a )
+        // Thus, determine min(ssd) and store in feature[...]
+        for( y = 0; y < ssd.rows; y++ )
         {
-		    const schar *mappingMaskPtr = mappingMask.ptr<schar>(y);
-		    const float *ssdPtr = ssd.ptr<float>(y);
-		    for( x = 0 ; x < ssd.cols; x++ )
+            const schar *mappingMaskPtr = mappingMask.ptr<schar>(y);
+            const float *ssdPtr = ssd.ptr<float>(y);
+            for( x = 0 ; x < ssd.cols; x++ )
             {
                 int index = mappingMaskPtr[x];
                 feature[index] = std::min(feature[index], ssdPtr[x]);
-		    }
-	    }
+            }
+        }
 
         var_noise = -1.f/var_noise;
-    	for( j = 0; j < fsize; j++ )
+        for( j = 0; j < fsize; j++ )
             feature0[j] = feature[j]*var_noise;
         Mat _f(1, fsize, CV_32F, feature0);
         cv::exp(_f, _f);

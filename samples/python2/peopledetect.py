@@ -4,7 +4,7 @@ import cv2
 help_message = '''
 USAGE: peopledetect.py <image_names> ...
 
-Press any key to continue, ESC to stop. 
+Press any key to continue, ESC to stop.
 '''
 
 def inside(r, q):
@@ -32,7 +32,7 @@ if __name__ == '__main__':
 
     for fn in it.chain(*map(glob, sys.argv[1:])):
         print fn, ' - ',
-        try: 
+        try:
             img = cv2.imread(fn)
         except:
             print 'loading error'
@@ -53,4 +53,4 @@ if __name__ == '__main__':
         ch = 0xFF & cv2.waitKey()
         if ch == 27:
             break
-    cv2.destroyAllWindows() 			
+    cv2.destroyAllWindows()

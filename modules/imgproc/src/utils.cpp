@@ -48,9 +48,9 @@ CV_IMPL CvSeq* cvPointSeqFromMat( int seq_kind, const CvArr* arr,
 
     int eltype;
     CvMat* mat = (CvMat*)arr;
-    
+
     if( !CV_IS_MAT( mat ))
-        CV_Error( CV_StsBadArg, "Input array is not a valid matrix" ); 
+        CV_Error( CV_StsBadArg, "Input array is not a valid matrix" );
 
     eltype = CV_MAT_TYPE( mat->type );
     if( eltype != CV_32SC2 && eltype != CV_32FC2 )
@@ -93,14 +93,14 @@ static void copyMakeBorder_8u( const uchar* src, size_t srcstep, Size srcroi,
     int* tab = _tab;
     int right = dstroi.width - srcroi.width - left;
     int bottom = dstroi.height - srcroi.height - top;
-    
+
     for( i = 0; i < left; i++ )
     {
         j = borderInterpolate(i - left, srcroi.width, borderType)*cn;
         for( k = 0; k < cn; k++ )
             tab[i*cn + k] = j + k;
     }
-    
+
     for( i = 0; i < right; i++ )
     {
         j = borderInterpolate(srcroi.width + i, srcroi.width, borderType)*cn;
@@ -112,14 +112,14 @@ static void copyMakeBorder_8u( const uchar* src, size_t srcstep, Size srcroi,
     dstroi.width *= cn;
     left *= cn;
     right *= cn;
-    
+
     uchar* dstInner = dst + dststep*top + left*elemSize;
 
     for( i = 0; i < srcroi.height; i++, dstInner += dststep, src += srcstep )
     {
         if( dstInner != src )
             memcpy(dstInner, src, srcroi.width*elemSize);
-        
+
         if( intMode )
         {
             const int* isrc = (int*)src;
@@ -137,16 +137,16 @@ static void copyMakeBorder_8u( const uchar* src, size_t srcstep, Size srcroi,
                 dstInner[j + srcroi.width] = src[tab[j + left]];
         }
     }
-    
+
     dstroi.width *= elemSize;
     dst += dststep*top;
-    
+
     for( i = 0; i < top; i++ )
     {
         j = borderInterpolate(i - top, srcroi.height, borderType);
         memcpy(dst + (i - top)*dststep, dst + j*dststep, dstroi.width);
     }
-    
+
     for( i = 0; i < bottom; i++ )
     {
         j = borderInterpolate(i + srcroi.height, srcroi.height, borderType);
@@ -164,20 +164,20 @@ static void copyMakeConstBorder_8u( const uchar* src, size_t srcstep, Size srcro
     uchar* constBuf = _constBuf;
     int right = dstroi.width - srcroi.width - left;
     int bottom = dstroi.height - srcroi.height - top;
-    
+
     for( i = 0; i < dstroi.width; i++ )
     {
         for( j = 0; j < cn; j++ )
             constBuf[i*cn + j] = value[j];
     }
-    
+
     srcroi.width *= cn;
     dstroi.width *= cn;
     left *= cn;
     right *= cn;
-    
+
     uchar* dstInner = dst + dststep*top + left;
-    
+
     for( i = 0; i < srcroi.height; i++, dstInner += dststep, src += srcstep )
     {
         if( dstInner != src )
@@ -185,24 +185,24 @@ static void copyMakeConstBorder_8u( const uchar* src, size_t srcstep, Size srcro
         memcpy( dstInner - left, constBuf, left );
         memcpy( dstInner + srcroi.width, constBuf, right );
     }
-    
+
     dst += dststep*top;
-    
+
     for( i = 0; i < top; i++ )
         memcpy(dst + (i - top)*dststep, constBuf, dstroi.width);
-    
+
     for( i = 0; i < bottom; i++ )
         memcpy(dst + (i + srcroi.height)*dststep, constBuf, dstroi.width);
 }
 
 }
-    
+
 void cv::copyMakeBorder( InputArray _src, OutputArray _dst, int top, int bottom,
                          int left, int right, int borderType, const Scalar& value )
 {
     Mat src = _src.getMat();
     CV_Assert( top >= 0 && bottom >= 0 && left >= 0 && right >= 0 );
-    
+
     if( src.isSubmatrix() && (borderType & BORDER_ISOLATED) == 0 )
     {
         Size wholeSize;
@@ -228,9 +228,9 @@ void cv::copyMakeBorder( InputArray _src, OutputArray _dst, int top, int bottom,
             src.copyTo(dst);
         return;
     }
-    
+
     borderType &= ~BORDER_ISOLATED;
-    
+
     if( borderType != BORDER_CONSTANT )
         copyMakeBorder_8u( src.data, src.step, src.size(),
                            dst.data, dst.step, dst.size(),
@@ -268,7 +268,7 @@ cvCopyMakeBorder( const CvArr* srcarr, CvArr* dstarr, CvPoint offset,
     cv::Mat src = cv::cvarrToMat(srcarr), dst = cv::cvarrToMat(dstarr);
     int left = offset.x, right = dst.cols - src.cols - left;
     int top = offset.y, bottom = dst.rows - src.rows - top;
-    
+
     CV_Assert( dst.type() == src.type() );
     cv::copyMakeBorder( src, dst, top, bottom, left, right, borderType, value );
 }

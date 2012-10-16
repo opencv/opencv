@@ -40,7 +40,7 @@ JNIEXPORT jint JNICALL Java_org_opencv_engine_HardwareDetector_GetProcessorCount
  */
 JNIEXPORT jint JNICALL Java_org_opencv_engine_HardwareDetector_DetectKnownPlatforms
 (JNIEnv *, jclass);
-  
+
 #ifdef __cplusplus
 }
 #endif

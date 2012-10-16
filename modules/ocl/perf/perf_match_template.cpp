@@ -67,14 +67,14 @@ using namespace std;
 class name \
 { \
 public: \
-	name ( type arg = type ()) : val_(arg) {} \
-	operator type () const {return val_;} \
+    name ( type arg = type ()) : val_(arg) {} \
+    operator type () const {return val_;} \
 private: \
-	type val_; \
+    type val_; \
 }; \
-	inline void PrintTo( name param, std::ostream* os) \
+    inline void PrintTo( name param, std::ostream* os) \
 { \
-	*os << #name <<  "(" << testing::PrintToString(static_cast< type >(param)) << ")"; \
+    *os << #name <<  "(" << testing::PrintToString(static_cast< type >(param)) << ")"; \
 }
 
 IMPLEMENT_PARAM_CLASS(Channels, int)

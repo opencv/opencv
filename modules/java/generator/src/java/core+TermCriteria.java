@@ -22,7 +22,7 @@ public class TermCriteria {
 
     /**
      * Termination criteria for iterative algorithms.
-     * 
+     *
      * @param type
      *            the type of termination criteria: COUNT, EPS or COUNT + EPS.
      * @param maxCount

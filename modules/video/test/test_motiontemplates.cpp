@@ -65,7 +65,7 @@ CV_MHIBaseTest::CV_MHIBaseTest()
     timestamp = duration = 0;
     max_log_duration = 9;
     mhi_i = mhi_ref_i = -1;
-    
+
     silh_ratio = 0.25;
 }
 
@@ -189,9 +189,9 @@ static void test_MHIGradient( const Mat& mhi, Mat& mask, Mat& orientation,
 {
     Point anchor( aperture_size/2, aperture_size/2 );
     double limit = 1e-4*aperture_size*aperture_size;
-    
+
     Mat dx, dy, min_mhi, max_mhi;
-    
+
     Mat kernel = cvtest::calcSobelKernel2D( 1, 0, aperture_size );
     cvtest::filter2D( mhi, dx, CV_32F, kernel, anchor, 0, BORDER_REPLICATE );
     kernel = cvtest::calcSobelKernel2D( 0, 1, aperture_size );
@@ -355,7 +355,7 @@ static double test_calcGlobalOrientation( const Mat& orient, const Mat& mask,
         const float* orient_data = orient.ptr<float>(y);
         const float* mhi_data = mhi.ptr<float>(y);
         const uchar* mask_data = mask.ptr(y);
-        
+
         for( x = 0; x < orient.cols; x++ )
         {
             if( mask_data[x] && mhi_data[x] > low_time )
@@ -383,7 +383,7 @@ static double test_calcGlobalOrientation( const Mat& orient, const Mat& mask,
         if( global_orientation < 0 ) global_orientation += 360;
         if( global_orientation > 360 ) global_orientation -= 360;
     }
-    
+
     return global_orientation;
 }
 
@@ -469,7 +469,7 @@ int CV_MHIGlobalOrientTest::validate_test_results( int test_case_idx )
 {
     //printf("%d. rows=%d, cols=%d, nzmask=%d\n", test_case_idx, test_mat[INPUT][1].rows, test_mat[INPUT][1].cols,
     //       cvCountNonZero(test_array[INPUT][1]));
-    
+
     double ref_angle = test_calcGlobalOrientation( test_mat[INPUT][2], test_mat[INPUT][1],
                                                    test_mat[INPUT][0], timestamp, duration );
     double err_level = get_success_error_level( test_case_idx, 0, 0 );

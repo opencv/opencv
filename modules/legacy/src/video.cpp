@@ -45,7 +45,7 @@ CV_IMPL void
 cvDeInterlace( const CvArr* framearr, CvArr* fieldEven, CvArr* fieldOdd )
 {
     CV_FUNCNAME("cvDeInterlace");
-    
+
     __BEGIN__;
 
     CvMat frame_stub, *frame = (CvMat*)framearr;
@@ -74,7 +74,7 @@ cvDeInterlace( const CvArr* framearr, CvArr* fieldEven, CvArr* fieldOdd )
                 frame->data.ptr + frame->step*y*2, size.width );
         memcpy( odd->data.ptr + even->step*y,
                 frame->data.ptr + frame->step*(y*2+1), size.width );
-    }  
+    }
 
     __END__;
 }

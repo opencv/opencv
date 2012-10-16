@@ -6,7 +6,7 @@ typedef double (*GetCameraPropertyC)(void* camera, int propIdx);
 typedef void (*SetCameraPropertyC)(void* camera, int propIdx, double value);
 typedef void (*ApplyCameraPropertiesC)(void** camera);
 
-extern "C" 
+extern "C"
 {
 void* initCameraConnectC(void* cameraCallback, int cameraId, void* userData);
 void closeCameraConnectC(void**);

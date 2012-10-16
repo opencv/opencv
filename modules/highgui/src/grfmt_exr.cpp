@@ -107,7 +107,7 @@ bool  ExrDecoder::readHeader()
     bool result = false;
 
     m_file = new InputFile( m_filename.c_str() );
-    
+
     if( !m_file ) // probably paranoid
         return false;
 
@@ -167,7 +167,7 @@ bool  ExrDecoder::readHeader()
             uintcnt += ( m_blue->type == UINT );
         }
         m_type = (chcnt == uintcnt) ? UINT : FLOAT;
-    
+
         m_isfloat = (m_type == FLOAT);
     }
 
@@ -182,7 +182,7 @@ bool  ExrDecoder::readData( Mat& img )
 {
     m_native_depth = CV_MAT_DEPTH(type()) == img.depth();
     bool color = img.channels() > 1;
-    
+
     uchar* data = img.data;
     int step = img.step;
     bool justcopy = m_native_depth;
@@ -549,12 +549,12 @@ void  ExrDecoder::RGBToGray( float *in, float *out )
     }
 }
 
-    
+
 ImageDecoder ExrDecoder::newDecoder() const
 {
     return new ExrDecoder;
-} 
-    
+}
+
 /////////////////////// ExrEncoder ///////////////////
 
 
@@ -728,8 +728,8 @@ bool  ExrEncoder::write( const Mat& img, const vector<int>& )
 ImageEncoder ExrEncoder::newEncoder() const
 {
     return new ExrEncoder;
-}    
-    
+}
+
 }
 
 #endif

@@ -58,7 +58,7 @@ template<typename _Tp> static int solveQuadratic(_Tp a, _Tp b, _Tp c, _Tp& x1, _
         x1 = x2 = -c/b;
         return 1;
     }
-    
+
     _Tp d = b*b - 4*a*c;
     if( d < 0 )
     {
@@ -148,7 +148,7 @@ EllipticKeyPoint::EllipticKeyPoint( const Point2f& _center, const Scalar& _ellip
     solveQuadratic(1., -(a+c), ac_b2, x1, x2);
     axes.width = (float)(1/sqrt(x1));
     axes.height = (float)(1/sqrt(x2));
-    
+
     boundingBox.width = (float)sqrt(ellipse[2]/ac_b2);
     boundingBox.height = (float)sqrt(ellipse[0]/ac_b2);
 }
@@ -421,7 +421,7 @@ static void calculateRepeatability( const Mat& img1, const Mat& img2, const Mat&
         thresholdedOverlapMask->create( (int)keypoints1.size(), (int)keypoints2t.size(), CV_8UC1 );
         thresholdedOverlapMask->setTo( Scalar::all(0) );
     }
-	size_t size1 = keypoints1.size(), size2 = keypoints2t.size();
+    size_t size1 = keypoints1.size(), size2 = keypoints2t.size();
     size_t minCount = MIN( size1, size2 );
 
     // calculate overlap errors

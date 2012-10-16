@@ -10,7 +10,7 @@ class FBackDemo:
         self.mv_color = (0, 255, 0)
         self.cflow = None
         self.flow = None
-        
+
         NamedWindow( "Optical Flow", 1 )
 
         print( "Press ESC - quit the program\n" )
@@ -28,7 +28,7 @@ class FBackDemo:
 
     def run(self):
         first_frame = True
-        
+
         while True:
             frame = QueryFrame( self.capture )
 
@@ -37,7 +37,7 @@ class FBackDemo:
                 prev_gray = CreateImage(GetSize(frame), 8, 1)
                 flow = CreateImage(GetSize(frame), 32, 2)
                 self.cflow = CreateImage(GetSize(frame), 8, 3)
-                
+
             CvtColor(frame, gray, CV_BGR2GRAY)
             if not first_frame:
                 CalcOpticalFlowFarneback(prev_gray, gray, flow,
@@ -47,7 +47,7 @@ class FBackDemo:
                 c = WaitKey(7)
                 if c in [27, ord('q'), ord('Q')]:
                     break
-            prev_gray, gray = gray, prev_gray        
+            prev_gray, gray = gray, prev_gray
             first_frame = False
 
 if __name__=="__main__":

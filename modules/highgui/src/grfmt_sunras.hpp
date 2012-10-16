@@ -78,7 +78,7 @@ public:
     ImageDecoder newDecoder() const;
 
 protected:
-   
+
     RMByteStream    m_strm;
     PaletteEntry    m_palette[256];
     int             m_bpp;

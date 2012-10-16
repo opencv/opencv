@@ -362,7 +362,7 @@ void cv::gpu::FarnebackOpticalFlow::operator ()(
             };
 
             Mat g = getGaussianKernel(smoothSize, sigma, CV_32F);
-            device::optflow_farneback::setGaussianBlurKernel(g.ptr<float>(smoothSize/2), smoothSize/2);           
+            device::optflow_farneback::setGaussianBlurKernel(g.ptr<float>(smoothSize/2), smoothSize/2);
 
             for (int i = 0; i < 2; i++)
             {
@@ -401,7 +401,7 @@ void cv::gpu::FarnebackOpticalFlow::operator ()(
     }
 
     flowx = curFlowX;
-    flowy = curFlowY;    
+    flowy = curFlowY;
 
     if (!S(s))
         streams[0].waitForCompletion();

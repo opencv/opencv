@@ -11,11 +11,11 @@ class BnOpenCVEngine: public android::BnInterface<IOpenCVEngine>
 {
 public:
     android::status_t onTransact(uint32_t code,
-				 const android::Parcel &data,
-				 android::Parcel *reply,
-				 uint32_t flags);
+                 const android::Parcel &data,
+                 android::Parcel *reply,
+                 uint32_t flags);
     virtual ~BnOpenCVEngine();
-    
+
 };
 
 #endif

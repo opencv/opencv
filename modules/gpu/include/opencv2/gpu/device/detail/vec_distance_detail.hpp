@@ -45,7 +45,7 @@
 
 #include "../datamov_utils.hpp"
 
-namespace cv { namespace gpu { namespace device 
+namespace cv { namespace gpu { namespace device
 {
     namespace vec_distance_detail
     {

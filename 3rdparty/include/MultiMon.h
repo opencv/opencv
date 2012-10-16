@@ -10,7 +10,7 @@
 //
 // Exactly one source must include this with COMPILE_MULTIMON_STUBS defined.
 //
-// Copyright (c) Microsoft Corporation. All rights reserved. 
+// Copyright (c) Microsoft Corporation. All rights reserved.
 //
 //=============================================================================
 
@@ -174,11 +174,11 @@ BOOL     g_fMultimonPlatformNT = FALSE;
 #endif
 
 BOOL IsPlatformNT()
-{ 
+{
     OSVERSIONINFOA osvi = {0};
     osvi.dwOSVersionInfoSize = sizeof(osvi);
     GetVersionExA((OSVERSIONINFOA*)&osvi);
-    return (VER_PLATFORM_WIN32_NT == osvi.dwPlatformId);    
+    return (VER_PLATFORM_WIN32_NT == osvi.dwPlatformId);
 }
 
 BOOL InitMultipleMonitorStubs(void)
@@ -199,7 +199,7 @@ BOOL InitMultipleMonitorStubs(void)
         (*(FARPROC*)&g_pfnEnumDisplayMonitors = GetProcAddress(hUser32,"EnumDisplayMonitors")) != NULL &&
 #ifdef UNICODE
         (*(FARPROC*)&g_pfnEnumDisplayDevices  = GetProcAddress(hUser32,"EnumDisplayDevicesW")) != NULL &&
-        (*(FARPROC*)&g_pfnGetMonitorInfo      = g_fMultimonPlatformNT ? GetProcAddress(hUser32,"GetMonitorInfoW") : 
+        (*(FARPROC*)&g_pfnGetMonitorInfo      = g_fMultimonPlatformNT ? GetProcAddress(hUser32,"GetMonitorInfoW") :
                                                 GetProcAddress(hUser32,"GetMonitorInfoA")) != NULL
 #else
         (*(FARPROC*)&g_pfnGetMonitorInfo      = GetProcAddress(hUser32,"GetMonitorInfoA")) != NULL &&
@@ -328,7 +328,7 @@ xGetMonitorInfo(HMONITOR hMonitor, __inout LPMONITORINFO lpMonitorInfo)
         BOOL f = g_pfnGetMonitorInfo(hMonitor, lpMonitorInfo);
 #ifdef UNICODE
         if (f && !g_fMultimonPlatformNT && (lpMonitorInfo->cbSize >= sizeof(MONITORINFOEX)))
-        { 
+        {
             MultiByteToWideChar(CP_ACP, 0,
                 (LPSTR)((MONITORINFOEX*)lpMonitorInfo)->szDevice, -1,
                 ((MONITORINFOEX*)lpMonitorInfo)->szDevice, (sizeof(((MONITORINFOEX*)lpMonitorInfo)->szDevice)/sizeof(TCHAR)));

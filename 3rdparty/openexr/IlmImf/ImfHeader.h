@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2004, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-// 
+//
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission. 
-// 
+// from this software without specific prior written permission.
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -68,19 +68,19 @@ class PreviewImage;
 class Header
 {
   public:
-    
+
     //----------------------------------------------------------------
     // Default constructor -- the display window and the data window
     // are both set to Box2i (V2i (0, 0), V2i (width-1, height-1).
     //----------------------------------------------------------------
 
     Header (int width = 64,
-	    int height = 64,
-	    float pixelAspectRatio = 1,
-	    const Imath::V2f &screenWindowCenter = Imath::V2f (0, 0),
-	    float screenWindowWidth = 1,
-	    LineOrder lineOrder = INCREASING_Y,
-	    Compression = ZIP_COMPRESSION);
+        int height = 64,
+        float pixelAspectRatio = 1,
+        const Imath::V2f &screenWindowCenter = Imath::V2f (0, 0),
+        float screenWindowWidth = 1,
+        LineOrder lineOrder = INCREASING_Y,
+        Compression = ZIP_COMPRESSION);
 
 
     //--------------------------------------------------------------------
@@ -89,13 +89,13 @@ class Header
     //--------------------------------------------------------------------
 
     Header (int width,
-	    int height,
-	    const Imath::Box2i &dataWindow,
-	    float pixelAspectRatio = 1,
-	    const Imath::V2f &screenWindowCenter = Imath::V2f (0, 0),
-	    float screenWindowWidth = 1,
-	    LineOrder lineOrder = INCREASING_Y,
-	    Compression = ZIP_COMPRESSION);
+        int height,
+        const Imath::Box2i &dataWindow,
+        float pixelAspectRatio = 1,
+        const Imath::V2f &screenWindowCenter = Imath::V2f (0, 0),
+        float screenWindowWidth = 1,
+        LineOrder lineOrder = INCREASING_Y,
+        Compression = ZIP_COMPRESSION);
 
 
     //----------------------------------------------------------
@@ -104,12 +104,12 @@ class Header
     //----------------------------------------------------------
 
     Header (const Imath::Box2i &displayWindow,
-	    const Imath::Box2i &dataWindow,
-	    float pixelAspectRatio = 1,
-	    const Imath::V2f &screenWindowCenter = Imath::V2f (0, 0),
-	    float screenWindowWidth = 1,
-	    LineOrder lineOrder = INCREASING_Y,
-	    Compression = ZIP_COMPRESSION);
+        const Imath::Box2i &dataWindow,
+        float pixelAspectRatio = 1,
+        const Imath::V2f &screenWindowCenter = Imath::V2f (0, 0),
+        float screenWindowWidth = 1,
+        LineOrder lineOrder = INCREASING_Y,
+        Compression = ZIP_COMPRESSION);
 
 
     //-----------------
@@ -152,10 +152,10 @@ class Header
     //---------------------------------------------------------------
 
     void			insert (const char name[],
-				        const Attribute &attribute);
+                        const Attribute &attribute);
 
     void			insert (const std::string &name,
-				        const Attribute &attribute);
+                        const Attribute &attribute);
 
     //------------------------------------------------------------------
     // Access to existing attributes:
@@ -194,7 +194,7 @@ class Header
 
     template <class T> T*	findTypedAttribute (const std::string &name);
     template <class T> const T*	findTypedAttribute (const std::string &name)
-								       const;
+                                       const;
 
     //---------------------------------------------
     // Iterator-style access to existing attributes
@@ -323,7 +323,7 @@ class Header
     // sanityCheck() will throw an exception if the width or height of
     // the data window exceeds the maximum image width or height, or
     // if the size of a tile exceeds the maximum tile width or height.
-    // 
+    //
     // At program startup the maximum image and tile width and height
     // are set to zero, meaning that width and height are unlimited.
     //
@@ -349,7 +349,7 @@ class Header
 
 
     Int64			writeTo (OStream &os,
-					 bool isTiled = false) const;
+                     bool isTiled = false) const;
 
     void			readFrom (IStream &is, int &version);
 
@@ -443,7 +443,7 @@ Header::Iterator::Iterator (const Header::AttributeMap::iterator &i): _i (i)
 }
 
 
-inline Header::Iterator &		
+inline Header::Iterator &
 Header::Iterator::operator ++ ()
 {
     ++_i;
@@ -451,7 +451,7 @@ Header::Iterator::operator ++ ()
 }
 
 
-inline Header::Iterator 	
+inline Header::Iterator
 Header::Iterator::operator ++ (int)
 {
     Iterator tmp = *this;
@@ -467,7 +467,7 @@ Header::Iterator::name () const
 }
 
 
-inline Attribute &	
+inline Attribute &
 Header::Iterator::attribute () const
 {
     return *_i->second;
@@ -503,7 +503,7 @@ Header::ConstIterator::operator ++ ()
 }
 
 
-inline Header::ConstIterator 		
+inline Header::ConstIterator
 Header::ConstIterator::operator ++ (int)
 {
     ConstIterator tmp = *this;
@@ -519,7 +519,7 @@ Header::ConstIterator::name () const
 }
 
 
-inline const Attribute &	
+inline const Attribute &
 Header::ConstIterator::attribute () const
 {
     return *_i->second;
@@ -552,7 +552,7 @@ Header::typedAttribute (const char name[])
     T *tattr = dynamic_cast <T*> (attr);
 
     if (tattr == 0)
-	throw Iex::TypeExc ("Unexpected attribute type.");
+    throw Iex::TypeExc ("Unexpected attribute type.");
 
     return *tattr;
 }
@@ -566,7 +566,7 @@ Header::typedAttribute (const char name[]) const
     const T *tattr = dynamic_cast <const T*> (attr);
 
     if (tattr == 0)
-	throw Iex::TypeExc ("Unexpected attribute type.");
+    throw Iex::TypeExc ("Unexpected attribute type.");
 
     return *tattr;
 }

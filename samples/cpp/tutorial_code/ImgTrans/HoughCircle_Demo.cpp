@@ -24,7 +24,7 @@ int main(int argc, char** argv)
    if( !src.data )
      { return -1; }
 
-   /// Convert it to gray 
+   /// Convert it to gray
     cvtColor( src, src_gray, CV_BGR2GRAY );
 
    /// Reduce the noise so we avoid false circle detection
@@ -46,7 +46,7 @@ int main(int argc, char** argv)
          circle( src, center, radius, Scalar(0,0,255), 3, 8, 0 );
     }
 
-   /// Show your results 
+   /// Show your results
     namedWindow( "Hough Circle Transform Demo", CV_WINDOW_AUTOSIZE );
     imshow( "Hough Circle Transform Demo", src );
 

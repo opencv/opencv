@@ -398,17 +398,17 @@ bool CvCaptureCAM_CMU::grabFrame()
 
 /*static void swapRedBlue(IplImage * im)
 {
-	uchar * ptr = (uchar *) im->imageData;
-	uchar t;
-	for(int i=0; i<im->height; i++){
-		ptr = (uchar *) im->imageData+im->widthStep*i;
-		for(int j=0; j<im->width; j++){
-			t = ptr[0];
-			ptr[0] = ptr[2];
-			ptr[2] = t;
-			ptr+=3;
-		}
-	}
+    uchar * ptr = (uchar *) im->imageData;
+    uchar t;
+    for(int i=0; i<im->height; i++){
+        ptr = (uchar *) im->imageData+im->widthStep*i;
+        for(int j=0; j<im->width; j++){
+            t = ptr[0];
+            ptr[0] = ptr[2];
+            ptr[2] = t;
+            ptr+=3;
+        }
+    }
 }*/
 
 IplImage* CvCaptureCAM_CMU::retrieveFrame(int)
