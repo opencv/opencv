@@ -79,6 +79,7 @@ endif(NOT HAVE_TBB)
 # get TBB version
 if(HAVE_TBB)
   find_file(TBB_STDDEF_PATH tbb/tbb_stddef.h "${TBB_INCLUDE_DIRS}")
+  mark_as_advanced(TBB _STDDEF_PATH)
 endif()
 if(HAVE_TBB AND TBB_STDDEF_PATH)
   ocv_parse_header("${TBB_STDDEF_PATH}" TBB_VERSION_LINES TBB_VERSION_MAJOR TBB_VERSION_MINOR TBB_INTERFACE_VERSION)

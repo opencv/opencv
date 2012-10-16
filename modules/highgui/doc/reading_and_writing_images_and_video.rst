@@ -81,12 +81,12 @@ Loads an image from a file.
         CV_LOAD_IMAGE_GRAYSCALE
         
 
-        * **>0**  Return a 3-channel color image
+        * **>0**  Return a 3-channel color image.
+            .. note:: In the current implementation the alpha channel, if any, is stripped from the output image. Use negative value if you need the alpha channel.
 
-        * **=0**  Return a grayscale image
+        * **=0**  Return a grayscale image.
 
-        * **<0**  Return the loaded image as is. 
-            .. note:: In the current implementation the alpha channel, if any, is stripped from the output image.
+        * **<0**  Return the loaded image as is (with alpha channel).
 
 The function ``imread`` loads an image from the specified file and returns it. If the image cannot be read (because of missing file, improper permissions, unsupported or invalid format), the function returns an empty matrix ( ``Mat::data==NULL`` ). Currently, the following file formats are supported:
 

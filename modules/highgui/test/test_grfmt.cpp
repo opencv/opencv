@@ -254,4 +254,31 @@ public:
 };
 
 TEST(Highgui_Image, encode_png) { CV_GrfmtPNGEncodeTest test; test.safe_run(); }
+
+TEST(Highgui_ImreadVSCvtColor, regression)
+{
+    cvtest::TS& ts = *cvtest::TS::ptr();
+
+    const int MAX_MEAN_DIFF = 1;
+    const int MAX_ABS_DIFF = 10;
+
+    string imgName = string(ts.get_data_path()) + "/../cv/shared/lena.png";
+    Mat original_image = imread(imgName);
+    Mat gray_by_codec = imread(imgName, 0);
+    Mat gray_by_cvt;
+
+    cvtColor(original_image, gray_by_cvt, CV_BGR2GRAY);
+
+    Mat diff;
+    absdiff(gray_by_codec, gray_by_cvt, diff);
+
+    double actual_avg_diff = (double)mean(diff)[0];
+    double actual_maxval, actual_minval;
+    minMaxLoc(diff, &actual_minval, &actual_maxval);
+	//printf("actual avg = %g, actual maxdiff = %g, npixels = %d\n", actual_avg_diff, actual_maxval, (int)diff.total());
+
+    EXPECT_LT(actual_avg_diff, MAX_MEAN_DIFF);
+    EXPECT_LT(actual_maxval, MAX_ABS_DIFF);
+}
 #endif
+

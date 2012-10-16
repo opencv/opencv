@@ -15,7 +15,7 @@ const std::string command_line_keys =
     "{   perf_min_samples    |10       |minimal required numer of samples}"
     "{   perf_force_samples  |100      |force set maximum number of samples for all tests}"
     "{   perf_seed           |809564   |seed for random numbers generator}"
-    "{   perf_tbb_nthreads   |-1       |if TBB is enabled, the number of TBB threads}"
+    "{   perf_threads        |-1       |the number of worker threads, if parallel execution is enabled}"
     "{   perf_write_sanity   |         |allow to create new records for sanity checks}"
 #ifdef ANDROID
     "{   perf_time_limit     |6.0      |default time limit for a single test (in seconds)}"
@@ -39,17 +39,17 @@ static unsigned int param_min_samples;
 static unsigned int param_force_samples;
 static uint64       param_seed;
 static double       param_time_limit;
-static int          param_tbb_nthreads;
+static int          param_threads;
 static bool         param_write_sanity;
 #ifdef HAVE_CUDA
 static bool         param_run_cpu;
 static int          param_cuda_device;
 #endif
+
+
 #ifdef ANDROID
 static int          param_affinity_mask;
 static bool         log_power_checkpoints;
-
-
 
 #include <sys/syscall.h>
 #include <pthread.h>
@@ -64,12 +64,24 @@ static void setCurrentThreadAffinityMask(int mask)
         LOGE("Error in the syscall setaffinity: mask=%d=0x%x err=%d=0x%x", mask, mask, err, err);
     }
 }
-
 #endif
 
 #ifdef HAVE_CUDA
 # include <opencv2/core/gpumat.hpp>
 #endif
+
+namespace {
+
+class PerfEnvironment: public ::testing::Environment
+{
+public:
+    void TearDown()
+    {
+        cv::setNumThreads(-1);
+    }
+};
+
+} // namespace
 
 static void randu(cv::Mat& m)
 {
@@ -635,6 +647,8 @@ void TestBase::Init(int argc, const char* const argv[])
         return;
     }
 
+    ::testing::AddGlobalTestEnvironment(new PerfEnvironment);
+
     param_max_outliers  = std::min(100., std::max(0., args.get<double>("perf_max_outliers")));
     param_min_samples   = std::max(1u, args.get<unsigned int>("perf_min_samples"));
     param_max_deviation = std::max(0., args.get<double>("perf_max_deviation"));
@@ -642,7 +656,7 @@ void TestBase::Init(int argc, const char* const argv[])
     param_time_limit    = std::max(0., args.get<double>("perf_time_limit"));
     param_force_samples = args.get<unsigned int>("perf_force_samples");
     param_write_sanity  = args.has("perf_write_sanity");
-    param_tbb_nthreads  = args.get<int>("perf_tbb_nthreads");
+    param_threads  = args.get<int>("perf_threads");
 #ifdef ANDROID
     param_affinity_mask   = args.get<int>("perf_affinity_mask");
     log_power_checkpoints = args.has("perf_log_power_checkpoints");
@@ -1039,16 +1053,14 @@ void TestBase::SetUp()
 {
     cv::theRNG().state = param_seed; // this rng should generate same numbers for each run
 
-#ifdef HAVE_TBB
-    if (param_tbb_nthreads > 0) {
-        p_tbb_initializer.release();
-        p_tbb_initializer=new tbb::task_scheduler_init(param_tbb_nthreads);
-    }
-#endif
+    if (param_threads >= 0)
+        cv::setNumThreads(param_threads);
+
 #ifdef ANDROID
     if (param_affinity_mask)
         setCurrentThreadAffinityMask(param_affinity_mask);
 #endif
+
     verified = false;
     lastTime = 0;
     totalTime = 0;
@@ -1076,9 +1088,6 @@ void TestBase::TearDown()
         if (type_param)  printf("[ TYPE     ] \t%s\n", type_param), fflush(stdout);
         reportMetrics(true);
     }
-#ifdef HAVE_TBB
-    p_tbb_initializer.release();
-#endif
 }
 
 std::string TestBase::getDataPath(const std::string& relativePath)
@@ -1167,12 +1176,7 @@ TestBase::_declareHelper& TestBase::_declareHelper::time(double timeLimitSecs)
 
 TestBase::_declareHelper& TestBase::_declareHelper::tbb_threads(int n)
 {
-#ifdef HAVE_TBB
-    test->p_tbb_initializer.release();
-    if (n > 0)
-        test->p_tbb_initializer=new tbb::task_scheduler_init(n);
-#endif
-    (void)n;
+    cv::setNumThreads(n);
     return *this;
 }
 
