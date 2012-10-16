@@ -47,7 +47,6 @@
 #include "opencv2/core/core.hpp"
 #include "opencv2/videostab/optical_flow.hpp"
 #include "opencv2/videostab/fast_marching.hpp"
-#include "opencv2/videostab/global_motion.hpp"
 #include "opencv2/photo/photo.hpp"
 
 namespace cv
@@ -59,21 +58,13 @@ class CV_EXPORTS InpainterBase
 {
 public:
     InpainterBase()
-        : radius_(0), motionModel_(MM_UNKNOWN), frames_(0), motions_(0),
+        : radius_(0), frames_(0), motions_(0),
           stabilizedFrames_(0), stabilizationMotions_(0) {}
 
     virtual ~InpainterBase() {}
 
     virtual void setRadius(int val) { radius_ = val; }
     virtual int radius() const { return radius_; }
-
-    virtual void setMotionModel(MotionModel val) { motionModel_ = val; }
-    virtual MotionModel motionModel() const { return motionModel_; }
-
-    virtual void inpaint(int idx, Mat &frame, Mat &mask) = 0;
-
-
-    // data from stabilizer
 
     virtual void setFrames(const std::vector<Mat> &val) { frames_ = &val; }
     virtual const std::vector<Mat>& frames() const { return *frames_; }
@@ -87,9 +78,12 @@ public:
     virtual void setStabilizationMotions(const std::vector<Mat> &val) { stabilizationMotions_ = &val; }
     virtual const std::vector<Mat>& stabilizationMotions() const { return *stabilizationMotions_; }
 
+    virtual void update() {}
+
+    virtual void inpaint(int idx, Mat &frame, Mat &mask) = 0;
+
 protected:
     int radius_;
-    MotionModel motionModel_;
     const std::vector<Mat> *frames_;
     const std::vector<Mat> *motions_;
     const std::vector<Mat> *stabilizedFrames_;
@@ -109,11 +103,12 @@ public:
     bool empty() const { return inpainters_.empty(); }
 
     virtual void setRadius(int val);
-    virtual void setMotionModel(MotionModel val);
     virtual void setFrames(const std::vector<Mat> &val);
     virtual void setMotions(const std::vector<Mat> &val);
     virtual void setStabilizedFrames(const std::vector<Mat> &val);
     virtual void setStabilizationMotions(const std::vector<Mat> &val);
+
+    virtual void update();
 
     virtual void inpaint(int idx, Mat &frame, Mat &mask);
 
@@ -180,7 +175,8 @@ private:
 class CV_EXPORTS ColorInpainter : public InpainterBase
 {
 public:
-    ColorInpainter(int method = INPAINT_TELEA, double radius = 2.);
+    ColorInpainter(int method = INPAINT_TELEA, double _radius = 2.)
+        : method_(method), radius_(_radius) {}
 
     virtual void inpaint(int idx, Mat &frame, Mat &mask);
 
@@ -189,9 +185,6 @@ private:
     double radius_;
     Mat invMask_;
 };
-
-inline ColorInpainter::ColorInpainter(int _method, double _radius)
-        : method_(_method), radius_(_radius) {}
 
 CV_EXPORTS void calcFlowMask(
         const Mat &flowX, const Mat &flowY, const Mat &errors, float maxError,

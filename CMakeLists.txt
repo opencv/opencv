@@ -140,7 +140,6 @@ OCV_OPTION(WITH_V4L            "Include Video 4 Linux support"               ON 
 OCV_OPTION(WITH_VIDEOINPUT     "Build HighGUI with DirectShow support"       ON   IF WIN32 )
 OCV_OPTION(WITH_XIMEA          "Include XIMEA cameras support"               OFF  IF (NOT ANDROID AND NOT APPLE) )
 OCV_OPTION(WITH_XINE           "Include Xine support (GPL)"                  OFF  IF (UNIX AND NOT APPLE AND NOT ANDROID) )
-OCV_OPTION(WITH_CLP            "Include Clp support (EPL)"                   OFF)
 OCV_OPTION(WITH_OPENCL         "Include OpenCL Runtime support"              OFF  IF (NOT ANDROID AND NOT IOS) )
 OCV_OPTION(WITH_OPENCLAMDFFT   "Include AMD OpenCL FFT library support"      OFF  IF (NOT ANDROID AND NOT IOS) )
 OCV_OPTION(WITH_OPENCLAMDBLAS  "Include AMD OpenCL BLAS library support"     OFF  IF (NOT ANDROID AND NOT IOS) )
@@ -763,7 +762,6 @@ endif(DEFINED WITH_CUDA)
 status("    Use OpenCL:"  HAVE_OPENCL  THEN YES ELSE NO)
 
 status("    Use Eigen:" HAVE_EIGEN THEN "YES (ver ${EIGEN_WORLD_VERSION}.${EIGEN_MAJOR_VERSION}.${EIGEN_MINOR_VERSION})" ELSE NO)
-status("    Use Clp:"   HAVE_CLP   THEN YES ELSE NO)
 
 if(HAVE_CUDA)
   status("")

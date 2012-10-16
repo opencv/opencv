@@ -40,16 +40,9 @@
 //
 //M*/
 
-// REFERENCES
-// 1. "Full-Frame Video Stabilization with Motion Inpainting"
-//     Yasuyuki Matsushita, Eyal Ofek, Weina Ge, Xiaoou Tang, Senior Member, and Heung-Yeung Shum
-// 2. "Auto-Directed Video Stabilization with Robust L1 Optimal Camera Paths"
-//     Matthias Grundmann, Vivek Kwatra, Irfan Essa
-
 #ifndef __OPENCV_VIDEOSTAB_HPP__
 #define __OPENCV_VIDEOSTAB_HPP__
 
 #include "opencv2/videostab/stabilizer.hpp"
-#include "opencv2/videostab/ring_buffer.hpp"
 
 #endif

@@ -45,8 +45,6 @@
 #include "opencv2/videostab/inpainting.hpp"
 #include "opencv2/videostab/global_motion.hpp"
 #include "opencv2/videostab/fast_marching.hpp"
-#include "opencv2/videostab/ring_buffer.hpp"
-#include "opencv2/opencv_modules.hpp"
 
 using namespace std;
 
@@ -71,14 +69,6 @@ void InpaintingPipeline::setFrames(const vector<Mat> &val)
 }
 
 
-void InpaintingPipeline::setMotionModel(MotionModel val)
-{
-    for (size_t i = 0; i < inpainters_.size(); ++i)
-        inpainters_[i]->setMotionModel(val);
-    InpainterBase::setMotionModel(val);
-}
-
-
 void InpaintingPipeline::setMotions(const vector<Mat> &val)
 {
     for (size_t i = 0; i < inpainters_.size(); ++i)
@@ -100,6 +90,14 @@ void InpaintingPipeline::setStabilizationMotions(const vector<Mat> &val)
     for (size_t i = 0; i < inpainters_.size(); ++i)
         inpainters_[i]->setStabilizationMotions(val);
     InpainterBase::setStabilizationMotions(val);
+}
+
+
+void InpaintingPipeline::update()
+{
+    for (size_t i = 0; i < inpainters_.size(); ++i)
+        inpainters_[i]->update();
+    InpainterBase::update();
 }
 
 
@@ -130,9 +128,9 @@ void ConsistentMosaicInpainter::inpaint(int idx, Mat &frame, Mat &mask)
     CV_Assert(mask.size() == frame.size() && mask.type() == CV_8U);
 
     Mat invS = at(idx, *stabilizationMotions_).inv();
-    vector<Mat_<float> > vmotions(2*radius_ + 1);
+    vector<Mat_<float> > _motions(2*radius_ + 1);
     for (int i = -radius_; i <= radius_; ++i)
-        vmotions[radius_ + i] = getMotion(idx, idx + i, *motions_) * invS;
+        _motions[radius_ + i] = getMotion(idx, idx + i, *motions_) * invS;
 
     int n;
     float mean, var;
@@ -154,7 +152,7 @@ void ConsistentMosaicInpainter::inpaint(int idx, Mat &frame, Mat &mask)
                 for (int i = -radius_; i <= radius_; ++i)
                 {
                     const Mat_<Point3_<uchar> > &framei = at(idx + i, *frames_);
-                    const Mat_<float> &Mi = vmotions[radius_ + i];
+                    const Mat_<float> &Mi = _motions[radius_ + i];
                     int xi = cvRound(Mi(0,0)*x + Mi(0,1)*y + Mi(0,2));
                     int yi = cvRound(Mi(1,0)*x + Mi(1,1)*y + Mi(1,2));
                     if (xi >= 0 && xi < framei.cols && yi >= 0 && yi < framei.rows)
@@ -339,12 +337,12 @@ MotionInpainter::MotionInpainter()
 void MotionInpainter::inpaint(int idx, Mat &frame, Mat &mask)
 {
     priority_queue<pair<float,int> > neighbors;
-    vector<Mat> vmotions(2*radius_ + 1);
+    vector<Mat> _motions(2*radius_ + 1);
 
     for (int i = -radius_; i <= radius_; ++i)
     {
         Mat motion0to1 = getMotion(idx, idx + i, *motions_) * at(idx, *stabilizationMotions_).inv();
-        vmotions[radius_ + i] = motion0to1;
+        _motions[radius_ + i] = motion0to1;
 
         if (i != 0)
         {
@@ -370,35 +368,18 @@ void MotionInpainter::inpaint(int idx, Mat &frame, Mat &mask)
         int neighbor = neighbors.top().second;
         neighbors.pop();
 
-        Mat motion1to0 = vmotions[radius_ + neighbor - idx].inv();
-
-        // warp frame
+        Mat motion1to0 = _motions[radius_ + neighbor - idx].inv();
 
         frame1_ = at(neighbor, *frames_);
-
-        if (motionModel_ != MM_HOMOGRAPHY)
-            warpAffine(
-                    frame1_, transformedFrame1_, motion1to0(Rect(0,0,3,2)), frame1_.size(),
-                    INTER_LINEAR, borderMode_);
-        else
-            warpPerspective(
-                    frame1_, transformedFrame1_, motion1to0, frame1_.size(), INTER_LINEAR,
-                    borderMode_);
-
+        warpAffine(
+                frame1_, transformedFrame1_, motion1to0(Rect(0,0,3,2)), frame1_.size(),
+                INTER_LINEAR, borderMode_);
         cvtColor(transformedFrame1_, transformedGrayFrame1_, CV_BGR2GRAY);
 
-        // warp mask
-
-        if (motionModel_ != MM_HOMOGRAPHY)
-            warpAffine(
-                    mask1_, transformedMask1_, motion1to0(Rect(0,0,3,2)), mask1_.size(),
-                    INTER_NEAREST);
-        else
-            warpPerspective(mask1_, transformedMask1_, motion1to0, mask1_.size(), INTER_NEAREST);
-
+        warpAffine(
+                mask1_, transformedMask1_, motion1to0(Rect(0,0,3,2)), mask1_.size(),
+                INTER_NEAREST);
         erode(transformedMask1_, transformedMask1_, Mat());
-
-        // update flow
 
         optFlowEstimator_->run(grayFrame_, transformedGrayFrame1_, flowX_, flowY_, flowErrors_);
 
@@ -521,6 +502,7 @@ void completeFrameAccordingToFlow(
     Mat_<uchar> flowMask_(flowMask), mask1_(mask1), mask0_(mask0);
     Mat_<float> flowX_(flowX), flowY_(flowY);
 
+    //int count = 0;
     for (int y0 = 0; y0 < frame0.rows; ++y0)
     {
         for (int x0 = 0; x0 < frame0.cols; ++x0)
@@ -535,10 +517,12 @@ void completeFrameAccordingToFlow(
                 {
                     frame0.at<Point3_<uchar> >(y0,x0) = frame1.at<Point3_<uchar> >(y1,x1);
                     mask0_(y0,x0) = 255;
+                    //count++;
                 }
             }
         }
     }
+    //cout << count << endl;
 }
 
 } // namespace videostab
