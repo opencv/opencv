@@ -17,41 +17,6 @@
       <x>73</x>
       <y>206</y>
       <val>1083.</val></rng2></dist></Norm_Destination_CrossCheck_batchDistance_8U--batchDistance_8U---NORM_L1--32SC1--false->
-<Norm_Destination_CrossCheck_batchDistance_8U--batchDistance_8U---NORM_L1--32SC1--true->
-  <dist>
-    <kind>65536</kind>
-    <type>4</type>
-    <min>0.</min>
-    <max>0.</max>
-    <last>
-      <x>0</x>
-      <y>299</y>
-      <val>2147483647.</val></last>
-    <rng1>
-      <x>0</x>
-      <y>191</y>
-      <val>2147483647.</val></rng1>
-    <rng2>
-      <x>0</x>
-      <y>56</y>
-      <val>2147483647.</val></rng2></dist>
-  <ndix>
-    <kind>65536</kind>
-    <type>4</type>
-    <min>3.</min>
-    <max>1199.</max>
-    <last>
-      <x>0</x>
-      <y>299</y>
-      <val>1199.</val></last>
-    <rng1>
-      <x>0</x>
-      <y>170</y>
-      <val>683.</val></rng1>
-    <rng2>
-      <x>0</x>
-      <y>34</y>
-      <val>139.</val></rng2></ndix></Norm_Destination_CrossCheck_batchDistance_8U--batchDistance_8U---NORM_L1--32SC1--true->
 <Norm_Destination_CrossCheck_batchDistance_8U--batchDistance_8U---NORM_L1--32FC1--false->
   <dist>
     <kind>65536</kind>
@@ -70,41 +35,6 @@
       <x>657</x>
       <y>146</y>
       <val>924.</val></rng2></dist></Norm_Destination_CrossCheck_batchDistance_8U--batchDistance_8U---NORM_L1--32FC1--false->
-<Norm_Destination_CrossCheck_batchDistance_8U--batchDistance_8U---NORM_L1--32FC1--true->
-  <dist>
-    <kind>65536</kind>
-    <type>5</type>
-    <min>0.</min>
-    <max>0.</max>
-    <last>
-      <x>0</x>
-      <y>299</y>
-      <val>3.4028234663852886e+38</val></last>
-    <rng1>
-      <x>0</x>
-      <y>276</y>
-      <val>3.4028234663852886e+38</val></rng1>
-    <rng2>
-      <x>0</x>
-      <y>91</y>
-      <val>3.4028234663852886e+38</val></rng2></dist>
-  <ndix>
-    <kind>65536</kind>
-    <type>4</type>
-    <min>3.</min>
-    <max>1199.</max>
-    <last>
-      <x>0</x>
-      <y>299</y>
-      <val>1199.</val></last>
-    <rng1>
-      <x>0</x>
-      <y>38</y>
-      <val>155.</val></rng1>
-    <rng2>
-      <x>0</x>
-      <y>23</y>
-      <val>95.</val></rng2></ndix></Norm_Destination_CrossCheck_batchDistance_8U--batchDistance_8U---NORM_L1--32FC1--true->
 <Norm_Destination_CrossCheck_batchDistance_8U--batchDistance_8U---NORM_L2SQR--32SC1--false->
   <dist>
     <kind>65536</kind>
@@ -123,41 +53,6 @@
       <x>649</x>
       <y>156</y>
       <val>90725.</val></rng2></dist></Norm_Destination_CrossCheck_batchDistance_8U--batchDistance_8U---NORM_L2SQR--32SC1--false->
-<Norm_Destination_CrossCheck_batchDistance_8U--batchDistance_8U---NORM_L2SQR--32SC1--true->
-  <dist>
-    <kind>65536</kind>
-    <type>4</type>
-    <min>0.</min>
-    <max>0.</max>
-    <last>
-      <x>0</x>
-      <y>299</y>
-      <val>2147483647.</val></last>
-    <rng1>
-      <x>0</x>
-      <y>32</y>
-      <val>2147483647.</val></rng1>
-    <rng2>
-      <x>0</x>
-      <y>188</y>
-      <val>2147483647.</val></rng2></dist>
-  <ndix>
-    <kind>65536</kind>
-    <type>4</type>
-    <min>3.</min>
-    <max>1199.</max>
-    <last>
-      <x>0</x>
-      <y>299</y>
-      <val>1199.</val></last>
-    <rng1>
-      <x>0</x>
-      <y>282</y>
-      <val>1131.</val></rng1>
-    <rng2>
-      <x>0</x>
-      <y>230</y>
-      <val>923.</val></rng2></ndix></Norm_Destination_CrossCheck_batchDistance_8U--batchDistance_8U---NORM_L2SQR--32SC1--true->
 <Norm_Destination_CrossCheck_batchDistance_8U--batchDistance_8U---NORM_L2SQR--32FC1--false->
   <dist>
     <kind>65536</kind>
@@ -176,41 +71,6 @@
       <x>90</x>
       <y>10</y>
       <val>649.</val></rng2></dist></Norm_Destination_CrossCheck_batchDistance_8U--batchDistance_8U---NORM_L2SQR--32FC1--false->
-<Norm_Destination_CrossCheck_batchDistance_8U--batchDistance_8U---NORM_L2SQR--32FC1--true->
-  <dist>
-    <kind>65536</kind>
-    <type>5</type>
-    <min>0.</min>
-    <max>0.</max>
-    <last>
-      <x>0</x>
-      <y>299</y>
-      <val>3.4028234663852886e+38</val></last>
-    <rng1>
-      <x>0</x>
-      <y>97</y>
-      <val>3.4028234663852886e+38</val></rng1>
-    <rng2>
-      <x>0</x>
-      <y>174</y>
-      <val>3.4028234663852886e+38</val></rng2></dist>
-  <ndix>
-    <kind>65536</kind>
-    <type>4</type>
-    <min>3.</min>
-    <max>1199.</max>
-    <last>
-      <x>0</x>
-      <y>299</y>
-      <val>1199.</val></last>
-    <rng1>
-      <x>0</x>
-      <y>289</y>
-      <val>1159.</val></rng1>
-    <rng2>
-      <x>0</x>
-      <y>51</y>
-      <val>773.</val></rng2></ndix></Norm_Destination_CrossCheck_batchDistance_8U--batchDistance_8U---NORM_L2SQR--32FC1--true->
 <Norm_CrossCheck_batchDistance_Dest_32S--batchDistance_Dest_32S---NORM_HAMMING--false->
   <dist>
     <kind>65536</kind>
@@ -229,41 +89,6 @@
       <x>1193</x>
       <y>9</y>
       <val>465.</val></rng2></dist></Norm_CrossCheck_batchDistance_Dest_32S--batchDistance_Dest_32S---NORM_HAMMING--false->
-<Norm_CrossCheck_batchDistance_Dest_32S--batchDistance_Dest_32S---NORM_HAMMING--true->
-  <dist>
-    <kind>65536</kind>
-    <type>4</type>
-    <min>0.</min>
-    <max>0.</max>
-    <last>
-      <x>0</x>
-      <y>299</y>
-      <val>2147483647.</val></last>
-    <rng1>
-      <x>0</x>
-      <y>50</y>
-      <val>2147483647.</val></rng1>
-    <rng2>
-      <x>0</x>
-      <y>235</y>
-      <val>2147483647.</val></rng2></dist>
-  <ndix>
-    <kind>65536</kind>
-    <type>4</type>
-    <min>3.</min>
-    <max>1199.</max>
-    <last>
-      <x>0</x>
-      <y>299</y>
-      <val>1199.</val></last>
-    <rng1>
-      <x>0</x>
-      <y>273</y>
-      <val>1095.</val></rng1>
-    <rng2>
-      <x>0</x>
-      <y>46</y>
-      <val>187.</val></rng2></ndix></Norm_CrossCheck_batchDistance_Dest_32S--batchDistance_Dest_32S---NORM_HAMMING--true->
 <Norm_CrossCheck_batchDistance_Dest_32S--batchDistance_Dest_32S---NORM_HAMMING2--false->
   <dist>
     <kind>65536</kind>
@@ -282,41 +107,6 @@
       <x>1064</x>
       <y>277</y>
       <val>333.</val></rng2></dist></Norm_CrossCheck_batchDistance_Dest_32S--batchDistance_Dest_32S---NORM_HAMMING2--false->
-<Norm_CrossCheck_batchDistance_Dest_32S--batchDistance_Dest_32S---NORM_HAMMING2--true->
-  <dist>
-    <kind>65536</kind>
-    <type>4</type>
-    <min>0.</min>
-    <max>0.</max>
-    <last>
-      <x>0</x>
-      <y>299</y>
-      <val>2147483647.</val></last>
-    <rng1>
-      <x>0</x>
-      <y>85</y>
-      <val>2147483647.</val></rng1>
-    <rng2>
-      <x>0</x>
-      <y>297</y>
-      <val>2147483647.</val></rng2></dist>
-  <ndix>
-    <kind>65536</kind>
-    <type>4</type>
-    <min>3.</min>
-    <max>1199.</max>
-    <last>
-      <x>0</x>
-      <y>299</y>
-      <val>1199.</val></last>
-    <rng1>
-      <x>0</x>
-      <y>67</y>
-      <val>271.</val></rng1>
-    <rng2>
-      <x>0</x>
-      <y>35</y>
-      <val>143.</val></rng2></ndix></Norm_CrossCheck_batchDistance_Dest_32S--batchDistance_Dest_32S---NORM_HAMMING2--true->
 <Source_CrossCheck_batchDistance_L2--batchDistance_L2---8UC1--false->
   <dist>
     <kind>65536</kind>
@@ -335,41 +125,6 @@
       <x>377</x>
       <y>62</y>
       <val>2.3340309143066406e+02</val></rng2></dist></Source_CrossCheck_batchDistance_L2--batchDistance_L2---8UC1--false->
-<Source_CrossCheck_batchDistance_L2--batchDistance_L2---8UC1--true->
-  <dist>
-    <kind>65536</kind>
-    <type>5</type>
-    <min>0.</min>
-    <max>0.</max>
-    <last>
-      <x>0</x>
-      <y>299</y>
-      <val>3.4028234663852886e+38</val></last>
-    <rng1>
-      <x>0</x>
-      <y>247</y>
-      <val>3.4028234663852886e+38</val></rng1>
-    <rng2>
-      <x>0</x>
-      <y>29</y>
-      <val>3.4028234663852886e+38</val></rng2></dist>
-  <ndix>
-    <kind>65536</kind>
-    <type>4</type>
-    <min>3.</min>
-    <max>1199.</max>
-    <last>
-      <x>0</x>
-      <y>299</y>
-      <val>1199.</val></last>
-    <rng1>
-      <x>0</x>
-      <y>22</y>
-      <val>90.</val></rng1>
-    <rng2>
-      <x>0</x>
-      <y>46</y>
-      <val>186.</val></rng2></ndix></Source_CrossCheck_batchDistance_L2--batchDistance_L2---8UC1--true->
 <Source_CrossCheck_batchDistance_L2--batchDistance_L2---32FC1--false->
   <dist>
     <kind>65536</kind>
@@ -388,41 +143,6 @@
       <x>937</x>
       <y>42</y>
       <val>2.5349721908569336e+01</val></rng2></dist></Source_CrossCheck_batchDistance_L2--batchDistance_L2---32FC1--false->
-<Source_CrossCheck_batchDistance_L2--batchDistance_L2---32FC1--true->
-  <dist>
-    <kind>65536</kind>
-    <type>5</type>
-    <min>0.</min>
-    <max>0.</max>
-    <last>
-      <x>0</x>
-      <y>299</y>
-      <val>3.4028234663852886e+38</val></last>
-    <rng1>
-      <x>0</x>
-      <y>47</y>
-      <val>3.4028234663852886e+38</val></rng1>
-    <rng2>
-      <x>0</x>
-      <y>96</y>
-      <val>3.4028234663852886e+38</val></rng2></dist>
-  <ndix>
-    <kind>65536</kind>
-    <type>4</type>
-    <min>3.</min>
-    <max>1199.</max>
-    <last>
-      <x>0</x>
-      <y>299</y>
-      <val>1199.</val></last>
-    <rng1>
-      <x>0</x>
-      <y>158</y>
-      <val>635.</val></rng1>
-    <rng2>
-      <x>0</x>
-      <y>269</y>
-      <val>1079.</val></rng2></ndix></Source_CrossCheck_batchDistance_L2--batchDistance_L2---32FC1--true->
 <Norm_CrossCheck_batchDistance_32F--batchDistance_32F---NORM_L1--false->
   <dist>
     <kind>65536</kind>
@@ -441,41 +161,6 @@
       <x>789</x>
       <y>174</y>
       <val>4.6035678100585938e+02</val></rng2></dist></Norm_CrossCheck_batchDistance_32F--batchDistance_32F---NORM_L1--false->
-<Norm_CrossCheck_batchDistance_32F--batchDistance_32F---NORM_L1--true->
-  <dist>
-    <kind>65536</kind>
-    <type>5</type>
-    <min>0.</min>
-    <max>0.</max>
-    <last>
-      <x>0</x>
-      <y>299</y>
-      <val>3.4028234663852886e+38</val></last>
-    <rng1>
-      <x>0</x>
-      <y>232</y>
-      <val>3.4028234663852886e+38</val></rng1>
-    <rng2>
-      <x>0</x>
-      <y>42</y>
-      <val>3.4028234663852886e+38</val></rng2></dist>
-  <ndix>
-    <kind>65536</kind>
-    <type>4</type>
-    <min>3.</min>
-    <max>1199.</max>
-    <last>
-      <x>0</x>
-      <y>299</y>
-      <val>1199.</val></last>
-    <rng1>
-      <x>0</x>
-      <y>282</y>
-      <val>1131.</val></rng1>
-    <rng2>
-      <x>0</x>
-      <y>148</y>
-      <val>595.</val></rng2></ndix></Norm_CrossCheck_batchDistance_32F--batchDistance_32F---NORM_L1--true->
 <Norm_CrossCheck_batchDistance_32F--batchDistance_32F---NORM_L2SQR--false->
   <dist>
     <kind>65536</kind>
@@ -494,41 +179,6 @@
       <x>727</x>
       <y>81</y>
       <val>6.4686029052734375e+02</val></rng2></dist></Norm_CrossCheck_batchDistance_32F--batchDistance_32F---NORM_L2SQR--false->
-<Norm_CrossCheck_batchDistance_32F--batchDistance_32F---NORM_L2SQR--true->
-  <dist>
-    <kind>65536</kind>
-    <type>5</type>
-    <min>0.</min>
-    <max>0.</max>
-    <last>
-      <x>0</x>
-      <y>299</y>
-      <val>3.4028234663852886e+38</val></last>
-    <rng1>
-      <x>0</x>
-      <y>223</y>
-      <val>3.4028234663852886e+38</val></rng1>
-    <rng2>
-      <x>0</x>
-      <y>145</y>
-      <val>3.4028234663852886e+38</val></rng2></dist>
-  <ndix>
-    <kind>65536</kind>
-    <type>4</type>
-    <min>3.</min>
-    <max>1199.</max>
-    <last>
-      <x>0</x>
-      <y>299</y>
-      <val>1199.</val></last>
-    <rng1>
-      <x>0</x>
-      <y>284</y>
-      <val>1139.</val></rng1>
-    <rng2>
-      <x>0</x>
-      <y>47</y>
-      <val>191.</val></rng2></ndix></Norm_CrossCheck_batchDistance_32F--batchDistance_32F---NORM_L2SQR--true->
 <fast_detect--detect----cv-detectors_descriptors_evaluation-images_datasets-leuven-img1-png---TYPE_5_8->
   <points-pt>
     <kind>65536</kind>
