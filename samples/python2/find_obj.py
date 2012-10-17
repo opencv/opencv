@@ -40,11 +40,11 @@ def init_feature(name):
                                key_size = 12,     # 20
                                multi_probe_level = 1) #2
         matcher = cv2.FlannBasedMatcher(flann_params, {})  # bug : need to pass empty dict (#1329)
-    else:    
+    else:
         matcher = cv2.BFMatcher(norm)
     return detector, matcher
 
-    
+
 def filter_matches(kp1, kp2, matches, ratio = 0.75):
     mkp1, mkp2 = [], []
     for m in matches:
@@ -56,7 +56,7 @@ def filter_matches(kp1, kp2, matches, ratio = 0.75):
     p2 = np.float32([kp.pt for kp in mkp2])
     kp_pairs = zip(mkp1, mkp2)
     return p1, p2, kp_pairs
-   
+
 def explore_match(win, img1, img2, kp_pairs, status = None, H = None):
     h1, w1 = img1.shape[:2]
     h2, w2 = img2.shape[:2]
@@ -123,7 +123,7 @@ def explore_match(win, img1, img2, kp_pairs, status = None, H = None):
 
 if __name__ == '__main__':
     print __doc__
-    
+
     import sys, getopt
     opts, args = getopt.getopt(sys.argv[1:], '', ['feature='])
     opts = dict(opts)
@@ -132,7 +132,7 @@ if __name__ == '__main__':
     except:
         fn1 = '../c/box.png'
         fn2 = '../c/box_in_scene.png'
-        
+
     img1 = cv2.imread(fn1, 0)
     img2 = cv2.imread(fn2, 0)
     detector, matcher = init_feature(feature_name)
@@ -162,4 +162,4 @@ if __name__ == '__main__':
 
     match_and_draw('find_obj')
     cv2.waitKey()
-    cv2.destroyAllWindows() 			
+    cv2.destroyAllWindows()

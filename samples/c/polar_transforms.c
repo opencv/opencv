@@ -8,10 +8,10 @@
 
 static void help( void )
 {
-	printf("\nThis program illustrates Linear-Polar and Log-Polar image transforms\n"
+    printf("\nThis program illustrates Linear-Polar and Log-Polar image transforms\n"
             "Usage :\n"
-			"./polar_transforms [[camera number -- Default 0],[AVI path_filename]]\n\n"
-			);
+            "./polar_transforms [[camera number -- Default 0],[AVI path_filename]]\n\n"
+            );
 }
 int main( int argc, char** argv )
 {
@@ -61,7 +61,7 @@ int main( int argc, char** argv )
         cvLinearPolar(frame,lin_polar_img,cvPoint2D32f(frame->width >> 1,frame->height >> 1),70, CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS);
 
 #if 0
-		cvLogPolar(log_polar_img,recovered_img,cvPoint2D32f(frame->width >> 1,frame->height >> 1),70, CV_WARP_INVERSE_MAP+CV_INTER_LINEAR);
+        cvLogPolar(log_polar_img,recovered_img,cvPoint2D32f(frame->width >> 1,frame->height >> 1),70, CV_WARP_INVERSE_MAP+CV_INTER_LINEAR);
 #else
         cvLinearPolar(lin_polar_img,recovered_img,cvPoint2D32f(frame->width >> 1,frame->height >> 1),70, CV_WARP_INVERSE_MAP+CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS);
 #endif

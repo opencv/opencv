@@ -1123,15 +1123,15 @@ void CV_PyramidDownTest::prepare_to_validation( int /*test_case_idx*/ )
     cvtest::filter2D(src, temp, src.depth(),
                      kernel, Point(kernel.cols/2, kernel.rows/2),
                      0, BORDER_REFLECT_101);
-    
+
     size_t elem_size = temp.elemSize();
     size_t ncols = dst.cols*elem_size;
-    
+
     for( int i = 0; i < dst.rows; i++ )
     {
         const uchar* src_row = temp.ptr(i*2);
         uchar* dst_row = dst.ptr(i);
-        
+
         for( size_t j = 0; j < ncols; j += elem_size )
         {
             for( size_t k = 0; k < elem_size; k++ )
@@ -1169,15 +1169,15 @@ void CV_PyramidUpTest::prepare_to_validation( int /*test_case_idx*/ )
 {
     Mat& src = test_mat[INPUT][0], &dst = test_mat[REF_OUTPUT][0];
     Mat temp(dst.size(), dst.type());
-    
+
     size_t elem_size = src.elemSize();
     size_t ncols = src.cols*elem_size;
-    
+
     for( int i = 0; i < src.rows; i++ )
     {
         const uchar* src_row = src.ptr(i);
         uchar* dst_row = temp.ptr(i*2);
-        
+
         if( i*2 + 1 < temp.rows )
             memset( temp.ptr(i*2+1), 0, temp.cols*elem_size );
         for( size_t j = 0; j < ncols; j += elem_size )
@@ -1189,7 +1189,7 @@ void CV_PyramidUpTest::prepare_to_validation( int /*test_case_idx*/ )
             }
         }
     }
-    
+
     cvtest::filter2D(temp, dst, dst.depth(),
                      kernel, Point(kernel.cols/2, kernel.rows/2),
                      0, BORDER_REFLECT_101);
@@ -1521,7 +1521,7 @@ void CV_PreCornerDetectTest::prepare_to_validation( int /*test_case_idx*/ )
     double kernel_scale = type != ftype ? 1./255 : 1.;
 
     Mat dx, dy, d2x, d2y, dxy, kernel;
-    
+
     kernel = cvtest::calcSobelKernel2D(1, 0, aperture_size);
     cvtest::filter2D(src, dx, ftype, kernel*kernel_scale, anchor, 0, BORDER_REPLICATE);
     kernel = cvtest::calcSobelKernel2D(2, 0, aperture_size);
@@ -1660,13 +1660,13 @@ void CV_IntegralTest::run_func()
 static void test_integral( const Mat& img, Mat* sum, Mat* sqsum, Mat* tilted )
 {
     CV_Assert( img.depth() == CV_32F );
-    
+
     sum->create(img.rows+1, img.cols+1, CV_64F);
     if( sqsum )
         sqsum->create(img.rows+1, img.cols+1, CV_64F);
     if( tilted )
         tilted->create(img.rows+1, img.cols+1, CV_64F);
-    
+
     const float* data = img.ptr<float>();
     double* sdata = sum->ptr<double>();
     double* sqdata = sqsum ? sqsum->ptr<double>() : 0;
@@ -1740,20 +1740,20 @@ void CV_IntegralTest::prepare_to_validation( int /*test_case_idx*/ )
         psqsum2 = sqsum0 ? *sqsum0 : Mat();
         ptsum2 = tsum0 ? *tsum0 : Mat();
     }
-    
+
     for( int i = 0; i < cn; i++ )
     {
         if( cn > 1 )
             cvtest::extract(src, plane, i);
         plane.convertTo(srcf, CV_32F);
-        
+
         test_integral( srcf, &psum, sqsum0 ? &psqsum : 0, tsum0 ? &ptsum : 0 );
         psum.convertTo(psum2, sum0->depth());
         if( sqsum0 )
             psqsum.convertTo(psqsum2, sqsum0->depth());
         if( tsum0 )
             ptsum.convertTo(ptsum2, tsum0->depth());
-        
+
         if( cn > 1 )
         {
             cvtest::insert(psum2, *sum0, i);
@@ -1790,11 +1790,11 @@ class CV_FilterSupportedFormatsTest : public cvtest::BaseTest
 {
 public:
     CV_FilterSupportedFormatsTest() {}
-    ~CV_FilterSupportedFormatsTest() {}   
+    ~CV_FilterSupportedFormatsTest() {}
 protected:
     void run(int)
     {
-        const int depths[][2] = 
+        const int depths[][2] =
         {
             {CV_8U, CV_8U},
             {CV_8U, CV_16U},
@@ -1811,7 +1811,7 @@ protected:
             {CV_64F, CV_64F},
             {-1, -1}
         };
-        
+
         int i = 0;
         volatile int fidx = -1;
         try
@@ -1830,10 +1830,10 @@ protected:
             symkernelX += kernelX;
             flip(kernelY, symkernelY, 0);
             symkernelY += kernelY;
-            
+
             Mat elem_ellipse = getStructuringElement(MORPH_ELLIPSE, Size(7, 7));
             Mat elem_rect = getStructuringElement(MORPH_RECT, Size(7, 7));
-            
+
             for( i = 0; depths[i][0] >= 0; i++ )
             {
                 int sdepth = depths[i][0];
@@ -1879,7 +1879,7 @@ protected:
                        fidx == 7 ? "blur" :
                        fidx == 8 || fidx == 9 ? "morphologyEx" :
                        "unknown???");
-                       
+
             ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
         }
     }

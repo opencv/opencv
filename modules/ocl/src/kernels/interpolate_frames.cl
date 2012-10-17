@@ -236,7 +236,7 @@ __kernel void blendFramesKernel(
     if (b0 && b1)
     {
         // pixel is visible on both frames
-        out[pos] = read_imagef(tex_src0, sampler, coord0).x * (1.0f - theta) + 
+        out[pos] = read_imagef(tex_src0, sampler, coord0).x * (1.0f - theta) +
             read_imagef(tex_src1, sampler, coord1).x * theta;
     }
     else if (b0)

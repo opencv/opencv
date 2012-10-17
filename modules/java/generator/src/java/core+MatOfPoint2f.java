@@ -20,8 +20,8 @@ public class MatOfPoint2f extends Mat {
     }
 
     public static MatOfPoint2f fromNativeAddr(long addr) {
-		return new MatOfPoint2f(addr);
-	}
+        return new MatOfPoint2f(addr);
+    }
 
     public MatOfPoint2f(Mat m) {
         super(m, Range.all());

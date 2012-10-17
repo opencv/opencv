@@ -84,7 +84,7 @@ __kernel void arithm_exp_D6(int rows, int cols, int srcStep, int dstStep, int sr
 
       double src_data = *((__global double *)((__global char *)src + srcIdx));
       double dst_data = exp(src_data);
-      
+
       *((__global double *)((__global char *)dst + dstIdx )) = dst_data;
      // dst[dstIdx] = exp(src[srcIdx]);
   }

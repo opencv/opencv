@@ -61,10 +61,10 @@ enum BmpCompression
 class BmpDecoder : public BaseImageDecoder
 {
 public:
-    
+
     BmpDecoder();
     ~BmpDecoder();
-    
+
     bool  readData( Mat& img );
     bool  readHeader();
     void  close();
@@ -72,7 +72,7 @@ public:
     ImageDecoder newDecoder() const;
 
 protected:
-    
+
     RLByteStream    m_strm;
     PaletteEntry    m_palette[256];
     int             m_origin;
@@ -88,7 +88,7 @@ class BmpEncoder : public BaseImageEncoder
 public:
     BmpEncoder();
     ~BmpEncoder();
-     
+
     bool  write( const Mat& img, const vector<int>& params );
 
     ImageEncoder newEncoder() const;

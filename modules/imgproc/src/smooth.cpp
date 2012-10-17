@@ -215,10 +215,10 @@ template<> struct ColumnSum<int, uchar> : public BaseColumnFilter
         int* SUM;
         bool haveScale = scale != 1;
         double _scale = scale;
-	
-		#if CV_SSE2
-			bool haveSSE2 = checkHardwareSupport(CV_CPU_SSE2);	
-		#endif
+
+        #if CV_SSE2
+            bool haveSSE2 = checkHardwareSupport(CV_CPU_SSE2);
+        #endif
 
         if( width != (int)sum.size() )
         {
@@ -229,22 +229,22 @@ template<> struct ColumnSum<int, uchar> : public BaseColumnFilter
         SUM = &sum[0];
         if( sumCount == 0 )
         {
-			memset((void*)SUM, 0, width*sizeof(int));
+            memset((void*)SUM, 0, width*sizeof(int));
             for( ; sumCount < ksize - 1; sumCount++, src++ )
             {
                 const int* Sp = (const int*)src[0];
-				i = 0;
-				#if CV_SSE2
-				if(haveSSE2)
-				{
-					for( ; i < width-4; i+=4 )
-					{
-						__m128i _sum = _mm_loadu_si128((const __m128i*)(SUM+i));
-						__m128i _sp = _mm_loadu_si128((const __m128i*)(Sp+i));
-						_mm_storeu_si128((__m128i*)(SUM+i),_mm_add_epi32(_sum, _sp));
-					}
-				}
-				#endif
+                i = 0;
+                #if CV_SSE2
+                if(haveSSE2)
+                {
+                    for( ; i < width-4; i+=4 )
+                    {
+                        __m128i _sum = _mm_loadu_si128((const __m128i*)(SUM+i));
+                        __m128i _sp = _mm_loadu_si128((const __m128i*)(Sp+i));
+                        _mm_storeu_si128((__m128i*)(SUM+i),_mm_add_epi32(_sum, _sp));
+                    }
+                }
+                #endif
                 for( ; i < width; i++ )
                     SUM[i] += Sp[i];
             }
@@ -262,33 +262,33 @@ template<> struct ColumnSum<int, uchar> : public BaseColumnFilter
             uchar* D = (uchar*)dst;
             if( haveScale )
             {
-				i = 0;
-				#if CV_SSE2
-				if(haveSSE2)
-				{
-					const __m128 scale4 = _mm_set1_ps((float)_scale);
-					for( ; i < width-8; i+=8 )
-					{
-						__m128i _sm  = _mm_loadu_si128((const __m128i*)(Sm+i));
-						__m128i _sm1  = _mm_loadu_si128((const __m128i*)(Sm+i+4));
+                i = 0;
+                #if CV_SSE2
+                if(haveSSE2)
+                {
+                    const __m128 scale4 = _mm_set1_ps((float)_scale);
+                    for( ; i < width-8; i+=8 )
+                    {
+                        __m128i _sm  = _mm_loadu_si128((const __m128i*)(Sm+i));
+                        __m128i _sm1  = _mm_loadu_si128((const __m128i*)(Sm+i+4));
 
-						__m128i _s0  = _mm_add_epi32(_mm_loadu_si128((const __m128i*)(SUM+i)),
+                        __m128i _s0  = _mm_add_epi32(_mm_loadu_si128((const __m128i*)(SUM+i)),
                                                      _mm_loadu_si128((const __m128i*)(Sp+i)));
-						__m128i _s01  = _mm_add_epi32(_mm_loadu_si128((const __m128i*)(SUM+i+4)),
+                        __m128i _s01  = _mm_add_epi32(_mm_loadu_si128((const __m128i*)(SUM+i+4)),
                                                       _mm_loadu_si128((const __m128i*)(Sp+i+4)));
 
-						__m128i _s0T = _mm_cvtps_epi32(_mm_mul_ps(scale4, _mm_cvtepi32_ps(_s0)));
-						__m128i _s0T1 = _mm_cvtps_epi32(_mm_mul_ps(scale4, _mm_cvtepi32_ps(_s01)));
-						
-						_s0T = _mm_packs_epi32(_s0T, _s0T1);
+                        __m128i _s0T = _mm_cvtps_epi32(_mm_mul_ps(scale4, _mm_cvtepi32_ps(_s0)));
+                        __m128i _s0T1 = _mm_cvtps_epi32(_mm_mul_ps(scale4, _mm_cvtepi32_ps(_s01)));
 
-						_mm_storel_epi64((__m128i*)(D+i), _mm_packus_epi16(_s0T, _s0T));
+                        _s0T = _mm_packs_epi32(_s0T, _s0T1);
 
-						_mm_storeu_si128((__m128i*)(SUM+i), _mm_sub_epi32(_s0,_sm));
-						_mm_storeu_si128((__m128i*)(SUM+i+4),_mm_sub_epi32(_s01,_sm1));
-					}
-				}
-				#endif
+                        _mm_storel_epi64((__m128i*)(D+i), _mm_packus_epi16(_s0T, _s0T));
+
+                        _mm_storeu_si128((__m128i*)(SUM+i), _mm_sub_epi32(_s0,_sm));
+                        _mm_storeu_si128((__m128i*)(SUM+i+4),_mm_sub_epi32(_s01,_sm1));
+                    }
+                }
+                #endif
                 for( ; i < width; i++ )
                 {
                     int s0 = SUM[i] + Sp[i];
@@ -298,29 +298,29 @@ template<> struct ColumnSum<int, uchar> : public BaseColumnFilter
             }
             else
             {
-				i = 0;
-				#if CV_SSE2
-				if(haveSSE2)
-				{
-					for( ; i < width-8; i+=8 )
-					{
-						__m128i _sm  = _mm_loadu_si128((const __m128i*)(Sm+i));
-						__m128i _sm1  = _mm_loadu_si128((const __m128i*)(Sm+i+4));
+                i = 0;
+                #if CV_SSE2
+                if(haveSSE2)
+                {
+                    for( ; i < width-8; i+=8 )
+                    {
+                        __m128i _sm  = _mm_loadu_si128((const __m128i*)(Sm+i));
+                        __m128i _sm1  = _mm_loadu_si128((const __m128i*)(Sm+i+4));
 
-						__m128i _s0  = _mm_add_epi32(_mm_loadu_si128((const __m128i*)(SUM+i)),
+                        __m128i _s0  = _mm_add_epi32(_mm_loadu_si128((const __m128i*)(SUM+i)),
                                                      _mm_loadu_si128((const __m128i*)(Sp+i)));
-						__m128i _s01  = _mm_add_epi32(_mm_loadu_si128((const __m128i*)(SUM+i+4)),
+                        __m128i _s01  = _mm_add_epi32(_mm_loadu_si128((const __m128i*)(SUM+i+4)),
                                                       _mm_loadu_si128((const __m128i*)(Sp+i+4)));
-			
-						__m128i _s0T = _mm_packs_epi32(_s0, _s01);
 
-						_mm_storel_epi64((__m128i*)(D+i), _mm_packus_epi16(_s0T, _s0T)); 
+                        __m128i _s0T = _mm_packs_epi32(_s0, _s01);
 
-						_mm_storeu_si128((__m128i*)(SUM+i), _mm_sub_epi32(_s0,_sm));
-						_mm_storeu_si128((__m128i*)(SUM+i+4),_mm_sub_epi32(_s01,_sm1));
-					}
-				}
-				#endif
+                        _mm_storel_epi64((__m128i*)(D+i), _mm_packus_epi16(_s0T, _s0T));
+
+                        _mm_storeu_si128((__m128i*)(SUM+i), _mm_sub_epi32(_s0,_sm));
+                        _mm_storeu_si128((__m128i*)(SUM+i+4),_mm_sub_epi32(_s01,_sm1));
+                    }
+                }
+                #endif
 
                 for( ; i < width; i++ )
                 {
@@ -357,9 +357,9 @@ template<> struct ColumnSum<int, short> : public BaseColumnFilter
         bool haveScale = scale != 1;
         double _scale = scale;
 
-		#if CV_SSE2
-			bool haveSSE2 = checkHardwareSupport(CV_CPU_SSE2);	
-		#endif
+        #if CV_SSE2
+            bool haveSSE2 = checkHardwareSupport(CV_CPU_SSE2);
+        #endif
 
         if( width != (int)sum.size() )
         {
@@ -369,22 +369,22 @@ template<> struct ColumnSum<int, short> : public BaseColumnFilter
         SUM = &sum[0];
         if( sumCount == 0 )
         {
-			memset((void*)SUM, 0, width*sizeof(int));
+            memset((void*)SUM, 0, width*sizeof(int));
             for( ; sumCount < ksize - 1; sumCount++, src++ )
             {
                 const int* Sp = (const int*)src[0];
-				i = 0;
-				#if CV_SSE2
-				if(haveSSE2)
-				{
-					for( ; i < width-4; i+=4 )
-					{
-						__m128i _sum = _mm_loadu_si128((const __m128i*)(SUM+i));
-						__m128i _sp = _mm_loadu_si128((const __m128i*)(Sp+i));
-						_mm_storeu_si128((__m128i*)(SUM+i),_mm_add_epi32(_sum, _sp));
-					}
-				}
-				#endif
+                i = 0;
+                #if CV_SSE2
+                if(haveSSE2)
+                {
+                    for( ; i < width-4; i+=4 )
+                    {
+                        __m128i _sum = _mm_loadu_si128((const __m128i*)(SUM+i));
+                        __m128i _sp = _mm_loadu_si128((const __m128i*)(Sp+i));
+                        _mm_storeu_si128((__m128i*)(SUM+i),_mm_add_epi32(_sum, _sp));
+                    }
+                }
+                #endif
                 for( ; i < width; i++ )
                     SUM[i] += Sp[i];
             }
@@ -402,31 +402,31 @@ template<> struct ColumnSum<int, short> : public BaseColumnFilter
             short* D = (short*)dst;
             if( haveScale )
             {
-				i = 0;
-				#if CV_SSE2
-				if(haveSSE2)
-				{
-					const __m128 scale4 = _mm_set1_ps((float)_scale);
-					for( ; i < width-8; i+=8 )
-					{
-						__m128i _sm   = _mm_loadu_si128((const __m128i*)(Sm+i));
-						__m128i _sm1  = _mm_loadu_si128((const __m128i*)(Sm+i+4));
+                i = 0;
+                #if CV_SSE2
+                if(haveSSE2)
+                {
+                    const __m128 scale4 = _mm_set1_ps((float)_scale);
+                    for( ; i < width-8; i+=8 )
+                    {
+                        __m128i _sm   = _mm_loadu_si128((const __m128i*)(Sm+i));
+                        __m128i _sm1  = _mm_loadu_si128((const __m128i*)(Sm+i+4));
 
-						__m128i _s0  = _mm_add_epi32(_mm_loadu_si128((const __m128i*)(SUM+i)),
+                        __m128i _s0  = _mm_add_epi32(_mm_loadu_si128((const __m128i*)(SUM+i)),
                                                      _mm_loadu_si128((const __m128i*)(Sp+i)));
-						__m128i _s01  = _mm_add_epi32(_mm_loadu_si128((const __m128i*)(SUM+i+4)),
+                        __m128i _s01  = _mm_add_epi32(_mm_loadu_si128((const __m128i*)(SUM+i+4)),
                                                       _mm_loadu_si128((const __m128i*)(Sp+i+4)));
 
-						__m128i _s0T  = _mm_cvtps_epi32(_mm_mul_ps(scale4, _mm_cvtepi32_ps(_s0)));
-						__m128i _s0T1 = _mm_cvtps_epi32(_mm_mul_ps(scale4, _mm_cvtepi32_ps(_s01)));
-						
-						_mm_storeu_si128((__m128i*)(D+i), _mm_packs_epi32(_s0T, _s0T1));
+                        __m128i _s0T  = _mm_cvtps_epi32(_mm_mul_ps(scale4, _mm_cvtepi32_ps(_s0)));
+                        __m128i _s0T1 = _mm_cvtps_epi32(_mm_mul_ps(scale4, _mm_cvtepi32_ps(_s01)));
 
-						_mm_storeu_si128((__m128i*)(SUM+i),_mm_sub_epi32(_s0,_sm));
-						_mm_storeu_si128((__m128i*)(SUM+i+4), _mm_sub_epi32(_s01,_sm1));
-					}
-				}
-				#endif
+                        _mm_storeu_si128((__m128i*)(D+i), _mm_packs_epi32(_s0T, _s0T1));
+
+                        _mm_storeu_si128((__m128i*)(SUM+i),_mm_sub_epi32(_s0,_sm));
+                        _mm_storeu_si128((__m128i*)(SUM+i+4), _mm_sub_epi32(_s01,_sm1));
+                    }
+                }
+                #endif
                 for( ; i < width; i++ )
                 {
                     int s0 = SUM[i] + Sp[i];
@@ -436,28 +436,28 @@ template<> struct ColumnSum<int, short> : public BaseColumnFilter
             }
             else
             {
-				i = 0;
-				#if CV_SSE2
-				if(haveSSE2)
-				{
-					for( ; i < width-8; i+=8 )
-					{
+                i = 0;
+                #if CV_SSE2
+                if(haveSSE2)
+                {
+                    for( ; i < width-8; i+=8 )
+                    {
 
-						__m128i _sm  = _mm_loadu_si128((const __m128i*)(Sm+i));
-						__m128i _sm1  = _mm_loadu_si128((const __m128i*)(Sm+i+4));
+                        __m128i _sm  = _mm_loadu_si128((const __m128i*)(Sm+i));
+                        __m128i _sm1  = _mm_loadu_si128((const __m128i*)(Sm+i+4));
 
-						__m128i _s0  = _mm_add_epi32(_mm_loadu_si128((const __m128i*)(SUM+i)),
+                        __m128i _s0  = _mm_add_epi32(_mm_loadu_si128((const __m128i*)(SUM+i)),
                                                      _mm_loadu_si128((const __m128i*)(Sp+i)));
-						__m128i _s01  = _mm_add_epi32(_mm_loadu_si128((const __m128i*)(SUM+i+4)),
+                        __m128i _s01  = _mm_add_epi32(_mm_loadu_si128((const __m128i*)(SUM+i+4)),
                                                       _mm_loadu_si128((const __m128i*)(Sp+i+4)));
 
-						_mm_storeu_si128((__m128i*)(D+i), _mm_packs_epi32(_s0, _s01)); 
+                        _mm_storeu_si128((__m128i*)(D+i), _mm_packs_epi32(_s0, _s01));
 
-						_mm_storeu_si128((__m128i*)(SUM+i), _mm_sub_epi32(_s0,_sm));
-						_mm_storeu_si128((__m128i*)(SUM+i+4),_mm_sub_epi32(_s01,_sm1));
-					}
-				}
-				#endif
+                        _mm_storeu_si128((__m128i*)(SUM+i), _mm_sub_epi32(_s0,_sm));
+                        _mm_storeu_si128((__m128i*)(SUM+i+4),_mm_sub_epi32(_s01,_sm1));
+                    }
+                }
+                #endif
 
                 for( ; i < width; i++ )
                 {
@@ -494,9 +494,9 @@ template<> struct ColumnSum<int, ushort> : public BaseColumnFilter
         int* SUM;
         bool haveScale = scale != 1;
         double _scale = scale;
-		#if CV_SSE2
-				bool haveSSE2 =  checkHardwareSupport(CV_CPU_SSE2);	
-		#endif
+        #if CV_SSE2
+                bool haveSSE2 =  checkHardwareSupport(CV_CPU_SSE2);
+        #endif
 
         if( width != (int)sum.size() )
         {
@@ -506,22 +506,22 @@ template<> struct ColumnSum<int, ushort> : public BaseColumnFilter
         SUM = &sum[0];
         if( sumCount == 0 )
         {
-			memset((void*)SUM, 0, width*sizeof(int));
+            memset((void*)SUM, 0, width*sizeof(int));
             for( ; sumCount < ksize - 1; sumCount++, src++ )
             {
                 const int* Sp = (const int*)src[0];
-				i = 0;
-				#if CV_SSE2
-				if(haveSSE2)
-				{
-					for( ; i < width-4; i+=4 )
-					{
-						__m128i _sum = _mm_loadu_si128((const __m128i*)(SUM+i));
-						__m128i _sp = _mm_loadu_si128((const __m128i*)(Sp+i));
-						_mm_storeu_si128((__m128i*)(SUM+i), _mm_add_epi32(_sum, _sp));
-					}
-				}
-				#endif
+                i = 0;
+                #if CV_SSE2
+                if(haveSSE2)
+                {
+                    for( ; i < width-4; i+=4 )
+                    {
+                        __m128i _sum = _mm_loadu_si128((const __m128i*)(SUM+i));
+                        __m128i _sp = _mm_loadu_si128((const __m128i*)(Sp+i));
+                        _mm_storeu_si128((__m128i*)(SUM+i), _mm_add_epi32(_sum, _sp));
+                    }
+                }
+                #endif
                 for( ; i < width; i++ )
                     SUM[i] += Sp[i];
             }
@@ -539,30 +539,30 @@ template<> struct ColumnSum<int, ushort> : public BaseColumnFilter
             ushort* D = (ushort*)dst;
             if( haveScale )
             {
-				i = 0;
-				#if CV_SSE2
-				if(haveSSE2)
-				{
-					const __m128 scale4 = _mm_set1_ps((float)_scale);
-					const __m128i delta0 = _mm_set1_epi32(0x8000);
+                i = 0;
+                #if CV_SSE2
+                if(haveSSE2)
+                {
+                    const __m128 scale4 = _mm_set1_ps((float)_scale);
+                    const __m128i delta0 = _mm_set1_epi32(0x8000);
                     const __m128i delta1 = _mm_set1_epi32(0x80008000);
 
-					for( ; i < width-4; i+=4)
-					{
-						__m128i _sm   = _mm_loadu_si128((const __m128i*)(Sm+i));
-						__m128i _s0   = _mm_add_epi32(_mm_loadu_si128((const __m128i*)(SUM+i)),
+                    for( ; i < width-4; i+=4)
+                    {
+                        __m128i _sm   = _mm_loadu_si128((const __m128i*)(Sm+i));
+                        __m128i _s0   = _mm_add_epi32(_mm_loadu_si128((const __m128i*)(SUM+i)),
                                                       _mm_loadu_si128((const __m128i*)(Sp+i)));
 
-						__m128i _res = _mm_cvtps_epi32(_mm_mul_ps(scale4, _mm_cvtepi32_ps(_s0)));
-                        
+                        __m128i _res = _mm_cvtps_epi32(_mm_mul_ps(scale4, _mm_cvtepi32_ps(_s0)));
+
                         _res = _mm_sub_epi32(_res, delta0);
                         _res = _mm_add_epi16(_mm_packs_epi32(_res, _res), delta1);
-						 
-						_mm_storel_epi64((__m128i*)(D+i), _res);
-						_mm_storeu_si128((__m128i*)(SUM+i), _mm_sub_epi32(_s0,_sm));
-					}
-				}
-				#endif
+
+                        _mm_storel_epi64((__m128i*)(D+i), _res);
+                        _mm_storeu_si128((__m128i*)(SUM+i), _mm_sub_epi32(_s0,_sm));
+                    }
+                }
+                #endif
                 for( ; i < width; i++ )
                 {
                     int s0 = SUM[i] + Sp[i];
@@ -572,27 +572,27 @@ template<> struct ColumnSum<int, ushort> : public BaseColumnFilter
             }
             else
             {
-				i = 0;
-				#if  CV_SSE2
-				if(haveSSE2)
-				{
-					const __m128i delta0 = _mm_set1_epi32(0x8000);
+                i = 0;
+                #if  CV_SSE2
+                if(haveSSE2)
+                {
+                    const __m128i delta0 = _mm_set1_epi32(0x8000);
                     const __m128i delta1 = _mm_set1_epi32(0x80008000);
 
-					for( ; i < width-4; i+=4 )
-					{
-						__m128i _sm   = _mm_loadu_si128((const __m128i*)(Sm+i));
-						__m128i _s0   = _mm_add_epi32(_mm_loadu_si128((const __m128i*)(SUM+i)),
+                    for( ; i < width-4; i+=4 )
+                    {
+                        __m128i _sm   = _mm_loadu_si128((const __m128i*)(Sm+i));
+                        __m128i _s0   = _mm_add_epi32(_mm_loadu_si128((const __m128i*)(SUM+i)),
                                                       _mm_loadu_si128((const __m128i*)(Sp+i)));
 
-						__m128i _res = _mm_sub_epi32(_s0, delta0);
+                        __m128i _res = _mm_sub_epi32(_s0, delta0);
                         _res = _mm_add_epi16(_mm_packs_epi32(_res, _res), delta1);
-						
-						_mm_storel_epi64((__m128i*)(D+i), _res);
-						_mm_storeu_si128((__m128i*)(SUM+i), _mm_sub_epi32(_s0,_sm));
-					}
-				}
-				#endif
+
+                        _mm_storel_epi64((__m128i*)(D+i), _res);
+                        _mm_storeu_si128((__m128i*)(SUM+i), _mm_sub_epi32(_s0,_sm));
+                    }
+                }
+                #endif
 
                 for( ; i < width; i++ )
                 {
@@ -1712,7 +1712,7 @@ public:
         maxk(_maxk), space_ofs(_space_ofs), space_weight(_space_weight), color_weight(_color_weight)
     {
     }
-    
+
     virtual void operator() (const Range& range) const
     {
         int i, j, cn = dest->channels(), k;
@@ -1723,12 +1723,12 @@ public:
         static const int CV_DECL_ALIGNED(16) bufSignMask[] = { 0x80000000, 0x80000000, 0x80000000, 0x80000000 };
         bool haveSSE3 = checkHardwareSupport(CV_CPU_SSE3);
         #endif
-        
+
         for( i = range.start; i < range.end; i++ )
         {
             const uchar* sptr = temp->ptr(i+radius) + radius*cn;
             uchar* dptr = dest->ptr(i);
-            
+
             if( cn == 1 )
             {
                 for( j = 0; j < size.width; j++ )
@@ -1746,7 +1746,7 @@ public:
                         {
                             __m128 _valF = _mm_set_ps(sptr[j + space_ofs[k+3]], sptr[j + space_ofs[k+2]],
                                                       sptr[j + space_ofs[k+1]], sptr[j + space_ofs[k]]);
-                            
+
                             __m128 _val = _mm_andnot_ps(_signMask, _mm_sub_ps(_valF, _val0));
                             _mm_store_si128((__m128i*)buf, _mm_cvtps_epi32(_val));
 
@@ -1791,7 +1791,7 @@ public:
                         const __m128 _g0 = _mm_set1_ps(static_cast<float>(g0));
                         const __m128 _r0 = _mm_set1_ps(static_cast<float>(r0));
                         const __m128 _signMask = _mm_load_ps((const float*)bufSignMask);
-                        
+
                         for( ; k <= maxk - 4; k += 4 )
                         {
                             const uchar* sptr_k  = sptr + j + space_ofs[k];
@@ -1851,7 +1851,7 @@ public:
             }
         }
     }
-    
+
 private:
     const Mat *temp;
     Mat *dest;
@@ -1868,41 +1868,41 @@ bilateralFilter_8u( const Mat& src, Mat& dst, int d,
     int cn = src.channels();
     int i, j, maxk, radius;
     Size size = src.size();
-    
+
     CV_Assert( (src.type() == CV_8UC1 || src.type() == CV_8UC3) &&
               src.type() == dst.type() && src.size() == dst.size() &&
               src.data != dst.data );
-    
+
     if( sigma_color <= 0 )
         sigma_color = 1;
     if( sigma_space <= 0 )
         sigma_space = 1;
-    
+
     double gauss_color_coeff = -0.5/(sigma_color*sigma_color);
     double gauss_space_coeff = -0.5/(sigma_space*sigma_space);
-    
+
     if( d <= 0 )
         radius = cvRound(sigma_space*1.5);
     else
         radius = d/2;
     radius = MAX(radius, 1);
     d = radius*2 + 1;
-    
+
     Mat temp;
     copyMakeBorder( src, temp, radius, radius, radius, radius, borderType );
-    
+
     vector<float> _color_weight(cn*256);
     vector<float> _space_weight(d*d);
     vector<int> _space_ofs(d*d);
     float* color_weight = &_color_weight[0];
     float* space_weight = &_space_weight[0];
     int* space_ofs = &_space_ofs[0];
-    
+
     // initialize color-related bilateral filter coefficients
 
     for( i = 0; i < 256*cn; i++ )
         color_weight[i] = (float)std::exp(i*i*gauss_color_coeff);
-    
+
     // initialize space-related bilateral filter coefficients
     for( i = -radius, maxk = 0; i <= radius; i++ )
     {
@@ -1917,7 +1917,7 @@ bilateralFilter_8u( const Mat& src, Mat& dst, int d,
             space_ofs[maxk++] = (int)(i*temp.step + j*cn);
         }
     }
-    
+
     BilateralFilter_8u_Invoker body(dst, temp, radius, maxk, space_ofs, space_weight, color_weight);
     parallel_for_(Range(0, size.height), body, dst.total()/(double)(1<<16));
 }
@@ -1964,7 +1964,7 @@ public:
                         const __m128 _val0 = _mm_set1_ps(sptr[j]);
                         const __m128 _scale_index = _mm_set1_ps(scale_index);
                         const __m128 _signMask = _mm_load_ps((const float*)bufSignMask);
-                    
+
                         for( ; k <= maxk - 4 ; k += 4 )
                         {
                             __m128 _sw    = _mm_loadu_ps(space_weight + k);
@@ -1980,7 +1980,7 @@ public:
                                                          expLUT[idxBuf[1]], expLUT[idxBuf[0]]);
                             __m128 _explut1 = _mm_set_ps(expLUT[idxBuf[3]+1], expLUT[idxBuf[2]+1],
                                                          expLUT[idxBuf[1]+1], expLUT[idxBuf[0]+1]);
-                        
+
                             __m128 _w = _mm_mul_ps(_sw, _mm_add_ps(_explut, _mm_mul_ps(_alpha, _mm_sub_ps(_explut1, _explut))));
                             _val = _mm_mul_ps(_w, _val);
 
@@ -2023,7 +2023,7 @@ public:
                         const __m128 _r0 = _mm_set1_ps(r0);
                         const __m128 _scale_index = _mm_set1_ps(scale_index);
                         const __m128 _signMask = _mm_load_ps((const float*)bufSignMask);
-                
+
                         for( ; k <= maxk-4; k += 4 )
                         {
                             __m128 _sw = _mm_loadu_ps(space_weight + k);
@@ -2049,7 +2049,7 @@ public:
 
                             __m128 _explut  = _mm_set_ps(expLUT[idxBuf[3]], expLUT[idxBuf[2]], expLUT[idxBuf[1]], expLUT[idxBuf[0]]);
                             __m128 _explut1 = _mm_set_ps(expLUT[idxBuf[3]+1], expLUT[idxBuf[2]+1], expLUT[idxBuf[1]+1], expLUT[idxBuf[0]+1]);
-                            
+
                             __m128 _w = _mm_mul_ps(_sw, _mm_add_ps(_explut, _mm_mul_ps(_alpha, _mm_sub_ps(_explut1, _explut))));
 
                             _b = _mm_mul_ps(_b, _w);
@@ -2070,7 +2070,7 @@ public:
 
                     }
                     #endif
-                    
+
                     for(; k < maxk; k++ )
                     {
                         const float* sptr_k = sptr + j + space_ofs[k];
@@ -2099,7 +2099,7 @@ private:
     Mat *dest;
     float scale_index, *space_weight, *expLUT;
 };
-    
+
 
 static void
 bilateralFilter_32f( const Mat& src, Mat& dst, int d,
@@ -2176,7 +2176,7 @@ bilateralFilter_32f( const Mat& src, Mat& dst, int d,
     }
 
     // initialize space-related bilateral filter coefficients
-    for( i = -radius, maxk = 0; i <= radius; i++ ) 
+    for( i = -radius, maxk = 0; i <= radius; i++ )
         for( j = -radius; j <= radius; j++ )
         {
             double r = std::sqrt((double)i*i + (double)j*j);

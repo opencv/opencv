@@ -96,7 +96,7 @@ public class Point3Test extends OpenCVTestCase {
         assertEquals(6., p1.y);
         assertEquals(10., p1.z);
     }
-    
+
     public void testToString() {
         String actual = p1.toString();
         String expected = "{2.0, 2.0, 2.0}";

@@ -29,9 +29,9 @@ static void help()
 static void writeOpticalFlowToFile(const Mat& flow, FILE* file) {
   int cols = flow.cols;
   int rows = flow.rows;
-  
+
   fprintf(file, "PIEH");
- 
+
   if (fwrite(&cols, sizeof(int), 1, file) != 1 ||
       fwrite(&rows, sizeof(int), 1, file) != 1) {
     printf(APP_NAME "writeOpticalFlowToFile : problem writing header\n");
@@ -53,7 +53,7 @@ static void writeOpticalFlowToFile(const Mat& flow, FILE* file) {
 
 static void run(int argc, char** argv) {
   if (argc < 3) {
-    printf(APP_NAME "Wrong number of command line arguments for mode `run`: %d (expected %d)\n", 
+    printf(APP_NAME "Wrong number of command line arguments for mode `run`: %d (expected %d)\n",
            argc, 3);
     exit(1);
   }
@@ -81,20 +81,20 @@ static void run(int argc, char** argv) {
     exit(1);
   }
 
-  printf(APP_NAME "Read two images of size [rows = %d, cols = %d]\n", 
+  printf(APP_NAME "Read two images of size [rows = %d, cols = %d]\n",
          frame1.rows, frame1.cols);
 
   Mat flow;
 
   float start = (float)getTickCount();
-  calcOpticalFlowSF(frame1, frame2, 
+  calcOpticalFlowSF(frame1, frame2,
                     flow,
                     3, 2, 4, 4.1, 25.5, 18, 55.0, 25.5, 0.35, 18, 55.0, 25.5, 10);
   printf(APP_NAME "calcOpticalFlowSF : %lf sec\n", (getTickCount() - start) / getTickFrequency());
 
   FILE* file = fopen(argv[2], "wb");
   if (file == NULL) {
-    printf(APP_NAME "Unable to open file '%s' for writing\n", argv[2]); 
+    printf(APP_NAME "Unable to open file '%s' for writing\n", argv[2]);
     exit(1);
   }
   printf(APP_NAME "Writing to file\n");
@@ -161,11 +161,11 @@ static float calc_rmse(Mat flow1, Mat flow2) {
 
 static void eval(int argc, char** argv) {
   if (argc < 2) {
-    printf(APP_NAME "Wrong number of command line arguments for mode `eval` : %d (expected %d)\n", 
+    printf(APP_NAME "Wrong number of command line arguments for mode `eval` : %d (expected %d)\n",
            argc, 2);
     exit(1);
   }
-  
+
   Mat flow1, flow2;
 
   FILE* flow_file_1 = fopen(argv[0], "rb");
@@ -189,7 +189,7 @@ static void eval(int argc, char** argv) {
     exit(1);
   }
   fclose(flow_file_2);
-  
+
   float rmse = calc_rmse(flow1, flow2);
   printf("%lf\n", rmse);
 }
@@ -208,12 +208,12 @@ int main(int argc, char** argv) {
     run(new_argc, new_argv);
   } else if ("eval" == mode) {
     eval(new_argc, new_argv);
-  } else if ("help" == mode) 
+  } else if ("help" == mode)
     help();
   else {
-    printf(APP_NAME "Unknown mode : %s\n", argv[1]);   
+    printf(APP_NAME "Unknown mode : %s\n", argv[1]);
     help();
   }
-  
+
   return 0;
 }

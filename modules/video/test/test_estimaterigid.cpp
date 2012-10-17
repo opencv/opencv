@@ -56,12 +56,12 @@ class CV_RigidTransform_Test : public cvtest::BaseTest
 {
 public:
     CV_RigidTransform_Test();
-    ~CV_RigidTransform_Test();    
+    ~CV_RigidTransform_Test();
 protected:
-    void run(int);    
+    void run(int);
 
     bool testNPoints(int);
-    bool testImage();    
+    bool testImage();
 };
 
 CV_RigidTransform_Test::CV_RigidTransform_Test()
@@ -76,39 +76,39 @@ struct WrapAff2D
     Point2f operator()(const Point2f& p)
     {
         return Point2d( p.x * F[0] + p.y * F[1] +  F[2],
-                        p.x * F[3] + p.y * F[4] +  F[5]);      
+                        p.x * F[3] + p.y * F[4] +  F[5]);
     }
 };
 
 bool CV_RigidTransform_Test::testNPoints(int from)
 {
     cv::RNG rng = ts->get_rng();
-    
+
     int progress = 0;
     int k, ntests = 10000;
-    
+
     for( k = from; k < ntests; k++ )
     {
         ts->update_context( this, k, true );
         progress = update_progress(progress, k, ntests, 0);
-        
+
         Mat aff(2, 3, CV_64F);
-        rng.fill(aff, CV_RAND_UNI, Scalar(-2), Scalar(2));          
+        rng.fill(aff, CV_RAND_UNI, Scalar(-2), Scalar(2));
 
         int n = (unsigned)rng % 100 + 10;
 
         Mat fpts(1, n, CV_32FC2);
         Mat tpts(1, n, CV_32FC2);
 
-        rng.fill(fpts, CV_RAND_UNI, Scalar(0,0), Scalar(10,10));                                     
+        rng.fill(fpts, CV_RAND_UNI, Scalar(0,0), Scalar(10,10));
         transform(fpts.ptr<Point2f>(), fpts.ptr<Point2f>() + n, tpts.ptr<Point2f>(), WrapAff2D(aff));
 
         Mat noise(1, n, CV_32FC2);
         rng.fill(noise, CV_RAND_NORMAL, Scalar::all(0), Scalar::all(0.001*(n<=7 ? 0 : n <= 30 ? 1 : 10)));
         tpts += noise;
-        
+
         Mat aff_est = estimateRigidTransform(fpts, tpts, true);
-                
+
         double thres = 0.1*norm(aff);
         double d = norm(aff_est, aff, NORM_L2);
         if (d > thres)
@@ -118,7 +118,7 @@ bool CV_RigidTransform_Test::testNPoints(int from)
             {
                 Mat A = fpts.reshape(1, 3);
                 Mat B = A - repeat(A.row(0), 3, 1), Bt = B.t();
-				B = Bt*B;
+                B = Bt*B;
                 dB = cv::determinant(B);
                 nB = norm(B);
                 if( fabs(dB) < 0.01*nB )
@@ -143,30 +143,30 @@ bool CV_RigidTransform_Test::testImage()
        return false;
     }
     pyrDown(testImg, img);
-         
+
     Mat aff = cv::getRotationMatrix2D(Point(img.cols/2, img.rows/2), 1, 0.99);
     aff.ptr<double>()[2]+=3;
     aff.ptr<double>()[5]+=3;
-        
+
     Mat rotated;
     warpAffine(img, rotated, aff, img.size());
-     
+
     Mat aff_est = estimateRigidTransform(img, rotated, true);
-    
+
     const double thres = 0.03;
     if (norm(aff_est, aff, NORM_INF) > thres)
-    {                
+    {
         ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
-        ts->printf( cvtest::TS::LOG, "Threshold = %f, norm of difference = %f", thres, 
+        ts->printf( cvtest::TS::LOG, "Threshold = %f, norm of difference = %f", thres,
             norm(aff_est, aff, NORM_INF) );
         return false;
-    }    
+    }
 
     return true;
 }
 
 void CV_RigidTransform_Test::run( int start_from )
-{	
+{
     cvtest::DefaultRngAuto dra;
 
     if (!testNPoints(start_from))

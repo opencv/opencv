@@ -68,11 +68,11 @@ namespace cv { namespace gpu { namespace device
 
         __device__ __forceinline__ float sqr(const float& a)  { return a * a; }
 
-        template<typename T, typename B> 
+        template<typename T, typename B>
         __global__ void bilateral_kernel(const PtrStepSz<T> src, PtrStep<T> dst, const B b, const int ksz, const float sigma_spatial2_inv_half, const float sigma_color2_inv_half)
         {
             typedef typename TypeVec<float, VecTraits<T>::cn>::vec_type value_type;
-            
+
             int x = threadIdx.x + blockIdx.x * blockDim.x;
             int y = threadIdx.y + blockIdx.y * blockDim.y;
 
@@ -150,7 +150,7 @@ namespace cv { namespace gpu { namespace device
         {
             typedef void (*caller_t)(const PtrStepSzb& src, PtrStepSzb dst, int kernel_size, float sigma_spatial, float sigma_color, cudaStream_t stream);
 
-            static caller_t funcs[] = 
+            static caller_t funcs[] =
             {
                 bilateral_caller<T, BrdReflect101>,
                 bilateral_caller<T, BrdReplicate>,

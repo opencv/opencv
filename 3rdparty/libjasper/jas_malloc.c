@@ -6,15 +6,15 @@
  */
 
 /* __START_OF_JASPER_LICENSE__
- * 
+ *
  * JasPer License Version 2.0
- * 
+ *
  * Copyright (c) 2001-2006 Michael David Adams
  * Copyright (c) 1999-2000 Image Power, Inc.
  * Copyright (c) 1999-2000 The University of British Columbia
- * 
+ *
  * All rights reserved.
- * 
+ *
  * Permission is hereby granted, free of charge, to any person (the
  * "User") obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without restriction,
@@ -22,15 +22,15 @@
  * publish, distribute, and/or sell copies of the Software, and to permit
  * persons to whom the Software is furnished to do so, subject to the
  * following conditions:
- * 
+ *
  * 1.  The above copyright notices and this permission notice (which
  * includes the disclaimer below) shall be included in all copies or
  * substantial portions of the Software.
- * 
+ *
  * 2.  The name of a copyright holder shall not be used to endorse or
  * promote products derived from the Software without specific prior
  * written permission.
- * 
+ *
  * THIS DISCLAIMER OF WARRANTY CONSTITUTES AN ESSENTIAL PART OF THIS
  * LICENSE.  NO USE OF THE SOFTWARE IS AUTHORIZED HEREUNDER EXCEPT UNDER
  * THIS DISCLAIMER.  THE SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS
@@ -57,7 +57,7 @@
  * PERSONAL INJURY, OR SEVERE PHYSICAL OR ENVIRONMENTAL DAMAGE ("HIGH
  * RISK ACTIVITIES").  THE COPYRIGHT HOLDERS SPECIFICALLY DISCLAIM ANY
  * EXPRESS OR IMPLIED WARRANTY OF FITNESS FOR HIGH RISK ACTIVITIES.
- * 
+ *
  * __END_OF_JASPER_LICENSE__
  */
 
@@ -101,68 +101,68 @@
 void *jas_malloc(size_t size)
 {
 #if defined(MEMALLOC_ALIGN2)
-	void *ptr;
+    void *ptr;
 abort();
-	if (posix_memalign(&ptr, MEMALLOC_ALIGNMENT, size)) {
-		return 0;
-	}
-	return ptr;
+    if (posix_memalign(&ptr, MEMALLOC_ALIGNMENT, size)) {
+        return 0;
+    }
+    return ptr;
 #endif
-	return malloc(size);
+    return malloc(size);
 }
 
 void jas_free(void *ptr)
 {
-	free(ptr);
+    free(ptr);
 }
 
 void *jas_realloc(void *ptr, size_t size)
 {
-	return ptr ? realloc(ptr, size) : malloc(size);
+    return ptr ? realloc(ptr, size) : malloc(size);
 }
 
 void *jas_realloc2(void *ptr, size_t nmemb, size_t size)
 {
-	if (!ptr)
-		return jas_alloc2(nmemb, size);
-	if (nmemb && SIZE_MAX / nmemb < size) {
-		errno = ENOMEM;
-		return NULL;
-	}
-	return jas_realloc(ptr, nmemb * size);
+    if (!ptr)
+        return jas_alloc2(nmemb, size);
+    if (nmemb && SIZE_MAX / nmemb < size) {
+        errno = ENOMEM;
+        return NULL;
+    }
+    return jas_realloc(ptr, nmemb * size);
 
 }
 
 void *jas_alloc2(size_t nmemb, size_t size)
 {
-	if (nmemb && SIZE_MAX / nmemb < size) {
-		errno = ENOMEM;
-		return NULL;
-	}
+    if (nmemb && SIZE_MAX / nmemb < size) {
+        errno = ENOMEM;
+        return NULL;
+    }
 
-	return jas_malloc(nmemb * size);
+    return jas_malloc(nmemb * size);
 }
 
 void *jas_alloc3(size_t a, size_t b, size_t c)
 {
-	size_t n;
+    size_t n;
 
-	if (a && SIZE_MAX / a < b) {
-		errno = ENOMEM;
-		return NULL;
-	}
+    if (a && SIZE_MAX / a < b) {
+        errno = ENOMEM;
+        return NULL;
+    }
 
-	return jas_alloc2(a*b, c);
+    return jas_alloc2(a*b, c);
 }
 
 void *jas_calloc(size_t nmemb, size_t size)
 {
-	void *ptr;
+    void *ptr;
 
-	ptr = jas_alloc2(nmemb, size);
-	if (ptr)
-		memset(ptr, 0, nmemb*size);
-	return ptr;
+    ptr = jas_alloc2(nmemb, size);
+    if (ptr)
+        memset(ptr, 0, nmemb*size);
+    return ptr;
 }
 
 #endif

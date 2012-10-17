@@ -105,7 +105,7 @@ int CV_SubdivTest::read_params( CvFileStorage* fs )
     max_log_point_count = cvReadInt( find_param( fs, "max_log_point_count" ), max_log_point_count );
     min_log_img_size = cvReadInt( find_param( fs, "min_log_img_size" ), min_log_img_size );
     max_log_img_size = cvReadInt( find_param( fs, "max_log_img_size" ), max_log_img_size );
-    
+
     min_log_point_count = cvtest::clipInt( min_log_point_count, 1, 10 );
     max_log_point_count = cvtest::clipInt( max_log_point_count, 1, 10 );
     if( min_log_point_count > max_log_point_count )
@@ -126,7 +126,7 @@ int CV_SubdivTest::prepare_test_case( int test_case_idx )
     int code = cvtest::BaseTest::prepare_test_case( test_case_idx );
     if( code < 0 )
         return code;
-    
+
     clear();
 
     point_count = cvRound(exp((cvtest::randReal(rng)*
@@ -150,7 +150,7 @@ static inline double sqdist( CvPoint2D32f pt1, CvPoint2D32f pt2 )
 {
     double dx = pt1.x - pt2.x;
     double dy = pt1.y - pt2.y;
-    
+
     return dx*dx + dy*dy;
 }
 
@@ -160,11 +160,11 @@ subdiv2DCheck( CvSubdiv2D* subdiv )
 {
     int i, j, total = subdiv->edges->total;
     CV_Assert( subdiv != 0 );
-    
+
     for( i = 0; i < total; i++ )
     {
         CvQuadEdge2D* edge = (CvQuadEdge2D*)cvGetSetElem(subdiv->edges,i);
-        
+
         if( edge && CV_IS_SET_ELEM( edge ))
         {
             for( j = 0; j < 4; j++ )
@@ -174,7 +174,7 @@ subdiv2DCheck( CvSubdiv2D* subdiv )
                 CvSubdiv2DEdge o_prev = cvSubdiv2DGetEdge(e, CV_PREV_AROUND_ORG );
                 CvSubdiv2DEdge d_prev = cvSubdiv2DGetEdge(e, CV_PREV_AROUND_DST );
                 CvSubdiv2DEdge d_next = cvSubdiv2DGetEdge(e, CV_NEXT_AROUND_DST );
-                
+
                 // check points
                 if( cvSubdiv2DEdgeOrg(e) != cvSubdiv2DEdgeOrg(o_next))
                     return 0;
@@ -200,7 +200,7 @@ subdiv2DCheck( CvSubdiv2D* subdiv )
             }
         }
     }
-    
+
     return 1;
 }
 
@@ -213,10 +213,10 @@ int CV_SubdivTest::validate_test_results( int /*test_case_idx*/ )
     int j, k, real_count = point_count;
     double xrange = img_size.width*(1 - FLT_EPSILON);
     double yrange = img_size.height*(1 - FLT_EPSILON);
-    
+
     subdiv = cvCreateSubdivDelaunay2D(
         cvRect( 0, 0, img_size.width, img_size.height ), storage );
-    
+
     CvSeq* seq = cvCreateSeq( 0, sizeof(*seq), sizeof(CvPoint2D32f), storage );
     CvSeqWriter writer;
     cvStartAppendToSeq( seq, &writer );
@@ -230,7 +230,7 @@ int CV_SubdivTest::validate_test_results( int /*test_case_idx*/ )
         pt.x = (float)(cvtest::randReal(rng)*xrange);
         pt.y = (float)(cvtest::randReal(rng)*yrange);
 
-        CvSubdiv2DPointLocation loc = 
+        CvSubdiv2DPointLocation loc =
             cvSubdiv2DLocate( subdiv, pt, 0, &point );
 
         if( loc == CV_PTLOC_VERTEX )
@@ -269,7 +269,7 @@ int CV_SubdivTest::validate_test_results( int /*test_case_idx*/ )
                 goto _exit_;
             }
         }
-        
+
         if( loc != CV_PTLOC_VERTEX )
         {
             CV_WRITE_SEQ_ELEM( pt, writer );

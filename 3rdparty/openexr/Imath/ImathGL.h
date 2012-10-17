@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2002, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-// 
+//
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission. 
-// 
+// from this software without specific prior written permission.
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -64,7 +64,7 @@ inline void glDisableTexture()
 }
 
 namespace {
-    
+
 const float GL_FLOAT_MAX = 1.8e+19; // sqrt (FLT_MAX)
 
 inline bool
@@ -74,55 +74,55 @@ badFloat (float f)
 }
 
 } // namespace
-	
+
 inline void
 throwBadMatrix (const Imath::M44f& m)
 {
     if (badFloat (m[0][0]) ||
-	badFloat (m[0][1]) ||
-	badFloat (m[0][2]) ||
-	badFloat (m[0][3]) || 
-	badFloat (m[1][0]) ||
-	badFloat (m[1][1]) ||
-	badFloat (m[1][2]) ||
-	badFloat (m[1][3]) || 
-	badFloat (m[2][0]) ||
-	badFloat (m[2][1]) ||
-	badFloat (m[2][2]) ||
-	badFloat (m[2][3]) || 
-	badFloat (m[3][0]) ||
-	badFloat (m[3][1]) ||
-	badFloat (m[3][2]) ||
-	badFloat (m[3][3]))
-	throw Iex::OverflowExc ("GL matrix overflow");
+    badFloat (m[0][1]) ||
+    badFloat (m[0][2]) ||
+    badFloat (m[0][3]) ||
+    badFloat (m[1][0]) ||
+    badFloat (m[1][1]) ||
+    badFloat (m[1][2]) ||
+    badFloat (m[1][3]) ||
+    badFloat (m[2][0]) ||
+    badFloat (m[2][1]) ||
+    badFloat (m[2][2]) ||
+    badFloat (m[2][3]) ||
+    badFloat (m[3][0]) ||
+    badFloat (m[3][1]) ||
+    badFloat (m[3][2]) ||
+    badFloat (m[3][3]))
+    throw Iex::OverflowExc ("GL matrix overflow");
 }
 
-inline void 
-glMultMatrix( const Imath::M44f& m ) 
-{ 
+inline void
+glMultMatrix( const Imath::M44f& m )
+{
     throwBadMatrix (m);
-    glMultMatrixf( (GLfloat*)m[0] ); 
+    glMultMatrixf( (GLfloat*)m[0] );
 }
 
-inline void 
-glMultMatrix( const Imath::M44f* m ) 
-{ 
+inline void
+glMultMatrix( const Imath::M44f* m )
+{
     throwBadMatrix (*m);
-    glMultMatrixf( (GLfloat*)(*m)[0] ); 
+    glMultMatrixf( (GLfloat*)(*m)[0] );
 }
 
-inline void 
-glLoadMatrix( const Imath::M44f& m ) 
-{ 
+inline void
+glLoadMatrix( const Imath::M44f& m )
+{
     throwBadMatrix (m);
-    glLoadMatrixf( (GLfloat*)m[0] ); 
+    glLoadMatrixf( (GLfloat*)m[0] );
 }
 
-inline void 
-glLoadMatrix( const Imath::M44f* m ) 
-{ 
+inline void
+glLoadMatrix( const Imath::M44f* m )
+{
     throwBadMatrix (*m);
-    glLoadMatrixf( (GLfloat*)(*m)[0] ); 
+    glLoadMatrixf( (GLfloat*)(*m)[0] );
 }
 
 

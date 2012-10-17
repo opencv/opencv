@@ -45,7 +45,7 @@
 
 #include "detail/color_detail.hpp"
 
-namespace cv { namespace gpu { namespace device 
+namespace cv { namespace gpu { namespace device
 {
     // All OPENCV_GPU_IMPLEMENT_*_TRAITS(ColorSpace1_to_ColorSpace2, ...) macros implements
     // template <typename T> class ColorSpace1_to_ColorSpace2_traits

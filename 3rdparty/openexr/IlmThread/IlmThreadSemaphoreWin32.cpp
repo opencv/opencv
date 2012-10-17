@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2005, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-// 
+//
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission. 
-// 
+// from this software without specific prior written permission.
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -58,22 +58,22 @@ errorString ()
     std::string message;
 
     //
-    // Call FormatMessage() to allow for message 
+    // Call FormatMessage() to allow for message
     // text to be acquired from the system.
     //
 
     if (bufferLength = FormatMessageA (FORMAT_MESSAGE_ALLOCATE_BUFFER |
-				       FORMAT_MESSAGE_IGNORE_INSERTS |
-				       FORMAT_MESSAGE_FROM_SYSTEM,
-				       0,
-				       GetLastError (),
-				       MAKELANGID (LANG_NEUTRAL,
-						   SUBLANG_DEFAULT),
-				       (LPSTR) &messageBuffer,
-				       0,
-				       NULL))
+                       FORMAT_MESSAGE_IGNORE_INSERTS |
+                       FORMAT_MESSAGE_FROM_SYSTEM,
+                       0,
+                       GetLastError (),
+                       MAKELANGID (LANG_NEUTRAL,
+                           SUBLANG_DEFAULT),
+                       (LPSTR) &messageBuffer,
+                       0,
+                       NULL))
     {
-	message = messageBuffer;
+    message = messageBuffer;
         LocalFree (messageBuffer);
     }
 
@@ -87,8 +87,8 @@ Semaphore::Semaphore (unsigned int value)
 {
     if ((_semaphore = ::CreateSemaphore (0, value, 0x7fffffff, 0)) == 0)
     {
-	THROW (LogicExc, "Could not create semaphore "
-			 "(" << errorString() << ").");
+    THROW (LogicExc, "Could not create semaphore "
+             "(" << errorString() << ").");
     }
 }
 
@@ -105,8 +105,8 @@ Semaphore::wait()
 {
     if (::WaitForSingleObject (_semaphore, INFINITE) != WAIT_OBJECT_0)
     {
-	THROW (LogicExc, "Could not wait on semaphore "
-			 "(" << errorString() << ").");
+    THROW (LogicExc, "Could not wait on semaphore "
+             "(" << errorString() << ").");
     }
 }
 
@@ -123,8 +123,8 @@ Semaphore::post()
 {
     if (!::ReleaseSemaphore (_semaphore, 1, 0))
     {
-	THROW (LogicExc, "Could not post on semaphore "
-			 "(" << errorString() << ").");
+    THROW (LogicExc, "Could not post on semaphore "
+             "(" << errorString() << ").");
     }
 }
 
@@ -136,8 +136,8 @@ Semaphore::value() const
 
     if (!::ReleaseSemaphore (_semaphore, 0, &v) || v < 0)
     {
-	THROW (LogicExc, "Could not get value of semaphore "
-			 "(" << errorString () << ").");
+    THROW (LogicExc, "Could not get value of semaphore "
+             "(" << errorString () << ").");
     }
 
     return v;

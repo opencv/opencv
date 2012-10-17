@@ -1,7 +1,7 @@
 #include "opencv2/core/core.hpp"
 #include <iostream>
 
-const char* keys = 
+const char* keys =
 {
     "{ b build | | print complete build info }"
     "{ h help  | | print this help           }"
@@ -25,7 +25,7 @@ int main(int argc, const char* argv[])
     }
     else
     {
-        std::cout << "OpenCV " << CV_VERSION << std::endl;	
+        std::cout << "OpenCV " << CV_VERSION << std::endl;
     }
 
     return 0;

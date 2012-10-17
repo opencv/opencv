@@ -43,7 +43,7 @@
 #include <DeepSeaIF.h>
 
 #if _MSC_VER >= 1200
-	#pragma comment(lib,"DeepSeaIF.lib")
+    #pragma comment(lib,"DeepSeaIF.lib")
 #endif
 
 
@@ -64,12 +64,12 @@ public:
     virtual bool setProperty(int, double) { return false; }
     virtual bool grabFrame();
     virtual IplImage* retrieveFrame(int);
-	virtual int getCaptureDomain() { return CV_CAP_TYZX; } // Return the type of the capture object: CV_CAP_VFW, etc...
+    virtual int getCaptureDomain() { return CV_CAP_TYZX; } // Return the type of the capture object: CV_CAP_VFW, etc...
 
 protected:
     virtual bool allocateImage();
 
-	int index;
+    int index;
     IplImage* image;
 }
 CvCaptureCAM_TYZX;
@@ -79,149 +79,149 @@ int         g_tyzx_refcount = 0;
 
 bool CvCaptureCAM_TYZX::open( int _index )
 {
-	close();
+    close();
 
     if(!g_tyzx_camera){
-		g_tyzx_camera = new DeepSeaIF;
-		if(!g_tyzx_camera) return false;
+        g_tyzx_camera = new DeepSeaIF;
+        if(!g_tyzx_camera) return false;
 
-		if(!g_tyzx_camera->initializeSettings(NULL)){
-			delete g_tyzx_camera;
-			return false;
-		}
+        if(!g_tyzx_camera->initializeSettings(NULL)){
+            delete g_tyzx_camera;
+            return false;
+        }
 
-		// set initial sensor mode
-		// TODO is g_tyzx_camera redundant?
-		g_tyzx_camera->setSensorMode(g_tyzx_camera->getSensorMode());
+        // set initial sensor mode
+        // TODO is g_tyzx_camera redundant?
+        g_tyzx_camera->setSensorMode(g_tyzx_camera->getSensorMode());
 
-		// mm's
-		g_tyzx_camera->setZUnits((int) 1000);
+        // mm's
+        g_tyzx_camera->setZUnits((int) 1000);
 
-	    g_tyzx_camera->enableLeftColor(true);
-		g_tyzx_camera->setColorMode(DeepSeaIF::BGRcolor);
-		g_tyzx_camera->setDoIntensityCrop(true);
-		g_tyzx_camera->enable8bitImages(true);
-		if(!g_tyzx_camera->startCapture()){
-			return false;
-		}
-		g_tyzx_refcount++;
-	}
-	index = _index;
-	return true;
+        g_tyzx_camera->enableLeftColor(true);
+        g_tyzx_camera->setColorMode(DeepSeaIF::BGRcolor);
+        g_tyzx_camera->setDoIntensityCrop(true);
+        g_tyzx_camera->enable8bitImages(true);
+        if(!g_tyzx_camera->startCapture()){
+            return false;
+        }
+        g_tyzx_refcount++;
+    }
+    index = _index;
+    return true;
 }
 
 void CvCaptureCAM_TYZX::close()
 {
-	if( isOpened() )
-	{
-		cvReleaseImage( &image );
-		g_tyzx_refcount--;
-		if(g_tyzx_refcount==0){
-			delete g_tyzx_camera;
-		}
-	}
+    if( isOpened() )
+    {
+        cvReleaseImage( &image );
+        g_tyzx_refcount--;
+        if(g_tyzx_refcount==0){
+            delete g_tyzx_camera;
+        }
+    }
 }
 
 bool CvCaptureCAM_TYZX::grabFrame()
 {
-	return isOpened() && g_tyzx_camera && g_tyzx_camera->grab();
+    return isOpened() && g_tyzx_camera && g_tyzx_camera->grab();
 }
 
 bool CvCaptureCAM_TYZX::allocateImage()
 {
-	int depth, nch;
-	CvSize size;
+    int depth, nch;
+    CvSize size;
 
-	// assume we want to resize
+    // assume we want to resize
     cvReleaseImage(&image);
 
-	// figure out size depending on index provided
-	switch(index){
-		case CV_TYZX_RIGHT:
-			size = cvSize(g_tyzx_camera->intensityWidth(), g_tyzx_camera->intensityHeight());
-			depth = 8;
-			nch = 1;
-			break;
-		case CV_TYZX_Z:
-			size = cvSize(g_tyzx_camera->zWidth(), g_tyzx_camera->zHeight());
-			depth = IPL_DEPTH_16S;
-			nch = 1;
-			break;
-		case CV_TYZX_LEFT:
-		default:
-			size = cvSize(g_tyzx_camera->intensityWidth(), g_tyzx_camera->intensityHeight());
-			depth = 8;
-			nch = 1;
-			break;
-	}
-	image = cvCreateImage(size, depth, nch);
+    // figure out size depending on index provided
+    switch(index){
+        case CV_TYZX_RIGHT:
+            size = cvSize(g_tyzx_camera->intensityWidth(), g_tyzx_camera->intensityHeight());
+            depth = 8;
+            nch = 1;
+            break;
+        case CV_TYZX_Z:
+            size = cvSize(g_tyzx_camera->zWidth(), g_tyzx_camera->zHeight());
+            depth = IPL_DEPTH_16S;
+            nch = 1;
+            break;
+        case CV_TYZX_LEFT:
+        default:
+            size = cvSize(g_tyzx_camera->intensityWidth(), g_tyzx_camera->intensityHeight());
+            depth = 8;
+            nch = 1;
+            break;
+    }
+    image = cvCreateImage(size, depth, nch);
     return image != 0;
 }
 
 /// Copy 'grabbed' image into capture buffer and return it.
 IplImage * CvCaptureCAM_TYZX::retrieveFrame(int)
 {
-	if(!isOpened() || !g_tyzx_camera) return 0;
+    if(!isOpened() || !g_tyzx_camera) return 0;
 
-	if(!image && !alocateImage())
+    if(!image && !alocateImage())
         return 0;
 
-	// copy camera image into buffer.
-	// tempting to reference TYZX memory directly to avoid copying.
-	switch (index)
-	{
-		case CV_TYZX_RIGHT:
-			memcpy(image->imageData, g_tyzx_camera->getRImage(), image->imageSize);
-			break;
-		case CV_TYZX_Z:
-			memcpy(image->imageData, g_tyzx_camera->getZImage(), image->imageSize);
-			break;
-		case CV_TYZX_LEFT:
-		default:
-			memcpy(image->imageData, g_tyzx_camera->getLImage(), image->imageSize);
-			break;
-	}
+    // copy camera image into buffer.
+    // tempting to reference TYZX memory directly to avoid copying.
+    switch (index)
+    {
+        case CV_TYZX_RIGHT:
+            memcpy(image->imageData, g_tyzx_camera->getRImage(), image->imageSize);
+            break;
+        case CV_TYZX_Z:
+            memcpy(image->imageData, g_tyzx_camera->getZImage(), image->imageSize);
+            break;
+        case CV_TYZX_LEFT:
+        default:
+            memcpy(image->imageData, g_tyzx_camera->getLImage(), image->imageSize);
+            break;
+    }
 
-	return image;
+    return image;
 }
 
 double CvCaptureCAM_TYZX::getProperty(int property_id)
 {
-	CvSize size;
-	switch(capture->index)
-	{
-		case CV_TYZX_LEFT:
-			size = cvSize(g_tyzx_camera->intensityWidth(), g_tyzx_camera->intensityHeight());
-			break;
-		case CV_TYZX_RIGHT:
-			size = cvSize(g_tyzx_camera->intensityWidth(), g_tyzx_camera->intensityHeight());
-			break;
-		case CV_TYZX_Z:
-			size = cvSize(g_tyzx_camera->zWidth(), g_tyzx_camera->zHeight());
-			break;
-		default:
-			size = cvSize(0,0);
-	}
+    CvSize size;
+    switch(capture->index)
+    {
+        case CV_TYZX_LEFT:
+            size = cvSize(g_tyzx_camera->intensityWidth(), g_tyzx_camera->intensityHeight());
+            break;
+        case CV_TYZX_RIGHT:
+            size = cvSize(g_tyzx_camera->intensityWidth(), g_tyzx_camera->intensityHeight());
+            break;
+        case CV_TYZX_Z:
+            size = cvSize(g_tyzx_camera->zWidth(), g_tyzx_camera->zHeight());
+            break;
+        default:
+            size = cvSize(0,0);
+    }
 
-	switch( property_id )
-	{
-		case CV_CAP_PROP_FRAME_WIDTH:
-			return size.width;
-		case CV_CAP_PROP_FRAME_HEIGHT:
-			return size.height;
-	}
+    switch( property_id )
+    {
+        case CV_CAP_PROP_FRAME_WIDTH:
+            return size.width;
+        case CV_CAP_PROP_FRAME_HEIGHT:
+            return size.height;
+    }
 
-	return 0;
+    return 0;
 }
 
 bool CvCaptureCAM_TYZX::setProperty( int, double )
 {
-	return false;
+    return false;
 }
 
 CvCapture * cvCreateCameraCapture_TYZX (int index)
 {
-	CvCaptureCAM_TYZX * capture = new CvCaptureCAM_TYZX;
+    CvCaptureCAM_TYZX * capture = new CvCaptureCAM_TYZX;
     if( capture->open(index) )
         return capture;
 

@@ -356,7 +356,7 @@ void magnitude( InputArray src1, InputArray src2, OutputArray dst )
 {
     Mat X = src1.getMat(), Y = src2.getMat();
     int type = X.type(), depth = X.depth(), cn = X.channels();
-	CV_Assert( X.size == Y.size && type == Y.type() && (depth == CV_32F || depth == CV_64F));
+    CV_Assert( X.size == Y.size && type == Y.type() && (depth == CV_32F || depth == CV_64F));
     dst.create(X.dims, X.size, X.type());
     Mat Mag = dst.getMat();
 
@@ -430,7 +430,7 @@ void phase( InputArray src1, InputArray src2, OutputArray dst, bool angleInDegre
 
                 FastAtan2_32f( buf[1], buf[0], buf[0], len, angleInDegrees );
                 for( k = 0; k < len; k++ )
-					angle[k] = buf[0][k];
+                    angle[k] = buf[0][k];
             }
             ptrs[0] += len*esz1;
             ptrs[1] += len*esz1;
@@ -491,7 +491,7 @@ void cartToPolar( InputArray src1, InputArray src2,
 
                 FastAtan2_32f( buf[1], buf[0], buf[0], len, angleInDegrees );
                 for( k = 0; k < len; k++ )
-					angle[k] = buf[0][k];
+                    angle[k] = buf[0][k];
             }
             ptrs[0] += len*esz1;
             ptrs[1] += len*esz1;
@@ -2249,15 +2249,15 @@ cvCartToPolar( const CvArr* xarr, const CvArr* yarr,
         Angle = cv::cvarrToMat(anglearr);
         CV_Assert( Angle.size() == X.size() && Angle.type() == X.type() );
     }
-	if( magarr )
-	{
-		if( anglearr )
-			cv::cartToPolar( X, Y, Mag, Angle, angle_in_degrees != 0 );
-		else
-			cv::magnitude( X, Y, Mag );
-	}
-	else
-		cv::phase( X, Y, Angle, angle_in_degrees != 0 );
+    if( magarr )
+    {
+        if( anglearr )
+            cv::cartToPolar( X, Y, Mag, Angle, angle_in_degrees != 0 );
+        else
+            cv::magnitude( X, Y, Mag );
+    }
+    else
+        cv::phase( X, Y, Angle, angle_in_degrees != 0 );
 }
 
 CV_IMPL void

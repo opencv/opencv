@@ -58,7 +58,7 @@ int main(int argc, char* argv[])
         namedWindow("Mat", WINDOW_AUTOSIZE);
 
         Mat img = imread(argv[1]);
-        
+
         if (haveCuda)
             setGlDevice();
 
@@ -67,11 +67,11 @@ int main(int argc, char* argv[])
 
         setOpenGlContext(openGlTextureWnd);
         GlTexture tex(img);
-        
+
         GpuMat d_img;
         if (haveCuda)
             d_img.upload(img);
-            
+
         cout << "=== First call\n\n";
 
         {
@@ -98,7 +98,7 @@ int main(int argc, char* argv[])
 
         waitKey();
 
-        cout << "\n=== Second call\n\n";   
+        cout << "\n=== Second call\n\n";
 
         {
             Timer t("OpenGL Mat      ");

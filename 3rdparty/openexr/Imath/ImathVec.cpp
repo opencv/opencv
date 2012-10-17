@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2002, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-// 
+//
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission. 
-// 
+// from this software without specific prior written permission.
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -126,7 +126,7 @@ normalizeOrThrow(Vec4<T> &v)
 
 // Vec2<short>
 
-template <> 
+template <>
 short
 Vec2<short>::length () const
 {
@@ -195,7 +195,7 @@ Vec2<short>::normalizedNonNull () const
 
 // Vec2<int>
 
-template <> 
+template <>
 int
 Vec2<int>::length () const
 {
@@ -264,7 +264,7 @@ Vec2<int>::normalizedNonNull () const
 
 // Vec3<short>
 
-template <> 
+template <>
 short
 Vec3<short>::length () const
 {
@@ -333,7 +333,7 @@ Vec3<short>::normalizedNonNull () const
 
 // Vec3<int>
 
-template <> 
+template <>
 int
 Vec3<int>::length () const
 {
@@ -402,7 +402,7 @@ Vec3<int>::normalizedNonNull () const
 
 // Vec4<short>
 
-template <> 
+template <>
 short
 Vec4<short>::length () const
 {
@@ -471,7 +471,7 @@ Vec4<short>::normalizedNonNull () const
 
 // Vec4<int>
 
-template <> 
+template <>
 int
 Vec4<int>::length () const
 {

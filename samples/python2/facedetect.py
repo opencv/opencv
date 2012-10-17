@@ -22,7 +22,7 @@ def draw_rects(img, rects, color):
 if __name__ == '__main__':
     import sys, getopt
     print help_message
-    
+
     args, video_src = getopt.getopt(sys.argv[1:], '', ['cascade=', 'nested-cascade='])
     try: video_src = video_src[0]
     except: video_src = 0
@@ -39,7 +39,7 @@ if __name__ == '__main__':
         ret, img = cam.read()
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         gray = cv2.equalizeHist(gray)
-        
+
         t = clock()
         rects = detect(gray, cascade)
         vis = img.copy()
@@ -56,5 +56,5 @@ if __name__ == '__main__':
 
         if 0xFF & cv2.waitKey(5) == 27:
             break
-    cv2.destroyAllWindows() 			
+    cv2.destroyAllWindows()
 

@@ -9,7 +9,7 @@ int main( int /*argc*/, char** /*argv*/ )
     const int N1 = (int)sqrt((double)N);
     const Scalar colors[] =
     {
-        Scalar(0,0,255), Scalar(0,255,0), 
+        Scalar(0,0,255), Scalar(0,255,0),
         Scalar(0,255,255),Scalar(255,255,0)
     };
 
@@ -27,7 +27,7 @@ int main( int /*argc*/, char** /*argv*/ )
     {
         // form the training samples
         Mat samples_part = samples.rowRange(i*nsamples/N, (i+1)*nsamples/N );
-        
+
         Scalar mean(((i%N1)+1)*img.rows/(N1+1),
                     ((i/N1)+1)*img.rows/(N1+1));
         Scalar sigma(30,30);

@@ -175,7 +175,7 @@ _cleanup_:
                     }
                     else
                     {
-                    	cerr << "Aw snap, couldn't read image " << buf << endl;
+                        cerr << "Aw snap, couldn't read image " << buf << endl;
                     }
                 }
                 fclose(f);
@@ -241,7 +241,7 @@ void detectAndDraw( Mat& img, CascadeClassifier& cascade,
         Point center;
         Scalar color = colors[i%8];
         int radius;
-        
+
         double aspect_ratio = (double)r->width/r->height;
         if( 0.75 < aspect_ratio && aspect_ratio < 1.3 )
         {

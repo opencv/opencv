@@ -151,9 +151,9 @@
 /* If using the C implementation of alloca, define if you know the
    direction of stack growth for your system; otherwise it will be
    automatically deduced at runtime.
-	STACK_DIRECTION > 0 => grows toward higher addresses
-	STACK_DIRECTION < 0 => grows toward lower addresses
-	STACK_DIRECTION = 0 => direction of growth unknown */
+    STACK_DIRECTION > 0 => grows toward higher addresses
+    STACK_DIRECTION < 0 => grows toward lower addresses
+    STACK_DIRECTION = 0 => direction of growth unknown */
 #cmakedefine  STACK_DIRECTION
 
 /* Version number of package */
@@ -178,7 +178,7 @@
 /* OpenCL Support */
 #cmakedefine HAVE_OPENCL
 
-/* AMD's OpenCL Fast Fourier Transform Library*/ 
+/* AMD's OpenCL Fast Fourier Transform Library*/
 #cmakedefine HAVE_CLAMDFFT
 
 /* AMD's Basic Linear Algebra Subprograms Library*/

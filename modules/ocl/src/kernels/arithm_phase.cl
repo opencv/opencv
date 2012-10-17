@@ -67,7 +67,7 @@ __kernel void arithm_phase_inradians_D5 (__global float *src1, int src1_step, in
         float data1 = *((__global float *)((__global char *)src1 + src1_index));
         float data2 = *((__global float *)((__global char *)src2 + src2_index));
         float tmp = atan2(data2,data1);
-        
+
         *((__global float *)((__global char *)dst + dst_index)) = tmp;
     }
 
@@ -92,7 +92,7 @@ __kernel void arithm_phase_inradians_D6 (__global double *src1, int src1_step, i
 
         double data1 = *((__global double *)((__global char *)src1 + src1_index));
         double data2 = *((__global double *)((__global char *)src2 + src2_index));
-        
+
         *((__global double *)((__global char *)dst + dst_index)) = atan2(data2,data1);
     }
 
@@ -119,7 +119,7 @@ __kernel void arithm_phase_indegrees_D5 (__global float *src1, int src1_step, in
         float data2 = *((__global float *)((__global char *)src2 + src2_index));
         float tmp = atan2(data2,data1);
         float tmp_data = 180*tmp/CV_PI;
-        
+
         *((__global float *)((__global char *)dst + dst_index)) = tmp_data;
     }
 
@@ -146,7 +146,7 @@ __kernel void arithm_phase_indegrees_D6 (__global double *src1, int src1_step, i
         double data2 = *((__global double *)((__global char *)src2 + src2_index));
         double tmp = atan2(data2,data1);
         double tmp_data = 180*tmp/CV_PI;
-        
+
         *((__global double *)((__global char *)dst + dst_index)) = tmp_data;
     }
 

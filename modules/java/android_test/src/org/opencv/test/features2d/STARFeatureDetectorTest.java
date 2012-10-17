@@ -47,7 +47,7 @@ public class STARFeatureDetectorTest extends OpenCVTestCase {
         matSize = 200;
 
         truth = new KeyPoint[] {
-        		/*
+                /*
                 new KeyPoint(95, 80, 22, -1, 31.595734f, 0, -1),
                 new KeyPoint(105, 80, 22, -1, 31.595734f, 0, -1),
                 new KeyPoint(80, 95, 22, -1, 31.595734f, 0, -1),
@@ -58,15 +58,15 @@ public class STARFeatureDetectorTest extends OpenCVTestCase {
                 new KeyPoint(95, 120, 22, -1, 31.595734f, 0, -1),
                 new KeyPoint(105, 120, 22, -1, 31.595734f, 0, -1)
                 */
-        		new KeyPoint( 95,  80, 22, -1, 31.5957f, 0, -1), 
-        		new KeyPoint(105,  80, 22, -1, 31.5957f, 0, -1), 
-        		new KeyPoint( 80,  95, 22, -1, 31.5957f, 0, -1), 
-        		new KeyPoint(120,  95, 22, -1, 31.5957f, 0, -1), 
-        		new KeyPoint(100, 100,  8, -1, 30.f,     0, -1), 
-        		new KeyPoint( 80, 105, 22, -1, 31.5957f, 0, -1), 
-        		new KeyPoint(120, 105, 22, -1, 31.5957f, 0, -1), 
-        		new KeyPoint( 95, 120, 22, -1, 31.5957f, 0, -1), 
-        		new KeyPoint(105, 120, 22, -1, 31.5957f, 0, -1)
+                new KeyPoint( 95,  80, 22, -1, 31.5957f, 0, -1),
+                new KeyPoint(105,  80, 22, -1, 31.5957f, 0, -1),
+                new KeyPoint( 80,  95, 22, -1, 31.5957f, 0, -1),
+                new KeyPoint(120,  95, 22, -1, 31.5957f, 0, -1),
+                new KeyPoint(100, 100,  8, -1, 30.f,     0, -1),
+                new KeyPoint( 80, 105, 22, -1, 31.5957f, 0, -1),
+                new KeyPoint(120, 105, 22, -1, 31.5957f, 0, -1),
+                new KeyPoint( 95, 120, 22, -1, 31.5957f, 0, -1),
+                new KeyPoint(105, 120, 22, -1, 31.5957f, 0, -1)
             };
 
         super.setUp();

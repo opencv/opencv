@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2004, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-// 
+//
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission. 
-// 
+// from this software without specific prior written permission.
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -48,8 +48,8 @@ namespace Imf {
 
 
 TileOffsets::TileOffsets (LevelMode mode,
-			  int numXLevels, int numYLevels,
-			  const int *numXTiles, const int *numYTiles)
+              int numXLevels, int numYLevels,
+              const int *numXTiles, const int *numYTiles)
 :
     _mode (mode),
     _numXLevels (numXLevels),
@@ -67,7 +67,7 @@ TileOffsets::TileOffsets (LevelMode mode,
             _offsets[l].resize (numYTiles[l]);
 
             for (unsigned int dy = 0; dy < _offsets[l].size(); ++dy)
-	    {
+        {
                 _offsets[l][dy].resize (numXTiles[l]);
             }
         }
@@ -99,11 +99,11 @@ bool
 TileOffsets::anyOffsetsAreInvalid () const
 {
     for (unsigned int l = 0; l < _offsets.size(); ++l)
-	for (unsigned int dy = 0; dy < _offsets[l].size(); ++dy)
-	    for (unsigned int dx = 0; dx < _offsets[l][dy].size(); ++dx)
-		if (_offsets[l][dy][dx] <= 0)
-		    return true;
-    
+    for (unsigned int dy = 0; dy < _offsets[l].size(); ++dy)
+        for (unsigned int dx = 0; dx < _offsets[l][dy].size(); ++dx)
+        if (_offsets[l][dy][dx] <= 0)
+            return true;
+
     return false;
 }
 
@@ -113,35 +113,35 @@ TileOffsets::findTiles (IStream &is)
 {
     for (unsigned int l = 0; l < _offsets.size(); ++l)
     {
-	for (unsigned int dy = 0; dy < _offsets[l].size(); ++dy)
-	{
-	    for (unsigned int dx = 0; dx < _offsets[l][dy].size(); ++dx)
-	    {
-		Int64 tileOffset = is.tellg();
+    for (unsigned int dy = 0; dy < _offsets[l].size(); ++dy)
+    {
+        for (unsigned int dx = 0; dx < _offsets[l][dy].size(); ++dx)
+        {
+        Int64 tileOffset = is.tellg();
 
-		int tileX;
-		Xdr::read <StreamIO> (is, tileX);
+        int tileX;
+        Xdr::read <StreamIO> (is, tileX);
 
-		int tileY;
-		Xdr::read <StreamIO> (is, tileY);
+        int tileY;
+        Xdr::read <StreamIO> (is, tileY);
 
-		int levelX;
-		Xdr::read <StreamIO> (is, levelX);
+        int levelX;
+        Xdr::read <StreamIO> (is, levelX);
 
-		int levelY;
-		Xdr::read <StreamIO> (is, levelY);
+        int levelY;
+        Xdr::read <StreamIO> (is, levelY);
 
-		int dataSize;
-		Xdr::read <StreamIO> (is, dataSize);
+        int dataSize;
+        Xdr::read <StreamIO> (is, dataSize);
 
-		Xdr::skip <StreamIO> (is, dataSize);
+        Xdr::skip <StreamIO> (is, dataSize);
 
-		if (!isValidTile(tileX, tileY, levelX, levelY))
-		    return;
+        if (!isValidTile(tileX, tileY, levelX, levelY))
+            return;
 
-		operator () (tileX, tileY, levelX, levelY) = tileOffset;
-	    }
-	}
+        operator () (tileX, tileY, levelX, levelY) = tileOffset;
+        }
+    }
     }
 }
 
@@ -159,14 +159,14 @@ TileOffsets::reconstructFromFile (IStream &is)
 
     try
     {
-	findTiles (is);
+    findTiles (is);
     }
     catch (...)
     {
         //
         // Suppress all exceptions.  This function is called only to
-	// reconstruct the tile offset table for incomplete files,
-	// and exceptions are likely.
+    // reconstruct the tile offset table for incomplete files,
+    // and exceptions are likely.
         //
     }
 
@@ -183,9 +183,9 @@ TileOffsets::readFrom (IStream &is, bool &complete)
     //
 
     for (unsigned int l = 0; l < _offsets.size(); ++l)
-	for (unsigned int dy = 0; dy < _offsets[l].size(); ++dy)
-	    for (unsigned int dx = 0; dx < _offsets[l][dy].size(); ++dx)
-		Xdr::read <StreamIO> (is, _offsets[l][dy][dx]);
+    for (unsigned int dy = 0; dy < _offsets[l].size(); ++dy)
+        for (unsigned int dx = 0; dx < _offsets[l][dy].size(); ++dx)
+        Xdr::read <StreamIO> (is, _offsets[l][dy][dx]);
 
     //
     // Check if any tile offsets are invalid.
@@ -203,12 +203,12 @@ TileOffsets::readFrom (IStream &is, bool &complete)
 
     if (anyOffsetsAreInvalid())
     {
-	complete = false;
-	reconstructFromFile (is);
+    complete = false;
+    reconstructFromFile (is);
     }
     else
     {
-	complete = true;
+    complete = true;
     }
 
 }
@@ -222,16 +222,16 @@ TileOffsets::writeTo (OStream &os) const
     // return the position of the start of the table
     // in the file.
     //
-    
+
     Int64 pos = os.tellp();
 
     if (pos == -1)
-	Iex::throwErrnoExc ("Cannot determine current file position (%T).");
+    Iex::throwErrnoExc ("Cannot determine current file position (%T).");
 
     for (unsigned int l = 0; l < _offsets.size(); ++l)
-	for (unsigned int dy = 0; dy < _offsets[l].size(); ++dy)
-	    for (unsigned int dx = 0; dx < _offsets[l][dy].size(); ++dx)
-		Xdr::write <StreamIO> (os, _offsets[l][dy][dx]);
+    for (unsigned int dy = 0; dy < _offsets[l].size(); ++dy)
+        for (unsigned int dx = 0; dx < _offsets[l][dy].size(); ++dx)
+        Xdr::write <StreamIO> (os, _offsets[l][dy][dx]);
 
     return pos;
 }
@@ -241,10 +241,10 @@ bool
 TileOffsets::isEmpty () const
 {
     for (unsigned int l = 0; l < _offsets.size(); ++l)
-	for (unsigned int dy = 0; dy < _offsets[l].size(); ++dy)
-	    for (unsigned int dx = 0; dx < _offsets[l][dy].size(); ++dx)
-		if (_offsets[l][dy][dx] != 0)
-		    return false;
+    for (unsigned int dy = 0; dy < _offsets[l].size(); ++dy)
+        for (unsigned int dx = 0; dx < _offsets[l][dy].size(); ++dx)
+        if (_offsets[l][dy][dx] != 0)
+            return false;
     return true;
 }
 
@@ -257,39 +257,39 @@ TileOffsets::isValidTile (int dx, int dy, int lx, int ly) const
       case ONE_LEVEL:
 
         if (lx == 0 &&
-	    ly == 0 &&
-	    _offsets.size() > 0 &&
+        ly == 0 &&
+        _offsets.size() > 0 &&
             _offsets[0].size() > dy &&
             _offsets[0][dy].size() > dx)
-	{
+    {
             return true;
-	}
+    }
 
         break;
 
       case MIPMAP_LEVELS:
 
         if (lx < _numXLevels &&
-	    ly < _numYLevels &&
+        ly < _numYLevels &&
             _offsets.size() > lx &&
             _offsets[lx].size() > dy &&
             _offsets[lx][dy].size() > dx)
-	{
+    {
             return true;
-	}
+    }
 
         break;
 
       case RIPMAP_LEVELS:
 
         if (lx < _numXLevels &&
-	    ly < _numYLevels &&
+        ly < _numYLevels &&
             _offsets.size() > lx + ly * _numXLevels &&
             _offsets[lx + ly * _numXLevels].size() > dy &&
             _offsets[lx + ly * _numXLevels][dy].size() > dx)
-	{
+    {
             return true;
-	}
+    }
 
         break;
 
@@ -297,7 +297,7 @@ TileOffsets::isValidTile (int dx, int dy, int lx, int ly) const
 
         return false;
     }
-    
+
     return false;
 }
 

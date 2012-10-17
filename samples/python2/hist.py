@@ -8,7 +8,7 @@ Level : Beginner or Intermediate
 Functions : 1) hist_curve : returns histogram of an image drawn as curves
             2) hist_lines : return histogram of an image drawn as bins ( only for grayscale images )
 
-Usage : python hist.py <image_file> 
+Usage : python hist.py <image_file>
 
 Abid Rahman 3/14/12 debug Gary Bradski
 '''
@@ -49,7 +49,7 @@ def hist_lines(im):
 
 
 if __name__ == '__main__':
-    
+
     import sys
 
     if len(sys.argv)>1:
@@ -57,11 +57,11 @@ if __name__ == '__main__':
     else :
         im = cv2.imread('../cpp/lena.jpg')
         print "usage : python hist.py <image_file>"
-        
+
 
     gray = cv2.cvtColor(im,cv2.COLOR_BGR2GRAY)
 
-   
+
     print ''' Histogram plotting \n
     Keymap :\n
     a - show histogram for color image in curve mode \n
@@ -106,5 +106,5 @@ if __name__ == '__main__':
             print 'ESC'
             cv2.destroyAllWindows()
             break
-    cv2.destroyAllWindows() 			
+    cv2.destroyAllWindows()
 

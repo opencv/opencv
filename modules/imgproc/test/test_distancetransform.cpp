@@ -57,7 +57,7 @@ protected:
 
     void get_minmax_bounds( int i, int j, int type, Scalar& low, Scalar& high );
     int prepare_test_case( int test_case_idx );
-    
+
     int mask_size;
     int dist_type;
     int fill_labels;
@@ -86,7 +86,7 @@ void CV_DisTransTest::get_test_array_types_and_sizes( int test_case_idx,
     types[INPUT][0] = CV_8UC1;
     types[OUTPUT][0] = types[REF_OUTPUT][0] = CV_32FC1;
     types[OUTPUT][1] = types[REF_OUTPUT][1] = CV_32SC1;
-    
+
     if( cvtest::randInt(rng) & 1 )
     {
         mask_size = 3;
@@ -239,7 +239,7 @@ cvTsDistTransform( const CvMat* _src, CvMat* _dst, int dist_type,
 
         for( j = 0; j < mask_size/2; j++ )
             tmp[-j-1] = tmp[j + width] = init_val;
-        
+
         for( j = 0; j < width; j++ )
         {
             if( s[j] == 0 )
@@ -287,7 +287,7 @@ cvTsDistTransform( const CvMat* _src, CvMat* _dst, int dist_type,
 void CV_DisTransTest::prepare_to_validation( int /*test_case_idx*/ )
 {
     CvMat _input = test_mat[INPUT][0], _output = test_mat[REF_OUTPUT][0];
-    
+
     cvTsDistTransform( &_input, &_output, dist_type, mask_size, mask, 0 );
 }
 

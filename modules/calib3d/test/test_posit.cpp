@@ -120,12 +120,12 @@ void CV_POSITTest::run( int start_from )
     {
         ts->update_context( this, counter, true );
         progress = update_progress( progress, counter, test_case_count, 0 );
-        
+
         /* set all rotation matrix to zero */
         cvZero( true_rotationX );
         cvZero( true_rotationY );
         cvZero( true_rotationZ );
-        
+
         /* fill random rotation matrix */
         angleX = (float)(cvtest::randReal(rng)*2*CV_PI);
         angleY = (float)(cvtest::randReal(rng)*2*CV_PI);

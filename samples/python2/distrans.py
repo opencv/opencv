@@ -1,7 +1,7 @@
 '''
 Distance transform sample.
 
-Usage: 
+Usage:
   distrans.py [<image>]
 
 Keys:
@@ -43,7 +43,7 @@ if __name__ == '__main__':
         global need_update
         need_update = True
 
-    cv2.namedWindow('distrans') 
+    cv2.namedWindow('distrans')
     cv2.createTrackbar('threshold', 'distrans', 60, 255, invalidate)
     update()
 
@@ -58,5 +58,5 @@ if __name__ == '__main__':
             update()
         if need_update:
             update()
-    cv2.destroyAllWindows() 			
-      
+    cv2.destroyAllWindows()
+

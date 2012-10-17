@@ -103,7 +103,7 @@ public:
     virtual bool setProperty(int, double);
     virtual bool grabFrame();
     virtual IplImage* retrieveFrame(int);
-	virtual int getCaptureDomain() { return CV_CAP_VFW; } // Return the type of the capture object: CV_CAP_VFW, etc...
+    virtual int getCaptureDomain() { return CV_CAP_VFW; } // Return the type of the capture object: CV_CAP_VFW, etc...
 
 protected:
     void init();
@@ -182,12 +182,12 @@ bool CvCaptureAVI_VFW::open( const char* filename )
                 getframe = AVIStreamGetFrameOpen( avistream, &bmihdr );
                 if( getframe != 0 )
                     return true;
-				
-				// Attempt to open as 8-bit AVI.
+
+                // Attempt to open as 8-bit AVI.
                 bmihdr = icvBitmapHeader( size.width, size.height, 8);
                 getframe = AVIStreamGetFrameOpen( avistream, &bmihdr );
-                if( getframe != 0 ) 
-					return true;
+                if( getframe != 0 )
+                    return true;
             }
         }
     }
@@ -207,23 +207,23 @@ IplImage* CvCaptureAVI_VFW::retrieveFrame(int)
 {
     if( avistream && bmih )
     {
-		bool isColor = bmih->biBitCount == 24;
-		int nChannels = (isColor) ? 3 : 1;
+        bool isColor = bmih->biBitCount == 24;
+        int nChannels = (isColor) ? 3 : 1;
         IplImage src;
         cvInitImageHeader( &src, cvSize( bmih->biWidth, bmih->biHeight ),
                            IPL_DEPTH_8U, nChannels, IPL_ORIGIN_BL, 4 );
 
-		char* dataPtr = (char*)(bmih + 1);
+        char* dataPtr = (char*)(bmih + 1);
 
-		// Only account for the color map size if we are an 8-bit image and the color map is used
-		if (!isColor) 
-		{
-			static int RGBQUAD_SIZE_PER_BYTE = sizeof(RGBQUAD)/sizeof(BYTE);
-			int offsetFromColormapToData = (int)bmih->biClrUsed*RGBQUAD_SIZE_PER_BYTE;
-			dataPtr += offsetFromColormapToData;
-		}
+        // Only account for the color map size if we are an 8-bit image and the color map is used
+        if (!isColor)
+        {
+            static int RGBQUAD_SIZE_PER_BYTE = sizeof(RGBQUAD)/sizeof(BYTE);
+            int offsetFromColormapToData = (int)bmih->biClrUsed*RGBQUAD_SIZE_PER_BYTE;
+            dataPtr += offsetFromColormapToData;
+        }
 
-		cvSetData( &src, dataPtr, src.widthStep );
+        cvSetData( &src, dataPtr, src.widthStep );
 
         if( !frame || frame->width != src.width || frame->height != src.height )
         {
@@ -321,7 +321,7 @@ public:
     virtual bool setProperty(int, double) { return false; }
     virtual bool grabFrame();
     virtual IplImage* retrieveFrame(int);
-	virtual int getCaptureDomain() { return CV_CAP_VFW; } // Return the type of the capture object: CV_CAP_VFW, etc...
+    virtual int getCaptureDomain() { return CV_CAP_VFW; } // Return the type of the capture object: CV_CAP_VFW, etc...
 
 protected:
     void init();

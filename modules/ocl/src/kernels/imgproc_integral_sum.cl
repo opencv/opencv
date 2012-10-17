@@ -70,23 +70,23 @@ kernel void integral_sum_cols(__global uchar4 *src,__global int *sum ,
     {
         src_t[0] = (i + lid < rows ? convert_int4(src[src_offset + (lid+i) * src_step + gid]) : 0);
         src_t[1] = (i + lid < rows ? convert_int4(src[src_offset + (lid+i) * src_step + gid + 1]) : 0);
-        
+
         sum_t[0] =  (i == 0 ? 0 : lm_sum[0][LSIZE_2 + LOG_LSIZE]);
         sum_t[1] =  (i == 0 ? 0 : lm_sum[1][LSIZE_2 + LOG_LSIZE]);
         barrier(CLK_LOCAL_MEM_FENCE);
-        
+
         int bf_loc = lid + GET_CONFLICT_OFFSET(lid);
         lm_sum[0][bf_loc] = src_t[0];
 
         lm_sum[1][bf_loc] = src_t[1];
-        
+
         int offset = 1;
         for(int d = LSIZE >> 1 ;  d > 0; d>>=1)
         {
             barrier(CLK_LOCAL_MEM_FENCE);
             int ai = offset * (((lid & 127)<<1) +1) - 1,bi = ai + offset;
-            ai += GET_CONFLICT_OFFSET(ai); 
-            bi += GET_CONFLICT_OFFSET(bi); 
+            ai += GET_CONFLICT_OFFSET(ai);
+            bi += GET_CONFLICT_OFFSET(bi);
 
             if((lid & 127) < d)
             {
@@ -94,7 +94,7 @@ kernel void integral_sum_cols(__global uchar4 *src,__global int *sum ,
             }
             offset <<= 1;
         }
-		barrier(CLK_LOCAL_MEM_FENCE);
+        barrier(CLK_LOCAL_MEM_FENCE);
         if(lid < 2)
         {
             lm_sum[lid][LSIZE_2 + LOG_LSIZE] = 0;
@@ -104,32 +104,32 @@ kernel void integral_sum_cols(__global uchar4 *src,__global int *sum ,
             barrier(CLK_LOCAL_MEM_FENCE);
             offset >>= 1;
             int ai = offset * (((lid & 127)<<1) +1) - 1,bi = ai + offset;
-            ai += GET_CONFLICT_OFFSET(ai); 
-            bi += GET_CONFLICT_OFFSET(bi); 
-            
+            ai += GET_CONFLICT_OFFSET(ai);
+            bi += GET_CONFLICT_OFFSET(bi);
+
             if((lid & 127) < d)
             {
                 lm_sum[lid >> 7][bi] += lm_sum[lid >> 7][ai];
                 lm_sum[lid >> 7][ai] = lm_sum[lid >> 7][bi] - lm_sum[lid >> 7][ai];
             }
         }
-		barrier(CLK_LOCAL_MEM_FENCE);
+        barrier(CLK_LOCAL_MEM_FENCE);
         if(lid > 0 && (i+lid) <= rows){
             int loc_s0 = gid * dst_step + i + lid - 1 - pre_invalid * dst_step / 4, loc_s1 = loc_s0 + dst_step ;
-            lm_sum[0][bf_loc] += sum_t[0]; 
-            lm_sum[1][bf_loc] += sum_t[1]; 
+            lm_sum[0][bf_loc] += sum_t[0];
+            lm_sum[1][bf_loc] += sum_t[1];
             sum_p = (__local int*)(&(lm_sum[0][bf_loc]));
             for(int k = 0; k < 4; k++)
             {
                 if(gid * 4 + k >= cols + pre_invalid || gid * 4 + k < pre_invalid) continue;
                 sum[loc_s0 + k * dst_step / 4] = sum_p[k];
-            } 
+            }
             sum_p = (__local int*)(&(lm_sum[1][bf_loc]));
             for(int k = 0; k < 4; k++)
             {
                 if(gid * 4 + k + 4 >= cols + pre_invalid) break;
                 sum[loc_s1 + k * dst_step / 4] = sum_p[k];
-            } 
+            }
         }
         barrier(CLK_LOCAL_MEM_FENCE);
     }
@@ -150,23 +150,23 @@ kernel void integral_sum_rows(__global int4 *srcsum,__global int *sum ,
     {
         src_t[0] = i + lid < rows ? srcsum[(lid+i) * src_step + gid * 2] : 0;
         src_t[1] = i + lid < rows ? srcsum[(lid+i) * src_step + gid * 2 + 1] : 0;
-        
+
         sum_t[0] =  (i == 0 ? 0 : lm_sum[0][LSIZE_2 + LOG_LSIZE]);
         sum_t[1] =  (i == 0 ? 0 : lm_sum[1][LSIZE_2 + LOG_LSIZE]);
         barrier(CLK_LOCAL_MEM_FENCE);
-        
+
         int bf_loc = lid + GET_CONFLICT_OFFSET(lid);
         lm_sum[0][bf_loc] = src_t[0];
-            
+
         lm_sum[1][bf_loc] = src_t[1];
-        
+
         int offset = 1;
         for(int d = LSIZE >> 1 ;  d > 0; d>>=1)
         {
             barrier(CLK_LOCAL_MEM_FENCE);
             int ai = offset * (((lid & 127)<<1) +1) - 1,bi = ai + offset;
-            ai += GET_CONFLICT_OFFSET(ai); 
-            bi += GET_CONFLICT_OFFSET(bi); 
+            ai += GET_CONFLICT_OFFSET(ai);
+            bi += GET_CONFLICT_OFFSET(bi);
 
             if((lid & 127) < d)
             {
@@ -174,7 +174,7 @@ kernel void integral_sum_rows(__global int4 *srcsum,__global int *sum ,
             }
             offset <<= 1;
         }
-		barrier(CLK_LOCAL_MEM_FENCE);
+        barrier(CLK_LOCAL_MEM_FENCE);
         if(lid < 2)
         {
             lm_sum[lid][LSIZE_2 + LOG_LSIZE] = 0;
@@ -184,9 +184,9 @@ kernel void integral_sum_rows(__global int4 *srcsum,__global int *sum ,
             barrier(CLK_LOCAL_MEM_FENCE);
             offset >>= 1;
             int ai = offset * (((lid & 127)<<1) +1) - 1,bi = ai + offset;
-            ai += GET_CONFLICT_OFFSET(ai); 
-            bi += GET_CONFLICT_OFFSET(bi); 
-            
+            ai += GET_CONFLICT_OFFSET(ai);
+            bi += GET_CONFLICT_OFFSET(bi);
+
             if((lid & 127) < d)
             {
                 lm_sum[lid >> 7][bi] += lm_sum[lid >> 7][ai];
@@ -201,13 +201,13 @@ kernel void integral_sum_rows(__global int4 *srcsum,__global int *sum ,
         if(i + lid == 0)
         {
             int loc0 = gid * 2 * sum_step;
-            for(int k = 1;k <= 8;k++) 
+            for(int k = 1;k <= 8;k++)
             {
                 if(gid * 8 + k > cols) break;
                 sum[sum_offset + loc0 + k * sum_step / 4] = 0;
             }
         }
-        
+
         if(lid > 0 && (i+lid) <= rows){
             int loc_s0 = sum_offset + gid * 2 * sum_step + sum_step / 4 + i + lid, loc_s1 = loc_s0 + sum_step ;
             lm_sum[0][bf_loc] += sum_t[0];
@@ -223,7 +223,7 @@ kernel void integral_sum_rows(__global int4 *srcsum,__global int *sum ,
             {
                 if(gid * 8 + 4 + k >= cols) break;
                 sum[loc_s1 + k * sum_step / 4] = sum_p[k];
-            } 
+            }
         }
         barrier(CLK_LOCAL_MEM_FENCE);
     }

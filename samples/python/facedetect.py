@@ -12,10 +12,10 @@ from optparse import OptionParser
 
 # Parameters for haar detection
 # From the API:
-# The default parameters (scale_factor=2, min_neighbors=3, flags=0) are tuned 
-# for accurate yet slow object detection. For a faster operation on real video 
-# images the settings are: 
-# scale_factor=1.2, min_neighbors=2, flags=CV_HAAR_DO_CANNY_PRUNING, 
+# The default parameters (scale_factor=2, min_neighbors=3, flags=0) are tuned
+# for accurate yet slow object detection. For a faster operation on real video
+# images the settings are:
+# scale_factor=1.2, min_neighbors=2, flags=CV_HAAR_DO_CANNY_PRUNING,
 # min_size=<minimum possible face size
 
 min_size = (20, 20)
@@ -28,7 +28,7 @@ def detect_and_draw(img, cascade):
     # allocate temporary images
     gray = cv.CreateImage((img.width,img.height), 8, 1)
     small_img = cv.CreateImage((cv.Round(img.width / image_scale),
-			       cv.Round (img.height / image_scale)), 8, 1)
+                   cv.Round (img.height / image_scale)), 8, 1)
 
     # convert color input image to grayscale
     cv.CvtColor(img, gray, cv.CV_BGR2GRAY)
@@ -46,7 +46,7 @@ def detect_and_draw(img, cascade):
         print "detection time = %gms" % (t/(cv.GetTickFrequency()*1000.))
         if faces:
             for ((x, y, w, h), n) in faces:
-                # the input to cv.HaarDetectObjects was resized, so scale the 
+                # the input to cv.HaarDetectObjects was resized, so scale the
                 # bounding box of each face and convert it to two CvPoints
                 pt1 = (int(x * image_scale), int(y * image_scale))
                 pt2 = (int((x + w) * image_scale), int((y + h) * image_scale))
@@ -61,7 +61,7 @@ if __name__ == '__main__':
     (options, args) = parser.parse_args()
 
     cascade = cv.Load(options.cascade)
-    
+
     if len(args) != 1:
         parser.print_help()
         sys.exit(1)
@@ -88,7 +88,7 @@ if __name__ == '__main__':
                 cv.Copy(frame, frame_copy)
             else:
                 cv.Flip(frame, frame_copy, 0)
-            
+
             detect_and_draw(frame_copy, cascade)
 
             if cv.WaitKey(10) >= 0:

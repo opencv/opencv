@@ -51,7 +51,7 @@ static void help()
                     "box.png box_in_scene.png " << endl;
 }
 
-const char* keys = 
+const char* keys =
 {
     "{@first_image  | box.png          | the first image}"
     "{@second_image | box_in_scene.png | the second image}"

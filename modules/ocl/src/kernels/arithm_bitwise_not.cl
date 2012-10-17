@@ -62,7 +62,7 @@ __kernel void arithm_bitwise_not_D0 (__global uchar *src1, int src1_step, int sr
         x = x << 2;
 
         #define dst_align (dst_offset & 3)
-        int src1_index = mad24(y, src1_step, x + src1_offset - dst_align); 
+        int src1_index = mad24(y, src1_step, x + src1_offset - dst_align);
 
         int dst_start  = mad24(y, dst_step, dst_offset);
         int dst_end    = mad24(y, dst_step, dst_offset + dst_step1);
@@ -95,7 +95,7 @@ __kernel void arithm_bitwise_not_D1 (__global char *src1, int src1_step, int src
         x = x << 2;
 
         #define dst_align (dst_offset & 3)
-        int src1_index = mad24(y, src1_step, x + src1_offset - dst_align); 
+        int src1_index = mad24(y, src1_step, x + src1_offset - dst_align);
 
         int dst_start  = mad24(y, dst_step, dst_offset);
         int dst_end    = mad24(y, dst_step, dst_offset + dst_step1);
@@ -129,7 +129,7 @@ __kernel void arithm_bitwise_not_D2 (__global ushort *src1, int src1_step, int s
         x = x << 2;
 
         #define dst_align ((dst_offset >> 1) & 3)
-        int src1_index = mad24(y, src1_step, (x << 1) + src1_offset - (dst_align << 1)); 
+        int src1_index = mad24(y, src1_step, (x << 1) + src1_offset - (dst_align << 1));
 
         int dst_start  = mad24(y, dst_step, dst_offset);
         int dst_end    = mad24(y, dst_step, dst_offset + dst_step1);
@@ -164,7 +164,7 @@ __kernel void arithm_bitwise_not_D3 (__global short *src1, int src1_step, int sr
         x = x << 2;
 
         #define dst_align ((dst_offset >> 1) & 3)
-        int src1_index = mad24(y, src1_step, (x << 1) + src1_offset - (dst_align << 1)); 
+        int src1_index = mad24(y, src1_step, (x << 1) + src1_offset - (dst_align << 1));
 
         int dst_start  = mad24(y, dst_step, dst_offset);
         int dst_end    = mad24(y, dst_step, dst_offset + dst_step1);
@@ -238,12 +238,12 @@ __kernel void arithm_bitwise_not_D6 (__global char *src, int src_step, int src_o
     {
         int src_index = mad24(y, src_step, (x << 3) + src_offset);
         int dst_index = mad24(y, dst_step,  (x << 3) + dst_offset);
-         
+
         char8 data;
 
         data = *((__global char8 *)((__global char *)src + src_index));
         data = ~ data;
-        
+
         *((__global char8 *)((__global char *)dst + dst_index)) = data;
     }
 }

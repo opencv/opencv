@@ -636,10 +636,8 @@ CV_EXPORTS_W void accumulateWeighted( InputArray src, InputOutputArray dst,
 //! computes PSNR image/video quality metric
 CV_EXPORTS_W double PSNR(InputArray src1, InputArray src2);
 
-CV_EXPORTS Point2d phaseCorrelate(InputArray src1, InputArray src2,
-                                  InputArray window = noArray());
 CV_EXPORTS_W Point2d phaseCorrelate(InputArray src1, InputArray src2,
-                                    InputArray window, CV_OUT double* response CV_WRAP_DEFAULT(0));
+                                    InputArray window = noArray(), CV_OUT double* response=0);
 CV_EXPORTS_W void createHanningWindow(OutputArray dst, Size winSize, int type);
 
 //! type of the threshold operation

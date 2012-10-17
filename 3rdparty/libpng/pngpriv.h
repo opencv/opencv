@@ -1582,7 +1582,7 @@ PNG_EXTERN void png_ascii_from_fixed PNGARG((png_structp png_ptr,
 #define PNG_FP_IS_ZERO(state) (((state) & PNG_FP_Z_MASK) == PNG_FP_SAW_DIGIT)
 #define PNG_FP_IS_POSITIVE(state) (((state) & PNG_FP_NZ_MASK) == PNG_FP_Z_MASK)
 #define PNG_FP_IS_NEGATIVE(state) (((state) & PNG_FP_NZ_MASK) == PNG_FP_NZ_MASK)
- 
+
 /* The actual parser.  This can be called repeatedly, it updates
  * the index into the string and the state variable (which must
  * be initialzed to 0).  It returns a result code, as above.  There

@@ -47,7 +47,7 @@
 #include "vec_traits.hpp"
 #include "vec_math.hpp"
 
-namespace cv { namespace gpu { namespace device 
+namespace cv { namespace gpu { namespace device
 {
     //////////////////////////////////////////////////////////////
     // BrdConstant
@@ -58,17 +58,17 @@ namespace cv { namespace gpu { namespace device
 
         explicit __host__ __device__ __forceinline__ BrdRowConstant(int width_, const D& val_ = VecTraits<D>::all(0)) : width(width_), val(val_) {}
 
-        template <typename T> __device__ __forceinline__ D at_low(int x, const T* data) const 
+        template <typename T> __device__ __forceinline__ D at_low(int x, const T* data) const
         {
             return x >= 0 ? saturate_cast<D>(data[x]) : val;
         }
 
-        template <typename T> __device__ __forceinline__ D at_high(int x, const T* data) const 
+        template <typename T> __device__ __forceinline__ D at_high(int x, const T* data) const
         {
             return x < width ? saturate_cast<D>(data[x]) : val;
         }
 
-        template <typename T> __device__ __forceinline__ D at(int x, const T* data) const 
+        template <typename T> __device__ __forceinline__ D at(int x, const T* data) const
         {
             return (x >= 0 && x < width) ? saturate_cast<D>(data[x]) : val;
         }
@@ -83,17 +83,17 @@ namespace cv { namespace gpu { namespace device
 
         explicit __host__ __device__ __forceinline__ BrdColConstant(int height_, const D& val_ = VecTraits<D>::all(0)) : height(height_), val(val_) {}
 
-        template <typename T> __device__ __forceinline__ D at_low(int y, const T* data, size_t step) const 
+        template <typename T> __device__ __forceinline__ D at_low(int y, const T* data, size_t step) const
         {
             return y >= 0 ? saturate_cast<D>(*(const T*)((const char*)data + y * step)) : val;
         }
 
-        template <typename T> __device__ __forceinline__ D at_high(int y, const T* data, size_t step) const 
+        template <typename T> __device__ __forceinline__ D at_high(int y, const T* data, size_t step) const
         {
             return y < height ? saturate_cast<D>(*(const T*)((const char*)data + y * step)) : val;
         }
 
-        template <typename T> __device__ __forceinline__ D at(int y, const T* data, size_t step) const 
+        template <typename T> __device__ __forceinline__ D at(int y, const T* data, size_t step) const
         {
             return (y >= 0 && y < height) ? saturate_cast<D>(*(const T*)((const char*)data + y * step)) : val;
         }
@@ -106,7 +106,7 @@ namespace cv { namespace gpu { namespace device
     {
         typedef D result_type;
 
-        __host__ __device__ __forceinline__ BrdConstant(int height_, int width_, const D& val_ = VecTraits<D>::all(0)) : height(height_), width(width_), val(val_) 
+        __host__ __device__ __forceinline__ BrdConstant(int height_, int width_, const D& val_ = VecTraits<D>::all(0)) : height(height_), width(width_), val(val_)
         {
         }
 
@@ -140,7 +140,7 @@ namespace cv { namespace gpu { namespace device
             return ::max(x, 0);
         }
 
-        __device__ __forceinline__ int idx_col_high(int x) const 
+        __device__ __forceinline__ int idx_col_high(int x) const
         {
             return ::min(x, last_col);
         }
@@ -150,17 +150,17 @@ namespace cv { namespace gpu { namespace device
             return idx_col_low(idx_col_high(x));
         }
 
-        template <typename T> __device__ __forceinline__ D at_low(int x, const T* data) const 
+        template <typename T> __device__ __forceinline__ D at_low(int x, const T* data) const
         {
             return saturate_cast<D>(data[idx_col_low(x)]);
         }
 
-        template <typename T> __device__ __forceinline__ D at_high(int x, const T* data) const 
+        template <typename T> __device__ __forceinline__ D at_high(int x, const T* data) const
         {
             return saturate_cast<D>(data[idx_col_high(x)]);
         }
 
-        template <typename T> __device__ __forceinline__ D at(int x, const T* data) const 
+        template <typename T> __device__ __forceinline__ D at(int x, const T* data) const
         {
             return saturate_cast<D>(data[idx_col(x)]);
         }
@@ -180,7 +180,7 @@ namespace cv { namespace gpu { namespace device
             return ::max(y, 0);
         }
 
-        __device__ __forceinline__ int idx_row_high(int y) const 
+        __device__ __forceinline__ int idx_row_high(int y) const
         {
             return ::min(y, last_row);
         }
@@ -190,17 +190,17 @@ namespace cv { namespace gpu { namespace device
             return idx_row_low(idx_row_high(y));
         }
 
-        template <typename T> __device__ __forceinline__ D at_low(int y, const T* data, size_t step) const 
+        template <typename T> __device__ __forceinline__ D at_low(int y, const T* data, size_t step) const
         {
             return saturate_cast<D>(*(const T*)((const char*)data + idx_row_low(y) * step));
         }
 
-        template <typename T> __device__ __forceinline__ D at_high(int y, const T* data, size_t step) const 
+        template <typename T> __device__ __forceinline__ D at_high(int y, const T* data, size_t step) const
         {
             return saturate_cast<D>(*(const T*)((const char*)data + idx_row_high(y) * step));
         }
 
-        template <typename T> __device__ __forceinline__ D at(int y, const T* data, size_t step) const 
+        template <typename T> __device__ __forceinline__ D at(int y, const T* data, size_t step) const
         {
             return saturate_cast<D>(*(const T*)((const char*)data + idx_row(y) * step));
         }
@@ -220,7 +220,7 @@ namespace cv { namespace gpu { namespace device
             return ::max(y, 0);
         }
 
-        __device__ __forceinline__ int idx_row_high(int y) const 
+        __device__ __forceinline__ int idx_row_high(int y) const
         {
             return ::min(y, last_row);
         }
@@ -235,7 +235,7 @@ namespace cv { namespace gpu { namespace device
             return ::max(x, 0);
         }
 
-        __device__ __forceinline__ int idx_col_high(int x) const 
+        __device__ __forceinline__ int idx_col_high(int x) const
         {
             return ::min(x, last_col);
         }
@@ -245,12 +245,12 @@ namespace cv { namespace gpu { namespace device
             return idx_col_low(idx_col_high(x));
         }
 
-        template <typename T> __device__ __forceinline__ D at(int y, int x, const T* data, size_t step) const 
+        template <typename T> __device__ __forceinline__ D at(int y, int x, const T* data, size_t step) const
         {
             return saturate_cast<D>(((const T*)((const char*)data + idx_row(y) * step))[idx_col(x)]);
         }
 
-        template <typename Ptr2D> __device__ __forceinline__ D at(typename Ptr2D::index_type y, typename Ptr2D::index_type x, const Ptr2D& src) const 
+        template <typename Ptr2D> __device__ __forceinline__ D at(typename Ptr2D::index_type y, typename Ptr2D::index_type x, const Ptr2D& src) const
         {
             return saturate_cast<D>(src(idx_row(y), idx_col(x)));
         }
@@ -274,7 +274,7 @@ namespace cv { namespace gpu { namespace device
             return ::abs(x) % (last_col + 1);
         }
 
-        __device__ __forceinline__ int idx_col_high(int x) const 
+        __device__ __forceinline__ int idx_col_high(int x) const
         {
             return ::abs(last_col - ::abs(last_col - x)) % (last_col + 1);
         }
@@ -284,17 +284,17 @@ namespace cv { namespace gpu { namespace device
             return idx_col_low(idx_col_high(x));
         }
 
-        template <typename T> __device__ __forceinline__ D at_low(int x, const T* data) const 
+        template <typename T> __device__ __forceinline__ D at_low(int x, const T* data) const
         {
             return saturate_cast<D>(data[idx_col_low(x)]);
         }
 
-        template <typename T> __device__ __forceinline__ D at_high(int x, const T* data) const 
+        template <typename T> __device__ __forceinline__ D at_high(int x, const T* data) const
         {
             return saturate_cast<D>(data[idx_col_high(x)]);
         }
 
-        template <typename T> __device__ __forceinline__ D at(int x, const T* data) const 
+        template <typename T> __device__ __forceinline__ D at(int x, const T* data) const
         {
             return saturate_cast<D>(data[idx_col(x)]);
         }
@@ -314,7 +314,7 @@ namespace cv { namespace gpu { namespace device
             return ::abs(y) % (last_row + 1);
         }
 
-        __device__ __forceinline__ int idx_row_high(int y) const 
+        __device__ __forceinline__ int idx_row_high(int y) const
         {
             return ::abs(last_row - ::abs(last_row - y)) % (last_row + 1);
         }
@@ -324,17 +324,17 @@ namespace cv { namespace gpu { namespace device
             return idx_row_low(idx_row_high(y));
         }
 
-        template <typename T> __device__ __forceinline__ D at_low(int y, const T* data, size_t step) const 
+        template <typename T> __device__ __forceinline__ D at_low(int y, const T* data, size_t step) const
         {
             return saturate_cast<D>(*(const D*)((const char*)data + idx_row_low(y) * step));
         }
 
-        template <typename T> __device__ __forceinline__ D at_high(int y, const T* data, size_t step) const 
+        template <typename T> __device__ __forceinline__ D at_high(int y, const T* data, size_t step) const
         {
             return saturate_cast<D>(*(const D*)((const char*)data + idx_row_high(y) * step));
         }
 
-        template <typename T> __device__ __forceinline__ D at(int y, const T* data, size_t step) const 
+        template <typename T> __device__ __forceinline__ D at(int y, const T* data, size_t step) const
         {
             return saturate_cast<D>(*(const D*)((const char*)data + idx_row(y) * step));
         }
@@ -354,7 +354,7 @@ namespace cv { namespace gpu { namespace device
             return ::abs(y) % (last_row + 1);
         }
 
-        __device__ __forceinline__ int idx_row_high(int y) const 
+        __device__ __forceinline__ int idx_row_high(int y) const
         {
             return ::abs(last_row - ::abs(last_row - y)) % (last_row + 1);
         }
@@ -369,7 +369,7 @@ namespace cv { namespace gpu { namespace device
             return ::abs(x) % (last_col + 1);
         }
 
-        __device__ __forceinline__ int idx_col_high(int x) const 
+        __device__ __forceinline__ int idx_col_high(int x) const
         {
             return ::abs(last_col - ::abs(last_col - x)) % (last_col + 1);
         }
@@ -379,12 +379,12 @@ namespace cv { namespace gpu { namespace device
             return idx_col_low(idx_col_high(x));
         }
 
-        template <typename T> __device__ __forceinline__ D at(int y, int x, const T* data, size_t step) const 
+        template <typename T> __device__ __forceinline__ D at(int y, int x, const T* data, size_t step) const
         {
             return saturate_cast<D>(((const T*)((const char*)data + idx_row(y) * step))[idx_col(x)]);
         }
 
-        template <typename Ptr2D> __device__ __forceinline__ D at(typename Ptr2D::index_type y, typename Ptr2D::index_type x, const Ptr2D& src) const 
+        template <typename Ptr2D> __device__ __forceinline__ D at(typename Ptr2D::index_type y, typename Ptr2D::index_type x, const Ptr2D& src) const
         {
             return saturate_cast<D>(src(idx_row(y), idx_col(x)));
         }
@@ -408,27 +408,27 @@ namespace cv { namespace gpu { namespace device
             return (::abs(x) - (x < 0)) % (last_col + 1);
         }
 
-        __device__ __forceinline__ int idx_col_high(int x) const 
+        __device__ __forceinline__ int idx_col_high(int x) const
         {
             return ::abs(last_col - ::abs(last_col - x) + (x > last_col)) % (last_col + 1);
         }
 
         __device__ __forceinline__ int idx_col(int x) const
-        {  
+        {
             return idx_col_high(::abs(x) - (x < 0));
         }
 
-        template <typename T> __device__ __forceinline__ D at_low(int x, const T* data) const 
+        template <typename T> __device__ __forceinline__ D at_low(int x, const T* data) const
         {
             return saturate_cast<D>(data[idx_col_low(x)]);
         }
 
-        template <typename T> __device__ __forceinline__ D at_high(int x, const T* data) const 
+        template <typename T> __device__ __forceinline__ D at_high(int x, const T* data) const
         {
             return saturate_cast<D>(data[idx_col_high(x)]);
         }
 
-        template <typename T> __device__ __forceinline__ D at(int x, const T* data) const 
+        template <typename T> __device__ __forceinline__ D at(int x, const T* data) const
         {
             return saturate_cast<D>(data[idx_col(x)]);
         }
@@ -448,7 +448,7 @@ namespace cv { namespace gpu { namespace device
             return (::abs(y) - (y < 0)) % (last_row + 1);
         }
 
-        __device__ __forceinline__ int idx_row_high(int y) const 
+        __device__ __forceinline__ int idx_row_high(int y) const
         {
             return ::abs(last_row - ::abs(last_row - y) + (y > last_row)) % (last_row + 1);
         }
@@ -458,17 +458,17 @@ namespace cv { namespace gpu { namespace device
             return idx_row_high(::abs(y) - (y < 0));
         }
 
-        template <typename T> __device__ __forceinline__ D at_low(int y, const T* data, size_t step) const 
+        template <typename T> __device__ __forceinline__ D at_low(int y, const T* data, size_t step) const
         {
             return saturate_cast<D>(*(const D*)((const char*)data + idx_row_low(y) * step));
         }
 
-        template <typename T> __device__ __forceinline__ D at_high(int y, const T* data, size_t step) const 
+        template <typename T> __device__ __forceinline__ D at_high(int y, const T* data, size_t step) const
         {
             return saturate_cast<D>(*(const D*)((const char*)data + idx_row_high(y) * step));
         }
 
-        template <typename T> __device__ __forceinline__ D at(int y, const T* data, size_t step) const 
+        template <typename T> __device__ __forceinline__ D at(int y, const T* data, size_t step) const
         {
             return saturate_cast<D>(*(const D*)((const char*)data + idx_row(y) * step));
         }
@@ -488,7 +488,7 @@ namespace cv { namespace gpu { namespace device
             return (::abs(y) - (y < 0)) % (last_row + 1);
         }
 
-        __device__ __forceinline__ int idx_row_high(int y) const 
+        __device__ __forceinline__ int idx_row_high(int y) const
         {
             return /*::abs*/(last_row - ::abs(last_row - y) + (y > last_row)) /*% (last_row + 1)*/;
         }
@@ -503,7 +503,7 @@ namespace cv { namespace gpu { namespace device
             return (::abs(x) - (x < 0)) % (last_col + 1);
         }
 
-        __device__ __forceinline__ int idx_col_high(int x) const 
+        __device__ __forceinline__ int idx_col_high(int x) const
         {
             return (last_col - ::abs(last_col - x) + (x > last_col));
         }
@@ -513,12 +513,12 @@ namespace cv { namespace gpu { namespace device
             return idx_col_low(idx_col_high(x));
         }
 
-        template <typename T> __device__ __forceinline__ D at(int y, int x, const T* data, size_t step) const 
+        template <typename T> __device__ __forceinline__ D at(int y, int x, const T* data, size_t step) const
         {
             return saturate_cast<D>(((const T*)((const char*)data + idx_row(y) * step))[idx_col(x)]);
         }
 
-        template <typename Ptr2D> __device__ __forceinline__ D at(typename Ptr2D::index_type y, typename Ptr2D::index_type x, const Ptr2D& src) const 
+        template <typename Ptr2D> __device__ __forceinline__ D at(typename Ptr2D::index_type y, typename Ptr2D::index_type x, const Ptr2D& src) const
         {
             return saturate_cast<D>(src(idx_row(y), idx_col(x)));
         }
@@ -542,7 +542,7 @@ namespace cv { namespace gpu { namespace device
             return (x >= 0) * x + (x < 0) * (x - ((x - width + 1) / width) * width);
         }
 
-        __device__ __forceinline__ int idx_col_high(int x) const 
+        __device__ __forceinline__ int idx_col_high(int x) const
         {
             return (x < width) * x + (x >= width) * (x % width);
         }
@@ -552,17 +552,17 @@ namespace cv { namespace gpu { namespace device
             return idx_col_high(idx_col_low(x));
         }
 
-        template <typename T> __device__ __forceinline__ D at_low(int x, const T* data) const 
+        template <typename T> __device__ __forceinline__ D at_low(int x, const T* data) const
         {
             return saturate_cast<D>(data[idx_col_low(x)]);
         }
 
-        template <typename T> __device__ __forceinline__ D at_high(int x, const T* data) const 
+        template <typename T> __device__ __forceinline__ D at_high(int x, const T* data) const
         {
             return saturate_cast<D>(data[idx_col_high(x)]);
         }
 
-        template <typename T> __device__ __forceinline__ D at(int x, const T* data) const 
+        template <typename T> __device__ __forceinline__ D at(int x, const T* data) const
         {
             return saturate_cast<D>(data[idx_col(x)]);
         }
@@ -582,7 +582,7 @@ namespace cv { namespace gpu { namespace device
             return (y >= 0) * y + (y < 0) * (y - ((y - height + 1) / height) * height);
         }
 
-        __device__ __forceinline__ int idx_row_high(int y) const 
+        __device__ __forceinline__ int idx_row_high(int y) const
         {
             return (y < height) * y + (y >= height) * (y % height);
         }
@@ -592,17 +592,17 @@ namespace cv { namespace gpu { namespace device
             return idx_row_high(idx_row_low(y));
         }
 
-        template <typename T> __device__ __forceinline__ D at_low(int y, const T* data, size_t step) const 
+        template <typename T> __device__ __forceinline__ D at_low(int y, const T* data, size_t step) const
         {
             return saturate_cast<D>(*(const D*)((const char*)data + idx_row_low(y) * step));
         }
 
-        template <typename T> __device__ __forceinline__ D at_high(int y, const T* data, size_t step) const 
+        template <typename T> __device__ __forceinline__ D at_high(int y, const T* data, size_t step) const
         {
             return saturate_cast<D>(*(const D*)((const char*)data + idx_row_high(y) * step));
         }
 
-        template <typename T> __device__ __forceinline__ D at(int y, const T* data, size_t step) const 
+        template <typename T> __device__ __forceinline__ D at(int y, const T* data, size_t step) const
         {
             return saturate_cast<D>(*(const D*)((const char*)data + idx_row(y) * step));
         }
@@ -614,13 +614,13 @@ namespace cv { namespace gpu { namespace device
     {
         typedef D result_type;
 
-        __host__ __device__ __forceinline__ BrdWrap(int height_, int width_) : 
-            height(height_), width(width_) 
+        __host__ __device__ __forceinline__ BrdWrap(int height_, int width_) :
+            height(height_), width(width_)
         {
         }
-        template <typename U> 
-        __host__ __device__ __forceinline__ BrdWrap(int height_, int width_, U) : 
-            height(height_), width(width_) 
+        template <typename U>
+        __host__ __device__ __forceinline__ BrdWrap(int height_, int width_, U) :
+            height(height_), width(width_)
         {
         }
 
@@ -629,7 +629,7 @@ namespace cv { namespace gpu { namespace device
             return (y >= 0) * y + (y < 0) * (y - ((y - height + 1) / height) * height);
         }
 
-        __device__ __forceinline__ int idx_row_high(int y) const 
+        __device__ __forceinline__ int idx_row_high(int y) const
         {
             return (y < height) * y + (y >= height) * (y % height);
         }
@@ -644,7 +644,7 @@ namespace cv { namespace gpu { namespace device
             return (x >= 0) * x + (x < 0) * (x - ((x - width + 1) / width) * width);
         }
 
-        __device__ __forceinline__ int idx_col_high(int x) const 
+        __device__ __forceinline__ int idx_col_high(int x) const
         {
             return (x < width) * x + (x >= width) * (x % width);
         }
@@ -654,12 +654,12 @@ namespace cv { namespace gpu { namespace device
             return idx_col_high(idx_col_low(x));
         }
 
-        template <typename T> __device__ __forceinline__ D at(int y, int x, const T* data, size_t step) const 
+        template <typename T> __device__ __forceinline__ D at(int y, int x, const T* data, size_t step) const
         {
             return saturate_cast<D>(((const T*)((const char*)data + idx_row(y) * step))[idx_col(x)]);
         }
 
-        template <typename Ptr2D> __device__ __forceinline__ D at(typename Ptr2D::index_type y, typename Ptr2D::index_type x, const Ptr2D& src) const 
+        template <typename Ptr2D> __device__ __forceinline__ D at(typename Ptr2D::index_type y, typename Ptr2D::index_type x, const Ptr2D& src) const
         {
             return saturate_cast<D>(src(idx_row(y), idx_col(x)));
         }
@@ -694,8 +694,8 @@ namespace cv { namespace gpu { namespace device
         typedef typename BrdConstant<D>::result_type elem_type;
         typedef typename Ptr2D::index_type index_type;
 
-        __host__ __device__ __forceinline__ BorderReader(const Ptr2D& src_, const BrdConstant<D>& b) : 
-            src(src_), height(b.height), width(b.width), val(b.val) 
+        __host__ __device__ __forceinline__ BorderReader(const Ptr2D& src_, const BrdConstant<D>& b) :
+            src(src_), height(b.height), width(b.width), val(b.val)
         {
         }
 

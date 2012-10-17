@@ -6,15 +6,15 @@
  */
 
 /* __START_OF_JASPER_LICENSE__
- * 
+ *
  * JasPer License Version 2.0
- * 
+ *
  * Copyright (c) 2001-2006 Michael David Adams
  * Copyright (c) 1999-2000 Image Power, Inc.
  * Copyright (c) 1999-2000 The University of British Columbia
- * 
+ *
  * All rights reserved.
- * 
+ *
  * Permission is hereby granted, free of charge, to any person (the
  * "User") obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without restriction,
@@ -22,15 +22,15 @@
  * publish, distribute, and/or sell copies of the Software, and to permit
  * persons to whom the Software is furnished to do so, subject to the
  * following conditions:
- * 
+ *
  * 1.  The above copyright notices and this permission notice (which
  * includes the disclaimer below) shall be included in all copies or
  * substantial portions of the Software.
- * 
+ *
  * 2.  The name of a copyright holder shall not be used to endorse or
  * promote products derived from the Software without specific prior
  * written permission.
- * 
+ *
  * THIS DISCLAIMER OF WARRANTY CONSTITUTES AN ESSENTIAL PART OF THIS
  * LICENSE.  NO USE OF THE SOFTWARE IS AUTHORIZED HEREUNDER EXCEPT UNDER
  * THIS DISCLAIMER.  THE SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS
@@ -57,7 +57,7 @@
  * PERSONAL INJURY, OR SEVERE PHYSICAL OR ENVIRONMENTAL DAMAGE ("HIGH
  * RISK ACTIVITIES").  THE COPYRIGHT HOLDERS SPECIFICALLY DISCLAIM ANY
  * EXPRESS OR IMPLIED WARRANTY OF FITNESS FOR HIGH RISK ACTIVITIES.
- * 
+ *
  * __END_OF_JASPER_LICENSE__
  */
 
@@ -98,53 +98,53 @@
 
 typedef struct {
 
-	/* The C register. */
-	uint_fast32_t creg;
+    /* The C register. */
+    uint_fast32_t creg;
 
-	/* The A register. */
-	uint_fast32_t areg;
+    /* The A register. */
+    uint_fast32_t areg;
 
-	/* The CT register. */
-	uint_fast32_t ctreg;
+    /* The CT register. */
+    uint_fast32_t ctreg;
 
-	/* The maximum number of contexts. */
-	int maxctxs;
+    /* The maximum number of contexts. */
+    int maxctxs;
 
-	/* The per-context information. */
-	jpc_mqstate_t **ctxs;
+    /* The per-context information. */
+    jpc_mqstate_t **ctxs;
 
-	/* The current context. */
-	jpc_mqstate_t **curctx;
+    /* The current context. */
+    jpc_mqstate_t **curctx;
 
-	/* The stream for encoder output. */
-	jas_stream_t *out;
+    /* The stream for encoder output. */
+    jas_stream_t *out;
 
-	/* The byte buffer (i.e., the B variable in the standard). */
-	int_fast16_t outbuf;
+    /* The byte buffer (i.e., the B variable in the standard). */
+    int_fast16_t outbuf;
 
-	/* The last byte output. */
-	int_fast16_t lastbyte;
+    /* The last byte output. */
+    int_fast16_t lastbyte;
 
-	/* The error indicator. */
-	int err;
-	
+    /* The error indicator. */
+    int err;
+
 } jpc_mqenc_t;
 
 /* MQ arithmetic encoder state information. */
 
 typedef struct {
 
-	/* The A register. */
-	unsigned areg;
+    /* The A register. */
+    unsigned areg;
 
-	/* The C register. */
-	unsigned creg;
+    /* The C register. */
+    unsigned creg;
 
-	/* The CT register. */
-	unsigned ctreg;
+    /* The CT register. */
+    unsigned ctreg;
 
-	/* The last byte output by the encoder. */
-	int lastbyte;
+    /* The last byte output by the encoder. */
+    int lastbyte;
 
 } jpc_mqencstate_t;
 
@@ -185,7 +185,7 @@ void jpc_mqenc_setctxs(jpc_mqenc_t *enc, int numctxs, jpc_mqctx_t *ctxs);
 
 /* Get the error state of a MQ encoder. */
 #define	jpc_mqenc_error(enc) \
-	((enc)->err)
+    ((enc)->err)
 
 /* Get the current encoder state. */
 void jpc_mqenc_getstate(jpc_mqenc_t *enc, jpc_mqencstate_t *state);
@@ -217,11 +217,11 @@ int jpc_mqenc_dump(jpc_mqenc_t *mqenc, FILE *out);
 /* Note: This macro is included only to satisfy the needs of
   the mqenc_putbit macro. */
 #define	jpc_mqenc_putbit_macro(enc, bit) \
-	(((*((enc)->curctx))->mps == (bit)) ? \
-	  (((enc)->areg -= (*(enc)->curctx)->qeval), \
-	  ((!((enc)->areg & 0x8000)) ? (jpc_mqenc_codemps2(enc)) : \
-	  ((enc)->creg += (*(enc)->curctx)->qeval))) : \
-	  jpc_mqenc_codelps(enc))
+    (((*((enc)->curctx))->mps == (bit)) ? \
+      (((enc)->areg -= (*(enc)->curctx)->qeval), \
+      ((!((enc)->areg & 0x8000)) ? (jpc_mqenc_codemps2(enc)) : \
+      ((enc)->creg += (*(enc)->curctx)->qeval))) : \
+      jpc_mqenc_codelps(enc))
 
 /* Note: These function prototypes are included only to satisfy the
   needs of the mqenc_putbit_macro macro.  Do not call any of these

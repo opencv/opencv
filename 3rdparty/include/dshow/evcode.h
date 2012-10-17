@@ -58,8 +58,8 @@ extern "C" {
 #define EC_USER 0x8000
 /*--- DirectShow Reference - DirectShow Structures */
 typedef struct {
-	HRESULT hrStatus;
-	void   *pData;
+    HRESULT hrStatus;
+    void   *pData;
 } AM_WMT_EVENT_DATA;
 
 #ifdef __cplusplus

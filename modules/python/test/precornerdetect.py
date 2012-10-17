@@ -1,7 +1,7 @@
 import cv2.cv as cv
 
 def precornerdetect(image):
-    # assume that the image is floating-point 
+    # assume that the image is floating-point
     corners = cv.CloneMat(image)
     cv.PreCornerDetect(image, corners, 3)
 

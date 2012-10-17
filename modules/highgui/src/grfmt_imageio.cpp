@@ -45,7 +45,7 @@ bool ImageIODecoder::checkSignature( const string& signature ) const
     // TODO: implement real signature check
     return true;
 }
-    
+
 ImageDecoder ImageIODecoder::newDecoder() const
 {
     return new ImageIODecoder;
@@ -162,31 +162,31 @@ bool  ImageIODecoder::readData( Mat& img )
     int bitmapIndex = 0;
 
     if( color == CV_LOAD_IMAGE_COLOR )
-	{
-		uchar * base = data;
+    {
+        uchar * base = data;
 
-		for (int y = 0; y < m_height; y++)
-		{
-			uchar * line = base + y * step;
+        for (int y = 0; y < m_height; y++)
+        {
+            uchar * line = base + y * step;
 
-		    for (int x = 0; x < m_width; x++)
-		    {
-				// Blue channel
-				line[0] = bitdata[bitmapIndex + 2];
-				// Green channel
-				line[1] = bitdata[bitmapIndex + 1];
-				// Red channel
-				line[2] = bitdata[bitmapIndex + 0];
+            for (int x = 0; x < m_width; x++)
+            {
+                // Blue channel
+                line[0] = bitdata[bitmapIndex + 2];
+                // Green channel
+                line[1] = bitdata[bitmapIndex + 1];
+                // Red channel
+                line[2] = bitdata[bitmapIndex + 0];
 
-				line        += 3;
-				bitmapIndex += bpp;
-			}
-		}
+                line        += 3;
+                bitmapIndex += bpp;
+            }
+        }
     }
     else if( color == CV_LOAD_IMAGE_GRAYSCALE )
     {
-		for (int y = 0; y < m_height; y++)
-			memcpy (data + y * step, bitmap + y * m_width, m_width);
+        for (int y = 0; y < m_height; y++)
+            memcpy (data + y * step, bitmap + y * m_width, m_width);
     }
 
     free( bitmap );
@@ -212,7 +212,7 @@ ImageEncoder ImageIOEncoder::newEncoder() const
 {
     return new ImageIOEncoder;
 }
-    
+
 static
 CFStringRef  FilenameToUTI( const char* filename )
 {
@@ -264,7 +264,7 @@ bool  ImageIOEncoder::write( const Mat& img, const vector<int>& params )
     int _channels = img.channels();
     const uchar* data = img.data;
     int step = img.step;
-    
+
     // Determine the appropriate UTI based on the filename extension
     CFStringRef imageUTI = FilenameToUTI( m_filename.c_str() );
 
@@ -319,30 +319,30 @@ bool  ImageIOEncoder::write( const Mat& img, const vector<int>& params )
     if (bpp == 4)
     {
         int           bitmapIndex = 0;
-		const uchar * base        = data;
+        const uchar * base        = data;
 
-		for (int y = 0; y < height; y++)
-		{
-			const uchar * line = base + y * step;
+        for (int y = 0; y < height; y++)
+        {
+            const uchar * line = base + y * step;
 
-		    for (int x = 0; x < width; x++)
-		    {
-				// Blue channel
+            for (int x = 0; x < width; x++)
+            {
+                // Blue channel
                 bitmapData[bitmapIndex + 2] = line[0];
-				// Green channel
-				bitmapData[bitmapIndex + 1] = line[1];
-				// Red channel
-				bitmapData[bitmapIndex + 0] = line[2];
+                // Green channel
+                bitmapData[bitmapIndex + 1] = line[1];
+                // Red channel
+                bitmapData[bitmapIndex + 0] = line[2];
 
-				line        += 3;
-				bitmapIndex += bpp;
-			}
-		}
+                line        += 3;
+                bitmapIndex += bpp;
+            }
+        }
     }
     else if (bpp == 1)
     {
-		for (int y = 0; y < height; y++)
-			memcpy (bitmapData + y * width, data + y * step, width);
+        for (int y = 0; y < height; y++)
+            memcpy (bitmapData + y * width, data + y * step, width);
     }
 
     // Turn the bitmap context into an imageRef

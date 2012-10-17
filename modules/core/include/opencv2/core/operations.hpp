@@ -2641,7 +2641,7 @@ template<typename _Tp> template<typename _Tp2> Ptr<_Tp>::Ptr(const Ptr<_Tp2>& p)
 {
     if (p.empty())
         return;
-    
+
     _Tp* p_casted = dynamic_cast<_Tp*>(p.obj);
     if (!p_casted)
         return;

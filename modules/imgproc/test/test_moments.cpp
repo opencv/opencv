@@ -50,7 +50,7 @@ public:
     CV_MomentsTest();
 
 protected:
-    
+
     enum { MOMENT_COUNT = 25 };
     int prepare_test_case( int test_case_idx );
     void prepare_to_validation( int /*test_case_idx*/ );
@@ -78,7 +78,7 @@ void CV_MomentsTest::get_minmax_bounds( int i, int j, int type, Scalar& low, Sca
 {
     cvtest::ArrayTest::get_minmax_bounds( i, j, type, low, high );
     int depth = CV_MAT_DEPTH(type);
-    
+
     if( depth == CV_16U )
     {
         low = Scalar::all(0);
@@ -167,7 +167,7 @@ void CV_MomentsTest::prepare_to_validation( int /*test_case_idx*/ )
     int cn = src.channels();
     int i, y, x, cols = src.cols;
     double xc = 0., yc = 0.;
-    
+
     memset( &m, 0, sizeof(m));
 
     for( y = 0; y < src.rows; y++ )
@@ -199,7 +199,7 @@ void CV_MomentsTest::prepare_to_validation( int /*test_case_idx*/ )
         m.m01 += s0*y;
         m.m02 += (s0*y)*y;
         m.m03 += ((s0*y)*y)*y;
-        
+
         m.m10 += s1;
         m.m11 += s1*y;
         m.m12 += (s1*y)*y;
@@ -243,7 +243,7 @@ void CV_MomentsTest::prepare_to_validation( int /*test_case_idx*/ )
 
         m.mu02 += s0*y1*y1;
         m.mu03 += ((s0*y1)*y1)*y1;
-        
+
         m.mu11 += s1*y1;
         m.mu12 += (s1*y1)*y1;
 
@@ -291,9 +291,9 @@ public:
     CV_HuMomentsTest();
 
 protected:
-    
+
     enum { MOMENT_COUNT = 18, HU_MOMENT_COUNT = 7 };
-    
+
     int prepare_test_case( int test_case_idx );
     void prepare_to_validation( int /*test_case_idx*/ );
     void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types );
@@ -367,7 +367,7 @@ void CV_HuMomentsTest::prepare_to_validation( int /*test_case_idx*/ )
     double nu20 = m->mu20 * s2;
     double nu11 = m->mu11 * s2;
     double nu02 = m->mu02 * s2;
-                  
+
     double nu30 = m->mu30 * s3;
     double nu21 = m->mu21 * s3;
     double nu12 = m->mu12 * s3;
@@ -396,7 +396,7 @@ class CV_SmallContourMomentTest : public cvtest::BaseTest
 {
 public:
     CV_SmallContourMomentTest() {}
-    ~CV_SmallContourMomentTest() {}   
+    ~CV_SmallContourMomentTest() {}
 protected:
     void run(int)
     {
@@ -407,10 +407,10 @@ protected:
             points.push_back(Point(53, 53));
             points.push_back(Point(46, 54));
             points.push_back(Point(49, 51));
-            
+
             Moments m = moments(points, false);
             double area = contourArea(points);
-            
+
             CV_Assert( m.m00 == 0 && m.m01 == 0 && m.m10 == 0 && area == 0 );
         }
         catch(...)

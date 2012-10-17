@@ -8,13 +8,13 @@ using namespace std;
 
 static void help()
 {
-	cout
-	<< "\nThis program illustrates the use of findContours and drawContours\n"
-	<< "The original image is put up along with the image of drawn contours\n"
-	<< "Usage:\n"
-	<< "./contours2\n"
-	<< "\nA trackbar is put up which controls the contour level from -3 to 3\n"
-	<< endl;
+    cout
+    << "\nThis program illustrates the use of findContours and drawContours\n"
+    << "The original image is put up along with the image of drawn contours\n"
+    << "Usage:\n"
+    << "./contours2\n"
+    << "\nA trackbar is put up which controls the contour level from -3 to 3\n"
+    << endl;
 }
 
 const int w = 500;
@@ -25,7 +25,7 @@ vector<Vec4i> hierarchy;
 
 static void on_trackbar(int, void*)
 {
-	Mat cnt_img = Mat::zeros(w, w, CV_8UC3);
+    Mat cnt_img = Mat::zeros(w, w, CV_8UC3);
     int _levels = levels - 3;
     drawContours( cnt_img, contours, _levels <= 0 ? 3 : -1, Scalar(128,255,255),
                   3, CV_AA, hierarchy, std::abs(_levels) );
@@ -38,8 +38,8 @@ int main( int argc, char**)
     Mat img = Mat::zeros(w, w, CV_8UC1);
     if(argc > 1)
     {
-    	help();
-    	return -1;
+        help();
+        return -1;
     }
     //Draw 6 faces
     for( int i = 0; i < 6; i++ )

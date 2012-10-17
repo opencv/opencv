@@ -166,8 +166,8 @@ bool CvCapture_Unicap::initDevice() {
 
   memset(&raw_buffer, 0x0, sizeof(unicap_data_buffer_t));
   raw_frame = cvCreateImage(cvSize(format.size.width,
-					format.size.height),
-				  8, format.bpp / 8);
+                    format.size.height),
+                  8, format.bpp / 8);
   memcpy(&raw_buffer.format, &format, sizeof(raw_buffer.format));
   raw_buffer.data = (unsigned char*)raw_frame->imageData;
   raw_buffer.buffer_size = format.size.width *
@@ -183,8 +183,8 @@ bool CvCapture_Unicap::initDevice() {
   //    buffer.format.bpp = 8;
 
   frame = cvCreateImage(cvSize(buffer.format.size.width,
-				    buffer.format.size.height),
-			      8, buffer.format.bpp / 8);
+                    buffer.format.size.height),
+                  8, buffer.format.bpp / 8);
   buffer.data = (unsigned char*)frame->imageData;
   buffer.buffer_size = buffer.format.size.width *
     buffer.format.size.height * buffer.format.bpp / 8;

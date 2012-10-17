@@ -1,4 +1,4 @@
-//IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING. 
+//IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
 
 // By downloading, copying, installing or using the software you agree to this license.
 // If you do not agree to this license, do not download, install,
@@ -85,16 +85,16 @@ enum { CV_MODE_NORMAL = 0, CV_MODE_OPENGL = 1 };
 
 //we can change the keyboard shortcuts from here !
 enum {	shortcut_zoom_normal 	= Qt::CTRL + Qt::Key_Z,
-		shortcut_zoom_imgRegion = Qt::CTRL + Qt::Key_X,
-		shortcut_save_img		= Qt::CTRL + Qt::Key_S,
-		shortcut_properties_win	= Qt::CTRL + Qt::Key_P,
-		shortcut_zoom_in 		= Qt::CTRL + Qt::Key_Plus,//QKeySequence(QKeySequence::ZoomIn),
-		shortcut_zoom_out		= Qt::CTRL + Qt::Key_Minus,//QKeySequence(QKeySequence::ZoomOut),
-		shortcut_panning_left 	= Qt::CTRL + Qt::Key_Left,
-		shortcut_panning_right 	= Qt::CTRL + Qt::Key_Right,
-		shortcut_panning_up 	= Qt::CTRL + Qt::Key_Up,
-		shortcut_panning_down 	= Qt::CTRL + Qt::Key_Down
-	};
+        shortcut_zoom_imgRegion = Qt::CTRL + Qt::Key_X,
+        shortcut_save_img		= Qt::CTRL + Qt::Key_S,
+        shortcut_properties_win	= Qt::CTRL + Qt::Key_P,
+        shortcut_zoom_in 		= Qt::CTRL + Qt::Key_Plus,//QKeySequence(QKeySequence::ZoomIn),
+        shortcut_zoom_out		= Qt::CTRL + Qt::Key_Minus,//QKeySequence(QKeySequence::ZoomOut),
+        shortcut_panning_left 	= Qt::CTRL + Qt::Key_Left,
+        shortcut_panning_right 	= Qt::CTRL + Qt::Key_Right,
+        shortcut_panning_up 	= Qt::CTRL + Qt::Key_Up,
+        shortcut_panning_down 	= Qt::CTRL + Qt::Key_Down
+    };
 
 //end enum
 
@@ -108,20 +108,20 @@ class GuiReceiver : public QObject
 
 public:
     GuiReceiver();
-	~GuiReceiver();
+    ~GuiReceiver();
 
     int start();
-	void isLastWindow();
+    void isLastWindow();
 
     bool bTimeOut;
-	QTimer* timer;
+    QTimer* timer;
 
 public slots:
     void createWindow( QString name, int flags = 0 );
     void destroyWindow(QString name);
     void destroyAllWindow();
     void addSlider(QString trackbar_name, QString window_name, void* value, int count, void* on_change);
-	void addSlider2(QString trackbar_name, QString window_name, void* value, int count, void* on_change, void *userdata);
+    void addSlider2(QString trackbar_name, QString window_name, void* value, int count, void* on_change, void *userdata);
     void moveWindow(QString name, int x, int y);
     void resizeWindow(QString name, int width, int height);
     void showImage(QString name, void* arr);
@@ -138,7 +138,7 @@ public slots:
     void loadWindowParameters(QString name);
     void putText(void* arg1, QString text, QPoint org, void* font);
     void addButton(QString button_name, int button_type, int initial_button_state , void* on_change, void* userdata);
-	void enablePropertiesButtonEachWindow();
+    void enablePropertiesButtonEachWindow();
 
     void setOpenGlDrawCallback(QString name, void* callback, void* userdata);
     void setOpenGlCleanCallback(QString name, void* callback, void* userdata);
@@ -147,8 +147,8 @@ public slots:
     double isOpenGl(QString name);
 
 private:
-	int nb_windows;
-	bool doesExternalQAppExist;
+    int nb_windows;
+    bool doesExternalQAppExist;
 };
 
 
@@ -234,7 +234,7 @@ class CvTrackbar :  public CvBar
     Q_OBJECT
 public:
     CvTrackbar(CvWindow* parent, QString name, int* value, int count, CvTrackbarCallback on_change);
-	CvTrackbar(CvWindow* parent, QString name, int* value, int count, CvTrackbarCallback2 on_change, void* data);
+    CvTrackbar(CvWindow* parent, QString name, int* value, int count, CvTrackbarCallback2 on_change, void* data);
 
     QPointer<QSlider> slider;
 
@@ -244,13 +244,13 @@ private slots:
 
 private:
     void setLabel(int myvalue);
-	void create(CvWindow* arg, QString name, int* value, int count);
+    void create(CvWindow* arg, QString name, int* value, int count);
     QString createLabel();
     QPointer<QPushButton > label;
     CvTrackbarCallback callback;
-	CvTrackbarCallback2 callback2;//look like it is use by python binding
+    CvTrackbarCallback2 callback2;//look like it is use by python binding
     int* dataSlider;
-	void* userdata;
+    void* userdata;
 };
 
 //Both are top level window, so that a way to differenciate them.
@@ -309,7 +309,7 @@ public:
     static CvButtonbar* createButtonBar(QString bar_name);
 
     static void addSlider(CvWindow* w, QString name, int* value, int count, CvTrackbarCallback on_change CV_DEFAULT(NULL));
-	static void addSlider2(CvWindow* w, QString name, int* value, int count, CvTrackbarCallback2 on_change CV_DEFAULT(NULL), void* userdata CV_DEFAULT(0));
+    static void addSlider2(CvWindow* w, QString name, int* value, int count, CvTrackbarCallback2 on_change CV_DEFAULT(NULL), void* userdata CV_DEFAULT(0));
 
     void setOpenGlDrawCallback(CvOpenGlDrawCallback callback, void* userdata);
     void setOpenGlCleanCallback(CvOpenGlCleanCallback callback, void* userdata);
@@ -322,13 +322,13 @@ public:
     //parameters (will be save/load)
     int param_flags;
     int param_gui_mode;
-	int param_ratio_mode;
+    int param_ratio_mode;
 
     QPointer<QBoxLayout> myGlobalLayout; //All the widget (toolbar, view, LayoutBar, ...) are attached to it
     QPointer<QBoxLayout> myBarLayout;
 
     QVector<QAction*> vect_QActions;
-    
+
     QPointer<QStatusBar> myStatusBar;
     QPointer<QToolBar> myToolBar;
     QPointer<QLabel> myStatusBar_msg;
@@ -345,13 +345,13 @@ private:
 
     void icvLoadTrackbars(QSettings *settings);
     void icvSaveTrackbars(QSettings *settings);
-	void icvLoadControlPanel();
-	void icvSaveControlPanel();
-	void icvLoadButtonbar(CvButtonbar* t,QSettings *settings);
-	void icvSaveButtonbar(CvButtonbar* t,QSettings *settings);
+    void icvLoadControlPanel();
+    void icvSaveControlPanel();
+    void icvLoadButtonbar(CvButtonbar* t,QSettings *settings);
+    void icvSaveButtonbar(CvButtonbar* t,QSettings *settings);
 
-	void createActions();
-	void createShortcuts();
+    void createActions();
+    void createShortcuts();
     void createToolBar();
     void createView();
     void createStatusBar();
@@ -361,7 +361,7 @@ private:
 
     void hideTools();
     void showTools();
-	QSize getAvailableSize();
+    QSize getAvailableSize();
 
 private slots:
     void displayPropertiesWin();
@@ -525,12 +525,12 @@ protected:
     void mouseDoubleClickEvent(QMouseEvent* event);
 
 private:
-	int param_keepRatio;
+    int param_keepRatio;
 
     //parameters (will be save/load)
     QTransform param_matrixWorld;
 
-	CvMat* image2Draw_mat;
+    CvMat* image2Draw_mat;
     QImage image2Draw_qt;
     QImage image2Draw_qt_resized;
     int nbChannelOriginImage;
@@ -556,7 +556,7 @@ private:
     QPointer<QTimer> timerDisplay;
     bool drawInfo;
     QString infoText;
-	QRectF target;
+    QRectF target;
 
     void drawInstructions(QPainter *painter);
     void drawViewOverview(QPainter *painter);

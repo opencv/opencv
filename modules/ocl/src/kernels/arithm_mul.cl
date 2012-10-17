@@ -48,23 +48,23 @@
 #endif
 
 int4 round_int4(float4 v){
-    v.s0 = v.s0 + (v.s0 > 0 ? 0.5 : -0.5); 
-    v.s1 = v.s1 + (v.s1 > 0 ? 0.5 : -0.5); 
-    v.s2 = v.s2 + (v.s2 > 0 ? 0.5 : -0.5); 
-    v.s3 = v.s3 + (v.s3 > 0 ? 0.5 : -0.5); 
+    v.s0 = v.s0 + (v.s0 > 0 ? 0.5 : -0.5);
+    v.s1 = v.s1 + (v.s1 > 0 ? 0.5 : -0.5);
+    v.s2 = v.s2 + (v.s2 > 0 ? 0.5 : -0.5);
+    v.s3 = v.s3 + (v.s3 > 0 ? 0.5 : -0.5);
 
     return convert_int4_sat(v);
 }
 uint4 round_uint4(float4 v){
-    v.s0 = v.s0 + (v.s0 > 0 ? 0.5 : -0.5); 
-    v.s1 = v.s1 + (v.s1 > 0 ? 0.5 : -0.5); 
-    v.s2 = v.s2 + (v.s2 > 0 ? 0.5 : -0.5); 
-    v.s3 = v.s3 + (v.s3 > 0 ? 0.5 : -0.5); 
+    v.s0 = v.s0 + (v.s0 > 0 ? 0.5 : -0.5);
+    v.s1 = v.s1 + (v.s1 > 0 ? 0.5 : -0.5);
+    v.s2 = v.s2 + (v.s2 > 0 ? 0.5 : -0.5);
+    v.s3 = v.s3 + (v.s3 > 0 ? 0.5 : -0.5);
 
     return convert_uint4_sat(v);
 }
 long round_int(float v){
-    v = v + (v > 0 ? 0.5 : -0.5); 
+    v = v + (v > 0 ? 0.5 : -0.5);
 
     return convert_int_sat(v);
 }
@@ -85,24 +85,24 @@ __kernel void arithm_mul_D0 (__global uchar *src1, int src1_step, int src1_offse
         x = x << 2;
 
         #define dst_align (dst_offset & 3)
-        int src1_index = mad24(y, src1_step, x + src1_offset - dst_align); 
-        int src2_index = mad24(y, src2_step, x + src2_offset - dst_align); 
+        int src1_index = mad24(y, src1_step, x + src1_offset - dst_align);
+        int src2_index = mad24(y, src2_step, x + src2_offset - dst_align);
 
         int dst_start  = mad24(y, dst_step, dst_offset);
         int dst_end    = mad24(y, dst_step, dst_offset + dst_step1);
         int dst_index  = mad24(y, dst_step, dst_offset + x & (int)0xfffffffc);
 
-		uchar4 src1_data ,src2_data;
+        uchar4 src1_data ,src2_data;
 
-		src1_data.x= src1_index+0 >= 0 ? src1[src1_index+0] : 0;
-		src1_data.y= src1_index+1 >= 0 ? src1[src1_index+1] : 0;
-		src1_data.z= src1_index+2 >= 0 ? src1[src1_index+2] : 0;
-		src1_data.w= src1_index+3 >= 0 ? src1[src1_index+3] : 0;
+        src1_data.x= src1_index+0 >= 0 ? src1[src1_index+0] : 0;
+        src1_data.y= src1_index+1 >= 0 ? src1[src1_index+1] : 0;
+        src1_data.z= src1_index+2 >= 0 ? src1[src1_index+2] : 0;
+        src1_data.w= src1_index+3 >= 0 ? src1[src1_index+3] : 0;
 
-		src2_data.x= src2_index+0 >= 0 ? src2[src2_index+0] : 0;
-		src2_data.y= src2_index+1 >= 0 ? src2[src2_index+1] : 0;
-		src2_data.z= src2_index+2 >= 0 ? src2[src2_index+2] : 0;
-		src2_data.w= src2_index+3 >= 0 ? src2[src2_index+3] : 0;
+        src2_data.x= src2_index+0 >= 0 ? src2[src2_index+0] : 0;
+        src2_data.y= src2_index+1 >= 0 ? src2[src2_index+1] : 0;
+        src2_data.z= src2_index+2 >= 0 ? src2[src2_index+2] : 0;
+        src2_data.w= src2_index+3 >= 0 ? src2[src2_index+3] : 0;
 
         uchar4 dst_data = *((__global uchar4 *)(dst + dst_index));
         int4 tmp      = convert_int4_sat(src1_data) * convert_int4_sat(src2_data);
@@ -130,8 +130,8 @@ __kernel void arithm_mul_D2 (__global ushort *src1, int src1_step, int src1_offs
         x = x << 2;
 
         #define dst_align ((dst_offset >> 1) & 3)
-        int src1_index = mad24(y, src1_step, (x << 1) + src1_offset - (dst_align << 1)); 
-        int src2_index = mad24(y, src2_step, (x << 1) + src2_offset - (dst_align << 1)); 
+        int src1_index = mad24(y, src1_step, (x << 1) + src1_offset - (dst_align << 1));
+        int src2_index = mad24(y, src2_step, (x << 1) + src2_offset - (dst_align << 1));
 
         int dst_start  = mad24(y, dst_step, dst_offset);
         int dst_end    = mad24(y, dst_step, dst_offset + dst_step1);
@@ -166,8 +166,8 @@ __kernel void arithm_mul_D3 (__global short *src1, int src1_step, int src1_offse
         x = x << 2;
 
         #define dst_align ((dst_offset >> 1) & 3)
-        int src1_index = mad24(y, src1_step, (x << 1) + src1_offset - (dst_align << 1)); 
-        int src2_index = mad24(y, src2_step, (x << 1) + src2_offset - (dst_align << 1)); 
+        int src1_index = mad24(y, src1_step, (x << 1) + src1_offset - (dst_align << 1));
+        int src2_index = mad24(y, src2_step, (x << 1) + src2_offset - (dst_align << 1));
 
         int dst_start  = mad24(y, dst_step, dst_offset);
         int dst_end    = mad24(y, dst_step, dst_offset + dst_step1);

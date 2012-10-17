@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2004, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-// 
+//
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission. 
-// 
+// from this software without specific prior written permission.
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -117,7 +117,7 @@ template <class T> class Vec2
     T *			getValue ();
     const T *		getValue () const;
 
-    
+
     //---------
     // Equality
     //---------
@@ -251,7 +251,7 @@ template <class T> class Vec2
 
     //--------------------------------------------------------------
     // Base type -- in templates, which accept a parameter, V, which
-    // could be either a Vec2<T>, a Vec3<T>, or a Vec4<T> you can 
+    // could be either a Vec2<T>, a Vec3<T>, or a Vec4<T> you can
     // refer to T as V::BaseType
     //--------------------------------------------------------------
 
@@ -463,7 +463,7 @@ template <class T> class Vec3
 
     //--------------------------------------------------------------
     // Base type -- in templates, which accept a parameter, V, which
-    // could be either a Vec2<T>, a Vec3<T>, or a Vec4<T> you can 
+    // could be either a Vec2<T>, a Vec3<T>, or a Vec4<T> you can
     // refer to T as V::BaseType
     //--------------------------------------------------------------
 
@@ -484,7 +484,7 @@ template <class T> class Vec4
     // Access to elements
     //-------------------
 
-    T               x, y, z, w; 
+    T               x, y, z, w;
 
     T &             operator [] (int i);
     const T &       operator [] (int i) const;
@@ -645,7 +645,7 @@ template <class T> class Vec4
 
     //--------------------------------------------------------------
     // Base type -- in templates, which accept a parameter, V, which
-    // could be either a Vec2<T>, a Vec3<T>, or a Vec4<T> you can 
+    // could be either a Vec2<T>, a Vec3<T>, or a Vec4<T> you can
     // refer to T as V::BaseType
     //--------------------------------------------------------------
 
@@ -981,8 +981,8 @@ bool
 Vec2<T>::equalWithAbsError (const Vec2<T> &v, T e) const
 {
     for (int i = 0; i < 2; i++)
-	if (!Imath::equalWithAbsError ((*this)[i], v[i], e))
-	    return false;
+    if (!Imath::equalWithAbsError ((*this)[i], v[i], e))
+        return false;
 
     return true;
 }
@@ -992,8 +992,8 @@ bool
 Vec2<T>::equalWithRelError (const Vec2<T> &v, T e) const
 {
     for (int i = 0; i < 2; i++)
-	if (!Imath::equalWithRelError ((*this)[i], v[i], e))
-	    return false;
+    if (!Imath::equalWithRelError ((*this)[i], v[i], e))
+        return false;
 
     return true;
 }
@@ -1145,14 +1145,14 @@ Vec2<T>::lengthTiny () const
 {
     T absX = (x >= T (0))? x: -x;
     T absY = (y >= T (0))? y: -y;
-    
+
     T max = absX;
 
     if (max < absY)
-	max = absY;
+    max = absY;
 
     if (max == T (0))
-	return T (0);
+    return T (0);
 
     //
     // Do not replace the divisions by max with multiplications by 1/max.
@@ -1173,7 +1173,7 @@ Vec2<T>::length () const
     T length2 = dot (*this);
 
     if (length2 < T (2) * limits<T>::smallest())
-	return lengthTiny();
+    return lengthTiny();
 
     return Math<T>::sqrt (length2);
 }
@@ -1199,8 +1199,8 @@ Vec2<T>::normalize ()
         // produce results less than or equal to 1.
         //
 
-	x /= l;
-	y /= l;
+    x /= l;
+    y /= l;
     }
 
     return *this;
@@ -1213,7 +1213,7 @@ Vec2<T>::normalizeExc () throw (Iex::MathExc)
     T l = length();
 
     if (l == T (0))
-	throw NullVecExc ("Cannot normalize null vector.");
+    throw NullVecExc ("Cannot normalize null vector.");
 
     x /= l;
     y /= l;
@@ -1238,7 +1238,7 @@ Vec2<T>::normalized () const
     T l = length();
 
     if (l == T (0))
-	return Vec2 (T (0));
+    return Vec2 (T (0));
 
     return Vec2 (x / l, y / l);
 }
@@ -1250,7 +1250,7 @@ Vec2<T>::normalizedExc () const throw (Iex::MathExc)
     T l = length();
 
     if (l == T (0))
-	throw NullVecExc ("Cannot normalize null vector.");
+    throw NullVecExc ("Cannot normalize null vector.");
 
     return Vec2 (x / l, y / l);
 }
@@ -1359,7 +1359,7 @@ Vec3<T>::Vec3 (const Vec4<S> &v, InfException)
     if (absW < 1)
     {
         T m = baseTypeMax() * absW;
-        
+
         if (vx <= -m || vx >= m || vy <= -m || vy >= m || vz <= -m || vz >= m)
             throw InfPointExc ("Cannot normalize point at infinity.");
     }
@@ -1444,8 +1444,8 @@ bool
 Vec3<T>::equalWithAbsError (const Vec3<T> &v, T e) const
 {
     for (int i = 0; i < 3; i++)
-	if (!Imath::equalWithAbsError ((*this)[i], v[i], e))
-	    return false;
+    if (!Imath::equalWithAbsError ((*this)[i], v[i], e))
+        return false;
 
     return true;
 }
@@ -1455,8 +1455,8 @@ bool
 Vec3<T>::equalWithRelError (const Vec3<T> &v, T e) const
 {
     for (int i = 0; i < 3; i++)
-	if (!Imath::equalWithRelError ((*this)[i], v[i], e))
-	    return false;
+    if (!Imath::equalWithRelError ((*this)[i], v[i], e))
+        return false;
 
     return true;
 }
@@ -1480,8 +1480,8 @@ inline Vec3<T>
 Vec3<T>::cross (const Vec3 &v) const
 {
     return Vec3 (y * v.z - z * v.y,
-		 z * v.x - x * v.z,
-		 x * v.y - y * v.x);
+         z * v.x - x * v.z,
+         x * v.y - y * v.x);
 }
 
 template <class T>
@@ -1502,8 +1502,8 @@ inline Vec3<T>
 Vec3<T>::operator % (const Vec3 &v) const
 {
     return Vec3 (y * v.z - z * v.y,
-		 z * v.x - x * v.z,
-		 x * v.y - y * v.x);
+         z * v.x - x * v.z,
+         x * v.y - y * v.x);
 }
 
 template <class T>
@@ -1632,17 +1632,17 @@ Vec3<T>::lengthTiny () const
     T absX = (x >= T (0))? x: -x;
     T absY = (y >= T (0))? y: -y;
     T absZ = (z >= T (0))? z: -z;
-    
+
     T max = absX;
 
     if (max < absY)
-	max = absY;
+    max = absY;
 
     if (max < absZ)
-	max = absZ;
+    max = absZ;
 
     if (max == T (0))
-	return T (0);
+    return T (0);
 
     //
     // Do not replace the divisions by max with multiplications by 1/max.
@@ -1664,7 +1664,7 @@ Vec3<T>::length () const
     T length2 = dot (*this);
 
     if (length2 < T (2) * limits<T>::smallest())
-	return lengthTiny();
+    return lengthTiny();
 
     return Math<T>::sqrt (length2);
 }
@@ -1690,9 +1690,9 @@ Vec3<T>::normalize ()
         // produce results less than or equal to 1.
         //
 
-	x /= l;
-	y /= l;
-	z /= l;
+    x /= l;
+    y /= l;
+    z /= l;
     }
 
     return *this;
@@ -1705,7 +1705,7 @@ Vec3<T>::normalizeExc () throw (Iex::MathExc)
     T l = length();
 
     if (l == T (0))
-	throw NullVecExc ("Cannot normalize null vector.");
+    throw NullVecExc ("Cannot normalize null vector.");
 
     x /= l;
     y /= l;
@@ -1732,7 +1732,7 @@ Vec3<T>::normalized () const
     T l = length();
 
     if (l == T (0))
-	return Vec3 (T (0));
+    return Vec3 (T (0));
 
     return Vec3 (x / l, y / l, z / l);
 }
@@ -1744,7 +1744,7 @@ Vec3<T>::normalizedExc () const throw (Iex::MathExc)
     T l = length();
 
     if (l == T (0))
-	throw NullVecExc ("Cannot normalize null vector.");
+    throw NullVecExc ("Cannot normalize null vector.");
 
     return Vec3 (x / l, y / l, z / l);
 }
@@ -2031,7 +2031,7 @@ Vec4<T>::lengthTiny () const
     T absY = (y >= T (0))? y: -y;
     T absZ = (z >= T (0))? z: -z;
     T absW = (w >= T (0))? w: -w;
-    
+
     T max = absX;
 
     if (max < absY)

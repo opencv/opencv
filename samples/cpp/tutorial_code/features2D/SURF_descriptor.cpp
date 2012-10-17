@@ -26,7 +26,7 @@ int main( int argc, char** argv )
 
   Mat img_1 = imread( argv[1], CV_LOAD_IMAGE_GRAYSCALE );
   Mat img_2 = imread( argv[2], CV_LOAD_IMAGE_GRAYSCALE );
-  
+
   if( !img_1.data || !img_2.data )
   { return -1; }
 
@@ -55,7 +55,7 @@ int main( int argc, char** argv )
 
   //-- Draw matches
   Mat img_matches;
-  drawMatches( img_1, keypoints_1, img_2, keypoints_2, matches, img_matches ); 
+  drawMatches( img_1, keypoints_1, img_2, keypoints_2, matches, img_matches );
 
   //-- Show detected matches
   imshow("Matches", img_matches );

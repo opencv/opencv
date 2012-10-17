@@ -65,7 +65,7 @@ void CV_EMDTest::run( int )
     const double success_error_level = 1e-6;
     #define M 10000
     double emd0 = 2460./210;
-    static float cost[] = 
+    static float cost[] =
     {
         16, 16, 13, 22, 17,
         14, 14, 13, 19, 15,
@@ -77,7 +77,7 @@ void CV_EMDTest::run( int )
     Mat _w1(4, 1, CV_32F, w1);
     Mat _w2(5, 1, CV_32F, w2);
     Mat _cost(_w1.rows, _w2.rows, CV_32F, cost);
-    
+
     float emd = EMD( _w1, _w2, -1, _cost );
     if( fabs( emd - emd0 ) > success_error_level*emd0 )
     {

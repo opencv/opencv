@@ -9,10 +9,10 @@ using namespace cv;
 static void help()
 {
     cout << "\nThis program demonstrates GrabCut segmentation -- select an object in a region\n"
-    		"and then grabcut will attempt to segment it out.\n"
-    		"Call:\n"
-    		"./grabcut <image_name>\n"
-    	"\nSelect a rectangular area around the object you want to segment\n" <<
+            "and then grabcut will attempt to segment it out.\n"
+            "Call:\n"
+            "./grabcut <image_name>\n"
+        "\nSelect a rectangular area around the object you want to segment\n" <<
         "\nHot keys: \n"
         "\tESC - quit the program\n"
         "\tr - restore the original image\n"
@@ -277,20 +277,20 @@ int main( int argc, char** argv )
 {
     if( argc!=2 )
     {
-    	help();
+        help();
         return 1;
     }
     string filename = argv[1];
     if( filename.empty() )
     {
-    	cout << "\nDurn, couldn't read in " << argv[1] << endl;
+        cout << "\nDurn, couldn't read in " << argv[1] << endl;
         return 1;
     }
     Mat image = imread( filename, 1 );
     if( image.empty() )
     {
         cout << "\n Durn, couldn't read image filename " << filename << endl;
-    	return 1;
+        return 1;
     }
 
     help();

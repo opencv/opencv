@@ -55,7 +55,7 @@ void cv::gpu::DisparityBilateralFilter::operator()(const GpuMat&, const GpuMat&,
 
 #else /* !defined (HAVE_CUDA) */
 
-namespace cv { namespace gpu { namespace device 
+namespace cv { namespace gpu { namespace device
 {
     namespace disp_bilateral_filter
     {
@@ -80,7 +80,7 @@ namespace
 
         float* line = cpu_table_color.ptr<float>();
 
-        for(int i = 0; i < len; i++) 
+        for(int i = 0; i < len; i++)
             line[i] = static_cast<float>(std::exp(-double(i * i) / (2 * sigma_range * sigma_range)));
 
         table_color.upload(cpu_table_color);
@@ -103,8 +103,8 @@ namespace
     }
 
     template <typename T>
-    void disp_bilateral_filter_operator(int ndisp, int radius, int iters, float edge_threshold,float max_disc_threshold, 
-                                   GpuMat& table_color, GpuMat& table_space, 
+    void disp_bilateral_filter_operator(int ndisp, int radius, int iters, float edge_threshold,float max_disc_threshold,
+                                   GpuMat& table_color, GpuMat& table_space,
                                    const GpuMat& disp, const GpuMat& img, GpuMat& dst, Stream& stream)
     {
         short edge_disc = max<short>(short(1), short(ndisp * edge_threshold + 0.5));
@@ -123,11 +123,11 @@ namespace
         disp_bilateral_filter<T>(dst, img, img.channels(), iters, StreamAccessor::getStream(stream));
     }
 
-    typedef void (*bilateral_filter_operator_t)(int ndisp, int radius, int iters, float edge_threshold, float max_disc_threshold, 
-                                                GpuMat& table_color, GpuMat& table_space, 
+    typedef void (*bilateral_filter_operator_t)(int ndisp, int radius, int iters, float edge_threshold, float max_disc_threshold,
+                                                GpuMat& table_color, GpuMat& table_space,
                                                 const GpuMat& disp, const GpuMat& img, GpuMat& dst, Stream& stream);
-    
-    const bilateral_filter_operator_t operators[] = 
+
+    const bilateral_filter_operator_t operators[] =
         {disp_bilateral_filter_operator<unsigned char>, 0, 0, disp_bilateral_filter_operator<short>, 0, 0, 0, 0};
 }
 
@@ -139,9 +139,9 @@ cv::gpu::DisparityBilateralFilter::DisparityBilateralFilter(int ndisp_, int radi
     calc_space_weighted_filter(table_space, radius * 2 + 1, radius + 1.0f);
 }
 
-cv::gpu::DisparityBilateralFilter::DisparityBilateralFilter(int ndisp_, int radius_, int iters_, float edge_threshold_, 
+cv::gpu::DisparityBilateralFilter::DisparityBilateralFilter(int ndisp_, int radius_, int iters_, float edge_threshold_,
                                                      float max_disc_threshold_, float sigma_range_)
-    : ndisp(ndisp_), radius(radius_), iters(iters_), edge_threshold(edge_threshold_), max_disc_threshold(max_disc_threshold_), 
+    : ndisp(ndisp_), radius(radius_), iters(iters_), edge_threshold(edge_threshold_), max_disc_threshold(max_disc_threshold_),
       sigma_range(sigma_range_)
 {
     calc_color_weighted_table(table_color, sigma_range, 255);

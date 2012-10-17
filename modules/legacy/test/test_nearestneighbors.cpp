@@ -128,7 +128,7 @@ void NearestNeighborTest::run( int /*start_from*/ ) {
     randu( desc, Scalar(minValue), Scalar(maxValue) );
 
     createModel( desc );
-    
+
     tempCode = checkGetPoins( desc );
     if( tempCode != cvtest::TS::OK )
     {
@@ -149,9 +149,9 @@ void NearestNeighborTest::run( int /*start_from*/ ) {
         ts->printf( cvtest::TS::LOG, "bad accuracy of Find \n" );
         code = tempCode;
     }
-    
+
     releaseModel();
-    
+
     ts->set_failed_test_info( code );
 }
 

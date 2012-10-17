@@ -1,11 +1,11 @@
 /*
  * Copyright 1993-2010 NVIDIA Corporation.  All rights reserved.
  *
- * NVIDIA Corporation and its licensors retain all intellectual 
- * property and proprietary rights in and to this software and 
- * related documentation and any modifications thereto.  
- * Any use, reproduction, disclosure, or distribution of this 
- * software and related documentation without an express license 
+ * NVIDIA Corporation and its licensors retain all intellectual
+ * property and proprietary rights in and to this software and
+ * related documentation and any modifications thereto.
+ * Any use, reproduction, disclosure, or distribution of this
+ * software and related documentation without an express license
  * agreement from NVIDIA Corporation is strictly prohibited.
  */
 #ifndef _ncvtestsourceprovider_hpp_
@@ -62,8 +62,8 @@ public:
     {
         ncvAssertPrintReturn(sizeof(T) == 1, "NCVTestSourceProvider ctor:: PGM constructor complies only with 8bit types", );
 
-		cv::Mat image = cv::imread(pgmFilename);		
-		ncvAssertPrintReturn(!image.empty(), "NCVTestSourceProvider ctor:: PGM file error", );
+        cv::Mat image = cv::imread(pgmFilename);
+        ncvAssertPrintReturn(!image.empty(), "NCVTestSourceProvider ctor:: PGM file error", );
 
         int devId;
         cudaDeviceProp devProp;
@@ -77,9 +77,9 @@ public:
         this->dataWidth = image.cols;
         this->dataHeight = image.rows;
 
-		cv::Mat hdr(image.size(), CV_8UC1, data.get()->ptr(), data.get()->pitch());
-		image.copyTo(hdr);
-        
+        cv::Mat hdr(image.size(), CV_8UC1, data.get()->ptr(), data.get()->pitch());
+        image.copyTo(hdr);
+
         this->bInit = true;
     }
 

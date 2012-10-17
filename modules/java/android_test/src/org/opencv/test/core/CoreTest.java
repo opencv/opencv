@@ -208,7 +208,7 @@ public class CoreTest extends OpenCVTestCase {
 
         assertFalse(Core.checkRange(outOfRange, true, 5, 100));
     }
-    
+
     public void testCircleMatPointIntScalar() {
         Point center = new Point(gray0.cols() / 2, gray0.rows() / 2);
         int radius = Math.min(gray0.cols() / 4, gray0.rows() / 4);
@@ -675,8 +675,8 @@ public class CoreTest extends OpenCVTestCase {
     }
 
     public void testFillPolyMatListOfListOfPointScalarIntIntPoint() {
-    	MatOfPoint polyline1 = new MatOfPoint(new Point(1, 4), new Point(1, 8), new Point(4, 1), new Point(7, 8), new Point(7, 4));
-    	MatOfPoint polyline2 = new MatOfPoint(new Point(0, 3), new Point(0, 7), new Point(3, 0), new Point(6, 7), new Point(6, 3));
+        MatOfPoint polyline1 = new MatOfPoint(new Point(1, 4), new Point(1, 8), new Point(4, 1), new Point(7, 8), new Point(7, 4));
+        MatOfPoint polyline2 = new MatOfPoint(new Point(0, 3), new Point(0, 7), new Point(3, 0), new Point(6, 7), new Point(6, 3));
 
         List<MatOfPoint> polylines1 = new ArrayList<MatOfPoint>();
         polylines1.add(polyline1);
@@ -1194,16 +1194,16 @@ public class CoreTest extends OpenCVTestCase {
     }
 
     public void testMeanStdDevMatMatMat() {
-    	MatOfDouble mean   = new MatOfDouble();
-    	MatOfDouble stddev = new MatOfDouble();
+        MatOfDouble mean   = new MatOfDouble();
+        MatOfDouble stddev = new MatOfDouble();
 
         Core.meanStdDev(rgbLena, mean, stddev);
 
         double expectedMean[] = new double[]
-        	{105.3989906311035, 99.56269836425781, 179.7303047180176};
+            {105.3989906311035, 99.56269836425781, 179.7303047180176};
         double expectedDev[] = new double[]
             {33.74205485167219, 52.8734582803278, 49.01569488056406};
-        
+
         assertArrayEquals(expectedMean, mean.toArray(), EPS);
         assertArrayEquals(expectedDev, stddev.toArray(), EPS);
     }
@@ -1214,14 +1214,14 @@ public class CoreTest extends OpenCVTestCase {
         Mat mask = gray0.clone();
         submat = mask.submat(0, mask.rows() / 2, 0, mask.cols() / 2);
         submat.setTo(new Scalar(1));
-    	MatOfDouble mean   = new MatOfDouble();
-    	MatOfDouble stddev = new MatOfDouble();
+        MatOfDouble mean   = new MatOfDouble();
+        MatOfDouble stddev = new MatOfDouble();
 
         Core.meanStdDev(grayRnd, mean, stddev, mask);
 
         double expectedMean[] = new double[] {33d};
         double expectedDev[]  = new double[] {0d};
-                
+
         assertArrayEquals(expectedMean, mean.toArray(), EPS);
         assertArrayEquals(expectedDev, stddev.toArray(), EPS);
     }
@@ -1285,7 +1285,7 @@ public class CoreTest extends OpenCVTestCase {
         List<Mat> src = Arrays.asList(rgba0);
         List<Mat> dst = Arrays.asList(gray3, gray2, gray1, gray0, getMat(CvType.CV_8UC3, 0, 0, 0));
         MatOfInt fromTo = new MatOfInt(
-        		3, 0,
+                3, 0,
                 3, 1,
                 2, 2,
                 0, 3,

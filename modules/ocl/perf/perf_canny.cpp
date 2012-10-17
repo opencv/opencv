@@ -61,17 +61,17 @@ using namespace std;
 #ifndef IMPLEMENT_PARAM_CLASS
 #define IMPLEMENT_PARAM_CLASS(name, type) \
 class name \
-	{ \
-	public: \
-	name ( type arg = type ()) : val_(arg) {} \
-	operator type () const {return val_;} \
-	private: \
-	type val_; \
-	}; \
-	inline void PrintTo( name param, std::ostream* os) \
-	{ \
-	*os << #name <<  "(" << testing::PrintToString(static_cast< type >(param)) << ")"; \
-	}
+    { \
+    public: \
+    name ( type arg = type ()) : val_(arg) {} \
+    operator type () const {return val_;} \
+    private: \
+    type val_; \
+    }; \
+    inline void PrintTo( name param, std::ostream* os) \
+    { \
+    *os << #name <<  "(" << testing::PrintToString(static_cast< type >(param)) << ")"; \
+    }
 
 IMPLEMENT_PARAM_CLASS(Channels, int)
 #endif // IMPLEMENT_PARAM_CLASS

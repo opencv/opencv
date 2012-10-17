@@ -25,9 +25,9 @@ PERF_TEST_P(Size_MatType_OutMatDepth, integral,
     Mat sum(sz, sdepth);
 
     declare.in(src, WARMUP_RNG).out(sum);
-    
+
     TEST_CYCLE() integral(src, sum, sdepth);
-    
+
     SANITY_CHECK(sum, 1e-6);
 }
 
@@ -48,9 +48,9 @@ PERF_TEST_P(Size_MatType_OutMatDepth, integral_sqsum,
     Mat sqsum(sz, sdepth);
 
     declare.in(src, WARMUP_RNG).out(sum, sqsum);
-    
+
     TEST_CYCLE() integral(src, sum, sqsum, sdepth);
-    
+
     SANITY_CHECK(sum, 1e-6);
     SANITY_CHECK(sqsum, 1e-6);
 }
@@ -73,9 +73,9 @@ PERF_TEST_P( Size_MatType_OutMatDepth, integral_sqsum_tilted,
     Mat tilted(sz, sdepth);
 
     declare.in(src, WARMUP_RNG).out(sum, sqsum, tilted);
-    
+
     TEST_CYCLE() integral(src, sum, sqsum, tilted, sdepth);
-    
+
     SANITY_CHECK(sum, 1e-6);
     SANITY_CHECK(sqsum, 1e-6);
     SANITY_CHECK(tilted, 1e-6, tilted.depth() > CV_32S ? ERROR_RELATIVE : ERROR_ABSOLUTE);

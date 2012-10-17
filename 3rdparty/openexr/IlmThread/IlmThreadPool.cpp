@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2005, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-// 
+//
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission. 
-// 
+// from this software without specific prior written permission.
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -57,7 +57,7 @@ class WorkerThread: public Thread
     WorkerThread (ThreadPool::Data* data);
 
     virtual void	run ();
-    
+
   private:
 
     ThreadPool::Data *	_data;
@@ -70,10 +70,10 @@ struct TaskGroup::Data
 {
      Data ();
     ~Data ();
-    
+
     void	addTask () ;
     void	removeTask ();
-    
+
     Semaphore	isEmpty;	// used to signal that the taskgroup is empty
     int		numPending;	// number of pending tasks to still execute
 };
@@ -83,7 +83,7 @@ struct ThreadPool::Data
 {
      Data ();
     ~Data();
-    
+
     void	finish ();
     bool	stopped () const;
     void	stop ();
@@ -98,7 +98,7 @@ struct ThreadPool::Data
     Mutex threadMutex;              // mutual exclusion for threads list
     list<WorkerThread*> threads;    // the list of all threads
     size_t numThreads;              // fast access to list size
-    
+
     bool stopping;                  // flag indicating whether to stop threads
     Mutex stopMutex;                // mutual exclusion for stopping flag
 };
@@ -127,23 +127,23 @@ WorkerThread::run ()
 
     while (true)
     {
-	//
+    //
         // Wait for a task to become available
-	//
+    //
 
         _data->taskSemaphore.wait();
 
         {
             Lock taskLock (_data->taskMutex);
-    
-	    //
+
+        //
             // If there is a task pending, pop off the next task in the FIFO
-	    //
+        //
 
             if (_data->numTasks > 0)
             {
                 Task* task = _data->tasks.front();
-		TaskGroup* taskGroup = task->group();
+        TaskGroup* taskGroup = task->group();
                 _data->tasks.pop_front();
                 _data->numTasks--;
 
@@ -155,9 +155,9 @@ WorkerThread::run ()
                 taskGroup->_data->removeTask();
             }
             else if (_data->stopped())
-	    {
+        {
                 break;
-	    }
+        }
         }
     }
 }
@@ -186,7 +186,7 @@ TaskGroup::Data::~Data ()
 
 
 void
-TaskGroup::Data::addTask () 
+TaskGroup::Data::addTask ()
 {
     //
     // Any access to the taskgroup is protected by a mutex that is
@@ -195,7 +195,7 @@ TaskGroup::Data::addTask ()
     //
 
     if (numPending++ == 0)
-	isEmpty.wait ();
+    isEmpty.wait ();
 }
 
 
@@ -203,9 +203,9 @@ void
 TaskGroup::Data::removeTask ()
 {
     if (--numPending == 0)
-	isEmpty.post ();
+    isEmpty.post ();
 }
-    
+
 
 //
 // struct ThreadPool::Data
@@ -243,8 +243,8 @@ ThreadPool::Data::finish ()
 
     for (size_t i = 0; i < numThreads; i++)
     {
-	taskSemaphore.post();
-	threadSemaphore.wait();
+    taskSemaphore.post();
+    threadSemaphore.wait();
     }
 
     //
@@ -252,10 +252,10 @@ ThreadPool::Data::finish ()
     //
 
     for (list<WorkerThread*>::iterator i = threads.begin();
-	 i != threads.end();
-	 ++i)
+     i != threads.end();
+     ++i)
     {
-	delete (*i);
+    delete (*i);
     }
 
     Lock lock1 (taskMutex);
@@ -350,7 +350,7 @@ ThreadPool::setNumThreads (int count)
 {
     if (count < 0)
         throw Iex::ArgExc ("Attempt to set the number of threads "
-			   "in a thread pool to a negative value.");
+               "in a thread pool to a negative value.");
 
     //
     // Lock access to thread list and size
@@ -360,9 +360,9 @@ ThreadPool::setNumThreads (int count)
 
     if ((size_t)count > _data->numThreads)
     {
-	//
+    //
         // Add more threads
-	//
+    //
 
         while (_data->numThreads < (size_t)count)
         {
@@ -372,16 +372,16 @@ ThreadPool::setNumThreads (int count)
     }
     else if ((size_t)count < _data->numThreads)
     {
-	//
-	// Wait until all existing threads are finished processing,
-	// then delete all threads.
-	//
+    //
+    // Wait until all existing threads are finished processing,
+    // then delete all threads.
+    //
 
         _data->finish ();
 
-	//
+    //
         // Add in new threads
-	//
+    //
 
         while (_data->numThreads < (size_t)count)
         {
@@ -393,7 +393,7 @@ ThreadPool::setNumThreads (int count)
 
 
 void
-ThreadPool::addTask (Task* task) 
+ThreadPool::addTask (Task* task)
 {
     //
     // Lock the threads, needed to access numThreads
@@ -408,25 +408,25 @@ ThreadPool::addTask (Task* task)
     }
     else
     {
-	//
+    //
         // Get exclusive access to the tasks queue
-	//
+    //
 
         {
             Lock taskLock (_data->taskMutex);
 
-	    //
+        //
             // Push the new task into the FIFO
-	    //
+        //
 
             _data->tasks.push_back (task);
             _data->numTasks++;
             task->group()->_data->addTask();
         }
-        
-	//
+
+    //
         // Signal that we have a new task to process
-	//
+    //
 
         _data->taskSemaphore.post ();
     }
@@ -439,7 +439,7 @@ ThreadPool::globalThreadPool ()
     //
     // The global thread pool
     //
-    
+
     static ThreadPool gThreadPool (0);
 
     return gThreadPool;

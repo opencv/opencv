@@ -11,7 +11,7 @@
 using namespace cv;
 
 /// Global Variables
-const int NUMBER = 100; 
+const int NUMBER = 100;
 const int DELAY = 5;
 
 const int window_width = 900;
@@ -44,14 +44,14 @@ int main( int argc, char** argv )
   char window_name[] = "Drawing_2 Tutorial";
 
   /// Also create a random object (RNG)
-  RNG rng( 0xFFFFFFFF ); 
+  RNG rng( 0xFFFFFFFF );
 
   /// Initialize a matrix filled with zeros
   Mat image = Mat::zeros( window_height, window_width, CV_8UC3 );
   /// Show it in a window during DELAY ms
-  imshow( window_name, image ); 
+  imshow( window_name, image );
   waitKey( DELAY );
-  
+
   /// Now, let's draw some lines
   c = Drawing_Random_Lines(image, window_name, rng);
   if( c != 0 ) return 0;
@@ -145,7 +145,7 @@ int Drawing_Random_Rectangles( Mat image, char* window_name, RNG rng )
 
     imshow( window_name, image );
     if( waitKey( DELAY ) >= 0 )
-      { return -1; } 
+      { return -1; }
   }
 
   return 0;
@@ -163,7 +163,7 @@ int Drawing_Random_Ellipses( Mat image, char* window_name, RNG rng )
     Point center;
     center.x = rng.uniform(x_1, x_2);
     center.y = rng.uniform(y_1, y_2);
-    
+
     Size axes;
     axes.width = rng.uniform(0, 200);
     axes.height = rng.uniform(0, 200);
@@ -172,10 +172,10 @@ int Drawing_Random_Ellipses( Mat image, char* window_name, RNG rng )
 
     ellipse( image, center, axes, angle, angle - 100, angle + 200,
              randomColor(rng), rng.uniform(-1,9), lineType );
-        
+
     imshow( window_name, image );
-    
-    if( waitKey(DELAY) >= 0 ) 
+
+    if( waitKey(DELAY) >= 0 )
       { return -1; }
   }
 
@@ -194,28 +194,28 @@ int Drawing_Random_Polylines( Mat image, char* window_name, RNG rng )
     Point pt[2][3];
     pt[0][0].x = rng.uniform(x_1, x_2);
     pt[0][0].y = rng.uniform(y_1, y_2);
-    pt[0][1].x = rng.uniform(x_1, x_2); 
-    pt[0][1].y = rng.uniform(y_1, y_2); 
+    pt[0][1].x = rng.uniform(x_1, x_2);
+    pt[0][1].y = rng.uniform(y_1, y_2);
     pt[0][2].x = rng.uniform(x_1, x_2);
     pt[0][2].y = rng.uniform(y_1, y_2);
-    pt[1][0].x = rng.uniform(x_1, x_2); 
+    pt[1][0].x = rng.uniform(x_1, x_2);
     pt[1][0].y = rng.uniform(y_1, y_2);
-    pt[1][1].x = rng.uniform(x_1, x_2); 
+    pt[1][1].x = rng.uniform(x_1, x_2);
     pt[1][1].y = rng.uniform(y_1, y_2);
-    pt[1][2].x = rng.uniform(x_1, x_2); 
+    pt[1][2].x = rng.uniform(x_1, x_2);
     pt[1][2].y = rng.uniform(y_1, y_2);
 
     const Point* ppt[2] = {pt[0], pt[1]};
     int npt[] = {3, 3};
-        
+
     polylines(image, ppt, npt, 2, true, randomColor(rng), rng.uniform(1,10), lineType);
-        
+
     imshow( window_name, image );
     if( waitKey(DELAY) >= 0 )
       { return -1; }
   }
   return 0;
-}    
+}
 
 /**
  * @function Drawing_Random_Filled_Polygons
@@ -229,22 +229,22 @@ int Drawing_Random_Filled_Polygons( Mat image, char* window_name, RNG rng )
     Point pt[2][3];
     pt[0][0].x = rng.uniform(x_1, x_2);
     pt[0][0].y = rng.uniform(y_1, y_2);
-    pt[0][1].x = rng.uniform(x_1, x_2); 
-    pt[0][1].y = rng.uniform(y_1, y_2); 
+    pt[0][1].x = rng.uniform(x_1, x_2);
+    pt[0][1].y = rng.uniform(y_1, y_2);
     pt[0][2].x = rng.uniform(x_1, x_2);
     pt[0][2].y = rng.uniform(y_1, y_2);
-    pt[1][0].x = rng.uniform(x_1, x_2); 
+    pt[1][0].x = rng.uniform(x_1, x_2);
     pt[1][0].y = rng.uniform(y_1, y_2);
-    pt[1][1].x = rng.uniform(x_1, x_2); 
+    pt[1][1].x = rng.uniform(x_1, x_2);
     pt[1][1].y = rng.uniform(y_1, y_2);
-    pt[1][2].x = rng.uniform(x_1, x_2); 
+    pt[1][2].x = rng.uniform(x_1, x_2);
     pt[1][2].y = rng.uniform(y_1, y_2);
 
     const Point* ppt[2] = {pt[0], pt[1]};
     int npt[] = {3, 3};
-        
+
     fillPoly( image, ppt, npt, 2, randomColor(rng), lineType );
-        
+
     imshow( window_name, image );
     if( waitKey(DELAY) >= 0 )
        { return -1; }
@@ -264,10 +264,10 @@ int Drawing_Random_Circles( Mat image, char* window_name, RNG rng )
     Point center;
     center.x = rng.uniform(x_1, x_2);
     center.y = rng.uniform(y_1, y_2);
-        
+
     circle( image, center, rng.uniform(0, 300), randomColor(rng),
             rng.uniform(-1, 9), lineType );
-        
+
     imshow( window_name, image );
     if( waitKey(DELAY) >= 0 )
       { return -1; }
@@ -291,7 +291,7 @@ int Displaying_Random_Text( Mat image, char* window_name, RNG rng )
 
     putText( image, "Testing text rendering", org, rng.uniform(0,8),
              rng.uniform(0,100)*0.05+0.1, randomColor(rng), rng.uniform(1, 10), lineType);
-        
+
     imshow( window_name, image );
     if( waitKey(DELAY) >= 0 )
       { return -1; }
@@ -308,7 +308,7 @@ int Displaying_Big_End( Mat image, char* window_name, RNG rng )
   Size textsize = getTextSize("OpenCV forever!", CV_FONT_HERSHEY_COMPLEX, 3, 5, 0);
   Point org((window_width - textsize.width)/2, (window_height - textsize.height)/2);
   int lineType = 8;
-    
+
   Mat image2;
 
   for( int i = 0; i < 255; i += 2 )
@@ -316,7 +316,7 @@ int Displaying_Big_End( Mat image, char* window_name, RNG rng )
     image2 = image - Scalar::all(i);
     putText( image2, "OpenCV forever!", org, CV_FONT_HERSHEY_COMPLEX, 3,
              Scalar(i, i, 255), 5, lineType );
-        
+
     imshow( window_name, image2 );
     if( waitKey(DELAY) >= 0 )
        { return -1; }

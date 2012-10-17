@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2002, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-// 
+//
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission. 
-// 
+// from this software without specific prior written permission.
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -56,7 +56,7 @@
 //	    size<S>();			returns the size, in bytes, of the
 //					machine-independent representation
 //					of an object of type S.
-//					
+//
 //	The write() and read() routines are templates; data can be written
 //	to and read from any output or input buffer type T for which a helper
 //	class, R, exits.  Class R must define a method to store a char array
@@ -425,31 +425,31 @@ write (T &out, signed long v)
 
     #if LONG_MAX == 2147483647
 
-	if (v >= 0)
-	{
-	    b[4] = 0;
-	    b[5] = 0;
-	    b[6] = 0;
-	    b[7] = 0;
-	}
-	else
-	{
-	    b[4] = ~0;
-	    b[5] = ~0;
-	    b[6] = ~0;
-	    b[7] = ~0;
-	}
+    if (v >= 0)
+    {
+        b[4] = 0;
+        b[5] = 0;
+        b[6] = 0;
+        b[7] = 0;
+    }
+    else
+    {
+        b[4] = ~0;
+        b[5] = ~0;
+        b[6] = ~0;
+        b[7] = ~0;
+    }
 
     #elif LONG_MAX == 9223372036854775807L
 
-	b[4] = (signed char) (v >> 32);
-	b[5] = (signed char) (v >> 40);
-	b[6] = (signed char) (v >> 48);
-	b[7] = (signed char) (v >> 56);
+    b[4] = (signed char) (v >> 32);
+    b[5] = (signed char) (v >> 40);
+    b[6] = (signed char) (v >> 48);
+    b[7] = (signed char) (v >> 56);
 
     #else
-	
-	#error write<T> (T &out, signed long v) not implemented
+
+    #error write<T> (T &out, signed long v) not implemented
 
     #endif
 
@@ -470,21 +470,21 @@ write (T &out, unsigned long v)
 
     #if ULONG_MAX == 4294967295U
 
-	b[4] = 0;
-	b[5] = 0;
-	b[6] = 0;
-	b[7] = 0;
+    b[4] = 0;
+    b[5] = 0;
+    b[6] = 0;
+    b[7] = 0;
 
     #elif ULONG_MAX == 18446744073709551615LU
 
-	b[4] = (unsigned char) (v >> 32);
-	b[5] = (unsigned char) (v >> 40);
-	b[6] = (unsigned char) (v >> 48);
-	b[7] = (unsigned char) (v >> 56);
+    b[4] = (unsigned char) (v >> 32);
+    b[5] = (unsigned char) (v >> 40);
+    b[6] = (unsigned char) (v >> 48);
+    b[7] = (unsigned char) (v >> 56);
 
     #else
-	
-	#error write<T> (T &out, unsigned long v) not implemented
+
+    #error write<T> (T &out, unsigned long v) not implemented
 
     #endif
 
@@ -582,8 +582,8 @@ write (T &out, const char v[])		// zero-terminated string
 {
     while (*v)
     {
-	S::writeChars (out, v, 1);
-	++v;
+    S::writeChars (out, v, 1);
+    ++v;
     }
 
     S::writeChars (out, v, 1);
@@ -596,8 +596,8 @@ pad (T &out, int n)			// add n padding bytes
 {
     for (int i = 0; i < n; i++)
     {
-	const char c = 0;
-	S::writeChars (out, &c, 1);
+    const char c = 0;
+    S::writeChars (out, &c, 1);
     }
 }
 
@@ -646,7 +646,7 @@ read (T &in, signed short &v)
     readSignedChars<S> (in, b, 2);
 
     v = (b[0] & 0x00ff) |
-	(b[1] << 8);
+    (b[1] << 8);
 }
 
 
@@ -659,7 +659,7 @@ read (T &in, unsigned short &v)
     readUnsignedChars<S> (in, b, 2);
 
     v = (b[0] & 0x00ff) |
-	(b[1] << 8);
+    (b[1] << 8);
 }
 
 
@@ -672,9 +672,9 @@ read (T &in, signed int &v)
     readSignedChars<S> (in, b, 4);
 
     v =  (b[0]        & 0x000000ff) |
-	((b[1] << 8)  & 0x0000ff00) |
-	((b[2] << 16) & 0x00ff0000) |
-	 (b[3] << 24);
+    ((b[1] << 8)  & 0x0000ff00) |
+    ((b[2] << 16) & 0x00ff0000) |
+     (b[3] << 24);
 }
 
 
@@ -687,9 +687,9 @@ read (T &in, unsigned int &v)
     readUnsignedChars<S> (in, b, 4);
 
     v =  (b[0]        & 0x000000ff) |
-	((b[1] << 8)  & 0x0000ff00) |
-	((b[2] << 16) & 0x00ff0000) |
-	 (b[3] << 24);
+    ((b[1] << 8)  & 0x0000ff00) |
+    ((b[2] << 16) & 0x00ff0000) |
+     (b[3] << 24);
 }
 
 
@@ -703,32 +703,32 @@ read (T &in, signed long &v)
 
     #if LONG_MAX == 2147483647
 
-	v =  (b[0]        & 0x000000ff) |
-	    ((b[1] << 8)  & 0x0000ff00) |
-	    ((b[2] << 16) & 0x00ff0000) |
-	     (b[3] << 24);
+    v =  (b[0]        & 0x000000ff) |
+        ((b[1] << 8)  & 0x0000ff00) |
+        ((b[2] << 16) & 0x00ff0000) |
+         (b[3] << 24);
 
-	if (( b[4] ||  b[5] ||  b[6] ||  b[7]) &&
-	    (~b[4] || ~b[5] || ~b[6] || ~b[7]))
-	{
-	    throw Iex::OverflowExc ("Long int overflow - read a large "
-				    "64-bit integer in a 32-bit process.");
-	}
+    if (( b[4] ||  b[5] ||  b[6] ||  b[7]) &&
+        (~b[4] || ~b[5] || ~b[6] || ~b[7]))
+    {
+        throw Iex::OverflowExc ("Long int overflow - read a large "
+                    "64-bit integer in a 32-bit process.");
+    }
 
     #elif LONG_MAX == 9223372036854775807L
 
-	v =  ((long) b[0]        & 0x00000000000000ff) |
-	    (((long) b[1] << 8)  & 0x000000000000ff00) |
-	    (((long) b[2] << 16) & 0x0000000000ff0000) |
-	    (((long) b[3] << 24) & 0x00000000ff000000) |
-	    (((long) b[4] << 32) & 0x000000ff00000000) |
-	    (((long) b[5] << 40) & 0x0000ff0000000000) |
-	    (((long) b[6] << 48) & 0x00ff000000000000) |
-	     ((long) b[7] << 56);
+    v =  ((long) b[0]        & 0x00000000000000ff) |
+        (((long) b[1] << 8)  & 0x000000000000ff00) |
+        (((long) b[2] << 16) & 0x0000000000ff0000) |
+        (((long) b[3] << 24) & 0x00000000ff000000) |
+        (((long) b[4] << 32) & 0x000000ff00000000) |
+        (((long) b[5] << 40) & 0x0000ff0000000000) |
+        (((long) b[6] << 48) & 0x00ff000000000000) |
+         ((long) b[7] << 56);
 
     #else
 
-	#error read<T> (T &in, signed long &v) not implemented
+    #error read<T> (T &in, signed long &v) not implemented
 
     #endif
 }
@@ -744,31 +744,31 @@ read (T &in, unsigned long &v)
 
     #if ULONG_MAX == 4294967295U
 
-	v =  (b[0]        & 0x000000ff) |
-	    ((b[1] << 8)  & 0x0000ff00) |
-	    ((b[2] << 16) & 0x00ff0000) |
-	     (b[3] << 24);
+    v =  (b[0]        & 0x000000ff) |
+        ((b[1] << 8)  & 0x0000ff00) |
+        ((b[2] << 16) & 0x00ff0000) |
+         (b[3] << 24);
 
-	if (b[4] || b[5] || b[6] || b[7])
-	{
-	    throw Iex::OverflowExc ("Long int overflow - read a large "
-				    "64-bit integer in a 32-bit process.");
-	}
+    if (b[4] || b[5] || b[6] || b[7])
+    {
+        throw Iex::OverflowExc ("Long int overflow - read a large "
+                    "64-bit integer in a 32-bit process.");
+    }
 
     #elif ULONG_MAX == 18446744073709551615LU
 
-	v =  ((unsigned long) b[0]        & 0x00000000000000ff) |
-	    (((unsigned long) b[1] << 8)  & 0x000000000000ff00) |
-	    (((unsigned long) b[2] << 16) & 0x0000000000ff0000) |
-	    (((unsigned long) b[3] << 24) & 0x00000000ff000000) |
-	    (((unsigned long) b[4] << 32) & 0x000000ff00000000) |
-	    (((unsigned long) b[5] << 40) & 0x0000ff0000000000) |
-	    (((unsigned long) b[6] << 48) & 0x00ff000000000000) |
-	     ((unsigned long) b[7] << 56);
+    v =  ((unsigned long) b[0]        & 0x00000000000000ff) |
+        (((unsigned long) b[1] << 8)  & 0x000000000000ff00) |
+        (((unsigned long) b[2] << 16) & 0x0000000000ff0000) |
+        (((unsigned long) b[3] << 24) & 0x00000000ff000000) |
+        (((unsigned long) b[4] << 32) & 0x000000ff00000000) |
+        (((unsigned long) b[5] << 40) & 0x0000ff0000000000) |
+        (((unsigned long) b[6] << 48) & 0x00ff000000000000) |
+         ((unsigned long) b[7] << 56);
 
     #else
 
-	#error read<T> (T &in, unsigned long &v) not implemented
+    #error read<T> (T &in, unsigned long &v) not implemented
 
     #endif
 }
@@ -785,13 +785,13 @@ read (T &in, unsigned long &v)
         readUnsignedChars<S> (in, b, 8);
 
         v =  ((Int64) b[0]        & 0x00000000000000ffLL) |
-	    (((Int64) b[1] << 8)  & 0x000000000000ff00LL) |
-	    (((Int64) b[2] << 16) & 0x0000000000ff0000LL) |
-	    (((Int64) b[3] << 24) & 0x00000000ff000000LL) |
-	    (((Int64) b[4] << 32) & 0x000000ff00000000LL) |
-	    (((Int64) b[5] << 40) & 0x0000ff0000000000LL) |
-	    (((Int64) b[6] << 48) & 0x00ff000000000000LL) |
-	    ((Int64) b[7] << 56);
+        (((Int64) b[1] << 8)  & 0x000000000000ff00LL) |
+        (((Int64) b[2] << 16) & 0x0000000000ff0000LL) |
+        (((Int64) b[3] << 24) & 0x00000000ff000000LL) |
+        (((Int64) b[4] << 32) & 0x000000ff00000000LL) |
+        (((Int64) b[5] << 40) & 0x0000ff0000000000LL) |
+        (((Int64) b[6] << 48) & 0x00ff000000000000LL) |
+        ((Int64) b[7] << 56);
     }
 
 #endif
@@ -808,9 +808,9 @@ read (T &in, float &v)
     union {unsigned int i; float f;} u;
 
     u.i = (b[0]        & 0x000000ff) |
-	 ((b[1] << 8)  & 0x0000ff00) |
-	 ((b[2] << 16) & 0x00ff0000) |
-	  (b[3] << 24);
+     ((b[1] << 8)  & 0x0000ff00) |
+     ((b[2] << 16) & 0x00ff0000) |
+      (b[3] << 24);
 
     v = u.f;
 }
@@ -827,13 +827,13 @@ read (T &in, double &v)
     union {Int64 i; double d;} u;
 
     u.i = ((Int64) b[0]        & 0x00000000000000ffULL) |
-	 (((Int64) b[1] << 8)  & 0x000000000000ff00ULL) |
-	 (((Int64) b[2] << 16) & 0x0000000000ff0000ULL) |
-	 (((Int64) b[3] << 24) & 0x00000000ff000000ULL) |
-	 (((Int64) b[4] << 32) & 0x000000ff00000000ULL) |
-	 (((Int64) b[5] << 40) & 0x0000ff0000000000ULL) |
-	 (((Int64) b[6] << 48) & 0x00ff000000000000ULL) |
-	  ((Int64) b[7] << 56);
+     (((Int64) b[1] << 8)  & 0x000000000000ff00ULL) |
+     (((Int64) b[2] << 16) & 0x0000000000ff0000ULL) |
+     (((Int64) b[3] << 24) & 0x00000000ff000000ULL) |
+     (((Int64) b[4] << 32) & 0x000000ff00000000ULL) |
+     (((Int64) b[5] << 40) & 0x0000ff0000000000ULL) |
+     (((Int64) b[6] << 48) & 0x00ff000000000000ULL) |
+      ((Int64) b[7] << 56);
 
     v = u.d;
 }
@@ -865,13 +865,13 @@ read (T &in, int n, char v[])		// zero-terminated string
 {
     while (n >= 0)
     {
-	S::readChars (in, v, 1);
+    S::readChars (in, v, 1);
 
-	if (*v == 0)
-	    break;
+    if (*v == 0)
+        break;
 
-	--n;
-	++v;
+    --n;
+    ++v;
     }
 }
 
@@ -884,14 +884,14 @@ skip (T &in, int n)			// skip n padding bytes
 
     while (n >= (int) sizeof (c))
     {
-	if (!S::readChars (in, c, sizeof (c)))
-	    return;
+    if (!S::readChars (in, c, sizeof (c)))
+        return;
 
-	n -= sizeof (c);
+    n -= sizeof (c);
     }
 
     if (n >= 1)
-	S::readChars (in, c, n);
+    S::readChars (in, c, n);
 }
 
 

@@ -46,11 +46,11 @@ public class ManagerActivity extends Activity
         OsVersionView.setText(Build.VERSION.CODENAME + " (" + Build.VERSION.RELEASE + "), API " + Build.VERSION.SDK_INT);
 
         try {
-        	PackageInfo packageInfo = getPackageManager().getPackageInfo(this.getPackageName(), 0);
-        	ManagerVersion = packageInfo.versionName;
+            PackageInfo packageInfo = getPackageManager().getPackageInfo(this.getPackageName(), 0);
+            ManagerVersion = packageInfo.versionName;
         } catch (NameNotFoundException e) {
-        	ManagerVersion = "N/A";
-        	e.printStackTrace();
+            ManagerVersion = "N/A";
+            e.printStackTrace();
         }
 
         mInstalledPackageView = (ListView)findViewById(R.id.InstalledPackageList);
@@ -58,12 +58,12 @@ public class ManagerActivity extends Activity
         mMarket = new MarketConnector(this);
 
         mInstalledPacksAdapter = new PackageListAdapter(
-        	    this,
-        	    mListViewItems,
-        	    R.layout.info,
-        	    new String[] {"Name", "Version", "Hardware", "Activity"},
-        	    new int[] {R.id.InfoName,R.id.InfoVersion, R.id.InfoHardware}
-        	    );
+                this,
+                mListViewItems,
+                R.layout.info,
+                new String[] {"Name", "Version", "Hardware", "Activity"},
+                new int[] {R.id.InfoName,R.id.InfoVersion, R.id.InfoHardware}
+                );
 
         mInstalledPackageView.setAdapter(mInstalledPacksAdapter);
 
@@ -73,65 +73,65 @@ public class ManagerActivity extends Activity
 
         if (HardwareDetector.PLATFORM_UNKNOWN != Platfrom)
         {
-        	if (HardwareDetector.PLATFORM_TEGRA == Platfrom)
-        	{
-        		HardwarePlatformView.setText("Tegra");
-        	}
-        	else if (HardwareDetector.PLATFORM_TEGRA == Platfrom)
-        	{
-        		HardwarePlatformView.setText("Tegra 2");
-        	}
-        	else
-        	{
-        		HardwarePlatformView.setText("Tegra 3");
-        	}
+            if (HardwareDetector.PLATFORM_TEGRA == Platfrom)
+            {
+                HardwarePlatformView.setText("Tegra");
+            }
+            else if (HardwareDetector.PLATFORM_TEGRA == Platfrom)
+            {
+                HardwarePlatformView.setText("Tegra 2");
+            }
+            else
+            {
+                HardwarePlatformView.setText("Tegra 3");
+            }
         }
         else
         {
-        	if ((CpuId & HardwareDetector.ARCH_X86) == HardwareDetector.ARCH_X86) 
-        	{
-        		HardwarePlatformView.setText("x86 " + JoinIntelFeatures(CpuId));
-        	}
-        	else if ((CpuId & HardwareDetector.ARCH_X64) == HardwareDetector.ARCH_X64)
-        	{
-        		HardwarePlatformView.setText("x64 " + JoinIntelFeatures(CpuId));
-        	}
-        	else if ((CpuId & HardwareDetector.ARCH_ARMv5) == HardwareDetector.ARCH_ARMv5)
-        	{
-        		HardwarePlatformView.setText("ARM v5 " + JoinArmFeatures(CpuId));
-        	}
-        	else if ((CpuId & HardwareDetector.ARCH_ARMv6) == HardwareDetector.ARCH_ARMv6)
-        	{
-        		HardwarePlatformView.setText("ARM v6 " + JoinArmFeatures(CpuId));
-        	}
-        	else if ((CpuId & HardwareDetector.ARCH_ARMv7) == HardwareDetector.ARCH_ARMv7)
-        	{
-        		HardwarePlatformView.setText("ARM v7 " + JoinArmFeatures(CpuId));
-        	}
-        	else if ((CpuId & HardwareDetector.ARCH_ARMv8) == HardwareDetector.ARCH_ARMv8)
-        	{
-        		HardwarePlatformView.setText("ARM v8 " + JoinArmFeatures(CpuId));
-        	}
-        	else if ((CpuId & HardwareDetector.ARCH_MIPS) == HardwareDetector.ARCH_MIPS)
-        	{
-        		HardwarePlatformView.setText("MIPS");
-        	}
-        	else
-        	{
-        		HardwarePlatformView.setText("not detected");
-        	}
+            if ((CpuId & HardwareDetector.ARCH_X86) == HardwareDetector.ARCH_X86)
+            {
+                HardwarePlatformView.setText("x86 " + JoinIntelFeatures(CpuId));
+            }
+            else if ((CpuId & HardwareDetector.ARCH_X64) == HardwareDetector.ARCH_X64)
+            {
+                HardwarePlatformView.setText("x64 " + JoinIntelFeatures(CpuId));
+            }
+            else if ((CpuId & HardwareDetector.ARCH_ARMv5) == HardwareDetector.ARCH_ARMv5)
+            {
+                HardwarePlatformView.setText("ARM v5 " + JoinArmFeatures(CpuId));
+            }
+            else if ((CpuId & HardwareDetector.ARCH_ARMv6) == HardwareDetector.ARCH_ARMv6)
+            {
+                HardwarePlatformView.setText("ARM v6 " + JoinArmFeatures(CpuId));
+            }
+            else if ((CpuId & HardwareDetector.ARCH_ARMv7) == HardwareDetector.ARCH_ARMv7)
+            {
+                HardwarePlatformView.setText("ARM v7 " + JoinArmFeatures(CpuId));
+            }
+            else if ((CpuId & HardwareDetector.ARCH_ARMv8) == HardwareDetector.ARCH_ARMv8)
+            {
+                HardwarePlatformView.setText("ARM v8 " + JoinArmFeatures(CpuId));
+            }
+            else if ((CpuId & HardwareDetector.ARCH_MIPS) == HardwareDetector.ARCH_MIPS)
+            {
+                HardwarePlatformView.setText("MIPS");
+            }
+            else
+            {
+                HardwarePlatformView.setText("not detected");
+            }
         }
 
         mUpdateEngineButton = (Button)findViewById(R.id.CheckEngineUpdate);
         mUpdateEngineButton.setOnClickListener(new OnClickListener() {
 
-        	public void onClick(View v) {
-        		if (!mMarket.InstallAppFromMarket("org.opencv.engine"))
-        		{
-        			Toast toast = Toast.makeText(getApplicationContext(), "Google Play is not avaliable", Toast.LENGTH_SHORT);
-        			toast.show();
-        		}
-        	}
+            public void onClick(View v) {
+                if (!mMarket.InstallAppFromMarket("org.opencv.engine"))
+                {
+                    Toast toast = Toast.makeText(getApplicationContext(), "Google Play is not avaliable", Toast.LENGTH_SHORT);
+                    toast.show();
+                }
+            }
         });
 
         mActionDialog = new AlertDialog.Builder(this).create();
@@ -139,41 +139,41 @@ public class ManagerActivity extends Activity
         mActionDialog.setTitle("Choose action");
         mActionDialog.setButton("Update", new DialogInterface.OnClickListener() {
 
-        	public void onClick(DialogInterface dialog, int which) {
-        		int index = (Integer)mInstalledPackageView.getTag();
-        		if (!mMarket.InstallAppFromMarket(mInstalledPackageInfo[index].packageName))
-        		{
-        			Toast toast = Toast.makeText(getApplicationContext(), "Google Play is not avaliable", Toast.LENGTH_SHORT);
-        			toast.show();
-        		}
-        	}
+            public void onClick(DialogInterface dialog, int which) {
+                int index = (Integer)mInstalledPackageView.getTag();
+                if (!mMarket.InstallAppFromMarket(mInstalledPackageInfo[index].packageName))
+                {
+                    Toast toast = Toast.makeText(getApplicationContext(), "Google Play is not avaliable", Toast.LENGTH_SHORT);
+                    toast.show();
+                }
+            }
         });
 
         mActionDialog.setButton3("Remove", new DialogInterface.OnClickListener() {
 
-        	public void onClick(DialogInterface dialog, int which) {
-        		int index = (Integer)mInstalledPackageView.getTag();
-        		if (!mMarket.RemoveAppFromMarket(mInstalledPackageInfo[index].packageName, true))
-        		{
-        			Toast toast = Toast.makeText(getApplicationContext(), "Google Play is not avaliable", Toast.LENGTH_SHORT);
-        			toast.show();
-        		}
-        	}
-		});
+            public void onClick(DialogInterface dialog, int which) {
+                int index = (Integer)mInstalledPackageView.getTag();
+                if (!mMarket.RemoveAppFromMarket(mInstalledPackageInfo[index].packageName, true))
+                {
+                    Toast toast = Toast.makeText(getApplicationContext(), "Google Play is not avaliable", Toast.LENGTH_SHORT);
+                    toast.show();
+                }
+            }
+        });
 
         mActionDialog.setButton2("Return", new DialogInterface.OnClickListener() {
 
-			public void onClick(DialogInterface dialog, int which) {
-				// nothing
-			}
-		});
+            public void onClick(DialogInterface dialog, int which) {
+                // nothing
+            }
+        });
 
         mInstalledPackageView.setOnItemClickListener(new OnItemClickListener() {
-        	
-        	public void onItemClick(AdapterView<?> arg0, View arg1, int arg2, long id) {
-        		mInstalledPackageView.setTag(Integer.valueOf((int)id));
-        		mActionDialog.show();
-        	}
+
+            public void onItemClick(AdapterView<?> arg0, View arg1, int arg2, long id) {
+                mInstalledPackageView.setTag(Integer.valueOf((int)id));
+                mActionDialog.show();
+            }
         });
 
         IntentFilter filter = new IntentFilter();
@@ -188,18 +188,18 @@ public class ManagerActivity extends Activity
 
     @Override
     protected void onDestroy() {
-    	super.onDestroy();
-    	unregisterReceiver(mPackageChangeReciever);
+        super.onDestroy();
+        unregisterReceiver(mPackageChangeReciever);
     }
 
     @Override
     protected void onResume() {
-    	super.onResume();
-    	Log.d(TAG, "Filling package list on resume");
+        super.onResume();
+        Log.d(TAG, "Filling package list on resume");
         if (!bindService(new Intent("org.opencv.engine.BIND"), new OpenCVEngineServiceConnection(), Context.BIND_AUTO_CREATE))
         {
-        	TextView EngineVersionView = (TextView)findViewById(R.id.EngineVersionValue);
-        	EngineVersionView.setText("not avaliable");
+            TextView EngineVersionView = (TextView)findViewById(R.id.EngineVersionValue);
+            EngineVersionView.setText("not avaliable");
         }
     }
 
@@ -217,161 +217,161 @@ public class ManagerActivity extends Activity
 
     protected BroadcastReceiver mPackageChangeReciever = new BroadcastReceiver() {
 
-		@Override
-		public void onReceive(Context context, Intent intent) {
-			Log.d("OpenCVManager/Reciever", "Bradcast message " + intent.getAction() + " reciever");
-			Log.d("OpenCVManager/Reciever", "Filling package list on broadcast message");
-	        if (!bindService(new Intent("org.opencv.engine.BIND"), new OpenCVEngineServiceConnection(), Context.BIND_AUTO_CREATE))
-	        {
-	        	TextView EngineVersionView = (TextView)findViewById(R.id.EngineVersionValue);
-	        	EngineVersionView.setText("not avaliable");
-	        }
-		}
-	};
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            Log.d("OpenCVManager/Reciever", "Bradcast message " + intent.getAction() + " reciever");
+            Log.d("OpenCVManager/Reciever", "Filling package list on broadcast message");
+            if (!bindService(new Intent("org.opencv.engine.BIND"), new OpenCVEngineServiceConnection(), Context.BIND_AUTO_CREATE))
+            {
+                TextView EngineVersionView = (TextView)findViewById(R.id.EngineVersionValue);
+                EngineVersionView.setText("not avaliable");
+            }
+        }
+    };
 
     protected class OpenCVEngineServiceConnection implements ServiceConnection
     {
-		public void onServiceDisconnected(ComponentName name) {
-			// TODO Auto-generated method stub
-			
-		}
+        public void onServiceDisconnected(ComponentName name) {
+            // TODO Auto-generated method stub
 
-		public void onServiceConnected(ComponentName name, IBinder service) {
-			OpenCVEngineInterface EngineService = OpenCVEngineInterface.Stub.asInterface(service);
-			try {
-				ManagerApiLevel = EngineService.getEngineVersion();
-			} catch (RemoteException e) {
-				e.printStackTrace();
-			}
+        }
 
-			TextView EngineVersionView = (TextView)findViewById(R.id.EngineVersionValue);
-			EngineVersionView.setText(ManagerVersion);
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            OpenCVEngineInterface EngineService = OpenCVEngineInterface.Stub.asInterface(service);
+            try {
+                ManagerApiLevel = EngineService.getEngineVersion();
+            } catch (RemoteException e) {
+                e.printStackTrace();
+            }
 
-			try {
-				String path = EngineService.getLibPathByVersion("2.4");
-				Log.d(TAG, "2.4 -> " + path);
-				mActivePackageMap.put("24", path);
-				path = EngineService.getLibPathByVersion("2.5");
-				Log.d(TAG, "2.5 -> " + path);
-				mActivePackageMap.put("25", path);
-			} catch (RemoteException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+            TextView EngineVersionView = (TextView)findViewById(R.id.EngineVersionValue);
+            EngineVersionView.setText(ManagerVersion);
 
-			Log.d(TAG, "Filling package list on service connection");
-			FillPackageList();
+            try {
+                String path = EngineService.getLibPathByVersion("2.4");
+                Log.d(TAG, "2.4 -> " + path);
+                mActivePackageMap.put("24", path);
+                path = EngineService.getLibPathByVersion("2.5");
+                Log.d(TAG, "2.5 -> " + path);
+                mActivePackageMap.put("25", path);
+            } catch (RemoteException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
 
-			unbindService(this);
-		}
-	};
-	
-	synchronized protected void FillPackageList()
-	{
-		synchronized (mListViewItems) {
-			mMarket.mIncludeManager = false;
-			mInstalledPackageInfo = mMarket.GetInstalledOpenCVPackages();
-	        mListViewItems.clear();
+            Log.d(TAG, "Filling package list on service connection");
+            FillPackageList();
 
-	        for (int i = 0; i < mInstalledPackageInfo.length; i++)
-	        {
-	        	// Convert to Items for package list view
-	        	HashMap<String,String> temp = new HashMap<String,String>();
-	        	String PublicName = mMarket.GetApplicationName(mInstalledPackageInfo[i].applicationInfo);
+            unbindService(this);
+        }
+    };
 
-	            int idx = 0;
-	            String OpenCVersion = "unknown";
-	            String HardwareName = "";
-	            StringTokenizer tokenizer = new StringTokenizer(mInstalledPackageInfo[i].packageName, "_");
-	            while (tokenizer.hasMoreTokens())
-	            {
-	            	if (idx == 1)
-	            	{
-	            		// version of OpenCV
-	            		OpenCVersion = tokenizer.nextToken().substring(1);
-	            	}
-	            	else if (idx >= 2)
-	            	{
-	            		// hardware options
-	            		HardwareName += tokenizer.nextToken() + " ";
-	            	}
-	            	else
-	            	{
-	            		tokenizer.nextToken();
-	            	}
-	            	idx++;
-	            }
+    synchronized protected void FillPackageList()
+    {
+        synchronized (mListViewItems) {
+            mMarket.mIncludeManager = false;
+            mInstalledPackageInfo = mMarket.GetInstalledOpenCVPackages();
+            mListViewItems.clear();
 
-	            String ActivePackagePath;
-	           	ActivePackagePath = mActivePackageMap.get(OpenCVersion);
-	            Log.d(TAG, OpenCVersion + " -> " + ActivePackagePath);
+            for (int i = 0; i < mInstalledPackageInfo.length; i++)
+            {
+                // Convert to Items for package list view
+                HashMap<String,String> temp = new HashMap<String,String>();
+                String PublicName = mMarket.GetApplicationName(mInstalledPackageInfo[i].applicationInfo);
 
-	            if (null != ActivePackagePath)
-	            {
-	            	int start = ActivePackagePath.indexOf(mInstalledPackageInfo[i].packageName);
-	            	int stop = start + mInstalledPackageInfo[i].packageName.length();
-	            	if (start >= 0 && ActivePackagePath.charAt(stop) == '/')
-	            	{
-	            		temp.put("Activity", "y");
-	            		PublicName += " (in use)";
-	            	}
-	            	else
-	            	{
-	            		temp.put("Activity", "n");
-	            	}
-	            }
-	            else
-	            {
-	            	temp.put("Activity", "n");
-	            }
+                int idx = 0;
+                String OpenCVersion = "unknown";
+                String HardwareName = "";
+                StringTokenizer tokenizer = new StringTokenizer(mInstalledPackageInfo[i].packageName, "_");
+                while (tokenizer.hasMoreTokens())
+                {
+                    if (idx == 1)
+                    {
+                        // version of OpenCV
+                        OpenCVersion = tokenizer.nextToken().substring(1);
+                    }
+                    else if (idx >= 2)
+                    {
+                        // hardware options
+                        HardwareName += tokenizer.nextToken() + " ";
+                    }
+                    else
+                    {
+                        tokenizer.nextToken();
+                    }
+                    idx++;
+                }
 
-	            temp.put("Name", PublicName);
-	            temp.put("Version", NormalizeVersion(OpenCVersion, mInstalledPackageInfo[i].versionName));
-	        	temp.put("Hardware", HardwareName);
-	        	mListViewItems.add(temp);
-	        }
+                String ActivePackagePath;
+                ActivePackagePath = mActivePackageMap.get(OpenCVersion);
+                Log.d(TAG, OpenCVersion + " -> " + ActivePackagePath);
 
-	        mInstalledPacksAdapter.notifyDataSetChanged();
-		}
-	}
+                if (null != ActivePackagePath)
+                {
+                    int start = ActivePackagePath.indexOf(mInstalledPackageInfo[i].packageName);
+                    int stop = start + mInstalledPackageInfo[i].packageName.length();
+                    if (start >= 0 && ActivePackagePath.charAt(stop) == '/')
+                    {
+                        temp.put("Activity", "y");
+                        PublicName += " (in use)";
+                    }
+                    else
+                    {
+                        temp.put("Activity", "n");
+                    }
+                }
+                else
+                {
+                    temp.put("Activity", "n");
+                }
 
-	protected String NormalizeVersion(String OpenCVersion, String PackageVersion)
-	{
-		int dot = PackageVersion.indexOf(".");
-		return OpenCVersion.substring(0,  OpenCVersion.length()-1) + "." +
-			OpenCVersion.toCharArray()[OpenCVersion.length()-1] + "." +
-			PackageVersion.substring(0, dot) + " rev " + PackageVersion.substring(dot+1);
-	}
+                temp.put("Name", PublicName);
+                temp.put("Version", NormalizeVersion(OpenCVersion, mInstalledPackageInfo[i].versionName));
+                temp.put("Hardware", HardwareName);
+                mListViewItems.add(temp);
+            }
+
+            mInstalledPacksAdapter.notifyDataSetChanged();
+        }
+    }
+
+    protected String NormalizeVersion(String OpenCVersion, String PackageVersion)
+    {
+        int dot = PackageVersion.indexOf(".");
+        return OpenCVersion.substring(0,  OpenCVersion.length()-1) + "." +
+            OpenCVersion.toCharArray()[OpenCVersion.length()-1] + "." +
+            PackageVersion.substring(0, dot) + " rev " + PackageVersion.substring(dot+1);
+    }
 
     protected String ConvertPackageName(String Name, String Version)
     {
-    	return Name + " rev " + Version;
+        return Name + " rev " + Version;
     }
 
     protected String JoinIntelFeatures(int features)
     {
-    	// TODO: update if package will be published
-    	return "";
+        // TODO: update if package will be published
+        return "";
     }
 
     protected String JoinArmFeatures(int features)
     {
-    	// TODO: update if package will be published
-    	if ((features & HardwareDetector.FEATURES_HAS_NEON) == HardwareDetector.FEATURES_HAS_NEON)
-    	{
-    		return "with Neon";
-    	}
-    	else if ((features & HardwareDetector.FEATURES_HAS_VFPv3) == HardwareDetector.FEATURES_HAS_VFPv3)
-    	{
-    		return "with VFP v3";
-    	}
-    	else if ((features & HardwareDetector.FEATURES_HAS_VFPv3d16) == HardwareDetector.FEATURES_HAS_VFPv3d16)
-    	{
-    		return "with VFP v3d16";
-    	}
-    	else
-    	{
-    		return "";
-    	}
+        // TODO: update if package will be published
+        if ((features & HardwareDetector.FEATURES_HAS_NEON) == HardwareDetector.FEATURES_HAS_NEON)
+        {
+            return "with Neon";
+        }
+        else if ((features & HardwareDetector.FEATURES_HAS_VFPv3) == HardwareDetector.FEATURES_HAS_VFPv3)
+        {
+            return "with VFP v3";
+        }
+        else if ((features & HardwareDetector.FEATURES_HAS_VFPv3d16) == HardwareDetector.FEATURES_HAS_VFPv3d16)
+        {
+            return "with VFP v3d16";
+        }
+        else
+        {
+            return "";
+        }
     }
 }

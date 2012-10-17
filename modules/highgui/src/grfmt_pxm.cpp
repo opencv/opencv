@@ -69,7 +69,7 @@ static int ReadNumber( RLByteStream& strm, int maxdigits )
                 }
                 while( code != '\n' && code != '\r' );
             }
-            
+
             code = strm.getByte();
 
             while( isspace(code))
@@ -128,7 +128,7 @@ void  PxMDecoder::close()
 bool  PxMDecoder::readHeader()
 {
     bool result = false;
-    
+
     if( !m_buf.empty() )
     {
         if( !m_strm.open(m_buf) )
@@ -151,13 +151,13 @@ bool  PxMDecoder::readHeader()
         case '3': case '6': m_bpp = 24; break;
         default: throw RBS_BAD_HEADER;
         }
-        
+
         m_binary = code >= '4';
         m_type = m_bpp > 8 ? CV_8UC3 : CV_8UC1;
 
         m_width = ReadNumber( m_strm, INT_MAX );
         m_height = ReadNumber( m_strm, INT_MAX );
-        
+
         m_maxval = m_bpp == 1 ? 1 : ReadNumber( m_strm, INT_MAX );
         if( m_maxval > 65535 )
             throw RBS_BAD_HEADER;
@@ -166,7 +166,7 @@ bool  PxMDecoder::readHeader()
         if( m_maxval > 255 )
             m_type = CV_MAKETYPE(CV_16U, CV_MAT_CN(m_type));
 
-        if( m_width > 0 && m_height > 0 && m_maxval > 0 && m_maxval < (1 << 16)) 
+        if( m_width > 0 && m_height > 0 && m_maxval > 0 && m_maxval < (1 << 16))
         {
             m_offset = m_strm.getPos();
             result = true;
@@ -201,7 +201,7 @@ bool  PxMDecoder::readData( Mat& img )
 
     if( m_offset < 0 || !m_strm.isOpened())
         return false;
-    
+
     AutoBuffer<uchar,1024> _src(src_pitch + 32);
     uchar* src = _src;
     AutoBuffer<uchar,1024> _gray_palette;
@@ -222,7 +222,7 @@ bool  PxMDecoder::readData( Mat& img )
     try
     {
         m_strm.setPos( m_offset );
-        
+
         switch( m_bpp )
         {
         ////////////////////////// 1 BPP /////////////////////////
@@ -245,7 +245,7 @@ bool  PxMDecoder::readData( Mat& img )
                 for( y = 0; y < m_height; y++, data += step )
                 {
                     m_strm.getBytes( src, src_pitch );
-                    
+
                     if( color )
                         FillColorRow1( data, src, m_width, palette );
                     else

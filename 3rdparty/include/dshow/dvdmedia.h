@@ -24,24 +24,24 @@
 #define AMCONTROL_PAD_TO_16x9 0x00000004
 
 enum AM_MPEG2Level {
-	AM_MPEG2Level_Low = 1,
-	AM_MPEG2Level_Main,
-	AM_MPEG2Level_High1440,
-	AM_MPEG2Level_High
+    AM_MPEG2Level_Low = 1,
+    AM_MPEG2Level_Main,
+    AM_MPEG2Level_High1440,
+    AM_MPEG2Level_High
 };
 enum AM_MPEG2Profile {
-	AM_MPEG2Profile_Simple = 1,
-	AM_MPEG2Profile_Main,
-	AM_MPEG2Profile_SNRScalable,
-	AM_MPEG2Profile_SpatiallyScalable,
-	AM_MPEG2Profile_High
+    AM_MPEG2Profile_Simple = 1,
+    AM_MPEG2Profile_Main,
+    AM_MPEG2Profile_SNRScalable,
+    AM_MPEG2Profile_SpatiallyScalable,
+    AM_MPEG2Profile_High
 };
 typedef enum {
-	AM_RATE_ChangeRate = 1,
-	AM_RATE_FullDataRateMax = 2,
-	AM_RATE_ReverseDecode = 3,
-	AM_RATE_DecoderPosition = 4,
-	AM_RATE_DecoderVersion = 5
+    AM_RATE_ChangeRate = 1,
+    AM_RATE_FullDataRateMax = 2,
+    AM_RATE_ReverseDecode = 3,
+    AM_RATE_DecoderPosition = 4,
+    AM_RATE_DecoderVersion = 5
 } AM_PROPERTY_DVD_RATE_CHANGE;
 
 typedef struct tagVIDEOINFOHEADER2 {

@@ -129,7 +129,7 @@ void CV_SimpleFlowTest::run(int) {
       ts->set_failed_test_info(cvtest::TS::FAIL_MISSING_TEST_DATA);
       return;
     }
-    
+
     if (frame2.empty()) {
       ts->printf(cvtest::TS::LOG, "could not read image %s\n", frame2_path.c_str());
       ts->set_failed_test_info(cvtest::TS::FAIL_MISSING_TEST_DATA);
@@ -172,7 +172,7 @@ void CV_SimpleFlowTest::run(int) {
     cv::calcOpticalFlowSF(frame1, frame2, flow, 3, 2, 4);
 
     float rmse = calc_rmse(flow_gt, flow);
-    
+
     ts->printf(cvtest::TS::LOG, "Optical flow estimation RMSE for SimpleFlow algorithm : %lf\n",
                rmse);
 

@@ -56,7 +56,7 @@ void thresh_callback(int, void* )
 
   /// Detect edges using canny
   Canny( src_gray, canny_output, thresh, thresh*2, 3 );
-  /// Find contours  
+  /// Find contours
   findContours( canny_output, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0, 0) );
 
   /// Get the moments
@@ -64,7 +64,7 @@ void thresh_callback(int, void* )
   for( int i = 0; i < contours.size(); i++ )
      { mu[i] = moments( contours[i], false ); }
 
-  ///  Get the mass centers: 
+  ///  Get the mass centers:
   vector<Point2f> mc( contours.size() );
   for( int i = 0; i < contours.size(); i++ )
      { mc[i] = Point2f( mu[i].m10/mu[i].m00 , mu[i].m01/mu[i].m00 ); }
@@ -72,9 +72,9 @@ void thresh_callback(int, void* )
   /// Draw contours
   Mat drawing = Mat::zeros( canny_output.size(), CV_8UC3 );
   for( int i = 0; i< contours.size(); i++ )
-     { 
+     {
        Scalar color = Scalar( rng.uniform(0, 255), rng.uniform(0,255), rng.uniform(0,255) );
-       drawContours( drawing, contours, i, color, 2, 8, hierarchy, 0, Point() ); 
+       drawContours( drawing, contours, i, color, 2, 8, hierarchy, 0, Point() );
        circle( drawing, mc[i], 4, color, -1, 8, 0 );
      }
 
@@ -86,9 +86,9 @@ void thresh_callback(int, void* )
   printf("\t Info: Area and Contour Length \n");
   for( int i = 0; i< contours.size(); i++ )
      {
-       printf(" * Contour[%d] - Area (M_00) = %.2f - Area OpenCV: %.2f - Length: %.2f \n", i, mu[i].m00, contourArea(contours[i]), arcLength( contours[i], true ) );  
+       printf(" * Contour[%d] - Area (M_00) = %.2f - Area OpenCV: %.2f - Length: %.2f \n", i, mu[i].m00, contourArea(contours[i]), arcLength( contours[i], true ) );
        Scalar color = Scalar( rng.uniform(0, 255), rng.uniform(0,255), rng.uniform(0,255) );
-       drawContours( drawing, contours, i, color, 2, 8, hierarchy, 0, Point() ); 
+       drawContours( drawing, contours, i, color, 2, 8, hierarchy, 0, Point() );
        circle( drawing, mc[i], 4, color, -1, 8, 0 );
      }
 }

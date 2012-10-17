@@ -221,13 +221,13 @@ CVAPI(const CvMat*)  cvKalmanCorrect( CvKalman* kalman, const CvMat* measurement
 
 #define cvKalmanUpdateByTime  cvKalmanPredict
 #define cvKalmanUpdateByMeasurement cvKalmanCorrect
-    
+
 #ifdef __cplusplus
 }
 
 namespace cv
 {
-    
+
 //! updates motion history image using the current silhouette
 CV_EXPORTS_W void updateMotionHistory( InputArray silhouette, InputOutputArray mhi,
                                        double timestamp, double duration );
@@ -257,7 +257,7 @@ CV_EXPORTS_W int meanShift( InputArray probImage, CV_OUT CV_IN_OUT Rect& window,
 
 /*!
  Kalman filter.
- 
+
  The class implements standard Kalman filter \url{http://en.wikipedia.org/wiki/Kalman_filter}.
  However, you can modify KalmanFilter::transitionMatrix, KalmanFilter::controlMatrix and
  KalmanFilter::measurementMatrix to get the extended Kalman filter functionality.
@@ -287,7 +287,7 @@ public:
     Mat errorCovPre;        //!< priori error estimate covariance matrix (P'(k)): P'(k)=A*P(k-1)*At + Q)*/
     Mat gain;               //!< Kalman gain matrix (K(k)): K(k)=P'(k)*Ht*inv(H*P'(k)*Ht+R)
     Mat errorCovPost;       //!< posteriori error estimate covariance matrix (P(k)): P(k)=(I-K(k)*H)*P'(k)
-    
+
     // temporary matrices
     Mat temp1;
     Mat temp2;
@@ -326,25 +326,25 @@ CV_EXPORTS_W void calcOpticalFlowFarneback( InputArray prev, InputArray next,
 // that maps one 2D point set to another or one image to another.
 CV_EXPORTS_W Mat estimateRigidTransform( InputArray src, InputArray dst,
                                          bool fullAffine);
-  
+
 //! computes dense optical flow using Simple Flow algorithm
-CV_EXPORTS_W void calcOpticalFlowSF(Mat& from, 
+CV_EXPORTS_W void calcOpticalFlowSF(Mat& from,
                                     Mat& to,
                                     Mat& flow,
                                     int layers,
-                                    int averaging_block_size, 
+                                    int averaging_block_size,
                                     int max_flow);
 
-CV_EXPORTS_W void calcOpticalFlowSF(Mat& from, 
+CV_EXPORTS_W void calcOpticalFlowSF(Mat& from,
                                     Mat& to,
                                     Mat& flow,
                                     int layers,
-                                    int averaging_block_size, 
+                                    int averaging_block_size,
                                     int max_flow,
                                     double sigma_dist,
                                     double sigma_color,
-                                    int postprocess_window, 
-                                    double sigma_dist_fix, 
+                                    int postprocess_window,
+                                    double sigma_dist_fix,
                                     double sigma_color_fix,
                                     double occ_thr,
                                     int upscale_averaging_radius,

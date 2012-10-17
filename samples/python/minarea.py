@@ -1,4 +1,4 @@
-#!/usr/bin/python 
+#!/usr/bin/python
 
 import urllib2
 import cv2.cv as cv
@@ -14,7 +14,7 @@ def draw_common(points):
 
     box = cv.MinAreaRect2(points)
     box_vtx = [roundxy(p) for p in cv.BoxPoints(box)]
-    cv.PolyLine(img, [box_vtx], 1, cv.CV_RGB(0, 255, 255), 1, cv. CV_AA) 
+    cv.PolyLine(img, [box_vtx], 1, cv.CV_RGB(0, 255, 255), 1, cv. CV_AA)
 
 def minarea_array(img, count):
     pointMat = cv.CreateMat(count, 1, cv.CV_32SC2)
@@ -43,10 +43,10 @@ if __name__ == "__main__":
     storage = cv.CreateMemStorage()
 
     cv.NamedWindow("rect & circle", 1)
-        
+
     use_seq = True
 
-    while True: 
+    while True:
         count = randint(1, 100)
         if use_seq:
             minarea_seq(img, count, storage)

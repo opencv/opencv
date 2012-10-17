@@ -932,14 +932,14 @@ DECLARE_INTERFACE_(IDirectSoundNotify,IUnknown)
 #define DS3D_DEFAULTCONEOUTSIDEVOLUME   DSBVOLUME_MAX
 
 typedef struct _DS3DLISTENER {
-	DWORD				dwSize;
-	D3DVECTOR			vPosition;
-	D3DVECTOR			vVelocity;
-	D3DVECTOR			vOrientFront;
-	D3DVECTOR			vOrientTop;
-	D3DVALUE			flDistanceFactor;
-	D3DVALUE			flRolloffFactor;
-	D3DVALUE			flDopplerFactor;
+    DWORD				dwSize;
+    D3DVECTOR			vPosition;
+    D3DVECTOR			vVelocity;
+    D3DVECTOR			vOrientFront;
+    D3DVECTOR			vOrientTop;
+    D3DVALUE			flDistanceFactor;
+    D3DVALUE			flRolloffFactor;
+    D3DVALUE			flDopplerFactor;
 } DS3DLISTENER, *LPDS3DLISTENER;
 
 typedef const DS3DLISTENER *LPCDS3DLISTENER;
@@ -1019,16 +1019,16 @@ DECLARE_INTERFACE_(IDirectSound3DListener,IUnknown)
  * IDirectSound3DBuffer interface
  */
 typedef struct  _DS3DBUFFER {
-	DWORD				dwSize;
-	D3DVECTOR			vPosition;
-	D3DVECTOR			vVelocity;
-	DWORD				dwInsideConeAngle;
-	DWORD				dwOutsideConeAngle;
-	D3DVECTOR			vConeOrientation;
-	LONG				lConeOutsideVolume;
-	D3DVALUE			flMinDistance;
-	D3DVALUE			flMaxDistance;
-	DWORD				dwMode;
+    DWORD				dwSize;
+    D3DVECTOR			vPosition;
+    D3DVECTOR			vVelocity;
+    DWORD				dwInsideConeAngle;
+    DWORD				dwOutsideConeAngle;
+    D3DVECTOR			vConeOrientation;
+    LONG				lConeOutsideVolume;
+    D3DVALUE			flMinDistance;
+    D3DVALUE			flMaxDistance;
+    DWORD				dwMode;
 } DS3DBUFFER, *LPDS3DBUFFER;
 
 typedef const DS3DBUFFER *LPCDS3DBUFFER;

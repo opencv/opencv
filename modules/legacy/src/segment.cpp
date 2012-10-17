@@ -53,7 +53,7 @@ typedef struct Seg
 Seg;
 
 #define UP 1
-#define DOWN -1             
+#define DOWN -1
 
 #define PUSH(Y,IL,IR,IPL,IPR,FL) {  stack[StIn].y=(ushort)(Y); \
                                     stack[StIn].l=(ushort)(IL); \
@@ -93,7 +93,7 @@ icvSegmFloodFill_Stage1( uchar* pImage, int step,
     unsigned Interval = (unsigned) (d_up + d_lw);
     Seg *stack = (Seg*)pStack;
     int StIn = 0;
-    int i, L, R; 
+    int i, L, R;
     int area = 0;
     int sum[] = { 0, 0, 0 };
     int XMin, XMax, YMin = seed.y, YMax = seed.y;
@@ -166,7 +166,7 @@ icvSegmFloodFill_Stage1( uchar* pImage, int step,
                 }
             }
         }
-        
+
         img = pImage + YC * step;
 
         for( i = L; i <= R; i++ )
@@ -178,7 +178,7 @@ icvSegmFloodFill_Stage1( uchar* pImage, int step,
 
         area += R - L + 1;
     }
-    
+
     region->area = area;
     region->rect.x = XMin;
     region->rect.y = YMin;
@@ -230,7 +230,7 @@ icvSegmFloodFill_Stage2( uchar* pImage, int step,
 static void color_derv( const CvArr* srcArr, CvArr* dstArr, int thresh )
 {
     static int tab[] = { 0, 2, 2, 1 };
-    
+
     uchar *src = 0, *dst = 0;
     int dst_step, src_step;
     int x, y;
@@ -244,13 +244,13 @@ static void color_derv( const CvArr* srcArr, CvArr* dstArr, int thresh )
     src += 3;
 
     #define  CV_IABS(a)     (((a) ^ ((a) < 0 ? -1 : 0)) - ((a) < 0 ? -1 : 0))
-    
+
     for( y = 1; y < size.height - 1; y++ )
     {
         src += src_step;
         dst += dst_step;
         uchar* src0 = src;
-        
+
         dst[0] = dst[size.width - 1] = 0;
 
         for( x = 1; x < size.width - 1; x++, src += 3 )
@@ -275,7 +275,7 @@ static void color_derv( const CvArr* srcArr, CvArr* dstArr, int thresh )
             m[2] = dh[0]*dv[0] + dh[1]*dv[1] + dh[2]*dv[2];
             m[1] = dv[0]*dv[0] + dv[1]*dv[1] + dh[2]*dh[2];
 
-            val = (m[0] + m[2]) + 
+            val = (m[0] + m[2]) +
                 sqrt(((double)((double)m[0] - m[2]))*(m[0] - m[2]) + (4.*m[1])*m[1]);
 
             /*
@@ -285,7 +285,7 @@ static void color_derv( const CvArr* srcArr, CvArr* dstArr, int thresh )
             v /= sqrt(xx*xx + yy*yy) + 1e-7;
             xx *= v;
             yy *= v;
-            
+
             dx[x] = (short)cvRound(xx);
             dy[x] = (short)cvRound(yy);
 
@@ -302,7 +302,7 @@ static void color_derv( const CvArr* srcArr, CvArr* dstArr, int thresh )
             ad[2] = CV_IABS(d[2]);
 
             f0 = ad[1] > ad[0];
-            f1 = ad[2] > ad[f0];  
+            f1 = ad[2] > ad[f0];
 
             val = d[tab[f0*2 + f1]];
 
@@ -316,7 +316,7 @@ static void color_derv( const CvArr* srcArr, CvArr* dstArr, int thresh )
             ad[2] = CV_IABS(d[2]);
 
             f0 = ad[1] > ad[0];
-            f1 = ad[2] > ad[f0];  
+            f1 = ad[2] > ad[f0];
 
             dst[x] = (uchar)(val + d[tab[f0*2 + f1]] > thresh ? 255 : 0);*/
             dst[x] = (uchar)(val > thresh);
@@ -352,7 +352,7 @@ icvGetComponent( uchar* img, int step, CvRect rect,
     for( y = rect.y; y < rect.height; y++, ptr += step )
     {
         int prev = ptr[rect.x - 1] & -2;
-        
+
         for( x = rect.x; x < rect.width; x++ )
         {
             int p = ptr[x] & -2;
@@ -484,7 +484,7 @@ cvSegmentImage( const CvArr* srcarr, CvArr* dstarr,
     CvMat* canny = 0;
     //CvMat* temp = 0;
     void* stack = 0;
-    
+
     CV_FUNCNAME( "cvSegmentImage" );
 
     __BEGIN__;
@@ -531,7 +531,7 @@ cvSegmentImage( const CvArr* srcarr, CvArr* dstarr,
             {
                 CvConnectedComp region;
                 int avgVal[3] = { 0, 0, 0 };
-                
+
                 icvSegmFloodFill_Stage1( src->data.ptr, src->step,
                                          mask->data.ptr, mask->step,
                                          size, pt, avgVal,

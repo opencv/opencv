@@ -41,7 +41,7 @@
 #include "precomp.hpp"
 #include <ctype.h>
 
-#define MISS_VAL    FLT_MAX 
+#define MISS_VAL    FLT_MAX
 #define CV_VAR_MISS    0
 
 CvTrainTestSplit::CvTrainTestSplit()
@@ -57,7 +57,7 @@ CvTrainTestSplit::CvTrainTestSplit( int _train_sample_count, bool _mix )
     train_sample_part.count = _train_sample_count;
     mix = _mix;
 }
-    
+
 CvTrainTestSplit::CvTrainTestSplit( float _train_sample_portion, bool _mix )
 {
     train_sample_part_mode = CV_PORTION;
@@ -71,7 +71,7 @@ CvMLData::CvMLData()
 {
     values = missing = var_types = var_idx_mask = response_out = var_idx_out = var_types_out = 0;
     train_sample_idx = test_sample_idx = 0;
-	header_lines_number = 0;
+    header_lines_number = 0;
     sample_idx = 0;
     response_idx = -1;
 
@@ -110,7 +110,7 @@ void CvMLData::clear()
     cvReleaseMat( &var_types_out );
 
     free_train_test_idx();
-    
+
     total_class_count = 0;
 
     response_idx = -1;
@@ -121,27 +121,27 @@ void CvMLData::clear()
 
 void CvMLData::set_header_lines_number( int idx )
 {
-	header_lines_number = (short)std::max(0, idx);
+    header_lines_number = std::max(0, idx);
 }
 
 int CvMLData::get_header_lines_number() const
 {
-	return header_lines_number;
+    return header_lines_number;
 }
 
 static char *fgets_chomp(char *str, int n, FILE *stream)
 {
-	char *head = fgets(str, n, stream);
-	if( head )
-	{
-		for(char *tail = head + strlen(head) - 1; tail >= head; --tail)
-		{
-			if( *tail != '\r'  && *tail != '\n' )
-				break;
-			*tail = '\0';
-		}
-	}
-	return head;
+    char *head = fgets(str, n, stream);
+    if( head )
+    {
+        for(char *tail = head + strlen(head) - 1; tail >= head; --tail)
+        {
+            if( *tail != '\r'  && *tail != '\n' )
+                break;
+            *tail = '\0';
+        }
+    }
+    return head;
 }
 
 
@@ -155,23 +155,23 @@ int CvMLData::read_csv(const char* filename)
     char *ptr;
     float* el_ptr;
     CvSeqReader reader;
-    int cols_count = 0;    
+    int cols_count = 0;
     uchar *var_types_ptr = 0;
 
     clear();
 
     file = fopen( filename, "rt" );
-    
+
     if( !file )
         return -1;
 
-	std::vector<char> _buf(M);
+    std::vector<char> _buf(M);
     char* buf = &_buf[0];
-    
-	// skip header lines
-	for( int i = 0; i < header_lines_number; i++ )
-		if( fgets( buf, M, file ) == 0 )
-			return -1;
+
+    // skip header lines
+    for( int i = 0; i < header_lines_number; i++ )
+        if( fgets( buf, M, file ) == 0 )
+            return -1;
 
     // read the first data line and determine the number of variables
     if( !fgets_chomp( buf, M, file ))
@@ -195,7 +195,7 @@ int CvMLData::read_csv(const char* filename)
             ptr++;
     }
 
-	cols_count++;
+    cols_count++;
 
     if ( cols_count == 0)
     {
@@ -217,7 +217,7 @@ int CvMLData::read_csv(const char* filename)
         char *token = NULL;
         int type;
         token = strtok(buf, str_delimiter);
-        if (!token) 
+        if (!token)
             break;
         for (int i = 0; i < cols_count-1; i++)
         {
@@ -292,7 +292,7 @@ const std::map<std::string, int>& CvMLData::get_class_labels_map() const
 
 void CvMLData::str_to_flt_elem( const char* token, float& flt_elem, int& type)
 {
-    
+
     char* stopstring = NULL;
     flt_elem = (float)strtod( token, &stopstring );
     assert( stopstring );
@@ -326,7 +326,7 @@ void CvMLData::set_delimiter(char ch)
 
     if (ch == miss_ch /*|| ch == flt_separator*/)
         CV_ERROR(CV_StsBadArg, "delimited, miss_character and flt_separator must be different");
-    
+
     delimiter = ch;
 
     __END__;
@@ -344,7 +344,7 @@ void CvMLData::set_miss_ch(char ch)
 
     if (ch == delimiter/* || ch == flt_separator*/)
         CV_ERROR(CV_StsBadArg, "delimited, miss_character and flt_separator must be different");
-   
+
     miss_ch = ch;
 
     __END__;
@@ -372,7 +372,7 @@ void CvMLData::set_response_idx( int idx )
         chahge_var_idx( idx, false );
     response_idx = idx;
 
-    __END__;    
+    __END__;
 }
 
 int CvMLData::get_response_idx() const
@@ -390,12 +390,12 @@ void CvMLData::change_var_type( int var_idx, int type )
 {
     CV_FUNCNAME( "CvMLData::change_var_type" );
     __BEGIN__;
-    
+
     int var_count = 0;
 
     if ( !values )
         CV_ERROR( CV_StsInternal, "data is empty" );
-    
+
      var_count = values->cols;
 
     if ( var_idx < 0 || var_idx >= var_count)
@@ -404,7 +404,7 @@ void CvMLData::change_var_type( int var_idx, int type )
     if ( type != CV_VAR_ORDERED && type != CV_VAR_CATEGORICAL)
          CV_ERROR( CV_StsBadArg, "type is not correct" );
 
-    assert( var_types );    
+    assert( var_types );
     if ( var_types->data.ptr[var_idx] == CV_VAR_CATEGORICAL && type == CV_VAR_ORDERED)
         CV_ERROR( CV_StsBadArg, "it`s impossible to assign CV_VAR_ORDERED type to categorical variable" );
     var_types->data.ptr[var_idx] = (uchar)type;
@@ -427,12 +427,12 @@ void CvMLData::set_var_types( const char* str )
     var_count = values->cols;
 
     assert( var_types );
- 
+
     ord = strstr( str, "ord" );
-    cat = strstr( str, "cat" );    
+    cat = strstr( str, "cat" );
     if ( !ord && !cat )
         CV_ERROR( CV_StsBadArg, "types string is not correct" );
-    
+
     if ( !ord && strlen(cat) == 3 ) // str == "cat"
     {
         cvSet( var_types, cvScalarAll(CV_VAR_CATEGORICAL) );
@@ -447,10 +447,10 @@ void CvMLData::set_var_types( const char* str )
 
     if ( ord ) // parse ord str
     {
-        char* stopstring = NULL;            
+        char* stopstring = NULL;
         if ( ord[3] != '[')
             CV_ERROR( CV_StsBadArg, "types string is not correct" );
-        
+
         ord += 4; // pass "ord["
         do
         {
@@ -465,18 +465,18 @@ void CvMLData::set_var_types( const char* str )
                 var_types->data.ptr[b1] = CV_VAR_ORDERED;
                 set_var_type_count++;
             }
-            else 
+            else
             {
-                if ( stopstring[0] == '-') 
+                if ( stopstring[0] == '-')
                 {
                     int b2 = (int)strtod( ord, &stopstring);
                     if ( (*stopstring == 0) || (*stopstring != ',' && *stopstring != ']') )
-                        CV_ERROR( CV_StsBadArg, "types string is not correct" );           
+                        CV_ERROR( CV_StsBadArg, "types string is not correct" );
                     ord = stopstring + 1;
                     for (int i = b1; i <= b2; i++)
                     {
                         if ( var_types->data.ptr[i] == CV_VAR_CATEGORICAL)
-                            CV_ERROR( CV_StsBadArg, "it`s impossible to assign CV_VAR_ORDERED type to categorical variable" );                
+                            CV_ERROR( CV_StsBadArg, "it`s impossible to assign CV_VAR_ORDERED type to categorical variable" );
                         var_types->data.ptr[i] = CV_VAR_ORDERED;
                     }
                     set_var_type_count += b2 - b1 + 1;
@@ -490,14 +490,14 @@ void CvMLData::set_var_types( const char* str )
 
         if ( stopstring[1] != '\0' && stopstring[1] != ',')
             CV_ERROR( CV_StsBadArg, "types string is not correct" );
-    }    
+    }
 
     if ( cat ) // parse cat str
     {
-        char* stopstring = NULL;            
+        char* stopstring = NULL;
         if ( cat[3] != '[')
             CV_ERROR( CV_StsBadArg, "types string is not correct" );
-        
+
         cat += 4; // pass "cat["
         do
         {
@@ -510,13 +510,13 @@ void CvMLData::set_var_types( const char* str )
                 var_types->data.ptr[b1] = CV_VAR_CATEGORICAL;
                 set_var_type_count++;
             }
-            else 
+            else
             {
-                if ( stopstring[0] == '-') 
+                if ( stopstring[0] == '-')
                 {
                     int b2 = (int)strtod( cat, &stopstring);
                     if ( (*stopstring == 0) || (*stopstring != ',' && *stopstring != ']') )
-                        CV_ERROR( CV_StsBadArg, "types string is not correct" );           
+                        CV_ERROR( CV_StsBadArg, "types string is not correct" );
                     cat = stopstring + 1;
                     for (int i = b1; i <= b2; i++)
                         var_types->data.ptr[i] = CV_VAR_CATEGORICAL;
@@ -531,7 +531,7 @@ void CvMLData::set_var_types( const char* str )
 
         if ( stopstring[1] != '\0' && stopstring[1] != ',')
             CV_ERROR( CV_StsBadArg, "types string is not correct" );
-    }    
+    }
 
     if (set_var_type_count != var_count)
         CV_ERROR( CV_StsBadArg, "types string is not correct" );
@@ -557,7 +557,7 @@ const CvMat* CvMLData::get_var_types()
     if ( avcount == values->cols || (avcount == values->cols-1 && response_idx == values->cols-1) )
         return var_types;
 
-    if ( !var_types_out || ( var_types_out && var_types_out->cols != vt_size ) ) 
+    if ( !var_types_out || ( var_types_out && var_types_out->cols != vt_size ) )
     {
         cvReleaseMat( &var_types_out );
         var_types_out = cvCreateMat( 1, vt_size, CV_8UC1 );
@@ -593,7 +593,7 @@ const CvMat* CvMLData::get_responses()
     if ( !values )
         CV_ERROR( CV_StsInternal, "data is empty" );
     var_count = values->cols;
-    
+
     if ( response_idx < 0 || response_idx >= var_count )
        return 0;
     if ( !response_out )
@@ -618,7 +618,7 @@ void CvMLData::set_train_test_split( const CvTrainTestSplit * spl)
         CV_ERROR( CV_StsInternal, "data is empty" );
 
     sample_count = values->rows;
-    
+
     float train_sample_portion;
 
     if (spl->train_sample_part_mode == CV_COUNT)
@@ -633,7 +633,7 @@ void CvMLData::set_train_test_split( const CvTrainTestSplit * spl)
         train_sample_portion = spl->train_sample_part.portion;
         if ( train_sample_portion > 1)
             CV_ERROR( CV_StsBadArg, "train samples count is not correct" );
-        train_sample_portion = train_sample_portion <= FLT_EPSILON || 
+        train_sample_portion = train_sample_portion <= FLT_EPSILON ||
             1 - train_sample_portion <= FLT_EPSILON ? 1 : train_sample_portion;
         train_sample_count = std::max(1, cvFloor( train_sample_portion * sample_count ));
     }
@@ -660,11 +660,11 @@ void CvMLData::set_train_test_split( const CvTrainTestSplit * spl)
         test_sample_idx = cvCreateMatHeader( 1, test_sample_count, CV_32SC1 );
         *test_sample_idx = cvMat( 1, test_sample_count, CV_32SC1, &sample_idx[train_sample_count] );
     }
-    
+
     mix = spl->mix;
     if ( mix )
         mix_train_and_test_idx();
-    
+
     __END__;
 }
 
@@ -728,14 +728,14 @@ const CvMat* CvMLData::get_var_idx()
         CV_ERROR( CV_StsInternal, "data is empty" );
 
     assert( var_idx_mask );
-    
+
     avcount = cvFloor( cvNorm( var_idx_mask, 0, CV_L1 ) );
     int* vidx;
 
     if ( avcount == values->cols )
         return 0;
-     
-    if ( !var_idx_out || ( var_idx_out && var_idx_out->cols != avcount ) ) 
+
+    if ( !var_idx_out || ( var_idx_out && var_idx_out->cols != avcount ) )
     {
         cvReleaseMat( &var_idx_out );
         var_idx_out = cvCreateMat( 1, avcount, CV_32SC1);
@@ -744,10 +744,10 @@ const CvMat* CvMLData::get_var_idx()
     }
 
     vidx = var_idx_out->data.i;
-    
+
     for(int i = 0; i < var_idx_mask->cols; i++)
         if ( var_idx_mask->data.ptr[i] )
-        {            
+        {
             *vidx = i;
             vidx++;
         }
@@ -777,7 +777,7 @@ void CvMLData::change_var_idx( int vi, bool state )
     if ( vi < 0 || vi >= var_count)
         CV_ERROR( CV_StsBadArg, "variable index is not correct" );
 
-    assert( var_idx_mask );    
+    assert( var_idx_mask );
     var_idx_mask->data.ptr[vi] = state;
 
     __END__;

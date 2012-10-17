@@ -71,7 +71,7 @@
 //             So, total number of observation vectors is Nx*Ny, and total size of
 //             array obs must be >= Nx*Ny*obsSize.width*obsSize.height*sizeof(float).
 //          2. Observation vectors are calculated in the following loop
-//               ( actual implementation may be different ), where 
+//               ( actual implementation may be different ), where
 //               I[x1:x2,y1:y2] means block of pixels from source image with
 //               x1 <= x < x2, y1 <= y < y2,
 //               D[x1:x2,y1:y2] means sub matrix of DCT matrix D.

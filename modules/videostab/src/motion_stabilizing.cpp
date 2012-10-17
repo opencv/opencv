@@ -564,7 +564,7 @@ void LpMotionStabilizer::stabilize(
         S0(0,2) = sol[c+2];
         S0(1,2) = sol[c+3];
         S[t] = S0;
-    }    
+    }
 }
 #endif // #ifndef HAVE_CLP
 

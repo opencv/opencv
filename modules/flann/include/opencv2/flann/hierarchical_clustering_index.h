@@ -162,7 +162,7 @@ private:
             int best_index = -1;
             DistanceType best_val = 0;
             for (int j=0; j<n; ++j) {
-            	DistanceType dist = distance(dataset[centers[0]],dataset[dsindices[j]],dataset.cols);
+                DistanceType dist = distance(dataset[centers[0]],dataset[dsindices[j]],dataset.cols);
                 for (int i=1; i<index; ++i) {
                     DistanceType tmp_dist = distance(dataset[centers[i]],dataset[dsindices[j]],dataset.cols);
                     if (tmp_dist<dist) {

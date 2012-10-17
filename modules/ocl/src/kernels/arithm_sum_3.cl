@@ -159,7 +159,7 @@
 #define repeat_e(a,b,c) a.s3=0; a.s2=0; a.s1=0; b=0; c=0;
 #endif
 
-__kernel void arithm_op_sum_3 (int cols,int invalid_cols,int offset,int elemnum,int groupnum,  
+__kernel void arithm_op_sum_3 (int cols,int invalid_cols,int offset,int elemnum,int groupnum,
                                 __global VEC_TYPE *src, __global RES_TYPE *dst)
 {
    unsigned int lid = get_local_id(0);
@@ -176,7 +176,7 @@ __kernel void arithm_op_sum_3 (int cols,int invalid_cols,int offset,int elemnum,
        temp1 = CONVERT_RES_TYPE(src[idx]);
        temp2 = CONVERT_RES_TYPE(src[idx+1]);
        temp3 = CONVERT_RES_TYPE(src[idx+2]);
-       if(id % cols == 0 ) 
+       if(id % cols == 0 )
        {
            repeat_s(temp1,temp2,temp3);
        }
@@ -201,7 +201,7 @@ __kernel void arithm_op_sum_3 (int cols,int invalid_cols,int offset,int elemnum,
        temp1 = CONVERT_RES_TYPE(src[idx]);
        temp2 = CONVERT_RES_TYPE(src[idx+1]);
        temp3 = CONVERT_RES_TYPE(src[idx+2]);
-       if(id % cols == 0 ) 
+       if(id % cols == 0 )
        {
                repeat_s(temp1,temp2,temp3);
        }

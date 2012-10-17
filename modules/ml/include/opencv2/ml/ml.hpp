@@ -505,7 +505,7 @@ public:
                             CvParamGrid degreeGrid = CvSVM::get_default_grid(CvSVM::DEGREE),
                             bool balanced=false);
     CV_WRAP virtual float predict( const cv::Mat& sample, bool returnDFVal=false ) const;
-    CV_WRAP_AS(predict_all) void predict( cv::InputArray samples, cv::OutputArray results ) const;
+    CV_WRAP_AS(predict_all) virtual void predict( cv::InputArray samples, cv::OutputArray results ) const;
 
     CV_WRAP virtual int get_support_vector_count() const;
     virtual const float* get_support_vector(int i) const;
@@ -2069,7 +2069,6 @@ protected:
 
     char delimiter;
     char miss_ch;
-    short header_lines_number;
     //char flt_separator;
 
     CvMat* values;
@@ -2080,6 +2079,8 @@ protected:
     CvMat* response_out; // header
     CvMat* var_idx_out; // mat
     CvMat* var_types_out; // mat
+
+    int header_lines_number;
 
     int response_idx;
 

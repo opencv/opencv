@@ -2,7 +2,7 @@
 Watershed segmentation
 =========
 
-This program demonstrates the watershed segmentation algorithm 
+This program demonstrates the watershed segmentation algorithm
 in OpenCV: watershed().
 
 Usage
@@ -37,7 +37,7 @@ class App:
 
         self.auto_update = True
         self.sketch = Sketcher('img', [self.markers_vis, self.markers], self.get_colors)
-        
+
     def get_colors(self):
         return map(int, self.colors[self.cur_marker]), self.cur_marker
 
@@ -66,8 +66,8 @@ class App:
                 self.markers[:] = 0
                 self.markers_vis[:] = self.img
                 self.sketch.show()
-        cv2.destroyAllWindows() 			
-		
+        cv2.destroyAllWindows()
+
 
 if __name__ == '__main__':
     import sys

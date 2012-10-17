@@ -136,7 +136,7 @@ void CV_TrackBaseTest::generate_object()
         {
             double x1 = (x - cx)*a - x_;
             double y1 = (x - cx)*b + y_;
-            
+
             if( x1*x1*inv_hh + y1*y1*inv_ww <= 1. )
             {
                 if( img_type == CV_8U )
@@ -236,13 +236,13 @@ int CV_CamShiftTest::prepare_test_case( int test_case_idx )
     for(i = 0; i < 100; i++)
     {
         CvMat temp;
-        
+
         m = MAX(box0.size.width,box0.size.height)*0.8;
         init_rect.x = cvFloor(box0.center.x - m*(0.45 + cvtest::randReal(rng)*0.2));
         init_rect.y = cvFloor(box0.center.y - m*(0.45 + cvtest::randReal(rng)*0.2));
         init_rect.width = cvCeil(box0.center.x + m*(0.45 + cvtest::randReal(rng)*0.2) - init_rect.x);
         init_rect.height = cvCeil(box0.center.y + m*(0.45 + cvtest::randReal(rng)*0.2) - init_rect.y);
-        
+
         if( init_rect.x < 0 || init_rect.y < 0 ||
             init_rect.x + init_rect.width >= img_size.width ||
             init_rect.y + init_rect.height >= img_size.height )
@@ -250,7 +250,7 @@ int CV_CamShiftTest::prepare_test_case( int test_case_idx )
 
         cvGetSubRect( img, &temp, init_rect );
         area = cvCountNonZero( &temp );
-        
+
         if( area >= 0.1*area0 )
             break;
     }
@@ -268,10 +268,10 @@ void CV_CamShiftTest::run_func(void)
 int CV_CamShiftTest::validate_test_results( int /*test_case_idx*/ )
 {
     int code = cvtest::TS::OK;
-    
+
     double m = MAX(box0.size.width, box0.size.height), delta;
     double diff_angle;
-    
+
     if( cvIsNaN(box.size.width) || cvIsInf(box.size.width) || box.size.width <= 0 ||
         cvIsNaN(box.size.height) || cvIsInf(box.size.height) || box.size.height <= 0 ||
         cvIsNaN(box.center.x) || cvIsInf(box.center.x) ||
@@ -306,7 +306,7 @@ int CV_CamShiftTest::validate_test_results( int /*test_case_idx*/ )
 
     if( box.angle < 0 )
         box.angle += 180;
-    
+
     diff_angle = fabs(box0.angle - box.angle);
     diff_angle = MIN( diff_angle, fabs(box0.angle - box.angle + 180));
 
@@ -403,13 +403,13 @@ int CV_MeanShiftTest::prepare_test_case( int test_case_idx )
     for(i = 0; i < 100; i++)
     {
         CvMat temp;
-        
+
         m = (box0.size.width + box0.size.height)*0.5;
         init_rect.x = cvFloor(box0.center.x - m*(0.4 + cvtest::randReal(rng)*0.2));
         init_rect.y = cvFloor(box0.center.y - m*(0.4 + cvtest::randReal(rng)*0.2));
         init_rect.width = cvCeil(box0.center.x + m*(0.4 + cvtest::randReal(rng)*0.2) - init_rect.x);
         init_rect.height = cvCeil(box0.center.y + m*(0.4 + cvtest::randReal(rng)*0.2) - init_rect.y);
-        
+
         if( init_rect.x < 0 || init_rect.y < 0 ||
             init_rect.x + init_rect.width >= img_size.width ||
             init_rect.y + init_rect.height >= img_size.height )
@@ -417,7 +417,7 @@ int CV_MeanShiftTest::prepare_test_case( int test_case_idx )
 
         cvGetSubRect( img, &temp, init_rect );
         area = cvCountNonZero( &temp );
-        
+
         if( area >= 0.5*area0 )
             break;
     }
@@ -437,7 +437,7 @@ int CV_MeanShiftTest::validate_test_results( int /*test_case_idx*/ )
     int code = cvtest::TS::OK;
     CvPoint2D32f c;
     double m = MAX(box0.size.width, box0.size.height), delta;
-    
+
     if( cvIsNaN(comp.area) || cvIsInf(comp.area) || comp.area <= 0 )
     {
         ts->printf( cvtest::TS::LOG, "Invalid CvConnectedComp was returned by cvMeanShift\n" );

@@ -1118,7 +1118,7 @@ public:
         fmt = ((channels-1)<<8) + DataDepth<channel_type>::fmt,
         type = CV_MAKETYPE(depth, channels) };
 };
-    
+
 template<typename _Tp, int cn> class DataType<Vec<_Tp, cn> >
 {
 public:
@@ -1400,7 +1400,7 @@ public:
     virtual bool fixedType() const;
     virtual bool needed() const;
     virtual Mat& getMatRef(int i=-1) const;
-    /*virtual*/ gpu::GpuMat& getGpuMatRef() const;
+    virtual gpu::GpuMat& getGpuMatRef() const;
     virtual void create(Size sz, int type, int i=-1, bool allowTransposed=false, int fixedDepthMask=0) const;
     virtual void create(int rows, int cols, int type, int i=-1, bool allowTransposed=false, int fixedDepthMask=0) const;
     virtual void create(int dims, const int* size, int type, int i=-1, bool allowTransposed=false, int fixedDepthMask=0) const;
@@ -2104,7 +2104,7 @@ CV_EXPORTS_AS(sumElems) Scalar sum(InputArray src);
 CV_EXPORTS_W int countNonZero( InputArray src );
 //! returns the list of locations of non-zero pixels
 CV_EXPORTS_W void findNonZero( InputArray src, OutputArray idx );
-    
+
 //! computes mean value of selected array elements
 CV_EXPORTS_W Scalar mean(InputArray src, InputArray mask=noArray());
 //! computes mean value and standard deviation of all or selected array elements
@@ -2139,15 +2139,11 @@ CV_EXPORTS_W void reduce(InputArray src, OutputArray dst, int dim, int rtype, in
 
 //! makes multi-channel array out of several single-channel arrays
 CV_EXPORTS void merge(const Mat* mv, size_t count, OutputArray dst);
-CV_EXPORTS void merge(const vector<Mat>& mv, OutputArray dst );
-
 //! makes multi-channel array out of several single-channel arrays
 CV_EXPORTS_W void merge(InputArrayOfArrays mv, OutputArray dst);
 
 //! copies each plane of a multi-channel array to a dedicated array
 CV_EXPORTS void split(const Mat& src, Mat* mvbegin);
-CV_EXPORTS void split(const Mat& m, vector<Mat>& mv );
-    
 //! copies each plane of a multi-channel array to a dedicated array
 CV_EXPORTS_W void split(InputArray m, OutputArrayOfArrays mv);
 
@@ -2566,7 +2562,7 @@ CV_EXPORTS_W void fillPoly(InputOutputArray img, InputArrayOfArrays pts,
                            Point offset=Point() );
 
 //! draws one or more polygonal curves
-CV_EXPORTS void polylines(Mat& img, const Point** pts, const int* npts,
+CV_EXPORTS void polylines(Mat& img, const Point* const* pts, const int* npts,
                           int ncontours, bool isClosed, const Scalar& color,
                           int thickness=1, int lineType=8, int shift=0 );
 
@@ -4014,7 +4010,7 @@ public:
     //! closes the file and releases all the memory buffers
     CV_WRAP virtual void release();
     //! closes the file, releases all the memory buffers and returns the text string
-    CV_WRAP string releaseAndGetString();
+    CV_WRAP virtual string releaseAndGetString();
 
     //! returns the first element of the top-level mapping
     CV_WRAP FileNode getFirstTopLevelNode() const;
@@ -4408,11 +4404,6 @@ public:
                   void (Algorithm::*setter)(int)=0,
                   const string& help=string());
     void addParam(Algorithm& algo, const char* name,
-                  short& value, bool readOnly=false,
-                  int (Algorithm::*getter)()=0,
-                  void (Algorithm::*setter)(int)=0,
-                  const string& help=string());
-    void addParam(Algorithm& algo, const char* name,
                   bool& value, bool readOnly=false,
                   int (Algorithm::*getter)()=0,
                   void (Algorithm::*setter)(int)=0,
@@ -4461,7 +4452,7 @@ protected:
 
 struct CV_EXPORTS Param
 {
-    enum { INT=0, BOOLEAN=1, REAL=2, STRING=3, MAT=4, MAT_VECTOR=5, ALGORITHM=6, FLOAT=7, UNSIGNED_INT=8, UINT64=9, SHORT=10 };
+    enum { INT=0, BOOLEAN=1, REAL=2, STRING=3, MAT=4, MAT_VECTOR=5, ALGORITHM=6, FLOAT=7, UNSIGNED_INT=8, UINT64=9 };
 
     Param();
     Param(int _type, bool _readonly, int _offset,
@@ -4492,14 +4483,6 @@ template<> struct ParamType<int>
     enum { type = Param::INT };
 };
 
-template<> struct ParamType<short>
-{
-    typedef int const_param_type;
-    typedef int member_type;
-    
-    enum { type = Param::SHORT };
-};    
-    
 template<> struct ParamType<double>
 {
     typedef double const_param_type;
@@ -4570,8 +4553,7 @@ template<> struct ParamType<uint64>
 class CV_EXPORTS CommandLineParser
 {
 public:
-    CommandLineParser(int argc, const char* const argv[], const char* key_map);
-    CommandLineParser(int argc, const char* const argv[], const string& key_map);
+    CommandLineParser(int argc, const char* const argv[], const string& keys);
     CommandLineParser(const CommandLineParser& parser);
     CommandLineParser& operator = (const CommandLineParser& parser);
 
@@ -4592,18 +4574,17 @@ public:
         getByIndex(index, space_delete, ParamType<T>::type, (void*)&val);
         return val;
     }
-    
-    bool has(const string& keys);
+
+    bool has(const string& name) const;
+
     bool check() const;
 
     void about(const string& message);
 
     void printMessage() const;
     void printErrors() const;
-    void printParams();
 
 protected:
-    string getString(const string& name);
     void getByName(const string& name, bool space_delete, int type, void* dst) const;
     void getByIndex(int index, bool space_delete, int type, void* dst) const;
 

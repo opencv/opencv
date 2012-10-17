@@ -17,7 +17,7 @@ import sys
 if __name__ == '__main__':
     print 'This sample shows how to implement a simple hi resolution image navigation.'
     print 'USAGE: browse.py [image filename]'
-    print 
+    print
 
     if len(sys.argv) > 1:
         fn = sys.argv[1]
@@ -45,4 +45,4 @@ if __name__ == '__main__':
     cv2.imshow('preview', small)
     cv2.setMouseCallback('preview', onmouse)
     cv2.waitKey()
-    cv2.destroyAllWindows() 			
+    cv2.destroyAllWindows()

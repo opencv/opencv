@@ -43,8 +43,8 @@
 
 /****************************************************************************************\
 
-   calculate image homography 
-   
+   calculate image homography
+
 \****************************************************************************************/
 
 CV_IMPL void
@@ -100,7 +100,7 @@ cvCalcImageHomography( float* line, CvPoint3D32f* _center,
     /* calculate (I - r_trans)*center */
     cvSetIdentity( &sub );
     cvSub( &sub, &r_trans, &sub );
-    cvMatMul( &sub, &center, &t_trans ); 
+    cvMatMul( &sub, &center, &t_trans );
 
     cvMatMul( &t_trans, &rz, &sub );
     cvScaleAdd( &sub, cvRealScalar(1./plane_dist), &r_trans, &sub ); /* ? */

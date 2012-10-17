@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2002, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-// 
+//
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission. 
-// 
+// from this software without specific prior written permission.
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -78,7 +78,7 @@ int	numSamples (int s, int a, int b);
 //
 
 size_t	bytesPerLineTable (const Header &header,
-		           std::vector<size_t> &bytesPerLine);
+                   std::vector<size_t> &bytesPerLine);
 
 //
 // For scanline-based files, pixels are read or written in
@@ -91,8 +91,8 @@ size_t	bytesPerLineTable (const Header &header,
 //
 
 void	offsetInLineBufferTable (const std::vector<size_t> &bytesPerLine,
-				 int linesInLineBuffer,
-				 std::vector<size_t> &offsetInLineBuffer);
+                 int linesInLineBuffer,
+                 std::vector<size_t> &offsetInLineBuffer);
 
 //
 // For a scanline-based file, compute the range of scanlines
@@ -147,12 +147,12 @@ int     numLinesInBuffer (Compressor *compressor);
 //
 
 void    copyIntoFrameBuffer (const char *&readPtr,
-			     char *writePtr,
+                 char *writePtr,
                              char *endPtr,
-			     size_t xStride,
-			     bool fill,
+                 size_t xStride,
+                 bool fill,
                              double fillValue,
-			     Compressor::Format format,
+                 Compressor::Format format,
                              PixelType typeInFrameBuffer,
                              PixelType typeInFile);
 
@@ -165,8 +165,8 @@ void    copyIntoFrameBuffer (const char *&readPtr,
 //
 
 void    skipChannel (const char *&readPtr,
-		     PixelType typeInFile,
-		     size_t xSize);
+             PixelType typeInFile,
+             size_t xSize);
 
 //
 // Convert an array of pixel data from the machine's native
@@ -185,11 +185,11 @@ void    skipChannel (const char *&readPtr,
 //    type		the pixel data type
 //
 //    numPixels		number of pixels in the input and output arrays
-// 
+//
 
 void    convertInPlace (char *&toPtr,
-			const char *&fromPtr,
-			PixelType type,
+            const char *&fromPtr,
+            PixelType type,
                         size_t numPixels);
 
 //
@@ -219,11 +219,11 @@ void    convertInPlace (char *&toPtr,
 //
 
 void    copyFromFrameBuffer (char *&writePtr,
-			     const char *&readPtr,
+                 const char *&readPtr,
                              const char *endPtr,
-			     size_t xStride,
+                 size_t xStride,
                              Compressor::Format format,
-			     PixelType type);
+                 PixelType type);
 
 //
 // Fill part of an output file's line buffer or tile buffer with
@@ -246,9 +246,9 @@ void    copyFromFrameBuffer (char *&writePtr,
 //
 
 void    fillChannelWithZeroes (char *&writePtr,
-			       Compressor::Format format,
-			       PixelType type,
-			       size_t xSize);
+                   Compressor::Format format,
+                   PixelType type,
+                   size_t xSize);
 
 } // namespace Imf
 

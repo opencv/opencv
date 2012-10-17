@@ -56,19 +56,19 @@ inline float calc(int x, int y)
 {
     return (float)abs(x) + abs(y);
 }
-#endif // 
+#endif //
 
 // Smoothing perpendicular to the derivative direction with a triangle filter
-// only support 3x3 Sobel kernel 
+// only support 3x3 Sobel kernel
 // h (-1) =  1, h (0) =  2, h (1) =  1
 // h'(-1) = -1, h'(0) =  0, h'(1) =  1
 // thus sobel 2D operator can be calculated as:
 // h'(x, y) = h'(x)h(y) for x direction
-// 
+//
 // src		input 8bit single channel image data
 // dx_buf	output dx buffer
 // dy_buf	output dy buffer
-__kernel 
+__kernel
     void calcSobelRowPass
     (
     __global const uchar * src,
@@ -99,11 +99,11 @@ __kernel
 
     __local int smem[16][18];
 
-    smem[lidy][lidx + 1] = src[gidx + gidy * src_step + src_offset]; 
+    smem[lidy][lidx + 1] = src[gidx + gidy * src_step + src_offset];
     if(lidx == 0)
     {
         smem[lidy][0]  = src[max(gidx - 1,  0)        + gidy * src_step + src_offset];
-        smem[lidy][17] = src[min(gidx + 16, cols - 1) + gidy * src_step + src_offset]; 
+        smem[lidy][17] = src[min(gidx + 16, cols - 1) + gidy * src_step + src_offset];
     }
     barrier(CLK_LOCAL_MEM_FENCE);
 
@@ -122,7 +122,7 @@ __kernel
 
 // calculate the magnitude of the filter pass combining both x and y directions
 // This is the buffered version(3x3 sobel)
-// 
+//
 // dx_buf		dx buffer, calculated from calcSobelRowPass
 // dy_buf		dy buffer, calculated from calcSobelRowPass
 // dx			direvitive in x direction output
@@ -169,7 +169,7 @@ __kernel
 
     __local int sdx[18][16];
     __local int sdy[18][16];
-    
+
     sdx[lidy + 1][lidx] = dx_buf[gidx + gidy * dx_buf_step + dx_buf_offset];
     sdy[lidy + 1][lidx] = dy_buf[gidx + gidy * dy_buf_step + dy_buf_offset];
     if(lidy == 0)
@@ -199,7 +199,7 @@ __kernel
 
 // calculate the magnitude of the filter pass combining both x and y directions
 // This is the non-buffered version(non-3x3 sobel)
-// 
+//
 // dx_buf		dx buffer, calculated from calcSobelRowPass
 // dy_buf		dy buffer, calculated from calcSobelRowPass
 // dx			direvitive in x direction output
@@ -233,9 +233,9 @@ __kernel
 
     if(gidy < rows && gidx < cols)
     {
-        mag[(gidx + 1) + (gidy + 1) * mag_step + mag_offset] = 
+        mag[(gidx + 1) + (gidy + 1) * mag_step + mag_offset] =
             calc(
-            dx[gidx + gidy * dx_step + dx_offset], 
+            dx[gidx + gidy * dx_step + dx_offset],
             dy[gidx + gidy * dy_step + dy_offset]
         );
     }
@@ -251,7 +251,7 @@ __kernel
 // 0 - below low thres, not an edge
 // 1 - maybe an edge
 // 2 - is an edge, either magnitude is greater than high thres, or
-//     Given estimates of the image gradients, a search is then carried out 
+//     Given estimates of the image gradients, a search is then carried out
 //     to determine if the gradient magnitude assumes a local maximum in the gradient direction.
 //     if the rounded gradient angle is zero degrees (i.e. the edge is in the north-south direction) the point will be considered to be on the edge if its gradient magnitude is greater than the magnitudes in the west and east directions,
 //     if the rounded gradient angle is 90 degrees (i.e. the edge is in the east-west direction) the point will be considered to be on the edge if its gradient magnitude is greater than the magnitudes in the north and south directions,
@@ -265,7 +265,7 @@ __kernel
     void calcMap
     (
     __global const int * dx,
-    __global const int * dy, 
+    __global const int * dy,
     __global const float * mag,
     __global int * map,
     int rows,
@@ -362,10 +362,10 @@ __kernel
 
 // non local memory version
 __kernel
-    void calcMap_2 
+    void calcMap_2
     (
     __global const int * dx,
-    __global const int * dy, 
+    __global const int * dy,
     __global const float * mag,
     __global int * map,
     int rows,
@@ -444,7 +444,7 @@ __kernel
     void calcMap_3
     (
     __global const int * dx,
-    __global const int * dy, 
+    __global const int * dy,
     __global const float * mag,
     __global int * map,
     int rows,
@@ -550,9 +550,9 @@ __kernel
 //
 // If candidate pixel (edge type is 1) has a neighbour pixel (in 3x3 area) with type 2, it is believed to be part of an edge and
 // marked as edge. Each thread will iterate for 16 times to connect local edges.
-// Candidate pixel being identified as edge will then be tested if there is nearby potiential edge points. If there is, counter will 
+// Candidate pixel being identified as edge will then be tested if there is nearby potiential edge points. If there is, counter will
 // be incremented by 1 and the point location is stored. These potiential candidates will be processed further in next kernel.
-// 
+//
 // map		raw edge type results calculated from calcMap.
 // st		the potiential edge points found in this kernel call
 // counter	the number of potiential edge points
@@ -560,7 +560,7 @@ __kernel
     void edgesHysteresisLocal
     (
     __global int * map,
-    __global ushort2 * st, 
+    __global ushort2 * st,
     volatile __global unsigned int * counter,
     int rows,
     int cols,
@@ -657,8 +657,8 @@ __kernel
     void edgesHysteresisGlobal
     (
     __global int * map,
-    __global ushort2 * st1, 
-    __global ushort2 * st2, 
+    __global ushort2 * st1,
+    __global ushort2 * st2,
     volatile __global int * counter,
     int rows,
     int cols,

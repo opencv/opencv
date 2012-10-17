@@ -8,7 +8,7 @@ struct CvCascadeBoostParams : CvBoostParams
 {
     float minHitRate;
     float maxFalseAlarm;
-    
+
     CvCascadeBoostParams();
     CvCascadeBoostParams( int _boostType, float _minHitRate, float _maxFalseAlarm,
                           double _weightTrimRate, int _maxDepth, int _maxWeakCount );
@@ -37,7 +37,7 @@ struct CvCascadeBoostTrainData : CvDTreeTrainData
     virtual const int* get_class_labels( CvDTreeNode* n, int* labelsBuf );
     virtual const int* get_cv_labels( CvDTreeNode* n, int* labelsBuf);
     virtual const int* get_sample_indices( CvDTreeNode* n, int* indicesBuf );
-    
+
     virtual void get_ord_var_data( CvDTreeNode* n, int vi, float* ordValuesBuf, int* sortedIndicesBuf,
                                   const float** ordValues, const int** sortedIndices, int* sampleIndicesBuf );
     virtual const int* get_cat_var_data( CvDTreeNode* n, int vi, int* catValuesBuf );

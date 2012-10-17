@@ -72,7 +72,7 @@ namespace
     static void outputHandler(const std::string &msg) { CV_Error(CV_GpuApiCallError, msg.c_str()); }
 }
 
-void cv::gpu::BroxOpticalFlow::operator ()(const GpuMat& frame0, const GpuMat& frame1, GpuMat& u, GpuMat& v, Stream& s) 
+void cv::gpu::BroxOpticalFlow::operator ()(const GpuMat& frame0, const GpuMat& frame1, GpuMat& u, GpuMat& v, Stream& s)
 {
     ncvSetDebugOutputHandler(outputHandler);
 
@@ -126,11 +126,11 @@ void cv::gpu::BroxOpticalFlow::operator ()(const GpuMat& frame0, const GpuMat& f
     ensureSizeIsEnough(1, static_cast<int>(bufSize), CV_8UC1, buf);
 
     NCVMemStackAllocator gpuAllocator(NCVMemoryTypeDevice, bufSize, static_cast<Ncv32u>(devProp.textureAlignment), buf.ptr());
-    
+
     ncvSafeCall( NCVBroxOpticalFlow(desc, gpuAllocator, frame0Mat, frame1Mat, uMat, vMat, stream) );
 }
 
-void cv::gpu::interpolateFrames(const GpuMat& frame0, const GpuMat& frame1, const GpuMat& fu, const GpuMat& fv, const GpuMat& bu, const GpuMat& bv, 
+void cv::gpu::interpolateFrames(const GpuMat& frame0, const GpuMat& frame1, const GpuMat& fu, const GpuMat& fv, const GpuMat& bu, const GpuMat& bv,
                                 float pos, GpuMat& newFrame, GpuMat& buf, Stream& s)
 {
     CV_Assert(frame0.type() == CV_32FC1);
@@ -144,7 +144,7 @@ void cv::gpu::interpolateFrames(const GpuMat& frame0, const GpuMat& frame1, cons
 
     buf.create(6 * frame0.rows, frame0.cols, CV_32FC1);
     buf.setTo(Scalar::all(0));
-    
+
     // occlusion masks
     GpuMat occ0 = buf.rowRange(0 * frame0.rows, 1 * frame0.rows);
     GpuMat occ1 = buf.rowRange(1 * frame0.rows, 2 * frame0.rows);
@@ -189,7 +189,7 @@ void cv::gpu::interpolateFrames(const GpuMat& frame0, const GpuMat& frame1, cons
         cudaSafeCall( cudaDeviceSynchronize() );
 }
 
-namespace cv { namespace gpu { namespace device 
+namespace cv { namespace gpu { namespace device
 {
     namespace optical_flow
     {
@@ -207,16 +207,16 @@ void cv::gpu::createOpticalFlowNeedleMap(const GpuMat& u, const GpuMat& v, GpuMa
 
     const int NEEDLE_MAP_SCALE = 16;
 
-	const int x_needles = u.cols / NEEDLE_MAP_SCALE;
-	const int y_needles = u.rows / NEEDLE_MAP_SCALE;
+    const int x_needles = u.cols / NEEDLE_MAP_SCALE;
+    const int y_needles = u.rows / NEEDLE_MAP_SCALE;
 
     GpuMat u_avg(y_needles, x_needles, CV_32FC1);
     GpuMat v_avg(y_needles, x_needles, CV_32FC1);
-    
+
     NeedleMapAverage_gpu(u, v, u_avg, v_avg);
-    
+
     const int NUM_VERTS_PER_ARROW = 6;
-    
+
     const int num_arrows = x_needles * y_needles * NUM_VERTS_PER_ARROW;
 
     vertex.create(1, num_arrows, CV_32FC3);

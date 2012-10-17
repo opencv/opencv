@@ -52,7 +52,7 @@
 #include "_cvwrap.h"
 
 /*typedef struct CvCliqueFinder
-{   
+{
     CvGraph* graph;
     int**    adj_matr;
     int N; //graph size
@@ -61,7 +61,7 @@
     int k; //stack size
     int* current_comp;
     int** All;
-    
+
     int* ne;
     int* ce;
     int* fixp; //node with minimal disconnections
@@ -99,7 +99,7 @@ void _MarkNodes( CvGraph* graph )
         {
             ver->flags = i<<1;
         }
-    }  
+    }
 }
 
 void _FillAdjMatrix( CvGraph* graph, int** connected, int reverse )
@@ -110,7 +110,7 @@ void _FillAdjMatrix( CvGraph* graph, int** connected, int reverse )
         for( int j = 0; j < graph->total; j++ )
         {
             connected[i][j] = 0|reverse;
-        } 
+        }
         //memset( connected[i], 0, sizeof(int)*graph->total );
         CvGraphVtx* ver = cvGetGraphVtx( graph, i );
         if( ver )
@@ -146,7 +146,7 @@ void cvStartFindCliques( CvGraph* graph, CvCliqueFinder* finder, int reverse, in
             assert(ver);
             assert(ver->weight>=0);
             finder->vertex_weights[i] = ver->weight;
-            finder->cand_weight[0] += ver->weight;             
+            finder->cand_weight[0] += ver->weight;
         }
     }
     else finder->weighted = 0;
@@ -174,14 +174,14 @@ void cvStartFindCliques( CvGraph* graph, CvCliqueFinder* finder, int reverse, in
                 if( edge )
                 {
                     assert( ((CvGraphWeightedEdge*)edge)->weight >= 0 );
-                    finder->edge_weights[ i * graph->total + j ] = 
+                    finder->edge_weights[ i * graph->total + j ] =
                     finder->edge_weights[ j * graph->total + i ] = ((CvGraphWeightedEdge*)edge)->weight;
                 }
             }
-        }        
+        }
     }
     else finder->weighted_edges = 0;
-                               
+
 
     //int* Compsub; //current component (vertex stack)
     finder->k = 0; //counter of steps
@@ -198,7 +198,7 @@ void cvStartFindCliques( CvGraph* graph, CvCliqueFinder* finder, int reverse, in
     finder->fixp = new int[N+1]; //node with minimal disconnections
     finder->nod = new int[N+1];
     finder->s = new int[N+1]; //for selected candidate
-    
+
     //form adj matrix
     finder->adj_matr = new int*[N]; //assume filled with 0
     for( i = 0 ; i < N; i++ )
@@ -220,12 +220,12 @@ void cvStartFindCliques( CvGraph* graph, CvCliqueFinder* finder, int reverse, in
     finder->status = GO;
     finder->best_score = 0;
 
-}   
+}
 
 void cvEndFindCliques( CvCliqueFinder* finder )
 {
     int i;
-    
+
     //int* Compsub; //current component (vertex stack)
     delete finder->current_comp;
     for( i = 0 ; i < finder->N; i++ )
@@ -233,25 +233,25 @@ void cvEndFindCliques( CvCliqueFinder* finder )
         delete finder->All[i];
     }
     delete finder->All;
-    
+
     delete finder->ne;
     delete finder->ce;
     delete finder->fixp; //node with minimal disconnections
     delete finder->nod;
     delete finder->s; //for selected candidate
-    
+
     //delete adj matrix
     for( i = 0 ; i < finder->N; i++ )
     {
         delete finder->adj_matr[i];
-    }  
+    }
     delete finder->adj_matr;
-    
+
     if(finder->weighted)
     {
         free(finder->vertex_weights);
         free(finder->cur_weight);
-        free(finder->cand_weight); 
+        free(finder->cand_weight);
     }
     if(finder->weighted_edges)
     {
@@ -259,7 +259,7 @@ void cvEndFindCliques( CvCliqueFinder* finder )
     }
 }
 
-int cvFindNextMaximalClique( CvCliqueFinder* finder ) 
+int cvFindNextMaximalClique( CvCliqueFinder* finder )
 {
     int**  connected = finder->adj_matr;
 //    int N = finder->N; //graph size
@@ -268,28 +268,28 @@ int cvFindNextMaximalClique( CvCliqueFinder* finder )
     int k = finder->k; //stack size
     int* Compsub = finder->current_comp;
     int** All = finder->All;
-    
+
     int* ne = finder->ne;
     int* ce = finder->ce;
     int* fixp = finder->fixp; //node with minimal disconnections
     int* nod = finder->nod;
-    int* s = finder->s; //for selected candidate   
-    
+    int* s = finder->s; //for selected candidate
+
     //START
     while( k >= 0)
     {
         int* old = All[k];
         switch(finder->status)
-        {    
+        {
         case GO://Forward step
-        /* we have all sets and will choose fixed point */ 
-            {   
+        /* we have all sets and will choose fixed point */
+            {
                 //check potential size of clique
-                if( (!finder->weighted) && (k + ce[k] - ne[k] < finder->best_score) ) 
+                if( (!finder->weighted) && (k + ce[k] - ne[k] < finder->best_score) )
                 {
                     finder->status  = BACK;
                     break;
-                } 
+                }
                 //check potential weight
                 if( finder->weighted && !finder->weighted_edges &&
                     finder->cur_weight[k] + finder->cand_weight[k] < finder->best_weight )
@@ -302,33 +302,33 @@ int cvFindNextMaximalClique( CvCliqueFinder* finder )
                 nod[k] = 0;
 
                 //for every vertex of All determine counter value and choose minimum
-                for( int i = 0; i < ce[k] && minnod != 0; i++) 
-                {   
+                for( int i = 0; i < ce[k] && minnod != 0; i++)
+                {
                     int p = old[i]; //current point
                     int count = 0;  //counter
                     int pos = 0;
 
                     /* Count disconnections with candidates */
-                    for (int j = ne[k]; j < ce[k] && (count < minnod); j++) 
+                    for (int j = ne[k]; j < ce[k] && (count < minnod); j++)
                     {
-                        if ( !connected[p][old[j]] ) 
+                        if ( !connected[p][old[j]] )
                         {
                             count++;
                             /* Save position of potential candidate */
                             pos = j;
                         }
                     }
-                    
+
                     /* Test new minimum */
-                    if (count < minnod) 
+                    if (count < minnod)
                     {
                         fixp[k] = p;     //set current point as fixed
                         minnod = count;  //new value for minnod
                         if (i < ne[k])      //if current fixed point belongs to 'not'
                         {
                             s[k] = pos;     //s - selected candidate
-                        } 
-                        else 
+                        }
+                        else
                         {
                             s[k] = i;        //selected candidate is fixed point itself
                             /* preincr */
@@ -338,11 +338,11 @@ int cvFindNextMaximalClique( CvCliqueFinder* finder )
                 }//for
 
                 nod[k] = minnod + nod[k];
-                finder->status = NEXT;//go to backtrackcycle 
+                finder->status = NEXT;//go to backtrackcycle
             }
             break;
         case NEXT:
-            //here we will look for candidate to translate into not    
+            //here we will look for candidate to translate into not
             //s[k] now contains index of choosen candidate
             {
                 int* new_ = All[k+1];
@@ -355,37 +355,37 @@ int cvFindNextMaximalClique( CvCliqueFinder* finder )
 
                     int newne = 0;
                     //fill new set 'not'
-                    for ( i = 0; i < ne[k]; i++) 
+                    for ( i = 0; i < ne[k]; i++)
                     {
-                        if (connected[sel][old[i]]) 
+                        if (connected[sel][old[i]])
                         {
                             new_[newne] = old[i];
                             newne++;
-                            
+
                         }
                     }
                     //fill new set 'candidate'
                     int newce = newne;
                     i++;//skip selected candidate
-                    
+
                     float candweight = 0;
-                    
-                    for (; i < ce[k]; i++) 
+
+                    for (; i < ce[k]; i++)
                     {
-                        if (connected[sel][old[i]]) 
+                        if (connected[sel][old[i]])
                         {
                             new_[newce] = old[i];
-                            
-                            if( finder->weighted ) 
-                                candweight += finder->vertex_weights[old[i]];                            
-                            
-                            newce++; 
+
+                            if( finder->weighted )
+                                candweight += finder->vertex_weights[old[i]];
+
+                            newce++;
                         }
                     }
 
                     nod[k]--;
 
-                    //add selected to stack 
+                    //add selected to stack
                     Compsub[k] = sel;
 
                     k++;
@@ -393,9 +393,9 @@ int cvFindNextMaximalClique( CvCliqueFinder* finder )
                     if( finder->weighted )
                     {
                         //update weights of current clique and candidates
-                        finder->cur_weight[k] = finder->cur_weight[k-1] + finder->vertex_weights[sel]; 
+                        finder->cur_weight[k] = finder->cur_weight[k-1] + finder->vertex_weights[sel];
                         finder->cand_weight[k] = candweight;
-                    }       
+                    }
                     if( finder->weighted_edges )
                     {
                         //update total weight by edge weights
@@ -405,8 +405,8 @@ int cvFindNextMaximalClique( CvCliqueFinder* finder )
                             added += finder->edge_weights[ Compsub[ind] * finder->N + sel ];
                         }
                         finder->cur_weight[k] += added;
-                    }                    
-                                        
+                    }
+
                     //check if 'not' and 'cand' are both empty
                     if( newce == 0 )
                     {
@@ -424,7 +424,7 @@ int cvFindNextMaximalClique( CvCliqueFinder* finder )
 
                         fclose(file);
                         */
-                        
+
                         //output new clique//************************
                         finder->status = BACK;
                         finder->k = k;
@@ -441,18 +441,18 @@ int cvFindNextMaximalClique( CvCliqueFinder* finder )
                         finder->status  = GO;
                         break;
                     }
-                    
+
                 }
-                else 
+                else
                     finder->status  = BACK;
 
             }
             break;
 
         case BACK:
-            {         
+            {
                 //decrease stack
-                k--;         
+                k--;
                 old = All[k];
                 if( k < 0 ) break;
 
@@ -475,7 +475,7 @@ int cvFindNextMaximalClique( CvCliqueFinder* finder )
 
             }
             break;
-        case END: assert(0);       
+        case END: assert(0);
 
         }
     }//end while
@@ -485,7 +485,7 @@ int cvFindNextMaximalClique( CvCliqueFinder* finder )
 }
 
 
-                                     
+
 
 void cvBronKerbosch( CvGraph* graph )
 {
@@ -505,7 +505,7 @@ void cvBronKerbosch( CvGraph* graph )
     int* fixp = new int[N]; //node with minimal disconnections
     int* nod = new int[N];
     int* s = new int[N]; //for selected candidate
-    
+
     //form adj matrix
     int** connected = new int*[N]; //assume filled with 0
     for( i = 0 ; i < N; i++ )
@@ -534,48 +534,48 @@ void cvBronKerbosch( CvGraph* graph )
     {
         int* old = All[k];
         switch(status)
-        {    
+        {
         case GO://Forward step
-        /* we have all sets and will choose fixed point */ 
-            {   
+        /* we have all sets and will choose fixed point */
+            {
 
-                if( k + ce[k] - ne[k] < best_score ) 
+                if( k + ce[k] - ne[k] < best_score )
                 {
                     status  = BACK;
                     break;
-                } 
+                }
 
                 int minnod = ce[k];
                 nod[k] = 0;
 
                 //for every vertex of All determine counter value and choose minimum
-                for( int i = 0; i < ce[k] && minnod != 0; i++) 
-                {   
+                for( int i = 0; i < ce[k] && minnod != 0; i++)
+                {
                     int p = old[i]; //current point
                     int count = 0;  //counter
                     int pos = 0;
 
                     /* Count disconnections with candidates */
-                    for (int j = ne[k]; j < ce[k] && (count < minnod); j++) 
+                    for (int j = ne[k]; j < ce[k] && (count < minnod); j++)
                     {
-                        if ( !connected[p][old[j]] ) 
+                        if ( !connected[p][old[j]] )
                         {
                             count++;
                             /* Save position of potential candidate */
                             pos = j;
                         }
                     }
-                    
+
                     /* Test new minimum */
-                    if (count < minnod) 
+                    if (count < minnod)
                     {
                         fixp[k] = p;     //set current point as fixed
                         minnod = count;  //new value for minnod
                         if (i < ne[k])      //if current fixed point belongs to 'not'
                         {
                             s[k] = pos;     //s - selected candidate
-                        } 
-                        else 
+                        }
+                        else
                         {
                             s[k] = i;        //selected candidate is fixed point itself
                             /* preincr */
@@ -585,11 +585,11 @@ void cvBronKerbosch( CvGraph* graph )
                 }//for
 
                 nod[k] = minnod + nod[k];
-                status = NEXT;//go to backtrackcycle 
+                status = NEXT;//go to backtrackcycle
             }
             break;
         case NEXT:
-            //here we will look for candidate to translate into not    
+            //here we will look for candidate to translate into not
             //s[k] now contains index of choosen candidate
             {
                 int* new_ = All[k+1];
@@ -602,21 +602,21 @@ void cvBronKerbosch( CvGraph* graph )
 
                     int newne = 0;
                     //fill new set 'not'
-                    for ( i = 0; i < ne[k]; i++) 
+                    for ( i = 0; i < ne[k]; i++)
                     {
-                        if (connected[sel][old[i]]) 
+                        if (connected[sel][old[i]])
                         {
                             new_[newne] = old[i];
                             newne++;
-                            
+
                         }
                     }
                     //fill new set 'candidate'
                     int newce = newne;
                     i++;//skip selected candidate
-                    for (; i < ce[k]; i++) 
+                    for (; i < ce[k]; i++)
                     {
-                        if (connected[sel][old[i]]) 
+                        if (connected[sel][old[i]])
                         {
                             new_[newce] = old[i];
                             newce++;
@@ -625,7 +625,7 @@ void cvBronKerbosch( CvGraph* graph )
 
                     nod[k]--;
 
-                    //add selected to stack 
+                    //add selected to stack
                     Compsub[k] = sel;
                     k++;
 
@@ -664,18 +664,18 @@ void cvBronKerbosch( CvGraph* graph )
                         status  = GO;
                         break;
                     }
-                    
+
                 }
-                else 
+                else
                     status  = BACK;
 
             }
             break;
 
         case BACK:
-            {         
+            {
                 //decrease stack
-                k--;         
+                k--;
                 old = All[k];
                 if( k < 0 ) break;
 
@@ -698,7 +698,7 @@ void cvBronKerbosch( CvGraph* graph )
 
             }
             break;
-       
+
 
         }
     }//end while

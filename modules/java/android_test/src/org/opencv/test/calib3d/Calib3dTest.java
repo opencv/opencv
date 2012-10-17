@@ -238,8 +238,8 @@ public class Calib3dTest extends OpenCVTestCase {
     public void testFindFundamentalMatListOfPointListOfPoint() {
         int minFundamentalMatPoints = 8;
 
-    	MatOfPoint2f pts = new MatOfPoint2f();
-    	pts.alloc(minFundamentalMatPoints);
+        MatOfPoint2f pts = new MatOfPoint2f();
+        pts.alloc(minFundamentalMatPoints);
 
         for (int i = 0; i < minFundamentalMatPoints; i++) {
             double x = Math.random() * 100 - 50;
@@ -271,12 +271,12 @@ public class Calib3dTest extends OpenCVTestCase {
     }
 
     public void testFindHomographyListOfPointListOfPoint() {
-    	final int NUM = 20;
-    	
-    	MatOfPoint2f originalPoints = new MatOfPoint2f();
-    	originalPoints.alloc(NUM);
-    	MatOfPoint2f transformedPoints = new MatOfPoint2f();
-    	transformedPoints.alloc(NUM);
+        final int NUM = 20;
+
+        MatOfPoint2f originalPoints = new MatOfPoint2f();
+        originalPoints.alloc(NUM);
+        MatOfPoint2f transformedPoints = new MatOfPoint2f();
+        transformedPoints.alloc(NUM);
 
         for (int i = 0; i < NUM; i++) {
             double x = Math.random() * 100 - 50;
@@ -503,7 +503,7 @@ public class Calib3dTest extends OpenCVTestCase {
         intrinsics.put(1, 2, 480 / 2);
 
         final int minPnpPointsNum = 4;
-        
+
         MatOfPoint3f points3d = new MatOfPoint3f();
         points3d.alloc(minPnpPointsNum);
         MatOfPoint2f points2d = new MatOfPoint2f();

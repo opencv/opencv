@@ -32,7 +32,7 @@ def on_mouse (event, x, y, flags, param):
     # we will use the global pt and add_remove_pt
     global pt
     global add_remove_pt
-    
+
     if image is None:
         # not initialized, so skip
         return
@@ -149,7 +149,7 @@ if __name__ == '__main__':
             # draw the points as green circles
             for the_point in features:
                 cv.Circle (image, (int(the_point[0]), int(the_point[1])), 3, (0, 255, 0, 0), -1, 8, 0)
-            
+
         if add_remove_pt:
             # we want to add a point
             # refine this corner location and append it to 'features'
@@ -167,7 +167,7 @@ if __name__ == '__main__':
         prev_grey, grey = grey, prev_grey
         prev_pyramid, pyramid = pyramid, prev_pyramid
         need_to_init = False
-        
+
         # we can now display the image
         cv.ShowImage ('LkDemo', image)
 

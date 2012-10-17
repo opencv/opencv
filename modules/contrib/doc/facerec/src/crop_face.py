@@ -80,7 +80,7 @@ def CropFace(image, eye_left=(0,0), eye_right=(0,0), offset_pct=(0.2,0.2), dest_
   # resize it
   image = image.resize(dest_sz, Image.ANTIALIAS)
   return image
-  
+
 if __name__ == "__main__":
   image =  Image.open("arnie.jpg")
   CropFace(image, eye_left=(252,364), eye_right=(420,366), offset_pct=(0.1,0.1), dest_sz=(200,200)).save("arnie_10_10_200_200.jpg")

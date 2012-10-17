@@ -57,7 +57,7 @@ struct CvSpillTreeNode
 };
 
 struct CvSpillTree
-{     
+{
   CvSpillTreeNode* root;
   CvMat** refmat; // leaf ref matrix
   int total; // total leaves
@@ -69,15 +69,15 @@ struct CvSpillTree
 
 struct CvResult
 {
-  int index;  
+  int index;
   double distance;
 };
 
 // find the farthest node in the "list" from "node"
 static inline CvSpillTreeNode*
 icvFarthestNode( CvSpillTreeNode* node,
-		 CvSpillTreeNode* list,
-		 int total )
+         CvSpillTreeNode* list,
+         int total )
 {
   double farthest = -1.;
   CvSpillTreeNode* result = NULL;
@@ -85,10 +85,10 @@ icvFarthestNode( CvSpillTreeNode* node,
     {
       double norm = cvNorm( node->center, list->center );
       if ( norm > farthest )
-	{
-	  farthest = norm;
-	  result = list;
-	}
+    {
+      farthest = norm;
+      result = list;
+    }
       list = list->rc;
     }
   return result;
@@ -106,7 +106,7 @@ icvCloneSpillTreeNode( CvSpillTreeNode* node )
 // append the link-list of a tree node
 static inline void
 icvAppendSpillTreeNode( CvSpillTreeNode* node,
-			CvSpillTreeNode* append )
+            CvSpillTreeNode* append )
 {
   if ( node->lc == NULL )
     {
@@ -125,8 +125,8 @@ icvAppendSpillTreeNode( CvSpillTreeNode* node,
 
 static void
 icvDFSInitSpillTreeNode( const CvSpillTree* tr,
-			 const int d,
-			 CvSpillTreeNode* node )
+             const int d,
+             CvSpillTreeNode* node )
 {
   if ( node->cc <= tr->naive )
     {
@@ -151,7 +151,7 @@ icvDFSInitSpillTreeNode( const CvSpillTree* tr,
   node->u = cvCreateMat( 1, d, tr->type );
   cvSub( lnode->center, rnode->center, node->u );
   cvNormalize( node->u, node->u );
-	
+
   // find the center of node in hyperspace
   node->center = cvCreateMat( 1, d, tr->type );
   cvZero( node->center );
@@ -172,7 +172,7 @@ icvDFSInitSpillTreeNode( const CvSpillTree* tr,
       node->mp += ( it->p = cvDotProduct( it->center, node->u ) );
       double norm = cvNorm( node->center, it->center );
       if ( norm > node->r )
-	node->r = norm;
+    node->r = norm;
       it = it->rc;
     }
   node->mp = node->mp / node->cc;
@@ -187,13 +187,13 @@ icvDFSInitSpillTreeNode( const CvSpillTree* tr,
   for ( int i = 0; i < node->cc; i++ )
     {
       if ( it->p <= node->ub )
-	sl++;
+    sl++;
       if ( it->p >= node->lb )
-	sr++;
+    sr++;
       if ( it->p < node->mp )
-	l++;
+    l++;
       else
-	r++;
+    r++;
       it = it->rc;
     }
   // precision problem, return the node as it is.
@@ -217,32 +217,32 @@ icvDFSInitSpillTreeNode( const CvSpillTree* tr,
       // it is not a spill point (defeatist search disabled)
       it = node->lc;
       for ( int i = 0; i < node->cc; i++ )
-	{
-	  CvSpillTreeNode* next = it->rc;
-	  if ( it->p < node->mp )
-	    icvAppendSpillTreeNode( lc, it );
-	  else
-	    icvAppendSpillTreeNode( rc, it );
-	  it = next;
-	}
+    {
+      CvSpillTreeNode* next = it->rc;
+      if ( it->p < node->mp )
+        icvAppendSpillTreeNode( lc, it );
+      else
+        icvAppendSpillTreeNode( rc, it );
+      it = next;
+    }
       node->spill = false;
     } else {
       // a spill point
       it = node->lc;
       for ( int i = 0; i < node->cc; i++ )
-	{
-	  CvSpillTreeNode* next = it->rc;
-	  if ( it->p < node->lb )
-	    icvAppendSpillTreeNode( lc, it );
-	  else if ( it->p > node->ub )
-	    icvAppendSpillTreeNode( rc, it );
-	  else {
-	    CvSpillTreeNode* cit = icvCloneSpillTreeNode( it );
-	    icvAppendSpillTreeNode( lc, it );
-	    icvAppendSpillTreeNode( rc, cit );
-	  }
-	  it = next;
-	}
+    {
+      CvSpillTreeNode* next = it->rc;
+      if ( it->p < node->lb )
+        icvAppendSpillTreeNode( lc, it );
+      else if ( it->p > node->ub )
+        icvAppendSpillTreeNode( rc, it );
+      else {
+        CvSpillTreeNode* cit = icvCloneSpillTreeNode( it );
+        icvAppendSpillTreeNode( lc, it );
+        icvAppendSpillTreeNode( rc, cit );
+      }
+      it = next;
+    }
       node->spill = true;
     }
   node->lc = lc;
@@ -255,9 +255,9 @@ icvDFSInitSpillTreeNode( const CvSpillTree* tr,
 
 static CvSpillTree*
 icvCreateSpillTree( const CvMat* raw_data,
-		    const int naive,
-		    const double rho,
-		    const double tau )
+            const int naive,
+            const double rho,
+            const double tau )
 {
   int n = raw_data->rows;
   int d = raw_data->cols;
@@ -304,8 +304,8 @@ icvCreateSpillTree( const CvMat* raw_data,
 
 static void
 icvSpillTreeNodeHeapify( CvResult * heap,
-			 int i,
-			 const int k )
+             int i,
+             const int k )
 {
   if ( heap[i].index == -1 )
     return;
@@ -319,7 +319,7 @@ icvSpillTreeNodeHeapify( CvResult * heap,
       largest = l;
     else if (( r < k )&&( heap[r].index == -1 ))
       largest = r;
-	else {
+    else {
       if (( l < k )&&( heap[l].distance > heap[i].distance ))
         largest = l;
       if (( r < k )&&( heap[r].distance > heap[largest].distance ))
@@ -332,12 +332,12 @@ icvSpillTreeNodeHeapify( CvResult * heap,
 
 static void
 icvSpillTreeDFSearch( CvSpillTree* tr,
-		      CvSpillTreeNode* node,
-		      CvResult* heap,
-		      int* es,
-		      const CvMat* desc,
-		      const int k,
-		      const int emax,
+              CvSpillTreeNode* node,
+              CvResult* heap,
+              int* es,
+              const CvMat* desc,
+              const int k,
+              const int emax,
                       bool * cache)
 {
   if ((emax > 0)&&( *es >= emax ))
@@ -348,15 +348,15 @@ icvSpillTreeDFSearch( CvSpillTree* tr,
     {
       // defeatist search
       if ( !node->leaf )
-	p = cvDotProduct( node->u, desc );
+    p = cvDotProduct( node->u, desc );
       if ( p < node->lb && node->lc->cc >= k ) // check the number of children larger than k otherwise you'll skip over better neighbor
-	node = node->lc;
+    node = node->lc;
       else if ( p > node->ub && node->rc->cc >= k )
-	node = node->rc;
+    node = node->rc;
       else
-	break;
+    break;
       if ( NULL == node )
-	return;
+    return;
     }
   if ( node->leaf )
     {
@@ -366,20 +366,20 @@ icvSpillTreeDFSearch( CvSpillTree* tr,
         {
           if ( !cache[it->i] )
           {
-	    distance = cvNorm( it->center, desc );
+        distance = cvNorm( it->center, desc );
             cache[it->i] = true;
-	    if (( heap[0].index == -1)||( distance < heap[0].distance ))
-	      {
+        if (( heap[0].index == -1)||( distance < heap[0].distance ))
+          {
                 CvResult  current_result;
                 current_result.index = it->i;
                 current_result.distance = distance;
                 heap[0] = current_result;
-	        icvSpillTreeNodeHeapify( heap, 0, k );
-		(*es)++;
-	      }
+            icvSpillTreeNodeHeapify( heap, 0, k );
+        (*es)++;
+          }
           }
           it = it->rc;
-	}
+    }
       return;
     }
   dist = cvNorm( node->center, desc );
@@ -400,11 +400,11 @@ icvSpillTreeDFSearch( CvSpillTree* tr,
 
 static void
 icvFindSpillTreeFeatures( CvSpillTree* tr,
-			  const CvMat* desc,
-			  CvMat* results,
-			  CvMat* dist,
-			  const int k,
-			  const int emax )
+              const CvMat* desc,
+              CvMat* results,
+              CvMat* dist,
+              const int k,
+              const int emax )
 {
   assert( desc->type == tr->type );
   CvResult* heap = (CvResult*)cvAlloc( k*sizeof(heap[0]) );
@@ -416,26 +416,26 @@ icvFindSpillTreeFeatures( CvSpillTree* tr,
         CvResult current;
         current.index=-1;
         current.distance=-1;
-	heap[i] = current;
+    heap[i] = current;
       }
       memset( cache, 0, sizeof(bool)*tr->total );
       int es = 0;
       icvSpillTreeDFSearch( tr, tr->root, heap, &es, &_desc, k, emax, cache );
       CvResult inp;
       for ( int i = k-1; i > 0; i-- )
-	{
-	  CV_SWAP( heap[i], heap[0], inp );
-	  icvSpillTreeNodeHeapify( heap, 0, i );
-	}
+    {
+      CV_SWAP( heap[i], heap[0], inp );
+      icvSpillTreeNodeHeapify( heap, 0, i );
+    }
       int* rs = results->data.i+j*results->cols;
       double* dt = dist->data.db+j*dist->cols;
       for ( int i = 0; i < k; i++, rs++, dt++ )
-	if ( heap[i].index != -1 )
-	  {
-	    *rs = heap[i].index;
-	    *dt = heap[i].distance;
-	  } else
-	    *rs = -1;
+    if ( heap[i].index != -1 )
+      {
+        *rs = heap[i].index;
+        *dt = heap[i].distance;
+      } else
+        *rs = -1;
     }
   cvFree( &heap );
   cvFree( &cache );
@@ -476,9 +476,9 @@ class CvSpillTreeWrap : public CvFeatureTree {
   CvSpillTree* tr;
 public:
   CvSpillTreeWrap(const CvMat* raw_data,
-		  const int naive,
-		  const double rho,
-		  const double tau) {
+          const int naive,
+          const double rho,
+          const double tau) {
     tr = icvCreateSpillTree(raw_data, naive, rho, tau);
   }
   ~CvSpillTreeWrap() {
@@ -491,8 +491,8 @@ public:
 };
 
 CvFeatureTree* cvCreateSpillTree( const CvMat* raw_data,
-				  const int naive,
-				  const double rho,
-				  const double tau ) {
+                  const int naive,
+                  const double rho,
+                  const double tau ) {
   return new CvSpillTreeWrap(raw_data, naive, rho, tau);
 }

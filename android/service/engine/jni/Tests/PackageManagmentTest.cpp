@@ -122,5 +122,5 @@ TEST(PackageManager, GetPackagePathForMips)
 //     string path = pm.GetPackagePathByVersion("240", PLATFORM_TEGRA2, 0);
 //     EXPECT_STREQ("/data/data/org.opencv.lib_v24_tegra2/lib", path.c_str());
 // }
- 
+
 

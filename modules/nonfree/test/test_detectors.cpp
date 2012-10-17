@@ -57,9 +57,9 @@ class CV_DetectorsTest : public cvtest::BaseTest
 {
 public:
     CV_DetectorsTest();
-    ~CV_DetectorsTest();    
-protected:    
-    void run(int);  
+    ~CV_DetectorsTest();
+protected:
+    void run(int);
     template <class T> bool testDetector(const Mat& img, const T& detector, vector<KeyPoint>& expected);
 
     void LoadExpected(const string& file, vector<KeyPoint>& out);
@@ -85,68 +85,68 @@ void getZoom(const Mat& img, Mat& aff, Mat& out)
     double *data = aff.ptr<double>();
     data[0] = mult; data[1] =    0; data[2] = 0;
     data[3] =    0; data[4] = mult; data[5] = 0;
-    
+
     warpAffine( img, out, aff, img.size());
 }
 
 void getBlur(const Mat& img, Mat& aff, Mat& out)
-{        
+{
     aff.create(2, 3, CV_64F);
     double *data = aff.ptr<double>();
     data[0] = 1; data[1] = 0; data[2] = 0;
     data[3] = 0; data[4] = 1; data[5] = 0;
-        
-    GaussianBlur(img, out, Size(5, 5), 2);    
+
+    GaussianBlur(img, out, Size(5, 5), 2);
 }
 
 void getBrightness(const Mat& img, Mat& aff, Mat& out)
-{        
+{
     aff.create(2, 3, CV_64F);
     double *data = aff.ptr<double>();
     data[0] = 1; data[1] = 0; data[2] = 0;
     data[3] = 0; data[4] = 1; data[5] = 0;
-        
-    add(img, Mat(img.size(), img.type(), Scalar(15)), out);    
+
+    add(img, Mat(img.size(), img.type(), Scalar(15)), out);
 }
 
 void showOrig(const Mat& img, const vector<KeyPoint>& orig_pts)
 {
-      
+
     Mat img_color;
-    cvtColor(img, img_color, CV_GRAY2BGR); 
-    
-    for(size_t i = 0; i < orig_pts.size(); ++i)    
-        circle(img_color, orig_pts[i].pt, (int)orig_pts[i].size/2, CV_RGB(0, 255, 0));                        
-    
-    namedWindow("O"); imshow("O", img_color);     
+    cvtColor(img, img_color, CV_GRAY2BGR);
+
+    for(size_t i = 0; i < orig_pts.size(); ++i)
+        circle(img_color, orig_pts[i].pt, (int)orig_pts[i].size/2, CV_RGB(0, 255, 0));
+
+    namedWindow("O"); imshow("O", img_color);
 }
 
 void show(const string& name, const Mat& new_img, const vector<KeyPoint>& new_pts, const vector<KeyPoint>& transf_pts)
 {
-      
-    Mat new_img_color;    
-    cvtColor(new_img, new_img_color, CV_GRAY2BGR); 
+
+    Mat new_img_color;
+    cvtColor(new_img, new_img_color, CV_GRAY2BGR);
 
     for(size_t i = 0; i < transf_pts.size(); ++i)
         circle(new_img_color, transf_pts[i].pt, (int)transf_pts[i].size/2, CV_RGB(255, 0, 0));
 
-    for(size_t i = 0; i < new_pts.size(); ++i)    
+    for(size_t i = 0; i < new_pts.size(); ++i)
         circle(new_img_color, new_pts[i].pt, (int)new_pts[i].size/2, CV_RGB(0, 0, 255));
-    
-    namedWindow(name + "_T"); imshow(name + "_T", new_img_color); 
+
+    namedWindow(name + "_T"); imshow(name + "_T", new_img_color);
 }
 
 struct WrapPoint
 {
     const double* R;
     WrapPoint(const Mat& rmat) : R(rmat.ptr<double>()) { };
-    
-    KeyPoint operator()(const KeyPoint& kp) const 
-    {                
+
+    KeyPoint operator()(const KeyPoint& kp) const
+    {
         KeyPoint res = kp;
         res.pt.x = static_cast<float>(kp.pt.x * R[0] + kp.pt.y * R[1] + R[2]);
-        res.pt.y = static_cast<float>(kp.pt.x * R[3] + kp.pt.y * R[4] + R[5]);                
-        return res;                             
+        res.pt.y = static_cast<float>(kp.pt.x * R[3] + kp.pt.y * R[4] + R[5]);
+        return res;
     }
 };
 
@@ -157,7 +157,7 @@ template <class T> bool CV_DetectorsTest::testDetector(const Mat& img, const T& 
     vector<KeyPoint> orig_kpts;
     detector(img, orig_kpts);
 
-    typedef void (*TransfFunc )(const Mat&, Mat&, Mat& FransfFunc);    
+    typedef void (*TransfFunc )(const Mat&, Mat&, Mat& FransfFunc);
     const TransfFunc transfFunc[] = { getRotation, getZoom, getBlur, getBrightness };
     //const string names[] =  { "Rotation", "Zoom", "Blur", "Brightness" };
     const size_t case_num = sizeof(transfFunc)/sizeof(transfFunc[0]);
@@ -169,7 +169,7 @@ template <class T> bool CV_DetectorsTest::testDetector(const Mat& img, const T& 
     vector< vector<KeyPoint> > transf_kpts(case_num);
 
     //showOrig(img, orig_kpts);
-    for(size_t i = 0; i < case_num; ++i)   
+    for(size_t i = 0; i < case_num; ++i)
     {
         transfFunc[i](img, affs[i], new_imgs[i]);
         detector(new_imgs[i], new_kpts[i]);
@@ -186,11 +186,11 @@ template <class T> bool CV_DetectorsTest::testDetector(const Mat& img, const T& 
         const KeyPoint& okp = orig_kpts[i];
         int foundCounter = 0;
         for(size_t j = 0; j < case_num; ++j)
-        {            
+        {
             const KeyPoint& tkp = transf_kpts[j][i];
 
             size_t k = 0;
-            
+
             for(; k < new_kpts[j].size(); ++k)
                 if (norm(new_kpts[j][k].pt - tkp.pt) < nthres && fabs(new_kpts[j][k].size - tkp.size) < thres)
                     break;
@@ -215,7 +215,7 @@ template <class T> bool CV_DetectorsTest::testDetector(const Mat& img, const T& 
     int foundCounter1 = 0;
     for(size_t i = 0; i < exp.size(); ++i)
     {
-        const KeyPoint& e = exp[i];                
+        const KeyPoint& e = exp[i];
         size_t j = 0;
         for(; j < result.size(); ++j)
         {
@@ -230,7 +230,7 @@ template <class T> bool CV_DetectorsTest::testDetector(const Mat& img, const T& 
     int foundCounter2 = 0;
     for(size_t i = 0; i < result.size(); ++i)
     {
-        const KeyPoint& r = result[i];                
+        const KeyPoint& r = result[i];
         size_t j = 0;
         for(; j < exp.size(); ++j)
         {
@@ -249,10 +249,10 @@ template <class T> bool CV_DetectorsTest::testDetector(const Mat& img, const T& 
         ts->set_failed_test_info( cvtest::TS::FAIL_MISMATCH);
         return false;
     }
-    return true;        
+    return true;
 }
 
-struct SurfNoMaskWrap 
+struct SurfNoMaskWrap
 {
     const SURF& detector;
     SurfNoMaskWrap(const SURF& surf) : detector(surf) {}
@@ -261,24 +261,24 @@ struct SurfNoMaskWrap
 };
 
 void CV_DetectorsTest::LoadExpected(const string& file, vector<KeyPoint>& out)
-{     
+{
     Mat mat_exp;
-    FileStorage fs(file, FileStorage::READ);    
+    FileStorage fs(file, FileStorage::READ);
     if (fs.isOpened())
     {
-        read( fs["ResultVectorData"], mat_exp, Mat() );           
+        read( fs["ResultVectorData"], mat_exp, Mat() );
         out.resize(mat_exp.cols / sizeof(KeyPoint));
-        copy(mat_exp.ptr<KeyPoint>(), mat_exp.ptr<KeyPoint>() + out.size(), out.begin());            
+        copy(mat_exp.ptr<KeyPoint>(), mat_exp.ptr<KeyPoint>() + out.size(), out.begin());
     }
     else
     {
         ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_TEST_DATA);
         out.clear();
-    }    
+    }
 }
 
 void CV_DetectorsTest::run( int /*start_from*/ )
-{	         
+{
     Mat img = imread(string(ts->get_data_path()) + "shared/graffiti.png", 0);
 
     if (img.empty())
@@ -286,20 +286,20 @@ void CV_DetectorsTest::run( int /*start_from*/ )
         ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_TEST_DATA );
         return;
     }
-            
+
     Mat to_test(img.size() * 2, img.type(), Scalar(0));
     Mat roi = to_test(Rect(img.rows/2, img.cols/2, img.cols, img.rows));
     img.copyTo(roi);
     GaussianBlur(to_test, to_test, Size(3, 3), 1.5);
-        
+
     vector<KeyPoint> exp;
-    LoadExpected(string(ts->get_data_path()) + "detectors/surf.xml", exp);        
+    LoadExpected(string(ts->get_data_path()) + "detectors/surf.xml", exp);
     if (exp.empty())
         return;
 
     if (!testDetector(to_test, SurfNoMaskWrap(SURF(1536+512+512, 2)), exp))
         return;
-    
+
     LoadExpected(string(ts->get_data_path()) + "detectors/star.xml", exp);
     if (exp.empty())
         return;
@@ -307,7 +307,7 @@ void CV_DetectorsTest::run( int /*start_from*/ )
     if (!testDetector(to_test, StarDetector(45, 30, 10, 8, 5), exp))
         return;
 
-    ts->set_failed_test_info( cvtest::TS::OK);		   
+    ts->set_failed_test_info( cvtest::TS::OK);
 }
 
 

@@ -490,7 +490,7 @@ int makeHelpGraph( CvGraph* graph,
             graphEdge = graphEdge -> next[ ofs ];
 
         } /* while( graphEdge ) */
-  
+
     } /* while( orderCount != orderFirst ) */
 
     int i;
@@ -836,7 +836,7 @@ void makePseudoMaxFlow( CvGraph* graph,
                                 - ( ( Edge* )hlpGraphEdge ) -> flow;
 
                             delta = CV_MIN2( cargo[ v ], delta );
-                            
+
                             (( ( Edge* )hlpGraphEdge ) -> flow) += delta;
 
                             cargo[ v ] -= delta;
@@ -1162,7 +1162,7 @@ void CCvGraphCutMorpher::Morph( unsigned char* _leftImage,
     int* result;
     int number;
     float alpha1        = 1.0f - alpha;
-    
+
     for( lineNumber = 0; lineNumber < height; lineNumber ++ )
     {
         leftTemp    = leftArray + leftLineSize * lineNumber;
@@ -1172,7 +1172,7 @@ void CCvGraphCutMorpher::Morph( unsigned char* _leftImage,
 
         result = _corrArray + width * lineNumber;
         number = width;
-        
+
         prevLeftPixel   = 0;
         prevRightPixel  = prevLeftPixel + result[ 0 ];
         if( prevRightPixel >= width ) {
@@ -1198,7 +1198,7 @@ void CCvGraphCutMorpher::Morph( unsigned char* _leftImage,
             leftPixel3      = leftPixel * 3;
             middlePixel3    = middlePixel * 3;
             rightPixel3     = rightPixel * 3;
-            
+
             if( imageNeed == morphDepthMap ) {
                 int t   = leftPixel - rightPixel + maxDifference;
                 t       = t < 0 ? -t : t;
@@ -1253,7 +1253,7 @@ void CCvGraphCutMorpher::Morph( unsigned char* _leftImage,
                                 rightTemp[ tempIndex * 3 + 2 ];
                         }
                     } // if( leftPixel - prevLeftPixel > 1 ) else
-                    
+
                 } // if( middlePixel - prevMiddlePixel > 1 )
 
             } // if( imageNeed == morphDepthMap ) else
@@ -1266,7 +1266,7 @@ void CCvGraphCutMorpher::Morph( unsigned char* _leftImage,
                 prevMiddlePixel = middlePixel;
             }
         } // for( i = number - 1; i >= 0; i -- )
-        
+
     } // for( lineNumber = 0; lineNumber < LeftImage -> m_Raster -> GetHeight() )
 
 } // Morph

@@ -22,7 +22,7 @@ int main ( int argc, char** argv )
   Mat kernel;
   Point anchor;
   double delta;
-  int ddepth;  
+  int ddepth;
   int kernel_size;
   char* window_name = "filter2D Demo";
 
@@ -36,7 +36,7 @@ int main ( int argc, char** argv )
 
   /// Create window
   namedWindow( window_name, CV_WINDOW_AUTOSIZE );
-  
+
   /// Initialize arguments for the filter
   anchor = Point( -1, -1 );
   delta = 0;
@@ -60,6 +60,6 @@ int main ( int argc, char** argv )
          imshow( window_name, dst );
          ind++;
        }
-  
+
   return 0;
 }

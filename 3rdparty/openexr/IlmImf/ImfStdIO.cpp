@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2004, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-// 
+//
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission. 
-// 
+// from this software without specific prior written permission.
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -61,15 +61,15 @@ checkError (istream &is, streamsize expected = 0)
 {
     if (!is)
     {
-	if (errno)
-	    Iex::throwErrnoExc();
+    if (errno)
+        Iex::throwErrnoExc();
 
-	if (is.gcount() < expected) 
-	{
-		THROW (Iex::InputExc, "Early end of file: read " << is.gcount() 
-			<< " out of " << expected << " requested bytes.");
-	}
-	return false;
+    if (is.gcount() < expected)
+    {
+        THROW (Iex::InputExc, "Early end of file: read " << is.gcount()
+            << " out of " << expected << " requested bytes.");
+    }
+    return false;
     }
 
     return true;
@@ -81,10 +81,10 @@ checkError (ostream &os)
 {
     if (!os)
     {
-	if (errno)
-	    Iex::throwErrnoExc();
+    if (errno)
+        Iex::throwErrnoExc();
 
-	throw Iex::ErrnoExc ("File output failed.");
+    throw Iex::ErrnoExc ("File output failed.");
     }
 }
 
@@ -98,12 +98,12 @@ StdIFStream::StdIFStream (const char fileName[]):
 {
     if (!*_is)
     {
-	delete _is;
-	Iex::throwErrnoExc();
+    delete _is;
+    Iex::throwErrnoExc();
     }
 }
 
-    
+
 StdIFStream::StdIFStream (ifstream &is, const char fileName[]):
     IStream (fileName),
     _is (&is),
@@ -116,7 +116,7 @@ StdIFStream::StdIFStream (ifstream &is, const char fileName[]):
 StdIFStream::~StdIFStream ()
 {
     if (_deleteStream)
-	delete _is;
+    delete _is;
 }
 
 
@@ -161,8 +161,8 @@ StdOFStream::StdOFStream (const char fileName[]):
 {
     if (!*_os)
     {
-	delete _os;
-	Iex::throwErrnoExc();
+    delete _os;
+    Iex::throwErrnoExc();
     }
 }
 
@@ -179,7 +179,7 @@ StdOFStream::StdOFStream (ofstream &os, const char fileName[]):
 StdOFStream::~StdOFStream ()
 {
     if (_deleteStream)
-	delete _os;
+    delete _os;
 }
 
 

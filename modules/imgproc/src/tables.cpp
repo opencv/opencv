@@ -158,7 +158,7 @@ const float icv8x32fSqrTab[] =
  61504.f,  62001.f,  62500.f,  63001.f,  63504.f,  64009.f,  64516.f,  65025.f
 };
 
-const uchar icvSaturate8u_cv[] = 
+const uchar icvSaturate8u_cv[] =
 {
       0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
       0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,

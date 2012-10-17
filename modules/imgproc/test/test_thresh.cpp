@@ -127,7 +127,7 @@ static void test_threshold( const Mat& _src, Mat& _dst,
     int width_n = _src.cols*cn, height = _src.rows;
     int ithresh = cvFloor(thresh);
     int imaxval, ithresh2;
-    
+
     if( depth == CV_8U )
     {
         ithresh2 = saturate_cast<uchar>(ithresh);
@@ -145,7 +145,7 @@ static void test_threshold( const Mat& _src, Mat& _dst,
     }
 
     assert( depth == CV_8U || depth == CV_16S || depth == CV_32F );
-    
+
     switch( thresh_type )
     {
     case CV_THRESH_BINARY:

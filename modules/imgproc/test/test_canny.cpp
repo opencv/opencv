@@ -193,13 +193,13 @@ test_Canny( const Mat& src, Mat& dst,
     {
         for( x = 0; x < width; x++ )
         {
-            
+
             float a = mag.at<float>(y, x), b = 0, c = 0;
             int y1 = 0, y2 = 0, x1 = 0, x2 = 0;
 
             if( a <= lowThreshold )
                 continue;
-            
+
             int dxval = dx.at<short>(y, x);
             int dyval = dy.at<short>(y, x);
 
@@ -259,18 +259,18 @@ int CV_CannyTest::validate_test_results( int test_case_idx )
 {
     int code = cvtest::TS::OK, nz0;
     prepare_to_validation(test_case_idx);
-    
+
     double err = cvtest::norm(test_mat[OUTPUT][0], test_mat[REF_OUTPUT][0], CV_L1);
     if( err == 0 )
         return code;
-    
+
     if( err != cvRound(err) || cvRound(err)%255 != 0 )
     {
         ts->printf( cvtest::TS::LOG, "Some of the pixels, produced by Canny, are not 0's or 255's; the difference is %g\n", err );
         ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_OUTPUT );
         return code;
     }
-    
+
     nz0 = cvRound(cvtest::norm(test_mat[REF_OUTPUT][0], CV_L1)/255);
     err = (err/255/MAX(nz0,100))*100;
     if( err > 1 )
@@ -278,7 +278,7 @@ int CV_CannyTest::validate_test_results( int test_case_idx )
         ts->printf( cvtest::TS::LOG, "Too high percentage of non-matching edge pixels = %g%%\n", err);
         ts->set_failed_test_info( cvtest::TS::FAIL_BAD_ACCURACY );
     }
-    
+
     return code;
 }
 

@@ -159,7 +159,7 @@ class RectSelector:
         x, y = np.int16([x, y]) # BUG
         if event == cv2.EVENT_LBUTTONDOWN:
             self.drag_start = (x, y)
-        if self.drag_start: 
+        if self.drag_start:
             if flags & cv2.EVENT_FLAG_LBUTTON:
                 xo, yo = self.drag_start
                 x0, y0 = np.minimum([xo, yo], [x, y])
@@ -190,7 +190,7 @@ def grouper(n, iterable, fillvalue=None):
     return it.izip_longest(fillvalue=fillvalue, *args)
 
 def mosaic(w, imgs):
-    '''Make a grid from images. 
+    '''Make a grid from images.
 
     w    -- number of grid columns
     imgs -- images (must have same size and format)

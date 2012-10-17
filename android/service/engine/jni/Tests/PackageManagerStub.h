@@ -11,7 +11,7 @@ public:
     virtual ~PackageManagerStub();
 protected:
     virtual bool InstallPackage(const PackageInfo& package);
-    virtual std::vector<PackageInfo> GetInstalledPackages();    
+    virtual std::vector<PackageInfo> GetInstalledPackages();
 };
 
 #endif

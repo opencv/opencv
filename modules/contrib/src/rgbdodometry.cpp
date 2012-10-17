@@ -366,17 +366,17 @@ bool solveSystem( const Mat& C, const Mat& dI_dt, double detThreshold, Mat& ksi 
     eCt = eC.transpose();
 
     Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> A, B, eksi;
-	
-	A = eCt * eC;
-	double det = A.determinant();
+
+    A = eCt * eC;
+    double det = A.determinant();
     if( fabs (det) < detThreshold || cvIsNaN(det) || cvIsInf(det) )
         return false;
-        
+
     B = -eCt * edI_dt;
 
     eksi = A.ldlt().solve(B);
     eigen2cv( eksi, ksi );
-    
+
 #else
     Mat A = C.t() * C;
 

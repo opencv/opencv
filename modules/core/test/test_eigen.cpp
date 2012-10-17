@@ -69,12 +69,12 @@ enum TASK_TYPE_EIGEN {VALUES, VECTORS};
 class Core_EigenTest: public cvtest::BaseTest
 {
 public:
-	
+
     Core_EigenTest();
-	~Core_EigenTest();
-    
+    ~Core_EigenTest();
+
 protected:
-    
+
     bool test_values(const cv::Mat& src);												// complex test for eigen without vectors
     bool check_full(int type);													// compex test for symmetric matrix
     virtual void run (int) = 0;													// main testing method
@@ -84,7 +84,7 @@ protected:
     float eps_val_32, eps_vec_32;
     float eps_val_64, eps_vec_64;
     int ntests;
-    
+
     bool check_pair_count(const cv::Mat& src, const cv::Mat& evalues, int low_index = -1, int high_index = -1);
     bool check_pair_count(const cv::Mat& src, const cv::Mat& evalues, const cv::Mat& evectors, int low_index = -1, int high_index = -1);
     bool check_pairs_order(const cv::Mat& eigen_values);											// checking order of eigen values & vectors (it should be none up)
@@ -115,17 +115,17 @@ public:
 class Core_EigenTest_Scalar_64 : public Core_EigenTest_Scalar
 {
 public:
-	Core_EigenTest_Scalar_64() : Core_EigenTest_Scalar() {}
-	~Core_EigenTest_Scalar_64();
-	void run(int);
+    Core_EigenTest_Scalar_64() : Core_EigenTest_Scalar() {}
+    ~Core_EigenTest_Scalar_64();
+    void run(int);
 };
 
 class Core_EigenTest_32 : public Core_EigenTest
 {
 public:
-	Core_EigenTest_32(): Core_EigenTest() {}
-	~Core_EigenTest_32() {}
-	void run(int);
+    Core_EigenTest_32(): Core_EigenTest() {}
+    ~Core_EigenTest_32() {}
+    void run(int);
 };
 
 class Core_EigenTest_64 : public Core_EigenTest
@@ -140,7 +140,7 @@ Core_EigenTest_Scalar::~Core_EigenTest_Scalar() {}
 Core_EigenTest_Scalar_32::~Core_EigenTest_Scalar_32() {}
 Core_EigenTest_Scalar_64::~Core_EigenTest_Scalar_64() {}
 
-void Core_EigenTest_Scalar_32::run(int) 
+void Core_EigenTest_Scalar_32::run(int)
 {
     for (int i = 0; i < ntests; ++i)
     {

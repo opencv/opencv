@@ -53,10 +53,10 @@
 // * allow efficient async storage
 
 
-// Datar, M., Immorlica, N., Indyk, P., and Mirrokni, V. S. 2004. Locality-sensitive hashing 
-// scheme based on p-stable distributions. In Proceedings of the Twentieth Annual Symposium on 
-// Computational Geometry (Brooklyn, New York, USA, June 08 - 11, 2004). SCG '04. ACM, New York, 
-// NY, 253-262. DOI= http://doi.acm.org/10.1145/997817.997857 
+// Datar, M., Immorlica, N., Indyk, P., and Mirrokni, V. S. 2004. Locality-sensitive hashing
+// scheme based on p-stable distributions. In Proceedings of the Twentieth Annual Symposium on
+// Computational Geometry (Brooklyn, New York, USA, June 08 - 11, 2004). SCG '04. ACM, New York,
+// NY, 253-262. DOI= http://doi.acm.org/10.1145/997817.997857
 
 #include "precomp.hpp"
 #include <math.h>
@@ -128,11 +128,11 @@ public:
     for (int ii = bins[h1], iin, iip = -1; ii != -1; iip = ii, ii = iin) {
       iin = nodes[ii].next;
       if (nodes[ii].h2 == h.h2 && nodes[ii].i == i) {
-	free_nodes.push_back(ii);
-	if (iip == -1)
-	  bins[h1] = iin;
-	else
-	  nodes[iip].next = iin;
+    free_nodes.push_back(ii);
+    if (iip == -1)
+      bins[h1] = iin;
+    else
+      nodes[iip].next = iin;
       }
     }
   }
@@ -141,7 +141,7 @@ public:
     int k = 0;
     for (int ii = bins[h1]; ii != -1 && k < ret_i_max; ii = nodes[ii].next)
       if (nodes[ii].h2 == h.h2)
-	ret_i[k++] = nodes[ii].i;
+    ret_i[k++] = nodes[ii].i;
     return k;
   }
 };
@@ -166,11 +166,11 @@ public:
     cvRandArr(&rng, a, CV_RAND_NORMAL, cvScalar(0), cvScalar(1));
     cvRandArr(&rng, b, CV_RAND_UNI, cvScalar(0), cvScalar(r));
     cvRandArr(&rng, r1, CV_RAND_UNI,
-	      cvScalar(std::numeric_limits<int>::min()),
-	      cvScalar(std::numeric_limits<int>::max()));
+          cvScalar(std::numeric_limits<int>::min()),
+          cvScalar(std::numeric_limits<int>::max()));
     cvRandArr(&rng, r2, CV_RAND_UNI,
-	      cvScalar(std::numeric_limits<int>::min()),
-	      cvScalar(std::numeric_limits<int>::max()));
+          cvScalar(std::numeric_limits<int>::min()),
+          cvScalar(std::numeric_limits<int>::max()));
   }
   ~pstable_l2_func() {
     cvReleaseMat(&a);
@@ -179,20 +179,20 @@ public:
     cvReleaseMat(&r2);
   }
 
-  // * factor all L functions into this (reduces number of matrices to 4 total; 
-  // * simpler syntax in lsh_table). give parameter l here that tells us which 
+  // * factor all L functions into this (reduces number of matrices to 4 total;
+  // * simpler syntax in lsh_table). give parameter l here that tells us which
   // * row to use etc.
 
   lsh_hash operator() (const T* x) const {
     const T* aj = (const T*)a->data.ptr;
-    const T* bj = (const T*)b->data.ptr;   
+    const T* bj = (const T*)b->data.ptr;
 
     lsh_hash h;
     h.h1 = h.h2 = 0;
     for (int j = 0; j < k; ++j) {
       accum_type s = 0;
       for (int jj = 0; jj < d; ++jj)
-	s += aj[jj] * x[jj];
+    s += aj[jj] * x[jj];
       s += *bj;
       s = accum_type(s/r);
       int si = int(s);
@@ -226,7 +226,7 @@ private:
   double r;
 
   static accum_type comp_dist(const std::pair<int,accum_type>& x,
-			      const std::pair<int,accum_type>& y) {
+                  const std::pair<int,accum_type>& y) {
     return x.second < y.second;
   }
 
@@ -257,11 +257,11 @@ public:
       const scalar_type* x = data+j*d;
       int i = ops->vector_add(x);
       if (ret_indices)
-	ret_indices[j] = i;
+    ret_indices[j] = i;
 
       for (int l = 0; l < L; ++l) {
-	lsh_hash h = (*g[l])(x);
-	ops->hash_insert(h, l, i);
+    lsh_hash h = (*g[l])(x);
+    ops->hash_insert(h, l, i);
       }
     }
   }
@@ -271,8 +271,8 @@ public:
       const scalar_type* x = (const scalar_type*)ops->vector_lookup(i);
 
       for (int l = 0; l < L; ++l) {
-	lsh_hash h = (*g[l])(x);
-	ops->hash_remove(h, l, i);
+    lsh_hash h = (*g[l])(x);
+    ops->hash_remove(h, l, i);
       }
       ops->vector_remove(i);
     }
@@ -289,17 +289,17 @@ public:
       lsh_hash h = (*g[l])(q);
       int m = ops->hash_lookup(h, l, tmp, emax);
       for (int j = 0; j < m && emax > 0; ++j, --emax) {
-	int i = tmp[j];
-	const scalar_type* p = (const scalar_type*)ops->vector_lookup(i);
-	accum_type pd = (*g[l]).distance(p, q);
-	if (k1 < k0) {
-	  dr[k1++] = std::make_pair(i, pd);
-	  std::push_heap(&dr[0], &dr[k1], comp_dist);
-	} else if (pd < dr[0].second) {
-	  std::pop_heap(&dr[0], &dr[k0], comp_dist);
-	  dr[k0 - 1] = std::make_pair(i, pd);
-	  std::push_heap(&dr[0], &dr[k0], comp_dist);
-	}
+    int i = tmp[j];
+    const scalar_type* p = (const scalar_type*)ops->vector_lookup(i);
+    accum_type pd = (*g[l]).distance(p, q);
+    if (k1 < k0) {
+      dr[k1++] = std::make_pair(i, pd);
+      std::push_heap(&dr[0], &dr[k1], comp_dist);
+    } else if (pd < dr[0].second) {
+      std::pop_heap(&dr[0], &dr[k0], comp_dist);
+      dr[k0 - 1] = std::make_pair(i, pd);
+      std::push_heap(&dr[0], &dr[k0], comp_dist);
+    }
       }
     }
 
@@ -454,9 +454,9 @@ void cvLSHQuery(CvLSH* lsh, const CvMat* data, CvMat* indices, CvMat* dist, int 
 
   switch (lsh->type) {
   case CV_32FC1: lsh->u.lsh_32f->query(data->data.fl, data->rows,
-				       k, emax, dist->data.db, indices->data.i); break;
+                       k, emax, dist->data.db, indices->data.i); break;
   case CV_64FC1: lsh->u.lsh_64f->query(data->data.db, data->rows,
-				       k, emax, dist->data.db, indices->data.i); break;
+                       k, emax, dist->data.db, indices->data.i); break;
   default: assert(0); return;
   }
 }

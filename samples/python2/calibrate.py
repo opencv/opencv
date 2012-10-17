@@ -4,7 +4,7 @@ import os
 from common import splitfn
 
 USAGE = '''
-USAGE: calib.py [--save <filename>] [--debug <output path>] [--square_size] [<image mask>] 
+USAGE: calib.py [--save <filename>] [--debug <output path>] [--square_size] [<image mask>]
 '''
 
 
@@ -47,12 +47,12 @@ if __name__ == '__main__':
             continue
         img_points.append(corners.reshape(-1, 2))
         obj_points.append(pattern_points)
-        
+
         print 'ok'
 
     rms, camera_matrix, dist_coefs, rvecs, tvecs = cv2.calibrateCamera(obj_points, img_points, (w, h))
     print "RMS:", rms
     print "camera matrix:\n", camera_matrix
     print "distortion coefficients: ", dist_coefs.ravel()
-    cv2.destroyAllWindows() 			
+    cv2.destroyAllWindows()
 

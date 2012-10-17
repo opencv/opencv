@@ -57,29 +57,29 @@ protected:
 void Foo(int /*k*/, void* /*z*/) {}
 
 void CV_HighGuiOnlyGuiTest::run( int /*start_from */)
-{	   
+{
     ts->printf(ts->LOG, "GUI 1\n");
     namedWindow("Win");
-    
+
     ts->printf(ts->LOG, "GUI 2\n");
     Mat m(256, 256, CV_8U);
     m = Scalar(128);
-    
+
     ts->printf(ts->LOG, "GUI 3\n");
     imshow("Win", m);
-    
+
     ts->printf(ts->LOG, "GUI 4\n");
     int value = 50;
-    
+
     ts->printf(ts->LOG, "GUI 5\n");
     createTrackbar( "trackbar", "Win", &value, 100, Foo, &value);
-    
+
     ts->printf(ts->LOG, "GUI 6\n");
     getTrackbarPos( "trackbar", "Win" );
-    
+
     ts->printf(ts->LOG, "GUI 7\n");
     waitKey(500);
-    
+
     ts->printf(ts->LOG, "GUI 8\n");
     cvDestroyAllWindows();
     ts->set_failed_test_info(cvtest::TS::OK);

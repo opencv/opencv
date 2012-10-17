@@ -41,30 +41,30 @@
 /*//Implementation of the Gaussian mixture model background subtraction from:
 //
 //"Improved adaptive Gausian mixture model for background subtraction"
-//Z.Zivkovic 
+//Z.Zivkovic
 //International Conference Pattern Recognition, UK, August, 2004
 //http://www.zoranz.net/Publications/zivkovic2004ICPR.pdf
-//The code is very fast and performs also shadow detection. 
+//The code is very fast and performs also shadow detection.
 //Number of Gausssian components is adapted per pixel.
 //
 // and
 //
 //"Efficient Adaptive Density Estimapion per Image Pixel for the Task of Background Subtraction"
-//Z.Zivkovic, F. van der Heijden 
+//Z.Zivkovic, F. van der Heijden
 //Pattern Recognition Letters, vol. 27, no. 7, pages 773-780, 2006.
 //
 //The algorithm similar to the standard Stauffer&Grimson algorithm with
 //additional selection of the number of the Gaussian components based on:
 //
 //"Recursive unsupervised learning of finite mixture models "
-//Z.Zivkovic, F.van der Heijden 
+//Z.Zivkovic, F.van der Heijden
 //IEEE Trans. on Pattern Analysis and Machine Intelligence, vol.26, no.5, pages 651-656, 2004
 //http://www.zoranz.net/Publications/zivkovic2004PAMI.pdf
 //
 //
 //Example usage with as cpp class
 // BackgroundSubtractorMOG2 bg_model;
-//For each new image the model is updates using: 
+//For each new image the model is updates using:
 // bg_model(img, fgmask);
 //
 //Example usage as part of the CvBGStatModel:
@@ -87,16 +87,16 @@ namespace cv
 
 /*
  Interface of Gaussian mixture algorithm from:
- 
+
  "Improved adaptive Gausian mixture model for background subtraction"
  Z.Zivkovic
  International Conference Pattern Recognition, UK, August, 2004
  http://www.zoranz.net/Publications/zivkovic2004ICPR.pdf
- 
+
  Advantages:
  -fast - number of Gausssian components is constantly adapted per pixel.
  -performs also shadow detection (see bgfg_segm_test.cpp example)
- 
+
 */
 
 // default parameters of gaussian background detection algorithm
@@ -109,23 +109,23 @@ static const float defaultVarInit2 = 15.0f; // initial variance for new componen
 static const float defaultVarMax2 = 5*defaultVarInit2;
 static const float defaultVarMin2 = 4.0f;
 
-// additional parameters    
+// additional parameters
 static const float defaultfCT2 = 0.05f; // complexity reduction prior constant 0 - no reduction of number of components
 static const unsigned char defaultnShadowDetection2 = (unsigned char)127; // value to use in the segmentation mask for shadows, set 0 not to do shadow detection
 static const float defaultfTau = 0.5f; // Tau - shadow threshold, see the paper for explanation
-    
+
 struct GaussBGStatModel2Params
 {
     //image info
     int nWidth;
     int nHeight;
     int nND;//number of data dimensions (image channels)
-    
-    bool bPostFiltering;//defult 1 - do postfiltering - will make shadow detection results also give value 255 
+
+    bool bPostFiltering;//defult 1 - do postfiltering - will make shadow detection results also give value 255
     double  minArea; // for postfiltering
-    
+
     bool bInit;//default 1, faster updates at start
-    
+
     /////////////////////////
     //very important parameters - things you will change
     ////////////////////////
@@ -138,7 +138,7 @@ struct GaussBGStatModel2Params
     //by the background model or not. Related to Cthr from the paper.
     //This does not influence the update of the background. A typical value could be 4 sigma
     //and that is Tb=4*4=16;
-    
+
     /////////////////////////
     //less important parameters - things you might change but be carefull
     ////////////////////////
@@ -164,10 +164,10 @@ struct GaussBGStatModel2Params
     //this is related to the number of samples needed to accept that a component
     //actually exists. We use CT=0.05 of all the samples. By setting CT=0 you get
     //the standard Stauffer&Grimson algorithm (maybe not exact but very similar)
-    
+
     //even less important parameters
     int nM;//max number of modes - const - 4 is usually enough
-    
+
     //shadow detection parameters
     bool bShadowDetection;//default 1 - do shadow detection
     unsigned char nShadowDetection;//do shadow detection - insert this value as the detection result
@@ -216,7 +216,7 @@ detectShadowGMM(const float* data, int nchannels, int nmodes,
         {
             float a = numerator / denominator;
             float dist2a = 0.0f;
-            
+
             for( int c = 0; c < nchannels; c++ )
             {
                 float dD= a*mean[c] - data[c];
@@ -237,14 +237,14 @@ detectShadowGMM(const float* data, int nchannels, int nmodes,
 //update GMM - the base update function performed per pixel
 //
 //"Efficient Adaptive Density Estimapion per Image Pixel for the Task of Background Subtraction"
-//Z.Zivkovic, F. van der Heijden 
+//Z.Zivkovic, F. van der Heijden
 //Pattern Recognition Letters, vol. 27, no. 7, pages 773-780, 2006.
 //
 //The algorithm similar to the standard Stauffer&Grimson algorithm with
 //additional selection of the number of the Gaussian components based on:
 //
 //"Recursive unsupervised learning of finite mixture models "
-//Z.Zivkovic, F.van der Heijden 
+//Z.Zivkovic, F.van der Heijden
 //IEEE Trans. on Pattern Analysis and Machine Intelligence, vol.26, no.5, pages 651-656, 2004
 //http://www.zoranz.net/Publications/zivkovic2004PAMI.pdf
 
@@ -276,10 +276,10 @@ struct MOG2Invoker
         tau = _tau;
         detectShadows = _detectShadows;
         shadowVal = _shadowVal;
-    
+
         cvtfunc = src->depth() != CV_32F ? getConvertFunc(src->depth(), CV_32F) : 0;
     }
-                
+
     void operator()(const BlockedRange& range) const
     {
         int y0 = range.begin(), y1 = range.end();
@@ -287,7 +287,7 @@ struct MOG2Invoker
         AutoBuffer<float> buf(src->cols*nchannels);
         float alpha1 = 1.f - alphaT;
         float dData[CV_CN_MAX];
-        
+
         for( int y = y0; y < y1; y++ )
         {
             const float* data = buf;
@@ -295,41 +295,41 @@ struct MOG2Invoker
                 cvtfunc( src->ptr(y), src->step, 0, 0, (uchar*)data, 0, Size(ncols*nchannels, 1), 0);
             else
                 data = src->ptr<float>(y);
-            
+
             float* mean = mean0 + ncols*nmixtures*nchannels*y;
             GMM* gmm = gmm0 + ncols*nmixtures*y;
             uchar* modesUsed = modesUsed0 + ncols*y;
             uchar* mask = dst->ptr(y);
-            
+
             for( int x = 0; x < ncols; x++, data += nchannels, gmm += nmixtures, mean += nmixtures*nchannels )
             {
                 //calculate distances to the modes (+ sort)
-                //here we need to go in descending order!!! 
+                //here we need to go in descending order!!!
                 bool background = false;//return value -> true - the pixel classified as background
-                
+
                 //internal:
-                bool fitsPDF = false;//if it remains zero a new GMM mode will be added   
+                bool fitsPDF = false;//if it remains zero a new GMM mode will be added
                 int nmodes = modesUsed[x], nNewModes = nmodes;//current number of modes in GMM
                 float totalWeight = 0.f;
-                
+
                 float* mean_m = mean;
-                
+
                 //////
                 //go through all modes
                 for( int mode = 0; mode < nmodes; mode++, mean_m += nchannels )
                 {
                     float weight = alpha1*gmm[mode].weight + prune;//need only weight if fit is found
-                    
+
                     ////
                     //fit not found yet
                     if( !fitsPDF )
                     {
                         //check if it belongs to some of the remaining modes
                         float var = gmm[mode].variance;
-                        
+
                         //calculate difference and distance
                         float dist2;
-                        
+
                         if( nchannels == 3 )
                         {
                             dData[0] = mean_m[0] - data[0];
@@ -346,44 +346,44 @@ struct MOG2Invoker
                                 dist2 += dData[c]*dData[c];
                             }
                         }
-                        
+
                         //background? - Tb - usually larger than Tg
                         if( totalWeight < TB && dist2 < Tb*var )
                             background = true;
-                        
+
                         //check fit
                         if( dist2 < Tg*var )
                         {
                             /////
                             //belongs to the mode
                             fitsPDF = true;
-                            
-                            //update distribution               
-                            
+
+                            //update distribution
+
                             //update weight
                             weight += alphaT;
                             float k = alphaT/weight;
-                            
+
                             //update mean
                             for( int c = 0; c < nchannels; c++ )
                                 mean_m[c] -= k*dData[c];
-                            
+
                             //update variance
                             float varnew = var + k*(dist2-var);
                             //limit the variance
                             varnew = MAX(varnew, varMin);
                             varnew = MIN(varnew, varMax);
                             gmm[mode].variance = varnew;
-                            
+
                             //sort
-                            //all other weights are at the same place and 
-                            //only the matched (iModes) is higher -> just find the new place for it             
+                            //all other weights are at the same place and
+                            //only the matched (iModes) is higher -> just find the new place for it
                             for( int i = mode; i > 0; i-- )
                             {
                                 //check one up
                                 if( weight < gmm[i-1].weight )
                                     break;
-                                
+
                                 //swap one up
                                 std::swap(gmm[i], gmm[i-1]);
                                 for( int c = 0; c < nchannels; c++ )
@@ -393,52 +393,52 @@ struct MOG2Invoker
                             /////
                         }
                     }//!bFitsPDF)
-                    
+
                     //check prune
                     if( weight < -prune )
                     {
                         weight = 0.0;
                         nmodes--;
                     }
-                    
+
                     gmm[mode].weight = weight;//update weight by the calculated value
                     totalWeight += weight;
                 }
                 //go through all modes
                 //////
-                
+
                 //renormalize weights
                 totalWeight = 1.f/totalWeight;
                 for( int mode = 0; mode < nmodes; mode++ )
                 {
                     gmm[mode].weight *= totalWeight;
                 }
-                
+
                 nmodes = nNewModes;
-                
+
                 //make new mode if needed and exit
                 if( !fitsPDF )
                 {
                     // replace the weakest or add a new one
                     int mode = nmodes == nmixtures ? nmixtures-1 : nmodes++;
-                    
+
                     if (nmodes==1)
                         gmm[mode].weight = 1.f;
                     else
                     {
                         gmm[mode].weight = alphaT;
-                        
+
                         // renormalize all other weights
                         for( int i = 0; i < nmodes-1; i++ )
                             gmm[i].weight *= alpha1;
                     }
-                    
+
                     // init
                     for( int c = 0; c < nchannels; c++ )
                         mean[mode*nchannels + c] = data[c];
-                    
+
                     gmm[mode].variance = varInit;
-                    
+
                     //sort
                     //find the new place for it
                     for( int i = nmodes - 1; i > 0; i-- )
@@ -446,14 +446,14 @@ struct MOG2Invoker
                         // check one up
                         if( alphaT < gmm[i-1].weight )
                             break;
-                        
+
                         // swap one up
                         std::swap(gmm[i], gmm[i-1]);
                         for( int c = 0; c < nchannels; c++ )
                             std::swap(mean[i*nchannels + c], mean[(i-1)*nchannels + c]);
                     }
                 }
-                
+
                 //set the number of modes
                 modesUsed[x] = uchar(nmodes);
                 mask[x] = background ? 0 :
@@ -462,20 +462,20 @@ struct MOG2Invoker
             }
         }
     }
-    
+
     const Mat* src;
     Mat* dst;
     GMM* gmm0;
     float* mean0;
     uchar* modesUsed0;
-    
+
     int nmixtures;
     float alphaT, Tb, TB, Tg;
     float varInit, varMin, varMax, prune, tau;
-    
+
     bool detectShadows;
     uchar shadowVal;
-    
+
     BinaryFunc cvtfunc;
 };
 
@@ -483,13 +483,13 @@ BackgroundSubtractorMOG2::BackgroundSubtractorMOG2()
 {
     frameSize = Size(0,0);
     frameType = 0;
-    
+
     nframes = 0;
     history = defaultHistory2;
     varThreshold = defaultVarThreshold2;
     bShadowDetection = 1;
 
-    nmixtures = defaultNMixtures2;   
+    nmixtures = defaultNMixtures2;
     backgroundRatio = defaultBackgroundRatio2;
     fVarInit = defaultVarInit2;
     fVarMax  = defaultVarMax2;
@@ -500,18 +500,18 @@ BackgroundSubtractorMOG2::BackgroundSubtractorMOG2()
     nShadowDetection =  defaultnShadowDetection2;
     fTau = defaultfTau;
 }
-    
+
 BackgroundSubtractorMOG2::BackgroundSubtractorMOG2(int _history,  float _varThreshold, bool _bShadowDetection)
 {
     frameSize = Size(0,0);
     frameType = 0;
-    
+
     nframes = 0;
     history = _history > 0 ? _history : defaultHistory2;
     varThreshold = (_varThreshold>0)? _varThreshold : defaultVarThreshold2;
     bShadowDetection = _bShadowDetection;
 
-    nmixtures = defaultNMixtures2;   
+    nmixtures = defaultNMixtures2;
     backgroundRatio = defaultBackgroundRatio2;
     fVarInit = defaultVarInit2;
     fVarMax  = defaultVarMax2;
@@ -522,7 +522,7 @@ BackgroundSubtractorMOG2::BackgroundSubtractorMOG2(int _history,  float _varThre
     nShadowDetection =  defaultnShadowDetection2;
     fTau = defaultfTau;
 }
-    
+
 BackgroundSubtractorMOG2::~BackgroundSubtractorMOG2()
 {
 }
@@ -533,10 +533,10 @@ void BackgroundSubtractorMOG2::initialize(Size _frameSize, int _frameType)
     frameSize = _frameSize;
     frameType = _frameType;
     nframes = 0;
-    
+
     int nchannels = CV_MAT_CN(frameType);
     CV_Assert( nchannels <= CV_CN_MAX );
-    
+
     // for each gaussian mixture of each pixel bg model we store ...
     // the mixture weight (w),
     // the mean (nchannels values) and
@@ -551,17 +551,17 @@ void BackgroundSubtractorMOG2::operator()(InputArray _image, OutputArray _fgmask
 {
     Mat image = _image.getMat();
     bool needToInitialize = nframes == 0 || learningRate >= 1 || image.size() != frameSize || image.type() != frameType;
-    
+
     if( needToInitialize )
         initialize(image.size(), image.type());
-    
+
     _fgmask.create( image.size(), CV_8U );
     Mat fgmask = _fgmask.getMat();
-    
+
     ++nframes;
     learningRate = learningRate >= 0 && nframes > 1 ? learningRate : 1./min( 2*nframes, history );
     CV_Assert(learningRate >= 0);
-    
+
     parallel_for(BlockedRange(0, image.rows),
                  MOG2Invoker(image, fgmask,
                              (GMM*)bgmodel.data,

@@ -36,7 +36,7 @@ int main( int argc, const char** argv )
   //-- 1. Load the cascades
   if( !face_cascade.load( face_cascade_name ) ){ printf("--(!)Error loading\n"); return -1; };
   if( !eyes_cascade.load( eyes_cascade_name ) ){ printf("--(!)Error loading\n"); return -1; };
- 
+
   //-- 2. Read the video stream
   capture = cvCaptureFromCAM( -1 );
   if( capture )
@@ -44,15 +44,15 @@ int main( int argc, const char** argv )
     while( true )
     {
       frame = cvQueryFrame( capture );
-  
+
       //-- 3. Apply the classifier to the frame
       if( !frame.empty() )
        { detectAndDisplay( frame ); }
       else
        { printf(" --(!) No captured frame -- Break!"); break; }
-      
+
       int c = waitKey(10);
-      if( (char)c == 'c' ) { break; } 
+      if( (char)c == 'c' ) { break; }
 
     }
   }
@@ -85,11 +85,11 @@ void detectAndDisplay( Mat frame )
 
       for( int j = 0; j < eyes.size(); j++ )
        {
-         Point center( faces[i].x + eyes[j].x + eyes[j].width*0.5, faces[i].y + eyes[j].y + eyes[j].height*0.5 ); 
+         Point center( faces[i].x + eyes[j].x + eyes[j].width*0.5, faces[i].y + eyes[j].y + eyes[j].height*0.5 );
          int radius = cvRound( (eyes[j].width + eyes[j].height)*0.25 );
          circle( frame, center, radius, Scalar( 255, 0, 0 ), 3, 8, 0 );
        }
-    } 
+    }
    //-- Show what you got
    imshow( window_name, frame );
 }

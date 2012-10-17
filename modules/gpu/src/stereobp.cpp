@@ -59,7 +59,7 @@ void cv::gpu::StereoBeliefPropagation::operator()(const GpuMat&, GpuMat&, Stream
 
 #else /* !defined (HAVE_CUDA) */
 
-namespace cv { namespace gpu { namespace device 
+namespace cv { namespace gpu { namespace device
 {
     namespace stereobp
     {
@@ -71,10 +71,10 @@ namespace cv { namespace gpu { namespace device
         template <typename T>
         void level_up_messages_gpu(int dst_idx, int dst_cols, int dst_rows, int src_rows, PtrStepSzb* mus, PtrStepSzb* mds, PtrStepSzb* mls, PtrStepSzb* mrs, cudaStream_t stream);
         template <typename T>
-        void calc_all_iterations_gpu(int cols, int rows, int iters, const PtrStepSzb& u, const PtrStepSzb& d, 
+        void calc_all_iterations_gpu(int cols, int rows, int iters, const PtrStepSzb& u, const PtrStepSzb& d,
             const PtrStepSzb& l, const PtrStepSzb& r, const PtrStepSzb& data, cudaStream_t stream);
         template <typename T>
-        void output_gpu(const PtrStepSzb& u, const PtrStepSzb& d, const PtrStepSzb& l, const PtrStepSzb& r, const PtrStepSzb& data, 
+        void output_gpu(const PtrStepSzb& u, const PtrStepSzb& d, const PtrStepSzb& l, const PtrStepSzb& r, const PtrStepSzb& data,
             const PtrStepSz<short>& disp, cudaStream_t stream);
     }
 }}}
@@ -92,7 +92,7 @@ namespace
 void cv::gpu::StereoBeliefPropagation::estimateRecommendedParams(int width, int height, int& ndisp, int& iters, int& levels)
 {
     ndisp = width / 4;
-    if ((ndisp & 1) != 0) 
+    if ((ndisp & 1) != 0)
         ndisp++;
 
     int mm = ::max(width, height);
@@ -138,7 +138,7 @@ namespace
         void operator()(const GpuMat& left, const GpuMat& right, GpuMat& disp, Stream& stream)
         {
             typedef void (*comp_data_t)(const PtrStepSzb& left, const PtrStepSzb& right, const PtrStepSzb& data, cudaStream_t stream);
-            static const comp_data_t comp_data_callers[2][5] = 
+            static const comp_data_t comp_data_callers[2][5] =
             {
                 {0, comp_data_gpu<unsigned char, short>, 0, comp_data_gpu<uchar3, short>, comp_data_gpu<uchar4, short>},
                 {0, comp_data_gpu<unsigned char, float>, 0, comp_data_gpu<uchar3, float>, comp_data_gpu<uchar4, float>}
@@ -254,25 +254,25 @@ namespace
         void calcBP(GpuMat& disp, Stream& stream)
         {
             typedef void (*data_step_down_t)(int dst_cols, int dst_rows, int src_rows, const PtrStepSzb& src, const PtrStepSzb& dst, cudaStream_t stream);
-            static const data_step_down_t data_step_down_callers[2] = 
+            static const data_step_down_t data_step_down_callers[2] =
             {
                 data_step_down_gpu<short>, data_step_down_gpu<float>
             };
-            
+
             typedef void (*level_up_messages_t)(int dst_idx, int dst_cols, int dst_rows, int src_rows, PtrStepSzb* mus, PtrStepSzb* mds, PtrStepSzb* mls, PtrStepSzb* mrs, cudaStream_t stream);
-            static const level_up_messages_t level_up_messages_callers[2] = 
+            static const level_up_messages_t level_up_messages_callers[2] =
             {
                 level_up_messages_gpu<short>, level_up_messages_gpu<float>
             };
 
             typedef void (*calc_all_iterations_t)(int cols, int rows, int iters, const PtrStepSzb& u, const PtrStepSzb& d, const PtrStepSzb& l, const PtrStepSzb& r, const PtrStepSzb& data, cudaStream_t stream);
-            static const calc_all_iterations_t calc_all_iterations_callers[2] = 
+            static const calc_all_iterations_t calc_all_iterations_callers[2] =
             {
                 calc_all_iterations_gpu<short>, calc_all_iterations_gpu<float>
             };
 
             typedef void (*output_t)(const PtrStepSzb& u, const PtrStepSzb& d, const PtrStepSzb& l, const PtrStepSzb& r, const PtrStepSzb& data, const PtrStepSz<short>& disp, cudaStream_t stream);
-            static const output_t output_callers[2] = 
+            static const output_t output_callers[2] =
             {
                 output_gpu<short>, output_gpu<float>
             };
@@ -327,7 +327,7 @@ namespace
                     stream.enqueueConvert(out, disp, disp.type());
                 else
                     out.convertTo(disp, disp.type());
-            }                
+            }
         }
 
         StereoBeliefPropagation& rthis;

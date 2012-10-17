@@ -91,7 +91,7 @@ enum
 {
     CV_ITERATIVE = 0,
     CV_EPNP = 1, // F.Moreno-Noguer, V.Lepetit and P.Fua "EPnP: Efficient Perspective-n-Point Camera Pose Estimation"
-	CV_P3P = 2 // X.S. Gao, X.-R. Hou, J. Tang, H.-F. Chang; "Complete Solution Classification for the Perspective-Three-Point Problem"
+    CV_P3P = 2 // X.S. Gao, X.-R. Hou, J. Tang, H.-F. Chang; "Complete Solution Classification for the Perspective-Three-Point Problem"
 };
 
 CVAPI(int) cvFindFundamentalMat( const CvMat* points1, const CvMat* points2,

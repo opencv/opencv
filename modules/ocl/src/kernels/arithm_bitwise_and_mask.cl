@@ -65,8 +65,8 @@ __kernel void arithm_bitwise_and_with_mask_C1_D0 (__global uchar *src1, int src1
         x = x << 2;
 
         #define dst_align (dst_offset & 3)
-        int src1_index = mad24(y, src1_step, x + src1_offset - dst_align); 
-        int src2_index = mad24(y, src2_step, x + src2_offset - dst_align); 
+        int src1_index = mad24(y, src1_step, x + src1_offset - dst_align);
+        int src2_index = mad24(y, src2_step, x + src2_offset - dst_align);
         int mask_index = mad24(y, mask_step, x + mask_offset - dst_align);
 
         int dst_start  = mad24(y, dst_step, dst_offset);
@@ -106,8 +106,8 @@ __kernel void arithm_bitwise_and_with_mask_C1_D1 (__global char *src1, int src1_
         x = x << 2;
 
         #define dst_align (dst_offset & 3)
-        int src1_index = mad24(y, src1_step, x + src1_offset - dst_align); 
-        int src2_index = mad24(y, src2_step, x + src2_offset - dst_align); 
+        int src1_index = mad24(y, src1_step, x + src1_offset - dst_align);
+        int src2_index = mad24(y, src2_step, x + src2_offset - dst_align);
         int mask_index = mad24(y, mask_step, x + mask_offset - dst_align);
 
         int dst_start  = mad24(y, dst_step, dst_offset);
@@ -147,8 +147,8 @@ __kernel void arithm_bitwise_and_with_mask_C1_D2 (__global ushort *src1, int src
         x = x << 1;
 
         #define dst_align ((dst_offset >> 1) & 1)
-        int src1_index = mad24(y, src1_step, (x << 1) + src1_offset - (dst_align << 1)); 
-        int src2_index = mad24(y, src2_step, (x << 1) + src2_offset - (dst_align << 1)); 
+        int src1_index = mad24(y, src1_step, (x << 1) + src1_offset - (dst_align << 1));
+        int src2_index = mad24(y, src2_step, (x << 1) + src2_offset - (dst_align << 1));
         int mask_index = mad24(y, mask_step, x + mask_offset - dst_align);
 
         int dst_start  = mad24(y, dst_step, dst_offset);
@@ -186,8 +186,8 @@ __kernel void arithm_bitwise_and_with_mask_C1_D3 (__global short *src1, int src1
         x = x << 1;
 
         #define dst_align ((dst_offset >> 1) & 1)
-        int src1_index = mad24(y, src1_step, (x << 1) + src1_offset - (dst_align << 1)); 
-        int src2_index = mad24(y, src2_step, (x << 1) + src2_offset - (dst_align << 1)); 
+        int src1_index = mad24(y, src1_step, (x << 1) + src1_offset - (dst_align << 1));
+        int src2_index = mad24(y, src2_step, (x << 1) + src2_offset - (dst_align << 1));
         int mask_index = mad24(y, mask_step, x + mask_offset - dst_align);
 
         int dst_start  = mad24(y, dst_step, dst_offset);
@@ -198,8 +198,8 @@ __kernel void arithm_bitwise_and_with_mask_C1_D3 (__global short *src1, int src1
         short2 src2_data = vload2(0, (__global short *)((__global char *)src2 + src2_index));
         uchar2  mask_data = vload2(0, mask + mask_index);
 
-	short2 data = *((__global short2 *)((__global uchar *)dst + dst_index));
-	short2 tmp_data = src1_data & src2_data;
+    short2 data = *((__global short2 *)((__global uchar *)dst + dst_index));
+    short2 tmp_data = src1_data & src2_data;
 
         data.x = convert_short((mask_data.x) && (dst_index + 0 >= dst_start) && (dst_index + 0 < dst_end)) ? tmp_data.x : data.x;
         data.y = convert_short((mask_data.y) && (dst_index + 2 >= dst_start) && (dst_index + 2 < dst_end)) ? tmp_data.y : data.y;
@@ -234,7 +234,7 @@ __kernel void arithm_bitwise_and_with_mask_C1_D4 (__global int   *src1, int src1
         int dst_data  = *((__global int *)((__global char *)dst  + dst_index));
 
         int data = src_data1 & src_data2;
-        data = mask_data ? data : dst_data; 
+        data = mask_data ? data : dst_data;
 
         *((__global int *)((__global char *)dst + dst_index)) = data;
     }
@@ -266,7 +266,7 @@ __kernel void arithm_bitwise_and_with_mask_C1_D5 (__global char *src1, int src1_
         char4 dst_data  = *((__global char4 *)((__global char *)dst  + dst_index));
 
         char4 data = src_data1 & src_data2;
-        data = mask_data ? data : dst_data; 
+        data = mask_data ? data : dst_data;
 
         *((__global char4 *)((__global char *)dst + dst_index)) = data;
     }
@@ -299,7 +299,7 @@ __kernel void arithm_bitwise_and_with_mask_C1_D6 (__global char *src1, int src1_
         char8 dst_data  = *((__global char8 *)((__global char *)dst  + dst_index));
 
         char8 data = src_data1 & src_data2;
-        data = mask_data ? data : dst_data; 
+        data = mask_data ? data : dst_data;
 
         *((__global char8 *)((__global char *)dst + dst_index)) = data;
     }
@@ -324,8 +324,8 @@ __kernel void arithm_bitwise_and_with_mask_C2_D0 (__global uchar *src1, int src1
         x = x << 1;
 
         #define dst_align ((dst_offset >> 1) & 1)
-        int src1_index = mad24(y, src1_step, (x << 1) + src1_offset - (dst_align << 1)); 
-        int src2_index = mad24(y, src2_step, (x << 1) + src2_offset - (dst_align << 1)); 
+        int src1_index = mad24(y, src1_step, (x << 1) + src1_offset - (dst_align << 1));
+        int src2_index = mad24(y, src2_step, (x << 1) + src2_offset - (dst_align << 1));
         int mask_index = mad24(y, mask_step, x + mask_offset - dst_align);
 
         int dst_start  = mad24(y, dst_step, dst_offset);
@@ -362,8 +362,8 @@ __kernel void arithm_bitwise_and_with_mask_C2_D1 (__global char *src1, int src1_
         x = x << 1;
 
         #define dst_align ((dst_offset >> 1) & 1)
-        int src1_index = mad24(y, src1_step, (x << 1) + src1_offset - (dst_align << 1)); 
-        int src2_index = mad24(y, src2_step, (x << 1) + src2_offset - (dst_align << 1)); 
+        int src1_index = mad24(y, src1_step, (x << 1) + src1_offset - (dst_align << 1));
+        int src2_index = mad24(y, src2_step, (x << 1) + src2_offset - (dst_align << 1));
         int mask_index = mad24(y, mask_step, x + mask_offset - dst_align);
 
         int dst_start  = mad24(y, dst_step, dst_offset);
@@ -408,7 +408,7 @@ __kernel void arithm_bitwise_and_with_mask_C2_D2 (__global ushort *src1, int src
         ushort2 dst_data  = *((__global ushort2 *)((__global char *)dst  + dst_index));
 
         ushort2 data = src_data1 & src_data2;
-        data = mask_data ? data : dst_data; 
+        data = mask_data ? data : dst_data;
 
         *((__global ushort2 *)((__global char *)dst + dst_index)) = data;
     }
@@ -437,7 +437,7 @@ __kernel void arithm_bitwise_and_with_mask_C2_D3 (__global short *src1, int src1
         short2 dst_data  = *((__global short2 *)((__global char *)dst  + dst_index));
 
         short2 data = src_data1 & src_data2;
-        data = mask_data ? data : dst_data; 
+        data = mask_data ? data : dst_data;
 
         *((__global short2 *)((__global char *)dst + dst_index)) = data;
     }
@@ -466,7 +466,7 @@ __kernel void arithm_bitwise_and_with_mask_C2_D4 (__global int   *src1, int src1
         int2 dst_data  = *((__global int2 *)((__global char *)dst  + dst_index));
 
         int2 data = src_data1 & src_data2;
-        data = mask_data ? data : dst_data; 
+        data = mask_data ? data : dst_data;
 
         *((__global int2 *)((__global char *)dst + dst_index)) = data;
     }
@@ -495,7 +495,7 @@ __kernel void arithm_bitwise_and_with_mask_C2_D5 (__global char *src1, int src1_
         char8 dst_data  = *((__global char8 *)((__global char *)dst  + dst_index));
 
         char8 data = src_data1 & src_data2;
-        data = mask_data ? data : dst_data; 
+        data = mask_data ? data : dst_data;
 
         *((__global char8 *)((__global char *)dst + dst_index)) = data;
     }
@@ -525,7 +525,7 @@ __kernel void arithm_bitwise_and_with_mask_C2_D6 (__global char *src1, int src1_
         char16 dst_data  = *((__global char16 *)((__global char *)dst  + dst_index));
 
         char16 data = src_data1 & src_data2;
-        data = mask_data ? data : dst_data; 
+        data = mask_data ? data : dst_data;
 
         *((__global char16 *)((__global char *)dst + dst_index)) = data;
     }
@@ -549,8 +549,8 @@ __kernel void arithm_bitwise_and_with_mask_C3_D0 (__global uchar *src1, int src1
         x = x << 2;
 
         #define dst_align (((dst_offset % dst_step) / 3 ) & 3)
-        int src1_index = mad24(y, src1_step, (x * 3) + src1_offset - (dst_align * 3)); 
-        int src2_index = mad24(y, src2_step, (x * 3) + src2_offset - (dst_align * 3)); 
+        int src1_index = mad24(y, src1_step, (x * 3) + src1_offset - (dst_align * 3));
+        int src2_index = mad24(y, src2_step, (x * 3) + src2_offset - (dst_align * 3));
         int mask_index = mad24(y, mask_step, x + mask_offset - dst_align);
 
         int dst_start  = mad24(y, dst_step, dst_offset);
@@ -576,17 +576,17 @@ __kernel void arithm_bitwise_and_with_mask_C3_D0 (__global uchar *src1, int src1
         uchar4 tmp_data_2 =  src1_data_2 & src2_data_2;
 
         data_0.xyz = ((mask_data.x) && (dst_index + 0 >= dst_start)) ? tmp_data_0.xyz : data_0.xyz;
-        data_0.w   = ((mask_data.y) && (dst_index + 3 >= dst_start) && (dst_index + 3 < dst_end)) 
+        data_0.w   = ((mask_data.y) && (dst_index + 3 >= dst_start) && (dst_index + 3 < dst_end))
                      ? tmp_data_0.w : data_0.w;
 
-        data_1.xy  = ((mask_data.y) && (dst_index + 3 >= dst_start) && (dst_index + 3 < dst_end)) 
+        data_1.xy  = ((mask_data.y) && (dst_index + 3 >= dst_start) && (dst_index + 3 < dst_end))
                      ? tmp_data_1.xy : data_1.xy;
-        data_1.zw  = ((mask_data.z) && (dst_index + 6 >= dst_start) && (dst_index + 6 < dst_end)) 
+        data_1.zw  = ((mask_data.z) && (dst_index + 6 >= dst_start) && (dst_index + 6 < dst_end))
                      ? tmp_data_1.zw : data_1.zw;
 
-        data_2.x   = ((mask_data.z) && (dst_index + 6 >= dst_start) && (dst_index + 6 < dst_end)) 
+        data_2.x   = ((mask_data.z) && (dst_index + 6 >= dst_start) && (dst_index + 6 < dst_end))
                      ? tmp_data_2.x : data_2.x;
-        data_2.yzw = ((mask_data.w) && (dst_index + 9 >= dst_start) && (dst_index + 9 < dst_end)) 
+        data_2.yzw = ((mask_data.w) && (dst_index + 9 >= dst_start) && (dst_index + 9 < dst_end))
                      ? tmp_data_2.yzw : data_2.yzw;
 
         *((__global uchar4 *)(dst + dst_index + 0)) = data_0;
@@ -611,8 +611,8 @@ __kernel void arithm_bitwise_and_with_mask_C3_D1 (__global char *src1, int src1_
         x = x << 2;
 
         #define dst_align (((dst_offset % dst_step) / 3 ) & 3)
-        int src1_index = mad24(y, src1_step, (x * 3) + src1_offset - (dst_align * 3)); 
-        int src2_index = mad24(y, src2_step, (x * 3) + src2_offset - (dst_align * 3)); 
+        int src1_index = mad24(y, src1_step, (x * 3) + src1_offset - (dst_align * 3));
+        int src2_index = mad24(y, src2_step, (x * 3) + src2_offset - (dst_align * 3));
         int mask_index = mad24(y, mask_step, x + mask_offset - dst_align);
 
         int dst_start  = mad24(y, dst_step, dst_offset);
@@ -638,17 +638,17 @@ __kernel void arithm_bitwise_and_with_mask_C3_D1 (__global char *src1, int src1_
         char4 tmp_data_2 =  src1_data_2 & src2_data_2;
 
         data_0.xyz = ((mask_data.x) && (dst_index + 0 >= dst_start)) ? tmp_data_0.xyz : data_0.xyz;
-        data_0.w   = ((mask_data.y) && (dst_index + 3 >= dst_start) && (dst_index + 3 < dst_end)) 
+        data_0.w   = ((mask_data.y) && (dst_index + 3 >= dst_start) && (dst_index + 3 < dst_end))
                      ? tmp_data_0.w : data_0.w;
 
-        data_1.xy  = ((mask_data.y) && (dst_index + 3 >= dst_start) && (dst_index + 3 < dst_end)) 
+        data_1.xy  = ((mask_data.y) && (dst_index + 3 >= dst_start) && (dst_index + 3 < dst_end))
                      ? tmp_data_1.xy : data_1.xy;
-        data_1.zw  = ((mask_data.z) && (dst_index + 6 >= dst_start) && (dst_index + 6 < dst_end)) 
+        data_1.zw  = ((mask_data.z) && (dst_index + 6 >= dst_start) && (dst_index + 6 < dst_end))
                      ? tmp_data_1.zw : data_1.zw;
 
-        data_2.x   = ((mask_data.z) && (dst_index + 6 >= dst_start) && (dst_index + 6 < dst_end)) 
+        data_2.x   = ((mask_data.z) && (dst_index + 6 >= dst_start) && (dst_index + 6 < dst_end))
                      ? tmp_data_2.x : data_2.x;
-        data_2.yzw = ((mask_data.w) && (dst_index + 9 >= dst_start) && (dst_index + 9 < dst_end)) 
+        data_2.yzw = ((mask_data.w) && (dst_index + 9 >= dst_start) && (dst_index + 9 < dst_end))
                      ? tmp_data_2.yzw : data_2.yzw;
 
         *((__global char4 *)(dst + dst_index + 0)) = data_0;
@@ -672,8 +672,8 @@ __kernel void arithm_bitwise_and_with_mask_C3_D2 (__global ushort *src1, int src
         x = x << 1;
 
         #define dst_align (((dst_offset % dst_step) / 6 ) & 1)
-        int src1_index = mad24(y, src1_step, (x * 6) + src1_offset - (dst_align * 6)); 
-        int src2_index = mad24(y, src2_step, (x * 6) + src2_offset - (dst_align * 6)); 
+        int src1_index = mad24(y, src1_step, (x * 6) + src1_offset - (dst_align * 6));
+        int src2_index = mad24(y, src2_step, (x * 6) + src2_offset - (dst_align * 6));
         int mask_index = mad24(y, mask_step, x + mask_offset - dst_align);
 
         int dst_start  = mad24(y, dst_step, dst_offset);
@@ -700,12 +700,12 @@ __kernel void arithm_bitwise_and_with_mask_C3_D2 (__global ushort *src1, int src
 
         data_0.xy = ((mask_data.x) && (dst_index + 0 >= dst_start)) ? tmp_data_0.xy : data_0.xy;
 
-        data_1.x  = ((mask_data.x) && (dst_index + 0 >= dst_start) && (dst_index + 0 < dst_end)) 
+        data_1.x  = ((mask_data.x) && (dst_index + 0 >= dst_start) && (dst_index + 0 < dst_end))
                      ? tmp_data_1.x : data_1.x;
-        data_1.y  = ((mask_data.y) && (dst_index + 6 >= dst_start) && (dst_index + 6 < dst_end)) 
+        data_1.y  = ((mask_data.y) && (dst_index + 6 >= dst_start) && (dst_index + 6 < dst_end))
                      ? tmp_data_1.y : data_1.y;
 
-        data_2.xy = ((mask_data.y) && (dst_index + 6 >= dst_start) && (dst_index + 6 < dst_end)) 
+        data_2.xy = ((mask_data.y) && (dst_index + 6 >= dst_start) && (dst_index + 6 < dst_end))
                      ? tmp_data_2.xy : data_2.xy;
 
        *((__global ushort2 *)((__global char *)dst + dst_index + 0))= data_0;
@@ -728,8 +728,8 @@ __kernel void arithm_bitwise_and_with_mask_C3_D3 (__global short *src1, int src1
         x = x << 1;
 
         #define dst_align (((dst_offset % dst_step) / 6 ) & 1)
-        int src1_index = mad24(y, src1_step, (x * 6) + src1_offset - (dst_align * 6)); 
-        int src2_index = mad24(y, src2_step, (x * 6) + src2_offset - (dst_align * 6)); 
+        int src1_index = mad24(y, src1_step, (x * 6) + src1_offset - (dst_align * 6));
+        int src2_index = mad24(y, src2_step, (x * 6) + src2_offset - (dst_align * 6));
         int mask_index = mad24(y, mask_step, x + mask_offset - dst_align);
 
         int dst_start  = mad24(y, dst_step, dst_offset);
@@ -756,12 +756,12 @@ __kernel void arithm_bitwise_and_with_mask_C3_D3 (__global short *src1, int src1
 
         data_0.xy = ((mask_data.x) && (dst_index + 0 >= dst_start)) ? tmp_data_0.xy : data_0.xy;
 
-        data_1.x  = ((mask_data.x) && (dst_index + 0 >= dst_start) && (dst_index + 0 < dst_end)) 
+        data_1.x  = ((mask_data.x) && (dst_index + 0 >= dst_start) && (dst_index + 0 < dst_end))
                      ? tmp_data_1.x : data_1.x;
-        data_1.y  = ((mask_data.y) && (dst_index + 6 >= dst_start) && (dst_index + 6 < dst_end)) 
+        data_1.y  = ((mask_data.y) && (dst_index + 6 >= dst_start) && (dst_index + 6 < dst_end))
                      ? tmp_data_1.y : data_1.y;
 
-        data_2.xy = ((mask_data.y) && (dst_index + 6 >= dst_start) && (dst_index + 6 < dst_end)) 
+        data_2.xy = ((mask_data.y) && (dst_index + 6 >= dst_start) && (dst_index + 6 < dst_end))
                      ? tmp_data_2.xy : data_2.xy;
 
        *((__global short2 *)((__global char *)dst + dst_index + 0))= data_0;
@@ -781,8 +781,8 @@ __kernel void arithm_bitwise_and_with_mask_C3_D4 (__global int   *src1, int src1
 
     if (x < cols && y < rows)
     {
-        int src1_index = mad24(y, src1_step, (x * 12) + src1_offset); 
-        int src2_index = mad24(y, src2_step, (x * 12) + src2_offset); 
+        int src1_index = mad24(y, src1_step, (x * 12) + src1_offset);
+        int src2_index = mad24(y, src2_step, (x * 12) + src2_offset);
         int mask_index = mad24(y, mask_step, x + mask_offset);
         int dst_index  = mad24(y, dst_step, dst_offset + (x * 12));
 
@@ -825,15 +825,15 @@ __kernel void arithm_bitwise_and_with_mask_C3_D5 (__global char *src1, int src1_
 
     if (x < cols && y < rows)
     {
-        int src1_index = mad24(y, src1_step, (x * 12) + src1_offset); 
-        int src2_index = mad24(y, src2_step, (x * 12) + src2_offset); 
+        int src1_index = mad24(y, src1_step, (x * 12) + src1_offset);
+        int src2_index = mad24(y, src2_step, (x * 12) + src2_offset);
         int mask_index = mad24(y, mask_step, x + mask_offset);
         int dst_index  = mad24(y, dst_step, dst_offset + (x * 12));
 
         char4 src1_data_0 = *((__global char4 *)((__global char *)src1 + src1_index + 0));
         char4 src1_data_1 = *((__global char4 *)((__global char *)src1 + src1_index + 4));
         char4 src1_data_2 = *((__global char4 *)((__global char *)src1 + src1_index + 8));
-                                             
+
         char4 src2_data_0 = *((__global char4 *)((__global char *)src2 + src2_index + 0));
         char4 src2_data_1 = *((__global char4 *)((__global char *)src2 + src2_index + 4));
         char4 src2_data_2 = *((__global char4 *)((__global char *)src2 + src2_index + 8));
@@ -870,15 +870,15 @@ __kernel void arithm_bitwise_and_with_mask_C3_D6 (__global char *src1, int src1_
 
     if (x < cols && y < rows)
     {
-        int src1_index = mad24(y, src1_step, (x * 24) + src1_offset); 
-        int src2_index = mad24(y, src2_step, (x * 24) + src2_offset); 
+        int src1_index = mad24(y, src1_step, (x * 24) + src1_offset);
+        int src2_index = mad24(y, src2_step, (x * 24) + src2_offset);
         int mask_index = mad24(y, mask_step, x + mask_offset);
         int dst_index  = mad24(y, dst_step, dst_offset + (x * 24));
 
         char8 src1_data_0 = *((__global char8 *)((__global char *)src1 + src1_index + 0 ));
         char8 src1_data_1 = *((__global char8 *)((__global char *)src1 + src1_index + 8 ));
         char8 src1_data_2 = *((__global char8 *)((__global char *)src1 + src1_index + 16));
-                                               
+
         char8 src2_data_0 = *((__global char8 *)((__global char *)src2 + src2_index + 0 ));
         char8 src2_data_1 = *((__global char8 *)((__global char *)src2 + src2_index + 8 ));
         char8 src2_data_2 = *((__global char8 *)((__global char *)src2 + src2_index + 16));
@@ -930,7 +930,7 @@ __kernel void arithm_bitwise_and_with_mask_C4_D0 (__global uchar *src1, int src1
         uchar4 dst_data  = *((__global uchar4 *)(dst  + dst_index));
 
         uchar4 data = src_data1 & src_data2;
-        data = mask_data ? data : dst_data; 
+        data = mask_data ? data : dst_data;
 
         *((__global uchar4 *)(dst + dst_index)) = data;
     }
@@ -961,7 +961,7 @@ __kernel void arithm_bitwise_and_with_mask_C4_D1 (__global char *src1, int src1_
         char4 dst_data  = *((__global char4 *)(dst  + dst_index));
 
         char4 data = src_data1 & src_data2;
-        data = mask_data ? data : dst_data; 
+        data = mask_data ? data : dst_data;
 
         *((__global char4 *)(dst + dst_index)) = data;
     }
@@ -991,7 +991,7 @@ __kernel void arithm_bitwise_and_with_mask_C4_D2 (__global ushort *src1, int src
         ushort4 dst_data  = *((__global ushort4 *)((__global char *)dst  + dst_index));
 
         ushort4 data = src_data1 & src_data2;
-        data = mask_data ? data : dst_data; 
+        data = mask_data ? data : dst_data;
 
         *((__global ushort4 *)((__global char *)dst + dst_index)) = data;
     }
@@ -1020,7 +1020,7 @@ __kernel void arithm_bitwise_and_with_mask_C4_D3 (__global short *src1, int src1
         short4 dst_data  = *((__global short4 *)((__global char *)dst  + dst_index));
 
         short4 data = src_data1 & src_data2;
-        data = mask_data ? data : dst_data; 
+        data = mask_data ? data : dst_data;
 
         *((__global short4 *)((__global char *)dst + dst_index)) = data;
     }
@@ -1049,7 +1049,7 @@ __kernel void arithm_bitwise_and_with_mask_C4_D4 (__global int   *src1, int src1
         int4 dst_data  = *((__global int4 *)((__global char *)dst  + dst_index));
 
         int4 data = src_data1 & src_data2;
-        data = mask_data ? data : dst_data; 
+        data = mask_data ? data : dst_data;
 
         *((__global int4 *)((__global char *)dst + dst_index)) = data;
     }
@@ -1078,7 +1078,7 @@ __kernel void arithm_bitwise_and_with_mask_C4_D5 (__global char *src1, int src1_
         char16 dst_data  = *((__global char16 *)((__global char *)dst  + dst_index));
 
         char16 data = src_data1 & src_data2;
-        data = mask_data ? data : dst_data; 
+        data = mask_data ? data : dst_data;
 
         *((__global char16 *)((__global char *)dst + dst_index)) = data;
     }
@@ -1123,10 +1123,10 @@ __kernel void arithm_bitwise_and_with_mask_C4_D6 (__global char *src1, int src1_
         char8 data_2 = src_data1_2 & src_data2_2;
         char8 data_3 = src_data1_3 & src_data2_3;
 
-        data_0 = mask_data ? data_0 : dst_data_0; 
-        data_1 = mask_data ? data_1 : dst_data_1; 
-        data_2 = mask_data ? data_2 : dst_data_2; 
-        data_3 = mask_data ? data_3 : dst_data_3; 
+        data_0 = mask_data ? data_0 : dst_data_0;
+        data_1 = mask_data ? data_1 : dst_data_1;
+        data_2 = mask_data ? data_2 : dst_data_2;
+        data_3 = mask_data ? data_3 : dst_data_3;
 
         *((__global char8 *)((__global char *)dst + dst_index + 0)) = data_0;
         *((__global char8 *)((__global char *)dst + dst_index + 8)) = data_1;

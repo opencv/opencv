@@ -52,8 +52,8 @@
 
 class CirclesGridClusterFinder
 {
-	CirclesGridClusterFinder& operator=(const CirclesGridClusterFinder&);
-	CirclesGridClusterFinder(const CirclesGridClusterFinder&);
+    CirclesGridClusterFinder& operator=(const CirclesGridClusterFinder&);
+    CirclesGridClusterFinder(const CirclesGridClusterFinder&);
 public:
   CirclesGridClusterFinder(bool _isAsymmetricGrid)
   {

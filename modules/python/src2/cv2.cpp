@@ -51,7 +51,7 @@ struct ArgInfo
     bool outputarg;
     // more fields may be added if necessary
 
-    ArgInfo(const char * name_, bool outputarg_) 
+    ArgInfo(const char * name_, bool outputarg_)
         : name(name_)
         , outputarg(outputarg_) {}
 
@@ -278,7 +278,7 @@ static int pyopencv_to(const PyObject* o, Mat& m, const ArgInfo info, bool allow
             (i < ndims-1 && _strides[i] < _strides[i+1]) )
             needcopy = true;
     }
-    
+
     if (needcopy)
     {
         if (info.outputarg)

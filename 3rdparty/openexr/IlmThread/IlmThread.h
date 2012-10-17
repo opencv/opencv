@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2005, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-// 
+//
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission. 
-// 
+// from this software without specific prior written permission.
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -105,12 +105,12 @@
 
 #if defined(OPENEXR_DLL) && !defined(ZENO_STATIC)
     #ifdef ILMTHREAD_EXPORTS
-	#define ILMTHREAD_EXPORT __declspec(dllexport)
+    #define ILMTHREAD_EXPORT __declspec(dllexport)
     #else
-	#define ILMTHREAD_EXPORT __declspec(dllimport)
+    #define ILMTHREAD_EXPORT __declspec(dllimport)
     #endif
 #else
-    #define ILMTHREAD_EXPORT 
+    #define ILMTHREAD_EXPORT
 #endif
 
 namespace IlmThread {
@@ -132,13 +132,13 @@ class ILMTHREAD_EXPORT Thread
 
     void		start ();
     virtual void	run () = 0;
-    
+
   private:
 
     #if defined _WIN32 || defined _WIN64
-	HANDLE _thread;
+    HANDLE _thread;
     #elif HAVE_PTHREAD
-	pthread_t _thread;
+    pthread_t _thread;
     #endif
 
     void operator = (const Thread& t);	// not implemented

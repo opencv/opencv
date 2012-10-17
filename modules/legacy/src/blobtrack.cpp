@@ -562,7 +562,7 @@ double CvBlobTracker::GetConfidenceList(CvBlobSeq* pBlobList, IplImage* pImg, Ip
 }
 
 void CvBlobTracker::UpdateBlob(int /*BlobIndex*/, CvBlob* /*pBlob*/, IplImage* /*pImg*/, IplImage* /*pImgFG*/)
-{  
+{
 }
 
 /* Update all blob models: */

@@ -101,7 +101,7 @@ PERF_TEST_P(MatInfo_Size_Scale_Area, ResizeArea,
     double scale = get<2>(GetParam());
 
     cv::Mat src(from, matType);
-    
+
     Size to(cvRound(from.width * scale), cvRound(from.height * scale));
     cv::Mat dst(to, matType);
 

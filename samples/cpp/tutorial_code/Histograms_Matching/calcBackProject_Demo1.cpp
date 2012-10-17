@@ -13,7 +13,7 @@ using namespace cv;
 using namespace std;
 
 /// Global Variables
-Mat src; Mat hsv; Mat hue; 
+Mat src; Mat hsv; Mat hue;
 int bins = 25;
 
 /// Function Headers
@@ -33,7 +33,7 @@ int main( int argc, char** argv )
   /// Use only the Hue value
   hue.create( hsv.size(), hsv.depth() );
   int ch[] = { 0, 0 };
-  mixChannels( &hsv, 1, &hue, 1, ch, 1 );  
+  mixChannels( &hsv, 1, &hue, 1, ch, 1 );
 
   /// Create Trackbar to enter the number of bins
   char* window_image = "Source image";
@@ -57,7 +57,7 @@ int main( int argc, char** argv )
 void Hist_and_Backproj(int, void* )
 {
   MatND hist;
-  int histSize = MAX( bins, 2 ); 
+  int histSize = MAX( bins, 2 );
   float hue_range[] = { 0, 180 };
   const float* ranges = { hue_range };
 
@@ -68,16 +68,16 @@ void Hist_and_Backproj(int, void* )
   /// Get Backprojection
   MatND backproj;
   calcBackProject( &hue, 1, 0, hist, backproj, &ranges, 1, true );
- 
+
   /// Draw the backproj
   imshow( "BackProj", backproj );
 
   /// Draw the histogram
   int w = 400; int h = 400;
-  int bin_w = cvRound( (double) w / histSize ); 
+  int bin_w = cvRound( (double) w / histSize );
   Mat histImg = Mat::zeros( w, h, CV_8UC3 );
 
-  for( int i = 0; i < bins; i ++ )  
+  for( int i = 0; i < bins; i ++ )
      { rectangle( histImg, Point( i*bin_w, h ), Point( (i+1)*bin_w, h - cvRound( hist.at<float>(i)*h/255.0 ) ), Scalar( 0, 0, 255 ), -1 ); }
 
   imshow( "Histogram", histImg );

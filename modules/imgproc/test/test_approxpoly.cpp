@@ -49,7 +49,7 @@ using namespace std;
 // TODO!!!:
 //  check_slice (and/or check) seem(s) to be broken, or this is a bug in function
 //  (or its inability to handle possible self-intersections in the generated contours).
-// 
+//
 //  At least, if // return TotalErrors;
 //  is uncommented in check_slice, the test fails easily.
 //  So, now (and it looks like since 0.9.6)
@@ -177,7 +177,7 @@ int CV_ApproxPolyTest::check_slice( CvPoint StartPt, CvPoint EndPt,
     double sin_a = 0;
     double cos_a = 0;
     double d     = 0;
-    double dist;    
+    double dist;
     ///////////
     int j, TotalErrors = 0;
 
@@ -193,7 +193,7 @@ int CV_ApproxPolyTest::check_slice( CvPoint StartPt, CvPoint EndPt,
 
     dx = (double)StartPt.x - (double)EndPt.x;
     dy = (double)StartPt.y - (double)EndPt.y;
-    
+
     if( ( dx == 0 ) && ( dy == 0 ) ) flag = false;
     else
     {
@@ -270,7 +270,7 @@ int CV_ApproxPolyTest::check( CvSeq* SrcSeq, CvSeq* DstSeq, float Eps )
         {
             TotalErrors++;
             return TotalErrors;
-        } //if( !flag ) 
+        } //if( !flag )
 
     } // for( int i = 0 ; i < DstSeq->total ; i++ )
 
@@ -283,7 +283,7 @@ int CV_ApproxPolyTest::check( CvSeq* SrcSeq, CvSeq* DstSeq, float Eps )
 void CV_ApproxPolyTest::run( int /*start_from*/ )
 {
     int code = cvtest::TS::OK;
-    CvMemStorage* storage = 0;    
+    CvMemStorage* storage = 0;
     ////////////// Variables ////////////////
     int IntervalsCount = 10;
     ///////////
@@ -296,42 +296,42 @@ void CV_ApproxPolyTest::run( int /*start_from*/ )
     for( int i = 0; i < 30; i++ )
     {
         CvMemStoragePos pos;
-        
+
         ts->update_context( this, i, false );
 
         ///////////////////// init contour /////////
         dDiam = 0;
         while( sqrt(dDiam) / IntervalsCount == 0 )
         {
-            if( storage != 0 ) 
-                cvReleaseMemStorage(&storage);				
-            
+            if( storage != 0 )
+                cvReleaseMemStorage(&storage);
+
             storage = cvCreateMemStorage( 0 );
             if( get_contour( 0, &SrcSeq, &iDiam, storage ) )
                 dDiam = (float)iDiam;
         }
         dDiam = (float)sqrt( dDiam );
-        
+
         storage = SrcSeq->storage;
-        
+
         ////////////////// test /////////////
         EpsStep = dDiam / IntervalsCount ;
         for( Eps = EpsStep ; Eps < dDiam ; Eps += EpsStep )
         {
-            cvSaveMemStoragePos( storage, &pos ); 
-            
+            cvSaveMemStoragePos( storage, &pos );
+
             ////////// call function ////////////
-            DstSeq = cvApproxPoly( SrcSeq, SrcSeq->header_size, storage, 
+            DstSeq = cvApproxPoly( SrcSeq, SrcSeq->header_size, storage,
                 CV_POLY_APPROX_DP, Eps );
-            
-            if( DstSeq == NULL ) 
+
+            if( DstSeq == NULL )
             {
                 ts->printf( cvtest::TS::LOG,
                     "cvApproxPoly returned NULL for contour #%d, espilon = %g\n", i, Eps );
                 code = cvtest::TS::FAIL_INVALID_OUTPUT;
                 goto _exit_;
             } // if( DstSeq == NULL )
-            
+
             code = check( SrcSeq, DstSeq, Eps );
             if( code != 0 )
             {
@@ -340,10 +340,10 @@ void CV_ApproxPolyTest::run( int /*start_from*/ )
                 code = cvtest::TS::FAIL_BAD_ACCURACY;
                 goto _exit_;
             }
-            
+
             cvRestoreMemStoragePos( storage, &pos );
         } // for( Eps = EpsStep ; Eps <= Diam ; Eps += EpsStep )
-        
+
         ///////////// free memory  ///////////////////
         cvReleaseMemStorage(&storage);
     } // for( int i = 0; NULL != ( Cont = Contours[i] ) ; i++ )

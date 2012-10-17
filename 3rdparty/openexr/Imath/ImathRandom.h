@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2002, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-// 
+//
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission. 
-// 
+// from this software without specific prior written permission.
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -76,7 +76,7 @@ class Rand32
     //------------
 
     Rand32 (unsigned long int seed = 0);
-    
+
 
     //--------------------------------
     // Re-initialize with a given seed
@@ -136,7 +136,7 @@ class Rand48
     //------------
 
     Rand48 (unsigned long int seed = 0);
-    
+
 
     //--------------------------------
     // Re-initialize with a given seed
@@ -185,7 +185,7 @@ class Rand48
 //------------------------------------------------------------
 
 template <class Vec, class Rand>
-Vec		
+Vec
 solidSphereRand (Rand &rand);
 
 
@@ -195,7 +195,7 @@ solidSphereRand (Rand &rand);
 //-------------------------------------------------------------
 
 template <class Vec, class Rand>
-Vec		
+Vec
 hollowSphereRand (Rand &rand);
 
 
@@ -289,11 +289,11 @@ Rand48::init (unsigned long int seed)
 
     _state[0] = (unsigned short int) (seed & 0xFFFF);
     _state[1] = (unsigned short int) ((seed >> 16) & 0xFFFF);
-    _state[2] = (unsigned short int) (seed & 0xFFFF);   
+    _state[2] = (unsigned short int) (seed & 0xFFFF);
 }
 
 
-inline 
+inline
 Rand48::Rand48 (unsigned long int seed)
 {
     init (seed);
@@ -337,8 +337,8 @@ solidSphereRand (Rand &rand)
 
     do
     {
-	for (unsigned int i = 0; i < Vec::dimensions(); i++)
-	    v[i] = (typename Vec::BaseType) rand.nextf (-1, 1);
+    for (unsigned int i = 0; i < Vec::dimensions(); i++)
+        v[i] = (typename Vec::BaseType) rand.nextf (-1, 1);
     }
     while (v.length2() > 1);
 
@@ -355,10 +355,10 @@ hollowSphereRand (Rand &rand)
 
     do
     {
-	for (unsigned int i = 0; i < Vec::dimensions(); i++)
-	    v[i] = (typename Vec::BaseType) rand.nextf (-1, 1);
+    for (unsigned int i = 0; i < Vec::dimensions(); i++)
+        v[i] = (typename Vec::BaseType) rand.nextf (-1, 1);
 
-	length = v.length();
+    length = v.length();
     }
     while (length > 1 || length == 0);
 
@@ -373,12 +373,12 @@ gaussRand (Rand &rand)
     float x;		// Note: to avoid numerical problems with very small
     float y;		// numbers, we make these variables singe-precision
     float length2;	// floats, but later we call the double-precision log()
-			// and sqrt() functions instead of logf() and sqrtf().
+            // and sqrt() functions instead of logf() and sqrtf().
     do
     {
-	x = float (rand.nextf (-1, 1));
-	y = float (rand.nextf (-1, 1));
-	length2 = x * x + y * y;
+    x = float (rand.nextf (-1, 1));
+    y = float (rand.nextf (-1, 1));
+    length2 = x * x + y * y;
     }
     while (length2 >= 1 || length2 == 0);
 

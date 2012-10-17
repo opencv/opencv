@@ -31,10 +31,10 @@ const string plotsDir = "/plots";
 
 static void help(char** argv)
 {
-	cout << "\nThis program shows how to read in, train on and produce test results for the PASCAL VOC (Visual Object Challenge) data. \n"
-	 << "It shows how to use detectors, descriptors and recognition methods \n"
-		"Using OpenCV version %s\n" << CV_VERSION << "\n"
-	 << "Call: \n"
+    cout << "\nThis program shows how to read in, train on and produce test results for the PASCAL VOC (Visual Object Challenge) data. \n"
+     << "It shows how to use detectors, descriptors and recognition methods \n"
+        "Using OpenCV version %s\n" << CV_VERSION << "\n"
+     << "Call: \n"
     << "Format:\n ./" << argv[0] << " [VOC path] [result directory]  \n"
     << "       or:  \n"
     << " ./" << argv[0] << " [VOC path] [result directory] [feature detector] [descriptor extractor] [descriptor matcher] \n"
@@ -2514,7 +2514,7 @@ int main(int argc, char** argv)
 {
     if( argc != 3 && argc != 6 )
     {
-    	help(argv);
+        help(argv);
         return -1;
     }
 

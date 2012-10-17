@@ -46,7 +46,7 @@ def findSquares4(img, storage):
         # extract the c-th color plane
         channels = [None, None, None]
         channels[c] = tgray
-        cv.Split(subimage, channels[0], channels[1], channels[2], None) 
+        cv.Split(subimage, channels[0], channels[1], channels[2], None)
         for l in range(N):
             # hack: use Canny instead of zero threshold level.
             # Canny helps to catch squares with gradient shading
@@ -68,7 +68,7 @@ def findSquares4(img, storage):
 
             if not contours:
                 continue
-            
+
             # test each contour
             for contour in contours.hrange():
                 # approximate contour with accuracy proportional
@@ -81,8 +81,8 @@ def findSquares4(img, storage):
                 # Note: absolute value of an area is used because
                 # area may be positive or negative - in accordance with the
                 # contour orientation
-                if(result.total == 4 and 
-                    abs(cv.ContourArea(result)) > 1000 and 
+                if(result.total == 4 and
+                    abs(cv.ContourArea(result)) > 1000 and
                     cv.CheckContourConvexity(result)):
                     s = 0
                     for i in range(5):

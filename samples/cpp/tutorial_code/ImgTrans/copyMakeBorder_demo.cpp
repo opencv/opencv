@@ -11,7 +11,7 @@
 
 using namespace cv;
 
-/// Global Variables 
+/// Global Variables
 Mat src, dst;
 int top, bottom, left, right;
 int borderType;
@@ -29,10 +29,10 @@ int main( int argc, char** argv )
 
   /// Load an image
   src = imread( argv[1] );
-  
+
   if( !src.data )
     { return -1;
-      printf(" No data entered, please enter the path to an image file \n"); 
+      printf(" No data entered, please enter the path to an image file \n");
     }
 
   /// Brief how-to for this program
@@ -46,12 +46,12 @@ int main( int argc, char** argv )
   namedWindow( window_name, CV_WINDOW_AUTOSIZE );
 
   /// Initialize arguments for the filter
-  top = (int) (0.05*src.rows); bottom = (int) (0.05*src.rows); 
+  top = (int) (0.05*src.rows); bottom = (int) (0.05*src.rows);
   left = (int) (0.05*src.cols); right = (int) (0.05*src.cols);
   dst = src;
 
   imshow( window_name, dst );
-  
+
   while( true )
        {
          c = waitKey(500);

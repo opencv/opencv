@@ -5,7 +5,7 @@
 
 namespace cv
 {
-    
+
 struct CommandLineParserParams
 {
 public:
@@ -14,34 +14,31 @@ public:
     vector<string> keys;
     int number;
 };
-    
+
 
 struct CommandLineParser::Impl
 {
     bool error;
     string error_message;
     string about_message;
-    
+
     string path_to_app;
     string app_name;
-    
+
     vector<CommandLineParserParams> data;
-    
-    Impl() { refcount = 1; }
-    Impl(int argc, const char* const argv[], const char* keys);
-    
+
     vector<string> split_range_string(const string& str, char fs, char ss) const;
     vector<string> split_string(const string& str, char symbol = ' ', bool create_empty_item = false) const;
-    string trim_spaces(const string& str) const;
-    
+    string cat_string(const string& str) const;
+
     void apply_params(const string& key, const string& value);
     void apply_params(int i, string value);
-    
+
     void sort_params();
     int refcount;
 };
 
-    
+
 static string get_type_name(int type)
 {
     if( type == Param::INT )
@@ -58,7 +55,7 @@ static string get_type_name(int type)
         return "string";
     return "unknown";
 }
-    
+
 static void from_str(const string& str, int type, void* dst)
 {
     std::stringstream ss(str);
@@ -76,49 +73,36 @@ static void from_str(const string& str, int type, void* dst)
         ss >> *(string*)dst;
     else
         throw cv::Exception(CV_StsBadArg, "unknown/unsupported parameter type", "", __FILE__, __LINE__);
-    
+
     if (ss.fail())
     {
         string err_msg = "can not convert: [" + str +
         + "] to [" + get_type_name(type) + "]";
-        
+
         throw cv::Exception(CV_StsBadArg, err_msg, "", __FILE__, __LINE__);
     }
 }
 
-string CommandLineParser::getString(const string& name)
-{
-    for (size_t i = 0; i < impl->data.size(); i++)
-    {
-        for (size_t j = 0; j < impl->data[i].keys.size(); j++)
-        {
-            if (name.compare(impl->data[i].keys[j]) == 0)
-            {
-                string v = impl->data[i].def_value;
-                return v;
-            }
-        }
-    }
-    return string();
-}
-    
 void CommandLineParser::getByName(const string& name, bool space_delete, int type, void* dst) const
 {
     try
     {
-        string v = ((CommandLineParser*)this)->getString(name);
-        if( v.empty() )
+        for (size_t i = 0; i < impl->data.size(); i++)
         {
-            impl->error = true;
-            impl->error_message += "Unknown parametes " + name + "\n";
+            for (size_t j = 0; j < impl->data[i].keys.size(); j++)
+            {
+                if (name.compare(impl->data[i].keys[j]) == 0)
+                {
+                    string v = impl->data[i].def_value;
+                    if (space_delete)
+                        v = impl->cat_string(v);
+                    from_str(v, type, dst);
+                    return;
+                }
+            }
         }
-        else
-        {
-            if (space_delete)
-                v = impl->trim_spaces(v);
-            from_str(v, type, dst);
-            return;
-        }
+        impl->error = true;
+        impl->error_message += "Unknown parametes " + name + "\n";
     }
     catch (std::exception& e)
     {
@@ -137,7 +121,7 @@ void CommandLineParser::getByIndex(int index, bool space_delete, int type, void*
             if (impl->data[i].number == index)
             {
                 string v = impl->data[i].def_value;
-                if (space_delete == true) v = impl->trim_spaces(v);
+                if (space_delete == true) v = impl->cat_string(v);
                 from_str(v, type, dst);
                 return;
             }
@@ -170,45 +154,36 @@ static bool cmp_params(const CommandLineParserParams & p1, const CommandLinePars
 
 CommandLineParser::CommandLineParser(int argc, const char* const argv[], const string& keys)
 {
-    impl = new Impl(argc, argv, keys.c_str());
-}
+    impl = new Impl;
+    impl->refcount = 1;
 
-CommandLineParser::CommandLineParser(int argc, const char* const argv[], const char* keys)
-{
-    impl = new Impl(argc, argv, keys);
-}
-    
-CommandLineParser::Impl::Impl(int argc, const char* const argv[], const char* keys)
-{
-    refcount = 1;
-    
     // path to application
     size_t pos_s = string(argv[0]).find_last_of("/\\");
     if (pos_s == string::npos)
     {
-        path_to_app = "";
-        app_name = string(argv[0]);
+        impl->path_to_app = "";
+        impl->app_name = string(argv[0]);
     }
     else
     {
-        path_to_app = string(argv[0]).substr(0, pos_s);
-        app_name = string(argv[0]).substr(pos_s + 1, string(argv[0]).length() - pos_s);
+        impl->path_to_app = string(argv[0]).substr(0, pos_s);
+        impl->app_name = string(argv[0]).substr(pos_s + 1, string(argv[0]).length() - pos_s);
     }
 
-    error = false;
-    error_message = "";
+    impl->error = false;
+    impl->error_message = "";
 
     // parse keys
-    vector<string> k = split_range_string(keys, '{', '}');
+    vector<string> k = impl->split_range_string(keys, '{', '}');
 
     int jj = 0;
     for (size_t i = 0; i < k.size(); i++)
     {
-        vector<string> l = split_string(k[i], '|', true);
+        vector<string> l = impl->split_string(k[i], '|', true);
         CommandLineParserParams p;
-        p.keys = split_string(l[0]);
+        p.keys = impl->split_string(l[0]);
         p.def_value = l[1];
-        p.help_message = trim_spaces(l[2]);
+        p.help_message = impl->cat_string(l[2]);
         p.number = -1;
         if (p.keys[0][0] == '@')
         {
@@ -216,7 +191,7 @@ CommandLineParser::Impl::Impl(int argc, const char* const argv[], const char* ke
             jj++;
         }
 
-        data.push_back(p);
+        impl->data.push_back(p);
     }
 
     // parse argv
@@ -227,13 +202,13 @@ CommandLineParser::Impl::Impl(int argc, const char* const argv[], const char* ke
 
         if (s.find('=') != string::npos && s.find('=') < s.length())
         {
-            vector<string> k_v = split_string(s, '=', true);
+            vector<string> k_v = impl->split_string(s, '=', true);
             for (int h = 0; h < 2; h++)
             {
                 if (k_v[0][0] == '-')
                     k_v[0] = k_v[0].substr(1, k_v[0].length() -1);
             }
-            apply_params(k_v[0], k_v[1]);
+            impl->apply_params(k_v[0], k_v[1]);
         }
         else if (s.length() > 1 && s[0] == '-')
         {
@@ -242,25 +217,25 @@ CommandLineParser::Impl::Impl(int argc, const char* const argv[], const char* ke
                 if (s[0] == '-')
                     s = s.substr(1, s.length() - 1);
             }
-            apply_params(s, "true");
+            impl->apply_params(s, "true");
         }
         else if (s[0] != '-')
         {
-            apply_params(jj, s);
+            impl->apply_params(jj, s);
             jj++;
         }
     }
 
-    sort_params();
+    impl->sort_params();
 }
-    
-    
+
+
 CommandLineParser::CommandLineParser(const CommandLineParser& parser)
 {
     impl = parser.impl;
     CV_XADD(&impl->refcount, 1);
 }
-    
+
 CommandLineParser& CommandLineParser::operator = (const CommandLineParser& parser)
 {
     if( this != &parser )
@@ -315,7 +290,7 @@ void CommandLineParser::Impl::sort_params()
     sort (data.begin(), data.end(), cmp_params);
 }
 
-string CommandLineParser::Impl::trim_spaces(const string& str) const
+string CommandLineParser::Impl::cat_string(const string& str) const
 {
     int left = 0, right = (int)str.length();
     while( left <= right && str[left] == ' ' )
@@ -330,7 +305,7 @@ string CommandLineParser::getPathToApplication() const
     return impl->path_to_app;
 }
 
-bool CommandLineParser::has(const string& name)
+bool CommandLineParser::has(const string& name) const
 {
     for (size_t i = 0; i < impl->data.size(); i++)
     {
@@ -358,11 +333,6 @@ void CommandLineParser::printErrors() const
     }
 }
 
-void CommandLineParser::printParams()
-{
-    printMessage();
-}
-    
 void CommandLineParser::printMessage() const
 {
     if (impl->about_message != "")
@@ -404,7 +374,7 @@ void CommandLineParser::printMessage() const
                     std::cout << ", ";
                 }
             }
-            string dv = impl->trim_spaces(impl->data[i].def_value);
+            string dv = impl->cat_string(impl->data[i].def_value);
             if (dv.compare("") != 0)
             {
                 std::cout << " (value:" << dv << ")";
@@ -424,7 +394,7 @@ void CommandLineParser::printMessage() const
 
             std::cout << k;
 
-            string dv = impl->trim_spaces(impl->data[i].def_value);
+            string dv = impl->cat_string(impl->data[i].def_value);
             if (dv.compare("") != 0)
             {
                 std::cout << " (value:" << dv << ")";

@@ -56,15 +56,15 @@ CV_INIT_ALGORITHM(SURF, "Feature2D.SURF",
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-CV_INIT_ALGORITHM(SIFT, "Feature2D.SIFT",    
+CV_INIT_ALGORITHM(SIFT, "Feature2D.SIFT",
                   obj.info()->addParam(obj, "nFeatures", obj.nfeatures);
                   obj.info()->addParam(obj, "nOctaveLayers", obj.nOctaveLayers);
                   obj.info()->addParam(obj, "contrastThreshold", obj.contrastThreshold);
                   obj.info()->addParam(obj, "edgeThreshold", obj.edgeThreshold);
                   obj.info()->addParam(obj, "sigma", obj.sigma));
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////    
-    
+///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 bool initModule_nonfree(void)
 {
     Ptr<Algorithm> sift = createSIFT(), surf = createSURF();
@@ -72,4 +72,3 @@ bool initModule_nonfree(void)
 }
 
 }
-    

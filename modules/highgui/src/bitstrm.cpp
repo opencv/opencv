@@ -56,7 +56,7 @@ bool  bsIsBigEndian( void )
 /////////////////////////  RBaseStream ////////////////////////////
 
 bool  RBaseStream::isOpened()
-{ 
+{
     return m_is_opened;
 }
 
@@ -219,7 +219,7 @@ int RLByteStream::getBytes( void* buffer, int count )
     uchar*  data = (uchar*)buffer;
     int readed = 0;
     assert( count >= 0 );
-    
+
     while( count > 0 )
     {
         int l;
@@ -350,7 +350,7 @@ WBaseStream::~WBaseStream()
 
 
 bool  WBaseStream::isOpened()
-{ 
+{
     return m_is_opened;
 }
 
@@ -368,7 +368,7 @@ void  WBaseStream::allocate()
 void  WBaseStream::writeBlock()
 {
     int size = (int)(m_current - m_start);
-    
+
     assert( isOpened() );
     if( size == 0 )
         return;
@@ -392,7 +392,7 @@ bool  WBaseStream::open( const string& filename )
 {
     close();
     allocate();
-    
+
     m_file = fopen( filename.c_str(), "wb" );
     if( m_file )
     {
@@ -407,7 +407,7 @@ bool  WBaseStream::open( vector<uchar>& buf )
 {
     close();
     allocate();
-    
+
     m_buf = &buf;
     m_is_opened = true;
     m_block_pos = 0;
@@ -445,7 +445,7 @@ int  WBaseStream::getPos()
 }
 
 
-///////////////////////////// WLByteStream /////////////////////////////////// 
+///////////////////////////// WLByteStream ///////////////////////////////////
 
 WLByteStream::~WLByteStream()
 {
@@ -462,16 +462,16 @@ void WLByteStream::putByte( int val )
 void WLByteStream::putBytes( const void* buffer, int count )
 {
     uchar* data = (uchar*)buffer;
-    
+
     assert( data && m_current && count >= 0 );
 
     while( count )
     {
         int l = (int)(m_end - m_current);
-        
+
         if( l > count )
             l = count;
-        
+
         if( l > 0 )
         {
             memcpy( m_current, data, l );
@@ -529,7 +529,7 @@ void WLByteStream::putDWord( int val )
 }
 
 
-///////////////////////////// WMByteStream /////////////////////////////////// 
+///////////////////////////// WMByteStream ///////////////////////////////////
 
 WMByteStream::~WMByteStream()
 {

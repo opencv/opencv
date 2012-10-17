@@ -575,12 +575,12 @@ CvCapture_OpenNI::CvCapture_OpenNI( int index )
 
     // Chose device according to index
     xn::NodeInfoList::Iterator it = devicesList.Begin();
-		for( int i = 0; i < index && it!=devicesList.End(); ++i ) it++;
-		if ( it == devicesList.End() )
-		{
-			std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : Failed device with index " << index << std::endl;
-			return;
-		}
+        for( int i = 0; i < index && it!=devicesList.End(); ++i ) it++;
+        if ( it == devicesList.End() )
+        {
+            std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : Failed device with index " << index << std::endl;
+            return;
+        }
 
     xn::NodeInfo deviceNode = *it;
     status = context.CreateProductionTree( deviceNode, productionNode );

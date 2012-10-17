@@ -73,7 +73,7 @@ public:
     virtual bool setProperty(int, double) { return false; }
     virtual bool grabFrame();
     virtual IplImage* retrieveFrame(int);
-	virtual int getCaptureDomain() { return CV_CAP_MIL; } // Return the type of the capture object: CV_CAP_VFW, etc...
+    virtual int getCaptureDomain() { return CV_CAP_MIL; } // Return the type of the capture object: CV_CAP_VFW, etc...
 
 protected:
     void init();
@@ -193,10 +193,10 @@ double CvCaptureCAM_MIL::getProperty( int property_id )
 {
     switch( property_id )
     {
-	case CV_CAP_PROP_FRAME_WIDTH:
+    case CV_CAP_PROP_FRAME_WIDTH:
         return rgb_frame ? rgb_frame->width : 0;
-	case CV_CAP_PROP_FRAME_HEIGHT:
-		return rgb_frame ? rgb_frame->height : 0;
+    case CV_CAP_PROP_FRAME_HEIGHT:
+        return rgb_frame ? rgb_frame->height : 0;
     }
     return 0;
 }
@@ -209,7 +209,7 @@ bool CvCaptureCAM_MIL::setProperty( int, double )
 
 CvCapture* cvCreateCameraCapture_MIL( int index )
 {
-	CvCaptureCAM_MIL* capture = new CvCaptureCAM_MIL;
+    CvCaptureCAM_MIL* capture = new CvCaptureCAM_MIL;
 
     if( capture->open( index ))
         return capture;

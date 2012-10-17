@@ -28,7 +28,7 @@ class TestInfo(object):
         self.parseLongMetric(xmlnode, "mean");
         self.parseLongMetric(xmlnode, "stddev");
         self.parseFloatMetric(xmlnode, "gstddev");
-    
+
     def parseLongMetric(self, xmlnode, name, default = 0):
         if xmlnode.hasAttribute(name):
             tmp = xmlnode.getAttribute(name)
@@ -94,7 +94,7 @@ class TestInfo(object):
 
     def dump(self, units="ms"):
         print "%s ->\t\033[1;31m%s\033[0m = \t%.2f%s" % (str(self), self.status, self.get("gmean", units), units)
-        
+
     def shortName(self):
         pos = self.name.find("/")
         if pos > 0:

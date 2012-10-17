@@ -48,7 +48,7 @@ using namespace std;
 
 #ifdef HAVE_CUDA
 
-namespace 
+namespace
 {
     #define error_entry(entry)  { entry, #entry }
 
@@ -56,7 +56,7 @@ namespace
     {
         int code;
         string str;
-    }; 
+    };
 
     struct ErrorEntryComparer
     {
@@ -79,8 +79,8 @@ namespace
 
     //////////////////////////////////////////////////////////////////////////
     // NPP errors
-    
-    const ErrorEntry npp_errors [] = 
+
+    const ErrorEntry npp_errors [] =
     {
         error_entry( NPP_NOT_SUPPORTED_MODE_ERROR ),
         error_entry( NPP_ROUND_MODE_NOT_SUPPORTED_ERROR ),
@@ -130,8 +130,8 @@ namespace
 
     //////////////////////////////////////////////////////////////////////////
     // NCV errors
-    
-    const ErrorEntry ncv_errors [] = 
+
+    const ErrorEntry ncv_errors [] =
     {
         error_entry( NCV_SUCCESS ),
         error_entry( NCV_UNKNOWN_ERROR ),
@@ -183,7 +183,7 @@ namespace
     //////////////////////////////////////////////////////////////////////////
     // CUFFT errors
 
-    const ErrorEntry cufft_errors[] = 
+    const ErrorEntry cufft_errors[] =
     {
         error_entry( CUFFT_INVALID_PLAN ),
         error_entry( CUFFT_ALLOC_FAILED ),
@@ -201,7 +201,7 @@ namespace
     //////////////////////////////////////////////////////////////////////////
     // CUBLAS errors
 
-    const ErrorEntry cublas_errors[] = 
+    const ErrorEntry cublas_errors[] =
     {
         error_entry( CUBLAS_STATUS_SUCCESS ),
         error_entry( CUBLAS_STATUS_NOT_INITIALIZED ),

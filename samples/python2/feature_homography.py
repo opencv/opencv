@@ -37,7 +37,7 @@ class App:
 
         cv2.namedWindow('plane')
         self.rect_sel = common.RectSelector('plane', self.on_rect)
-    
+
     def on_rect(self, rect):
         self.tracker.clear()
         self.tracker.add_target(self.frame, rect)
@@ -50,7 +50,7 @@ class App:
                 if not ret:
                     break
                 self.frame = frame.copy()
-            
+
             w, h = getsize(self.frame)
             vis = np.zeros((h, w*2, 3), np.uint8)
             vis[:h,:w] = self.frame

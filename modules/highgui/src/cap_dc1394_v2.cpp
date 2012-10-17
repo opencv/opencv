@@ -202,8 +202,8 @@ public:
     virtual bool setProperty(int, double);
     virtual bool grabFrame();
     virtual IplImage* retrieveFrame(int);
-	virtual int getCaptureDomain() { return CV_CAP_DC1394; } // Return the type of the capture object: CV_CAP_VFW, etc...
-	
+    virtual int getCaptureDomain() { return CV_CAP_DC1394; } // Return the type of the capture object: CV_CAP_VFW, etc...
+
 
 protected:
     virtual bool startCapture();
@@ -304,21 +304,21 @@ bool CvCaptureCAM_DC1394_v2_CPP::startCapture()
                                           DC1394_ISO_SPEED_3200);
     }
 
-	// should a specific mode be used
+    // should a specific mode be used
     if (userMode >= 0)
-	
+
     {
         dc1394video_mode_t wantedMode;
         dc1394video_modes_t videoModes;
         dc1394_video_get_supported_modes(dcCam, &videoModes);
-	
+
         //set mode from number, for example the second supported mode, i.e userMode = 1
-	
+
         if (userMode < (int)videoModes.num)
         {
             wantedMode = videoModes.modes[userMode];
         }
-	
+
         //set modes directly from DC134 constants (from dc1394video_mode_t)
         else if ((userMode >= DC1394_VIDEO_MODE_MIN) && (userMode <= DC1394_VIDEO_MODE_MAX ))
         {
@@ -328,7 +328,7 @@ bool CvCaptureCAM_DC1394_v2_CPP::startCapture()
             {
                 j++;
             }
-	
+
             if ((int)videoModes.modes[j]==userMode)
             {
                 wantedMode = videoModes.modes[j];
@@ -361,8 +361,8 @@ bool CvCaptureCAM_DC1394_v2_CPP::startCapture()
         for (i = 0; i < (int)videoModes.num; i++)
         {
             dc1394video_mode_t mode = videoModes.modes[i];
-			if (mode >= DC1394_VIDEO_MODE_FORMAT7_MIN && mode <= DC1394_VIDEO_MODE_FORMAT7_MAX)
-				continue;
+            if (mode >= DC1394_VIDEO_MODE_FORMAT7_MIN && mode <= DC1394_VIDEO_MODE_FORMAT7_MAX)
+                continue;
             int pref = -1;
             dc1394color_coding_t colorCoding;
             dc1394_get_color_coding_from_video_mode(dcCam, mode, &colorCoding);
@@ -398,7 +398,7 @@ bool CvCaptureCAM_DC1394_v2_CPP::startCapture()
         if ((int)bestMode >= 0)
             code = dc1394_video_set_mode(dcCam, bestMode);
     }
-    
+
     if (fps > 0)
     {
         dc1394video_mode_t mode;
@@ -588,9 +588,9 @@ bool CvCaptureCAM_DC1394_v2_CPP::grabFrame()
         cvInitImageHeader(&fhdr, cvSize(fc->size[0], fc->size[1]), 8, nch);
         cvSetData(&fhdr, fc->image, fc->size[0]*nch);
 
-	// Swap R&B channels:
-	if (nch==3)
-		cvConvertImage(&fhdr,&fhdr,CV_CVTIMG_SWAP_RB);
+    // Swap R&B channels:
+    if (nch==3)
+        cvConvertImage(&fhdr,&fhdr,CV_CVTIMG_SWAP_RB);
 
         if( rectify && cameraId == VIDERE && nimages == 2 )
         {
@@ -662,7 +662,7 @@ double CvCaptureCAM_DC1394_v2_CPP::getProperty(int propId)
                                                   &feature_set.feature[DC1394_FEATURE_WHITE_BALANCE-DC1394_FEATURE_MIN].RV_value) == DC1394_SUCCESS)
         return feature_set.feature[DC1394_FEATURE_WHITE_BALANCE-DC1394_FEATURE_MIN].RV_value;
         break;
-	case CV_CAP_PROP_GUID:
+    case CV_CAP_PROP_GUID:
         //the least 32 bits are enough to identify the camera
         return (double) (guid & 0x00000000FFFFFFFF);
         break;
@@ -688,19 +688,19 @@ bool CvCaptureCAM_DC1394_v2_CPP::setProperty(int propId, double value)
     {
     case CV_CAP_PROP_FRAME_WIDTH:
         if(started)
-			return false;
+            return false;
         frameWidth = cvRound(value);
         frameHeight = 0;
         break;
     case CV_CAP_PROP_FRAME_HEIGHT:
-    	if(started)
-			return false;
+        if(started)
+            return false;
         frameWidth = 0;
         frameHeight = cvRound(value);
         break;
     case CV_CAP_PROP_FPS:
-    	if(started)
-			return false;
+        if(started)
+            return false;
         fps = value;
         break;
     case CV_CAP_PROP_RECTIFICATION:
@@ -709,26 +709,26 @@ bool CvCaptureCAM_DC1394_v2_CPP::setProperty(int propId, double value)
         rectify = fabs(value) > FLT_EPSILON;
         break;
     case CV_CAP_PROP_MODE:
-		if(started)
+        if(started)
           return false;
         userMode = cvRound(value);
         break;
-	case CV_CAP_PROP_ISO_SPEED:
+    case CV_CAP_PROP_ISO_SPEED:
         if(started)
           return false;
         isoSpeed = cvRound(value);
-		break;
+        break;
         //The code below is based on coriander, callbacks.c:795, refer to case RANGE_MENU_MAN :
          default:
              if (propId<CV_CAP_PROP_MAX_DC1394 && dc1394properties[propId]!=-1
                  && dcCam)
              {
-				 //get the corresponding feature from property-id
+                 //get the corresponding feature from property-id
                  dc1394feature_info_t *act_feature = &feature_set.feature[dc1394properties[propId]-DC1394_FEATURE_MIN];
 
                  if (cvRound(value) == CV_CAP_PROP_DC1394_OFF)
                  {
-					 if (  (act_feature->on_off_capable)
+                     if (  (act_feature->on_off_capable)
                            && (dc1394_feature_set_power(dcCam, act_feature->id, DC1394_OFF) == DC1394_SUCCESS))
                      {
                          act_feature->is_on=DC1394_OFF;
@@ -793,8 +793,8 @@ bool CvCaptureCAM_DC1394_v2_CPP::setProperty(int propId, double value)
                          return true;
                      }
                  }
-				 
-				 //first: check boundaries
+
+                 //first: check boundaries
                  if (value < act_feature->min)
                  {
                      value = act_feature->min;
@@ -803,7 +803,7 @@ bool CvCaptureCAM_DC1394_v2_CPP::setProperty(int propId, double value)
                  {
                      value = act_feature->max;
                  }
-	
+
                  if (dc1394_feature_set_value(dcCam, act_feature->id, cvRound(value)) == DC1394_SUCCESS)
                  {
                      act_feature->value = value;

@@ -199,8 +199,8 @@ icvCalcPGH( const CvSeq * contour, float *pgh, int angle_dim, int dist_dim )
         buffer[i] = (float)(1./sqrt(dx * dx + dy * dy));
     }
 
-    /* 
-       do 2 passes. 
+    /*
+       do 2 passes.
        First calculates maximal distance.
        Second calculates histogram itself.
      */
@@ -335,14 +335,14 @@ cvCalcPGH( const CvSeq * contour, CvHistogram * hist )
 {
     int size[CV_MAX_DIM];
     int dims;
-    
+
     if( !CV_IS_HIST(hist))
         CV_Error( CV_StsBadArg, "The histogram header is invalid " );
 
     if( CV_IS_SPARSE_HIST( hist ))
         CV_Error( CV_StsUnsupportedFormat, "Sparse histogram are not supported" );
 
-    dims = cvGetDims( hist->bins, size ); 
+    dims = cvGetDims( hist->bins, size );
 
     if( dims != 2 )
         CV_Error( CV_StsBadSize, "The histogram must be two-dimensional" );

@@ -92,7 +92,7 @@ cvSubdiv2DAddPoint( CvSubdiv2D * subdiv, CvPoint2D32f pt, int is_virtual )
         subdiv_point->pt = pt;
         subdiv_point->first = 0;
         subdiv_point->flags |= is_virtual ? CV_SUBDIV2D_VIRTUAL_POINT_FLAG : 0;
-		subdiv_point->id = -1;
+        subdiv_point->id = -1;
     }
 
     return subdiv_point;
@@ -278,7 +278,7 @@ cvSubdiv2DLocate( CvSubdiv2D * subdiv, CvPoint2D32f pt,
         }
     }
 exit:
-    
+
     subdiv->recent_edge = edge;
 
     if( location == CV_PTLOC_INSIDE )
@@ -532,11 +532,11 @@ icvCreateCenterNormalLine( CvSubdiv2DEdge edge, double *_a, double *_b, double *
 {
     CvPoint2D32f org = cvSubdiv2DEdgeOrg( edge )->pt;
     CvPoint2D32f dst = cvSubdiv2DEdgeDst( edge )->pt;
-    
+
     double a = dst.x - org.x;
     double b = dst.y - org.y;
     double c = -(a * (dst.x + org.x) + b * (dst.y + org.y));
-    
+
     *_a = a + a;
     *_b = b + b;
     *_c = c;
@@ -548,7 +548,7 @@ icvIntersectLines3( double *a0, double *b0, double *c0,
                    double *a1, double *b1, double *c1, CvPoint2D32f * point )
 {
     double det = a0[0] * b1[0] - a1[0] * b0[0];
-    
+
     if( det != 0 )
     {
         det = 1. / det;
@@ -665,15 +665,15 @@ cvFindNearestPoint2D( CvSubdiv2D* subdiv, CvPoint2D32f pt )
     CvPoint2D32f start;
     CvPoint2D32f diff;
     CvSubdiv2DPointLocation loc;
-    CvSubdiv2DEdge edge; 
+    CvSubdiv2DEdge edge;
     int i;
-    
+
     if( !subdiv )
         CV_Error( CV_StsNullPtr, "" );
 
     if( !CV_IS_SUBDIV2D( subdiv ))
         CV_Error( CV_StsNullPtr, "" );
-    
+
     if( subdiv->edges->active_count <= 3 )
         return 0;
 
@@ -702,11 +702,11 @@ cvFindNearestPoint2D( CvSubdiv2D* subdiv, CvPoint2D32f pt )
     for( i = 0; i < subdiv->total; i++ )
     {
         CvPoint2D32f t;
-        
+
         for(;;)
         {
             assert( cvSubdiv2DEdgeDst( edge ));
-            
+
             t = cvSubdiv2DEdgeDst( edge )->pt;
             if( icvIsRightOf2( t, start, diff ) >= 0 )
                 break;
@@ -749,11 +749,11 @@ icvSubdiv2DCheck( CvSubdiv2D* subdiv )
 {
     int i, j, total = subdiv->edges->total;
     CV_Assert( subdiv != 0 );
-    
+
     for( i = 0; i < total; i++ )
     {
         CvQuadEdge2D* edge = (CvQuadEdge2D*)cvGetSetElem(subdiv->edges,i);
-        
+
         if( edge && CV_IS_SET_ELEM( edge ))
         {
             for( j = 0; j < 4; j++ )
@@ -803,7 +803,7 @@ draw_subdiv_facet( CvSubdiv2D * subdiv, IplImage * dst, IplImage * src, CvSubdiv
     CvPoint local_buf[100];
     CvPoint *buf = local_buf;
 
-    // count number of edges in facet 
+    // count number of edges in facet
     do
     {
         count++;

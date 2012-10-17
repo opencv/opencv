@@ -18,14 +18,14 @@ def RunTestApp(AppName):
 
 if (__name__ ==  "__main__"):
     if (3 == len(sys.argv)):
-	DEVICE_ARCH = sys.argv[1]
-	DEVICE_NAME = sys.argv[2]
+    DEVICE_ARCH = sys.argv[1]
+    DEVICE_NAME = sys.argv[2]
 
-	if (DEVICE_NAME != ""):
-	    DEVICE_STR = "-s \"" + DEVICE_NAME + "\""
+    if (DEVICE_NAME != ""):
+        DEVICE_STR = "-s \"" + DEVICE_NAME + "\""
 
     if (not os.path.exists(LOCAL_LOG_PATH)):
-	os.makedirs(LOCAL_LOG_PATH)
+    os.makedirs(LOCAL_LOG_PATH)
 
     print("Waiting for device \"%s\" with arch \"%s\" ..." % (DEVICE_NAME, DEVICE_ARCH))
     os.system("adb %s wait-for-device" % DEVICE_STR)

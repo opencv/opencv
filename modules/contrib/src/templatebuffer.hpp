@@ -72,8 +72,8 @@
 
 
 //// If a parallelization method is available then, you should define MAKE_PARALLEL, in the other case, the classical serial code will be used
-#define MAKE_PARALLEL 
-// ==> then include required includes 
+#define MAKE_PARALLEL
+// ==> then include required includes
 #ifdef MAKE_PARALLEL
 
 // ==> declare usefull generic tools

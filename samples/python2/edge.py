@@ -15,7 +15,7 @@ import sys
 
 if __name__ == '__main__':
     print __doc__
-    
+
     try: fn = sys.argv[1]
     except: fn = 0
 
@@ -40,5 +40,5 @@ if __name__ == '__main__':
         ch = cv2.waitKey(5)
         if ch == 27:
             break
-    cv2.destroyAllWindows() 			
+    cv2.destroyAllWindows()
 

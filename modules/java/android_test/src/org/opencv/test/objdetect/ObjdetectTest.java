@@ -29,7 +29,7 @@ public class ObjdetectTest extends OpenCVTestCase {
 
         for (int i = 0; i < NUM; i++)
             rects.put(i, 0, 10, 10, 20, 20);
-        
+
         for (int i = 0; i < NUM; i++)
             rects.put(i, 0, 10, 10, 25, 25);
 

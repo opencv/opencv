@@ -50,8 +50,8 @@ typedef double F;
 typedef float F;
 #endif
 
-short2 do_mean_shift(int x0, int y0, __global uchar4* out,int out_step, 
-               __global uchar4* in, int in_step, int dst_off, int src_off, 
+short2 do_mean_shift(int x0, int y0, __global uchar4* out,int out_step,
+               __global uchar4* in, int in_step, int dst_off, int src_off,
                int cols, int rows, int sp, int sr, int maxIter, float eps)
 {
     int isr2 = sr*sr;
@@ -81,9 +81,9 @@ short2 do_mean_shift(int x0, int y0, __global uchar4* out,int out_step,
         for( int y = miny; y <= maxy; y++)
         {
             int rowCount = 0;
-            int x = minx; 
+            int x = minx;
             for( ; x+3 <= maxx; x+=4 )
-            {                    
+            {
                 int id = src_off + y*in_step + x;
                 uchar16 t = (uchar16)(in[id],in[id+1],in[id+2],in[id+3]);
                 int norm2_1 = (t.s0 - c.x) * (t.s0 - c.x) + (t.s1 - c.y) * (t.s1 - c.y) +
@@ -126,7 +126,7 @@ short2 do_mean_shift(int x0, int y0, __global uchar4* out,int out_step,
                     s.x += t.s0; s.y += t.s1; s.z += t.s2;
                     sx += x; rowCount++;
                 }
-                
+
             }
             if(x+1 == maxx)
             {
@@ -213,32 +213,32 @@ short2 do_mean_shift(int x0, int y0, __global uchar4* out,int out_step,
 }
 
 
-__kernel void meanshift_kernel(__global uchar4* out, int out_step, 
-                               __global uchar4* in, int in_step, 
+__kernel void meanshift_kernel(__global uchar4* out, int out_step,
+                               __global uchar4* in, int in_step,
                         int dst_off, int src_off, int cols, int rows,
                         int sp, int sr, int maxIter, float eps)
 {
-    int x0 = get_global_id(0); 
-    int y0 = get_global_id(1); 
+    int x0 = get_global_id(0);
+    int y0 = get_global_id(1);
     if( x0 < cols && y0 < rows )
         do_mean_shift(x0, y0, out, out_step, in, in_step, dst_off, src_off,
                           cols, rows, sp, sr, maxIter, eps);
 }
 
-__kernel void meanshiftproc_kernel( __global uchar4* in, __global uchar4* outr, 
-                             __global short2* outsp, int instep, int outrstep, 
+__kernel void meanshiftproc_kernel( __global uchar4* in, __global uchar4* outr,
+                             __global short2* outsp, int instep, int outrstep,
                              int outspstep, int in_off, int outr_off, int outsp_off,
                              int cols, int rows, int sp, int sr, int maxIter, float eps )
 {
-    int x0 = get_global_id(0); 
-    int y0 = get_global_id(1); 
+    int x0 = get_global_id(0);
+    int y0 = get_global_id(1);
 
     if( x0 < cols && y0 < rows )
     {
         //int basesp = (blockIdx.y * blockDim.y + threadIdx.y) * outspstep + (blockIdx.x * blockDim.x + threadIdx.x) * 2 * sizeof(short);
         //*(short2*)(outsp + basesp) = do_mean_shift(x0, y0, outr, outrstep, cols, rows, sp, sr, maxIter, eps);
         // we have ensured before that ((outspstep & 0x11)==0).
-        outsp_off >>= 2; 
+        outsp_off >>= 2;
         outspstep >>= 2;
         int basesp = outsp_off + y0 * outspstep + x0;
         outsp[basesp] = do_mean_shift(x0, y0, outr, outrstep, in, instep, outr_off, in_off, cols, rows, sp, sr, maxIter, eps);

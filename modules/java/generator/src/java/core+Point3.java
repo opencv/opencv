@@ -71,7 +71,7 @@ public class Point3 {
         Point3 it = (Point3) obj;
         return x == it.x && y == it.y && z == it.z;
     }
-    
+
     @Override
     public String toString() {
         return "{" + x + ", " + y + ", " + z + "}";

@@ -24,25 +24,25 @@ class p3p
  private:
   template <typename T>
   void init_camera_parameters(const cv::Mat& cameraMatrix)
-  {	
-	cx = cameraMatrix.at<T> (0, 2);
-	cy = cameraMatrix.at<T> (1, 2);
-	fx = cameraMatrix.at<T> (0, 0);
-	fy = cameraMatrix.at<T> (1, 1);
+  {
+    cx = cameraMatrix.at<T> (0, 2);
+    cy = cameraMatrix.at<T> (1, 2);
+    fx = cameraMatrix.at<T> (0, 0);
+    fy = cameraMatrix.at<T> (1, 1);
   }
   template <typename OpointType, typename IpointType>
   void extract_points(const cv::Mat& opoints, const cv::Mat& ipoints, std::vector<double>& points)
   {
-	  points.clear();
-	  points.resize(20);
-	  for(int i = 0; i < 4; i++)
-	  {
-		  points[i*5] = ipoints.at<IpointType>(0,i).x*fx + cx;
-		  points[i*5+1] = ipoints.at<IpointType>(0,i).y*fy + cy;
-		  points[i*5+2] = opoints.at<OpointType>(0,i).x;
-		  points[i*5+3] = opoints.at<OpointType>(0,i).y;
-		  points[i*5+4] = opoints.at<OpointType>(0,i).z;
-	  }
+      points.clear();
+      points.resize(20);
+      for(int i = 0; i < 4; i++)
+      {
+          points[i*5] = ipoints.at<IpointType>(0,i).x*fx + cx;
+          points[i*5+1] = ipoints.at<IpointType>(0,i).y*fy + cy;
+          points[i*5+2] = opoints.at<OpointType>(0,i).x;
+          points[i*5+3] = opoints.at<OpointType>(0,i).y;
+          points[i*5+4] = opoints.at<OpointType>(0,i).z;
+      }
   }
   void init_inverse_parameters();
   int solve_for_lengths(double lengths[4][3], double distances[3], double cosines[3]);

@@ -57,37 +57,37 @@
 #if defined (DEPTH_1)
 #define VEC_TYPE char8
 #define CONVERT_TYPE convert_char8
-#define MIN_VAL -128 
+#define MIN_VAL -128
 #define MAX_VAL 127
 #endif
 #if defined (DEPTH_2)
 #define VEC_TYPE ushort8
 #define CONVERT_TYPE convert_ushort8
-#define MIN_VAL 0 
+#define MIN_VAL 0
 #define MAX_VAL 65535
 #endif
 #if defined (DEPTH_3)
 #define VEC_TYPE short8
 #define CONVERT_TYPE convert_short8
-#define MIN_VAL -32768 
+#define MIN_VAL -32768
 #define MAX_VAL 32767
 #endif
 #if defined (DEPTH_4)
 #define VEC_TYPE int8
 #define CONVERT_TYPE convert_int8
-#define MIN_VAL INT_MIN 
+#define MIN_VAL INT_MIN
 #define MAX_VAL INT_MAX
 #endif
 #if defined (DEPTH_5)
 #define VEC_TYPE float8
 #define CONVERT_TYPE convert_float8
-#define MIN_VAL (-FLT_MAX) 
+#define MIN_VAL (-FLT_MAX)
 #define MAX_VAL FLT_MAX
 #endif
 #if defined (DEPTH_6)
 #define VEC_TYPE double8
 #define CONVERT_TYPE convert_double8
-#define MIN_VAL (-DBL_MAX) 
+#define MIN_VAL (-DBL_MAX)
 #define MAX_VAL DBL_MAX
 #endif
 
@@ -157,7 +157,7 @@ __kernel void arithm_op_minMax (int cols,int invalid_cols,int offset,int elemnum
    if(id < elemnum)
    {
        temp = src[idx];
-       if(id % cols == 0 ) 
+       if(id % cols == 0 )
        {
            repeat_s(temp);
        }
@@ -177,7 +177,7 @@ __kernel void arithm_op_minMax (int cols,int invalid_cols,int offset,int elemnum
    {
        idx = offset + id + (id / cols) * invalid_cols;
        temp = src[idx];
-       if(id % cols == 0 ) 
+       if(id % cols == 0 )
        {
                repeat_s(temp);
        }

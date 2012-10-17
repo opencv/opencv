@@ -26,13 +26,13 @@ import video
 import common
 from plane_tracker import PlaneTracker
 
-    
+
 ar_verts = np.float32([[0, 0, 0], [0, 1, 0], [1, 1, 0], [1, 0, 0],
-                       [0, 0, 1], [0, 1, 1], [1, 1, 1], [1, 0, 1], 
+                       [0, 0, 1], [0, 1, 1], [1, 1, 1], [1, 0, 1],
                        [0, 0.5, 2], [1, 0.5, 2]])
-ar_edges = [(0, 1), (1, 2), (2, 3), (3, 0), 
+ar_edges = [(0, 1), (1, 2), (2, 3), (3, 0),
             (4, 5), (5, 6), (6, 7), (7, 4),
-            (0, 4), (1, 5), (2, 6), (3, 7), 
+            (0, 4), (1, 5), (2, 6), (3, 7),
             (4, 8), (5, 8), (6, 9), (7, 9), (8, 9)]
 
 class App:
@@ -45,7 +45,7 @@ class App:
         cv2.namedWindow('plane')
         cv2.createTrackbar('focal', 'plane', 25, 50, common.nothing)
         self.rect_sel = common.RectSelector('plane', self.on_rect)
-    
+
     def on_rect(self, rect):
         self.tracker.add_target(self.frame, rect)
 
@@ -57,7 +57,7 @@ class App:
                 if not ret:
                     break
                 self.frame = frame.copy()
-            
+
             vis = self.frame.copy()
             if playing:
                 tracked = self.tracker.track(self.frame)

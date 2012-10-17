@@ -7,6 +7,8 @@
 
 #include <vector>
 
+namespace cv
+{
 class DetectionBasedTracker
 {
     public:
@@ -27,7 +29,6 @@ class DetectionBasedTracker
                     minNeighbours(2),
                     scaleFactor(1.1f)
                 {}
-                virtual ~IDetector() {}
 
                 virtual void detect(const cv::Mat& image, std::vector<cv::Rect>& objects) = 0;
 
@@ -63,6 +64,7 @@ class DetectionBasedTracker
                 {
                     minNeighbours = value;
                 }
+                virtual ~IDetector() {}
 
             protected:
                 cv::Size minObjSize;
@@ -83,7 +85,7 @@ class DetectionBasedTracker
         bool setParameters(const Parameters& params);
         const Parameters& getParameters() const;
 
-        
+
         typedef std::pair<cv::Rect, int> Object;
         virtual void getObjects(std::vector<cv::Rect>& result) const;
         virtual void getObjects(std::vector<Object>& result) const;
@@ -106,6 +108,7 @@ class DetectionBasedTracker
             }
         };
         virtual void getObjects(std::vector<ExtObject>& result) const;
+
 
         virtual int addObject(const cv::Rect& location); //returns id of the new object
 
@@ -166,10 +169,5 @@ class DetectionBasedTracker
         cv::Rect calcTrackedObjectPositionToShow(int i, ObjectStatus& status) const;
         void detectInRegion(const cv::Mat& img, const cv::Rect& r, std::vector<cv::Rect>& detectedObjectsInRegions);
 };
-
-namespace cv
-{
-    using ::DetectionBasedTracker;
 } //end of cv namespace
-
 #endif

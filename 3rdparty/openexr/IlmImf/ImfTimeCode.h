@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2004, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-// 
+//
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission. 
-// 
+// from this software without specific prior written permission.
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -39,7 +39,7 @@
 //-----------------------------------------------------------------------------
 //
 //	class TimeCode
-// 	
+//
 // 	A TimeCode object stores time and control codes as described
 // 	in SMPTE standard 12M-1999.  A TimeCode object contains the
 // 	following fields:
@@ -112,7 +112,7 @@
 
 namespace Imf {
 
-   
+
 class TimeCode
 {
   public:
@@ -123,9 +123,9 @@ class TimeCode
 
     enum Packing
     {
-	TV60_PACKING,		// packing for 60-field television
-	TV50_PACKING,		// packing for 50-field television
-	FILM24_PACKING		// packing for 24-frame film
+    TV60_PACKING,		// packing for 60-field television
+    TV50_PACKING,		// packing for 50-field television
+    FILM24_PACKING		// packing for 24-frame film
     };
 
 
@@ -136,27 +136,27 @@ class TimeCode
     TimeCode ();  // all fields set to 0 or false
 
     TimeCode (int hours,
-	      int minutes,
-	      int seconds,
-	      int frame,
-	      bool dropFrame = false,
-	      bool colorFrame = false,
-	      bool fieldPhase = false,
-	      bool bgf0 = false,
-	      bool bgf1 = false,
-	      bool bgf2 = false,
-	      int binaryGroup1 = 0,
-	      int binaryGroup2 = 0,
-	      int binaryGroup3 = 0,
-	      int binaryGroup4 = 0,
-	      int binaryGroup5 = 0,
-	      int binaryGroup6 = 0,
-	      int binaryGroup7 = 0,
-	      int binaryGroup8 = 0);
+          int minutes,
+          int seconds,
+          int frame,
+          bool dropFrame = false,
+          bool colorFrame = false,
+          bool fieldPhase = false,
+          bool bgf0 = false,
+          bool bgf1 = false,
+          bool bgf2 = false,
+          int binaryGroup1 = 0,
+          int binaryGroup2 = 0,
+          int binaryGroup3 = 0,
+          int binaryGroup4 = 0,
+          int binaryGroup5 = 0,
+          int binaryGroup6 = 0,
+          int binaryGroup7 = 0,
+          int binaryGroup8 = 0);
 
     TimeCode (unsigned int timeAndFlags,
-	      unsigned int userData = 0,
-	      Packing packing = TV60_PACKING);
+          unsigned int userData = 0,
+          Packing packing = TV60_PACKING);
 
     TimeCode (const TimeCode &other);
 
@@ -200,7 +200,7 @@ class TimeCode
     int		binaryGroup (int group) const; // group must be between 1 and 8
     void	setBinaryGroup (int group, int value);
 
-    
+
     //---------------------------------
     // Access to packed representations
     //---------------------------------
@@ -208,7 +208,7 @@ class TimeCode
     unsigned int	timeAndFlags (Packing packing = TV60_PACKING) const;
 
     void		setTimeAndFlags (unsigned int value,
-					 Packing packing = TV60_PACKING);
+                     Packing packing = TV60_PACKING);
 
     unsigned int	userData () const;
 

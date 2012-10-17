@@ -195,11 +195,11 @@ static  CvStatus  icvPOSIT( CvPOSITObject *pObject, CvPoint2D32f *imagePoints,
         }
 
         inorm = rotation[0] /*[0][0]*/ * rotation[0] /*[0][0]*/ +
-                rotation[1] /*[0][1]*/ * rotation[1] /*[0][1]*/ + 
+                rotation[1] /*[0][1]*/ * rotation[1] /*[0][1]*/ +
                 rotation[2] /*[0][2]*/ * rotation[2] /*[0][2]*/;
 
         jnorm = rotation[3] /*[1][0]*/ * rotation[3] /*[1][0]*/ +
-                rotation[4] /*[1][1]*/ * rotation[4] /*[1][1]*/ + 
+                rotation[4] /*[1][1]*/ * rotation[4] /*[1][1]*/ +
                 rotation[5] /*[1][2]*/ * rotation[5] /*[1][2]*/;
 
         invInorm = cvInvSqrt( inorm );
@@ -219,10 +219,10 @@ static  CvStatus  icvPOSIT( CvPOSITObject *pObject, CvPoint2D32f *imagePoints,
         /* row2 = row0 x row1 (cross product) */
         rotation[6] /*->m[2][0]*/ = rotation[1] /*->m[0][1]*/ * rotation[5] /*->m[1][2]*/ -
                                     rotation[2] /*->m[0][2]*/ * rotation[4] /*->m[1][1]*/;
-        
+
         rotation[7] /*->m[2][1]*/ = rotation[2] /*->m[0][2]*/ * rotation[3] /*->m[1][0]*/ -
                                     rotation[0] /*->m[0][0]*/ * rotation[5] /*->m[1][2]*/;
-        
+
         rotation[8] /*->m[2][2]*/ = rotation[0] /*->m[0][0]*/ * rotation[4] /*->m[1][1]*/ -
                                     rotation[1] /*->m[0][1]*/ * rotation[3] /*->m[1][0]*/;
 
@@ -249,16 +249,16 @@ static  CvStatus  icvReleasePOSITObject( CvPOSITObject ** ppObject )
 }
 
 /*F///////////////////////////////////////////////////////////////////////////////////////
-//    Name:       icvPseudoInverse3D     
+//    Name:       icvPseudoInverse3D
 //    Purpose:    Pseudoinverse N x 3 matrix     N >= 3
-//    Context:   
+//    Context:
 //    Parameters:
 //                a - input matrix
 //                b - pseudoinversed a
 //                n - number of rows in a
 //                method - if 0, then b = inv(transpose(a)*a) * transpose(a)
 //                         if 1, then SVD used.
-//    Returns:   
+//    Returns:
 //    Notes:      Both matrix are stored by n-dimensional vectors.
 //                Now only method == 0 supported.
 //F*/

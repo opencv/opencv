@@ -12,12 +12,12 @@ using namespace cv;
 
 /**
  * @function main
- * @brief Main function 
+ * @brief Main function
  */
 int main( int argc, char** argv )
 {
 
-   double alpha = 0.5; double beta; double input; 
+   double alpha = 0.5; double beta; double input;
 
    Mat src1, src2, dst;
 
@@ -43,7 +43,7 @@ int main( int argc, char** argv )
 
    beta = ( 1.0 - alpha );
    addWeighted( src1, alpha, src2, beta, 0.0, dst);
-  
+
    imshow( "Linear Blend", dst );
 
 

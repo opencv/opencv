@@ -20,8 +20,8 @@ public class MatOfDouble extends Mat {
     }
 
     public static MatOfDouble fromNativeAddr(long addr) {
-		return new MatOfDouble(addr);
-	}
+        return new MatOfDouble(addr);
+    }
 
     public MatOfDouble(Mat m) {
         super(m, Range.all());
@@ -51,7 +51,7 @@ public class MatOfDouble extends Mat {
     public double[] toArray() {
         int num = checkVector(_channels, _depth);
         if(num < 0)
-        	throw new RuntimeException("Native Mat has unexpected type or size: " + toString());
+            throw new RuntimeException("Native Mat has unexpected type or size: " + toString());
         double[] a = new double[num * _channels];
         if(num == 0)
             return a;

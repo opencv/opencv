@@ -514,7 +514,7 @@ namespace cv { namespace gpu { namespace device
 
         template <int nthreads>
         __global__ void extract_descrs_by_rows_kernel(const int img_block_width, const int win_block_stride_x, const int win_block_stride_y,
-											          const float* block_hists, PtrStepf descriptors)
+                                                      const float* block_hists, PtrStepf descriptors)
         {
             // Get left top corner of the window in src
             const float* hist = block_hists + (blockIdx.y * win_block_stride_y * img_block_width +
@@ -534,7 +534,7 @@ namespace cv { namespace gpu { namespace device
 
 
         void extract_descrs_by_rows(int win_height, int win_width, int block_stride_y, int block_stride_x, int win_stride_y, int win_stride_x,
-							        int height, int width, float* block_hists, PtrStepSzf descriptors)
+                                    int height, int width, float* block_hists, PtrStepSzf descriptors)
         {
             const int nthreads = 256;
 
@@ -824,10 +824,10 @@ namespace cv { namespace gpu { namespace device
             unsigned int y = blockIdx.y * blockDim.y + threadIdx.y;
 
             if (x < dst.cols && y < dst.rows)
-	        {
-		        float4 val = tex2D(resize8UC4_tex, x * sx + colOfs, y * sy);
+            {
+                float4 val = tex2D(resize8UC4_tex, x * sx + colOfs, y * sy);
                 dst.ptr(y)[x] = make_uchar4(val.x * 255, val.y * 255, val.z * 255, val.w * 255);
-	        }
+            }
         }
 
         template<class T, class TEX>
@@ -851,7 +851,7 @@ namespace cv { namespace gpu { namespace device
             dim3 threads(32, 8);
             dim3 grid(divUp(dst.cols, threads.x), divUp(dst.rows, threads.y));
 
-	        float sx = static_cast<float>(src.cols) / dst.cols;
+            float sx = static_cast<float>(src.cols) / dst.cols;
             float sy = static_cast<float>(src.rows) / dst.rows;
 
             resize_for_hog_kernel<<<grid, threads>>>(sx, sy, (PtrStepSz<T>)dst, colOfs);

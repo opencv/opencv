@@ -42,152 +42,152 @@
 
 void CvAdaptiveSkinDetector::initData(IplImage *src, int widthDivider, int heightDivider)
 {
-	CvSize imageSize = cvSize(src->width/widthDivider, src->height/heightDivider);
+    CvSize imageSize = cvSize(src->width/widthDivider, src->height/heightDivider);
 
-	imgHueFrame = cvCreateImage(imageSize, IPL_DEPTH_8U, 1);
-	imgShrinked = cvCreateImage(imageSize, IPL_DEPTH_8U, src->nChannels);
-	imgSaturationFrame = cvCreateImage(imageSize, IPL_DEPTH_8U, 1);
-	imgMotionFrame = cvCreateImage(imageSize, IPL_DEPTH_8U, 1);
-	imgTemp = cvCreateImage(imageSize, IPL_DEPTH_8U, 1);
-	imgFilteredFrame = cvCreateImage(imageSize, IPL_DEPTH_8U, 1);
-	imgGrayFrame = cvCreateImage(imageSize, IPL_DEPTH_8U, 1);
-	imgLastGrayFrame = cvCreateImage(imageSize, IPL_DEPTH_8U, 1);
-	imgHSVFrame = cvCreateImage(imageSize, IPL_DEPTH_8U, 3);
+    imgHueFrame = cvCreateImage(imageSize, IPL_DEPTH_8U, 1);
+    imgShrinked = cvCreateImage(imageSize, IPL_DEPTH_8U, src->nChannels);
+    imgSaturationFrame = cvCreateImage(imageSize, IPL_DEPTH_8U, 1);
+    imgMotionFrame = cvCreateImage(imageSize, IPL_DEPTH_8U, 1);
+    imgTemp = cvCreateImage(imageSize, IPL_DEPTH_8U, 1);
+    imgFilteredFrame = cvCreateImage(imageSize, IPL_DEPTH_8U, 1);
+    imgGrayFrame = cvCreateImage(imageSize, IPL_DEPTH_8U, 1);
+    imgLastGrayFrame = cvCreateImage(imageSize, IPL_DEPTH_8U, 1);
+    imgHSVFrame = cvCreateImage(imageSize, IPL_DEPTH_8U, 3);
 };
 
 CvAdaptiveSkinDetector::CvAdaptiveSkinDetector(int samplingDivider, int morphingMethod)
 {
-	nSkinHueLowerBound = GSD_HUE_LT;
-	nSkinHueUpperBound = GSD_HUE_UT;
+    nSkinHueLowerBound = GSD_HUE_LT;
+    nSkinHueUpperBound = GSD_HUE_UT;
 
-	fHistogramMergeFactor = 0.05;  	// empirical result
-	fHuePercentCovered = 0.95;		// empirical result
+    fHistogramMergeFactor = 0.05;  	// empirical result
+    fHuePercentCovered = 0.95;		// empirical result
 
-	nMorphingMethod = morphingMethod;
-	nSamplingDivider = samplingDivider;
+    nMorphingMethod = morphingMethod;
+    nSamplingDivider = samplingDivider;
 
-	nFrameCount = 0;
-	nStartCounter = 0;
+    nFrameCount = 0;
+    nStartCounter = 0;
 
-	imgHueFrame = NULL;
-	imgMotionFrame = NULL;
-	imgTemp = NULL;
-	imgFilteredFrame = NULL;
-	imgShrinked = NULL;
-	imgGrayFrame = NULL;
-	imgLastGrayFrame = NULL;
-	imgSaturationFrame = NULL;
-	imgHSVFrame = NULL;
+    imgHueFrame = NULL;
+    imgMotionFrame = NULL;
+    imgTemp = NULL;
+    imgFilteredFrame = NULL;
+    imgShrinked = NULL;
+    imgGrayFrame = NULL;
+    imgLastGrayFrame = NULL;
+    imgSaturationFrame = NULL;
+    imgHSVFrame = NULL;
 };
 
 CvAdaptiveSkinDetector::~CvAdaptiveSkinDetector()
 {
-	cvReleaseImage(&imgHueFrame);
-	cvReleaseImage(&imgSaturationFrame);
-	cvReleaseImage(&imgMotionFrame);
-	cvReleaseImage(&imgTemp);
-	cvReleaseImage(&imgFilteredFrame);
-	cvReleaseImage(&imgShrinked);
-	cvReleaseImage(&imgGrayFrame);
-	cvReleaseImage(&imgLastGrayFrame);
-	cvReleaseImage(&imgHSVFrame);
+    cvReleaseImage(&imgHueFrame);
+    cvReleaseImage(&imgSaturationFrame);
+    cvReleaseImage(&imgMotionFrame);
+    cvReleaseImage(&imgTemp);
+    cvReleaseImage(&imgFilteredFrame);
+    cvReleaseImage(&imgShrinked);
+    cvReleaseImage(&imgGrayFrame);
+    cvReleaseImage(&imgLastGrayFrame);
+    cvReleaseImage(&imgHSVFrame);
 };
 
 void CvAdaptiveSkinDetector::process(IplImage *inputBGRImage, IplImage *outputHueMask)
 {
-	IplImage *src = inputBGRImage;
+    IplImage *src = inputBGRImage;
 
-	int h, v, i, l;
-	bool isInit = false;
+    int h, v, i, l;
+    bool isInit = false;
 
-	nFrameCount++;
+    nFrameCount++;
 
-	if (imgHueFrame == NULL)
-	{
-		isInit = true;
-		initData(src, nSamplingDivider, nSamplingDivider);
-	}
+    if (imgHueFrame == NULL)
+    {
+        isInit = true;
+        initData(src, nSamplingDivider, nSamplingDivider);
+    }
 
-	unsigned char *pShrinked, *pHueFrame, *pMotionFrame, *pLastGrayFrame, *pFilteredFrame, *pGrayFrame;
-	pShrinked = (unsigned char *)imgShrinked->imageData;
-	pHueFrame = (unsigned char *)imgHueFrame->imageData;
-	pMotionFrame = (unsigned char *)imgMotionFrame->imageData;
-	pLastGrayFrame = (unsigned char *)imgLastGrayFrame->imageData;
-	pFilteredFrame = (unsigned char *)imgFilteredFrame->imageData;
-	pGrayFrame = (unsigned char *)imgGrayFrame->imageData;
+    unsigned char *pShrinked, *pHueFrame, *pMotionFrame, *pLastGrayFrame, *pFilteredFrame, *pGrayFrame;
+    pShrinked = (unsigned char *)imgShrinked->imageData;
+    pHueFrame = (unsigned char *)imgHueFrame->imageData;
+    pMotionFrame = (unsigned char *)imgMotionFrame->imageData;
+    pLastGrayFrame = (unsigned char *)imgLastGrayFrame->imageData;
+    pFilteredFrame = (unsigned char *)imgFilteredFrame->imageData;
+    pGrayFrame = (unsigned char *)imgGrayFrame->imageData;
 
-	if ((src->width != imgHueFrame->width) || (src->height != imgHueFrame->height))
-	{
-		cvResize(src, imgShrinked);
-		cvCvtColor(imgShrinked, imgHSVFrame, CV_BGR2HSV);
-	}
-	else
-	{
-		cvCvtColor(src, imgHSVFrame, CV_BGR2HSV);
-	}
+    if ((src->width != imgHueFrame->width) || (src->height != imgHueFrame->height))
+    {
+        cvResize(src, imgShrinked);
+        cvCvtColor(imgShrinked, imgHSVFrame, CV_BGR2HSV);
+    }
+    else
+    {
+        cvCvtColor(src, imgHSVFrame, CV_BGR2HSV);
+    }
 
-	cvSplit(imgHSVFrame, imgHueFrame, imgSaturationFrame, imgGrayFrame, 0);
+    cvSplit(imgHSVFrame, imgHueFrame, imgSaturationFrame, imgGrayFrame, 0);
 
-	cvSetZero(imgMotionFrame);
-	cvSetZero(imgFilteredFrame);
+    cvSetZero(imgMotionFrame);
+    cvSetZero(imgFilteredFrame);
 
-	l = imgHueFrame->height * imgHueFrame->width;
+    l = imgHueFrame->height * imgHueFrame->width;
 
-	for (i = 0; i < l; i++)
-	{
-		v = (*pGrayFrame);
-		if ((v >= GSD_INTENSITY_LT) && (v <= GSD_INTENSITY_UT))
-		{
-			h = (*pHueFrame);
-			if ((h >= GSD_HUE_LT) && (h <= GSD_HUE_UT))
-			{
-				if ((h >= nSkinHueLowerBound) && (h <= nSkinHueUpperBound))
-					ASD_INTENSITY_SET_PIXEL(pFilteredFrame, h);
+    for (i = 0; i < l; i++)
+    {
+        v = (*pGrayFrame);
+        if ((v >= GSD_INTENSITY_LT) && (v <= GSD_INTENSITY_UT))
+        {
+            h = (*pHueFrame);
+            if ((h >= GSD_HUE_LT) && (h <= GSD_HUE_UT))
+            {
+                if ((h >= nSkinHueLowerBound) && (h <= nSkinHueUpperBound))
+                    ASD_INTENSITY_SET_PIXEL(pFilteredFrame, h);
 
-				if (ASD_IS_IN_MOTION(pLastGrayFrame, v, 7))
-					ASD_INTENSITY_SET_PIXEL(pMotionFrame, h);
-			}
-		}
-		pShrinked += 3;
-		pGrayFrame++;
-		pLastGrayFrame++;
-		pMotionFrame++;
-		pHueFrame++;
-		pFilteredFrame++;
-	}
+                if (ASD_IS_IN_MOTION(pLastGrayFrame, v, 7))
+                    ASD_INTENSITY_SET_PIXEL(pMotionFrame, h);
+            }
+        }
+        pShrinked += 3;
+        pGrayFrame++;
+        pLastGrayFrame++;
+        pMotionFrame++;
+        pHueFrame++;
+        pFilteredFrame++;
+    }
 
-	if (isInit)
-		cvCalcHist(&imgHueFrame, skinHueHistogram.fHistogram);
+    if (isInit)
+        cvCalcHist(&imgHueFrame, skinHueHistogram.fHistogram);
 
-	cvCopy(imgGrayFrame, imgLastGrayFrame);
+    cvCopy(imgGrayFrame, imgLastGrayFrame);
 
-	cvErode(imgMotionFrame, imgTemp);  // eliminate disperse pixels, which occur because of the camera noise
-	cvDilate(imgTemp, imgMotionFrame);
+    cvErode(imgMotionFrame, imgTemp);  // eliminate disperse pixels, which occur because of the camera noise
+    cvDilate(imgTemp, imgMotionFrame);
 
-	cvCalcHist(&imgMotionFrame, histogramHueMotion.fHistogram);
+    cvCalcHist(&imgMotionFrame, histogramHueMotion.fHistogram);
 
-	skinHueHistogram.mergeWith(&histogramHueMotion, fHistogramMergeFactor);
+    skinHueHistogram.mergeWith(&histogramHueMotion, fHistogramMergeFactor);
 
-	skinHueHistogram.findCurveThresholds(nSkinHueLowerBound, nSkinHueUpperBound, 1 - fHuePercentCovered);
+    skinHueHistogram.findCurveThresholds(nSkinHueLowerBound, nSkinHueUpperBound, 1 - fHuePercentCovered);
 
-	switch (nMorphingMethod)
-	{
-		case MORPHING_METHOD_ERODE :
-			cvErode(imgFilteredFrame, imgTemp);
-			cvCopy(imgTemp, imgFilteredFrame);
-			break;
-		case MORPHING_METHOD_ERODE_ERODE :
-			cvErode(imgFilteredFrame, imgTemp);
-			cvErode(imgTemp, imgFilteredFrame);
-			break;
-		case MORPHING_METHOD_ERODE_DILATE :
-			cvErode(imgFilteredFrame, imgTemp);
-			cvDilate(imgTemp, imgFilteredFrame);
-			break;
-	}
+    switch (nMorphingMethod)
+    {
+        case MORPHING_METHOD_ERODE :
+            cvErode(imgFilteredFrame, imgTemp);
+            cvCopy(imgTemp, imgFilteredFrame);
+            break;
+        case MORPHING_METHOD_ERODE_ERODE :
+            cvErode(imgFilteredFrame, imgTemp);
+            cvErode(imgTemp, imgFilteredFrame);
+            break;
+        case MORPHING_METHOD_ERODE_DILATE :
+            cvErode(imgFilteredFrame, imgTemp);
+            cvDilate(imgTemp, imgFilteredFrame);
+            break;
+    }
 
-	if (outputHueMask != NULL)
-		cvCopy(imgFilteredFrame, outputHueMask);
+    if (outputHueMask != NULL)
+        cvCopy(imgFilteredFrame, outputHueMask);
 };
 
 
@@ -195,94 +195,94 @@ void CvAdaptiveSkinDetector::process(IplImage *inputBGRImage, IplImage *outputHu
 
 CvAdaptiveSkinDetector::Histogram::Histogram()
 {
-	int histogramSize[] = { HistogramSize };
-	float range[] = { GSD_HUE_LT, GSD_HUE_UT };
-	float *ranges[] = { range };
-	fHistogram = cvCreateHist(1, histogramSize, CV_HIST_ARRAY, ranges, 1);
-	cvClearHist(fHistogram);
+    int histogramSize[] = { HistogramSize };
+    float range[] = { GSD_HUE_LT, GSD_HUE_UT };
+    float *ranges[] = { range };
+    fHistogram = cvCreateHist(1, histogramSize, CV_HIST_ARRAY, ranges, 1);
+    cvClearHist(fHistogram);
 };
 
 CvAdaptiveSkinDetector::Histogram::~Histogram()
 {
-	cvReleaseHist(&fHistogram);
+    cvReleaseHist(&fHistogram);
 };
 
 int CvAdaptiveSkinDetector::Histogram::findCoverageIndex(double surfaceToCover, int defaultValue)
 {
-	double s = 0;
-	for (int i = 0; i < HistogramSize; i++)
-	{
-		s += cvGetReal1D( fHistogram->bins, i );
-		if (s >= surfaceToCover)
-		{
-			return i;
-		}
-	}
-	return defaultValue;
+    double s = 0;
+    for (int i = 0; i < HistogramSize; i++)
+    {
+        s += cvGetReal1D( fHistogram->bins, i );
+        if (s >= surfaceToCover)
+        {
+            return i;
+        }
+    }
+    return defaultValue;
 };
 
 void CvAdaptiveSkinDetector::Histogram::findCurveThresholds(int &x1, int &x2, double percent)
 {
-	double sum = 0;
+    double sum = 0;
 
-	for (int i = 0; i < HistogramSize; i++)
-	{
-		sum += cvGetReal1D( fHistogram->bins, i );
-	}
+    for (int i = 0; i < HistogramSize; i++)
+    {
+        sum += cvGetReal1D( fHistogram->bins, i );
+    }
 
-	x1 = findCoverageIndex(sum * percent, -1);
-	x2 = findCoverageIndex(sum * (1-percent), -1);
+    x1 = findCoverageIndex(sum * percent, -1);
+    x2 = findCoverageIndex(sum * (1-percent), -1);
 
-	if (x1 == -1)
-		x1 = GSD_HUE_LT;
-	else
-		x1 += GSD_HUE_LT;
+    if (x1 == -1)
+        x1 = GSD_HUE_LT;
+    else
+        x1 += GSD_HUE_LT;
 
-	if (x2 == -1)
-		x2 = GSD_HUE_UT;
-	else
-		x2 += GSD_HUE_LT;
+    if (x2 == -1)
+        x2 = GSD_HUE_UT;
+    else
+        x2 += GSD_HUE_LT;
 };
 
 void CvAdaptiveSkinDetector::Histogram::mergeWith(CvAdaptiveSkinDetector::Histogram *source, double weight)
 {
-	float myweight = (float)(1-weight);
-	float maxVal1 = 0, maxVal2 = 0, *f1, *f2, ff1, ff2;
+    float myweight = (float)(1-weight);
+    float maxVal1 = 0, maxVal2 = 0, *f1, *f2, ff1, ff2;
 
-	cvGetMinMaxHistValue(source->fHistogram, NULL, &maxVal2);
+    cvGetMinMaxHistValue(source->fHistogram, NULL, &maxVal2);
 
-	if (maxVal2 > 0 )
-	{
-		cvGetMinMaxHistValue(fHistogram, NULL, &maxVal1);
-		if (maxVal1 <= 0)
-		{
-			for (int i = 0; i < HistogramSize; i++)
-			{
-				f1 = (float*)cvPtr1D(fHistogram->bins, i);
-				f2 = (float*)cvPtr1D(source->fHistogram->bins, i);
-				(*f1) = (*f2);
-			}
-		}
-		else
-		{
-			for (int i = 0; i < HistogramSize; i++)
-			{
-				f1 = (float*)cvPtr1D(fHistogram->bins, i);
-				f2 = (float*)cvPtr1D(source->fHistogram->bins, i);
+    if (maxVal2 > 0 )
+    {
+        cvGetMinMaxHistValue(fHistogram, NULL, &maxVal1);
+        if (maxVal1 <= 0)
+        {
+            for (int i = 0; i < HistogramSize; i++)
+            {
+                f1 = (float*)cvPtr1D(fHistogram->bins, i);
+                f2 = (float*)cvPtr1D(source->fHistogram->bins, i);
+                (*f1) = (*f2);
+            }
+        }
+        else
+        {
+            for (int i = 0; i < HistogramSize; i++)
+            {
+                f1 = (float*)cvPtr1D(fHistogram->bins, i);
+                f2 = (float*)cvPtr1D(source->fHistogram->bins, i);
 
-				ff1 = ((*f1)/maxVal1)*myweight;
-				if (ff1 < 0)
-					ff1 = -ff1;
+                ff1 = ((*f1)/maxVal1)*myweight;
+                if (ff1 < 0)
+                    ff1 = -ff1;
 
-				ff2 = (float)(((*f2)/maxVal2)*weight);
-				if (ff2 < 0)
-					ff2 = -ff2;
+                ff2 = (float)(((*f2)/maxVal2)*weight);
+                if (ff2 < 0)
+                    ff2 = -ff2;
 
-				(*f1) = (ff1 + ff2);
+                (*f1) = (ff1 + ff2);
 
-			}
-		}
-	}
+            }
+        }
+    }
 };
 
 

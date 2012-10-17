@@ -3,12 +3,12 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <iostream>
 
-using namespace std; 
+using namespace std;
 using namespace cv;
 
 void help(char* progName)
 {
-    cout << endl 
+    cout << endl
         <<  "This program shows how to filter images with mask: the write it yourself and the"
         << "filter2d way. " << endl
         <<  "Usage:"                                                                        << endl
@@ -35,27 +35,27 @@ int main( int argc, char* argv[])
 
     imshow("Input", I);
     double t = (double)getTickCount();
-    
-    Sharpen(I, J); 
-    
+
+    Sharpen(I, J);
+
     t = ((double)getTickCount() - t)/getTickFrequency();
     cout << "Hand written function times passed in seconds: " << t << endl;
 
     imshow("Output", J);
     cvWaitKey(0);
 
-    Mat kern = (Mat_<char>(3,3) <<  0, -1,  0, 
+    Mat kern = (Mat_<char>(3,3) <<  0, -1,  0,
                                    -1,  5, -1,
                                     0, -1,  0);
     t = (double)getTickCount();
-    filter2D(I, K, I.depth(), kern ); 
+    filter2D(I, K, I.depth(), kern );
     t = ((double)getTickCount() - t)/getTickFrequency();
     cout << "Built-in filter2D time passed in seconds:      " << t << endl;
 
     imshow("Output", K);
 
     cvWaitKey(0);
-    return 0; 
+    return 0;
 }
 void Sharpen(const Mat& myImage,Mat& Result)
 {
@@ -63,7 +63,7 @@ void Sharpen(const Mat& myImage,Mat& Result)
 
     const int nChannels = myImage.channels();
     Result.create(myImage.size(),myImage.type());
-    
+
     for(int j = 1 ; j < myImage.rows-1; ++j)
     {
         const uchar* previous = myImage.ptr<uchar>(j - 1);
@@ -74,7 +74,7 @@ void Sharpen(const Mat& myImage,Mat& Result)
 
         for(int i= nChannels;i < nChannels*(myImage.cols-1); ++i)
         {
-            *output++ = saturate_cast<uchar>(5*current[i] 
+            *output++ = saturate_cast<uchar>(5*current[i]
                          -current[i-nChannels] - current[i+nChannels] - previous[i] - next[i]);
         }
     }

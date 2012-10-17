@@ -106,7 +106,7 @@ output_message (j_common_ptr cinfo)
 #ifdef USE_WINDOWS_MESSAGEBOX
   /* Display it in a message dialog box */
   MessageBox(GetActiveWindow(), buffer, "JPEG Library Error",
-	     MB_OK | MB_ICONERROR);
+         MB_OK | MB_ICONERROR);
 #else
   /* Send it to stderr, adding a newline */
   fprintf(stderr, "%s\n", buffer);
@@ -168,8 +168,8 @@ format_message (j_common_ptr cinfo, char * buffer)
   if (msg_code > 0 && msg_code <= err->last_jpeg_message) {
     msgtext = err->jpeg_message_table[msg_code];
   } else if (err->addon_message_table != NULL &&
-	     msg_code >= err->first_addon_message &&
-	     msg_code <= err->last_addon_message) {
+         msg_code >= err->first_addon_message &&
+         msg_code <= err->last_addon_message) {
     msgtext = err->addon_message_table[msg_code - err->first_addon_message];
   }
 
@@ -194,10 +194,10 @@ format_message (j_common_ptr cinfo, char * buffer)
     sprintf(buffer, msgtext, err->msg_parm.s);
   else
     sprintf(buffer, msgtext,
-	    err->msg_parm.i[0], err->msg_parm.i[1],
-	    err->msg_parm.i[2], err->msg_parm.i[3],
-	    err->msg_parm.i[4], err->msg_parm.i[5],
-	    err->msg_parm.i[6], err->msg_parm.i[7]);
+        err->msg_parm.i[0], err->msg_parm.i[1],
+        err->msg_parm.i[2], err->msg_parm.i[3],
+        err->msg_parm.i[4], err->msg_parm.i[5],
+        err->msg_parm.i[6], err->msg_parm.i[7]);
 }
 
 

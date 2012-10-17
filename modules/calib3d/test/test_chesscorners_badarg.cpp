@@ -59,10 +59,10 @@ protected:
 
     /* cpp interface */
     Mat img;
-    Size pattern_size;    
+    Size pattern_size;
     int flags;
     vector<Point2f> corners;
-   
+
     /* c interface */
     CvMat arr;
     CvPoint2D32f* out_corners;
@@ -73,16 +73,16 @@ protected:
     bool drawCorners;
     CvMat drawCorImg;
     bool was_found;
-    
-    void run_func() 
-    { 
+
+    void run_func()
+    {
         if (cpp)
-            findChessboardCorners(img, pattern_size, corners, flags); 
+            findChessboardCorners(img, pattern_size, corners, flags);
         else
             if (!drawCorners)
                 cvFindChessboardCorners( &arr, pattern_size, out_corners, out_corner_count, flags );
             else
-                cvDrawChessboardCorners( &drawCorImg, pattern_size, 
+                cvDrawChessboardCorners( &drawCorImg, pattern_size,
                     (CvPoint2D32f*)(corners.empty() ? 0 : &corners[0]),
                     (int)corners.size(), was_found);
     }
@@ -95,14 +95,14 @@ void CV_ChessboardDetectorBadArgTest::run( int /*start_from */)
 {
     Mat bg(800, 600, CV_8U, Scalar(0));
     Mat_<float> camMat(3, 3);
-    camMat << 300.f, 0.f, bg.cols/2.f, 0, 300.f, bg.rows/2.f, 0.f, 0.f, 1.f;    
+    camMat << 300.f, 0.f, bg.cols/2.f, 0, 300.f, bg.rows/2.f, 0.f, 0.f, 1.f;
     Mat_<float> distCoeffs(1, 5);
     distCoeffs << 1.2f, 0.2f, 0.f, 0.f, 0.f;
 
     ChessBoardGenerator cbg(Size(8,6));
-    vector<Point2f> exp_corn;    
+    vector<Point2f> exp_corn;
     Mat cb = cbg(bg, camMat, distCoeffs, exp_corn);
-    
+
     /* /*//*/ */
     int errors = 0;
     flags = CV_CALIB_CB_ADAPTIVE_THRESH | CV_CALIB_CB_NORMALIZE_IMAGE;
@@ -110,9 +110,9 @@ void CV_ChessboardDetectorBadArgTest::run( int /*start_from */)
 
     img = cb.clone();
     pattern_size = Size(2,2);
-    errors += run_test_case( CV_StsOutOfRange, "Invlid pattern size" );        
-    
-    pattern_size = cbg.cornersSize();    
+    errors += run_test_case( CV_StsOutOfRange, "Invlid pattern size" );
+
+    pattern_size = cbg.cornersSize();
     cb.convertTo(img, CV_32F);
     errors += run_test_case( CV_StsUnsupportedFormat, "Not 8-bit image" );
 
@@ -123,9 +123,9 @@ void CV_ChessboardDetectorBadArgTest::run( int /*start_from */)
     drawCorners = false;
 
     img = cb.clone();
-    arr = img; 
+    arr = img;
     out_corner_count = 0;
-    out_corners = 0;    
+    out_corners = 0;
     errors += run_test_case( CV_StsNullPtr, "Null pointer to corners" );
 
     drawCorners = true;
@@ -133,7 +133,7 @@ void CV_ChessboardDetectorBadArgTest::run( int /*start_from */)
     drawCorImg = cvdrawCornImg;
     was_found = true;
     errors += run_test_case( CV_StsUnsupportedFormat, "2 channel image" );
-            
+
 
     if (errors)
         ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);

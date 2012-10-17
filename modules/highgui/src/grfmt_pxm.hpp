@@ -52,10 +52,10 @@ namespace cv
 class PxMDecoder : public BaseImageDecoder
 {
 public:
-    
+
     PxMDecoder();
     virtual ~PxMDecoder();
-    
+
     bool  readData( Mat& img );
     bool  readHeader();
     void  close();
@@ -65,7 +65,7 @@ public:
     ImageDecoder newDecoder() const;
 
 protected:
-    
+
     RLByteStream    m_strm;
     PaletteEntry    m_palette[256];
     int             m_bpp;

@@ -26,7 +26,7 @@ class CamShiftDemo:
         """ Returns a nice representation of a hue histogram """
 
         histimg_hsv = cv.CreateImage( (320,200), 8, 3)
-        
+
         mybins = cv.CloneMatND(hist.bins)
         cv.Log(mybins, mybins)
         (_, hi, _, _) = cv.MinMaxLoc(mybins)

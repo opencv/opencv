@@ -30,7 +30,7 @@ PERF_TEST_P(Img_BlockSize_ApertureSize_k_BorderType, cornerHarris,
     Mat src = imread(filename, IMREAD_GRAYSCALE);
     if (src.empty())
         FAIL() << "Unable to load source image" << filename;
-    
+
     Mat dst;
 
     TEST_CYCLE() cornerHarris(src, dst, blockSize, apertureSize, k, borderType);

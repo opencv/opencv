@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-''' 
+'''
 mouse_and_match.py [-i path | --input path: default ./]
 
 Demonstrate using a mouse to interact with an image:
@@ -45,13 +45,13 @@ def onmouse(event, x, y, flags, param):
         else:
             print "selection is complete"
             drag_start = None
-            
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Demonstrate mouse interaction with images')
     parser.add_argument("-i","--input", default='./', help="Input directory.")
     args = parser.parse_args()
     path = args.input
- 
+
     cv.namedWindow("gray",1)
     cv.setMouseCallback("gray", onmouse)
     '''Loop through all the images in the directory'''
@@ -59,7 +59,7 @@ if __name__ == '__main__':
         ext = os.path.splitext(infile)[1][1:] #get the filename extenstion
         if ext == "png" or ext == "jpg" or ext == "bmp" or ext == "tiff" or ext == "pbm":
             print infile
-            
+
             img=cv.imread(infile,1)
             if img == None:
                 continue
@@ -69,4 +69,4 @@ if __name__ == '__main__':
             cv.imshow("gray",gray)
             if (cv.waitKey() & 255) == 27:
                 break
-    cv.destroyAllWindows() 			
+    cv.destroyAllWindows()

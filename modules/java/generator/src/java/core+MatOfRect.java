@@ -21,8 +21,8 @@ public class MatOfRect extends Mat {
     }
 
     public static MatOfRect fromNativeAddr(long addr) {
-		return new MatOfRect(addr);
-	}
+        return new MatOfRect(addr);
+    }
 
     public MatOfRect(Mat m) {
         super(m, Range.all());

@@ -116,7 +116,7 @@ namespace cv { namespace gpu { namespace device
         typedef float index_type;
         typedef typename TypeVec<float, VecTraits<elem_type>::cn>::vec_type work_type;
 
-        explicit __host__ __device__ __forceinline__ CubicFilter(const Ptr2D& src_, float fx = 0.f, float fy = 0.f) 
+        explicit __host__ __device__ __forceinline__ CubicFilter(const Ptr2D& src_, float fx = 0.f, float fy = 0.f)
         : src(src_)
         {
             (void)fx;

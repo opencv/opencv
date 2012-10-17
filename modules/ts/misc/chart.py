@@ -32,7 +32,7 @@ def keyselector(a):
         return ((channels-1) & 511) + (depth << 9)
     return a
 
-convert = lambda text: int(text) if text.isdigit() else text 
+convert = lambda text: int(text) if text.isdigit() else text
 alphanum_keyselector = lambda key: [ convert(c) for c in re.split('([0-9]+)', str(keyselector(key))) ]
 
 def getValueParams(test):
@@ -95,13 +95,13 @@ def getTestWideName(sname, indexes, lists, x, y):
             name += "Y"
         else:
             name += lists[i][indexes[i]]
-    return str(name + ")")    
-     
+    return str(name + ")")
+
 def getTest(stests, x, y, row, col):
     for pair in stests:
         if pair[1][x] == row and pair[1][y] == col:
             return pair[0]
-    return None       
+    return None
 
 if __name__ == "__main__":
     parser = OptionParser()
@@ -112,7 +112,7 @@ if __name__ == "__main__":
     parser.add_option("-y", "", dest="y", help="argument number for columns", metavar="COL", default=0)
     parser.add_option("-f", "--filter", dest="filter", help="regex to filter tests", metavar="REGEX", default=None)
     (options, args) = parser.parse_args()
-    
+
     if len(args) != 1:
         print >> sys.stderr, "Usage:\n", os.path.basename(sys.argv[0]), "<log_name1>.xml"
         exit(1)
@@ -123,27 +123,27 @@ if __name__ == "__main__":
     if options.metric.endswith("%"):
         options.metric = options.metric[:-1]
     getter = metrix_table[options.metric][1]
-        
+
     tests = testlog_parser.parseLogFile(args[0])
     if options.filter:
         expr = re.compile(options.filter)
         tests = [(t,getValueParams(t)) for t in tests if expr.search(str(t))]
     else:
         tests = [(t,getValueParams(t)) for t in tests]
-        
+
     args[0] = os.path.basename(args[0])
-        
+
     if not tests:
         print >> sys.stderr, "Error - no tests matched"
         exit(1)
-    
+
     argsnum = len(tests[0][1])
     sname = tests[0][0].shortName()
-    
+
     arglists = []
     for i in range(argsnum):
         arglists.append({})
-        
+
     names = set()
     names1 = set()
     for pair in tests:
@@ -158,7 +158,7 @@ if __name__ == "__main__":
                 sys.exit(1)
             for i in range(argsnum):
                 arglists[i][pair[1][i]] = 1
-    
+
     if names1 or len(names) != 1:
         print >> sys.stderr, "Error - unable to create tables for functions from different test suits:"
         i = 1
@@ -171,24 +171,24 @@ if __name__ == "__main__":
                 print >> sys.stderr, "%4s:   %s" % (i, name)
                 i += 1
         sys.exit(1)
-    
+
     if argsnum < 2:
         print >> sys.stderr, "Error - tests from %s have less than 2 parameters" % sname
         exit(1)
-            
+
     for i in range(argsnum):
         arglists[i] = sorted([str(key) for key in arglists[i].iterkeys()], key=alphanum_keyselector)
-                
+
     if options.generateHtml and options.format != "moinwiki":
         htmlPrintHeader(sys.stdout, "Report %s for %s" % (args[0], sname))
-            
+
     indexes = [0] * argsnum
     x = int(options.x)
     y = int(options.y)
     if x == y or x < 0 or y < 0 or x >= argsnum or y >= argsnum:
         x = 1
         y = 0
-            
+
     while True:
         stests = []
         for pair in tests:
@@ -223,13 +223,13 @@ if __name__ == "__main__":
                             tbl.newCell(col, val, val)
                 else:
                     tbl.newCell(col, "-")
-        
+
         if options.generateHtml:
             tbl.htmlPrintTable(sys.stdout, options.format == "moinwiki")
         else:
             tbl.consolePrintTable(sys.stdout)
         if not nextPermutation(indexes, arglists, x, y):
             break
-    
+
     if options.generateHtml and options.format != "moinwiki":
         htmlPrintFooter(sys.stdout)

@@ -159,7 +159,7 @@ public:
     TwoPassStabilizer();
 
     void setMotionStabilizer(Ptr<IMotionStabilizer> val) { motionStabilizer_ = val; }
-    Ptr<IMotionStabilizer> motionStabilizer() const { return motionStabilizer_; }    
+    Ptr<IMotionStabilizer> motionStabilizer() const { return motionStabilizer_; }
 
     void setWobbleSuppressor(Ptr<WobbleSuppressorBase> val) { wobbleSuppressor_ = val; }
     Ptr<WobbleSuppressorBase> wobbleSuppressor() const { return wobbleSuppressor_; }

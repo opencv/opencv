@@ -124,7 +124,7 @@ void cv::gpu::nonLocalMeans(const GpuMat& src, GpuMat& dst, float h, int search_
 
     int gpuBorderType;
     CV_Assert(tryConvertToGpuBorderType(borderMode, gpuBorderType));
-    
+
     dst.create(src.size(), src.type());
     func(src, dst, search_window/2, block_window/2, h, gpuBorderType, StreamAccessor::getStream(s));
 }
@@ -143,7 +143,7 @@ namespace cv { namespace gpu { namespace device
         template<typename T>
         void nlm_fast_gpu(const PtrStepSzb& src, PtrStepSzb dst, PtrStepi buffer,
                           int search_window, int block_window, float h, cudaStream_t stream);
-        
+
         void fnlm_split_channels(const PtrStepSz<uchar3>& lab, PtrStepb l, PtrStep<uchar2> ab, cudaStream_t stream);
         void fnlm_merge_channels(const PtrStepb& l, const PtrStep<uchar2>& ab, PtrStepSz<uchar3> lab, cudaStream_t stream);
      }
@@ -152,30 +152,30 @@ namespace cv { namespace gpu { namespace device
 void cv::gpu::FastNonLocalMeansDenoising::simpleMethod(const GpuMat& src, GpuMat& dst, float h, int search_window, int block_window, Stream& s)
 {
     CV_Assert(src.depth() == CV_8U && src.channels() < 4);
-            
-    int border_size = search_window/2 + block_window/2;    
+
+    int border_size = search_window/2 + block_window/2;
     Size esize = src.size() + Size(border_size, border_size) * 2;
 
-    cv::gpu::ensureSizeIsEnough(esize, CV_8UC3, extended_src_buffer);    
+    cv::gpu::ensureSizeIsEnough(esize, CV_8UC3, extended_src_buffer);
     GpuMat extended_src(esize, src.type(), extended_src_buffer.ptr(), extended_src_buffer.step);
 
     cv::gpu::copyMakeBorder(src, extended_src, border_size, border_size, border_size, border_size, cv::BORDER_DEFAULT, Scalar(), s);
     GpuMat src_hdr = extended_src(Rect(Point2i(border_size, border_size), src.size()));
-    
+
     int bcols, brows;
     device::imgproc::nln_fast_get_buffer_size(src_hdr, search_window, block_window, bcols, brows);
     buffer.create(brows, bcols, CV_32S);
 
     using namespace cv::gpu::device::imgproc;
     typedef void (*nlm_fast_t)(const PtrStepSzb&, PtrStepSzb, PtrStepi, int, int, float, cudaStream_t);
-    static const nlm_fast_t funcs[] = { nlm_fast_gpu<uchar>, nlm_fast_gpu<uchar2>, nlm_fast_gpu<uchar3>, 0};            
-    
+    static const nlm_fast_t funcs[] = { nlm_fast_gpu<uchar>, nlm_fast_gpu<uchar2>, nlm_fast_gpu<uchar3>, 0};
+
     dst.create(src.size(), src.type());
     funcs[src.channels()-1](src_hdr, dst, buffer, search_window, block_window, h, StreamAccessor::getStream(s));
 }
 
 void cv::gpu::FastNonLocalMeansDenoising::labMethod( const GpuMat& src, GpuMat& dst, float h_luminance, float h_color, int search_window, int block_window, Stream& s)
-{   
+{
 #if (CUDA_VERSION < 5000)
     (void)src;
     (void)dst;
@@ -183,14 +183,14 @@ void cv::gpu::FastNonLocalMeansDenoising::labMethod( const GpuMat& src, GpuMat& 
     (void)h_color;
     (void)search_window;
     (void)block_window;
-    (void)s;            
-            
+    (void)s;
+
     CV_Error( CV_GpuApiCallError, "Lab method required CUDA 5.0 and higher" );
 #else
 
 
     CV_Assert(src.type() == CV_8UC3);
-    
+
     lab.create(src.size(), src.type());
     cv::gpu::cvtColor(src, lab, CV_BGR2Lab, 0, s);
 
@@ -201,7 +201,7 @@ void cv::gpu::FastNonLocalMeansDenoising::labMethod( const GpuMat& src, GpuMat& 
     l.create(src.size(), CV_8U);
     ab.create(src.size(), CV_8UC2);
     device::imgproc::fnlm_split_channels(lab, l, ab, StreamAccessor::getStream(s));
-        
+
     simpleMethod(l, l, h_luminance, search_window, block_window, s);
     simpleMethod(ab, ab, h_color, search_window, block_window, s);
 

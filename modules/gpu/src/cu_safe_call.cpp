@@ -45,14 +45,14 @@
 #ifdef HAVE_CUDA
 
 namespace
-{    
+{
     #define error_entry(entry)  { entry, #entry }
 
     struct ErrorEntry
     {
         int code;
         std::string str;
-    }; 
+    };
 
     class ErrorEntryComparer
     {
@@ -77,7 +77,7 @@ namespace
         return ostr.str();
     }
 
-    const ErrorEntry cu_errors [] = 
+    const ErrorEntry cu_errors [] =
     {
         error_entry( CUDA_SUCCESS                              ),
         error_entry( CUDA_ERROR_INVALID_VALUE                  ),
@@ -87,7 +87,7 @@ namespace
         error_entry( CUDA_ERROR_PROFILER_DISABLED              ),
         error_entry( CUDA_ERROR_PROFILER_NOT_INITIALIZED       ),
         error_entry( CUDA_ERROR_PROFILER_ALREADY_STARTED       ),
-        error_entry( CUDA_ERROR_PROFILER_ALREADY_STOPPED       ),  
+        error_entry( CUDA_ERROR_PROFILER_ALREADY_STOPPED       ),
         error_entry( CUDA_ERROR_NO_DEVICE                      ),
         error_entry( CUDA_ERROR_INVALID_DEVICE                 ),
         error_entry( CUDA_ERROR_INVALID_IMAGE                  ),
