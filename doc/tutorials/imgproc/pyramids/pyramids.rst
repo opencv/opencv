@@ -129,7 +129,7 @@ This tutorial code's is shown lines below. You can also download it from `here <
        c = waitKey(10);
 
        if( (char)c == 27 )
-       	 { break; }
+         { break; }
        if( (char)c == 'u' )
          { pyrUp( tmp, dst, Size( tmp.cols*2, tmp.rows*2 ) );
            printf( "** Zoom In: Image x 2 \n" );
@@ -188,7 +188,7 @@ Explanation
           c = waitKey(10);
 
           if( (char)c == 27 )
-       	    { break; }
+            { break; }
           if( (char)c == 'u' )
             { pyrUp( tmp, dst, Size( tmp.cols*2, tmp.rows*2 ) );
               printf( "** Zoom In: Image x 2 \n" );

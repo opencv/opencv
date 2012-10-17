@@ -15,13 +15,13 @@ with several computational optimizations. Noise expected to be a gaussian white 
     :param dst: Output image with the same size and type as  ``src`` .
 
     :param templateWindowSize: Size in pixels of the template patch that is used to compute weights. Should be odd. Recommended value 7 pixels
-    
+
     :param searchWindowSize: Size in pixels of the window that is used to compute weighted average for given pixel. Should be odd. Affect performance linearly: greater searchWindowsSize - greater denoising time. Recommended value 21 pixels
-    
+
     :param h: Parameter regulating filter strength. Big h value perfectly removes noise but also removes image details, smaller h value preserves details but also preserves some noise
 
 This function expected to be applied to grayscale images. For colored images look at ``fastNlMeansDenoisingColored``.
-Advanced usage of this functions can be manual denoising of colored image in different colorspaces. 
+Advanced usage of this functions can be manual denoising of colored image in different colorspaces.
 Such approach is used in ``fastNlMeansDenoisingColored`` by converting image to CIELAB colorspace and then separately denoise L and AB components with different h parameter.
 
 fastNlMeansDenoisingColored
@@ -35,9 +35,9 @@ Modification of ``fastNlMeansDenoising`` function for colored images
     :param dst: Output image with the same size and type as  ``src`` .
 
     :param templateWindowSize: Size in pixels of the template patch that is used to compute weights. Should be odd. Recommended value 7 pixels
-    
+
     :param searchWindowSize: Size in pixels of the window that is used to compute weighted average for given pixel. Should be odd. Affect performance linearly: greater searchWindowsSize - greater denoising time. Recommended value 21 pixels
-    
+
     :param h: Parameter regulating filter strength for luminance component. Bigger h value perfectly removes noise but also removes image details, smaller h value preserves details but also preserves some noise
 
     :param hForColorComponents: The same as h but for color components. For most images value equals 10 will be enought to remove colored noise and do not distort colors
@@ -60,9 +60,9 @@ For more details see http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.131
     :param dst: Output image with the same size and type as ``srcImgs`` images.
 
     :param templateWindowSize: Size in pixels of the template patch that is used to compute weights. Should be odd. Recommended value 7 pixels
-    
+
     :param searchWindowSize: Size in pixels of the window that is used to compute weighted average for given pixel. Should be odd. Affect performance linearly: greater searchWindowsSize - greater denoising time. Recommended value 21 pixels
-    
+
     :param h: Parameter regulating filter strength for luminance component. Bigger h value perfectly removes noise but also removes image details, smaller h value preserves details but also preserves some noise
 
 fastNlMeansDenoisingColoredMulti
@@ -80,9 +80,9 @@ Modification of ``fastNlMeansDenoisingMulti`` function for colored images sequen
     :param dst: Output image with the same size and type as ``srcImgs`` images.
 
     :param templateWindowSize: Size in pixels of the template patch that is used to compute weights. Should be odd. Recommended value 7 pixels
-    
+
     :param searchWindowSize: Size in pixels of the window that is used to compute weighted average for given pixel. Should be odd. Affect performance linearly: greater searchWindowsSize - greater denoising time. Recommended value 21 pixels
-    
+
     :param h: Parameter regulating filter strength for luminance component. Bigger h value perfectly removes noise but also removes image details, smaller h value preserves details but also preserves some noise.
 
     :param hForColorComponents: The same as h but for color components.

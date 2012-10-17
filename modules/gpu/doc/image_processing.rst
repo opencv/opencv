@@ -868,7 +868,7 @@ Performs pure non local means denoising without any simplification, and thus it 
 .. seealso::
 
     :ocv:func:`fastNlMeansDenoising`
-    
+
 gpu::FastNonLocalMeansDenoising
 -------------------------------
 .. ocv:class:: gpu::FastNonLocalMeansDenoising
@@ -894,19 +894,19 @@ Perform image denoising using Non-local Means Denoising algorithm http://www.ipo
     :param src: Input 8-bit 1-channel, 2-channel or 3-channel image.
 
     :param dst: Output image with the same size and type as  ``src`` .
-    
+
     :param h: Parameter regulating filter strength. Big h value perfectly removes noise but also removes image details, smaller h value preserves details but also preserves some noise
 
     :param search_window: Size in pixels of the window that is used to compute weighted average for given pixel. Should be odd. Affect performance linearly: greater search_window - greater denoising time. Recommended value 21 pixels
-    
+
     :param block_size: Size in pixels of the template patch that is used to compute weights. Should be odd. Recommended value 7 pixels
-           
+
     :param stream: Stream for the asynchronous invocations.
 
-This function expected to be applied to grayscale images. For colored images look at ``FastNonLocalMeansDenoising::labMethod``. 
+This function expected to be applied to grayscale images. For colored images look at ``FastNonLocalMeansDenoising::labMethod``.
 
-.. seealso:: 
-    
+.. seealso::
+
     :ocv:func:`fastNlMeansDenoising`
 
 gpu::FastNonLocalMeansDenoising::labMethod()
@@ -920,21 +920,21 @@ Modification of ``FastNonLocalMeansDenoising::simpleMethod`` for color images
     :param dst: Output image with the same size and type as  ``src`` .
 
     :param h_luminance: Parameter regulating filter strength. Big h value perfectly removes noise but also removes image details, smaller h value preserves details but also preserves some noise
-    
+
     :param float: The same as h but for color components. For most images value equals 10 will be enought to remove colored noise and do not distort colors
 
     :param search_window: Size in pixels of the window that is used to compute weighted average for given pixel. Should be odd. Affect performance linearly: greater search_window - greater denoising time. Recommended value 21 pixels
-    
+
     :param block_size: Size in pixels of the template patch that is used to compute weights. Should be odd. Recommended value 7 pixels
-           
+
     :param stream: Stream for the asynchronous invocations.
-    
+
 The function converts image to CIELAB colorspace and then separately denoise L and AB components with given h parameters using ``FastNonLocalMeansDenoising::simpleMethod`` function.
 
-.. seealso:: 
+.. seealso::
 
     :ocv:func:`fastNlMeansDenoisingColored`
-    
+
 gpu::alphaComp
 -------------------
 Composites two images using alpha opacity values contained in each image.

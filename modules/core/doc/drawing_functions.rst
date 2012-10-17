@@ -405,8 +405,8 @@ The number of pixels along the line is stored in ``LineIterator::count`` . The m
 
     for(int i = 0; i < it.count; i++, ++it)
         buf[i] = *(const Vec3b)*it;
-    
-    // alternative way of iterating through the line    
+
+    // alternative way of iterating through the line
     for(int i = 0; i < it2.count; i++, ++it2)
     {
         Vec3b val = img.at<Vec3b>(it2.pos());

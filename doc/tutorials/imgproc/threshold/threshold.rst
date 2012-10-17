@@ -174,12 +174,12 @@ The tutorial code's is shown lines below. You can also download it from `here <h
 
      /// Create Trackbar to choose type of Threshold
      createTrackbar( trackbar_type,
-		     window_name, &threshold_type,
-		     max_type, Threshold_Demo );
+             window_name, &threshold_type,
+             max_type, Threshold_Demo );
 
      createTrackbar( trackbar_value,
-		     window_name, &threshold_value,
-		     max_value, Threshold_Demo );
+             window_name, &threshold_value,
+             max_value, Threshold_Demo );
 
      /// Call the function to initialize
      Threshold_Demo( 0, 0 );
@@ -190,7 +190,7 @@ The tutorial code's is shown lines below. You can also download it from `here <h
        int c;
        c = waitKey( 20 );
        if( (char)c == 27 )
-	 { break; }
+     { break; }
       }
 
    }
@@ -245,12 +245,12 @@ Explanation
      .. code-block:: cpp
 
         createTrackbar( trackbar_type,
-		     window_name, &threshold_type,
-		     max_type, Threshold_Demo );
+             window_name, &threshold_type,
+             max_type, Threshold_Demo );
 
         createTrackbar( trackbar_value,
-		     window_name, &threshold_value,
-		     max_value, Threshold_Demo );
+             window_name, &threshold_value,
+             max_value, Threshold_Demo );
 
    * Wait until the user enters the threshold value, the type of thresholding (or until the program exits)
 

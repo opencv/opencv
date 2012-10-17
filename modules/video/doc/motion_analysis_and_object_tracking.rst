@@ -607,7 +607,7 @@ Calculate an optical flow using "SimpleFlow" algorithm.
 
     :param prev: First 8-bit 3-channel image.
 
-    :param next: Second 8-bit 3-channel image 
+    :param next: Second 8-bit 3-channel image
 
     :param flowX: X-coordinate of estimated flow
 
@@ -639,7 +639,7 @@ Calculate an optical flow using "SimpleFlow" algorithm.
 
     :param speed_up_thr: threshold to detect point with irregular flow - where flow should be recalculated after upscale
 
-See [Tao2012]_. And site of project - http://graphics.berkeley.edu/papers/Tao-SAN-2012-05/. 
+See [Tao2012]_. And site of project - http://graphics.berkeley.edu/papers/Tao-SAN-2012-05/.
 
 .. [Bouguet00] Jean-Yves Bouguet. Pyramidal Implementation of the Lucas Kanade Feature Tracker.
 

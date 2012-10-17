@@ -13,7 +13,7 @@ void onManagerConnected()
 .. method:: void onManagerConnected(int status)
 
     Callback method that is called after OpenCV Library initialization.
- 
+
     :param status: status of initialization (see Initialization Status Constants).
 
 void onPackageInstall()

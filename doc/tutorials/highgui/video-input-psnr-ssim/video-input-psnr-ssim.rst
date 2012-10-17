@@ -27,9 +27,9 @@ As a test case where to show off these using OpenCV I've created a small program
 How to read a video stream (online-camera or offline-file)?
 ===========================================================
 
-Essentially, all the functionalities required for video manipulation is integrated in the :huivideo:`VideoCapture <videocapture>` C++ class. This on itself builds on the FFmpeg open source library. This is a basic dependency of OpenCV so you shouldn't need to worry about this. A video is composed of a succession of images, we refer to these in the literature as frames. In case of a video file there is a *frame rate* specifying just how long is between two frames. While for the video cameras usually there is a limit of just how many frames they can digitalize per second, this property is less important as at any time the camera sees the current snapshot of the world. 
+Essentially, all the functionalities required for video manipulation is integrated in the :huivideo:`VideoCapture <videocapture>` C++ class. This on itself builds on the FFmpeg open source library. This is a basic dependency of OpenCV so you shouldn't need to worry about this. A video is composed of a succession of images, we refer to these in the literature as frames. In case of a video file there is a *frame rate* specifying just how long is between two frames. While for the video cameras usually there is a limit of just how many frames they can digitalize per second, this property is less important as at any time the camera sees the current snapshot of the world.
 
-The first task you need to do is to assign to a :huivideo:`VideoCapture <videocapture>` class its source. You can do this either via the :huivideo:`constructor <videocapture-videocapture>` or its :huivideo:`open <videocapture-open>` function. If this argument is an integer then you will bind the class to a camera, a device. The number passed here is the ID of the device, assigned by the operating system. If you have a single camera attached to your system its ID will probably be zero and further ones increasing from there. If the parameter passed to these is a string it will refer to a video file, and the string points to the location and name of the file. For example, to the upper source code a valid command line is: 
+The first task you need to do is to assign to a :huivideo:`VideoCapture <videocapture>` class its source. You can do this either via the :huivideo:`constructor <videocapture-videocapture>` or its :huivideo:`open <videocapture-open>` function. If this argument is an integer then you will bind the class to a camera, a device. The number passed here is the ID of the device, assigned by the operating system. If you have a single camera attached to your system its ID will probably be zero and further ones increasing from there. If the parameter passed to these is a string it will refer to a video file, and the string points to the location and name of the file. For example, to the upper source code a valid command line is:
 
 .. code-block:: bash
 
@@ -56,7 +56,7 @@ To check if the binding of the class to a video source was successful or not use
      return -1;
      }
 
-Closing the video is automatic when the objects destructor is called. However, if you want to close it before this you need to call its :huivideo:`release <videocapture-release>` function. The frames of the video are just simple images. Therefore, we just need to extract them from the :huivideo:`VideoCapture <videocapture>` object and put them inside a *Mat* one. The video streams are sequential. You may get the frames one after another by the :huivideo:`read <videocapture-read>` or the overloaded >> operator: 
+Closing the video is automatic when the objects destructor is called. However, if you want to close it before this you need to call its :huivideo:`release <videocapture-release>` function. The frames of the video are just simple images. Therefore, we just need to extract them from the :huivideo:`VideoCapture <videocapture>` object and put them inside a *Mat* one. The video streams are sequential. You may get the frames one after another by the :huivideo:`read <videocapture-read>` or the overloaded >> operator:
 
 .. code-block:: cpp
 
@@ -64,7 +64,7 @@ Closing the video is automatic when the objects destructor is called. However, i
    captRefrnc >> frameReference;
    captUndTst.open(frameUnderTest);
 
-The upper read operations will leave empty the *Mat* objects if no frame could be acquired (either cause the video stream was closed or you got to the end of the video file). We can check this with a simple if: 
+The upper read operations will leave empty the *Mat* objects if no frame could be acquired (either cause the video stream was closed or you got to the end of the video file). We can check this with a simple if:
 
 .. code-block:: cpp
 
@@ -73,9 +73,9 @@ The upper read operations will leave empty the *Mat* objects if no frame could b
     // exit the program
    }
 
-A read method is made of a frame grab and a decoding applied on that. You may call explicitly these two by using the :huivideo:`grab <videocapture-grab>` and then the :huivideo:`retrieve <videocapture-retrieve>` functions. 
+A read method is made of a frame grab and a decoding applied on that. You may call explicitly these two by using the :huivideo:`grab <videocapture-grab>` and then the :huivideo:`retrieve <videocapture-retrieve>` functions.
 
-Videos have many-many information attached to them besides the content of the frames. These are usually numbers, however in some case it may be short character sequences (4 bytes or less). Due to this to acquire these information there is a general function named :huivideo:`get <videocapture-get>` that returns double values containing these properties. Use bitwise operations to decode the characters from a double type and conversions where valid values are only integers. Its single argument is the ID of the queried property. For example, here we get the size of the frames in the reference and test case video file; plus the number of frames inside the reference. 
+Videos have many-many information attached to them besides the content of the frames. These are usually numbers, however in some case it may be short character sequences (4 bytes or less). Due to this to acquire these information there is a general function named :huivideo:`get <videocapture-get>` that returns double values containing these properties. Use bitwise operations to decode the characters from a double type and conversions where valid values are only integers. Its single argument is the ID of the queried property. For example, here we get the size of the frames in the reference and test case video file; plus the number of frames inside the reference.
 
 .. code-block:: cpp
 
@@ -85,7 +85,7 @@ Videos have many-many information attached to them besides the content of the fr
    cout << "Reference frame resolution: Width=" << refS.width << "  Height=" << refS.height
         << " of nr#: " << captRefrnc.get(CV_CAP_PROP_FRAME_COUNT) << endl;
 
-When you are working with videos you may often want to control these values yourself. To do this there is a :huivideo:`set <videocapture-set>` function. Its first argument remains the name of the property you want to change and there is a second of double type containing the value to be set. It will return true if it succeeds and false otherwise. Good examples for this is seeking in a video file to a given time or frame: 
+When you are working with videos you may often want to control these values yourself. To do this there is a :huivideo:`set <videocapture-set>` function. Its first argument remains the name of the property you want to change and there is a second of double type containing the value to be set. It will return true if it succeeds and false otherwise. Good examples for this is seeking in a video file to a given time or frame:
 
 .. code-block:: cpp
 
@@ -93,7 +93,7 @@ When you are working with videos you may often want to control these values your
    captRefrnc.set(CV_CAP_PROP_POS_FRAMES, 10); // go to the 10th frame of the video
    // now a read operation would read the frame at the set position
 
-For properties you can read and change look into the documentation of the :huivideo:`get <videocapture-get>` and :huivideo:`set <videocapture-set>` functions. 
+For properties you can read and change look into the documentation of the :huivideo:`get <videocapture-get>` and :huivideo:`set <videocapture-set>` functions.
 
 
 Image similarity - PSNR and SSIM
@@ -111,7 +111,7 @@ Then the PSNR is expressed as:
 
    PSNR = 10 \cdot \log_{10} \left( \frac{MAX_I^2}{MSE} \right)
 
-Here the :math:`MAX_I^2` is the maximum valid value for a pixel. In case of the simple single byte image per pixel per channel this is 255. When two images are the same the MSE will give zero, resulting in an invalid divide by zero operation in the PSNR formula. In this case the PSNR is undefined and as we'll need to handle this case separately. The transition to a logarithmic scale is made because the pixel values have a very wide dynamic range. All this translated to OpenCV and a C++ function looks like: 
+Here the :math:`MAX_I^2` is the maximum valid value for a pixel. In case of the simple single byte image per pixel per channel this is 255. When two images are the same the MSE will give zero, resulting in an invalid divide by zero operation in the PSNR formula. In this case the PSNR is undefined and as we'll need to handle this case separately. The transition to a logarithmic scale is made because the pixel values have a very wide dynamic range. All this translated to OpenCV and a C++ function looks like:
 
 .. code-block:: cpp
 
@@ -136,13 +136,13 @@ Here the :math:`MAX_I^2` is the maximum valid value for a pixel. In case of the 
     }
    }
 
-Typically result values are anywhere between 30 and 50 for video compression, where higher is better. If the images significantly differ you'll get much lower ones like 15 and so. This similarity check is easy and fast to calculate, however in practice it may turn out somewhat inconsistent with human eye perception. The **structural similarity** algorithm aims to correct this. 
+Typically result values are anywhere between 30 and 50 for video compression, where higher is better. If the images significantly differ you'll get much lower ones like 15 and so. This similarity check is easy and fast to calculate, however in practice it may turn out somewhat inconsistent with human eye perception. The **structural similarity** algorithm aims to correct this.
 
-Describing the methods goes well beyond the purpose of this tutorial. For that I invite you to read the article introducing it. Nevertheless, you can get a good image of it by looking at the OpenCV implementation below. 
+Describing the methods goes well beyond the purpose of this tutorial. For that I invite you to read the article introducing it. Nevertheless, you can get a good image of it by looking at the OpenCV implementation below.
 
 .. seealso::
 
-   SSIM is described more in-depth in the: "Z. Wang, A. C. Bovik, H. R. Sheikh and E. P. Simoncelli, "Image quality assessment: From error visibility to structural similarity," IEEE Transactions on Image Processing, vol. 13, no. 4, pp. 600-612, Apr. 2004." article. 
+   SSIM is described more in-depth in the: "Z. Wang, A. C. Bovik, H. R. Sheikh and E. P. Simoncelli, "Image quality assessment: From error visibility to structural similarity," IEEE Transactions on Image Processing, vol. 13, no. 4, pp. 600-612, Apr. 2004." article.
 
 .. code-block:: cpp
 
@@ -162,7 +162,7 @@ Describing the methods goes well beyond the purpose of this tutorial. For that I
 
     /***********************PRELIMINARY COMPUTING ******************************/
 
-    Mat mu1, mu2;   // 
+    Mat mu1, mu2;   //
     GaussianBlur(I1, mu1, Size(11, 11), 1.5);
     GaussianBlur(I2, mu2, Size(11, 11), 1.5);
 
@@ -199,7 +199,7 @@ Describing the methods goes well beyond the purpose of this tutorial. For that I
     return mssim;
    }
 
-This will return a similarity index for each channel of the image. This value is between zero and one, where one corresponds to perfect fit. Unfortunately, the many Gaussian blurring is quite costly, so while the PSNR may work in a real time like environment (24 frame per second) this will take significantly more than to accomplish similar performance results. 
+This will return a similarity index for each channel of the image. This value is between zero and one, where one corresponds to perfect fit. Unfortunately, the many Gaussian blurring is quite costly, so while the PSNR may work in a real time like environment (24 frame per second) this will take significantly more than to accomplish similar performance results.
 
 Therefore, the source code presented at the start of the tutorial will perform the PSNR measurement for each frame, and the SSIM only for the frames where the PSNR falls below an input value. For visualization purpose we show both images in an OpenCV window and print the PSNR and MSSIM values to the console. Expect to see something like:
 
@@ -207,7 +207,7 @@ Therefore, the source code presented at the start of the tutorial will perform t
    :alt: A sample output
    :align: center
 
-You may observe a runtime instance of this on the `YouTube here <https://www.youtube.com/watch?v=iOcNljutOgg>`_. 
+You may observe a runtime instance of this on the `YouTube here <https://www.youtube.com/watch?v=iOcNljutOgg>`_.
 
 .. raw:: html
 

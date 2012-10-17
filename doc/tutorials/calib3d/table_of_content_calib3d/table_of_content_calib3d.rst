@@ -3,11 +3,11 @@
 *calib3d* module. Camera calibration and 3D reconstruction
 -----------------------------------------------------------
 
-Although we got most of our images in a 2D format they do come from a 3D world. Here you will learn how to find out from the 2D images information about the 3D world. 
+Although we got most of our images in a 2D format they do come from a 3D world. Here you will learn how to find out from the 2D images information about the 3D world.
 
-.. include:: ../../definitions/tocDefinitions.rst 
+.. include:: ../../definitions/tocDefinitions.rst
 
-+ 
++
   .. tabularcolumns:: m{100pt} m{300pt}
   .. cssclass:: toctableopencv
 
@@ -26,7 +26,7 @@ Although we got most of our images in a 2D format they do come from a 3D world. 
      :height: 90pt
      :width:  90pt
 
-+ 
++
   .. tabularcolumns:: m{100pt} m{300pt}
   .. cssclass:: toctableopencv
 

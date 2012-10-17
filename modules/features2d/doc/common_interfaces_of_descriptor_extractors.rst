@@ -41,7 +41,7 @@ Abstract base class for computing descriptors for image keypoints. ::
 
 
 In this interface, a keypoint descriptor can be represented as a
-dense, fixed-dimension vector of a basic type. Most descriptors 
+dense, fixed-dimension vector of a basic type. Most descriptors
 follow this pattern as it simplifies computing
 distances between descriptors. Therefore, a collection of
 descriptors is represented as

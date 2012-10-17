@@ -11,16 +11,16 @@ to build a universal binary framework. Invoke this script from Terminal.app, wai
 and you are done.
 
 OpenCV is a Private Framework:
-On Mac OS X the concept of Framework bundles is meant to simplify distribution of shared libraries, 
-accompanying headers and documentation. There are however to subtly different 'flavours' of 
-Frameworks: public and private ones. The public frameworks get installed into the Frameworks 
-diretories in /Library, /System/Library or ~/Library and are meant to be shared amongst 
-applications. The private frameworks are only distributed as parts of an Application Bundle. 
-This makes it easier to deploy applications because they bring their own framework invisibly to 
-the user. No installation of the framework is necessary and different applications can bring 
+On Mac OS X the concept of Framework bundles is meant to simplify distribution of shared libraries,
+accompanying headers and documentation. There are however to subtly different 'flavours' of
+Frameworks: public and private ones. The public frameworks get installed into the Frameworks
+diretories in /Library, /System/Library or ~/Library and are meant to be shared amongst
+applications. The private frameworks are only distributed as parts of an Application Bundle.
+This makes it easier to deploy applications because they bring their own framework invisibly to
+the user. No installation of the framework is necessary and different applications can bring
 different versions of the same framework without any conflict.
-Since OpenCV is still a moving target, it seems best to avoid any installation and versioning issues 
-for an end user. The OpenCV framework that currently comes with this demo application therefore 
+Since OpenCV is still a moving target, it seems best to avoid any installation and versioning issues
+for an end user. The OpenCV framework that currently comes with this demo application therefore
 is a Private Framework.
 
 Use it for targets that result in an Application Bundle:

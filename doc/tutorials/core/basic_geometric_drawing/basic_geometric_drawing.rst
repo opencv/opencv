@@ -99,11 +99,11 @@ Explanation
 
       /// 2.b. Creating rectangles
       rectangle( rook_image,
-  	         Point( 0, 7*w/8.0 ),
-	         Point( w, w),
-	         Scalar( 0, 255, 255 ),
-	         -1,
-	         8 );
+             Point( 0, 7*w/8.0 ),
+             Point( w, w),
+             Scalar( 0, 255, 255 ),
+             -1,
+             8 );
 
       /// 2.c. Create a few lines
       MyLine( rook_image, Point( 0, 15*w/16 ), Point( w, 15*w/16 ) );
@@ -118,16 +118,16 @@ Explanation
      .. code-block:: cpp
 
         void MyLine( Mat img, Point start, Point end )
-	{
-  	  int thickness = 2;
-  	  int lineType = 8;
-  	  line( img,
-	  	start,
-		end,
-		Scalar( 0, 0, 0 ),
-		thickness,
-		lineType );
-	}
+    {
+      int thickness = 2;
+      int lineType = 8;
+      line( img,
+        start,
+        end,
+        Scalar( 0, 0, 0 ),
+        thickness,
+        lineType );
+    }
 
      As we can see, *MyLine* just call the function :line:`line <>`, which does the following:
 
@@ -145,18 +145,18 @@ Explanation
 
         void MyEllipse( Mat img, double angle )
         {
-   	  int thickness = 2;
-  	  int lineType = 8;
+      int thickness = 2;
+      int lineType = 8;
 
-	  ellipse( img,
-	   	   Point( w/2.0, w/2.0 ),
-	   	   Size( w/4.0, w/16.0 ),
-	   	   angle,
-	   	   0,
-	   	   360,
-	   	   Scalar( 255, 0, 0 ),
-	   	   thickness,
-	   	   lineType );
+      ellipse( img,
+           Point( w/2.0, w/2.0 ),
+           Size( w/4.0, w/16.0 ),
+           angle,
+           0,
+           360,
+           Scalar( 255, 0, 0 ),
+           thickness,
+           lineType );
         }
 
      From the code above, we can observe that the function :ellipse:`ellipse <>` draws an ellipse such that:
@@ -176,17 +176,17 @@ Explanation
      .. code-block:: cpp
 
         void MyFilledCircle( Mat img, Point center )
-	{
-  	 int thickness = -1;
-  	 int lineType = 8;
+    {
+     int thickness = -1;
+     int lineType = 8;
 
-	 circle( img,
-	  	 center,
-	  	 w/32.0,
-	  	 Scalar( 0, 0, 255 ),
-	  	 thickness,
-	  	 lineType );
-	}
+     circle( img,
+         center,
+         w/32.0,
+         Scalar( 0, 0, 255 ),
+         thickness,
+         lineType );
+    }
 
      Similar to the ellipse function, we can observe that *circle* receives as arguments:
 
@@ -203,41 +203,41 @@ Explanation
      .. code-block:: cpp
 
         void MyPolygon( Mat img )
-	{
-  	  int lineType = 8;
+    {
+      int lineType = 8;
 
-	  /** Create some points */
-  	  Point rook_points[1][20];
-  	  rook_points[0][0] = Point( w/4.0, 7*w/8.0 );
-  	  rook_points[0][1] = Point( 3*w/4.0, 7*w/8.0 );
-  	  rook_points[0][2] = Point( 3*w/4.0, 13*w/16.0 );
-  	  rook_points[0][3] = Point( 11*w/16.0, 13*w/16.0 );
- 	  rook_points[0][4] = Point( 19*w/32.0, 3*w/8.0 );
-  	  rook_points[0][5] = Point( 3*w/4.0, 3*w/8.0 );
-  	  rook_points[0][6] = Point( 3*w/4.0, w/8.0 );
-  	  rook_points[0][7] = Point( 26*w/40.0, w/8.0 );
-  	  rook_points[0][8] = Point( 26*w/40.0, w/4.0 );
-  	  rook_points[0][9] = Point( 22*w/40.0, w/4.0 );
-  	  rook_points[0][10] = Point( 22*w/40.0, w/8.0 );
-  	  rook_points[0][11] = Point( 18*w/40.0, w/8.0 );
-  	  rook_points[0][12] = Point( 18*w/40.0, w/4.0 );
-  	  rook_points[0][13] = Point( 14*w/40.0, w/4.0 );
-  	  rook_points[0][14] = Point( 14*w/40.0, w/8.0 );
-  	  rook_points[0][15] = Point( w/4.0, w/8.0 );
-  	  rook_points[0][16] = Point( w/4.0, 3*w/8.0 );
-  	  rook_points[0][17] = Point( 13*w/32.0, 3*w/8.0 );
-  	  rook_points[0][18] = Point( 5*w/16.0, 13*w/16.0 );
-  	  rook_points[0][19] = Point( w/4.0, 13*w/16.0) ;
+      /** Create some points */
+      Point rook_points[1][20];
+      rook_points[0][0] = Point( w/4.0, 7*w/8.0 );
+      rook_points[0][1] = Point( 3*w/4.0, 7*w/8.0 );
+      rook_points[0][2] = Point( 3*w/4.0, 13*w/16.0 );
+      rook_points[0][3] = Point( 11*w/16.0, 13*w/16.0 );
+      rook_points[0][4] = Point( 19*w/32.0, 3*w/8.0 );
+      rook_points[0][5] = Point( 3*w/4.0, 3*w/8.0 );
+      rook_points[0][6] = Point( 3*w/4.0, w/8.0 );
+      rook_points[0][7] = Point( 26*w/40.0, w/8.0 );
+      rook_points[0][8] = Point( 26*w/40.0, w/4.0 );
+      rook_points[0][9] = Point( 22*w/40.0, w/4.0 );
+      rook_points[0][10] = Point( 22*w/40.0, w/8.0 );
+      rook_points[0][11] = Point( 18*w/40.0, w/8.0 );
+      rook_points[0][12] = Point( 18*w/40.0, w/4.0 );
+      rook_points[0][13] = Point( 14*w/40.0, w/4.0 );
+      rook_points[0][14] = Point( 14*w/40.0, w/8.0 );
+      rook_points[0][15] = Point( w/4.0, w/8.0 );
+      rook_points[0][16] = Point( w/4.0, 3*w/8.0 );
+      rook_points[0][17] = Point( 13*w/32.0, 3*w/8.0 );
+      rook_points[0][18] = Point( 5*w/16.0, 13*w/16.0 );
+      rook_points[0][19] = Point( w/4.0, 13*w/16.0) ;
 
-	  const Point* ppt[1] = { rook_points[0] };
-  	  int npt[] = { 20 };
+      const Point* ppt[1] = { rook_points[0] };
+      int npt[] = { 20 };
 
-  	  fillPoly( img,
-	    	    ppt,
-	    	    npt,
-            	    1,
-	    	    Scalar( 255, 255, 255 ),
-	    	    lineType );
+      fillPoly( img,
+                ppt,
+                npt,
+                    1,
+                Scalar( 255, 255, 255 ),
+                lineType );
          }
 
      To draw a filled polygon we use the function :fill_poly:`fillPoly <>`. We note that:
@@ -255,11 +255,11 @@ Explanation
      .. code-block:: cpp
 
         rectangle( rook_image,
-	     	   Point( 0, 7*w/8.0 ),
-	     	   Point( w, w),
-	     	   Scalar( 0, 255, 255 ),
-	     	   -1,
-	     	   8 );
+               Point( 0, 7*w/8.0 ),
+               Point( w, w),
+               Scalar( 0, 255, 255 ),
+               -1,
+               8 );
 
      Finally we have the :rectangle:`rectangle <>` function (we did not create a special function for this guy). We note that:
 

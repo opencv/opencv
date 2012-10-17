@@ -159,35 +159,35 @@ Code
       if( display_caption( "Homogeneous Blur" ) != 0 ) { return 0; }
 
       for ( int i = 1; i < MAX_KERNEL_LENGTH; i = i + 2 )
-      	  { blur( src, dst, Size( i, i ), Point(-1,-1) );
+          { blur( src, dst, Size( i, i ), Point(-1,-1) );
             if( display_dst( DELAY_BLUR ) != 0 ) { return 0; } }
 
        /// Applying Gaussian blur
        if( display_caption( "Gaussian Blur" ) != 0 ) { return 0; }
 
        for ( int i = 1; i < MAX_KERNEL_LENGTH; i = i + 2 )
-       	   { GaussianBlur( src, dst, Size( i, i ), 0, 0 );
+           { GaussianBlur( src, dst, Size( i, i ), 0, 0 );
              if( display_dst( DELAY_BLUR ) != 0 ) { return 0; } }
 
         /// Applying Median blur
-  	if( display_caption( "Median Blur" ) != 0 ) { return 0; }
+    if( display_caption( "Median Blur" ) != 0 ) { return 0; }
 
-  	for ( int i = 1; i < MAX_KERNEL_LENGTH; i = i + 2 )
-      	    { medianBlur ( src, dst, i );
+    for ( int i = 1; i < MAX_KERNEL_LENGTH; i = i + 2 )
+            { medianBlur ( src, dst, i );
               if( display_dst( DELAY_BLUR ) != 0 ) { return 0; } }
 
-  	/// Applying Bilateral Filter
-  	if( display_caption( "Bilateral Blur" ) != 0 ) { return 0; }
+    /// Applying Bilateral Filter
+    if( display_caption( "Bilateral Blur" ) != 0 ) { return 0; }
 
-  	for ( int i = 1; i < MAX_KERNEL_LENGTH; i = i + 2 )
-      	    { bilateralFilter ( src, dst, i, i*2, i/2 );
+    for ( int i = 1; i < MAX_KERNEL_LENGTH; i = i + 2 )
+            { bilateralFilter ( src, dst, i, i*2, i/2 );
               if( display_dst( DELAY_BLUR ) != 0 ) { return 0; } }
 
-  	/// Wait until user press a key
-  	display_caption( "End: Press a key!" );
+    /// Wait until user press a key
+    display_caption( "End: Press a key!" );
 
-  	waitKey(0);
-  	return 0;
+    waitKey(0);
+    return 0;
     }
 
     int display_caption( char* caption )
