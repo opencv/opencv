@@ -2,11 +2,11 @@
 Video capture sample.
 
 Sample shows how VideoCapture class can be used to acquire video
-frames from a camera of a movie file. Also the sample provides 
-an example of procedural video generation by an object, mimicking 
-the VideoCapture interface (see Chess class). 
+frames from a camera of a movie file. Also the sample provides
+an example of procedural video generation by an object, mimicking
+the VideoCapture interface (see Chess class).
 
-'create_capture' is a convinience function for capture creation, 
+'create_capture' is a convinience function for capture creation,
 falling back to procedural video in case of error.
 
 Usage:
@@ -41,7 +41,7 @@ class VideoSynthBase(object):
             self.bg = cv2.imread(bg, 1)
             h, w = self.bg.shape[:2]
             self.frame_size = (w, h)
-            
+
         if size is not None:
             w, h = map(int, size.split('x'))
             self.frame_size = (w, h)
@@ -51,7 +51,7 @@ class VideoSynthBase(object):
 
     def render(self, dst):
         pass
-        
+
     def read(self, dst=None):
         w, h = self.frame_size
 
@@ -96,14 +96,14 @@ class Chess(VideoSynthBase):
 
     def draw_quads(self, img, quads, color = (0, 255, 0)):
         img_quads = cv2.projectPoints(quads.reshape(-1, 3), self.rvec, self.tvec, self.K, self.dist_coef) [0]
-        img_quads.shape = quads.shape[:2] + (2,) 
+        img_quads.shape = quads.shape[:2] + (2,)
         for q in img_quads:
             cv2.fillConvexPoly(img, np.int32(q*4), color, cv2.CV_AA, shift=2)
 
     def render(self, dst):
         t = self.t
         self.t += 1.0/30.0
-        
+
         sx, sy = self.grid_size
         center = np.array([0.5*sx, 0.5*sy, 0.0])
         phi = pi/3 + sin(t*3)*pi/8
@@ -142,7 +142,7 @@ def create_capture(source = 0, fallback = presets['chess']):
     try: source = int(source)
     except ValueError: pass
     params = dict( s.split('=') for s in chunks[1:] )
-    
+
     cap = None
     if source == 'synth':
         Class = classes.get(params.get('class', None), VideoSynthBase)
@@ -189,4 +189,4 @@ if __name__ == '__main__':
                 cv2.imwrite(fn, img)
                 print fn, 'saved'
             shot_idx += 1
-    cv2.destroyAllWindows() 			
+    cv2.destroyAllWindows()

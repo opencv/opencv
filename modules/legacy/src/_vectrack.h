@@ -70,21 +70,21 @@ inline int operator != (const CvRect& r1, const CvRect& r2)
         return !(r1 == r2);
 }
 
-inline 
+inline
 int CmpPoints(const CvPoint& p1, const CvPoint& p2, int err)
 {
         /* Simakov: modify __max to max */
         return (max(abs(p1.x - p2.x), abs(p1.y - p2.y)) < err);
 }
 
-inline 
+inline
 int PointInRect(const CvPoint& p, const CvRect& r)
 {
         return ((p.x > r.x) && (p.x < (r.x + r.width)) &&
                         (p.y > r.y) && (p.y < (r.y + r.height)));
 }
 
-inline 
+inline
 int RectInRect(const CvRect& r1, const CvRect& r2)
 {
         CvPoint plt = {r1.x, r1.y};
@@ -92,7 +92,7 @@ int RectInRect(const CvRect& r1, const CvRect& r2)
         return (PointInRect(plt, r2) && PointInRect(prb, r2));
 }
 
-inline 
+inline
 CvRect Increase(const CvRect& r, int decr)
 {
         CvRect rect;
@@ -103,7 +103,7 @@ CvRect Increase(const CvRect& r, int decr)
         return rect;
 }
 
-inline 
+inline
 CvPoint Increase(const CvPoint& p, int decr)
 {
         CvPoint point;
@@ -112,21 +112,21 @@ CvPoint Increase(const CvPoint& p, int decr)
         return point;
 }
 
-inline 
+inline
 void Move(CvRect& r, int dx, int dy)
 {
         r.x += dx;
         r.y += dy;
 }
 
-inline 
+inline
 void Move(CvPoint& p, int dx, int dy)
 {
         p.x += dx;
         p.y += dy;
 }
 
-inline 
+inline
 void Extend(CvRect& r, int d)
 {
         r.x -= d;
@@ -135,7 +135,7 @@ void Extend(CvRect& r, int d)
         r.height += 2*d;
 }
 
-inline 
+inline
 CvPoint Center(const CvRect& r)
 {
         CvPoint p;
@@ -147,7 +147,7 @@ CvPoint Center(const CvRect& r)
 inline void ReallocImage(IplImage** ppImage, CvSize sz, long lChNum)
 {
     IplImage* pImage;
-    if( ppImage == NULL ) 
+    if( ppImage == NULL )
                 return;
     pImage = *ppImage;
     if( pImage != NULL )

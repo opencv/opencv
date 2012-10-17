@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2002, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-// 
+//
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission. 
-// 
+// from this software without specific prior written permission.
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -50,22 +50,22 @@ namespace Imath {
 
 
 DEFINE_EXC (NullVecExc, ::Iex::MathExc)		// Attempt to normalize
-						// null vector
+                        // null vector
 
 DEFINE_EXC (InfPointExc, ::Iex::MathExc)	// Attempt to normalize
                                                 // a point at infinity
 
 DEFINE_EXC (NullQuatExc, ::Iex::MathExc) 	// Attempt to normalize
-						// null quaternion
+                        // null quaternion
 
 DEFINE_EXC (SingMatrixExc, ::Iex::MathExc)	// Attempt to invert
-						// singular matrix
+                        // singular matrix
 
 DEFINE_EXC (ZeroScaleExc, ::Iex::MathExc)	// Attempt to remove zero
-						// scaling from matrix
+                        // scaling from matrix
 
 DEFINE_EXC (IntVecNormalizeExc, ::Iex::MathExc)	// Attempt to normalize
-						// a vector of whose elements
+                        // a vector of whose elements
                                                 // are an integer type
 
 } // namespace Imath

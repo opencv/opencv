@@ -15,7 +15,7 @@ int beta;  /**< Simple brightness control */
 
 /**
  * @function main
- * @brief Main function 
+ * @brief Main function
  */
 int main( int argc, char** argv )
 {
@@ -23,7 +23,7 @@ int main( int argc, char** argv )
    Mat image = imread( argv[1] );
    Mat new_image = Mat::zeros( image.size(), image.type() );
 
-   /// Initialize values 
+   /// Initialize values
    std::cout<<" Basic Linear Transforms "<<std::endl;
    std::cout<<"-------------------------"<<std::endl;
    std::cout<<"* Enter the alpha value [1.0-3.0]: ";std::cin>>alpha;
@@ -38,9 +38,9 @@ int main( int argc, char** argv )
       { for( int x = 0; x < image.cols; x++ )
            { for( int c = 0; c < 3; c++ )
                 {
-		  new_image.at<Vec3b>(y,x)[c] = saturate_cast<uchar>( alpha*( image.at<Vec3b>(y,x)[c] ) + beta );
+          new_image.at<Vec3b>(y,x)[c] = saturate_cast<uchar>( alpha*( image.at<Vec3b>(y,x)[c] ) + beta );
                 }
-	   }
+       }
       }
 
    /// Create Windows
@@ -51,7 +51,7 @@ int main( int argc, char** argv )
    imshow("Original Image", image);
    imshow("New Image", new_image);
 
-   
+
    /// Wait until user press some key
    waitKey();
    return 0;

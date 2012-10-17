@@ -414,14 +414,14 @@ namespace cv
         // most simple functions: only perform 1D filtering with output=input (no add on)
         void _horizontalCausalFilter(float *outputFrame, unsigned int IDrowStart, unsigned int IDrowEnd);
         void _horizontalAnticausalFilter(float *outputFrame, unsigned int IDrowStart, unsigned int IDrowEnd);     // parallelized with TBB
-        void _verticalCausalFilter(float *outputFrame, unsigned int IDcolumnStart, unsigned int IDcolumnEnd);     // parallelized with TBB 
+        void _verticalCausalFilter(float *outputFrame, unsigned int IDcolumnStart, unsigned int IDcolumnEnd);     // parallelized with TBB
         void _verticalAnticausalFilter(float *outputFrame, unsigned int IDcolumnStart, unsigned int IDcolumnEnd);
 
         // perform 1D filtering with output with varrying spatial coefficient
         void _horizontalCausalFilter_Irregular(float *outputFrame, unsigned int IDrowStart, unsigned int IDrowEnd);
         void _horizontalCausalFilter_Irregular_addInput(const float *inputFrame, float *outputFrame, unsigned int IDrowStart, unsigned int IDrowEnd);
-        void _horizontalAnticausalFilter_Irregular(float *outputFrame, unsigned int IDrowStart, unsigned int IDrowEnd, const float *spatialConstantBuffer);   // parallelized with TBB 
-        void _verticalCausalFilter_Irregular(float *outputFrame, unsigned int IDcolumnStart, unsigned int IDcolumnEnd, const float *spatialConstantBuffer);   // parallelized with TBB 
+        void _horizontalAnticausalFilter_Irregular(float *outputFrame, unsigned int IDrowStart, unsigned int IDrowEnd, const float *spatialConstantBuffer);   // parallelized with TBB
+        void _verticalCausalFilter_Irregular(float *outputFrame, unsigned int IDcolumnStart, unsigned int IDcolumnEnd, const float *spatialConstantBuffer);   // parallelized with TBB
         void _verticalAnticausalFilter_Irregular_multGain(float *outputFrame, unsigned int IDcolumnStart, unsigned int IDcolumnEnd);
 
 
@@ -546,7 +546,7 @@ namespace cv
             float *outputFrame;
             unsigned int nbRows, nbColumns;
             float filterParam_a, filterParam_gain;
-        public:        
+        public:
             Parallel_verticalAnticausalFilter_multGain(float *bufferToProcess, const unsigned int nbRws, const unsigned int nbCols, const float a, const float  gain)
                 :outputFrame(bufferToProcess), nbRows(nbRws), nbColumns(nbCols), filterParam_a(a), filterParam_gain(gain){}
 
@@ -585,7 +585,7 @@ namespace cv
                 for (register int IDpixel=r.start ; IDpixel!=r.end ; ++IDpixel, ++inputFramePTR, ++outputFramePTR)
                 {
                     float X0=*(localLuminancePTR++)*localLuminanceFactor+localLuminanceAddon;
-                    // TODO : the following line can lead to a divide by zero ! A small offset is added, take care if the offset is too large in case of High Dynamic Range images which can use very small values...		
+                    // TODO : the following line can lead to a divide by zero ! A small offset is added, take care if the offset is too large in case of High Dynamic Range images which can use very small values...
                     *(outputFramePTR) = (maxInputValue+X0)**inputFramePTR/(*inputFramePTR +X0+0.00000000001f);
                     //std::cout<<"BasicRetinaFilter::inputFrame[IDpixel]=%f, X0=%f, outputFrame[IDpixel]=%f\n", inputFrame[IDpixel], X0, outputFrame[IDpixel]);
                 }
@@ -593,7 +593,7 @@ namespace cv
         };
 
         //////////////////////////////////////////
-        /// Specific filtering methods which manage non const spatial filtering parameter (used By retinacolor and LogProjectors) 
+        /// Specific filtering methods which manage non const spatial filtering parameter (used By retinacolor and LogProjectors)
         class Parallel_horizontalAnticausalFilter_Irregular: public cv::ParallelLoopBody
         {
         private:

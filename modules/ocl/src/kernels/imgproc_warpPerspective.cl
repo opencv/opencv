@@ -52,7 +52,7 @@
 typedef double F;
 typedef double4 F4;
 #define convert_F4 convert_double4
-#else 
+#else
 typedef float F;
 typedef float4 F4;
 #define convert_F4 convert_float4
@@ -61,9 +61,9 @@ typedef float4 F4;
 
 #define INTER_BITS 5
 #define INTER_TAB_SIZE (1 << INTER_BITS)
-#define INTER_SCALE 1.f/INTER_TAB_SIZE 
-#define AB_BITS max(10, (int)INTER_BITS) 
-#define AB_SCALE (1 << AB_BITS) 
+#define INTER_SCALE 1.f/INTER_TAB_SIZE
+#define AB_BITS max(10, (int)INTER_BITS)
+#define AB_SCALE (1 << AB_BITS)
 #define INTER_REMAP_COEF_BITS 15
 #define INTER_REMAP_COEF_SCALE (1 << INTER_REMAP_COEF_BITS)
 
@@ -81,7 +81,7 @@ inline void interpolateCubic( float x, float* coeffs )
 /**********************************************8UC1*********************************************
 ***********************************************************************************************/
 __kernel void warpPerspectiveNN_C1_D0(__global uchar const * restrict src, __global uchar * dst, int src_cols, int src_rows,
-                            int dst_cols, int dst_rows, int srcStep, int dstStep, 
+                            int dst_cols, int dst_rows, int srcStep, int dstStep,
                             int src_offset, int dst_offset,  __constant F * M, int threadCols )
 {
     int dx = get_global_id(0);
@@ -90,7 +90,7 @@ __kernel void warpPerspectiveNN_C1_D0(__global uchar const * restrict src, __glo
     if( dx < threadCols && dy < dst_rows)
     {
         dx = (dx<<2) - (dst_offset&3);
-        
+
         F4 DX = (F4)(dx, dx+1, dx+2, dx+3);
         F4 X0 = M[0]*DX + M[1]*dy + M[2];
         F4 Y0 = M[3]*DX + M[4]*dy + M[5];
@@ -118,12 +118,12 @@ __kernel void warpPerspectiveNN_C1_D0(__global uchar const * restrict src, __glo
 }
 
 __kernel void warpPerspectiveLinear_C1_D0(__global const uchar * restrict src, __global uchar * dst,
-                            int src_cols, int src_rows, int dst_cols, int dst_rows, int srcStep, 
+                            int src_cols, int src_rows, int dst_cols, int dst_rows, int srcStep,
                             int dstStep, int src_offset, int dst_offset,  __constant F * M, int threadCols )
 {
     int dx = get_global_id(0);
     int dy = get_global_id(1);
- 
+
     if( dx < threadCols && dy < dst_rows)
     {
         F X0 = M[0]*dx + M[1]*dy + M[2];
@@ -132,12 +132,12 @@ __kernel void warpPerspectiveLinear_C1_D0(__global const uchar * restrict src, _
         W = (W != 0.0) ? INTER_TAB_SIZE/W : 0.0;
         int X = rint(X0*W);
         int Y = rint(Y0*W);
-        
+
         int sx = (short)(X >> INTER_BITS);
         int sy = (short)(Y >> INTER_BITS);
         int ay = (short)(Y & (INTER_TAB_SIZE-1));
         int ax = (short)(X & (INTER_TAB_SIZE-1));
-       
+
         uchar v[4];
         int i;
 #pragma unroll 4
@@ -150,7 +150,7 @@ __kernel void warpPerspectiveLinear_C1_D0(__global const uchar * restrict src, _
         tab1y[1] = 1.f/INTER_TAB_SIZE*ay;
         tab1x[0] = 1.0 - 1.f/INTER_TAB_SIZE*ax;
         tab1x[1] = 1.f/INTER_TAB_SIZE*ax;
-        
+
 #pragma unroll 4
         for(i=0; i<4;  i++)
         {
@@ -170,12 +170,12 @@ __kernel void warpPerspectiveLinear_C1_D0(__global const uchar * restrict src, _
 }
 
 __kernel void warpPerspectiveCubic_C1_D0(__global uchar * src, __global uchar * dst, int src_cols, int src_rows,
-                            int dst_cols, int dst_rows, int srcStep, int dstStep, 
+                            int dst_cols, int dst_rows, int srcStep, int dstStep,
                             int src_offset, int dst_offset,  __constant F * M, int threadCols )
 {
     int dx = get_global_id(0);
     int dy = get_global_id(1);
- 	
+
     if( dx < threadCols && dy < dst_rows)
     {
         F X0 = M[0]*dx + M[1]*dy + M[2];
@@ -184,15 +184,15 @@ __kernel void warpPerspectiveCubic_C1_D0(__global uchar * src, __global uchar * 
         W = (W != 0.0) ? INTER_TAB_SIZE/W : 0.0;
         int X = rint(X0*W);
         int Y = rint(Y0*W);
-        
+
         short sx = (short)(X >> INTER_BITS) - 1;
         short sy = (short)(Y >> INTER_BITS) - 1;
         short ay = (short)(Y & (INTER_TAB_SIZE-1));
         short ax = (short)(X & (INTER_TAB_SIZE-1));
-     
+
       uchar v[16];
         int i, j;
-       
+
 #pragma unroll 4
         for(i=0; i<4;  i++)
         for(j=0; j<4;  j++)
@@ -208,7 +208,7 @@ __kernel void warpPerspectiveCubic_C1_D0(__global uchar * src, __global uchar * 
         axx = 1.f/INTER_TAB_SIZE * ax;
         interpolateCubic(ayy, tab1y);
         interpolateCubic(axx, tab1x);
-        
+
         int isum = 0;
 #pragma unroll 16
         for( i=0; i<16; i++ )
@@ -249,12 +249,12 @@ __kernel void warpPerspectiveCubic_C1_D0(__global uchar * src, __global uchar * 
 ***********************************************************************************************/
 
 __kernel void warpPerspectiveNN_C4_D0(__global uchar4 const * restrict src, __global uchar4 * dst,
-                            int src_cols, int src_rows, int dst_cols, int dst_rows, int srcStep, 
-							int dstStep, int src_offset, int dst_offset,  __constant F * M, int threadCols )
+                            int src_cols, int src_rows, int dst_cols, int dst_rows, int srcStep,
+                            int dstStep, int src_offset, int dst_offset,  __constant F * M, int threadCols )
 {
     int dx = get_global_id(0);
     int dy = get_global_id(1);
-  
+
     if( dx < threadCols && dy < dst_rows)
     {
 
@@ -266,37 +266,37 @@ __kernel void warpPerspectiveNN_C4_D0(__global uchar4 const * restrict src, __gl
         int Y = rint(Y0*W);
         short sx = (short)X;
         short sy = (short)Y;
-     
+
         if(dx >= 0 && dx < dst_cols && dy >= 0 && dy < dst_rows)
-            dst[(dst_offset>>2)+dy*(dstStep>>2)+dx]= (sx>=0 && sx<src_cols && sy>=0 && sy<src_rows) ? src[(src_offset>>2)+sy*(srcStep>>2)+sx] : (uchar4)0; 
+            dst[(dst_offset>>2)+dy*(dstStep>>2)+dx]= (sx>=0 && sx<src_cols && sy>=0 && sy<src_rows) ? src[(src_offset>>2)+sy*(srcStep>>2)+sx] : (uchar4)0;
     }
 }
 
 __kernel void warpPerspectiveLinear_C4_D0(__global uchar4 const * restrict src, __global uchar4 * dst,
-						   	int src_cols, int src_rows, int dst_cols, int dst_rows, int srcStep,
-							int dstStep, int src_offset, int dst_offset,  __constant F * M, int threadCols )
+                            int src_cols, int src_rows, int dst_cols, int dst_rows, int srcStep,
+                            int dstStep, int src_offset, int dst_offset,  __constant F * M, int threadCols )
 {
     int dx = get_global_id(0);
     int dy = get_global_id(1);
-    
+
     if( dx < threadCols && dy < dst_rows)
     {
         src_offset = (src_offset>>2);
-        srcStep = (srcStep>>2); 
-     
+        srcStep = (srcStep>>2);
+
         F X0 = M[0]*dx + M[1]*dy + M[2];
         F Y0 = M[3]*dx + M[4]*dy + M[5];
         F W = M[6]*dx + M[7]*dy + M[8];
         W = (W != 0.0) ? INTER_TAB_SIZE/W : 0.0;
         int X = rint(X0*W);
         int Y = rint(Y0*W);
-        
+
         short sx = (short)(X >> INTER_BITS);
         short sy = (short)(Y >> INTER_BITS);
         short ay = (short)(Y & (INTER_TAB_SIZE-1));
         short ax = (short)(X & (INTER_TAB_SIZE-1));
-        
-        
+
+
         int4 v0, v1, v2, v3;
 
         v0 = (sx >= 0 && sx < src_cols && sy >= 0 && sy < src_rows) ? convert_int4(src[src_offset+sy * srcStep + sx]) : 0;
@@ -308,46 +308,46 @@ __kernel void warpPerspectiveLinear_C4_D0(__global uchar4 const * restrict src, 
         float taby, tabx;
         taby = 1.f/INTER_TAB_SIZE*ay;
         tabx = 1.f/INTER_TAB_SIZE*ax;
-        
+
         itab0 = convert_short_sat(rint( (1.0f-taby)*(1.0f-tabx) * INTER_REMAP_COEF_SCALE ));
         itab1 = convert_short_sat(rint( (1.0f-taby)*tabx * INTER_REMAP_COEF_SCALE ));
         itab2 = convert_short_sat(rint( taby*(1.0f-tabx) * INTER_REMAP_COEF_SCALE ));
         itab3 = convert_short_sat(rint( taby*tabx * INTER_REMAP_COEF_SCALE ));
-        
+
         int4 val;
         val = v0 * itab0 +  v1 * itab1 + v2 * itab2 + v3 * itab3;
-            
+
         if(dx >= 0 && dx < dst_cols && dy >= 0 && dy < dst_rows)
             dst[(dst_offset>>2)+dy*(dstStep>>2)+dx] =  convert_uchar4_sat ( (val + (1 << (INTER_REMAP_COEF_BITS-1))) >> INTER_REMAP_COEF_BITS ) ;
     }
 }
 
-__kernel void warpPerspectiveCubic_C4_D0(__global uchar4 const * restrict src, __global uchar4 * dst, 
-							int src_cols, int src_rows, int dst_cols, int dst_rows, int srcStep,
-							int dstStep, int src_offset, int dst_offset,  __constant F * M, int threadCols )
+__kernel void warpPerspectiveCubic_C4_D0(__global uchar4 const * restrict src, __global uchar4 * dst,
+                            int src_cols, int src_rows, int dst_cols, int dst_rows, int srcStep,
+                            int dstStep, int src_offset, int dst_offset,  __constant F * M, int threadCols )
 {
     int dx = get_global_id(0);
     int dy = get_global_id(1);
-    
+
     if( dx < threadCols && dy < dst_rows)
     {
         src_offset = (src_offset>>2);
-        srcStep = (srcStep>>2); 
+        srcStep = (srcStep>>2);
         dst_offset = (dst_offset>>2);
-        dstStep = (dstStep>>2); 
-        
+        dstStep = (dstStep>>2);
+
         F X0 = M[0]*dx + M[1]*dy + M[2];
         F Y0 = M[3]*dx + M[4]*dy + M[5];
         F W = M[6]*dx + M[7]*dy + M[8];
         W = (W != 0.0) ? INTER_TAB_SIZE/W : 0.0;
         int X = rint(X0*W);
         int Y = rint(Y0*W);
-        
+
         short sx = (short)(X >> INTER_BITS) - 1;
         short sy = (short)(Y >> INTER_BITS) - 1;
         short ay = (short)(Y & (INTER_TAB_SIZE-1));
         short ax = (short)(X & (INTER_TAB_SIZE-1));
-        
+
         uchar4 v[16];
         int i,j;
 #pragma unroll 4
@@ -365,7 +365,7 @@ __kernel void warpPerspectiveCubic_C4_D0(__global uchar4 const * restrict src, _
         interpolateCubic(ayy, tab1y);
         interpolateCubic(axx, tab1x);
         int isum = 0;
-        
+
 #pragma unroll 16
         for( i=0; i<16; i++ )
         {
@@ -380,17 +380,17 @@ __kernel void warpPerspectiveCubic_C4_D0(__global uchar4 const * restrict src, _
             int k1, k2;
             int diff = isum - INTER_REMAP_COEF_SCALE;
             int Mk1=2, Mk2=2, mk1=2, mk2=2;
-            
+
                for( k1 = 2; k1 < 4; k1++ )
                 for( k2 = 2; k2 < 4; k2++ )
                 {
-                    
+
                     if( itab[(k1<<2)+k2] < itab[(mk1<<2)+mk2] )
                         mk1 = k1, mk2 = k2;
                     else if( itab[(k1<<2)+k2] > itab[(Mk1<<2)+Mk2] )
                          Mk1 = k1, Mk2 = k2;
                 }
-                
+
             diff<0 ? (itab[(Mk1<<2)+Mk2]=(short)(itab[(Mk1<<2)+Mk2]-diff)) : (itab[(mk1<<2)+mk2]=(short)(itab[(mk1<<2)+mk2]-diff));
         }
 
@@ -411,12 +411,12 @@ __kernel void warpPerspectiveCubic_C4_D0(__global uchar4 const * restrict src, _
 ***********************************************************************************************/
 
 __kernel void warpPerspectiveNN_C1_D5(__global float * src, __global float * dst, int src_cols, int src_rows,
-                            int dst_cols, int dst_rows, int srcStep, int dstStep, 
+                            int dst_cols, int dst_rows, int srcStep, int dstStep,
                             int src_offset, int dst_offset,  __constant F * M, int threadCols )
 {
     int dx = get_global_id(0);
     int dy = get_global_id(1);
-     
+
     if( dx < threadCols && dy < dst_rows)
     {
         F X0 = M[0]*dx + M[1]*dy + M[2];
@@ -429,33 +429,33 @@ __kernel void warpPerspectiveNN_C1_D5(__global float * src, __global float * dst
         short sy = (short)Y;
 
         if(dx >= 0 && dx < dst_cols && dy >= 0 && dy < dst_rows)
-            dst[(dst_offset>>2)+dy*dstStep+dx]= (sx>=0 && sx<src_cols && sy>=0 && sy<src_rows) ? src[(src_offset>>2)+sy*srcStep+sx] : 0; 
+            dst[(dst_offset>>2)+dy*dstStep+dx]= (sx>=0 && sx<src_cols && sy>=0 && sy<src_rows) ? src[(src_offset>>2)+sy*srcStep+sx] : 0;
     }
 }
 
 __kernel void warpPerspectiveLinear_C1_D5(__global float * src, __global float * dst, int src_cols, int src_rows,
-                            int dst_cols, int dst_rows, int srcStep, int dstStep, 
+                            int dst_cols, int dst_rows, int srcStep, int dstStep,
                             int src_offset, int dst_offset,  __constant F * M, int threadCols )
 {
     int dx = get_global_id(0);
     int dy = get_global_id(1);
-    
+
     if( dx < threadCols && dy < dst_rows)
     {
         src_offset = (src_offset>>2);
-         
+
         F X0 = M[0]*dx + M[1]*dy + M[2];
         F Y0 = M[3]*dx + M[4]*dy + M[5];
         F W = M[6]*dx + M[7]*dy + M[8];
         W = (W != 0.0) ? INTER_TAB_SIZE/W : 0.0;
         int X = rint(X0*W);
         int Y = rint(Y0*W);
-        
+
         short sx = (short)(X >> INTER_BITS);
         short sy = (short)(Y >> INTER_BITS);
         short ay = (short)(Y & (INTER_TAB_SIZE-1));
         short ax = (short)(X & (INTER_TAB_SIZE-1));
-        
+
         float v0, v1, v2, v3;
 
         v0 = (sx >= 0 && sx < src_cols && sy >= 0 && sy < src_rows) ? src[src_offset+sy * srcStep + sx] : 0;
@@ -469,38 +469,38 @@ __kernel void warpPerspectiveLinear_C1_D5(__global float * src, __global float *
         taby[1] = 1.f/INTER_TAB_SIZE*ay;
         tabx[0] = 1.0 - 1.f/INTER_TAB_SIZE*ax;
         tabx[1] = 1.f/INTER_TAB_SIZE*ax;
-       
+
         tab[0] = taby[0] * tabx[0];
         tab[1] = taby[0] * tabx[1];
         tab[2] = taby[1] * tabx[0];
         tab[3] = taby[1] * tabx[1];
 
         float sum = 0;
-        sum += v0 * tab[0] +  v1 * tab[1] +  v2 * tab[2] +  v3 * tab[3]; 
+        sum += v0 * tab[0] +  v1 * tab[1] +  v2 * tab[2] +  v3 * tab[3];
         if(dx >= 0 && dx < dst_cols && dy >= 0 && dy < dst_rows)
             dst[(dst_offset>>2)+dy*dstStep+dx] = sum;
     }
 }
-    
+
 __kernel void warpPerspectiveCubic_C1_D5(__global float * src, __global float * dst, int src_cols, int src_rows,
-                            int dst_cols, int dst_rows, int srcStep, int dstStep, 
+                            int dst_cols, int dst_rows, int srcStep, int dstStep,
                             int src_offset, int dst_offset,  __constant F * M, int threadCols )
 {
     int dx = get_global_id(0);
     int dy = get_global_id(1);
-    
+
     if( dx < threadCols && dy < dst_rows)
     {
         src_offset = (src_offset>>2);
         dst_offset = (dst_offset>>2);
-         
+
         F X0 = M[0]*dx + M[1]*dy + M[2];
         F Y0 = M[3]*dx + M[4]*dy + M[5];
         F W = M[6]*dx + M[7]*dy + M[8];
         W = (W != 0.0) ? INTER_TAB_SIZE/W : 0.0;
         int X = rint(X0*W);
         int Y = rint(Y0*W);
-        
+
         short sx = (short)(X >> INTER_BITS) - 1;
         short sy = (short)(Y >> INTER_BITS) - 1;
         short ay = (short)(Y & (INTER_TAB_SIZE-1));
@@ -526,7 +526,7 @@ __kernel void warpPerspectiveCubic_C1_D5(__global float * src, __global float * 
         {
             tab[i] = tab1y[(i>>2)] * tab1x[(i&3)];
         }
-        
+
         if( dx >= 0 && dx < dst_cols && dy >= 0 && dy < dst_rows)
         {
             float sum = 0;
@@ -546,12 +546,12 @@ __kernel void warpPerspectiveCubic_C1_D5(__global float * src, __global float * 
 ***********************************************************************************************/
 
 __kernel void warpPerspectiveNN_C4_D5(__global float4 * src, __global float4 * dst, int src_cols, int src_rows,
-                            int dst_cols, int dst_rows, int srcStep, int dstStep, 
+                            int dst_cols, int dst_rows, int srcStep, int dstStep,
                             int src_offset, int dst_offset,  __constant F * M, int threadCols )
 {
     int dx = get_global_id(0);
     int dy = get_global_id(1);
-        
+
     if( dx < threadCols && dy < dst_rows)
     {
         F X0 = M[0]*dx + M[1]*dy + M[2];
@@ -562,39 +562,39 @@ __kernel void warpPerspectiveNN_C4_D5(__global float4 * src, __global float4 * d
         int Y = rint(Y0*W);
         short sx = (short)X;
         short sy = (short)Y;
-        
+
         if(dx >= 0 && dx < dst_cols && dy >= 0 && dy < dst_rows)
-            dst[(dst_offset>>4)+dy*(dstStep>>2)+dx]= (sx>=0 && sx<src_cols && sy>=0 && sy<src_rows) ? src[(src_offset>>4)+sy*(srcStep>>2)+sx] : 0; 
+            dst[(dst_offset>>4)+dy*(dstStep>>2)+dx]= (sx>=0 && sx<src_cols && sy>=0 && sy<src_rows) ? src[(src_offset>>4)+sy*(srcStep>>2)+sx] : 0;
     }
 }
 
 __kernel void warpPerspectiveLinear_C4_D5(__global float4 * src, __global float4 * dst, int src_cols, int src_rows,
-                            int dst_cols, int dst_rows, int srcStep, int dstStep, 
+                            int dst_cols, int dst_rows, int srcStep, int dstStep,
                             int src_offset, int dst_offset,  __constant F * M, int threadCols )
 {
     int dx = get_global_id(0);
     int dy = get_global_id(1);
-   
+
     if( dx < threadCols && dy < dst_rows)
     {
         src_offset = (src_offset>>4);
         dst_offset = (dst_offset>>4);
         srcStep = (srcStep>>2);
         dstStep = (dstStep>>2);
-            
+
         F X0 = M[0]*dx + M[1]*dy + M[2];
         F Y0 = M[3]*dx + M[4]*dy + M[5];
         F W = M[6]*dx + M[7]*dy + M[8];
         W = (W != 0.0) ? INTER_TAB_SIZE/W : 0.0;
         int X = rint(X0*W);
         int Y = rint(Y0*W);
-        
+
         short sx0 = (short)(X >> INTER_BITS);
         short sy0 = (short)(Y >> INTER_BITS);
         short ay0 = (short)(Y & (INTER_TAB_SIZE-1));
         short ax0 = (short)(X & (INTER_TAB_SIZE-1));
-     
-        
+
+
         float4 v0, v1, v2, v3;
 
         v0 = (sx0 >= 0 && sx0 < src_cols && sy0 >= 0 && sy0 < src_rows) ? src[src_offset+sy0 * srcStep + sx0] : 0;
@@ -608,46 +608,46 @@ __kernel void warpPerspectiveLinear_C4_D5(__global float4 * src, __global float4
         taby[1] = 1.f/INTER_TAB_SIZE*ay0;
         tabx[0] = 1.0 - 1.f/INTER_TAB_SIZE*ax0;
         tabx[1] = 1.f/INTER_TAB_SIZE*ax0;
-       
+
         tab[0] = taby[0] * tabx[0];
         tab[1] = taby[0] * tabx[1];
         tab[2] = taby[1] * tabx[0];
         tab[3] = taby[1] * tabx[1];
 
         float4 sum = 0;
-        sum += v0 * tab[0] +  v1 * tab[1] +  v2 * tab[2] +  v3 * tab[3]; 
+        sum += v0 * tab[0] +  v1 * tab[1] +  v2 * tab[2] +  v3 * tab[3];
         if(dx >= 0 && dx < dst_cols && dy >= 0 && dy < dst_rows)
             dst[dst_offset+dy*dstStep+dx] = sum;
     }
 }
-    
-__kernel void warpPerspectiveCubic_C4_D5(__global float4 * src, __global float4 * dst, 
+
+__kernel void warpPerspectiveCubic_C4_D5(__global float4 * src, __global float4 * dst,
                             int src_cols, int src_rows, int dst_cols, int dst_rows, int srcStep,
-							int dstStep, int src_offset, int dst_offset,  __constant F * M, int threadCols )
+                            int dstStep, int src_offset, int dst_offset,  __constant F * M, int threadCols )
 {
     int dx = get_global_id(0);
     int dy = get_global_id(1);
-    
+
     if( dx < threadCols && dy < dst_rows )
     {
         src_offset = (src_offset>>4);
         dst_offset = (dst_offset>>4);
         srcStep = (srcStep>>2);
         dstStep = (dstStep>>2);
-            
+
         F X0 = M[0]*dx + M[1]*dy + M[2];
         F Y0 = M[3]*dx + M[4]*dy + M[5];
         F W = M[6]*dx + M[7]*dy + M[8];
         W = (W != 0.0) ? INTER_TAB_SIZE/W : 0.0;
         int X = rint(X0*W);
         int Y = rint(Y0*W);
-        
+
         short sx = (short)(X >> INTER_BITS)-1;
         short sy = (short)(Y >> INTER_BITS)-1;
         short ay = (short)(Y & (INTER_TAB_SIZE-1));
         short ax = (short)(X & (INTER_TAB_SIZE-1));
-     
-        
+
+
         float4 v[16];
         int i;
 
@@ -668,7 +668,7 @@ __kernel void warpPerspectiveCubic_C4_D5(__global float4 * src, __global float4 
         {
             tab[i] = tab1y[(i>>2)] * tab1x[(i&3)];
         }
-        
+
         if( dx >= 0 && dx < dst_cols && dy >= 0 && dy < dst_rows)
         {
             float4 sum = 0;

@@ -555,7 +555,7 @@ icvCalcOpticalFlowLK_8u32fR( uchar * imgA,
 /*F///////////////////////////////////////////////////////////////////////////////////////
 //    Name:    cvCalcOpticalFlowLK
 //    Purpose: Optical flow implementation
-//    Context: 
+//    Context:
 //    Parameters:
 //             srcA, srcB - source image
 //             velx, vely - destination image

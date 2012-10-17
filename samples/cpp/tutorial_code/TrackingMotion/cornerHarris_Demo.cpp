@@ -37,7 +37,7 @@ int main( int argc, char** argv )
   namedWindow( source_window, CV_WINDOW_AUTOSIZE );
   createTrackbar( "Threshold: ", source_window, &thresh, max_thresh, cornerHarris_demo );
   imshow( source_window, src );
-  
+
   cornerHarris_demo( 0, 0 );
 
   waitKey(0);
@@ -58,25 +58,25 @@ void cornerHarris_demo( int, void* )
   int blockSize = 2;
   int apertureSize = 3;
   double k = 0.04;
- 
+
   /// Detecting corners
   cornerHarris( src_gray, dst, blockSize, apertureSize, k, BORDER_DEFAULT );
 
   /// Normalizing
   normalize( dst, dst_norm, 0, 255, NORM_MINMAX, CV_32FC1, Mat() );
-  convertScaleAbs( dst_norm, dst_norm_scaled ); 
+  convertScaleAbs( dst_norm, dst_norm_scaled );
 
   /// Drawing a circle around corners
   for( int j = 0; j < dst_norm.rows ; j++ )
      { for( int i = 0; i < dst_norm.cols; i++ )
           {
             if( (int) dst_norm.at<float>(j,i) > thresh )
-              { 
-               circle( dst_norm_scaled, Point( i, j ), 5,  Scalar(0), 2, 8, 0 ); 
+              {
+               circle( dst_norm_scaled, Point( i, j ), 5,  Scalar(0), 2, 8, 0 );
               }
-          } 
-     }    
-  /// Showing the result 
+          }
+     }
+  /// Showing the result
   namedWindow( corners_window, CV_WINDOW_AUTOSIZE );
   imshow( corners_window, dst_norm_scaled );
 }

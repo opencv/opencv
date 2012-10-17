@@ -123,13 +123,13 @@
     static inline void throw_nogpu() { CV_Error(CV_StsNotImplemented, "The called functionality is disabled for current build or platform"); }
 
 #else /* defined(HAVE_CUDA) */
-    
+
     static inline void throw_nogpu() { CV_Error(CV_GpuNotSupported, "The library is compiled without GPU support"); }
 
 #endif /* defined(HAVE_CUDA) */
 
 
-namespace cv { namespace gpu 
+namespace cv { namespace gpu
 {
     // Converts CPU border extrapolation mode into GPU internal analogue.
     // Returns true if the GPU analogue exists, false otherwise.

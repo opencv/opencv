@@ -159,12 +159,12 @@ void CV_ColorCvtBaseTest::run_func()
 {
     CvArr* out0 = test_array[OUTPUT][0];
     cv::Mat _out0 = cv::cvarrToMat(out0), _out1 = cv::cvarrToMat(test_array[OUTPUT][1]);
-    
+
     if(!test_cpp)
         cvCvtColor( inplace ? out0 : test_array[INPUT][0], out0, fwd_code );
     else
         cv::cvtColor( cv::cvarrToMat(inplace ? out0 : test_array[INPUT][0]), _out0, fwd_code, _out0.channels());
-    
+
     if( inplace )
     {
         cvCopy( out0, test_array[OUTPUT][1] );
@@ -189,7 +189,7 @@ void CV_ColorCvtBaseTest::prepare_to_validation( int /*test_case_idx*/ )
         {
             uchar* h0 = test_mat[REF_OUTPUT][0].ptr(y);
             uchar* h = test_mat[OUTPUT][0].ptr(y);
-            
+
             for( int x = 0; x < test_mat[REF_OUTPUT][0].cols; x++, h0 += 3, h += 3 )
             {
                 if( abs(*h - *h0) >= hue_range-1 && (*h <= 1 || *h0 <= 1) )
@@ -1018,16 +1018,16 @@ void CV_ColorLabTest::convert_row_bgr2abc_32f_c3(const float* src_row, float* ds
     float Lscale = depth == CV_8U ? 255.f/100.f : depth == CV_16U ? 65535.f/100.f : 1.f;
     float ab_bias = depth == CV_8U ? 128.f : depth == CV_16U ? 32768.f : 0.f;
     float M[9];
-    
+
     for (int j = 0; j < 9; j++ )
         M[j] = (float)RGB2XYZ[j];
-    
+
     for (int x = 0; x < n*3; x += 3)
     {
         float R = src_row[x + 2];
         float G = src_row[x + 1];
         float B = src_row[x];
-        
+
         float X = (R * M[0] + G * M[1] + B * M[2]) / Xn;
         float Y = R * M[3] + G * M[4] + B * M[5];
         float Z = (R * M[6] + G * M[7] + B * M[8]) / Zn;
@@ -1035,7 +1035,7 @@ void CV_ColorLabTest::convert_row_bgr2abc_32f_c3(const float* src_row, float* ds
             (7.787f * X + 16.f / 116.f);
         float fZ = Z > 0.008856f ? pow(Z, _1_3f):
             (7.787f * Z + 16.f / 116.f);
-        
+
         float L = 0.0f, fY = 0.0f;
         if (Y > 0.008856f)
         {
@@ -1047,10 +1047,10 @@ void CV_ColorLabTest::convert_row_bgr2abc_32f_c3(const float* src_row, float* ds
             fY = 7.787f * Y + 16.f / 116.f;
             L = 903.3f * Y;
         }
-        
+
         float a = 500.f * (fX - fY);
         float b = 200.f * (fY - fZ);
-        
+
         dst_row[x] = L * Lscale;
         dst_row[x + 1] = a + ab_bias;
         dst_row[x + 2] = b + ab_bias;
@@ -1063,10 +1063,10 @@ void CV_ColorLabTest::convert_row_abc2bgr_32f_c3( const float* src_row, float* d
     float Lscale = depth == CV_8U ? 100.f/255.f : depth == CV_16U ? 100.f/65535.f : 1.f;
     float ab_bias = depth == CV_8U ? 128.f : depth == CV_16U ? 32768.f : 0.f;
     float M[9];
-    
+
     for(int j = 0; j < 9; j++ )
         M[j] = (float)XYZ2RGB[j];
-    
+
     static const float lthresh = 903.3f * 0.008856f;
     static const float thresh = 7.787f * 0.008856f + 16.0f / 116.0f;
     for (int x = 0, end = n * 3; x < end; x += 3)
@@ -1074,7 +1074,7 @@ void CV_ColorLabTest::convert_row_abc2bgr_32f_c3( const float* src_row, float* d
         float L = src_row[x] * Lscale;
         float a = src_row[x + 1] - ab_bias;
         float b = src_row[x + 2] - ab_bias;
-        
+
         float FY = 0.0f, Y = 0.0f;
         if (L <= lthresh)
         {
@@ -1086,10 +1086,10 @@ void CV_ColorLabTest::convert_row_abc2bgr_32f_c3( const float* src_row, float* d
             FY = (L + 16.0f) / 116.0f;
             Y = FY * FY * FY;
         }
-        
+
         float FX = a / 500.0f + FY;
         float FZ = FY - b / 200.0f;
-        
+
         float FXZ[] = { FX, FZ };
         for (int k = 0; k < 2; ++k)
         {
@@ -1100,11 +1100,11 @@ void CV_ColorLabTest::convert_row_abc2bgr_32f_c3( const float* src_row, float* d
         }
         float X = FXZ[0] * Xn;
         float Z = FXZ[1] * Zn;
-        
+
         float R = M[0] * X + M[1] * Y + M[2] * Z;
         float G = M[3] * X + M[4] * Y + M[5] * Z;
         float B = M[6] * X + M[7] * Y + M[8] * Z;
-        
+
         dst_row[x] = B;
         dst_row[x + 1] = G;
         dst_row[x + 2] = R;
@@ -1589,10 +1589,10 @@ static void bayer2BGR_(const Mat& src, Mat& dst, int code)
     int i, j, cols = src.cols - 2;
     int bi = 0;
     int step = (int)(src.step/sizeof(T));
-    
+
     if( code == CV_BayerRG2BGR || code == CV_BayerGR2BGR )
         bi ^= 2;
-    
+
     for( i = 1; i < src.rows - 1; i++ )
     {
         const T* ptr = src.ptr<T>(i) + 1;
@@ -1604,7 +1604,7 @@ static void bayer2BGR_(const Mat& src, Mat& dst, int code)
             dst_row[cols*3] = dst_row[cols*3+1] = dst_row[cols*3+2] = 0;
             continue;
         }
-        
+
         for( j = 0; j < cols; j++ )
         {
             int b, g, r;
@@ -1625,18 +1625,18 @@ static void bayer2BGR_(const Mat& src, Mat& dst, int code)
             dst_row[j*3 + 1] = (T)g;
             dst_row[j*3 + (bi^2)] = (T)r;
         }
-        
+
         dst_row[-3] = dst_row[0];
         dst_row[-2] = dst_row[1];
         dst_row[-1] = dst_row[2];
         dst_row[cols*3] = dst_row[cols*3-3];
         dst_row[cols*3+1] = dst_row[cols*3-2];
         dst_row[cols*3+2] = dst_row[cols*3-1];
-        
+
         code = save_code ^ 1;
         bi ^= 2;
     }
-    
+
     if( src.rows <= 2 )
     {
         memset( dst.ptr(), 0, (cols+2)*3*sizeof(T) );
@@ -1647,7 +1647,7 @@ static void bayer2BGR_(const Mat& src, Mat& dst, int code)
         T* top_row = dst.ptr<T>();
         T* bottom_row = dst.ptr<T>(dst.rows-1);
         int dstep = (int)(dst.step/sizeof(T));
-        
+
         for( j = 0; j < (cols+2)*3; j++ )
         {
             top_row[j] = top_row[j + dstep];
@@ -1708,14 +1708,14 @@ TEST(Imgproc_ColorBayerVNG, regression)
     cvtest::TS& ts = *cvtest::TS::ptr();
 
     Mat given = imread(string(ts.get_data_path()) + "/cvtcolor/bayer_input.png", CV_LOAD_IMAGE_GRAYSCALE);
-    string goldfname = string(ts.get_data_path()) + "/cvtcolor/bayerVNG_gold.png"; 
+    string goldfname = string(ts.get_data_path()) + "/cvtcolor/bayerVNG_gold.png";
     Mat gold = imread(goldfname, CV_LOAD_IMAGE_UNCHANGED);
     Mat result;
 
     CV_Assert(given.data != NULL);
-    
+
     cvtColor(given, result, CV_BayerBG2BGR_VNG, 3);
-    
+
     if (gold.empty())
         imwrite(goldfname, result);
     else
@@ -1750,7 +1750,7 @@ TEST(Imgproc_ColorBayerVNG_Strict, regression)
         ts.set_gtest_status();
         return;
     }
-    
+
     int type = -1;
     for (int i = 0; i < 4; ++i)
     {
@@ -1816,7 +1816,7 @@ TEST(Imgproc_ColorBayerVNG_Strict, regression)
 
         // calculating a dst image
         cvtColor(bayer, dst, type);
-        
+
         // reading a reference image
         full_path = parent_path + pattern[i] + image_name;
         reference = imread(full_path, CV_LOAD_IMAGE_UNCHANGED);
@@ -1825,7 +1825,7 @@ TEST(Imgproc_ColorBayerVNG_Strict, regression)
             imwrite(full_path, dst);
             continue;
         }
-        
+
         if (reference.depth() != dst.depth() || reference.channels() != dst.channels() ||
             reference.size() != dst.size())
         {
@@ -1839,13 +1839,13 @@ TEST(Imgproc_ColorBayerVNG_Strict, regression)
             ts.printf(cvtest::TS::SUMMARY, "\nReference cols: %d\n"
                 "Actual cols: %d\n", reference.cols, dst.cols);
             ts.set_gtest_status();
-            
+
             return;
         }
-        
+
         Mat diff;
         absdiff(reference, dst, diff);
-        
+
         int nonZero = countNonZero(diff.reshape(1) > 1);
         if (nonZero != 0)
         {
@@ -1872,7 +1872,7 @@ void GetTestMatrix(Mat& src)
             float b = (1 + cos((szm - i) * (szm - j) * pi2 / (10 * float(szm)))) / 2;
             float g = (1 + cos((szm - i) * j * pi2 / (10 * float(szm)))) / 2;
             float r = (1 + sin(i * j * pi2 / (10 * float(szm)))) / 2;
-            
+
             // The following lines aren't necessary, but just to prove that
             // the BGR values all lie in [0,1]...
             if (b < 0) b = 0; else if (b > 1) b = 1;
@@ -1887,11 +1887,11 @@ void validate_result(const Mat& reference, const Mat& actual, const Mat& src = M
 {
     cvtest::TS* ts = cvtest::TS::ptr();
     Size ssize = reference.size();
-    
+
     int cn = reference.channels();
     ssize.width *= cn;
     bool next = true;
-    
+
     for (int y = 0; y < ssize.height && next; ++y)
     {
         const float* rD = reference.ptr<float>(y);
@@ -1906,7 +1906,7 @@ void validate_result(const Mat& reference, const Mat& actual, const Mat& src = M
                 if (!src.empty())
                     ts->printf(cvtest::TS::SUMMARY, "Src value: %f\n", src.ptr<float>(y)[x]);
                 ts->printf(cvtest::TS::SUMMARY, "Size: (%d, %d)\n", reference.rows, reference.cols);
-                
+
                 if (mode >= 0)
                 {
                     cv::Mat lab;
@@ -1914,7 +1914,7 @@ void validate_result(const Mat& reference, const Mat& actual, const Mat& src = M
                     std::cout << "lab: " << lab(cv::Rect(y, x / cn, 1, 1)) << std::endl;
                 }
                 std::cout << "src: " << src(cv::Rect(y, x / cn, 1, 1)) << std::endl;
-                
+
                 ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
                 ts->set_gtest_status();
             }
@@ -1928,11 +1928,11 @@ TEST(Imgproc_ColorLab_Full, accuracy)
     Mat reference(src.size(), CV_32FC3);
     Size ssize = src.size();
     CV_Assert(ssize.width == ssize.height);
-    
+
     RNG& rng = cvtest::TS::ptr()->get_rng();
     int blueInd = rng.uniform(0., 1.) > 0.5 ? 0 : 2;
     bool srgb = rng.uniform(0., 1.) > 0.5;
-    
+
     // Convert test image to LAB
     cv::Mat lab;
     int forward_code = blueInd ? srgb ? CV_BGR2Lab : CV_LBGR2Lab : srgb ? CV_RGB2Lab : CV_LRGB2Lab;
@@ -1941,12 +1941,12 @@ TEST(Imgproc_ColorLab_Full, accuracy)
     // Convert LAB image back to BGR(RGB)
     cv::Mat recons;
     cv::cvtColor(lab, recons, inverse_code);
-    
+
     validate_result(src, recons, src, forward_code);
-    
+
 //    src *= 255.0f;
 //    recons *= 255.0f;
-    
+
 //    imshow("Test", src);
 //    imshow("OpenCV", recons);
 //    waitKey();

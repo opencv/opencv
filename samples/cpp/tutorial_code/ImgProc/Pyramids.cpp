@@ -36,7 +36,7 @@ int main( int argc, char** argv )
     { printf(" No data! -- Exiting the program \n");
       return -1; }
 
-  tmp = src;  
+  tmp = src;
   dst = tmp;
 
   /// Create window
@@ -45,7 +45,7 @@ int main( int argc, char** argv )
 
   /// Loop
   while( true )
-  { 
+  {
     int c;
     c = waitKey(10);
 
@@ -53,7 +53,7 @@ int main( int argc, char** argv )
       { break; }
     if( (char)c == 'u' )
       { pyrUp( tmp, dst, Size( tmp.cols*2, tmp.rows*2 ) );
-        printf( "** Zoom In: Image x 2 \n" ); 
+        printf( "** Zoom In: Image x 2 \n" );
       }
     else if( (char)c == 'd' )
       { pyrDown( tmp, dst, Size( tmp.cols/2, tmp.rows/2 ) );
@@ -62,8 +62,8 @@ int main( int argc, char** argv )
 
     imshow( window_name, dst );
     tmp = dst;
-   }  
-    
+   }
+
    return 0;
 }
 

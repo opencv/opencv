@@ -26,14 +26,14 @@ int main( int argc, char **argv ){
   char atom_window[] = "Drawing 1: Atom";
   char rook_window[] = "Drawing 2: Rook";
 
-  /// Create black empty images 
+  /// Create black empty images
   Mat atom_image = Mat::zeros( w, w, CV_8UC3 );
   Mat rook_image = Mat::zeros( w, w, CV_8UC3 );
 
   /// 1. Draw a simple atom:
   /// -----------------------
 
-  /// 1.a. Creating ellipses 
+  /// 1.a. Creating ellipses
   MyEllipse( atom_image, 90 );
   MyEllipse( atom_image, 0 );
   MyEllipse( atom_image, 45 );
@@ -50,13 +50,13 @@ int main( int argc, char **argv ){
 
   /// 2.b. Creating rectangles
   rectangle( rook_image,
-	     Point( 0, 7*w/8.0 ),
-	     Point( w, w),
-	     Scalar( 0, 255, 255 ),
-	     -1,
-	     8 );
+         Point( 0, 7*w/8.0 ),
+         Point( w, w),
+         Scalar( 0, 255, 255 ),
+         -1,
+         8 );
 
-  /// 2.c. Create a few lines 
+  /// 2.c. Create a few lines
   MyLine( rook_image, Point( 0, 15*w/16 ), Point( w, 15*w/16 ) );
   MyLine( rook_image, Point( w/4, 7*w/8 ), Point( w/4, w ) );
   MyLine( rook_image, Point( w/2, 7*w/8 ), Point( w/2, w ) );
@@ -84,14 +84,14 @@ void MyEllipse( Mat img, double angle )
   int lineType = 8;
 
   ellipse( img,
-	   Point( w/2.0, w/2.0 ),
-	   Size( w/4.0, w/16.0 ),
-	   angle,
-	   0, 
-	   360,
-	   Scalar( 255, 0, 0 ),
-	   thickness,
-	   lineType );  
+       Point( w/2.0, w/2.0 ),
+       Size( w/4.0, w/16.0 ),
+       angle,
+       0,
+       360,
+       Scalar( 255, 0, 0 ),
+       thickness,
+       lineType );
 }
 
 /**
@@ -103,12 +103,12 @@ void MyFilledCircle( Mat img, Point center )
   int thickness = -1;
   int lineType = 8;
 
-  circle( img, 
-	  center,
-	  w/32.0,
-	  Scalar( 0, 0, 255 ),
-	  thickness, 
-	  lineType );
+  circle( img,
+      center,
+      w/32.0,
+      Scalar( 0, 0, 255 ),
+      thickness,
+      lineType );
 }
 
 /**
@@ -146,11 +146,11 @@ void MyPolygon( Mat img )
   int npt[] = { 20 };
 
   fillPoly( img,
-	    ppt,
-	    npt,
+        ppt,
+        npt,
             1,
-	    Scalar( 255, 255, 255 ),
-	    lineType );			
+        Scalar( 255, 255, 255 ),
+        lineType );
 }
 
 /**
@@ -161,12 +161,12 @@ void MyLine( Mat img, Point start, Point end )
 {
   int thickness = 2;
   int lineType = 8;
-  line( img, 
-	start,
-	end,
-	Scalar( 0, 0, 0 ),
-	thickness,
-	lineType );
+  line( img,
+    start,
+    end,
+    Scalar( 0, 0, 0 ),
+    thickness,
+    lineType );
 }
 
 

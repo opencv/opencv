@@ -32,8 +32,8 @@ struct GreedyLabeling
             return lo <= d && d <= hi;
         }
 
-	private:
-		InInterval& operator=(const InInterval&);
+    private:
+        InInterval& operator=(const InInterval&);
 
 
     };

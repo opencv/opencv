@@ -30,7 +30,7 @@ int main()
     //--------------------- 1. Set up training data randomly ---------------------------------------
     Mat trainData(2*NTRAINING_SAMPLES, 2, CV_32FC1);
     Mat labels   (2*NTRAINING_SAMPLES, 1, CV_32FC1);
-    
+
     RNG rng(100); // Random value generation class
 
     // Set up the linearly separable part of the training data
@@ -48,7 +48,7 @@ int main()
     // Generate random points for the class 2
     trainClass = trainData.rowRange(2*NTRAINING_SAMPLES-nLinearSamples, 2*NTRAINING_SAMPLES);
     // The x coordinate of the points is in [0.6, 1]
-    c = trainClass.colRange(0 , 1); 
+    c = trainClass.colRange(0 , 1);
     rng.fill(c, RNG::UNIFORM, Scalar(0.6*WIDTH), Scalar(WIDTH));
     // The y coordinate of the points is in [0, 1)
     c = trainClass.colRange(1,2);
@@ -60,11 +60,11 @@ int main()
     trainClass = trainData.rowRange(  nLinearSamples, 2*NTRAINING_SAMPLES-nLinearSamples);
     // The x coordinate of the points is in [0.4, 0.6)
     c = trainClass.colRange(0,1);
-    rng.fill(c, RNG::UNIFORM, Scalar(0.4*WIDTH), Scalar(0.6*WIDTH)); 
+    rng.fill(c, RNG::UNIFORM, Scalar(0.4*WIDTH), Scalar(0.6*WIDTH));
     // The y coordinate of the points is in [0, 1)
     c = trainClass.colRange(1,2);
     rng.fill(c, RNG::UNIFORM, Scalar(1), Scalar(HEIGHT));
-    
+
     //------------------------- Set up the labels for the classes ---------------------------------
     labels.rowRange(                0,   NTRAINING_SAMPLES).setTo(1);  // Class 1
     labels.rowRange(NTRAINING_SAMPLES, 2*NTRAINING_SAMPLES).setTo(2);  // Class 2
@@ -81,9 +81,9 @@ int main()
     CvSVM svm;
     svm.train(trainData, labels, Mat(), Mat(), params);
     cout << "Finished training process" << endl;
-    
+
     //------------------------ 4. Show the decision regions ----------------------------------------
-	Vec3b green(0,100,0), blue (100,0,0);
+    Vec3b green(0,100,0), blue (100,0,0);
     for (int i = 0; i < I.rows; ++i)
         for (int j = 0; j < I.cols; ++j)
         {

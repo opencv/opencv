@@ -1,0 +1,55 @@
+.git*       export-ignore
+
+*           text=auto
+*           whitespace=!indent,trail,space
+
+*.py        text whitespace=tab-in-indent,trail,space,fix
+*.cpp       text whitespace=tab-in-indent,trail,space,fix
+*.hpp       text whitespace=tab-in-indent,trail,space,fix
+*.cxx       text whitespace=tab-in-indent,trail,space,fix
+*.hxx       text whitespace=tab-in-indent,trail,space,fix
+*.mm        text whitespace=tab-in-indent,trail,space,fix
+*.c         text whitespace=tab-in-indent,trail,space,fix
+*.h         text whitespace=tab-in-indent,trail,space,fix
+*.i         text whitespace=tab-in-indent,trail,space,fix
+*.java      text whitespace=tab-in-indent,trail,space,fix
+*.cu        text whitespace=tab-in-indent,trail,space,fix
+*.cl        text whitespace=tab-in-indent,trail,space,fix
+
+*.cmake     text whitespace=tab-in-indent,trail,space,fix
+*.cmakein   text whitespace=tab-in-indent,trail,space,fix
+*.in        text whitespace=tab-in-indent,trail,space,fix
+CMakeLists.txt  text whitespace=tab-in-indent,trail,space,fix
+
+*.rst       text whitespace=tab-in-indent,trail,space,fix
+
+*.png       binary
+*.jepg      binary
+*.jpg       binary
+*.exr       binary
+*.ico       binary
+
+*.a         binary
+*.so        binary
+*.dll       binary
+
+*.pdf       binary
+*.pbxproj   binary
+*.vec       binary
+*.doc       binary
+
+*.css_t     text
+*.qrc       text
+*.qss       text
+*.S         text
+
+*.xml       -text
+*.yml       -text
+
+*.vcproj    text eol=crlf merge=union
+*.cproject  text eol=crlf merge=union
+*.bat       text eol=crlf
+*.cmd       text eol=crlf
+*.cmd.tmpl  text eol=crlf
+
+*.sh        text eol=lf

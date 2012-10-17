@@ -37,7 +37,7 @@ def hs_histogram(src):
             cv.Rectangle(hist_img,
                          (h*scale, s*scale),
                          ((h+1)*scale - 1, (s+1)*scale - 1),
-                         cv.RGB(intensity, intensity, intensity), 
+                         cv.RGB(intensity, intensity, intensity),
                          cv.CV_FILLED)
     return hist_img
 

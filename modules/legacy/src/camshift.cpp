@@ -43,7 +43,7 @@
 CvCamShiftTracker::CvCamShiftTracker()
 {
     int i;
-    
+
     memset( &m_box, 0, sizeof(m_box));
     memset( &m_comp, 0, sizeof(m_comp));
     memset( m_color_planes, 0, sizeof(m_color_planes));
@@ -68,7 +68,7 @@ CvCamShiftTracker::CvCamShiftTracker()
 CvCamShiftTracker::~CvCamShiftTracker()
 {
     int i;
-    
+
     cvReleaseHist( &m_hist );
     for( i = 0; i < CV_MAX_DIM; i++ )
         cvReleaseImage( &m_color_planes[i] );
@@ -89,7 +89,7 @@ CvCamShiftTracker::color_transform( const IplImage* image )
     int i, n = get_hist_dims(dims);
 
     assert( image->nChannels == 3 && m_hist != 0 );
-    
+
     if( !m_temp || !m_mask || !m_color_planes[0] || !m_color_planes[n-1] || !m_back_project ||
         m_temp->width != size.width || m_temp->height != size.height ||
         m_temp->nChannels != 3 )
@@ -111,7 +111,7 @@ CvCamShiftTracker::color_transform( const IplImage* image )
     cvCvtColor( image, m_temp, CV_BGR2HSV );
     cvGetRawData( m_temp, &color_data, &color_step, &size );
     cvGetRawData( m_mask, &mask, &mask_step, &size );
-    
+
     for( i = 0; i < n; i++ )
         cvGetRawData( m_color_planes[i], &planes[i], &plane_step, &size );
 
@@ -203,19 +203,19 @@ CvCamShiftTracker::track_object( const IplImage* cur_frame )
 {
     CvRect rect;
     CvSize bp_size;
-    
+
     union
     {
         void** arr;
         IplImage** img;
     } u;
-    
+
     if( m_comp.rect.width == 0 || m_comp.rect.height == 0 ||
         m_hist == 0 )
     {
         return false;
     }
-    
+
     color_transform( cur_frame );
     u.img = m_color_planes;
     cvCalcArrBackProject( u.arr, m_back_project, m_hist );

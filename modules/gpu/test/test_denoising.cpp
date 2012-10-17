@@ -72,7 +72,7 @@ PARAM_TEST_CASE(BilateralFilter, cv::gpu::DeviceInfo, cv::Size, MatType)
 TEST_P(BilateralFilter, Accuracy)
 {
     cv::Mat src = randomMat(size, type);
-    
+
     src.convertTo(src, type);
     cv::gpu::GpuMat dst;
 
@@ -111,7 +111,7 @@ TEST_P(BruteForceNonLocalMeans, Regression)
 
     cv::Mat bgr  = readImage("denoising/lena_noised_gaussian_sigma=20_multi_0.png", cv::IMREAD_COLOR);
     ASSERT_FALSE(bgr.empty());
-    
+
     cv::Mat gray;
     cv::cvtColor(bgr, gray, CV_BGR2GRAY);
 
@@ -154,7 +154,7 @@ TEST_P(FastNonLocalMeans, Regression)
 {
     using cv::gpu::GpuMat;
 
-    cv::Mat bgr  = readImage("denoising/lena_noised_gaussian_sigma=20_multi_0.png", cv::IMREAD_COLOR);    
+    cv::Mat bgr  = readImage("denoising/lena_noised_gaussian_sigma=20_multi_0.png", cv::IMREAD_COLOR);
     ASSERT_FALSE(bgr.empty());
 
     cv::Mat gray;

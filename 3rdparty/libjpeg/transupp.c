@@ -77,9 +77,9 @@
 
 LOCAL(void)
 do_crop (j_decompress_ptr srcinfo, j_compress_ptr dstinfo,
-	 JDIMENSION x_crop_offset, JDIMENSION y_crop_offset,
-	 jvirt_barray_ptr *src_coef_arrays,
-	 jvirt_barray_ptr *dst_coef_arrays)
+     JDIMENSION x_crop_offset, JDIMENSION y_crop_offset,
+     jvirt_barray_ptr *src_coef_arrays,
+     jvirt_barray_ptr *dst_coef_arrays)
 /* Crop.  This is only used when no rotate/flip is requested with the crop. */
 {
   JDIMENSION dst_blk_y, x_crop_blocks, y_crop_blocks;
@@ -95,18 +95,18 @@ do_crop (j_decompress_ptr srcinfo, j_compress_ptr dstinfo,
     x_crop_blocks = x_crop_offset * compptr->h_samp_factor;
     y_crop_blocks = y_crop_offset * compptr->v_samp_factor;
     for (dst_blk_y = 0; dst_blk_y < compptr->height_in_blocks;
-	 dst_blk_y += compptr->v_samp_factor) {
+     dst_blk_y += compptr->v_samp_factor) {
       dst_buffer = (*srcinfo->mem->access_virt_barray)
-	((j_common_ptr) srcinfo, dst_coef_arrays[ci], dst_blk_y,
-	 (JDIMENSION) compptr->v_samp_factor, TRUE);
+    ((j_common_ptr) srcinfo, dst_coef_arrays[ci], dst_blk_y,
+     (JDIMENSION) compptr->v_samp_factor, TRUE);
       src_buffer = (*srcinfo->mem->access_virt_barray)
-	((j_common_ptr) srcinfo, src_coef_arrays[ci],
-	 dst_blk_y + y_crop_blocks,
-	 (JDIMENSION) compptr->v_samp_factor, FALSE);
+    ((j_common_ptr) srcinfo, src_coef_arrays[ci],
+     dst_blk_y + y_crop_blocks,
+     (JDIMENSION) compptr->v_samp_factor, FALSE);
       for (offset_y = 0; offset_y < compptr->v_samp_factor; offset_y++) {
-	jcopy_block_row(src_buffer[offset_y] + x_crop_blocks,
-			dst_buffer[offset_y],
-			compptr->width_in_blocks);
+    jcopy_block_row(src_buffer[offset_y] + x_crop_blocks,
+            dst_buffer[offset_y],
+            compptr->width_in_blocks);
       }
     }
   }
@@ -115,8 +115,8 @@ do_crop (j_decompress_ptr srcinfo, j_compress_ptr dstinfo,
 
 LOCAL(void)
 do_flip_h_no_crop (j_decompress_ptr srcinfo, j_compress_ptr dstinfo,
-		   JDIMENSION x_crop_offset,
-		   jvirt_barray_ptr *src_coef_arrays)
+           JDIMENSION x_crop_offset,
+           jvirt_barray_ptr *src_coef_arrays)
 /* Horizontal flip; done in-place, so no separate dest array is required.
  * NB: this only works when y_crop_offset is zero.
  */
@@ -140,39 +140,39 @@ do_flip_h_no_crop (j_decompress_ptr srcinfo, j_compress_ptr dstinfo,
     comp_width = MCU_cols * compptr->h_samp_factor;
     x_crop_blocks = x_crop_offset * compptr->h_samp_factor;
     for (blk_y = 0; blk_y < compptr->height_in_blocks;
-	 blk_y += compptr->v_samp_factor) {
+     blk_y += compptr->v_samp_factor) {
       buffer = (*srcinfo->mem->access_virt_barray)
-	((j_common_ptr) srcinfo, src_coef_arrays[ci], blk_y,
-	 (JDIMENSION) compptr->v_samp_factor, TRUE);
+    ((j_common_ptr) srcinfo, src_coef_arrays[ci], blk_y,
+     (JDIMENSION) compptr->v_samp_factor, TRUE);
       for (offset_y = 0; offset_y < compptr->v_samp_factor; offset_y++) {
-	/* Do the mirroring */
-	for (blk_x = 0; blk_x * 2 < comp_width; blk_x++) {
-	  ptr1 = buffer[offset_y][blk_x];
-	  ptr2 = buffer[offset_y][comp_width - blk_x - 1];
-	  /* this unrolled loop doesn't need to know which row it's on... */
-	  for (k = 0; k < DCTSIZE2; k += 2) {
-	    temp1 = *ptr1;	/* swap even column */
-	    temp2 = *ptr2;
-	    *ptr1++ = temp2;
-	    *ptr2++ = temp1;
-	    temp1 = *ptr1;	/* swap odd column with sign change */
-	    temp2 = *ptr2;
-	    *ptr1++ = -temp2;
-	    *ptr2++ = -temp1;
-	  }
-	}
-	if (x_crop_blocks > 0) {
-	  /* Now left-justify the portion of the data to be kept.
-	   * We can't use a single jcopy_block_row() call because that routine
-	   * depends on memcpy(), whose behavior is unspecified for overlapping
-	   * source and destination areas.  Sigh.
-	   */
-	  for (blk_x = 0; blk_x < compptr->width_in_blocks; blk_x++) {
-	    jcopy_block_row(buffer[offset_y] + blk_x + x_crop_blocks,
-			    buffer[offset_y] + blk_x,
-			    (JDIMENSION) 1);
-	  }
-	}
+    /* Do the mirroring */
+    for (blk_x = 0; blk_x * 2 < comp_width; blk_x++) {
+      ptr1 = buffer[offset_y][blk_x];
+      ptr2 = buffer[offset_y][comp_width - blk_x - 1];
+      /* this unrolled loop doesn't need to know which row it's on... */
+      for (k = 0; k < DCTSIZE2; k += 2) {
+        temp1 = *ptr1;	/* swap even column */
+        temp2 = *ptr2;
+        *ptr1++ = temp2;
+        *ptr2++ = temp1;
+        temp1 = *ptr1;	/* swap odd column with sign change */
+        temp2 = *ptr2;
+        *ptr1++ = -temp2;
+        *ptr2++ = -temp1;
+      }
+    }
+    if (x_crop_blocks > 0) {
+      /* Now left-justify the portion of the data to be kept.
+       * We can't use a single jcopy_block_row() call because that routine
+       * depends on memcpy(), whose behavior is unspecified for overlapping
+       * source and destination areas.  Sigh.
+       */
+      for (blk_x = 0; blk_x < compptr->width_in_blocks; blk_x++) {
+        jcopy_block_row(buffer[offset_y] + blk_x + x_crop_blocks,
+                buffer[offset_y] + blk_x,
+                (JDIMENSION) 1);
+      }
+    }
       }
     }
   }
@@ -181,9 +181,9 @@ do_flip_h_no_crop (j_decompress_ptr srcinfo, j_compress_ptr dstinfo,
 
 LOCAL(void)
 do_flip_h (j_decompress_ptr srcinfo, j_compress_ptr dstinfo,
-	   JDIMENSION x_crop_offset, JDIMENSION y_crop_offset,
-	   jvirt_barray_ptr *src_coef_arrays,
-	   jvirt_barray_ptr *dst_coef_arrays)
+       JDIMENSION x_crop_offset, JDIMENSION y_crop_offset,
+       jvirt_barray_ptr *src_coef_arrays,
+       jvirt_barray_ptr *dst_coef_arrays)
 /* Horizontal flip in general cropping case */
 {
   JDIMENSION MCU_cols, comp_width, dst_blk_x, dst_blk_y;
@@ -206,34 +206,34 @@ do_flip_h (j_decompress_ptr srcinfo, j_compress_ptr dstinfo,
     x_crop_blocks = x_crop_offset * compptr->h_samp_factor;
     y_crop_blocks = y_crop_offset * compptr->v_samp_factor;
     for (dst_blk_y = 0; dst_blk_y < compptr->height_in_blocks;
-	 dst_blk_y += compptr->v_samp_factor) {
+     dst_blk_y += compptr->v_samp_factor) {
       dst_buffer = (*srcinfo->mem->access_virt_barray)
-	((j_common_ptr) srcinfo, dst_coef_arrays[ci], dst_blk_y,
-	 (JDIMENSION) compptr->v_samp_factor, TRUE);
+    ((j_common_ptr) srcinfo, dst_coef_arrays[ci], dst_blk_y,
+     (JDIMENSION) compptr->v_samp_factor, TRUE);
       src_buffer = (*srcinfo->mem->access_virt_barray)
-	((j_common_ptr) srcinfo, src_coef_arrays[ci],
-	 dst_blk_y + y_crop_blocks,
-	 (JDIMENSION) compptr->v_samp_factor, FALSE);
+    ((j_common_ptr) srcinfo, src_coef_arrays[ci],
+     dst_blk_y + y_crop_blocks,
+     (JDIMENSION) compptr->v_samp_factor, FALSE);
       for (offset_y = 0; offset_y < compptr->v_samp_factor; offset_y++) {
-	dst_row_ptr = dst_buffer[offset_y];
-	src_row_ptr = src_buffer[offset_y];
-	for (dst_blk_x = 0; dst_blk_x < compptr->width_in_blocks; dst_blk_x++) {
-	  if (x_crop_blocks + dst_blk_x < comp_width) {
-	    /* Do the mirrorable blocks */
-	    dst_ptr = dst_row_ptr[dst_blk_x];
-	    src_ptr = src_row_ptr[comp_width - x_crop_blocks - dst_blk_x - 1];
-	    /* this unrolled loop doesn't need to know which row it's on... */
-	    for (k = 0; k < DCTSIZE2; k += 2) {
-	      *dst_ptr++ = *src_ptr++;	 /* copy even column */
-	      *dst_ptr++ = - *src_ptr++; /* copy odd column with sign change */
-	    }
-	  } else {
-	    /* Copy last partial block(s) verbatim */
-	    jcopy_block_row(src_row_ptr + dst_blk_x + x_crop_blocks,
-			    dst_row_ptr + dst_blk_x,
-			    (JDIMENSION) 1);
-	  }
-	}
+    dst_row_ptr = dst_buffer[offset_y];
+    src_row_ptr = src_buffer[offset_y];
+    for (dst_blk_x = 0; dst_blk_x < compptr->width_in_blocks; dst_blk_x++) {
+      if (x_crop_blocks + dst_blk_x < comp_width) {
+        /* Do the mirrorable blocks */
+        dst_ptr = dst_row_ptr[dst_blk_x];
+        src_ptr = src_row_ptr[comp_width - x_crop_blocks - dst_blk_x - 1];
+        /* this unrolled loop doesn't need to know which row it's on... */
+        for (k = 0; k < DCTSIZE2; k += 2) {
+          *dst_ptr++ = *src_ptr++;	 /* copy even column */
+          *dst_ptr++ = - *src_ptr++; /* copy odd column with sign change */
+        }
+      } else {
+        /* Copy last partial block(s) verbatim */
+        jcopy_block_row(src_row_ptr + dst_blk_x + x_crop_blocks,
+                dst_row_ptr + dst_blk_x,
+                (JDIMENSION) 1);
+      }
+    }
       }
     }
   }
@@ -242,9 +242,9 @@ do_flip_h (j_decompress_ptr srcinfo, j_compress_ptr dstinfo,
 
 LOCAL(void)
 do_flip_v (j_decompress_ptr srcinfo, j_compress_ptr dstinfo,
-	   JDIMENSION x_crop_offset, JDIMENSION y_crop_offset,
-	   jvirt_barray_ptr *src_coef_arrays,
-	   jvirt_barray_ptr *dst_coef_arrays)
+       JDIMENSION x_crop_offset, JDIMENSION y_crop_offset,
+       jvirt_barray_ptr *src_coef_arrays,
+       jvirt_barray_ptr *dst_coef_arrays)
 /* Vertical flip */
 {
   JDIMENSION MCU_rows, comp_height, dst_blk_x, dst_blk_y;
@@ -270,49 +270,49 @@ do_flip_v (j_decompress_ptr srcinfo, j_compress_ptr dstinfo,
     x_crop_blocks = x_crop_offset * compptr->h_samp_factor;
     y_crop_blocks = y_crop_offset * compptr->v_samp_factor;
     for (dst_blk_y = 0; dst_blk_y < compptr->height_in_blocks;
-	 dst_blk_y += compptr->v_samp_factor) {
+     dst_blk_y += compptr->v_samp_factor) {
       dst_buffer = (*srcinfo->mem->access_virt_barray)
-	((j_common_ptr) srcinfo, dst_coef_arrays[ci], dst_blk_y,
-	 (JDIMENSION) compptr->v_samp_factor, TRUE);
+    ((j_common_ptr) srcinfo, dst_coef_arrays[ci], dst_blk_y,
+     (JDIMENSION) compptr->v_samp_factor, TRUE);
       if (y_crop_blocks + dst_blk_y < comp_height) {
-	/* Row is within the mirrorable area. */
-	src_buffer = (*srcinfo->mem->access_virt_barray)
-	  ((j_common_ptr) srcinfo, src_coef_arrays[ci],
-	   comp_height - y_crop_blocks - dst_blk_y -
-	   (JDIMENSION) compptr->v_samp_factor,
-	   (JDIMENSION) compptr->v_samp_factor, FALSE);
+    /* Row is within the mirrorable area. */
+    src_buffer = (*srcinfo->mem->access_virt_barray)
+      ((j_common_ptr) srcinfo, src_coef_arrays[ci],
+       comp_height - y_crop_blocks - dst_blk_y -
+       (JDIMENSION) compptr->v_samp_factor,
+       (JDIMENSION) compptr->v_samp_factor, FALSE);
       } else {
-	/* Bottom-edge blocks will be copied verbatim. */
-	src_buffer = (*srcinfo->mem->access_virt_barray)
-	  ((j_common_ptr) srcinfo, src_coef_arrays[ci],
-	   dst_blk_y + y_crop_blocks,
-	   (JDIMENSION) compptr->v_samp_factor, FALSE);
+    /* Bottom-edge blocks will be copied verbatim. */
+    src_buffer = (*srcinfo->mem->access_virt_barray)
+      ((j_common_ptr) srcinfo, src_coef_arrays[ci],
+       dst_blk_y + y_crop_blocks,
+       (JDIMENSION) compptr->v_samp_factor, FALSE);
       }
       for (offset_y = 0; offset_y < compptr->v_samp_factor; offset_y++) {
-	if (y_crop_blocks + dst_blk_y < comp_height) {
-	  /* Row is within the mirrorable area. */
-	  dst_row_ptr = dst_buffer[offset_y];
-	  src_row_ptr = src_buffer[compptr->v_samp_factor - offset_y - 1];
-	  src_row_ptr += x_crop_blocks;
-	  for (dst_blk_x = 0; dst_blk_x < compptr->width_in_blocks;
-	       dst_blk_x++) {
-	    dst_ptr = dst_row_ptr[dst_blk_x];
-	    src_ptr = src_row_ptr[dst_blk_x];
-	    for (i = 0; i < DCTSIZE; i += 2) {
-	      /* copy even row */
-	      for (j = 0; j < DCTSIZE; j++)
-		*dst_ptr++ = *src_ptr++;
-	      /* copy odd row with sign change */
-	      for (j = 0; j < DCTSIZE; j++)
-		*dst_ptr++ = - *src_ptr++;
-	    }
-	  }
-	} else {
-	  /* Just copy row verbatim. */
-	  jcopy_block_row(src_buffer[offset_y] + x_crop_blocks,
-			  dst_buffer[offset_y],
-			  compptr->width_in_blocks);
-	}
+    if (y_crop_blocks + dst_blk_y < comp_height) {
+      /* Row is within the mirrorable area. */
+      dst_row_ptr = dst_buffer[offset_y];
+      src_row_ptr = src_buffer[compptr->v_samp_factor - offset_y - 1];
+      src_row_ptr += x_crop_blocks;
+      for (dst_blk_x = 0; dst_blk_x < compptr->width_in_blocks;
+           dst_blk_x++) {
+        dst_ptr = dst_row_ptr[dst_blk_x];
+        src_ptr = src_row_ptr[dst_blk_x];
+        for (i = 0; i < DCTSIZE; i += 2) {
+          /* copy even row */
+          for (j = 0; j < DCTSIZE; j++)
+        *dst_ptr++ = *src_ptr++;
+          /* copy odd row with sign change */
+          for (j = 0; j < DCTSIZE; j++)
+        *dst_ptr++ = - *src_ptr++;
+        }
+      }
+    } else {
+      /* Just copy row verbatim. */
+      jcopy_block_row(src_buffer[offset_y] + x_crop_blocks,
+              dst_buffer[offset_y],
+              compptr->width_in_blocks);
+    }
       }
     }
   }
@@ -321,9 +321,9 @@ do_flip_v (j_decompress_ptr srcinfo, j_compress_ptr dstinfo,
 
 LOCAL(void)
 do_transpose (j_decompress_ptr srcinfo, j_compress_ptr dstinfo,
-	      JDIMENSION x_crop_offset, JDIMENSION y_crop_offset,
-	      jvirt_barray_ptr *src_coef_arrays,
-	      jvirt_barray_ptr *dst_coef_arrays)
+          JDIMENSION x_crop_offset, JDIMENSION y_crop_offset,
+          jvirt_barray_ptr *src_coef_arrays,
+          jvirt_barray_ptr *dst_coef_arrays)
 /* Transpose source into destination */
 {
   JDIMENSION dst_blk_x, dst_blk_y, x_crop_blocks, y_crop_blocks;
@@ -342,25 +342,25 @@ do_transpose (j_decompress_ptr srcinfo, j_compress_ptr dstinfo,
     x_crop_blocks = x_crop_offset * compptr->h_samp_factor;
     y_crop_blocks = y_crop_offset * compptr->v_samp_factor;
     for (dst_blk_y = 0; dst_blk_y < compptr->height_in_blocks;
-	 dst_blk_y += compptr->v_samp_factor) {
+     dst_blk_y += compptr->v_samp_factor) {
       dst_buffer = (*srcinfo->mem->access_virt_barray)
-	((j_common_ptr) srcinfo, dst_coef_arrays[ci], dst_blk_y,
-	 (JDIMENSION) compptr->v_samp_factor, TRUE);
+    ((j_common_ptr) srcinfo, dst_coef_arrays[ci], dst_blk_y,
+     (JDIMENSION) compptr->v_samp_factor, TRUE);
       for (offset_y = 0; offset_y < compptr->v_samp_factor; offset_y++) {
-	for (dst_blk_x = 0; dst_blk_x < compptr->width_in_blocks;
-	     dst_blk_x += compptr->h_samp_factor) {
-	  src_buffer = (*srcinfo->mem->access_virt_barray)
-	    ((j_common_ptr) srcinfo, src_coef_arrays[ci],
-	     dst_blk_x + x_crop_blocks,
-	     (JDIMENSION) compptr->h_samp_factor, FALSE);
-	  for (offset_x = 0; offset_x < compptr->h_samp_factor; offset_x++) {
-	    dst_ptr = dst_buffer[offset_y][dst_blk_x + offset_x];
-	    src_ptr = src_buffer[offset_x][dst_blk_y + offset_y + y_crop_blocks];
-	    for (i = 0; i < DCTSIZE; i++)
-	      for (j = 0; j < DCTSIZE; j++)
-		dst_ptr[j*DCTSIZE+i] = src_ptr[i*DCTSIZE+j];
-	  }
-	}
+    for (dst_blk_x = 0; dst_blk_x < compptr->width_in_blocks;
+         dst_blk_x += compptr->h_samp_factor) {
+      src_buffer = (*srcinfo->mem->access_virt_barray)
+        ((j_common_ptr) srcinfo, src_coef_arrays[ci],
+         dst_blk_x + x_crop_blocks,
+         (JDIMENSION) compptr->h_samp_factor, FALSE);
+      for (offset_x = 0; offset_x < compptr->h_samp_factor; offset_x++) {
+        dst_ptr = dst_buffer[offset_y][dst_blk_x + offset_x];
+        src_ptr = src_buffer[offset_x][dst_blk_y + offset_y + y_crop_blocks];
+        for (i = 0; i < DCTSIZE; i++)
+          for (j = 0; j < DCTSIZE; j++)
+        dst_ptr[j*DCTSIZE+i] = src_ptr[i*DCTSIZE+j];
+      }
+    }
       }
     }
   }
@@ -369,9 +369,9 @@ do_transpose (j_decompress_ptr srcinfo, j_compress_ptr dstinfo,
 
 LOCAL(void)
 do_rot_90 (j_decompress_ptr srcinfo, j_compress_ptr dstinfo,
-	   JDIMENSION x_crop_offset, JDIMENSION y_crop_offset,
-	   jvirt_barray_ptr *src_coef_arrays,
-	   jvirt_barray_ptr *dst_coef_arrays)
+       JDIMENSION x_crop_offset, JDIMENSION y_crop_offset,
+       jvirt_barray_ptr *src_coef_arrays,
+       jvirt_barray_ptr *dst_coef_arrays)
 /* 90 degree rotation is equivalent to
  *   1. Transposing the image;
  *   2. Horizontal mirroring.
@@ -397,50 +397,50 @@ do_rot_90 (j_decompress_ptr srcinfo, j_compress_ptr dstinfo,
     x_crop_blocks = x_crop_offset * compptr->h_samp_factor;
     y_crop_blocks = y_crop_offset * compptr->v_samp_factor;
     for (dst_blk_y = 0; dst_blk_y < compptr->height_in_blocks;
-	 dst_blk_y += compptr->v_samp_factor) {
+     dst_blk_y += compptr->v_samp_factor) {
       dst_buffer = (*srcinfo->mem->access_virt_barray)
-	((j_common_ptr) srcinfo, dst_coef_arrays[ci], dst_blk_y,
-	 (JDIMENSION) compptr->v_samp_factor, TRUE);
+    ((j_common_ptr) srcinfo, dst_coef_arrays[ci], dst_blk_y,
+     (JDIMENSION) compptr->v_samp_factor, TRUE);
       for (offset_y = 0; offset_y < compptr->v_samp_factor; offset_y++) {
-	for (dst_blk_x = 0; dst_blk_x < compptr->width_in_blocks;
-	     dst_blk_x += compptr->h_samp_factor) {
-	  if (x_crop_blocks + dst_blk_x < comp_width) {
-	    /* Block is within the mirrorable area. */
-	    src_buffer = (*srcinfo->mem->access_virt_barray)
-	      ((j_common_ptr) srcinfo, src_coef_arrays[ci],
-	       comp_width - x_crop_blocks - dst_blk_x -
-	       (JDIMENSION) compptr->h_samp_factor,
-	       (JDIMENSION) compptr->h_samp_factor, FALSE);
-	  } else {
-	    /* Edge blocks are transposed but not mirrored. */
-	    src_buffer = (*srcinfo->mem->access_virt_barray)
-	      ((j_common_ptr) srcinfo, src_coef_arrays[ci],
-	       dst_blk_x + x_crop_blocks,
-	       (JDIMENSION) compptr->h_samp_factor, FALSE);
-	  }
-	  for (offset_x = 0; offset_x < compptr->h_samp_factor; offset_x++) {
-	    dst_ptr = dst_buffer[offset_y][dst_blk_x + offset_x];
-	    if (x_crop_blocks + dst_blk_x < comp_width) {
-	      /* Block is within the mirrorable area. */
-	      src_ptr = src_buffer[compptr->h_samp_factor - offset_x - 1]
-		[dst_blk_y + offset_y + y_crop_blocks];
-	      for (i = 0; i < DCTSIZE; i++) {
-		for (j = 0; j < DCTSIZE; j++)
-		  dst_ptr[j*DCTSIZE+i] = src_ptr[i*DCTSIZE+j];
-		i++;
-		for (j = 0; j < DCTSIZE; j++)
-		  dst_ptr[j*DCTSIZE+i] = -src_ptr[i*DCTSIZE+j];
-	      }
-	    } else {
-	      /* Edge blocks are transposed but not mirrored. */
-	      src_ptr = src_buffer[offset_x]
-		[dst_blk_y + offset_y + y_crop_blocks];
-	      for (i = 0; i < DCTSIZE; i++)
-		for (j = 0; j < DCTSIZE; j++)
-		  dst_ptr[j*DCTSIZE+i] = src_ptr[i*DCTSIZE+j];
-	    }
-	  }
-	}
+    for (dst_blk_x = 0; dst_blk_x < compptr->width_in_blocks;
+         dst_blk_x += compptr->h_samp_factor) {
+      if (x_crop_blocks + dst_blk_x < comp_width) {
+        /* Block is within the mirrorable area. */
+        src_buffer = (*srcinfo->mem->access_virt_barray)
+          ((j_common_ptr) srcinfo, src_coef_arrays[ci],
+           comp_width - x_crop_blocks - dst_blk_x -
+           (JDIMENSION) compptr->h_samp_factor,
+           (JDIMENSION) compptr->h_samp_factor, FALSE);
+      } else {
+        /* Edge blocks are transposed but not mirrored. */
+        src_buffer = (*srcinfo->mem->access_virt_barray)
+          ((j_common_ptr) srcinfo, src_coef_arrays[ci],
+           dst_blk_x + x_crop_blocks,
+           (JDIMENSION) compptr->h_samp_factor, FALSE);
+      }
+      for (offset_x = 0; offset_x < compptr->h_samp_factor; offset_x++) {
+        dst_ptr = dst_buffer[offset_y][dst_blk_x + offset_x];
+        if (x_crop_blocks + dst_blk_x < comp_width) {
+          /* Block is within the mirrorable area. */
+          src_ptr = src_buffer[compptr->h_samp_factor - offset_x - 1]
+        [dst_blk_y + offset_y + y_crop_blocks];
+          for (i = 0; i < DCTSIZE; i++) {
+        for (j = 0; j < DCTSIZE; j++)
+          dst_ptr[j*DCTSIZE+i] = src_ptr[i*DCTSIZE+j];
+        i++;
+        for (j = 0; j < DCTSIZE; j++)
+          dst_ptr[j*DCTSIZE+i] = -src_ptr[i*DCTSIZE+j];
+          }
+        } else {
+          /* Edge blocks are transposed but not mirrored. */
+          src_ptr = src_buffer[offset_x]
+        [dst_blk_y + offset_y + y_crop_blocks];
+          for (i = 0; i < DCTSIZE; i++)
+        for (j = 0; j < DCTSIZE; j++)
+          dst_ptr[j*DCTSIZE+i] = src_ptr[i*DCTSIZE+j];
+        }
+      }
+    }
       }
     }
   }
@@ -449,9 +449,9 @@ do_rot_90 (j_decompress_ptr srcinfo, j_compress_ptr dstinfo,
 
 LOCAL(void)
 do_rot_270 (j_decompress_ptr srcinfo, j_compress_ptr dstinfo,
-	    JDIMENSION x_crop_offset, JDIMENSION y_crop_offset,
-	    jvirt_barray_ptr *src_coef_arrays,
-	    jvirt_barray_ptr *dst_coef_arrays)
+        JDIMENSION x_crop_offset, JDIMENSION y_crop_offset,
+        jvirt_barray_ptr *src_coef_arrays,
+        jvirt_barray_ptr *dst_coef_arrays)
 /* 270 degree rotation is equivalent to
  *   1. Horizontal mirroring;
  *   2. Transposing the image.
@@ -477,40 +477,40 @@ do_rot_270 (j_decompress_ptr srcinfo, j_compress_ptr dstinfo,
     x_crop_blocks = x_crop_offset * compptr->h_samp_factor;
     y_crop_blocks = y_crop_offset * compptr->v_samp_factor;
     for (dst_blk_y = 0; dst_blk_y < compptr->height_in_blocks;
-	 dst_blk_y += compptr->v_samp_factor) {
+     dst_blk_y += compptr->v_samp_factor) {
       dst_buffer = (*srcinfo->mem->access_virt_barray)
-	((j_common_ptr) srcinfo, dst_coef_arrays[ci], dst_blk_y,
-	 (JDIMENSION) compptr->v_samp_factor, TRUE);
+    ((j_common_ptr) srcinfo, dst_coef_arrays[ci], dst_blk_y,
+     (JDIMENSION) compptr->v_samp_factor, TRUE);
       for (offset_y = 0; offset_y < compptr->v_samp_factor; offset_y++) {
-	for (dst_blk_x = 0; dst_blk_x < compptr->width_in_blocks;
-	     dst_blk_x += compptr->h_samp_factor) {
-	  src_buffer = (*srcinfo->mem->access_virt_barray)
-	    ((j_common_ptr) srcinfo, src_coef_arrays[ci],
-	     dst_blk_x + x_crop_blocks,
-	     (JDIMENSION) compptr->h_samp_factor, FALSE);
-	  for (offset_x = 0; offset_x < compptr->h_samp_factor; offset_x++) {
-	    dst_ptr = dst_buffer[offset_y][dst_blk_x + offset_x];
-	    if (y_crop_blocks + dst_blk_y < comp_height) {
-	      /* Block is within the mirrorable area. */
-	      src_ptr = src_buffer[offset_x]
-		[comp_height - y_crop_blocks - dst_blk_y - offset_y - 1];
-	      for (i = 0; i < DCTSIZE; i++) {
-		for (j = 0; j < DCTSIZE; j++) {
-		  dst_ptr[j*DCTSIZE+i] = src_ptr[i*DCTSIZE+j];
-		  j++;
-		  dst_ptr[j*DCTSIZE+i] = -src_ptr[i*DCTSIZE+j];
-		}
-	      }
-	    } else {
-	      /* Edge blocks are transposed but not mirrored. */
-	      src_ptr = src_buffer[offset_x]
-		[dst_blk_y + offset_y + y_crop_blocks];
-	      for (i = 0; i < DCTSIZE; i++)
-		for (j = 0; j < DCTSIZE; j++)
-		  dst_ptr[j*DCTSIZE+i] = src_ptr[i*DCTSIZE+j];
-	    }
-	  }
-	}
+    for (dst_blk_x = 0; dst_blk_x < compptr->width_in_blocks;
+         dst_blk_x += compptr->h_samp_factor) {
+      src_buffer = (*srcinfo->mem->access_virt_barray)
+        ((j_common_ptr) srcinfo, src_coef_arrays[ci],
+         dst_blk_x + x_crop_blocks,
+         (JDIMENSION) compptr->h_samp_factor, FALSE);
+      for (offset_x = 0; offset_x < compptr->h_samp_factor; offset_x++) {
+        dst_ptr = dst_buffer[offset_y][dst_blk_x + offset_x];
+        if (y_crop_blocks + dst_blk_y < comp_height) {
+          /* Block is within the mirrorable area. */
+          src_ptr = src_buffer[offset_x]
+        [comp_height - y_crop_blocks - dst_blk_y - offset_y - 1];
+          for (i = 0; i < DCTSIZE; i++) {
+        for (j = 0; j < DCTSIZE; j++) {
+          dst_ptr[j*DCTSIZE+i] = src_ptr[i*DCTSIZE+j];
+          j++;
+          dst_ptr[j*DCTSIZE+i] = -src_ptr[i*DCTSIZE+j];
+        }
+          }
+        } else {
+          /* Edge blocks are transposed but not mirrored. */
+          src_ptr = src_buffer[offset_x]
+        [dst_blk_y + offset_y + y_crop_blocks];
+          for (i = 0; i < DCTSIZE; i++)
+        for (j = 0; j < DCTSIZE; j++)
+          dst_ptr[j*DCTSIZE+i] = src_ptr[i*DCTSIZE+j];
+        }
+      }
+    }
       }
     }
   }
@@ -519,9 +519,9 @@ do_rot_270 (j_decompress_ptr srcinfo, j_compress_ptr dstinfo,
 
 LOCAL(void)
 do_rot_180 (j_decompress_ptr srcinfo, j_compress_ptr dstinfo,
-	    JDIMENSION x_crop_offset, JDIMENSION y_crop_offset,
-	    jvirt_barray_ptr *src_coef_arrays,
-	    jvirt_barray_ptr *dst_coef_arrays)
+        JDIMENSION x_crop_offset, JDIMENSION y_crop_offset,
+        jvirt_barray_ptr *src_coef_arrays,
+        jvirt_barray_ptr *dst_coef_arrays)
 /* 180 degree rotation is equivalent to
  *   1. Vertical mirroring;
  *   2. Horizontal mirroring.
@@ -546,77 +546,77 @@ do_rot_180 (j_decompress_ptr srcinfo, j_compress_ptr dstinfo,
     x_crop_blocks = x_crop_offset * compptr->h_samp_factor;
     y_crop_blocks = y_crop_offset * compptr->v_samp_factor;
     for (dst_blk_y = 0; dst_blk_y < compptr->height_in_blocks;
-	 dst_blk_y += compptr->v_samp_factor) {
+     dst_blk_y += compptr->v_samp_factor) {
       dst_buffer = (*srcinfo->mem->access_virt_barray)
-	((j_common_ptr) srcinfo, dst_coef_arrays[ci], dst_blk_y,
-	 (JDIMENSION) compptr->v_samp_factor, TRUE);
+    ((j_common_ptr) srcinfo, dst_coef_arrays[ci], dst_blk_y,
+     (JDIMENSION) compptr->v_samp_factor, TRUE);
       if (y_crop_blocks + dst_blk_y < comp_height) {
-	/* Row is within the vertically mirrorable area. */
-	src_buffer = (*srcinfo->mem->access_virt_barray)
-	  ((j_common_ptr) srcinfo, src_coef_arrays[ci],
-	   comp_height - y_crop_blocks - dst_blk_y -
-	   (JDIMENSION) compptr->v_samp_factor,
-	   (JDIMENSION) compptr->v_samp_factor, FALSE);
+    /* Row is within the vertically mirrorable area. */
+    src_buffer = (*srcinfo->mem->access_virt_barray)
+      ((j_common_ptr) srcinfo, src_coef_arrays[ci],
+       comp_height - y_crop_blocks - dst_blk_y -
+       (JDIMENSION) compptr->v_samp_factor,
+       (JDIMENSION) compptr->v_samp_factor, FALSE);
       } else {
-	/* Bottom-edge rows are only mirrored horizontally. */
-	src_buffer = (*srcinfo->mem->access_virt_barray)
-	  ((j_common_ptr) srcinfo, src_coef_arrays[ci],
-	   dst_blk_y + y_crop_blocks,
-	   (JDIMENSION) compptr->v_samp_factor, FALSE);
+    /* Bottom-edge rows are only mirrored horizontally. */
+    src_buffer = (*srcinfo->mem->access_virt_barray)
+      ((j_common_ptr) srcinfo, src_coef_arrays[ci],
+       dst_blk_y + y_crop_blocks,
+       (JDIMENSION) compptr->v_samp_factor, FALSE);
       }
       for (offset_y = 0; offset_y < compptr->v_samp_factor; offset_y++) {
-	dst_row_ptr = dst_buffer[offset_y];
-	if (y_crop_blocks + dst_blk_y < comp_height) {
-	  /* Row is within the mirrorable area. */
-	  src_row_ptr = src_buffer[compptr->v_samp_factor - offset_y - 1];
-	  for (dst_blk_x = 0; dst_blk_x < compptr->width_in_blocks; dst_blk_x++) {
-	    dst_ptr = dst_row_ptr[dst_blk_x];
-	    if (x_crop_blocks + dst_blk_x < comp_width) {
-	      /* Process the blocks that can be mirrored both ways. */
-	      src_ptr = src_row_ptr[comp_width - x_crop_blocks - dst_blk_x - 1];
-	      for (i = 0; i < DCTSIZE; i += 2) {
-		/* For even row, negate every odd column. */
-		for (j = 0; j < DCTSIZE; j += 2) {
-		  *dst_ptr++ = *src_ptr++;
-		  *dst_ptr++ = - *src_ptr++;
-		}
-		/* For odd row, negate every even column. */
-		for (j = 0; j < DCTSIZE; j += 2) {
-		  *dst_ptr++ = - *src_ptr++;
-		  *dst_ptr++ = *src_ptr++;
-		}
-	      }
-	    } else {
-	      /* Any remaining right-edge blocks are only mirrored vertically. */
-	      src_ptr = src_row_ptr[x_crop_blocks + dst_blk_x];
-	      for (i = 0; i < DCTSIZE; i += 2) {
-		for (j = 0; j < DCTSIZE; j++)
-		  *dst_ptr++ = *src_ptr++;
-		for (j = 0; j < DCTSIZE; j++)
-		  *dst_ptr++ = - *src_ptr++;
-	      }
-	    }
-	  }
-	} else {
-	  /* Remaining rows are just mirrored horizontally. */
-	  src_row_ptr = src_buffer[offset_y];
-	  for (dst_blk_x = 0; dst_blk_x < compptr->width_in_blocks; dst_blk_x++) {
-	    if (x_crop_blocks + dst_blk_x < comp_width) {
-	      /* Process the blocks that can be mirrored. */
-	      dst_ptr = dst_row_ptr[dst_blk_x];
-	      src_ptr = src_row_ptr[comp_width - x_crop_blocks - dst_blk_x - 1];
-	      for (i = 0; i < DCTSIZE2; i += 2) {
-		*dst_ptr++ = *src_ptr++;
-		*dst_ptr++ = - *src_ptr++;
-	      }
-	    } else {
-	      /* Any remaining right-edge blocks are only copied. */
-	      jcopy_block_row(src_row_ptr + dst_blk_x + x_crop_blocks,
-			      dst_row_ptr + dst_blk_x,
-			      (JDIMENSION) 1);
-	    }
-	  }
-	}
+    dst_row_ptr = dst_buffer[offset_y];
+    if (y_crop_blocks + dst_blk_y < comp_height) {
+      /* Row is within the mirrorable area. */
+      src_row_ptr = src_buffer[compptr->v_samp_factor - offset_y - 1];
+      for (dst_blk_x = 0; dst_blk_x < compptr->width_in_blocks; dst_blk_x++) {
+        dst_ptr = dst_row_ptr[dst_blk_x];
+        if (x_crop_blocks + dst_blk_x < comp_width) {
+          /* Process the blocks that can be mirrored both ways. */
+          src_ptr = src_row_ptr[comp_width - x_crop_blocks - dst_blk_x - 1];
+          for (i = 0; i < DCTSIZE; i += 2) {
+        /* For even row, negate every odd column. */
+        for (j = 0; j < DCTSIZE; j += 2) {
+          *dst_ptr++ = *src_ptr++;
+          *dst_ptr++ = - *src_ptr++;
+        }
+        /* For odd row, negate every even column. */
+        for (j = 0; j < DCTSIZE; j += 2) {
+          *dst_ptr++ = - *src_ptr++;
+          *dst_ptr++ = *src_ptr++;
+        }
+          }
+        } else {
+          /* Any remaining right-edge blocks are only mirrored vertically. */
+          src_ptr = src_row_ptr[x_crop_blocks + dst_blk_x];
+          for (i = 0; i < DCTSIZE; i += 2) {
+        for (j = 0; j < DCTSIZE; j++)
+          *dst_ptr++ = *src_ptr++;
+        for (j = 0; j < DCTSIZE; j++)
+          *dst_ptr++ = - *src_ptr++;
+          }
+        }
+      }
+    } else {
+      /* Remaining rows are just mirrored horizontally. */
+      src_row_ptr = src_buffer[offset_y];
+      for (dst_blk_x = 0; dst_blk_x < compptr->width_in_blocks; dst_blk_x++) {
+        if (x_crop_blocks + dst_blk_x < comp_width) {
+          /* Process the blocks that can be mirrored. */
+          dst_ptr = dst_row_ptr[dst_blk_x];
+          src_ptr = src_row_ptr[comp_width - x_crop_blocks - dst_blk_x - 1];
+          for (i = 0; i < DCTSIZE2; i += 2) {
+        *dst_ptr++ = *src_ptr++;
+        *dst_ptr++ = - *src_ptr++;
+          }
+        } else {
+          /* Any remaining right-edge blocks are only copied. */
+          jcopy_block_row(src_row_ptr + dst_blk_x + x_crop_blocks,
+                  dst_row_ptr + dst_blk_x,
+                  (JDIMENSION) 1);
+        }
+      }
+    }
       }
     }
   }
@@ -625,9 +625,9 @@ do_rot_180 (j_decompress_ptr srcinfo, j_compress_ptr dstinfo,
 
 LOCAL(void)
 do_transverse (j_decompress_ptr srcinfo, j_compress_ptr dstinfo,
-	       JDIMENSION x_crop_offset, JDIMENSION y_crop_offset,
-	       jvirt_barray_ptr *src_coef_arrays,
-	       jvirt_barray_ptr *dst_coef_arrays)
+           JDIMENSION x_crop_offset, JDIMENSION y_crop_offset,
+           jvirt_barray_ptr *src_coef_arrays,
+           jvirt_barray_ptr *dst_coef_arrays)
 /* Transverse transpose is equivalent to
  *   1. 180 degree rotation;
  *   2. Transposition;
@@ -655,81 +655,81 @@ do_transverse (j_decompress_ptr srcinfo, j_compress_ptr dstinfo,
     x_crop_blocks = x_crop_offset * compptr->h_samp_factor;
     y_crop_blocks = y_crop_offset * compptr->v_samp_factor;
     for (dst_blk_y = 0; dst_blk_y < compptr->height_in_blocks;
-	 dst_blk_y += compptr->v_samp_factor) {
+     dst_blk_y += compptr->v_samp_factor) {
       dst_buffer = (*srcinfo->mem->access_virt_barray)
-	((j_common_ptr) srcinfo, dst_coef_arrays[ci], dst_blk_y,
-	 (JDIMENSION) compptr->v_samp_factor, TRUE);
+    ((j_common_ptr) srcinfo, dst_coef_arrays[ci], dst_blk_y,
+     (JDIMENSION) compptr->v_samp_factor, TRUE);
       for (offset_y = 0; offset_y < compptr->v_samp_factor; offset_y++) {
-	for (dst_blk_x = 0; dst_blk_x < compptr->width_in_blocks;
-	     dst_blk_x += compptr->h_samp_factor) {
-	  if (x_crop_blocks + dst_blk_x < comp_width) {
-	    /* Block is within the mirrorable area. */
-	    src_buffer = (*srcinfo->mem->access_virt_barray)
-	      ((j_common_ptr) srcinfo, src_coef_arrays[ci],
-	       comp_width - x_crop_blocks - dst_blk_x -
-	       (JDIMENSION) compptr->h_samp_factor,
-	       (JDIMENSION) compptr->h_samp_factor, FALSE);
-	  } else {
-	    src_buffer = (*srcinfo->mem->access_virt_barray)
-	      ((j_common_ptr) srcinfo, src_coef_arrays[ci],
-	       dst_blk_x + x_crop_blocks,
-	       (JDIMENSION) compptr->h_samp_factor, FALSE);
-	  }
-	  for (offset_x = 0; offset_x < compptr->h_samp_factor; offset_x++) {
-	    dst_ptr = dst_buffer[offset_y][dst_blk_x + offset_x];
-	    if (y_crop_blocks + dst_blk_y < comp_height) {
-	      if (x_crop_blocks + dst_blk_x < comp_width) {
-		/* Block is within the mirrorable area. */
-		src_ptr = src_buffer[compptr->h_samp_factor - offset_x - 1]
-		  [comp_height - y_crop_blocks - dst_blk_y - offset_y - 1];
-		for (i = 0; i < DCTSIZE; i++) {
-		  for (j = 0; j < DCTSIZE; j++) {
-		    dst_ptr[j*DCTSIZE+i] = src_ptr[i*DCTSIZE+j];
-		    j++;
-		    dst_ptr[j*DCTSIZE+i] = -src_ptr[i*DCTSIZE+j];
-		  }
-		  i++;
-		  for (j = 0; j < DCTSIZE; j++) {
-		    dst_ptr[j*DCTSIZE+i] = -src_ptr[i*DCTSIZE+j];
-		    j++;
-		    dst_ptr[j*DCTSIZE+i] = src_ptr[i*DCTSIZE+j];
-		  }
-		}
-	      } else {
-		/* Right-edge blocks are mirrored in y only */
-		src_ptr = src_buffer[offset_x]
-		  [comp_height - y_crop_blocks - dst_blk_y - offset_y - 1];
-		for (i = 0; i < DCTSIZE; i++) {
-		  for (j = 0; j < DCTSIZE; j++) {
-		    dst_ptr[j*DCTSIZE+i] = src_ptr[i*DCTSIZE+j];
-		    j++;
-		    dst_ptr[j*DCTSIZE+i] = -src_ptr[i*DCTSIZE+j];
-		  }
-		}
-	      }
-	    } else {
-	      if (x_crop_blocks + dst_blk_x < comp_width) {
-		/* Bottom-edge blocks are mirrored in x only */
-		src_ptr = src_buffer[compptr->h_samp_factor - offset_x - 1]
-		  [dst_blk_y + offset_y + y_crop_blocks];
-		for (i = 0; i < DCTSIZE; i++) {
-		  for (j = 0; j < DCTSIZE; j++)
-		    dst_ptr[j*DCTSIZE+i] = src_ptr[i*DCTSIZE+j];
-		  i++;
-		  for (j = 0; j < DCTSIZE; j++)
-		    dst_ptr[j*DCTSIZE+i] = -src_ptr[i*DCTSIZE+j];
-		}
-	      } else {
-		/* At lower right corner, just transpose, no mirroring */
-		src_ptr = src_buffer[offset_x]
-		  [dst_blk_y + offset_y + y_crop_blocks];
-		for (i = 0; i < DCTSIZE; i++)
-		  for (j = 0; j < DCTSIZE; j++)
-		    dst_ptr[j*DCTSIZE+i] = src_ptr[i*DCTSIZE+j];
-	      }
-	    }
-	  }
-	}
+    for (dst_blk_x = 0; dst_blk_x < compptr->width_in_blocks;
+         dst_blk_x += compptr->h_samp_factor) {
+      if (x_crop_blocks + dst_blk_x < comp_width) {
+        /* Block is within the mirrorable area. */
+        src_buffer = (*srcinfo->mem->access_virt_barray)
+          ((j_common_ptr) srcinfo, src_coef_arrays[ci],
+           comp_width - x_crop_blocks - dst_blk_x -
+           (JDIMENSION) compptr->h_samp_factor,
+           (JDIMENSION) compptr->h_samp_factor, FALSE);
+      } else {
+        src_buffer = (*srcinfo->mem->access_virt_barray)
+          ((j_common_ptr) srcinfo, src_coef_arrays[ci],
+           dst_blk_x + x_crop_blocks,
+           (JDIMENSION) compptr->h_samp_factor, FALSE);
+      }
+      for (offset_x = 0; offset_x < compptr->h_samp_factor; offset_x++) {
+        dst_ptr = dst_buffer[offset_y][dst_blk_x + offset_x];
+        if (y_crop_blocks + dst_blk_y < comp_height) {
+          if (x_crop_blocks + dst_blk_x < comp_width) {
+        /* Block is within the mirrorable area. */
+        src_ptr = src_buffer[compptr->h_samp_factor - offset_x - 1]
+          [comp_height - y_crop_blocks - dst_blk_y - offset_y - 1];
+        for (i = 0; i < DCTSIZE; i++) {
+          for (j = 0; j < DCTSIZE; j++) {
+            dst_ptr[j*DCTSIZE+i] = src_ptr[i*DCTSIZE+j];
+            j++;
+            dst_ptr[j*DCTSIZE+i] = -src_ptr[i*DCTSIZE+j];
+          }
+          i++;
+          for (j = 0; j < DCTSIZE; j++) {
+            dst_ptr[j*DCTSIZE+i] = -src_ptr[i*DCTSIZE+j];
+            j++;
+            dst_ptr[j*DCTSIZE+i] = src_ptr[i*DCTSIZE+j];
+          }
+        }
+          } else {
+        /* Right-edge blocks are mirrored in y only */
+        src_ptr = src_buffer[offset_x]
+          [comp_height - y_crop_blocks - dst_blk_y - offset_y - 1];
+        for (i = 0; i < DCTSIZE; i++) {
+          for (j = 0; j < DCTSIZE; j++) {
+            dst_ptr[j*DCTSIZE+i] = src_ptr[i*DCTSIZE+j];
+            j++;
+            dst_ptr[j*DCTSIZE+i] = -src_ptr[i*DCTSIZE+j];
+          }
+        }
+          }
+        } else {
+          if (x_crop_blocks + dst_blk_x < comp_width) {
+        /* Bottom-edge blocks are mirrored in x only */
+        src_ptr = src_buffer[compptr->h_samp_factor - offset_x - 1]
+          [dst_blk_y + offset_y + y_crop_blocks];
+        for (i = 0; i < DCTSIZE; i++) {
+          for (j = 0; j < DCTSIZE; j++)
+            dst_ptr[j*DCTSIZE+i] = src_ptr[i*DCTSIZE+j];
+          i++;
+          for (j = 0; j < DCTSIZE; j++)
+            dst_ptr[j*DCTSIZE+i] = -src_ptr[i*DCTSIZE+j];
+        }
+          } else {
+        /* At lower right corner, just transpose, no mirroring */
+        src_ptr = src_buffer[offset_x]
+          [dst_blk_y + offset_y + y_crop_blocks];
+        for (i = 0; i < DCTSIZE; i++)
+          for (j = 0; j < DCTSIZE; j++)
+            dst_ptr[j*DCTSIZE+i] = src_ptr[i*DCTSIZE+j];
+          }
+        }
+      }
+    }
       }
     }
   }
@@ -786,7 +786,7 @@ jtransform_parse_crop_spec (jpeg_transform_info *info, const char *spec)
       return FALSE;
     info->crop_width_set = JCROP_POS;
   }
-  if (*spec == 'x' || *spec == 'X') {	
+  if (*spec == 'x' || *spec == 'X') {
     /* fetch height */
     spec++;
     if (! jt_read_integer(&spec, &info->crop_height))
@@ -856,7 +856,7 @@ trim_bottom_edge (jpeg_transform_info *info, JDIMENSION full_height)
 
 GLOBAL(void)
 jtransform_request_workspace (j_decompress_ptr srcinfo,
-			      jpeg_transform_info *info)
+                  jpeg_transform_info *info)
 {
   jvirt_barray_ptr *coef_arrays = NULL;
   boolean need_workspace, transpose_it;
@@ -919,7 +919,7 @@ jtransform_request_workspace (j_decompress_ptr srcinfo,
     if (info->crop_yoffset_set == JCROP_UNSET)
       info->crop_yoffset = 0;	/* default to +0 */
     if (info->crop_xoffset >= info->output_width ||
-	info->crop_yoffset >= info->output_height)
+    info->crop_yoffset >= info->output_height)
       ERREXIT(srcinfo, JERR_BAD_CROP_SPEC);
     if (info->crop_width_set == JCROP_UNSET)
       info->crop_width = info->output_width - info->crop_xoffset;
@@ -927,9 +927,9 @@ jtransform_request_workspace (j_decompress_ptr srcinfo,
       info->crop_height = info->output_height - info->crop_yoffset;
     /* Ensure parameters are valid */
     if (info->crop_width <= 0 || info->crop_width > info->output_width ||
-	info->crop_height <= 0 || info->crop_height > info->output_height ||
-	info->crop_xoffset > info->output_width - info->crop_width ||
-	info->crop_yoffset > info->output_height - info->crop_height)
+    info->crop_height <= 0 || info->crop_height > info->output_height ||
+    info->crop_xoffset > info->output_width - info->crop_width ||
+    info->crop_yoffset > info->output_height - info->crop_height)
       ERREXIT(srcinfo, JERR_BAD_CROP_SPEC);
     /* Convert negative crop offsets into regular offsets */
     if (info->crop_xoffset_set == JCROP_NEG)
@@ -1023,30 +1023,30 @@ jtransform_request_workspace (j_decompress_ptr srcinfo,
   if (need_workspace) {
     coef_arrays = (jvirt_barray_ptr *)
       (*srcinfo->mem->alloc_small) ((j_common_ptr) srcinfo, JPOOL_IMAGE,
-		SIZEOF(jvirt_barray_ptr) * info->num_components);
+        SIZEOF(jvirt_barray_ptr) * info->num_components);
     width_in_iMCUs = (JDIMENSION)
       jdiv_round_up((long) info->output_width,
-		    (long) (info->max_h_samp_factor * DCTSIZE));
+            (long) (info->max_h_samp_factor * DCTSIZE));
     height_in_iMCUs = (JDIMENSION)
       jdiv_round_up((long) info->output_height,
-		    (long) (info->max_v_samp_factor * DCTSIZE));
+            (long) (info->max_v_samp_factor * DCTSIZE));
     for (ci = 0; ci < info->num_components; ci++) {
       compptr = srcinfo->comp_info + ci;
       if (info->num_components == 1) {
-	/* we're going to force samp factors to 1x1 in this case */
-	h_samp_factor = v_samp_factor = 1;
+    /* we're going to force samp factors to 1x1 in this case */
+    h_samp_factor = v_samp_factor = 1;
       } else if (transpose_it) {
-	h_samp_factor = compptr->v_samp_factor;
-	v_samp_factor = compptr->h_samp_factor;
+    h_samp_factor = compptr->v_samp_factor;
+    v_samp_factor = compptr->h_samp_factor;
       } else {
-	h_samp_factor = compptr->h_samp_factor;
-	v_samp_factor = compptr->v_samp_factor;
+    h_samp_factor = compptr->h_samp_factor;
+    v_samp_factor = compptr->v_samp_factor;
       }
       width_in_blocks = width_in_iMCUs * h_samp_factor;
       height_in_blocks = height_in_iMCUs * v_samp_factor;
       coef_arrays[ci] = (*srcinfo->mem->request_virt_barray)
-	((j_common_ptr) srcinfo, JPOOL_IMAGE, FALSE,
-	 width_in_blocks, height_in_blocks, (JDIMENSION) v_samp_factor);
+    ((j_common_ptr) srcinfo, JPOOL_IMAGE, FALSE,
+     width_in_blocks, height_in_blocks, (JDIMENSION) v_samp_factor);
     }
   }
 
@@ -1077,11 +1077,11 @@ transpose_critical_parameters (j_compress_ptr dstinfo)
     qtblptr = dstinfo->quant_tbl_ptrs[tblno];
     if (qtblptr != NULL) {
       for (i = 0; i < DCTSIZE; i++) {
-	for (j = 0; j < i; j++) {
-	  qtemp = qtblptr->quantval[i*DCTSIZE+j];
-	  qtblptr->quantval[i*DCTSIZE+j] = qtblptr->quantval[j*DCTSIZE+i];
-	  qtblptr->quantval[j*DCTSIZE+i] = qtemp;
-	}
+    for (j = 0; j < i; j++) {
+      qtemp = qtblptr->quantval[i*DCTSIZE+j];
+      qtblptr->quantval[i*DCTSIZE+j] = qtblptr->quantval[j*DCTSIZE+i];
+      qtblptr->quantval[j*DCTSIZE+i] = qtemp;
+    }
       }
     }
   }
@@ -1095,7 +1095,7 @@ transpose_critical_parameters (j_compress_ptr dstinfo)
 
 LOCAL(void)
 adjust_exif_parameters (JOCTET FAR * data, unsigned int length,
-			JDIMENSION new_width, JDIMENSION new_height)
+            JDIMENSION new_width, JDIMENSION new_height)
 {
   boolean is_motorola; /* Flag for byte order */
   unsigned int number_of_tags, tagnum;
@@ -1212,31 +1212,31 @@ adjust_exif_parameters (JOCTET FAR * data, unsigned int length,
     }
     if (tagnum == 0xA002 || tagnum == 0xA003) {
       if (tagnum == 0xA002)
-	new_value = new_width; /* ExifImageWidth Tag */
+    new_value = new_width; /* ExifImageWidth Tag */
       else
-	new_value = new_height; /* ExifImageHeight Tag */
+    new_value = new_height; /* ExifImageHeight Tag */
       if (is_motorola) {
-	data[offset+2] = 0; /* Format = unsigned long (4 octets) */
-	data[offset+3] = 4;
-	data[offset+4] = 0; /* Number Of Components = 1 */
-	data[offset+5] = 0;
-	data[offset+6] = 0;
-	data[offset+7] = 1;
-	data[offset+8] = 0;
-	data[offset+9] = 0;
-	data[offset+10] = (JOCTET)((new_value >> 8) & 0xFF);
-	data[offset+11] = (JOCTET)(new_value & 0xFF);
+    data[offset+2] = 0; /* Format = unsigned long (4 octets) */
+    data[offset+3] = 4;
+    data[offset+4] = 0; /* Number Of Components = 1 */
+    data[offset+5] = 0;
+    data[offset+6] = 0;
+    data[offset+7] = 1;
+    data[offset+8] = 0;
+    data[offset+9] = 0;
+    data[offset+10] = (JOCTET)((new_value >> 8) & 0xFF);
+    data[offset+11] = (JOCTET)(new_value & 0xFF);
       } else {
-	data[offset+2] = 4; /* Format = unsigned long (4 octets) */
-	data[offset+3] = 0;
-	data[offset+4] = 1; /* Number Of Components = 1 */
-	data[offset+5] = 0;
-	data[offset+6] = 0;
-	data[offset+7] = 0;
-	data[offset+8] = (JOCTET)(new_value & 0xFF);
-	data[offset+9] = (JOCTET)((new_value >> 8) & 0xFF);
-	data[offset+10] = 0;
-	data[offset+11] = 0;
+    data[offset+2] = 4; /* Format = unsigned long (4 octets) */
+    data[offset+3] = 0;
+    data[offset+4] = 1; /* Number Of Components = 1 */
+    data[offset+5] = 0;
+    data[offset+6] = 0;
+    data[offset+7] = 0;
+    data[offset+8] = (JOCTET)(new_value & 0xFF);
+    data[offset+9] = (JOCTET)((new_value >> 8) & 0xFF);
+    data[offset+10] = 0;
+    data[offset+11] = 0;
       }
     }
     offset += 12;
@@ -1257,9 +1257,9 @@ adjust_exif_parameters (JOCTET FAR * data, unsigned int length,
 
 GLOBAL(jvirt_barray_ptr *)
 jtransform_adjust_parameters (j_decompress_ptr srcinfo,
-			      j_compress_ptr dstinfo,
-			      jvirt_barray_ptr *src_coef_arrays,
-			      jpeg_transform_info *info)
+                  j_compress_ptr dstinfo,
+                  jvirt_barray_ptr *src_coef_arrays,
+                  jpeg_transform_info *info)
 {
   /* If force-to-grayscale is requested, adjust destination parameters */
   if (info->force_grayscale) {
@@ -1269,11 +1269,11 @@ jtransform_adjust_parameters (j_decompress_ptr srcinfo,
      * isn't worth extra code space.  But we check it to avoid crashing.)
      */
     if (((dstinfo->jpeg_color_space == JCS_YCbCr &&
-	  dstinfo->num_components == 3) ||
-	 (dstinfo->jpeg_color_space == JCS_GRAYSCALE &&
-	  dstinfo->num_components == 1)) &&
-	srcinfo->comp_info[0].h_samp_factor == srcinfo->max_h_samp_factor &&
-	srcinfo->comp_info[0].v_samp_factor == srcinfo->max_v_samp_factor) {
+      dstinfo->num_components == 3) ||
+     (dstinfo->jpeg_color_space == JCS_GRAYSCALE &&
+      dstinfo->num_components == 1)) &&
+    srcinfo->comp_info[0].h_samp_factor == srcinfo->max_h_samp_factor &&
+    srcinfo->comp_info[0].v_samp_factor == srcinfo->max_v_samp_factor) {
       /* We use jpeg_set_colorspace to make sure subsidiary settings get fixed
        * properly.  Among other things, it sets the target h_samp_factor &
        * v_samp_factor to 1, which typically won't match the source.
@@ -1327,11 +1327,11 @@ jtransform_adjust_parameters (j_decompress_ptr srcinfo,
     dstinfo->write_JFIF_header = FALSE;
     /* Adjust Exif image parameters */
     if (dstinfo->image_width != srcinfo->image_width ||
-	dstinfo->image_height != srcinfo->image_height)
+    dstinfo->image_height != srcinfo->image_height)
       /* Align data segment to start of TIFF structure for parsing */
       adjust_exif_parameters(srcinfo->marker_list->data + 6,
-	srcinfo->marker_list->data_length - 6,
-	dstinfo->image_width, dstinfo->image_height);
+    srcinfo->marker_list->data_length - 6,
+    dstinfo->image_width, dstinfo->image_height);
   }
 
   /* Return the appropriate output data set */
@@ -1352,9 +1352,9 @@ jtransform_adjust_parameters (j_decompress_ptr srcinfo,
 
 GLOBAL(void)
 jtransform_execute_transform (j_decompress_ptr srcinfo,
-			      j_compress_ptr dstinfo,
-			      jvirt_barray_ptr *src_coef_arrays,
-			      jpeg_transform_info *info)
+                  j_compress_ptr dstinfo,
+                  jvirt_barray_ptr *src_coef_arrays,
+                  jpeg_transform_info *info)
 {
   jvirt_barray_ptr *dst_coef_arrays = info->workspace_coef_arrays;
 
@@ -1365,39 +1365,39 @@ jtransform_execute_transform (j_decompress_ptr srcinfo,
   case JXFORM_NONE:
     if (info->x_crop_offset != 0 || info->y_crop_offset != 0)
       do_crop(srcinfo, dstinfo, info->x_crop_offset, info->y_crop_offset,
-	      src_coef_arrays, dst_coef_arrays);
+          src_coef_arrays, dst_coef_arrays);
     break;
   case JXFORM_FLIP_H:
     if (info->y_crop_offset != 0)
       do_flip_h(srcinfo, dstinfo, info->x_crop_offset, info->y_crop_offset,
-		src_coef_arrays, dst_coef_arrays);
+        src_coef_arrays, dst_coef_arrays);
     else
       do_flip_h_no_crop(srcinfo, dstinfo, info->x_crop_offset,
-			src_coef_arrays);
+            src_coef_arrays);
     break;
   case JXFORM_FLIP_V:
     do_flip_v(srcinfo, dstinfo, info->x_crop_offset, info->y_crop_offset,
-	      src_coef_arrays, dst_coef_arrays);
+          src_coef_arrays, dst_coef_arrays);
     break;
   case JXFORM_TRANSPOSE:
     do_transpose(srcinfo, dstinfo, info->x_crop_offset, info->y_crop_offset,
-		 src_coef_arrays, dst_coef_arrays);
+         src_coef_arrays, dst_coef_arrays);
     break;
   case JXFORM_TRANSVERSE:
     do_transverse(srcinfo, dstinfo, info->x_crop_offset, info->y_crop_offset,
-		  src_coef_arrays, dst_coef_arrays);
+          src_coef_arrays, dst_coef_arrays);
     break;
   case JXFORM_ROT_90:
     do_rot_90(srcinfo, dstinfo, info->x_crop_offset, info->y_crop_offset,
-	      src_coef_arrays, dst_coef_arrays);
+          src_coef_arrays, dst_coef_arrays);
     break;
   case JXFORM_ROT_180:
     do_rot_180(srcinfo, dstinfo, info->x_crop_offset, info->y_crop_offset,
-	       src_coef_arrays, dst_coef_arrays);
+           src_coef_arrays, dst_coef_arrays);
     break;
   case JXFORM_ROT_270:
     do_rot_270(srcinfo, dstinfo, info->x_crop_offset, info->y_crop_offset,
-	       src_coef_arrays, dst_coef_arrays);
+           src_coef_arrays, dst_coef_arrays);
     break;
   }
 }
@@ -1425,8 +1425,8 @@ jtransform_execute_transform (j_decompress_ptr srcinfo,
 
 GLOBAL(boolean)
 jtransform_perfect_transform(JDIMENSION image_width, JDIMENSION image_height,
-			     int MCU_width, int MCU_height,
-			     JXFORM_CODE transform)
+                 int MCU_width, int MCU_height,
+                 JXFORM_CODE transform)
 {
   boolean result = TRUE; /* initialize TRUE */
 
@@ -1489,7 +1489,7 @@ jcopy_markers_setup (j_decompress_ptr srcinfo, JCOPY_OPTION option)
 
 GLOBAL(void)
 jcopy_markers_execute (j_decompress_ptr srcinfo, j_compress_ptr dstinfo,
-		       JCOPY_OPTION option)
+               JCOPY_OPTION option)
 {
   jpeg_saved_marker_ptr marker;
 
@@ -1500,22 +1500,22 @@ jcopy_markers_execute (j_decompress_ptr srcinfo, j_compress_ptr dstinfo,
    */
   for (marker = srcinfo->marker_list; marker != NULL; marker = marker->next) {
     if (dstinfo->write_JFIF_header &&
-	marker->marker == JPEG_APP0 &&
-	marker->data_length >= 5 &&
-	GETJOCTET(marker->data[0]) == 0x4A &&
-	GETJOCTET(marker->data[1]) == 0x46 &&
-	GETJOCTET(marker->data[2]) == 0x49 &&
-	GETJOCTET(marker->data[3]) == 0x46 &&
-	GETJOCTET(marker->data[4]) == 0)
+    marker->marker == JPEG_APP0 &&
+    marker->data_length >= 5 &&
+    GETJOCTET(marker->data[0]) == 0x4A &&
+    GETJOCTET(marker->data[1]) == 0x46 &&
+    GETJOCTET(marker->data[2]) == 0x49 &&
+    GETJOCTET(marker->data[3]) == 0x46 &&
+    GETJOCTET(marker->data[4]) == 0)
       continue;			/* reject duplicate JFIF */
     if (dstinfo->write_Adobe_marker &&
-	marker->marker == JPEG_APP0+14 &&
-	marker->data_length >= 5 &&
-	GETJOCTET(marker->data[0]) == 0x41 &&
-	GETJOCTET(marker->data[1]) == 0x64 &&
-	GETJOCTET(marker->data[2]) == 0x6F &&
-	GETJOCTET(marker->data[3]) == 0x62 &&
-	GETJOCTET(marker->data[4]) == 0x65)
+    marker->marker == JPEG_APP0+14 &&
+    marker->data_length >= 5 &&
+    GETJOCTET(marker->data[0]) == 0x41 &&
+    GETJOCTET(marker->data[1]) == 0x64 &&
+    GETJOCTET(marker->data[2]) == 0x6F &&
+    GETJOCTET(marker->data[3]) == 0x62 &&
+    GETJOCTET(marker->data[4]) == 0x65)
       continue;			/* reject duplicate Adobe */
 #ifdef NEED_FAR_POINTERS
     /* We could use jpeg_write_marker if the data weren't FAR... */
@@ -1523,11 +1523,11 @@ jcopy_markers_execute (j_decompress_ptr srcinfo, j_compress_ptr dstinfo,
       unsigned int i;
       jpeg_write_m_header(dstinfo, marker->marker, marker->data_length);
       for (i = 0; i < marker->data_length; i++)
-	jpeg_write_m_byte(dstinfo, marker->data[i]);
+    jpeg_write_m_byte(dstinfo, marker->data[i]);
     }
 #else
     jpeg_write_marker(dstinfo, marker->marker,
-		      marker->data, marker->data_length);
+              marker->data, marker->data_length);
 #endif
   }
 }

@@ -21,12 +21,12 @@ namespace
 void help(char** av)
 {
   cout << "\nThis program gets you started being able to read images from a list in a file\n"
-		  "Usage:\n./" << av[0] << " image_list.yaml\n"
+          "Usage:\n./" << av[0] << " image_list.yaml\n"
        << "\tThis is a starter sample, to get you up and going in a copy pasta fashion.\n"
        << "\tThe program reads in an list of images from a yaml or xml file and displays\n"
        << "one at a time\n"
        << "\tTry running imagelist_creator to generate a list of images.\n"
-		"Using OpenCV version %s\n" << CV_VERSION << "\n" << endl;
+        "Using OpenCV version %s\n" << CV_VERSION << "\n" << endl;
 }
 
 bool readStringList(const string& filename, vector<string>& l)
@@ -71,7 +71,7 @@ int main(int ac, char** av)
   vector<string> imagelist;
 
   if (!readStringList(arg,imagelist))
-  {   
+  {
     cerr << "Failed to read image list\n" << endl;
     help(av);
     return 1;

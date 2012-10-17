@@ -54,7 +54,7 @@
 namespace cv
 {
 
-static void removeOcclusions(const Mat& flow, 
+static void removeOcclusions(const Mat& flow,
                              const Mat& flow_inv,
                              float occ_thr,
                              Mat& confidence) {
@@ -84,12 +84,12 @@ static void wd(Mat& d, int top_shift, int bottom_shift, int left_shift, int righ
   exp(d, d);
 }
 
-static void wc(const Mat& image, Mat& d, int r0, int c0, 
+static void wc(const Mat& image, Mat& d, int r0, int c0,
                int top_shift, int bottom_shift, int left_shift, int right_shift, float sigma) {
   const Vec3b centeral_point = image.at<Vec3b>(r0, c0);
   int left_border = c0-left_shift, right_border = c0+right_shift;
   for (int dr = r0-top_shift, r = 0; dr <= r0+bottom_shift; ++dr, ++r) {
-    const Vec3b *row = image.ptr<Vec3b>(dr); 
+    const Vec3b *row = image.ptr<Vec3b>(dr);
     float *d_row = d.ptr<float>(r);
     for (int dc = left_border, c = 0; dc <= right_border; ++dc, ++c) {
       d_row[c] = -dist(centeral_point, row[dc]);
@@ -99,11 +99,11 @@ static void wc(const Mat& image, Mat& d, int r0, int c0,
   exp(d, d);
 }
 
-static void crossBilateralFilter(const Mat& image, 
-                                 const Mat& edge_image, 
-                                 const Mat confidence, 
-                                 Mat& dst, int d, 
-                                 float sigma_color, float sigma_space, 
+static void crossBilateralFilter(const Mat& image,
+                                 const Mat& edge_image,
+                                 const Mat confidence,
+                                 Mat& dst, int d,
+                                 float sigma_color, float sigma_space,
                                  bool flag=false) {
   const int rows = image.rows;
   const int cols = image.cols;
@@ -115,7 +115,7 @@ static void crossBilateralFilter(const Mat& image,
   wd(weights_space, d, d, d, d, sigma_space);
   Mat weights(2*d+1, 2*d+1, CV_32F);
   Mat weighted_sum(2*d+1, 2*d+1, CV_32F);
-  
+
   vector<Mat> image_extended_channels;
   split(image_extended, image_extended_channels);
 
@@ -134,15 +134,15 @@ static void crossBilateralFilter(const Mat& image,
         multiply(weights, image_extended_channels[ch](window_rows, window_cols), weighted_sum);
         float total_sum = (float)sum(weighted_sum)[0];
 
-        dst.at<Vec2f>(row, col)[ch] = (flag && fabs(weights_sum) < 1e-9) 
-          ? image.at<float>(row, col) 
+        dst.at<Vec2f>(row, col)[ch] = (flag && fabs(weights_sum) < 1e-9)
+          ? image.at<float>(row, col)
           : total_sum / weights_sum;
       }
     }
   }
 }
 
-static void calcConfidence(const Mat& prev, 
+static void calcConfidence(const Mat& prev,
                            const Mat& next,
                            const Mat& flow,
                            Mat& confidence,
@@ -150,7 +150,7 @@ static void calcConfidence(const Mat& prev,
   const int rows = prev.rows;
   const int cols = prev.cols;
   confidence = Mat::zeros(rows, cols, CV_32F);
-  
+
   for (int r0 = 0; r0 < rows; ++r0) {
     for (int c0 = 0; c0 < cols; ++c0) {
       Vec2f flow_at_point = flow.at<Vec2f>(r0, c0);
@@ -195,14 +195,14 @@ static void calcOpticalFlowSingleScaleSF(const Mat& prev_extended,
                                          const Mat& next_extended,
                                          const Mat& mask,
                                          Mat& flow,
-                                         int averaging_radius, 
+                                         int averaging_radius,
                                          int max_flow,
                                          float sigma_dist,
                                          float sigma_color) {
   const int averaging_radius_2 = averaging_radius << 1;
   const int rows = prev_extended.rows - averaging_radius_2;
   const int cols = prev_extended.cols - averaging_radius_2;
-  
+
   Mat weight_window(averaging_radius_2 + 1, averaging_radius_2 + 1, CV_32F);
   Mat space_weight_window(averaging_radius_2 + 1, averaging_radius_2 + 1, CV_32F);
 
@@ -248,12 +248,12 @@ static void calcOpticalFlowSingleScaleSF(const Mat& prev_extended,
             const Vec3b *next_extended_window_row = next_extended.ptr<Vec3b>(next_extended_top_window_row + r);
             const float* weight_window_row = weight_window.ptr<float>(r);
             for (int c = 0; c <= averaging_radius_2; ++c) {
-              cost += weight_window_row[c] * 
-                           dist(prev_extended_window_row[prev_extended_left_window_col + c], 
+              cost += weight_window_row[c] *
+                           dist(prev_extended_window_row[prev_extended_left_window_col + c],
                                 next_extended_window_row[next_extended_left_window_col + c]);
             }
           }
-          // cost should be divided by sum(weight_window), but because 
+          // cost should be divided by sum(weight_window), but because
           // we interested only in min(cost) and sum(weight_window) is constant
           // for every point - we remove it
 
@@ -269,7 +269,7 @@ static void calcOpticalFlowSingleScaleSF(const Mat& prev_extended,
   }
 }
 
-static Mat upscaleOpticalFlow(int new_rows, 
+static Mat upscaleOpticalFlow(int new_rows,
                                int new_cols,
                                const Mat& image,
                                const Mat& confidence,
@@ -307,7 +307,7 @@ static Mat calcIrregularityMat(const Mat& flow, int radius) {
   return irregularity;
 }
 
-static void selectPointsToRecalcFlow(const Mat& flow, 
+static void selectPointsToRecalcFlow(const Mat& flow,
                                      int irregularity_metric_radius,
                                      float speed_up_thr,
                                      int curr_rows,
@@ -327,7 +327,7 @@ static void selectPointsToRecalcFlow(const Mat& flow,
   for (int r = 0; r < is_flow_regular.rows; ++r) {
     for (int c = 0; c < is_flow_regular.cols; ++c) {
       if (!done.at<uchar>(r, c)) {
-        if (is_flow_regular.at<uchar>(r, c) && 
+        if (is_flow_regular.at<uchar>(r, c) &&
             2*r + 1 < curr_rows && 2*c + 1< curr_cols) {
 
           bool all_flow_in_region_regular = true;
@@ -352,7 +352,7 @@ static void selectPointsToRecalcFlow(const Mat& flow,
           int curr_left = std::min(2 * c, curr_cols - 1);
           int curr_right = std::min(2*(c + step) + 1, curr_cols - 1);
 
-          if (all_flow_in_region_regular && 
+          if (all_flow_in_region_regular &&
               curr_top != curr_bottom &&
               curr_left != curr_right) {
             mask.at<uchar>(curr_top, curr_left) = MASK_TRUE_VALUE;
@@ -361,7 +361,7 @@ static void selectPointsToRecalcFlow(const Mat& flow,
             mask.at<uchar>(curr_bottom, curr_right) = MASK_TRUE_VALUE;
             for (int rr = curr_top; rr <= curr_bottom; ++rr) {
               for (int cc = curr_left; cc <= curr_right; ++cc) {
-                speed_up.at<uchar>(rr, cc) = (uchar)(speed_up_at_this_point + 1); 
+                speed_up.at<uchar>(rr, cc) = (uchar)(speed_up_at_this_point + 1);
               }
             }
           } else {
@@ -396,15 +396,15 @@ static inline float extrapolateValueInRect(int height, int width,
   if (r == 0 && c == width) { return v12;}
   if (r == height && c == 0) { return v21;}
   if (r == height && c == width) { return v22;}
-  
+
   float qr = float(r) / height;
   float pr = 1.0f - qr;
   float qc = float(c) / width;
   float pc = 1.0f - qc;
 
-  return v11*pr*pc + v12*pr*qc + v21*qr*pc + v22*qc*qr; 
+  return v11*pr*pc + v12*pr*qc + v21*qr*pc + v22*qc*qr;
 }
-                                              
+
 static void extrapolateFlow(Mat& flow,
                             const Mat& speed_up) {
   const int rows = flow.rows;
@@ -430,15 +430,15 @@ static void extrapolateFlow(Mat& flow,
             Vec2f bottom_left = flow.at<Vec2f>(bottom, left);
             Vec2f bottom_right = flow.at<Vec2f>(bottom, right);
 
-            flow_at_point[0] = extrapolateValueInRect(height, width, 
+            flow_at_point[0] = extrapolateValueInRect(height, width,
                                                       top_left[0], top_right[0],
                                                       bottom_left[0], bottom_right[0],
-                                                      rr-top, cc-left); 
+                                                      rr-top, cc-left);
 
-            flow_at_point[1] = extrapolateValueInRect(height, width, 
+            flow_at_point[1] = extrapolateValueInRect(height, width,
                                                       top_left[1], top_right[1],
                                                       bottom_left[1], bottom_right[1],
-                                                      rr-top, cc-left); 
+                                                      rr-top, cc-left);
             flow.at<Vec2f>(rr, cc) = flow_at_point;
           }
         }
@@ -464,16 +464,16 @@ static void buildPyramidWithResizeMethod(Mat& src,
   }
 }
 
-CV_EXPORTS_W void calcOpticalFlowSF(Mat& from, 
-                                    Mat& to, 
+CV_EXPORTS_W void calcOpticalFlowSF(Mat& from,
+                                    Mat& to,
                                     Mat& resulted_flow,
                                     int layers,
-                                    int averaging_radius, 
+                                    int averaging_radius,
                                     int max_flow,
                                     double sigma_dist,
                                     double sigma_color,
-                                    int postprocess_window, 
-                                    double sigma_dist_fix, 
+                                    int postprocess_window,
+                                    double sigma_dist_fix,
                                     double sigma_color_fix,
                                     double occ_thr,
                                     int upscale_averaging_radius,
@@ -494,10 +494,10 @@ CV_EXPORTS_W void calcOpticalFlowSF(Mat& from,
   curr_from = pyr_from_images[layers - 1];
   curr_to = pyr_to_images[layers - 1];
 
-  copyMakeBorder(curr_from, curr_from_extended, 
+  copyMakeBorder(curr_from, curr_from_extended,
                  averaging_radius, averaging_radius, averaging_radius, averaging_radius,
                  BORDER_DEFAULT);
-  copyMakeBorder(curr_to, curr_to_extended, 
+  copyMakeBorder(curr_to, curr_to_extended,
                  averaging_radius, averaging_radius, averaging_radius, averaging_radius,
                  BORDER_DEFAULT);
 
@@ -515,26 +515,26 @@ CV_EXPORTS_W void calcOpticalFlowSF(Mat& from,
                                curr_to_extended,
                                mask,
                                flow,
-                               averaging_radius, 
-                               max_flow, 
-                               (float)sigma_dist, 
+                               averaging_radius,
+                               max_flow,
+                               (float)sigma_dist,
                                (float)sigma_color);
 
   calcOpticalFlowSingleScaleSF(curr_to_extended,
                                curr_from_extended,
                                mask_inv,
                                flow_inv,
-                               averaging_radius, 
-                               max_flow, 
-                               (float)sigma_dist, 
+                               averaging_radius,
+                               max_flow,
+                               (float)sigma_dist,
                                (float)sigma_color);
 
-  removeOcclusions(flow, 
+  removeOcclusions(flow,
                    flow_inv,
                    (float)occ_thr,
                    confidence);
 
-  removeOcclusions(flow_inv, 
+  removeOcclusions(flow_inv,
                    flow,
                    (float)occ_thr,
                    confidence_inv);
@@ -548,7 +548,7 @@ CV_EXPORTS_W void calcOpticalFlowSF(Mat& from,
     prev_from = pyr_from_images[curr_layer + 1];
     prev_to = pyr_to_images[curr_layer + 1];
 
-    copyMakeBorder(curr_from, curr_from_extended, 
+    copyMakeBorder(curr_from, curr_from_extended,
                    averaging_radius, averaging_radius, averaging_radius, averaging_radius,
                    BORDER_DEFAULT);
     copyMakeBorder(curr_to, curr_to_extended,
@@ -585,7 +585,7 @@ CV_EXPORTS_W void calcOpticalFlowSF(Mat& from,
                               curr_cols,
                               prev_from,
                               confidence,
-                              flow, 
+                              flow,
                               upscale_averaging_radius,
                               (float)upscale_sigma_dist,
                               (float)upscale_sigma_color);
@@ -604,9 +604,9 @@ CV_EXPORTS_W void calcOpticalFlowSF(Mat& from,
                                  curr_to_extended,
                                  mask,
                                  flow,
-                                 averaging_radius, 
-                                 max_flow, 
-                                 (float)sigma_dist, 
+                                 averaging_radius,
+                                 max_flow,
+                                 (float)sigma_dist,
                                  (float)sigma_color);
 
     calcConfidence(curr_to, curr_from, flow_inv, confidence_inv, max_flow);
@@ -614,9 +614,9 @@ CV_EXPORTS_W void calcOpticalFlowSF(Mat& from,
                                  curr_from_extended,
                                  mask_inv,
                                  flow_inv,
-                                 averaging_radius, 
-                                 max_flow, 
-                                 (float)sigma_dist, 
+                                 averaging_radius,
+                                 max_flow,
+                                 (float)sigma_dist,
                                  (float)sigma_color);
 
     extrapolateFlow(flow, speed_up);
@@ -627,7 +627,7 @@ CV_EXPORTS_W void calcOpticalFlowSF(Mat& from,
     removeOcclusions(flow_inv, flow, (float)occ_thr, confidence_inv);
   }
 
-  crossBilateralFilter(flow, curr_from, confidence, flow, 
+  crossBilateralFilter(flow, curr_from, confidence, flow,
                        postprocess_window, (float)sigma_color_fix, (float)sigma_dist_fix);
 
   GaussianBlur(flow, flow, Size(3, 3), 5);
@@ -637,11 +637,11 @@ CV_EXPORTS_W void calcOpticalFlowSF(Mat& from,
   mixChannels(&flow, 1, &resulted_flow, 1, from_to, 2);
 }
 
-CV_EXPORTS_W void calcOpticalFlowSF(Mat& from, 
+CV_EXPORTS_W void calcOpticalFlowSF(Mat& from,
                                     Mat& to,
                                     Mat& flow,
                                     int layers,
-                                    int averaging_block_size, 
+                                    int averaging_block_size,
                                     int max_flow) {
   calcOpticalFlowSF(from, to, flow, layers, averaging_block_size, max_flow,
                     4.1, 25.5, 18, 55.0, 25.5, 0.35, 18, 55.0, 25.5, 10);

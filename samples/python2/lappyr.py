@@ -57,7 +57,7 @@ if __name__ == '__main__':
         res = merge_lappyr(pyr)
 
         cv2.imshow('laplacian pyramid filter', res)
-        
+
         if cv2.waitKey(1) == 27:
             break
 

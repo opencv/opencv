@@ -102,7 +102,7 @@ public:
 
 protected:
     string m_description;
-    
+
     string m_filename;
     vector<uchar>* m_buf;
     bool m_buf_supported;

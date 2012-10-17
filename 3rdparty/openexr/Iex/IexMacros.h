@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2002, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-// 
+//
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission. 
-// 
+// from this software without specific prior written permission.
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -52,15 +52,15 @@
 // Example:
 //
 //	THROW (InputExc, "Syntax error in line " << line ", " << file << ".");
-//	
+//
 //----------------------------------------------------------------------------
 
 #define THROW(type, text)	\
     do				\
     {				\
-	std::stringstream s;	\
-	s << text;		\
-	throw type (s);		\
+    std::stringstream s;	\
+    s << text;		\
+    throw type (s);		\
     }				\
     while (0)
 
@@ -91,18 +91,18 @@
 #define APPEND_EXC(exc, text)	\
     do				\
     {				\
-	std::stringstream s;	\
-	s << text;		\
-	exc.append (s);		\
+    std::stringstream s;	\
+    s << text;		\
+    exc.append (s);		\
     }				\
     while (0)
 
 #define REPLACE_EXC(exc, text)	\
     do				\
     {				\
-	std::stringstream s;	\
-	s << text;		\
-	exc.assign (s);		\
+    std::stringstream s;	\
+    s << text;		\
+    exc.assign (s);		\
     }				\
     while (0)
 
@@ -120,9 +120,9 @@
 #define THROW_ERRNO(text)		\
     do					\
     {					\
-	std::stringstream s;		\
-	s << text;			\
-	::Iex::throwErrnoExc (s.str());	\
+    std::stringstream s;		\
+    s << text;			\
+    ::Iex::throwErrnoExc (s.str());	\
     }					\
     while (0)
 
@@ -139,8 +139,8 @@
 #define ASSERT(assertion, type, text)   \
     do                                  \
     {                                   \
-	if ((assertion) == false)       \
-	    THROW (type, text);         \
+    if ((assertion) == false)       \
+        THROW (type, text);         \
     }                                   \
     while (0)
 

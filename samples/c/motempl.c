@@ -7,14 +7,14 @@
 
 static void help(void)
 {
-	printf(
-			"\nThis program demonstrated the use of motion templates -- basically using the gradients\n"
-			"of thresholded layers of decaying frame differencing. New movements are stamped on top with floating system\n"
-			"time code and motions too old are thresholded away. This is the 'motion history file'. The program reads from the camera of your choice or from\n"
-			"a file. Gradients of motion history are used to detect direction of motoin etc\n"
+    printf(
+            "\nThis program demonstrated the use of motion templates -- basically using the gradients\n"
+            "of thresholded layers of decaying frame differencing. New movements are stamped on top with floating system\n"
+            "time code and motions too old are thresholded away. This is the 'motion history file'. The program reads from the camera of your choice or from\n"
+            "a file. Gradients of motion history are used to detect direction of motoin etc\n"
             "Usage :\n"
-			"./motempl [camera number 0-n or file name, default is camera 0]\n"
-			);
+            "./motempl [camera number 0-n or file name, default is camera 0]\n"
+            );
 }
 // various tracking parameters (in seconds)
 const double MHI_DURATION = 1;

@@ -20,16 +20,16 @@ class ServiceStarter
 public:
     ServiceStarter()
     {
-	PackageManager = new PackageManagerStub();
-	Engine = new OpenCVEngine(PackageManager);
-	
-	defaultServiceManager()->addService(IOpenCVEngine::descriptor, Engine);
-	     LOGI("OpenCVEngine native service started successfully");
-	ProcessState::self()->startThreadPool();
+    PackageManager = new PackageManagerStub();
+    Engine = new OpenCVEngine(PackageManager);
+
+    defaultServiceManager()->addService(IOpenCVEngine::descriptor, Engine);
+         LOGI("OpenCVEngine native service started successfully");
+    ProcessState::self()->startThreadPool();
     }
     ~ServiceStarter()
     {
-	delete PackageManager;
+    delete PackageManager;
     }
 
     PackageManagerStub* PackageManager;
@@ -46,9 +46,9 @@ sp<IOpenCVEngine> InitConnect()
 
     do
     {
-	EngineService = ServiceManager->getService(IOpenCVEngine::descriptor);
-	if (EngineService != 0) break;
-	usleep(500000); // 0.5 s
+    EngineService = ServiceManager->getService(IOpenCVEngine::descriptor);
+    if (EngineService != 0) break;
+    usleep(500000); // 0.5 s
     } while(true);
 
     Engine = interface_cast<IOpenCVEngine>(EngineService);

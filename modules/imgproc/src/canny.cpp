@@ -47,7 +47,7 @@ void cv::Canny( InputArray _src, OutputArray _dst,
 {
     Mat src = _src.getMat();
     CV_Assert( src.depth() == CV_8U );
-    
+
     _dst.create(src.size(), CV_8U);
     Mat dst = _dst.getMat();
 
@@ -80,7 +80,7 @@ void cv::Canny( InputArray _src, OutputArray _dst,
     {
         low_thresh = std::min(32767.0, low_thresh);
         high_thresh = std::min(32767.0, high_thresh);
-		
+
         if (low_thresh > 0) low_thresh *= low_thresh;
         if (high_thresh > 0) high_thresh *= high_thresh;
     }
@@ -89,7 +89,7 @@ void cv::Canny( InputArray _src, OutputArray _dst,
 
     ptrdiff_t mapstep = src.cols + 2;
     cv::AutoBuffer<uchar> buffer((src.cols+2)*(src.rows+2) + cn * mapstep * 3 * sizeof(int));
-    
+
     int* mag_buf[3];
     mag_buf[0] = (int*)(uchar*)buffer;
     mag_buf[1] = mag_buf[0] + mapstep*cn;
@@ -143,7 +143,7 @@ void cv::Canny( InputArray _src, OutputArray _dst,
                 for (int j = 0; j < src.cols*cn; j++)
                     _norm[j] = int(_dx[j])*_dx[j] + int(_dy[j])*_dy[j];
             }
-			
+
             if (cn > 1)
             {
                 for(int j = 0, jn = 0; j < src.cols; ++j, jn += cn)
@@ -160,7 +160,7 @@ void cv::Canny( InputArray _src, OutputArray _dst,
         }
         else
             memset(_norm-1, 0, /* cn* */mapstep*sizeof(int));
-		
+
         // at the very beginning we do not have a complete ring
         // buffer of 3 magnitude rows for non-maxima suppression
         if (i == 0)
@@ -280,7 +280,7 @@ void cvCanny( const CvArr* image, CvArr* edges, double threshold1,
 {
     cv::Mat src = cv::cvarrToMat(image), dst = cv::cvarrToMat(edges);
     CV_Assert( src.size == dst.size && src.depth() == CV_8U && dst.type() == CV_8U );
-    
+
     cv::Canny(src, dst, threshold1, threshold2, aperture_size & 255,
               (aperture_size & CV_CANNY_L2_GRADIENT) != 0);
 }

@@ -58,7 +58,7 @@ int CV_AMLTest::run_test_case( int testCaseIdx )
     {
         //#define GET_STAT
 #ifdef GET_STAT
-        const char* data_name = ((CvFileNode*)cvGetSeqElem( dataSetNames, testCaseIdx ))->data.str.ptr;     
+        const char* data_name = ((CvFileNode*)cvGetSeqElem( dataSetNames, testCaseIdx ))->data.str.ptr;
         printf("%s, %s      ", name, data_name);
         const int icount = 100;
         float res[icount];
@@ -66,7 +66,7 @@ int CV_AMLTest::run_test_case( int testCaseIdx )
         {
 #endif
             data.mix_train_and_test_idx();
-            code = train( testCaseIdx );            
+            code = train( testCaseIdx );
 #ifdef GET_STAT
             float case_result = get_error();
 
@@ -94,9 +94,9 @@ int CV_AMLTest::validate_test_results( int testCaseIdx )
     int iters;
     float mean, sigma;
     // read validation params
-    FileNode resultNode = 
+    FileNode resultNode =
         validationFS.getFirstTopLevelNode()["validation"][modelName][dataSetNames[testCaseIdx]]["result"];
-    resultNode["iter_count"] >> iters; 
+    resultNode["iter_count"] >> iters;
     if ( iters > 0)
     {
         resultNode["mean"] >> mean;

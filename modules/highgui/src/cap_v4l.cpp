@@ -548,7 +548,7 @@ static int autosetup_capture_mode_v4l2(CvCaptureCAM_V4L* capture)
 #ifdef HAVE_JPEG
 #ifdef __USE_GNU
       /* support for MJPEG is only available with libjpeg and gcc,
-	 because it's use libjepg and fmemopen()
+     because it's use libjepg and fmemopen()
       */
   if (try_palette_v4l2(capture, V4L2_PIX_FMT_MJPEG) == 0 ||
       try_palette_v4l2(capture, V4L2_PIX_FMT_JPEG) == 0)
@@ -582,7 +582,7 @@ static int autosetup_capture_mode_v4l2(CvCaptureCAM_V4L* capture)
   }
       else
   {
-	fprintf(stderr, "HIGHGUI ERROR: V4L2: Pixel format of incoming image is unsupported by OpenCV\n");
+    fprintf(stderr, "HIGHGUI ERROR: V4L2: Pixel format of incoming image is unsupported by OpenCV\n");
     icvCloseCAM_V4L(capture);
     return -1;
   }
@@ -617,7 +617,7 @@ static int autosetup_capture_mode_v4l(CvCaptureCAM_V4L* capture)
       //printf("negotiated palette YUV420P\n");
   }
   else {
-	fprintf(stderr, "HIGHGUI ERROR: V4L: Pixel format of incoming image is unsupported by OpenCV\n");
+    fprintf(stderr, "HIGHGUI ERROR: V4L: Pixel format of incoming image is unsupported by OpenCV\n");
     icvCloseCAM_V4L(capture);
     return -1;
   }
@@ -928,9 +928,9 @@ static int _capture_V4L2 (CvCaptureCAM_V4L *capture, char *deviceName)
            return -1;
        } else {
          buffer_number--;
-	 fprintf (stderr, "Insufficient buffer memory on %s -- decreaseing buffers\n", deviceName);
+     fprintf (stderr, "Insufficient buffer memory on %s -- decreaseing buffers\n", deviceName);
 
-	 goto try_again;
+     goto try_again;
        }
    }
 
@@ -969,8 +969,8 @@ static int _capture_V4L2 (CvCaptureCAM_V4L *capture, char *deviceName)
        }
 
        if (n_buffers == 0) {
-	 capture->buffers[MAX_V4L_BUFFERS].start = malloc( buf.length );
-	 capture->buffers[MAX_V4L_BUFFERS].length = buf.length;
+     capture->buffers[MAX_V4L_BUFFERS].start = malloc( buf.length );
+     capture->buffers[MAX_V4L_BUFFERS].length = buf.length;
        }
    }
 
@@ -1183,14 +1183,14 @@ static int read_frame_v4l2(CvCaptureCAM_V4L* capture) {
             return 0;
 
         case EIO:
-	    if (!(buf.flags & (V4L2_BUF_FLAG_QUEUED | V4L2_BUF_FLAG_DONE)))
-	    {
-	      if (xioctl(capture->deviceHandle, VIDIOC_QBUF, &buf) == -1)
-	      {
-	        return 0;
-	      }
-	    }
-	    return 0;
+        if (!(buf.flags & (V4L2_BUF_FLAG_QUEUED | V4L2_BUF_FLAG_DONE)))
+        {
+          if (xioctl(capture->deviceHandle, VIDIOC_QBUF, &buf) == -1)
+          {
+            return 0;
+          }
+        }
+        return 0;
 
         default:
             /* display the error and stop processing */
@@ -1202,8 +1202,8 @@ static int read_frame_v4l2(CvCaptureCAM_V4L* capture) {
    assert(buf.index < capture->req.count);
 
    memcpy(capture->buffers[MAX_V4L_BUFFERS].start,
-	  capture->buffers[buf.index].start,
-	  capture->buffers[MAX_V4L_BUFFERS].length );
+      capture->buffers[buf.index].start,
+      capture->buffers[MAX_V4L_BUFFERS].length );
    capture->bufferIndex = MAX_V4L_BUFFERS;
    //printf("got data in buff %d, len=%d, flags=0x%X, seq=%d, used=%d)\n",
    //	  buf.index, buf.length, buf.flags, buf.sequence, buf.bytesused);
@@ -1347,9 +1347,9 @@ static int icvGrabFrameCAM_V4L(CvCaptureCAM_V4L* capture) {
      capture->mmaps[capture->bufferIndex].format = capture->imageProperties.palette;
 
      if (ioctl (capture->deviceHandle, VIDIOCMCAPTURE,
-		&capture->mmaps[capture->bufferIndex]) == -1) {
-	 /* capture is on the way, so just exit */
-	 return 1;
+        &capture->mmaps[capture->bufferIndex]) == -1) {
+     /* capture is on the way, so just exit */
+     return 1;
      }
 
      ++capture->bufferIndex;
@@ -1647,9 +1647,9 @@ yuyv_to_rgb24 (int width, int height, unsigned char *src, unsigned char *dst)
          SAT(g);
          SAT(b);
 
-	 *d++ = b;
-	 *d++ = g;
-	 *d++ = r;
+     *d++ = b;
+     *d++ = g;
+     *d++ = r;
 
          r = y2 + cr;
          b = y2 + cb;
@@ -1658,9 +1658,9 @@ yuyv_to_rgb24 (int width, int height, unsigned char *src, unsigned char *dst)
          SAT(g);
          SAT(b);
 
-	 *d++ = b;
-	 *d++ = g;
-	 *d++ = r;
+     *d++ = b;
+     *d++ = g;
+     *d++ = r;
       }
    }
 }
@@ -1693,9 +1693,9 @@ uyvy_to_rgb24 (int width, int height, unsigned char *src, unsigned char *dst)
          SAT(g);
          SAT(b);
 
-	 *d++ = b;
-	 *d++ = g;
-	 *d++ = r;
+     *d++ = b;
+     *d++ = g;
+     *d++ = r;
 
          r = y2 + cr;
          b = y2 + cb;
@@ -1704,9 +1704,9 @@ uyvy_to_rgb24 (int width, int height, unsigned char *src, unsigned char *dst)
          SAT(g);
          SAT(b);
 
-	 *d++ = b;
-	 *d++ = g;
-	 *d++ = r;
+     *d++ = b;
+     *d++ = g;
+     *d++ = r;
       }
    }
 }
@@ -1716,8 +1716,8 @@ uyvy_to_rgb24 (int width, int height, unsigned char *src, unsigned char *dst)
 /* convert from mjpeg to rgb24 */
 static bool
 mjpeg_to_rgb24 (int width, int height,
-		unsigned char *src, int length,
-		unsigned char *dst)
+        unsigned char *src, int length,
+        unsigned char *dst)
 {
   cv::Mat temp=cv::imdecode(cv::Mat(std::vector<uchar>(src, src + length)), 1);
   if( !temp.data || temp.cols != width || temp.rows != height )
@@ -2126,85 +2126,85 @@ static IplImage* icvRetrieveFrameCAM_V4L( CvCaptureCAM_V4L* capture, int) {
     switch (capture->palette)
       {
       case PALETTE_BGR24:
-	memcpy((char *)capture->frame.imageData,
-	       (char *)capture->buffers[capture->bufferIndex].start,
-	       capture->frame.imageSize);
-	break;
+    memcpy((char *)capture->frame.imageData,
+           (char *)capture->buffers[capture->bufferIndex].start,
+           capture->frame.imageSize);
+    break;
 
       case PALETTE_YVU420:
-	  yuv420p_to_rgb24(capture->form.fmt.pix.width,
-			   capture->form.fmt.pix.height,
-			   (unsigned char*)(capture->buffers[capture->bufferIndex].start),
-			   (unsigned char*)capture->frame.imageData);
-	  break;
+      yuv420p_to_rgb24(capture->form.fmt.pix.width,
+               capture->form.fmt.pix.height,
+               (unsigned char*)(capture->buffers[capture->bufferIndex].start),
+               (unsigned char*)capture->frame.imageData);
+      break;
 
       case PALETTE_YUV411P:
-	yuv411p_to_rgb24(capture->form.fmt.pix.width,
-			 capture->form.fmt.pix.height,
-			 (unsigned char*)(capture->buffers[capture->bufferIndex].start),
-			 (unsigned char*)capture->frame.imageData);
-	break;
+    yuv411p_to_rgb24(capture->form.fmt.pix.width,
+             capture->form.fmt.pix.height,
+             (unsigned char*)(capture->buffers[capture->bufferIndex].start),
+             (unsigned char*)capture->frame.imageData);
+    break;
 #ifdef HAVE_JPEG
 #ifdef __USE_GNU
     /* support for MJPEG is only available with libjpeg and gcc,
        because it's use libjepg and fmemopen()
     */
       case PALETTE_MJPEG:
-	if (!mjpeg_to_rgb24(capture->form.fmt.pix.width,
-			    capture->form.fmt.pix.height,
-			    (unsigned char*)(capture->buffers[capture->bufferIndex]
-					     .start),
-			    capture->buffers[capture->bufferIndex].length,
-			    (unsigned char*)capture->frame.imageData))
-	  return 0;
-	break;
+    if (!mjpeg_to_rgb24(capture->form.fmt.pix.width,
+                capture->form.fmt.pix.height,
+                (unsigned char*)(capture->buffers[capture->bufferIndex]
+                         .start),
+                capture->buffers[capture->bufferIndex].length,
+                (unsigned char*)capture->frame.imageData))
+      return 0;
+    break;
 #endif
 #endif
 
       case PALETTE_YUYV:
-	yuyv_to_rgb24(capture->form.fmt.pix.width,
-		      capture->form.fmt.pix.height,
-		      (unsigned char*)(capture->buffers[capture->bufferIndex].start),
-		      (unsigned char*)capture->frame.imageData);
-	break;
+    yuyv_to_rgb24(capture->form.fmt.pix.width,
+              capture->form.fmt.pix.height,
+              (unsigned char*)(capture->buffers[capture->bufferIndex].start),
+              (unsigned char*)capture->frame.imageData);
+    break;
 
       case PALETTE_UYVY:
-	uyvy_to_rgb24(capture->form.fmt.pix.width,
-		      capture->form.fmt.pix.height,
-		      (unsigned char*)(capture->buffers[capture->bufferIndex].start),
-		      (unsigned char*)capture->frame.imageData);
-	break;
+    uyvy_to_rgb24(capture->form.fmt.pix.width,
+              capture->form.fmt.pix.height,
+              (unsigned char*)(capture->buffers[capture->bufferIndex].start),
+              (unsigned char*)capture->frame.imageData);
+    break;
       case PALETTE_SBGGR8:
-	bayer2rgb24(capture->form.fmt.pix.width,
-		    capture->form.fmt.pix.height,
-		    (unsigned char*)capture->buffers[capture->bufferIndex].start,
-		    (unsigned char*)capture->frame.imageData);
-	break;
+    bayer2rgb24(capture->form.fmt.pix.width,
+            capture->form.fmt.pix.height,
+            (unsigned char*)capture->buffers[capture->bufferIndex].start,
+            (unsigned char*)capture->frame.imageData);
+    break;
 
-      case PALETTE_SN9C10X:	
-	sonix_decompress_init();
-	sonix_decompress(capture->form.fmt.pix.width,
-			 capture->form.fmt.pix.height,
-			 (unsigned char*)capture->buffers[capture->bufferIndex].start,
-			 (unsigned char*)capture->buffers[(capture->bufferIndex+1) % capture->req.count].start);
-	
-	bayer2rgb24(capture->form.fmt.pix.width,
-		    capture->form.fmt.pix.height,
-		    (unsigned char*)capture->buffers[(capture->bufferIndex+1) % capture->req.count].start,
-		    (unsigned char*)capture->frame.imageData);
-	break;
-	
-      case PALETTE_SGBRG:	
-	sgbrg2rgb24(capture->form.fmt.pix.width,
-		    capture->form.fmt.pix.height,
-		    (unsigned char*)capture->buffers[(capture->bufferIndex+1) % capture->req.count].start,
-		    (unsigned char*)capture->frame.imageData);
-	break;
+      case PALETTE_SN9C10X:
+    sonix_decompress_init();
+    sonix_decompress(capture->form.fmt.pix.width,
+             capture->form.fmt.pix.height,
+             (unsigned char*)capture->buffers[capture->bufferIndex].start,
+             (unsigned char*)capture->buffers[(capture->bufferIndex+1) % capture->req.count].start);
+
+    bayer2rgb24(capture->form.fmt.pix.width,
+            capture->form.fmt.pix.height,
+            (unsigned char*)capture->buffers[(capture->bufferIndex+1) % capture->req.count].start,
+            (unsigned char*)capture->frame.imageData);
+    break;
+
+      case PALETTE_SGBRG:
+    sgbrg2rgb24(capture->form.fmt.pix.width,
+            capture->form.fmt.pix.height,
+            (unsigned char*)capture->buffers[(capture->bufferIndex+1) % capture->req.count].start,
+            (unsigned char*)capture->frame.imageData);
+    break;
       }
   } else
 #endif /* HAVE_CAMV4L2 */
   {
-    
+
     switch(capture->imageProperties.palette) {
       case VIDEO_PALETTE_RGB24:
         memcpy((char *)capture->frame.imageData,
@@ -2778,8 +2778,8 @@ static void icvCloseCAM_V4L( CvCaptureCAM_V4L* capture ){
 
        if (capture->buffers[MAX_V4L_BUFFERS].start)
        {
-    	   free(capture->buffers[MAX_V4L_BUFFERS].start);
-    	   capture->buffers[MAX_V4L_BUFFERS].start = 0;
+           free(capture->buffers[MAX_V4L_BUFFERS].start);
+           capture->buffers[MAX_V4L_BUFFERS].start = 0;
        }
      }
 #endif /* HAVE_CAMV4L2 */

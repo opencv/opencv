@@ -57,16 +57,16 @@ class App:
         self.win.pack(fill=tk.BOTH, expand=1)
 
         left = tk.Frame(win)
-        right = tk.Frame(win)                 
+        right = tk.Frame(win)
         win.add(left)
         win.add(right)
-                            
+
         scrollbar = tk.Scrollbar(left, orient=tk.VERTICAL)
         self.demos_lb = demos_lb = tk.Listbox(left, yscrollcommand=scrollbar.set)
         scrollbar.config(command=demos_lb.yview)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         demos_lb.pack(side=tk.LEFT, fill=tk.BOTH, expand=1)
-        
+
         self.samples = {}
         for fn in glob('*.py'):
             name = splitfn(fn)[1]
@@ -99,7 +99,7 @@ class App:
         loc = {}
         execfile(fn, loc)
         descr = loc.get('__doc__', 'no-description')
-                
+
         self.linker.reset()
         self.text.config(state='normal')
         self.text.delete(1.0, tk.END)
@@ -122,7 +122,7 @@ class App:
                 text.tag_add('header2', 'end-2l', 'end-1l')
             else:
                 text.insert('end', s+'\n')
-        
+
         def add_link(start, end, url):
             for tag in self.linker.add(url):
                 text.tag_add(tag, start, end)
@@ -153,4 +153,4 @@ class App:
 
 if __name__ == '__main__':
     App().run()
-		
+

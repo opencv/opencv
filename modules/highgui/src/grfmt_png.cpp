@@ -359,7 +359,7 @@ bool  PngEncoder::write( const Mat& img, const vector<int>& params )
 
                 int compression_level = -1; // Invalid value to allow setting 0-9 as valid
                 int compression_strategy = Z_RLE; // Default strategy
-				bool isBilevel = false;
+                bool isBilevel = false;
 
                 for( size_t i = 0; i < params.size(); i += 2 )
                 {
@@ -375,7 +375,7 @@ bool  PngEncoder::write( const Mat& img, const vector<int>& params )
                     }
                     if( params[i] == CV_IMWRITE_PNG_BILEVEL )
                     {
-                        isBilevel = params[i+1] != 0;                        
+                        isBilevel = params[i+1] != 0;
                     }
                 }
 
@@ -402,8 +402,8 @@ bool  PngEncoder::write( const Mat& img, const vector<int>& params )
 
                     png_write_info( png_ptr, info_ptr );
 
-					if (isBilevel)
-						png_set_packing(png_ptr);
+                    if (isBilevel)
+                        png_set_packing(png_ptr);
 
                     png_set_bgr( png_ptr );
                     if( !isBigEndian() )

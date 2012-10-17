@@ -26,7 +26,7 @@ PERF_TEST_P( Size_DepthSrc_DepthDst_Channels_alpha, convertTo,
     int channels = get<3>(GetParam());
     double alpha = get<4>(GetParam());
 
-    Mat src(sz, CV_MAKETYPE(depthSrc, channels));  
+    Mat src(sz, CV_MAKETYPE(depthSrc, channels));
     randu(src, 0, 255);
     Mat dst(sz, CV_MAKETYPE(depthDst, channels));
 

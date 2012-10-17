@@ -233,7 +233,7 @@ int main(int argc, char** argv)
 {
     if( argc != 7 && argc != 8 )
     {
-    	help(argv);
+        help(argv);
         return -1;
     }
 
@@ -256,7 +256,7 @@ int main(int argc, char** argv)
         cout << "Can not create detector or descriptor exstractor or descriptor matcher of given types" << endl;
         return -1;
     }
-		
+
     cout << "< Reading the images..." << endl;
     Mat img1 = imread( argv[5] ), img2;
     if( !isWarpPerspective )

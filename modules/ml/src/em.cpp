@@ -79,7 +79,7 @@ void EM::clear()
     logWeightDivDet.release();
 }
 
-    
+
 bool EM::train(InputArray samples,
                OutputArray logLikelihoods,
                OutputArray labels,
@@ -101,7 +101,7 @@ bool EM::trainE(InputArray samples,
     Mat samplesMat = samples.getMat();
     vector<Mat> covs0;
     _covs0.getMatVector(covs0);
-    
+
     Mat means0 = _means0.getMat(), weights0 = _weights0.getMat();
 
     setTrainData(START_E_STEP, samplesMat, 0, !_means0.empty() ? &means0 : 0,
@@ -117,12 +117,12 @@ bool EM::trainM(InputArray samples,
 {
     Mat samplesMat = samples.getMat();
     Mat probs0 = _probs0.getMat();
-    
+
     setTrainData(START_M_STEP, samplesMat, !_probs0.empty() ? &probs0 : 0, 0, 0, 0);
     return doTrain(START_M_STEP, logLikelihoods, labels, probs);
 }
 
-    
+
 Vec2d EM::predict(InputArray _sample, OutputArray _probs) const
 {
     Mat sample = _sample.getMat();
@@ -456,14 +456,14 @@ bool EM::doTrain(int startStep, OutputArray logLikelihoods, OutputArray labels, 
             covs[clusterIndex] = Mat::diag(covsEigenValues[clusterIndex]);
         }
     }
-    
+
     if(labels.needed())
         trainLabels.copyTo(labels);
     if(probs.needed())
         trainProbs.copyTo(probs);
     if(logLikelihoods.needed())
         trainLogLikelihoods.copyTo(logLikelihoods);
-    
+
     trainSamples.release();
     trainProbs.release();
     trainLabels.release();

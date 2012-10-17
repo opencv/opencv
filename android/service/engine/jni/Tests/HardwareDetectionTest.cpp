@@ -59,7 +59,7 @@ TEST(Parse, ParseStringWithoutSeporator)
 {
     string a = "qqqwww";
     string key;
-    string value;    
+    string value;
     EXPECT_FALSE(ParseString(a, key, value));
 }
 
@@ -143,8 +143,8 @@ TEST(CpuID, CheckSSE2)
     #ifdef __SUPPORT_MIPS
     TEST(CpuID, CheckMips)
     {
-	int cpu_id = GetCpuID();
-	EXPECT_TRUE(cpu_id & ARCH_MIPS);
+    int cpu_id = GetCpuID();
+    EXPECT_TRUE(cpu_id & ARCH_MIPS);
     }
     #endif
 #else

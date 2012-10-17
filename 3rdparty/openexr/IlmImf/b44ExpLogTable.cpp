@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2006, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-// 
+//
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission. 
-// 
+// from this software without specific prior written permission.
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -70,64 +70,64 @@ main ()
 #endif
 
     cout << "//\n"
-	    "// This is an automatically generated file.\n"
-	    "// Do not edit.\n"
-	    "//\n\n";
+        "// This is an automatically generated file.\n"
+        "// Do not edit.\n"
+        "//\n\n";
 
     const int iMax = (1 << 16);
 
     cout << "const unsigned short expTable[] =\n"
-	    "{\n"
-	    "    ";
+        "{\n"
+        "    ";
 
     for (int i = 0; i < iMax; i++)
     {
-	half h;
-	h.setBits (i);
+    half h;
+    h.setBits (i);
 
-	if (!h.isFinite())
-	    h = 0;
-	else if (h >= 8 * log (HALF_MAX))
-	    h = HALF_MAX;
-	else
-	    h = exp (h / 8);
+    if (!h.isFinite())
+        h = 0;
+    else if (h >= 8 * log (HALF_MAX))
+        h = HALF_MAX;
+    else
+        h = exp (h / 8);
 
-	cout << "0x" << setfill ('0') << setw (4) << h.bits() << ", ";
+    cout << "0x" << setfill ('0') << setw (4) << h.bits() << ", ";
 
-	if (i % 8 == 7)
-	{
-	    cout << "\n";
+    if (i % 8 == 7)
+    {
+        cout << "\n";
 
-	    if (i < iMax - 1)
-		cout << "    ";
-	}
+        if (i < iMax - 1)
+        cout << "    ";
+    }
     }
 
     cout << "};\n\n";
 
     cout << "const unsigned short logTable[] =\n"
-	    "{\n"
-	    "    ";
+        "{\n"
+        "    ";
 
     for (int i = 0; i < iMax; i++)
     {
-	half h;
-	h.setBits (i);
+    half h;
+    h.setBits (i);
 
-	if (!h.isFinite() || h < 0)
-	    h = 0;
-	else
-	    h = 8 * log (h);
+    if (!h.isFinite() || h < 0)
+        h = 0;
+    else
+        h = 8 * log (h);
 
-	cout << "0x" << setfill ('0') << setw (4) << h.bits() << ", ";
+    cout << "0x" << setfill ('0') << setw (4) << h.bits() << ", ";
 
-	if (i % 8 == 7)
-	{
-	    cout << "\n";
+    if (i % 8 == 7)
+    {
+        cout << "\n";
 
-	    if (i < iMax - 1)
-		cout << "    ";
-	}
+        if (i < iMax - 1)
+        cout << "    ";
+    }
     }
 
     cout << "};\n";

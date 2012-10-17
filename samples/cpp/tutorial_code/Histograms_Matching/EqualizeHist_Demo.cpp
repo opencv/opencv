@@ -27,7 +27,7 @@ int main( int argc, char** argv )
 
   if( !src.data )
     { cout<<"Usage: ./Histogram_Demo <path_to_image>"<<endl;
-      return -1; 
+      return -1;
     }
 
   /// Convert to grayscale
@@ -35,15 +35,15 @@ int main( int argc, char** argv )
 
   /// Apply Histogram Equalization
   equalizeHist( src, dst );
- 
+
   /// Display results
   namedWindow( source_window, CV_WINDOW_AUTOSIZE );
   namedWindow( equalized_window, CV_WINDOW_AUTOSIZE );
 
   imshow( source_window, src );
   imshow( equalized_window, dst );
- 
-  /// Wait until user exits the program 
+
+  /// Wait until user exits the program
   waitKey(0);
 
   return 0;

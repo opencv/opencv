@@ -97,7 +97,7 @@ cvCalcOpticalFlowBM( const void* srcarrA, const void* srcarrB,
 
     const int SMALL_DIFF=2;
     const int BIG_DIFF=128;
-    
+
     // scanning scheme coordinates
     cv::vector<CvPoint> _ss((2 * maxRange.width + 1) * (2 * maxRange.height + 1));
     CvPoint* ss = &_ss[0];
@@ -107,50 +107,50 @@ cvCalcOpticalFlowBM( const void* srcarrA, const void* srcarrB,
     int blSize = blWidth*blHeight;
     int acceptLevel = blSize * SMALL_DIFF;
     int escapeLevel = blSize * BIG_DIFF;
-    
+
     int i, j;
 
     cv::vector<uchar> _blockA(cvAlign(blSize + 16, 16));
     uchar* blockA = (uchar*)cvAlignPtr(&_blockA[0], 16);
-    
+
     // Calculate scanning scheme
     int min_count = MIN( maxRange.width, maxRange.height );
-    
+
     // use spiral search pattern
-    // 
+    //
     //     9 10 11 12
     //     8  1  2 13
     //     7  *  3 14
-    //     6  5  4 15      
+    //     6  5  4 15
     //... 20 19 18 17
     //
-    
+
     for( i = 0; i < min_count; i++ )
     {
         // four cycles along sides
         int x = -i-1, y = x;
-        
+
         // upper side
         for( j = -i; j <= i + 1; j++, ss_count++ )
         {
             ss[ss_count].x = ++x;
             ss[ss_count].y = y;
         }
-        
+
         // right side
         for( j = -i; j <= i + 1; j++, ss_count++ )
         {
             ss[ss_count].x = x;
             ss[ss_count].y = ++y;
         }
-        
+
         // bottom side
         for( j = -i; j <= i + 1; j++, ss_count++ )
         {
             ss[ss_count].x = --x;
             ss[ss_count].y = y;
         }
-        
+
         // left side
         for( j = -i; j <= i + 1; j++, ss_count++ )
         {
@@ -158,26 +158,26 @@ cvCalcOpticalFlowBM( const void* srcarrA, const void* srcarrB,
             ss[ss_count].y = --y;
         }
     }
-    
+
     // the rest part
     if( maxRange.width < maxRange.height )
     {
         int xleft = -min_count;
-        
+
         // cycle by neighbor rings
         for( i = min_count; i < maxRange.height; i++ )
         {
             // two cycles by x
             int y = -(i + 1);
             int x = xleft;
-            
+
             // upper side
             for( j = -maxRange.width; j <= maxRange.width; j++, ss_count++, x++ )
             {
                 ss[ss_count].x = x;
                 ss[ss_count].y = y;
             }
-            
+
             x = xleft;
             y = -y;
             // bottom side
@@ -191,21 +191,21 @@ cvCalcOpticalFlowBM( const void* srcarrA, const void* srcarrB,
     else if( maxRange.width > maxRange.height )
     {
         int yupper = -min_count;
-        
+
         // cycle by neighbor rings
         for( i = min_count; i < maxRange.width; i++ )
         {
             // two cycles by y
             int x = -(i + 1);
             int y = yupper;
-            
+
             // left side
             for( j = -maxRange.height; j <= maxRange.height; j++, ss_count++, y++ )
             {
                 ss[ss_count].x = x;
                 ss[ss_count].y = y;
             }
-            
+
             y = yupper;
             x = -x;
             // right side
@@ -221,18 +221,18 @@ cvCalcOpticalFlowBM( const void* srcarrA, const void* srcarrB,
     const uchar* Adata = srcA->data.ptr;
     const uchar* Bdata = srcB->data.ptr;
     int Astep = srcA->step, Bstep = srcB->step;
-    
+
     // compute the flow
     for( i = 0; i < velx->rows; i++ )
     {
         float* vx = (float*)(velx->data.ptr + velx->step*i);
         float* vy = (float*)(vely->data.ptr + vely->step*i);
-        
+
         for( j = 0; j < velx->cols; j++ )
         {
             int X1 = j*shiftSize.width, Y1 = i*shiftSize.height, X2, Y2;
             int offX = 0, offY = 0;
-            
+
             if( usePrevious )
             {
                 offX = cvRound(vx[j]);
@@ -242,7 +242,7 @@ cvCalcOpticalFlowBM( const void* srcarrA, const void* srcarrB,
             int k;
             for( k = 0; k < blHeight; k++ )
                 memcpy( blockA + k*blWidth, Adata + Astep*(Y1 + k) + X1, blWidth );
-            
+
             X2 = X1 + offX;
             Y2 = Y1 + offY;
             int dist = INT_MAX;
@@ -261,10 +261,10 @@ cvCalcOpticalFlowBM( const void* srcarrA, const void* srcarrB,
                     int dy = offY + ss[k].y;
                     X2 = X1 + dx;
                     Y2 = Y1 + dy;
-                    
+
                     if( !(0 <= X2 && X2 <= maxX && 0 <= Y2 && Y2 <= maxY) )
                         continue;
-                    
+
                     int tmpDist = cmpBlocks( blockA, Bdata + Bstep*Y2 + X2, Bstep, blockSize );
                     if( tmpDist < acceptLevel )
                     {
@@ -272,7 +272,7 @@ cvCalcOpticalFlowBM( const void* srcarrA, const void* srcarrB,
                         countMin = 1;
                         break;
                     }
-                    
+
                     if( tmpDist < dist )
                     {
                         dist = tmpDist;
@@ -285,7 +285,7 @@ cvCalcOpticalFlowBM( const void* srcarrA, const void* srcarrB,
                         countMin++;
                     }
                 }
-                
+
                 if( dist > escapeLevel )
                 {
                     sumx = offX;
@@ -293,10 +293,10 @@ cvCalcOpticalFlowBM( const void* srcarrA, const void* srcarrB,
                     countMin = 1;
                 }
             }
-            
+
             vx[j] = (float)sumx/countMin;
             vy[j] = (float)sumy/countMin;
-        } 
+        }
     }
 }
 

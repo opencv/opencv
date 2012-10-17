@@ -1118,7 +1118,7 @@ public:
         fmt = ((channels-1)<<8) + DataDepth<channel_type>::fmt,
         type = CV_MAKETYPE(depth, channels) };
 };
-    
+
 template<typename _Tp, int cn> class DataType<Vec<_Tp, cn> >
 {
 public:
@@ -2104,7 +2104,7 @@ CV_EXPORTS_AS(sumElems) Scalar sum(InputArray src);
 CV_EXPORTS_W int countNonZero( InputArray src );
 //! returns the list of locations of non-zero pixels
 CV_EXPORTS_W void findNonZero( InputArray src, OutputArray idx );
-    
+
 //! computes mean value of selected array elements
 CV_EXPORTS_W Scalar mean(InputArray src, InputArray mask=noArray());
 //! computes mean value and standard deviation of all or selected array elements

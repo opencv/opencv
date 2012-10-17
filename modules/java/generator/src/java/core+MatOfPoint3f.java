@@ -20,8 +20,8 @@ public class MatOfPoint3f extends Mat {
     }
 
     public static MatOfPoint3f fromNativeAddr(long addr) {
-		return new MatOfPoint3f(addr);
-	}
+        return new MatOfPoint3f(addr);
+    }
 
     public MatOfPoint3f(Mat m) {
         super(m, Range.all());

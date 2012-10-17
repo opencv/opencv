@@ -12,11 +12,11 @@ public:
 protected:
     virtual bool InstallPackage(const PackageInfo& package);
     virtual std::vector<PackageInfo> GetInstalledPackages();
-    
+
 private:
     JavaVM* JavaContext;
     jobject JavaPackageManager;
-    
+
     JavaBasedPackageManager();
     PackageInfo ConvertPackageFromJava(jobject package, JNIEnv* jenv);
 };

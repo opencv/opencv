@@ -104,7 +104,7 @@ void estimateFocal(const vector<ImageFeatures> &features, const vector<MatchesIn
     vector<double> all_focals;
 
     for (int i = 0; i < num_images; ++i)
-    {        
+    {
         for (int j = 0; j < num_images; ++j)
         {
             const MatchesInfo &m = pairwise_matches[i*num_images + j];
@@ -113,7 +113,7 @@ void estimateFocal(const vector<ImageFeatures> &features, const vector<MatchesIn
             double f0, f1;
             bool f0ok, f1ok;
             focalsFromHomography(m.H, f0, f1, f0ok, f1ok);
-            if (f0ok && f1ok) 
+            if (f0ok && f1ok)
                 all_focals.push_back(sqrt(f0 * f1));
         }
     }

@@ -52,7 +52,7 @@ public class MatOfInt extends Mat {
     public int[] toArray() {
         int num = checkVector(_channels, _depth);
         if(num < 0)
-        	throw new RuntimeException("Native Mat has unexpected type or size: " + toString());
+            throw new RuntimeException("Native Mat has unexpected type or size: " + toString());
         int[] a = new int[num * _channels];
         if(num == 0)
             return a;

@@ -32,8 +32,8 @@ namespace {
     }
 
     int process(VideoCapture& capture) {
-    	int n = 0;
-    	char filename[200];
+        int n = 0;
+        char filename[200];
         string window_name = "video | q or esc to quit";
         cout << "press space to save a picture. q or esc to quit" << endl;
         namedWindow(window_name, CV_WINDOW_KEEPRATIO); //resizable window;
@@ -50,10 +50,10 @@ namespace {
         case 27: //escape key
             return 0;
         case ' ': //Save an image
-        	sprintf(filename,"filename%.3d.jpg",n++);
-        	imwrite(filename,frame);
-        	cout << "Saved " << filename << endl;
-        	break;
+            sprintf(filename,"filename%.3d.jpg",n++);
+            imwrite(filename,frame);
+            cout << "Saved " << filename << endl;
+            break;
         default:
             break;
             }

@@ -9,7 +9,7 @@ import org.opencv.test.OpenCVTestCase;
 public class PhotoTest extends OpenCVTestCase {
 
     public void testInpaint() {
-    	Point p = new Point(matSize / 2, matSize / 2);
+        Point p = new Point(matSize / 2, matSize / 2);
         Core.circle(gray255, p, 2, colorBlack, Core.FILLED);
         Core.circle(gray0,   p, 2, colorWhite, Core.FILLED);
 

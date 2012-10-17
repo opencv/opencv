@@ -22,11 +22,11 @@ import video
 from common import anorm2, draw_str
 from time import clock
 
-lk_params = dict( winSize  = (15, 15), 
-                  maxLevel = 2, 
-                  criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03))    
+lk_params = dict( winSize  = (15, 15),
+                  maxLevel = 2,
+                  criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03))
 
-feature_params = dict( maxCorners = 500, 
+feature_params = dict( maxCorners = 500,
                        qualityLevel = 0.3,
                        minDistance = 7,
                        blockSize = 7 )
@@ -91,7 +91,7 @@ def main():
 
     print __doc__
     App(video_src).run()
-    cv2.destroyAllWindows() 			
+    cv2.destroyAllWindows()
 
 if __name__ == '__main__':
     main()

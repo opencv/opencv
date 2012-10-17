@@ -25,7 +25,7 @@ int main( int argc, char** argv )
    /// Load three images with different environment settings
    if( argc < 4 )
      { printf("** Error. Usage: ./compareHist_Demo <image_settings0> <image_setting1> <image_settings2>\n");
-       return -1; 
+       return -1;
      }
 
    src_base = imread( argv[1], 1 );
@@ -37,7 +37,7 @@ int main( int argc, char** argv )
    cvtColor( src_test1, hsv_test1, CV_BGR2HSV );
    cvtColor( src_test2, hsv_test2, CV_BGR2HSV );
 
-   hsv_half_down = hsv_base( Range( hsv_base.rows/2, hsv_base.rows - 1 ), Range( 0, hsv_base.cols - 1 ) );  
+   hsv_half_down = hsv_base( Range( hsv_base.rows/2, hsv_base.rows - 1 ), Range( 0, hsv_base.cols - 1 ) );
 
    /// Using 30 bins for hue and 32 for saturation
     int h_bins = 50; int s_bins = 60;
@@ -74,14 +74,14 @@ int main( int argc, char** argv )
 
     /// Apply the histogram comparison methods
     for( int i = 0; i < 4; i++ )
-       { int compare_method = i; 
+       { int compare_method = i;
          double base_base = compareHist( hist_base, hist_base, compare_method );
          double base_half = compareHist( hist_base, hist_half_down, compare_method );
          double base_test1 = compareHist( hist_base, hist_test1, compare_method );
          double base_test2 = compareHist( hist_base, hist_test2, compare_method );
-     
+
          printf( " Method [%d] Perfect, Base-Half, Base-Test(1), Base-Test(2) : %f, %f, %f, %f \n", i, base_base, base_half , base_test1, base_test2 );
-       } 
+       }
 
     printf( "Done \n" );
 

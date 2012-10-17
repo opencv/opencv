@@ -2986,21 +2986,21 @@ PCA& PCA::operator()(InputArray _data, InputArray __mean, int flags, double reta
             g.at<float>(ig,0) += eigenvalues.at<float>(im,0);
         }
     }
-    
+
     int L;
     for(L = 0; L < eigenvalues.rows; L++)
     {
         double energy = g.at<float>(L, 0) / g.at<float>(g.rows - 1, 0);
-        if(energy > retainedVariance) 
-            break;    
+        if(energy > retainedVariance)
+            break;
     }
 
     L = std::max(2, L);
-    
+
     // use clone() to physically copy the data and thus deallocate the original matrices
     eigenvalues = eigenvalues.rowRange(0,L).clone();
     eigenvectors = eigenvectors.rowRange(0,L).clone();
-  
+
     return *this;
 }
 

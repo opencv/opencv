@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2002, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-// 
+//
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission. 
-// 
+// from this software without specific prior written permission.
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -88,10 +88,10 @@ unsigned int
 halfToUint (half h)
 {
     if (h.isNegative() || h.isNan())
-	return 0;
+    return 0;
 
     if (h.isInfinity())
-	return UINT_MAX;
+    return UINT_MAX;
 
     return (unsigned int) h;
 }
@@ -101,35 +101,35 @@ unsigned int
 floatToUint (float f)
 {
     if (isNegative (f) || isNan (f))
-	return 0;
+    return 0;
 
     if (isInfinity (f) || f > UINT_MAX)
-	return UINT_MAX;
+    return UINT_MAX;
 
     return (unsigned int) f;
 }
 
 
-half	
+half
 uintToHalf (unsigned int ui)
 {
     if (ui >  HALF_MAX)
-	return half::posInf();
+    return half::posInf();
 
     return half (ui);
 }
 
 
-half	
+half
 floatToHalf (float f)
 {
     if (isFinite (f))
     {
-	if (f >  HALF_MAX)
-	    return half::posInf();
+    if (f >  HALF_MAX)
+        return half::posInf();
 
-	if (f < -HALF_MAX)
-	    return half::negInf();
+    if (f < -HALF_MAX)
+        return half::negInf();
     }
 
     return half (f);

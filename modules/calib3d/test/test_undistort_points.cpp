@@ -8,8 +8,8 @@ class CV_UndistortTest : public cvtest::BaseTest
 {
 public:
     CV_UndistortTest();
-    ~CV_UndistortTest();    
-protected:    
+    ~CV_UndistortTest();
+protected:
     void run(int);
 private:
     void generate3DPointCloud(vector<Point3f>& points, Point3f pmin = Point3f(-1,
@@ -68,7 +68,7 @@ void CV_UndistortTest::run(int /* start_from */)
     generate3DPointCloud(points);
     vector<Point2f> projectedPoints;
     projectedPoints.resize(points.size());
-    
+
     int modelMembersCount[] = {4,5,8};
     for (int idx = 0; idx < 3; idx++)
     {
@@ -86,8 +86,8 @@ void CV_UndistortTest::run(int /* start_from */)
         undistortedPoints = p;
         double diff = norm(Mat(realUndistortedPoints), undistortedPoints);
         if (diff > thresh)
-        {    
-            ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);  
+        {
+            ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
             return;
         }
         ts->set_failed_test_info(cvtest::TS::OK);

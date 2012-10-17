@@ -53,7 +53,7 @@ __kernel void convolve_D5 (__global float *src, __global float *temp1, __global 
                                   int rows, int cols, int src_step, int dst_step,int k_step, int kWidth, int kHeight)
 {
     __local float smem[16 + 2 * 8][16 + 2 * 8];
-    
+
     int x = get_local_id(0);
     int y = get_local_id(1);
     int gx = get_global_id(0);
@@ -92,7 +92,7 @@ __kernel void convolve_D5 (__global float *src, __global float *temp1, __global 
     smem[y + 16][x + 16] = src[min(gy + 8, rows - 1)*(src_step >> 2) + min(gx + 8, cols - 1)];
 
     barrier(CLK_LOCAL_MEM_FENCE);
- 
+
     if (gx < cols && gy < rows)
     {
        float res = 0;

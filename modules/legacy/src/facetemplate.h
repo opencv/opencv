@@ -48,49 +48,49 @@
 class FaceFeature
 {
 public:
-	FaceFeature(double dWeight,void * lpContour,bool bIsFeature);
-	FaceFeature();
-	virtual ~FaceFeature();
-	inline bool isFaceFeature();
-	inline void * GetContour();
-	inline double GetWeight();
-	inline void SetContour(void * lpContour); 
-	inline void SetWeight(double dWeight);
-	inline void SetFeature(bool bIsFeature);
+    FaceFeature(double dWeight,void * lpContour,bool bIsFeature);
+    FaceFeature();
+    virtual ~FaceFeature();
+    inline bool isFaceFeature();
+    inline void * GetContour();
+    inline double GetWeight();
+    inline void SetContour(void * lpContour);
+    inline void SetWeight(double dWeight);
+    inline void SetFeature(bool bIsFeature);
 private:
-	double m_dWeight;
-	void * m_lpContour;
-	bool m_bIsFaceFeature;
+    double m_dWeight;
+    void * m_lpContour;
+    bool m_bIsFaceFeature;
 };//class FaceFeature
 
 inline void FaceFeature::SetFeature(bool bIsFeature)
 {
-	m_bIsFaceFeature = bIsFeature;
+    m_bIsFaceFeature = bIsFeature;
 }
 
 inline bool FaceFeature::isFaceFeature()
 {
-	return m_bIsFaceFeature;
+    return m_bIsFaceFeature;
 }//inline bool FaceFeature::isFaceFeature()
 
 inline void * FaceFeature::GetContour()
 {
-	return m_lpContour;	
+    return m_lpContour;
 }//inline void * FaceFeature::GetContour()
 
 inline double FaceFeature::GetWeight()
 {
-	return m_dWeight;
+    return m_dWeight;
 }//inline long FaceFeature::GetWeight()
 
 inline void FaceFeature::SetContour(void * lpContour)
 {
-	m_lpContour = lpContour;
+    m_lpContour = lpContour;
 }//inline void FaceFeature::SetContour(void * lpContour)
 
 inline void FaceFeature::SetWeight(double  dWeight)
 {
-	m_dWeight = dWeight;
+    m_dWeight = dWeight;
 }//inline void FaceFeature::SetWeight(double * dWeight)
 
 
@@ -98,28 +98,28 @@ inline void FaceFeature::SetWeight(double  dWeight)
 class FaceTemplate
 {
 public:
-	FaceTemplate(long lFeatureCount) {m_lFeturesCount = lFeatureCount;	m_lpFeaturesList = new FaceFeature[lFeatureCount];};
-	virtual ~FaceTemplate();
-	
-	inline long GetCount();
-	inline FaceFeature * GetFeatures();
+    FaceTemplate(long lFeatureCount) {m_lFeturesCount = lFeatureCount;	m_lpFeaturesList = new FaceFeature[lFeatureCount];};
+    virtual ~FaceTemplate();
+
+    inline long GetCount();
+    inline FaceFeature * GetFeatures();
 
 protected:
-	FaceFeature * m_lpFeaturesList;	
+    FaceFeature * m_lpFeaturesList;
 private:
-	long m_lFeturesCount;
+    long m_lFeturesCount;
 };//class FaceTemplate
 
 
 inline long FaceTemplate::GetCount()
 {
-	return m_lFeturesCount;
+    return m_lFeturesCount;
 }//inline long FaceTemplate::GetCount()
 
 
 inline FaceFeature * FaceTemplate::GetFeatures()
 {
-	return m_lpFeaturesList;
+    return m_lpFeaturesList;
 }//inline FaceFeature * FaceTemplate::GetFeatures()
 
 ////////////
@@ -129,57 +129,57 @@ inline FaceFeature * FaceTemplate::GetFeatures()
 class MouthFaceTemplate:public FaceTemplate
 {
 public:
-	inline MouthFaceTemplate(long lNumber,CvRect rect,double dEyeWidth,double dEyeHeight,double dDistanceBetweenEye,double dDistanceEyeAboveMouth);
-	~MouthFaceTemplate();
+    inline MouthFaceTemplate(long lNumber,CvRect rect,double dEyeWidth,double dEyeHeight,double dDistanceBetweenEye,double dDistanceEyeAboveMouth);
+    ~MouthFaceTemplate();
 };//class MouthFaceTemplate:public FaceTemplate
 
 
 inline MouthFaceTemplate::MouthFaceTemplate(long lNumber,CvRect rect,double dEyeWidth,double dEyeHeight,
-							 double dDistanceBetweenEye,double dDistanceEyeAboveMouth):FaceTemplate(lNumber)
+                             double dDistanceBetweenEye,double dDistanceEyeAboveMouth):FaceTemplate(lNumber)
 {
-	
-	CvRect MouthRect = rect;
-	
-	
-	CvRect LeftEyeRect = cvRect(cvRound(rect.x - (dEyeWidth + dDistanceBetweenEye/(double)2 - (double)rect.width/(double)2)),
-						        cvRound(rect.y - dDistanceEyeAboveMouth - dEyeHeight),
-						        cvRound(dEyeWidth),
-						        cvRound(dEyeHeight) );
 
-	CvRect RightEyeRect = cvRect(cvRound(rect.x + (double)rect.width/(double)2 + dDistanceBetweenEye/(double)2),
-							     cvRound(rect.y - dDistanceEyeAboveMouth - dEyeHeight),
-							     cvRound(dEyeWidth),
-							     cvRound(dEyeHeight) );
+    CvRect MouthRect = rect;
+
+
+    CvRect LeftEyeRect = cvRect(cvRound(rect.x - (dEyeWidth + dDistanceBetweenEye/(double)2 - (double)rect.width/(double)2)),
+                                cvRound(rect.y - dDistanceEyeAboveMouth - dEyeHeight),
+                                cvRound(dEyeWidth),
+                                cvRound(dEyeHeight) );
+
+    CvRect RightEyeRect = cvRect(cvRound(rect.x + (double)rect.width/(double)2 + dDistanceBetweenEye/(double)2),
+                                 cvRound(rect.y - dDistanceEyeAboveMouth - dEyeHeight),
+                                 cvRound(dEyeWidth),
+                                 cvRound(dEyeHeight) );
 
 //	CvRect NoseRect = cvRect(cvRound(rect.x + (double)rect.width/(double)4),
 //							 cvRound(rect.y - (double)rect.width/(double)2 - (double)rect.height/(double)4),
 //							 cvRound((double)rect.width/(double)2),
 //							 cvRound((double)rect.width/(double)2) );
-/*	
-	CvRect CheenRect = cvRect(rect.x,rect.y + 3*rect.height/2,rect.width,rect.height);
-		
-*/	
-	
-	CvRect * lpMouthRect = new CvRect();
-	*lpMouthRect = MouthRect;
-	m_lpFeaturesList[0].SetContour(lpMouthRect);
-	m_lpFeaturesList[0].SetWeight(1);
-	m_lpFeaturesList[0].SetFeature(false);
+/*
+    CvRect CheenRect = cvRect(rect.x,rect.y + 3*rect.height/2,rect.width,rect.height);
+
+*/
+
+    CvRect * lpMouthRect = new CvRect();
+    *lpMouthRect = MouthRect;
+    m_lpFeaturesList[0].SetContour(lpMouthRect);
+    m_lpFeaturesList[0].SetWeight(1);
+    m_lpFeaturesList[0].SetFeature(false);
 
 
-	CvRect * lpLeftEyeRect = new CvRect();
-	*lpLeftEyeRect = LeftEyeRect;
-	m_lpFeaturesList[1].SetContour(lpLeftEyeRect);
-	m_lpFeaturesList[1].SetWeight(1);
-	m_lpFeaturesList[1].SetFeature(true);
+    CvRect * lpLeftEyeRect = new CvRect();
+    *lpLeftEyeRect = LeftEyeRect;
+    m_lpFeaturesList[1].SetContour(lpLeftEyeRect);
+    m_lpFeaturesList[1].SetWeight(1);
+    m_lpFeaturesList[1].SetFeature(true);
 
-	CvRect * lpRightEyeRect = new CvRect();
-	*lpRightEyeRect = RightEyeRect;
-	m_lpFeaturesList[2].SetContour(lpRightEyeRect);
-	m_lpFeaturesList[2].SetWeight(1);
-	m_lpFeaturesList[2].SetFeature(true);
+    CvRect * lpRightEyeRect = new CvRect();
+    *lpRightEyeRect = RightEyeRect;
+    m_lpFeaturesList[2].SetContour(lpRightEyeRect);
+    m_lpFeaturesList[2].SetWeight(1);
+    m_lpFeaturesList[2].SetFeature(true);
 
-	
+
 //	CvRect * lpNoseRect = new CvRect();
 //	*lpNoseRect = NoseRect;
 //	m_lpFeaturesList[3].SetContour(lpNoseRect);
@@ -187,10 +187,10 @@ inline MouthFaceTemplate::MouthFaceTemplate(long lNumber,CvRect rect,double dEye
 //	m_lpFeaturesList[3].SetFeature(true);
 
 /*	CvRect * lpCheenRect = new CvRect();
-	*lpCheenRect = CheenRect;
-	m_lpFeaturesList[4].SetContour(lpCheenRect);
-	m_lpFeaturesList[4].SetWeight(1);
-	m_lpFeaturesList[4].SetFeature(false);
+    *lpCheenRect = CheenRect;
+    m_lpFeaturesList[4].SetContour(lpCheenRect);
+    m_lpFeaturesList[4].SetWeight(1);
+    m_lpFeaturesList[4].SetFeature(false);
 
 */
 

@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2002, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-// 
+//
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission. 
-// 
+// from this software without specific prior written permission.
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -68,48 +68,48 @@ halfToFloat (unsigned short y)
 
     if (e == 0)
     {
-	if (m == 0)
-	{
-	    //
-	    // Plus or minus zero
-	    //
+    if (m == 0)
+    {
+        //
+        // Plus or minus zero
+        //
 
-	    return s << 31;
-	}
-	else
-	{
-	    //
-	    // Denormalized number -- renormalize it
-	    //
+        return s << 31;
+    }
+    else
+    {
+        //
+        // Denormalized number -- renormalize it
+        //
 
-	    while (!(m & 0x00000400))
-	    {
-		m <<= 1;
-		e -=  1;
-	    }
+        while (!(m & 0x00000400))
+        {
+        m <<= 1;
+        e -=  1;
+        }
 
-	    e += 1;
-	    m &= ~0x00000400;
-	}
+        e += 1;
+        m &= ~0x00000400;
+    }
     }
     else if (e == 31)
     {
-	if (m == 0)
-	{
-	    //
-	    // Positive or negative infinity
-	    //
+    if (m == 0)
+    {
+        //
+        // Positive or negative infinity
+        //
 
-	    return (s << 31) | 0x7f800000;
-	}
-	else
-	{
-	    //
-	    // Nan -- preserve sign and significand bits
-	    //
+        return (s << 31) | 0x7f800000;
+    }
+    else
+    {
+        //
+        // Nan -- preserve sign and significand bits
+        //
 
-	    return (s << 31) | 0x7f800000 | (m << 13);
-	}
+        return (s << 31) | 0x7f800000 | (m << 13);
+    }
     }
 
     //
@@ -138,9 +138,9 @@ main ()
     cout.setf (ios_base::hex, ios_base::basefield);
 
     cout << "//\n"
-	    "// This is an automatically generated file.\n"
-	    "// Do not edit.\n"
-	    "//\n\n";
+        "// This is an automatically generated file.\n"
+        "// Do not edit.\n"
+        "//\n\n";
 
     cout << "{\n    ";
 
@@ -148,15 +148,15 @@ main ()
 
     for (int i = 0; i < iMax; i++)
     {
-	cout << "{0x" << setfill ('0') << setw (8) << halfToFloat (i) << "}, ";
+    cout << "{0x" << setfill ('0') << setw (8) << halfToFloat (i) << "}, ";
 
-	if (i % 4 == 3)
-	{
-	    cout << "\n";
+    if (i % 4 == 3)
+    {
+        cout << "\n";
 
-	    if (i < iMax - 1)
-		cout << "    ";
-	}
+        if (i < iMax - 1)
+        cout << "    ";
+    }
     }
 
     cout << "};\n";

@@ -60,17 +60,17 @@ __kernel void magnitudeSqr_C1_D5 (__global float *src1,int src1_step,int src1_of
     int y = get_global_id(1);
 
     if (x < cols && y < rows)
-    
+
 
     {
-            
+
         x = x << 2;
 
         #define dst_align ((dst_offset >> 2) & 3)
 
-        int src1_index = mad24(y, src1_step, (x << 2) + src1_offset - (dst_align << 2)); 
-        int src2_index = mad24(y, src2_step, (x << 2) + src2_offset - (dst_align << 2)); 
-       
+        int src1_index = mad24(y, src1_step, (x << 2) + src1_offset - (dst_align << 2));
+        int src2_index = mad24(y, src2_step, (x << 2) + src2_offset - (dst_align << 2));
+
         int dst_start  = mad24(y, dst_step, dst_offset);
         int dst_end    = mad24(y, dst_step, dst_offset + dst_step1);
         int dst_index  = mad24(y, dst_step, dst_offset + (x << 2) -(dst_align << 2));
@@ -112,16 +112,16 @@ __kernel void magnitudeSqr_C2_D5 (__global float *src1,int src1_step,int src1_of
     int y = get_global_id(1);
 
     if (x < cols && y < rows)
-    
+
 
     {
-            
+
         x = x << 2;
 
         #define dst_align ((dst_offset >> 2) & 3)
 
-        int src1_index = mad24(y, src1_step, (x << 3) + src1_offset - (dst_align << 3)); 
-       
+        int src1_index = mad24(y, src1_step, (x << 3) + src1_offset - (dst_align << 3));
+
         int dst_start  = mad24(y, dst_step, dst_offset);
         int dst_end    = mad24(y, dst_step, dst_offset + dst_step1);
         int dst_index  = mad24(y, dst_step, dst_offset + (x << 2) -(dst_align << 2));

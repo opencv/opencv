@@ -243,7 +243,7 @@ static int countNonZero8u( const uchar* src, int len )
             }
             initialized = true;
         }
-        
+
         for (; i<=len-16; i+=16)
         {
             __m128i r0 = _mm_loadu_si128((const __m128i*)(src+i));
@@ -1915,7 +1915,7 @@ void cv::findNonZero( InputArray _src, OutputArray _idx )
     Mat idx = _idx.getMat();
     CV_Assert(idx.isContinuous());
     Point* idx_ptr = (Point*)idx.data;
-    
+
     for( int i = 0; i < src.rows; i++ )
     {
         const uchar* bin_ptr = src.ptr(i);

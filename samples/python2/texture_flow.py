@@ -1,7 +1,7 @@
 '''
 Texture flow direction estimation.
 
-Sample shows how cv2.cornerEigenValsAndVecs function can be used 
+Sample shows how cv2.cornerEigenValsAndVecs function can be used
 to estimate image texture flow direction.
 
 Usage:

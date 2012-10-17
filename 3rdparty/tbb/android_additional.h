@@ -33,7 +33,7 @@ static inline int getPossibleCPUs()
           sscanf(pos, "%d-%d", &rstart, &rend);
           cpusAvailable += rend - rstart + 1;
       }
-      
+
    }
    return cpusAvailable ? cpusAvailable : 1;
 }

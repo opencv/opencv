@@ -7,7 +7,7 @@ using namespace std;
 
 void help(char** av)
 {
-    cout << endl 
+    cout << endl
         << av[0] << " shows the usage of the OpenCV serialization functionality."         << endl
         << "usage: "                                                                      << endl
         <<  av[0] << " outputfile.yml.gz"                                                 << endl
@@ -54,8 +54,8 @@ void read(const FileNode& node, MyData& x, const MyData& default_value = MyData(
 }
 
 // This function will print our custom class to the console
-ostream& operator<<(ostream& out, const MyData& m) 
-{ 
+ostream& operator<<(ostream& out, const MyData& m)
+{
     out << "{ id = " << m.id << ", ";
     out << "X = " << m.X << ", ";
     out << "A = " << m.A << "}";
@@ -82,10 +82,10 @@ int main(int ac, char** av)
         fs << "strings" << "[";                              // text - string sequence
         fs << "image1.jpg" << "Awesomeness" << "baboon.jpg";
         fs << "]";                                           // close sequence
-        
+
         fs << "Mapping";                              // text - mapping
         fs << "{" << "One" << 1;
-        fs <<        "Two" << 2 << "}";               
+        fs <<        "Two" << 2 << "}";
 
         fs << "R" << R;                                      // cv::Mat
         fs << "T" << T;
@@ -98,10 +98,10 @@ int main(int ac, char** av)
 
     {//read
         cout << endl << "Reading: " << endl;
-        FileStorage fs; 
+        FileStorage fs;
         fs.open(filename, FileStorage::READ);
 
-        int itNr; 
+        int itNr;
         //fs["iterationNr"] >> itNr;
         itNr = (int) fs["iterationNr"];
         cout << itNr;
@@ -122,12 +122,12 @@ int main(int ac, char** av)
         FileNodeIterator it = n.begin(), it_end = n.end(); // Go through the node
         for (; it != it_end; ++it)
             cout << (string)*it << endl;
-        
-        
+
+
         n = fs["Mapping"];                                // Read mappings from a sequence
-        cout << "Two  " << (int)(n["Two"]) << "; "; 
-        cout << "One  " << (int)(n["One"]) << endl << endl; 
-        
+        cout << "Two  " << (int)(n["Two"]) << "; ";
+        cout << "One  " << (int)(n["One"]) << endl << endl;
+
 
         MyData m;
         Mat R, T;
@@ -136,18 +136,18 @@ int main(int ac, char** av)
         fs["T"] >> T;
         fs["MyData"] >> m;                                 // Read your own structure_
 
-        cout << endl 
+        cout << endl
             << "R = " << R << endl;
         cout << "T = " << T << endl << endl;
         cout << "MyData = " << endl << m << endl << endl;
 
         //Show default behavior for non existing nodes
-        cout << "Attempt to read NonExisting (should initialize the data structure with its default).";  
+        cout << "Attempt to read NonExisting (should initialize the data structure with its default).";
         fs["NonExisting"] >> m;
         cout << endl << "NonExisting = " << endl << m << endl;
     }
 
-    cout << endl 
+    cout << endl
         << "Tip: Open up " << filename << " with a text editor to see the serialized data." << endl;
 
     return 0;

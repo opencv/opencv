@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2004, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-// 
+//
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission. 
-// 
+// from this software without specific prior written permission.
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -80,9 +80,9 @@ class TiledOutputFile
     // faster than reading the tiles in random order (see writeTile,
     // below).
     //-------------------------------------------------------------------
-    
+
     TiledOutputFile (const char fileName[],
-		     const Header &header,
+             const Header &header,
                      int numThreads = globalThreadCount ());
 
 
@@ -94,7 +94,7 @@ class TiledOutputFile
     // ----------------------------------------------------------------
 
     TiledOutputFile (OStream &os,
-		     const Header &header,
+             const Header &header,
                      int numThreads = globalThreadCount ());
 
 
@@ -104,21 +104,21 @@ class TiledOutputFile
     // Destroying a TiledOutputFile object before all tiles
     // have been written results in an incomplete file.
     //-----------------------------------------------------
-    
+
     virtual ~TiledOutputFile ();
 
 
     //------------------------
     // Access to the file name
     //------------------------
-    
+
     const char *	fileName () const;
 
 
     //--------------------------
     // Access to the file header
     //--------------------------
-    
+
     const Header &	header () const;
 
 
@@ -132,14 +132,14 @@ class TiledOutputFile
     // called.  The current frame buffer can be changed
     // after each call to writeTile().
     //-------------------------------------------------------
-    
+
     void		setFrameBuffer (const FrameBuffer &frameBuffer);
 
 
     //-----------------------------------
     // Access to the current frame buffer
     //-----------------------------------
-    
+
     const FrameBuffer &	frameBuffer () const;
 
 
@@ -197,7 +197,7 @@ class TiledOutputFile
     //	if levelMode() == RIPMAP_LEVELS:
     //      an Iex::LogicExc exception is thrown
     //
-    // isValidLevel(lx, ly) returns true if the file contains 
+    // isValidLevel(lx, ly) returns true if the file contains
     // a level with level number (lx, ly), false if not.
     //
     //--------------------------------------------------------------------
@@ -300,10 +300,10 @@ class TiledOutputFile
     //-------------------------------------------------------------------
 
     Imath::Box2i	dataWindowForTile (int dx, int dy,
-					   int l = 0) const;
+                       int l = 0) const;
 
     Imath::Box2i	dataWindowForTile (int dx, int dy,
-					   int lx, int ly) const;
+                       int lx, int ly) const;
 
     //------------------------------------------------------------------
     // Write pixel data:
@@ -343,10 +343,10 @@ class TiledOutputFile
     //	 		in a contiguous block.  The levels are ordered
     //	 		like this:
     //
-    //			    (0, 0)   (1, 0)   ... (nx-1, 0) 
-    //			    (0, 1)   (1, 1)   ... (nx-1, 1) 
+    //			    (0, 0)   (1, 0)   ... (nx-1, 0)
+    //			    (0, 1)   (1, 1)   ... (nx-1, 1)
     //			     ...
-    //			    (0,ny-1) (1,ny-1) ... (nx-1,ny-1) 
+    //			    (0,ny-1) (1,ny-1) ... (nx-1,ny-1)
     //
     //			where nx = numXLevels(), and ny = numYLevels().
     //			In an individual level, (lx, ly), the tiles
@@ -394,9 +394,9 @@ class TiledOutputFile
     // header:  The two header's "dataWindow", "compression",
     // "lineOrder", "channels", and "tiles" attributes must be the same.
     //------------------------------------------------------------------
-    
+
     void		copyPixels (TiledInputFile &in);
-    
+
 
     //------------------------------------------------------------------
     // Shortcut to copy all pixels from an InputFile into this file,
@@ -407,7 +407,7 @@ class TiledOutputFile
     //
     // To use this function, the InputFile must be tiled.
     //------------------------------------------------------------------
-    
+
     void		copyPixels (InputFile &in);
 
 
@@ -434,7 +434,7 @@ class TiledOutputFile
 
     //-------------------------------------------------------------
     // Break a tile -- for testing and debugging only:
-    // 
+    //
     // breakTile(dx,dy,lx,ly,p,n,c) introduces an error into the
     // output file by writing n copies of character c, starting
     // p bytes from the beginning of the tile with tile coordinates
@@ -447,10 +447,10 @@ class TiledOutputFile
     //-------------------------------------------------------------
 
     void		breakTile  (int dx, int dy,
-				    int lx, int ly,
-				    int offset,
-				    int length,
-				    char c);
+                    int lx, int ly,
+                    int offset,
+                    int length,
+                    char c);
     struct Data;
 
   private:
@@ -461,10 +461,10 @@ class TiledOutputFile
     void		initialize (const Header &header);
 
     bool		isValidTile (int dx, int dy,
-				     int lx, int ly) const;
+                     int lx, int ly) const;
 
     size_t		bytesPerLineForTile (int dx, int dy,
-					     int lx, int ly) const;
+                         int lx, int ly) const;
 
     Data *		_data;
 };

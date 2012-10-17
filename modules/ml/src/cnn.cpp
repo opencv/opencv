@@ -263,10 +263,10 @@ static void icvTrainCNNetwork( CvCNNetwork* network,
             {
                 image.data.fl = (float*)images[i];
                 cvTranspose( &image, X[0] );
-                
+
                 for( k = 0, layer = first_layer; k < n_layers; k++, layer = layer->next_layer )
                     CV_CALL(layer->forward( layer, X[k], X[k+1] ));
-                
+
                 cvTranspose( X[n_layers], dE_dX[n_layers] );
                 cvGetRow( etalons, &etalon, *right_etal_idx );
                 loss = (float)cvNorm( dE_dX[n_layers], &etalon );
@@ -466,8 +466,8 @@ static void icvCNNModelRelease( CvStatModel** cnn_model )
 \****************************************************************************************/
 ML_IMPL CvCNNetwork* cvCreateCNNetwork( CvCNNLayer* first_layer )
 {
-    CvCNNetwork* network = 0;    
-    
+    CvCNNetwork* network = 0;
+
     CV_FUNCNAME( "cvCreateCNNetwork" );
     __BEGIN__;
 
@@ -669,7 +669,7 @@ ML_IMPL CvCNNLayer* cvCreateCNNConvolutionLayer(
         CvRNG rng = cvRNG( 0xFFFFFFFF );
         cvRandArr( &rng, layer->weights, CV_RAND_UNI, cvRealScalar(-1), cvRealScalar(1) );
     }
- 
+
     if( connect_mask )
     {
         if( !ICV_IS_MAT_OF_TYPE( connect_mask, CV_8UC1 ) )
@@ -689,7 +689,7 @@ ML_IMPL CvCNNLayer* cvCreateCNNConvolutionLayer(
         cvReleaseMat( &layer->connect_mask );
         cvFree( &layer );
     }
-    
+
     return (CvCNNLayer*)layer;
 }
 
@@ -757,7 +757,7 @@ ML_IMPL CvCNNLayer* cvCreateCNNSubSamplingLayer(
 }
 
 /****************************************************************************************/
-ML_IMPL CvCNNLayer* cvCreateCNNFullConnectLayer( 
+ML_IMPL CvCNNLayer* cvCreateCNNFullConnectLayer(
     int n_inputs, int n_outputs, float a, float s,
     float init_learn_rate, int learn_rate_decrease_type, CvMat* weights )
 {
@@ -928,7 +928,7 @@ static void icvCNNSubSamplingForward( CvCNNLayer* _layer,
                     for( xx = 0; xx < Ywidth; xx++, sumX_data++ )
                         *sumX_data += Xplane[((yy+ky)*Xwidth+(xx+kx))];
             }
-        }                
+        }
 
     w = layer->weights->data.fl;
     cvGetRows( layer->sumX, &sumX_sub_col, 0, Ysize );
@@ -1256,7 +1256,7 @@ static void icvCNNFullConnectBackward( CvCNNLayer* _layer,
 {
     CvMat* dE_dY_activ_func_der = 0;
     CvMat* dE_dW = 0;
-    
+
     CV_FUNCNAME( "icvCNNFullConnectBackward" );
 
     if( !ICV_IS_CNN_FULLCONNECT_LAYER(_layer) )
@@ -1276,12 +1276,12 @@ static void icvCNNFullConnectBackward( CvCNNLayer* _layer,
     CV_ASSERT(X->cols == 1 && X->rows == n_inputs);
     CV_ASSERT(dE_dY->rows == 1 && dE_dY->cols == n_outputs );
     CV_ASSERT(dE_dX->rows == 1 && dE_dX->cols == n_inputs );
-    
+
     // we violate the convetion about vector's orientation because
-    // here is more convenient to make this parameter a row-vector 
+    // here is more convenient to make this parameter a row-vector
     CV_CALL(dE_dY_activ_func_der = cvCreateMat( 1, n_outputs, CV_32FC1 ));
     CV_CALL(dE_dW = cvCreateMat( 1, weights->rows*weights->cols, CV_32FC1 ));
-    
+
     // 1) compute gradients dE_dX and dE_dW
     // activ_func_der == 4as*(layer->exp2ssumWX)/(layer->exp2ssumWX + 1)^2
     CV_CALL(cvReshape( layer->exp2ssumWX, &exp2ssumWXrow, 0, layer->exp2ssumWX->cols ));
@@ -1359,7 +1359,7 @@ static void icvCNNSubSamplingRelease( CvCNNLayer** p_layer )
     __BEGIN__;
 
     CvCNNSubSamplingLayer* layer = 0;
-    
+
     if( !p_layer )
         CV_ERROR( CV_StsNullPtr, "Null double pointer" );
 
@@ -1384,7 +1384,7 @@ static void icvCNNFullConnectRelease( CvCNNLayer** p_layer )
     __BEGIN__;
 
     CvCNNFullConnectLayer* layer = 0;
-    
+
     if( !p_layer )
         CV_ERROR( CV_StsNullPtr, "Null double pointer" );
 
@@ -1467,7 +1467,7 @@ static CvCNNLayer* icvReadCNNLayer( CvFileStorage* fs, CvFileNode* node )
         if( !connect_mask )
             CV_ERROR( CV_StsParseError, "Missing <connect mask>" );
 
-        CV_CALL(layer = cvCreateCNNConvolutionLayer( 
+        CV_CALL(layer = cvCreateCNNConvolutionLayer(
             n_input_planes, input_height, input_width, n_output_planes, K,
             init_learn_rate, learn_type, connect_mask, weights ));
     }
@@ -1619,7 +1619,7 @@ static void* icvReadCNNModel( CvFileStorage* fs, CvFileNode* root_node )
 static void
 icvWriteCNNModel( CvFileStorage* fs, const char* name,
                   const void* struct_ptr, CvAttrList )
-                                   
+
 {
     CV_FUNCNAME ("icvWriteCNNModel");
     __BEGIN__;
@@ -1632,12 +1632,12 @@ icvWriteCNNModel( CvFileStorage* fs, const char* name,
         CV_ERROR( CV_StsBadArg, "Invalid pointer" );
 
     n_layers = cnn->network->n_layers;
-    
+
     CV_CALL( cvStartWriteStruct( fs, name, CV_NODE_MAP, CV_TYPE_NAME_ML_CNN ));
 
     CV_CALL(cvWrite( fs, "etalons", cnn->etalons ));
     CV_CALL(cvWrite( fs, "cls_labels", cnn->cls_labels ));
-    
+
     CV_CALL( cvStartWriteStruct( fs, "network", CV_NODE_SEQ ));
 
     layer = cnn->network->layers;

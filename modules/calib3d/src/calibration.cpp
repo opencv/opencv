@@ -3359,11 +3359,11 @@ void cv::projectPoints( InputArray _opoints,
     CvMat c_imagePoints = _ipoints.getMat();
     CvMat c_objectPoints = opoints;
     Mat cameraMatrix = _cameraMatrix.getMat();
-    
+
     Mat rvec = _rvec.getMat(), tvec = _tvec.getMat();
     CvMat c_cameraMatrix = cameraMatrix;
     CvMat c_rvec = rvec, c_tvec = tvec;
-    
+
     Mat distCoeffs = _distCoeffs.getMat();
     CvMat c_distCoeffs = distCoeffs;
     int ndistCoeffs = distCoeffs.rows + distCoeffs.cols - 1;

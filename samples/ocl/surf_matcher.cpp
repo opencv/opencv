@@ -83,7 +83,7 @@ int main(int argc, char* argv[])
         cout << "Error: Did not find a valid OpenCL device!" << endl;
         return -1;
     }
-    Mat cpu_img1, cpu_img2, cpu_img1_grey, cpu_img2_grey; 
+    Mat cpu_img1, cpu_img2, cpu_img1_grey, cpu_img2_grey;
     oclMat img1, img2;
     if(argc != 5)
     {
@@ -120,7 +120,7 @@ int main(int argc, char* argv[])
             }
         }
     }
-    
+
     SURF_OCL surf;
     //surf.hessianThreshold = 400.f;
     //surf.extended = false;
@@ -128,7 +128,7 @@ int main(int argc, char* argv[])
     // detecting keypoints & computing descriptors
     oclMat keypoints1GPU, keypoints2GPU;
     oclMat descriptors1GPU, descriptors2GPU;
-    
+
     // downloading results
     vector<KeyPoint> keypoints1, keypoints2;
     vector<DMatch> matches;
@@ -170,7 +170,7 @@ int main(int argc, char* argv[])
     double max_dist = 0; double min_dist = 100;
     //-- Quick calculation of max and min distances between keypoints
     for( size_t i = 0; i < keypoints1.size(); i++ )
-    { 
+    {
         double dist = matches[i].distance;
         if( dist < min_dist ) min_dist = dist;
         if( dist > max_dist ) max_dist = dist;
@@ -183,10 +183,10 @@ int main(int argc, char* argv[])
     std::vector< DMatch > good_matches;
 
     for( size_t i = 0; i < keypoints1.size(); i++ )
-    { 
+    {
         if( matches[i].distance < 3*min_dist )
-        { 
-            good_matches.push_back( matches[i]); 
+        {
+            good_matches.push_back( matches[i]);
         }
     }
 

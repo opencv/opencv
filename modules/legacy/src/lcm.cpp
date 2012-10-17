@@ -103,7 +103,7 @@ typedef struct CvLCMData
 //    Returns: 1, if hybrid model was succesfully constructed
 //             0, if some error occures
 //F*/
-CV_IMPL 
+CV_IMPL
 int _cvConstructLCM(CvLCM* LCM);
 
 /*F///////////////////////////////////////////////////////////////////////////////////////
@@ -180,7 +180,7 @@ CvLCMNode* _cvTreatExeptionalCase(CvLCM* pLCM,
 //      LinkedEdges : out, matrix of incident edges
 //      LinkedSites : out, matrix of incident sites
 //      pSite: in, original site (pNode must be the begin point of pEdge
-//              for this pSite, this property hold out far all edges)  
+//              for this pSite, this property hold out far all edges)
 //    Returns: number of incident edges (must be less than 10)
 //F*/
 CV_IMPL
@@ -223,10 +223,10 @@ CvLCMEdge* _cvCreateLCMEdge(CvLCM* pLCM);
 //      LCMNode : in, graph node
 //      LCMEdge : in, graph edge
 //      LCMEdge_prev : in&out, previous edge, connected with given node
-//      index: in, 
+//      index: in,
 //      i    : =0, if node is initial for edge
 //             =1, if node  is terminal for edge
-//    Returns: 
+//    Returns:
 //F*/
 CV_IMPL
 void _cvAttachLCMEdgeToLCMNode(CvLCMNode* LCMNode,
@@ -244,7 +244,7 @@ void _cvAttachLCMEdgeToLCMNode(CvLCMNode* LCMNode,
 //      PointO, PointA,PointB: in, given points
 //      PrPoint : out, projection
 //      dist : distance from PointO to PrPoint
-//    Returns: 
+//    Returns:
 //F*/
 CV_IMPL
 void _cvProjectionPointToSegment(CvPoint2D32f* PointO,
@@ -261,7 +261,7 @@ void _cvProjectionPointToSegment(CvPoint2D32f* PointO,
 //    Parameters:
 //      pLCMData : in
 //      pLCMCCNData : out
-//    Returns: 
+//    Returns:
 //F*/
 CV_IMPL
 void _cvPrepareData(CvLCMComplexNodeData* pLCMCCNData,
@@ -280,12 +280,12 @@ CV_IMPL CvGraph* cvLinearContorModelFromVoronoiDiagram(CvVoronoiDiagram2D* Voron
 
     CV_FUNCNAME( "cvLinearContorModelFromVoronoiDiagram" );
      __BEGIN__;
-    
+
     if( !VoronoiDiagram )
         CV_ERROR( CV_StsBadArg,"Voronoi Diagram is not defined" );
     if( maxWidth < 0 )
         CV_ERROR( CV_StsBadArg,"Treshold parameter must be non negative" );
-    
+
     for(SiteSet = VoronoiDiagram->sites;
         SiteSet != NULL;
         SiteSet = (CvSet*)SiteSet->h_next)
@@ -295,7 +295,7 @@ CV_IMPL CvGraph* cvLinearContorModelFromVoronoiDiagram(CvVoronoiDiagram2D* Voron
             if(SiteSet->total > 70000)
                 CV_ERROR( CV_StsBadArg,"Can't operate with large domains" );
         }
-            
+
 
     LCMstorage = cvCreateMemStorage(0);
     LCM.EdgeStorage = cvCreateChildMemStorage(LCMstorage);
@@ -308,7 +308,7 @@ CV_IMPL CvGraph* cvLinearContorModelFromVoronoiDiagram(CvVoronoiDiagram2D* Voron
     if(!_cvConstructLCM(&LCM))
         cvReleaseLinearContorModelStorage(&LCM.Graph);
 
-    
+
     __END__;
     return LCM.Graph;
 }//end of cvLinearContorModelFromVoronoiDiagram
@@ -343,7 +343,7 @@ CV_IMPL int cvReleaseLinearContorModelStorage(CvGraph** Graph)
         cvReleaseMemStorage(&(*Graph)->storage);
     *Graph = NULL;
 
-    
+
     __END__;
     return 1;
 }//end of cvReleaseLinearContorModelStorage
@@ -353,10 +353,10 @@ int _cvConstructLCM(CvLCM* LCM)
     CvVoronoiSite2D* pSite = 0;
     CvVoronoiEdge2D* pEdge = 0, *pEdge1;
     CvVoronoiNode2D* pNode, *pNode1;
-    
+
     CvVoronoiEdge2D* LinkedEdges[10];
     CvVoronoiSite2D* LinkedSites[10];
-    
+
     CvSeqReader reader;
     CvLCMData LCMdata;
     int i;
@@ -375,7 +375,7 @@ int _cvConstructLCM(CvLCM* LCM)
             pNode = CV_VORONOIEDGE2D_BEGINNODE(pEdge,pSite);
             if(pNode->radius > LCM->maxWidth)
                 goto PREPARECOMPLEXNODE;
-            
+
             pEdge1 = CV_PREV_VORONOIEDGE2D(pEdge,pSite);
             pNode1 = CV_VORONOIEDGE2D_BEGINNODE(pEdge1,pSite);
             if(pNode1->radius > LCM->maxWidth)
@@ -396,7 +396,7 @@ PREPARECOMPLEXNODE:
         if(!_cvConstructLCMComplexNode(LCM,NULL,&LCMdata))
             return 0;
         continue;
-        
+
 PREPARESIMPLENODE:
         _CV_INITIALIZE_CVLCMDATA(&LCMdata,pSite,pEdge,CV_VORONOIEDGE2D_ENDNODE(pEdge,pSite));
         if(!_cvConstructLCMSimpleNode(LCM,NULL,&LCMdata))
@@ -419,7 +419,7 @@ CvLCMNode* _cvConstructLCMComplexNode(CvLCM* pLCM,
     CvLCMData LCMOutputData;
     CvLCMComplexNodeData LCMCCNData;
     int index = 0;
-    
+
     _cvPrepareData(&LCMCCNData,pLCMInputData);
 
     pLCMNode = _cvCreateLCMNode(pLCM);
@@ -435,11 +435,11 @@ CvLCMNode* _cvConstructLCMComplexNode(CvLCM* pLCM,
         index+=2;
     }
 
-    pSite_first = LCMCCNData.site_first; 
+    pSite_first = LCMCCNData.site_first;
     pSite_last = LCMCCNData.site_last;
     pEdge = LCMCCNData.edge;
 
-    for(pSite = pSite_first; 
+    for(pSite = pSite_first;
         pSite != pSite_last;
         pSite = CV_NEXT_VORONOISITE2D(pSite),
         pEdge = CV_PREV_VORONOIEDGE2D(CV_LAST_VORONOIEDGE2D(pSite),pSite))
@@ -498,7 +498,7 @@ CvLCMNode* _cvConstructLCMSimpleNode(CvLCM* pLCM,
         pLCMInputData->psite = CV_TWIN_VORONOISITE2D(LinkedSites[1],LinkedEdges[1]);
         return NULL;
     }
-    
+
     CvLCMEdge* pLCMEdge_prev = NULL;
     CvLCMNode* pLCMNode;
     CvLCMData LCMOutputData;
@@ -530,7 +530,7 @@ CvLCMEdge* _cvConstructLCMEdge(CvLCM* pLCM,
     CvVoronoiNode2D* pNode0,*pNode1;
 
     CvLCMEdge* pLCMEdge = _cvCreateLCMEdge(pLCM);
-    
+
     CvSeqWriter writer;
     cvStartAppendToSeq(pLCMEdge->chain,&writer );
 
@@ -636,7 +636,7 @@ int _cvNodeMultyplicity(CvVoronoiSite2D* pSite,
                         CvVoronoiSite2D** LinkedSites)
 {
     if(!pNode->radius)
-        return -1; 
+        return -1;
     assert(pNode == CV_VORONOIEDGE2D_BEGINNODE(pEdge,pSite));
 
     int multyplicity = 0;

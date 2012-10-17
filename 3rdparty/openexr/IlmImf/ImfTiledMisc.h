@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2004, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-// 
+//
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission. 
-// 
+// from this software without specific prior written permission.
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -51,23 +51,23 @@ namespace Imf {
 int levelSize (int min, int max, int l, LevelRoundingMode rmode);
 
 Imath::Box2i dataWindowForLevel (const TileDescription &tileDesc,
-				 int minX, int maxX,
-				 int minY, int maxY,
-				 int lx, int ly);
+                 int minX, int maxX,
+                 int minY, int maxY,
+                 int lx, int ly);
 
 Imath::Box2i dataWindowForTile (const TileDescription &tileDesc,
-				int minX, int maxX,
-				int minY, int maxY,
-				int dx, int dy,
-				int lx, int ly);
+                int minX, int maxX,
+                int minY, int maxY,
+                int dx, int dy,
+                int lx, int ly);
 
 size_t calculateBytesPerPixel (const Header &header);
 
 void precalculateTileInfo (const TileDescription& tileDesc,
-			   int minX, int maxX,
-			   int minY, int maxY,
-			   int *&numXTiles, int *&numYTiles,
-			   int &numXLevels, int &numYLevels);
+               int minX, int maxX,
+               int minY, int maxY,
+               int *&numXTiles, int *&numYTiles,
+               int &numXLevels, int &numYLevels);
 
 
 } // namespace Imf

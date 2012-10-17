@@ -8,7 +8,7 @@ ocv_check_dependencies(${OPENCV_OCL_SAMPLES_REQUIRED_DEPS})
 if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
   set(project "ocl")
   string(TOUPPER "${project}" project_upper)
-    
+
   project("${project}_samples")
 
   ocv_include_modules(${OPENCV_OCL_SAMPLES_REQUIRED_DEPS})
@@ -31,9 +31,9 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
     target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${OPENCV_OCL_SAMPLES_REQUIRED_DEPS})
 
     set_target_properties(${the_target} PROPERTIES
-      OUTPUT_NAME "${name}_${project}"                                       
+      OUTPUT_NAME "${name}_${project}"
       PROJECT_LABEL "(EXAMPLE_${project_upper}) ${name}")
-        
+
     if(ENABLE_SOLUTION_FOLDERS)
       set_target_properties(${the_target} PROPERTIES FOLDER "samples//${project}")
     endif()

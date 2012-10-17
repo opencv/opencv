@@ -513,13 +513,13 @@ gpuCreateHidHaarClassifierCascade( CvHaarClassifierCascade *cascade, int *size, 
 
 
 #define sum_elem_ptr(sum,row,col)  \
-	((sumtype*)CV_MAT_ELEM_PTR_FAST((sum),(row),(col),sizeof(sumtype)))
+    ((sumtype*)CV_MAT_ELEM_PTR_FAST((sum),(row),(col),sizeof(sumtype)))
 
 #define sqsum_elem_ptr(sqsum,row,col)  \
-	((sqsumtype*)CV_MAT_ELEM_PTR_FAST((sqsum),(row),(col),sizeof(sqsumtype)))
+    ((sqsumtype*)CV_MAT_ELEM_PTR_FAST((sqsum),(row),(col),sizeof(sqsumtype)))
 
 #define calc_sum(rect,offset) \
-	((rect).p0[offset] - (rect).p1[offset] - (rect).p2[offset] + (rect).p3[offset])
+    ((rect).p0[offset] - (rect).p1[offset] - (rect).p2[offset] + (rect).p3[offset])
 
 
 CV_IMPL void

@@ -63,7 +63,7 @@ and DirectX SDK (2006 April or later).
    See <PlatformSDKInstallFolder>\samples\multimedia\directshow\readme.txt.
 
 4. Copy the built libraries (called strmbase.lib and strmbasd.lib
-   in Release and Debug versions, respectively) to 
+   in Release and Debug versions, respectively) to
    <PlatformSDKInstallFolder>\lib.
 
 5. In Developer Studio add the following paths:
@@ -81,7 +81,7 @@ and DirectX SDK (2006 April or later).
 
    NOTE: PUT THE ADDED LINES ON THE VERY TOP OF THE LISTS, OTHERWISE YOU MAY STILL GET
    COMPILER OR LINKER ERRORS. This is necessary, because Visual Studio
-   may include older versions of the same headers and libraries. 
+   may include older versions of the same headers and libraries.
 
 6. Now you can build OpenCV DirectShow filters.
 

@@ -17,26 +17,26 @@ using namespace android;
 int main(int argc, char *argv[])
 {
     LOGI("OpenCVEngine client is now starting");
-    
+
     sp<IServiceManager> ServiceManager = defaultServiceManager();
     sp<IBinder> EngineService;
     sp<IOpenCVEngine> Engine;
-    
+
     LOGI("Trying to contect to service");
-    
+
     do {
-	EngineService = ServiceManager->getService(IOpenCVEngine::descriptor);
-	if (EngineService != 0) break;
-	LOGW("OpenCVEngine not published, waiting...");
-	usleep(500000); // 0.5 s
+    EngineService = ServiceManager->getService(IOpenCVEngine::descriptor);
+    if (EngineService != 0) break;
+    LOGW("OpenCVEngine not published, waiting...");
+    usleep(500000); // 0.5 s
     } while(true);
-        
+
     LOGI("Connection established");
 
     Engine = interface_cast<IOpenCVEngine>(EngineService);
     int32_t EngineVersion = Engine->GetVersion();
-    
+
     printf("OpenCVEngine version %d started", EngineVersion);
-	
+
     return 0;
 }

@@ -13,7 +13,7 @@ Usage:
     camshift.py [<video source>]
 
     To initialize tracking, select the object with mouse
-  
+
 Keys:
 -----
     ESC   - exit
@@ -42,7 +42,7 @@ class App(object):
         if event == cv2.EVENT_LBUTTONDOWN:
             self.drag_start = (x, y)
             self.tracking_state = 0
-        if self.drag_start: 
+        if self.drag_start:
             if flags & cv2.EVENT_FLAG_LBUTTON:
                 h, w = self.frame.shape[:2]
                 xo, yo = self.drag_start
@@ -82,7 +82,7 @@ class App(object):
                 cv2.normalize(hist, hist, 0, 255, cv2.NORM_MINMAX);
                 self.hist = hist.reshape(-1)
                 self.show_hist()
-                
+
                 vis_roi = vis[y0:y1, x0:x1]
                 cv2.bitwise_not(vis_roi, vis_roi)
                 vis[mask == 0] = 0
@@ -93,12 +93,12 @@ class App(object):
                 prob &= mask
                 term_crit = ( cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 1 )
                 track_box, self.track_window = cv2.CamShift(prob, self.track_window, term_crit)
-                
+
                 if self.show_backproj:
                     vis[:] = prob[...,np.newaxis]
                 try: cv2.ellipse(vis, track_box, (0, 0, 255), 2)
                 except: print track_box
-                
+
             cv2.imshow('camshift', vis)
 
             ch = 0xFF & cv2.waitKey(5)
@@ -106,7 +106,7 @@ class App(object):
                 break
             if ch == ord('b'):
                 self.show_backproj = not self.show_backproj
-        cv2.destroyAllWindows() 			
+        cv2.destroyAllWindows()
 
 
 if __name__ == '__main__':

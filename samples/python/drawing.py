@@ -22,7 +22,7 @@ if __name__ == '__main__':
     number = 100
     delay = 5
     line_type = cv.CV_AA  # change it to 8 to see non-antialiased graphics
-    
+
     # create the source image
     image = cv.CreateImage( (width, height), 8, 3)
 
@@ -44,7 +44,7 @@ if __name__ == '__main__':
                    random_color(random),
                    random.randrange(0, 10),
                    line_type, 0)
-        
+
         cv.ShowImage(window_name, image)
         cv.WaitKey(delay)
 
@@ -58,7 +58,7 @@ if __name__ == '__main__':
                         random_color(random),
                         random.randrange(-1, 9),
                         line_type, 0)
-        
+
         cv.ShowImage(window_name, image)
         cv.WaitKey(delay)
 
@@ -73,7 +73,7 @@ if __name__ == '__main__':
                         random_color(random),
                         random.randrange(-1, 9),
                         line_type, 0)
-        
+
         cv.ShowImage(window_name, image)
         cv.WaitKey(delay)
 
@@ -119,7 +119,7 @@ if __name__ == '__main__':
                      random_color(random),
                      random.randrange(-1, 9),
                      line_type, 0)
-        
+
         cv.ShowImage(window_name, image)
         cv.WaitKey(delay)
 
@@ -137,7 +137,7 @@ if __name__ == '__main__':
         cv.PutText(image, "Testing text rendering!",
                       pt1, font,
                       random_color(random))
-        
+
         cv.ShowImage(window_name, image)
         cv.WaitKey(delay)
 

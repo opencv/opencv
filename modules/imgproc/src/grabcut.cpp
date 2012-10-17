@@ -119,7 +119,7 @@ double GMM::operator()( int ci, const Vec3d color ) const
     double res = 0;
     if( coefs[ci] > 0 )
     {
-		CV_Assert( covDeterms[ci] > std::numeric_limits<double>::epsilon() );
+        CV_Assert( covDeterms[ci] > std::numeric_limits<double>::epsilon() );
         Vec3d diff = color;
         double* m = mean + 3*ci;
         diff[0] -= m[0]; diff[1] -= m[1]; diff[2] -= m[2];
@@ -138,7 +138,7 @@ int GMM::whichComponent( const Vec3d color ) const
 
     for( int ci = 0; ci < componentsCount; ci++ )
     {
-		double p = (*this)( ci, color );
+        double p = (*this)( ci, color );
         if( p > max )
         {
             k = ci;
@@ -406,7 +406,7 @@ static void assignGMMsComponents( const Mat& img, const Mat& mask, const GMM& bg
         for( p.x = 0; p.x < img.cols; p.x++ )
         {
             Vec3d color = img.at<Vec3b>(p);
-			compIdxs.at<int>(p) = mask.at<uchar>(p) == GC_BGD || mask.at<uchar>(p) == GC_PR_BGD ?
+            compIdxs.at<int>(p) = mask.at<uchar>(p) == GC_BGD || mask.at<uchar>(p) == GC_PR_BGD ?
                 bgdGMM.whichComponent(color) : fgdGMM.whichComponent(color);
         }
     }

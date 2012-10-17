@@ -66,8 +66,8 @@
 
 GLOBAL(void)
 jpeg_idct_float (j_decompress_ptr cinfo, jpeg_component_info * compptr,
-		 JCOEFPTR coef_block,
-		 JSAMPARRAY output_buf, JDIMENSION output_col)
+         JCOEFPTR coef_block,
+         JSAMPARRAY output_buf, JDIMENSION output_col)
 {
   FAST_FLOAT tmp0, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7;
   FAST_FLOAT tmp10, tmp11, tmp12, tmp13;
@@ -95,14 +95,14 @@ jpeg_idct_float (j_decompress_ptr cinfo, jpeg_component_info * compptr,
      * With typical images and quantization tables, half or more of the
      * column DCT calculations can be simplified this way.
      */
-    
+
     if (inptr[DCTSIZE*1] == 0 && inptr[DCTSIZE*2] == 0 &&
-	inptr[DCTSIZE*3] == 0 && inptr[DCTSIZE*4] == 0 &&
-	inptr[DCTSIZE*5] == 0 && inptr[DCTSIZE*6] == 0 &&
-	inptr[DCTSIZE*7] == 0) {
+    inptr[DCTSIZE*3] == 0 && inptr[DCTSIZE*4] == 0 &&
+    inptr[DCTSIZE*5] == 0 && inptr[DCTSIZE*6] == 0 &&
+    inptr[DCTSIZE*7] == 0) {
       /* AC terms all zero */
       FAST_FLOAT dcval = DEQUANTIZE(inptr[DCTSIZE*0], quantptr[DCTSIZE*0]);
-      
+
       wsptr[DCTSIZE*0] = dcval;
       wsptr[DCTSIZE*1] = dcval;
       wsptr[DCTSIZE*2] = dcval;
@@ -111,13 +111,13 @@ jpeg_idct_float (j_decompress_ptr cinfo, jpeg_component_info * compptr,
       wsptr[DCTSIZE*5] = dcval;
       wsptr[DCTSIZE*6] = dcval;
       wsptr[DCTSIZE*7] = dcval;
-      
+
       inptr++;			/* advance pointers to next column */
       quantptr++;
       wsptr++;
       continue;
     }
-    
+
     /* Even part */
 
     tmp0 = DEQUANTIZE(inptr[DCTSIZE*0], quantptr[DCTSIZE*0]);
@@ -135,7 +135,7 @@ jpeg_idct_float (j_decompress_ptr cinfo, jpeg_component_info * compptr,
     tmp3 = tmp10 - tmp13;
     tmp1 = tmp11 + tmp12;
     tmp2 = tmp11 - tmp12;
-    
+
     /* Odd part */
 
     tmp4 = DEQUANTIZE(inptr[DCTSIZE*1], quantptr[DCTSIZE*1]);
@@ -172,7 +172,7 @@ jpeg_idct_float (j_decompress_ptr cinfo, jpeg_component_info * compptr,
     quantptr++;
     wsptr++;
   }
-  
+
   /* Pass 2: process rows from work array, store into output array. */
   /* Note that we must descale the results by a factor of 8 == 2**3. */
 
@@ -184,7 +184,7 @@ jpeg_idct_float (j_decompress_ptr cinfo, jpeg_component_info * compptr,
      * the simplification applies less often (typically 5% to 10% of the time).
      * And testing floats for zero is relatively expensive, so we don't bother.
      */
-    
+
     /* Even part */
 
     tmp10 = wsptr[0] + wsptr[4];
@@ -219,22 +219,22 @@ jpeg_idct_float (j_decompress_ptr cinfo, jpeg_component_info * compptr,
     /* Final output stage: scale down by a factor of 8 and range-limit */
 
     outptr[0] = range_limit[(int) DESCALE((INT32) (tmp0 + tmp7), 3)
-			    & RANGE_MASK];
+                & RANGE_MASK];
     outptr[7] = range_limit[(int) DESCALE((INT32) (tmp0 - tmp7), 3)
-			    & RANGE_MASK];
+                & RANGE_MASK];
     outptr[1] = range_limit[(int) DESCALE((INT32) (tmp1 + tmp6), 3)
-			    & RANGE_MASK];
+                & RANGE_MASK];
     outptr[6] = range_limit[(int) DESCALE((INT32) (tmp1 - tmp6), 3)
-			    & RANGE_MASK];
+                & RANGE_MASK];
     outptr[2] = range_limit[(int) DESCALE((INT32) (tmp2 + tmp5), 3)
-			    & RANGE_MASK];
+                & RANGE_MASK];
     outptr[5] = range_limit[(int) DESCALE((INT32) (tmp2 - tmp5), 3)
-			    & RANGE_MASK];
+                & RANGE_MASK];
     outptr[4] = range_limit[(int) DESCALE((INT32) (tmp3 + tmp4), 3)
-			    & RANGE_MASK];
+                & RANGE_MASK];
     outptr[3] = range_limit[(int) DESCALE((INT32) (tmp3 - tmp4), 3)
-			    & RANGE_MASK];
-    
+                & RANGE_MASK];
+
     wsptr += DCTSIZE;		/* advance pointer to next row */
   }
 }

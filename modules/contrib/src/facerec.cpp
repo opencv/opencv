@@ -345,7 +345,7 @@ void Eigenfaces::train(InputArrayOfArrays _src, InputArray _local_labels) {
     Mat labels = _local_labels.getMat();
     // observations in row
     Mat data = asRowMatrix(_src, CV_64FC1);
-   
+
     // number of samples
    int n = data.rows;
     // assert there are as much samples as labels
@@ -359,7 +359,7 @@ void Eigenfaces::train(InputArrayOfArrays _src, InputArray _local_labels) {
     // clip number of components to be valid
     if((_num_components <= 0) || (_num_components > n))
         _num_components = n;
-    
+
     // perform the PCA
     PCA pca(data, Mat(), CV_PCA_DATA_AS_ROW, _num_components);
     // copy the PCA results

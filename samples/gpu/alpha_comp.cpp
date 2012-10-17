@@ -36,8 +36,8 @@ int main()
 
     int alpha_op = ALPHA_OVER;
 
-    const char* op_names[] = 
-    { 
+    const char* op_names[] =
+    {
         "ALPHA_OVER", "ALPHA_IN", "ALPHA_OUT", "ALPHA_ATOP", "ALPHA_XOR", "ALPHA_PLUS", "ALPHA_OVER_PREMUL", "ALPHA_IN_PREMUL", "ALPHA_OUT_PREMUL",
         "ALPHA_ATOP_PREMUL", "ALPHA_XOR_PREMUL", "ALPHA_PLUS_PREMUL", "ALPHA_PREMUL"
     };
@@ -60,7 +60,7 @@ int main()
             ++alpha_op;
 
             if (alpha_op > ALPHA_PREMUL)
-                alpha_op = ALPHA_OVER; 
+                alpha_op = ALPHA_OVER;
         }
     }
 

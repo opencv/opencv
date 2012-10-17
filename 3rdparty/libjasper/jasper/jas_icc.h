@@ -4,15 +4,15 @@
  */
 
 /* __START_OF_JASPER_LICENSE__
- * 
+ *
  * JasPer License Version 2.0
- * 
+ *
  * Copyright (c) 2001-2006 Michael David Adams
  * Copyright (c) 1999-2000 Image Power, Inc.
  * Copyright (c) 1999-2000 The University of British Columbia
- * 
+ *
  * All rights reserved.
- * 
+ *
  * Permission is hereby granted, free of charge, to any person (the
  * "User") obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without restriction,
@@ -20,15 +20,15 @@
  * publish, distribute, and/or sell copies of the Software, and to permit
  * persons to whom the Software is furnished to do so, subject to the
  * following conditions:
- * 
+ *
  * 1.  The above copyright notices and this permission notice (which
  * includes the disclaimer below) shall be included in all copies or
  * substantial portions of the Software.
- * 
+ *
  * 2.  The name of a copyright holder shall not be used to endorse or
  * promote products derived from the Software without specific prior
  * written permission.
- * 
+ *
  * THIS DISCLAIMER OF WARRANTY CONSTITUTES AN ESSENTIAL PART OF THIS
  * LICENSE.  NO USE OF THE SOFTWARE IS AUTHORIZED HEREUNDER EXCEPT UNDER
  * THIS DISCLAIMER.  THE SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS
@@ -55,7 +55,7 @@
  * PERSONAL INJURY, OR SEVERE PHYSICAL OR ENVIRONMENTAL DAMAGE ("HIGH
  * RISK ACTIVITIES").  THE COPYRIGHT HOLDERS SPECIFICALLY DISCLAIM ANY
  * EXPRESS OR IMPLIED WARRANTY OF FITNESS FOR HIGH RISK ACTIVITIES.
- * 
+ *
  * __END_OF_JASPER_LICENSE__
  */
 
@@ -225,152 +225,152 @@ typedef jas_iccsig_t jas_iccattrname_t;
 
 /* Date/time type. */
 typedef struct {
-	jas_iccuint16_t year;
-	jas_iccuint16_t month;
-	jas_iccuint16_t day;
-	jas_iccuint16_t hour;
-	jas_iccuint16_t min;
-	jas_iccuint16_t sec;
+    jas_iccuint16_t year;
+    jas_iccuint16_t month;
+    jas_iccuint16_t day;
+    jas_iccuint16_t hour;
+    jas_iccuint16_t min;
+    jas_iccuint16_t sec;
 } jas_icctime_t;
 
 /* XYZ type. */
 typedef struct {
-	jas_iccs15fixed16_t x;
-	jas_iccs15fixed16_t y;
-	jas_iccs15fixed16_t z;
+    jas_iccs15fixed16_t x;
+    jas_iccs15fixed16_t y;
+    jas_iccs15fixed16_t z;
 } jas_iccxyz_t;
 
 /* Curve type. */
 typedef struct {
-	jas_iccuint32_t numents;
-	jas_iccuint16_t *ents;
+    jas_iccuint32_t numents;
+    jas_iccuint16_t *ents;
 } jas_icccurv_t;
 
 /* Text description type. */
 typedef struct {
-	jas_iccuint32_t asclen;
-	char *ascdata; /* ASCII invariant description */
-	jas_iccuint32_t uclangcode; /* Unicode language code */
-	jas_iccuint32_t uclen; /* Unicode localizable description count */
-	uchar *ucdata; /* Unicode localizable description */
-	jas_iccuint16_t sccode; /* ScriptCode code */
-	jas_iccuint8_t maclen; /* Localizable Macintosh description count */
-	uchar macdata[69]; /* Localizable Macintosh description */
+    jas_iccuint32_t asclen;
+    char *ascdata; /* ASCII invariant description */
+    jas_iccuint32_t uclangcode; /* Unicode language code */
+    jas_iccuint32_t uclen; /* Unicode localizable description count */
+    uchar *ucdata; /* Unicode localizable description */
+    jas_iccuint16_t sccode; /* ScriptCode code */
+    jas_iccuint8_t maclen; /* Localizable Macintosh description count */
+    uchar macdata[69]; /* Localizable Macintosh description */
 } jas_icctxtdesc_t;
 
 /* Text type. */
 typedef struct {
-	char *string;	/* ASCII character string */
+    char *string;	/* ASCII character string */
 } jas_icctxt_t;
 
 typedef struct {
-	jas_iccuint8_t numinchans;
-	jas_iccuint8_t numoutchans;
-	jas_iccsint32_t e[3][3];
-	jas_iccuint8_t clutlen;
-	jas_iccuint8_t *clut;
-	jas_iccuint16_t numintabents;
-	jas_iccuint8_t **intabs;
-	jas_iccuint8_t *intabsbuf;
-	jas_iccuint16_t numouttabents;
-	jas_iccuint8_t **outtabs;
-	jas_iccuint8_t *outtabsbuf;
+    jas_iccuint8_t numinchans;
+    jas_iccuint8_t numoutchans;
+    jas_iccsint32_t e[3][3];
+    jas_iccuint8_t clutlen;
+    jas_iccuint8_t *clut;
+    jas_iccuint16_t numintabents;
+    jas_iccuint8_t **intabs;
+    jas_iccuint8_t *intabsbuf;
+    jas_iccuint16_t numouttabents;
+    jas_iccuint8_t **outtabs;
+    jas_iccuint8_t *outtabsbuf;
 } jas_icclut8_t;
 
 typedef struct {
-	jas_iccuint8_t numinchans;
-	jas_iccuint8_t numoutchans;
-	jas_iccsint32_t e[3][3];
-	jas_iccuint8_t clutlen;
-	jas_iccuint16_t *clut;
-	jas_iccuint16_t numintabents;
-	jas_iccuint16_t **intabs;
-	jas_iccuint16_t *intabsbuf;
-	jas_iccuint16_t numouttabents;
-	jas_iccuint16_t **outtabs;
-	jas_iccuint16_t *outtabsbuf;
+    jas_iccuint8_t numinchans;
+    jas_iccuint8_t numoutchans;
+    jas_iccsint32_t e[3][3];
+    jas_iccuint8_t clutlen;
+    jas_iccuint16_t *clut;
+    jas_iccuint16_t numintabents;
+    jas_iccuint16_t **intabs;
+    jas_iccuint16_t *intabsbuf;
+    jas_iccuint16_t numouttabents;
+    jas_iccuint16_t **outtabs;
+    jas_iccuint16_t *outtabsbuf;
 } jas_icclut16_t;
 
 struct jas_iccattrval_s;
 
 typedef struct {
-	void (*destroy)(struct jas_iccattrval_s *);
-	int (*copy)(struct jas_iccattrval_s *, struct jas_iccattrval_s *);
-	int (*input)(struct jas_iccattrval_s *, jas_stream_t *, int);
-	int (*output)(struct jas_iccattrval_s *, jas_stream_t *);
-	int (*getsize)(struct jas_iccattrval_s *);
-	void (*dump)(struct jas_iccattrval_s *, FILE *);
+    void (*destroy)(struct jas_iccattrval_s *);
+    int (*copy)(struct jas_iccattrval_s *, struct jas_iccattrval_s *);
+    int (*input)(struct jas_iccattrval_s *, jas_stream_t *, int);
+    int (*output)(struct jas_iccattrval_s *, jas_stream_t *);
+    int (*getsize)(struct jas_iccattrval_s *);
+    void (*dump)(struct jas_iccattrval_s *, FILE *);
 } jas_iccattrvalops_t;
 
 /* Attribute value type (type and value information). */
 typedef struct jas_iccattrval_s {
-	int refcnt; /* reference count */
-	jas_iccsig_t type; /* type */
-	jas_iccattrvalops_t *ops; /* type-dependent operations */
-	union {
-		jas_iccxyz_t xyz;
-		jas_icccurv_t curv;
-		jas_icctxtdesc_t txtdesc;
-		jas_icctxt_t txt;
-		jas_icclut8_t lut8;
-		jas_icclut16_t lut16;
-	} data; /* value */
+    int refcnt; /* reference count */
+    jas_iccsig_t type; /* type */
+    jas_iccattrvalops_t *ops; /* type-dependent operations */
+    union {
+        jas_iccxyz_t xyz;
+        jas_icccurv_t curv;
+        jas_icctxtdesc_t txtdesc;
+        jas_icctxt_t txt;
+        jas_icclut8_t lut8;
+        jas_icclut16_t lut16;
+    } data; /* value */
 } jas_iccattrval_t;
 
 /* Header type. */
 typedef struct {
-	jas_iccuint32_t size; /* profile size */
-	jas_iccsig_t cmmtype; /* CMM type signature */
-	jas_iccuint32_t version; /* profile version */
-	jas_iccsig_t clas; /* profile/device class signature */
-	jas_iccsig_t colorspc; /* color space of data */
-	jas_iccsig_t refcolorspc; /* profile connection space */
-	jas_icctime_t ctime; /* creation time */
-	jas_iccsig_t magic; /* profile file signature */
-	jas_iccsig_t platform; /* primary platform */
-	jas_iccuint32_t flags; /* profile flags */
-	jas_iccsig_t maker; /* device manufacturer signature */
-	jas_iccsig_t model; /* device model signature */
-	jas_iccuint64_t attr; /* device setup attributes */
-	jas_iccsig_t intent; /* rendering intent */
-	jas_iccxyz_t illum; /* illuminant */
-	jas_iccsig_t creator; /* profile creator signature */
+    jas_iccuint32_t size; /* profile size */
+    jas_iccsig_t cmmtype; /* CMM type signature */
+    jas_iccuint32_t version; /* profile version */
+    jas_iccsig_t clas; /* profile/device class signature */
+    jas_iccsig_t colorspc; /* color space of data */
+    jas_iccsig_t refcolorspc; /* profile connection space */
+    jas_icctime_t ctime; /* creation time */
+    jas_iccsig_t magic; /* profile file signature */
+    jas_iccsig_t platform; /* primary platform */
+    jas_iccuint32_t flags; /* profile flags */
+    jas_iccsig_t maker; /* device manufacturer signature */
+    jas_iccsig_t model; /* device model signature */
+    jas_iccuint64_t attr; /* device setup attributes */
+    jas_iccsig_t intent; /* rendering intent */
+    jas_iccxyz_t illum; /* illuminant */
+    jas_iccsig_t creator; /* profile creator signature */
 } jas_icchdr_t;
 
 typedef struct {
-	jas_iccsig_t name;
-	jas_iccattrval_t *val;
+    jas_iccsig_t name;
+    jas_iccattrval_t *val;
 } jas_iccattr_t;
 
 typedef struct {
-	int numattrs;
-	int maxattrs;
-	jas_iccattr_t *attrs;
+    int numattrs;
+    int maxattrs;
+    jas_iccattr_t *attrs;
 } jas_iccattrtab_t;
 
 typedef struct jas_icctagtabent_s {
-	jas_iccuint32_t tag;
-	jas_iccuint32_t off;
-	jas_iccuint32_t len;
-	void *data;
-	struct jas_icctagtabent_s *first;
+    jas_iccuint32_t tag;
+    jas_iccuint32_t off;
+    jas_iccuint32_t len;
+    void *data;
+    struct jas_icctagtabent_s *first;
 } jas_icctagtabent_t;
 
 typedef struct {
-	jas_iccuint32_t numents;
-	jas_icctagtabent_t *ents;
+    jas_iccuint32_t numents;
+    jas_icctagtabent_t *ents;
 } jas_icctagtab_t;
 
 /* ICC profile type. */
 typedef struct {
-	jas_icchdr_t hdr;
-	jas_icctagtab_t tagtab;
-	jas_iccattrtab_t *attrtab;
+    jas_icchdr_t hdr;
+    jas_icctagtab_t tagtab;
+    jas_iccattrtab_t *attrtab;
 } jas_iccprof_t;
 
 typedef struct {
-	jas_iccuint32_t type;
-	jas_iccattrvalops_t ops;
+    jas_iccuint32_t type;
+    jas_iccattrvalops_t ops;
 } jas_iccattrvalinfo_t;
 
 jas_iccprof_t *jas_iccprof_load(jas_stream_t *in);

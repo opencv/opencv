@@ -59,25 +59,25 @@ __kernel void merge_vector_C2_D0(__global uchar *mat_dst,  int dst_step,  int ds
 
 {
     int x = get_global_id(0);
-    int y = get_global_id(1); 
-  
+    int y = get_global_id(1);
+
     if ((x < cols) && (y < rows))
     {
         x = x << 1;
 
         #define dst_align  ((dst_offset & 3) >> 1)
-        int src0_index = mad24(y, src0_step, src0_offset + x - dst_align); 
-        int src1_index = mad24(y, src1_step, src1_offset + x - dst_align); 
+        int src0_index = mad24(y, src0_step, src0_offset + x - dst_align);
+        int src1_index = mad24(y, src1_step, src1_offset + x - dst_align);
 
         int dst_start  = mad24(y, dst_step, dst_offset);
         int dst_end    = mad24(y, dst_step, dst_offset + dst_step1);
         int dst_index  = mad24(y, dst_step, dst_offset + (x << 1) & (int)0xfffffffc);
 
-        __global uchar4 * dst  = (__global uchar4 *)(mat_dst + dst_index); 
-        __global uchar  * src0 = mat_src0 + src0_index; 
-        __global uchar  * src1 = src0     + 1; 
-        __global uchar  * src2 = mat_src1 + src1_index; 
-        __global uchar  * src3 = src2     + 1; 
+        __global uchar4 * dst  = (__global uchar4 *)(mat_dst + dst_index);
+        __global uchar  * src0 = mat_src0 + src0_index;
+        __global uchar  * src1 = src0     + 1;
+        __global uchar  * src2 = mat_src1 + src1_index;
+        __global uchar  * src3 = src2     + 1;
 
         uchar4 dst_data = *dst;
         uchar  data_0   = *(src0);
@@ -87,8 +87,8 @@ __kernel void merge_vector_C2_D0(__global uchar *mat_dst,  int dst_step,  int ds
 
         uchar4 tmp_data = (uchar4)(data_0, data_2, data_1, data_3);
 
-        tmp_data.xy = dst_index + 0 >= dst_start ? tmp_data.xy : dst_data.xy; 
-        tmp_data.zw = dst_index + 2 <  dst_end   ? tmp_data.zw : dst_data.zw; 
+        tmp_data.xy = dst_index + 0 >= dst_start ? tmp_data.xy : dst_data.xy;
+        tmp_data.zw = dst_index + 2 <  dst_end   ? tmp_data.zw : dst_data.zw;
 
         *dst = tmp_data;
     }
@@ -100,25 +100,25 @@ __kernel void merge_vector_C2_D1(__global char *mat_dst,  int dst_step,  int dst
 
 {
     int x = get_global_id(0);
-    int y = get_global_id(1); 
-  
+    int y = get_global_id(1);
+
     if ((x < cols) && (y < rows))
     {
         x = x << 1;
 
         #define dst_align  ((dst_offset & 3) >> 1)
-        int src0_index = mad24(y, src0_step, src0_offset + x - dst_align); 
-        int src1_index = mad24(y, src1_step, src1_offset + x - dst_align); 
+        int src0_index = mad24(y, src0_step, src0_offset + x - dst_align);
+        int src1_index = mad24(y, src1_step, src1_offset + x - dst_align);
 
         int dst_start  = mad24(y, dst_step, dst_offset);
         int dst_end    = mad24(y, dst_step, dst_offset + dst_step1);
         int dst_index  = mad24(y, dst_step, dst_offset + (x << 1) & (int)0xfffffffc);
 
-        __global char4 * dst  = (__global char4 *)(mat_dst + dst_index); 
-        __global char  * src0 = mat_src0 + src0_index; 
-        __global char  * src1 = src0     + 1; 
-        __global char  * src2 = mat_src1 + src1_index; 
-        __global char  * src3 = src2     + 1; 
+        __global char4 * dst  = (__global char4 *)(mat_dst + dst_index);
+        __global char  * src0 = mat_src0 + src0_index;
+        __global char  * src1 = src0     + 1;
+        __global char  * src2 = mat_src1 + src1_index;
+        __global char  * src3 = src2     + 1;
 
         char4 dst_data = *dst;
         char  data_0   = *(src0);
@@ -128,8 +128,8 @@ __kernel void merge_vector_C2_D1(__global char *mat_dst,  int dst_step,  int dst
 
         char4 tmp_data = (char4)(data_0, data_2, data_1, data_3);
 
-        tmp_data.xy = dst_index + 0 >= dst_start ? tmp_data.xy : dst_data.xy; 
-        tmp_data.zw = dst_index + 2 <  dst_end   ? tmp_data.zw : dst_data.zw; 
+        tmp_data.xy = dst_index + 0 >= dst_start ? tmp_data.xy : dst_data.xy;
+        tmp_data.zw = dst_index + 2 <  dst_end   ? tmp_data.zw : dst_data.zw;
 
         *dst = tmp_data;
     }
@@ -141,12 +141,12 @@ __kernel void merge_vector_C2_D2(__global ushort *mat_dst,  int dst_step,  int d
 
 {
     int x = get_global_id(0);
-    int y = get_global_id(1); 
-  
+    int y = get_global_id(1);
+
     if ((x < cols) && (y < rows))
     {
-        int src0_index = mad24(y, src0_step, src0_offset); 
-        int src1_index = mad24(y, src1_step, src1_offset); 
+        int src0_index = mad24(y, src0_step, src0_offset);
+        int src1_index = mad24(y, src1_step, src1_offset);
 
         int dst_index  = mad24(y, dst_step , dst_offset);
 
@@ -167,12 +167,12 @@ __kernel void merge_vector_C2_D3(__global short *mat_dst,  int dst_step,  int ds
                                  int rows, int cols, int dst_step1)
 {
     int x = get_global_id(0);
-    int y = get_global_id(1); 
-  
+    int y = get_global_id(1);
+
     if ((x < cols) && (y < rows))
     {
-        int src0_index = mad24(y, src0_step, src0_offset); 
-        int src1_index = mad24(y, src1_step, src1_offset); 
+        int src0_index = mad24(y, src0_step, src0_offset);
+        int src1_index = mad24(y, src1_step, src1_offset);
 
         int dst_index  = mad24(y, dst_step , dst_offset);
 
@@ -193,12 +193,12 @@ __kernel void merge_vector_C2_D4(__global int *mat_dst,  int dst_step,  int dst_
                                  int rows, int cols, int dst_step1)
 {
     int x = get_global_id(0);
-    int y = get_global_id(1); 
-  
+    int y = get_global_id(1);
+
     if ((x < cols) && (y < rows))
     {
-        int src0_index = mad24(y, src0_step, src0_offset); 
-        int src1_index = mad24(y, src1_step, src1_offset); 
+        int src0_index = mad24(y, src0_step, src0_offset);
+        int src1_index = mad24(y, src1_step, src1_offset);
         int dst_index  = mad24(y, dst_step , dst_offset);
 
         int src0 = *((__global int *)((__global uchar *)mat_src0 + src0_index + (x << 2)));
@@ -213,12 +213,12 @@ __kernel void merge_vector_C2_D5(__global float *mat_dst,  int dst_step,  int ds
                                  int rows, int cols, int dst_step1)
 {
     int x = get_global_id(0);
-    int y = get_global_id(1); 
-  
+    int y = get_global_id(1);
+
     if ((x < cols) && (y < rows))
     {
-        int src0_index = mad24(y, src0_step, src0_offset); 
-        int src1_index = mad24(y, src1_step, src1_offset); 
+        int src0_index = mad24(y, src0_step, src0_offset);
+        int src1_index = mad24(y, src1_step, src1_offset);
         int dst_index  = mad24(y, dst_step , dst_offset);
 
         float src0 = *((__global float *)((__global uchar *)mat_src0 + src0_index + (x << 2)));
@@ -235,12 +235,12 @@ __kernel void merge_vector_C2_D6(__global double *mat_dst,  int dst_step,  int d
                                  int rows, int cols, int dst_step1)
 {
     int x = get_global_id(0);
-    int y = get_global_id(1); 
-  
+    int y = get_global_id(1);
+
     if ((x < cols) && (y < rows))
     {
-        int src0_index = mad24(y, src0_step, src0_offset); 
-        int src1_index = mad24(y, src1_step, src1_offset); 
+        int src0_index = mad24(y, src0_step, src0_offset);
+        int src1_index = mad24(y, src1_step, src1_offset);
         int dst_index  = mad24(y, dst_step , dst_offset);
 
         double src0 = *((__global double *)((__global uchar *)mat_src0 + src0_index + (x << 3)));
@@ -258,8 +258,8 @@ __kernel void merge_vector_C3_D0(__global uchar *mat_dst,  int dst_step,  int ds
                                  int rows, int cols, int dst_step1)
 {
     int x = get_global_id(0);
-    int y = get_global_id(1); 
-  
+    int y = get_global_id(1);
+
     if ((x < cols) && (y < rows))
     {
         x = x << 2;
@@ -268,8 +268,8 @@ __kernel void merge_vector_C3_D0(__global uchar *mat_dst,  int dst_step,  int ds
         int src1_index = mad24(y, src1_step, x + src1_offset - offset_cols);
         int src2_index = mad24(y, src2_step, x + src2_offset - offset_cols);
 
-        int dst_start = mad24(y, dst_step, dst_offset); 
-        int dst_end   = mad24(y, dst_step, dst_offset + dst_step1); 
+        int dst_start = mad24(y, dst_step, dst_offset);
+        int dst_end   = mad24(y, dst_step, dst_offset + dst_step1);
         int dst_index = mad24(y, dst_step, dst_offset + 3 * x - offset_cols * 3);
 
         uchar data0_0 = *(mat_src0 + src0_index + 0);
@@ -322,8 +322,8 @@ __kernel void merge_vector_C3_D1(__global char *mat_dst,  int dst_step,  int dst
                                  int rows, int cols, int dst_step1)
 {
     int x = get_global_id(0);
-    int y = get_global_id(1); 
-  
+    int y = get_global_id(1);
+
     if ((x < cols) && (y < rows))
     {
         x = x << 2;
@@ -332,8 +332,8 @@ __kernel void merge_vector_C3_D1(__global char *mat_dst,  int dst_step,  int dst
         int src1_index = mad24(y, src1_step, x + src1_offset - offset_cols);
         int src2_index = mad24(y, src2_step, x + src2_offset - offset_cols);
 
-        int dst_start = mad24(y, dst_step, dst_offset); 
-        int dst_end   = mad24(y, dst_step, dst_offset + dst_step1); 
+        int dst_start = mad24(y, dst_step, dst_offset);
+        int dst_end   = mad24(y, dst_step, dst_offset + dst_step1);
         int dst_index = mad24(y, dst_step, dst_offset + 3 * x - offset_cols * 3);
 
         char data0_0 = *(mat_src0 + src0_index + 0);
@@ -386,8 +386,8 @@ __kernel void merge_vector_C3_D2(__global ushort *mat_dst,  int dst_step,  int d
                                  int rows, int cols, int dst_step1)
 {
     int x = get_global_id(0);
-    int y = get_global_id(1); 
-  
+    int y = get_global_id(1);
+
     if ((x < cols) && (y < rows))
     {
         x = x << 1;
@@ -396,8 +396,8 @@ __kernel void merge_vector_C3_D2(__global ushort *mat_dst,  int dst_step,  int d
         int src1_index = mad24(y, src1_step, (x << 1) + src1_offset - offset_cols);
         int src2_index = mad24(y, src2_step, (x << 1) + src2_offset - offset_cols);
 
-        int dst_start = mad24(y, dst_step, dst_offset); 
-        int dst_end   = mad24(y, dst_step, dst_offset + dst_step1); 
+        int dst_start = mad24(y, dst_step, dst_offset);
+        int dst_end   = mad24(y, dst_step, dst_offset + dst_step1);
         int dst_index = mad24(y, dst_step, dst_offset + 6 * x - offset_cols * 6);
 
         ushort data0_0 = *((__global ushort *)((__global char *)mat_src0 + src0_index + 0));
@@ -438,8 +438,8 @@ __kernel void merge_vector_C3_D3(__global short *mat_dst,  int dst_step,  int ds
                                  int rows, int cols, int dst_step1)
 {
     int x = get_global_id(0);
-    int y = get_global_id(1); 
-  
+    int y = get_global_id(1);
+
     if ((x < cols) && (y < rows))
     {
         x = x << 1;
@@ -448,8 +448,8 @@ __kernel void merge_vector_C3_D3(__global short *mat_dst,  int dst_step,  int ds
         int src1_index = mad24(y, src1_step, (x << 1) + src1_offset - offset_cols);
         int src2_index = mad24(y, src2_step, (x << 1) + src2_offset - offset_cols);
 
-        int dst_start = mad24(y, dst_step, dst_offset); 
-        int dst_end   = mad24(y, dst_step, dst_offset + dst_step1); 
+        int dst_start = mad24(y, dst_step, dst_offset);
+        int dst_end   = mad24(y, dst_step, dst_offset + dst_step1);
         int dst_index = mad24(y, dst_step, dst_offset + 6 * x - offset_cols * 6);
 
         short data0_0 = *((__global short *)((__global char *)mat_src0 + src0_index + 0));
@@ -490,13 +490,13 @@ __kernel void merge_vector_C3_D4(__global int *mat_dst,  int dst_step,  int dst_
                                  int rows, int cols, int dst_step1)
 {
     int x = get_global_id(0);
-    int y = get_global_id(1); 
-  
+    int y = get_global_id(1);
+
     if ((x < cols) && (y < rows))
     {
-        int src0_index = mad24(y, src0_step, src0_offset); 
-        int src1_index = mad24(y, src1_step, src1_offset); 
-        int src2_index = mad24(y, src2_step, src2_offset); 
+        int src0_index = mad24(y, src0_step, src0_offset);
+        int src1_index = mad24(y, src1_step, src1_offset);
+        int src2_index = mad24(y, src2_step, src2_offset);
 
         int dst_index  = mad24(y, dst_step , dst_offset);
 
@@ -524,13 +524,13 @@ __kernel void merge_vector_C3_D5(__global float *mat_dst,  int dst_step,  int ds
                                  int rows, int cols, int dst_step1)
 {
     int x = get_global_id(0);
-    int y = get_global_id(1); 
-  
+    int y = get_global_id(1);
+
     if ((x < cols) && (y < rows))
     {
-        int src0_index = mad24(y, src0_step, src0_offset); 
-        int src1_index = mad24(y, src1_step, src1_offset); 
-        int src2_index = mad24(y, src2_step, src2_offset); 
+        int src0_index = mad24(y, src0_step, src0_offset);
+        int src1_index = mad24(y, src1_step, src1_offset);
+        int src2_index = mad24(y, src2_step, src2_offset);
 
         int dst_index  = mad24(y, dst_step , dst_offset);
 
@@ -560,13 +560,13 @@ __kernel void merge_vector_C3_D6(__global double *mat_dst,  int dst_step,  int d
                                  int rows, int cols, int dst_step1)
 {
     int x = get_global_id(0);
-    int y = get_global_id(1); 
-  
+    int y = get_global_id(1);
+
     if ((x < cols) && (y < rows))
     {
-        int src0_index = mad24(y, src0_step, src0_offset); 
-        int src1_index = mad24(y, src1_step, src1_offset); 
-        int src2_index = mad24(y, src2_step, src2_offset); 
+        int src0_index = mad24(y, src0_step, src0_offset);
+        int src1_index = mad24(y, src1_step, src1_offset);
+        int src2_index = mad24(y, src2_step, src2_offset);
 
         int dst_index  = mad24(y, dst_step , dst_offset);
 
@@ -596,14 +596,14 @@ __kernel void merge_vector_C4_D0(__global uchar *mat_dst,  int dst_step,  int ds
                                  int rows, int cols, int dst_step1)
 {
     int x = get_global_id(0);
-    int y = get_global_id(1); 
-  
+    int y = get_global_id(1);
+
     if ((x < cols) && (y < rows))
     {
-        int src0_index = mad24(y, src0_step, src0_offset); 
-        int src1_index = mad24(y, src1_step, src1_offset); 
-        int src2_index = mad24(y, src2_step, src2_offset); 
-        int src3_index = mad24(y, src3_step, src3_offset); 
+        int src0_index = mad24(y, src0_step, src0_offset);
+        int src1_index = mad24(y, src1_step, src1_offset);
+        int src2_index = mad24(y, src2_step, src2_offset);
+        int src3_index = mad24(y, src3_step, src3_offset);
         int dst_index  = mad24(y, dst_step , dst_offset);
 
         uchar src0 = *(mat_src0 + src0_index + x );
@@ -622,14 +622,14 @@ __kernel void merge_vector_C4_D1(__global char *mat_dst,  int dst_step,  int dst
                                  int rows, int cols, int dst_step1)
 {
     int x = get_global_id(0);
-    int y = get_global_id(1); 
-  
+    int y = get_global_id(1);
+
     if ((x < cols) && (y < rows))
     {
-        int src0_index = mad24(y, src0_step, src0_offset); 
-        int src1_index = mad24(y, src1_step, src1_offset); 
-        int src2_index = mad24(y, src2_step, src2_offset); 
-        int src3_index = mad24(y, src3_step, src3_offset); 
+        int src0_index = mad24(y, src0_step, src0_offset);
+        int src1_index = mad24(y, src1_step, src1_offset);
+        int src2_index = mad24(y, src2_step, src2_offset);
+        int src3_index = mad24(y, src3_step, src3_offset);
         int dst_index  = mad24(y, dst_step , dst_offset);
 
         char src0 = *(mat_src0 + src0_index + x );
@@ -648,14 +648,14 @@ __kernel void merge_vector_C4_D2(__global ushort *mat_dst,  int dst_step,  int d
                                  int rows, int cols, int dst_step1)
 {
     int x = get_global_id(0);
-    int y = get_global_id(1); 
-  
+    int y = get_global_id(1);
+
     if ((x < cols) && (y < rows))
     {
-        int src0_index = mad24(y, src0_step, src0_offset); 
-        int src1_index = mad24(y, src1_step, src1_offset); 
-        int src2_index = mad24(y, src2_step, src2_offset); 
-        int src3_index = mad24(y, src3_step, src3_offset); 
+        int src0_index = mad24(y, src0_step, src0_offset);
+        int src1_index = mad24(y, src1_step, src1_offset);
+        int src2_index = mad24(y, src2_step, src2_offset);
+        int src3_index = mad24(y, src3_step, src3_offset);
         int dst_index  = mad24(y, dst_step , dst_offset);
 
         ushort src0 = *((__global ushort *)((__global uchar *)mat_src0 + src0_index + (x << 1)));
@@ -674,14 +674,14 @@ __kernel void merge_vector_C4_D3(__global short *mat_dst,  int dst_step,  int ds
                                  int rows, int cols, int dst_step1)
 {
     int x = get_global_id(0);
-    int y = get_global_id(1); 
-  
+    int y = get_global_id(1);
+
     if ((x < cols) && (y < rows))
     {
-        int src0_index = mad24(y, src0_step, src0_offset); 
-        int src1_index = mad24(y, src1_step, src1_offset); 
-        int src2_index = mad24(y, src2_step, src2_offset); 
-        int src3_index = mad24(y, src3_step, src3_offset); 
+        int src0_index = mad24(y, src0_step, src0_offset);
+        int src1_index = mad24(y, src1_step, src1_offset);
+        int src2_index = mad24(y, src2_step, src2_offset);
+        int src3_index = mad24(y, src3_step, src3_offset);
         int dst_index  = mad24(y, dst_step , dst_offset);
 
         short src0 = *((__global short *)((__global uchar *)mat_src0 + src0_index + (x << 1)));
@@ -700,14 +700,14 @@ __kernel void merge_vector_C4_D4(__global int *mat_dst,  int dst_step,  int dst_
                                  int rows, int cols, int dst_step1)
 {
     int x = get_global_id(0);
-    int y = get_global_id(1); 
-  
+    int y = get_global_id(1);
+
     if ((x < cols) && (y < rows))
     {
-        int src0_index = mad24(y, src0_step, src0_offset); 
-        int src1_index = mad24(y, src1_step, src1_offset); 
-        int src2_index = mad24(y, src2_step, src2_offset); 
-        int src3_index = mad24(y, src3_step, src3_offset); 
+        int src0_index = mad24(y, src0_step, src0_offset);
+        int src1_index = mad24(y, src1_step, src1_offset);
+        int src2_index = mad24(y, src2_step, src2_offset);
+        int src3_index = mad24(y, src3_step, src3_offset);
         int dst_index  = mad24(y, dst_step , dst_offset);
 
         int src0 = *((__global int *)((__global uchar *)mat_src0 + src0_index + (x << 2)));
@@ -726,14 +726,14 @@ __kernel void merge_vector_C4_D5(__global float *mat_dst,  int dst_step,  int ds
                                  int rows, int cols, int dst_step1)
 {
     int x = get_global_id(0);
-    int y = get_global_id(1); 
-  
+    int y = get_global_id(1);
+
     if ((x < cols) && (y < rows))
     {
-        int src0_index = mad24(y, src0_step, src0_offset); 
-        int src1_index = mad24(y, src1_step, src1_offset); 
-        int src2_index = mad24(y, src2_step, src2_offset); 
-        int src3_index = mad24(y, src3_step, src3_offset); 
+        int src0_index = mad24(y, src0_step, src0_offset);
+        int src1_index = mad24(y, src1_step, src1_offset);
+        int src2_index = mad24(y, src2_step, src2_offset);
+        int src3_index = mad24(y, src3_step, src3_offset);
         int dst_index  = mad24(y, dst_step , dst_offset);
 
         float src0 = *((__global float *)((__global uchar *)mat_src0 + src0_index + (x << 2)));
@@ -754,14 +754,14 @@ __kernel void merge_vector_C4_D6(__global double *mat_dst,  int dst_step,  int d
                                  int rows, int cols, int dst_step1)
 {
     int x = get_global_id(0);
-    int y = get_global_id(1); 
-  
+    int y = get_global_id(1);
+
     if ((x < cols) && (y < rows))
     {
-        int src0_index = mad24(y, src0_step, src0_offset); 
-        int src1_index = mad24(y, src1_step, src1_offset); 
-        int src2_index = mad24(y, src2_step, src2_offset); 
-        int src3_index = mad24(y, src3_step, src3_offset); 
+        int src0_index = mad24(y, src0_step, src0_offset);
+        int src1_index = mad24(y, src1_step, src1_offset);
+        int src2_index = mad24(y, src2_step, src2_offset);
+        int src3_index = mad24(y, src3_step, src3_offset);
         int dst_index  = mad24(y, dst_step , dst_offset);
 
         double src0 = *((__global double *)((__global uchar *)mat_src0 + src0_index + (x << 3)));
@@ -783,8 +783,8 @@ __kernel void merge_vector_C2_D0_1(int rows, int cols,
                                    __global uchar *mat_src1, int src1_step)
 {
     int x = get_global_id(0);
-    int y = get_global_id(1); 
-  
+    int y = get_global_id(1);
+
     if ((x < cols) && (y < rows))
     {
         __global uchar4  *src0_y = (__global uchar4 * )(mat_src0 + y * src0_step);
@@ -807,8 +807,8 @@ __kernel void merge_vector_C2_D1_1(int rows, int cols,
                                    __global char *mat_src1, int src1_step)
 {
     int x = get_global_id(0);
-    int y = get_global_id(1); 
-  
+    int y = get_global_id(1);
+
     if ((x < cols) && (y < rows))
     {
         __global char4  *src0_y = (__global char4 * )(mat_src0 + y * src0_step);
@@ -831,8 +831,8 @@ __kernel void merge_vector_C2_D2_1(int rows, int cols,
                                    __global ushort *mat_src1, int src1_step)
 {
     int x = get_global_id(0);
-    int y = get_global_id(1); 
-  
+    int y = get_global_id(1);
+
     if ((x < cols) && (y < rows))
     {
         __global ushort2  *src0_y = (__global ushort2 *)((__global uchar *)mat_src0 + y * src0_step);
@@ -855,8 +855,8 @@ __kernel void merge_vector_C2_D3_1(int rows, int cols,
                                    __global short *mat_src1, int src1_step)
 {
     int x = get_global_id(0);
-    int y = get_global_id(1); 
-  
+    int y = get_global_id(1);
+
     if ((x < cols) && (y < rows))
     {
         __global short2  *src0_y = (__global short2 *)((__global uchar *)mat_src0 + y * src0_step);
@@ -880,8 +880,8 @@ __kernel void merge_vector_C2_D4_1(int rows, int cols,
                                    __global int *mat_src1, int src1_step)
 {
     int x = get_global_id(0);
-    int y = get_global_id(1); 
-  
+    int y = get_global_id(1);
+
     if ((x < cols) && (y < rows))
     {
         __global int  *src0_y = (__global int *)((__global uchar *)mat_src0 + y * src0_step);
@@ -904,8 +904,8 @@ __kernel void merge_vector_C2_D5_1(int rows, int cols,
                                    __global float *mat_src1, int src1_step)
 {
     int x = get_global_id(0);
-    int y = get_global_id(1); 
-  
+    int y = get_global_id(1);
+
     if ((x < cols) && (y < rows))
     {
         __global float  *src0_y = (__global float *)((__global uchar *)mat_src0 + y * src0_step);
@@ -915,7 +915,7 @@ __kernel void merge_vector_C2_D5_1(int rows, int cols,
         float value1 = src0_y[x];
         float value2 = src1_y[x];
 
-        dst_y[x] = (float2)(value1, value2); 
+        dst_y[x] = (float2)(value1, value2);
     }
 }
 
@@ -926,8 +926,8 @@ __kernel void merge_vector_C2_D6_1(int rows, int cols,
                                    __global double *mat_src1, int src1_step)
 {
     int x = get_global_id(0);
-    int y = get_global_id(1); 
-  
+    int y = get_global_id(1);
+
     if ((x < cols) && (y < rows))
     {
         __global double  *src0_y = (__global double *)((__global uchar *)mat_src0 + y * src0_step);
@@ -949,8 +949,8 @@ __kernel void merge_vector_C3_D0_1(int rows, int cols,
                                    __global uchar *mat_src2, int src2_step)
 {
     int x = get_global_id(0);
-    int y = get_global_id(1); 
-  
+    int y = get_global_id(1);
+
     if ((x < cols) && (y < rows))
     {
         __global uchar4  *src0_y = (__global uchar4 * )(mat_src0 + y * src0_step);
@@ -981,8 +981,8 @@ __kernel void merge_vector_C3_D1_1(int rows, int cols,
                                    __global char *mat_src2, int src2_step)
 {
     int x = get_global_id(0);
-    int y = get_global_id(1); 
-  
+    int y = get_global_id(1);
+
     if ((x < cols) && (y < rows))
     {
         __global char4  *src0_y = (__global char4 * )(mat_src0 + y * src0_step);
@@ -1027,8 +1027,8 @@ __kernel void merge_vector_C3_D2_1(int rows, int cols,
                                    __global ushort *mat_src2, int src2_step)
 {
     int x = get_global_id(0);
-    int y = get_global_id(1); 
-  
+    int y = get_global_id(1);
+
     if ((x < cols) && (y < rows))
     {
         __global ushort2  *src0_y = (__global ushort2 * )((__global char *)mat_src0 + y * src0_step);
@@ -1054,8 +1054,8 @@ __kernel void merge_vector_C3_D3_1(int rows, int cols,
                                    __global short *mat_src2, int src2_step)
 {
     int x = get_global_id(0);
-    int y = get_global_id(1); 
-  
+    int y = get_global_id(1);
+
     if ((x < cols) && (y < rows))
     {
         __global short2  *src0_y = (__global short2 * )((__global char *)mat_src0 + y * src0_step);
@@ -1091,8 +1091,8 @@ __kernel void merge_vector_C3_D4_1(int rows, int cols,
                                    __global int *mat_src2, int src2_step)
 {
     int x = get_global_id(0);
-    int y = get_global_id(1); 
-  
+    int y = get_global_id(1);
+
     if ((x < cols) && (y < rows))
     {
         __global int  *src0_y = (__global int * )((__global char *)mat_src0 + y * src0_step);
@@ -1123,8 +1123,8 @@ __kernel void merge_vector_C3_D5_1(int rows, int cols,
                                    __global float *mat_src2, int src2_step)
 {
     int x = get_global_id(0);
-    int y = get_global_id(1); 
-  
+    int y = get_global_id(1);
+
     if ((x < cols) && (y < rows))
     {
         __global float  *src0_y = (__global float * )((__global char *)mat_src0 + y * src0_step);
@@ -1151,8 +1151,8 @@ __kernel void merge_vector_C3_D6_1(int rows, int cols,
                                    __global double *mat_src2, int src2_step)
 {
     int x = get_global_id(0);
-    int y = get_global_id(1); 
-  
+    int y = get_global_id(1);
+
     if ((x < cols) && (y < rows))
     {
         __global double  *src0_y = (__global double * )((__global char *)mat_src0 + y * src0_step);
@@ -1179,8 +1179,8 @@ __kernel void merge_vector_C4_D0_1(int rows, int cols,
                                    __global uchar *mat_src3, int src3_step)
 {
     int x = get_global_id(0);
-    int y = get_global_id(1); 
-  
+    int y = get_global_id(1);
+
     if ((x < cols) && (y < rows))
     {
         __global uchar4  *src0_y = (__global uchar4 * )(mat_src0 + y * src0_step);
@@ -1196,7 +1196,7 @@ __kernel void merge_vector_C4_D0_1(int rows, int cols,
         uchar4 value3 = src3_y[x];
 
         dst_y[x] = (uchar16)(value0.x, value1.x, value2.x, value3.x,
-                             value0.y, value1.y, value2.y, value3.y,   
+                             value0.y, value1.y, value2.y, value3.y,
                              value0.z, value1.z, value2.z, value3.z,
                              value0.w, value1.w, value2.w, value3.w);
     }
@@ -1210,8 +1210,8 @@ __kernel void merge_vector_C4_D1_1(int rows, int cols,
                                    __global char *mat_src3, int src3_step)
 {
     int x = get_global_id(0);
-    int y = get_global_id(1); 
-  
+    int y = get_global_id(1);
+
     if ((x < cols) && (y < rows))
     {
         __global char4  *src0_y = (__global char4 * )(mat_src0 + y * src0_step);
@@ -1227,7 +1227,7 @@ __kernel void merge_vector_C4_D1_1(int rows, int cols,
         char4 value3 = src3_y[x];
 
         dst_y[x] = (char16)(value0.x, value1.x, value2.x, value3.x,
-                            value0.y, value1.y, value2.y, value3.y,   
+                            value0.y, value1.y, value2.y, value3.y,
                             value0.z, value1.z, value2.z, value3.z,
                             value0.w, value1.w, value2.w, value3.w);
     }
@@ -1240,8 +1240,8 @@ __kernel void merge_vector_C4_D2_1(int rows, int cols,
                                    __global ushort *mat_src3, int src3_step)
 {
     int x = get_global_id(0);
-    int y = get_global_id(1); 
-  
+    int y = get_global_id(1);
+
     if ((x < cols) && (y < rows))
     {
         __global ushort2  *src0_y = (__global ushort2 * )((__global uchar*)mat_src0 + y * src0_step);
@@ -1257,7 +1257,7 @@ __kernel void merge_vector_C4_D2_1(int rows, int cols,
         ushort2 value3 = src3_y[x];
 
         dst_y[x] = (ushort8)(value0.x, value1.x, value2.x, value3.x,
-                             value0.y, value1.y, value2.y, value3.y);   
+                             value0.y, value1.y, value2.y, value3.y);
     }
 }
 __kernel void merge_vector_C4_D3_1(int rows, int cols,
@@ -1268,8 +1268,8 @@ __kernel void merge_vector_C4_D3_1(int rows, int cols,
                                    __global short *mat_src3, int src3_step)
 {
     int x = get_global_id(0);
-    int y = get_global_id(1); 
-  
+    int y = get_global_id(1);
+
     if ((x < cols) && (y < rows))
     {
         __global short2  *src0_y = (__global short2 * )((__global uchar*)mat_src0 + y * src0_step);
@@ -1285,7 +1285,7 @@ __kernel void merge_vector_C4_D3_1(int rows, int cols,
         short2 value3 = src3_y[x];
 
         dst_y[x] = (short8)(value0.x, value1.x, value2.x, value3.x,
-                            value0.y, value1.y, value2.y, value3.y);   
+                            value0.y, value1.y, value2.y, value3.y);
     }
 }
 __kernel void merge_vector_C4_D4_1(int rows, int cols,
@@ -1296,8 +1296,8 @@ __kernel void merge_vector_C4_D4_1(int rows, int cols,
                                    __global int *mat_src3, int src3_step)
 {
     int x = get_global_id(0);
-    int y = get_global_id(1); 
-  
+    int y = get_global_id(1);
+
     if ((x < cols) && (y < rows))
     {
         __global int *src0_y = (__global int * )((__global uchar*)mat_src0 + y * src0_step);
@@ -1323,8 +1323,8 @@ __kernel void merge_vector_C4_D5_1(int rows, int cols,
                                    __global float *mat_src3, int src3_step)
 {
     int x = get_global_id(0);
-    int y = get_global_id(1); 
-  
+    int y = get_global_id(1);
+
     if ((x < cols) && (y < rows))
     {
         __global float *src0_y = (__global float * )((__global uchar*)mat_src0 + y * src0_step);
@@ -1352,8 +1352,8 @@ __kernel void merge_vector_C4_D6_1(int rows, int cols,
                                    __global double *mat_src3, int src3_step)
 {
     int x = get_global_id(0);
-    int y = get_global_id(1); 
-  
+    int y = get_global_id(1);
+
     if ((x < cols) && (y < rows))
     {
         __global double *src0_y = (__global double * )((__global uchar*)mat_src0 + y * src0_step);

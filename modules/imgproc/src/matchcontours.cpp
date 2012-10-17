@@ -51,7 +51,7 @@
 //      method - method for the matching calculation
 //      (now CV_IPPI_CONTOURS_MATCH_I1, CV_CONTOURS_MATCH_I2 or
 //      CV_CONTOURS_MATCH_I3 only  )
-//      rezult - output calculated measure 
+//      rezult - output calculated measure
 //
 //F*/
 CV_IMPL  double

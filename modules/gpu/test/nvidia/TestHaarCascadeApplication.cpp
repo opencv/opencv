@@ -51,7 +51,7 @@ bool TestHaarCascadeApplication::init()
 bool TestHaarCascadeApplication::process()
 {
 #if defined(__APPLE)
-	return true;
+    return true;
 #endif
     NCVStatus ncvStat;
     bool rcode = false;

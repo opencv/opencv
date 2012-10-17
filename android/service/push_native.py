@@ -10,11 +10,11 @@ DEVICE_ARCH = "armeabi"
 
 if (__name__ ==  "__main__"):
     if (len(sys.argv) >= 3):
-	DEVICE_ARCH = sys.argv[1]
-	DEVICE_NAME = sys.argv[2]
+    DEVICE_ARCH = sys.argv[1]
+    DEVICE_NAME = sys.argv[2]
 
-	if (DEVICE_NAME != ""):
-	    DEVICE_STR = "-s \"" + DEVICE_NAME + "\""
+    if (DEVICE_NAME != ""):
+        DEVICE_STR = "-s \"" + DEVICE_NAME + "\""
 
     print("Waiting for device \"%s\" with arch \"%s\" ..." % (DEVICE_NAME, DEVICE_ARCH))
     os.system("adb %s wait-for-device" % DEVICE_STR)

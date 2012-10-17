@@ -16,13 +16,13 @@ if __name__ == "__main__":
     rng = cv.RNG(-1)
 
     cv.NamedWindow("clusters", 1)
-        
+
     while True:
         cluster_count = randint(2, MAX_CLUSTERS)
         sample_count = randint(1, 1000)
         points = cv.CreateMat(sample_count, 1, cv.CV_32FC2)
         clusters = cv.CreateMat(sample_count, 1, cv.CV_32SC1)
-        
+
         # generate random sample from multigaussian distribution
         for k in range(cluster_count):
             center = (cv.RandInt(rng)%img.width, cv.RandInt(rng)%img.height)
@@ -32,13 +32,13 @@ if __name__ == "__main__":
                 last = (k+1)*sample_count/cluster_count
 
             point_chunk = cv.GetRows(points, first, last)
-                        
+
             cv.RandArr(rng, point_chunk, cv.CV_RAND_NORMAL,
                        cv.Scalar(center[0], center[1], 0, 0),
                        cv.Scalar(img.width*0.1, img.height*0.1, 0, 0))
-        
 
-        # shuffle samples 
+
+        # shuffle samples
         cv.RandShuffle(points, rng)
 
         cv.KMeans2(points, cluster_count, clusters,
@@ -56,5 +56,5 @@ if __name__ == "__main__":
         key = cv.WaitKey(0) % 0x100
         if key in [27, ord('q'), ord('Q')]:
             break
-    
+
     cv.DestroyWindow("clusters")

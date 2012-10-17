@@ -52,7 +52,7 @@ namespace cv
 
 /*!
  SIFT implementation.
- 
+
  The class implements SIFT algorithm by D. Lowe.
 */
 class CV_EXPORTS_W SIFT : public Feature2D
@@ -64,10 +64,10 @@ public:
 
     //! returns the descriptor size in floats (128)
     CV_WRAP int descriptorSize() const;
-    
+
     //! returns the descriptor type
     CV_WRAP int descriptorType() const;
-    
+
     //! finds the keypoints using SIFT algorithm
     void operator()(InputArray img, InputArray mask,
                     vector<KeyPoint>& keypoints) const;
@@ -77,9 +77,9 @@ public:
                     vector<KeyPoint>& keypoints,
                     OutputArray descriptors,
                     bool useProvidedKeypoints=false) const;
-    
+
     AlgorithmInfo* info() const;
-    
+
     void buildGaussianPyramid( const Mat& base, vector<Mat>& pyr, int nOctaves ) const;
     void buildDoGPyramid( const vector<Mat>& pyr, vector<Mat>& dogpyr ) const;
     void findScaleSpaceExtrema( const vector<Mat>& gauss_pyr, const vector<Mat>& dog_pyr,
@@ -88,7 +88,7 @@ public:
 protected:
     void detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
     void computeImpl( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors ) const;
-    
+
     CV_PROP_RW int nfeatures;
     CV_PROP_RW int nOctaveLayers;
     CV_PROP_RW double contrastThreshold;
@@ -98,10 +98,10 @@ protected:
 
 typedef SIFT SiftFeatureDetector;
 typedef SIFT SiftDescriptorExtractor;
-    
+
 /*!
  SURF implementation.
- 
+
  The class implements SURF algorithm by H. Bay et al.
  */
 class CV_EXPORTS_W SURF : public Feature2D
@@ -116,10 +116,10 @@ public:
 
     //! returns the descriptor size in float's (64 or 128)
     CV_WRAP int descriptorSize() const;
-    
+
     //! returns the descriptor type
     CV_WRAP int descriptorType() const;
-    
+
     //! finds the keypoints using fast hessian detector used in SURF
     void operator()(InputArray img, InputArray mask,
                     CV_OUT vector<KeyPoint>& keypoints) const;
@@ -128,21 +128,21 @@ public:
                     CV_OUT vector<KeyPoint>& keypoints,
                     OutputArray descriptors,
                     bool useProvidedKeypoints=false) const;
-    
+
     AlgorithmInfo* info() const;
-    
+
     CV_PROP_RW double hessianThreshold;
     CV_PROP_RW int nOctaves;
     CV_PROP_RW int nOctaveLayers;
     CV_PROP_RW bool extended;
     CV_PROP_RW bool upright;
-    
+
 protected:
-    
+
     void detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
     void computeImpl( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors ) const;
 };
-    
+
 typedef SURF SurfFeatureDetector;
 typedef SURF SurfDescriptorExtractor;
 

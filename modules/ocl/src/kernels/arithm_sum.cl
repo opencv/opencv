@@ -151,7 +151,7 @@ __kernel void arithm_op_sum (int cols,int invalid_cols,int offset,int elemnum,in
    if(id < elemnum)
    {
        temp = CONVERT_RES_TYPE(src[idx]);
-       if(id % cols == 0 ) 
+       if(id % cols == 0 )
        {
            repeat_s(temp);
        }
@@ -169,7 +169,7 @@ __kernel void arithm_op_sum (int cols,int invalid_cols,int offset,int elemnum,in
    {
        idx = offset + id + (id / cols) * invalid_cols;
        temp = CONVERT_RES_TYPE(src[idx]);
-       if(id % cols == 0 ) 
+       if(id % cols == 0 )
        {
                repeat_s(temp);
        }

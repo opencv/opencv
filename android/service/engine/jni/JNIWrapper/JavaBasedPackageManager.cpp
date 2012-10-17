@@ -11,7 +11,7 @@ JavaBasedPackageManager::JavaBasedPackageManager(JavaVM* JavaMashine, jobject Ma
     JavaContext(JavaMashine),
     JavaPackageManager(MarketConnector)
 {
-    assert(JavaContext);    
+    assert(JavaContext);
     assert(JavaPackageManager);
 }
 
@@ -20,41 +20,41 @@ bool JavaBasedPackageManager::InstallPackage(const PackageInfo& package)
     JNIEnv* jenv;
     bool self_attached;
     LOGD("JavaBasedPackageManager::InstallPackage() begin\n");
-    
+
     self_attached = (JNI_EDETACHED == JavaContext->GetEnv((void**)&jenv, JNI_VERSION_1_6));
     if (self_attached)
     {
-	JavaContext->AttachCurrentThread(&jenv, NULL);
+    JavaContext->AttachCurrentThread(&jenv, NULL);
     }
-    
+
     LOGD("GetObjectClass call\n");
     jclass jclazz = jenv->GetObjectClass(JavaPackageManager);
     if (!jclazz)
     {
-	LOGE("MarketConnector class was not found!");
-	return false;
+    LOGE("MarketConnector class was not found!");
+    return false;
     }
 
     LOGD("GetMethodID call\n");
     jmethodID jmethod = jenv->GetMethodID(jclazz, "InstallAppFromMarket", "(Ljava/lang/String;)Z");
     if (!jmethod)
     {
-	LOGE("MarketConnector::GetAppFormMarket method was not found!");
-	return false;
+    LOGE("MarketConnector::GetAppFormMarket method was not found!");
+    return false;
     }
-    
+
     LOGD("Calling java package manager with package name %s\n", package.GetFullName().c_str());
     jobject jpkgname = jenv->NewStringUTF(package.GetFullName().c_str());
     bool result = jenv->CallNonvirtualBooleanMethod(JavaPackageManager, jclazz, jmethod, jpkgname);
-    jenv->DeleteLocalRef(jpkgname);   
-    
+    jenv->DeleteLocalRef(jpkgname);
+
     if (self_attached)
     {
-	JavaContext->DetachCurrentThread();
+    JavaContext->DetachCurrentThread();
     }
-    
+
     LOGD("JavaBasedPackageManager::InstallPackage() end\n");
-    
+
     return result;
 }
 
@@ -65,56 +65,56 @@ vector<PackageInfo> JavaBasedPackageManager::GetInstalledPackages()
     bool self_attached;
 
     LOGD("JavaBasedPackageManager::GetInstalledPackages() begin");
-        
+
     self_attached = (JNI_EDETACHED == JavaContext->GetEnv((void**)&jenv, JNI_VERSION_1_6));
     if (self_attached)
     {
-	JavaContext->AttachCurrentThread(&jenv, NULL);
+    JavaContext->AttachCurrentThread(&jenv, NULL);
     }
-    
+
     LOGD("GetObjectClass call");
     jclass jclazz = jenv->GetObjectClass(JavaPackageManager);
     if (!jclazz)
     {
-	LOGE("MarketConnector class was not found!");
-	return result;
+    LOGE("MarketConnector class was not found!");
+    return result;
     }
-    
+
     LOGD("GetMethodID call");
     jmethodID jmethod = jenv->GetMethodID(jclazz, "GetInstalledOpenCVPackages", "()[Landroid/content/pm/PackageInfo;");
     if (!jmethod)
     {
-	LOGE("MarketConnector::GetInstalledOpenCVPackages method was not found!");
-	return result;
+    LOGE("MarketConnector::GetInstalledOpenCVPackages method was not found!");
+    return result;
     }
-    
+
     LOGD("Java package manager call");
     jobjectArray jpkgs = static_cast<jobjectArray>(jenv->CallNonvirtualObjectMethod(JavaPackageManager, jclazz, jmethod));
     jsize size = jenv->GetArrayLength(jpkgs);
-   
+
     LOGD("Package info conversion");
-    
+
     result.reserve(size);
-   
+
     for (jsize i = 0; i < size; i++)
     {
-	jobject jtmp = jenv->GetObjectArrayElement(jpkgs, i);
-	PackageInfo tmp = ConvertPackageFromJava(jtmp, jenv);
-	jenv->DeleteLocalRef(jtmp);
-	
-	if (tmp.IsValid())
-	    result.push_back(tmp);
+    jobject jtmp = jenv->GetObjectArrayElement(jpkgs, i);
+    PackageInfo tmp = ConvertPackageFromJava(jtmp, jenv);
+    jenv->DeleteLocalRef(jtmp);
+
+    if (tmp.IsValid())
+        result.push_back(tmp);
     }
-    
+
     jenv->DeleteLocalRef(jpkgs);
-    
+
     if (self_attached)
     {
-	JavaContext->DetachCurrentThread();
+    JavaContext->DetachCurrentThread();
     }
-    
+
     LOGD("JavaBasedPackageManager::GetInstalledPackages() end");
-    
+
     return result;
 }
 
@@ -127,35 +127,35 @@ PackageInfo JavaBasedPackageManager::ConvertPackageFromJava(jobject package, JNI
     const char* jnamestr = jenv->GetStringUTFChars(jnameobj, NULL);
     string name(jnamestr);
     jenv->DeleteLocalRef(jnameobj);
-    
+
     jfield = jenv->GetFieldID(jclazz, "versionName", "Ljava/lang/String;");
     jstring jversionobj = static_cast<jstring>(jenv->GetObjectField(package, jfield));
     const char* jversionstr = jenv->GetStringUTFChars(jversionobj, NULL);
     string verison(jversionstr);
     jenv->DeleteLocalRef(jversionobj);
-    
+
     string path;
     jclazz = jenv->FindClass("android/os/Build$VERSION");
     jfield = jenv->GetStaticFieldID(jclazz, "SDK_INT", "I");
     jint api_level = jenv->GetStaticIntField(jclazz, jfield);
     if (api_level > 8)
     {
-	jclazz = jenv->GetObjectClass(package);
-	jfield = jenv->GetFieldID(jclazz, "applicationInfo", "Landroid/content/pm/ApplicationInfo;");
-	jobject japp_info = jenv->GetObjectField(package, jfield);
-	jclazz = jenv->GetObjectClass(japp_info);
-	jfield = jenv->GetFieldID(jclazz, "nativeLibraryDir", "Ljava/lang/String;");
-	jstring jpathobj = static_cast<jstring>(jenv->GetObjectField(japp_info, jfield));
-	const char* jpathstr = jenv->GetStringUTFChars(jpathobj, NULL);
-	path = string(jpathstr);
-	jenv->ReleaseStringUTFChars(jpathobj, jpathstr);
-	jenv->DeleteLocalRef(jpathobj);
+    jclazz = jenv->GetObjectClass(package);
+    jfield = jenv->GetFieldID(jclazz, "applicationInfo", "Landroid/content/pm/ApplicationInfo;");
+    jobject japp_info = jenv->GetObjectField(package, jfield);
+    jclazz = jenv->GetObjectClass(japp_info);
+    jfield = jenv->GetFieldID(jclazz, "nativeLibraryDir", "Ljava/lang/String;");
+    jstring jpathobj = static_cast<jstring>(jenv->GetObjectField(japp_info, jfield));
+    const char* jpathstr = jenv->GetStringUTFChars(jpathobj, NULL);
+    path = string(jpathstr);
+    jenv->ReleaseStringUTFChars(jpathobj, jpathstr);
+    jenv->DeleteLocalRef(jpathobj);
     }
     else
     {
-	path = "/data/data/" + name + "/lib";
+    path = "/data/data/" + name + "/lib";
     }
-    
+
     return PackageInfo(name, path, verison);
 }
 
@@ -165,19 +165,19 @@ JavaBasedPackageManager::~JavaBasedPackageManager()
     bool self_attached;
 
     LOGD("JavaBasedPackageManager::~JavaBasedPackageManager() begin");
-    
+
     JavaContext->GetEnv((void**)&jenv, JNI_VERSION_1_6);
     self_attached = (JNI_EDETACHED == JavaContext->GetEnv((void**)&jenv, JNI_VERSION_1_6));
     if (self_attached)
     {
-	JavaContext->AttachCurrentThread(&jenv, NULL);
+    JavaContext->AttachCurrentThread(&jenv, NULL);
     }
 
     jenv->DeleteGlobalRef(JavaPackageManager);
 
     if (self_attached)
     {
-	JavaContext->DetachCurrentThread();
+    JavaContext->DetachCurrentThread();
     }
     LOGD("JavaBasedPackageManager::~JavaBasedPackageManager() end");
 }

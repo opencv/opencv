@@ -89,14 +89,14 @@
  */
 
 typedef enum {
-	JXFORM_NONE,		/* no transformation */
-	JXFORM_FLIP_H,		/* horizontal flip */
-	JXFORM_FLIP_V,		/* vertical flip */
-	JXFORM_TRANSPOSE,	/* transpose across UL-to-LR axis */
-	JXFORM_TRANSVERSE,	/* transpose across UR-to-LL axis */
-	JXFORM_ROT_90,		/* 90-degree clockwise rotation */
-	JXFORM_ROT_180,		/* 180-degree rotation */
-	JXFORM_ROT_270		/* 270-degree clockwise (or 90 ccw) */
+    JXFORM_NONE,		/* no transformation */
+    JXFORM_FLIP_H,		/* horizontal flip */
+    JXFORM_FLIP_V,		/* vertical flip */
+    JXFORM_TRANSPOSE,	/* transpose across UL-to-LR axis */
+    JXFORM_TRANSVERSE,	/* transpose across UR-to-LL axis */
+    JXFORM_ROT_90,		/* 90-degree clockwise rotation */
+    JXFORM_ROT_180,		/* 180-degree rotation */
+    JXFORM_ROT_270		/* 270-degree clockwise (or 90 ccw) */
 } JXFORM_CODE;
 
 /*
@@ -105,9 +105,9 @@ typedef enum {
  */
 
 typedef enum {
-	JCROP_UNSET,
-	JCROP_POS,
-	JCROP_NEG
+    JCROP_UNSET,
+    JCROP_POS,
+    JCROP_NEG
 } JCROP_CODE;
 
 /*
@@ -152,27 +152,27 @@ typedef struct {
 
 /* Parse a crop specification (written in X11 geometry style) */
 EXTERN(boolean) jtransform_parse_crop_spec
-	JPP((jpeg_transform_info *info, const char *spec));
+    JPP((jpeg_transform_info *info, const char *spec));
 /* Request any required workspace */
 EXTERN(void) jtransform_request_workspace
-	JPP((j_decompress_ptr srcinfo, jpeg_transform_info *info));
+    JPP((j_decompress_ptr srcinfo, jpeg_transform_info *info));
 /* Adjust output image parameters */
 EXTERN(jvirt_barray_ptr *) jtransform_adjust_parameters
-	JPP((j_decompress_ptr srcinfo, j_compress_ptr dstinfo,
-	     jvirt_barray_ptr *src_coef_arrays,
-	     jpeg_transform_info *info));
+    JPP((j_decompress_ptr srcinfo, j_compress_ptr dstinfo,
+         jvirt_barray_ptr *src_coef_arrays,
+         jpeg_transform_info *info));
 /* Execute the actual transformation, if any */
 EXTERN(void) jtransform_execute_transform
-	JPP((j_decompress_ptr srcinfo, j_compress_ptr dstinfo,
-	     jvirt_barray_ptr *src_coef_arrays,
-	     jpeg_transform_info *info));
+    JPP((j_decompress_ptr srcinfo, j_compress_ptr dstinfo,
+         jvirt_barray_ptr *src_coef_arrays,
+         jpeg_transform_info *info));
 /* Determine whether lossless transformation is perfectly
  * possible for a specified image and transformation.
  */
 EXTERN(boolean) jtransform_perfect_transform
-	JPP((JDIMENSION image_width, JDIMENSION image_height,
-	     int MCU_width, int MCU_height,
-	     JXFORM_CODE transform));
+    JPP((JDIMENSION image_width, JDIMENSION image_height,
+         int MCU_width, int MCU_height,
+         JXFORM_CODE transform));
 
 /* jtransform_execute_transform used to be called
  * jtransform_execute_transformation, but some compilers complain about
@@ -189,17 +189,17 @@ EXTERN(boolean) jtransform_perfect_transform
  */
 
 typedef enum {
-	JCOPYOPT_NONE,		/* copy no optional markers */
-	JCOPYOPT_COMMENTS,	/* copy only comment (COM) markers */
-	JCOPYOPT_ALL		/* copy all optional markers */
+    JCOPYOPT_NONE,		/* copy no optional markers */
+    JCOPYOPT_COMMENTS,	/* copy only comment (COM) markers */
+    JCOPYOPT_ALL		/* copy all optional markers */
 } JCOPY_OPTION;
 
 #define JCOPYOPT_DEFAULT  JCOPYOPT_COMMENTS	/* recommended default */
 
 /* Setup decompression object to save desired markers in memory */
 EXTERN(void) jcopy_markers_setup
-	JPP((j_decompress_ptr srcinfo, JCOPY_OPTION option));
+    JPP((j_decompress_ptr srcinfo, JCOPY_OPTION option));
 /* Copy markers saved in the given source object to the destination object */
 EXTERN(void) jcopy_markers_execute
-	JPP((j_decompress_ptr srcinfo, j_compress_ptr dstinfo,
-	     JCOPY_OPTION option));
+    JPP((j_decompress_ptr srcinfo, j_compress_ptr dstinfo,
+         JCOPY_OPTION option));

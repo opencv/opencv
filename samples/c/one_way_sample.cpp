@@ -20,8 +20,8 @@
 
 static void help()
 {
-	printf("\nThis program demonstrates the one way interest point descriptor found in features2d.hpp\n"
-			"Correspondences are drawn\n");
+    printf("\nThis program demonstrates the one way interest point descriptor found in features2d.hpp\n"
+            "Correspondences are drawn\n");
     printf("Format: \n./one_way_sample <path_to_samples> <image1> <image2>\n");
     printf("For example: ./one_way_sample . ../c/scene_l.bmp ../c/scene_r.bmp\n");
 }
@@ -39,7 +39,7 @@ int main(int argc, char** argv)
 
     if (argc != 4)
     {
-    	help();
+        help();
         return 0;
     }
 
@@ -50,14 +50,14 @@ int main(int argc, char** argv)
     printf("Reading the images...\n");
     Mat img1 = imread(img1_name, CV_LOAD_IMAGE_GRAYSCALE);
     Mat img2 = imread(img2_name, CV_LOAD_IMAGE_GRAYSCALE);
-    
+
     // extract keypoints from the first image
     SURF surf_extractor(5.0e3);
     vector<KeyPoint> keypoints1;
 
     // printf("Extracting keypoints\n");
     surf_extractor(img1, Mat(), keypoints1);
-    
+
     printf("Extracted %d keypoints...\n", (int)keypoints1.size());
 
     printf("Training one way descriptors... \n");
@@ -101,18 +101,18 @@ Mat DrawCorrespondences(const Mat& img1, const vector<KeyPoint>& features1, cons
     cvtColor(img1, part, COLOR_GRAY2RGB);
     part = img_corr(Rect(img1.cols, 0, img2.cols, img2.rows));
     cvtColor(img1, part, COLOR_GRAY2RGB);
-    
+
     for (size_t i = 0; i < features1.size(); i++)
     {
         circle(img_corr, features1[i].pt, 3, CV_RGB(255, 0, 0));
     }
-    
+
     for (size_t i = 0; i < features2.size(); i++)
     {
         Point pt((int)features2[i].pt.x + img1.cols, (int)features2[i].pt.y);
         circle(img_corr, pt, 3, Scalar(0, 0, 255));
         line(img_corr, features1[desc_idx[i]].pt, pt, Scalar(0, 255, 0));
     }
-    
+
     return img_corr;
 }

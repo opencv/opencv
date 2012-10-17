@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2002, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-// 
+//
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission. 
-// 
+// from this software without specific prior written permission.
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -71,10 +71,10 @@ const int HUF_DECMASK = HUF_DECSIZE - 1;
 
 struct HufDec
 {				// short code		long code
-				//-------------------------------
-    int		len:8;		// code length		0	 
-    int		lit:24;		// lit			p size	 
-    int	*	p;		// 0			lits	 
+                //-------------------------------
+    int		len:8;		// code length		0
+    int		lit:24;		// lit			p size
+    int	*	p;		// 0			lits
 };
 
 
@@ -82,7 +82,7 @@ void
 invalidNBits ()
 {
     throw InputExc ("Error in header for Huffman-encoded data "
-		    "(invalid number of bits).");
+            "(invalid number of bits).");
 }
 
 
@@ -90,7 +90,7 @@ void
 tooMuchData ()
 {
     throw InputExc ("Error in Huffman-encoded data "
-		    "(decoded data are longer than expected).");
+            "(decoded data are longer than expected).");
 }
 
 
@@ -98,7 +98,7 @@ void
 notEnoughData ()
 {
     throw InputExc ("Error in Huffman-encoded data "
-		    "(decoded data are shorter than expected).");
+            "(decoded data are shorter than expected).");
 }
 
 
@@ -106,7 +106,7 @@ void
 invalidCode ()
 {
     throw InputExc ("Error in Huffman-encoded data "
-		    "(invalid code).");
+            "(invalid code).");
 }
 
 
@@ -114,7 +114,7 @@ void
 invalidTableSize ()
 {
     throw InputExc ("Error in Huffman-encoded data "
-		    "(invalid code table size).");
+            "(invalid code table size).");
 }
 
 
@@ -122,7 +122,7 @@ void
 unexpectedEndOfTable ()
 {
     throw InputExc ("Error in Huffman-encoded data "
-		    "(unexpected end of code table data).");
+            "(unexpected end of code table data).");
 }
 
 
@@ -130,7 +130,7 @@ void
 tableTooLong ()
 {
     throw InputExc ("Error in Huffman-encoded data "
-		    "(code table is longer than expected).");
+            "(code table is longer than expected).");
 }
 
 
@@ -138,7 +138,7 @@ void
 invalidTableEntry ()
 {
     throw InputExc ("Error in Huffman-encoded data "
-		    "(invalid code table entry).");
+            "(invalid code table entry).");
 }
 
 
@@ -165,7 +165,7 @@ outputBits (int nBits, Int64 bits, Int64 &c, int &lc, char *&out)
     c |= bits;
 
     while (lc >= 8)
-	*out++ = (c >> (lc -= 8));
+    *out++ = (c >> (lc -= 8));
 }
 
 
@@ -174,8 +174,8 @@ getBits (int nBits, Int64 &c, int &lc, const char *&in)
 {
     while (lc < nBits)
     {
-	c = (c << 8) | *(unsigned char *)(in++);
-	lc += 8;
+    c = (c << 8) | *(unsigned char *)(in++);
+    lc += 8;
     }
 
     lc -= nBits;
@@ -215,10 +215,10 @@ hufCanonicalCodeTable (Int64 hcode[HUF_ENCSIZE])
     //
 
     for (int i = 0; i <= 58; ++i)
-	n[i] = 0;
+    n[i] = 0;
 
     for (int i = 0; i < HUF_ENCSIZE; ++i)
-	n[hcode[i]] += 1;
+    n[hcode[i]] += 1;
 
     //
     // For each i from 58 through 1, compute the
@@ -230,9 +230,9 @@ hufCanonicalCodeTable (Int64 hcode[HUF_ENCSIZE])
 
     for (int i = 58; i > 0; --i)
     {
-	Int64 nc = ((c + n[i]) >> 1);
-	n[i] = c;
-	c = nc;
+    Int64 nc = ((c + n[i]) >> 1);
+    n[i] = c;
+    c = nc;
     }
 
     //
@@ -244,10 +244,10 @@ hufCanonicalCodeTable (Int64 hcode[HUF_ENCSIZE])
 
     for (int i = 0; i < HUF_ENCSIZE; ++i)
     {
-	int l = hcode[i];
+    int l = hcode[i];
 
-	if (l > 0)
-	    hcode[i] = l | (n[l]++ << 6);
+    if (l > 0)
+        hcode[i] = l | (n[l]++ << 6);
     }
 }
 
@@ -301,20 +301,20 @@ hufBuildEncTable
     *im = 0;
 
     while (!frq[*im])
-	(*im)++;
+    (*im)++;
 
     int nf = 0;
 
     for (int i = *im; i < HUF_ENCSIZE; i++)
     {
-	hlink[i] = i;
+    hlink[i] = i;
 
-	if (frq[i])
-	{
-	    fHeap[nf] = &frq[i];
-	    nf++;
-	    *iM = i;
-	}
+    if (frq[i])
+    {
+        fHeap[nf] = &frq[i];
+        nf++;
+        *iM = i;
+    }
     }
 
     //
@@ -363,71 +363,71 @@ hufBuildEncTable
 
     while (nf > 1)
     {
-	//
-	// Find the indices, mm and m, of the two smallest non-zero frq
-	// values in fHeap, add the smallest frq to the second-smallest
-	// frq, and remove the smallest frq value from fHeap.
-	//
+    //
+    // Find the indices, mm and m, of the two smallest non-zero frq
+    // values in fHeap, add the smallest frq to the second-smallest
+    // frq, and remove the smallest frq value from fHeap.
+    //
 
-	int mm = fHeap[0] - frq;
-	pop_heap (&fHeap[0], &fHeap[nf], FHeapCompare());
-	--nf;
+    int mm = fHeap[0] - frq;
+    pop_heap (&fHeap[0], &fHeap[nf], FHeapCompare());
+    --nf;
 
-	int m = fHeap[0] - frq;
-	pop_heap (&fHeap[0], &fHeap[nf], FHeapCompare());
+    int m = fHeap[0] - frq;
+    pop_heap (&fHeap[0], &fHeap[nf], FHeapCompare());
 
-	frq[m ] += frq[mm];
-	push_heap (&fHeap[0], &fHeap[nf], FHeapCompare());
+    frq[m ] += frq[mm];
+    push_heap (&fHeap[0], &fHeap[nf], FHeapCompare());
 
-	//
-	// The entries in scode are linked into lists with the
-	// entries in hlink serving as "next" pointers and with
-	// the end of a list marked by hlink[j] == j.
-	//
-	// Traverse the lists that start at scode[m] and scode[mm].
-	// For each element visited, increment the length of the
-	// corresponding code by one bit. (If we visit scode[j]
-	// during the traversal, then the code for symbol j becomes
-	// one bit longer.)
-	//
-	// Merge the lists that start at scode[m] and scode[mm]
-	// into a single list that starts at scode[m].
-	//
-	
-	//
-	// Add a bit to all codes in the first list.
-	//
+    //
+    // The entries in scode are linked into lists with the
+    // entries in hlink serving as "next" pointers and with
+    // the end of a list marked by hlink[j] == j.
+    //
+    // Traverse the lists that start at scode[m] and scode[mm].
+    // For each element visited, increment the length of the
+    // corresponding code by one bit. (If we visit scode[j]
+    // during the traversal, then the code for symbol j becomes
+    // one bit longer.)
+    //
+    // Merge the lists that start at scode[m] and scode[mm]
+    // into a single list that starts at scode[m].
+    //
 
-	for (int j = m; true; j = hlink[j])
-	{
-	    scode[j]++;
+    //
+    // Add a bit to all codes in the first list.
+    //
 
-	    assert (scode[j] <= 58);
+    for (int j = m; true; j = hlink[j])
+    {
+        scode[j]++;
 
-	    if (hlink[j] == j)
-	    {
-		//
-		// Merge the two lists.
-		//
+        assert (scode[j] <= 58);
 
-		hlink[j] = mm;
-		break;
-	    }
-	}
+        if (hlink[j] == j)
+        {
+        //
+        // Merge the two lists.
+        //
 
-	//
-	// Add a bit to all codes in the second list
-	//
+        hlink[j] = mm;
+        break;
+        }
+    }
 
-	for (int j = mm; true; j = hlink[j])
-	{
-	    scode[j]++;
+    //
+    // Add a bit to all codes in the second list
+    //
 
-	    assert (scode[j] <= 58);
+    for (int j = mm; true; j = hlink[j])
+    {
+        scode[j]++;
 
-	    if (hlink[j] == j)
-		break;
-	}
+        assert (scode[j] <= 58);
+
+        if (hlink[j] == j)
+        break;
+    }
     }
 
     //
@@ -475,40 +475,40 @@ hufPackEncTable
 
     for (; im <= iM; im++)
     {
-	int l = hufLength (hcode[im]);
+    int l = hufLength (hcode[im]);
 
-	if (l == 0)
-	{
-	    int zerun = 1;
+    if (l == 0)
+    {
+        int zerun = 1;
 
-	    while ((im < iM) && (zerun < LONGEST_LONG_RUN))
-	    {
-		if (hufLength (hcode[im+1]) > 0 )	 
-		    break;
-		im++;
-		zerun++;
-	    }
+        while ((im < iM) && (zerun < LONGEST_LONG_RUN))
+        {
+        if (hufLength (hcode[im+1]) > 0 )
+            break;
+        im++;
+        zerun++;
+        }
 
-	    if (zerun >= 2)
-	    {
-		if (zerun >= SHORTEST_LONG_RUN)
-		{
-		    outputBits (6, LONG_ZEROCODE_RUN, c, lc, p);
-		    outputBits (8, zerun - SHORTEST_LONG_RUN, c, lc, p);
-		}
-		else
-		{
-		    outputBits (6, SHORT_ZEROCODE_RUN + zerun - 2, c, lc, p);
-		}
-		continue;
-	    }
-	}
+        if (zerun >= 2)
+        {
+        if (zerun >= SHORTEST_LONG_RUN)
+        {
+            outputBits (6, LONG_ZEROCODE_RUN, c, lc, p);
+            outputBits (8, zerun - SHORTEST_LONG_RUN, c, lc, p);
+        }
+        else
+        {
+            outputBits (6, SHORT_ZEROCODE_RUN + zerun - 2, c, lc, p);
+        }
+        continue;
+        }
+    }
 
-	outputBits (6, l, c, lc, p);
+    outputBits (6, l, c, lc, p);
     }
 
     if (lc > 0)
-	*p++ = (unsigned char) (c << (8 - lc));
+    *p++ = (unsigned char) (c << (8 - lc));
 
     *pcode = p;
 }
@@ -534,38 +534,38 @@ hufUnpackEncTable
 
     for (; im <= iM; im++)
     {
-	if (p - *pcode > ni)
-	    unexpectedEndOfTable();
+    if (p - *pcode > ni)
+        unexpectedEndOfTable();
 
-	Int64 l = hcode[im] = getBits (6, c, lc, p); // code length
+    Int64 l = hcode[im] = getBits (6, c, lc, p); // code length
 
-	if (l == (Int64) LONG_ZEROCODE_RUN)
-	{
-	    if (p - *pcode > ni)
-		unexpectedEndOfTable();
+    if (l == (Int64) LONG_ZEROCODE_RUN)
+    {
+        if (p - *pcode > ni)
+        unexpectedEndOfTable();
 
-	    int zerun = getBits (8, c, lc, p) + SHORTEST_LONG_RUN;
+        int zerun = getBits (8, c, lc, p) + SHORTEST_LONG_RUN;
 
-	    if (im + zerun > iM + 1)
-		tableTooLong();
+        if (im + zerun > iM + 1)
+        tableTooLong();
 
-	    while (zerun--)
-		hcode[im++] = 0;
+        while (zerun--)
+        hcode[im++] = 0;
 
-	    im--;
-	}
-	else if (l >= (Int64) SHORT_ZEROCODE_RUN)
-	{
-	    int zerun = l - SHORT_ZEROCODE_RUN + 2;
+        im--;
+    }
+    else if (l >= (Int64) SHORT_ZEROCODE_RUN)
+    {
+        int zerun = l - SHORT_ZEROCODE_RUN + 2;
 
-	    if (im + zerun > iM + 1)
-		tableTooLong();
+        if (im + zerun > iM + 1)
+        tableTooLong();
 
-	    while (zerun--)
-		hcode[im++] = 0;
+        while (zerun--)
+        hcode[im++] = 0;
 
-	    im--;
-	}
+        im--;
+    }
     }
 
     *pcode = (char *) p;
@@ -585,7 +585,7 @@ hufUnpackEncTable
 void
 hufClearDecTable
     (HufDec *		hdecod)		// io: (allocated by caller)
-     					//     decoding table [HUF_DECSIZE]
+                        //     decoding table [HUF_DECSIZE]
 {
     memset (hdecod, 0, sizeof (HufDec) * HUF_DECSIZE);
 }
@@ -605,7 +605,7 @@ hufBuildDecTable
      int		im,		// i : min index in hcode
      int		iM,		// i : max index in hcode
      HufDec *		hdecod)		//  o: (allocated by caller)
-     					//     decoding table [HUF_DECSIZE]
+                        //     decoding table [HUF_DECSIZE]
 {
     //
     // Init hashtable & loop on all codes.
@@ -614,81 +614,81 @@ hufBuildDecTable
 
     for (; im <= iM; im++)
     {
-	Int64 c = hufCode (hcode[im]);
-	int l = hufLength (hcode[im]);
+    Int64 c = hufCode (hcode[im]);
+    int l = hufLength (hcode[im]);
 
-	if (c >> l)
-	{
-	    //
-	    // Error: c is supposed to be an l-bit code,
-	    // but c contains a value that is greater
-	    // than the largest l-bit number.
-	    //
+    if (c >> l)
+    {
+        //
+        // Error: c is supposed to be an l-bit code,
+        // but c contains a value that is greater
+        // than the largest l-bit number.
+        //
 
-	    invalidTableEntry();
-	}
+        invalidTableEntry();
+    }
 
-	if (l > HUF_DECBITS)
-	{
-	    //
-	    // Long code: add a secondary entry
-	    //
+    if (l > HUF_DECBITS)
+    {
+        //
+        // Long code: add a secondary entry
+        //
 
-	    HufDec *pl = hdecod + (c >> (l - HUF_DECBITS));
+        HufDec *pl = hdecod + (c >> (l - HUF_DECBITS));
 
-	    if (pl->len)
-	    {
-		//
-		// Error: a short code has already
-		// been stored in table entry *pl.
-		//
+        if (pl->len)
+        {
+        //
+        // Error: a short code has already
+        // been stored in table entry *pl.
+        //
 
-		invalidTableEntry();
-	    }
+        invalidTableEntry();
+        }
 
-	    pl->lit++;
+        pl->lit++;
 
-	    if (pl->p)
-	    {
-		int *p = pl->p;
-		pl->p = new int [pl->lit];
+        if (pl->p)
+        {
+        int *p = pl->p;
+        pl->p = new int [pl->lit];
 
-		for (int i = 0; i < pl->lit - 1; ++i)
-		    pl->p[i] = p[i];
+        for (int i = 0; i < pl->lit - 1; ++i)
+            pl->p[i] = p[i];
 
-		delete [] p;
-	    }
-	    else
-	    {
-		pl->p = new int [1];
-	    }
+        delete [] p;
+        }
+        else
+        {
+        pl->p = new int [1];
+        }
 
-	    pl->p[pl->lit - 1]= im;
-	}
-	else if (l)
-	{
-	    //
-	    // Short code: init all primary entries
-	    //
+        pl->p[pl->lit - 1]= im;
+    }
+    else if (l)
+    {
+        //
+        // Short code: init all primary entries
+        //
 
-	    HufDec *pl = hdecod + (c << (HUF_DECBITS - l));
+        HufDec *pl = hdecod + (c << (HUF_DECBITS - l));
 
-	    for (Int64 i = 1 << (HUF_DECBITS - l); i > 0; i--, pl++)
-	    {
-		if (pl->len || pl->p)
-		{
-		    //
-		    // Error: a short code or a long code has
-		    // already been stored in table entry *pl.
-		    //
+        for (Int64 i = 1 << (HUF_DECBITS - l); i > 0; i--, pl++)
+        {
+        if (pl->len || pl->p)
+        {
+            //
+            // Error: a short code or a long code has
+            // already been stored in table entry *pl.
+            //
 
-		    invalidTableEntry();
-		}
+            invalidTableEntry();
+        }
 
-		pl->len = l;
-		pl->lit = im;
-	    }
-	}
+        pl->len = l;
+        pl->lit = im;
+        }
+    }
     }
 }
 
@@ -702,11 +702,11 @@ hufFreeDecTable (HufDec *hdecod)	// io: Decoding table
 {
     for (int i = 0; i < HUF_DECSIZE; i++)
     {
-	if (hdecod[i].p)
-	{
-	    delete [] hdecod[i].p;
-	    hdecod[i].p = 0;
-	}
+    if (hdecod[i].p)
+    {
+        delete [] hdecod[i].p;
+        hdecod[i].p = 0;
+    }
     }
 }
 
@@ -724,20 +724,20 @@ outputCode (Int64 code, Int64 &c, int &lc, char *&out)
 
 inline void
 sendCode (Int64 sCode, int runCount, Int64 runCode,
-	  Int64 &c, int &lc, char *&out)
+      Int64 &c, int &lc, char *&out)
 {
     static const int RLMIN = 32; // min count to activate run-length coding
 
     if (runCount > RLMIN)
     {
-	outputCode (sCode, c, lc, out);
-	outputCode (runCode, c, lc, out);
-	outputBits (8, runCount, c, lc, out);
+    outputCode (sCode, c, lc, out);
+    outputCode (runCode, c, lc, out);
+    outputBits (8, runCount, c, lc, out);
     }
     else
     {
-	while (runCount-- >= 0)
-	    outputCode (sCode, c, lc, out);
+    while (runCount-- >= 0)
+        outputCode (sCode, c, lc, out);
     }
 }
 
@@ -766,21 +766,21 @@ hufEncode				// return: output size (in bits)
 
     for (int i = 1; i < ni; i++)
     {
-	//
-	// Count same values or send code
-	//
+    //
+    // Count same values or send code
+    //
 
-	if (s == in[i] && cs < 255)
-	{
-	    cs++;
-	}
-	else
-	{
-	    sendCode (hcode[s], cs, hcode[rlc], c, lc, out);
-	    cs=0;
-	}
+    if (s == in[i] && cs < 255)
+    {
+        cs++;
+    }
+    else
+    {
+        sendCode (hcode[s], cs, hcode[rlc], c, lc, out);
+        cs=0;
+    }
 
-	s = in[i];
+    s = in[i];
     }
 
     //
@@ -790,7 +790,7 @@ hufEncode				// return: output size (in bits)
     sendCode (hcode[s], cs, hcode[rlc], c, lc, out);
 
     if (lc)
-	*out = (c << (8 - lc)) & 0xff;
+    *out = (c << (8 - lc)) & 0xff;
 
     return (out - outStart) * 8 + lc;
 }
@@ -817,28 +817,28 @@ hufEncode				// return: output size (in bits)
 {						\
     if (po == rlc)				\
     {						\
-	if (lc < 8)				\
-	    getChar(c, lc, in);			\
-						\
-	lc -= 8;				\
-						\
-	unsigned char cs = (c >> lc);		\
-						\
-	if (out + cs > oe)			\
-	    tooMuchData();			\
-						\
-	unsigned short s = out[-1];		\
-						\
-	while (cs-- > 0)			\
-	    *out++ = s;				\
+    if (lc < 8)				\
+        getChar(c, lc, in);			\
+                        \
+    lc -= 8;				\
+                        \
+    unsigned char cs = (c >> lc);		\
+                        \
+    if (out + cs > oe)			\
+        tooMuchData();			\
+                        \
+    unsigned short s = out[-1];		\
+                        \
+    while (cs-- > 0)			\
+        *out++ = s;				\
     }						\
     else if (out < oe)				\
     {						\
-	*out++ = po;				\
+    *out++ = po;				\
     }						\
     else					\
     {						\
-	tooMuchData();				\
+    tooMuchData();				\
     }						\
 }
 
@@ -869,63 +869,63 @@ hufDecode
 
     while (in < ie)
     {
-	getChar (c, lc, in);
+    getChar (c, lc, in);
 
-	//
-	// Access decoding table
-	//
+    //
+    // Access decoding table
+    //
 
-	while (lc >= HUF_DECBITS)
-	{
-	    const HufDec pl = hdecod[(c >> (lc-HUF_DECBITS)) & HUF_DECMASK];
+    while (lc >= HUF_DECBITS)
+    {
+        const HufDec pl = hdecod[(c >> (lc-HUF_DECBITS)) & HUF_DECMASK];
 
-	    if (pl.len)
-	    {
-		//
-		// Get short code
-		//
+        if (pl.len)
+        {
+        //
+        // Get short code
+        //
 
-		lc -= pl.len;
-		getCode (pl.lit, rlc, c, lc, in, out, oe);
-	    }
-	    else
-	    {
-		if (!pl.p)
-		    invalidCode(); // wrong code
+        lc -= pl.len;
+        getCode (pl.lit, rlc, c, lc, in, out, oe);
+        }
+        else
+        {
+        if (!pl.p)
+            invalidCode(); // wrong code
 
-		//
-		// Search long code
-		//
+        //
+        // Search long code
+        //
 
-		int j;
+        int j;
 
-		for (j = 0; j < pl.lit; j++)
-		{
-		    int	l = hufLength (hcode[pl.p[j]]);
+        for (j = 0; j < pl.lit; j++)
+        {
+            int	l = hufLength (hcode[pl.p[j]]);
 
-		    while (lc < l && in < ie)	// get more bits
-			getChar (c, lc, in);
+            while (lc < l && in < ie)	// get more bits
+            getChar (c, lc, in);
 
-		    if (lc >= l)
-		    {
-			if (hufCode (hcode[pl.p[j]]) ==
-				((c >> (lc - l)) & ((Int64(1) << l) - 1)))
-			{
-			    //
-			    // Found : get long code
-			    //
+            if (lc >= l)
+            {
+            if (hufCode (hcode[pl.p[j]]) ==
+                ((c >> (lc - l)) & ((Int64(1) << l) - 1)))
+            {
+                //
+                // Found : get long code
+                //
 
-			    lc -= l;
-			    getCode (pl.p[j], rlc, c, lc, in, out, oe);
-			    break;
-			}
-		    }
-		}
+                lc -= l;
+                getCode (pl.p[j], rlc, c, lc, in, out, oe);
+                break;
+            }
+            }
+        }
 
-		if (j == pl.lit)
-		    invalidCode(); // Not found
-	    }
-	}
+        if (j == pl.lit)
+            invalidCode(); // Not found
+        }
+    }
     }
 
     //
@@ -938,34 +938,34 @@ hufDecode
 
     while (lc > 0)
     {
-	const HufDec pl = hdecod[(c << (HUF_DECBITS - lc)) & HUF_DECMASK];
+    const HufDec pl = hdecod[(c << (HUF_DECBITS - lc)) & HUF_DECMASK];
 
-	if (pl.len)
-	{
-	    lc -= pl.len;
-	    getCode (pl.lit, rlc, c, lc, in, out, oe);
-	}
-	else
-	{
-	    invalidCode(); // wrong (long) code
-	}
+    if (pl.len)
+    {
+        lc -= pl.len;
+        getCode (pl.lit, rlc, c, lc, in, out, oe);
+    }
+    else
+    {
+        invalidCode(); // wrong (long) code
+    }
     }
 
     if (out - outb != no)
-	notEnoughData ();
+    notEnoughData ();
 }
 
 
 void
 countFrequencies (Int64 freq[HUF_ENCSIZE],
-		  const unsigned short data[/*n*/],
-		  int n)
+          const unsigned short data[/*n*/],
+          int n)
 {
     for (int i = 0; i < HUF_ENCSIZE; ++i)
-	freq[i] = 0;
+    freq[i] = 0;
 
     for (int i = 0; i < n; ++i)
-	++freq[data[i]];
+    ++freq[data[i]];
 }
 
 
@@ -987,9 +987,9 @@ readUInt (const char buf[4])
     const unsigned char *b = (const unsigned char *) buf;
 
     return ( b[0]        & 0x000000ff) |
-	   ((b[1] <<  8) & 0x0000ff00) |
-	   ((b[2] << 16) & 0x00ff0000) |
-	   ((b[3] << 24) & 0xff000000);
+       ((b[1] <<  8) & 0x0000ff00) |
+       ((b[2] << 16) & 0x00ff0000) |
+       ((b[3] << 24) & 0xff000000);
 }
 
 } // namespace
@@ -1002,11 +1002,11 @@ readUInt (const char buf[4])
 
 int
 hufCompress (const unsigned short raw[],
-	     int nRaw,
-	     char compressed[])
+         int nRaw,
+         char compressed[])
 {
     if (nRaw == 0)
-	return 0;
+    return 0;
 
     AutoArray <Int64, HUF_ENCSIZE> freq;
 
@@ -1036,16 +1036,16 @@ hufCompress (const unsigned short raw[],
 
 void
 hufUncompress (const char compressed[],
-	       int nCompressed,
-	       unsigned short raw[],
-	       int nRaw)
+           int nCompressed,
+           unsigned short raw[],
+           int nRaw)
 {
     if (nCompressed == 0)
     {
-	if (nRaw != 0)
-	    notEnoughData();
+    if (nRaw != 0)
+        notEnoughData();
 
-	return;
+    return;
     }
 
     int im = readUInt (compressed);
@@ -1054,7 +1054,7 @@ hufUncompress (const char compressed[],
     int nBits = readUInt (compressed + 12);
 
     if (im < 0 || im >= HUF_ENCSIZE || iM < 0 || iM >= HUF_ENCSIZE)
-	invalidTableSize();
+    invalidTableSize();
 
     const char *ptr = compressed + 20;
 
@@ -1067,16 +1067,16 @@ hufUncompress (const char compressed[],
 
     try
     {
-	if (nBits > 8 * (nCompressed - (ptr - compressed)))
-	    invalidNBits();
+    if (nBits > 8 * (nCompressed - (ptr - compressed)))
+        invalidNBits();
 
-	hufBuildDecTable (freq, im, iM, hdec);
-	hufDecode (freq, hdec, ptr, nBits, iM, nRaw, raw);
+    hufBuildDecTable (freq, im, iM, hdec);
+    hufDecode (freq, hdec, ptr, nBits, iM, nRaw, raw);
     }
     catch (...)
     {
-	hufFreeDecTable (hdec);
-	throw;
+    hufFreeDecTable (hdec);
+    throw;
     }
 
     hufFreeDecTable (hdec);

@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2002, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-// 
+//
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission. 
-// 
+// from this software without specific prior written permission.
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -89,9 +89,9 @@
 
 #if defined(OPENEXR_DLL)
     #if defined(HALF_EXPORTS)
-	#define HALF_EXPORT __declspec(dllexport)
+    #define HALF_EXPORT __declspec(dllexport)
     #else
-	#define HALF_EXPORT __declspec(dllimport)
+    #define HALF_EXPORT __declspec(dllimport)
     #endif
     #define HALF_EXPORT_CONST
 #else
@@ -216,8 +216,8 @@ class HALF_EXPORT half
 
     union uif
     {
-	unsigned int	i;
-	float		f;
+    unsigned int	i;
+    float		f;
     };
 
   private:
@@ -266,7 +266,7 @@ HALF_EXPORT void			printBits   (char  c[35], float f);
   #define HALF_MAX	65504.0f	// Largest positive half
 
   #define HALF_EPSILON	0.00097656f	// Smallest positive e for which
-					// half (1.0 + e) != half (1.0)
+                    // half (1.0 + e) != half (1.0)
 #else
 
   #define HALF_MIN	5.96046448e-08	// Smallest positive half
@@ -276,35 +276,35 @@ HALF_EXPORT void			printBits   (char  c[35], float f);
   #define HALF_MAX	65504.0		// Largest positive half
 
   #define HALF_EPSILON	0.00097656	// Smallest positive e for which
-					// half (1.0 + e) != half (1.0)
+                    // half (1.0 + e) != half (1.0)
 #endif
 
 
 #define HALF_MANT_DIG	11		// Number of digits in mantissa
-					// (significand + hidden leading 1)
+                    // (significand + hidden leading 1)
 
 #define HALF_DIG	2		// Number of base 10 digits that
-					// can be represented without change
+                    // can be represented without change
 
 #define HALF_RADIX	2		// Base of the exponent
 
 #define HALF_MIN_EXP	-13		// Minimum negative integer such that
-					// HALF_RADIX raised to the power of
-					// one less than that integer is a
-					// normalized half
+                    // HALF_RADIX raised to the power of
+                    // one less than that integer is a
+                    // normalized half
 
 #define HALF_MAX_EXP	16		// Maximum positive integer such that
-					// HALF_RADIX raised to the power of
-					// one less than that integer is a
-					// normalized half
+                    // HALF_RADIX raised to the power of
+                    // one less than that integer is a
+                    // normalized half
 
 #define HALF_MIN_10_EXP	-4		// Minimum positive integer such
-					// that 10 raised to that power is
-					// a normalized half
+                    // that 10 raised to that power is
+                    // a normalized half
 
 #define HALF_MAX_10_EXP	4		// Maximum positive integer such
-					// that 10 raised to that power is
-					// a normalized half
+                    // that 10 raised to that power is
+                    // a normalized half
 
 
 //---------------------------------------------------------------------------
@@ -317,9 +317,9 @@ HALF_EXPORT void			printBits   (char  c[35], float f);
 //	floating point number, whose bits are arranged as follows:
 //
 //	    31 (msb)
-//	    | 
+//	    |
 //	    | 30     23
-//	    | |      | 
+//	    | |      |
 //	    | |      | 22                    0 (lsb)
 //	    | |      | |                     |
 //	    X XXXXXXXX XXXXXXXXXXXXXXXXXXXXXXX
@@ -363,7 +363,7 @@ HALF_EXPORT void			printBits   (char  c[35], float f);
 //	Here is the bit-layout for a half number, h:
 //
 //	    15 (msb)
-//	    | 
+//	    |
 //	    | 14  10
 //	    | |   |
 //	    | |   | 9        0 (lsb)
@@ -443,53 +443,53 @@ half::half (float f)
 
     if (f == 0)
     {
-	//
-	// Common special case - zero.
-	// Preserve the zero's sign bit.
-	//
+    //
+    // Common special case - zero.
+    // Preserve the zero's sign bit.
+    //
 
-	_h = (x.i >> 16);
+    _h = (x.i >> 16);
     }
     else
     {
-	//
-	// We extract the combined sign and exponent, e, from our
-	// floating-point number, f.  Then we convert e to the sign
-	// and exponent of the half number via a table lookup.
-	//
-	// For the most common case, where a normalized half is produced,
-	// the table lookup returns a non-zero value; in this case, all
-	// we have to do is round f's significand to 10 bits and combine
-	// the result with e.
-	//
-	// For all other cases (overflow, zeroes, denormalized numbers
-	// resulting from underflow, infinities and NANs), the table
-	// lookup returns zero, and we call a longer, non-inline function
-	// to do the float-to-half conversion.
-	//
+    //
+    // We extract the combined sign and exponent, e, from our
+    // floating-point number, f.  Then we convert e to the sign
+    // and exponent of the half number via a table lookup.
+    //
+    // For the most common case, where a normalized half is produced,
+    // the table lookup returns a non-zero value; in this case, all
+    // we have to do is round f's significand to 10 bits and combine
+    // the result with e.
+    //
+    // For all other cases (overflow, zeroes, denormalized numbers
+    // resulting from underflow, infinities and NANs), the table
+    // lookup returns zero, and we call a longer, non-inline function
+    // to do the float-to-half conversion.
+    //
 
-	register int e = (x.i >> 23) & 0x000001ff;
+    register int e = (x.i >> 23) & 0x000001ff;
 
-	e = _eLut[e];
+    e = _eLut[e];
 
-	if (e)
-	{
-	    //
-	    // Simple case - round the significand, m, to 10
-	    // bits and combine it with the sign and exponent.
-	    //
+    if (e)
+    {
+        //
+        // Simple case - round the significand, m, to 10
+        // bits and combine it with the sign and exponent.
+        //
 
-	    register int m = x.i & 0x007fffff;
-	    _h = e + ((m + 0x00000fff + ((m >> 13) & 1)) >> 13);
-	}
-	else
-	{
-	    //
-	    // Difficult case - call a function.
-	    //
+        register int m = x.i & 0x007fffff;
+        _h = e + ((m + 0x00000fff + ((m >> 13) & 1)) >> 13);
+    }
+    else
+    {
+        //
+        // Difficult case - call a function.
+        //
 
-	    _h = convert (x.i);
-	}
+        _h = convert (x.i);
+    }
     }
 }
 
@@ -517,7 +517,7 @@ half::round (unsigned int n) const
     //
 
     if (n >= 10)
-	return *this;
+    return *this;
 
     //
     // Disassemble h into the sign, s,
@@ -544,13 +544,13 @@ half::round (unsigned int n) const
 
     if (e >= 0x7c00)
     {
-	//
-	// Overflow occurred -- truncate instead of rounding.
-	//
+    //
+    // Overflow occurred -- truncate instead of rounding.
+    //
 
-	e = _h;
-	e >>= 10 - n;
-	e <<= 10 - n;
+    e = _h;
+    e >>= 10 - n;
+    e <<= 10 - n;
     }
 
     //
@@ -568,7 +568,7 @@ half::round (unsigned int n) const
 // Other inline functions
 //-----------------------
 
-inline half	
+inline half
 half::operator - () const
 {
     half h;
@@ -657,7 +657,7 @@ half::operator /= (float f)
 }
 
 
-inline bool	
+inline bool
 half::isFinite () const
 {
     unsigned short e = (_h >> 10) & 0x001f;
@@ -707,7 +707,7 @@ half::isInfinity () const
 }
 
 
-inline bool	
+inline bool
 half::isNegative () const
 {
     return (_h & 0x8000) != 0;

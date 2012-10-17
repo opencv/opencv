@@ -48,7 +48,7 @@
 
     An implementation of the Earth Movers Distance.
     Based of the solution for the Transportation problem as described in
-    "Introduction to Mathematical Programming" by F. S. Hillier and 
+    "Introduction to Mathematical Programming" by F. S. Hillier and
     G. J. Lieberman, McGraw-Hill, 1990.
 
     Copyright (C) 1998 Yossi Rubner
@@ -347,7 +347,7 @@ static int icvInitEMD( const float* signature1, int size1,
                            sizeof( CvNode2D * ) +  /* cols_x & rows_x */
                            sizeof( CvNode1D ) + /* u & v */
                            sizeof( float ) + /* s & d */
-                           sizeof( int ) + sizeof(CvNode2D*)) +  /* idx1 & idx2 */ 
+                           sizeof( int ) + sizeof(CvNode2D*)) +  /* idx1 & idx2 */
         (size1+1) * (sizeof( float * ) + sizeof( char * ) + /* rows pointers for */
                  sizeof( float * )) + 256;      /*  cost, is_x and delta */
 
@@ -384,7 +384,7 @@ static int icvInitEMD( const float* signature1, int size1,
             s_sum += weight;
             state->s[ssize] = weight;
             state->idx1[ssize++] = i;
-            
+
         }
         else if( weight < 0 )
             CV_Error(CV_StsOutOfRange, "");
@@ -416,7 +416,7 @@ static int icvInitEMD( const float* signature1, int size1,
         {
             state->s[ssize] = -diff;
             state->idx1[ssize++] = -1;
-        }    
+        }
         else
         {
             state->d[dsize] = diff;
@@ -525,7 +525,7 @@ static int icvInitEMD( const float* signature1, int size1,
     }
 
     state->max_cost = max_cost;
-    
+
     memset( buffer, 0, buffer_end - buffer );
 
     state->rows_x = (CvNode2D **) buffer;
@@ -1144,7 +1144,7 @@ float cv::EMD( InputArray _signature1, InputArray _signature2,
 {
     Mat signature1 = _signature1.getMat(), signature2 = _signature2.getMat();
     Mat cost = _cost.getMat(), flow;
-    
+
     CvMat _csignature1 = signature1;
     CvMat _csignature2 = signature2;
     CvMat _ccost = cost, _cflow;
@@ -1154,7 +1154,7 @@ float cv::EMD( InputArray _signature1, InputArray _signature2,
         flow = _flow.getMat();
         _cflow = flow;
     }
-    
+
     return cvCalcEMD2( &_csignature1, &_csignature2, distType, 0, cost.empty() ? 0 : &_ccost,
                        _flow.needed() ? &_cflow : 0, lowerBound, 0 );
 }

@@ -68,7 +68,7 @@ typedef void (*CvReleaseVideoWriter_Plugin)( void** writer );
 /*
  * For CUDA encoder
  */
- 
+
 OPENCV_FFMPEG_API struct OutputMediaStream_FFMPEG* create_OutputMediaStream_FFMPEG(const char* fileName, int width, int height, double fps);
 OPENCV_FFMPEG_API void release_OutputMediaStream_FFMPEG(struct OutputMediaStream_FFMPEG* stream);
 OPENCV_FFMPEG_API void write_OutputMediaStream_FFMPEG(struct OutputMediaStream_FFMPEG* stream, unsigned char* data, int size, int keyFrame);

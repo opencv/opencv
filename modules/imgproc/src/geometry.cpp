@@ -131,7 +131,7 @@ CV_IMPL double
 cvPointPolygonTest( const CvArr* _contour, CvPoint2D32f pt, int measure_dist )
 {
     double result = 0;
-    
+
     CvSeqBlock block;
     CvContour header;
     CvSeq* contour = (CvSeq*)_contour;
@@ -256,7 +256,7 @@ cvPointPolygonTest( const CvArr* _contour, CvPoint2D32f pt, int measure_dist )
             for( i = 0; i < total; i++ )
             {
                 double dx, dy, dx1, dy1, dx2, dy2, dist_num, dist_denom = 1;
-        
+
                 v0 = v;
                 if( is_float )
                 {
@@ -267,11 +267,11 @@ cvPointPolygonTest( const CvArr* _contour, CvPoint2D32f pt, int measure_dist )
                     CV_READ_SEQ_ELEM( iv, reader );
                     v = cvPointTo32f( iv );
                 }
-        
+
                 dx = v.x - v0.x; dy = v.y - v0.y;
                 dx1 = pt.x - v0.x; dy1 = pt.y - v0.y;
                 dx2 = pt.x - v.x; dy2 = pt.y - v.y;
-        
+
                 if( dx1*dx + dy1*dy <= 0 )
                     dist_num = dx1*dx1 + dy1*dy1;
                 else if( dx2*dx + dy2*dy >= 0 )
@@ -316,7 +316,7 @@ cvPointPolygonTest( const CvArr* _contour, CvPoint2D32f pt, int measure_dist )
  This code is described in "Computational Geometry in C" (Second Edition),
  Chapter 7.  It is not written to be comprehensible without the
  explanation in that book.
- 
+
  Written by Joseph O'Rourke.
  Last modified: December 1997
  Questions to orourke@cs.smith.edu.
@@ -345,7 +345,7 @@ static int areaSign( Point2f a, Point2f b, Point2f c )
 static bool between( Point2f a, Point2f b, Point2f c )
 {
     Point2f ba, ca;
-    
+
     // If ab not vertical, check betweenness on x; else on y.
     if ( a.x != b.x )
         return ((a.x <= c.x) && (c.x <= b.x)) ||
@@ -394,38 +394,38 @@ static char segSegInt( Point2f a, Point2f b, Point2f c, Point2f d, Point2f& p, P
     double  s, t;       // The two parameters of the parametric eqns.
     double num, denom;  // Numerator and denoninator of equations.
     char code = '?';    // Return char characterizing intersection.
-    
+
     denom = a.x * (double)( d.y - c.y ) +
     b.x * (double)( c.y - d.y ) +
     d.x * (double)( b.y - a.y ) +
     c.x * (double)( a.y - b.y );
-    
+
     // If denom is zero, then segments are parallel: handle separately.
     if (denom == 0.0)
         return parallelInt(a, b, c, d, p, q);
-    
+
     num =    a.x * (double)( d.y - c.y ) +
     c.x * (double)( a.y - d.y ) +
     d.x * (double)( c.y - a.y );
     if ( (num == 0.0) || (num == denom) ) code = 'v';
     s = num / denom;
-    
+
     num = -( a.x * (double)( c.y - b.y ) +
             b.x * (double)( a.y - c.y ) +
             c.x * (double)( b.y - a.y ) );
     if ( (num == 0.0) || (num == denom) ) code = 'v';
     t = num / denom;
-    
+
     if      ( (0.0 < s) && (s < 1.0) &&
              (0.0 < t) && (t < 1.0) )
         code = '1';
     else if ( (0.0 > s) || (s > 1.0) ||
              (0.0 > t) || (t > 1.0) )
         code = '0';
-    
+
     p.x = (float)(a.x + s*(b.x - a.x));
     p.y = (float)(a.y + s*(b.y - a.y));
-    
+
     return code;
 }
 
@@ -446,7 +446,7 @@ static int advance( int a, int *aa, int n, bool inside, Point2f v, Point2f*& res
         *result++ = v;
     (*aa)++;
     return  (a+1) % n;
-}    
+}
 
 static void addSharedSeg( Point2f p, Point2f q, Point2f*& result )
 {
@@ -469,19 +469,19 @@ static int intersectConvexConvex_( const Point2f* P, int n, const Point2f* Q, in
     bool    FirstPoint=true;// Is this the first point? (used to initialize).
     Point2f p0;             // The first point.
     *result++ = Point2f(FLT_MAX, FLT_MAX);
-    
+
     do
     {
         // Computations of key variables.
         int a1 = (a + n - 1) % n; // a-1, b-1 (resp.)
         int b1 = (b + m - 1) % m;
-        
+
         Point2f A = P[a] - P[a1], B = Q[b] - Q[b1]; // directed edges on P and Q (resp.)
-        
+
         int cross = areaSign( Origin, A, B );    // sign of z-component of A x B
         int aHB = areaSign( Q[b1], Q[b], P[a] ); // a in H(b).
         int bHA = areaSign( P[a1], P[a], Q[b] ); // b in H(A);
-        
+
         // If A & B intersect, update inflag.
         Point2f p, q;
         int code = segSegInt( P[a1], P[a], Q[b1], Q[b], p, q );
@@ -496,20 +496,20 @@ static int intersectConvexConvex_( const Point2f* P, int n, const Point2f* Q, in
             }
             inflag = inOut( p, inflag, aHB, bHA, result );
         }
-        
+
         //-----Advance rules-----
-        
+
         // Special case: A & B overlap and oppositely oriented.
         if( code == 'e' && A.ddot(B) < 0 )
         {
             addSharedSeg( p, q, result );
             return (int)(result - result0);
         }
-        
+
         // Special case: A & B parallel and separated.
         if( cross == 0 && aHB < 0 && bHA < 0 )
             return (int)(result - result0);
-        
+
         // Special case: A & B collinear.
         else if ( cross == 0 && aHB == 0 && bHA == 0 ) {
             // Advance but do not output point.
@@ -518,7 +518,7 @@ static int intersectConvexConvex_( const Point2f* P, int n, const Point2f* Q, in
             else
                 a = advance( a, &aa, n, inflag == Pin, P[a], result );
         }
-        
+
         // Generic cases.
         else if( cross >= 0 )
         {
@@ -537,14 +537,14 @@ static int intersectConvexConvex_( const Point2f* P, int n, const Point2f* Q, in
         // Quit when both adv. indices have cycled, or one has cycled twice.
     }
     while ( ((aa < n) || (ba < m)) && (aa < 2*n) && (ba < 2*m) );
-    
+
     // Deal with special cases: not implemented.
     if( inflag == Unknown )
     {
         // The boundaries of P and Q do not cross.
         // ...
     }
-    
+
     int i, nr = (int)(result - result0);
     double area = 0;
     Point2f prev = result0[nr-1];
@@ -554,44 +554,44 @@ static int intersectConvexConvex_( const Point2f* P, int n, const Point2f* Q, in
         area += (double)prev.x*result0[i].y - (double)prev.y*result0[i].x;
         prev = result0[i];
     }
-    
+
     *_area = (float)(area*0.5);
-    
+
     if( result0[nr-2] == result0[0] && nr > 1 )
         nr--;
     return nr-1;
 }
-    
+
 }
-    
+
 float cv::intersectConvexConvex( InputArray _p1, InputArray _p2, OutputArray _p12, bool handleNested )
 {
     Mat p1 = _p1.getMat(), p2 = _p2.getMat();
     CV_Assert( p1.depth() == CV_32S || p1.depth() == CV_32F );
     CV_Assert( p2.depth() == CV_32S || p2.depth() == CV_32F );
-    
+
     int n = p1.checkVector(2, p1.depth(), true);
     int m = p2.checkVector(2, p2.depth(), true);
-    
+
     CV_Assert( n >= 0 && m >= 0 );
-    
+
     if( n < 2 || m < 2 )
     {
         _p12.release();
         return 0.f;
     }
-    
+
     AutoBuffer<Point2f> _result(n*2 + m*2 + 1);
     Point2f *fp1 = _result, *fp2 = fp1 + n;
     Point2f* result = fp2 + m;
     int orientation = 0;
-    
+
     for( int k = 1; k <= 2; k++ )
     {
         Mat& p = k == 1 ? p1 : p2;
         int len = k == 1 ? n : m;
         Point2f* dst = k == 1 ? fp1 : fp2;
-        
+
         Mat temp(p.size(), CV_MAKETYPE(CV_32F, p.channels()), dst);
         p.convertTo(temp, CV_32F);
         CV_Assert( temp.ptr<Point2f>() == dst );
@@ -610,7 +610,7 @@ float cv::intersectConvexConvex( InputArray _p1, InputArray _p2, OutputArray _p1
             }
         }
     }
-    
+
     float area = 0.f;
     int nr = intersectConvexConvex_(fp1, n, fp2, m, result, &area);
     if( nr == 0 )
@@ -620,7 +620,7 @@ float cv::intersectConvexConvex( InputArray _p1, InputArray _p2, OutputArray _p1
             _p12.release();
             return 0.f;
         }
-        
+
         if( pointPolygonTest(_InputArray(fp1, n), fp2[0], false) >= 0 )
         {
             result = fp2;
@@ -638,7 +638,7 @@ float cv::intersectConvexConvex( InputArray _p1, InputArray _p2, OutputArray _p1
         }
         area = (float)contourArea(_InputArray(result, nr), false);
     }
-    
+
     if( _p12.needed() )
     {
         Mat temp(nr, 1, CV_32FC2, result);
@@ -662,7 +662,7 @@ static void testConvConv()
         100, 100,
         0, 100,
     };
-    
+
     static const int Q1[] =
     {
         100, 80,
@@ -670,7 +670,7 @@ static void testConvConv()
         50, 50,
         100, 50
     };
-    
+
     static const int P2[] =
     {
         0, 0,
@@ -679,7 +679,7 @@ static void testConvConv()
         100, 200,
         0, 100
     };
-    
+
     static const int Q2[] =
     {
         100, 100,
@@ -687,7 +687,7 @@ static void testConvConv()
         300, 200,
         100, 200
     };
-    
+
     static const int P3[] =
     {
         0,   0,
@@ -695,7 +695,7 @@ static void testConvConv()
         100, 100,
         0, 100
     };
-    
+
     static const int Q3[] =
     {
         50, 50,
@@ -703,7 +703,7 @@ static void testConvConv()
         150, 150,
         50, 150
     };
-    
+
     static const int P4[] =
     {
         0, 160,
@@ -717,7 +717,7 @@ static void testConvConv()
         70, 320,
         30, 290
     };
-    
+
     static const int Q4[] =
     {
         160, -30,
@@ -726,12 +726,12 @@ static void testConvConv()
         0, 220,
         30, 100
     };
-    
+
     static const void* PQs[] =
     {
         P1, Q1, P2, Q2, P3, Q3, P4, Q4
     };
-    
+
     static const int lens[] =
     {
         CV_DIM(P1), CV_DIM(Q1),
@@ -739,36 +739,36 @@ static void testConvConv()
         CV_DIM(P3), CV_DIM(Q3),
         CV_DIM(P4), CV_DIM(Q4)
     };
-    
+
     Mat img(800, 800, CV_8UC3);
-    
+
     for( int i = 0; i < CV_DIM(PQs)/2; i++ )
     {
         Mat Pm = Mat(lens[i*2]/2, 1, CV_32SC2, (void*)PQs[i*2]) + Scalar(100, 100);
         Mat Qm = Mat(lens[i*2+1]/2, 1, CV_32SC2, (void*)PQs[i*2+1]) + Scalar(100, 100);
         Point* P = Pm.ptr<Point>();
         Point* Q = Qm.ptr<Point>();
-        
+
         flip(Pm, Pm, 0);
         flip(Qm, Qm, 0);
-        
+
         Mat Rm;
         intersectConvexConvex(Pm, Qm, Rm);
         std::cout << Rm << std::endl << std::endl;
-        
+
         img = Scalar::all(0);
-        
+
         polylines(img, Pm, true, Scalar(0,255,0), 1, CV_AA, 0);
         polylines(img, Qm, true, Scalar(0,0,255), 1, CV_AA, 0);
         Mat temp;
         Rm.convertTo(temp, CV_32S, 256);
         polylines(img, temp, true, Scalar(128, 255, 255), 3, CV_AA, 8);
-        
+
         namedWindow("test", 1);
         imshow("test", img);
         waitKey();
     }
 }
 */
- 
+
 /* End of file. */

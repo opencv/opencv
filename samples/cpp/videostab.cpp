@@ -524,7 +524,7 @@ int main(int argc, const char **argv)
         {
             inpainters->setRadius(argi("radius"));
             stabilizer->setInpainter(inpainters_);
-        }       
+        }
 
         if (arg("output") != "no")
             outputPath = arg("output");

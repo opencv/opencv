@@ -4263,48 +4263,48 @@ struct AddWeighted : ArithmTestBase {};
 TEST_P(AddWeighted, Mat)
 {
 #ifndef PRINT_KERNEL_RUN_TIME
-	double totalcputick=0;
-	double totalgputick=0;
-	double totalgputick_kernel=0;
-	double t0=0;
-	double t1=0;
-	double t2=0;
-	for(int j = 0; j < LOOP_TIMES+1; j ++)
-	{
-		double alpha=2.0,beta=1.0,gama=3.0;
+    double totalcputick=0;
+    double totalgputick=0;
+    double totalgputick_kernel=0;
+    double t0=0;
+    double t1=0;
+    double t2=0;
+    for(int j = 0; j < LOOP_TIMES+1; j ++)
+    {
+        double alpha=2.0,beta=1.0,gama=3.0;
 
-		t0 = (double)cvGetTickCount();//cpu start
-		cv::addWeighted(mat1,alpha,mat2,beta,gama,dst);
-		t0 = (double)cvGetTickCount() - t0;//cpu end
+        t0 = (double)cvGetTickCount();//cpu start
+        cv::addWeighted(mat1,alpha,mat2,beta,gama,dst);
+        t0 = (double)cvGetTickCount() - t0;//cpu end
 
-		t1 = (double)cvGetTickCount();//gpu start1
-		cv::ocl::oclMat clmat1(mat1),clmat2(mat2),cldst;
+        t1 = (double)cvGetTickCount();//gpu start1
+        cv::ocl::oclMat clmat1(mat1),clmat2(mat2),cldst;
 
-		t2=(double)cvGetTickCount();//kernel
-		cv::ocl::addWeighted(clmat1,alpha,clmat2,beta,gama, cldst);
-		t2 = (double)cvGetTickCount() - t2;//kernel
-		cv::Mat cpu_dst;
-		cldst.download(cpu_dst);
-		t1 = (double)cvGetTickCount() - t1;//gpu end1
-		if(j == 0)
-			continue;
-		totalgputick=t1+totalgputick;
-		totalcputick=t0+totalcputick;
-		totalgputick_kernel=t2+totalgputick_kernel;
+        t2=(double)cvGetTickCount();//kernel
+        cv::ocl::addWeighted(clmat1,alpha,clmat2,beta,gama, cldst);
+        t2 = (double)cvGetTickCount() - t2;//kernel
+        cv::Mat cpu_dst;
+        cldst.download(cpu_dst);
+        t1 = (double)cvGetTickCount() - t1;//gpu end1
+        if(j == 0)
+            continue;
+        totalgputick=t1+totalgputick;
+        totalcputick=t0+totalcputick;
+        totalgputick_kernel=t2+totalgputick_kernel;
 
-	}
-	cout << "average cpu runtime is  " << totalcputick/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
-	cout << "average gpu runtime is  " << totalgputick/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
-	cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
+    }
+    cout << "average cpu runtime is  " << totalcputick/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
+    cout << "average gpu runtime is  " << totalgputick/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
+    cout << "average gpu runtime without data transfer is  " << totalgputick_kernel/((double)cvGetTickFrequency()* LOOP_TIMES *1000.) << "ms" << endl;
 
 #else
-	//for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
-	//	{
-	double alpha=2.0,beta=1.0,gama=3.0;
-	cv::ocl::oclMat clmat1(mat1),clmat2(mat2),cldst;
-	//if(j==0){cout<<"no roi:";}else{cout<<"\nwith roi:";};
-	cv::ocl::addWeighted(clmat1,alpha,clmat2,beta,gama, cldst);
-	//	};
+    //for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
+    //	{
+    double alpha=2.0,beta=1.0,gama=3.0;
+    cv::ocl::oclMat clmat1(mat1),clmat2(mat2),cldst;
+    //if(j==0){cout<<"no roi:";}else{cout<<"\nwith roi:";};
+    cv::ocl::addWeighted(clmat1,alpha,clmat2,beta,gama, cldst);
+    //	};
 #endif
 
 }

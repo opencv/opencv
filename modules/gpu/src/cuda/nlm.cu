@@ -74,12 +74,12 @@ namespace cv { namespace gpu { namespace device
 
             const int i = blockDim.y * blockIdx.y + threadIdx.y;
             const int j = blockDim.x * blockIdx.x + threadIdx.x;
-            
+
             if (j >= dst.cols || i >= dst.rows)
                 return;
-                                                
+
             int bsize = search_radius + block_radius;
-            int search_window = 2 * search_radius + 1;                        
+            int search_window = 2 * search_radius + 1;
             float minus_search_window2_inv = -1.f/(search_window * search_window);
 
             value_type sum1 = VecTraits<value_type>::all(0);
@@ -87,16 +87,16 @@ namespace cv { namespace gpu { namespace device
 
             if (j - bsize >= 0 && j + bsize < dst.cols && i - bsize >= 0 && i + bsize < dst.rows)
             {
-                for(float y = -search_radius; y <= search_radius; ++y)                
+                for(float y = -search_radius; y <= search_radius; ++y)
                     for(float x = -search_radius; x <= search_radius; ++x)
-                    {                    
+                    {
                         float dist2 = 0;
                         for(float ty = -block_radius; ty <= block_radius; ++ty)
                             for(float tx = -block_radius; tx <= block_radius; ++tx)
                             {
                                 value_type bv = saturate_cast<value_type>(src(i + y + ty, j + x + tx));
                                 value_type av = saturate_cast<value_type>(src(i +     ty, j +     tx));
-                                
+
                                 dist2 += norm2(av - bv);
                             }
 
@@ -119,10 +119,10 @@ namespace cv { namespace gpu { namespace device
                             for(float tx = -block_radius; tx <= block_radius; ++tx)
                             {
                                 value_type bv = saturate_cast<value_type>(b.at(i + y + ty, j + x + tx, src));
-                                value_type av = saturate_cast<value_type>(b.at(i +     ty, j +     tx, src));                                
+                                value_type av = saturate_cast<value_type>(b.at(i +     ty, j +     tx, src));
                                 dist2 += norm2(av - bv);
                             }
-                        
+
                         float w = __expf(dist2 * noise_mult + (x * x + y * y) * minus_search_window2_inv);
 
                         sum1 = sum1 + w * saturate_cast<value_type>(b.at(i + y, j + x, src));
@@ -144,9 +144,9 @@ namespace cv { namespace gpu { namespace device
             B<T> b(src.rows, src.cols);
 
             int block_window = 2 * block_radius + 1;
-            float minus_h2_inv = -1.f/(h * h * VecTraits<T>::cn);            
+            float minus_h2_inv = -1.f/(h * h * VecTraits<T>::cn);
             float noise_mult = minus_h2_inv/(block_window * block_window);
-            
+
             cudaSafeCall( cudaFuncSetCacheConfig (nlm_kernel<T, B<T> >, cudaFuncCachePreferL1) );
             nlm_kernel<<<grid, block>>>((PtrStepSz<T>)src, (PtrStepSz<T>)dst, b, search_radius, block_radius, noise_mult);
             cudaSafeCall ( cudaGetLastError () );
@@ -160,7 +160,7 @@ namespace cv { namespace gpu { namespace device
         {
             typedef void (*func_t)(const PtrStepSzb src, PtrStepSzb dst, int search_radius, int block_radius, float h, cudaStream_t stream);
 
-            static func_t funcs[] = 
+            static func_t funcs[] =
             {
                 nlm_caller<T, BrdReflect101>,
                 nlm_caller<T, BrdReplicate>,
@@ -183,7 +183,7 @@ namespace cv { namespace gpu { namespace device
 namespace cv { namespace gpu { namespace device
 {
     namespace imgproc
-    {  
+    {
         __device__ __forceinline__ int calcDist(const uchar&  a, const uchar&  b) { return (a-b)*(a-b); }
         __device__ __forceinline__ int calcDist(const uchar2& a, const uchar2& b) { return (a.x-b.x)*(a.x-b.x) + (a.y-b.y)*(a.y-b.y); }
         __device__ __forceinline__ int calcDist(const uchar3& a, const uchar3& b) { return (a.x-b.x)*(a.x-b.x) + (a.y-b.y)*(a.y-b.y) + (a.z-b.z)*(a.z-b.z); }
@@ -193,7 +193,7 @@ namespace cv { namespace gpu { namespace device
             enum
             {
                 CTA_SIZE = 128,
-              
+
                 TILE_COLS = 128,
                 TILE_ROWS = 32,
 
@@ -217,7 +217,7 @@ namespace cv { namespace gpu { namespace device
 
             PtrStep<T> src;
             mutable PtrStepi buffer;
-            
+
             __device__ __forceinline__ void initSums_BruteForce(int i, int j, int* dist_sums, PtrStepi& col_sums, PtrStepi& up_col_sums) const
             {
                 for(int index = threadIdx.x; index < search_window * search_window; index += STRIDE)
@@ -256,7 +256,7 @@ namespace cv { namespace gpu { namespace device
                             int dist = calcDist(src(ay + ty, ax + tx), src(by + ty, bx + tx));
 
                             dist_sums[index] += dist;
-                            col_sums(tx + block_radius, index) += dist;                            
+                            col_sums(tx + block_radius, index) += dist;
                         }
 #endif
 
@@ -265,9 +265,9 @@ namespace cv { namespace gpu { namespace device
             }
 
             __device__ __forceinline__ void shiftRight_FirstRow(int i, int j, int first, int* dist_sums, PtrStepi& col_sums, PtrStepi& up_col_sums) const
-            {                          
+            {
                 for(int index = threadIdx.x; index < search_window * search_window; index += STRIDE)
-                {                                        
+                {
                     int y = index / search_window;
                     int x = index - y * search_window;
 
@@ -280,8 +280,8 @@ namespace cv { namespace gpu { namespace device
                     int col_sum = 0;
 
                     for (int ty = -block_radius; ty <= block_radius; ++ty)
-                        col_sum += calcDist(src(ay + ty, ax), src(by + ty, bx));                  
-                    
+                        col_sum += calcDist(src(ay + ty, ax), src(by + ty, bx));
+
                     dist_sums[index] += col_sum - col_sums(first, index);
 
                     col_sums(first, index) = col_sum;
@@ -298,7 +298,7 @@ namespace cv { namespace gpu { namespace device
                 T a_down = src(ay + block_radius, ax);
 
                 for(int index = threadIdx.x; index < search_window * search_window; index += STRIDE)
-                {                    
+                {
                     int y = index / search_window;
                     int x = index - y * search_window;
 
@@ -309,9 +309,9 @@ namespace cv { namespace gpu { namespace device
                     T b_down = src(by + block_radius, bx);
 
                     int col_sum = up_col_sums(j, index) + calcDist(a_down, b_down) - calcDist(a_up, b_up);
-                  
+
                     dist_sums[index] += col_sum  - col_sums(first, index);
-                    col_sums(first, index) = col_sum;                    
+                    col_sums(first, index) = col_sum;
                     up_col_sums(j, index) = col_sum;
                 }
             }
@@ -339,14 +339,14 @@ namespace cv { namespace gpu { namespace device
 
                     sum = sum + weight * saturate_cast<sum_type>(src(sy + y, sx + x));
                 }
-                
+
                 volatile __shared__ float cta_buffer[CTA_SIZE];
-                
+
                 int tid = threadIdx.x;
 
                 cta_buffer[tid] = weights_sum;
                 __syncthreads();
-                Block::reduce<CTA_SIZE>(cta_buffer, plus());                                
+                Block::reduce<CTA_SIZE>(cta_buffer, plus());
                 weights_sum = cta_buffer[0];
 
                 __syncthreads();
@@ -356,7 +356,7 @@ namespace cv { namespace gpu { namespace device
                 {
                     cta_buffer[tid] = reinterpret_cast<float*>(&sum)[n];
                     __syncthreads();
-                    Block::reduce<CTA_SIZE>(cta_buffer, plus());                                                    
+                    Block::reduce<CTA_SIZE>(cta_buffer, plus());
                     reinterpret_cast<float*>(&sum)[n] = cta_buffer[0];
 
                     __syncthreads();
@@ -388,7 +388,7 @@ namespace cv { namespace gpu { namespace device
 
                 for (int i = tby; i < tey; ++i)
                     for (int j = tbx; j < tex; ++j)
-                    {           
+                    {
                         __syncthreads();
 
                         if (j == tbx)
@@ -397,7 +397,7 @@ namespace cv { namespace gpu { namespace device
                             first = 0;
                         }
                         else
-                        {                            
+                        {
                             if (i == tby)
                               shiftRight_FirstRow(i, j, first, dist_sums, col_sums, up_col_sums);
                             else
@@ -407,7 +407,7 @@ namespace cv { namespace gpu { namespace device
                         }
 
                         __syncthreads();
-                        
+
                         convolve_window(i, j, dist_sums, col_sums, up_col_sums, dst(i, j));
                     }
             }
@@ -418,7 +418,7 @@ namespace cv { namespace gpu { namespace device
         __global__ void fast_nlm_kernel(const FastNonLocalMenas<T> fnlm, PtrStepSz<T> dst) { fnlm(dst); }
 
         void nln_fast_get_buffer_size(const PtrStepSzb& src, int search_window, int block_window, int& buffer_cols, int& buffer_rows)
-        {            
+        {
             typedef FastNonLocalMenas<uchar> FNLM;
             dim3 grid(divUp(src.cols, FNLM::TILE_COLS), divUp(src.rows, FNLM::TILE_ROWS));
 
@@ -434,13 +434,13 @@ namespace cv { namespace gpu { namespace device
             FNLM fnlm(search_window, block_window, h);
 
             fnlm.src = (PtrStepSz<T>)src;
-            fnlm.buffer = buffer;            
+            fnlm.buffer = buffer;
 
             dim3 block(FNLM::CTA_SIZE, 1);
             dim3 grid(divUp(src.cols, FNLM::TILE_COLS), divUp(src.rows, FNLM::TILE_ROWS));
             int smem = search_window * search_window * sizeof(int);
 
-           
+
             fast_nlm_kernel<<<grid, block, smem>>>(fnlm, (PtrStepSz<T>)dst);
             cudaSafeCall ( cudaGetLastError () );
             if (stream == 0)
@@ -451,7 +451,7 @@ namespace cv { namespace gpu { namespace device
         template void nlm_fast_gpu<uchar2>(const PtrStepSzb&, PtrStepSzb, PtrStepi, int, int, float, cudaStream_t);
         template void nlm_fast_gpu<uchar3>(const PtrStepSzb&, PtrStepSzb, PtrStepi, int, int, float, cudaStream_t);
 
-        
+
 
         __global__ void fnlm_split_kernel(const PtrStepSz<uchar3> lab, PtrStepb l, PtrStep<uchar2> ab)
         {
@@ -462,10 +462,10 @@ namespace cv { namespace gpu { namespace device
             {
                 uchar3 p = lab(y, x);
                 ab(y,x) = make_uchar2(p.y, p.z);
-                l(y,x) = p.x;                
+                l(y,x) = p.x;
             }
         }
-        
+
         void fnlm_split_channels(const PtrStepSz<uchar3>& lab, PtrStepb l, PtrStep<uchar2> ab, cudaStream_t stream)
         {
             dim3 b(32, 8);
@@ -485,7 +485,7 @@ namespace cv { namespace gpu { namespace device
             if (x < lab.cols && y < lab.rows)
             {
                 uchar2 p = ab(y, x);
-                lab(y, x) = make_uchar3(l(y, x), p.x, p.y);          
+                lab(y, x) = make_uchar3(l(y, x), p.x, p.y);
             }
         }
 

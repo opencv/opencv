@@ -97,7 +97,7 @@ int icvMkDir( const char* filename )
             }
 #endif /* _WIN32 */
         }
-        
+
         p[pos] = '/';
 
         p += pos + 1;
@@ -113,7 +113,7 @@ void icvSave( const CvArr* ptr, const char* filename, int line )
     CvFileStorage* fs;
     char buf[PATH_MAX];
     const char* name;
-    
+
     name = strrchr( filename, '\\' );
     if( !name ) name = strrchr( filename, '/' );
     if( !name ) name = filename;

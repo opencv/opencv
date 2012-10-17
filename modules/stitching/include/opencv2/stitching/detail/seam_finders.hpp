@@ -233,18 +233,18 @@ class CV_EXPORTS GraphCutSeamFinderGpu : public GraphCutSeamFinderBase, public P
 public:
     GraphCutSeamFinderGpu(int cost_type = COST_COLOR_GRAD, float terminal_cost = 10000.f,
                           float bad_region_penalty = 1000.f)
-                          : cost_type_(cost_type), terminal_cost_(terminal_cost), 
+                          : cost_type_(cost_type), terminal_cost_(terminal_cost),
                             bad_region_penalty_(bad_region_penalty) {}
 
-    void find(const std::vector<cv::Mat> &src, const std::vector<cv::Point> &corners, 
+    void find(const std::vector<cv::Mat> &src, const std::vector<cv::Point> &corners,
               std::vector<cv::Mat> &masks);
     void findInPair(size_t first, size_t second, Rect roi);
 
 private:
     void setGraphWeightsColor(const cv::Mat &img1, const cv::Mat &img2, const cv::Mat &mask1, const cv::Mat &mask2,
                               cv::Mat &terminals, cv::Mat &leftT, cv::Mat &rightT, cv::Mat &top, cv::Mat &bottom);
-    void setGraphWeightsColorGrad(const cv::Mat &img1, const cv::Mat &img2, const cv::Mat &dx1, const cv::Mat &dx2, 
-                                  const cv::Mat &dy1, const cv::Mat &dy2, const cv::Mat &mask1, const cv::Mat &mask2, 
+    void setGraphWeightsColorGrad(const cv::Mat &img1, const cv::Mat &img2, const cv::Mat &dx1, const cv::Mat &dx2,
+                                  const cv::Mat &dy1, const cv::Mat &dy2, const cv::Mat &mask1, const cv::Mat &mask2,
                                   cv::Mat &terminals, cv::Mat &leftT, cv::Mat &rightT, cv::Mat &top, cv::Mat &bottom);
     std::vector<Mat> dx_, dy_;
     int cost_type_;

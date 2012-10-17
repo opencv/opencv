@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2002, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-// 
+//
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission. 
-// 
+// from this software without specific prior written permission.
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -73,8 +73,8 @@ class HalfLut
     //----------------------------------------------------------------------
 
     void apply (half *data,
-		int nData,
-		int stride = 1) const;
+        int nData,
+        int stride = 1) const;
 
 
     //---------------------------------------------------------------
@@ -82,7 +82,7 @@ class HalfLut
     //---------------------------------------------------------------
 
     void apply (const Slice &data,
-		const Imath::Box2i &dataWindow) const;
+        const Imath::Box2i &dataWindow) const;
 
   private:
 
@@ -111,8 +111,8 @@ class RgbaLut
     //----------------------------------------------------------------------
 
     void apply (Rgba *data,
-		int nData,
-		int stride = 1) const;
+        int nData,
+        int stride = 1) const;
 
 
     //-----------------------------------------------------------------------
@@ -120,9 +120,9 @@ class RgbaLut
     //-----------------------------------------------------------------------
 
     void apply (Rgba *base,
-		int xStride,
-		int yStride,
-		const Imath::Box2i &dataWindow) const;
+        int xStride,
+        int yStride,
+        const Imath::Box2i &dataWindow) const;
 
   private:
 
@@ -164,7 +164,7 @@ struct roundNBit
 template <class Function>
 HalfLut::HalfLut (Function f):
     _lut(f, -HALF_MAX, HALF_MAX, half (0),
-	 half::posInf(), half::negInf(), half::qNan())
+     half::posInf(), half::negInf(), half::qNan())
 {
     // empty
 }
@@ -173,7 +173,7 @@ HalfLut::HalfLut (Function f):
 template <class Function>
 RgbaLut::RgbaLut (Function f, RgbaChannels chn):
     _lut(f, -HALF_MAX, HALF_MAX, half (0),
-	 half::posInf(), half::negInf(), half::qNan()),
+     half::posInf(), half::negInf(), half::qNan()),
     _chn(chn)
 {
     // empty

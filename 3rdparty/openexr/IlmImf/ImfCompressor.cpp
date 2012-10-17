@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2004, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-// 
+//
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission. 
-// 
+// from this software without specific prior written permission.
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -68,25 +68,25 @@ Compressor::format () const
 
 int
 Compressor::compressTile (const char *inPtr,
-			  int inSize,
-			  Box2i range,
-			  const char *&outPtr)
+              int inSize,
+              Box2i range,
+              const char *&outPtr)
 {
     return compress (inPtr, inSize, range.min.y, outPtr);
 }
 
-             
+
 int
 Compressor::uncompressTile (const char *inPtr,
-			    int inSize,
-			    Box2i range,
-			    const char *&outPtr)
+                int inSize,
+                Box2i range,
+                const char *&outPtr)
 {
     return uncompress (inPtr, inSize, range.min.y, outPtr);
 }
 
 
-bool	
+bool
 isValidCompression (Compression c)
 {
     switch (c)
@@ -100,11 +100,11 @@ isValidCompression (Compression c)
       case B44_COMPRESSION:
       case B44A_COMPRESSION:
 
-	return true;
+    return true;
 
       default:
 
-	return false;
+    return false;
     }
 }
 
@@ -116,75 +116,75 @@ newCompressor (Compression c, size_t maxScanLineSize, const Header &hdr)
     {
       case RLE_COMPRESSION:
 
-	return new RleCompressor (hdr, maxScanLineSize);
+    return new RleCompressor (hdr, maxScanLineSize);
 
       case ZIPS_COMPRESSION:
 
-	return new ZipCompressor (hdr, maxScanLineSize, 1);
+    return new ZipCompressor (hdr, maxScanLineSize, 1);
 
       case ZIP_COMPRESSION:
 
-	return new ZipCompressor (hdr, maxScanLineSize, 16);
+    return new ZipCompressor (hdr, maxScanLineSize, 16);
 
       case PIZ_COMPRESSION:
 
-	return new PizCompressor (hdr, maxScanLineSize, 32);
+    return new PizCompressor (hdr, maxScanLineSize, 32);
 
       case PXR24_COMPRESSION:
 
-	return new Pxr24Compressor (hdr, maxScanLineSize, 16);
+    return new Pxr24Compressor (hdr, maxScanLineSize, 16);
 
       case B44_COMPRESSION:
 
-	return new B44Compressor (hdr, maxScanLineSize, 32, false);
+    return new B44Compressor (hdr, maxScanLineSize, 32, false);
 
       case B44A_COMPRESSION:
 
-	return new B44Compressor (hdr, maxScanLineSize, 32, true);
+    return new B44Compressor (hdr, maxScanLineSize, 32, true);
 
       default:
 
-	return 0;
+    return 0;
     }
 }
 
 
 Compressor *
 newTileCompressor (Compression c,
-		   size_t tileLineSize,
-		   size_t numTileLines,
-		   const Header &hdr)
+           size_t tileLineSize,
+           size_t numTileLines,
+           const Header &hdr)
 {
     switch (c)
     {
       case RLE_COMPRESSION:
 
-	return new RleCompressor (hdr, uiMult (tileLineSize, numTileLines));
+    return new RleCompressor (hdr, uiMult (tileLineSize, numTileLines));
 
       case ZIPS_COMPRESSION:
       case ZIP_COMPRESSION:
 
-	return new ZipCompressor (hdr, tileLineSize, numTileLines);
+    return new ZipCompressor (hdr, tileLineSize, numTileLines);
 
       case PIZ_COMPRESSION:
 
-	return new PizCompressor (hdr, tileLineSize, numTileLines);
+    return new PizCompressor (hdr, tileLineSize, numTileLines);
 
       case PXR24_COMPRESSION:
 
-	return new Pxr24Compressor (hdr, tileLineSize, numTileLines);
+    return new Pxr24Compressor (hdr, tileLineSize, numTileLines);
 
       case B44_COMPRESSION:
 
-	return new B44Compressor (hdr, tileLineSize, numTileLines, false);
+    return new B44Compressor (hdr, tileLineSize, numTileLines, false);
 
       case B44A_COMPRESSION:
 
-	return new B44Compressor (hdr, tileLineSize, numTileLines, true);
+    return new B44Compressor (hdr, tileLineSize, numTileLines, true);
 
       default:
 
-	return 0;
+    return 0;
     }
 }
 

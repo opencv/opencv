@@ -103,13 +103,13 @@ static CvStatus icvCreateHandMask8uC1R(CvSeq * numbers,
 /*F///////////////////////////////////////////////////////////////////////////////////////
 //    Name:     cvCreateHandMask
 //    Purpose:  creates hand mask image
-//    Context:   
-//    Parameters: 
+//    Context:
+//    Parameters:
 //      numbers - pointer to the input sequence of the point's indexes inside
-//                hand region                
-//      img_mask - pointer to the result mask image 
-//      roi      - result hand mask ROI 
-//      
+//                hand region
+//      img_mask - pointer to the result mask image
+//      roi      - result hand mask ROI
+//
 //    Notes:
 //F*/
 CV_IMPL void

@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2004, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-// 
+//
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission. 
-// 
+// from this software without specific prior written permission.
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -55,14 +55,14 @@ int
 levelSize (int min, int max, int l, LevelRoundingMode rmode)
 {
     if (l < 0)
-	throw Iex::ArgExc ("Argument not in valid range.");
+    throw Iex::ArgExc ("Argument not in valid range.");
 
     int a = max - min + 1;
     int b = (1 << l);
     int size = a / b;
 
     if (rmode == ROUND_UP && size * b < a)
-	size += 1;
+    size += 1;
 
     return std::max (size, 1);
 }
@@ -70,15 +70,15 @@ levelSize (int min, int max, int l, LevelRoundingMode rmode)
 
 Box2i
 dataWindowForLevel (const TileDescription &tileDesc,
-		    int minX, int maxX,
-		    int minY, int maxY,
-		    int lx, int ly)
+            int minX, int maxX,
+            int minY, int maxY,
+            int lx, int ly)
 {
     V2i levelMin = V2i (minX, minY);
 
     V2i levelMax = levelMin +
-		   V2i (levelSize (minX, maxX, lx, tileDesc.roundingMode) - 1,
-			levelSize (minY, maxY, ly, tileDesc.roundingMode) - 1);
+           V2i (levelSize (minX, maxX, lx, tileDesc.roundingMode) - 1,
+            levelSize (minY, maxY, ly, tileDesc.roundingMode) - 1);
 
     return Box2i(levelMin, levelMax);
 }
@@ -86,21 +86,21 @@ dataWindowForLevel (const TileDescription &tileDesc,
 
 Box2i
 dataWindowForTile (const TileDescription &tileDesc,
-		   int minX, int maxX,
-		   int minY, int maxY,
-		   int dx, int dy,
-		   int lx, int ly)
+           int minX, int maxX,
+           int minY, int maxY,
+           int dx, int dy,
+           int lx, int ly)
 {
     V2i tileMin = V2i (minX + dx * tileDesc.xSize,
-		       minY + dy * tileDesc.ySize);
+               minY + dy * tileDesc.ySize);
 
     V2i tileMax = tileMin + V2i (tileDesc.xSize - 1, tileDesc.ySize - 1);
 
     V2i levelMax = dataWindowForLevel
-		       (tileDesc, minX, maxX, minY, maxY, lx, ly).max;
+               (tileDesc, minX, maxX, minY, maxY, lx, ly).max;
 
     tileMax = V2i (std::min (tileMax[0], levelMax[0]),
-		   std::min (tileMax[1], levelMax[1]));
+           std::min (tileMax[1], levelMax[1]));
 
     return Box2i (tileMin, tileMax);
 }
@@ -114,10 +114,10 @@ calculateBytesPerPixel (const Header &header)
     size_t bytesPerPixel = 0;
 
     for (ChannelList::ConstIterator c = channels.begin();
-	 c != channels.end();
-	 ++c)
+     c != channels.end();
+     ++c)
     {
-	bytesPerPixel += pixelTypeSize (c.channel().type);
+    bytesPerPixel += pixelTypeSize (c.channel().type);
     }
 
     return bytesPerPixel;
@@ -137,8 +137,8 @@ floorLog2 (int x)
 
     while (x > 1)
     {
-	y +=  1;
-	x >>= 1;
+    y +=  1;
+    x >>= 1;
     }
 
     return y;
@@ -157,11 +157,11 @@ ceilLog2 (int x)
 
     while (x > 1)
     {
-	if (x & 1)
-	    r = 1;
+    if (x & 1)
+        r = 1;
 
-	y +=  1;
-	x >>= 1;
+    y +=  1;
+    x >>= 1;
     }
 
     return y + r;
@@ -177,8 +177,8 @@ roundLog2 (int x, LevelRoundingMode rmode)
 
 int
 calculateNumXLevels (const TileDescription& tileDesc,
-		     int minX, int maxX,
-		     int minY, int maxY)
+             int minX, int maxX,
+             int minY, int maxY)
 {
     int num = 0;
 
@@ -186,29 +186,29 @@ calculateNumXLevels (const TileDescription& tileDesc,
     {
       case ONE_LEVEL:
 
-	num = 1;
-	break;
+    num = 1;
+    break;
 
       case MIPMAP_LEVELS:
 
-	{
-	  int w = maxX - minX + 1;
-	  int h = maxY - minY + 1;
-	  num = roundLog2 (std::max (w, h), tileDesc.roundingMode) + 1;
-	}
+    {
+      int w = maxX - minX + 1;
+      int h = maxY - minY + 1;
+      num = roundLog2 (std::max (w, h), tileDesc.roundingMode) + 1;
+    }
         break;
 
       case RIPMAP_LEVELS:
 
-	{
-	  int w = maxX - minX + 1;
-	  num = roundLog2 (w, tileDesc.roundingMode) + 1;
-	}
-	break;
+    {
+      int w = maxX - minX + 1;
+      num = roundLog2 (w, tileDesc.roundingMode) + 1;
+    }
+    break;
 
       default:
 
-	throw Iex::ArgExc ("Unknown LevelMode format.");
+    throw Iex::ArgExc ("Unknown LevelMode format.");
     }
 
     return num;
@@ -217,8 +217,8 @@ calculateNumXLevels (const TileDescription& tileDesc,
 
 int
 calculateNumYLevels (const TileDescription& tileDesc,
-		     int minX, int maxX,
-		     int minY, int maxY)
+             int minX, int maxX,
+             int minY, int maxY)
 {
     int num = 0;
 
@@ -226,29 +226,29 @@ calculateNumYLevels (const TileDescription& tileDesc,
     {
       case ONE_LEVEL:
 
-	num = 1;
-	break;
+    num = 1;
+    break;
 
       case MIPMAP_LEVELS:
 
-	{
-	  int w = maxX - minX + 1;
-	  int h = maxY - minY + 1;
-	  num = roundLog2 (std::max (w, h), tileDesc.roundingMode) + 1;
-	}
+    {
+      int w = maxX - minX + 1;
+      int h = maxY - minY + 1;
+      num = roundLog2 (std::max (w, h), tileDesc.roundingMode) + 1;
+    }
         break;
 
       case RIPMAP_LEVELS:
 
-	{
-	  int h = maxY - minY + 1;
-	  num = roundLog2 (h, tileDesc.roundingMode) + 1;
-	}
-	break;
+    {
+      int h = maxY - minY + 1;
+      num = roundLog2 (h, tileDesc.roundingMode) + 1;
+    }
+    break;
 
       default:
 
-	throw Iex::ArgExc ("Unknown LevelMode format.");
+    throw Iex::ArgExc ("Unknown LevelMode format.");
     }
 
     return num;
@@ -257,14 +257,14 @@ calculateNumYLevels (const TileDescription& tileDesc,
 
 void
 calculateNumTiles (int *numTiles,
-		   int numLevels,
-		   int min, int max,
-		   int size,
-		   LevelRoundingMode rmode)
+           int numLevels,
+           int min, int max,
+           int size,
+           LevelRoundingMode rmode)
 {
     for (int i = 0; i < numLevels; i++)
     {
-	numTiles[i] = (levelSize (min, max, i, rmode) + size - 1) / size;
+    numTiles[i] = (levelSize (min, max, i, rmode) + size - 1) / size;
     }
 }
 
@@ -273,28 +273,28 @@ calculateNumTiles (int *numTiles,
 
 void
 precalculateTileInfo (const TileDescription& tileDesc,
-		      int minX, int maxX,
-		      int minY, int maxY,
-		      int *&numXTiles, int *&numYTiles,
-		      int &numXLevels, int &numYLevels)
+              int minX, int maxX,
+              int minY, int maxY,
+              int *&numXTiles, int *&numYTiles,
+              int &numXLevels, int &numYLevels)
 {
     numXLevels = calculateNumXLevels(tileDesc, minX, maxX, minY, maxY);
     numYLevels = calculateNumYLevels(tileDesc, minX, maxX, minY, maxY);
-    
+
     numXTiles = new int[numXLevels];
     numYTiles = new int[numYLevels];
 
     calculateNumTiles (numXTiles,
-		       numXLevels,
-		       minX, maxX,
-		       tileDesc.xSize,
-		       tileDesc.roundingMode);
+               numXLevels,
+               minX, maxX,
+               tileDesc.xSize,
+               tileDesc.roundingMode);
 
     calculateNumTiles (numYTiles,
-		       numYLevels,
-		       minY, maxY,
-		       tileDesc.ySize,
-		       tileDesc.roundingMode);
+               numYLevels,
+               minY, maxY,
+               tileDesc.ySize,
+               tileDesc.roundingMode);
 }
 
 

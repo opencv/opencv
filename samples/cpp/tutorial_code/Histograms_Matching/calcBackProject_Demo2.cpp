@@ -13,7 +13,7 @@ using namespace cv;
 using namespace std;
 
 /// Global Variables
-Mat src; Mat hsv; 
+Mat src; Mat hsv;
 Mat mask;
 
 int lo = 20; int up = 20;
@@ -33,7 +33,7 @@ int main( int argc, char** argv )
   /// Transform it to HSV
   cvtColor( src, hsv, CV_BGR2HSV );
 
-  /// Show the image 
+  /// Show the image
   namedWindow( window_image, CV_WINDOW_AUTOSIZE );
   imshow( window_image, src );
 
@@ -57,7 +57,7 @@ void pickPoint (int event, int x, int y, int, void* )
 
   // Fill and get the mask
   Point seed = Point( x, y );
- 
+
   int newMaskVal = 255;
   Scalar newVal = Scalar( 120, 120, 120 );
 
@@ -65,7 +65,7 @@ void pickPoint (int event, int x, int y, int, void* )
   int flags = connectivity + (newMaskVal << 8 ) + FLOODFILL_FIXED_RANGE + FLOODFILL_MASK_ONLY;
 
   Mat mask2 = Mat::zeros( src.rows + 2, src.cols + 2, CV_8UC1 );
-  floodFill( src, mask2, seed, newVal, 0, Scalar( lo, lo, lo ), Scalar( up, up, up), flags ); 
+  floodFill( src, mask2, seed, newVal, 0, Scalar( lo, lo, lo ), Scalar( up, up, up), flags );
   mask = mask2( Range( 1, mask2.rows - 1 ), Range( 1, mask2.cols - 1 ) );
 
   imshow( "Mask", mask );
@@ -80,7 +80,7 @@ void Hist_and_Backproj( )
 {
   MatND hist;
   int h_bins = 30; int s_bins = 32;
-  int histSize[] = { h_bins, s_bins }; 
+  int histSize[] = { h_bins, s_bins };
 
   float h_range[] = { 0, 179 };
   float s_range[] = { 0, 255 };
@@ -96,7 +96,7 @@ void Hist_and_Backproj( )
   /// Get Backprojection
   MatND backproj;
   calcBackProject( &hsv, 1, channels, hist, backproj, ranges, 1, true );
- 
+
   /// Draw the backproj
   imshow( "BackProj", backproj );
 

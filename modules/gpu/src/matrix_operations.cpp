@@ -45,33 +45,33 @@
 using namespace cv;
 using namespace cv::gpu;
 
-cv::gpu::CudaMem::CudaMem() 
-    : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0), alloc_type(0) 
+cv::gpu::CudaMem::CudaMem()
+    : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0), alloc_type(0)
 {
 }
 
-cv::gpu::CudaMem::CudaMem(int _rows, int _cols, int _type, int _alloc_type) 
+cv::gpu::CudaMem::CudaMem(int _rows, int _cols, int _type, int _alloc_type)
     : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0), alloc_type(0)
 {
     if( _rows > 0 && _cols > 0 )
         create( _rows, _cols, _type, _alloc_type);
 }
 
-cv::gpu::CudaMem::CudaMem(Size _size, int _type, int _alloc_type) 
+cv::gpu::CudaMem::CudaMem(Size _size, int _type, int _alloc_type)
     : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0), alloc_type(0)
 {
     if( _size.height > 0 && _size.width > 0 )
         create( _size.height, _size.width, _type, _alloc_type);
 }
 
-cv::gpu::CudaMem::CudaMem(const CudaMem& m) 
+cv::gpu::CudaMem::CudaMem(const CudaMem& m)
     : flags(m.flags), rows(m.rows), cols(m.cols), step(m.step), data(m.data), refcount(m.refcount), datastart(m.datastart), dataend(m.dataend), alloc_type(m.alloc_type)
 {
     if( refcount )
         CV_XADD(refcount, 1);
 }
 
-cv::gpu::CudaMem::CudaMem(const Mat& m, int _alloc_type) 
+cv::gpu::CudaMem::CudaMem(const Mat& m, int _alloc_type)
     : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0), alloc_type(0)
 {
     if( m.rows > 0 && m.cols > 0 )
@@ -113,69 +113,69 @@ CudaMem cv::gpu::CudaMem::clone() const
     return m;
 }
 
-void cv::gpu::CudaMem::create(Size _size, int _type, int _alloc_type) 
-{ 
-    create(_size.height, _size.width, _type, _alloc_type); 
+void cv::gpu::CudaMem::create(Size _size, int _type, int _alloc_type)
+{
+    create(_size.height, _size.width, _type, _alloc_type);
 }
 
-Mat cv::gpu::CudaMem::createMatHeader() const 
-{ 
-    return Mat(size(), type(), data, step); 
+Mat cv::gpu::CudaMem::createMatHeader() const
+{
+    return Mat(size(), type(), data, step);
 }
 
-cv::gpu::CudaMem::operator Mat() const 
-{ 
-    return createMatHeader(); 
+cv::gpu::CudaMem::operator Mat() const
+{
+    return createMatHeader();
 }
 
-cv::gpu::CudaMem::operator GpuMat() const 
-{ 
-    return createGpuMatHeader(); 
+cv::gpu::CudaMem::operator GpuMat() const
+{
+    return createGpuMatHeader();
 }
 
-bool cv::gpu::CudaMem::isContinuous() const 
-{ 
-    return (flags & Mat::CONTINUOUS_FLAG) != 0; 
+bool cv::gpu::CudaMem::isContinuous() const
+{
+    return (flags & Mat::CONTINUOUS_FLAG) != 0;
 }
 
-size_t cv::gpu::CudaMem::elemSize() const 
-{ 
-    return CV_ELEM_SIZE(flags); 
+size_t cv::gpu::CudaMem::elemSize() const
+{
+    return CV_ELEM_SIZE(flags);
 }
 
-size_t cv::gpu::CudaMem::elemSize1() const 
-{ 
-    return CV_ELEM_SIZE1(flags); 
+size_t cv::gpu::CudaMem::elemSize1() const
+{
+    return CV_ELEM_SIZE1(flags);
 }
 
-int cv::gpu::CudaMem::type() const 
-{ 
-    return CV_MAT_TYPE(flags); 
+int cv::gpu::CudaMem::type() const
+{
+    return CV_MAT_TYPE(flags);
 }
 
-int cv::gpu::CudaMem::depth() const 
-{ 
-    return CV_MAT_DEPTH(flags); 
+int cv::gpu::CudaMem::depth() const
+{
+    return CV_MAT_DEPTH(flags);
 }
 
-int cv::gpu::CudaMem::channels() const 
-{ 
-    return CV_MAT_CN(flags); 
+int cv::gpu::CudaMem::channels() const
+{
+    return CV_MAT_CN(flags);
 }
 
-size_t cv::gpu::CudaMem::step1() const 
-{ 
-    return step/elemSize1(); 
+size_t cv::gpu::CudaMem::step1() const
+{
+    return step/elemSize1();
 }
 
-Size cv::gpu::CudaMem::size() const 
-{ 
-    return Size(cols, rows); 
+Size cv::gpu::CudaMem::size() const
+{
+    return Size(cols, rows);
 }
 
-bool cv::gpu::CudaMem::empty() const 
-{ 
-    return data == 0; 
+bool cv::gpu::CudaMem::empty() const
+{
+    return data == 0;
 }
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)

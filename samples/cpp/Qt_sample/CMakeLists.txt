@@ -1,6 +1,6 @@
 #http://www.cmake.org/cmake/help/cmake2.6docs.html
 cmake_minimum_required (VERSION 2.6)
-project (OpenGL_Qt_Binding) 
+project (OpenGL_Qt_Binding)
 
 
 FIND_PACKAGE( OpenCV REQUIRED )

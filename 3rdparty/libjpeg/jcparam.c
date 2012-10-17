@@ -21,8 +21,8 @@
 
 GLOBAL(void)
 jpeg_add_quant_table (j_compress_ptr cinfo, int which_tbl,
-		      const unsigned int *basic_table,
-		      int scale_factor, boolean force_baseline)
+              const unsigned int *basic_table,
+              int scale_factor, boolean force_baseline)
 /* Define a quantization table equal to the basic_table times
  * a scale factor (given as a percentage).
  * If force_baseline is TRUE, the computed quantization table entries
@@ -62,7 +62,7 @@ jpeg_add_quant_table (j_compress_ptr cinfo, int which_tbl,
 
 GLOBAL(void)
 jpeg_set_linear_quality (j_compress_ptr cinfo, int scale_factor,
-			 boolean force_baseline)
+             boolean force_baseline)
 /* Set or change the 'quality' (quantization) setting, using default tables
  * and a straight percentage-scaling quality scale.  In most cases it's better
  * to use jpeg_set_quality (below); this entry point is provided for
@@ -96,9 +96,9 @@ jpeg_set_linear_quality (j_compress_ptr cinfo, int scale_factor,
 
   /* Set up two quantization tables using the specified scaling */
   jpeg_add_quant_table(cinfo, 0, std_luminance_quant_tbl,
-		       scale_factor, force_baseline);
+               scale_factor, force_baseline);
   jpeg_add_quant_table(cinfo, 1, std_chrominance_quant_tbl,
-		       scale_factor, force_baseline);
+               scale_factor, force_baseline);
 }
 
 
@@ -150,7 +150,7 @@ jpeg_set_quality (j_compress_ptr cinfo, int quality, boolean force_baseline)
 
 LOCAL(void)
 add_huff_table (j_compress_ptr cinfo,
-		JHUFF_TBL **htblptr, const UINT8 *bits, const UINT8 *val)
+        JHUFF_TBL **htblptr, const UINT8 *bits, const UINT8 *val)
 /* Define a Huffman table */
 {
   int nsymbols, len;
@@ -187,12 +187,12 @@ std_huff_tables (j_compress_ptr cinfo)
     { /* 0-base */ 0, 0, 1, 5, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0 };
   static const UINT8 val_dc_luminance[] =
     { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 };
-  
+
   static const UINT8 bits_dc_chrominance[17] =
     { /* 0-base */ 0, 0, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0 };
   static const UINT8 val_dc_chrominance[] =
     { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 };
-  
+
   static const UINT8 bits_ac_luminance[17] =
     { /* 0-base */ 0, 0, 2, 1, 3, 3, 2, 4, 3, 5, 5, 4, 4, 0, 0, 1, 0x7d };
   static const UINT8 val_ac_luminance[] =
@@ -217,7 +217,7 @@ std_huff_tables (j_compress_ptr cinfo)
       0xe3, 0xe4, 0xe5, 0xe6, 0xe7, 0xe8, 0xe9, 0xea,
       0xf1, 0xf2, 0xf3, 0xf4, 0xf5, 0xf6, 0xf7, 0xf8,
       0xf9, 0xfa };
-  
+
   static const UINT8 bits_ac_chrominance[17] =
     { /* 0-base */ 0, 0, 2, 1, 2, 4, 4, 3, 4, 7, 5, 4, 4, 0, 1, 2, 0x77 };
   static const UINT8 val_ac_chrominance[] =
@@ -242,15 +242,15 @@ std_huff_tables (j_compress_ptr cinfo)
       0xe2, 0xe3, 0xe4, 0xe5, 0xe6, 0xe7, 0xe8, 0xe9,
       0xea, 0xf2, 0xf3, 0xf4, 0xf5, 0xf6, 0xf7, 0xf8,
       0xf9, 0xfa };
-  
+
   add_huff_table(cinfo, &cinfo->dc_huff_tbl_ptrs[0],
-		 bits_dc_luminance, val_dc_luminance);
+         bits_dc_luminance, val_dc_luminance);
   add_huff_table(cinfo, &cinfo->ac_huff_tbl_ptrs[0],
-		 bits_ac_luminance, val_ac_luminance);
+         bits_ac_luminance, val_ac_luminance);
   add_huff_table(cinfo, &cinfo->dc_huff_tbl_ptrs[1],
-		 bits_dc_chrominance, val_dc_chrominance);
+         bits_dc_chrominance, val_dc_chrominance);
   add_huff_table(cinfo, &cinfo->ac_huff_tbl_ptrs[1],
-		 bits_ac_chrominance, val_ac_chrominance);
+         bits_ac_chrominance, val_ac_chrominance);
 }
 
 
@@ -280,7 +280,7 @@ jpeg_set_defaults (j_compress_ptr cinfo)
   if (cinfo->comp_info == NULL)
     cinfo->comp_info = (jpeg_component_info *)
       (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_PERMANENT,
-				  MAX_COMPONENTS * SIZEOF(jpeg_component_info));
+                  MAX_COMPONENTS * SIZEOF(jpeg_component_info));
 
   /* Initialize everything not dependent on the color space */
 
@@ -458,7 +458,7 @@ jpeg_set_colorspace (j_compress_ptr cinfo, J_COLOR_SPACE colorspace)
     cinfo->num_components = cinfo->input_components;
     if (cinfo->num_components < 1 || cinfo->num_components > MAX_COMPONENTS)
       ERREXIT2(cinfo, JERR_COMPONENT_COUNT, cinfo->num_components,
-	       MAX_COMPONENTS);
+           MAX_COMPONENTS);
     for (ci = 0; ci < cinfo->num_components; ci++) {
       SET_COMP(ci, ci, 1,1, 0, 0,0);
     }
@@ -473,7 +473,7 @@ jpeg_set_colorspace (j_compress_ptr cinfo, J_COLOR_SPACE colorspace)
 
 LOCAL(jpeg_scan_info *)
 fill_a_scan (jpeg_scan_info * scanptr, int ci,
-	     int Ss, int Se, int Ah, int Al)
+         int Ss, int Se, int Ah, int Al)
 /* Support routine: generate one scan for specified component */
 {
   scanptr->comps_in_scan = 1;
@@ -488,7 +488,7 @@ fill_a_scan (jpeg_scan_info * scanptr, int ci,
 
 LOCAL(jpeg_scan_info *)
 fill_scans (jpeg_scan_info * scanptr, int ncomps,
-	    int Ss, int Se, int Ah, int Al)
+        int Ss, int Se, int Ah, int Al)
 /* Support routine: generate one scan for each component */
 {
   int ci;
@@ -567,7 +567,7 @@ jpeg_simple_progression (j_compress_ptr cinfo)
     cinfo->script_space_size = MAX(nscans, 10);
     cinfo->script_space = (jpeg_scan_info *)
       (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_PERMANENT,
-			cinfo->script_space_size * SIZEOF(jpeg_scan_info));
+            cinfo->script_space_size * SIZEOF(jpeg_scan_info));
   }
   scanptr = cinfo->script_space;
   cinfo->scan_info = scanptr;

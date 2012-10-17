@@ -525,7 +525,7 @@ CV_EXPORTS void cvUnDistortInit( const CvArr* src,
 CV_EXPORTS void  cvUnDistort( const CvArr* src, CvArr* dst,
                              const CvArr* undistortion_map,
                              int interpolate );
-                             
+
 /* Find fundamental matrix */
 CV_EXPORTS void  cvFindFundamentalMatrix( int* points1, int* points2,
     int numpoints, int method, float* matrix );
@@ -600,18 +600,18 @@ CV_EXPORTS void  cvProjectPointsSimple( int point_count, CvPoint3D64f* _object_p
 
 #define cvConvertPointsHomogenious cvConvertPointsHomogeneous
 
-    
+
 //////////////////////////////////// feature extractors: obsolete API //////////////////////////////////
 
 typedef struct CvSURFPoint
 {
     CvPoint2D32f pt;
-    
+
     int          laplacian;
     int          size;
     float        dir;
     float        hessian;
-    
+
 } CvSURFPoint;
 
 CV_INLINE CvSURFPoint cvSURFPoint( CvPoint2D32f pt, int laplacian,
@@ -619,13 +619,13 @@ CV_INLINE CvSURFPoint cvSURFPoint( CvPoint2D32f pt, int laplacian,
                                   float hessian CV_DEFAULT(0))
 {
     CvSURFPoint kp;
-    
+
     kp.pt        = pt;
     kp.laplacian = laplacian;
     kp.size      = size;
     kp.dir       = dir;
     kp.hessian   = hessian;
-    
+
     return kp;
 }
 
@@ -634,10 +634,10 @@ typedef struct CvSURFParams
     int    extended;
     int    upright;
     double hessianThreshold;
-    
+
     int    nOctaves;
     int    nOctaveLayers;
-    
+
 } CvSURFParams;
 
 CVAPI(CvSURFParams) cvSURFParams( double hessianThreshold, int extended CV_DEFAULT(0) );
@@ -664,9 +664,9 @@ typedef struct CvMSERParams
     float maxVariation;
     //! trace back to cut off mser with diversity < min_diversity
     float minDiversity;
-    
+
     /////// the next few params for MSER of color image
-    
+
     //! for color image, the evolution steps
     int maxEvolution;
     //! the area threshold to cause re-initialize
@@ -726,7 +726,7 @@ CV_INLINE CvStarDetectorParams cvStarDetectorParams(
     params.lineThresholdProjected = lineThresholdProjected;
     params.lineThresholdBinarized = lineThresholdBinarized;
     params.suppressNonmaxSize = suppressNonmaxSize;
-    
+
     return params;
 }
 

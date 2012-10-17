@@ -44,15 +44,15 @@ int main( int argc, const char** argv )
     while( true )
     {
       frame = cvQueryFrame( capture );
-  
+
       //-- 3. Apply the classifier to the frame
       if( !frame.empty() )
        { detectAndDisplay( frame ); }
       else
        { printf(" --(!) No captured frame -- Break!"); break; }
-      
+
       int c = waitKey(10);
-      if( (char)c == 'c' ) { break; } 
+      if( (char)c == 'c' ) { break; }
 
     }
   }
@@ -88,13 +88,13 @@ void detectAndDisplay( Mat frame )
 
          for( int j = 0; j < eyes.size(); j++ )
           { //-- Draw the eyes
-            Point center( faces[i].x + eyes[j].x + eyes[j].width*0.5, faces[i].y + eyes[j].y + eyes[j].height*0.5 ); 
+            Point center( faces[i].x + eyes[j].x + eyes[j].width*0.5, faces[i].y + eyes[j].y + eyes[j].height*0.5 );
             int radius = cvRound( (eyes[j].width + eyes[j].height)*0.25 );
             circle( frame, center, radius, Scalar( 255, 0, 255 ), 3, 8, 0 );
           }
        }
 
-    } 
+    }
    //-- Show what you got
    imshow( window_name, frame );
 }

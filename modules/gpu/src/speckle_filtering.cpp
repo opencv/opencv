@@ -97,7 +97,7 @@ void cv::filterSpeckles( Mat& img, uchar newVal, int maxSpeckleSize, uchar maxDi
             if( ds[j] != newVal )	// not a bad disparity
             {
                 if( ls[j] )		// has a label, check for bad label
-                {  
+                {
                     if( rtype[ls[j]] ) // small region, zero out disparity
                         ds[j] = (uchar)newVal;
                 }
@@ -164,5 +164,5 @@ void cv::filterSpeckles( Mat& img, uchar newVal, int maxSpeckleSize, uchar maxDi
             }
         }
     }
-}    
+}
 

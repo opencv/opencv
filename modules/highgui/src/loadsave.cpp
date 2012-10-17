@@ -401,7 +401,7 @@ Mat imdecode( InputArray _buf, int flags, Mat* dst )
     imdecode_( buf, flags, LOAD_MAT, dst );
     return *dst;
 }
-    
+
 bool imencode( const string& ext, InputArray _image,
                vector<uchar>& buf, const vector<int>& params )
 {

@@ -29,7 +29,7 @@ from find_obj import init_feature, filter_matches, explore_match
 def affine_skew(tilt, phi, img, mask=None):
     '''
     affine_skew(tilt, phi, img, mask=None) -> skew_img, skew_mask, Ai
-    
+
     Ai - is an affine transform matrix from skew_img to img
     '''
     h, w = img.shape[:2]
@@ -59,10 +59,10 @@ def affine_skew(tilt, phi, img, mask=None):
 
 
 def affine_detect(detector, img, mask=None, pool=None):
-    ''' 
+    '''
     affine_detect(detector, img, mask=None, pool=None) -> keypoints, descrs
 
-    Apply a set of affine transormations to the image, detect keypoints and 
+    Apply a set of affine transormations to the image, detect keypoints and
     reproject them into initial image coordinates.
     See http://www.ipol.im/pub/algo/my_affine_sift/ for the details.
 
@@ -72,7 +72,7 @@ def affine_detect(detector, img, mask=None, pool=None):
     for t in 2**(0.5*np.arange(1,6)):
         for phi in np.arange(0, 180, 72.0 / t):
             params.append((t, phi))
-    
+
     def f(p):
         t, phi = p
         timg, tmask, Ai = affine_skew(t, phi, img)
@@ -94,10 +94,10 @@ def affine_detect(detector, img, mask=None, pool=None):
         descrs.extend(d)
     print
     return keypoints, np.array(descrs)
-            
+
 if __name__ == '__main__':
     print __doc__
-    
+
     import sys, getopt
     opts, args = getopt.getopt(sys.argv[1:], '', ['feature='])
     opts = dict(opts)
@@ -106,7 +106,7 @@ if __name__ == '__main__':
     except:
         fn1 = 'data/aero1.jpg'
         fn2 = 'data/aero3.jpg'
-        
+
     img1 = cv2.imread(fn1, 0)
     img2 = cv2.imread(fn2, 0)
     detector, matcher = init_feature(feature_name)
@@ -134,10 +134,10 @@ if __name__ == '__main__':
             H, status = None, None
             print '%d matches found, not enough for homography estimation' % len(p1)
 
-        vis = explore_match(win, img1, img2, kp_pairs, None, H) 
+        vis = explore_match(win, img1, img2, kp_pairs, None, H)
 
 
     match_and_draw('affine find_obj')
     cv2.waitKey()
-    cv2.destroyAllWindows() 			
+    cv2.destroyAllWindows()
 

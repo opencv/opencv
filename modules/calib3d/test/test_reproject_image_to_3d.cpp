@@ -48,18 +48,18 @@ using namespace cv;
 using namespace std;
 
 template<class T> double thres() { return 1.0; }
-template<> double thres<float>() { return 1e-5; }   
+template<> double thres<float>() { return 1e-5; }
 
 class CV_ReprojectImageTo3DTest : public cvtest::BaseTest
 {
 public:
     CV_ReprojectImageTo3DTest() {}
     ~CV_ReprojectImageTo3DTest() {}
-protected: 
+protected:
 
-    
+
     void run(int)
-    {        
+    {
         ts->set_failed_test_info(cvtest::TS::OK);
         int progress = 0;
         int caseId = 0;
@@ -89,7 +89,7 @@ protected:
         progress = update_progress( progress, 12, 14, 0 );
         runCase<short, short>(++caseId, -100, 100);
         progress = update_progress( progress, 13, 14, 0 );
-        runCase<unsigned char, short>(++caseId, 10, 100);        
+        runCase<unsigned char, short>(++caseId, 10, 100);
         progress = update_progress( progress, 14, 14, 0 );
     }
 
@@ -100,42 +100,42 @@ protected:
         for(int i = 0; i < 3; ++i)
         {
             tmp = v1[i];
-            nsum +=  tmp * tmp;            
+            nsum +=  tmp * tmp;
 
             tmp = tmp - v2[i];
             sum += tmp * tmp;
-            
-        }        
+
+        }
         return sqrt(sum)/(sqrt(nsum)+1.);
     }
 
     template<class InT, class OutT> void runCase(int caseId, InT min, InT max)
-    {                     
+    {
         typedef Vec<OutT, 3> out3d_t;
 
-        bool handleMissingValues = (unsigned)theRNG() % 2 == 0;                   
+        bool handleMissingValues = (unsigned)theRNG() % 2 == 0;
 
         Mat_<InT> disp(Size(320, 240));
         randu(disp, Scalar(min), Scalar(max));
 
         if (handleMissingValues)
             disp(disp.rows/2, disp.cols/2) = min - 1;
-        
+
         Mat_<double> Q(4, 4);
         randu(Q, Scalar(-5), Scalar(5));
 
         Mat_<out3d_t> _3dImg(disp.size());
-                       
+
         CvMat cvdisp = disp; CvMat cv_3dImg = _3dImg; CvMat cvQ = Q;
         cvReprojectImageTo3D( &cvdisp, &cv_3dImg, &cvQ, handleMissingValues );
 
         if (numeric_limits<OutT>::max() == numeric_limits<float>::max())
             reprojectImageTo3D(disp, _3dImg, Q, handleMissingValues);
-                        
+
         for(int y = 0; y < disp.rows; ++y)
             for(int x = 0; x < disp.cols; ++x)
             {
-                InT d = disp(y, x);                
+                InT d = disp(y, x);
 
                 double from[4] = { x, y, d, 1 };
                 Mat_<double> res = Q * Mat_<double>(4, 1, from);
@@ -144,15 +144,15 @@ protected:
                 out3d_t pixel_exp = *(Vec3d*)res.data;
                 out3d_t pixel_out = _3dImg(y, x);
 
-                const int largeZValue = 10000; /* see documentation */ 
+                const int largeZValue = 10000; /* see documentation */
 
-                if (handleMissingValues && y == disp.rows/2 && x == disp.cols/2)                    
-                {   
+                if (handleMissingValues && y == disp.rows/2 && x == disp.cols/2)
+                {
                     if (pixel_out[2] == largeZValue)
                         continue;
 
                     ts->printf(cvtest::TS::LOG, "Missing values are handled improperly\n");
-                    ts->set_failed_test_info( cvtest::TS::FAIL_BAD_ACCURACY );                       
+                    ts->set_failed_test_info( cvtest::TS::FAIL_BAD_ACCURACY );
                     return;
                 }
                 else
@@ -167,9 +167,9 @@ protected:
                         return;
                     }
                 }
-            }    
+            }
     }
-};   
-    
+};
+
 TEST(Calib3d_ReprojectImageTo3D, accuracy) { CV_ReprojectImageTo3DTest test; test.safe_run(); }
 

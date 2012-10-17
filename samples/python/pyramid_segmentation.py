@@ -28,7 +28,7 @@ class PyrSegmentation:
         comp = cv.PyrSegmentation(self.image0, self.image1, self.storage, \
                             self.level, self.thresh1+1, self.thresh2+1)
         cv.ShowImage("Segmentation", self.image1)
-    
+
     def run(self):
         self.on_segment()
         cv.WaitKey(0)

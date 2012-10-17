@@ -123,7 +123,7 @@ namespace cv
         typedef PtrStep<int> PtrStepi;
 
 
-#if defined __GNUC__ 
+#if defined __GNUC__
     #define __CV_GPU_DEPR_BEFORE__
     #define __CV_GPU_DEPR_AFTER__ __attribute__ ((deprecated))
 #elif defined(__MSVC__) //|| defined(__CUDACC__)
@@ -140,7 +140,7 @@ namespace cv
             DevMem2D_() {}
             DevMem2D_(int rows_, int cols_, T* data_, size_t step_) : PtrStepSz<T>(rows_, cols_, data_, step_) {}
 
-            template <typename U> 
+            template <typename U>
             explicit __CV_GPU_DEPR_BEFORE__ DevMem2D_(const DevMem2D_<U>& d) : PtrStepSz<T>(d.rows, d.cols, (T*)d.data, d.step) {}
         } __CV_GPU_DEPR_AFTER__ ;
 

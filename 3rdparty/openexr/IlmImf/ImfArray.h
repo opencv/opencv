@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2002, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-// 
+//
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission. 
-// 
+// from this software without specific prior written permission.
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -53,17 +53,17 @@
 //	    C ()		{std::cout << "C::C  (" << this << ")\n";};
 //	    virtual ~C ()	{std::cout << "C::~C (" << this << ")\n";};
 //	};
-// 
+//
 //	int
 //	main ()
 //	{
 //	    Array <C> a(3);
-// 
+//
 //	    C &b = a[1];
 //	    const C &c = a[1];
 //	    C *d = a + 2;
 //	    const C *e = a;
-// 
+//
 //	    return 0;
 //	}
 //
@@ -218,7 +218,7 @@ Array2D<T>::~Array2D ()
 
 
 template <class T>
-inline T *	
+inline T *
 Array2D<T>::operator [] (long x)
 {
     return _data + x * _sizeY;

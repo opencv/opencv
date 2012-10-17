@@ -47,7 +47,7 @@
 
 #if defined(HAVE_CUDA) && !defined(__APPLE__)
 
-namespace cv { namespace gpu 
+namespace cv { namespace gpu
 {
     namespace detail
     {
@@ -70,10 +70,10 @@ namespace cv { namespace gpu
             // Callback for handling packages of demuxed video data.
             //
             // Parameters:
-            //      pUserData - Pointer to user data. We must pass a pointer to a 
+            //      pUserData - Pointer to user data. We must pass a pointer to a
             //          VideoSourceData struct here, that contains a valid CUvideoparser
             //          and FrameQueue.
-            //      pPacket - video-source data packet. 
+            //      pPacket - video-source data packet.
             //
             // NOTE: called from a different thread that doesn't not have a cuda context
             //

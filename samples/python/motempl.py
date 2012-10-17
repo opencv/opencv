@@ -10,7 +10,7 @@ MHI_DURATION = 1
 MAX_TIME_DELTA = 0.5
 MIN_TIME_DELTA = 0.05
 N = 4
-buf = range(10) 
+buf = range(10)
 last = 0
 mhi = None # MHI
 orient = None # orientation
@@ -37,7 +37,7 @@ def update_mhi(img, dst, diff_threshold):
         orient = cv.CreateImage(size,cv. IPL_DEPTH_32F, 1)
         segmask = cv.CreateImage(size,cv. IPL_DEPTH_32F, 1)
         mask = cv.CreateImage(size,cv. IPL_DEPTH_8U, 1)
-    
+
     cv.CvtColor(img, buf[last], cv.CV_BGR2GRAY) # convert frame to grayscale
     idx2 = (last + 1) % N # index of (last - (N-1))th frame
     last = idx2
@@ -87,12 +87,12 @@ if __name__ == "__main__":
     elif len(sys.argv)==2 and sys.argv[1].isdigit():
         capture = cv.CreateCameraCapture(int(sys.argv[1]))
     elif len(sys.argv)==2:
-        capture = cv.CreateFileCapture(sys.argv[1]) 
+        capture = cv.CreateFileCapture(sys.argv[1])
 
     if not capture:
         print "Could not initialize capturing..."
         sys.exit(-1)
-        
+
     cv.NamedWindow("Motion", 1)
     while True:
         image = cv.QueryFrame(capture)

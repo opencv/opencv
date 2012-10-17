@@ -104,7 +104,7 @@ class PlaneTracker:
             if status.sum() < MIN_MATCH_COUNT:
                 continue
             p0, p1 = p0[status], p1[status]
-            
+
             x0, y0, x1, y1 = target.rect
             quad = np.float32([[x0, y0], [x1, y0], [x1, y1], [x0, y1]])
             quad = cv2.perspectiveTransform(quad.reshape(1, -1, 2), H).reshape(-1, 2)
@@ -131,7 +131,7 @@ class App:
 
         cv2.namedWindow('plane')
         self.rect_sel = common.RectSelector('plane', self.on_rect)
-    
+
     def on_rect(self, rect):
         self.tracker.add_target(self.frame, rect)
 
@@ -143,7 +143,7 @@ class App:
                 if not ret:
                     break
                 self.frame = frame.copy()
-            
+
             vis = self.frame.copy()
             if playing:
                 tracked = self.tracker.track(self.frame)

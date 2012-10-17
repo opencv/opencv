@@ -61,30 +61,30 @@ __kernel void addWeighted_D0 (__global uchar *src1,int src1_step,int src1_offset
     int y = get_global_id(1);
 
     if (x < cols && y < rows)
-    
+
     {
 
         x = x << 2;
 
         #define dst_align (dst_offset & 3)
-        int src1_index = mad24(y, src1_step, x + src1_offset - dst_align); 
-        int src2_index = mad24(y, src2_step, x + src2_offset - dst_align); 
+        int src1_index = mad24(y, src1_step, x + src1_offset - dst_align);
+        int src2_index = mad24(y, src2_step, x + src2_offset - dst_align);
 
         int dst_start  = mad24(y, dst_step, dst_offset);
         int dst_end    = mad24(y, dst_step, dst_offset + dst_step1);
         int dst_index  = mad24(y, dst_step, dst_offset + x & (int)0xfffffffc);
 
-		uchar4 src1_data ,src2_data;
+        uchar4 src1_data ,src2_data;
 
-		src1_data.x= src1_index+0 >= 0 ? src1[src1_index+0] : 0;
-		src1_data.y= src1_index+1 >= 0 ? src1[src1_index+1] : 0;
-		src1_data.z= src1_index+2 >= 0 ? src1[src1_index+2] : 0;
-		src1_data.w= src1_index+3 >= 0 ? src1[src1_index+3] : 0;
+        src1_data.x= src1_index+0 >= 0 ? src1[src1_index+0] : 0;
+        src1_data.y= src1_index+1 >= 0 ? src1[src1_index+1] : 0;
+        src1_data.z= src1_index+2 >= 0 ? src1[src1_index+2] : 0;
+        src1_data.w= src1_index+3 >= 0 ? src1[src1_index+3] : 0;
 
-		src2_data.x= src2_index+0 >= 0 ? src2[src2_index+0] : 0;
-		src2_data.y= src2_index+1 >= 0 ? src2[src2_index+1] : 0;
-		src2_data.z= src2_index+2 >= 0 ? src2[src2_index+2] : 0;
-		src2_data.w= src2_index+3 >= 0 ? src2[src2_index+3] : 0;
+        src2_data.x= src2_index+0 >= 0 ? src2[src2_index+0] : 0;
+        src2_data.y= src2_index+1 >= 0 ? src2[src2_index+1] : 0;
+        src2_data.z= src2_index+2 >= 0 ? src2[src2_index+2] : 0;
+        src2_data.w= src2_index+3 >= 0 ? src2[src2_index+3] : 0;
 
         uchar4 dst_data = *((__global uchar4 *)(dst + dst_index));
 //        short4 tmp      = convert_short4_sat(src1_data) * alpha + convert_short4_sat(src2_data) * beta + gama;
@@ -118,14 +118,14 @@ __kernel void addWeighted_D2 (__global ushort *src1, int src1_step,int src1_offs
     int y = get_global_id(1);
 
     if (x < cols && y < rows)
-    
+
     {
 
         x = x << 2;
 
         #define dst_align ((dst_offset >> 1) & 3)
-        int src1_index = mad24(y, src1_step, (x << 1) + src1_offset -( dst_align << 1)); 
-        int src2_index = mad24(y, src2_step, (x << 1) + src2_offset -( dst_align << 1)); 
+        int src1_index = mad24(y, src1_step, (x << 1) + src1_offset -( dst_align << 1));
+        int src2_index = mad24(y, src2_step, (x << 1) + src2_offset -( dst_align << 1));
 
         int dst_start  = mad24(y, dst_step, dst_offset);
         int dst_end    = mad24(y, dst_step, dst_offset + dst_step1);
@@ -164,14 +164,14 @@ __kernel void addWeighted_D3 (__global short *src1, int src1_step,int src1_offse
     int y = get_global_id(1);
 
     if (x < cols && y < rows)
-    
+
     {
 
         x = x << 2;
 
         #define dst_align ((dst_offset >> 1) & 3)
-        int src1_index = mad24(y, src1_step, (x << 1) + src1_offset -( dst_align << 1)); 
-        int src2_index = mad24(y, src2_step, (x << 1) + src2_offset -( dst_align << 1)); 
+        int src1_index = mad24(y, src1_step, (x << 1) + src1_offset -( dst_align << 1));
+        int src2_index = mad24(y, src2_step, (x << 1) + src2_offset -( dst_align << 1));
 
         int dst_start  = mad24(y, dst_step, dst_offset);
         int dst_end    = mad24(y, dst_step, dst_offset + dst_step1);
@@ -209,18 +209,18 @@ __kernel void addWeighted_D4 (__global int *src1, int src1_step,int src1_offset,
     int y = get_global_id(1);
 
     if (x < cols && y < rows)
-    
+
     {
-            
+
         x = x << 2;
 
         #define bitOfInt  (sizeof(int)== 4 ? 2: 3)
 
         #define dst_align ((dst_offset >> bitOfInt) & 3)
 
-        int src1_index = mad24(y, src1_step, (x << bitOfInt) + src1_offset - (dst_align << bitOfInt)); 
-        int src2_index = mad24(y, src2_step, (x << bitOfInt) + src2_offset - (dst_align << bitOfInt)); 
-       
+        int src1_index = mad24(y, src1_step, (x << bitOfInt) + src1_offset - (dst_align << bitOfInt));
+        int src2_index = mad24(y, src2_step, (x << bitOfInt) + src2_offset - (dst_align << bitOfInt));
+
         int dst_start  = mad24(y, dst_step, dst_offset);
         int dst_end    = mad24(y, dst_step, dst_offset + dst_step1);
         int dst_index  = mad24(y, dst_step, dst_offset + (x << bitOfInt) -(dst_align << bitOfInt));
@@ -257,16 +257,16 @@ __kernel void addWeighted_D5 (__global float *src1,int src1_step,int src1_offset
     int y = get_global_id(1);
 
     if (x < cols && y < rows)
-    
+
     {
-            
+
         x = x << 2;
 
         #define dst_align ((dst_offset >> 2) & 3)
 
-        int src1_index = mad24(y, src1_step, (x << 2) + src1_offset - (dst_align << 2)); 
-        int src2_index = mad24(y, src2_step, (x << 2) + src2_offset - (dst_align << 2)); 
-       
+        int src1_index = mad24(y, src1_step, (x << 2) + src1_offset - (dst_align << 2));
+        int src2_index = mad24(y, src2_step, (x << 2) + src2_offset - (dst_align << 2));
+
         int dst_start  = mad24(y, dst_step, dst_offset);
         int dst_end    = mad24(y, dst_step, dst_offset + dst_step1);
         int dst_index  = mad24(y, dst_step, dst_offset + (x << 2) -(dst_align << 2));
@@ -305,16 +305,16 @@ __kernel void addWeighted_D6 (__global double *src1, int src1_step,int src1_offs
     int y = get_global_id(1);
 
     if (x < cols && y < rows)
-    
+
     {
-            
+
         x = x << 2;
 
         #define dst_align ((dst_offset >> 3) & 3)
 
-        int src1_index = mad24(y, src1_step, (x << 3) + src1_offset - (dst_align << 3)); 
-        int src2_index = mad24(y, src2_step, (x << 3) + src2_offset - (dst_align << 3)); 
-       
+        int src1_index = mad24(y, src1_step, (x << 3) + src1_offset - (dst_align << 3));
+        int src2_index = mad24(y, src2_step, (x << 3) + src2_offset - (dst_align << 3));
+
         int dst_start  = mad24(y, dst_step, dst_offset);
         int dst_end    = mad24(y, dst_step, dst_offset + dst_step1);
         int dst_index  = mad24(y, dst_step, dst_offset + (x << 3) -(dst_align << 3));

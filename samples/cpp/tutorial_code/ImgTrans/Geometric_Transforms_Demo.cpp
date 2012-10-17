@@ -32,14 +32,14 @@ int main( int argc, char** argv )
   /// Load the image
   src = imread( argv[1], 1 );
 
-  /// Set the dst image the same type and size as src  
+  /// Set the dst image the same type and size as src
   warp_dst = Mat::zeros( src.rows, src.cols, src.type() );
 
   /// Set your 3 points to calculate the  Affine Transform
   srcTri[0] = Point2f( 0,0 );
   srcTri[1] = Point2f( src.cols - 1, 0 );
   srcTri[2] = Point2f( 0, src.rows - 1 );
-  
+
   dstTri[0] = Point2f( src.cols*0.0, src.rows*0.33 );
   dstTri[1] = Point2f( src.cols*0.85, src.rows*0.25 );
   dstTri[2] = Point2f( src.cols*0.15, src.rows*0.7 );
@@ -62,7 +62,7 @@ int main( int argc, char** argv )
 
   /// Rotate the warped image
   warpAffine( warp_dst, warp_rotate_dst, rot_mat, warp_dst.size() );
-  
+
 
   /// Show what you got
   namedWindow( source_window, CV_WINDOW_AUTOSIZE );

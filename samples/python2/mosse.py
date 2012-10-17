@@ -53,13 +53,13 @@ class MOSSE:
         self.pos = x, y = x1+0.5*(w-1), y1+0.5*(h-1)
         self.size = w, h
         img = cv2.getRectSubPix(frame, (w, h), (x, y))
-        
-        self.win = cv2.createHanningWindow((w, h), cv2.CV_32F)   
+
+        self.win = cv2.createHanningWindow((w, h), cv2.CV_32F)
         g = np.zeros((h, w), np.float32)
         g[h//2, w//2] = 1
         g = cv2.GaussianBlur(g, (-1, -1), 2.0)
         g /= g.max()
-        
+
         self.G = cv2.dft(g, flags=cv2.DFT_COMPLEX_OUTPUT)
         self.H1 = np.zeros_like(self.G)
         self.H2 = np.zeros_like(self.G)
@@ -79,7 +79,7 @@ class MOSSE:
         self.good = self.psr > 8.0
         if not self.good:
             return
-        
+
         self.pos = x+dx, y+dy
         self.last_img = img = cv2.getRectSubPix(frame, (w, h), self.pos)
         img = self.preprocess(img)
@@ -147,7 +147,7 @@ class App:
         frame_gray = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
         tracker = MOSSE(frame_gray, rect)
         self.trackers.append(tracker)
-    
+
     def run(self):
         while True:
             if not self.paused:
@@ -157,14 +157,14 @@ class App:
                 frame_gray = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
                 for tracker in self.trackers:
                     tracker.update(frame_gray)
-            
+
             vis = self.frame.copy()
             for tracker in self.trackers:
                 tracker.draw_state(vis)
             if len(self.trackers) > 0:
                 cv2.imshow('tracker state', self.trackers[-1].state_vis)
             self.rect_sel.draw(vis)
-            
+
             cv2.imshow('frame', vis)
             ch = cv2.waitKey(10)
             if ch == 27:
@@ -174,7 +174,7 @@ class App:
             if ch == ord('c'):
                 self.trackers = []
 
-        
+
 if __name__ == '__main__':
     print __doc__
     import sys, getopt

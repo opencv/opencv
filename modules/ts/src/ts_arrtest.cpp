@@ -57,7 +57,7 @@ ArrayTest::ArrayTest()
     min_log_array_size = 0;
     max_log_array_size = default_max_log_array_size;
     element_wise_relative_error = true;
-    
+
     test_array.resize(MAX_ARR);
 }
 
@@ -325,9 +325,9 @@ int ArrayTest::validate_test_results( int test_case_idx )
                 continue;
             }
             string idxstr = vec2str(", ", &idx[0], idx.size());
-            
+
             ts->printf( TS::LOG, "%s in %s array %d at (%s)", msg, arr_names[i0], j, idxstr.c_str() );
-            
+
             for( i0 = 0; i0 < (int)test_array.size(); i0++ )
             {
                 size_t sizei0 = test_array[i0].size();
@@ -352,7 +352,7 @@ int ArrayTest::validate_test_results( int test_case_idx )
 
     return 0;
 }
-    
+
 }
 
 /* End of file. */

@@ -16,7 +16,7 @@ static void help()
 "			./bgfg_segm [--camera]=<use camera, if this key is present>, [--file_name]=<path to movie file> \n\n");
 }
 
-const char* keys = 
+const char* keys =
 {
     "{c  camera   |         | use camera or not}"
     "{fn file_name|tree.avi | movie file        }"
@@ -25,18 +25,18 @@ const char* keys =
 //this is a sample for foreground detection functions
 int main(int argc, const char** argv)
 {
-	help();
+    help();
 
-	CommandLineParser parser(argc, argv, keys);
+    CommandLineParser parser(argc, argv, keys);
     bool useCamera = parser.has("camera");
-	string file = parser.get<string>("file_name");
+    string file = parser.get<string>("file_name");
     VideoCapture cap;
     bool update_bg_model = true;
 
     if( useCamera )
         cap.open(0);
     else
-		cap.open(file.c_str());
+        cap.open(file.c_str());
 
     parser.printMessage();
 
@@ -45,25 +45,25 @@ int main(int argc, const char** argv)
         printf("can not open camera or video file\n");
         return -1;
     }
-    
+
     namedWindow("image", CV_WINDOW_NORMAL);
     namedWindow("foreground mask", CV_WINDOW_NORMAL);
     namedWindow("foreground image", CV_WINDOW_NORMAL);
     namedWindow("mean background image", CV_WINDOW_NORMAL);
 
     BackgroundSubtractorMOG2 bg_model;//(100, 3, 0.3, 5);
-                                     
+
     Mat img, fgmask, fgimg;
 
     for(;;)
     {
         cap >> img;
-        
+
         if( img.empty() )
             break;
-        
+
         //cvtColor(_img, img, COLOR_BGR2GRAY);
-        
+
         if( fgimg.empty() )
           fgimg.create(img.size(), img.type());
 
@@ -88,9 +88,9 @@ int main(int argc, const char** argv)
         {
             update_bg_model = !update_bg_model;
             if(update_bg_model)
-            	printf("Background update is on\n");
+                printf("Background update is on\n");
             else
-            	printf("Background update is off\n");
+                printf("Background update is off\n");
         }
     }
 

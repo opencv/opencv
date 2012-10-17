@@ -16,7 +16,7 @@ PERF_TEST_P(Image_RhoStep_ThetaStep_Threshold, HoughLines,
                 testing::Values( "cv/shared/pic5.png", "stitching/a1.png" ),
                 testing::Values( 1, 10 ),
                 testing::Values( 0.01, 0.1 ),
-                testing::Values( 300, 500 )            
+                testing::Values( 300, 500 )
                 )
           )
 {
@@ -28,9 +28,9 @@ PERF_TEST_P(Image_RhoStep_ThetaStep_Threshold, HoughLines,
     Mat image = imread(filename, IMREAD_GRAYSCALE);
     if (image.empty())
         FAIL() << "Unable to load source image" << filename;
-    
+
     Canny(image, image, 0, 0);
-    
+
     Mat lines;
     declare.time(7);
 

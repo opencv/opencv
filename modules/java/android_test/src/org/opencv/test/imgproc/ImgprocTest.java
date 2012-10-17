@@ -146,9 +146,9 @@ public class ImgprocTest extends OpenCVTestCase {
     }
 
     public void testApproxPolyDP() {
-    	MatOfPoint2f curve = new MatOfPoint2f(new Point(1, 3), new Point(2, 4), new Point(3, 5), new Point(4, 4), new Point(5, 3));
-    	
-    	MatOfPoint2f approxCurve = new MatOfPoint2f();
+        MatOfPoint2f curve = new MatOfPoint2f(new Point(1, 3), new Point(2, 4), new Point(3, 5), new Point(4, 4), new Point(5, 3));
+
+        MatOfPoint2f approxCurve = new MatOfPoint2f();
 
         Imgproc.approxPolyDP(curve, approxCurve, EPS, true);
 
@@ -294,39 +294,39 @@ public class ImgprocTest extends OpenCVTestCase {
 
     public void testCalcHistListOfMatListOfIntegerMatMatListOfIntegerListOfFloat3D() {
         List<Mat> images = Arrays.asList(rgbLena);
-        
+
         Mat hist3D = new Mat();
         List<Mat> histList = Arrays.asList( new Mat[] {new Mat(), new Mat(), new Mat()} );
-        
+
         MatOfInt histSize = new MatOfInt(10);
         MatOfFloat ranges = new MatOfFloat(0f, 256f);
-        
+
         for(int i=0; i<rgbLena.channels(); i++)
         {
             Imgproc.calcHist(images, new MatOfInt(i), new Mat(), histList.get(i), histSize, ranges);
 
             assertEquals(10, histList.get(i).checkVector(1));
         }
-        
+
         Core.merge(histList, hist3D);
 
         assertEquals(CvType.CV_32FC3, hist3D.type());
         assertEquals(10, hist3D.checkVector(3));
-        
+
         Mat truth = new Mat(10, 1, CvType.CV_32FC3);
         truth.put(0, 0,
-        		 0, 24870, 0,
-        		 1863, 31926, 1,
-        		 56682, 37677, 2260,
-        		 77278, 44751, 32436,
-        		 69397, 41343, 18526,
-        		 27180, 40407, 18658,
-        		 21101, 15993, 32042,
-        		 8343, 18585, 47786,
-        		 300, 6567, 80988,
-        		 0, 25, 29447
-        		);
-        
+                 0, 24870, 0,
+                 1863, 31926, 1,
+                 56682, 37677, 2260,
+                 77278, 44751, 32436,
+                 69397, 41343, 18526,
+                 27180, 40407, 18658,
+                 21101, 15993, 32042,
+                 8343, 18585, 47786,
+                 300, 6567, 80988,
+                 0, 25, 29447
+                );
+
         assertMatEqual(truth, hist3D, EPS);
     }
 
@@ -421,61 +421,61 @@ public class ImgprocTest extends OpenCVTestCase {
     }
 
     public void testConvexHullMatMat() {
-    	MatOfPoint points = new MatOfPoint(
-    	        new Point(20, 0), 
-    	        new Point(40, 0),
-    	        new Point(30, 20),
-    	        new Point(0,  20),
-    	        new Point(20, 10),
-    	        new Point(30, 10)
-    	);
-    	
-    	MatOfInt hull = new MatOfInt();
+        MatOfPoint points = new MatOfPoint(
+                new Point(20, 0),
+                new Point(40, 0),
+                new Point(30, 20),
+                new Point(0,  20),
+                new Point(20, 10),
+                new Point(30, 10)
+        );
+
+        MatOfInt hull = new MatOfInt();
 
         Imgproc.convexHull(points, hull);
 
         MatOfInt expHull = new MatOfInt(
-        		1, 2, 3, 0
+                1, 2, 3, 0
         );
         assertMatEqual(expHull, hull, EPS);
     }
 
     public void testConvexHullMatMatBooleanBoolean() {
-    	MatOfPoint points = new MatOfPoint(
-    			new Point(2, 0),
-    			new Point(4, 0),
-    			new Point(3, 2),
-    			new Point(0, 2),
-    			new Point(2, 1),
-    			new Point(3, 1)
-		);
-        
-    	MatOfInt hull = new MatOfInt();
+        MatOfPoint points = new MatOfPoint(
+                new Point(2, 0),
+                new Point(4, 0),
+                new Point(3, 2),
+                new Point(0, 2),
+                new Point(2, 1),
+                new Point(3, 1)
+        );
+
+        MatOfInt hull = new MatOfInt();
 
         Imgproc.convexHull(points, hull, true);
 
         MatOfInt expHull = new MatOfInt(
-        		3, 2, 1, 0
+                3, 2, 1, 0
         );
         assertMatEqual(expHull, hull, EPS);
     }
-    
+
     public void testConvexityDefects() {
-    	MatOfPoint points = new MatOfPoint(
-    	        new Point(20, 0), 
-    	        new Point(40, 0),
-    	        new Point(30, 20),
-    	        new Point(0,  20),
-    	        new Point(20, 10),
-    	        new Point(30, 10)
-    	);
+        MatOfPoint points = new MatOfPoint(
+                new Point(20, 0),
+                new Point(40, 0),
+                new Point(30, 20),
+                new Point(0,  20),
+                new Point(20, 10),
+                new Point(30, 10)
+        );
 
         MatOfInt hull = new MatOfInt();
         Imgproc.convexHull(points, hull);
-        
+
         MatOfInt4 convexityDefects = new MatOfInt4();
         Imgproc.convexityDefects(points, hull, convexityDefects);
-        
+
         assertMatEqual(new MatOfInt4(3, 0, 5, 3620), convexityDefects);
     }
 
@@ -622,7 +622,7 @@ public class ImgprocTest extends OpenCVTestCase {
         TermCriteria criteria = new TermCriteria(TermCriteria.EPS, 0, 0.01);
 
         Imgproc.cornerSubPix(img, corners, winSize, zeroZone, criteria);
-        
+
         assertPointEquals(truthPosition, corners.toList().get(0), weakEPS);
     }
 
@@ -819,7 +819,7 @@ public class ImgprocTest extends OpenCVTestCase {
         int iBuff[] = new int[ (int) (hierarchy.total() * hierarchy.channels()) ]; // [ Contour0 (next sibling num, previous sibling num, 1st child num, parent num), Contour1(...), ...
         hierarchy.get(0, 0, iBuff);
         Log.d("findContours", Arrays.toString(iBuff));
-		*/
+        */
     }
 
     public void testFitEllipse() {
@@ -908,8 +908,8 @@ public class ImgprocTest extends OpenCVTestCase {
     }
 
     public void testGetAffineTransform() {
-    	MatOfPoint2f src = new MatOfPoint2f(new Point(2, 3), new Point(3, 1), new Point(1, 4));
-    	MatOfPoint2f dst = new MatOfPoint2f(new Point(3, 3), new Point(7, 4), new Point(5, 6));
+        MatOfPoint2f src = new MatOfPoint2f(new Point(2, 3), new Point(3, 1), new Point(1, 4));
+        MatOfPoint2f dst = new MatOfPoint2f(new Point(3, 3), new Point(7, 4), new Point(5, 6));
 
         Mat transform = Imgproc.getAffineTransform(src, dst);
 
@@ -1116,7 +1116,7 @@ public class ImgprocTest extends OpenCVTestCase {
         Imgproc.HoughLines(img, lines, 1, 3.1415926/180, 100);
 
         assertEquals(1, lines.cols());
-        
+
         /*
         Log.d("HoughLines", "lines=" + lines);
         int num = (int)lines.total();
@@ -1148,7 +1148,7 @@ public class ImgprocTest extends OpenCVTestCase {
         Imgproc.HoughLinesP(img, lines, 1, 3.1415926/180, 100);
 
         assertEquals(2, lines.cols());
-        
+
         /*
         Log.d("HoughLinesP", "lines=" + lines);
         int num = (int)lines.cols();
@@ -1498,7 +1498,7 @@ public class ImgprocTest extends OpenCVTestCase {
     }
 
     public void testPointPolygonTest() {
-    	MatOfPoint2f contour = new MatOfPoint2f(new Point(0, 0), new Point(1, 3), new Point(3, 4), new Point(4, 3), new Point(2, 1));
+        MatOfPoint2f contour = new MatOfPoint2f(new Point(0, 0), new Point(1, 3), new Point(3, 4), new Point(4, 3), new Point(2, 1));
         double sign1 = Imgproc.pointPolygonTest(contour, new Point(2, 2), false);
         assertEquals(1.0, sign1);
 
@@ -1830,21 +1830,21 @@ public class ImgprocTest extends OpenCVTestCase {
 
     //undistortPoints(List<Point> src, List<Point> dst, Mat cameraMatrix, Mat distCoeffs)
     public void testUndistortPointsListOfPointListOfPointMatMat() {
-    	MatOfPoint2f src = new MatOfPoint2f(new Point(1, 2), new Point(3, 4), new Point(-1, -1));
-    	MatOfPoint2f dst = new MatOfPoint2f();
+        MatOfPoint2f src = new MatOfPoint2f(new Point(1, 2), new Point(3, 4), new Point(-1, -1));
+        MatOfPoint2f dst = new MatOfPoint2f();
         Mat cameraMatrix = Mat.eye(3, 3, CvType.CV_64FC1);
         Mat distCoeffs = new Mat(8, 1, CvType.CV_64FC1, new Scalar(0));
 
         Imgproc.undistortPoints(src, dst, cameraMatrix, distCoeffs);
-        
+
         assertEquals(src.size(), dst.size());
         for(int i=0; i<src.toList().size(); i++) {
-        	//Log.d("UndistortPoints", "s="+src.get(i)+", d="+dst.get(i));
-        	assertTrue(src.toList().get(i).equals(dst.toList().get(i)));
+            //Log.d("UndistortPoints", "s="+src.get(i)+", d="+dst.get(i));
+            assertTrue(src.toList().get(i).equals(dst.toList().get(i)));
         }
     }
-    
-    
+
+
     public void testWarpAffineMatMatMatSize() {
         Mat src = new Mat(3, 3, CvType.CV_32F) {
             {

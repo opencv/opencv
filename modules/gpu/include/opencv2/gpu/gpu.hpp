@@ -785,10 +785,10 @@ public:
 
     //! Processes luminance and color components separatelly
     void labMethod(const GpuMat& src, GpuMat& dst, float h_luminance, float h_color, int search_window = 21, int block_size = 7, Stream& s = Stream::Null());
-    
+
 private:
-    
-    GpuMat buffer, extended_src_buffer;    
+
+    GpuMat buffer, extended_src_buffer;
     GpuMat lab, l, ab;
 };
 

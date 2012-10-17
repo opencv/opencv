@@ -275,7 +275,7 @@ cvFindHomography( const CvMat* objectPoints, const CvMat* imagePoints,
 
     if( result )
         cvConvert( &matH, __H );
-    
+
     if( mask && tempMask )
     {
         if( CV_ARE_SIZES_EQ(mask, tempMask) )
@@ -481,12 +481,12 @@ int CvFMEstimator::run8Point( const CvMat* _m1, const CvMat* _m2, CvMat* _fmatri
 
     scale0 = sqrt(2.)/scale0;
     scale1 = sqrt(2.)/scale1;
-    
+
     cvZero( &A );
 
     // form a linear system Ax=0: for each selected pair of points m1 & m2,
     // the row of A(=a) represents the coefficients of equation: (m2, 1)'*F*(m1, 1) = 0
-    // to save computation time, we compute (At*A) instead of A and then solve (At*A)x=0. 
+    // to save computation time, we compute (At*A) instead of A and then solve (At*A)x=0.
     for( i = 0; i < count; i++ )
     {
         double x0 = (m1[i].x - m0c.x)*scale0;
@@ -561,7 +561,7 @@ void CvFMEstimator::computeReprojError( const CvMat* _m1, const CvMat* _m2,
     const CvPoint2D64f* m2 = (const CvPoint2D64f*)_m2->data.ptr;
     const double* F = model->data.db;
     float* err = _err->data.fl;
-    
+
     for( i = 0; i < count; i++ )
     {
         double a, b, c, d1, d2, s1, s2;
@@ -632,7 +632,7 @@ CV_IMPL int cvFindFundamentalMat( const CvMat* points1, const CvMat* points2,
             param1 = 3;
         if( param2 < DBL_EPSILON || param2 > 1 - DBL_EPSILON )
             param2 = 0.99;
-        
+
         if( (method & ~3) == CV_RANSAC && count >= 15 )
             result = estimator.runRANSAC(m1, m2, &_F3x3, tempMask, param1, param2 );
         else
@@ -648,7 +648,7 @@ CV_IMPL int cvFindFundamentalMat( const CvMat* points1, const CvMat* points2,
 
     if( result )
         cvConvert( fmatrix->rows == 3 ? &_F3x3 : &_F9x3, fmatrix );
-    
+
     if( mask && tempMask )
     {
         if( CV_ARE_SIZES_EQ(mask, tempMask) )
@@ -1072,7 +1072,7 @@ cv::Mat cv::findHomography( InputArray _points1, InputArray _points2,
     int npoints = points1.checkVector(2);
     CV_Assert( npoints >= 0 && points2.checkVector(2) == npoints &&
                points1.type() == points2.type());
-    
+
     Mat H(3, 3, CV_64F);
     CvMat _pt1 = points1, _pt2 = points2;
     CvMat matH = H, c_mask, *p_mask = 0;
@@ -1101,7 +1101,7 @@ cv::Mat cv::findFundamentalMat( InputArray _points1, InputArray _points2,
     int npoints = points1.checkVector(2);
     CV_Assert( npoints >= 0 && points2.checkVector(2) == npoints &&
               points1.type() == points2.type());
-    
+
     Mat F(method == CV_FM_7POINT ? 9 : 3, 3, CV_64F);
     CvMat _pt1 = points1, _pt2 = points2;
     CvMat matF = F, c_mask, *p_mask = 0;
@@ -1133,7 +1133,7 @@ void cv::computeCorrespondEpilines( InputArray _points, int whichImage,
     if( npoints < 0 )
         npoints = points.checkVector(3);
     CV_Assert( npoints >= 0 && (points.depth() == CV_32F || points.depth() == CV_32S));
-    
+
     _lines.create(npoints, 1, CV_32FC3, -1, true);
     CvMat c_points = points, c_lines = _lines.getMat(), c_F = F;
     cvComputeCorrespondEpilines(&c_points, whichImage, &c_F, &c_lines);
@@ -1150,7 +1150,7 @@ void cv::convertPointsFromHomogeneous( InputArray _src, OutputArray _dst )
             cn = 4;
     }
     CV_Assert( npoints >= 0 && (src.depth() == CV_32F || src.depth() == CV_32S));
-    
+
     _dst.create(npoints, 1, CV_MAKETYPE(CV_32F, cn-1));
     CvMat c_src = src, c_dst = _dst.getMat();
     cvConvertPointsHomogeneous(&c_src, &c_dst);
@@ -1167,7 +1167,7 @@ void cv::convertPointsToHomogeneous( InputArray _src, OutputArray _dst )
             cn = 3;
     }
     CV_Assert( npoints >= 0 && (src.depth() == CV_32F || src.depth() == CV_32S));
-    
+
     _dst.create(npoints, 1, CV_MAKETYPE(CV_32F, cn+1));
     CvMat c_src = src, c_dst = _dst.getMat();
     cvConvertPointsHomogeneous(&c_src, &c_dst);
@@ -1177,7 +1177,7 @@ void cv::convertPointsHomogeneous( InputArray _src, OutputArray _dst )
 {
     int stype = _src.type(), dtype = _dst.type();
     CV_Assert( _dst.fixedType() );
-    
+
     if( CV_MAT_CN(stype) > CV_MAT_CN(dtype) )
         convertPointsFromHomogeneous(_src, _dst);
     else

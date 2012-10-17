@@ -11,7 +11,7 @@ CV_EXPORTS_W void add(InputArray src1, Scalar src2, OutputArray dst, InputArray 
 CV_EXPORTS_W void subtract(InputArray src1, Scalar src2, OutputArray dst, InputArray mask=noArray(), int dtype=-1);
 
 CV_EXPORTS_W void multiply(InputArray src1, Scalar src2, OutputArray dst, double scale=1, int dtype=-1);
-    
+
 CV_EXPORTS_W void divide(InputArray src1, Scalar src2, OutputArray dst, double scale=1, int dtype=-1);
 
 CV_EXPORTS_W void absdiff(InputArray src1, Scalar src2, OutputArray dst);

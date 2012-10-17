@@ -226,7 +226,7 @@ bool icvEarCutTriangulation( CvPoint* contour,
                         if( t2 > ZERO_CLOSE && t2 < ONE_CLOSE ) {
                             isInternal = 0;
                         }
-    
+
                     } // if( t1 > ZERO_CLOSE && t1 < ONE_CLOSE )
 
                 } // if( det != 0.0f )
@@ -541,7 +541,7 @@ void cvDecompPoly( CvContour* cont,
     CvSeqReader reader;
     CvPoint2D32f pnt;
     CvQuadEdge2D* quadEdge;
-    
+
     numVtx = cont -> total;
     if( numVtx < 3 ) {
         return;

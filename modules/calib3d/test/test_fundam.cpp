@@ -364,7 +364,7 @@ static void test_convertHomogeneous( const Mat& _src, Mat& _dst )
 
     if( src.depth() != CV_64F )
         _src.convertTo(src, CV_64F);
-    
+
     if( dst.depth() != CV_64F )
         dst.create(dst.size(), CV_MAKETYPE(CV_64F, _dst.channels()));
 
@@ -467,11 +467,11 @@ void
 test_projectPoints( const Mat& _3d, const Mat& Rt, const Mat& A, Mat& _2d, RNG* rng, double sigma )
 {
     CV_Assert( _3d.isContinuous() );
-    
+
     double p[12];
     Mat P( 3, 4, CV_64F, p );
     gemm(A, Rt, 1, Mat(), 0, P);
-    
+
     int i, count = _3d.cols;
 
     Mat noise;
@@ -659,7 +659,7 @@ int CV_RodriguesTest::prepare_test_case( int test_case_idx )
 void CV_RodriguesTest::run_func()
 {
     CvMat v2m_jac, m2v_jac;
-    
+
     if( calc_jacobians )
     {
         v2m_jac = test_mat[OUTPUT][1];
@@ -746,10 +746,10 @@ void CV_RodriguesTest::prepare_to_validation( int /*test_case_idx*/ )
         }
         else
         {
-            setIdentity(test_mat[OUTPUT][4], Scalar::all(1.)); 
+            setIdentity(test_mat[OUTPUT][4], Scalar::all(1.));
             cvtest::copy( test_mat[REF_OUTPUT][2], test_mat[OUTPUT][2] );
         }
-        setIdentity(test_mat[REF_OUTPUT][4], Scalar::all(1.)); 
+        setIdentity(test_mat[REF_OUTPUT][4], Scalar::all(1.));
     }
 }
 
@@ -881,7 +881,7 @@ void CV_FundamentalMatTest::get_test_array_types_and_sizes( int /*test_case_idx*
     types[OUTPUT][0] = types[REF_OUTPUT][0] = CV_64FC1;
     sizes[OUTPUT][1] = sizes[REF_OUTPUT][1] = cvSize(pt_count,1);
     types[OUTPUT][1] = types[REF_OUTPUT][1] = CV_8UC1;
-    
+
     test_cpp = (cvtest::randInt(rng) & 256) == 0;
 }
 
@@ -985,7 +985,7 @@ void CV_FundamentalMatTest::run_func()
         cv::findFundamentalMat(const Mat& points1, const Mat& points2,
         vector<uchar>& mask, int method=FM_RANSAC,
         double param1=3., double param2=0.99 );
-        
+
         CV_EXPORTS Mat findFundamentalMat( const Mat& points1, const Mat& points2,
                                           int method=FM_RANSAC,
                                           double param1=3., double param2=0.99 );

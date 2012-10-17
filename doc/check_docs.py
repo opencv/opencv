@@ -27,10 +27,10 @@ opencv_module_list = [
 ]
 
 class RSTParser(object):
-    
+
     def __init__(self):
         self.read_whitelist()
-    
+
     # reads the file containing functions and classes that do not need to be documented
     def read_whitelist(self):
         self.whitelist = {}
@@ -39,7 +39,7 @@ class RSTParser(object):
         except IOError:
             return
         self.parser = hp.CppHeaderParser()
-        
+
         for l in wf.readlines():
             cpos = l.find("#")
             if cpos >= 0:
@@ -71,13 +71,13 @@ class RSTParser(object):
                 wl.append(rst_decl)
                 self.whitelist[fname] = wl
         wf.close()
-            
+
     def process_rst(self, docname):
         df = open(docname, "rt")
         fdecl = ""
         balance = 0
         lineno = 0
-        
+
         for l in df.readlines():
             lineno += 1
             ll = l.strip()
@@ -100,7 +100,7 @@ class RSTParser(object):
             if not hdr_decls:
                 fname = fname.replace("cv.", "")
                 hdr_decls = self.fmap.get(fname, [])
-            if not hdr_decls:    
+            if not hdr_decls:
                 print "Documented function %s (%s) in %s:%d is not in the headers" % (fdecl, rst_decl[0].replace(".", "::"), docname, lineno)
                 continue
             decl_idx = 0
@@ -133,20 +133,20 @@ class RSTParser(object):
         for hname in opencv_hdr_list:
             if hname.startswith("../modules/" + name):
                 decls += self.parser.parse(hname, wmode=False)
-                
+
         for d in decls:
             fname = d[0]
-            if not fname.startswith("struct") and not fname.startswith("class") and not fname.startswith("const"):                
+            if not fname.startswith("struct") and not fname.startswith("class") and not fname.startswith("const"):
                 dlist = self.fmap.get(fname, [])
                 dlist.append(d)
                 self.fmap[fname] = dlist
-    
+
         self.missing_docfunc_list = []
-    
+
         doclist = glob.glob("../modules/" + name + "/doc/*.rst")
         for d in doclist:
             self.process_rst(d)
-            
+
         print "\n\n########## The list of undocumented functions: ###########\n\n"
         misscount = 0
         fkeys = sorted(self.fmap.keys())
@@ -166,7 +166,7 @@ class RSTParser(object):
             if wlist_decls == "*":
                 continue
             wlist_decls = [self.decl2str(d) for d in wlist_decls]
-                
+
             for d in decls:
                 dstr = self.decl2str(d)
                 # special hack for ML: skip old variants of the methods
@@ -183,4 +183,4 @@ for m in opencv_module_list:
     print "\n\n*************************** " + m + " *************************\n"
     p.check_module_docs(m)
 
-    
+

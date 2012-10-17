@@ -47,12 +47,12 @@
 static CvBGStatModel* cvCreateBGStatModel( IplImage* first_frame, int model_type, void* params )
 {
     CvBGStatModel* bg_model = NULL;
-    
+
     if( model_type == CV_BG_MODEL_FGD || model_type == CV_BG_MODEL_FGD_SIMPLE )
         bg_model = cvCreateFGDStatModel( first_frame, (CvFGDStatModelParams*)params );
     else if( model_type == CV_BG_MODEL_MOG )
         bg_model = cvCreateGaussianBGModel( first_frame, (CvGaussBGStatModelParams*)params );
-    
+
     return bg_model;
 }
 

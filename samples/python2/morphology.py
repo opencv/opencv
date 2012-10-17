@@ -47,7 +47,7 @@ if __name__ == '__main__':
         oper_name = 'MORPH_' + op.upper()
         st = cv2.getStructuringElement(getattr(cv2, str_name), (sz, sz))
         res = cv2.morphologyEx(img, getattr(cv2, oper_name), st, iterations=iters)
-        
+
         draw_str(res, (10, 20), 'mode: ' + cur_mode)
         draw_str(res, (10, 40), 'operation: ' + oper_name)
         draw_str(res, (10, 60), 'structure: ' + str_name)
@@ -67,4 +67,4 @@ if __name__ == '__main__':
         if ch == ord('2'):
             cur_str_mode = str_modes.next()
         update()
-    cv2.destroyAllWindows() 			
+    cv2.destroyAllWindows()

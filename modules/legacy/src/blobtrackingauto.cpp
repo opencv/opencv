@@ -223,10 +223,10 @@ void CvBlobTrackerAuto1::Process(IplImage* pImg, IplImage* pMask)
 #ifndef WINCE
             time_t ltime;
             time( &ltime );
-			char* stime = ctime( &ltime );
+            char* stime = ctime( &ltime );
 #else
-			/* WINCE does not have above POSIX functions (time,ctime) */
-			const char* stime = " wince ";
+            /* WINCE does not have above POSIX functions (time,ctime) */
+            const char* stime = " wince ";
 #endif
             FILE* out = fopen(m_TimesFile,"at");
             double Time;

@@ -9,7 +9,7 @@ using namespace std;
 
 void help(char* progName)
 {
-    cout << endl 
+    cout << endl
         <<  "This program demonstrated the use of the discrete Fourier transform (DFT). " << endl
         <<  "The dft of an image is taken and it's power spectrum is displayed."          << endl
         <<  "Usage:"                                                                      << endl
@@ -18,14 +18,14 @@ void help(char* progName)
 
 int main(int argc, char ** argv)
 {
-	help(argv[0]);
+    help(argv[0]);
 
     const char* filename = argc >=2 ? argv[1] : "lena.jpg";
 
     Mat I = imread(filename, CV_LOAD_IMAGE_GRAYSCALE);
     if( I.empty())
         return -1;
-    
+
     Mat padded;                            //expand input image to optimal size
     int m = getOptimalDFTSize( I.rows );
     int n = getOptimalDFTSize( I.cols ); // on the border add zero values
@@ -40,20 +40,20 @@ int main(int argc, char ** argv)
     // compute the magnitude and switch to logarithmic scale
     // => log(1 + sqrt(Re(DFT(I))^2 + Im(DFT(I))^2))
     split(complexI, planes);                   // planes[0] = Re(DFT(I), planes[1] = Im(DFT(I))
-    magnitude(planes[0], planes[1], planes[0]);// planes[0] = magnitude  
+    magnitude(planes[0], planes[1], planes[0]);// planes[0] = magnitude
     Mat magI = planes[0];
-    
+
     magI += Scalar::all(1);                    // switch to logarithmic scale
     log(magI, magI);
 
     // crop the spectrum, if it has an odd number of rows or columns
     magI = magI(Rect(0, 0, magI.cols & -2, magI.rows & -2));
 
-    // rearrange the quadrants of Fourier image  so that the origin is at the image center        
+    // rearrange the quadrants of Fourier image  so that the origin is at the image center
     int cx = magI.cols/2;
     int cy = magI.rows/2;
 
-    Mat q0(magI, Rect(0, 0, cx, cy));   // Top-Left - Create a ROI per quadrant 
+    Mat q0(magI, Rect(0, 0, cx, cy));   // Top-Left - Create a ROI per quadrant
     Mat q1(magI, Rect(cx, 0, cx, cy));  // Top-Right
     Mat q2(magI, Rect(0, cy, cx, cy));  // Bottom-Left
     Mat q3(magI, Rect(cx, cy, cx, cy)); // Bottom-Right
@@ -67,11 +67,11 @@ int main(int argc, char ** argv)
     q2.copyTo(q1);
     tmp.copyTo(q2);
 
-    normalize(magI, magI, 0, 1, CV_MINMAX); // Transform the matrix with float values into a 
+    normalize(magI, magI, 0, 1, CV_MINMAX); // Transform the matrix with float values into a
                                             // viewable image form (float between values 0 and 1).
 
     imshow("Input Image"       , I   );    // Show the result
-    imshow("spectrum magnitude", magI);    
+    imshow("spectrum magnitude", magI);
     waitKey();
 
     return 0;

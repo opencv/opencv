@@ -7221,7 +7221,7 @@ void StackLowerThanAddress(const void* ptr, bool* result) {
   *result = (&dummy < ptr);
 }
 
-#if GTEST_HAS_CLONE    
+#if GTEST_HAS_CLONE
 static bool StackGrowsDown() {
   int dummy;
   bool result;

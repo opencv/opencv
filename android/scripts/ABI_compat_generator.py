@@ -20,32 +20,32 @@ EXCLUDE_HEADERS = set(["hdf5.h", "eigen.hpp", "cxeigen.hpp"]);
 def FindClasses(root, prefix):
     classes = []
     if ("" != prefix):
-	prefix = prefix + "."
+    prefix = prefix + "."
     for path in os.listdir(root):
-	currentPath = os.path.join(root, path)
-	if (os.path.isdir(currentPath)):
-	    classes += FindClasses(currentPath, prefix + path)
-	else:
-	    name = str.split(path, ".")[0]
-	    ext = str.split(path, ".")[1]
-	    if (ext == "class"):
-		#print("class: %s" % (prefix + name))
-		classes.append(prefix+name)
+    currentPath = os.path.join(root, path)
+    if (os.path.isdir(currentPath)):
+        classes += FindClasses(currentPath, prefix + path)
+    else:
+        name = str.split(path, ".")[0]
+        ext = str.split(path, ".")[1]
+        if (ext == "class"):
+        #print("class: %s" % (prefix + name))
+        classes.append(prefix+name)
     return classes
 
 def FindHeaders(root):
     headers = []
     for path in os.listdir(root):
-	currentPath = os.path.join(root, path)
-	if (os.path.isdir(currentPath)):
-	    headers += FindHeaders(currentPath)
-	else:
-	    ext = str.split(path, ".")[-1]
-	    #print("%s: \"%s\"" % (currentPath, ext))
-	    if (ext in HEADER_EXTS):
-		#print("Added as header file")
-		if (path not in EXCLUDE_HEADERS):
-		    headers.append(currentPath)
+    currentPath = os.path.join(root, path)
+    if (os.path.isdir(currentPath)):
+        headers += FindHeaders(currentPath)
+    else:
+        ext = str.split(path, ".")[-1]
+        #print("%s: \"%s\"" % (currentPath, ext))
+        if (ext in HEADER_EXTS):
+        #print("Added as header file")
+        if (path not in EXCLUDE_HEADERS):
+            headers.append(currentPath)
     return headers
 
 if (len(sys.argv) < 3):
@@ -68,7 +68,7 @@ if (not ANDROID_NDK_PATH):
     pipe = os.popen("which ndk-build")
     tmp = str.strip(pipe.readline(), "\n")
     while(not tmp):
-	tmp = str.strip(pipe.readline(), "\n")
+    tmp = str.strip(pipe.readline(), "\n")
     pipe.close()
     ANDROID_NDK_PATH = os.path.split(tmp)[0]
     print("Using Android NDK from PATH (\"%s\")" % ANDROID_NDK_PATH)

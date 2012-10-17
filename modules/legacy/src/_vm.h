@@ -176,7 +176,7 @@ CvStatus  icvGetCrossEpilineFrame(    CvSize     imgSize,
                                         int*        y2
                                     );
 
-CvStatus  icvBuildScanlineLeftStereo( 
+CvStatus  icvBuildScanlineLeftStereo(
                                         CvSize         imgSize,
                                         CvMatrix3*     matrix,
                                         float*          l_epipole,
@@ -261,16 +261,16 @@ CvStatus  icvFindFundamentalMatrix(
                                     CvMatrix3*      matrix);
 */
 void   icvChoose7(	int*    ml,     int* mr,
-					    int     num,	int* ml7,
-					    int*   mr7 );
+                        int     num,	int* ml7,
+                        int*   mr7 );
 
 double icvMedian(	int* ml, int* mr,
-				    int num, double* F );
+                    int num, double* F );
 
 int icvBoltingPoints( int* ml,	    int* mr,
-					    int num,        double* F,
-					    double Mj,      int* *new_ml,
-					    int* *new_mr,   int* new_num);
+                        int num,        double* F,
+                        double Mj,      int* *new_ml,
+                        int* *new_mr,   int* new_num);
 
 CvStatus  icvPoints8( int* ml, int* mr,
                         int num, double* F );
@@ -280,17 +280,17 @@ CvStatus  icvRank2Constraint( double* F );
 CvStatus  icvSort( double* array, int length );
 
 double icvAnalyticPoints8(	double* A,
-											int num, double* F );
+                                            int num, double* F );
 
 int icvSingularValueDecomposition(	int		M,
-										int		N,
-										double*	A,
-										double*	W,
-										int		get_U,
-										double*	U,
-										int		get_V,
-										double*	V
-												 );
+                                        int		N,
+                                        double*	A,
+                                        double*	W,
+                                        int		get_U,
+                                        double*	U,
+                                        int		get_V,
+                                        double*	V
+                                                 );
 
 
 /*======================================================================================*/

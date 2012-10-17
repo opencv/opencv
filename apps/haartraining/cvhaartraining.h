@@ -101,7 +101,7 @@ void cvCreateTestSamples( const char* infoname,
  * showsamples - if not 0 samples will be shown
  * winwidth    - sample width
  * winheight   - sample height
- * 
+ *
  * Return number of successfully created samples
  */
 int cvCreateTrainingSamplesFromInfo( const char* infoname, const char* vecfilename,
@@ -164,7 +164,7 @@ void cvShowVecSamples( const char* filename, int winwidth, int winheight, double
  */
 void cvCreateCascadeClassifier( const char* dirname,
                                 const char* vecfilename,
-                                const char* bgfilename, 
+                                const char* bgfilename,
                                 int npos, int nneg, int nstages,
                                 int numprecalculated,
                                 int numsplits,
@@ -177,7 +177,7 @@ void cvCreateCascadeClassifier( const char* dirname,
 
 void cvCreateTreeCascadeClassifier( const char* dirname,
                                     const char* vecfilename,
-                                    const char* bgfilename, 
+                                    const char* bgfilename,
                                     int npos, int nneg, int nstages,
                                     int numprecalculated,
                                     int numsplits,

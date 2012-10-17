@@ -30,7 +30,7 @@ if __name__ == '__main__':
 
         # initialisations
         points = []
-        
+
         for i in range (count):
             # generate a random point
             points.append ( (

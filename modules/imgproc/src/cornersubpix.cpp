@@ -46,7 +46,7 @@ cvFindCornerSubPix( const void* srcarr, CvPoint2D32f* corners,
                     CvTermCriteria criteria )
 {
     cv::AutoBuffer<float> buffer;
-    
+
     const int MAX_ITERS = 100;
     const float drv[] = { -1.f, 0.f, 1.f };
     float *maskX;
@@ -257,7 +257,7 @@ void cv::cornerSubPix( InputArray _image, InputOutputArray _corners,
     CV_Assert( ncorners >= 0 && corners.depth() == CV_32F );
     Mat image = _image.getMat();
     CvMat c_image = image;
-    
+
     cvFindCornerSubPix( &c_image, (CvPoint2D32f*)corners.data, ncorners,
                         winSize, zeroZone, criteria );
 }

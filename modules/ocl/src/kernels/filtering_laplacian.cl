@@ -51,8 +51,8 @@
 //BORDER_REPLICATE:     aaaaaa|abcdefgh|hhhhhhh
 #define ADDR_L(i, l_edge, r_edge)  ((i) <  (l_edge) ? (l_edge)   : (i))
 #define ADDR_R(i, r_edge, addr)    ((i) >= (r_edge) ? (r_edge)-1 : (addr))
-#define ADDR_H(i, t_edge, b_edge)  ((i) <  (t_edge) ? (t_edge)   :(i)) 
-#define ADDR_B(i, b_edge, addr)    ((i) >= (b_edge) ? (b_edge)-1 :(addr)) 
+#define ADDR_H(i, t_edge, b_edge)  ((i) <  (t_edge) ? (t_edge)   :(i))
+#define ADDR_B(i, b_edge, addr)    ((i) >= (b_edge) ? (b_edge)-1 :(addr))
 #endif
 
 #ifdef BORDER_REFLECT
@@ -90,10 +90,10 @@
 #define ROWS_PER_GROUP_BITS     2
 #define ROWS_FETCH              (ROWS_PER_GROUP + ANY + ANY)   //(ROWS_PER_GROUP + anY * 2)
 
-#define THREADS_PER_ROW         64 
-#define THREADS_PER_ROW_BIT     6 
+#define THREADS_PER_ROW         64
+#define THREADS_PER_ROW_BIT     6
 
-#define ELEMENTS_PER_THREAD     4 
+#define ELEMENTS_PER_THREAD     4
 #define ELEMENTS_PER_THREAD_BIT 2
 
 #define LOCAL_MEM_STEP          260 //divup((get_local_size(0) + anX * 2), 4) * 4
@@ -101,10 +101,10 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////8uC1////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-__kernel void filter2D_C1_D0(__global uchar *src, int src_step, int src_offset_x, int src_offset_y, 
-                             __global uchar *dst, int dst_step, int dst_offset_x, int dst_offset_y, 
+__kernel void filter2D_C1_D0(__global uchar *src, int src_step, int src_offset_x, int src_offset_y,
+                             __global uchar *dst, int dst_step, int dst_offset_x, int dst_offset_y,
                              __constant int *mat_kernel __attribute__((max_constant_size (16384))),
-                             int cols,int rows, int operate_cols, int wholecols, int wholerows) 
+                             int cols,int rows, int operate_cols, int wholecols, int wholerows)
 {
     int gX = get_global_id(0);
     int gY = get_global_id(1);
@@ -114,16 +114,16 @@ __kernel void filter2D_C1_D0(__global uchar *src, int src_step, int src_offset_x
     int groupX_size = get_local_size(0);
     int groupX_id   = get_group_id(0);
 
-    #define dst_align (dst_offset_x & 3)     
-    int cols_start_index_group = src_offset_x - dst_align + groupX_size * groupX_id - ANX; 
-    int rows_start_index       = src_offset_y + (gY << ROWS_PER_GROUP_BITS) - ANY; 
-        
+    #define dst_align (dst_offset_x & 3)
+    int cols_start_index_group = src_offset_x - dst_align + groupX_size * groupX_id - ANX;
+    int rows_start_index       = src_offset_y + (gY << ROWS_PER_GROUP_BITS) - ANY;
+
     __local uchar local_data[LOCAL_MEM_STEP * ROWS_FETCH];
     if((gY << 2) < rows)
     {
         for(int i = 0; i < ROWS_FETCH; ++i)
         {
-            if((rows_start_index - src_offset_y) + i < rows + ANY)  
+            if((rows_start_index - src_offset_y) + i < rows + ANY)
             {
                 #ifdef BORDER_CONSTANT
                 int selected_row  = rows_start_index + i;
@@ -132,7 +132,7 @@ __kernel void filter2D_C1_D0(__global uchar *src, int src_step, int src_offset_x
                 uchar data = *(src + selected_row * src_step + selected_cols);
                 int con = selected_row >=0 && selected_row < wholerows && selected_cols >=0 && selected_cols < wholecols;
                 data = con ? data : 0;
-                local_data[i * LOCAL_MEM_STEP + lX ] =data; 
+                local_data[i * LOCAL_MEM_STEP + lX ] =data;
 
                 if(lX < (ANX << 1))
                 {
@@ -141,7 +141,7 @@ __kernel void filter2D_C1_D0(__global uchar *src, int src_step, int src_offset_x
                     data = *(src + selected_row * src_step + selected_cols);
                     con = selected_row >=0 && selected_row < wholerows && selected_cols >=0 && selected_cols < wholecols;
                     data = con ? data : 0;
-                    local_data[i * LOCAL_MEM_STEP + lX + groupX_size] =data; 
+                    local_data[i * LOCAL_MEM_STEP + lX + groupX_size] =data;
                 }
                 #else
                 int selected_row = ADDR_H(rows_start_index + i,  0, wholerows);
@@ -152,7 +152,7 @@ __kernel void filter2D_C1_D0(__global uchar *src, int src_step, int src_offset_x
 
                 uchar data = *(src + selected_row * src_step + selected_cols);
 
-                local_data[i * LOCAL_MEM_STEP + lX ] =data; 
+                local_data[i * LOCAL_MEM_STEP + lX ] =data;
 
                 if(lX < (ANX << 1))
                 {
@@ -160,7 +160,7 @@ __kernel void filter2D_C1_D0(__global uchar *src, int src_step, int src_offset_x
                     selected_cols = ADDR_R(selected_cols, wholecols, selected_cols);
 
                     data = *(src + selected_row * src_step + selected_cols);
-                    local_data[i * LOCAL_MEM_STEP + lX + groupX_size] =data; 
+                    local_data[i * LOCAL_MEM_STEP + lX + groupX_size] =data;
                 }
                 #endif
             }
@@ -171,9 +171,9 @@ __kernel void filter2D_C1_D0(__global uchar *src, int src_step, int src_offset_x
     int process_col = groupX_size * groupX_id + ((lX % THREADS_PER_ROW) << 2);
     if(((gY << 2) < rows) && (process_col < operate_cols))
     {
-        int dst_cols_start = dst_offset_x; 
+        int dst_cols_start = dst_offset_x;
         int dst_cols_end   = dst_offset_x + cols;
-        int dst_cols_index = (dst_offset_x + process_col) & 0xfffffffc;  
+        int dst_cols_index = (dst_offset_x + process_col) & 0xfffffffc;
 
         int dst_rows_end   = dst_offset_y + rows;
         int dst_rows_index = dst_offset_y + (gY << ROWS_PER_GROUP_BITS) + (lX >> THREADS_PER_ROW_BIT);
@@ -191,9 +191,9 @@ __kernel void filter2D_C1_D0(__global uchar *src, int src_step, int src_offset_x
                 if(dst_rows_index < dst_rows_end)
                 {
                      int local_row = (lX >> THREADS_PER_ROW_BIT) + i;
-                     int local_cols = ((lX % THREADS_PER_ROW) << ELEMENTS_PER_THREAD_BIT) + j; 
+                     int local_cols = ((lX % THREADS_PER_ROW) << ELEMENTS_PER_THREAD_BIT) + j;
 
-                     data = vload4(0, local_data+local_row * LOCAL_MEM_STEP + local_cols); 
+                     data = vload4(0, local_data+local_row * LOCAL_MEM_STEP + local_cols);
                      sum = sum + (mat_kernel[i * ANCHOR + j] * convert_int4_sat(data));
                  }
             }
@@ -205,17 +205,17 @@ __kernel void filter2D_C1_D0(__global uchar *src, int src_step, int src_offset_x
             sum.y = ((dst_cols_index + 1 >= dst_cols_start) && (dst_cols_index + 1 < dst_cols_end)) ? sum.y : dst_data.y;
             sum.z = ((dst_cols_index + 2 >= dst_cols_start) && (dst_cols_index + 2 < dst_cols_end)) ? sum.z : dst_data.z;
             sum.w = ((dst_cols_index + 3 >= dst_cols_start) && (dst_cols_index + 3 < dst_cols_end)) ? sum.w : dst_data.w;
-            *((__global uchar4 *)(dst + dst_rows_index * dst_step + dst_cols_index)) = convert_uchar4_sat(sum); 
+            *((__global uchar4 *)(dst + dst_rows_index * dst_step + dst_cols_index)) = convert_uchar4_sat(sum);
         }
    }
 }
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////32FC1////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-__kernel void filter2D_C1_D5(__global float *src, int src_step, int src_offset_x, int src_offset_y, 
-                             __global float *dst, int dst_step, int dst_offset_x, int dst_offset_y, 
+__kernel void filter2D_C1_D5(__global float *src, int src_step, int src_offset_x, int src_offset_y,
+                             __global float *dst, int dst_step, int dst_offset_x, int dst_offset_y,
                              __constant int *mat_kernel __attribute__((max_constant_size (16384))),
-                             int cols,int rows, int operate_cols, int wholecols, int wholerows) 
+                             int cols,int rows, int operate_cols, int wholecols, int wholerows)
 {
     int gX = get_global_id(0);
     int gY = get_global_id(1);
@@ -225,16 +225,16 @@ __kernel void filter2D_C1_D5(__global float *src, int src_step, int src_offset_x
     int groupX_size = get_local_size(0);
     int groupX_id   = get_group_id(0);
 
-    #define dst_align (dst_offset_x & 3)     
-    int cols_start_index_group = src_offset_x - dst_align + groupX_size * groupX_id - ANX; 
-    int rows_start_index       = src_offset_y + (gY << ROWS_PER_GROUP_BITS) - ANY; 
-        
+    #define dst_align (dst_offset_x & 3)
+    int cols_start_index_group = src_offset_x - dst_align + groupX_size * groupX_id - ANX;
+    int rows_start_index       = src_offset_y + (gY << ROWS_PER_GROUP_BITS) - ANY;
+
     __local float local_data[LOCAL_MEM_STEP * ROWS_FETCH];
     if(((gY << 2) < rows))
     {
         for(int i = 0; i < ROWS_FETCH; ++i)
         {
-            if((rows_start_index - src_offset_y) + i < rows + ANY)  
+            if((rows_start_index - src_offset_y) + i < rows + ANY)
             {
                 #ifdef BORDER_CONSTANT
                 int selected_row  = rows_start_index + i;
@@ -243,7 +243,7 @@ __kernel void filter2D_C1_D5(__global float *src, int src_step, int src_offset_x
                 float data = *((__global float *)((__global char *)src + selected_row * src_step + (selected_cols << 2)));
                 int con = selected_row >=0 && selected_row < wholerows && selected_cols >=0 && selected_cols < wholecols;
                 data = con ? data : 0;
-                local_data[i * LOCAL_MEM_STEP + lX ] =data; 
+                local_data[i * LOCAL_MEM_STEP + lX ] =data;
 
                 if(lX < (ANX << 1))
                 {
@@ -252,7 +252,7 @@ __kernel void filter2D_C1_D5(__global float *src, int src_step, int src_offset_x
                     data = *((__global float *)((__global char *)src + selected_row * src_step + (selected_cols << 2)));
                     con = selected_row >=0 && selected_row < wholerows && selected_cols >=0 && selected_cols < wholecols;
                     data = con ? data : 0;
-                    local_data[i * LOCAL_MEM_STEP + lX + groupX_size] =data; 
+                    local_data[i * LOCAL_MEM_STEP + lX + groupX_size] =data;
                 }
                 #else
                 int selected_row = ADDR_H(rows_start_index + i,  0, wholerows);
@@ -262,7 +262,7 @@ __kernel void filter2D_C1_D5(__global float *src, int src_step, int src_offset_x
                 selected_cols     = ADDR_R(cols_start_index_group + lX, wholecols, selected_cols);
 
                 float data = *((__global float *)((__global char *)src + selected_row * src_step + (selected_cols << 2)));
-                local_data[i * LOCAL_MEM_STEP + lX] =data; 
+                local_data[i * LOCAL_MEM_STEP + lX] =data;
 
                 if(lX < (ANX << 1))
                 {
@@ -270,7 +270,7 @@ __kernel void filter2D_C1_D5(__global float *src, int src_step, int src_offset_x
                     selected_cols = ADDR_R(selected_cols, wholecols, selected_cols);
 
                     data = *((__global float *)((__global char *)src + selected_row * src_step + (selected_cols << 2)));
-                    local_data[i * LOCAL_MEM_STEP + lX + groupX_size] =data; 
+                    local_data[i * LOCAL_MEM_STEP + lX + groupX_size] =data;
                 }
                 #endif
             }
@@ -281,9 +281,9 @@ __kernel void filter2D_C1_D5(__global float *src, int src_step, int src_offset_x
     int process_col = groupX_size * groupX_id + ((lX % THREADS_PER_ROW) << 2);
     if(((gY << 2) < rows) && (process_col < operate_cols))
     {
-        int dst_cols_start = dst_offset_x; 
+        int dst_cols_start = dst_offset_x;
         int dst_cols_end   = dst_offset_x + cols;
-        int dst_cols_index = (dst_offset_x + process_col) & 0xfffffffc;  
+        int dst_cols_index = (dst_offset_x + process_col) & 0xfffffffc;
 
         int dst_rows_end   = dst_offset_y + rows;
         int dst_rows_index = dst_offset_y + (gY << ROWS_PER_GROUP_BITS) + (lX >> THREADS_PER_ROW_BIT);
@@ -301,9 +301,9 @@ __kernel void filter2D_C1_D5(__global float *src, int src_step, int src_offset_x
                 if(dst_rows_index < dst_rows_end)
                 {
                      int local_row = (lX >> THREADS_PER_ROW_BIT) + i;
-                     int local_cols = ((lX % THREADS_PER_ROW) << ELEMENTS_PER_THREAD_BIT) + j; 
+                     int local_cols = ((lX % THREADS_PER_ROW) << ELEMENTS_PER_THREAD_BIT) + j;
 
-                     data = vload4(0, local_data+local_row * LOCAL_MEM_STEP + local_cols); 
+                     data = vload4(0, local_data+local_row * LOCAL_MEM_STEP + local_cols);
                      sum = sum + (mat_kernel[i * ANCHOR + j] * data);
                  }
             }
@@ -316,7 +316,7 @@ __kernel void filter2D_C1_D5(__global float *src, int src_step, int src_offset_x
             sum.z = ((dst_cols_index + 2 >= dst_cols_start) && (dst_cols_index + 2 < dst_cols_end)) ? sum.z : dst_data.z;
             sum.w = ((dst_cols_index + 3 >= dst_cols_start) && (dst_cols_index + 3 < dst_cols_end)) ? sum.w : dst_data.w;
 
-            *((__global float4 *)((__global char *)dst + dst_rows_index * dst_step + (dst_cols_index << 2))) = sum; 
+            *((__global float4 *)((__global char *)dst + dst_rows_index * dst_step + (dst_cols_index << 2))) = sum;
         }
    }
 }
@@ -324,10 +324,10 @@ __kernel void filter2D_C1_D5(__global float *src, int src_step, int src_offset_x
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////8uC4////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-__kernel void filter2D_C4_D0(__global uchar4 *src, int src_step, int src_offset_x, int src_offset_y, 
-                             __global uchar4 *dst, int dst_step, int dst_offset_x, int dst_offset_y, 
+__kernel void filter2D_C4_D0(__global uchar4 *src, int src_step, int src_offset_x, int src_offset_y,
+                             __global uchar4 *dst, int dst_step, int dst_offset_x, int dst_offset_y,
                              __constant int *mat_kernel __attribute__((max_constant_size (16384))),
-                             int cols,int rows, int operate_cols, int wholecols, int wholerows) 
+                             int cols,int rows, int operate_cols, int wholecols, int wholerows)
 {
     int gX = get_global_id(0);
     int gY = get_global_id(1);
@@ -337,17 +337,17 @@ __kernel void filter2D_C4_D0(__global uchar4 *src, int src_step, int src_offset_
     int groupX_size = get_local_size(0);
     int groupX_id   = get_group_id(0);
 
-    #define dst_align (dst_offset_x & 3)     
-    int cols_start_index_group = src_offset_x - dst_align + groupX_size * groupX_id - ANX; 
-    int rows_start_index       = src_offset_y + (gY << ROWS_PER_GROUP_BITS) - ANY; 
-        
+    #define dst_align (dst_offset_x & 3)
+    int cols_start_index_group = src_offset_x - dst_align + groupX_size * groupX_id - ANX;
+    int rows_start_index       = src_offset_y + (gY << ROWS_PER_GROUP_BITS) - ANY;
+
     __local uchar4 local_data[LOCAL_MEM_STEP * ROWS_FETCH];
-        
+
     if(((gY << 2) < rows))
     {
         for(int i = 0; i < ROWS_FETCH; ++i)
         {
-            if((rows_start_index - src_offset_y) + i < rows + ANY)  
+            if((rows_start_index - src_offset_y) + i < rows + ANY)
             {
                 #ifdef BORDER_CONSTANT
                 int selected_row  = rows_start_index + i;
@@ -356,7 +356,7 @@ __kernel void filter2D_C4_D0(__global uchar4 *src, int src_step, int src_offset_
                 uchar4 data = *((__global uchar4*)((__global char*)src + selected_row * src_step + (selected_cols << 2)));
                 int con = selected_row >=0 && selected_row < wholerows && selected_cols >=0 && selected_cols < wholecols;
                 data = con ? data : 0;
-                local_data[i * LOCAL_MEM_STEP + lX ] =data; 
+                local_data[i * LOCAL_MEM_STEP + lX ] =data;
 
                 if(lX < (ANX << 1))
                 {
@@ -365,7 +365,7 @@ __kernel void filter2D_C4_D0(__global uchar4 *src, int src_step, int src_offset_
                     data = *((__global uchar4*)((__global char*)src + selected_row * src_step + (selected_cols << 2)));
                     con = selected_row >=0 && selected_row < wholerows && selected_cols >=0 && selected_cols < wholecols;
                     data = con ? data : 0;
-                    local_data[i * LOCAL_MEM_STEP + lX + groupX_size] =data; 
+                    local_data[i * LOCAL_MEM_STEP + lX + groupX_size] =data;
                 }
                 #else
                 int selected_row = ADDR_H(rows_start_index + i,  0, wholerows);
@@ -376,7 +376,7 @@ __kernel void filter2D_C4_D0(__global uchar4 *src, int src_step, int src_offset_
 
                 uchar4 data = *((__global uchar4*)((__global char*)src + selected_row * src_step + (selected_cols << 2)));
 
-                local_data[i * LOCAL_MEM_STEP + lX] =data; 
+                local_data[i * LOCAL_MEM_STEP + lX] =data;
 
                 if(lX < (ANX << 1))
                 {
@@ -384,7 +384,7 @@ __kernel void filter2D_C4_D0(__global uchar4 *src, int src_step, int src_offset_
                     selected_cols = ADDR_R(selected_cols, wholecols, selected_cols);
 
                     data = *((__global uchar4*)((__global char*)src + selected_row * src_step + (selected_cols << 2)));
-                    local_data[i * LOCAL_MEM_STEP + lX + groupX_size] =data; 
+                    local_data[i * LOCAL_MEM_STEP + lX + groupX_size] =data;
                 }
                 #endif
             }
@@ -395,9 +395,9 @@ __kernel void filter2D_C4_D0(__global uchar4 *src, int src_step, int src_offset_
     int process_col = groupX_size * groupX_id + ((lX % THREADS_PER_ROW) << 2);
     if(((gY << 2) < rows) && (process_col < operate_cols))
     {
-        int dst_cols_start = dst_offset_x; 
+        int dst_cols_start = dst_offset_x;
         int dst_cols_end   = dst_offset_x + cols;
-        int dst_cols_index = (dst_offset_x + process_col) & 0xfffffffc;  
+        int dst_cols_index = (dst_offset_x + process_col) & 0xfffffffc;
 
         int dst_rows_end   = dst_offset_y + rows;
         int dst_rows_index = dst_offset_y + (gY << ROWS_PER_GROUP_BITS) + (lX >> THREADS_PER_ROW_BIT);
@@ -416,9 +416,9 @@ __kernel void filter2D_C4_D0(__global uchar4 *src, int src_step, int src_offset_
                 if(dst_rows_index < dst_rows_end)
                 {
                      int local_row = (lX >> THREADS_PER_ROW_BIT) + i;
-                     int local_cols = ((lX % THREADS_PER_ROW) << ELEMENTS_PER_THREAD_BIT) + j; 
+                     int local_cols = ((lX % THREADS_PER_ROW) << ELEMENTS_PER_THREAD_BIT) + j;
 
-                     data = vload16(0, (__local uchar *)(local_data+local_row * LOCAL_MEM_STEP + local_cols)); 
+                     data = vload16(0, (__local uchar *)(local_data+local_row * LOCAL_MEM_STEP + local_cols));
                      sum = sum + (mat_kernel[i * ANCHOR + j] * convert_int16_sat(data));
                  }
             }
@@ -427,16 +427,16 @@ __kernel void filter2D_C4_D0(__global uchar4 *src, int src_step, int src_offset_
         if(dst_rows_index < dst_rows_end)
         {
             uchar16 sum1 = convert_uchar16_sat(sum);
-            sum1.s0123 = ((dst_cols_index + 0 >= dst_cols_start) && (dst_cols_index + 0 < dst_cols_end))?  
+            sum1.s0123 = ((dst_cols_index + 0 >= dst_cols_start) && (dst_cols_index + 0 < dst_cols_end))?
                          sum1.s0123 : dst_data.s0123;
-            sum1.s4567 = ((dst_cols_index + 1 >= dst_cols_start) && (dst_cols_index + 1 < dst_cols_end))? 
+            sum1.s4567 = ((dst_cols_index + 1 >= dst_cols_start) && (dst_cols_index + 1 < dst_cols_end))?
                          sum1.s4567 : dst_data.s4567;
-            sum1.s89ab = ((dst_cols_index + 2 >= dst_cols_start) && (dst_cols_index + 2 < dst_cols_end))? 
+            sum1.s89ab = ((dst_cols_index + 2 >= dst_cols_start) && (dst_cols_index + 2 < dst_cols_end))?
                          sum1.s89ab : dst_data.s89ab;
-            sum1.scdef = ((dst_cols_index + 3 >= dst_cols_start) && (dst_cols_index + 3 < dst_cols_end))? 
+            sum1.scdef = ((dst_cols_index + 3 >= dst_cols_start) && (dst_cols_index + 3 < dst_cols_end))?
                          sum1.scdef : dst_data.scdef;
 
-            *((__global uchar16*)((__global char *)dst + dst_rows_index * dst_step + (dst_cols_index << 2))) = sum1; 
+            *((__global uchar16*)((__global char *)dst + dst_rows_index * dst_step + (dst_cols_index << 2))) = sum1;
         }
     }
 }
@@ -445,10 +445,10 @@ __kernel void filter2D_C4_D0(__global uchar4 *src, int src_step, int src_offset_
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 #define ROWS_FETCH_C4              (1 + ANY + ANY)   //(ROWS_PER_GROUP + anY * 2)
 #define LOCAL_MEM_STEP_C4           260 //divup((get_local_size(0) + anX * 2), 4) * 4)
-__kernel void filter2D_C4_D5(__global float4 *src, int src_step, int src_offset_x, int src_offset_y, 
-                             __global float4 *dst, int dst_step, int dst_offset_x, int dst_offset_y, 
+__kernel void filter2D_C4_D5(__global float4 *src, int src_step, int src_offset_x, int src_offset_y,
+                             __global float4 *dst, int dst_step, int dst_offset_x, int dst_offset_y,
                              __constant int *mat_kernel __attribute__((max_constant_size (16384))),
-                             int cols,int rows, int operate_cols, int wholecols, int wholerows) 
+                             int cols,int rows, int operate_cols, int wholecols, int wholerows)
 {
     int gX = get_global_id(0);
     int gY = get_global_id(1);
@@ -458,15 +458,15 @@ __kernel void filter2D_C4_D5(__global float4 *src, int src_step, int src_offset_
     int groupX_size = get_local_size(0);
     int groupX_id   = get_group_id(0);
 
-    int cols_start_index_group = src_offset_x + groupX_size * groupX_id - ANX; 
-    int rows_start_index       = src_offset_y + gY - ANY; 
-        
+    int cols_start_index_group = src_offset_x + groupX_size * groupX_id - ANX;
+    int rows_start_index       = src_offset_y + gY - ANY;
+
     __local float4 local_data[LOCAL_MEM_STEP_C4 * ROWS_FETCH_C4];
     if((gY < rows) && (gX < (operate_cols + ANX + ANX)))
     {
         for(int i = 0; i < ROWS_FETCH_C4; ++i)
         {
-            if((rows_start_index - src_offset_y) + i < rows + ANY)  
+            if((rows_start_index - src_offset_y) + i < rows + ANY)
             {
                 #ifdef BORDER_CONSTANT
                 int selected_row  = rows_start_index + i;
@@ -475,7 +475,7 @@ __kernel void filter2D_C4_D5(__global float4 *src, int src_step, int src_offset_
                 float4 data = *((__global float4*)((__global char*)src + selected_row * src_step + (selected_cols << 4)));
                 int con = selected_row >=0 && selected_row < wholerows && selected_cols >=0 && selected_cols < wholecols;
                 data = con ? data : 0;
-                local_data[i * LOCAL_MEM_STEP + lX ] =data; 
+                local_data[i * LOCAL_MEM_STEP + lX ] =data;
 
                 if(lX < (ANX << 1))
                 {
@@ -484,7 +484,7 @@ __kernel void filter2D_C4_D5(__global float4 *src, int src_step, int src_offset_
                     data = *((__global float4*)((__global char*)src + selected_row * src_step + (selected_cols << 4)));
                     con = selected_row >=0 && selected_row < wholerows && selected_cols >=0 && selected_cols < wholecols;
                     data = con ? data : 0;
-                    local_data[i * LOCAL_MEM_STEP + lX + groupX_size] =data; 
+                    local_data[i * LOCAL_MEM_STEP + lX + groupX_size] =data;
                 }
                 #else
                 int selected_row = ADDR_H(rows_start_index + i,  0, wholerows);
@@ -494,7 +494,7 @@ __kernel void filter2D_C4_D5(__global float4 *src, int src_step, int src_offset_
                 selected_cols     = ADDR_R(cols_start_index_group + lX, wholecols, selected_cols);
 
                 float4 data = *((__global float4*)((__global char*)src + selected_row * src_step + (selected_cols << 4)));
-                local_data[i * LOCAL_MEM_STEP_C4 + lX] =data; 
+                local_data[i * LOCAL_MEM_STEP_C4 + lX] =data;
 
                 if(lX < (ANX << 1))
                 {
@@ -502,7 +502,7 @@ __kernel void filter2D_C4_D5(__global float4 *src, int src_step, int src_offset_
                     selected_cols = ADDR_R(selected_cols, wholecols, selected_cols);
 
                     data = *((__global float4*)((__global char*)src + selected_row * src_step + (selected_cols << 4)));
-                    local_data[i * LOCAL_MEM_STEP_C4 + lX + groupX_size] =data; 
+                    local_data[i * LOCAL_MEM_STEP_C4 + lX + groupX_size] =data;
                 }
                 #endif
             }
@@ -512,7 +512,7 @@ __kernel void filter2D_C4_D5(__global float4 *src, int src_step, int src_offset_
 
     if((gY < rows) && (gX < operate_cols))
     {
-        int dst_cols_index = dst_offset_x + gX;  
+        int dst_cols_index = dst_offset_x + gX;
         int dst_rows_index = dst_offset_y + gY;
 
         float4 sum = (float4)(0);
@@ -521,11 +521,11 @@ __kernel void filter2D_C4_D5(__global float4 *src, int src_step, int src_offset_
         {
            for(int j = 0; j < ANCHOR; j++)
            {
-               int local_cols = lX + j; 
+               int local_cols = lX + j;
                sum = sum + mat_kernel[i * ANCHOR + j] * local_data[i * LOCAL_MEM_STEP_C4 + local_cols];
             }
         }
 
-        *((__global float4*)((__global char *)dst + dst_rows_index * dst_step + (dst_cols_index << 4))) = sum; 
+        *((__global float4*)((__global char *)dst + dst_rows_index * dst_step + (dst_cols_index << 4))) = sum;
     }
 }

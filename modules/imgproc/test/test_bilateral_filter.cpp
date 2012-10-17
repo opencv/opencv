@@ -44,16 +44,16 @@
 
 using namespace cv;
 
-namespace cvtest 
-{ 
-    class CV_BilateralFilterTest : 
+namespace cvtest
+{
+    class CV_BilateralFilterTest :
         public cvtest::BaseTest
     {
     public:
-        enum 
+        enum
         {
             MAX_WIDTH = 1920, MIN_WIDTH = 1,
-            MAX_HEIGHT = 1080, MIN_HEIGHT = 1 
+            MAX_HEIGHT = 1080, MIN_HEIGHT = 1
         };
 
         CV_BilateralFilterTest();
@@ -63,22 +63,22 @@ namespace cvtest
         virtual void run_func();
         virtual int prepare_test_case(int test_case_index);
         virtual int validate_test_results(int test_case_index);
-        
+
     private:
         void reference_bilateral_filter(const Mat& src, Mat& dst, int d, double sigma_color,
             double sigma_space, int borderType = BORDER_DEFAULT);
-            
+
         int getRandInt(RNG& rng, int min_value, int max_value) const;
-                       
+
         double _sigma_color;
         double _sigma_space;
-        
+
         Mat _src;
         Mat _parallel_dst;
         int _d;
     };
 
-    CV_BilateralFilterTest::CV_BilateralFilterTest() : 
+    CV_BilateralFilterTest::CV_BilateralFilterTest() :
         cvtest::BaseTest(), _src(), _parallel_dst(), _d()
     {
         test_case_count = 1000;
@@ -94,7 +94,7 @@ namespace cvtest
         return cvRound(exp((double)rand_value));
     }
 
-    void CV_BilateralFilterTest::reference_bilateral_filter(const Mat &src, Mat &dst, int d, 
+    void CV_BilateralFilterTest::reference_bilateral_filter(const Mat &src, Mat &dst, int d,
         double sigma_color, double sigma_space, int borderType)
     {
         int cn = src.channels();
@@ -237,22 +237,22 @@ namespace cvtest
         RNG& rng = ts->get_rng();
         Size size(getRandInt(rng, MIN_WIDTH, MAX_WIDTH), getRandInt(rng, MIN_HEIGHT, MAX_HEIGHT));
         int type = types[rng(sizeof(types) / sizeof(types[0]))];
-    
-        _d = rng.uniform(0., 1.) > 0.5 ? 5 : 3; 
-        
+
+        _d = rng.uniform(0., 1.) > 0.5 ? 5 : 3;
+
         _src.create(size, type);
-        
+
         rng.fill(_src, RNG::UNIFORM, 0, 256);
-        
+
         _sigma_color = _sigma_space = 1.;
-        
+
         return 1;
     }
 
     int CV_BilateralFilterTest::validate_test_results(int test_case_index)
     {
         static const double eps = 1;
-        
+
         Mat reference_dst, reference_src;
         if (_src.depth() == CV_32F)
             reference_bilateral_filter(_src, reference_dst, _d, _sigma_color, _sigma_space);
@@ -263,7 +263,7 @@ namespace cvtest
             reference_bilateral_filter(reference_src, reference_dst, _d, _sigma_color, _sigma_space);
             reference_dst.convertTo(reference_dst, type);
         }
-        
+
         double e = norm(reference_dst, _parallel_dst);
         if (e > eps)
         {
@@ -272,7 +272,7 @@ namespace cvtest
         }
         else
             ts->set_failed_test_info(cvtest::TS::OK);
-        
+
         return BaseTest::validate_test_results(test_case_index);
     }
 
@@ -282,9 +282,9 @@ namespace cvtest
     }
 
     TEST(Imgproc_BilateralFilter, accuracy)
-    { 
-        CV_BilateralFilterTest test; 
-        test.safe_run(); 
+    {
+        CV_BilateralFilterTest test;
+        test.safe_run();
     }
 
 } // end of namespace cvtest

@@ -1,4 +1,4 @@
-# Will be modified later 
+# Will be modified later
 if(NOT HAVE_OPENCL)
   ocv_module_disable(ocl)
 endif()
@@ -38,12 +38,12 @@ if (HAVE_OPENCL)
       ocv_include_directories(${OPENCL_INCLUDE_DIR})
   endif()
   if (HAVE_CLAMDFFT)
-	set(ocl_link_libs ${ocl_link_libs} ${CLAMDFFT_LIBRARIES})
-	ocv_include_directories(${CLAMDFFT_INCLUDE_DIR})
+    set(ocl_link_libs ${ocl_link_libs} ${CLAMDFFT_LIBRARIES})
+    ocv_include_directories(${CLAMDFFT_INCLUDE_DIR})
   endif()
   if (HAVE_CLAMDBLAS)
-	set(ocl_link_libs ${ocl_link_libs} ${CLAMDBLAS_LIBRARIES})
-	ocv_include_directories(${CLAMDBLAS_INCLUDE_DIR})
+    set(ocl_link_libs ${ocl_link_libs} ${CLAMDBLAS_LIBRARIES})
+    ocv_include_directories(${CLAMDBLAS_INCLUDE_DIR})
   endif()
 endif()
 
@@ -51,7 +51,7 @@ ocv_set_module_sources(
     HEADERS ${lib_hdrs}
     SOURCES ${lib_int_hdrs} ${lib_srcs}
     )
-    
+
 set(OPENCV_MODULE_opencv_ocl_SOURCES ${OPENCV_MODULE_opencv_ocl_SOURCES} ${kernels_cpp})
 ocv_create_module(${ocl_link_libs})
 

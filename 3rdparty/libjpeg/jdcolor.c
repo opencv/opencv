@@ -76,26 +76,26 @@ build_ycc_rgb_table (j_decompress_ptr cinfo)
 
   cconvert->Cr_r_tab = (int *)
     (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
-				(MAXJSAMPLE+1) * SIZEOF(int));
+                (MAXJSAMPLE+1) * SIZEOF(int));
   cconvert->Cb_b_tab = (int *)
     (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
-				(MAXJSAMPLE+1) * SIZEOF(int));
+                (MAXJSAMPLE+1) * SIZEOF(int));
   cconvert->Cr_g_tab = (INT32 *)
     (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
-				(MAXJSAMPLE+1) * SIZEOF(INT32));
+                (MAXJSAMPLE+1) * SIZEOF(INT32));
   cconvert->Cb_g_tab = (INT32 *)
     (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
-				(MAXJSAMPLE+1) * SIZEOF(INT32));
+                (MAXJSAMPLE+1) * SIZEOF(INT32));
 
   for (i = 0, x = -CENTERJSAMPLE; i <= MAXJSAMPLE; i++, x++) {
     /* i is the actual input pixel value, in the range 0..MAXJSAMPLE */
     /* The Cb or Cr value we are thinking of is x = i - CENTERJSAMPLE */
     /* Cr=>R value is nearest int to 1.40200 * x */
     cconvert->Cr_r_tab[i] = (int)
-		    RIGHT_SHIFT(FIX(1.40200) * x + ONE_HALF, SCALEBITS);
+            RIGHT_SHIFT(FIX(1.40200) * x + ONE_HALF, SCALEBITS);
     /* Cb=>B value is nearest int to 1.77200 * x */
     cconvert->Cb_b_tab[i] = (int)
-		    RIGHT_SHIFT(FIX(1.77200) * x + ONE_HALF, SCALEBITS);
+            RIGHT_SHIFT(FIX(1.77200) * x + ONE_HALF, SCALEBITS);
     /* Cr=>G value is scaled-up -0.71414 * x */
     cconvert->Cr_g_tab[i] = (- FIX(0.71414)) * x;
     /* Cb=>G value is scaled-up -0.34414 * x */
@@ -118,8 +118,8 @@ build_ycc_rgb_table (j_decompress_ptr cinfo)
 
 METHODDEF(void)
 ycc_rgb_convert (j_decompress_ptr cinfo,
-		 JSAMPIMAGE input_buf, JDIMENSION input_row,
-		 JSAMPARRAY output_buf, int num_rows)
+         JSAMPIMAGE input_buf, JDIMENSION input_row,
+         JSAMPARRAY output_buf, int num_rows)
 {
   my_cconvert_ptr cconvert = (my_cconvert_ptr) cinfo->cconvert;
   register int y, cb, cr;
@@ -148,8 +148,8 @@ ycc_rgb_convert (j_decompress_ptr cinfo,
       /* Range-limiting is essential due to noise introduced by DCT losses. */
       outptr[RGB_RED] =   range_limit[y + Crrtab[cr]];
       outptr[RGB_GREEN] = range_limit[y +
-			      ((int) RIGHT_SHIFT(Cbgtab[cb] + Crgtab[cr],
-						 SCALEBITS))];
+                  ((int) RIGHT_SHIFT(Cbgtab[cb] + Crgtab[cr],
+                         SCALEBITS))];
       outptr[RGB_BLUE] =  range_limit[y + Cbbtab[cb]];
       outptr += RGB_PIXELSIZE;
     }
@@ -167,8 +167,8 @@ ycc_rgb_convert (j_decompress_ptr cinfo,
 
 METHODDEF(void)
 null_convert (j_decompress_ptr cinfo,
-	      JSAMPIMAGE input_buf, JDIMENSION input_row,
-	      JSAMPARRAY output_buf, int num_rows)
+          JSAMPIMAGE input_buf, JDIMENSION input_row,
+          JSAMPARRAY output_buf, int num_rows)
 {
   register JSAMPROW inptr, outptr;
   register JDIMENSION count;
@@ -181,8 +181,8 @@ null_convert (j_decompress_ptr cinfo,
       inptr = input_buf[ci][input_row];
       outptr = output_buf[0] + ci;
       for (count = num_cols; count > 0; count--) {
-	*outptr = *inptr++;	/* needn't bother with GETJSAMPLE() here */
-	outptr += num_components;
+    *outptr = *inptr++;	/* needn't bother with GETJSAMPLE() here */
+    outptr += num_components;
       }
     }
     input_row++;
@@ -199,11 +199,11 @@ null_convert (j_decompress_ptr cinfo,
 
 METHODDEF(void)
 grayscale_convert (j_decompress_ptr cinfo,
-		   JSAMPIMAGE input_buf, JDIMENSION input_row,
-		   JSAMPARRAY output_buf, int num_rows)
+           JSAMPIMAGE input_buf, JDIMENSION input_row,
+           JSAMPARRAY output_buf, int num_rows)
 {
   jcopy_sample_rows(input_buf[0], (int) input_row, output_buf, 0,
-		    num_rows, cinfo->output_width);
+            num_rows, cinfo->output_width);
 }
 
 
@@ -215,8 +215,8 @@ grayscale_convert (j_decompress_ptr cinfo,
 
 METHODDEF(void)
 gray_rgb_convert (j_decompress_ptr cinfo,
-		  JSAMPIMAGE input_buf, JDIMENSION input_row,
-		  JSAMPARRAY output_buf, int num_rows)
+          JSAMPIMAGE input_buf, JDIMENSION input_row,
+          JSAMPARRAY output_buf, int num_rows)
 {
   register JSAMPROW inptr, outptr;
   register JDIMENSION col;
@@ -243,8 +243,8 @@ gray_rgb_convert (j_decompress_ptr cinfo,
 
 METHODDEF(void)
 ycck_cmyk_convert (j_decompress_ptr cinfo,
-		   JSAMPIMAGE input_buf, JDIMENSION input_row,
-		   JSAMPARRAY output_buf, int num_rows)
+           JSAMPIMAGE input_buf, JDIMENSION input_row,
+           JSAMPARRAY output_buf, int num_rows)
 {
   my_cconvert_ptr cconvert = (my_cconvert_ptr) cinfo->cconvert;
   register int y, cb, cr;
@@ -274,8 +274,8 @@ ycck_cmyk_convert (j_decompress_ptr cinfo,
       /* Range-limiting is essential due to noise introduced by DCT losses. */
       outptr[0] = range_limit[MAXJSAMPLE - (y + Crrtab[cr])];	/* red */
       outptr[1] = range_limit[MAXJSAMPLE - (y +			/* green */
-			      ((int) RIGHT_SHIFT(Cbgtab[cb] + Crgtab[cr],
-						 SCALEBITS)))];
+                  ((int) RIGHT_SHIFT(Cbgtab[cb] + Crgtab[cr],
+                         SCALEBITS)))];
       outptr[2] = range_limit[MAXJSAMPLE - (y + Cbbtab[cb])];	/* blue */
       /* K passes through unchanged */
       outptr[3] = inptr3[col];	/* don't need GETJSAMPLE here */
@@ -308,7 +308,7 @@ jinit_color_deconverter (j_decompress_ptr cinfo)
 
   cconvert = (my_cconvert_ptr)
     (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
-				SIZEOF(my_color_deconverter));
+                SIZEOF(my_color_deconverter));
   cinfo->cconvert = (struct jpeg_color_deconverter *) cconvert;
   cconvert->pub.start_pass = start_pass_dcolor;
 
@@ -346,11 +346,11 @@ jinit_color_deconverter (j_decompress_ptr cinfo)
   case JCS_GRAYSCALE:
     cinfo->out_color_components = 1;
     if (cinfo->jpeg_color_space == JCS_GRAYSCALE ||
-	cinfo->jpeg_color_space == JCS_YCbCr) {
+    cinfo->jpeg_color_space == JCS_YCbCr) {
       cconvert->pub.color_convert = grayscale_convert;
       /* For color->grayscale conversion, only the Y (0) component is needed */
       for (ci = 1; ci < cinfo->num_components; ci++)
-	cinfo->comp_info[ci].component_needed = FALSE;
+    cinfo->comp_info[ci].component_needed = FALSE;
     } else
       ERREXIT(cinfo, JERR_CONVERSION_NOTIMPL);
     break;

@@ -251,7 +251,7 @@ CV_INLINE void icvTransposeMatrix_32f( const float* src, int w, int h, float* ds
     for( i = 0; i < w; i++ )
         for( j = 0; j < h; j++ )
             *dst++ = src[j*w + i];
-        
+
     icvCheckVector_32f( dst, w*h );
 }
 
@@ -269,7 +269,7 @@ CV_INLINE void icvTransposeMatrix_64d( const double* src, int w, int h, double* 
 CV_INLINE void icvDetMatrix3x3_64d( const double* mat, double* det )
 {
     #define m(y,x) mat[(y)*3 + (x)]
-    
+
     *det = m(0,0)*(m(1,1)*m(2,2) - m(1,2)*m(2,1)) -
            m(0,1)*(m(1,0)*m(2,2) - m(1,2)*m(2,0)) +
            m(0,2)*(m(1,0)*m(2,1) - m(1,1)*m(2,0));

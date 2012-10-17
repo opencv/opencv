@@ -5,7 +5,7 @@
 
 namespace cv
 {
-    
+
 struct CommandLineParserParams
 {
 public:
@@ -14,31 +14,31 @@ public:
     vector<string> keys;
     int number;
 };
-    
+
 
 struct CommandLineParser::Impl
 {
     bool error;
     string error_message;
     string about_message;
-    
+
     string path_to_app;
     string app_name;
-    
+
     vector<CommandLineParserParams> data;
-    
+
     vector<string> split_range_string(const string& str, char fs, char ss) const;
     vector<string> split_string(const string& str, char symbol = ' ', bool create_empty_item = false) const;
     string cat_string(const string& str) const;
-    
+
     void apply_params(const string& key, const string& value);
     void apply_params(int i, string value);
-    
+
     void sort_params();
     int refcount;
 };
 
-    
+
 static string get_type_name(int type)
 {
     if( type == Param::INT )
@@ -55,7 +55,7 @@ static string get_type_name(int type)
         return "string";
     return "unknown";
 }
-    
+
 static void from_str(const string& str, int type, void* dst)
 {
     std::stringstream ss(str);
@@ -73,12 +73,12 @@ static void from_str(const string& str, int type, void* dst)
         ss >> *(string*)dst;
     else
         throw cv::Exception(CV_StsBadArg, "unknown/unsupported parameter type", "", __FILE__, __LINE__);
-    
+
     if (ss.fail())
     {
         string err_msg = "can not convert: [" + str +
         + "] to [" + get_type_name(type) + "]";
-        
+
         throw cv::Exception(CV_StsBadArg, err_msg, "", __FILE__, __LINE__);
     }
 }
@@ -156,7 +156,7 @@ CommandLineParser::CommandLineParser(int argc, const char* const argv[], const s
 {
     impl = new Impl;
     impl->refcount = 1;
-    
+
     // path to application
     size_t pos_s = string(argv[0]).find_last_of("/\\");
     if (pos_s == string::npos)
@@ -228,14 +228,14 @@ CommandLineParser::CommandLineParser(int argc, const char* const argv[], const s
 
     impl->sort_params();
 }
-    
-    
+
+
 CommandLineParser::CommandLineParser(const CommandLineParser& parser)
 {
     impl = parser.impl;
     CV_XADD(&impl->refcount, 1);
 }
-    
+
 CommandLineParser& CommandLineParser::operator = (const CommandLineParser& parser)
 {
     if( this != &parser )

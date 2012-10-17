@@ -52,27 +52,27 @@ cvCreateKalman( int DP, int MP, int CP )
 
     if( CP < 0 )
         CP = DP;
-    
+
     /* allocating memory for the structure */
     kalman = (CvKalman *)cvAlloc( sizeof( CvKalman ));
     memset( kalman, 0, sizeof(*kalman));
-    
+
     kalman->DP = DP;
     kalman->MP = MP;
     kalman->CP = CP;
 
     kalman->state_pre = cvCreateMat( DP, 1, CV_32FC1 );
     cvZero( kalman->state_pre );
-    
+
     kalman->state_post = cvCreateMat( DP, 1, CV_32FC1 );
     cvZero( kalman->state_post );
-    
+
     kalman->transition_matrix = cvCreateMat( DP, DP, CV_32FC1 );
     cvSetIdentity( kalman->transition_matrix );
 
     kalman->process_noise_cov = cvCreateMat( DP, DP, CV_32FC1 );
     cvSetIdentity( kalman->process_noise_cov );
-    
+
     kalman->measurement_matrix = cvCreateMat( MP, DP, CV_32FC1 );
     cvZero( kalman->measurement_matrix );
 
@@ -80,7 +80,7 @@ cvCreateKalman( int DP, int MP, int CP )
     cvSetIdentity( kalman->measurement_noise_cov );
 
     kalman->error_cov_pre = cvCreateMat( DP, DP, CV_32FC1 );
-    
+
     kalman->error_cov_post = cvCreateMat( DP, DP, CV_32FC1 );
     cvZero( kalman->error_cov_post );
 
@@ -108,7 +108,7 @@ cvCreateKalman( int DP, int MP, int CP )
     kalman->KalmGainMatr = kalman->gain->data.fl;
     kalman->PriorErrorCovariance = kalman->error_cov_pre->data.fl;
     kalman->PosterErrorCovariance = kalman->error_cov_post->data.fl;
-#endif    
+#endif
 
     return kalman;
 }
@@ -121,11 +121,11 @@ cvReleaseKalman( CvKalman** _kalman )
 
     if( !_kalman )
         CV_Error( CV_StsNullPtr, "" );
-    
+
     kalman = *_kalman;
     if( !kalman )
         return;
-    
+
     /* freeing the memory */
     cvReleaseMat( &kalman->state_pre );
     cvReleaseMat( &kalman->state_post );
@@ -163,15 +163,15 @@ cvKalmanPredict( CvKalman* kalman, const CvMat* control )
     if( control && kalman->CP > 0 )
         /* x'(k) = x'(k) + B*u(k) */
         cvMatMulAdd( kalman->control_matrix, control, kalman->state_pre, kalman->state_pre );
-    
+
     /* update error covariance matrices */
     /* temp1 = A*P(k) */
     cvMatMulAdd( kalman->transition_matrix, kalman->error_cov_post, 0, kalman->temp1 );
-    
+
     /* P'(k) = temp1*At + Q */
     cvGEMM( kalman->temp1, kalman->transition_matrix, 1, kalman->process_noise_cov, 1,
                      kalman->error_cov_pre, CV_GEMM_B_T );
-    
+
     /* handle the case when there will be measurement before the next predict */
     cvCopy(kalman->state_pre, kalman->state_post);
 
@@ -196,7 +196,7 @@ cvKalmanCorrect( CvKalman* kalman, const CvMat* measurement )
 
     /* K(k) */
     cvTranspose( kalman->temp4, kalman->gain );
-    
+
     /* temp5 = z(k) - H*x'(k) */
     cvGEMM( kalman->measurement_matrix, kalman->state_pre, -1, measurement, 1, kalman->temp5 );
 
@@ -263,7 +263,7 @@ const Mat& KalmanFilter::predict(const Mat& control)
 
     // P'(k) = temp1*At + Q
     gemm(temp1, transitionMatrix, 1, processNoiseCov, 1, errorCovPre, GEMM_2_T);
-    
+
     // handle the case when there will be measurement before the next predict.
     statePre.copyTo(statePost);
 
@@ -276,14 +276,14 @@ const Mat& KalmanFilter::correct(const Mat& measurement)
     temp2 = measurementMatrix * errorCovPre;
 
     // temp3 = temp2*Ht + R
-    gemm(temp2, measurementMatrix, 1, measurementNoiseCov, 1, temp3, GEMM_2_T); 
+    gemm(temp2, measurementMatrix, 1, measurementNoiseCov, 1, temp3, GEMM_2_T);
 
     // temp4 = inv(temp3)*temp2 = Kt(k)
     solve(temp3, temp2, temp4, DECOMP_SVD);
 
     // K(k)
     gain = temp4.t();
-    
+
     // temp5 = z(k) - H*x'(k)
     temp5 = measurement - measurementMatrix*statePre;
 
@@ -295,7 +295,7 @@ const Mat& KalmanFilter::correct(const Mat& measurement)
 
     return statePost;
 }
-    
+
 };
 
 

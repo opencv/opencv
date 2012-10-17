@@ -28,7 +28,7 @@ PERF_TEST_P(Img_BlockSize_ApertureSize_BorderType, cornerEigenValsAndVecs,
     Mat src = imread(filename, IMREAD_GRAYSCALE);
     if (src.empty())
         FAIL() << "Unable to load source image" << filename;
-    
+
     Mat dst;
 
     TEST_CYCLE() cornerEigenValsAndVecs(src, dst, blockSize, apertureSize, borderType);

@@ -57,24 +57,24 @@
 /// CV_32FC1
 __kernel void columnSum_C1_D5(__global float* src,__global float* dst,int srcCols,int srcRows,int srcStep,int dstStep)
 {
-	const int x = get_global_id(0);
-	
-	srcStep >>= 2;
-	dstStep >>= 2;
+    const int x = get_global_id(0);
 
-	if (x < srcCols)
+    srcStep >>= 2;
+    dstStep >>= 2;
+
+    if (x < srcCols)
     {
-		int srcIdx = x ;
-		int dstIdx = x ;
+        int srcIdx = x ;
+        int dstIdx = x ;
 
         float sum = 0;
-		
+
         for (int y = 0; y < srcRows; ++y)
         {
-			sum += src[srcIdx];
+            sum += src[srcIdx];
             dst[dstIdx] = sum;
-			srcIdx += srcStep;
-			dstIdx += dstStep;	
+            srcIdx += srcStep;
+            dstIdx += dstStep;
         }
-	}
+    }
 }

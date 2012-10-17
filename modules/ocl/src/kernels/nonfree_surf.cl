@@ -210,7 +210,7 @@ __kernel void icvCalcLayerDetAndTrace(
         const float dxy = icvCalcHaarPatternSum_4(sumTex, c_DXY, 9, size, i << c_octave, j << c_octave);
 
         det  [j + margin + det_step   * (layer * c_layer_rows + i + margin)] = dx * dy - 0.81f * dxy * dxy;
-        trace[j + margin + trace_step * (layer * c_layer_rows + i + margin)] = dx + dy; 
+        trace[j + margin + trace_step * (layer * c_layer_rows + i + margin)] = dx + dy;
     }
 }
 
@@ -246,9 +246,9 @@ bool within_check(image2d_t maskSumTex, int sum_i, int sum_j, int size)
 // Non-maximal suppression to further filtering the candidates from previous step
 __kernel
     void icvFindMaximaInLayer_withmask(
-    __global const float * det, 
-    __global const float * trace, 
-    __global int4 * maxPosBuffer, 
+    __global const float * det,
+    __global const float * trace,
+    __global int4 * maxPosBuffer,
     volatile __global unsigned int* maxCounter,
     int counter_offset,
     int det_step,     // the step of det in bytes
@@ -288,26 +288,26 @@ __kernel
     // Is this thread within the hessian buffer?
     const int zoff = get_local_size(0) * get_local_size(1);
     const int localLin = get_local_id(0) + get_local_id(1) * get_local_size(0) + zoff;
-    N9[localLin - zoff] = 
-        det[det_step * 
+    N9[localLin - zoff] =
+        det[det_step *
         (c_layer_rows * (layer - 1) + min(max(i, 0), c_img_rows - 1)) // y
         + min(max(j, 0), c_img_cols - 1)];                            // x
-    N9[localLin       ] = 
-        det[det_step * 
+    N9[localLin       ] =
+        det[det_step *
         (c_layer_rows * (layer    ) + min(max(i, 0), c_img_rows - 1)) // y
         + min(max(j, 0), c_img_cols - 1)];                            // x
-    N9[localLin + zoff] = 
-        det[det_step * 
+    N9[localLin + zoff] =
+        det[det_step *
         (c_layer_rows * (layer + 1) + min(max(i, 0), c_img_rows - 1)) // y
         + min(max(j, 0), c_img_cols - 1)];                            // x
 
     barrier(CLK_LOCAL_MEM_FENCE);
 
-    if (i < c_layer_rows - margin 
+    if (i < c_layer_rows - margin
         && j < c_layer_cols - margin
-        && get_local_id(0) > 0 
+        && get_local_id(0) > 0
         && get_local_id(0) < get_local_size(0) - 1
-        && get_local_id(1) > 0 
+        && get_local_id(1) > 0
         && get_local_id(1) < get_local_size(1) - 1 // these are unnecessary conditions ported from CUDA
         )
     {
@@ -372,9 +372,9 @@ __kernel
 
 __kernel
     void icvFindMaximaInLayer(
-    __global float * det, 
-    __global float * trace, 
-    __global int4 * maxPosBuffer, 
+    __global float * det,
+    __global float * trace,
+    __global int4 * maxPosBuffer,
     volatile __global unsigned int* maxCounter,
     int counter_offset,
     int det_step,     // the step of det in bytes
@@ -417,19 +417,19 @@ __kernel
     int l_x = min(max(j, 0), c_img_cols - 1);
     int l_y = c_layer_rows * layer + min(max(i, 0), c_img_rows - 1);
 
-    N9[localLin - zoff] = 
+    N9[localLin - zoff] =
         det[det_step * (l_y - c_layer_rows) + l_x];
-    N9[localLin       ] = 
+    N9[localLin       ] =
         det[det_step * (l_y               ) + l_x];
-    N9[localLin + zoff] = 
+    N9[localLin + zoff] =
         det[det_step * (l_y + c_layer_rows) + l_x];
     barrier(CLK_LOCAL_MEM_FENCE);
 
-    if (i < c_layer_rows - margin 
+    if (i < c_layer_rows - margin
         && j < c_layer_cols - margin
-        && get_local_id(0) > 0 
+        && get_local_id(0) > 0
         && get_local_id(0) < get_local_size(0) - 1
-        && get_local_id(1) > 0 
+        && get_local_id(1) > 0
         && get_local_id(1) < get_local_size(1) - 1 // these are unnecessary conditions ported from CUDA
         )
     {
@@ -497,17 +497,17 @@ inline bool solve3x3_float(volatile __local  const float A[3][3], volatile __loc
     {
         F invdet = 1.0 / det;
 
-        x[0] = invdet * 
+        x[0] = invdet *
             (b[0]    * (A[1][1] * A[2][2] - A[1][2] * A[2][1]) -
             A[0][1] * (b[1]    * A[2][2] - A[1][2] * b[2]   ) +
             A[0][2] * (b[1]    * A[2][1] - A[1][1] * b[2]   ));
 
-        x[1] = invdet * 
+        x[1] = invdet *
             (A[0][0] * (b[1]    * A[2][2] - A[1][2] * b[2]   ) -
             b[0]    * (A[1][0] * A[2][2] - A[1][2] * A[2][0]) +
             A[0][2] * (A[1][0] * b[2]    - b[1]    * A[2][0]));
 
-        x[2] = invdet * 
+        x[2] = invdet *
             (A[0][0] * (A[1][1] * b[2]    - b[1]    * A[2][1]) -
             A[0][1] * (A[1][0] * b[2]    - b[1]    * A[2][0]) +
             b[0]    * (A[1][0] * A[2][1] - A[1][1] * A[2][0]));
@@ -528,9 +528,9 @@ inline bool solve3x3_float(volatile __local  const float A[3][3], volatile __loc
 
 ////////////////////////////////////////////////////////////////////////
 // INTERPOLATION
-__kernel 
+__kernel
     void icvInterpolateKeypoint(
-    __global const float * det, 
+    __global const float * det,
     __global const int4 * maxPosBuffer,
     __global float * keypoints,
     volatile __global unsigned int * featureCounter,
@@ -560,7 +560,7 @@ __kernel
 
     volatile __local  float N9[3][3][3];
 
-    N9[get_local_id(2)][get_local_id(1)][get_local_id(0)] = 
+    N9[get_local_id(2)][get_local_id(1)][get_local_id(0)] =
         det[det_step * (c_layer_rows * layer + i) + j];
     barrier(CLK_LOCAL_MEM_FENCE);
 
@@ -658,27 +658,27 @@ __kernel
 
 __constant float c_aptX[ORI_SAMPLES] = {-6, -5, -5, -5, -5, -5, -5, -5, -4, -4, -4, -4, -4, -4, -4, -4, -4, -3, -3, -3, -3, -3, -3, -3, -3, -3, -3, -3, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 6};
 __constant float c_aptY[ORI_SAMPLES] = {0, -3, -2, -1, 0, 1, 2, 3, -4, -3, -2, -1, 0, 1, 2, 3, 4, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, -6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, -4, -3, -2, -1, 0, 1, 2, 3, 4, -3, -2, -1, 0, 1, 2, 3, 0};
-__constant float c_aptW[ORI_SAMPLES] = {0.001455130288377404f, 0.001707611023448408f, 0.002547456417232752f, 0.003238451667129993f, 0.0035081731621176f, 
-    0.003238451667129993f, 0.002547456417232752f, 0.001707611023448408f, 0.002003900473937392f, 0.0035081731621176f, 0.005233579315245152f, 
-    0.00665318313986063f, 0.00720730796456337f, 0.00665318313986063f, 0.005233579315245152f, 0.0035081731621176f, 
-    0.002003900473937392f, 0.001707611023448408f, 0.0035081731621176f, 0.006141661666333675f, 0.009162282571196556f, 
-    0.01164754293859005f, 0.01261763460934162f, 0.01164754293859005f, 0.009162282571196556f, 0.006141661666333675f, 
-    0.0035081731621176f, 0.001707611023448408f, 0.002547456417232752f, 0.005233579315245152f, 0.009162282571196556f, 
-    0.01366852037608624f, 0.01737609319388866f, 0.0188232995569706f, 0.01737609319388866f, 0.01366852037608624f, 
-    0.009162282571196556f, 0.005233579315245152f, 0.002547456417232752f, 0.003238451667129993f, 0.00665318313986063f, 
-    0.01164754293859005f, 0.01737609319388866f, 0.02208934165537357f, 0.02392910048365593f, 0.02208934165537357f, 
-    0.01737609319388866f, 0.01164754293859005f, 0.00665318313986063f, 0.003238451667129993f, 0.001455130288377404f, 
-    0.0035081731621176f, 0.00720730796456337f, 0.01261763460934162f, 0.0188232995569706f, 0.02392910048365593f, 
-    0.02592208795249462f, 0.02392910048365593f, 0.0188232995569706f, 0.01261763460934162f, 0.00720730796456337f, 
-    0.0035081731621176f, 0.001455130288377404f, 0.003238451667129993f, 0.00665318313986063f, 0.01164754293859005f, 
-    0.01737609319388866f, 0.02208934165537357f, 0.02392910048365593f, 0.02208934165537357f, 0.01737609319388866f, 
+__constant float c_aptW[ORI_SAMPLES] = {0.001455130288377404f, 0.001707611023448408f, 0.002547456417232752f, 0.003238451667129993f, 0.0035081731621176f,
+    0.003238451667129993f, 0.002547456417232752f, 0.001707611023448408f, 0.002003900473937392f, 0.0035081731621176f, 0.005233579315245152f,
+    0.00665318313986063f, 0.00720730796456337f, 0.00665318313986063f, 0.005233579315245152f, 0.0035081731621176f,
+    0.002003900473937392f, 0.001707611023448408f, 0.0035081731621176f, 0.006141661666333675f, 0.009162282571196556f,
+    0.01164754293859005f, 0.01261763460934162f, 0.01164754293859005f, 0.009162282571196556f, 0.006141661666333675f,
+    0.0035081731621176f, 0.001707611023448408f, 0.002547456417232752f, 0.005233579315245152f, 0.009162282571196556f,
+    0.01366852037608624f, 0.01737609319388866f, 0.0188232995569706f, 0.01737609319388866f, 0.01366852037608624f,
+    0.009162282571196556f, 0.005233579315245152f, 0.002547456417232752f, 0.003238451667129993f, 0.00665318313986063f,
+    0.01164754293859005f, 0.01737609319388866f, 0.02208934165537357f, 0.02392910048365593f, 0.02208934165537357f,
+    0.01737609319388866f, 0.01164754293859005f, 0.00665318313986063f, 0.003238451667129993f, 0.001455130288377404f,
+    0.0035081731621176f, 0.00720730796456337f, 0.01261763460934162f, 0.0188232995569706f, 0.02392910048365593f,
+    0.02592208795249462f, 0.02392910048365593f, 0.0188232995569706f, 0.01261763460934162f, 0.00720730796456337f,
+    0.0035081731621176f, 0.001455130288377404f, 0.003238451667129993f, 0.00665318313986063f, 0.01164754293859005f,
+    0.01737609319388866f, 0.02208934165537357f, 0.02392910048365593f, 0.02208934165537357f, 0.01737609319388866f,
     0.01164754293859005f, 0.00665318313986063f, 0.003238451667129993f, 0.002547456417232752f, 0.005233579315245152f,
-    0.009162282571196556f, 0.01366852037608624f, 0.01737609319388866f, 0.0188232995569706f, 0.01737609319388866f, 
-    0.01366852037608624f, 0.009162282571196556f, 0.005233579315245152f, 0.002547456417232752f, 0.001707611023448408f, 
-    0.0035081731621176f, 0.006141661666333675f, 0.009162282571196556f, 0.01164754293859005f, 0.01261763460934162f, 
+    0.009162282571196556f, 0.01366852037608624f, 0.01737609319388866f, 0.0188232995569706f, 0.01737609319388866f,
+    0.01366852037608624f, 0.009162282571196556f, 0.005233579315245152f, 0.002547456417232752f, 0.001707611023448408f,
+    0.0035081731621176f, 0.006141661666333675f, 0.009162282571196556f, 0.01164754293859005f, 0.01261763460934162f,
     0.01164754293859005f, 0.009162282571196556f, 0.006141661666333675f, 0.0035081731621176f, 0.001707611023448408f,
-    0.002003900473937392f, 0.0035081731621176f, 0.005233579315245152f, 0.00665318313986063f, 0.00720730796456337f, 
-    0.00665318313986063f, 0.005233579315245152f, 0.0035081731621176f, 0.002003900473937392f, 0.001707611023448408f, 
+    0.002003900473937392f, 0.0035081731621176f, 0.005233579315245152f, 0.00665318313986063f, 0.00720730796456337f,
+    0.00665318313986063f, 0.005233579315245152f, 0.0035081731621176f, 0.002003900473937392f, 0.001707611023448408f,
     0.002547456417232752f, 0.003238451667129993f, 0.0035081731621176f, 0.003238451667129993f, 0.002547456417232752f,
     0.001707611023448408f, 0.001455130288377404f};
 
@@ -691,13 +691,13 @@ void reduce_32_sum(volatile __local  float * data, float partial_reduction, int 
     data[tid] = partial_reduction;
     barrier(CLK_LOCAL_MEM_FENCE);
 
-    if (tid < 16) 
+    if (tid < 16)
     {
         data[tid] = partial_reduction = op(partial_reduction, data[tid + 16]);
         data[tid] = partial_reduction = op(partial_reduction, data[tid + 8 ]);
         data[tid] = partial_reduction = op(partial_reduction, data[tid + 4 ]);
         data[tid] = partial_reduction = op(partial_reduction, data[tid + 2 ]);
-        data[tid] = partial_reduction = op(partial_reduction, data[tid + 1 ]); 
+        data[tid] = partial_reduction = op(partial_reduction, data[tid + 1 ]);
     }
 #undef op
 }
@@ -758,7 +758,7 @@ __kernel
             Y = c_aptW[tid] * icvCalcHaarPatternSum_2(sumTex, c_NY, 4, grad_wav_size, y, x);
 
             angle = atan2(Y, X);
-            
+
             if (angle < 0)
                 angle += 2.0f * CV_PI_F;
             angle *= 180.0f / CV_PI_F;
@@ -769,7 +769,7 @@ __kernel
     s_Y[tid] = Y;
     s_angle[tid] = angle;
     barrier(CLK_LOCAL_MEM_FENCE);
-    
+
     float bestx = 0, besty = 0, best_mod = 0;
 
 #pragma unroll
@@ -881,8 +881,8 @@ __constant float c_DW[PATCH_SZ * PATCH_SZ] =
 
 // utility for linear filter
 inline uchar readerGet(
-    image2d_t src, 
-    const float centerX, const float centerY, const float win_offset, const float cos_dir, const float sin_dir, 
+    image2d_t src,
+    const float centerX, const float centerY, const float win_offset, const float cos_dir, const float sin_dir,
     int i, int j
     )
 {
@@ -892,8 +892,8 @@ inline uchar readerGet(
 }
 
 inline float linearFilter(
-    image2d_t src, 
-    const float centerX, const float centerY, const float win_offset, const float cos_dir, const float sin_dir,  
+    image2d_t src,
+    const float centerX, const float centerY, const float win_offset, const float cos_dir, const float sin_dir,
     float y, float x
     )
 {
@@ -927,9 +927,9 @@ void calc_dx_dy(
     volatile __local  float s_dx_bin[25],
     volatile __local  float s_dy_bin[25],
     volatile __local  float s_PATCH[6][6],
-    __global const float* featureX, 
-    __global const float* featureY, 
-    __global const float* featureSize, 
+    __global const float* featureX,
+    __global const float* featureY,
+    __global const float* featureSize,
     __global const float* featureDir
     )
 {
@@ -976,26 +976,26 @@ void calc_dx_dy(
         const float dw = c_DW[yIndex * PATCH_SZ + xIndex];
 
         const float vx = (
-            s_PATCH[get_local_id(1)    ][get_local_id(0) + 1] - 
-            s_PATCH[get_local_id(1)    ][get_local_id(0)    ] + 
-            s_PATCH[get_local_id(1) + 1][get_local_id(0) + 1] - 
-            s_PATCH[get_local_id(1) + 1][get_local_id(0)    ]) 
+            s_PATCH[get_local_id(1)    ][get_local_id(0) + 1] -
+            s_PATCH[get_local_id(1)    ][get_local_id(0)    ] +
+            s_PATCH[get_local_id(1) + 1][get_local_id(0) + 1] -
+            s_PATCH[get_local_id(1) + 1][get_local_id(0)    ])
             * dw;
         const float vy = (
-            s_PATCH[get_local_id(1) + 1][get_local_id(0)    ] - 
-            s_PATCH[get_local_id(1)    ][get_local_id(0)    ] + 
-            s_PATCH[get_local_id(1) + 1][get_local_id(0) + 1] - 
-            s_PATCH[get_local_id(1)    ][get_local_id(0) + 1]) 
+            s_PATCH[get_local_id(1) + 1][get_local_id(0)    ] -
+            s_PATCH[get_local_id(1)    ][get_local_id(0)    ] +
+            s_PATCH[get_local_id(1) + 1][get_local_id(0) + 1] -
+            s_PATCH[get_local_id(1)    ][get_local_id(0) + 1])
             * dw;
         s_dx_bin[tid] = vx;
         s_dy_bin[tid] = vy;
     }
 }
 void reduce_sum25(
-    volatile __local  float* sdata1, 
-    volatile __local  float* sdata2, 
-    volatile __local  float* sdata3, 
-    volatile __local  float* sdata4, 
+    volatile __local  float* sdata1,
+    volatile __local  float* sdata2,
+    volatile __local  float* sdata3,
+    volatile __local  float* sdata4,
     int tid
     )
 {
@@ -1033,10 +1033,10 @@ void reduce_sum25(
     }
 }
 
-__kernel 
+__kernel
     void compute_descriptors64(
     image2d_t imgTex,
-    volatile __global float * descriptors, 
+    volatile __global float * descriptors,
     __global const float * keypoints,
     int descriptors_step,
     int keypoints_step
@@ -1083,10 +1083,10 @@ __kernel
         }
     }
 }
-__kernel 
+__kernel
     void compute_descriptors128(
     image2d_t imgTex,
-    __global volatile float * descriptors, 
+    __global volatile float * descriptors,
     __global float * keypoints,
     int descriptors_step,
     int keypoints_step
@@ -1178,7 +1178,7 @@ __kernel
     }
 }
 
-__kernel 
+__kernel
     void normalize_descriptors128(__global float * descriptors, int descriptors_step)
 {
     descriptors_step /= sizeof(*descriptors);
@@ -1219,7 +1219,7 @@ __kernel
     // normalize and store in output
     descriptor_base[get_local_id(0)] = lookup / len;
 }
-__kernel 
+__kernel
     void normalize_descriptors64(__global float * descriptors, int descriptors_step)
 {
     descriptors_step /= sizeof(*descriptors);

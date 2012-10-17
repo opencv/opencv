@@ -46,7 +46,7 @@
 /****************************************************************************************\
 
    find region where hand is   (for gesture recognition)
-   flag = 0 (use left bucket)  flag = 1 (use right bucket) 
+   flag = 0 (use left bucket)  flag = 1 (use right bucket)
 
 \****************************************************************************************/
 
@@ -66,7 +66,7 @@ icvFindHandRegion( CvPoint3D32f * points, int count,
     CvStatus status;
     int nbins = 20, i, l, i_point, left, right;
     int *bin_counts = 0;        //  pointer to the point's counter in the bickets
-    int low_count;              //  low threshold  
+    int low_count;              //  low threshold
 
     CvPoint *tmp_number = 0, *pt;
     float value, vmin, vmax, vl, bsize, vc;
@@ -136,7 +136,7 @@ icvFindHandRegion( CvPoint3D32f * points, int count,
     i_point = 0;
     for( i = 0; i < count; i++ )
     {
-/*    
+/*
         icvSubVector_32f ((IppmVect32f )&points[i], (IppmVect32f )&line[3], sub, 3);
 
         icvCrossProduct2L_32f ((IppmVect32f )&line[0], sub, cros);
@@ -288,7 +288,7 @@ icvFindHandRegionA( CvPoint3D32f * points, int count,
     int *bin_counts = 0;        //  pointer to the point's counter in the bickets
 
 //    int *bin_countsj = 0;   //  pointer to the index's counter in the bickets
-    int low_count;              //  low threshold  
+    int low_count;              //  low threshold
 
     CvPoint *tmp_number = 0, *pt;
     float value, vmin, vmax, vl, bsize, bsizej, vc, vcl, vcr;
@@ -341,7 +341,7 @@ icvFindHandRegionA( CvPoint3D32f * points, int count,
     memset( bin_counts, 0, nbins * sizeof( int ));
 
 /*  alloc memory for the point's counter in the bickets     */
-//    bin_countsj = (int*) icvAlloc(nbins*sizeof(int));  
+//    bin_countsj = (int*) icvAlloc(nbins*sizeof(int));
 //    if(bin_countsj == NULL) {status = CV_OUTOFMEM_ERR; goto M_END;}
 //    memset(bin_countsj,0,nbins*sizeof(int));
 
@@ -395,7 +395,7 @@ icvFindHandRegionA( CvPoint3D32f * points, int count,
             icvDotProduct_32f( sub, &line[0], 3, &value);
             if(value > vmax) vmax = value;
             if(value < vmin) vmin = value;
-            
+
             vv[i_point] = value;
 
             pt = (CvPoint* )icvGetSeqElem ( indexs, i, 0);
@@ -406,7 +406,7 @@ icvFindHandRegionA( CvPoint3D32f * points, int count,
             tmp_number[i_point] = *pt;
             i_point++;
         }
-        else 
+        else
 */
         {
             if( _CV_NORM_L32( a ) < threshold2 )
@@ -572,20 +572,20 @@ icvFindHandRegionA( CvPoint3D32f * points, int count,
 /*F///////////////////////////////////////////////////////////////////////////////////////
 //    Name:     cvFindHandRegion
 //    Purpose:  finds hand region in range image data
-//    Context:   
-//    Parameters: 
+//    Context:
+//    Parameters:
 //      points - pointer to the input point's set.
 //      count  - the number of the input points.
 //      indexs - pointer to the input sequence of the point's indexes
 //      line   - pointer to the 3D-line
-//      size   - size of the hand in meters 
-//      flag   - hand direction's flag (0 - left, -1 - right, 
+//      size   - size of the hand in meters
+//      flag   - hand direction's flag (0 - left, -1 - right,
 //               otherwise j-index of the initial image center)
 //      center - pointer to the output hand center
-//      storage - pointer to the memory storage  
+//      storage - pointer to the memory storage
 //      numbers - pointer to the output sequence of the point's indexes inside
-//                hand region                
-//      
+//                hand region
+//
 //    Notes:
 //F*/
 CV_IMPL void
@@ -595,31 +595,31 @@ cvFindHandRegion( CvPoint3D32f * points, int count,
                   CvPoint3D32f * center, CvMemStorage * storage, CvSeq ** numbers )
 {
     if(flag == 0 || flag == -1)
-	{
-		IPPI_CALL( icvFindHandRegion( points, count, indexs, line, size, -flag,
-			                           center, storage, numbers ));
-	}
-	else 
-		IPPI_CALL( icvFindHandRegionA( points, count, indexs, line, size, flag,
-			                            center, storage, numbers ));
+    {
+        IPPI_CALL( icvFindHandRegion( points, count, indexs, line, size, -flag,
+                                       center, storage, numbers ));
+    }
+    else
+        IPPI_CALL( icvFindHandRegionA( points, count, indexs, line, size, flag,
+                                        center, storage, numbers ));
 }
 
 /*F///////////////////////////////////////////////////////////////////////////////////////
 //    Name:     cvFindHandRegionA
 //    Purpose:  finds hand region in range image data
-//    Context:   
-//    Parameters: 
+//    Context:
+//    Parameters:
 //      points - pointer to the input point's set.
 //      count  - the number of the input points.
 //      indexs - pointer to the input sequence of the point's indexes
 //      line   - pointer to the 3D-line
-//      size   - size of the hand in meters 
+//      size   - size of the hand in meters
 //      jc     - j-index of the initial image center
 //      center - pointer to the output hand center
-//      storage - pointer to the memory storage  
+//      storage - pointer to the memory storage
 //      numbers - pointer to the output sequence of the point's indexes inside
-//                hand region                
-//      
+//                hand region
+//
 //    Notes:
 //F*/
 CV_IMPL void

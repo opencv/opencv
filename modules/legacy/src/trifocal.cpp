@@ -997,13 +997,13 @@ int icvComputeProjectMatricesNPoints(  CvMat* points1,CvMat* points2,CvMat* poin
                     memcpy(bestFlags,flags,sizeof(flags[0])*numPoints);
 
                     /* Adaptive number of samples to count*/
-			        double ep = 1 - (double)numGoodPoints / (double)numPoints;
+                    double ep = 1 - (double)numGoodPoints / (double)numPoints;
                     if( ep == 1 )
                     {
                         ep = 0.5;/* if there is not good points set ration of outliers to 50% */
                     }
 
-			        double newNumSamples = (log(1-p) / log(1-pow(1-ep,6)));
+                    double newNumSamples = (log(1-p) / log(1-pow(1-ep,6)));
                     if(  newNumSamples < double(NumSamples) )
                     {
                         NumSamples = cvRound(newNumSamples);

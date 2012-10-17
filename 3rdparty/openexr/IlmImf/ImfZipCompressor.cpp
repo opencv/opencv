@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2004, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-// 
+//
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission. 
-// 
+// from this software without specific prior written permission.
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -69,10 +69,10 @@ ZipCompressor::ZipCompressor
                size_t (100));
 
     _tmpBuffer =
-	new char [maxInBytes];
+    new char [maxInBytes];
 
     _outBuffer =
-	new char [maxOutBytes];
+    new char [maxOutBytes];
 }
 
 
@@ -92,9 +92,9 @@ ZipCompressor::numScanLines () const
 
 int
 ZipCompressor::compress (const char *inPtr,
-			 int inSize,
-			 int /*minY*/,
-			 const char *&outPtr)
+             int inSize,
+             int /*minY*/,
+             const char *&outPtr)
 {
     //
     // Special case ­- empty input buffer
@@ -102,8 +102,8 @@ ZipCompressor::compress (const char *inPtr,
 
     if (inSize == 0)
     {
-	outPtr = _outBuffer;
-	return 0;
+    outPtr = _outBuffer;
+    return 0;
     }
 
     //
@@ -111,22 +111,22 @@ ZipCompressor::compress (const char *inPtr,
     //
 
     {
-	char *t1 = _tmpBuffer;
-	char *t2 = _tmpBuffer + (inSize + 1) / 2;
-	const char *stop = inPtr + inSize;
+    char *t1 = _tmpBuffer;
+    char *t2 = _tmpBuffer + (inSize + 1) / 2;
+    const char *stop = inPtr + inSize;
 
-	while (true)
-	{
-	    if (inPtr < stop)
-		*(t1++) = *(inPtr++);
-	    else
-		break;
+    while (true)
+    {
+        if (inPtr < stop)
+        *(t1++) = *(inPtr++);
+        else
+        break;
 
-	    if (inPtr < stop)
-		*(t2++) = *(inPtr++);
-	    else
-		break;
-	}
+        if (inPtr < stop)
+        *(t2++) = *(inPtr++);
+        else
+        break;
+    }
     }
 
     //
@@ -134,17 +134,17 @@ ZipCompressor::compress (const char *inPtr,
     //
 
     {
-	unsigned char *t = (unsigned char *) _tmpBuffer + 1;
-	unsigned char *stop = (unsigned char *) _tmpBuffer + inSize;
-	int p = t[-1];
+    unsigned char *t = (unsigned char *) _tmpBuffer + 1;
+    unsigned char *stop = (unsigned char *) _tmpBuffer + inSize;
+    int p = t[-1];
 
-	while (t < stop)
-	{
-	    int d = int (t[0]) - p + (128 + 256);
-	    p = t[0];
-	    t[0] = d;
-	    ++t;
-	}
+    while (t < stop)
+    {
+        int d = int (t[0]) - p + (128 + 256);
+        p = t[0];
+        t[0] = d;
+        ++t;
+    }
     }
 
     //
@@ -154,9 +154,9 @@ ZipCompressor::compress (const char *inPtr,
     uLongf outSize = int(ceil(inSize * 1.01)) + 100;
 
     if (Z_OK != ::compress ((Bytef *)_outBuffer, &outSize,
-			    (const Bytef *) _tmpBuffer, inSize))
+                (const Bytef *) _tmpBuffer, inSize))
     {
-	throw Iex::BaseExc ("Data compression (zlib) failed.");
+    throw Iex::BaseExc ("Data compression (zlib) failed.");
     }
 
     outPtr = _outBuffer;
@@ -166,9 +166,9 @@ ZipCompressor::compress (const char *inPtr,
 
 int
 ZipCompressor::uncompress (const char *inPtr,
-			   int inSize,
-			   int /*minY*/,
-			   const char *&outPtr)
+               int inSize,
+               int /*minY*/,
+               const char *&outPtr)
 {
     //
     // Special case ­- empty input buffer
@@ -176,8 +176,8 @@ ZipCompressor::uncompress (const char *inPtr,
 
     if (inSize == 0)
     {
-	outPtr = _outBuffer;
-	return 0;
+    outPtr = _outBuffer;
+    return 0;
     }
 
     //
@@ -187,9 +187,9 @@ ZipCompressor::uncompress (const char *inPtr,
     uLongf outSize = _maxScanLineSize * _numScanLines;
 
     if (Z_OK != ::uncompress ((Bytef *)_tmpBuffer, &outSize,
-			      (const Bytef *) inPtr, inSize))
+                  (const Bytef *) inPtr, inSize))
     {
-	throw Iex::InputExc ("Data decompression (zlib) failed.");
+    throw Iex::InputExc ("Data decompression (zlib) failed.");
     }
 
     //
@@ -197,15 +197,15 @@ ZipCompressor::uncompress (const char *inPtr,
     //
 
     {
-	unsigned char *t = (unsigned char *) _tmpBuffer + 1;
-	unsigned char *stop = (unsigned char *) _tmpBuffer + outSize;
+    unsigned char *t = (unsigned char *) _tmpBuffer + 1;
+    unsigned char *stop = (unsigned char *) _tmpBuffer + outSize;
 
-	while (t < stop)
-	{
-	    int d = int (t[-1]) + int (t[0]) - 128;
-	    t[0] = d;
-	    ++t;
-	}
+    while (t < stop)
+    {
+        int d = int (t[-1]) + int (t[0]) - 128;
+        t[0] = d;
+        ++t;
+    }
     }
 
     //
@@ -213,23 +213,23 @@ ZipCompressor::uncompress (const char *inPtr,
     //
 
     {
-	const char *t1 = _tmpBuffer;
-	const char *t2 = _tmpBuffer + (outSize + 1) / 2;
-	char *s = _outBuffer;
-	char *stop = s + outSize;
+    const char *t1 = _tmpBuffer;
+    const char *t2 = _tmpBuffer + (outSize + 1) / 2;
+    char *s = _outBuffer;
+    char *stop = s + outSize;
 
-	while (true)
-	{
-	    if (s < stop)
-		*(s++) = *(t1++);
-	    else
-		break;
+    while (true)
+    {
+        if (s < stop)
+        *(s++) = *(t1++);
+        else
+        break;
 
-	    if (s < stop)
-		*(s++) = *(t2++);
-	    else
-		break;
-	}
+        if (s < stop)
+        *(s++) = *(t2++);
+        else
+        break;
+    }
     }
 
     outPtr = _outBuffer;

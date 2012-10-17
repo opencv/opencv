@@ -63,7 +63,7 @@ int DisjointSets::findSetByElem(int elem)
     while (set != parent[set])
         set = parent[set];
     int next;
-    while (elem != parent[elem]) 
+    while (elem != parent[elem])
     {
         next = parent[elem];
         parent[elem] = set;
@@ -75,13 +75,13 @@ int DisjointSets::findSetByElem(int elem)
 
 int DisjointSets::mergeSets(int set1, int set2)
 {
-    if (rank_[set1] < rank_[set2]) 
+    if (rank_[set1] < rank_[set2])
     {
         parent[set1] = set2;
         size[set2] += size[set1];
         return set2;
     }
-    if (rank_[set2] < rank_[set1]) 
+    if (rank_[set2] < rank_[set1])
     {
         parent[set2] = set1;
         size[set1] += size[set2];

@@ -6,15 +6,15 @@
  */
 
 /* __START_OF_JASPER_LICENSE__
- * 
+ *
  * JasPer License Version 2.0
- * 
+ *
  * Copyright (c) 2001-2006 Michael David Adams
  * Copyright (c) 1999-2000 Image Power, Inc.
  * Copyright (c) 1999-2000 The University of British Columbia
- * 
+ *
  * All rights reserved.
- * 
+ *
  * Permission is hereby granted, free of charge, to any person (the
  * "User") obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without restriction,
@@ -22,15 +22,15 @@
  * publish, distribute, and/or sell copies of the Software, and to permit
  * persons to whom the Software is furnished to do so, subject to the
  * following conditions:
- * 
+ *
  * 1.  The above copyright notices and this permission notice (which
  * includes the disclaimer below) shall be included in all copies or
  * substantial portions of the Software.
- * 
+ *
  * 2.  The name of a copyright holder shall not be used to endorse or
  * promote products derived from the Software without specific prior
  * written permission.
- * 
+ *
  * THIS DISCLAIMER OF WARRANTY CONSTITUTES AN ESSENTIAL PART OF THIS
  * LICENSE.  NO USE OF THE SOFTWARE IS AUTHORIZED HEREUNDER EXCEPT UNDER
  * THIS DISCLAIMER.  THE SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS
@@ -57,7 +57,7 @@
  * PERSONAL INJURY, OR SEVERE PHYSICAL OR ENVIRONMENTAL DAMAGE ("HIGH
  * RISK ACTIVITIES").  THE COPYRIGHT HOLDERS SPECIFICALLY DISCLAIM ANY
  * EXPRESS OR IMPLIED WARRANTY OF FITNESS FOR HIGH RISK ACTIVITIES.
- * 
+ *
  * __END_OF_JASPER_LICENSE__
  */
 
@@ -111,20 +111,20 @@
 
 typedef struct {
 
-	/* Some miscellaneous flags. */
-	int flags_;
+    /* Some miscellaneous flags. */
+    int flags_;
 
-	/* The input/output buffer. */
-	uint_fast16_t buf_;
+    /* The input/output buffer. */
+    uint_fast16_t buf_;
 
-	/* The number of bits remaining in the byte being read/written. */
-	int cnt_;
+    /* The number of bits remaining in the byte being read/written. */
+    int cnt_;
 
-	/* The underlying stream associated with this bit stream. */
-	jas_stream_t *stream_;
+    /* The underlying stream associated with this bit stream. */
+    jas_stream_t *stream_;
 
-	/* The mode in which this bit stream was opened. */
-	int openmode_;
+    /* The mode in which this bit stream was opened. */
+    int openmode_;
 
 } jpc_bitstream_t;
 
@@ -145,19 +145,19 @@ int jpc_bitstream_close(jpc_bitstream_t *bitstream);
 /* Read a bit from a bit stream. */
 #if defined(DEBUG)
 #define	jpc_bitstream_getbit(bitstream) \
-	jpc_bitstream_getbit_func(bitstream)
+    jpc_bitstream_getbit_func(bitstream)
 #else
 #define jpc_bitstream_getbit(bitstream) \
-	jpc_bitstream_getbit_macro(bitstream)
+    jpc_bitstream_getbit_macro(bitstream)
 #endif
 
 /* Write a bit to a bit stream. */
 #if defined(DEBUG)
 #define	jpc_bitstream_putbit(bitstream, v) \
-	jpc_bitstream_putbit_func(bitstream, v)
+    jpc_bitstream_putbit_func(bitstream, v)
 #else
 #define	jpc_bitstream_putbit(bitstream, v) \
-	jpc_bitstream_putbit_macro(bitstream, v)
+    jpc_bitstream_putbit_macro(bitstream, v)
 #endif
 
 /* Read one or more bits from a bit stream. */
@@ -196,7 +196,7 @@ int jpc_bitstream_pending(jpc_bitstream_t *bitstream);
 
 /* Has EOF been encountered on a bit stream? */
 #define jpc_bitstream_eof(bitstream) \
-	((bitstream)->flags_ & JPC_BITSTREAM_EOF)
+    ((bitstream)->flags_ & JPC_BITSTREAM_EOF)
 
 /******************************************************************************\
 * Internals.
@@ -212,20 +212,20 @@ int jpc_bitstream_putbit_func(jpc_bitstream_t *bitstream, int v);
 int jpc_bitstream_fillbuf(jpc_bitstream_t *bitstream);
 
 #define	jpc_bitstream_getbit_macro(bitstream) \
-	(assert((bitstream)->openmode_ & JPC_BITSTREAM_READ), \
-	  (--(bitstream)->cnt_ >= 0) ? \
-	  ((int)(((bitstream)->buf_ >> (bitstream)->cnt_) & 1)) : \
-	  jpc_bitstream_fillbuf(bitstream))
+    (assert((bitstream)->openmode_ & JPC_BITSTREAM_READ), \
+      (--(bitstream)->cnt_ >= 0) ? \
+      ((int)(((bitstream)->buf_ >> (bitstream)->cnt_) & 1)) : \
+      jpc_bitstream_fillbuf(bitstream))
 
 #define jpc_bitstream_putbit_macro(bitstream, bit) \
-	(assert((bitstream)->openmode_ & JPC_BITSTREAM_WRITE), \
-	  (--(bitstream)->cnt_ < 0) ? \
-	  ((bitstream)->buf_ = ((bitstream)->buf_ << 8) & 0xffff, \
-	  (bitstream)->cnt_ = ((bitstream)->buf_ == 0xff00) ? 6 : 7, \
-	  (bitstream)->buf_ |= ((bit) & 1) << (bitstream)->cnt_, \
-	  (jas_stream_putc((bitstream)->stream_, (bitstream)->buf_ >> 8) == EOF) \
-	  ? (EOF) : ((bit) & 1)) : \
-	  ((bitstream)->buf_ |= ((bit) & 1) << (bitstream)->cnt_, \
-	  (bit) & 1))
+    (assert((bitstream)->openmode_ & JPC_BITSTREAM_WRITE), \
+      (--(bitstream)->cnt_ < 0) ? \
+      ((bitstream)->buf_ = ((bitstream)->buf_ << 8) & 0xffff, \
+      (bitstream)->cnt_ = ((bitstream)->buf_ == 0xff00) ? 6 : 7, \
+      (bitstream)->buf_ |= ((bit) & 1) << (bitstream)->cnt_, \
+      (jas_stream_putc((bitstream)->stream_, (bitstream)->buf_ >> 8) == EOF) \
+      ? (EOF) : ((bit) & 1)) : \
+      ((bitstream)->buf_ |= ((bit) & 1) << (bitstream)->cnt_, \
+      (bit) & 1))
 
 #endif

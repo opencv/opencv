@@ -1,7 +1,7 @@
 /*M///////////////////////////////////////////////////////////////////////////////////////
 //
-// IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING. 
-// 
+// IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
+//
 //  By downloading, copying, installing or using the software you agree to this license.
 //  If you do not agree to this license, do not download, install,
 //  copy or use the software.
@@ -359,19 +359,19 @@ NCV_EXPORTS NCVStatus ncvDetectObjectsMultiScale_device(NCVMatrix<Ncv8u> &d_srcI
                                                         NcvSize32u srcRoi,
                                                         NCVVector<NcvRect32u> &d_dstRects,
                                                         Ncv32u &dstNumRects,
-            
+
                                                         HaarClassifierCascadeDescriptor &haar,
                                                         NCVVector<HaarStage64> &h_HaarStages,
                                                         NCVVector<HaarStage64> &d_HaarStages,
                                                         NCVVector<HaarClassifierNode128> &d_HaarNodes,
                                                         NCVVector<HaarFeature64> &d_HaarFeatures,
-            
+
                                                         NcvSize32u minObjSize,
                                                         Ncv32u minNeighbors,      //default 4
                                                         Ncv32f scaleStep,         //default 1.2f
                                                         Ncv32u pixelStep,         //default 1
                                                         Ncv32u flags,             //default NCVPipeObjDet_Default
-            
+
                                                         INCVMemAllocator &gpuAllocator,
                                                         INCVMemAllocator &cpuAllocator,
                                                         cudaDeviceProp &devProp,

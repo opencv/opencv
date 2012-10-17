@@ -15,11 +15,11 @@ def main():
     classifier_fn = 'digits_svm.dat'
     if not os.path.exists(classifier_fn):
         print '"%s" not found, run digits.py first' % classifier_fn
-        return 
+        return
     model = SVM()
     model.load(classifier_fn)
 
-    
+
     while True:
         ret, frame = cap.read()
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -55,7 +55,7 @@ def main():
             s = "%f, %f" % (abs(v_in.mean() - v_out.mean()), v_out.std())
             cv2.putText(frame, s, (x, y), cv2.FONT_HERSHEY_PLAIN, 1.0, (200, 0, 0), thickness = 1)
             '''
-            
+
             s = 1.5*float(h)/SZ
             m = cv2.moments(bin_roi)
             c1 = np.float32([m['m10'], m['m01']]) / m['m00']
@@ -68,7 +68,7 @@ def main():
             bin_norm = deskew(bin_norm)
             if x+w+SZ < frame.shape[1] and y+SZ < frame.shape[0]:
                 frame[y:,x+w:][:SZ, :SZ] = bin_norm[...,np.newaxis]
-                
+
             sample = preprocess_hog([bin_norm])
             digit = model.predict(sample)[0]
             cv2.putText(frame, '%d'%digit, (x, y), cv2.FONT_HERSHEY_PLAIN, 1.0, (200, 0, 0), thickness = 1)

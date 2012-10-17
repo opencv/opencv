@@ -16,7 +16,7 @@ in the documentation and/or other materials provided with the
 distribution.
 *       Neither the name of Industrial Light & Magic nor the names of
 its contributors may be used to endorse or promote products derived
-from this software without specific prior written permission. 
+from this software without specific prior written permission.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
@@ -49,17 +49,17 @@ extern "C" {
 typedef unsigned short ImfHalf;
 
 void	ImfFloatToHalf (float f,
-			ImfHalf *h);
+            ImfHalf *h);
 
 void	ImfFloatToHalfArray (int n,
-			    const float f[/*n*/],
-			    ImfHalf h[/*n*/]);
+                const float f[/*n*/],
+                ImfHalf h[/*n*/]);
 
 float	ImfHalfToFloat (ImfHalf h);
 
 void	ImfHalfToFloatArray (int n,
-			    const ImfHalf h[/*n*/],
-			    float f[/*n*/]);
+                const ImfHalf h[/*n*/],
+                float f[/*n*/]);
 
 /*
 ** RGBA pixel; memory layout must be the same as struct Imf::Rgba.
@@ -158,146 +158,146 @@ void		ImfDeleteHeader (ImfHeader *hdr);
 ImfHeader *	ImfCopyHeader (const ImfHeader *hdr);
 
 void		ImfHeaderSetDisplayWindow (ImfHeader *hdr,
-					   int xMin, int yMin,
-					   int xMax, int yMax);
+                       int xMin, int yMin,
+                       int xMax, int yMax);
 
 void		ImfHeaderDisplayWindow (const ImfHeader *hdr,
-					int *xMin, int *yMin,
-					int *xMax, int *yMax);
+                    int *xMin, int *yMin,
+                    int *xMax, int *yMax);
 
 void		ImfHeaderSetDataWindow (ImfHeader *hdr,
-					int xMin, int yMin,
-					int xMax, int yMax);
+                    int xMin, int yMin,
+                    int xMax, int yMax);
 
 void		ImfHeaderDataWindow (const ImfHeader *hdr,
-				     int *xMin, int *yMin,
-				     int *xMax, int *yMax);
+                     int *xMin, int *yMin,
+                     int *xMax, int *yMax);
 
 void		ImfHeaderSetPixelAspectRatio (ImfHeader *hdr,
-					      float pixelAspectRatio);
+                          float pixelAspectRatio);
 
 float		ImfHeaderPixelAspectRatio (const ImfHeader *hdr);
 
 void		ImfHeaderSetScreenWindowCenter (ImfHeader *hdr,
-						float x, float y);
+                        float x, float y);
 
 void		ImfHeaderScreenWindowCenter (const ImfHeader *hdr,
-					     float *x, float *y);
+                         float *x, float *y);
 
 void		ImfHeaderSetScreenWindowWidth (ImfHeader *hdr,
-					       float width);
+                           float width);
 
 float		ImfHeaderScreenWindowWidth (const ImfHeader *hdr);
 
 void		ImfHeaderSetLineOrder (ImfHeader *hdr,
-				       int lineOrder);
+                       int lineOrder);
 
 int		ImfHeaderLineOrder (const ImfHeader *hdr);
-			    
+
 void		ImfHeaderSetCompression (ImfHeader *hdr,
-					 int compression);
+                     int compression);
 
 int		ImfHeaderCompression (const ImfHeader *hdr);
 
 int		ImfHeaderSetIntAttribute (ImfHeader *hdr,
-					  const char name[],
-					  int value);
+                      const char name[],
+                      int value);
 
 int		ImfHeaderIntAttribute (const ImfHeader *hdr,
-				       const char name[],
-				       int *value);
+                       const char name[],
+                       int *value);
 
 int		ImfHeaderSetFloatAttribute (ImfHeader *hdr,
-					    const char name[],
-					    float value);
+                        const char name[],
+                        float value);
 
 int		ImfHeaderSetDoubleAttribute (ImfHeader *hdr,
-					     const char name[],
-					     double value);
+                         const char name[],
+                         double value);
 
 int		ImfHeaderFloatAttribute (const ImfHeader *hdr,
-				         const char name[],
-				         float *value);
+                         const char name[],
+                         float *value);
 
 int		ImfHeaderDoubleAttribute (const ImfHeader *hdr,
-				          const char name[],
-				          double *value);
+                          const char name[],
+                          double *value);
 
 int		ImfHeaderSetStringAttribute (ImfHeader *hdr,
-					     const char name[],
-					     const char value[]);
+                         const char name[],
+                         const char value[]);
 
 int		ImfHeaderStringAttribute (const ImfHeader *hdr,
-				         const char name[],
-					  const char **value);
+                         const char name[],
+                      const char **value);
 
 int		ImfHeaderSetBox2iAttribute (ImfHeader *hdr,
-					    const char name[],
-					    int xMin, int yMin,
-					    int xMax, int yMax);
+                        const char name[],
+                        int xMin, int yMin,
+                        int xMax, int yMax);
 
 int		ImfHeaderBox2iAttribute (const ImfHeader *hdr,
-					 const char name[],
-					 int *xMin, int *yMin,
-					 int *xMax, int *yMax);
+                     const char name[],
+                     int *xMin, int *yMin,
+                     int *xMax, int *yMax);
 
 int		ImfHeaderSetBox2fAttribute (ImfHeader *hdr,
-					    const char name[],
-					    float xMin, float yMin,
-					    float xMax, float yMax);
+                        const char name[],
+                        float xMin, float yMin,
+                        float xMax, float yMax);
 
 int		ImfHeaderBox2fAttribute (const ImfHeader *hdr,
-					 const char name[],
-					 float *xMin, float *yMin,
-					 float *xMax, float *yMax);
+                     const char name[],
+                     float *xMin, float *yMin,
+                     float *xMax, float *yMax);
 
 int		ImfHeaderSetV2iAttribute (ImfHeader *hdr,
-				         const char name[],
-				         int x, int y);
+                         const char name[],
+                         int x, int y);
 
 int		ImfHeaderV2iAttribute (const ImfHeader *hdr,
-				       const char name[],
-				       int *x, int *y);
+                       const char name[],
+                       int *x, int *y);
 
 int		ImfHeaderSetV2fAttribute (ImfHeader *hdr,
-				          const char name[],
-				          float x, float y);
+                          const char name[],
+                          float x, float y);
 
 int		ImfHeaderV2fAttribute (const ImfHeader *hdr,
-				       const char name[],
-				       float *x, float *y);
+                       const char name[],
+                       float *x, float *y);
 
 int		ImfHeaderSetV3iAttribute (ImfHeader *hdr,
-				          const char name[],
-				          int x, int y, int z);
+                          const char name[],
+                          int x, int y, int z);
 
 int		ImfHeaderV3iAttribute (const ImfHeader *hdr,
-				       const char name[],
-				       int *x, int *y, int *z);
+                       const char name[],
+                       int *x, int *y, int *z);
 
 int		ImfHeaderSetV3fAttribute (ImfHeader *hdr,
-				          const char name[],
-				          float x, float y, float z);
+                          const char name[],
+                          float x, float y, float z);
 
 int		ImfHeaderV3fAttribute (const ImfHeader *hdr,
-				       const char name[],
-				       float *x, float *y, float *z);
+                       const char name[],
+                       float *x, float *y, float *z);
 
 int		ImfHeaderSetM33fAttribute (ImfHeader *hdr,
-					   const char name[],
-					   const float m[3][3]);
+                       const char name[],
+                       const float m[3][3]);
 
 int		ImfHeaderM33fAttribute (const ImfHeader *hdr,
-					const char name[],
-					float m[3][3]);
+                    const char name[],
+                    float m[3][3]);
 
 int		ImfHeaderSetM44fAttribute (ImfHeader *hdr,
-					   const char name[],
-					   const float m[4][4]);
+                       const char name[],
+                       const float m[4][4]);
 
 int		ImfHeaderM44fAttribute (const ImfHeader *hdr,
-					const char name[],
-					float m[4][4]);
+                    const char name[],
+                    float m[4][4]);
 
 /*
 ** RGBA output file
@@ -307,18 +307,18 @@ struct ImfOutputFile;
 typedef struct ImfOutputFile ImfOutputFile;
 
 ImfOutputFile *	ImfOpenOutputFile (const char name[],
-				   const ImfHeader *hdr,
-				   int channels);
+                   const ImfHeader *hdr,
+                   int channels);
 
 int			ImfCloseOutputFile (ImfOutputFile *out);
 
 int			ImfOutputSetFrameBuffer (ImfOutputFile *out,
-						 const ImfRgba *base,
-						 size_t xStride,
-						 size_t yStride);
+                         const ImfRgba *base,
+                         size_t xStride,
+                         size_t yStride);
 
 int			ImfOutputWritePixels (ImfOutputFile *out,
-					      int numScanLines);
+                          int numScanLines);
 
 int			ImfOutputCurrentScanLine (const ImfOutputFile *out);
 
@@ -335,21 +335,21 @@ struct ImfTiledOutputFile;
 typedef struct ImfTiledOutputFile ImfTiledOutputFile;
 
 ImfTiledOutputFile *	ImfOpenTiledOutputFile (const char name[],
-					        const ImfHeader *hdr,
-						int channels,
-						int xSize, int ySize,
-						int mode, int rmode);
+                            const ImfHeader *hdr,
+                        int channels,
+                        int xSize, int ySize,
+                        int mode, int rmode);
 
 int		ImfCloseTiledOutputFile (ImfTiledOutputFile *out);
 
 int		ImfTiledOutputSetFrameBuffer (ImfTiledOutputFile *out,
-					      const ImfRgba *base,
-					      size_t xStride,
-					      size_t yStride);
+                          const ImfRgba *base,
+                          size_t xStride,
+                          size_t yStride);
 
 int		ImfTiledOutputWriteTile (ImfTiledOutputFile *out,
-					 int dx, int dy,
-					 int lx, int ly);
+                     int dx, int dy,
+                     int lx, int ly);
 
 int             ImfTiledOutputWriteTiles (ImfTiledOutputFile *out,
                                           int dxMin, int dxMax,
@@ -366,7 +366,7 @@ int		ImfTiledOutputTileYSize (const ImfTiledOutputFile *out);
 
 int		ImfTiledOutputLevelMode (const ImfTiledOutputFile *out);
 int	       	ImfTiledOutputLevelRoundingMode
-						(const ImfTiledOutputFile *out);
+                        (const ImfTiledOutputFile *out);
 
 
 /*
@@ -381,13 +381,13 @@ ImfInputFile *		ImfOpenInputFile (const char name[]);
 int			ImfCloseInputFile (ImfInputFile *in);
 
 int			ImfInputSetFrameBuffer (ImfInputFile *in,
-						ImfRgba *base,
-						size_t xStride,
-						size_t yStride);
+                        ImfRgba *base,
+                        size_t xStride,
+                        size_t yStride);
 
 int			ImfInputReadPixels (ImfInputFile *in,
-					    int scanLine1,
-					    int scanLine2);
+                        int scanLine1,
+                        int scanLine2);
 
 const ImfHeader *	ImfInputHeader (const ImfInputFile *in);
 
@@ -408,13 +408,13 @@ ImfTiledInputFile *	ImfOpenTiledInputFile (const char name[]);
 int		ImfCloseTiledInputFile (ImfTiledInputFile *in);
 
 int		ImfTiledInputSetFrameBuffer (ImfTiledInputFile *in,
-					     ImfRgba *base,
-					     size_t xStride,
-					     size_t yStride);
+                         ImfRgba *base,
+                         size_t xStride,
+                         size_t yStride);
 
 int		ImfTiledInputReadTile (ImfTiledInputFile *in,
-				       int dx, int dy,
-				       int lx, int ly);
+                       int dx, int dy,
+                       int lx, int ly);
 
 int		ImfTiledInputReadTiles (ImfTiledInputFile *in,
                                         int dxMin, int dxMax,
@@ -434,7 +434,7 @@ int		ImfTiledInputTileYSize (const ImfTiledInputFile *in);
 int		ImfTiledInputLevelMode (const ImfTiledInputFile *in);
 
 int	       	ImfTiledInputLevelRoundingMode
-					       (const ImfTiledInputFile *in);
+                           (const ImfTiledInputFile *in);
 
 /*
 ** Lookup tables
@@ -450,9 +450,9 @@ ImfLut *		ImfNewRoundNBitLut (unsigned int n, int channels);
 void			ImfDeleteLut (ImfLut *lut);
 
 void			ImfApplyLut (ImfLut *lut,
-				     ImfRgba *data,
-				     int nData,
-				     int stride);
+                     ImfRgba *data,
+                     int nData,
+                     int stride);
 /*
 ** Most recent error message
 */

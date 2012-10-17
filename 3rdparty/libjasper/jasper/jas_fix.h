@@ -6,15 +6,15 @@
  */
 
 /* __START_OF_JASPER_LICENSE__
- * 
+ *
  * JasPer License Version 2.0
- * 
+ *
  * Copyright (c) 2001-2006 Michael David Adams
  * Copyright (c) 1999-2000 Image Power, Inc.
  * Copyright (c) 1999-2000 The University of British Columbia
- * 
+ *
  * All rights reserved.
- * 
+ *
  * Permission is hereby granted, free of charge, to any person (the
  * "User") obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without restriction,
@@ -22,15 +22,15 @@
  * publish, distribute, and/or sell copies of the Software, and to permit
  * persons to whom the Software is furnished to do so, subject to the
  * following conditions:
- * 
+ *
  * 1.  The above copyright notices and this permission notice (which
  * includes the disclaimer below) shall be included in all copies or
  * substantial portions of the Software.
- * 
+ *
  * 2.  The name of a copyright holder shall not be used to endorse or
  * promote products derived from the Software without specific prior
  * written permission.
- * 
+ *
  * THIS DISCLAIMER OF WARRANTY CONSTITUTES AN ESSENTIAL PART OF THIS
  * LICENSE.  NO USE OF THE SOFTWARE IS AUTHORIZED HEREUNDER EXCEPT UNDER
  * THIS DISCLAIMER.  THE SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS
@@ -57,7 +57,7 @@
  * PERSONAL INJURY, OR SEVERE PHYSICAL OR ENVIRONMENTAL DAMAGE ("HIGH
  * RISK ACTIVITIES").  THE COPYRIGHT HOLDERS SPECIFICALLY DISCLAIM ANY
  * EXPRESS OR IMPLIED WARRANTY OF FITNESS FOR HIGH RISK ACTIVITIES.
- * 
+ *
  * __END_OF_JASPER_LICENSE__
  */
 
@@ -91,15 +91,15 @@ extern "C" {
 
 /* The representation of the value zero. */
 #define	JAS_FIX_ZERO(fix_t, fracbits) \
-	JAS_CAST(fix_t, 0)
+    JAS_CAST(fix_t, 0)
 
 /* The representation of the value one. */
 #define	JAS_FIX_ONE(fix_t, fracbits) \
-	(JAS_CAST(fix_t, 1) << (fracbits))
+    (JAS_CAST(fix_t, 1) << (fracbits))
 
 /* The representation of the value one half. */
 #define	JAS_FIX_HALF(fix_t, fracbits) \
-	(JAS_CAST(fix_t, 1) << ((fracbits) - 1))
+    (JAS_CAST(fix_t, 1) << ((fracbits) - 1))
 
 /******************************************************************************\
 * Conversion operations.
@@ -107,19 +107,19 @@ extern "C" {
 
 /* Convert an int to a fixed-point number. */
 #define JAS_INTTOFIX(fix_t, fracbits, x) \
-	JAS_CAST(fix_t, (x) << (fracbits))
+    JAS_CAST(fix_t, (x) << (fracbits))
 
 /* Convert a fixed-point number to an int. */
 #define JAS_FIXTOINT(fix_t, fracbits, x) \
-	JAS_CAST(int, (x) >> (fracbits))
+    JAS_CAST(int, (x) >> (fracbits))
 
 /* Convert a fixed-point number to a double. */
 #define JAS_FIXTODBL(fix_t, fracbits, x) \
-	(JAS_CAST(double, x) / (JAS_CAST(fix_t, 1) << (fracbits)))
+    (JAS_CAST(double, x) / (JAS_CAST(fix_t, 1) << (fracbits)))
 
 /* Convert a double to a fixed-point number. */
 #define JAS_DBLTOFIX(fix_t, fracbits, x) \
-	JAS_CAST(fix_t, ((x) * JAS_CAST(double, JAS_CAST(fix_t, 1) << (fracbits))))
+    JAS_CAST(fix_t, ((x) * JAS_CAST(double, JAS_CAST(fix_t, 1) << (fracbits))))
 
 /******************************************************************************\
 * Basic arithmetic operations.
@@ -143,11 +143,11 @@ extern "C" {
 
 /* Calculate the sum of two fixed-point numbers with overflow checking. */
 #define	JAS_FIX_ADD_OFLOW(fix_t, fracbits, x, y) \
-	((x) >= 0) ? \
-	  (((y) >= 0) ? ((x) + (y) >= 0 || JAS_FIX_OFLOW(), (x) + (y)) : \
-	  ((x) + (y))) : \
-	  (((y) >= 0) ? ((x) + (y)) : ((x) + (y) < 0 || JAS_FIX_OFLOW(), \
-	  (x) + (y)))
+    ((x) >= 0) ? \
+      (((y) >= 0) ? ((x) + (y) >= 0 || JAS_FIX_OFLOW(), (x) + (y)) : \
+      ((x) + (y))) : \
+      (((y) >= 0) ? ((x) + (y)) : ((x) + (y) < 0 || JAS_FIX_OFLOW(), \
+      (x) + (y)))
 
 /* Calculate the product of two fixed-point numbers. */
 #if !defined(DEBUG_OVERFLOW)
@@ -159,17 +159,17 @@ extern "C" {
 /* Calculate the product of two fixed-point numbers without overflow
   checking. */
 #define	JAS_FIX_MUL_FAST(fix_t, fracbits, bigfix_t, x, y) \
-	JAS_CAST(fix_t, (JAS_CAST(bigfix_t, x) * JAS_CAST(bigfix_t, y)) >> \
-	  (fracbits))
+    JAS_CAST(fix_t, (JAS_CAST(bigfix_t, x) * JAS_CAST(bigfix_t, y)) >> \
+      (fracbits))
 
 /* Calculate the product of two fixed-point numbers with overflow
   checking. */
 #define JAS_FIX_MUL_OFLOW(fix_t, fracbits, bigfix_t, x, y) \
-	((JAS_CAST(bigfix_t, x) * JAS_CAST(bigfix_t, y) >> (fracbits)) == \
-	  JAS_CAST(fix_t, (JAS_CAST(bigfix_t, x) * JAS_CAST(bigfix_t, y) >> \
-	  (fracbits))) ? \
-	  JAS_CAST(fix_t, (JAS_CAST(bigfix_t, x) * JAS_CAST(bigfix_t, y) >> \
-	  (fracbits))) : JAS_FIX_OFLOW())
+    ((JAS_CAST(bigfix_t, x) * JAS_CAST(bigfix_t, y) >> (fracbits)) == \
+      JAS_CAST(fix_t, (JAS_CAST(bigfix_t, x) * JAS_CAST(bigfix_t, y) >> \
+      (fracbits))) ? \
+      JAS_CAST(fix_t, (JAS_CAST(bigfix_t, x) * JAS_CAST(bigfix_t, y) >> \
+      (fracbits))) : JAS_FIX_OFLOW())
 
 /* Calculate the product of a fixed-point number and an int. */
 #if !defined(DEBUG_OVERFLOW)
@@ -181,12 +181,12 @@ extern "C" {
 /* Calculate the product of a fixed-point number and an int without overflow
   checking. */
 #define	JAS_FIX_MULBYINT_FAST(fix_t, fracbits, x, y) \
-	JAS_CAST(fix_t, ((x) * (y)))
+    JAS_CAST(fix_t, ((x) * (y)))
 
 /* Calculate the product of a fixed-point number and an int with overflow
   checking. */
 #define	JAS_FIX_MULBYINT_OFLOW(fix_t, fracbits, x, y) \
-	JAS_FIX_MULBYINT_FAST(fix_t, fracbits, x, y)
+    JAS_FIX_MULBYINT_FAST(fix_t, fracbits, x, y)
 
 /* Calculate the quotient of two fixed-point numbers. */
 #if !defined(DEBUG_OVERFLOW)
@@ -198,12 +198,12 @@ extern "C" {
 /* Calculate the quotient of two fixed-point numbers without underflow
   checking. */
 #define	JAS_FIX_DIV_FAST(fix_t, fracbits, bigfix_t, x, y) \
-	JAS_CAST(fix_t, (JAS_CAST(bigfix_t, x) << (fracbits)) / (y))
+    JAS_CAST(fix_t, (JAS_CAST(bigfix_t, x) << (fracbits)) / (y))
 
 /* Calculate the quotient of two fixed-point numbers with underflow
   checking. */
 #define JAS_FIX_DIV_UFLOW(fix_t, fracbits, bigfix_t, x, y) \
-	JAS_FIX_DIV_FAST(fix_t, fracbits, bigfix_t, x, y)
+    JAS_FIX_DIV_FAST(fix_t, fracbits, bigfix_t, x, y)
 
 /* Negate a fixed-point number. */
 #if !defined(DEBUG_OVERFLOW)
@@ -214,13 +214,13 @@ extern "C" {
 
 /* Negate a fixed-point number without overflow checking. */
 #define	JAS_FIX_NEG_FAST(fix_t, fracbits, x) \
-	(-(x))
+    (-(x))
 
 /* Negate a fixed-point number with overflow checking. */
 /* Yes, overflow is actually possible for two's complement representations,
   although highly unlikely to occur. */
 #define	JAS_FIX_NEG_OFLOW(fix_t, fracbits, x) \
-	(((x) < 0) ? (-(x) > 0 || JAS_FIX_OFLOW(), -(x)) : (-(x)))
+    (((x) < 0) ? (-(x) > 0 || JAS_FIX_OFLOW(), -(x)) : (-(x)))
 
 /* Perform an arithmetic shift left of a fixed-point number. */
 #if !defined(DEBUG_OVERFLOW)
@@ -232,12 +232,12 @@ extern "C" {
 /* Perform an arithmetic shift left of a fixed-point number without overflow
   checking. */
 #define	JAS_FIX_ASL_FAST(fix_t, fracbits, x, n) \
-	((x) << (n))
+    ((x) << (n))
 
 /* Perform an arithmetic shift left of a fixed-point number with overflow
   checking. */
 #define	JAS_FIX_ASL_OFLOW(fix_t, fracbits, x, n) \
-	((((x) << (n)) >> (n)) == (x) || JAS_FIX_OFLOW(), (x) << (n))
+    ((((x) << (n)) >> (n)) == (x) || JAS_FIX_OFLOW(), (x) << (n))
 
 /* Perform an arithmetic shift right of a fixed-point number. */
 #if !defined(DEBUG_OVERFLOW)
@@ -249,12 +249,12 @@ extern "C" {
 /* Perform an arithmetic shift right of a fixed-point number without underflow
   checking. */
 #define	JAS_FIX_ASR_FAST(fix_t, fracbits, x, n) \
-	((x) >> (n))
+    ((x) >> (n))
 
 /* Perform an arithmetic shift right of a fixed-point number with underflow
   checking. */
 #define	JAS_FIX_ASR_UFLOW(fix_t, fracbits, x, n) \
-	JAS_FIX_ASR_FAST(fix_t, fracbits, x, n)
+    JAS_FIX_ASR_FAST(fix_t, fracbits, x, n)
 
 /******************************************************************************\
 * Other basic arithmetic operations.
@@ -262,19 +262,19 @@ extern "C" {
 
 /* Calculate the difference between two fixed-point numbers. */
 #define JAS_FIX_SUB(fix_t, fracbits, x, y) \
-	JAS_FIX_ADD(fix_t, fracbits, x, JAS_FIX_NEG(fix_t, fracbits, y))
+    JAS_FIX_ADD(fix_t, fracbits, x, JAS_FIX_NEG(fix_t, fracbits, y))
 
 /* Add one fixed-point number to another. */
 #define JAS_FIX_PLUSEQ(fix_t, fracbits, x, y) \
-	((x) = JAS_FIX_ADD(fix_t, fracbits, x, y))
+    ((x) = JAS_FIX_ADD(fix_t, fracbits, x, y))
 
 /* Subtract one fixed-point number from another. */
 #define JAS_FIX_MINUSEQ(fix_t, fracbits, x, y) \
-	((x) = JAS_FIX_SUB(fix_t, fracbits, x, y))
+    ((x) = JAS_FIX_SUB(fix_t, fracbits, x, y))
 
 /* Multiply one fixed-point number by another. */
 #define	JAS_FIX_MULEQ(fix_t, fracbits, bigfix_t, x, y) \
-	((x) = JAS_FIX_MUL(fix_t, fracbits, bigfix_t, x, y))
+    ((x) = JAS_FIX_MUL(fix_t, fracbits, bigfix_t, x, y))
 
 /******************************************************************************\
 * Miscellaneous operations.
@@ -282,15 +282,15 @@ extern "C" {
 
 /* Calculate the absolute value of a fixed-point number. */
 #define	JAS_FIX_ABS(fix_t, fracbits, x) \
-	(((x) >= 0) ? (x) : (JAS_FIX_NEG(fix_t, fracbits, x)))
+    (((x) >= 0) ? (x) : (JAS_FIX_NEG(fix_t, fracbits, x)))
 
 /* Is a fixed-point number an integer? */
 #define	JAS_FIX_ISINT(fix_t, fracbits, x) \
-	(JAS_FIX_FLOOR(fix_t, fracbits, x) == (x))
+    (JAS_FIX_FLOOR(fix_t, fracbits, x) == (x))
 
 /* Get the sign of a fixed-point number. */
 #define JAS_FIX_SGN(fix_t, fracbits, x) \
-	((x) >= 0 ? 1 : (-1))
+    ((x) >= 0 ? 1 : (-1))
 
 /******************************************************************************\
 * Relational operations.
@@ -298,23 +298,23 @@ extern "C" {
 
 /* Compare two fixed-point numbers. */
 #define JAS_FIX_CMP(fix_t, fracbits, x, y) \
-	((x) > (y) ? 1 : (((x) == (y)) ? 0 : (-1)))
+    ((x) > (y) ? 1 : (((x) == (y)) ? 0 : (-1)))
 
 /* Less than. */
 #define	JAS_FIX_LT(fix_t, fracbits, x, y) \
-	((x) < (y))
+    ((x) < (y))
 
 /* Less than or equal. */
 #define	JAS_FIX_LTE(fix_t, fracbits, x, y) \
-	((x) <= (y))
+    ((x) <= (y))
 
 /* Greater than. */
 #define	JAS_FIX_GT(fix_t, fracbits, x, y) \
-	((x) > (y))
+    ((x) > (y))
 
 /* Greater than or equal. */
 #define	JAS_FIX_GTE(fix_t, fracbits, x, y) \
-	((x) >= (y))
+    ((x) >= (y))
 
 /******************************************************************************\
 * Rounding functions.
@@ -322,21 +322,21 @@ extern "C" {
 
 /* Round a fixed-point number to the nearest integer. */
 #define	JAS_FIX_ROUND(fix_t, fracbits, x) \
-	(((x) < 0) ? JAS_FIX_FLOOR(fix_t, fracbits, JAS_FIX_ADD(fix_t, fracbits, \
-	  (x), JAS_FIX_HALF(fix_t, fracbits))) : \
-	  JAS_FIX_NEG(fix_t, fracbits, JAS_FIX_FLOOR(fix_t, fracbits, \
-	  JAS_FIX_ADD(fix_t, fracbits, (-(x)), JAS_FIX_HALF(fix_t, fracbits)))))
+    (((x) < 0) ? JAS_FIX_FLOOR(fix_t, fracbits, JAS_FIX_ADD(fix_t, fracbits, \
+      (x), JAS_FIX_HALF(fix_t, fracbits))) : \
+      JAS_FIX_NEG(fix_t, fracbits, JAS_FIX_FLOOR(fix_t, fracbits, \
+      JAS_FIX_ADD(fix_t, fracbits, (-(x)), JAS_FIX_HALF(fix_t, fracbits)))))
 
 /* Round a fixed-point number to the nearest integer in the direction of
   negative infinity (i.e., the floor function). */
 #define	JAS_FIX_FLOOR(fix_t, fracbits, x) \
-	((x) & (~((JAS_CAST(fix_t, 1) << (fracbits)) - 1)))
+    ((x) & (~((JAS_CAST(fix_t, 1) << (fracbits)) - 1)))
 
 /* Round a fixed-point number to the nearest integer in the direction
   of zero. */
 #define JAS_FIX_TRUNC(fix_t, fracbits, x) \
-	(((x) >= 0) ? JAS_FIX_FLOOR(fix_t, fracbits, x) : \
-	  JAS_FIX_CEIL(fix_t, fracbits, x))
+    (((x) >= 0) ? JAS_FIX_FLOOR(fix_t, fracbits, x) : \
+      JAS_FIX_CEIL(fix_t, fracbits, x))
 
 /******************************************************************************\
 * The below macros are for internal library use only.  Do not invoke them
@@ -345,11 +345,11 @@ extern "C" {
 
 /* Handle overflow. */
 #define	JAS_FIX_OFLOW() \
-	jas_eprintf("overflow error: file %s, line %d\n", __FILE__, __LINE__)
+    jas_eprintf("overflow error: file %s, line %d\n", __FILE__, __LINE__)
 
 /* Handle underflow. */
 #define	JAS_FIX_UFLOW() \
-	jas_eprintf("underflow error: file %s, line %d\n", __FILE__, __LINE__)
+    jas_eprintf("underflow error: file %s, line %d\n", __FILE__, __LINE__)
 
 #ifdef __cplusplus
 }

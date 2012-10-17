@@ -4,15 +4,15 @@
  */
 
 /* __START_OF_JASPER_LICENSE__
- * 
+ *
  * JasPer License Version 2.0
- * 
+ *
  * Copyright (c) 2001-2006 Michael David Adams
  * Copyright (c) 1999-2000 Image Power, Inc.
  * Copyright (c) 1999-2000 The University of British Columbia
- * 
+ *
  * All rights reserved.
- * 
+ *
  * Permission is hereby granted, free of charge, to any person (the
  * "User") obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without restriction,
@@ -20,15 +20,15 @@
  * publish, distribute, and/or sell copies of the Software, and to permit
  * persons to whom the Software is furnished to do so, subject to the
  * following conditions:
- * 
+ *
  * 1.  The above copyright notices and this permission notice (which
  * includes the disclaimer below) shall be included in all copies or
  * substantial portions of the Software.
- * 
+ *
  * 2.  The name of a copyright holder shall not be used to endorse or
  * promote products derived from the Software without specific prior
  * written permission.
- * 
+ *
  * THIS DISCLAIMER OF WARRANTY CONSTITUTES AN ESSENTIAL PART OF THIS
  * LICENSE.  NO USE OF THE SOFTWARE IS AUTHORIZED HEREUNDER EXCEPT UNDER
  * THIS DISCLAIMER.  THE SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS
@@ -55,7 +55,7 @@
  * PERSONAL INJURY, OR SEVERE PHYSICAL OR ENVIRONMENTAL DAMAGE ("HIGH
  * RISK ACTIVITIES").  THE COPYRIGHT HOLDERS SPECIFICALLY DISCLAIM ANY
  * EXPRESS OR IMPLIED WARRANTY OF FITNESS FOR HIGH RISK ACTIVITIES.
- * 
+ *
  * __END_OF_JASPER_LICENSE__
  */
 
@@ -139,72 +139,72 @@ typedef double jas_cmreal_t;
 struct jas_cmpxform_s;
 
 typedef struct {
-	long *buf;
-	int prec;
-	int sgnd;
-	int width;
-	int height;
+    long *buf;
+    int prec;
+    int sgnd;
+    int width;
+    int height;
 } jas_cmcmptfmt_t;
 
 typedef struct {
-	int numcmpts;
-	jas_cmcmptfmt_t *cmptfmts;
+    int numcmpts;
+    jas_cmcmptfmt_t *cmptfmts;
 } jas_cmpixmap_t;
 
 typedef struct {
-	void (*destroy)(struct jas_cmpxform_s *pxform);
-	int (*apply)(struct jas_cmpxform_s *pxform, jas_cmreal_t *in, jas_cmreal_t *out, int cnt);
-	void (*dump)(struct jas_cmpxform_s *pxform);
+    void (*destroy)(struct jas_cmpxform_s *pxform);
+    int (*apply)(struct jas_cmpxform_s *pxform, jas_cmreal_t *in, jas_cmreal_t *out, int cnt);
+    void (*dump)(struct jas_cmpxform_s *pxform);
 } jas_cmpxformops_t;
 
 typedef struct {
-	jas_cmreal_t *data;
-	int size;
+    jas_cmreal_t *data;
+    int size;
 } jas_cmshapmatlut_t;
 
 typedef struct {
-	int mono;
-	int order;
-	int useluts;
-	int usemat;
-	jas_cmshapmatlut_t luts[3];
-	jas_cmreal_t mat[3][4];
+    int mono;
+    int order;
+    int useluts;
+    int usemat;
+    jas_cmshapmatlut_t luts[3];
+    jas_cmreal_t mat[3][4];
 } jas_cmshapmat_t;
 
 typedef struct {
-	int order;
+    int order;
 } jas_cmshaplut_t;
 
 typedef struct {
-	int inclrspc;
-	int outclrspc;
+    int inclrspc;
+    int outclrspc;
 } jas_cmclrspcconv_t;
 
 #define	jas_align_t	double
 
 typedef struct jas_cmpxform_s {
-	int refcnt;
-	jas_cmpxformops_t *ops;
-	int numinchans;
-	int numoutchans;
-	union {
-		jas_align_t dummy;
-		jas_cmshapmat_t shapmat;
-		jas_cmshaplut_t shaplut;
-		jas_cmclrspcconv_t clrspcconv;
-	} data;
+    int refcnt;
+    jas_cmpxformops_t *ops;
+    int numinchans;
+    int numoutchans;
+    union {
+        jas_align_t dummy;
+        jas_cmshapmat_t shapmat;
+        jas_cmshaplut_t shaplut;
+        jas_cmclrspcconv_t clrspcconv;
+    } data;
 } jas_cmpxform_t;
 
 typedef struct {
-	int numpxforms;
-	int maxpxforms;
-	jas_cmpxform_t **pxforms;
+    int numpxforms;
+    int maxpxforms;
+    jas_cmpxform_t **pxforms;
 } jas_cmpxformseq_t;
 
 typedef struct {
-	int numinchans;
-	int numoutchans;
-	jas_cmpxformseq_t *pxformseq;
+    int numinchans;
+    int numoutchans;
+    jas_cmpxformseq_t *pxformseq;
 } jas_cmxform_t;
 
 #define	JAS_CMPROF_TYPE_DEV	1
@@ -213,12 +213,12 @@ typedef struct {
 #define	JAS_CMPROF_NUMPXFORMSEQS	13
 
 typedef struct {
-	int clrspc;
-	int numchans;
-	int refclrspc;
-	int numrefchans;
-	jas_iccprof_t *iccprof;
-	jas_cmpxformseq_t *pxformseqs[JAS_CMPROF_NUMPXFORMSEQS];
+    int clrspc;
+    int numchans;
+    int refclrspc;
+    int numrefchans;
+    jas_iccprof_t *iccprof;
+    jas_cmpxformseq_t *pxformseqs[JAS_CMPROF_NUMPXFORMSEQS];
 } jas_cmprof_t;
 
 /* Create a profile. */

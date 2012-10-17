@@ -153,7 +153,7 @@ typedef struct CvClassifierTrainParams
                       CvMat* weights CV_DEFAULT(0),
                       CvClassifierTrainParams* trainParams CV_DEFAULT(0)
                     )
- 
+
  */
 
 typedef CvClassifier* (*CvClassifierConstructor)( CvMat*, int, CvMat*, CvMat*, CvMat*,
@@ -190,7 +190,7 @@ typedef struct CvMTStumpTrainParams
     CvStumpError error;
     int portion; /* number of components calculated in each thread */
     int numcomp; /* total number of components */
-    
+
     /* callback which fills <mat> with components [first, first+num[ */
     void (*getTrainData)( CvMat* mat, CvMat* sampleIdx, CvMat* compIdx,
                           int first, int num, void* userdata );
@@ -202,10 +202,10 @@ typedef struct CvStumpClassifier
 {
     CV_CLASSIFIER_FIELDS()
     int compidx;
-    
+
     float lerror; /* impurity of the right node */
     float rerror; /* impurity of the left  node */
-    
+
     float threshold;
     float left;
     float right;
@@ -218,7 +218,7 @@ typedef struct CvCARTTrainParams
     int count;
     CvClassifierTrainParams* stumpTrainParams;
     CvClassifierConstructor  stumpConstructor;
-    
+
     /*
      * Split sample indices <idx>
      * on the "left" indices <left> and "right" indices <right>
@@ -316,13 +316,13 @@ float cvEvalCARTClassifier( CvClassifier* classifier, CvMat* sample );
 \****************************************************************************************/
 
 /*
- * CvBoostType 
+ * CvBoostType
  *
  * The CvBoostType enumeration specifies the boosting type.
  *
  * Remarks
  *   Four different boosting variants for 2 class classification problems are supported:
- *   Discrete AdaBoost, Real AdaBoost, LogitBoost and Gentle AdaBoost. 
+ *   Discrete AdaBoost, Real AdaBoost, LogitBoost and Gentle AdaBoost.
  *   The L2 (2 class classification problems) and LK (K class classification problems)
  *   algorithms are close to LogitBoost but more numerically stable than last one.
  *   For regression three different loss functions are supported:
@@ -496,7 +496,7 @@ void cvBoostEndTraining( CvBoostTrainer** trainer );
 typedef struct CvBtClassifier
 {
     CV_CLASSIFIER_FIELDS()
-    
+
     CvBoostType type;
     int numclasses;
     int numiter;

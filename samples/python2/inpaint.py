@@ -1,10 +1,10 @@
 '''
 Inpainting sample.
 
-Inpainting repairs damage to images by floodfilling 
+Inpainting repairs damage to images by floodfilling
 the damage with surrounding image areas.
 
-Usage: 
+Usage:
   inpaint.py [<image>]
 
 Keys:
@@ -39,5 +39,5 @@ if __name__ == '__main__':
             img_mark[:] = img
             mark[:] = 0
             sketch.show()
-    cv2.destroyAllWindows() 			
-            
+    cv2.destroyAllWindows()
+

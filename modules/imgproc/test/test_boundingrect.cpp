@@ -53,12 +53,12 @@ using namespace std;
 class CV_BoundingRectTest: public cvtest::ArrayTest
 {
 public:
-	CV_BoundingRectTest();
-	~CV_BoundingRectTest();
+    CV_BoundingRectTest();
+    ~CV_BoundingRectTest();
 
 protected:
-	void run (int);
-	
+    void run (int);
+
 private:
     template <typename T> void generate_src_points(vector <Point_<T> >& src, int n);
     template <typename T> cv::Rect get_bounding_rect(const vector <Point_<T> > src);

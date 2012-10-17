@@ -11,9 +11,9 @@ using namespace cv;
 
 /** Global Variables */
 const int alpha_slider_max = 100;
-int alpha_slider; 
+int alpha_slider;
 double alpha;
-double beta;  
+double beta;
 
 /** Matrices to store images */
 Mat src1;
@@ -25,20 +25,20 @@ Mat dst;
  * @brief Callback for trackbar
  */
 void on_trackbar( int, void* )
-{ 
+{
    alpha = (double) alpha_slider/alpha_slider_max ;
 
    beta = ( 1.0 - alpha );
 
    addWeighted( src1, alpha, src2, beta, 0.0, dst);
-  
+
    imshow( "Linear Blend", dst );
 }
 
 
 /**
  * @function main
- * @brief Main function 
+ * @brief Main function
  */
 int main( int argc, char** argv )
 {
@@ -49,7 +49,7 @@ int main( int argc, char** argv )
    if( !src1.data ) { printf("Error loading src1 \n"); return -1; }
    if( !src2.data ) { printf("Error loading src2 \n"); return -1; }
 
-   /// Initialize values 
+   /// Initialize values
    alpha_slider = 0;
 
    /// Create Windows
@@ -57,12 +57,12 @@ int main( int argc, char** argv )
 
    /// Create Trackbars
    char TrackbarName[50];
-   sprintf( TrackbarName, "Alpha x %d", alpha_slider_max ); 
+   sprintf( TrackbarName, "Alpha x %d", alpha_slider_max );
    createTrackbar( TrackbarName, "Linear Blend", &alpha_slider, alpha_slider_max, on_trackbar );
 
    /// Show some stuff
    on_trackbar( alpha_slider, 0 );
-  
+
    /// Wait until user press some key
    waitKey(0);
    return 0;

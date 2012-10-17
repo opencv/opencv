@@ -24,13 +24,13 @@ public:
     CvPoint ****partsDisplacement;
     int *kPoints;
 public:
-    ScoreComputation(const CvLSVMFilterObject **_filters, int _n, 
+    ScoreComputation(const CvLSVMFilterObject **_filters, int _n,
                      const CvLSVMFeaturePyramid *_H,
                      float _b, int _maxXBorder, int _maxYBorder,
                      float _scoreThreshold, int _kLevels, const int *_procLevels,
                      float **_score, CvPoint ***_points, int *_kPoints,
                      CvPoint ****_partsDisplacement) :
-    n(_n), b(_b), maxXBorder(_maxXBorder), 
+    n(_n), b(_b), maxXBorder(_maxXBorder),
         maxYBorder(_maxYBorder), scoreThreshold(_scoreThreshold),
         kLevels(_kLevels), score(_score), points(_points),
         partsDisplacement(_partsDisplacement), kPoints(_kPoints)
@@ -49,8 +49,8 @@ public:
             partsLevel = level - LAMBDA;//H->lambda;
             res = thresholdFunctionalScoreFixedLevel(
                 filters, n, H, level, b,
-                maxXBorder, maxYBorder, scoreThreshold, &(score[partsLevel]), 
-                points[partsLevel], &(kPoints[partsLevel]), 
+                maxXBorder, maxYBorder, scoreThreshold, &(score[partsLevel]),
+                points[partsLevel], &(kPoints[partsLevel]),
                 partsDisplacement[partsLevel]);
             if (res != LATENT_SVM_OK)
             {
@@ -65,17 +65,17 @@ public:
 // Computation score function using TBB tasks
 //
 // API
-// int tbbTasksThresholdFunctionalScore(const CvLSVMFilterObject **filters, const int n, 
+// int tbbTasksThresholdFunctionalScore(const CvLSVMFilterObject **filters, const int n,
                                         const CvLSVMFeatureMap *H, const float b,
                                         const int maxXBorder, const int maxYBorder,
                                         const float scoreThreshold,
                                         int *kLevels, int **procLevels,
                                         const int threadsNum,
-                                        float **score, CvPoint ***points, 
+                                        float **score, CvPoint ***points,
                                         int *kPoints,
                                         CvPoint ****partsDisplacement);
 // INPUT
-// filters           - the set of filters (the first element is root filter, 
+// filters           - the set of filters (the first element is root filter,
                        the other - part filters)
 // n                 - the number of part filters
 // H                 - feature pyramid
@@ -83,9 +83,9 @@ public:
 // maxXBorder        - the largest root filter size (X-direction)
 // maxYBorder        - the largest root filter size (Y-direction)
 // scoreThreshold    - score threshold
-// kLevels           - array that contains number of levels processed 
+// kLevels           - array that contains number of levels processed
                        by each thread
-// procLevels        - array that contains lists of levels processed 
+// procLevels        - array that contains lists of levels processed
                        by each thread
 // threadsNum        - the number of created threads
 // OUTPUT
@@ -96,13 +96,13 @@ public:
 // RESULT
 //
 */
-int tbbTasksThresholdFunctionalScore(const CvLSVMFilterObject **filters, const int n, 
+int tbbTasksThresholdFunctionalScore(const CvLSVMFilterObject **filters, const int n,
                                      const CvLSVMFeaturePyramid *H, const float b,
                                      const int maxXBorder, const int maxYBorder,
                                      const float scoreThreshold,
                                      int *kLevels, int **procLevels,
                                      const int threadsNum,
-                                     float **score, CvPoint ***points, 
+                                     float **score, CvPoint ***points,
                                      int *kPoints,
                                      CvPoint ****partsDisplacement)
 {
@@ -110,9 +110,9 @@ int tbbTasksThresholdFunctionalScore(const CvLSVMFilterObject **filters, const i
     int i;
     for (i = 0; i < threadsNum; i++)
     {
-        ScoreComputation& sc = 
+        ScoreComputation& sc =
             *new(tbb::task::allocate_root()) ScoreComputation(filters, n, H, b,
-            maxXBorder, maxYBorder, scoreThreshold, kLevels[i], procLevels[i], 
+            maxXBorder, maxYBorder, scoreThreshold, kLevels[i], procLevels[i],
             score, points, kPoints, partsDisplacement);
         tasks.push_back(sc);
     }

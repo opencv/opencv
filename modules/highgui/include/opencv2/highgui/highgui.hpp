@@ -54,7 +54,7 @@ struct CvVideoWriter;
 namespace cv
 {
 
-enum { 
+enum {
     // Flags for namedWindow
     WINDOW_NORMAL   = CV_WINDOW_NORMAL,   // the user can resize the window (no constraint) / also use to switch a fullscreen window to a normal size
     WINDOW_AUTOSIZE = CV_WINDOW_AUTOSIZE, // the user cannot resize the window, the size is constrainted by the image displayed
@@ -106,7 +106,7 @@ enum
     EVENT_FLAG_SHIFTKEY  =16,
     EVENT_FLAG_ALTKEY    =32
 };
-        
+
 typedef void (*MouseCallback)(int event, int x, int y, int flags, void* userdata);
 
 //! assigns callback for mouse events
@@ -170,13 +170,13 @@ enum
     // ?, any color
     IMREAD_ANYCOLOR   =4
 };
-    
+
 enum
 {
     IMWRITE_JPEG_QUALITY =1,
     IMWRITE_PNG_COMPRESSION =16,
     IMWRITE_PNG_STRATEGY =17,
-	IMWRITE_PNG_BILEVEL =18,
+    IMWRITE_PNG_BILEVEL =18,
     IMWRITE_PNG_STRATEGY_DEFAULT =0,
     IMWRITE_PNG_STRATEGY_FILTERED =1,
     IMWRITE_PNG_STRATEGY_HUFFMAN_ONLY =2,
@@ -184,7 +184,7 @@ enum
     IMWRITE_PNG_STRATEGY_FIXED =4,
     IMWRITE_PXM_BINARY =32
 };
-    
+
 CV_EXPORTS_W Mat imread( const string& filename, int flags=1 );
 CV_EXPORTS_W bool imwrite( const string& filename, InputArray img,
               const vector<int>& params=vector<int>());
@@ -205,41 +205,41 @@ public:
     CV_WRAP VideoCapture();
     CV_WRAP VideoCapture(const string& filename);
     CV_WRAP VideoCapture(int device);
-    
+
     virtual ~VideoCapture();
     CV_WRAP virtual bool open(const string& filename);
     CV_WRAP virtual bool open(int device);
     CV_WRAP virtual bool isOpened() const;
     CV_WRAP virtual void release();
-    
+
     CV_WRAP virtual bool grab();
     CV_WRAP virtual bool retrieve(CV_OUT Mat& image, int channel=0);
     virtual VideoCapture& operator >> (CV_OUT Mat& image);
     CV_WRAP virtual bool read(CV_OUT Mat& image);
-    
+
     CV_WRAP virtual bool set(int propId, double value);
     CV_WRAP virtual double get(int propId);
-    
+
 protected:
     Ptr<CvCapture> cap;
 };
 
-    
+
 class CV_EXPORTS_W VideoWriter
 {
-public:    
+public:
     CV_WRAP VideoWriter();
     CV_WRAP VideoWriter(const string& filename, int fourcc, double fps,
                 Size frameSize, bool isColor=true);
-    
+
     virtual ~VideoWriter();
     CV_WRAP virtual bool open(const string& filename, int fourcc, double fps,
-                      Size frameSize, bool isColor=true);    
+                      Size frameSize, bool isColor=true);
     CV_WRAP virtual bool isOpened() const;
     CV_WRAP virtual void release();
     virtual VideoWriter& operator << (const Mat& image);
     CV_WRAP virtual void write(const Mat& image);
-    
+
 protected:
     Ptr<CvVideoWriter> writer;
 };

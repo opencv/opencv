@@ -18,10 +18,10 @@ public class MatOfFloat6 extends Mat {
             throw new IllegalArgumentException("Incomatible Mat");
         //FIXME: do we need release() here?
     }
-    
+
     public static MatOfFloat6 fromNativeAddr(long addr) {
-		return new MatOfFloat6(addr);
-	}
+        return new MatOfFloat6(addr);
+    }
 
     public MatOfFloat6(Mat m) {
         super(m, Range.all());
@@ -51,7 +51,7 @@ public class MatOfFloat6 extends Mat {
     public float[] toArray() {
         int num = checkVector(_channels, _depth);
         if(num < 0)
-        	throw new RuntimeException("Native Mat has unexpected type or size: " + toString());
+            throw new RuntimeException("Native Mat has unexpected type or size: " + toString());
         float[] a = new float[num * _channels];
         if(num == 0)
             return a;

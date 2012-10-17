@@ -41,31 +41,31 @@ std::string OpenCVEngine::NormalizeVersionString(std::string version)
 
     if (version.empty())
     {
-	return result;
+    return result;
     }
 
     if (('a' == version[version.size()-1]) || ('b' == version[version.size()-1]))
     {
-	suffix = version[version.size()-1];
-	version.erase(version.size()-1);
+    suffix = version[version.size()-1];
+    version.erase(version.size()-1);
     }
 
     std::vector<std::string> parts = SplitStringVector(version, '.');
 
     if (parts.size() >= 2)
     {
-	if (parts.size() >= 3)
-	{
-	    result = parts[0] + parts[1] + parts[2] + suffix;
-	    if (!ValidateVersionString(result))
-		result = "";
-	}
-	else
-	{
-	    result = parts[0] + parts[1] + "0" + suffix;
-	    if (!ValidateVersionString(result))
-		result = "";
-	}
+    if (parts.size() >= 3)
+    {
+        result = parts[0] + parts[1] + parts[2] + suffix;
+        if (!ValidateVersionString(result))
+        result = "";
+    }
+    else
+    {
+        result = parts[0] + parts[1] + "0" + suffix;
+        if (!ValidateVersionString(result))
+        result = "";
+    }
     }
 
     return result;
@@ -94,19 +94,19 @@ String16 OpenCVEngine::GetLibPathByVersion(android::String16 version)
 
     if (!norm_version.empty())
     {
-	path = PackageManager->GetPackagePathByVersion(norm_version, Platform, CpuID);
-	if (path.empty())
-	{
-	    LOGI("Package OpenCV of version %s is not installed. Try to install it :)", norm_version.c_str());
-	}
-	else
-	{
-	    FixPermissions(path);
-	}
+    path = PackageManager->GetPackagePathByVersion(norm_version, Platform, CpuID);
+    if (path.empty())
+    {
+        LOGI("Package OpenCV of version %s is not installed. Try to install it :)", norm_version.c_str());
     }
     else
     {
-	LOGE("OpenCV version \"%s\" (%s) is not supported", String8(version).string(), norm_version.c_str());
+        FixPermissions(path);
+    }
+    }
+    else
+    {
+    LOGE("OpenCV version \"%s\" (%s) is not supported", String8(version).string(), norm_version.c_str());
     }
 
     return String16(path.c_str());
@@ -121,46 +121,46 @@ android::String16 OpenCVEngine::GetLibraryList(android::String16 version)
 
     if (!norm_version.empty())
     {
-	std::string tmp = PackageManager->GetPackagePathByVersion(norm_version, Platform, CpuID);
-	if (!tmp.empty())
-	{
-	    tmp += (std::string("/") + LIB_OPENCV_INFO_NAME);
+    std::string tmp = PackageManager->GetPackagePathByVersion(norm_version, Platform, CpuID);
+    if (!tmp.empty())
+    {
+        tmp += (std::string("/") + LIB_OPENCV_INFO_NAME);
 
-	    LOGD("Trying to load info library \"%s\"", tmp.c_str());
+        LOGD("Trying to load info library \"%s\"", tmp.c_str());
 
-	    void* handle;
-	    char* (*info_func)();
+        void* handle;
+        char* (*info_func)();
 
-	    handle = dlopen(tmp.c_str(), RTLD_LAZY);
-	    if (handle)
-	    {
-		const char* error;
+        handle = dlopen(tmp.c_str(), RTLD_LAZY);
+        if (handle)
+        {
+        const char* error;
 
-		dlerror();
-		*(void **) (&info_func) = dlsym(handle, "GetLibraryList");
-		if ((error = dlerror()) == NULL)
-		{
-		    result = String16((*info_func)());
-		    dlclose(handle);
-		}
-		else
-		{
-		    LOGE("Library loading error: \"%s\"", error);
-		}
-	    }
-	    else
-	    {
-		LOGI("Info library not found in package");
-	    }
-	}
-	else
-	{
-	    LOGI("Package OpenCV of version %s is not installed. Try to install it :)", norm_version.c_str());
-	}
+        dlerror();
+        *(void **) (&info_func) = dlsym(handle, "GetLibraryList");
+        if ((error = dlerror()) == NULL)
+        {
+            result = String16((*info_func)());
+            dlclose(handle);
+        }
+        else
+        {
+            LOGE("Library loading error: \"%s\"", error);
+        }
+        }
+        else
+        {
+        LOGI("Info library not found in package");
+        }
     }
     else
     {
-	LOGE("OpenCV version \"%s\" is not supported", norm_version.c_str());
+        LOGI("Package OpenCV of version %s is not installed. Try to install it :)", norm_version.c_str());
+    }
+    }
+    else
+    {
+    LOGE("OpenCV version \"%s\" is not supported", norm_version.c_str());
     }
 
     return result;
@@ -176,22 +176,22 @@ bool OpenCVEngine::InstallVersion(android::String16 version)
 
     if (!norm_version.empty())
     {
-	LOGD("OpenCVEngine::InstallVersion() begin");
-	
-	if (!PackageManager->CheckVersionInstalled(norm_version, Platform, CpuID))
-	{
-	    LOGD("PackageManager->InstallVersion call");
-	    result = PackageManager->InstallVersion(norm_version, Platform, CpuID);
-	}
-	else
-	{
-	    LOGI("Package OpenCV of version %s is already installed. Skiped.", norm_version.c_str());
-	    result = true;
-	}
+    LOGD("OpenCVEngine::InstallVersion() begin");
+
+    if (!PackageManager->CheckVersionInstalled(norm_version, Platform, CpuID))
+    {
+        LOGD("PackageManager->InstallVersion call");
+        result = PackageManager->InstallVersion(norm_version, Platform, CpuID);
     }
     else
     {
-	LOGE("OpenCV version \"%s\" is not supported", norm_version.c_str());
+        LOGI("Package OpenCV of version %s is already installed. Skiped.", norm_version.c_str());
+        result = true;
+    }
+    }
+    else
+    {
+    LOGE("OpenCV version \"%s\" is not supported", norm_version.c_str());
     }
 
     LOGD("OpenCVEngine::InstallVersion() end");
@@ -207,16 +207,16 @@ bool OpenCVEngine::FixPermissions(const std::string& path)
     DIR* dir = opendir(path.c_str());
     if (!dir)
     {
-	LOGD("Fixing permissions error");
-	return false;
+    LOGD("Fixing permissions error");
+    return false;
     }
 
     dirent* files = readdir(dir);
     while (files)
     {
-	LOGD("Fix permissions for \"%s\"", files->d_name);
-	chmod((path + std::string("/") + std::string(files->d_name)).c_str(), S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH);
-	files = readdir(dir);
+    LOGD("Fix permissions for \"%s\"", files->d_name);
+    chmod((path + std::string("/") + std::string(files->d_name)).c_str(), S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH);
+    files = readdir(dir);
     }
 
     closedir(dir);

@@ -26,7 +26,7 @@ if __name__ == "__main__":
     if len(sys.argv) < 2:
         print >> sys.stderr, "Usage:\n", os.path.basename(sys.argv[0]), "<log_name1>.xml [<log_name2>.xml ...]"
         exit(0)
-        
+
     parser = OptionParser()
     parser.add_option("-o", "--output", dest="format", help="output results in text format (can be 'txt', 'html' or 'auto' - default)", metavar="FMT", default="auto")
     parser.add_option("-m", "--metric", dest="metric", help="output metric", metavar="NAME", default="gmean")
@@ -40,7 +40,7 @@ if __name__ == "__main__":
     parser.add_option("", "--match", dest="match", default=None)
     parser.add_option("", "--match-replace", dest="match_replace", default="")
     (options, args) = parser.parse_args()
-    
+
     options.generateHtml = detectHtmlOutputType(options.format)
     if options.metric not in metrix_table:
         options.metric = "gmean"
@@ -49,7 +49,7 @@ if __name__ == "__main__":
         options.calc_cr = False
     if options.columns:
         options.columns = [s.strip().replace("\\n", "\n") for s in options.columns.split(",")]
-    
+
     # expand wildcards and filter duplicates
     files = []
     seen = set()
@@ -62,7 +62,7 @@ if __name__ == "__main__":
             fname = os.path.abspath(arg)
             if fname not in seen and not seen.add(fname):
                 files.append(fname)
-    
+
     # read all passed files
     test_sets = []
     for arg in files:
@@ -79,20 +79,20 @@ if __name__ == "__main__":
             sys.stderr.write("IOError reading \"" + arg + "\" - " + str(err) + os.linesep)
         except xml.parsers.expat.ExpatError as err:
             sys.stderr.write("ExpatError reading \"" + arg + "\" - " + str(err) + os.linesep)
-            
+
     if not test_sets:
         sys.stderr.write("Error: no test data found" + os.linesep)
         quit()
-            
+
     # find matches
     setsCount = len(test_sets)
     test_cases = {}
-    
+
     name_extractor = lambda name: str(name)
     if options.match:
         reg = re.compile(options.match)
         name_extractor = lambda name: reg.sub(options.match_replace, str(name))
-    
+
     for i in range(setsCount):
         for case in test_sets[i][1]:
             name = name_extractor(case)
@@ -101,7 +101,7 @@ if __name__ == "__main__":
             if name not in test_cases:
                 test_cases[name] = [None] * setsCount
             test_cases[name][i] = case
-            
+
     # build table
     getter = metrix_table[options.metric][1]
     if options.calc_relatives:
@@ -109,7 +109,7 @@ if __name__ == "__main__":
     if options.calc_cr:
         getter_cr = metrix_table[options.metric + "$"][1]
     tbl = table(metrix_table[options.metric][0])
-    
+
     # header
     tbl.newColumn("name", "Name of Test", align = "left", cssclass = "col_name")
     i = 0
@@ -127,7 +127,7 @@ if __name__ == "__main__":
         for set in metric_sets:
             tbl.newColumn(str(i) + "%", getSetName(set, i, options.columns) + "\nvs\n" + getSetName(test_sets[0], 0, options.columns) + "\n(x-factor)", align = "center", cssclass = "col_rel")
             i += 1
-        
+
     # rows
     prevGroupName = None
     needNewRow = True
@@ -139,7 +139,7 @@ if __name__ == "__main__":
             if not options.showall:
                 needNewRow = False
         tbl.newCell("name", name)
-        
+
         groupName = next(c for c in cases if c).shortName()
         if groupName != prevGroupName:
             prop = lastRow.props.get("cssclass", "")

@@ -49,24 +49,24 @@ Face::Face(FaceTemplate * lpFaceTemplate)
 {
     //init number of face elements;
     m_lFaceFeaturesNumber = lpFaceTemplate->GetCount();
-    
+
     //init array of numbers of foundet face elements of each type
-    m_lplFaceFeaturesCount = new long[m_lFaceFeaturesNumber];   
+    m_lplFaceFeaturesCount = new long[m_lFaceFeaturesNumber];
     memset(m_lplFaceFeaturesCount,0,m_lFaceFeaturesNumber*sizeof(long));
-    
+
     //init array of ideal face features
     m_lpIdealFace = new FaceFeature[m_lFaceFeaturesNumber];
 
     //init array of founded features
     m_lppFoundedFaceFeatures = new FaceFeature*[m_lFaceFeaturesNumber];
-    
+
     for (int i = 0;i < m_lFaceFeaturesNumber;i ++)
     {
         m_lppFoundedFaceFeatures[i] = (new FaceFeature[3*MAX_LAYERS]);
     }
 
     //set start weight 0
-    m_dWeight = 0;  
+    m_dWeight = 0;
 
 }//Face::Face(FaceTemplate * lpFaceTemplate)
 
@@ -77,8 +77,8 @@ Face::~Face()
         delete [] (m_lppFoundedFaceFeatures[i]);
     }
     delete [] m_lppFoundedFaceFeatures;
-    
-    
+
+
     delete [] m_lplFaceFeaturesCount;
     delete [] m_lpIdealFace;
 
@@ -90,19 +90,19 @@ Face::~Face()
 
 
 ////////////
-//class RFace(rect based face) 
+//class RFace(rect based face)
 ////////////
 RFace::RFace(FaceTemplate * lpFaceTemplate):Face(lpFaceTemplate)
 {
     //init ideal face
     FaceFeature * lpTmp = lpFaceTemplate->GetFeatures();
-    
+
     for (int j = 0;j < m_lFaceFeaturesNumber;j ++)
     {
         CvRect * lpTmpRect = NULL;
         lpTmpRect = new CvRect;
-        *lpTmpRect = *(CvRect*)lpTmp[j].GetContour(); 
-        
+        *lpTmpRect = *(CvRect*)lpTmp[j].GetContour();
+
         m_lpIdealFace[j].SetContour( lpTmpRect );
         m_lpIdealFace[j].SetWeight( lpTmp[j].GetWeight() );
         m_lpIdealFace[j].SetFeature( lpTmp[j].isFaceFeature() );
@@ -133,16 +133,16 @@ double RFace::GetWeight()
 
 bool RFace::CheckElem(void * lpCandidat,void * lpIdeal)
 {
-    
+
     CvRect IdealRect = *(CvRect*)lpIdeal;
     CvRect Rect = *(CvRect*)lpCandidat;
 
     if (Rect.height > Rect.width)
         return false;
-    
+
     long SizeIdeal = IdealRect.width*IdealRect.height;
     long Size = Rect.width*Rect.height;
-    
+
     if ( (Size > SizeIdeal) || ( Size < (SizeIdeal/5) ) )
         return false;
 
@@ -151,23 +151,23 @@ bool RFace::CheckElem(void * lpCandidat,void * lpIdeal)
 //  ResizeRect(IdealRect,&UpRect,UP_SCALE,7);
 //  ResizeRect(IdealRect,&DownRect,DOWN_SCALE,7);
 
-    long x = Rect.x + cvRound(Rect.width/2);  
+    long x = Rect.x + cvRound(Rect.width/2);
     long y = Rect.y + cvRound(Rect.height/2);
 
     if ( isPointInRect(cvPoint(x,y),IdealRect) )
         return true;
-    
-//  if ( isPointInRect(cvPoint(Rect.x,Rect.y),UpRect) && 
+
+//  if ( isPointInRect(cvPoint(Rect.x,Rect.y),UpRect) &&
 //       isPointInRect(cvPoint(Rect.x + Rect.width,Rect.y + Rect.height),UpRect ) &&
 //       isPointInRect(cvPoint(DownRect.x,DownRect.y),Rect) &&
 //       isPointInRect(cvPoint(DownRect.x + DownRect.width,DownRect.y + DownRect.height),Rect) )
 //      return true;
-    
-    
-//  if ( isPointInRect(cvPoint(Rect.x,Rect.y),IdealRect) && 
+
+
+//  if ( isPointInRect(cvPoint(Rect.x,Rect.y),IdealRect) &&
 //       isPointInRect(cvPoint(Rect.x + Rect.width,Rect.y + Rect.height),IdealRect ) )
 //      return true;
-            
+
     return false;
 }//inline bool RFace::CheckElem(CvRect rect)
 
@@ -178,21 +178,21 @@ void RFace::CalculateError(FaceData * lpFaceData)
     CvRect LeftEyeRect = lpFaceData->LeftEyeRect;
     CvRect RightEyeRect = lpFaceData->RightEyeRect;
     CvRect MouthRect = lpFaceData->MouthRect;
-    
+
     long LeftSquare = LeftEyeRect.width*LeftEyeRect.height;
     long RightSquare = RightEyeRect.width*RightEyeRect.height;
 
     long dy = LeftEyeRect.y - RightEyeRect.y;
-    
+
     long dx1 = LeftEyeRect.x + LeftEyeRect.width/2 - MouthRect.x;
     long dx2 = RightEyeRect.x + RightEyeRect.width/2 - MouthRect.x - MouthRect.width;
 
 
-    lpFaceData->Error = (double)(LeftSquare - RightSquare)*(double)(LeftSquare - RightSquare)/((double)(LeftSquare + RightSquare)*(LeftSquare + RightSquare)) + 
-                        (double)(dy*dy)/((double)(LeftEyeRect.height + RightEyeRect.height)*(LeftEyeRect.height + RightEyeRect.height)) + 
-                        (double)(dx1*dx1)/((double)MouthRect.width*MouthRect.width) + 
+    lpFaceData->Error = (double)(LeftSquare - RightSquare)*(double)(LeftSquare - RightSquare)/((double)(LeftSquare + RightSquare)*(LeftSquare + RightSquare)) +
+                        (double)(dy*dy)/((double)(LeftEyeRect.height + RightEyeRect.height)*(LeftEyeRect.height + RightEyeRect.height)) +
+                        (double)(dx1*dx1)/((double)MouthRect.width*MouthRect.width) +
                         (double)(dx2*dx2)/((double)MouthRect.width*MouthRect.width);
-                        
+
 }//void RFace::CalculateError(FaceData * lpFaceData)
 
 #define MAX_ERROR 0xFFFFFFFF
@@ -200,23 +200,23 @@ void RFace::CalculateError(FaceData * lpFaceData)
 void  RFace::CreateFace(void * lpData)
 {
     FaceData Data;
-    
+
     double Error = MAX_ERROR;
     double CurError = MAX_ERROR;
-    
+
     FaceData * lpFaceData = (FaceData*)lpData;
-    
+
     int im = 0;//mouth was find
     int jl = 0;//left eye was find
     int kr = 0;//right eye was find
-    
+
     long MouthNumber = 0;
     long LeftEyeNumber = 0;
     long RightEyeNumber = 0;
 
     for (int i = 0;i < m_lplFaceFeaturesCount[0] + 1;i ++)
     {
-        
+
         if ( !m_lplFaceFeaturesCount[0] )
             Data.MouthRect = *(CvRect*)m_lpIdealFace[0].GetContour();
         else
@@ -225,11 +225,11 @@ void  RFace::CreateFace(void * lpData)
                 Data.MouthRect = *(CvRect*)m_lppFoundedFaceFeatures[0][i].GetContour();
             im = 1;
         }
-            
-        
+
+
         for (int j = 0;j < m_lplFaceFeaturesCount[1] + 1;j ++)
         {
-            
+
             if ( !m_lplFaceFeaturesCount[1] )
                 Data.LeftEyeRect = *(CvRect*)m_lpIdealFace[1].GetContour();
             else
@@ -238,8 +238,8 @@ void  RFace::CreateFace(void * lpData)
                     Data.LeftEyeRect = *(CvRect*)m_lppFoundedFaceFeatures[1][j].GetContour();
                 jl = 1;
             }
-            
-            
+
+
             for (int k = 0;k < m_lplFaceFeaturesCount[2] + 1;k ++)
             {
 
@@ -251,15 +251,15 @@ void  RFace::CreateFace(void * lpData)
                         Data.RightEyeRect = *(CvRect*)m_lppFoundedFaceFeatures[2][k].GetContour();
                     kr = 1;
                 }
-        
-                CalculateError(&Data);      
-        
+
+                CalculateError(&Data);
+
                 if ( (im + jl + kr) )
                 {
                     Error = Data.Error/(im + jl + kr);
                 }else
                     Error = MAX_ERROR;
-                
+
                 if (CurError > Error)
                 {
                     CurError = Error;
@@ -269,8 +269,8 @@ void  RFace::CreateFace(void * lpData)
                 }
 
             }
-        
-        
+
+
         }
 
     }
@@ -284,7 +284,7 @@ void  RFace::CreateFace(void * lpData)
         lpFaceData->LeftEyeRect = *(CvRect*)m_lppFoundedFaceFeatures[1][LeftEyeNumber].GetContour();
     else
         lpFaceData->LeftEyeRect = *(CvRect*)m_lpIdealFace[1].GetContour();
-    
+
     if ( m_lplFaceFeaturesCount[2] )
         lpFaceData->RightEyeRect = *(CvRect*)m_lppFoundedFaceFeatures[2][RightEyeNumber].GetContour();
     else
@@ -342,7 +342,7 @@ inline void RFace::ResizeRect(CvRect Rect,CvRect * lpRect,long lDir,long lD)
             lpRect->width = Rect.width - 2*lD;
         }else
             lpRect->width = 0;
-        
+
         if (Rect.height - 2*lD >= 0)
         {
             lpRect->height = Rect.height - 2*lD;

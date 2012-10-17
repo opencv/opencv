@@ -23,14 +23,14 @@ using namespace android;
 class IOpenCVEngine: public android::IInterface
 {
 public:
-       
+
     DECLARE_META_INTERFACE(OpenCVEngine)
 
 public:
     virtual int GetVersion() = 0;
     virtual android::String16 GetLibPathByVersion(android::String16 version) = 0;
     virtual android::String16 GetLibraryList(android::String16 version) = 0;
-    virtual bool InstallVersion(android::String16 version) = 0; 
+    virtual bool InstallVersion(android::String16 version) = 0;
 };
 
 #endif

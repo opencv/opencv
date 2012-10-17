@@ -13,12 +13,12 @@ class tblColumn(object):
         self.text = caption
         self.title = title
         self.props = props
-        
+
 class tblRow(object):
     def __init__(self, colsNum, props = None):
         self.cells = [None] * colsNum
         self.props = props
-        
+
 def htmlEncode(str):
     return '<br/>'.join([cgi.escape(s) for s in str])
 
@@ -46,7 +46,7 @@ class table(object):
             self.rows[ridx + 1].props = properties
         self.ridx += 1
         return self.rows[self.ridx]
-    
+
     def trimLastRow(self):
         if self.rows:
             self.rows.pop()
@@ -90,24 +90,24 @@ class table(object):
             cl = tblCell(text, value, properties)
         row.cells[col.index] = cl
         return cl
-    
+
     def layoutTable(self):
         columns = self.columns.values()
         columns.sort(key=lambda c: c.index)
-        
+
         colspanned = []
         rowspanned = []
-        
+
         self.headerHeight = 1
         rowsToAppend = 0
-        
+
         for col in columns:
             self.measureCell(col)
             if col.height > self.headerHeight:
                 self.headerHeight = col.height
             col.minwidth = col.width
             col.line = None
-        
+
         for r in range(len(self.rows)):
             row = self.rows[r]
             row.minheight = 1
@@ -141,12 +141,12 @@ class table(object):
                             self.rows[j].cells[i] = None
                 elif row.minheight < cell.height:
                     row.minheight = cell.height
-                    
+
         self.ridx = len(self.rows) - 1
         for r in range(rowsToAppend):
             self.newRow()
             self.rows[len(self.rows) - 1].minheight = 1
-            
+
         while colspanned:
             colspanned_new = []
             for r, c in colspanned:
@@ -169,7 +169,7 @@ class table(object):
                     addition = s * budget / total - spent
                     spent += addition
                     col.minwidth += addition
-        
+
         while rowspanned:
             rowspanned_new = []
             for r, c in rowspanned:
@@ -191,7 +191,7 @@ class table(object):
                     addition = s * budget / total - spent
                     spent += addition
                     row.minheight += addition
-                    
+
         return columns
 
     def measureCell(self, cell):
@@ -199,7 +199,7 @@ class table(object):
         cell.text = self.reformatTextValue(text)
         cell.height = len(cell.text)
         cell.width = len(max(cell.text, key = lambda line: len(line)))
-                
+
     def reformatTextValue(self, value):
         if isinstance(value, str):
             vstr = value
@@ -211,7 +211,7 @@ class table(object):
             except TypeError:
                 vstr = str(value)
         return vstr.splitlines()
-    
+
     def adjustColWidth(self, cols, width):
         total = sum([c.minWidth for c in cols])
         if total + len(cols) - 1 >= width:
@@ -243,30 +243,30 @@ class table(object):
             return getattr(self.__class__, "def_" + name)
         except AttributeError:
             return None
-        
+
     def consolePrintTable(self, out):
         columns = self.layoutTable()
-        colrizer = getColorizer(out) 
-        
+        colrizer = getColorizer(out)
+
         if self.caption:
             out.write("%s%s%s" % ( os.linesep,  os.linesep.join(self.reformatTextValue(self.caption)), os.linesep * 2))
-        
+
         headerRow = tblRow(len(columns), {"align": "center", "valign": "top", "bold": True, "header": True})
         headerRow.cells = columns
         headerRow.minheight = self.headerHeight
-        
+
         self.consolePrintRow2(colrizer, headerRow, columns)
-        
+
         for i in range(0, len(self.rows)):
             self.consolePrintRow2(colrizer, i, columns)
-            
+
     def consolePrintRow2(self, out, r, columns):
         if isinstance(r, tblRow):
             row = r
             r = -1
         else:
             row = self.rows[r]
-        
+
         #evaluate initial values for line numbers
         i = 0
         while i < len(row.cells):
@@ -284,7 +284,7 @@ class table(object):
                         for rw in rows:
                             rw.cells[i] = cell
             i += colspan
-            
+
         #print content
         for ln in range(row.minheight):
             i = 0
@@ -300,7 +300,7 @@ class table(object):
                     self.consolePrintLine(cell, row, column, out)
                     i += self.getValue("colspan", cell)
             out.write(os.linesep)
-                
+
     def consolePrintLine(self, cell, row, column, out):
         if cell.line < 0 or cell.line >= cell.height:
             line = ""
@@ -308,17 +308,17 @@ class table(object):
             line = cell.text[cell.line]
         width = cell.wspace
         align = self.getValue("align", ((None, cell)[isinstance(cell, tblCell)]), row, column)
-        
+
         if align == "right":
             pattern = "%" + str(width) + "s"
         elif align == "center":
             pattern = "%" + str((width - len(line)) / 2 + len(line)) + "s" + " " * (width - len(line) - (width - len(line)) / 2)
         else:
             pattern = "%-" + str(width) + "s"
-        
+
         out.write(pattern % line, color = self.getValue("color", cell, row, column))
         cell.line += 1
-            
+
     def evalLine(self, cell, rows, column):
         height = cell.height
         valign = self.getValue("valign", cell, rows[0], column)
@@ -328,10 +328,10 @@ class table(object):
         if valign == "middle":
             return (height - space + 1) / 2
         return 0
-    
+
     def htmlPrintTable(self, out, embeedcss = False):
         columns = self.layoutTable()
-        
+
         if embeedcss:
             out.write("<div style=\"font-family: Lucida Console, Courier New, Courier;font-size: 16px;color:#3e4758;\">\n<table style=\"background:none repeat scroll 0 0 #FFFFFF;border-collapse:collapse;font-family:'Lucida Sans Unicode','Lucida Grande',Sans-Serif;font-size:14px;margin:20px;text-align:left;width:480px;margin-left: auto;margin-right: auto;white-space:nowrap;\">\n")
         else:
@@ -342,14 +342,14 @@ class table(object):
             else:
                 out.write(" <caption>%s</caption>\n" % htmlEncode(self.reformatTextValue(self.caption)))
         out.write(" <thead>\n")
-        
+
         headerRow = tblRow(len(columns), {"align": "center", "valign": "top", "bold": True, "header": True})
         headerRow.cells = columns
-        
+
         header_rows = [headerRow]
         header_rows.extend([row for row in self.rows if self.getValue("header")])
         last_row = header_rows[len(header_rows) - 1]
-        
+
         for row in header_rows:
             out.write("  <tr>\n")
             for th in row.cells:
@@ -373,9 +373,9 @@ class table(object):
                     out.write("    %s\n" % htmlEncode(th.text))
                 out.write("   </th>\n")
             out.write("  </tr>\n")
-            
+
         out.write(" </thead>\n <tbody>\n")
-        
+
         rows = [row for row in self.rows if not self.getValue("header")]
         for r in range(len(rows)):
             row = rows[r]
@@ -386,7 +386,7 @@ class table(object):
             out.write("  <tr%s>\n" % (rowattr))
             i = 0
             while i < len(row.cells):
-                column = columns[i] 
+                column = columns[i]
                 td = row.cells[i]
                 if isinstance(td, int):
                     i += td
@@ -429,9 +429,9 @@ class table(object):
                 out.write("   </td>\n")
                 i += colspan
             out.write("  </tr>\n")
-            
+
         out.write(" </tbody>\n</table>\n</div>\n")
-        
+
 def htmlPrintHeader(out, title = None):
     if title:
         titletag = "<title>%s</title>\n" % htmlEncode([str(title)])
@@ -522,7 +522,7 @@ $(function(){
                 if (re.exec($(row.get(colIdx)).text()) == null)
                   return false
                 return pred(row)
-	      }
+          }
            } else if(flt.hasClass("filter_col_rel")) {
               var percent = parseFloat(val)
               if (percent < 0) {
@@ -531,14 +531,14 @@ $(function(){
                   if (!val || val >= 1 || val > 1+percent)
                     return false
                   return pred(row)
-	        }
+            }
               } else {
                 predicate = function(row) {
                   var val = parseFloat($(row.get(colIdx)).text())
                   if (!val || val < percent)
                     return false
                   return pred(row)
-	        }
+            }
               }
            } else if(flt.hasClass("filter_col_cr")) {
               var percent = parseFloat(val)
@@ -547,7 +547,7 @@ $(function(){
                 if (!val || val < percent)
                   return false
                 return pred(row)
-	      }
+          }
            }
          }
       });
@@ -567,10 +567,10 @@ $(function(){
 </head>
 <body>
 """ % titletag)
-    
+
 def htmlPrintFooter(out):
     out.write("</body>\n</html>")
-    
+
 def getStdoutFilename():
     try:
         if os.name == "nt":
@@ -584,7 +584,7 @@ def getStdoutFilename():
             return os.readlink('/proc/self/fd/1')
     except:
         return ""
-    
+
 def detectHtmlOutputType(requestedType):
     if requestedType == "txt":
         return False
@@ -601,8 +601,8 @@ def detectHtmlOutputType(requestedType):
                 else:
                     return False
             else:
-                return False 
-            
+                return False
+
 def getRelativeVal(test, test0, metric):
     if not test or not test0:
         return None
@@ -625,21 +625,21 @@ def getCycleReduction(test, test0, metric):
         return None
     return (1.0-float(val)/val0)*100
 
-        
+
 metrix_table = \
 {
     "name": ("Name of Test", lambda test,test0,units: str(test)),
-    
+
     "samples": ("Number of\ncollected samples", lambda test,test0,units: test.get("samples", units)),
     "outliers": ("Number of\noutliers", lambda test,test0,units: test.get("outliers", units)),
-    
+
     "gmean": ("Geometric mean", lambda test,test0,units: test.get("gmean", units)),
     "mean": ("Mean", lambda test,test0,units: test.get("mean", units)),
     "min": ("Min", lambda test,test0,units: test.get("min", units)),
     "median": ("Median", lambda test,test0,units: test.get("median", units)),
     "stddev": ("Standard deviation", lambda test,test0,units: test.get("stddev", units)),
     "gstddev": ("Standard deviation of Ln(time)", lambda test,test0,units: test.get("gstddev")),
-    
+
     "gmean%": ("Geometric mean (relative)", lambda test,test0,units: getRelativeVal(test, test0, "gmean")),
     "mean%": ("Mean (relative)", lambda test,test0,units: getRelativeVal(test, test0, "mean")),
     "min%": ("Min (relative)", lambda test,test0,units: getRelativeVal(test, test0, "min")),
@@ -668,17 +668,17 @@ if __name__ == "__main__":
     if len(sys.argv) < 2:
         print "Usage:\n", os.path.basename(sys.argv[0]), "<log_name>.xml"
         exit(0)
-        
+
     parser = OptionParser()
     parser.add_option("-o", "--output", dest="format", help="output results in text format (can be 'txt', 'html' or 'auto' - default)", metavar="FMT", default="auto")
     parser.add_option("-m", "--metric", dest="metric", help="output metric", metavar="NAME", default="gmean")
     parser.add_option("-u", "--units", dest="units", help="units for output values (s, ms (default), mks, ns or ticks)", metavar="UNITS", default="ms")
     (options, args) = parser.parse_args()
-    
+
     options.generateHtml = detectHtmlOutputType(options.format)
     if options.metric not in metrix_table:
         options.metric = "gmean"
-    
+
     #print options
     #print args
 
@@ -711,10 +711,10 @@ if __name__ == "__main__":
 #        htmlPrintFooter(sys.stdout)
 
     import testlog_parser
-    
+
     if options.generateHtml:
         htmlPrintHeader(sys.stdout, "Tables demo")
-        
+
     getter = metrix_table[options.metric][1]
 
     for arg in args:
@@ -722,11 +722,11 @@ if __name__ == "__main__":
         tbl = table(arg)
         tbl.newColumn("name", "Name of Test", align = "left")
         tbl.newColumn("value", metrix_table[options.metric][0], align = "center", bold = "true")
-        
+
         for t in sorted(tests):
             tbl.newRow()
             tbl.newCell("name", str(t))
-            
+
             status = t.get("status")
             if status != "run":
                 tbl.newCell("value", status)
@@ -739,11 +739,11 @@ if __name__ == "__main__":
                         tbl.newCell("value", "%.3f %s" % (val, options.units), val)
                 else:
                     tbl.newCell("value", "-")
-        
+
         if options.generateHtml:
             tbl.htmlPrintTable(sys.stdout)
         else:
             tbl.consolePrintTable(sys.stdout)
-            
+
     if options.generateHtml:
         htmlPrintFooter(sys.stdout)

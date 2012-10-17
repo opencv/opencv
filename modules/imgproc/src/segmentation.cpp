@@ -64,7 +64,7 @@ static CvWSNode*
 icvAllocWSNodes( CvMemStorage* storage )
 {
     CvWSNode* n = 0;
-    
+
     int i, count = (storage->block_size - sizeof(CvMemBlock))/sizeof(*n) - 1;
 
     n = (CvWSNode*)cvMemStorageAlloc( storage, count*sizeof(*n) );
@@ -83,7 +83,7 @@ cvWatershed( const CvArr* srcarr, CvArr* dstarr )
     const int WSHED = -1;
     const int NQ = 256;
     cv::Ptr<CvMemStorage> storage;
-    
+
     CvMat sstub, *src;
     CvMat dstub, *dst;
     CvSize size;
@@ -149,7 +149,7 @@ cvWatershed( const CvArr* srcarr, CvArr* dstarr )
     if( CV_MAT_TYPE(dst->type) != CV_32SC1 )
         CV_Error( CV_StsUnsupportedFormat,
             "Only 32-bit, 1-channel output images are supported" );
-    
+
     if( !CV_ARE_SIZES_EQ( src, dst ))
         CV_Error( CV_StsUnmatchedSizes, "The input and output images must have the same size" );
 
@@ -231,7 +231,7 @@ cvWatershed( const CvArr* srcarr, CvArr* dstarr )
         int lab = 0, t;
         int* m;
         uchar* ptr;
-        
+
         if( q[active_queue].first == 0 )
         {
             for( i = active_queue+1; i < NQ; i++ )
@@ -316,13 +316,13 @@ void cv::watershed( InputArray _src, InputOutputArray markers )
 \****************************************************************************************/
 
 CV_IMPL void
-cvPyrMeanShiftFiltering( const CvArr* srcarr, CvArr* dstarr, 
+cvPyrMeanShiftFiltering( const CvArr* srcarr, CvArr* dstarr,
                          double sp0, double sr, int max_level,
                          CvTermCriteria termcrit )
 {
     const int cn = 3;
     const int MAX_LEVELS = 8;
-    
+
     if( (unsigned)max_level > (unsigned)MAX_LEVELS )
         CV_Error( CV_StsOutOfRange, "The number of pyramid levels is too large or negative" );
 
@@ -343,7 +343,7 @@ cvPyrMeanShiftFiltering( const CvArr* srcarr, CvArr* dstarr,
 
     if( src0.type() != CV_8UC3 )
         CV_Error( CV_StsUnsupportedFormat, "Only 8-bit, 3-channel images are supported" );
-    
+
     if( src0.type() != dst0.type() )
         CV_Error( CV_StsUnmatchedFormats, "The input and output images must have the same type" );
 
@@ -423,9 +423,9 @@ cvPyrMeanShiftFiltering( const CvArr* srcarr, CvArr* dstarr,
         for( i = 0; i < size.height; i++, sptr += sstep - size.width*3,
                                           dptr += dstep - size.width*3,
                                           mask += mstep )
-        {   
+        {
             for( j = 0; j < size.width; j++, sptr += 3, dptr += 3 )
-            {               
+            {
                 int x0 = j, y0 = i, x1, y1, iter;
                 int c0, c1, c2;
 
@@ -449,46 +449,46 @@ cvPyrMeanShiftFiltering( const CvArr* srcarr, CvArr* dstarr,
                     miny = cvRound(y0 - sp); miny = MAX(miny, 0);
                     maxx = cvRound(x0 + sp); maxx = MIN(maxx, size.width-1);
                     maxy = cvRound(y0 + sp); maxy = MIN(maxy, size.height-1);
-                    ptr = sptr + (miny - i)*sstep + (minx - j)*3; 
+                    ptr = sptr + (miny - i)*sstep + (minx - j)*3;
 
                     for( y = miny; y <= maxy; y++, ptr += sstep - (maxx-minx+1)*3 )
                     {
                         int row_count = 0;
                         x = minx;
-						#if CV_ENABLE_UNROLLED
+                        #if CV_ENABLE_UNROLLED
                         for( ; x + 3 <= maxx; x += 4, ptr += 12 )
                         {
                             int t0 = ptr[0], t1 = ptr[1], t2 = ptr[2];
                             if( tab[t0-c0+255] + tab[t1-c1+255] + tab[t2-c2+255] <= isr2 )
-                            {                        
+                            {
                                 s0 += t0; s1 += t1; s2 += t2;
                                 sx += x; row_count++;
                             }
                             t0 = ptr[3], t1 = ptr[4], t2 = ptr[5];
                             if( tab[t0-c0+255] + tab[t1-c1+255] + tab[t2-c2+255] <= isr2 )
-                            {                        
+                            {
                                 s0 += t0; s1 += t1; s2 += t2;
                                 sx += x+1; row_count++;
                             }
                             t0 = ptr[6], t1 = ptr[7], t2 = ptr[8];
                             if( tab[t0-c0+255] + tab[t1-c1+255] + tab[t2-c2+255] <= isr2 )
-                            {                        
+                            {
                                 s0 += t0; s1 += t1; s2 += t2;
                                 sx += x+2; row_count++;
                             }
                             t0 = ptr[9], t1 = ptr[10], t2 = ptr[11];
                             if( tab[t0-c0+255] + tab[t1-c1+255] + tab[t2-c2+255] <= isr2 )
-                            {                        
+                            {
                                 s0 += t0; s1 += t1; s2 += t2;
                                 sx += x+3; row_count++;
                             }
                         }
                         #endif
                         for( ; x <= maxx; x++, ptr += 3 )
-                        {      
+                        {
                             int t0 = ptr[0], t1 = ptr[1], t2 = ptr[2];
                             if( tab[t0-c0+255] + tab[t1-c1+255] + tab[t2-c2+255] <= isr2 )
-                            {                        
+                            {
                                 s0 += t0; s1 += t1; s2 += t2;
                                 sx += x; row_count++;
                             }
@@ -510,7 +510,7 @@ cvPyrMeanShiftFiltering( const CvArr* srcarr, CvArr* dstarr,
                     stop_flag = (x0 == x1 && y0 == y1) || abs(x1-x0) + abs(y1-y0) +
                         tab[s0 - c0 + 255] + tab[s1 - c1 + 255] +
                         tab[s2 - c2 + 255] <= termcrit.epsilon;
-                
+
                     x0 = x1; y0 = y1;
                     c0 = s0; c1 = s1; c2 = s2;
 
@@ -531,7 +531,7 @@ void cv::pyrMeanShiftFiltering( InputArray _src, OutputArray _dst,
                                 TermCriteria termcrit )
 {
     Mat src = _src.getMat();
-    
+
     if( src.empty() )
         return;
 

@@ -47,7 +47,7 @@
 
 #ifdef HAVE_CUDA
 
-namespace cv { namespace gpu { 
+namespace cv { namespace gpu {
     namespace detail
     {
         std::string cuGetErrString(CUresult res);

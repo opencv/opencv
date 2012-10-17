@@ -61,23 +61,23 @@ int cvUpdateBGStatModel( IplImage* current_frame,
 //      bg_model - pointer to CvBGStatModel structure
 CV_IMPL void cvRefineForegroundMaskBySegm( CvSeq* segments, CvBGStatModel*  bg_model )
 {
-	IplImage* tmp_image = cvCreateImage(cvSize(bg_model->foreground->width,bg_model->foreground->height),
-							IPL_DEPTH_8U, 1);
-	for( ; segments; segments = ((CvSeq*)segments)->h_next )
-	{
-		CvSeq seq = *segments;
-		seq.v_next = seq.h_next = NULL;
-		cvZero(tmp_image);
-		cvDrawContours( tmp_image, &seq, CV_RGB(0, 0, 255), CV_RGB(0, 0, 255), 10, -1);
-		int num1 = cvCountNonZero(tmp_image);
+    IplImage* tmp_image = cvCreateImage(cvSize(bg_model->foreground->width,bg_model->foreground->height),
+                            IPL_DEPTH_8U, 1);
+    for( ; segments; segments = ((CvSeq*)segments)->h_next )
+    {
+        CvSeq seq = *segments;
+        seq.v_next = seq.h_next = NULL;
+        cvZero(tmp_image);
+        cvDrawContours( tmp_image, &seq, CV_RGB(0, 0, 255), CV_RGB(0, 0, 255), 10, -1);
+        int num1 = cvCountNonZero(tmp_image);
         cvAnd(tmp_image, bg_model->foreground, tmp_image);
-		int num2 = cvCountNonZero(tmp_image);
-		if( num2 > num1*0.5 )
-			cvDrawContours( bg_model->foreground, &seq, CV_RGB(0, 0, 255), CV_RGB(0, 0, 255), 10, -1);
-		else
-			cvDrawContours( bg_model->foreground, &seq, CV_RGB(0, 0, 0), CV_RGB(0, 0, 0), 10, -1);
-	}
-	cvReleaseImage(&tmp_image);
+        int num2 = cvCountNonZero(tmp_image);
+        if( num2 > num1*0.5 )
+            cvDrawContours( bg_model->foreground, &seq, CV_RGB(0, 0, 255), CV_RGB(0, 0, 255), 10, -1);
+        else
+            cvDrawContours( bg_model->foreground, &seq, CV_RGB(0, 0, 0), CV_RGB(0, 0, 0), 10, -1);
+    }
+    cvReleaseImage(&tmp_image);
 }
 
 
@@ -91,7 +91,7 @@ cvSegmentFGMask( CvArr* _mask, int poly1Hull0, float perimScale,
     CvSeq *contours, *c;
     int nContours = 0;
     CvContourScanner scanner;
-    
+
     // clean up raw mask
     cvMorphologyEx( mask, mask, 0, 0, CV_MOP_OPEN, 1 );
     cvMorphologyEx( mask, mask, 0, 0, CV_MOP_CLOSE, 1 );
@@ -99,8 +99,8 @@ cvSegmentFGMask( CvArr* _mask, int poly1Hull0, float perimScale,
     // find contours around only bigger regions
     scanner = cvStartFindContours( mask, tempStorage,
         sizeof(CvContour), CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE, offset );
-    
-    while( (c = cvFindNextContour( scanner )) != 0 ) 
+
+    while( (c = cvFindNextContour( scanner )) != 0 )
     {
         double len = cvContourPerimeter( c );
         double q = (mask->rows + mask->cols)/perimScale; // calculate perimeter len threshold
@@ -109,8 +109,8 @@ cvSegmentFGMask( CvArr* _mask, int poly1Hull0, float perimScale,
         else //Smooth it's edges if it's large enough
         {
             CvSeq* newC;
-            if( poly1Hull0 ) //Polygonal approximation of the segmentation 
-                newC = cvApproxPoly( c, sizeof(CvContour), tempStorage, CV_POLY_APPROX_DP, 2, 0 ); 
+            if( poly1Hull0 ) //Polygonal approximation of the segmentation
+                newC = cvApproxPoly( c, sizeof(CvContour), tempStorage, CV_POLY_APPROX_DP, 2, 0 );
             else //Convex Hull of the segmentation
                 newC = cvConvexHull2( c, tempStorage, CV_CLOCKWISE, 1 );
             cvSubstituteContour( scanner, newC );
@@ -121,7 +121,7 @@ cvSegmentFGMask( CvArr* _mask, int poly1Hull0, float perimScale,
 
     // paint the found regions back into the image
     cvZero( mask );
-    for( c=contours; c != 0; c = c->h_next ) 
+    for( c=contours; c != 0; c = c->h_next )
         cvDrawContours( mask, c, cvScalarAll(255), cvScalarAll(0), -1, CV_FILLED, 8,
             cvPoint(-offset.x,-offset.y));
 
