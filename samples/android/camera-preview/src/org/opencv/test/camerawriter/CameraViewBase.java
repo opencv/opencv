@@ -5,8 +5,6 @@ import java.util.List;
 import org.opencv.android.Utils;
 import org.opencv.core.Mat;
 import org.opencv.core.Size;
-import org.opencv.highgui.Highgui;
-import org.opencv.highgui.VideoCapture;
 
 import android.content.Context;
 import android.graphics.Bitmap;
@@ -23,7 +21,7 @@ import android.view.SurfaceView;
  * frame to the screen.
  * The clients shall implement CvCameraViewListener
  */
-public abstract class OpenCvCameraBridgeViewBase extends SurfaceView implements SurfaceHolder.Callback {
+public abstract class CameraViewBase extends SurfaceView implements SurfaceHolder.Callback {
 
         private static final int MAX_UNSPECIFIED = -1;
 
@@ -36,8 +34,9 @@ public abstract class OpenCvCameraBridgeViewBase extends SurfaceView implements 
         private Bitmap mCacheBitmap;
 
 
-        public OpenCvCameraBridgeViewBase(Context context, AttributeSet attrs) {
+        public CameraViewBase(Context context, AttributeSet attrs) {
                 super(context,attrs);
+                Log.d(TAG, "call CameraViewBase constructor");
                 getHolder().addCallback(this);
                 mMaxWidth = MAX_UNSPECIFIED;
                 mMaxHeight = MAX_UNSPECIFIED;
@@ -113,7 +112,7 @@ public abstract class OpenCvCameraBridgeViewBase extends SurfaceView implements 
 
         /**
          * This method is provided for clients, so they can enable the camera connection.
-         * The actuall onCameraViewStarted callback will be delivered only after both this method is called and surface is available
+         * The actual onCameraViewStarted callback will be delivered only after both this method is called and surface is available
          */
         public void enableView() {
                 synchronized(mSyncObject) {
@@ -124,7 +123,7 @@ public abstract class OpenCvCameraBridgeViewBase extends SurfaceView implements 
 
         /**
          * This method is provided for clients, so they can disable camera connection and stop
-         * the delivery of frames eventhough the surfaceview itself is not destroyed and still stays on the scren
+         * the delivery of frames even though the surface view itself is not destroyed and still stays on the scren
          */
         public void disableView() {
                 synchronized(mSyncObject) {
@@ -143,9 +142,9 @@ public abstract class OpenCvCameraBridgeViewBase extends SurfaceView implements 
          * size - the biggest size which less or equal the size set will be selected.
          * As an example - we set setMaxFrameSize(200,200) and we have 176x152 and 320x240 sizes. The
          * preview frame will be selected with 176x152 size.
-         * This method is usefull when need to restrict the size of preview frame for some reason (for example for video recording)
+         * This method is useful when need to restrict the size of preview frame for some reason (for example for video recording)
          * @param maxWidth - the maximum width allowed for camera frame.
-         * @param maxHeight - the maxumum height allowed for camera frame
+         * @param maxHeight - the maximum height allowed for camera frame
          */
         public void setMaxFrameSize(int maxWidth, int maxHeight) {
                 mMaxWidth = maxWidth;
@@ -212,7 +211,7 @@ public abstract class OpenCvCameraBridgeViewBase extends SurfaceView implements 
         private void onEnterStartedState() {
 
                 connectCamera(getWidth(), getHeight());
-                /* Now create cahe Bitmap */
+                /* Now create cache Bitmap */
                 mCacheBitmap = Bitmap.createBitmap(mFrameWidth, mFrameHeight, Bitmap.Config.ARGB_8888);
 
         }
@@ -249,7 +248,8 @@ public abstract class OpenCvCameraBridgeViewBase extends SurfaceView implements 
                 if (mCacheBitmap != null) {
                     Canvas canvas = getHolder().lockCanvas();
                     if (canvas != null) {
-                        canvas.drawBitmap(mCacheBitmap, (canvas.getWidth() - mCacheBitmap.getWidth()) / 2, (canvas.getHeight() - mCacheBitmap.getHeight()) / 2, null);
+			canvas.drawColor(0, android.graphics.PorterDuff.Mode.CLEAR);
+			canvas.drawBitmap(mCacheBitmap, (canvas.getWidth() - mCacheBitmap.getWidth()) / 2, (canvas.getHeight() - mCacheBitmap.getHeight()) / 2, null);
                         getHolder().unlockCanvasAndPost(canvas);
                     }
                 }
