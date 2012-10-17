@@ -1390,172 +1390,151 @@ struct DecimateAlpha
     float alpha;
 };
 
-template <typename T, typename WT>
-class resizeArea_Invoker :
+
+template<typename T, typename WT> class ResizeArea_Invoker :
     public ParallelLoopBody
 {
 public:
-    resizeArea_Invoker(const Mat& _src, Mat& _dst, const DecimateAlpha* _xofs,
-        int _xofs_count, double _scale_y_, const int* _cur_dy_ofs,
-        const std::vector<std::pair<int, int> >& _bands) :
-        ParallelLoopBody(), src(_src), dst(_dst), xofs(_xofs),
-        xofs_count(_xofs_count), scale_y_(_scale_y_),
-        cur_dy_ofs(_cur_dy_ofs), bands(_bands)
+    ResizeArea_Invoker( const Mat& _src, Mat& _dst,
+                        const DecimateAlpha* _xtab, int _xtab_size,
+                        const DecimateAlpha* _ytab, int _ytab_size,
+                        const int* _tabofs )
     {
-    }
-
-    void resize_single_band(const Range& range) const
-    {
-        Size ssize = src.size(), dsize = dst.size();
-        int cn = src.channels();
-        dsize.width *= cn;
-        AutoBuffer<WT> _buffer(dsize.width*2);
-        WT *buf = _buffer, *sum = buf + dsize.width;
-        int k = 0, sy = 0, dx = 0, cur_dy = 0;
-        WT scale_y = (WT)scale_y_;
-
-        CV_Assert( cn <= 4 );
-        for( dx = 0; dx < dsize.width; dx++ )
-            buf[dx] = sum[dx] = 0;
-
-        cur_dy = cur_dy_ofs[range.start];
-        for (sy = range.start; sy < range.end; sy++)
-        {
-            const T* S = (const T*)(src.data + src.step*sy);
-            if( cn == 1 )
-                for( k = 0; k < xofs_count; k++ )
-                {
-                    int dxn = xofs[k].di;
-                    WT alpha = xofs[k].alpha;
-                    buf[dxn] += S[xofs[k].si]*alpha;
-                }
-            else if( cn == 2 )
-                for( k = 0; k < xofs_count; k++ )
-                {
-                    int sxn = xofs[k].si;
-                    int dxn = xofs[k].di;
-                    WT alpha = xofs[k].alpha;
-                    WT t0 = buf[dxn] + S[sxn]*alpha;
-                    WT t1 = buf[dxn+1] + S[sxn+1]*alpha;
-                    buf[dxn] = t0; buf[dxn+1] = t1;
-                }
-            else if( cn == 3 )
-                for( k = 0; k < xofs_count; k++ )
-                {
-                    int sxn = xofs[k].si;
-                    int dxn = xofs[k].di;
-                    WT alpha = xofs[k].alpha;
-                    WT t0 = buf[dxn] + S[sxn]*alpha;
-                    WT t1 = buf[dxn+1] + S[sxn+1]*alpha;
-                    WT t2 = buf[dxn+2] + S[sxn+2]*alpha;
-                    buf[dxn] = t0; buf[dxn+1] = t1; buf[dxn+2] = t2;
-                }
-            else
-                for( k = 0; k < xofs_count; k++ )
-                {
-                    int sxn = xofs[k].si;
-                    int dxn = xofs[k].di;
-                    WT alpha = xofs[k].alpha;
-                    WT t0 = buf[dxn] + S[sxn]*alpha;
-                    WT t1 = buf[dxn+1] + S[sxn+1]*alpha;
-                    buf[dxn] = t0; buf[dxn+1] = t1;
-                    t0 = buf[dxn+2] + S[sxn+2]*alpha;
-                    t1 = buf[dxn+3] + S[sxn+3]*alpha;
-                    buf[dxn+2] = t0; buf[dxn+3] = t1;
-                }
-
-            if( (cur_dy + 1)*scale_y <= sy + 1 || sy == ssize.height - 1 )
-            {
-                WT beta = std::max(sy + 1 - (cur_dy+1)*scale_y, (WT)0);
-                WT beta1 = 1 - beta;
-                T* D = (T*)(dst.data + dst.step*cur_dy);
-                if( fabs(beta) < 1e-3 )
-                {
-                    if(cur_dy >= dsize.height)
-                        return;
-                    for( dx = 0; dx < dsize.width; dx++ )
-                    {
-                        D[dx] = saturate_cast<T>((sum[dx] + buf[dx]) / min(scale_y, src.rows - cur_dy * scale_y)); //
-                        sum[dx] = buf[dx] = 0;
-                    }
-                }
-                else
-                    for( dx = 0; dx < dsize.width; dx++ )
-                    {
-                        D[dx] = saturate_cast<T>((sum[dx] + buf[dx]* beta1)/ min(scale_y, src.rows - cur_dy*scale_y)); //
-                        sum[dx] = buf[dx]*beta;
-                        buf[dx] = 0;
-                    }
-                cur_dy++;
-            }
-            else
-            {
-                for( dx = 0; dx <= dsize.width - 2; dx += 2 )
-                {
-                    WT t0 = sum[dx] + buf[dx];
-                    WT t1 = sum[dx+1] + buf[dx+1];
-                    sum[dx] = t0; sum[dx+1] = t1;
-                    buf[dx] = buf[dx+1] = 0;
-                }
-                for( ; dx < dsize.width; dx++ )
-                {
-                    sum[dx] += buf[dx];
-                    buf[dx] = 0;
-                }
-            }
-        }
+        src = &_src;
+        dst = &_dst;
+        xtab0 = _xtab;
+        xtab_size0 = _xtab_size;
+        ytab = _ytab;
+        ytab_size = _ytab_size;
+        tabofs = _tabofs;
     }
 
     virtual void operator() (const Range& range) const
     {
-        for (int i = range.start; i < range.end; ++i)
+        Size dsize = dst->size();
+        int cn = dst->channels();
+        dsize.width *= cn;
+        AutoBuffer<WT> _buffer(dsize.width*2);
+        const DecimateAlpha* xtab = xtab0;
+        int xtab_size = xtab_size0;
+        WT *buf = _buffer, *sum = buf + dsize.width;
+        int j_start = tabofs[range.start], j_end = tabofs[range.end], j, k, dx, prev_sy = -1, prev_dy = ytab[j_start].di;
+
+        for( dx = 0; dx < dsize.width; dx++ )
+            sum[dx] = (WT)0;
+
+        for( j = j_start; j < j_end; j++ )
         {
-            Range band_range(bands[i].first, bands[i].second);
-            resize_single_band(band_range);
+            WT beta = ytab[j].alpha;
+            int dy = ytab[j].di;
+            int sy = ytab[j].si;
+
+            if( sy != prev_sy )
+            {
+                const T* S = (const T*)(src->data + src->step*sy);
+                for( dx = 0; dx < dsize.width; dx++ )
+                    buf[dx] = (WT)0;
+
+                if( cn == 1 )
+                    for( k = 0; k < xtab_size; k++ )
+                    {
+                        int dxn = xtab[k].di;
+                        WT alpha = xtab[k].alpha;
+                        buf[dxn] += S[xtab[k].si]*alpha;
+                    }
+                else if( cn == 2 )
+                    for( k = 0; k < xtab_size; k++ )
+                    {
+                        int sxn = xtab[k].si;
+                        int dxn = xtab[k].di;
+                        WT alpha = xtab[k].alpha;
+                        WT t0 = buf[dxn] + S[sxn]*alpha;
+                        WT t1 = buf[dxn+1] + S[sxn+1]*alpha;
+                        buf[dxn] = t0; buf[dxn+1] = t1;
+                    }
+                else if( cn == 3 )
+                    for( k = 0; k < xtab_size; k++ )
+                    {
+                        int sxn = xtab[k].si;
+                        int dxn = xtab[k].di;
+                        WT alpha = xtab[k].alpha;
+                        WT t0 = buf[dxn] + S[sxn]*alpha;
+                        WT t1 = buf[dxn+1] + S[sxn+1]*alpha;
+                        WT t2 = buf[dxn+2] + S[sxn+2]*alpha;
+                        buf[dxn] = t0; buf[dxn+1] = t1; buf[dxn+2] = t2;
+                    }
+                else if( cn == 4 )
+                {
+                    for( k = 0; k < xtab_size; k++ )
+                    {
+                        int sxn = xtab[k].si;
+                        int dxn = xtab[k].di;
+                        WT alpha = xtab[k].alpha;
+                        WT t0 = buf[dxn] + S[sxn]*alpha;
+                        WT t1 = buf[dxn+1] + S[sxn+1]*alpha;
+                        buf[dxn] = t0; buf[dxn+1] = t1;
+                        t0 = buf[dxn+2] + S[sxn+2]*alpha;
+                        t1 = buf[dxn+3] + S[sxn+3]*alpha;
+                        buf[dxn+2] = t0; buf[dxn+3] = t1;
+                    }
+                }
+                else
+                {
+                    for( k = 0; k < xtab_size; k++ )
+                    {
+                        int sxn = xtab[k].si;
+                        int dxn = xtab[k].di;
+                        WT alpha = xtab[k].alpha;
+                        for( int c = 0; c < cn; c++ )
+                            buf[dxn + c] += S[sxn + c]*alpha;
+                    }
+                }
+            }
+
+            if( dy != prev_dy )
+            {
+                T* D = (T*)(dst->data + dst->step*prev_dy);
+
+                for( dx = 0; dx < dsize.width; dx++ )
+                {
+                    D[dx] = saturate_cast<T>(sum[dx]);
+                    sum[dx] = beta*buf[dx];
+                }
+                prev_dy = dy;
+            }
+            else
+            {
+                for( dx = 0; dx < dsize.width; dx++ )
+                    sum[dx] += beta*buf[dx];
+            }
+        }
+
+        {
+        T* D = (T*)(dst->data + dst->step*prev_dy);
+        for( dx = 0; dx < dsize.width; dx++ )
+            D[dx] = saturate_cast<T>(sum[dx]);
         }
     }
 
 private:
-    Mat src;
-    Mat dst;
-    const DecimateAlpha* xofs;
-    int xofs_count;
-    double scale_y_;
-    const int *cur_dy_ofs;
-    std::vector<std::pair<int, int> > bands;
+    const Mat* src;
+    Mat* dst;
+    const DecimateAlpha* xtab0;
+    const DecimateAlpha* ytab;
+    int xtab_size0, ytab_size;
+    const int* tabofs;
 };
 
+
 template <typename T, typename WT>
-static void resizeArea_( const Mat& src, Mat& dst, const DecimateAlpha* xofs, int xofs_count, double scale_y_)
+static void resizeArea_( const Mat& src, Mat& dst,
+                         const DecimateAlpha* xtab, int xtab_size,
+                         const DecimateAlpha* ytab, int ytab_size,
+                         const int* tabofs )
 {
-    Size ssize = src.size(), dsize = dst.size();
-    AutoBuffer<int> _yofs(ssize.height);
-    int *cur_dy_ofs = _yofs;
-    int cur_dy = 0, index = 0;
-    std::vector<std::pair<int, int> > bands;
-
-    for (int sy = 0; sy < ssize.height; sy++)
-    {
-        cur_dy_ofs[sy] = cur_dy;
-
-        if ((cur_dy + 1) * scale_y_ <= sy + 1 || sy == ssize.height - 1 )
-        {
-            WT beta = (WT)std::max(sy + 1 - (cur_dy + 1) * scale_y_, 0.);
-            if (fabs(beta) < 1e-3 )
-            {
-                if (cur_dy >= dsize.height)
-                    break;
-                bands.push_back(std::make_pair(index, sy + 1));
-                index = sy + 1;
-            }
-            cur_dy++;
-        }
-    }
-
-    Range range(0, (int)bands.size());
-    resizeArea_Invoker<T, WT> invoker(src, dst, xofs, xofs_count, scale_y_, cur_dy_ofs, bands);
-    //parallel_for_(range, invoker);
-    invoker(Range(range.start, range.end));
+    parallel_for_(Range(0, dst.rows),
+                 ResizeArea_Invoker<T, WT>(src, dst, xtab, xtab_size, ytab, ytab_size, tabofs),
+                 dst.total()/((double)(1 << 16)));
 }
 
 
@@ -1569,8 +1548,50 @@ typedef void (*ResizeAreaFastFunc)( const Mat& src, Mat& dst,
                                     int scale_x, int scale_y );
 
 typedef void (*ResizeAreaFunc)( const Mat& src, Mat& dst,
-                                const DecimateAlpha* xofs, int xofs_count,
-                                double scale_y_);
+                                const DecimateAlpha* xtab, int xtab_size,
+                                const DecimateAlpha* ytab, int ytab_size,
+                                const int* yofs);
+
+
+static int computeResizeAreaTab( int ssize, int dsize, int cn, double scale, DecimateAlpha* tab )
+{
+    int k = 0, sx, dx = 0;
+    for( ; dx < dsize; dx++ )
+    {
+        double fsx1 = dx*scale;
+        double fsx2 = fsx1 + scale;
+        int sx1 = cvCeil(fsx1), sx2 = cvFloor(fsx2);
+        sx1 = std::min(sx1, ssize-1);
+        sx2 = std::min(sx2, ssize-1);
+
+        if( sx1 > fsx1 )
+        {
+            assert( k < ssize*2 );
+            tab[k].di = dx*cn;
+            tab[k].si = (sx1-1)*cn;
+            tab[k++].alpha = (float)((sx1 - fsx1) / min(scale, ssize - fsx1));
+        }
+
+        for( sx = sx1; sx < sx2; sx++ )
+        {
+            assert( k < ssize*2 );
+            tab[k].di = dx*cn;
+            tab[k].si = sx*cn;
+            tab[k++].alpha = float(1.0 / min(scale, ssize - fsx1));
+        }
+
+        if( fsx2 - sx2 > 1e-3 )
+        {
+            assert( k < ssize*2 );
+            tab[k].di = dx*cn;
+            tab[k].si = sx2*cn;
+            tab[k++].alpha = (float)(min(fsx2 - sx2, 1.) / min(scale, ssize - fsx1));
+        }
+    }
+
+    return k;
+}
+
 
 }
 
@@ -1766,43 +1787,25 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
             ResizeAreaFunc func = area_tab[depth];
             CV_Assert( func != 0 && cn <= 4 );
 
-            AutoBuffer<DecimateAlpha> _xofs(ssize.width*2);
-            DecimateAlpha* xofs = _xofs;
+            AutoBuffer<DecimateAlpha> _xytab((ssize.width + ssize.height)*2);
+            DecimateAlpha* xtab = _xytab, *ytab = xtab + ssize.width*2;
 
-            for( dx = 0, k = 0; dx < dsize.width; dx++ )
+            int xtab_size = computeResizeAreaTab(ssize.width, dsize.width, cn, scale_x, xtab);
+            int ytab_size = computeResizeAreaTab(ssize.height, dsize.height, 1, scale_y, ytab);
+
+            AutoBuffer<int> _tabofs(dsize.height + 1);
+            int* tabofs = _tabofs;
+            for( k = 0, dy = 0; k < ytab_size; k++ )
             {
-                double fsx1 = dx*scale_x;
-                double fsx2 = fsx1 + scale_x;
-                int sx1 = cvCeil(fsx1), sx2 = cvFloor(fsx2);
-                sx1 = std::min(sx1, ssize.width-1);
-                sx2 = std::min(sx2, ssize.width-1);
-
-                if( sx1 > fsx1 )
+                if( k == 0 || ytab[k].di != ytab[k-1].di )
                 {
-                    assert( k < ssize.width*2 );
-                    xofs[k].di = dx*cn;
-                    xofs[k].si = (sx1-1)*cn;
-                    xofs[k++].alpha = (float)((sx1 - fsx1) / min(scale_x, src.cols - fsx1));
-                }
-
-                for( sx = sx1; sx < sx2; sx++ )
-                {
-                    assert( k < ssize.width*2 );
-                    xofs[k].di = dx*cn;
-                    xofs[k].si = sx*cn;
-                    xofs[k++].alpha = float(1.0 / min(scale_x, src.cols - fsx1));
-                }
-
-                if( fsx2 - sx2 > 1e-3 )
-                {
-                    assert( k < ssize.width*2 );
-                    xofs[k].di = dx*cn;
-                    xofs[k].si = sx2*cn;
-                    xofs[k++].alpha = (float)(min(fsx2 - sx2, 1.) / min(scale_x, src.cols - fsx1));
+                    assert( ytab[k].di == dy );
+                    tabofs[dy++] = k;
                 }
             }
+            tabofs[dy] = ytab_size;
 
-            func( src, dst, xofs, k, scale_y);
+            func( src, dst, xtab, xtab_size, ytab, ytab_size, tabofs );
             return;
         }
     }
