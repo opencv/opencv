@@ -27,94 +27,94 @@ import org.opencv.imgproc.Imgproc;
  */
 public class OpenCvJavaCameraView extends OpenCvCameraBridgeViewBase implements PreviewCallback {
 
-        private static final int MAGIC_TEXTURE_ID = 10;
-        private static final String TAG = "OpenCvJavaCameraView";
+    private static final int MAGIC_TEXTURE_ID = 10;
+    private static final String TAG = "OpenCvJavaCameraView";
 
-        private Mat mBaseMat;
+    private Mat mBaseMat;
 
-        public static class JavaCameraSizeAccessor implements ListItemAccessor {
+    public static class JavaCameraSizeAccessor implements ListItemAccessor {
 
-                @Override
-                public int getWidth(Object obj) {
-                        Camera.Size size = (Camera.Size) obj;
-                        return size.width;
-                }
-
-                @Override
-                public int getHeight(Object obj) {
-                        Camera.Size size = (Camera.Size) obj;
-                        return size.height;
-                }
-
+        @Override
+        public int getWidth(Object obj) {
+            Camera.Size size = (Camera.Size) obj;
+            return size.width;
         }
+
+        @Override
+        public int getHeight(Object obj) {
+            Camera.Size size = (Camera.Size) obj;
+            return size.height;
+        }
+
+    }
 
     private Camera mCamera;
 
-        public OpenCvJavaCameraView(Context context, AttributeSet attrs) {
-                super(context, attrs);
-        }
+    public OpenCvJavaCameraView(Context context, AttributeSet attrs) {
+        super(context, attrs);
+    }
 
 
 
-        @Override
-        protected void connectCamera(int width, int height) {
-                mCamera = Camera.open(0);
+    @Override
+    protected void connectCamera(int width, int height) {
+        mCamera = Camera.open(0);
 
-                List<android.hardware.Camera.Size> sizes = mCamera.getParameters().getSupportedPreviewSizes();
+        List<android.hardware.Camera.Size> sizes = mCamera.getParameters().getSupportedPreviewSizes();
         /* Select the size that fits surface considering maximum size allowed */
         FrameSize frameSize = calculateCameraFrameSize(sizes, new JavaCameraSizeAccessor(), width, height);
 
         /* Now set camera parameters */
         try {
-		Camera.Parameters params = mCamera.getParameters();
+            Camera.Parameters params = mCamera.getParameters();
 
-		List<Integer> formats = params.getSupportedPictureFormats();
+            List<Integer> formats = params.getSupportedPictureFormats();
 
-		params.setPreviewFormat(ImageFormat.NV21);
-		params.setPreviewSize(frameSize.width, frameSize.height);
+            params.setPreviewFormat(ImageFormat.NV21);
+            params.setPreviewSize(frameSize.width, frameSize.height);
 
-		mCamera.setPreviewCallback(this);
-		mCamera.setParameters(params);
-                        //mCamera.setPreviewTexture(new SurfaceTexture(MAGIC_TEXTURE_ID));
+            mCamera.setPreviewCallback(this);
+            mCamera.setParameters(params);
+            //mCamera.setPreviewTexture(new SurfaceTexture(MAGIC_TEXTURE_ID));
 
-		SurfaceTexture tex = new SurfaceTexture(MAGIC_TEXTURE_ID);
+            SurfaceTexture tex = new SurfaceTexture(MAGIC_TEXTURE_ID);
 
-		mCamera.setPreviewTexture(tex);
+            mCamera.setPreviewTexture(tex);
 
-                        mFrameWidth = frameSize.width;
-                        mFrameHeight = frameSize.height;
+            mFrameWidth = frameSize.width;
+            mFrameHeight = frameSize.height;
 
-                } catch (IOException e) {
-                        e.printStackTrace();
-                }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
-                mBaseMat = new Mat(mFrameHeight + (mFrameHeight/2), mFrameWidth, CvType.CV_8UC1);
+        mBaseMat = new Mat(mFrameHeight + (mFrameHeight/2), mFrameWidth, CvType.CV_8UC1);
 
         /* Finally we are ready to start the preview */
-                mCamera.startPreview();
-        }
+        mCamera.startPreview();
+    }
 
-        @Override
-        protected void disconnectCamera() {
+    @Override
+    protected void disconnectCamera() {
 
-                mCamera.setPreviewCallback(null);
-                mCamera.stopPreview();
-                mCamera.release();
-        }
+        mCamera.setPreviewCallback(null);
+        mCamera.stopPreview();
+        mCamera.release();
+    }
 
 
 
-        @Override
-        public void onPreviewFrame(byte[] frame, Camera arg1) {
-                Log.i(TAG, "Preview Frame received. Need to create MAT and deliver it to clients");
+    @Override
+    public void onPreviewFrame(byte[] frame, Camera arg1) {
+        Log.i(TAG, "Preview Frame received. Need to create MAT and deliver it to clients");
 
-                Log.i(TAG, "Frame size  is " + frame.length);
+        Log.i(TAG, "Frame size  is " + frame.length);
 
-                mBaseMat.put(0, 0, frame);
-                Mat frameMat = new Mat();
-                Imgproc.cvtColor(mBaseMat, frameMat, Imgproc.COLOR_YUV2RGBA_NV21, 4);
-                deliverAndDrawFrame(frameMat);
-                frameMat.release();
-        }
+        mBaseMat.put(0, 0, frame);
+        Mat frameMat = new Mat();
+        Imgproc.cvtColor(mBaseMat, frameMat, Imgproc.COLOR_YUV2RGBA_NV21, 4);
+        deliverAndDrawFrame(frameMat);
+        frameMat.release();
+    }
 
 }
