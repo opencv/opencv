@@ -1,0 +1,6 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:id="@+id/menu_start_new_game"
+        android:title="@string/menu_start_new_game"
+        android:orderInCategory="100" />
+    <item android:id="@+id/menu_toggle_tile_numbers" android:title="@string/menu_toggle_tile_numbers"></item>
+</menu>
