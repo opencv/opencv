@@ -3,14 +3,11 @@
     android:versionCode="1"
     android:versionName="1.0" >
 
-    <uses-permission android:name="android.permission.CAMERA"/>
-    <uses-feature android:name="android.hardware.camera" />
-    <uses-feature android:name="android.hardware.camera.autofocus" />
+    <uses-permission android:name="android.permission.CAMERA" required="false"/>
+    <uses-feature android:name="android.hardware.camera" required="false"/>
+    <uses-feature android:name="android.hardware.camera.autofocus" required="false"/>
 
-
-    <uses-sdk
-        android:minSdkVersion="8"
-        android:targetSdkVersion="9" />
+    <uses-sdk android:minSdkVersion="8"/>
 
     <application
         android:icon="@drawable/ic_launcher"
@@ -18,7 +15,8 @@
         android:theme="@style/AppTheme" >
         <activity
             android:name=".Puzzle15Activity"
-            android:label="@string/title_activity_puzzle15" >
+            android:label="@string/title_activity_puzzle15"
+             android:configChanges = "keyboardHidden|orientation" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
