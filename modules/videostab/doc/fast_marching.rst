@@ -39,7 +39,7 @@ videostab::FastMarchingMethod::run
 
 Template method that runs the Fast Marching Method.
 
-.. ocv:function:: Inpaint FastMarchingMethod::run(const Mat &mask, Inpaint inpaint)
+.. ocv:function:: template<typename Inpaint> Inpaint videostab::FastMarchingMethod::run(const Mat &mask, Inpaint inpaint)
 
     :param mask: Image mask. ``0`` value indicates that the pixel value must be inpainted, ``255`` indicates that the pixel value is known, other values aren't acceptable.
 
