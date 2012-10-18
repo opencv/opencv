@@ -76,6 +76,7 @@ protected:
     bool TestVec();
     bool TestMatxMultiplication();
     bool TestSubMatAccess();
+    bool TestExp();
     bool TestSVD();
     bool operations1();
 
@@ -1003,6 +1004,17 @@ bool CV_OperationsTest::operations1()
 }
 
 
+bool CV_OperationsTest::TestExp()
+{
+    Mat1f tt = Mat1f::ones(4,2);
+    Mat1f outs;
+    exp(-tt, outs);
+    Mat1f tt2 = Mat1f::ones(4,1), outs2;
+    exp(-tt2, outs2);
+    return true;
+}
+
+
 bool CV_OperationsTest::TestSVD()
 {
     try
@@ -1077,6 +1089,9 @@ void CV_OperationsTest::run( int /* start_from */)
         return;
 
     if (!TestSubMatAccess())
+        return;
+
+    if (!TestExp())
         return;
 
     if (!TestSVD())
