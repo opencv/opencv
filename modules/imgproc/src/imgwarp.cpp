@@ -1418,7 +1418,7 @@ public:
         const DecimateAlpha* xtab = xtab0;
         int xtab_size = xtab_size0;
         WT *buf = _buffer, *sum = buf + dsize.width;
-        int j_start = tabofs[range.start], j_end = tabofs[range.end], j, k, dx, prev_sy = -1, prev_dy = ytab[j_start].di;
+        int j_start = tabofs[range.start], j_end = tabofs[range.end], j, k, dx, prev_dy = ytab[j_start].di;
 
         for( dx = 0; dx < dsize.width; dx++ )
             sum[dx] = (WT)0;
@@ -1429,7 +1429,6 @@ public:
             int dy = ytab[j].di;
             int sy = ytab[j].si;
 
-            if( sy != prev_sy )
             {
                 const T* S = (const T*)(src->data + src->step*sy);
                 for( dx = 0; dx < dsize.width; dx++ )
@@ -1555,40 +1554,42 @@ typedef void (*ResizeAreaFunc)( const Mat& src, Mat& dst,
 
 static int computeResizeAreaTab( int ssize, int dsize, int cn, double scale, DecimateAlpha* tab )
 {
-    int k = 0, sx, dx = 0;
-    for( ; dx < dsize; dx++ )
+    int k = 0;
+    for(int dx = 0; dx < dsize; dx++ )
     {
-        double fsx1 = dx*scale;
+        double fsx1 = dx * scale;
         double fsx2 = fsx1 + scale;
-        int sx1 = cvCeil(fsx1), sx2 = cvFloor(fsx2);
-        sx1 = std::min(sx1, ssize-1);
-        sx2 = std::min(sx2, ssize-1);
+        double cellWidth = min(scale, ssize - fsx1);
 
-        if( sx1 > fsx1 )
+        int sx1 = cvCeil(fsx1), sx2 = cvFloor(fsx2);
+
+        sx2 = std::min(sx2, ssize - 1);
+        sx1 = std::min(sx1, sx2);
+
+        if( sx1 - fsx1 > 1e-3 )
         {
             assert( k < ssize*2 );
-            tab[k].di = dx*cn;
-            tab[k].si = (sx1-1)*cn;
-            tab[k++].alpha = (float)((sx1 - fsx1) / min(scale, ssize - fsx1));
+            tab[k].di = dx * cn;
+            tab[k].si = (sx1 - 1) * cn;
+            tab[k++].alpha = (float)((sx1 - fsx1) / cellWidth);
         }
 
-        for( sx = sx1; sx < sx2; sx++ )
+        for(int sx = sx1; sx < sx2; sx++ )
         {
             assert( k < ssize*2 );
-            tab[k].di = dx*cn;
-            tab[k].si = sx*cn;
-            tab[k++].alpha = float(1.0 / min(scale, ssize - fsx1));
+            tab[k].di = dx * cn;
+            tab[k].si = sx * cn;
+            tab[k++].alpha = float(1.0 / cellWidth);
         }
 
         if( fsx2 - sx2 > 1e-3 )
         {
             assert( k < ssize*2 );
-            tab[k].di = dx*cn;
-            tab[k].si = sx2*cn;
-            tab[k++].alpha = (float)(min(fsx2 - sx2, 1.) / min(scale, ssize - fsx1));
+            tab[k].di = dx * cn;
+            tab[k].si = sx2 * cn;
+            tab[k++].alpha = (float)(min(min(fsx2 - sx2, 1.), cellWidth) / cellWidth);
         }
     }
-
     return k;
 }
 
