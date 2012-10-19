@@ -55,6 +55,6 @@ There is a very base code snippet implementing the async initialization with Bas
 Using in Service
 ----------------
 
-Default BaseLoaderCallback implementation treat application context as Activity and calls Activity.finish() method to exit in case of initialization failure. 
-To override this behavior you need to override finish() method of BaseLoaderCallback class and implement your own finalization method. 
+Default BaseLoaderCallback implementation treat application context as Activity and calls Activity.finish() method to exit in case of initialization failure.
+To override this behavior you need to override finish() method of BaseLoaderCallback class and implement your own finalization method.
 

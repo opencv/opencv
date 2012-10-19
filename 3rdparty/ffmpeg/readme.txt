@@ -16,7 +16,7 @@ How to update opencv_ffmpeg.dll and opencv_ffmpeg_64.dll when a new version of F
 2. Install 64-bit MinGW. http://mingw-w64.sourceforge.net/
    Let's assume, it's installed in C:\MSYS64
 3. Copy C:\MSYS32\msys to C:\MSYS64\msys. Edit C:\MSYS64\msys\etc\fstab, change C:\MSYS32 to C:\MSYS64.
-   
+
 4. Now you have working MSYS32 and MSYS64 environments.
    Launch, one by one, C:\MSYS32\msys\msys.bat and C:\MSYS64\msys\msys.bat to create your home directories.
 

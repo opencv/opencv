@@ -10,7 +10,7 @@ videostab::MotionModel
 
 .. ocv:class:: videostab::MotionModel
 
-Describes motion model between two point clouds. 
+Describes motion model between two point clouds.
 
 ::
 
@@ -187,7 +187,7 @@ videostab::MotionEstimatorBase::motionModel
 
 .. ocv:function:: MotionModel MotionEstimatorBase::motionModel() const
 
-    :return: Motion model. See :ocv:class:`videostab::MotionModel`.    
+    :return: Motion model. See :ocv:class:`videostab::MotionModel`.
 
 
 videostab::MotionEstimatorBase::estimate

@@ -201,7 +201,7 @@ For the first source code example, I'll go through it with you. I am first givin
 .. literalinclude:: src/facerec_eigenfaces.cpp
    :language: cpp
    :linenos:
-   
+
 The source code for this demo application is also available in the ``src`` folder coming with this documentation:
 
 * :download:`src/facerec_eigenfaces.cpp <src/facerec_eigenfaces.cpp>`

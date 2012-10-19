@@ -20,7 +20,7 @@ In MacOS it can be done using the following command in Terminal:
 
    cd ~/<my_working _directory>
    git clone https://github.com/Itseez/opencv.git
- 
+
 
 Building OpenCV from Source, using CMake and Command Line
 =========================================================
@@ -28,10 +28,10 @@ Building OpenCV from Source, using CMake and Command Line
 #. Make symbolic link for Xcode to let OpenCV build scripts find the compiler, header files etc.
 
     .. code-block:: bash
-    
+
        cd /
        sudo ln -s /Applications/Xcode.app/Contents/Developer Developer
-       
+
 #. Build OpenCV framework:
 
     .. code-block:: bash

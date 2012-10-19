@@ -177,7 +177,7 @@ Loads a classifier from a file.
 
 CascadeClassifier::read
 ---------------------------
-Reads a classifier from a FileStorage node. 
+Reads a classifier from a FileStorage node.
 
 .. ocv:function:: bool CascadeClassifier::read(const FileNode& node)
 
