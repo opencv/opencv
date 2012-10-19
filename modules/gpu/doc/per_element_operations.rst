@@ -276,8 +276,6 @@ Compares elements of two matrices.
 
 .. ocv:function:: void gpu::compare( const GpuMat& a, const GpuMat& b, GpuMat& c, int cmpop, Stream& stream=Stream::Null() )
 
-.. ocv:function:: void gpu::compare(const GpuMat& a, Scalar sc, GpuMat& c, int cmpop, Stream& stream = Stream::Null())
-
     :param a: First source matrix.
 
     :param b: Second source matrix with the same size and type as ``a`` .

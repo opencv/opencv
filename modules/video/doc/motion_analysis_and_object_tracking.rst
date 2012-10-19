@@ -598,16 +598,16 @@ See :ocv:func:`BackgroundSubtractor::getBackgroundImage`.
 
 
 calcOpticalFlowSF
------------
+-----------------
 Calculate an optical flow using "SimpleFlow" algorithm.
 
-.. ocv:function:: void calcOpticalFlowSF( Mat& prev, Mat& next, Mat& flowX, Mat& flowY, int layers, int averaging_block_size, int max_flow)
+.. ocv:function:: void calcOpticalFlowSF( Mat& from, Mat& to, Mat& flow, int layers, int averaging_block_size, int max_flow )
 
-.. ocv:function:: void calcOpticalFlowSF( Mat& prev, Mat& next, Mat& flowX, Mat& flowY, int layers, int averaging_block_size, int max_flow, double sigma_dist, double sigma_color, int postprocess_window, double sigma_dist_fix, double sigma_color_fix, double occ_thr, int upscale_averaging_radiud, double upscale_sigma_dist, double upscale_sigma_color, double speed_up_thr)
+.. ocv:function:: void calcOpticalFlowSF( Mat& from, Mat& to, Mat& flow, int layers, int averaging_block_size, int max_flow, double sigma_dist, double sigma_color, int postprocess_window, double sigma_dist_fix, double sigma_color_fix, double occ_thr, int upscale_averaging_radius, double upscale_sigma_dist, double upscale_sigma_color, double speed_up_thr )
 
     :param prev: First 8-bit 3-channel image.
 
-    :param next: Second 8-bit 3-channel image 
+    :param next: Second 8-bit 3-channel image
 
     :param flowX: X-coordinate of estimated flow
 
@@ -639,7 +639,7 @@ Calculate an optical flow using "SimpleFlow" algorithm.
 
     :param speed_up_thr: threshold to detect point with irregular flow - where flow should be recalculated after upscale
 
-See [Tao2012]_. And site of project - http://graphics.berkeley.edu/papers/Tao-SAN-2012-05/. 
+See [Tao2012]_. And site of project - http://graphics.berkeley.edu/papers/Tao-SAN-2012-05/.
 
 .. [Bouguet00] Jean-Yves Bouguet. Pyramidal Implementation of the Lucas Kanade Feature Tracker.
 
