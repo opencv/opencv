@@ -824,7 +824,7 @@ gpu::bilateralFilter
 --------------------
 Performs bilateral filtering of passed image
 
-.. ocv:function:: void gpu::bilateralFilter(const GpuMat& src, GpuMat& dst, int kernel_size, float sigma_color, float sigma_spatial, int borderMode, Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::bilateralFilter( const GpuMat& src, GpuMat& dst, int kernel_size, float sigma_color, float sigma_spatial, int borderMode=BORDER_DEFAULT, Stream& stream=Stream::Null() )
 
     :param src: Source image. Supports only (channles != 2 && depth() != CV_8S && depth() != CV_32S && depth() != CV_64F).
 
@@ -849,7 +849,7 @@ gpu::nonLocalMeans
 -------------------
 Performs pure non local means denoising without any simplification, and thus it is not fast.
 
-.. ocv:function:: void nonLocalMeans(const GpuMat& src, GpuMat& dst, float h, int search_window = 21, int block_size = 7, int borderMode = BORDER_DEFAULT, Stream& s = Stream::Null())
+.. ocv:function:: void gpu::nonLocalMeans(const GpuMat& src, GpuMat& dst, float h, int search_window = 21, int block_size = 7, int borderMode = BORDER_DEFAULT, Stream& s = Stream::Null())
 
     :param src: Source image. Supports only CV_8UC1, CV_8UC2 and CV_8UC3.
 
@@ -877,10 +877,10 @@ gpu::FastNonLocalMeansDenoising
     {
     public:
         //! Simple method, recommended for grayscale images (though it supports multichannel images)
-        void simpleMethod(const GpuMat& src, GpuMat& dst, float h, int search_window = 21, int block_size = 7, Stream& s = Stream::Null());
+        void simpleMethod(const GpuMat& src, GpuMat& dst, float h, int search_window = 21, int block_size = 7, Stream& s = Stream::Null())
 
         //! Processes luminance and color components separatelly
-        void labMethod(const GpuMat& src, GpuMat& dst, float h_luminance, float h_color, int search_window = 21, int block_size = 7, Stream& s = Stream::Null());
+        void labMethod(const GpuMat& src, GpuMat& dst, float h_luminance, float h_color, int search_window = 21, int block_size = 7, Stream& s = Stream::Null())
     };
 
 The class implements fast approximate Non Local Means Denoising algorithm.
@@ -889,7 +889,7 @@ gpu::FastNonLocalMeansDenoising::simpleMethod()
 -------------------------------------
 Perform image denoising using Non-local Means Denoising algorithm http://www.ipol.im/pub/algo/bcm_non_local_means_denoising with several computational optimizations. Noise expected to be a gaussian white noise
 
-.. ocv:function:: void gpu::FastNonLocalMeansDenoising::simpleMethod(const GpuMat& src, GpuMat& dst, float h, int search_window = 21, int block_size = 7, Stream& s = Stream::Null());
+.. ocv:function:: void gpu::FastNonLocalMeansDenoising::simpleMethod(const GpuMat& src, GpuMat& dst, float h, int search_window = 21, int block_size = 7, Stream& s = Stream::Null())
 
     :param src: Input 8-bit 1-channel, 2-channel or 3-channel image.
 
@@ -913,7 +913,7 @@ gpu::FastNonLocalMeansDenoising::labMethod()
 -------------------------------------
 Modification of ``FastNonLocalMeansDenoising::simpleMethod`` for color images
 
-.. ocv:function:: void gpu::FastNonLocalMeansDenoising::labMethod(const GpuMat& src, GpuMat& dst, float h_luminance, float h_color, int search_window = 21, int block_size = 7, Stream& s = Stream::Null());
+.. ocv:function:: void gpu::FastNonLocalMeansDenoising::labMethod(const GpuMat& src, GpuMat& dst, float h_luminance, float h_color, int search_window = 21, int block_size = 7, Stream& s = Stream::Null())
 
     :param src: Input 8-bit 3-channel image.
 

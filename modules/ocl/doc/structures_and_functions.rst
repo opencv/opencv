@@ -13,7 +13,7 @@ ocl::getDevice
 ------------------
 Returns the list of devices
 
-.. ocv:function:: int ocl::getDevice(std::vector<Info>& oclinfo, int devicetype = CVCL_DEVICE_TYPE_GPU)
+.. ocv:function:: int ocl::getDevice( std::vector<Info> & oclinfo, int devicetype=CVCL_DEVICE_TYPE_GPU )
 
     :param oclinfo: Output vector of ``ocl::Info`` structures
 
