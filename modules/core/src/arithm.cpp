@@ -1228,10 +1228,10 @@ static int actualScalarDepth(const double* data, int len)
         maxval = MAX(maxval, ival);
     }
     return i < len ? CV_64F :
-        minval >= 0 && maxval <= UCHAR_MAX ? CV_8U :
-        minval >= SCHAR_MIN && maxval <= SCHAR_MAX ? CV_8S :
-        minval >= 0 && maxval <= USHRT_MAX ? CV_16U :
-        minval >= SHRT_MIN && maxval <= SHRT_MAX ? CV_16S :
+        minval >= 0 && maxval <= (int)UCHAR_MAX ? CV_8U :
+        minval >= (int)SCHAR_MIN && maxval <= (int)SCHAR_MAX ? CV_8S :
+        minval >= 0 && maxval <= (int)USHRT_MAX ? CV_16U :
+        minval >= (int)SHRT_MIN && maxval <= (int)SHRT_MAX ? CV_16S :
         CV_32S;
 }
 
