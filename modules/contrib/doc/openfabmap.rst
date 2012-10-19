@@ -9,10 +9,10 @@ FAB-MAP is an approach to appearance-based place recognition. FAB-MAP compares i
 
 openFABMAP requires training data (e.g. a collection of images from a similar but not identical environment) to construct a visual vocabulary for the visual bag-of-words model, along with a Chow-Liu tree representation of feature likelihood and for use in the Sampled new place method (see below).
 
-FabMap
+of2::FabMap
 --------------------
 
-.. ocv:class:: FabMap
+.. ocv:class:: of2::FabMap
 
 The main FabMap class performs the comparison between visual bags-of-words extracted from one or more images. The FabMap class is instantiated as one of the four inherited FabMap classes (FabMap1, FabMapLUT, FabMapFBO, FabMap2). Each inherited class performs the comparison differently based on algorithm iterations as published (see each class below for specifics). A Chow-Liu tree, detector model parameters and some option flags are common to all Fabmap variants and are supplied on class creation. Training data (visual bag-of-words) is supplied to the class if using the SAMPLED new place method. Test data (visual bag-of-words) is supplied as images to which query bag-of-words are compared against. The common flags are listed below: ::
 
@@ -149,10 +149,10 @@ The inverted index FAB-MAP as in [IJRR2010]_. This version of FAB-MAP is the fas
 
 .. [ICRA2011] A. Glover, et al., "OpenFABMAP: An Open Source Toolbox for Appearance-based Loop Closure Detection," in IEEE International Conference on Robotics and Automation, St Paul, Minnesota, 2011
 
-ImageMatch
+of2::IMatch
 --------------------
 
-.. ocv:struct:: IMatch
+.. ocv:struct:: of2::IMatch
 
 FAB-MAP comparison results are stored in a vector of IMatch structs. Each IMatch structure provides the index of the provided query bag-of-words, the index of the test bag-of-words, the raw log-likelihood of the match (independent of other comparisons), and the match probability (normalised over other comparison likelihoods).
 
@@ -180,48 +180,48 @@ FAB-MAP comparison results are stored in a vector of IMatch structs. Each IMatch
 
     };
 
-Chow-Liu Tree
+of2::ChowLiuTree
 --------------------
 
-.. ocv:class:: ChowLiuTree
+.. ocv:class:: of2::ChowLiuTree
 
 The Chow-Liu tree is a probabilistic model of the environment in terms of feature occurance and co-occurance. The Chow-Liu tree is a form of Bayesian network. FAB-MAP uses the model when calculating bag-of-words similarity by taking into account feature saliency. Training data is provided to the ChowLiuTree class in the form of bag-of-words image descriptors. The make function produces a cv::Mat that encodes the tree structure.
 
-.. ocv:function:: ChowLiuTree::ChowLiuTree()
+.. ocv:function:: of2::ChowLiuTree::ChowLiuTree()
 
-.. ocv:function:: void add(const Mat& imgDescriptor)
+.. ocv:function:: void of2::ChowLiuTree::add(const Mat& imgDescriptor)
 
     :param imgDescriptor:  bag-of-words image descriptors stored as rows in a Mat
 
-.. ocv:function:: void add(const vector<Mat>& imgDescriptors)
+.. ocv:function:: void of2::ChowLiuTree::add(const vector<Mat>& imgDescriptors)
 
     :param imgDescriptors: a vector containing multiple bag-of-words image descriptors
 
-.. ocv:function:: const vector<Mat>& getImgDescriptors() const
+.. ocv:function:: const vector<Mat>& of2::ChowLiuTree::getImgDescriptors() const
 
     Returns a vector containing multiple bag-of-words image descriptors
 
-.. ocv:function:: Mat make(double infoThreshold = 0.0)
+.. ocv:function:: Mat of2::ChowLiuTree::make(double infoThreshold = 0.0)
 
     :param infoThreshold: a threshold can be set to reduce the amount of memory used when making the Chow-Liu tree, which can occur with large vocabulary sizes. This function can fail if the threshold is set too high. If memory is an issue the value must be set by trial and error (~0.0005)
 
 
-BOWMSCTrainer
+of2::BOWMSCTrainer
 --------------------
 
-.. ocv:class:: BOWMSCTrainer : public BOWTrainer
+.. ocv:class:: of2::BOWMSCTrainer : public of2::BOWTrainer
 
 BOWMSCTrainer is a custom clustering algorithm used to produce the feature vocabulary required to create bag-of-words representations. The algorithm is an implementation of [AVC2007]_. Arguments against using K-means for the FAB-MAP algorithm are discussed in [IJRR2010]_. The BOWMSCTrainer inherits from the cv::BOWTrainer class, overwriting the cluster function.
 
-.. ocv:function::   BOWMSCTrainer::BOWMSCTrainer(double clusterSize = 0.4)
+.. ocv:function::   of2::BOWMSCTrainer::BOWMSCTrainer(double clusterSize = 0.4)
 
     :param clusterSize: the specificity of the vocabulary produced. A smaller cluster size will instigate a larger vocabulary.
 
-.. ocv:function::  virtual Mat cluster() const
+.. ocv:function::  virtual Mat of2::BOWMSCTrainer::cluster() const
 
 Cluster using features added to the class
 
-.. ocv:function:: virtual Mat cluster(const Mat& descriptors) const
+.. ocv:function:: virtual Mat of2::BOWMSCTrainer::cluster(const Mat& descriptors) const
 
     :param descriptors: feature descriptors provided as rows of the Mat.
 

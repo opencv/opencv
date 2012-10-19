@@ -598,12 +598,12 @@ See :ocv:func:`BackgroundSubtractor::getBackgroundImage`.
 
 
 calcOpticalFlowSF
------------
+-----------------
 Calculate an optical flow using "SimpleFlow" algorithm.
 
-.. ocv:function:: void calcOpticalFlowSF( Mat& prev, Mat& next, Mat& flowX, Mat& flowY, int layers, int averaging_block_size, int max_flow)
+.. ocv:function:: void calcOpticalFlowSF( Mat& from, Mat& to, Mat& flow, int layers, int averaging_block_size, int max_flow )
 
-.. ocv:function:: void calcOpticalFlowSF( Mat& prev, Mat& next, Mat& flowX, Mat& flowY, int layers, int averaging_block_size, int max_flow, double sigma_dist, double sigma_color, int postprocess_window, double sigma_dist_fix, double sigma_color_fix, double occ_thr, int upscale_averaging_radiud, double upscale_sigma_dist, double upscale_sigma_color, double speed_up_thr)
+.. ocv:function:: calcOpticalFlowSF( Mat& from, Mat& to, Mat& flow, int layers, int averaging_block_size, int max_flow, double sigma_dist, double sigma_color, int postprocess_window, double sigma_dist_fix, double sigma_color_fix, double occ_thr, int upscale_averaging_radius, double upscale_sigma_dist, double upscale_sigma_color, double speed_up_thr )
 
     :param prev: First 8-bit 3-channel image.
 

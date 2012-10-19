@@ -42,6 +42,17 @@
 
 #include "precomp.hpp"
 
+#if defined __linux__ || defined __APPLE__
+    #include <unistd.h>
+    #include <stdio.h>
+    #include <sys/types.h>
+    #if defined ANDROID
+        #include <sys/sysconf.h>
+    #else
+        #include <sys/sysctl.h>
+    #endif
+#endif
+
 #ifdef _OPENMP
     #define HAVE_OPENMP
 #endif
@@ -85,7 +96,6 @@
         #include <omp.h>
     #elif defined HAVE_GCD
         #include <dispatch/dispatch.h>
-        #include <sys/sysctl.h>
         #include <pthread.h>
     #elif defined HAVE_CONCURRENCY
         #include <ppl.h>
