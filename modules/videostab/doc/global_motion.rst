@@ -8,8 +8,6 @@ The video stabilization module contains a set of functions and classes for globa
 videostab::MotionModel
 ----------------------
 
-.. ocv:class:: videostab::MotionModel
-
 Describes motion model between two point clouds.
 
 ::
@@ -30,7 +28,7 @@ Describes motion model between two point clouds.
 videostab::RansacParams
 -----------------------
 
-.. ocv:class:: videostab::RansacParams
+.. ocv:struct:: videostab::RansacParams
 
 Describes RANSAC method parameters.
 
@@ -55,7 +53,7 @@ Describes RANSAC method parameters.
 videostab::RansacParams::RansacParams
 -------------------------------------
 
-.. ocv:function:: RansacParams::RansacParams()
+.. ocv:function:: videostab::RansacParams::RansacParams()
 
     :return: RANSAC method empty parameters object.
 
@@ -63,7 +61,7 @@ videostab::RansacParams::RansacParams
 videostab::RansacParams::RansacParams
 -------------------------------------
 
-.. ocv:function:: RansacParams::RansacParams(int size, float thresh, float eps, float prob)
+.. ocv:function:: videostab::RansacParams::RansacParams(int size, float thresh, float eps, float prob)
 
     :param size: Subset size.
 
@@ -79,7 +77,7 @@ videostab::RansacParams::RansacParams
 videostab::RansacParams::niters
 -------------------------------
 
-.. ocv:function:: int RansacParams::niters() const
+.. ocv:function:: int videostab::RansacParams::niters() const
 
     :return: Number of iterations that'll be performed by RANSAC method.
 
@@ -87,7 +85,7 @@ videostab::RansacParams::niters
 videostab::RansacParams::default2dMotion
 ----------------------------------------
 
-.. ocv:function:: static RansacParams RansacParams::default2dMotion(MotionModel model)
+.. ocv:function:: static RansacParams videostab::RansacParams::default2dMotion(MotionModel model)
 
     :param model: Motion model. See :ocv:class:`videostab::MotionModel`.
 
@@ -101,7 +99,7 @@ Estimates best global motion between two 2D point clouds in the least-squares se
 
 .. note:: Works in-place and changes input point arrays.
 
-.. ocv:function:: Mat estimateGlobalMotionLeastSquares(InputOutputArray points0, InputOutputArray points1, int model = MM_AFFINE, float *rmse = 0)
+.. ocv:function:: Mat videostab::estimateGlobalMotionLeastSquares(InputOutputArray points0, InputOutputArray points1, int model = MM_AFFINE, float *rmse = 0)
 
     :param points0: Source set of 2D points (``32F``).
 
@@ -119,7 +117,7 @@ videostab::estimateGlobalMotionRansac
 
 Estimates best global motion between two 2D point clouds robustly (using RANSAC method).
 
-.. ocv:function:: Mat estimateGlobalMotionRansac(InputArray points0, InputArray points1, int model = MM_AFFINE, const RansacParams &params = RansacParams::default2dMotion(MM_AFFINE), float *rmse = 0, int *ninliers = 0)
+.. ocv:function:: Mat videostab::estimateGlobalMotionRansac(InputArray points0, InputArray points1, int model = MM_AFFINE, const RansacParams &params = RansacParams::default2dMotion(MM_AFFINE), float *rmse = 0, int *ninliers = 0)
 
     :param points0: Source set of 2D points (``32F``).
 
@@ -139,7 +137,7 @@ videostab::getMotion
 
 Computes motion between two frames assuming that all the intermediate motions are known.
 
-.. ocv:function:: Mat getMotion(int from, int to, const std::vector<Mat> &motions)
+.. ocv:function:: Mat videostab::getMotion(int from, int to, const std::vector<Mat> &motions)
 
     :param from: Source frame index.
 
@@ -176,7 +174,7 @@ videostab::MotionEstimatorBase::setMotionModel
 
 Sets motion model.
 
-.. ocv:function:: void MotionEstimatorBase::setMotionModel(MotionModel val)
+.. ocv:function:: void videostab::MotionEstimatorBase::setMotionModel(MotionModel val)
 
     :param val: Motion model. See :ocv:class:`videostab::MotionModel`.
 
@@ -185,7 +183,7 @@ Sets motion model.
 videostab::MotionEstimatorBase::motionModel
 ----------------------------------------------
 
-.. ocv:function:: MotionModel MotionEstimatorBase::motionModel() const
+.. ocv:function:: MotionModel videostab::MotionEstimatorBase::motionModel() const
 
     :return: Motion model. See :ocv:class:`videostab::MotionModel`.
 
@@ -195,7 +193,7 @@ videostab::MotionEstimatorBase::estimate
 
 Estimates global motion between two 2D point clouds.
 
-.. ocv:function:: Mat MotionEstimatorBase::estimate(InputArray points0, InputArray points1, bool *ok = 0)
+.. ocv:function:: Mat videostab::MotionEstimatorBase::estimate(InputArray points0, InputArray points1, bool *ok = 0)
 
     :param points0: Source set of 2D points (``32F``).
 
@@ -209,7 +207,7 @@ Estimates global motion between two 2D point clouds.
 videostab::MotionEstimatorRansacL2
 ----------------------------------
 
-.. ocv:class:: videostab::MotionEstimatorRansacL2
+.. ocv:class:: videostab::MotionEstimatorRansacL2 : public videostab::MotionEstimatorBase
 
 Describes a robust RANSAC-based global 2D motion estimation method which minimizes L2 error.
 
@@ -233,7 +231,7 @@ Describes a robust RANSAC-based global 2D motion estimation method which minimiz
 videostab::MotionEstimatorL1
 ----------------------------
 
-.. ocv:class:: videostab::MotionEstimatorL1
+.. ocv:class:: videostab::MotionEstimatorL1 : public videostab::MotionEstimatorBase
 
 Describes a global 2D motion estimation method which minimizes L1 error.
 
@@ -274,7 +272,7 @@ Base class for global 2D motion estimation methods which take frames as input.
 videostab::KeypointBasedMotionEstimator
 ---------------------------------------
 
-.. ocv:class:: videostab::KeypointBasedMotionEstimator
+.. ocv:class:: videostab::KeypointBasedMotionEstimator : public videostab::ImageMotionEstimatorBase
 
 Describes a global 2D motion estimation method which uses keypoints detection and optical flow for matching.
 
