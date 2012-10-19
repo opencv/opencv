@@ -326,7 +326,10 @@ static int parseCmdArgs(int argc, char** argv)
 
 int main(int argc, char* argv[])
 {
+#if ENABLE_LOG
     int64 app_start_time = getTickCount();
+#endif
+
     cv::setBreakOnError(true);
 
     int retval = parseCmdArgs(argc, argv);
@@ -345,7 +348,9 @@ int main(int argc, char* argv[])
     bool is_work_scale_set = false, is_seam_scale_set = false, is_compose_scale_set = false;
 
     LOGLN("Finding features...");
+#if ENABLE_LOG
     int64 t = getTickCount();
+#endif
 
     Ptr<FeaturesFinder> finder;
     if (features_type == "surf")
@@ -420,7 +425,9 @@ int main(int argc, char* argv[])
     LOGLN("Finding features, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
     LOG("Pairwise matching");
+#if ENABLE_LOG
     t = getTickCount();
+#endif
     vector<MatchesInfo> pairwise_matches;
     BestOf2NearestMatcher matcher(try_gpu, match_conf);
     matcher(features, pairwise_matches);
@@ -516,7 +523,9 @@ int main(int argc, char* argv[])
     }
 
     LOGLN("Warping images (auxiliary)... ");
+#if ENABLE_LOG
     t = getTickCount();
+#endif
 
     vector<Point> corners(num_images);
     vector<Mat> masks_warped(num_images);
@@ -634,7 +643,9 @@ int main(int argc, char* argv[])
     masks.clear();
 
     LOGLN("Compositing...");
+#if ENABLE_LOG
     t = getTickCount();
+#endif
 
     Mat img_warped, img_warped_s;
     Mat dilated_mask, seam_mask, mask, mask_warped;
