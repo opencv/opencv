@@ -19,7 +19,7 @@ def process(filename, expr, save_results):
     for case in fstorage.childNodes:
         if case.nodeName == "#text":
             continue
-        if expr.match(case.nodeName):
+        if expr.search(case.nodeName):
             print case.nodeName
             fstorage.removeChild(case)
 
