@@ -286,7 +286,7 @@ static int pyopencv_to(const PyObject* o, Mat& m, const ArgInfo info, bool allow
     {
         if (info.outputarg)
         {
-            failmsg("Layout of the output array %s is compatible with cv::Mat (step[ndims-1] != elemsize or step[1] != elemsize*nchannels)", info.name);
+            failmsg("Layout of the output array %s is incompatible with cv::Mat (step[ndims-1] != elemsize or step[1] != elemsize*nchannels)", info.name);
             return false;
         }
         if( needcast )
