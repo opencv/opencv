@@ -221,6 +221,18 @@ static const void* initInterTab2D( int method, bool fixpt )
 }
 
 
+static bool initAllInterTab2D()
+{
+    return  initInterTab2D( INTER_LINEAR, false ) &&
+            initInterTab2D( INTER_LINEAR, true ) &&
+            initInterTab2D( INTER_CUBIC, false ) &&
+            initInterTab2D( INTER_CUBIC, true ) &&
+            initInterTab2D( INTER_LANCZOS4, false ) &&
+            initInterTab2D( INTER_LANCZOS4, true );
+}
+
+static volatile bool doInitAllInterTab2D = initAllInterTab2D();
+
 template<typename ST, typename DT> struct Cast
 {
     typedef ST type1;
