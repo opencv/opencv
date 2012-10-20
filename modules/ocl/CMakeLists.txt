@@ -10,23 +10,12 @@ ocv_module_include_directories()
 
 file(GLOB CL_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/kernels/*.cl")
 set(kernels_cpp "${CMAKE_CURRENT_BINARY_DIR}/kernels.cpp")
-set(cl2cpp_script "${CMAKE_CURRENT_SOURCE_DIR}/cl2cpp.py")
-set(cl2cpp_script_W32 "${CMAKE_CURRENT_SOURCE_DIR}/cl2cpp.js")
+set(cl2cpp_script "${CMAKE_CURRENT_SOURCE_DIR}/cl2cpp.cmake")
 
-IF(WSH_USE4PYTHON)
-	add_custom_command(
-		OUTPUT ${kernels_cpp}
-		COMMAND ${WSH_SCRIPT} ${cl2cpp_script_W32} "${CMAKE_CURRENT_SOURCE_DIR}/src/kernels" ${kernels_cpp}
-		DEPENDS ${CL_FILES} ${cl2cpp_script_W32}
-	)
-elseif(PYTHON_EXECUTABLE)
-	add_custom_command(
-	OUTPUT ${kernels_cpp}
-	COMMAND ${PYTHON_EXECUTABLE} ${cl2cpp_script} "${CMAKE_CURRENT_SOURCE_DIR}/src/kernels" ${kernels_cpp}
-	DEPENDS ${CL_FILES} ${cl2cpp_script})
-else()
-	message(FATAL_ERROR "Python interpreter has not been found, you can't build this module without it (or alternative)")
-endif()
+add_custom_command(
+  OUTPUT ${kernels_cpp}
+  COMMAND ${CMAKE_COMMAND} -DCL_DIR="${CMAKE_CURRENT_SOURCE_DIR}/src/kernels" -DOUTPUT="${kernels_cpp}" -P ${cl2cpp_script}
+  DEPENDS ${CL_FILES} ${cl2cpp_script})
 
 
 file(GLOB lib_hdrs     "include/opencv2/${name}/*.hpp" "include/opencv2/${name}/*.h")
