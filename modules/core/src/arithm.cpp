@@ -1281,7 +1281,7 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
                 depth2 = CV_32F;
         }
         else
-            depth2 = src1.depth() < CV_32S || src1.depth() == CV_32F ? CV_32F : CV_64F;
+            depth2 = CV_64F;
     }
 
     int cn = src1.channels(), depth1 = src1.depth(), wtype;
