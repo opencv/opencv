@@ -1387,8 +1387,8 @@ struct RGB2Lab_f
               C6 = coeffs[6], C7 = coeffs[7], C8 = coeffs[8];
         n *= 3;
 
-        static const float _1_3 = 1.0 / 3.0;
-        static const double _a = 16.0 / 116;
+        static const float _1_3 = 1.0f / 3.0f;
+        static const float _a = 16.0f / 116.0f;
         for (i = 0; i < n; i += 3, src += scn )
         {
             float R = clip(src[0]);
@@ -1409,11 +1409,11 @@ struct RGB2Lab_f
             float Y = R*C3 + G*C4 + B*C5;
             float Z = R*C6 + G*C7 + B*C8;
 
-            float FX = X > 0.008856 ? pow(X, _1_3) : (7.787f * X + _a);
-            float FY = Y > 0.008856 ? pow(Y, _1_3) : (7.787f * Y + _a);
-            float FZ = Z > 0.008856 ? pow(Z, _1_3) : (7.787f * Z + _a);
+            float FX = X > 0.008856f ? pow(X, _1_3) : (7.787f * X + _a);
+            float FY = Y > 0.008856f ? pow(Y, _1_3) : (7.787f * Y + _a);
+            float FZ = Z > 0.008856f ? pow(Z, _1_3) : (7.787f * Z + _a);
 
-            float L = Y > 0.008856 ? (116.f * FY - 16.f) : (903.3 * Y);
+            float L = Y > 0.008856f ? (116.f * FY - 16.f) : (903.3f * Y);
             float a = 500.f * (FX - FY);
             float b = 200.f * (FY - FZ);
 

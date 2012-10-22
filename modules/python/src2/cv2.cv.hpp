@@ -3829,8 +3829,9 @@ static int zero = 0;
       coeff_usage = CV_VALUE; \
     else if ((length == alpha.count) && (alpha.count == beta.count) && (beta.count == gamma.count)) \
       coeff_usage = CV_ARRAY; \
-    else \
-      return (PyObject*)failmsg("SnakeImage weights invalid"); \
+    else { \
+        failmsg("SnakeImage weights invalid"); \
+        return (PyObject*)0; } \
     cvSnakeImage(image, points, length, a, b, g, coeff_usage, win, criteria, calc_gradient); \
   } while (0)
 

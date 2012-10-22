@@ -633,7 +633,7 @@ static CvTestSeqElem* icvTestSeqReadElemOne(CvTestSeq_* pTS, CvFileStorage* fs, 
 
             for(i0=0, i1=1; i1<KeyFrameNum;)
             {
-                for(i1=i0+1; i1<KeyFrameNum && KeyFrames[i1]<0; i1++);
+                for(i1=i0+1; i1<KeyFrameNum && KeyFrames[i1]<0; i1++) {}
 
                 assert(i1<KeyFrameNum);
                 assert(i1>i0);
@@ -779,7 +779,7 @@ static CvTestSeqElem* icvTestSeqReadElemAll(CvTestSeq_* pTS, CvFileStorage* fs, 
             }
 
             /* Find last element: */
-            for(pElemLast=pElemNew;pElemLast && pElemLast->next;pElemLast= pElemLast->next);
+            for(pElemLast=pElemNew;pElemLast && pElemLast->next;pElemLast= pElemLast->next) {}
 
         }   /* Next element. */
     }   /*  Read all element in sequence. */
@@ -842,7 +842,7 @@ CvTestSeq* cvCreateTestSeq(char* pConfigfile, char** videos, int numvideo, float
         else
         {
             CvTestSeqElem* p = NULL;
-            for(p=pTS->pElemList;p->next;p=p->next);
+            for(p=pTS->pElemList;p->next;p=p->next) {}
             p->next = pElemNew;
         }
     }   /* Read all videos. */
