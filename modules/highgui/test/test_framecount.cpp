@@ -109,6 +109,6 @@ void CV_FramecountTest::run(int)
         }
     }
 }
-#if BUILD_WITH_VIDEO_INPUT_SUPPORT
+#if BUILD_WITH_VIDEO_INPUT_SUPPORT && defined HAVE_FFMPEG
 TEST(Highgui_Video, framecount) {CV_FramecountTest test; test.safe_run();}
 #endif
