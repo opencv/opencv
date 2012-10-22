@@ -66,13 +66,11 @@ public class OpenCvNativeCameraView extends OpenCvCameraBridgeViewBase {
 
     public static class OpenCvSizeAccessor implements ListItemAccessor {
 
-        @Override
         public int getWidth(Object obj) {
             Size size  = (Size)obj;
             return (int)size.width;
         }
 
-        @Override
         public int getHeight(Object obj) {
             Size size  = (Size)obj;
             return (int)size.height;
@@ -112,6 +110,7 @@ public class OpenCvNativeCameraView extends OpenCvCameraBridgeViewBase {
     private class CameraWorker implements Runnable {
 
         private Mat mRgba = new Mat();
+        private Mat mGray = new Mat();
         private int mWidth;
         private int mHeight;
 
@@ -120,7 +119,6 @@ public class OpenCvNativeCameraView extends OpenCvCameraBridgeViewBase {
             mHeight = h;
         }
 
-        @Override
         public void run() {
             Mat modified;
 
@@ -130,9 +128,20 @@ public class OpenCvNativeCameraView extends OpenCvCameraBridgeViewBase {
                     Log.e(TAG, "Camera frame grab failed");
                     break;
                 }
-                mCamera.retrieve(mRgba, Highgui.CV_CAP_ANDROID_COLOR_FRAME_RGBA);
 
-                deliverAndDrawFrame(mRgba);
+                switch (mPreviewFormat) {
+                    case Highgui.CV_CAP_ANDROID_COLOR_FRAME_RGBA:
+                    {
+                        mCamera.retrieve(mRgba, Highgui.CV_CAP_ANDROID_COLOR_FRAME_RGBA);
+                        deliverAndDrawFrame(mRgba);
+                    } break;
+                    case Highgui.CV_CAP_ANDROID_GREY_FRAME:
+                        mCamera.retrieve(mGray, Highgui.CV_CAP_ANDROID_GREY_FRAME);
+                        deliverAndDrawFrame(mGray);
+                        break;
+                    default:
+                        Log.e(TAG, "Invalid frame format! Only RGBA and Gray Scale are supported!");
+                }
 
             } while (!mStopThread);
 

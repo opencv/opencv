@@ -17,6 +17,7 @@ import android.view.SurfaceHolder;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.Size;
+import org.opencv.highgui.Highgui;
 import org.opencv.imgproc.Imgproc;
 
 /**
@@ -41,13 +42,11 @@ public class OpenCvJavaCameraView extends OpenCvCameraBridgeViewBase implements 
 
     public static class JavaCameraSizeAccessor implements ListItemAccessor {
 
-        @Override
         public int getWidth(Object obj) {
             Camera.Size size = (Camera.Size) obj;
             return size.width;
         }
 
-        @Override
         public int getHeight(Object obj) {
             Camera.Size size = (Camera.Size) obj;
             return size.height;
@@ -122,8 +121,8 @@ public class OpenCvJavaCameraView extends OpenCvCameraBridgeViewBase implements 
                 AllocateCache();
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
-                        SurfaceTexture tex = new SurfaceTexture(MAGIC_TEXTURE_ID);
-                        getHolder().setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
+                    SurfaceTexture tex = new SurfaceTexture(MAGIC_TEXTURE_ID);
+                    getHolder().setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
                     mCamera.setPreviewTexture(tex);
                 } else
                    mCamera.setPreviewDisplay(null);
@@ -176,7 +175,7 @@ public class OpenCvJavaCameraView extends OpenCvCameraBridgeViewBase implements 
             Log.d(TAG, "Notify thread");
             synchronized (this) {
                 this.notify();
-                        }
+            }
             Log.d(TAG, "Wating for thread");
             mThread.join();
         } catch (InterruptedException e) {
@@ -189,7 +188,6 @@ public class OpenCvJavaCameraView extends OpenCvCameraBridgeViewBase implements 
         releaseCamera();
     }
 
-    @Override
     public void onPreviewFrame(byte[] frame, Camera arg1) {
         Log.i(TAG, "Preview Frame received. Need to create MAT and deliver it to clients");
         Log.i(TAG, "Frame size  is " + frame.length);
@@ -213,26 +211,34 @@ public class OpenCvJavaCameraView extends OpenCvCameraBridgeViewBase implements 
             mHeight = h;
         }
 
-        @Override
         public void run() {
-                do {
-                        synchronized (OpenCvJavaCameraView.this) {
-                        try {
-                                        OpenCvJavaCameraView.this.wait();
-                                } catch (InterruptedException e) {
-                                        // TODO Auto-generated catch block
-                                        e.printStackTrace();
-                                }
-                                }
+            do {
+                synchronized (OpenCvJavaCameraView.this) {
+                    try {
+                        OpenCvJavaCameraView.this.wait();
+                    } catch (InterruptedException e) {
+                        // TODO Auto-generated catch block
+                        e.printStackTrace();
+                    }
+                }
 
-                        if (!mStopThread) {
-                        Mat frameMat = new Mat();
-                    Imgproc.cvtColor(mBaseMat, frameMat, Imgproc.COLOR_YUV2RGBA_NV21, 4);
+                if (!mStopThread) {
+                    Mat frameMat = new Mat();
+                    switch (mPreviewFormat) {
+                        case Highgui.CV_CAP_ANDROID_COLOR_FRAME_RGBA:
+                            Imgproc.cvtColor(mBaseMat, frameMat, Imgproc.COLOR_YUV2RGBA_NV21, 4);
+                        break;
+                        case Highgui.CV_CAP_ANDROID_GREY_FRAME:
+                            frameMat = mBaseMat.submat(0, mFrameHeight, 0, mFrameWidth);
+                        break;
+                        default:
+                            Log.e(TAG, "Invalid frame format! Only RGBA and Gray Scale are supported!");
+                    };
                     deliverAndDrawFrame(frameMat);
                     frameMat.release();
-                        }
-                } while (!mStopThread);
-                Log.d(TAG, "Finish processing thread");
+                }
+            } while (!mStopThread);
+            Log.d(TAG, "Finish processing thread");
         }
     }
 }

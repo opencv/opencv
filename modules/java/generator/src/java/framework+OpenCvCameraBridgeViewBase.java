@@ -6,9 +6,11 @@ import org.opencv.android.Utils;
 import org.opencv.core.Mat;
 import org.opencv.core.Size;
 import org.opencv.highgui.Highgui;
-import org.opencv.highgui.VideoCapture;
 
+import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.util.AttributeSet;
@@ -34,15 +36,15 @@ public abstract class OpenCvCameraBridgeViewBase extends SurfaceView implements 
     protected int mMaxHeight;
     protected int mMaxWidth;
 
+    protected int mPreviewFormat = Highgui.CV_CAP_ANDROID_COLOR_FRAME_RGBA;
+
     private Bitmap mCacheBitmap;
 
-
     public OpenCvCameraBridgeViewBase(Context context, AttributeSet attrs) {
-        super(context,attrs);
+        super(context, attrs);
         getHolder().addCallback(this);
         mMaxWidth = MAX_UNSPECIFIED;
         mMaxHeight = MAX_UNSPECIFIED;
-
     }
 
     public interface CvCameraViewListener {
@@ -69,28 +71,16 @@ public abstract class OpenCvCameraBridgeViewBase extends SurfaceView implements 
 
     }
 
-    public class FrameSize {
-        public int width;
-        public int height;
-
-        public FrameSize(int w, int h) {
-            width = w;
-            height = h;
-        }
-    }
-
-
     private static final int STOPPED = 0;
     private static final int STARTED = 1;
-    private  static final String TAG = "SampleCvBase";
+
+    private static final String TAG = "OpenCvCameraBridge";
 
     private CvCameraViewListener mListener;
     private int mState = STOPPED;
 
     private boolean mEnabled;
     private boolean mSurfaceExist;
-
-
 
     private Object mSyncObject = new Object();
 
@@ -122,10 +112,9 @@ public abstract class OpenCvCameraBridgeViewBase extends SurfaceView implements 
         }
     }
 
-
     /**
      * This method is provided for clients, so they can enable the camera connection.
-     * The actuall onCameraViewStarted callback will be delivered only after both this method is called and surface is available
+     * The actual onCameraViewStarted callback will be delivered only after both this method is called and surface is available
      */
     public void enableView() {
         synchronized(mSyncObject) {
@@ -136,7 +125,7 @@ public abstract class OpenCvCameraBridgeViewBase extends SurfaceView implements 
 
     /**
      * This method is provided for clients, so they can disable camera connection and stop
-     * the delivery of frames eventhough the surfaceview itself is not destroyed and still stays on the scren
+     * the delivery of frames even though the surface view itself is not destroyed and still stays on the scren
      */
     public void disableView() {
         synchronized(mSyncObject) {
@@ -144,7 +133,6 @@ public abstract class OpenCvCameraBridgeViewBase extends SurfaceView implements 
             checkCurrentState();
         }
     }
-
 
     public void setCvCameraViewListener(CvCameraViewListener listener) {
         mListener = listener;
@@ -155,13 +143,18 @@ public abstract class OpenCvCameraBridgeViewBase extends SurfaceView implements 
      * size - the biggest size which less or equal the size set will be selected.
      * As an example - we set setMaxFrameSize(200,200) and we have 176x152 and 320x240 sizes. The
      * preview frame will be selected with 176x152 size.
-     * This method is usefull when need to restrict the size of preview frame for some reason (for example for video recording)
+     * This method is useful when need to restrict the size of preview frame for some reason (for example for video recording)
      * @param maxWidth - the maximum width allowed for camera frame.
-     * @param maxHeight - the maxumum height allowed for camera frame
+     * @param maxHeight - the maximum height allowed for camera frame
      */
     public void setMaxFrameSize(int maxWidth, int maxHeight) {
         mMaxWidth = maxWidth;
         mMaxHeight = maxHeight;
+    }
+
+    public void SetCaptureFormat(int format)
+    {
+        mPreviewFormat = format;
     }
 
     /**
@@ -201,7 +194,6 @@ public abstract class OpenCvCameraBridgeViewBase extends SurfaceView implements 
         };
     }
 
-
     private void processExitState(int state) {
         switch(state) {
         case STARTED:
@@ -221,22 +213,31 @@ public abstract class OpenCvCameraBridgeViewBase extends SurfaceView implements 
         /* nothing to do */
     }
 
+    // NOTE: The order of bitmap constructor and camera connection is important for android 4.1.x
+    // Bitmap must be constructed before surface
     private void onEnterStartedState() {
+        /* Connect camera */
+        if (!connectCamera(getWidth(), getHeight())) {
+            AlertDialog ad = new AlertDialog.Builder(getContext()).create();
+            ad.setCancelable(false); // This blocks the 'BACK' button
+            ad.setMessage("It seems that you device does not support camera (or it is locked). Application will be closed.");
+            ad.setButton(DialogInterface.BUTTON_NEUTRAL,  "OK", new DialogInterface.OnClickListener() {
+                public void onClick(DialogInterface dialog, int which) {
+                    dialog.dismiss();
+                    ((Activity) getContext()).finish();
+                }
+            });
+            ad.show();
 
-        connectCamera(getWidth(), getHeight());
-        /* Now create cahe Bitmap */
-        mCacheBitmap = Bitmap.createBitmap(mFrameWidth, mFrameHeight, Bitmap.Config.ARGB_8888);
-
+        }
     }
 
     private void onExitStartedState() {
-
         disconnectCamera();
         if (mCacheBitmap != null) {
             mCacheBitmap.recycle();
         }
     }
-
 
     /**
      * This method shall be called by the subclasses when they have valid
@@ -247,23 +248,32 @@ public abstract class OpenCvCameraBridgeViewBase extends SurfaceView implements 
     protected void deliverAndDrawFrame(Mat frame) {
         Mat modified;
 
-            if (mListener != null) {
-                modified = mListener.onCameraFrame(frame);
-            } else {
-                modified = frame;
-            }
+        if (mListener != null) {
+            modified = mListener.onCameraFrame(frame);
+        } else {
+            modified = frame;
+        }
 
-            if (modified != null) {
+        boolean bmpValid = true;
+        if (modified != null) {
+            try {
                 Utils.matToBitmap(modified, mCacheBitmap);
+            } catch(Exception e) {
+                Log.e(TAG, "Mat type: " + modified);
+                Log.e(TAG, "Bitmap type: " + mCacheBitmap.getWidth() + "*" + mCacheBitmap.getHeight());
+                Log.e(TAG, "Utils.matToBitmap() throws an exception: " + e.getMessage());
+                bmpValid = false;
             }
+        }
 
-            if (mCacheBitmap != null) {
-                Canvas canvas = getHolder().lockCanvas();
-                if (canvas != null) {
-                    canvas.drawBitmap(mCacheBitmap, (canvas.getWidth() - mCacheBitmap.getWidth()) / 2, (canvas.getHeight() - mCacheBitmap.getHeight()) / 2, null);
-                    getHolder().unlockCanvasAndPost(canvas);
-                }
+        if (bmpValid && mCacheBitmap != null) {
+            Canvas canvas = getHolder().lockCanvas();
+            if (canvas != null) {
+                canvas.drawColor(0, android.graphics.PorterDuff.Mode.CLEAR);
+                canvas.drawBitmap(mCacheBitmap, (canvas.getWidth() - mCacheBitmap.getWidth()) / 2, (canvas.getHeight() - mCacheBitmap.getHeight()) / 2, null);
+                getHolder().unlockCanvasAndPost(canvas);
             }
+        }
     }
 
     /**
@@ -273,20 +283,24 @@ public abstract class OpenCvCameraBridgeViewBase extends SurfaceView implements 
      * @param width - the width of this SurfaceView
      * @param height - the height of this SurfaceView
      */
-    protected abstract void connectCamera(int width, int height);
+    protected abstract boolean connectCamera(int width, int height);
 
     /**
-     * Disconnects and release the particular camera object beeing connected to this surface view.
+     * Disconnects and release the particular camera object being connected to this surface view.
      * Called when syncObject lock is held
      */
     protected abstract void disconnectCamera();
 
+    // NOTE: On Android 4.1.x the function must be called before SurfaceTextre constructor!
+    protected void AllocateCache()
+    {
+        mCacheBitmap = Bitmap.createBitmap(mFrameWidth, mFrameHeight, Bitmap.Config.ARGB_8888);
+    }
 
     public interface ListItemAccessor {
         public int getWidth(Object obj);
         public int getHeight(Object obj);
     };
-
 
     /**
      * This helper method can be called by subclasses to select camera preview size.
@@ -297,7 +311,7 @@ public abstract class OpenCvCameraBridgeViewBase extends SurfaceView implements 
      * @param surfaceHeight
      * @return
      */
-    protected FrameSize calculateCameraFrameSize(List<?> supportedSizes, ListItemAccessor accessor, int surfaceWidth, int surfaceHeight) {
+    protected Size calculateCameraFrameSize(List<?> supportedSizes, ListItemAccessor accessor, int surfaceWidth, int surfaceHeight) {
         int calcWidth = 0;
         int calcHeight = 0;
 
@@ -315,6 +329,7 @@ public abstract class OpenCvCameraBridgeViewBase extends SurfaceView implements 
                 }
             }
         }
-        return new FrameSize(calcWidth, calcHeight);
+
+        return new Size(calcWidth, calcHeight);
     }
 }
