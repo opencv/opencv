@@ -126,7 +126,7 @@ namespace cv
 
 ////////////////////////////////////////////////////////////////////////
 // convert_C3C4
-void convert_C3C4(const cl_mem &src, oclMat &dst, int srcStep)
+void convert_C3C4(const cl_mem &src, oclMat &dst)
 {
     int dstStep_in_pixel = dst.step1() / dst.oclchannels();
     int pixel_end = dst.wholecols * dst.wholerows - 1;
@@ -174,7 +174,7 @@ void convert_C3C4(const cl_mem &src, oclMat &dst, int srcStep)
 }
 ////////////////////////////////////////////////////////////////////////
 // convert_C4C3
-void convert_C4C3(const oclMat &src, cl_mem &dst, int dstStep)
+void convert_C4C3(const oclMat &src, cl_mem &dst)
 {
     int srcStep_in_pixel = src.step1() / src.oclchannels();
     int pixel_end = src.wholecols * src.wholerows - 1;
@@ -245,7 +245,7 @@ void cv::ocl::oclMat::upload(const Mat &m)
         openCLVerifyCall(err);
 
         openCLMemcpy2D(clCxt, temp, pitch, m.datastart, m.step, wholeSize.width * m.elemSize(), wholeSize.height, clMemcpyHostToDevice, 3);
-        convert_C3C4(temp, *this, pitch);
+        convert_C3C4(temp, *this);
         //int* cputemp=new int[wholeSize.height*wholeSize.width * 3];
         //int* cpudata=new int[this->step*this->wholerows/sizeof(int)];
         //openCLSafeCall(clEnqueueReadBuffer(clCxt->impl->clCmdQueue, temp, CL_TRUE,
@@ -296,7 +296,7 @@ void cv::ocl::oclMat::download(cv::Mat &m) const
                                      (pitch * wholerows + tail_padding - 1) / tail_padding * tail_padding, 0, &err);
         openCLVerifyCall(err);
 
-        convert_C4C3(*this, temp, pitch / m.elemSize1());
+        convert_C4C3(*this, temp);
         openCLMemcpy2D(clCxt, m.data, m.step, temp, pitch, wholecols * m.elemSize(), wholerows, clMemcpyDeviceToHost, 3);
         //int* cputemp=new int[wholecols*wholerows * 3];
         //int* cpudata=new int[this->step*this->wholerows/sizeof(int)];
@@ -382,7 +382,7 @@ void cv::ocl::oclMat::copyTo( oclMat &m ) const
     CV_DbgAssert(!this->empty());
     m.create(size(), type());
     openCLCopyBuffer2D(clCxt, m.data, m.step, m.offset,
-                       data, step, cols * elemSize(), rows, offset, clMemcpyDeviceToDevice);
+                       data, step, cols * elemSize(), rows, offset);
 }
 
 void cv::ocl::oclMat::copyTo( oclMat &mat, const oclMat &mask) const

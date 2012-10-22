@@ -1246,6 +1246,7 @@ TEST_P(Remap, Mat)
     }
     int bordertype[] = {cv::BORDER_CONSTANT, cv::BORDER_REPLICATE/*,BORDER_REFLECT,BORDER_WRAP,BORDER_REFLECT_101*/};
     const char *borderstr[] = {"BORDER_CONSTANT", "BORDER_REPLICATE"/*, "BORDER_REFLECT","BORDER_WRAP","BORDER_REFLECT_101"*/};
+    cout << borderstr[0] << endl;
 #ifndef PRINT_KERNEL_RUN_TIME
     double totalcputick = 0;
     double totalgputick = 0;

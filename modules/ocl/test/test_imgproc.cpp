@@ -1008,7 +1008,7 @@ TEST_P(Remap, Mat)
     int bordertype[] = {cv::BORDER_CONSTANT, cv::BORDER_REPLICATE/*,BORDER_REFLECT,BORDER_WRAP,BORDER_REFLECT_101*/};
     const char *borderstr[] = {"BORDER_CONSTANT", "BORDER_REPLICATE"/*, "BORDER_REFLECT","BORDER_WRAP","BORDER_REFLECT_101"*/};
     // for(int i = 0; i < sizeof(bordertype)/sizeof(int); i++)
-    for(int j = 0; j < 100; j++)
+    for(int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
         cv::remap(src_roi, dst_roi, map1_roi, map2_roi, interpolation, bordertype[0], val);
@@ -1017,7 +1017,7 @@ TEST_P(Remap, Mat)
         gdst.download(cpu_dst);
 
         char sss[1024];
-        sprintf(sss, "src_roicols=%d,src_roirows=%d,dst_roicols=%d,dst_roirows=%d,src1x =%d,src1y=%d,dstx=%d,dsty=%d", src_roicols, src_roirows, dst_roicols, dst_roirows, srcx, srcy, dstx, dsty);
+        sprintf(sss, "src_roicols=%d,src_roirows=%d,dst_roicols=%d,dst_roirows=%d,src1x =%d,src1y=%d,dstx=%d,dsty=%d bordertype=%s", src_roicols, src_roirows, dst_roicols, dst_roirows, srcx, srcy, dstx, dsty, borderstr[0]);
 
 
         if(interpolation == 0)
@@ -1371,7 +1371,9 @@ TEST_P(meanShiftFiltering, Mat)
         gdst.download(cpu_gdst);
 
         char sss[1024];
+        char warning[300] = "Warning: If the selected device doesn't support double, a deviation will exist.\nIf the accuracy is acceptable, please ignore it.\n";
         sprintf(sss, "roicols=%d,roirows=%d,srcx=%d,srcy=%d,dstx=%d,dsty=%d\n", roicols, roirows, srcx, srcy, dstx, dsty);
+        strcat(sss, warning);
         EXPECT_MAT_NEAR(dst, cpu_gdst, 0.0, sss);
 
     }
@@ -1397,7 +1399,9 @@ TEST_P(meanShiftProc, Mat)
         gdstCoor.download(cpu_gdstCoor);
 
         char sss[1024];
+        char warning[300] = "Warning: If the selected device doesn't support double, a deviation will exist.\nIf the accuracy is acceptable, please ignore it.\n";
         sprintf(sss, "roicols=%d,roirows=%d,srcx=%d,srcy=%d,dstx=%d,dsty=%d\n", roicols, roirows, srcx, srcy, dstx, dsty);
+        strcat(sss, warning);
         EXPECT_MAT_NEAR(dst, cpu_gdst, 0.0, sss);
         EXPECT_MAT_NEAR(dstCoor, cpu_gdstCoor, 0.0, sss);
     }
@@ -1740,7 +1744,7 @@ INSTANTIATE_TEST_CASE_P(Imgproc, meanShiftProc, Combine(
                         ));
 
 INSTANTIATE_TEST_CASE_P(Imgproc, Remap, Combine(
-                            Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC4),
+                            Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4),
                             Values(CV_32FC1, CV_16SC2, CV_32FC2), Values(-1, CV_32FC1),
                             Values((int)cv::INTER_NEAREST, (int)cv::INTER_LINEAR),
                             Values((int)cv::BORDER_CONSTANT)));
@@ -1751,7 +1755,7 @@ INSTANTIATE_TEST_CASE_P(histTestBase, calcHist, Combine(
                             ONE_TYPE(CV_32SC1) //no use
                         ));
 
-INSTANTIATE_TEST_CASE_P(ConvolveTestBase, Convolve, Combine(
-                            Values(CV_32FC1, CV_32FC1),
-                            Values(false))); // Values(false) is the reserved parameter
+//INSTANTIATE_TEST_CASE_P(ConvolveTestBase, Convolve, Combine(
+//                            Values(CV_32FC1, CV_32FC1),
+//                            Values(false))); // Values(false) is the reserved parameter
 #endif // HAVE_OPENCL

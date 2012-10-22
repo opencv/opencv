@@ -133,10 +133,9 @@ PARAM_TEST_CASE(ArithmTestBase, MatType, bool)
 
     void random_roi()
     {
-        cv::RNG &rng = TS::ptr()->get_rng();
-
 #ifdef RANDOMROI
         //randomize ROI
+        cv::RNG &rng = TS::ptr()->get_rng();
         roicols = rng.uniform(1, mat1.cols);
         roirows = rng.uniform(1, mat1.rows);
         src1x   = rng.uniform(0, mat1.cols - roicols);
@@ -234,7 +233,7 @@ TEST_P(Exp, Mat)
 
         char s[1024];
         sprintf(s, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,maskx=%d,masky=%d,src2x=%d,src2y=%d", roicols, roirows, src1x, src1y, dstx, dsty, maskx, masky, src2x, src2y);
-        EXPECT_MAT_NEAR(dst, cpu_dst, 1, s);
+        EXPECT_MAT_NEAR(dst, cpu_dst, 2, s);
 
     }
 }
@@ -855,7 +854,7 @@ TEST_P(MinMaxLoc, MAT)
         cv::Point minLoc_, maxLoc_;
         cv::ocl::minMaxLoc(gmat1, &minVal_, &maxVal_, &minLoc_, &maxLoc_, cv::ocl::oclMat());
 
-        double error0, error1, minlocVal, minlocVal_, maxlocVal, maxlocVal_;
+        double error0 = 0., error1 = 0., minlocVal = 0., minlocVal_ = 0., maxlocVal = 0., maxlocVal_ = 0.;
         if(depth == 0)
         {
             minlocVal = mat1_roi.at<unsigned char>(minLoc);
@@ -975,7 +974,7 @@ TEST_P(MinMaxLoc, MASK)
         cv::Point minLoc_, maxLoc_;
         cv::ocl::minMaxLoc(gmat1, &minVal_, &maxVal_, &minLoc_, &maxLoc_, gmask);
 
-        double error0, error1, minlocVal, minlocVal_, maxlocVal, maxlocVal_;
+        double error0 = 0., error1 = 0., minlocVal = 0., minlocVal_ = 0., maxlocVal = 0., maxlocVal_ = 0.;
         if(minLoc_.x == -1 || minLoc_.y == -1 || maxLoc_.x == -1 || maxLoc_.y == -1) continue;
         if(depth == 0)
         {

@@ -48,7 +48,7 @@
 using namespace std;
 #ifdef HAVE_OPENCL
 
-
+extern string workdir;
 PARAM_TEST_CASE(HOG, cv::Size, int)
 {
     cv::Size winSize;
@@ -63,7 +63,7 @@ PARAM_TEST_CASE(HOG, cv::Size, int)
 TEST_P(HOG, GetDescriptors)
 {
     // Load image
-    cv::Mat img_rgb = readImage("../../../samples/gpu/road.png");
+    cv::Mat img_rgb = readImage(workdir + "lena.jpg");
     ASSERT_FALSE(img_rgb.empty());
 
     // Convert image
@@ -120,7 +120,7 @@ bool match_rect(cv::Rect r1, cv::Rect r2, int threshold)
 TEST_P(HOG, Detect)
 {
     // Load image
-    cv::Mat img_rgb = readImage("../../../samples/gpu/road.png");
+    cv::Mat img_rgb = readImage(workdir + "lena.jpg");
     ASSERT_FALSE(img_rgb.empty());
 
     // Convert image

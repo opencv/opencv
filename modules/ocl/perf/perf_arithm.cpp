@@ -2672,13 +2672,13 @@ TEST_P(CountNonZero, MAT)
             Has_roi(k);
 
             t0 = (double)cvGetTickCount();//cpu start
-            int cpures = cv::countNonZero(mat1_roi);
+            cv::countNonZero(mat1_roi);
             t0 = (double)cvGetTickCount() - t0;//cpu end
 
             t1 = (double)cvGetTickCount();//gpu start1
             gmat1 = mat1_roi;
             t2 = (double)cvGetTickCount(); //kernel
-            int gpures = cv::ocl::countNonZero(gmat1);
+            cv::ocl::countNonZero(gmat1);
             t2 = (double)cvGetTickCount() - t2;//kernel
             t1 = (double)cvGetTickCount() - t1;//gpu end1
             if(j == 0)
@@ -2713,7 +2713,7 @@ TEST_P(CountNonZero, MAT)
         {
             cout << "\nwith roi:";
         };
-        int gpures = cv::ocl::countNonZero(gmat1);
+        cv::ocl::countNonZero(gmat1);
     };
 #endif
 

@@ -61,30 +61,29 @@ __kernel void addWeighted_D0 (__global uchar *src1,int src1_step,int src1_offset
     int y = get_global_id(1);
 
     if (x < cols && y < rows)
-
+    
     {
 
         x = x << 2;
-
         #define dst_align (dst_offset & 3)
-        int src1_index = mad24(y, src1_step, x + src1_offset - dst_align);
-        int src2_index = mad24(y, src2_step, x + src2_offset - dst_align);
+        int src1_index = mad24(y, src1_step, x + src1_offset - dst_align); 
+        int src2_index = mad24(y, src2_step, x + src2_offset - dst_align); 
 
         int dst_start  = mad24(y, dst_step, dst_offset);
         int dst_end    = mad24(y, dst_step, dst_offset + dst_step1);
         int dst_index  = mad24(y, dst_step, dst_offset + x & (int)0xfffffffc);
 
-        uchar4 src1_data ,src2_data;
+		uchar4 src1_data ,src2_data;
 
-        src1_data.x= src1_index+0 >= 0 ? src1[src1_index+0] : 0;
-        src1_data.y= src1_index+1 >= 0 ? src1[src1_index+1] : 0;
-        src1_data.z= src1_index+2 >= 0 ? src1[src1_index+2] : 0;
-        src1_data.w= src1_index+3 >= 0 ? src1[src1_index+3] : 0;
+		src1_data.x= src1_index+0 >= 0 ? src1[src1_index+0] : 0;
+		src1_data.y= src1_index+1 >= 0 ? src1[src1_index+1] : 0;
+		src1_data.z= src1_index+2 >= 0 ? src1[src1_index+2] : 0;
+		src1_data.w= src1_index+3 >= 0 ? src1[src1_index+3] : 0;
 
-        src2_data.x= src2_index+0 >= 0 ? src2[src2_index+0] : 0;
-        src2_data.y= src2_index+1 >= 0 ? src2[src2_index+1] : 0;
-        src2_data.z= src2_index+2 >= 0 ? src2[src2_index+2] : 0;
-        src2_data.w= src2_index+3 >= 0 ? src2[src2_index+3] : 0;
+		src2_data.x= src2_index+0 >= 0 ? src2[src2_index+0] : 0;
+		src2_data.y= src2_index+1 >= 0 ? src2[src2_index+1] : 0;
+		src2_data.z= src2_index+2 >= 0 ? src2[src2_index+2] : 0;
+		src2_data.w= src2_index+3 >= 0 ? src2[src2_index+3] : 0;
 
         uchar4 dst_data = *((__global uchar4 *)(dst + dst_index));
 //        short4 tmp      = convert_short4_sat(src1_data) * alpha + convert_short4_sat(src2_data) * beta + gama;
@@ -118,21 +117,35 @@ __kernel void addWeighted_D2 (__global ushort *src1, int src1_step,int src1_offs
     int y = get_global_id(1);
 
     if (x < cols && y < rows)
-
+    
     {
 
         x = x << 2;
 
         #define dst_align ((dst_offset >> 1) & 3)
-        int src1_index = mad24(y, src1_step, (x << 1) + src1_offset -( dst_align << 1));
-        int src2_index = mad24(y, src2_step, (x << 1) + src2_offset -( dst_align << 1));
+        int src1_index = mad24(y, src1_step, (x << 1) + src1_offset -( dst_align << 1)); 
+        int src2_index = mad24(y, src2_step, (x << 1) + src2_offset -( dst_align << 1)); 
 
         int dst_start  = mad24(y, dst_step, dst_offset);
         int dst_end    = mad24(y, dst_step, dst_offset + dst_step1);
         int dst_index  = mad24(y, dst_step, dst_offset +( x<< 1) & (int)0xfffffff8);
+    int src1_index_fix = src1_index < 0 ? 0 : src1_index;
+    int src2_index_fix = src2_index < 0 ? 0 : src2_index;
+        ushort4 src1_data = vload4(0, (__global ushort *)((__global char *)src1 + src1_index_fix));
+        ushort4 src2_data = vload4(0, (__global ushort *)((__global char *)src2 + src2_index_fix));
+    if(src1_index < 0)
+    {
+        ushort4 tmp;
+        tmp.xyzw = (src1_index == -2) ? src1_data.zwxy:src1_data.yzwx;
+        src1_data.xyzw = (src1_index == -1) ? src1_data.wxyz:tmp.xyzw;
+    }
+    if(src2_index < 0)
+    {
+        ushort4 tmp;
+        tmp.xyzw = (src2_index == -2) ? src2_data.zwxy:src2_data.yzwx;
+        src2_data.xyzw = (src2_index == -1) ? src2_data.wxyz:tmp.xyzw;
+    }
 
-        ushort4 src1_data = vload4(0, (__global ushort *)((__global char *)src1 + src1_index));
-        ushort4 src2_data = vload4(0, (__global ushort *)((__global char *)src2 + src2_index));
 
         ushort4 dst_data = *((__global ushort4 *)((__global char *)dst + dst_index));
        // int4 tmp      = convert_int4_sat(src1_data) * alpha + convert_int4_sat(src2_data) * beta + gama;
@@ -164,22 +177,36 @@ __kernel void addWeighted_D3 (__global short *src1, int src1_step,int src1_offse
     int y = get_global_id(1);
 
     if (x < cols && y < rows)
-
+    
     {
 
         x = x << 2;
 
         #define dst_align ((dst_offset >> 1) & 3)
-        int src1_index = mad24(y, src1_step, (x << 1) + src1_offset -( dst_align << 1));
-        int src2_index = mad24(y, src2_step, (x << 1) + src2_offset -( dst_align << 1));
+        int src1_index = mad24(y, src1_step, (x << 1) + src1_offset -( dst_align << 1)); 
+        int src2_index = mad24(y, src2_step, (x << 1) + src2_offset -( dst_align << 1)); 
 
         int dst_start  = mad24(y, dst_step, dst_offset);
         int dst_end    = mad24(y, dst_step, dst_offset + dst_step1);
         int dst_index  = mad24(y, dst_step, dst_offset +( x<< 1) - (dst_align << 1 ));
 
-        short4 src1_data = vload4(0, (__global short *)((__global char *)src1 + src1_index));
-        short4 src2_data = vload4(0, (__global short *)((__global char *)src2 + src2_index));
+    int src1_index_fix = src1_index < 0 ? 0 : src1_index;
+    int src2_index_fix = src2_index < 0 ? 0 : src2_index;
+        short4 src1_data = vload4(0, (__global short *)((__global char *)src1 + src1_index_fix));
+        short4 src2_data = vload4(0, (__global short *)((__global char *)src2 + src2_index_fix));
 
+    if(src1_index < 0)
+    {
+        short4 tmp;
+        tmp.xyzw = (src1_index == -2) ? src1_data.zwxy:src1_data.yzwx;
+        src1_data.xyzw = (src1_index == -1) ? src1_data.wxyz:tmp.xyzw;
+    }
+    if(src2_index < 0)
+    {
+        short4 tmp;
+        tmp.xyzw = (src2_index == -2) ? src2_data.zwxy:src2_data.yzwx;
+        src2_data.xyzw = (src2_index == -1) ? src2_data.wxyz:tmp.xyzw;
+    }
         short4 dst_data = *((__global short4 *)((__global char *)dst + dst_index));
        // int4 tmp      = convert_int4_sat(src1_data) * alpha + convert_int4_sat(src2_data) * beta + gama;
          int4 tmp;
@@ -209,24 +236,39 @@ __kernel void addWeighted_D4 (__global int *src1, int src1_step,int src1_offset,
     int y = get_global_id(1);
 
     if (x < cols && y < rows)
-
+    
     {
-
+            
         x = x << 2;
 
         #define bitOfInt  (sizeof(int)== 4 ? 2: 3)
 
         #define dst_align ((dst_offset >> bitOfInt) & 3)
 
-        int src1_index = mad24(y, src1_step, (x << bitOfInt) + src1_offset - (dst_align << bitOfInt));
-        int src2_index = mad24(y, src2_step, (x << bitOfInt) + src2_offset - (dst_align << bitOfInt));
-
+        int src1_index = mad24(y, src1_step, (x << bitOfInt) + src1_offset - (dst_align << bitOfInt)); 
+        int src2_index = mad24(y, src2_step, (x << bitOfInt) + src2_offset - (dst_align << bitOfInt)); 
+       
         int dst_start  = mad24(y, dst_step, dst_offset);
         int dst_end    = mad24(y, dst_step, dst_offset + dst_step1);
         int dst_index  = mad24(y, dst_step, dst_offset + (x << bitOfInt) -(dst_align << bitOfInt));
 
-        int4 src1_data = vload4(0, (__global int *)((__global char *)src1 + src1_index));
-        int4 src2_data = vload4(0, (__global int *)((__global char *)src2 + src2_index));
+    int src1_index_fix = src1_index < 0 ? 0 : src1_index;
+    int src2_index_fix = src2_index < 0 ? 0 : src2_index;
+        int4 src1_data = vload4(0, (__global int *)((__global char *)src1 + src1_index_fix));
+        int4 src2_data = vload4(0, (__global int *)((__global char *)src2 + src2_index_fix));
+        
+    if(src1_index < 0)
+    {
+        int4 tmp;
+        tmp.xyzw = (src1_index == -2) ? src1_data.zwxy:src1_data.yzwx;
+        src1_data.xyzw = (src1_index == -1) ? src1_data.wxyz:tmp.xyzw;
+    }
+    if(src2_index < 0)
+    {
+        int4 tmp;
+        tmp.xyzw = (src2_index == -2) ? src2_data.zwxy:src2_data.yzwx;
+        src2_data.xyzw = (src2_index == -1) ? src2_data.wxyz:tmp.xyzw;
+    }
         int4 dst_data = *((__global int4 *)((__global char *)dst + dst_index));
        // double4   tmp = convert_double4(src1_data) * alpha + convert_double4(src2_data) * beta + gama ;
          float4 tmp;
@@ -257,23 +299,37 @@ __kernel void addWeighted_D5 (__global float *src1,int src1_step,int src1_offset
     int y = get_global_id(1);
 
     if (x < cols && y < rows)
-
+    
     {
-
+            
         x = x << 2;
 
         #define dst_align ((dst_offset >> 2) & 3)
 
-        int src1_index = mad24(y, src1_step, (x << 2) + src1_offset - (dst_align << 2));
-        int src2_index = mad24(y, src2_step, (x << 2) + src2_offset - (dst_align << 2));
-
+        int src1_index = mad24(y, src1_step, (x << 2) + src1_offset - (dst_align << 2)); 
+        int src2_index = mad24(y, src2_step, (x << 2) + src2_offset - (dst_align << 2)); 
+       
         int dst_start  = mad24(y, dst_step, dst_offset);
         int dst_end    = mad24(y, dst_step, dst_offset + dst_step1);
         int dst_index  = mad24(y, dst_step, dst_offset + (x << 2) -(dst_align << 2));
 
-        float4 src1_data = vload4(0, (__global float  *)((__global char *)src1 + src1_index));
-        float4 src2_data = vload4(0, (__global float *)((__global char *)src2 + src2_index));
+    int src1_index_fix = src1_index < 0 ? 0 : src1_index;
+    int src2_index_fix = src2_index < 0 ? 0 : src2_index;
+        float4 src1_data = vload4(0, (__global float  *)((__global char *)src1 + src1_index_fix));
+        float4 src2_data = vload4(0, (__global float *)((__global char *)src2 + src2_index_fix));
         float4 dst_data = *((__global float4 *)((__global char *)dst + dst_index));
+    if(src1_index < 0)
+    {
+        float4 tmp;
+        tmp.xyzw = (src1_index == -2) ? src1_data.zwxy:src1_data.yzwx;
+        src1_data.xyzw = (src1_index == -1) ? src1_data.wxyz:tmp.xyzw;
+    }
+    if(src2_index < 0)
+    {
+        float4 tmp;
+        tmp.xyzw = (src2_index == -2) ? src2_data.zwxy:src2_data.yzwx;
+        src2_data.xyzw = (src2_index == -1) ? src2_data.wxyz:tmp.xyzw;
+    }
     //    double4   tmp = convert_double4(src1_data) * alpha + convert_double4(src2_data) * beta + gama ;
 
        // float4   tmp_data =(src1_data) * alpha + (src2_data) * beta + gama ;
@@ -305,23 +361,37 @@ __kernel void addWeighted_D6 (__global double *src1, int src1_step,int src1_offs
     int y = get_global_id(1);
 
     if (x < cols && y < rows)
-
+    
     {
-
+            
         x = x << 2;
 
         #define dst_align ((dst_offset >> 3) & 3)
 
-        int src1_index = mad24(y, src1_step, (x << 3) + src1_offset - (dst_align << 3));
-        int src2_index = mad24(y, src2_step, (x << 3) + src2_offset - (dst_align << 3));
-
+        int src1_index = mad24(y, src1_step, (x << 3) + src1_offset - (dst_align << 3)); 
+        int src2_index = mad24(y, src2_step, (x << 3) + src2_offset - (dst_align << 3)); 
+       
         int dst_start  = mad24(y, dst_step, dst_offset);
         int dst_end    = mad24(y, dst_step, dst_offset + dst_step1);
         int dst_index  = mad24(y, dst_step, dst_offset + (x << 3) -(dst_align << 3));
 
-        double4 src1_data = vload4(0, (__global double  *)((__global char *)src1 + src1_index));
-        double4 src2_data = vload4(0, (__global double  *)((__global char *)src2 + src2_index));
+    int src1_index_fix = src1_index < 0 ? 0 : src1_index;
+    int src2_index_fix = src2_index < 0 ? 0 : src2_index;
+        double4 src1_data = vload4(0, (__global double  *)((__global char *)src1 + src1_index_fix));
+        double4 src2_data = vload4(0, (__global double  *)((__global char *)src2 + src2_index_fix));
         double4 dst_data = *((__global double4 *)((__global char *)dst + dst_index));
+    if(src1_index < 0)
+    {
+        double4 tmp;
+        tmp.xyzw = (src1_index == -2) ? src1_data.zwxy:src1_data.yzwx;
+        src1_data.xyzw = (src1_index == -1) ? src1_data.wxyz:tmp.xyzw;
+    }
+    if(src2_index < 0)
+    {
+        double4 tmp;
+        tmp.xyzw = (src2_index == -2) ? src2_data.zwxy:src2_data.yzwx;
+        src2_data.xyzw = (src2_index == -1) ? src2_data.wxyz:tmp.xyzw;
+    }
       //  double4   tmp_data = (src1_data) * alpha + (src2_data) * beta + gama ;
          double4 tmp_data;
         tmp_data.x = src1_data.x * alpha + src2_data.x * beta + gama;
