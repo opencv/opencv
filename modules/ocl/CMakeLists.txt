@@ -13,7 +13,7 @@ set(kernels_cpp "${CMAKE_CURRENT_BINARY_DIR}/kernels.cpp")
 set(cl2cpp_script "${CMAKE_CURRENT_SOURCE_DIR}/cl2cpp.py")
 set(cl2cpp_script_W32 "${CMAKE_CURRENT_SOURCE_DIR}/cl2cpp.js")
 
-IF(WIN32)
+IF(0)
    add_custom_command(
    OUTPUT ${kernels_cpp}
    COMMAND wscript.exe ${cl2cpp_script_W32} "${CMAKE_CURRENT_SOURCE_DIR}/src/kernels" ${kernels_cpp}
