@@ -220,7 +220,7 @@ static const void* initInterTab2D( int method, bool fixpt )
     return fixpt ? (const void*)itab : (const void*)tab;
 }
 
-
+#if !defined WIN32 || !defined __GNUC__
 static bool initAllInterTab2D()
 {
     return  initInterTab2D( INTER_LINEAR, false ) &&
@@ -232,6 +232,7 @@ static bool initAllInterTab2D()
 }
 
 static volatile bool doInitAllInterTab2D = initAllInterTab2D();
+#endif
 
 template<typename ST, typename DT> struct Cast
 {

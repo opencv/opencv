@@ -217,7 +217,7 @@ void CV_VideoRandomPositioningTest::run(int)
     run_test(RANDOM);
 }
 
-#if BUILD_WITH_VIDEO_INPUT_SUPPORT
+#if BUILD_WITH_VIDEO_INPUT_SUPPORT && defined HAVE_FFMPEG
 TEST (Highgui_Video, seek_progressive) { CV_VideoProgressivePositioningTest test; test.safe_run(); }
 TEST (Highgui_Video, seek_random) { CV_VideoRandomPositioningTest test; test.safe_run(); }
 #endif
