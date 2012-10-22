@@ -310,7 +310,18 @@ enum
     CV_RGBA2mRGBA = 125,
     CV_mRGBA2RGBA = 126,
 
-    CV_COLORCVT_MAX  = 127
+    // Bayer -> RGBA
+    CV_BayerBG2BGRA = 127,
+    CV_BayerGB2BGRA = 128,
+    CV_BayerRG2BGRA = 129,
+    CV_BayerGR2BGRA = 130,
+    
+    CV_BayerBG2RGBA = CV_BayerRG2BGRA,
+    CV_BayerGB2RGBA = CV_BayerGR2BGRA,
+    CV_BayerRG2RGBA = CV_BayerBG2BGRA,
+    CV_BayerGR2RGBA = CV_BayerGB2BGRA,
+
+    CV_COLORCVT_MAX  = 131
 };
 
 
