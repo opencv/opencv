@@ -17,8 +17,6 @@ add_subdirectory(tutorial-2-opencvcamera)
 add_subdirectory(tutorial-3-native)
 add_subdirectory(tutorial-4-mixed)
 
-add_subdirectory(camera-preview)
-
 #hello-android sample
 if(HAVE_opencv_highgui)
   ocv_include_modules_recurse(opencv_highgui opencv_core)
