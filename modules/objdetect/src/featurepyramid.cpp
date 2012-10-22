@@ -31,28 +31,20 @@ int getFeatureMaps(const IplImage* image, const int k, CvLSVMFeatureMap **map)
     int i, j, kk, c, ii, jj, d;
     float  * datadx, * datady;
 
-    //номер канала в цикле
     int   ch;
-    //переменные вычисления магнитуды
     float magnitude, x, y, tx, ty;
 
     IplImage * dx, * dy;
     int *nearest;
     float *w, a_x, b_x;
 
-    // ядро для вычисления градиентов изображение по осям x и y
     float kernel[3] = {-1.f, 0.f, 1.f};
     CvMat kernel_dx = cvMat(1, 3, CV_32F, kernel);
     CvMat kernel_dy = cvMat(3, 1, CV_32F, kernel);
 
-    // грачение градиента
     float * r;
-    // новер сектора куда попало значение градиента
-    //     четные иннексы не контрастное изображение
-    //  не четные иннексы    контрастное изображение
     int   * alfa;
 
-    // векторы границ секторов
     float boundary_x[NUM_SECTOR + 1];
     float boundary_y[NUM_SECTOR + 1];
     float max, dotProd;
@@ -70,7 +62,7 @@ int getFeatureMaps(const IplImage* image, const int k, CvLSVMFeatureMap **map)
 
     sizeX = width  / k;
     sizeY = height / k;
-    px    = 3 * NUM_SECTOR; // контрастное и не контрастное изображение
+    px    = 3 * NUM_SECTOR;
     p     = px;
     stringSize = sizeX * p;
     allocFeatureMapObject(map, sizeX, sizeY, p);
@@ -138,7 +130,6 @@ int getFeatureMaps(const IplImage* image, const int k, CvLSVMFeatureMap **map)
         }/*for(i = 0; i < width; i++)*/
     }/*for(j = 0; j < height; j++)*/
 
-    //подсчет весов и смещений
     nearest = (int  *)malloc(sizeof(int  ) *  k);
     w       = (float*)malloc(sizeof(float) * (k * 2));
 
@@ -167,7 +158,6 @@ int getFeatureMaps(const IplImage* image, const int k, CvLSVMFeatureMap **map)
     }/*for(j = k / 2; j < k; j++)*/
 
 
-    //интерполяция
     for(i = 0; i < sizeY; i++)
     {
       for(j = 0; j < sizeX; j++)
@@ -275,7 +265,7 @@ int normalizeAndTruncate(CvLSVMFeatureMap *map, const float alfa)
     sizeY -= 2;
 
     newData = (float *)malloc (sizeof(float) * (sizeX * sizeY * pp));
-//normalization
+    //normalization
     for(i = 1; i <= sizeY; i++)
     {
         for(j = 1; j <= sizeX; j++)
@@ -336,12 +326,12 @@ int normalizeAndTruncate(CvLSVMFeatureMap *map, const float alfa)
             }/*for(ii = 0; ii < 2 * p; ii++)*/
         }/*for(j = 1; j <= sizeX; j++)*/
     }/*for(i = 1; i <= sizeY; i++)*/
-//truncation
+    //truncation
     for(i = 0; i < sizeX * sizeY * pp; i++)
     {
         if(newData [i] > alfa) newData [i] = alfa;
     }/*for(i = 0; i < sizeX * sizeY * pp; i++)*/
-//swop data
+    //swap data
 
     map->numFeatures  = pp;
     map->sizeX = sizeX;
@@ -354,6 +344,7 @@ int normalizeAndTruncate(CvLSVMFeatureMap *map, const float alfa)
 
     return LATENT_SVM_OK;
 }
+
 /*
 // Feature map reduction
 // In each cell we reduce dimension of the feature vector
@@ -427,7 +418,7 @@ int PCAFeatureMaps(CvLSVMFeatureMap *map)
             } /*for(ii = 0; ii < yp; ii++)*/
         }/*for(j = 0; j < sizeX; j++)*/
     }/*for(i = 0; i < sizeY; i++)*/
-//swop data
+    //swap data
 
     map->numFeatures = pp;
 
