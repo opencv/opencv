@@ -85,10 +85,10 @@ namespace cv
                 globalThreads[1] = divUp(globalThreads[1], localThreads[1]) * localThreads[1];
                 globalThreads[2] = divUp(globalThreads[2], localThreads[2]) * localThreads[2];
 
-                size_t blockSize = localThreads[0] * localThreads[1] * localThreads[2];
-                cv::ocl::openCLVerifyKernel(clCxt, kernel, &blockSize, globalThreads, localThreads);
+                //size_t blockSize = localThreads[0] * localThreads[1] * localThreads[2];
+                cv::ocl::openCLVerifyKernel(clCxt, kernel,  localThreads);
             }
-            for(int i = 0; i < args.size(); i ++)
+            for(size_t i = 0; i < args.size(); i ++)
                 openCLSafeCall(clSetKernelArg(kernel, i, args[i].first, args[i].second));
 
             openCLSafeCall(clEnqueueNDRangeKernel(clCxt->impl->clCmdQueue, kernel, 3, NULL, globalThreads,
