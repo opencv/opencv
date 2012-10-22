@@ -2813,7 +2813,7 @@ PCA::PCA(InputArray data, InputArray _mean, int flags, int maxComponents)
 
 PCA::PCA(InputArray data, InputArray _mean, int flags, double retainedVariance)
 {
-    operator()(data, _mean, flags, retainedVariance);
+    computeVar(data, _mean, flags, retainedVariance);
 }
 
 PCA& PCA::operator()(InputArray _data, InputArray __mean, int flags, int maxComponents)
@@ -3077,7 +3077,7 @@ void cv::PCAComputeVar(InputArray data, InputOutputArray mean,
                     OutputArray eigenvectors, double retainedVariance)
 {
     PCA pca;
-    pca(data, mean, 0, retainedVariance);
+    pca.computeVar(data, mean, 0, retainedVariance);
     pca.mean.copyTo(mean);
     pca.eigenvectors.copyTo(eigenvectors);
 }

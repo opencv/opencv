@@ -136,7 +136,7 @@ static bool wasInitialized = false;
     }
 }*/
 
-CV_IMPL int cvInitSystem( int argc, char** argv)
+CV_IMPL int cvInitSystem( int , char** )
 {
     //cout << "cvInitSystem" << endl;
     wasInitialized = true;
@@ -159,7 +159,7 @@ CV_IMPL int cvInitSystem( int argc, char** argv)
     return 0;
 }
 
-CVWindow *cvGetWindow(const char *name) {
+static CVWindow *cvGetWindow(const char *name) {
     //cout << "cvGetWindow" << endl;
     NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
     NSString *cvname = [NSString stringWithFormat:@"%s", name];
@@ -614,6 +614,7 @@ void cvSetModeWindow_COCOA( const char* name, double prop_value )
 @synthesize status;
 
 - (void)cvSendMouseEvent:(NSEvent *)event type:(int)type flags:(int)flags {
+    (void)event;
     //cout << "cvSendMouseEvent" << endl;
     NSPoint mp = [NSEvent mouseLocation];
     //NSRect visible = [[self contentView] frame];
@@ -924,6 +925,7 @@ void cvSetModeWindow_COCOA( const char* name, double prop_value )
 }
 
 - (void)sliderChanged:(NSNotification *)notification {
+    (void)notification;
     int pos = [slider intValue];
     if(value)
         *value = pos;

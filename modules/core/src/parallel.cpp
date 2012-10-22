@@ -362,8 +362,8 @@ void cv::setNumThreads( int threads )
     else if (pplScheduler == 0 || 1 + pplScheduler->GetNumberOfVirtualProcessors() != (unsigned int)threads)
     {
         pplScheduler = Concurrency::Scheduler::Create(Concurrency::SchedulerPolicy(2,
-                       Concurrency::PolicyElementKey::MinConcurrency, threads-1,
-                       Concurrency::PolicyElementKey::MaxConcurrency, threads-1));
+                       Concurrency::MinConcurrency, threads-1,
+                       Concurrency::MaxConcurrency, threads-1));
     }
 
 #endif
