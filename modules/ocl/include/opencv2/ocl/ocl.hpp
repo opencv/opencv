@@ -57,13 +57,15 @@ namespace cv
     namespace ocl
     {
         using std::auto_ptr;
-
-#define CVCL_DEVICE_TYPE_DEFAULT                      (1 << 0)
-#define CVCL_DEVICE_TYPE_CPU                          (1 << 1)
-#define CVCL_DEVICE_TYPE_GPU                          (1 << 2)
-#define CVCL_DEVICE_TYPE_ACCELERATOR                  (1 << 3)
-        //#define CVCL_DEVICE_TYPE_CUSTOM                       (1 << 4)
-#define CVCL_DEVICE_TYPE_ALL                          0xFFFFFFFF
+        enum
+        {
+            CVCL_DEVICE_TYPE_DEFAULT     = (1 << 0),
+            CVCL_DEVICE_TYPE_CPU         = (1 << 1),
+            CVCL_DEVICE_TYPE_GPU         = (1 << 2),
+            CVCL_DEVICE_TYPE_ACCELERATOR = (1 << 3),
+            //CVCL_DEVICE_TYPE_CUSTOM      = (1 << 4)
+            CVCL_DEVICE_TYPE_ALL         = 0xFFFFFFFF
+        };
         //this class contains ocl runtime information
         class CV_EXPORTS Info
         {
@@ -825,7 +827,6 @@ namespace cv
 
         };
 
-#ifdef HAVE_CLAMDFFT
         ///////////////////////////////////////// clAmdFft related /////////////////////////////////////////
         //! Performs a forward or inverse discrete Fourier transform (1D or 2D) of floating point matrix.
         //! Param dft_size is the size of DFT transform.
@@ -839,16 +840,13 @@ namespace cv
         // real to complex dft output is not the same with cpu version
         // real to complex and complex to real does not support DFT_ROWS
         CV_EXPORTS void dft(const oclMat &src, oclMat &dst, Size dft_size = Size(0, 0), int flags = 0);
-#endif // HAVE_CLAMDFFT
 
-#ifdef HAVE_CLAMDBLAS
         //! implements generalized matrix product algorithm GEMM from BLAS
         // The functionality requires clAmdBlas library
         // only support type CV_32FC1
         // flag GEMM_3_T is not supported
         CV_EXPORTS void gemm(const oclMat &src1, const oclMat &src2, double alpha,
                              const oclMat &src3, double beta, oclMat &dst, int flags = 0);
-#endif
 
         //////////////// HOG (Histogram-of-Oriented-Gradients) Descriptor and Object Detector //////////////
 

@@ -52,7 +52,7 @@ using namespace cvtest;
 using namespace testing;
 using namespace std;
 using namespace cv;
-
+extern std::string workdir;
 struct getRect
 {
     Rect operator ()(const CvAvgComp &e) const
@@ -80,9 +80,6 @@ PARAM_TEST_CASE(HaarTestBase, int, int)
         if( (!cascade.load( cascadeName )) || (!cpucascade.load(cascadeName)))
         {
             cout << "ERROR: Could not load classifier cascade" << endl;
-            cout << "Usage: facedetect [--cascade=<cascade_path>]\n"
-                 "   [--scale[=<image scale>\n"
-                 "   [filename|camera_index]\n" << endl ;
             return;
         }
         //int devnums = getDevice(oclinfo);
@@ -99,16 +96,16 @@ struct Haar : HaarTestBase {};
 
 TEST_F(Haar, FaceDetect)
 {
-    string imgName = "../../../samples/c/lena.jpg";
+    string imgName = workdir + "lena.jpg";
     Mat img = imread( imgName, 1 );
 
     if(img.empty())
     {
-        std::cout << "Couldn't read test" << index << ".jpg" << std::endl;
+        std::cout << imgName << std::endl;
         return ;
     }
 
-    int i = 0;
+    //int i = 0;
     double t = 0;
     vector<Rect> faces, oclfaces;
 

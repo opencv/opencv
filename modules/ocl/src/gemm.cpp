@@ -50,10 +50,17 @@
 
 #include "clAmdBlas.h"
 
-#if !defined (HAVE_OPENCL)
-void cv::ocl::dft(const oclMat &src, oclMat &dst, int flags)
+#if !defined HAVE_OPENCL
+void cv::ocl::gemm(const oclMat &src1, const oclMat &src2, double alpha,
+                   const oclMat &src3, double beta, oclMat &dst, int flags)
 {
     throw_nogpu();
+}
+#elif !defined HAVE_CLAMDBLAS
+void cv::ocl::gemm(const oclMat &src1, const oclMat &src2, double alpha,
+                   const oclMat &src3, double beta, oclMat &dst, int flags)
+{
+    CV_Error(CV_StsNotImplemented, "OpenCL BLAS is not implemented");
 }
 #else
 

@@ -53,8 +53,7 @@ using namespace cv::ocl;
 using namespace cvtest;
 using namespace testing;
 using namespace std;
-
-#define FILTER_IMAGE "../../../samples/gpu/road.png"
+extern std::string workdir;
 
 #ifndef MWC_TEST_UTILITY
 #define MWC_TEST_UTILITY
@@ -100,15 +99,15 @@ PARAM_TEST_CASE(HOG, WinSizw48, bool)
 
 TEST_P(HOG, Performance)
 {
-    cv::Mat img = readImage(FILTER_IMAGE, cv::IMREAD_GRAYSCALE);
+    cv::Mat img = readImage(workdir + "lena.jpg", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(img.empty());
 
     // define HOG related arguments
     float scale = 1.05;
-    int nlevels = 13;
+    //int nlevels = 13;
     float gr_threshold = 8;
     float hit_threshold = 1.4;
-    bool hit_threshold_auto = true;
+    //bool hit_threshold_auto = true;
 
     int win_width = is48 ? 48 : 64;
     int win_stride_width = 8;

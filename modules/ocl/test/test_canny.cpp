@@ -45,16 +45,11 @@
 
 #include "precomp.hpp"
 #ifdef HAVE_OPENCL
-#ifdef WIN32
-#define FILTER_IMAGE "C:/Users/Public/Pictures/Sample Pictures/Penguins.jpg"
-#else
-#define FILTER_IMAGE "/Users/Test/Valve_original.PNG" // user need to specify a valid image path
-#endif
 #define SHOW_RESULT 0
 
 ////////////////////////////////////////////////////////
 // Canny
-
+extern std::string workdir;
 IMPLEMENT_PARAM_CLASS(AppertureSize, int);
 IMPLEMENT_PARAM_CLASS(L2gradient, bool);
 
@@ -76,7 +71,7 @@ PARAM_TEST_CASE(Canny, AppertureSize, L2gradient)
 
 TEST_P(Canny, Accuracy)
 {
-    cv::Mat img = readImage(FILTER_IMAGE, cv::IMREAD_GRAYSCALE);
+    cv::Mat img = readImage(workdir + "fruits.jpg", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(img.empty());
 
     double low_thresh = 50.0;
