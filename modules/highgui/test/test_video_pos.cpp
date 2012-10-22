@@ -173,6 +173,6 @@ public:
     Size framesize;
 };
 
-#if BUILD_WITH_VIDEO_INPUT_SUPPORT && BUILD_WITH_VIDEO_OUTPUT_SUPPORT
+#if BUILD_WITH_VIDEO_INPUT_SUPPORT && BUILD_WITH_VIDEO_OUTPUT_SUPPORT && defined HAVE_FFMPEG
 TEST(Highgui_Video, seek_random_synthetic) { CV_PositioningTest test; test.safe_run(); }
 #endif
