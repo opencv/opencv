@@ -13,17 +13,21 @@ set(kernels_cpp "${CMAKE_CURRENT_BINARY_DIR}/kernels.cpp")
 set(cl2cpp_script "${CMAKE_CURRENT_SOURCE_DIR}/cl2cpp.py")
 set(cl2cpp_script_W32 "${CMAKE_CURRENT_SOURCE_DIR}/cl2cpp.js")
 
-IF(0)
-   add_custom_command(
-   OUTPUT ${kernels_cpp}
-   COMMAND wscript.exe ${cl2cpp_script_W32} "${CMAKE_CURRENT_SOURCE_DIR}/src/kernels" ${kernels_cpp}
-   DEPENDS ${CL_FILES} ${cl2cpp_script_W32})
+IF(WSH_USE4PYTHON)
+	add_custom_command(
+		OUTPUT ${kernels_cpp}
+		COMMAND ${WSH_SCRIPT} ${cl2cpp_script_W32} "${CMAKE_CURRENT_SOURCE_DIR}/src/kernels" ${kernels_cpp}
+		DEPENDS ${CL_FILES} ${cl2cpp_script_W32}
+	)
+elseif(PYTHON_EXECUTABLE)
+	add_custom_command(
+	OUTPUT ${kernels_cpp}
+	COMMAND ${PYTHON_EXECUTABLE} ${cl2cpp_script} "${CMAKE_CURRENT_SOURCE_DIR}/src/kernels" ${kernels_cpp}
+	DEPENDS ${CL_FILES} ${cl2cpp_script})
 else()
-   add_custom_command(
-   OUTPUT ${kernels_cpp}
-   COMMAND ${PYTHON_EXECUTABLE} ${cl2cpp_script} "${CMAKE_CURRENT_SOURCE_DIR}/src/kernels" ${kernels_cpp}
-   DEPENDS ${CL_FILES} ${cl2cpp_script})
-ENDIF()
+	message(FATAL_ERROR "Python interpreter has not been found, you can't build this module without it (or alternative)")
+endif()
+
 
 file(GLOB lib_hdrs     "include/opencv2/${name}/*.hpp" "include/opencv2/${name}/*.h")
 file(GLOB lib_srcs     "src/*.cpp")
