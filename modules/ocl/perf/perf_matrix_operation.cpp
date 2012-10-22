@@ -714,7 +714,6 @@ TEST_P(DataTransfer, perf)
         totaluploadtick = t0 + totaluploadtick;
         totaldownloadtick = t1 + totaldownloadtick;
     }
-    EXPECT_MAT_SIMILAR(mat, cpu_dst, 0.0);
     totaltick = totaluploadtick + totaldownloadtick;
     cout << "average upload time is  " << totaluploadtick / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
     cout << "average download time is  " << totaldownloadtick / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;

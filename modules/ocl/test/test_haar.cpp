@@ -52,7 +52,7 @@ using namespace cvtest;
 using namespace testing;
 using namespace std;
 using namespace cv;
-
+extern string workdir;
 struct getRect
 {
     Rect operator ()(const CvAvgComp &e) const
@@ -75,14 +75,11 @@ PARAM_TEST_CASE(HaarTestBase, int, int)
     {
         scale = 1.0;
         index = 0;
-        string cascadeName = "../../../data/haarcascades/haarcascade_frontalface_alt.xml";
+        string cascadeName = workdir + "../../data/haarcascades/haarcascade_frontalface_alt.xml";
 
         if( (!cascade.load( cascadeName )) || (!cpucascade.load(cascadeName)))
         {
             cout << "ERROR: Could not load classifier cascade" << endl;
-            cout << "Usage: facedetect [--cascade=<cascade_path>]\n"
-                 "   [--scale[=<image scale>\n"
-                 "   [filename|camera_index]\n" << endl ;
             return;
         }
         //int devnums = getDevice(oclinfo);
@@ -99,17 +96,17 @@ struct Haar : HaarTestBase {};
 
 TEST_F(Haar, FaceDetect)
 {
-    string imgName = "../../../samples/c/lena.jpg";
+    string imgName = workdir + "lena.jpg";
     Mat img = imread( imgName, 1 );
 
     if(img.empty())
     {
-        std::cout << "Couldn't read test" << index << ".jpg" << std::endl;
+        std::cout << "Couldn't read " << imgName << std::endl;
         return ;
     }
 
-    int i = 0;
-    double t = 0;
+    //int i = 0;
+    //double t = 0;
     vector<Rect> faces, oclfaces;
 
     const static Scalar colors[] =  { CV_RGB(0, 0, 255),

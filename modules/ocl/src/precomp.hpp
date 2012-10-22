@@ -47,7 +47,7 @@
 #define __OPENCV_PRECOMP_H__
 
 #if _MSC_VER >= 1200
-#pragma warning( disable: 4251 4710 4711 4514 4996 )
+#pragma warning( disable: 4244 4251 4710 4711 4514 4996 )
 #endif
 
 #ifdef HAVE_CVCONFIG_H
@@ -81,7 +81,7 @@
 #if defined __APPLE__
 #include <OpenCL/OpenCL.h>
 #else
-#include <CL/cl.h>
+#include <CL/opencl.h>
 #endif
 
 #include "safe_call.hpp"
@@ -100,7 +100,7 @@ namespace cv
                             size_t width, size_t height, enum openCLMemcpyKind kind, int channels = -1);
         void openCLCopyBuffer2D(Context *clCxt, void *dst, size_t dpitch, int dst_offset,
                                 const void *src, size_t spitch,
-                                size_t width, size_t height, int src_offset, enum openCLMemcpyKind kind);
+                                size_t width, size_t height, int src_offset);
         void openCLFree(void *devPtr);
         cl_mem openCLCreateBuffer(Context *clCxt, size_t flag, size_t size);
         void openCLReadBuffer(Context *clCxt, cl_mem dst_buffer, void *host_buffer, size_t size);
@@ -108,8 +108,7 @@ namespace cv
                                             const char **source, string kernelName);
         cl_kernel openCLGetKernelFromSource(const Context *clCxt,
                                             const char **source, string kernelName, const char *build_options);
-        void openCLVerifyKernel(const Context *clCxt, cl_kernel kernel, size_t *blockSize,
-                                size_t *globalThreads, size_t *localThreads);
+        void openCLVerifyKernel(const Context *clCxt, cl_kernel kernel, size_t *localThreads);
         void openCLExecuteKernel(Context *clCxt , const char **source, string kernelName, vector< std::pair<size_t, const void *> > &args,
                                  int globalcols , int globalrows, size_t blockSize = 16, int kernel_expand_depth = -1, int kernel_expand_channel = -1);
         void openCLExecuteKernel_(Context *clCxt , const char **source, string kernelName,

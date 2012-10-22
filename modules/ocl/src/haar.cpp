@@ -513,13 +513,13 @@ gpuCreateHidHaarClassifierCascade( CvHaarClassifierCascade *cascade, int *size, 
 
 
 #define sum_elem_ptr(sum,row,col)  \
-    ((sumtype*)CV_MAT_ELEM_PTR_FAST((sum),(row),(col),sizeof(sumtype)))
+	((sumtype*)CV_MAT_ELEM_PTR_FAST((sum),(row),(col),sizeof(sumtype)))
 
 #define sqsum_elem_ptr(sqsum,row,col)  \
-    ((sqsumtype*)CV_MAT_ELEM_PTR_FAST((sqsum),(row),(col),sizeof(sqsumtype)))
+	((sqsumtype*)CV_MAT_ELEM_PTR_FAST((sqsum),(row),(col),sizeof(sqsumtype)))
 
 #define calc_sum(rect,offset) \
-    ((rect).p0[offset] - (rect).p1[offset] - (rect).p2[offset] + (rect).p3[offset])
+	((rect).p0[offset] - (rect).p1[offset] - (rect).p2[offset] + (rect).p3[offset])
 
 
 CV_IMPL void
@@ -813,14 +813,9 @@ gpuSetHaarClassifierCascade( CvHaarClassifierCascade *_cascade
                 CvHaarFeature *feature =
                     &_cascade->stage_classifier[i].classifier[j].haar_feature[l];
                 GpuHidHaarTreeNode *hidnode = &stage_classifier[i].classifier[j].node[l];
-                double sum0 = 0, area0 = 0;
                 CvRect r[3];
 
-                int base_w = -1, base_h = -1;
-                int new_base_w = 0, new_base_h = 0;
-                int kx, ky;
-                int flagx = 0, flagy = 0;
-                int x0 = 0, y0 = 0;
+
                 int nr;
 
                 /* align blocks */
@@ -872,7 +867,6 @@ CvSeq *cv::ocl::OclCascadeClassifier::oclHaarDetectObjects( oclMat &gimg, CvMemS
     std::vector<cv::Rect> rectList;
     std::vector<int> rweights;
     double factor;
-    int coi;
     int datasize;
     int totalclassifier;
 
@@ -885,9 +879,9 @@ CvSeq *cv::ocl::OclCascadeClassifier::oclHaarDetectObjects( oclMat &gimg, CvMemS
     int *candidate;
     cl_int status;
 
-    bool doCannyPruning = (flags & CV_HAAR_DO_CANNY_PRUNING) != 0;
+    //    bool doCannyPruning = (flags & CV_HAAR_DO_CANNY_PRUNING) != 0;
     bool findBiggestObject = (flags & CV_HAAR_FIND_BIGGEST_OBJECT) != 0;
-    bool roughSearch = (flags & CV_HAAR_DO_ROUGH_SEARCH) != 0;
+    //    bool roughSearch = (flags & CV_HAAR_DO_ROUGH_SEARCH) != 0;
 
     //the Intel HD Graphics is unsupported
     if (gimg.clCxt->impl->devName.find("Intel(R) HD Graphics") != string::npos)
@@ -1015,7 +1009,6 @@ CvSeq *cv::ocl::OclCascadeClassifier::oclHaarDetectObjects( oclMat &gimg, CvMemS
             gimgroi = gsum(roi);
             gimgroisq = gsqsum(roi);
             //scaleinfo[i].rows = gimgroi.rows;
-            int ystep = 1; // factor > 2 ? 1 : 2;
             int width = gimgroi.cols - 1 - cascade->orig_window_size.width;
             int height = gimgroi.rows - 1 - cascade->orig_window_size.height;
             scaleinfo[i].width_height = (width << 16) | height;
@@ -1109,7 +1102,7 @@ CvSeq *cv::ocl::OclCascadeClassifier::oclHaarDetectObjects( oclMat &gimg, CvMemS
         pq.s[2] = gcascade->pq2;
         pq.s[3] = gcascade->pq3;
         float correction = gcascade->inv_window_area;
-        int argcount = 0;
+
         //int grpnumperline = ((m + localThreads[0] - 1) / localThreads[0]);
         //int totalgrp = ((n + localThreads[1] - 1) / localThreads[1])*grpnumperline;
         //   openCLVerifyKernel(gsum.clCxt, kernel, &blocksize, globalThreads, localThreads);
@@ -1184,7 +1177,6 @@ CvSeq *cv::ocl::OclCascadeClassifier::oclHaarDetectObjects( oclMat &gimg, CvMemS
     {
         CvSize winsize0 = cascade->orig_window_size;
         int n_factors = 0;
-        int flag = 0;
         oclMat gsum;
         oclMat gsqsum;
         cv::ocl::integral(gimg, gsum, gsqsum);
@@ -1276,7 +1268,6 @@ CvSeq *cv::ocl::OclCascadeClassifier::oclHaarDetectObjects( oclMat &gimg, CvMemS
             scaleinfo[i].imgoff = 0;
             scaleinfo[i].factor = factor;
             int startnodenum = nodenum * i;
-            int argcounts = 0;
             float factor2 = (float)factor;
             /*
              openCLSafeCall(clSetKernelArg(kernel2, argcounts++, sizeof(cl_mem), (void *)&nodebuffer));
@@ -1294,7 +1285,6 @@ CvSeq *cv::ocl::OclCascadeClassifier::oclHaarDetectObjects( oclMat &gimg, CvMemS
             args1.push_back ( make_pair(sizeof(cl_int) , (void *)&startnodenum ));
 
             size_t globalThreads2[3] = {nodenum, 1, 1};
-            size_t localThreads2[3] = {256, 1, 1};
 
             openCLExecuteKernel(gsum.clCxt, &haarobjectdetect_scaled2, "gpuscaleclassifier", globalThreads2, NULL/*localThreads2*/, args1, -1, -1);
 
@@ -2478,13 +2468,13 @@ else
 //        } /* j */
 //    }
 //}
-
+/*
 CV_INLINE
 double gpuEvalHidHaarClassifier( GpuHidHaarClassifier *classifier,
-                                 double variance_norm_factor,
-                                 size_t p_offset )
+double variance_norm_factor,
+size_t p_offset )
 {
-    /*
+
     int idx = 0;
     do
     {
@@ -2501,14 +2491,15 @@ double gpuEvalHidHaarClassifier( GpuHidHaarClassifier *classifier,
     }
     while( idx > 0 );
     return classifier->alpha[-idx];
-    */
+
     return 0.;
 }
 
 
+*/
 CV_IMPL int
-gpuRunHaarClassifierCascade( const CvHaarClassifierCascade *_cascade,
-                             CvPoint pt, int start_stage )
+gpuRunHaarClassifierCascade( /*const CvHaarClassifierCascade *_cascade,
+CvPoint pt, int start_stage */)
 {
     /*
     int result = -1;
@@ -2620,7 +2611,7 @@ namespace cv
                 for( y = y1; y < y2; y += ystep )
                     for( x = 0; x < ssz.width; x += ystep )
                     {
-                        if( gpuRunHaarClassifierCascade( cascade, cvPoint(x, y), 0 ) > 0 )
+                        if( gpuRunHaarClassifierCascade( /*cascade, cvPoint(x, y), 0*/ ) > 0 )
                             vec->push_back(Rect(cvRound(x * factor), cvRound(y * factor),
                                                 winSize.width, winSize.height));
                     }
@@ -2679,7 +2670,7 @@ namespace cv
                             }
                         }
 
-                        int result = gpuRunHaarClassifierCascade( cascade, cvPoint(x, y), 0 );
+                        int result = gpuRunHaarClassifierCascade(/* cascade, cvPoint(x, y), 0 */);
                         if( result > 0 )
                             vec->push_back(Rect(x, y, winsize.width, winsize.height));
                         ixstep = result != 0 ? 1 : 2;

@@ -124,7 +124,7 @@ namespace cv
             result.create(image.rows - templ.rows + 1, image.cols - templ.cols + 1, CV_32F);
             if (templ.size().area() < getTemplateThreshold(CV_TM_SQDIFF, image.depth()))
             {
-                matchTemplateNaive_SQDIFF(image, templ, result, image.channels());
+                matchTemplateNaive_SQDIFF(image, templ, result, image.oclchannels());
                 return;
             }
             else
@@ -172,7 +172,7 @@ namespace cv
             CV_Assert((image.depth() == CV_8U && templ.depth() == CV_8U )
                       || ((image.depth() == CV_32F && templ.depth() == CV_32F) && result.depth() == CV_32F)
                      );
-            CV_Assert(image.channels() == templ.channels() && (image.channels() == 1 || image.oclchannels() == 4) && result.channels() == 1);
+            CV_Assert(image.oclchannels() == templ.oclchannels() && (image.oclchannels() == 1 || image.oclchannels() == 4) && result.oclchannels() == 1);
             CV_Assert(result.rows == image.rows - templ.rows + 1 && result.cols == image.cols - templ.cols + 1);
 
             Context *clCxt = image.clCxt;
@@ -209,7 +209,7 @@ namespace cv
             result.create(image.rows - templ.rows + 1, image.cols - templ.cols + 1, CV_32F);
             if (templ.size().area() < getTemplateThreshold(CV_TM_SQDIFF, image.depth()))
             {
-                matchTemplateNaive_CCORR(image, templ, result, image.channels());
+                matchTemplateNaive_CCORR(image, templ, result, image.oclchannels());
                 return;
             }
             else
@@ -220,8 +220,8 @@ namespace cv
                     image.convertTo(buf.imagef, CV_32F);
                     templ.convertTo(buf.templf, CV_32F);
                 }
-                CV_Assert(image.channels() == 1);
-                oclMat o_result(image.size(), CV_MAKETYPE(CV_32F, image.channels()));
+                CV_Assert(image.oclchannels() == 1);
+                oclMat o_result(image.size(), CV_MAKETYPE(CV_32F, image.oclchannels()));
                 filter2D(buf.imagef, o_result, CV_32F, buf.templf, Point(0, 0));
                 result = o_result(Rect(0, 0, image.rows - templ.rows + 1, image.cols - templ.cols + 1));
             }
@@ -265,7 +265,7 @@ namespace cv
             CV_Assert((image.depth() == CV_8U && templ.depth() == CV_8U )
                       || ((image.depth() == CV_32F && templ.depth() == CV_32F) && result.depth() == CV_32F)
                      );
-            CV_Assert(image.channels() == templ.channels() && (image.oclchannels() == 1 || image.oclchannels() == 4) && result.channels() == 1);
+            CV_Assert(image.oclchannels() == templ.oclchannels() && (image.oclchannels() == 1 || image.oclchannels() == 4) && result.oclchannels() == 1);
             CV_Assert(result.rows == image.rows - templ.rows + 1 && result.cols == image.cols - templ.cols + 1);
 
             Context *clCxt = image.clCxt;
@@ -320,7 +320,7 @@ namespace cv
             args.push_back( make_pair( sizeof(cl_int), (void *)&result.offset));
             args.push_back( make_pair( sizeof(cl_int), (void *)&result.step));
             // to be continued in the following section
-            if(image.channels() == 1)
+            if(image.oclchannels() == 1)
             {
                 buf.image_sums.resize(1);
                 integral(image, buf.image_sums[0]);
@@ -340,7 +340,7 @@ namespace cv
                 buf.image_sums.resize(buf.images.size());
 
 
-                for(int i = 0; i < image.channels(); i ++)
+                for(int i = 0; i < image.oclchannels(); i ++)
                 {
                     integral(buf.images[i], buf.image_sums[i]);
                 }
@@ -394,7 +394,7 @@ namespace cv
             args.push_back( make_pair( sizeof(cl_int), (void *)&result.step));
             args.push_back( make_pair( sizeof(cl_float), (void *)&scale) );
             // to be continued in the following section
-            if(image.channels() == 1)
+            if(image.oclchannels() == 1)
             {
                 buf.image_sums.resize(1);
                 buf.image_sqsums.resize(1);
