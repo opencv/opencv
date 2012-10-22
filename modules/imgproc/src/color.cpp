@@ -1362,7 +1362,7 @@ struct RGB2Lab_f
             _coeffs = sRGB2XYZ_D65;
         if (!_whitept)
             _whitept = D65;
-
+        
         float scale[] = { 1.0f / _whitept[0], 1.0f, 1.0f / _whitept[2] };
 
         for( int i = 0; i < _3; i++ )
@@ -1371,7 +1371,7 @@ struct RGB2Lab_f
             coeffs[j + (blueIdx ^ 2)] = _coeffs[j] * scale[i];
             coeffs[j + 1] = _coeffs[j + 1] * scale[i];
             coeffs[j + blueIdx] = _coeffs[j + 2] * scale[i];
-
+            
             CV_Assert( coeffs[j] >= 0 && coeffs[j + 1] >= 0 && coeffs[j + 2] >= 0 &&
                        coeffs[j] + coeffs[j + 1] + coeffs[j + 2] < 1.5f*LabCbrtTabScale );
         }
@@ -1394,11 +1394,11 @@ struct RGB2Lab_f
             float R = clip(src[0]);
             float G = clip(src[1]);
             float B = clip(src[2]);
-
+            
 //            CV_Assert(R >= 0.0f && R <= 1.0f);
 //            CV_Assert(G >= 0.0f && G <= 1.0f);
 //            CV_Assert(B >= 0.0f && B <= 1.0f);
-
+            
             if (gammaTab)
             {
                 R = splineInterpolate(R * gscale, gammaTab, GAMMA_TAB_SIZE);
@@ -1408,15 +1408,15 @@ struct RGB2Lab_f
             float X = R*C0 + G*C1 + B*C2;
             float Y = R*C3 + G*C4 + B*C5;
             float Z = R*C6 + G*C7 + B*C8;
-
+            
             float FX = X > 0.008856 ? pow(X, _1_3) : (7.787f * X + _a);
             float FY = Y > 0.008856 ? pow(Y, _1_3) : (7.787f * Y + _a);
             float FZ = Z > 0.008856 ? pow(Z, _1_3) : (7.787f * Z + _a);
-
+            
             float L = Y > 0.008856 ? (116.f * FY - 16.f) : (903.3 * Y);
             float a = 500.f * (FX - FY);
             float b = 200.f * (FY - FZ);
-
+            
             dst[i] = L;
             dst[i + 1] = a;
             dst[i + 2] = b;
@@ -1427,22 +1427,22 @@ struct RGB2Lab_f
     float coeffs[9];
     bool srgb;
 };
-
+    
 struct Lab2RGB_f
 {
     typedef float channel_type;
-
+    
     Lab2RGB_f( int _dstcn, int blueIdx, const float* _coeffs,
               const float* _whitept, bool _srgb )
     : dstcn(_dstcn), srgb(_srgb), blueInd(blueIdx)
     {
         initLabTabs();
-
+        
         if(!_coeffs)
             _coeffs = XYZ2sRGB_D65;
         if(!_whitept)
             _whitept = D65;
-
+        
         for( int i = 0; i < 3; i++ )
         {
             coeffs[i+(blueIdx^2)*3] = _coeffs[i]*_whitept[i];
@@ -1450,7 +1450,7 @@ struct Lab2RGB_f
             coeffs[i+blueIdx*3] = _coeffs[i+6]*_whitept[i];
         }
     }
-
+    
     void operator()(const float* src, float* dst, int n) const
     {
         int i, dcn = dstcn;
@@ -1461,7 +1461,7 @@ struct Lab2RGB_f
         C6 = coeffs[6], C7 = coeffs[7], C8 = coeffs[8];
         float alpha = ColorChannel<float>::max();
         n *= 3;
-
+        
         static const float lThresh = 0.008856f * 903.3f;
         static const float fThresh = 7.787f * 0.008856f + 16.0f / 116.0f;
         for (i = 0; i < n; i += 3, dst += dcn)
@@ -1469,7 +1469,7 @@ struct Lab2RGB_f
             float li = src[i];
             float ai = src[i + 1];
             float bi = src[i + 2];
-
+            
             float y, fy;
             if (li <= lThresh)
             {
@@ -1481,44 +1481,44 @@ struct Lab2RGB_f
                 fy = (li + 16.0f) / 116.0f;
                 y = fy * fy * fy;
             }
-
+            
             float fxz[] = { ai / 500.0f + fy, fy - bi / 200.0f };
-
+            
             for (int j = 0; j < 2; j++)
                 if (fxz[j] <= fThresh)
                     fxz[j] = (fxz[j] - 16.0f / 116.0f) / 7.787f;
                 else
                     fxz[j] = fxz[j] * fxz[j] * fxz[j];
-
-
+            
+            
             float x = fxz[0], z = fxz[1];
             float ro = clip(C0 * x + C1 * y + C2 * z);
             float go = clip(C3 * x + C4 * y + C5 * z);
             float bo = clip(C6 * x + C7 * y + C8 * z);
-
+            
 //            CV_Assert(ro >= 0.0f && ro <= 1.0f);
 //            CV_Assert(go >= 0.0f && go <= 1.0f);
 //            CV_Assert(bo >= 0.0f && bo <= 1.0f);
-
+            
             if (gammaTab)
             {
                 ro = splineInterpolate(ro * gscale, gammaTab, GAMMA_TAB_SIZE);
                 go = splineInterpolate(go * gscale, gammaTab, GAMMA_TAB_SIZE);
                 bo = splineInterpolate(bo * gscale, gammaTab, GAMMA_TAB_SIZE);
             }
-
+            
             dst[0] = ro, dst[1] = go, dst[2] = bo;
             if( dcn == 4 )
                 dst[3] = alpha;
         }
     }
-
+    
     int dstcn;
     float coeffs[9];
     bool srgb;
     int blueInd;
 };
-
+  
 #undef clip
 
 struct Lab2RGB_b
@@ -2066,10 +2066,16 @@ static void Bayer2RGB_( const Mat& srcmat, Mat& dstmat, int code )
     T* dst0 = (T*)dstmat.data;
     int dst_step = (int)(dstmat.step/sizeof(T));
     Size size = srcmat.size();
-    int blue = code == CV_BayerBG2BGR || code == CV_BayerGB2BGR ? -1 : 1;
-    int start_with_green = code == CV_BayerGB2BGR || code == CV_BayerGR2BGR;
-
-    dst0 += dst_step + 3 + 1;
+    int blue = code == CV_BayerBG2BGRA || code == CV_BayerGB2BGRA ||
+       code == CV_BayerBG2BGR || code == CV_BayerGB2BGR ? -1 : 1;
+    int start_with_green = code == CV_BayerGB2BGRA || code == CV_BayerGR2BGRA ||
+       code == CV_BayerGB2BGR || code == CV_BayerGR2BGR;
+    
+    int dcn = dstmat.channels(), dcn2 = dcn * 2;
+    T alpha = ColorChannel<T>::max();
+    int offset = dcn == 4 ? 1 : 0;
+    
+    dst0 += dst_step + dcn + 1;
     size.height -= 2;
     size.width -= 2;
 
@@ -2082,8 +2088,8 @@ static void Bayer2RGB_( const Mat& srcmat, Mat& dstmat, int code )
 
         if( size.width <= 0 )
         {
-            dst[-4] = dst[-3] = dst[-2] = dst[size.width*3-1] =
-            dst[size.width*3] = dst[size.width*3+1] = 0;
+            dst[-4] = dst[-3] = dst[-2] = dst[size.width*dcn-1] =
+            dst[size.width*dcn] = dst[size.width*dcn+1] = 0;
             continue;
         }
 
@@ -2095,52 +2101,55 @@ static void Bayer2RGB_( const Mat& srcmat, Mat& dstmat, int code )
             dst[0] = bayer[bayer_step+1];
             dst[blue] = (T)t1;
             bayer++;
-            dst += 3;
+            dst += dcn;
         }
 
-        int delta = vecOp.bayer2RGB(bayer, bayer_step, dst, size.width, blue);
+        int delta = dcn == 4 ? 0 : vecOp.bayer2RGB(bayer, bayer_step, dst, size.width, blue);
         bayer += delta;
-        dst += delta*3;
+        dst += delta * dcn;
 
         if( blue > 0 )
         {
-            for( ; bayer <= bayer_end - 2; bayer += 2, dst += 6 )
+            for( ; bayer <= bayer_end - 2; bayer += 2, dst += dcn2 )
             {
                 t0 = (bayer[0] + bayer[2] + bayer[bayer_step*2] +
-                      bayer[bayer_step*2+2] + 2) >> 2;
+                                 bayer[bayer_step*2+2] + 2) >> 2;
                 t1 = (bayer[1] + bayer[bayer_step] +
-                      bayer[bayer_step+2] + bayer[bayer_step*2+1]+2) >> 2;
+                                 bayer[bayer_step+2] + bayer[bayer_step*2+1]+2) >> 2;
                 dst[-1] = (T)t0;
                 dst[0] = (T)t1;
                 dst[1] = bayer[bayer_step+1];
-
+                
                 t0 = (bayer[2] + bayer[bayer_step*2+2] + 1) >> 1;
                 t1 = (bayer[bayer_step+1] + bayer[bayer_step+3] + 1) >> 1;
-                dst[2] = (T)t0;
-                dst[3] = bayer[bayer_step+2];
-                dst[4] = (T)t1;
+                
+                dst[2 + offset] = (T)t0;
+                dst[3 + offset] = bayer[bayer_step+2];
+                dst[4 + offset] = (T)t1;
             }
         }
         else
         {
-            for( ; bayer <= bayer_end - 2; bayer += 2, dst += 6 )
+            for( ; bayer <= bayer_end - 2; bayer += 2, dst += dcn2 )
             {
                 t0 = (bayer[0] + bayer[2] + bayer[bayer_step*2] +
-                      bayer[bayer_step*2+2] + 2) >> 2;
+                                 bayer[bayer_step*2+2] + 2) >> 2;
                 t1 = (bayer[1] + bayer[bayer_step] +
-                      bayer[bayer_step+2] + bayer[bayer_step*2+1]+2) >> 2;
+                                 bayer[bayer_step+2] + bayer[bayer_step*2+1]+2) >> 2;
+                
                 dst[1] = (T)t0;
                 dst[0] = (T)t1;
                 dst[-1] = bayer[bayer_step+1];
 
                 t0 = (bayer[2] + bayer[bayer_step*2+2] + 1) >> 1;
                 t1 = (bayer[bayer_step+1] + bayer[bayer_step+3] + 1) >> 1;
-                dst[4] = (T)t0;
-                dst[3] = bayer[bayer_step+2];
-                dst[2] = (T)t1;
+                
+                dst[4 + offset] = (T)t0;
+                dst[3 + offset] = bayer[bayer_step+2];
+                dst[2 + offset] = (T)t1;
             }
         }
-
+        
         if( bayer < bayer_end )
         {
             t0 = (bayer[0] + bayer[2] + bayer[bayer_step*2] +
@@ -2151,32 +2160,44 @@ static void Bayer2RGB_( const Mat& srcmat, Mat& dstmat, int code )
             dst[0] = (T)t1;
             dst[blue] = bayer[bayer_step+1];
             bayer++;
-            dst += 3;
+            dst += dcn;
         }
-
-        dst0[-4] = dst0[-1];
-        dst0[-3] = dst0[0];
-        dst0[-2] = dst0[1];
-        dst0[size.width*3-1] = dst0[size.width*3-4];
-        dst0[size.width*3] = dst0[size.width*3-3];
-        dst0[size.width*3+1] = dst0[size.width*3-2];
-
+        
+            
+        dst0[-4] = dst0[-1+offset];
+        dst0[-3] = dst0[0+offset];
+        dst0[-2] = dst0[1+offset];
+        if (dcn == 4)
+            dst0[-5] = dst0[-1];
+        dst0[size.width*dcn-1] = dst0[size.width*dcn-4-offset];
+        dst0[size.width*dcn] = dst0[size.width*dcn-3-offset];
+        dst0[size.width*dcn+1] = dst0[size.width*dcn-2-offset];
+        if (dcn == 4)
+            dst0[size.width*dcn+2] = dst0[size.width*dcn-4];
+        
         blue = -blue;
         start_with_green = !start_with_green;
     }
 
+        
     size = dstmat.size();
     dst0 = (T*)dstmat.data;
     if( size.height > 2 )
-        for( int i = 0; i < size.width*3; i++ )
+        for( int i = 0; i < size.width*dcn; i++ )
         {
             dst0[i] = dst0[i + dst_step];
             dst0[i + (size.height-1)*dst_step] = dst0[i + (size.height-2)*dst_step];
         }
     else
-        for( int i = 0; i < size.width*3; i++ )
-        {
+        for( int i = 0; i < size.width*dcn; i++ )
             dst0[i] = dst0[i + (size.height-1)*dst_step] = 0;
+    
+    if (dcn == 4)
+        for (int y = 0; y < dstmat.rows; ++y)
+        {
+            uchar* yD = dstmat.data + y * dstmat.step;
+            for (int x = 0; x < dstmat.cols; ++x, yD += dcn)
+                yD[3] = alpha;
         }
 }
 
@@ -3600,6 +3621,22 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
                 CV_Error(CV_StsUnsupportedFormat, "Bayer->Gray demosaicing only supports 8u and 16u types");
             break;
 
+        case CV_BayerBG2BGRA: case CV_BayerGB2BGRA: case CV_BayerRG2BGRA: case CV_BayerGR2BGRA:
+            {
+                if (dcn == 0)
+                    dcn = 4;
+                CV_Assert(scn == 1 && dcn == 4);
+                
+                _dst.create(sz, CV_MAKE_TYPE(depth, dcn));
+                dst = _dst.getMat();
+                
+                if (depth == CV_8U)
+                    Bayer2RGB_<uchar, SIMDBayerInterpolator_8u>(src, dst, code);
+                else
+                    CV_Error(CV_StsUnsupportedFormat, "Bayer->RGBA demosaicing only supports 8u type");
+            }
+            break;
+            
         case CV_BayerBG2BGR: case CV_BayerGB2BGR: case CV_BayerRG2BGR: case CV_BayerGR2BGR:
         case CV_BayerBG2BGR_VNG: case CV_BayerGB2BGR_VNG: case CV_BayerRG2BGR_VNG: case CV_BayerGR2BGR_VNG:
             {

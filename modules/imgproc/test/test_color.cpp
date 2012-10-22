@@ -1685,10 +1685,10 @@ TEST(Imgproc_ColorBayer, accuracy) { CV_ColorBayerTest test; test.safe_run(); }
 
 TEST(Imgproc_ColorBayer, regression)
 {
-    cvtest::TS& ts = *cvtest::TS::ptr();
+    cvtest::TS* ts = cvtest::TS::ptr();
 
-    Mat given = imread(string(ts.get_data_path()) + "/cvtcolor/bayer_input.png", CV_LOAD_IMAGE_GRAYSCALE);
-    Mat gold = imread(string(ts.get_data_path()) + "/cvtcolor/bayer_gold.png", CV_LOAD_IMAGE_UNCHANGED);
+    Mat given = imread(string(ts->get_data_path()) + "/cvtcolor/bayer_input.png", CV_LOAD_IMAGE_GRAYSCALE);
+    Mat gold = imread(string(ts->get_data_path()) + "/cvtcolor/bayer_gold.png", CV_LOAD_IMAGE_UNCHANGED);
     Mat result;
 
     cvtColor(given, result, CV_BayerBG2GRAY);
@@ -1705,17 +1705,17 @@ TEST(Imgproc_ColorBayer, regression)
 
 TEST(Imgproc_ColorBayerVNG, regression)
 {
-    cvtest::TS& ts = *cvtest::TS::ptr();
+    cvtest::TS* ts = cvtest::TS::ptr();
 
-    Mat given = imread(string(ts.get_data_path()) + "/cvtcolor/bayer_input.png", CV_LOAD_IMAGE_GRAYSCALE);
-    string goldfname = string(ts.get_data_path()) + "/cvtcolor/bayerVNG_gold.png";
+    Mat given = imread(string(ts->get_data_path()) + "/cvtcolor/bayer_input.png", CV_LOAD_IMAGE_GRAYSCALE);
+    string goldfname = string(ts->get_data_path()) + "/cvtcolor/bayerVNG_gold.png";
     Mat gold = imread(goldfname, CV_LOAD_IMAGE_UNCHANGED);
     Mat result;
 
     CV_Assert(given.data != NULL);
-
+    
     cvtColor(given, result, CV_BayerBG2BGR_VNG, 3);
-
+    
     if (gold.empty())
         imwrite(goldfname, result);
     else
@@ -1733,10 +1733,10 @@ TEST(Imgproc_ColorBayerVNG, regression)
 
 TEST(Imgproc_ColorBayerVNG_Strict, regression)
 {
-    cvtest::TS& ts = *cvtest::TS::ptr();
+    cvtest::TS* ts = cvtest::TS::ptr();
     const char pattern[][3] = { "bg", "gb", "rg", "gr" };
     const std::string image_name = "lena.png";
-    const std::string parent_path = string(ts.get_data_path()) + "/cvtcolor_strict/";
+    const std::string parent_path = string(ts->get_data_path()) + "/cvtcolor_strict/";
 
     Mat src, dst, bayer, reference;
     std::string full_path = parent_path + image_name;
@@ -1745,12 +1745,12 @@ TEST(Imgproc_ColorBayerVNG_Strict, regression)
 
     if (src.data == NULL)
     {
-        ts.set_failed_test_info(cvtest::TS::FAIL_MISSING_TEST_DATA);
-        ts.printf(cvtest::TS::SUMMARY, "No input image\n");
-        ts.set_gtest_status();
+        ts->set_failed_test_info(cvtest::TS::FAIL_MISSING_TEST_DATA);
+        ts->printf(cvtest::TS::SUMMARY, "No input image\n");
+        ts->set_gtest_status();
         return;
     }
-
+    
     int type = -1;
     for (int i = 0; i < 4; ++i)
     {
@@ -1816,7 +1816,7 @@ TEST(Imgproc_ColorBayerVNG_Strict, regression)
 
         // calculating a dst image
         cvtColor(bayer, dst, type);
-
+        
         // reading a reference image
         full_path = parent_path + pattern[i] + image_name;
         reference = imread(full_path, CV_LOAD_IMAGE_UNCHANGED);
@@ -1825,33 +1825,33 @@ TEST(Imgproc_ColorBayerVNG_Strict, regression)
             imwrite(full_path, dst);
             continue;
         }
-
+        
         if (reference.depth() != dst.depth() || reference.channels() != dst.channels() ||
             reference.size() != dst.size())
         {
-            ts.set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
-            ts.printf(cvtest::TS::SUMMARY, "\nReference channels: %d\n"
+            ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
+            ts->printf(cvtest::TS::SUMMARY, "\nReference channels: %d\n"
                 "Actual channels: %d\n", reference.channels(), dst.channels());
-            ts.printf(cvtest::TS::SUMMARY, "\nReference depth: %d\n"
+            ts->printf(cvtest::TS::SUMMARY, "\nReference depth: %d\n"
                 "Actual depth: %d\n", reference.depth(), dst.depth());
-            ts.printf(cvtest::TS::SUMMARY, "\nReference rows: %d\n"
+            ts->printf(cvtest::TS::SUMMARY, "\nReference rows: %d\n"
                 "Actual rows: %d\n", reference.rows, dst.rows);
-            ts.printf(cvtest::TS::SUMMARY, "\nReference cols: %d\n"
+            ts->printf(cvtest::TS::SUMMARY, "\nReference cols: %d\n"
                 "Actual cols: %d\n", reference.cols, dst.cols);
-            ts.set_gtest_status();
-
+            ts->set_gtest_status();
+            
             return;
         }
-
+        
         Mat diff;
         absdiff(reference, dst, diff);
-
+        
         int nonZero = countNonZero(diff.reshape(1) > 1);
         if (nonZero != 0)
         {
-            ts.set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
-            ts.printf(cvtest::TS::SUMMARY, "\nCount non zero in absdiff: %d\n", nonZero);
-            ts.set_gtest_status();
+            ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
+            ts->printf(cvtest::TS::SUMMARY, "\nCount non zero in absdiff: %d\n", nonZero);
+            ts->set_gtest_status();
             return;
         }
     }
@@ -1872,7 +1872,7 @@ void GetTestMatrix(Mat& src)
             float b = (1 + cos((szm - i) * (szm - j) * pi2 / (10 * float(szm)))) / 2;
             float g = (1 + cos((szm - i) * j * pi2 / (10 * float(szm)))) / 2;
             float r = (1 + sin(i * j * pi2 / (10 * float(szm)))) / 2;
-
+            
             // The following lines aren't necessary, but just to prove that
             // the BGR values all lie in [0,1]...
             if (b < 0) b = 0; else if (b > 1) b = 1;
@@ -1887,11 +1887,11 @@ void validate_result(const Mat& reference, const Mat& actual, const Mat& src = M
 {
     cvtest::TS* ts = cvtest::TS::ptr();
     Size ssize = reference.size();
-
+    
     int cn = reference.channels();
     ssize.width *= cn;
     bool next = true;
-
+    
     for (int y = 0; y < ssize.height && next; ++y)
     {
         const float* rD = reference.ptr<float>(y);
@@ -1906,7 +1906,7 @@ void validate_result(const Mat& reference, const Mat& actual, const Mat& src = M
                 if (!src.empty())
                     ts->printf(cvtest::TS::SUMMARY, "Src value: %f\n", src.ptr<float>(y)[x]);
                 ts->printf(cvtest::TS::SUMMARY, "Size: (%d, %d)\n", reference.rows, reference.cols);
-
+                
                 if (mode >= 0)
                 {
                     cv::Mat lab;
@@ -1914,7 +1914,7 @@ void validate_result(const Mat& reference, const Mat& actual, const Mat& src = M
                     std::cout << "lab: " << lab(cv::Rect(y, x / cn, 1, 1)) << std::endl;
                 }
                 std::cout << "src: " << src(cv::Rect(y, x / cn, 1, 1)) << std::endl;
-
+                
                 ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
                 ts->set_gtest_status();
             }
@@ -1928,11 +1928,11 @@ TEST(Imgproc_ColorLab_Full, accuracy)
     Mat reference(src.size(), CV_32FC3);
     Size ssize = src.size();
     CV_Assert(ssize.width == ssize.height);
-
+    
     RNG& rng = cvtest::TS::ptr()->get_rng();
     int blueInd = rng.uniform(0., 1.) > 0.5 ? 0 : 2;
     bool srgb = rng.uniform(0., 1.) > 0.5;
-
+    
     // Convert test image to LAB
     cv::Mat lab;
     int forward_code = blueInd ? srgb ? CV_BGR2Lab : CV_LBGR2Lab : srgb ? CV_RGB2Lab : CV_LRGB2Lab;
@@ -1941,13 +1941,70 @@ TEST(Imgproc_ColorLab_Full, accuracy)
     // Convert LAB image back to BGR(RGB)
     cv::Mat recons;
     cv::cvtColor(lab, recons, inverse_code);
-
+    
     validate_result(src, recons, src, forward_code);
+}
 
-//    src *= 255.0f;
-//    recons *= 255.0f;
-
-//    imshow("Test", src);
-//    imshow("OpenCV", recons);
-//    waitKey();
+TEST(ImgProc_Bayer2RGBA, accuracy)
+{
+    cvtest::TS* ts = cvtest::TS::ptr();
+    Mat raw = imread(string(ts->get_data_path()) + "/cvtcolor/bayer_input.png", CV_LOAD_IMAGE_GRAYSCALE);
+    Mat rgb, reference;
+    
+    CV_Assert(raw.channels() == 1);
+    CV_Assert(raw.depth() == CV_8U);
+    CV_Assert(!raw.empty());
+    
+    /*
+     CV_BayerBG2BGRA = 127,
+     CV_BayerGB2BGRA = 128,
+     CV_BayerRG2BGRA = 129,
+     CV_BayerGR2BGRA = 130,
+     
+     CV_BayerBG2BGR = 46,
+     CV_BayerGB2BGR = 47,
+     CV_BayerRG2BGR = 48,
+     CV_BayerGR2BGR = 49,
+     */
+    
+    for (int code = CV_BayerBG2BGRA; code <= CV_BayerGR2BGRA; ++code)
+    {
+        cvtColor(raw, rgb, code - 81);
+        cvtColor(rgb, reference, CV_BGR2BGRA);
+        
+        Mat actual;
+        cvtColor(raw, actual, code);
+        
+        EXPECT_EQ(reference.size(), actual.size());
+        EXPECT_EQ(reference.depth(), actual.depth());
+        EXPECT_EQ(reference.channels(), actual.channels());
+        
+        Size ssize = raw.size();
+        int cn = reference.channels();
+        ssize.width *= cn;
+        bool next = true;
+        for (int y = 0; y < ssize.height && next; ++y)
+        {
+            const uchar* rD = reference.ptr<uchar>(y);
+            const uchar* D = actual.ptr<uchar>(y);
+            for (int x = 0; x < ssize.width && next; ++x)
+                if (abs(rD[x] - D[x]) >= 1)
+                {
+                    next = false;
+                    ts->printf(cvtest::TS::SUMMARY, "Error in: (%d, %d)\n", x / cn,  y);
+                    ts->printf(cvtest::TS::SUMMARY, "Reference value: %d\n", rD[x]);
+                    ts->printf(cvtest::TS::SUMMARY, "Actual value: %d\n", D[x]);
+                    ts->printf(cvtest::TS::SUMMARY, "Src value: %d\n", raw.ptr<uchar>(y)[x]);
+                    ts->printf(cvtest::TS::SUMMARY, "Size: (%d, %d)\n", reference.rows, reference.cols);
+                    
+                    Mat diff;
+                    absdiff(actual, reference, diff);
+                    
+                    EXPECT_EQ(countNonZero(diff.reshape(1) > 1), 0);
+                    
+                    ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
+                    ts->set_gtest_status();
+                }
+        }
+    }
 }
