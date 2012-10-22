@@ -510,3 +510,10 @@ function(ocv_source_group group)
   file(GLOB srcs ${OCV_SOURCE_GROUP_GLOB})
   source_group(${group} FILES ${srcs})
 endfunction()
+
+# Set XCode attribute (build setting) for a target
+# Usage:
+#        ocv_set_xcode_property(<target>, <attribute_name>, <attribute_value>)
+macro(ocv_set_xcode_property TARGET XCODE_PROPERTY XCODE_VALUE)
+ set_property(TARGET ${TARGET} PROPERTY XCODE_ATTRIBUTE_${XCODE_PROPERTY} ${XCODE_VALUE})
+endmacro(ocv_set_xcode_property)

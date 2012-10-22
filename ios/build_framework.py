@@ -4,10 +4,12 @@ The script builds OpenCV.framework for iOS.
 The built framework is universal, it can be used to build app and run it on either iOS simulator or real device.
 
 Usage:
-    ./build_framework.py <outputdir>
+    ./build_framework.py <outputdir> [<IPHONEOS_DEPLOYMENT_TARGET=4.3>]
 
 By cmake conventions (and especially if you work with OpenCV repository),
 the output dir should not be a subdirectory of OpenCV source tree.
+
+IPHONEOS_DEPLOYMENT_TARGET is set to 4.3 unless specified.
 
 Script will create <outputdir>, if it's missing, and a few its subdirectories:
 
@@ -27,7 +29,7 @@ However, OpenCV.framework directory is erased and recreated on each run.
 
 import glob, re, os, os.path, shutil, string, sys
 
-def build_opencv(srcroot, buildroot, target):
+def build_opencv(srcroot, buildroot, target, deploymenttarget):
     "builds OpenCV for device or simulator"
 
     builddir = os.path.join(buildroot, target)
@@ -40,12 +42,17 @@ def build_opencv(srcroot, buildroot, target):
                 "-DCMAKE_BUILD_TYPE=Release " +
                 "-DCMAKE_TOOLCHAIN_FILE=%s/ios/cmake/Toolchains/Toolchain-%s_Xcode.cmake " +
                 "-DBUILD_opencv_world=ON " +
-                "-DCMAKE_INSTALL_PREFIX=install") % (srcroot, target)
+                "-DIPHONEOS_DEPLOYMENT_TARGET=%s " +
+                "-DCMAKE_INSTALL_PREFIX=install") % (srcroot, target, deploymenttarget)
+
     # if cmake cache exists, just rerun cmake to update OpenCV.xproj if necessary
+    cmakecmd = "cmake" #-DCMAKE_VERBOSE=TRUE --debug-output"
     if os.path.isfile(os.path.join(builddir, "CMakeCache.txt")):
-        os.system("cmake %s ." % (cmakeargs,))
+        cmakecmd += " %s ." % (cmakeargs,)
     else:
-        os.system("cmake %s %s" % (cmakeargs, srcroot))
+        cmakecmd += " %s %s" % (cmakeargs, srcroot)
+
+    os.system(cmakecmd)
 
     for wlib in [builddir + "/modules/world/UninstalledProducts/libopencv_world.a",
                  builddir + "/lib/Release/libopencv_world.a"]:
@@ -109,18 +116,22 @@ def put_framework_together(srcroot, dstroot):
     os.symlink("A", "Versions/Current")
 
 
-def build_framework(srcroot, dstroot):
+def build_framework(srcroot, dstroot, deploymenttarget):
     "main function to do all the work"
 
     for target in ["iPhoneOS", "iPhoneSimulator"]:
-        build_opencv(srcroot, os.path.join(dstroot, "build"), target)
+        build_opencv(srcroot, os.path.join(dstroot, "build"), target, deploymenttarget)
 
     put_framework_together(srcroot, dstroot)
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print "Usage:\n\t./build_framework.py <outputdir>\n\n"
+    if not len(sys.argv) in (2,3):
+        print "Usage:\n\t./build_framework.py <outputdir> [<IPHONEOS_DEPLOYMENT_TARGET=4.3>]\n\n"
         sys.exit(0)
 
-    build_framework(os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]), "..")), os.path.abspath(sys.argv[1]))
+    deploymenttarget = "4.3"
+    if (len(sys.argv) == 3):
+        deploymenttarget = sys.argv[2]
+
+    build_framework(os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]), "..")), os.path.abspath(sys.argv[1]), deploymenttarget)
