@@ -3780,23 +3780,6 @@ struct CV_EXPORTS Formatted
     vector<int> params;
 };
 
-
-/** Writes a point to an output stream in Matlab notation
- */
-template<typename _Tp> inline std::ostream& operator<<(std::ostream& out, const Point_<_Tp>& p)
-{
-    out << "[" << p.x << ", " << p.y << "]";
-    return out;
-}
-
-/** Writes a point to an output stream in Matlab notation
- */
-template<typename _Tp> inline std::ostream& operator<<(std::ostream& out, const Point3_<_Tp>& p)
-{
-    out << "[" << p.x << ", " << p.y << ", " << p.z << "]";
-    return out;
-}
-
 static inline Formatted format(const Mat& mtx, const char* fmt,
                                const vector<int>& params=vector<int>())
 {
@@ -3854,6 +3837,60 @@ template<typename _Tp> static inline std::ostream& operator << (std::ostream& ou
                                                                 const vector<Point3_<_Tp> >& vec)
 {
     Formatter::get()->write(out, Mat(vec));
+    return out;
+}
+
+
+/** Writes a Matx to an output stream.
+ */
+template<typename _Tp, int m, int n> inline std::ostream& operator<<(std::ostream& out, const Matx<_Tp, m, n>& matx)
+{
+    out << cv::Mat(matx);
+    return out;
+}
+
+/** Writes a point to an output stream in Matlab notation
+ */
+template<typename _Tp> inline std::ostream& operator<<(std::ostream& out, const Point_<_Tp>& p)
+{
+    out << "[" << p.x << ", " << p.y << "]";
+    return out;
+}
+
+/** Writes a point to an output stream in Matlab notation
+ */
+template<typename _Tp> inline std::ostream& operator<<(std::ostream& out, const Point3_<_Tp>& p)
+{
+    out << "[" << p.x << ", " << p.y << ", " << p.z << "]";
+    return out;
+}
+
+/** Writes a Vec to an output stream. Format example : [10, 20, 30]
+ */
+template<typename _Tp, int n> inline std::ostream& operator<<(std::ostream& out, const Vec<_Tp, n>& vec)
+{
+    out << "[";
+    for (int i = 0; i < n - 1; ++i) {
+        out << vec[i] << ", ";
+    }
+    out << vec[n-1] << "]";
+
+    return out;
+}
+
+/** Writes a Size_ to an output stream. Format example : [640 x 480]
+ */
+template<typename _Tp> inline std::ostream& operator<<(std::ostream& out, const Size_<_Tp>& size)
+{
+    out << "[" << size.width << " x " << size.height << "]";
+    return out;
+}
+
+/** Writes a Rect_ to an output stream. Format example : [640 x 480 from (10, 20)]
+ */
+template<typename _Tp> inline std::ostream& operator<<(std::ostream& out, const Rect_<_Tp>& rect)
+{
+    out << "[" << rect.width << " x " << rect.height << " from (" << rect.x << ", " << rect.y << ")]";
     return out;
 }
 
