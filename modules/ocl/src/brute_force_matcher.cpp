@@ -227,8 +227,8 @@ void matchUnrolledCached(const oclMat &query, const oclMat &train, const oclMat 
 }
 
 template < int BLOCK_SIZE, int MAX_DESC_LEN,  typename T/*, typename Mask*/ >
-void matchUnrolledCached(const oclMat query, const oclMat *trains, int n, const oclMat mask,
-                         const oclMat &bestTrainIdx, const oclMat &bestImgIdx, const oclMat &bestDistance, int distType)
+void matchUnrolledCached(const oclMat /*query*/, const oclMat * /*trains*/, int /*n*/, const oclMat /*mask*/,
+                         const oclMat &/*bestTrainIdx*/, const oclMat & /*bestImgIdx*/, const oclMat & /*bestDistance*/, int /*distType*/)
 {
 }
 
@@ -266,8 +266,8 @@ void match(const oclMat &query, const oclMat &train, const oclMat &mask,
 }
 
 template < int BLOCK_SIZE,  typename T/*, typename Mask*/ >
-void match(const oclMat query, const oclMat *trains, int n, const oclMat mask,
-           const oclMat &bestTrainIdx, const oclMat &bestImgIdx, const oclMat &bestDistance, int distType)
+void match(const oclMat /*query*/, const oclMat * /*trains*/, int /*n*/, const oclMat /*mask*/,
+           const oclMat &/*bestTrainIdx*/, const oclMat & /*bestImgIdx*/, const oclMat & /*bestDistance*/, int /*distType*/)
 {
 }
 
@@ -796,7 +796,7 @@ void match2Dispatcher(const oclMat &query, const oclMat &train, const oclMat &ma
 }
 
 template <int BLOCK_SIZE>
-void findKnnMatch(int k, const oclMat &trainIdx, const oclMat &distance, const oclMat &allDist, int distType)
+void findKnnMatch(int k, const oclMat &trainIdx, const oclMat &distance, const oclMat &allDist, int /*distType*/)
 {
     cv::ocl::Context *ctx = trainIdx.clCxt;
     size_t globalSize[] = {trainIdx.rows * BLOCK_SIZE, 1, 1};
@@ -1406,7 +1406,7 @@ void cv::ocl::BruteForceMatcher_OCL_base::knnMatch(const oclMat &query, const oc
 }
 
 void cv::ocl::BruteForceMatcher_OCL_base::knnMatch2Collection(const oclMat &query, const oclMat &trainCollection,
-        oclMat &trainIdx, oclMat &imgIdx, oclMat &distance, const oclMat &maskCollection)
+        oclMat &trainIdx, oclMat &imgIdx, oclMat &distance, const oclMat &/*maskCollection*/)
 {
     if (query.empty() || trainCollection.empty())
         return;
@@ -1548,7 +1548,8 @@ void cv::ocl::BruteForceMatcher_OCL_base::knnMatch(const oclMat &query, vector< 
         temp.reserve(2 * k);
 
         matches.resize(query.rows);
-        for_each(matches.begin(), matches.end(), bind2nd(mem_fun_ref(&vector<DMatch>::reserve), k));
+        for(size_t queryIdx = 0; queryIdx < matches.size(); queryIdx++ )
+            matches[queryIdx].reserve(k);
 
         for (size_t imgIdx = 0, size = trainDescCollection.size(); imgIdx < size; ++imgIdx)
         {
@@ -1572,8 +1573,15 @@ void cv::ocl::BruteForceMatcher_OCL_base::knnMatch(const oclMat &query, vector< 
 
         if (compactResult)
         {
-            vector< vector<DMatch> >::iterator new_end = remove_if(matches.begin(), matches.end(), mem_fun_ref(&vector<DMatch>::empty));
-            matches.erase(new_end, matches.end());
+            size_t i, j = 0;
+            for( i = 0; i < matches.size(); i++ )
+                if( !matches[i].empty() )
+                {
+                    if( i > j )
+                        matches[j] = matches[i];
+                    j++;
+                }
+            matches.resize(j);
         }
     }
 }
@@ -1702,7 +1710,7 @@ void cv::ocl::BruteForceMatcher_OCL_base::radiusMatch(const oclMat &query, const
 }
 
 void cv::ocl::BruteForceMatcher_OCL_base::radiusMatchCollection(const oclMat &query, oclMat &trainIdx, oclMat &imgIdx, oclMat &distance,
-        oclMat &nMatches, float maxDistance, const vector<oclMat> &masks)
+        oclMat &nMatches, float /*maxDistance*/, const vector<oclMat> &masks)
 {
     if (query.empty() || empty())
         return;

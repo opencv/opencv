@@ -51,13 +51,17 @@ using namespace cv;
 using namespace cv::ocl;
 using namespace std;
 
-#if !defined (HAVE_OPENCL)
+#if !defined HAVE_OPENCL
 void cv::ocl::dft(const oclMat &src, oclMat &dst, int flags)
 {
     throw_nogpu();
 }
+#elif !defined HAVE_CLAMDFFT
+void cv::ocl::dft(const oclMat &src, oclMat &dst, int flags)
+{
+    CV_Error(CV_StsNotImplemented, "OpenCL DFT is not implemented");
+}
 #else
-
 #include <clAmdFft.h>
 
 namespace cv

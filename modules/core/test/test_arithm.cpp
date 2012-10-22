@@ -1522,4 +1522,12 @@ protected:
 
 TEST(Core_ArithmMask, uninitialized) { CV_ArithmMaskTest test; test.safe_run(); }
 
+TEST(Multiply, FloatingPointRounding)
+{
+    cv::Mat src(1, 1, CV_8UC1, cv::Scalar::all(110)), dst;
+    cv::Scalar s(147.286359696927, 1, 1 ,1);
 
+    cv::multiply(src, s, dst, 1, CV_16U);
+    // with CV_32F this produce result 16202
+    ASSERT_EQ(dst.at<ushort>(0,0), 16201);
+}

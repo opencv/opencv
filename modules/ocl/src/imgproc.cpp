@@ -296,9 +296,9 @@ namespace cv
                     kernelName = "remapNNF1Constant";
             }
 
-            int channels = dst.oclchannels();
-            int depth = dst.depth();
-            int type = src.type();
+            //int channels = dst.oclchannels();
+            //int depth = dst.depth();
+            //int type = src.type();
             size_t blkSizeX = 16, blkSizeY = 16;
             size_t glbSizeX;
             int cols = dst.cols;
@@ -308,7 +308,7 @@ namespace cv
                 glbSizeX = cols % blkSizeX == 0 ? cols : (cols / blkSizeX + 1) * blkSizeX;
 
             }
-            else if(src.type() == CV_8UC3 || src.type() == CV_8UC4 || src.type() == CV_32FC1)
+            else if(src.type() == CV_32FC1 && interpolation == INTER_LINEAR)
             {
                 cols = (dst.cols + (dst.offset >> 2) % 4 + 3) / 4;
                 glbSizeX = cols % blkSizeX == 0 ? cols : (cols / blkSizeX + 1) * blkSizeX;
@@ -322,73 +322,6 @@ namespace cv
             size_t glbSizeY = dst.rows % blkSizeY == 0 ? dst.rows : (dst.rows / blkSizeY + 1) * blkSizeY;
             size_t globalThreads[3] = {glbSizeX, glbSizeY, 1};
             size_t localThreads[3] = {blkSizeX, blkSizeY, 1};
-            /*
-            /////////////////////////////
-            //using the image buffer
-            /////////////////////////////
-
-            size_t image_row_pitch = 0;
-            cl_int err1, err2, err3;
-            cl_mem_flags flags1 = CL_MEM_READ_ONLY;
-            cl_image_format format;
-            if(src.type() == CV_8UC1)
-            {
-                format.image_channel_order = CL_R;
-                format.image_channel_data_type = CL_UNSIGNED_INT8;
-            }
-            else if(src.type() == CV_8UC4)
-            {
-                format.image_channel_order = CL_RGBA;
-                format.image_channel_data_type = CL_UNSIGNED_INT8;
-            }
-            else if(src.type() == CV_32FC1)
-            {
-                format.image_channel_order = CL_R;
-                format.image_channel_data_type = CL_FLOAT;
-            }
-            else if(src.type() == CV_32FC4)
-            {
-                format.image_channel_order = CL_RGBA;
-                format.image_channel_data_type = CL_FLOAT;
-            }
-            cl_mem srcImage = clCreateImage2D(clCxt->impl->clContext, flags1, &format, src.cols, src.rows,
-                    image_row_pitch, NULL, &err1);
-            if(err1 != CL_SUCCESS)
-            {
-                printf("Error creating CL image buffer, error code %d\n", err1);
-                return;
-            }
-            const size_t src_origin[3] = {0, 0, 0};
-            const size_t region[3] = {src.cols, src.rows, 1};
-            cl_event BtoI_event, ItoB_event;
-            err3 = clEnqueueCopyBufferToImage(clCxt->impl->clCmdQueue, (cl_mem)src.data, srcImage,
-                    0, src_origin, region, 0, NULL, NULL);
-            if(err3 != CL_SUCCESS)
-            {
-                printf("Error copying buffer to image\n");
-                printf("Error code %d \n", err3);
-                return;
-            }
-            // clWaitForEvents(1, &BtoI_event);
-
-            cl_int ret;
-            Mat test(src.rows, src.cols, CV_8UC1);
-            memset(test.data, 0, src.rows*src.cols);
-            ret = clEnqueueReadImage(clCxt->impl->clCmdQueue, srcImage, CL_TRUE,
-                    src_origin, region, 0, 0, test.data, NULL, NULL, &ItoB_event);
-            if(ret != CL_SUCCESS)
-            {
-                printf("read image error, %d ", ret);
-                return;
-            }
-            clWaitForEvents(1, &ItoB_event);
-
-            cout << "src" << endl;
-            cout << src << endl;
-            cout<<"image:"<<endl;
-            cout<< test << endl;
-
-            */
 
 
             vector< pair<size_t, const void *> > args;
@@ -396,7 +329,6 @@ namespace cv
             {
                 args.push_back( make_pair(sizeof(cl_mem), (void *)&dst.data));
                 args.push_back( make_pair(sizeof(cl_mem), (void *)&src.data));
-                // args.push_back( make_pair(sizeof(cl_mem),(void*)&srcImage));  //imageBuffer
                 args.push_back( make_pair(sizeof(cl_mem), (void *)&map1.data));
                 args.push_back( make_pair(sizeof(cl_int), (void *)&dst.offset));
                 args.push_back( make_pair(sizeof(cl_int), (void *)&src.offset));
@@ -425,7 +357,6 @@ namespace cv
             {
                 args.push_back( make_pair(sizeof(cl_mem), (void *)&dst.data));
                 args.push_back( make_pair(sizeof(cl_mem), (void *)&src.data));
-                // args.push_back( make_pair(sizeof(cl_mem),(void*)&srcImage));  //imageBuffer
                 args.push_back( make_pair(sizeof(cl_mem), (void *)&map1.data));
                 args.push_back( make_pair(sizeof(cl_mem), (void *)&map2.data));
                 args.push_back( make_pair(sizeof(cl_int), (void *)&dst.offset));
@@ -1369,10 +1300,10 @@ namespace cv
             if( src.depth() != CV_8U || src.oclchannels() != 4 )
                 CV_Error( CV_StsUnsupportedFormat, "Only 8-bit, 4-channel images are supported" );
 
-            if(src.clCxt->impl->double_support == 0)
-            {
-                CV_Error( CV_GpuNotSupported, "Selected device doesn't support double, so a deviation is exists.\nIf the accuracy is acceptable, the error can be ignored.\n");
-            }
+            //            if(src.clCxt->impl->double_support == 0)
+            //            {
+            //                CV_Error( CV_GpuNotSupported, "Selected device doesn't support double, so a deviation exists.\nIf the accuracy is acceptable, the error can be ignored.\n");
+            //            }
 
             dst.create( src.size(), CV_8UC4 );
 
@@ -1437,10 +1368,10 @@ namespace cv
             if( src.depth() != CV_8U || src.oclchannels() != 4 )
                 CV_Error( CV_StsUnsupportedFormat, "Only 8-bit, 4-channel images are supported" );
 
-            if(src.clCxt->impl->double_support == 0)
-            {
-                CV_Error( CV_GpuNotSupported, "Selected device doesn't support double, so a deviation is exists.\nIf the accuracy is acceptable, the error can be ignored.\n");
-            }
+            //            if(src.clCxt->impl->double_support == 0)
+            //            {
+            //                CV_Error( CV_GpuNotSupported, "Selected device doesn't support double, so a deviation exists.\nIf the accuracy is acceptable, the error can be ignored.\n");
+            //            }
 
             dstr.create( src.size(), CV_8UC4 );
             dstsp.create( src.size(), CV_16SC2 );
@@ -1603,7 +1534,7 @@ namespace cv
                                int borderType )
         {
             int cn = src.channels();
-            int i, j, k, maxk, radius;
+            int i, j, maxk, radius;
             Size size = src.size();
 
             CV_Assert( (src.channels() == 1 || src.channels() == 3) &&
