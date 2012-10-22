@@ -426,7 +426,7 @@ protected:
         }
 
         // 3. check C++ PCA w/retainedVariance
-        cPCA( rPoints.t(), Mat(), CV_PCA_DATA_AS_COL, retainedVariance );
+        cPCA.computeVar( rPoints.t(), Mat(), CV_PCA_DATA_AS_COL, retainedVariance );
         diffPrjEps = 1, diffBackPrjEps = 1;
         Mat rvPrjTestPoints = cPCA.project(rTestPoints.t());
 
