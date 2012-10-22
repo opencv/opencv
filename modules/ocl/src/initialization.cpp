@@ -424,7 +424,7 @@ namespace cv
 
         void openCLCopyBuffer2D(Context *clCxt, void *dst, size_t dpitch, int dst_offset,
                                 const void *src, size_t spitch,
-                                size_t width, size_t height, int src_offset, enum openCLMemcpyKind kind)
+                                size_t width, size_t height, int src_offset)
         {
             size_t src_origin[3] = {src_offset % spitch, src_offset / spitch, 0};
             size_t dst_origin[3] = {dst_offset % dpitch, dst_offset / dpitch, 0};
@@ -451,7 +451,7 @@ namespace cv
         }
         int savetofile(const Context *clcxt,  cl_program &program, const char *fileName)
         {
-            cl_int status;
+            //cl_int status;
             size_t numDevices = 1;
             cl_device_id *devices = clcxt->impl->devices;
             //figure out the sizes of each of the binaries.
@@ -507,7 +507,7 @@ namespace cv
                     FILE *fp = fopen(fileName, "wb+");
                     if(fp == NULL)
                     {
-                        char *temp;
+                        char *temp = NULL;
                         sprintf(temp, "Failed to load kernel file : %s\r\n", fileName);
                         CV_Error(CV_GpuApiCallError, temp);
                     }
@@ -639,8 +639,7 @@ namespace cv
             return kernel;
         }
 
-        void openCLVerifyKernel(const Context *clCxt, cl_kernel kernel, size_t *blockSize,
-                                size_t *globalThreads, size_t *localThreads)
+        void openCLVerifyKernel(const Context *clCxt, cl_kernel kernel, size_t *localThreads)
         {
             size_t kernelWorkGroupSize;
             openCLSafeCall(clGetKernelWorkGroupInfo(kernel, clCxt->impl->devices[0],
@@ -679,10 +678,10 @@ namespace cv
                 globalThreads[1] = divUp(globalThreads[1], localThreads[1]) * localThreads[1];
                 globalThreads[2] = divUp(globalThreads[2], localThreads[2]) * localThreads[2];
 
-                size_t blockSize = localThreads[0] * localThreads[1] * localThreads[2];
-                cv::ocl::openCLVerifyKernel(clCxt, kernel, &blockSize, globalThreads, localThreads);
+                //size_t blockSize = localThreads[0] * localThreads[1] * localThreads[2];
+                cv::ocl::openCLVerifyKernel(clCxt, kernel, localThreads);
             }
-            for(int i = 0; i < args.size(); i ++)
+            for(size_t i = 0; i < args.size(); i ++)
                 openCLSafeCall(clSetKernelArg(kernel, i, args[i].first, args[i].second));
 
 #ifndef PRINT_KERNEL_RUN_TIME
@@ -897,7 +896,7 @@ namespace cv
             impl->maxComputeUnits = m.impl->maxComputeUnits;
             impl->double_support = m.impl->double_support;
             memcpy(impl->extra_options, m.impl->extra_options, 512);
-            for(int i = 0; i < m.impl->devices.size(); i++)
+            for(size_t i = 0; i < m.impl->devices.size(); i++)
             {
                 impl->devices.push_back(m.impl->devices[i]);
                 impl->devName.push_back(m.impl->devName[i]);

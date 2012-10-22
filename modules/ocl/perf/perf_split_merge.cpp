@@ -450,7 +450,7 @@ TEST_P(Split, Accuracy)
     for(int j = LOOPROISTART; j < LOOPROIEND; j ++)
     {
         Has_roi(j);
-        cv::Mat         dev_dst[4]  = {dst1_roi, dst2_roi, dst3_roi, dst4_roi};
+        //cv::Mat         dev_dst[4]  = {dst1_roi, dst2_roi, dst3_roi, dst4_roi};
         cv::ocl::oclMat dev_gdst[4] = {gdst1, gdst2, gdst3, gdst4};
         gdst1_whole = dst1;
         gdst1 = gdst1_whole(Rect(dst1x, dst1y, roicols, roirows));

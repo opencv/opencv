@@ -52,8 +52,6 @@ using namespace cvtest;
 using namespace testing;
 using namespace std;
 
-#define FILTER_IMAGE "../../../samples/gpu/road.png"
-
 #ifndef MWC_TEST_UTILITY
 #define MWC_TEST_UTILITY
 
@@ -79,7 +77,7 @@ IMPLEMENT_PARAM_CLASS(Channels, int)
 
 ////////////////////////////////////////////////////////
 // Canny1
-
+extern std::string workdir;
 IMPLEMENT_PARAM_CLASS(AppertureSize, int);
 IMPLEMENT_PARAM_CLASS(L2gradient, bool);
 
@@ -101,7 +99,7 @@ PARAM_TEST_CASE(Canny1, AppertureSize, L2gradient)
 
 TEST_P(Canny1, Performance)
 {
-    cv::Mat img = readImage(FILTER_IMAGE, cv::IMREAD_GRAYSCALE);
+    cv::Mat img = readImage(workdir + "fruits.jpg", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(img.empty());
 
     double low_thresh = 100.0;
