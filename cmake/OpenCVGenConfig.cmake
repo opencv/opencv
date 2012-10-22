@@ -53,6 +53,12 @@ if(OpenCV_LIB_COMPONENTS)
   list(REMOVE_ITEM OPENCV_MODULES_CONFIGCMAKE ${OpenCV_LIB_COMPONENTS})
 endif()
 
+if(IOS)
+  foreach(m ${OPENCV_MODULES_BUILD})
+    ocv_set_xcode_property(${m} IPHONEOS_DEPLOYMENT_TARGET ${IPHONEOS_DEPLOYMENT_TARGET})
+  endforeach()
+endif()
+
 macro(ocv_generate_dependencies_map_configcmake suffix configuration)
   set(OPENCV_DEPENDENCIES_MAP_${suffix} "")
   set(OPENCV_PROCESSED_LIBS "")
