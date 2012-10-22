@@ -6,7 +6,6 @@ import org.opencv.android.OpenCVLoader;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.framework.OpenCvJavaCameraView;
-import org.opencv.framework.OpenCvNativeCameraView;
 import org.opencv.framework.OpenCvCameraBridgeViewBase.CvCameraViewListener;
 import org.opencv.highgui.Highgui;
 import org.opencv.imgproc.Imgproc;
@@ -122,8 +121,6 @@ public class Sample4Mixed extends Activity implements CvCameraViewListener {
     public Mat onCameraFrame(Mat inputFrame) {
         final int viewMode = mViewMode;
 
-        Log.d(TAG, "Input format: " + inputFrame);
-
         switch (viewMode) {
         case VIEW_MODE_GRAY:
             // input frame has gray scale format
@@ -140,14 +137,11 @@ public class Sample4Mixed extends Activity implements CvCameraViewListener {
             break;
         case VIEW_MODE_FEATURES:
             // input frame has RGBA format
-            //Imgproc.cvtColor(mYuv, mRgba, Imgproc.COLOR_YUV420sp2RGB, 4);
             inputFrame.copyTo(mRgba);
             Imgproc.cvtColor(mRgba, mGrayMat, Imgproc.COLOR_RGBA2GRAY);
             FindFeatures(mGrayMat.getNativeObjAddr(), mRgba.getNativeObjAddr());
             break;
         }
-
-        Log.d(TAG, "Output format: " + mRgba);
 
         return mRgba;
     }

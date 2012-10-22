@@ -3,6 +3,7 @@ package org.opencv.samples.tutorial0;
 import java.io.IOException;
 import java.util.List;
 
+import android.annotation.TargetApi;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
@@ -43,7 +44,8 @@ public abstract class SampleViewBase extends SurfaceView implements SurfaceHolde
         return mFrameHeight;
     }
 
-    public void setPreview() throws IOException {
+    @TargetApi(11)
+        public void setPreview() throws IOException {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
             mSf = new SurfaceTexture(10);
             mCamera.setPreviewTexture( mSf );
