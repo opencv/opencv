@@ -59,6 +59,9 @@
 #  ifdef ANDROID
      template <typename Scalar> Scalar log2(Scalar v) { using std::log; return log(v)/log(Scalar(2)); }
 #  endif
+#  if defined __GNUC__ && defined __APPLE__
+#    pragma GCC diagnostic ignored "-Wshadow"
+#  endif
 #  include <unsupported/Eigen/MatrixFunctions>
 #  include <Eigen/Dense>
 #endif

@@ -48,6 +48,10 @@
 #  pragma warning( disable: 4100 4244 4267 )
 #endif
 
+#if defined __GNUC__ && defined __APPLE__
+#  pragma GCC diagnostic ignored "-Wshadow"
+#endif
+
 #include <ImfHeader.h>
 #include <ImfInputFile.h>
 #include <ImfOutputFile.h>
