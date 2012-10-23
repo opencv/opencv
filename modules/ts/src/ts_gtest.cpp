@@ -6352,7 +6352,9 @@ namespace internal {
 
 // Valid only for fast death tests. Indicates the code is running in the
 // child process of a fast style death test.
+# if !GTEST_OS_WINDOWS
 static bool g_in_fast_death_test_child = false;
+# endif
 
 // Returns a Boolean value indicating whether the caller is currently
 // executing in the context of the death test child process.  Tools such as
