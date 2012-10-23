@@ -5,16 +5,11 @@ import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.Menu;
-import android.view.MenuItem;
 import android.view.Window;
 
 public class Sample0Base extends Activity {
 
     private static final String TAG = "OCVSample::Activity";
-
-    private MenuItem            mItemPreviewRGBA;
-    private MenuItem            mItemPreviewGray;
     private Sample0View         mView;
 
     public Sample0Base() {
@@ -54,23 +49,5 @@ public class Sample0Base extends Activity {
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         mView = new Sample0View(this);
         setContentView(mView);
-    }
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        Log.i(TAG, "called onCreateOptionsMenu");
-        mItemPreviewRGBA = menu.add("Preview RGBA");
-        mItemPreviewGray = menu.add("Preview GRAY");
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        Log.i(TAG, "called onOptionsItemSelected; selected item: " + item);
-        if (item == mItemPreviewRGBA)
-            mView.setViewMode(Sample0View.VIEW_MODE_RGBA);
-        else if (item == mItemPreviewGray)
-            mView.setViewMode(Sample0View.VIEW_MODE_GRAY);
-        return true;
     }
 }
