@@ -70,7 +70,7 @@ static void from_str(const string& str, int type, void* dst)
     else if( type == Param::REAL )
         ss >> *(double*)dst;
     else if( type == Param::STRING )
-        ss >> *(string*)dst;
+        *(string*)dst = str;
     else
         throw cv::Exception(CV_StsBadArg, "unknown/unsupported parameter type", "", __FILE__, __LINE__);
 
