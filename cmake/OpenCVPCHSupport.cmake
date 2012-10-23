@@ -182,10 +182,20 @@ MACRO(ADD_PRECOMPILED_HEADER_TO_TARGET _targetName _input _pch_output_to_use )
 
     _PCH_GET_TARGET_COMPILE_FLAGS(_target_cflags ${_name} ${_pch_output_to_use} ${_dowarn})
     #MESSAGE("Add flags ${_target_cflags} to ${_targetName} " )
-    SET_TARGET_PROPERTIES(${_targetName}
-      PROPERTIES
-      COMPILE_FLAGS ${_target_cflags}
-      )
+
+    GET_TARGET_PROPERTY(_sources ${_targetName} SOURCES)
+    FOREACH(src ${_sources})
+      if(NOT "${src}" MATCHES "\\.mm$")
+        get_source_file_property(_flags "${src}" COMPILE_FLAGS)
+        if(_flags)
+          set(_flags "${_flags} ${_target_cflags}")
+        else()
+          set(_flags "${_target_cflags}")
+        endif()
+
+        set_source_files_properties("${src}" PROPERTIES COMPILE_FLAGS "${_flags}")
+      endif()
+    ENDFOREACH()
 
     ADD_CUSTOM_TARGET(pch_Generate_${_targetName}
       DEPENDS ${_pch_output_to_use}
