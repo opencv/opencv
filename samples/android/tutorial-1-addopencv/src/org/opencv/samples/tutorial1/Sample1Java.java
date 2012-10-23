@@ -4,8 +4,8 @@ import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.core.Mat;
-import org.opencv.framework.OpenCvCameraBridgeViewBase.CvCameraViewListener;
-import org.opencv.framework.OpenCvJavaCameraView;
+import org.opencv.android.CameraBridgeViewBase.CvCameraViewListener;
+import org.opencv.android.JavaCameraView;
 
 import android.app.Activity;
 import android.os.Bundle;
@@ -16,7 +16,7 @@ import android.view.WindowManager;
 public class Sample1Java extends Activity implements CvCameraViewListener {
     private static final String TAG = "OCVSample::Activity";
 
-    private OpenCvJavaCameraView mOpenCvCameraView;
+    private JavaCameraView mOpenCvCameraView;
 
     private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this) {
         @Override
@@ -49,7 +49,7 @@ public class Sample1Java extends Activity implements CvCameraViewListener {
 
         setContentView(R.layout.tutorial1_surface_view);
 
-        mOpenCvCameraView = (OpenCvJavaCameraView)findViewById(R.id.tutorial1_activity_surface_view);
+        mOpenCvCameraView = (JavaCameraView)findViewById(R.id.tutorial1_activity_surface_view);
         mOpenCvCameraView.setCvCameraViewListener(this);
     }
 

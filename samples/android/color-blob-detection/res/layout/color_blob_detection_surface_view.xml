@@ -3,7 +3,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent" >
 
-    <org.opencv.framework.OpenCvJavaCameraView
+    <org.opencv.android.JavaCameraView
         android:layout_width="fill_parent"
         android:layout_height="fill_parent"
         android:id="@+id/color_blob_detection_activity_surface_view" />

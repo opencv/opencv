@@ -13,8 +13,8 @@ import org.opencv.core.MatOfInt;
 import org.opencv.core.Point;
 import org.opencv.core.Scalar;
 import org.opencv.core.Size;
-import org.opencv.framework.OpenCvJavaCameraView;
-import org.opencv.framework.OpenCvCameraBridgeViewBase.CvCameraViewListener;
+import org.opencv.android.JavaCameraView;
+import org.opencv.android.CameraBridgeViewBase.CvCameraViewListener;
 import org.opencv.imgproc.Imgproc;
 
 import android.app.Activity;
@@ -45,7 +45,7 @@ public class ImageManipulationsActivity extends Activity implements CvCameraView
     private MenuItem             mItemPreviewZoom;
     private MenuItem             mItemPreviewPixelize;
     private MenuItem             mItemPreviewPosterize;
-    private OpenCvJavaCameraView mOpenCvCameraView;
+    private JavaCameraView       mOpenCvCameraView;
 
     private Size                 mSize0;
     private Size                 mSizeRgba;
@@ -106,7 +106,7 @@ public class ImageManipulationsActivity extends Activity implements CvCameraView
 
         setContentView(R.layout.image_manipulations_surface_view);
 
-        mOpenCvCameraView = (OpenCvJavaCameraView)findViewById(R.id.image_manipulations_activity_surface_view);
+        mOpenCvCameraView = (JavaCameraView)findViewById(R.id.image_manipulations_activity_surface_view);
         mOpenCvCameraView.setCvCameraViewListener(this);
     }
 

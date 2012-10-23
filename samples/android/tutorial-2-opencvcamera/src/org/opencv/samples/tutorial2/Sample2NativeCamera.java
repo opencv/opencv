@@ -8,8 +8,8 @@ import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.Point;
 import org.opencv.core.Scalar;
-import org.opencv.framework.OpenCvJavaCameraView;
-import org.opencv.framework.OpenCvCameraBridgeViewBase.CvCameraViewListener;
+import org.opencv.android.NativeCameraView;
+import org.opencv.android.CameraBridgeViewBase.CvCameraViewListener;
 import org.opencv.highgui.Highgui;
 import org.opencv.imgproc.Imgproc;
 
@@ -35,7 +35,7 @@ public class Sample2NativeCamera extends Activity implements CvCameraViewListene
     private Mat                 mRgba;
     private Mat                 mIntermediateMat;
 
-    private OpenCvJavaCameraView mOpenCvCameraView;
+    private NativeCameraView    mOpenCvCameraView;
 
     private BaseLoaderCallback  mLoaderCallback = new BaseLoaderCallback(this) {
         @Override
@@ -68,7 +68,7 @@ public class Sample2NativeCamera extends Activity implements CvCameraViewListene
 
         setContentView(R.layout.tutorial2_surface_view);
 
-        mOpenCvCameraView = (OpenCvJavaCameraView)findViewById(R.id.tutorial2_activity_surface_view);
+        mOpenCvCameraView = (NativeCameraView)findViewById(R.id.tutorial2_activity_surface_view);
         mOpenCvCameraView.setCvCameraViewListener(this);
     }
 

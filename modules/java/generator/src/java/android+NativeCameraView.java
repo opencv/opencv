@@ -1,14 +1,11 @@
-package org.opencv.framework;
+package org.opencv.android;
 
-import org.opencv.android.Utils;
 import org.opencv.core.Mat;
 import org.opencv.core.Size;
 import org.opencv.highgui.Highgui;
 import org.opencv.highgui.VideoCapture;
 
 import android.content.Context;
-import android.graphics.Bitmap;
-import android.graphics.Canvas;
 import android.util.AttributeSet;
 import android.util.Log;
 
@@ -17,31 +14,32 @@ import android.util.Log;
  * Due to the big amount of work done, by the base class this child is only responsible
  * for creating camera, destroying camera and delivering frames while camera is enabled
  */
-public class OpenCvNativeCameraView extends OpenCvCameraBridgeViewBase {
+public class NativeCameraView extends CameraBridgeViewBase {
 
-    public static final String TAG = "OpenCvNativeCameraView";
+    public static final String TAG = "NativeCameraView";
     private boolean mStopThread;
     private Thread mThread;
     private VideoCapture mCamera;
 
-
-    public OpenCvNativeCameraView(Context context, AttributeSet attrs) {
+    public NativeCameraView(Context context, AttributeSet attrs) {
         super(context, attrs);
     }
 
-
     @Override
-    protected void connectCamera(int width, int height) {
+    protected boolean connectCamera(int width, int height) {
 
         /* 1. We need to instantiate camera
          * 2. We need to start thread which will be getting frames
          */
         /* First step - initialize camera connection */
-        initializeCamera(getWidth(), getHeight());
+        if (!initializeCamera(getWidth(), getHeight()))
+            return false;
 
         /* now we can start update thread */
-        mThread = new Thread(new CameraWorker(getWidth(), getHeight()));
+        mThread = new Thread(new CameraWorker());
         mThread.start();
+
+        return true;
     }
 
     @Override
@@ -61,7 +59,6 @@ public class OpenCvNativeCameraView extends OpenCvCameraBridgeViewBase {
 
         /* Now release camera */
         releaseCamera();
-
     }
 
     public static class OpenCvSizeAccessor implements ListItemAccessor {
@@ -78,32 +75,39 @@ public class OpenCvNativeCameraView extends OpenCvCameraBridgeViewBase {
 
     }
 
-    private void initializeCamera(int width, int height) {
-        mCamera = new VideoCapture(Highgui.CV_CAP_ANDROID);
-        //TODO: improve error handling
+    private boolean initializeCamera(int width, int height) {
+        synchronized (this) {
+            mCamera = new VideoCapture(Highgui.CV_CAP_ANDROID);
 
-        java.util.List<Size> sizes = mCamera.getSupportedPreviewSizes();
+            if (mCamera == null)
+                return false;
 
-        /* Select the size that fits surface considering maximum size allowed */
-        FrameSize frameSize = calculateCameraFrameSize(sizes, new OpenCvSizeAccessor(), width, height);
+            //TODO: improve error handling
 
+            java.util.List<Size> sizes = mCamera.getSupportedPreviewSizes();
 
-        double frameWidth = frameSize.width;
-        double frameHeight = frameSize.height;
+            /* Select the size that fits surface considering maximum size allowed */
+            Size frameSize = calculateCameraFrameSize(sizes, new OpenCvSizeAccessor(), width, height);
 
+            mFrameWidth = (int)frameSize.width;
+            mFrameHeight = (int)frameSize.height;
 
-        mCamera.set(Highgui.CV_CAP_PROP_FRAME_WIDTH, frameWidth);
-        mCamera.set(Highgui.CV_CAP_PROP_FRAME_HEIGHT, frameHeight);
+            AllocateCache();
 
-        mFrameWidth = (int)frameWidth;
-        mFrameHeight = (int)frameHeight;
+            mCamera.set(Highgui.CV_CAP_PROP_FRAME_WIDTH, frameSize.width);
+            mCamera.set(Highgui.CV_CAP_PROP_FRAME_HEIGHT, frameSize.height);
+        }
 
         Log.i(TAG, "Selected camera frame size = (" + mFrameWidth + ", " + mFrameHeight + ")");
+
+        return true;
     }
 
     private void releaseCamera() {
-        if (mCamera != null) {
-            mCamera.release();
+        synchronized (this) {
+            if (mCamera != null) {
+                mCamera.release();
+            }
         }
     }
 
@@ -111,18 +115,8 @@ public class OpenCvNativeCameraView extends OpenCvCameraBridgeViewBase {
 
         private Mat mRgba = new Mat();
         private Mat mGray = new Mat();
-        private int mWidth;
-        private int mHeight;
-
-        CameraWorker(int w, int h) {
-            mWidth = w;
-            mHeight = h;
-        }
 
         public void run() {
-            Mat modified;
-
-
             do {
                 if (!mCamera.grab()) {
                     Log.e(TAG, "Camera frame grab failed");

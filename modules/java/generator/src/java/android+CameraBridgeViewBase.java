@@ -1,4 +1,4 @@
-package org.opencv.framework;
+package org.opencv.android;
 
 import java.util.List;
 
@@ -26,7 +26,7 @@ import android.view.SurfaceView;
  * The clients shall implement CvCameraViewListener
  * TODO: add method to control the format in which the frames will be delivered to CvCameraViewListener
  */
-public abstract class OpenCvCameraBridgeViewBase extends SurfaceView implements SurfaceHolder.Callback {
+public abstract class CameraBridgeViewBase extends SurfaceView implements SurfaceHolder.Callback {
 
     private static final int MAX_UNSPECIFIED = -1;
 
@@ -40,7 +40,7 @@ public abstract class OpenCvCameraBridgeViewBase extends SurfaceView implements 
 
     private Bitmap mCacheBitmap;
 
-    public OpenCvCameraBridgeViewBase(Context context, AttributeSet attrs) {
+    public CameraBridgeViewBase(Context context, AttributeSet attrs) {
         super(context, attrs);
         getHolder().addCallback(this);
         mMaxWidth = MAX_UNSPECIFIED;
@@ -74,7 +74,7 @@ public abstract class OpenCvCameraBridgeViewBase extends SurfaceView implements 
     private static final int STOPPED = 0;
     private static final int STARTED = 1;
 
-    private static final String TAG = "OpenCvCameraBridge";
+    private static final String TAG = "CameraBridge";
 
     private CvCameraViewListener mListener;
     private int mState = STOPPED;

@@ -12,8 +12,8 @@ import org.opencv.core.MatOfPoint;
 import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
 import org.opencv.core.Size;
-import org.opencv.framework.OpenCvCameraBridgeViewBase.CvCameraViewListener;
-import org.opencv.framework.OpenCvJavaCameraView;
+import org.opencv.android.CameraBridgeViewBase.CvCameraViewListener;
+import org.opencv.android.JavaCameraView;
 import org.opencv.imgproc.Imgproc;
 
 import android.app.Activity;
@@ -37,7 +37,7 @@ public class ColorBlobDetectionActivity extends Activity implements OnTouchListe
     private Size                 SPECTRUM_SIZE;
     private Scalar               CONTOUR_COLOR;
 
-    private OpenCvJavaCameraView mOpenCvCameraView;
+    private JavaCameraView mOpenCvCameraView;
 
     private BaseLoaderCallback  mLoaderCallback = new BaseLoaderCallback(this) {
         @Override
@@ -71,7 +71,7 @@ public class ColorBlobDetectionActivity extends Activity implements OnTouchListe
 
         setContentView(R.layout.color_blob_detection_surface_view);
 
-        mOpenCvCameraView = (OpenCvJavaCameraView)findViewById(R.id.color_blob_detection_activity_surface_view);
+        mOpenCvCameraView = (JavaCameraView)findViewById(R.id.color_blob_detection_activity_surface_view);
         mOpenCvCameraView.setCvCameraViewListener(this);
     }
 
