@@ -435,6 +435,8 @@ endif()
 # Extra OpenCV targets: uninstall, package_source, perf, etc.
 include(cmake/OpenCVExtraTargets.cmake)
 
+# --- WSH Support ---
+include(cmake/OpenCVDetectWSH.cmake)
 
 # ----------------------------------------------------------------------------
 # Process subdirectories

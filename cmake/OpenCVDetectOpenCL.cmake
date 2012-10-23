@@ -4,16 +4,26 @@ if(APPLE)
 else()
     #find_package(OpenCL QUIET)
     if(WITH_OPENCLAMDFFT)
-            find_path(CLAMDFFT_INCLUDE_DIR
-                NAMES clAmdFft.h)
-            find_library(CLAMDFFT_LIBRARIES
-                NAMES clAmdFft.Runtime)
+		find_path(CLAMDFFT_INCLUDE_DIR
+			NAMES clAmdFft.h PATHS $ENV{PROGRAMFILES}/AMD/clAmdFft/include)
+		if( CMAKE_SIZEOF_VOID_P EQUAL 8 )
+			find_library(CLAMDFFT_LIBRARIES
+                NAMES clAmdFft.Runtime PATHS $ENV{PROGRAMFILES}/AMD/clAmdFft/lib64/import)
+		else( CMAKE_SIZEOF_VOID_P EQUAL 8 )
+			find_library(CLAMDFFT_LIBRARIES
+                NAMES clAmdFft.Runtime PATHS $ENV{PROGRAMFILES}/AMD/clAmdFft/lib32/import)
+		endif( CMAKE_SIZEOF_VOID_P EQUAL 8 )
     endif()
     if(WITH_OPENCLAMDBLAS)
-            find_path(CLAMDBLAS_INCLUDE_DIR
-                NAMES clAmdBlas.h)
-            find_library(CLAMDBLAS_LIBRARIES
-                NAMES clAmdBlas)
+		find_path(CLAMDBLAS_INCLUDE_DIR
+			NAMES clAmdBlas.h PATHS $ENV{PROGRAMFILES}/AMD/clAmdBlas/include)
+		if( CMAKE_SIZEOF_VOID_P EQUAL 8 )
+			find_library(CLAMDBLAS_LIBRARIES
+				NAMES clAmdBlas PATHS $ENV{PROGRAMFILES}/AMD/clAmdBlas/lib64/import)
+		else( CMAKE_SIZEOF_VOID_P EQUAL 8 )
+			find_library(CLAMDBLAS_LIBRARIES
+				NAMES clAmdBlas PATHS $ENV{PROGRAMFILES}/AMD/clAmdBlas/lib32/import)
+		endif( CMAKE_SIZEOF_VOID_P EQUAL 8 )
     endif()
     # Try AMD/ATI Stream SDK
     if (NOT OPENCL_FOUND)
