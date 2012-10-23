@@ -2069,7 +2069,11 @@ static void Bayer2RGB_( const Mat& srcmat, Mat& dstmat, int code )
     int blue = code == CV_BayerBG2BGR || code == CV_BayerGB2BGR ? -1 : 1;
     int start_with_green = code == CV_BayerGB2BGR || code == CV_BayerGR2BGR;
 
-    dst0 += dst_step + 3 + 1;
+    int dcn = dstmat.channels(), dcn2 = dcn * 2;
+    T alpha = ColorChannel<T>::max();
+    int offset = dcn == 4 ? 1 : 0;
+
+    dst0 += dst_step + dcn + 1;
     size.height -= 2;
     size.width -= 2;
 
@@ -2082,8 +2086,8 @@ static void Bayer2RGB_( const Mat& srcmat, Mat& dstmat, int code )
 
         if( size.width <= 0 )
         {
-            dst[-4] = dst[-3] = dst[-2] = dst[size.width*3-1] =
-            dst[size.width*3] = dst[size.width*3+1] = 0;
+            dst[-4] = dst[-3] = dst[-2] = dst[size.width*dcn-1] =
+            dst[size.width*dcn] = dst[size.width*dcn+1] = 0;
             continue;
         }
 
@@ -2095,16 +2099,16 @@ static void Bayer2RGB_( const Mat& srcmat, Mat& dstmat, int code )
             dst[0] = bayer[bayer_step+1];
             dst[blue] = (T)t1;
             bayer++;
-            dst += 3;
+            dst += dcn;
         }
 
-        int delta = vecOp.bayer2RGB(bayer, bayer_step, dst, size.width, blue);
+        int delta = dcn == 4 ? 0 : vecOp.bayer2RGB(bayer, bayer_step, dst, size.width, blue);
         bayer += delta;
-        dst += delta*3;
+        dst += delta * dcn;
 
         if( blue > 0 )
         {
-            for( ; bayer <= bayer_end - 2; bayer += 2, dst += 6 )
+            for( ; bayer <= bayer_end - 2; bayer += 2, dst += dcn2 )
             {
                 t0 = (bayer[0] + bayer[2] + bayer[bayer_step*2] +
                       bayer[bayer_step*2+2] + 2) >> 2;
@@ -2116,14 +2120,14 @@ static void Bayer2RGB_( const Mat& srcmat, Mat& dstmat, int code )
 
                 t0 = (bayer[2] + bayer[bayer_step*2+2] + 1) >> 1;
                 t1 = (bayer[bayer_step+1] + bayer[bayer_step+3] + 1) >> 1;
-                dst[2] = (T)t0;
-                dst[3] = bayer[bayer_step+2];
-                dst[4] = (T)t1;
+                dst[2 + offset] = (T)t0;
+                dst[3 + offset] = bayer[bayer_step+2];
+                dst[4 + offset] = (T)t1;
             }
         }
         else
         {
-            for( ; bayer <= bayer_end - 2; bayer += 2, dst += 6 )
+            for( ; bayer <= bayer_end - 2; bayer += 2, dst += dcn2 )
             {
                 t0 = (bayer[0] + bayer[2] + bayer[bayer_step*2] +
                       bayer[bayer_step*2+2] + 2) >> 2;
@@ -2135,9 +2139,9 @@ static void Bayer2RGB_( const Mat& srcmat, Mat& dstmat, int code )
 
                 t0 = (bayer[2] + bayer[bayer_step*2+2] + 1) >> 1;
                 t1 = (bayer[bayer_step+1] + bayer[bayer_step+3] + 1) >> 1;
-                dst[4] = (T)t0;
-                dst[3] = bayer[bayer_step+2];
-                dst[2] = (T)t1;
+                dst[4 + offset] = (T)t0;
+                dst[3 + offset] = bayer[bayer_step+2];
+                dst[2 + offset] = (T)t1;
             }
         }
 
@@ -2151,15 +2155,19 @@ static void Bayer2RGB_( const Mat& srcmat, Mat& dstmat, int code )
             dst[0] = (T)t1;
             dst[blue] = bayer[bayer_step+1];
             bayer++;
-            dst += 3;
+            dst += dcn;
         }
 
-        dst0[-4] = dst0[-1];
-        dst0[-3] = dst0[0];
-        dst0[-2] = dst0[1];
-        dst0[size.width*3-1] = dst0[size.width*3-4];
-        dst0[size.width*3] = dst0[size.width*3-3];
-        dst0[size.width*3+1] = dst0[size.width*3-2];
+        dst0[-4] = dst0[-1+offset];
+        dst0[-3] = dst0[0+offset];
+        dst0[-2] = dst0[1+offset];
+        if (dcn == 4)
+           dst0[-5] = dst0[-1];
+        dst0[size.width*dcn-1] = dst0[size.width*dcn-4-offset];
+        dst0[size.width*dcn] = dst0[size.width*dcn-3-offset];
+        dst0[size.width*dcn+1] = dst0[size.width*dcn-2-offset];
+        if (dcn == 4)
+           dst0[size.width*dcn+2] = dst0[size.width*dcn-4];
 
         blue = -blue;
         start_with_green = !start_with_green;
@@ -2168,15 +2176,21 @@ static void Bayer2RGB_( const Mat& srcmat, Mat& dstmat, int code )
     size = dstmat.size();
     dst0 = (T*)dstmat.data;
     if( size.height > 2 )
-        for( int i = 0; i < size.width*3; i++ )
+        for( int i = 0; i < size.width*dcn; i++ )
         {
             dst0[i] = dst0[i + dst_step];
             dst0[i + (size.height-1)*dst_step] = dst0[i + (size.height-2)*dst_step];
         }
     else
-        for( int i = 0; i < size.width*3; i++ )
-        {
+        for( int i = 0; i < size.width*dcn; i++ )
             dst0[i] = dst0[i + (size.height-1)*dst_step] = 0;
+
+    if (dcn == 4)
+        for (int y = 0; y < dstmat.rows; ++y)
+        {
+            uchar* yD = dstmat.data + y * dstmat.step;
+            for (int x = 0; x < dstmat.cols; ++x, yD += dcn)
+                yD[3] = alpha;
         }
 }
 
@@ -3605,7 +3619,7 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             {
                 if (dcn <= 0)
                     dcn = 3;
-                CV_Assert( scn == 1 && dcn == 3 );
+                CV_Assert( scn == 1 && (dcn == 3 || (dcn == 4 && depth == CV_8U)) );
 
                 _dst.create(sz, CV_MAKE_TYPE(depth, dcn));
                 Mat dst_ = _dst.getMat();
@@ -3616,13 +3630,18 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
                     if( depth == CV_8U )
                         Bayer2RGB_<uchar, SIMDBayerInterpolator_8u>(src, dst_, code);
                     else if( depth == CV_16U )
-                        Bayer2RGB_<ushort, SIMDBayerStubInterpolator_<ushort> >(src, dst_, code);
+                    {
+                        if (dcn == 3)
+                            Bayer2RGB_<ushort, SIMDBayerStubInterpolator_<ushort> >(src, dst_, code);
+                        else
+                            CV_Error(CV_StsUnsupportedFormat, "Bayer->RGBA demosaicing supports only 8u");
+                    }
                     else
                         CV_Error(CV_StsUnsupportedFormat, "Bayer->RGB demosaicing only supports 8u and 16u types");
                 }
                 else
                 {
-                    CV_Assert( depth == CV_8U );
+                    CV_Assert( depth == CV_8U && dcn == 3 );
                     Bayer2RGB_VNG_8u(src, dst_, code);
                 }
             }
