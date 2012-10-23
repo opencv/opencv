@@ -12,14 +12,14 @@ static void help()
                         "The user gets some of the supported output images.\n"
             "\nAll supported output map types:\n"
             "1.) Data given from depth generator\n"
-            "   OPENNI_DEPTH_MAP            - depth values in mm (CV_16UC1)\n"
-            "   OPENNI_POINT_CLOUD_MAP      - XYZ in meters (CV_32FC3)\n"
-            "   OPENNI_DISPARITY_MAP        - disparity in pixels (CV_8UC1)\n"
-            "   OPENNI_DISPARITY_MAP_32F    - disparity in pixels (CV_32FC1)\n"
-            "   OPENNI_VALID_DEPTH_MASK     - mask of valid pixels (not ocluded, not shaded etc.) (CV_8UC1)\n"
+            "   CV_CAP_OPENNI_DEPTH_MAP            - depth values in mm (CV_16UC1)\n"
+            "   CV_CAP_OPENNI_POINT_CLOUD_MAP      - XYZ in meters (CV_32FC3)\n"
+            "   CV_CAP_OPENNI_DISPARITY_MAP        - disparity in pixels (CV_8UC1)\n"
+            "   CV_CAP_OPENNI_DISPARITY_MAP_32F    - disparity in pixels (CV_32FC1)\n"
+            "   CV_CAP_OPENNI_VALID_DEPTH_MASK     - mask of valid pixels (not ocluded, not shaded etc.) (CV_8UC1)\n"
             "2.) Data given from RGB image generator\n"
-            "   OPENNI_BGR_IMAGE            - color image (CV_8UC3)\n"
-            "   OPENNI_GRAY_IMAGE           - gray image (CV_8UC1)\n"
+            "   CV_CAP_OPENNI_BGR_IMAGE            - color image (CV_8UC3)\n"
+            "   CV_CAP_OPENNI_GRAY_IMAGE           - gray image (CV_8UC1)\n"
          << endl;
 }
 
