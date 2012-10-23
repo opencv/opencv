@@ -120,10 +120,14 @@ PERF_TEST_P( TestWarpPerspectiveNear_t, WarpPerspectiveNear,
     resize(src, src, size);
 
     int shift = src.cols*0.04;
-    Mat srcVertices = (Mat_<Vec2f>(1, 4) << Vec2f(0, 0), Vec2f(size.width-1, 0),
-                                            Vec2f(size.width-1, size.height-1), Vec2f(0, size.height-1));
-    Mat dstVertices = (Mat_<Vec2f>(1, 4) << Vec2f(0, shift), Vec2f(size.width-shift/2, 0),
-                                            Vec2f(size.width-shift, size.height-shift), Vec2f(shift/2, size.height-1));
+    Mat srcVertices = (Mat_<Vec2f>(1, 4) << Vec2f(0, 0),
+                                            Vec2f(static_cast<float>(size.width-1), 0),
+                                            Vec2f(static_cast<float>(size.width-1), static_cast<float>(size.height-1)),
+                                            Vec2f(0, static_cast<float>(size.height-1)));
+    Mat dstVertices = (Mat_<Vec2f>(1, 4) << Vec2f(0, static_cast<float>(shift)),
+                                            Vec2f(static_cast<float>(size.width-shift/2), 0),
+                                            Vec2f(static_cast<float>(size.width-shift), static_cast<float>(size.height-shift)),
+                                            Vec2f(static_cast<float>(shift/2), static_cast<float>(size.height-1)));
     Mat warpMat = getPerspectiveTransform(srcVertices, dstVertices);
 
     Mat dst(size, type);
