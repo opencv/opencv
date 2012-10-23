@@ -15,6 +15,7 @@ CV_ENUM(RemapMode, HALF_SIZE, UPSIDE_DOWN, REFLECTION_X, REFLECTION_BOTH)
 
 typedef TestBaseWithParam< tr1::tuple<Size, InterType, BorderMode> > TestWarpAffine;
 typedef TestBaseWithParam< tr1::tuple<Size, InterType, BorderMode> > TestWarpPerspective;
+typedef TestBaseWithParam< tr1::tuple<Size, InterType, BorderMode, MatType> > TestWarpPerspectiveNear_t;
 typedef TestBaseWithParam< tr1::tuple<MatType, Size, InterType, BorderMode, RemapMode> > TestRemap;
 
 void update_map(const Mat& src, Mat& map_x, Mat& map_y, const int remapMode );
@@ -80,44 +81,59 @@ PERF_TEST_P( TestWarpPerspective, WarpPerspective,
     SANITY_CHECK(dst);
 }
 
-PERF_TEST_P( TestWarpPerspective, WarpPerspectiveLarge,
+PERF_TEST_P( TestWarpPerspectiveNear_t, WarpPerspectiveNear,
              Combine(
-                Values( sz3MP, sz5MP ),
-                ValuesIn( InterType::all() ),
-                ValuesIn( BorderMode::all() )
+                 Values( Size(176,144), Size(320,240), Size(352,288), Size(480,480),
+                         Size(640,480), Size(704,576), Size(720,408), Size(720,480),
+                         Size(720,576), Size(768,432), Size(800,448), Size(960,720),
+                         Size(1024,768), Size(1280,720), Size(1280,960), Size(1360,720),
+                         Size(1600,1200), Size(1920,1080), Size(2048,1536), Size(2592,1920),
+                         Size(2592,1944), Size(3264,2448), Size(4096,3072), Size(4208,3120) ),
+                 ValuesIn( InterType::all() ),
+                 ValuesIn( BorderMode::all() ),
+                 Values( CV_8UC1, CV_8UC4 )
+                 )
              )
-)
 {
-    Size sz;
-    int borderMode, interType;
-    sz         = get<0>(GetParam());
+    Size size;
+    int borderMode, interType, type;
+    size       = get<0>(GetParam());
     borderMode = get<1>(GetParam());
     interType  = get<2>(GetParam());
+    type = get<3>(GetParam());
 
-    string resolution;
-    if (sz == sz3MP)
-        resolution = "3MP";
-    else if (sz == sz5MP)
-        resolution = "5MP";
+    Mat src, img = imread(getDataPath("cv/shared/5MP.png"));
+
+    if( type == CV_8UC1 )
+    {
+        cvtColor(img, src, COLOR_BGR2GRAY, 1);
+    }
+    else if( type == CV_8UC4 )
+    {
+        cvtColor(img, src, COLOR_BGR2BGRA, 4);
+    }
     else
+    {
         FAIL();
+    }
 
-    Mat src, img = imread(getDataPath("cv/shared/" + resolution + ".png"));
-    cvtColor(img, src, COLOR_BGR2BGRA, 4);
+    resize(src, src, size);
 
-    int shift = 103;
-    Mat srcVertices = (Mat_<Vec2f>(1, 4) << Vec2f(0, 0), Vec2f(sz.width-1, 0),
-                                            Vec2f(sz.width-1, sz.height-1), Vec2f(0, sz.height-1));
-    Mat dstVertices = (Mat_<Vec2f>(1, 4) << Vec2f(0, shift), Vec2f(sz.width-shift/2, 0),
-                                            Vec2f(sz.width-shift, sz.height-shift), Vec2f(shift/2, sz.height-1));
+    int shift = src.cols*0.04;
+    Mat srcVertices = (Mat_<Vec2f>(1, 4) << Vec2f(0, 0), Vec2f(size.width-1, 0),
+                                            Vec2f(size.width-1, size.height-1), Vec2f(0, size.height-1));
+    Mat dstVertices = (Mat_<Vec2f>(1, 4) << Vec2f(0, shift), Vec2f(size.width-shift/2, 0),
+                                            Vec2f(size.width-shift, size.height-shift), Vec2f(shift/2, size.height-1));
     Mat warpMat = getPerspectiveTransform(srcVertices, dstVertices);
 
-    Mat dst(sz, CV_8UC4);
+    Mat dst(size, type);
 
     declare.in(src).out(dst);
 
     TEST_CYCLE()
-        warpPerspective( src, dst, warpMat, sz, interType, borderMode, Scalar::all(150) );
+    {
+        warpPerspective( src, dst, warpMat, size, interType, borderMode, Scalar::all(150) );
+    }
 
     SANITY_CHECK(dst);
 }
