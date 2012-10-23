@@ -2547,7 +2547,6 @@ public:
           data(_data),
           centers(_centers)
     {
-        CV_DbgAssert(centers.cols == data.cols);
     }
 
     void operator()( const BlockedRange& range ) const
