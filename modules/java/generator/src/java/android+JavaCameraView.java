@@ -57,13 +57,16 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
 
     public JavaCameraView(Context context, AttributeSet attrs) {
         super(context, attrs);
+        Log.d(TAG, "Java camera view ctor");
     }
 
     @TargetApi(11)
     protected boolean initializeCamera(int width, int height) {
+        Log.d(TAG, "Initialize java camera");
         synchronized (this) {
             mCamera = null;
 
+            Log.d(TAG, "Trying to open camera with old open()");
             try {
                 mCamera = Camera.open();
             }
@@ -72,31 +75,30 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
             }
 
             if(mCamera == null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.GINGERBREAD) {
+                boolean connected = false;
                 for (int camIdx = 0; camIdx < Camera.getNumberOfCameras(); ++camIdx) {
+                    Log.d(TAG, "Trying to open camera with new open(" + Integer.valueOf(camIdx) + ")");
                     try {
                         mCamera = Camera.open(camIdx);
-                    }
-                    catch (RuntimeException e) {
+                        connected = true;
+                    } catch (RuntimeException e) {
                         Log.e(TAG, "Camera #" + camIdx + "failed to open: " + e.getLocalizedMessage());
                     }
+                    if (connected) break;
                 }
             }
 
             if (mCamera == null)
                 return false;
 
-            mCamera.setPreviewCallbackWithBuffer(this);
-
-            List<android.hardware.Camera.Size> sizes = mCamera.getParameters().getSupportedPreviewSizes();
-            /* Select the size that fits surface considering maximum size allowed */
-            Size frameSize = calculateCameraFrameSize(sizes, new JavaCameraSizeAccessor(), width, height);
-
-            mFrameWidth = (int)frameSize.width;
-            mFrameHeight = (int)frameSize.height;
-
             /* Now set camera parameters */
             try {
                 Camera.Parameters params = mCamera.getParameters();
+                Log.d(TAG, "getSupportedPreviewSizes()");
+                List<android.hardware.Camera.Size> sizes = params.getSupportedPreviewSizes();
+
+                /* Select the size that fits surface considering maximum size allowed */
+                Size frameSize = calculateCameraFrameSize(sizes, new JavaCameraSizeAccessor(), width, height);
 
                 params.setPreviewFormat(ImageFormat.NV21);
                 params.setPreviewSize((int)frameSize.width, (int)frameSize.height);
@@ -110,11 +112,15 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
                 mCamera.setParameters(params);
                 params = mCamera.getParameters();
 
-                int size = params.getPreviewSize().width * params.getPreviewSize().height;
+                mFrameWidth = params.getPreviewSize().width;
+                mFrameHeight = params.getPreviewSize().height;
+
+                int size = mFrameWidth * mFrameHeight;
                 size  = size * ImageFormat.getBitsPerPixel(params.getPreviewFormat()) / 8;
                 mBuffer = new byte[size];
 
                 mCamera.addCallbackBuffer(mBuffer);
+                mCamera.setPreviewCallbackWithBuffer(this);
 
                 mBaseMat = new Mat(mFrameHeight + (mFrameHeight/2), mFrameWidth, CvType.CV_8UC1);
 
@@ -131,6 +137,7 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
             }
 
             /* Finally we are ready to start the preview */
+            Log.d(TAG, "startPreview");
             mCamera.startPreview();
         }
 

@@ -259,6 +259,7 @@ public class ImageManipulationsActivity extends Activity implements CvCameraView
     }
 
     public Mat onCameraFrame(Mat inputFrame) {
+        inputFrame.copyTo(mRgba);
 
         switch (ImageManipulationsActivity.viewMode) {
         case ImageManipulationsActivity.VIEW_MODE_RGBA:
