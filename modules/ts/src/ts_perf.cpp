@@ -16,7 +16,7 @@ const std::string command_line_keys =
     "{   |perf_force_samples  |100      |force set maximum number of samples for all tests}"
     "{   |perf_seed           |809564   |seed for random numbers generator}"
     "{   |perf_threads        |-1       |the number of worker threads, if parallel execution is enabled}"
-    "{   |perf_write_sanity   |         |allow to create new records for sanity checks}"
+    "{   |perf_write_sanity   |false    |allow to create new records for sanity checks}"
 #ifdef ANDROID
     "{   |perf_time_limit     |6.0      |default time limit for a single test (in seconds)}"
     "{   |perf_affinity_mask  |0        |set affinity mask for the main thread}"
@@ -25,7 +25,7 @@ const std::string command_line_keys =
     "{   |perf_time_limit     |3.0      |default time limit for a single test (in seconds)}"
 #endif
     "{   |perf_max_deviation  |1.0      |}"
-    "{h  |help                |         |print help info}"
+    "{h  |help                |false    |print help info}"
 #ifdef HAVE_CUDA
     "{   |perf_run_cpu        |false    |run GPU performance tests for analogical CPU functions}"
     "{   |perf_cuda_device    |0        |run GPU test suite onto specific CUDA capable device}"
