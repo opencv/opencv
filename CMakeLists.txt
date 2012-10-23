@@ -489,7 +489,7 @@ include(cmake/OpenCVGenConfig.cmake)
 # Summary:
 # ----------------------------------------------------------------------------
 status("")
-status("General configuration for OpenCV ${OPENCV_VERSION} =====================================")
+status("General configuration for OpenCV ${OPENCV_VERSION}-rc =====================================")
 if(OPENCV_VCSVERSION)
   status("  Version control:" ${OPENCV_VCSVERSION})
 endif()
