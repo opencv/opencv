@@ -23,6 +23,7 @@ std::set<std::string> OpenCVEngine::InitKnownOpenCVersions()
     result.insert("240");
     result.insert("241");
     result.insert("242");
+    result.insert("243");
 
     return result;
 }
