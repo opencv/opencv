@@ -18,7 +18,7 @@ Here you will learn how to use additionnal modules of OpenCV defined in the "con
 
                   *Author:* |Author_AlexB|
 
-                  You will learn how to process images and video streams with a model of retina filter of details enhancement, spatio-temporal noise removal and luminance correction.
+                  You will learn how to process images and video streams with a model of retina filter for details enhancement, spatio-temporal noise removal, luminance correction and spatio-temporal events detection.
 
   =============== ======================================================
 
