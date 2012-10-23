@@ -322,6 +322,7 @@ int cv::getNumThreads(void)
 
 void cv::setNumThreads( int threads )
 {
+    (void)threads;
 #ifdef HAVE_PARALLEL_FRAMEWORK
     numThreads = threads;
 #endif
