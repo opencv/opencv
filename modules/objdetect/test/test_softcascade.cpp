@@ -65,7 +65,6 @@ TEST(SoftCascade, detect)
 
     cascade.detectMultiScale(colored, rois, objects);
 
-    std::cout << "detected: " << (int)objects.size() << std::endl;
 
     cv::Mat out = colored.clone();
     int level = 0, total = 0;
@@ -78,7 +77,6 @@ TEST(SoftCascade, detect)
             std::cout << "Level: " << level << " total " << total << std::endl;
             cv::imshow("out", out);
             cv::waitKey(0);
-
             out = colored.clone();
             levelWidth = objects[i].rect.width;
             total = 0;
@@ -91,4 +89,5 @@ TEST(SoftCascade, detect)
                                    << " " << objects[i].rect.height << std::endl;
         total++;
     }
+    std::cout << "detected: " << (int)objects.size() << std::endl;
 }

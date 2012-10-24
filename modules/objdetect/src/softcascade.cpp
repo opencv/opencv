@@ -50,21 +50,6 @@
 #include <cstdio>
 #include <stdarg.h>
 
-// use previous stored integrals for regression testing
-// #define USE_REFERENCE_VALUES
-
-#if defined USE_REFERENCE_VALUES
-
-namespace {
-
-char *itoa(long i, char* s, int /*dummy_radix*/)
-{
-    sprintf(s, "%ld", i);
-    return s;
-}
-
-#endif
-
 // used for noisy printfs
 // #define WITH_DEBUG_OUT
 
@@ -235,45 +220,8 @@ struct Level
         float sarea = (scaledRect.width - scaledRect.x) * (scaledRect.height - scaledRect.y);
 
         // compensation areas rounding
-        return (threshold * scaling[idx] * sarea);
+        return (sarea == 0.0f)? threshold : (threshold * scaling[idx] * sarea);
     }
-};
-
-template< typename T>
-struct Decimate {
-    int shrinkage;
-
-    Decimate(const int sr) : shrinkage(sr) {}
-
-    void operator()(const cv::Mat& in, cv::Mat& out) const
-    {
-        int cols = in.cols / shrinkage;
-        int rows = in.rows / shrinkage;
-        out.create(rows, cols, in.type());
-
-        CV_Assert(cols * shrinkage == in.cols);
-        CV_Assert(rows * shrinkage == in.rows);
-
-        for (int outIdx_y = 0; outIdx_y < rows; ++outIdx_y)
-        {
-            T* outPtr = out.ptr<T>(outIdx_y);
-            for (int outIdx_x = 0; outIdx_x < cols; ++outIdx_x)
-            {
-                // do desimate
-                int inIdx_y = outIdx_y * shrinkage;
-                int inIdx_x = outIdx_x * shrinkage;
-                int sum = 0;
-
-                for (int y = inIdx_y; y < inIdx_y + shrinkage; ++y)
-                    for (int x = inIdx_x; x < inIdx_x + shrinkage; ++x)
-                        sum += in.at<T>(y, x);
-
-                sum /= shrinkage * shrinkage;
-                outPtr[outIdx_x] = cv::saturate_cast<T>(sum);
-            }
-        }
-    }
-
 };
 
 struct ChannelStorage
@@ -289,111 +237,16 @@ struct ChannelStorage
     ChannelStorage(const cv::Mat& colored, int shr) : shrinkage(shr)
     {
         hog.clear();
-        Decimate<uchar> decimate(shr);
-
-#if defined USE_REFERENCE_VALUES
-        char buff[33];
-        cv::FileStorage imgs("/home/kellan/testInts.xml", cv::FileStorage::READ);
-
-        for(int i = 0; i < HOG_LUV_BINS; ++i)
-        {
-            cv::Mat channel;
-            imgs[std::string("channel") + itoa(i, buff, 10)] >> channel;
-            hog.push_back(channel);
-        }
-#else
-        // add gauss
-        cv::Mat gauss;
-        cv::GaussianBlur(colored, gauss, cv::Size(3,3), 0 ,0);
-
-        // convert to luv
-        cv::Mat luv;
-        cv::cvtColor(colored, luv, CV_BGR2Luv);
-
-        // split to 3 one channel matrix
-        std::vector<cv::Mat> splited, luvs;
-        split(luv, splited);
-
-        // shrink and integrate
-        for (int i = 0; i < (int)splited.size(); i++)
-        {
-            cv::Mat shrunk, sum;
-            decimate(splited[i], shrunk);
-            cv::integral(shrunk, sum, cv::noArray(), CV_32S);
-            luvs.push_back(sum);
-        }
+        cv::IntegralChannels ints(shr);
 
         // convert to grey
         cv::Mat grey;
         cv::cvtColor(colored, grey, CV_BGR2GRAY);
 
-        // get derivative
-        cv::Mat df_dx, df_dy, mag, angle;
-        cv::Sobel(grey, df_dx, CV_32F, 1, 0);
-        cv::Sobel(grey, df_dy, CV_32F, 0, 1);
-
-        // normalize
-        df_dx /= 4;
-        df_dy /= 4;
-
-        // calculate magnitude
-        cv::cartToPolar(df_dx, df_dy, mag, angle, true);
-
-        // normalize to avoid uchar overflow
-        static const float magnitudeScaling = 1.f / sqrt(2);
-        mag *= magnitudeScaling;
-
-        // convert to uchar
-        cv::Mat saturatedMag(grey.rows, grey.cols, CV_8UC1), shrMag;
-        for (int y = 0; y < grey.rows; ++y)
-        {
-            float* rm = mag.ptr<float>(y);
-            uchar* mg = saturatedMag.ptr<uchar>(y);
-            for (int x = 0; x < grey.cols; ++x)
-            {
-                mg[x] =  cv::saturate_cast<uchar>(rm[x]);
-            }
-        }
-
-        // srink and integrate
-        decimate(saturatedMag, shrMag);
-        cv::integral(shrMag, mag, cv::noArray(), CV_32S);
-
-        // create hog channels
-        angle /= 60.f;
-
-        std::vector<cv::Mat> hist;
-        for (int bin = 0; bin < HOG_BINS; ++bin)
-        {
-            hist.push_back(cv::Mat::zeros(saturatedMag.rows, saturatedMag.cols, CV_8UC1));
-        }
-
-        for (int y = 0; y < saturatedMag.rows; ++y)
-        {
-            uchar* magnitude = saturatedMag.ptr<uchar>(y);
-            float* ang = angle.ptr<float>(y);
-
-            for (int x = 0; x < saturatedMag.cols; ++x)
-            {
-                hist[ (int)ang[x] ].ptr<uchar>(y)[x] = magnitude[x];
-            }
-        }
-
-        for(int i = 0; i < HOG_BINS; ++i)
-        {
-            cv::Mat shrunk, sum;
-            decimate(hist[i], shrunk);
-            cv::integral(shrunk, sum, cv::noArray(), CV_32S);
-            hog.push_back(sum);
-        }
-
-        hog.push_back(mag);
-        hog.insert(hog.end(), luvs.begin(), luvs.end());
+        ints.createHogBins(grey, hog, 6);
+        ints.createLuvBins(colored, hog);
 
         step = hog[0].cols;
-
-        // CV_Assert(hog.size() == 10);
-#endif
     }
 
     float get(const int channel, const cv::Rect& area) const
@@ -441,7 +294,7 @@ struct cv::SoftCascade::Filds
         float detectionScore = 0.f;
 
         const Octave& octave = *(level.octave);
-        int stBegin = octave.index * octave.stages, stEnd = stBegin + octave.stages;
+        int stBegin = octave.index * octave.stages, stEnd = stBegin + 1024;//octave.stages;
 
         dprintf("  octave stages: %d to %d index %d %f level %f\n",
             stBegin, stEnd, octave.index, octave.scale, level.origScale);
