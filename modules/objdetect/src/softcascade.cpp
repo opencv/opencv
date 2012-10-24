@@ -85,17 +85,17 @@ const char *const Octave::SC_OCT_SCALE     = "scale";
 const char *const Octave::SC_OCT_STAGES    = "stageNum";
 const char *const Octave::SC_OCT_SHRINKAGE = "shrinkingFactor";
 
-struct Stage
+struct Weak
 {
     float threshold;
 
     static const char *const SC_STAGE_THRESHOLD;
 
-    Stage(){}
-    Stage(const cv::FileNode& fn) : threshold((float)fn[SC_STAGE_THRESHOLD]){}
+    Weak(){}
+    Weak(const cv::FileNode& fn) : threshold((float)fn[SC_STAGE_THRESHOLD]){}
 };
 
-const char *const Stage::SC_STAGE_THRESHOLD  = "stageThreshold";
+const char *const Weak::SC_STAGE_THRESHOLD  = "stageThreshold";
 
 struct Node
 {
@@ -277,7 +277,7 @@ struct cv::SoftCascade::Filds
     int shrinkage;
 
     std::vector<Octave>  octaves;
-    std::vector<Stage>   stages;
+    std::vector<Weak>   stages;
     std::vector<Node>    nodes;
     std::vector<float>   leaves;
     std::vector<Feature> features;
@@ -305,7 +305,7 @@ struct cv::SoftCascade::Filds
 
             dprintf("index: %d\n", st);
 
-            const Stage& stage = stages[st];
+            const Weak& stage = stages[st];
             {
                 int nId = st * 3;
 
@@ -481,7 +481,7 @@ struct cv::SoftCascade::Filds
             for (; st != st_end; ++st )
             {
                 fns = *st;
-                stages.push_back(Stage(fns));
+                stages.push_back(Weak(fns));
 
                 fns = fns[SC_WEEK];
                 FileNodeIterator ftr = fns.begin(), ft_end = fns.end();
