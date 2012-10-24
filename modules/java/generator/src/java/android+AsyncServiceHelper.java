@@ -118,7 +118,7 @@ class AsyncServiceHelper
         }
         else
         {
-            Log.d(TAG, "Wating current installation process");
+            Log.d(TAG, "Waiting current installation process");
             InstallCallbackInterface WaitQuery = new InstallCallbackInterface() {
                 private LoaderCallbackInterface mUserAppCallback = Callback;
                 public String getPackageName()
@@ -268,17 +268,21 @@ class AsyncServiceHelper
                                         {
                                             Log.d(TAG, "OpenCV package was not installed!");
                                             mStatus = LoaderCallbackInterface.MARKET_ERROR;
+                                            Log.d(TAG, "Init finished with status " + mStatus);
+                                            Log.d(TAG, "Unbind from service");
+                                            mAppContext.unbindService(mServiceConnection);
+                                            Log.d(TAG, "Calling using callback");
+                                            mUserAppCallback.onManagerConnected(mStatus);
                                         }
                                     } catch (RemoteException e) {
                                         e.printStackTrace();
                                         mStatus = LoaderCallbackInterface.INIT_FAILED;
+                                        Log.d(TAG, "Init finished with status " + mStatus);
+                                        Log.d(TAG, "Unbind from service");
+                                        mAppContext.unbindService(mServiceConnection);
+                                        Log.d(TAG, "Calling using callback");
+                                        mUserAppCallback.onManagerConnected(mStatus);
                                     }
-
-                                    Log.d(TAG, "Init finished with status " + mStatus);
-                                    Log.d(TAG, "Unbind from service");
-                                    mAppContext.unbindService(mServiceConnection);
-                                    Log.d(TAG, "Calling using callback");
-                                    mUserAppCallback.onManagerConnected(mStatus);
                                }
                             };
 

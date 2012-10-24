@@ -28,7 +28,7 @@ public abstract class BaseLoaderCallback implements LoaderCallbackInterface {
             /** OpenCV loader can not start Google Play Market. **/
             case LoaderCallbackInterface.MARKET_ERROR:
             {
-                Log.d(TAG, "Google Play service is not installed! You can get it here");
+                Log.e(TAG, "Package installation failed!");
                 AlertDialog MarketErrorMessage = new AlertDialog.Builder(mAppContext).create();
                 MarketErrorMessage.setTitle("OpenCV Manager");
                 MarketErrorMessage.setMessage("Package installation failed!");
