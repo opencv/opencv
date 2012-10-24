@@ -20,11 +20,11 @@ JNIEXPORT jobject JNICALL Java_org_opencv_engine_BinderConnector_Connect(JNIEnv*
     LOGI("Creating new component");
     if (NULL != OpenCVEngineBinder.get())
     {
-    LOGI("New component created successfully");
+        LOGI("New component created successfully");
     }
     else
     {
-    LOGE("OpenCV Engine component was not created!");
+        LOGE("OpenCV Engine component was not created!");
     }
 
     return javaObjectForIBinder(env, OpenCVEngineBinder);
@@ -36,25 +36,25 @@ JNIEXPORT jboolean JNICALL Java_org_opencv_engine_BinderConnector_Init(JNIEnv* e
 
     if (NULL == PackageManager)
     {
-    JavaVM* jvm;
-    env->GetJavaVM(&jvm);
-    PackageManager = new JavaBasedPackageManager(jvm, env->NewGlobalRef(market));
+        JavaVM* jvm;
+        env->GetJavaVM(&jvm);
+        PackageManager = new JavaBasedPackageManager(jvm, env->NewGlobalRef(market));
     }
     if (PackageManager)
     {
-    if (!OpenCVEngineBinder.get())
-    {
-        OpenCVEngineBinder = new OpenCVEngine(PackageManager);
-        return (NULL != OpenCVEngineBinder.get());
+        if (!OpenCVEngineBinder.get())
+        {
+            OpenCVEngineBinder = new OpenCVEngine(PackageManager);
+            return (NULL != OpenCVEngineBinder.get());
+        }
+        else
+        {
+            return true;
+        }
     }
     else
     {
-        return true;
-    }
-    }
-    else
-    {
-    return false;
+        return false;
     }
 }
 
@@ -67,4 +67,3 @@ JNIEXPORT void JNICALL Java_org_opencv_engine_BinderConnector_Final(JNIEnv *, jo
     delete PackageManager;
     PackageManager = NULL;
 }
-

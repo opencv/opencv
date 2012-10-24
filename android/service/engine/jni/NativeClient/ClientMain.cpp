@@ -25,10 +25,10 @@ int main(int argc, char *argv[])
     LOGI("Trying to contect to service");
 
     do {
-    EngineService = ServiceManager->getService(IOpenCVEngine::descriptor);
-    if (EngineService != 0) break;
-    LOGW("OpenCVEngine not published, waiting...");
-    usleep(500000); // 0.5 s
+        EngineService = ServiceManager->getService(IOpenCVEngine::descriptor);
+        if (EngineService != 0) break;
+        LOGW("OpenCVEngine not published, waiting...");
+        usleep(500000); // 0.5 s
     } while(true);
 
     LOGI("Connection established");
