@@ -1,9 +1,9 @@
 .. _Table-Of-Content-Contrib:
 
-*contrib* module. The additionnal contributions made available !
+*contrib* module. The additional contributions made available !
 ----------------------------------------------------------------
 
-Here you will learn how to use additionnal modules of OpenCV defined in the "contrib" module.
+Here you will learn how to use additional modules of OpenCV defined in the "contrib" module.
 
  .. include:: ../../definitions/tocDefinitions.rst
 
