@@ -20656,474 +20656,6 @@
       <cols>0</cols>
       <dt>u</dt>
       <data></data></val></lines></Image_RhoStep_ThetaStep_Threshold_HoughLines--HoughLines----cv-shared-pic5-png---10--0-1--500->
-<TestWarpAffine_WarpAffine--WarpAffine---640x480--INTER_NEAREST--BORDER_CONSTANT->
-  <dst>
-    <kind>65536</kind>
-    <type>24</type>
-    <min>0.</min>
-    <max>255.</max>
-    <last>
-      <x>639</x>
-      <y>479</y>
-      <val>255.</val></last>
-    <rng1>
-      <x>448</x>
-      <y>104</y>
-      <cn>3</cn>
-      <val>255.</val></rng1>
-    <rng2>
-      <x>56</x>
-      <y>405</y>
-      <cn>2</cn>
-      <val>158.</val></rng2></dst></TestWarpAffine_WarpAffine--WarpAffine---640x480--INTER_NEAREST--BORDER_CONSTANT->
-<TestWarpAffine_WarpAffine--WarpAffine---640x480--INTER_NEAREST--BORDER_REPLICATE->
-  <dst>
-    <kind>65536</kind>
-    <type>24</type>
-    <min>0.</min>
-    <max>255.</max>
-    <last>
-      <x>639</x>
-      <y>479</y>
-      <val>255.</val></last>
-    <rng1>
-      <x>23</x>
-      <y>456</y>
-      <cn>3</cn>
-      <val>255.</val></rng1>
-    <rng2>
-      <x>70</x>
-      <y>468</y>
-      <cn>3</cn>
-      <val>255.</val></rng2></dst></TestWarpAffine_WarpAffine--WarpAffine---640x480--INTER_NEAREST--BORDER_REPLICATE->
-<TestWarpAffine_WarpAffine--WarpAffine---640x480--INTER_LINEAR--BORDER_CONSTANT->
-  <dst>
-    <kind>65536</kind>
-    <type>24</type>
-    <min>0.</min>
-    <max>255.</max>
-    <last>
-      <x>639</x>
-      <y>479</y>
-      <val>255.</val></last>
-    <rng1>
-      <x>426</x>
-      <y>225</y>
-      <cn>1</cn>
-      <val>41.</val></rng1>
-    <rng2>
-      <x>607</x>
-      <y>378</y>
-      <cn>1</cn>
-      <val>131.</val></rng2></dst></TestWarpAffine_WarpAffine--WarpAffine---640x480--INTER_LINEAR--BORDER_CONSTANT->
-<TestWarpAffine_WarpAffine--WarpAffine---640x480--INTER_LINEAR--BORDER_REPLICATE->
-  <dst>
-    <kind>65536</kind>
-    <type>24</type>
-    <min>0.</min>
-    <max>255.</max>
-    <last>
-      <x>639</x>
-      <y>479</y>
-      <val>255.</val></last>
-    <rng1>
-      <x>484</x>
-      <y>295</y>
-      <val>79.</val></rng1>
-    <rng2>
-      <x>82</x>
-      <y>2</y>
-      <cn>2</cn>
-      <val>26.</val></rng2></dst></TestWarpAffine_WarpAffine--WarpAffine---640x480--INTER_LINEAR--BORDER_REPLICATE->
-<TestWarpAffine_WarpAffine--WarpAffine---1280x720--INTER_NEAREST--BORDER_CONSTANT->
-  <dst>
-    <kind>65536</kind>
-    <type>24</type>
-    <min>0.</min>
-    <max>255.</max>
-    <last>
-      <x>1279</x>
-      <y>719</y>
-      <val>150.</val></last>
-    <rng1>
-      <x>21</x>
-      <y>267</y>
-      <cn>1</cn>
-      <val>87.</val></rng1>
-    <rng2>
-      <x>1130</x>
-      <y>639</y>
-      <cn>1</cn>
-      <val>150.</val></rng2></dst></TestWarpAffine_WarpAffine--WarpAffine---1280x720--INTER_NEAREST--BORDER_CONSTANT->
-<TestWarpAffine_WarpAffine--WarpAffine---1280x720--INTER_NEAREST--BORDER_REPLICATE->
-  <dst>
-    <kind>65536</kind>
-    <type>24</type>
-    <min>0.</min>
-    <max>255.</max>
-    <last>
-      <x>1279</x>
-      <y>719</y>
-      <val>150.</val></last>
-    <rng1>
-      <x>1137</x>
-      <y>311</y>
-      <cn>2</cn>
-      <val>150.</val></rng1>
-    <rng2>
-      <x>618</x>
-      <y>410</y>
-      <val>139.</val></rng2></dst></TestWarpAffine_WarpAffine--WarpAffine---1280x720--INTER_NEAREST--BORDER_REPLICATE->
-<TestWarpAffine_WarpAffine--WarpAffine---1280x720--INTER_LINEAR--BORDER_CONSTANT->
-  <dst>
-    <kind>65536</kind>
-    <type>24</type>
-    <min>0.</min>
-    <max>255.</max>
-    <last>
-      <x>1279</x>
-      <y>719</y>
-      <val>255.</val></last>
-    <rng1>
-      <x>1279</x>
-      <y>152</y>
-      <cn>2</cn>
-      <val>10.</val></rng1>
-    <rng2>
-      <x>591</x>
-      <y>581</y>
-      <cn>2</cn>
-      <val>70.</val></rng2></dst></TestWarpAffine_WarpAffine--WarpAffine---1280x720--INTER_LINEAR--BORDER_CONSTANT->
-<TestWarpAffine_WarpAffine--WarpAffine---1280x720--INTER_LINEAR--BORDER_REPLICATE->
-  <dst>
-    <kind>65536</kind>
-    <type>24</type>
-    <min>0.</min>
-    <max>255.</max>
-    <last>
-      <x>1279</x>
-      <y>719</y>
-      <val>255.</val></last>
-    <rng1>
-      <x>840</x>
-      <y>379</y>
-      <cn>3</cn>
-      <val>255.</val></rng1>
-    <rng2>
-      <x>1038</x>
-      <y>114</y>
-      <cn>3</cn>
-      <val>255.</val></rng2></dst></TestWarpAffine_WarpAffine--WarpAffine---1280x720--INTER_LINEAR--BORDER_REPLICATE->
-<TestWarpAffine_WarpAffine--WarpAffine---1920x1080--INTER_NEAREST--BORDER_CONSTANT->
-  <dst>
-    <kind>65536</kind>
-    <type>24</type>
-    <min>0.</min>
-    <max>255.</max>
-    <last>
-      <x>1919</x>
-      <y>1079</y>
-      <val>150.</val></last>
-    <rng1>
-      <x>891</x>
-      <y>712</y>
-      <cn>2</cn>
-      <val>150.</val></rng1>
-    <rng2>
-      <x>906</x>
-      <y>84</y>
-      <val>150.</val></rng2></dst></TestWarpAffine_WarpAffine--WarpAffine---1920x1080--INTER_NEAREST--BORDER_CONSTANT->
-<TestWarpAffine_WarpAffine--WarpAffine---1920x1080--INTER_NEAREST--BORDER_REPLICATE->
-  <dst>
-    <kind>65536</kind>
-    <type>24</type>
-    <min>0.</min>
-    <max>255.</max>
-    <last>
-      <x>1919</x>
-      <y>1079</y>
-      <val>150.</val></last>
-    <rng1>
-      <x>1852</x>
-      <y>35</y>
-      <cn>1</cn>
-      <val>150.</val></rng1>
-    <rng2>
-      <x>443</x>
-      <y>981</y>
-      <cn>3</cn>
-      <val>150.</val></rng2></dst></TestWarpAffine_WarpAffine--WarpAffine---1920x1080--INTER_NEAREST--BORDER_REPLICATE->
-<TestWarpAffine_WarpAffine--WarpAffine---1920x1080--INTER_LINEAR--BORDER_CONSTANT->
-  <dst>
-    <kind>65536</kind>
-    <type>24</type>
-    <min>0.</min>
-    <max>255.</max>
-    <last>
-      <x>1919</x>
-      <y>1079</y>
-      <val>255.</val></last>
-    <rng1>
-      <x>826</x>
-      <y>767</y>
-      <cn>1</cn>
-      <val>18.</val></rng1>
-    <rng2>
-      <x>1428</x>
-      <y>288</y>
-      <val>55.</val></rng2></dst></TestWarpAffine_WarpAffine--WarpAffine---1920x1080--INTER_LINEAR--BORDER_CONSTANT->
-<TestWarpAffine_WarpAffine--WarpAffine---1920x1080--INTER_LINEAR--BORDER_REPLICATE->
-  <dst>
-    <kind>65536</kind>
-    <type>24</type>
-    <min>0.</min>
-    <max>255.</max>
-    <last>
-      <x>1919</x>
-      <y>1079</y>
-      <val>255.</val></last>
-    <rng1>
-      <x>1236</x>
-      <y>911</y>
-      <cn>1</cn>
-      <val>57.</val></rng1>
-    <rng2>
-      <x>591</x>
-      <y>982</y>
-      <cn>1</cn>
-      <val>48.</val></rng2></dst></TestWarpAffine_WarpAffine--WarpAffine---1920x1080--INTER_LINEAR--BORDER_REPLICATE->
-<TestWarpPerspective_WarpPerspective--WarpPerspective---640x480--INTER_NEAREST--BORDER_CONSTANT->
-  <dst>
-    <kind>65536</kind>
-    <type>24</type>
-    <min>0.</min>
-    <max>255.</max>
-    <last>
-      <x>639</x>
-      <y>479</y>
-      <val>150.</val></last>
-    <rng1>
-      <x>494</x>
-      <y>17</y>
-      <cn>2</cn>
-      <val>41.</val></rng1>
-    <rng2>
-      <x>342</x>
-      <y>152</y>
-      <val>13.</val></rng2></dst></TestWarpPerspective_WarpPerspective--WarpPerspective---640x480--INTER_NEAREST--BORDER_CONSTANT->
-<TestWarpPerspective_WarpPerspective--WarpPerspective---640x480--INTER_NEAREST--BORDER_REPLICATE->
-  <dst>
-    <kind>65536</kind>
-    <type>24</type>
-    <min>0.</min>
-    <max>255.</max>
-    <last>
-      <x>639</x>
-      <y>479</y>
-      <val>150.</val></last>
-    <rng1>
-      <x>167</x>
-      <y>84</y>
-      <val>164.</val></rng1>
-    <rng2>
-      <x>479</x>
-      <y>93</y>
-      <cn>2</cn>
-      <val>51.</val></rng2></dst></TestWarpPerspective_WarpPerspective--WarpPerspective---640x480--INTER_NEAREST--BORDER_REPLICATE->
-<TestWarpPerspective_WarpPerspective--WarpPerspective---640x480--INTER_LINEAR--BORDER_CONSTANT->
-  <dst>
-    <kind>65536</kind>
-    <type>24</type>
-    <min>0.</min>
-    <max>255.</max>
-    <last>
-      <x>639</x>
-      <y>479</y>
-      <val>255.</val></last>
-    <rng1>
-      <x>61</x>
-      <y>309</y>
-      <cn>2</cn>
-      <val>128.</val></rng1>
-    <rng2>
-      <x>268</x>
-      <y>270</y>
-      <val>157.</val></rng2></dst></TestWarpPerspective_WarpPerspective--WarpPerspective---640x480--INTER_LINEAR--BORDER_CONSTANT->
-<TestWarpPerspective_WarpPerspective--WarpPerspective---640x480--INTER_LINEAR--BORDER_REPLICATE->
-  <dst>
-    <kind>65536</kind>
-    <type>24</type>
-    <min>0.</min>
-    <max>255.</max>
-    <last>
-      <x>639</x>
-      <y>479</y>
-      <val>255.</val></last>
-    <rng1>
-      <x>280</x>
-      <y>128</y>
-      <cn>2</cn>
-      <val>10.</val></rng1>
-    <rng2>
-      <x>48</x>
-      <y>234</y>
-      <val>163.</val></rng2></dst></TestWarpPerspective_WarpPerspective--WarpPerspective---640x480--INTER_LINEAR--BORDER_REPLICATE->
-<TestWarpPerspective_WarpPerspective--WarpPerspective---1280x720--INTER_NEAREST--BORDER_CONSTANT->
-  <dst>
-    <kind>65536</kind>
-    <type>24</type>
-    <min>0.</min>
-    <max>255.</max>
-    <last>
-      <x>1279</x>
-      <y>719</y>
-      <val>150.</val></last>
-    <rng1>
-      <x>1228</x>
-      <y>399</y>
-      <cn>2</cn>
-      <val>150.</val></rng1>
-    <rng2>
-      <x>411</x>
-      <y>187</y>
-      <cn>3</cn>
-      <val>255.</val></rng2></dst></TestWarpPerspective_WarpPerspective--WarpPerspective---1280x720--INTER_NEAREST--BORDER_CONSTANT->
-<TestWarpPerspective_WarpPerspective--WarpPerspective---1280x720--INTER_NEAREST--BORDER_REPLICATE->
-  <dst>
-    <kind>65536</kind>
-    <type>24</type>
-    <min>0.</min>
-    <max>255.</max>
-    <last>
-      <x>1279</x>
-      <y>719</y>
-      <val>150.</val></last>
-    <rng1>
-      <x>706</x>
-      <y>93</y>
-      <cn>2</cn>
-      <val>150.</val></rng1>
-    <rng2>
-      <x>1115</x>
-      <y>308</y>
-      <cn>1</cn>
-      <val>150.</val></rng2></dst></TestWarpPerspective_WarpPerspective--WarpPerspective---1280x720--INTER_NEAREST--BORDER_REPLICATE->
-<TestWarpPerspective_WarpPerspective--WarpPerspective---1280x720--INTER_LINEAR--BORDER_CONSTANT->
-  <dst>
-    <kind>65536</kind>
-    <type>24</type>
-    <min>0.</min>
-    <max>255.</max>
-    <last>
-      <x>1279</x>
-      <y>719</y>
-      <val>255.</val></last>
-    <rng1>
-      <x>1082</x>
-      <y>476</y>
-      <cn>1</cn>
-      <val>40.</val></rng1>
-    <rng2>
-      <x>558</x>
-      <y>131</y>
-      <cn>2</cn>
-      <val>59.</val></rng2></dst></TestWarpPerspective_WarpPerspective--WarpPerspective---1280x720--INTER_LINEAR--BORDER_CONSTANT->
-<TestWarpPerspective_WarpPerspective--WarpPerspective---1280x720--INTER_LINEAR--BORDER_REPLICATE->
-  <dst>
-    <kind>65536</kind>
-    <type>24</type>
-    <min>0.</min>
-    <max>255.</max>
-    <last>
-      <x>1279</x>
-      <y>719</y>
-      <val>255.</val></last>
-    <rng1>
-      <x>652</x>
-      <y>59</y>
-      <cn>2</cn>
-      <val>59.</val></rng1>
-    <rng2>
-      <x>1031</x>
-      <y>114</y>
-      <cn>2</cn>
-      <val>12.</val></rng2></dst></TestWarpPerspective_WarpPerspective--WarpPerspective---1280x720--INTER_LINEAR--BORDER_REPLICATE->
-<TestWarpPerspective_WarpPerspective--WarpPerspective---1920x1080--INTER_NEAREST--BORDER_CONSTANT->
-  <dst>
-    <kind>65536</kind>
-    <type>24</type>
-    <min>0.</min>
-    <max>255.</max>
-    <last>
-      <x>1919</x>
-      <y>1079</y>
-      <val>150.</val></last>
-    <rng1>
-      <x>779</x>
-      <y>320</y>
-      <val>98.</val></rng1>
-    <rng2>
-      <x>938</x>
-      <y>912</y>
-      <cn>2</cn>
-      <val>150.</val></rng2></dst></TestWarpPerspective_WarpPerspective--WarpPerspective---1920x1080--INTER_NEAREST--BORDER_CONSTANT->
-<TestWarpPerspective_WarpPerspective--WarpPerspective---1920x1080--INTER_NEAREST--BORDER_REPLICATE->
-  <dst>
-    <kind>65536</kind>
-    <type>24</type>
-    <min>0.</min>
-    <max>255.</max>
-    <last>
-      <x>1919</x>
-      <y>1079</y>
-      <val>150.</val></last>
-    <rng1>
-      <x>471</x>
-      <y>366</y>
-      <val>171.</val></rng1>
-    <rng2>
-      <x>1130</x>
-      <y>316</y>
-      <val>150.</val></rng2></dst></TestWarpPerspective_WarpPerspective--WarpPerspective---1920x1080--INTER_NEAREST--BORDER_REPLICATE->
-<TestWarpPerspective_WarpPerspective--WarpPerspective---1920x1080--INTER_LINEAR--BORDER_CONSTANT->
-  <dst>
-    <kind>65536</kind>
-    <type>24</type>
-    <min>0.</min>
-    <max>255.</max>
-    <last>
-      <x>1919</x>
-      <y>1079</y>
-      <val>255.</val></last>
-    <rng1>
-      <x>572</x>
-      <y>931</y>
-      <cn>2</cn>
-      <val>90.</val></rng1>
-    <rng2>
-      <x>897</x>
-      <y>361</y>
-      <cn>1</cn>
-      <val>40.</val></rng2></dst></TestWarpPerspective_WarpPerspective--WarpPerspective---1920x1080--INTER_LINEAR--BORDER_CONSTANT->
-<TestWarpPerspective_WarpPerspective--WarpPerspective---1920x1080--INTER_LINEAR--BORDER_REPLICATE->
-  <dst>
-    <kind>65536</kind>
-    <type>24</type>
-    <min>0.</min>
-    <max>255.</max>
-    <last>
-      <x>1919</x>
-      <y>1079</y>
-      <val>255.</val></last>
-    <rng1>
-      <x>1647</x>
-      <y>296</y>
-      <cn>1</cn>
-      <val>40.</val></rng1>
-    <rng2>
-      <x>872</x>
-      <y>349</y>
-      <val>55.</val></rng2></dst></TestWarpPerspective_WarpPerspective--WarpPerspective---1920x1080--INTER_LINEAR--BORDER_REPLICATE->
 <Size_AdaptThreshType_AdaptThreshMethod_BlockSize_adaptiveThreshold--adaptiveThreshold---640x480--THRESH_BINARY--ADAPTIVE_THRESH_MEAN_C--3->
   <dst>
     <kind>65536</kind>
@@ -45159,6 +44691,477 @@
       <y>465</y>
       <val>8.4813610839843750e+02</val></rng2></dst></TestRemap_Remap--Remap---1920x1080--32FC1--32FC2--INTER_NEAREST->
  <!-- resumed -->
+ <!-- resumed -->
+<TestWarpAffine_WarpAffine--WarpAffine---640x480--INTER_NEAREST--BORDER_CONSTANT->
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>255.</val></last>
+    <rng1>
+      <x>142</x>
+      <y>314</y>
+      <val>161.</val></rng1>
+    <rng2>
+      <x>317</x>
+      <y>10</y>
+      <cn>1</cn>
+      <val>1.</val></rng2></dst></TestWarpAffine_WarpAffine--WarpAffine---640x480--INTER_NEAREST--BORDER_CONSTANT->
+<TestWarpAffine_WarpAffine--WarpAffine---640x480--INTER_NEAREST--BORDER_REPLICATE->
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>255.</val></last>
+    <rng1>
+      <x>563</x>
+      <y>277</y>
+      <cn>3</cn>
+      <val>255.</val></rng1>
+    <rng2>
+      <x>543</x>
+      <y>323</y>
+      <cn>3</cn>
+      <val>255.</val></rng2></dst></TestWarpAffine_WarpAffine--WarpAffine---640x480--INTER_NEAREST--BORDER_REPLICATE->
+<TestWarpAffine_WarpAffine--WarpAffine---640x480--INTER_LINEAR--BORDER_CONSTANT->
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>255.</val></last>
+    <rng1>
+      <x>547</x>
+      <y>454</y>
+      <val>157.</val></rng1>
+    <rng2>
+      <x>277</x>
+      <y>234</y>
+      <cn>2</cn>
+      <val>84.</val></rng2></dst></TestWarpAffine_WarpAffine--WarpAffine---640x480--INTER_LINEAR--BORDER_CONSTANT->
+<TestWarpAffine_WarpAffine--WarpAffine---640x480--INTER_LINEAR--BORDER_REPLICATE->
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>255.</val></last>
+    <rng1>
+      <x>623</x>
+      <y>332</y>
+      <cn>2</cn>
+      <val>72.</val></rng1>
+    <rng2>
+      <x>322</x>
+      <y>189</y>
+      <cn>3</cn>
+      <val>255.</val></rng2></dst></TestWarpAffine_WarpAffine--WarpAffine---640x480--INTER_LINEAR--BORDER_REPLICATE->
+<TestWarpAffine_WarpAffine--WarpAffine---1280x720--INTER_NEAREST--BORDER_CONSTANT->
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>150.</val></last>
+    <rng1>
+      <x>381</x>
+      <y>235</y>
+      <cn>3</cn>
+      <val>255.</val></rng1>
+    <rng2>
+      <x>74</x>
+      <y>530</y>
+      <cn>2</cn>
+      <val>33.</val></rng2></dst></TestWarpAffine_WarpAffine--WarpAffine---1280x720--INTER_NEAREST--BORDER_CONSTANT->
+<TestWarpAffine_WarpAffine--WarpAffine---1280x720--INTER_NEAREST--BORDER_REPLICATE->
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>255.</val></last>
+    <rng1>
+      <x>1014</x>
+      <y>452</y>
+      <cn>3</cn>
+      <val>255.</val></rng1>
+    <rng2>
+      <x>367</x>
+      <y>615</y>
+      <cn>2</cn>
+      <val>79.</val></rng2></dst></TestWarpAffine_WarpAffine--WarpAffine---1280x720--INTER_NEAREST--BORDER_REPLICATE->
+<TestWarpAffine_WarpAffine--WarpAffine---1280x720--INTER_LINEAR--BORDER_CONSTANT->
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>150.</val></last>
+    <rng1>
+      <x>324</x>
+      <y>437</y>
+      <cn>2</cn>
+      <val>20.</val></rng1>
+    <rng2>
+      <x>1098</x>
+      <y>105</y>
+      <cn>1</cn>
+      <val>150.</val></rng2></dst></TestWarpAffine_WarpAffine--WarpAffine---1280x720--INTER_LINEAR--BORDER_CONSTANT->
+<TestWarpAffine_WarpAffine--WarpAffine---1280x720--INTER_LINEAR--BORDER_REPLICATE->
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>255.</val></last>
+    <rng1>
+      <x>32</x>
+      <y>71</y>
+      <val>151.</val></rng1>
+    <rng2>
+      <x>597</x>
+      <y>505</y>
+      <val>155.</val></rng2></dst></TestWarpAffine_WarpAffine--WarpAffine---1280x720--INTER_LINEAR--BORDER_REPLICATE->
+<TestWarpAffine_WarpAffine--WarpAffine---1920x1080--INTER_NEAREST--BORDER_CONSTANT->
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>150.</val></last>
+    <rng1>
+      <x>723</x>
+      <y>837</y>
+      <cn>3</cn>
+      <val>150.</val></rng1>
+    <rng2>
+      <x>778</x>
+      <y>642</y>
+      <cn>3</cn>
+      <val>150.</val></rng2></dst></TestWarpAffine_WarpAffine--WarpAffine---1920x1080--INTER_NEAREST--BORDER_CONSTANT->
+<TestWarpAffine_WarpAffine--WarpAffine---1920x1080--INTER_NEAREST--BORDER_REPLICATE->
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>255.</val></last>
+    <rng1>
+      <x>1768</x>
+      <y>904</y>
+      <cn>2</cn>
+      <val>17.</val></rng1>
+    <rng2>
+      <x>1129</x>
+      <y>1000</y>
+      <val>104.</val></rng2></dst></TestWarpAffine_WarpAffine--WarpAffine---1920x1080--INTER_NEAREST--BORDER_REPLICATE->
+<TestWarpAffine_WarpAffine--WarpAffine---1920x1080--INTER_LINEAR--BORDER_CONSTANT->
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>150.</val></last>
+    <rng1>
+      <x>592</x>
+      <y>855</y>
+      <cn>3</cn>
+      <val>150.</val></rng1>
+    <rng2>
+      <x>999</x>
+      <y>454</y>
+      <val>150.</val></rng2></dst></TestWarpAffine_WarpAffine--WarpAffine---1920x1080--INTER_LINEAR--BORDER_CONSTANT->
+<TestWarpAffine_WarpAffine--WarpAffine---1920x1080--INTER_LINEAR--BORDER_REPLICATE->
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>255.</val></last>
+    <rng1>
+      <x>254</x>
+      <y>830</y>
+      <cn>1</cn>
+      <val>19.</val></rng1>
+    <rng2>
+      <x>1284</x>
+      <y>821</y>
+      <cn>2</cn>
+      <val>17.</val></rng2></dst></TestWarpAffine_WarpAffine--WarpAffine---1920x1080--INTER_LINEAR--BORDER_REPLICATE->
+<TestWarpPerspective_WarpPerspective--WarpPerspective---640x480--INTER_NEAREST--BORDER_CONSTANT->
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>150.</val></last>
+    <rng1>
+      <x>348</x>
+      <y>180</y>
+      <cn>2</cn>
+      <val>10.</val></rng1>
+    <rng2>
+      <x>514</x>
+      <y>40</y>
+      <cn>3</cn>
+      <val>255.</val></rng2></dst></TestWarpPerspective_WarpPerspective--WarpPerspective---640x480--INTER_NEAREST--BORDER_CONSTANT->
+<TestWarpPerspective_WarpPerspective--WarpPerspective---640x480--INTER_NEAREST--BORDER_REPLICATE->
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>255.</val></last>
+    <rng1>
+      <x>107</x>
+      <y>189</y>
+      <cn>3</cn>
+      <val>255.</val></rng1>
+    <rng2>
+      <x>138</x>
+      <y>441</y>
+      <cn>3</cn>
+      <val>255.</val></rng2></dst></TestWarpPerspective_WarpPerspective--WarpPerspective---640x480--INTER_NEAREST--BORDER_REPLICATE->
+<TestWarpPerspective_WarpPerspective--WarpPerspective---640x480--INTER_LINEAR--BORDER_CONSTANT->
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>150.</val></last>
+    <rng1>
+      <x>486</x>
+      <y>410</y>
+      <cn>3</cn>
+      <val>150.</val></rng1>
+    <rng2>
+      <x>449</x>
+      <y>195</y>
+      <cn>1</cn>
+      <val>129.</val></rng2></dst></TestWarpPerspective_WarpPerspective--WarpPerspective---640x480--INTER_LINEAR--BORDER_CONSTANT->
+<TestWarpPerspective_WarpPerspective--WarpPerspective---640x480--INTER_LINEAR--BORDER_REPLICATE->
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>255.</val></last>
+    <rng1>
+      <x>448</x>
+      <y>142</y>
+      <cn>3</cn>
+      <val>255.</val></rng1>
+    <rng2>
+      <x>532</x>
+      <y>375</y>
+      <cn>3</cn>
+      <val>255.</val></rng2></dst></TestWarpPerspective_WarpPerspective--WarpPerspective---640x480--INTER_LINEAR--BORDER_REPLICATE->
+<TestWarpPerspective_WarpPerspective--WarpPerspective---1280x720--INTER_NEAREST--BORDER_CONSTANT->
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>150.</val></last>
+    <rng1>
+      <x>298</x>
+      <y>59</y>
+      <cn>3</cn>
+      <val>255.</val></rng1>
+    <rng2>
+      <x>1269</x>
+      <y>644</y>
+      <cn>3</cn>
+      <val>150.</val></rng2></dst></TestWarpPerspective_WarpPerspective--WarpPerspective---1280x720--INTER_NEAREST--BORDER_CONSTANT->
+<TestWarpPerspective_WarpPerspective--WarpPerspective---1280x720--INTER_NEAREST--BORDER_REPLICATE->
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>255.</val></last>
+    <rng1>
+      <x>646</x>
+      <y>73</y>
+      <val>135.</val></rng1>
+    <rng2>
+      <x>767</x>
+      <y>194</y>
+      <cn>1</cn>
+      <val>107.</val></rng2></dst></TestWarpPerspective_WarpPerspective--WarpPerspective---1280x720--INTER_NEAREST--BORDER_REPLICATE->
+<TestWarpPerspective_WarpPerspective--WarpPerspective---1280x720--INTER_LINEAR--BORDER_CONSTANT->
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>150.</val></last>
+    <rng1>
+      <x>1190</x>
+      <y>410</y>
+      <cn>1</cn>
+      <val>150.</val></rng1>
+    <rng2>
+      <x>181</x>
+      <y>629</y>
+      <cn>2</cn>
+      <val>12.</val></rng2></dst></TestWarpPerspective_WarpPerspective--WarpPerspective---1280x720--INTER_LINEAR--BORDER_CONSTANT->
+<TestWarpPerspective_WarpPerspective--WarpPerspective---1280x720--INTER_LINEAR--BORDER_REPLICATE->
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>255.</val></last>
+    <rng1>
+      <x>344</x>
+      <y>550</y>
+      <cn>1</cn>
+      <val>158.</val></rng1>
+    <rng2>
+      <x>210</x>
+      <y>668</y>
+      <val>6.</val></rng2></dst></TestWarpPerspective_WarpPerspective--WarpPerspective---1280x720--INTER_LINEAR--BORDER_REPLICATE->
+<TestWarpPerspective_WarpPerspective--WarpPerspective---1920x1080--INTER_NEAREST--BORDER_CONSTANT->
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>150.</val></last>
+    <rng1>
+      <x>1902</x>
+      <y>793</y>
+      <cn>1</cn>
+      <val>150.</val></rng1>
+    <rng2>
+      <x>709</x>
+      <y>81</y>
+      <cn>1</cn>
+      <val>150.</val></rng2></dst></TestWarpPerspective_WarpPerspective--WarpPerspective---1920x1080--INTER_NEAREST--BORDER_CONSTANT->
+<TestWarpPerspective_WarpPerspective--WarpPerspective---1920x1080--INTER_NEAREST--BORDER_REPLICATE->
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>255.</val></last>
+    <rng1>
+      <x>132</x>
+      <y>886</y>
+      <cn>3</cn>
+      <val>255.</val></rng1>
+    <rng2>
+      <x>493</x>
+      <y>36</y>
+      <val>63.</val></rng2></dst></TestWarpPerspective_WarpPerspective--WarpPerspective---1920x1080--INTER_NEAREST--BORDER_REPLICATE->
+<TestWarpPerspective_WarpPerspective--WarpPerspective---1920x1080--INTER_LINEAR--BORDER_CONSTANT->
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>150.</val></last>
+    <rng1>
+      <x>1110</x>
+      <y>338</y>
+      <val>150.</val></rng1>
+    <rng2>
+      <x>466</x>
+      <y>1022</y>
+      <cn>2</cn>
+      <val>150.</val></rng2></dst></TestWarpPerspective_WarpPerspective--WarpPerspective---1920x1080--INTER_LINEAR--BORDER_CONSTANT->
+<TestWarpPerspective_WarpPerspective--WarpPerspective---1920x1080--INTER_LINEAR--BORDER_REPLICATE->
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>255.</val></last>
+    <rng1>
+      <x>784</x>
+      <y>50</y>
+      <cn>1</cn>
+      <val>123.</val></rng1>
+    <rng2>
+      <x>45</x>
+      <y>764</y>
+      <cn>1</cn>
+      <val>124.</val></rng2></dst></TestWarpPerspective_WarpPerspective--WarpPerspective---1920x1080--INTER_LINEAR--BORDER_REPLICATE->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---176x144--INTER_NEAREST--BORDER_CONSTANT--8UC1->
   <dst>
     <kind>65536</kind>
@@ -45170,13 +45173,13 @@
       <y>143</y>
       <val>150.</val></last>
     <rng1>
-      <x>127</x>
-      <y>18</y>
-      <val>101.</val></rng1>
+      <x>17</x>
+      <y>132</y>
+      <val>81.</val></rng1>
     <rng2>
-      <x>119</x>
-      <y>36</y>
-      <val>180.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---176x144--INTER_NEAREST--BORDER_CONSTANT--8UC1->
+      <x>166</x>
+      <y>129</y>
+      <val>89.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---176x144--INTER_NEAREST--BORDER_CONSTANT--8UC1->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---176x144--INTER_NEAREST--BORDER_CONSTANT--8UC4->
   <dst>
     <kind>65536</kind>
@@ -45188,52 +45191,16 @@
       <y>143</y>
       <val>150.</val></last>
     <rng1>
-      <x>5</x>
-      <y>53</y>
-      <cn>2</cn>
-      <val>83.</val></rng1>
-    <rng2>
-      <x>155</x>
-      <y>45</y>
-      <val>93.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---176x144--INTER_NEAREST--BORDER_CONSTANT--8UC4->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---176x144--INTER_NEAREST--BORDER_REPLICATE--8UC1->
-  <dst>
-    <kind>65536</kind>
-    <type>0</type>
-    <min>33.</min>
-    <max>254.</max>
-    <last>
-      <x>175</x>
-      <y>143</y>
-      <val>150.</val></last>
-    <rng1>
-      <x>153</x>
-      <y>129</y>
-      <val>88.</val></rng1>
-    <rng2>
-      <x>149</x>
-      <y>77</y>
-      <val>100.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---176x144--INTER_NEAREST--BORDER_REPLICATE--8UC1->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---176x144--INTER_NEAREST--BORDER_REPLICATE--8UC4->
-  <dst>
-    <kind>65536</kind>
-    <type>24</type>
-    <min>6.</min>
-    <max>255.</max>
-    <last>
-      <x>175</x>
-      <y>143</y>
-      <val>150.</val></last>
-    <rng1>
-      <x>78</x>
-      <y>92</y>
+      <x>25</x>
+      <y>46</y>
       <cn>3</cn>
       <val>255.</val></rng1>
     <rng2>
-      <x>116</x>
-      <y>99</y>
-      <val>91.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---176x144--INTER_NEAREST--BORDER_REPLICATE--8UC4->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---176x144--INTER_LINEAR--BORDER_CONSTANT--8UC1->
+      <x>142</x>
+      <y>72</y>
+      <cn>3</cn>
+      <val>255.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---176x144--INTER_NEAREST--BORDER_CONSTANT--8UC4->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---176x144--INTER_NEAREST--BORDER_REPLICATE--8UC1->
   <dst>
     <kind>65536</kind>
     <type>0</type>
@@ -45244,14 +45211,14 @@
       <y>143</y>
       <val>67.</val></last>
     <rng1>
-      <x>16</x>
-      <y>4</y>
-      <val>254.</val></rng1>
+      <x>96</x>
+      <y>89</y>
+      <val>98.</val></rng1>
     <rng2>
-      <x>32</x>
-      <y>62</y>
-      <val>120.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---176x144--INTER_LINEAR--BORDER_CONSTANT--8UC1->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---176x144--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+      <x>138</x>
+      <y>3</y>
+      <val>230.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---176x144--INTER_NEAREST--BORDER_REPLICATE--8UC1->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---176x144--INTER_NEAREST--BORDER_REPLICATE--8UC4->
   <dst>
     <kind>65536</kind>
     <type>24</type>
@@ -45262,15 +45229,53 @@
       <y>143</y>
       <val>255.</val></last>
     <rng1>
-      <x>1</x>
-      <y>140</y>
-      <cn>2</cn>
-      <val>57.</val></rng1>
+      <x>14</x>
+      <y>131</y>
+      <cn>3</cn>
+      <val>255.</val></rng1>
     <rng2>
-      <x>33</x>
-      <y>53</y>
-      <cn>1</cn>
-      <val>132.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---176x144--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+      <x>6</x>
+      <y>6</y>
+      <cn>3</cn>
+      <val>255.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---176x144--INTER_NEAREST--BORDER_REPLICATE--8UC4->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---176x144--INTER_LINEAR--BORDER_CONSTANT--8UC1->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>33.</min>
+    <max>254.</max>
+    <last>
+      <x>175</x>
+      <y>143</y>
+      <val>150.</val></last>
+    <rng1>
+      <x>76</x>
+      <y>45</y>
+      <val>179.</val></rng1>
+    <rng2>
+      <x>24</x>
+      <y>96</y>
+      <val>45.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---176x144--INTER_LINEAR--BORDER_CONSTANT--8UC1->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---176x144--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>6.</min>
+    <max>255.</max>
+    <last>
+      <x>175</x>
+      <y>143</y>
+      <val>150.</val></last>
+    <rng1>
+      <x>77</x>
+      <y>14</y>
+      <cn>3</cn>
+      <val>255.</val></rng1>
+    <rng2>
+      <x>95</x>
+      <y>33</y>
+      <cn>2</cn>
+      <val>168.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---176x144--INTER_LINEAR--BORDER_CONSTANT--8UC4->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---176x144--INTER_LINEAR--BORDER_REPLICATE--8UC1->
   <dst>
     <kind>65536</kind>
@@ -45282,13 +45287,13 @@
       <y>143</y>
       <val>67.</val></last>
     <rng1>
-      <x>72</x>
-      <y>141</y>
-      <val>203.</val></rng1>
+      <x>76</x>
+      <y>30</y>
+      <val>133.</val></rng1>
     <rng2>
-      <x>41</x>
-      <y>101</y>
-      <val>95.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---176x144--INTER_LINEAR--BORDER_REPLICATE--8UC1->
+      <x>102</x>
+      <y>136</y>
+      <val>79.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---176x144--INTER_LINEAR--BORDER_REPLICATE--8UC1->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---176x144--INTER_LINEAR--BORDER_REPLICATE--8UC4->
   <dst>
     <kind>65536</kind>
@@ -45300,15 +45305,15 @@
       <y>143</y>
       <val>255.</val></last>
     <rng1>
-      <x>86</x>
-      <y>115</y>
-      <cn>2</cn>
-      <val>133.</val></rng1>
-    <rng2>
-      <x>28</x>
-      <y>8</y>
+      <x>90</x>
+      <y>38</y>
       <cn>1</cn>
-      <val>248.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---176x144--INTER_LINEAR--BORDER_REPLICATE--8UC4->
+      <val>127.</val></rng1>
+    <rng2>
+      <x>37</x>
+      <y>110</y>
+      <cn>3</cn>
+      <val>255.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---176x144--INTER_LINEAR--BORDER_REPLICATE--8UC4->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---320x240--INTER_NEAREST--BORDER_CONSTANT--8UC1->
   <dst>
     <kind>65536</kind>
@@ -45320,13 +45325,13 @@
       <y>239</y>
       <val>150.</val></last>
     <rng1>
-      <x>81</x>
-      <y>92</y>
-      <val>141.</val></rng1>
+      <x>74</x>
+      <y>97</y>
+      <val>77.</val></rng1>
     <rng2>
-      <x>222</x>
-      <y>24</y>
-      <val>118.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---320x240--INTER_NEAREST--BORDER_CONSTANT--8UC1->
+      <x>106</x>
+      <y>192</y>
+      <val>96.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---320x240--INTER_NEAREST--BORDER_CONSTANT--8UC1->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---320x240--INTER_NEAREST--BORDER_CONSTANT--8UC4->
   <dst>
     <kind>65536</kind>
@@ -45338,53 +45343,16 @@
       <y>239</y>
       <val>150.</val></last>
     <rng1>
-      <x>3</x>
-      <y>136</y>
-      <cn>3</cn>
-      <val>255.</val></rng1>
-    <rng2>
-      <x>236</x>
-      <y>135</y>
+      <x>43</x>
+      <y>7</y>
       <cn>1</cn>
-      <val>134.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---320x240--INTER_NEAREST--BORDER_CONSTANT--8UC4->
+      <val>150.</val></rng1>
+    <rng2>
+      <x>174</x>
+      <y>156</y>
+      <cn>2</cn>
+      <val>86.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---320x240--INTER_NEAREST--BORDER_CONSTANT--8UC4->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---320x240--INTER_NEAREST--BORDER_REPLICATE--8UC1->
-  <dst>
-    <kind>65536</kind>
-    <type>0</type>
-    <min>33.</min>
-    <max>254.</max>
-    <last>
-      <x>319</x>
-      <y>239</y>
-      <val>150.</val></last>
-    <rng1>
-      <x>128</x>
-      <y>195</y>
-      <val>82.</val></rng1>
-    <rng2>
-      <x>85</x>
-      <y>173</y>
-      <val>82.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---320x240--INTER_NEAREST--BORDER_REPLICATE--8UC1->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---320x240--INTER_NEAREST--BORDER_REPLICATE--8UC4->
-  <dst>
-    <kind>65536</kind>
-    <type>24</type>
-    <min>11.</min>
-    <max>255.</max>
-    <last>
-      <x>319</x>
-      <y>239</y>
-      <val>150.</val></last>
-    <rng1>
-      <x>89</x>
-      <y>177</y>
-      <val>70.</val></rng1>
-    <rng2>
-      <x>125</x>
-      <y>116</y>
-      <cn>1</cn>
-      <val>80.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---320x240--INTER_NEAREST--BORDER_REPLICATE--8UC4->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---320x240--INTER_LINEAR--BORDER_CONSTANT--8UC1->
   <dst>
     <kind>65536</kind>
     <type>0</type>
@@ -45395,14 +45363,14 @@
       <y>239</y>
       <val>81.</val></last>
     <rng1>
-      <x>208</x>
-      <y>143</y>
-      <val>65.</val></rng1>
+      <x>36</x>
+      <y>16</y>
+      <val>254.</val></rng1>
     <rng2>
-      <x>225</x>
-      <y>132</y>
-      <val>135.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---320x240--INTER_LINEAR--BORDER_CONSTANT--8UC1->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---320x240--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+      <x>34</x>
+      <y>54</y>
+      <val>180.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---320x240--INTER_NEAREST--BORDER_REPLICATE--8UC1->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---320x240--INTER_NEAREST--BORDER_REPLICATE--8UC4->
   <dst>
     <kind>65536</kind>
     <type>24</type>
@@ -45413,15 +45381,52 @@
       <y>239</y>
       <val>255.</val></last>
     <rng1>
-      <x>298</x>
-      <y>231</y>
+      <x>267</x>
+      <y>161</y>
       <cn>2</cn>
-      <val>49.</val></rng1>
+      <val>99.</val></rng1>
     <rng2>
-      <x>195</x>
-      <y>18</y>
+      <x>318</x>
+      <y>213</y>
+      <val>76.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---320x240--INTER_NEAREST--BORDER_REPLICATE--8UC4->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---320x240--INTER_LINEAR--BORDER_CONSTANT--8UC1->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>33.</min>
+    <max>254.</max>
+    <last>
+      <x>319</x>
+      <y>239</y>
+      <val>150.</val></last>
+    <rng1>
+      <x>253</x>
+      <y>166</y>
+      <val>92.</val></rng1>
+    <rng2>
+      <x>202</x>
+      <y>208</y>
+      <val>105.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---320x240--INTER_LINEAR--BORDER_CONSTANT--8UC1->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---320x240--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>11.</min>
+    <max>255.</max>
+    <last>
+      <x>319</x>
+      <y>239</y>
+      <val>150.</val></last>
+    <rng1>
+      <x>20</x>
+      <y>115</y>
+      <cn>2</cn>
+      <val>109.</val></rng1>
+    <rng2>
+      <x>262</x>
+      <y>161</y>
       <cn>1</cn>
-      <val>253.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---320x240--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+      <val>75.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---320x240--INTER_LINEAR--BORDER_CONSTANT--8UC4->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---320x240--INTER_LINEAR--BORDER_REPLICATE--8UC1->
   <dst>
     <kind>65536</kind>
@@ -45433,13 +45438,13 @@
       <y>239</y>
       <val>81.</val></last>
     <rng1>
-      <x>137</x>
-      <y>22</y>
-      <val>159.</val></rng1>
+      <x>102</x>
+      <y>127</y>
+      <val>53.</val></rng1>
     <rng2>
-      <x>60</x>
-      <y>196</y>
-      <val>94.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---320x240--INTER_LINEAR--BORDER_REPLICATE--8UC1->
+      <x>284</x>
+      <y>126</y>
+      <val>104.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---320x240--INTER_LINEAR--BORDER_REPLICATE--8UC1->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---320x240--INTER_LINEAR--BORDER_REPLICATE--8UC4->
   <dst>
     <kind>65536</kind>
@@ -45451,15 +45456,14 @@
       <y>239</y>
       <val>255.</val></last>
     <rng1>
-      <x>42</x>
-      <y>183</y>
-      <cn>3</cn>
-      <val>255.</val></rng1>
+      <x>193</x>
+      <y>124</y>
+      <cn>1</cn>
+      <val>61.</val></rng1>
     <rng2>
-      <x>305</x>
-      <y>140</y>
-      <cn>2</cn>
-      <val>76.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---320x240--INTER_LINEAR--BORDER_REPLICATE--8UC4->
+      <x>24</x>
+      <y>79</y>
+      <val>86.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---320x240--INTER_LINEAR--BORDER_REPLICATE--8UC4->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---352x288--INTER_NEAREST--BORDER_CONSTANT--8UC1->
   <dst>
     <kind>65536</kind>
@@ -45471,13 +45475,13 @@
       <y>287</y>
       <val>150.</val></last>
     <rng1>
-      <x>71</x>
-      <y>179</y>
-      <val>243.</val></rng1>
+      <x>165</x>
+      <y>116</y>
+      <val>141.</val></rng1>
     <rng2>
-      <x>106</x>
-      <y>92</y>
-      <val>146.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---352x288--INTER_NEAREST--BORDER_CONSTANT--8UC1->
+      <x>201</x>
+      <y>270</y>
+      <val>88.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---352x288--INTER_NEAREST--BORDER_CONSTANT--8UC1->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---352x288--INTER_NEAREST--BORDER_CONSTANT--8UC4->
   <dst>
     <kind>65536</kind>
@@ -45489,53 +45493,16 @@
       <y>287</y>
       <val>150.</val></last>
     <rng1>
-      <x>270</x>
-      <y>80</y>
-      <cn>2</cn>
-      <val>150.</val></rng1>
-    <rng2>
-      <x>246</x>
-      <y>66</y>
-      <cn>2</cn>
-      <val>73.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---352x288--INTER_NEAREST--BORDER_CONSTANT--8UC4->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---352x288--INTER_NEAREST--BORDER_REPLICATE--8UC1->
-  <dst>
-    <kind>65536</kind>
-    <type>0</type>
-    <min>30.</min>
-    <max>254.</max>
-    <last>
-      <x>351</x>
-      <y>287</y>
-      <val>150.</val></last>
-    <rng1>
-      <x>119</x>
-      <y>257</y>
-      <val>110.</val></rng1>
-    <rng2>
-      <x>349</x>
-      <y>26</y>
-      <val>150.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---352x288--INTER_NEAREST--BORDER_REPLICATE--8UC1->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---352x288--INTER_NEAREST--BORDER_REPLICATE--8UC4->
-  <dst>
-    <kind>65536</kind>
-    <type>24</type>
-    <min>16.</min>
-    <max>255.</max>
-    <last>
-      <x>351</x>
-      <y>287</y>
-      <val>150.</val></last>
-    <rng1>
-      <x>189</x>
-      <y>126</y>
-      <val>138.</val></rng1>
-    <rng2>
-      <x>291</x>
-      <y>10</y>
+      <x>59</x>
+      <y>97</y>
       <cn>1</cn>
-      <val>114.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---352x288--INTER_NEAREST--BORDER_REPLICATE--8UC4->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---352x288--INTER_LINEAR--BORDER_CONSTANT--8UC1->
+      <val>79.</val></rng1>
+    <rng2>
+      <x>29</x>
+      <y>266</y>
+      <cn>2</cn>
+      <val>66.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---352x288--INTER_NEAREST--BORDER_CONSTANT--8UC4->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---352x288--INTER_NEAREST--BORDER_REPLICATE--8UC1->
   <dst>
     <kind>65536</kind>
     <type>0</type>
@@ -45546,14 +45513,14 @@
       <y>287</y>
       <val>80.</val></last>
     <rng1>
-      <x>312</x>
-      <y>20</y>
-      <val>254.</val></rng1>
+      <x>32</x>
+      <y>194</y>
+      <val>64.</val></rng1>
     <rng2>
-      <x>37</x>
-      <y>226</y>
-      <val>48.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---352x288--INTER_LINEAR--BORDER_CONSTANT--8UC1->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---352x288--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+      <x>236</x>
+      <y>8</y>
+      <val>254.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---352x288--INTER_NEAREST--BORDER_REPLICATE--8UC1->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---352x288--INTER_NEAREST--BORDER_REPLICATE--8UC4->
   <dst>
     <kind>65536</kind>
     <type>24</type>
@@ -45564,15 +45531,52 @@
       <y>287</y>
       <val>255.</val></last>
     <rng1>
-      <x>152</x>
-      <y>283</y>
-      <cn>2</cn>
-      <val>232.</val></rng1>
+      <x>329</x>
+      <y>117</y>
+      <cn>3</cn>
+      <val>255.</val></rng1>
     <rng2>
-      <x>213</x>
-      <y>27</y>
-      <cn>1</cn>
-      <val>253.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---352x288--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+      <x>233</x>
+      <y>140</y>
+      <cn>2</cn>
+      <val>129.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---352x288--INTER_NEAREST--BORDER_REPLICATE--8UC4->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---352x288--INTER_LINEAR--BORDER_CONSTANT--8UC1->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>30.</min>
+    <max>254.</max>
+    <last>
+      <x>351</x>
+      <y>287</y>
+      <val>150.</val></last>
+    <rng1>
+      <x>113</x>
+      <y>0</y>
+      <val>150.</val></rng1>
+    <rng2>
+      <x>309</x>
+      <y>212</y>
+      <val>75.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---352x288--INTER_LINEAR--BORDER_CONSTANT--8UC1->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---352x288--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>16.</min>
+    <max>255.</max>
+    <last>
+      <x>351</x>
+      <y>287</y>
+      <val>150.</val></last>
+    <rng1>
+      <x>21</x>
+      <y>48</y>
+      <cn>2</cn>
+      <val>141.</val></rng1>
+    <rng2>
+      <x>266</x>
+      <y>111</y>
+      <val>108.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---352x288--INTER_LINEAR--BORDER_CONSTANT--8UC4->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---352x288--INTER_LINEAR--BORDER_REPLICATE--8UC1->
   <dst>
     <kind>65536</kind>
@@ -45584,13 +45588,13 @@
       <y>287</y>
       <val>80.</val></last>
     <rng1>
-      <x>326</x>
-      <y>38</y>
-      <val>226.</val></rng1>
+      <x>178</x>
+      <y>25</y>
+      <val>221.</val></rng1>
     <rng2>
-      <x>10</x>
-      <y>90</y>
-      <val>146.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---352x288--INTER_LINEAR--BORDER_REPLICATE--8UC1->
+      <x>73</x>
+      <y>87</y>
+      <val>95.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---352x288--INTER_LINEAR--BORDER_REPLICATE--8UC1->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---352x288--INTER_LINEAR--BORDER_REPLICATE--8UC4->
   <dst>
     <kind>65536</kind>
@@ -45602,15 +45606,14 @@
       <y>287</y>
       <val>255.</val></last>
     <rng1>
-      <x>228</x>
-      <y>95</y>
-      <cn>1</cn>
-      <val>155.</val></rng1>
+      <x>24</x>
+      <y>208</y>
+      <cn>2</cn>
+      <val>94.</val></rng1>
     <rng2>
-      <x>48</x>
-      <y>22</y>
-      <cn>3</cn>
-      <val>255.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---352x288--INTER_LINEAR--BORDER_REPLICATE--8UC4->
+      <x>143</x>
+      <y>106</y>
+      <val>186.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---352x288--INTER_LINEAR--BORDER_REPLICATE--8UC4->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---480x480--INTER_NEAREST--BORDER_CONSTANT--8UC1->
   <dst>
     <kind>65536</kind>
@@ -45622,13 +45625,13 @@
       <y>479</y>
       <val>150.</val></last>
     <rng1>
-      <x>438</x>
-      <y>123</y>
-      <val>103.</val></rng1>
+      <x>337</x>
+      <y>364</y>
+      <val>97.</val></rng1>
     <rng2>
-      <x>477</x>
-      <y>188</y>
-      <val>150.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---480x480--INTER_NEAREST--BORDER_CONSTANT--8UC1->
+      <x>182</x>
+      <y>330</y>
+      <val>97.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---480x480--INTER_NEAREST--BORDER_CONSTANT--8UC1->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---480x480--INTER_NEAREST--BORDER_CONSTANT--8UC4->
   <dst>
     <kind>65536</kind>
@@ -45640,54 +45643,16 @@
       <y>479</y>
       <val>150.</val></last>
     <rng1>
-      <x>106</x>
-      <y>180</y>
+      <x>158</x>
+      <y>354</y>
       <cn>2</cn>
-      <val>168.</val></rng1>
+      <val>111.</val></rng1>
     <rng2>
-      <x>217</x>
-      <y>187</y>
-      <cn>2</cn>
-      <val>133.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---480x480--INTER_NEAREST--BORDER_CONSTANT--8UC4->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---480x480--INTER_NEAREST--BORDER_REPLICATE--8UC1->
-  <dst>
-    <kind>65536</kind>
-    <type>0</type>
-    <min>32.</min>
-    <max>254.</max>
-    <last>
-      <x>479</x>
-      <y>479</y>
-      <val>150.</val></last>
-    <rng1>
-      <x>164</x>
-      <y>35</y>
-      <val>178.</val></rng1>
-    <rng2>
-      <x>197</x>
-      <y>348</y>
-      <val>108.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---480x480--INTER_NEAREST--BORDER_REPLICATE--8UC1->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---480x480--INTER_NEAREST--BORDER_REPLICATE--8UC4->
-  <dst>
-    <kind>65536</kind>
-    <type>24</type>
-    <min>10.</min>
-    <max>255.</max>
-    <last>
-      <x>479</x>
-      <y>479</y>
-      <val>150.</val></last>
-    <rng1>
-      <x>438</x>
-      <y>266</y>
-      <cn>3</cn>
-      <val>255.</val></rng1>
-    <rng2>
-      <x>194</x>
-      <y>31</y>
+      <x>269</x>
+      <y>39</y>
       <cn>1</cn>
-      <val>149.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---480x480--INTER_NEAREST--BORDER_REPLICATE--8UC4->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---480x480--INTER_LINEAR--BORDER_CONSTANT--8UC1->
+      <val>253.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---480x480--INTER_NEAREST--BORDER_CONSTANT--8UC4->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---480x480--INTER_NEAREST--BORDER_REPLICATE--8UC1->
   <dst>
     <kind>65536</kind>
     <type>0</type>
@@ -45698,14 +45663,14 @@
       <y>479</y>
       <val>76.</val></last>
     <rng1>
-      <x>150</x>
-      <y>304</y>
-      <val>90.</val></rng1>
+      <x>463</x>
+      <y>30</y>
+      <val>254.</val></rng1>
     <rng2>
-      <x>286</x>
-      <y>376</y>
-      <val>105.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---480x480--INTER_LINEAR--BORDER_CONSTANT--8UC1->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---480x480--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+      <x>246</x>
+      <y>474</y>
+      <val>63.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---480x480--INTER_NEAREST--BORDER_REPLICATE--8UC1->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---480x480--INTER_NEAREST--BORDER_REPLICATE--8UC4->
   <dst>
     <kind>65536</kind>
     <type>24</type>
@@ -45716,14 +45681,53 @@
       <y>479</y>
       <val>255.</val></last>
     <rng1>
-      <x>346</x>
-      <y>206</y>
+      <x>218</x>
+      <y>423</y>
       <cn>3</cn>
       <val>255.</val></rng1>
     <rng2>
-      <x>303</x>
-      <y>329</y>
-      <val>79.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---480x480--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+      <x>406</x>
+      <y>219</y>
+      <cn>2</cn>
+      <val>112.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---480x480--INTER_NEAREST--BORDER_REPLICATE--8UC4->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---480x480--INTER_LINEAR--BORDER_CONSTANT--8UC1->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>32.</min>
+    <max>254.</max>
+    <last>
+      <x>479</x>
+      <y>479</y>
+      <val>150.</val></last>
+    <rng1>
+      <x>60</x>
+      <y>33</y>
+      <val>254.</val></rng1>
+    <rng2>
+      <x>472</x>
+      <y>368</y>
+      <val>150.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---480x480--INTER_LINEAR--BORDER_CONSTANT--8UC1->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---480x480--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>10.</min>
+    <max>255.</max>
+    <last>
+      <x>479</x>
+      <y>479</y>
+      <val>150.</val></last>
+    <rng1>
+      <x>175</x>
+      <y>289</y>
+      <cn>3</cn>
+      <val>255.</val></rng1>
+    <rng2>
+      <x>194</x>
+      <y>469</y>
+      <cn>2</cn>
+      <val>225.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---480x480--INTER_LINEAR--BORDER_CONSTANT--8UC4->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---480x480--INTER_LINEAR--BORDER_REPLICATE--8UC1->
   <dst>
     <kind>65536</kind>
@@ -45735,13 +45739,13 @@
       <y>479</y>
       <val>76.</val></last>
     <rng1>
-      <x>394</x>
-      <y>95</y>
-      <val>118.</val></rng1>
+      <x>155</x>
+      <y>25</y>
+      <val>158.</val></rng1>
     <rng2>
-      <x>359</x>
-      <y>104</y>
-      <val>129.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---480x480--INTER_LINEAR--BORDER_REPLICATE--8UC1->
+      <x>93</x>
+      <y>311</y>
+      <val>52.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---480x480--INTER_LINEAR--BORDER_REPLICATE--8UC1->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---480x480--INTER_LINEAR--BORDER_REPLICATE--8UC4->
   <dst>
     <kind>65536</kind>
@@ -45753,14 +45757,14 @@
       <y>479</y>
       <val>255.</val></last>
     <rng1>
-      <x>434</x>
-      <y>355</y>
-      <val>76.</val></rng1>
+      <x>114</x>
+      <y>301</y>
+      <val>65.</val></rng1>
     <rng2>
-      <x>355</x>
-      <y>40</y>
-      <cn>1</cn>
-      <val>146.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---480x480--INTER_LINEAR--BORDER_REPLICATE--8UC4->
+      <x>79</x>
+      <y>80</y>
+      <cn>3</cn>
+      <val>255.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---480x480--INTER_LINEAR--BORDER_REPLICATE--8UC4->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---640x480--INTER_NEAREST--BORDER_CONSTANT--8UC1->
   <dst>
     <kind>65536</kind>
@@ -45772,13 +45776,13 @@
       <y>479</y>
       <val>150.</val></last>
     <rng1>
-      <x>547</x>
-      <y>120</y>
-      <val>75.</val></rng1>
+      <x>468</x>
+      <y>54</y>
+      <val>132.</val></rng1>
     <rng2>
-      <x>483</x>
-      <y>233</y>
-      <val>72.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---640x480--INTER_NEAREST--BORDER_CONSTANT--8UC1->
+      <x>114</x>
+      <y>329</y>
+      <val>52.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---640x480--INTER_NEAREST--BORDER_CONSTANT--8UC1->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---640x480--INTER_NEAREST--BORDER_CONSTANT--8UC4->
   <dst>
     <kind>65536</kind>
@@ -45790,54 +45794,16 @@
       <y>479</y>
       <val>150.</val></last>
     <rng1>
-      <x>446</x>
-      <y>291</y>
-      <cn>2</cn>
-      <val>93.</val></rng1>
-    <rng2>
-      <x>57</x>
-      <y>386</y>
-      <cn>2</cn>
-      <val>63.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---640x480--INTER_NEAREST--BORDER_CONSTANT--8UC4->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---640x480--INTER_NEAREST--BORDER_REPLICATE--8UC1->
-  <dst>
-    <kind>65536</kind>
-    <type>0</type>
-    <min>20.</min>
-    <max>254.</max>
-    <last>
-      <x>639</x>
-      <y>479</y>
-      <val>150.</val></last>
-    <rng1>
-      <x>136</x>
-      <y>340</y>
-      <val>66.</val></rng1>
-    <rng2>
-      <x>578</x>
-      <y>384</y>
-      <val>85.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---640x480--INTER_NEAREST--BORDER_REPLICATE--8UC1->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---640x480--INTER_NEAREST--BORDER_REPLICATE--8UC4->
-  <dst>
-    <kind>65536</kind>
-    <type>24</type>
-    <min>4.</min>
-    <max>255.</max>
-    <last>
-      <x>639</x>
-      <y>479</y>
-      <val>150.</val></last>
-    <rng1>
-      <x>233</x>
-      <y>371</y>
-      <cn>3</cn>
-      <val>255.</val></rng1>
-    <rng2>
-      <x>123</x>
-      <y>451</y>
+      <x>387</x>
+      <y>120</y>
       <cn>1</cn>
-      <val>78.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---640x480--INTER_NEAREST--BORDER_REPLICATE--8UC4->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---640x480--INTER_LINEAR--BORDER_CONSTANT--8UC1->
+      <val>118.</val></rng1>
+    <rng2>
+      <x>133</x>
+      <y>157</y>
+      <cn>2</cn>
+      <val>152.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---640x480--INTER_NEAREST--BORDER_CONSTANT--8UC4->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---640x480--INTER_NEAREST--BORDER_REPLICATE--8UC1->
   <dst>
     <kind>65536</kind>
     <type>0</type>
@@ -45848,14 +45814,14 @@
       <y>479</y>
       <val>80.</val></last>
     <rng1>
-      <x>221</x>
-      <y>128</y>
-      <val>237.</val></rng1>
+      <x>528</x>
+      <y>8</y>
+      <val>135.</val></rng1>
     <rng2>
-      <x>380</x>
-      <y>222</y>
-      <val>130.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---640x480--INTER_LINEAR--BORDER_CONSTANT--8UC1->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---640x480--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+      <x>418</x>
+      <y>219</y>
+      <val>69.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---640x480--INTER_NEAREST--BORDER_REPLICATE--8UC1->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---640x480--INTER_NEAREST--BORDER_REPLICATE--8UC4->
   <dst>
     <kind>65536</kind>
     <type>24</type>
@@ -45866,15 +45832,51 @@
       <y>479</y>
       <val>255.</val></last>
     <rng1>
-      <x>430</x>
-      <y>116</y>
-      <cn>1</cn>
-      <val>76.</val></rng1>
-    <rng2>
-      <x>222</x>
-      <y>40</y>
+      <x>184</x>
+      <y>228</y>
       <cn>3</cn>
-      <val>255.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---640x480--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+      <val>255.</val></rng1>
+    <rng2>
+      <x>448</x>
+      <y>348</y>
+      <val>67.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---640x480--INTER_NEAREST--BORDER_REPLICATE--8UC4->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---640x480--INTER_LINEAR--BORDER_CONSTANT--8UC1->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>20.</min>
+    <max>254.</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>150.</val></last>
+    <rng1>
+      <x>434</x>
+      <y>162</y>
+      <val>123.</val></rng1>
+    <rng2>
+      <x>591</x>
+      <y>415</y>
+      <val>77.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---640x480--INTER_LINEAR--BORDER_CONSTANT--8UC1->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---640x480--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>4.</min>
+    <max>255.</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>150.</val></last>
+    <rng1>
+      <x>379</x>
+      <y>117</y>
+      <val>125.</val></rng1>
+    <rng2>
+      <x>631</x>
+      <y>292</y>
+      <cn>3</cn>
+      <val>150.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---640x480--INTER_LINEAR--BORDER_CONSTANT--8UC4->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---640x480--INTER_LINEAR--BORDER_REPLICATE--8UC1->
   <dst>
     <kind>65536</kind>
@@ -45886,13 +45888,13 @@
       <y>479</y>
       <val>80.</val></last>
     <rng1>
-      <x>499</x>
-      <y>429</y>
-      <val>66.</val></rng1>
+      <x>329</x>
+      <y>375</y>
+      <val>104.</val></rng1>
     <rng2>
-      <x>78</x>
-      <y>294</y>
-      <val>90.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---640x480--INTER_LINEAR--BORDER_REPLICATE--8UC1->
+      <x>423</x>
+      <y>324</y>
+      <val>86.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---640x480--INTER_LINEAR--BORDER_REPLICATE--8UC1->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---640x480--INTER_LINEAR--BORDER_REPLICATE--8UC4->
   <dst>
     <kind>65536</kind>
@@ -45904,14 +45906,15 @@
       <y>479</y>
       <val>255.</val></last>
     <rng1>
-      <x>300</x>
-      <y>152</y>
-      <cn>1</cn>
-      <val>168.</val></rng1>
+      <x>183</x>
+      <y>434</y>
+      <cn>3</cn>
+      <val>255.</val></rng1>
     <rng2>
-      <x>304</x>
-      <y>146</y>
-      <val>125.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---640x480--INTER_LINEAR--BORDER_REPLICATE--8UC4->
+      <x>242</x>
+      <y>214</y>
+      <cn>3</cn>
+      <val>255.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---640x480--INTER_LINEAR--BORDER_REPLICATE--8UC4->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---704x576--INTER_NEAREST--BORDER_CONSTANT--8UC1->
   <dst>
     <kind>65536</kind>
@@ -45923,13 +45926,13 @@
       <y>575</y>
       <val>150.</val></last>
     <rng1>
-      <x>529</x>
-      <y>224</y>
-      <val>120.</val></rng1>
+      <x>532</x>
+      <y>484</y>
+      <val>78.</val></rng1>
     <rng2>
-      <x>234</x>
-      <y>344</y>
-      <val>81.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---704x576--INTER_NEAREST--BORDER_CONSTANT--8UC1->
+      <x>117</x>
+      <y>191</y>
+      <val>176.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---704x576--INTER_NEAREST--BORDER_CONSTANT--8UC1->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---704x576--INTER_NEAREST--BORDER_CONSTANT--8UC4->
   <dst>
     <kind>65536</kind>
@@ -45941,53 +45944,16 @@
       <y>575</y>
       <val>150.</val></last>
     <rng1>
-      <x>70</x>
-      <y>485</y>
-      <val>84.</val></rng1>
-    <rng2>
-      <x>592</x>
-      <y>567</y>
+      <x>658</x>
+      <y>102</y>
       <cn>2</cn>
-      <val>150.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---704x576--INTER_NEAREST--BORDER_CONSTANT--8UC4->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---704x576--INTER_NEAREST--BORDER_REPLICATE--8UC1->
-  <dst>
-    <kind>65536</kind>
-    <type>0</type>
-    <min>23.</min>
-    <max>254.</max>
-    <last>
-      <x>703</x>
-      <y>575</y>
-      <val>150.</val></last>
-    <rng1>
-      <x>81</x>
-      <y>477</y>
-      <val>89.</val></rng1>
+      <val>115.</val></rng1>
     <rng2>
-      <x>158</x>
-      <y>106</y>
-      <val>141.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---704x576--INTER_NEAREST--BORDER_REPLICATE--8UC1->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---704x576--INTER_NEAREST--BORDER_REPLICATE--8UC4->
-  <dst>
-    <kind>65536</kind>
-    <type>24</type>
-    <min>10.</min>
-    <max>255.</max>
-    <last>
-      <x>703</x>
-      <y>575</y>
-      <val>150.</val></last>
-    <rng1>
-      <x>239</x>
-      <y>218</y>
+      <x>337</x>
+      <y>129</y>
       <cn>3</cn>
-      <val>255.</val></rng1>
-    <rng2>
-      <x>248</x>
-      <y>412</y>
-      <cn>1</cn>
-      <val>75.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---704x576--INTER_NEAREST--BORDER_REPLICATE--8UC4->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---704x576--INTER_LINEAR--BORDER_CONSTANT--8UC1->
+      <val>255.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---704x576--INTER_NEAREST--BORDER_CONSTANT--8UC4->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---704x576--INTER_NEAREST--BORDER_REPLICATE--8UC1->
   <dst>
     <kind>65536</kind>
     <type>0</type>
@@ -45998,14 +45964,14 @@
       <y>575</y>
       <val>81.</val></last>
     <rng1>
-      <x>129</x>
-      <y>161</y>
-      <val>153.</val></rng1>
+      <x>91</x>
+      <y>341</y>
+      <val>56.</val></rng1>
     <rng2>
-      <x>253</x>
-      <y>28</y>
-      <val>234.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---704x576--INTER_LINEAR--BORDER_CONSTANT--8UC1->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---704x576--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+      <x>458</x>
+      <y>573</y>
+      <val>85.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---704x576--INTER_NEAREST--BORDER_REPLICATE--8UC1->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---704x576--INTER_NEAREST--BORDER_REPLICATE--8UC4->
   <dst>
     <kind>65536</kind>
     <type>24</type>
@@ -46016,14 +45982,53 @@
       <y>575</y>
       <val>255.</val></last>
     <rng1>
-      <x>358</x>
-      <y>546</y>
+      <x>9</x>
+      <y>277</y>
       <cn>3</cn>
       <val>255.</val></rng1>
     <rng2>
-      <x>111</x>
-      <y>374</y>
-      <val>82.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---704x576--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+      <x>109</x>
+      <y>360</y>
+      <cn>3</cn>
+      <val>255.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---704x576--INTER_NEAREST--BORDER_REPLICATE--8UC4->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---704x576--INTER_LINEAR--BORDER_CONSTANT--8UC1->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>23.</min>
+    <max>254.</max>
+    <last>
+      <x>703</x>
+      <y>575</y>
+      <val>150.</val></last>
+    <rng1>
+      <x>402</x>
+      <y>102</y>
+      <val>130.</val></rng1>
+    <rng2>
+      <x>529</x>
+      <y>479</y>
+      <val>83.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---704x576--INTER_LINEAR--BORDER_CONSTANT--8UC1->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---704x576--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>10.</min>
+    <max>255.</max>
+    <last>
+      <x>703</x>
+      <y>575</y>
+      <val>150.</val></last>
+    <rng1>
+      <x>105</x>
+      <y>2</y>
+      <cn>3</cn>
+      <val>150.</val></rng1>
+    <rng2>
+      <x>238</x>
+      <y>104</y>
+      <cn>3</cn>
+      <val>255.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---704x576--INTER_LINEAR--BORDER_CONSTANT--8UC4->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---704x576--INTER_LINEAR--BORDER_REPLICATE--8UC1->
   <dst>
     <kind>65536</kind>
@@ -46035,13 +46040,13 @@
       <y>575</y>
       <val>81.</val></last>
     <rng1>
-      <x>517</x>
-      <y>487</y>
-      <val>85.</val></rng1>
+      <x>491</x>
+      <y>182</y>
+      <val>167.</val></rng1>
     <rng2>
-      <x>270</x>
-      <y>151</y>
-      <val>155.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---704x576--INTER_LINEAR--BORDER_REPLICATE--8UC1->
+      <x>479</x>
+      <y>488</y>
+      <val>98.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---704x576--INTER_LINEAR--BORDER_REPLICATE--8UC1->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---704x576--INTER_LINEAR--BORDER_REPLICATE--8UC4->
   <dst>
     <kind>65536</kind>
@@ -46053,15 +46058,14 @@
       <y>575</y>
       <val>255.</val></last>
     <rng1>
-      <x>280</x>
-      <y>153</y>
-      <cn>1</cn>
-      <val>141.</val></rng1>
+      <x>76</x>
+      <y>104</y>
+      <val>167.</val></rng1>
     <rng2>
-      <x>636</x>
-      <y>532</y>
+      <x>685</x>
+      <y>198</y>
       <cn>2</cn>
-      <val>71.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---704x576--INTER_LINEAR--BORDER_REPLICATE--8UC4->
+      <val>104.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---704x576--INTER_LINEAR--BORDER_REPLICATE--8UC4->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x408--INTER_NEAREST--BORDER_CONSTANT--8UC1->
   <dst>
     <kind>65536</kind>
@@ -46073,13 +46077,13 @@
       <y>407</y>
       <val>150.</val></last>
     <rng1>
-      <x>291</x>
-      <y>322</y>
-      <val>139.</val></rng1>
+      <x>280</x>
+      <y>286</y>
+      <val>70.</val></rng1>
     <rng2>
-      <x>488</x>
-      <y>354</y>
-      <val>104.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x408--INTER_NEAREST--BORDER_CONSTANT--8UC1->
+      <x>438</x>
+      <y>355</y>
+      <val>98.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x408--INTER_NEAREST--BORDER_CONSTANT--8UC1->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x408--INTER_NEAREST--BORDER_CONSTANT--8UC4->
   <dst>
     <kind>65536</kind>
@@ -46091,53 +46095,15 @@
       <y>407</y>
       <val>150.</val></last>
     <rng1>
-      <x>708</x>
-      <y>138</y>
-      <cn>2</cn>
-      <val>150.</val></rng1>
-    <rng2>
-      <x>318</x>
-      <y>57</y>
-      <val>190.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x408--INTER_NEAREST--BORDER_CONSTANT--8UC4->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x408--INTER_NEAREST--BORDER_REPLICATE--8UC1->
-  <dst>
-    <kind>65536</kind>
-    <type>0</type>
-    <min>23.</min>
-    <max>254.</max>
-    <last>
-      <x>719</x>
-      <y>407</y>
-      <val>150.</val></last>
-    <rng1>
-      <x>12</x>
-      <y>379</y>
-      <val>150.</val></rng1>
-    <rng2>
-      <x>39</x>
-      <y>346</y>
-      <val>93.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x408--INTER_NEAREST--BORDER_REPLICATE--8UC1->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x408--INTER_NEAREST--BORDER_REPLICATE--8UC4->
-  <dst>
-    <kind>65536</kind>
-    <type>24</type>
-    <min>8.</min>
-    <max>255.</max>
-    <last>
-      <x>719</x>
-      <y>407</y>
-      <val>150.</val></last>
-    <rng1>
-      <x>630</x>
-      <y>213</y>
-      <cn>2</cn>
-      <val>94.</val></rng1>
-    <rng2>
-      <x>300</x>
-      <y>124</y>
+      <x>520</x>
+      <y>332</y>
       <cn>1</cn>
-      <val>165.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x408--INTER_NEAREST--BORDER_REPLICATE--8UC4->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x408--INTER_LINEAR--BORDER_CONSTANT--8UC1->
+      <val>90.</val></rng1>
+    <rng2>
+      <x>673</x>
+      <y>306</y>
+      <val>84.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x408--INTER_NEAREST--BORDER_CONSTANT--8UC4->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x408--INTER_NEAREST--BORDER_REPLICATE--8UC1->
   <dst>
     <kind>65536</kind>
     <type>0</type>
@@ -46148,14 +46114,14 @@
       <y>407</y>
       <val>81.</val></last>
     <rng1>
-      <x>126</x>
-      <y>9</y>
-      <val>238.</val></rng1>
+      <x>428</x>
+      <y>287</y>
+      <val>91.</val></rng1>
     <rng2>
-      <x>191</x>
-      <y>331</y>
-      <val>97.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x408--INTER_LINEAR--BORDER_CONSTANT--8UC1->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x408--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+      <x>244</x>
+      <y>212</y>
+      <val>133.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x408--INTER_NEAREST--BORDER_REPLICATE--8UC1->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x408--INTER_NEAREST--BORDER_REPLICATE--8UC4->
   <dst>
     <kind>65536</kind>
     <type>24</type>
@@ -46166,14 +46132,52 @@
       <y>407</y>
       <val>255.</val></last>
     <rng1>
-      <x>581</x>
-      <y>308</y>
-      <cn>3</cn>
-      <val>255.</val></rng1>
+      <x>210</x>
+      <y>307</y>
+      <cn>2</cn>
+      <val>82.</val></rng1>
     <rng2>
-      <x>120</x>
-      <y>39</y>
-      <val>216.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x408--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+      <x>707</x>
+      <y>218</y>
+      <cn>3</cn>
+      <val>255.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x408--INTER_NEAREST--BORDER_REPLICATE--8UC4->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x408--INTER_LINEAR--BORDER_CONSTANT--8UC1->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>23.</min>
+    <max>254.</max>
+    <last>
+      <x>719</x>
+      <y>407</y>
+      <val>150.</val></last>
+    <rng1>
+      <x>236</x>
+      <y>26</y>
+      <val>157.</val></rng1>
+    <rng2>
+      <x>658</x>
+      <y>349</y>
+      <val>106.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x408--INTER_LINEAR--BORDER_CONSTANT--8UC1->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x408--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>8.</min>
+    <max>255.</max>
+    <last>
+      <x>719</x>
+      <y>407</y>
+      <val>150.</val></last>
+    <rng1>
+      <x>35</x>
+      <y>320</y>
+      <cn>1</cn>
+      <val>94.</val></rng1>
+    <rng2>
+      <x>577</x>
+      <y>6</y>
+      <val>141.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x408--INTER_LINEAR--BORDER_CONSTANT--8UC4->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x408--INTER_LINEAR--BORDER_REPLICATE--8UC1->
   <dst>
     <kind>65536</kind>
@@ -46185,13 +46189,13 @@
       <y>407</y>
       <val>81.</val></last>
     <rng1>
-      <x>73</x>
-      <y>55</y>
-      <val>130.</val></rng1>
+      <x>17</x>
+      <y>374</y>
+      <val>76.</val></rng1>
     <rng2>
-      <x>696</x>
-      <y>335</y>
-      <val>57.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x408--INTER_LINEAR--BORDER_REPLICATE--8UC1->
+      <x>157</x>
+      <y>99</y>
+      <val>113.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x408--INTER_LINEAR--BORDER_REPLICATE--8UC1->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x408--INTER_LINEAR--BORDER_REPLICATE--8UC4->
   <dst>
     <kind>65536</kind>
@@ -46203,15 +46207,15 @@
       <y>407</y>
       <val>255.</val></last>
     <rng1>
-      <x>599</x>
-      <y>212</y>
+      <x>172</x>
+      <y>0</y>
       <cn>3</cn>
       <val>255.</val></rng1>
     <rng2>
-      <x>348</x>
-      <y>264</y>
+      <x>76</x>
+      <y>94</y>
       <cn>1</cn>
-      <val>95.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x408--INTER_LINEAR--BORDER_REPLICATE--8UC4->
+      <val>169.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x408--INTER_LINEAR--BORDER_REPLICATE--8UC4->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x480--INTER_NEAREST--BORDER_CONSTANT--8UC1->
   <dst>
     <kind>65536</kind>
@@ -46223,13 +46227,13 @@
       <y>479</y>
       <val>150.</val></last>
     <rng1>
-      <x>436</x>
-      <y>127</y>
-      <val>160.</val></rng1>
+      <x>88</x>
+      <y>96</y>
+      <val>113.</val></rng1>
     <rng2>
-      <x>264</x>
-      <y>128</y>
-      <val>191.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x480--INTER_NEAREST--BORDER_CONSTANT--8UC1->
+      <x>59</x>
+      <y>290</y>
+      <val>79.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x480--INTER_NEAREST--BORDER_CONSTANT--8UC1->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x480--INTER_NEAREST--BORDER_CONSTANT--8UC4->
   <dst>
     <kind>65536</kind>
@@ -46241,54 +46245,16 @@
       <y>479</y>
       <val>150.</val></last>
     <rng1>
-      <x>49</x>
-      <y>272</y>
-      <cn>1</cn>
-      <val>150.</val></rng1>
+      <x>281</x>
+      <y>122</y>
+      <cn>3</cn>
+      <val>255.</val></rng1>
     <rng2>
-      <x>562</x>
-      <y>194</y>
+      <x>238</x>
+      <y>48</y>
       <cn>1</cn>
-      <val>67.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x480--INTER_NEAREST--BORDER_CONSTANT--8UC4->
+      <val>121.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x480--INTER_NEAREST--BORDER_CONSTANT--8UC4->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x480--INTER_NEAREST--BORDER_REPLICATE--8UC1->
-  <dst>
-    <kind>65536</kind>
-    <type>0</type>
-    <min>28.</min>
-    <max>254.</max>
-    <last>
-      <x>719</x>
-      <y>479</y>
-      <val>150.</val></last>
-    <rng1>
-      <x>621</x>
-      <y>156</y>
-      <val>125.</val></rng1>
-    <rng2>
-      <x>123</x>
-      <y>77</y>
-      <val>167.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x480--INTER_NEAREST--BORDER_REPLICATE--8UC1->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x480--INTER_NEAREST--BORDER_REPLICATE--8UC4->
-  <dst>
-    <kind>65536</kind>
-    <type>24</type>
-    <min>6.</min>
-    <max>255.</max>
-    <last>
-      <x>719</x>
-      <y>479</y>
-      <val>150.</val></last>
-    <rng1>
-      <x>368</x>
-      <y>270</y>
-      <cn>1</cn>
-      <val>96.</val></rng1>
-    <rng2>
-      <x>606</x>
-      <y>344</y>
-      <cn>1</cn>
-      <val>59.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x480--INTER_NEAREST--BORDER_REPLICATE--8UC4->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x480--INTER_LINEAR--BORDER_CONSTANT--8UC1->
   <dst>
     <kind>65536</kind>
     <type>0</type>
@@ -46299,14 +46265,14 @@
       <y>479</y>
       <val>81.</val></last>
     <rng1>
-      <x>187</x>
-      <y>312</y>
-      <val>130.</val></rng1>
+      <x>6</x>
+      <y>292</y>
+      <val>72.</val></rng1>
     <rng2>
-      <x>624</x>
-      <y>403</y>
-      <val>96.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x480--INTER_LINEAR--BORDER_CONSTANT--8UC1->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x480--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+      <x>649</x>
+      <y>448</y>
+      <val>67.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x480--INTER_NEAREST--BORDER_REPLICATE--8UC1->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x480--INTER_NEAREST--BORDER_REPLICATE--8UC4->
   <dst>
     <kind>65536</kind>
     <type>24</type>
@@ -46317,15 +46283,53 @@
       <y>479</y>
       <val>255.</val></last>
     <rng1>
-      <x>395</x>
-      <y>457</y>
-      <cn>1</cn>
-      <val>43.</val></rng1>
-    <rng2>
-      <x>271</x>
-      <y>450</y>
+      <x>663</x>
+      <y>259</y>
       <cn>3</cn>
-      <val>255.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x480--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+      <val>255.</val></rng1>
+    <rng2>
+      <x>165</x>
+      <y>258</y>
+      <cn>2</cn>
+      <val>91.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x480--INTER_NEAREST--BORDER_REPLICATE--8UC4->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x480--INTER_LINEAR--BORDER_CONSTANT--8UC1->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>28.</min>
+    <max>254.</max>
+    <last>
+      <x>719</x>
+      <y>479</y>
+      <val>150.</val></last>
+    <rng1>
+      <x>120</x>
+      <y>262</y>
+      <val>126.</val></rng1>
+    <rng2>
+      <x>303</x>
+      <y>375</y>
+      <val>132.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x480--INTER_LINEAR--BORDER_CONSTANT--8UC1->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x480--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>6.</min>
+    <max>255.</max>
+    <last>
+      <x>719</x>
+      <y>479</y>
+      <val>150.</val></last>
+    <rng1>
+      <x>502</x>
+      <y>126</y>
+      <cn>2</cn>
+      <val>86.</val></rng1>
+    <rng2>
+      <x>12</x>
+      <y>43</y>
+      <cn>2</cn>
+      <val>134.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x480--INTER_LINEAR--BORDER_CONSTANT--8UC4->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x480--INTER_LINEAR--BORDER_REPLICATE--8UC1->
   <dst>
     <kind>65536</kind>
@@ -46337,13 +46341,13 @@
       <y>479</y>
       <val>81.</val></last>
     <rng1>
-      <x>213</x>
-      <y>427</y>
-      <val>92.</val></rng1>
+      <x>46</x>
+      <y>39</y>
+      <val>236.</val></rng1>
     <rng2>
-      <x>623</x>
-      <y>193</y>
-      <val>121.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x480--INTER_LINEAR--BORDER_REPLICATE--8UC1->
+      <x>492</x>
+      <y>415</y>
+      <val>97.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x480--INTER_LINEAR--BORDER_REPLICATE--8UC1->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x480--INTER_LINEAR--BORDER_REPLICATE--8UC4->
   <dst>
     <kind>65536</kind>
@@ -46355,15 +46359,13 @@
       <y>479</y>
       <val>255.</val></last>
     <rng1>
-      <x>195</x>
-      <y>373</y>
-      <cn>3</cn>
-      <val>255.</val></rng1>
+      <x>572</x>
+      <y>39</y>
+      <val>158.</val></rng1>
     <rng2>
-      <x>66</x>
-      <y>459</y>
-      <cn>3</cn>
-      <val>255.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x480--INTER_LINEAR--BORDER_REPLICATE--8UC4->
+      <x>183</x>
+      <y>435</y>
+      <val>82.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x480--INTER_LINEAR--BORDER_REPLICATE--8UC4->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x576--INTER_NEAREST--BORDER_CONSTANT--8UC1->
   <dst>
     <kind>65536</kind>
@@ -46375,13 +46377,13 @@
       <y>575</y>
       <val>150.</val></last>
     <rng1>
-      <x>570</x>
-      <y>253</y>
-      <val>90.</val></rng1>
+      <x>47</x>
+      <y>298</y>
+      <val>120.</val></rng1>
     <rng2>
-      <x>27</x>
-      <y>126</y>
-      <val>172.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x576--INTER_NEAREST--BORDER_CONSTANT--8UC1->
+      <x>319</x>
+      <y>35</y>
+      <val>181.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x576--INTER_NEAREST--BORDER_CONSTANT--8UC1->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x576--INTER_NEAREST--BORDER_CONSTANT--8UC4->
   <dst>
     <kind>65536</kind>
@@ -46393,52 +46395,15 @@
       <y>575</y>
       <val>150.</val></last>
     <rng1>
-      <x>53</x>
-      <y>332</y>
-      <val>112.</val></rng1>
+      <x>137</x>
+      <y>489</y>
+      <val>126.</val></rng1>
     <rng2>
-      <x>352</x>
-      <y>42</y>
-      <cn>1</cn>
-      <val>251.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x576--INTER_NEAREST--BORDER_CONSTANT--8UC4->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x576--INTER_NEAREST--BORDER_REPLICATE--8UC1->
-  <dst>
-    <kind>65536</kind>
-    <type>0</type>
-    <min>14.</min>
-    <max>255.</max>
-    <last>
-      <x>719</x>
-      <y>575</y>
-      <val>150.</val></last>
-    <rng1>
-      <x>28</x>
-      <y>50</y>
-      <val>247.</val></rng1>
-    <rng2>
-      <x>274</x>
-      <y>115</y>
-      <val>149.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x576--INTER_NEAREST--BORDER_REPLICATE--8UC1->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x576--INTER_NEAREST--BORDER_REPLICATE--8UC4->
-  <dst>
-    <kind>65536</kind>
-    <type>24</type>
-    <min>3.</min>
-    <max>255.</max>
-    <last>
-      <x>719</x>
-      <y>575</y>
-      <val>150.</val></last>
-    <rng1>
-      <x>563</x>
-      <y>367</y>
-      <val>103.</val></rng1>
-    <rng2>
-      <x>673</x>
-      <y>401</y>
+      <x>295</x>
+      <y>270</y>
       <cn>2</cn>
-      <val>59.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x576--INTER_NEAREST--BORDER_REPLICATE--8UC4->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x576--INTER_LINEAR--BORDER_CONSTANT--8UC1->
+      <val>164.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x576--INTER_NEAREST--BORDER_CONSTANT--8UC4->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x576--INTER_NEAREST--BORDER_REPLICATE--8UC1->
   <dst>
     <kind>65536</kind>
     <type>0</type>
@@ -46449,14 +46414,14 @@
       <y>575</y>
       <val>82.</val></last>
     <rng1>
-      <x>308</x>
-      <y>256</y>
-      <val>189.</val></rng1>
+      <x>479</x>
+      <y>134</y>
+      <val>165.</val></rng1>
     <rng2>
-      <x>114</x>
-      <y>397</y>
-      <val>53.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x576--INTER_LINEAR--BORDER_CONSTANT--8UC1->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x576--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+      <x>341</x>
+      <y>216</y>
+      <val>146.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x576--INTER_NEAREST--BORDER_REPLICATE--8UC1->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x576--INTER_NEAREST--BORDER_REPLICATE--8UC4->
   <dst>
     <kind>65536</kind>
     <type>24</type>
@@ -46467,15 +46432,52 @@
       <y>575</y>
       <val>255.</val></last>
     <rng1>
-      <x>49</x>
-      <y>410</y>
-      <cn>2</cn>
-      <val>81.</val></rng1>
+      <x>696</x>
+      <y>460</y>
+      <val>108.</val></rng1>
     <rng2>
-      <x>475</x>
-      <y>566</y>
+      <x>412</x>
+      <y>289</y>
+      <cn>1</cn>
+      <val>68.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x576--INTER_NEAREST--BORDER_REPLICATE--8UC4->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x576--INTER_LINEAR--BORDER_CONSTANT--8UC1->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>14.</min>
+    <max>255.</max>
+    <last>
+      <x>719</x>
+      <y>575</y>
+      <val>150.</val></last>
+    <rng1>
+      <x>357</x>
+      <y>366</y>
+      <val>128.</val></rng1>
+    <rng2>
+      <x>83</x>
+      <y>472</y>
+      <val>86.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x576--INTER_LINEAR--BORDER_CONSTANT--8UC1->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x576--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>3.</min>
+    <max>255.</max>
+    <last>
+      <x>719</x>
+      <y>575</y>
+      <val>150.</val></last>
+    <rng1>
+      <x>244</x>
+      <y>86</y>
+      <cn>1</cn>
+      <val>133.</val></rng1>
+    <rng2>
+      <x>92</x>
+      <y>414</y>
       <cn>2</cn>
-      <val>96.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x576--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+      <val>37.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x576--INTER_LINEAR--BORDER_CONSTANT--8UC4->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x576--INTER_LINEAR--BORDER_REPLICATE--8UC1->
   <dst>
     <kind>65536</kind>
@@ -46487,13 +46489,13 @@
       <y>575</y>
       <val>82.</val></last>
     <rng1>
-      <x>438</x>
-      <y>562</y>
-      <val>82.</val></rng1>
+      <x>75</x>
+      <y>329</y>
+      <val>122.</val></rng1>
     <rng2>
-      <x>11</x>
-      <y>393</y>
-      <val>126.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x576--INTER_LINEAR--BORDER_REPLICATE--8UC1->
+      <x>208</x>
+      <y>48</y>
+      <val>183.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x576--INTER_LINEAR--BORDER_REPLICATE--8UC1->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x576--INTER_LINEAR--BORDER_REPLICATE--8UC4->
   <dst>
     <kind>65536</kind>
@@ -46505,14 +46507,15 @@
       <y>575</y>
       <val>255.</val></last>
     <rng1>
-      <x>48</x>
-      <y>515</y>
-      <cn>3</cn>
-      <val>255.</val></rng1>
+      <x>451</x>
+      <y>362</y>
+      <cn>1</cn>
+      <val>96.</val></rng1>
     <rng2>
-      <x>256</x>
-      <y>20</y>
-      <val>247.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x576--INTER_LINEAR--BORDER_REPLICATE--8UC4->
+      <x>367</x>
+      <y>15</y>
+      <cn>1</cn>
+      <val>253.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---720x576--INTER_LINEAR--BORDER_REPLICATE--8UC4->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---768x432--INTER_NEAREST--BORDER_CONSTANT--8UC1->
   <dst>
     <kind>65536</kind>
@@ -46524,13 +46527,13 @@
       <y>431</y>
       <val>150.</val></last>
     <rng1>
-      <x>76</x>
-      <y>159</y>
-      <val>78.</val></rng1>
+      <x>684</x>
+      <y>215</y>
+      <val>65.</val></rng1>
     <rng2>
-      <x>260</x>
-      <y>100</y>
-      <val>168.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---768x432--INTER_NEAREST--BORDER_CONSTANT--8UC1->
+      <x>385</x>
+      <y>145</y>
+      <val>161.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---768x432--INTER_NEAREST--BORDER_CONSTANT--8UC1->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---768x432--INTER_NEAREST--BORDER_CONSTANT--8UC4->
   <dst>
     <kind>65536</kind>
@@ -46542,54 +46545,15 @@
       <y>431</y>
       <val>150.</val></last>
     <rng1>
-      <x>256</x>
-      <y>243</y>
-      <cn>3</cn>
-      <val>255.</val></rng1>
+      <x>600</x>
+      <y>87</y>
+      <val>170.</val></rng1>
     <rng2>
-      <x>592</x>
-      <y>114</y>
-      <cn>3</cn>
-      <val>255.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---768x432--INTER_NEAREST--BORDER_CONSTANT--8UC4->
+      <x>523</x>
+      <y>2</y>
+      <cn>1</cn>
+      <val>150.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---768x432--INTER_NEAREST--BORDER_CONSTANT--8UC4->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---768x432--INTER_NEAREST--BORDER_REPLICATE--8UC1->
-  <dst>
-    <kind>65536</kind>
-    <type>0</type>
-    <min>24.</min>
-    <max>254.</max>
-    <last>
-      <x>767</x>
-      <y>431</y>
-      <val>150.</val></last>
-    <rng1>
-      <x>444</x>
-      <y>234</y>
-      <val>87.</val></rng1>
-    <rng2>
-      <x>21</x>
-      <y>22</y>
-      <val>150.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---768x432--INTER_NEAREST--BORDER_REPLICATE--8UC1->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---768x432--INTER_NEAREST--BORDER_REPLICATE--8UC4->
-  <dst>
-    <kind>65536</kind>
-    <type>24</type>
-    <min>3.</min>
-    <max>255.</max>
-    <last>
-      <x>767</x>
-      <y>431</y>
-      <val>150.</val></last>
-    <rng1>
-      <x>118</x>
-      <y>401</y>
-      <cn>2</cn>
-      <val>64.</val></rng1>
-    <rng2>
-      <x>184</x>
-      <y>135</y>
-      <cn>3</cn>
-      <val>255.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---768x432--INTER_NEAREST--BORDER_REPLICATE--8UC4->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---768x432--INTER_LINEAR--BORDER_CONSTANT--8UC1->
   <dst>
     <kind>65536</kind>
     <type>0</type>
@@ -46600,14 +46564,14 @@
       <y>431</y>
       <val>82.</val></last>
     <rng1>
-      <x>5</x>
-      <y>322</y>
-      <val>66.</val></rng1>
+      <x>10</x>
+      <y>364</y>
+      <val>73.</val></rng1>
     <rng2>
-      <x>395</x>
-      <y>260</y>
-      <val>103.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---768x432--INTER_LINEAR--BORDER_CONSTANT--8UC1->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---768x432--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+      <x>571</x>
+      <y>340</y>
+      <val>84.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---768x432--INTER_NEAREST--BORDER_REPLICATE--8UC1->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---768x432--INTER_NEAREST--BORDER_REPLICATE--8UC4->
   <dst>
     <kind>65536</kind>
     <type>24</type>
@@ -46618,14 +46582,53 @@
       <y>431</y>
       <val>255.</val></last>
     <rng1>
-      <x>628</x>
-      <y>383</y>
-      <cn>3</cn>
-      <val>255.</val></rng1>
+      <x>99</x>
+      <y>28</y>
+      <cn>1</cn>
+      <val>251.</val></rng1>
     <rng2>
-      <x>23</x>
-      <y>252</y>
-      <val>102.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---768x432--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+      <x>537</x>
+      <y>40</y>
+      <cn>2</cn>
+      <val>90.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---768x432--INTER_NEAREST--BORDER_REPLICATE--8UC4->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---768x432--INTER_LINEAR--BORDER_CONSTANT--8UC1->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>24.</min>
+    <max>254.</max>
+    <last>
+      <x>767</x>
+      <y>431</y>
+      <val>150.</val></last>
+    <rng1>
+      <x>49</x>
+      <y>150</y>
+      <val>137.</val></rng1>
+    <rng2>
+      <x>522</x>
+      <y>6</y>
+      <val>150.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---768x432--INTER_LINEAR--BORDER_CONSTANT--8UC1->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---768x432--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>3.</min>
+    <max>255.</max>
+    <last>
+      <x>767</x>
+      <y>431</y>
+      <val>150.</val></last>
+    <rng1>
+      <x>415</x>
+      <y>94</y>
+      <cn>1</cn>
+      <val>161.</val></rng1>
+    <rng2>
+      <x>124</x>
+      <y>144</y>
+      <cn>1</cn>
+      <val>145.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---768x432--INTER_LINEAR--BORDER_CONSTANT--8UC4->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---768x432--INTER_LINEAR--BORDER_REPLICATE--8UC1->
   <dst>
     <kind>65536</kind>
@@ -46637,13 +46640,13 @@
       <y>431</y>
       <val>82.</val></last>
     <rng1>
-      <x>223</x>
-      <y>381</y>
-      <val>89.</val></rng1>
+      <x>420</x>
+      <y>297</y>
+      <val>83.</val></rng1>
     <rng2>
-      <x>680</x>
-      <y>405</y>
-      <val>56.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---768x432--INTER_LINEAR--BORDER_REPLICATE--8UC1->
+      <x>373</x>
+      <y>64</y>
+      <val>249.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---768x432--INTER_LINEAR--BORDER_REPLICATE--8UC1->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---768x432--INTER_LINEAR--BORDER_REPLICATE--8UC4->
   <dst>
     <kind>65536</kind>
@@ -46655,12 +46658,13 @@
       <y>431</y>
       <val>255.</val></last>
     <rng1>
-      <x>653</x>
-      <y>75</y>
-      <val>101.</val></rng1>
+      <x>577</x>
+      <y>288</y>
+      <cn>2</cn>
+      <val>90.</val></rng1>
     <rng2>
-      <x>628</x>
-      <y>124</y>
+      <x>387</x>
+      <y>243</y>
       <cn>3</cn>
       <val>255.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---768x432--INTER_LINEAR--BORDER_REPLICATE--8UC4->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---800x448--INTER_NEAREST--BORDER_CONSTANT--8UC1->
@@ -46674,13 +46678,13 @@
       <y>447</y>
       <val>150.</val></last>
     <rng1>
-      <x>195</x>
-      <y>24</y>
-      <val>253.</val></rng1>
+      <x>610</x>
+      <y>54</y>
+      <val>115.</val></rng1>
     <rng2>
-      <x>5</x>
-      <y>386</y>
-      <val>150.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---800x448--INTER_NEAREST--BORDER_CONSTANT--8UC1->
+      <x>594</x>
+      <y>92</y>
+      <val>90.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---800x448--INTER_NEAREST--BORDER_CONSTANT--8UC1->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---800x448--INTER_NEAREST--BORDER_CONSTANT--8UC4->
   <dst>
     <kind>65536</kind>
@@ -46692,54 +46696,15 @@
       <y>447</y>
       <val>150.</val></last>
     <rng1>
-      <x>204</x>
-      <y>9</y>
+      <x>184</x>
+      <y>217</y>
       <cn>1</cn>
-      <val>150.</val></rng1>
+      <val>140.</val></rng1>
     <rng2>
-      <x>255</x>
-      <y>103</y>
-      <cn>3</cn>
-      <val>255.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---800x448--INTER_NEAREST--BORDER_CONSTANT--8UC4->
+      <x>85</x>
+      <y>17</y>
+      <val>150.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---800x448--INTER_NEAREST--BORDER_CONSTANT--8UC4->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---800x448--INTER_NEAREST--BORDER_REPLICATE--8UC1->
-  <dst>
-    <kind>65536</kind>
-    <type>0</type>
-    <min>29.</min>
-    <max>254.</max>
-    <last>
-      <x>799</x>
-      <y>447</y>
-      <val>150.</val></last>
-    <rng1>
-      <x>305</x>
-      <y>376</y>
-      <val>72.</val></rng1>
-    <rng2>
-      <x>410</x>
-      <y>444</y>
-      <val>150.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---800x448--INTER_NEAREST--BORDER_REPLICATE--8UC1->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---800x448--INTER_NEAREST--BORDER_REPLICATE--8UC4->
-  <dst>
-    <kind>65536</kind>
-    <type>24</type>
-    <min>8.</min>
-    <max>255.</max>
-    <last>
-      <x>799</x>
-      <y>447</y>
-      <val>150.</val></last>
-    <rng1>
-      <x>747</x>
-      <y>265</y>
-      <cn>1</cn>
-      <val>51.</val></rng1>
-    <rng2>
-      <x>495</x>
-      <y>275</y>
-      <cn>2</cn>
-      <val>83.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---800x448--INTER_NEAREST--BORDER_REPLICATE--8UC4->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---800x448--INTER_LINEAR--BORDER_CONSTANT--8UC1->
   <dst>
     <kind>65536</kind>
     <type>0</type>
@@ -46750,14 +46715,14 @@
       <y>447</y>
       <val>83.</val></last>
     <rng1>
-      <x>535</x>
-      <y>206</y>
-      <val>124.</val></rng1>
+      <x>784</x>
+      <y>393</y>
+      <val>79.</val></rng1>
     <rng2>
-      <x>632</x>
-      <y>352</y>
-      <val>88.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---800x448--INTER_LINEAR--BORDER_CONSTANT--8UC1->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---800x448--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+      <x>655</x>
+      <y>245</y>
+      <val>77.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---800x448--INTER_NEAREST--BORDER_REPLICATE--8UC1->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---800x448--INTER_NEAREST--BORDER_REPLICATE--8UC4->
   <dst>
     <kind>65536</kind>
     <type>24</type>
@@ -46768,15 +46733,51 @@
       <y>447</y>
       <val>255.</val></last>
     <rng1>
-      <x>430</x>
-      <y>81</y>
+      <x>536</x>
+      <y>302</y>
+      <val>78.</val></rng1>
+    <rng2>
+      <x>24</x>
+      <y>373</y>
+      <val>93.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---800x448--INTER_NEAREST--BORDER_REPLICATE--8UC4->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---800x448--INTER_LINEAR--BORDER_CONSTANT--8UC1->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>29.</min>
+    <max>254.</max>
+    <last>
+      <x>799</x>
+      <y>447</y>
+      <val>150.</val></last>
+    <rng1>
+      <x>291</x>
+      <y>153</y>
+      <val>116.</val></rng1>
+    <rng2>
+      <x>552</x>
+      <y>87</y>
+      <val>97.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---800x448--INTER_LINEAR--BORDER_CONSTANT--8UC1->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---800x448--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>8.</min>
+    <max>255.</max>
+    <last>
+      <x>799</x>
+      <y>447</y>
+      <val>150.</val></last>
+    <rng1>
+      <x>34</x>
+      <y>90</y>
       <cn>3</cn>
       <val>255.</val></rng1>
     <rng2>
-      <x>54</x>
-      <y>413</y>
-      <cn>3</cn>
-      <val>255.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---800x448--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+      <x>196</x>
+      <y>47</y>
+      <cn>1</cn>
+      <val>137.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---800x448--INTER_LINEAR--BORDER_CONSTANT--8UC4->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---800x448--INTER_LINEAR--BORDER_REPLICATE--8UC1->
   <dst>
     <kind>65536</kind>
@@ -46788,13 +46789,13 @@
       <y>447</y>
       <val>83.</val></last>
     <rng1>
-      <x>275</x>
-      <y>302</y>
-      <val>122.</val></rng1>
+      <x>399</x>
+      <y>305</y>
+      <val>93.</val></rng1>
     <rng2>
-      <x>278</x>
-      <y>191</y>
-      <val>162.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---800x448--INTER_LINEAR--BORDER_REPLICATE--8UC1->
+      <x>649</x>
+      <y>125</y>
+      <val>79.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---800x448--INTER_LINEAR--BORDER_REPLICATE--8UC1->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---800x448--INTER_LINEAR--BORDER_REPLICATE--8UC4->
   <dst>
     <kind>65536</kind>
@@ -46806,15 +46807,15 @@
       <y>447</y>
       <val>255.</val></last>
     <rng1>
-      <x>3</x>
-      <y>185</y>
-      <cn>3</cn>
-      <val>255.</val></rng1>
+      <x>33</x>
+      <y>412</y>
+      <cn>2</cn>
+      <val>84.</val></rng1>
     <rng2>
-      <x>629</x>
-      <y>312</y>
-      <cn>1</cn>
-      <val>107.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---800x448--INTER_LINEAR--BORDER_REPLICATE--8UC4->
+      <x>258</x>
+      <y>231</y>
+      <cn>2</cn>
+      <val>59.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---800x448--INTER_LINEAR--BORDER_REPLICATE--8UC4->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---960x720--INTER_NEAREST--BORDER_CONSTANT--8UC1->
   <dst>
     <kind>65536</kind>
@@ -46826,13 +46827,13 @@
       <y>719</y>
       <val>150.</val></last>
     <rng1>
-      <x>365</x>
-      <y>710</y>
-      <val>150.</val></rng1>
+      <x>465</x>
+      <y>62</y>
+      <val>206.</val></rng1>
     <rng2>
-      <x>321</x>
-      <y>430</y>
-      <val>83.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---960x720--INTER_NEAREST--BORDER_CONSTANT--8UC1->
+      <x>909</x>
+      <y>480</y>
+      <val>45.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---960x720--INTER_NEAREST--BORDER_CONSTANT--8UC1->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---960x720--INTER_NEAREST--BORDER_CONSTANT--8UC4->
   <dst>
     <kind>65536</kind>
@@ -46844,52 +46845,15 @@
       <y>719</y>
       <val>150.</val></last>
     <rng1>
-      <x>689</x>
-      <y>639</y>
-      <val>49.</val></rng1>
-    <rng2>
-      <x>483</x>
-      <y>90</y>
-      <val>232.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---960x720--INTER_NEAREST--BORDER_CONSTANT--8UC4->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---960x720--INTER_NEAREST--BORDER_REPLICATE--8UC1->
-  <dst>
-    <kind>65536</kind>
-    <type>0</type>
-    <min>28.</min>
-    <max>255.</max>
-    <last>
-      <x>959</x>
-      <y>719</y>
-      <val>150.</val></last>
-    <rng1>
-      <x>121</x>
-      <y>374</y>
-      <val>104.</val></rng1>
-    <rng2>
-      <x>355</x>
-      <y>451</y>
-      <val>112.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---960x720--INTER_NEAREST--BORDER_REPLICATE--8UC1->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---960x720--INTER_NEAREST--BORDER_REPLICATE--8UC4->
-  <dst>
-    <kind>65536</kind>
-    <type>24</type>
-    <min>5.</min>
-    <max>255.</max>
-    <last>
-      <x>959</x>
-      <y>719</y>
-      <val>150.</val></last>
-    <rng1>
-      <x>6</x>
-      <y>486</y>
+      <x>280</x>
+      <y>116</y>
       <cn>2</cn>
-      <val>150.</val></rng1>
+      <val>172.</val></rng1>
     <rng2>
-      <x>179</x>
-      <y>708</y>
-      <cn>1</cn>
-      <val>55.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---960x720--INTER_NEAREST--BORDER_REPLICATE--8UC4->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---960x720--INTER_LINEAR--BORDER_CONSTANT--8UC1->
+      <x>287</x>
+      <y>230</y>
+      <val>123.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---960x720--INTER_NEAREST--BORDER_CONSTANT--8UC4->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---960x720--INTER_NEAREST--BORDER_REPLICATE--8UC1->
   <dst>
     <kind>65536</kind>
     <type>0</type>
@@ -46900,14 +46864,14 @@
       <y>719</y>
       <val>86.</val></last>
     <rng1>
-      <x>367</x>
-      <y>303</y>
-      <val>112.</val></rng1>
+      <x>612</x>
+      <y>590</y>
+      <val>83.</val></rng1>
     <rng2>
-      <x>862</x>
-      <y>488</y>
-      <val>59.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---960x720--INTER_LINEAR--BORDER_CONSTANT--8UC1->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---960x720--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+      <x>218</x>
+      <y>277</y>
+      <val>73.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---960x720--INTER_NEAREST--BORDER_REPLICATE--8UC1->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---960x720--INTER_NEAREST--BORDER_REPLICATE--8UC4->
   <dst>
     <kind>65536</kind>
     <type>24</type>
@@ -46918,15 +46882,53 @@
       <y>719</y>
       <val>255.</val></last>
     <rng1>
-      <x>552</x>
-      <y>337</y>
-      <cn>2</cn>
-      <val>109.</val></rng1>
+      <x>399</x>
+      <y>638</y>
+      <cn>3</cn>
+      <val>255.</val></rng1>
     <rng2>
-      <x>387</x>
-      <y>699</y>
+      <x>667</x>
+      <y>416</y>
       <cn>1</cn>
-      <val>252.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---960x720--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+      <val>110.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---960x720--INTER_NEAREST--BORDER_REPLICATE--8UC4->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---960x720--INTER_LINEAR--BORDER_CONSTANT--8UC1->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>28.</min>
+    <max>255.</max>
+    <last>
+      <x>959</x>
+      <y>719</y>
+      <val>150.</val></last>
+    <rng1>
+      <x>749</x>
+      <y>364</y>
+      <val>121.</val></rng1>
+    <rng2>
+      <x>307</x>
+      <y>87</y>
+      <val>211.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---960x720--INTER_LINEAR--BORDER_CONSTANT--8UC1->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---960x720--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>5.</min>
+    <max>255.</max>
+    <last>
+      <x>959</x>
+      <y>719</y>
+      <val>150.</val></last>
+    <rng1>
+      <x>275</x>
+      <y>263</y>
+      <cn>1</cn>
+      <val>76.</val></rng1>
+    <rng2>
+      <x>424</x>
+      <y>491</y>
+      <cn>1</cn>
+      <val>103.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---960x720--INTER_LINEAR--BORDER_CONSTANT--8UC4->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---960x720--INTER_LINEAR--BORDER_REPLICATE--8UC1->
   <dst>
     <kind>65536</kind>
@@ -46938,13 +46940,13 @@
       <y>719</y>
       <val>86.</val></last>
     <rng1>
-      <x>91</x>
-      <y>131</y>
-      <val>178.</val></rng1>
+      <x>72</x>
+      <y>17</y>
+      <val>254.</val></rng1>
     <rng2>
-      <x>825</x>
-      <y>595</y>
-      <val>78.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---960x720--INTER_LINEAR--BORDER_REPLICATE--8UC1->
+      <x>273</x>
+      <y>11</y>
+      <val>254.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---960x720--INTER_LINEAR--BORDER_REPLICATE--8UC1->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---960x720--INTER_LINEAR--BORDER_REPLICATE--8UC4->
   <dst>
     <kind>65536</kind>
@@ -46956,15 +46958,14 @@
       <y>719</y>
       <val>255.</val></last>
     <rng1>
-      <x>489</x>
-      <y>677</y>
-      <cn>3</cn>
-      <val>255.</val></rng1>
-    <rng2>
-      <x>600</x>
-      <y>684</y>
+      <x>406</x>
+      <y>30</y>
       <cn>1</cn>
-      <val>73.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---960x720--INTER_LINEAR--BORDER_REPLICATE--8UC4->
+      <val>181.</val></rng1>
+    <rng2>
+      <x>22</x>
+      <y>674</y>
+      <val>171.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---960x720--INTER_LINEAR--BORDER_REPLICATE--8UC4->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1024x768--INTER_NEAREST--BORDER_CONSTANT--8UC1->
   <dst>
     <kind>65536</kind>
@@ -46976,12 +46977,12 @@
       <y>767</y>
       <val>150.</val></last>
     <rng1>
-      <x>847</x>
-      <y>35</y>
-      <val>116.</val></rng1>
+      <x>157</x>
+      <y>537</y>
+      <val>41.</val></rng1>
     <rng2>
-      <x>13</x>
-      <y>721</y>
+      <x>91</x>
+      <y>32</y>
       <val>150.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1024x768--INTER_NEAREST--BORDER_CONSTANT--8UC1->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1024x768--INTER_NEAREST--BORDER_CONSTANT--8UC4->
   <dst>
@@ -46994,51 +46995,16 @@
       <y>767</y>
       <val>150.</val></last>
     <rng1>
-      <x>64</x>
-      <y>521</y>
-      <val>84.</val></rng1>
-    <rng2>
-      <x>423</x>
-      <y>570</y>
-      <val>90.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1024x768--INTER_NEAREST--BORDER_CONSTANT--8UC4->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1024x768--INTER_NEAREST--BORDER_REPLICATE--8UC1->
-  <dst>
-    <kind>65536</kind>
-    <type>0</type>
-    <min>22.</min>
-    <max>254.</max>
-    <last>
-      <x>1023</x>
-      <y>767</y>
-      <val>150.</val></last>
-    <rng1>
-      <x>217</x>
-      <y>608</y>
-      <val>87.</val></rng1>
-    <rng2>
-      <x>709</x>
-      <y>23</y>
-      <val>243.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1024x768--INTER_NEAREST--BORDER_REPLICATE--8UC1->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1024x768--INTER_NEAREST--BORDER_REPLICATE--8UC4->
-  <dst>
-    <kind>65536</kind>
-    <type>24</type>
-    <min>5.</min>
-    <max>255.</max>
-    <last>
-      <x>1023</x>
-      <y>767</y>
-      <val>150.</val></last>
-    <rng1>
-      <x>650</x>
-      <y>458</y>
+      <x>956</x>
+      <y>108</y>
       <cn>3</cn>
       <val>255.</val></rng1>
     <rng2>
-      <x>514</x>
-      <y>586</y>
-      <val>78.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1024x768--INTER_NEAREST--BORDER_REPLICATE--8UC4->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1024x768--INTER_LINEAR--BORDER_CONSTANT--8UC1->
+      <x>716</x>
+      <y>749</y>
+      <cn>3</cn>
+      <val>150.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1024x768--INTER_NEAREST--BORDER_CONSTANT--8UC4->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1024x768--INTER_NEAREST--BORDER_REPLICATE--8UC1->
   <dst>
     <kind>65536</kind>
     <type>0</type>
@@ -47049,14 +47015,14 @@
       <y>767</y>
       <val>86.</val></last>
     <rng1>
-      <x>991</x>
-      <y>48</y>
-      <val>254.</val></rng1>
+      <x>1015</x>
+      <y>571</y>
+      <val>82.</val></rng1>
     <rng2>
-      <x>475</x>
-      <y>424</y>
-      <val>113.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1024x768--INTER_LINEAR--BORDER_CONSTANT--8UC1->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1024x768--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+      <x>330</x>
+      <y>250</y>
+      <val>173.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1024x768--INTER_NEAREST--BORDER_REPLICATE--8UC1->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1024x768--INTER_NEAREST--BORDER_REPLICATE--8UC4->
   <dst>
     <kind>65536</kind>
     <type>24</type>
@@ -47067,15 +47033,52 @@
       <y>767</y>
       <val>255.</val></last>
     <rng1>
-      <x>871</x>
-      <y>132</y>
+      <x>736</x>
+      <y>231</y>
+      <val>130.</val></rng1>
+    <rng2>
+      <x>637</x>
+      <y>12</y>
+      <cn>2</cn>
+      <val>255.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1024x768--INTER_NEAREST--BORDER_REPLICATE--8UC4->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1024x768--INTER_LINEAR--BORDER_CONSTANT--8UC1->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>22.</min>
+    <max>254.</max>
+    <last>
+      <x>1023</x>
+      <y>767</y>
+      <val>150.</val></last>
+    <rng1>
+      <x>933</x>
+      <y>418</y>
+      <val>121.</val></rng1>
+    <rng2>
+      <x>333</x>
+      <y>299</y>
+      <val>99.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1024x768--INTER_LINEAR--BORDER_CONSTANT--8UC1->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1024x768--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>5.</min>
+    <max>255.</max>
+    <last>
+      <x>1023</x>
+      <y>767</y>
+      <val>150.</val></last>
+    <rng1>
+      <x>738</x>
+      <y>274</y>
       <cn>3</cn>
       <val>255.</val></rng1>
     <rng2>
-      <x>797</x>
-      <y>308</y>
-      <cn>3</cn>
-      <val>255.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1024x768--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+      <x>57</x>
+      <y>199</y>
+      <cn>1</cn>
+      <val>140.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1024x768--INTER_LINEAR--BORDER_CONSTANT--8UC4->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1024x768--INTER_LINEAR--BORDER_REPLICATE--8UC1->
   <dst>
     <kind>65536</kind>
@@ -47087,13 +47090,13 @@
       <y>767</y>
       <val>86.</val></last>
     <rng1>
-      <x>134</x>
-      <y>385</y>
-      <val>102.</val></rng1>
+      <x>561</x>
+      <y>510</y>
+      <val>90.</val></rng1>
     <rng2>
-      <x>408</x>
-      <y>280</y>
-      <val>99.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1024x768--INTER_LINEAR--BORDER_REPLICATE--8UC1->
+      <x>734</x>
+      <y>742</y>
+      <val>70.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1024x768--INTER_LINEAR--BORDER_REPLICATE--8UC1->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1024x768--INTER_LINEAR--BORDER_REPLICATE--8UC4->
   <dst>
     <kind>65536</kind>
@@ -47105,14 +47108,15 @@
       <y>767</y>
       <val>255.</val></last>
     <rng1>
-      <x>379</x>
-      <y>697</y>
-      <val>82.</val></rng1>
+      <x>598</x>
+      <y>665</y>
+      <cn>2</cn>
+      <val>95.</val></rng1>
     <rng2>
-      <x>110</x>
-      <y>511</y>
-      <cn>1</cn>
-      <val>56.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1024x768--INTER_LINEAR--BORDER_REPLICATE--8UC4->
+      <x>988</x>
+      <y>743</y>
+      <cn>3</cn>
+      <val>255.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1024x768--INTER_LINEAR--BORDER_REPLICATE--8UC4->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1280x720--INTER_NEAREST--BORDER_CONSTANT--8UC1->
   <dst>
     <kind>65536</kind>
@@ -47124,13 +47128,13 @@
       <y>719</y>
       <val>150.</val></last>
     <rng1>
-      <x>133</x>
-      <y>122</y>
-      <val>153.</val></rng1>
+      <x>98</x>
+      <y>229</y>
+      <val>125.</val></rng1>
     <rng2>
-      <x>885</x>
-      <y>183</y>
-      <val>88.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1280x720--INTER_NEAREST--BORDER_CONSTANT--8UC1->
+      <x>234</x>
+      <y>284</y>
+      <val>122.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1280x720--INTER_NEAREST--BORDER_CONSTANT--8UC1->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1280x720--INTER_NEAREST--BORDER_CONSTANT--8UC4->
   <dst>
     <kind>65536</kind>
@@ -47142,54 +47146,15 @@
       <y>719</y>
       <val>150.</val></last>
     <rng1>
-      <x>492</x>
-      <y>279</y>
-      <cn>2</cn>
-      <val>153.</val></rng1>
+      <x>640</x>
+      <y>390</y>
+      <val>84.</val></rng1>
     <rng2>
-      <x>796</x>
-      <y>530</y>
-      <cn>1</cn>
-      <val>95.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1280x720--INTER_NEAREST--BORDER_CONSTANT--8UC4->
+      <x>874</x>
+      <y>362</y>
+      <cn>2</cn>
+      <val>104.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1280x720--INTER_NEAREST--BORDER_CONSTANT--8UC4->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1280x720--INTER_NEAREST--BORDER_REPLICATE--8UC1->
-  <dst>
-    <kind>65536</kind>
-    <type>0</type>
-    <min>29.</min>
-    <max>254.</max>
-    <last>
-      <x>1279</x>
-      <y>719</y>
-      <val>150.</val></last>
-    <rng1>
-      <x>86</x>
-      <y>475</y>
-      <val>150.</val></rng1>
-    <rng2>
-      <x>1032</x>
-      <y>50</y>
-      <val>196.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1280x720--INTER_NEAREST--BORDER_REPLICATE--8UC1->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1280x720--INTER_NEAREST--BORDER_REPLICATE--8UC4->
-  <dst>
-    <kind>65536</kind>
-    <type>24</type>
-    <min>5.</min>
-    <max>255.</max>
-    <last>
-      <x>1279</x>
-      <y>719</y>
-      <val>150.</val></last>
-    <rng1>
-      <x>456</x>
-      <y>412</y>
-      <cn>2</cn>
-      <val>90.</val></rng1>
-    <rng2>
-      <x>189</x>
-      <y>438</y>
-      <cn>2</cn>
-      <val>150.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1280x720--INTER_NEAREST--BORDER_REPLICATE--8UC4->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1280x720--INTER_LINEAR--BORDER_CONSTANT--8UC1->
   <dst>
     <kind>65536</kind>
     <type>0</type>
@@ -47200,14 +47165,14 @@
       <y>719</y>
       <val>88.</val></last>
     <rng1>
-      <x>273</x>
-      <y>711</y>
-      <val>48.</val></rng1>
+      <x>966</x>
+      <y>421</y>
+      <val>129.</val></rng1>
     <rng2>
-      <x>446</x>
-      <y>108</y>
-      <val>166.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1280x720--INTER_LINEAR--BORDER_CONSTANT--8UC1->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1280x720--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+      <x>34</x>
+      <y>565</y>
+      <val>84.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1280x720--INTER_NEAREST--BORDER_REPLICATE--8UC1->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1280x720--INTER_NEAREST--BORDER_REPLICATE--8UC4->
   <dst>
     <kind>65536</kind>
     <type>24</type>
@@ -47218,15 +47183,52 @@
       <y>719</y>
       <val>255.</val></last>
     <rng1>
-      <x>375</x>
-      <y>587</y>
-      <cn>1</cn>
-      <val>100.</val></rng1>
+      <x>1080</x>
+      <y>3</y>
+      <cn>3</cn>
+      <val>255.</val></rng1>
     <rng2>
-      <x>110</x>
-      <y>327</y>
-      <cn>2</cn>
-      <val>137.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1280x720--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+      <x>293</x>
+      <y>126</y>
+      <cn>1</cn>
+      <val>188.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1280x720--INTER_NEAREST--BORDER_REPLICATE--8UC4->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1280x720--INTER_LINEAR--BORDER_CONSTANT--8UC1->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>29.</min>
+    <max>254.</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>150.</val></last>
+    <rng1>
+      <x>906</x>
+      <y>14</y>
+      <val>234.</val></rng1>
+    <rng2>
+      <x>1147</x>
+      <y>171</y>
+      <val>88.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1280x720--INTER_LINEAR--BORDER_CONSTANT--8UC1->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1280x720--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>5.</min>
+    <max>255.</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>150.</val></last>
+    <rng1>
+      <x>1108</x>
+      <y>38</y>
+      <val>193.</val></rng1>
+    <rng2>
+      <x>937</x>
+      <y>8</y>
+      <cn>1</cn>
+      <val>150.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1280x720--INTER_LINEAR--BORDER_CONSTANT--8UC4->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1280x720--INTER_LINEAR--BORDER_REPLICATE--8UC1->
   <dst>
     <kind>65536</kind>
@@ -47238,13 +47240,13 @@
       <y>719</y>
       <val>88.</val></last>
     <rng1>
-      <x>950</x>
-      <y>461</y>
-      <val>87.</val></rng1>
+      <x>393</x>
+      <y>265</y>
+      <val>82.</val></rng1>
     <rng2>
-      <x>189</x>
-      <y>5</y>
-      <val>244.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1280x720--INTER_LINEAR--BORDER_REPLICATE--8UC1->
+      <x>510</x>
+      <y>615</y>
+      <val>57.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1280x720--INTER_LINEAR--BORDER_REPLICATE--8UC1->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1280x720--INTER_LINEAR--BORDER_REPLICATE--8UC4->
   <dst>
     <kind>65536</kind>
@@ -47256,13 +47258,13 @@
       <y>719</y>
       <val>255.</val></last>
     <rng1>
-      <x>1072</x>
-      <y>237</y>
-      <val>95.</val></rng1>
-    <rng2>
-      <x>1055</x>
-      <y>399</y>
+      <x>493</x>
+      <y>436</y>
       <cn>3</cn>
+      <val>255.</val></rng1>
+    <rng2>
+      <x>1193</x>
+      <y>36</y>
       <val>255.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1280x720--INTER_LINEAR--BORDER_REPLICATE--8UC4->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1280x960--INTER_NEAREST--BORDER_CONSTANT--8UC1->
   <dst>
@@ -47275,13 +47277,13 @@
       <y>959</y>
       <val>150.</val></last>
     <rng1>
-      <x>1117</x>
-      <y>267</y>
+      <x>151</x>
+      <y>379</y>
       <val>78.</val></rng1>
     <rng2>
-      <x>117</x>
-      <y>237</y>
-      <val>112.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1280x960--INTER_NEAREST--BORDER_CONSTANT--8UC1->
+      <x>696</x>
+      <y>788</y>
+      <val>105.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1280x960--INTER_NEAREST--BORDER_CONSTANT--8UC1->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1280x960--INTER_NEAREST--BORDER_CONSTANT--8UC4->
   <dst>
     <kind>65536</kind>
@@ -47293,52 +47295,15 @@
       <y>959</y>
       <val>150.</val></last>
     <rng1>
-      <x>1096</x>
-      <y>308</y>
-      <val>142.</val></rng1>
+      <x>1241</x>
+      <y>286</y>
+      <val>99.</val></rng1>
     <rng2>
-      <x>678</x>
-      <y>557</y>
-      <val>65.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1280x960--INTER_NEAREST--BORDER_CONSTANT--8UC4->
+      <x>654</x>
+      <y>900</y>
+      <cn>2</cn>
+      <val>38.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1280x960--INTER_NEAREST--BORDER_CONSTANT--8UC4->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1280x960--INTER_NEAREST--BORDER_REPLICATE--8UC1->
-  <dst>
-    <kind>65536</kind>
-    <type>0</type>
-    <min>26.</min>
-    <max>255.</max>
-    <last>
-      <x>1279</x>
-      <y>959</y>
-      <val>150.</val></last>
-    <rng1>
-      <x>721</x>
-      <y>425</y>
-      <val>153.</val></rng1>
-    <rng2>
-      <x>583</x>
-      <y>577</y>
-      <val>123.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1280x960--INTER_NEAREST--BORDER_REPLICATE--8UC1->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1280x960--INTER_NEAREST--BORDER_REPLICATE--8UC4->
-  <dst>
-    <kind>65536</kind>
-    <type>24</type>
-    <min>1.</min>
-    <max>255.</max>
-    <last>
-      <x>1279</x>
-      <y>959</y>
-      <val>150.</val></last>
-    <rng1>
-      <x>684</x>
-      <y>2</y>
-      <cn>3</cn>
-      <val>150.</val></rng1>
-    <rng2>
-      <x>208</x>
-      <y>191</y>
-      <cn>3</cn>
-      <val>255.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1280x960--INTER_NEAREST--BORDER_REPLICATE--8UC4->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1280x960--INTER_LINEAR--BORDER_CONSTANT--8UC1->
   <dst>
     <kind>65536</kind>
     <type>0</type>
@@ -47349,14 +47314,14 @@
       <y>959</y>
       <val>88.</val></last>
     <rng1>
-      <x>794</x>
-      <y>805</y>
-      <val>84.</val></rng1>
+      <x>418</x>
+      <y>9</y>
+      <val>146.</val></rng1>
     <rng2>
-      <x>936</x>
-      <y>290</y>
-      <val>140.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1280x960--INTER_LINEAR--BORDER_CONSTANT--8UC1->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1280x960--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+      <x>985</x>
+      <y>445</y>
+      <val>118.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1280x960--INTER_NEAREST--BORDER_REPLICATE--8UC1->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1280x960--INTER_NEAREST--BORDER_REPLICATE--8UC4->
   <dst>
     <kind>65536</kind>
     <type>24</type>
@@ -47367,15 +47332,52 @@
       <y>959</y>
       <val>255.</val></last>
     <rng1>
-      <x>429</x>
-      <y>640</y>
+      <x>736</x>
+      <y>672</y>
       <cn>3</cn>
       <val>255.</val></rng1>
     <rng2>
-      <x>76</x>
-      <y>337</y>
+      <x>669</x>
+      <y>287</y>
+      <cn>3</cn>
+      <val>255.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1280x960--INTER_NEAREST--BORDER_REPLICATE--8UC4->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1280x960--INTER_LINEAR--BORDER_CONSTANT--8UC1->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>26.</min>
+    <max>255.</max>
+    <last>
+      <x>1279</x>
+      <y>959</y>
+      <val>150.</val></last>
+    <rng1>
+      <x>50</x>
+      <y>860</y>
+      <val>80.</val></rng1>
+    <rng2>
+      <x>1180</x>
+      <y>940</y>
+      <val>150.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1280x960--INTER_LINEAR--BORDER_CONSTANT--8UC1->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1280x960--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>1.</min>
+    <max>255.</max>
+    <last>
+      <x>1279</x>
+      <y>959</y>
+      <val>150.</val></last>
+    <rng1>
+      <x>1253</x>
+      <y>158</y>
       <cn>1</cn>
-      <val>125.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1280x960--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+      <val>150.</val></rng1>
+    <rng2>
+      <x>395</x>
+      <y>623</y>
+      <val>95.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1280x960--INTER_LINEAR--BORDER_CONSTANT--8UC4->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1280x960--INTER_LINEAR--BORDER_REPLICATE--8UC1->
   <dst>
     <kind>65536</kind>
@@ -47387,13 +47389,13 @@
       <y>959</y>
       <val>88.</val></last>
     <rng1>
-      <x>431</x>
-      <y>197</y>
-      <val>177.</val></rng1>
+      <x>690</x>
+      <y>201</y>
+      <val>109.</val></rng1>
     <rng2>
-      <x>1206</x>
-      <y>670</y>
-      <val>47.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1280x960--INTER_LINEAR--BORDER_REPLICATE--8UC1->
+      <x>207</x>
+      <y>218</y>
+      <val>170.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1280x960--INTER_LINEAR--BORDER_REPLICATE--8UC1->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1280x960--INTER_LINEAR--BORDER_REPLICATE--8UC4->
   <dst>
     <kind>65536</kind>
@@ -47405,15 +47407,14 @@
       <y>959</y>
       <val>255.</val></last>
     <rng1>
-      <x>481</x>
-      <y>611</y>
-      <cn>1</cn>
-      <val>99.</val></rng1>
+      <x>105</x>
+      <y>72</y>
+      <cn>3</cn>
+      <val>255.</val></rng1>
     <rng2>
-      <x>88</x>
-      <y>886</y>
-      <cn>1</cn>
-      <val>85.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1280x960--INTER_LINEAR--BORDER_REPLICATE--8UC4->
+      <x>31</x>
+      <y>116</y>
+      <val>140.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1280x960--INTER_LINEAR--BORDER_REPLICATE--8UC4->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1360x720--INTER_NEAREST--BORDER_CONSTANT--8UC1->
   <dst>
     <kind>65536</kind>
@@ -47425,13 +47426,13 @@
       <y>719</y>
       <val>150.</val></last>
     <rng1>
-      <x>1098</x>
-      <y>285</y>
-      <val>69.</val></rng1>
+      <x>1304</x>
+      <y>450</y>
+      <val>74.</val></rng1>
     <rng2>
-      <x>402</x>
-      <y>144</y>
-      <val>147.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1360x720--INTER_NEAREST--BORDER_CONSTANT--8UC1->
+      <x>577</x>
+      <y>417</y>
+      <val>85.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1360x720--INTER_NEAREST--BORDER_CONSTANT--8UC1->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1360x720--INTER_NEAREST--BORDER_CONSTANT--8UC4->
   <dst>
     <kind>65536</kind>
@@ -47443,51 +47444,16 @@
       <y>719</y>
       <val>150.</val></last>
     <rng1>
-      <x>800</x>
-      <y>77</y>
+      <x>967</x>
+      <y>679</y>
+      <cn>3</cn>
       <val>255.</val></rng1>
     <rng2>
-      <x>983</x>
-      <y>577</y>
-      <cn>2</cn>
-      <val>99.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1360x720--INTER_NEAREST--BORDER_CONSTANT--8UC4->
+      <x>46</x>
+      <y>411</y>
+      <cn>3</cn>
+      <val>255.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1360x720--INTER_NEAREST--BORDER_CONSTANT--8UC4->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1360x720--INTER_NEAREST--BORDER_REPLICATE--8UC1->
-  <dst>
-    <kind>65536</kind>
-    <type>0</type>
-    <min>21.</min>
-    <max>255.</max>
-    <last>
-      <x>1359</x>
-      <y>719</y>
-      <val>150.</val></last>
-    <rng1>
-      <x>677</x>
-      <y>28</y>
-      <val>254.</val></rng1>
-    <rng2>
-      <x>166</x>
-      <y>108</y>
-      <val>170.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1360x720--INTER_NEAREST--BORDER_REPLICATE--8UC1->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1360x720--INTER_NEAREST--BORDER_REPLICATE--8UC4->
-  <dst>
-    <kind>65536</kind>
-    <type>24</type>
-    <min>1.</min>
-    <max>255.</max>
-    <last>
-      <x>1359</x>
-      <y>719</y>
-      <val>150.</val></last>
-    <rng1>
-      <x>29</x>
-      <y>188</y>
-      <val>104.</val></rng1>
-    <rng2>
-      <x>1126</x>
-      <y>550</y>
-      <val>80.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1360x720--INTER_NEAREST--BORDER_REPLICATE--8UC4->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1360x720--INTER_LINEAR--BORDER_CONSTANT--8UC1->
   <dst>
     <kind>65536</kind>
     <type>0</type>
@@ -47498,14 +47464,14 @@
       <y>719</y>
       <val>88.</val></last>
     <rng1>
-      <x>381</x>
-      <y>503</y>
-      <val>81.</val></rng1>
+      <x>312</x>
+      <y>490</y>
+      <val>85.</val></rng1>
     <rng2>
-      <x>294</x>
-      <y>50</y>
-      <val>251.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1360x720--INTER_LINEAR--BORDER_CONSTANT--8UC1->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1360x720--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+      <x>891</x>
+      <y>393</y>
+      <val>57.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1360x720--INTER_NEAREST--BORDER_REPLICATE--8UC1->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1360x720--INTER_NEAREST--BORDER_REPLICATE--8UC4->
   <dst>
     <kind>65536</kind>
     <type>24</type>
@@ -47516,15 +47482,52 @@
       <y>719</y>
       <val>255.</val></last>
     <rng1>
-      <x>790</x>
-      <y>97</y>
-      <cn>3</cn>
-      <val>255.</val></rng1>
+      <x>358</x>
+      <y>132</y>
+      <cn>2</cn>
+      <val>220.</val></rng1>
     <rng2>
-      <x>411</x>
-      <y>150</y>
+      <x>875</x>
+      <y>270</y>
+      <val>116.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1360x720--INTER_NEAREST--BORDER_REPLICATE--8UC4->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1360x720--INTER_LINEAR--BORDER_CONSTANT--8UC1->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>21.</min>
+    <max>255.</max>
+    <last>
+      <x>1359</x>
+      <y>719</y>
+      <val>150.</val></last>
+    <rng1>
+      <x>689</x>
+      <y>502</y>
+      <val>97.</val></rng1>
+    <rng2>
+      <x>858</x>
+      <y>410</y>
+      <val>87.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1360x720--INTER_LINEAR--BORDER_CONSTANT--8UC1->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1360x720--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>1.</min>
+    <max>255.</max>
+    <last>
+      <x>1359</x>
+      <y>719</y>
+      <val>150.</val></last>
+    <rng1>
+      <x>1253</x>
+      <y>659</y>
       <cn>1</cn>
-      <val>184.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1360x720--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+      <val>57.</val></rng1>
+    <rng2>
+      <x>439</x>
+      <y>655</y>
+      <cn>3</cn>
+      <val>255.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1360x720--INTER_LINEAR--BORDER_CONSTANT--8UC4->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1360x720--INTER_LINEAR--BORDER_REPLICATE--8UC1->
   <dst>
     <kind>65536</kind>
@@ -47536,13 +47539,13 @@
       <y>719</y>
       <val>88.</val></last>
     <rng1>
-      <x>702</x>
-      <y>372</y>
-      <val>96.</val></rng1>
+      <x>293</x>
+      <y>409</y>
+      <val>91.</val></rng1>
     <rng2>
-      <x>197</x>
-      <y>689</y>
-      <val>61.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1360x720--INTER_LINEAR--BORDER_REPLICATE--8UC1->
+      <x>1033</x>
+      <y>626</y>
+      <val>87.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1360x720--INTER_LINEAR--BORDER_REPLICATE--8UC1->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1360x720--INTER_LINEAR--BORDER_REPLICATE--8UC4->
   <dst>
     <kind>65536</kind>
@@ -47554,15 +47557,14 @@
       <y>719</y>
       <val>255.</val></last>
     <rng1>
-      <x>316</x>
-      <y>441</y>
-      <cn>2</cn>
-      <val>169.</val></rng1>
+      <x>789</x>
+      <y>312</y>
+      <val>64.</val></rng1>
     <rng2>
-      <x>268</x>
-      <y>27</y>
-      <cn>1</cn>
-      <val>251.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1360x720--INTER_LINEAR--BORDER_REPLICATE--8UC4->
+      <x>276</x>
+      <y>210</y>
+      <cn>3</cn>
+      <val>255.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1360x720--INTER_LINEAR--BORDER_REPLICATE--8UC4->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1600x1200--INTER_NEAREST--BORDER_CONSTANT--8UC1->
   <dst>
     <kind>65536</kind>
@@ -47574,13 +47576,13 @@
       <y>1199</y>
       <val>150.</val></last>
     <rng1>
-      <x>1442</x>
-      <y>1080</y>
-      <val>90.</val></rng1>
+      <x>559</x>
+      <y>350</y>
+      <val>158.</val></rng1>
     <rng2>
-      <x>483</x>
-      <y>100</y>
-      <val>173.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1600x1200--INTER_NEAREST--BORDER_CONSTANT--8UC1->
+      <x>756</x>
+      <y>853</y>
+      <val>80.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1600x1200--INTER_NEAREST--BORDER_CONSTANT--8UC1->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1600x1200--INTER_NEAREST--BORDER_CONSTANT--8UC4->
   <dst>
     <kind>65536</kind>
@@ -47592,52 +47594,16 @@
       <y>1199</y>
       <val>150.</val></last>
     <rng1>
-      <x>678</x>
-      <y>145</y>
-      <val>154.</val></rng1>
+      <x>436</x>
+      <y>634</y>
+      <cn>2</cn>
+      <val>79.</val></rng1>
     <rng2>
-      <x>1445</x>
-      <y>470</y>
-      <val>79.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1600x1200--INTER_NEAREST--BORDER_CONSTANT--8UC4->
+      <x>497</x>
+      <y>756</y>
+      <cn>3</cn>
+      <val>255.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1600x1200--INTER_NEAREST--BORDER_CONSTANT--8UC4->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1600x1200--INTER_NEAREST--BORDER_REPLICATE--8UC1->
-  <dst>
-    <kind>65536</kind>
-    <type>0</type>
-    <min>22.</min>
-    <max>255.</max>
-    <last>
-      <x>1599</x>
-      <y>1199</y>
-      <val>150.</val></last>
-    <rng1>
-      <x>1223</x>
-      <y>70</y>
-      <val>128.</val></rng1>
-    <rng2>
-      <x>1498</x>
-      <y>1105</y>
-      <val>76.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1600x1200--INTER_NEAREST--BORDER_REPLICATE--8UC1->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1600x1200--INTER_NEAREST--BORDER_REPLICATE--8UC4->
-  <dst>
-    <kind>65536</kind>
-    <type>24</type>
-    <min>1.</min>
-    <max>255.</max>
-    <last>
-      <x>1599</x>
-      <y>1199</y>
-      <val>150.</val></last>
-    <rng1>
-      <x>391</x>
-      <y>836</y>
-      <cn>2</cn>
-      <val>106.</val></rng1>
-    <rng2>
-      <x>1120</x>
-      <y>316</y>
-      <cn>2</cn>
-      <val>93.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1600x1200--INTER_NEAREST--BORDER_REPLICATE--8UC4->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1600x1200--INTER_LINEAR--BORDER_CONSTANT--8UC1->
   <dst>
     <kind>65536</kind>
     <type>0</type>
@@ -47648,14 +47614,14 @@
       <y>1199</y>
       <val>90.</val></last>
     <rng1>
-      <x>274</x>
-      <y>298</y>
-      <val>165.</val></rng1>
+      <x>921</x>
+      <y>861</y>
+      <val>90.</val></rng1>
     <rng2>
-      <x>457</x>
-      <y>135</y>
-      <val>195.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1600x1200--INTER_LINEAR--BORDER_CONSTANT--8UC1->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1600x1200--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+      <x>1241</x>
+      <y>1104</y>
+      <val>74.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1600x1200--INTER_NEAREST--BORDER_REPLICATE--8UC1->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1600x1200--INTER_NEAREST--BORDER_REPLICATE--8UC4->
   <dst>
     <kind>65536</kind>
     <type>24</type>
@@ -47666,15 +47632,53 @@
       <y>1199</y>
       <val>255.</val></last>
     <rng1>
-      <x>429</x>
-      <y>613</y>
+      <x>983</x>
+      <y>783</y>
       <cn>3</cn>
       <val>255.</val></rng1>
     <rng2>
-      <x>1311</x>
-      <y>610</y>
-      <cn>1</cn>
-      <val>90.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1600x1200--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+      <x>1266</x>
+      <y>850</y>
+      <cn>2</cn>
+      <val>69.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1600x1200--INTER_NEAREST--BORDER_REPLICATE--8UC4->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1600x1200--INTER_LINEAR--BORDER_CONSTANT--8UC1->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>22.</min>
+    <max>255.</max>
+    <last>
+      <x>1599</x>
+      <y>1199</y>
+      <val>150.</val></last>
+    <rng1>
+      <x>771</x>
+      <y>1194</y>
+      <val>150.</val></rng1>
+    <rng2>
+      <x>254</x>
+      <y>1122</y>
+      <val>65.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1600x1200--INTER_LINEAR--BORDER_CONSTANT--8UC1->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1600x1200--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>1.</min>
+    <max>255.</max>
+    <last>
+      <x>1599</x>
+      <y>1199</y>
+      <val>150.</val></last>
+    <rng1>
+      <x>929</x>
+      <y>1167</y>
+      <cn>3</cn>
+      <val>150.</val></rng1>
+    <rng2>
+      <x>1285</x>
+      <y>150</y>
+      <cn>3</cn>
+      <val>255.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1600x1200--INTER_LINEAR--BORDER_CONSTANT--8UC4->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1600x1200--INTER_LINEAR--BORDER_REPLICATE--8UC1->
   <dst>
     <kind>65536</kind>
@@ -47686,13 +47690,13 @@
       <y>1199</y>
       <val>90.</val></last>
     <rng1>
-      <x>16</x>
-      <y>464</y>
-      <val>118.</val></rng1>
+      <x>746</x>
+      <y>204</y>
+      <val>140.</val></rng1>
     <rng2>
-      <x>454</x>
-      <y>196</y>
-      <val>130.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1600x1200--INTER_LINEAR--BORDER_REPLICATE--8UC1->
+      <x>1069</x>
+      <y>173</y>
+      <val>149.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1600x1200--INTER_LINEAR--BORDER_REPLICATE--8UC1->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1600x1200--INTER_LINEAR--BORDER_REPLICATE--8UC4->
   <dst>
     <kind>65536</kind>
@@ -47704,14 +47708,14 @@
       <y>1199</y>
       <val>255.</val></last>
     <rng1>
-      <x>442</x>
-      <y>241</y>
-      <val>112.</val></rng1>
+      <x>1477</x>
+      <y>424</y>
+      <val>79.</val></rng1>
     <rng2>
-      <x>428</x>
-      <y>1047</y>
+      <x>528</x>
+      <y>671</y>
       <cn>2</cn>
-      <val>71.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1600x1200--INTER_LINEAR--BORDER_REPLICATE--8UC4->
+      <val>46.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1600x1200--INTER_LINEAR--BORDER_REPLICATE--8UC4->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1920x1080--INTER_NEAREST--BORDER_CONSTANT--8UC1->
   <dst>
     <kind>65536</kind>
@@ -47723,13 +47727,13 @@
       <y>1079</y>
       <val>150.</val></last>
     <rng1>
-      <x>1849</x>
-      <y>977</y>
-      <val>150.</val></rng1>
+      <x>1536</x>
+      <y>307</y>
+      <val>102.</val></rng1>
     <rng2>
-      <x>1753</x>
-      <y>26</y>
-      <val>254.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1920x1080--INTER_NEAREST--BORDER_CONSTANT--8UC1->
+      <x>1693</x>
+      <y>230</y>
+      <val>192.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1920x1080--INTER_NEAREST--BORDER_CONSTANT--8UC1->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1920x1080--INTER_NEAREST--BORDER_CONSTANT--8UC4->
   <dst>
     <kind>65536</kind>
@@ -47741,54 +47745,16 @@
       <y>1079</y>
       <val>150.</val></last>
     <rng1>
-      <x>1451</x>
-      <y>471</y>
+      <x>1095</x>
+      <y>884</y>
       <cn>1</cn>
-      <val>113.</val></rng1>
+      <val>81.</val></rng1>
     <rng2>
-      <x>1224</x>
-      <y>9</y>
+      <x>29</x>
+      <y>544</y>
       <cn>3</cn>
-      <val>150.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1920x1080--INTER_NEAREST--BORDER_CONSTANT--8UC4->
+      <val>255.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1920x1080--INTER_NEAREST--BORDER_CONSTANT--8UC4->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1920x1080--INTER_NEAREST--BORDER_REPLICATE--8UC1->
-  <dst>
-    <kind>65536</kind>
-    <type>0</type>
-    <min>25.</min>
-    <max>255.</max>
-    <last>
-      <x>1919</x>
-      <y>1079</y>
-      <val>150.</val></last>
-    <rng1>
-      <x>257</x>
-      <y>935</y>
-      <val>119.</val></rng1>
-    <rng2>
-      <x>27</x>
-      <y>481</y>
-      <val>100.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1920x1080--INTER_NEAREST--BORDER_REPLICATE--8UC1->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1920x1080--INTER_NEAREST--BORDER_REPLICATE--8UC4->
-  <dst>
-    <kind>65536</kind>
-    <type>24</type>
-    <min>2.</min>
-    <max>255.</max>
-    <last>
-      <x>1919</x>
-      <y>1079</y>
-      <val>150.</val></last>
-    <rng1>
-      <x>954</x>
-      <y>294</y>
-      <cn>2</cn>
-      <val>131.</val></rng1>
-    <rng2>
-      <x>853</x>
-      <y>634</y>
-      <cn>2</cn>
-      <val>96.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1920x1080--INTER_NEAREST--BORDER_REPLICATE--8UC4->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1920x1080--INTER_LINEAR--BORDER_CONSTANT--8UC1->
   <dst>
     <kind>65536</kind>
     <type>0</type>
@@ -47799,14 +47765,14 @@
       <y>1079</y>
       <val>90.</val></last>
     <rng1>
-      <x>280</x>
-      <y>44</y>
-      <val>253.</val></rng1>
+      <x>398</x>
+      <y>922</y>
+      <val>66.</val></rng1>
     <rng2>
-      <x>1361</x>
-      <y>809</y>
-      <val>111.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1920x1080--INTER_LINEAR--BORDER_CONSTANT--8UC1->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1920x1080--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+      <x>1652</x>
+      <y>117</y>
+      <val>250.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1920x1080--INTER_NEAREST--BORDER_REPLICATE--8UC1->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1920x1080--INTER_NEAREST--BORDER_REPLICATE--8UC4->
   <dst>
     <kind>65536</kind>
     <type>24</type>
@@ -47817,13 +47783,53 @@
       <y>1079</y>
       <val>255.</val></last>
     <rng1>
-      <x>1225</x>
-      <y>1008</y>
-      <val>96.</val></rng1>
+      <x>706</x>
+      <y>420</y>
+      <cn>3</cn>
+      <val>255.</val></rng1>
     <rng2>
-      <x>1494</x>
-      <y>906</y>
-      <val>94.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1920x1080--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+      <x>314</x>
+      <y>330</y>
+      <cn>2</cn>
+      <val>130.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1920x1080--INTER_NEAREST--BORDER_REPLICATE--8UC4->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1920x1080--INTER_LINEAR--BORDER_CONSTANT--8UC1->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>25.</min>
+    <max>255.</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>150.</val></last>
+    <rng1>
+      <x>1557</x>
+      <y>828</y>
+      <val>81.</val></rng1>
+    <rng2>
+      <x>61</x>
+      <y>619</y>
+      <val>79.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1920x1080--INTER_LINEAR--BORDER_CONSTANT--8UC1->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1920x1080--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>2.</min>
+    <max>255.</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>150.</val></last>
+    <rng1>
+      <x>937</x>
+      <y>466</y>
+      <cn>1</cn>
+      <val>119.</val></rng1>
+    <rng2>
+      <x>1439</x>
+      <y>646</y>
+      <cn>1</cn>
+      <val>77.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1920x1080--INTER_LINEAR--BORDER_CONSTANT--8UC4->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1920x1080--INTER_LINEAR--BORDER_REPLICATE--8UC1->
   <dst>
     <kind>65536</kind>
@@ -47835,13 +47841,13 @@
       <y>1079</y>
       <val>90.</val></last>
     <rng1>
-      <x>652</x>
-      <y>117</y>
-      <val>159.</val></rng1>
+      <x>1852</x>
+      <y>686</y>
+      <val>80.</val></rng1>
     <rng2>
-      <x>1062</x>
-      <y>1009</y>
-      <val>49.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1920x1080--INTER_LINEAR--BORDER_REPLICATE--8UC1->
+      <x>864</x>
+      <y>232</y>
+      <val>141.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1920x1080--INTER_LINEAR--BORDER_REPLICATE--8UC1->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1920x1080--INTER_LINEAR--BORDER_REPLICATE--8UC4->
   <dst>
     <kind>65536</kind>
@@ -47853,13 +47859,14 @@
       <y>1079</y>
       <val>255.</val></last>
     <rng1>
-      <x>1105</x>
-      <y>61</y>
-      <val>255.</val></rng1>
+      <x>1406</x>
+      <y>347</y>
+      <val>106.</val></rng1>
     <rng2>
-      <x>1503</x>
-      <y>585</y>
-      <val>137.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1920x1080--INTER_LINEAR--BORDER_REPLICATE--8UC4->
+      <x>886</x>
+      <y>723</y>
+      <cn>2</cn>
+      <val>80.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---1920x1080--INTER_LINEAR--BORDER_REPLICATE--8UC4->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2048x1536--INTER_NEAREST--BORDER_CONSTANT--8UC1->
   <dst>
     <kind>65536</kind>
@@ -47871,13 +47878,13 @@
       <y>1535</y>
       <val>150.</val></last>
     <rng1>
-      <x>176</x>
-      <y>1357</y>
-      <val>44.</val></rng1>
+      <x>807</x>
+      <y>1418</y>
+      <val>68.</val></rng1>
     <rng2>
-      <x>1960</x>
-      <y>1336</y>
-      <val>86.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2048x1536--INTER_NEAREST--BORDER_CONSTANT--8UC1->
+      <x>1386</x>
+      <y>1419</y>
+      <val>89.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2048x1536--INTER_NEAREST--BORDER_CONSTANT--8UC1->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2048x1536--INTER_NEAREST--BORDER_CONSTANT--8UC4->
   <dst>
     <kind>65536</kind>
@@ -47889,52 +47896,15 @@
       <y>1535</y>
       <val>150.</val></last>
     <rng1>
-      <x>283</x>
-      <y>632</y>
-      <cn>3</cn>
-      <val>255.</val></rng1>
-    <rng2>
-      <x>1852</x>
-      <y>414</y>
-      <val>83.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2048x1536--INTER_NEAREST--BORDER_CONSTANT--8UC4->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2048x1536--INTER_NEAREST--BORDER_REPLICATE--8UC1->
-  <dst>
-    <kind>65536</kind>
-    <type>0</type>
-    <min>18.</min>
-    <max>255.</max>
-    <last>
-      <x>2047</x>
-      <y>1535</y>
-      <val>150.</val></last>
-    <rng1>
-      <x>483</x>
-      <y>1436</y>
-      <val>85.</val></rng1>
-    <rng2>
-      <x>1013</x>
-      <y>1516</y>
-      <val>150.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2048x1536--INTER_NEAREST--BORDER_REPLICATE--8UC1->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2048x1536--INTER_NEAREST--BORDER_REPLICATE--8UC4->
-  <dst>
-    <kind>65536</kind>
-    <type>24</type>
-    <min>1.</min>
-    <max>255.</max>
-    <last>
-      <x>2047</x>
-      <y>1535</y>
-      <val>150.</val></last>
-    <rng1>
-      <x>1823</x>
-      <y>275</y>
-      <val>124.</val></rng1>
-    <rng2>
-      <x>1822</x>
-      <y>520</y>
+      <x>1737</x>
+      <y>174</y>
       <cn>1</cn>
-      <val>70.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2048x1536--INTER_NEAREST--BORDER_REPLICATE--8UC4->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2048x1536--INTER_LINEAR--BORDER_CONSTANT--8UC1->
+      <val>103.</val></rng1>
+    <rng2>
+      <x>156</x>
+      <y>1342</y>
+      <val>82.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2048x1536--INTER_NEAREST--BORDER_CONSTANT--8UC4->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2048x1536--INTER_NEAREST--BORDER_REPLICATE--8UC1->
   <dst>
     <kind>65536</kind>
     <type>0</type>
@@ -47945,14 +47915,14 @@
       <y>1535</y>
       <val>91.</val></last>
     <rng1>
-      <x>505</x>
-      <y>146</y>
-      <val>129.</val></rng1>
+      <x>1064</x>
+      <y>1533</y>
+      <val>47.</val></rng1>
     <rng2>
-      <x>929</x>
-      <y>908</y>
-      <val>110.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2048x1536--INTER_LINEAR--BORDER_CONSTANT--8UC1->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2048x1536--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+      <x>987</x>
+      <y>198</y>
+      <val>236.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2048x1536--INTER_NEAREST--BORDER_REPLICATE--8UC1->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2048x1536--INTER_NEAREST--BORDER_REPLICATE--8UC4->
   <dst>
     <kind>65536</kind>
     <type>24</type>
@@ -47963,14 +47933,51 @@
       <y>1535</y>
       <val>255.</val></last>
     <rng1>
-      <x>518</x>
-      <y>410</y>
-      <val>146.</val></rng1>
-    <rng2>
-      <x>1654</x>
-      <y>432</y>
+      <x>427</x>
+      <y>537</y>
       <cn>1</cn>
-      <val>59.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2048x1536--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+      <val>109.</val></rng1>
+    <rng2>
+      <x>1452</x>
+      <y>1528</y>
+      <val>79.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2048x1536--INTER_NEAREST--BORDER_REPLICATE--8UC4->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2048x1536--INTER_LINEAR--BORDER_CONSTANT--8UC1->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>18.</min>
+    <max>255.</max>
+    <last>
+      <x>2047</x>
+      <y>1535</y>
+      <val>150.</val></last>
+    <rng1>
+      <x>348</x>
+      <y>452</y>
+      <val>134.</val></rng1>
+    <rng2>
+      <x>1858</x>
+      <y>499</y>
+      <val>141.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2048x1536--INTER_LINEAR--BORDER_CONSTANT--8UC1->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2048x1536--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>1.</min>
+    <max>255.</max>
+    <last>
+      <x>2047</x>
+      <y>1535</y>
+      <val>150.</val></last>
+    <rng1>
+      <x>1056</x>
+      <y>525</y>
+      <val>100.</val></rng1>
+    <rng2>
+      <x>1414</x>
+      <y>1495</y>
+      <cn>3</cn>
+      <val>150.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2048x1536--INTER_LINEAR--BORDER_CONSTANT--8UC4->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2048x1536--INTER_LINEAR--BORDER_REPLICATE--8UC1->
   <dst>
     <kind>65536</kind>
@@ -47982,13 +47989,13 @@
       <y>1535</y>
       <val>91.</val></last>
     <rng1>
-      <x>1725</x>
-      <y>188</y>
-      <val>101.</val></rng1>
+      <x>399</x>
+      <y>1090</y>
+      <val>63.</val></rng1>
     <rng2>
-      <x>1913</x>
-      <y>1250</y>
-      <val>73.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2048x1536--INTER_LINEAR--BORDER_REPLICATE--8UC1->
+      <x>301</x>
+      <y>453</y>
+      <val>128.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2048x1536--INTER_LINEAR--BORDER_REPLICATE--8UC1->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2048x1536--INTER_LINEAR--BORDER_REPLICATE--8UC4->
   <dst>
     <kind>65536</kind>
@@ -48000,14 +48007,14 @@
       <y>1535</y>
       <val>255.</val></last>
     <rng1>
-      <x>181</x>
-      <y>200</y>
+      <x>411</x>
+      <y>351</y>
       <cn>3</cn>
       <val>255.</val></rng1>
     <rng2>
-      <x>1210</x>
-      <y>16</y>
-      <val>255.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2048x1536--INTER_LINEAR--BORDER_REPLICATE--8UC4->
+      <x>1754</x>
+      <y>278</y>
+      <val>198.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2048x1536--INTER_LINEAR--BORDER_REPLICATE--8UC4->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2592x1920--INTER_NEAREST--BORDER_CONSTANT--8UC1->
   <dst>
     <kind>65536</kind>
@@ -48019,13 +48026,13 @@
       <y>1919</y>
       <val>150.</val></last>
     <rng1>
-      <x>1155</x>
-      <y>1180</y>
-      <val>116.</val></rng1>
+      <x>270</x>
+      <y>434</y>
+      <val>178.</val></rng1>
     <rng2>
-      <x>984</x>
-      <y>370</y>
-      <val>132.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2592x1920--INTER_NEAREST--BORDER_CONSTANT--8UC1->
+      <x>1600</x>
+      <y>801</y>
+      <val>107.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2592x1920--INTER_NEAREST--BORDER_CONSTANT--8UC1->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2592x1920--INTER_NEAREST--BORDER_CONSTANT--8UC4->
   <dst>
     <kind>65536</kind>
@@ -48037,53 +48044,15 @@
       <y>1919</y>
       <val>150.</val></last>
     <rng1>
-      <x>828</x>
-      <y>847</y>
+      <x>2474</x>
+      <y>584</y>
       <cn>1</cn>
-      <val>101.</val></rng1>
+      <val>104.</val></rng1>
     <rng2>
-      <x>1875</x>
-      <y>38</y>
-      <val>255.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2592x1920--INTER_NEAREST--BORDER_CONSTANT--8UC4->
+      <x>2111</x>
+      <y>60</y>
+      <val>156.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2592x1920--INTER_NEAREST--BORDER_CONSTANT--8UC4->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2592x1920--INTER_NEAREST--BORDER_REPLICATE--8UC1->
-  <dst>
-    <kind>65536</kind>
-    <type>0</type>
-    <min>11.</min>
-    <max>255.</max>
-    <last>
-      <x>2591</x>
-      <y>1919</y>
-      <val>150.</val></last>
-    <rng1>
-      <x>1466</x>
-      <y>704</y>
-      <val>192.</val></rng1>
-    <rng2>
-      <x>2239</x>
-      <y>95</y>
-      <val>213.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2592x1920--INTER_NEAREST--BORDER_REPLICATE--8UC1->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2592x1920--INTER_NEAREST--BORDER_REPLICATE--8UC4->
-  <dst>
-    <kind>65536</kind>
-    <type>24</type>
-    <min>0.</min>
-    <max>255.</max>
-    <last>
-      <x>2591</x>
-      <y>1919</y>
-      <val>150.</val></last>
-    <rng1>
-      <x>1402</x>
-      <y>839</y>
-      <cn>2</cn>
-      <val>71.</val></rng1>
-    <rng2>
-      <x>1921</x>
-      <y>1535</y>
-      <cn>1</cn>
-      <val>89.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2592x1920--INTER_NEAREST--BORDER_REPLICATE--8UC4->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2592x1920--INTER_LINEAR--BORDER_CONSTANT--8UC1->
   <dst>
     <kind>65536</kind>
     <type>0</type>
@@ -48094,14 +48063,14 @@
       <y>1919</y>
       <val>92.</val></last>
     <rng1>
-      <x>998</x>
-      <y>823</y>
-      <val>100.</val></rng1>
+      <x>153</x>
+      <y>761</y>
+      <val>140.</val></rng1>
     <rng2>
-      <x>304</x>
-      <y>62</y>
-      <val>254.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2592x1920--INTER_LINEAR--BORDER_CONSTANT--8UC1->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2592x1920--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+      <x>1010</x>
+      <y>803</y>
+      <val>130.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2592x1920--INTER_NEAREST--BORDER_REPLICATE--8UC1->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2592x1920--INTER_NEAREST--BORDER_REPLICATE--8UC4->
   <dst>
     <kind>65536</kind>
     <type>24</type>
@@ -48112,15 +48081,53 @@
       <y>1919</y>
       <val>255.</val></last>
     <rng1>
-      <x>1834</x>
-      <y>315</y>
+      <x>1067</x>
+      <y>318</y>
       <cn>1</cn>
-      <val>166.</val></rng1>
+      <val>115.</val></rng1>
     <rng2>
-      <x>1288</x>
-      <y>1820</y>
-      <cn>1</cn>
-      <val>66.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2592x1920--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+      <x>1194</x>
+      <y>1897</y>
+      <cn>2</cn>
+      <val>242.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2592x1920--INTER_NEAREST--BORDER_REPLICATE--8UC4->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2592x1920--INTER_LINEAR--BORDER_CONSTANT--8UC1->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>11.</min>
+    <max>255.</max>
+    <last>
+      <x>2591</x>
+      <y>1919</y>
+      <val>150.</val></last>
+    <rng1>
+      <x>273</x>
+      <y>1523</y>
+      <val>100.</val></rng1>
+    <rng2>
+      <x>2464</x>
+      <y>211</y>
+      <val>254.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2592x1920--INTER_LINEAR--BORDER_CONSTANT--8UC1->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2592x1920--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>2591</x>
+      <y>1919</y>
+      <val>150.</val></last>
+    <rng1>
+      <x>2394</x>
+      <y>631</y>
+      <cn>2</cn>
+      <val>66.</val></rng1>
+    <rng2>
+      <x>204</x>
+      <y>634</y>
+      <cn>3</cn>
+      <val>255.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2592x1920--INTER_LINEAR--BORDER_CONSTANT--8UC4->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2592x1920--INTER_LINEAR--BORDER_REPLICATE--8UC1->
   <dst>
     <kind>65536</kind>
@@ -48132,13 +48139,13 @@
       <y>1919</y>
       <val>92.</val></last>
     <rng1>
-      <x>966</x>
-      <y>1070</y>
-      <val>79.</val></rng1>
+      <x>338</x>
+      <y>134</y>
+      <val>253.</val></rng1>
     <rng2>
-      <x>423</x>
-      <y>1569</y>
-      <val>64.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2592x1920--INTER_LINEAR--BORDER_REPLICATE--8UC1->
+      <x>2245</x>
+      <y>1153</y>
+      <val>78.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2592x1920--INTER_LINEAR--BORDER_REPLICATE--8UC1->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2592x1920--INTER_LINEAR--BORDER_REPLICATE--8UC4->
   <dst>
     <kind>65536</kind>
@@ -48150,14 +48157,15 @@
       <y>1919</y>
       <val>255.</val></last>
     <rng1>
-      <x>1405</x>
-      <y>1485</y>
-      <val>57.</val></rng1>
+      <x>764</x>
+      <y>1152</y>
+      <cn>3</cn>
+      <val>255.</val></rng1>
     <rng2>
-      <x>129</x>
-      <y>721</y>
-      <cn>2</cn>
-      <val>139.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2592x1920--INTER_LINEAR--BORDER_REPLICATE--8UC4->
+      <x>1441</x>
+      <y>1335</y>
+      <cn>1</cn>
+      <val>98.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2592x1920--INTER_LINEAR--BORDER_REPLICATE--8UC4->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2592x1944--INTER_NEAREST--BORDER_CONSTANT--8UC1->
   <dst>
     <kind>65536</kind>
@@ -48169,13 +48177,13 @@
       <y>1943</y>
       <val>150.</val></last>
     <rng1>
-      <x>2265</x>
-      <y>686</y>
-      <val>72.</val></rng1>
+      <x>450</x>
+      <y>932</y>
+      <val>118.</val></rng1>
     <rng2>
-      <x>220</x>
-      <y>359</y>
-      <val>113.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2592x1944--INTER_NEAREST--BORDER_CONSTANT--8UC1->
+      <x>2134</x>
+      <y>190</y>
+      <val>234.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2592x1944--INTER_NEAREST--BORDER_CONSTANT--8UC1->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2592x1944--INTER_NEAREST--BORDER_CONSTANT--8UC4->
   <dst>
     <kind>65536</kind>
@@ -48187,52 +48195,15 @@
       <y>1943</y>
       <val>150.</val></last>
     <rng1>
-      <x>653</x>
-      <y>164</y>
-      <cn>3</cn>
-      <val>255.</val></rng1>
+      <x>1174</x>
+      <y>1597</y>
+      <val>158.</val></rng1>
     <rng2>
-      <x>1711</x>
-      <y>1064</y>
+      <x>111</x>
+      <y>1104</y>
       <cn>3</cn>
       <val>255.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2592x1944--INTER_NEAREST--BORDER_CONSTANT--8UC4->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2592x1944--INTER_NEAREST--BORDER_REPLICATE--8UC1->
-  <dst>
-    <kind>65536</kind>
-    <type>0</type>
-    <min>4.</min>
-    <max>255.</max>
-    <last>
-      <x>2591</x>
-      <y>1943</y>
-      <val>150.</val></last>
-    <rng1>
-      <x>1202</x>
-      <y>351</y>
-      <val>179.</val></rng1>
-    <rng2>
-      <x>267</x>
-      <y>245</y>
-      <val>203.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2592x1944--INTER_NEAREST--BORDER_REPLICATE--8UC1->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2592x1944--INTER_NEAREST--BORDER_REPLICATE--8UC4->
-  <dst>
-    <kind>65536</kind>
-    <type>24</type>
-    <min>0.</min>
-    <max>255.</max>
-    <last>
-      <x>2591</x>
-      <y>1943</y>
-      <val>150.</val></last>
-    <rng1>
-      <x>552</x>
-      <y>210</y>
-      <val>255.</val></rng1>
-    <rng2>
-      <x>1817</x>
-      <y>1494</y>
-      <val>135.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2592x1944--INTER_NEAREST--BORDER_REPLICATE--8UC4->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2592x1944--INTER_LINEAR--BORDER_CONSTANT--8UC1->
   <dst>
     <kind>65536</kind>
     <type>0</type>
@@ -48243,14 +48214,14 @@
       <y>1943</y>
       <val>92.</val></last>
     <rng1>
-      <x>1823</x>
-      <y>201</y>
-      <val>210.</val></rng1>
+      <x>1323</x>
+      <y>1069</y>
+      <val>94.</val></rng1>
     <rng2>
-      <x>562</x>
-      <y>1319</y>
-      <val>59.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2592x1944--INTER_LINEAR--BORDER_CONSTANT--8UC1->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2592x1944--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+      <x>2518</x>
+      <y>949</y>
+      <val>123.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2592x1944--INTER_NEAREST--BORDER_REPLICATE--8UC1->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2592x1944--INTER_NEAREST--BORDER_REPLICATE--8UC4->
   <dst>
     <kind>65536</kind>
     <type>24</type>
@@ -48261,15 +48232,52 @@
       <y>1943</y>
       <val>255.</val></last>
     <rng1>
-      <x>95</x>
-      <y>817</y>
-      <cn>3</cn>
-      <val>255.</val></rng1>
+      <x>2257</x>
+      <y>814</y>
+      <cn>1</cn>
+      <val>146.</val></rng1>
     <rng2>
-      <x>336</x>
-      <y>649</y>
+      <x>305</x>
+      <y>70</y>
       <cn>2</cn>
-      <val>124.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2592x1944--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+      <val>255.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2592x1944--INTER_NEAREST--BORDER_REPLICATE--8UC4->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2592x1944--INTER_LINEAR--BORDER_CONSTANT--8UC1->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>4.</min>
+    <max>255.</max>
+    <last>
+      <x>2591</x>
+      <y>1943</y>
+      <val>150.</val></last>
+    <rng1>
+      <x>895</x>
+      <y>1537</y>
+      <val>121.</val></rng1>
+    <rng2>
+      <x>1941</x>
+      <y>780</y>
+      <val>71.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2592x1944--INTER_LINEAR--BORDER_CONSTANT--8UC1->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2592x1944--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>2591</x>
+      <y>1943</y>
+      <val>150.</val></last>
+    <rng1>
+      <x>1394</x>
+      <y>855</y>
+      <val>149.</val></rng1>
+    <rng2>
+      <x>587</x>
+      <y>431</y>
+      <cn>3</cn>
+      <val>255.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2592x1944--INTER_LINEAR--BORDER_CONSTANT--8UC4->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2592x1944--INTER_LINEAR--BORDER_REPLICATE--8UC1->
   <dst>
     <kind>65536</kind>
@@ -48281,13 +48289,13 @@
       <y>1943</y>
       <val>92.</val></last>
     <rng1>
-      <x>1485</x>
-      <y>966</y>
-      <val>81.</val></rng1>
+      <x>1356</x>
+      <y>1513</y>
+      <val>95.</val></rng1>
     <rng2>
-      <x>940</x>
-      <y>58</y>
-      <val>239.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2592x1944--INTER_LINEAR--BORDER_REPLICATE--8UC1->
+      <x>732</x>
+      <y>567</y>
+      <val>130.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2592x1944--INTER_LINEAR--BORDER_REPLICATE--8UC1->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2592x1944--INTER_LINEAR--BORDER_REPLICATE--8UC4->
   <dst>
     <kind>65536</kind>
@@ -48299,15 +48307,14 @@
       <y>1943</y>
       <val>255.</val></last>
     <rng1>
-      <x>277</x>
-      <y>1840</y>
+      <x>2010</x>
+      <y>160</y>
       <cn>2</cn>
-      <val>51.</val></rng1>
+      <val>223.</val></rng1>
     <rng2>
-      <x>408</x>
-      <y>374</y>
-      <cn>1</cn>
-      <val>163.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2592x1944--INTER_LINEAR--BORDER_REPLICATE--8UC4->
+      <x>662</x>
+      <y>897</y>
+      <val>86.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---2592x1944--INTER_LINEAR--BORDER_REPLICATE--8UC4->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---3264x2448--INTER_NEAREST--BORDER_CONSTANT--8UC1->
   <dst>
     <kind>65536</kind>
@@ -48319,12 +48326,12 @@
       <y>2447</y>
       <val>150.</val></last>
     <rng1>
-      <x>411</x>
-      <y>1791</y>
-      <val>37.</val></rng1>
+      <x>1930</x>
+      <y>2344</y>
+      <val>58.</val></rng1>
     <rng2>
-      <x>3175</x>
-      <y>1541</y>
+      <x>2477</x>
+      <y>2360</y>
       <val>150.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---3264x2448--INTER_NEAREST--BORDER_CONSTANT--8UC1->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---3264x2448--INTER_NEAREST--BORDER_CONSTANT--8UC4->
   <dst>
@@ -48337,52 +48344,16 @@
       <y>2447</y>
       <val>150.</val></last>
     <rng1>
-      <x>2013</x>
-      <y>171</y>
-      <val>255.</val></rng1>
+      <x>1261</x>
+      <y>1969</y>
+      <cn>1</cn>
+      <val>108.</val></rng1>
     <rng2>
-      <x>1567</x>
-      <y>1502</y>
-      <cn>2</cn>
-      <val>125.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---3264x2448--INTER_NEAREST--BORDER_CONSTANT--8UC4->
+      <x>2350</x>
+      <y>581</y>
+      <cn>3</cn>
+      <val>255.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---3264x2448--INTER_NEAREST--BORDER_CONSTANT--8UC4->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---3264x2448--INTER_NEAREST--BORDER_REPLICATE--8UC1->
-  <dst>
-    <kind>65536</kind>
-    <type>0</type>
-    <min>14.</min>
-    <max>255.</max>
-    <last>
-      <x>3263</x>
-      <y>2447</y>
-      <val>150.</val></last>
-    <rng1>
-      <x>3049</x>
-      <y>1977</y>
-      <val>191.</val></rng1>
-    <rng2>
-      <x>762</x>
-      <y>1882</y>
-      <val>53.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---3264x2448--INTER_NEAREST--BORDER_REPLICATE--8UC1->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---3264x2448--INTER_NEAREST--BORDER_REPLICATE--8UC4->
-  <dst>
-    <kind>65536</kind>
-    <type>24</type>
-    <min>0.</min>
-    <max>255.</max>
-    <last>
-      <x>3263</x>
-      <y>2447</y>
-      <val>150.</val></last>
-    <rng1>
-      <x>815</x>
-      <y>1332</y>
-      <val>75.</val></rng1>
-    <rng2>
-      <x>1251</x>
-      <y>715</y>
-      <cn>2</cn>
-      <val>194.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---3264x2448--INTER_NEAREST--BORDER_REPLICATE--8UC4->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---3264x2448--INTER_LINEAR--BORDER_CONSTANT--8UC1->
   <dst>
     <kind>65536</kind>
     <type>0</type>
@@ -48393,14 +48364,14 @@
       <y>2447</y>
       <val>92.</val></last>
     <rng1>
-      <x>1501</x>
-      <y>1591</y>
-      <val>86.</val></rng1>
+      <x>1147</x>
+      <y>1382</y>
+      <val>75.</val></rng1>
     <rng2>
-      <x>2543</x>
-      <y>1657</y>
-      <val>100.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---3264x2448--INTER_LINEAR--BORDER_CONSTANT--8UC1->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---3264x2448--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+      <x>938</x>
+      <y>158</y>
+      <val>163.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---3264x2448--INTER_NEAREST--BORDER_REPLICATE--8UC1->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---3264x2448--INTER_NEAREST--BORDER_REPLICATE--8UC4->
   <dst>
     <kind>65536</kind>
     <type>24</type>
@@ -48411,14 +48382,52 @@
       <y>2447</y>
       <val>255.</val></last>
     <rng1>
-      <x>1958</x>
-      <y>1386</y>
+      <x>2399</x>
+      <y>2133</y>
       <cn>1</cn>
-      <val>97.</val></rng1>
+      <val>85.</val></rng1>
     <rng2>
-      <x>419</x>
-      <y>2130</y>
-      <val>129.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---3264x2448--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+      <x>678</x>
+      <y>1401</y>
+      <val>82.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---3264x2448--INTER_NEAREST--BORDER_REPLICATE--8UC4->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---3264x2448--INTER_LINEAR--BORDER_CONSTANT--8UC1->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>14.</min>
+    <max>255.</max>
+    <last>
+      <x>3263</x>
+      <y>2447</y>
+      <val>150.</val></last>
+    <rng1>
+      <x>555</x>
+      <y>905</y>
+      <val>99.</val></rng1>
+    <rng2>
+      <x>459</x>
+      <y>1636</y>
+      <val>44.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---3264x2448--INTER_LINEAR--BORDER_CONSTANT--8UC1->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---3264x2448--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>3263</x>
+      <y>2447</y>
+      <val>150.</val></last>
+    <rng1>
+      <x>927</x>
+      <y>174</y>
+      <cn>2</cn>
+      <val>150.</val></rng1>
+    <rng2>
+      <x>1720</x>
+      <y>901</y>
+      <cn>1</cn>
+      <val>178.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---3264x2448--INTER_LINEAR--BORDER_CONSTANT--8UC4->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---3264x2448--INTER_LINEAR--BORDER_REPLICATE--8UC1->
   <dst>
     <kind>65536</kind>
@@ -48430,13 +48439,13 @@
       <y>2447</y>
       <val>92.</val></last>
     <rng1>
-      <x>737</x>
-      <y>152</y>
-      <val>252.</val></rng1>
+      <x>852</x>
+      <y>401</y>
+      <val>152.</val></rng1>
     <rng2>
-      <x>869</x>
-      <y>1847</y>
-      <val>106.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---3264x2448--INTER_LINEAR--BORDER_REPLICATE--8UC1->
+      <x>47</x>
+      <y>535</y>
+      <val>94.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---3264x2448--INTER_LINEAR--BORDER_REPLICATE--8UC1->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---3264x2448--INTER_LINEAR--BORDER_REPLICATE--8UC4->
   <dst>
     <kind>65536</kind>
@@ -48448,15 +48457,14 @@
       <y>2447</y>
       <val>255.</val></last>
     <rng1>
-      <x>2904</x>
-      <y>816</y>
-      <cn>3</cn>
-      <val>255.</val></rng1>
+      <x>543</x>
+      <y>1531</y>
+      <val>244.</val></rng1>
     <rng2>
-      <x>2159</x>
-      <y>1427</y>
-      <cn>1</cn>
-      <val>74.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---3264x2448--INTER_LINEAR--BORDER_REPLICATE--8UC4->
+      <x>2089</x>
+      <y>527</y>
+      <cn>3</cn>
+      <val>255.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---3264x2448--INTER_LINEAR--BORDER_REPLICATE--8UC4->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---4096x3072--INTER_NEAREST--BORDER_CONSTANT--8UC1->
   <dst>
     <kind>65536</kind>
@@ -48468,13 +48476,13 @@
       <y>3071</y>
       <val>150.</val></last>
     <rng1>
-      <x>3111</x>
-      <y>2926</y>
-      <val>80.</val></rng1>
+      <x>2350</x>
+      <y>1999</y>
+      <val>95.</val></rng1>
     <rng2>
-      <x>1756</x>
-      <y>2195</y>
-      <val>88.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---4096x3072--INTER_NEAREST--BORDER_CONSTANT--8UC1->
+      <x>123</x>
+      <y>1512</y>
+      <val>112.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---4096x3072--INTER_NEAREST--BORDER_CONSTANT--8UC1->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---4096x3072--INTER_NEAREST--BORDER_CONSTANT--8UC4->
   <dst>
     <kind>65536</kind>
@@ -48486,53 +48494,15 @@
       <y>3071</y>
       <val>150.</val></last>
     <rng1>
-      <x>3157</x>
-      <y>2187</y>
-      <cn>1</cn>
-      <val>101.</val></rng1>
+      <x>3184</x>
+      <y>2345</y>
+      <val>80.</val></rng1>
     <rng2>
-      <x>2191</x>
-      <y>2382</y>
-      <cn>3</cn>
-      <val>255.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---4096x3072--INTER_NEAREST--BORDER_CONSTANT--8UC4->
+      <x>511</x>
+      <y>1310</y>
+      <cn>1</cn>
+      <val>118.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---4096x3072--INTER_NEAREST--BORDER_CONSTANT--8UC4->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---4096x3072--INTER_NEAREST--BORDER_REPLICATE--8UC1->
-  <dst>
-    <kind>65536</kind>
-    <type>0</type>
-    <min>10.</min>
-    <max>255.</max>
-    <last>
-      <x>4095</x>
-      <y>3071</y>
-      <val>150.</val></last>
-    <rng1>
-      <x>1525</x>
-      <y>2934</y>
-      <val>79.</val></rng1>
-    <rng2>
-      <x>1477</x>
-      <y>2332</y>
-      <val>139.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---4096x3072--INTER_NEAREST--BORDER_REPLICATE--8UC1->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---4096x3072--INTER_NEAREST--BORDER_REPLICATE--8UC4->
-  <dst>
-    <kind>65536</kind>
-    <type>24</type>
-    <min>0.</min>
-    <max>255.</max>
-    <last>
-      <x>4095</x>
-      <y>3071</y>
-      <val>150.</val></last>
-    <rng1>
-      <x>1161</x>
-      <y>1671</y>
-      <val>70.</val></rng1>
-    <rng2>
-      <x>1693</x>
-      <y>2724</y>
-      <cn>1</cn>
-      <val>55.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---4096x3072--INTER_NEAREST--BORDER_REPLICATE--8UC4->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---4096x3072--INTER_LINEAR--BORDER_CONSTANT--8UC1->
   <dst>
     <kind>65536</kind>
     <type>0</type>
@@ -48543,14 +48513,14 @@
       <y>3071</y>
       <val>92.</val></last>
     <rng1>
-      <x>1380</x>
-      <y>1904</y>
-      <val>111.</val></rng1>
+      <x>189</x>
+      <y>117</y>
+      <val>254.</val></rng1>
     <rng2>
-      <x>816</x>
-      <y>2168</y>
-      <val>65.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---4096x3072--INTER_LINEAR--BORDER_CONSTANT--8UC1->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---4096x3072--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+      <x>1936</x>
+      <y>2207</y>
+      <val>106.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---4096x3072--INTER_NEAREST--BORDER_REPLICATE--8UC1->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---4096x3072--INTER_NEAREST--BORDER_REPLICATE--8UC4->
   <dst>
     <kind>65536</kind>
     <type>24</type>
@@ -48561,15 +48531,52 @@
       <y>3071</y>
       <val>255.</val></last>
     <rng1>
-      <x>1638</x>
-      <y>1318</y>
+      <x>1163</x>
+      <y>1992</y>
+      <cn>1</cn>
+      <val>74.</val></rng1>
+    <rng2>
+      <x>3634</x>
+      <y>2314</y>
+      <cn>1</cn>
+      <val>144.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---4096x3072--INTER_NEAREST--BORDER_REPLICATE--8UC4->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---4096x3072--INTER_LINEAR--BORDER_CONSTANT--8UC1->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>10.</min>
+    <max>255.</max>
+    <last>
+      <x>4095</x>
+      <y>3071</y>
+      <val>150.</val></last>
+    <rng1>
+      <x>2534</x>
+      <y>104</y>
+      <val>254.</val></rng1>
+    <rng2>
+      <x>1484</x>
+      <y>1855</y>
+      <val>103.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---4096x3072--INTER_LINEAR--BORDER_CONSTANT--8UC1->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---4096x3072--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>4095</x>
+      <y>3071</y>
+      <val>150.</val></last>
+    <rng1>
+      <x>3275</x>
+      <y>229</y>
       <cn>3</cn>
       <val>255.</val></rng1>
     <rng2>
-      <x>3585</x>
-      <y>435</y>
-      <cn>1</cn>
-      <val>253.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---4096x3072--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+      <x>640</x>
+      <y>240</y>
+      <val>199.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---4096x3072--INTER_LINEAR--BORDER_CONSTANT--8UC4->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---4096x3072--INTER_LINEAR--BORDER_REPLICATE--8UC1->
   <dst>
     <kind>65536</kind>
@@ -48581,13 +48588,13 @@
       <y>3071</y>
       <val>92.</val></last>
     <rng1>
-      <x>349</x>
-      <y>1479</y>
-      <val>115.</val></rng1>
+      <x>646</x>
+      <y>765</y>
+      <val>147.</val></rng1>
     <rng2>
-      <x>3470</x>
-      <y>279</y>
-      <val>250.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---4096x3072--INTER_LINEAR--BORDER_REPLICATE--8UC1->
+      <x>2076</x>
+      <y>2437</y>
+      <val>145.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---4096x3072--INTER_LINEAR--BORDER_REPLICATE--8UC1->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---4096x3072--INTER_LINEAR--BORDER_REPLICATE--8UC4->
   <dst>
     <kind>65536</kind>
@@ -48599,15 +48606,14 @@
       <y>3071</y>
       <val>255.</val></last>
     <rng1>
-      <x>2346</x>
-      <y>1471</y>
-      <cn>1</cn>
-      <val>158.</val></rng1>
+      <x>1708</x>
+      <y>2331</y>
+      <cn>2</cn>
+      <val>85.</val></rng1>
     <rng2>
-      <x>1693</x>
-      <y>2208</y>
-      <cn>3</cn>
-      <val>255.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---4096x3072--INTER_LINEAR--BORDER_REPLICATE--8UC4->
+      <x>3100</x>
+      <y>2958</y>
+      <val>67.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---4096x3072--INTER_LINEAR--BORDER_REPLICATE--8UC4->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---4208x3120--INTER_NEAREST--BORDER_CONSTANT--8UC1->
   <dst>
     <kind>65536</kind>
@@ -48619,13 +48625,13 @@
       <y>3119</y>
       <val>150.</val></last>
     <rng1>
-      <x>1069</x>
-      <y>1849</y>
-      <val>82.</val></rng1>
+      <x>965</x>
+      <y>2905</y>
+      <val>93.</val></rng1>
     <rng2>
-      <x>928</x>
-      <y>1426</y>
-      <val>78.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---4208x3120--INTER_NEAREST--BORDER_CONSTANT--8UC1->
+      <x>1371</x>
+      <y>25</y>
+      <val>150.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---4208x3120--INTER_NEAREST--BORDER_CONSTANT--8UC1->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---4208x3120--INTER_NEAREST--BORDER_CONSTANT--8UC4->
   <dst>
     <kind>65536</kind>
@@ -48637,53 +48643,16 @@
       <y>3119</y>
       <val>150.</val></last>
     <rng1>
-      <x>990</x>
-      <y>2359</y>
-      <cn>1</cn>
-      <val>82.</val></rng1>
+      <x>1237</x>
+      <y>416</y>
+      <cn>3</cn>
+      <val>255.</val></rng1>
     <rng2>
-      <x>3487</x>
-      <y>1079</y>
-      <val>91.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---4208x3120--INTER_NEAREST--BORDER_CONSTANT--8UC4->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---4208x3120--INTER_NEAREST--BORDER_REPLICATE--8UC1->
-  <dst>
-    <kind>65536</kind>
-    <type>0</type>
-    <min>12.</min>
-    <max>255.</max>
-    <last>
-      <x>4207</x>
-      <y>3119</y>
-      <val>150.</val></last>
-    <rng1>
-      <x>2893</x>
-      <y>1360</y>
-      <val>122.</val></rng1>
-    <rng2>
-      <x>1071</x>
-      <y>1327</y>
-      <val>105.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---4208x3120--INTER_NEAREST--BORDER_REPLICATE--8UC1->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---4208x3120--INTER_NEAREST--BORDER_REPLICATE--8UC4->
-  <dst>
-    <kind>65536</kind>
-    <type>24</type>
-    <min>0.</min>
-    <max>255.</max>
-    <last>
-      <x>4207</x>
-      <y>3119</y>
-      <val>150.</val></last>
-    <rng1>
-      <x>3393</x>
-      <y>1772</y>
-      <cn>1</cn>
-      <val>134.</val></rng1>
-    <rng2>
-      <x>2721</x>
-      <y>1869</y>
+      <x>2823</x>
+      <y>78</y>
       <cn>2</cn>
-      <val>68.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---4208x3120--INTER_NEAREST--BORDER_REPLICATE--8UC4->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---4208x3120--INTER_LINEAR--BORDER_CONSTANT--8UC1->
+      <val>223.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---4208x3120--INTER_NEAREST--BORDER_CONSTANT--8UC4->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---4208x3120--INTER_NEAREST--BORDER_REPLICATE--8UC1->
   <dst>
     <kind>65536</kind>
     <type>0</type>
@@ -48694,14 +48663,14 @@
       <y>3119</y>
       <val>92.</val></last>
     <rng1>
-      <x>1516</x>
-      <y>1736</y>
-      <val>56.</val></rng1>
+      <x>1054</x>
+      <y>102</y>
+      <val>254.</val></rng1>
     <rng2>
-      <x>1183</x>
-      <y>2377</y>
-      <val>80.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---4208x3120--INTER_LINEAR--BORDER_CONSTANT--8UC1->
-<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---4208x3120--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+      <x>213</x>
+      <y>2706</y>
+      <val>97.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---4208x3120--INTER_NEAREST--BORDER_REPLICATE--8UC1->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---4208x3120--INTER_NEAREST--BORDER_REPLICATE--8UC4->
   <dst>
     <kind>65536</kind>
     <type>24</type>
@@ -48712,15 +48681,52 @@
       <y>3119</y>
       <val>255.</val></last>
     <rng1>
-      <x>4159</x>
-      <y>2170</y>
-      <cn>2</cn>
-      <val>64.</val></rng1>
+      <x>148</x>
+      <y>1245</y>
+      <val>126.</val></rng1>
     <rng2>
-      <x>3191</x>
-      <y>2316</y>
-      <cn>2</cn>
-      <val>94.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---4208x3120--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+      <x>2478</x>
+      <y>1988</y>
+      <cn>1</cn>
+      <val>96.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---4208x3120--INTER_NEAREST--BORDER_REPLICATE--8UC4->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---4208x3120--INTER_LINEAR--BORDER_CONSTANT--8UC1->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>12.</min>
+    <max>255.</max>
+    <last>
+      <x>4207</x>
+      <y>3119</y>
+      <val>150.</val></last>
+    <rng1>
+      <x>2383</x>
+      <y>819</y>
+      <val>168.</val></rng1>
+    <rng2>
+      <x>145</x>
+      <y>1697</y>
+      <val>81.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---4208x3120--INTER_LINEAR--BORDER_CONSTANT--8UC1->
+<TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---4208x3120--INTER_LINEAR--BORDER_CONSTANT--8UC4->
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>4207</x>
+      <y>3119</y>
+      <val>150.</val></last>
+    <rng1>
+      <x>376</x>
+      <y>1962</y>
+      <cn>3</cn>
+      <val>255.</val></rng1>
+    <rng2>
+      <x>2077</x>
+      <y>4</y>
+      <cn>1</cn>
+      <val>150.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---4208x3120--INTER_LINEAR--BORDER_CONSTANT--8UC4->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---4208x3120--INTER_LINEAR--BORDER_REPLICATE--8UC1->
   <dst>
     <kind>65536</kind>
@@ -48732,13 +48738,13 @@
       <y>3119</y>
       <val>92.</val></last>
     <rng1>
-      <x>1564</x>
-      <y>1751</y>
-      <val>78.</val></rng1>
+      <x>1649</x>
+      <y>1419</y>
+      <val>88.</val></rng1>
     <rng2>
-      <x>3324</x>
-      <y>86</y>
-      <val>253.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---4208x3120--INTER_LINEAR--BORDER_REPLICATE--8UC1->
+      <x>2669</x>
+      <y>2467</y>
+      <val>133.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---4208x3120--INTER_LINEAR--BORDER_REPLICATE--8UC1->
 <TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---4208x3120--INTER_LINEAR--BORDER_REPLICATE--8UC4->
   <dst>
     <kind>65536</kind>
@@ -48750,13 +48756,13 @@
       <y>3119</y>
       <val>255.</val></last>
     <rng1>
-      <x>2415</x>
-      <y>434</y>
-      <cn>1</cn>
-      <val>250.</val></rng1>
+      <x>2822</x>
+      <y>3030</y>
+      <cn>3</cn>
+      <val>255.</val></rng1>
     <rng2>
-      <x>278</x>
-      <y>928</y>
+      <x>1883</x>
+      <y>624</y>
       <cn>3</cn>
       <val>255.</val></rng2></dst></TestWarpPerspectiveNear_t_WarpPerspectiveNear--WarpPerspectiveNear---4208x3120--INTER_LINEAR--BORDER_REPLICATE--8UC4->
 </opencv_storage>
