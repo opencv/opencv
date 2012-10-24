@@ -18,9 +18,9 @@ set<string> CommonPackageManager::GetInstalledVersions()
 
     for (vector<PackageInfo>::const_iterator it = installed_packages.begin(); it != installed_packages.end(); ++it)
     {
-    string version = it->GetVersion();
-    assert(!version.empty());
-    result.insert(version);
+        string version = it->GetVersion();
+        assert(!version.empty());
+        result.insert(version);
     }
 
     return result;
@@ -36,12 +36,13 @@ bool CommonPackageManager::CheckVersionInstalled(const std::string& version, int
 
     for (vector<PackageInfo>::const_iterator it = packages.begin(); it != packages.end(); ++it)
     {
-    LOGD("Found package: \"%s\"", it->GetFullName().c_str());
+        LOGD("Found package: \"%s\"", it->GetFullName().c_str());
     }
 
     if (!packages.empty())
     {
-    result = (packages.end() != find(packages.begin(), packages.end(), target_package));
+        vector<PackageInfo>::const_iterator it = find(packages.begin(), packages.end(), target_package);
+        result = (it != packages.end());
     }
     LOGD("CommonPackageManager::CheckVersionInstalled() end");
     return result;
@@ -63,65 +64,65 @@ string CommonPackageManager::GetPackagePathByVersion(const std::string& version,
 
     for (vector<PackageInfo>::iterator it = all_packages.begin(); it != all_packages.end(); ++it)
     {
-    LOGD("Check version \"%s\" compatibility with \"%s\"\n", version.c_str(), it->GetVersion().c_str());
-    if (IsVersionCompatible(version, it->GetVersion()))
-    {
-        LOGD("Compatible");
-        packages.push_back(*it);
-    }
-    else
-    {
-        LOGD("NOT Compatible");
-    }
+        LOGD("Check version \"%s\" compatibility with \"%s\"\n", version.c_str(), it->GetVersion().c_str());
+        if (IsVersionCompatible(version, it->GetVersion()))
+        {
+            LOGD("Compatible");
+            packages.push_back(*it);
+        }
+        else
+        {
+            LOGD("NOT Compatible");
+        }
     }
 
     if (!packages.empty())
     {
-    vector<PackageInfo>::iterator found = find(packages.begin(), packages.end(), target_package);
-    if (packages.end() != found)
-    {
-        result = found->GetInstalationPath();
-    }
-    else
-    {
-        int OptRating = -1;
-        std::vector<std::pair<int, int> >& group = CommonPackageManager::ArmRating;
-
-        if ((cpu_id & ARCH_X86) || (cpu_id & ARCH_X64))
-        group = CommonPackageManager::IntelRating;
-
-        int HardwareRating = GetHardwareRating(platform, cpu_id, group);
-        LOGD("Current hardware platform %d, %d", platform, cpu_id);
-
-        if (-1 == HardwareRating)
-        {
-        LOGE("Cannot calculate rating for current hardware platform!");
-        }
-        else
-        {
-        for (vector<PackageInfo>::iterator it = packages.begin(); it != packages.end(); ++it)
-        {
-            int PackageRating = GetHardwareRating(it->GetPlatform(), it->GetCpuID(), group);
-            if (PackageRating >= 0)
-            {
-            if ((PackageRating <= HardwareRating) && (PackageRating > OptRating))
-            {
-                OptRating = PackageRating;
-                found = it;
-            }
-            }
-        }
-
-        if ((-1 != OptRating) && (packages.end() != found))
+        vector<PackageInfo>::iterator found = find(packages.begin(), packages.end(), target_package);
+        if (packages.end() != found)
         {
             result = found->GetInstalationPath();
         }
         else
         {
-            LOGI("Found package is incompatible with current hardware platform");
+            int OptRating = -1;
+            std::vector<std::pair<int, int> >& group = CommonPackageManager::ArmRating;
+
+            if ((cpu_id & ARCH_X86) || (cpu_id & ARCH_X64))
+                group = CommonPackageManager::IntelRating;
+
+            int HardwareRating = GetHardwareRating(platform, cpu_id, group);
+            LOGD("Current hardware platform %d, %d", platform, cpu_id);
+
+            if (-1 == HardwareRating)
+            {
+                LOGE("Cannot calculate rating for current hardware platform!");
+            }
+            else
+            {
+                for (vector<PackageInfo>::iterator it = packages.begin(); it != packages.end(); ++it)
+                {
+                    int PackageRating = GetHardwareRating(it->GetPlatform(), it->GetCpuID(), group);
+                    if (PackageRating >= 0)
+                    {
+                        if ((PackageRating <= HardwareRating) && (PackageRating > OptRating))
+                        {
+                            OptRating = PackageRating;
+                            found = it;
+                        }
+                    }
+                }
+
+                if ((-1 != OptRating) && (packages.end() != found))
+                {
+                    result = found->GetInstalationPath();
+                }
+                else
+                {
+                    LOGI("Found package is incompatible with current hardware platform");
+                }
+            }
         }
-        }
-    }
     }
 
     return result;

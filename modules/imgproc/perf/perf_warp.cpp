@@ -31,8 +31,8 @@ PERF_TEST_P( TestWarpAffine, WarpAffine,
     Size sz;
     int borderMode, interType;
     sz         = get<0>(GetParam());
-    borderMode = get<1>(GetParam());
-    interType  = get<2>(GetParam());
+    interType  = get<1>(GetParam());
+    borderMode = get<2>(GetParam());
 
     Mat src, img = imread(getDataPath("cv/shared/fruits.png"));
     cvtColor(img, src, COLOR_BGR2RGBA, 4);
@@ -58,8 +58,8 @@ PERF_TEST_P( TestWarpPerspective, WarpPerspective,
     Size sz;
     int borderMode, interType;
     sz         = get<0>(GetParam());
-    borderMode = get<1>(GetParam());
-    interType  = get<2>(GetParam());
+    interType  = get<1>(GetParam());
+    borderMode = get<2>(GetParam());
 
 
     Mat src, img = imread(getDataPath("cv/shared/fruits.png"));
@@ -98,9 +98,9 @@ PERF_TEST_P( TestWarpPerspectiveNear_t, WarpPerspectiveNear,
     Size size;
     int borderMode, interType, type;
     size       = get<0>(GetParam());
-    borderMode = get<1>(GetParam());
-    interType  = get<2>(GetParam());
-    type = get<3>(GetParam());
+    interType  = get<1>(GetParam());
+    borderMode = get<2>(GetParam());
+    type       = get<3>(GetParam());
 
     Mat src, img = imread(getDataPath("cv/shared/5MP.png"));
 
@@ -120,10 +120,14 @@ PERF_TEST_P( TestWarpPerspectiveNear_t, WarpPerspectiveNear,
     resize(src, src, size);
 
     int shift = src.cols*0.04;
-    Mat srcVertices = (Mat_<Vec2f>(1, 4) << Vec2f(0, 0), Vec2f(size.width-1, 0),
-                                            Vec2f(size.width-1, size.height-1), Vec2f(0, size.height-1));
-    Mat dstVertices = (Mat_<Vec2f>(1, 4) << Vec2f(0, shift), Vec2f(size.width-shift/2, 0),
-                                            Vec2f(size.width-shift, size.height-shift), Vec2f(shift/2, size.height-1));
+    Mat srcVertices = (Mat_<Vec2f>(1, 4) << Vec2f(0, 0),
+                                            Vec2f(static_cast<float>(size.width-1), 0),
+                                            Vec2f(static_cast<float>(size.width-1), static_cast<float>(size.height-1)),
+                                            Vec2f(0, static_cast<float>(size.height-1)));
+    Mat dstVertices = (Mat_<Vec2f>(1, 4) << Vec2f(0, static_cast<float>(shift)),
+                                            Vec2f(static_cast<float>(size.width-shift/2), 0),
+                                            Vec2f(static_cast<float>(size.width-shift), static_cast<float>(size.height-shift)),
+                                            Vec2f(static_cast<float>(shift/2), static_cast<float>(size.height-1)));
     Mat warpMat = getPerspectiveTransform(srcVertices, dstVertices);
 
     Mat dst(size, type);

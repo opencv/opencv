@@ -12,17 +12,17 @@ map<string, string> GetCpuInfo()
     f.open("/proc/cpuinfo");
     if (f.is_open())
     {
-    while (!f.eof())
-    {
-        string tmp;
-        string key;
-        string value;
-        getline(f, tmp);
-        if (ParseString(tmp, key, value))
+        while (!f.eof())
         {
-        result[key] = value;
+            string tmp;
+            string key;
+            string value;
+            getline(f, tmp);
+            if (ParseString(tmp, key, value))
+            {
+                result[key] = value;
+            }
         }
-    }
     }
 
     f.close();

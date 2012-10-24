@@ -8,7 +8,7 @@ bool StripString(string& src)
 
     if (src.empty())
     {
-    return false;
+        return false;
     }
 
     while ((pos < src.length()) && (' ' == src[pos])) pos++;
@@ -32,7 +32,7 @@ bool StripString(string& src)
 bool ParseString(const string& src, string& key, string& value)
 {
     if (src.empty())
-    return false;
+        return false;
 
     // find seporator ":"
     size_t seporator_pos = src.find(":");
@@ -52,20 +52,19 @@ bool ParseString(const string& src, string& key, string& value)
 
 set<string> SplitString(const string& src, const char seporator)
 {
-
     set<string> result;
 
     if (!src.empty())
     {
-    size_t seporator_pos;
-    size_t prev_pos = 0;
-    do
-    {
-        seporator_pos = src.find(seporator, prev_pos);
-        result.insert(src.substr(prev_pos, seporator_pos - prev_pos));
-        prev_pos = seporator_pos + 1;
-    }
-    while (string::npos != seporator_pos);
+        size_t seporator_pos;
+        size_t prev_pos = 0;
+        do
+        {
+            seporator_pos = src.find(seporator, prev_pos);
+            result.insert(src.substr(prev_pos, seporator_pos - prev_pos));
+            prev_pos = seporator_pos + 1;
+        }
+        while (string::npos != seporator_pos);
     }
 
     return result;
@@ -77,16 +76,16 @@ vector<string> SplitStringVector(const string& src, const char seporator)
 
     if (!src.empty())
     {
-    size_t seporator_pos;
-    size_t prev_pos = 0;
-    do
-    {
-        seporator_pos = src.find(seporator, prev_pos);
-        string tmp = src.substr(prev_pos, seporator_pos - prev_pos);
-        result.push_back(tmp);
-        prev_pos = seporator_pos + 1;
-    }
-    while (string::npos != seporator_pos);
+        size_t seporator_pos;
+        size_t prev_pos = 0;
+        do
+        {
+            seporator_pos = src.find(seporator, prev_pos);
+            string tmp = src.substr(prev_pos, seporator_pos - prev_pos);
+            result.push_back(tmp);
+            prev_pos = seporator_pos + 1;
+        }
+        while (string::npos != seporator_pos);
     }
 
     return result;
