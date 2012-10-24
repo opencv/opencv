@@ -131,16 +131,6 @@ struct Feature
 const char * const Feature::SC_F_CHANNEL   = "channel";
 const char * const Feature::SC_F_RECT      = "rect";
 
-struct Object
-{
-    enum Class{PEDESTRIAN};
-    cv::Rect rect;
-    float confidence;
-    Class detType;
-
-    Object(const cv::Rect& r, const float c, Class dt = PEDESTRIAN) : rect(r), confidence(c), detType(dt) {}
-};
-
 struct CascadeIntrinsics
 {
     static const float lambda = 1.099f, a = 0.89f;
