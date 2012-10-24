@@ -31,8 +31,8 @@ PERF_TEST_P( TestWarpAffine, WarpAffine,
     Size sz;
     int borderMode, interType;
     sz         = get<0>(GetParam());
-    borderMode = get<1>(GetParam());
-    interType  = get<2>(GetParam());
+    interType  = get<1>(GetParam());
+    borderMode = get<2>(GetParam());
 
     Mat src, img = imread(getDataPath("cv/shared/fruits.png"));
     cvtColor(img, src, COLOR_BGR2RGBA, 4);
@@ -58,8 +58,8 @@ PERF_TEST_P( TestWarpPerspective, WarpPerspective,
     Size sz;
     int borderMode, interType;
     sz         = get<0>(GetParam());
-    borderMode = get<1>(GetParam());
-    interType  = get<2>(GetParam());
+    interType  = get<1>(GetParam());
+    borderMode = get<2>(GetParam());
 
 
     Mat src, img = imread(getDataPath("cv/shared/fruits.png"));
@@ -98,9 +98,9 @@ PERF_TEST_P( TestWarpPerspectiveNear_t, WarpPerspectiveNear,
     Size size;
     int borderMode, interType, type;
     size       = get<0>(GetParam());
-    borderMode = get<1>(GetParam());
-    interType  = get<2>(GetParam());
-    type = get<3>(GetParam());
+    interType  = get<1>(GetParam());
+    borderMode = get<2>(GetParam());
+    type       = get<3>(GetParam());
 
     Mat src, img = imread(getDataPath("cv/shared/5MP.png"));
 
