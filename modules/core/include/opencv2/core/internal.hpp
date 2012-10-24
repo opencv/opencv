@@ -263,20 +263,20 @@ namespace cv
 } //namespace cv
 
 #define CV_INIT_ALGORITHM(classname, algname, memberinit) \
-    static Algorithm* create##classname() \
+    static ::cv::Algorithm* create##classname() \
     { \
         return new classname; \
     } \
     \
-    static AlgorithmInfo& classname##_info() \
+    static ::cv::AlgorithmInfo& classname##_info() \
     { \
-        static AlgorithmInfo classname##_info_var(algname, create##classname); \
+        static ::cv::AlgorithmInfo classname##_info_var(algname, create##classname); \
         return classname##_info_var; \
     } \
     \
-    static AlgorithmInfo& classname##_info_auto = classname##_info(); \
+    static ::cv::AlgorithmInfo& classname##_info_auto = classname##_info(); \
     \
-    AlgorithmInfo* classname::info() const \
+    ::cv::AlgorithmInfo* classname::info() const \
     { \
         static volatile bool initialized = false; \
         \
