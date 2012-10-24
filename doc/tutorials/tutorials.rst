@@ -162,7 +162,7 @@ As always, we would be happy to hear your comments and receive your contribution
    .. cssclass:: toctableopencv
 
    =========== =======================================================
-   |Contrib|       Discover additionnal contribution to OpenCV.
+   |Contrib|       Discover additional contribution to OpenCV.
 
    =========== =======================================================
 

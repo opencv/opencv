@@ -21,35 +21,34 @@ In this tutorial you will learn how to:
 General overview
 ================
 
-The proposed model originates from Jeanny Herault at `Gipsa <http://www.gipsa-lab.inpg.fr>`_. It is involved in image processing applications with `Listic <http://www.listic.univ-savoie.fr>`_ (code maintainer) lab. The model allows the following human retina properties to be used :
+The proposed model originates from Jeanny Herault's research at `Gipsa <http://www.gipsa-lab.inpg.fr>`_. It is involved in image processing applications with `Listic <http://www.listic.univ-savoie.fr>`_ (code maintainer) lab. This is not a complete model but it already present interesting properties that can be involved for enhanced image processing experience. The model allows the following human retina properties to be used :
 
-* spectral whithening (mid-frequency details enhancement and low frequency luminance energy reduction)
+* spectral whitening that has 3 important effects: high spatio-temporal frequency signals canceling (noise), mid-frequency details enhancement and low frequency luminance energy reduction. This *all in one* property directly allows visual signals cleaning of classical undesired distortions introduced by image sensors and input luminance range.
 
-* high frequency spatio-temporal noise cancelling (temporal noise and high frequency spatial noise are minimized)
+* local logarithmic luminance compression allows details to be enhanced even in low light conditions.
 
-* local logarithmic luminance compression allows details to be enhanced even in low light conditions
-
+* decorrelation of the details information (Parvocellular output channel) and transient information (events, motion made available at the Magnocellular output channel).
 
 .. image:: images/retina_TreeHdr_small.jpg
    :alt: Illustration of the retina luminance compression effect
    :align: center
 
-For example in the above figure, a High Dynamic Range image (left) is processed by the retina model (right). The left image is coded on more than 8bit/color channel so that displaying this on 8bit format hides many details. However, as your retina does, using complementary processing. Here, local luminance adaptation, spatio-temporal noise removal and spectral whitening play an important role thus transmitting accurate information on low range data channels.
+For example in the above figure, a High Dynamic Range image (left) is processed by the retina model (right). The left image is coded on more than 8bit/color channel so that its compression to 8bit image format hides many details. However, as your retina does, local luminance adaptation, spatio-temporal noise removal and spectral whitening work together and transmit accurate information on lower range 8bit data channels.
 
 The retina model output channels
 ================================
 
 The retina model presents two outputs that benefit from the above cited behaviors.
 
-* The first one is called the Parvocellular channel. It is mainly active in the foveal retina area (high resolution central vision with color sensitive photoreceptors), its aim is to provide accurate color vision for visual details remaining static on the retina. On the other hand objects moving on the retina projection are blurried.
+* The first one is called the Parvocellular channel. It is mainly active in the foveal retina area (high resolution central vision with color sensitive photo-receptors), its aim is to provide accurate color vision for visual details remaining static on the retina. On the other hand objects moving on the retina projection are blurred.
 
-* The second well known channel is the magnocellular channel. It is mainly active in the retina peripheral vision and send signals related to change events (motion, transient events, etc.). These outing signals also help visual system to focus/center retina on 'transient'/moving areas for more detailled analysis thus improving visual scene context and object classification.
+* The second well known channel is the Magnocellular channel. It is mainly active in the retina peripheral vision and send signals related to change events (motion, transient events, etc.). These outing signals also help visual system to focus/center retina on 'transient'/moving areas for more detailed analysis thus improving visual scene context and object classification.
 
-**NOTE :** regarding the proposed model, contrary to the real retina, we apply these two channels on the entire input images using the same resoltion. This allows enhanced visual details and motion information to be extracted on all the considered images... but remember, that these two channels are complementary, if Magnocellular channel gives strong energy in an area, then, the Parvo channel is certainly blurried there since there is a transient event.
+**NOTE :** regarding the proposed model, contrary to the real retina, we apply these two channels on the entire input images using the same resolution. This allows enhanced visual details and motion information to be extracted on all the considered images... but remember, that these two channels are complementary. For example, if Magnocellular channel gives strong energy in an area, then, the Parvocellular channel is certainly blurred there since there is a transient event.
 
 As an illustration, we apply in the following the retina model on a webcam video stream of a dark visual scene. In this visual scene, captured in an amphitheater of the university, some students are moving while talking to the teacher. 
 
-In this video sequence, because of the dark ambiance, signal to noise ratio is low and color artifacts are present on visual features edges because of the low quality image capture toolchain.
+In this video sequence, because of the dark ambiance, signal to noise ratio is low and color artifacts are present on visual features edges because of the low quality image capture tool-chain.
 
 .. image:: images/studentsSample_input.jpg
    :alt: an input video stream extract sample
@@ -61,7 +60,7 @@ Below is shown the retina foveal vision applied on the entire image. In the used
    :alt: the retina Parvocellular output. Enhanced details, luminance adaptation and noise removal. A processing tool for image analysis.
    :align: center
 
-Below is the output of the magnocellular output of the retina model. Its signals are strong where transient events occur. Here, a student is moving at the bottom of the image thus generating high energy. The remaining of the image is static however, it is corrupted by a strong noise. Here, the retina filters out most of the noise thus generating low false motion area 'alarms'. This channel can be used as a transient/moving areas detector : it would provide relevant information for a low cost segmentation tool that would highlight areas in which an event is occuring.
+Below is the output of the Magnocellular output of the retina model. Its signals are strong where transient events occur. Here, a student is moving at the bottom of the image thus generating high energy. The remaining of the image is static however, it is corrupted by a strong noise. Here, the retina filters out most of the noise thus generating low false motion area 'alarms'. This channel can be used as a transient/moving areas detector : it would provide relevant information for a low cost segmentation tool that would highlight areas in which an event is occurring.
 
 .. image:: images/studentsSample_magno.jpg
    :alt: the retina Magnocellular output. Enhanced transient signals (motion, etc.). A preprocessing tool for event detection.
@@ -72,7 +71,7 @@ Retina use case
 
 This model can be used basically for spatio-temporal video effects but also in the aim of :
   
-* performing texture analysis with enhanced signal to noise ratio and enhanced details robust against input images luminance ranges (check out the parvocellular retina channel output)
+* performing texture analysis with enhanced signal to noise ratio and enhanced details robust against input images luminance ranges (check out the Parvocellular retina channel output)
 
 * performing motion analysis also taking benefit of the previously cited properties.
 
@@ -88,7 +87,7 @@ This retina filter code includes the research contributions of phd/research coll
 
 * take a look at the *retinacolor.hpp* module to discover Brice Chaix de Lavarene phD color mosaicing/demosaicing and his reference paper: B. Chaix de Lavarene, D. Alleysson, B. Durette, J. Herault (2007). "Efficient demosaicing through recursive filtering", IEEE International Conference on Image Processing ICIP 2007
 
-* take a look at *imagelogpolprojection.hpp* to discover retina spatial log sampling which originates from Barthelemy Durette phd with Jeanny Herault. A Retina / V1 cortex projection is also proposed and originates from Jeanny's discussions. ====> more informations in the above cited Jeanny Heraults's book.
+* take a look at *imagelogpolprojection.hpp* to discover retina spatial log sampling which originates from Barthelemy Durette phd with Jeanny Herault. A Retina / V1 cortex projection is also proposed and originates from Jeanny's discussions. ====> more information in the above cited Jeanny Heraults's book.
 
 Code tutorial
 =============
@@ -158,7 +157,7 @@ Then, start the main program and first declare a *cv::Mat* matrix in which input
     cv::VideoCapture videoCapture; // in case a video media is used, its manager is declared here
 
 
-In the main program, before processing, first check input command parameters
+In the main program, before processing, first check input command parameters. Here it loads a first input image coming from a single loaded image (if user chose command *-image*) or from a video stream (if user chose command *-video*). Also, if the user added *log* command at the end of its program call, the spatial logarithmic image sampling performed by the retina is taken into account by the Boolean flag *useLogSampling*.
 
 .. code-block:: cpp
 
@@ -231,7 +230,7 @@ Now, everything is ready to run the retina model. I propose here to allocate a r
             myRetina = new cv::Retina(inputFrame.size());
 
         
-Once done, the proposed code writes a default xml file that contains the default parameters of the retina. This is usefull to make your own config using this template. Here generated template xml file is called *RetinaDefaultParameters.xml*.
+Once done, the proposed code writes a default xml file that contains the default parameters of the retina. This is useful to make your own config using this template. Here generated template xml file is called *RetinaDefaultParameters.xml*.
 
 .. code-block:: cpp
 
@@ -260,7 +259,7 @@ Now, it is time to run the retina ! First create some output buffers ready to re
         cv::Mat retinaOutput_parvo;
         cv::Mat retinaOutput_magno;
 
-Then, run retina in a loop, load new frames from video sequence if necessary and retina outputs.
+Then, run retina in a loop, load new frames from video sequence if necessary and get retina outputs back to dedicated buffers.
 
 .. code-block:: cpp
 
@@ -282,7 +281,7 @@ Then, run retina in a loop, load new frames from video sequence if necessary and
             cv::waitKey(10);
         }
 
-That's done ! But if you want to secure the system, take care and manage Exceptions. The retina can throw some when it sees unrelevant data (no input frame, wrong setup, etc.)
+That's done ! But if you want to secure the system, take care and manage Exceptions. The retina can throw some when it sees irrelevant data (no input frame, wrong setup, etc.). 
 Then, i recommend to surround all the retina code by a try/catch system like this :
 
 .. code-block:: cpp
@@ -301,3 +300,106 @@ Then, i recommend to surround all the retina code by a try/catch system like thi
     {
         std::cerr<<"Error using Retina : "<<e.what()<<std::endl;
     }
+
+Retina parameters, what to do ?
+===============================
+
+First, it is recommended to read the reference paper :
+
+* Benoit A., Caplier A., Durette B., Herault, J., *"Using Human Visual System Modeling For Bio-Inspired Low Level Image Processing"*, Elsevier, Computer Vision and Image Understanding 114 (2010), pp. 758-773. DOI <http://dx.doi.org/10.1016/j.cviu.2010.01.011> 
+
+Once done open the configuration file *RetinaDefaultParameters.xml* generated by the demo and let's have a look at it.
+
+.. code-block:: cpp
+
+	<?xml version="1.0"?>
+	<opencv_storage>
+	<OPLandIPLparvo>
+	  <colorMode>1</colorMode>
+	  <normaliseOutput>1</normaliseOutput>
+	  <photoreceptorsLocalAdaptationSensitivity>7.0e-01</photoreceptorsLocalAdaptationSensitivity>
+	  <photoreceptorsTemporalConstant>5.0e-01</photoreceptorsTemporalConstant>
+	  <photoreceptorsSpatialConstant>5.3e-01</photoreceptorsSpatialConstant>
+	  <horizontalCellsGain>0.</horizontalCellsGain>
+	  <hcellsTemporalConstant>1.</hcellsTemporalConstant>
+	  <hcellsSpatialConstant>7.</hcellsSpatialConstant>
+	  <ganglionCellsSensitivity>7.0e-01</ganglionCellsSensitivity></OPLandIPLparvo>
+	<IPLmagno>
+	  <normaliseOutput>1</normaliseOutput>
+	  <parasolCells_beta>0.</parasolCells_beta>
+	  <parasolCells_tau>0.</parasolCells_tau>
+	  <parasolCells_k>7.</parasolCells_k>
+	  <amacrinCellsTemporalCutFrequency>1.2e+00</amacrinCellsTemporalCutFrequency>
+	  <V0CompressionParameter>9.5e-01</V0CompressionParameter>
+	  <localAdaptintegration_tau>0.</localAdaptintegration_tau>
+	  <localAdaptintegration_k>7.</localAdaptintegration_k></IPLmagno>
+	</opencv_storage>
+
+
+Here are some hints but actually, the best parameter setup depends more on what you want to do with the retina rather than the images input that you give to retina. Apart from the more specific case of High Dynamic Range images (HDR) that require more specific setup for specific luminance compression objective, the retina behaviors should be rather stable from content to content. Note that OpenCV is able to manage such HDR format thanks to the OpenEXR images compatibility.
+
+Then, if the application target requires details enhancement prior to specific image processing, you need to know if mean luminance information is required or not. If not, the the retina can cancel or significantly reduce its energy thus giving more visibility to higher spatial frequency details.
+
+
+Basic parameters
+----------------
+
+The most simple parameters are the following :
+
+* **colorMode** : let the retina process color information (if 1) or gray scale images (if 0). In this last case, only the first channel of the input will be processed.
+
+* **normaliseOutput** : each channel has this parameter, if value is 1, then the considered channel output is rescaled between 0 and 255. Take care in this case at the Magnocellular output level (motion/transient channel detection). Residual noise will also be rescaled !
+
+**Note :** using color requires color channels multiplexing/demultipexing which requires more processing. You can expect much faster processing using gray levels : it would require around 30 product per pixel for all the retina processes and it has recently been parallelized for multicore architectures.
+
+Photo-receptors parameters
+-------------------------
+
+The following parameters act on the entry point of the retina - photo-receptors - and impact all the following processes. These sensors are low pass spatio-temporal filters that smooth temporal and spatial data and also adjust there sensitivity to local luminance thus improving details extraction and high frequency noise canceling.
+
+* **photoreceptorsLocalAdaptationSensitivity** between 0 and 1. Values close to 1 allow high luminance log compression effect at the photo-receptors level. Values closer to 0 give a more linear sensitivity. Increased alone, it can burn the *Parvo (details channel)* output image. If adjusted in collaboration with **ganglionCellsSensitivity** images can be very contrasted whatever the local luminance there is... at the price of a naturalness decrease.
+
+* **photoreceptorsTemporalConstant** this setups the temporal constant of the low pass filter effect at the entry of the retina. High value lead to strong temporal smoothing effect : moving objects are blurred and can disappear while static object are favored. But when starting the retina processing, stable state is reached lately.
+
+* **photoreceptorsSpatialConstant** specifies the spatial constant related to photo-receptors low pass filter effect. This parameters specify the minimum allowed spatial signal period allowed in the following. Typically, this filter should cut high frequency noise. Then a 0 value doesn't cut anything noise while higher values start to cut high spatial frequencies and more and more lower frequencies... Then, do not go to high if you wanna see some details of the input images ! A good compromise for color images is 0.53 since this won't affect too much the color spectrum. Higher values would lead to gray and blurred output images.
+
+Horizontal cells parameters
+---------------------------
+
+This parameter set tunes the neural network connected to the photo-receptors, the horizontal cells. It modulates photo-receptors sensitivity and completes the processing for final spectral whitening (part of the spatial band pass effect thus favoring visual details enhancement).
+
+* **horizontalCellsGain** here is a critical parameter ! If you are not interested by the mean luminance and focus on details enhancement, then, set to zero. But if you want to keep some environment luminance data, let some low spatial frequencies pass into the system and set a higher value (<1).
+
+* **hcellsTemporalConstant** similar to photo-receptors, this acts on the temporal constant of a low pass temporal filter that smooths input data. Here, a high value generates a high retina after effect while a lower value makes the retina more reactive.
+
+* **hcellsSpatialConstant** is the spatial constant of the low pass filter of these cells filter. It specifies the lowest spatial frequency allowed in the following. Visually, a high value leads to very low spatial frequencies processing and leads to salient halo effects. Lower values reduce this effect but the limit is : do not go lower than the value of **photoreceptorsSpatialConstant**. Those 2 parameters actually specify the spatial band-pass of the retina.
+
+**NOTE** after the processing managed by the previous parameters, input data is cleaned from noise and luminance in already partly enhanced. The following parameters act on the last processing stages of the two outing retina signals.
+
+Parvo (details channel) dedicated parameter
+-------------------------------------------
+
+* **ganglionCellsSensitivity** specifies the strength of the final local adaptation occurring at the output of this details dedicated channel. Parameter values remain between 0 and 1. Low value tend to give a linear response while higher values enforces the remaining low contrasted areas.
+
+**Note :** this parameter can correct eventual burned images by favoring low energetic details of the visual scene, even in bright areas.
+
+IPL Magno (motion/transient channel) parameters
+-----------------------------------------------
+
+Once image information is cleaned, this channel acts as a high pass temporal filter that only selects signals related to transient signals (events, motion, etc.). A low pass spatial filter smooths extracted transient data and a final logarithmic compression enhances low transient events thus enhancing event sensitivity.
+
+* **parasolCells_beta** generally set to zero, can be considered as an amplifier gain at the entry point of this processing stage. Generally set to 0.
+
+* **parasolCells_tau** the temporal smoothing effect that can be added
+
+* **parasolCells_k** the spatial constant of the spatial filtering effect, set it at a high value to favor low spatial frequency signals that are lower subject to residual noise.
+
+* **amacrinCellsTemporalCutFrequency** specifies the temporal constant of the high pass filter. High values let slow transient events to be selected.  
+
+* **V0CompressionParameter** specifies the strength of the log compression. Similar behaviors to previous description but here it enforces sensitivity of transient events.
+
+* **localAdaptintegration_tau** generally set to 0, no real use here actually
+
+* **localAdaptintegration_k** specifies the size of the area on which local adaptation is performed. Low values lead to short range local adaptation (higher sensitivity to noise), high values secure log compression.
+
+
