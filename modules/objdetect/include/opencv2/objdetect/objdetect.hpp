@@ -543,6 +543,28 @@ private:
     Filds* filds;
 };
 
+class CV_EXPORTS IntegralChannels
+{
+public:
+    //! constrictor form resizing factor.
+    //! Param shr is a resizing factor. Resize is applied before integral sum computing
+    IntegralChannels(const int shr) : shrinkage(shr) {}
+
+    //! Appends specified number of hog first order feature integrals into given vector.
+    //! Param gray is an input 1-chennel gray image.
+    //! Param integrals is a vector of integrals. Computed from frame frame hog-channels will be appended to it.
+    //! Param bins is a number of hog-bins
+    void createHogBins(const cv::Mat gray, std::vector<cv::Mat>& integrals, int bins) const;
+
+    //! Converts 3-chennel BGR input frame to Luv and append each channel to the integrals.
+    //! Param frame is an input 3-chennel BGR colored image.
+    //! Param integrals is a vector of integrals. Computed from frame frame luv-channels will be appended to it.
+    void createLuvBins(const cv::Mat frame, std::vector<cv::Mat>& integrals) const;
+
+private:
+    int shrinkage;
+};
+
 //////////////// HOG (Histogram-of-Oriented-Gradients) Descriptor and Object Detector //////////////
 
 // struct for detection region of interest (ROI)
