@@ -46,7 +46,7 @@ There is a very base code snippet implementing the async initialization with Bas
         super.onResume();
 
         Log.i(TAG, "Trying to load OpenCV library");
-        if (!OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_2, this, mOpenCVCallBack))
+        if (!OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_3, this, mOpenCVCallBack))
         {
             Log.e(TAG, "Cannot connect to OpenCV Manager");
         }
@@ -55,6 +55,6 @@ There is a very base code snippet implementing the async initialization with Bas
 Using in Service
 ----------------
 
-Default BaseLoaderCallback implementation treat application context as Activity and calls Activity.finish() method to exit in case of initialization failure. 
-To override this behavior you need to override finish() method of BaseLoaderCallback class and implement your own finalization method. 
+Default BaseLoaderCallback implementation treat application context as Activity and calls Activity.finish() method to exit in case of initialization failure.
+To override this behavior you need to override finish() method of BaseLoaderCallback class and implement your own finalization method.
 
