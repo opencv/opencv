@@ -497,18 +497,19 @@ struct cv::SoftCascade::Filds
     }
 };
 
-cv::SoftCascade::SoftCascade() : filds(0) {}
+cv::SoftCascade::SoftCascade(const float mins, const float maxs, const int nsc)
+: filds(0), minScale(mins), maxScale(maxs), scales(nsc) {}
 
-cv::SoftCascade::SoftCascade(const cv::FileStorage& fs, const float minScale, const float maxScale) : filds(0)
+cv::SoftCascade::SoftCascade(const cv::FileStorage& fs) : filds(0)
 {
-    read(fs, minScale, maxScale);
+    read(fs);
 }
 cv::SoftCascade::~SoftCascade()
 {
     delete filds;
 }
 
-bool cv::SoftCascade::read( const cv::FileStorage& fs, const float minScale, const float maxScale)
+bool cv::SoftCascade::read( const cv::FileStorage& fs)
 {
     if (!fs.isOpened()) return false;
 

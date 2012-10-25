@@ -510,19 +510,18 @@ public:
     };
 
     //! An empty cascade will be created.
-    SoftCascade();
+    //! Param minScale is a minimum scale relative to the original size of the image on which cascade will be applyed.
+    //! Param minScale is a maximum scale relative to the original size of the image on which cascade will be applyed.
+    //! Param scales is a number of scales from minScale to maxScale.
+    SoftCascade( const float minScale = 0.4f, const float maxScale = 5.f, const int scales = 55);
 
     //! Cascade will be created for scales from minScale to maxScale.
     //! Param fs is a serialized sacsade.
-    //! Param minScale is a minimum scale relative to the original size of the image on which cascade will be applyed.
-    //! Param minScale is a maximum scale relative to the original size of the image on which cascade will be applyed.
-    SoftCascade( const cv::FileStorage& fs, const float minScale = 0.4f, const float maxScale = 5.f);
+    SoftCascade( const cv::FileStorage& fs);
 
     //! cascade will be loaded. The previous cascade will be destroyed.
     //! Param fs is a serialized sacsade.
-    //! Param minScale is a minimum scale relative to the original size of the image on which cascade will be applyed.
-    //! Param minScale is a maximum scale relative to the original size of the image on which cascade will be applyed.
-    bool read( const cv::FileStorage& fs, const float minScale = 0.4f, const float maxScale = 5.f);
+    bool read( const cv::FileStorage& fs);
 
     virtual ~SoftCascade();
 
@@ -545,6 +544,10 @@ protected:
 private:
     struct Filds;
     Filds* filds;
+
+    float minScale;
+    float maxScale;
+    int   scales;
 };
 
 class CV_EXPORTS IntegralChannels
