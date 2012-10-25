@@ -395,6 +395,56 @@ PERF_TEST_P(ImagePair, Video_FarnebackOpticalFlow,
 }
 
 //////////////////////////////////////////////////////
+// OpticalFlowDual_TVL1
+
+PERF_TEST_P(ImagePair, Video_OpticalFlowDual_TVL1,
+    Values<pair_string>(make_pair("gpu/opticalflow/frame0.png", "gpu/opticalflow/frame1.png")))
+{
+    declare.time(20);
+
+    cv::Mat frame0 = readImage(GetParam().first, cv::IMREAD_GRAYSCALE);
+    ASSERT_FALSE(frame0.empty());
+
+    cv::Mat frame1 = readImage(GetParam().second, cv::IMREAD_GRAYSCALE);
+    ASSERT_FALSE(frame1.empty());
+
+    if (PERF_RUN_GPU())
+    {
+        cv::gpu::GpuMat d_frame0(frame0);
+        cv::gpu::GpuMat d_frame1(frame1);
+        cv::gpu::GpuMat d_flowx;
+        cv::gpu::GpuMat d_flowy;
+
+        cv::gpu::OpticalFlowDual_TVL1_GPU d_alg;
+
+        d_alg(d_frame0, d_frame1, d_flowx, d_flowy);
+
+        TEST_CYCLE()
+        {
+            d_alg(d_frame0, d_frame1, d_flowx, d_flowy);
+        }
+
+        GPU_SANITY_CHECK(d_flowx);
+        GPU_SANITY_CHECK(d_flowy);
+    }
+    else
+    {
+        cv::Mat flow;
+
+        cv::OpticalFlowDual_TVL1 alg;
+
+        alg(frame0, frame1, flow);
+
+        TEST_CYCLE()
+        {
+            alg(frame0, frame1, flow);
+        }
+
+        CPU_SANITY_CHECK(flow);
+    }
+}
+
+//////////////////////////////////////////////////////
 // FGDStatModel
 
 DEF_PARAM_TEST_1(Video, string);
