@@ -529,18 +529,6 @@ public:
     virtual void detectMultiScale(const Mat& image, const std::vector<cv::Rect>& rois, std::vector<Detection>& objects,
     int rejectfactor = 1) const;
 
-protected:
-    enum { BOOST = 0 };
-    enum
-    {
-        FRAME_WIDTH        = 640,
-        FRAME_HEIGHT       = 480,
-        TOTAL_SCALES       = 55,
-        CLASSIFIERS        = 5,
-        ORIG_OBJECT_WIDTH  = 64,
-        ORIG_OBJECT_HEIGHT = 128
-    };
-
 private:
     struct Filds;
     Filds* filds;

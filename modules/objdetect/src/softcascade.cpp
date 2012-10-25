@@ -270,6 +270,10 @@ struct cv::SoftCascade::Filds
 
     std::vector<Level> levels;
 
+    cv::Size frameSize;
+
+    enum { BOOST = 0 };
+
     typedef std::vector<Octave>::iterator  octIt_t;
 
     void detectAt(const int dx, const int dy, const Level& level, const ChannelStorage& storage,
@@ -364,8 +368,11 @@ struct cv::SoftCascade::Filds
     }
 
     // compute levels of full pyramid
-    void calcLevels(int frameW, int frameH, int scales)
+    void calcLevels(const cv::Size& curr, int scales)
     {
+        if (frameSize == curr) return;
+        frameSize = curr;
+
         CV_Assert(scales > 1);
         levels.clear();
         float logFactor = (log(maxScale) - log(minScale)) / (scales -1);
@@ -373,8 +380,8 @@ struct cv::SoftCascade::Filds
         float scale = minScale;
         for (int sc = 0; sc < scales; ++sc)
         {
-            int width  = std::max(0.0f, frameW - (origObjWidth  * scale));
-            int height = std::max(0.0f, frameH - (origObjHeight * scale));
+            int width  = std::max(0.0f, frameSize.width  - (origObjWidth  * scale));
+            int height = std::max(0.0f, frameSize.height - (origObjHeight * scale));
 
             float logScale = log(scale);
             octIt_t fit = fitOctave(logScale);
@@ -434,11 +441,8 @@ struct cv::SoftCascade::Filds
         string featureTypeStr = (string)root[SC_FEATURE_TYPE];
         CV_Assert(featureTypeStr == SC_ICF);
 
-        origObjWidth = (int)root[SC_ORIG_W];
-        CV_Assert(origObjWidth == SoftCascade::ORIG_OBJECT_WIDTH);
-
+        origObjWidth  = (int)root[SC_ORIG_W];
         origObjHeight = (int)root[SC_ORIG_H];
-        CV_Assert(origObjHeight == SoftCascade::ORIG_OBJECT_HEIGHT);
 
         // for each octave (~ one cascade in classic OpenCV xml)
         FileNode fn = root[SC_OCTAVES];
@@ -451,7 +455,7 @@ struct cv::SoftCascade::Filds
         for (; it != it_end; ++it)
         {
             FileNode fns = *it;
-            Octave octave(octIndex, cv::Size(SoftCascade::ORIG_OBJECT_WIDTH, SoftCascade::ORIG_OBJECT_HEIGHT), fns);
+            Octave octave(octIndex, cv::Size(origObjWidth, origObjHeight), fns);
             CV_Assert(octave.stages > 0);
             octaves.push_back(octave);
 
@@ -520,7 +524,7 @@ bool cv::SoftCascade::read( const cv::FileStorage& fs)
     filds = new Filds;
     Filds& flds = *filds;
     if (!flds.fill(fs.getFirstTopLevelNode(), minScale, maxScale)) return false;
-    flds.calcLevels(FRAME_WIDTH, FRAME_HEIGHT, TOTAL_SCALES);
+    // flds.calcLevels(FRAME_WIDTH, FRAME_HEIGHT, scales);
 
     return true;
 }
@@ -534,9 +538,10 @@ void cv::SoftCascade::detectMultiScale(const Mat& image, const std::vector<cv::R
     // only this window size allowed
     CV_Assert(image.cols == 640 && image.rows == 480);
 
-    objects.clear();
+    Filds& fld = *filds;
+    fld.calcLevels(image.size(), scales);
 
-    const Filds& fld = *filds;
+    objects.clear();
 
     // create integrals
     ChannelStorage storage(image, fld.shrinkage);
