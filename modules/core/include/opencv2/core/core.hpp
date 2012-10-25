@@ -4340,14 +4340,23 @@ public:
     CV_WRAP vector<Mat> getMatVector(const string& name) const;
     CV_WRAP Ptr<Algorithm> getAlgorithm(const string& name) const;
 
-    CV_WRAP_AS(setInt) void set(const string& name, int value);
-    CV_WRAP_AS(setDouble) void set(const string& name, double value);
-    CV_WRAP_AS(setBool) void set(const string& name, bool value);
-    CV_WRAP_AS(setString) void set(const string& name, const string& value);
-    CV_WRAP_AS(setMat) void set(const string& name, const Mat& value);
-    CV_WRAP_AS(setMatVector) void set(const string& name, const vector<Mat>& value);
-    CV_WRAP_AS(setAlgorithm) void set(const string& name, const Ptr<Algorithm>& value);
+    void set(const string& name, int value);
+    void set(const string& name, double value);
+    void set(const string& name, bool value);
+    void set(const string& name, const string& value);
+    void set(const string& name, const Mat& value);
+    void set(const string& name, const vector<Mat>& value);
+    void set(const string& name, const Ptr<Algorithm>& value);
     template<typename _Tp> void set(const string& name, const Ptr<_Tp>& value);
+
+    CV_WRAP void setInt(const string& name, int value);
+    CV_WRAP void setDouble(const string& name, double value);
+    CV_WRAP void setBool(const string& name, bool value);
+    CV_WRAP void setString(const string& name, const string& value);
+    CV_WRAP void setMat(const string& name, const Mat& value);
+    CV_WRAP void setMatVector(const string& name, const vector<Mat>& value);
+    CV_WRAP void setAlgorithm(const string& name, const Ptr<Algorithm>& value);
+    template<typename _Tp> void setAlgorithm(const string& name, const Ptr<_Tp>& value);
 
     void set(const char* name, int value);
     void set(const char* name, double value);
@@ -4357,6 +4366,15 @@ public:
     void set(const char* name, const vector<Mat>& value);
     void set(const char* name, const Ptr<Algorithm>& value);
     template<typename _Tp> void set(const char* name, const Ptr<_Tp>& value);
+
+    void setInt(const char* name, int value);
+    void setDouble(const char* name, double value);
+    void setBool(const char* name, bool value);
+    void setString(const char* name, const string& value);
+    void setMat(const char* name, const Mat& value);
+    void setMatVector(const char* name, const vector<Mat>& value);
+    void setAlgorithm(const char* name, const Ptr<Algorithm>& value);
+    template<typename _Tp> void setAlgorithm(const char* name, const Ptr<_Tp>& value);
 
     CV_WRAP string paramHelp(const string& name) const;
     int paramType(const char* name) const;
