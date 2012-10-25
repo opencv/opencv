@@ -65,7 +65,8 @@ PERF_TEST_P(detect, SoftCascade,
     ASSERT_FALSE(colored.empty());
 
     cv::SoftCascade cascade;
-    ASSERT_TRUE(cascade.load(getDataPath(get<0>(GetParam()))));
+    cv::FileStorage fs(getDataPath(get<0>(GetParam())), cv::FileStorage::READ);
+    ASSERT_TRUE(cascade.read(fs));
 
     std::vector<cv::Rect> rois;
     std::vector<detection_t> objectBoxes;

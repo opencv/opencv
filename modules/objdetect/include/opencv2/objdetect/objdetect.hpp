@@ -500,25 +500,29 @@ public:
         float confidence;
         int kind;
 
-        enum {PEDESTRIAN = 0};
+        enum {PEDESTRIAN = 1};
 
+        //! Create detection from an object bounding rectangle and confidence. Only PEDESTRIAN type carrently supported.
+        //! Param r is a boundinf rectangle
+        //! param c is a confidence that object belongs to class k
+        //! Paral k is an object class
         Detection(const cv::Rect& r, const float c, int k = PEDESTRIAN) : rect(r), confidence(c), kind(k) {}
     };
 
     //! An empty cascade will be created.
     SoftCascade();
 
-    //! Cascade will be created from file for scales from minScale to maxScale.
-    //! Param filename is a path to xml-serialized cascade.
+    //! Cascade will be created for scales from minScale to maxScale.
+    //! Param fs is a serialized sacsade.
     //! Param minScale is a minimum scale relative to the original size of the image on which cascade will be applyed.
     //! Param minScale is a maximum scale relative to the original size of the image on which cascade will be applyed.
-    SoftCascade( const string& filename, const float minScale = 0.4f, const float maxScale = 5.f);
+    SoftCascade( const cv::FileStorage& fs, const float minScale = 0.4f, const float maxScale = 5.f);
 
-    //! cascade will be loaded from file "filename". The previous cascade will be destroyed.
-    //! Param filename is a path to xml-serialized cascade.
+    //! cascade will be loaded. The previous cascade will be destroyed.
+    //! Param fs is a serialized sacsade.
     //! Param minScale is a minimum scale relative to the original size of the image on which cascade will be applyed.
     //! Param minScale is a maximum scale relative to the original size of the image on which cascade will be applyed.
-    bool load( const string& filename, const float minScale = 0.4f, const float maxScale = 5.f);
+    bool read( const cv::FileStorage& fs, const float minScale = 0.4f, const float maxScale = 5.f);
 
     virtual ~SoftCascade();
 

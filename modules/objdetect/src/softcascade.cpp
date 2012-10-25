@@ -499,23 +499,22 @@ struct cv::SoftCascade::Filds
 
 cv::SoftCascade::SoftCascade() : filds(0) {}
 
-cv::SoftCascade::SoftCascade( const string& filename, const float minScale, const float maxScale) : filds(0)
+cv::SoftCascade::SoftCascade(const cv::FileStorage& fs, const float minScale, const float maxScale) : filds(0)
 {
-    load(filename, minScale, maxScale);
+    read(fs, minScale, maxScale);
 }
 cv::SoftCascade::~SoftCascade()
 {
     delete filds;
 }
 
-bool cv::SoftCascade::load( const string& filename, const float minScale, const float maxScale)
+bool cv::SoftCascade::read( const cv::FileStorage& fs, const float minScale, const float maxScale)
 {
+    if (!fs.isOpened()) return false;
+
     if (filds)
         delete filds;
     filds = 0;
-
-    cv::FileStorage fs(filename, FileStorage::READ);
-    if (!fs.isOpened()) return false;
 
     filds = new Filds;
     Filds& flds = *filds;
