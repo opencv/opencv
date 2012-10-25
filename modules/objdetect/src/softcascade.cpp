@@ -135,12 +135,9 @@ struct CascadeIntrinsics
 {
     static const float lambda = 1.099f, a = 0.89f;
 
-    static float getFor(int channel, float scaling)
+    static float getFor(bool isUp, float scaling)
     {
-        CV_Assert(channel < 10);
-
         if (fabs(scaling - 1.f) < FLT_EPSILON)
-        // if (scaling == 1.f)
             return 1.f;
 
         // according to R. Benenson, M. Mathias, R. Timofte and L. Van Gool's and Dallal's papers
@@ -156,8 +153,8 @@ struct CascadeIntrinsics
             {             0.f, 2.f}  // up
         };
 
-        float a = A[(int)(scaling >= 1)][(int)(channel > 6)];
-        float b = B[(int)(scaling >= 1)][(int)(channel > 6)];
+        float a = A[(int)(scaling >= 1)][(int)(isUp)];
+        float b = B[(int)(scaling >= 1)][(int)(isUp)];
 
         dprintf("scaling: %f %f %f %f\n", scaling, a, b, a * pow(scaling, b));
         return a * pow(scaling, b);
@@ -170,7 +167,6 @@ struct Level
 
     float origScale;
     float relScale;
-    float shrScale; // used for marking detection
     int scaleshift;
 
     cv::Size workRect;
@@ -182,16 +178,16 @@ struct Level
     typedef cv::SoftCascade::Detection detection_t;
 
     Level(const Octave& oct, const float scale, const int shrinkage, const int w, const int h)
-    :  octave(&oct), origScale(scale), relScale(scale / oct.scale), shrScale (relScale / (float)shrinkage),
+    :  octave(&oct), origScale(scale), relScale(scale / oct.scale),
        workRect(cv::Size(cvRound(w / (float)shrinkage),cvRound(h / (float)shrinkage))),
        objSize(cv::Size(cvRound(oct.size.width * relScale), cvRound(oct.size.height * relScale)))
     {
-        scaling[0] = CascadeIntrinsics::getFor(0, relScale) / (relScale * relScale);
-        scaling[1] = CascadeIntrinsics::getFor(9, relScale) / (relScale * relScale);
+        scaling[0] = CascadeIntrinsics::getFor(false, relScale) / (relScale * relScale);
+        scaling[1] = CascadeIntrinsics::getFor(true, relScale) / (relScale * relScale);
         scaleshift = relScale * (1 << 16);
     }
 
-    void markDetection(const int x, const int y, float confidence, std::vector<detection_t>& detections) const
+    void addDetection(const int x, const int y, float confidence, std::vector<detection_t>& detections) const
     {
         int shrinkage = (*octave).shrinkage;
         cv::Rect rect(cvRound(x * shrinkage), cvRound(y * shrinkage), objSize.width, objSize.height);
@@ -345,7 +341,7 @@ struct cv::SoftCascade::Filds
         dprintf("x %d y %d: %d\n", dx, dy, st - stBegin);
         dprintf("  got %d\n", st);
 
-        level.markDetection(dx, dy, detectionScore, detections);
+        level.addDetection(dx, dy, detectionScore, detections);
     }
 
     octIt_t fitOctave(const float& logFactor)
@@ -400,7 +396,6 @@ struct cv::SoftCascade::Filds
                       << levels[sc].octave->scale
                       << " "
                       << levels[sc].relScale
-                      << " " << levels[sc].shrScale
                       << " [" << levels[sc].objSize.width
                       << " " << levels[sc].objSize.height << "] ["
             << levels[sc].workRect.width << " " << levels[sc].workRect.height << "]" << std::endl;
@@ -533,8 +528,6 @@ bool cv::SoftCascade::load( const string& filename, const float minScale, const 
 void cv::SoftCascade::detectMultiScale(const Mat& image, const std::vector<cv::Rect>& /*rois*/,
                                        std::vector<Detection>& objects, const int /*rejectfactor*/) const
 {
-    typedef std::vector<cv::Rect>::const_iterator RIter_t;
-
     // only color images are supperted
     CV_Assert(image.type() == CV_8UC3);
 
@@ -549,7 +542,6 @@ void cv::SoftCascade::detectMultiScale(const Mat& image, const std::vector<cv::R
     ChannelStorage storage(image, fld.shrinkage);
 
     typedef std::vector<Level>::const_iterator lIt;
-
     for (lIt it = fld.levels.begin(); it != fld.levels.end(); ++it)
     {
         const Level& level = *it;
@@ -563,5 +555,4 @@ void cv::SoftCascade::detectMultiScale(const Mat& image, const std::vector<cv::R
             }
         }
     }
-
 }
