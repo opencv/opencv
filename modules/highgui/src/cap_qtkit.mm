@@ -833,7 +833,15 @@ double CvCaptureFile::getProperty(int property_id){
             retval = currentFPS;
             break;
         case CV_CAP_PROP_FRAME_COUNT:
-            retval = movieDuration*movieFPS/1000;
+            {
+                NSArray *videoTracks = [mCaptureSession tracksOfMediaType:QTMediaTypeVideo];
+                if ([videoTracks count] > 0) {
+                    QTMedia *media = [[videoTracks objectAtIndex:0] media];
+                    retval = [[media attributeForKey:QTMediaSampleCountAttribute] longValue];
+                } else {
+                    retval = 0;
+                }
+            }
             break;
         case CV_CAP_PROP_FOURCC:
         default:
