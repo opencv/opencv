@@ -162,7 +162,7 @@ typedef _ALIGNED_ON(128) struct  GpuHidHaarFeature
         _ALIGNED_ON(4)  int    p3 ;
         _ALIGNED_ON(4)  float weight  ;
     }
-    _ALIGNED_ON(32) rect[CV_HAAR_FEATURE_MAX] ;
+    /*_ALIGNED_ON(32)*/ rect[CV_HAAR_FEATURE_MAX] ;
 }
 GpuHidHaarFeature;
 
@@ -867,8 +867,8 @@ CvSeq *cv::ocl::OclCascadeClassifier::oclHaarDetectObjects( oclMat &gimg, CvMemS
     std::vector<cv::Rect> rectList;
     std::vector<int> rweights;
     double factor;
-    int datasize;
-    int totalclassifier;
+    int datasize=0;
+    int totalclassifier=0;
 
     void *out;
     GpuHidHaarClassifierCascade *gcascade;

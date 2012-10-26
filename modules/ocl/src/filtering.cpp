@@ -1235,7 +1235,7 @@ void linearRowFilter_gpu(const oclMat &src, const oclMat &dst, oclMat mat_kernel
     openCLExecuteKernel(clCxt, &filter_sep_row, kernelName, globalThreads, localThreads, args, channels, src.depth(), compile_option);
 }
 
-Ptr<BaseRowFilter_GPU> cv::ocl::getLinearRowFilter_GPU(int srcType, int bufType, const Mat &rowKernel, int anchor, int bordertype)
+Ptr<BaseRowFilter_GPU> cv::ocl::getLinearRowFilter_GPU(int srcType, int /*bufType*/, const Mat &rowKernel, int anchor, int bordertype)
 {
     static const gpuFilter1D_t gpuFilter1D_callers[6] =
     {
@@ -1391,7 +1391,7 @@ void linearColumnFilter_gpu(const oclMat &src, const oclMat &dst, oclMat mat_ker
     openCLExecuteKernel(clCxt, &filter_sep_col, kernelName, globalThreads, localThreads, args, -1, -1, compile_option);
 }
 
-Ptr<BaseColumnFilter_GPU> cv::ocl::getLinearColumnFilter_GPU(int bufType, int dstType, const Mat &columnKernel, int anchor, int bordertype, double delta)
+Ptr<BaseColumnFilter_GPU> cv::ocl::getLinearColumnFilter_GPU(int /*bufType*/, int dstType, const Mat &columnKernel, int anchor, int bordertype, double /*delta*/)
 {
     static const gpuFilter1D_t gpuFilter1D_callers[6] =
     {

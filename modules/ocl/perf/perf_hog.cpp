@@ -103,10 +103,10 @@ TEST_P(HOG, Performance)
     ASSERT_FALSE(img.empty());
 
     // define HOG related arguments
-    float scale = 1.05;
+    float scale = 1.05f;
     //int nlevels = 13;
-    float gr_threshold = 8;
-    float hit_threshold = 1.4;
+    int gr_threshold = 8;
+    float hit_threshold = 1.4f;
     //bool hit_threshold_auto = true;
 
     int win_width = is48 ? 48 : 64;

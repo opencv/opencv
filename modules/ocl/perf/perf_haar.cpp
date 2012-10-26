@@ -137,7 +137,7 @@ TEST_F(Haar, FaceDetect)
     printf( "cpudetection time = %g ms\n", t / (LOOP_TIMES * (double)cvGetTickFrequency() * 1000.) );
 
     cv::ocl::oclMat image;
-    CvSeq *_objects;
+    CvSeq *_objects=NULL;
     t = (double)cvGetTickCount();
     for(int k = 0; k < LOOP_TIMES; k++)
     {

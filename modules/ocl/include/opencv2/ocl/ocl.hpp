@@ -378,7 +378,7 @@ namespace cv
         // disabled until fix crash
         // support all types
         CV_EXPORTS Scalar sum(const oclMat &m);
-
+        CV_EXPORTS Scalar absSum(const oclMat &m);
         CV_EXPORTS Scalar sqrSum(const oclMat &m);
 
         //! finds global minimum and maximum array elements and returns their values
@@ -1738,5 +1738,12 @@ namespace cv
 
     }
 }
+#if _MSC_VER >= 1200
+#pragma warning( push)
+#pragma warning( disable: 4267)
+#endif
 #include "opencv2/ocl/matrix_operations.hpp"
+#if _MSC_VER >= 1200
+#pragma warning( pop)
+#endif
 #endif /* __OPENCV_GPU_HPP__ */
