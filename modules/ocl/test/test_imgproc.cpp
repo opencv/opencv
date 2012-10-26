@@ -213,8 +213,8 @@ COOR do_meanShift(int x0, int y0, uchar *sptr, uchar *dptr, int sstep, cv::Size 
     dptr[3] = (uchar)c3;
 
     COOR coor;
-    coor.x = x0;
-    coor.y = y0;
+    coor.x = (short)x0;
+    coor.y = (short)y0;
     return coor;
 }
 

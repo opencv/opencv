@@ -199,8 +199,8 @@ TEST_P(HOG, Detect)
 
     int threshold = 10;
     int val = 32;
-    d_comp[0] = d_found.size();
-    comp[0] = found.size();
+    d_comp[0] = (int)d_found.size();
+    comp[0] = (int)found.size();
     if (winSize == cv::Size(48, 96))
     {
         for(int i = 0; i < (int)d_found.size(); i++)

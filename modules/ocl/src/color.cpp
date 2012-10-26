@@ -96,7 +96,7 @@ namespace
         size_t gt[3] = {src.cols, src.rows, 1}, lt[3] = {16, 16, 1};
         openCLExecuteKernel(src.clCxt, &cvt_color, "RGB2Gray", gt, lt, args, -1, -1, build_options);
     }
-    void cvtColor_caller(const oclMat &src, oclMat &dst, int code, int dcn)
+    void cvtColor_caller(const oclMat &src, oclMat &dst, int code, int /*dcn*/)
     {
         Size sz = src.size();
         int scn = src.oclchannels(), depth = src.depth(), bidx;

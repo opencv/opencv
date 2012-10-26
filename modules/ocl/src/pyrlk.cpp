@@ -792,6 +792,12 @@ void lkSparse_run(oclMat &I, oclMat &J,
 
 void cv::ocl::PyrLKOpticalFlow::sparse(const oclMat &prevImg, const oclMat &nextImg, const oclMat &prevPts, oclMat &nextPts, oclMat &status, oclMat *err)
 {
+	if (prevImg.clCxt->impl->devName.find("Intel(R) HD Graphics") != string::npos)
+	{
+		cout << " Intel HD GPU device unsupported " << endl;
+		return;
+	}
+
     if (prevPts.empty())
     {
         nextPts.release();
