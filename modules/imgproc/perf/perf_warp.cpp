@@ -139,7 +139,7 @@ PERF_TEST_P( TestWarpPerspectiveNear_t, WarpPerspectiveNear,
         warpPerspective( src, dst, warpMat, size, interType, borderMode, Scalar::all(150) );
     }
 
-    SANITY_CHECK(dst);
+    SANITY_CHECK(dst, 1);
 }
 
 PERF_TEST_P( TestRemap, remap,
