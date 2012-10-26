@@ -545,22 +545,6 @@ namespace cv { namespace gpu
         ensureSizeIsEnough(size.height, size.width, type, m);
     }
 
-    inline void createContinuous(int rows, int cols, int type, GpuMat& m)
-    {
-        int area = rows * cols;
-        if (!m.isContinuous() || m.type() != type || m.size().area() != area)
-            ensureSizeIsEnough(1, area, type, m);
-        m = m.reshape(0, rows);
-    }
-
-    inline void ensureSizeIsEnough(int rows, int cols, int type, GpuMat& m)
-    {
-        if (m.type() == type && m.rows >= rows && m.cols >= cols)
-            m = m(Rect(0, 0, cols, rows));
-        else
-            m.create(rows, cols, type);
-    }
-
     inline GpuMat allocMatFromBuf(int rows, int cols, int type, GpuMat &mat)
     {
         if (!mat.empty() && mat.type() == type && mat.rows >= rows && mat.cols >= cols)

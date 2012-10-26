@@ -704,6 +704,43 @@ cv::Mat::Mat(const GpuMat& m) : flags(0), dims(0), rows(0), cols(0), data(0), re
     m.download(*this);
 }
 
+void cv::gpu::createContinuous(int rows, int cols, int type, GpuMat& m)
+{
+    int area = rows * cols;
+    if (m.empty() || m.type() != type || !m.isContinuous() || m.size().area() < area)
+        m.create(1, area, type);
+
+    m.cols = cols;
+    m.rows = rows;
+    m.step = m.elemSize() * cols;
+    m.flags |= Mat::CONTINUOUS_FLAG;
+}
+
+void cv::gpu::ensureSizeIsEnough(int rows, int cols, int type, GpuMat& m)
+{
+    if (m.empty() || m.type() != type || m.data != m.datastart)
+        m.create(rows, cols, type);
+    else
+    {
+        const size_t esz = m.elemSize();
+        const ptrdiff_t delta2 = m.dataend - m.datastart;
+
+        const size_t minstep = m.cols * esz;
+
+        Size wholeSize;
+        wholeSize.height = std::max(static_cast<int>((delta2 - minstep) / m.step + 1), m.rows);
+        wholeSize.width = std::max(static_cast<int>((delta2 - m.step * (wholeSize.height - 1)) / esz), m.cols);
+
+        if (wholeSize.height < rows || wholeSize.width < cols)
+            m.create(rows, cols, type);
+        else
+        {
+            m.cols = cols;
+            m.rows = rows;
+        }
+    }
+}
+
 namespace
 {
     class GpuFuncTable

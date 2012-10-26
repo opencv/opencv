@@ -324,6 +324,40 @@ INSTANTIATE_TEST_CASE_P(GPU_GpuMat, ConvertTo, testing::Combine(
     ALL_DEPTH,
     WHOLE_SUBMAT));
 
+////////////////////////////////////////////////////////////////////////////////
+// ensureSizeIsEnough
+
+struct EnsureSizeIsEnough : testing::TestWithParam<cv::gpu::DeviceInfo>
+{
+    virtual void SetUp()
+    {
+        cv::gpu::DeviceInfo devInfo = GetParam();
+        cv::gpu::setDevice(devInfo.deviceID());
+    }
+};
+
+TEST_P(EnsureSizeIsEnough, BufferReuse)
+{
+    cv::gpu::GpuMat buffer(100, 100, CV_8U);
+    cv::gpu::GpuMat old = buffer;
+
+    // don't reallocate memory
+    cv::gpu::ensureSizeIsEnough(10, 20, CV_8U, buffer);
+    EXPECT_EQ(10, buffer.rows);
+    EXPECT_EQ(20, buffer.cols);
+    EXPECT_EQ(CV_8UC1, buffer.type());
+    EXPECT_EQ(reinterpret_cast<intptr_t>(old.data), reinterpret_cast<intptr_t>(buffer.data));
+
+    // don't reallocate memory
+    cv::gpu::ensureSizeIsEnough(20, 30, CV_8U, buffer);
+    EXPECT_EQ(20, buffer.rows);
+    EXPECT_EQ(30, buffer.cols);
+    EXPECT_EQ(CV_8UC1, buffer.type());
+    EXPECT_EQ(reinterpret_cast<intptr_t>(old.data), reinterpret_cast<intptr_t>(buffer.data));
+}
+
+INSTANTIATE_TEST_CASE_P(GPU_GpuMat, EnsureSizeIsEnough, ALL_DEVICES);
+
 } // namespace
 
 #endif // HAVE_CUDA
