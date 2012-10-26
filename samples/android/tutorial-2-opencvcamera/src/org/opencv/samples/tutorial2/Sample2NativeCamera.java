@@ -8,7 +8,7 @@ import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.Point;
 import org.opencv.core.Scalar;
-import org.opencv.android.NativeCameraView;
+import org.opencv.android.CameraBridgeViewBase;
 import org.opencv.android.CameraBridgeViewBase.CvCameraViewListener;
 import org.opencv.highgui.Highgui;
 import org.opencv.imgproc.Imgproc;
@@ -22,20 +22,20 @@ import android.view.Window;
 import android.view.WindowManager;
 
 public class Sample2NativeCamera extends Activity implements CvCameraViewListener {
-    private static final String TAG             = "OCVSample::Activity";
+    private static final String  TAG             = "OCVSample::Activity";
 
-    public static final int     VIEW_MODE_RGBA  = 0;
-    public static final int     VIEW_MODE_GRAY  = 1;
-    public static final int     VIEW_MODE_CANNY = 2;
+    public static final int      VIEW_MODE_RGBA  = 0;
+    public static final int      VIEW_MODE_GRAY  = 1;
+    public static final int      VIEW_MODE_CANNY = 2;
 
     private static int           viewMode       = VIEW_MODE_RGBA;
-    private MenuItem            mItemPreviewRGBA;
-    private MenuItem            mItemPreviewGray;
-    private MenuItem            mItemPreviewCanny;
-    private Mat                 mRgba;
-    private Mat                 mIntermediateMat;
+    private MenuItem             mItemPreviewRGBA;
+    private MenuItem             mItemPreviewGray;
+    private MenuItem             mItemPreviewCanny;
+    private Mat                  mRgba;
+    private Mat                  mIntermediateMat;
 
-    private NativeCameraView    mOpenCvCameraView;
+    private CameraBridgeViewBase mOpenCvCameraView;
 
     private BaseLoaderCallback  mLoaderCallback = new BaseLoaderCallback(this) {
         @Override
@@ -68,7 +68,7 @@ public class Sample2NativeCamera extends Activity implements CvCameraViewListene
 
         setContentView(R.layout.tutorial2_surface_view);
 
-        mOpenCvCameraView = (NativeCameraView)findViewById(R.id.tutorial2_activity_surface_view);
+        mOpenCvCameraView = (CameraBridgeViewBase) findViewById(R.id.tutorial2_activity_surface_view);
         mOpenCvCameraView.setCvCameraViewListener(this);
     }
 
