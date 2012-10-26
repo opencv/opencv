@@ -14,7 +14,7 @@ import org.opencv.core.MatOfRect;
 import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
 import org.opencv.core.Size;
-import org.opencv.android.JavaCameraView;
+import org.opencv.android.CameraBridgeViewBase;
 import org.opencv.android.CameraBridgeViewBase.CvCameraViewListener;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.objdetect.CascadeClassifier;
@@ -53,7 +53,7 @@ public class FdActivity extends Activity implements CvCameraViewListener {
     private float                  mRelativeFaceSize   = 0;
     private int                    mAbsoluteFaceSize   = 0;
 
-    private JavaCameraView         mOpenCvCameraView;
+    private CameraBridgeViewBase   mOpenCvCameraView;
 
     private BaseLoaderCallback  mLoaderCallback = new BaseLoaderCallback(this) {
         @Override
@@ -125,7 +125,7 @@ public class FdActivity extends Activity implements CvCameraViewListener {
 
         setContentView(R.layout.face_detect_surface_view);
 
-        mOpenCvCameraView = (JavaCameraView)findViewById(R.id.fd_activity_surface_view);
+        mOpenCvCameraView = (CameraBridgeViewBase) findViewById(R.id.fd_activity_surface_view);
         mOpenCvCameraView.setCvCameraViewListener(this);
     }
 

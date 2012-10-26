@@ -85,6 +85,7 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
     private Object mSyncObject = new Object();
 
     public void surfaceChanged(SurfaceHolder arg0, int arg1, int arg2, int arg3) {
+        Log.d(TAG, "call surfaceChanged event");
         synchronized(mSyncObject) {
             if (!mSurfaceExist) {
                 mSurfaceExist = true;
@@ -163,7 +164,7 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
     private void checkCurrentState() {
         int targetState;
 
-        if (mEnabled && mSurfaceExist) {
+        if (mEnabled && mSurfaceExist && getVisibility() == VISIBLE) {
             targetState = STARTED;
         } else {
             targetState = STOPPED;
