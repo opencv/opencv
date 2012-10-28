@@ -44,7 +44,7 @@ In the following image, as your retina does, local luminance adaptation, spatial
    :align: center
 
 
-*Note :* image sample can be downloaded from the `OpenEXR website <http://www.openexr.com>`_. Regarding this demonstration, before retina processing, input image has been linearly rescaled within 0-255 keeping its channels float format. 5% of its histogram ends has been cut (mostly removes wrong HDR pixels). Check out the sample </opencv/samples/cpp/OpenEXRimages_HighDynamicRange_Retina_toneMapping.cpp> for similar processing. The following demonstration will only consider classical 8bit/channel images.
+*Note :* image sample can be downloaded from the `OpenEXR website <http://www.openexr.com>`_. Regarding this demonstration, before retina processing, input image has been linearly rescaled within 0-255 keeping its channels float format. 5% of its histogram ends has been cut (mostly removes wrong HDR pixels). Check out the sample *opencv/samples/cpp/OpenEXRimages_HighDynamicRange_Retina_toneMapping.cpp* for similar processing. The following demonstration will only consider classical 8bit/channel images.
 
 The retina model output channels
 ================================
@@ -364,7 +364,7 @@ The most simple parameters are the following :
 **Note :** using color requires color channels multiplexing/demultipexing which requires more processing. You can expect much faster processing using gray levels : it would require around 30 product per pixel for all the retina processes and it has recently been parallelized for multicore architectures.
 
 Photo-receptors parameters
--------------------------
+--------------------------
 
 The following parameters act on the entry point of the retina - photo-receptors - and impact all the following processes. These sensors are low pass spatio-temporal filters that smooth temporal and spatial data and also adjust there sensitivity to local luminance thus improving details extraction and high frequency noise canceling.
 
