@@ -1,12 +1,12 @@
 if(MINGW OR (X86 AND UNIX AND NOT APPLE))
   # mingw compiler is known to produce unstable SSE code with -O3 hence we are trying to use -O2 instead
-  if(CMAKE_COMPILER_IS_GNUCXX)
+  if(CMAKE_COMPILER_IS_GNUCXX AND ${CMAKE_OPENCV_GCC_VERSION} VERSION_LESS "47")
     foreach(flags CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_RELEASE CMAKE_CXX_FLAGS_DEBUG)
       string(REPLACE "-O3" "-O2" ${flags} "${${flags}}")
     endforeach()
   endif()
 
-  if(CMAKE_COMPILER_IS_GNUCC)
+  if(CMAKE_COMPILER_IS_GNUCC AND ${CMAKE_OPENCV_GCC_VERSION} VERSION_LESS "47")
     foreach(flags CMAKE_C_FLAGS CMAKE_C_FLAGS_RELEASE CMAKE_C_FLAGS_DEBUG)
       string(REPLACE "-O3" "-O2" ${flags} "${${flags}}")
     endforeach()
