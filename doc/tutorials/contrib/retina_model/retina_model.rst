@@ -23,17 +23,28 @@ General overview
 
 The proposed model originates from Jeanny Herault's research at `Gipsa <http://www.gipsa-lab.inpg.fr>`_. It is involved in image processing applications with `Listic <http://www.listic.univ-savoie.fr>`_ (code maintainer) lab. This is not a complete model but it already present interesting properties that can be involved for enhanced image processing experience. The model allows the following human retina properties to be used :
 
-* spectral whitening that has 3 important effects: high spatio-temporal frequency signals canceling (noise), mid-frequency details enhancement and low frequency luminance energy reduction. This *all in one* property directly allows visual signals cleaning of classical undesired distortions introduced by image sensors and input luminance range.
+* spectral whitening that has 3 important effects: high spatio-temporal frequency signals canceling (noise), mid-frequencies details enhancement and low frequencies luminance energy reduction. This *all in one* property directly allows visual signals cleaning of classical undesired distortions introduced by image sensors and input luminance range.
 
 * local logarithmic luminance compression allows details to be enhanced even in low light conditions.
 
 * decorrelation of the details information (Parvocellular output channel) and transient information (events, motion made available at the Magnocellular output channel).
 
+The first two points are illustrated below :
+
+In the figure below, the OpenEXR image sample *CrissyField.exr*, a High Dynamic Range image is shown. In order to make it visible on this web-page, the original input image is linearly rescaled to the classical image luminance range [0-255] and is converted to 8bit/channel format. Such strong conversion hides many details because of too strong local contrasts. Furthermore, noise energy is also strong and pollutes visual information.
+
 .. image:: images/retina_TreeHdr_small.jpg
-   :alt: Illustration of the retina luminance compression effect
+   :alt: A High dynamic range image linearly rescaled within range [0-255].
    :align: center
 
-For example in the above figure, a High Dynamic Range image (left) is processed by the retina model (right). The left image is coded on more than 8bit/color channel so that its compression to 8bit image format hides many details. However, as your retina does, local luminance adaptation, spatio-temporal noise removal and spectral whitening work together and transmit accurate information on lower range 8bit data channels.
+In the following image, as your retina does, local luminance adaptation, spatial noise removal and spectral whitening work together and transmit accurate information on lower range 8bit data channels. On this picture, noise in significantly removed, local details hidden by strong luminance contrasts are enhanced. Output image keeps its naturalness and visual content is enhanced.
+
+.. image:: images/retina_TreeHdr_retina.jpg
+   :alt: A High dynamic range image compressed within range [0-255] using the retina.
+   :align: center
+
+
+*Note :* image sample can be downloaded from the `OpenEXR website <http://www.openexr.com>`_. Regarding this demonstration, before retina processing, input image has been linearly rescaled within 0-255 keeping its channels float format. 5% of its histogram ends has been cut (mostly removes wrong HDR pixels). Check out the sample </opencv/samples/cpp/OpenEXRimages_HighDynamicRange_Retina_toneMapping.cpp> for similar processing. The following demonstration will only consider classical 8bit/channel images.
 
 The retina model output channels
 ================================
