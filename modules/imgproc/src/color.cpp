@@ -1956,230 +1956,285 @@ typedef SIMDBayerStubInterpolator_<uchar> SIMDBayerInterpolator_8u;
 #endif
 
 template<typename T, class SIMDInterpolator>
-static void Bayer2Gray_( const Mat& srcmat, Mat& dstmat, int code )
+class Bayer2GrayInvoker
 {
-    SIMDInterpolator vecOp;
-    const int R2Y = 4899;
-    const int G2Y = 9617;
-    const int B2Y = 1868;
-    const int SHIFT = 14;
+public:
+    Bayer2GrayInvoker( const Mat& src, Mat& dst, const int code )
+        : src_(src), dst_(dst), code_(code) { }
 
-    const T* bayer0 = (const T*)srcmat.data;
-    int bayer_step = (int)(srcmat.step/sizeof(T));
-    T* dst0 = (T*)dstmat.data;
-    int dst_step = (int)(dstmat.step/sizeof(T));
-    Size size = srcmat.size();
-    int bcoeff = B2Y, rcoeff = R2Y;
-    int start_with_green = code == CV_BayerGB2GRAY || code == CV_BayerGR2GRAY;
-    bool brow = true;
-
-    if( code != CV_BayerBG2GRAY && code != CV_BayerGB2GRAY )
+    void operator()( const BlockedRange& range ) const
     {
-        brow = false;
-        std::swap(bcoeff, rcoeff);
-    }
+        const int R2Y = 4899;
+        const int G2Y = 9617;
+        const int B2Y = 1868;
+        const int SHIFT = 14;
 
-    dst0 += dst_step + 1;
+        int bayerStep = (int)(src_.step/sizeof(T));
+        const T* bayer0 = (const T*)src_.data + range.begin()*2*bayerStep;
+        int dstStep = (int)(dst_.step/sizeof(T));
+        T* dst0 = (T*)dst_.data + (dstStep + 1) + range.begin()*2*dstStep;
+        int blueCoeff = B2Y, redCoeff = R2Y;
+        int startWithGreen = code_ == CV_BayerGB2GRAY || code_ == CV_BayerGR2GRAY;
+        bool blueRow = true;
+        Size size = src_.size();
+        size.height -= 2;
+        size.width -= 2;
+
+        if( code_ != CV_BayerBG2GRAY && code_ != CV_BayerGB2GRAY )
+        {
+            blueRow = false;
+            std::swap(blueCoeff, redCoeff);
+        }
+
+        int iterationStart = range.begin()*2;
+        int iterationEnd = std::min(range.end()*2, size.height);
+        for( int row = iterationStart; row < iterationEnd; row++, bayer0 += bayerStep, dst0 += dstStep )
+        {
+            unsigned t0, t1, t2;
+            const T* bayer = bayer0;
+            T* dst = dst0;
+            const T* bayerEnd = bayer + size.width;
+
+            if( startWithGreen )
+            {
+                t0 = (bayer[1] + bayer[bayerStep*2+1])*redCoeff;
+                t1 = (bayer[bayerStep] + bayer[bayerStep+2])*blueCoeff;
+                t2 = bayer[bayerStep+1]*(2*G2Y);
+
+                dst[0] = (T)CV_DESCALE(t0 + t1 + t2, SHIFT+1);
+                bayer++;
+                dst++;
+            }
+
+            int delta = vecOp_.bayer2Gray(bayer, bayerStep, dst, size.width, blueCoeff, G2Y, redCoeff);
+            bayer += delta;
+            dst += delta;
+
+            for( ; bayer <= bayerEnd - 2; bayer += 2, dst += 2 )
+            {
+                t0 = (bayer[0] + bayer[2] + bayer[bayerStep*2] + bayer[bayerStep*2+2])*redCoeff;
+                t1 = (bayer[1] + bayer[bayerStep] + bayer[bayerStep+2] + bayer[bayerStep*2+1])*G2Y;
+                t2 = bayer[bayerStep+1]*(4*blueCoeff);
+                dst[0] = (T)CV_DESCALE(t0 + t1 + t2, SHIFT+2);
+
+                t0 = (bayer[2] + bayer[bayerStep*2+2])*redCoeff;
+                t1 = (bayer[bayerStep+1] + bayer[bayerStep+3])*blueCoeff;
+                t2 = bayer[bayerStep+2]*(2*G2Y);
+                dst[1] = (T)CV_DESCALE(t0 + t1 + t2, SHIFT+1);
+            }
+
+            if( bayer < bayerEnd )
+            {
+                t0 = (bayer[0] + bayer[2] + bayer[bayerStep*2] + bayer[bayerStep*2+2])*redCoeff;
+                t1 = (bayer[1] + bayer[bayerStep] + bayer[bayerStep+2] + bayer[bayerStep*2+1])*G2Y;
+                t2 = bayer[bayerStep+1]*(4*blueCoeff);
+                dst[0] = (T)CV_DESCALE(t0 + t1 + t2, SHIFT+2);
+                bayer++;
+                dst++;
+            }
+
+            dst0[-1] = dst0[0];
+            dst0[size.width] = dst0[size.width-1];
+
+            blueRow = !blueRow;
+            std::swap(blueCoeff, redCoeff);
+            startWithGreen = !startWithGreen;
+        }
+    }
+private:
+    const Mat& src_;
+    Mat& dst_;
+    const int code_;
+    SIMDInterpolator vecOp_;
+};
+
+template<typename T, class SIMDInterpolator>
+static void Bayer2Gray_( const Mat& src, Mat& dst, int code )
+{
+    Size size = src.size();
     size.height -= 2;
-    size.width -= 2;
+    const int n = size.height/2 + 1; // every invoker must processes an even number of rows
 
-    for( ; size.height-- > 0; bayer0 += bayer_step, dst0 += dst_step )
+    if( size.height > 0 )
     {
-        unsigned t0, t1, t2;
-        const T* bayer = bayer0;
-        T* dst = dst0;
-        const T* bayer_end = bayer + size.width;
-
-        if( size.width <= 0 )
-        {
-            dst[-1] = dst[size.width] = 0;
-            continue;
-        }
-
-        if( start_with_green )
-        {
-            t0 = (bayer[1] + bayer[bayer_step*2+1])*rcoeff;
-            t1 = (bayer[bayer_step] + bayer[bayer_step+2])*bcoeff;
-            t2 = bayer[bayer_step+1]*(2*G2Y);
-
-            dst[0] = (T)CV_DESCALE(t0 + t1 + t2, SHIFT+1);
-            bayer++;
-            dst++;
-        }
-
-        int delta = vecOp.bayer2Gray(bayer, bayer_step, dst, size.width, bcoeff, G2Y, rcoeff);
-        bayer += delta;
-        dst += delta;
-
-        for( ; bayer <= bayer_end - 2; bayer += 2, dst += 2 )
-        {
-            t0 = (bayer[0] + bayer[2] + bayer[bayer_step*2] + bayer[bayer_step*2+2])*rcoeff;
-            t1 = (bayer[1] + bayer[bayer_step] + bayer[bayer_step+2] + bayer[bayer_step*2+1])*G2Y;
-            t2 = bayer[bayer_step+1]*(4*bcoeff);
-            dst[0] = (T)CV_DESCALE(t0 + t1 + t2, SHIFT+2);
-
-            t0 = (bayer[2] + bayer[bayer_step*2+2])*rcoeff;
-            t1 = (bayer[bayer_step+1] + bayer[bayer_step+3])*bcoeff;
-            t2 = bayer[bayer_step+2]*(2*G2Y);
-            dst[1] = (T)CV_DESCALE(t0 + t1 + t2, SHIFT+1);
-        }
-
-        if( bayer < bayer_end )
-        {
-            t0 = (bayer[0] + bayer[2] + bayer[bayer_step*2] + bayer[bayer_step*2+2])*rcoeff;
-            t1 = (bayer[1] + bayer[bayer_step] + bayer[bayer_step+2] + bayer[bayer_step*2+1])*G2Y;
-            t2 = bayer[bayer_step+1]*(4*bcoeff);
-            dst[0] = (T)CV_DESCALE(t0 + t1 + t2, SHIFT+2);
-            bayer++;
-            dst++;
-        }
-
-        dst0[-1] = dst0[0];
-        dst0[size.width] = dst0[size.width-1];
-
-        brow = !brow;
-        std::swap(bcoeff, rcoeff);
-        start_with_green = !start_with_green;
+        Bayer2GrayInvoker<T, SIMDInterpolator> body(src, dst, code);
+        parallel_for(BlockedRange(0,n), body);
     }
 
-    size = dstmat.size();
-    dst0 = (T*)dstmat.data;
+    size = dst.size();
+    T* dst0 = (T*)dst.data;
+    int dstStep = (int)(dst.step/sizeof(T));
     if( size.height > 2 )
+    {
         for( int i = 0; i < size.width; i++ )
         {
-            dst0[i] = dst0[i + dst_step];
-            dst0[i + (size.height-1)*dst_step] = dst0[i + (size.height-2)*dst_step];
+            dst0[i] = dst0[i + dstStep];
+            dst0[i + (size.height-1)*dstStep] = dst0[i + (size.height-2)*dstStep];
         }
+    }
     else
+    {
         for( int i = 0; i < size.width; i++ )
         {
-            dst0[i] = dst0[i + (size.height-1)*dst_step] = 0;
+            dst0[i] = dst0[i + (size.height-1)*dstStep] = 0;
         }
+    }
 }
 
 template<typename T, class SIMDInterpolator>
-static void Bayer2RGB_( const Mat& srcmat, Mat& dstmat, int code )
+class Bayer2RGBInvoker
 {
-    SIMDInterpolator vecOp;
-    const T* bayer0 = (const T*)srcmat.data;
-    int bayer_step = (int)(srcmat.step/sizeof(T));
-    T* dst0 = (T*)dstmat.data;
-    int dst_step = (int)(dstmat.step/sizeof(T));
-    Size size = srcmat.size();
-    int blue = code == CV_BayerBG2BGR || code == CV_BayerGB2BGR ? -1 : 1;
-    int start_with_green = code == CV_BayerGB2BGR || code == CV_BayerGR2BGR;
+public:
+    Bayer2RGBInvoker( const Mat& src, Mat& dst, const int code )
+        : src_(src), dst_(dst), code_(code) { }
 
-    dst0 += dst_step + 3 + 1;
-    size.height -= 2;
-    size.width -= 2;
-
-    for( ; size.height-- > 0; bayer0 += bayer_step, dst0 += dst_step )
+    void operator()( const BlockedRange& range ) const
     {
-        int t0, t1;
-        const T* bayer = bayer0;
-        T* dst = dst0;
-        const T* bayer_end = bayer + size.width;
+        int bayerStep = (int)(src_.step/sizeof(T));
+        const T* bayer0 = (const T*)src_.data + range.begin()*2*bayerStep;
+        int dstStep = (int)(dst_.step/sizeof(T));
+        T* dst0 = (T*)dst_.data + range.begin()*2*dstStep;
+        dst0 += dstStep + 3 + 1;
+        int blue = code_ == CV_BayerBG2BGR || code_ == CV_BayerGB2BGR ? -1 : 1;
+        int startWithGreen = code_ == CV_BayerGB2BGR || code_ == CV_BayerGR2BGR;
+        Size size = src_.size();
+        size.height -= 2;
+        size.width -= 2;
 
-        if( size.width <= 0 )
+        int iterationStart = range.begin()*2;
+        int iterationEnd = std::min(range.end()*2, size.height);
+
+        for( int row = iterationStart; row != iterationEnd; ++row, bayer0 += bayerStep, dst0 += dstStep )
         {
-            dst[-4] = dst[-3] = dst[-2] = dst[size.width*3-1] =
-            dst[size.width*3] = dst[size.width*3+1] = 0;
-            continue;
-        }
-
-        if( start_with_green )
-        {
-            t0 = (bayer[1] + bayer[bayer_step*2+1] + 1) >> 1;
-            t1 = (bayer[bayer_step] + bayer[bayer_step+2] + 1) >> 1;
-            dst[-blue] = (T)t0;
-            dst[0] = bayer[bayer_step+1];
-            dst[blue] = (T)t1;
-            bayer++;
-            dst += 3;
-        }
-
-        int delta = vecOp.bayer2RGB(bayer, bayer_step, dst, size.width, blue);
-        bayer += delta;
-        dst += delta*3;
-
-        if( blue > 0 )
-        {
-            for( ; bayer <= bayer_end - 2; bayer += 2, dst += 6 )
+            if( size.width <= 0 )
             {
-                t0 = (bayer[0] + bayer[2] + bayer[bayer_step*2] +
-                      bayer[bayer_step*2+2] + 2) >> 2;
-                t1 = (bayer[1] + bayer[bayer_step] +
-                      bayer[bayer_step+2] + bayer[bayer_step*2+1]+2) >> 2;
-                dst[-1] = (T)t0;
-                dst[0] = (T)t1;
-                dst[1] = bayer[bayer_step+1];
-
-                t0 = (bayer[2] + bayer[bayer_step*2+2] + 1) >> 1;
-                t1 = (bayer[bayer_step+1] + bayer[bayer_step+3] + 1) >> 1;
-                dst[2] = (T)t0;
-                dst[3] = bayer[bayer_step+2];
-                dst[4] = (T)t1;
+                dst0[-4] = dst0[-3] = dst0[-2] = dst0[size.width*3-1] =
+                        dst0[size.width*3] = dst0[size.width*3+1] = 0;
+                continue;
             }
-        }
-        else
-        {
-            for( ; bayer <= bayer_end - 2; bayer += 2, dst += 6 )
+
+            int t0, t1;
+            const T* bayer = bayer0;
+            T* dst = dst0;
+            const T* bayerEnd = bayer + size.width;
+
+            if( startWithGreen )
             {
-                t0 = (bayer[0] + bayer[2] + bayer[bayer_step*2] +
-                      bayer[bayer_step*2+2] + 2) >> 2;
-                t1 = (bayer[1] + bayer[bayer_step] +
-                      bayer[bayer_step+2] + bayer[bayer_step*2+1]+2) >> 2;
-                dst[1] = (T)t0;
-                dst[0] = (T)t1;
-                dst[-1] = bayer[bayer_step+1];
-
-                t0 = (bayer[2] + bayer[bayer_step*2+2] + 1) >> 1;
-                t1 = (bayer[bayer_step+1] + bayer[bayer_step+3] + 1) >> 1;
-                dst[4] = (T)t0;
-                dst[3] = bayer[bayer_step+2];
-                dst[2] = (T)t1;
+                t0 = (bayer[1] + bayer[bayerStep*2+1] + 1) >> 1;
+                t1 = (bayer[bayerStep] + bayer[bayerStep+2] + 1) >> 1;
+                dst[-blue] = (T)t0;
+                dst[0] = bayer[bayerStep+1];
+                dst[blue] = (T)t1;
+                bayer++;
+                dst += 3;
             }
+
+            int delta = vecOp_.bayer2RGB(bayer, bayerStep, dst, size.width, blue);
+            bayer += delta;
+            dst += delta*3;
+
+            if( blue > 0 )
+            {
+                for( ; bayer <= bayerEnd - 2; bayer += 2, dst += 6 )
+                {
+                    t0 = (bayer[0] + bayer[2] + bayer[bayerStep*2] +
+                          bayer[bayerStep*2+2] + 2) >> 2;
+                    t1 = (bayer[1] + bayer[bayerStep] +
+                          bayer[bayerStep+2] + bayer[bayerStep*2+1]+2) >> 2;
+                    dst[-1] = (T)t0;
+                    dst[0] = (T)t1;
+                    dst[1] = bayer[bayerStep+1];
+
+                    t0 = (bayer[2] + bayer[bayerStep*2+2] + 1) >> 1;
+                    t1 = (bayer[bayerStep+1] + bayer[bayerStep+3] + 1) >> 1;
+                    dst[2] = (T)t0;
+                    dst[3] = bayer[bayerStep+2];
+                    dst[4] = (T)t1;
+                }
+            }
+            else
+            {
+                for( ; bayer <= bayerEnd - 2; bayer += 2, dst += 6 )
+                {
+                    t0 = (bayer[0] + bayer[2] + bayer[bayerStep*2] +
+                          bayer[bayerStep*2+2] + 2) >> 2;
+                    t1 = (bayer[1] + bayer[bayerStep] +
+                          bayer[bayerStep+2] + bayer[bayerStep*2+1]+2) >> 2;
+                    dst[1] = (T)t0;
+                    dst[0] = (T)t1;
+                    dst[-1] = bayer[bayerStep+1];
+
+                    t0 = (bayer[2] + bayer[bayerStep*2+2] + 1) >> 1;
+                    t1 = (bayer[bayerStep+1] + bayer[bayerStep+3] + 1) >> 1;
+                    dst[4] = (T)t0;
+                    dst[3] = bayer[bayerStep+2];
+                    dst[2] = (T)t1;
+                }
+            }
+
+            if( bayer < bayerEnd )
+            {
+                t0 = (bayer[0] + bayer[2] + bayer[bayerStep*2] +
+                      bayer[bayerStep*2+2] + 2) >> 2;
+                t1 = (bayer[1] + bayer[bayerStep] +
+                      bayer[bayerStep+2] + bayer[bayerStep*2+1]+2) >> 2;
+                dst[-blue] = (T)t0;
+                dst[0] = (T)t1;
+                dst[blue] = bayer[bayerStep+1];
+                bayer++;
+                dst += 3;
+            }
+
+            dst0[-4] = dst0[-1];
+            dst0[-3] = dst0[0];
+            dst0[-2] = dst0[1];
+            dst0[size.width*3-1] = dst0[size.width*3-4];
+            dst0[size.width*3] = dst0[size.width*3-3];
+            dst0[size.width*3+1] = dst0[size.width*3-2];
+
+            blue = -blue;
+            startWithGreen = !startWithGreen;
         }
+    }
+private:
+    const Mat& src_;
+    Mat& dst_;
+    const int code_;
+    SIMDInterpolator vecOp_;
+};
 
-        if( bayer < bayer_end )
-        {
-            t0 = (bayer[0] + bayer[2] + bayer[bayer_step*2] +
-                  bayer[bayer_step*2+2] + 2) >> 2;
-            t1 = (bayer[1] + bayer[bayer_step] +
-                  bayer[bayer_step+2] + bayer[bayer_step*2+1]+2) >> 2;
-            dst[-blue] = (T)t0;
-            dst[0] = (T)t1;
-            dst[blue] = bayer[bayer_step+1];
-            bayer++;
-            dst += 3;
-        }
+template<typename T, class SIMDInterpolator>
+static void Bayer2RGB_( const Mat& src, Mat& dst, int code )
+{
+    Size size = src.size();
+    size.height -= 2;
+    const int n = size.height/2 + 1; // every invoker must processes an even number of rows
 
-        dst0[-4] = dst0[-1];
-        dst0[-3] = dst0[0];
-        dst0[-2] = dst0[1];
-        dst0[size.width*3-1] = dst0[size.width*3-4];
-        dst0[size.width*3] = dst0[size.width*3-3];
-        dst0[size.width*3+1] = dst0[size.width*3-2];
-
-        blue = -blue;
-        start_with_green = !start_with_green;
+    if( size.height > 0 )
+    {
+        Bayer2RGBInvoker<T, SIMDInterpolator> body(src, dst, code);
+        parallel_for(BlockedRange(0,n), body);
     }
 
-    size = dstmat.size();
-    dst0 = (T*)dstmat.data;
+    size = dst.size();
+    T* dst0 = (T*)dst.data;
+    int dstStep = (int)(dst.step/sizeof(T));
     if( size.height > 2 )
+    {
         for( int i = 0; i < size.width*3; i++ )
         {
-            dst0[i] = dst0[i + dst_step];
-            dst0[i + (size.height-1)*dst_step] = dst0[i + (size.height-2)*dst_step];
+            dst0[i] = dst0[i + dstStep];
+            dst0[i + (size.height-1)*dstStep] = dst0[i + (size.height-2)*dstStep];
         }
+    }
     else
+    {
         for( int i = 0; i < size.width*3; i++ )
         {
-            dst0[i] = dst0[i + (size.height-1)*dst_step] = 0;
+            dst0[i] = dst0[i + (size.height-1)*dstStep] = 0;
         }
+    }
 }
-
 
 /////////////////// Demosaicing using Variable Number of Gradients ///////////////////////
 
