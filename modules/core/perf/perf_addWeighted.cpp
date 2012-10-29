@@ -23,6 +23,13 @@ PERF_TEST_P(Size_MatType, addWeighted, TYPICAL_MATS_ADWEIGHTED)
 
     declare.in(src1, src2, dst, WARMUP_RNG).out(dst);
 
+    if (CV_MAT_DEPTH(type) == CV_32S)
+    {
+        //see ticket 1529: absdiff can be without saturation on 32S
+        src1 /= 8;
+        src2 /= 8;
+    }
+
     TEST_CYCLE() cv::addWeighted( src1, alpha, src2, beta, gamma, dst, dst.type() );
 
     SANITY_CHECK(dst);

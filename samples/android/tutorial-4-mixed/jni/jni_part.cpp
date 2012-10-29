@@ -8,7 +8,7 @@ using namespace std;
 using namespace cv;
 
 extern "C" {
-JNIEXPORT void JNICALL Java_org_opencv_samples_tutorial4_Sample4View_FindFeatures(JNIEnv*, jobject, jlong addrGray, jlong addrRgba)
+JNIEXPORT void JNICALL Java_org_opencv_samples_tutorial4_Sample4Mixed_FindFeatures(JNIEnv*, jobject, jlong addrGray, jlong addrRgba)
 {
     Mat* pMatGr=(Mat*)addrGray;
     Mat* pMatRgb=(Mat*)addrRgba;

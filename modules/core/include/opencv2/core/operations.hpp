@@ -86,6 +86,11 @@
 
 #include <limits>
 
+#ifdef _MSC_VER
+# pragma warning(push)
+# pragma warning(disable:4127) //conditional expression is constant
+#endif
+
 namespace cv
 {
 
@@ -3916,6 +3921,22 @@ inline void Algorithm::set(const string& _name, const Ptr<_Tp>& value)
     this->set<_Tp>(_name.c_str(), value);
 }
 
+template<typename _Tp>
+inline void Algorithm::setAlgorithm(const char* _name, const Ptr<_Tp>& value)
+{
+    Ptr<Algorithm> algo_ptr = value. template ptr<cv::Algorithm>();
+    if (algo_ptr.empty()) {
+        CV_Error( CV_StsUnsupportedFormat, "unknown/unsupported Ptr type of the second parameter of the method Algorithm::set");
+    }
+    info()->set(this, _name, ParamType<Algorithm>::type, &algo_ptr);
+}
+
+template<typename _Tp>
+inline void Algorithm::setAlgorithm(const string& _name, const Ptr<_Tp>& value)
+{
+    this->set<_Tp>(_name.c_str(), value);
+}
+
 template<typename _Tp> inline typename ParamType<_Tp>::member_type Algorithm::get(const string& _name) const
 {
     typename ParamType<_Tp>::member_type value;
@@ -3949,6 +3970,10 @@ template<typename _Tp> inline void AlgorithmInfo::addParam(Algorithm& algo, cons
 }
 
 }
+
+#ifdef _MSC_VER
+# pragma warning(pop)
+#endif
 
 #endif // __cplusplus
 #endif

@@ -414,7 +414,7 @@ static void icvFindStereoCorrespondenceByBirchfieldDP( uchar* src1, uchar* src2,
         for( x = 1; x < imgW; x++ )
         {
             i = x - 1;
-            for( ; x < imgW && dest[y*widthStep+x] == dest[y*widthStep+x-1]; x++ );
+            for( ; x < imgW && dest[y*widthStep+x] == dest[y*widthStep+x-1]; x++ ) {}
             s = x - i;
             for( ; i < x; i++ )
             {

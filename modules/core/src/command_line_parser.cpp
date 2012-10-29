@@ -70,7 +70,7 @@ static void from_str(const string& str, int type, void* dst)
     else if( type == Param::REAL )
         ss >> *(double*)dst;
     else if( type == Param::STRING )
-        ss >> *(string*)dst;
+        *(string*)dst = str;
     else
         throw cv::Exception(CV_StsBadArg, "unknown/unsupported parameter type", "", __FILE__, __LINE__);
 
@@ -185,13 +185,21 @@ CommandLineParser::CommandLineParser(int argc, const char* const argv[], const s
         p.def_value = l[1];
         p.help_message = impl->cat_string(l[2]);
         p.number = -1;
-        if (p.keys[0][0] == '@')
+        if (p.keys.size() <= 0)
         {
-            p.number = jj;
-            jj++;
+            impl->error = true;
+            impl->error_message = "Field KEYS could not be empty\n";
         }
+        else
+        {
+            if (p.keys[0][0] == '@')
+            {
+                p.number = jj;
+                jj++;
+            }
 
-        impl->data.push_back(p);
+            impl->data.push_back(p);
+        }
     }
 
     // parse argv
