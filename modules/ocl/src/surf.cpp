@@ -197,11 +197,11 @@ public:
             throw std::exception();
             //!FIXME
             // temp fix for missing min overload
-            oclMat temp(mask.size(), mask.type());
-            temp.setTo(Scalar::all(1.0));
-            //cv::ocl::min(mask, temp, surf_.mask1);           ///////// disable this
-            integral(surf_.mask1, surf_.maskSum);
-            bindImgTex(surf_.maskSum, maskSumTex);
+            //oclMat temp(mask.size(), mask.type());
+            //temp.setTo(Scalar::all(1.0));
+            ////cv::ocl::min(mask, temp, surf_.mask1);           ///////// disable this
+            //integral(surf_.mask1, surf_.maskSum);
+            //bindImgTex(surf_.maskSum, maskSumTex);
         }
     }
 
@@ -415,6 +415,11 @@ void cv::ocl::SURF_OCL::operator()(const oclMat &img, const oclMat &mask, oclMat
 {
     if (!img.empty())
     {
+		if (img.clCxt->impl->devName.find("Intel(R) HD Graphics") != string::npos)
+		{
+			cout << " Intel HD GPU device unsupported " << endl;
+			return;
+		}
         SURF_OCL_Invoker surf(*this, img, mask);
 
         surf.detectKeypoints(keypoints);
@@ -426,6 +431,11 @@ void cv::ocl::SURF_OCL::operator()(const oclMat &img, const oclMat &mask, oclMat
 {
     if (!img.empty())
     {
+		if (img.clCxt->impl->devName.find("Intel(R) HD Graphics") != string::npos)
+		{
+			cout << " Intel HD GPU device unsupported " << endl;
+			return;
+		}
         SURF_OCL_Invoker surf(*this, img, mask);
 
         if (!useProvidedKeypoints)
