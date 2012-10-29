@@ -20,14 +20,13 @@ public class Puzzle15Processor {
     private static final int GRID_AREA = GRID_SIZE * GRID_SIZE;
     private static final int GRID_EMPTY_INDEX = GRID_AREA - 1;
     private static final String TAG = "Puzzle15Processor";
+    private static final Scalar GRID_EMPTY_COLOR = new Scalar(0x33, 0x33, 0x33, 0xFF);
 
     private int[]   mIndexes;
     private int[]   mTextWidths;
     private int[]   mTextHeights;
 
     private Mat mRgba15;
-
-    private Mat[] mCells;
     private Mat[] mCells15;
     private boolean mShowTileNumbers = true;
 
@@ -54,8 +53,6 @@ public class Puzzle15Processor {
      */
     public synchronized void prepareGameSize(int width, int height) {
         mRgba15 = new Mat(height, width, CvType.CV_8UC4);
-
-        mCells = new Mat[GRID_AREA];
         mCells15 = new Mat[GRID_AREA];
 
         for (int i = 0; i < GRID_SIZE; i++) {
@@ -76,6 +73,7 @@ public class Puzzle15Processor {
      * the tiles as specified by mIndexes array
      */
     public synchronized Mat puzzleFrame(Mat inputPicture) {
+        Mat[] cells = new Mat[GRID_AREA];
         int rows = inputPicture.rows();
         int cols = inputPicture.cols();
 
@@ -85,7 +83,7 @@ public class Puzzle15Processor {
         for (int i = 0; i < GRID_SIZE; i++) {
             for (int j = 0; j < GRID_SIZE; j++) {
                 int k = i * GRID_SIZE + j;
-                mCells[k] = inputPicture.submat(i * inputPicture.rows() / GRID_SIZE, (i + 1) * inputPicture.rows() / GRID_SIZE, j * inputPicture.cols()/ GRID_SIZE, (j + 1) * inputPicture.cols() / GRID_SIZE);
+                cells[k] = inputPicture.submat(i * inputPicture.rows() / GRID_SIZE, (i + 1) * inputPicture.rows() / GRID_SIZE, j * inputPicture.cols()/ GRID_SIZE, (j + 1) * inputPicture.cols() / GRID_SIZE);
             }
         }
 
@@ -96,15 +94,18 @@ public class Puzzle15Processor {
         for (int i = 0; i < GRID_AREA; i++) {
             int idx = mIndexes[i];
             if (idx == GRID_EMPTY_INDEX)
-                mCells15[i].setTo(new Scalar(0x33, 0x33, 0x33, 0xFF));
+                mCells15[i].setTo(GRID_EMPTY_COLOR);
             else {
-                mCells[idx].copyTo(mCells15[i]);
+                cells[idx].copyTo(mCells15[i]);
                 if (mShowTileNumbers) {
                     Core.putText(mCells15[i], Integer.toString(1 + idx), new Point((cols / GRID_SIZE - mTextWidths[idx]) / 2,
                             (rows / GRID_SIZE + mTextHeights[idx]) / 2), 3/* CV_FONT_HERSHEY_COMPLEX */, 1, new Scalar(255, 0, 0, 255), 2);
                 }
             }
         }
+
+        for (int i = 0; i < GRID_AREA; i++)
+            cells[i].release();
 
         drawGrid(cols, rows, mRgba15);
 
