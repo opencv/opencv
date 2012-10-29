@@ -328,27 +328,66 @@ void CvCapture_FFMPEG::close()
 #define AVSEEK_FLAG_ANY 1
 #endif
 
-static void icvInitFFMPEG_internal()
+static int LockCallBack(void **mutex, AVLockOp op)
 {
-    static volatile bool initialized = false;
-    if( !initialized )
+    switch (op)
     {
-    #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 13, 0)
-        avformat_network_init();
-    #endif
+        case AV_LOCK_CREATE:
+            *mutex = reinterpret_cast<void*>(new cv::Mutex());
+            if (!*mutex)
+                return 1;
+        break;
 
+        case AV_LOCK_OBTAIN:
+            reinterpret_cast<cv::Mutex*>(*mutex)->lock();
+        break;
+
+        case AV_LOCK_RELEASE:
+            reinterpret_cast<cv::Mutex*>(*mutex)->unlock();
+        break;
+
+        case AV_LOCK_DESTROY:
+            cv::Mutex* cv_mutex = reinterpret_cast<cv::Mutex*>(*mutex);
+            delete cv_mutex;
+            cv_mutex = NULL;
+        break;
+    }
+    return 0;
+}
+
+class InternalFFMpegRegister
+{
+public:
+    static void Register()
+    {
+        static InternalFFMpegRegister init;
+    }
+    
+    ~InternalFFMpegRegister()
+    {
+        av_lockmgr_register(NULL);
+    }
+    
+private:
+    InternalFFMpegRegister()
+    {
+#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 13, 0)
+        avformat_network_init();
+#endif
+        
         /* register all codecs, demux and protocols */
         av_register_all();
-
+        
+        /* register a callback function for synchronization */
+        av_lockmgr_register(&LockCallBack);
+        
         av_log_set_level(AV_LOG_ERROR);
-
-        initialized = true;
     }
-}
+};
 
 bool CvCapture_FFMPEG::open( const char* _filename )
 {
-    icvInitFFMPEG_internal();
+    InternalFFMpegRegister::Register();
 
     unsigned i;
     bool valid = false;
@@ -1275,7 +1314,7 @@ void CvVideoWriter_FFMPEG::close()
 bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
                                  double fps, int width, int height, bool is_color )
 {
-    icvInitFFMPEG_internal();
+    InternalFFMpegRegister::Register();
 
     CodecID codec_id = CODEC_ID_NONE;
     int err, codec_pix_fmt;
