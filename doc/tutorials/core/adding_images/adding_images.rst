@@ -18,7 +18,7 @@ Theory
 
 .. note::
 
-   The explanation below belongs to the book `Computer Vision: Algorithms and Applications <http://szeliski.org/Book/>`_  by Richard Szeliski 
+   The explanation below belongs to the book `Computer Vision: Algorithms and Applications <http://szeliski.org/Book/>`_  by Richard Szeliski
 
 From our previous tutorial, we know already a bit of *Pixel operators*. An interesting dyadic (two-input) operator is the *linear blend operator*:
 
@@ -43,7 +43,7 @@ As usual, after the not-so-lengthy explanation, let's go to the code:
 
    int main( int argc, char** argv )
    {
-    double alpha = 0.5; double beta; double input; 
+    double alpha = 0.5; double beta; double input;
 
     Mat src1, src2, dst;
 
@@ -69,7 +69,7 @@ As usual, after the not-so-lengthy explanation, let's go to the code:
 
     beta = ( 1.0 - alpha );
     addWeighted( src1, alpha, src2, beta, 0.0, dst);
-  
+
     imshow( "Linear Blend", dst );
 
     waitKey(0);
@@ -99,10 +99,10 @@ Explanation
 #. Now we need to generate the :math:`g(x)` image. For this, the function :add_weighted:`addWeighted <>` comes quite handy:
 
    .. code-block:: cpp
-   
+
       beta = ( 1.0 - alpha );
       addWeighted( src1, alpha, src2, beta, 0.0, dst);
- 
+
    since :add_weighted:`addWeighted <>` produces:
 
    .. math::
@@ -110,12 +110,12 @@ Explanation
       dst = \alpha \cdot src1 + \beta \cdot src2 + \gamma
 
    In this case, :math:`\gamma` is the argument :math:`0.0` in the code above.
- 
-#. Create windows, show the images and wait for the user to end the program. 
+
+#. Create windows, show the images and wait for the user to end the program.
 
 Result
 =======
 
 .. image:: images/Adding_Images_Tutorial_Result_0.jpg
    :alt: Blending Images Tutorial - Final Result
-   :align: center 
+   :align: center

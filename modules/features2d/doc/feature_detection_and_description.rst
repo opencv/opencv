@@ -7,9 +7,7 @@ FAST
 ----
 Detects corners using the FAST algorithm
 
-.. ocv:function:: void FAST( InputArray image, vector<KeyPoint>& keypoints, int threshold, bool nonmaxSupression=true )
-
-.. ocv:function:: void FASTX( InputArray image, vector<KeyPoint>& keypoints, int threshold, bool nonmaxSupression, int type )
+.. ocv:function:: void FAST( InputArray image, vector<KeyPoint>& keypoints, int threshold, bool nonmaxSupression=true, type=FastFeatureDetector::TYPE_9_16 )
 
     :param image: grayscale image where keypoints (corners) are detected.
 

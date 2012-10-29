@@ -30,13 +30,10 @@ PERF_TEST_P(fast, detect, testing::Combine(
 
     declare.in(frame);
 
-    Ptr<FeatureDetector> fd = Algorithm::create<FeatureDetector>("Feature2D.FASTX");
-    fd->set("threshold", 20);
-    fd->set("nonmaxSuppression", true);
-    fd->set("type", type);
+    FastFeatureDetector fd(20, true, type);
     vector<KeyPoint> points;
 
-    TEST_CYCLE() fd->detect(frame, points);
+    TEST_CYCLE() fd.detect(frame, points);
 
     SANITY_CHECK_KEYPOINTS(points);
 }

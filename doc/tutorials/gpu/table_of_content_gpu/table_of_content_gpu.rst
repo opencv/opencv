@@ -7,7 +7,7 @@ Squeeze out every little computation power from your system by using the power o
 
 .. include:: ../../definitions/tocDefinitions.rst
 
-+ 
++
   .. tabularcolumns:: m{100pt} m{300pt}
   .. cssclass:: toctableopencv
 
@@ -18,7 +18,7 @@ Squeeze out every little computation power from your system by using the power o
 
                   *Author:* |Author_BernatG|
 
-                  This will give a good grasp on how to approach coding on the GPU module, once you already know how to handle the other modules. As a test case it will port the similarity methods from the tutorial :ref:`videoInputPSNRMSSIM` to the GPU. 
+                  This will give a good grasp on how to approach coding on the GPU module, once you already know how to handle the other modules. As a test case it will port the similarity methods from the tutorial :ref:`videoInputPSNRMSSIM` to the GPU.
 
   =============== ======================================================
 

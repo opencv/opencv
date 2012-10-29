@@ -152,23 +152,22 @@ static void getFlowField(const Mat& u, const Mat& v, Mat& flowField)
 int main(int argc, const char* argv[])
 {
     const char* keys =
-        "{ h            | help           | false | print help message }"
-        "{ l            | left           |       | specify left image }"
-        "{ r            | right          |       | specify right image }"
-        "{ gray         | gray           | false | use grayscale sources [PyrLK Sparse] }"
-        "{ win_size     | win_size       | 21    | specify windows size [PyrLK] }"
-        "{ max_level    | max_level      | 3     | specify max level [PyrLK] }"
-        "{ iters        | iters          | 30    | specify iterations count [PyrLK] }"
-        "{ points       | points         | 4000  | specify points count [GoodFeatureToTrack] }"
-        "{ min_dist     | min_dist       | 0     | specify minimal distance between points [GoodFeatureToTrack] }";
+        "{ h             help   |       | print help message }"
+        "{ l             left   |       | specify left image }"
+        "{ r             right  |       | specify right image }"
+        "{ gray                 |       | use grayscale sources [PyrLK Sparse] }"
+        "{ win_size             | 21    | specify windows size [PyrLK] }"
+        "{ max_level            | 3     | specify max level [PyrLK] }"
+        "{ iters                | 30    | specify iterations count [PyrLK] }"
+        "{ points               | 4000  | specify points count [GoodFeatureToTrack] }"
+        "{ min_dist             | 0     | specify minimal distance between points [GoodFeatureToTrack] }";
 
     CommandLineParser cmd(argc, argv, keys);
 
-    if (cmd.get<bool>("help"))
+    if (cmd.has("help") || !cmd.check())
     {
-        cout << "Usage: pyrlk_optical_flow [options]" << endl;
-        cout << "Avaible options:" << endl;
-        cmd.printParams();
+        cmd.printMessage();
+        cmd.printErrors();
         return 0;
     }
 
@@ -181,7 +180,7 @@ int main(int argc, const char* argv[])
         return -1;
     }
 
-    bool useGray = cmd.get<bool>("gray");
+    bool useGray = cmd.has("gray");
     int winSize = cmd.get<int>("win_size");
     int maxLevel = cmd.get<int>("max_level");
     int iters = cmd.get<int>("iters");

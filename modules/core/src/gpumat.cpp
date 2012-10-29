@@ -299,6 +299,7 @@ void cv::gpu::DeviceInfo::query()
     multi_processor_count_ = prop.multiProcessorCount;
     majorVersion_ = prop.major;
     minorVersion_ = prop.minor;
+    sharedMemPerBlock_ = prop.sharedMemPerBlock;
 }
 
 void cv::gpu::DeviceInfo::queryMemory(size_t& free_memory, size_t& total_memory) const

@@ -405,8 +405,8 @@ The number of pixels along the line is stored in ``LineIterator::count`` . The m
 
     for(int i = 0; i < it.count; i++, ++it)
         buf[i] = *(const Vec3b)*it;
-    
-    // alternative way of iterating through the line    
+
+    // alternative way of iterating through the line
     for(int i = 0; i < it2.count; i++, ++it2)
     {
         Vec3b val = img.at<Vec3b>(it2.pos());
@@ -452,7 +452,7 @@ polylines
 -------------
 Draws several polygonal curves.
 
-.. ocv:function:: void polylines( Mat& img, const Point** pts, const int* npts, int ncontours, bool isClosed, const Scalar& color, int thickness=1, int lineType=8, int shift=0 )
+.. ocv:function:: void polylines( Mat& img, const Point* const* pts, const int* npts, int ncontours, bool isClosed, const Scalar& color, int thickness=1, int lineType=8, int shift=0 )
 
 .. ocv:function:: void polylines( InputOutputArray img, InputArrayOfArrays pts, bool isClosed, const Scalar& color, int thickness=1, int lineType=8, int shift=0 )
 
@@ -481,6 +481,88 @@ Draws several polygonal curves.
     :param shift: Number of fractional bits in the vertex coordinates.
 
 The function ``polylines`` draws one or more polygonal curves.
+
+
+drawContours
+----------------
+Draws contours outlines or filled contours.
+
+.. ocv:function:: void drawContours( InputOutputArray image, InputArrayOfArrays contours, int contourIdx, const Scalar& color, int thickness=1, int lineType=8, InputArray hierarchy=noArray(), int maxLevel=INT_MAX, Point offset=Point() )
+
+.. ocv:pyfunction:: cv2.drawContours(image, contours, contourIdx, color[, thickness[, lineType[, hierarchy[, maxLevel[, offset]]]]]) -> None
+
+.. ocv:cfunction:: void cvDrawContours( CvArr * img, CvSeq* contour, CvScalar external_color, CvScalar hole_color, int max_level, int thickness=1, int line_type=8, CvPoint offset=cvPoint(0,0) )
+
+.. ocv:pyoldfunction:: cv.DrawContours(img, contour, external_color, hole_color, max_level, thickness=1, lineType=8, offset=(0, 0))-> None
+
+    :param image: Destination image.
+
+    :param contours: All the input contours. Each contour is stored as a point vector.
+
+    :param contourIdx: Parameter indicating a contour to draw. If it is negative, all the contours are drawn.
+
+    :param color: Color of the contours.
+
+    :param thickness: Thickness of lines the contours are drawn with. If it is negative (for example,  ``thickness=CV_FILLED`` ), the contour interiors are
+        drawn.
+
+    :param lineType: Line connectivity. See  :ocv:func:`line`  for details.
+
+    :param hierarchy: Optional information about hierarchy. It is only needed if you want to draw only some of the  contours (see  ``maxLevel`` ).
+
+    :param maxLevel: Maximal level for drawn contours. If it is 0, only
+        the specified contour is drawn. If it is 1, the function draws the contour(s) and all the nested contours. If it is 2, the function draws the contours, all the nested contours, all the nested-to-nested contours, and so on. This parameter is only taken into account when there is  ``hierarchy``  available.
+
+    :param offset: Optional contour shift parameter. Shift all the drawn contours by the specified  :math:`\texttt{offset}=(dx,dy)` .
+
+    :param contour: Pointer to the first contour.
+
+    :param external_color: Color of external contours.
+
+    :param hole_color: Color of internal contours (holes).
+
+The function draws contour outlines in the image if
+:math:`\texttt{thickness} \ge 0` or fills the area bounded by the contours if
+:math:`\texttt{thickness}<0` . The example below shows how to retrieve connected components from the binary image and label them: ::
+
+    #include "cv.h"
+    #include "highgui.h"
+
+    using namespace cv;
+
+    int main( int argc, char** argv )
+    {
+        Mat src;
+        // the first command-line parameter must be a filename of the binary
+        // (black-n-white) image
+        if( argc != 2 || !(src=imread(argv[1], 0)).data)
+            return -1;
+
+        Mat dst = Mat::zeros(src.rows, src.cols, CV_8UC3);
+
+        src = src > 1;
+        namedWindow( "Source", 1 );
+        imshow( "Source", src );
+
+        vector<vector<Point> > contours;
+        vector<Vec4i> hierarchy;
+
+        findContours( src, contours, hierarchy,
+            CV_RETR_CCOMP, CV_CHAIN_APPROX_SIMPLE );
+
+        // iterate through all the top-level contours,
+        // draw each connected component with its own random color
+        int idx = 0;
+        for( ; idx >= 0; idx = hierarchy[idx][0] )
+        {
+            Scalar color( rand()&255, rand()&255, rand()&255 );
+            drawContours( dst, contours, idx, color, CV_FILLED, 8, hierarchy );
+        }
+
+        namedWindow( "Components", 1 );
+        imshow( "Components", dst );
+        waitKey(0);
+    }
 
 
 

@@ -527,6 +527,7 @@ CV_EXPORTS void pow(const GpuMat& src, double power, GpuMat& dst, Stream& stream
 
 //! compares elements of two arrays (c = a <cmpop> b)
 CV_EXPORTS void compare(const GpuMat& a, const GpuMat& b, GpuMat& c, int cmpop, Stream& stream = Stream::Null());
+CV_EXPORTS void compare(const GpuMat& a, Scalar sc, GpuMat& c, int cmpop, Stream& stream = Stream::Null());
 
 //! performs per-elements bit-wise inversion
 CV_EXPORTS void bitwise_not(const GpuMat& src, GpuMat& dst, const GpuMat& mask=GpuMat(), Stream& stream = Stream::Null());
@@ -1324,12 +1325,10 @@ protected:
 
 ////////////////////////////////// BruteForceMatcher //////////////////////////////////
 
-class CV_EXPORTS BruteForceMatcher_GPU_base
+class CV_EXPORTS BFMatcher_GPU
 {
 public:
-    enum DistType {L1Dist = 0, L2Dist, HammingDist};
-
-    explicit BruteForceMatcher_GPU_base(DistType distType = L2Dist);
+    explicit BFMatcher_GPU(int norm = cv::NORM_L2);
 
     // Add descriptors to train descriptor collection
     void add(const std::vector<GpuMat>& descCollection);
@@ -1471,7 +1470,7 @@ public:
     void radiusMatch(const GpuMat& query, std::vector< std::vector<DMatch> >& matches, float maxDistance,
         const std::vector<GpuMat>& masks = std::vector<GpuMat>(), bool compactResult = false);
 
-    DistType distType;
+    int norm;
 
 private:
     std::vector<GpuMat> trainDescCollection;
@@ -1481,24 +1480,24 @@ template <class Distance>
 class CV_EXPORTS BruteForceMatcher_GPU;
 
 template <typename T>
-class CV_EXPORTS BruteForceMatcher_GPU< L1<T> > : public BruteForceMatcher_GPU_base
+class CV_EXPORTS BruteForceMatcher_GPU< L1<T> > : public BFMatcher_GPU
 {
 public:
-    explicit BruteForceMatcher_GPU() : BruteForceMatcher_GPU_base(L1Dist) {}
-    explicit BruteForceMatcher_GPU(L1<T> /*d*/) : BruteForceMatcher_GPU_base(L1Dist) {}
+    explicit BruteForceMatcher_GPU() : BFMatcher_GPU(NORM_L1) {}
+    explicit BruteForceMatcher_GPU(L1<T> /*d*/) : BFMatcher_GPU(NORM_L1) {}
 };
 template <typename T>
-class CV_EXPORTS BruteForceMatcher_GPU< L2<T> > : public BruteForceMatcher_GPU_base
+class CV_EXPORTS BruteForceMatcher_GPU< L2<T> > : public BFMatcher_GPU
 {
 public:
-    explicit BruteForceMatcher_GPU() : BruteForceMatcher_GPU_base(L2Dist) {}
-    explicit BruteForceMatcher_GPU(L2<T> /*d*/) : BruteForceMatcher_GPU_base(L2Dist) {}
+    explicit BruteForceMatcher_GPU() : BFMatcher_GPU(NORM_L2) {}
+    explicit BruteForceMatcher_GPU(L2<T> /*d*/) : BFMatcher_GPU(NORM_L2) {}
 };
-template <> class CV_EXPORTS BruteForceMatcher_GPU< Hamming > : public BruteForceMatcher_GPU_base
+template <> class CV_EXPORTS BruteForceMatcher_GPU< Hamming > : public BFMatcher_GPU
 {
 public:
-    explicit BruteForceMatcher_GPU() : BruteForceMatcher_GPU_base(HammingDist) {}
-    explicit BruteForceMatcher_GPU(Hamming /*d*/) : BruteForceMatcher_GPU_base(HammingDist) {}
+    explicit BruteForceMatcher_GPU() : BFMatcher_GPU(NORM_HAMMING) {}
+    explicit BruteForceMatcher_GPU(Hamming /*d*/) : BFMatcher_GPU(NORM_HAMMING) {}
 };
 
 ////////////////////////////////// CascadeClassifier_GPU //////////////////////////////////////////
@@ -1515,7 +1514,7 @@ public:
     void release();
 
     /* returns number of detected objects */
-    int detectMultiScale(const GpuMat& image, GpuMat& objectsBuf, double scaleFactor = 1.1, int minNeighbors = 4, Size minSize = Size());
+    int detectMultiScale(const GpuMat& image, GpuMat& objectsBuf, double scaleFactor = 1.2, int minNeighbors = 4, Size minSize = Size());
 
     bool findLargestObject;
     bool visualizeInPlace;
@@ -1523,12 +1522,14 @@ public:
     Size getClassifierSize() const;
 
 private:
-
     struct CascadeClassifierImpl;
     CascadeClassifierImpl* impl;
     struct HaarCascade;
     struct LbpCascade;
     friend class CascadeClassifier_GPU_LBP;
+
+public:
+    int detectMultiScale(const GpuMat& image, GpuMat& objectsBuf, Size maxObjectSize, Size minSize = Size(), double scaleFactor = 1.1, int minNeighbors = 4);
 };
 
 ////////////////////////////////// SURF //////////////////////////////////////////
@@ -1558,12 +1559,12 @@ public:
     int descriptorSize() const;
 
     //! upload host keypoints to device memory
-    void uploadKeypoints(const vector<KeyPoint>& keypoints, GpuMat& keypointsGPU);
+    static void uploadKeypoints(const vector<KeyPoint>& keypoints, GpuMat& keypointsGPU);
     //! download keypoints from device to host memory
-    void downloadKeypoints(const GpuMat& keypointsGPU, vector<KeyPoint>& keypoints);
+    static void downloadKeypoints(const GpuMat& keypointsGPU, vector<KeyPoint>& keypoints);
 
     //! download descriptors from device to host memory
-    void downloadDescriptors(const GpuMat& descriptorsGPU, vector<float>& descriptors);
+    static void downloadDescriptors(const GpuMat& descriptorsGPU, vector<float>& descriptors);
 
     //! finds the keypoints using fast hessian detector used in SURF
     //! supports CV_8UC1 images
@@ -1630,10 +1631,10 @@ public:
     void operator ()(const GpuMat& image, const GpuMat& mask, std::vector<KeyPoint>& keypoints);
 
     //! download keypoints from device to host memory
-    void downloadKeypoints(const GpuMat& d_keypoints, std::vector<KeyPoint>& keypoints);
+    static void downloadKeypoints(const GpuMat& d_keypoints, std::vector<KeyPoint>& keypoints);
 
     //! convert keypoints to KeyPoint vector
-    void convertKeypoints(const Mat& h_keypoints, std::vector<KeyPoint>& keypoints);
+    static void convertKeypoints(const Mat& h_keypoints, std::vector<KeyPoint>& keypoints);
 
     //! release temporary buffer's memory
     void release();
@@ -1704,10 +1705,9 @@ public:
     void operator()(const GpuMat& image, const GpuMat& mask, GpuMat& keypoints, GpuMat& descriptors);
 
     //! download keypoints from device to host memory
-    void downloadKeyPoints(GpuMat& d_keypoints, std::vector<KeyPoint>& keypoints);
-
+    static void downloadKeyPoints(const GpuMat& d_keypoints, std::vector<KeyPoint>& keypoints);
     //! convert keypoints to KeyPoint vector
-    void convertKeyPoints(Mat& d_keypoints, std::vector<KeyPoint>& keypoints);
+    static void convertKeyPoints(const Mat& d_keypoints, std::vector<KeyPoint>& keypoints);
 
     //! returns the descriptor size in bytes
     inline int descriptorSize() const { return kBytes; }
@@ -1855,62 +1855,28 @@ inline GoodFeaturesToTrackDetector_GPU::GoodFeaturesToTrackDetector_GPU(int maxC
 class CV_EXPORTS PyrLKOpticalFlow
 {
 public:
-    PyrLKOpticalFlow()
-    {
-        winSize = Size(21, 21);
-        maxLevel = 3;
-        iters = 30;
-        derivLambda = 0.5;
-        useInitialFlow = false;
-        minEigThreshold = 1e-4f;
-        getMinEigenVals = false;
-        isDeviceArch11_ = !DeviceInfo().supports(FEATURE_SET_COMPUTE_12);
-    }
+    PyrLKOpticalFlow();
 
     void sparse(const GpuMat& prevImg, const GpuMat& nextImg, const GpuMat& prevPts, GpuMat& nextPts,
         GpuMat& status, GpuMat* err = 0);
 
     void dense(const GpuMat& prevImg, const GpuMat& nextImg, GpuMat& u, GpuMat& v, GpuMat* err = 0);
 
+    void releaseMemory();
+
     Size winSize;
     int maxLevel;
     int iters;
-    double derivLambda;
     bool useInitialFlow;
-    float minEigThreshold;
-    bool getMinEigenVals;
-
-    void releaseMemory()
-    {
-        dx_calcBuf_.release();
-        dy_calcBuf_.release();
-
-        prevPyr_.clear();
-        nextPyr_.clear();
-
-        dx_buf_.release();
-        dy_buf_.release();
-
-        uPyr_.clear();
-        vPyr_.clear();
-    }
 
 private:
-    void calcSharrDeriv(const GpuMat& src, GpuMat& dx, GpuMat& dy);
-
-    void buildImagePyramid(const GpuMat& img0, vector<GpuMat>& pyr, bool withBorder);
-
-    GpuMat dx_calcBuf_;
-    GpuMat dy_calcBuf_;
-
     vector<GpuMat> prevPyr_;
     vector<GpuMat> nextPyr_;
 
-    GpuMat dx_buf_;
-    GpuMat dy_buf_;
+    GpuMat buf_;
 
-    vector<GpuMat> uPyr_;
-    vector<GpuMat> vPyr_;
+    GpuMat uPyr_[2];
+    GpuMat vPyr_[2];
 
     bool isDeviceArch11_;
 };

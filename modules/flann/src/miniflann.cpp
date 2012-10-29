@@ -331,7 +331,7 @@ buildIndex(void*& index, const Mat& data, const IndexParams& params, const Dista
 #if CV_NEON
 typedef ::cvflann::Hamming<uchar> HammingDistance;
 #else
-typedef ::cvflann::HammingLUT2 HammingDistance;
+typedef ::cvflann::HammingLUT HammingDistance;
 #endif
 
 Index::Index()

@@ -8,7 +8,7 @@ The package provides new OpenCV SDK that uses OpenCV Manager for library initial
 * Hardware specific optimizations for all supported platforms;
 * Trusted OpenCV library source. All packages with OpenCV are published on Google Play service;
 * Regular updates and bug fixes;
- 
+
 Package consists from Library Project for Java development with Eclipse, C++ headers and libraries for native application development, javadoc samples and prebuilt binaries for ARM and X86 platforms.
 To try new SDK on serial device with Google Play just install sample package and follow application messages (Google Play service access will be needed).
 TO start example on device without Google Play you need to install OpenCV manager package and OpenCV binary pack for your platform from apk folder before.

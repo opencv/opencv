@@ -98,16 +98,16 @@ How does it work?
                         u & v
                        \end{bmatrix}
                        \left (
-		       \displaystyle \sum_{x,y}
+               \displaystyle \sum_{x,y}
                        w(x,y)
                        \begin{bmatrix}
                         I_x^{2} & I_{x}I_{y} \\
                         I_xI_{y} & I_{y}^{2}
-		       \end{bmatrix}
-		       \right )
-		       \begin{bmatrix}
+               \end{bmatrix}
+               \right )
+               \begin{bmatrix}
                         u \\
-			v
+            v
                        \end{bmatrix}
 
    * Let's denote:
@@ -115,11 +115,11 @@ How does it work?
      .. math::
 
         M = \displaystyle \sum_{x,y}
-			      w(x,y)
-			      \begin{bmatrix}
-                        	I_x^{2} & I_{x}I_{y} \\
-                        	I_xI_{y} & I_{y}^{2}
-		       	       \end{bmatrix}
+                  w(x,y)
+                  \begin{bmatrix}
+                            I_x^{2} & I_{x}I_{y} \\
+                            I_xI_{y} & I_{y}^{2}
+                       \end{bmatrix}
 
    * So, our equation now is:
 
@@ -128,10 +128,10 @@ How does it work?
         E(u,v) \approx \begin{bmatrix}
                         u & v
                        \end{bmatrix}
-		       M
-		       \begin{bmatrix}
+               M
+               \begin{bmatrix}
                         u \\
-			v
+            v
                        \end{bmatrix}
 
 

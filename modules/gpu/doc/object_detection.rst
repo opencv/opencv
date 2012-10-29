@@ -271,7 +271,9 @@ gpu::CascadeClassifier_GPU::detectMultiScale
 ------------------------------------------------
 Detects objects of different sizes in the input image.
 
-.. ocv:function:: int gpu::CascadeClassifier_GPU::detectMultiScale( const GpuMat& image, GpuMat& objectsBuf, double scaleFactor=1.1, int minNeighbors=4, Size minSize=Size() )
+.. ocv:function:: int gpu::CascadeClassifier_GPU::detectMultiScale(const GpuMat& image, GpuMat& objectsBuf, double scaleFactor=1.2, int minNeighbors=4, Size minSize=Size())
+
+.. ocv:function:: int gpu::CascadeClassifier_GPU::detectMultiScale(const GpuMat& image, GpuMat& objectsBuf, Size maxObjectSize, Size minSize = Size(), double scaleFactor = 1.1, int minNeighbors = 4)
 
     :param image: Matrix of type  ``CV_8U``  containing an image where objects should be detected.
 
