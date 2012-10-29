@@ -307,5 +307,5 @@ void LatentSVMDetectorTest::run( int /* start_from */)
     ts->set_failed_test_info( cvtest::TS::OK);
 }
 
-TEST(Objdetect_LatentSVMDetector_c, regression) { CV_LatentSVMDetectorTest test; test.safe_run(); }
-TEST(Objdetect_LatentSVMDetector_cpp, regression) { LatentSVMDetectorTest test; test.safe_run(); }
+TEST(Objdetect_LatentSVMDetector_c, DISABLED_regression) { CV_LatentSVMDetectorTest test; test.safe_run(); }
+TEST(Objdetect_LatentSVMDetector_cpp, DISABLED_regression) { LatentSVMDetectorTest test; test.safe_run(); }

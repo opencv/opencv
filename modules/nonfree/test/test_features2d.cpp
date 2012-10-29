@@ -991,7 +991,7 @@ TEST( Features2d_DescriptorExtractor_SIFT, regression )
     test.safe_run();
 }
 
-TEST( Features2d_DescriptorExtractor_SURF, regression )
+TEST( Features2d_DescriptorExtractor_SURF, DISABLED_regression )
 {
     CV_DescriptorExtractorTest<L2<float> > test( "descriptor-surf",  0.05f,
                                                  DescriptorExtractor::create("SURF") );
@@ -1005,7 +1005,7 @@ TEST( Features2d_DescriptorExtractor_OpponentSIFT, regression )
     test.safe_run();
 }
 
-TEST( Features2d_DescriptorExtractor_OpponentSURF, regression )
+TEST( Features2d_DescriptorExtractor_OpponentSURF, DISABLED_regression )
 {
     CV_DescriptorExtractorTest<L2<float> > test( "descriptor-opponent-surf",  0.3f,
                                                  DescriptorExtractor::create("OpponentSURF") );
