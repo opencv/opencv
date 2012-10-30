@@ -628,7 +628,7 @@ bool DpSeamFinder::getSeamTips(int comp1, int comp2, Point &p1, Point &p2)
     {
         for (int j = i+1; j < nlabels; ++j)
         {
-            double size1 = points[i].size(), size2 = points[j].size();
+            double size1 = static_cast<double>(points[i].size()), size2 = static_cast<double>(points[j].size());
             double cx1 = cvRound(sum[i].x / size1), cy1 = cvRound(sum[i].y / size1);
             double cx2 = cvRound(sum[j].x / size2), cy2 = cvRound(sum[j].y / size1);
 
@@ -648,7 +648,7 @@ bool DpSeamFinder::getSeamTips(int comp1, int comp2, Point &p1, Point &p2)
 
     for (int i = 0; i < 2; ++i)
     {
-        double size = points[idx[i]].size();
+        double size = static_cast<double>(points[idx[i]].size());
         double cx = cvRound(sum[idx[i]].x / size);
         double cy = cvRound(sum[idx[i]].y / size);
 
@@ -1036,7 +1036,7 @@ void DpSeamFinder::updateLabelsUsingSeam(
 
     for (map<int, int>::iterator itr = connect2.begin(); itr != connect2.end(); ++itr)
     {
-        double len = contours_[comp1].size();
+        double len = static_cast<double>(contours_[comp1].size());
         isAdjComp[itr->first] = itr->second / len > 0.05 && connectOther.find(itr->first)->second / len < 0.1;
     }
 

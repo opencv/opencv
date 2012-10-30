@@ -42,6 +42,17 @@
 
 #include "precomp.hpp"
 
+#if defined __linux__ || defined __APPLE__
+    #include <unistd.h>
+    #include <stdio.h>
+    #include <sys/types.h>
+    #if defined ANDROID
+        #include <sys/sysconf.h>
+    #else
+        #include <sys/sysctl.h>
+    #endif
+#endif
+
 #ifdef _OPENMP
     #define HAVE_OPENMP
 #endif
@@ -85,7 +96,6 @@
         #include <omp.h>
     #elif defined HAVE_GCD
         #include <dispatch/dispatch.h>
-        #include <sys/sysctl.h>
         #include <pthread.h>
     #elif defined HAVE_CONCURRENCY
         #include <ppl.h>
@@ -312,6 +322,7 @@ int cv::getNumThreads(void)
 
 void cv::setNumThreads( int threads )
 {
+    (void)threads;
 #ifdef HAVE_PARALLEL_FRAMEWORK
     numThreads = threads;
 #endif
@@ -351,8 +362,8 @@ void cv::setNumThreads( int threads )
     else if (pplScheduler == 0 || 1 + pplScheduler->GetNumberOfVirtualProcessors() != (unsigned int)threads)
     {
         pplScheduler = Concurrency::Scheduler::Create(Concurrency::SchedulerPolicy(2,
-                       Concurrency::PolicyElementKey::MinConcurrency, threads-1,
-                       Concurrency::PolicyElementKey::MaxConcurrency, threads-1));
+                       Concurrency::MinConcurrency, threads-1,
+                       Concurrency::MaxConcurrency, threads-1));
     }
 
 #endif

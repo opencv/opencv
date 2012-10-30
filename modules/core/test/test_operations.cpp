@@ -69,13 +69,14 @@ protected:
 
     bool SomeMatFunctions();
     bool TestMat();
-    template<typename _Tp> void TestType(Size sz, _Tp value=_Tp(1.f));
+    template<typename _Tp> void TestType(Size sz, _Tp value);
     bool TestTemplateMat();
     bool TestMatND();
     bool TestSparseMat();
     bool TestVec();
     bool TestMatxMultiplication();
     bool TestSubMatAccess();
+    bool TestExp();
     bool TestSVD();
     bool operations1();
 
@@ -115,9 +116,12 @@ template<typename _Tp> void CV_OperationsTest::TestType(Size sz, _Tp value)
               m.elemSize() == sizeof(_Tp) && m.step == m.elemSize()*m.cols);
     for( int y = 0; y < sz.height; y++ )
         for( int x = 0; x < sz.width; x++ )
-            m(y, x) = value;
+        {
+            m(y,x) = value;
+        }
 
-    CV_Assert( sum(m.reshape(1,1))[0] == (double)sz.width*sz.height );
+    double s = sum(Mat(m).reshape(1))[0];
+    CV_Assert( s == (double)sz.width*sz.height );
 }
 
 bool CV_OperationsTest::TestMat()
@@ -794,15 +798,16 @@ bool CV_OperationsTest::TestTemplateMat()
         }
         CV_Assert( badarg_catched );
 
-#include <iostream>
-#include <opencv2/core/core.hpp>
-
         Size size(2, 5);
-        TestType<float>(size);
-        TestType<cv::Vec3f>(size);
-        TestType<cv::Matx31f>(size);
-        TestType<cv::Matx41f>(size);
-        TestType<cv::Matx32f>(size);
+        TestType<float>(size, 1.f);
+        cv::Vec3f val1 = 1.f;
+        TestType<cv::Vec3f>(size, val1);
+        cv::Matx31f val2 = 1.f;
+        TestType<cv::Matx31f>(size, val2);
+        cv::Matx41f val3 = 1.f;
+        TestType<cv::Matx41f>(size, val3);
+        cv::Matx32f val4 = 1.f;
+        TestType<cv::Matx32f>(size, val4);
     }
     catch (const test_excep& e)
     {
@@ -1003,6 +1008,17 @@ bool CV_OperationsTest::operations1()
 }
 
 
+bool CV_OperationsTest::TestExp()
+{
+    Mat1f tt = Mat1f::ones(4,2);
+    Mat1f outs;
+    exp(-tt, outs);
+    Mat1f tt2 = Mat1f::ones(4,1), outs2;
+    exp(-tt2, outs2);
+    return true;
+}
+
+
 bool CV_OperationsTest::TestSVD()
 {
     try
@@ -1077,6 +1093,9 @@ void CV_OperationsTest::run( int /* start_from */)
         return;
 
     if (!TestSubMatAccess())
+        return;
+
+    if (!TestExp())
         return;
 
     if (!TestSVD())

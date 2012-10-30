@@ -54,7 +54,7 @@ using namespace std;
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // BroxOpticalFlow
-
+extern string workdir;
 #define BROX_OPTICAL_FLOW_DUMP_FILE            "opticalflow/brox_optical_flow.bin"
 #define BROX_OPTICAL_FLOW_DUMP_FILE_CC20       "opticalflow/brox_optical_flow_cc20.bin"
 
@@ -78,10 +78,10 @@ PARAM_TEST_CASE(Sparse, bool, bool)
 
 TEST_P(Sparse, Mat)
 {
-    cv::Mat frame0 = readImage("../../../samples/gpu/rubberwhale1.png", useGray ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
+    cv::Mat frame0 = readImage(workdir + "../gpu/rubberwhale1.png", useGray ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
     ASSERT_FALSE(frame0.empty());
 
-    cv::Mat frame1 = readImage("../../../samples/gpu/rubberwhale2.png", useGray ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
+    cv::Mat frame1 = readImage(workdir + "../gpu/rubberwhale2.png", useGray ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
     ASSERT_FALSE(frame1.empty());
 
     cv::Mat gray_frame;

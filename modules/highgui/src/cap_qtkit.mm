@@ -525,6 +525,9 @@ bool CvCaptureCAM::setProperty(int property_id, double value) {
   didOutputVideoFrame:(CVImageBufferRef)videoFrame
      withSampleBuffer:(QTSampleBuffer *)sampleBuffer
        fromConnection:(QTCaptureConnection *)connection {
+    (void)captureOutput;
+    (void)sampleBuffer;
+    (void)connection;
 
     CVBufferRetain(videoFrame);
     CVImageBufferRef imageBufferToRelease  = mCurrentImageBuffer;
@@ -541,6 +544,9 @@ bool CvCaptureCAM::setProperty(int property_id, double value) {
 - (void)captureOutput:(QTCaptureOutput *)captureOutput
 didDropVideoFrameWithSampleBuffer:(QTSampleBuffer *)sampleBuffer
        fromConnection:(QTCaptureConnection *)connection {
+    (void)captureOutput;
+    (void)sampleBuffer;
+    (void)connection;
     cout << "Camera dropped frame!" << endl;
 }
 

@@ -2,7 +2,7 @@ if(APPLE)
     set(OPENCL_FOUND YES)
     set(OPENCL_LIBRARIES "-framework OpenCL")
 else()
-    find_package(OpenCL QUIET)
+    #find_package(OpenCL QUIET)
     if(WITH_OPENCLAMDFFT)
             find_path(CLAMDFFT_INCLUDE_DIR
                 NAMES clAmdFft.h)

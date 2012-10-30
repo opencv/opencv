@@ -126,7 +126,7 @@ TEST(OpenCVEngineTest, GetPathForExecHWNewVersion)
     EXPECT_EQ(0, result.size());
 }
 
-#else
+#else // armeabi
 TEST(OpenCVEngineTest, GetPathForExecHWExistVersion)
 {
     sp<IOpenCVEngine> Engine = InitConnect();

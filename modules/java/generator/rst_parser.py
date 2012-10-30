@@ -202,8 +202,8 @@ class RstParser(object):
 
             # skip lines if line-skipping mode is activated
             if skip_code_lines:
-        if not l:
-            continue
+                if not l:
+                    continue
                 if l.startswith(" "):
                     None
                 else:
@@ -293,19 +293,19 @@ class RstParser(object):
 
             # record other lines as long description
             if (skip_code_lines):
-        ll = ll.replace("/*", "/ *")
-        ll = ll.replace("*/", "* /")
-        if (was_code_line):
-            func["long"] = func.get("long", "") + "\n" + ll + "\n"
-        else:
-            was_code_line = True;
-            func["long"] = func.get("long", "") + ll +"\n<code>\n\n // C++ code:\n\n"
-        else:
-        if (was_code_line):
-            func["long"] = func.get("long", "") + "\n" + ll + "\n</code>\n";
-            was_code_line = False;
-        else:
-            func["long"] = func.get("long", "") + "\n" + ll
+                ll = ll.replace("/*", "/ *")
+                ll = ll.replace("*/", "* /")
+                if (was_code_line):
+                    func["long"] = func.get("long", "") + "\n" + ll + "\n"
+                else:
+                    was_code_line = True;
+                    func["long"] = func.get("long", "") + ll +"\n<code>\n\n // C++ code:\n\n"
+            else:
+                if (was_code_line):
+                    func["long"] = func.get("long", "") + "\n" + ll + "\n</code>\n";
+                    was_code_line = False;
+                else:
+                    func["long"] = func.get("long", "") + "\n" + ll
         # endfor l in lines
 
         if fdecl.balance != 0:

@@ -1085,7 +1085,7 @@ Calculates eigenvalues and eigenvectors of a symmetric matrix.
 
 .. ocv:function:: bool eigen(InputArray src, OutputArray eigenvalues, OutputArray eigenvectors, int lowindex=-1,int highindex=-1)
 
-.. ocv:pyfunction:: cv2.eigen(src, calculateEigenvectors[, eigenvalues[, eigenvectors]]) -> retval, eigenvalues, eigenvectors
+.. ocv:pyfunction:: cv2.eigen(src, computeEigenvectors[, eigenvalues[, eigenvectors]]) -> retval, eigenvalues, eigenvectors
 
 .. ocv:cfunction:: void cvEigenVV( CvArr* mat, CvArr* evects, CvArr* evals, double eps=0, int lowindex=-1, int highindex=-1 )
 

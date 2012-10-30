@@ -150,8 +150,6 @@ namespace
 
             sumOffset = bindSumTex(surf_.sum);
 
-            return;
-
             if (use_mask)
             {
                 min(mask, 1.0, surf_.mask1);

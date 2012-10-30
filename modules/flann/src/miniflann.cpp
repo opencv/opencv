@@ -500,7 +500,7 @@ int runRadiusSearch_(void* index, const Mat& query, Mat& indices, Mat& dists,
     ::cvflann::Matrix<DistanceType> _dists((DistanceType*)dists.data, dists.rows, dists.cols);
 
     return ((IndexType*)index)->radiusSearch(_query, _indices, _dists,
-                                            saturate_cast<DistanceType>(radius),
+                                            saturate_cast<float>(radius),
                                             (const ::cvflann::SearchParams&)get_params(params));
 }
 
