@@ -1,3 +1,5 @@
+// Based on http://www.phoboslab.org/log/2009/07/uvc-camera-control-for-mac-os-x
+
 #import "UVCCameraControl.h"
 
 
@@ -5,23 +7,28 @@ const uvc_controls_t uvc_controls = {
     // Camera Terminal Control Selectors
     .autoExposure = {
         .unit = UVC_INPUT_TERMINAL_ID,
-        .selector = 0x02,
+        .selector = 0x02, // CT_AE_MODE_CONTROL
         .size = 1,
     },
     .exposure = {
         .unit = UVC_INPUT_TERMINAL_ID,
-        .selector = 0x04,
+        .selector = 0x04, // CT_EXPOSURE_TIME_ABSOLUTE_CONTROL
         .size = 4,
     },
     .focus = {
         .unit = UVC_INPUT_TERMINAL_ID,
-        .selector = 0x06,
+        .selector = 0x06, // CT_FOCUS_ABSOLUTE_CONTROL
         .size = 2,
     },
     .autoFocus = {
         .unit = UVC_INPUT_TERMINAL_ID,
-        .selector = 0x08,
+        .selector = 0x08, // CT_FOCUS_AUTO_CONTROL
         .size = 1,
+    },
+    .zoom = {
+        .unit = UVC_INPUT_TERMINAL_ID,
+        .selector = 0x0B, // CT_ZOOM_ABSOLUTE_CONTROL
+        .size = 2,
     },
 
     // Processing Unit Control Selectors
@@ -278,7 +285,7 @@ const uvc_controls_t uvc_controls = {
 
 // Used to de-/normalize values
 - (double)mapValue:(double)value fromMin:(double)fromMin max:(double)fromMax toMin:(double)toMin max:(double)toMax {
- return toMin + (toMax - toMin) * ((value - fromMin) / (fromMax - fromMin));
+    return toMin + (toMax - toMin) * ((value - fromMin) / (fromMax - fromMin));
 }
 
 - (long)getInfoForControl:(const uvc_control_info_t *)control {
@@ -309,15 +316,6 @@ const uvc_controls_t uvc_controls = {
                          at:control->unit];
 }
 
-// - (int)getRangeValueForControl:(const uvc_control_info_t *)control {
-//  // TODO: Cache the range somewhere?
-//  uvc_range_t range = [self getRangeForControl:control];
-
-//  int intval = [self getDataFor:UVC_GET_CUR withLength:control->size fromSelector:control->selector at:control->unit];
-//  return [self mapValue:intval fromMin:range.min max:range.max toMin:0 max:1];
-// }
-
-
 - (BOOL)setValue:(long)value forControl:(const uvc_control_info_t *)control {
     return [self setData:value
               withLength:control->size
@@ -328,27 +326,11 @@ const uvc_controls_t uvc_controls = {
 - (void)updateCapabilities {
     supportedAutoExposure = [self getResolutionForControl:&uvc_controls.autoExposure];
     focusRange = [self getRangeForControl:&uvc_controls.focus];
+    exposureRange = [self getRangeForControl:&uvc_controls.exposure];
 }
 
 
-// Set a normalized value
-// - (BOOL)setValueInRange:(float)value forControl:(const uvc_control_info_t *)control {
-//  // TODO: Cache the range somewhere?
-//  uvc_range_t range = [self getRangeForControl:control];
-
-//  int intval = [self mapValue:value fromMin:0 max:1 toMin:range.min max:range.max];
-//  return [self setData:intval
-//            withLength:control->size
-//           forSelector:control->selector
-//                    at:control->unit];
-// }
-
-
-
-// ================================================================
-
-// Set/Get the actual values for the camera
-//
+// === Exposure ================================================================
 
 // From USB Video Class spec:
 #define UVC_AUTO_EXPOSURE_MANUAL    0x01 // Manual Mode – manual Exposure Time, manual Iris
@@ -375,6 +357,20 @@ const uvc_controls_t uvc_controls = {
     return (value >= UVC_AUTO_EXPOSURE_AUTO ? YES : NO);
 }
 
+- (BOOL)setExposure:(double)value {
+    if (![self getAutoExposure]) {
+        return [self setValue:value forControl:&uvc_controls.exposure];
+    } else {
+        return NO;
+    }
+}
+
+- (double)getExposure {
+    return [self getValueForControl:&uvc_controls.exposure];
+}
+
+// === Focus ===================================================================
+
 - (BOOL)setAutoFocus:(BOOL)value {
     return [self setValue:(value ? 0x01 : 0x00) forControl:&uvc_controls.autoFocus];
 }
@@ -399,52 +395,5 @@ const uvc_controls_t uvc_controls = {
     return [self mapValue:focus fromMin:focusRange.min max:focusRange.max toMin:0 max:1];
 }
 
-- (BOOL)setExposure:(double)value {
- return [self setValue:value forControl:&uvc_controls.exposure];
-}
-
-- (double)getExposure {
- return [self getValueForControl:&uvc_controls.exposure];
-}
-
-// - (BOOL)setGain:(float)value {
-//  return [self setValue:value forControl:&uvc_controls.gain];
-// }
-
-// - (float)getGain {
-//  return [self getValueForControl:&uvc_controls.gain];
-// }
-
-// - (BOOL)setBrightness:(float)value {
-//  return [self setValue:value forControl:&uvc_controls.brightness];
-// }
-
-// - (float)getBrightness {
-//  return [self getValueForControl:&uvc_controls.brightness];
-// }
-
-// - (BOOL)setContrast:(float)value {
-//  return [self setValue:value forControl:&uvc_controls.contrast];
-// }
-
-// - (float)getContrast {
-//  return [self getValueForControl:&uvc_controls.contrast];
-// }
-
-// - (BOOL)setSaturation:(float)value {
-//  return [self setValue:value forControl:&uvc_controls.saturation];
-// }
-
-// - (float)getSaturation {
-//  return [self getValueForControl:&uvc_controls.saturation];
-// }
-
-// - (BOOL)setSharpness:(float)value {
-//  return [self setValue:value forControl:&uvc_controls.sharpness];
-// }
-
-// - (float)getSharpness {
-//  return [self getValueForControl:&uvc_controls.sharpness];
-// }
 
 @end

@@ -4,7 +4,6 @@
 
 void setExposure(int value, void *cap_ptr) {
     cv::VideoCapture& cap = *(cv::VideoCapture *)cap_ptr;
-    fprintf(stderr, "exposure: %d\n", value);
 
     int exposure = 1;
     switch (value) {
@@ -24,8 +23,6 @@ void setExposure(int value, void *cap_ptr) {
         case 13: exposure = 5000; break;
         case 14: exposure = 10000; break;
     }
-
-    fprintf(stderr, "setting to exposure %d\n", exposure);
 
     cap.set(CV_CAP_PROP_EXPOSURE, exposure);
 }
@@ -51,6 +48,7 @@ int main(int argc, const char *argv[]) {
     int temperature = 50;
 
     cv::createTrackbar("focus", "image", &focus, 100, setFocus, (void *)&cap);
+    cv::createTrackbar("exposure", "image", &focus, 14, setExposure, (void *)&cap);
 
     setExposure(7, (void *)&cap);
     setFocus(focus, (void *)&cap);
@@ -64,9 +62,6 @@ int main(int argc, const char *argv[]) {
         char key = cv::waitKey(30);
         if (key == 'q' || key == 27) break;
         if (key == 'f') cap.set(CV_CAP_PROP_AUTO_FOCUS, 1 - cap.get(CV_CAP_PROP_AUTO_FOCUS));
-        // if (key == 't') cap.set(CV_CAP_PROP_AUTO_TEMPERATURE, 1 - cap.get(CV_CAP_PROP_AUTO_TEMPERATURE));
-
-        // fprintf(stderr, "focus: %f, autofocus: %f\n", cap.get(CV_CAP_PROP_FOCUS), cap.get(CV_CAP_PROP_AUTO_FOCUS));
-        // fprintf(stderr, "temperature: %f, autotemperature: %f\n", cap.get(CV_CAP_PROP_TEMPERATURE), cap.get(CV_CAP_PROP_AUTO_TEMPERATURE));
+        if (key == 'e') cap.set(CV_CAP_PROP_AUTO_EXPOSURE, 1 - cap.get(CV_CAP_PROP_AUTO_EXPOSURE));
     }
 }

@@ -362,7 +362,6 @@ int CvCaptureCAM::startCaptureDevice(int cameraNum) {
 
         UInt32 locationID = 0;
         sscanf([[device uniqueID] UTF8String], "0x%8x", (unsigned int *)&locationID);
-        fprintf(stderr, "locationID: %x\n", locationID);
         cameraControl = [[UVCCameraControl alloc] initWithLocationID:locationID];
 
         mCaptureDecompressedVideoOutput = [[QTCaptureDecompressedVideoOutput alloc] init];
@@ -437,6 +436,8 @@ double CvCaptureCAM::getProperty(int property_id){
             return height;
         case CV_CAP_PROP_AUTO_EXPOSURE:
             return [cameraControl getAutoExposure];
+        case CV_CAP_PROP_EXPOSURE:
+            return [cameraControl getExposure];
         case CV_CAP_PROP_AUTO_FOCUS:
             return [cameraControl getAutoFocus];
         case CV_CAP_PROP_FOCUS:

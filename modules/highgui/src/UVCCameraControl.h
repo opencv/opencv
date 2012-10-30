@@ -37,6 +37,7 @@ typedef struct {
 	uvc_control_info_t exposure;
 	uvc_control_info_t focus;
 	uvc_control_info_t autoFocus;
+	uvc_control_info_t zoom;
 	uvc_control_info_t brightness;
 	uvc_control_info_t contrast;
 	uvc_control_info_t gain;
@@ -53,6 +54,7 @@ typedef struct {
 
 	long supportedAutoExposure;
 	uvc_range_t focusRange;
+	uvc_range_t exposureRange;
 }
 
 
@@ -67,8 +69,8 @@ typedef struct {
 - (double)mapValue:(double)value fromMin:(double)fromMin max:(double)fromMax toMin:(double)toMin max:(double)toMax;
 - (long)getInfoForControl:(const uvc_control_info_t *)control;
 - (long)getResolutionForControl:(const uvc_control_info_t *)control;
-- (long)getDefaultValueForControl:(const uvc_control_info_t *)control;
 - (long)getValueForControl:(const uvc_control_info_t *)control;
+- (long)getDefaultValueForControl:(const uvc_control_info_t *)control;
 - (BOOL)setValue:(long)value forControl:(const uvc_control_info_t *)control;
 - (void)updateCapabilities;
 
@@ -82,15 +84,5 @@ typedef struct {
 - (BOOL)setFocus:(double)value;
 - (double)getFocus;
 
-// - (BOOL)setGain:(double)value;
-// - (double)getGain;
-// - (BOOL)setBrightness:(double)value;
-// - (double)getBrightness;
-// - (BOOL)setContrast:(double)value;
-// - (double)getContrast;
-// - (BOOL)setSaturation:(double)value;
-// - (double)getSaturation;
-// - (BOOL)setSharpness:(double)value;
-// - (double)getSharpness;
 
 @end
