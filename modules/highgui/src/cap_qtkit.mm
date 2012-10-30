@@ -33,6 +33,8 @@
 #include <iostream>
 #import <QTKit/QTKit.h>
 
+#import "UVCCameraControl.mm"
+
 using namespace std;
 
 /********************** Declaration of class headers ************************/
@@ -109,6 +111,7 @@ private:
     QTCaptureDeviceInput        *mCaptureDeviceInput;
     QTCaptureDecompressedVideoOutput    *mCaptureDecompressedVideoOutput;
     CaptureDelegate* capture;
+    UVCCameraControl *cameraControl;
 
     int startCaptureDevice(int cameraNum);
     void stopCaptureDevice();
@@ -298,6 +301,7 @@ void CvCaptureCAM::stopCaptureDevice() {
     [mCaptureSession stopRunning];
 
     QTCaptureDevice *device = [mCaptureDeviceInput device];
+    [cameraControl release];
     if ([device isOpen])  [device close];
 
     [mCaptureSession release];
@@ -356,6 +360,10 @@ int CvCaptureCAM::startCaptureDevice(int cameraNum) {
             return 0;
         }
 
+        UInt32 locationID = 0;
+        sscanf([[device uniqueID] UTF8String], "0x%8x", (unsigned int *)&locationID);
+        fprintf(stderr, "locationID: %x\n", locationID);
+        cameraControl = [[UVCCameraControl alloc] initWithLocationID:locationID];
 
         mCaptureDecompressedVideoOutput = [[QTCaptureDecompressedVideoOutput alloc] init];
         [mCaptureDecompressedVideoOutput setDelegate:capture];
@@ -427,6 +435,12 @@ double CvCaptureCAM::getProperty(int property_id){
             return width;
         case CV_CAP_PROP_FRAME_HEIGHT:
             return height;
+        case CV_CAP_PROP_AUTO_EXPOSURE:
+            return [cameraControl getAutoExposure];
+        case CV_CAP_PROP_AUTO_FOCUS:
+            return [cameraControl getAutoFocus];
+        case CV_CAP_PROP_FOCUS:
+            return [cameraControl getFocus];
         default:
             return 0;
     }
@@ -455,6 +469,14 @@ bool CvCaptureCAM::setProperty(int property_id, double value) {
                 settingHeight = 0;
             }
             return true;
+        case CV_CAP_PROP_AUTO_EXPOSURE:
+            return [cameraControl setAutoExposure: value ? TRUE : FALSE];
+        case CV_CAP_PROP_EXPOSURE:
+            return [cameraControl setExposure: value];
+        case CV_CAP_PROP_AUTO_FOCUS:
+            return [cameraControl setAutoFocus: value];
+        case CV_CAP_PROP_FOCUS:
+            return [cameraControl setFocus: value];
         case DISABLE_AUTO_RESTART:
             disableAutoRestart = value;
             return 1;

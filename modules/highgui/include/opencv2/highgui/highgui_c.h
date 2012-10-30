@@ -380,6 +380,7 @@ enum
     CV_CAP_PROP_ROLL          =35,
     CV_CAP_PROP_IRIS          =36,
     CV_CAP_PROP_SETTINGS      =37,
+    CV_CAP_PROP_AUTO_FOCUS    =38,
 
     CV_CAP_PROP_AUTOGRAB      =1024, // property for highgui class CvCapture_Android only
     CV_CAP_PROP_SUPPORTED_PREVIEW_SIZES_STRING=1025, // readonly, tricky property, returns cpnst char* indeed
