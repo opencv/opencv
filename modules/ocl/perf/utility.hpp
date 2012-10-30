@@ -45,7 +45,7 @@
 #ifdef PRINT_KERNEL_RUN_TIME
 #define LOOP_TIMES 1
 #else
-#define LOOP_TIMES 100
+#define LOOP_TIMES 1
 #endif
 #define MWIDTH 1920
 #define MHEIGHT 1080

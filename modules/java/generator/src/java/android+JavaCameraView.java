@@ -40,6 +40,8 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
     private Thread mThread;
     private boolean mStopThread;
 
+    private SurfaceTexture mSurfaceTexture;
+
     public static class JavaCameraSizeAccessor implements ListItemAccessor {
 
         public int getWidth(Object obj) {
@@ -101,6 +103,7 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
                 Size frameSize = calculateCameraFrameSize(sizes, new JavaCameraSizeAccessor(), width, height);
 
                 params.setPreviewFormat(ImageFormat.NV21);
+                Log.d(TAG, "Set preview size to " + Integer.valueOf((int)frameSize.width) + "x" + Integer.valueOf((int)frameSize.height));
                 params.setPreviewSize((int)frameSize.width, (int)frameSize.height);
 
                 List<String> FocusModes = params.getSupportedFocusModes();
@@ -127,9 +130,9 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
                 AllocateCache();
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
-                    SurfaceTexture tex = new SurfaceTexture(MAGIC_TEXTURE_ID);
+                    mSurfaceTexture = new SurfaceTexture(MAGIC_TEXTURE_ID);
                     getHolder().setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
-                    mCamera.setPreviewTexture(tex);
+                    mCamera.setPreviewTexture(mSurfaceTexture);
                 } else
                    mCamera.setPreviewDisplay(null);
             } catch (IOException e) {

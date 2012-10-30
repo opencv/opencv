@@ -4,8 +4,8 @@ import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.core.Mat;
+import org.opencv.android.CameraBridgeViewBase;
 import org.opencv.android.CameraBridgeViewBase.CvCameraViewListener;
-import org.opencv.android.JavaCameraView;
 
 import android.os.Bundle;
 import android.app.Activity;
@@ -18,13 +18,13 @@ import android.view.View;
 
 public class Puzzle15Activity extends Activity implements CvCameraViewListener, View.OnTouchListener {
 
-    private static final String TAG = "Sample::Puzzle15::Activity";
+    private static final String  TAG = "Sample::Puzzle15::Activity";
 
-    private JavaCameraView mOpenCvCameraView;
-    private Puzzle15Processor mPuzzle15;
+    private CameraBridgeViewBase mOpenCvCameraView;
+    private Puzzle15Processor    mPuzzle15;
 
-    private int mGameWidth;
-    private int mGameHeight;
+    private int                  mGameWidth;
+    private int                  mGameHeight;
 
     private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this) {
 
@@ -54,7 +54,7 @@ public class Puzzle15Activity extends Activity implements CvCameraViewListener, 
 
         setContentView(R.layout.activity_puzzle15);
 
-        mOpenCvCameraView = (JavaCameraView) findViewById(R.id.puzzle_activity_surface_view);
+        mOpenCvCameraView = (CameraBridgeViewBase) findViewById(R.id.puzzle_activity_surface_view);
         mOpenCvCameraView.setCvCameraViewListener(this);
         mPuzzle15 = new Puzzle15Processor();
         mPuzzle15.prepareNewGame();

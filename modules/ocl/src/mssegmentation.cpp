@@ -150,7 +150,7 @@ namespace
     // Implementation
     //
 
-    DjSets DjSets::operator = (const DjSets &obj)
+    DjSets DjSets::operator = (const DjSets &/*obj*/)
     {
         //cout << "Invalid DjSets constructor\n";
         CV_Error(-1, "Invalid DjSets constructor\n");

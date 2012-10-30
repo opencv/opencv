@@ -54,11 +54,11 @@ using namespace cvtest;
 using namespace testing;
 using namespace std;
 
-extern std::string workdir;
+#define FILTER_IMAGE "../../../samples/gpu/road.png"
 
 TEST(SURF, Performance)
 {
-    cv::Mat img = readImage(workdir+"lena.jpg", cv::IMREAD_GRAYSCALE);
+    cv::Mat img = readImage(FILTER_IMAGE, cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(img.empty());
 
     ocl::SURF_OCL d_surf;

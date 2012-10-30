@@ -76,7 +76,7 @@ namespace cv
 //////////////////////////////////////////////////////////////////////////////
 // buildWarpPlaneMaps
 
-void cv::ocl::buildWarpPlaneMaps(Size src_size, Rect dst_roi, const Mat &K, const Mat &R, const Mat &T,
+void cv::ocl::buildWarpPlaneMaps(Size /*src_size*/, Rect dst_roi, const Mat &K, const Mat &R, const Mat &T,
                                  float scale, oclMat &map_x, oclMat &map_y)
 {
     CV_Assert(K.size() == Size(3, 3) && K.type() == CV_32F);
@@ -121,7 +121,7 @@ void cv::ocl::buildWarpPlaneMaps(Size src_size, Rect dst_roi, const Mat &K, cons
 //////////////////////////////////////////////////////////////////////////////
 // buildWarpCylyndricalMaps
 
-void cv::ocl::buildWarpCylindricalMaps(Size src_size, Rect dst_roi, const Mat &K, const Mat &R, float scale,
+void cv::ocl::buildWarpCylindricalMaps(Size /*src_size*/, Rect dst_roi, const Mat &K, const Mat &R, float scale,
                                        oclMat &map_x, oclMat &map_y)
 {
     CV_Assert(K.size() == Size(3, 3) && K.type() == CV_32F);
@@ -160,7 +160,7 @@ void cv::ocl::buildWarpCylindricalMaps(Size src_size, Rect dst_roi, const Mat &K
 
 //////////////////////////////////////////////////////////////////////////////
 // buildWarpSphericalMaps
-void cv::ocl::buildWarpSphericalMaps(Size src_size, Rect dst_roi, const Mat &K, const Mat &R, float scale,
+void cv::ocl::buildWarpSphericalMaps(Size /*src_size*/, Rect dst_roi, const Mat &K, const Mat &R, float scale,
                                      oclMat &map_x, oclMat &map_y)
 {
     CV_Assert(K.size() == Size(3, 3) && K.type() == CV_32F);
