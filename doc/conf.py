@@ -293,7 +293,7 @@ extlinks = {
             'svms':('http://opencv.itseez.com/modules/ml/doc/support_vector_machines.html#%s', None),
             'drawingfunc':('http://opencv.itseez.com/modules/core/doc/drawing_functions.html#%s', None),
             'xmlymlpers':('http://opencv.itseez.com/modules/core/doc/xml_yaml_persistence.html#%s', None),
-            'huivideo' : ('http://opencv.itseez.com/modules/highgui/doc/reading_and_writing_images_and_video.html#%s', None),
+            'hgvideo' : ('http://opencv.itseez.com/modules/highgui/doc/reading_and_writing_images_and_video.html#%s', None),
             'gpuinit' : ('http://opencv.itseez.com/modules/gpu/doc/initalization_and_information.html#%s', None),
             'gpudatastructure' : ('http://opencv.itseez.com/modules/gpu/doc/data_structures.html#%s', None),
             'gpuopmatrices' : ('http://opencv.itseez.com/modules/gpu/doc/operations_on_matrices.html#%s', None),
