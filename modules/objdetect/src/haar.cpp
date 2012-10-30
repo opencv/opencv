@@ -728,8 +728,14 @@ double icvEvalHidHaarClassifierAVX( CvHidHaarClassifier* classifier,
 
         sum = _mm256_add_ps(sum,_mm256_load_ps(tmp));
 
-        __m256 left  = _mm256_set_ps(nodes[7]->left, nodes[6]->left, nodes[5]->left, nodes[4]->left, nodes[3]->left, nodes[2]->left, nodes[1]->left, nodes[0]->left );
-        __m256 right = _mm256_set_ps(nodes[7]->right,nodes[6]->right,nodes[5]->right,nodes[4]->right,nodes[3]->right,nodes[2]->right,nodes[1]->right,nodes[0]->right);
+        __m256 left  = _mm256_set_ps(static_cast<float>(nodes[7]->left), static_cast<float>(nodes[6]->left),
+                                     static_cast<float>(nodes[5]->left), static_cast<float>(nodes[4]->left),
+                                     static_cast<float>(nodes[3]->left), static_cast<float>(nodes[2]->left),
+                                     static_cast<float>(nodes[1]->left), static_cast<float>(nodes[0]->left));
+        __m256 right = _mm256_set_ps(static_cast<float>(nodes[7]->right),static_cast<float>(nodes[6]->right),
+                                     static_cast<float>(nodes[5]->right),static_cast<float>(nodes[4]->right),
+                                     static_cast<float>(nodes[3]->right),static_cast<float>(nodes[2]->right),
+                                     static_cast<float>(nodes[1]->right),static_cast<float>(nodes[0]->right));
 
         _mm256_store_si256((__m256i*)idxV, _mm256_cvttps_epi32(_mm256_blendv_ps(right, left, _mm256_cmp_ps(sum, t, _CMP_LT_OQ))));
 
