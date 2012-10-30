@@ -1548,8 +1548,7 @@ void cv::ocl::BruteForceMatcher_OCL_base::knnMatch(const oclMat &query, vector< 
         temp.reserve(2 * k);
 
         matches.resize(query.rows);
-        for(size_t queryIdx = 0; queryIdx < matches.size(); queryIdx++ )
-            matches[queryIdx].reserve(k);
+        for_each(matches.begin(), matches.end(), bind2nd(mem_fun_ref(&vector<DMatch>::reserve), k));
 
         for (size_t imgIdx = 0, size = trainDescCollection.size(); imgIdx < size; ++imgIdx)
         {
@@ -1573,15 +1572,8 @@ void cv::ocl::BruteForceMatcher_OCL_base::knnMatch(const oclMat &query, vector< 
 
         if (compactResult)
         {
-            size_t i, j = 0;
-            for( i = 0; i < matches.size(); i++ )
-                if( !matches[i].empty() )
-                {
-                    if( i > j )
-                        matches[j] = matches[i];
-                    j++;
-                }
-            matches.resize(j);
+            vector< vector<DMatch> >::iterator new_end = remove_if(matches.begin(), matches.end(), mem_fun_ref(&vector<DMatch>::empty));
+            matches.erase(new_end, matches.end());
         }
     }
 }

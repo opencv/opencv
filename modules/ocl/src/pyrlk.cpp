@@ -581,26 +581,26 @@ void pyrDown_cus(const oclMat &src, oclMat &dst)
 //
 //void callF(const oclMat& src, oclMat& dst, MultiplyScalar op, int mask)
 //{
-//	Mat srcTemp;
-//	Mat dstTemp;
-//	src.download(srcTemp);
-//	dst.download(dstTemp);
+//  Mat srcTemp;
+//  Mat dstTemp;
+//  src.download(srcTemp);
+//  dst.download(dstTemp);
 //
-//	int i;
-//	int j;
-//	int k;
-//	for(i = 0; i < srcTemp.rows; i++)
-//	{
-//		for(j = 0; j < srcTemp.cols; j++)
-//		{
-//			for(k = 0; k < srcTemp.channels(); k++)
-//			{
-//				((float*)dstTemp.data)[srcTemp.channels() * (i * srcTemp.rows + j) + k] = (float)op(((float*)srcTemp.data)[srcTemp.channels() * (i * srcTemp.rows + j) + k]);
-//			}
-//		}
-//	}
+//  int i;
+//  int j;
+//  int k;
+//  for(i = 0; i < srcTemp.rows; i++)
+//  {
+//      for(j = 0; j < srcTemp.cols; j++)
+//      {
+//          for(k = 0; k < srcTemp.channels(); k++)
+//          {
+//              ((float*)dstTemp.data)[srcTemp.channels() * (i * srcTemp.rows + j) + k] = (float)op(((float*)srcTemp.data)[srcTemp.channels() * (i * srcTemp.rows + j) + k]);
+//          }
+//      }
+//  }
 //
-//	dst = dstTemp;
+//  dst = dstTemp;
 //}
 //
 //static inline bool isAligned(const unsigned char* ptr, size_t size)
@@ -622,54 +622,54 @@ void pyrDown_cus(const oclMat &src, oclMat &dst)
 //        return;
 //    }
 //
-//	Mat srcTemp;
-//	Mat dstTemp;
-//	src.download(srcTemp);
-//	dst.download(dstTemp);
+//  Mat srcTemp;
+//  Mat dstTemp;
+//  src.download(srcTemp);
+//  dst.download(dstTemp);
 //
-//	int x_shifted;
+//  int x_shifted;
 //
-//	int i;
-//	int j;
-//	for(i = 0; i < srcTemp.rows; i++)
-//	{
-//		const double* srcRow = (const double*)srcTemp.data + i * srcTemp.rows;
+//  int i;
+//  int j;
+//  for(i = 0; i < srcTemp.rows; i++)
+//  {
+//      const double* srcRow = (const double*)srcTemp.data + i * srcTemp.rows;
 //        double* dstRow = (double*)dstTemp.data + i * dstTemp.rows;;
 //
-//		for(j = 0; j < srcTemp.cols; j++)
-//		{
-//			x_shifted = j * 4;
+//      for(j = 0; j < srcTemp.cols; j++)
+//      {
+//          x_shifted = j * 4;
 //
-//			if(x_shifted + 4 - 1 < srcTemp.cols)
-//			{
-//				dstRow[x_shifted    ] = op(srcRow[x_shifted    ]);
-//				dstRow[x_shifted + 1] = op(srcRow[x_shifted + 1]);
-//				dstRow[x_shifted + 2] = op(srcRow[x_shifted + 2]);
-//				dstRow[x_shifted + 3] = op(srcRow[x_shifted + 3]);
-//			}
-//			else
-//			{
-//				for (int real_x = x_shifted; real_x < srcTemp.cols; ++real_x)
-//				{
-//					((float*)dstTemp.data)[i * srcTemp.rows + real_x] = op(((float*)srcTemp.data)[i * srcTemp.rows + real_x]);
-//				}
-//			}
-//		}
-//	}
+//          if(x_shifted + 4 - 1 < srcTemp.cols)
+//          {
+//              dstRow[x_shifted    ] = op(srcRow[x_shifted    ]);
+//              dstRow[x_shifted + 1] = op(srcRow[x_shifted + 1]);
+//              dstRow[x_shifted + 2] = op(srcRow[x_shifted + 2]);
+//              dstRow[x_shifted + 3] = op(srcRow[x_shifted + 3]);
+//          }
+//          else
+//          {
+//              for (int real_x = x_shifted; real_x < srcTemp.cols; ++real_x)
+//              {
+//                  ((float*)dstTemp.data)[i * srcTemp.rows + real_x] = op(((float*)srcTemp.data)[i * srcTemp.rows + real_x]);
+//              }
+//          }
+//      }
+//  }
 //}
 //
 //void multiply(const oclMat& src1, double val, oclMat& dst, double scale = 1.0f);
 //void multiply(const oclMat& src1, double val, oclMat& dst, double scale)
 //{
 //    MultiplyScalar op(val, scale);
-//	//if(src1.channels() == 1 && dst.channels() == 1)
-//	//{
-//	//    callT(src1, dst, op, 0);
-//	//}
-//	//else
-//	//{
-//	    callF(src1, dst, op, 0);
-//	//}
+//  //if(src1.channels() == 1 && dst.channels() == 1)
+//  //{
+//  //    callT(src1, dst, op, 0);
+//  //}
+//  //else
+//  //{
+//      callF(src1, dst, op, 0);
+//  //}
 //}
 
 cl_mem bindTexture(const oclMat &mat, int depth, int channels)
@@ -792,6 +792,12 @@ void lkSparse_run(oclMat &I, oclMat &J,
 
 void cv::ocl::PyrLKOpticalFlow::sparse(const oclMat &prevImg, const oclMat &nextImg, const oclMat &prevPts, oclMat &nextPts, oclMat &status, oclMat *err)
 {
+    if (prevImg.clCxt->impl->devName.find("Intel(R) HD Graphics") != string::npos)
+    {
+        cout << " Intel HD GPU device unsupported " << endl;
+        return;
+    }
+
     if (prevPts.empty())
     {
         nextPts.release();

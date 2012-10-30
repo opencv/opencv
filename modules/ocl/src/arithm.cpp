@@ -813,6 +813,22 @@ Scalar cv::ocl::sum(const oclMat &src)
     return func(src, 0);
 }
 
+Scalar cv::ocl::absSum(const oclMat &src)
+{
+    if(src.clCxt->impl->double_support == 0 && src.depth() == CV_64F)
+    {
+        CV_Error(CV_GpuNotSupported, "select device don't support double");
+    }
+    static sumFunc functab[2] =
+    {
+        arithmetic_sum<float>,
+        arithmetic_sum<double>
+    };
+
+    sumFunc func;
+    func = functab[src.clCxt->impl->double_support];
+    return func(src, 1);
+}
 
 Scalar cv::ocl::sqrSum(const oclMat &src)
 {
@@ -945,13 +961,17 @@ template <typename T> void arithmetic_minMax(const oclMat &src, double *minVal, 
     T *p = new T[groupnum * vlen * 2];
     memset(p, 0, dbsize);
     openCLReadBuffer(clCxt, dstBuffer, (void *)p, dbsize);
-    for(int i = 0; i < vlen * (int)groupnum; i++)
-    {
-        *minVal = *minVal < p[i] ? *minVal : p[i];
+    if(minVal != NULL){
+        for(int i = 0; i < vlen * (int)groupnum; i++)
+        {
+            *minVal = *minVal < p[i] ? *minVal : p[i];
+        }
     }
-    for(int i = vlen * (int)groupnum; i < 2 * vlen * (int)groupnum; i++)
-    {
-        *maxVal = *maxVal > p[i] ? *maxVal : p[i];
+    if(maxVal != NULL){
+        for(int i = vlen * (int)groupnum; i < 2 * vlen * (int)groupnum; i++)
+        {
+            *maxVal = *maxVal > p[i] ? *maxVal : p[i];
+        }
     }
     delete[] p;
     openCLFree(dstBuffer);

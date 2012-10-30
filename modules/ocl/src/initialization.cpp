@@ -644,7 +644,7 @@ namespace cv
             size_t kernelWorkGroupSize;
             openCLSafeCall(clGetKernelWorkGroupInfo(kernel, clCxt->impl->devices[0],
                                                     CL_KERNEL_WORK_GROUP_SIZE, sizeof(size_t), &kernelWorkGroupSize, 0));
-            CV_DbgAssert( (localThreads[0] <= clCxt->impl->maxWorkItemSizes[0]) &&
+            CV_Assert( (localThreads[0] <= clCxt->impl->maxWorkItemSizes[0]) &&
                           (localThreads[1] <= clCxt->impl->maxWorkItemSizes[1]) &&
                           (localThreads[2] <= clCxt->impl->maxWorkItemSizes[2]) &&
                           ((localThreads[0] * localThreads[1] * localThreads[2]) <= kernelWorkGroupSize) &&

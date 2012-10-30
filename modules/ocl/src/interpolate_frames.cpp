@@ -218,7 +218,7 @@ void interpolate::vectorWarp(const oclMat &src, const oclMat &u, const oclMat &v
     normalizeKernel(buffer, src.rows, b_offset, d_offset);
 }
 
-void interpolate::blendFrames(const oclMat &frame0, const oclMat &frame1, const oclMat &buffer, float pos, oclMat &newFrame, cl_mem &tex_src0, cl_mem &tex_src1)
+void interpolate::blendFrames(const oclMat &frame0, const oclMat &/*frame1*/, const oclMat &buffer, float pos, oclMat &newFrame, cl_mem &tex_src0, cl_mem &tex_src1)
 {
     int step = buffer.step / sizeof(float);
 
