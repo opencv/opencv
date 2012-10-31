@@ -363,7 +363,7 @@ InstallPath(install_path)
                 }
                 else
                 {
-                    LOGE("Library loading error (%x, %x): \"%s\"", name_func, revision_func, error);
+                    LOGE("Library loading error (%p, %p): \"%s\"", name_func, revision_func, error);
                 }
             }
             else
