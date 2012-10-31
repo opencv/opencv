@@ -485,7 +485,7 @@ The class ``BruteForceMatcher_GPU_base`` has an interface similar to the class :
 
 
 gpu::BruteForceMatcher_GPU_base::match
--------------------------------------
+--------------------------------------
 Finds the best match for each descriptor from a query set with train descriptors.
 
 .. ocv:function:: void gpu::BruteForceMatcher_GPU_base::match(const GpuMat& query, const GpuMat& train, std::vector<DMatch>& matches, const GpuMat& mask = GpuMat())
@@ -501,7 +501,7 @@ Finds the best match for each descriptor from a query set with train descriptors
 
 
 gpu::BruteForceMatcher_GPU_base::makeGpuCollection
--------------------------------------------------
+--------------------------------------------------
 Performs a GPU collection of train descriptors and masks in a suitable format for the :ocv:func:`gpu::BruteForceMatcher_GPU_base::matchCollection` function.
 
 .. ocv:function:: void gpu::BruteForceMatcher_GPU_base::makeGpuCollection(GpuMat& trainCollection, GpuMat& maskCollection, const vector<GpuMat>& masks = std::vector<GpuMat>())
@@ -509,7 +509,7 @@ Performs a GPU collection of train descriptors and masks in a suitable format fo
 
 
 gpu::BruteForceMatcher_GPU_base::matchDownload
----------------------------------------------
+----------------------------------------------
 Downloads matrices obtained via :ocv:func:`gpu::BruteForceMatcher_GPU_base::matchSingle` or :ocv:func:`gpu::BruteForceMatcher_GPU_base::matchCollection` to vector with :ocv:class:`DMatch`.
 
 .. ocv:function:: static void gpu::BruteForceMatcher_GPU_base::matchDownload(const GpuMat& trainIdx, const GpuMat& distance, std::vector<DMatch>&matches)
@@ -529,7 +529,7 @@ Converts matrices obtained via :ocv:func:`gpu::BruteForceMatcher_GPU_base::match
 
 
 gpu::BruteForceMatcher_GPU_base::knnMatch
-----------------------------------------
+-----------------------------------------
 Finds the ``k`` best matches for each descriptor from a query set with train descriptors.
 
 .. ocv:function:: void gpu::BruteForceMatcher_GPU_base::knnMatch(const GpuMat& query, const GpuMat& train, std::vector< std::vector<DMatch> >&matches, int k, const GpuMat& mask = GpuMat(), bool compactResult = false)
@@ -561,7 +561,7 @@ The third variant of the method stores the results in GPU memory.
 
 
 gpu::BruteForceMatcher_GPU_base::knnMatchDownload
-------------------------------------------------
+-------------------------------------------------
 Downloads matrices obtained via :ocv:func:`gpu::BruteForceMatcher_GPU_base::knnMatchSingle` or :ocv:func:`gpu::BruteForceMatcher_GPU_base::knnMatch2Collection` to vector with :ocv:class:`DMatch`.
 
 .. ocv:function:: void gpu::BruteForceMatcher_GPU_base::knnMatchDownload(const GpuMat& trainIdx, const GpuMat& distance, std::vector< std::vector<DMatch> >&matches, bool compactResult = false)
@@ -585,7 +585,7 @@ If ``compactResult`` is ``true`` , the ``matches`` vector does not contain match
 
 
 gpu::BruteForceMatcher_GPU_base::radiusMatch
--------------------------------------------
+--------------------------------------------
 For each query descriptor, finds the best matches with a distance less than a given threshold.
 
 .. ocv:function:: void gpu::BruteForceMatcher_GPU_base::radiusMatch(const GpuMat& query, const GpuMat& train, std::vector< std::vector<DMatch> >&matches, float maxDistance, const GpuMat& mask = GpuMat(), bool compactResult = false)
@@ -619,7 +619,7 @@ The third variant of the method stores the results in GPU memory and does not st
 
 
 gpu::BruteForceMatcher_GPU_base::radiusMatchDownload
----------------------------------------------------
+----------------------------------------------------
 Downloads matrices obtained via :ocv:func:`gpu::BruteForceMatcher_GPU_base::radiusMatchSingle` or :ocv:func:`gpu::BruteForceMatcher_GPU_base::radiusMatchCollection` to vector with :ocv:class:`DMatch`.
 
 .. ocv:function:: void gpu::BruteForceMatcher_GPU_base::radiusMatchDownload(const GpuMat& trainIdx, const GpuMat& distance, const GpuMat& nMatches, std::vector< std::vector<DMatch> >&matches, bool compactResult = false)
