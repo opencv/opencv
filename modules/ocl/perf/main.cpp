@@ -80,36 +80,36 @@ int main(int argc, char **argv)
     InitGoogleTest(&argc, argv);
     const char *keys =
 
-        "{ h | help     | false              | print help message }"
+        "{ h | false              | print help message }"
 
-        "{ w | workdir  | ../../../samples/c/| set working directory }"
+        "{ w | ../../../samples/c/| set working directory i.e. -w=C:\\}"
 
-        "{ t | type     | gpu                | set device type:cpu or gpu}"
+        "{ t | gpu                | set device type:i.e. -t=cpu or gpu}"
 
-        "{ p | platform | 0                  | set platform id }"
+        "{ p | 0                  | set platform id i.e. -p=0}"
 
-        "{ d | device   | 0                  | set device id }";
+        "{ d | 0                  | set device id i.e. -d=0}";
 
 
 
     CommandLineParser cmd(argc, argv, keys);
 
-    if (cmd.get<bool>("help"))
+    if (cmd.get<string>("h")=="true")
 
     {
 
-        cout << "Avaible options besides goole test option:" << endl;
+        cout << "Avaible options besides google test option:" << endl;
 
-        cmd.printParams();
+        cmd.printMessage();
     }
 
-    workdir = cmd.get<string>("workdir");
+    workdir = cmd.get<string>("w");
 
-    string type = cmd.get<string>("type");
+    string type = cmd.get<string>("t");
 
-    unsigned int pid = cmd.get<unsigned int>("platform");
+    unsigned int pid = cmd.get<unsigned int>("p");
 
-    int device = cmd.get<int>("device");
+    int device = cmd.get<int>("d");
 
 
     print_info();
