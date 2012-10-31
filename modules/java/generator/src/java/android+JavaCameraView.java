@@ -21,7 +21,7 @@ import org.opencv.highgui.Highgui;
 import org.opencv.imgproc.Imgproc;
 
 /**
- * This class is an implementation of the Bridge View between OpenCv and JAVA Camera.
+ * This class is an implementation of the Bridge View between OpenCV and Java Camera.
  * This class relays on the functionality available in base class and only implements
  * required functions:
  * connectCamera - opens Java camera and sets the PreviewCallback to be delivered.
