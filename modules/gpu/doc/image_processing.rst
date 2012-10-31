@@ -886,7 +886,7 @@ gpu::FastNonLocalMeansDenoising
 The class implements fast approximate Non Local Means Denoising algorithm.
 
 gpu::FastNonLocalMeansDenoising::simpleMethod()
--------------------------------------
+-----------------------------------------------
 Perform image denoising using Non-local Means Denoising algorithm http://www.ipol.im/pub/algo/bcm_non_local_means_denoising with several computational optimizations. Noise expected to be a gaussian white noise
 
 .. ocv:function:: void gpu::FastNonLocalMeansDenoising::simpleMethod(const GpuMat& src, GpuMat& dst, float h, int search_window = 21, int block_size = 7, Stream& s = Stream::Null())
@@ -910,7 +910,7 @@ This function expected to be applied to grayscale images. For colored images loo
     :ocv:func:`fastNlMeansDenoising`
 
 gpu::FastNonLocalMeansDenoising::labMethod()
--------------------------------------
+--------------------------------------------
 Modification of ``FastNonLocalMeansDenoising::simpleMethod`` for color images
 
 .. ocv:function:: void gpu::FastNonLocalMeansDenoising::labMethod(const GpuMat& src, GpuMat& dst, float h_luminance, float h_color, int search_window = 21, int block_size = 7, Stream& s = Stream::Null())

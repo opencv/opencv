@@ -1,4 +1,4 @@
-openFABMAP
+OpenFABMAP
 ========================================
 
 .. highlight:: cpp
