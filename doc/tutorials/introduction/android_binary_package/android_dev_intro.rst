@@ -210,6 +210,10 @@ You need the following software to be installed in order to develop for Android 
 
 #. **CDT plugin for Eclipse**
 
+   There are several possible ways to integrate compilation of C++ code by Android NDK into Eclipse
+   compilation process. We recommend the approach based on Eclipse
+   :abbr:`CDT(C/C++ Development Tooling)` Builder.
+
    .. note:: If you're using the latest ADT plugin for Eclipse (version 20 and above), most likely
              that you already have the CDT plugin. If it is so, just skip this section.
 
@@ -218,18 +222,6 @@ You need the following software to be installed in order to develop for Android 
 
    .. image:: images/eclipse_inst_details.png
      :alt: Eclipse About
-     :align: center
-
-   There are several possible ways to integrate compilation of C++ code by Android NDK into Eclipse
-   compilation process.
-   We recommend the approach based on Eclipse :abbr:`CDT(C/C++ Development Tooling)` Builder.
-
-   .. important:: Make sure your Eclipse IDE has the :abbr:`CDT(C/C++ Development Tooling)` plugin
-                  installed. Menu :guilabel:`Help -> About Eclipse SDK` and push
-                  :guilabel:`Installation Details` button.
-
-   .. image:: images/eclipse_inst_details.png
-     :alt: Configure builders
      :align: center
 
    To install the `CDT plugin <http://eclipse.org/cdt/>`_ use menu

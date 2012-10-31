@@ -7,9 +7,10 @@ OpenCV4Android SDK
 
 This tutorial was designed to help you with installation and configuration of OpenCV4Android SDK.
 
-This guide was written with MS Windows 7 in mind, though it should work with GNU Linux and Apple MacOS as well.
+This guide was written with MS Windows 7 in mind, though it should work with GNU Linux and Apple
+Mac OS as well.
 
-This tutorial assumes you have the following installed and configured:
+This tutorial assumes you have the following software installed and configured:
 
 * JDK
 
@@ -23,7 +24,20 @@ This tutorial assumes you have the following installed and configured:
 
 If you need help with anything of the above, you may refer to our :ref:`android_dev_intro` guide.
 
-If you encounter any error after thoroughly following these steps, feel free to contact us via `OpenCV4Android <https://groups.google.com/group/android-opencv/>`_ discussion group or OpenCV `Q&A forum <http://answers.opencv.org>`_. We'll do our best to help you out.
+If you encounter any error after thoroughly following these steps, feel free to contact us via
+`OpenCV4Android <https://groups.google.com/group/android-opencv/>`_ discussion group or
+OpenCV `Q&A forum <http://answers.opencv.org>`_. We'll do our best to help you out.
+
+Tegra Android Development Pack users
+====================================
+
+You may have used `Tegra Android Development Pack <http://developer.nvidia.com/tegra-android-development-pack>`_
+(**TADP**) released by **NVIDIA** for Android development environment setup.
+
+Beside Android development tools the TADP 2.0 includes OpenCV4Android SDK, so it can be already
+installed in your system and you can skip to :ref:`Running_OpenCV_Samples` section of this tutorial.
+
+More details regarding TADP can be found in the :ref:`android_dev_intro` guide.
 
 General info
 ============
@@ -57,32 +71,44 @@ The structure of package contents looks as follows:
 
 * :file:`sdk` folder contains OpenCV API and libraries for Android:
 
-* :file:`sdk/java` folder contains an Android library Eclipse project providing OpenCV Java API that can be imported into developer's workspace;
+* :file:`sdk/java` folder contains an Android library Eclipse project providing OpenCV Java API that
+  can be imported into developer's workspace;
 
-* :file:`sdk/native` folder contains OpenCV C++ headers (for JNI code) and native Android libraries (\*\.so and \*\.a) for ARM-v5, ARM-v7a and x86 architectures;
+* :file:`sdk/native` folder contains OpenCV C++ headers (for JNI code) and native Android libraries
+  (\*\.so and \*\.a) for ARM-v5, ARM-v7a and x86 architectures;
 
 * :file:`sdk/etc` folder contains Haar and LBP cascades distributed with OpenCV.
 
-* :file:`apk` folder contains Android packages that should be installed on the target Android device to enable OpenCV library access via OpenCV Manager API (see details below).
+* :file:`apk` folder contains Android packages that should be installed on the target Android device
+  to enable OpenCV library access via OpenCV Manager API (see details below).
 
-  On production devices that have access to Google Play Market (and internet) these packages will be installed from Market on the first start of an application using OpenCV Manager API.
-  But dev kits without Market or internet require this packages to be installed manually.
-  (Install the `Manager.apk` and the corresponding `binary_pack.apk` depending on the device CPU, the Manager GUI provides this info).
+  On production devices that have access to Google Play Market (and Internet) these packages will be
+  installed from Market on the first start of an application using OpenCV Manager API.
+  But devkits without Market or Internet connection require this packages to be installed manually.
+  Install the `Manager.apk` and the corresponding `binary_pack.apk` depending on the device CPU,
+  the Manager GUI provides this info. Below you'll see exact commands on how to do this.
 
-  **Note**: installation from internet is the preferable way since we may publish updated versions of this packages on the Market.
+  .. note:: Installation from Internet is the preferable way since OpenCV team may publish updated
+            versions of this packages on the Market.
 
 * :file:`samples` folder contains sample applications projects and their prebuilt packages (APK).
-  Import them into Eclipse workspace (like described below) and browse the code to learn possible ways of OpenCV use on Android.
+  Import them into Eclipse workspace (like described below) and browse the code to learn possible
+  ways of OpenCV use on Android.
 
 * :file:`doc` folder contains various OpenCV documentation in PDF format.
   It's also available online at http://docs.opencv.org.
 
-  **Note**: the most recent docs (nightly build) are at http://docs.opencv.org/trunk/.
-  Generally, it's more up-to-date, but can refer to not-yet-released functionality.
+  .. note:: The most recent docs (nightly build) are at http://docs.opencv.org/trunk/.
+            Generally, it's more up-to-date, but can refer to not-yet-released functionality.
 
-Starting version 2.4.3 `OpenCV4Android SDK` uses `OpenCV Manager` API for library initialization. `OpenCV Manager` is an Android service based solution providing the following benefits for OpenCV applications developers:
+.. TODO: I'm not sure that this is the best place to talk about OpenCV Manager
 
-* Compact apk-size, since all applications use the same binaries from Manager and do not store native libs within themselves;
+Starting from version 2.4.3 `OpenCV4Android SDK` uses `OpenCV Manager` API for library
+initialization. `OpenCV Manager` is an Android service based solution providing the following
+benefits for OpenCV applications developers:
+
+* Compact apk-size, since all applications use the same binaries from Manager and do not store
+  native libs within themselves;
 
 * Hardware specific optimizations are automatically enabled on all supported platforms;
 
@@ -91,7 +117,6 @@ Starting version 2.4.3 `OpenCV4Android SDK` uses `OpenCV Manager` API for librar
 * Trusted OpenCV library source. All packages with OpenCV are published on Google Play;
 
      ..
-
 
 For additional information on OpenCV Manager see the:
 
@@ -106,29 +131,21 @@ For additional information on OpenCV Manager see the:
 .. |OpenCV4Android_Reference| replace:: Reference Manual
 .. _OpenCV4Android_Reference: http://docs.opencv.org/android/refman.html
 
-Tegra Android Development Pack users
-====================================
-
-You may have used `Tegra Android Development Pack <http://developer.nvidia.com/tegra-android-development-pack>`_
-(**TADP**) released by **NVIDIA** for Android development environment setup.
-
-Beside Android development tools the TADP 2.0 includes OpenCV4Android SDK 2.4.2, so it can be already installed in your system and you can skip to running the ``face-detection`` sample.
-
-More details regarding TADP can be found in the :ref:`android_dev_intro` guide.
-
 Manual OpenCV4Android SDK setup
 ===============================
 
 Get the OpenCV4Android SDK
 --------------------------
 
-#. Go to the `OpenCV dowload page on SourceForge <http://sourceforge.net/projects/opencvlibrary/files/opencv-android/>`_ and download the latest available version. Currently it's |opencv_android_bin_pack_url|_
+#. Go to the `OpenCV download page on SourceForge <http://sourceforge.net/projects/opencvlibrary/files/opencv-android/>`_
+   and download the latest available version. Currently it's |opencv_android_bin_pack_url|_.
 
-#. Create a new folder for Android with OpenCV development. For this tutorial I have unpacked OpenCV to the :file:`C:\\Work\\OpenCV4Android\\` directory.
+#. Create a new folder for Android with OpenCV development. For this tutorial we have unpacked
+   OpenCV SDK to the :file:`C:\\Work\\OpenCV4Android\\` directory.
 
-      .. note:: Better to use a path without spaces in it. Otherwise you may have problems with :command:`ndk-build`.
+   .. note:: Better to use a path without spaces in it. Otherwise you may have problems with :command:`ndk-build`.
 
-#. Unpack the OpenCV package into the chosen directory.
+#. Unpack the SDK archive into the chosen directory.
 
    You can unpack it using any popular archiver (e.g with |seven_zip|_):
 
@@ -148,12 +165,13 @@ Get the OpenCV4Android SDK
 .. |seven_zip| replace:: 7-Zip
 .. _seven_zip: http://www.7-zip.org/
 
-Open OpenCV library and samples in Eclipse
-------------------------------------------
+Import OpenCV library and samples to the Eclipse
+------------------------------------------------
 
-#. Start *Eclipse* and choose your workspace location.
+#. Start Eclipse and choose your workspace location.
 
-   We recommend to start working with OpenCV for Android from a new clean workspace. A new Eclipse workspace can for example be created in the folder where you have unpacked OpenCV4Android SDK package:
+   We recommend to start working with OpenCV for Android from a new clean workspace. A new Eclipse
+   workspace can for example be created in the folder where you have unpacked OpenCV4Android SDK package:
 
       .. image:: images/eclipse_1_choose_workspace.png
          :alt: Choosing C:\Work\android-opencv\ as workspace location
@@ -162,24 +180,28 @@ Open OpenCV library and samples in Eclipse
 #. Import OpenCV library and samples into workspace.
 
    OpenCV library is packed as a ready-for-use `Android Library Project
-   <http://developer.android.com/guide/developing/projects/index.html#LibraryProjects>`_. You can simply reference it in your projects.
+   <http://developer.android.com/guide/developing/projects/index.html#LibraryProjects>`_.
+   You can simply reference it in your projects.
 
-   Each sample included into the |opencv_android_bin_pack| is a regular Android project that already references OpenCV library.
-   Follow the steps below to import OpenCV and samples into the workspace:
+   Each sample included into the |opencv_android_bin_pack| is a regular Android project that already
+   references OpenCV library.Follow the steps below to import OpenCV and samples into the workspace:
 
-   * Right click on the :guilabel:`Package Explorer` window and choose :guilabel:`Import...` option from the context menu:
+   * Right click on the :guilabel:`Package Explorer` window and choose :guilabel:`Import...` option
+     from the context menu:
 
       .. image:: images/eclipse_5_import_command.png
          :alt: Select Import... from context menu
          :align: center
 
-   * In the main panel select :menuselection:`General --> Existing Projects into Workspace` and press :guilabel:`Next` button:
+   * In the main panel select :menuselection:`General --> Existing Projects into Workspace` and
+     press :guilabel:`Next` button:
 
       .. image:: images/eclipse_6_import_existing_projects.png
          :alt: General > Existing Projects into Workspace
          :align: center
 
-   * In the :guilabel:`Select root directory` field locate your OpenCV package folder. Eclipse should automatically locate OpenCV library and samples:
+   * In the :guilabel:`Select root directory` field locate your OpenCV package folder. Eclipse
+     should automatically locate OpenCV library and samples:
 
       .. image:: images/eclipse_7_select_projects.png
          :alt: Locate OpenCV library and samples
@@ -187,34 +209,20 @@ Open OpenCV library and samples in Eclipse
 
    * Click :guilabel:`Finish` button to complete the import operation.
 
-   After clicking :guilabel:`Finish` button Eclipse will load all selected projects into workspace. Numerous errors will be indicated:
+   After clicking :guilabel:`Finish` button Eclipse will load all selected projects into workspace,
+   and you have to wait some time while it is building OpenCV samples. Just give a minute to
+   Eclipse to complete initialization.
 
-      .. image:: images/eclipse_8_false_alarm.png
-         :alt: Confusing Eclipse screen with numerous errors
-         :align: center
+   .. note :: After the initial import, on a non-Windows (Linux and Mac OS) operating system Eclipse
+              will still show build errors for applications with native C++ code. To resolve the
+              issues, please do the following:
 
-   However, **all these errors are only false-alarms**!
+              Open :guilabel:`Project Properties -> C/C++ Build`, and replace "Build command" text
+              to ``"${NDKROOT}/ndk-build"`` (remove .cmd at the end).
 
-   Just give a minute to Eclipse to complete initialization.
-
-   In some cases these errors disappear after :menuselection:`Project --> Clean... --> Clean all --> OK`
-   or after pressing :kbd:`F5` (for Refresh action) when selecting error-label-marked projects in :guilabel:`Package Explorer`.
-
-   Sometimes more advanced manipulations are required:
-
-   The provided projects are configured for ``API 11`` target (and ``API 9`` for the library) that can be missing platform in your Android SDK.
-   After right click on any project select  :guilabel:`Properties` and then :guilabel:`Android` on the left pane.
-   Click some target with `API Level` 11 or higher:
-
-      .. image:: images/eclipse_8a_target.png
-         :alt: Updating target
-         :align: center
-
-   Eclipse will rebuild your workspace and error icons will disappear one by one:
-
-      .. image:: images/eclipse_9_errors_dissapearing.png
-         :alt: After small help Eclipse removes error icons!
-         :align: center
+   .. image:: images/eclipse_cdt_cfg4.png
+      :alt: Configure CDT
+      :align: center
 
    Once Eclipse completes build you will have the clean workspace without any build errors:
 
@@ -227,13 +235,17 @@ Open OpenCV library and samples in Eclipse
 Running OpenCV Samples
 ----------------------
 
-At this point you should be able to build and run the samples. Keep in mind, that ``face-detection``, ``Tutorial 3`` and ``Tutorial 4`` include some native code and require Android NDK and CDT plugin for Eclipse to build working applications.
-If you haven't installed these tools see the corresponding section of :ref:`Android_Dev_Intro`.
+At this point you should be able to build and run the samples. Keep in mind, that ``face-detection``,
+``Tutorial 3`` and ``Tutorial 4`` include some native code and require Android NDK and CDT plugin
+for Eclipse to build working applications. If you haven't installed these tools see the corresponding
+section of :ref:`Android_Dev_Intro`.
 
-Also, please consider that ``Tutorial 0`` and ``Tutorial 1`` samples use Java Camera API that definitelly accessible on emulator from the Android SDK.
+Also, please consider that ``Tutorial 0`` and ``Tutorial 1`` samples use Java Camera API that
+definitelly accessible on emulator from the Android SDK.
 Other samples use OpenCV Native Camera which may not work with emulator.
 
-.. note:: Recent *Android SDK tools, revision 19+* can run ARM v7a OS images but they available not for all Android versions.
+.. note:: Recent *Android SDK tools, revision 19+* can run ARM v7a OS images but they available not
+          for all Android versions.
 
 Well, running samples from Eclipse is very simple:
 
@@ -245,7 +257,8 @@ Well, running samples from Eclipse is very simple:
     <http://developer.android.com/guide/developing/device.html>`_ for help with real devices (not emulators).
 
 
-* Select project you want to start in :guilabel:`Package Explorer` and just press :kbd:`Ctrl + F11` or select option :menuselection:`Run --> Run` from the main menu, or click :guilabel:`Run` button on the toolbar.
+* Select project you want to start in :guilabel:`Package Explorer` and just press :kbd:`Ctrl + F11`
+  or select option :menuselection:`Run --> Run` from the main menu, or click :guilabel:`Run` button on the toolbar.
 
   .. note:: Android Emulator can take several minutes to start. So, please, be patient.
 
