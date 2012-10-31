@@ -20,7 +20,7 @@ Reads an image from a buffer in memory.
     :param buf: Input array or vector of bytes.
 
     :param flags: The same flags as in :ocv:func:`imread` .
-    
+
     :param dst: The optional output placeholder for the decoded matrix. It can save the image reallocations when the function is called repeatedly for images of the same size.
 
 The function reads an image from the specified buffer in the memory.
@@ -74,12 +74,12 @@ Loads an image from a file.
     :param filename: Name of file to be loaded.
 
     :param flags: Flags specifying the color type of a loaded image:
-    
-        * 1 - 
-        * CV_LOAD_IMAGE_ANYDEPTH - 
+
+        * 1 -
+        * CV_LOAD_IMAGE_ANYDEPTH -
         CV_LOAD_IMAGE_COLOR
         CV_LOAD_IMAGE_GRAYSCALE
-        
+
 
         * **>0**  Return a 3-channel color image.
             .. note:: In the current implementation the alpha channel, if any, is stripped from the output image. Use negative value if you need the alpha channel.

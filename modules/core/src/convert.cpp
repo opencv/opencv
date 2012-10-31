@@ -267,11 +267,6 @@ void cv::split(InputArray _m, OutputArrayOfArrays _mv)
     split(m, dst);
 }
 
-void cv::split(const Mat& src, vector<Mat>& mv)
-{
-    split(_InputArray(src), _OutputArray(mv));
-}
-
 void cv::merge(const Mat* mv, size_t n, OutputArray _dst)
 {
     CV_Assert( mv && n > 0 );
@@ -352,11 +347,6 @@ void cv::merge(InputArrayOfArrays _mv, OutputArray _dst)
     vector<Mat> mv;
     _mv.getMatVector(mv);
     merge(!mv.empty() ? &mv[0] : 0, mv.size(), _dst);
-}
-
-void cv::merge(const vector<Mat>& _mv, OutputArray _dst)
-{
-    merge(_InputArray(_mv), _dst);
 }
 
 /****************************************************************************************\

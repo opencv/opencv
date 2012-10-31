@@ -119,9 +119,7 @@ void cv::gpu::HoughLines(const GpuMat& src, GpuMat& lines, HoughLinesBuf& buf, f
     buf.accum.setTo(Scalar::all(0));
 
     DeviceInfo devInfo;
-    cudaDeviceProp prop;
-    cudaSafeCall(cudaGetDeviceProperties(&prop, devInfo.deviceID()));
-    linesAccum_gpu(srcPoints, pointsCount, buf.accum, rho, theta, prop.sharedMemPerBlock, devInfo.supports(FEATURE_SET_COMPUTE_20));
+    linesAccum_gpu(srcPoints, pointsCount, buf.accum, rho, theta, devInfo.sharedMemPerBlock(), devInfo.supports(FEATURE_SET_COMPUTE_20));
 
     ensureSizeIsEnough(2, maxLines, CV_32FC2, lines);
 

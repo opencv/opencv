@@ -603,7 +603,7 @@ Calculate an optical flow using "SimpleFlow" algorithm.
 
 .. ocv:function:: void calcOpticalFlowSF( Mat& from, Mat& to, Mat& flow, int layers, int averaging_block_size, int max_flow )
 
-.. ocv:function:: void calcOpticalFlowSF( Mat& from, Mat& to, Mat& flow, int layers, int averaging_block_size, int max_flow, double sigma_dist, double sigma_color, int postprocess_window, double sigma_dist_fix, double sigma_color_fix, double occ_thr, int upscale_averaging_radius, double upscale_sigma_dist, double upscale_sigma_color, double speed_up_thr )
+.. ocv:function:: calcOpticalFlowSF( Mat& from, Mat& to, Mat& flow, int layers, int averaging_block_size, int max_flow, double sigma_dist, double sigma_color, int postprocess_window, double sigma_dist_fix, double sigma_color_fix, double occ_thr, int upscale_averaging_radius, double upscale_sigma_dist, double upscale_sigma_color, double speed_up_thr )
 
     :param prev: First 8-bit 3-channel image.
 
@@ -641,6 +641,72 @@ Calculate an optical flow using "SimpleFlow" algorithm.
 
 See [Tao2012]_. And site of project - http://graphics.berkeley.edu/papers/Tao-SAN-2012-05/.
 
+
+
+OpticalFlowDual_TVL1
+--------------------
+"Dual TV L1" Optical Flow Algorithm.
+
+.. ocv:class:: OpticalFlowDual_TVL12
+
+
+The class implements the "Dual TV L1" optical flow algorithm described in [Zach2007]_ and [Javier2012]_ .
+
+Here are important members of the class that control the algorithm, which you can set after constructing the class instance:
+
+    .. ocv:member:: double tau
+
+        Time step of the numerical scheme.
+
+    .. ocv:member:: double lambda
+
+        Weight parameter for the data term, attachment parameter. This is the most relevant parameter, which determines the smoothness of the output. The smaller this parameter is, the smoother the solutions we obtain. It depends on the range of motions of the images, so its value should be adapted to each image sequence.
+
+    .. ocv:member:: double theta
+
+        Weight parameter for (u - v)^2, tightness parameter. It serves as a link between the attachment and the regularization terms. In theory, it should have a small value in order to maintain both parts in correspondence. The method is stable for a large range of values of this parameter.
+
+    .. ocv:member:: int nscales
+
+        Number of scales used to create the pyramid of images.
+
+    .. ocv:member:: int warps
+
+        Number of warpings per scale. Represents the number of times that I1(x+u0) and grad( I1(x+u0) ) are computed per scale. This is a parameter that assures the stability of the method. It also affects the running time, so it is a compromise between speed and accuracy.
+
+    .. ocv:member:: double epsilon
+
+        Stopping criterion threshold used in the numerical scheme, which is a trade-off between precision and running time. A small value will yield more accurate solutions at the expense of a slower convergence.
+
+    .. ocv:member:: int iterations
+
+        Stopping criterion iterations number used in the numerical scheme.
+
+
+
+
+OpticalFlowDual_TVL1::operator()
+--------------------------------
+Calculates an optical flow.
+
+.. ocv:function:: void OpticalFlowDual_TVL1::operator ()(InputArray I0, InputArray I1, InputOutputArray flow)
+
+    :param prev: first 8-bit single-channel input image.
+
+    :param next: second input image of the same size and the same type as ``prev`` .
+
+    :param flow: computed flow image that has the same size as ``prev`` and type ``CV_32FC2`` .
+
+
+
+OpticalFlowDual_TVL1::collectGarbage
+------------------------------------
+Releases all inner buffers.
+
+.. ocv:function:: void OpticalFlowDual_TVL1::collectGarbage()
+
+
+
 .. [Bouguet00] Jean-Yves Bouguet. Pyramidal Implementation of the Lucas Kanade Feature Tracker.
 
 .. [Bradski98] Bradski, G.R. "Computer Vision Face Tracking for Use in a Perceptual User Interface", Intel, 1998
@@ -658,3 +724,7 @@ See [Tao2012]_. And site of project - http://graphics.berkeley.edu/papers/Tao-SA
 .. [Welch95] Greg Welch and Gary Bishop “An Introduction to the Kalman Filter”, 1995
 
 .. [Tao2012] Michael Tao, Jiamin Bai, Pushmeet Kohli and Sylvain Paris. SimpleFlow: A Non-iterative, Sublinear Optical Flow Algorithm. Computer Graphics Forum (Eurographics 2012)
+
+.. [Zach2007] C. Zach, T. Pock and H. Bischof. "A Duality Based Approach for Realtime TV-L1 Optical Flow", In Proceedings of Pattern Recognition (DAGM), Heidelberg, Germany, pp. 214-223, 2007
+
+.. [Javier2012] Javier Sanchez, Enric Meinhardt-Llopis and Gabriele Facciolo. "TV-L1 Optical Flow Estimation".

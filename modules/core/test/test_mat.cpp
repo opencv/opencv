@@ -426,7 +426,7 @@ protected:
         }
 
         // 3. check C++ PCA w/retainedVariance
-        cPCA.computeVar( rPoints.t(), Mat(), CV_PCA_DATA_AS_COL, retainedVariance );
+        cPCA( rPoints.t(), Mat(), CV_PCA_DATA_AS_COL, retainedVariance );
         diffPrjEps = 1, diffBackPrjEps = 1;
         Mat rvPrjTestPoints = cPCA.project(rTestPoints.t());
 
@@ -858,9 +858,223 @@ void Core_ArrayOpTest::run( int /* start_from */)
     ts->set_failed_test_info(errcount == 0 ? cvtest::TS::OK : cvtest::TS::FAIL_INVALID_OUTPUT);
 }
 
+
+template <class ElemType>
+int calcDiffElemCountImpl(const vector<Mat>& mv, const Mat& m)
+{
+    int diffElemCount = 0;
+    const size_t mChannels = m.channels();
+    for(int y = 0; y < m.rows; y++)
+    {
+        for(int x = 0; x < m.cols; x++)
+        {
+            const ElemType* mElem = &m.at<ElemType>(y,x*mChannels);
+            size_t loc = 0;
+            for(size_t i = 0; i < mv.size(); i++)
+            {
+                const size_t mvChannel = mv[i].channels();
+                const ElemType* mvElem = &mv[i].at<ElemType>(y,x*mvChannel);
+                for(size_t li = 0; li < mvChannel; li++)
+                    if(mElem[loc + li] != mvElem[li])
+                        diffElemCount++;
+                loc += mvChannel;
+            }
+            CV_Assert(loc == mChannels);
+        }
+    }
+    return diffElemCount;
+}
+
+static
+int calcDiffElemCount(const vector<Mat>& mv, const Mat& m)
+{
+    int depth = m.depth();
+    switch (depth)
+    {
+    case CV_8U:
+        return calcDiffElemCountImpl<uchar>(mv, m);
+    case CV_8S:
+        return calcDiffElemCountImpl<char>(mv, m);
+    case CV_16U:
+        return calcDiffElemCountImpl<unsigned short>(mv, m);
+    case CV_16S:
+        return calcDiffElemCountImpl<short int>(mv, m);
+    case CV_32S:
+        return calcDiffElemCountImpl<int>(mv, m);
+    case CV_32F:
+        return calcDiffElemCountImpl<float>(mv, m);
+    case CV_64F:
+        return calcDiffElemCountImpl<double>(mv, m);
+    }
+
+    return INT_MAX;
+}
+
+class Core_MergeSplitBaseTest : public cvtest::BaseTest
+{
+protected:
+    virtual int run_case(int depth, size_t channels, const Size& size, RNG& rng) = 0;
+
+    virtual void run(int)
+    {
+        // m is Mat
+        // mv is vector<Mat>
+        const int minMSize = 1;
+        const int maxMSize = 100;
+        const size_t maxMvSize = 10;
+
+        RNG& rng = theRNG();
+        Size mSize(rng.uniform(minMSize, maxMSize), rng.uniform(minMSize, maxMSize));
+        size_t mvSize = rng(maxMvSize);
+
+        int res = cvtest::TS::OK, curRes = res;
+        curRes = run_case(CV_8U, mvSize, mSize, rng);
+        res = curRes != cvtest::TS::OK ? curRes : res;
+
+        curRes = run_case(CV_8S, mvSize, mSize, rng);
+        res = curRes != cvtest::TS::OK ? curRes : res;
+
+        curRes = run_case(CV_16U, mvSize, mSize, rng);
+        res = curRes != cvtest::TS::OK ? curRes : res;
+
+        curRes = run_case(CV_16S, mvSize, mSize, rng);
+        res = curRes != cvtest::TS::OK ? curRes : res;
+
+        curRes = run_case(CV_32S, mvSize, mSize, rng);
+        res = curRes != cvtest::TS::OK ? curRes : res;
+
+        curRes = run_case(CV_32F, mvSize, mSize, rng);
+        res = curRes != cvtest::TS::OK ? curRes : res;
+
+        curRes = run_case(CV_64F, mvSize, mSize, rng);
+        res = curRes != cvtest::TS::OK ? curRes : res;
+
+        ts->set_failed_test_info(res);
+    }
+};
+
+class Core_MergeTest : public Core_MergeSplitBaseTest
+{
+public:
+    Core_MergeTest() {}
+    ~Core_MergeTest() {}
+
+protected:
+    virtual int run_case(int depth, size_t matCount, const Size& size, RNG& rng)
+    {
+        const int maxMatChannels = 10;
+
+        vector<Mat> src(matCount);
+        int channels = 0;
+        for(size_t i = 0; i < src.size(); i++)
+        {
+            Mat m(size, CV_MAKETYPE(depth, rng.uniform(1,maxMatChannels)));
+            rng.fill(m, RNG::UNIFORM, 0, 100, true);
+            channels += m.channels();
+            src[i] = m;
+        }
+
+        Mat dst;
+        merge(src, dst);
+
+        // check result
+        stringstream commonLog;
+        commonLog << "Depth " << depth << " :";
+        if(dst.depth() != depth)
+        {
+            ts->printf(cvtest::TS::LOG, "%s incorrect depth of dst (%d instead of %d)\n",
+                       commonLog.str().c_str(), dst.depth(), depth);
+            return cvtest::TS::FAIL_INVALID_OUTPUT;
+        }
+        if(dst.size() != size)
+        {
+            ts->printf(cvtest::TS::LOG, "%s incorrect size of dst (%d x %d instead of %d x %d)\n",
+                       commonLog.str().c_str(), dst.rows, dst.cols, size.height, size.width);
+            return cvtest::TS::FAIL_INVALID_OUTPUT;
+        }
+        if(dst.channels() != channels)
+        {
+            ts->printf(cvtest::TS::LOG, "%s: incorrect channels count of dst (%d instead of %d)\n",
+                       commonLog.str().c_str(), dst.channels(), channels);
+            return cvtest::TS::FAIL_INVALID_OUTPUT;
+        }
+
+        int diffElemCount = calcDiffElemCount(src, dst);
+        if(diffElemCount > 0)
+        {
+            ts->printf(cvtest::TS::LOG, "%s: there are incorrect elements in dst (part of them is %f)\n",
+                       commonLog.str().c_str(), static_cast<float>(diffElemCount)/(channels*size.area()));
+            return cvtest::TS::FAIL_INVALID_OUTPUT;
+        }
+
+        return cvtest::TS::OK;
+    }
+};
+
+class Core_SplitTest : public Core_MergeSplitBaseTest
+{
+public:
+    Core_SplitTest() {}
+    ~Core_SplitTest() {}
+
+protected:
+    virtual int run_case(int depth, size_t channels, const Size& size, RNG& rng)
+    {
+        Mat src(size, CV_MAKETYPE(depth, channels));
+        rng.fill(src, RNG::UNIFORM, 0, 100, true);
+
+        vector<Mat> dst;
+        split(src, dst);
+
+        // check result
+        stringstream commonLog;
+        commonLog << "Depth " << depth << " :";
+        if(dst.size() != channels)
+        {
+            ts->printf(cvtest::TS::LOG, "%s incorrect count of matrices in dst (%d instead of %d)\n",
+                       commonLog.str().c_str(), dst.size(), channels);
+            return cvtest::TS::FAIL_INVALID_OUTPUT;
+        }
+        for(size_t i = 0; i < dst.size(); i++)
+        {
+            if(dst[i].size() != size)
+            {
+                ts->printf(cvtest::TS::LOG, "%s incorrect size of dst[%d] (%d x %d instead of %d x %d)\n",
+                           commonLog.str().c_str(), i, dst[i].rows, dst[i].cols, size.height, size.width);
+                return cvtest::TS::FAIL_INVALID_OUTPUT;
+            }
+            if(dst[i].depth() != depth)
+            {
+                ts->printf(cvtest::TS::LOG, "%s: incorrect depth of dst[%d] (%d instead of %d)\n",
+                           commonLog.str().c_str(), i, dst[i].depth(), depth);
+                return cvtest::TS::FAIL_INVALID_OUTPUT;
+            }
+            if(dst[i].channels() != 1)
+            {
+                ts->printf(cvtest::TS::LOG, "%s: incorrect channels count of dst[%d] (%d instead of %d)\n",
+                           commonLog.str().c_str(), i, dst[i].channels(), 1);
+                return cvtest::TS::FAIL_INVALID_OUTPUT;
+            }
+        }
+
+        int diffElemCount = calcDiffElemCount(dst, src);
+        if(diffElemCount > 0)
+        {
+            ts->printf(cvtest::TS::LOG, "%s: there are incorrect elements in dst (part of them is %f)\n",
+                       commonLog.str().c_str(), static_cast<float>(diffElemCount)/(channels*size.area()));
+            return cvtest::TS::FAIL_INVALID_OUTPUT;
+        }
+
+        return cvtest::TS::OK;
+    }
+};
+
 TEST(Core_PCA, accuracy) { Core_PCATest test; test.safe_run(); }
 TEST(Core_Reduce, accuracy) { Core_ReduceTest test; test.safe_run(); }
 TEST(Core_Array, basic_operations) { Core_ArrayOpTest test; test.safe_run(); }
+
+TEST(Core_Merge, shape_operations) { Core_MergeTest test; test.safe_run(); }
+TEST(Core_Split, shape_operations) { Core_SplitTest test; test.safe_run(); }
 
 
 TEST(Core_IOArray, submat_assignment)

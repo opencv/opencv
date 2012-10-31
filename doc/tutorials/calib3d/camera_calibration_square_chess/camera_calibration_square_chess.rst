@@ -7,16 +7,16 @@ Camera calibration with square chessboard
 
 The goal of this tutorial is to learn how to calibrate a camera given a set of chessboard images.
 
-*Test data*: use images in your data/chess folder. 
+*Test data*: use images in your data/chess folder.
 
 #.
-    Compile opencv with samples by setting ``BUILD_EXAMPLES`` to ``ON`` in cmake configuration. 
+    Compile opencv with samples by setting ``BUILD_EXAMPLES`` to ``ON`` in cmake configuration.
 
 #.
     Go to ``bin`` folder and use ``imagelist_creator`` to create an ``XML/YAML`` list of your images.
-    
+
 #.
-    Then, run ``calibration`` sample to get camera parameters. Use square size equal to 3cm. 
+    Then, run ``calibration`` sample to get camera parameters. Use square size equal to 3cm.
 
 Pose estimation
 ===============
@@ -57,6 +57,6 @@ Now, let us write a code that detects a chessboard in a new image and finds its 
                              distCoeffs, rvec, tvec, false);
 
 #.
-    Calculate reprojection error like it is done in ``calibration`` sample (see ``opencv/samples/cpp/calibration.cpp``, function ``computeReprojectionErrors``). 
+    Calculate reprojection error like it is done in ``calibration`` sample (see ``opencv/samples/cpp/calibration.cpp``, function ``computeReprojectionErrors``).
 
-Question: how to calculate the distance from the camera origin to any of the corners? 
+Question: how to calculate the distance from the camera origin to any of the corners?

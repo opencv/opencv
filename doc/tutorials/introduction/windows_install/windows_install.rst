@@ -130,7 +130,7 @@ Building the library
 
 #. Install |TortoiseGit|_. Choose the 32 or 64 bit version according to the type of OS you work in. While installing, locate your msysgit (if it doesn't do that automatically). Follow the wizard -- the default options are OK for the most part.
 
-#. Choose a directory in your file system, where you will download the OpenCV libraries to. I recommend creating a new one that has short path and no special charachters in it, for example :file:`D:/OpenCV`. For this tutorial I'll suggest you do so. If you use your own path and know, what you're doing -- it's OK. 
+#. Choose a directory in your file system, where you will download the OpenCV libraries to. I recommend creating a new one that has short path and no special charachters in it, for example :file:`D:/OpenCV`. For this tutorial I'll suggest you do so. If you use your own path and know, what you're doing -- it's OK.
 
    a) Clone the repository to the selected directory. After clicking *Clone* button, a window will appear where you can select from what repository you want to download source files (https://github.com/Itseez/opencv.git) and to what directory (:file:`D:/OpenCV`).
 

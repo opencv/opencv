@@ -637,9 +637,7 @@ CV_EXPORTS_W void accumulateWeighted( InputArray src, InputOutputArray dst,
 CV_EXPORTS_W double PSNR(InputArray src1, InputArray src2);
 
 CV_EXPORTS_W Point2d phaseCorrelate(InputArray src1, InputArray src2,
-                                  InputArray window = noArray());
-CV_EXPORTS_W Point2d phaseCorrelateRes(InputArray src1, InputArray src2,
-                                    InputArray window, CV_OUT double* response = 0);
+                                    InputArray window = noArray(), CV_OUT double* response=0);
 CV_EXPORTS_W void createHanningWindow(OutputArray dst, Size winSize, int type);
 
 //! type of the threshold operation
@@ -1120,13 +1118,6 @@ CV_EXPORTS_W void findContours( InputOutputArray image, OutputArrayOfArrays cont
 //! retrieves contours from black-n-white image.
 CV_EXPORTS void findContours( InputOutputArray image, OutputArrayOfArrays contours,
                               int mode, int method, Point offset=Point());
-
-//! draws contours in the image
-CV_EXPORTS_W void drawContours( InputOutputArray image, InputArrayOfArrays contours,
-                              int contourIdx, const Scalar& color,
-                              int thickness=1, int lineType=8,
-                              InputArray hierarchy=noArray(),
-                              int maxLevel=INT_MAX, Point offset=Point() );
 
 //! approximates contour or a curve using Douglas-Peucker algorithm
 CV_EXPORTS_W void approxPolyDP( InputArray curve,

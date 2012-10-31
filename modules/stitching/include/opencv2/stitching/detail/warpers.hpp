@@ -70,8 +70,8 @@ public:
 
     virtual Rect warpRoi(Size src_size, const Mat &K, const Mat &R) = 0;
 
-    float getScale() const { return 1.f; }
-    void setScale(float) {}
+    virtual float getScale() const { return 1.f; }
+    virtual void setScale(float) {}
 };
 
 
@@ -133,8 +133,6 @@ class CV_EXPORTS PlaneWarper : public RotationWarperBase<PlaneProjector>
 {
 public:
     PlaneWarper(float scale = 1.f) { projector_.scale = scale; }
-
-    void setScale(float scale) { projector_.scale = scale; }
 
     Point2f warpPoint(const Point2f &pt, const Mat &K, const Mat &R, const Mat &T);
 

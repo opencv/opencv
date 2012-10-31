@@ -1462,7 +1462,7 @@ Reconstructs points by triangulation.
 
     :param points4D: 4xN array of reconstructed points in homogeneous coordinates.
 
-The function reconstructs 3-dimensional points (in homogeneous coordinates) by using their observations with a stereo camera. Projections matrices can be obtained from :ocv:func:`stereoRectify`. 
+The function reconstructs 3-dimensional points (in homogeneous coordinates) by using their observations with a stereo camera. Projections matrices can be obtained from :ocv:func:`stereoRectify`.
 
 .. seealso::
 

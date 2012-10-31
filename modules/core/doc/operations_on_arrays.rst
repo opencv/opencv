@@ -2297,11 +2297,9 @@ Performs Principal Component Analysis of the supplied dataset.
 
 .. ocv:function:: PCA& PCA::operator()(InputArray data, InputArray mean, int flags, int maxComponents=0)
 
-.. ocv:function:: PCA& PCA::computeVar(InputArray data, InputArray mean, int flags, double retainedVariance)
+.. ocv:function:: PCA& PCA::operator()(InputArray data, InputArray mean, int flags, double retainedVariance)
 
 .. ocv:pyfunction:: cv2.PCACompute(data[, mean[, eigenvectors[, maxComponents]]]) -> mean, eigenvectors
-
-.. ocv:pyfunction:: cv2.PCAComputeVar(data, retainedVariance[, mean[, eigenvectors]]) -> mean, eigenvectors
 
     :param data: input samples stored as the matrix rows or as the matrix columns.
 

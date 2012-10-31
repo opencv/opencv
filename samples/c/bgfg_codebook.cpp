@@ -72,9 +72,9 @@ static void help()
 //
 const char *keys =
 {
-    "{nf|nframes   |300        |frames number}"
-    "{c |camera    |false      |use the camera or not}"
-    "{mf|movie_file|tree.avi   |used movie video file}"
+    "{nf nframes   |300        |frames number}"
+    "{c  camera    |false      |use the camera or not}"
+    "{mf movie_file|tree.avi   |used movie video file}"
 };
 int main(int argc, const char** argv)
 {
@@ -82,7 +82,7 @@ int main(int argc, const char** argv)
 
     CommandLineParser parser(argc, argv, keys);
     int nframesToLearnBG = parser.get<int>("nf");
-    bool useCamera = parser.get<bool>("c");
+    bool useCamera = parser.has("c");
     string filename = parser.get<string>("mf");
     IplImage* rawImage = 0, *yuvImage = 0; //yuvImage is for codebook method
     IplImage *ImaskCodeBook = 0,*ImaskCodeBookCC = 0;
