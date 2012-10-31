@@ -415,6 +415,8 @@ void AlgorithmInfo::write(const Algorithm* algo, FileStorage& fs) const
             cv::write(fs, pname, algo->get<int>(pname));
         else if( p.type == Param::BOOLEAN )
             cv::write(fs, pname, (int)algo->get<bool>(pname));
+        else if( p.type == Param::SHORT )
+            cv::write(fs, pname, (int)algo->get<short>(pname));
         else if( p.type == Param::REAL )
             cv::write(fs, pname, algo->get<double>(pname));
         else if( p.type == Param::STRING )
@@ -430,7 +432,10 @@ void AlgorithmInfo::write(const Algorithm* algo, FileStorage& fs) const
             nestedAlgo->write(fs);
         }
         else
-            CV_Error( CV_StsUnsupportedFormat, "unknown/unsupported parameter type");
+        {
+            string msg = format("unknown/unsupported type of '%s' parameter == %d", pname.c_str(), p.type);
+            CV_Error( CV_StsUnsupportedFormat, msg.c_str());
+        }
     }
 }
 
@@ -446,7 +451,7 @@ void AlgorithmInfo::read(Algorithm* algo, const FileNode& fn) const
         const FileNode n = fn[pname];
         if( n.empty() )
             continue;
-        if( p.type == Param::INT )
+        if( p.type == Param::INT || p.type == Param::SHORT )
         {
             int val = (int)n;
             info->set(algo, pname.c_str(), p.type, &val, true);
@@ -486,7 +491,10 @@ void AlgorithmInfo::read(Algorithm* algo, const FileNode& fn) const
             info->set(algo, pname.c_str(), p.type, &nestedAlgo, true);
         }
         else
-            CV_Error( CV_StsUnsupportedFormat, "unknown/unsupported parameter type");
+        {
+            string msg = format("unknown/unsupported type of '%s' parameter == %d", pname.c_str(), p.type);
+            CV_Error( CV_StsUnsupportedFormat, msg.c_str());
+        }
     }
 }
 
@@ -589,7 +597,7 @@ void AlgorithmInfo::set(Algorithm* algo, const char* parameter, int argType, con
     GetSetParam f;
     f.set_int = p->setter;
 
-    if( argType == Param::INT || argType == Param::BOOLEAN || argType == Param::REAL )
+    if( argType == Param::INT || argType == Param::BOOLEAN || argType == Param::REAL || argType == Param::SHORT )
     {
         if ( !( p->type == Param::INT || p->type == Param::REAL || p->type == Param::BOOLEAN || (p->type == Param::SHORT && argType == Param::INT)) )
         {
@@ -805,7 +813,10 @@ void AlgorithmInfo::get(const Algorithm* algo, const char* parameter, int argTyp
             *(Ptr<Algorithm>*)((uchar*)algo + p->offset);
     }
     else
-        CV_Error(CV_StsBadArg, "Unknown/unsupported parameter type");
+    {
+        string message = getErrorMessageForWrongArgumentInGetter(algo->name(), parameter, p->type, argType);
+        CV_Error(CV_StsBadArg, message);
+    }
 }
 
 
@@ -864,7 +875,7 @@ void AlgorithmInfo::addParam(Algorithm& algo, const char* parameter,
                              void (Algorithm::*setter)(int),
                              const string& help)
 {
-    addParam_(algo, parameter, ParamType<int>::type, &value, readOnly,
+    addParam_(algo, parameter, ParamType<short>::type, &value, readOnly,
               (Algorithm::Getter)getter, (Algorithm::Setter)setter, help);
 }
 
