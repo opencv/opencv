@@ -75,7 +75,8 @@ public class Sample2NativeCamera extends Activity implements CvCameraViewListene
     @Override
     public void onPause()
     {
-        mOpenCvCameraView.disableView();
+        if (mOpenCvCameraView != null)
+            mOpenCvCameraView.disableView();
         super.onPause();
     }
 
@@ -88,7 +89,8 @@ public class Sample2NativeCamera extends Activity implements CvCameraViewListene
 
     public void onDestroy() {
         super.onDestroy();
-        mOpenCvCameraView.disableView();
+        if (mOpenCvCameraView != null)
+            mOpenCvCameraView.disableView();
     }
 
     public void onCameraViewStarted(int width, int height) {

@@ -63,7 +63,8 @@ public class Puzzle15Activity extends Activity implements CvCameraViewListener, 
     @Override
     public void onPause()
     {
-        mOpenCvCameraView.disableView();
+        if (mOpenCvCameraView != null)
+            mOpenCvCameraView.disableView();
         super.onPause();
     }
 
@@ -76,7 +77,8 @@ public class Puzzle15Activity extends Activity implements CvCameraViewListener, 
 
     public void onDestroy() {
         super.onDestroy();
-        mOpenCvCameraView.disableView();
+        if (mOpenCvCameraView != null)
+            mOpenCvCameraView.disableView();
     }
 
     @Override

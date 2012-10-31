@@ -22,6 +22,13 @@ public class ColorBlobDetector {
     private Mat mSpectrum = new Mat();
     private List<MatOfPoint> mContours = new ArrayList<MatOfPoint>();
 
+    // Cache
+    Mat mPyrDownMat = new Mat();
+    Mat mHsvMat = new Mat();
+    Mat mMask = new Mat();
+    Mat mDilatedMask = new Mat();
+    Mat mHierarchy = new Mat();
+
     public void setColorRadius(Scalar radius) {
         mColorRadius = radius;
     }
@@ -61,23 +68,17 @@ public class ColorBlobDetector {
     }
 
     public void process(Mat rgbaImage) {
-        Mat pyrDownMat = new Mat();
+        Imgproc.pyrDown(rgbaImage, mPyrDownMat);
+        Imgproc.pyrDown(mPyrDownMat, mPyrDownMat);
 
-        Imgproc.pyrDown(rgbaImage, pyrDownMat);
-        Imgproc.pyrDown(pyrDownMat, pyrDownMat);
+        Imgproc.cvtColor(mPyrDownMat, mHsvMat, Imgproc.COLOR_RGB2HSV_FULL);
 
-        Mat hsvMat = new Mat();
-        Imgproc.cvtColor(pyrDownMat, hsvMat, Imgproc.COLOR_RGB2HSV_FULL);
-
-        Mat Mask = new Mat();
-        Core.inRange(hsvMat, mLowerBound, mUpperBound, Mask);
-        Mat dilatedMask = new Mat();
-        Imgproc.dilate(Mask, dilatedMask, new Mat());
+        Core.inRange(mHsvMat, mLowerBound, mUpperBound, mMask);
+        Imgproc.dilate(mMask, mDilatedMask, new Mat());
 
         List<MatOfPoint> contours = new ArrayList<MatOfPoint>();
-        Mat hierarchy = new Mat();
 
-        Imgproc.findContours(dilatedMask, contours, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
+        Imgproc.findContours(mDilatedMask, contours, mHierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
 
         // Find max contour area
         double maxArea = 0;
