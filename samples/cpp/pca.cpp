@@ -64,7 +64,7 @@ static void read_imgList(const string& filename, vector<Mat>& images) {
 
 static  Mat formatImagesForPCA(const vector<Mat> &data)
 {
-    Mat dst(data.size(), data[0].rows*data[0].cols, CV_32F);
+    Mat dst(static_cast<int>(data.size()), data[0].rows*data[0].cols, CV_32F);
     for(unsigned int i = 0; i < data.size(); i++)
     {
         Mat image_row = data[i].clone().reshape(1,1);

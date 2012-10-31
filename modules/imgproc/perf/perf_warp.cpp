@@ -119,7 +119,7 @@ PERF_TEST_P( TestWarpPerspectiveNear_t, WarpPerspectiveNear,
 
     resize(src, src, size);
 
-    int shift = src.cols*0.04;
+    int shift = static_cast<int>(src.cols*0.04);
     Mat srcVertices = (Mat_<Vec2f>(1, 4) << Vec2f(0, 0),
                                             Vec2f(static_cast<float>(size.width-1), 0),
                                             Vec2f(static_cast<float>(size.width-1), static_cast<float>(size.height-1)),
