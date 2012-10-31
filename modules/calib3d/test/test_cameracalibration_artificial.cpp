@@ -426,4 +426,4 @@ protected:
     }
 };
 
-TEST(Calib3d_CalibrateCamera_CPP, accuracy_on_artificial_data) { CV_CalibrateCameraArtificialTest test; test.safe_run(); }
+TEST(Calib3d_CalibrateCamera_CPP, DISABLED_accuracy_on_artificial_data) { CV_CalibrateCameraArtificialTest test; test.safe_run(); }

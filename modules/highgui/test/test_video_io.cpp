@@ -143,7 +143,7 @@ void CV_HighGuiTest::ImageTest(const string& dir)
 #ifdef HAVE_JASPER
         "jp2",
 #endif
-#if defined HAVE_OPENEXR && !defined __APPLE__
+#if 0 /*defined HAVE_OPENEXR && !defined __APPLE__*/
         "exr",
 #endif
         "bmp",
