@@ -78,7 +78,8 @@ public class ColorBlobDetectionActivity extends Activity implements OnTouchListe
     @Override
     public void onPause()
     {
-        mOpenCvCameraView.disableView();
+        if (mOpenCvCameraView != null)
+            mOpenCvCameraView.disableView();
         super.onPause();
     }
 
@@ -91,7 +92,8 @@ public class ColorBlobDetectionActivity extends Activity implements OnTouchListe
 
     public void onDestroy() {
         super.onDestroy();
-        mOpenCvCameraView.disableView();
+        if (mOpenCvCameraView != null)
+            mOpenCvCameraView.disableView();
     }
 
     public void onCameraViewStarted(int width, int height) {
@@ -100,7 +102,7 @@ public class ColorBlobDetectionActivity extends Activity implements OnTouchListe
         mSpectrum = new Mat();
         mBlobColorRgba = new Scalar(255);
         mBlobColorHsv = new Scalar(255);
-        SPECTRUM_SIZE = new Size(200, 32);
+        SPECTRUM_SIZE = new Size(200, 64);
         CONTOUR_COLOR = new Scalar(255,0,0,255);
     }
 
@@ -152,6 +154,9 @@ public class ColorBlobDetectionActivity extends Activity implements OnTouchListe
 
         mIsColorSelected = true;
 
+        touchedRegionRgba.release();
+        touchedRegionHsv.release();
+
         return false; // don't need subsequent touch events
     }
 
@@ -164,10 +169,10 @@ public class ColorBlobDetectionActivity extends Activity implements OnTouchListe
             Log.e(TAG, "Contours count: " + contours.size());
             Imgproc.drawContours(mRgba, contours, -1, CONTOUR_COLOR);
 
-            Mat colorLabel = mRgba.submat(2, 34, 2, 34);
+            Mat colorLabel = mRgba.submat(4, 68, 4, 68);
             colorLabel.setTo(mBlobColorRgba);
 
-            Mat spectrumLabel = mRgba.submat(2, 2 + mSpectrum.rows(), 38, 38 + mSpectrum.cols());
+            Mat spectrumLabel = mRgba.submat(4, 4 + mSpectrum.rows(), 70, 70 + mSpectrum.cols());
             mSpectrum.copyTo(spectrumLabel);
         }
 

@@ -50,7 +50,7 @@ public class FdActivity extends Activity implements CvCameraViewListener {
     private int                    mDetectorType       = JAVA_DETECTOR;
     private String[]               mDetectorName;
 
-    private float                  mRelativeFaceSize   = 0;
+    private float                  mRelativeFaceSize   = 0.2f;
     private int                    mAbsoluteFaceSize   = 0;
 
     private CameraBridgeViewBase   mOpenCvCameraView;
@@ -132,7 +132,8 @@ public class FdActivity extends Activity implements CvCameraViewListener {
     @Override
     public void onPause()
     {
-        mOpenCvCameraView.disableView();
+        if (mOpenCvCameraView != null)
+            mOpenCvCameraView.disableView();
         super.onPause();
     }
 

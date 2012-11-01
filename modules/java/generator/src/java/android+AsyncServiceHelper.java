@@ -41,7 +41,7 @@ class AsyncServiceHelper
     }
 
     protected static final String TAG = "OpenCVManager/Helper";
-    protected static final int MINIMUM_ENGINE_VERSION = 1;
+    protected static final int MINIMUM_ENGINE_VERSION = 2;
     protected OpenCVEngineInterface mEngineService;
     protected LoaderCallbackInterface mUserAppCallback;
     protected String mOpenCVersion;

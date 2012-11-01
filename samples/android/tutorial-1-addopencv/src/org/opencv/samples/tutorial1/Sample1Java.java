@@ -68,7 +68,8 @@ public class Sample1Java extends Activity implements CvCameraViewListener {
     @Override
     public void onPause()
     {
-        mOpenCvCameraView.disableView();
+        if (mOpenCvCameraView != null)
+            mOpenCvCameraView.disableView();
         super.onPause();
     }
 
@@ -81,7 +82,8 @@ public class Sample1Java extends Activity implements CvCameraViewListener {
 
     public void onDestroy() {
         super.onDestroy();
-        mOpenCvCameraView.disableView();
+        if (mOpenCvCameraView != null)
+            mOpenCvCameraView.disableView();
     }
 
     @Override
