@@ -300,7 +300,7 @@ void matchUnrolledCached(const oclMat &query, const oclMat &train, float maxDist
         args.push_back( make_pair( sizeof(cl_int), (void *)&query.cols ));
         args.push_back( make_pair( sizeof(cl_int), (void *)&train.rows ));
         args.push_back( make_pair( sizeof(cl_int), (void *)&train.cols ));
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&trainIdx.cols ));
+        args.push_back( make_pair( sizeof(cl_int), (void *)&trainIdx.cols ));
         args.push_back( make_pair( sizeof(cl_int), (void *)&query.step ));
         args.push_back( make_pair( sizeof(cl_int), (void *)&trainIdx.step ));
         args.push_back( make_pair( sizeof(cl_int), (void *)&distType ));
@@ -338,7 +338,7 @@ void radius_match(const oclMat &query, const oclMat &train, float maxDistance, c
         args.push_back( make_pair( sizeof(cl_int), (void *)&query.cols ));
         args.push_back( make_pair( sizeof(cl_int), (void *)&train.rows ));
         args.push_back( make_pair( sizeof(cl_int), (void *)&train.cols ));
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&trainIdx.cols ));
+        args.push_back( make_pair( sizeof(cl_int), (void *)&trainIdx.cols ));
         args.push_back( make_pair( sizeof(cl_int), (void *)&query.step ));
         args.push_back( make_pair( sizeof(cl_int), (void *)&trainIdx.step ));
         args.push_back( make_pair( sizeof(cl_int), (void *)&distType ));
