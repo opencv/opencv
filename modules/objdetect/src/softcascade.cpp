@@ -55,7 +55,7 @@
 
 #if defined WITH_DEBUG_OUT
 # define dprintf(format, ...) \
-            do { printf(format, __VA_ARGS__); } while (0)
+            do { printf(format, ##__VA_ARGS__); } while (0)
 #else
 # define dprintf(format, ...)
 #endif

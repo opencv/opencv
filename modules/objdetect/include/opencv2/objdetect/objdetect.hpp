@@ -488,25 +488,31 @@ protected:
     Ptr<MaskGenerator> maskGenerator;
 };
 
-// ======================== soft cascade version ===================== //
-
+/**
+ * \class SoftCascade
+ * \brief Implement soft (stageless) cascade.
+ */
 class CV_EXPORTS SoftCascade
 {
 public:
 
+    /**
+     * \class Detection
+     * \brief Soft cascade detector result represintation.
+     */
     struct CV_EXPORTS Detection
     {
-        cv::Rect rect;
-        float confidence;
-        int kind;
-
         enum {PEDESTRIAN = 1};
 
         //! Create detection from an object bounding rectangle and confidence. Only PEDESTRIAN type carrently supported.
         //! Param r is a boundinf rectangle
         //! param c is a confidence that object belongs to class k
         //! Paral k is an object class
+
         Detection(const cv::Rect& r, const float c, int k = PEDESTRIAN) : rect(r), confidence(c), kind(k) {}
+        cv::Rect rect;
+        float confidence;
+        int kind;
     };
 
     //! An empty cascade will be created.
@@ -538,6 +544,10 @@ private:
     int   scales;
 };
 
+/**
+ * \class IntegralChannels
+ * \brief Create channel integrals for Soft Cascade detector.
+ */
 class CV_EXPORTS IntegralChannels
 {
 public:
