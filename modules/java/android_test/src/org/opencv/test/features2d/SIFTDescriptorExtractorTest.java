@@ -34,11 +34,14 @@ public class SIFTDescriptorExtractorTest extends OpenCVTestCase {
         truth = new Mat(1, 128, CvType.CV_32FC1) {
             {
                 put(0, 0,
-                        0, 0, 0, 0, 0, 0, 0, 0, 16, 12, 17, 28, 26, 0, 0, 2, 23, 14, 12, 9, 6, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                        14, 88, 23, 17, 24, 29, 0, 117, 54, 117, 116, 117, 22, 29, 27, 117, 59, 76, 19, 30, 2, 9, 26, 2, 7, 6, 0, 0,
-                        0, 0, 0, 0, 8, 50, 16, 30, 58, 89, 0, 117, 49, 95, 75, 117, 112, 117, 93, 81, 86, 117, 5, 5, 39, 117, 71, 20,
-                        20, 12, 0, 0, 1, 20, 19, 0, 0, 0, 2, 14, 4, 1, 0, 69, 0, 0, 14, 90, 31, 35, 56, 25, 0, 0, 0, 0, 2, 12, 16, 0,
-                        0, 0, 0, 0, 0, 2, 1);
+                          0, 0, 0, 1, 3, 0, 0, 0, 15, 23, 22, 20, 24, 2, 0, 0, 7, 8, 2, 0,
+                          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 27, 16, 13, 2, 0, 0, 117,
+                          86, 79, 68, 117, 42, 5, 5, 79, 60, 117, 25, 9, 2, 28, 19, 11, 13,
+                          20, 2, 0, 0, 5, 8, 0, 0, 76, 58, 34, 31, 97, 16, 95, 49, 117, 92,
+                          117, 112, 117, 76, 117, 54, 117, 25, 29, 22, 117, 117, 16, 11, 14,
+                          1, 0, 0, 22, 26, 0, 0, 0, 0, 1, 4, 15, 2, 47, 8, 0, 0, 82, 56, 31,
+                          17, 81, 12, 0, 0, 26, 23, 18, 23, 0, 0, 0, 0, 0, 0, 0, 0
+                   );
             }
         };
 
@@ -76,18 +79,7 @@ public class SIFTDescriptorExtractorTest extends OpenCVTestCase {
     }
 
     public void testRead() {
-        MatOfKeyPoint keypoints =new MatOfKeyPoint(keypoint);
-        Mat img = getTestImg();
-        Mat descriptors = new Mat();
-
-        String filename = OpenCVTestRunner.getTempFileName("yml");
-        writeFile(filename,
-                "%YAML:1.0\nmagnification: 3.\nisNormalize: 1\nrecalculateAngles: 1\nnOctaves: 6\nnOctaveLayers: 4\nfirstOctave: -1\nangleMode: 0\n");
-
-        extractor.read(filename);
-
-        extractor.compute(img, keypoints, descriptors);
-        assertMatNotEqual(truth, descriptors, EPS);
+        fail("Not yet implemented");
     }
 
     public void testWrite() {
