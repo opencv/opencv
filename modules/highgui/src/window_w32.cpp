@@ -106,7 +106,7 @@ static const char* trackbar_text =
 
 #endif
 
-void FillBitmapInfo( BITMAPINFO* bmi, int width, int height, int bpp, int origin )
+static void FillBitmapInfo( BITMAPINFO* bmi, int width, int height, int bpp, int origin )
 {
     assert( bmi && width >= 0 && height >= 0 && (bpp == 8 || bpp == 24 || bpp == 32));
 

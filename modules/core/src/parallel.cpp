@@ -42,6 +42,14 @@
 
 #include "precomp.hpp"
 
+#if defined WIN32 || defined WINCE
+    #include <windows.h>
+    #undef small
+    #undef min
+    #undef max
+    #undef abs
+#endif
+
 #if defined __linux__ || defined __APPLE__
     #include <unistd.h>
     #include <stdio.h>
