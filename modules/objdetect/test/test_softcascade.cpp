@@ -92,5 +92,5 @@ TEST(SoftCascade, detect)
         total++;
     }
     std::cout << "detected: " << (int)objects.size() << std::endl;
-    ASSERT_EQ((int)objects.size(), 1501);
+    ASSERT_EQ((int)objects.size(), 1469);
 }
