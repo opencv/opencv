@@ -56,6 +56,18 @@ PERF_TEST_P(ImageName_MinSize, CascadeClassifierLBPFrontalFace,
 typedef std::tr1::tuple<std::string, std::string> fixture;
 typedef perf::TestBaseWithParam<fixture> detect;
 
+
+namespace {
+  typedef cv::SoftCascade::Detection detection_t;
+
+  void extractRacts(std::vector<detection_t> objectBoxes, vector<Rect> rects)
+  {
+    rects.clear();
+    for (int i = 0; i < (int)objectBoxes.size(); ++i)
+      rects.push_back(objectBoxes[i].rect);
+  }
+}
+
 PERF_TEST_P(detect, SoftCascade,
     testing::Combine(testing::Values(std::string("cv/cascadeandhog/sc_cvpr_2012_to_opencv.xml")),
     testing::Values(std::string("cv/cascadeandhog/bahnhof/image_00000000_0.png"))))
@@ -76,5 +88,9 @@ PERF_TEST_P(detect, SoftCascade,
     {
         cascade.detectMultiScale(colored, rois, objectBoxes);
     }
-    SANITY_CHECK(objectBoxes);
+
+    vector<Rect> rects;
+    extractRacts(objectBoxes, rects);
+    std::sort(rects.begin(), rects.end(), comparators::RectLess());
+    SANITY_CHECK(rects);
 }

@@ -396,16 +396,6 @@ struct cv::SoftCascade::Filds
 
             if (fabs(scale - maxScale) < FLT_EPSILON) break;
             scale = std::min(maxScale, expf(log(scale) + logFactor));
-
-            std::cout << "level " << sc << " scale "
-                      << levels[sc].origScale
-                      << " octeve "
-                      << levels[sc].octave->scale
-                      << " "
-                      << levels[sc].relScale
-                      << " [" << levels[sc].objSize.width
-                      << " " << levels[sc].objSize.height << "] ["
-            << levels[sc].workRect.width << " " << levels[sc].workRect.height << "]" << std::endl;
         }
     }
 
@@ -523,10 +513,7 @@ bool cv::SoftCascade::read( const cv::FileStorage& fs)
 
     filds = new Filds;
     Filds& flds = *filds;
-    if (!flds.fill(fs.getFirstTopLevelNode(), minScale, maxScale)) return false;
-    // flds.calcLevels(FRAME_WIDTH, FRAME_HEIGHT, scales);
-
-    return true;
+    return flds.fill(fs.getFirstTopLevelNode(), minScale, maxScale);
 }
 
 void cv::SoftCascade::detectMultiScale(const Mat& image, const std::vector<cv::Rect>& /*rois*/,
@@ -534,9 +521,6 @@ void cv::SoftCascade::detectMultiScale(const Mat& image, const std::vector<cv::R
 {
     // only color images are supperted
     CV_Assert(image.type() == CV_8UC3);
-
-    // only this window size allowed
-    CV_Assert(image.cols == 640 && image.rows == 480);
 
     Filds& fld = *filds;
     fld.calcLevels(image.size(), scales);

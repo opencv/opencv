@@ -44,52 +44,12 @@
 #include <opencv2/objdetect/objdetect.hpp>
 #include <opencv2/core/core.hpp>
 
-
-template<typename T>
-struct Decimate {
-    int shrinkage;
-
-    Decimate(const int sr) : shrinkage(sr) {}
-
-    void operator()(const cv::Mat& in, cv::Mat& out) const
-    {
-        int cols = in.cols / shrinkage;
-        int rows = in.rows / shrinkage;
-        out.create(rows, cols, in.type());
-
-        CV_Assert(cols * shrinkage == in.cols);
-        CV_Assert(rows * shrinkage == in.rows);
-
-        for (int outIdx_y = 0; outIdx_y < rows; ++outIdx_y)
-        {
-            T* outPtr = out.ptr<T>(outIdx_y);
-            for (int outIdx_x = 0; outIdx_x < cols; ++outIdx_x)
-            {
-                // do desimate
-                int inIdx_y = outIdx_y * shrinkage;
-                int inIdx_x = outIdx_x * shrinkage;
-                int sum = 0;
-
-                for (int y = inIdx_y; y < inIdx_y + shrinkage; ++y)
-                    for (int x = inIdx_x; x < inIdx_x + shrinkage; ++x)
-                        sum += in.at<T>(y, x);
-
-                sum /= shrinkage * shrinkage;
-                outPtr[outIdx_x] = cv::saturate_cast<T>(sum);
-            }
-        }
-    }
-
-};
-
 void cv::IntegralChannels::createHogBins(const cv::Mat gray, std::vector<cv::Mat>& integrals, int bins) const
 {
     CV_Assert(gray.type() == CV_8UC1);
     int h = gray.rows;
     int w = gray.cols;
     CV_Assert(!(w % shrinkage) && !(h % shrinkage));
-
-    Decimate<uchar> decimate(shrinkage);
 
     cv::Mat df_dx, df_dy, mag, angle;
     cv::Sobel(gray, df_dx, CV_32F, 1, 0, 3, 0.125);
@@ -121,13 +81,13 @@ void cv::IntegralChannels::createHogBins(const cv::Mat gray, std::vector<cv::Mat
     for(int i = 0; i < bins; ++i)
     {
         cv::Mat shrunk, sum;
-        decimate(hist[i], shrunk);
+        cv::resize(hist[i], shrunk, cv::Size(), 1.0 / shrinkage, 1.0 / shrinkage, CV_INTER_AREA);
         cv::integral(shrunk, sum, cv::noArray(), CV_32S);
         integrals.push_back(sum);
     }
 
     cv::Mat shrMag;
-    decimate(nmag, shrMag);
+    cv::resize(nmag, shrMag, cv::Size(), 1.0 / shrinkage, 1.0 / shrinkage, CV_INTER_AREA);
     cv::integral(shrMag, mag, cv::noArray(), CV_32S);
     integrals.push_back(mag);
 }
@@ -136,8 +96,6 @@ void cv::IntegralChannels::createLuvBins(const cv::Mat frame, std::vector<cv::Ma
 {
     CV_Assert(frame.type() == CV_8UC3);
     CV_Assert(!(frame.cols % shrinkage) && !(frame.rows % shrinkage));
-
-    Decimate<uchar> decimate(shrinkage);
 
     cv::Mat luv;
     cv::cvtColor(frame, luv, CV_BGR2Luv);
@@ -148,7 +106,7 @@ void cv::IntegralChannels::createLuvBins(const cv::Mat frame, std::vector<cv::Ma
     for (size_t i = 0; i < splited.size(); ++i)
     {
         cv::Mat shrunk, sum;
-        decimate(splited[i], shrunk);
+        cv::resize(splited[i], shrunk, cv::Size(), 1.0 / shrinkage, 1.0 / shrinkage, CV_INTER_AREA);
         cv::integral(shrunk, sum, cv::noArray(), CV_32S);
         integrals.push_back(sum);
     }

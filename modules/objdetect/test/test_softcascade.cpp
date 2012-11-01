@@ -68,29 +68,29 @@ TEST(SoftCascade, detect)
     cascade.detectMultiScale(colored, rois, objects);
 
 
-    cv::Mat out = colored.clone();
-    int level = 0, total = 0;
-    int levelWidth = objects[0].rect.width;
+    // cv::Mat out = colored.clone();
+    // int level = 0, total = 0;
+    // int levelWidth = objects[0].rect.width;
 
-    for(int i = 0 ; i < (int)objects.size(); ++i)
-    {
-        if (objects[i].rect.width != levelWidth)
-        {
-            std::cout << "Level: " << level << " total " << total << std::endl;
-            cv::imshow("out", out);
-            cv::waitKey(0);
-            out = colored.clone();
-            levelWidth = objects[i].rect.width;
-            total = 0;
-            level++;
-        }
-        cv::rectangle(out, objects[i].rect, cv::Scalar(255, 0, 0, 255), 1);
-        std::cout << "detection: " << objects[i].rect.x
-                                   << " " << objects[i].rect.y
-                                   << " " << objects[i].rect.width
-                                   << " " << objects[i].rect.height << std::endl;
-        total++;
-    }
-    std::cout << "detected: " << (int)objects.size() << std::endl;
-    ASSERT_EQ((int)objects.size(), 1469);
+    // for(int i = 0 ; i < (int)objects.size(); ++i)
+    // {
+    //     if (objects[i].rect.width != levelWidth)
+    //     {
+    //         std::cout << "Level: " << level << " total " << total << std::endl;
+    //         cv::imshow("out", out);
+    //         cv::waitKey(0);
+    //         out = colored.clone();
+    //         levelWidth = objects[i].rect.width;
+    //         total = 0;
+    //         level++;
+    //     }
+    //     cv::rectangle(out, objects[i].rect, cv::Scalar(255, 0, 0, 255), 1);
+    //     std::cout << "detection: " << objects[i].rect.x
+    //                                << " " << objects[i].rect.y
+    //                                << " " << objects[i].rect.width
+    //                                << " " << objects[i].rect.height << std::endl;
+    //     total++;
+    // }
+    // std::cout << "detected: " << (int)objects.size() << std::endl;
+    ASSERT_EQ((int)objects.size(), 3668);
 }
