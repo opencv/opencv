@@ -32160,117 +32160,117 @@
       <x>79</x>
       <y>28</y>
       <val>-932276125.</val></rng2></c></Size_MatType_subtractScalar--subtractScalar---127x61--32SC1->
- <!-- resumed -->
 <Size_MatType_addWeighted--addWeighted---640x480--32SC1->
   <dst>
     <kind>65536</kind>
     <type>4</type>
-    <min>-1040051661.</min>
-    <max>1039269698.</max>
+    <min>-4062600.</min>
+    <max>4059747.</max>
     <last>
       <x>639</x>
       <y>479</y>
-      <val>717343657.</val></last>
+      <val>2802222.</val></last>
     <rng1>
-      <x>339</x>
-      <y>468</y>
-      <val>985143818.</val></rng1>
+      <x>402</x>
+      <y>366</y>
+      <val>-1974732.</val></rng1>
     <rng2>
-      <x>202</x>
-      <y>475</y>
-      <val>842063813.</val></rng2></dst></Size_MatType_addWeighted--addWeighted---640x480--32SC1->
+      <x>45</x>
+      <y>179</y>
+      <val>-402850.</val></rng2></dst></Size_MatType_addWeighted--addWeighted---640x480--32SC1->
 <Size_MatType_addWeighted--addWeighted---640x480--32SC4->
   <dst>
     <kind>65536</kind>
     <type>28</type>
-    <min>-1039404538.</min>
-    <max>1039569090.</max>
+    <min>-4060074.</min>
+    <max>4060917.</max>
     <last>
       <x>639</x>
       <y>479</y>
-      <val>-12716152.</val></last>
+      <val>-49574.</val></last>
     <rng1>
-      <x>238</x>
-      <y>445</y>
-      <cn>3</cn>
-      <val>512792603.</val></rng1>
+      <x>267</x>
+      <y>192</y>
+      <val>-1321110.</val></rng1>
     <rng2>
-      <x>78</x>
-      <y>308</y>
-      <val>287713856.</val></rng2></dst></Size_MatType_addWeighted--addWeighted---640x480--32SC4->
+      <x>591</x>
+      <y>212</y>
+      <cn>3</cn>
+      <val>1615028.</val></rng2></dst></Size_MatType_addWeighted--addWeighted---640x480--32SC4->
 <Size_MatType_addWeighted--addWeighted---1280x720--32SC1->
   <dst>
     <kind>65536</kind>
     <type>4</type>
-    <min>-1040011006.</min>
-    <max>1039628956.</max>
+    <min>-4062443.</min>
+    <max>4061149.</max>
     <last>
       <x>1279</x>
       <y>719</y>
-      <val>-106226922.</val></last>
+      <val>-414848.</val></last>
     <rng1>
-      <x>495</x>
-      <y>268</y>
-      <val>151391803.</val></rng1>
+      <x>1042</x>
+      <y>209</y>
+      <val>-2302872.</val></rng1>
     <rng2>
-      <x>367</x>
-      <y>464</y>
-      <val>-651137837.</val></rng2></dst></Size_MatType_addWeighted--addWeighted---1280x720--32SC1->
+      <x>428</x>
+      <y>341</y>
+      <val>1828967.</val></rng2></dst></Size_MatType_addWeighted--addWeighted---1280x720--32SC1->
 <Size_MatType_addWeighted--addWeighted---1280x720--32SC4->
   <dst>
     <kind>65536</kind>
     <type>28</type>
-    <min>-1039854379.</min>
-    <max>1040066780.</max>
+    <min>-4061832.</min>
+    <max>4062862.</max>
     <last>
       <x>1279</x>
       <y>719</y>
-      <val>254404097.</val></last>
+      <val>993866.</val></last>
     <rng1>
-      <x>439</x>
-      <y>642</y>
+      <x>245</x>
+      <y>469</y>
       <cn>2</cn>
-      <val>-80851551.</val></rng1>
+      <val>-1926968.</val></rng1>
     <rng2>
-      <x>377</x>
-      <y>107</y>
-      <val>-677941472.</val></rng2></dst></Size_MatType_addWeighted--addWeighted---1280x720--32SC4->
+      <x>270</x>
+      <y>604</y>
+      <cn>1</cn>
+      <val>2846353.</val></rng2></dst></Size_MatType_addWeighted--addWeighted---1280x720--32SC4->
 <Size_MatType_addWeighted--addWeighted---1920x1080--32SC1->
   <dst>
     <kind>65536</kind>
     <type>4</type>
-    <min>-1039991240.</min>
-    <max>1040103457.</max>
+    <min>-4062366.</min>
+    <max>4063005.</max>
     <last>
       <x>1919</x>
       <y>1079</y>
-      <val>251711110.</val></last>
+      <val>983345.</val></last>
     <rng1>
-      <x>1353</x>
-      <y>656</y>
-      <val>-953678467.</val></rng1>
+      <x>1880</x>
+      <y>137</y>
+      <val>-2770298.</val></rng1>
     <rng2>
-      <x>80</x>
-      <y>109</y>
-      <val>701361803.</val></rng2></dst></Size_MatType_addWeighted--addWeighted---1920x1080--32SC1->
+      <x>689</x>
+      <y>801</y>
+      <val>1337096.</val></rng2></dst></Size_MatType_addWeighted--addWeighted---1920x1080--32SC1->
 <Size_MatType_addWeighted--addWeighted---1920x1080--32SC4->
   <dst>
     <kind>65536</kind>
     <type>28</type>
-    <min>-1039996010.</min>
-    <max>1040102711.</max>
+    <min>-4062385.</min>
+    <max>4063002.</max>
     <last>
       <x>1919</x>
       <y>1079</y>
-      <val>-413178372.</val></last>
+      <val>-1613878.</val></last>
     <rng1>
-      <x>189</x>
-      <y>821</y>
-      <cn>2</cn>
-      <val>-513125224.</val></rng1>
-    <rng2>
-      <x>699</x>
-      <y>974</y>
+      <x>1191</x>
+      <y>469</y>
       <cn>1</cn>
-      <val>-930679347.</val></rng2></dst></Size_MatType_addWeighted--addWeighted---1920x1080--32SC4->
+      <val>665573.</val></rng1>
+    <rng2>
+      <x>1448</x>
+      <y>468</y>
+      <cn>3</cn>
+      <val>-1030548.</val></rng2></dst></Size_MatType_addWeighted--addWeighted---1920x1080--32SC4->
 </opencv_storage>
