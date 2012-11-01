@@ -56,7 +56,10 @@
   #define CV_XADD(addr,delta) _InterlockedExchangeAdd(const_cast<void*>(reinterpret_cast<volatile void*>(addr)), delta)
 #elif defined __GNUC__
 
-  #if __GNUC__*10 + __GNUC_MINOR__ >= 42
+  #if defined __clang__ && __clang_major__ >= 3 && defined __ATOMIC_SEQ_CST
+    #define CV_XADD(addr, delta) __c11_atomic_fetch_add((_Atomic(int)*)(addr), (delta), __ATOMIC_SEQ_CST)
+
+  #elif __GNUC__*10 + __GNUC_MINOR__ >= 42
 
     #if !defined WIN32 && (defined __i486__ || defined __i586__ || \
         defined __i686__ || defined __MMX__ || defined __SSE__  || defined __ppc__)
@@ -2460,18 +2463,10 @@ dot(const Vector<_Tp>& v1, const Vector<_Tp>& v2)
     assert(v1.size() == v2.size());
 
     _Tw s = 0;
-    if( n > 0 )
-    {
-        const _Tp *ptr1 = &v1[0], *ptr2 = &v2[0];
-     #if CV_ENABLE_UNROLLED
-        const size_t n2 = (n > 4) ? n : 4;
-        for(; i <= n2 - 4; i += 4 )
-            s += (_Tw)ptr1[i]*ptr2[i] + (_Tw)ptr1[i+1]*ptr2[i+1] +
-                (_Tw)ptr1[i+2]*ptr2[i+2] + (_Tw)ptr1[i+3]*ptr2[i+3];
-    #endif
-        for( ; i < n; i++ )
-            s += (_Tw)ptr1[i]*ptr2[i];
-    }
+    const _Tp *ptr1 = &v1[0], *ptr2 = &v2[0];
+    for( ; i < n; i++ )
+        s += (_Tw)ptr1[i]*ptr2[i];
+
     return s;
 }
 
