@@ -130,7 +130,7 @@ android::String16 OpenCVEngine::GetLibraryList(android::String16 version)
             LOGD("Trying to load info library \"%s\"", tmp.c_str());
 
             void* handle;
-            char* (*info_func)();
+            const char* (*info_func)();
 
             handle = dlopen(tmp.c_str(), RTLD_LAZY);
             if (handle)
