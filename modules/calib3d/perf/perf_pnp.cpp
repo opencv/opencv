@@ -55,7 +55,7 @@ PERF_TEST_P(PointsNum_Algo, solvePnP,
     }
 
     SANITY_CHECK(rvec, 1e-6);
-    SANITY_CHECK(tvec, 1e-6);
+    SANITY_CHECK(tvec, 1e-3);
 }
 
 PERF_TEST(PointsNum_Algo, solveP3P)

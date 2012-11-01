@@ -43,7 +43,7 @@ PERF_TEST_P( TestWarpAffine, WarpAffine,
 
     TEST_CYCLE() warpAffine( src, dst, warpMat, sz, interType, borderMode, Scalar::all(150) );
 
-    SANITY_CHECK(dst);
+    SANITY_CHECK(dst, 1);
 
 }
 
@@ -78,7 +78,7 @@ PERF_TEST_P( TestWarpPerspective, WarpPerspective,
 
     TEST_CYCLE() warpPerspective( src, dst, warpMat, sz, interType, borderMode, Scalar::all(150) );
 
-    SANITY_CHECK(dst);
+    SANITY_CHECK(dst, 1);
 }
 
 PERF_TEST_P( TestWarpPerspectiveNear_t, WarpPerspectiveNear,
