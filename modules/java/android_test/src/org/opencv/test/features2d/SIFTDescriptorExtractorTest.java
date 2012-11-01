@@ -79,19 +79,7 @@ public class SIFTDescriptorExtractorTest extends OpenCVTestCase {
     }
 
     public void testRead() {
-        MatOfKeyPoint keypoints = new MatOfKeyPoint(keypoint);
-        Mat img = getTestImg();
-        Mat descriptors = new Mat();
-
-        String filename = OpenCVTestRunner.getTempFileName("yml");
-        writeFile(filename,
-            "%YAML:1.0\nname: \"Feature2D.SIFT\"\ncontrastThreshold: 0.01\nedgeThreshold: 200\nnFeatures: 0\nsigma: 1.6\n");
-
-        extractor.read(filename);
-
-        extractor.compute(img, keypoints, descriptors);
-
-        assertMatEqual(truth, descriptors, EPS);
+        fail("Not yet implemented");
     }
 
     public void testWrite() {
