@@ -73,6 +73,14 @@
 #include "opencv2/core/internal.hpp"
 #include "opencv2/video/video.hpp"
 
+#if defined WIN32 || defined WINCE
+    #include <windows.h>
+    #undef small
+    #undef min
+    #undef max
+    #undef abs
+#endif
+
 #define OPENCV_GPU_UNUSED(x) (void)x
 
 #ifdef HAVE_CUDA
