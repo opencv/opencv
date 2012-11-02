@@ -41,7 +41,7 @@
 
 #ifdef __GNUC__
 #  pragma GCC diagnostic ignored "-Wmissing-declarations"
-#  ifdef __APPLE__
+#  ifdef __clang__
 #    pragma GCC diagnostic ignored "-Wmissing-prototypes"
 #    pragma GCC diagnostic ignored "-Wextra"
 #  endif
