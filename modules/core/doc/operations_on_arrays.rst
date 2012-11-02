@@ -13,17 +13,17 @@ Calculates an absolute value of each matrix element.
     :param m: matrix.
     :param e: matrix expression.
 
-``abs`` is a meta-function that is expanded to one of :ocv:func:`absdiff` forms:
+``abs`` is a meta-function that is expanded to one of :ocv:func:`absdiff` or :ocv:func:`convertScaleAbs` forms:
 
     * ``C = abs(A-B)``     is equivalent to ``absdiff(A, B, C)``
 
     * ``C = abs(A)``     is equivalent to ``absdiff(A, Scalar::all(0), C)``
 
-    * ``C = Mat_<Vec<uchar,n> >(abs(A*alpha + beta))``     is equivalent to :ocv:funcx:`convertScaleAbs` (A, C, alpha, beta)
+    * ``C = Mat_<Vec<uchar,n> >(abs(A*alpha + beta))``     is equivalent to  ``convertScaleAbs(A, C, alpha, beta)``
 
 The output matrix has the same size and the same type as the input one except for the last case, where ``C`` is ``depth=CV_8U`` .
 
-    .. seealso:: :ref:`MatrixExpressions`, :ocv:func:`absdiff`
+    .. seealso:: :ref:`MatrixExpressions`, :ocv:func:`absdiff`, :ocv:func:`convertScaleAbs`
 
 
 absdiff

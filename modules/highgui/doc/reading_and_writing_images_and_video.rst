@@ -75,11 +75,11 @@ Loads an image from a file.
 
     :param flags: Flags specifying the color type of a loaded image:
 
-        * 1 -
-        * CV_LOAD_IMAGE_ANYDEPTH -
-        CV_LOAD_IMAGE_COLOR
-        CV_LOAD_IMAGE_GRAYSCALE
+        * CV_LOAD_IMAGE_ANYDEPTH - If set, return 16-bit/32-bit image when the input has the corresponding depth, otherwise convert it to 8-bit.
 
+        * CV_LOAD_IMAGE_COLOR - If set, always convert image to the color one
+
+        * CV_LOAD_IMAGE_GRAYSCALE - If set, always convert image to the grayscale one
 
         * **>0**  Return a 3-channel color image.
             .. note:: In the current implementation the alpha channel, if any, is stripped from the output image. Use negative value if you need the alpha channel.

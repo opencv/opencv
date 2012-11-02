@@ -52,7 +52,7 @@ public abstract class BaseLoaderCallback implements LoaderCallbackInterface {
                 Log.d(TAG, "OpenCV Manager Service is uncompatible with this app!");
                 AlertDialog IncomatibilityMessage = new AlertDialog.Builder(mAppContext).create();
                 IncomatibilityMessage.setTitle("OpenCV Manager");
-                IncomatibilityMessage.setMessage("OpenCV Manager service is incompatible with this app. Update it!");
+                IncomatibilityMessage.setMessage("OpenCV Manager service is incompatible with this app. Try to update it via Google Play.");
                 IncomatibilityMessage.setCancelable(false); // This blocks the 'BACK' button
                 IncomatibilityMessage.setButton(AlertDialog.BUTTON_POSITIVE, "OK", new OnClickListener() {
                     public void onClick(DialogInterface dialog, int which) {
@@ -60,7 +60,7 @@ public abstract class BaseLoaderCallback implements LoaderCallbackInterface {
                     }
                 });
                 IncomatibilityMessage.show();
-            }
+            } break;
             /** Other status, i.e. INIT_FAILED. **/
             default:
             {
@@ -113,7 +113,7 @@ public abstract class BaseLoaderCallback implements LoaderCallbackInterface {
             {
                 AlertDialog WaitMessage = new AlertDialog.Builder(mAppContext).create();
                 WaitMessage.setTitle("OpenCV is not ready");
-                WaitMessage.setMessage("Installation is in progeress. Wait or exit?");
+                WaitMessage.setMessage("Installation is in progress. Wait or exit?");
                 WaitMessage.setCancelable(false); // This blocks the 'BACK' button
                 WaitMessage.setButton(AlertDialog.BUTTON_POSITIVE, "Wait", new OnClickListener() {
                     public void onClick(DialogInterface dialog, int which) {

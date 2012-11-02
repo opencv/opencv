@@ -49,17 +49,20 @@
 #include "opencv2/imgproc/imgproc_c.h"
 #include "opencv2/core/internal.hpp"
 
-#if defined WIN32 || defined _WIN32
-//required windows.h has to be included by the opencv2/core/internal.hpp
-void  FillBitmapInfo( BITMAPINFO* bmi, int width, int height, int bpp, int origin );
-#endif
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <limits.h>
 #include <ctype.h>
 #include <assert.h>
+
+#if defined WIN32 || defined WINCE
+    #include <windows.h>
+    #undef small
+    #undef min
+    #undef max
+    #undef abs
+#endif
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
 #include "opencv2/highgui/highgui_tegra.hpp"

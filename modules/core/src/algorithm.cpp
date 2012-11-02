@@ -430,7 +430,10 @@ void AlgorithmInfo::write(const Algorithm* algo, FileStorage& fs) const
             nestedAlgo->write(fs);
         }
         else
-            CV_Error( CV_StsUnsupportedFormat, "unknown/unsupported parameter type");
+        {
+            string msg = format("unknown/unsupported type of '%s' parameter == %d", pname.c_str(), p.type);
+            CV_Error( CV_StsUnsupportedFormat, msg.c_str());
+        }
     }
 }
 
@@ -486,7 +489,10 @@ void AlgorithmInfo::read(Algorithm* algo, const FileNode& fn) const
             info->set(algo, pname.c_str(), p.type, &nestedAlgo, true);
         }
         else
-            CV_Error( CV_StsUnsupportedFormat, "unknown/unsupported parameter type");
+        {
+            string msg = format("unknown/unsupported type of '%s' parameter == %d", pname.c_str(), p.type);
+            CV_Error( CV_StsUnsupportedFormat, msg.c_str());
+        }
     }
 }
 
@@ -777,7 +783,10 @@ void AlgorithmInfo::get(const Algorithm* algo, const char* parameter, int argTyp
             *(Ptr<Algorithm>*)((uchar*)algo + p->offset);
     }
     else
-        CV_Error(CV_StsBadArg, "Unknown/unsupported parameter type");
+    {
+        string message = getErrorMessageForWrongArgumentInGetter(algo->name(), parameter, p->type, argType);
+        CV_Error(CV_StsBadArg, message);
+    }
 }
 
 

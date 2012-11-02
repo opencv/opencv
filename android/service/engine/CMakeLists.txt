@@ -1,10 +1,16 @@
 set(engine OpenCVEngine)
 set(JNI_LIB_NAME ${engine} ${engine}_jni)
+
+unset(__android_project_chain CACHE)
 add_android_project(opencv_engine "${CMAKE_CURRENT_SOURCE_DIR}" SDK_TARGET 8 ${ANDROID_SDK_TARGET} IGNORE_JAVA ON)
 
-link_directories("${ANDROID_SOURCE_TREE}/out/target/product/generic/system/lib" "${ANDROID_SOURCE_TREE}/out/target/product/${ANDROID_PRODUCT}/system/lib" "${ANDROID_SOURCE_TREE}/bin_${ANDROID_ARCH_NAME}/system/lib")
+link_directories("${ANDROID_SOURCE_TREE}/out/target/product/generic/system/lib" "${ANDROID_SOURCE_TREE}/out/target/product/${ANDROID_PRODUCT}/system/lib" "${ANDROID_SOURCE_TREE}/bin/${ANDROID_ARCH_NAME}")
 
-SET(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-allow-shlib-undefined")
+# -D__SUPPORT_ARMEABI_FEATURES key is also available
+add_definitions(-DPLATFORM_ANDROID -D__SUPPORT_ARMEABI_V7A_FEATURES -D__SUPPORT_TEGRA3 -D__SUPPORT_MIPS)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti -fno-exceptions")
+
+set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-allow-shlib-undefined")
 file(GLOB engine_files "jni/BinderComponent/*.cpp" "jni/BinderComponent/*.h" "jni/include/*.h")
 
 include_directories(jni/BinderComponent jni/include)

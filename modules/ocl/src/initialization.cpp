@@ -338,7 +338,8 @@ namespace cv
                                            EXT_LEN, (void *)extends_set, &extends_size));
             CV_Assert(extends_size < EXT_LEN);
             extends_set[EXT_LEN - 1] = 0;
-            //oclinfo.extra_options = NULL;
+            memset(oclinfo.impl->extra_options, 0, 512);
+            oclinfo.impl->double_support = 0;
             int fp64_khr = string(extends_set).find("cl_khr_fp64");
 
             if(fp64_khr >= 0 && fp64_khr < EXT_LEN)

@@ -113,7 +113,8 @@ public class ImageManipulationsActivity extends Activity implements CvCameraView
     @Override
     public void onPause()
     {
-        mOpenCvCameraView.disableView();
+        if (mOpenCvCameraView != null)
+            mOpenCvCameraView.disableView();
         super.onPause();
     }
 
@@ -126,7 +127,8 @@ public class ImageManipulationsActivity extends Activity implements CvCameraView
 
     public void onDestroy() {
         super.onDestroy();
-        mOpenCvCameraView.disableView();
+        if (mOpenCvCameraView != null)
+            mOpenCvCameraView.disableView();
     }
 
     @Override

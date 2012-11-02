@@ -6,6 +6,8 @@ using namespace perf;
 using std::tr1::make_tuple;
 using std::tr1::get;
 
+#ifndef ANDROID
+
 typedef perf::TestBaseWithParam<String> VideoCapture_Reading;
 
 PERF_TEST_P(VideoCapture_Reading, ReadFile, testing::Values( "highgui/video/big_buck_bunny.avi",
@@ -23,3 +25,5 @@ PERF_TEST_P(VideoCapture_Reading, ReadFile, testing::Values( "highgui/video/big_
   bool dummy = cap.isOpened();
   SANITY_CHECK(dummy);
 }
+
+#endif //ANDROID

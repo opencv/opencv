@@ -1,6 +1,5 @@
 package org.opencv.android;
 
-import java.io.IOException;
 import java.util.List;
 
 import android.annotation.TargetApi;
@@ -21,7 +20,7 @@ import org.opencv.highgui.Highgui;
 import org.opencv.imgproc.Imgproc;
 
 /**
- * This class is an implementation of the Bridge View between OpenCv and JAVA Camera.
+ * This class is an implementation of the Bridge View between OpenCV and Java Camera.
  * This class relays on the functionality available in base class and only implements
  * required functions:
  * connectCamera - opens Java camera and sets the PreviewCallback to be delivered.
@@ -36,7 +35,8 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
 
     private Mat mBaseMat;
     private byte mBuffer[];
-
+    private Mat[] mFrameChain;
+    private int mChainIdx = 0;
     private Thread mThread;
     private boolean mStopThread;
 
@@ -65,6 +65,7 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
     @TargetApi(11)
     protected boolean initializeCamera(int width, int height) {
         Log.d(TAG, "Initialize java camera");
+        boolean result = true;
         synchronized (this) {
             mCamera = null;
 
@@ -99,59 +100,76 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
                 Log.d(TAG, "getSupportedPreviewSizes()");
                 List<android.hardware.Camera.Size> sizes = params.getSupportedPreviewSizes();
 
-                /* Select the size that fits surface considering maximum size allowed */
-                Size frameSize = calculateCameraFrameSize(sizes, new JavaCameraSizeAccessor(), width, height);
+                if (sizes != null) {
+                    /* Select the size that fits surface considering maximum size allowed */
+                    Size frameSize = calculateCameraFrameSize(sizes, new JavaCameraSizeAccessor(), width, height);
 
-                params.setPreviewFormat(ImageFormat.NV21);
-                Log.d(TAG, "Set preview size to " + Integer.valueOf((int)frameSize.width) + "x" + Integer.valueOf((int)frameSize.height));
-                params.setPreviewSize((int)frameSize.width, (int)frameSize.height);
+                    params.setPreviewFormat(ImageFormat.NV21);
+                    Log.d(TAG, "Set preview size to " + Integer.valueOf((int)frameSize.width) + "x" + Integer.valueOf((int)frameSize.height));
+                    params.setPreviewSize((int)frameSize.width, (int)frameSize.height);
 
-                List<String> FocusModes = params.getSupportedFocusModes();
-                if (FocusModes.contains(Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO))
-                {
-                    params.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO);
+                    List<String> FocusModes = params.getSupportedFocusModes();
+                    if (FocusModes.contains(Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO))
+                    {
+                        params.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO);
+                    }
+
+                    mCamera.setParameters(params);
+                    params = mCamera.getParameters();
+
+                    mFrameWidth = params.getPreviewSize().width;
+                    mFrameHeight = params.getPreviewSize().height;
+
+                    int size = mFrameWidth * mFrameHeight;
+                    size  = size * ImageFormat.getBitsPerPixel(params.getPreviewFormat()) / 8;
+                    mBuffer = new byte[size];
+
+                    mCamera.addCallbackBuffer(mBuffer);
+                    mCamera.setPreviewCallbackWithBuffer(this);
+
+                    mBaseMat = new Mat(mFrameHeight + (mFrameHeight/2), mFrameWidth, CvType.CV_8UC1);
+
+                    mFrameChain = new Mat[2];
+                    mFrameChain[0] = new Mat();
+                    mFrameChain[1] = new Mat();
+
+                    AllocateCache();
+
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
+                        mSurfaceTexture = new SurfaceTexture(MAGIC_TEXTURE_ID);
+                        getHolder().setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
+                        mCamera.setPreviewTexture(mSurfaceTexture);
+                    } else
+                       mCamera.setPreviewDisplay(null);
+
+                    /* Finally we are ready to start the preview */
+                    Log.d(TAG, "startPreview");
+                    mCamera.startPreview();
                 }
-
-                mCamera.setParameters(params);
-                params = mCamera.getParameters();
-
-                mFrameWidth = params.getPreviewSize().width;
-                mFrameHeight = params.getPreviewSize().height;
-
-                int size = mFrameWidth * mFrameHeight;
-                size  = size * ImageFormat.getBitsPerPixel(params.getPreviewFormat()) / 8;
-                mBuffer = new byte[size];
-
-                mCamera.addCallbackBuffer(mBuffer);
-                mCamera.setPreviewCallbackWithBuffer(this);
-
-                mBaseMat = new Mat(mFrameHeight + (mFrameHeight/2), mFrameWidth, CvType.CV_8UC1);
-
-                AllocateCache();
-
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
-                    mSurfaceTexture = new SurfaceTexture(MAGIC_TEXTURE_ID);
-                    getHolder().setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
-                    mCamera.setPreviewTexture(mSurfaceTexture);
-                } else
-                   mCamera.setPreviewDisplay(null);
-            } catch (IOException e) {
+                else
+                    result = false;
+            } catch (Exception e) {
+                result = false;
                 e.printStackTrace();
             }
-
-            /* Finally we are ready to start the preview */
-            Log.d(TAG, "startPreview");
-            mCamera.startPreview();
         }
 
-        return true;
+        return result;
     }
 
     protected void releaseCamera() {
         synchronized (this) {
-            mCamera.stopPreview();
-            mCamera.release();
+            if (mCamera != null) {
+                mCamera.stopPreview();
+                mCamera.release();
+            }
             mCamera = null;
+            if (mBaseMat != null)
+                mBaseMat.release();
+            if (mFrameChain != null) {
+                mFrameChain[0].release();
+                mFrameChain[1].release();
+            }
         }
     }
 
@@ -187,7 +205,8 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
                 this.notify();
             }
             Log.d(TAG, "Wating for thread");
-            mThread.join();
+            if (mThread != null)
+                mThread.join();
         } catch (InterruptedException e) {
             e.printStackTrace();
         } finally {
@@ -224,19 +243,19 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
                 }
 
                 if (!mStopThread) {
-                    Mat frameMat = new Mat();
                     switch (mPreviewFormat) {
                         case Highgui.CV_CAP_ANDROID_COLOR_FRAME_RGBA:
-                            Imgproc.cvtColor(mBaseMat, frameMat, Imgproc.COLOR_YUV2RGBA_NV21, 4);
+                            Imgproc.cvtColor(mBaseMat, mFrameChain[mChainIdx], Imgproc.COLOR_YUV2RGBA_NV21, 4);
                         break;
                         case Highgui.CV_CAP_ANDROID_GREY_FRAME:
-                            frameMat = mBaseMat.submat(0, mFrameHeight, 0, mFrameWidth);
+                            mFrameChain[mChainIdx] = mBaseMat.submat(0, mFrameHeight, 0, mFrameWidth);
                         break;
                         default:
                             Log.e(TAG, "Invalid frame format! Only RGBA and Gray Scale are supported!");
                     };
-                    deliverAndDrawFrame(frameMat);
-                    frameMat.release();
+                    if (!mFrameChain[mChainIdx].empty())
+                        deliverAndDrawFrame(mFrameChain[mChainIdx]);
+                    mChainIdx = 1 - mChainIdx;
                 }
             } while (!mStopThread);
             Log.d(TAG, "Finish processing thread");

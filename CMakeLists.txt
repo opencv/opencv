@@ -158,7 +158,7 @@ OCV_OPTION(BUILD_TESTS              "Build accuracy & regression tests"         
 OCV_OPTION(BUILD_WITH_DEBUG_INFO    "Include debug info into debug libs (not MSCV only)" ON )
 OCV_OPTION(BUILD_WITH_STATIC_CRT    "Enables use of staticaly linked CRT for staticaly linked OpenCV" ON IF MSVC )
 OCV_OPTION(BUILD_FAT_JAVA_LIB       "Create fat java wrapper containing the whole OpenCV library" ON IF ANDROID AND NOT BUILD_SHARED_LIBS AND CMAKE_COMPILER_IS_GNUCXX )
-OCV_OPTION(BUILD_ANDROID_SERVICE    "Build OpenCV Manager for Google Play" OFF IF ANDROID AND ANDROID_USE_STLPORT AND ANDROID_SOURCE_TREE )
+OCV_OPTION(BUILD_ANDROID_SERVICE    "Build OpenCV Manager for Google Play" OFF IF ANDROID AND ANDROID_SOURCE_TREE )
 OCV_OPTION(BUILD_ANDROID_PACKAGE    "Build platform-specific package for Google Play" OFF IF ANDROID )
 
 # 3rd party libs
@@ -466,6 +466,10 @@ endif()
 
 if(BUILD_ANDROID_PACKAGE)
   add_subdirectory(android/package)
+endif()
+
+if (ANDROID AND NOT BUILD_ANDROID_SERVICE AND NOT BUILD_ANDROID_PACKAGE AND NOT BUILD_CAMERA_WRAPER)
+  add_subdirectory(android/libinfo)
 endif()
 
 # ----------------------------------------------------------------------------

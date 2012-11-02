@@ -43,7 +43,7 @@ PERF_TEST_P( TestWarpAffine, WarpAffine,
 
     TEST_CYCLE() warpAffine( src, dst, warpMat, sz, interType, borderMode, Scalar::all(150) );
 
-    SANITY_CHECK(dst);
+    SANITY_CHECK(dst, 1);
 
 }
 
@@ -78,7 +78,7 @@ PERF_TEST_P( TestWarpPerspective, WarpPerspective,
 
     TEST_CYCLE() warpPerspective( src, dst, warpMat, sz, interType, borderMode, Scalar::all(150) );
 
-    SANITY_CHECK(dst);
+    SANITY_CHECK(dst, 1);
 }
 
 PERF_TEST_P( TestWarpPerspectiveNear_t, WarpPerspectiveNear,
@@ -119,7 +119,7 @@ PERF_TEST_P( TestWarpPerspectiveNear_t, WarpPerspectiveNear,
 
     resize(src, src, size);
 
-    int shift = src.cols*0.04;
+    int shift = static_cast<int>(src.cols*0.04);
     Mat srcVertices = (Mat_<Vec2f>(1, 4) << Vec2f(0, 0),
                                             Vec2f(static_cast<float>(size.width-1), 0),
                                             Vec2f(static_cast<float>(size.width-1), static_cast<float>(size.height-1)),
@@ -139,7 +139,7 @@ PERF_TEST_P( TestWarpPerspectiveNear_t, WarpPerspectiveNear,
         warpPerspective( src, dst, warpMat, size, interType, borderMode, Scalar::all(150) );
     }
 
-    SANITY_CHECK(dst);
+    SANITY_CHECK(dst, 1);
 }
 
 PERF_TEST_P( TestRemap, remap,

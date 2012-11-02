@@ -135,7 +135,7 @@ namespace {
 
             int outliers = 0;
             for (int j = 0; j < image.rows; ++j)
-                for (int i = 0; i < image.cols; ++i)
+                for (int i = 0; i < image.cols - 1; ++i)
                 {
                     if ( (_labels.at<int>(j,i) == gpu.at<int>(j,i + 1)) && (diff.at<int>(j, i) != diff.at<int>(j,i + 1)))
                     {

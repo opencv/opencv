@@ -30,7 +30,7 @@ JNIEXPORT jobject JNICALL Java_org_opencv_engine_BinderConnector_Connect(JNIEnv*
     return javaObjectForIBinder(env, OpenCVEngineBinder);
 }
 
-JNIEXPORT jboolean JNICALL Java_org_opencv_engine_BinderConnector_Init(JNIEnv* env, jobject thiz, jobject market)
+JNIEXPORT jboolean JNICALL Java_org_opencv_engine_BinderConnector_Init(JNIEnv* env, jobject , jobject market)
 {
     LOGD("Java_org_opencv_engine_BinderConnector_Init");
 
