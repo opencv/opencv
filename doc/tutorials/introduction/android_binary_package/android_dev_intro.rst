@@ -37,9 +37,10 @@ following key topis:
 Quick environment setup for Android development
 ===============================================
 
-If you are making a clean environment install, then you can try
-`Tegra Android Development Pack <http://developer.nvidia.com/mobile/tegra-android-development-pack>`_
+If you are making a clean environment install, then you can try `Tegra Android Development Pack <https://developer.nvidia.com/tegra-android-development-pack>`_
 (**TADP**) released by **NVIDIA**.
+
+  .. note:: Starting the *version 2.0* the TADP package includes *OpenCV for Tegra* SDK that is a regular *OpenCV4Android SDK* extended with Tegra-specific stuff.
 
 When unpacked, TADP will cover all of the environment setup automatically and you can skip the rest of the guide.
 
@@ -124,20 +125,18 @@ You need the following software to be installed in order to develop for Android 
 
    You need the following SDK components to be installed:
 
-   * *Android SDK Tools, revision 14* or newer.
+   * *Android SDK Tools, revision 20* or newer.
 
      Older revisions should also work, but they are not recommended.
 
-   * *SDK Platform Android 3.0*, ``API 11`` and *Android 2.3.1*, ``API 9``.
+   * *SDK Platform Android 3.0* (``API 11``).
 
      The minimal platform supported by OpenCV Java API is **Android 2.2** (``API 8``). This is also
      the minimum API Level required for the provided samples to run.
      See the ``<uses-sdk android:minSdkVersion="8"/>`` tag in their **AndroidManifest.xml** files.
-     But for successful compilation of some samples the **target** platform should be set to
-     Android 3.0 (API 11) or higher. It will not prevent them from running on  Android 2.2.
+     But for successful compilation the **target** platform should be set to Android 3.0 (API 11) or higher. It will not prevent them from running on  Android 2.2.
 
      .. image:: images/android_sdk_and_avd_manager.png
-        :height: 500px
         :alt: Android SDK Manager
         :align: center
 
@@ -178,7 +177,13 @@ You need the following software to be installed in order to develop for Android 
       :guilabel:`Developer Tools` and click :guilabel:`Next`.
    #. In the next window, you'll see a list of the tools to be downloaded. Click :guilabel:`Next`.
 
-      .. TODO: Here we need user to check the presence of CDT plugin.
+      .. note:: If you also plan to develop native C++ code with Android NDK don't forget to
+                enable `NDK Plugins` installations as well.
+
+      .. image:: images/eclipse_inst_adt.png
+         :alt: ADT installation
+         :align: center
+
 
    #. Read and accept the license agreements, then click :guilabel:`Finish`.
 
@@ -213,15 +218,24 @@ You need the following software to be installed in order to develop for Android 
    There are several possible ways to integrate compilation of C++ code by Android NDK into Eclipse
    compilation process. We recommend the approach based on Eclipse
    :abbr:`CDT(C/C++ Development Tooling)` Builder.
-
-   .. note:: If you're using the latest ADT plugin for Eclipse (version 20 and above), most likely
-             that you already have the CDT plugin. If it is so, just skip this section.
-
    Make sure your Eclipse IDE has the :abbr:`CDT(C/C++ Development Tooling)` plugin
    installed. Menu :guilabel:`Help -> About Eclipse SDK -> Installation Details`.
 
-   .. image:: images/eclipse_inst_details.png
-     :alt: Eclipse About
+       .. image:: images/eclipse_about_cdt_0.png
+         :alt: CDT in Eclipse About
+         :align: center
+
+   ..
+
+       .. image:: images/eclipse_about_cdt_1.png
+         :alt: CDT in Eclipse About
+         :align: center
+
+   .. note:: If you're using the latest ADT plugin for Eclipse (version 20 and above), most likely
+             you already have the CDT plugin and don't need to install it.
+
+   .. image:: images/eclipse_about_cdt_1.png
+     :alt: CDT in Eclipse About
      :align: center
 
    To install the `CDT plugin <http://eclipse.org/cdt/>`_ use menu
