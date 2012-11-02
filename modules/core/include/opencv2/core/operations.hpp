@@ -56,9 +56,12 @@
   #define CV_XADD(addr,delta) _InterlockedExchangeAdd(const_cast<void*>(reinterpret_cast<volatile void*>(addr)), delta)
 #elif defined __GNUC__
 
-  #if defined __clang__ && __clang_major__ >= 3 && defined __ATOMIC_SEQ_CST
-    #define CV_XADD(addr, delta) __c11_atomic_fetch_add((_Atomic(int)*)(addr), (delta), __ATOMIC_SEQ_CST)
-
+  #if defined __clang__ && __clang_major__ >= 3
+    #ifdef __ATOMIC_SEQ_CST
+        #define CV_XADD(addr, delta) __c11_atomic_fetch_add((_Atomic(int)*)(addr), (delta), __ATOMIC_SEQ_CST)
+    #else
+        #define CV_XADD(addr, delta) __atomic_fetch_add((_Atomic(int)*)(addr), (delta), 5)
+    #endif
   #elif __GNUC__*10 + __GNUC_MINOR__ >= 42
 
     #if !defined WIN32 && (defined __i486__ || defined __i586__ || \
