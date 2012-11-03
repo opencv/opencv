@@ -34,17 +34,17 @@ namespace {
             else return a.h < b.h;
         }
 
-        bool operator()(const cv::SoftCascade::Detection& a,
-            const cv::SoftCascade::Detection& b) const
-        {
-            const cv::Rect& ra = a.rect;
-            const cv::Rect& rb = b.rect;
+        // bool operator()(const cv::SoftCascade::Detection& a,
+        //     const cv::SoftCascade::Detection& b) const
+        // {
+        //     const cv::Rect& ra = a.rect;
+        //     const cv::Rect& rb = b.rect;
 
-            if (ra.x != rb.x) return ra.x < rb.x;
-            else if (ra.y != rb.y) return ra.y < rb.y;
-            else if (ra.width != rb.width) return ra.width < rb.width;
-            else return ra.height < rb.height;
-        }
+        //     if (ra.x != rb.x) return ra.x < rb.x;
+        //     else if (ra.y != rb.y) return ra.y < rb.y;
+        //     else if (ra.width != rb.width) return ra.width < rb.width;
+        //     else return ra.height < rb.height;
+        // }
     };
 
     cv::Mat sortDetections(cv::gpu::GpuMat& objects)
@@ -95,28 +95,30 @@ RUN_GPU(SoftCascadeTest, detect)
     SANITY_CHECK(sortDetections(curr));
 }
 
-RUN_CPU(SoftCascadeTest, detect)
-{
-    cv::Mat colored = readImage(GET_PARAM(1));
-    ASSERT_FALSE(colored.empty());
+NO_CPU(SoftCascadeTest, detect)
 
-    cv::SoftCascade cascade;
-    ASSERT_TRUE(cascade.load(getDataPath(GET_PARAM(0))));
+// RUN_CPU(SoftCascadeTest, detect)
+// {
+//     cv::Mat colored = readImage(GET_PARAM(1));
+//     ASSERT_FALSE(colored.empty());
 
-    std::vector<cv::Rect> rois;
+//     cv::SoftCascade cascade;
+//     ASSERT_TRUE(cascade.load(getDataPath(GET_PARAM(0))));
 
-    typedef cv::SoftCascade::Detection Detection;
-    std::vector<Detection>objects;
-    cascade.detectMultiScale(colored, rois, objects);
+//     std::vector<cv::Rect> rois;
 
-    TEST_CYCLE()
-    {
-        cascade.detectMultiScale(colored, rois, objects);
-    }
+//     typedef cv::SoftCascade::Detection Detection;
+//     std::vector<Detection>objects;
+//     cascade.detectMultiScale(colored, rois, objects);
 
-    std::sort(objects.begin(), objects.end(), DetectionLess());
-    SANITY_CHECK(objects);
-}
+//     TEST_CYCLE()
+//     {
+//         cascade.detectMultiScale(colored, rois, objects);
+//     }
+
+//     std::sort(objects.begin(), objects.end(), DetectionLess());
+//     SANITY_CHECK(objects);
+// }
 
 static cv::Rect getFromTable(int idx)
 {
