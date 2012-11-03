@@ -68,12 +68,10 @@ using cv::gpu::GpuMat;
     INSTANTIATE_TEST_CASE_P(/*none*/, fixture##_##name, params);  \
     void fixture##_##name::body()
 
+namespace {
 
-typedef std::tr1::tuple<std::string, std::string, int> roi_fixture_t;
+    typedef cv::gpu::SoftCascade::Detection Detection;
 
-struct SoftCascadeTest : public ::testing::TestWithParam<roi_fixture_t>
-{
-    typedef cv::gpu::SoftCascade::Detection detection_t;
     static cv::Rect getFromTable(int idx)
     {
         static const cv::Rect rois[] =
@@ -114,7 +112,7 @@ struct SoftCascadeTest : public ::testing::TestWithParam<roi_fixture_t>
         return "gpu_rec_level_" + itoa(level)+ "_" + std::string(buffer) + ".png";
     }
 
-    static void print(std::ostream &out, const detection_t& d)
+    static void print(std::ostream &out, const Detection& d)
     {
         out << "\x1b[32m[ detection]\x1b[0m ("
             << std::setw(4)  << d.x
@@ -131,7 +129,7 @@ struct SoftCascadeTest : public ::testing::TestWithParam<roi_fixture_t>
 
     static void printTotal(std::ostream &out, int detbytes)
     {
-        out << "\x1b[32m[          ]\x1b[0m Total detections " << (detbytes / sizeof(detection_t)) << std::endl;
+        out << "\x1b[32m[          ]\x1b[0m Total detections " << (detbytes / sizeof(Detection)) << std::endl;
     }
 
     static void writeResult(const cv::Mat& result, const int level)
@@ -140,24 +138,27 @@ struct SoftCascadeTest : public ::testing::TestWithParam<roi_fixture_t>
         cv::imwrite(path, result);
         std::cout << "\x1b[32m" << "[          ]" << std::endl << "[ stored in]"<< "\x1b[0m" << path << std::endl;
     }
-};
+}
 
-GPU_TEST_P(SoftCascadeTest, detectInROI,
+typedef ::testing::TestWithParam<std::tr1::tuple<cv::gpu::DeviceInfo, std::string, std::string, int> > SoftCascadeTestRoi;
+GPU_TEST_P(SoftCascadeTestRoi, detect,
     testing::Combine(
+        ALL_DEVICES,
         testing::Values(std::string("../cv/cascadeandhog/sc_cvpr_2012_to_opencv.xml")),
         testing::Values(std::string("../cv/cascadeandhog/bahnhof/image_00000000_0.png")),
         testing::Range(0, 5)))
 {
-    cv::Mat coloredCpu = cv::imread(cvtest::TS::ptr()->get_data_path() + GET_PARAM(1));
+    cv::gpu::setDevice(GET_PARAM(0).deviceID());
+    cv::Mat coloredCpu = cv::imread(cvtest::TS::ptr()->get_data_path() + GET_PARAM(2));
     ASSERT_FALSE(coloredCpu.empty());
 
     cv::gpu::SoftCascade cascade;
-    ASSERT_TRUE(cascade.load(cvtest::TS::ptr()->get_data_path() + GET_PARAM(0)));
+    ASSERT_TRUE(cascade.load(cvtest::TS::ptr()->get_data_path() + GET_PARAM(1)));
 
     GpuMat colored(coloredCpu), objectBoxes(1, 16384, CV_8UC1), rois(cascade.getRoiSize(), CV_8UC1), trois;
     rois.setTo(0);
 
-    int nroi = GET_PARAM(2);
+    int nroi = GET_PARAM(3);
     cv::Mat result(coloredCpu);
     cv::RNG rng;
     for (int i = 0; i < nroi; ++i)
@@ -173,16 +174,15 @@ GPU_TEST_P(SoftCascadeTest, detectInROI,
 
     cascade.detectMultiScale(colored, trois, objectBoxes);
 
-    ///
     cv::Mat dt(objectBoxes);
-    typedef cv::gpu::SoftCascade::Detection detection_t;
+    typedef cv::gpu::SoftCascade::Detection Detection;
 
-    detection_t* dts = (detection_t*)dt.data;
+    Detection* dts = (Detection*)dt.data;
 
     printTotal(std::cout, dt.cols);
-    for (int i = 0; i  < (int)(dt.cols / sizeof(detection_t)); ++i)
+    for (int i = 0; i  < (int)(dt.cols / sizeof(Detection)); ++i)
     {
-        detection_t d = dts[i];
+        Detection d = dts[i];
         print(std::cout, d);
         cv::rectangle(result, cv::Rect(d.x, d.y, d.w, d.h), cv::Scalar(255, 0, 0, 255), 1);
     }
@@ -190,39 +190,43 @@ GPU_TEST_P(SoftCascadeTest, detectInROI,
     SHOW(result);
 }
 
-GPU_TEST_P(SoftCascadeTest, detectInLevel,
+typedef ::testing::TestWithParam<std::tr1::tuple<cv::gpu::DeviceInfo, std::string, std::string, int> > SoftCascadeTestLevel;
+GPU_TEST_P(SoftCascadeTestLevel, detect,
         testing::Combine(
+        ALL_DEVICES,
         testing::Values(std::string("../cv/cascadeandhog/sc_cvpr_2012_to_opencv.xml")),
         testing::Values(std::string("../cv/cascadeandhog/bahnhof/image_00000000_0.png")),
         testing::Range(0, 47)
         ))
 {
-    std::string xml =  cvtest::TS::ptr()->get_data_path() + GET_PARAM(0);
+    cv::gpu::setDevice(GET_PARAM(0).deviceID());
+
+    std::string xml =  cvtest::TS::ptr()->get_data_path() + GET_PARAM(1);
     cv::gpu::SoftCascade cascade;
     ASSERT_TRUE(cascade.load(xml));
 
-    cv::Mat coloredCpu = cv::imread(cvtest::TS::ptr()->get_data_path() + GET_PARAM(1));
+    cv::Mat coloredCpu = cv::imread(cvtest::TS::ptr()->get_data_path() + GET_PARAM(2));
     ASSERT_FALSE(coloredCpu.empty());
 
-    typedef cv::gpu::SoftCascade::Detection detection_t;
-    GpuMat colored(coloredCpu), objectBoxes(1, 100 * sizeof(detection_t), CV_8UC1), rois(cascade.getRoiSize(), CV_8UC1);
+    typedef cv::gpu::SoftCascade::Detection Detection;
+    GpuMat colored(coloredCpu), objectBoxes(1, 100 * sizeof(Detection), CV_8UC1), rois(cascade.getRoiSize(), CV_8UC1);
     rois.setTo(1);
 
     cv::gpu::GpuMat trois;
     cv::gpu::transpose(rois, trois);
 
-    int level = GET_PARAM(2);
+    int level = GET_PARAM(3);
     cascade.detectMultiScale(colored, trois, objectBoxes, 1, level);
 
     cv::Mat dt(objectBoxes);
 
-    detection_t* dts = (detection_t*)dt.data;
+    Detection* dts = (Detection*)dt.data;
     cv::Mat result(coloredCpu);
 
     printTotal(std::cout, dt.cols);
-    for (int i = 0; i  < (int)(dt.cols / sizeof(detection_t)); ++i)
+    for (int i = 0; i  < (int)(dt.cols / sizeof(Detection)); ++i)
     {
-        detection_t d = dts[i];
+        Detection d = dts[i];
         print(std::cout, d);
         cv::rectangle(result, cv::Rect(d.x, d.y, d.w, d.h), cv::Scalar(255, 0, 0, 255), 1);
     }
@@ -238,8 +242,12 @@ TEST(SoftCascadeTest, readCascade)
     ASSERT_TRUE(cascade.load(xml));
 }
 
-TEST(SoftCascadeTest, detect)
+typedef ::testing::TestWithParam<cv::gpu::DeviceInfo > SoftCascadeTestAll;
+GPU_TEST_P(SoftCascadeTestAll, detect,
+        ALL_DEVICES
+        )
 {
+    cv::gpu::setDevice(GetParam().deviceID());
     std::string xml =  cvtest::TS::ptr()->get_data_path() + "../cv/cascadeandhog/sc_cvpr_2012_to_opencv.xml";
     cv::gpu::SoftCascade cascade;
     ASSERT_TRUE(cascade.load(xml));
@@ -263,8 +271,11 @@ TEST(SoftCascadeTest, detect)
     ASSERT_EQ(detections.cols / sizeof(Detection) ,3670U);
 }
 
-TEST(SoftCascadeTest, detectOnIntegral)
+GPU_TEST_P(SoftCascadeTestAll, detectOnIntegral,
+        ALL_DEVICES
+        )
 {
+    cv::gpu::setDevice(GetParam().deviceID());
     std::string xml =  cvtest::TS::ptr()->get_data_path() + "../cv/cascadeandhog/sc_cvpr_2012_to_opencv.xml";
     cv::gpu::SoftCascade cascade;
     ASSERT_TRUE(cascade.load(xml));
@@ -277,7 +288,7 @@ TEST(SoftCascadeTest, detectOnIntegral)
     for (int i = 0; i < 10; ++i)
     {
         cv::Mat channel;
-        fs[std::string("channel") + SoftCascadeTest::itoa(i)] >> channel;
+        fs[std::string("channel") + itoa(i)] >> channel;
         GpuMat gchannel(hogluv, cv::Rect(0, 121 * i, 161, 121));
         gchannel.upload(channel);
     }
