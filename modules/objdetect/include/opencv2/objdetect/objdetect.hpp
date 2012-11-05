@@ -556,9 +556,11 @@ public:
     // Param image is a frame on which detector will be applied.
     // Param rois is a vector of regions of interest. Only the objects that fall into one of the regions will be returned.
     // Param objects is an output array of Detections
-    virtual void detect(const Mat& image, const std::vector<cv::Rect>& rois, std::vector<Detection>& objects) const;
+    virtual void detect(InputArray image, InputArray rois, std::vector<Detection>& objects) const;
 
 private:
+    void detectNoRoi(const Mat& image, std::vector<Detection>& objects) const;
+
     struct Filds;
     Filds* filds;
 

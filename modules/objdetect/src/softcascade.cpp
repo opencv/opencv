@@ -510,16 +510,9 @@ bool cv::SCascade::load(const FileNode& fn)
     return filds->fill(fn, minScale, maxScale);
 }
 
-void cv::SCascade::detect(const Mat& image, const std::vector<cv::Rect>& /*rois*/, std::vector<Detection>& objects) const
+void cv::SCascade::detectNoRoi(const cv::Mat& image, std::vector<Detection>& objects) const
 {
-    // only color images are supperted
-    CV_Assert(image.type() == CV_8UC3);
-
     Filds& fld = *filds;
-    fld.calcLevels(image.size(), scales);
-
-    objects.clear();
-
     // create integrals
     ChannelStorage storage(image, fld.shrinkage);
 
@@ -536,5 +529,50 @@ void cv::SCascade::detect(const Mat& image, const std::vector<cv::Rect>& /*rois*
                 fld.detectAt(dx, dy, level, storage, objects);
             }
         }
+    }
+}
+
+void cv::SCascade::detect(cv::InputArray _image, cv::InputArray _rois, std::vector<Detection>& objects) const
+{
+    // only color images are supperted
+    cv::Mat image = _image.getMat();
+    CV_Assert(image.type() == CV_8UC3);
+
+    Filds& fld = *filds;
+    fld.calcLevels(image.size(), scales);
+
+    objects.clear();
+
+    if (_rois.kind() == cv::_InputArray::NONE)
+        return detectNoRoi(image, objects);
+
+    cv::Mat roi = _rois.getMat();
+    cv::Mat mask(image.rows / fld.shrinkage, image.cols / fld.shrinkage, CV_8UC1);
+
+    mask.setTo(cv::Scalar::all(0));
+    cv::Rect* r = roi.ptr<cv::Rect>(0);
+    for (int i = 0; i < (int)roi.cols; ++i)
+        cv::Mat(mask, cv::Rect(r[i].x / fld.shrinkage, r[i].y / fld.shrinkage, r[i].width / fld.shrinkage , r[i].height / fld.shrinkage)).setTo(cv::Scalar::all(1));
+
+    // create integrals
+    ChannelStorage storage(image, fld.shrinkage);
+
+    typedef std::vector<Level>::const_iterator lIt;
+    for (lIt it = fld.levels.begin(); it != fld.levels.end(); ++it)
+    {
+         const Level& level = *it;
+
+         for (int dy = 0; dy < level.workRect.height; ++dy)
+         {
+             uchar* m  = mask.ptr<uchar>(dy);
+             for (int dx = 0; dx < level.workRect.width; ++dx)
+             {
+                 if (m[dx])
+                 {
+                     storage.offset = dy * storage.step + dx;
+                     fld.detectAt(dx, dy, level, storage, objects);
+                 }
+             }
+         }
     }
 }

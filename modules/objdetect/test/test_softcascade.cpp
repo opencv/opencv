@@ -64,35 +64,95 @@ TEST(SCascade, detect)
     ASSERT_FALSE(colored.empty());
 
     std::vector<Detection> objects;
+
+    cascade.detect(colored, cv::noArray(), objects);
+
+    // cv::Mat out = colored.clone();
+    // int level = 0, total = 0;
+    // int levelWidth = objects[0].bb.width;
+
+    // for(int i = 0 ; i < (int)objects.size(); ++i)
+    // {
+    //     if (objects[i].bb.width != levelWidth)
+    //     {
+    //         std::cout << "Level: " << level << " total " << total << std::endl;
+    //         cv::imshow("out", out);
+    //         cv::waitKey(0);
+    //         out = colored.clone();
+    //         levelWidth = objects[i].bb.width;
+    //         total = 0;
+    //         level++;
+    //     }
+    //     cv::rectangle(out, objects[i].bb, cv::Scalar(255, 0, 0, 255), 1);
+    //     std::cout << "detection: " << objects[i].bb.x
+    //                                << " " << objects[i].bb.y
+    //                                << " " << objects[i].bb.width
+    //                                << " " << objects[i].bb.height << std::endl;
+    //     total++;
+    // }
+    // std::cout << "detected: " << (int)objects.size() << std::endl;
+    ASSERT_EQ((int)objects.size(), 3498);
+}
+
+TEST(SCascade, detectRoi)
+{
+    typedef cv::SCascade::Detection Detection;
+    std::string xml =  cvtest::TS::ptr()->get_data_path() + "cascadeandhog/sc_cvpr_2012_to_opencv.xml";
+    cv::SCascade cascade;
+    cv::FileStorage fs(xml, cv::FileStorage::READ);
+    ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
+
+    cv::Mat colored = cv::imread(cvtest::TS::ptr()->get_data_path() + "cascadeandhog/bahnhof/image_00000000_0.png");
+    ASSERT_FALSE(colored.empty());
+
+    std::vector<Detection> objects;
     std::vector<cv::Rect> rois;
     rois.push_back(cv::Rect(0, 0, 640, 480));
 
     cascade.detect(colored, rois, objects);
 
+    // cv::Mat out = colored.clone();
+    // int level = 0, total = 0;
+    // int levelWidth = objects[0].bb.width;
 
-    cv::Mat out = colored.clone();
-    int level = 0, total = 0;
-    int levelWidth = objects[0].bb.width;
-
-    for(int i = 0 ; i < (int)objects.size(); ++i)
-    {
-        if (objects[i].bb.width != levelWidth)
-        {
-            std::cout << "Level: " << level << " total " << total << std::endl;
-            cv::imshow("out", out);
-            cv::waitKey(0);
-            out = colored.clone();
-            levelWidth = objects[i].bb.width;
-            total = 0;
-            level++;
-        }
-        cv::rectangle(out, objects[i].bb, cv::Scalar(255, 0, 0, 255), 1);
-        std::cout << "detection: " << objects[i].bb.x
-                                   << " " << objects[i].bb.y
-                                   << " " << objects[i].bb.width
-                                   << " " << objects[i].bb.height << std::endl;
-        total++;
-    }
-    std::cout << "detected: " << (int)objects.size() << std::endl;
+    // for(int i = 0 ; i < (int)objects.size(); ++i)
+    // {
+    //     if (objects[i].bb.width != levelWidth)
+    //     {
+    //         std::cout << "Level: " << level << " total " << total << std::endl;
+    //         cv::imshow("out", out);
+    //         cv::waitKey(0);
+    //         out = colored.clone();
+    //         levelWidth = objects[i].bb.width;
+    //         total = 0;
+    //         level++;
+    //     }
+    //     cv::rectangle(out, objects[i].bb, cv::Scalar(255, 0, 0, 255), 1);
+    //     std::cout << "detection: " << objects[i].bb.x
+    //                                << " " << objects[i].bb.y
+    //                                << " " << objects[i].bb.width
+    //                                << " " << objects[i].bb.height << std::endl;
+    //     total++;
+    // }
+    // std::cout << "detected: " << (int)objects.size() << std::endl;
     ASSERT_EQ((int)objects.size(), 3498);
+}
+
+TEST(SCascade, detectNoRoi)
+{
+    typedef cv::SCascade::Detection Detection;
+    std::string xml =  cvtest::TS::ptr()->get_data_path() + "cascadeandhog/sc_cvpr_2012_to_opencv.xml";
+    cv::SCascade cascade;
+    cv::FileStorage fs(xml, cv::FileStorage::READ);
+    ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
+
+    cv::Mat colored = cv::imread(cvtest::TS::ptr()->get_data_path() + "cascadeandhog/bahnhof/image_00000000_0.png");
+    ASSERT_FALSE(colored.empty());
+
+    std::vector<Detection> objects;
+    std::vector<cv::Rect> rois;
+
+    cascade.detect(colored, rois, objects);
+
+    ASSERT_EQ((int)objects.size(), 0);
 }

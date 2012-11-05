@@ -81,13 +81,12 @@ PERF_TEST_P(detect, SCascade,
     ASSERT_TRUE(fs.isOpened());
     ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
 
-    std::vector<cv::Rect> rois;
     std::vector<detection_t> objectBoxes;
-    cascade.detect(colored, rois, objectBoxes);
+    cascade.detect(colored, cv::noArray(), objectBoxes);
 
     TEST_CYCLE()
     {
-        cascade.detect(colored, rois, objectBoxes);
+        cascade.detect(colored, cv::noArray(), objectBoxes);
     }
 
     vector<Rect> rects;
