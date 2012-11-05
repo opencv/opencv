@@ -43,6 +43,16 @@
 #include "precomp.hpp"
 #include <vector>
 
+//It's 2012 and we still let compilers get by without defining standard integer types...
+typedef schar int8_t;
+typedef uchar uint8_t;
+typedef short int16_t;
+typedef unsigned short uint16_t;
+typedef int int32_t;
+typedef unsigned int uint32_t;
+typedef int64 int64_t;
+typedef uint64 uint64_t;
+
 namespace cv{
     namespace connectedcomponents{
 
@@ -463,7 +473,7 @@ uint64_t connectedComponents(Mat &L, const Mat &I, int connectivity){
     }
 }
 
-uint64_t connectedComponents(Mat &L, const Mat &I, std::vector<ConnectedComponentStats> &statsv, int connectivity){
+uint64_t connectedComponentsWithStats(Mat &L, const Mat &I, std::vector<ConnectedComponentStats> &statsv, int connectivity){
     int lDepth = L.depth();
     if(lDepth == CV_8U){
         connectedcomponents::CCStatsOp<uint8_t> sop(statsv); return connectedComponents_sub1(L, I, connectivity, sop);

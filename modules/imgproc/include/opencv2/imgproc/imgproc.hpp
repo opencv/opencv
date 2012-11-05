@@ -1091,24 +1091,24 @@ enum { TM_SQDIFF=0, TM_SQDIFF_NORMED=1, TM_CCORR=2, TM_CCORR_NORMED=3, TM_CCOEFF
 CV_EXPORTS_W void matchTemplate( InputArray image, InputArray templ,
                                  OutputArray result, int method );
 
-
 struct CV_EXPORTS ConnectedComponentStats
 {
-    int32_t lower_x;
-    int32_t lower_y;
-    int32_t upper_x;
-    int32_t upper_y;
-    double centroid_x;
-    double centroid_y;
-    uint64_t integral_x;
-    uint64_t integral_y;
-    uint32_t area;
+    int lower_x;//!< lower left corner column
+    int lower_y;//!< lower left corner row
+    int upper_x;//!< upper right corner column
+    int upper_y;//!< upper right corner row
+    double centroid_x;//!< centroid column
+    double centroid_y;//!< centroid row
+    uint64 integral_x;//!< sum of all columns where the image was non-zero
+    uint64 integral_y;//!< sum of all rows where the image was non-zero
+    unsigned int area;//!< count of all non-zero pixels
 };
+
 //! computes the connected components labeled image of boolean image I with 4 or 8 way connectivity - returns N, the total
 //number of labels [0, N-1] where 0 represents the background label. L's value type determines the label type, an important
 //consideration based on the total number of labels or alternatively the total number of pixels.
-CV_EXPORTS_W uint64_t connectedComponents(Mat &L, const Mat &I, int connectivity = 8);
-CV_EXPORTS_W uint64_t connectedComponents(Mat &L, const Mat &I, std::vector<ConnectedComponentStats> &statsv, int connectivity = 8);
+CV_EXPORTS_W uint64 connectedComponents(CV_OUT Mat &L, const Mat &I, int connectivity = 8);
+CV_EXPORTS_W uint64 connectedComponentsWithStats(CV_OUT Mat &L, const Mat &I, CV_OUT std::vector<ConnectedComponentStats> &statsv, int connectivity = 8);
 
 
 //! mode of the contour retrieval algorithm
