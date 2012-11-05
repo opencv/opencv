@@ -198,14 +198,14 @@ namespace icf {
             Node node = nodes[nId];
 
             float threshold = rescale<isUp>(level, node);
-            int sum = get<isUp>(x, y + (node.threshold >> 28) * 121, node.rect);
+            int sum = get<isUp>(x, y + (node.threshold >> 28) * 120, node.rect);
 
             int next = 1 + (int)(sum >= threshold);
             dprintf("%d: go: %d (%d >= %f)\n\n" ,threadIdx.x, next, sum, threshold);
 
             node = nodes[nId + next];
             threshold = rescale<isUp>(level, node);
-            sum = get<isUp>(x, y + (node.threshold >> 28) * 121, node.rect);
+            sum = get<isUp>(x, y + (node.threshold >> 28) * 120, node.rect);
 
             const int lShift = (next - 1) * 2 + (int)(sum >= threshold);
             float impact = leaves[(st + threadIdx.x) * 4 + lShift];

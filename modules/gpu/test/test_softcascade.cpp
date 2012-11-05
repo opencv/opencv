@@ -271,6 +271,7 @@ GPU_TEST_P(SoftCascadeTestAll, detect,
     ASSERT_EQ(detections.cols / sizeof(Detection) ,3670U);
 }
 
+//ToDo: fix me
 GPU_TEST_P(SoftCascadeTestAll, detectOnIntegral,
         ALL_DEVICES
         )

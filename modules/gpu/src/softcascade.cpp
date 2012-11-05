@@ -76,14 +76,20 @@ cv::gpu::device::icf::Level::Level(int idx, const Octave& oct, const float scale
 }
 
 namespace cv { namespace gpu { namespace device {
+
 namespace icf {
     void fillBins(cv::gpu::PtrStepSzb hogluv, const cv::gpu::PtrStepSzf& nangle,
         const int fw, const int fh, const int bins);
 }
-namespace imgproc
-{
-    void shfl_integral_gpu(PtrStepSzb img, PtrStepSz<unsigned int> integral, cudaStream_t stream);
+
+namespace imgproc {
+    void shfl_integral_gpu_buffered(PtrStepSzb, PtrStepSz<uint4>, PtrStepSz<unsigned int>, int, cudaStream_t);
+
+    template <typename T>
+    void resize_gpu(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, float fx, float fy,
+                    PtrStepSzb dst, int interpolation, cudaStream_t stream);
 }
+
 }}}
 
 struct cv::gpu::SoftCascade::Filds
@@ -319,9 +325,13 @@ struct cv::gpu::SoftCascade::Filds
         plane.create(FRAME_HEIGHT * (HOG_LUV_BINS + 1), FRAME_WIDTH, CV_8UC1);
         fplane.create(FRAME_HEIGHT * 6, FRAME_WIDTH, CV_32FC1);
         luv.create(FRAME_HEIGHT, FRAME_WIDTH, CV_8UC3);
+
         shrunk.create(FRAME_HEIGHT / shr * HOG_LUV_BINS, FRAME_WIDTH / shr, CV_8UC1);
-        integralBuffer.create(1 , (shrunk.rows + 1) * HOG_LUV_BINS * (shrunk.cols + 1), CV_32SC1);
-        hogluv.create((FRAME_HEIGHT / shr + 1) * HOG_LUV_BINS, FRAME_WIDTH / shr + 64, CV_32SC1);
+        integralBuffer.create(shrunk.rows, shrunk.cols, CV_32SC1);
+
+        hogluv.create((FRAME_HEIGHT / shr) * HOG_LUV_BINS + 1, FRAME_WIDTH / shr + 1, CV_32SC1);
+        hogluv.setTo(cv::Scalar::all(0));
+
         detCounter.create(1,1, CV_32SC1);
 
         octaves.upload(hoctaves);
@@ -432,16 +442,7 @@ private:
 
         GpuMat channels(plane, cv::Rect(0, 0, fw, fh * Filds::HOG_LUV_BINS));
         cv::gpu::resize(channels, shrunk, cv::Size(), 0.25, 0.25, CV_INTER_AREA);
-
-        fw /= shrinkage;
-        fh /= shrinkage;
-
-        for(int i = 0; i < Filds::HOG_LUV_BINS; ++i)
-        {
-            GpuMat channel(shrunk, cv::Rect(0, fh  * i, fw, fh ));
-            GpuMat sum(hogluv, cv::Rect(0, (fh + 1) * i, fw + 1, fh + 1));
-            cv::gpu::integralBuffered(channel, sum, integralBuffer);
-        }
+        device::imgproc::shfl_integral_gpu_buffered(shrunk, integralBuffer, hogluv, 12, 0);
     }
 
 public:
