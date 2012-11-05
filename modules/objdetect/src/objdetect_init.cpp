@@ -7,11 +7,11 @@
 //  copy or use the software.
 //
 //
-//                          License Agreement
+//                           License Agreement
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
-// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2008-2012, Willow Garage Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -40,4 +40,21 @@
 //
 //M*/
 
-#include "precomp.hpp"
+#include <precomp.hpp>
+
+namespace cv
+{
+
+CV_INIT_ALGORITHM(SCascade, "CascadeDetector.SCascade",
+                  obj.info()->addParam(obj, "minScale",  obj.minScale));
+                  // obj.info()->addParam(obj, "maxScale",  obj.maxScale);
+                  // obj.info()->addParam(obj, "scales",    obj.scales);
+                  // obj.info()->addParam(obj, "rejfactor", obj.rejfactor));
+
+bool initModule_objdetect(void)
+{
+    Ptr<Algorithm> sc = createSCascade();
+    return sc->info() != 0;
+}
+
+}

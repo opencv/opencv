@@ -58,35 +58,36 @@ typedef perf::TestBaseWithParam<fixture> detect;
 
 
 namespace {
-  typedef cv::SoftCascade::Detection detection_t;
+  typedef cv::SCascade::Detection detection_t;
 
   void extractRacts(std::vector<detection_t> objectBoxes, vector<Rect> rects)
   {
     rects.clear();
     for (int i = 0; i < (int)objectBoxes.size(); ++i)
-      rects.push_back(objectBoxes[i].rect);
+      rects.push_back(objectBoxes[i].bb);
   }
 }
 
-PERF_TEST_P(detect, SoftCascade,
+PERF_TEST_P(detect, SCascade,
     testing::Combine(testing::Values(std::string("cv/cascadeandhog/sc_cvpr_2012_to_opencv.xml")),
     testing::Values(std::string("cv/cascadeandhog/bahnhof/image_00000000_0.png"))))
 {
-    typedef cv::SoftCascade::Detection detection_t;
+    typedef cv::SCascade::Detection Detection;
     cv::Mat colored = imread(getDataPath(get<1>(GetParam())));
     ASSERT_FALSE(colored.empty());
 
-    cv::SoftCascade cascade;
+    cv::SCascade cascade;
     cv::FileStorage fs(getDataPath(get<0>(GetParam())), cv::FileStorage::READ);
-    ASSERT_TRUE(cascade.read(fs));
+    ASSERT_TRUE(fs.isOpened());
+    ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
 
     std::vector<cv::Rect> rois;
     std::vector<detection_t> objectBoxes;
-    cascade.detectMultiScale(colored, rois, objectBoxes);
+    cascade.detect(colored, rois, objectBoxes);
 
     TEST_CYCLE()
     {
-        cascade.detectMultiScale(colored, rois, objectBoxes);
+        cascade.detect(colored, rois, objectBoxes);
     }
 
     vector<Rect> rects;

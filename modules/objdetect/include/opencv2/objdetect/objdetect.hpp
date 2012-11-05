@@ -488,52 +488,52 @@ protected:
     Ptr<MaskGenerator> maskGenerator;
 };
 
-/**
- * \class SoftCascade
- * \brief Implement soft (stageless) cascade.
- */
-class CV_EXPORTS SoftCascade
+
+// Implementation of soft (stageless) cascaded detector.
+class CV_EXPORTS SCascade : public Algorithm
 {
 public:
 
-    /**
-     * \class Detection
-     * \brief Soft cascade detector result represintation.
-     */
+    // Representation of detectors result.
     struct CV_EXPORTS Detection
     {
+        // Default object type.
         enum {PEDESTRIAN = 1};
 
-        //! Create detection from an object bounding rectangle and confidence. Only PEDESTRIAN type carrently supported.
-        //! Param r is a boundinf rectangle
-        //! param c is a confidence that object belongs to class k
-        //! Paral k is an object class
+        // Creates Detection from an object bounding box and confidence.
+        // Param b is a bounding box
+        // Param c is a confidence that object belongs to class k
+        // Paral k is an object class
+        Detection(const cv::Rect& b, const float c, int k = PEDESTRIAN) : bb(b), confidence(c), kind(k) {}
 
-        Detection(const cv::Rect& r, const float c, int k = PEDESTRIAN) : rect(r), confidence(c), kind(k) {}
-        cv::Rect rect;
+        cv::Rect bb;
         float confidence;
         int kind;
     };
 
-    //! An empty cascade will be created.
-    //! Param minScale is a minimum scale relative to the original size of the image on which cascade will be applyed.
-    //! Param minScale is a maximum scale relative to the original size of the image on which cascade will be applyed.
-    //! Param scales is a number of scales from minScale to maxScale.
-    SoftCascade( const float minScale = 0.4f, const float maxScale = 5.f, const int scales = 55);
+    // An empty cascade will be created.
+    // Param minScale is a minimum scale relative to the original size of the image on which cascade will be applyed.
+    // Param minScale is a maximum scale relative to the original size of the image on which cascade will be applyed.
+    // Param scales is a number of scales from minScale to maxScale.
+    // Param rejfactor is used for NMS.
+    SCascade(const float minScale = 0.4f, const float maxScale = 5.f, const int scales = 55, const int rejfactor = 1);
 
-    //! Cascade will be created for scales from minScale to maxScale.
-    //! Param fs is a serialized sacsade.
-    SoftCascade( const cv::FileStorage& fs);
+    virtual ~SCascade();
 
-    //! cascade will be loaded. The previous cascade will be destroyed.
-    //! Param fs is a serialized sacsade.
-    bool read( const cv::FileStorage& fs);
+    cv::AlgorithmInfo* info() const;
 
-    virtual ~SoftCascade();
+    // Load cascade from FileNode.
+    // Param fn is a root node for cascade. Should be <cascade>.
+    virtual bool load(const FileNode& fn);
 
-    //! return vector of bounding boxes. Each box contains one detected object
-    virtual void detectMultiScale(const Mat& image, const std::vector<cv::Rect>& rois, std::vector<Detection>& objects,
-    int rejectfactor = 1) const;
+    // Load cascade config.
+    virtual void read(const FileNode& fn);
+
+    // Return the vector of Decection objcts.
+    // Param image is a frame on which detector will be applied.
+    // Param rois is a vector of regions of interest. Only the objects that fall into one of the regions will be returned.
+    // Param objects is an output array of Detections
+    virtual void detect(const Mat& image, const std::vector<cv::Rect>& rois, std::vector<Detection>& objects) const;
 
 private:
     struct Filds;
@@ -542,7 +542,10 @@ private:
     float minScale;
     float maxScale;
     int   scales;
+    int   rejfactor;
 };
+
+CV_EXPORTS bool initModule_objdetect(void);
 
 /**
  * \class IntegralChannels

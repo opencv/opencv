@@ -175,7 +175,7 @@ struct Level
     enum { R_SHIFT = 1 << 15 };
 
     float scaling[2];
-    typedef cv::SoftCascade::Detection detection_t;
+    typedef cv::SCascade::Detection detection_t;
 
     Level(const Octave& oct, const float scale, const int shrinkage, const int w, const int h)
     :  octave(&oct), origScale(scale), relScale(scale / oct.scale),
@@ -252,7 +252,7 @@ struct ChannelStorage
 
 }
 
-struct cv::SoftCascade::Filds
+struct cv::SCascade::Filds
 {
     float minScale;
     float maxScale;
@@ -491,33 +491,25 @@ struct cv::SoftCascade::Filds
     }
 };
 
-cv::SoftCascade::SoftCascade(const float mins, const float maxs, const int nsc)
-: filds(0), minScale(mins), maxScale(maxs), scales(nsc) {}
+cv::SCascade::SCascade(const float mins, const float maxs, const int nsc, const int rej)
+: filds(0), minScale(mins), maxScale(maxs), scales(nsc), rejfactor(rej) {}
 
-cv::SoftCascade::SoftCascade(const cv::FileStorage& fs) : filds(0)
+cv::SCascade::~SCascade() { delete filds;}
+
+void cv::SCascade::read(const FileNode& fn)
 {
-    read(fs);
-}
-cv::SoftCascade::~SoftCascade()
-{
-    delete filds;
+    Algorithm::read(fn);
 }
 
-bool cv::SoftCascade::read( const cv::FileStorage& fs)
+bool cv::SCascade::load(const FileNode& fn)
 {
-    if (!fs.isOpened()) return false;
-
-    if (filds)
-        delete filds;
-    filds = 0;
+    if (filds) delete filds;
 
     filds = new Filds;
-    Filds& flds = *filds;
-    return flds.fill(fs.getFirstTopLevelNode(), minScale, maxScale);
+    return filds->fill(fn, minScale, maxScale);
 }
 
-void cv::SoftCascade::detectMultiScale(const Mat& image, const std::vector<cv::Rect>& /*rois*/,
-                                       std::vector<Detection>& objects, const int /*rejectfactor*/) const
+void cv::SCascade::detect(const Mat& image, const std::vector<cv::Rect>& /*rois*/, std::vector<Detection>& objects) const
 {
     // only color images are supperted
     CV_Assert(image.type() == CV_8UC3);
