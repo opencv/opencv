@@ -396,8 +396,8 @@ private:
         GpuMat dfdx(fplane, cv::Rect(0,  0, fw, fh));
         GpuMat dfdy(fplane, cv::Rect(0, fh, fw, fh));
 
-        cv::gpu::Sobel(gray, dfdx, CV_32F, 1, 0, 3, 0.125f);
-        cv::gpu::Sobel(gray, dfdy, CV_32F, 0, 1, 3, 0.125f);
+        cv::gpu::Sobel(gray, dfdx, CV_32F, 1, 0);
+        cv::gpu::Sobel(gray, dfdy, CV_32F, 0, 1);
 
         GpuMat mag(fplane, cv::Rect(0, 2 * fh, fw, fh));
         GpuMat ang(fplane, cv::Rect(0, 3 * fh, fw, fh));
@@ -409,7 +409,7 @@ private:
         GpuMat nmag(fplane, cv::Rect(0, 4 * fh, fw, fh));
         GpuMat nang(fplane, cv::Rect(0, 5 * fh, fw, fh));
 
-        cv::gpu::multiply(mag, cv::Scalar::all(1.f / ::log(2)), nmag);
+        cv::gpu::multiply(mag, cv::Scalar::all(1.f / (8 *::log(2))), nmag);
         cv::gpu::multiply(ang, cv::Scalar::all(1.f / 60.f),     nang);
 
         //create uchar magnitude
