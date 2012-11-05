@@ -223,14 +223,15 @@ struct ChannelStorage
     ChannelStorage(const cv::Mat& colored, int shr) : shrinkage(shr)
     {
         hog.clear();
-        cv::IntegralChannels ints(shr);
+        hog.reserve(10);
+        cv::SCascade::Channels ints(shr);
 
         // convert to grey
         cv::Mat grey;
         cv::cvtColor(colored, grey, CV_BGR2GRAY);
 
-        ints.createHogBins(grey, hog, 6);
-        ints.createLuvBins(colored, hog);
+        ints.appendHogBins(grey, hog, 6);
+        ints.appendLuvBins(colored, hog);
 
         step = hog[0].cols;
     }

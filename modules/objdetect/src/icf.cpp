@@ -44,7 +44,9 @@
 #include <opencv2/objdetect/objdetect.hpp>
 #include <opencv2/core/core.hpp>
 
-void cv::IntegralChannels::createHogBins(const cv::Mat gray, std::vector<cv::Mat>& integrals, int bins) const
+cv::SCascade::Channels::Channels(int shr) : shrinkage(shr) {}
+
+void cv::SCascade::Channels::appendHogBins(const cv::Mat gray, std::vector<cv::Mat>& integrals, int bins) const
 {
     CV_Assert(gray.type() == CV_8UC1);
     int h = gray.rows;
@@ -52,11 +54,11 @@ void cv::IntegralChannels::createHogBins(const cv::Mat gray, std::vector<cv::Mat
     CV_Assert(!(w % shrinkage) && !(h % shrinkage));
 
     cv::Mat df_dx, df_dy, mag, angle;
-    cv::Sobel(gray, df_dx, CV_32F, 1, 0, 3, 0.125);
-    cv::Sobel(gray, df_dy, CV_32F, 0, 1, 3, 0.125);
+    cv::Sobel(gray, df_dx, CV_32F, 1, 0);
+    cv::Sobel(gray, df_dy, CV_32F, 0, 1);
 
     cv::cartToPolar(df_dx, df_dy, mag, angle, true);
-    mag *= (1.f / sqrt(2));
+    mag *= (1.f / (8 * sqrt(2)));
 
     cv::Mat nmag;
     mag.convertTo(nmag, CV_8UC1);
@@ -92,22 +94,22 @@ void cv::IntegralChannels::createHogBins(const cv::Mat gray, std::vector<cv::Mat
     integrals.push_back(mag);
 }
 
-void cv::IntegralChannels::createLuvBins(const cv::Mat frame, std::vector<cv::Mat>& integrals) const
+void cv::SCascade::Channels::appendLuvBins(const cv::Mat frame, std::vector<cv::Mat>& integrals) const
 {
     CV_Assert(frame.type() == CV_8UC3);
     CV_Assert(!(frame.cols % shrinkage) && !(frame.rows % shrinkage));
 
-    cv::Mat luv;
+    cv::Mat luv, shrunk;
     cv::cvtColor(frame, luv, CV_BGR2Luv);
+    cv::resize(luv, shrunk, cv::Size(), 1.0 / shrinkage, 1.0 / shrinkage, CV_INTER_AREA);
 
     std::vector<cv::Mat> splited;
-    split(luv, splited);
+    split(shrunk, splited);
 
     for (size_t i = 0; i < splited.size(); ++i)
     {
-        cv::Mat shrunk, sum;
-        cv::resize(splited[i], shrunk, cv::Size(), 1.0 / shrinkage, 1.0 / shrinkage, CV_INTER_AREA);
-        cv::integral(shrunk, sum, cv::noArray(), CV_32S);
+        cv::Mat sum;
+        cv::integral(splited[i], sum, cv::noArray(), CV_32S);
         integrals.push_back(sum);
     }
 }
