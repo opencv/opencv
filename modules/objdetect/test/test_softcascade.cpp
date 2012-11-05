@@ -94,5 +94,5 @@ TEST(SCascade, detect)
         total++;
     }
     std::cout << "detected: " << (int)objects.size() << std::endl;
-    ASSERT_EQ((int)objects.size(), 3668);
+    ASSERT_EQ((int)objects.size(), 3498);
 }
