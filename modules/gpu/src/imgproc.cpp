@@ -553,7 +553,7 @@ void cv::gpu::integralBuffered(const GpuMat& src, GpuMat& sum, GpuMat& buffer, S
 
     src.locateROI(whole, offset);
 
-    if (false && info.supports(WARP_SHUFFLE_FUNCTIONS) && src.cols <= 2048)
+    if (info.supports(WARP_SHUFFLE_FUNCTIONS) && src.cols <= 2048)
     {
         GpuMat srcAlligned;
 
