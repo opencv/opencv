@@ -63,7 +63,7 @@ void cv::SCascade::Channels::appendHogBins(const cv::Mat gray, std::vector<cv::M
     cv::Mat nmag;
     mag.convertTo(nmag, CV_8UC1);
 
-    angle /= 60.f;
+    angle *=  bins/360.f;
 
     std::vector<cv::Mat> hist;
     for (int bin = 0; bin < bins; ++bin)
