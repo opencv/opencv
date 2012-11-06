@@ -41,8 +41,6 @@
 //M*/
 
 #include <precomp.hpp>
-#include <opencv2/objdetect/objdetect.hpp>
-#include <opencv2/core/core.hpp>
 
 cv::SCascade::Channels::Channels(int shr) : shrinkage(shr) {}
 
