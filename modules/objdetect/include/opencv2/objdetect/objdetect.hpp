@@ -561,8 +561,8 @@ public:
 private:
     void detectNoRoi(const Mat& image, std::vector<Detection>& objects) const;
 
-    struct Filds;
-    Filds* filds;
+    struct Fields;
+    Fields* fields;
 
     float minScale;
     float maxScale;

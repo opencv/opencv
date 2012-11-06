@@ -253,7 +253,7 @@ struct ChannelStorage
 
 }
 
-struct cv::SCascade::Filds
+struct cv::SCascade::Fields
 {
     float minScale;
     float maxScale;
@@ -493,9 +493,9 @@ struct cv::SCascade::Filds
 };
 
 cv::SCascade::SCascade(const float mins, const float maxs, const int nsc, const int rej)
-: filds(0), minScale(mins), maxScale(maxs), scales(nsc), rejfactor(rej) {}
+: fields(0), minScale(mins), maxScale(maxs), scales(nsc), rejfactor(rej) {}
 
-cv::SCascade::~SCascade() { delete filds;}
+cv::SCascade::~SCascade() { delete fields;}
 
 void cv::SCascade::read(const FileNode& fn)
 {
@@ -504,15 +504,15 @@ void cv::SCascade::read(const FileNode& fn)
 
 bool cv::SCascade::load(const FileNode& fn)
 {
-    if (filds) delete filds;
+    if (fields) delete fields;
 
-    filds = new Filds;
-    return filds->fill(fn, minScale, maxScale);
+    fields = new Fields;
+    return fields->fill(fn, minScale, maxScale);
 }
 
 void cv::SCascade::detectNoRoi(const cv::Mat& image, std::vector<Detection>& objects) const
 {
-    Filds& fld = *filds;
+    Fields& fld = *fields;
     // create integrals
     ChannelStorage storage(image, fld.shrinkage);
 
@@ -538,7 +538,7 @@ void cv::SCascade::detect(cv::InputArray _image, cv::InputArray _rois, std::vect
     cv::Mat image = _image.getMat();
     CV_Assert(image.type() == CV_8UC3);
 
-    Filds& fld = *filds;
+    Fields& fld = *fields;
     fld.calcLevels(image.size(), scales);
 
     objects.clear();
