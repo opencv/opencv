@@ -56,7 +56,7 @@ void cv::SCascade::Channels::appendHogBins(const cv::Mat gray, std::vector<cv::M
     cv::Sobel(gray, df_dy, CV_32F, 0, 1);
 
     cv::cartToPolar(df_dx, df_dy, mag, angle, true);
-    mag *= (1.f / (8 * sqrt(2)));
+    mag *= (1.f / (8 * sqrt(2.f)));
 
     cv::Mat nmag;
     mag.convertTo(nmag, CV_8UC1);
