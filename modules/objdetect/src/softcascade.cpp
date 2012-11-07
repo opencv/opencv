@@ -296,10 +296,10 @@ struct cv::SCascade::Fields
     void calcLevels(const cv::Size& curr, float mins, float maxs, int total)
     {
         if (frameSize == curr && maxs == maxScale && mins == minScale && total == scales) return;
-        CV_Assert(scales > 1);
 
         frameSize = curr;
         maxScale = maxs; minScale = mins; scales = total;
+        CV_Assert(scales > 1);
 
         levels.clear();
         float logFactor = (log(maxScale) - log(minScale)) / (scales -1);
@@ -415,7 +415,7 @@ struct cv::SCascade::Fields
     }
 };
 
-cv::SCascade::SCascade(const float mins, const float maxs, const int nsc, const int rej)
+cv::SCascade::SCascade(const double mins, const double maxs, const int nsc, const int rej)
 : fields(0), minScale(mins), maxScale(maxs), scales(nsc), rejfactor(rej) {}
 
 cv::SCascade::~SCascade() { delete fields;}
@@ -462,7 +462,7 @@ void cv::SCascade::detect(cv::InputArray _image, cv::InputArray _rois, std::vect
     CV_Assert(image.type() == CV_8UC3);
 
     Fields& fld = *fields;
-    fld.calcLevels(image.size(),minScale, maxScale, scales);
+    fld.calcLevels(image.size(),(float) minScale, (float)maxScale, (float)scales);
 
     objects.clear();
 

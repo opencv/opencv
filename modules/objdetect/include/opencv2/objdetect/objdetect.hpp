@@ -523,12 +523,12 @@ public:
         // Param gray is an input 1-channel gray image.
         // Param integrals is a vector of integrals. Hog-channels will be appended to it.
         // Param bins is a number of hog-bins
-        void appendHogBins(const cv::Mat gray, std::vector<cv::Mat>& integrals, int bins) const;
+        void appendHogBins(const cv::Mat& gray, std::vector<cv::Mat>& integrals, int bins) const;
 
         // Converts 3-channel BGR input frame in  Luv and appends each channel to the integrals.
         // Param frame is an input 3-channel BGR colored image.
         // Param integrals is a vector of integrals. Computed from the frame luv-channels will be appended to it.
-        void appendLuvBins(const cv::Mat frame, std::vector<cv::Mat>& integrals) const;
+        void appendLuvBins(const cv::Mat& frame, std::vector<cv::Mat>& integrals) const;
 
     private:
         int shrinkage;
@@ -539,7 +539,7 @@ public:
     // Param minScale is a maximum scale relative to the original size of the image on which cascade will be applyed.
     // Param scales is a number of scales from minScale to maxScale.
     // Param rejfactor is used for NMS.
-    SCascade(const float minScale = 0.4f, const float maxScale = 5.f, const int scales = 55, const int rejfactor = 1);
+    SCascade(const double minScale = 0.4, const double maxScale = 5., const int scales = 55, const int rejfactor = 1);
 
     virtual ~SCascade();
 
@@ -564,8 +564,9 @@ private:
     struct Fields;
     Fields* fields;
 
-    float minScale;
-    float maxScale;
+    double minScale;
+    double maxScale;
+
     int   scales;
     int   rejfactor;
 };
