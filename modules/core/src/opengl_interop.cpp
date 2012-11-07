@@ -45,6 +45,14 @@
 #include "opencv2/core/opengl_interop.hpp"
 #include "opencv2/core/gpumat.hpp"
 
+#if defined WIN32 || defined _WIN32 || defined WINCE
+#include <windows.h>
+#undef small
+#undef min
+#undef max
+#undef abs
+#endif
+
 #ifdef HAVE_OPENGL
     #ifdef __APPLE__
         #include <OpenGL/gl.h>
