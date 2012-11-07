@@ -1,10 +1,10 @@
-#include <iostream>	// for standard I/O
+#include <iostream> // for standard I/O
 #include <string>   // for strings
 #include <iomanip>  // for controlling float print precision
 #include <sstream>  // string to number conversion
 
-#include <opencv2/imgproc/imgproc.hpp>  // Gaussian Blur
 #include <opencv2/core/core.hpp>        // Basic OpenCV structures (cv::Mat, Scalar)
+#include <opencv2/imgproc/imgproc.hpp>  // Gaussian Blur
 #include <opencv2/highgui/highgui.hpp>  // OpenCV window I/O
 
 using namespace std;
@@ -13,55 +13,57 @@ using namespace cv;
 double getPSNR ( const Mat& I1, const Mat& I2);
 Scalar getMSSIM( const Mat& I1, const Mat& I2);
 
-void help()
+static void help()
 {
     cout
-        << "\n--------------------------------------------------------------------------" << endl
-        << "This program shows how to read a video file with OpenCV. In addition, it tests the"
-        << " similarity of two input videos first with PSNR, and for the frames below a PSNR "  << endl
-        << "trigger value, also with MSSIM."<< endl
-        << "Usage:"                                                                       << endl
+        << "------------------------------------------------------------------------------" << endl
+        << "This program shows how to read a video file with OpenCV. In addition, it "
+        << "tests the similarity of two input videos first with PSNR, and for the frames "
+        << "below a PSNR trigger value, also with MSSIM."                                   << endl
+        << "Usage:"                                                                         << endl
         << "./video-source referenceVideo useCaseTestVideo PSNR_Trigger_Value Wait_Between_Frames " << endl
-        << "--------------------------------------------------------------------------"   << endl
+        << "--------------------------------------------------------------------------"     << endl
         << endl;
 }
-int main(int argc, char *argv[], char *window_name)
+
+int main(int argc, char *argv[])
 {
     help();
+
     if (argc != 5)
     {
         cout << "Not enough parameters" << endl;
         return -1;
     }
+
     stringstream conv;
 
-    const string sourceReference = argv[1],sourceCompareWith = argv[2];
+    const string sourceReference = argv[1], sourceCompareWith = argv[2];
     int psnrTriggerValue, delay;
-    conv << argv[3] << endl << argv[4];		  // put in the strings
-    conv >> psnrTriggerValue >> delay;// take out the numbers
+    conv << argv[3] << endl << argv[4];       // put in the strings
+    conv >> psnrTriggerValue >> delay;        // take out the numbers
 
     char c;
-    int frameNum = -1;			// Frame counter
+    int frameNum = -1;          // Frame counter
 
-    VideoCapture captRefrnc(sourceReference),
-        captUndTst(sourceCompareWith);
+    VideoCapture captRefrnc(sourceReference), captUndTst(sourceCompareWith);
 
-    if ( !captRefrnc.isOpened())
+    if (!captRefrnc.isOpened())
     {
         cout  << "Could not open reference " << sourceReference << endl;
         return -1;
     }
 
-    if( !captUndTst.isOpened())
+    if (!captUndTst.isOpened())
     {
         cout  << "Could not open case test " << sourceCompareWith << endl;
         return -1;
     }
 
     Size refS = Size((int) captRefrnc.get(CV_CAP_PROP_FRAME_WIDTH),
-        (int) captRefrnc.get(CV_CAP_PROP_FRAME_HEIGHT)),
-        uTSi = Size((int) captUndTst.get(CV_CAP_PROP_FRAME_WIDTH),
-        (int) captUndTst.get(CV_CAP_PROP_FRAME_HEIGHT));
+                     (int) captRefrnc.get(CV_CAP_PROP_FRAME_HEIGHT)),
+         uTSi = Size((int) captUndTst.get(CV_CAP_PROP_FRAME_WIDTH),
+                     (int) captUndTst.get(CV_CAP_PROP_FRAME_HEIGHT));
 
     if (refS != uTSi)
     {
@@ -73,43 +75,43 @@ int main(int argc, char *argv[], char *window_name)
     const char* WIN_RF = "Reference";
 
     // Windows
-    namedWindow(WIN_RF, CV_WINDOW_AUTOSIZE );
-    namedWindow(WIN_UT, CV_WINDOW_AUTOSIZE );
-    cvMoveWindow(WIN_RF, 400       ,            0);		 //750,  2 (bernat =0)
-    cvMoveWindow(WIN_UT, refS.width,            0);		 //1500, 2
+    namedWindow(WIN_RF, CV_WINDOW_AUTOSIZE);
+    namedWindow(WIN_UT, CV_WINDOW_AUTOSIZE);
+    cvMoveWindow(WIN_RF, 400       , 0);         //750,  2 (bernat =0)
+    cvMoveWindow(WIN_UT, refS.width, 0);         //1500, 2
 
     cout << "Reference frame resolution: Width=" << refS.width << "  Height=" << refS.height
-        << " of nr#: " << captRefrnc.get(CV_CAP_PROP_FRAME_COUNT) << endl;
+         << " of nr#: " << captRefrnc.get(CV_CAP_PROP_FRAME_COUNT) << endl;
 
-    cout << "PSNR trigger value " <<
-        setiosflags(ios::fixed) << setprecision(3) << psnrTriggerValue << endl;
+    cout << "PSNR trigger value " << setiosflags(ios::fixed) << setprecision(3)
+         << psnrTriggerValue << endl;
 
     Mat frameReference, frameUnderTest;
     double psnrV;
     Scalar mssimV;
 
-    while( true) //Show the image captured in the window and repeat
+    for(;;) //Show the image captured in the window and repeat
     {
         captRefrnc >> frameReference;
         captUndTst >> frameUnderTest;
 
-        if( frameReference.empty()  || frameUnderTest.empty())
+        if (frameReference.empty() || frameUnderTest.empty())
         {
             cout << " < < <  Game over!  > > > ";
             break;
         }
 
         ++frameNum;
-        cout <<"Frame:" << frameNum <<"# ";
+        cout << "Frame: " << frameNum << "# ";
 
         ///////////////////////////////// PSNR ////////////////////////////////////////////////////
-        psnrV = getPSNR(frameReference,frameUnderTest);					//get PSNR
+        psnrV = getPSNR(frameReference,frameUnderTest);
         cout << setiosflags(ios::fixed) << setprecision(3) << psnrV << "dB";
 
         //////////////////////////////////// MSSIM /////////////////////////////////////////////////
         if (psnrV < psnrTriggerValue && psnrV)
         {
-            mssimV = getMSSIM(frameReference,frameUnderTest);
+            mssimV = getMSSIM(frameReference, frameUnderTest);
 
             cout << " MSSIM: "
                 << " R " << setiosflags(ios::fixed) << setprecision(2) << mssimV.val[2] * 100 << "%"
@@ -120,10 +122,10 @@ int main(int argc, char *argv[], char *window_name)
         cout << endl;
 
         ////////////////////////////////// Show Image /////////////////////////////////////////////
-        imshow( WIN_RF, frameReference);
-        imshow( WIN_UT, frameUnderTest);
+        imshow(WIN_RF, frameReference);
+        imshow(WIN_UT, frameUnderTest);
 
-        c = cvWaitKey(delay);
+        c = (char)cvWaitKey(delay);
         if (c == 27) break;
     }
 
@@ -137,7 +139,7 @@ double getPSNR(const Mat& I1, const Mat& I2)
     s1.convertTo(s1, CV_32F);  // cannot make a square on 8 bits
     s1 = s1.mul(s1);           // |I1 - I2|^2
 
-    Scalar s = sum(s1);         // sum elements per channel
+    Scalar s = sum(s1);        // sum elements per channel
 
     double sse = s.val[0] + s.val[1] + s.val[2]; // sum channels
 
@@ -145,8 +147,8 @@ double getPSNR(const Mat& I1, const Mat& I2)
         return 0;
     else
     {
-        double  mse =sse /(double)(I1.channels() * I1.total());
-        double psnr = 10.0*log10((255*255)/mse);
+        double mse  = sse / (double)(I1.channels() * I1.total());
+        double psnr = 10.0 * log10((255 * 255) / mse);
         return psnr;
     }
 }
@@ -155,10 +157,10 @@ Scalar getMSSIM( const Mat& i1, const Mat& i2)
 {
     const double C1 = 6.5025, C2 = 58.5225;
     /***************************** INITS **********************************/
-    int d     = CV_32F;
+    int d = CV_32F;
 
     Mat I1, I2;
-    i1.convertTo(I1, d);           // cannot calculate on one byte large values
+    i1.convertTo(I1, d);            // cannot calculate on one byte large values
     i2.convertTo(I2, d);
 
     Mat I2_2   = I2.mul(I2);        // I2^2
@@ -167,7 +169,7 @@ Scalar getMSSIM( const Mat& i1, const Mat& i2)
 
     /*************************** END INITS **********************************/
 
-    Mat mu1, mu2;   // PRELIMINARY COMPUTING
+    Mat mu1, mu2;                   // PRELIMINARY COMPUTING
     GaussianBlur(I1, mu1, Size(11, 11), 1.5);
     GaussianBlur(I2, mu2, Size(11, 11), 1.5);
 
@@ -191,15 +193,15 @@ Scalar getMSSIM( const Mat& i1, const Mat& i2)
 
     t1 = 2 * mu1_mu2 + C1;
     t2 = 2 * sigma12 + C2;
-    t3 = t1.mul(t2);              // t3 = ((2*mu1_mu2 + C1).*(2*sigma12 + C2))
+    t3 = t1.mul(t2);                 // t3 = ((2*mu1_mu2 + C1).*(2*sigma12 + C2))
 
     t1 = mu1_2 + mu2_2 + C1;
     t2 = sigma1_2 + sigma2_2 + C2;
-    t1 = t1.mul(t2);               // t1 =((mu1_2 + mu2_2 + C1).*(sigma1_2 + sigma2_2 + C2))
+    t1 = t1.mul(t2);                 // t1 =((mu1_2 + mu2_2 + C1).*(sigma1_2 + sigma2_2 + C2))
 
     Mat ssim_map;
-    divide(t3, t1, ssim_map);      // ssim_map =  t3./t1;
+    divide(t3, t1, ssim_map);        // ssim_map =  t3./t1;
 
-    Scalar mssim = mean( ssim_map ); // mssim = average of ssim map
+    Scalar mssim = mean(ssim_map);   // mssim = average of ssim map
     return mssim;
 }

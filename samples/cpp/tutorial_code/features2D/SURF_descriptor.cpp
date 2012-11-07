@@ -9,7 +9,7 @@
 #include "opencv2/core/core.hpp"
 #include "opencv2/features2d/features2d.hpp"
 #include "opencv2/highgui/highgui.hpp"
-#include "opencv2/nonfree/features2d.cpp"
+#include "opencv2/nonfree/features2d.hpp"
 
 using namespace cv;
 
@@ -49,7 +49,7 @@ int main( int argc, char** argv )
   extractor.compute( img_2, keypoints_2, descriptors_2 );
 
   //-- Step 3: Matching descriptor vectors with a brute force matcher
-  BruteForceMatcher< L2<float> > matcher;
+  BFMatcher matcher(NORM_L2);
   std::vector< DMatch > matches;
   matcher.match( descriptors_1, descriptors_2, matches );
 

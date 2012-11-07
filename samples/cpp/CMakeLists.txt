@@ -53,7 +53,15 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
     endif()
   ENDMACRO()
 
-  file(GLOB cpp_samples RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.cpp)
+  file(GLOB_RECURSE cpp_samples RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.cpp)
+
+  if(NOT HAVE_OPENGL)
+    ocv_list_filterout(cpp_samples Qt_sample)
+  endif()
+
+  if(NOT HAVE_opencv_gpu)
+    ocv_list_filterout(cpp_samples "/gpu/")
+  endif()
 
   foreach(sample_filename ${cpp_samples})
     get_filename_component(sample ${sample_filename} NAME_WE)
