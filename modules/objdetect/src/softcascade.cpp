@@ -46,7 +46,7 @@ namespace {
 
 struct Octave
 {
-    Octave(const int i, cv::Size origObjSize, const cv::FileNode& fn)
+    Octave(const int i, const cv::Size& origObjSize, const cv::FileNode& fn)
     : index(i), scale((float)fn[SC_OCT_SCALE]), stages((int)fn[SC_OCT_STAGES]),
       size(cvRound(origObjSize.width * scale), cvRound(origObjSize.height * scale)),
       shrinkage((int)fn[SC_OCT_SHRINKAGE]) {}
@@ -207,6 +207,7 @@ struct cv::SCascade::Fields
 {
     float minScale;
     float maxScale;
+    int scales;
 
     int origObjWidth;
     int origObjHeight;
@@ -292,12 +293,14 @@ struct cv::SCascade::Fields
     }
 
     // compute levels of full pyramid
-    void calcLevels(const cv::Size& curr, int scales)
+    void calcLevels(const cv::Size& curr, float mins, float maxs, int total)
     {
-        if (frameSize == curr) return;
-        frameSize = curr;
-
+        if (frameSize == curr && maxs == maxScale && mins == minScale && total == scales) return;
         CV_Assert(scales > 1);
+
+        frameSize = curr;
+        maxScale = maxs; minScale = mins; scales = total;
+
         levels.clear();
         float logFactor = (log(maxScale) - log(minScale)) / (scales -1);
 
@@ -323,11 +326,8 @@ struct cv::SCascade::Fields
         }
     }
 
-    bool fill(const FileNode &root, const float mins, const float maxs)
+    bool fill(const FileNode &root)
     {
-        minScale = mins;
-        maxScale = maxs;
-
         // cascade properties
         static const char *const SC_STAGE_TYPE       = "stageType";
         static const char *const SC_BOOST            = "BOOST";
@@ -430,7 +430,7 @@ bool cv::SCascade::load(const FileNode& fn)
     if (fields) delete fields;
 
     fields = new Fields;
-    return fields->fill(fn, minScale, maxScale);
+    return fields->fill(fn);
 }
 
 void cv::SCascade::detectNoRoi(const cv::Mat& image, std::vector<Detection>& objects) const
@@ -462,7 +462,7 @@ void cv::SCascade::detect(cv::InputArray _image, cv::InputArray _rois, std::vect
     CV_Assert(image.type() == CV_8UC3);
 
     Fields& fld = *fields;
-    fld.calcLevels(image.size(), scales);
+    fld.calcLevels(image.size(),minScale, maxScale, scales);
 
     objects.clear();
 
