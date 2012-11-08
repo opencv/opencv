@@ -44,7 +44,7 @@
 
 #if defined(HAVE_CUDA) && !defined(__APPLE__)
 
-#ifdef HAVE_FFMPEG
+#if defined(HAVE_FFMPEG) && defined(BUILD_SHARED_LIBS)
     #include "cap_ffmpeg_impl.hpp"
 #else
     #include "cap_ffmpeg_api.hpp"
