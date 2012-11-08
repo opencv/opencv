@@ -134,7 +134,7 @@ struct Level
     {
         scaling[0] = ((relScale >= 1.f)? 1.f : (0.89f * pow(relScale, 1.099f / log(2.f)))) / (relScale * relScale);
         scaling[1] = 1.f;
-        scaleshift = relScale * (1 << 16);
+        scaleshift = static_cast<int>(relScale * (1 << 16));
     }
 
     void addDetection(const int x, const int y, float confidence, std::vector<Detection>& detections) const
@@ -154,7 +154,7 @@ struct Level
         scaledRect.width  = SSHIFT(scaleshift * scaledRect.width);
         scaledRect.height = SSHIFT(scaleshift * scaledRect.height);
 #undef SSHIFT
-        float sarea = (scaledRect.width - scaledRect.x) * (scaledRect.height - scaledRect.y);
+        float sarea = static_cast<float>((scaledRect.width - scaledRect.x) * (scaledRect.height - scaledRect.y));
 
         // compensation areas rounding
         return (sarea == 0.0f)? threshold : (threshold * scaling[idx] * sarea);
@@ -197,7 +197,7 @@ struct ChannelStorage
         int c = ptr[area.height * step + area.width];
         int d = ptr[area.height * step + area.x];
 
-        return (a - b + c - d);
+        return static_cast<float>(a - b + c - d);
     }
 };
 
@@ -307,8 +307,8 @@ struct cv::SCascade::Fields
         float scale = minScale;
         for (int sc = 0; sc < scales; ++sc)
         {
-            int width  = std::max(0.0f, frameSize.width  - (origObjWidth  * scale));
-            int height = std::max(0.0f, frameSize.height - (origObjHeight * scale));
+            int width  = static_cast<int>(std::max(0.0f, frameSize.width  - (origObjWidth  * scale)));
+            int height = static_cast<int>(std::max(0.0f, frameSize.height - (origObjHeight * scale)));
 
             float logScale = log(scale);
             octIt_t fit = fitOctave(logScale);
@@ -462,7 +462,7 @@ void cv::SCascade::detect(cv::InputArray _image, cv::InputArray _rois, std::vect
     CV_Assert(image.type() == CV_8UC3);
 
     Fields& fld = *fields;
-    fld.calcLevels(image.size(),(float) minScale, (float)maxScale, (float)scales);
+    fld.calcLevels(image.size(),(float) minScale, (float)maxScale, scales);
 
     objects.clear();
 
