@@ -300,7 +300,13 @@ public:
 //------------------------------------------------------------------------------
 // FaceRecognizer
 //------------------------------------------------------------------------------
-void FaceRecognizer::update(InputArrayOfArrays, InputArray) {
+void FaceRecognizer::update(InputArrayOfArrays src, InputArray labels ) {
+    if( dynamic_cast<LBPH*>(this) != 0 )
+    {
+        dynamic_cast<LBPH*>(this)->update( src, labels );
+        return;
+    }
+    
     string error_msg = format("This FaceRecognizer (%s) does not support updating, you have to use FaceRecognizer::train to update it.", this->name().c_str());
     CV_Error(CV_StsNotImplemented, error_msg);
 }
