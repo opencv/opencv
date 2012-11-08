@@ -28,7 +28,16 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
   #      Define executable targets
   # ---------------------------------------------
   MACRO(OPENCV_DEFINE_CPP_EXAMPLE name srcs)
-    set(the_target "example_${name}")
+
+    if("${srcs}" MATCHES "tutorial_code")
+      set(sample_kind tutorial)
+      set(sample_KIND TUTORIAL)
+    else()
+      set(sample_kind example)
+      set(sample_KIND EXAMPLE)
+    endif()
+
+    set(the_target "${sample_kind}_${name}")
     add_executable(${the_target} ${srcs})
     target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${OPENCV_CPP_SAMPLES_REQUIRED_DEPS})
 
@@ -37,11 +46,11 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
     endif()
 
     set_target_properties(${the_target} PROPERTIES
-      OUTPUT_NAME "${name}"
-      PROJECT_LABEL "(EXAMPLE) ${name}")
+      OUTPUT_NAME "cpp-${sample_kind}-${name}"
+      PROJECT_LABEL "(${sample_KIND}) ${name}")
 
     if(ENABLE_SOLUTION_FOLDERS)
-      set_target_properties(${the_target} PROPERTIES FOLDER "samples//cpp")
+      set_target_properties(${the_target} PROPERTIES FOLDER "${sample_kind}s//cpp")
     endif()
 
     if(WIN32)
@@ -49,7 +58,7 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
         set_target_properties(${the_target} PROPERTIES LINK_FLAGS "/NODEFAULTLIB:atlthunk.lib /NODEFAULTLIB:atlsd.lib /DEBUG")
       endif()
       install(TARGETS ${the_target}
-              RUNTIME DESTINATION "samples/cpp" COMPONENT main)
+              RUNTIME DESTINATION "${sample_kind}s/cpp" COMPONENT main)
     endif()
   ENDMACRO()
 
