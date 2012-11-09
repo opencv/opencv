@@ -139,7 +139,7 @@ struct CascadeInvoker
     const float*  leaves;
 
     void operator()(const PtrStepSzb& roi, const PtrStepSzi& hogluv, PtrStepSz<uchar4> objects,
-        PtrStepSzi counter, const int downscales, const int csale = -1) const;
+        PtrStepSzi counter, const int downscales, const int csale = -1, const cudaStream_t& stream = 0) const;
 };
 
 }

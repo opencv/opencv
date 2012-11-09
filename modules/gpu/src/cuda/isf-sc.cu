@@ -71,7 +71,7 @@ namespace icf {
     }
 
     void fillBins(cv::gpu::PtrStepSzb hogluv, const cv::gpu::PtrStepSzf& nangle,
-                  const int fw,  const int fh, const int bins)
+                  const int fw,  const int fh, const int bins, cudaStream_t stream )
     {
         const uchar* mag = (const uchar*)hogluv.ptr(fh * bins);
         uchar* hog = (uchar*)hogluv.ptr();
@@ -80,9 +80,12 @@ namespace icf {
         dim3 block(32, 8);
         dim3 grid(fw / 32, fh / 8);
 
-        magToHist<<<grid, block>>>(mag, angle, nangle.step / sizeof(float), hog, hogluv.step, fh);
-        cudaSafeCall( cudaGetLastError() );
-        cudaSafeCall( cudaDeviceSynchronize() );
+        magToHist<<<grid, block, 0, stream>>>(mag, angle, nangle.step / sizeof(float), hog, hogluv.step, fh);
+        if (!stream)
+        {
+            cudaSafeCall( cudaGetLastError() );
+            cudaSafeCall( cudaDeviceSynchronize() );
+        }
     }
 
     texture<int,  cudaTextureType2D, cudaReadModeElementType> thogluv;
@@ -305,7 +308,7 @@ namespace icf {
 
     template<>
     void CascadeInvoker<CascadePolicy>::operator()(const PtrStepSzb& roi, const PtrStepSzi& hogluv,
-        PtrStepSz<uchar4> objects, PtrStepSzi counter, const int downscales, const int scale) const
+        PtrStepSz<uchar4> objects, PtrStepSzi counter, const int downscales, const int scale, const cudaStream_t& stream) const
     {
         int fw = 160;
         int fh = 120;
@@ -325,22 +328,25 @@ namespace icf {
 
         if (scale == -1)
         {
-            test_kernel_warp<false><<<grid, block>>>(levels, octaves, stages, nodes, leaves, det, max_det, ctr, 0);
+            test_kernel_warp<false><<<grid, block, 0, stream>>>(levels, octaves, stages, nodes, leaves, det, max_det, ctr, 0);
             cudaSafeCall( cudaGetLastError());
 
             grid = dim3(fw, fh / 8, 47 - downscales);
-            test_kernel_warp<true><<<grid, block>>>(levels, octaves, stages, nodes, leaves, det, max_det, ctr, downscales);
+            test_kernel_warp<true><<<grid, block, 0, stream>>>(levels, octaves, stages, nodes, leaves, det, max_det, ctr, downscales);
         }
         else
         {
             if (scale >= downscales)
-                test_kernel_warp<true><<<grid, block>>>(levels, octaves, stages, nodes, leaves, det, max_det, ctr, scale);
+                test_kernel_warp<true><<<grid, block, 0, stream>>>(levels, octaves, stages, nodes, leaves, det, max_det, ctr, scale);
             else
-                test_kernel_warp<false><<<grid, block>>>(levels, octaves, stages, nodes, leaves, det, max_det, ctr, scale);
+                test_kernel_warp<false><<<grid, block, 0, stream>>>(levels, octaves, stages, nodes, leaves, det, max_det, ctr, scale);
         }
 
-        cudaSafeCall( cudaGetLastError());
-        cudaSafeCall( cudaDeviceSynchronize());
+        if (!stream)
+        {
+            cudaSafeCall( cudaGetLastError());
+            cudaSafeCall( cudaDeviceSynchronize());
+        }
     }
 }
 }}}

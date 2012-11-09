@@ -285,3 +285,43 @@ RUN_GPU(SCascadeTest, detectOnIntegral)
 }
 
 NO_CPU(SCascadeTest, detectOnIntegral)
+
+GPU_PERF_TEST_P(SCascadeTest, detectStream,
+    testing::Combine(
+        testing::Values(std::string("cv/cascadeandhog/sc_cvpr_2012_to_opencv.xml")),
+        testing::Values(std::string("cv/cascadeandhog/bahnhof/image_00000000_0.png"))))
+{ }
+
+RUN_GPU(SCascadeTest, detectStream)
+{
+    cv::Mat cpu = readImage (GET_PARAM(1));
+    ASSERT_FALSE(cpu.empty());
+    cv::gpu::GpuMat colored(cpu);
+
+    cv::gpu::SCascade cascade;
+
+    cv::FileStorage fs(perf::TestBase::getDataPath(GET_PARAM(0)), cv::FileStorage::READ);
+    ASSERT_TRUE(fs.isOpened());
+
+    ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
+
+    cv::gpu::GpuMat objectBoxes(1, 10000 * sizeof(cv::gpu::SCascade::Detection), CV_8UC1), rois(colored.size(), CV_8UC1), trois;
+    rois.setTo(1);
+
+    cv::gpu::Stream s;
+
+    cascade.genRoi(rois, trois, s);
+
+    cascade.detect(colored, trois, objectBoxes, s);
+
+    TEST_CYCLE()
+    {
+        cascade.detect(colored, trois, objectBoxes, s);
+    }
+
+    cudaDeviceSynchronize();
+
+    SANITY_CHECK(sortDetections(objectBoxes));
+}
+
+NO_CPU(SCascadeTest, detectStream)

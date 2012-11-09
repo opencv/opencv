@@ -54,7 +54,7 @@ bool cv::gpu::SCascade::load(const FileNode&) { throw_nogpu(); return false;}
 void cv::gpu::SCascade::detect(InputArray, InputArray, OutputArray, Stream&) const { throw_nogpu(); }
 void cv::gpu::SCascade::detect(InputArray, InputArray, OutputArray, const int, Stream&) const { throw_nogpu(); }
 
-void cv::gpu::SCascade::genRoi(InputArray, OutputArray) const { throw_nogpu(); }
+void cv::gpu::SCascade::genRoi(InputArray, OutputArray, Stream&) const { throw_nogpu(); }
 
 void cv::gpu::SCascade::read(const FileNode& fn) { Algorithm::read(fn); }
 
@@ -76,7 +76,7 @@ namespace cv { namespace gpu { namespace device {
 
 namespace icf {
     void fillBins(cv::gpu::PtrStepSzb hogluv, const cv::gpu::PtrStepSzf& nangle,
-        const int fw, const int fh, const int bins);
+        const int fw, const int fh, const int bins, cudaStream_t stream);
 }
 
 namespace imgproc {
@@ -341,27 +341,30 @@ struct cv::gpu::SCascade::Fields
 
     }
 
-    void detect(int scale, const cv::gpu::GpuMat& roi, const cv::gpu::GpuMat& count, cv::gpu::GpuMat& objects, cudaStream_t stream) const
+    void detect(int scale, const cv::gpu::GpuMat& roi, const cv::gpu::GpuMat& count, cv::gpu::GpuMat& objects, const cudaStream_t& stream) const
     {
         cudaMemset(count.data, 0, sizeof(Detection));
         cudaSafeCall( cudaGetLastError());
-        invoker(roi, hogluv, objects, count, downscales, scale);
+        invoker(roi, hogluv, objects, count, downscales, scale, stream);
     }
 
-    void preprocess(const cv::gpu::GpuMat& colored)
+    void preprocess(const cv::gpu::GpuMat& colored, Stream& s)
     {
-        cudaMemset(plane.data, 0, plane.step * plane.rows);
+        if (s)
+            s.enqueueMemSet(plane, 0);
+        else
+            cudaMemset(plane.data, 0, plane.step * plane.rows);
 
         static const int fw = Fields::FRAME_WIDTH;
         static const int fh = Fields::FRAME_HEIGHT;
 
         GpuMat gray(plane, cv::Rect(0, fh * Fields::HOG_LUV_BINS, fw, fh));
-        cv::gpu::cvtColor(colored, gray, CV_BGR2GRAY);
-        createHogBins(gray);
+        cv::gpu::cvtColor(colored, gray, CV_BGR2GRAY, s);
+        createHogBins(gray ,s);
 
-        createLuvBins(colored);
+        createLuvBins(colored, s);
 
-        integrate();
+        integrate(s);
     }
 
 private:
@@ -386,7 +389,7 @@ private:
         return res;
     }
 
-    void createHogBins(const cv::gpu::GpuMat& gray)
+    void createHogBins(const cv::gpu::GpuMat& gray, Stream& s)
     {
         static const int fw = Fields::FRAME_WIDTH;
         static const int fh = Fields::FRAME_HEIGHT;
@@ -394,35 +397,38 @@ private:
         GpuMat dfdx(fplane, cv::Rect(0,  0, fw, fh));
         GpuMat dfdy(fplane, cv::Rect(0, fh, fw, fh));
 
-        cv::gpu::Sobel(gray, dfdx, CV_32F, 1, 0);
-        cv::gpu::Sobel(gray, dfdy, CV_32F, 0, 1);
+        cv::gpu::Sobel(gray, dfdx, CV_32F, 1, 0, sobelBuf, 3, 1, BORDER_DEFAULT, -1, s);
+        cv::gpu::Sobel(gray, dfdy, CV_32F, 0, 1, sobelBuf, 3, 1, BORDER_DEFAULT, -1, s);
 
         GpuMat mag(fplane, cv::Rect(0, 2 * fh, fw, fh));
         GpuMat ang(fplane, cv::Rect(0, 3 * fh, fw, fh));
 
-        cv::gpu::cartToPolar(dfdx, dfdy, mag, ang, true);
+        cv::gpu::cartToPolar(dfdx, dfdy, mag, ang, true, s);
 
         // normolize magnitude to uchar interval and angles to 6 bins
-
         GpuMat nmag(fplane, cv::Rect(0, 4 * fh, fw, fh));
         GpuMat nang(fplane, cv::Rect(0, 5 * fh, fw, fh));
 
-        cv::gpu::multiply(mag, cv::Scalar::all(1.f / (8 *::log(2))), nmag);
-        cv::gpu::multiply(ang, cv::Scalar::all(1.f / 60.f),     nang);
+        cv::gpu::multiply(mag, cv::Scalar::all(1.f / (8 *::log(2))), nmag, 1, -1, s);
+        cv::gpu::multiply(ang, cv::Scalar::all(1.f / 60.f),     nang, 1, -1, s);
 
         //create uchar magnitude
         GpuMat cmag(plane, cv::Rect(0, fh * Fields::HOG_BINS, fw, fh));
-        nmag.convertTo(cmag, CV_8UC1);
+        if (s)
+            s.enqueueConvert(nmag, cmag, CV_8UC1);
+        else
+            nmag.convertTo(cmag, CV_8UC1);
 
-        device::icf::fillBins(plane, nang, fw, fh, Fields::HOG_BINS);
+        cudaStream_t stream = StreamAccessor::getStream(s);
+        device::icf::fillBins(plane, nang, fw, fh, Fields::HOG_BINS, stream);
     }
 
-    void createLuvBins(const cv::gpu::GpuMat& colored)
+    void createLuvBins(const cv::gpu::GpuMat& colored, Stream& s)
     {
         static const int fw = Fields::FRAME_WIDTH;
         static const int fh = Fields::FRAME_HEIGHT;
 
-        cv::gpu::cvtColor(colored, luv, CV_BGR2Luv);
+        cv::gpu::cvtColor(colored, luv, CV_BGR2Luv, s);
 
         std::vector<GpuMat> splited;
         for(int i = 0; i < Fields::LUV_BINS; ++i)
@@ -430,17 +436,18 @@ private:
             splited.push_back(GpuMat(plane, cv::Rect(0, fh * (7 + i), fw, fh)));
         }
 
-        cv::gpu::split(luv, splited);
+        cv::gpu::split(luv, splited, s);
     }
 
-    void integrate()
+    void integrate( Stream& s)
     {
         int fw = Fields::FRAME_WIDTH;
         int fh = Fields::FRAME_HEIGHT;
 
         GpuMat channels(plane, cv::Rect(0, 0, fw, fh * Fields::HOG_LUV_BINS));
-        cv::gpu::resize(channels, shrunk, cv::Size(), 0.25, 0.25, CV_INTER_AREA);
-        device::imgproc::shfl_integral_gpu_buffered(shrunk, integralBuffer, hogluv, 12, 0);
+        cv::gpu::resize(channels, shrunk, cv::Size(), 0.25, 0.25, CV_INTER_AREA, s);
+        cudaStream_t stream = StreamAccessor::getStream(s);
+        device::imgproc::shfl_integral_gpu_buffered(shrunk, integralBuffer, hogluv, 12, stream);
     }
 
 public:
@@ -482,6 +489,8 @@ public:
     GpuMat leaves;
     GpuMat levels;
 
+    GpuMat sobelBuf;
+
     device::icf::CascadeInvoker<device::icf::CascadePolicy> invoker;
 
     enum { BOOST = 0 };
@@ -516,6 +525,8 @@ void cv::gpu::SCascade::detect(InputArray image, InputArray _rois, OutputArray _
     // only color images are supperted
     CV_Assert(colored.type() == CV_8UC3 || colored.type() == CV_32SC1);
 
+    GpuMat rois = _rois.getGpuMat(), objects = _objects.getGpuMat();
+
     // we guess user knows about shrincage
     // CV_Assert((rois.size().width == getRoiSize().height) && (rois.type() == CV_8UC1));
 
@@ -525,14 +536,13 @@ void cv::gpu::SCascade::detect(InputArray image, InputArray _rois, OutputArray _
     {
         // only this window size allowed
         CV_Assert(colored.cols == Fields::FRAME_WIDTH && colored.rows == Fields::FRAME_HEIGHT);
-        flds.preprocess(colored);
+        flds.preprocess(colored, s);
     }
     else
     {
         colored.copyTo(flds.hogluv);
     }
 
-    GpuMat rois = _rois.getGpuMat(), objects = _objects.getGpuMat();
 
     GpuMat tmp = GpuMat(objects, cv::Rect(0, 0, sizeof(Detection), 1));
     objects = GpuMat(objects, cv::Rect( sizeof(Detection), 0, objects.cols -  sizeof(Detection), 1));
@@ -556,7 +566,7 @@ void cv::gpu::SCascade::detect(InputArray image, InputArray _rois, OutputArray _
     {
         // only this window size allowed
         CV_Assert(colored.cols == Fields::FRAME_WIDTH && colored.rows == Fields::FRAME_HEIGHT);
-        flds.preprocess(colored);
+        flds.preprocess(colored, s);
     }
     else
     {
@@ -572,15 +582,15 @@ void cv::gpu::SCascade::detect(InputArray image, InputArray _rois, OutputArray _
     flds.detect(level, rois, tmp, objects, stream);
 }
 
-void cv::gpu::SCascade::genRoi(InputArray _roi, OutputArray _mask) const
+void cv::gpu::SCascade::genRoi(InputArray _roi, OutputArray _mask, Stream& stream) const
 {
     const GpuMat roi = _roi.getGpuMat();
     _mask.create( roi.cols / 4, roi.rows / 4, roi.type() );
     GpuMat mask = _mask.getGpuMat();
     cv::gpu::GpuMat tmp;
 
-    cv::gpu::resize(roi, tmp, cv::Size(), 0.25, 0.25, CV_INTER_AREA);
-    cv::gpu::transpose(tmp, mask);
+    cv::gpu::resize(roi, tmp, cv::Size(), 0.25, 0.25, CV_INTER_AREA, stream);
+    cv::gpu::transpose(tmp, mask, stream);
 }
 
 void cv::gpu::SCascade::read(const FileNode& fn)

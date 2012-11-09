@@ -1577,7 +1577,7 @@ public:
     virtual void detect(InputArray image, InputArray rois, OutputArray objects, Stream& stream = Stream::Null()) const;
     virtual void detect(InputArray image, InputArray rois, OutputArray objects, const int level, Stream& stream = Stream::Null()) const;
 
-    void genRoi(InputArray roi, OutputArray mask) const;
+    void genRoi(InputArray roi, OutputArray mask, Stream& stream = Stream::Null()) const;
 
 private:
 

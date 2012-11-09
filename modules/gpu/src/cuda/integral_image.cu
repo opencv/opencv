@@ -444,7 +444,6 @@ namespace cv { namespace gpu { namespace device
         }
 
         // used for frame preprocessing before Soft Cascade evaluation: no synchronization needed
-        // ToDo: partial dy
         void shfl_integral_gpu_buffered(PtrStepSzb img, PtrStepSz<uint4> buffer, PtrStepSz<unsigned int> integral,
             int blockStep, cudaStream_t stream)
         {

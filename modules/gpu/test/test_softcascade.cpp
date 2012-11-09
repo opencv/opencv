@@ -330,4 +330,43 @@ GPU_TEST_P(SCascadeTestAll, detectOnIntegral,
 
     ASSERT_EQ( a ,1024);
 }
+
+GPU_TEST_P(SCascadeTestAll, detectStream,
+        ALL_DEVICES
+        )
+{
+    cv::gpu::setDevice(GetParam().deviceID());
+    std::string xml =  cvtest::TS::ptr()->get_data_path() + "../cv/cascadeandhog/sc_cvpr_2012_to_opencv.xml";
+    cv::gpu::SCascade cascade;
+
+    cv::FileStorage fs(xml, cv::FileStorage::READ);
+    ASSERT_TRUE(fs.isOpened());
+
+    ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
+
+    cv::Mat coloredCpu = cv::imread(cvtest::TS::ptr()->get_data_path()
+        + "../cv/cascadeandhog/bahnhof/image_00000000_0.png");
+    ASSERT_FALSE(coloredCpu.empty());
+
+    GpuMat colored(coloredCpu), objectBoxes(1, 100000, CV_8UC1), rois(colored.size(), CV_8UC1);
+    rois.setTo(0);
+    GpuMat sub(rois, cv::Rect(rois.cols / 4, rois.rows / 4,rois.cols / 2, rois.rows / 2));
+    sub.setTo(cv::Scalar::all(1));
+
+    cv::gpu::Stream s;
+
+    cv::gpu::GpuMat trois;
+    cascade.genRoi(rois, trois, s);
+
+    cascade.detect(colored, trois, objectBoxes, s);
+
+    cudaDeviceSynchronize();
+
+    typedef cv::gpu::SCascade::Detection Detection;
+    cv::Mat detections(objectBoxes);
+    int a = *(detections.ptr<int>(0));
+    ASSERT_EQ(a ,2460);
+}
+
+
 #endif
