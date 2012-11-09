@@ -12,7 +12,7 @@
 
 using namespace cv;
 
-char *windowDisparity = "Disparity";
+const char *windowDisparity = "Disparity";
 
 void readme();
 

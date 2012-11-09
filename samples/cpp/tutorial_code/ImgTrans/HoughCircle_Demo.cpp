@@ -14,7 +14,7 @@ using namespace cv;
 /**
  * @function main
  */
-int main(int argc, char** argv)
+int main(int, char** argv)
 {
    Mat src, src_gray;
 

@@ -4,8 +4,8 @@
  * @author OpenCV team
  */
 
-#include <cv.h>
-#include <highgui.h>
+#include "opencv2/highgui/highgui.hpp"
+#include <stdio.h>
 
 using namespace cv;
 
@@ -24,7 +24,7 @@ Mat dst;
  * @function on_trackbar
  * @brief Callback for trackbar
  */
-void on_trackbar( int, void* )
+static void on_trackbar( int, void* )
 {
    alpha = (double) alpha_slider/alpha_slider_max ;
 
@@ -40,7 +40,7 @@ void on_trackbar( int, void* )
  * @function main
  * @brief Main function
  */
-int main( int argc, char** argv )
+int main( void )
 {
    /// Read image ( same size, same type )
    src1 = imread("../images/LinuxLogo.jpg");

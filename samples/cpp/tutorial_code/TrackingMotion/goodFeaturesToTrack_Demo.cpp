@@ -20,7 +20,7 @@ int maxCorners = 23;
 int maxTrackbar = 100;
 
 RNG rng(12345);
-char* source_window = "Image";
+const char* source_window = "Image";
 
 /// Function header
 void goodFeaturesToTrack_Demo( int, void* );
@@ -28,7 +28,7 @@ void goodFeaturesToTrack_Demo( int, void* );
 /**
  * @function main
  */
-int main( int argc, char** argv )
+int main( int, char** argv )
 {
   /// Load source image and convert it to gray
   src = imread( argv[1], 1 );
@@ -83,7 +83,7 @@ void goodFeaturesToTrack_Demo( int, void* )
   /// Draw corners detected
   cout<<"** Number of corners detected: "<<corners.size()<<endl;
   int r = 4;
-  for( int i = 0; i < corners.size(); i++ )
+  for( size_t i = 0; i < corners.size(); i++ )
      { circle( copy, corners[i], r, Scalar(rng.uniform(0,255), rng.uniform(0,255), rng.uniform(0,255)), -1, 8, 0 ); }
 
   /// Show what you got
