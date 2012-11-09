@@ -1534,10 +1534,12 @@ public:
 
 // ======================== GPU version for soft cascade ===================== //
 
-class CV_EXPORTS SoftCascade
+// Implementation of soft (stageless) cascaded detector.
+class CV_EXPORTS SCascade : public Algorithm
 {
 public:
 
+    // Representation of detectors result.
     struct CV_EXPORTS Detection
     {
         ushort x;
@@ -1549,47 +1551,44 @@ public:
 
         enum {PEDESTRIAN = 0};
     };
-    //! An empty cascade will be created.
-    SoftCascade();
 
-    //! Cascade will be created from file for scales from minScale to maxScale.
-    //! Param filename is a path to xml-serialized cascade.
-    //! Param minScale is a minimum scale relative to the original size of the image on which cascade will be applyed.
-    //! Param minScale is a maximum scale relative to the original size of the image on which cascade will be applyed.
-    SoftCascade( const string& filename, const float minScale = 0.4f, const float maxScale = 5.f);
+    // An empty cascade will be created.
+    // Param minScale is a minimum scale relative to the original size of the image on which cascade will be applyed.
+    // Param minScale is a maximum scale relative to the original size of the image on which cascade will be applyed.
+    // Param scales is a number of scales from minScale to maxScale.
+    // Param rejfactor is used for NMS.
+    SCascade(const double minScale = 0.4, const double maxScale = 5., const int scales = 55, const int rejfactor = 1);
 
-    //! cascade will be loaded from file "filename". The previous cascade will be destroyed.
-    //! Param filename is a path to xml-serialized cascade.
-    //! Param minScale is a minimum scale relative to the original size of the image on which cascade will be applyed.
-    //! Param minScale is a maximum scale relative to the original size of the image on which cascade will be applyed.
-    bool load( const string& filename, const float minScale = 0.4f, const float maxScale = 5.f);
+    virtual ~SCascade();
 
-    virtual ~SoftCascade();
+    cv::AlgorithmInfo* info() const;
 
-    //! detect specific objects on in the input frame for all scales computed flom minScale and maxscale values
-    //! Param image is input frame for detector. Cascade will be applied to it.
-    //! Param rois is a mask
-    //! Param objects 4-channel matrix thet contain detected rectangles
-    //! Param rejectfactor used for final object box computing
-    virtual void detectMultiScale(const GpuMat& image, const GpuMat& rois, GpuMat& objects,
-    int rejectfactor = 1, int specificScale = -1) const;
+    // Load cascade from FileNode.
+    // Param fn is a root node for cascade. Should be <cascade>.
+    virtual bool load(const FileNode& fn);
 
-    //! detect specific objects on in the input frame for all scales computed flom minScale and maxscale values.
-    //! asynchronous version.
-    //! Param image is input frame for detector. Cascade will be applied to it.
-    //! Param rois is a mask
-    //! Param objects 4-channel matrix thet contain detected rectangles
-    //! Param rejectfactor used for final object box computing
-    //! Param ndet retrieves number of detections
-    //! Param stream wrapper for CUDA stream
-    virtual void detectMultiScale(const GpuMat& image, const GpuMat& rois, GpuMat& objects,
-    int rejectfactor, GpuMat& ndet, Stream stream) const;
+    // Load cascade config.
+    virtual void read(const FileNode& fn);
 
-    cv::Size getRoiSize() const;
+    // Return the vector of Decection objcts.
+    // Param image is a frame on which detector will be applied.
+    // Param rois is a vector of regions of interest. Only the objects that fall into one of the regions will be returned.
+    // Param objects is an output array of Detections
+    virtual void detect(InputArray image, InputArray rois, OutputArray objects, Stream& stream = Stream::Null()) const;
+    virtual void detect(InputArray image, InputArray rois, OutputArray objects, const int level, Stream& stream = Stream::Null()) const;
+
+    void genRoi(InputArray roi, OutputArray mask) const;
 
 private:
-    struct Filds;
-    Filds* filds;
+
+    struct Fields;
+    Fields* fields;
+
+    double minScale;
+    double maxScale;
+
+    int scales;
+    int rejfactor;
 };
 
 ////////////////////////////////// SURF //////////////////////////////////////////

@@ -45,21 +45,18 @@
 
 #if !defined (HAVE_CUDA)
 
-cv::gpu::SoftCascade::SoftCascade() : filds(0) { throw_nogpu(); }
-cv::gpu::SoftCascade::SoftCascade( const string&, const float, const float) : filds(0) { throw_nogpu(); }
-cv::gpu::SoftCascade::~SoftCascade() { throw_nogpu(); }
-bool cv::gpu::SoftCascade::load( const string&, const float, const float) { throw_nogpu(); return false; }
-void cv::gpu::SoftCascade::detectMultiScale(const GpuMat&, const GpuMat&, GpuMat&, const int, int) const
-{
-    throw_nogpu();
-}
+cv::gpu::SCascade::SCascade(const double, const double, const int, const int) { throw_nogpu(); }
 
-void cv::gpu::SoftCascade::detectMultiScale(const GpuMat&, const GpuMat&, GpuMat&, int, GpuMat&, Stream) const
-{
-    throw_nogpu();
-}
+cv::gpu::SCascade::~SCascade() { throw_nogpu(); }
 
-cv::Size cv::gpu::SoftCascade::getRoiSize() const { throw_nogpu(); return cv::Size();}
+bool cv::gpu::SCascade::load(const FileNode&) { throw_nogpu(); return false;}
+
+void cv::gpu::SCascade::detect(InputArray, InputArray, OutputArray, Stream&) const { throw_nogpu(); }
+void cv::gpu::SCascade::detect(InputArray, InputArray, OutputArray, const int, Stream&) const { throw_nogpu(); }
+
+void cv::gpu::SCascade::genRoi(InputArray, OutputArray) const { throw_nogpu(); }
+
+void cv::gpu::SCascade::read(const FileNode& fn) { Algorithm::read(fn); }
 
 #else
 
@@ -92,7 +89,7 @@ namespace imgproc {
 
 }}}
 
-struct cv::gpu::SoftCascade::Filds
+struct cv::gpu::SCascade::Fields
 {
     struct CascadeIntrinsics
     {
@@ -126,7 +123,7 @@ struct cv::gpu::SoftCascade::Filds
         }
     };
 
-    static Filds* parseCascade(const FileNode &root, const float mins, const float maxs)
+    static Fields* parseCascade(const FileNode &root, const float mins, const float maxs)
     {
         static const char *const SC_STAGE_TYPE          = "stageType";
         static const char *const SC_BOOST               = "BOOST";
@@ -312,13 +309,13 @@ struct cv::gpu::SoftCascade::Filds
         cv::Mat hlevels(1, vlevels.size() * sizeof(Level), CV_8UC1, (uchar*)&(vlevels[0]) );
         CV_Assert(!hlevels.empty());
 
-        Filds* filds = new Filds(mins, maxs, origWidth, origHeight, shrinkage, downscales,
+        Fields* fields = new Fields(mins, maxs, origWidth, origHeight, shrinkage, downscales,
             hoctaves, hstages, hnodes, hleaves, hlevels);
 
-        return filds;
+        return fields;
     }
 
-    Filds( const float mins, const float maxs, const int ow, const int oh, const int shr, const int ds,
+    Fields( const float mins, const float maxs, const int ow, const int oh, const int shr, const int ds,
         cv::Mat hoctaves, cv::Mat hstages, cv::Mat hnodes, cv::Mat hleaves, cv::Mat hlevels)
     : minScale(mins), maxScale(maxs), origObjWidth(ow), origObjHeight(oh), shrinkage(shr), downscales(ds)
     {
@@ -332,7 +329,7 @@ struct cv::gpu::SoftCascade::Filds
         hogluv.create((FRAME_HEIGHT / shr) * HOG_LUV_BINS + 1, FRAME_WIDTH / shr + 1, CV_32SC1);
         hogluv.setTo(cv::Scalar::all(0));
 
-        detCounter.create(1,1, CV_32SC1);
+        detCounter.create(sizeof(Detection) / sizeof(int),1, CV_32SC1);
 
         octaves.upload(hoctaves);
         stages.upload(hstages);
@@ -344,20 +341,21 @@ struct cv::gpu::SoftCascade::Filds
 
     }
 
-    void detect(int scale, const cv::gpu::GpuMat& roi, cv::gpu::GpuMat& objects, cudaStream_t stream) const
+    void detect(int scale, const cv::gpu::GpuMat& roi, const cv::gpu::GpuMat& count, cv::gpu::GpuMat& objects, cudaStream_t stream) const
     {
-        cudaMemset(detCounter.data, 0, detCounter.step * detCounter.rows * sizeof(int));
-        invoker(roi, hogluv, objects, detCounter, downscales, scale);
+        cudaMemset(count.data, 0, sizeof(Detection));
+        cudaSafeCall( cudaGetLastError());
+        invoker(roi, hogluv, objects, count, downscales, scale);
     }
 
     void preprocess(const cv::gpu::GpuMat& colored)
     {
         cudaMemset(plane.data, 0, plane.step * plane.rows);
 
-        static const int fw = Filds::FRAME_WIDTH;
-        static const int fh = Filds::FRAME_HEIGHT;
+        static const int fw = Fields::FRAME_WIDTH;
+        static const int fh = Fields::FRAME_HEIGHT;
 
-        GpuMat gray(plane, cv::Rect(0, fh * Filds::HOG_LUV_BINS, fw, fh));
+        GpuMat gray(plane, cv::Rect(0, fh * Fields::HOG_LUV_BINS, fw, fh));
         cv::gpu::cvtColor(colored, gray, CV_BGR2GRAY);
         createHogBins(gray);
 
@@ -390,8 +388,8 @@ private:
 
     void createHogBins(const cv::gpu::GpuMat& gray)
     {
-        static const int fw = Filds::FRAME_WIDTH;
-        static const int fh = Filds::FRAME_HEIGHT;
+        static const int fw = Fields::FRAME_WIDTH;
+        static const int fh = Fields::FRAME_HEIGHT;
 
         GpuMat dfdx(fplane, cv::Rect(0,  0, fw, fh));
         GpuMat dfdy(fplane, cv::Rect(0, fh, fw, fh));
@@ -413,21 +411,21 @@ private:
         cv::gpu::multiply(ang, cv::Scalar::all(1.f / 60.f),     nang);
 
         //create uchar magnitude
-        GpuMat cmag(plane, cv::Rect(0, fh * Filds::HOG_BINS, fw, fh));
+        GpuMat cmag(plane, cv::Rect(0, fh * Fields::HOG_BINS, fw, fh));
         nmag.convertTo(cmag, CV_8UC1);
 
-        device::icf::fillBins(plane, nang, fw, fh, Filds::HOG_BINS);
+        device::icf::fillBins(plane, nang, fw, fh, Fields::HOG_BINS);
     }
 
     void createLuvBins(const cv::gpu::GpuMat& colored)
     {
-        static const int fw = Filds::FRAME_WIDTH;
-        static const int fh = Filds::FRAME_HEIGHT;
+        static const int fw = Fields::FRAME_WIDTH;
+        static const int fh = Fields::FRAME_HEIGHT;
 
         cv::gpu::cvtColor(colored, luv, CV_BGR2Luv);
 
         std::vector<GpuMat> splited;
-        for(int i = 0; i < Filds::LUV_BINS; ++i)
+        for(int i = 0; i < Fields::LUV_BINS; ++i)
         {
             splited.push_back(GpuMat(plane, cv::Rect(0, fh * (7 + i), fw, fh)));
         }
@@ -437,10 +435,10 @@ private:
 
     void integrate()
     {
-        int fw = Filds::FRAME_WIDTH;
-        int fh = Filds::FRAME_HEIGHT;
+        int fw = Fields::FRAME_WIDTH;
+        int fh = Fields::FRAME_HEIGHT;
 
-        GpuMat channels(plane, cv::Rect(0, 0, fw, fh * Filds::HOG_LUV_BINS));
+        GpuMat channels(plane, cv::Rect(0, 0, fw, fh * Fields::HOG_LUV_BINS));
         cv::gpu::resize(channels, shrunk, cv::Size(), 0.25, 0.25, CV_INTER_AREA);
         device::imgproc::shfl_integral_gpu_buffered(shrunk, integralBuffer, hogluv, 12, 0);
     }
@@ -500,45 +498,33 @@ public:
     };
 };
 
-cv::gpu::SoftCascade::SoftCascade() : filds(0) {}
+cv::gpu::SCascade::SCascade(const double mins, const double maxs, const int sc, const int rjf)
+: fields(0),  minScale(mins), maxScale(maxs), scales(sc), rejfactor(rjf) {}
 
-cv::gpu::SoftCascade::SoftCascade( const string& filename, const float minScale, const float maxScale) : filds(0)
+cv::gpu::SCascade::~SCascade() { delete fields; }
+
+bool cv::gpu::SCascade::load(const FileNode& fn)
 {
-    load(filename, minScale, maxScale);
+    if (fields) delete fields;
+    fields = Fields::parseCascade(fn, minScale, maxScale);
+    return fields != 0;
 }
 
-cv::gpu::SoftCascade::~SoftCascade()
+void cv::gpu::SCascade::detect(InputArray image, InputArray _rois, OutputArray _objects, Stream& s) const
 {
-    delete filds;
-}
-
-bool cv::gpu::SoftCascade::load( const string& filename, const float minScale, const float maxScale)
-{
-    if (filds) delete filds;
-
-    cv::FileStorage fs(filename, FileStorage::READ);
-    if (!fs.isOpened()) return false;
-
-    filds = Filds::parseCascade(fs.getFirstTopLevelNode(), minScale, maxScale);
-    return filds != 0;
-}
-
-void cv::gpu::SoftCascade::detectMultiScale(const GpuMat& colored, const GpuMat& rois,
-                                GpuMat& objects, const int /*rejectfactor*/, int specificScale) const
-{
+    const GpuMat colored = image.getGpuMat();
     // only color images are supperted
     CV_Assert(colored.type() == CV_8UC3 || colored.type() == CV_32SC1);
 
     // we guess user knows about shrincage
-    CV_Assert((rois.size().width == getRoiSize().height) && (rois.type() == CV_8UC1));
+    // CV_Assert((rois.size().width == getRoiSize().height) && (rois.type() == CV_8UC1));
 
-
-    Filds& flds = *filds;
+    Fields& flds = *fields;
 
     if (colored.type() == CV_8UC3)
     {
         // only this window size allowed
-        CV_Assert(colored.cols == Filds::FRAME_WIDTH && colored.rows == Filds::FRAME_HEIGHT);
+        CV_Assert(colored.cols == Fields::FRAME_WIDTH && colored.rows == Fields::FRAME_HEIGHT);
         flds.preprocess(colored);
     }
     else
@@ -546,25 +532,60 @@ void cv::gpu::SoftCascade::detectMultiScale(const GpuMat& colored, const GpuMat&
         colored.copyTo(flds.hogluv);
     }
 
-    flds.detect(specificScale, rois, objects, 0);
+    GpuMat rois = _rois.getGpuMat(), objects = _objects.getGpuMat();
 
-    cv::Mat out(flds.detCounter);
-    int ndetections = *(out.ptr<int>(0));
+    GpuMat tmp = GpuMat(objects, cv::Rect(0, 0, sizeof(Detection), 1));
+    objects = GpuMat(objects, cv::Rect( sizeof(Detection), 0, objects.cols -  sizeof(Detection), 1));
+    cudaStream_t stream = StreamAccessor::getStream(s);
 
-    if (! ndetections)
-        objects = GpuMat();
+    flds.detect(-1, rois, tmp, objects, stream);
+}
+
+void cv::gpu::SCascade::detect(InputArray image, InputArray _rois, OutputArray _objects, const int level, Stream& s) const
+{
+    const GpuMat colored = image.getGpuMat();
+    // only color images are supperted
+    CV_Assert(colored.type() == CV_8UC3 || colored.type() == CV_32SC1);
+
+    // we guess user knows about shrincage
+    // CV_Assert((rois.size().width == getRoiSize().height) && (rois.type() == CV_8UC1));
+
+    Fields& flds = *fields;
+
+    if (colored.type() == CV_8UC3)
+    {
+        // only this window size allowed
+        CV_Assert(colored.cols == Fields::FRAME_WIDTH && colored.rows == Fields::FRAME_HEIGHT);
+        flds.preprocess(colored);
+    }
     else
-        objects = GpuMat(objects, cv::Rect(0, 0, ndetections * sizeof(Detection), 1));
+    {
+        colored.copyTo(flds.hogluv);
+    }
+
+    GpuMat rois = _rois.getGpuMat(), objects = _objects.getGpuMat();
+
+    GpuMat tmp = GpuMat(objects, cv::Rect(0, 0, sizeof(Detection), 1));
+    objects = GpuMat(objects, cv::Rect( sizeof(Detection), 0, objects.cols -  sizeof(Detection), 1));
+    cudaStream_t stream = StreamAccessor::getStream(s);
+
+    flds.detect(level, rois, tmp, objects, stream);
 }
 
-void cv::gpu::SoftCascade::detectMultiScale(const GpuMat&, const GpuMat&, GpuMat&, int, GpuMat&, Stream) const
+void cv::gpu::SCascade::genRoi(InputArray _roi, OutputArray _mask) const
 {
-    // cudaStream_t stream = StreamAccessor::getStream(s);
+    const GpuMat roi = _roi.getGpuMat();
+    _mask.create( roi.cols / 4, roi.rows / 4, roi.type() );
+    GpuMat mask = _mask.getGpuMat();
+    cv::gpu::GpuMat tmp;
+
+    cv::gpu::resize(roi, tmp, cv::Size(), 0.25, 0.25, CV_INTER_AREA);
+    cv::gpu::transpose(tmp, mask);
 }
 
-cv::Size cv::gpu::SoftCascade::getRoiSize() const
+void cv::gpu::SCascade::read(const FileNode& fn)
 {
-    return cv::Size(Filds::FRAME_WIDTH / (*filds).shrinkage, Filds::FRAME_HEIGHT / (*filds).shrinkage);
+    Algorithm::read(fn);
 }
 
 #endif
