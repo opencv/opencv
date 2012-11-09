@@ -4,6 +4,24 @@ set(JNI_LIB_NAME ${engine} ${engine}_jni)
 unset(__android_project_chain CACHE)
 add_android_project(opencv_engine "${CMAKE_CURRENT_SOURCE_DIR}" SDK_TARGET 8 ${ANDROID_SDK_TARGET} IGNORE_JAVA ON)
 
+set(ANDROID_PLATFORM_VERSION_CODE "0")
+
+if(ARMEABI_V7A)
+    set(ANDROID_PLATFORM_VERSION_CODE "2")
+  elseif(ARMEABI_V6)
+    set(ANDROID_PLATFORM_VERSION_CODE "1")
+  elseif(ARMEABI)
+    set(ANDROID_PLATFORM_VERSION_CODE "1")
+  elseif(X86)
+    set(ANDROID_PLATFORM_VERSION_CODE "3")
+  elseif(MIPS)
+    set(ANDROID_PLATFORM_VERSION_CODE "4")
+  else()
+    message(WARNING "Can not automatically determine the value for ANDROID_PLATFORM_VERSION_CODE")
+  endif()
+
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/${ANDROID_MANIFEST_FILE}" "${OpenCV_BINARY_DIR}/android/service/engine/.build/${ANDROID_MANIFEST_FILE}"  @ONLY)
+
 link_directories("${ANDROID_SOURCE_TREE}/out/target/product/generic/system/lib" "${ANDROID_SOURCE_TREE}/out/target/product/${ANDROID_PRODUCT}/system/lib" "${ANDROID_SOURCE_TREE}/bin/${ANDROID_ARCH_NAME}")
 
 # -D__SUPPORT_ARMEABI_FEATURES key is also available
