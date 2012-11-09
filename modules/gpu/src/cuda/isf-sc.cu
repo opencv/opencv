@@ -229,7 +229,7 @@ namespace icf {
             if(__any((confidence <= stages[(st + threadIdx.x)]))) st += 2048;
         }
 
-        if(st == stEnd && !threadIdx.x)
+        if(!threadIdx.x && st == stEnd &&  ((confidence - FLT_EPSILON) >= 0))
         {
             int idx = atomicInc(ctr, ndetections);
             // store detection
