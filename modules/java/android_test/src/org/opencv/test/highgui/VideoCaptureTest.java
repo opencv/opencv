@@ -19,13 +19,17 @@ public class VideoCaptureTest extends OpenCVTestCase {
         super.setUp();
 
         capture = null;
+        isEnabled = false;
         isSucceed = false;
         isOpened = false;
     }
 
     public void testGet() {
-        try
-        {
+        if (!isEnabled) {
+            fail("Not yet implemented");
+        }
+
+        try {
             capture = new VideoCapture(Highgui.CV_CAP_ANDROID);
             double frameWidth = capture.get(Highgui.CV_CAP_PROP_FRAME_WIDTH);
             assertTrue(0 != frameWidth);
@@ -35,8 +39,11 @@ public class VideoCaptureTest extends OpenCVTestCase {
     }
 
     public void testGetSupportedPreviewSizes() {
-        try
-        {
+        if (!isEnabled) {
+            fail("Not yet implemented");
+        }
+
+        try {
             capture = new VideoCapture(Highgui.CV_CAP_ANDROID);
             List<Size> sizes = capture.getSupportedPreviewSizes();
             assertNotNull(sizes);
@@ -47,12 +54,20 @@ public class VideoCaptureTest extends OpenCVTestCase {
     }
 
     public void testGrab() {
+        if (!isEnabled) {
+            fail("Not yet implemented");
+        }
+
         capture = new VideoCapture();
         isSucceed = capture.grab();
         assertFalse(isSucceed);
     }
 
     public void testGrabFromRealCamera() {
+        if (!isEnabled) {
+            fail("Not yet implemented");
+        }
+
         try {
             capture = new VideoCapture(Highgui.CV_CAP_ANDROID);
             isSucceed = capture.grab();
@@ -63,13 +78,20 @@ public class VideoCaptureTest extends OpenCVTestCase {
     }
 
     public void testIsOpened() {
+        if (!isEnabled) {
+            fail("Not yet implemented");
+        }
+
         capture = new VideoCapture();
         assertFalse(capture.isOpened());
     }
 
     public void testIsOpenedRealCamera() {
-        try
-        {
+        if (!isEnabled) {
+            fail("Not yet implemented");
+        }
+
+        try {
             capture = new VideoCapture(Highgui.CV_CAP_ANDROID);
             isOpened = capture.isOpened();
             assertTrue(isOpened);
@@ -79,8 +101,11 @@ public class VideoCaptureTest extends OpenCVTestCase {
     }
 
     public void testOpen() {
-        try
-        {
+        if (!isEnabled) {
+            fail("Not yet implemented");
+        }
+
+        try {
             capture = new VideoCapture();
             capture.open(Highgui.CV_CAP_ANDROID);
             isOpened = capture.isOpened();
@@ -91,8 +116,11 @@ public class VideoCaptureTest extends OpenCVTestCase {
     }
 
     public void testRead() {
-        try
-        {
+        if (!isEnabled) {
+            fail("Not yet implemented");
+        }
+
+        try {
             capture = new VideoCapture(Highgui.CV_CAP_ANDROID);
             isSucceed = capture.read(dst);
             assertTrue(isSucceed);
@@ -104,8 +132,11 @@ public class VideoCaptureTest extends OpenCVTestCase {
     }
 
     public void testRelease() {
-        try
-        {
+        if (!isEnabled) {
+            fail("Not yet implemented");
+        }
+
+        try {
             capture = new VideoCapture(Highgui.CV_CAP_ANDROID);
             capture.release();
             assertFalse(capture.isOpened());
@@ -116,8 +147,11 @@ public class VideoCaptureTest extends OpenCVTestCase {
     }
 
     public void testRetrieveMat() {
-        try
-        {
+        if (!isEnabled) {
+            fail("Not yet implemented");
+        }
+
+        try {
             capture = new VideoCapture(Highgui.CV_CAP_ANDROID);
             capture.grab();
             isSucceed = capture.retrieve(dst);
@@ -130,8 +164,11 @@ public class VideoCaptureTest extends OpenCVTestCase {
     }
 
     public void testRetrieveMatInt() {
-        try
-        {
+        if (!isEnabled) {
+            fail("Not yet implemented");
+        }
+
+        try {
             capture = new VideoCapture(Highgui.CV_CAP_ANDROID);
             capture.grab();
             isSucceed = capture.retrieve(dst, Highgui.CV_CAP_ANDROID_GREY_FRAME);
@@ -144,8 +181,11 @@ public class VideoCaptureTest extends OpenCVTestCase {
     }
 
     public void testSet() {
-        try
-        {
+        if (!isEnabled) {
+            fail("Not yet implemented");
+        }
+
+        try {
             capture = new VideoCapture(Highgui.CV_CAP_ANDROID);
             capture.set(Highgui.CV_CAP_PROP_FRAME_WIDTH, 640);
             capture.set(Highgui.CV_CAP_PROP_FRAME_HEIGHT, 480);
@@ -165,8 +205,11 @@ public class VideoCaptureTest extends OpenCVTestCase {
     }
 
     public void testVideoCaptureInt() {
-        try
-        {
+        if (!isEnabled) {
+            fail("Not yet implemented");
+        }
+
+        try {
             capture = new VideoCapture(Highgui.CV_CAP_ANDROID);
             assertNotNull(capture);
             assertTrue(capture.isOpened());

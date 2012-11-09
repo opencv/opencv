@@ -28,6 +28,8 @@ public class OpenCVTestCase extends TestCase {
     //change to 'true' to unblock fail on fail("Not yet implemented")
     public static final boolean passNYI = true;
 
+    protected static boolean isEnabled = true;
+
     protected static final int matSize = 10;
     protected static final double EPS = 0.001;
     protected static final double weakEPS = 0.5;
