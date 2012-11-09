@@ -830,20 +830,14 @@ void cv::gpu::filter2D(const GpuMat& src, GpuMat& dst, int ddepth, const Mat& ke
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Separable Linear Filter
 
-namespace cv { namespace gpu { namespace device
+namespace filter
 {
-    namespace row_filter
-    {
-        template <typename T, typename D>
-        void linearRowFilter_gpu(PtrStepSzb src, PtrStepSzb dst, const float* kernel, int ksize, int anchor, int brd_type, int cc, cudaStream_t stream);
-    }
+    template <typename T, typename D>
+    void linearRow(PtrStepSzb src, PtrStepSzb dst, const float* kernel, int ksize, int anchor, int brd_type, int cc, cudaStream_t stream);
 
-    namespace column_filter
-    {
-        template <typename T, typename D>
-        void linearColumnFilter_gpu(PtrStepSzb src, PtrStepSzb dst, const float* kernel, int ksize, int anchor, int brd_type, int cc, cudaStream_t stream);
-    }
-}}}
+    template <typename T, typename D>
+    void linearColumn(PtrStepSzb src, PtrStepSzb dst, const float* kernel, int ksize, int anchor, int brd_type, int cc, cudaStream_t stream);
+}
 
 namespace
 {
@@ -899,8 +893,6 @@ namespace
 
 Ptr<BaseRowFilter_GPU> cv::gpu::getLinearRowFilter_GPU(int srcType, int bufType, const Mat& rowKernel, int anchor, int borderType)
 {
-    using namespace ::cv::gpu::device::row_filter;
-
     static const nppFilter1D_t nppFilter1D_callers[] = {0, nppiFilterRow_8u_C1R, 0, 0, nppiFilterRow_8u_C4R};
 
     if ((bufType == srcType) && (srcType == CV_8UC1 || srcType == CV_8UC4))
@@ -940,28 +932,28 @@ Ptr<BaseRowFilter_GPU> cv::gpu::getLinearRowFilter_GPU(int srcType, int bufType,
     switch (srcType)
     {
     case CV_8UC1:
-        func = linearRowFilter_gpu<uchar, float>;
+        func = filter::linearRow<uchar, float>;
         break;
     case CV_8UC3:
-        func = linearRowFilter_gpu<uchar3, float3>;
+        func = filter::linearRow<uchar3, float3>;
         break;
     case CV_8UC4:
-        func = linearRowFilter_gpu<uchar4, float4>;
+        func = filter::linearRow<uchar4, float4>;
         break;
     case CV_16SC3:
-        func = linearRowFilter_gpu<short3, float3>;
+        func = filter::linearRow<short3, float3>;
         break;
     case CV_32SC1:
-        func = linearRowFilter_gpu<int, float>;
+        func = filter::linearRow<int, float>;
         break;
     case CV_32FC1:
-        func = linearRowFilter_gpu<float, float>;
+        func = filter::linearRow<float, float>;
         break;
     case CV_32FC3:
-        func = linearRowFilter_gpu<float3, float3>;
+        func = filter::linearRow<float3, float3>;
         break;
     case CV_32FC4:
-        func = linearRowFilter_gpu<float4, float4>;
+        func = filter::linearRow<float4, float4>;
         break;
     }
 
@@ -1020,8 +1012,6 @@ namespace
 
 Ptr<BaseColumnFilter_GPU> cv::gpu::getLinearColumnFilter_GPU(int bufType, int dstType, const Mat& columnKernel, int anchor, int borderType)
 {
-    using namespace ::cv::gpu::device::column_filter;
-
     static const nppFilter1D_t nppFilter1D_callers[] = {0, nppiFilterColumn_8u_C1R, 0, 0, nppiFilterColumn_8u_C4R};
 
     if ((bufType == dstType) && (bufType == CV_8UC1 || bufType == CV_8UC4))
@@ -1061,28 +1051,28 @@ Ptr<BaseColumnFilter_GPU> cv::gpu::getLinearColumnFilter_GPU(int bufType, int ds
     switch (dstType)
     {
     case CV_8UC1:
-        func = linearColumnFilter_gpu<float, uchar>;
+        func = filter::linearColumn<float, uchar>;
         break;
     case CV_8UC3:
-        func = linearColumnFilter_gpu<float3, uchar3>;
+        func = filter::linearColumn<float3, uchar3>;
         break;
     case CV_8UC4:
-        func = linearColumnFilter_gpu<float4, uchar4>;
+        func = filter::linearColumn<float4, uchar4>;
         break;
     case CV_16SC3:
-        func = linearColumnFilter_gpu<float3, short3>;
+        func = filter::linearColumn<float3, short3>;
         break;
     case CV_32SC1:
-        func = linearColumnFilter_gpu<float, int>;
+        func = filter::linearColumn<float, int>;
         break;
     case CV_32FC1:
-        func = linearColumnFilter_gpu<float, float>;
+        func = filter::linearColumn<float, float>;
         break;
     case CV_32FC3:
-        func = linearColumnFilter_gpu<float3, float3>;
+        func = filter::linearColumn<float3, float3>;
         break;
     case CV_32FC4:
-        func = linearColumnFilter_gpu<float4, float4>;
+        func = filter::linearColumn<float4, float4>;
         break;
     }
 
