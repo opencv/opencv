@@ -1,4 +1,4 @@
-package org.opencv.samples.fd;
+package org.opencv.samples.facedetect;
 
 import java.text.DecimalFormat;
 
