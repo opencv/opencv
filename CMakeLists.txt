@@ -467,7 +467,7 @@ if(BUILD_ANDROID_PACKAGE)
   add_subdirectory(android/package)
 endif()
 
-if (ANDROID AND NOT BUILD_ANDROID_SERVICE AND NOT BUILD_ANDROID_PACKAGE AND NOT BUILD_CAMERA_WRAPER)
+if (ANDROID)
   add_subdirectory(android/libinfo)
 endif()
 
