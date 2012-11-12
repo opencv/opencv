@@ -19,13 +19,13 @@ public class VideoCaptureTest extends OpenCVTestCase {
         super.setUp();
 
         capture = null;
-        isEnabled = false;
+        isTestCaseEnabled = false;
         isSucceed = false;
         isOpened = false;
     }
 
     public void testGet() {
-        if (!isEnabled) {
+        if (!isTestCaseEnabled) {
             fail("Not yet implemented");
         }
 
@@ -39,7 +39,7 @@ public class VideoCaptureTest extends OpenCVTestCase {
     }
 
     public void testGetSupportedPreviewSizes() {
-        if (!isEnabled) {
+        if (!isTestCaseEnabled) {
             fail("Not yet implemented");
         }
 
@@ -54,7 +54,7 @@ public class VideoCaptureTest extends OpenCVTestCase {
     }
 
     public void testGrab() {
-        if (!isEnabled) {
+        if (!isTestCaseEnabled) {
             fail("Not yet implemented");
         }
 
@@ -64,7 +64,7 @@ public class VideoCaptureTest extends OpenCVTestCase {
     }
 
     public void testGrabFromRealCamera() {
-        if (!isEnabled) {
+        if (!isTestCaseEnabled) {
             fail("Not yet implemented");
         }
 
@@ -78,7 +78,7 @@ public class VideoCaptureTest extends OpenCVTestCase {
     }
 
     public void testIsOpened() {
-        if (!isEnabled) {
+        if (!isTestCaseEnabled) {
             fail("Not yet implemented");
         }
 
@@ -87,7 +87,7 @@ public class VideoCaptureTest extends OpenCVTestCase {
     }
 
     public void testIsOpenedRealCamera() {
-        if (!isEnabled) {
+        if (!isTestCaseEnabled) {
             fail("Not yet implemented");
         }
 
@@ -101,7 +101,7 @@ public class VideoCaptureTest extends OpenCVTestCase {
     }
 
     public void testOpen() {
-        if (!isEnabled) {
+        if (!isTestCaseEnabled) {
             fail("Not yet implemented");
         }
 
@@ -116,7 +116,7 @@ public class VideoCaptureTest extends OpenCVTestCase {
     }
 
     public void testRead() {
-        if (!isEnabled) {
+        if (!isTestCaseEnabled) {
             fail("Not yet implemented");
         }
 
@@ -132,7 +132,7 @@ public class VideoCaptureTest extends OpenCVTestCase {
     }
 
     public void testRelease() {
-        if (!isEnabled) {
+        if (!isTestCaseEnabled) {
             fail("Not yet implemented");
         }
 
@@ -147,7 +147,7 @@ public class VideoCaptureTest extends OpenCVTestCase {
     }
 
     public void testRetrieveMat() {
-        if (!isEnabled) {
+        if (!isTestCaseEnabled) {
             fail("Not yet implemented");
         }
 
@@ -164,7 +164,7 @@ public class VideoCaptureTest extends OpenCVTestCase {
     }
 
     public void testRetrieveMatInt() {
-        if (!isEnabled) {
+        if (!isTestCaseEnabled) {
             fail("Not yet implemented");
         }
 
@@ -181,7 +181,7 @@ public class VideoCaptureTest extends OpenCVTestCase {
     }
 
     public void testSet() {
-        if (!isEnabled) {
+        if (!isTestCaseEnabled) {
             fail("Not yet implemented");
         }
 
@@ -205,7 +205,7 @@ public class VideoCaptureTest extends OpenCVTestCase {
     }
 
     public void testVideoCaptureInt() {
-        if (!isEnabled) {
+        if (!isTestCaseEnabled) {
             fail("Not yet implemented");
         }
 
