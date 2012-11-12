@@ -159,7 +159,7 @@ namespace cv { namespace gpu { namespace device
     ///////////////////////////////////////////////////////////////////////////////
     // Reduction
 
-    template <int n, typename T, typename Op> __device__ __forceinline__ void reduce(volatile T* data, T& partial_reduction, int tid, const Op& op)
+    template <int n, typename T, typename Op> __device__ __forceinline__ void reduce_old(volatile T* data, T& partial_reduction, int tid, const Op& op)
     {
         StaticAssert<n >= 8 && n <= 512>::check();
         utility_detail::ReductionDispatcher<n <= 64>::reduce<n>(data, partial_reduction, tid, op);

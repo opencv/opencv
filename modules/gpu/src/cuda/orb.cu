@@ -109,9 +109,9 @@ namespace cv { namespace gpu { namespace device
                     c += Ix * Iy;
                 }
 
-                reduce<32>(srow, a, threadIdx.x, plus<volatile int>());
-                reduce<32>(srow, b, threadIdx.x, plus<volatile int>());
-                reduce<32>(srow, c, threadIdx.x, plus<volatile int>());
+                reduce_old<32>(srow, a, threadIdx.x, plus<volatile int>());
+                reduce_old<32>(srow, b, threadIdx.x, plus<volatile int>());
+                reduce_old<32>(srow, c, threadIdx.x, plus<volatile int>());
 
                 if (threadIdx.x == 0)
                 {
@@ -167,7 +167,7 @@ namespace cv { namespace gpu { namespace device
                 for (int u = threadIdx.x - half_k; u <= half_k; u += blockDim.x)
                     m_10 += u * image(loc.y, loc.x + u);
 
-                reduce<32>(srow, m_10, threadIdx.x, plus<volatile int>());
+                reduce_old<32>(srow, m_10, threadIdx.x, plus<volatile int>());
 
                 for (int v = 1; v <= half_k; ++v)
                 {
@@ -185,8 +185,8 @@ namespace cv { namespace gpu { namespace device
                         m_sum += u * (val_plus + val_minus);
                     }
 
-                    reduce<32>(srow, v_sum, threadIdx.x, plus<volatile int>());
-                    reduce<32>(srow, m_sum, threadIdx.x, plus<volatile int>());
+                    reduce_old<32>(srow, v_sum, threadIdx.x, plus<volatile int>());
+                    reduce_old<32>(srow, m_sum, threadIdx.x, plus<volatile int>());
 
                     m_10 += m_sum;
                     m_01 += v * v_sum;

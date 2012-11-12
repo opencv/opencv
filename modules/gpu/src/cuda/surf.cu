@@ -599,8 +599,8 @@ namespace cv { namespace gpu { namespace device
                     sumy += s_Y[threadIdx.x + 96];
                 }
 
-                device::reduce<32>(s_sumx + threadIdx.y * 32, sumx, threadIdx.x, plus<volatile float>());
-                device::reduce<32>(s_sumy + threadIdx.y * 32, sumy, threadIdx.x, plus<volatile float>());
+                device::reduce_old<32>(s_sumx + threadIdx.y * 32, sumx, threadIdx.x, plus<volatile float>());
+                device::reduce_old<32>(s_sumy + threadIdx.y * 32, sumy, threadIdx.x, plus<volatile float>());
 
                 const float temp_mod = sumx * sumx + sumy * sumy;
                 if (temp_mod > best_mod)

@@ -63,7 +63,7 @@ namespace cv { namespace gpu { namespace device
 
         template <int THREAD_DIM> __device__ __forceinline__ void reduceAll(int* smem, int tid)
         {
-            reduce<THREAD_DIM>(smem, mySum, tid, plus<volatile int>());
+            reduce_old<THREAD_DIM>(smem, mySum, tid, plus<volatile int>());
         }
 
         __device__ __forceinline__ operator int() const
@@ -87,7 +87,7 @@ namespace cv { namespace gpu { namespace device
 
         template <int THREAD_DIM> __device__ __forceinline__ void reduceAll(float* smem, int tid)
         {
-            reduce<THREAD_DIM>(smem, mySum, tid, plus<volatile float>());
+            reduce_old<THREAD_DIM>(smem, mySum, tid, plus<volatile float>());
         }
 
         __device__ __forceinline__ operator float() const
@@ -113,7 +113,7 @@ namespace cv { namespace gpu { namespace device
 
         template <int THREAD_DIM> __device__ __forceinline__ void reduceAll(float* smem, int tid)
         {
-            reduce<THREAD_DIM>(smem, mySum, tid, plus<volatile float>());
+            reduce_old<THREAD_DIM>(smem, mySum, tid, plus<volatile float>());
         }
 
         __device__ __forceinline__ operator float() const
@@ -138,7 +138,7 @@ namespace cv { namespace gpu { namespace device
 
         template <int THREAD_DIM> __device__ __forceinline__ void reduceAll(int* smem, int tid)
         {
-            reduce<THREAD_DIM>(smem, mySum, tid, plus<volatile int>());
+            reduce_old<THREAD_DIM>(smem, mySum, tid, plus<volatile int>());
         }
 
         __device__ __forceinline__ operator int() const
