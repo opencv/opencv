@@ -71,9 +71,7 @@ void cv::gpu::histRange(const GpuMat&, GpuMat&, const GpuMat&, GpuMat&, Stream&)
 void cv::gpu::histRange(const GpuMat&, GpuMat*, const GpuMat*, Stream&) { throw_nogpu(); }
 void cv::gpu::histRange(const GpuMat&, GpuMat*, const GpuMat*, GpuMat&, Stream&) { throw_nogpu(); }
 void cv::gpu::calcHist(const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::calcHist(const GpuMat&, GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
 void cv::gpu::equalizeHist(const GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
-void cv::gpu::equalizeHist(const GpuMat&, GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
 void cv::gpu::equalizeHist(const GpuMat&, GpuMat&, GpuMat&, GpuMat&, Stream&) { throw_nogpu(); }
 void cv::gpu::cornerHarris(const GpuMat&, GpuMat&, int, int, double, int) { throw_nogpu(); }
 void cv::gpu::cornerHarris(const GpuMat&, GpuMat&, GpuMat&, GpuMat&, int, int, double, int) { throw_nogpu(); }
@@ -989,36 +987,20 @@ void cv::gpu::histRange(const GpuMat& src, GpuMat hist[4], const GpuMat levels[4
     hist_callers[src.depth()](src, hist, levels, buf, StreamAccessor::getStream(stream));
 }
 
-namespace cv { namespace gpu { namespace device
+namespace hist
 {
-    namespace hist
-    {
-        void histogram256_gpu(PtrStepSzb src, int* hist, unsigned int* buf, cudaStream_t stream);
-
-        const int PARTIAL_HISTOGRAM256_COUNT = 240;
-        const int HISTOGRAM256_BIN_COUNT     = 256;
-
-        void equalizeHist_gpu(PtrStepSzb src, PtrStepSzb dst, const int* lut, cudaStream_t stream);
-    }
-}}}
+    void histogram256(PtrStepSzb src, int* hist, cudaStream_t stream);
+    void equalizeHist(PtrStepSzb src, PtrStepSzb dst, const int* lut, cudaStream_t stream);
+}
 
 void cv::gpu::calcHist(const GpuMat& src, GpuMat& hist, Stream& stream)
 {
-    GpuMat buf;
-    calcHist(src, hist, buf, stream);
-}
-
-void cv::gpu::calcHist(const GpuMat& src, GpuMat& hist, GpuMat& buf, Stream& stream)
-{
-    using namespace ::cv::gpu::device::hist;
-
     CV_Assert(src.type() == CV_8UC1);
 
     hist.create(1, 256, CV_32SC1);
+    hist.setTo(Scalar::all(0));
 
-    ensureSizeIsEnough(1, PARTIAL_HISTOGRAM256_COUNT * HISTOGRAM256_BIN_COUNT, CV_32SC1, buf);
-
-    histogram256_gpu(src, hist.ptr<int>(), buf.ptr<unsigned int>(), StreamAccessor::getStream(stream));
+    hist::histogram256(src, hist.ptr<int>(), StreamAccessor::getStream(stream));
 }
 
 void cv::gpu::equalizeHist(const GpuMat& src, GpuMat& dst, Stream& stream)
@@ -1028,16 +1010,8 @@ void cv::gpu::equalizeHist(const GpuMat& src, GpuMat& dst, Stream& stream)
     equalizeHist(src, dst, hist, buf, stream);
 }
 
-void cv::gpu::equalizeHist(const GpuMat& src, GpuMat& dst, GpuMat& hist, Stream& stream)
-{
-    GpuMat buf;
-    equalizeHist(src, dst, hist, buf, stream);
-}
-
 void cv::gpu::equalizeHist(const GpuMat& src, GpuMat& dst, GpuMat& hist, GpuMat& buf, Stream& s)
 {
-    using namespace ::cv::gpu::device::hist;
-
     CV_Assert(src.type() == CV_8UC1);
 
     dst.create(src.size(), src.type());
@@ -1045,15 +1019,12 @@ void cv::gpu::equalizeHist(const GpuMat& src, GpuMat& dst, GpuMat& hist, GpuMat&
     int intBufSize;
     nppSafeCall( nppsIntegralGetBufferSize_32s(256, &intBufSize) );
 
-    int bufSize = static_cast<int>(std::max(256 * 240 * sizeof(int), intBufSize + 256 * sizeof(int)));
+    ensureSizeIsEnough(1, intBufSize + 256 * sizeof(int), CV_8UC1, buf);
 
-    ensureSizeIsEnough(1, bufSize, CV_8UC1, buf);
-
-    GpuMat histBuf(1, 256 * 240, CV_32SC1, buf.ptr());
     GpuMat intBuf(1, intBufSize, CV_8UC1, buf.ptr());
     GpuMat lut(1, 256, CV_32S, buf.ptr() + intBufSize);
 
-    calcHist(src, hist, histBuf, s);
+    calcHist(src, hist, s);
 
     cudaStream_t stream = StreamAccessor::getStream(s);
 
@@ -1061,10 +1032,7 @@ void cv::gpu::equalizeHist(const GpuMat& src, GpuMat& dst, GpuMat& hist, GpuMat&
 
     nppSafeCall( nppsIntegral_32s(hist.ptr<Npp32s>(), lut.ptr<Npp32s>(), 256, intBuf.ptr<Npp8u>()) );
 
-    if (stream == 0)
-        cudaSafeCall( cudaDeviceSynchronize() );
-
-    equalizeHist_gpu(src, dst, lut.ptr<int>(), stream);
+    hist::equalizeHist(src, dst, lut.ptr<int>(), stream);
 }
 
 ////////////////////////////////////////////////////////////////////////
