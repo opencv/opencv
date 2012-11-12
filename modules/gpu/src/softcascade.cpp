@@ -70,6 +70,15 @@ cv::gpu::device::icf::Level::Level(int idx, const Octave& oct, const float scale
 
     objSize.x  = cv::saturate_cast<uchar>(oct.size.x * relScale);
     objSize.y  = cv::saturate_cast<uchar>(oct.size.y * relScale);
+
+    // according to R. Benenson, M. Mathias, R. Timofte and L. Van Gool's and Dallal's papers
+    if (fabs(relScale - 1.f) < FLT_EPSILON)
+        scaling[0] = scaling[1] = 1.f;
+    else
+    {
+        scaling[0] = (relScale < 1.f) ? 0.89f * ::pow(relScale, 1.099f / ::log(2)) : 1.f;
+        scaling[1] = relScale * relScale;
+    }
 }
 
 namespace cv { namespace gpu { namespace device {
@@ -91,38 +100,6 @@ namespace imgproc {
 
 struct cv::gpu::SCascade::Fields
 {
-    struct CascadeIntrinsics
-    {
-        static const float lambda = 1.099f, a = 0.89f;
-
-        static float getFor(int channel, float scaling)
-        {
-            CV_Assert(channel < 10);
-
-            if (fabs(scaling - 1.f) < FLT_EPSILON)
-                return 1.f;
-
-            // according to R. Benenson, M. Mathias, R. Timofte and L. Van Gool's and Dallal's papers
-            static const float A[2][2] =
-            {   //channel <= 6, otherwise
-                {        0.89f, 1.f}, // down
-                {        1.00f, 1.f}  // up
-            };
-
-            static const float B[2][2] =
-            {   //channel <= 6,  otherwise
-                { 1.099f / ::log(2), 2.f}, // down
-                {             0.f, 2.f}  // up
-            };
-
-            float a = A[(int)(scaling >= 1)][(int)(channel > 6)];
-            float b = B[(int)(scaling >= 1)][(int)(channel > 6)];
-
-            // printf("!!! scaling: %f %f %f -> %f\n", scaling, a, b, a * pow(scaling, b));
-            return a * ::pow(scaling, b);
-        }
-    };
-
     static Fields* parseCascade(const FileNode &root, const float mins, const float maxs)
     {
         static const char *const SC_STAGE_TYPE          = "stageType";
@@ -281,8 +258,6 @@ struct cv::gpu::SCascade::Fields
             int fit = fitOctave(voctaves, logScale);
 
             Level level(fit, voctaves[fit], scale, width, height);
-            level.scaling[0] = CascadeIntrinsics::getFor(0, level.relScale);
-            level.scaling[1] = CascadeIntrinsics::getFor(9, level.relScale);
 
             if (!width || !height)
                 break;
@@ -294,16 +269,6 @@ struct cv::gpu::SCascade::Fields
 
             if (::fabs(scale - maxs) < FLT_EPSILON) break;
             scale = ::std::min(maxs, ::expf(::log(scale) + logFactor));
-
-            // std::cout << "level " << sc
-            //           << " octeve "
-            //           << vlevels[sc].octave
-            //           << " relScale "
-            //           << vlevels[sc].relScale
-            //           << " " << vlevels[sc].shrScale
-            //           << " [" << (int)vlevels[sc].objSize.x
-            //           << " " <<  (int)vlevels[sc].objSize.y << "] ["
-            // <<  (int)vlevels[sc].workRect.x << " " <<  (int)vlevels[sc].workRect.y << "]" << std::endl;
         }
 
         cv::Mat hlevels(1, vlevels.size() * sizeof(Level), CV_8UC1, (uchar*)&(vlevels[0]) );
