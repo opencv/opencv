@@ -501,3 +501,26 @@ void cv::SCascade::detect(cv::InputArray _image, cv::InputArray _rois, std::vect
          }
     }
 }
+
+void cv::SCascade::detect(InputArray _image, InputArray _rois,  OutputArray _rects, OutputArray _confs) const
+{
+    std::vector<Detection> objects;
+    detect( _image, _rois, objects);
+
+    _rects.create(1, objects.size(), CV_32SC4);
+    cv::Mat_<cv::Rect> rects = (cv::Mat_<cv::Rect>)_rects.getMat();
+    cv::Rect* rectPtr = rects.ptr<cv::Rect>(0);
+
+    _confs.create(1, objects.size(), CV_32F);
+    cv::Mat confs = _confs.getMat();
+    float* confPtr = rects.ptr<float>(0);
+
+    typedef std::vector<Detection>::const_iterator IDet;
+
+    int i = 0;
+    for (IDet it = objects.begin(); it != objects.end(); ++it, ++i)
+    {
+        rectPtr[i] = (*it).bb;
+        confPtr[i] = (*it).confidence;
+    }
+}

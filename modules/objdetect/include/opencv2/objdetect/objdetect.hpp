@@ -490,7 +490,7 @@ protected:
 
 
 // Implementation of soft (stageless) cascaded detector.
-class CV_EXPORTS SCascade : public Algorithm
+class CV_EXPORTS_W SCascade : public Algorithm
 {
 public:
 
@@ -539,24 +539,27 @@ public:
     // Param minScale is a maximum scale relative to the original size of the image on which cascade will be applyed.
     // Param scales is a number of scales from minScale to maxScale.
     // Param rejfactor is used for NMS.
-    SCascade(const double minScale = 0.4, const double maxScale = 5., const int scales = 55, const int rejfactor = 1);
+    CV_WRAP SCascade(const double minScale = 0.4, const double maxScale = 5., const int scales = 55, const int rejfactor = 1);
 
-    virtual ~SCascade();
+    CV_WRAP virtual ~SCascade();
 
     cv::AlgorithmInfo* info() const;
 
     // Load cascade from FileNode.
     // Param fn is a root node for cascade. Should be <cascade>.
-    virtual bool load(const FileNode& fn);
+    CV_WRAP virtual bool load(const FileNode& fn);
 
     // Load cascade config.
-    virtual void read(const FileNode& fn);
+    CV_WRAP virtual void read(const FileNode& fn);
 
     // Return the vector of Decection objcts.
     // Param image is a frame on which detector will be applied.
     // Param rois is a vector of regions of interest. Only the objects that fall into one of the regions will be returned.
     // Param objects is an output array of Detections
     virtual void detect(InputArray image, InputArray rois, std::vector<Detection>& objects) const;
+    // Param rects is an output array of bounding rectangles for detected objects.
+    // Param confs is an output array of confidence for detected objects. i-th bounding rectangle corresponds i-th configence.
+    CV_WRAP virtual void detect(InputArray image, InputArray rois, OutputArray rects, OutputArray confs) const;
 
 private:
     void detectNoRoi(const Mat& image, std::vector<Detection>& objects) const;

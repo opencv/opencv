@@ -39,6 +39,7 @@ Implementation of soft (stageless) cascaded detector. ::
         cv::AlgorithmInfo* info() const;
         virtual bool load(const FileNode& fn);
         virtual void detect(InputArray image, InputArray rois, std::vector<Detection>& objects) const;
+        virtual void detect(InputArray image, InputArray rois, OutputArray rects, OutputArray confs) const;
     };
 
 
@@ -80,10 +81,16 @@ SCascade::detect
 --------------------------
 Apply cascade to an input frame and return the vector of Decection objcts.
 
-.. ocv:function:: bool SCascade::detect(InputArray image, InputArray rois, std::vector<Detection>& objects) const
+.. ocv:function:: void SCascade::detect(InputArray image, InputArray rois, std::vector<Detection>& objects) const
+
+.. ocv:function:: void SCascade::detect(InputArray image, InputArray rois, OutputArray rects, OutputArray confs) const
 
     :param image: a frame on which detector will be applied.
 
     :param rois: a vector of regions of interest. Only the objects that fall into one of the regions will be returned.
 
     :param objects: an output array of Detections.
+
+    :param rects: an output array of bounding rectangles for detected objects.
+
+    :param confs: an output array of confidence for detected objects. i-th bounding rectangle corresponds i-th configence.
