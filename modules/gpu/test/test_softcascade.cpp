@@ -172,7 +172,7 @@ GPU_TEST_P(SCascadeTestRoi, detect,
         sub.setTo(1);
         cv::rectangle(result, r, cv::Scalar(0, 0, 255, 255), 1);
     }
-
+    objectBoxes.setTo(0);
     cascade.genRoi(rois, trois);
     cascade.detect(colored, trois, objectBoxes);
 
@@ -222,7 +222,7 @@ GPU_TEST_P(SCascadeTestLevel, detect,
 
     cv::gpu::GpuMat trois;
     cascade.genRoi(rois, trois);
-
+    objectBoxes.setTo(0);
     int level = GET_PARAM(3);
     cascade.detect(colored, trois, objectBoxes, level);
 
@@ -281,7 +281,7 @@ GPU_TEST_P(SCascadeTestAll, detect,
 
     cv::gpu::GpuMat trois;
     cascade.genRoi(rois, trois);
-
+    objectBoxes.setTo(0);
     cascade.detect(colored, trois, objectBoxes);
 
     typedef cv::gpu::SCascade::Detection Detection;
@@ -321,7 +321,7 @@ GPU_TEST_P(SCascadeTestAll, detectOnIntegral,
 
     cv::gpu::GpuMat trois;
     cascade.genRoi(rois, trois);
-
+    objectBoxes.setTo(0);
     cascade.detect(hogluv, trois, objectBoxes);
 
     typedef cv::gpu::SCascade::Detection Detection;
@@ -357,7 +357,7 @@ GPU_TEST_P(SCascadeTestAll, detectStream,
 
     cv::gpu::GpuMat trois;
     cascade.genRoi(rois, trois, s);
-
+    objectBoxes.setTo(0);
     cascade.detect(colored, trois, objectBoxes, s);
 
     cudaDeviceSynchronize();

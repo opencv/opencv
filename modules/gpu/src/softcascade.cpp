@@ -63,7 +63,7 @@ void cv::gpu::SCascade::read(const FileNode& fn) { Algorithm::read(fn); }
 #include <icf.hpp>
 
 cv::gpu::device::icf::Level::Level(int idx, const Octave& oct, const float scale, const int w, const int h)
-:  octave(idx), relScale(scale / oct.scale), shrScale (relScale / (float)oct.shrinkage)
+:  octave(idx), step(oct.stages), relScale(scale / oct.scale)
 {
     workRect.x = round(w / (float)oct.shrinkage);
     workRect.y = round(h / (float)oct.shrinkage);
@@ -100,7 +100,7 @@ namespace imgproc {
 
 struct cv::gpu::SCascade::Fields
 {
-    static Fields* parseCascade(const FileNode &root, const float mins, const float maxs)
+    static Fields* parseCascade(const FileNode &root, const float mins, const float maxs, const int totals)
     {
         static const char *const SC_STAGE_TYPE          = "stageType";
         static const char *const SC_BOOST               = "BOOST";
@@ -119,11 +119,8 @@ struct cv::gpu::SCascade::Fields
         static const char *const SC_ORIG_W              = "width";
         static const char *const SC_ORIG_H              = "height";
 
-        int origWidth = (int)root[SC_ORIG_W];
-        CV_Assert(origWidth  == ORIG_OBJECT_WIDTH);
-
+        int origWidth  = (int)root[SC_ORIG_W];
         int origHeight = (int)root[SC_ORIG_H];
-        CV_Assert(origHeight == ORIG_OBJECT_HEIGHT);
 
         static const char *const SC_OCTAVES             = "octaves";
         static const char *const SC_STAGES              = "stages";
@@ -141,7 +138,6 @@ struct cv::gpu::SCascade::Fields
 
         static const char * const SC_F_CHANNEL          = "channel";
         static const char * const SC_F_RECT             = "rect";
-
 
         FileNode fn = root[SC_OCTAVES];
             if (fn.empty()) return false;
@@ -167,8 +163,8 @@ struct cv::gpu::SCascade::Fields
 
             ushort nstages = saturate_cast<ushort>((int)fns[SC_OCT_STAGES]);
             ushort2 size;
-            size.x = cvRound(ORIG_OBJECT_WIDTH * scale);
-            size.y = cvRound(ORIG_OBJECT_HEIGHT * scale);
+            size.x = cvRound(origWidth * scale);
+            size.y = cvRound(origHeight * scale);
             shrinkage = saturate_cast<ushort>((int)fns[SC_OCT_SHRINKAGE]);
 
             Octave octave(octIndex, nstages, shrinkage, size, scale);
@@ -245,11 +241,11 @@ struct cv::gpu::SCascade::Fields
         CV_Assert(!hleaves.empty());
 
         std::vector<Level> vlevels;
-        float logFactor = (::log(maxs) - ::log(mins)) / (TOTAL_SCALES -1);
+        float logFactor = (::log(maxs) - ::log(mins)) / (totals -1);
 
         float scale = mins;
         int downscales = 0;
-        for (int sc = 0; sc < TOTAL_SCALES; ++sc)
+        for (int sc = 0; sc < totals; ++sc)
         {
             int width  = ::std::max(0.0f, FRAME_WIDTH - (origWidth  * scale));
             int height = ::std::max(0.0f, FRAME_HEIGHT - (origHeight * scale));
@@ -302,7 +298,7 @@ struct cv::gpu::SCascade::Fields
         leaves.upload(hleaves);
         levels.upload(hlevels);
 
-        invoker = device::icf::CascadeInvoker<device::icf::CascadePolicy>(levels, octaves, stages, nodes, leaves);
+        invoker = device::icf::CascadeInvoker<device::icf::GK107PolicyX4>(levels, octaves, stages, nodes, leaves);
 
     }
 
@@ -456,16 +452,13 @@ public:
 
     GpuMat sobelBuf;
 
-    device::icf::CascadeInvoker<device::icf::CascadePolicy> invoker;
+    device::icf::CascadeInvoker<device::icf::GK107PolicyX4> invoker;
 
     enum { BOOST = 0 };
     enum
     {
         FRAME_WIDTH        = 640,
         FRAME_HEIGHT       = 480,
-        TOTAL_SCALES       = 55,
-        ORIG_OBJECT_WIDTH  = 64,
-        ORIG_OBJECT_HEIGHT = 128,
         HOG_BINS           = 6,
         LUV_BINS           = 3,
         HOG_LUV_BINS       = 10
@@ -480,21 +473,19 @@ cv::gpu::SCascade::~SCascade() { delete fields; }
 bool cv::gpu::SCascade::load(const FileNode& fn)
 {
     if (fields) delete fields;
-    fields = Fields::parseCascade(fn, minScale, maxScale);
+    fields = Fields::parseCascade(fn, minScale, maxScale, scales);
     return fields != 0;
 }
 
 void cv::gpu::SCascade::detect(InputArray image, InputArray _rois, OutputArray _objects, Stream& s) const
 {
+    CV_Assert(fields);
+
     const GpuMat colored = image.getGpuMat();
     // only color images are supperted
     CV_Assert(colored.type() == CV_8UC3 || colored.type() == CV_32SC1);
 
     GpuMat rois = _rois.getGpuMat(), objects = _objects.getGpuMat();
-
-    // we guess user knows about shrincage
-    // CV_Assert((rois.size().width == getRoiSize().height) && (rois.type() == CV_8UC1));
-
     Fields& flds = *fields;
 
     if (colored.type() == CV_8UC3)
@@ -518,15 +509,13 @@ void cv::gpu::SCascade::detect(InputArray image, InputArray _rois, OutputArray _
 
 void cv::gpu::SCascade::detect(InputArray image, InputArray _rois, OutputArray _objects, const int level, Stream& s) const
 {
+    CV_Assert(fields);
+
     const GpuMat colored = image.getGpuMat();
     // only color images are supperted
     CV_Assert(colored.type() == CV_8UC3 || colored.type() == CV_32SC1);
 
-    // we guess user knows about shrincage
-    // CV_Assert((rois.size().width == getRoiSize().height) && (rois.type() == CV_8UC1));
-
     Fields& flds = *fields;
-
     if (colored.type() == CV_8UC3)
     {
         // only this window size allowed
@@ -549,6 +538,8 @@ void cv::gpu::SCascade::detect(InputArray image, InputArray _rois, OutputArray _
 
 void cv::gpu::SCascade::genRoi(InputArray _roi, OutputArray _mask, Stream& stream) const
 {
+    CV_Assert(fields);
+
     const GpuMat roi = _roi.getGpuMat();
     _mask.create( roi.cols / 4, roi.rows / 4, roi.type() );
     GpuMat mask = _mask.getGpuMat();

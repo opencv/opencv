@@ -161,192 +161,128 @@ namespace icf {
     }
 
     texture<float2,  cudaTextureType2D, cudaReadModeElementType> troi;
-#if defined __CUDA_ARCH__ && __CUDA_ARCH__ >= 300
-    template<bool isUp>
-    __global__ void test_kernel_warp(const Level* levels, const Octave* octaves, const float* stages,
-        const Node* nodes, const float* leaves, Detection* objects, const uint ndetections, uint* ctr,
-        const int downscales)
+
+template<typename Policy>
+template<bool isUp>
+__device void CascadeInvoker<Policy>::detect(Detection* objects, const uint ndetections, uint* ctr, const int downscales) const
+{
+    const int y = blockIdx.y * blockDim.y + threadIdx.y;
+    const int x = blockIdx.x;
+
+    // load Lavel
+    __shared__ Level level;
+
+    // check POI
+    __shared__ volatile char roiCache[Policy::STA_Y];
+
+    if (!threadIdx.y && !threadIdx.x)
+        ((float2*)roiCache)[threadIdx.x] = tex2D(troi, blockIdx.y, x);
+
+    __syncthreads();
+
+    if (!roiCache[threadIdx.y]) return;
+
+    if (!threadIdx.x)
+        level = levels[downscales + blockIdx.z];
+
+    if(x >= level.workRect.x || y >= level.workRect.y) return;
+
+    int st = level.octave * level.step;
+    const int stEnd = st + level.step;
+
+    float confidence = 0.f;
+    for(; st < stEnd; st += Policy::WARP)
     {
-        const int y = blockIdx.y * blockDim.y + threadIdx.y;
-        const int x = blockIdx.x;
+        const int nId = (st + threadIdx.x) * 3;
 
-        // load Lavel
-        __shared__ Level level;
+        Node node = nodes[nId];
 
-        // check POI
-        __shared__ volatile char roiCache[8];
-        if (!threadIdx.y && !threadIdx.x)
-            ((float2*)roiCache)[threadIdx.x] = tex2D(troi, blockIdx.y, x);
+        float threshold = rescale<isUp>(level, node);
+        int sum = get<isUp>(x, y + (node.threshold >> 28) * 120, node.rect);
 
-        __syncthreads();
+        int next = 1 + (int)(sum >= threshold);
 
-        if (!roiCache[threadIdx.y]) return;
+        node = nodes[nId + next];
+        threshold = rescale<isUp>(level, node);
+        sum = get<isUp>(x, y + (node.threshold >> 28) * 120, node.rect);
 
-        if (!threadIdx.x)
-            level = levels[downscales + blockIdx.z];
+        const int lShift = (next - 1) * 2 + (int)(sum >= threshold);
+        float impact = leaves[(st + threadIdx.x) * 4 + lShift];
 
-        if(x >= level.workRect.x || y >= level.workRect.y) return;
-
-        Octave octave = octaves[level.octave];
-        int st = octave.index * octave.stages;
-        const int stEnd = st + 1024;
-
-        float confidence = 0.f;
-
-        for(; st < stEnd; st += 32)
-        {
-
-            const int nId = (st + threadIdx.x) * 3;
-            dprintf("\n\n%d: stage: %d %d\n",threadIdx.x, st, nId);
-            Node node = nodes[nId];
-
-            float threshold = rescale<isUp>(level, node);
-            int sum = get<isUp>(x, y + (node.threshold >> 28) * 120, node.rect);
-
-            int next = 1 + (int)(sum >= threshold);
-            dprintf("%d: go: %d (%d >= %f)\n\n" ,threadIdx.x, next, sum, threshold);
-
-            node = nodes[nId + next];
-            threshold = rescale<isUp>(level, node);
-            sum = get<isUp>(x, y + (node.threshold >> 28) * 120, node.rect);
-
-            const int lShift = (next - 1) * 2 + (int)(sum >= threshold);
-            float impact = leaves[(st + threadIdx.x) * 4 + lShift];
-
-            dprintf("%d: decided: %d (%d >= %f) %d %f\n\n" ,threadIdx.x, next, sum, threshold, lShift, impact);
-            dprintf("%d: extracted stage: %f\n",threadIdx.x, stages[(st + threadIdx.x)]);
-            dprintf("%d: computed  score: %f\n",threadIdx.x, impact);
 #pragma unroll
-            // scan on shuffl functions
-            for (int i = 1; i < 32; i *= 2)
-            {
-                const float n = __shfl_up(impact, i, 32);
-
-                if (threadIdx.x >= i)
-                    impact += n;
-            }
-
-            dprintf("%d: impact scaned %f\n" ,threadIdx.x, impact);
-
-            confidence += impact;
-            if(__any((confidence <= stages[(st + threadIdx.x)]))) st += 2048;
-        }
-
-        if(!threadIdx.x && st == stEnd &&  ((confidence - FLT_EPSILON) >= 0))
+        // scan on shuffl functions
+        for (int i = 1; i < Policy::WARP; i *= 2)
         {
-            int idx = atomicInc(ctr, ndetections);
-            // store detection
-            objects[idx] = Detection(__float2int_rn(x * octave.shrinkage),
-                __float2int_rn(y * octave.shrinkage), level.objSize.x, level.objSize.y, confidence);
+            const float n = __shfl_up(impact, i, Policy::WARP);
+
+            if (threadIdx.x >= i)
+                impact += n;
         }
+
+        confidence += impact;
+        if(__any((confidence <= stages[(st + threadIdx.x)]))) st += 2048;
     }
-#else
-    template<bool isUp>
-    __global__ void test_kernel_warp(const Level* levels, const Octave* octaves, const float* stages,
-        const Node* nodes, const float* leaves, Detection* objects, const uint ndetections, uint* ctr,
-        const int downscales)
+
+    if(!threadIdx.x && st == stEnd &&  ((confidence - FLT_EPSILON) >= 0))
     {
-        const int y = blockIdx.y * blockDim.y + threadIdx.y;
-        const int x = blockIdx.x * blockDim.x + threadIdx.x;
-        Level level = levels[blockIdx.z];
-
-        // if (blockIdx.z != 31) return;
-        if(x >= level.workRect.x || y >= level.workRect.y) return;
-
-        // int roi = tex2D(troi, x, y);
-        // printf("%d\n", roi);
-        // if (!roi) return;
-
-        Octave octave = octaves[level.octave];
-
-        int st = octave.index * octave.stages;
-        const int stEnd = st + 1000;//octave.stages;
-
-        float confidence = 0.f;
-
-        for(; st < stEnd; ++st)
-        {
-            dprintf("\n\nstage: %d\n", st);
-            const int nId = st * 3;
-            Node node = nodes[nId];
-
-            dprintf("Node: [%d %d %d %d] %d %d\n", node.rect.x, node.rect.y, node.rect.z, node.rect.w,
-                node.threshold >> 28, node.threshold & 0x0FFFFFFFU);
-
-            float threshold = rescale<isUp>(level, node);
-            int sum = get<isUp>(x, y + (node.threshold >> 28) * 121, node.rect);
-
-            dprintf("Node: [%d %d %d %d] %f\n", node.rect.x, node.rect.y, node.rect.z,
-                node.rect.w, threshold);
-
-            int next = 1 + (int)(sum >= threshold);
-            dprintf("go: %d (%d >= %f)\n\n" ,next, sum, threshold);
-
-            node = nodes[nId + next];
-            threshold = rescale<isUp>(level, node);
-            sum = get<isUp>(x, y + (node.threshold >> 28) * 121, node.rect);
-
-            const int lShift = (next - 1) * 2 + (int)(sum >= threshold);
-            float impact = leaves[st * 4 + lShift];
-            confidence += impact;
-
-            if (confidence <= stages[st]) st = stEnd + 10;
-            dprintf("decided: %d (%d >= %f) %d %f\n\n" ,next, sum, threshold, lShift, impact);
-            dprintf("extracted stage: %f\n", stages[st]);
-            dprintf("computed  score: %f\n\n", confidence);
-        }
-
-        if(st == stEnd)
-        {
-            int idx = atomicInc(ctr, ndetections);
-            // store detection
-            objects[idx] = Detection(__float2int_rn(x * octave.shrinkage),
-                __float2int_rn(y * octave.shrinkage), level.objSize.x, level.objSize.y, confidence);
-        }
+        int idx = atomicInc(ctr, ndetections);
+        objects[idx] = Detection(__float2int_rn(x * Policy::SHRINKAGE),
+            __float2int_rn(y * Policy::SHRINKAGE), level.objSize.x, level.objSize.y, confidence);
     }
-#endif
+}
 
-    template<>
-    void CascadeInvoker<CascadePolicy>::operator()(const PtrStepSzb& roi, const PtrStepSzi& hogluv,
-        PtrStepSz<uchar4> objects, PtrStepSzi counter, const int downscales, const int scale, const cudaStream_t& stream) const
+template<typename Policy, bool isUp>
+__global__ void soft_cascade(const CascadeInvoker<Policy> invoker, Detection* objects, const uint n, uint* ctr, const int downs)
+{
+    invoker.template detect<isUp>(objects, n, ctr, downs);
+}
+
+template<typename Policy>
+void CascadeInvoker<Policy>::operator()(const PtrStepSzb& roi, const PtrStepSzi& hogluv,
+    PtrStepSz<uchar4> objects, PtrStepSzi counter, const int downscales, const int scale, const cudaStream_t& stream) const
+{
+    int fw = 160;
+    int fh = 120;
+
+    dim3 grid(fw, fh / Policy::STA_Y, (scale == -1) ? downscales : 1);
+
+    uint* ctr = (uint*)(counter.ptr(0));
+    Detection* det = (Detection*)objects.ptr();
+    uint max_det = objects.cols / sizeof(Detection);
+
+    cudaChannelFormatDesc desc = cudaCreateChannelDesc<int>();
+    cudaSafeCall( cudaBindTexture2D(0, thogluv, hogluv.data, desc, hogluv.cols, hogluv.rows, hogluv.step));
+
+    cudaChannelFormatDesc desc_roi = cudaCreateChannelDesc<float2>();
+    cudaSafeCall( cudaBindTexture2D(0, troi, roi.data, desc_roi, roi.cols / 8, roi.rows, roi.step));
+
+    const CascadeInvoker<Policy> inv = *this;
+
+    if (scale == -1)
     {
-        int fw = 160;
-        int fh = 120;
+        soft_cascade<Policy, false><<<grid, Policy::block(), 0, stream>>>(inv, det, max_det, ctr, 0);
+        cudaSafeCall( cudaGetLastError());
 
-        dim3 block(32, 8);
-        dim3 grid(fw, fh / 8, (scale == -1) ? downscales : 1);
-
-        uint* ctr = (uint*)(counter.ptr(0));
-        Detection* det = (Detection*)objects.ptr();
-        uint max_det = objects.cols / sizeof(Detection);
-
-        cudaChannelFormatDesc desc = cudaCreateChannelDesc<int>();
-        cudaSafeCall( cudaBindTexture2D(0, thogluv, hogluv.data, desc, hogluv.cols, hogluv.rows, hogluv.step));
-
-        cudaChannelFormatDesc desc_roi = cudaCreateChannelDesc<float2>();
-        cudaSafeCall( cudaBindTexture2D(0, troi, roi.data, desc_roi, roi.cols / 8, roi.rows, roi.step));
-
-        if (scale == -1)
-        {
-            test_kernel_warp<false><<<grid, block, 0, stream>>>(levels, octaves, stages, nodes, leaves, det, max_det, ctr, 0);
-            cudaSafeCall( cudaGetLastError());
-
-            grid = dim3(fw, fh / 8, 47 - downscales);
-            test_kernel_warp<true><<<grid, block, 0, stream>>>(levels, octaves, stages, nodes, leaves, det, max_det, ctr, downscales);
-        }
+        grid = dim3(fw, fh / Policy::STA_Y, scales - downscales);
+        soft_cascade<Policy, true><<<grid, Policy::block(), 0, stream>>>(inv, det, max_det, ctr, downscales);
+    }
+    else
+    {
+        if (scale >= downscales)
+            soft_cascade<Policy, true><<<grid, Policy::block(), 0, stream>>>(inv, det, max_det, ctr, scale);
         else
-        {
-            if (scale >= downscales)
-                test_kernel_warp<true><<<grid, block, 0, stream>>>(levels, octaves, stages, nodes, leaves, det, max_det, ctr, scale);
-            else
-                test_kernel_warp<false><<<grid, block, 0, stream>>>(levels, octaves, stages, nodes, leaves, det, max_det, ctr, scale);
-        }
-
-        if (!stream)
-        {
-            cudaSafeCall( cudaGetLastError());
-            cudaSafeCall( cudaDeviceSynchronize());
-        }
+            soft_cascade<Policy, false><<<grid, Policy::block(), 0, stream>>>(inv, det, max_det, ctr, scale);
     }
+
+    if (!stream)
+    {
+        cudaSafeCall( cudaGetLastError());
+        cudaSafeCall( cudaDeviceSynchronize());
+    }
+}
+
+template void CascadeInvoker<GK107PolicyX4>::operator()(const PtrStepSzb& roi, const PtrStepSzi& hogluv,
+    PtrStepSz<uchar4> objects, PtrStepSzi counter, const int downscales, const int scale, const cudaStream_t& stream) const;
+
 }
 }}}

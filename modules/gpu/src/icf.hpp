@@ -72,9 +72,9 @@ struct __align__(16) Octave
 struct __align__(8) Level //is actually 24 bytes
 {
     int octave;
+    int step;
 
     float relScale;
-    float shrScale;   // used for marking detection
     float scaling[2]; // calculated according to Dollal paper
 
     // for 640x480 we can not get overflow
@@ -115,31 +115,41 @@ struct __align__(16) Detection
     : x(_x), y(_y), w(_w), h(_h), confidence(c), kind(0) {};
 };
 
-struct CascadePolicy
+struct GK107PolicyX4
 {
-    enum {STA_X = 32, STA_Y = 8};
+    enum {WARP = 32, STA_X = WARP, STA_Y = 8, SHRINKAGE = 4};
+    static const dim3 block()
+    {
+        return dim3(GK107PolicyX4::STA_X, GK107PolicyX4::STA_Y);
+    }
 };
 
 template<typename Policy>
 struct CascadeInvoker
 {
-    CascadeInvoker(): levels(0), octaves(0), stages(0), nodes(0), leaves(0) {}
+    CascadeInvoker(): levels(0), stages(0), nodes(0), leaves(0), scales(0) {}
+
     CascadeInvoker(const PtrStepSzb& _levels, const PtrStepSzb& _octaves, const PtrStepSzf& _stages,
                    const PtrStepSzb& _nodes,  const PtrStepSzf& _leaves)
-    : levels((const Level*)_levels.ptr()), octaves((const Octave*)_octaves.ptr()), stages((const float*)_stages.ptr()),
-       nodes((const Node*)_nodes.ptr()), leaves((const float*)_leaves.ptr())
+    : levels((const Level*)_levels.ptr()),
+      stages((const float*)_stages.ptr()),
+      nodes((const Node*)_nodes.ptr()), leaves((const float*)_leaves.ptr()),
+      scales(_levels.cols / sizeof(Level))
     {}
 
     const Level*  levels;
-    const Octave* octaves;
-
     const float*  stages;
 
     const Node*   nodes;
     const float*  leaves;
 
+    int scales;
+
     void operator()(const PtrStepSzb& roi, const PtrStepSzi& hogluv, PtrStepSz<uchar4> objects,
         PtrStepSzi counter, const int downscales, const int csale = -1, const cudaStream_t& stream = 0) const;
+
+    template<bool isUp>
+    __device void detect(Detection* objects, const uint ndetections, uint* ctr, const int downscales) const;
 };
 
 }
