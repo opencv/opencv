@@ -43,11 +43,12 @@
 #include "test_precomp.hpp"
 #include "opencv2/highgui/highgui.hpp"
 
+using namespace cv;
+
 #ifdef HAVE_FFMPEG
 
 #include "ffmpeg_codecs.hpp"
 
-using namespace cv;
 using namespace std;
 
 class CV_FFmpegWriteBigVideoTest : public cvtest::BaseTest
@@ -173,6 +174,8 @@ public:
 
 TEST(Highgui_Video, ffmpeg_image) { CV_FFmpegReadImageTest test; test.safe_run(); }
 
+#endif
+
 class CreateVideoWriterInvoker :
     public ParallelLoopBody
 {
@@ -230,6 +233,7 @@ public:
         CV_Assert((range.start + 1) == range.end);
         VideoWriter* writer = writers->operator[](range.start);
         CV_Assert(writer != NULL);
+        CV_Assert(writer->isOpened());
         
         Mat frame(CreateVideoWriterInvoker::FrameSize, CV_8UC3);
         for (unsigned int i = 0; i < FrameCount; ++i)
@@ -262,10 +266,12 @@ TEST(Highgui_Video_parallel_writers, accuracy)
     
     // creating VideoWriters
     std::vector<VideoWriter*> writers(threadsCount);
-    parallel_for_(Range(0, threadsCount), CreateVideoWriterInvoker(writers));
+    Range range(0, threadsCount);
+    CreateVideoWriterInvoker invoker(writers);
+    parallel_for_(range, invoker);
 
     // write a video
-    parallel_for_(Range(0, threadsCount), WriteVideo_Invoker(writers));
+    parallel_for_(range, WriteVideo_Invoker(writers));
 
     // deleting the writers
     for (std::vector<VideoWriter*>::iterator i = writers.begin(), end = writers.end(); i != end; ++i)
@@ -288,8 +294,6 @@ TEST(Highgui_Video_parallel_writers, accuracy)
         unsigned int videoFrameCount = static_cast<unsigned int>(capture.get(CV_CAP_PROP_FRAME_COUNT));
         EXPECT_EQ(videoFrameCount, WriteVideo_Invoker::FrameCount);
 
-        return;
-
         // creating the reference image
         Mat reference(CreateVideoWriterInvoker::FrameSize, CV_8UC3);
 
@@ -307,7 +311,7 @@ TEST(Highgui_Video_parallel_writers, accuracy)
             EXPECT_EQ(actual.rows, reference.rows);
             EXPECT_EQ(actual.channels(), reference.channels());
 
-            const static double eps = 30.0;
+            const static double eps = 22.0;
             double psnr = PSNR(actual, reference);
 
 #define SUM cvtest::TS::SUMMARY
@@ -443,7 +447,5 @@ TEST(Highgui_Video_parallel_readers, accuracy)
     
     ReadImageAndTest::next = true;
 
-    parallel_for_(Range(0, threadsCount), ReadImageAndTest(readers, ts));
+    parallel_for_(range, ReadImageAndTest(readers, ts));
 }
-
-#endif

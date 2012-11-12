@@ -328,26 +328,135 @@ void CvCapture_FFMPEG::close()
 #define AVSEEK_FLAG_ANY 1
 #endif
 
+class Mutex
+{
+public:
+    Mutex();
+    ~Mutex();
+
+    void lock();
+    bool trylock();
+    void unlock();
+
+    struct Impl;
+protected:
+    Impl* impl;
+
+private:
+    Mutex(const Mutex&);
+    Mutex& operator = (const Mutex& m);
+};
+
+#if defined WIN32 || defined _WIN32 || defined WINCE
+
+struct Mutex::Impl
+{
+    Impl() { InitializeCriticalSection(&cs); refcount = 1; }
+    ~Impl() { DeleteCriticalSection(&cs); }
+
+    void lock() { EnterCriticalSection(&cs); }
+    bool trylock() { return TryEnterCriticalSection(&cs) != 0; }
+    void unlock() { LeaveCriticalSection(&cs); }
+
+    CRITICAL_SECTION cs;
+    int refcount;
+};
+
+#ifndef __GNUC__
+static int _interlockedExchangeAdd(int* addr, int delta)
+{
+#if defined _MSC_VER && _MSC_VER >= 1500
+    return (int)_InterlockedExchangeAdd((long volatile*)addr, delta);
+#else
+    return (int)InterlockedExchangeAdd((long volatile*)addr, delta);
+#endif
+}
+#endif // __GNUC__
+
+#elif defined __APPLE__
+
+#include <libkern/OSAtomic.h>
+
+struct Mutex::Impl
+{
+    Impl() { sl = OS_SPINLOCK_INIT; refcount = 1; }
+    ~Impl() {}
+
+    void lock() { OSSpinLockLock(&sl); }
+    bool trylock() { return OSSpinLockTry(&sl); }
+    void unlock() { OSSpinLockUnlock(&sl); }
+
+    OSSpinLock sl;
+    int refcount;
+};
+
+#elif defined __linux__ && !defined ANDROID
+
+struct Mutex::Impl
+{
+    Impl() { pthread_spin_init(&sl, 0); refcount = 1; }
+    ~Impl() { pthread_spin_destroy(&sl); }
+
+    void lock() { pthread_spin_lock(&sl); }
+    bool trylock() { return pthread_spin_trylock(&sl) == 0; }
+    void unlock() { pthread_spin_unlock(&sl); }
+
+    pthread_spinlock_t sl;
+    int refcount;
+};
+
+#else
+
+struct Mutex::Impl
+{
+    Impl() { pthread_mutex_init(&sl, 0); refcount = 1; }
+    ~Impl() { pthread_mutex_destroy(&sl); }
+
+    void lock() { pthread_mutex_lock(&sl); }
+    bool trylock() { return pthread_mutex_trylock(&sl) == 0; }
+    void unlock() { pthread_mutex_unlock(&sl); }
+
+    pthread_mutex_t sl;
+    int refcount;
+};
+
+#endif
+
+Mutex::Mutex()
+{
+    impl = new Mutex::Impl;
+}
+
+Mutex::~Mutex()
+{
+    delete impl;
+    impl = 0;
+}
+
+void Mutex::lock() { impl->lock(); }
+void Mutex::unlock() { impl->unlock(); }
+bool Mutex::trylock() { return impl->trylock(); }
+
 static int LockCallBack(void **mutex, AVLockOp op)
 {
     switch (op)
     {
         case AV_LOCK_CREATE:
-            *mutex = reinterpret_cast<void*>(new cv::Mutex());
+            *mutex = reinterpret_cast<void*>(new Mutex());
             if (!*mutex)
                 return 1;
         break;
 
         case AV_LOCK_OBTAIN:
-            reinterpret_cast<cv::Mutex*>(*mutex)->lock();
+            reinterpret_cast<Mutex*>(*mutex)->lock();
         break;
 
         case AV_LOCK_RELEASE:
-            reinterpret_cast<cv::Mutex*>(*mutex)->unlock();
+            reinterpret_cast<Mutex*>(*mutex)->unlock();
         break;
 
         case AV_LOCK_DESTROY:
-            cv::Mutex* cv_mutex = reinterpret_cast<cv::Mutex*>(*mutex);
+            Mutex* cv_mutex = reinterpret_cast<Mutex*>(*mutex);
             delete cv_mutex;
             cv_mutex = NULL;
         break;
@@ -362,25 +471,25 @@ public:
     {
         static InternalFFMpegRegister init;
     }
-    
+
     ~InternalFFMpegRegister()
     {
         av_lockmgr_register(NULL);
     }
-    
+
 private:
     InternalFFMpegRegister()
     {
 #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 13, 0)
         avformat_network_init();
 #endif
-        
+
         /* register all codecs, demux and protocols */
         av_register_all();
-        
+
         /* register a callback function for synchronization */
         av_lockmgr_register(&LockCallBack);
-        
+
         av_log_set_level(AV_LOG_ERROR);
     }
 };
@@ -388,7 +497,6 @@ private:
 bool CvCapture_FFMPEG::open( const char* _filename )
 {
     InternalFFMpegRegister::Register();
-
     unsigned i;
     bool valid = false;
 
@@ -1534,6 +1642,7 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
     frame_width = width;
     frame_height = height;
     ok = true;
+
     return true;
 }
 
@@ -1592,7 +1701,6 @@ CvVideoWriter_FFMPEG* cvCreateVideoWriter_FFMPEG( const char* filename, int four
     free(writer);
     return 0;
 }
-
 
 void cvReleaseVideoWriter_FFMPEG( CvVideoWriter_FFMPEG** writer )
 {
@@ -1780,14 +1888,11 @@ AVStream* OutputMediaStream_FFMPEG::addVideoStream(AVFormatContext *oc, CodecID 
 
 bool OutputMediaStream_FFMPEG::open(const char* fileName, int width, int height, double fps)
 {
+    InternalFFMpegRegister::Register();
+
     fmt_ = 0;
     oc_ = 0;
     video_st_ = 0;
-
-    // tell FFMPEG to register codecs
-    av_register_all();
-
-    av_log_set_level(AV_LOG_ERROR);
 
     // auto detect the output format from the name and fourcc code
     #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 2, 0)
@@ -1959,6 +2064,8 @@ private:
 
 bool InputMediaStream_FFMPEG::open(const char* fileName, int* codec, int* chroma_format, int* width, int* height)
 {
+    InternalFFMpegRegister::Register();
+
     int err;
 
     ctx_ = 0;
@@ -1968,11 +2075,6 @@ bool InputMediaStream_FFMPEG::open(const char* fileName, int* codec, int* chroma
     #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 13, 0)
         avformat_network_init();
     #endif
-
-    // register all codecs, demux and protocols
-    av_register_all();
-
-    av_log_set_level(AV_LOG_ERROR);
 
     #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 6, 0)
         err = avformat_open_input(&ctx_, fileName, 0, 0);
@@ -2093,7 +2195,7 @@ bool InputMediaStream_FFMPEG::read(unsigned char** data, int* size, int* endOfFi
 
         if (ret < 0)
         {
-            if (ret == AVERROR_EOF)
+            if (ret == (int)AVERROR_EOF)
                 *endOfFile = true;
             return false;
         }
