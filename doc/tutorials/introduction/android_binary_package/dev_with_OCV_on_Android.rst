@@ -260,34 +260,35 @@ To build your own Android application, which uses OpenCV from native part, the f
 #. Either use :ref:`manual <NDK_build_cli>` ``ndk-build`` invocation or :ref:`setup Eclipse CDT Builder <CDT_Builder>` to build native JNI lib before Java part [re]build and APK creation.
 
 
-Hello OpenCV Sample
-===================
+"Hello OpenCV" Sample
+=====================
 
-Here are basic steps to guide you trough the process of creating a simple OpenCV-centric application.
+Here are basic steps to guide you trough the creation process of a simple OpenCV-centric application.
 It will be capable of accessing camera output, processing it and displaying the result.
 
-#. Open Eclipse IDE, create a new clean workspace, create a new Android project (*File -> New -> Android Project*).
+#. Open Eclipse IDE, create a new clean workspace, create a new Android project (:guilabel:`File -> New -> Android Project`).
 
-#. Set name, target, package and minSDKVersion accordingly.
+#. Set name, target, package and ``minSDKVersion`` accordingly.
 
-#. Add the following permissions to the AndroidManifest.xml file:
+#. Add the following permissions to the ``AndroidManifest.xml`` file:
 
    .. code-block:: xml
       :linenos:
 
-      </application>
+        <uses-permission android:name="android.permission.CAMERA"/>
 
-      <uses-permission android:name="android.permission.CAMERA" />
-      <uses-feature android:name="android.hardware.camera" />
-      <uses-feature android:name="android.hardware.camera.autofocus" />
+        <uses-feature android:name="android.hardware.camera" android:required="false"/>
+        <uses-feature android:name="android.hardware.camera.autofocus" android:required="false"/>
+        <uses-feature android:name="android.hardware.camera.front" android:required="false"/>
+        <uses-feature android:name="android.hardware.camera.front.autofocus" android:required="false"/>
 
-#. Reference OpenCV library within your project properties.
+#. Reference the OpenCV library within your project properties.
 
    .. image:: images/dev_OCV_reference.png
         :alt: Reference OpenCV library.
         :align: center
 
-#. Create new view layout for your application, lets name it hello_opencv.xml, and add the following to it:
+#. Create new view layout for your application, lets name it ``hello_opencv.xml``, and add the following to it:
 
     .. code-block:: xml
        :linenos:
@@ -307,70 +308,71 @@ It will be capable of accessing camera output, processing it and displaying the 
 
 #. Remove default auto generated layout, if exists.
 
-#. Create a new *Activity* (*New -> Other -> Android -> Android Activity*) and name it, for example: *HelloOpenCVActivity*. Add *CvCameraViewListener* interface to *implementes* section of *HelloOpenCVActivity* class. Add the following code to activity implementation:
+#. Create a new ``Activity`` (:guilabel:`New -> Other -> Android -> Android Activity`) and name it, for example: ``HelloOpenCVActivity``.
+   Add ``CvCameraViewListener`` interface to ``implements`` list of ``HelloOpenCVActivity`` class. Add the following code to activity implementation:
 
    .. code-block:: java
       :linenos:
 
-    public class Sample1Java extends Activity implements CvCameraViewListener {
-    
-        private CameraBridgeViewBase mOpenCvCameraView;
+        public class Sample1Java extends Activity implements CvCameraViewListener {
 
-        private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this) {
+            private CameraBridgeViewBase mOpenCvCameraView;
+
+            private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this) {
+                @Override
+                public void onManagerConnected(int status) {
+                    switch (status) {
+                        case LoaderCallbackInterface.SUCCESS: {
+                            Log.i(TAG, "OpenCV loaded successfully");
+                            mOpenCvCameraView.enableView();
+                        } break;
+                        default:
+                            super.onManagerConnected(status);
+                   }
+                }
+            };
+
+            /** Called when the activity is first created. */
             @Override
-            public void onManagerConnected(int status) {
-                switch (status) {
-                    case LoaderCallbackInterface.SUCCESS: {
-                        Log.i(TAG, "OpenCV loaded successfully");
-                        mOpenCvCameraView.enableView();
-                    } break;
-                    default:
-                        super.onManagerConnected(status);
-               }
+            public void onCreate(Bundle savedInstanceState) {
+                Log.i(TAG, "called onCreate");
+                super.onCreate(savedInstanceState);
+                requestWindowFeature(Window.FEATURE_NO_TITLE);
+                getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+                setContentView(R.layout.hello_opencv);
+                mOpenCvCameraView = (CameraBridgeViewBase) findViewById(R.id.java_surface_view);
+                mOpenCvCameraView.setVisibility(SurfaceView.VISIBLE);
+                mOpenCvCameraView.setCvCameraViewListener(this);
             }
-        };
 
-        /** Called when the activity is first created. */
-        @Override
-        public void onCreate(Bundle savedInstanceState) {
-            Log.i(TAG, "called onCreate");
-            super.onCreate(savedInstanceState);
-            requestWindowFeature(Window.FEATURE_NO_TITLE);
-            getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-            setContentView(R.layout.hello_opencv);
-            mOpenCvCameraView = (CameraBridgeViewBase) findViewById(R.id.java_surface_view);
-            mOpenCvCameraView.setVisibility(SurfaceView.VISIBLE);
-            mOpenCvCameraView.setCvCameraViewListener(this);
-        }
+            @Override
+            public void onPause()
+            {
+                if (mOpenCvCameraView != null)
+                     mOpenCvCameraView.disableView();
+                super.onPause();
+            }
 
-        @Override
-        public void onPause()
-        {
-            if (mOpenCvCameraView != null)
-                 mOpenCvCameraView.disableView();
-            super.onPause();
-        }
+            @Override
+            public void onResume()
+            {
+                super.onResume();
+                OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_3, this, mLoaderCallback);
+            }
 
-        @Override
-        public void onResume()
-        {
-            super.onResume();
-            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_3, this, mLoaderCallback);
-        }
+            public void onDestroy() {
+                 super.onDestroy();
+                 if (mOpenCvCameraView != null)
+                     mOpenCvCameraView.disableView();
+            }
 
-        public void onDestroy() {
-             super.onDestroy();
-             if (mOpenCvCameraView != null)
-                 mOpenCvCameraView.disableView();
-        }
+            public void onCameraViewStarted(int width, int height) {
+            }
 
-        public void onCameraViewStarted(int width, int height) {
-        }
+            public void onCameraViewStopped() {
+            }
 
-        public void onCameraViewStopped() {
+            public Mat onCameraFrame(Mat inputFrame) {
+                return inputFrame;
+            }
         }
-
-        public Mat onCameraFrame(Mat inputFrame) {
-            return inputFrame;
-        }
-    }
