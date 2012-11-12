@@ -337,10 +337,10 @@ class CppHeaderParser(object):
                     atype = arg[:pos+1].strip()
                     if aname.endswith("&") or aname.endswith("*") or (aname in ["int", "string", "Mat"]):
                         atype = (atype + " " + aname).strip()
-                        aname = "param"
+                        aname = ""
                 else:
                     atype = arg
-                    aname = "param"
+                    aname = ""
                 if aname.endswith("]"):
                     bidx = aname.find('[')
                     atype += aname[bidx:]
