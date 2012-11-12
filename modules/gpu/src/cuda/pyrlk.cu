@@ -267,7 +267,7 @@ namespace cv { namespace gpu { namespace device
         }
         __device__ __forceinline__ float4 abs_(const float4& a)
         {
-            return fabs(a);
+            return abs(a);
         }
 
         template <int cn, int PATCH_X, int PATCH_Y, bool calcErr>
