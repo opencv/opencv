@@ -42,7 +42,9 @@
 
 #if !defined CUDA_DISABLER
 
-#include "internal_shared.hpp"
+#include "opencv2/gpu/device/common.hpp"
+#include "opencv2/gpu/device/utility.hpp"
+#include "opencv2/gpu/device/reduce.hpp"
 #include "opencv2/gpu/device/limits.hpp"
 #include "opencv2/gpu/device/vec_distance.hpp"
 #include "opencv2/gpu/device/datamov_utils.hpp"
@@ -60,12 +62,7 @@ namespace cv { namespace gpu { namespace device
             s_distance += threadIdx.y * BLOCK_SIZE;
             s_trainIdx += threadIdx.y * BLOCK_SIZE;
 
-            s_distance[threadIdx.x] = bestDistance;
-            s_trainIdx[threadIdx.x] = bestTrainIdx;
-
-            __syncthreads();
-
-            reducePredVal<BLOCK_SIZE>(s_distance, bestDistance, s_trainIdx, bestTrainIdx, threadIdx.x, less<volatile float>());
+            reduceKeyVal<BLOCK_SIZE>(s_distance, bestDistance, s_trainIdx, bestTrainIdx, threadIdx.x, less<float>());
         }
 
         template <int BLOCK_SIZE>
@@ -75,13 +72,7 @@ namespace cv { namespace gpu { namespace device
             s_trainIdx += threadIdx.y * BLOCK_SIZE;
             s_imgIdx   += threadIdx.y * BLOCK_SIZE;
 
-            s_distance[threadIdx.x] = bestDistance;
-            s_trainIdx[threadIdx.x] = bestTrainIdx;
-            s_imgIdx  [threadIdx.x] = bestImgIdx;
-
-            __syncthreads();
-
-            reducePredVal2<BLOCK_SIZE>(s_distance, bestDistance, s_trainIdx, bestTrainIdx, s_imgIdx, bestImgIdx, threadIdx.x, less<volatile float>());
+            reduceKeyVal<BLOCK_SIZE>(s_distance, bestDistance, smem_tuple(s_trainIdx, s_imgIdx), thrust::tie(bestTrainIdx, bestImgIdx), threadIdx.x, less<float>());
         }
 
         ///////////////////////////////////////////////////////////////////////////////
