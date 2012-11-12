@@ -2982,7 +2982,7 @@ TEST_P(Sum, Sqr)
 INSTANTIATE_TEST_CASE_P(GPU_Core, Sum, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
-    TYPES(CV_8U, CV_32F, 1, 4),
+    TYPES(CV_8U, CV_64F, 1, 4),
     WHOLE_SUBMAT));
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -3351,7 +3351,14 @@ PARAM_TEST_CASE(Reduce, cv::gpu::DeviceInfo, cv::Size, MatDepth, Channels, Reduc
         cv::gpu::setDevice(devInfo.deviceID());
 
         type = CV_MAKE_TYPE(depth, channels);
-        dst_depth = (reduceOp == CV_REDUCE_MAX || reduceOp == CV_REDUCE_MIN) ? depth : CV_32F;
+
+        if (reduceOp == CV_REDUCE_MAX || reduceOp == CV_REDUCE_MIN)
+            dst_depth = depth;
+        else if (reduceOp == CV_REDUCE_SUM)
+            dst_depth = depth == CV_8U ? CV_32S : depth < CV_64F ? CV_32F : depth;
+        else
+            dst_depth = depth < CV_32F ? CV_32F : depth;
+
         dst_type = CV_MAKE_TYPE(dst_depth, channels);
     }
 
@@ -3392,7 +3399,8 @@ INSTANTIATE_TEST_CASE_P(GPU_Core, Reduce, testing::Combine(
     testing::Values(MatDepth(CV_8U),
                     MatDepth(CV_16U),
                     MatDepth(CV_16S),
-                    MatDepth(CV_32F)),
+                    MatDepth(CV_32F),
+                    MatDepth(CV_64F)),
     ALL_CHANNELS,
     ALL_REDUCE_CODES,
     WHOLE_SUBMAT));
