@@ -2546,6 +2546,21 @@ REGISTER_TYPED_TEST_CASE_P(Core_CheckRange, Negative, Positive, Bounds, Zero);
 typedef ::testing::Types<signed char,unsigned char, signed short, unsigned short, signed int> mat_data_types;
 INSTANTIATE_TYPED_TEST_CASE_P(Negative_Test, Core_CheckRange, mat_data_types);
 
+TEST(Core_Invert, small)
+{
+    cv::Mat a = (cv::Mat_<float>(3,3) << 2.42104644730331, 1.81444796521479, -3.98072565304758, 0, 7.08389214348967e-3, 5.55326770986007e-3, 0,0, 7.44556154284261e-3);
+    //cv::randu(a, -1, 1);
+
+    cv::Mat b = a.t()*a;
+    cv::Mat c, i = Mat_<float>::eye(3, 3);
+    cv::invert(b, c, cv::DECOMP_LU); //std::cout << b*c << std::endl;
+    ASSERT_LT( cv::norm(b*c, i, CV_C), 0.1 );
+    cv::invert(b, c, cv::DECOMP_SVD); //std::cout << b*c << std::endl;
+    ASSERT_LT( cv::norm(b*c, i, CV_C), 0.1 );
+    cv::invert(b, c, cv::DECOMP_CHOLESKY); //std::cout << b*c << std::endl;
+    ASSERT_LT( cv::norm(b*c, i, CV_C), 0.1 );
+}
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 
 TEST(Core_CovarMatrix, accuracy) { Core_CovarMatrixTest test; test.safe_run(); }

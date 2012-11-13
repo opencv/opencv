@@ -6,7 +6,6 @@
 
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/highgui/highgui.hpp"
-#include "highgui.h"
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -29,7 +28,7 @@ void Dilation( int, void* );
 /**
  * @function main
  */
-int main( int argc, char** argv )
+int main( int, char** argv )
 {
   /// Load an image
   src = imread( argv[1] );
@@ -73,7 +72,7 @@ int main( int argc, char** argv )
  */
 void Erosion( int, void* )
 {
-  int erosion_type;
+  int erosion_type = 0;
   if( erosion_elem == 0 ){ erosion_type = MORPH_RECT; }
   else if( erosion_elem == 1 ){ erosion_type = MORPH_CROSS; }
   else if( erosion_elem == 2) { erosion_type = MORPH_ELLIPSE; }
@@ -91,7 +90,7 @@ void Erosion( int, void* )
  */
 void Dilation( int, void* )
 {
-  int dilation_type;
+  int dilation_type = 0;
   if( dilation_elem == 0 ){ dilation_type = MORPH_RECT; }
   else if( dilation_elem == 1 ){ dilation_type = MORPH_CROSS; }
   else if( dilation_elem == 2) { dilation_type = MORPH_ELLIPSE; }

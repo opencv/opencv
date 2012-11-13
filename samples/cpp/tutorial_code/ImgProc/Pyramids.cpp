@@ -15,13 +15,13 @@ using namespace cv;
 /// Global variables
 Mat src, dst, tmp;
 
-char* window_name = "Pyramids Demo";
+const char* window_name = "Pyramids Demo";
 
 
 /**
  * @function main
  */
-int main( int argc, char** argv )
+int main( void )
 {
   /// General instructions
   printf( "\n Zoom In-Out demo  \n " );
@@ -44,7 +44,7 @@ int main( int argc, char** argv )
   imshow( window_name, dst );
 
   /// Loop
-  while( true )
+  for(;;)
   {
     int c;
     c = waitKey(10);

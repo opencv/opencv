@@ -6,7 +6,7 @@
 using namespace std;
 using namespace cv;
 
-void help()
+static void help()
 {
     cout
         << "\n--------------------------------------------------------------------------" << endl
@@ -57,7 +57,7 @@ int main( int argc, char* argv[])
 
     uchar table[256];
     for (int i = 0; i < 256; ++i)
-       table[i] = divideWith* (i/divideWith);
+       table[i] = (uchar)(divideWith * (i/divideWith));
 
     const int times = 100;
     double t;

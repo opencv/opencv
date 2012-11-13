@@ -16,7 +16,7 @@ using namespace std;
 /**
  * @function main
  */
-int main( int argc, char** argv )
+int main( void )
 {
   /// Create an image
   const int r = 100;
@@ -25,12 +25,12 @@ int main( int argc, char** argv )
   /// Create a sequence of points to make a contour:
   vector<Point2f> vert(6);
 
-  vert[0] = Point( 1.5*r, 1.34*r );
+  vert[0] = Point( 3*r/2, static_cast<int>(1.34*r) );
   vert[1] = Point( 1*r, 2*r );
-  vert[2] = Point( 1.5*r, 2.866*r );
-  vert[3] = Point( 2.5*r, 2.866*r );
+  vert[2] = Point( 3*r/2, static_cast<int>(2.866*r) );
+  vert[3] = Point( 5*r/2, static_cast<int>(2.866*r) );
   vert[4] = Point( 3*r, 2*r );
-  vert[5] = Point( 2.5*r, 1.34*r );
+  vert[5] = Point( 5*r/2, static_cast<int>(1.34*r) );
 
   /// Draw it in src
   for( int j = 0; j < 6; j++ )
@@ -47,7 +47,7 @@ int main( int argc, char** argv )
 
   for( int j = 0; j < src.rows; j++ )
      { for( int i = 0; i < src.cols; i++ )
-          { raw_dist.at<float>(j,i) = pointPolygonTest( contours[0], Point2f(i,j), true ); }
+          { raw_dist.at<float>(j,i) = (float)pointPolygonTest( contours[0], Point2f((float)i,(float)j), true ); }
      }
 
   double minVal; double maxVal;
@@ -61,16 +61,16 @@ int main( int argc, char** argv )
      { for( int i = 0; i < src.cols; i++ )
           {
             if( raw_dist.at<float>(j,i) < 0 )
-              { drawing.at<Vec3b>(j,i)[0] = 255 - (int) abs(raw_dist.at<float>(j,i))*255/minVal; }
+              { drawing.at<Vec3b>(j,i)[0] = (uchar)(255 - abs(raw_dist.at<float>(j,i))*255/minVal); }
             else if( raw_dist.at<float>(j,i) > 0 )
-              { drawing.at<Vec3b>(j,i)[2] = 255 - (int) raw_dist.at<float>(j,i)*255/maxVal; }
+              { drawing.at<Vec3b>(j,i)[2] = (uchar)(255 - raw_dist.at<float>(j,i)*255/maxVal); }
             else
               { drawing.at<Vec3b>(j,i)[0] = 255; drawing.at<Vec3b>(j,i)[1] = 255; drawing.at<Vec3b>(j,i)[2] = 255; }
           }
      }
 
   /// Create Window and show your results
-  char* source_window = "Source";
+  const char* source_window = "Source";
   namedWindow( source_window, CV_WINDOW_AUTOSIZE );
   imshow( source_window, src );
   namedWindow( "Distance", CV_WINDOW_AUTOSIZE );

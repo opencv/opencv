@@ -14,7 +14,7 @@ using namespace cv;
 /**
  * @function main
  */
-int main( int argc, char** argv )
+int main( int, char** argv )
 {
 
   Mat src, src_gray, dst;
@@ -22,9 +22,7 @@ int main( int argc, char** argv )
   int scale = 1;
   int delta = 0;
   int ddepth = CV_16S;
-  char* window_name = "Laplace Demo";
-
-  int c;
+  const char* window_name = "Laplace Demo";
 
   /// Load an image
   src = imread( argv[1] );

@@ -22,14 +22,14 @@ Mat src; Mat dst;
 char window_name[] = "Smoothing Demo";
 
 /// Function headers
-int display_caption( char* caption );
+int display_caption( const char* caption );
 int display_dst( int delay );
 
 
 /**
  * function main
  */
-int main( int argc, char** argv )
+int main( void )
 {
   namedWindow( window_name, CV_WINDOW_AUTOSIZE );
 
@@ -84,7 +84,7 @@ int main( int argc, char** argv )
 /**
  * @function display_caption
  */
-int display_caption( char* caption )
+int display_caption( const char* caption )
 {
   dst = Mat::zeros( src.size(), src.type() );
   putText( dst, caption,
