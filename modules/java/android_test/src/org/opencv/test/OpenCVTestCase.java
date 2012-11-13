@@ -175,6 +175,14 @@ public class OpenCVTestCase extends TestCase {
         super.tearDown();
     }
 
+    @Override
+    protected void runTest() throws Throwable {
+        // Do nothing if the precondition does not hold.
+        if (isTestCaseEnabled) {
+            super.runTest();
+        }
+    }
+
     protected Mat getMat(int type, double... vals)
     {
         return new Mat(matSize, matSize, type, new Scalar(vals));

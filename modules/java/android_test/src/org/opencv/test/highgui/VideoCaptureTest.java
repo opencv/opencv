@@ -25,10 +25,6 @@ public class VideoCaptureTest extends OpenCVTestCase {
     }
 
     public void testGet() {
-        if (!isTestCaseEnabled) {
-            fail("Not yet implemented");
-        }
-
         try {
             capture = new VideoCapture(Highgui.CV_CAP_ANDROID);
             double frameWidth = capture.get(Highgui.CV_CAP_PROP_FRAME_WIDTH);
@@ -39,10 +35,6 @@ public class VideoCaptureTest extends OpenCVTestCase {
     }
 
     public void testGetSupportedPreviewSizes() {
-        if (!isTestCaseEnabled) {
-            fail("Not yet implemented");
-        }
-
         try {
             capture = new VideoCapture(Highgui.CV_CAP_ANDROID);
             List<Size> sizes = capture.getSupportedPreviewSizes();
@@ -54,20 +46,12 @@ public class VideoCaptureTest extends OpenCVTestCase {
     }
 
     public void testGrab() {
-        if (!isTestCaseEnabled) {
-            fail("Not yet implemented");
-        }
-
         capture = new VideoCapture();
         isSucceed = capture.grab();
         assertFalse(isSucceed);
     }
 
     public void testGrabFromRealCamera() {
-        if (!isTestCaseEnabled) {
-            fail("Not yet implemented");
-        }
-
         try {
             capture = new VideoCapture(Highgui.CV_CAP_ANDROID);
             isSucceed = capture.grab();
@@ -78,19 +62,11 @@ public class VideoCaptureTest extends OpenCVTestCase {
     }
 
     public void testIsOpened() {
-        if (!isTestCaseEnabled) {
-            fail("Not yet implemented");
-        }
-
         capture = new VideoCapture();
         assertFalse(capture.isOpened());
     }
 
     public void testIsOpenedRealCamera() {
-        if (!isTestCaseEnabled) {
-            fail("Not yet implemented");
-        }
-
         try {
             capture = new VideoCapture(Highgui.CV_CAP_ANDROID);
             isOpened = capture.isOpened();
@@ -101,10 +77,6 @@ public class VideoCaptureTest extends OpenCVTestCase {
     }
 
     public void testOpen() {
-        if (!isTestCaseEnabled) {
-            fail("Not yet implemented");
-        }
-
         try {
             capture = new VideoCapture();
             capture.open(Highgui.CV_CAP_ANDROID);
@@ -116,10 +88,6 @@ public class VideoCaptureTest extends OpenCVTestCase {
     }
 
     public void testRead() {
-        if (!isTestCaseEnabled) {
-            fail("Not yet implemented");
-        }
-
         try {
             capture = new VideoCapture(Highgui.CV_CAP_ANDROID);
             isSucceed = capture.read(dst);
@@ -132,10 +100,6 @@ public class VideoCaptureTest extends OpenCVTestCase {
     }
 
     public void testRelease() {
-        if (!isTestCaseEnabled) {
-            fail("Not yet implemented");
-        }
-
         try {
             capture = new VideoCapture(Highgui.CV_CAP_ANDROID);
             capture.release();
@@ -147,10 +111,6 @@ public class VideoCaptureTest extends OpenCVTestCase {
     }
 
     public void testRetrieveMat() {
-        if (!isTestCaseEnabled) {
-            fail("Not yet implemented");
-        }
-
         try {
             capture = new VideoCapture(Highgui.CV_CAP_ANDROID);
             capture.grab();
@@ -164,10 +124,6 @@ public class VideoCaptureTest extends OpenCVTestCase {
     }
 
     public void testRetrieveMatInt() {
-        if (!isTestCaseEnabled) {
-            fail("Not yet implemented");
-        }
-
         try {
             capture = new VideoCapture(Highgui.CV_CAP_ANDROID);
             capture.grab();
@@ -181,10 +137,6 @@ public class VideoCaptureTest extends OpenCVTestCase {
     }
 
     public void testSet() {
-        if (!isTestCaseEnabled) {
-            fail("Not yet implemented");
-        }
-
         try {
             capture = new VideoCapture(Highgui.CV_CAP_ANDROID);
             capture.set(Highgui.CV_CAP_PROP_FRAME_WIDTH, 640);
@@ -205,10 +157,6 @@ public class VideoCaptureTest extends OpenCVTestCase {
     }
 
     public void testVideoCaptureInt() {
-        if (!isTestCaseEnabled) {
-            fail("Not yet implemented");
-        }
-
         try {
             capture = new VideoCapture(Highgui.CV_CAP_ANDROID);
             assertNotNull(capture);
