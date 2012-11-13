@@ -23,8 +23,9 @@ import org.opencv.features2d.DMatch;
 import org.opencv.features2d.KeyPoint;
 import org.opencv.highgui.Highgui;
 
-public class OpenCVTestCase extends TestCase {
+import android.util.Log;
 
+public class OpenCVTestCase extends TestCase {
     //change to 'true' to unblock fail on fail("Not yet implemented")
     public static final boolean passNYI = true;
 
@@ -33,6 +34,8 @@ public class OpenCVTestCase extends TestCase {
     protected static final int matSize = 10;
     protected static final double EPS = 0.001;
     protected static final double weakEPS = 0.5;
+
+    private static final String TAG = "OpenCVTestCase";
 
     protected Mat dst;
     protected Mat truth;
@@ -180,6 +183,8 @@ public class OpenCVTestCase extends TestCase {
         // Do nothing if the precondition does not hold.
         if (isTestCaseEnabled) {
             super.runTest();
+        } else {
+            Log.e(TAG, "Test case \"" + this.getClass().getName() + "\" disabled!");
         }
     }
 
