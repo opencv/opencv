@@ -187,24 +187,31 @@ bool CvCaptureCAM_PvAPI::open( int index )
 
     if (PvCameraOpen(Camera.UID, ePvAccessMaster, &(Camera.Handle))==ePvErrSuccess)
     {
-
-        //Set Pixel Format to BRG24 to follow conventions
-        /*Errcode = PvAttrEnumSet(Camera.Handle, "PixelFormat", "Bgr24");
-        if (Errcode != ePvErrSuccess)
-        {
-            fprintf(stderr, "PvAPI: couldn't set PixelFormat to Bgr24\n");
-            return NULL;
-        }
-        */
         tPvUint32 frameWidth, frameHeight;
         unsigned long maxSize;
+
+    	// By Default, set the pixel format to Mono8.  This can be changed later
+    	// via calls to setProperty. Some colour cameras (i.e. the Manta line) have a default
+    	// image mode of Bayer8.
+
+    	if (PvAttrEnumSet(Camera.Handle, "PixelFormat", "Mono8") != ePvErrSuccess) {
+    		fprintf (stderr, "ERROR:  Cannot set default pixel format to Mono8\n");
+    		close();
+    		return false;
+    	}
+
         PvAttrUint32Get(Camera.Handle, "Width", &frameWidth);
         PvAttrUint32Get(Camera.Handle, "Height", &frameHeight);
 
+        // Determine the maximum packet size supported by the system (ethernet adapter)
+        // and then configure the camera to use this value.  If the system's NIC only supports
+        // an MTU of 1500 or lower, this will automatically configure an MTU of 1500.
+        // 8228 is the optimal size described by the API in order to enable jumbo frames
+
         maxSize = 8228;
-        //PvAttrUint32Get(Camera.Handle,"PacketSize",&maxSize);
-        if (PvCaptureAdjustPacketSize(Camera.Handle,maxSize)!=ePvErrSuccess)
+        if (PvCaptureAdjustPacketSize(Camera.Handle,maxSize)!=ePvErrSuccess) {
             return false;
+        }
 
         resizeCaptureFrame(frameWidth, frameHeight);
 
@@ -242,33 +249,43 @@ double CvCaptureCAM_PvAPI::getProperty( int property_id )
 
     switch ( property_id )
     {
+    //////////////////////////////////////////////////////////////////////////
     case CV_CAP_PROP_FRAME_WIDTH:
         PvAttrUint32Get(Camera.Handle, "Width", &nTemp);
         return (double)nTemp;
+    //////////////////////////////////////////////////////////////////////////
     case CV_CAP_PROP_FRAME_HEIGHT:
         PvAttrUint32Get(Camera.Handle, "Height", &nTemp);
         return (double)nTemp;
+    //////////////////////////////////////////////////////////////////////////
     case CV_CAP_PROP_EXPOSURE:
-    PvAttrUint32Get(Camera.Handle,"ExposureValue",&nTemp);
-    return (double)nTemp;
+		PvAttrUint32Get(Camera.Handle,"ExposureValue",&nTemp);
+		return (double)nTemp;
+	//////////////////////////////////////////////////////////////////////////
     case CV_CAP_PROP_FPS:
-    tPvFloat32 nfTemp;
+    	tPvFloat32 nfTemp;
         PvAttrFloat32Get(Camera.Handle, "StatFrameRate", &nfTemp);
         return (double)nfTemp;
+    //////////////////////////////////////////////////////////////////////////
     case CV_CAP_PROP_PVAPI_MULTICASTIP:
-    char mEnable[2];
-    char mIp[11];
-    PvAttrEnumGet(Camera.Handle,"MulticastEnable",mEnable,sizeof(mEnable),NULL);
-    if (strcmp(mEnable, "Off") == 0) {
-        return -1;
-    }
-    else {
-        long int ip;
-        int a,b,c,d;
-        PvAttrStringGet(Camera.Handle, "MulticastIPAddress",mIp,sizeof(mIp),NULL);
-        sscanf(mIp, "%d.%d.%d.%d", &a, &b, &c, &d); ip = ((a*256 + b)*256 + c)*256 + d;
-        return (double)ip;
-    }
+		char mEnable[2];
+		char mIp[11];
+		PvAttrEnumGet(Camera.Handle,"MulticastEnable",mEnable,sizeof(mEnable),NULL);
+		if (strcmp(mEnable, "Off") == 0) {
+			return -1;
+		}
+		else {
+			long int ip;
+			int a,b,c,d;
+			PvAttrStringGet(Camera.Handle, "MulticastIPAddress",mIp,sizeof(mIp),NULL);
+			sscanf(mIp, "%d.%d.%d.%d", &a, &b, &c, &d); ip = ((a*256 + b)*256 + c)*256 + d;
+			return (double)ip;
+		}
+		break;
+	//////////////////////////////////////////////////////////////////////////
+    case CV_CAP_PROP_GAIN:
+    	PvAttrUint32Get(Camera.Handle, "GainValue", &nTemp);
+    	return (double)nTemp;
     }
     return -1.0;
 }
@@ -277,6 +294,7 @@ bool CvCaptureCAM_PvAPI::setProperty( int property_id, double value )
 {
     switch ( property_id )
     {
+    ///////////////////////////////////////////////////////////////////////////
     case CV_CAP_PROP_FRAME_WIDTH:
     {
     	tPvUint32 currHeight;
@@ -294,6 +312,7 @@ bool CvCaptureCAM_PvAPI::setProperty( int property_id, double value )
 
         break;
     }
+    ///////////////////////////////////////////////////////////////////////////
     case CV_CAP_PROP_FRAME_HEIGHT:
     {
     	tPvUint32 currWidth;
@@ -312,6 +331,7 @@ bool CvCaptureCAM_PvAPI::setProperty( int property_id, double value )
 
         break;
     }
+    ///////////////////////////////////////////////////////////////////////////
     case CV_CAP_PROP_MONOCROME:
         if (value==1) {
             char pixelFormat[256];
@@ -325,27 +345,45 @@ bool CvCaptureCAM_PvAPI::setProperty( int property_id, double value )
         else
             monocrome=false;
         break;
+    ///////////////////////////////////////////////////////////////////////////
     case CV_CAP_PROP_EXPOSURE:
         if ((PvAttrUint32Set(Camera.Handle,"ExposureValue",(tPvUint32)value)==ePvErrSuccess))
         break;
         else
         return false;
+    ///////////////////////////////////////////////////////////////////////////
     case CV_CAP_PROP_PVAPI_MULTICASTIP:
 
-            if (value==-1) {
-        if ((PvAttrEnumSet(Camera.Handle,"MulticastEnable", "Off")==ePvErrSuccess))
-            break;
+    	if (value==-1)
+    	{
+			if ((PvAttrEnumSet(Camera.Handle,"MulticastEnable", "Off")==ePvErrSuccess))
+				break;
+			else
+				return false;
+		}
         else
-            return false;
+        {
+			std::string ip=cv::format("%d.%d.%d.%d", ((int)value>>24)&255, ((int)value>>16)&255, ((int)value>>8)&255, (int)value&255);
+			if ((PvAttrEnumSet(Camera.Handle,"MulticastEnable", "On")==ePvErrSuccess) &&
+				(PvAttrStringSet(Camera.Handle, "MulticastIPAddress", ip.c_str())==ePvErrSuccess))
+				break;
+			else
+				return false;
         }
-        else {
-        std::string ip=cv::format("%d.%d.%d.%d", ((int)value>>24)&255, ((int)value>>16)&255, ((int)value>>8)&255, (int)value&255);
-        if ((PvAttrEnumSet(Camera.Handle,"MulticastEnable", "On")==ePvErrSuccess) &&
-        (PvAttrStringSet(Camera.Handle, "MulticastIPAddress", ip.c_str())==ePvErrSuccess))
-            break;
-        else
-            return false;
-        }
+    //////////////////////////////////////////////////////////////////////////
+    case CV_CAP_PROP_GAIN:
+    	if ((value < 0) || (value > 31))
+    	{
+    		return false;
+    	}
+
+    	if (PvAttrUint32Set(Camera.Handle,"GainValue",(tPvUint32)value)!=ePvErrSuccess)
+    	{
+    		return false;
+    	}
+
+    	break;
+    //////////////////////////////////////////////////////////////////////////
     default:
         return false;
     }
@@ -414,11 +452,11 @@ bool CvCaptureCAM_PvAPI::resizeCaptureFrame (int frameWidth, int frameHeight)
     }
 
     // Cap out of bounds widths to the max supported by the sensor
-    if ((frameWidth < 0) || (frameWidth > sensorWidth)) {
+    if ((frameWidth < 0) || ((tPvUint32)frameWidth > sensorWidth)) {
     	frameWidth = sensorWidth;
     }
 
-    if ((frameHeight < 0) || (frameHeight > sensorHeight)) {
+    if ((frameHeight < 0) || ((tPvUint32)frameHeight > sensorHeight)) {
     	frameHeight = sensorHeight;
     }
 
