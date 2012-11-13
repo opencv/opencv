@@ -14,8 +14,8 @@ using namespace cv;
 
 /// Global Variables
 Mat img; Mat templ; Mat result;
-char* image_window = "Source Image";
-char* result_window = "Result window";
+const char* image_window = "Source Image";
+const char* result_window = "Result window";
 
 int match_method;
 int max_Trackbar = 5;
@@ -26,7 +26,7 @@ void MatchingMethod( int, void* );
 /**
  * @function main
  */
-int main( int argc, char** argv )
+int main( int, char** argv )
 {
   /// Load image and template
   img = imread( argv[1], 1 );
@@ -37,7 +37,7 @@ int main( int argc, char** argv )
   namedWindow( result_window, CV_WINDOW_AUTOSIZE );
 
   /// Create Trackbar
-  char* trackbar_label = "Method: \n 0: SQDIFF \n 1: SQDIFF NORMED \n 2: TM CCORR \n 3: TM CCORR NORMED \n 4: TM COEFF \n 5: TM COEFF NORMED";
+  const char* trackbar_label = "Method: \n 0: SQDIFF \n 1: SQDIFF NORMED \n 2: TM CCORR \n 3: TM CCORR NORMED \n 4: TM COEFF \n 5: TM COEFF NORMED";
   createTrackbar( trackbar_label, image_window, &match_method, max_Trackbar, MatchingMethod );
 
   MatchingMethod( 0, 0 );

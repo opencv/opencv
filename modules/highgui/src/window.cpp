@@ -571,6 +571,56 @@ int cv::createButton(const string& button_name, ButtonCallback on_change, void* 
     return cvCreateButton(button_name.c_str(), on_change, userdata, button_type , initial_button_state );
 }
 
+#else
+
+CvFont cv::fontQt(const string&, int, Scalar, int,  int, int)
+{
+    CV_Error(CV_StsNotImplemented, "The library is compiled without QT support");
+    return CvFont();
+}
+
+void cv::addText( const Mat&, const string&, Point, CvFont)
+{
+    CV_Error(CV_StsNotImplemented, "The library is compiled without QT support");
+}
+
+void cv::displayStatusBar(const string&,  const string&, int)
+{
+    CV_Error(CV_StsNotImplemented, "The library is compiled without QT support");
+}
+
+void cv::displayOverlay(const string&,  const string&, int )
+{
+    CV_Error(CV_StsNotImplemented, "The library is compiled without QT support");
+}
+
+int cv::startLoop(int (*)(int argc, char *argv[]), int , char**)
+{
+    CV_Error(CV_StsNotImplemented, "The library is compiled without QT support");
+    return 0;
+}
+
+void cv::stopLoop()
+{
+    CV_Error(CV_StsNotImplemented, "The library is compiled without QT support");
+}
+
+void cv::saveWindowParameters(const string&)
+{
+    CV_Error(CV_StsNotImplemented, "The library is compiled without QT support");
+}
+
+void cv::loadWindowParameters(const string&)
+{
+    CV_Error(CV_StsNotImplemented, "The library is compiled without QT support");
+}
+
+int cv::createButton(const string&, ButtonCallback, void*, int , bool )
+{
+    CV_Error(CV_StsNotImplemented, "The library is compiled without QT support");
+    return 0;
+}
+
 #endif
 
 #if   defined WIN32 || defined _WIN32         // see window_w32.cpp

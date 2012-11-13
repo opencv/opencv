@@ -13,14 +13,14 @@ using namespace cv;
 using namespace std;
 
 /// Global variables
-char* source_window = "Source image";
-char* warp_window = "Warp";
-char* warp_rotate_window = "Warp + Rotate";
+const char* source_window = "Source image";
+const char* warp_window = "Warp";
+const char* warp_rotate_window = "Warp + Rotate";
 
 /**
  * @function main
  */
-int main( int argc, char** argv )
+int main( int, char** argv )
 {
   Point2f srcTri[3];
   Point2f dstTri[3];
@@ -37,12 +37,12 @@ int main( int argc, char** argv )
 
   /// Set your 3 points to calculate the  Affine Transform
   srcTri[0] = Point2f( 0,0 );
-  srcTri[1] = Point2f( src.cols - 1, 0 );
-  srcTri[2] = Point2f( 0, src.rows - 1 );
+  srcTri[1] = Point2f( src.cols - 1.f, 0 );
+  srcTri[2] = Point2f( 0, src.rows - 1.f );
 
-  dstTri[0] = Point2f( src.cols*0.0, src.rows*0.33 );
-  dstTri[1] = Point2f( src.cols*0.85, src.rows*0.25 );
-  dstTri[2] = Point2f( src.cols*0.15, src.rows*0.7 );
+  dstTri[0] = Point2f( src.cols*0.0f, src.rows*0.33f );
+  dstTri[1] = Point2f( src.cols*0.85f, src.rows*0.25f );
+  dstTri[2] = Point2f( src.cols*0.15f, src.rows*0.7f );
 
   /// Get the Affine Transform
   warp_mat = getAffineTransform( srcTri, dstTri );

@@ -17,7 +17,7 @@ Mat src; Mat hsv;
 Mat mask;
 
 int lo = 20; int up = 20;
-char* window_image = "Source image";
+const char* window_image = "Source image";
 
 /// Function Headers
 void Hist_and_Backproj( );
@@ -26,7 +26,7 @@ void pickPoint (int event, int x, int y, int, void* );
 /**
  * @function main
  */
-int main( int argc, char** argv )
+int main( int, char** argv )
 {
   /// Read the image
   src = imread( argv[1], 1 );

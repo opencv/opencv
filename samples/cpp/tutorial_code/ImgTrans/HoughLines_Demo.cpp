@@ -21,8 +21,8 @@ Mat standard_hough, probabilistic_hough;
 int min_threshold = 50;
 int max_trackbar = 150;
 
-char* standard_name = "Standard Hough Lines Demo";
-char* probabilistic_name = "Probabilistic Hough Lines Demo";
+const char* standard_name = "Standard Hough Lines Demo";
+const char* probabilistic_name = "Probabilistic Hough Lines Demo";
 
 int s_trackbar = max_trackbar;
 int p_trackbar = max_trackbar;
@@ -35,7 +35,7 @@ void Probabilistic_Hough( int, void* );
 /**
  * @function main
  */
-int main( int argc, char** argv )
+int main( int, char** argv )
 {
    /// Read the image
    src = imread( argv[1], 1 );
@@ -91,7 +91,7 @@ void Standard_Hough( int, void* )
   HoughLines( edges, s_lines, 1, CV_PI/180, min_threshold + s_trackbar, 0, 0 );
 
   /// Show the result
-  for( int i = 0; i < s_lines.size(); i++ )
+  for( size_t i = 0; i < s_lines.size(); i++ )
      {
       float r = s_lines[i][0], t = s_lines[i][1];
       double cos_t = cos(t), sin_t = sin(t);

@@ -118,7 +118,7 @@ int main(int argc, char* argv[]) {
         cv::Mat retinaOutput_magno;
 
         // processing loop with no stop condition
-        while(true)
+        for(;;)
         {
             // if using video stream, then, grabbing a new frame, else, input remains the same
             if (videoCapture.isOpened())

@@ -14,7 +14,7 @@ using namespace cv;
 /**
  * @function main
  */
-int main ( int argc, char** argv )
+int main ( int, char** argv )
 {
   /// Declare variables
   Mat src, dst;
@@ -24,7 +24,7 @@ int main ( int argc, char** argv )
   double delta;
   int ddepth;
   int kernel_size;
-  char* window_name = "filter2D Demo";
+  const char* window_name = "filter2D Demo";
 
   int c;
 
@@ -44,7 +44,7 @@ int main ( int argc, char** argv )
 
   /// Loop - Will filter the image with different kernel sizes each 0.5 seconds
   int ind = 0;
-  while( true )
+  for(;;)
        {
          c = waitKey(500);
          /// Press 'ESC' to exit the program

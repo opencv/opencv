@@ -16,13 +16,13 @@ Mat src, dst;
 int top, bottom, left, right;
 int borderType;
 Scalar value;
-char* window_name = "copyMakeBorder Demo";
+const char* window_name = "copyMakeBorder Demo";
 RNG rng(12345);
 
 /**
  * @function main
  */
-int main( int argc, char** argv )
+int main( int, char** argv )
 {
 
   int c;
@@ -31,8 +31,9 @@ int main( int argc, char** argv )
   src = imread( argv[1] );
 
   if( !src.data )
-    { return -1;
+    {
       printf(" No data entered, please enter the path to an image file \n");
+      return -1;
     }
 
   /// Brief how-to for this program
@@ -52,7 +53,7 @@ int main( int argc, char** argv )
 
   imshow( window_name, dst );
 
-  while( true )
+  for(;;)
        {
          c = waitKey(500);
 
