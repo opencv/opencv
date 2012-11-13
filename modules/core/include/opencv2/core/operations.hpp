@@ -3873,10 +3873,21 @@ template<typename _Tp> inline std::ostream& operator<<(std::ostream& out, const 
 template<typename _Tp, int n> inline std::ostream& operator<<(std::ostream& out, const Vec<_Tp, n>& vec)
 {
     out << "[";
-    for (int i = 0; i < n - 1; ++i) {
-        out << vec[i] << ", ";
+
+    if(Vec<_Tp, n>::depth < CV_32F)
+    {
+        for (int i = 0; i < n - 1; ++i) {
+            out << (int)vec[i] << ", ";
+        }
+        out << (int)vec[n-1] << "]";
     }
-    out << vec[n-1] << "]";
+    else
+    {
+        for (int i = 0; i < n - 1; ++i) {
+            out << vec[i] << ", ";
+        }
+        out << vec[n-1] << "]";
+    }
 
     return out;
 }
