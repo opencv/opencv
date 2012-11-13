@@ -55,7 +55,7 @@ static Vec3b computeColor(float fx, float fy)
     }
 
     const float rad = sqrt(fx * fx + fy * fy);
-    const float a = atan2(-fy, -fx) / CV_PI;
+    const float a = atan2(-fy, -fx) / (float)CV_PI;
 
     const float fk = (a + 1.0f) / 2.0f * (NCOLS - 1);
     const int k0 = static_cast<int>(fk);
@@ -66,8 +66,8 @@ static Vec3b computeColor(float fx, float fy)
 
     for (int b = 0; b < 3; b++)
     {
-        const float col0 = colorWheel[k0][b] / 255.0;
-        const float col1 = colorWheel[k1][b] / 255.0;
+        const float col0 = colorWheel[k0][b] / 255.f;
+        const float col1 = colorWheel[k1][b] / 255.f;
 
         float col = (1 - f) * col0 + f * col1;
 
@@ -76,7 +76,7 @@ static Vec3b computeColor(float fx, float fy)
         else
             col *= .75; // out of range
 
-        pix[2 - b] = static_cast<int>(255.0 * col);
+        pix[2 - b] = static_cast<uchar>(255.f * col);
     }
 
     return pix;
@@ -175,7 +175,7 @@ int main(int argc, const char* argv[])
     Mat_<Point2f> flow;
     OpticalFlowDual_TVL1 tvl1;
 
-    const double start = getTickCount();
+    const double start = (double)getTickCount();
     tvl1(frame0, frame1, flow);
     const double timeSec = (getTickCount() - start) / getTickFrequency();
     cout << "calcOpticalFlowDual_TVL1 : " << timeSec << " sec" << endl;
