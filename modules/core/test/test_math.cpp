@@ -2421,7 +2421,7 @@ protected:
         }
 
         Mat diff = abs(anglesInDegrees - resInDeg);
-        int errDegCount = diff.total() - countNonZero((diff < maxAngleDiff) | ((360 - diff) < maxAngleDiff));
+        size_t errDegCount = diff.total() - countNonZero((diff < maxAngleDiff) | ((360 - diff) < maxAngleDiff));
         if(errDegCount > 0)
         {
             ts->printf(cvtest::TS::LOG, "There are incorrect result angles (in degrees) (part of them is %f)\n",
