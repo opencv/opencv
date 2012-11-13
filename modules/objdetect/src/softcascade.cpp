@@ -232,7 +232,7 @@ struct cv::SCascade::Fields
         float detectionScore = 0.f;
 
         const Octave& octave = *(level.octave);
-        int stBegin = octave.index * octave.stages, stEnd = stBegin + 1024;//octave.stages;
+        int stBegin = octave.index * octave.stages, stEnd = stBegin + octave.stages;
 
         int st = stBegin;
         for(; st < stEnd; ++st)
@@ -270,7 +270,8 @@ struct cv::SCascade::Fields
             if (detectionScore <= stage.threshold) return;
         }
 
-        level.addDetection(dx, dy, detectionScore, detections);
+        if (detectionScore > 0)
+            level.addDetection(dx, dy, detectionScore, detections);
     }
 
     octIt_t fitOctave(const float& logFactor)

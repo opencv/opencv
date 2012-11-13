@@ -66,7 +66,7 @@ TEST(SCascade, detect)
     std::vector<Detection> objects;
 
     cascade.detect(colored, cv::noArray(), objects);
-    ASSERT_EQ((int)objects.size(), 3498);
+    ASSERT_EQ(1459, (int)objects.size());
 }
 
 TEST(SCascade, detectSeparate)
@@ -83,7 +83,7 @@ TEST(SCascade, detectSeparate)
     cv::Mat rects, confs;
 
     cascade.detect(colored, cv::noArray(), rects, confs);
-    ASSERT_EQ(confs.cols, 3498);
+    ASSERT_EQ(1459, confs.cols);
 }
 
 TEST(SCascade, detectRoi)
@@ -102,7 +102,7 @@ TEST(SCascade, detectRoi)
     rois.push_back(cv::Rect(0, 0, 640, 480));
 
     cascade.detect(colored, rois, objects);
-    ASSERT_EQ((int)objects.size(), 3498);
+    ASSERT_EQ(1459, (int)objects.size());
 }
 
 TEST(SCascade, detectNoRoi)
@@ -121,5 +121,5 @@ TEST(SCascade, detectNoRoi)
 
     cascade.detect(colored, rois, objects);
 
-    ASSERT_EQ((int)objects.size(), 0);
+    ASSERT_EQ(0, (int)objects.size());
 }
