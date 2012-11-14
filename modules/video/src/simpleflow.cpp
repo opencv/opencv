@@ -447,7 +447,7 @@ static void extrapolateFlow(Mat& flow,
   }
 }
 
-static void buildPyramidWithResizeMethod(Mat& src,
+static void buildPyramidWithResizeMethod(const Mat& src,
                                   vector<Mat>& pyramid,
                                   int layers,
                                   int interpolation_type) {
@@ -464,9 +464,9 @@ static void buildPyramidWithResizeMethod(Mat& src,
   }
 }
 
-CV_EXPORTS_W void calcOpticalFlowSF(Mat& from,
-                                    Mat& to,
-                                    Mat& resulted_flow,
+CV_EXPORTS_W void calcOpticalFlowSF(InputArray _from,
+                                    InputArray _to,
+                                    OutputArray _resulted_flow,
                                     int layers,
                                     int averaging_radius,
                                     int max_flow,
@@ -479,7 +479,11 @@ CV_EXPORTS_W void calcOpticalFlowSF(Mat& from,
                                     int upscale_averaging_radius,
                                     double upscale_sigma_dist,
                                     double upscale_sigma_color,
-                                    double speed_up_thr) {
+                                    double speed_up_thr) 
+{
+  Mat from = _from.getMat();
+  Mat to = _to.getMat();
+
   vector<Mat> pyr_from_images;
   vector<Mat> pyr_to_images;
 
@@ -632,14 +636,15 @@ CV_EXPORTS_W void calcOpticalFlowSF(Mat& from,
 
   GaussianBlur(flow, flow, Size(3, 3), 5);
 
-  resulted_flow = Mat(flow.size(), CV_32FC2);
+  _resulted_flow.create(flow.size(), CV_32FC2);
+  Mat resulted_flow = _resulted_flow.getMat();
   int from_to[] = {0,1 , 1,0};
   mixChannels(&flow, 1, &resulted_flow, 1, from_to, 2);
 }
 
-CV_EXPORTS_W void calcOpticalFlowSF(Mat& from,
-                                    Mat& to,
-                                    Mat& flow,
+CV_EXPORTS_W void calcOpticalFlowSF(InputArray from,
+                                    InputArray to,
+                                    OutputArray flow,
                                     int layers,
                                     int averaging_block_size,
                                     int max_flow) {
