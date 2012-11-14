@@ -130,7 +130,7 @@ struct CascadeInvoker
 {
     CascadeInvoker(): levels(0), stages(0), nodes(0), leaves(0), scales(0) {}
 
-    CascadeInvoker(const PtrStepSzb& _levels, const PtrStepSzb& _octaves, const PtrStepSzf& _stages,
+    CascadeInvoker(const PtrStepSzb& _levels, const PtrStepSzf& _stages,
                    const PtrStepSzb& _nodes,  const PtrStepSzf& _leaves)
     : levels((const Level*)_levels.ptr()),
       stages((const float*)_stages.ptr()),

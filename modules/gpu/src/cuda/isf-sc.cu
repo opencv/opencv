@@ -181,6 +181,7 @@ __device void CascadeInvoker<Policy>::detect(Detection* objects, const uint ndet
     int st = level.octave * level.step;
     const int stEnd = st + level.step;
 
+    const int hogluvStep = gridDim.y * Policy::STA_Y;
     float confidence = 0.f;
     for(; st < stEnd; st += Policy::WARP)
     {
@@ -189,13 +190,13 @@ __device void CascadeInvoker<Policy>::detect(Detection* objects, const uint ndet
         Node node = nodes[nId];
 
         float threshold = rescale<isUp>(level, node);
-        int sum = get<isUp>(x, y + (node.threshold >> 28) * 120, node.rect);
+        int sum = get<isUp>(x, y + (node.threshold >> 28) * hogluvStep, node.rect);
 
         int next = 1 + (int)(sum >= threshold);
 
         node = nodes[nId + next];
         threshold = rescale<isUp>(level, node);
-        sum = get<isUp>(x, y + (node.threshold >> 28) * 120, node.rect);
+        sum = get<isUp>(x, y + (node.threshold >> 28) * hogluvStep, node.rect);
 
         const int lShift = (next - 1) * 2 + (int)(sum >= threshold);
         float impact = leaves[(st + threadIdx.x) * 4 + lShift];

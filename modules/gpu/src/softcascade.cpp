@@ -316,7 +316,7 @@ struct cv::gpu::SCascade::Fields
         cudaMemset(count.data, 0, sizeof(Detection));
         cudaSafeCall( cudaGetLastError());
         device::icf::CascadeInvoker<device::icf::GK107PolicyX4> invoker
-        = device::icf::CascadeInvoker<device::icf::GK107PolicyX4>(levels, octaves, stages, nodes, leaves);
+        = device::icf::CascadeInvoker<device::icf::GK107PolicyX4>(levels, stages, nodes, leaves);
         invoker(roi, hogluv, objects, count, downscales, stream);
     }
 
@@ -414,7 +414,7 @@ private:
     void integrate(const int fh, const int fw, Stream& s)
     {
         GpuMat channels(plane, cv::Rect(0, 0, fw, fh * Fields::HOG_LUV_BINS));
-        cv::gpu::resize(channels, shrunk, cv::Size(), 0.25, 0.25, CV_INTER_AREA, s);
+        cv::gpu::resize(channels, shrunk, cv::Size(), 1.f / shrinkage, 1.f / shrinkage, CV_INTER_AREA, s);
 
         if (info.majorVersion() < 3)
             cv::gpu::integralBuffered(shrunk, hogluv, integralBuffer, s);
@@ -518,7 +518,7 @@ void cv::gpu::SCascade::detect(InputArray image, InputArray _rois, OutputArray _
 
 
     GpuMat tmp = GpuMat(objects, cv::Rect(0, 0, sizeof(Detection), 1));
-    objects = GpuMat(objects, cv::Rect( sizeof(Detection), 0, objects.cols -  sizeof(Detection), 1));
+    objects = GpuMat(objects, cv::Rect( sizeof(Detection), 0, objects.cols - sizeof(Detection), 1));
     cudaStream_t stream = StreamAccessor::getStream(s);
 
     flds.detect(rois, tmp, objects, stream);
@@ -527,13 +527,14 @@ void cv::gpu::SCascade::detect(InputArray image, InputArray _rois, OutputArray _
 void cv::gpu::SCascade::genRoi(InputArray _roi, OutputArray _mask, Stream& stream) const
 {
     CV_Assert(fields);
+    int shr = (*fields).shrinkage;
 
     const GpuMat roi = _roi.getGpuMat();
-    _mask.create( roi.cols / 4, roi.rows / 4, roi.type() );
+    _mask.create( roi.cols / shr, roi.rows / shr, roi.type() );
     GpuMat mask = _mask.getGpuMat();
     cv::gpu::GpuMat tmp;
 
-    cv::gpu::resize(roi, tmp, cv::Size(), 0.25, 0.25, CV_INTER_AREA, stream);
+    cv::gpu::resize(roi, tmp, cv::Size(), 1.f / shr, 1.f / shr, CV_INTER_AREA, stream);
     cv::gpu::transpose(tmp, mask, stream);
 }
 
