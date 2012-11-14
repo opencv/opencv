@@ -601,17 +601,15 @@ calcOpticalFlowSF
 -----------------
 Calculate an optical flow using "SimpleFlow" algorithm.
 
-.. ocv:function:: void calcOpticalFlowSF( Mat& from, Mat& to, Mat& flow, int layers, int averaging_block_size, int max_flow )
+.. ocv:function:: void calcOpticalFlowSF( InputArray from, InputArray to, OutputArray flow, int layers, int averaging_block_size, int max_flow )
 
-.. ocv:function:: calcOpticalFlowSF( Mat& from, Mat& to, Mat& flow, int layers, int averaging_block_size, int max_flow, double sigma_dist, double sigma_color, int postprocess_window, double sigma_dist_fix, double sigma_color_fix, double occ_thr, int upscale_averaging_radius, double upscale_sigma_dist, double upscale_sigma_color, double speed_up_thr )
+.. ocv:function:: calcOpticalFlowSF( InputArray from, InputArray to, OutputArray flow, int layers, int averaging_block_size, int max_flow, double sigma_dist, double sigma_color, int postprocess_window, double sigma_dist_fix, double sigma_color_fix, double occ_thr, int upscale_averaging_radius, double upscale_sigma_dist, double upscale_sigma_color, double speed_up_thr )
 
     :param prev: First 8-bit 3-channel image.
 
-    :param next: Second 8-bit 3-channel image
+    :param next: Second 8-bit 3-channel image of the same size as ``prev``
 
-    :param flowX: X-coordinate of estimated flow
-
-    :param flowY: Y-coordinate of estimated flow
+    :param flow: computed flow image that has the same size as ``prev`` and type ``CV_32FC2`` 
 
     :param layers: Number of layers
 
@@ -631,7 +629,7 @@ Calculate an optical flow using "SimpleFlow" algorithm.
 
     :param occ_thr: threshold for detecting occlusions
 
-    :param upscale_averaging_radiud: window size for bilateral upscale operation
+    :param upscale_averaging_radius: window size for bilateral upscale operation
 
     :param upscale_sigma_dist: spatial sigma for bilateral upscale operation
 
