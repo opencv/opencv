@@ -464,12 +464,16 @@ static int LockCallBack(void **mutex, AVLockOp op)
     return 0;
 }
 
+static Mutex m;
+
 class InternalFFMpegRegister
 {
 public:
     static void Register()
     {
+        m.lock();
         static InternalFFMpegRegister init;
+        m.unlock();
     }
 
     ~InternalFFMpegRegister()
