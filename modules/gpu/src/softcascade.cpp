@@ -298,14 +298,14 @@ struct cv::gpu::SCascade::Fields
         leaves.upload(hleaves);
         levels.upload(hlevels);
 
-        invoker = device::icf::CascadeInvoker<device::icf::GK107PolicyX4>(levels, octaves, stages, nodes, leaves);
-
     }
 
     void detect(int scale, const cv::gpu::GpuMat& roi, const cv::gpu::GpuMat& count, cv::gpu::GpuMat& objects, const cudaStream_t& stream) const
     {
         cudaMemset(count.data, 0, sizeof(Detection));
         cudaSafeCall( cudaGetLastError());
+        device::icf::CascadeInvoker<device::icf::GK107PolicyX4> invoker
+        = device::icf::CascadeInvoker<device::icf::GK107PolicyX4>(levels, octaves, stages, nodes, leaves);
         invoker(roi, hogluv, objects, count, downscales, scale, stream);
     }
 
@@ -407,8 +407,14 @@ private:
 
         GpuMat channels(plane, cv::Rect(0, 0, fw, fh * Fields::HOG_LUV_BINS));
         cv::gpu::resize(channels, shrunk, cv::Size(), 0.25, 0.25, CV_INTER_AREA, s);
-        cudaStream_t stream = StreamAccessor::getStream(s);
-        device::imgproc::shfl_integral_gpu_buffered(shrunk, integralBuffer, hogluv, 12, stream);
+
+        if (info.majorVersion() < 3)
+            cv::gpu::integralBuffered(shrunk, hogluv, integralBuffer, s);
+        else
+        {
+            cudaStream_t stream = StreamAccessor::getStream(s);
+            device::imgproc::shfl_integral_gpu_buffered(shrunk, integralBuffer, hogluv, 12, stream);
+        }
     }
 
 public:
@@ -452,7 +458,7 @@ public:
 
     GpuMat sobelBuf;
 
-    device::icf::CascadeInvoker<device::icf::GK107PolicyX4> invoker;
+    DeviceInfo info;
 
     enum { BOOST = 0 };
     enum
