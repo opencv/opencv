@@ -256,8 +256,8 @@ template<typename Policy>
 void CascadeInvoker<Policy>::operator()(const PtrStepSzb& roi, const PtrStepSzi& hogluv,
     PtrStepSz<uchar4> objects, PtrStepSzi counter, const int downscales, const int scale, const cudaStream_t& stream) const
 {
-    int fw = 160;
-    int fh = 120;
+    int fw = roi.rows;
+    int fh = roi.cols;
 
     dim3 grid(fw, fh / Policy::STA_Y, (scale == -1) ? downscales : 1);
 

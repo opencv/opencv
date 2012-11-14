@@ -240,15 +240,26 @@ struct cv::gpu::SCascade::Fields
         cv::Mat hleaves(cv::Mat(vleaves).reshape(1,1));
         CV_Assert(!hleaves.empty());
 
-        std::vector<Level> vlevels;
-        float logFactor = (::log(maxs) - ::log(mins)) / (totals -1);
+        Fields* fields = new Fields(mins, maxs, totals, origWidth, origHeight, shrinkage, 0,
+            hoctaves, hstages, hnodes, hleaves);
+        fields->voctaves = voctaves;
+        fields->createLevels(FRAME_HEIGHT, FRAME_WIDTH);
 
-        float scale = mins;
-        int downscales = 0;
+        return fields;
+    }
+
+    int createLevels(const int fh, const int fw)
+    {
+        using namespace device::icf;
+        std::vector<Level> vlevels;
+        float logFactor = (::log(maxScale) - ::log(minScale)) / (totals -1);
+
+        float scale = minScale;
+        int dcs = 0;
         for (int sc = 0; sc < totals; ++sc)
         {
-            int width  = ::std::max(0.0f, FRAME_WIDTH - (origWidth  * scale));
-            int height = ::std::max(0.0f, FRAME_HEIGHT - (origHeight * scale));
+            int width  = ::std::max(0.0f, fw - (origObjWidth  * scale));
+            int height = ::std::max(0.0f, fh - (origObjHeight * scale));
 
             float logScale = ::log(scale);
             int fit = fitOctave(voctaves, logScale);
@@ -260,44 +271,44 @@ struct cv::gpu::SCascade::Fields
             else
             {
                 vlevels.push_back(level);
-                if (voctaves[fit].scale < 1) ++downscales;
+                if (voctaves[fit].scale < 1) ++dcs;
             }
 
-            if (::fabs(scale - maxs) < FLT_EPSILON) break;
-            scale = ::std::min(maxs, ::expf(::log(scale) + logFactor));
+            if (::fabs(scale - maxScale) < FLT_EPSILON) break;
+            scale = ::std::min(maxScale, ::expf(::log(scale) + logFactor));
         }
 
-        cv::Mat hlevels(1, vlevels.size() * sizeof(Level), CV_8UC1, (uchar*)&(vlevels[0]) );
+        cv::Mat hlevels = cv::Mat(1, vlevels.size() * sizeof(Level), CV_8UC1, (uchar*)&(vlevels[0]) );
         CV_Assert(!hlevels.empty());
-
-        Fields* fields = new Fields(mins, maxs, origWidth, origHeight, shrinkage, downscales,
-            hoctaves, hstages, hnodes, hleaves, hlevels);
-
-        return fields;
+        levels.upload(hlevels);
+        downscales = dcs;
+        return dcs;
     }
 
-    Fields( const float mins, const float maxs, const int ow, const int oh, const int shr, const int ds,
-        cv::Mat hoctaves, cv::Mat hstages, cv::Mat hnodes, cv::Mat hleaves, cv::Mat hlevels)
-    : minScale(mins), maxScale(maxs), origObjWidth(ow), origObjHeight(oh), shrinkage(shr), downscales(ds)
+    bool update(int fh, int fw, int shr)
     {
-        plane.create(FRAME_HEIGHT * (HOG_LUV_BINS + 1), FRAME_WIDTH, CV_8UC1);
-        fplane.create(FRAME_HEIGHT * 6, FRAME_WIDTH, CV_32FC1);
-        luv.create(FRAME_HEIGHT, FRAME_WIDTH, CV_8UC3);
+        if (fh == luv.rows && fh == luv.cols) return false;
+        plane.create(fh * (HOG_LUV_BINS + 1), fw, CV_8UC1);
+        fplane.create(fh * HOG_BINS, fw, CV_32FC1);
+        luv.create(fh, fw, CV_8UC3);
 
-        shrunk.create(FRAME_HEIGHT / shr * HOG_LUV_BINS, FRAME_WIDTH / shr, CV_8UC1);
+        shrunk.create(fh / shr * HOG_LUV_BINS, fw / shr, CV_8UC1);
         integralBuffer.create(shrunk.rows, shrunk.cols, CV_32SC1);
 
-        hogluv.create((FRAME_HEIGHT / shr) * HOG_LUV_BINS + 1, FRAME_WIDTH / shr + 1, CV_32SC1);
+        hogluv.create((fh / shr) * HOG_LUV_BINS + 1, fw / shr + 1, CV_32SC1);
         hogluv.setTo(cv::Scalar::all(0));
+        return true;
+    }
 
-        detCounter.create(sizeof(Detection) / sizeof(int),1, CV_32SC1);
-
+    Fields( const float mins, const float maxs, const int tts, const int ow, const int oh, const int shr, const int ds,
+        cv::Mat hoctaves, cv::Mat hstages, cv::Mat hnodes, cv::Mat hleaves)
+    : minScale(mins), maxScale(maxs), totals(tts), origObjWidth(ow), origObjHeight(oh), shrinkage(shr), downscales(ds)
+    {
+        update(FRAME_HEIGHT, FRAME_WIDTH, shr);
         octaves.upload(hoctaves);
         stages.upload(hstages);
         nodes.upload(hnodes);
         leaves.upload(hleaves);
-        levels.upload(hlevels);
-
     }
 
     void detect(int scale, const cv::gpu::GpuMat& roi, const cv::gpu::GpuMat& count, cv::gpu::GpuMat& objects, const cudaStream_t& stream) const
@@ -316,8 +327,8 @@ struct cv::gpu::SCascade::Fields
         else
             cudaMemset(plane.data, 0, plane.step * plane.rows);
 
-        static const int fw = Fields::FRAME_WIDTH;
-        static const int fh = Fields::FRAME_HEIGHT;
+        const int fw = colored.cols;
+        const int fh = colored.rows;
 
         GpuMat gray(plane, cv::Rect(0, fh * Fields::HOG_LUV_BINS, fw, fh));
         cv::gpu::cvtColor(colored, gray, CV_BGR2GRAY, s);
@@ -325,7 +336,7 @@ struct cv::gpu::SCascade::Fields
 
         createLuvBins(colored, s);
 
-        integrate(s);
+        integrate(fh, fw, s);
     }
 
 private:
@@ -352,8 +363,8 @@ private:
 
     void createHogBins(const cv::gpu::GpuMat& gray, Stream& s)
     {
-        static const int fw = Fields::FRAME_WIDTH;
-        static const int fh = Fields::FRAME_HEIGHT;
+        static const int fw = gray.cols;
+        static const int fh = gray.rows;
 
         GpuMat dfdx(fplane, cv::Rect(0,  0, fw, fh));
         GpuMat dfdy(fplane, cv::Rect(0, fh, fw, fh));
@@ -386,8 +397,8 @@ private:
 
     void createLuvBins(const cv::gpu::GpuMat& colored, Stream& s)
     {
-        static const int fw = Fields::FRAME_WIDTH;
-        static const int fh = Fields::FRAME_HEIGHT;
+        static const int fw = colored.cols;
+        static const int fh = colored.rows;
 
         cv::gpu::cvtColor(colored, luv, CV_BGR2Luv, s);
 
@@ -400,11 +411,8 @@ private:
         cv::gpu::split(luv, splited, s);
     }
 
-    void integrate( Stream& s)
+    void integrate(const int fh, const int fw, Stream& s)
     {
-        int fw = Fields::FRAME_WIDTH;
-        int fh = Fields::FRAME_HEIGHT;
-
         GpuMat channels(plane, cv::Rect(0, 0, fw, fh * Fields::HOG_LUV_BINS));
         cv::gpu::resize(channels, shrunk, cv::Size(), 0.25, 0.25, CV_INTER_AREA, s);
 
@@ -422,6 +430,8 @@ public:
     // scales range
     float minScale;
     float maxScale;
+
+    int totals;
 
     int origObjWidth;
     int origObjHeight;
@@ -447,8 +457,6 @@ public:
     // 161x121x10
     GpuMat hogluv;
 
-    GpuMat detCounter;
-
     // Cascade from xml
     GpuMat octaves;
     GpuMat stages;
@@ -457,6 +465,8 @@ public:
     GpuMat levels;
 
     GpuMat sobelBuf;
+
+    std::vector<device::icf::Octave> voctaves;
 
     DeviceInfo info;
 
@@ -488,6 +498,7 @@ void cv::gpu::SCascade::detect(InputArray image, InputArray _rois, OutputArray _
     CV_Assert(fields);
 
     const GpuMat colored = image.getGpuMat();
+
     // only color images are supperted
     CV_Assert(colored.type() == CV_8UC3 || colored.type() == CV_32SC1);
 
@@ -496,8 +507,8 @@ void cv::gpu::SCascade::detect(InputArray image, InputArray _rois, OutputArray _
 
     if (colored.type() == CV_8UC3)
     {
-        // only this window size allowed
-        CV_Assert(colored.cols == Fields::FRAME_WIDTH && colored.rows == Fields::FRAME_HEIGHT);
+        if (!flds.update(colored.rows, colored.cols, flds.shrinkage))
+            flds.createLevels(colored.rows, colored.cols);
         flds.preprocess(colored, s);
     }
     else
@@ -525,7 +536,7 @@ void cv::gpu::SCascade::detect(InputArray image, InputArray _rois, OutputArray _
     if (colored.type() == CV_8UC3)
     {
         // only this window size allowed
-        CV_Assert(colored.cols == Fields::FRAME_WIDTH && colored.rows == Fields::FRAME_HEIGHT);
+        // CV_Assert(colored.cols == Fields::FRAME_WIDTH && colored.rows == Fields::FRAME_HEIGHT);
         flds.preprocess(colored, s);
     }
     else
