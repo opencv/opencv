@@ -248,7 +248,6 @@ Implementation of soft (stageless) cascaded detector. ::
         virtual ~SCascade();
         virtual bool load(const FileNode& fn);
         virtual void detect(InputArray image, InputArray rois, OutputArray objects, Stream& stream = Stream::Null()) const;
-        virtual void detect(InputArray image, InputArray rois, OutputArray objects, const int level, Stream& stream = Stream::Null()) const;
         void genRoi(InputArray roi, OutputArray mask, Stream& stream = Stream::Null()) const;
     };
 
@@ -292,7 +291,6 @@ SCascade::detect
 Apply cascade to an input frame and return the vector of Decection objcts.
 
 .. ocv:function:: void detect(InputArray image, InputArray rois, OutputArray objects, Stream& stream = Stream::Null()) const
-.. ocv:function:: void detect(InputArray image, InputArray rois, OutputArray objects, const int level, Stream& stream = Stream::Null()) const
 
     :param image: a frame on which detector will be applied.
 
@@ -301,8 +299,6 @@ Apply cascade to an input frame and return the vector of Decection objcts.
     :param objects: an output array of Detections represented as GpuMat of detections (SCascade::Detection). The first element of the matrix is  actually a count of detections.
 
     :param stream: a high-level CUDA stream abstraction used for asynchronous execution.
-
-    :param level: used for execution cascade on specific scales pyramid level.
 
 
 SCascade::genRoi

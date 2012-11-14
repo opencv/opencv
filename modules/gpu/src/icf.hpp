@@ -118,9 +118,10 @@ struct __align__(16) Detection
 struct GK107PolicyX4
 {
     enum {WARP = 32, STA_X = WARP, STA_Y = 8, SHRINKAGE = 4};
+    typedef float2 roi_type;
     static const dim3 block()
     {
-        return dim3(GK107PolicyX4::STA_X, GK107PolicyX4::STA_Y);
+        return dim3(STA_X, STA_Y);
     }
 };
 
@@ -146,7 +147,7 @@ struct CascadeInvoker
     int scales;
 
     void operator()(const PtrStepSzb& roi, const PtrStepSzi& hogluv, PtrStepSz<uchar4> objects,
-        PtrStepSzi counter, const int downscales, const int csale = -1, const cudaStream_t& stream = 0) const;
+        PtrStepSzi counter, const int downscales, const cudaStream_t& stream = 0) const;
 
     template<bool isUp>
     __device void detect(Detection* objects, const uint ndetections, uint* ctr, const int downscales) const;

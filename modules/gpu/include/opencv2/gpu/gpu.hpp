@@ -1577,9 +1577,7 @@ public:
     // Param objects is an output array of Detections represented as GpuMat of detections (SCascade::Detection)
     //    The first element of the matrix is  actually a count of detections.
     // Param stream is stream is a high-level CUDA stream abstraction used for asynchronous execution
-    // Param level used for execution cascade on specific scales pyramid level.
     virtual void detect(InputArray image, InputArray rois, OutputArray objects, Stream& stream = Stream::Null()) const;
-    virtual void detect(InputArray image, InputArray rois, OutputArray objects, const int level, Stream& stream = Stream::Null()) const;
 
     // Convert ROI matrix into the suitable for detect method.
     // Param roi is an input matrix of the same size as the image.

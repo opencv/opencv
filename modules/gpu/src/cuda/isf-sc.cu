@@ -45,15 +45,6 @@
 #include <stdio.h>
 #include <float.h>
 
-// #define LOG_CUDA_CASCADE
-
-#if defined LOG_CUDA_CASCADE
-# define dprintf(format, ...) \
-            do { printf(format, __VA_ARGS__); } while (0)
-#else
-# define dprintf(format, ...)
-#endif
-
 namespace cv { namespace gpu { namespace device {
 namespace icf {
 
@@ -254,12 +245,12 @@ __global__ void soft_cascade(const CascadeInvoker<Policy> invoker, Detection* ob
 
 template<typename Policy>
 void CascadeInvoker<Policy>::operator()(const PtrStepSzb& roi, const PtrStepSzi& hogluv,
-    PtrStepSz<uchar4> objects, PtrStepSzi counter, const int downscales, const int scale, const cudaStream_t& stream) const
+    PtrStepSz<uchar4> objects, PtrStepSzi counter, const int downscales, const cudaStream_t& stream) const
 {
     int fw = roi.rows;
     int fh = roi.cols;
 
-    dim3 grid(fw, fh / Policy::STA_Y, (scale == -1) ? downscales : 1);
+    dim3 grid(fw, fh / Policy::STA_Y, downscales);
 
     uint* ctr = (uint*)(counter.ptr(0));
     Detection* det = (Detection*)objects.ptr();
@@ -268,26 +259,16 @@ void CascadeInvoker<Policy>::operator()(const PtrStepSzb& roi, const PtrStepSzi&
     cudaChannelFormatDesc desc = cudaCreateChannelDesc<int>();
     cudaSafeCall( cudaBindTexture2D(0, thogluv, hogluv.data, desc, hogluv.cols, hogluv.rows, hogluv.step));
 
-    cudaChannelFormatDesc desc_roi = cudaCreateChannelDesc<float2>();
-    cudaSafeCall( cudaBindTexture2D(0, troi, roi.data, desc_roi, roi.cols / 8, roi.rows, roi.step));
+    cudaChannelFormatDesc desc_roi = cudaCreateChannelDesc<typename Policy::roi_type>();
+    cudaSafeCall( cudaBindTexture2D(0, troi, roi.data, desc_roi, roi.cols / Policy::STA_Y, roi.rows, roi.step));
 
     const CascadeInvoker<Policy> inv = *this;
 
-    if (scale == -1)
-    {
-        soft_cascade<Policy, false><<<grid, Policy::block(), 0, stream>>>(inv, det, max_det, ctr, 0);
-        cudaSafeCall( cudaGetLastError());
+    soft_cascade<Policy, false><<<grid, Policy::block(), 0, stream>>>(inv, det, max_det, ctr, 0);
+    cudaSafeCall( cudaGetLastError());
 
-        grid = dim3(fw, fh / Policy::STA_Y, scales - downscales);
-        soft_cascade<Policy, true><<<grid, Policy::block(), 0, stream>>>(inv, det, max_det, ctr, downscales);
-    }
-    else
-    {
-        if (scale >= downscales)
-            soft_cascade<Policy, true><<<grid, Policy::block(), 0, stream>>>(inv, det, max_det, ctr, scale);
-        else
-            soft_cascade<Policy, false><<<grid, Policy::block(), 0, stream>>>(inv, det, max_det, ctr, scale);
-    }
+    grid = dim3(fw, fh / Policy::STA_Y, scales - downscales);
+    soft_cascade<Policy, true><<<grid, Policy::block(), 0, stream>>>(inv, det, max_det, ctr, downscales);
 
     if (!stream)
     {
@@ -297,7 +278,7 @@ void CascadeInvoker<Policy>::operator()(const PtrStepSzb& roi, const PtrStepSzi&
 }
 
 template void CascadeInvoker<GK107PolicyX4>::operator()(const PtrStepSzb& roi, const PtrStepSzi& hogluv,
-    PtrStepSz<uchar4> objects, PtrStepSzi counter, const int downscales, const int scale, const cudaStream_t& stream) const;
+    PtrStepSz<uchar4> objects, PtrStepSzi counter, const int downscales, const cudaStream_t& stream) const;
 
 }
 }}}

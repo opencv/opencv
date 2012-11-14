@@ -311,13 +311,13 @@ struct cv::gpu::SCascade::Fields
         leaves.upload(hleaves);
     }
 
-    void detect(int scale, const cv::gpu::GpuMat& roi, const cv::gpu::GpuMat& count, cv::gpu::GpuMat& objects, const cudaStream_t& stream) const
+    void detect(const cv::gpu::GpuMat& roi, const cv::gpu::GpuMat& count, cv::gpu::GpuMat& objects, const cudaStream_t& stream) const
     {
         cudaMemset(count.data, 0, sizeof(Detection));
         cudaSafeCall( cudaGetLastError());
         device::icf::CascadeInvoker<device::icf::GK107PolicyX4> invoker
         = device::icf::CascadeInvoker<device::icf::GK107PolicyX4>(levels, octaves, stages, nodes, leaves);
-        invoker(roi, hogluv, objects, count, downscales, scale, stream);
+        invoker(roi, hogluv, objects, count, downscales, stream);
     }
 
     void preprocess(const cv::gpu::GpuMat& colored, Stream& s)
@@ -521,36 +521,7 @@ void cv::gpu::SCascade::detect(InputArray image, InputArray _rois, OutputArray _
     objects = GpuMat(objects, cv::Rect( sizeof(Detection), 0, objects.cols -  sizeof(Detection), 1));
     cudaStream_t stream = StreamAccessor::getStream(s);
 
-    flds.detect(-1, rois, tmp, objects, stream);
-}
-
-void cv::gpu::SCascade::detect(InputArray image, InputArray _rois, OutputArray _objects, const int level, Stream& s) const
-{
-    CV_Assert(fields);
-
-    const GpuMat colored = image.getGpuMat();
-    // only color images are supperted
-    CV_Assert(colored.type() == CV_8UC3 || colored.type() == CV_32SC1);
-
-    Fields& flds = *fields;
-    if (colored.type() == CV_8UC3)
-    {
-        // only this window size allowed
-        // CV_Assert(colored.cols == Fields::FRAME_WIDTH && colored.rows == Fields::FRAME_HEIGHT);
-        flds.preprocess(colored, s);
-    }
-    else
-    {
-        colored.copyTo(flds.hogluv);
-    }
-
-    GpuMat rois = _rois.getGpuMat(), objects = _objects.getGpuMat();
-
-    GpuMat tmp = GpuMat(objects, cv::Rect(0, 0, sizeof(Detection), 1));
-    objects = GpuMat(objects, cv::Rect( sizeof(Detection), 0, objects.cols -  sizeof(Detection), 1));
-    cudaStream_t stream = StreamAccessor::getStream(s);
-
-    flds.detect(level, rois, tmp, objects, stream);
+    flds.detect(rois, tmp, objects, stream);
 }
 
 void cv::gpu::SCascade::genRoi(InputArray _roi, OutputArray _mask, Stream& stream) const
