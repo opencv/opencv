@@ -248,6 +248,17 @@ struct cv::gpu::SCascade::Fields
         return fields;
     }
 
+    bool check(float mins,float  maxs, int scales)
+    {
+        bool updated = (minScale == mins) || (maxScale == maxs) || (totals = scales);
+
+        minScale = mins;
+        maxScale = maxScale;
+        totals   = scales;
+
+        return updated;
+    }
+
     int createLevels(const int fh, const int fw)
     {
         using namespace device::icf;
@@ -509,7 +520,7 @@ void cv::gpu::SCascade::detect(InputArray image, InputArray _rois, OutputArray _
 
     if (colored.type() == CV_8UC3)
     {
-        if (!flds.update(colored.rows, colored.cols, flds.shrinkage))
+        if (!flds.update(colored.rows, colored.cols, flds.shrinkage) || flds.check(minScale, maxScale, scales))
             flds.createLevels(colored.rows, colored.cols);
         flds.preprocess(colored, s);
     }
