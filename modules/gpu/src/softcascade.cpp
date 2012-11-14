@@ -52,7 +52,6 @@ cv::gpu::SCascade::~SCascade() { throw_nogpu(); }
 bool cv::gpu::SCascade::load(const FileNode&) { throw_nogpu(); return false;}
 
 void cv::gpu::SCascade::detect(InputArray, InputArray, OutputArray, Stream&) const { throw_nogpu(); }
-void cv::gpu::SCascade::detect(InputArray, InputArray, OutputArray, const int, Stream&) const { throw_nogpu(); }
 
 void cv::gpu::SCascade::genRoi(InputArray, OutputArray, Stream&) const { throw_nogpu(); }
 
