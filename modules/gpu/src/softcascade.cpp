@@ -287,7 +287,8 @@ struct cv::gpu::SCascade::Fields
 
     bool update(int fh, int fw, int shr)
     {
-        if (fh == luv.rows && fh == luv.cols) return false;
+        if ((fh == luv.rows) && (fw == luv.cols)) return false;
+
         plane.create(fh * (HOG_LUV_BINS + 1), fw, CV_8UC1);
         fplane.create(fh * HOG_BINS, fw, CV_32FC1);
         luv.create(fh, fw, CV_8UC3);
@@ -297,6 +298,7 @@ struct cv::gpu::SCascade::Fields
 
         hogluv.create((fh / shr) * HOG_LUV_BINS + 1, fw / shr + 1, CV_32SC1);
         hogluv.setTo(cv::Scalar::all(0));
+
         return true;
     }
 
