@@ -388,7 +388,9 @@ namespace cv { namespace gpu { namespace device
 
                 if (tid < N / 2)
                 {
+                #if __CUDA_ARCH__ >= 200
                     #pragma unroll
+                #endif
                     for (unsigned int i = N / 2; i >= 1; i /= 2)
                         merge(skeys, key, svals, val, cmp, tid, i);
                 }
@@ -421,7 +423,9 @@ namespace cv { namespace gpu { namespace device
 
                 if (laneId < 16)
                 {
+                #if __CUDA_ARCH__ >= 200
                     #pragma unroll
+                #endif
                     for (int i = 16; i >= 1; i /= 2)
                         merge(skeys, key, svals, val, cmp, tid, i);
                 }
@@ -448,7 +452,9 @@ namespace cv { namespace gpu { namespace device
                     for (unsigned int i = M / 2; i >= 1; i /= 2)
                         mergeShfl(key, val, cml, i, M);
                 #else
+                #if __CUDA_ARCH__ >= 200
                     #pragma unroll
+                #endif
                     for (unsigned int i = M / 2; i >= 1; i /= 2)
                         merge(skeys, key, svals, val, cmp, tid, i);
                 #endif

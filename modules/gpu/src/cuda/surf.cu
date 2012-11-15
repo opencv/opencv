@@ -568,7 +568,9 @@ namespace cv { namespace gpu { namespace device
 
             float bestx = 0, besty = 0, best_mod = 0;
 
+        #if __CUDA_ARCH__ >= 200
             #pragma unroll
+        #endif
             for (int i = 0; i < 18; ++i)
             {
                 const int dir = (i * 4 + threadIdx.y) * ORI_SEARCH_INC;
