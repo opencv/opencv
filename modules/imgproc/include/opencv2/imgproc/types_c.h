@@ -310,7 +310,18 @@ enum
     CV_RGBA2mRGBA = 125,
     CV_mRGBA2RGBA = 126,
 
-    CV_COLORCVT_MAX  = 127
+    // Edge-Aware Demosaicing
+    CV_BayerBG2BGR_EA = 127,
+    CV_BayerGB2BGR_EA = 128,
+    CV_BayerRG2BGR_EA = 129,
+    CV_BayerGR2BGR_EA = 130,
+
+    CV_BayerBG2RGB_EA = CV_BayerRG2BGR_EA,
+    CV_BayerGB2RGB_EA = CV_BayerGR2BGR_EA,
+    CV_BayerRG2RGB_EA = CV_BayerBG2BGR_EA,
+    CV_BayerGR2RGB_EA = CV_BayerGB2BGR_EA,
+
+    CV_COLORCVT_MAX  = 131
 };
 
 

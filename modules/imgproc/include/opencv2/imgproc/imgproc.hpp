@@ -1048,7 +1048,18 @@ enum
     COLOR_RGBA2mRGBA = 125,
     COLOR_mRGBA2RGBA = 126,
 
-    COLOR_COLORCVT_MAX  = 127
+    // Edge-Aware Demosaicing
+    COLOR_BayerBG2BGR_EA = 127,
+    COLOR_BayerGB2BGR_EA = 128,
+    COLOR_BayerRG2BGR_EA = 129,
+    COLOR_BayerGR2BGR_EA = 130,
+
+    COLOR_BayerBG2RGB_EA = COLOR_BayerRG2BGR_EA,
+    COLOR_BayerGB2RGB_EA = COLOR_BayerGR2BGR_EA,
+    COLOR_BayerRG2RGB_EA = COLOR_BayerBG2BGR_EA,
+    COLOR_BayerGR2RGB_EA = COLOR_BayerGB2BGR_EA,
+
+    COLOR_COLORCVT_MAX  = 131
 };
 
 
@@ -1251,6 +1262,9 @@ protected:
     Point2f topLeft;
     Point2f bottomRight;
 };
+
+// main function for all demosaicing procceses
+CV_EXPORTS_W void demosaicing(InputArray _src, OutputArray _dst, int code, int dcn = 0);
 
 }
 

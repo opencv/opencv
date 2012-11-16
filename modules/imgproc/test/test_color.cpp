@@ -1826,6 +1826,8 @@ TEST(Imgproc_ColorBayerVNG_Strict, regression)
             continue;
         }
 
+        std::cout << reference(Rect(0, 0, 5, 5)) << std::endl << std::endl << std::endl;
+
         if (reference.depth() != dst.depth() || reference.channels() != dst.channels() ||
             reference.size() != dst.size())
         {
@@ -1925,7 +1927,6 @@ TEST(Imgproc_ColorLab_Full, accuracy)
 {
     Mat src;
     GetTestMatrix(src);
-    Mat reference(src.size(), CV_32FC3);
     Size ssize = src.size();
     CV_Assert(ssize.width == ssize.height);
 
@@ -1943,11 +1944,33 @@ TEST(Imgproc_ColorLab_Full, accuracy)
     cv::cvtColor(lab, recons, inverse_code);
 
     validate_result(src, recons, src, forward_code);
+}
 
-//    src *= 255.0f;
-//    recons *= 255.0f;
+TEST(ImgProc_EdgeAwareDemosaicing, accuracy)
+{
+    cvtest::TS* ts = cvtest::TS::ptr();
 
-//    imshow("Test", src);
-//    imshow("OpenCV", recons);
-//    waitKey();
+    /*
+    COLOR_BayerBG2BGR_EA = 127,
+    COLOR_BayerGB2BGR_EA = 128,
+    COLOR_BayerRG2BGR_EA = 129,
+    COLOR_BayerGR2BGR_EA = 130,
+    */
+
+    const char* types[] = { "bg", "gb", "rg", "gr" };
+    for (int i = 0; i < 4; ++i)
+    {
+        Mat bayer = imread(string(ts->get_data_path()) + "/cvtcolor/" + types[i] + ".jpg", CV_LOAD_IMAGE_GRAYSCALE);
+        CV_Assert(!bayer.empty());
+
+        Mat actual;
+        cv::demosaicing(bayer, actual, CV_BayerBG2BGR_EA + i);
+
+        EXPECT_EQ(actual.size(), bayer.size());
+        EXPECT_EQ(actual.channels(), 3);
+        EXPECT_EQ(actual.depth(), CV_8U);
+
+        imshow("Debayered image", actual);
+        waitKey();
+    }
 }
