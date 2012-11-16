@@ -328,11 +328,11 @@ void CvCapture_FFMPEG::close()
 #define AVSEEK_FLAG_ANY 1
 #endif
 
-class Mutex
+class ImplMutex
 {
 public:
-    Mutex();
-    ~Mutex();
+    ImplMutex();
+    ~ImplMutex();
 
     void lock();
     bool trylock();
@@ -343,13 +343,13 @@ protected:
     Impl* impl;
 
 private:
-    Mutex(const Mutex&);
-    Mutex& operator = (const Mutex& m);
+    ImplMutex(const ImplMutex&);
+    ImplMutex& operator = (const ImplMutex& m);
 };
 
 #if defined WIN32 || defined _WIN32 || defined WINCE
 
-struct Mutex::Impl
+struct ImplMutex::Impl
 {
     Impl() { InitializeCriticalSection(&cs); refcount = 1; }
     ~Impl() { DeleteCriticalSection(&cs); }
@@ -377,7 +377,7 @@ static int _interlockedExchangeAdd(int* addr, int delta)
 
 #include <libkern/OSAtomic.h>
 
-struct Mutex::Impl
+struct ImplMutex::Impl
 {
     Impl() { sl = OS_SPINLOCK_INIT; refcount = 1; }
     ~Impl() {}
@@ -392,7 +392,7 @@ struct Mutex::Impl
 
 #elif defined __linux__ && !defined ANDROID
 
-struct Mutex::Impl
+struct ImplMutex::Impl
 {
     Impl() { pthread_spin_init(&sl, 0); refcount = 1; }
     ~Impl() { pthread_spin_destroy(&sl); }
@@ -407,7 +407,7 @@ struct Mutex::Impl
 
 #else
 
-struct Mutex::Impl
+struct ImplMutex::Impl
 {
     Impl() { pthread_mutex_init(&sl, 0); refcount = 1; }
     ~Impl() { pthread_mutex_destroy(&sl); }
@@ -422,41 +422,41 @@ struct Mutex::Impl
 
 #endif
 
-Mutex::Mutex()
+ImplMutex::ImplMutex()
 {
-    impl = new Mutex::Impl;
+    impl = new ImplMutex::Impl;
 }
 
-Mutex::~Mutex()
+ImplMutex::~ImplMutex()
 {
     delete impl;
     impl = 0;
 }
 
-void Mutex::lock() { impl->lock(); }
-void Mutex::unlock() { impl->unlock(); }
-bool Mutex::trylock() { return impl->trylock(); }
+void ImplMutex::lock() { impl->lock(); }
+void ImplMutex::unlock() { impl->unlock(); }
+bool ImplMutex::trylock() { return impl->trylock(); }
 
 static int LockCallBack(void **mutex, AVLockOp op)
 {
     switch (op)
     {
         case AV_LOCK_CREATE:
-            *mutex = reinterpret_cast<void*>(new Mutex());
+            *mutex = reinterpret_cast<void*>(new ImplMutex());
             if (!*mutex)
                 return 1;
         break;
 
         case AV_LOCK_OBTAIN:
-            reinterpret_cast<Mutex*>(*mutex)->lock();
+            reinterpret_cast<ImplMutex*>(*mutex)->lock();
         break;
 
         case AV_LOCK_RELEASE:
-            reinterpret_cast<Mutex*>(*mutex)->unlock();
+            reinterpret_cast<ImplMutex*>(*mutex)->unlock();
         break;
 
         case AV_LOCK_DESTROY:
-            Mutex* cv_mutex = reinterpret_cast<Mutex*>(*mutex);
+            ImplMutex* cv_mutex = reinterpret_cast<ImplMutex*>(*mutex);
             delete cv_mutex;
             cv_mutex = NULL;
         break;
@@ -464,16 +464,16 @@ static int LockCallBack(void **mutex, AVLockOp op)
     return 0;
 }
 
-static Mutex m1;
+static ImplMutex _InternalFFMpegRegister_mutex;
 
 class InternalFFMpegRegister
 {
 public:
     static void Register()
     {
-        m1.lock();
+        _InternalFFMpegRegister_mutex.lock();
         static InternalFFMpegRegister init;
-        m1.unlock();
+        _InternalFFMpegRegister_mutex.unlock();
     }
 
     ~InternalFFMpegRegister()
