@@ -45,6 +45,7 @@
 #include <algorithm>
 #include <limits>
 #include <iostream>
+#include <fstream>
 
 #if defined _MSC_VER && _MSC_VER >= 1200
 #pragma warning( disable: 4244 4510 4512 4610 )
@@ -516,7 +517,11 @@ bool CvCapture_FFMPEG::open( const char* _filename )
 
     if (err < 0)
     {
-        std::cout << "Error opening file" << std::endl;
+        std::fstream file(filename, std::ios::in);
+        if (file.fail())
+            std::cout << "File doesn't exit" << std::endl;
+        else
+            std::cout << "Error opening file" << std::endl;
         CV_WARN("Error opening file");
         goto exit_func;
     }
