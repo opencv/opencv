@@ -485,6 +485,7 @@ public:
 private:
     InternalFFMpegRegister()
     {
+        std::cout << "FFmpeg register" << std::endl;
 #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 13, 0)
         avformat_network_init();
 #endif
@@ -513,7 +514,9 @@ bool CvCapture_FFMPEG::open( const char* _filename )
     int err = av_open_input_file(&ic, _filename, NULL, 0, NULL);
 #endif
 
-    if (err < 0) {
+    if (err < 0)
+    {
+        std::cout << "Error opening file" << std::endl;
         CV_WARN("Error opening file");
         goto exit_func;
     }
@@ -524,9 +527,11 @@ bool CvCapture_FFMPEG::open( const char* _filename )
     av_find_stream_info(ic);
 #endif
     if (err < 0) {
+        std::cout << "Could not find codec parameters" << std::endl;
         CV_WARN("Could not find codec parameters");
         goto exit_func;
     }
+    std::cout << "nb_streams: " << ic->nb_streams << std::endl;
     for(i = 0; i < ic->nb_streams; i++)
     {
 #if LIBAVFORMAT_BUILD > 4628
@@ -536,6 +541,7 @@ bool CvCapture_FFMPEG::open( const char* _filename )
 #endif
 
 #ifdef FF_API_THREAD_INIT
+        std::cout << "avcodec_thread_init" << std::endl;
         avcodec_thread_init(enc, get_number_of_cpus());
 #else
         enc->thread_count = get_number_of_cpus();
@@ -545,7 +551,9 @@ bool CvCapture_FFMPEG::open( const char* _filename )
 #define AVMEDIA_TYPE_VIDEO CODEC_TYPE_VIDEO
 #endif
 
-        if( AVMEDIA_TYPE_VIDEO == enc->codec_type && video_stream < 0) {
+        if( AVMEDIA_TYPE_VIDEO == enc->codec_type && video_stream < 0)
+        {
+            std::cout << "Set avcodec" << std::endl;
             AVCodec *codec = avcodec_find_decoder(enc->codec_id);
             if (!codec ||
 #if LIBAVCODEC_VERSION_INT >= ((53<<16)+(8<<8)+0)
@@ -553,8 +561,11 @@ bool CvCapture_FFMPEG::open( const char* _filename )
 #else
                 avcodec_open(enc, codec)
 #endif
-                < 0) goto exit_func;
-
+                < 0)
+            {
+                std::cout << "!avcodec_open" << std::endl;
+                goto exit_func;
+            }
             video_stream = i;
             video_st = ic->streams[i];
             picture = avcodec_alloc_frame();

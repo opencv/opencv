@@ -40,6 +40,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include <iostream>
 
 #ifdef HAVE_FFMPEG
 #include "cap_ffmpeg_impl.hpp"
