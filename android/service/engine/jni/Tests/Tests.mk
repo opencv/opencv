@@ -36,7 +36,7 @@ LOCAL_CFLAGS += -D__SUPPORT_TEGRA3
 LOCAL_CFLAGS += -D__SUPPORT_MIPS
 #LOCAL_CFLAGS += -D__SUPPORT_ARMEABI_FEATURES
 
-LOCAL_LDFLAGS = -Wl,-allow-shlib-undefined
+#LOCAL_LDFLAGS = -Wl,-allow-shlib-undefined
 
 LOCAL_MODULE := OpenCVEngineTestApp
 
