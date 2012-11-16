@@ -40,7 +40,6 @@
 //M*/
 
 #include "precomp.hpp"
-#include <iostream>
 
 #ifdef HAVE_FFMPEG
 #include "cap_ffmpeg_impl.hpp"
@@ -185,10 +184,7 @@ public:
         close();
 
         if( !icvCreateFileCapture_FFMPEG_p )
-        {
-            std::cout << "!icvCreateFileCapture_FFMPEG_p" << std::endl;
             return false;
-        }
         ffmpegCapture = icvCreateFileCapture_FFMPEG_p( filename );
         return ffmpegCapture != 0;
     }

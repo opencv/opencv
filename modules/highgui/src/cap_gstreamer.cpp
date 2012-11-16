@@ -58,7 +58,6 @@
 #include <gst/app/gstappsink.h>
 #include <gst/app/gstappsrc.h>
 #include <gst/riff/riff-media.h>
-#include <iostream>
 
 #ifdef NDEBUG
 #define CV_WARN(message)
@@ -765,7 +764,6 @@ CvCapture* cvCreateCapture_GStreamer(int type, const char* filename )
 
     if( capture->open( type, filename ))
         return capture;
-    std::cout << "cvCreateCapture_GStreamer: !opened" << std::endl;
 
     delete capture;
     return 0;
