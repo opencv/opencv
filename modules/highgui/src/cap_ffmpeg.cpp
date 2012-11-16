@@ -180,11 +180,14 @@ public:
     }
     virtual bool open( const char* filename )
     {
+        icvInitFFMPEG::Init();
         close();
 
-        icvInitFFMPEG::Init();
         if( !icvCreateFileCapture_FFMPEG_p )
+        {
+            std::cout << "!icvCreateFileCapture_FFMPEG_p" << std::endl;
             return false;
+        }
         ffmpegCapture = icvCreateFileCapture_FFMPEG_p( filename );
         return ffmpegCapture != 0;
     }
@@ -232,8 +235,8 @@ public:
     }
     virtual bool open( const char* filename, int fourcc, double fps, CvSize frameSize, bool isColor )
     {
-        close();
         icvInitFFMPEG::Init();
+        close();
         if( !icvCreateVideoWriter_FFMPEG_p )
             return false;
         ffmpegWriter = icvCreateVideoWriter_FFMPEG_p( filename, fourcc, fps, frameSize.width, frameSize.height, isColor );
