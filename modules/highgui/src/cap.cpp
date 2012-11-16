@@ -40,6 +40,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include <iostream>
 
 #if defined _M_X64 && defined _MSC_VER && !defined CV_ICC
 #pragma optimize("",off)
@@ -346,7 +347,11 @@ CV_IMPL CvCapture * cvCreateFileCapture (const char * filename)
     CvCapture * result = 0;
 
     if (! result)
+    {
         result = cvCreateFileCapture_FFMPEG_proxy (filename);
+        std::cout << "called cvCreateFileCapture_FFMPEG_proxy: ";
+        std::cout << (result ? "created" : "!created") << std::endl;
+    }
 
 #ifdef HAVE_XINE
     if (! result)
@@ -355,7 +360,11 @@ CV_IMPL CvCapture * cvCreateFileCapture (const char * filename)
 
 #ifdef HAVE_GSTREAMER
     if (! result)
+    {
+        std::cout << "called cvCreateCapture_GStreamer: ";
+        std::cout << (result ? "created" : "!created") << std::endl;
         result = cvCreateCapture_GStreamer (CV_CAP_GSTREAMER_FILE, filename);
+    }
 #endif
 
 #ifdef HAVE_QUICKTIME
