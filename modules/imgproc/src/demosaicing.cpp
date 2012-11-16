@@ -41,7 +41,6 @@
 //M*/
 
 #include "precomp.hpp"
-#include <iostream>
 
 namespace cv
 {
@@ -1033,7 +1032,7 @@ public:
                 // blue
                 D[0] = S[0];
                 D[1] = (fabs(S[-1] - S[1]) > fabs(S[step] - S[-step]) ? (S[step] + S[-step]) : (S[-1] + S[1])) / 2;
-                D[2] = ((S[-step-1] + S[-step+1] + S[step-1] + S[step+1]) / 4);
+                D[2] = (S[-step-1] + S[-step+1] + S[step-1] + S[step+1]) / 4;
                 // red
                 if (!blue)
                     std::swap(D[0], D[2]);
