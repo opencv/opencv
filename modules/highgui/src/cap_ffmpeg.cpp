@@ -57,11 +57,32 @@ static CvCreateVideoWriter_Plugin icvCreateVideoWriter_FFMPEG_p = 0;
 static CvReleaseVideoWriter_Plugin icvReleaseVideoWriter_FFMPEG_p = 0;
 static CvWriteFrame_Plugin icvWriteFrame_FFMPEG_p = 0;
 
-static void
-icvInitFFMPEG(void)
+static cv::Mutex _icvInitFFMPEG_mutex;
+
+class icvInitFFMPEG
 {
-    static int ffmpegInitialized = 0;
-    if( !ffmpegInitialized )
+public:
+    static void Init()
+    {
+        cv::AutoLock al(_icvInitFFMPEG_mutex);
+        static icvInitFFMPEG init;
+    }
+
+private:
+    #if defined WIN32 || defined _WIN32
+    HMODULE icvFFOpenCV;
+
+    ~icvInitFFMPEG()
+    {
+        if (icvFFOpenCV)
+        {
+            FreeLibrary(icvFFOpenCV);
+            icvFFOpenCV = 0;
+        }
+    }
+    #endif
+
+    icvInitFFMPEG()
     {
     #if defined WIN32 || defined _WIN32
         const char* module_name = "opencv_ffmpeg"
@@ -71,7 +92,7 @@ icvInitFFMPEG(void)
         #endif
             ".dll";
 
-        static HMODULE icvFFOpenCV = LoadLibrary( module_name );
+        icvFFOpenCV = LoadLibrary( module_name );
         if( icvFFOpenCV )
         {
             icvCreateFileCapture_FFMPEG_p =
@@ -123,10 +144,8 @@ icvInitFFMPEG(void)
         icvReleaseVideoWriter_FFMPEG_p = (CvReleaseVideoWriter_Plugin)cvReleaseVideoWriter_FFMPEG;
         icvWriteFrame_FFMPEG_p = (CvWriteFrame_Plugin)cvWriteFrame_FFMPEG;
     #endif
-
-        ffmpegInitialized = 1;
     }
-}
+};
 
 
 class CvCapture_FFMPEG_proxy : public CvCapture
@@ -161,9 +180,9 @@ public:
     }
     virtual bool open( const char* filename )
     {
+        icvInitFFMPEG::Init();
         close();
 
-        icvInitFFMPEG();
         if( !icvCreateFileCapture_FFMPEG_p )
             return false;
         ffmpegCapture = icvCreateFileCapture_FFMPEG_p( filename );
@@ -196,7 +215,6 @@ CvCapture* cvCreateFileCapture_FFMPEG_proxy(const char * filename)
 #endif
 }
 
-
 class CvVideoWriter_FFMPEG_proxy : public CvVideoWriter
 {
 public:
@@ -214,8 +232,8 @@ public:
     }
     virtual bool open( const char* filename, int fourcc, double fps, CvSize frameSize, bool isColor )
     {
+        icvInitFFMPEG::Init();
         close();
-        icvInitFFMPEG();
         if( !icvCreateVideoWriter_FFMPEG_p )
             return false;
         ffmpegWriter = icvCreateVideoWriter_FFMPEG_p( filename, fourcc, fps, frameSize.width, frameSize.height, isColor );
