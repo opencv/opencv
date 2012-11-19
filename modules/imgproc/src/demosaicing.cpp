@@ -1035,7 +1035,7 @@ public:
                 // blue
                 D[0] = S[0];
 #define ABS(x) ((x) >= 0 ? (x) : -(x))
-                D[1] = (fabs(S[-1] - S[1]) > fabs(S[sstep] - S[-sstep]) ? (S[sstep] + S[-sstep]) : (S[-1] + S[1])) / 2;
+                D[1] = (ABS(S[-1] - S[1]) > ABS(S[sstep] - S[-sstep]) ? (S[sstep] + S[-sstep]) : (S[-1] + S[1])) / 2;
 #undef ABS
                 D[2] = (S[-sstep-1] + S[-sstep+1] + S[sstep-1] + S[sstep+1]) / 4;
                 // red

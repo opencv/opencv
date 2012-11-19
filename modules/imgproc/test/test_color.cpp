@@ -2025,7 +2025,7 @@ static void test_Bayer2RGB_EdgeAware_8u(const Mat& src, Mat& dst, int code)
         for (int i = 0; i < dcn; ++i)
         {
             D[i] = D[-dcn + i];
-            D[static_cast<int>(-dst.step)+dcn+i] = D[-dst.step+(dcn<<1)+i];
+            D[-static_cast<int>(dst.step)+dcn+i] = D[-static_cast<int>(dst.step)+(dcn<<1)+i];
         }
 
         start_with_green ^= 1;
@@ -2038,7 +2038,7 @@ static void test_Bayer2RGB_EdgeAware_8u(const Mat& src, Mat& dst, int code)
     for (int x = 0; x < size.width; ++x)
     {
         firstRow[x] = firstRow[dst.step + x];
-        lastRow[x] = lastRow[static_cast<int>(-dst.step)+x];
+        lastRow[x] = lastRow[-static_cast<int>(dst.step)+x];
     }
 }
 
