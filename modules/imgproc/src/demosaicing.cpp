@@ -989,60 +989,63 @@ static void Bayer2RGB_VNG_8u( const Mat& srcmat, Mat& dstmat, int code )
 
 //////////////////////////////// Edge-Aware Demosaicing //////////////////////////////////
 
-class Bayer2RGB_EdgeAware_8u_Invoker :
+template <typename T>
+class Bayer2RGB_EdgeAware_T_Invoker :
     public cv::ParallelLoopBody
 {
 public:
-    Bayer2RGB_EdgeAware_8u_Invoker(const Mat& _src, Mat& _dst, const Size& _size,
+    Bayer2RGB_EdgeAware_T_Invoker(const Mat& _src, Mat& _dst, const Size& _size,
         int _blue, int _start_with_green) :
+        ParallelLoopBody(),
         src(_src), dst(_dst), size(_size), Blue(_blue), Start_with_green(_start_with_green)
     {
     }
 
     virtual void operator()(const Range& range) const
     {
-        int dcn = dst.channels(), step = src.step;
+        int dcn = dst.channels();
         int start_with_green = Start_with_green, blue = Blue;
+        int sstep = src.step / src.elemSize1(), dstep = dst.step / dst.elemSize1();
 
         start_with_green = range.start % 2 == 0 ? (Start_with_green ^ 1) : Start_with_green;
         blue = range.start % 2 == 0 ? (Blue ^ 1) : Blue;
 
         for (int y = range.start; y < range.end; ++y)
         {
-            const uchar* S = src.data + y * src.step + 1 + (start_with_green ^ 1);
-            uchar* D = dst.data + y * dst.step + (1 + (start_with_green ^ 1)) * dcn;
+            const T* S = reinterpret_cast<const T*>(src.data + y * src.step) + 1 + (start_with_green ^ 1);
+            T* D = reinterpret_cast<T*>(dst.data + y * dst.step) + (1 + (start_with_green ^ 1)) * dcn;
             // green
             for (int x = 1 + (start_with_green ^ 1); x < size.width; x += 2, S += 2, D += 2*dcn)
             {
                 // blue
                 D[0] = (S[-1] + S[1]) / 2;
                 D[1] = S[0];
-                D[2] = (S[-step] + S[step]) / 2;
+                D[2] = (S[-sstep] + S[sstep]) / 2;
                 // red
                 if (!blue)
                     std::swap(D[0], D[2]);
             }
 
-            S = src.data + y * src.step + 2 - (start_with_green ^ 1);
-            D = dst.data + y * dst.step + (2 - (start_with_green ^ 1))*dcn;
+            S = reinterpret_cast<T*>(src.data + y * src.step) + 2 - (start_with_green ^ 1);
+            D = reinterpret_cast<T*>(dst.data + y * dst.step) + (2 - (start_with_green ^ 1))*dcn;
 
             // !green
             for (int x = 2 - (start_with_green ^ 1); x < size.width; x += 2, S += 2, D += 2*dcn)
             {
                 // blue
                 D[0] = S[0];
-                D[1] = (fabs(S[-1] - S[1]) > fabs(S[step] - S[-step]) ? (S[step] + S[-step]) : (S[-1] + S[1])) / 2;
-                D[2] = (S[-step-1] + S[-step+1] + S[step-1] + S[step+1]) / 4;
+                D[1] = (fabs(S[-1] - S[1]) > fabs(S[sstep] - S[-sstep]) ? (S[sstep] + S[-sstep]) : (S[-1] + S[1])) / 2;
+                D[2] = (S[-sstep-1] + S[-sstep+1] + S[sstep-1] + S[sstep+1]) / 4;
                 // red
                 if (!blue)
                     std::swap(D[0], D[2]);
             }
 
-            D = dst.data + (y + 1) * dst.step - dcn;
+            D = reinterpret_cast<T*>(dst.data + (y + 1) * dst.step) - dcn;
             for (int i = 0; i < dcn; ++i)
             {
                 D[i] = D[-dcn + i];
-                D[-dst.step+dcn+i] = D[-dst.step+(dcn<<1)+i];
+                D[-dstep+dcn+i] = D[-dstep+(dcn<<1)+i];
             }
 
             start_with_green ^= 1;
@@ -1055,28 +1058,41 @@ private:
     Mat dst;
     const Size size;
     const int Blue, Start_with_green;
+
+    const Bayer2RGB_EdgeAware_T_Invoker& operator= (const Bayer2RGB_EdgeAware_T_Invoker&);
+    Bayer2RGB_EdgeAware_T_Invoker(const Bayer2RGB_EdgeAware_T_Invoker&);
 };
 
-static void Bayer2RGB_EdgeAware_8u(const Mat& src, Mat& dst, int code)
+template <typename T>
+static void Bayer2RGB_EdgeAware_T(const Mat& src, Mat& dst, int code)
 {
     Size size = src.size();
+
+    // for small sizes
+    if (size.width <= 2 || size.height <= 2)
+    {
+        dst = Scalar::all(0);
+        return;
+    }
+
     size.width -= 1;
     size.height -= 1;
 
     int start_with_green = code == CV_BayerGB2BGR_EA || code == CV_BayerGR2BGR_EA ? 1 : 0;
     int blue = code == CV_BayerGB2BGR_EA || code == CV_BayerBG2BGR_EA ? 1 : 0;
 
-    Bayer2RGB_EdgeAware_8u_Invoker invoker(src, dst, size, blue, start_with_green);
+    Bayer2RGB_EdgeAware_T_Invoker<T> invoker(src, dst, size, blue, start_with_green);
     Range range(1, size.height);
     parallel_for_(range, invoker);
 
     ++size.width;
-    uchar* firstRow = dst.data, *lastRow = dst.data + size.height * dst.step;
+    T* firstRow = reinterpret_cast<T*>(dst.data), *lastRow = reinterpret_cast<T*>(dst.data + size.height * dst.step);
     size.width *= dst.channels();
+    int dstep = dst.step / dst.elemSize1();
     for (int x = 0; x < size.width; ++x)
     {
-        firstRow[x] = firstRow[dst.step + x];
-        lastRow[x] = lastRow[-dst.step+x];
+        firstRow[x] = firstRow[dstep + x];
+        lastRow[x] = lastRow[-dstep+x];
     }
 }
 
@@ -1150,13 +1166,15 @@ void cv::demosaicing(InputArray _src, OutputArray _dst, int code, int dcn)
         dst = _dst.getMat();
 
         if (depth == CV_8U)
-            Bayer2RGB_EdgeAware_8u(src, dst, code);
+            Bayer2RGB_EdgeAware_T<uchar>(src, dst, code);
+        else if (depth == CV_16U)
+            Bayer2RGB_EdgeAware_T<ushort>(src, dst, code);
         else
-            CV_Error(CV_StsUnsupportedFormat, "Bayer->RGB Edge-Aware demosaicing only currently supports 8u type");
+            CV_Error(CV_StsUnsupportedFormat, "Bayer->RGB Edge-Aware demosaicing only currently supports 8u and 16u types");
 
         break;
 
     default:
-        CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" );
+        CV_Error( CV_StsBadFlag, "Unknown / unsupported color conversion code" );
     }
 }

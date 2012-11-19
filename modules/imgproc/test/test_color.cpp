@@ -1732,10 +1732,12 @@ TEST(Imgproc_ColorBayerVNG, regression)
 }
 
 // creating Bayer pattern
+template <typename T, int depth>
 void calculateBayerPattern(const Mat& src, Mat& bayer, const char* pattern)
 {
     Size ssize = src.size();
-    bayer.create(ssize, CV_MAKETYPE(src.depth(), 1));
+    const int scn = 1;
+    bayer.create(ssize, CV_MAKETYPE(depth, scn));
 
     if (!strcmp(pattern, "bg"))
     {
@@ -1743,11 +1745,11 @@ void calculateBayerPattern(const Mat& src, Mat& bayer, const char* pattern)
             for (int x = 0; x < ssize.width; ++x)
             {
                 if ((x + y) % 2)
-                    bayer.at<uchar>(y, x) = src.at<Vec3b>(y, x)[1];
+                    bayer.at<T>(y, x) = static_cast<T>(src.at<Vec3b>(y, x)[1]);
                 else if (x % 2)
-                    bayer.at<uchar>(y, x) = src.at<Vec3b>(y, x)[0];
+                    bayer.at<T>(y, x) = static_cast<T>(src.at<Vec3b>(y, x)[0]);
                 else
-                    bayer.at<uchar>(y, x) = src.at<Vec3b>(y, x)[2];
+                    bayer.at<T>(y, x) = static_cast<T>(src.at<Vec3b>(y, x)[2]);
             }
     }
     else if (!strcmp(pattern, "gb"))
@@ -1756,11 +1758,11 @@ void calculateBayerPattern(const Mat& src, Mat& bayer, const char* pattern)
             for (int x = 0; x < ssize.width; ++x)
             {
                 if ((x + y) % 2 == 0)
-                    bayer.at<uchar>(y, x) = src.at<Vec3b>(y, x)[1];
+                    bayer.at<T>(y, x) = static_cast<T>(src.at<Vec3b>(y, x)[1]);
                 else if (x % 2 == 0)
-                    bayer.at<uchar>(y, x) = src.at<Vec3b>(y, x)[0];
+                    bayer.at<T>(y, x) = static_cast<T>(src.at<Vec3b>(y, x)[0]);
                 else
-                    bayer.at<uchar>(y, x) = src.at<Vec3b>(y, x)[2];
+                    bayer.at<T>(y, x) = static_cast<T>(src.at<Vec3b>(y, x)[2]);
             }
     }
     else if (!strcmp(pattern, "rg"))
@@ -1769,11 +1771,11 @@ void calculateBayerPattern(const Mat& src, Mat& bayer, const char* pattern)
             for (int x = 0; x < ssize.width; ++x)
             {
                 if ((x + y) % 2)
-                    bayer.at<uchar>(y, x) = src.at<Vec3b>(y, x)[1];
+                    bayer.at<T>(y, x) = static_cast<T>(src.at<Vec3b>(y, x)[1]);
                 else if (x % 2 == 0)
-                    bayer.at<uchar>(y, x) = src.at<Vec3b>(y, x)[0];
+                    bayer.at<T>(y, x) = static_cast<T>(src.at<Vec3b>(y, x)[0]);
                 else
-                    bayer.at<uchar>(y, x) = src.at<Vec3b>(y, x)[2];
+                    bayer.at<T>(y, x) = static_cast<T>(src.at<Vec3b>(y, x)[2]);
             }
     }
     else
@@ -1782,11 +1784,11 @@ void calculateBayerPattern(const Mat& src, Mat& bayer, const char* pattern)
             for (int x = 0; x < ssize.width; ++x)
             {
                 if ((x + y) % 2 == 0)
-                    bayer.at<uchar>(y, x) = src.at<Vec3b>(y, x)[1];
+                    bayer.at<T>(y, x) = static_cast<T>(src.at<Vec3b>(y, x)[1]);
                 else if (x % 2)
-                    bayer.at<uchar>(y, x) = src.at<Vec3b>(y, x)[0];
+                    bayer.at<T>(y, x) = static_cast<T>(src.at<Vec3b>(y, x)[0]);
                 else
-                    bayer.at<uchar>(y, x) = src.at<Vec3b>(y, x)[2];
+                    bayer.at<T>(y, x) = static_cast<T>(src.at<Vec3b>(y, x)[2]);
             }
     }
 }
@@ -1812,7 +1814,7 @@ TEST(Imgproc_ColorBayerVNG_Strict, regression)
 
     for (int i = 0; i < 4; ++i)
     {
-        calculateBayerPattern(src, bayer, pattern[i]);
+        calculateBayerPattern<uchar, CV_8U>(src, bayer, pattern[i]);
         CV_Assert(!bayer.empty() && bayer.type() == CV_8UC1);
 
         // calculating a dst image
@@ -1957,16 +1959,16 @@ static void test_Bayer2RGB_EdgeAware_8u(const Mat& src, Mat& dst, int code)
     CV_Assert(dcn == 3);
 
     int step = src.step;
-    const uchar* S = src.data + 1 + step;
-    uchar* D = dst.data + dcn + dst.step;
+    const uchar* S = src.ptr<uchar>(1) + 1;
+    uchar* D = dst.ptr<uchar>(1) + dcn;
 
     int start_with_green = code == CV_BayerGB2BGR_EA || code == CV_BayerGR2BGR_EA ? 1 : 0;
     int blue = code == CV_BayerGB2BGR_EA || code == CV_BayerBG2BGR_EA ? 1 : 0;
 
     for (int y = 1; y < size.height; ++y)
     {
-        S = src.data + y * src.step + 1;
-        D = dst.data + y * dst.step + dcn;
+        S = src.ptr<uchar>(y) + 1;
+        D = dst.ptr<uchar>(y) + dcn;
 
         if (start_with_green)
         {
@@ -1980,8 +1982,8 @@ static void test_Bayer2RGB_EdgeAware_8u(const Mat& src, Mat& dst, int code)
                     std::swap(D[0], D[2]);
             }
 
-            S = src.data + y * src.step + 2;
-            D = dst.data + y * dst.step + 2*dcn;
+            S = src.ptr<uchar>(y) + 2;
+            D = dst.ptr<uchar>(y) + 2*dcn;
 
             for (int x = 2; x < size.width; x += 2, S += 2, D += 2*dcn)
             {
@@ -2004,8 +2006,8 @@ static void test_Bayer2RGB_EdgeAware_8u(const Mat& src, Mat& dst, int code)
                     std::swap(D[0], D[2]);
             }
 
-            S = src.data + y * src.step + 2;
-            D = dst.data + y * dst.step + 2*dcn;
+            S = src.ptr<uchar>(y) + 2;
+            D = dst.ptr<uchar>(y) + 2*dcn;
 
             for (int x = 2; x < size.width; x += 2, S += 2, D += 2*dcn)
             {
@@ -2017,7 +2019,7 @@ static void test_Bayer2RGB_EdgeAware_8u(const Mat& src, Mat& dst, int code)
             }
         }
 
-        D = dst.data + (y + 1) * dst.step - dcn;
+        D = dst.ptr<uchar>(y + 1) - dcn;
         for (int i = 0; i < dcn; ++i)
         {
             D[i] = D[-dcn + i];
@@ -2035,6 +2037,44 @@ static void test_Bayer2RGB_EdgeAware_8u(const Mat& src, Mat& dst, int code)
     {
         firstRow[x] = firstRow[dst.step + x];
         lastRow[x] = lastRow[-dst.step+x];
+    }
+}
+
+template <typename T>
+static void checkData(const Mat& actual, const Mat& reference, cvtest::TS* ts, const char* type,
+    bool& next, const char* bayer_type)
+{
+    EXPECT_EQ(actual.size(), reference.size());
+    EXPECT_EQ(actual.channels(), reference.channels());
+    EXPECT_EQ(actual.depth(), reference.depth());
+
+    Size size = reference.size();
+    size.width *= reference.channels();
+    for (int y = 0; y < size.height && next; ++y)
+    {
+        const T* A = reinterpret_cast<const T*>(actual.data + actual.step * y);
+        const T* R = reinterpret_cast<const T*>(reference.data + reference.step * y);
+
+        for (int x = 0; x < size.width && next; ++x)
+            if (fabs(A[x] - R[x]) > 1)
+            {
+                #define SUM cvtest::TS::SUMMARY
+                ts->printf(SUM, "\nReference value: %d\n", static_cast<int>(R[x]));
+                ts->printf(SUM, "Actual value: %d\n", static_cast<int>(A[x]));
+                ts->printf(SUM, "(y, x): (%d, %d)\n", y, x / reference.channels());
+                ts->printf(SUM, "Pattern: %s\n", type);
+                ts->printf(SUM, "Bayer image type: %s", bayer_type);
+                #undef SUM
+
+                imshow("Reference", reference);
+                imshow("Actual", actual);
+                waitKey();
+
+                ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
+                ts->set_gtest_status();
+
+                next = false;
+            }
     }
 }
 
@@ -2067,38 +2107,28 @@ TEST(ImgProc_BayerEdgeAwareDemosaicing, accuracy)
     const char* types[] = { "bg", "gb", "rg", "gr" };
     for (int i = 0; i < 4 && next; ++i)
     {
-        calculateBayerPattern(src, bayer, types[i]);
-        CV_Assert(!bayer.empty() && bayer.type() == CV_8UC1);
-
-        Mat actual;
-        cv::demosaicing(bayer, actual, CV_BayerBG2BGR_EA + i);
+        calculateBayerPattern<uchar, CV_8U>(src, bayer, types[i]);
         Mat reference;
         test_Bayer2RGB_EdgeAware_8u(bayer, reference, CV_BayerBG2BGR_EA + i);
 
-        EXPECT_EQ(actual.size(), reference.size());
-        EXPECT_EQ(actual.channels(), reference.channels());
-        EXPECT_EQ(actual.depth(), reference.depth());
-
-        Size size = reference.size();
-        size.width *= reference.channels();
-        for (int y = 0; y < size.height && next; ++y)
+        for (int t = 0; t <= 1; ++t)
         {
-            const uchar* A = actual.data + actual.step * y;
-            const uchar* R = reference.data + reference.step * y;
+            if (t == 1)
+                calculateBayerPattern<unsigned short int, CV_16U>(src, bayer, types[i]);
 
-            for (int x = 0; x < size.width && next; ++x)
-                if (fabs(A[x] - R[x]) > 1)
-                {
-#define SUM cvtest::TS::SUMMARY
-                    ts->printf(SUM, "\nReference value: %d\n", static_cast<int>(R[x]));
-                    ts->printf(SUM, "Actual value: %d\n", static_cast<int>(A[x]));
-                    ts->printf(SUM, "(y, x): (%d, %d)\n", y, x / reference.channels());
-                    ts->printf(SUM, "Pattern: %s", types[i]);
-#undef SUM
-                    ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
-                    ts->set_gtest_status();
-                    next = false;
-                }
+            CV_Assert(!bayer.empty() && (bayer.type() == CV_8UC1 || bayer.type() == CV_16UC1));
+
+            Mat actual;
+            cv::demosaicing(bayer, actual, CV_BayerBG2BGR_EA + i);
+
+            if (t == 0)
+                checkData<unsigned char>(actual, reference, ts, types[i], next, "CV_8U");
+            else
+            {
+                Mat tmp;
+                reference.convertTo(tmp, CV_16U);
+                checkData<unsigned short int>(actual, tmp, ts, types[i], next, "CV_16U");
+            }
         }
     }
 }
