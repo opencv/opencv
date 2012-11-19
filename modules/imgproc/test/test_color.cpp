@@ -1947,7 +1947,7 @@ TEST(Imgproc_ColorLab_Full, accuracy)
     validateResult(src, recons, src, forward_code);
 }
 
-#define ABS(x) (x >= 0 ? x : -x)
+#define ABS(x) ((x) >= 0 ? (x) : -(x))
 
 static void test_Bayer2RGB_EdgeAware_8u(const Mat& src, Mat& dst, int code)
 {
@@ -2067,10 +2067,6 @@ static void checkData(const Mat& actual, const Mat& reference, cvtest::TS* ts, c
                 ts->printf(SUM, "Pattern: %s\n", type);
                 ts->printf(SUM, "Bayer image type: %s", bayer_type);
                 #undef SUM
-
-                imshow("Reference", reference);
-                imshow("Actual", actual);
-                waitKey();
 
                 ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
                 ts->set_gtest_status();
