@@ -1947,6 +1947,8 @@ TEST(Imgproc_ColorLab_Full, accuracy)
     validateResult(src, recons, src, forward_code);
 }
 
+#define ABS(x) (x >= 0 ? x : -x)
+
 static void test_Bayer2RGB_EdgeAware_8u(const Mat& src, Mat& dst, int code)
 {
     if (dst.empty())
@@ -1989,7 +1991,7 @@ static void test_Bayer2RGB_EdgeAware_8u(const Mat& src, Mat& dst, int code)
             {
                 // red
                 D[0] = S[0];
-                D[1] = (fabs(S[-1] - S[1]) > fabs(S[step] - S[-step]) ? (S[step] + S[-step]) : (S[-1] + S[1])) / 2;
+                D[1] = (ABS(S[-1] - S[1]) > ABS(S[step] - S[-step]) ? (S[step] + S[-step]) : (S[-1] + S[1])) / 2;
                 D[2] = ((S[-step-1] + S[-step+1] + S[step-1] + S[step+1]) / 4);
                 if (!blue)
                     std::swap(D[0], D[2]);
@@ -2000,7 +2002,7 @@ static void test_Bayer2RGB_EdgeAware_8u(const Mat& src, Mat& dst, int code)
             for (int x = 1; x < size.width; x += 2, S += 2, D += 2*dcn)
             {
                 D[0] = S[0];
-                D[1] = (fabs(S[-1] - S[1]) > fabs(S[step] - S[-step]) ? (S[step] + S[-step]) : (S[-1] + S[1])) / 2;
+                D[1] = (ABS(S[-1] - S[1]) > ABS(S[step] - S[-step]) ? (S[step] + S[-step]) : (S[-1] + S[1])) / 2;
                 D[2] = ((S[-step-1] + S[-step+1] + S[step-1] + S[step+1]) / 4);
                 if (!blue)
                     std::swap(D[0], D[2]);
@@ -2023,7 +2025,7 @@ static void test_Bayer2RGB_EdgeAware_8u(const Mat& src, Mat& dst, int code)
         for (int i = 0; i < dcn; ++i)
         {
             D[i] = D[-dcn + i];
-            D[-dst.step+dcn+i] = D[-dst.step+(dcn<<1)+i];
+            D[static_cast<int>(-dst.step)+dcn+i] = D[-dst.step+(dcn<<1)+i];
         }
 
         start_with_green ^= 1;
@@ -2036,7 +2038,7 @@ static void test_Bayer2RGB_EdgeAware_8u(const Mat& src, Mat& dst, int code)
     for (int x = 0; x < size.width; ++x)
     {
         firstRow[x] = firstRow[dst.step + x];
-        lastRow[x] = lastRow[-dst.step+x];
+        lastRow[x] = lastRow[static_cast<int>(-dst.step)+x];
     }
 }
 
@@ -2056,7 +2058,7 @@ static void checkData(const Mat& actual, const Mat& reference, cvtest::TS* ts, c
         const T* R = reinterpret_cast<const T*>(reference.data + reference.step * y);
 
         for (int x = 0; x < size.width && next; ++x)
-            if (fabs(A[x] - R[x]) > 1)
+            if (ABS(A[x] - R[x]) > 1)
             {
                 #define SUM cvtest::TS::SUMMARY
                 ts->printf(SUM, "\nReference value: %d\n", static_cast<int>(R[x]));
@@ -2077,6 +2079,8 @@ static void checkData(const Mat& actual, const Mat& reference, cvtest::TS* ts, c
             }
     }
 }
+
+#undef ABS
 
 TEST(ImgProc_BayerEdgeAwareDemosaicing, accuracy)
 {
