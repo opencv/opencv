@@ -178,14 +178,17 @@ TEST(Highgui_Video, ffmpeg_image) { CV_FFmpegReadImageTest test; test.safe_run()
 
 #if defined(HAVE_FFMPEG) || defined(WIN32) || defined(_WIN32)
 
+//////////////////////////////// Parallel VideoWriters and VideoCaptures ////////////////////////////////////
+
 class CreateVideoWriterInvoker :
     public ParallelLoopBody
 {
 public:
     const static Size FrameSize;
+    static std::string TmpDirectory;
     
-    CreateVideoWriterInvoker(std::vector<VideoWriter*>& _writers) :
-        ParallelLoopBody(), writers(&_writers)
+    CreateVideoWriterInvoker(std::vector<VideoWriter*>& _writers, std::vector<std::string>& _files) :
+        ParallelLoopBody(), writers(&_writers), files(&_files)
     {
     }
 
@@ -194,17 +197,23 @@ public:
         for (int i = range.start; i != range.end; ++i)
         {
             std::ostringstream stream;
-            stream << "file_" << i << ".avi";
+            stream << i << ".avi";
+            std::string fileName = tempfile(stream.str().c_str());
 
-            writers->operator[](i) = new VideoWriter(stream.str(), CV_FOURCC('X','V','I','D'), 25.0f, FrameSize);
+            files->operator[](i) = fileName;
+            writers->operator[](i) = new VideoWriter(fileName, CV_FOURCC('X','V','I','D'), 25.0f, FrameSize);
+
             CV_Assert(writers->operator[](i)->isOpened());
         }
     }
 
+
 private:
     std::vector<VideoWriter*>* writers;
+    std::vector<std::string>* files;
 };
-            
+
+std::string CreateVideoWriterInvoker::TmpDirectory;
 const Size CreateVideoWriterInvoker::FrameSize(1020, 900);
 
 class WriteVideo_Invoker :
@@ -216,7 +225,7 @@ public:
     static const Scalar ObjectColor;
     static const Point Center;
 
-    WriteVideo_Invoker(std::vector<VideoWriter*>& _writers) :
+    WriteVideo_Invoker(const std::vector<VideoWriter*>& _writers) :
         ParallelLoopBody(), writers(&_writers)
     {
     }
@@ -254,23 +263,109 @@ protected:
     }
 
 private:
-    std::vector<VideoWriter*>* writers;
+    const std::vector<VideoWriter*>* writers;
 };
 
 const Scalar WriteVideo_Invoker::ObjectColor(Scalar::all(0));
 const Point WriteVideo_Invoker::Center(CreateVideoWriterInvoker::FrameSize.height / 2,
     CreateVideoWriterInvoker::FrameSize.width / 2);
 
-TEST(Highgui_Video_parallel_writers, accuracy)
+class CreateVideoCaptureInvoker :
+    public ParallelLoopBody
+{
+public:
+    CreateVideoCaptureInvoker(std::vector<VideoCapture*>& _readers, const std::vector<std::string>& _files) :
+        ParallelLoopBody(), readers(&_readers), files(&_files)
+    {
+    }
+
+    virtual void operator() (const Range& range) const
+    {
+        for (int i = range.start; i != range.end; ++i)
+        {
+            readers->operator[](i) = new VideoCapture(files->operator[](i));
+            CV_Assert(readers->operator[](i)->isOpened());
+        }
+    }
+private:
+    std::vector<VideoCapture*>* readers;
+    const std::vector<std::string>* files;
+};
+
+class ReadImageAndTest :
+    public ParallelLoopBody
+{
+public:
+    ReadImageAndTest(const std::vector<VideoCapture*>& _readers, cvtest::TS* _ts) :
+        ParallelLoopBody(), readers(&_readers), ts(_ts)
+    {
+    }
+
+    virtual void operator() (const Range& range) const
+    {
+        CV_Assert(range.start + 1 == range.end);
+        VideoCapture* capture = readers->operator[](range.start);
+        CV_Assert(capture != NULL);
+        CV_Assert(capture->isOpened());
+
+        const static double eps = 23.0;
+        unsigned int frameCount = static_cast<unsigned int>(capture->get(CV_CAP_PROP_FRAME_COUNT));
+        CV_Assert(frameCount == WriteVideo_Invoker::FrameCount);
+        Mat reference(CreateVideoWriterInvoker::FrameSize, CV_8UC3);
+
+        for (unsigned int i = 0; i < frameCount && next; ++i)
+        {
+            Mat actual;
+            (*capture) >> actual;
+
+            WriteVideo_Invoker::GenerateFrame(reference, i);
+
+            EXPECT_EQ(reference.cols, actual.cols);
+            EXPECT_EQ(reference.rows, actual.rows);
+            EXPECT_EQ(reference.depth(), actual.depth());
+            EXPECT_EQ(reference.channels(), actual.channels());
+
+            double psnr = PSNR(actual, reference);
+            if (psnr < eps)
+            {
+#define SUM cvtest::TS::SUMMARY
+                ts->printf(SUM, "\nPSNR: %lf\n", psnr);
+                ts->printf(SUM, "Video #: %d\n", range.start);
+                ts->printf(SUM, "Frame #: %d\n", i);
+#undef SUM
+                ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
+                ts->set_gtest_status();
+
+                Mat diff;
+                absdiff(actual, reference, diff);
+
+                EXPECT_EQ(countNonZero(diff.reshape(1) > 1), 0);
+
+                next = false;
+            }
+        }
+    }
+
+    static bool next;
+
+private:
+    const std::vector<VideoCapture*>* readers;
+    cvtest::TS* ts;
+};
+
+bool ReadImageAndTest::next;
+
+TEST(Highgui_Video_parallel_writers_and_readers, accuracy)
 {
     const unsigned int threadsCount = 4;
     cvtest::TS* ts = cvtest::TS::ptr();
-    
+
     // creating VideoWriters
     std::vector<VideoWriter*> writers(threadsCount);
     Range range(0, threadsCount);
-    CreateVideoWriterInvoker invoker(writers);
-    parallel_for_(range, invoker);
+    std::vector<std::string> files(threadsCount);
+    CreateVideoWriterInvoker invoker1(writers, files);
+    parallel_for_(range, invoker1);
 
     // write a video
     parallel_for_(range, WriteVideo_Invoker(writers));
@@ -279,177 +374,22 @@ TEST(Highgui_Video_parallel_writers, accuracy)
     for (std::vector<VideoWriter*>::iterator i = writers.begin(), end = writers.end(); i != end; ++i)
         delete *i;
     writers.clear();
-    
-    // test video;
-    bool next = true;
-    for (unsigned int i = 0; i < threadsCount && next; ++i)
-    {
-        // file name
-        std::ostringstream stream;
-        stream << "file_" << i << ".avi";
-        std::string fileName = stream.str();
-        
-        VideoCapture capture(fileName);
-        CV_Assert(capture.isOpened());
 
-        // getting a frame count
-        unsigned int videoFrameCount = static_cast<unsigned int>(capture.get(CV_CAP_PROP_FRAME_COUNT));
-        EXPECT_EQ(videoFrameCount, WriteVideo_Invoker::FrameCount);
-
-        // creating the reference image
-        Mat reference(CreateVideoWriterInvoker::FrameSize, CV_8UC3);
-
-        // reading frames
-        for (unsigned int j = 0; j < WriteVideo_Invoker::FrameCount && next; ++j)
-        {
-            WriteVideo_Invoker::GenerateFrame(reference, j);
-
-            // getting actual image
-            Mat actual;
-            capture >> actual;
-
-            EXPECT_EQ(actual.cols, reference.cols);
-            EXPECT_EQ(actual.depth(), reference.depth());
-            EXPECT_EQ(actual.rows, reference.rows);
-            EXPECT_EQ(actual.channels(), reference.channels());
-
-            const static double eps = 22.0;
-            double psnr = PSNR(actual, reference);
-
-#define SUM cvtest::TS::SUMMARY
-            if (psnr < eps)
-            {
-                ts->printf(SUM, "\nPSNR: %lf\n", psnr);
-                ts->printf(SUM, "Video #: %d\n", i);
-                ts->printf(SUM, "Frame #: %d\n", j);
-                
-                ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
-                ts->set_gtest_status();
-                
-                Mat diff;
-                absdiff(actual, reference, diff);
-                
-                EXPECT_EQ(countNonZero(diff.reshape(1) > 1), 0);
-                next = false;
-            }
-#undef SUM
-        }
-        capture.release();
-        remove(fileName.c_str());
-    }
-}
-
-class CreateVideoCaptureInvoker :
-    public ParallelLoopBody
-{
-public:
-    CreateVideoCaptureInvoker(std::vector<VideoCapture*>& _readers) :
-        ParallelLoopBody(), readers(&_readers)
-    {
-    }
-    
-    virtual void operator() (const Range& range) const
-    {
-        for (int i = range.start; i != range.end; ++i)
-        {
-            std::stringstream stream;
-            stream << "multiple_readers/" << (i + 1) << ".avi";
-            readers->operator[](i) = new VideoCapture(ParentPath + stream.str());
-            CV_Assert(readers->operator[](i)->isOpened());
-        }
-    }
-    
-    static std::string ParentPath;
-private:
-    std::vector<VideoCapture*>* readers;
-};
-
-std::string CreateVideoCaptureInvoker::ParentPath;
-
-class ReadImageAndTest :
-    public ParallelLoopBody
-{
-public:
-    ReadImageAndTest(std::vector<VideoCapture*>& _readers, cvtest::TS* _ts) :
-        ParallelLoopBody(), readers(&_readers), ts(_ts)
-    {
-    }
-    
-    virtual void operator() (const Range& range) const
-    {
-        CV_Assert(range.start + 1 == range.end);
-        VideoCapture* capture = readers->operator[](range.start);
-        CV_Assert(capture != NULL);
-        
-        const static double eps = 20.0;
-        unsigned int frameCount = static_cast<unsigned int>(capture->get(CV_CAP_PROP_FRAME_COUNT));
-        Mat reference(CreateVideoWriterInvoker::FrameSize, CV_8UC3);
-        
-        for (unsigned int i = 0; i < frameCount && next; ++i)
-        {
-            Mat actual;
-            (*capture) >> actual;
-            
-            WriteVideo_Invoker::GenerateFrame(reference, i);
-            
-            EXPECT_EQ(reference.cols, actual.cols);
-            EXPECT_EQ(reference.rows, actual.rows);
-            EXPECT_EQ(reference.depth(), actual.depth());
-            EXPECT_EQ(reference.channels(), actual.channels());
-
-#define SUM cvtest::TS::SUMMARY
-            
-            double psnr = PSNR(actual, reference);
-            if (psnr < eps)
-            {
-                ts->printf(SUM, "\nPSNR: %lf\n", psnr);
-                ts->printf(SUM, "Video #: %d\n", range.start);
-                ts->printf(SUM, "Frame #: %d\n", i);
-                
-                ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
-                ts->set_gtest_status();
-                
-                Mat diff;
-                absdiff(actual, reference, diff);
-                
-                EXPECT_EQ(countNonZero(diff.reshape(1) > 1), 0);
-                
-                mutex.lock();
-                next = false;
-                mutex.unlock();
-            }
-        }
-    }
-    
-#undef SUM
-    
-    static bool next;
-    
-private:
-    std::vector<VideoCapture*>* readers;
-    cvtest::TS* ts;
-    static Mutex mutex;
-};
-
-Mutex ReadImageAndTest::mutex;
-bool ReadImageAndTest::next;
-
-TEST(Highgui_Video_parallel_readers, accuracy)
-{
-    const unsigned int threadsCount = 4;
-    
-    cvtest::TS* ts = cvtest::TS::ptr();
-    CreateVideoCaptureInvoker::ParentPath = ts->get_data_path();
-    CV_Assert(CreateVideoCaptureInvoker::ParentPath.length() > 0);
-    
     std::vector<VideoCapture*> readers(threadsCount);
-    CreateVideoCaptureInvoker invoker(readers);
-    Range range(0, threadsCount);
-    parallel_for_(range, invoker);
-    
+    CreateVideoCaptureInvoker invoker2(readers, files);
+    parallel_for_(range, invoker2);
+
     ReadImageAndTest::next = true;
 
     parallel_for_(range, ReadImageAndTest(readers, ts));
+
+    // deleting tmp video files
+    for (std::vector<std::string>::const_iterator i = files.begin(), end = files.end(); i != end; ++i)
+    {
+        int code = remove(i->c_str());
+        if (code == 1)
+            std::cerr << "Couldn't delete " << *i << std::endl;
+    }
 }
 
 #endif
