@@ -129,6 +129,11 @@ add_definitions(-D__TBB_DYNAMIC_LOAD_ENABLED=0         #required
                 -DDO_ITT_NOTIFY=0                      #it seems that we don't need these notifications
                )
 
+if(ANDROID_COMPILER_IS_CLANG)
+  add_definitions(-D__TBB_GCC_BUILTIN_ATOMICS_PRESENT=1)
+  ocv_warnings_disable(CMAKE_CXX_FLAGS -Wmissing-prototypes)
+endif()
+
 if(tbb_need_GENERIC_DWORD_LOAD_STORE)
   #needed by TBB 4.0 update 1,2; fixed in TBB 4.0 update 3 but it has 2 new problems
   add_definitions(-D__TBB_USE_GENERIC_DWORD_LOAD_STORE=1)
