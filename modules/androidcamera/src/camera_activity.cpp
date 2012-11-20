@@ -427,7 +427,6 @@ void CameraActivity::applyProperties()
 
 int CameraActivity::getFrameWidth()
 {
-    LOGD("CameraActivity::getFrameWidth()");
     if (frameWidth <= 0)
     frameWidth = getProperty(ANDROID_CAMERA_PROPERTY_FRAMEWIDTH);
     return frameWidth;
@@ -435,7 +434,6 @@ int CameraActivity::getFrameWidth()
 
 int CameraActivity::getFrameHeight()
 {
-    LOGD("CameraActivity::getFrameHeight()");
     if (frameHeight <= 0)
     frameHeight = getProperty(ANDROID_CAMERA_PROPERTY_FRAMEHEIGHT);
     return frameHeight;
