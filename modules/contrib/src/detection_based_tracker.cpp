@@ -1,6 +1,8 @@
 #if defined(__linux__) || defined(LINUX) || defined(__APPLE__) || defined(ANDROID)
 #include "opencv2/contrib/detection_based_tracker.hpp"
 
+#include <pthread.h>
+
 #define DEBUGLOGS 1
 
 #ifdef ANDROID
