@@ -4,7 +4,7 @@
     android:versionCode="22@ANDROID_PLATFORM_VERSION_CODE@"
     android:versionName="2.2" >
 
-    <uses-sdk android:minSdkVersion="8" />
+    <uses-sdk android:minSdkVersion="@ANDROID_NATIVE_API_LEVEL@" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false"/>
 
     <application
