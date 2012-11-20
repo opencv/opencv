@@ -1,6 +1,8 @@
 #if defined(__linux__) || defined(LINUX) || defined(__APPLE__) || defined(ANDROID)
 #include "opencv2/contrib/detection_based_tracker.hpp"
 
+#include <pthread.h>
+
 #if defined(DEBUG) || defined(_DEBUG)
 #undef DEBUGLOGS
 #define DEBUGLOGS 1
@@ -12,7 +14,6 @@
 
 #ifdef ANDROID
 #include <android/log.h>
-#include <pthread.h>
 #define LOG_TAG "OBJECT_DETECTOR"
 #define LOGD0(...) ((void)__android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__))
 #define LOGI0(...) ((void)__android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__))

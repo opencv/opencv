@@ -4,6 +4,9 @@ import java.io.File;
 import java.io.IOException;
 import junit.framework.Assert;
 
+import org.opencv.android.BaseLoaderCallback;
+import org.opencv.android.LoaderCallbackInterface;
+import org.opencv.android.OpenCVLoader;
 import org.opencv.android.Utils;
 import org.opencv.core.Mat;
 
@@ -20,8 +23,7 @@ import android.util.Log;
 
 public class OpenCVTestRunner extends InstrumentationTestRunner {
 
-    static { System.loadLibrary("opencv_java"); }
-
+    private static final long MANAGER_TIMEOUT = 3000;
     public static String LENA_PATH;
     public static String CHESS_PATH;
     public static String LBPCASCADE_FRONTALFACE_PATH;
@@ -29,6 +31,26 @@ public class OpenCVTestRunner extends InstrumentationTestRunner {
 
     private AndroidTestRunner androidTestRunner;
     private static String TAG = "opencv_test_java";
+
+    private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(getContext()) {
+
+        @Override
+        public void onManagerConnected(int status) {
+            switch (status) {
+                case LoaderCallbackInterface.SUCCESS:
+                {
+                    Log("OpenCV loaded successfully");
+                    synchronized (this) {
+                        notify();
+                    }
+                } break;
+                default:
+                {
+                    super.onManagerConnected(status);
+                } break;
+            }
+        }
+    };
 
     public static String getTempFileName(String extension)
     {
@@ -56,6 +78,25 @@ public class OpenCVTestRunner extends InstrumentationTestRunner {
 
     @Override
     public void onStart() {
+        // try to load internal libs
+        if (!OpenCVLoader.initDebug()) {
+            // There is no internal OpenCV libs
+            // Using OpenCV Manager for initialization;
+
+            Log("Internal OpenCV library not found. Using OpenCV Manager for initialization");
+            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_3, getContext(), mLoaderCallback);
+
+            synchronized (this) {
+                try {
+                    wait(MANAGER_TIMEOUT);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        } else {
+            Log("OpenCV library found inside test package. Using it!");
+        }
+
         context = getContext();
         Assert.assertTrue("Context can't be 'null'", context != null);
         LENA_PATH = Utils.exportResource(context, R.drawable.lena);
@@ -68,8 +109,6 @@ public class OpenCVTestRunner extends InstrumentationTestRunner {
          */
         //List<TestCase> testCases = androidTestRunner.getTestCases();
         //Collections.shuffle(testCases); //shuffle the tests order
-
-        // Note: VideoCapture tests turned off by flag field in VideoCaptureTest class
 
         super.onStart();
     }

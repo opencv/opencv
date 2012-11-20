@@ -5,40 +5,46 @@ endif()
 
 project(tbb)
 
-# 4.1 - works fine
-set(tbb_ver "tbb41_20120718oss")
-set(tbb_url "http://threadingbuildingblocks.org/uploads/77/188/4.1/tbb41_20120718oss_src.tgz")
-set(tbb_md5 "31b9ec300f3d09da2504d5d882788dd4")
+# 4.1 update 1 - works fine
+set(tbb_ver "tbb41_20121003oss")
+set(tbb_url "http://threadingbuildingblocks.org/sites/default/files/software_releases/source/tbb41_20121003oss_src.tgz")
+set(tbb_md5 "2a684fefb855d2d0318d1ef09afa75ff")
 set(tbb_version_file "version_string.ver")
+
+# 4.1 - works fine
+#set(tbb_ver "tbb41_20120718oss")
+#set(tbb_url "http://threadingbuildingblocks.org/sites/default/files/software_releases/source/tbb41_20120718oss_src.tgz")
+#set(tbb_md5 "31b9ec300f3d09da2504d5d882788dd4")
+#set(tbb_version_file "version_string.ver")
 
 # 4.0 update 5 - works fine
 #set(tbb_ver "tbb40_20120613oss")
-#set(tbb_url "http://threadingbuildingblocks.org/uploads/77/187/4.0%20update%205/tbb40_20120613oss_src.tgz")
+#set(tbb_url "http://threadingbuildingblocks.org/sites/default/files/software_releases/source/tbb40_20120613oss_src.tgz")
 #set(tbb_md5 "da01ed74944ec5950cfae3476901a172")
 #set(tbb_version_file "version_string.ver")
 
 # 4.0 update 4 - works fine
 #set(tbb_ver "tbb40_20120408oss")
-#set(tbb_url "http://threadingbuildingblocks.org/uploads/77/185/4.0%20update%204/tbb40_20120408oss_src.tgz")
+#set(tbb_url "http://threadingbuildingblocks.org/sites/default/files/software_releases/source/tbb40_20120408oss_src.tgz")
 #set(tbb_md5 "734b356da7fe0ed308741f3e6018251e")
 #set(tbb_version_file "version_string.ver")
 
 # 4.0 update 3 - build broken
 #set(tbb_ver "tbb40_20120201oss")
-#set(tbb_url "http://threadingbuildingblocks.org/uploads/77/182/4.0%20update%203/tbb40_20120201oss_src.tgz")
+#set(tbb_url "http://threadingbuildingblocks.org/sites/default/files/software_releases/source/tbb40_20120201oss_src.tgz")
 #set(tbb_md5 "4669e7d4adee018de7a7b8b972987218")
 #set(tbb_version_file "version_string.tmp")
 
 # 4.0 update 2 - works fine
 #set(tbb_ver "tbb40_20111130oss")
-#set(tbb_url "http://threadingbuildingblocks.org/uploads/77/180/4.0%20update%202/tbb40_20111130oss_src.tgz")
+#set(tbb_url "http://threadingbuildingblocks.org/sites/default/files/software_releases/source/tbb40_20111130oss_src.tgz")
 #set(tbb_md5 "1e6926b21e865e79772119cd44fc3ad8")
 #set(tbb_version_file "version_string.tmp")
 #set(tbb_need_GENERIC_DWORD_LOAD_STORE TRUE)
 
 # 4.0 update 1 - works fine
 #set(tbb_ver "tbb40_20111003oss")
-#set(tbb_url "http://threadingbuildingblocks.org/uploads/77/177/4.0%20update%201/tbb40_20111003oss_src.tgz")
+#set(tbb_url "http://threadingbuildingblocks.org/sites/default/files/software_releases/source/tbb40_20111003oss_src.tgz")
 #set(tbb_md5 "7b5d94eb35a563b29ef402e0fd8f15c9")
 #set(tbb_version_file "version_string.tmp")
 #set(tbb_need_GENERIC_DWORD_LOAD_STORE TRUE)
@@ -122,6 +128,11 @@ add_definitions(-D__TBB_DYNAMIC_LOAD_ENABLED=0         #required
                 -DTBB_NO_LEGACY=1                      #don't need backward compatibility
                 -DDO_ITT_NOTIFY=0                      #it seems that we don't need these notifications
                )
+
+if(ANDROID_COMPILER_IS_CLANG)
+  add_definitions(-D__TBB_GCC_BUILTIN_ATOMICS_PRESENT=1)
+  ocv_warnings_disable(CMAKE_CXX_FLAGS -Wmissing-prototypes)
+endif()
 
 if(tbb_need_GENERIC_DWORD_LOAD_STORE)
   #needed by TBB 4.0 update 1,2; fixed in TBB 4.0 update 3 but it has 2 new problems
