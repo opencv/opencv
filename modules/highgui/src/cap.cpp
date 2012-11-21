@@ -424,7 +424,6 @@ CV_IMPL CvVideoWriter* cvCreateVideoWriter( const char* filename, int fourcc,
 
 CV_IMPL int cvWriteFrame( CvVideoWriter* writer, const IplImage* image )
 {
-
     return writer ? writer->writeFrame(image) : 0;
 }
 
