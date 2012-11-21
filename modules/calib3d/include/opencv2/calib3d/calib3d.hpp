@@ -748,4 +748,11 @@ CV_EXPORTS_W  int estimateAffine3D(InputArray src, InputArray dst,
 
 #endif
 
+
+// Auto linking by "#pragma comment(lib)" syntax
+#include "opencv2/core/pragma_lib.hpp"
+#if PRAGMA_COMMENT_SUPPORT && OPENCV_AUTO_LINK
+#pragma OPENCV_COMMENT_LIB_FNAME("calib3d")
+#endif // PRAGMA_COMMENT_SUPPORT && OPENCV_AUTO_LINK
+
 #endif
