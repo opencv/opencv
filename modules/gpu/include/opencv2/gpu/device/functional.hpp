@@ -357,6 +357,9 @@ namespace cv { namespace gpu { namespace device
         {
             return abs(x);
         }
+
+        __device__ __forceinline__ abs_func() {}
+        __device__ __forceinline__ abs_func(const abs_func&) {}
     };
     template <> struct abs_func<unsigned char> : unary_function<unsigned char, unsigned char>
     {
@@ -364,6 +367,9 @@ namespace cv { namespace gpu { namespace device
         {
             return x;
         }
+
+        __device__ __forceinline__ abs_func() {}
+        __device__ __forceinline__ abs_func(const abs_func&) {}
     };
     template <> struct abs_func<signed char> : unary_function<signed char, signed char>
     {
@@ -371,6 +377,9 @@ namespace cv { namespace gpu { namespace device
         {
             return ::abs(x);
         }
+
+        __device__ __forceinline__ abs_func() {}
+        __device__ __forceinline__ abs_func(const abs_func&) {}
     };
     template <> struct abs_func<char> : unary_function<char, char>
     {
@@ -378,6 +387,9 @@ namespace cv { namespace gpu { namespace device
         {
             return ::abs(x);
         }
+
+        __device__ __forceinline__ abs_func() {}
+        __device__ __forceinline__ abs_func(const abs_func&) {}
     };
     template <> struct abs_func<unsigned short> : unary_function<unsigned short, unsigned short>
     {
@@ -385,6 +397,9 @@ namespace cv { namespace gpu { namespace device
         {
             return x;
         }
+
+        __device__ __forceinline__ abs_func() {}
+        __device__ __forceinline__ abs_func(const abs_func&) {}
     };
     template <> struct abs_func<short> : unary_function<short, short>
     {
@@ -392,6 +407,9 @@ namespace cv { namespace gpu { namespace device
         {
             return ::abs(x);
         }
+
+        __device__ __forceinline__ abs_func() {}
+        __device__ __forceinline__ abs_func(const abs_func&) {}
     };
     template <> struct abs_func<unsigned int> : unary_function<unsigned int, unsigned int>
     {
@@ -399,6 +417,9 @@ namespace cv { namespace gpu { namespace device
         {
             return x;
         }
+
+        __device__ __forceinline__ abs_func() {}
+        __device__ __forceinline__ abs_func(const abs_func&) {}
     };
     template <> struct abs_func<int> : unary_function<int, int>
     {
@@ -406,6 +427,9 @@ namespace cv { namespace gpu { namespace device
         {
             return ::abs(x);
         }
+
+        __device__ __forceinline__ abs_func() {}
+        __device__ __forceinline__ abs_func(const abs_func&) {}
     };
     template <> struct abs_func<float> : unary_function<float, float>
     {
@@ -413,6 +437,9 @@ namespace cv { namespace gpu { namespace device
         {
             return ::fabsf(x);
         }
+
+        __device__ __forceinline__ abs_func() {}
+        __device__ __forceinline__ abs_func(const abs_func&) {}
     };
     template <> struct abs_func<double> : unary_function<double, double>
     {
@@ -420,6 +447,9 @@ namespace cv { namespace gpu { namespace device
         {
             return ::fabs(x);
         }
+
+        __device__ __forceinline__ abs_func() {}
+        __device__ __forceinline__ abs_func(const abs_func&) {}
     };
 
 #define OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(name, func) \
@@ -429,6 +459,8 @@ namespace cv { namespace gpu { namespace device
         { \
             return func ## f(v); \
         } \
+        __device__ __forceinline__ name ## _func() {} \
+        __device__ __forceinline__ name ## _func(const name ## _func&) {} \
     }; \
     template <> struct name ## _func<double> : unary_function<double, double> \
     { \
@@ -436,6 +468,8 @@ namespace cv { namespace gpu { namespace device
         { \
             return func(v); \
         } \
+        __device__ __forceinline__ name ## _func() {} \
+        __device__ __forceinline__ name ## _func(const name ## _func&) {} \
     };
 
 #define OPENCV_GPU_IMPLEMENT_BIN_FUNCTOR(name, func) \
