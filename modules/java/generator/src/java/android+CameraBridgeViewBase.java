@@ -30,6 +30,11 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
 
     private static final int MAX_UNSPECIFIED = -1;
 
+    private static final int STOPPED = 0;
+    private static final int STARTED = 1;
+
+    private static final String TAG = "CameraBridge";
+
     protected int mFrameWidth;
     protected int mFrameHeight;
 
@@ -37,11 +42,26 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
     protected int mMaxWidth;
 
     protected int mPreviewFormat = Highgui.CV_CAP_ANDROID_COLOR_FRAME_RGBA;
+    protected int mCameraIndex = -1;
+    private boolean mEnabled;
 
     private Bitmap mCacheBitmap;
+    protected FpsMeter mFpsMeter = null;
+
+    private CvCameraViewListener mListener;
+    private int mState = STOPPED;
+
+    private boolean mSurfaceExist;
+
+    private Object mSyncObject = new Object();
 
     public CameraBridgeViewBase(Context context, AttributeSet attrs) {
         super(context, attrs);
+        if (attrs.getAttributeBooleanValue(null, "show_fps", false))
+            enableFpsMeter();
+
+        mCameraIndex = attrs.getAttributeIntValue(null,"camera_index", -1);
+
         getHolder().addCallback(this);
         mMaxWidth = MAX_UNSPECIFIED;
         mMaxHeight = MAX_UNSPECIFIED;
@@ -70,19 +90,6 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
         public Mat onCameraFrame(Mat inputFrame);
 
     }
-
-    private static final int STOPPED = 0;
-    private static final int STARTED = 1;
-
-    private static final String TAG = "CameraBridge";
-
-    private CvCameraViewListener mListener;
-    private int mState = STOPPED;
-
-    private boolean mEnabled;
-    private boolean mSurfaceExist;
-
-    private Object mSyncObject = new Object();
 
     public void surfaceChanged(SurfaceHolder arg0, int arg1, int arg2, int arg3) {
         Log.d(TAG, "call surfaceChanged event");
@@ -134,6 +141,24 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
             checkCurrentState();
         }
     }
+
+    /**
+     * This method enables label with fps value on the screen
+     */
+    public void enableFpsMeter() {
+        if (mFpsMeter == null) {
+            mFpsMeter = new FpsMeter();
+        }
+    }
+
+    public void disableFpsMeter() {
+            mFpsMeter = null;
+    }
+
+    /**
+     *
+     * @param listener
+     */
 
     public void setCvCameraViewListener(CvCameraViewListener listener) {
         mListener = listener;
@@ -272,6 +297,10 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
             if (canvas != null) {
                 canvas.drawColor(0, android.graphics.PorterDuff.Mode.CLEAR);
                 canvas.drawBitmap(mCacheBitmap, (canvas.getWidth() - mCacheBitmap.getWidth()) / 2, (canvas.getHeight() - mCacheBitmap.getHeight()) / 2, null);
+                if (mFpsMeter != null) {
+                    mFpsMeter.measure();
+                    mFpsMeter.draw(canvas, 0, 0);
+                }
                 getHolder().unlockCanvasAndPost(canvas);
             }
         }

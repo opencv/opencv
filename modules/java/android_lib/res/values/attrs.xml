@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <attr name="show_fps" format="boolean"/>
+    <attr name="camera_index" format="integer"/>
+</resources>

@@ -40,6 +40,8 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
     private Thread mThread;
     private boolean mStopThread;
 
+    protected Camera mCamera;
+
     private SurfaceTexture mSurfaceTexture;
 
     public static class JavaCameraSizeAccessor implements ListItemAccessor {
@@ -55,8 +57,6 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
         }
     }
 
-    private Camera mCamera;
-
     public JavaCameraView(Context context, AttributeSet attrs) {
         super(context, attrs);
         Log.d(TAG, "Java camera view ctor");
@@ -69,25 +69,36 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
         synchronized (this) {
             mCamera = null;
 
-            Log.d(TAG, "Trying to open camera with old open()");
-            try {
-                mCamera = Camera.open();
-            }
-            catch (Exception e){
-                Log.e(TAG, "Camera is not available (in use or does not exist): " + e.getLocalizedMessage());
-            }
+            if (mCameraIndex == -1) {
+                Log.d(TAG, "Trying to open camera with old open()");
+                try {
+                    mCamera = Camera.open();
+                }
+                catch (Exception e){
+                    Log.e(TAG, "Camera is not available (in use or does not exist): " + e.getLocalizedMessage());
+                }
 
-            if(mCamera == null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.GINGERBREAD) {
-                boolean connected = false;
-                for (int camIdx = 0; camIdx < Camera.getNumberOfCameras(); ++camIdx) {
-                    Log.d(TAG, "Trying to open camera with new open(" + Integer.valueOf(camIdx) + ")");
-                    try {
-                        mCamera = Camera.open(camIdx);
-                        connected = true;
-                    } catch (RuntimeException e) {
-                        Log.e(TAG, "Camera #" + camIdx + "failed to open: " + e.getLocalizedMessage());
+                if(mCamera == null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.GINGERBREAD) {
+                    boolean connected = false;
+                    for (int camIdx = 0; camIdx < Camera.getNumberOfCameras(); ++camIdx) {
+                        Log.d(TAG, "Trying to open camera with new open(" + Integer.valueOf(camIdx) + ")");
+                        try {
+                            mCamera = Camera.open(camIdx);
+                            connected = true;
+                        } catch (RuntimeException e) {
+                            Log.e(TAG, "Camera #" + camIdx + "failed to open: " + e.getLocalizedMessage());
+                        }
+                        if (connected) break;
                     }
-                    if (connected) break;
+                }
+            } else {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.GINGERBREAD) {
+                    Log.d(TAG, "Trying to open camera with new open(" + Integer.valueOf(mCameraIndex) + ")");
+                    try {
+                        mCamera = Camera.open(mCameraIndex);
+                    } catch (RuntimeException e) {
+                        Log.e(TAG, "Camera #" + mCameraIndex + "failed to open: " + e.getLocalizedMessage());
+                    }
                 }
             }
 
@@ -217,6 +228,7 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
         releaseCamera();
     }
 
+    @TargetApi(Build.VERSION_CODES.FROYO)
     public void onPreviewFrame(byte[] frame, Camera arg1) {
         Log.i(TAG, "Preview Frame received. Need to create MAT and deliver it to clients");
         Log.i(TAG, "Frame size  is " + frame.length);
