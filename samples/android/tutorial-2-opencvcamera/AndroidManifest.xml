@@ -4,7 +4,11 @@
           android:versionCode="21"
           android:versionName="2.1">
 
-    <application android:label="@string/app_name" android:icon="@drawable/icon">
+    <application
+        android:label="@string/app_name"
+        android:icon="@drawable/icon"
+        android:theme="@android:style/Theme.NoTitleBar.Fullscreen" >
+
         <activity android:name="Sample2NativeCamera"
                   android:label="@string/app_name"
                   android:screenOrientation="landscape"
