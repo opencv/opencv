@@ -534,12 +534,14 @@ public:
         int shrinkage;
     };
 
+    enum { NO_REJECT = 1, DOLLAR = 2, /*PASCAL = 4,*/ DEFAULT = NO_REJECT};
+
     // An empty cascade will be created.
     // Param minScale is a minimum scale relative to the original size of the image on which cascade will be applyed.
     // Param minScale is a maximum scale relative to the original size of the image on which cascade will be applyed.
     // Param scales is a number of scales from minScale to maxScale.
     // Param rejfactor is used for NMS.
-    CV_WRAP SCascade(const double minScale = 0.4, const double maxScale = 5., const int scales = 55, const int rejfactor = 1);
+    CV_WRAP SCascade(const double minScale = 0.4, const double maxScale = 5., const int scales = 55, const int rejCriteria = 1);
 
     CV_WRAP virtual ~SCascade();
 
@@ -571,7 +573,7 @@ private:
     double maxScale;
 
     int   scales;
-    int   rejfactor;
+    int   rejCriteria;
 };
 
 CV_EXPORTS bool initModule_objdetect(void);
