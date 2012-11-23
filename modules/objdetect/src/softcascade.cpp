@@ -90,8 +90,13 @@ struct Feature
     Feature(const cv::FileNode& fn) : channel((int)fn[SC_F_CHANNEL])
     {
         cv::FileNode rn = fn[SC_F_RECT];
-        cv::FileNodeIterator r_it = rn.end();
-        rect = cv::Rect(*(--r_it), *(--r_it), *(--r_it), *(--r_it));
+        cv::FileNodeIterator r_it = rn.begin();
+
+        int x = *r_it++;
+        int y = *r_it++;
+        int w = *r_it++;
+        int h = *r_it++;
+        rect = cv::Rect(x, y, w, h);
 
         // 1 / area
         rarea = 1.f / ((rect.width - rect.x) * (rect.height - rect.y));
