@@ -1,3 +1,5 @@
+#/usr/bin/env python
+
 '''
 This module contais some common routines used by other samples.
 '''

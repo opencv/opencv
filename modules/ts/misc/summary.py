@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import testlog_parser, sys, os, xml, glob, re
 from table_formatter import *
 from optparse import OptionParser

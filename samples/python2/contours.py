@@ -1,3 +1,5 @@
+#/usr/bin/env python
+
 '''
 This program illustrates the use of findContours and drawContours.
 The original image is put up along with the image of drawn contours.

@@ -1,3 +1,5 @@
+#/usr/bin/env python
+
 # -*- coding: utf-8 -*-
 #
 # opencvstd documentation build configuration file, created by

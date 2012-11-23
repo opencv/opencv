@@ -1,3 +1,5 @@
+#/usr/bin/env python
+
 '''
 This sample demonstrates Canny edge detection.
 

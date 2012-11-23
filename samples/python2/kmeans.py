@@ -1,3 +1,5 @@
+#/usr/bin/env python
+
 '''
 K-means clusterization sample.
 Usage:

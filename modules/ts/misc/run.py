@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import sys, os, platform, xml, re, tempfile, glob, datetime, getpass, shutil
 from optparse import OptionParser
 from subprocess import Popen, PIPE
