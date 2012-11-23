@@ -537,7 +537,7 @@ namespace cv { namespace gpu { namespace device
 {
     namespace imgproc
     {
-        void shfl_integral_gpu(PtrStepSzb img, PtrStepSz<unsigned int> integral, cudaStream_t stream);
+        void shfl_integral_gpu(const PtrStepSzb& img, PtrStepSz<unsigned int> integral, cudaStream_t stream);
     }
 }}}
 
