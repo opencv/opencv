@@ -1107,8 +1107,8 @@ struct CV_EXPORTS ConnectedComponentStats
 //! computes the connected components labeled image of boolean image I with 4 or 8 way connectivity - returns N, the total
 //number of labels [0, N-1] where 0 represents the background label. L's value type determines the label type, an important
 //consideration based on the total number of labels or alternatively the total number of pixels.
-CV_EXPORTS_W uint64 connectedComponents(CV_OUT Mat &L, const Mat &I, int connectivity = 8);
-CV_EXPORTS_W uint64 connectedComponentsWithStats(CV_OUT Mat &L, const Mat &I, CV_OUT std::vector<ConnectedComponentStats> &statsv, int connectivity = 8);
+CV_EXPORTS_W int connectedComponents(CV_OUT Mat &L, const Mat &I, int connectivity = 8);
+CV_EXPORTS_W int connectedComponentsWithStats(CV_OUT Mat &L, const Mat &I, CV_OUT std::vector<ConnectedComponentStats> &statsv, int connectivity = 8);
 
 
 //! mode of the contour retrieval algorithm

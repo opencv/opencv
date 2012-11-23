@@ -50,8 +50,6 @@ typedef short int16_t;
 typedef unsigned short uint16_t;
 typedef int int32_t;
 typedef unsigned int uint32_t;
-typedef int64 int64_t;
-typedef uint64 uint64_t;
 
 namespace cv{
     namespace connectedcomponents{
@@ -342,7 +340,7 @@ namespace cv{
 
 //L's type must have an appropriate depth for the number of pixels in I
 template<typename StatsOp>
-uint64_t connectedComponents_sub1(Mat &L, const Mat &I, int connectivity, StatsOp &sop){
+int connectedComponents_sub1(Mat &L, const Mat &I, int connectivity, StatsOp &sop){
     CV_Assert(L.rows == I.rows);
     CV_Assert(L.cols == I.cols);
     CV_Assert(L.channels() == 1 && I.channels() == 1);
@@ -356,99 +354,31 @@ uint64_t connectedComponents_sub1(Mat &L, const Mat &I, int connectivity, StatsO
     if(lDepth == CV_8U){
         if(iDepth == CV_8U || iDepth == CV_8S){
             if(connectivity == 4){
-                return (uint64_t) LabelingImpl<uint8_t, uint8_t, StatsOp, 4>()(L, I, sop);
+                return (int) LabelingImpl<uint8_t, uint8_t, StatsOp, 4>()(L, I, sop);
             }else{
-                return (uint64_t) LabelingImpl<uint8_t, uint8_t, StatsOp, 8>()(L, I, sop);
+                return (int) LabelingImpl<uint8_t, uint8_t, StatsOp, 8>()(L, I, sop);
             }
-        }else if(iDepth == CV_16U || iDepth == CV_16S){
-            if(connectivity == 4){
-                return (uint64_t) LabelingImpl<uint8_t, uint16_t, StatsOp, 4>()(L, I, sop);
-            }else{
-                return (uint64_t) LabelingImpl<uint8_t, uint16_t, StatsOp, 8>()(L, I, sop);
-            }
-        }else if(iDepth == CV_32S){
-            if(connectivity == 4){
-                return (uint64_t) LabelingImpl<uint8_t, int32_t, StatsOp, 4>()(L, I, sop);
-            }else{
-                return (uint64_t) LabelingImpl<uint8_t, int32_t, StatsOp, 8>()(L, I, sop);
-            }
-        }else if(iDepth == CV_32F){
-            if(connectivity == 4){
-                return (uint64_t) LabelingImpl<uint8_t, float, StatsOp, 4>()(L, I, sop);
-            }else{
-                return (uint64_t) LabelingImpl<uint8_t, float, StatsOp, 8>()(L, I, sop);
-            }
-        }else if(iDepth == CV_64F){
-            if(connectivity == 4){
-                return (uint64_t) LabelingImpl<uint8_t, double, StatsOp, 4>()(L, I, sop);
-            }else{
-                return (uint64_t) LabelingImpl<uint8_t, double, StatsOp, 8>()(L, I, sop);
-            }
+        }else{
+            CV_Assert(false);
         }
     }else if(lDepth == CV_16U){
         if(iDepth == CV_8U || iDepth == CV_8S){
             if(connectivity == 4){
-                return (uint64_t) LabelingImpl<uint16_t, uint8_t, StatsOp, 4>()(L, I, sop);
+                return (int) LabelingImpl<uint16_t, uint8_t, StatsOp, 4>()(L, I, sop);
             }else{
-                return (uint64_t) LabelingImpl<uint16_t, uint8_t, StatsOp, 8>()(L, I, sop);
+                return (int) LabelingImpl<uint16_t, uint8_t, StatsOp, 8>()(L, I, sop);
             }
-        }else if(iDepth == CV_16U || iDepth == CV_16S){
-            if(connectivity == 4){
-                return (uint64_t) LabelingImpl<uint16_t, uint16_t, StatsOp, 4>()(L, I, sop);
-            }else{
-                return (uint64_t) LabelingImpl<uint16_t, uint16_t, StatsOp, 8>()(L, I, sop);
-            }
-        }else if(iDepth == CV_32S){
-            if(connectivity == 4){
-                return (uint64_t) LabelingImpl<uint16_t, int32_t, StatsOp, 4>()(L, I, sop);
-            }else{
-                return (uint64_t) LabelingImpl<uint16_t, int32_t, StatsOp, 8>()(L, I, sop);
-            }
-        }else if(iDepth == CV_32F){
-            if(connectivity == 4){
-                return (uint64_t) LabelingImpl<uint16_t, float, StatsOp, 4>()(L, I, sop);
-            }else{
-                return (uint64_t) LabelingImpl<uint16_t, float, StatsOp, 8>()(L, I, sop);
-            }
-        }else if(iDepth == CV_64F){
-            if(connectivity == 4){
-                return (uint64_t) LabelingImpl<uint16_t, double, StatsOp, 4>()(L, I, sop);
-            }else{
-                return (uint64_t) LabelingImpl<uint16_t, double, StatsOp, 8>()(L, I, sop);
-            }
+        }else{
+            CV_Assert(false);
         }
     }else if(lDepth == CV_32S){
         //note that signed types don't really make sense here and not being able to use uint32_t matters for scientific projects
         //OpenCV: how should we proceed?  .at<T> typechecks in debug mode
         if(iDepth == CV_8U || iDepth == CV_8S){
             if(connectivity == 4){
-                return (uint64_t) LabelingImpl<int32_t, uint8_t, StatsOp, 4>()(L, I, sop);
+                return (int) LabelingImpl<int32_t, uint8_t, StatsOp, 4>()(L, I, sop);
             }else{
-                return (uint64_t) LabelingImpl<int32_t, uint8_t, StatsOp, 8>()(L, I, sop);
-            }
-        }else if(iDepth == CV_16U || iDepth == CV_16S){
-            if(connectivity == 4){
-                return (uint64_t) LabelingImpl<int32_t, uint16_t, StatsOp, 4>()(L, I, sop);
-            }else{
-                return (uint64_t) LabelingImpl<int32_t, uint16_t, StatsOp, 8>()(L, I, sop);
-            }
-        }else if(iDepth == CV_32S){
-            if(connectivity == 4){
-                return (uint64_t) LabelingImpl<int32_t, int32_t, StatsOp, 4>()(L, I, sop);
-            }else{
-                return (uint64_t) LabelingImpl<int32_t, int32_t, StatsOp, 8>()(L, I, sop);
-            }
-        }else if(iDepth == CV_32F){
-            if(connectivity == 4){
-                return (uint64_t) LabelingImpl<int32_t, float, StatsOp, 4>()(L, I, sop);
-            }else{
-                return (uint64_t) LabelingImpl<int32_t, float, StatsOp, 8>()(L, I, sop);
-            }
-        }else if(iDepth == CV_64F){
-            if(connectivity == 4){
-                return (uint64_t) LabelingImpl<int32_t, double, StatsOp, 4>()(L, I, sop);
-            }else{
-                return (uint64_t) LabelingImpl<int32_t, double, StatsOp, 8>()(L, I, sop);
+                return (int) LabelingImpl<int32_t, uint8_t, StatsOp, 8>()(L, I, sop);
             }
         }else{
             CV_Assert(false);
@@ -459,7 +389,7 @@ uint64_t connectedComponents_sub1(Mat &L, const Mat &I, int connectivity, StatsO
     return -1;
 }
 
-uint64_t connectedComponents(Mat &L, const Mat &I, int connectivity){
+int connectedComponents(Mat &L, const Mat &I, int connectivity){
     int lDepth = L.depth();
     if(lDepth == CV_8U){
         connectedcomponents::NoOp<uint8_t> sop; return connectedComponents_sub1(L, I, connectivity, sop);
@@ -473,7 +403,7 @@ uint64_t connectedComponents(Mat &L, const Mat &I, int connectivity){
     }
 }
 
-uint64_t connectedComponentsWithStats(Mat &L, const Mat &I, std::vector<ConnectedComponentStats> &statsv, int connectivity){
+int connectedComponentsWithStats(Mat &L, const Mat &I, std::vector<ConnectedComponentStats> &statsv, int connectivity){
     int lDepth = L.depth();
     if(lDepth == CV_8U){
         connectedcomponents::CCStatsOp<uint8_t> sop(statsv); return connectedComponents_sub1(L, I, connectivity, sop);
@@ -488,4 +418,3 @@ uint64_t connectedComponentsWithStats(Mat &L, const Mat &I, std::vector<Connecte
 }
 
 }
-
