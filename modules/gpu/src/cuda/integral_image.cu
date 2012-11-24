@@ -361,14 +361,8 @@ namespace cv { namespace gpu { namespace device
         {
             {
                 // each thread handles 16 values, use 1 block/row
-                int block = img.cols / 16;
-
                 // save, becouse step is actually can't be less 512 bytes
-                int align = img.cols % 4;
-                if ( align != 0)
-                {
-                    block += (4 - align);
-                }
+                int block = integral.cols / 16;
 
                 // launch 1 block / row
                 const int grid = img.rows;
