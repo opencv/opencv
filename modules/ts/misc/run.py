@@ -809,6 +809,7 @@ if __name__ == "__main__":
     parser.add_option("", "--serial", dest="adb_serial", help="Android: directs command to the USB device or emulator with the given serial number", metavar="serial number", default="")
     parser.add_option("", "--package", dest="junit_package", help="Android: run jUnit tests for specified package", metavar="package", default="")
     parser.add_option("", "--help-tests", dest="help", help="Show help for test executable", action="store_true", default=False)
+    parser.add_option("", "--check", dest="check", help="Shortcut for '--perf_min_samples=1 --perf_force_samples=1'", action="store_true", default=False)
 
     (options, args) = parser.parse_args(argv)
 
@@ -828,6 +829,9 @@ if __name__ == "__main__":
     if len(tests) != 1 or len(run_args) != 1:
         # remove --gtest_output from params
         test_args = [a for a in test_args if not a.startswith("--gtest_output=")]
+
+    if options.check:
+        test_args.extend(["--perf_min_samples=1", "--perf_force_samples=1"])
 
     logs = []
     for path in run_args:
