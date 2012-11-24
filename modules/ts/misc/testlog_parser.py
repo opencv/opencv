@@ -1,3 +1,5 @@
+#/usr/bin/env python
+
 import sys, re, os.path
 from xml.dom.minidom import parse
 

@@ -1,3 +1,5 @@
+#/usr/bin/env python
+
 '''
 Data matrix detector sample.
 Usage:

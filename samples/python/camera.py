@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 import cv2.cv as cv
 import time
 

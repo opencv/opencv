@@ -1,3 +1,5 @@
+#/usr/bin/env python
+
 '''
 Robust line fitting.
 ==================

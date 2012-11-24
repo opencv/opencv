@@ -1,3 +1,5 @@
+#/usr/bin/env python
+
 '''
 The sample demonstrates how to train Random Trees classifier
 (or Boosting classifier, or MLP, or Knearest, or Support Vector Machines) using the provided dataset.

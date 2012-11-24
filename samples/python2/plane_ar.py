@@ -1,3 +1,5 @@
+#/usr/bin/env python
+
 '''
 Planar augmented reality
 ==================

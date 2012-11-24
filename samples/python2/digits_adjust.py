@@ -1,3 +1,5 @@
+#/usr/bin/env python
+
 '''
 Digit recognition adjustment.
 Grid search is used to find the best parameters for SVM and KNearest classifiers.

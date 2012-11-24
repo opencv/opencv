@@ -1,5 +1,6 @@
-# Calculating and displaying 2D Hue-Saturation histogram of a color image
+#/usr/bin/env python
 
+# Calculating and displaying 2D Hue-Saturation histogram of a color image
 import sys
 import cv2.cv as cv
 
