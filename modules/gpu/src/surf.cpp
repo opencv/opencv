@@ -147,16 +147,13 @@ namespace
 
             bindImgTex(img);
 
-            integralBuffered(img, tmpSum, surf_.intBuffer);
-            tmpSum.copyTo(surf_.sum);
-
+            integralBuffered(img, surf_.sum, surf_.intBuffer);
             sumOffset = bindSumTex(surf_.sum);
 
             if (use_mask)
             {
                 min(mask, 1.0, surf_.mask1);
-                integralBuffered(surf_.mask1, tmpMaskSum, surf_.intBuffer);
-                tmpMaskSum.copyTo(surf_.maskSum);
+                integralBuffered(surf_.mask1, surf_.maskSum, surf_.intBuffer);
                 maskOffset = bindMaskSumTex(surf_.maskSum);
             }
         }
@@ -230,9 +227,6 @@ namespace
 
     private:
         SURF_GPU& surf_;
-
-        cv::gpu::GpuMat tmpSum;
-        cv::gpu::GpuMat tmpMaskSum;
 
         int img_cols, img_rows;
 
