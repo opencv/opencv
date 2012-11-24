@@ -1,3 +1,5 @@
+#/usr/bin/env python
+
 import hdr_parser, sys, re, os, cStringIO
 from string import Template
 

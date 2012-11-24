@@ -1,3 +1,5 @@
+#/usr/bin/env python
+
 '''
 Simple example of stereo image matching and point cloud generation.
 

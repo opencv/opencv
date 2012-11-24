@@ -1,3 +1,5 @@
+#/usr/bin/env python
+
 '''
 Coherence-enhancing filtering example
 =====================================

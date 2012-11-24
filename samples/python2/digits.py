@@ -1,3 +1,5 @@
+#/usr/bin/env python
+
 '''
 SVM and KNearest digit recognition.
 

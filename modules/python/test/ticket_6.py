@@ -1,3 +1,5 @@
+#/usr/bin/env python
+
 import urllib
 import cv2.cv as cv
 import Image

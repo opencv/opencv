@@ -1,3 +1,5 @@
+#/usr/bin/env python
+
 import os, sys, re, string
 
 # the list only for debugging. The real list, used in the real OpenCV build, is specified in CMakeLists.txt

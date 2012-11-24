@@ -1,3 +1,5 @@
+#/usr/bin/env python
+
 import os, sys, fnmatch, re
 
 sys.path.append("../modules/python/src2/")
