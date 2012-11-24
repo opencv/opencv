@@ -75,10 +75,10 @@ namespace cv { namespace gpu { namespace device
         size_t bindMaskSumTex(PtrStepSz<unsigned int> maskSum);
 
         void icvCalcLayerDetAndTrace_gpu(const PtrStepf& det, const PtrStepf& trace, int img_rows, int img_cols,
-            int octave, int nOctaveLayers, const size_t sumOffset);
+            int octave, int nOctaveLayer);
 
         void icvFindMaximaInLayer_gpu(const PtrStepf& det, const PtrStepf& trace, int4* maxPosBuffer, unsigned int* maxCounter,
-            int img_rows, int img_cols, int octave, bool use_mask, int nLayers, const size_t maskOffset);
+            int img_rows, int img_cols, int octave, bool use_mask, int nLayers);
 
         void icvInterpolateKeypoint_gpu(const PtrStepf& det, const int4* maxPosBuffer, unsigned int maxCounter,
             float* featureX, float* featureY, int* featureLaplacian, int* featureOctave, float* featureSize, float* featureHessian,
@@ -146,14 +146,17 @@ namespace
             loadGlobalConstants(maxCandidates, maxFeatures, img_rows, img_cols, surf_.nOctaveLayers, static_cast<float>(surf_.hessianThreshold));
 
             bindImgTex(img);
-            integralBuffered(img, surf_.sum, surf_.intBuffer);
+
+            integralBuffered(img, tmpSum, surf_.intBuffer);
+            tmpSum.copyTo(surf_.sum);
 
             sumOffset = bindSumTex(surf_.sum);
 
             if (use_mask)
             {
                 min(mask, 1.0, surf_.mask1);
-                integralBuffered(surf_.mask1, surf_.maskSum, surf_.intBuffer);
+                integralBuffered(surf_.mask1, tmpMaskSum, surf_.intBuffer);
+                tmpMaskSum.copyTo(surf_.maskSum);
                 maskOffset = bindMaskSumTex(surf_.maskSum);
             }
         }
@@ -174,10 +177,10 @@ namespace
 
                 loadOctaveConstants(octave, layer_rows, layer_cols);
 
-                icvCalcLayerDetAndTrace_gpu(surf_.det, surf_.trace, img_rows, img_cols, octave, surf_.nOctaveLayers, sumOffset);
+                icvCalcLayerDetAndTrace_gpu(surf_.det, surf_.trace, img_rows, img_cols, octave, surf_.nOctaveLayers);
 
                 icvFindMaximaInLayer_gpu(surf_.det, surf_.trace, surf_.maxPosBuffer.ptr<int4>(), counters.ptr<unsigned int>() + 1 + octave,
-                    img_rows, img_cols, octave, use_mask, surf_.nOctaveLayers, maskOffset);
+                    img_rows, img_cols, octave, use_mask, surf_.nOctaveLayers);
 
                 unsigned int maxCounter;
                 cudaSafeCall( cudaMemcpy(&maxCounter, counters.ptr<unsigned int>() + 1 + octave, sizeof(unsigned int), cudaMemcpyDeviceToHost) );
@@ -227,6 +230,9 @@ namespace
 
     private:
         SURF_GPU& surf_;
+
+        cv::gpu::GpuMat tmpSum;
+        cv::gpu::GpuMat tmpMaskSum;
 
         int img_cols, img_rows;
 
