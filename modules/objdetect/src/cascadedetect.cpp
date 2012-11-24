@@ -46,7 +46,7 @@
 
 #include <string>
 
-
+#if defined (LOG_CASCADE_STATISTIC)
 struct Logger
 {
     enum { STADIES_NUM = 20 };
@@ -109,7 +109,7 @@ struct Logger
     }
 
 } logger;
-
+#endif
 
 namespace cv
 {
