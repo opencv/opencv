@@ -39,7 +39,7 @@ PERF_TEST_P( TestFilter2d, Filter2d,
 
     TEST_CYCLE() filter2D(src, dst, CV_8UC4, kernel, Point(1, 1), 0., borderMode);
 
-    SANITY_CHECK(dst);
+    SANITY_CHECK(dst, 1);
 }
 
 PERF_TEST_P( Image_KernelSize, GaborFilter2d,
