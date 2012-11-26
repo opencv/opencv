@@ -336,8 +336,8 @@ and exceptions are used in C++, it also should be created. Example of the file :
    APP_CPPFLAGS := -frtti -fexceptions
    APP_ABI := armeabi-v7a
 
-.. note:: This example is true for ARMv7 CPU chips, if you're working with ARMv6 CPU instead, 
-          the last line should look this way: 
+.. note:: This example is true for ARMv7 CPU chips, if you're working with ARMv5 or ARMv6 CPU 
+          instead, the last line should look this way: 
 
           .. code-block:: make
 
