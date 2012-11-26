@@ -1,0 +1,2 @@
+/usr/bin/ar cr ../../lib/libopencv_objdetect_pch_dephelp.a  CMakeFiles/opencv_objdetect_pch_dephelp.dir/opencv_objdetect_pch_dephelp.cxx.o
+/usr/bin/ranlib ../../lib/libopencv_objdetect_pch_dephelp.a

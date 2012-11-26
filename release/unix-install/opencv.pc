@@ -1,0 +1,13 @@
+# Package Information for pkg-config
+
+prefix=/usr/local
+exec_prefix=${prefix}
+libdir=
+includedir_old=${prefix}/include/opencv
+includedir_new=${prefix}/include
+
+Name: OpenCV
+Description: Open Source Computer Vision Library
+Version: 2.4.9
+Libs:  ${exec_prefix}/lib/libopencv_calib3d.so ${exec_prefix}/lib/libopencv_contrib.so ${exec_prefix}/lib/libopencv_core.so ${exec_prefix}/lib/libopencv_features2d.so ${exec_prefix}/lib/libopencv_flann.so ${exec_prefix}/lib/libopencv_gpu.so ${exec_prefix}/lib/libopencv_highgui.so ${exec_prefix}/lib/libopencv_imgproc.so ${exec_prefix}/lib/libopencv_legacy.so ${exec_prefix}/lib/libopencv_ml.so ${exec_prefix}/lib/libopencv_nonfree.so ${exec_prefix}/lib/libopencv_objdetect.so ${exec_prefix}/lib/libopencv_photo.so ${exec_prefix}/lib/libopencv_stitching.so ${exec_prefix}/lib/libopencv_ts.so ${exec_prefix}/lib/libopencv_video.so ${exec_prefix}/lib/libopencv_videostab.so
+Cflags: -I${includedir_old} -I${includedir_new}

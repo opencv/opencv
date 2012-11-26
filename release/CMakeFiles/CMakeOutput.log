@@ -1,0 +1,478 @@
+The system is: Linux - 3.6.7-4.fc17.i686 - i686
+Compiling the CXX compiler identification source file "CMakeCXXCompilerId.cpp" succeeded.
+Compiler: /usr/bin/c++ 
+Build flags: 
+Id flags: 
+
+The output was:
+0
+
+
+Compilation of the CXX compiler identification source "CMakeCXXCompilerId.cpp" produced "a.out"
+
+The CXX compiler identification is GNU, found in "/home/rodrygojose/opencv/release/CMakeFiles/CompilerIdCXX/a.out"
+
+Compiling the C compiler identification source file "CMakeCCompilerId.c" succeeded.
+Compiler: /usr/bin/gcc 
+Build flags: 
+Id flags: 
+
+The output was:
+0
+
+
+Compilation of the C compiler identification source "CMakeCCompilerId.c" produced "a.out"
+
+The C compiler identification is GNU, found in "/home/rodrygojose/opencv/release/CMakeFiles/CompilerIdC/a.out"
+
+Determining if the CXX compiler works passed with the following output:
+Change Dir: /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp
+
+Run Build Command:/usr/bin/gmake "cmTryCompileExec285057211/fast"
+/usr/bin/gmake -f CMakeFiles/cmTryCompileExec285057211.dir/build.make CMakeFiles/cmTryCompileExec285057211.dir/build
+gmake[1]: Entering directory `/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp'
+/usr/bin/cmake -E cmake_progress_report /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CMakeFiles 1
+Building CXX object CMakeFiles/cmTryCompileExec285057211.dir/testCXXCompiler.cxx.o
+/usr/bin/c++     -o CMakeFiles/cmTryCompileExec285057211.dir/testCXXCompiler.cxx.o -c /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/testCXXCompiler.cxx
+Linking CXX executable cmTryCompileExec285057211
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTryCompileExec285057211.dir/link.txt --verbose=1
+/usr/bin/c++          CMakeFiles/cmTryCompileExec285057211.dir/testCXXCompiler.cxx.o  -o cmTryCompileExec285057211 -rdynamic 
+gmake[1]: Leaving directory `/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp'
+
+
+Detecting CXX compiler ABI info compiled with the following output:
+Change Dir: /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp
+
+Run Build Command:/usr/bin/gmake "cmTryCompileExec3155348758/fast"
+/usr/bin/gmake -f CMakeFiles/cmTryCompileExec3155348758.dir/build.make CMakeFiles/cmTryCompileExec3155348758.dir/build
+gmake[1]: Entering directory `/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp'
+/usr/bin/cmake -E cmake_progress_report /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CMakeFiles 1
+Building CXX object CMakeFiles/cmTryCompileExec3155348758.dir/CMakeCXXCompilerABI.cpp.o
+/usr/bin/c++     -o CMakeFiles/cmTryCompileExec3155348758.dir/CMakeCXXCompilerABI.cpp.o -c /usr/share/cmake/Modules/CMakeCXXCompilerABI.cpp
+Linking CXX executable cmTryCompileExec3155348758
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTryCompileExec3155348758.dir/link.txt --verbose=1
+/usr/bin/c++        -v CMakeFiles/cmTryCompileExec3155348758.dir/CMakeCXXCompilerABI.cpp.o  -o cmTryCompileExec3155348758 -rdynamic  
+Using built-in specs.
+COLLECT_GCC=/usr/bin/c++
+COLLECT_LTO_WRAPPER=/usr/libexec/gcc/i686-redhat-linux/4.7.2/lto-wrapper
+Target: i686-redhat-linux
+Configured with: ../configure --prefix=/usr --mandir=/usr/share/man --infodir=/usr/share/info --with-bugurl=http://bugzilla.redhat.com/bugzilla --enable-bootstrap --enable-shared --enable-threads=posix --enable-checking=release --disable-build-with-cxx --disable-build-poststage1-with-cxx --with-system-zlib --enable-__cxa_atexit --disable-libunwind-exceptions --enable-gnu-unique-object --enable-linker-build-id --with-linker-hash-style=gnu --enable-languages=c,c++,objc,obj-c++,java,fortran,ada,go,lto --enable-plugin --enable-initfini-array --enable-java-awt=gtk --disable-dssi --with-java-home=/usr/lib/jvm/java-1.5.0-gcj-1.5.0.0/jre --enable-libgcj-multifile --enable-java-maintainer-mode --with-ecj-jar=/usr/share/java/eclipse-ecj.jar --disable-libjava-multilib --with-ppl --with-cloog --with-tune=generic --with-arch=i686 --build=i686-redhat-linux
+Thread model: posix
+gcc version 4.7.2 20120921 (Red Hat 4.7.2-2) (GCC) 
+COMPILER_PATH=/usr/libexec/gcc/i686-redhat-linux/4.7.2/:/usr/libexec/gcc/i686-redhat-linux/4.7.2/:/usr/libexec/gcc/i686-redhat-linux/:/usr/lib/gcc/i686-redhat-linux/4.7.2/:/usr/lib/gcc/i686-redhat-linux/
+LIBRARY_PATH=/usr/lib/gcc/i686-redhat-linux/4.7.2/:/usr/lib/gcc/i686-redhat-linux/4.7.2/../../../:/lib/:/usr/lib/
+COLLECT_GCC_OPTIONS='-v' '-o' 'cmTryCompileExec3155348758' '-rdynamic' '-shared-libgcc' '-mtune=generic' '-march=i686'
+ /usr/libexec/gcc/i686-redhat-linux/4.7.2/collect2 --build-id --no-add-needed --eh-frame-hdr --hash-style=gnu -m elf_i386 -export-dynamic -dynamic-linker /lib/ld-linux.so.2 -o cmTryCompileExec3155348758 /usr/lib/gcc/i686-redhat-linux/4.7.2/../../../crt1.o /usr/lib/gcc/i686-redhat-linux/4.7.2/../../../crti.o /usr/lib/gcc/i686-redhat-linux/4.7.2/crtbegin.o -L/usr/lib/gcc/i686-redhat-linux/4.7.2 -L/usr/lib/gcc/i686-redhat-linux/4.7.2/../../.. CMakeFiles/cmTryCompileExec3155348758.dir/CMakeCXXCompilerABI.cpp.o -lstdc++ -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /usr/lib/gcc/i686-redhat-linux/4.7.2/crtend.o /usr/lib/gcc/i686-redhat-linux/4.7.2/../../../crtn.o
+gmake[1]: Leaving directory `/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp'
+
+
+Parsed CXX implicit link information from above output:
+  link line regex: [^( *|.*[/\])(ld|ld|collect2)[^/\]*( |$)]
+  ignore line: [Change Dir: /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp]
+  ignore line: []
+  ignore line: [Run Build Command:/usr/bin/gmake "cmTryCompileExec3155348758/fast"]
+  ignore line: [/usr/bin/gmake -f CMakeFiles/cmTryCompileExec3155348758.dir/build.make CMakeFiles/cmTryCompileExec3155348758.dir/build]
+  ignore line: [gmake[1]: Entering directory `/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp']
+  ignore line: [/usr/bin/cmake -E cmake_progress_report /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CMakeFiles 1]
+  ignore line: [Building CXX object CMakeFiles/cmTryCompileExec3155348758.dir/CMakeCXXCompilerABI.cpp.o]
+  ignore line: [/usr/bin/c++     -o CMakeFiles/cmTryCompileExec3155348758.dir/CMakeCXXCompilerABI.cpp.o -c /usr/share/cmake/Modules/CMakeCXXCompilerABI.cpp]
+  ignore line: [Linking CXX executable cmTryCompileExec3155348758]
+  ignore line: [/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTryCompileExec3155348758.dir/link.txt --verbose=1]
+  ignore line: [/usr/bin/c++        -v CMakeFiles/cmTryCompileExec3155348758.dir/CMakeCXXCompilerABI.cpp.o  -o cmTryCompileExec3155348758 -rdynamic  ]
+  ignore line: [Using built-in specs.]
+  ignore line: [COLLECT_GCC=/usr/bin/c++]
+  ignore line: [COLLECT_LTO_WRAPPER=/usr/libexec/gcc/i686-redhat-linux/4.7.2/lto-wrapper]
+  ignore line: [Target: i686-redhat-linux]
+  ignore line: [Configured with: ../configure --prefix=/usr --mandir=/usr/share/man --infodir=/usr/share/info --with-bugurl=http://bugzilla.redhat.com/bugzilla --enable-bootstrap --enable-shared --enable-threads=posix --enable-checking=release --disable-build-with-cxx --disable-build-poststage1-with-cxx --with-system-zlib --enable-__cxa_atexit --disable-libunwind-exceptions --enable-gnu-unique-object --enable-linker-build-id --with-linker-hash-style=gnu --enable-languages=c,c++,objc,obj-c++,java,fortran,ada,go,lto --enable-plugin --enable-initfini-array --enable-java-awt=gtk --disable-dssi --with-java-home=/usr/lib/jvm/java-1.5.0-gcj-1.5.0.0/jre --enable-libgcj-multifile --enable-java-maintainer-mode --with-ecj-jar=/usr/share/java/eclipse-ecj.jar --disable-libjava-multilib --with-ppl --with-cloog --with-tune=generic --with-arch=i686 --build=i686-redhat-linux]
+  ignore line: [Thread model: posix]
+  ignore line: [gcc version 4.7.2 20120921 (Red Hat 4.7.2-2) (GCC) ]
+  ignore line: [COMPILER_PATH=/usr/libexec/gcc/i686-redhat-linux/4.7.2/:/usr/libexec/gcc/i686-redhat-linux/4.7.2/:/usr/libexec/gcc/i686-redhat-linux/:/usr/lib/gcc/i686-redhat-linux/4.7.2/:/usr/lib/gcc/i686-redhat-linux/]
+  ignore line: [LIBRARY_PATH=/usr/lib/gcc/i686-redhat-linux/4.7.2/:/usr/lib/gcc/i686-redhat-linux/4.7.2/../../../:/lib/:/usr/lib/]
+  ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'cmTryCompileExec3155348758' '-rdynamic' '-shared-libgcc' '-mtune=generic' '-march=i686']
+  link line: [ /usr/libexec/gcc/i686-redhat-linux/4.7.2/collect2 --build-id --no-add-needed --eh-frame-hdr --hash-style=gnu -m elf_i386 -export-dynamic -dynamic-linker /lib/ld-linux.so.2 -o cmTryCompileExec3155348758 /usr/lib/gcc/i686-redhat-linux/4.7.2/../../../crt1.o /usr/lib/gcc/i686-redhat-linux/4.7.2/../../../crti.o /usr/lib/gcc/i686-redhat-linux/4.7.2/crtbegin.o -L/usr/lib/gcc/i686-redhat-linux/4.7.2 -L/usr/lib/gcc/i686-redhat-linux/4.7.2/../../.. CMakeFiles/cmTryCompileExec3155348758.dir/CMakeCXXCompilerABI.cpp.o -lstdc++ -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /usr/lib/gcc/i686-redhat-linux/4.7.2/crtend.o /usr/lib/gcc/i686-redhat-linux/4.7.2/../../../crtn.o]
+    arg [/usr/libexec/gcc/i686-redhat-linux/4.7.2/collect2] ==> ignore
+    arg [--build-id] ==> ignore
+    arg [--no-add-needed] ==> ignore
+    arg [--eh-frame-hdr] ==> ignore
+    arg [--hash-style=gnu] ==> ignore
+    arg [-m] ==> ignore
+    arg [elf_i386] ==> ignore
+    arg [-export-dynamic] ==> ignore
+    arg [-dynamic-linker] ==> ignore
+    arg [/lib/ld-linux.so.2] ==> ignore
+    arg [-o] ==> ignore
+    arg [cmTryCompileExec3155348758] ==> ignore
+    arg [/usr/lib/gcc/i686-redhat-linux/4.7.2/../../../crt1.o] ==> ignore
+    arg [/usr/lib/gcc/i686-redhat-linux/4.7.2/../../../crti.o] ==> ignore
+    arg [/usr/lib/gcc/i686-redhat-linux/4.7.2/crtbegin.o] ==> ignore
+    arg [-L/usr/lib/gcc/i686-redhat-linux/4.7.2] ==> dir [/usr/lib/gcc/i686-redhat-linux/4.7.2]
+    arg [-L/usr/lib/gcc/i686-redhat-linux/4.7.2/../../..] ==> dir [/usr/lib/gcc/i686-redhat-linux/4.7.2/../../..]
+    arg [CMakeFiles/cmTryCompileExec3155348758.dir/CMakeCXXCompilerABI.cpp.o] ==> ignore
+    arg [-lstdc++] ==> lib [stdc++]
+    arg [-lm] ==> lib [m]
+    arg [-lgcc_s] ==> lib [gcc_s]
+    arg [-lgcc] ==> lib [gcc]
+    arg [-lc] ==> lib [c]
+    arg [-lgcc_s] ==> lib [gcc_s]
+    arg [-lgcc] ==> lib [gcc]
+    arg [/usr/lib/gcc/i686-redhat-linux/4.7.2/crtend.o] ==> ignore
+    arg [/usr/lib/gcc/i686-redhat-linux/4.7.2/../../../crtn.o] ==> ignore
+  remove lib [gcc_s]
+  remove lib [gcc]
+  remove lib [gcc_s]
+  remove lib [gcc]
+  collapse dir [/usr/lib/gcc/i686-redhat-linux/4.7.2] ==> [/usr/lib/gcc/i686-redhat-linux/4.7.2]
+  collapse dir [/usr/lib/gcc/i686-redhat-linux/4.7.2/../../..] ==> [/usr/lib]
+  implicit libs: [stdc++;m;c]
+  implicit dirs: [/usr/lib/gcc/i686-redhat-linux/4.7.2;/usr/lib]
+
+
+Determining if the C compiler works passed with the following output:
+Change Dir: /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp
+
+Run Build Command:/usr/bin/gmake "cmTryCompileExec636327126/fast"
+/usr/bin/gmake -f CMakeFiles/cmTryCompileExec636327126.dir/build.make CMakeFiles/cmTryCompileExec636327126.dir/build
+gmake[1]: Entering directory `/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp'
+/usr/bin/cmake -E cmake_progress_report /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CMakeFiles 1
+Building C object CMakeFiles/cmTryCompileExec636327126.dir/testCCompiler.c.o
+/usr/bin/gcc    -o CMakeFiles/cmTryCompileExec636327126.dir/testCCompiler.c.o   -c /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/testCCompiler.c
+Linking C executable cmTryCompileExec636327126
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTryCompileExec636327126.dir/link.txt --verbose=1
+/usr/bin/gcc         CMakeFiles/cmTryCompileExec636327126.dir/testCCompiler.c.o  -o cmTryCompileExec636327126 -rdynamic 
+gmake[1]: Leaving directory `/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp'
+
+
+Detecting C compiler ABI info compiled with the following output:
+Change Dir: /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp
+
+Run Build Command:/usr/bin/gmake "cmTryCompileExec2467291222/fast"
+/usr/bin/gmake -f CMakeFiles/cmTryCompileExec2467291222.dir/build.make CMakeFiles/cmTryCompileExec2467291222.dir/build
+gmake[1]: Entering directory `/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp'
+/usr/bin/cmake -E cmake_progress_report /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CMakeFiles 1
+Building C object CMakeFiles/cmTryCompileExec2467291222.dir/CMakeCCompilerABI.c.o
+/usr/bin/gcc    -o CMakeFiles/cmTryCompileExec2467291222.dir/CMakeCCompilerABI.c.o   -c /usr/share/cmake/Modules/CMakeCCompilerABI.c
+Linking C executable cmTryCompileExec2467291222
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTryCompileExec2467291222.dir/link.txt --verbose=1
+/usr/bin/gcc       -v CMakeFiles/cmTryCompileExec2467291222.dir/CMakeCCompilerABI.c.o  -o cmTryCompileExec2467291222 -rdynamic  
+Using built-in specs.
+COLLECT_GCC=/usr/bin/gcc
+COLLECT_LTO_WRAPPER=/usr/libexec/gcc/i686-redhat-linux/4.7.2/lto-wrapper
+Target: i686-redhat-linux
+Configured with: ../configure --prefix=/usr --mandir=/usr/share/man --infodir=/usr/share/info --with-bugurl=http://bugzilla.redhat.com/bugzilla --enable-bootstrap --enable-shared --enable-threads=posix --enable-checking=release --disable-build-with-cxx --disable-build-poststage1-with-cxx --with-system-zlib --enable-__cxa_atexit --disable-libunwind-exceptions --enable-gnu-unique-object --enable-linker-build-id --with-linker-hash-style=gnu --enable-languages=c,c++,objc,obj-c++,java,fortran,ada,go,lto --enable-plugin --enable-initfini-array --enable-java-awt=gtk --disable-dssi --with-java-home=/usr/lib/jvm/java-1.5.0-gcj-1.5.0.0/jre --enable-libgcj-multifile --enable-java-maintainer-mode --with-ecj-jar=/usr/share/java/eclipse-ecj.jar --disable-libjava-multilib --with-ppl --with-cloog --with-tune=generic --with-arch=i686 --build=i686-redhat-linux
+Thread model: posix
+gcc version 4.7.2 20120921 (Red Hat 4.7.2-2) (GCC) 
+COMPILER_PATH=/usr/libexec/gcc/i686-redhat-linux/4.7.2/:/usr/libexec/gcc/i686-redhat-linux/4.7.2/:/usr/libexec/gcc/i686-redhat-linux/:/usr/lib/gcc/i686-redhat-linux/4.7.2/:/usr/lib/gcc/i686-redhat-linux/
+LIBRARY_PATH=/usr/lib/gcc/i686-redhat-linux/4.7.2/:/usr/lib/gcc/i686-redhat-linux/4.7.2/../../../:/lib/:/usr/lib/
+COLLECT_GCC_OPTIONS='-v' '-o' 'cmTryCompileExec2467291222' '-rdynamic' '-mtune=generic' '-march=i686'
+ /usr/libexec/gcc/i686-redhat-linux/4.7.2/collect2 --build-id --no-add-needed --eh-frame-hdr --hash-style=gnu -m elf_i386 -export-dynamic -dynamic-linker /lib/ld-linux.so.2 -o cmTryCompileExec2467291222 /usr/lib/gcc/i686-redhat-linux/4.7.2/../../../crt1.o /usr/lib/gcc/i686-redhat-linux/4.7.2/../../../crti.o /usr/lib/gcc/i686-redhat-linux/4.7.2/crtbegin.o -L/usr/lib/gcc/i686-redhat-linux/4.7.2 -L/usr/lib/gcc/i686-redhat-linux/4.7.2/../../.. CMakeFiles/cmTryCompileExec2467291222.dir/CMakeCCompilerABI.c.o -lgcc --as-needed -lgcc_s --no-as-needed -lc -lgcc --as-needed -lgcc_s --no-as-needed /usr/lib/gcc/i686-redhat-linux/4.7.2/crtend.o /usr/lib/gcc/i686-redhat-linux/4.7.2/../../../crtn.o
+gmake[1]: Leaving directory `/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp'
+
+
+Parsed C implicit link information from above output:
+  link line regex: [^( *|.*[/\])(ld|ld|collect2)[^/\]*( |$)]
+  ignore line: [Change Dir: /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp]
+  ignore line: []
+  ignore line: [Run Build Command:/usr/bin/gmake "cmTryCompileExec2467291222/fast"]
+  ignore line: [/usr/bin/gmake -f CMakeFiles/cmTryCompileExec2467291222.dir/build.make CMakeFiles/cmTryCompileExec2467291222.dir/build]
+  ignore line: [gmake[1]: Entering directory `/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp']
+  ignore line: [/usr/bin/cmake -E cmake_progress_report /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CMakeFiles 1]
+  ignore line: [Building C object CMakeFiles/cmTryCompileExec2467291222.dir/CMakeCCompilerABI.c.o]
+  ignore line: [/usr/bin/gcc    -o CMakeFiles/cmTryCompileExec2467291222.dir/CMakeCCompilerABI.c.o   -c /usr/share/cmake/Modules/CMakeCCompilerABI.c]
+  ignore line: [Linking C executable cmTryCompileExec2467291222]
+  ignore line: [/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTryCompileExec2467291222.dir/link.txt --verbose=1]
+  ignore line: [/usr/bin/gcc       -v CMakeFiles/cmTryCompileExec2467291222.dir/CMakeCCompilerABI.c.o  -o cmTryCompileExec2467291222 -rdynamic  ]
+  ignore line: [Using built-in specs.]
+  ignore line: [COLLECT_GCC=/usr/bin/gcc]
+  ignore line: [COLLECT_LTO_WRAPPER=/usr/libexec/gcc/i686-redhat-linux/4.7.2/lto-wrapper]
+  ignore line: [Target: i686-redhat-linux]
+  ignore line: [Configured with: ../configure --prefix=/usr --mandir=/usr/share/man --infodir=/usr/share/info --with-bugurl=http://bugzilla.redhat.com/bugzilla --enable-bootstrap --enable-shared --enable-threads=posix --enable-checking=release --disable-build-with-cxx --disable-build-poststage1-with-cxx --with-system-zlib --enable-__cxa_atexit --disable-libunwind-exceptions --enable-gnu-unique-object --enable-linker-build-id --with-linker-hash-style=gnu --enable-languages=c,c++,objc,obj-c++,java,fortran,ada,go,lto --enable-plugin --enable-initfini-array --enable-java-awt=gtk --disable-dssi --with-java-home=/usr/lib/jvm/java-1.5.0-gcj-1.5.0.0/jre --enable-libgcj-multifile --enable-java-maintainer-mode --with-ecj-jar=/usr/share/java/eclipse-ecj.jar --disable-libjava-multilib --with-ppl --with-cloog --with-tune=generic --with-arch=i686 --build=i686-redhat-linux]
+  ignore line: [Thread model: posix]
+  ignore line: [gcc version 4.7.2 20120921 (Red Hat 4.7.2-2) (GCC) ]
+  ignore line: [COMPILER_PATH=/usr/libexec/gcc/i686-redhat-linux/4.7.2/:/usr/libexec/gcc/i686-redhat-linux/4.7.2/:/usr/libexec/gcc/i686-redhat-linux/:/usr/lib/gcc/i686-redhat-linux/4.7.2/:/usr/lib/gcc/i686-redhat-linux/]
+  ignore line: [LIBRARY_PATH=/usr/lib/gcc/i686-redhat-linux/4.7.2/:/usr/lib/gcc/i686-redhat-linux/4.7.2/../../../:/lib/:/usr/lib/]
+  ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'cmTryCompileExec2467291222' '-rdynamic' '-mtune=generic' '-march=i686']
+  link line: [ /usr/libexec/gcc/i686-redhat-linux/4.7.2/collect2 --build-id --no-add-needed --eh-frame-hdr --hash-style=gnu -m elf_i386 -export-dynamic -dynamic-linker /lib/ld-linux.so.2 -o cmTryCompileExec2467291222 /usr/lib/gcc/i686-redhat-linux/4.7.2/../../../crt1.o /usr/lib/gcc/i686-redhat-linux/4.7.2/../../../crti.o /usr/lib/gcc/i686-redhat-linux/4.7.2/crtbegin.o -L/usr/lib/gcc/i686-redhat-linux/4.7.2 -L/usr/lib/gcc/i686-redhat-linux/4.7.2/../../.. CMakeFiles/cmTryCompileExec2467291222.dir/CMakeCCompilerABI.c.o -lgcc --as-needed -lgcc_s --no-as-needed -lc -lgcc --as-needed -lgcc_s --no-as-needed /usr/lib/gcc/i686-redhat-linux/4.7.2/crtend.o /usr/lib/gcc/i686-redhat-linux/4.7.2/../../../crtn.o]
+    arg [/usr/libexec/gcc/i686-redhat-linux/4.7.2/collect2] ==> ignore
+    arg [--build-id] ==> ignore
+    arg [--no-add-needed] ==> ignore
+    arg [--eh-frame-hdr] ==> ignore
+    arg [--hash-style=gnu] ==> ignore
+    arg [-m] ==> ignore
+    arg [elf_i386] ==> ignore
+    arg [-export-dynamic] ==> ignore
+    arg [-dynamic-linker] ==> ignore
+    arg [/lib/ld-linux.so.2] ==> ignore
+    arg [-o] ==> ignore
+    arg [cmTryCompileExec2467291222] ==> ignore
+    arg [/usr/lib/gcc/i686-redhat-linux/4.7.2/../../../crt1.o] ==> ignore
+    arg [/usr/lib/gcc/i686-redhat-linux/4.7.2/../../../crti.o] ==> ignore
+    arg [/usr/lib/gcc/i686-redhat-linux/4.7.2/crtbegin.o] ==> ignore
+    arg [-L/usr/lib/gcc/i686-redhat-linux/4.7.2] ==> dir [/usr/lib/gcc/i686-redhat-linux/4.7.2]
+    arg [-L/usr/lib/gcc/i686-redhat-linux/4.7.2/../../..] ==> dir [/usr/lib/gcc/i686-redhat-linux/4.7.2/../../..]
+    arg [CMakeFiles/cmTryCompileExec2467291222.dir/CMakeCCompilerABI.c.o] ==> ignore
+    arg [-lgcc] ==> lib [gcc]
+    arg [--as-needed] ==> ignore
+    arg [-lgcc_s] ==> lib [gcc_s]
+    arg [--no-as-needed] ==> ignore
+    arg [-lc] ==> lib [c]
+    arg [-lgcc] ==> lib [gcc]
+    arg [--as-needed] ==> ignore
+    arg [-lgcc_s] ==> lib [gcc_s]
+    arg [--no-as-needed] ==> ignore
+    arg [/usr/lib/gcc/i686-redhat-linux/4.7.2/crtend.o] ==> ignore
+    arg [/usr/lib/gcc/i686-redhat-linux/4.7.2/../../../crtn.o] ==> ignore
+  remove lib [gcc]
+  remove lib [gcc_s]
+  remove lib [gcc]
+  remove lib [gcc_s]
+  collapse dir [/usr/lib/gcc/i686-redhat-linux/4.7.2] ==> [/usr/lib/gcc/i686-redhat-linux/4.7.2]
+  collapse dir [/usr/lib/gcc/i686-redhat-linux/4.7.2/../../..] ==> [/usr/lib]
+  implicit libs: [c]
+  implicit dirs: [/usr/lib/gcc/i686-redhat-linux/4.7.2;/usr/lib]
+
+
+Determining if the include file alloca.h exists passed with the following output:
+Change Dir: /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp
+
+Run Build Command:/usr/bin/gmake "cmTryCompileExec4052689192/fast"
+/usr/bin/gmake -f CMakeFiles/cmTryCompileExec4052689192.dir/build.make CMakeFiles/cmTryCompileExec4052689192.dir/build
+gmake[1]: Entering directory `/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp'
+/usr/bin/cmake -E cmake_progress_report /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CMakeFiles 1
+Building C object CMakeFiles/cmTryCompileExec4052689192.dir/CheckIncludeFile.c.o
+/usr/bin/gcc   -W -Wall -Werror=return-type -Werror=address -Werror=sequence-point -Wformat -Werror=format-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wno-narrowing -fdiagnostics-show-option -pthread -march=i686 -fomit-frame-pointer -msse -msse2 -msse3 -mfpmath=sse -ffunction-sections   -O3 -DNDEBUG   -o CMakeFiles/cmTryCompileExec4052689192.dir/CheckIncludeFile.c.o   -c /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CheckIncludeFile.c
+Linking C executable cmTryCompileExec4052689192
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTryCompileExec4052689192.dir/link.txt --verbose=1
+/usr/bin/gcc      -W -Wall -Werror=return-type -Werror=address -Werror=sequence-point -Wformat -Werror=format-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wno-narrowing -fdiagnostics-show-option -pthread -march=i686 -fomit-frame-pointer -msse -msse2 -msse3 -mfpmath=sse -ffunction-sections   -O3 -DNDEBUG    CMakeFiles/cmTryCompileExec4052689192.dir/CheckIncludeFile.c.o  -o cmTryCompileExec4052689192 -rdynamic 
+gmake[1]: Leaving directory `/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp'
+
+
+Determining if the include file unistd.h exists passed with the following output:
+Change Dir: /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp
+
+Run Build Command:/usr/bin/gmake "cmTryCompileExec2618317897/fast"
+/usr/bin/gmake -f CMakeFiles/cmTryCompileExec2618317897.dir/build.make CMakeFiles/cmTryCompileExec2618317897.dir/build
+gmake[1]: Entering directory `/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp'
+/usr/bin/cmake -E cmake_progress_report /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CMakeFiles 1
+Building C object CMakeFiles/cmTryCompileExec2618317897.dir/CheckIncludeFile.c.o
+/usr/bin/gcc   -W -Wall -Werror=return-type -Werror=address -Werror=sequence-point -Wformat -Werror=format-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wno-narrowing -fdiagnostics-show-option -pthread -march=i686 -fomit-frame-pointer -msse -msse2 -msse3 -mfpmath=sse -ffunction-sections   -O3 -DNDEBUG   -o CMakeFiles/cmTryCompileExec2618317897.dir/CheckIncludeFile.c.o   -c /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CheckIncludeFile.c
+Linking C executable cmTryCompileExec2618317897
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTryCompileExec2618317897.dir/link.txt --verbose=1
+/usr/bin/gcc      -W -Wall -Werror=return-type -Werror=address -Werror=sequence-point -Wformat -Werror=format-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wno-narrowing -fdiagnostics-show-option -pthread -march=i686 -fomit-frame-pointer -msse -msse2 -msse3 -mfpmath=sse -ffunction-sections   -O3 -DNDEBUG    CMakeFiles/cmTryCompileExec2618317897.dir/CheckIncludeFile.c.o  -o cmTryCompileExec2618317897 -rdynamic 
+gmake[1]: Leaving directory `/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp'
+
+
+Determining if the include file pthread.h exists passed with the following output:
+Change Dir: /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp
+
+Run Build Command:/usr/bin/gmake "cmTryCompileExec1778651864/fast"
+/usr/bin/gmake -f CMakeFiles/cmTryCompileExec1778651864.dir/build.make CMakeFiles/cmTryCompileExec1778651864.dir/build
+gmake[1]: Entering directory `/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp'
+/usr/bin/cmake -E cmake_progress_report /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CMakeFiles 1
+Building C object CMakeFiles/cmTryCompileExec1778651864.dir/CheckIncludeFile.c.o
+/usr/bin/gcc   -W -Wall -Werror=return-type -Werror=address -Werror=sequence-point -Wformat -Werror=format-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wno-narrowing -fdiagnostics-show-option -pthread -march=i686 -fomit-frame-pointer -msse -msse2 -msse3 -mfpmath=sse -ffunction-sections   -O3 -DNDEBUG   -o CMakeFiles/cmTryCompileExec1778651864.dir/CheckIncludeFile.c.o   -c /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CheckIncludeFile.c
+Linking C executable cmTryCompileExec1778651864
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTryCompileExec1778651864.dir/link.txt --verbose=1
+/usr/bin/gcc      -W -Wall -Werror=return-type -Werror=address -Werror=sequence-point -Wformat -Werror=format-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wno-narrowing -fdiagnostics-show-option -pthread -march=i686 -fomit-frame-pointer -msse -msse2 -msse3 -mfpmath=sse -ffunction-sections   -O3 -DNDEBUG    CMakeFiles/cmTryCompileExec1778651864.dir/CheckIncludeFile.c.o  -o cmTryCompileExec1778651864 -rdynamic 
+gmake[1]: Leaving directory `/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp'
+
+
+Determining if the include file /usr/include/png.h exists passed with the following output:
+Change Dir: /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp
+
+Run Build Command:/usr/bin/gmake "cmTryCompileExec1603962948/fast"
+/usr/bin/gmake -f CMakeFiles/cmTryCompileExec1603962948.dir/build.make CMakeFiles/cmTryCompileExec1603962948.dir/build
+gmake[1]: Entering directory `/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp'
+/usr/bin/cmake -E cmake_progress_report /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CMakeFiles 1
+Building C object CMakeFiles/cmTryCompileExec1603962948.dir/CheckIncludeFile.c.o
+/usr/bin/gcc   -W -Wall -Werror=return-type -Werror=address -Werror=sequence-point -Wformat -Werror=format-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wno-narrowing -fdiagnostics-show-option -pthread -march=i686 -fomit-frame-pointer -msse -msse2 -msse3 -mfpmath=sse -ffunction-sections   -O3 -DNDEBUG   -o CMakeFiles/cmTryCompileExec1603962948.dir/CheckIncludeFile.c.o   -c /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CheckIncludeFile.c
+Linking C executable cmTryCompileExec1603962948
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTryCompileExec1603962948.dir/link.txt --verbose=1
+/usr/bin/gcc      -W -Wall -Werror=return-type -Werror=address -Werror=sequence-point -Wformat -Werror=format-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wno-narrowing -fdiagnostics-show-option -pthread -march=i686 -fomit-frame-pointer -msse -msse2 -msse3 -mfpmath=sse -ffunction-sections   -O3 -DNDEBUG    CMakeFiles/cmTryCompileExec1603962948.dir/CheckIncludeFile.c.o  -o cmTryCompileExec1603962948 -rdynamic 
+gmake[1]: Leaving directory `/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp'
+
+
+Determining if the include file semaphore.h exists passed with the following output:
+Change Dir: /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp
+
+Run Build Command:/usr/bin/gmake "cmTryCompileExec234398453/fast"
+/usr/bin/gmake -f CMakeFiles/cmTryCompileExec234398453.dir/build.make CMakeFiles/cmTryCompileExec234398453.dir/build
+gmake[1]: Entering directory `/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp'
+/usr/bin/cmake -E cmake_progress_report /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CMakeFiles 1
+Building C object CMakeFiles/cmTryCompileExec234398453.dir/CheckIncludeFile.c.o
+/usr/bin/gcc   -W -Wall -Werror=return-type -Werror=address -Werror=sequence-point -Wformat -Werror=format-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wno-narrowing -fdiagnostics-show-option -pthread -march=i686 -fomit-frame-pointer -msse -msse2 -msse3 -mfpmath=sse -ffunction-sections   -O3 -DNDEBUG   -o CMakeFiles/cmTryCompileExec234398453.dir/CheckIncludeFile.c.o   -c /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CheckIncludeFile.c
+Linking C executable cmTryCompileExec234398453
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTryCompileExec234398453.dir/link.txt --verbose=1
+/usr/bin/gcc      -W -Wall -Werror=return-type -Werror=address -Werror=sequence-point -Wformat -Werror=format-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wno-narrowing -fdiagnostics-show-option -pthread -march=i686 -fomit-frame-pointer -msse -msse2 -msse3 -mfpmath=sse -ffunction-sections   -O3 -DNDEBUG    CMakeFiles/cmTryCompileExec234398453.dir/CheckIncludeFile.c.o  -o cmTryCompileExec234398453 -rdynamic 
+gmake[1]: Leaving directory `/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp'
+
+
+Determining if the Q_WS_X11 exist passed with the following output:
+Change Dir: /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp
+
+Run Build Command:/usr/bin/gmake "cmTryCompileExec3485354341/fast"
+/usr/bin/gmake -f CMakeFiles/cmTryCompileExec3485354341.dir/build.make CMakeFiles/cmTryCompileExec3485354341.dir/build
+gmake[1]: Entering directory `/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp'
+/usr/bin/cmake -E cmake_progress_report /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CMakeFiles 1
+Building CXX object CMakeFiles/cmTryCompileExec3485354341.dir/CheckSymbolExists.cxx.o
+/usr/bin/c++    -W -Wall -Werror=return-type -Werror=address -Werror=sequence-point -Wformat -Werror=format-security -Wmissing-declarations -Wundef -Winit-self -Wpointer-arith -Wshadow -Wsign-promo -Wno-narrowing -Wno-delete-non-virtual-dtor -fdiagnostics-show-option -pthread -march=i686 -fomit-frame-pointer -msse -msse2 -msse3 -mfpmath=sse -ffunction-sections   -O3 -DNDEBUG   -o CMakeFiles/cmTryCompileExec3485354341.dir/CheckSymbolExists.cxx.o -c /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CheckSymbolExists.cxx
+Linking CXX executable cmTryCompileExec3485354341
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTryCompileExec3485354341.dir/link.txt --verbose=1
+/usr/bin/c++       -W -Wall -Werror=return-type -Werror=address -Werror=sequence-point -Wformat -Werror=format-security -Wmissing-declarations -Wundef -Winit-self -Wpointer-arith -Wshadow -Wsign-promo -Wno-narrowing -Wno-delete-non-virtual-dtor -fdiagnostics-show-option -pthread -march=i686 -fomit-frame-pointer -msse -msse2 -msse3 -mfpmath=sse -ffunction-sections   -O3 -DNDEBUG    CMakeFiles/cmTryCompileExec3485354341.dir/CheckSymbolExists.cxx.o  -o cmTryCompileExec3485354341 -rdynamic 
+gmake[1]: Leaving directory `/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp'
+
+File /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CheckSymbolExists.cxx:
+/* */
+#include <QtCore/qglobal.h>
+
+int main(int argc, char** argv)
+{
+  (void)argv;
+#ifndef Q_WS_X11
+  return ((int*)(&Q_WS_X11))[argc];
+#else
+  (void)argc;
+  return 0;
+#endif
+}
+
+Determining if the function XOpenDisplay exists in the /lib/libX11.so;/lib/libXext.so passed with the following output:
+Change Dir: /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp
+
+Run Build Command:/usr/bin/gmake "cmTryCompileExec2965956904/fast"
+/usr/bin/gmake -f CMakeFiles/cmTryCompileExec2965956904.dir/build.make CMakeFiles/cmTryCompileExec2965956904.dir/build
+gmake[1]: Entering directory `/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp'
+/usr/bin/cmake -E cmake_progress_report /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CMakeFiles 1
+Building C object CMakeFiles/cmTryCompileExec2965956904.dir/CheckFunctionExists.c.o
+/usr/bin/gcc   -W -Wall -Werror=return-type -Werror=address -Werror=sequence-point -Wformat -Werror=format-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wno-narrowing -fdiagnostics-show-option -pthread -march=i686 -fomit-frame-pointer -msse -msse2 -msse3 -mfpmath=sse -ffunction-sections  -DCHECK_FUNCTION_EXISTS=XOpenDisplay -O3 -DNDEBUG   -o CMakeFiles/cmTryCompileExec2965956904.dir/CheckFunctionExists.c.o   -c /usr/share/cmake/Modules/CheckFunctionExists.c
+/usr/share/cmake/Modules/CheckFunctionExists.c:3:1: warning: function declaration isn’t a prototype [-Wstrict-prototypes]
+Linking C executable cmTryCompileExec2965956904
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTryCompileExec2965956904.dir/link.txt --verbose=1
+/usr/bin/gcc      -W -Wall -Werror=return-type -Werror=address -Werror=sequence-point -Wformat -Werror=format-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wno-narrowing -fdiagnostics-show-option -pthread -march=i686 -fomit-frame-pointer -msse -msse2 -msse3 -mfpmath=sse -ffunction-sections  -DCHECK_FUNCTION_EXISTS=XOpenDisplay -O3 -DNDEBUG    CMakeFiles/cmTryCompileExec2965956904.dir/CheckFunctionExists.c.o  -o cmTryCompileExec2965956904 -rdynamic -lX11 -lXext 
+gmake[1]: Leaving directory `/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp'
+
+
+Determining if the function gethostbyname exists passed with the following output:
+Change Dir: /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp
+
+Run Build Command:/usr/bin/gmake "cmTryCompileExec3681540899/fast"
+/usr/bin/gmake -f CMakeFiles/cmTryCompileExec3681540899.dir/build.make CMakeFiles/cmTryCompileExec3681540899.dir/build
+gmake[1]: Entering directory `/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp'
+/usr/bin/cmake -E cmake_progress_report /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CMakeFiles 1
+Building C object CMakeFiles/cmTryCompileExec3681540899.dir/CheckFunctionExists.c.o
+/usr/bin/gcc   -W -Wall -Werror=return-type -Werror=address -Werror=sequence-point -Wformat -Werror=format-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wno-narrowing -fdiagnostics-show-option -pthread -march=i686 -fomit-frame-pointer -msse -msse2 -msse3 -mfpmath=sse -ffunction-sections  -DCHECK_FUNCTION_EXISTS=gethostbyname -O3 -DNDEBUG   -o CMakeFiles/cmTryCompileExec3681540899.dir/CheckFunctionExists.c.o   -c /usr/share/cmake/Modules/CheckFunctionExists.c
+/usr/share/cmake/Modules/CheckFunctionExists.c:3:1: warning: function declaration isn’t a prototype [-Wstrict-prototypes]
+Linking C executable cmTryCompileExec3681540899
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTryCompileExec3681540899.dir/link.txt --verbose=1
+/usr/bin/gcc      -W -Wall -Werror=return-type -Werror=address -Werror=sequence-point -Wformat -Werror=format-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wno-narrowing -fdiagnostics-show-option -pthread -march=i686 -fomit-frame-pointer -msse -msse2 -msse3 -mfpmath=sse -ffunction-sections  -DCHECK_FUNCTION_EXISTS=gethostbyname -O3 -DNDEBUG    CMakeFiles/cmTryCompileExec3681540899.dir/CheckFunctionExists.c.o  -o cmTryCompileExec3681540899 -rdynamic 
+gmake[1]: Leaving directory `/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp'
+
+
+Determining if the function connect exists passed with the following output:
+Change Dir: /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp
+
+Run Build Command:/usr/bin/gmake "cmTryCompileExec2653983587/fast"
+/usr/bin/gmake -f CMakeFiles/cmTryCompileExec2653983587.dir/build.make CMakeFiles/cmTryCompileExec2653983587.dir/build
+gmake[1]: Entering directory `/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp'
+/usr/bin/cmake -E cmake_progress_report /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CMakeFiles 1
+Building C object CMakeFiles/cmTryCompileExec2653983587.dir/CheckFunctionExists.c.o
+/usr/bin/gcc   -W -Wall -Werror=return-type -Werror=address -Werror=sequence-point -Wformat -Werror=format-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wno-narrowing -fdiagnostics-show-option -pthread -march=i686 -fomit-frame-pointer -msse -msse2 -msse3 -mfpmath=sse -ffunction-sections  -DCHECK_FUNCTION_EXISTS=connect -O3 -DNDEBUG   -o CMakeFiles/cmTryCompileExec2653983587.dir/CheckFunctionExists.c.o   -c /usr/share/cmake/Modules/CheckFunctionExists.c
+/usr/share/cmake/Modules/CheckFunctionExists.c:3:1: warning: function declaration isn’t a prototype [-Wstrict-prototypes]
+Linking C executable cmTryCompileExec2653983587
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTryCompileExec2653983587.dir/link.txt --verbose=1
+/usr/bin/gcc      -W -Wall -Werror=return-type -Werror=address -Werror=sequence-point -Wformat -Werror=format-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wno-narrowing -fdiagnostics-show-option -pthread -march=i686 -fomit-frame-pointer -msse -msse2 -msse3 -mfpmath=sse -ffunction-sections  -DCHECK_FUNCTION_EXISTS=connect -O3 -DNDEBUG    CMakeFiles/cmTryCompileExec2653983587.dir/CheckFunctionExists.c.o  -o cmTryCompileExec2653983587 -rdynamic 
+gmake[1]: Leaving directory `/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp'
+
+
+Determining if the function remove exists passed with the following output:
+Change Dir: /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp
+
+Run Build Command:/usr/bin/gmake "cmTryCompileExec1882781064/fast"
+/usr/bin/gmake -f CMakeFiles/cmTryCompileExec1882781064.dir/build.make CMakeFiles/cmTryCompileExec1882781064.dir/build
+gmake[1]: Entering directory `/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp'
+/usr/bin/cmake -E cmake_progress_report /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CMakeFiles 1
+Building C object CMakeFiles/cmTryCompileExec1882781064.dir/CheckFunctionExists.c.o
+/usr/bin/gcc   -W -Wall -Werror=return-type -Werror=address -Werror=sequence-point -Wformat -Werror=format-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wno-narrowing -fdiagnostics-show-option -pthread -march=i686 -fomit-frame-pointer -msse -msse2 -msse3 -mfpmath=sse -ffunction-sections  -DCHECK_FUNCTION_EXISTS=remove -O3 -DNDEBUG   -o CMakeFiles/cmTryCompileExec1882781064.dir/CheckFunctionExists.c.o   -c /usr/share/cmake/Modules/CheckFunctionExists.c
+/usr/share/cmake/Modules/CheckFunctionExists.c:3:1: warning: function declaration isn’t a prototype [-Wstrict-prototypes]
+Linking C executable cmTryCompileExec1882781064
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTryCompileExec1882781064.dir/link.txt --verbose=1
+/usr/bin/gcc      -W -Wall -Werror=return-type -Werror=address -Werror=sequence-point -Wformat -Werror=format-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wno-narrowing -fdiagnostics-show-option -pthread -march=i686 -fomit-frame-pointer -msse -msse2 -msse3 -mfpmath=sse -ffunction-sections  -DCHECK_FUNCTION_EXISTS=remove -O3 -DNDEBUG    CMakeFiles/cmTryCompileExec1882781064.dir/CheckFunctionExists.c.o  -o cmTryCompileExec1882781064 -rdynamic 
+gmake[1]: Leaving directory `/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp'
+
+
+Determining if the function shmat exists passed with the following output:
+Change Dir: /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp
+
+Run Build Command:/usr/bin/gmake "cmTryCompileExec858731382/fast"
+/usr/bin/gmake -f CMakeFiles/cmTryCompileExec858731382.dir/build.make CMakeFiles/cmTryCompileExec858731382.dir/build
+gmake[1]: Entering directory `/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp'
+/usr/bin/cmake -E cmake_progress_report /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CMakeFiles 1
+Building C object CMakeFiles/cmTryCompileExec858731382.dir/CheckFunctionExists.c.o
+/usr/bin/gcc   -W -Wall -Werror=return-type -Werror=address -Werror=sequence-point -Wformat -Werror=format-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wno-narrowing -fdiagnostics-show-option -pthread -march=i686 -fomit-frame-pointer -msse -msse2 -msse3 -mfpmath=sse -ffunction-sections  -DCHECK_FUNCTION_EXISTS=shmat -O3 -DNDEBUG   -o CMakeFiles/cmTryCompileExec858731382.dir/CheckFunctionExists.c.o   -c /usr/share/cmake/Modules/CheckFunctionExists.c
+/usr/share/cmake/Modules/CheckFunctionExists.c:3:1: warning: function declaration isn’t a prototype [-Wstrict-prototypes]
+Linking C executable cmTryCompileExec858731382
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTryCompileExec858731382.dir/link.txt --verbose=1
+/usr/bin/gcc      -W -Wall -Werror=return-type -Werror=address -Werror=sequence-point -Wformat -Werror=format-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wno-narrowing -fdiagnostics-show-option -pthread -march=i686 -fomit-frame-pointer -msse -msse2 -msse3 -mfpmath=sse -ffunction-sections  -DCHECK_FUNCTION_EXISTS=shmat -O3 -DNDEBUG    CMakeFiles/cmTryCompileExec858731382.dir/CheckFunctionExists.c.o  -o cmTryCompileExec858731382 -rdynamic 
+gmake[1]: Leaving directory `/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp'
+
+
+Determining if the function IceConnectionNumber exists in the ICE passed with the following output:
+Change Dir: /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp
+
+Run Build Command:/usr/bin/gmake "cmTryCompileExec2282697246/fast"
+/usr/bin/gmake -f CMakeFiles/cmTryCompileExec2282697246.dir/build.make CMakeFiles/cmTryCompileExec2282697246.dir/build
+gmake[1]: Entering directory `/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp'
+/usr/bin/cmake -E cmake_progress_report /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CMakeFiles 1
+Building C object CMakeFiles/cmTryCompileExec2282697246.dir/CheckFunctionExists.c.o
+/usr/bin/gcc   -W -Wall -Werror=return-type -Werror=address -Werror=sequence-point -Wformat -Werror=format-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wno-narrowing -fdiagnostics-show-option -pthread -march=i686 -fomit-frame-pointer -msse -msse2 -msse3 -mfpmath=sse -ffunction-sections  -DCHECK_FUNCTION_EXISTS=IceConnectionNumber -O3 -DNDEBUG   -o CMakeFiles/cmTryCompileExec2282697246.dir/CheckFunctionExists.c.o   -c /usr/share/cmake/Modules/CheckFunctionExists.c
+/usr/share/cmake/Modules/CheckFunctionExists.c:3:1: warning: function declaration isn’t a prototype [-Wstrict-prototypes]
+Linking C executable cmTryCompileExec2282697246
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTryCompileExec2282697246.dir/link.txt --verbose=1
+/usr/bin/gcc      -W -Wall -Werror=return-type -Werror=address -Werror=sequence-point -Wformat -Werror=format-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wno-narrowing -fdiagnostics-show-option -pthread -march=i686 -fomit-frame-pointer -msse -msse2 -msse3 -mfpmath=sse -ffunction-sections  -DCHECK_FUNCTION_EXISTS=IceConnectionNumber -O3 -DNDEBUG    CMakeFiles/cmTryCompileExec2282697246.dir/CheckFunctionExists.c.o  -o cmTryCompileExec2282697246 -rdynamic -lICE 
+gmake[1]: Leaving directory `/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp'
+
+
+Determining if the include file linux/videodev2.h exists passed with the following output:
+Change Dir: /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp
+
+Run Build Command:/usr/bin/gmake "cmTryCompileExec3165724134/fast"
+/usr/bin/gmake -f CMakeFiles/cmTryCompileExec3165724134.dir/build.make CMakeFiles/cmTryCompileExec3165724134.dir/build
+gmake[1]: Entering directory `/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp'
+/usr/bin/cmake -E cmake_progress_report /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CMakeFiles 1
+Building C object CMakeFiles/cmTryCompileExec3165724134.dir/CheckIncludeFile.c.o
+/usr/bin/gcc   -W -Wall -Werror=return-type -Werror=address -Werror=sequence-point -Wformat -Werror=format-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wno-narrowing -fdiagnostics-show-option -pthread -march=i686 -fomit-frame-pointer -msse -msse2 -msse3 -mfpmath=sse -ffunction-sections   -O3 -DNDEBUG   -o CMakeFiles/cmTryCompileExec3165724134.dir/CheckIncludeFile.c.o   -c /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CheckIncludeFile.c
+Linking C executable cmTryCompileExec3165724134
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTryCompileExec3165724134.dir/link.txt --verbose=1
+/usr/bin/gcc      -W -Wall -Werror=return-type -Werror=address -Werror=sequence-point -Wformat -Werror=format-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wno-narrowing -fdiagnostics-show-option -pthread -march=i686 -fomit-frame-pointer -msse -msse2 -msse3 -mfpmath=sse -ffunction-sections   -O3 -DNDEBUG    CMakeFiles/cmTryCompileExec3165724134.dir/CheckIncludeFile.c.o  -o cmTryCompileExec3165724134 -rdynamic 
+gmake[1]: Leaving directory `/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp'
+
+
+Determining if the include file linux/videodev2.h exists passed with the following output:
+Change Dir: /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp
+
+Run Build Command:/usr/bin/gmake "cmTryCompileExec1920006013/fast"
+/usr/bin/gmake -f CMakeFiles/cmTryCompileExec1920006013.dir/build.make CMakeFiles/cmTryCompileExec1920006013.dir/build
+gmake[1]: Entering directory `/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp'
+/usr/bin/cmake -E cmake_progress_report /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CMakeFiles 1
+Building C object CMakeFiles/cmTryCompileExec1920006013.dir/CheckIncludeFile.c.o
+/usr/bin/gcc   -W -Wall -Werror=return-type -Werror=address -Werror=sequence-point -Wformat -Werror=format-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wno-narrowing -fdiagnostics-show-option -pthread -march=i686 -fomit-frame-pointer -msse -msse2 -msse3 -mfpmath=sse -ffunction-sections   -O3 -DNDEBUG   -o CMakeFiles/cmTryCompileExec1920006013.dir/CheckIncludeFile.c.o   -c /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CheckIncludeFile.c
+Linking C executable cmTryCompileExec1920006013
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTryCompileExec1920006013.dir/link.txt --verbose=1
+/usr/bin/gcc      -W -Wall -Werror=return-type -Werror=address -Werror=sequence-point -Wformat -Werror=format-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wno-narrowing -fdiagnostics-show-option -pthread -march=i686 -fomit-frame-pointer -msse -msse2 -msse3 -mfpmath=sse -ffunction-sections   -O3 -DNDEBUG    CMakeFiles/cmTryCompileExec1920006013.dir/CheckIncludeFile.c.o  -o cmTryCompileExec1920006013 -rdynamic 
+gmake[1]: Leaving directory `/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp'
+
+
+Determining if the include file linux/videodev2.h exists passed with the following output:
+Change Dir: /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp
+
+Run Build Command:/usr/bin/gmake "cmTryCompileExec1346168095/fast"
+/usr/bin/gmake -f CMakeFiles/cmTryCompileExec1346168095.dir/build.make CMakeFiles/cmTryCompileExec1346168095.dir/build
+gmake[1]: Entering directory `/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp'
+/usr/bin/cmake -E cmake_progress_report /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CMakeFiles 1
+Building C object CMakeFiles/cmTryCompileExec1346168095.dir/CheckIncludeFile.c.o
+/usr/bin/gcc   -W -Wall -Werror=return-type -Werror=address -Werror=sequence-point -Wformat -Werror=format-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wno-narrowing -fdiagnostics-show-option -pthread -march=i686 -fomit-frame-pointer -msse -msse2 -msse3 -mfpmath=sse -ffunction-sections   -O3 -DNDEBUG   -o CMakeFiles/cmTryCompileExec1346168095.dir/CheckIncludeFile.c.o   -c /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CheckIncludeFile.c
+Linking C executable cmTryCompileExec1346168095
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTryCompileExec1346168095.dir/link.txt --verbose=1
+/usr/bin/gcc      -W -Wall -Werror=return-type -Werror=address -Werror=sequence-point -Wformat -Werror=format-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wno-narrowing -fdiagnostics-show-option -pthread -march=i686 -fomit-frame-pointer -msse -msse2 -msse3 -mfpmath=sse -ffunction-sections   -O3 -DNDEBUG    CMakeFiles/cmTryCompileExec1346168095.dir/CheckIncludeFile.c.o  -o cmTryCompileExec1346168095 -rdynamic 
+gmake[1]: Leaving directory `/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp'
+
+

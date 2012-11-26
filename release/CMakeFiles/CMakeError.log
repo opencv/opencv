@@ -1,0 +1,272 @@
+Determining if the function alloca exists failed with the following output:
+Change Dir: /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp
+
+Run Build Command:/usr/bin/gmake "cmTryCompileExec1325599773/fast"
+/usr/bin/gmake -f CMakeFiles/cmTryCompileExec1325599773.dir/build.make CMakeFiles/cmTryCompileExec1325599773.dir/build
+gmake[1]: Entering directory `/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp'
+/usr/bin/cmake -E cmake_progress_report /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CMakeFiles 1
+Building C object CMakeFiles/cmTryCompileExec1325599773.dir/CheckFunctionExists.c.o
+/usr/bin/gcc   -W -Wall -Werror=return-type -Werror=address -Werror=sequence-point -Wformat -Werror=format-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wno-narrowing -fdiagnostics-show-option -pthread -march=i686 -fomit-frame-pointer -msse -msse2 -msse3 -mfpmath=sse -ffunction-sections  -DCHECK_FUNCTION_EXISTS=alloca -O3 -DNDEBUG   -o CMakeFiles/cmTryCompileExec1325599773.dir/CheckFunctionExists.c.o   -c /usr/share/cmake/Modules/CheckFunctionExists.c
+/usr/share/cmake/Modules/CheckFunctionExists.c:3:1: warning: function declaration isn’t a prototype [-Wstrict-prototypes]
+/usr/share/cmake/Modules/CheckFunctionExists.c:3:6: warning: conflicting types for built-in function ‘alloca’ [enabled by default]
+Linking C executable cmTryCompileExec1325599773
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTryCompileExec1325599773.dir/link.txt --verbose=1
+/usr/bin/gcc      -W -Wall -Werror=return-type -Werror=address -Werror=sequence-point -Wformat -Werror=format-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wno-narrowing -fdiagnostics-show-option -pthread -march=i686 -fomit-frame-pointer -msse -msse2 -msse3 -mfpmath=sse -ffunction-sections  -DCHECK_FUNCTION_EXISTS=alloca -O3 -DNDEBUG    CMakeFiles/cmTryCompileExec1325599773.dir/CheckFunctionExists.c.o  -o cmTryCompileExec1325599773 -rdynamic 
+CMakeFiles/cmTryCompileExec1325599773.dir/CheckFunctionExists.c.o: In function `main':
+CheckFunctionExists.c:(.text.startup.main+0x19): undefined reference to `alloca'
+collect2: error: ld returned 1 exit status
+gmake[1]: Leaving directory `/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp'
+gmake[1]: *** [cmTryCompileExec1325599773] Error 1
+gmake: *** [cmTryCompileExec1325599773/fast] Error 2
+
+
+Determining if the include file /usr/include/libpng/png.h exists failed with the following output:
+Change Dir: /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp
+
+Run Build Command:/usr/bin/gmake "cmTryCompileExec372252205/fast"
+/usr/bin/gmake -f CMakeFiles/cmTryCompileExec372252205.dir/build.make CMakeFiles/cmTryCompileExec372252205.dir/build
+gmake[1]: Entering directory `/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp'
+/usr/bin/cmake -E cmake_progress_report /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CMakeFiles 1
+Building C object CMakeFiles/cmTryCompileExec372252205.dir/CheckIncludeFile.c.o
+/usr/bin/gcc   -W -Wall -Werror=return-type -Werror=address -Werror=sequence-point -Wformat -Werror=format-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wno-narrowing -fdiagnostics-show-option -pthread -march=i686 -fomit-frame-pointer -msse -msse2 -msse3 -mfpmath=sse -ffunction-sections   -O3 -DNDEBUG   -o CMakeFiles/cmTryCompileExec372252205.dir/CheckIncludeFile.c.o   -c /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CheckIncludeFile.c
+/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CheckIncludeFile.c:1:37: fatal error: /usr/include/libpng/png.h: No such file or directory
+compilation terminated.
+gmake[1]: Leaving directory `/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp'
+gmake[1]: *** [CMakeFiles/cmTryCompileExec372252205.dir/CheckIncludeFile.c.o] Error 1
+gmake: *** [cmTryCompileExec372252205/fast] Error 2
+
+
+Determining if the Q_WS_WIN exist failed with the following output:
+Change Dir: /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp
+
+Run Build Command:/usr/bin/gmake "cmTryCompileExec4127264998/fast"
+/usr/bin/gmake -f CMakeFiles/cmTryCompileExec4127264998.dir/build.make CMakeFiles/cmTryCompileExec4127264998.dir/build
+gmake[1]: Entering directory `/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp'
+/usr/bin/cmake -E cmake_progress_report /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CMakeFiles 1
+Building CXX object CMakeFiles/cmTryCompileExec4127264998.dir/CheckSymbolExists.cxx.o
+/usr/bin/c++    -W -Wall -Werror=return-type -Werror=address -Werror=sequence-point -Wformat -Werror=format-security -Wmissing-declarations -Wundef -Winit-self -Wpointer-arith -Wshadow -Wsign-promo -Wno-narrowing -Wno-delete-non-virtual-dtor -fdiagnostics-show-option -pthread -march=i686 -fomit-frame-pointer -msse -msse2 -msse3 -mfpmath=sse -ffunction-sections   -O3 -DNDEBUG   -o CMakeFiles/cmTryCompileExec4127264998.dir/CheckSymbolExists.cxx.o -c /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CheckSymbolExists.cxx
+/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CheckSymbolExists.cxx: In function ‘int main(int, char**)’:
+/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CheckSymbolExists.cxx:8:19: error: ‘Q_WS_WIN’ was not declared in this scope
+gmake[1]: Leaving directory `/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp'
+gmake[1]: *** [CMakeFiles/cmTryCompileExec4127264998.dir/CheckSymbolExists.cxx.o] Error 1
+gmake: *** [cmTryCompileExec4127264998/fast] Error 2
+
+File /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CheckSymbolExists.cxx:
+/* */
+#include <QtCore/qglobal.h>
+
+int main(int argc, char** argv)
+{
+  (void)argv;
+#ifndef Q_WS_WIN
+  return ((int*)(&Q_WS_WIN))[argc];
+#else
+  (void)argc;
+  return 0;
+#endif
+}
+
+Determining if the Q_WS_QWS exist failed with the following output:
+Change Dir: /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp
+
+Run Build Command:/usr/bin/gmake "cmTryCompileExec4274809612/fast"
+/usr/bin/gmake -f CMakeFiles/cmTryCompileExec4274809612.dir/build.make CMakeFiles/cmTryCompileExec4274809612.dir/build
+gmake[1]: Entering directory `/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp'
+/usr/bin/cmake -E cmake_progress_report /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CMakeFiles 1
+Building CXX object CMakeFiles/cmTryCompileExec4274809612.dir/CheckSymbolExists.cxx.o
+/usr/bin/c++    -W -Wall -Werror=return-type -Werror=address -Werror=sequence-point -Wformat -Werror=format-security -Wmissing-declarations -Wundef -Winit-self -Wpointer-arith -Wshadow -Wsign-promo -Wno-narrowing -Wno-delete-non-virtual-dtor -fdiagnostics-show-option -pthread -march=i686 -fomit-frame-pointer -msse -msse2 -msse3 -mfpmath=sse -ffunction-sections   -O3 -DNDEBUG   -o CMakeFiles/cmTryCompileExec4274809612.dir/CheckSymbolExists.cxx.o -c /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CheckSymbolExists.cxx
+/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CheckSymbolExists.cxx: In function ‘int main(int, char**)’:
+/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CheckSymbolExists.cxx:8:19: error: ‘Q_WS_QWS’ was not declared in this scope
+gmake[1]: Leaving directory `/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp'
+gmake[1]: *** [CMakeFiles/cmTryCompileExec4274809612.dir/CheckSymbolExists.cxx.o] Error 1
+gmake: *** [cmTryCompileExec4274809612/fast] Error 2
+
+File /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CheckSymbolExists.cxx:
+/* */
+#include <QtCore/qglobal.h>
+
+int main(int argc, char** argv)
+{
+  (void)argv;
+#ifndef Q_WS_QWS
+  return ((int*)(&Q_WS_QWS))[argc];
+#else
+  (void)argc;
+  return 0;
+#endif
+}
+
+Determining if the Q_WS_MAC exist failed with the following output:
+Change Dir: /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp
+
+Run Build Command:/usr/bin/gmake "cmTryCompileExec2250595435/fast"
+/usr/bin/gmake -f CMakeFiles/cmTryCompileExec2250595435.dir/build.make CMakeFiles/cmTryCompileExec2250595435.dir/build
+gmake[1]: Entering directory `/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp'
+/usr/bin/cmake -E cmake_progress_report /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CMakeFiles 1
+Building CXX object CMakeFiles/cmTryCompileExec2250595435.dir/CheckSymbolExists.cxx.o
+/usr/bin/c++    -W -Wall -Werror=return-type -Werror=address -Werror=sequence-point -Wformat -Werror=format-security -Wmissing-declarations -Wundef -Winit-self -Wpointer-arith -Wshadow -Wsign-promo -Wno-narrowing -Wno-delete-non-virtual-dtor -fdiagnostics-show-option -pthread -march=i686 -fomit-frame-pointer -msse -msse2 -msse3 -mfpmath=sse -ffunction-sections   -O3 -DNDEBUG   -o CMakeFiles/cmTryCompileExec2250595435.dir/CheckSymbolExists.cxx.o -c /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CheckSymbolExists.cxx
+/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CheckSymbolExists.cxx: In function ‘int main(int, char**)’:
+/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CheckSymbolExists.cxx:8:19: error: ‘Q_WS_MAC’ was not declared in this scope
+gmake[1]: Leaving directory `/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp'
+gmake[1]: *** [CMakeFiles/cmTryCompileExec2250595435.dir/CheckSymbolExists.cxx.o] Error 1
+gmake: *** [cmTryCompileExec2250595435/fast] Error 2
+
+File /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CheckSymbolExists.cxx:
+/* */
+#include <QtCore/qglobal.h>
+
+int main(int argc, char** argv)
+{
+  (void)argv;
+#ifndef Q_WS_MAC
+  return ((int*)(&Q_WS_MAC))[argc];
+#else
+  (void)argc;
+  return 0;
+#endif
+}
+
+Determining if the include file linux/videodev.h exists failed with the following output:
+Change Dir: /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp
+
+Run Build Command:/usr/bin/gmake "cmTryCompileExec2988672125/fast"
+/usr/bin/gmake -f CMakeFiles/cmTryCompileExec2988672125.dir/build.make CMakeFiles/cmTryCompileExec2988672125.dir/build
+gmake[1]: Entering directory `/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp'
+/usr/bin/cmake -E cmake_progress_report /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CMakeFiles 1
+Building C object CMakeFiles/cmTryCompileExec2988672125.dir/CheckIncludeFile.c.o
+/usr/bin/gcc   -W -Wall -Werror=return-type -Werror=address -Werror=sequence-point -Wformat -Werror=format-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wno-narrowing -fdiagnostics-show-option -pthread -march=i686 -fomit-frame-pointer -msse -msse2 -msse3 -mfpmath=sse -ffunction-sections   -O3 -DNDEBUG   -o CMakeFiles/cmTryCompileExec2988672125.dir/CheckIncludeFile.c.o   -c /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CheckIncludeFile.c
+/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CheckIncludeFile.c:1:28: fatal error: linux/videodev.h: No such file or directory
+compilation terminated.
+gmake[1]: Leaving directory `/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp'
+gmake[1]: *** [CMakeFiles/cmTryCompileExec2988672125.dir/CheckIncludeFile.c.o] Error 1
+gmake: *** [cmTryCompileExec2988672125/fast] Error 2
+
+
+Determining if the include file libavformat/avformat.h exists failed with the following output:
+Change Dir: /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp
+
+Run Build Command:/usr/bin/gmake "cmTryCompileExec693928541/fast"
+/usr/bin/gmake -f CMakeFiles/cmTryCompileExec693928541.dir/build.make CMakeFiles/cmTryCompileExec693928541.dir/build
+gmake[1]: Entering directory `/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp'
+/usr/bin/cmake -E cmake_progress_report /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CMakeFiles 1
+Building C object CMakeFiles/cmTryCompileExec693928541.dir/CheckIncludeFile.c.o
+/usr/bin/gcc   -W -Wall -Werror=return-type -Werror=address -Werror=sequence-point -Wformat -Werror=format-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wno-narrowing -fdiagnostics-show-option -pthread -march=i686 -fomit-frame-pointer -msse -msse2 -msse3 -mfpmath=sse -ffunction-sections   -O3 -DNDEBUG   -o CMakeFiles/cmTryCompileExec693928541.dir/CheckIncludeFile.c.o   -c /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CheckIncludeFile.c
+/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CheckIncludeFile.c:1:34: fatal error: libavformat/avformat.h: No such file or directory
+compilation terminated.
+gmake[1]: Leaving directory `/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp'
+gmake[1]: *** [CMakeFiles/cmTryCompileExec693928541.dir/CheckIncludeFile.c.o] Error 1
+gmake: *** [cmTryCompileExec693928541/fast] Error 2
+
+
+Determining if the include file ffmpeg/avformat.h exists failed with the following output:
+Change Dir: /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp
+
+Run Build Command:/usr/bin/gmake "cmTryCompileExec774099066/fast"
+/usr/bin/gmake -f CMakeFiles/cmTryCompileExec774099066.dir/build.make CMakeFiles/cmTryCompileExec774099066.dir/build
+gmake[1]: Entering directory `/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp'
+/usr/bin/cmake -E cmake_progress_report /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CMakeFiles 1
+Building C object CMakeFiles/cmTryCompileExec774099066.dir/CheckIncludeFile.c.o
+/usr/bin/gcc   -W -Wall -Werror=return-type -Werror=address -Werror=sequence-point -Wformat -Werror=format-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wno-narrowing -fdiagnostics-show-option -pthread -march=i686 -fomit-frame-pointer -msse -msse2 -msse3 -mfpmath=sse -ffunction-sections   -O3 -DNDEBUG   -o CMakeFiles/cmTryCompileExec774099066.dir/CheckIncludeFile.c.o   -c /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CheckIncludeFile.c
+/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CheckIncludeFile.c:1:29: fatal error: ffmpeg/avformat.h: No such file or directory
+compilation terminated.
+gmake[1]: *** [CMakeFiles/cmTryCompileExec774099066.dir/CheckIncludeFile.c.o] Error 1
+gmake[1]: Leaving directory `/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp'
+gmake: *** [cmTryCompileExec774099066/fast] Error 2
+
+
+Determining if the include file linux/videodev.h exists failed with the following output:
+Change Dir: /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp
+
+Run Build Command:/usr/bin/gmake "cmTryCompileExec45325851/fast"
+/usr/bin/gmake -f CMakeFiles/cmTryCompileExec45325851.dir/build.make CMakeFiles/cmTryCompileExec45325851.dir/build
+gmake[1]: Entering directory `/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp'
+/usr/bin/cmake -E cmake_progress_report /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CMakeFiles 1
+Building C object CMakeFiles/cmTryCompileExec45325851.dir/CheckIncludeFile.c.o
+/usr/bin/gcc   -W -Wall -Werror=return-type -Werror=address -Werror=sequence-point -Wformat -Werror=format-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wno-narrowing -fdiagnostics-show-option -pthread -march=i686 -fomit-frame-pointer -msse -msse2 -msse3 -mfpmath=sse -ffunction-sections   -O3 -DNDEBUG   -o CMakeFiles/cmTryCompileExec45325851.dir/CheckIncludeFile.c.o   -c /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CheckIncludeFile.c
+/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CheckIncludeFile.c:1:28: fatal error: linux/videodev.h: No such file or directory
+compilation terminated.
+gmake[1]: Leaving directory `/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp'
+gmake[1]: *** [CMakeFiles/cmTryCompileExec45325851.dir/CheckIncludeFile.c.o] Error 1
+gmake: *** [cmTryCompileExec45325851/fast] Error 2
+
+
+Determining if the include file libavformat/avformat.h exists failed with the following output:
+Change Dir: /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp
+
+Run Build Command:/usr/bin/gmake "cmTryCompileExec1022531485/fast"
+/usr/bin/gmake -f CMakeFiles/cmTryCompileExec1022531485.dir/build.make CMakeFiles/cmTryCompileExec1022531485.dir/build
+gmake[1]: Entering directory `/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp'
+/usr/bin/cmake -E cmake_progress_report /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CMakeFiles 1
+Building C object CMakeFiles/cmTryCompileExec1022531485.dir/CheckIncludeFile.c.o
+/usr/bin/gcc   -W -Wall -Werror=return-type -Werror=address -Werror=sequence-point -Wformat -Werror=format-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wno-narrowing -fdiagnostics-show-option -pthread -march=i686 -fomit-frame-pointer -msse -msse2 -msse3 -mfpmath=sse -ffunction-sections   -O3 -DNDEBUG   -o CMakeFiles/cmTryCompileExec1022531485.dir/CheckIncludeFile.c.o   -c /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CheckIncludeFile.c
+/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CheckIncludeFile.c:1:34: fatal error: libavformat/avformat.h: No such file or directory
+compilation terminated.
+gmake[1]: Leaving directory `/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp'
+gmake[1]: *** [CMakeFiles/cmTryCompileExec1022531485.dir/CheckIncludeFile.c.o] Error 1
+gmake: *** [cmTryCompileExec1022531485/fast] Error 2
+
+
+Determining if the include file ffmpeg/avformat.h exists failed with the following output:
+Change Dir: /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp
+
+Run Build Command:/usr/bin/gmake "cmTryCompileExec3773783479/fast"
+/usr/bin/gmake -f CMakeFiles/cmTryCompileExec3773783479.dir/build.make CMakeFiles/cmTryCompileExec3773783479.dir/build
+gmake[1]: Entering directory `/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp'
+/usr/bin/cmake -E cmake_progress_report /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CMakeFiles 1
+Building C object CMakeFiles/cmTryCompileExec3773783479.dir/CheckIncludeFile.c.o
+/usr/bin/gcc   -W -Wall -Werror=return-type -Werror=address -Werror=sequence-point -Wformat -Werror=format-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wno-narrowing -fdiagnostics-show-option -pthread -march=i686 -fomit-frame-pointer -msse -msse2 -msse3 -mfpmath=sse -ffunction-sections   -O3 -DNDEBUG   -o CMakeFiles/cmTryCompileExec3773783479.dir/CheckIncludeFile.c.o   -c /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CheckIncludeFile.c
+/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CheckIncludeFile.c:1:29: fatal error: ffmpeg/avformat.h: No such file or directory
+compilation terminated.
+gmake[1]: Leaving directory `/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp'
+gmake[1]: *** [CMakeFiles/cmTryCompileExec3773783479.dir/CheckIncludeFile.c.o] Error 1
+gmake: *** [cmTryCompileExec3773783479/fast] Error 2
+
+
+Determining if the include file linux/videodev.h exists failed with the following output:
+Change Dir: /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp
+
+Run Build Command:/usr/bin/gmake "cmTryCompileExec3622974295/fast"
+/usr/bin/gmake -f CMakeFiles/cmTryCompileExec3622974295.dir/build.make CMakeFiles/cmTryCompileExec3622974295.dir/build
+gmake[1]: Entering directory `/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp'
+/usr/bin/cmake -E cmake_progress_report /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CMakeFiles 1
+Building C object CMakeFiles/cmTryCompileExec3622974295.dir/CheckIncludeFile.c.o
+/usr/bin/gcc   -W -Wall -Werror=return-type -Werror=address -Werror=sequence-point -Wformat -Werror=format-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wno-narrowing -fdiagnostics-show-option -pthread -march=i686 -fomit-frame-pointer -msse -msse2 -msse3 -mfpmath=sse -ffunction-sections   -O3 -DNDEBUG   -o CMakeFiles/cmTryCompileExec3622974295.dir/CheckIncludeFile.c.o   -c /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CheckIncludeFile.c
+/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CheckIncludeFile.c:1:28: fatal error: linux/videodev.h: No such file or directory
+compilation terminated.
+gmake[1]: Leaving directory `/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp'
+gmake[1]: *** [CMakeFiles/cmTryCompileExec3622974295.dir/CheckIncludeFile.c.o] Error 1
+gmake: *** [cmTryCompileExec3622974295/fast] Error 2
+
+
+Determining if the include file libavformat/avformat.h exists failed with the following output:
+Change Dir: /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp
+
+Run Build Command:/usr/bin/gmake "cmTryCompileExec2823378063/fast"
+/usr/bin/gmake -f CMakeFiles/cmTryCompileExec2823378063.dir/build.make CMakeFiles/cmTryCompileExec2823378063.dir/build
+gmake[1]: Entering directory `/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp'
+/usr/bin/cmake -E cmake_progress_report /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CMakeFiles 1
+Building C object CMakeFiles/cmTryCompileExec2823378063.dir/CheckIncludeFile.c.o
+/usr/bin/gcc   -W -Wall -Werror=return-type -Werror=address -Werror=sequence-point -Wformat -Werror=format-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wno-narrowing -fdiagnostics-show-option -pthread -march=i686 -fomit-frame-pointer -msse -msse2 -msse3 -mfpmath=sse -ffunction-sections   -O3 -DNDEBUG   -o CMakeFiles/cmTryCompileExec2823378063.dir/CheckIncludeFile.c.o   -c /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CheckIncludeFile.c
+/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CheckIncludeFile.c:1:34: fatal error: libavformat/avformat.h: No such file or directory
+compilation terminated.
+gmake[1]: Leaving directory `/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp'
+gmake[1]: *** [CMakeFiles/cmTryCompileExec2823378063.dir/CheckIncludeFile.c.o] Error 1
+gmake: *** [cmTryCompileExec2823378063/fast] Error 2
+
+
+Determining if the include file ffmpeg/avformat.h exists failed with the following output:
+Change Dir: /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp
+
+Run Build Command:/usr/bin/gmake "cmTryCompileExec3216204496/fast"
+/usr/bin/gmake -f CMakeFiles/cmTryCompileExec3216204496.dir/build.make CMakeFiles/cmTryCompileExec3216204496.dir/build
+gmake[1]: Entering directory `/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp'
+/usr/bin/cmake -E cmake_progress_report /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CMakeFiles 1
+Building C object CMakeFiles/cmTryCompileExec3216204496.dir/CheckIncludeFile.c.o
+/usr/bin/gcc   -W -Wall -Werror=return-type -Werror=address -Werror=sequence-point -Wformat -Werror=format-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wno-narrowing -fdiagnostics-show-option -pthread -march=i686 -fomit-frame-pointer -msse -msse2 -msse3 -mfpmath=sse -ffunction-sections   -O3 -DNDEBUG   -o CMakeFiles/cmTryCompileExec3216204496.dir/CheckIncludeFile.c.o   -c /home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CheckIncludeFile.c
+/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp/CheckIncludeFile.c:1:29: fatal error: ffmpeg/avformat.h: No such file or directory
+compilation terminated.
+gmake[1]: Leaving directory `/home/rodrygojose/opencv/release/CMakeFiles/CMakeTmp'
+gmake[1]: *** [CMakeFiles/cmTryCompileExec3216204496.dir/CheckIncludeFile.c.o] Error 1
+gmake: *** [cmTryCompileExec3216204496/fast] Error 2
+
+
