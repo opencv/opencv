@@ -12,14 +12,16 @@ JNIEXPORT void JNICALL Java_org_opencv_samples_tutorial3_Sample3Native_FindFeatu
 
 JNIEXPORT void JNICALL Java_org_opencv_samples_tutorial3_Sample3Native_FindFeatures(JNIEnv*, jobject, jlong addrGray, jlong addrRgba)
 {
-    Mat* pMatGr=(Mat*)addrGray;
-    Mat* pMatRgb=(Mat*)addrRgba;
+    Mat& mGr  = *(Mat*)addrGray;
+    Mat& mRgb = *(Mat*)addrRgba;
     vector<KeyPoint> v;
 
     FastFeatureDetector detector(50);
-    detector.detect(*pMatGr, v);
-    for( size_t i = 0; i < v.size(); i++ )
-        circle(*pMatRgb, Point(v[i].pt.x, v[i].pt.y), 10, Scalar(255,0,0,255));
+    detector.detect(mGr, v);
+    for( unsigned int i = 0; i < v.size(); i++ )
+    {
+        const KeyPoint& kp = v[i];
+        circle(mRgb, Point(kp.pt.x, kp.pt.y), 10, Scalar(255,0,0,255));
+    }
 }
-
 }
