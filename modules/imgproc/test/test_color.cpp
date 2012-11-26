@@ -1731,6 +1731,68 @@ TEST(Imgproc_ColorBayerVNG, regression)
     }
 }
 
+// creating Bayer pattern
+template <typename T, int depth>
+void calculateBayerPattern(const Mat& src, Mat& bayer, const char* pattern)
+{
+    Size ssize = src.size();
+    const int scn = 1;
+    bayer.create(ssize, CV_MAKETYPE(depth, scn));
+
+    if (!strcmp(pattern, "bg"))
+    {
+        for (int y = 0; y < ssize.height; ++y)
+            for (int x = 0; x < ssize.width; ++x)
+            {
+                if ((x + y) % 2)
+                    bayer.at<T>(y, x) = static_cast<T>(src.at<Vec3b>(y, x)[1]);
+                else if (x % 2)
+                    bayer.at<T>(y, x) = static_cast<T>(src.at<Vec3b>(y, x)[0]);
+                else
+                    bayer.at<T>(y, x) = static_cast<T>(src.at<Vec3b>(y, x)[2]);
+            }
+    }
+    else if (!strcmp(pattern, "gb"))
+    {
+        for (int y = 0; y < ssize.height; ++y)
+            for (int x = 0; x < ssize.width; ++x)
+            {
+                if ((x + y) % 2 == 0)
+                    bayer.at<T>(y, x) = static_cast<T>(src.at<Vec3b>(y, x)[1]);
+                else if (x % 2 == 0)
+                    bayer.at<T>(y, x) = static_cast<T>(src.at<Vec3b>(y, x)[0]);
+                else
+                    bayer.at<T>(y, x) = static_cast<T>(src.at<Vec3b>(y, x)[2]);
+            }
+    }
+    else if (!strcmp(pattern, "rg"))
+    {
+        for (int y = 0; y < ssize.height; ++y)
+            for (int x = 0; x < ssize.width; ++x)
+            {
+                if ((x + y) % 2)
+                    bayer.at<T>(y, x) = static_cast<T>(src.at<Vec3b>(y, x)[1]);
+                else if (x % 2 == 0)
+                    bayer.at<T>(y, x) = static_cast<T>(src.at<Vec3b>(y, x)[0]);
+                else
+                    bayer.at<T>(y, x) = static_cast<T>(src.at<Vec3b>(y, x)[2]);
+            }
+    }
+    else
+    {
+        for (int y = 0; y < ssize.height; ++y)
+            for (int x = 0; x < ssize.width; ++x)
+            {
+                if ((x + y) % 2 == 0)
+                    bayer.at<T>(y, x) = static_cast<T>(src.at<Vec3b>(y, x)[1]);
+                else if (x % 2)
+                    bayer.at<T>(y, x) = static_cast<T>(src.at<Vec3b>(y, x)[0]);
+                else
+                    bayer.at<T>(y, x) = static_cast<T>(src.at<Vec3b>(y, x)[2]);
+            }
+    }
+}
+
 TEST(Imgproc_ColorBayerVNG_Strict, regression)
 {
     cvtest::TS& ts = *cvtest::TS::ptr();
@@ -1741,7 +1803,6 @@ TEST(Imgproc_ColorBayerVNG_Strict, regression)
     Mat src, dst, bayer, reference;
     std::string full_path = parent_path + image_name;
     src = imread(full_path, CV_LOAD_IMAGE_UNCHANGED);
-    Size ssize = src.size();
 
     if (src.data == NULL)
     {
@@ -1751,71 +1812,13 @@ TEST(Imgproc_ColorBayerVNG_Strict, regression)
         return;
     }
 
-    int type = -1;
     for (int i = 0; i < 4; ++i)
     {
-        // creating Bayer pattern
-        bayer.create(ssize, CV_MAKETYPE(src.depth(), 1));
-
-        if (!strcmp(pattern[i], "bg"))
-        {
-            for (int y = 0; y < ssize.height; ++y)
-                for (int x = 0; x < ssize.width; ++x)
-                {
-                    if ((x + y) % 2)
-                        bayer.at<uchar>(y, x) = src.at<Vec3b>(y, x)[1];
-                    else if (x % 2)
-                        bayer.at<uchar>(y, x) = src.at<Vec3b>(y, x)[0];
-                    else
-                        bayer.at<uchar>(y, x) = src.at<Vec3b>(y, x)[2];
-                }
-            type = CV_BayerBG2BGR_VNG;
-        }
-        else if (!strcmp(pattern[i], "gb"))
-        {
-            for (int y = 0; y < ssize.height; ++y)
-                for (int x = 0; x < ssize.width; ++x)
-                {
-                    if ((x + y) % 2 == 0)
-                        bayer.at<uchar>(y, x) = src.at<Vec3b>(y, x)[1];
-                    else if (x % 2 == 0)
-                        bayer.at<uchar>(y, x) = src.at<Vec3b>(y, x)[0];
-                    else
-                        bayer.at<uchar>(y, x) = src.at<Vec3b>(y, x)[2];
-                }
-            type = CV_BayerGB2BGR_VNG;
-        }
-        else if (!strcmp(pattern[i], "rg"))
-        {
-            for (int y = 0; y < ssize.height; ++y)
-                for (int x = 0; x < ssize.width; ++x)
-                {
-                    if ((x + y) % 2)
-                        bayer.at<uchar>(y, x) = src.at<Vec3b>(y, x)[1];
-                    else if (x % 2 == 0)
-                        bayer.at<uchar>(y, x) = src.at<Vec3b>(y, x)[0];
-                    else
-                        bayer.at<uchar>(y, x) = src.at<Vec3b>(y, x)[2];
-                }
-            type = CV_BayerRG2BGR_VNG;
-        }
-        else
-        {
-            for (int y = 0; y < ssize.height; ++y)
-                for (int x = 0; x < ssize.width; ++x)
-                {
-                    if ((x + y) % 2 == 0)
-                        bayer.at<uchar>(y, x) = src.at<Vec3b>(y, x)[1];
-                    else if (x % 2)
-                        bayer.at<uchar>(y, x) = src.at<Vec3b>(y, x)[0];
-                    else
-                        bayer.at<uchar>(y, x) = src.at<Vec3b>(y, x)[2];
-                }
-            type = CV_BayerGR2BGR_VNG;
-        }
+        calculateBayerPattern<uchar, CV_8U>(src, bayer, pattern[i]);
+        CV_Assert(!bayer.empty() && bayer.type() == CV_8UC1);
 
         // calculating a dst image
-        cvtColor(bayer, dst, type);
+        cvtColor(bayer, dst, CV_BayerBG2BGR_VNG + i);
 
         // reading a reference image
         full_path = parent_path + pattern[i] + image_name;
@@ -1829,6 +1832,7 @@ TEST(Imgproc_ColorBayerVNG_Strict, regression)
         if (reference.depth() != dst.depth() || reference.channels() != dst.channels() ||
             reference.size() != dst.size())
         {
+            std::cout << reference(Rect(0, 0, 5, 5)) << std::endl << std::endl << std::endl;
             ts.set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
             ts.printf(cvtest::TS::SUMMARY, "\nReference channels: %d\n"
                 "Actual channels: %d\n", reference.channels(), dst.channels());
@@ -1857,8 +1861,7 @@ TEST(Imgproc_ColorBayerVNG_Strict, regression)
     }
 }
 
-
-void GetTestMatrix(Mat& src)
+void getTestMatrix(Mat& src)
 {
     Size ssize(1000, 1000);
     src.create(ssize, CV_32FC3);
@@ -1883,7 +1886,7 @@ void GetTestMatrix(Mat& src)
     }
 }
 
-void validate_result(const Mat& reference, const Mat& actual, const Mat& src = Mat(), int mode = -1)
+void validateResult(const Mat& reference, const Mat& actual, const Mat& src = Mat(), int mode = -1)
 {
     cvtest::TS* ts = cvtest::TS::ptr();
     Size ssize = reference.size();
@@ -1924,8 +1927,7 @@ void validate_result(const Mat& reference, const Mat& actual, const Mat& src = M
 TEST(Imgproc_ColorLab_Full, accuracy)
 {
     Mat src;
-    GetTestMatrix(src);
-    Mat reference(src.size(), CV_32FC3);
+    getTestMatrix(src);
     Size ssize = src.size();
     CV_Assert(ssize.width == ssize.height);
 
@@ -1942,12 +1944,191 @@ TEST(Imgproc_ColorLab_Full, accuracy)
     cv::Mat recons;
     cv::cvtColor(lab, recons, inverse_code);
 
-    validate_result(src, recons, src, forward_code);
+    validateResult(src, recons, src, forward_code);
+}
 
-//    src *= 255.0f;
-//    recons *= 255.0f;
+#define ABS(x) ((x) >= 0 ? (x) : -(x))
 
-//    imshow("Test", src);
-//    imshow("OpenCV", recons);
-//    waitKey();
+static void test_Bayer2RGB_EdgeAware_8u(const Mat& src, Mat& dst, int code)
+{
+    if (dst.empty())
+        dst.create(src.size(), CV_MAKETYPE(src.depth(), 3));
+    Size size = src.size();
+    size.width -= 1;
+    size.height -= 1;
+
+    int dcn = dst.channels();
+    CV_Assert(dcn == 3);
+
+    int step = src.step;
+    const uchar* S = src.ptr<uchar>(1) + 1;
+    uchar* D = dst.ptr<uchar>(1) + dcn;
+
+    int start_with_green = code == CV_BayerGB2BGR_EA || code == CV_BayerGR2BGR_EA ? 1 : 0;
+    int blue = code == CV_BayerGB2BGR_EA || code == CV_BayerBG2BGR_EA ? 1 : 0;
+
+    for (int y = 1; y < size.height; ++y)
+    {
+        S = src.ptr<uchar>(y) + 1;
+        D = dst.ptr<uchar>(y) + dcn;
+
+        if (start_with_green)
+        {
+            for (int x = 1; x < size.width; x += 2, S += 2, D += 2*dcn)
+            {
+                // red
+                D[0] = (S[-1] + S[1]) / 2;
+                D[1] = S[0];
+                D[2] = (S[-step] + S[step]) / 2;
+                if (!blue)
+                    std::swap(D[0], D[2]);
+            }
+
+            S = src.ptr<uchar>(y) + 2;
+            D = dst.ptr<uchar>(y) + 2*dcn;
+
+            for (int x = 2; x < size.width; x += 2, S += 2, D += 2*dcn)
+            {
+                // red
+                D[0] = S[0];
+                D[1] = (ABS(S[-1] - S[1]) > ABS(S[step] - S[-step]) ? (S[step] + S[-step]) : (S[-1] + S[1])) / 2;
+                D[2] = ((S[-step-1] + S[-step+1] + S[step-1] + S[step+1]) / 4);
+                if (!blue)
+                    std::swap(D[0], D[2]);
+            }
+        }
+        else
+        {
+            for (int x = 1; x < size.width; x += 2, S += 2, D += 2*dcn)
+            {
+                D[0] = S[0];
+                D[1] = (ABS(S[-1] - S[1]) > ABS(S[step] - S[-step]) ? (S[step] + S[-step]) : (S[-1] + S[1])) / 2;
+                D[2] = ((S[-step-1] + S[-step+1] + S[step-1] + S[step+1]) / 4);
+                if (!blue)
+                    std::swap(D[0], D[2]);
+            }
+
+            S = src.ptr<uchar>(y) + 2;
+            D = dst.ptr<uchar>(y) + 2*dcn;
+
+            for (int x = 2; x < size.width; x += 2, S += 2, D += 2*dcn)
+            {
+                D[0] = (S[-1] + S[1]) / 2;
+                D[1] = S[0];
+                D[2] = (S[-step] + S[step]) / 2;
+                if (!blue)
+                    std::swap(D[0], D[2]);
+            }
+        }
+
+        D = dst.ptr<uchar>(y + 1) - dcn;
+        for (int i = 0; i < dcn; ++i)
+        {
+            D[i] = D[-dcn + i];
+            D[-static_cast<int>(dst.step)+dcn+i] = D[-static_cast<int>(dst.step)+(dcn<<1)+i];
+        }
+
+        start_with_green ^= 1;
+        blue ^= 1;
+    }
+
+    ++size.width;
+    uchar* firstRow = dst.data, *lastRow = dst.data + size.height * dst.step;
+    size.width *= dcn;
+    for (int x = 0; x < size.width; ++x)
+    {
+        firstRow[x] = firstRow[dst.step + x];
+        lastRow[x] = lastRow[-static_cast<int>(dst.step)+x];
+    }
+}
+
+template <typename T>
+static void checkData(const Mat& actual, const Mat& reference, cvtest::TS* ts, const char* type,
+    bool& next, const char* bayer_type)
+{
+    EXPECT_EQ(actual.size(), reference.size());
+    EXPECT_EQ(actual.channels(), reference.channels());
+    EXPECT_EQ(actual.depth(), reference.depth());
+
+    Size size = reference.size();
+    size.width *= reference.channels();
+    for (int y = 0; y < size.height && next; ++y)
+    {
+        const T* A = reinterpret_cast<const T*>(actual.data + actual.step * y);
+        const T* R = reinterpret_cast<const T*>(reference.data + reference.step * y);
+
+        for (int x = 0; x < size.width && next; ++x)
+            if (ABS(A[x] - R[x]) > 1)
+            {
+                #define SUM cvtest::TS::SUMMARY
+                ts->printf(SUM, "\nReference value: %d\n", static_cast<int>(R[x]));
+                ts->printf(SUM, "Actual value: %d\n", static_cast<int>(A[x]));
+                ts->printf(SUM, "(y, x): (%d, %d)\n", y, x / reference.channels());
+                ts->printf(SUM, "Pattern: %s\n", type);
+                ts->printf(SUM, "Bayer image type: %s", bayer_type);
+                #undef SUM
+
+                ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
+                ts->set_gtest_status();
+
+                next = false;
+            }
+    }
+}
+
+#undef ABS
+
+TEST(ImgProc_BayerEdgeAwareDemosaicing, accuracy)
+{
+    cvtest::TS* ts = cvtest::TS::ptr();
+    const std::string image_name = "lena.png";
+    const std::string parent_path = string(ts->get_data_path()) + "/cvtcolor_strict/";
+
+    Mat src, bayer;
+    std::string full_path = parent_path + image_name;
+    src = imread(full_path, CV_LOAD_IMAGE_UNCHANGED);
+
+    if (src.data == NULL)
+    {
+        ts->set_failed_test_info(cvtest::TS::FAIL_MISSING_TEST_DATA);
+        ts->printf(cvtest::TS::SUMMARY, "No input image\n");
+        ts->set_gtest_status();
+        return;
+    }
+
+    /*
+    COLOR_BayerBG2BGR_EA = 127,
+    COLOR_BayerGB2BGR_EA = 128,
+    COLOR_BayerRG2BGR_EA = 129,
+    COLOR_BayerGR2BGR_EA = 130,
+    */
+
+    bool next = true;
+    const char* types[] = { "bg", "gb", "rg", "gr" };
+    for (int i = 0; i < 4 && next; ++i)
+    {
+        calculateBayerPattern<uchar, CV_8U>(src, bayer, types[i]);
+        Mat reference;
+        test_Bayer2RGB_EdgeAware_8u(bayer, reference, CV_BayerBG2BGR_EA + i);
+
+        for (int t = 0; t <= 1; ++t)
+        {
+            if (t == 1)
+                calculateBayerPattern<unsigned short int, CV_16U>(src, bayer, types[i]);
+
+            CV_Assert(!bayer.empty() && (bayer.type() == CV_8UC1 || bayer.type() == CV_16UC1));
+
+            Mat actual;
+            cv::demosaicing(bayer, actual, CV_BayerBG2BGR_EA + i);
+
+            if (t == 0)
+                checkData<unsigned char>(actual, reference, ts, types[i], next, "CV_8U");
+            else
+            {
+                Mat tmp;
+                reference.convertTo(tmp, CV_16U);
+                checkData<unsigned short int>(actual, tmp, ts, types[i], next, "CV_16U");
+            }
+        }
+    }
 }
