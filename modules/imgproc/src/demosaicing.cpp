@@ -355,9 +355,17 @@ public:
             // in case of when size.width <= 2
             if( size.width <= 0 )
             {
-                // ?
-                dst[-4] = dst[-3] = dst[-2] = dst[size.width*3-1] =
-                dst[size.width*3] = dst[size.width*3+1] = 0;
+                if (dcn == 3)
+                {
+                    dst[-4] = dst[-3] = dst[-2] = dst[size.width*dcn-1] =
+                    dst[size.width*dcn] = dst[size.width*dcn+1] = 0;
+                }
+                else
+                {
+                    dst[-5] = dst[-4] = dst[-3] = dst[size.width*dcn-1] =
+                    dst[size.width*dcn] = dst[size.width*dcn+1] = 0;
+                    dst[-2] = dst[size.width*dcn+2] = alpha;
+                }
                 continue;
             }
             
