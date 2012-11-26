@@ -46,10 +46,10 @@ namespace cv { namespace gpu
 {
 
 CV_INIT_ALGORITHM(SCascade, "CascadeDetector.SCascade",
-                  obj.info()->addParam(obj, "minScale",  obj.minScale);
-                  obj.info()->addParam(obj, "maxScale",  obj.maxScale);
-                  obj.info()->addParam(obj, "scales",    obj.scales);
-                  obj.info()->addParam(obj, "rejfactor", obj.rejfactor));
+                  obj.info()->addParam(obj, "minScale",    obj.minScale);
+                  obj.info()->addParam(obj, "maxScale",    obj.maxScale);
+                  obj.info()->addParam(obj, "scales",      obj.scales);
+                  obj.info()->addParam(obj, "rejCriteria", obj.rejCriteria));
 
 bool initModule_gpu(void)
 {

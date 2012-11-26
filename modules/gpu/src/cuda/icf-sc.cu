@@ -41,9 +41,10 @@
 //M*/
 
 #include <opencv2/gpu/device/common.hpp>
+
 #include <icf.hpp>
-#include <stdio.h>
 #include <float.h>
+#include <stdio.h>
 
 namespace cv { namespace gpu { namespace device {
 namespace icf {
@@ -76,6 +77,70 @@ namespace icf {
         {
             cudaSafeCall( cudaGetLastError() );
             cudaSafeCall( cudaDeviceSynchronize() );
+        }
+    }
+
+    __device__ __forceinline__ float overlapArea(const Detection &a, const Detection &b)
+    {
+        int w = ::min(a.x + a.w, b.x + b.w) - ::max(a.x, b.x);
+        int h = ::min(a.y + a.h, b.y + b.h) - ::max(a.y, b.y);
+
+        return (w < 0 || h < 0)? 0.f : (float)(w * h);
+    }
+
+    __global__ void overlap(const uint* n, const Detection* detections, uchar* overlaps)
+    {
+        const int idx = threadIdx.x;
+        const int total = *n;
+
+        for (int i = idx; i < total; i += 192)
+        {
+            const Detection& a = detections[i];
+            bool excluded = false;
+
+            for (int j = i + 1; j < total; ++j)
+            {
+                const Detection& b = detections[j];
+                float ovl = overlapArea(a, b) / ::min(a.w * a.h, b.w * b.h);
+
+                if (ovl > 0.65f)
+                {
+                    int suppessed = (a.confidence > b.confidence)? j : i;
+                    overlaps[suppessed] = 1;
+                    excluded = excluded || (suppessed == i);
+                }
+
+                if (__all(excluded)) break;
+            }
+        }
+    }
+
+    __global__ void collect(const uint* n, const Detection* detections, uchar* overlaps)
+    {
+        const int idx = threadIdx.x;
+        const int total = *n;
+
+        for (int i = idx; i < total; i += 192)
+        {
+            if (!overlaps[i])
+            {
+                const Detection& det = detections[i];
+                // printf("%d: %d %d %d %d %f\n", i, det.x, det.y, det.w, det.h, det.confidence );
+            }
+        }
+    }
+
+    void suppress(const PtrStepSzb& objects, PtrStepSzb overlaps, PtrStepSzi ndetections)
+    {
+        int block = 192;
+        int grid = 1;
+
+        overlap<<<grid, block>>>((uint*)ndetections.ptr(0), (Detection*)objects.ptr(0), (uchar*)overlaps.ptr(0));
+        collect<<<grid, block>>>((uint*)ndetections.ptr(0), (Detection*)objects.ptr(0), (uchar*)overlaps.ptr(0));
+        // if (!stream)
+        {
+            cudaSafeCall( cudaGetLastError());
+            cudaSafeCall( cudaDeviceSynchronize());
         }
     }
 

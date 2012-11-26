@@ -85,6 +85,8 @@ namespace cv { namespace gpu { namespace device {
 namespace icf {
     void fillBins(cv::gpu::PtrStepSzb hogluv, const cv::gpu::PtrStepSzf& nangle,
         const int fw, const int fh, const int bins, cudaStream_t stream);
+
+    void suppress(const PtrStepSzb& objects, PtrStepSzb overlaps, PtrStepSzi ndetections);
 }
 
 namespace imgproc {
@@ -309,6 +311,8 @@ struct cv::gpu::SCascade::Fields
         hogluv.create((fh / shr) * HOG_LUV_BINS + 1, fw / shr + 1, CV_32SC1);
         hogluv.setTo(cv::Scalar::all(0));
 
+        overlaps.create(1, 5000, CV_8UC1);
+
         return true;
     }
 
@@ -437,7 +441,15 @@ private:
         }
     }
 
+#include <iostream>
 public:
+    void suppress(GpuMat& ndetections, GpuMat& objects)
+    {
+        ensureSizeIsEnough(objects.rows, objects.cols, CV_8UC1, overlaps);
+        overlaps.setTo(0);
+        device::icf::suppress(objects, overlaps, ndetections);
+        // std::cout << cv::Mat(overlaps) << std::endl;
+    }
 
     // scales range
     float minScale;
@@ -469,6 +481,9 @@ public:
     // 161x121x10
     GpuMat hogluv;
 
+    // used for area overlap computing during
+    GpuMat overlaps;
+
     // Cascade from xml
     GpuMat octaves;
     GpuMat stages;
@@ -477,6 +492,8 @@ public:
     GpuMat levels;
 
     GpuMat sobelBuf;
+
+    GpuMat collected;
 
     std::vector<device::icf::Octave> voctaves;
 
@@ -494,7 +511,7 @@ public:
 };
 
 cv::gpu::SCascade::SCascade(const double mins, const double maxs, const int sc, const int rjf)
-: fields(0),  minScale(mins), maxScale(maxs), scales(sc), rejfactor(rjf) {}
+: fields(0),  minScale(mins), maxScale(maxs), scales(sc), rejCriteria(rjf) {}
 
 cv::gpu::SCascade::~SCascade() { delete fields; }
 
@@ -534,6 +551,9 @@ void cv::gpu::SCascade::detect(InputArray image, InputArray _rois, OutputArray _
     cudaStream_t stream = StreamAccessor::getStream(s);
 
     flds.detect(rois, tmp, objects, stream);
+
+    // if (rejCriteria != NO_REJECT)
+    flds.suppress(tmp, objects);
 }
 
 void cv::gpu::SCascade::genRoi(InputArray _roi, OutputArray _mask, Stream& stream) const
