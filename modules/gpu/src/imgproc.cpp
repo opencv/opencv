@@ -553,7 +553,8 @@ void cv::gpu::integralBuffered(const GpuMat& src, GpuMat& sum, GpuMat& buffer, S
 
     src.locateROI(whole, offset);
 
-    if (info.supports(WARP_SHUFFLE_FUNCTIONS) && src.cols <= 2048 && offset.x % 16 == 0 && (src.cols + 63) / 64 <= (src.step - offset.x))
+    if (info.supports(WARP_SHUFFLE_FUNCTIONS) && src.cols <= 2048
+        && offset.x % 16 == 0 && ((src.cols + 63) / 64) * 64 <= (src.step - offset.x))
     {
         ensureSizeIsEnough(((src.rows + 7) / 8) * 8, ((src.cols + 63) / 64) * 64, CV_32SC1, buffer);
 
