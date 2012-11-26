@@ -243,29 +243,46 @@ namespace cv { namespace gpu { namespace device
             }
         };
 
+        template <unsigned int I, typename Pointer, typename Reference, class Op>
+        struct Unroll
+        {
+            static __device__ void loopShfl(Reference val, Op op, unsigned int N)
+            {
+                mergeShfl(val, I, N, op);
+                Unroll<I / 2, Pointer, Reference, Op>::loopShfl(val, op, N);
+            }
+            static __device__ void loop(Pointer smem, Reference val, unsigned int tid, Op op)
+            {
+                merge(smem, val, tid, I, op);
+                Unroll<I / 2, Pointer, Reference, Op>::loop(smem, val, tid, op);
+            }
+        };
+        template <typename Pointer, typename Reference, class Op>
+        struct Unroll<0, Pointer, Reference, Op>
+        {
+            static __device__ void loopShfl(Reference, Op, unsigned int)
+            {
+            }
+            static __device__ void loop(Pointer, Reference, unsigned int, Op)
+            {
+            }
+        };
+
         template <unsigned int N> struct WarpOptimized
         {
             template <typename Pointer, typename Reference, class Op>
             static __device__ void reduce(Pointer smem, Reference val, unsigned int tid, Op op)
             {
-            #if __CUDA_ARCH >= 300
+            #if __CUDA_ARCH__ >= 300
                 (void) smem;
                 (void) tid;
 
-                #pragma unroll
-                for (unsigned int i = N / 2; i >= 1; i /= 2)
-                    mergeShfl(val, i, N, op);
+                Unroll<N / 2, Pointer, Reference, Op>::loopShfl(val, op, N);
             #else
                 loadToSmem(smem, val, tid);
 
                 if (tid < N / 2)
-                {
-                #if __CUDA_ARCH__ >= 200
-                    #pragma unroll
-                #endif
-                    for (unsigned int i = N / 2; i >= 1; i /= 2)
-                        merge(smem, val, tid, i, op);
-                }
+                    Unroll<N / 2, Pointer, Reference, Op>::loop(smem, val, tid, op);
             #endif
             }
         };
@@ -279,10 +296,8 @@ namespace cv { namespace gpu { namespace device
             {
                 const unsigned int laneId = Warp::laneId();
 
-            #if __CUDA_ARCH >= 300
-                #pragma unroll
-                for (int i = 16; i >= 1; i /= 2)
-                    mergeShfl(val, i, warpSize, op);
+            #if __CUDA_ARCH__ >= 300
+                Unroll<16, Pointer, Reference, Op>::loopShfl(val, op, warpSize);
 
                 if (laneId == 0)
                     loadToSmem(smem, val, tid / 32);
@@ -290,13 +305,7 @@ namespace cv { namespace gpu { namespace device
                 loadToSmem(smem, val, tid);
 
                 if (laneId < 16)
-                {
-                #if __CUDA_ARCH__ >= 200
-                    #pragma unroll
-                #endif
-                    for (int i = 16; i >= 1; i /= 2)
-                        merge(smem, val, tid, i, op);
-                }
+                    Unroll<16, Pointer, Reference, Op>::loop(smem, val, tid, op);
 
                 __syncthreads();
 
@@ -310,16 +319,10 @@ namespace cv { namespace gpu { namespace device
 
                 if (tid < 32)
                 {
-                #if __CUDA_ARCH >= 300
-                    #pragma unroll
-                    for (int i = M / 2; i >= 1; i /= 2)
-                        mergeShfl(val, i, M, op);
+                #if __CUDA_ARCH__ >= 300
+                    Unroll<M / 2, Pointer, Reference, Op>::loopShfl(val, op, M);
                 #else
-                #if __CUDA_ARCH__ >= 200
-                    #pragma unroll
-                #endif
-                    for (int i = M / 2; i >= 1; i /= 2)
-                        merge(smem, val, tid, i, op);
+                    Unroll<M / 2, Pointer, Reference, Op>::loop(smem, val, tid, op);
                 #endif
                 }
             }

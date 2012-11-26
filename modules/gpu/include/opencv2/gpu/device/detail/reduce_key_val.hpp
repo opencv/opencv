@@ -369,31 +369,48 @@ namespace cv { namespace gpu { namespace device
             }
         };
 
+        template <unsigned int I, class KP, class KR, class VP, class VR, class Cmp>
+        struct Unroll
+        {
+            static __device__ void loopShfl(KR key, VR val, Cmp cmp, unsigned int N)
+            {
+                mergeShfl(key, val, cmp, I, N);
+                Unroll<I / 2, KP, KR, VP, VR, Cmp>::loopShfl(key, val, cmp, N);
+            }
+            static __device__ void loop(KP skeys, KR key, VP svals, VR val, unsigned int tid, Cmp cmp)
+            {
+                merge(skeys, key, svals, val, cmp, tid, I);
+                Unroll<I / 2, KP, KR, VP, VR, Cmp>::loop(skeys, key, svals, val, tid, cmp);
+            }
+        };
+        template <class KP, class KR, class VP, class VR, class Cmp>
+        struct Unroll<0, KP, KR, VP, VR, Cmp>
+        {
+            static __device__ void loopShfl(KR, VR, Cmp, unsigned int)
+            {
+            }
+            static __device__ void loop(KP, KR, VP, VR, unsigned int, Cmp)
+            {
+            }
+        };
+
         template <unsigned int N> struct WarpOptimized
         {
             template <class KP, class KR, class VP, class VR, class Cmp>
             static __device__ void reduce(KP skeys, KR key, VP svals, VR val, unsigned int tid, Cmp cmp)
             {
-            #if __CUDA_ARCH >= 300
+            #if __CUDA_ARCH__ >= 300
                 (void) skeys;
                 (void) svals;
                 (void) tid;
 
-                #pragma unroll
-                for (unsigned int i = N / 2; i >= 1; i /= 2)
-                    mergeShfl(key, val, cml, i, N);
+                Unroll<N / 2, KP, KR, VP, VR, Cmp>::loopShfl(key, val, cmp, N);
             #else
                 loadToSmem(skeys, key, tid);
                 loadToSmem(svals, val, tid);
 
                 if (tid < N / 2)
-                {
-                #if __CUDA_ARCH__ >= 200
-                    #pragma unroll
-                #endif
-                    for (unsigned int i = N / 2; i >= 1; i /= 2)
-                        merge(skeys, key, svals, val, cmp, tid, i);
-                }
+                    Unroll<N / 2, KP, KR, VP, VR, Cmp>::loop(skeys, key, svals, val, tid, cmp);
             #endif
             }
         };
@@ -407,10 +424,8 @@ namespace cv { namespace gpu { namespace device
             {
                 const unsigned int laneId = Warp::laneId();
 
-            #if __CUDA_ARCH >= 300
-                #pragma unroll
-                for (unsigned int i = 16; i >= 1; i /= 2)
-                    mergeShfl(key, val, cml, i, warpSize);
+            #if __CUDA_ARCH__ >= 300
+                Unroll<16, KP, KR, VP, VR, Cmp>::loopShfl(key, val, cmp, warpSize);
 
                 if (laneId == 0)
                 {
@@ -422,13 +437,7 @@ namespace cv { namespace gpu { namespace device
                 loadToSmem(svals, val, tid);
 
                 if (laneId < 16)
-                {
-                #if __CUDA_ARCH__ >= 200
-                    #pragma unroll
-                #endif
-                    for (int i = 16; i >= 1; i /= 2)
-                        merge(skeys, key, svals, val, cmp, tid, i);
-                }
+                    Unroll<16, KP, KR, VP, VR, Cmp>::loop(skeys, key, svals, val, tid, cmp);
 
                 __syncthreads();
 
@@ -445,18 +454,12 @@ namespace cv { namespace gpu { namespace device
 
                 if (tid < 32)
                 {
-                #if __CUDA_ARCH >= 300
+                #if __CUDA_ARCH__ >= 300
                     loadFromSmem(svals, val, tid);
 
-                    #pragma unroll
-                    for (unsigned int i = M / 2; i >= 1; i /= 2)
-                        mergeShfl(key, val, cml, i, M);
+                    Unroll<M / 2, KP, KR, VP, VR, Cmp>::loopShfl(key, val, cmp, M);
                 #else
-                #if __CUDA_ARCH__ >= 200
-                    #pragma unroll
-                #endif
-                    for (unsigned int i = M / 2; i >= 1; i /= 2)
-                        merge(skeys, key, svals, val, cmp, tid, i);
+                    Unroll<M / 2, KP, KR, VP, VR, Cmp>::loop(skeys, key, svals, val, tid, cmp);
                 #endif
                 }
             }
