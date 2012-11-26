@@ -86,7 +86,7 @@ namespace icf {
     void fillBins(cv::gpu::PtrStepSzb hogluv, const cv::gpu::PtrStepSzf& nangle,
         const int fw, const int fh, const int bins, cudaStream_t stream);
 
-    void suppress(const PtrStepSzb& objects, PtrStepSzb overlaps, PtrStepSzi ndetections);
+    void suppress(const PtrStepSzb& objects, PtrStepSzb overlaps, PtrStepSzi ndetections, PtrStepSzb suppressed);
 }
 
 namespace imgproc {
@@ -312,6 +312,7 @@ struct cv::gpu::SCascade::Fields
         hogluv.setTo(cv::Scalar::all(0));
 
         overlaps.create(1, 5000, CV_8UC1);
+        suppressed.create(1, sizeof(Detection) * 51, CV_8UC1);
 
         return true;
     }
@@ -447,7 +448,9 @@ public:
     {
         ensureSizeIsEnough(objects.rows, objects.cols, CV_8UC1, overlaps);
         overlaps.setTo(0);
-        device::icf::suppress(objects, overlaps, ndetections);
+        suppressed.setTo(0);
+
+        device::icf::suppress(objects, overlaps, ndetections, suppressed);
         // std::cout << cv::Mat(overlaps) << std::endl;
     }
 
@@ -483,6 +486,9 @@ public:
 
     // used for area overlap computing during
     GpuMat overlaps;
+
+    // used for suppression
+    GpuMat suppressed;
 
     // Cascade from xml
     GpuMat octaves;
@@ -525,7 +531,6 @@ bool cv::gpu::SCascade::load(const FileNode& fn)
 void cv::gpu::SCascade::detect(InputArray image, InputArray _rois, OutputArray _objects, Stream& s) const
 {
     CV_Assert(fields);
-
     const GpuMat colored = image.getGpuMat();
 
     // only color images are supperted
@@ -545,6 +550,7 @@ void cv::gpu::SCascade::detect(InputArray image, InputArray _rois, OutputArray _
         colored.copyTo(flds.hogluv);
     }
 
+    GpuMat spr(objects, cv::Rect(0, 0, flds.suppressed.cols, flds.suppressed.rows));
 
     GpuMat tmp = GpuMat(objects, cv::Rect(0, 0, sizeof(Detection), 1));
     objects = GpuMat(objects, cv::Rect( sizeof(Detection), 0, objects.cols - sizeof(Detection), 1));
@@ -552,8 +558,11 @@ void cv::gpu::SCascade::detect(InputArray image, InputArray _rois, OutputArray _
 
     flds.detect(rois, tmp, objects, stream);
 
-    // if (rejCriteria != NO_REJECT)
-    flds.suppress(tmp, objects);
+    if (rejCriteria != NO_REJECT)
+    {
+        flds.suppress(tmp, objects);
+        flds.suppressed.copyTo(spr);
+    }
 }
 
 void cv::gpu::SCascade::genRoi(InputArray _roi, OutputArray _mask, Stream& stream) const

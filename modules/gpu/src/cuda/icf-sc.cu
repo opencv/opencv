@@ -88,19 +88,23 @@ namespace icf {
         return (w < 0 || h < 0)? 0.f : (float)(w * h);
     }
 
-    __global__ void overlap(const uint* n, const Detection* detections, uchar* overlaps)
+    texture<uint4,  cudaTextureType2D, cudaReadModeElementType> tdetections;
+
+    __global__ void overlap(const uint* n, uchar* overlaps)
     {
         const int idx = threadIdx.x;
         const int total = *n;
 
-        for (int i = idx; i < total; i += 192)
+        for (int i = idx + 1; i < total; i += 192)
         {
-            const Detection& a = detections[i];
+            const uint4 _a = tex2D(tdetections, i, 0);
+            const Detection& a = *((Detection*)(&_a));
             bool excluded = false;
 
             for (int j = i + 1; j < total; ++j)
             {
-                const Detection& b = detections[j];
+                const uint4 _b = tex2D(tdetections, j, 0);
+                const Detection& b = *((Detection*)(&_b));
                 float ovl = overlapArea(a, b) / ::min(a.w * a.h, b.w * b.h);
 
                 if (ovl > 0.65f)
@@ -115,7 +119,7 @@ namespace icf {
         }
     }
 
-    __global__ void collect(const uint* n, const Detection* detections, uchar* overlaps)
+    __global__ void collect(const uint* n, uchar* overlaps, uint* ctr, uint4* suppressed)
     {
         const int idx = threadIdx.x;
         const int total = *n;
@@ -124,19 +128,24 @@ namespace icf {
         {
             if (!overlaps[i])
             {
-                const Detection& det = detections[i];
-                // printf("%d: %d %d %d %d %f\n", i, det.x, det.y, det.w, det.h, det.confidence );
+                int oidx = atomicInc(ctr, 50);
+                suppressed[oidx] = tex2D(tdetections, i + 1, 0);
             }
         }
     }
 
-    void suppress(const PtrStepSzb& objects, PtrStepSzb overlaps, PtrStepSzi ndetections)
+    void suppress(const PtrStepSzb& objects, PtrStepSzb overlaps, PtrStepSzi ndetections, PtrStepSzb suppressed)
     {
         int block = 192;
         int grid = 1;
 
-        overlap<<<grid, block>>>((uint*)ndetections.ptr(0), (Detection*)objects.ptr(0), (uchar*)overlaps.ptr(0));
-        collect<<<grid, block>>>((uint*)ndetections.ptr(0), (Detection*)objects.ptr(0), (uchar*)overlaps.ptr(0));
+        cudaChannelFormatDesc desc = cudaCreateChannelDesc<uint4>();
+        size_t offset;
+        cudaSafeCall( cudaBindTexture2D(&offset, tdetections, objects.data, desc, objects.cols / sizeof(uint4), objects.rows, objects.step));
+
+        overlap<<<grid, block>>>((uint*)ndetections.ptr(0), (uchar*)overlaps.ptr(0));
+        collect<<<grid, block>>>((uint*)ndetections.ptr(0), (uchar*)overlaps.ptr(0), (uint*)suppressed.ptr(0), ((uint4*)suppressed.ptr(0)) + 1);
+
         // if (!stream)
         {
             cudaSafeCall( cudaGetLastError());
