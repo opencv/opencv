@@ -1034,7 +1034,7 @@ namespace cv { namespace gpu { namespace device
                 cudaSafeCall( cudaDeviceSynchronize() );
         }
 
-        void findKnnMatchDispatcher(int k, const PtrStepSzb& trainIdx, const PtrStepSzb& distance, const PtrStepSzf& allDist, int cc, cudaStream_t stream)
+        void findKnnMatchDispatcher(int k, const PtrStepSzb& trainIdx, const PtrStepSzb& distance, const PtrStepSzf& allDist, int /*cc*/, cudaStream_t stream)
         {
             findKnnMatch<256>(k, static_cast<PtrStepSzi>(trainIdx), static_cast<PtrStepSzf>(distance), allDist, stream);
         }
