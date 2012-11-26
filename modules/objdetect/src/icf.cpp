@@ -42,19 +42,72 @@
 
 #include <precomp.hpp>
 
-namespace cv
-{
+cv::SCascade::Channels::Channels(int shr) : shrinkage(shr) {}
 
-CV_INIT_ALGORITHM(SCascade, "CascadeDetector.SCascade",
-                  obj.info()->addParam(obj, "minScale",  obj.minScale);
-                  obj.info()->addParam(obj, "maxScale",  obj.maxScale);
-                  obj.info()->addParam(obj, "scales",    obj.scales);
-                  obj.info()->addParam(obj, "rejfactor", obj.rejfactor));
-
-bool initModule_objdetect(void)
+void cv::SCascade::Channels::appendHogBins(const cv::Mat& gray, std::vector<cv::Mat>& integrals, int bins) const
 {
-    Ptr<Algorithm> sc = createSCascade();
-    return sc->info() != 0;
+    CV_Assert(gray.type() == CV_8UC1);
+    int h = gray.rows;
+    int w = gray.cols;
+    CV_Assert(!(w % shrinkage) && !(h % shrinkage));
+
+    cv::Mat df_dx, df_dy, mag, angle;
+    cv::Sobel(gray, df_dx, CV_32F, 1, 0);
+    cv::Sobel(gray, df_dy, CV_32F, 0, 1);
+
+    cv::cartToPolar(df_dx, df_dy, mag, angle, true);
+    mag *= (1.f / (8 * sqrt(2.f)));
+
+    cv::Mat nmag;
+    mag.convertTo(nmag, CV_8UC1);
+
+    angle *=  bins/360.f;
+
+    std::vector<cv::Mat> hist;
+    for (int bin = 0; bin < bins; ++bin)
+        hist.push_back(cv::Mat::zeros(h, w, CV_8UC1));
+
+    for (int y = 0; y < h; ++y)
+    {
+        uchar* magnitude = nmag.ptr<uchar>(y);
+        float* ang = angle.ptr<float>(y);
+
+        for (int x = 0; x < w; ++x)
+        {
+            hist[ (int)ang[x] ].ptr<uchar>(y)[x] = magnitude[x];
+        }
+    }
+
+    for(int i = 0; i < bins; ++i)
+    {
+        cv::Mat shrunk, sum;
+        cv::resize(hist[i], shrunk, cv::Size(), 1.0 / shrinkage, 1.0 / shrinkage, CV_INTER_AREA);
+        cv::integral(shrunk, sum, cv::noArray(), CV_32S);
+        integrals.push_back(sum);
+    }
+
+    cv::Mat shrMag;
+    cv::resize(nmag, shrMag, cv::Size(), 1.0 / shrinkage, 1.0 / shrinkage, CV_INTER_AREA);
+    cv::integral(shrMag, mag, cv::noArray(), CV_32S);
+    integrals.push_back(mag);
 }
 
+void cv::SCascade::Channels::appendLuvBins(const cv::Mat& frame, std::vector<cv::Mat>& integrals) const
+{
+    CV_Assert(frame.type() == CV_8UC3);
+    CV_Assert(!(frame.cols % shrinkage) && !(frame.rows % shrinkage));
+
+    cv::Mat luv, shrunk;
+    cv::cvtColor(frame, luv, CV_BGR2Luv);
+    cv::resize(luv, shrunk, cv::Size(), 1.0 / shrinkage, 1.0 / shrinkage, CV_INTER_AREA);
+
+    std::vector<cv::Mat> splited;
+    split(shrunk, splited);
+
+    for (size_t i = 0; i < splited.size(); ++i)
+    {
+        cv::Mat sum;
+        cv::integral(splited[i], sum, cv::noArray(), CV_32S);
+        integrals.push_back(sum);
+    }
 }

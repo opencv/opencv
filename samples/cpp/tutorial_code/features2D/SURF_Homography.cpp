@@ -10,7 +10,7 @@
 #include "opencv2/features2d/features2d.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/calib3d/calib3d.hpp"
-#include "opencv2/nonfree/features2d.cpp"
+#include "opencv2/nonfree/features2d.hpp"
 
 using namespace cv;
 
@@ -84,7 +84,7 @@ int main( int argc, char** argv )
   std::vector<Point2f> obj;
   std::vector<Point2f> scene;
 
-  for( int i = 0; i < good_matches.size(); i++ )
+  for( size_t i = 0; i < good_matches.size(); i++ )
   {
     //-- Get the keypoints from the good matches
     obj.push_back( keypoints_object[ good_matches[i].queryIdx ].pt );
@@ -103,10 +103,11 @@ int main( int argc, char** argv )
 
 
   //-- Draw lines between the corners (the mapped object in the scene - image_2 )
-  line( img_matches, scene_corners[0] + Point2f( img_object.cols, 0), scene_corners[1] + Point2f( img_object.cols, 0), Scalar(0, 255, 0), 4 );
-  line( img_matches, scene_corners[1] + Point2f( img_object.cols, 0), scene_corners[2] + Point2f( img_object.cols, 0), Scalar( 0, 255, 0), 4 );
-  line( img_matches, scene_corners[2] + Point2f( img_object.cols, 0), scene_corners[3] + Point2f( img_object.cols, 0), Scalar( 0, 255, 0), 4 );
-  line( img_matches, scene_corners[3] + Point2f( img_object.cols, 0), scene_corners[0] + Point2f( img_object.cols, 0), Scalar( 0, 255, 0), 4 );
+  Point2f offset( (float)img_object.cols, 0);
+  line( img_matches, scene_corners[0] + offset, scene_corners[1] + offset, Scalar(0, 255, 0), 4 );
+  line( img_matches, scene_corners[1] + offset, scene_corners[2] + offset, Scalar( 0, 255, 0), 4 );
+  line( img_matches, scene_corners[2] + offset, scene_corners[3] + offset, Scalar( 0, 255, 0), 4 );
+  line( img_matches, scene_corners[3] + offset, scene_corners[0] + offset, Scalar( 0, 255, 0), 4 );
 
   //-- Show detected matches
   imshow( "Good Matches & Object detection", img_matches );

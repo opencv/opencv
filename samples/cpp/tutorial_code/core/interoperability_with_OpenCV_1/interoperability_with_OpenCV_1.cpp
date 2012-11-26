@@ -8,7 +8,7 @@
 using namespace cv;  // The new C++ interface API is inside this namespace. Import it.
 using namespace std;
 
-void help( char* progName)
+static void help( char* progName)
 {
     cout << endl << progName
         << " shows how to use cv::Mat and IplImages together (converting back and forth)." << endl

@@ -8,4 +8,5 @@ objdetect. Object Detection
     :maxdepth: 2
 
     cascade_classification
+    soft_cascade
     latent_svm

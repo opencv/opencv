@@ -583,7 +583,7 @@ namespace cv
         virtual ~StereoVar();
 
         //! the stereo correspondence operator that computes disparity map for the specified rectified stereo pair
-        CV_WRAP_AS(compute) virtual void operator()(const Mat& left, const Mat& right, Mat& disp);
+        CV_WRAP_AS(compute) virtual void operator()(const Mat& left, const Mat& right, CV_OUT Mat& disp);
 
         CV_PROP_RW int      levels;
         CV_PROP_RW double   pyrScale;

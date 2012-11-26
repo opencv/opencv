@@ -1,6 +1,7 @@
 #include <iostream>
 #include <sstream>
 #include <time.h>
+#include <stdio.h>
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -10,7 +11,7 @@
 using namespace cv;
 using namespace std;
 
-void help()
+static void help()
 {
     cout <<  "This is a camera calibration sample." << endl
          <<  "Usage: calibration configurationFile"  << endl
@@ -99,7 +100,7 @@ public:
                 if (readStringList(input, imageList))
                     {
                         inputType = IMAGE_LIST;
-                        nrFrames = (nrFrames < imageList.size()) ? nrFrames : imageList.size();
+                        nrFrames = (nrFrames < (int)imageList.size()) ? nrFrames : (int)imageList.size();
                     }
                 else
                     inputType = VIDEO_FILE;
@@ -196,11 +197,7 @@ private:
 
 };
 
-void write(FileStorage& fs, const std::string&, const Settings& x)
-{
-    x.write(fs);
-}
-void read(const FileNode& node, Settings& x, const Settings& default_value = Settings())
+static void read(const FileNode& node, Settings& x, const Settings& default_value = Settings())
 {
     if(node.empty())
         x = default_value;
@@ -282,6 +279,9 @@ int main(int argc, char* argv[])
         case Settings::ASYMMETRIC_CIRCLES_GRID:
             found = findCirclesGrid( view, s.boardSize, pointBuf, CALIB_CB_ASYMMETRIC_GRID );
             break;
+        default:
+            found = false;
+            break;
         }
 
         if ( found)                // If done with success,
@@ -336,7 +336,7 @@ int main(int argc, char* argv[])
 
         //------------------------------ Show image and check for input commands -------------------
         imshow("Image View", view);
-        char key =  waitKey(s.inputCapture.isOpened() ? 50 : s.delay);
+        char key = (char)waitKey(s.inputCapture.isOpened() ? 50 : s.delay);
 
         if( key  == ESC_KEY )
             break;
@@ -366,7 +366,7 @@ int main(int argc, char* argv[])
                 continue;
             remap(view, rview, map1, map2, INTER_LINEAR);
             imshow("Image View", rview);
-            char c = waitKey();
+            char c = (char)waitKey();
             if( c  == ESC_KEY || c == 'q' || c == 'Q' )
                 break;
         }
@@ -376,11 +376,11 @@ int main(int argc, char* argv[])
     return 0;
 }
 
-double computeReprojectionErrors( const vector<vector<Point3f> >& objectPoints,
-                                  const vector<vector<Point2f> >& imagePoints,
-                                  const vector<Mat>& rvecs, const vector<Mat>& tvecs,
-                                  const Mat& cameraMatrix , const Mat& distCoeffs,
-                                  vector<float>& perViewErrors)
+static double computeReprojectionErrors( const vector<vector<Point3f> >& objectPoints,
+                                         const vector<vector<Point2f> >& imagePoints,
+                                         const vector<Mat>& rvecs, const vector<Mat>& tvecs,
+                                         const Mat& cameraMatrix , const Mat& distCoeffs,
+                                         vector<float>& perViewErrors)
 {
     vector<Point2f> imagePoints2;
     int i, totalPoints = 0;
@@ -402,8 +402,8 @@ double computeReprojectionErrors( const vector<vector<Point3f> >& objectPoints,
     return std::sqrt(totalErr/totalPoints);
 }
 
-void calcBoardCornerPositions(Size boardSize, float squareSize, vector<Point3f>& corners,
-                          Settings::Pattern patternType /*= Settings::CHESSBOARD*/)
+static void calcBoardCornerPositions(Size boardSize, float squareSize, vector<Point3f>& corners,
+                                     Settings::Pattern patternType /*= Settings::CHESSBOARD*/)
 {
     corners.clear();
 
@@ -421,12 +421,14 @@ void calcBoardCornerPositions(Size boardSize, float squareSize, vector<Point3f>&
             for( int j = 0; j < boardSize.width; j++ )
                 corners.push_back(Point3f(float((2*j + i % 2)*squareSize), float(i*squareSize), 0));
         break;
+    default:
+        break;
     }
 }
 
-bool runCalibration( Settings& s, Size& imageSize, Mat& cameraMatrix, Mat& distCoeffs,
-                    vector<vector<Point2f> > imagePoints, vector<Mat>& rvecs, vector<Mat>& tvecs,
-                    vector<float>& reprojErrs,  double& totalAvgErr)
+static bool runCalibration( Settings& s, Size& imageSize, Mat& cameraMatrix, Mat& distCoeffs,
+                            vector<vector<Point2f> > imagePoints, vector<Mat>& rvecs, vector<Mat>& tvecs,
+                            vector<float>& reprojErrs,  double& totalAvgErr)
 {
 
     cameraMatrix = Mat::eye(3, 3, CV_64F);
@@ -455,16 +457,16 @@ bool runCalibration( Settings& s, Size& imageSize, Mat& cameraMatrix, Mat& distC
 }
 
 // Print camera parameters to the output file
-void saveCameraParams( Settings& s, Size& imageSize, Mat& cameraMatrix, Mat& distCoeffs,
-                        const vector<Mat>& rvecs, const vector<Mat>& tvecs,
-                       const vector<float>& reprojErrs, const vector<vector<Point2f> >& imagePoints,
-                       double totalAvgErr )
+static void saveCameraParams( Settings& s, Size& imageSize, Mat& cameraMatrix, Mat& distCoeffs,
+                              const vector<Mat>& rvecs, const vector<Mat>& tvecs,
+                              const vector<float>& reprojErrs, const vector<vector<Point2f> >& imagePoints,
+                              double totalAvgErr )
 {
     FileStorage fs( s.outputFileName, FileStorage::WRITE );
 
-    time_t t;
-    time( &t );
-    struct tm *t2 = localtime( &t );
+    time_t tm;
+    time( &tm );
+    struct tm *t2 = localtime( &tm );
     char buf[1024];
     strftime( buf, sizeof(buf)-1, "%c", t2 );
 
@@ -522,7 +524,7 @@ void saveCameraParams( Settings& s, Size& imageSize, Mat& cameraMatrix, Mat& dis
 
     if( !imagePoints.empty() )
     {
-        Mat imagePtMat((int)imagePoints.size(), imagePoints[0].size(), CV_32FC2);
+        Mat imagePtMat((int)imagePoints.size(), (int)imagePoints[0].size(), CV_32FC2);
         for( int i = 0; i < (int)imagePoints.size(); i++ )
         {
             Mat r = imagePtMat.row(i).reshape(2, imagePtMat.cols);

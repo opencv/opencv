@@ -23,7 +23,7 @@ void Hist_and_Backproj(int, void* );
 /**
  * @function main
  */
-int main( int argc, char** argv )
+int main( int, char** argv )
 {
   /// Read the image
   src = imread( argv[1], 1 );
@@ -36,7 +36,7 @@ int main( int argc, char** argv )
   mixChannels( &hsv, 1, &hue, 1, ch, 1 );
 
   /// Create Trackbar to enter the number of bins
-  char* window_image = "Source image";
+  const char* window_image = "Source image";
   namedWindow( window_image, CV_WINDOW_AUTOSIZE );
   createTrackbar("* Hue  bins: ", window_image, &bins, 180, Hist_and_Backproj );
   Hist_and_Backproj(0, 0);

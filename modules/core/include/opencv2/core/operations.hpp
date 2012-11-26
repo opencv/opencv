@@ -56,7 +56,7 @@
   #define CV_XADD(addr,delta) _InterlockedExchangeAdd(const_cast<void*>(reinterpret_cast<volatile void*>(addr)), delta)
 #elif defined __GNUC__
 
-  #if defined __clang__ && __clang_major__ >= 3
+  #if defined __clang__ && __clang_major__ >= 3 && !defined __ANDROID__
     #ifdef __ATOMIC_SEQ_CST
         #define CV_XADD(addr, delta) __c11_atomic_fetch_add((_Atomic(int)*)(addr), (delta), __ATOMIC_SEQ_CST)
     #else
@@ -3873,10 +3873,21 @@ template<typename _Tp> inline std::ostream& operator<<(std::ostream& out, const 
 template<typename _Tp, int n> inline std::ostream& operator<<(std::ostream& out, const Vec<_Tp, n>& vec)
 {
     out << "[";
-    for (int i = 0; i < n - 1; ++i) {
-        out << vec[i] << ", ";
+
+    if(Vec<_Tp, n>::depth < CV_32F)
+    {
+        for (int i = 0; i < n - 1; ++i) {
+            out << (int)vec[i] << ", ";
+        }
+        out << (int)vec[n-1] << "]";
     }
-    out << vec[n-1] << "]";
+    else
+    {
+        for (int i = 0; i < n - 1; ++i) {
+            out << vec[i] << ", ";
+        }
+        out << vec[n-1] << "]";
+    }
 
     return out;
 }
