@@ -11,17 +11,15 @@ In this tutorial you will learn how to:
 .. container:: enumeratevisibleitemswithsquare
 
    + Access pixel values
-
    + Initialize a matrix with zeros
-
    + Learn what :saturate_cast:`saturate_cast <>` does and why it is useful
-
    + Get some cool info about pixel transformations
 
 Theory
 =======
 
 .. note::
+
    The explanation below belongs to the book `Computer Vision: Algorithms and Applications <http://szeliski.org/Book/>`_  by Richard Szeliski
 
 Image Processing
@@ -38,7 +36,7 @@ Image Processing
 
 
 Pixel Transforms
-^^^^^^^^^^^^^^^^^
+-----------------
 
 .. container:: enumeratevisibleitemswithsquare
 
@@ -47,7 +45,7 @@ Pixel Transforms
    * Examples of such operators include *brightness and contrast adjustments* as well as color correction and transformations.
 
 Brightness and contrast adjustments
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+------------------------------------
 
 .. container:: enumeratevisibleitemswithsquare
 
@@ -70,9 +68,7 @@ Brightness and contrast adjustments
 Code
 =====
 
-.. container:: enumeratevisibleitemswithsquare
-
-   * The following code performs the operation :math:`g(i,j) = \alpha \cdot f(i,j) + \beta` :
+* The following code performs the operation :math:`g(i,j) = \alpha \cdot f(i,j) + \beta` :
 
 .. code-block:: cpp
 
@@ -87,38 +83,37 @@ Code
 
    int main( int argc, char** argv )
    {
-    /// Read image given by user
-    Mat image = imread( argv[1] );
-    Mat new_image = Mat::zeros( image.size(), image.type() );
+       /// Read image given by user
+       Mat image = imread( argv[1] );
+       Mat new_image = Mat::zeros( image.size(), image.type() );
 
-    /// Initialize values
-    std::cout<<" Basic Linear Transforms "<<std::endl;
-    std::cout<<"-------------------------"<<std::endl;
-    std::cout<<"* Enter the alpha value [1.0-3.0]: ";std::cin>>alpha;
-    std::cout<<"* Enter the beta value [0-100]: "; std::cin>>beta;
+       /// Initialize values
+       std::cout<<" Basic Linear Transforms "<<std::endl;
+       std::cout<<"-------------------------"<<std::endl;
+       std::cout<<"* Enter the alpha value [1.0-3.0]: ";std::cin>>alpha;
+       std::cout<<"* Enter the beta value [0-100]: "; std::cin>>beta;
 
-    /// Do the operation new_image(i,j) = alpha*image(i,j) + beta
-    for( int y = 0; y < image.rows; y++ )
-       { for( int x = 0; x < image.cols; x++ )
-            { for( int c = 0; c < 3; c++ )
-                 {
-         new_image.at<Vec3b>(y,x)[c] =
-            saturate_cast<uchar>( alpha*( image.at<Vec3b>(y,x)[c] ) + beta );
-                }
+       /// Do the operation new_image(i,j) = alpha*image(i,j) + beta
+       for( int y = 0; y < image.rows; y++ ) {
+           for( int x = 0; x < image.cols; x++ ) {
+               for( int c = 0; c < 3; c++ ) {
+                   new_image.at<Vec3b>(y,x)[c] =
+                   saturate_cast<uchar>( alpha*( image.at<Vec3b>(y,x)[c] ) + beta );
+               }
+           }
        }
-       }
 
-    /// Create Windows
-    namedWindow("Original Image", 1);
-    namedWindow("New Image", 1);
+       /// Create Windows
+       namedWindow("Original Image", 1);
+       namedWindow("New Image", 1);
 
-    /// Show stuff
-    imshow("Original Image", image);
-    imshow("New Image", new_image);
+       /// Show stuff
+       imshow("Original Image", image);
+       imshow("New Image", new_image);
 
-    /// Wait until user press some key
-    waitKey();
-    return 0;
+       /// Wait until user press some key
+       waitKey();
+       return 0;
    }
 
 Explanation
@@ -155,13 +150,14 @@ Explanation
 
    .. code-block:: cpp
 
-      for( int y = 0; y < image.rows; y++ )
-         { for( int x = 0; x < image.cols; x++ )
-              { for( int c = 0; c < 3; c++ )
-                   { new_image.at<Vec3b>(y,x)[c] =
-                               saturate_cast<uchar>( alpha*( image.at<Vec3b>(y,x)[c] ) + beta ); }
-         }
-         }
+      for( int y = 0; y < image.rows; y++ ) {
+          for( int x = 0; x < image.cols; x++ ) {
+              for( int c = 0; c < 3; c++ ) {
+                  new_image.at<Vec3b>(y,x)[c] =
+                    saturate_cast<uchar>( alpha*( image.at<Vec3b>(y,x)[c] ) + beta );
+              }
+          }
+      }
 
    Notice the following:
 
@@ -209,6 +205,6 @@ Result
 
 * We get this:
 
-.. image:: images/Basic_Linear_Transform_Tutorial_Result_0.jpg
-   :alt: Basic Linear Transform - Final Result
-   :align: center
+  .. image:: images/Basic_Linear_Transform_Tutorial_Result_0.jpg
+     :alt: Basic Linear Transform - Final Result
+     :align: center
