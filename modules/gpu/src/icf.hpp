@@ -147,7 +147,7 @@ struct CascadeInvoker
     int scales;
 
     void operator()(const PtrStepSzb& roi, const PtrStepSzi& hogluv, PtrStepSz<uchar4> objects,
-        PtrStepSzi counter, const int downscales, const cudaStream_t& stream = 0) const;
+        const int downscales, const cudaStream_t& stream = 0) const;
 
     template<bool isUp>
     __device void detect(Detection* objects, const uint ndetections, uint* ctr, const int downscales) const;

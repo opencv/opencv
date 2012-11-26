@@ -47,7 +47,7 @@
 using cv::gpu::GpuMat;
 
 // show detection results on input image with cv::imshow
-#define SHOW_DETECTIONS
+// #define SHOW_DETECTIONS
 
 #if defined SHOW_DETECTIONS
 # define SHOW(res)           \
@@ -99,6 +99,35 @@ namespace {
         return std::string(s);
     }
 
+    static void print(std::ostream &out, const Detection& d)
+    {
+#if defined SHOW_DETECTIONS
+        out << "\x1b[32m[ detection]\x1b[0m ("
+            << std::setw(4)  << d.x
+            << " "
+            << std::setw(4)  << d.y
+            << ") ("
+            << std::setw(4)  << d.w
+            << " "
+            << std::setw(4)  << d.h
+            << ") "
+            << std::setw(12) << d.confidence
+            <<  std::endl;
+#else
+        (void)out; (void)d;
+#endif
+    }
+
+    static void printTotal(std::ostream &out, int detbytes)
+    {
+#if defined SHOW_DETECTIONS
+        out << "\x1b[32m[          ]\x1b[0m Total detections " << (detbytes / sizeof(Detection)) << std::endl;
+#else
+        (void)out; (void)detbytes;
+#endif
+    }
+
+#if defined SHOW_DETECTIONS
     static std::string getImageName(int level)
     {
         time_t rawtime;
@@ -112,32 +141,13 @@ namespace {
         return "gpu_rec_level_" + itoa(level)+ "_" + std::string(buffer) + ".png";
     }
 
-    static void print(std::ostream &out, const Detection& d)
-    {
-        out << "\x1b[32m[ detection]\x1b[0m ("
-            << std::setw(4)  << d.x
-            << " "
-            << std::setw(4)  << d.y
-            << ") ("
-            << std::setw(4)  << d.w
-            << " "
-            << std::setw(4)  << d.h
-            << ") "
-            << std::setw(12) << d.confidence
-            <<  std::endl;
-    }
-
-    static void printTotal(std::ostream &out, int detbytes)
-    {
-        out << "\x1b[32m[          ]\x1b[0m Total detections " << (detbytes / sizeof(Detection)) << std::endl;
-    }
-
     static void writeResult(const cv::Mat& result, const int level)
     {
         std::string path = cv::tempfile(getImageName(level).c_str());
         cv::imwrite(path, result);
         std::cout << "\x1b[32m" << "[          ]" << std::endl << "[ stored in]"<< "\x1b[0m" << path << std::endl;
     }
+#endif
 }
 
 typedef ::testing::TestWithParam<std::tr1::tuple<cv::gpu::DeviceInfo, std::string, std::string, int> > SCascadeTestRoi;

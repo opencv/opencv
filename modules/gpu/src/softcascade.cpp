@@ -86,7 +86,8 @@ namespace icf {
     void fillBins(cv::gpu::PtrStepSzb hogluv, const cv::gpu::PtrStepSzf& nangle,
         const int fw, const int fh, const int bins, cudaStream_t stream);
 
-    void suppress(const PtrStepSzb& objects, PtrStepSzb overlaps, PtrStepSzi ndetections, PtrStepSzb suppressed);
+    void suppress(const PtrStepSzb& objects, PtrStepSzb overlaps, PtrStepSzi ndetections,
+        PtrStepSzb suppressed, cudaStream_t stream);
 }
 
 namespace imgproc {
@@ -328,13 +329,20 @@ struct cv::gpu::SCascade::Fields
         leaves.upload(hleaves);
     }
 
-    void detect(const cv::gpu::GpuMat& roi, const cv::gpu::GpuMat& count, cv::gpu::GpuMat& objects, const cudaStream_t& stream) const
+    void detect(const cv::gpu::GpuMat& roi, cv::gpu::GpuMat& objects, Stream& s) const
     {
-        cudaMemset(count.data, 0, sizeof(Detection));
+        if (s)
+            s.enqueueMemSet(objects, 0);
+        else
+            cudaMemset(objects.data, 0, sizeof(Detection));
+
         cudaSafeCall( cudaGetLastError());
+
         device::icf::CascadeInvoker<device::icf::GK107PolicyX4> invoker
         = device::icf::CascadeInvoker<device::icf::GK107PolicyX4>(levels, stages, nodes, leaves);
-        invoker(roi, hogluv, objects, count, downscales, stream);
+
+        cudaStream_t stream = StreamAccessor::getStream(s);
+        invoker(roi, hogluv, objects, downscales, stream);
     }
 
     void preprocess(const cv::gpu::GpuMat& colored, Stream& s)
@@ -354,6 +362,26 @@ struct cv::gpu::SCascade::Fields
         createLuvBins(colored, s);
 
         integrate(fh, fw, s);
+    }
+
+    void suppress(GpuMat& objects, Stream& s)
+    {
+        GpuMat ndetections = GpuMat(objects, cv::Rect(0, 0, sizeof(Detection), 1));
+        ensureSizeIsEnough(objects.rows, objects.cols, CV_8UC1, overlaps);
+
+        if (s)
+        {
+            s.enqueueMemSet(overlaps, 0);
+            s.enqueueMemSet(suppressed, 0);
+        }
+        else
+        {
+            overlaps.setTo(0);
+            suppressed.setTo(0);
+        }
+
+        cudaStream_t stream = StreamAccessor::getStream(s);
+        device::icf::suppress(objects, overlaps, ndetections, suppressed, stream);
     }
 
 private:
@@ -442,17 +470,7 @@ private:
         }
     }
 
-#include <iostream>
 public:
-    void suppress(GpuMat& ndetections, GpuMat& objects)
-    {
-        ensureSizeIsEnough(objects.rows, objects.cols, CV_8UC1, overlaps);
-        overlaps.setTo(0);
-        suppressed.setTo(0);
-
-        device::icf::suppress(objects, overlaps, ndetections, suppressed);
-        // std::cout << cv::Mat(overlaps) << std::endl;
-    }
 
     // scales range
     float minScale;
@@ -547,20 +565,18 @@ void cv::gpu::SCascade::detect(InputArray image, InputArray _rois, OutputArray _
     }
     else
     {
-        colored.copyTo(flds.hogluv);
+        if (s)
+            s.enqueueCopy(colored, flds.hogluv);
+        else
+            colored.copyTo(flds.hogluv);
     }
 
-    GpuMat spr(objects, cv::Rect(0, 0, flds.suppressed.cols, flds.suppressed.rows));
-
-    GpuMat tmp = GpuMat(objects, cv::Rect(0, 0, sizeof(Detection), 1));
-    objects = GpuMat(objects, cv::Rect( sizeof(Detection), 0, objects.cols - sizeof(Detection), 1));
-    cudaStream_t stream = StreamAccessor::getStream(s);
-
-    flds.detect(rois, tmp, objects, stream);
+    flds.detect(rois, objects, s);
 
     if (rejCriteria != NO_REJECT)
     {
-        flds.suppress(tmp, objects);
+        GpuMat spr(objects, cv::Rect(0, 0, flds.suppressed.cols, flds.suppressed.rows));
+        flds.suppress(objects, s);
         flds.suppressed.copyTo(spr);
     }
 }

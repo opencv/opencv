@@ -134,7 +134,8 @@ namespace icf {
         }
     }
 
-    void suppress(const PtrStepSzb& objects, PtrStepSzb overlaps, PtrStepSzi ndetections, PtrStepSzb suppressed)
+    void suppress(const PtrStepSzb& objects, PtrStepSzb overlaps, PtrStepSzi ndetections,
+        PtrStepSzb suppressed, cudaStream_t stream)
     {
         int block = 192;
         int grid = 1;
@@ -146,7 +147,7 @@ namespace icf {
         overlap<<<grid, block>>>((uint*)ndetections.ptr(0), (uchar*)overlaps.ptr(0));
         collect<<<grid, block>>>((uint*)ndetections.ptr(0), (uchar*)overlaps.ptr(0), (uint*)suppressed.ptr(0), ((uint4*)suppressed.ptr(0)) + 1);
 
-        // if (!stream)
+        if (!stream)
         {
             cudaSafeCall( cudaGetLastError());
             cudaSafeCall( cudaDeviceSynchronize());
@@ -330,15 +331,15 @@ __global__ void soft_cascade(const CascadeInvoker<Policy> invoker, Detection* ob
 
 template<typename Policy>
 void CascadeInvoker<Policy>::operator()(const PtrStepSzb& roi, const PtrStepSzi& hogluv,
-    PtrStepSz<uchar4> objects, PtrStepSzi counter, const int downscales, const cudaStream_t& stream) const
+    PtrStepSz<uchar4> objects, const int downscales, const cudaStream_t& stream) const
 {
     int fw = roi.rows;
     int fh = roi.cols;
 
     dim3 grid(fw, fh / Policy::STA_Y, downscales);
 
-    uint* ctr = (uint*)(counter.ptr(0));
-    Detection* det = (Detection*)objects.ptr();
+    uint* ctr = (uint*)(objects.ptr(0));
+    Detection* det = ((Detection*)objects.ptr(0)) + 1;
     uint max_det = objects.cols / sizeof(Detection);
 
     cudaChannelFormatDesc desc = cudaCreateChannelDesc<int>();
@@ -363,7 +364,7 @@ void CascadeInvoker<Policy>::operator()(const PtrStepSzb& roi, const PtrStepSzi&
 }
 
 template void CascadeInvoker<GK107PolicyX4>::operator()(const PtrStepSzb& roi, const PtrStepSzi& hogluv,
-    PtrStepSz<uchar4> objects, PtrStepSzi counter, const int downscales, const cudaStream_t& stream) const;
+    PtrStepSz<uchar4> objects, const int downscales, const cudaStream_t& stream) const;
 
 }
 }}}
