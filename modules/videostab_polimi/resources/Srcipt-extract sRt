@@ -1,0 +1,15 @@
+Mat_<float> M;
+float t1, t2, cos1, cos2, nsin1, sin2;
+float ang, s, factor;
+
+	cos1 = M(0,0);
+	cos2 = M(1,1);
+	nsin1 = M(0,1);
+	sin2 = M(1,0);
+	t1 = M(0,2);
+	t2 = M(1,2);
+
+	ang = ( atan2(sin2,cos1) + atan2(-nsin1,cos2) )/2;
+	s = ( cos1/cos(ang) + cos2/cos(ang) )/2;
+
+	factor = fabs(t1) + fabs(t2) +( fabs(s-1) + fabs(cos(ang)) -1 + fabs(sin(ang)) )*sqrt(640*480);

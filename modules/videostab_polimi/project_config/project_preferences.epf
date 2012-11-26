@@ -1,0 +1,109 @@
+#Sat Nov 17 09:37:10 CET 2012
+@org.eclipse.debug.ui=3.8.1.v20120718-192144
+@org.eclipse.ui.ide=3.8.1.v20120828-165804
+/instance/org.eclipse.ui.workbench/resourcetypes=<?xml version\="1.0" encoding\="UTF-8"?>\n<editors version\="3.1">\n<info extension\="in" name\="Makefile">\n<editor id\="org.eclipse.cdt.autotools.ui.editors.AutomakeEditor"/>\n<defaultEditor id\="org.eclipse.cdt.autotools.ui.editors.AutomakeEditor"/>\n</info>\n<info extension\="html" name\="*">\n<editor id\="org.eclipse.ui.browser.editorSupport"/>\n</info>\n<info extension\="htm" name\="*">\n<editor id\="org.eclipse.ui.browser.editorSupport"/>\n</info>\n<info extension\="pda" name\="*">\n<editor id\="org.eclipse.cdt.examples.dsf.pda.editor"/>\n<editor id\="org.eclipse.cdt.examples.dsf.pda.editor"/>\n<defaultEditor id\="org.eclipse.cdt.examples.dsf.pda.editor"/>\n</info>\n<info extension\="ac" name\="configure">\n<editor id\="org.eclipse.cdt.autotools.ui.editor.autoconf"/>\n<defaultEditor id\="org.eclipse.cdt.autotools.ui.editor.autoconf"/>\n</info>\n<info extension\="am" name\="*">\n<editor id\="org.eclipse.cdt.autotools.ui.editors.AutomakeEditor"/>\n<defaultEditor id\="org.eclipse.cdt.autotools.ui.editors.AutomakeEditor"/>\n</info>\n<info extension\="am" name\="Makefile">\n<editor id\="org.eclipse.cdt.autotools.ui.editors.AutomakeEditor"/>\n<defaultEditor id\="org.eclipse.cdt.autotools.ui.editors.AutomakeEditor"/>\n</info>\n<info extension\="shtml" name\="*">\n<editor id\="org.eclipse.ui.browser.editorSupport"/>\n</info>\n<info extension\="in" name\="configure">\n<editor id\="org.eclipse.cdt.autotools.ui.editor.autoconf"/>\n<defaultEditor id\="org.eclipse.cdt.autotools.ui.editor.autoconf"/>\n</info>\n<info extension\="m4" name\="*">\n<editor id\="org.eclipse.cdt.autotools.ui.editor.autoconf"/>\n<defaultEditor id\="org.eclipse.cdt.autotools.ui.editor.autoconf"/>\n</info>\n</editors>
+/instance/org.eclipse.ui.editors/spellingEnabled=false
+@org.eclipse.cdt.ui=5.5.0.201209170703
+/instance/org.eclipse.debug.core//org.eclipse.debug.core.PREFERRED_DELEGATES/org.eclipse.cdt.launch.remoteApplicationLaunchType=org.eclipse.rse.remotecdt.dsf.debug,debug
+@org.eclipse.cdt.debug.ui=7.2.0.201209170703
+/instance/org.eclipse.cdt.core.prj-videostab_polimi/indexer/preferenceScope=0
+@org.eclipse.ui.browser=3.4.0.v20120716-173435
+/instance/org.eclipse.ui.ide/PROBLEMS_FILTERS_MIGRATE=true
+/instance/org.eclipse.ui.editors/overviewRuler_migration=migrated_3.1
+@org.eclipse.jdt.ui=3.8.1.v20120814-144251
+/instance/org.eclipse.core.resources/version=1
+@org.eclipse.core.resources=3.8.1.v20120802-154922
+/instance/org.eclipse.ui.workbench/UIActivities.org.eclipse.cdt.debug.dsfgdbActivity=true
+/instance/org.eclipse.ui/showIntro=false
+@org.eclipse.rse.ui=3.3.1.201209191030
+/instance/org.eclipse.rse.ui/org.eclipse.rse.preferences.order.connections=62.Local
+/instance/org.eclipse.cdt.core/macros/workspace=<?xml version\="1.0" encoding\="UTF-8" standalone\="no"?>\n<macros/>\n
+/instance/org.eclipse.jdt.ui/tabWidthPropagated=true
+@org.eclipse.team.cvs.ui=3.3.500.v20120522-1148
+@org.eclipse.debug.core=3.7.100.v20120521-2012
+/instance/org.eclipse.cdt.debug.ui/visibleColumnsKeySF=1,1,0,0,0,0
+/instance/org.eclipse.debug.ui/org.eclipse.debug.ui.memory.rowSize\:org.eclipse.cdt.dsf.gdb=16
+/instance/org.eclipse.cdt.debug.ui/columnOrderKeySF=0,1,2,3,4,5
+/configuration/org.eclipse.ui.ide/MAX_RECENT_WORKSPACES=5
+@org.eclipse.ui.workbench=3.103.1.v20120906-120042
+/instance/org.eclipse.ui.ide/BOOKMARKS_FILTERS_MIGRATE=true
+file_export_version=3.0
+/instance/org.eclipse.jdt.ui/org.eclipse.jdt.ui.editor.tab.width=
+@org.eclipse.cdt.core=5.4.1.201209170703
+/instance/org.eclipse.cdt.debug.ui/columnSortDirectionKeySF=128
+@org.eclipse.rse.core=3.3.0.201209191030
+/instance/org.eclipse.jdt.ui/org.eclipse.jface.textfont=1|Monospace|10.0|0|GTK|1|;
+/instance/org.eclipse.core.net/org.eclipse.core.net.hasMigrated=true
+/instance/org.eclipse.team.ui/org.eclipse.team.ui.first_time=false
+/instance/org.eclipse.debug.ui/org.eclipse.debug.ui.memory.columnSize\:org.eclipse.cdt.dsf.gdb=4
+/instance/org.eclipse.cdt.debug.ui/columnSortDirectionKeyEXE=128
+/instance/org.eclipse.ui.ide/platformState=1352805771011
+@org.eclipse.core.net=1.2.200.v20120522-1148
+/instance/org.eclipse.ui.ide/TASKS_FILTERS_MIGRATE=true
+/instance/org.eclipse.cdt.debug.ui/visibleColumnsKeyEXE=1,1,1,0,0,0
+/instance/org.eclipse.debug.core//org.eclipse.debug.core.PREFERRED_DELEGATES/org.eclipse.cdt.launch.postmortemLaunchType=org.eclipse.cdt.dsf.gdb.launch.coreCLaunch,debug
+\!/=
+/instance/org.eclipse.rse.core/org.eclipse.rse.systemtype.local.systemType.defaultUserId=rodrygojose
+@org.eclipse.cdt.debug.core=7.2.0.201209170703
+/instance/org.eclipse.ui.workbench/RUN_IN_BACKGROUND=true
+/instance/org.eclipse.debug.ui/pref_state_memento.org.eclipse.debug.ui.VariableView=<?xml version\="1.0" encoding\="UTF-8"?>\n<VariablesViewMemento org.eclipse.debug.ui.SASH_DETAILS_PART\="187" org.eclipse.debug.ui.SASH_VIEW_PART\="812">\n<COLUMN_SIZES IMemento.internal.id\="org.eclipse.cdt.dsf.ui.COLUMN_ID__TYPE" SIZE\="224"/>\n<COLUMN_SIZES IMemento.internal.id\="org.eclipse.cdt.dsf.ui.COLUMN_ID__VALUE" SIZE\="249"/>\n<COLUMN_SIZES IMemento.internal.id\="org.eclipse.cdt.dsf.ui.COLUMN_ID__NAME" SIZE\="173"/>\n<PRESENTATION_CONTEXT_PROPERTIES IMemento.internal.id\="org.eclipse.debug.ui.VariableView">\n<INTEGER IMemento.internal.id\="initialChildCountLimitForCollections" INTEGER\="100"/>\n</PRESENTATION_CONTEXT_PROPERTIES>\n</VariablesViewMemento>
+/instance/org.eclipse.core.resources/description.autobuilding=false
+@org.eclipse.cdt.dsf.ui=2.3.0.201209170703
+/instance/org.eclipse.debug.ui/org.eclipse.debug.ui.MemoryView.RenderingViewPane.2=<?xml version\="1.0" encoding\="UTF-8" standalone\="no"?>\n<persistedMemoryRenderings>\n<memoryRendering memoryBlock\="298932" renderingId\="org.eclipse.cdt.debug.ui.memory.traditional.TraditionalRendering"/>\n</persistedMemoryRenderings>\n
+/instance/org.eclipse.ui.workbench/ColorsAndFontsPreferencePage.selectedElement=Forg.eclipse.cdt.ui.editors.textfont
+/instance/org.eclipse.debug.ui/org.eclipse.debug.ui.MemoryView.RenderingViewPane.1=<?xml version\="1.0" encoding\="UTF-8" standalone\="no"?>\n<persistedMemoryRenderings>\n<memoryRendering memoryBlock\="298932" renderingId\="org.eclipse.debug.ui.rendering.raw_memory"/>\n</persistedMemoryRenderings>\n
+/instance/org.eclipse.cdt.managedbuilder.core/properties/videostab_polimi.cdt.managedbuild.target.gnu.cross.exe.1605245586/cdt.managedbuild.config.gnu.cross.exe.debug.1496130770=\#\n\#Sat Nov 17 09\:34\:25 CET 2012\ncdt.managedbuild.tool.gnu.cross.assembler.1720657408\=\\\#\\n\\\#Sat Nov 17 09\\\:34\\\:25 CET 2012\\nrebuildState\\\=false\\n\ncdt.managedbuild.tool.gnu.cross.archiver.1212844300\=\\\#\\n\\\#Thu Nov 15 14\\\:01\\\:17 CET 2012\\nrebuildState\\\=true\\n\ncdt.managedbuild.tool.gnu.cross.c.compiler.793782030\=\\\#\\n\\\#Sat Nov 17 09\\\:34\\\:25 CET 2012\\nrebuildState\\\=false\\n\ncdt.managedbuild.tool.gnu.cross.cpp.linker.312459180\=\\\#\\n\\\#Thu Nov 15 14\\\:01\\\:17 CET 2012\\nrebuildState\\\=true\\n\ncdt.managedbuild.toolchain.gnu.cross.exe.debug.1240485163\=\\\#\\n\\\#Sat Nov 17 09\\\:34\\\:25 CET 2012\\nrebuildState\\\=false\\n\ncdt.managedbuild.tool.gnu.cross.archiver.102329048\=\\\#\\n\\\#Sat Nov 17 09\\\:34\\\:25 CET 2012\\nrebuildState\\\=false\\n\ncdt.managedbuild.tool.gnu.cross.cpp.compiler.37417010\=\\\#\\n\\\#Sat Nov 17 09\\\:34\\\:25 CET 2012\\nrebuildState\\\=false\\n\ncdt.managedbuild.tool.gnu.cross.c.compiler.1673480018\=\\\#\\n\\\#Thu Nov 15 14\\\:01\\\:17 CET 2012\\nrebuildState\\\=true\\n\ncdt.managedbuild.tool.gnu.cross.c.linker.664798628\=\\\#\\n\\\#Sat Nov 17 09\\\:34\\\:25 CET 2012\\nrebuildState\\\=false\\n\ncdt.managedbuild.tool.gnu.cross.cpp.compiler.555313656\=\\\#\\n\\\#Thu Nov 15 14\\\:01\\\:17 CET 2012\\nrebuildState\\\=true\\n\ncdt.managedbuild.config.gnu.cross.exe.debug.1496130770\=\\\#\\n\\\#Sat Nov 17 09\\\:34\\\:25 CET 2012\\nrcState\\\=0\\nrebuildState\\\=false\\n\ncdt.managedbuild.tool.gnu.cross.assembler.870696180\=\\\#\\n\\\#Thu Nov 15 14\\\:01\\\:17 CET 2012\\nrebuildState\\\=true\\n\ncdt.managedbuild.toolchain.gnu.cross.exe.debug.1042949548\=\\\#\\n\\\#Thu Nov 15 14\\\:01\\\:17 CET 2012\\nrebuildState\\\=true\\n\ncdt.managedbuild.tool.gnu.cross.cpp.linker.965999223\=\\\#\\n\\\#Sat Nov 17 09\\\:34\\\:25 CET 2012\\nrebuildState\\\=false\\n\ncdt.managedbuild.tool.gnu.cross.c.linker.1732798645\=\\\#\\n\\\#Thu Nov 15 14\\\:01\\\:17 CET 2012\\nrebuildState\\\=true\\n\n
+/instance/org.eclipse.ui.editors/tabWidth=5
+@org.eclipse.ui.editors=3.8.0.v20120523-1540
+@org.eclipse.core.variables=3.2.600.v20120521-2012
+/instance/org.eclipse.cdt.ui/useQuickDiffPrefPage=true
+/configuration/org.eclipse.ui.ide/RECENT_WORKSPACES=/home/rodrygojose/opencv_polimi/modules\n/home/rodrygojose/Thesis/Video Stabilization for UAV/2 - Coding/Code/OpenCV/VVM3-a\n/home/rodrygojose/workspace\n/home/rodrygojose/opencv_polimi/modules/videostab_polimi/doc\n/home/rodrygojose/opencv_polimi/modules/videostab
+/instance/org.eclipse.debug.core//org.eclipse.debug.core.PREFERRED_DELEGATES/org.eclipse.cdt.launch.attachLaunchType=org.eclipse.cdt.dsf.gdb.launch.attachCLaunch,debug
+/instance/org.eclipse.team.cvs.ui/pref_first_startup=false
+/instance/org.eclipse.ui.ide/quickStart=false
+/instance/org.eclipse.debug.ui/pref_state_memento.org.eclipse.debug.ui.BreakpointView=<?xml version\="1.0" encoding\="UTF-8"?>\n<VariablesViewMemento org.eclipse.debug.ui.SASH_DETAILS_PART\="315" org.eclipse.debug.ui.SASH_VIEW_PART\="684">\n<PRESENTATION_CONTEXT_PROPERTIES IMemento.internal.id\="org.eclipse.debug.ui.BreakpointView">\n<BOOLEAN BOOLEAN\="true" IMemento.internal.id\="org.eclipse.debug.ui.check"/>\n</PRESENTATION_CONTEXT_PROPERTIES>\n</VariablesViewMemento>
+/instance/org.eclipse.debug.ui/org.eclipse.debug.ui.PREF_LAUNCH_PERSPECTIVES=<?xml version\="1.0" encoding\="UTF-8" standalone\="no"?>\n<launchPerspectives/>\n
+@org.eclipse.emf.converter=2.5.0.v20120917-0436
+/instance/org.eclipse.jdt.ui/content_assist_proposals_foreground=26,26,26
+/instance/org.eclipse.jdt.ui/org.eclipse.jdt.ui.formatterprofiles.version=12
+/instance/org.eclipse.ui.workbench/ENABLED_DECORATORS=org.eclipse.cdt.ui.indexedFiles\:false,org.eclipse.cdt.managedbuilder.ui.excludedFile\:true,org.eclipse.cdt.managedbuilder.ui.includeFolder\:true,org.eclipse.rse.core.virtualobject.decorator\:true,org.eclipse.rse.core.binary.executable.decorator\:true,org.eclipse.rse.core.script.executable.decorator\:true,org.eclipse.rse.core.java.executable.decorator\:true,org.eclipse.rse.core.library.decorator\:true,org.eclipse.rse.core.link.decorator\:true,org.eclipse.rse.subsystems.error.decorator\:true,org.eclipse.team.cvs.ui.decorator\:true,org.eclipse.ui.LinkedResourceDecorator\:true,org.eclipse.ui.VirtualResourceDecorator\:true,org.eclipse.ui.ContentTypeDecorator\:true,org.eclipse.ui.ResourceFilterDecorator\:false,
+/instance/org.eclipse.jdt.ui/useAnnotationsPrefPage=true
+/instance/org.eclipse.jdt.ui/useQuickDiffPrefPage=true
+/instance/org.eclipse.ui.editors/lineNumberRuler=true
+/instance/org.eclipse.jdt.ui/org.eclipse.jdt.internal.ui.navigator.layout=2
+/instance/org.eclipse.cdt.managedbuilder.core/properties/videostab_polimi.cdt.managedbuild.target.gnu.cross.exe.1605245586/cdt.managedbuild.config.gnu.cross.exe.release.1302911560=\#\n\#Sat Nov 17 03\:57\:48 CET 2012\ncdt.managedbuild.tool.gnu.cross.c.compiler.2072308328\=\\\#\\n\\\#Sat Nov 17 03\\\:57\\\:48 CET 2012\\nrebuildState\\\=true\\n\ncdt.managedbuild.tool.gnu.cross.cpp.linker.227835539\=\\\#\\n\\\#Sat Nov 17 03\\\:57\\\:48 CET 2012\\nrebuildState\\\=true\\n\ncdt.managedbuild.toolchain.gnu.cross.exe.release.221271605\=\\\#\\n\\\#Sat Nov 17 03\\\:57\\\:48 CET 2012\\nrebuildState\\\=true\\n\ncdt.managedbuild.tool.gnu.cross.cpp.compiler.1786945421\=\\\#\\n\\\#Sat Nov 17 03\\\:57\\\:48 CET 2012\\nrebuildState\\\=true\\n\ncdt.managedbuild.tool.gnu.cross.archiver.258811155\=\\\#\\n\\\#Sat Nov 17 03\\\:57\\\:48 CET 2012\\nrebuildState\\\=true\\n\ncdt.managedbuild.tool.gnu.cross.assembler.973540402\=\\\#\\n\\\#Sat Nov 17 03\\\:57\\\:48 CET 2012\\nrebuildState\\\=true\\n\ncdt.managedbuild.tool.gnu.cross.c.linker.897551955\=\\\#\\n\\\#Sat Nov 17 03\\\:57\\\:48 CET 2012\\nrebuildState\\\=true\\n\n
+@org.eclipse.search=3.8.0.v20120523-1540
+/instance/org.eclipse.ui.workbench/ColorsAndFontsPreferencePage.expandedCategories=Torg.eclipse.ui.workbenchMisc\tTorg.eclipse.cdt.ui.presentation\tTorg.eclipse.cdt.ui.CEditor.presentation
+/instance/org.eclipse.debug.ui/preferredDetailPanes=DefaultDetailPane\:DefaultDetailPane|NumberFormatPane\:NumberFormatPane|
+/instance/org.eclipse.debug.ui/org.eclipse.debug.ui.switch_perspective_on_suspend=always
+/instance/org.eclipse.ui.ide/tipsAndTricks=true
+/instance/org.eclipse.debug.core/prefWatchExpressions=<?xml version\="1.0" encoding\="UTF-8" standalone\="no"?>\n<watchExpressions/>\n
+/instance/org.eclipse.ui.browser/browsers=<?xml version\="1.0" encoding\="UTF-8"?>\n<web-browsers current\="0">\n<system/>\n<external location\="/usr/bin/firefox" name\="Firefox"/>\n</web-browsers>
+/instance/org.eclipse.cdt.ui/spelling_locale_initialized=true
+/instance/org.eclipse.ui.workbench/editors=<?xml version\="1.0" encoding\="UTF-8"?>\n<editors>\n<descriptor class\="org.eclipse.cdt.internal.autotools.ui.editors.automake.AutomakeEditor" id\="org.eclipse.cdt.autotools.ui.editors.AutomakeEditor" image\="icons/automake.gif" internal\="true" label\="AutomakeEditor" openMode\="1" open_in_place\="false" plugin\="org.eclipse.cdt.autotools.ui"/>\n<descriptor id\="org.eclipse.ui.browser.editorSupport" image\="$nl$/icons/obj16/internal_browser.gif" internal\="false" label\="Web Browser" launcher\="org.eclipse.ui.internal.browser.BrowserLauncher" openMode\="4" open_in_place\="false" plugin\="org.eclipse.ui.browser"/>\n<descriptor class\="org.eclipse.cdt.examples.dsf.pda.ui.editor.PDAEditor" id\="org.eclipse.cdt.examples.dsf.pda.editor" image\="icons/full/obj16/pda.gif" internal\="true" label\="PDA(DSF) Editor" openMode\="1" open_in_place\="false" plugin\="org.eclipse.cdt.examples.dsf.pda.ui"/>\n<descriptor class\="org.eclipse.cdt.autotools.ui.editors.AutoconfEditor" id\="org.eclipse.cdt.autotools.ui.editor.autoconf" image\="icons/autoconf.gif" internal\="true" label\="Autoconf Editor" openMode\="1" open_in_place\="false" plugin\="org.eclipse.cdt.autotools.ui"/>\n</editors>
+/instance/org.eclipse.debug.ui/org.eclipse.debug.ui.user_view_bindings=<?xml version\="1.0" encoding\="UTF-8" standalone\="no"?>\n<viewBindings>\n<view id\="org.eclipse.debug.ui.MemoryView">\n<perspective id\="org.eclipse.debug.ui.DebugPerspective" userAction\="opened"/>\n</view>\n<view id\="org.eclipse.debug.ui.DebugView">\n<perspective id\="org.eclipse.debug.ui.DebugPerspective" userAction\="opened"/>\n</view>\n<view id\="org.eclipse.ui.console.ConsoleView">\n<perspective id\="org.eclipse.debug.ui.DebugPerspective" userAction\="opened"/>\n</view>\n</viewBindings>\n
+/instance/org.eclipse.jdt.ui/org.eclipse.jdt.ui.javadoclocations.migrated=true
+/instance/org.eclipse.cdt.core.prj-videostab_polimi/language.settings.providers.disabled=false
+/instance/org.eclipse.cdt.ui/useAnnotationsPrefPage=true
+@org.eclipse.team.ui=3.6.200.v20120522-1148
+/instance/org.eclipse.search/org.eclipse.search.defaultPerspective=org.eclipse.search.defaultPerspective.none
+/instance/org.eclipse.cdt.debug.ui/columnOrderKeyEXE=0,1,2,3,4,5
+/instance/org.eclipse.jdt.ui/content_assist_proposals_background=255,255,255
+/instance/org.eclipse.jdt.ui/proposalOrderMigrated=true
+/instance/org.eclipse.debug.core//org.eclipse.debug.core.PREFERRED_DELEGATES/org.eclipse.cdt.launch.applicationLaunchType=org.eclipse.cdt.dsf.gdb.launch.localCLaunch,debug;org.eclipse.cdt.cdi.launch.localCLaunch,run
+/instance/org.eclipse.ui.workbench/UIActivities.org.eclipse.cdt.debug.cdigdbActivity=true
+/instance/org.eclipse.core.variables/org.eclipse.core.variables.valueVariables=<?xml version\="1.0" encoding\="UTF-8" standalone\="no"?>\n<valueVariables>\n<valueVariable description\="payload" name\="payload" readOnly\="false" value\="&quot;&quot;"/>\n<valueVariable description\="Path to Perl executable in the local file system" name\="dsfPerlExecutable" readOnly\="false" value\="/usr/bin/perl"/>\n<valueVariable description\="payload_args" name\="payload_args" readOnly\="false" value\="&quot;&quot;"/>\n</valueVariables>\n
+/configuration/org.eclipse.ui.ide/RECENT_WORKSPACES_PROTOCOL=3
+/configuration/org.eclipse.core.net/org.eclipse.core.net.hasMigrated=true
+/instance/org.eclipse.emf.converter/org.eclipse.emf.importer.ui.contribution.ModelImporterManager=org.eclipse.uml2.uml.ecore.importer
+/instance/org.eclipse.cdt.dsf.ui/useAnnotationsPrefPage=true
+/instance/org.eclipse.debug.ui/preferredTargets=org.eclipse.cdt.debug.ui.toggleCBreakpointTarget\:org.eclipse.cdt.debug.ui.toggleCBreakpointTarget|
+/instance/org.eclipse.jdt.ui/fontPropagated=true
+/instance/org.eclipse.ui.ide/EXIT_PROMPT_ON_CLOSE_LAST_WINDOW=false
+/instance/org.eclipse.cdt.debug.core/org.eclipse.cdt.debug.core.cDebug.default_source_containers=<?xml version\="1.0" encoding\="UTF-8" standalone\="no"?>\n<sourceLookupDirector>\n<sourceContainers duplicates\="false">\n<container memento\="AbsolutePath" typeId\="org.eclipse.cdt.debug.core.containerType.absolutePath"/>\n<container memento\="programRelativePath" typeId\="org.eclipse.cdt.debug.core.containerType.programRelativePath"/>\n<container memento\="&lt;?xml version\=&quot;1.0&quot; encoding\=&quot;UTF-8&quot; standalone\=&quot;no&quot;?&gt;&\#10;&lt;project referencedProjects\=&quot;true&quot;/&gt;&\#10;" typeId\="org.eclipse.cdt.debug.core.containerType.project"/>\n</sourceContainers>\n</sourceLookupDirector>\n
+/instance/org.eclipse.jdt.ui/spelling_locale_initialized=true
+@org.eclipse.ui=3.103.0.v20120705-114351
+/instance/org.eclipse.debug.ui/pref_state_memento.org.eclipse.debug.ui.DebugVieworg.eclipse.debug.ui.DebugView=<?xml version\="1.0" encoding\="UTF-8"?>\n<DebugViewMemento org.eclipse.debug.ui.BREADCRUMB_DROPDOWN_AUTO_EXPAND\="false"/>
+@org.eclipse.cdt.managedbuilder.core=8.1.0.201209170703
+/instance/org.eclipse.rse.core/activeuserprofiles=62;Team
+/configuration/org.eclipse.ui.ide/SHOW_WORKSPACE_SELECTION_DIALOG=false

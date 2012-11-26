@@ -1,0 +1,9 @@
+<map id="sqr" name="sqr">
+<area shape="rect" id="node3" href="$namespacecv_1_1videostab.html#a6260bd61792a7ec94ea974af9d94ead7" title="cv::videostab::estimateGlobal\lMotionRansac" alt="" coords="96,5,291,51"/>
+<area shape="rect" id="node7" href="$classcv_1_1videostab_1_1_consistent_mosaic_inpainter.html#aad66052a9ddb3ba8f8dde10586141a40" title="cv::videostab::Consistent\lMosaicInpainter::inpaint" alt="" coords="108,74,279,121"/>
+<area shape="rect" id="node9" href="$classcv_1_1videostab_1_1_motion_inpaint_body.html#a8d916b1d2578016dd6b3ed5eae7f117e" title="cv::videostab::MotionInpaint\lBody::operator()" alt="" coords="100,143,287,190"/>
+<area shape="rect" id="node11" href="$namespacecv_1_1videostab.html#ac7e9d9a4c1095962a1b4780b4fb859df" title="cv::videostab::completeFrame\lAccordingToFlow" alt="" coords="95,213,292,259"/>
+<area shape="rect" id="node15" href="$classcv_1_1videostab_1_1_translation_based_local_outlier_rejector.html#a66a0af9c36d39ae6e08dd58a0e007d0c" title="cv::videostab::Translation\lBasedLocalOutlierRejector\l::process" alt="" coords="105,283,281,347"/>
+<area shape="rect" id="node5" href="$classcv_1_1videostab_1_1_motion_estimator_ransac_l2.html#a13ed5192e633e3932852e06cac889b14" title="cv::videostab::MotionEstimator\lRansacL2::estimate" alt="" coords="341,5,544,51"/>
+<area shape="rect" id="node13" href="$classcv_1_1videostab_1_1_motion_inpainter.html#ad4fb41d45227c6a1dd2920ba6dadd495" title="cv::videostab::MotionInpainter\l::inpaint" alt="" coords="344,213,541,259"/>
+</map>

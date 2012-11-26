@@ -1,0 +1,750 @@
+desc: --massif-out-file=/home/rodrygojose/opencv_polimi/modules/.metadata/.plugins/org.eclipse.linuxtools.valgrind.launch/massif_%p.txt --heap=yes --heap-admin=8 --stacks=no --depth=30 --threshold=1.0 --peak-inaccuracy=1.0 --time-unit=i --detailed-freq=10 --max-snapshots=100 --pages-as-heap=no
+cmd: /home/rodrygojose/opencv_polimi/modules/videostab_polimi/Debug/videostab_polimi ./videos/home1.mp4 --o=./stabilized_videos/stabilized_home1_1pass_profb20.avi --nkps=20 --et=no --radius=40 --quiet
+time_unit: i
+#-----------
+snapshot=0
+#-----------
+time=0
+mem_heap_B=0
+mem_heap_extra_B=0
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=1
+#-----------
+time=1250873041
+mem_heap_B=16870295
+mem_heap_extra_B=20425
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=2
+#-----------
+time=2659073925
+mem_heap_B=31007783
+mem_heap_extra_B=19993
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=3
+#-----------
+time=4484044864
+mem_heap_B=47629408
+mem_heap_extra_B=22664
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=4
+#-----------
+time=5981531972
+mem_heap_B=68665606
+mem_heap_extra_B=23794
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=5
+#-----------
+time=7082426182
+mem_heap_B=83412070
+mem_heap_extra_B=24018
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=6
+#-----------
+time=8534520309
+mem_heap_B=110540974
+mem_heap_extra_B=24426
+mem_stacks_B=0
+heap_tree=detailed
+n4: 110540974 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n2: 102922200 0x41EF8AE: cv::fastMalloc(unsigned int) (in /usr/local/lib/libopencv_core.so.2.4.9)
+  n4: 102921336 0x419B856: cv::Mat::create(int, int const*, int) (in /usr/local/lib/libopencv_core.so.2.4.9)
+   n2: 66361128 0x419C77B: cv::_OutputArray::create(int, int, int, int, bool, int) const (in /usr/local/lib/libopencv_core.so.2.4.9)
+    n1: 66356928 0x40F16CA: cv::Mat::copyTo(cv::_OutputArray const&) const (in /usr/local/lib/libopencv_core.so.2.4.9)
+     n1: 66356928 0x80500A5: cv::Mat::clone() const (mat.hpp:335)
+      n1: 66356928 0x804FB77: cv::videostab::(anonymous namespace)::VideoFileSourceImpl::nextFrame() (frame_source.cpp:85)
+       n1: 66356928 0x804FD62: cv::videostab::VideoFileSource::nextFrame() (frame_source.cpp:114)
+        n1: 66356928 0x8071049: cv::videostab::StabilizerBase::doOneIteration() (stabilizer.cpp:117)
+         n1: 66356928 0x8070F7F: cv::videostab::StabilizerBase::nextStabilizedFrame() (stabilizer.cpp:101)
+          n1: 66356928 0x8073C45: cv::videostab::OnePassStabilizer::nextFrame() (stabilizer.hpp:145)
+           n1: 66356928 0x8075C2E: run() (videostab.cpp:42)
+            n0: 66356928 0x80794A1: main (videostab.cpp:534)
+    n0: 4200 in 2 places, all below massif's threshold (01.00%)
+   n4: 32565900 0x419BEB5: cv::_OutputArray::create(cv::Size_<int>, int, int, bool, int) const (in /usr/local/lib/libopencv_core.so.2.4.9)
+    n1: 28570344 0x460F73A: cv::warpAffine(cv::_InputArray const&, cv::_OutputArray const&, cv::_InputArray const&, cv::Size_<int>, int, int, cv::Scalar_<double> const&) (in /usr/local/lib/libopencv_imgproc.so.2.4.9)
+     n1: 28570344 0x8071908: cv::videostab::StabilizerBase::stabilizeFrame() (stabilizer.cpp:211)
+      n1: 28570344 0x8071183: cv::videostab::StabilizerBase::doOneIteration() (stabilizer.cpp:134)
+       n1: 28570344 0x8070F7F: cv::videostab::StabilizerBase::nextStabilizedFrame() (stabilizer.cpp:101)
+        n1: 28570344 0x8073C45: cv::videostab::OnePassStabilizer::nextFrame() (stabilizer.hpp:145)
+         n1: 28570344 0x8075C2E: run() (videostab.cpp:42)
+          n0: 28570344 0x80794A1: main (videostab.cpp:534)
+    n2: 2457648 0x4579269: cv::Sobel(cv::_InputArray const&, cv::_OutputArray const&, int, int, int, int, double, double, int) (in /usr/local/lib/libopencv_imgproc.so.2.4.9)
+     n1: 1228824 0x4573EC6: cv::cornerEigenValsVecs(cv::Mat const&, cv::Mat&, int, int, int, double, int) (in /usr/local/lib/libopencv_imgproc.so.2.4.9)
+      n1: 1228824 0x4574CBD: cv::cornerMinEigenVal(cv::_InputArray const&, cv::_OutputArray const&, int, int, int) (in /usr/local/lib/libopencv_imgproc.so.2.4.9)
+       n1: 1228824 0x4621713: cv::goodFeaturesToTrack(cv::_InputArray const&, cv::_OutputArray const&, int, double, double, cv::_InputArray const&, int, bool, double) (in /usr/local/lib/libopencv_imgproc.so.2.4.9)
+        n1: 1228824 0x431C4E5: cv::GFTTDetector::detectImpl(cv::Mat const&, std::vector<cv::KeyPoint, std::allocator<cv::KeyPoint> >&, cv::Mat const&) const (in /usr/local/lib/libopencv_features2d.so.2.4.9)
+         n1: 1228824 0x431ABDB: cv::FeatureDetector::detect(cv::Mat const&, std::vector<cv::KeyPoint, std::allocator<cv::KeyPoint> >&, cv::Mat const&) const (in /usr/local/lib/libopencv_features2d.so.2.4.9)
+          n1: 1228824 0x805666A: cv::videostab::KeypointBasedMotionEstimator::estimate(cv::Mat const&, cv::Mat const&, bool*) (global_motion.cpp:678)
+           n1: 1228824 0x8072714: cv::videostab::OnePassStabilizer::estimateMotion() (stabilizer.cpp:295)
+            n1: 1228824 0x8071112: cv::videostab::StabilizerBase::doOneIteration() (stabilizer.cpp:129)
+             n1: 1228824 0x8070F7F: cv::videostab::StabilizerBase::nextStabilizedFrame() (stabilizer.cpp:101)
+              n1: 1228824 0x8073C45: cv::videostab::OnePassStabilizer::nextFrame() (stabilizer.hpp:145)
+               n1: 1228824 0x8075C2E: run() (videostab.cpp:42)
+                n0: 1228824 0x80794A1: main (videostab.cpp:534)
+     n1: 1228824 0x4573F70: cv::cornerEigenValsVecs(cv::Mat const&, cv::Mat&, int, int, int, double, int) (in /usr/local/lib/libopencv_imgproc.so.2.4.9)
+      n1: 1228824 0x4574CBD: cv::cornerMinEigenVal(cv::_InputArray const&, cv::_OutputArray const&, int, int, int) (in /usr/local/lib/libopencv_imgproc.so.2.4.9)
+       n1: 1228824 0x4621713: cv::goodFeaturesToTrack(cv::_InputArray const&, cv::_OutputArray const&, int, double, double, cv::_InputArray const&, int, bool, double) (in /usr/local/lib/libopencv_imgproc.so.2.4.9)
+        n1: 1228824 0x431C4E5: cv::GFTTDetector::detectImpl(cv::Mat const&, std::vector<cv::KeyPoint, std::allocator<cv::KeyPoint> >&, cv::Mat const&) const (in /usr/local/lib/libopencv_features2d.so.2.4.9)
+         n1: 1228824 0x431ABDB: cv::FeatureDetector::detect(cv::Mat const&, std::vector<cv::KeyPoint, std::allocator<cv::KeyPoint> >&, cv::Mat const&) const (in /usr/local/lib/libopencv_features2d.so.2.4.9)
+          n1: 1228824 0x805666A: cv::videostab::KeypointBasedMotionEstimator::estimate(cv::Mat const&, cv::Mat const&, bool*) (global_motion.cpp:678)
+           n1: 1228824 0x8072714: cv::videostab::OnePassStabilizer::estimateMotion() (stabilizer.cpp:295)
+            n1: 1228824 0x8071112: cv::videostab::StabilizerBase::doOneIteration() (stabilizer.cpp:129)
+             n1: 1228824 0x8070F7F: cv::videostab::StabilizerBase::nextStabilizedFrame() (stabilizer.cpp:101)
+              n1: 1228824 0x8073C45: cv::videostab::OnePassStabilizer::nextFrame() (stabilizer.hpp:145)
+               n1: 1228824 0x8075C2E: run() (videostab.cpp:42)
+                n0: 1228824 0x80794A1: main (videostab.cpp:534)
+    n1: 1228824 0x4574C6E: cv::cornerMinEigenVal(cv::_InputArray const&, cv::_OutputArray const&, int, int, int) (in /usr/local/lib/libopencv_imgproc.so.2.4.9)
+     n1: 1228824 0x4621713: cv::goodFeaturesToTrack(cv::_InputArray const&, cv::_OutputArray const&, int, double, double, cv::_InputArray const&, int, bool, double) (in /usr/local/lib/libopencv_imgproc.so.2.4.9)
+      n1: 1228824 0x431C4E5: cv::GFTTDetector::detectImpl(cv::Mat const&, std::vector<cv::KeyPoint, std::allocator<cv::KeyPoint> >&, cv::Mat const&) const (in /usr/local/lib/libopencv_features2d.so.2.4.9)
+       n1: 1228824 0x431ABDB: cv::FeatureDetector::detect(cv::Mat const&, std::vector<cv::KeyPoint, std::allocator<cv::KeyPoint> >&, cv::Mat const&) const (in /usr/local/lib/libopencv_features2d.so.2.4.9)
+        n1: 1228824 0x805666A: cv::videostab::KeypointBasedMotionEstimator::estimate(cv::Mat const&, cv::Mat const&, bool*) (global_motion.cpp:678)
+         n1: 1228824 0x8072714: cv::videostab::OnePassStabilizer::estimateMotion() (stabilizer.cpp:295)
+          n1: 1228824 0x8071112: cv::videostab::StabilizerBase::doOneIteration() (stabilizer.cpp:129)
+           n1: 1228824 0x8070F7F: cv::videostab::StabilizerBase::nextStabilizedFrame() (stabilizer.cpp:101)
+            n1: 1228824 0x8073C45: cv::videostab::OnePassStabilizer::nextFrame() (stabilizer.hpp:145)
+             n1: 1228824 0x8075C2E: run() (videostab.cpp:42)
+              n0: 1228824 0x80794A1: main (videostab.cpp:534)
+    n0: 309084 in 3 places, all below massif's threshold (01.00%)
+   n1: 3686424 0x457406E: cv::cornerEigenValsVecs(cv::Mat const&, cv::Mat&, int, int, int, double, int) (in /usr/local/lib/libopencv_imgproc.so.2.4.9)
+    n1: 3686424 0x4574CBD: cv::cornerMinEigenVal(cv::_InputArray const&, cv::_OutputArray const&, int, int, int) (in /usr/local/lib/libopencv_imgproc.so.2.4.9)
+     n1: 3686424 0x4621713: cv::goodFeaturesToTrack(cv::_InputArray const&, cv::_OutputArray const&, int, double, double, cv::_InputArray const&, int, bool, double) (in /usr/local/lib/libopencv_imgproc.so.2.4.9)
+      n1: 3686424 0x431C4E5: cv::GFTTDetector::detectImpl(cv::Mat const&, std::vector<cv::KeyPoint, std::allocator<cv::KeyPoint> >&, cv::Mat const&) const (in /usr/local/lib/libopencv_features2d.so.2.4.9)
+       n1: 3686424 0x431ABDB: cv::FeatureDetector::detect(cv::Mat const&, std::vector<cv::KeyPoint, std::allocator<cv::KeyPoint> >&, cv::Mat const&) const (in /usr/local/lib/libopencv_features2d.so.2.4.9)
+        n1: 3686424 0x805666A: cv::videostab::KeypointBasedMotionEstimator::estimate(cv::Mat const&, cv::Mat const&, bool*) (global_motion.cpp:678)
+         n1: 3686424 0x8072714: cv::videostab::OnePassStabilizer::estimateMotion() (stabilizer.cpp:295)
+          n1: 3686424 0x8071112: cv::videostab::StabilizerBase::doOneIteration() (stabilizer.cpp:129)
+           n1: 3686424 0x8070F7F: cv::videostab::StabilizerBase::nextStabilizedFrame() (stabilizer.cpp:101)
+            n1: 3686424 0x8073C45: cv::videostab::OnePassStabilizer::nextFrame() (stabilizer.hpp:145)
+             n1: 3686424 0x8075C2E: run() (videostab.cpp:42)
+              n0: 3686424 0x80794A1: main (videostab.cpp:534)
+   n0: 307884 in 9 places, all below massif's threshold (01.00%)
+  n0: 864 in 38 places, all below massif's threshold (01.00%)
+ n2: 3447394 0x4257A7FE: av_malloc (in /usr/lib/libavutil.so.51.35.100)
+  n0: 2077586 in 25 places, all below massif's threshold (01.00%)
+  n1: 1369808 0x43A35E6B: avcodec_default_get_buffer (in /usr/lib/libavcodec.so.53.61.100)
+   n1: 1369808 0x4394F92C: ??? (in /usr/lib/libavcodec.so.53.61.100)
+    n0: 1369808 in 2 places, all below massif's threshold (01.00%)
+ n1: 2107897 0x4257A96E: av_mallocz (in /usr/lib/libavutil.so.51.35.100)
+  n0: 2107897 in 93 places, all below massif's threshold (01.00%)
+ n0: 2063483 in 162 places, all below massif's threshold (01.00%)
+#-----------
+snapshot=7
+#-----------
+time=9644829031
+mem_heap_B=125287438
+mem_heap_extra_B=24650
+mem_stacks_B=0
+heap_tree=detailed
+n4: 125287438 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n2: 117668664 0x41EF8AE: cv::fastMalloc(unsigned int) (in /usr/local/lib/libopencv_core.so.2.4.9)
+  n4: 117667800 0x419B856: cv::Mat::create(int, int const*, int) (in /usr/local/lib/libopencv_core.so.2.4.9)
+   n2: 73734600 0x419C77B: cv::_OutputArray::create(int, int, int, int, bool, int) const (in /usr/local/lib/libopencv_core.so.2.4.9)
+    n1: 73729920 0x40F16CA: cv::Mat::copyTo(cv::_OutputArray const&) const (in /usr/local/lib/libopencv_core.so.2.4.9)
+     n1: 73729920 0x80500A5: cv::Mat::clone() const (mat.hpp:335)
+      n1: 73729920 0x804FB77: cv::videostab::(anonymous namespace)::VideoFileSourceImpl::nextFrame() (frame_source.cpp:85)
+       n1: 73729920 0x804FD62: cv::videostab::VideoFileSource::nextFrame() (frame_source.cpp:114)
+        n1: 73729920 0x8071049: cv::videostab::StabilizerBase::doOneIteration() (stabilizer.cpp:117)
+         n1: 73729920 0x8070F7F: cv::videostab::StabilizerBase::nextStabilizedFrame() (stabilizer.cpp:101)
+          n1: 73729920 0x8073C45: cv::videostab::OnePassStabilizer::nextFrame() (stabilizer.hpp:145)
+           n1: 73729920 0x8075C2E: run() (videostab.cpp:42)
+            n0: 73729920 0x80794A1: main (videostab.cpp:534)
+    n0: 4680 in 2 places, all below massif's threshold (01.00%)
+   n3: 39939372 0x419BEB5: cv::_OutputArray::create(cv::Size_<int>, int, int, bool, int) const (in /usr/local/lib/libopencv_core.so.2.4.9)
+    n1: 35943336 0x460F73A: cv::warpAffine(cv::_InputArray const&, cv::_OutputArray const&, cv::_InputArray const&, cv::Size_<int>, int, int, cv::Scalar_<double> const&) (in /usr/local/lib/libopencv_imgproc.so.2.4.9)
+     n1: 35943336 0x8071908: cv::videostab::StabilizerBase::stabilizeFrame() (stabilizer.cpp:211)
+      n1: 35943336 0x8071183: cv::videostab::StabilizerBase::doOneIteration() (stabilizer.cpp:134)
+       n1: 35943336 0x8070F7F: cv::videostab::StabilizerBase::nextStabilizedFrame() (stabilizer.cpp:101)
+        n1: 35943336 0x8073C45: cv::videostab::OnePassStabilizer::nextFrame() (stabilizer.hpp:145)
+         n1: 35943336 0x8075C2E: run() (videostab.cpp:42)
+          n0: 35943336 0x80794A1: main (videostab.cpp:534)
+    n1: 2457648 0x4579269: cv::Sobel(cv::_InputArray const&, cv::_OutputArray const&, int, int, int, int, double, double, int) (in /usr/local/lib/libopencv_imgproc.so.2.4.9)
+     n0: 2457648 in 2 places, all below massif's threshold (01.00%)
+    n0: 1538388 in 4 places, all below massif's threshold (01.00%)
+   n1: 3686424 0x457406E: cv::cornerEigenValsVecs(cv::Mat const&, cv::Mat&, int, int, int, double, int) (in /usr/local/lib/libopencv_imgproc.so.2.4.9)
+    n1: 3686424 0x4574CBD: cv::cornerMinEigenVal(cv::_InputArray const&, cv::_OutputArray const&, int, int, int) (in /usr/local/lib/libopencv_imgproc.so.2.4.9)
+     n1: 3686424 0x4621713: cv::goodFeaturesToTrack(cv::_InputArray const&, cv::_OutputArray const&, int, double, double, cv::_InputArray const&, int, bool, double) (in /usr/local/lib/libopencv_imgproc.so.2.4.9)
+      n1: 3686424 0x431C4E5: cv::GFTTDetector::detectImpl(cv::Mat const&, std::vector<cv::KeyPoint, std::allocator<cv::KeyPoint> >&, cv::Mat const&) const (in /usr/local/lib/libopencv_features2d.so.2.4.9)
+       n1: 3686424 0x431ABDB: cv::FeatureDetector::detect(cv::Mat const&, std::vector<cv::KeyPoint, std::allocator<cv::KeyPoint> >&, cv::Mat const&) const (in /usr/local/lib/libopencv_features2d.so.2.4.9)
+        n1: 3686424 0x805666A: cv::videostab::KeypointBasedMotionEstimator::estimate(cv::Mat const&, cv::Mat const&, bool*) (global_motion.cpp:678)
+         n1: 3686424 0x8072714: cv::videostab::OnePassStabilizer::estimateMotion() (stabilizer.cpp:295)
+          n1: 3686424 0x8071112: cv::videostab::StabilizerBase::doOneIteration() (stabilizer.cpp:129)
+           n1: 3686424 0x8070F7F: cv::videostab::StabilizerBase::nextStabilizedFrame() (stabilizer.cpp:101)
+            n1: 3686424 0x8073C45: cv::videostab::OnePassStabilizer::nextFrame() (stabilizer.hpp:145)
+             n1: 3686424 0x8075C2E: run() (videostab.cpp:42)
+              n0: 3686424 0x80794A1: main (videostab.cpp:534)
+   n0: 307404 in 9 places, all below massif's threshold (01.00%)
+  n0: 864 in 38 places, all below massif's threshold (01.00%)
+ n2: 3447394 0x4257A7FE: av_malloc (in /usr/lib/libavutil.so.51.35.100)
+  n0: 2077586 in 25 places, all below massif's threshold (01.00%)
+  n1: 1369808 0x43A35E6B: avcodec_default_get_buffer (in /usr/lib/libavcodec.so.53.61.100)
+   n1: 1369808 0x4394F92C: ??? (in /usr/lib/libavcodec.so.53.61.100)
+    n0: 1369808 in 2 places, all below massif's threshold (01.00%)
+ n1: 2107897 0x4257A96E: av_mallocz (in /usr/lib/libavutil.so.51.35.100)
+  n0: 2107897 in 93 places, all below massif's threshold (01.00%)
+ n0: 2063483 in 162 places, all below massif's threshold (01.00%)
+#-----------
+snapshot=8
+#-----------
+time=11748654428
+mem_heap_B=140034322
+mem_heap_extra_B=24958
+mem_stacks_B=0
+heap_tree=detailed
+n4: 140034322 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n2: 132415548 0x41EF8AE: cv::fastMalloc(unsigned int) (in /usr/local/lib/libopencv_core.so.2.4.9)
+  n4: 132414684 0x419B856: cv::Mat::create(int, int const*, int) (in /usr/local/lib/libopencv_core.so.2.4.9)
+   n2: 74656404 0x419C77B: cv::_OutputArray::create(int, int, int, int, bool, int) const (in /usr/local/lib/libopencv_core.so.2.4.9)
+    n1: 74651544 0x40F16CA: cv::Mat::copyTo(cv::_OutputArray const&) const (in /usr/local/lib/libopencv_core.so.2.4.9)
+     n1: 74651544 0x80500A5: cv::Mat::clone() const (mat.hpp:335)
+      n1: 74651544 0x804FB77: cv::videostab::(anonymous namespace)::VideoFileSourceImpl::nextFrame() (frame_source.cpp:85)
+       n1: 74651544 0x804FD62: cv::videostab::VideoFileSource::nextFrame() (frame_source.cpp:114)
+        n1: 74651544 0x8071049: cv::videostab::StabilizerBase::doOneIteration() (stabilizer.cpp:117)
+         n1: 74651544 0x8070F7F: cv::videostab::StabilizerBase::nextStabilizedFrame() (stabilizer.cpp:101)
+          n1: 74651544 0x8073C45: cv::videostab::OnePassStabilizer::nextFrame() (stabilizer.hpp:145)
+           n1: 74651544 0x8075C2E: run() (videostab.cpp:42)
+            n0: 74651544 0x80794A1: main (videostab.cpp:534)
+    n0: 4860 in 2 places, all below massif's threshold (01.00%)
+   n3: 53764632 0x419BEB5: cv::_OutputArray::create(cv::Size_<int>, int, int, bool, int) const (in /usr/local/lib/libopencv_core.so.2.4.9)
+    n1: 49767696 0x460F73A: cv::warpAffine(cv::_InputArray const&, cv::_OutputArray const&, cv::_InputArray const&, cv::Size_<int>, int, int, cv::Scalar_<double> const&) (in /usr/local/lib/libopencv_imgproc.so.2.4.9)
+     n1: 49767696 0x8071908: cv::videostab::StabilizerBase::stabilizeFrame() (stabilizer.cpp:211)
+      n1: 49767696 0x8071183: cv::videostab::StabilizerBase::doOneIteration() (stabilizer.cpp:134)
+       n1: 49767696 0x8070F7F: cv::videostab::StabilizerBase::nextStabilizedFrame() (stabilizer.cpp:101)
+        n1: 49767696 0x8073C45: cv::videostab::OnePassStabilizer::nextFrame() (stabilizer.hpp:145)
+         n1: 49767696 0x8075C2E: run() (videostab.cpp:42)
+          n0: 49767696 0x80794A1: main (videostab.cpp:534)
+    n1: 2457648 0x4579269: cv::Sobel(cv::_InputArray const&, cv::_OutputArray const&, int, int, int, int, double, double, int) (in /usr/local/lib/libopencv_imgproc.so.2.4.9)
+     n0: 2457648 in 2 places, all below massif's threshold (01.00%)
+    n0: 1539288 in 4 places, all below massif's threshold (01.00%)
+   n1: 3686424 0x457406E: cv::cornerEigenValsVecs(cv::Mat const&, cv::Mat&, int, int, int, double, int) (in /usr/local/lib/libopencv_imgproc.so.2.4.9)
+    n1: 3686424 0x4574CBD: cv::cornerMinEigenVal(cv::_InputArray const&, cv::_OutputArray const&, int, int, int) (in /usr/local/lib/libopencv_imgproc.so.2.4.9)
+     n1: 3686424 0x4621713: cv::goodFeaturesToTrack(cv::_InputArray const&, cv::_OutputArray const&, int, double, double, cv::_InputArray const&, int, bool, double) (in /usr/local/lib/libopencv_imgproc.so.2.4.9)
+      n1: 3686424 0x431C4E5: cv::GFTTDetector::detectImpl(cv::Mat const&, std::vector<cv::KeyPoint, std::allocator<cv::KeyPoint> >&, cv::Mat const&) const (in /usr/local/lib/libopencv_features2d.so.2.4.9)
+       n1: 3686424 0x431ABDB: cv::FeatureDetector::detect(cv::Mat const&, std::vector<cv::KeyPoint, std::allocator<cv::KeyPoint> >&, cv::Mat const&) const (in /usr/local/lib/libopencv_features2d.so.2.4.9)
+        n1: 3686424 0x805666A: cv::videostab::KeypointBasedMotionEstimator::estimate(cv::Mat const&, cv::Mat const&, bool*) (global_motion.cpp:678)
+         n1: 3686424 0x8072714: cv::videostab::OnePassStabilizer::estimateMotion() (stabilizer.cpp:295)
+          n1: 3686424 0x8071112: cv::videostab::StabilizerBase::doOneIteration() (stabilizer.cpp:129)
+           n1: 3686424 0x8070F7F: cv::videostab::StabilizerBase::nextStabilizedFrame() (stabilizer.cpp:101)
+            n1: 3686424 0x8073C45: cv::videostab::OnePassStabilizer::nextFrame() (stabilizer.hpp:145)
+             n1: 3686424 0x8075C2E: run() (videostab.cpp:42)
+              n0: 3686424 0x80794A1: main (videostab.cpp:534)
+   n0: 307224 in 9 places, all below massif's threshold (01.00%)
+  n0: 864 in 38 places, all below massif's threshold (01.00%)
+ n1: 3447394 0x4257A7FE: av_malloc (in /usr/lib/libavutil.so.51.35.100)
+  n0: 3447394 in 26 places, all below massif's threshold (01.00%)
+ n1: 2107897 0x4257A96E: av_mallocz (in /usr/lib/libavutil.so.51.35.100)
+  n0: 2107897 in 93 places, all below massif's threshold (01.00%)
+ n0: 2063483 in 162 places, all below massif's threshold (01.00%)
+#-----------
+snapshot=9
+#-----------
+time=13705499979
+mem_heap_B=152937898
+mem_heap_extra_B=25238
+mem_stacks_B=0
+heap_tree=detailed
+n4: 152937898 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n2: 145319124 0x41EF8AE: cv::fastMalloc(unsigned int) (in /usr/local/lib/libopencv_core.so.2.4.9)
+  n4: 145318260 0x419B856: cv::Mat::create(int, int const*, int) (in /usr/local/lib/libopencv_core.so.2.4.9)
+   n2: 74656404 0x419C77B: cv::_OutputArray::create(int, int, int, int, bool, int) const (in /usr/local/lib/libopencv_core.so.2.4.9)
+    n1: 74651544 0x40F16CA: cv::Mat::copyTo(cv::_OutputArray const&) const (in /usr/local/lib/libopencv_core.so.2.4.9)
+     n1: 74651544 0x80500A5: cv::Mat::clone() const (mat.hpp:335)
+      n1: 74651544 0x804FB77: cv::videostab::(anonymous namespace)::VideoFileSourceImpl::nextFrame() (frame_source.cpp:85)
+       n1: 74651544 0x804FD62: cv::videostab::VideoFileSource::nextFrame() (frame_source.cpp:114)
+        n1: 74651544 0x8071049: cv::videostab::StabilizerBase::doOneIteration() (stabilizer.cpp:117)
+         n1: 74651544 0x8070F7F: cv::videostab::StabilizerBase::nextStabilizedFrame() (stabilizer.cpp:101)
+          n1: 74651544 0x8073C45: cv::videostab::OnePassStabilizer::nextFrame() (stabilizer.hpp:145)
+           n1: 74651544 0x8075C2E: run() (videostab.cpp:42)
+            n0: 74651544 0x80794A1: main (videostab.cpp:534)
+    n0: 4860 in 2 places, all below massif's threshold (01.00%)
+   n3: 66668208 0x419BEB5: cv::_OutputArray::create(cv::Size_<int>, int, int, bool, int) const (in /usr/local/lib/libopencv_core.so.2.4.9)
+    n1: 62670432 0x460F73A: cv::warpAffine(cv::_InputArray const&, cv::_OutputArray const&, cv::_InputArray const&, cv::Size_<int>, int, int, cv::Scalar_<double> const&) (in /usr/local/lib/libopencv_imgproc.so.2.4.9)
+     n1: 62670432 0x8071908: cv::videostab::StabilizerBase::stabilizeFrame() (stabilizer.cpp:211)
+      n1: 62670432 0x8071183: cv::videostab::StabilizerBase::doOneIteration() (stabilizer.cpp:134)
+       n1: 62670432 0x8070F7F: cv::videostab::StabilizerBase::nextStabilizedFrame() (stabilizer.cpp:101)
+        n1: 62670432 0x8073C45: cv::videostab::OnePassStabilizer::nextFrame() (stabilizer.hpp:145)
+         n1: 62670432 0x8075C2E: run() (videostab.cpp:42)
+          n0: 62670432 0x80794A1: main (videostab.cpp:534)
+    n1: 2457648 0x4579269: cv::Sobel(cv::_InputArray const&, cv::_OutputArray const&, int, int, int, int, double, double, int) (in /usr/local/lib/libopencv_imgproc.so.2.4.9)
+     n0: 2457648 in 2 places, all below massif's threshold (01.00%)
+    n0: 1540128 in 4 places, all below massif's threshold (01.00%)
+   n1: 3686424 0x457406E: cv::cornerEigenValsVecs(cv::Mat const&, cv::Mat&, int, int, int, double, int) (in /usr/local/lib/libopencv_imgproc.so.2.4.9)
+    n1: 3686424 0x4574CBD: cv::cornerMinEigenVal(cv::_InputArray const&, cv::_OutputArray const&, int, int, int) (in /usr/local/lib/libopencv_imgproc.so.2.4.9)
+     n1: 3686424 0x4621713: cv::goodFeaturesToTrack(cv::_InputArray const&, cv::_OutputArray const&, int, double, double, cv::_InputArray const&, int, bool, double) (in /usr/local/lib/libopencv_imgproc.so.2.4.9)
+      n1: 3686424 0x431C4E5: cv::GFTTDetector::detectImpl(cv::Mat const&, std::vector<cv::KeyPoint, std::allocator<cv::KeyPoint> >&, cv::Mat const&) const (in /usr/local/lib/libopencv_features2d.so.2.4.9)
+       n1: 3686424 0x431ABDB: cv::FeatureDetector::detect(cv::Mat const&, std::vector<cv::KeyPoint, std::allocator<cv::KeyPoint> >&, cv::Mat const&) const (in /usr/local/lib/libopencv_features2d.so.2.4.9)
+        n1: 3686424 0x805666A: cv::videostab::KeypointBasedMotionEstimator::estimate(cv::Mat const&, cv::Mat const&, bool*) (global_motion.cpp:678)
+         n1: 3686424 0x8072714: cv::videostab::OnePassStabilizer::estimateMotion() (stabilizer.cpp:295)
+          n1: 3686424 0x8071112: cv::videostab::StabilizerBase::doOneIteration() (stabilizer.cpp:129)
+           n1: 3686424 0x8070F7F: cv::videostab::StabilizerBase::nextStabilizedFrame() (stabilizer.cpp:101)
+            n1: 3686424 0x8073C45: cv::videostab::OnePassStabilizer::nextFrame() (stabilizer.hpp:145)
+             n1: 3686424 0x8075C2E: run() (videostab.cpp:42)
+              n0: 3686424 0x80794A1: main (videostab.cpp:534)
+   n0: 307224 in 9 places, all below massif's threshold (01.00%)
+  n0: 864 in 38 places, all below massif's threshold (01.00%)
+ n1: 3447394 0x4257A7FE: av_malloc (in /usr/lib/libavutil.so.51.35.100)
+  n0: 3447394 in 26 places, all below massif's threshold (01.00%)
+ n1: 2107897 0x4257A96E: av_mallocz (in /usr/lib/libavutil.so.51.35.100)
+  n0: 2107897 in 93 places, all below massif's threshold (01.00%)
+ n0: 2063483 in 162 places, all below massif's threshold (01.00%)
+#-----------
+snapshot=10
+#-----------
+time=15379683287
+mem_heap_B=163998106
+mem_heap_extra_B=25478
+mem_stacks_B=0
+heap_tree=peak
+n4: 163998106 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n2: 156379332 0x41EF8AE: cv::fastMalloc(unsigned int) (in /usr/local/lib/libopencv_core.so.2.4.9)
+  n4: 156378468 0x419B856: cv::Mat::create(int, int const*, int) (in /usr/local/lib/libopencv_core.so.2.4.9)
+   n3: 77728416 0x419BEB5: cv::_OutputArray::create(cv::Size_<int>, int, int, bool, int) const (in /usr/local/lib/libopencv_core.so.2.4.9)
+    n1: 73729920 0x460F73A: cv::warpAffine(cv::_InputArray const&, cv::_OutputArray const&, cv::_InputArray const&, cv::Size_<int>, int, int, cv::Scalar_<double> const&) (in /usr/local/lib/libopencv_imgproc.so.2.4.9)
+     n1: 73729920 0x8071908: cv::videostab::StabilizerBase::stabilizeFrame() (stabilizer.cpp:211)
+      n1: 73729920 0x8071183: cv::videostab::StabilizerBase::doOneIteration() (stabilizer.cpp:134)
+       n1: 73729920 0x8070F7F: cv::videostab::StabilizerBase::nextStabilizedFrame() (stabilizer.cpp:101)
+        n1: 73729920 0x8073C45: cv::videostab::OnePassStabilizer::nextFrame() (stabilizer.hpp:145)
+         n1: 73729920 0x8075C2E: run() (videostab.cpp:42)
+          n0: 73729920 0x80794A1: main (videostab.cpp:534)
+    n1: 2457648 0x4579269: cv::Sobel(cv::_InputArray const&, cv::_OutputArray const&, int, int, int, int, double, double, int) (in /usr/local/lib/libopencv_imgproc.so.2.4.9)
+     n0: 2457648 in 2 places, all below massif's threshold (01.00%)
+    n0: 1540848 in 4 places, all below massif's threshold (01.00%)
+   n2: 74656404 0x419C77B: cv::_OutputArray::create(int, int, int, int, bool, int) const (in /usr/local/lib/libopencv_core.so.2.4.9)
+    n1: 74651544 0x40F16CA: cv::Mat::copyTo(cv::_OutputArray const&) const (in /usr/local/lib/libopencv_core.so.2.4.9)
+     n1: 74651544 0x80500A5: cv::Mat::clone() const (mat.hpp:335)
+      n1: 74651544 0x804FB77: cv::videostab::(anonymous namespace)::VideoFileSourceImpl::nextFrame() (frame_source.cpp:85)
+       n1: 74651544 0x804FD62: cv::videostab::VideoFileSource::nextFrame() (frame_source.cpp:114)
+        n1: 74651544 0x8071049: cv::videostab::StabilizerBase::doOneIteration() (stabilizer.cpp:117)
+         n1: 74651544 0x8070F7F: cv::videostab::StabilizerBase::nextStabilizedFrame() (stabilizer.cpp:101)
+          n1: 74651544 0x8073C45: cv::videostab::OnePassStabilizer::nextFrame() (stabilizer.hpp:145)
+           n1: 74651544 0x8075C2E: run() (videostab.cpp:42)
+            n0: 74651544 0x80794A1: main (videostab.cpp:534)
+    n0: 4860 in 2 places, all below massif's threshold (01.00%)
+   n1: 3686424 0x457406E: cv::cornerEigenValsVecs(cv::Mat const&, cv::Mat&, int, int, int, double, int) (in /usr/local/lib/libopencv_imgproc.so.2.4.9)
+    n1: 3686424 0x4574CBD: cv::cornerMinEigenVal(cv::_InputArray const&, cv::_OutputArray const&, int, int, int) (in /usr/local/lib/libopencv_imgproc.so.2.4.9)
+     n1: 3686424 0x4621713: cv::goodFeaturesToTrack(cv::_InputArray const&, cv::_OutputArray const&, int, double, double, cv::_InputArray const&, int, bool, double) (in /usr/local/lib/libopencv_imgproc.so.2.4.9)
+      n1: 3686424 0x431C4E5: cv::GFTTDetector::detectImpl(cv::Mat const&, std::vector<cv::KeyPoint, std::allocator<cv::KeyPoint> >&, cv::Mat const&) const (in /usr/local/lib/libopencv_features2d.so.2.4.9)
+       n1: 3686424 0x431ABDB: cv::FeatureDetector::detect(cv::Mat const&, std::vector<cv::KeyPoint, std::allocator<cv::KeyPoint> >&, cv::Mat const&) const (in /usr/local/lib/libopencv_features2d.so.2.4.9)
+        n1: 3686424 0x805666A: cv::videostab::KeypointBasedMotionEstimator::estimate(cv::Mat const&, cv::Mat const&, bool*) (global_motion.cpp:678)
+         n1: 3686424 0x8072714: cv::videostab::OnePassStabilizer::estimateMotion() (stabilizer.cpp:295)
+          n1: 3686424 0x8071112: cv::videostab::StabilizerBase::doOneIteration() (stabilizer.cpp:129)
+           n1: 3686424 0x8070F7F: cv::videostab::StabilizerBase::nextStabilizedFrame() (stabilizer.cpp:101)
+            n1: 3686424 0x8073C45: cv::videostab::OnePassStabilizer::nextFrame() (stabilizer.hpp:145)
+             n1: 3686424 0x8075C2E: run() (videostab.cpp:42)
+              n0: 3686424 0x80794A1: main (videostab.cpp:534)
+   n0: 307224 in 9 places, all below massif's threshold (01.00%)
+  n0: 864 in 38 places, all below massif's threshold (01.00%)
+ n1: 3447394 0x4257A7FE: av_malloc (in /usr/lib/libavutil.so.51.35.100)
+  n0: 3447394 in 26 places, all below massif's threshold (01.00%)
+ n1: 2107897 0x4257A96E: av_mallocz (in /usr/lib/libavutil.so.51.35.100)
+  n0: 2107897 in 93 places, all below massif's threshold (01.00%)
+ n0: 2063483 in 162 places, all below massif's threshold (01.00%)
+#-----------
+snapshot=11
+#-----------
+time=17212017780
+mem_heap_B=159909878
+mem_heap_extra_B=25482
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=12
+#-----------
+time=18332046225
+mem_heap_B=159938086
+mem_heap_extra_B=25394
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=13
+#-----------
+time=19593639522
+mem_heap_B=159929078
+mem_heap_extra_B=25466
+mem_stacks_B=0
+heap_tree=detailed
+n4: 159929078 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n2: 152385804 0x41EF8AE: cv::fastMalloc(unsigned int) (in /usr/local/lib/libopencv_core.so.2.4.9)
+  n3: 152384940 0x419B856: cv::Mat::create(int, int const*, int) (in /usr/local/lib/libopencv_core.so.2.4.9)
+   n2: 77421276 0x419BEB5: cv::_OutputArray::create(cv::Size_<int>, int, int, bool, int) const (in /usr/local/lib/libopencv_core.so.2.4.9)
+    n1: 74651544 0x460F73A: cv::warpAffine(cv::_InputArray const&, cv::_OutputArray const&, cv::_InputArray const&, cv::Size_<int>, int, int, cv::Scalar_<double> const&) (in /usr/local/lib/libopencv_imgproc.so.2.4.9)
+     n1: 74651544 0x8071908: cv::videostab::StabilizerBase::stabilizeFrame() (stabilizer.cpp:211)
+      n1: 74651544 0x8071183: cv::videostab::StabilizerBase::doOneIteration() (stabilizer.cpp:134)
+       n1: 74651544 0x8070F7F: cv::videostab::StabilizerBase::nextStabilizedFrame() (stabilizer.cpp:101)
+        n1: 74651544 0x8073C45: cv::videostab::OnePassStabilizer::nextFrame() (stabilizer.hpp:145)
+         n1: 74651544 0x8075C2E: run() (videostab.cpp:42)
+          n0: 74651544 0x80794A1: main (videostab.cpp:534)
+    n0: 2769732 in 5 places, all below massif's threshold (01.00%)
+   n2: 74656404 0x419C77B: cv::_OutputArray::create(int, int, int, int, bool, int) const (in /usr/local/lib/libopencv_core.so.2.4.9)
+    n1: 74651544 0x40F16CA: cv::Mat::copyTo(cv::_OutputArray const&) const (in /usr/local/lib/libopencv_core.so.2.4.9)
+     n1: 74651544 0x80500A5: cv::Mat::clone() const (mat.hpp:335)
+      n1: 74651544 0x804FB77: cv::videostab::(anonymous namespace)::VideoFileSourceImpl::nextFrame() (frame_source.cpp:85)
+       n1: 74651544 0x804FD62: cv::videostab::VideoFileSource::nextFrame() (frame_source.cpp:114)
+        n1: 74651544 0x8071049: cv::videostab::StabilizerBase::doOneIteration() (stabilizer.cpp:117)
+         n1: 74651544 0x8070F7F: cv::videostab::StabilizerBase::nextStabilizedFrame() (stabilizer.cpp:101)
+          n1: 74651544 0x8073C45: cv::videostab::OnePassStabilizer::nextFrame() (stabilizer.hpp:145)
+           n1: 74651544 0x8075C2E: run() (videostab.cpp:42)
+            n0: 74651544 0x80794A1: main (videostab.cpp:534)
+    n0: 4860 in 2 places, all below massif's threshold (01.00%)
+   n0: 307260 in 10 places, all below massif's threshold (01.00%)
+  n0: 864 in 38 places, all below massif's threshold (01.00%)
+ n1: 3466594 0x4257A7FE: av_malloc (in /usr/lib/libavutil.so.51.35.100)
+  n0: 3466594 in 26 places, all below massif's threshold (01.00%)
+ n1: 2107897 0x4257A96E: av_mallocz (in /usr/lib/libavutil.so.51.35.100)
+  n0: 2107897 in 93 places, all below massif's threshold (01.00%)
+ n0: 1968783 in 162 places, all below massif's threshold (01.00%)
+#-----------
+snapshot=14
+#-----------
+time=21482775198
+mem_heap_B=157164790
+mem_heap_extra_B=25354
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=15
+#-----------
+time=23197160156
+mem_heap_B=157154937
+mem_heap_extra_B=25375
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=16
+#-----------
+time=24559634199
+mem_heap_B=158517798
+mem_heap_extra_B=25370
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=17
+#-----------
+time=26452771984
+mem_heap_B=164435510
+mem_heap_extra_B=25482
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=18
+#-----------
+time=27655495415
+mem_heap_B=158064886
+mem_heap_extra_B=25346
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=19
+#-----------
+time=29719242872
+mem_heap_B=164923630
+mem_heap_extra_B=25466
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=20
+#-----------
+time=31086874222
+mem_heap_B=157143442
+mem_heap_extra_B=25374
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=21
+#-----------
+time=33143434225
+mem_heap_B=157164790
+mem_heap_extra_B=25354
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=22
+#-----------
+time=34532098246
+mem_heap_B=159908134
+mem_heap_extra_B=25362
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=23
+#-----------
+time=36583574328
+mem_heap_B=159929078
+mem_heap_extra_B=25474
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=24
+#-----------
+time=38292854641
+mem_heap_B=158064886
+mem_heap_extra_B=25354
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=25
+#-----------
+time=40349677614
+mem_heap_B=157143542
+mem_heap_extra_B=25370
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=26
+#-----------
+time=41389733748
+mem_heap_B=157147133
+mem_heap_extra_B=25379
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=27
+#-----------
+time=43117869482
+mem_heap_B=164435510
+mem_heap_extra_B=25482
+mem_stacks_B=0
+heap_tree=detailed
+n4: 164435510 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n2: 156912624 0x41EF8AE: cv::fastMalloc(unsigned int) (in /usr/local/lib/libopencv_core.so.2.4.9)
+  n5: 156911832 0x419B856: cv::Mat::create(int, int const*, int) (in /usr/local/lib/libopencv_core.so.2.4.9)
+   n2: 74656404 0x419C77B: cv::_OutputArray::create(int, int, int, int, bool, int) const (in /usr/local/lib/libopencv_core.so.2.4.9)
+    n1: 74651544 0x40F16CA: cv::Mat::copyTo(cv::_OutputArray const&) const (in /usr/local/lib/libopencv_core.so.2.4.9)
+     n1: 74651544 0x80500A5: cv::Mat::clone() const (mat.hpp:335)
+      n1: 74651544 0x804FB77: cv::videostab::(anonymous namespace)::VideoFileSourceImpl::nextFrame() (frame_source.cpp:85)
+       n1: 74651544 0x804FD62: cv::videostab::VideoFileSource::nextFrame() (frame_source.cpp:114)
+        n1: 74651544 0x8071049: cv::videostab::StabilizerBase::doOneIteration() (stabilizer.cpp:117)
+         n1: 74651544 0x8070F7F: cv::videostab::StabilizerBase::nextStabilizedFrame() (stabilizer.cpp:101)
+          n1: 74651544 0x8073C45: cv::videostab::OnePassStabilizer::nextFrame() (stabilizer.hpp:145)
+           n1: 74651544 0x8075C2E: run() (videostab.cpp:42)
+            n0: 74651544 0x80794A1: main (videostab.cpp:534)
+    n0: 4860 in 2 places, all below massif's threshold (01.00%)
+   n2: 74656404 0x419BEB5: cv::_OutputArray::create(cv::Size_<int>, int, int, bool, int) const (in /usr/local/lib/libopencv_core.so.2.4.9)
+    n1: 74651544 0x460F73A: cv::warpAffine(cv::_InputArray const&, cv::_OutputArray const&, cv::_InputArray const&, cv::Size_<int>, int, int, cv::Scalar_<double> const&) (in /usr/local/lib/libopencv_imgproc.so.2.4.9)
+     n1: 74651544 0x8071908: cv::videostab::StabilizerBase::stabilizeFrame() (stabilizer.cpp:211)
+      n1: 74651544 0x8071183: cv::videostab::StabilizerBase::doOneIteration() (stabilizer.cpp:134)
+       n1: 74651544 0x8070F7F: cv::videostab::StabilizerBase::nextStabilizedFrame() (stabilizer.cpp:101)
+        n1: 74651544 0x8073C45: cv::videostab::OnePassStabilizer::nextFrame() (stabilizer.hpp:145)
+         n1: 74651544 0x8075C2E: run() (videostab.cpp:42)
+          n0: 74651544 0x80794A1: main (videostab.cpp:534)
+    n0: 4860 in 5 places, all below massif's threshold (01.00%)
+   n1: 4272072 0x482EFAE: cv::calcOpticalFlowPyrLK(cv::_InputArray const&, cv::_InputArray const&, cv::_InputArray const&, cv::_OutputArray const&, cv::_OutputArray const&, cv::_OutputArray const&, cv::Size_<int>, int, cv::TermCriteria, int, double) (in /usr/local/lib/libopencv_video.so.2.4.9)
+    n1: 4272072 0x806C325: cv::videostab::SparsePyrLkOptFlowEstimator::run(cv::_InputArray const&, cv::_InputArray const&, cv::_InputArray const&, cv::_OutputArray const&, cv::_OutputArray const&, cv::_OutputArray const&) (optical_flow.cpp:59)
+     n1: 4272072 0x80567D8: cv::videostab::KeypointBasedMotionEstimator::estimate(cv::Mat const&, cv::Mat const&, bool*) (global_motion.cpp:686)
+      n1: 4272072 0x8072714: cv::videostab::OnePassStabilizer::estimateMotion() (stabilizer.cpp:295)
+       n1: 4272072 0x8071112: cv::videostab::StabilizerBase::doOneIteration() (stabilizer.cpp:129)
+        n1: 4272072 0x8070F7F: cv::videostab::StabilizerBase::nextStabilizedFrame() (stabilizer.cpp:101)
+         n1: 4272072 0x8073C45: cv::videostab::OnePassStabilizer::nextFrame() (stabilizer.hpp:145)
+          n1: 4272072 0x8075C2E: run() (videostab.cpp:42)
+           n0: 4272072 0x80794A1: main (videostab.cpp:534)
+   n1: 2136072 0x4829313: cv::buildOpticalFlowPyramid(cv::_InputArray const&, cv::_OutputArray const&, cv::Size_<int>, int, bool, int, int, bool) (in /usr/local/lib/libopencv_video.so.2.4.9)
+    n0: 2136072 in 2 places, all below massif's threshold (01.00%)
+   n0: 1190880 in 8 places, all below massif's threshold (01.00%)
+  n0: 792 in 38 places, all below massif's threshold (01.00%)
+ n1: 3466594 0x4257A7FE: av_malloc (in /usr/lib/libavutil.so.51.35.100)
+  n0: 3466594 in 26 places, all below massif's threshold (01.00%)
+ n1: 2107897 0x4257A96E: av_mallocz (in /usr/lib/libavutil.so.51.35.100)
+  n0: 2107897 in 93 places, all below massif's threshold (01.00%)
+ n0: 1948395 in 162 places, all below massif's threshold (01.00%)
+#-----------
+snapshot=28
+#-----------
+time=44507622471
+mem_heap_B=157164790
+mem_heap_extra_B=25354
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=29
+#-----------
+time=45874828035
+mem_heap_B=157164790
+mem_heap_extra_B=25354
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=30
+#-----------
+time=48024064805
+mem_heap_B=157143262
+mem_heap_extra_B=25346
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=31
+#-----------
+time=50266627160
+mem_heap_B=157164790
+mem_heap_extra_B=25354
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=32
+#-----------
+time=51393565418
+mem_heap_B=159924600
+mem_heap_extra_B=25472
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=33
+#-----------
+time=53078140686
+mem_heap_B=157143262
+mem_heap_extra_B=25338
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=34
+#-----------
+time=54199362711
+mem_heap_B=159929078
+mem_heap_extra_B=25466
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=35
+#-----------
+time=55892307346
+mem_heap_B=160027886
+mem_heap_extra_B=25426
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=36
+#-----------
+time=57021987100
+mem_heap_B=158064886
+mem_heap_extra_B=25354
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=37
+#-----------
+time=58143311094
+mem_heap_B=158615994
+mem_heap_extra_B=25390
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=38
+#-----------
+time=59838190614
+mem_heap_B=157164790
+mem_heap_extra_B=25354
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=39
+#-----------
+time=61524145723
+mem_heap_B=161153424
+mem_heap_extra_B=25480
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=40
+#-----------
+time=62652318495
+mem_heap_B=157164790
+mem_heap_extra_B=25362
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=41
+#-----------
+time=63773801212
+mem_heap_B=164923630
+mem_heap_extra_B=25474
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=42
+#-----------
+time=65458006612
+mem_heap_B=164443448
+mem_heap_extra_B=25504
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=43
+#-----------
+time=66580042984
+mem_heap_B=161153424
+mem_heap_extra_B=25496
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=44
+#-----------
+time=68266863605
+mem_heap_B=160027886
+mem_heap_extra_B=25442
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=45
+#-----------
+time=69400423933
+mem_heap_B=159924600
+mem_heap_extra_B=25472
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=46
+#-----------
+time=71101016429
+mem_heap_B=158517798
+mem_heap_extra_B=25378
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=47
+#-----------
+time=72797253092
+mem_heap_B=157164790
+mem_heap_extra_B=25362
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=48
+#-----------
+time=73919792875
+mem_heap_B=159908134
+mem_heap_extra_B=25370
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=49
+#-----------
+time=75046062362
+mem_heap_B=157154510
+mem_heap_extra_B=25386
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=50
+#-----------
+time=76086256354
+mem_heap_B=144240526
+mem_heap_extra_B=25234
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=51
+#-----------
+time=77126332497
+mem_heap_B=126751198
+mem_heap_extra_B=25098
+mem_stacks_B=0
+heap_tree=empty

@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<breakpoints>
+<breakpoint enabled="false" persistant="true" registered="true">
+<resource path="/videostab_polimi/src/stabilizer.cpp" type="1"/>
+<marker lineNumber="94" type="org.eclipse.cdt.debug.core.cLineBreakpointMarker">
+<attrib name="message" value="Line breakpoint: stabilizer.cpp [line: 94]"/>
+<attrib name="org.eclipse.cdt.debug.core.condition" value=""/>
+<attrib name="org.eclipse.debug.core.id" value="org.eclipse.cdt.debug.core"/>
+<attrib name="requestedSourceHandle" value="/home/rodrygojose/opencv_polimi/modules/videostab_polimi/src/stabilizer.cpp"/>
+<attrib name="org.eclipse.cdt.debug.core.installCount" value="0"/>
+<attrib name="org.eclipse.cdt.debug.core.sourceHandle" value="/home/rodrygojose/opencv_polimi/modules/videostab_polimi/src/stabilizer.cpp"/>
+<attrib name="requestedLine" value="94"/>
+<attrib name="org.eclipse.debug.core.enabled" value="false"/>
+<attrib name="org.eclipse.cdt.debug.core.ignoreCount" value="0"/>
+<attrib name="org.eclipse.cdt.debug.core.breakpointType" value="0"/>
+<attrib name="workingset_name" value=""/>
+<attrib name="workingset_id" value="org.eclipse.debug.ui.breakpointWorkingSet"/>
+</marker>
+</breakpoint>
+<breakpoint enabled="false" persistant="true" registered="true">
+<resource path="/videostab_polimi/src/stabilizer.cpp" type="1"/>
+<marker lineNumber="101" type="org.eclipse.cdt.debug.core.cLineBreakpointMarker">
+<attrib name="message" value="Line breakpoint: stabilizer.cpp [line: 101]"/>
+<attrib name="org.eclipse.cdt.debug.core.condition" value=""/>
+<attrib name="org.eclipse.debug.core.id" value="org.eclipse.cdt.debug.core"/>
+<attrib name="requestedSourceHandle" value="/home/rodrygojose/opencv_polimi/modules/videostab_polimi/src/stabilizer.cpp"/>
+<attrib name="org.eclipse.cdt.debug.core.installCount" value="0"/>
+<attrib name="org.eclipse.cdt.debug.core.sourceHandle" value="/home/rodrygojose/opencv_polimi/modules/videostab_polimi/src/stabilizer.cpp"/>
+<attrib name="requestedLine" value="101"/>
+<attrib name="org.eclipse.debug.core.enabled" value="false"/>
+<attrib name="org.eclipse.cdt.debug.core.ignoreCount" value="0"/>
+<attrib name="org.eclipse.cdt.debug.core.breakpointType" value="0"/>
+<attrib name="workingset_name" value=""/>
+<attrib name="workingset_id" value="org.eclipse.debug.ui.breakpointWorkingSet"/>
+</marker>
+</breakpoint>
+<breakpoint enabled="false" persistant="true" registered="true">
+<resource path="/videostab_polimi/src/stabilizer.cpp" type="1"/>
+<marker lineNumber="107" type="org.eclipse.cdt.debug.core.cLineBreakpointMarker">
+<attrib name="message" value="Line breakpoint: stabilizer.cpp [line: 107]"/>
+<attrib name="org.eclipse.cdt.debug.core.condition" value=""/>
+<attrib name="org.eclipse.debug.core.id" value="org.eclipse.cdt.debug.core"/>
+<attrib name="requestedSourceHandle" value="/home/rodrygojose/opencv_polimi/modules/videostab_polimi/src/stabilizer.cpp"/>
+<attrib name="org.eclipse.cdt.debug.core.installCount" value="0"/>
+<attrib name="org.eclipse.cdt.debug.core.sourceHandle" value="/home/rodrygojose/opencv_polimi/modules/videostab_polimi/src/stabilizer.cpp"/>
+<attrib name="requestedLine" value="107"/>
+<attrib name="org.eclipse.debug.core.enabled" value="false"/>
+<attrib name="org.eclipse.cdt.debug.core.ignoreCount" value="0"/>
+<attrib name="org.eclipse.cdt.debug.core.breakpointType" value="0"/>
+<attrib name="workingset_name" value=""/>
+<attrib name="workingset_id" value="org.eclipse.debug.ui.breakpointWorkingSet"/>
+</marker>
+</breakpoint>
+<breakpoint enabled="false" persistant="true" registered="true">
+<resource path="/videostab_polimi/src/stabilizer.cpp" type="1"/>
+<marker lineNumber="117" type="org.eclipse.cdt.debug.core.cLineBreakpointMarker">
+<attrib name="message" value="Line breakpoint: stabilizer.cpp [line: 117]"/>
+<attrib name="org.eclipse.cdt.debug.core.condition" value=""/>
+<attrib name="org.eclipse.debug.core.id" value="org.eclipse.cdt.debug.core"/>
+<attrib name="requestedSourceHandle" value="/home/rodrygojose/opencv_polimi/modules/videostab_polimi/src/stabilizer.cpp"/>
+<attrib name="org.eclipse.cdt.debug.core.installCount" value="0"/>
+<attrib name="org.eclipse.cdt.debug.core.sourceHandle" value="/home/rodrygojose/opencv_polimi/modules/videostab_polimi/src/stabilizer.cpp"/>
+<attrib name="requestedLine" value="117"/>
+<attrib name="org.eclipse.debug.core.enabled" value="false"/>
+<attrib name="org.eclipse.cdt.debug.core.ignoreCount" value="0"/>
+<attrib name="org.eclipse.cdt.debug.core.breakpointType" value="0"/>
+<attrib name="workingset_name" value=""/>
+<attrib name="workingset_id" value="org.eclipse.debug.ui.breakpointWorkingSet"/>
+</marker>
+</breakpoint>
+<breakpoint enabled="false" persistant="true" registered="true">
+<resource path="/videostab_polimi/src/stabilizer.cpp" type="1"/>
+<marker lineNumber="146" type="org.eclipse.cdt.debug.core.cLineBreakpointMarker">
+<attrib name="message" value="Line breakpoint: stabilizer.cpp [line: 146]"/>
+<attrib name="org.eclipse.cdt.debug.core.condition" value=""/>
+<attrib name="org.eclipse.debug.core.id" value="org.eclipse.cdt.debug.core"/>
+<attrib name="requestedSourceHandle" value="/home/rodrygojose/opencv_polimi/modules/videostab_polimi/src/stabilizer.cpp"/>
+<attrib name="org.eclipse.cdt.debug.core.installCount" value="0"/>
+<attrib name="org.eclipse.cdt.debug.core.sourceHandle" value="/home/rodrygojose/opencv_polimi/modules/videostab_polimi/src/stabilizer.cpp"/>
+<attrib name="requestedLine" value="146"/>
+<attrib name="org.eclipse.debug.core.enabled" value="false"/>
+<attrib name="org.eclipse.cdt.debug.core.ignoreCount" value="0"/>
+<attrib name="org.eclipse.cdt.debug.core.breakpointType" value="0"/>
+<attrib name="workingset_name" value=""/>
+<attrib name="workingset_id" value="org.eclipse.debug.ui.breakpointWorkingSet"/>
+</marker>
+</breakpoint>
+<breakpoint enabled="false" persistant="true" registered="true">
+<resource path="/videostab_polimi/src/stabilizer.cpp" type="1"/>
+<marker lineNumber="155" type="org.eclipse.cdt.debug.core.cLineBreakpointMarker">
+<attrib name="message" value="Line breakpoint: stabilizer.cpp [line: 155]"/>
+<attrib name="org.eclipse.cdt.debug.core.condition" value=""/>
+<attrib name="org.eclipse.debug.core.id" value="org.eclipse.cdt.debug.core"/>
+<attrib name="requestedSourceHandle" value="/home/rodrygojose/opencv_polimi/modules/videostab_polimi/src/stabilizer.cpp"/>
+<attrib name="org.eclipse.cdt.debug.core.installCount" value="0"/>
+<attrib name="org.eclipse.cdt.debug.core.sourceHandle" value="/home/rodrygojose/opencv_polimi/modules/videostab_polimi/src/stabilizer.cpp"/>
+<attrib name="requestedLine" value="155"/>
+<attrib name="org.eclipse.debug.core.enabled" value="false"/>
+<attrib name="org.eclipse.cdt.debug.core.ignoreCount" value="0"/>
+<attrib name="org.eclipse.cdt.debug.core.breakpointType" value="0"/>
+<attrib name="workingset_name" value=""/>
+<attrib name="workingset_id" value="org.eclipse.debug.ui.breakpointWorkingSet"/>
+</marker>
+</breakpoint>
+<breakpoint enabled="false" persistant="true" registered="true">
+<resource path="/videostab_polimi/src/videostab.cpp" type="1"/>
+<marker lineNumber="359" type="org.eclipse.cdt.debug.core.cLineBreakpointMarker">
+<attrib name="message" value="Line breakpoint: videostab.cpp [line: 359]"/>
+<attrib name="org.eclipse.cdt.debug.core.condition" value=""/>
+<attrib name="org.eclipse.debug.core.id" value="org.eclipse.cdt.debug.core"/>
+<attrib name="requestedSourceHandle" value="/home/rodrygojose/opencv_polimi/modules/videostab_polimi/src/videostab.cpp"/>
+<attrib name="org.eclipse.cdt.debug.core.installCount" value="0"/>
+<attrib name="org.eclipse.cdt.debug.core.sourceHandle" value="/home/rodrygojose/opencv_polimi/modules/videostab_polimi/src/videostab.cpp"/>
+<attrib name="requestedLine" value="359"/>
+<attrib name="org.eclipse.debug.core.enabled" value="false"/>
+<attrib name="org.eclipse.cdt.debug.core.ignoreCount" value="0"/>
+<attrib name="org.eclipse.cdt.debug.core.breakpointType" value="0"/>
+<attrib name="workingset_name" value=""/>
+<attrib name="workingset_id" value="org.eclipse.debug.ui.breakpointWorkingSet"/>
+</marker>
+</breakpoint>
+<breakpoint enabled="false" persistant="true" registered="true">
+<resource path="/videostab_polimi/src/videostab.cpp" type="1"/>
+<marker lineNumber="374" type="org.eclipse.cdt.debug.core.cLineBreakpointMarker">
+<attrib name="message" value="Line breakpoint: videostab.cpp [line: 374]"/>
+<attrib name="org.eclipse.cdt.debug.core.condition" value=""/>
+<attrib name="org.eclipse.debug.core.id" value="org.eclipse.cdt.debug.core"/>
+<attrib name="requestedSourceHandle" value="/home/rodrygojose/opencv_polimi/modules/videostab_polimi/src/videostab.cpp"/>
+<attrib name="org.eclipse.cdt.debug.core.installCount" value="0"/>
+<attrib name="requestedLine" value="374"/>
+<attrib name="org.eclipse.cdt.debug.core.sourceHandle" value="/home/rodrygojose/opencv_polimi/modules/videostab_polimi/src/videostab.cpp"/>
+<attrib name="org.eclipse.cdt.debug.core.breakpointType" value="0"/>
+<attrib name="org.eclipse.cdt.debug.core.ignoreCount" value="0"/>
+<attrib name="org.eclipse.debug.core.enabled" value="false"/>
+<attrib name="workingset_name" value=""/>
+<attrib name="workingset_id" value="org.eclipse.debug.ui.breakpointWorkingSet"/>
+</marker>
+</breakpoint>
+</breakpoints>

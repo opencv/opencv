@@ -1,0 +1,14 @@
+<map id="precomp.hpp" name="precomp.hpp">
+<area shape="rect" id="node3" href="$deblurring_8cpp.html" title="deblurring.cpp" alt="" coords="5,83,107,112"/>
+<area shape="rect" id="node5" href="$fast__marching_8cpp.html" title="fast_marching.cpp" alt="" coords="131,83,259,112"/>
+<area shape="rect" id="node7" href="$frame__source_8cpp.html" title="frame_source.cpp" alt="" coords="283,83,408,112"/>
+<area shape="rect" id="node9" href="$global__motion_8cpp.html" title="global_motion.cpp" alt="" coords="432,83,557,112"/>
+<area shape="rect" id="node11" href="$inpainting_8cpp.html" title="inpainting.cpp" alt="" coords="581,83,683,112"/>
+<area shape="rect" id="node13" href="$log_8cpp.html" title="log.cpp" alt="" coords="707,83,771,112"/>
+<area shape="rect" id="node15" href="$motion__stabilizing_8cpp.html" title="motion_stabilizing.cpp" alt="" coords="795,83,944,112"/>
+<area shape="rect" id="node17" href="$optical__flow_8cpp.html" title="optical_flow.cpp" alt="" coords="968,83,1083,112"/>
+<area shape="rect" id="node19" href="$outlier__rejection_8cpp.html" title="outlier_rejection.cpp" alt="" coords="1107,83,1245,112"/>
+<area shape="rect" id="node21" href="$precomp_8cpp.html" title="precomp.cpp" alt="" coords="1269,83,1365,112"/>
+<area shape="rect" id="node23" href="$stabilizer_8cpp.html" title="stabilizer.cpp" alt="" coords="1389,83,1488,112"/>
+<area shape="rect" id="node25" href="$wobble__suppression_8cpp.html" title="wobble_suppression.cpp" alt="" coords="1512,83,1677,112"/>
+</map>

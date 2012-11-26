@@ -1,0 +1,4 @@
+<map id="motionModel" name="motionModel">
+<area shape="rect" id="node3" href="$class_motion_estimator_ransac_l2_builder.html#ac7d06fdfb0158b27e0303508552ed889" title="MotionEstimatorRansacL2Builder\l::build" alt="" coords="149,5,365,51"/>
+<area shape="rect" id="node5" href="$class_motion_estimator_l1_builder.html#a4c7d734ed75a37a9495bc5b1db94f0ae" title="MotionEstimatorL1Builder\l::build" alt="" coords="172,74,343,121"/>
+</map>

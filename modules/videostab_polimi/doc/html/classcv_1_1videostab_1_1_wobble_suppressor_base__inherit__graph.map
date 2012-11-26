@@ -1,0 +1,5 @@
+<map id="cv::videostab::WobbleSuppressorBase" name="cv::videostab::WobbleSuppressorBase">
+<area shape="rect" id="node3" href="$classcv_1_1videostab_1_1_more_accurate_motion_wobble_suppressor_base.html" title="cv::videostab::MoreAccurate\lMotionWobbleSuppressorBase" alt="" coords="303,5,503,51"/>
+<area shape="rect" id="node7" href="$classcv_1_1videostab_1_1_null_wobble_suppressor.html" title="cv::videostab::NullWobble\lSuppressor" alt="" coords="316,74,489,121"/>
+<area shape="rect" id="node5" href="$classcv_1_1videostab_1_1_more_accurate_motion_wobble_suppressor.html" title="cv::videostab::MoreAccurate\lMotionWobbleSuppressor" alt="" coords="552,5,741,51"/>
+</map>

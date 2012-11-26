@@ -1,0 +1,3 @@
+allow_usage_report_preference=true
+ask_user_for_usage_report_preference=false
+eclipse.preferences.version=1

@@ -1,0 +1,7 @@
+18:35:33 **** Clean-only build of configuration Debug for project videostab_polimi ****
+make clean 
+rm -rf  ./src/deblurring.o ./src/fast_marching.o ./src/frame_source.o ./src/global_motion.o ./src/inpainting.o ./src/log.o ./src/motion_stabilizing.o ./src/optical_flow.o ./src/outlier_rejection.o ./src/stabilizer.o ./src/videostab.o ./src/wobble_suppression.o  ./src/deblurring.d ./src/fast_marching.d ./src/frame_source.d ./src/global_motion.d ./src/inpainting.d ./src/log.d ./src/motion_stabilizing.d ./src/optical_flow.d ./src/outlier_rejection.d ./src/stabilizer.d ./src/videostab.d ./src/wobble_suppression.d  videostab_polimi
+ 
+
+18:35:34 Build Finished (took 844ms)
+

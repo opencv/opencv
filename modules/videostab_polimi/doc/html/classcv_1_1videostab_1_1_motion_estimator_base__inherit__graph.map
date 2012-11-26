@@ -1,0 +1,4 @@
+<map id="cv::videostab::MotionEstimatorBase" name="cv::videostab::MotionEstimatorBase">
+<area shape="rect" id="node3" href="$classcv_1_1videostab_1_1_motion_estimator_l1.html" title="cv::videostab::MotionEstimatorL1" alt="" coords="5,92,221,121"/>
+<area shape="rect" id="node5" href="$classcv_1_1videostab_1_1_motion_estimator_ransac_l2.html" title="cv::videostab::MotionEstimator\lRansacL2" alt="" coords="245,83,448,130"/>
+</map>

@@ -1,0 +1,17 @@
+<map id="videostab.cpp" name="videostab.cpp">
+<area shape="rect" id="node21" href="$videostab_8hpp.html" title="opencv2/videostab/videostab.hpp" alt="" coords="812,83,1028,112"/>
+<area shape="rect" id="node23" href="$stabilizer_8hpp.html" title="opencv2/videostab/stabilizer.hpp" alt="" coords="1373,169,1584,199"/>
+<area shape="rect" id="node99" href="$ring__buffer_8hpp.html" title="opencv2/videostab/ring\l_buffer.hpp" alt="" coords="843,161,997,207"/>
+<area shape="rect" id="node31" href="$global__motion_8hpp.html" title="opencv2/videostab/global\l_motion.hpp" alt="" coords="944,353,1112,399"/>
+<area shape="rect" id="node55" href="$motion__stabilizing_8hpp.html" title="opencv2/videostab/motion\l_stabilizing.hpp" alt="" coords="1477,257,1651,303"/>
+<area shape="rect" id="node62" href="$frame__source_8hpp.html" title="opencv2/videostab/frame\l_source.hpp" alt="" coords="1776,353,1944,399"/>
+<area shape="rect" id="node67" href="$log_8hpp.html" title="opencv2/videostab/log.hpp" alt="" coords="2019,361,2195,391"/>
+<area shape="rect" id="node70" href="$inpainting_8hpp.html" title="opencv2/videostab/inpainting.hpp" alt="" coords="740,265,953,295"/>
+<area shape="rect" id="node89" href="$deblurring_8hpp.html" title="opencv2/videostab/deblurring.hpp" alt="" coords="1853,457,2069,487"/>
+<area shape="rect" id="node93" href="$wobble__suppression_8hpp.html" title="opencv2/videostab/wobble\l_suppression.hpp" alt="" coords="1277,257,1453,303"/>
+<area shape="rect" id="node41" href="$optical__flow_8hpp.html" title="opencv2/videostab/optical\l_flow.hpp" alt="" coords="561,449,735,495"/>
+<area shape="rect" id="node45" href="$motion__core_8hpp.html" title="opencv2/videostab/motion\l_core.hpp" alt="" coords="473,545,647,591"/>
+<area shape="rect" id="node50" href="$outlier__rejection_8hpp.html" title="opencv2/videostab/outlier\l_rejection.hpp" alt="" coords="759,449,929,495"/>
+<area shape="rect" id="node75" href="$fast__marching_8hpp.html" title="opencv2/videostab/fast\l_marching.hpp" alt="" coords="112,545,269,591"/>
+<area shape="rect" id="node83" href="$fast__marching__inl_8hpp.html" title="fast_marching_inl.hpp" alt="" coords="184,640,333,669"/>
+</map>

@@ -1,0 +1,13 @@
+17:45:55 **** Incremental Build of configuration Debug for project videostab_test ****
+make all 
+Building target: videostab_test
+Invoking: Cross G++ Linker
+g++ -L/usr/local/lib -o "videostab_test"  ./src/deblurring.o ./src/fast_marching.o ./src/frame_source.o ./src/global_motion.o ./src/inpainting.o ./src/log.o ./src/motion_stabilizing.o ./src/optical_flow.o ./src/outlier_rejection.o ./src/precomp.o ./src/stabilizer.o ./src/videostab.o ./src/wobble_suppression.o   -lopencv_core -lopencv_features2d -lopencv_imgproc -lopencv_photo -lopencv_video -lopencv_calib3d -lopencv_gpu -lopencv_highgui
+/bin/ld: ./src/global_motion.o: undefined reference to symbol '_ZN10ClpSimplexC1Eb'
+/bin/ld: note: '_ZN10ClpSimplexC1Eb' is defined in DSO /home/rodrygojose/Downloads/Clp-1.14.7/lib/libClp.so.1 so try adding it to the linker command line
+/home/rodrygojose/Downloads/Clp-1.14.7/lib/libClp.so.1: could not read symbols: Invalid operation
+collect2: error: ld returned 1 exit status
+make: *** [videostab_test] Error 1
+
+17:45:57 Build Finished (took 1s.900ms)
+

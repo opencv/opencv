@@ -1,0 +1,12 @@
+<map id="cv::videostab::at" name="cv::videostab::at">
+<area shape="rect" id="node3" href="$classcv_1_1videostab_1_1_weighting_deblurer.html#a16e16be9b297dec71d55e0bbd7bb718a" title="cv::videostab::Weighting\lDeblurer::deblur" alt="" coords="200,5,365,51"/>
+<area shape="rect" id="node5" href="$namespacecv_1_1videostab.html#aaf5231d13f544ab717b0a4dbe8d40859" title="cv::videostab::getMotion" alt="" coords="200,75,365,104"/>
+<area shape="rect" id="node7" href="$classcv_1_1videostab_1_1_consistent_mosaic_inpainter.html#aad66052a9ddb3ba8f8dde10586141a40" title="cv::videostab::Consistent\lMosaicInpainter::inpaint" alt="" coords="197,127,368,174"/>
+<area shape="rect" id="node9" href="$classcv_1_1videostab_1_1_motion_inpainter.html#ad4fb41d45227c6a1dd2920ba6dadd495" title="cv::videostab::MotionInpainter\l::inpaint" alt="" coords="184,197,381,243"/>
+<area shape="rect" id="node11" href="$classcv_1_1videostab_1_1_motion_stabilization_pipeline.html#a73ec1facd8290affb88c63118b91e27a" title="cv::videostab::MotionStabilization\lPipeline::stabilize" alt="" coords="173,266,392,313"/>
+<area shape="rect" id="node13" href="$classcv_1_1videostab_1_1_gaussian_motion_filter.html#a49de332f3e61f9da2296e0ffcea4e106" title="cv::videostab::GaussianMotion\lFilter::stabilize" alt="" coords="181,335,384,382"/>
+<area shape="rect" id="node15" href="$classcv_1_1videostab_1_1_stabilizer_base.html#a59ffdca7516042b0553a43c7b3cdcf74" title="cv::videostab::Stabilizer\lBase::nextStabilizedFrame" alt="" coords="193,405,372,451"/>
+<area shape="rect" id="node17" href="$classcv_1_1videostab_1_1_stabilizer_base.html#ade2bda91481dab757bf2ffe3f4f27465" title="cv::videostab::Stabilizer\lBase::doOneIteration" alt="" coords="201,474,364,521"/>
+<area shape="rect" id="node19" href="$classcv_1_1videostab_1_1_stabilizer_base.html#a9bafc196647a564328d92419a581a875" title="cv::videostab::Stabilizer\lBase::setUp" alt="" coords="201,543,364,590"/>
+<area shape="rect" id="node21" href="$classcv_1_1videostab_1_1_stabilizer_base.html#aff4ee85e72d58fb3eb09c0f5c8a9314c" title="cv::videostab::Stabilizer\lBase::stabilizeFrame" alt="" coords="201,613,364,659"/>
+</map>

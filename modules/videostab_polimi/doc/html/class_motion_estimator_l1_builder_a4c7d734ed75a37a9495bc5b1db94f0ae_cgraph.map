@@ -1,0 +1,7 @@
+<map id="MotionEstimatorL1Builder::build" name="MotionEstimatorL1Builder::build">
+<area shape="rect" id="node3" href="$videostab_8cpp.html#a49a8fe23275002630fb6f3df5dbb5850" title="motionModel" alt="" coords="292,5,388,35"/>
+<area shape="rect" id="node5" href="$classcv_1_1videostab_1_1_translation_based_local_outlier_rejector.html#a3bad804f36bbbdc724c9b05a35bb6b79" title="cv::videostab::Translation\lBasedLocalOutlierRejector\l::ransacParams" alt="" coords="252,59,428,123"/>
+<area shape="rect" id="node7" href="$classcv_1_1videostab_1_1_translation_based_local_outlier_rejector.html#a8fd42e55f57a3294ff6545c683e25e16" title="cv::videostab::Translation\lBasedLocalOutlierRejector\l::setRansacParams" alt="" coords="252,147,428,211"/>
+<area shape="rect" id="node9" href="$classcv_1_1videostab_1_1_keypoint_based_motion_estimator.html#a629366ab4e0e482425c244f66a121337" title="cv::videostab::KeypointBased\lMotionEstimator::setDetector" alt="" coords="243,234,437,281"/>
+<area shape="rect" id="node11" href="$classcv_1_1videostab_1_1_keypoint_based_motion_estimator.html#ade0c45a14e83a4f2b7a480f4459c47b9" title="cv::videostab::KeypointBased\lMotionEstimator::setOutlierRejector" alt="" coords="225,303,455,350"/>
+</map>

@@ -1,0 +1,5 @@
+<map id="cv::videostab::WeightingDeblurer::deblur" name="cv::videostab::WeightingDeblurer::deblur">
+<area shape="rect" id="node3" href="$namespacecv_1_1videostab.html#a64715f89ad837e2b6b5649d0f833172d" title="cv::videostab::at" alt="" coords="245,5,363,35"/>
+<area shape="rect" id="node5" href="$namespacecv_1_1videostab.html#a3c4d339f7e22f330c83af7aebdf720d6" title="cv::videostab::getMotion" alt="" coords="221,59,387,88"/>
+<area shape="rect" id="node7" href="$precomp_8hpp.html#a4cc2c5519950c279589e9d77684a8304" title="intensity" alt="" coords="269,112,339,141"/>
+</map>

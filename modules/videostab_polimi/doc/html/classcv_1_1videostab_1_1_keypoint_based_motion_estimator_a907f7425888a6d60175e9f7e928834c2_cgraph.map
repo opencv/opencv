@@ -1,0 +1,5 @@
+<map id="cv::videostab::KeypointBasedMotionEstimator::KeypointBasedMotionEstimator" name="cv::videostab::KeypointBasedMotionEstimator::KeypointBasedMotionEstimator">
+<area shape="rect" id="node3" href="$classcv_1_1videostab_1_1_keypoint_based_motion_estimator.html#a629366ab4e0e482425c244f66a121337" title="cv::videostab::KeypointBased\lMotionEstimator::setDetector" alt="" coords="325,5,520,51"/>
+<area shape="rect" id="node5" href="$classcv_1_1videostab_1_1_keypoint_based_motion_estimator.html#a8ad21523860d819b2a84faeace4551c4" title="cv::videostab::KeypointBased\lMotionEstimator::setOpticalFlow\lEstimator" alt="" coords="317,75,528,139"/>
+<area shape="rect" id="node7" href="$classcv_1_1videostab_1_1_keypoint_based_motion_estimator.html#ade0c45a14e83a4f2b7a480f4459c47b9" title="cv::videostab::KeypointBased\lMotionEstimator::setOutlierRejector" alt="" coords="308,162,537,209"/>
+</map>

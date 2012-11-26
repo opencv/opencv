@@ -1,0 +1,7 @@
+<map id="cv::videostab::MotionInpainter::inpaint" name="cv::videostab::MotionInpainter::inpaint">
+<area shape="rect" id="node3" href="$namespacecv_1_1videostab.html#a3c4d339f7e22f330c83af7aebdf720d6" title="cv::videostab::getMotion" alt="" coords="268,5,433,35"/>
+<area shape="rect" id="node5" href="$namespacecv_1_1videostab.html#a64715f89ad837e2b6b5649d0f833172d" title="cv::videostab::at" alt="" coords="292,59,409,88"/>
+<area shape="rect" id="node7" href="$namespacecv_1_1videostab.html#a682d54675bbbffe349241bd6887892b1" title="cv::videostab::calcFlowMask" alt="" coords="255,112,447,141"/>
+<area shape="rect" id="node9" href="$namespacecv_1_1videostab.html#ac7e9d9a4c1095962a1b4780b4fb859df" title="cv::videostab::completeFrame\lAccordingToFlow" alt="" coords="252,165,449,211"/>
+<area shape="rect" id="node11" href="$precomp_8hpp.html#a8cab84cc5fe4972692fbdae513a78f6f" title="sqr" alt="" coords="499,173,539,203"/>
+</map>

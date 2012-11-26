@@ -1,0 +1,5 @@
+<map id="cv::videostab::ImageMotionEstimatorBase" name="cv::videostab::ImageMotionEstimatorBase">
+<area shape="rect" id="node3" href="$classcv_1_1videostab_1_1_from_file_motion_reader.html" title="cv::videostab::FromFileMotion\lReader" alt="" coords="239,5,436,51"/>
+<area shape="rect" id="node5" href="$classcv_1_1videostab_1_1_keypoint_based_motion_estimator.html" title="cv::videostab::KeypointBased\lMotionEstimator" alt="" coords="240,74,435,121"/>
+<area shape="rect" id="node7" href="$classcv_1_1videostab_1_1_to_file_motion_writer.html" title="cv::videostab::ToFileMotion\lWriter" alt="" coords="247,143,428,190"/>
+</map>

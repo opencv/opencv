@@ -1,0 +1,874 @@
+Flat profile:
+
+Each sample counts as 0.01 seconds.
+  %   cumulative   self              self     total           
+ time   seconds   seconds    calls  us/call  us/call  name    
+ 62.12      0.41     0.41  3764561     0.11     0.11  main
+ 12.12      0.49     0.08  1655019     0.05     0.05  cv::videostab::estimateGlobMotionLeastSquaresSimilarity(int, cv::Point_<float>*, cv::Point_<float>*, float*)
+  7.58      0.54     0.05   415159     0.12     0.12  cv::videostab::ToFileMotionWriter::ToFileMotionWriter(std::string const&, cv::Ptr<cv::videostab::ImageMotionEstimatorBase>)
+  6.06      0.58     0.04  2893110     0.01     0.01  cv::videostab::estimateGlobMotionLeastSquaresAffine(int, cv::Point_<float>*, cv::Point_<float>*, float*)
+  6.06      0.62     0.04  1667510     0.02     0.02  cv::videostab::estimateGlobMotionLeastSquaresTranslationAndScale(int, cv::Point_<float>*, cv::Point_<float>*, float*)
+  1.52      0.63     0.01  1083412     0.01     0.01  cv::videostab::ToFileMotionWriter::estimate(cv::Mat const&, cv::Mat const&, bool*)
+  1.52      0.64     0.01     3748     2.67     2.67  cv::videostab::GaussianMotionFilter::stabilize(int, std::vector<cv::Mat, std::allocator<cv::Mat> > const&, std::pair<int, int>)
+  1.52      0.65     0.01     1125     8.89     8.89  cv::videostab::MotionFilterBase::stabilize(int, std::vector<cv::Mat, std::allocator<cv::Mat> > const&, std::pair<int, int>, cv::Mat*)
+  1.52      0.66     0.01      874    11.44    11.44  cv::videostab::MotionEstimatorRansacL2::MotionEstimatorRansacL2(cv::videostab::MotionModel)
+  0.00      0.66     0.00   384127     0.00     0.00  cv::videostab::getMotion(int, int, std::vector<cv::Mat, std::allocator<cv::Mat> > const&)
+  0.00      0.66     0.00    20977     0.00     0.00  cv::videostab::MotionInpaintBody cv::videostab::FastMarchingMethod::run<cv::videostab::MotionInpaintBody>(cv::Mat const&, cv::videostab::MotionInpaintBody)
+  0.00      0.66     0.00    14865     0.00     0.00  cv::videostab::ColorAverageInpaintBody cv::videostab::FastMarchingMethod::run<cv::videostab::ColorAverageInpaintBody>(cv::Mat const&, cv::videostab::ColorAverageInpaintBody)
+  0.00      0.66     0.00    11433     0.00     0.00  cv::videostab::calcFlowMask(cv::Mat const&, cv::Mat const&, cv::Mat const&, float, cv::Mat const&, cv::Mat const&, cv::Mat&)
+  0.00      0.66     0.00     9853     0.00     0.00  cv::videostab::ConsistentMosaicInpainter::inpaint(int, cv::Mat&, cv::Mat&)
+  0.00      0.66     0.00     9664     0.00     0.00  cv::videostab::MotionInpainter::inpaint(int, cv::Mat&, cv::Mat&)
+  0.00      0.66     0.00     7502     0.00     0.00  cv::videostab::MotionInpainter::MotionInpainter()
+  0.00      0.66     0.00     6442     0.00     0.00  cv::videostab::ensureInclusionConstraint(cv::Mat const&, cv::Size_<int>, float)
+  0.00      0.66     0.00     3529     0.00     0.00  cv::videostab::estimateOptimalTrimRatio(cv::Mat const&, cv::Size_<int>)
+  0.00      0.66     0.00     1125     0.00     0.00  cv::gpu::GoodFeaturesToTrackDetector_GPU::~GoodFeaturesToTrackDetector_GPU()
+  0.00      0.66     0.00      877     0.00     0.00  cv::videostab::MotionInpaintBody::MotionInpaintBody(cv::videostab::MotionInpaintBody const&)
+  0.00      0.66     0.00      876     0.00     0.00  cv::videostab::estimateGlobMotionLeastSquaresRigid(int, cv::Point_<float>*, cv::Point_<float>*, float*)
+  0.00      0.66     0.00      876     0.00     0.00  std::basic_string<char, std::char_traits<char>, std::allocator<char> > std::operator+<char, std::char_traits<char>, std::allocator<char> >(char const*, std::basic_string<char, std::char_traits<char>, std::allocator<char> > const&)
+  0.00      0.66     0.00      875     0.00     0.00  cv::videostab::MotionInpaintBody::operator()(int, int)
+  0.00      0.66     0.00      875     0.00     0.00  cv::videostab::TwoPassStabilizer::postProcessFrame(cv::Mat const&)
+  0.00      0.66     0.00      875     0.00     0.00  cv::videostab::estimateGlobMotionLeastSquaresTranslation(int, cv::Point_<float>*, cv::Point_<float>*, float*)
+  0.00      0.66     0.00      874     0.00     3.37  cv::videostab::ColorInpainter::inpaint(int, cv::Mat&, cv::Mat&)
+  0.00      0.66     0.00      874     0.00     0.00  std::vector<cv::Mat, std::allocator<cv::Mat> >::vector(unsigned int, cv::Mat const&, std::allocator<cv::Mat> const&)
+  0.00      0.66     0.00       91     0.00     0.26  cv::videostab::StabilizerBase::stabilizeFrame()
+  0.00      0.66     0.00       11     0.00     0.00  cv::videostab::InpainterBase::setMotions(std::vector<cv::Mat, std::allocator<cv::Mat> > const&)
+  0.00      0.66     0.00        8     0.00     0.00  cv::videostab::StabilizerBase::doOneIteration()
+  0.00      0.66     0.00        8     0.00     0.00  cv::videostab::TwoPassStabilizer::estimateStabilizationMotion()
+  0.00      0.66     0.00        5     0.00     0.00  cv::videostab::ConsistentMosaicInpainter::ConsistentMosaicInpainter()
+  0.00      0.66     0.00        5     0.00     0.00  cv::videostab::ConsistentMosaicInpainter::~ConsistentMosaicInpainter()
+  0.00      0.66     0.00        5     0.00     0.00  cv::videostab::KeypointBasedMotionEstimatorGpu::estimate(cv::gpu::GpuMat const&, cv::gpu::GpuMat const&, bool*)
+  0.00      0.66     0.00        3     0.00     0.00  cv::videostab::ColorInpainter::~ColorInpainter()
+  0.00      0.66     0.00        3     0.00    21.57  cv::videostab::StabilizerBase::reset()
+  0.00      0.66     0.00        3     0.00     1.12  cv::videostab::OnePassStabilizer::estimateMotion()
+  0.00      0.66     0.00        2     0.00     0.00  cv::Ptr<cv::FeatureDetector>::release()
+  0.00      0.66     0.00        2     0.00     0.00  cv::Mat_<unsigned char>::~Mat_()
+  0.00      0.66     0.00        2     0.00     1.69  cv::videostab::InpainterBase::setStabilizationMotions(std::vector<cv::Mat, std::allocator<cv::Mat> > const&)
+  0.00      0.66     0.00        2     0.00     0.00  cv::videostab::InpainterBase::setRadius(int)
+  0.00      0.66     0.00        2     0.00     0.00  cv::videostab::FromFileMotionReader::FromFileMotionReader(std::string const&)
+  0.00      0.66     0.00        2     0.00     0.00  cv::videostab::ConsistentMosaicInpainter::~ConsistentMosaicInpainter()
+  0.00      0.66     0.00        2     0.00     0.00  cv::videostab::KeypointBasedMotionEstimator::KeypointBasedMotionEstimator(cv::Ptr<cv::videostab::MotionEstimatorBase>)
+  0.00      0.66     0.00        2     0.00     0.00  cv::videostab::InpainterBase::frames() const
+  0.00      0.66     0.00        2     0.00     0.00  std::vector<cv::Point_<float>, std::allocator<cv::Point_<float> > >::~vector()
+  0.00      0.66     0.00        1     0.00     0.00  cv::MatExpr::~MatExpr()
+  0.00      0.66     0.00        1     0.00     0.00  cv::videostab::InpainterBase::setMotionModel(cv::videostab::MotionModel)
+  0.00      0.66     0.00        1     0.00     0.00  cv::videostab::InpainterBase::~InpainterBase()
+  0.00      0.66     0.00        1     0.00     0.00  cv::videostab::ColorInpainter::~ColorInpainter()
+  0.00      0.66     0.00        1     0.00     3.37  cv::videostab::StabilizerBase::postProcessFrame(cv::Mat const&)
+  0.00      0.66     0.00        1     0.00     0.00  cv::videostab::OnePassStabilizer::estimateStabilizationMotion()
+  0.00      0.66     0.00        1     0.00     0.00  cv::videostab::InpainterBase::stabilizedFrames() const
+  0.00      0.66     0.00        1     0.00     1.56  std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >::_M_fill_assign(unsigned int, std::vector<int, std::allocator<int> > const&)
+
+ %         the percentage of the total running time of the
+time       program used by this function.
+
+cumulative a running sum of the number of seconds accounted
+ seconds   for by this function and those listed above it.
+
+ self      the number of seconds accounted for by this
+seconds    function alone.  This is the major sort for this
+           listing.
+
+calls      the number of times this function was invoked, if
+           this function is profiled, else blank.
+ 
+ self      the average number of milliseconds spent in this
+ms/call    function per call, if this function is profiled,
+	   else blank.
+
+ total     the average number of milliseconds spent in this
+ms/call    function and its descendents per call, if this 
+	   function is profiled, else blank.
+
+name       the name of the function.  This is the minor sort
+           for this listing. The index shows the location of
+	   the function in the gprof listing. If the index is
+	   in parenthesis it shows where it would appear in
+	   the gprof listing if it were to be printed.
+
+		     Call graph (explanation follows)
+
+
+granularity: each sample hit covers 4 byte(s) for 1.52% of 0.66 seconds
+
+index % time    self  children    called     name
+[1]    100.0    0.66    0.00  195594+11763484 <cycle 1 as a whole> [1]
+                0.41    0.00 3764561+11528109     main <cycle 1> [3]
+                0.08    0.00 1655019+3122847     cv::videostab::estimateGlobMotionLeastSquaresSimilarity(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [4]
+                0.05    0.00  415159+846436      cv::videostab::ToFileMotionWriter::ToFileMotionWriter(std::string const&, cv::Ptr<cv::videostab::ImageMotionEstimatorBase>) <cycle 1> [5]
+                0.04    0.00 2893110+7058        cv::videostab::estimateGlobMotionLeastSquaresAffine(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [6]
+                0.04    0.00 1667510+3524        cv::videostab::estimateGlobMotionLeastSquaresTranslationAndScale(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [7]
+                0.01    0.00 1083412+2           cv::videostab::ToFileMotionWriter::estimate(cv::Mat const&, cv::Mat const&, bool*) <cycle 1> [9]
+                0.01    0.00    3748+252         cv::videostab::GaussianMotionFilter::stabilize(int, std::vector<cv::Mat, std::allocator<cv::Mat> > const&, std::pair<int, int>) <cycle 1> [10]
+                0.01    0.00    1125             cv::videostab::MotionFilterBase::stabilize(int, std::vector<cv::Mat, std::allocator<cv::Mat> > const&, std::pair<int, int>, cv::Mat*) <cycle 1> [11]
+                0.01    0.00     874             cv::videostab::MotionEstimatorRansacL2::MotionEstimatorRansacL2(cv::videostab::MotionModel) <cycle 1> [12]
+                0.00    0.00  384127+4           cv::videostab::getMotion(int, int, std::vector<cv::Mat, std::allocator<cv::Mat> > const&) <cycle 1> [43]
+                0.00    0.00   20977+48945       cv::videostab::MotionInpaintBody cv::videostab::FastMarchingMethod::run<cv::videostab::MotionInpaintBody>(cv::Mat const&, cv::videostab::MotionInpaintBody) <cycle 1> [44]
+                0.00    0.00   14865+49821       cv::videostab::ColorAverageInpaintBody cv::videostab::FastMarchingMethod::run<cv::videostab::ColorAverageInpaintBody>(cv::Mat const&, cv::videostab::ColorAverageInpaintBody) <cycle 1> [45]
+                0.00    0.00    9664+38489       cv::videostab::MotionInpainter::inpaint(int, cv::Mat&, cv::Mat&) <cycle 1> [48]
+                0.00    0.00    3529+38585       cv::videostab::estimateOptimalTrimRatio(cv::Mat const&, cv::Size_<int>) <cycle 1> [51]
+                0.00    0.00   11433+2647        cv::videostab::calcFlowMask(cv::Mat const&, cv::Mat const&, cv::Mat const&, float, cv::Mat const&, cv::Mat const&, cv::Mat&) <cycle 1> [46]
+                0.00    0.00    9853+52          cv::videostab::ConsistentMosaicInpainter::inpaint(int, cv::Mat&, cv::Mat&) <cycle 1> [47]
+                0.00    0.00    6442+2032        cv::videostab::ensureInclusionConstraint(cv::Mat const&, cv::Size_<int>, float) <cycle 1> [50]
+                0.00    0.00    7502             cv::videostab::MotionInpainter::MotionInpainter() <cycle 1> [49]
+                0.00    0.00     877+3           cv::videostab::MotionInpaintBody::MotionInpaintBody(cv::videostab::MotionInpaintBody const&) <cycle 1> [53]
+                0.00    0.00     876             cv::videostab::estimateGlobMotionLeastSquaresRigid(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [54]
+                0.00    0.00     876             std::basic_string<char, std::char_traits<char>, std::allocator<char> > std::operator+<char, std::char_traits<char>, std::allocator<char> >(char const*, std::basic_string<char, std::char_traits<char>, std::allocator<char> > const&) <cycle 1> [55]
+                0.00    0.00     875+1           cv::videostab::MotionInpaintBody::operator()(int, int) <cycle 1> [56]
+                0.00    0.00     875             cv::videostab::TwoPassStabilizer::postProcessFrame(cv::Mat const&) <cycle 1> [57]
+                0.00    0.00     875             cv::videostab::estimateGlobMotionLeastSquaresTranslation(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [58]
+                0.00    0.00     874             std::vector<cv::Mat, std::allocator<cv::Mat> >::vector(unsigned int, cv::Mat const&, std::allocator<cv::Mat> const&) <cycle 1> [59]
+                0.00    0.00       8+7           cv::videostab::StabilizerBase::doOneIteration() <cycle 1> [61]
+                0.00    0.00      11             cv::videostab::InpainterBase::setMotions(std::vector<cv::Mat, std::allocator<cv::Mat> > const&) <cycle 1> [60]
+                0.00    0.00       5+3           cv::videostab::KeypointBasedMotionEstimatorGpu::estimate(cv::gpu::GpuMat const&, cv::gpu::GpuMat const&, bool*) <cycle 1> [65]
+                0.00    0.00       8             cv::videostab::TwoPassStabilizer::estimateStabilizationMotion() <cycle 1> [62]
+                0.00    0.00       3             cv::videostab::ColorInpainter::~ColorInpainter() <cycle 1> [66]
+                0.00    0.00       1+2           cv::videostab::ColorInpainter::~ColorInpainter() <cycle 1> [78]
+                0.00    0.00       2             cv::videostab::KeypointBasedMotionEstimator::KeypointBasedMotionEstimator(cv::Ptr<cv::videostab::MotionEstimatorBase>) <cycle 1> [72]
+                0.00    0.00       2             cv::videostab::ConsistentMosaicInpainter::~ConsistentMosaicInpainter() <cycle 1> [71]
+-----------------------------------------------
+                                                 <spontaneous>
+[2]     93.5    0.00    0.62                 cv::videostab::MotionEstimatorL1::estimate(cv::_InputArray const&, cv::_InputArray const&, bool*) [2]
+                0.59    0.00  175036/195594      cv::videostab::estimateGlobMotionLeastSquaresTranslationAndScale(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [7]
+                0.02    0.00    6118/195594      main <cycle 1> [3]
+                0.01    0.00    1748/195594      cv::videostab::estimateGlobMotionLeastSquaresAffine(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [6]
+-----------------------------------------------
+                             11528109             main <cycle 1> [3]
+                                  20             cv::videostab::ensureInclusionConstraint(cv::Mat const&, cv::Size_<int>, float) <cycle 1> [50]
+                                 874             cv::videostab::MotionInpaintBody::operator()(int, int) <cycle 1> [56]
+                                 874             std::vector<cv::Mat, std::allocator<cv::Mat> >::vector(unsigned int, cv::Mat const&, std::allocator<cv::Mat> const&) <cycle 1> [59]
+                                 874             cv::videostab::TwoPassStabilizer::postProcessFrame(cv::Mat const&) <cycle 1> [57]
+                                1015             cv::videostab::GaussianMotionFilter::stabilize(int, std::vector<cv::Mat, std::allocator<cv::Mat> > const&, std::pair<int, int>) <cycle 1> [10]
+                                1748             cv::videostab::ToFileMotionWriter::estimate(cv::Mat const&, cv::Mat const&, bool*) <cycle 1> [9]
+                                3496             cv::videostab::estimateGlobMotionLeastSquaresAffine(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [6]
+                                3496             cv::videostab::MotionInpaintBody cv::videostab::FastMarchingMethod::run<cv::videostab::MotionInpaintBody>(cv::Mat const&, cv::videostab::MotionInpaintBody) <cycle 1> [44]
+                                6118             cv::videostab::estimateGlobMotionLeastSquaresTranslation(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [58]
+                                6136             cv::videostab::ColorAverageInpaintBody cv::videostab::FastMarchingMethod::run<cv::videostab::ColorAverageInpaintBody>(cv::Mat const&, cv::videostab::ColorAverageInpaintBody) <cycle 1> [45]
+                                6992             cv::videostab::estimateGlobMotionLeastSquaresRigid(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [54]
+                                7499             cv::videostab::ConsistentMosaicInpainter::inpaint(int, cv::Mat&, cv::Mat&) <cycle 1> [47]
+                                8770             cv::videostab::estimateOptimalTrimRatio(cv::Mat const&, cv::Size_<int>) <cycle 1> [51]
+                               27095             cv::videostab::MotionInpainter::inpaint(int, cv::Mat&, cv::Mat&) <cycle 1> [48]
+                               55335             cv::videostab::getMotion(int, int, std::vector<cv::Mat, std::allocator<cv::Mat> > const&) <cycle 1> [43]
+                              223070             cv::videostab::ToFileMotionWriter::ToFileMotionWriter(std::string const&, cv::Ptr<cv::videostab::ImageMotionEstimatorBase>) <cycle 1> [5]
+                              382375             cv::videostab::MotionEstimatorRansacL2::MotionEstimatorRansacL2(cv::videostab::MotionModel) <cycle 1> [12]
+                              711909             cv::videostab::estimateGlobMotionLeastSquaresSimilarity(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [4]
+                             2304738             cv::videostab::estimateGlobMotionLeastSquaresTranslationAndScale(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [7]
+                0.00    0.00       1/195594      cv::videostab::TranslationBasedLocalOutlierRejector::process(cv::Size_<int>, cv::_InputArray const&, cv::_InputArray const&, cv::_OutputArray const&) [27]
+                0.00    0.00       2/195594      cv::videostab::SparsePyrLkOptFlowEstimatorGpu::run(cv::_InputArray const&, cv::_InputArray const&, cv::_InputArray const&, cv::_OutputArray const&, cv::_OutputArray const&, cv::_OutputArray const&) [20]
+                0.00    0.00       2/195594      cv::videostab::SparsePyrLkOptFlowEstimatorGpu::run(cv::gpu::GpuMat const&, cv::gpu::GpuMat const&, cv::gpu::GpuMat const&, cv::gpu::GpuMat&, cv::gpu::GpuMat&, cv::gpu::GpuMat&) [28]
+                0.00    0.00       3/195594      cv::videostab::TwoPassStabilizer::setUp(cv::Mat const&) [22]
+                0.00    0.00     874/195594      void std::__adjust_heap<__gnu_cxx::__normal_iterator<cv::videostab::Pixel3*, std::vector<cv::videostab::Pixel3, std::allocator<cv::videostab::Pixel3> > >, int, cv::videostab::Pixel3>(__gnu_cxx::__normal_iterator<cv::videostab::Pixel3*, std::vector<cv::videostab::Pixel3, std::allocator<cv::videostab::Pixel3> > >, int, int, cv::videostab::Pixel3) [13]
+                0.00    0.00     874/195594      void std::make_heap<__gnu_cxx::__normal_iterator<cv::videostab::Pixel3*, std::vector<cv::videostab::Pixel3, std::allocator<cv::videostab::Pixel3> > > >(__gnu_cxx::__normal_iterator<cv::videostab::Pixel3*, std::vector<cv::videostab::Pixel3, std::allocator<cv::videostab::Pixel3> > >, __gnu_cxx::__normal_iterator<cv::videostab::Pixel3*, std::vector<cv::videostab::Pixel3, std::allocator<cv::videostab::Pixel3> > >) [14]
+                0.00    0.00     874/195594      cv::videostab::LpMotionStabilizer::stabilize(int, std::vector<cv::Mat, std::allocator<cv::Mat> > const&, std::pair<int, int>, cv::Mat*) [17]
+                0.00    0.00    1125/195594      cv::videostab::GaussianMotionFilter::setParams(int, float) [15]
+                0.01    0.00    2254/195594      cv::videostab::MotionStabilizationPipeline::stabilize(int, std::vector<cv::Mat, std::allocator<cv::Mat> > const&, std::pair<int, int>, cv::Mat*) [8]
+                0.02    0.00    6118/195594      cv::videostab::MotionEstimatorL1::estimate(cv::_InputArray const&, cv::_InputArray const&, bool*) [2]
+[3]     62.1    0.41    0.00 3764561+11528109 main <cycle 1> [3]
+                                   2             cv::videostab::estimateOptimalTrimRatio(cv::Mat const&, cv::Size_<int>) <cycle 1> [51]
+                             11528109             main <cycle 1> [3]
+-----------------------------------------------
+                             3122847             cv::videostab::estimateGlobMotionLeastSquaresSimilarity(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [4]
+                               10488             cv::videostab::MotionInpaintBody cv::videostab::FastMarchingMethod::run<cv::videostab::MotionInpaintBody>(cv::Mat const&, cv::videostab::MotionInpaintBody) <cycle 1> [44]
+                              182669             cv::videostab::ToFileMotionWriter::ToFileMotionWriter(std::string const&, cv::Ptr<cv::videostab::ImageMotionEstimatorBase>) <cycle 1> [5]
+                              190559             cv::videostab::estimateGlobMotionLeastSquaresAffine(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [6]
+                             1271303             cv::videostab::ToFileMotionWriter::estimate(cv::Mat const&, cv::Mat const&, bool*) <cycle 1> [9]
+[4]     12.1    0.08    0.00 1655019+3122847 cv::videostab::estimateGlobMotionLeastSquaresSimilarity(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [4]
+                             1461345             cv::videostab::estimateGlobMotionLeastSquaresAffine(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [6]
+                              730667             cv::videostab::ToFileMotionWriter::estimate(cv::Mat const&, cv::Mat const&, bool*) <cycle 1> [9]
+                              711909             main <cycle 1> [3]
+                              529242             cv::videostab::estimateGlobMotionLeastSquaresTranslationAndScale(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [7]
+                              373207             cv::videostab::ToFileMotionWriter::ToFileMotionWriter(std::string const&, cv::Ptr<cv::videostab::ImageMotionEstimatorBase>) <cycle 1> [5]
+                                   5             cv::videostab::KeypointBasedMotionEstimatorGpu::estimate(cv::gpu::GpuMat const&, cv::gpu::GpuMat const&, bool*) <cycle 1> [65]
+                                   3             cv::videostab::ColorAverageInpaintBody cv::videostab::FastMarchingMethod::run<cv::videostab::ColorAverageInpaintBody>(cv::Mat const&, cv::videostab::ColorAverageInpaintBody) <cycle 1> [45]
+                                   2             cv::videostab::MotionInpaintBody::MotionInpaintBody(cv::videostab::MotionInpaintBody const&) <cycle 1> [53]
+                             3122847             cv::videostab::estimateGlobMotionLeastSquaresSimilarity(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [4]
+-----------------------------------------------
+                              846436             cv::videostab::ToFileMotionWriter::ToFileMotionWriter(std::string const&, cv::Ptr<cv::videostab::ImageMotionEstimatorBase>) <cycle 1> [5]
+                               13984             cv::videostab::MotionInpaintBody cv::videostab::FastMarchingMethod::run<cv::videostab::MotionInpaintBody>(cv::Mat const&, cv::videostab::MotionInpaintBody) <cycle 1> [44]
+                               27968             cv::videostab::ColorAverageInpaintBody cv::videostab::FastMarchingMethod::run<cv::videostab::ColorAverageInpaintBody>(cv::Mat const&, cv::videostab::ColorAverageInpaintBody) <cycle 1> [45]
+                              373207             cv::videostab::estimateGlobMotionLeastSquaresSimilarity(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [4]
+[5]      7.6    0.05    0.00  415159+846436  cv::videostab::ToFileMotionWriter::ToFileMotionWriter(std::string const&, cv::Ptr<cv::videostab::ImageMotionEstimatorBase>) <cycle 1> [5]
+                              223070             main <cycle 1> [3]
+                              223070             cv::videostab::estimateGlobMotionLeastSquaresTranslationAndScale(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [7]
+                              182669             cv::videostab::estimateGlobMotionLeastSquaresSimilarity(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [4]
+                              846436             cv::videostab::ToFileMotionWriter::ToFileMotionWriter(std::string const&, cv::Ptr<cv::videostab::ImageMotionEstimatorBase>) <cycle 1> [5]
+-----------------------------------------------
+                                7058             cv::videostab::estimateGlobMotionLeastSquaresAffine(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [6]
+                                   1             cv::videostab::estimateGlobMotionLeastSquaresTranslation(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [58]
+                                   1             cv::videostab::KeypointBasedMotionEstimatorGpu::estimate(cv::gpu::GpuMat const&, cv::gpu::GpuMat const&, bool*) <cycle 1> [65]
+                                   1             cv::videostab::ensureInclusionConstraint(cv::Mat const&, cv::Size_<int>, float) <cycle 1> [50]
+                                   2             cv::videostab::ColorAverageInpaintBody cv::videostab::FastMarchingMethod::run<cv::videostab::ColorAverageInpaintBody>(cv::Mat const&, cv::videostab::ColorAverageInpaintBody) <cycle 1> [45]
+                                   3             cv::videostab::TwoPassStabilizer::estimateStabilizationMotion() <cycle 1> [62]
+                                  12             cv::videostab::KeypointBasedMotionEstimator::KeypointBasedMotionEstimator(cv::Ptr<cv::videostab::MotionEstimatorBase>) <cycle 1> [72]
+                                1750             cv::videostab::ToFileMotionWriter::estimate(cv::Mat const&, cv::Mat const&, bool*) <cycle 1> [9]
+                                2651             cv::videostab::estimateGlobMotionLeastSquaresTranslationAndScale(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [7]
+                               17480             cv::videostab::MotionInpaintBody cv::videostab::FastMarchingMethod::run<cv::videostab::MotionInpaintBody>(cv::Mat const&, cv::videostab::MotionInpaintBody) <cycle 1> [44]
+                             1408108             cv::videostab::estimateGlobMotionLeastSquaresRigid(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [54]
+                             1461345             cv::videostab::estimateGlobMotionLeastSquaresSimilarity(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [4]
+                0.00    0.00       1/195594      cv::videostab::SparsePyrLkOptFlowEstimatorGpu::run(cv::_InputArray const&, cv::_InputArray const&, cv::_InputArray const&, cv::_OutputArray const&, cv::_OutputArray const&, cv::_OutputArray const&) [20]
+                0.00    0.00       1/195594      cv::videostab::SparsePyrLkOptFlowEstimatorGpu::run(cv::gpu::GpuMat const&, cv::gpu::GpuMat const&, cv::gpu::GpuMat const&, cv::gpu::GpuMat&, cv::gpu::GpuMat&) [24]
+                0.00    0.00       3/195594      cv::videostab::DensePyrLkOptFlowEstimatorGpu::DensePyrLkOptFlowEstimatorGpu() [21]
+                0.00    0.00       3/195594      cv::videostab::StabilizerBase::reset() [19]
+                0.01    0.00    1748/195594      cv::videostab::MotionEstimatorL1::estimate(cv::_InputArray const&, cv::_InputArray const&, bool*) [2]
+[6]      6.1    0.04    0.00 2893110+7058    cv::videostab::estimateGlobMotionLeastSquaresAffine(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [6]
+                              352742             cv::videostab::ToFileMotionWriter::estimate(cv::Mat const&, cv::Mat const&, bool*) <cycle 1> [9]
+                              190559             cv::videostab::estimateGlobMotionLeastSquaresSimilarity(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [4]
+                                3496             main <cycle 1> [3]
+                                7058             cv::videostab::estimateGlobMotionLeastSquaresAffine(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [6]
+-----------------------------------------------
+                                3524             cv::videostab::estimateGlobMotionLeastSquaresTranslationAndScale(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [7]
+                                   2             cv::videostab::getMotion(int, int, std::vector<cv::Mat, std::allocator<cv::Mat> > const&) <cycle 1> [43]
+                                   2             cv::videostab::MotionInpaintBody::MotionInpaintBody(cv::videostab::MotionInpaintBody const&) <cycle 1> [53]
+                                   3             cv::videostab::KeypointBasedMotionEstimatorGpu::estimate(cv::gpu::GpuMat const&, cv::gpu::GpuMat const&, bool*) <cycle 1> [65]
+                                   4             cv::videostab::ColorAverageInpaintBody cv::videostab::FastMarchingMethod::run<cv::videostab::ColorAverageInpaintBody>(cv::Mat const&, cv::videostab::ColorAverageInpaintBody) <cycle 1> [45]
+                                  10             std::basic_string<char, std::char_traits<char>, std::allocator<char> > std::operator+<char, std::char_traits<char>, std::allocator<char> >(char const*, std::basic_string<char, std::char_traits<char>, std::allocator<char> > const&) <cycle 1> [55]
+                                  10             cv::videostab::KeypointBasedMotionEstimator::KeypointBasedMotionEstimator(cv::Ptr<cv::videostab::MotionEstimatorBase>) <cycle 1> [72]
+                                 874             cv::videostab::TwoPassStabilizer::postProcessFrame(cv::Mat const&) <cycle 1> [57]
+                                 875             cv::videostab::GaussianMotionFilter::stabilize(int, std::vector<cv::Mat, std::allocator<cv::Mat> > const&, std::pair<int, int>) <cycle 1> [10]
+                                 877             cv::videostab::estimateGlobMotionLeastSquaresTranslation(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [58]
+                                1124             cv::videostab::MotionFilterBase::stabilize(int, std::vector<cv::Mat, std::allocator<cv::Mat> > const&, std::pair<int, int>, cv::Mat*) <cycle 1> [11]
+                              223070             cv::videostab::ToFileMotionWriter::ToFileMotionWriter(std::string const&, cv::Ptr<cv::videostab::ImageMotionEstimatorBase>) <cycle 1> [5]
+                              351372             cv::videostab::estimateGlobMotionLeastSquaresRigid(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [54]
+                              383249             cv::videostab::MotionEstimatorRansacL2::MotionEstimatorRansacL2(cv::videostab::MotionModel) <cycle 1> [12]
+                              529242             cv::videostab::estimateGlobMotionLeastSquaresSimilarity(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [4]
+                0.00    0.00       2/195594      cv::videostab::SparsePyrLkOptFlowEstimatorGpu::run(cv::gpu::GpuMat const&, cv::gpu::GpuMat const&, cv::gpu::GpuMat const&, cv::gpu::GpuMat&, cv::gpu::GpuMat&) [24]
+                0.00    0.00       2/195594      cv::videostab::DensePyrLkOptFlowEstimatorGpu::DensePyrLkOptFlowEstimatorGpu() [21]
+                0.00    0.00       8/195594      cv::videostab::StabilizerBase::reset() [19]
+                0.01    0.00    1748/195594      void std::__adjust_heap<__gnu_cxx::__normal_iterator<cv::videostab::Pixel3*, std::vector<cv::videostab::Pixel3, std::allocator<cv::videostab::Pixel3> > >, int, cv::videostab::Pixel3>(__gnu_cxx::__normal_iterator<cv::videostab::Pixel3*, std::vector<cv::videostab::Pixel3, std::allocator<cv::videostab::Pixel3> > >, int, int, cv::videostab::Pixel3) [13]
+                0.59    0.00  175036/195594      cv::videostab::MotionEstimatorL1::estimate(cv::_InputArray const&, cv::_InputArray const&, bool*) [2]
+[7]      6.1    0.04    0.00 1667510+3524    cv::videostab::estimateGlobMotionLeastSquaresTranslationAndScale(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [7]
+                             2304738             main <cycle 1> [3]
+                                2651             cv::videostab::estimateGlobMotionLeastSquaresAffine(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [6]
+                                   2             cv::videostab::getMotion(int, int, std::vector<cv::Mat, std::allocator<cv::Mat> > const&) <cycle 1> [43]
+                                3524             cv::videostab::estimateGlobMotionLeastSquaresTranslationAndScale(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [7]
+-----------------------------------------------
+                                                 <spontaneous>
+[8]      2.3    0.00    0.02                 cv::videostab::MotionStabilizationPipeline::stabilize(int, std::vector<cv::Mat, std::allocator<cv::Mat> > const&, std::pair<int, int>, cv::Mat*) [8]
+                0.01    0.00    2254/195594      main <cycle 1> [3]
+                0.00    0.00    1125/195594      cv::videostab::GaussianMotionFilter::stabilize(int, std::vector<cv::Mat, std::allocator<cv::Mat> > const&, std::pair<int, int>) <cycle 1> [10]
+                0.00    0.00    1125/195594      cv::videostab::ensureInclusionConstraint(cv::Mat const&, cv::Size_<int>, float) <cycle 1> [50]
+                0.00    0.00       2/3           cv::videostab::StabilizerBase::reset() [19]
+                0.00    0.00      27/91          cv::videostab::StabilizerBase::stabilizeFrame() [23]
+-----------------------------------------------
+                                   2             cv::videostab::ToFileMotionWriter::estimate(cv::Mat const&, cv::Mat const&, bool*) <cycle 1> [9]
+                                   3             cv::videostab::ensureInclusionConstraint(cv::Mat const&, cv::Size_<int>, float) <cycle 1> [50]
+                              352742             cv::videostab::estimateGlobMotionLeastSquaresAffine(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [6]
+                              730667             cv::videostab::estimateGlobMotionLeastSquaresSimilarity(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [4]
+[9]      1.5    0.01    0.00 1083412+2       cv::videostab::ToFileMotionWriter::estimate(cv::Mat const&, cv::Mat const&, bool*) <cycle 1> [9]
+                             1271303             cv::videostab::estimateGlobMotionLeastSquaresSimilarity(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [4]
+                                1750             cv::videostab::estimateGlobMotionLeastSquaresAffine(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [6]
+                                1748             main <cycle 1> [3]
+                                   2             cv::videostab::ToFileMotionWriter::estimate(cv::Mat const&, cv::Mat const&, bool*) <cycle 1> [9]
+-----------------------------------------------
+                                 252             cv::videostab::GaussianMotionFilter::stabilize(int, std::vector<cv::Mat, std::allocator<cv::Mat> > const&, std::pair<int, int>) <cycle 1> [10]
+                                 874             std::vector<cv::Mat, std::allocator<cv::Mat> >::vector(unsigned int, cv::Mat const&, std::allocator<cv::Mat> const&) <cycle 1> [59]
+                                1748             cv::videostab::ColorAverageInpaintBody cv::videostab::FastMarchingMethod::run<cv::videostab::ColorAverageInpaintBody>(cv::Mat const&, cv::videostab::ColorAverageInpaintBody) <cycle 1> [45]
+                0.00    0.00       1/195594      cv::videostab::SparsePyrLkOptFlowEstimator::run(cv::_InputArray const&, cv::_InputArray const&, cv::_InputArray const&, cv::_OutputArray const&, cv::_OutputArray const&, cv::_OutputArray const&) [31]
+                0.00    0.00    1125/195594      cv::videostab::MotionStabilizationPipeline::stabilize(int, std::vector<cv::Mat, std::allocator<cv::Mat> > const&, std::pair<int, int>, cv::Mat*) [8]
+[10]     1.5    0.01    0.00    3748+252     cv::videostab::GaussianMotionFilter::stabilize(int, std::vector<cv::Mat, std::allocator<cv::Mat> > const&, std::pair<int, int>) <cycle 1> [10]
+                                2248             cv::videostab::ConsistentMosaicInpainter::inpaint(int, cv::Mat&, cv::Mat&) <cycle 1> [47]
+                                1760             cv::videostab::ensureInclusionConstraint(cv::Mat const&, cv::Size_<int>, float) <cycle 1> [50]
+                                1124             cv::videostab::MotionFilterBase::stabilize(int, std::vector<cv::Mat, std::allocator<cv::Mat> > const&, std::pair<int, int>, cv::Mat*) <cycle 1> [11]
+                                1015             main <cycle 1> [3]
+                                 878             cv::videostab::ColorAverageInpaintBody cv::videostab::FastMarchingMethod::run<cv::videostab::ColorAverageInpaintBody>(cv::Mat const&, cv::videostab::ColorAverageInpaintBody) <cycle 1> [45]
+                                 875             cv::videostab::estimateGlobMotionLeastSquaresTranslationAndScale(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [7]
+                                 874             cv::videostab::estimateGlobMotionLeastSquaresTranslation(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [58]
+                                 874             cv::videostab::TwoPassStabilizer::postProcessFrame(cv::Mat const&) <cycle 1> [57]
+                                 252             cv::videostab::GaussianMotionFilter::stabilize(int, std::vector<cv::Mat, std::allocator<cv::Mat> > const&, std::pair<int, int>) <cycle 1> [10]
+-----------------------------------------------
+                                   1             cv::videostab::ColorAverageInpaintBody cv::videostab::FastMarchingMethod::run<cv::videostab::ColorAverageInpaintBody>(cv::Mat const&, cv::videostab::ColorAverageInpaintBody) <cycle 1> [45]
+                                1124             cv::videostab::GaussianMotionFilter::stabilize(int, std::vector<cv::Mat, std::allocator<cv::Mat> > const&, std::pair<int, int>) <cycle 1> [10]
+[11]     1.5    0.01    0.00    1125         cv::videostab::MotionFilterBase::stabilize(int, std::vector<cv::Mat, std::allocator<cv::Mat> > const&, std::pair<int, int>, cv::Mat*) <cycle 1> [11]
+                0.00    0.00    1124/1125        cv::gpu::GoodFeaturesToTrackDetector_GPU::~GoodFeaturesToTrackDetector_GPU() [52]
+                                2248             cv::videostab::ConsistentMosaicInpainter::inpaint(int, cv::Mat&, cv::Mat&) <cycle 1> [47]
+                                1124             cv::videostab::estimateGlobMotionLeastSquaresTranslationAndScale(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [7]
+                                   1             cv::videostab::ensureInclusionConstraint(cv::Mat const&, cv::Size_<int>, float) <cycle 1> [50]
+                                   1             cv::videostab::MotionInpainter::inpaint(int, cv::Mat&, cv::Mat&) <cycle 1> [48]
+-----------------------------------------------
+                                 874             cv::videostab::TwoPassStabilizer::postProcessFrame(cv::Mat const&) <cycle 1> [57]
+[12]     1.5    0.01    0.00     874         cv::videostab::MotionEstimatorRansacL2::MotionEstimatorRansacL2(cv::videostab::MotionModel) <cycle 1> [12]
+                              383249             cv::videostab::getMotion(int, int, std::vector<cv::Mat, std::allocator<cv::Mat> > const&) <cycle 1> [43]
+                              383249             cv::videostab::estimateGlobMotionLeastSquaresTranslationAndScale(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [7]
+                              382375             main <cycle 1> [3]
+-----------------------------------------------
+                                                 <spontaneous>
+[13]     1.3    0.00    0.01                 void std::__adjust_heap<__gnu_cxx::__normal_iterator<cv::videostab::Pixel3*, std::vector<cv::videostab::Pixel3, std::allocator<cv::videostab::Pixel3> > >, int, cv::videostab::Pixel3>(__gnu_cxx::__normal_iterator<cv::videostab::Pixel3*, std::vector<cv::videostab::Pixel3, std::allocator<cv::videostab::Pixel3> > >, int, int, cv::videostab::Pixel3) [13]
+                0.01    0.00    1748/195594      cv::videostab::estimateGlobMotionLeastSquaresTranslationAndScale(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [7]
+                0.00    0.00     874/195594      main <cycle 1> [3]
+-----------------------------------------------
+                                                 <spontaneous>
+[14]     1.3    0.00    0.01                 void std::make_heap<__gnu_cxx::__normal_iterator<cv::videostab::Pixel3*, std::vector<cv::videostab::Pixel3, std::allocator<cv::videostab::Pixel3> > > >(__gnu_cxx::__normal_iterator<cv::videostab::Pixel3*, std::vector<cv::videostab::Pixel3, std::allocator<cv::videostab::Pixel3> > >, __gnu_cxx::__normal_iterator<cv::videostab::Pixel3*, std::vector<cv::videostab::Pixel3, std::allocator<cv::videostab::Pixel3> > >) [14]
+                0.00    0.00     874/874         cv::videostab::ColorInpainter::inpaint(int, cv::Mat&, cv::Mat&) [16]
+                0.00    0.00     874/195594      main <cycle 1> [3]
+                0.00    0.00     874/195594      cv::videostab::ConsistentMosaicInpainter::inpaint(int, cv::Mat&, cv::Mat&) <cycle 1> [47]
+-----------------------------------------------
+                                                 <spontaneous>
+[15]     0.6    0.00    0.00                 cv::videostab::GaussianMotionFilter::setParams(int, float) [15]
+                0.00    0.00    1125/195594      main <cycle 1> [3]
+                0.00    0.00       1/3           cv::videostab::OnePassStabilizer::estimateMotion() [32]
+-----------------------------------------------
+                0.00    0.00     874/874         void std::make_heap<__gnu_cxx::__normal_iterator<cv::videostab::Pixel3*, std::vector<cv::videostab::Pixel3, std::allocator<cv::videostab::Pixel3> > > >(__gnu_cxx::__normal_iterator<cv::videostab::Pixel3*, std::vector<cv::videostab::Pixel3, std::allocator<cv::videostab::Pixel3> > >, __gnu_cxx::__normal_iterator<cv::videostab::Pixel3*, std::vector<cv::videostab::Pixel3, std::allocator<cv::videostab::Pixel3> > >) [14]
+[16]     0.4    0.00    0.00     874         cv::videostab::ColorInpainter::inpaint(int, cv::Mat&, cv::Mat&) [16]
+                0.00    0.00     874/195594      cv::videostab::calcFlowMask(cv::Mat const&, cv::Mat const&, cv::Mat const&, float, cv::Mat const&, cv::Mat const&, cv::Mat&) <cycle 1> [46]
+-----------------------------------------------
+                                                 <spontaneous>
+[17]     0.4    0.00    0.00                 cv::videostab::LpMotionStabilizer::stabilize(int, std::vector<cv::Mat, std::allocator<cv::Mat> > const&, std::pair<int, int>, cv::Mat*) [17]
+                0.00    0.00     874/195594      main <cycle 1> [3]
+-----------------------------------------------
+                                                 <spontaneous>
+[18]     0.4    0.00    0.00                 void std::_Destroy_aux<false>::__destroy<cv::Mat_<float>*>(cv::Mat_<float>*, cv::Mat_<float>*) [18]
+                0.00    0.00     874/195594      cv::videostab::ConsistentMosaicInpainter::inpaint(int, cv::Mat&, cv::Mat&) <cycle 1> [47]
+-----------------------------------------------
+                0.00    0.00       1/3           cv::videostab::SparsePyrLkOptFlowEstimatorGpu::run(cv::_InputArray const&, cv::_InputArray const&, cv::_InputArray const&, cv::_OutputArray const&, cv::_OutputArray const&, cv::_OutputArray const&) [20]
+                0.00    0.00       2/3           cv::videostab::MotionStabilizationPipeline::stabilize(int, std::vector<cv::Mat, std::allocator<cv::Mat> > const&, std::pair<int, int>, cv::Mat*) [8]
+[19]     0.0    0.00    0.00       3         cv::videostab::StabilizerBase::reset() [19]
+                0.00    0.00       8/195594      cv::videostab::estimateGlobMotionLeastSquaresTranslationAndScale(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [7]
+                0.00    0.00       3/195594      cv::videostab::estimateGlobMotionLeastSquaresAffine(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [6]
+                0.00    0.00       2/195594      cv::videostab::TwoPassStabilizer::estimateStabilizationMotion() <cycle 1> [62]
+                0.00    0.00       2/195594      cv::videostab::ensureInclusionConstraint(cv::Mat const&, cv::Size_<int>, float) <cycle 1> [50]
+                0.00    0.00      18/91          cv::videostab::StabilizerBase::stabilizeFrame() [23]
+                0.00    0.00       1/195594      std::basic_string<char, std::char_traits<char>, std::allocator<char> > std::operator+<char, std::char_traits<char>, std::allocator<char> >(char const*, std::basic_string<char, std::char_traits<char>, std::allocator<char> > const&) <cycle 1> [55]
+                0.00    0.00       1/195594      cv::videostab::estimateGlobMotionLeastSquaresRigid(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [54]
+                0.00    0.00       1/1           std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >::_M_fill_assign(unsigned int, std::vector<int, std::allocator<int> > const&) [36]
+                0.00    0.00       1/3           cv::videostab::OnePassStabilizer::estimateMotion() [32]
+-----------------------------------------------
+                                                 <spontaneous>
+[20]     0.0    0.00    0.00                 cv::videostab::SparsePyrLkOptFlowEstimatorGpu::run(cv::_InputArray const&, cv::_InputArray const&, cv::_InputArray const&, cv::_OutputArray const&, cv::_OutputArray const&, cv::_OutputArray const&) [20]
+                0.00    0.00       1/3           cv::videostab::StabilizerBase::reset() [19]
+                0.00    0.00       3/195594      cv::videostab::ensureInclusionConstraint(cv::Mat const&, cv::Size_<int>, float) <cycle 1> [50]
+                0.00    0.00       2/195594      main <cycle 1> [3]
+                0.00    0.00       1/195594      cv::videostab::TwoPassStabilizer::estimateStabilizationMotion() <cycle 1> [62]
+                0.00    0.00       1/195594      cv::videostab::estimateGlobMotionLeastSquaresAffine(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [6]
+                0.00    0.00       4/91          cv::videostab::StabilizerBase::stabilizeFrame() [23]
+-----------------------------------------------
+                                                 <spontaneous>
+[21]     0.0    0.00    0.00                 cv::videostab::DensePyrLkOptFlowEstimatorGpu::DensePyrLkOptFlowEstimatorGpu() [21]
+                0.00    0.00       3/195594      cv::videostab::estimateGlobMotionLeastSquaresAffine(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [6]
+                0.00    0.00       2/195594      cv::videostab::TwoPassStabilizer::estimateStabilizationMotion() <cycle 1> [62]
+                0.00    0.00       2/195594      cv::videostab::ensureInclusionConstraint(cv::Mat const&, cv::Size_<int>, float) <cycle 1> [50]
+                0.00    0.00       2/195594      cv::videostab::estimateGlobMotionLeastSquaresTranslationAndScale(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [7]
+                0.00    0.00       1/195594      cv::videostab::estimateGlobMotionLeastSquaresTranslation(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [58]
+                0.00    0.00       7/91          cv::videostab::StabilizerBase::stabilizeFrame() [23]
+-----------------------------------------------
+                                   2             cv::videostab::TwoPassStabilizer::setUp(cv::Mat const&) [22]
+[22]     0.0    0.00    0.00       0+2       cv::videostab::TwoPassStabilizer::setUp(cv::Mat const&) [22]
+                0.00    0.00       3/195594      main <cycle 1> [3]
+                0.00    0.00       1/1           cv::videostab::StabilizerBase::postProcessFrame(cv::Mat const&) [34]
+                0.00    0.00       1/195594      cv::videostab::ensureInclusionConstraint(cv::Mat const&, cv::Size_<int>, float) <cycle 1> [50]
+                0.00    0.00       1/195594      cv::videostab::MotionInpaintBody cv::videostab::FastMarchingMethod::run<cv::videostab::MotionInpaintBody>(cv::Mat const&, cv::videostab::MotionInpaintBody) <cycle 1> [44]
+                0.00    0.00       1/195594      cv::videostab::MotionInpaintBody::MotionInpaintBody(cv::videostab::MotionInpaintBody const&) <cycle 1> [53]
+                0.00    0.00       1/195594      cv::videostab::ConsistentMosaicInpainter::inpaint(int, cv::Mat&, cv::Mat&) <cycle 1> [47]
+                0.00    0.00       1/195594      cv::videostab::MotionInpainter::inpaint(int, cv::Mat&, cv::Mat&) <cycle 1> [48]
+                0.00    0.00       1/1125        cv::gpu::GoodFeaturesToTrackDetector_GPU::~GoodFeaturesToTrackDetector_GPU() [52]
+                0.00    0.00       1/2           cv::videostab::FromFileMotionReader::FromFileMotionReader(std::string const&) [70]
+                                   2             cv::videostab::TwoPassStabilizer::setUp(cv::Mat const&) [22]
+-----------------------------------------------
+                                  19             cv::videostab::StabilizerBase::stabilizeFrame() [23]
+                0.00    0.00       1/91          cv::videostab::SparsePyrLkOptFlowEstimator::run(cv::_InputArray const&, cv::_InputArray const&, cv::_InputArray const&, cv::_OutputArray const&, cv::_OutputArray const&, cv::_OutputArray const&) [31]
+                0.00    0.00       1/91          cv::videostab::DensePyrLkOptFlowEstimatorGpu::run(cv::_InputArray const&, cv::_InputArray const&, cv::_OutputArray const&, cv::_OutputArray const&, cv::_OutputArray const&) [26]
+                0.00    0.00       1/91          cv::videostab::OnePassStabilizer::postProcessFrame(cv::Mat const&) [38]
+                0.00    0.00       2/91          cv::videostab::DensePyrLkOptFlowEstimatorGpu::~DensePyrLkOptFlowEstimatorGpu() [37]
+                0.00    0.00       3/91          cv::videostab::DensePyrLkOptFlowEstimatorGpu::~DensePyrLkOptFlowEstimatorGpu() [30]
+                0.00    0.00       3/91          cv::videostab::TranslationBasedLocalOutlierRejector::process(cv::Size_<int>, cv::_InputArray const&, cv::_InputArray const&, cv::_OutputArray const&) [27]
+                0.00    0.00       4/91          cv::videostab::SparsePyrLkOptFlowEstimatorGpu::run(cv::_InputArray const&, cv::_InputArray const&, cv::_InputArray const&, cv::_OutputArray const&, cv::_OutputArray const&, cv::_OutputArray const&) [20]
+                0.00    0.00       6/91          std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >::_M_fill_assign(unsigned int, std::vector<int, std::allocator<int> > const&) [36]
+                0.00    0.00       7/91          cv::videostab::DensePyrLkOptFlowEstimatorGpu::DensePyrLkOptFlowEstimatorGpu() [21]
+                0.00    0.00       7/91          cv::videostab::SparsePyrLkOptFlowEstimatorGpu::SparsePyrLkOptFlowEstimatorGpu() [25]
+                0.00    0.00      11/91          cv::videostab::NullOutlierRejector::process(cv::Size_<int>, cv::_InputArray const&, cv::_InputArray const&, cv::_OutputArray const&) [29]
+                0.00    0.00      18/91          cv::videostab::StabilizerBase::reset() [19]
+                0.00    0.00      27/91          cv::videostab::MotionStabilizationPipeline::stabilize(int, std::vector<cv::Mat, std::allocator<cv::Mat> > const&, std::pair<int, int>, cv::Mat*) [8]
+[23]     0.0    0.00    0.00      91+19      cv::videostab::StabilizerBase::stabilizeFrame() [23]
+                0.00    0.00       7/195594      cv::videostab::StabilizerBase::doOneIteration() <cycle 1> [61]
+                0.00    0.00       1/2           std::vector<cv::Point_<float>, std::allocator<cv::Point_<float> > >::~vector() [74]
+                                  19             cv::videostab::StabilizerBase::stabilizeFrame() [23]
+-----------------------------------------------
+                                                 <spontaneous>
+[24]     0.0    0.00    0.00                 cv::videostab::SparsePyrLkOptFlowEstimatorGpu::run(cv::gpu::GpuMat const&, cv::gpu::GpuMat const&, cv::gpu::GpuMat const&, cv::gpu::GpuMat&, cv::gpu::GpuMat&) [24]
+                0.00    0.00       2/195594      cv::videostab::estimateGlobMotionLeastSquaresTranslationAndScale(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [7]
+                0.00    0.00       1/195594      cv::videostab::TwoPassStabilizer::estimateStabilizationMotion() <cycle 1> [62]
+                0.00    0.00       1/195594      cv::videostab::estimateGlobMotionLeastSquaresAffine(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [6]
+-----------------------------------------------
+                                                 <spontaneous>
+[25]     0.0    0.00    0.00                 cv::videostab::SparsePyrLkOptFlowEstimatorGpu::SparsePyrLkOptFlowEstimatorGpu() [25]
+                0.00    0.00       3/195594      cv::videostab::ensureInclusionConstraint(cv::Mat const&, cv::Size_<int>, float) <cycle 1> [50]
+                0.00    0.00       7/91          cv::videostab::StabilizerBase::stabilizeFrame() [23]
+-----------------------------------------------
+                                                 <spontaneous>
+[26]     0.0    0.00    0.00                 cv::videostab::DensePyrLkOptFlowEstimatorGpu::run(cv::_InputArray const&, cv::_InputArray const&, cv::_OutputArray const&, cv::_OutputArray const&, cv::_OutputArray const&) [26]
+                0.00    0.00       3/195594      cv::videostab::ensureInclusionConstraint(cv::Mat const&, cv::Size_<int>, float) <cycle 1> [50]
+                0.00    0.00       1/3           cv::videostab::OnePassStabilizer::estimateMotion() [32]
+                0.00    0.00       1/91          cv::videostab::StabilizerBase::stabilizeFrame() [23]
+-----------------------------------------------
+                                                 <spontaneous>
+[27]     0.0    0.00    0.00                 cv::videostab::TranslationBasedLocalOutlierRejector::process(cv::Size_<int>, cv::_InputArray const&, cv::_InputArray const&, cv::_OutputArray const&) [27]
+                0.00    0.00       1/195594      cv::videostab::estimateOptimalTrimRatio(cv::Mat const&, cv::Size_<int>) <cycle 1> [51]
+                0.00    0.00       1/195594      cv::videostab::calcFlowMask(cv::Mat const&, cv::Mat const&, cv::Mat const&, float, cv::Mat const&, cv::Mat const&, cv::Mat&) <cycle 1> [46]
+                0.00    0.00       1/195594      main <cycle 1> [3]
+                0.00    0.00       3/91          cv::videostab::StabilizerBase::stabilizeFrame() [23]
+-----------------------------------------------
+                                                 <spontaneous>
+[28]     0.0    0.00    0.00                 cv::videostab::SparsePyrLkOptFlowEstimatorGpu::run(cv::gpu::GpuMat const&, cv::gpu::GpuMat const&, cv::gpu::GpuMat const&, cv::gpu::GpuMat&, cv::gpu::GpuMat&, cv::gpu::GpuMat&) [28]
+                0.00    0.00       2/195594      main <cycle 1> [3]
+                0.00    0.00       1/195594      cv::videostab::ensureInclusionConstraint(cv::Mat const&, cv::Size_<int>, float) <cycle 1> [50]
+-----------------------------------------------
+                                                 <spontaneous>
+[29]     0.0    0.00    0.00                 cv::videostab::NullOutlierRejector::process(cv::Size_<int>, cv::_InputArray const&, cv::_InputArray const&, cv::_OutputArray const&) [29]
+                0.00    0.00       1/195594      cv::videostab::TwoPassStabilizer::postProcessFrame(cv::Mat const&) <cycle 1> [57]
+                0.00    0.00      11/91          cv::videostab::StabilizerBase::stabilizeFrame() [23]
+-----------------------------------------------
+                                                 <spontaneous>
+[30]     0.0    0.00    0.00                 cv::videostab::DensePyrLkOptFlowEstimatorGpu::~DensePyrLkOptFlowEstimatorGpu() [30]
+                0.00    0.00       1/195594      cv::videostab::ensureInclusionConstraint(cv::Mat const&, cv::Size_<int>, float) <cycle 1> [50]
+                0.00    0.00       3/91          cv::videostab::StabilizerBase::stabilizeFrame() [23]
+-----------------------------------------------
+                                                 <spontaneous>
+[31]     0.0    0.00    0.00                 cv::videostab::SparsePyrLkOptFlowEstimator::run(cv::_InputArray const&, cv::_InputArray const&, cv::_InputArray const&, cv::_OutputArray const&, cv::_OutputArray const&, cv::_OutputArray const&) [31]
+                0.00    0.00       1/195594      cv::videostab::GaussianMotionFilter::stabilize(int, std::vector<cv::Mat, std::allocator<cv::Mat> > const&, std::pair<int, int>) <cycle 1> [10]
+                0.00    0.00       1/91          cv::videostab::StabilizerBase::stabilizeFrame() [23]
+-----------------------------------------------
+                0.00    0.00       1/3           cv::videostab::GaussianMotionFilter::setParams(int, float) [15]
+                0.00    0.00       1/3           cv::videostab::DensePyrLkOptFlowEstimatorGpu::run(cv::_InputArray const&, cv::_InputArray const&, cv::_OutputArray const&, cv::_OutputArray const&, cv::_OutputArray const&) [26]
+                0.00    0.00       1/3           cv::videostab::StabilizerBase::reset() [19]
+[32]     0.0    0.00    0.00       3         cv::videostab::OnePassStabilizer::estimateMotion() [32]
+                0.00    0.00       1/195594      cv::videostab::ensureInclusionConstraint(cv::Mat const&, cv::Size_<int>, float) <cycle 1> [50]
+-----------------------------------------------
+                0.00    0.00       2/2           cv::videostab::InpainterBase::radius() const [35]
+[33]     0.0    0.00    0.00       2         cv::videostab::InpainterBase::setStabilizationMotions(std::vector<cv::Mat, std::allocator<cv::Mat> > const&) [33]
+                0.00    0.00       1/195594      cv::videostab::ColorInpainter::~ColorInpainter() <cycle 1> [66]
+-----------------------------------------------
+                0.00    0.00       1/1           cv::videostab::TwoPassStabilizer::setUp(cv::Mat const&) [22]
+[34]     0.0    0.00    0.00       1         cv::videostab::StabilizerBase::postProcessFrame(cv::Mat const&) [34]
+                0.00    0.00       1/195594      cv::videostab::ensureInclusionConstraint(cv::Mat const&, cv::Size_<int>, float) <cycle 1> [50]
+                0.00    0.00       1/1           cv::videostab::OnePassStabilizer::estimateStabilizationMotion() [79]
+-----------------------------------------------
+                                                 <spontaneous>
+[35]     0.0    0.00    0.00                 cv::videostab::InpainterBase::radius() const [35]
+                0.00    0.00       2/2           cv::videostab::InpainterBase::setStabilizationMotions(std::vector<cv::Mat, std::allocator<cv::Mat> > const&) [33]
+-----------------------------------------------
+                0.00    0.00       1/1           cv::videostab::StabilizerBase::reset() [19]
+[36]     0.0    0.00    0.00       1         std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >::_M_fill_assign(unsigned int, std::vector<int, std::allocator<int> > const&) [36]
+                0.00    0.00       6/91          cv::videostab::StabilizerBase::stabilizeFrame() [23]
+-----------------------------------------------
+                                                 <spontaneous>
+[37]     0.0    0.00    0.00                 cv::videostab::DensePyrLkOptFlowEstimatorGpu::~DensePyrLkOptFlowEstimatorGpu() [37]
+                0.00    0.00       2/91          cv::videostab::StabilizerBase::stabilizeFrame() [23]
+-----------------------------------------------
+                                                 <spontaneous>
+[38]     0.0    0.00    0.00                 cv::videostab::OnePassStabilizer::postProcessFrame(cv::Mat const&) [38]
+                0.00    0.00       1/91          cv::videostab::StabilizerBase::stabilizeFrame() [23]
+-----------------------------------------------
+                                   4             cv::videostab::getMotion(int, int, std::vector<cv::Mat, std::allocator<cv::Mat> > const&) <cycle 1> [43]
+                                   2             cv::videostab::estimateGlobMotionLeastSquaresTranslationAndScale(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [7]
+                                   2             cv::videostab::MotionInpaintBody::MotionInpaintBody(cv::videostab::MotionInpaintBody const&) <cycle 1> [53]
+                                 874             cv::videostab::TwoPassStabilizer::postProcessFrame(cv::Mat const&) <cycle 1> [57]
+                              383249             cv::videostab::MotionEstimatorRansacL2::MotionEstimatorRansacL2(cv::videostab::MotionModel) <cycle 1> [12]
+[43]     0.0    0.00    0.00  384127+4       cv::videostab::getMotion(int, int, std::vector<cv::Mat, std::allocator<cv::Mat> > const&) <cycle 1> [43]
+                               55335             main <cycle 1> [3]
+                                   2             cv::videostab::estimateGlobMotionLeastSquaresTranslationAndScale(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [7]
+                                   4             cv::videostab::getMotion(int, int, std::vector<cv::Mat, std::allocator<cv::Mat> > const&) <cycle 1> [43]
+-----------------------------------------------
+                               48945             cv::videostab::MotionInpaintBody cv::videostab::FastMarchingMethod::run<cv::videostab::MotionInpaintBody>(cv::Mat const&, cv::videostab::MotionInpaintBody) <cycle 1> [44]
+                               20976             cv::videostab::ColorAverageInpaintBody cv::videostab::FastMarchingMethod::run<cv::videostab::ColorAverageInpaintBody>(cv::Mat const&, cv::videostab::ColorAverageInpaintBody) <cycle 1> [45]
+                0.00    0.00       1/195594      cv::videostab::TwoPassStabilizer::setUp(cv::Mat const&) [22]
+[44]     0.0    0.00    0.00   20977+48945   cv::videostab::MotionInpaintBody cv::videostab::FastMarchingMethod::run<cv::videostab::MotionInpaintBody>(cv::Mat const&, cv::videostab::MotionInpaintBody) <cycle 1> [44]
+                               17480             cv::videostab::estimateGlobMotionLeastSquaresAffine(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [6]
+                               13984             cv::videostab::ColorAverageInpaintBody cv::videostab::FastMarchingMethod::run<cv::videostab::ColorAverageInpaintBody>(cv::Mat const&, cv::videostab::ColorAverageInpaintBody) <cycle 1> [45]
+                               13984             cv::videostab::ToFileMotionWriter::ToFileMotionWriter(std::string const&, cv::Ptr<cv::videostab::ImageMotionEstimatorBase>) <cycle 1> [5]
+                               10488             cv::videostab::estimateGlobMotionLeastSquaresSimilarity(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [4]
+                                3496             main <cycle 1> [3]
+                               48945             cv::videostab::MotionInpaintBody cv::videostab::FastMarchingMethod::run<cv::videostab::MotionInpaintBody>(cv::Mat const&, cv::videostab::MotionInpaintBody) <cycle 1> [44]
+-----------------------------------------------
+                               49821             cv::videostab::ColorAverageInpaintBody cv::videostab::FastMarchingMethod::run<cv::videostab::ColorAverageInpaintBody>(cv::Mat const&, cv::videostab::ColorAverageInpaintBody) <cycle 1> [45]
+                                   3             cv::videostab::estimateGlobMotionLeastSquaresSimilarity(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [4]
+                                 878             cv::videostab::GaussianMotionFilter::stabilize(int, std::vector<cv::Mat, std::allocator<cv::Mat> > const&, std::pair<int, int>) <cycle 1> [10]
+                               13984             cv::videostab::MotionInpaintBody cv::videostab::FastMarchingMethod::run<cv::videostab::MotionInpaintBody>(cv::Mat const&, cv::videostab::MotionInpaintBody) <cycle 1> [44]
+[45]     0.0    0.00    0.00   14865+49821   cv::videostab::ColorAverageInpaintBody cv::videostab::FastMarchingMethod::run<cv::videostab::ColorAverageInpaintBody>(cv::Mat const&, cv::videostab::ColorAverageInpaintBody) <cycle 1> [45]
+                               27968             cv::videostab::ToFileMotionWriter::ToFileMotionWriter(std::string const&, cv::Ptr<cv::videostab::ImageMotionEstimatorBase>) <cycle 1> [5]
+                               20976             cv::videostab::MotionInpaintBody cv::videostab::FastMarchingMethod::run<cv::videostab::MotionInpaintBody>(cv::Mat const&, cv::videostab::MotionInpaintBody) <cycle 1> [44]
+                                6136             main <cycle 1> [3]
+                                3535             cv::videostab::ensureInclusionConstraint(cv::Mat const&, cv::Size_<int>, float) <cycle 1> [50]
+                                2622             cv::videostab::ConsistentMosaicInpainter::inpaint(int, cv::Mat&, cv::Mat&) <cycle 1> [47]
+                                1748             cv::videostab::GaussianMotionFilter::stabilize(int, std::vector<cv::Mat, std::allocator<cv::Mat> > const&, std::pair<int, int>) <cycle 1> [10]
+                                 874             std::vector<cv::Mat, std::allocator<cv::Mat> >::vector(unsigned int, cv::Mat const&, std::allocator<cv::Mat> const&) <cycle 1> [59]
+                                 874             cv::videostab::MotionInpainter::inpaint(int, cv::Mat&, cv::Mat&) <cycle 1> [48]
+                                   4             cv::videostab::estimateGlobMotionLeastSquaresTranslationAndScale(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [7]
+                                   2             cv::videostab::estimateGlobMotionLeastSquaresAffine(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [6]
+                                   1             std::basic_string<char, std::char_traits<char>, std::allocator<char> > std::operator+<char, std::char_traits<char>, std::allocator<char> >(char const*, std::basic_string<char, std::char_traits<char>, std::allocator<char> > const&) <cycle 1> [55]
+                                   1             cv::videostab::estimateGlobMotionLeastSquaresRigid(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [54]
+                                   1             cv::videostab::calcFlowMask(cv::Mat const&, cv::Mat const&, cv::Mat const&, float, cv::Mat const&, cv::Mat const&, cv::Mat&) <cycle 1> [46]
+                                   1             cv::videostab::MotionFilterBase::stabilize(int, std::vector<cv::Mat, std::allocator<cv::Mat> > const&, std::pair<int, int>, cv::Mat*) <cycle 1> [11]
+                               49821             cv::videostab::ColorAverageInpaintBody cv::videostab::FastMarchingMethod::run<cv::videostab::ColorAverageInpaintBody>(cv::Mat const&, cv::videostab::ColorAverageInpaintBody) <cycle 1> [45]
+-----------------------------------------------
+                                2647             cv::videostab::calcFlowMask(cv::Mat const&, cv::Mat const&, cv::Mat const&, float, cv::Mat const&, cv::Mat const&, cv::Mat&) <cycle 1> [46]
+                                   1             cv::videostab::ColorAverageInpaintBody cv::videostab::FastMarchingMethod::run<cv::videostab::ColorAverageInpaintBody>(cv::Mat const&, cv::videostab::ColorAverageInpaintBody) <cycle 1> [45]
+                                   1             cv::videostab::ensureInclusionConstraint(cv::Mat const&, cv::Size_<int>, float) <cycle 1> [50]
+                                   3             cv::videostab::MotionInpainter::inpaint(int, cv::Mat&, cv::Mat&) <cycle 1> [48]
+                                  25             cv::videostab::MotionInpainter::MotionInpainter() <cycle 1> [49]
+                               10528             cv::videostab::estimateOptimalTrimRatio(cv::Mat const&, cv::Size_<int>) <cycle 1> [51]
+                0.00    0.00       1/195594      cv::videostab::TranslationBasedLocalOutlierRejector::process(cv::Size_<int>, cv::_InputArray const&, cv::_InputArray const&, cv::_OutputArray const&) [27]
+                0.00    0.00     874/195594      cv::videostab::ColorInpainter::inpaint(int, cv::Mat&, cv::Mat&) [16]
+[46]     0.0    0.00    0.00   11433+2647    cv::videostab::calcFlowMask(cv::Mat const&, cv::Mat const&, cv::Mat const&, float, cv::Mat const&, cv::Mat const&, cv::Mat&) <cycle 1> [46]
+                                1772             cv::videostab::MotionInpainter::inpaint(int, cv::Mat&, cv::Mat&) <cycle 1> [48]
+                                   5             cv::videostab::MotionInpainter::MotionInpainter() <cycle 1> [49]
+                                2647             cv::videostab::calcFlowMask(cv::Mat const&, cv::Mat const&, cv::Mat const&, float, cv::Mat const&, cv::Mat const&, cv::Mat&) <cycle 1> [46]
+-----------------------------------------------
+                                  52             cv::videostab::ConsistentMosaicInpainter::inpaint(int, cv::Mat&, cv::Mat&) <cycle 1> [47]
+                                   1             cv::videostab::StabilizerBase::doOneIteration() <cycle 1> [61]
+                                   2             cv::videostab::MotionInpaintBody::operator()(int, int) <cycle 1> [56]
+                                   4             cv::videostab::ensureInclusionConstraint(cv::Mat const&, cv::Size_<int>, float) <cycle 1> [50]
+                                   5             cv::videostab::ColorInpainter::~ColorInpainter() <cycle 1> [66]
+                                   6             cv::videostab::ColorInpainter::~ColorInpainter() <cycle 1> [78]
+                                  94             cv::videostab::MotionInpainter::inpaint(int, cv::Mat&, cv::Mat&) <cycle 1> [48]
+                                 874             std::vector<cv::Mat, std::allocator<cv::Mat> >::vector(unsigned int, cv::Mat const&, std::allocator<cv::Mat> const&) <cycle 1> [59]
+                                2248             cv::videostab::MotionFilterBase::stabilize(int, std::vector<cv::Mat, std::allocator<cv::Mat> > const&, std::pair<int, int>, cv::Mat*) <cycle 1> [11]
+                                2248             cv::videostab::GaussianMotionFilter::stabilize(int, std::vector<cv::Mat, std::allocator<cv::Mat> > const&, std::pair<int, int>) <cycle 1> [10]
+                                2622             cv::videostab::ColorAverageInpaintBody cv::videostab::FastMarchingMethod::run<cv::videostab::ColorAverageInpaintBody>(cv::Mat const&, cv::videostab::ColorAverageInpaintBody) <cycle 1> [45]
+                0.00    0.00       1/195594      cv::videostab::TwoPassStabilizer::setUp(cv::Mat const&) [22]
+                0.00    0.00     874/195594      void std::_Destroy_aux<false>::__destroy<cv::Mat_<float>*>(cv::Mat_<float>*, cv::Mat_<float>*) [18]
+                0.00    0.00     874/195594      void std::make_heap<__gnu_cxx::__normal_iterator<cv::videostab::Pixel3*, std::vector<cv::videostab::Pixel3, std::allocator<cv::videostab::Pixel3> > > >(__gnu_cxx::__normal_iterator<cv::videostab::Pixel3*, std::vector<cv::videostab::Pixel3, std::allocator<cv::videostab::Pixel3> > >, __gnu_cxx::__normal_iterator<cv::videostab::Pixel3*, std::vector<cv::videostab::Pixel3, std::allocator<cv::videostab::Pixel3> > >) [14]
+[47]     0.0    0.00    0.00    9853+52      cv::videostab::ConsistentMosaicInpainter::inpaint(int, cv::Mat&, cv::Mat&) <cycle 1> [47]
+                0.00    0.00       2/2           cv::videostab::InpainterBase::setRadius(int) [69]
+                0.00    0.00       2/2           cv::videostab::InpainterBase::frames() const [73]
+                0.00    0.00       1/1           cv::videostab::InpainterBase::~InpainterBase() [77]
+                0.00    0.00       1/1           cv::videostab::InpainterBase::setMotionModel(cv::videostab::MotionModel) [76]
+                                7499             main <cycle 1> [3]
+                                7492             cv::videostab::MotionInpainter::MotionInpainter() <cycle 1> [49]
+                                  11             cv::videostab::InpainterBase::setMotions(std::vector<cv::Mat, std::allocator<cv::Mat> > const&) <cycle 1> [60]
+                                  52             cv::videostab::ConsistentMosaicInpainter::inpaint(int, cv::Mat&, cv::Mat&) <cycle 1> [47]
+-----------------------------------------------
+                               38489             cv::videostab::MotionInpainter::inpaint(int, cv::Mat&, cv::Mat&) <cycle 1> [48]
+                                   1             std::vector<cv::Mat, std::allocator<cv::Mat> >::vector(unsigned int, cv::Mat const&, std::allocator<cv::Mat> const&) <cycle 1> [59]
+                                   1             cv::videostab::MotionFilterBase::stabilize(int, std::vector<cv::Mat, std::allocator<cv::Mat> > const&, std::pair<int, int>, cv::Mat*) <cycle 1> [11]
+                                   2             cv::videostab::ensureInclusionConstraint(cv::Mat const&, cv::Size_<int>, float) <cycle 1> [50]
+                                 874             cv::videostab::ColorAverageInpaintBody cv::videostab::FastMarchingMethod::run<cv::videostab::ColorAverageInpaintBody>(cv::Mat const&, cv::videostab::ColorAverageInpaintBody) <cycle 1> [45]
+                                1772             cv::videostab::calcFlowMask(cv::Mat const&, cv::Mat const&, cv::Mat const&, float, cv::Mat const&, cv::Mat const&, cv::Mat&) <cycle 1> [46]
+                                7013             cv::videostab::estimateOptimalTrimRatio(cv::Mat const&, cv::Size_<int>) <cycle 1> [51]
+                0.00    0.00       1/195594      cv::videostab::TwoPassStabilizer::setUp(cv::Mat const&) [22]
+[48]     0.0    0.00    0.00    9664+38489   cv::videostab::MotionInpainter::inpaint(int, cv::Mat&, cv::Mat&) <cycle 1> [48]
+                0.00    0.00       1/2           cv::Ptr<cv::FeatureDetector>::release() [67]
+                               27095             main <cycle 1> [3]
+                                  94             cv::videostab::ConsistentMosaicInpainter::inpaint(int, cv::Mat&, cv::Mat&) <cycle 1> [47]
+                                   3             cv::videostab::calcFlowMask(cv::Mat const&, cv::Mat const&, cv::Mat const&, float, cv::Mat const&, cv::Mat const&, cv::Mat&) <cycle 1> [46]
+                                   1             cv::videostab::estimateOptimalTrimRatio(cv::Mat const&, cv::Size_<int>) <cycle 1> [51]
+                               38489             cv::videostab::MotionInpainter::inpaint(int, cv::Mat&, cv::Mat&) <cycle 1> [48]
+-----------------------------------------------
+                                   5             cv::videostab::calcFlowMask(cv::Mat const&, cv::Mat const&, cv::Mat const&, float, cv::Mat const&, cv::Mat const&, cv::Mat&) <cycle 1> [46]
+                                   5             cv::videostab::estimateOptimalTrimRatio(cv::Mat const&, cv::Size_<int>) <cycle 1> [51]
+                                7492             cv::videostab::ConsistentMosaicInpainter::inpaint(int, cv::Mat&, cv::Mat&) <cycle 1> [47]
+[49]     0.0    0.00    0.00    7502         cv::videostab::MotionInpainter::MotionInpainter() <cycle 1> [49]
+                                  25             cv::videostab::calcFlowMask(cv::Mat const&, cv::Mat const&, cv::Mat const&, float, cv::Mat const&, cv::Mat const&, cv::Mat&) <cycle 1> [46]
+-----------------------------------------------
+                                2032             cv::videostab::ensureInclusionConstraint(cv::Mat const&, cv::Size_<int>, float) <cycle 1> [50]
+                                   1             std::vector<cv::Mat, std::allocator<cv::Mat> >::vector(unsigned int, cv::Mat const&, std::allocator<cv::Mat> const&) <cycle 1> [59]
+                                   1             cv::videostab::MotionFilterBase::stabilize(int, std::vector<cv::Mat, std::allocator<cv::Mat> > const&, std::pair<int, int>, cv::Mat*) <cycle 1> [11]
+                                   2             cv::videostab::estimateOptimalTrimRatio(cv::Mat const&, cv::Size_<int>) <cycle 1> [51]
+                                1760             cv::videostab::GaussianMotionFilter::stabilize(int, std::vector<cv::Mat, std::allocator<cv::Mat> > const&, std::pair<int, int>) <cycle 1> [10]
+                                3535             cv::videostab::ColorAverageInpaintBody cv::videostab::FastMarchingMethod::run<cv::videostab::ColorAverageInpaintBody>(cv::Mat const&, cv::videostab::ColorAverageInpaintBody) <cycle 1> [45]
+                0.00    0.00       1/195594      cv::videostab::SparsePyrLkOptFlowEstimatorGpu::run(cv::gpu::GpuMat const&, cv::gpu::GpuMat const&, cv::gpu::GpuMat const&, cv::gpu::GpuMat&, cv::gpu::GpuMat&, cv::gpu::GpuMat&) [28]
+                0.00    0.00       1/195594      cv::videostab::DensePyrLkOptFlowEstimatorGpu::~DensePyrLkOptFlowEstimatorGpu() [30]
+                0.00    0.00       1/195594      cv::videostab::StabilizerBase::postProcessFrame(cv::Mat const&) [34]
+                0.00    0.00       1/195594      cv::videostab::OnePassStabilizer::estimateMotion() [32]
+                0.00    0.00       1/195594      cv::videostab::TwoPassStabilizer::setUp(cv::Mat const&) [22]
+                0.00    0.00       2/195594      cv::videostab::DensePyrLkOptFlowEstimatorGpu::DensePyrLkOptFlowEstimatorGpu() [21]
+                0.00    0.00       2/195594      cv::videostab::StabilizerBase::reset() [19]
+                0.00    0.00       3/195594      cv::videostab::DensePyrLkOptFlowEstimatorGpu::run(cv::_InputArray const&, cv::_InputArray const&, cv::_OutputArray const&, cv::_OutputArray const&, cv::_OutputArray const&) [26]
+                0.00    0.00       3/195594      cv::videostab::SparsePyrLkOptFlowEstimatorGpu::run(cv::_InputArray const&, cv::_InputArray const&, cv::_InputArray const&, cv::_OutputArray const&, cv::_OutputArray const&, cv::_OutputArray const&) [20]
+                0.00    0.00       3/195594      cv::videostab::SparsePyrLkOptFlowEstimatorGpu::SparsePyrLkOptFlowEstimatorGpu() [25]
+                0.00    0.00    1125/195594      cv::videostab::MotionStabilizationPipeline::stabilize(int, std::vector<cv::Mat, std::allocator<cv::Mat> > const&, std::pair<int, int>, cv::Mat*) [8]
+[50]     0.0    0.00    0.00    6442+2032    cv::videostab::ensureInclusionConstraint(cv::Mat const&, cv::Size_<int>, float) <cycle 1> [50]
+                0.00    0.00       5/5           cv::videostab::ConsistentMosaicInpainter::ConsistentMosaicInpainter() [63]
+                0.00    0.00       1/2           std::vector<cv::Point_<float>, std::allocator<cv::Point_<float> > >::~vector() [74]
+                                3525             cv::videostab::estimateOptimalTrimRatio(cv::Mat const&, cv::Size_<int>) <cycle 1> [51]
+                                  20             main <cycle 1> [3]
+                                   4             cv::videostab::ConsistentMosaicInpainter::inpaint(int, cv::Mat&, cv::Mat&) <cycle 1> [47]
+                                   3             cv::videostab::ToFileMotionWriter::estimate(cv::Mat const&, cv::Mat const&, bool*) <cycle 1> [9]
+                                   2             cv::videostab::MotionInpainter::inpaint(int, cv::Mat&, cv::Mat&) <cycle 1> [48]
+                                   1             cv::videostab::calcFlowMask(cv::Mat const&, cv::Mat const&, cv::Mat const&, float, cv::Mat const&, cv::Mat const&, cv::Mat&) <cycle 1> [46]
+                                   1             cv::videostab::estimateGlobMotionLeastSquaresAffine(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [6]
+                                2032             cv::videostab::ensureInclusionConstraint(cv::Mat const&, cv::Size_<int>, float) <cycle 1> [50]
+-----------------------------------------------
+                               38585             cv::videostab::estimateOptimalTrimRatio(cv::Mat const&, cv::Size_<int>) <cycle 1> [51]
+                                   1             cv::videostab::MotionInpainter::inpaint(int, cv::Mat&, cv::Mat&) <cycle 1> [48]
+                                   2             main <cycle 1> [3]
+                                3525             cv::videostab::ensureInclusionConstraint(cv::Mat const&, cv::Size_<int>, float) <cycle 1> [50]
+                0.00    0.00       1/195594      cv::videostab::TranslationBasedLocalOutlierRejector::process(cv::Size_<int>, cv::_InputArray const&, cv::_InputArray const&, cv::_OutputArray const&) [27]
+[51]     0.0    0.00    0.00    3529+38585   cv::videostab::estimateOptimalTrimRatio(cv::Mat const&, cv::Size_<int>) <cycle 1> [51]
+                0.00    0.00       1/2           cv::Ptr<cv::FeatureDetector>::release() [67]
+                               10528             cv::videostab::calcFlowMask(cv::Mat const&, cv::Mat const&, cv::Mat const&, float, cv::Mat const&, cv::Mat const&, cv::Mat&) <cycle 1> [46]
+                                8770             main <cycle 1> [3]
+                                7013             cv::videostab::MotionInpainter::inpaint(int, cv::Mat&, cv::Mat&) <cycle 1> [48]
+                                   5             cv::videostab::MotionInpainter::MotionInpainter() <cycle 1> [49]
+                                   2             cv::videostab::ensureInclusionConstraint(cv::Mat const&, cv::Size_<int>, float) <cycle 1> [50]
+                                   1             cv::videostab::StabilizerBase::doOneIteration() <cycle 1> [61]
+                                   1             cv::videostab::MotionInpaintBody::operator()(int, int) <cycle 1> [56]
+                               38585             cv::videostab::estimateOptimalTrimRatio(cv::Mat const&, cv::Size_<int>) <cycle 1> [51]
+-----------------------------------------------
+                0.00    0.00       1/1125        cv::videostab::TwoPassStabilizer::setUp(cv::Mat const&) [22]
+                0.00    0.00    1124/1125        cv::videostab::MotionFilterBase::stabilize(int, std::vector<cv::Mat, std::allocator<cv::Mat> > const&, std::pair<int, int>, cv::Mat*) <cycle 1> [11]
+[52]     0.0    0.00    0.00    1125         cv::gpu::GoodFeaturesToTrackDetector_GPU::~GoodFeaturesToTrackDetector_GPU() [52]
+                0.00    0.00       1/1           cv::MatExpr::~MatExpr() [75]
+-----------------------------------------------
+                                   3             cv::videostab::MotionInpaintBody::MotionInpaintBody(cv::videostab::MotionInpaintBody const&) <cycle 1> [53]
+                                   2             cv::videostab::estimateGlobMotionLeastSquaresSimilarity(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [4]
+                                 874             cv::videostab::MotionInpaintBody::operator()(int, int) <cycle 1> [56]
+                0.00    0.00       1/195594      cv::videostab::TwoPassStabilizer::setUp(cv::Mat const&) [22]
+[53]     0.0    0.00    0.00     877+3       cv::videostab::MotionInpaintBody::MotionInpaintBody(cv::videostab::MotionInpaintBody const&) <cycle 1> [53]
+                                   2             cv::videostab::getMotion(int, int, std::vector<cv::Mat, std::allocator<cv::Mat> > const&) <cycle 1> [43]
+                                   2             cv::videostab::estimateGlobMotionLeastSquaresTranslationAndScale(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [7]
+                                   3             cv::videostab::MotionInpaintBody::MotionInpaintBody(cv::videostab::MotionInpaintBody const&) <cycle 1> [53]
+-----------------------------------------------
+                                   1             cv::videostab::ColorAverageInpaintBody cv::videostab::FastMarchingMethod::run<cv::videostab::ColorAverageInpaintBody>(cv::Mat const&, cv::videostab::ColorAverageInpaintBody) <cycle 1> [45]
+                                 874             cv::videostab::estimateGlobMotionLeastSquaresTranslation(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [58]
+                0.00    0.00       1/195594      cv::videostab::StabilizerBase::reset() [19]
+[54]     0.0    0.00    0.00     876         cv::videostab::estimateGlobMotionLeastSquaresRigid(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [54]
+                             1408108             cv::videostab::estimateGlobMotionLeastSquaresAffine(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [6]
+                              351372             cv::videostab::estimateGlobMotionLeastSquaresTranslationAndScale(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [7]
+                                6992             main <cycle 1> [3]
+                                 874             cv::videostab::MotionInpaintBody::operator()(int, int) <cycle 1> [56]
+                                 874             std::basic_string<char, std::char_traits<char>, std::allocator<char> > std::operator+<char, std::char_traits<char>, std::allocator<char> >(char const*, std::basic_string<char, std::char_traits<char>, std::allocator<char> > const&) <cycle 1> [55]
+-----------------------------------------------
+                                   1             cv::videostab::ColorAverageInpaintBody cv::videostab::FastMarchingMethod::run<cv::videostab::ColorAverageInpaintBody>(cv::Mat const&, cv::videostab::ColorAverageInpaintBody) <cycle 1> [45]
+                                 874             cv::videostab::estimateGlobMotionLeastSquaresRigid(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [54]
+                0.00    0.00       1/195594      cv::videostab::StabilizerBase::reset() [19]
+[55]     0.0    0.00    0.00     876         std::basic_string<char, std::char_traits<char>, std::allocator<char> > std::operator+<char, std::char_traits<char>, std::allocator<char> >(char const*, std::basic_string<char, std::char_traits<char>, std::allocator<char> > const&) <cycle 1> [55]
+                                  10             cv::videostab::estimateGlobMotionLeastSquaresTranslationAndScale(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [7]
+-----------------------------------------------
+                                   1             cv::videostab::MotionInpaintBody::operator()(int, int) <cycle 1> [56]
+                                   1             cv::videostab::estimateOptimalTrimRatio(cv::Mat const&, cv::Size_<int>) <cycle 1> [51]
+                                 874             cv::videostab::estimateGlobMotionLeastSquaresRigid(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [54]
+[56]     0.0    0.00    0.00     875+1       cv::videostab::MotionInpaintBody::operator()(int, int) <cycle 1> [56]
+                                 874             cv::videostab::MotionInpaintBody::MotionInpaintBody(cv::videostab::MotionInpaintBody const&) <cycle 1> [53]
+                                 874             main <cycle 1> [3]
+                                   2             cv::videostab::ConsistentMosaicInpainter::inpaint(int, cv::Mat&, cv::Mat&) <cycle 1> [47]
+                                   1             cv::videostab::MotionInpaintBody::operator()(int, int) <cycle 1> [56]
+-----------------------------------------------
+                                 874             cv::videostab::GaussianMotionFilter::stabilize(int, std::vector<cv::Mat, std::allocator<cv::Mat> > const&, std::pair<int, int>) <cycle 1> [10]
+                0.00    0.00       1/195594      cv::videostab::NullOutlierRejector::process(cv::Size_<int>, cv::_InputArray const&, cv::_InputArray const&, cv::_OutputArray const&) [29]
+[57]     0.0    0.00    0.00     875         cv::videostab::TwoPassStabilizer::postProcessFrame(cv::Mat const&) <cycle 1> [57]
+                                 874             cv::videostab::MotionEstimatorRansacL2::MotionEstimatorRansacL2(cv::videostab::MotionModel) <cycle 1> [12]
+                                 874             cv::videostab::getMotion(int, int, std::vector<cv::Mat, std::allocator<cv::Mat> > const&) <cycle 1> [43]
+                                 874             cv::videostab::estimateGlobMotionLeastSquaresTranslationAndScale(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [7]
+                                 874             main <cycle 1> [3]
+-----------------------------------------------
+                                 874             cv::videostab::GaussianMotionFilter::stabilize(int, std::vector<cv::Mat, std::allocator<cv::Mat> > const&, std::pair<int, int>) <cycle 1> [10]
+                0.00    0.00       1/195594      cv::videostab::DensePyrLkOptFlowEstimatorGpu::DensePyrLkOptFlowEstimatorGpu() [21]
+[58]     0.0    0.00    0.00     875         cv::videostab::estimateGlobMotionLeastSquaresTranslation(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [58]
+                0.00    0.00       1/2           cv::videostab::FromFileMotionReader::FromFileMotionReader(std::string const&) [70]
+                                6118             main <cycle 1> [3]
+                                 877             cv::videostab::estimateGlobMotionLeastSquaresTranslationAndScale(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [7]
+                                 874             cv::videostab::estimateGlobMotionLeastSquaresRigid(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [54]
+                                   1             cv::videostab::estimateGlobMotionLeastSquaresAffine(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [6]
+-----------------------------------------------
+                                 874             cv::videostab::ColorAverageInpaintBody cv::videostab::FastMarchingMethod::run<cv::videostab::ColorAverageInpaintBody>(cv::Mat const&, cv::videostab::ColorAverageInpaintBody) <cycle 1> [45]
+[59]     0.0    0.00    0.00     874         std::vector<cv::Mat, std::allocator<cv::Mat> >::vector(unsigned int, cv::Mat const&, std::allocator<cv::Mat> const&) <cycle 1> [59]
+                                 874             cv::videostab::GaussianMotionFilter::stabilize(int, std::vector<cv::Mat, std::allocator<cv::Mat> > const&, std::pair<int, int>) <cycle 1> [10]
+                                 874             cv::videostab::ConsistentMosaicInpainter::inpaint(int, cv::Mat&, cv::Mat&) <cycle 1> [47]
+                                 874             main <cycle 1> [3]
+                                   1             cv::videostab::ensureInclusionConstraint(cv::Mat const&, cv::Size_<int>, float) <cycle 1> [50]
+                                   1             cv::videostab::MotionInpainter::inpaint(int, cv::Mat&, cv::Mat&) <cycle 1> [48]
+-----------------------------------------------
+                                  11             cv::videostab::ConsistentMosaicInpainter::inpaint(int, cv::Mat&, cv::Mat&) <cycle 1> [47]
+[60]     0.0    0.00    0.00      11         cv::videostab::InpainterBase::setMotions(std::vector<cv::Mat, std::allocator<cv::Mat> > const&) <cycle 1> [60]
+                                   2             cv::videostab::ConsistentMosaicInpainter::~ConsistentMosaicInpainter() <cycle 1> [71]
+-----------------------------------------------
+                                   7             cv::videostab::StabilizerBase::doOneIteration() <cycle 1> [61]
+                                   1             cv::videostab::estimateOptimalTrimRatio(cv::Mat const&, cv::Size_<int>) <cycle 1> [51]
+                0.00    0.00       7/195594      cv::videostab::StabilizerBase::stabilizeFrame() [23]
+[61]     0.0    0.00    0.00       8+7       cv::videostab::StabilizerBase::doOneIteration() <cycle 1> [61]
+                                   2             cv::videostab::TwoPassStabilizer::estimateStabilizationMotion() <cycle 1> [62]
+                                   1             cv::videostab::ConsistentMosaicInpainter::inpaint(int, cv::Mat&, cv::Mat&) <cycle 1> [47]
+                                   7             cv::videostab::StabilizerBase::doOneIteration() <cycle 1> [61]
+-----------------------------------------------
+                                   2             cv::videostab::StabilizerBase::doOneIteration() <cycle 1> [61]
+                0.00    0.00       1/195594      cv::videostab::SparsePyrLkOptFlowEstimatorGpu::run(cv::_InputArray const&, cv::_InputArray const&, cv::_InputArray const&, cv::_OutputArray const&, cv::_OutputArray const&, cv::_OutputArray const&) [20]
+                0.00    0.00       1/195594      cv::videostab::SparsePyrLkOptFlowEstimatorGpu::run(cv::gpu::GpuMat const&, cv::gpu::GpuMat const&, cv::gpu::GpuMat const&, cv::gpu::GpuMat&, cv::gpu::GpuMat&) [24]
+                0.00    0.00       2/195594      cv::videostab::DensePyrLkOptFlowEstimatorGpu::DensePyrLkOptFlowEstimatorGpu() [21]
+                0.00    0.00       2/195594      cv::videostab::StabilizerBase::reset() [19]
+[62]     0.0    0.00    0.00       8         cv::videostab::TwoPassStabilizer::estimateStabilizationMotion() <cycle 1> [62]
+                                   3             cv::videostab::estimateGlobMotionLeastSquaresAffine(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [6]
+-----------------------------------------------
+                0.00    0.00       5/5           cv::videostab::ensureInclusionConstraint(cv::Mat const&, cv::Size_<int>, float) <cycle 1> [50]
+[63]     0.0    0.00    0.00       5         cv::videostab::ConsistentMosaicInpainter::ConsistentMosaicInpainter() [63]
+-----------------------------------------------
+                0.00    0.00       1/5           cv::videostab::InpainterBase::setMotionModel(cv::videostab::MotionModel) [76]
+                0.00    0.00       2/5           cv::videostab::InpainterBase::setRadius(int) [69]
+                0.00    0.00       2/5           cv::videostab::InpainterBase::stabilizationMotions() const [322]
+[64]     0.0    0.00    0.00       5         cv::videostab::ConsistentMosaicInpainter::~ConsistentMosaicInpainter() [64]
+-----------------------------------------------
+                                   3             cv::videostab::KeypointBasedMotionEstimatorGpu::estimate(cv::gpu::GpuMat const&, cv::gpu::GpuMat const&, bool*) <cycle 1> [65]
+                                   5             cv::videostab::estimateGlobMotionLeastSquaresSimilarity(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [4]
+[65]     0.0    0.00    0.00       5+3       cv::videostab::KeypointBasedMotionEstimatorGpu::estimate(cv::gpu::GpuMat const&, cv::gpu::GpuMat const&, bool*) <cycle 1> [65]
+                                   3             cv::videostab::estimateGlobMotionLeastSquaresTranslationAndScale(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [7]
+                                   2             cv::videostab::KeypointBasedMotionEstimator::KeypointBasedMotionEstimator(cv::Ptr<cv::videostab::MotionEstimatorBase>) <cycle 1> [72]
+                                   1             cv::videostab::estimateGlobMotionLeastSquaresAffine(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [6]
+                                   3             cv::videostab::KeypointBasedMotionEstimatorGpu::estimate(cv::gpu::GpuMat const&, cv::gpu::GpuMat const&, bool*) <cycle 1> [65]
+-----------------------------------------------
+                                   2             cv::videostab::ConsistentMosaicInpainter::~ConsistentMosaicInpainter() <cycle 1> [71]
+                0.00    0.00       1/195594      cv::videostab::InpainterBase::setStabilizationMotions(std::vector<cv::Mat, std::allocator<cv::Mat> > const&) [33]
+[66]     0.0    0.00    0.00       3         cv::videostab::ColorInpainter::~ColorInpainter() <cycle 1> [66]
+                                   5             cv::videostab::ConsistentMosaicInpainter::inpaint(int, cv::Mat&, cv::Mat&) <cycle 1> [47]
+                                   1             cv::videostab::ColorInpainter::~ColorInpainter() <cycle 1> [78]
+-----------------------------------------------
+                0.00    0.00       1/2           cv::videostab::MotionInpainter::inpaint(int, cv::Mat&, cv::Mat&) <cycle 1> [48]
+                0.00    0.00       1/2           cv::videostab::estimateOptimalTrimRatio(cv::Mat const&, cv::Size_<int>) <cycle 1> [51]
+[67]     0.0    0.00    0.00       2         cv::Ptr<cv::FeatureDetector>::release() [67]
+-----------------------------------------------
+                                   2             cv::Mat_<unsigned char>::~Mat_() [68]
+                0.00    0.00       2/2           cv::videostab::ColorInpainter::~ColorInpainter() <cycle 1> [78]
+[68]     0.0    0.00    0.00       2+2       cv::Mat_<unsigned char>::~Mat_() [68]
+                                   2             cv::Mat_<unsigned char>::~Mat_() [68]
+-----------------------------------------------
+                0.00    0.00       2/2           cv::videostab::ConsistentMosaicInpainter::inpaint(int, cv::Mat&, cv::Mat&) <cycle 1> [47]
+[69]     0.0    0.00    0.00       2         cv::videostab::InpainterBase::setRadius(int) [69]
+                0.00    0.00       2/5           cv::videostab::ConsistentMosaicInpainter::~ConsistentMosaicInpainter() [64]
+                0.00    0.00       1/1           cv::videostab::InpainterBase::stabilizedFrames() const [80]
+-----------------------------------------------
+                                   1             cv::videostab::FromFileMotionReader::FromFileMotionReader(std::string const&) [70]
+                0.00    0.00       1/2           cv::videostab::estimateGlobMotionLeastSquaresTranslation(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [58]
+                0.00    0.00       1/2           cv::videostab::TwoPassStabilizer::setUp(cv::Mat const&) [22]
+[70]     0.0    0.00    0.00       2+1       cv::videostab::FromFileMotionReader::FromFileMotionReader(std::string const&) [70]
+                                   1             cv::videostab::FromFileMotionReader::FromFileMotionReader(std::string const&) [70]
+-----------------------------------------------
+                                   2             cv::videostab::InpainterBase::setMotions(std::vector<cv::Mat, std::allocator<cv::Mat> > const&) <cycle 1> [60]
+[71]     0.0    0.00    0.00       2         cv::videostab::ConsistentMosaicInpainter::~ConsistentMosaicInpainter() <cycle 1> [71]
+                                   2             cv::videostab::ColorInpainter::~ColorInpainter() <cycle 1> [66]
+-----------------------------------------------
+                                   2             cv::videostab::KeypointBasedMotionEstimatorGpu::estimate(cv::gpu::GpuMat const&, cv::gpu::GpuMat const&, bool*) <cycle 1> [65]
+[72]     0.0    0.00    0.00       2         cv::videostab::KeypointBasedMotionEstimator::KeypointBasedMotionEstimator(cv::Ptr<cv::videostab::MotionEstimatorBase>) <cycle 1> [72]
+                                  12             cv::videostab::estimateGlobMotionLeastSquaresAffine(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [6]
+                                  10             cv::videostab::estimateGlobMotionLeastSquaresTranslationAndScale(int, cv::Point_<float>*, cv::Point_<float>*, float*) <cycle 1> [7]
+-----------------------------------------------
+                0.00    0.00       2/2           cv::videostab::ConsistentMosaicInpainter::inpaint(int, cv::Mat&, cv::Mat&) <cycle 1> [47]
+[73]     0.0    0.00    0.00       2         cv::videostab::InpainterBase::frames() const [73]
+-----------------------------------------------
+                0.00    0.00       1/2           cv::videostab::ensureInclusionConstraint(cv::Mat const&, cv::Size_<int>, float) <cycle 1> [50]
+                0.00    0.00       1/2           cv::videostab::StabilizerBase::stabilizeFrame() [23]
+[74]     0.0    0.00    0.00       2         std::vector<cv::Point_<float>, std::allocator<cv::Point_<float> > >::~vector() [74]
+-----------------------------------------------
+                0.00    0.00       1/1           cv::gpu::GoodFeaturesToTrackDetector_GPU::~GoodFeaturesToTrackDetector_GPU() [52]
+[75]     0.0    0.00    0.00       1         cv::MatExpr::~MatExpr() [75]
+-----------------------------------------------
+                0.00    0.00       1/1           cv::videostab::ConsistentMosaicInpainter::inpaint(int, cv::Mat&, cv::Mat&) <cycle 1> [47]
+[76]     0.0    0.00    0.00       1         cv::videostab::InpainterBase::setMotionModel(cv::videostab::MotionModel) [76]
+                0.00    0.00       1/5           cv::videostab::ConsistentMosaicInpainter::~ConsistentMosaicInpainter() [64]
+-----------------------------------------------
+                0.00    0.00       1/1           cv::videostab::ConsistentMosaicInpainter::inpaint(int, cv::Mat&, cv::Mat&) <cycle 1> [47]
+[77]     0.0    0.00    0.00       1         cv::videostab::InpainterBase::~InpainterBase() [77]
+-----------------------------------------------
+                                   2             cv::videostab::ColorInpainter::~ColorInpainter() <cycle 1> [78]
+                                   1             cv::videostab::ColorInpainter::~ColorInpainter() <cycle 1> [66]
+[78]     0.0    0.00    0.00       1+2       cv::videostab::ColorInpainter::~ColorInpainter() <cycle 1> [78]
+                0.00    0.00       2/2           cv::Mat_<unsigned char>::~Mat_() [68]
+                                   6             cv::videostab::ConsistentMosaicInpainter::inpaint(int, cv::Mat&, cv::Mat&) <cycle 1> [47]
+                                   2             cv::videostab::ColorInpainter::~ColorInpainter() <cycle 1> [78]
+-----------------------------------------------
+                0.00    0.00       1/1           cv::videostab::StabilizerBase::postProcessFrame(cv::Mat const&) [34]
+[79]     0.0    0.00    0.00       1         cv::videostab::OnePassStabilizer::estimateStabilizationMotion() [79]
+-----------------------------------------------
+                0.00    0.00       1/1           cv::videostab::InpainterBase::setRadius(int) [69]
+[80]     0.0    0.00    0.00       1         cv::videostab::InpainterBase::stabilizedFrames() const [80]
+-----------------------------------------------
+
+ This table describes the call tree of the program, and was sorted by
+ the total amount of time spent in each function and its children.
+
+ Each entry in this table consists of several lines.  The line with the
+ index number at the left hand margin lists the current function.
+ The lines above it list the functions that called this function,
+ and the lines below it list the functions this one called.
+ This line lists:
+     index	A unique number given to each element of the table.
+		Index numbers are sorted numerically.
+		The index number is printed next to every function name so
+		it is easier to look up where the function in the table.
+
+     % time	This is the percentage of the `total' time that was spent
+		in this function and its children.  Note that due to
+		different viewpoints, functions excluded by options, etc,
+		these numbers will NOT add up to 100%.
+
+     self	This is the total amount of time spent in this function.
+
+     children	This is the total amount of time propagated into this
+		function by its children.
+
+     called	This is the number of times the function was called.
+		If the function called itself recursively, the number
+		only includes non-recursive calls, and is followed by
+		a `+' and the number of recursive calls.
+
+     name	The name of the current function.  The index number is
+		printed after it.  If the function is a member of a
+		cycle, the cycle number is printed between the
+		function's name and the index number.
+
+
+ For the function's parents, the fields have the following meanings:
+
+     self	This is the amount of time that was propagated directly
+		from the function into this parent.
+
+     children	This is the amount of time that was propagated from
+		the function's children into this parent.
+
+     called	This is the number of times this parent called the
+		function `/' the total number of times the function
+		was called.  Recursive calls to the function are not
+		included in the number after the `/'.
+
+     name	This is the name of the parent.  The parent's index
+		number is printed after it.  If the parent is a
+		member of a cycle, the cycle number is printed between
+		the name and the index number.
+
+ If the parents of the function cannot be determined, the word
+ `<spontaneous>' is printed in the `name' field, and all the other
+ fields are blank.
+
+ For the function's children, the fields have the following meanings:
+
+     self	This is the amount of time that was propagated directly
+		from the child into the function.
+
+     children	This is the amount of time that was propagated from the
+		child's children to the function.
+
+     called	This is the number of times the function called
+		this child `/' the total number of times the child
+		was called.  Recursive calls by the child are not
+		listed in the number after the `/'.
+
+     name	This is the name of the child.  The child's index
+		number is printed after it.  If the child is a
+		member of a cycle, the cycle number is printed
+		between the name and the index number.
+
+ If there are any cycles (circles) in the call graph, there is an
+ entry for the cycle-as-a-whole.  This entry shows who called the
+ cycle (as parents) and the members of the cycle (as children.)
+ The `+' recursive calls entry shows the number of function calls that
+ were internal to the cycle, and the calls entry for each member shows,
+ for that member, how many times it was called from other members of
+ the cycle.
+
+
+Index by function name
+
+  [67] cv::Ptr<cv::FeatureDetector>::release() [11] cv::videostab::MotionFilterBase::stabilize(int, std::vector<cv::Mat, std::allocator<cv::Mat> > const&, std::pair<int, int>, cv::Mat*) [50] cv::videostab::ensureInclusionConstraint(cv::Mat const&, cv::Size_<int>, float)
+  [52] cv::gpu::GoodFeaturesToTrackDetector_GPU::~GoodFeaturesToTrackDetector_GPU() [53] cv::videostab::MotionInpaintBody::MotionInpaintBody(cv::videostab::MotionInpaintBody const&) [72] cv::videostab::KeypointBasedMotionEstimator::KeypointBasedMotionEstimator(cv::Ptr<cv::videostab::MotionEstimatorBase>)
+  [68] cv::Mat_<unsigned char>::~Mat_() [56] cv::videostab::MotionInpaintBody::operator()(int, int) [65] cv::videostab::KeypointBasedMotionEstimatorGpu::estimate(cv::gpu::GpuMat const&, cv::gpu::GpuMat const&, bool*)
+  [75] cv::MatExpr::~MatExpr() [32] cv::videostab::OnePassStabilizer::estimateMotion() [43] cv::videostab::getMotion(int, int, std::vector<cv::Mat, std::allocator<cv::Mat> > const&)
+  [46] cv::videostab::calcFlowMask(cv::Mat const&, cv::Mat const&, cv::Mat const&, float, cv::Mat const&, cv::Mat const&, cv::Mat&) [79] cv::videostab::OnePassStabilizer::estimateStabilizationMotion() [54] cv::videostab::estimateGlobMotionLeastSquaresRigid(int, cv::Point_<float>*, cv::Point_<float>*, float*)
+  [60] cv::videostab::InpainterBase::setMotions(std::vector<cv::Mat, std::allocator<cv::Mat> > const&) [57] cv::videostab::TwoPassStabilizer::postProcessFrame(cv::Mat const&) [6] cv::videostab::estimateGlobMotionLeastSquaresAffine(int, cv::Point_<float>*, cv::Point_<float>*, float*)
+  [76] cv::videostab::InpainterBase::setMotionModel(cv::videostab::MotionModel) [62] cv::videostab::TwoPassStabilizer::estimateStabilizationMotion() [4] cv::videostab::estimateGlobMotionLeastSquaresSimilarity(int, cv::Point_<float>*, cv::Point_<float>*, float*)
+  [33] cv::videostab::InpainterBase::setStabilizationMotions(std::vector<cv::Mat, std::allocator<cv::Mat> > const&) [44] cv::videostab::MotionInpaintBody cv::videostab::FastMarchingMethod::run<cv::videostab::MotionInpaintBody>(cv::Mat const&, cv::videostab::MotionInpaintBody) [58] cv::videostab::estimateGlobMotionLeastSquaresTranslation(int, cv::Point_<float>*, cv::Point_<float>*, float*)
+  [69] cv::videostab::InpainterBase::setRadius(int) [45] cv::videostab::ColorAverageInpaintBody cv::videostab::FastMarchingMethod::run<cv::videostab::ColorAverageInpaintBody>(cv::Mat const&, cv::videostab::ColorAverageInpaintBody) [7] cv::videostab::estimateGlobMotionLeastSquaresTranslationAndScale(int, cv::Point_<float>*, cv::Point_<float>*, float*)
+  [77] cv::videostab::InpainterBase::~InpainterBase() [9] cv::videostab::ToFileMotionWriter::estimate(cv::Mat const&, cv::Mat const&, bool*) [80] cv::videostab::InpainterBase::stabilizedFrames() const
+  [16] cv::videostab::ColorInpainter::inpaint(int, cv::Mat&, cv::Mat&) [5] cv::videostab::ToFileMotionWriter::ToFileMotionWriter(std::string const&, cv::Ptr<cv::videostab::ImageMotionEstimatorBase>) [73] cv::videostab::InpainterBase::frames() const
+  [78] cv::videostab::ColorInpainter::~ColorInpainter() [70] cv::videostab::FromFileMotionReader::FromFileMotionReader(std::string const&) [59] std::vector<cv::Mat, std::allocator<cv::Mat> >::vector(unsigned int, cv::Mat const&, std::allocator<cv::Mat> const&)
+  [66] cv::videostab::ColorInpainter::~ColorInpainter() [10] cv::videostab::GaussianMotionFilter::stabilize(int, std::vector<cv::Mat, std::allocator<cv::Mat> > const&, std::pair<int, int>) [74] std::vector<cv::Point_<float>, std::allocator<cv::Point_<float> > >::~vector()
+  [61] cv::videostab::StabilizerBase::doOneIteration() [12] cv::videostab::MotionEstimatorRansacL2::MotionEstimatorRansacL2(cv::videostab::MotionModel) [36] std::vector<std::vector<int, std::allocator<int> >, std::allocator<std::vector<int, std::allocator<int> > > >::_M_fill_assign(unsigned int, std::vector<int, std::allocator<int> > const&)
+  [23] cv::videostab::StabilizerBase::stabilizeFrame() [51] cv::videostab::estimateOptimalTrimRatio(cv::Mat const&, cv::Size_<int>) [55] std::basic_string<char, std::char_traits<char>, std::allocator<char> > std::operator+<char, std::char_traits<char>, std::allocator<char> >(char const*, std::basic_string<char, std::char_traits<char>, std::allocator<char> > const&)
+  [34] cv::videostab::StabilizerBase::postProcessFrame(cv::Mat const&) [47] cv::videostab::ConsistentMosaicInpainter::inpaint(int, cv::Mat&, cv::Mat&) [3] main
+  [19] cv::videostab::StabilizerBase::reset() [63] cv::videostab::ConsistentMosaicInpainter::ConsistentMosaicInpainter() [1] <cycle 1>
+  [48] cv::videostab::MotionInpainter::inpaint(int, cv::Mat&, cv::Mat&) [71] cv::videostab::ConsistentMosaicInpainter::~ConsistentMosaicInpainter()
+  [49] cv::videostab::MotionInpainter::MotionInpainter() [64] cv::videostab::ConsistentMosaicInpainter::~ConsistentMosaicInpainter()

@@ -1,0 +1,18 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<?p2f version='1.0.0'?>
+<p2f version='1.0.0'>
+  <ius size='2'>
+    <iu id='org.eclipse.cvs.feature.group' name='Eclipse CVS Client' version='1.3.200.v20120525-1249-7B79FJJAkF7BF7RGD3BCKZ'>
+      <repositories size='2'>
+        <repository location='http://download.eclipse.org/eclipse/updates/4.2'/>
+        <repository location='http://download.eclipse.org/releases/juno'/>
+      </repositories>
+    </iu>
+    <iu id='org.eclipse.platform.ide' name='Eclipse Platform' version='3.7.0.M20120914-1800'>
+      <repositories size='2'>
+        <repository location='http://download.eclipse.org/eclipse/updates/4.2'/>
+        <repository location='http://download.eclipse.org/releases/juno'/>
+      </repositories>
+    </iu>
+  </ius>
+</p2f>

@@ -1,0 +1,16 @@
+<map id="videostab.hpp" name="videostab.hpp">
+<area shape="rect" id="node3" href="$stabilizer_8hpp.html" title="opencv2/videostab/stabilizer.hpp" alt="" coords="545,92,756,121"/>
+<area shape="rect" id="node83" href="$ring__buffer_8hpp.html" title="opencv2/videostab/ring\l_buffer.hpp" alt="" coords="780,83,935,130"/>
+<area shape="rect" id="node13" href="$global__motion_8hpp.html" title="opencv2/videostab/global\l_motion.hpp" alt="" coords="765,275,933,322"/>
+<area shape="rect" id="node39" href="$motion__stabilizing_8hpp.html" title="opencv2/videostab/motion\l_stabilizing.hpp" alt="" coords="1119,179,1292,226"/>
+<area shape="rect" id="node46" href="$frame__source_8hpp.html" title="opencv2/videostab/frame\l_source.hpp" alt="" coords="421,275,589,322"/>
+<area shape="rect" id="node51" href="$log_8hpp.html" title="opencv2/videostab/log.hpp" alt="" coords="52,284,228,313"/>
+<area shape="rect" id="node54" href="$inpainting_8hpp.html" title="opencv2/videostab/inpainting.hpp" alt="" coords="881,188,1095,217"/>
+<area shape="rect" id="node73" href="$deblurring_8hpp.html" title="opencv2/videostab/deblurring.hpp" alt="" coords="93,380,309,409"/>
+<area shape="rect" id="node77" href="$wobble__suppression_8hpp.html" title="opencv2/videostab/wobble\l_suppression.hpp" alt="" coords="303,179,479,226"/>
+<area shape="rect" id="node25" href="$optical__flow_8hpp.html" title="opencv2/videostab/optical\l_flow.hpp" alt="" coords="1413,371,1587,418"/>
+<area shape="rect" id="node29" href="$motion__core_8hpp.html" title="opencv2/videostab/motion\l_core.hpp" alt="" coords="1537,467,1711,514"/>
+<area shape="rect" id="node34" href="$outlier__rejection_8hpp.html" title="opencv2/videostab/outlier\l_rejection.hpp" alt="" coords="1117,371,1288,418"/>
+<area shape="rect" id="node59" href="$fast__marching_8hpp.html" title="opencv2/videostab/fast\l_marching.hpp" alt="" coords="1849,467,2007,514"/>
+<area shape="rect" id="node67" href="$fast__marching__inl_8hpp.html" title="fast_marching_inl.hpp" alt="" coords="1789,563,1939,592"/>
+</map>

@@ -1,0 +1,8 @@
+<map id="inpainting.hpp" name="inpainting.hpp">
+<area shape="rect" id="node7" href="$optical__flow_8hpp.html" title="opencv2/videostab/optical\l_flow.hpp" alt="" coords="344,179,517,226"/>
+<area shape="rect" id="node12" href="$fast__marching_8hpp.html" title="opencv2/videostab/fast\l_marching.hpp" alt="" coords="112,275,269,322"/>
+<area shape="rect" id="node24" href="$global__motion_8hpp.html" title="opencv2/videostab/global\l_motion.hpp" alt="" coords="679,83,847,130"/>
+<area shape="rect" id="node21" href="$fast__marching__inl_8hpp.html" title="fast_marching_inl.hpp" alt="" coords="184,371,333,400"/>
+<area shape="rect" id="node36" href="$motion__core_8hpp.html" title="opencv2/videostab/motion\l_core.hpp" alt="" coords="683,275,856,322"/>
+<area shape="rect" id="node40" href="$outlier__rejection_8hpp.html" title="opencv2/videostab/outlier\l_rejection.hpp" alt="" coords="853,179,1024,226"/>
+</map>

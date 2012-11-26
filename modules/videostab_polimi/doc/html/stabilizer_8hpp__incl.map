@@ -1,0 +1,14 @@
+<map id="stabilizer.hpp" name="stabilizer.hpp">
+<area shape="rect" id="node11" href="$global__motion_8hpp.html" title="opencv2/videostab/global\l_motion.hpp" alt="" coords="1184,179,1352,226"/>
+<area shape="rect" id="node37" href="$motion__stabilizing_8hpp.html" title="opencv2/videostab/motion\l_stabilizing.hpp" alt="" coords="776,83,949,130"/>
+<area shape="rect" id="node44" href="$frame__source_8hpp.html" title="opencv2/videostab/frame\l_source.hpp" alt="" coords="533,179,701,226"/>
+<area shape="rect" id="node49" href="$log_8hpp.html" title="opencv2/videostab/log.hpp" alt="" coords="5,188,181,217"/>
+<area shape="rect" id="node52" href="$inpainting_8hpp.html" title="opencv2/videostab/inpainting.hpp" alt="" coords="1368,92,1581,121"/>
+<area shape="rect" id="node71" href="$deblurring_8hpp.html" title="opencv2/videostab/deblurring.hpp" alt="" coords="192,284,408,313"/>
+<area shape="rect" id="node75" href="$wobble__suppression_8hpp.html" title="opencv2/videostab/wobble\l_suppression.hpp" alt="" coords="475,83,651,130"/>
+<area shape="rect" id="node23" href="$optical__flow_8hpp.html" title="opencv2/videostab/optical\l_flow.hpp" alt="" coords="1552,275,1725,322"/>
+<area shape="rect" id="node27" href="$motion__core_8hpp.html" title="opencv2/videostab/motion\l_core.hpp" alt="" coords="1603,371,1776,418"/>
+<area shape="rect" id="node32" href="$outlier__rejection_8hpp.html" title="opencv2/videostab/outlier\l_rejection.hpp" alt="" coords="1005,275,1176,322"/>
+<area shape="rect" id="node57" href="$fast__marching_8hpp.html" title="opencv2/videostab/fast\l_marching.hpp" alt="" coords="1901,371,2059,418"/>
+<area shape="rect" id="node65" href="$fast__marching__inl_8hpp.html" title="fast_marching_inl.hpp" alt="" coords="1841,467,1991,496"/>
+</map>

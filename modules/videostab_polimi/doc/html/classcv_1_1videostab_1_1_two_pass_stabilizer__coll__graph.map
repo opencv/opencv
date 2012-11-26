@@ -1,0 +1,4 @@
+<map id="cv::videostab::TwoPassStabilizer" name="cv::videostab::TwoPassStabilizer">
+<area shape="rect" id="node2" href="$classcv_1_1videostab_1_1_stabilizer_base.html" title="cv::videostab::StabilizerBase" alt="" coords="5,5,197,35"/>
+<area shape="rect" id="node4" href="$classcv_1_1videostab_1_1_i_frame_source.html" title="cv::videostab::IFrameSource" alt="" coords="221,5,411,35"/>
+</map>
