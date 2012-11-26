@@ -1586,7 +1586,7 @@ public:
     //    There non zero value mean that detector should be executed in this point.
     // Param mask is an output mask
     // Param stream is stream is a high-level CUDA stream abstraction used for asynchronous execution
-    void genRoi(InputArray roi, OutputArray mask, Stream& stream = Stream::Null()) const;
+    virtual void genRoi(InputArray roi, OutputArray mask, Stream& stream = Stream::Null()) const;
 
 private:
 
@@ -1599,6 +1599,8 @@ private:
     int scales;
     int rejCriteria;
 };
+
+CV_EXPORTS bool initModule_gpu(void);
 
 ////////////////////////////////// SURF //////////////////////////////////////////
 

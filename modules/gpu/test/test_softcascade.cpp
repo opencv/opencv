@@ -205,56 +205,6 @@ GPU_TEST_P(SCascadeTestRoi, detect,
 
 }
 
-// typedef ::testing::TestWithParam<std::tr1::tuple<cv::gpu::DeviceInfo, std::string, std::string, int> > SCascadeTestLevel;
-// GPU_TEST_P(SCascadeTestLevel, detect,
-//         testing::Combine(
-//         ALL_DEVICES,
-//         testing::Values(std::string("cv/cascadeandhog/sc_cvpr_2012_to_opencv.xml")),
-//         testing::Values(std::string("../cv/cascadeandhog/bahnhof/image_00000000_0.png")),
-//         testing::Range(0, 47)
-//         ))
-// {
-//     cv::gpu::setDevice(GET_PARAM(0).deviceID());
-
-//     cv::gpu::SCascade cascade;
-
-//     cv::FileStorage fs(perf::TestBase::getDataPath(GET_PARAM(1)), cv::FileStorage::READ);
-//     ASSERT_TRUE(fs.isOpened());
-
-//     ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
-
-//     cv::Mat coloredCpu = cv::imread(cvtest::TS::ptr()->get_data_path() + GET_PARAM(2));
-//     ASSERT_FALSE(coloredCpu.empty());
-
-//     typedef cv::gpu::SCascade::Detection Detection;
-//     GpuMat colored(coloredCpu), objectBoxes(1, 100 * sizeof(Detection), CV_8UC1), rois(colored.size(), CV_8UC1);
-//     rois.setTo(1);
-
-//     cv::gpu::GpuMat trois;
-//     cascade.genRoi(rois, trois);
-//     objectBoxes.setTo(0);
-//     int level = GET_PARAM(3);
-//     cascade.detect(colored, trois, objectBoxes, level);
-
-//     cv::Mat dt(objectBoxes);
-
-//     Detection* dts = ((Detection*)dt.data) + 1;
-//     int* count = dt.ptr<int>(0);
-
-//     cv::Mat result(coloredCpu);
-
-//     printTotal(std::cout, *count);
-//     for (int i = 0; i  < *count; ++i)
-//     {
-//         Detection d = dts[i];
-//         print(std::cout, d);
-//         cv::rectangle(result, cv::Rect(d.x, d.y, d.w, d.h), cv::Scalar(255, 0, 0, 255), 1);
-//     }
-
-//     writeResult(result, level);
-//     SHOW(result);
-// }
-
 TEST(SCascadeTest, readCascade)
 {
     std::string xml = cvtest::TS::ptr()->get_data_path() + "../cv/cascadeandhog/icf-template.xml";

@@ -200,7 +200,7 @@ The function is mainly used to learn the classifier.
 
 
 Soft Cascade Classifier
-======================
+==========================
 
 Soft Cascade Classifier for Object Detection
 ----------------------------------------------------------
@@ -226,7 +226,7 @@ The sample has been rejected if it fall rejection threshold. So stageless cascad
 
 SCascade
 ----------------
-.. ocv:class:: SCascade
+.. ocv:class:: SCascade : public Algorithm
 
 Implementation of soft (stageless) cascaded detector. ::
 
@@ -248,7 +248,7 @@ Implementation of soft (stageless) cascaded detector. ::
         virtual ~SCascade();
         virtual bool load(const FileNode& fn);
         virtual void detect(InputArray image, InputArray rois, OutputArray objects, Stream& stream = Stream::Null()) const;
-        void genRoi(InputArray roi, OutputArray mask, Stream& stream = Stream::Null()) const;
+        virtual void genRoi(InputArray roi, OutputArray mask, Stream& stream = Stream::Null()) const;
     };
 
 

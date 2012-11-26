@@ -33,18 +33,6 @@ namespace {
             else if (a.w != b.w) return a.w < b.w;
             else return a.h < b.h;
         }
-
-        // bool operator()(const cv::SoftCascade::Detection& a,
-        //     const cv::SoftCascade::Detection& b) const
-        // {
-        //     const cv::Rect& ra = a.rect;
-        //     const cv::Rect& rb = b.rect;
-
-        //     if (ra.x != rb.x) return ra.x < rb.x;
-        //     else if (ra.y != rb.y) return ra.y < rb.y;
-        //     else if (ra.width != rb.width) return ra.width < rb.width;
-        //     else return ra.height < rb.height;
-        // }
     };
 
     cv::Mat sortDetections(cv::gpu::GpuMat& objects)
@@ -98,29 +86,6 @@ RUN_GPU(SCascadeTest, detect)
 }
 
 NO_CPU(SCascadeTest, detect)
-
-// RUN_CPU(SCascadeTest, detect)
-// {
-//     cv::Mat colored = readImage(GET_PARAM(1));
-//     ASSERT_FALSE(colored.empty());
-
-//     cv::SCascade cascade;
-//     ASSERT_TRUE(cascade.load(getDataPath(GET_PARAM(0))));
-
-//     std::vector<cv::Rect> rois;
-
-//     typedef cv::SCascade::Detection Detection;
-//     std::vector<Detection>objects;
-//     cascade.detectMultiScale(colored, rois, objects);
-
-//     TEST_CYCLE()
-//     {
-//         cascade.detectMultiScale(colored, rois, objects);
-//     }
-
-//     std::sort(objects.begin(), objects.end(), DetectionLess());
-//     SANITY_CHECK(objects);
-// }
 
 static cv::Rect getFromTable(int idx)
 {

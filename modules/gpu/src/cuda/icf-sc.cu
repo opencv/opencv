@@ -49,7 +49,7 @@
 namespace cv { namespace gpu { namespace device {
 namespace icf {
 
-    // ToDo: use textures or ancached load instruction.
+    // ToDo: use textures or uncached load instruction.
     __global__ void magToHist(const uchar* __restrict__ mag,
                               const float* __restrict__ angle, const int angPitch,
                                     uchar* __restrict__ hog,   const int hogPitch, const int fh)

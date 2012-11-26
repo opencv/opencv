@@ -45,7 +45,6 @@
 #define __OPENCV_ICF_HPP__
 
 #include <opencv2/gpu/device/common.hpp>
-#include <stdio.h>
 
 #if defined __CUDACC__
 # define __device __device__ __forceinline__
@@ -93,12 +92,7 @@ struct __align__(8) Node
 
     enum { THRESHOLD_MASK = 0x0FFFFFFF };
 
-    Node(const uchar4 r, const uint ch, const uint t) : rect(r), threshold(t + (ch << 28))
-    {
-        // printf("%d\n", t);
-        // printf("[%d %d %d %d] %d, %d\n",rect.x, rect.y, rect.z, rect.w, (int)(threshold >> 28),
-        //     (int)(0x0FFFFFFF & threshold));
-    }
+    Node(const uchar4 r, const uint ch, const uint t) : rect(r), threshold(t + (ch << 28)) {}
 };
 
 struct __align__(16) Detection

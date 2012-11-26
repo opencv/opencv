@@ -142,7 +142,7 @@ struct cv::gpu::SCascade::Fields
         static const char * const SC_F_RECT             = "rect";
 
         FileNode fn = root[SC_OCTAVES];
-            if (fn.empty()) return false;
+        if (fn.empty()) return false;
 
         using namespace device::icf;
 
