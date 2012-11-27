@@ -179,7 +179,7 @@ unset(__android_project_chain CACHE)
 #add_android_project(target_name ${path} NATIVE_DEPS opencv_core LIBRARY_DEPS ${OpenCV_BINARY_DIR} SDK_TARGET 11)
 macro(add_android_project target path)
   # parse arguments
-  set(android_proj_arglist NATIVE_DEPS LIBRARY_DEPS SDK_TARGET IGNORE_JAVA)
+  set(android_proj_arglist NATIVE_DEPS LIBRARY_DEPS SDK_TARGET IGNORE_JAVA IGNORE_MANIFEST)
   set(__varname "android_proj_")
   foreach(v ${android_proj_arglist})
     set(${__varname}${v} "")
@@ -220,9 +220,13 @@ macro(add_android_project target path)
     # get project sources
     file(GLOB_RECURSE android_proj_files RELATIVE "${path}" "${path}/res/*" "${path}/src/*")
 
+    if(NOT android_proj_IGNORE_MANIFEST)
+      list(APPEND android_proj_files ${ANDROID_MANIFEST_FILE})
+    endif()
+
     # copy sources out from the build tree
     set(android_proj_file_deps "")
-    foreach(f ${android_proj_files} ${ANDROID_MANIFEST_FILE})
+    foreach(f ${android_proj_files})
       add_custom_command(
         OUTPUT "${android_proj_bin_dir}/${f}"
         COMMAND ${CMAKE_COMMAND} -E copy "${path}/${f}" "${android_proj_bin_dir}/${f}"
@@ -324,6 +328,7 @@ macro(add_android_project target path)
       install(FILES "${OpenCV_BINARY_DIR}/bin/${target}.apk" DESTINATION "samples" COMPONENT main)
       get_filename_component(sample_dir "${path}" NAME)
       #java part
+      list(REMOVE_ITEM android_proj_files ${ANDROID_MANIFEST_FILE})
       foreach(f ${android_proj_files} ${ANDROID_MANIFEST_FILE})
         get_filename_component(install_subdir "${f}" PATH)
         install(FILES "${android_proj_bin_dir}/${f}" DESTINATION "samples/${sample_dir}/${install_subdir}" COMPONENT main)
