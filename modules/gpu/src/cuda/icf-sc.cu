@@ -41,6 +41,7 @@
 //M*/
 
 #include <opencv2/gpu/device/common.hpp>
+#include <opencv2/gpu/device/saturate_cast.hpp>
 
 #include <icf.hpp>
 #include <float.h>
@@ -48,6 +49,108 @@
 
 namespace cv { namespace gpu { namespace device {
 namespace icf {
+
+    __device__ __forceinline__ void luv(const float& b, const float& g, const float& r, uchar& __l, uchar& __u, uchar& __v)
+    {
+        // rgb -> XYZ
+        float x = 0.412453f * r + 0.357580f * g + 0.180423f * b;
+        float y = 0.212671f * r + 0.715160f * g + 0.072169f * b;
+        float z = 0.019334f * r + 0.119193f * g + 0.950227f * b;
+
+        // computed for D65
+        const float _ur = 0.19783303699678276f;
+        const float _vr = 0.46833047435252234f;
+
+        const float divisor = fmax((x + 15.f * y + 3.f * z), FLT_EPSILON);
+        const float _u = __fdividef(4.f * x, divisor);
+        const float _v = __fdividef(9.f * y, divisor);
+
+        const float L = fmax(0.f, ((116.f * cbrtf(y)) - 16.f));
+        const float U = 13.f * L * (_u - _ur);
+        const float V = 13.f * L * (_v - _vr);
+
+        // L in [0, 100], u in [-134, 220], v in [-140, 122]
+        __l = static_cast<uchar>( L * (255.f / 100.f));
+        __u = static_cast<uchar>((U + 134.f) * (255.f / (220.f + 134.f )));
+        __v = static_cast<uchar>((V + 140.f) * (255.f / (122.f + 140.f )));
+    }
+
+    __global__ void bgr2Luv_d(const uchar* rgb, const int rgbPitch, uchar* luvg, const int luvgPitch)
+    {
+        const int y = blockIdx.y * blockDim.y + threadIdx.y;
+        const int x = blockIdx.x * blockDim.x + threadIdx.x;
+
+        uchar3 color = ((uchar3*)(rgb + rgbPitch * y))[x];
+        uchar l, u, v;
+        luv(color.x / 255.f, color.y / 255.f, color.z / 255.f, l, u, v);
+
+        luvg[luvgPitch *  y + x] = l;
+        luvg[luvgPitch * (y + 480) + x] = u;
+        luvg[luvgPitch * (y + 2 * 480) + x] = v;
+    }
+
+    void bgr2Luv(const PtrStepSzb& bgr, PtrStepSzb luv)
+    {
+        dim3 block(32, 8);
+        dim3 grid(bgr.cols / 32, bgr.rows / 8);
+
+        bgr2Luv_d<<<grid, block>>>((const uchar*)bgr.ptr(0), bgr.step, (uchar*)luv.ptr(0), luv.step);
+
+        cudaSafeCall(cudaDeviceSynchronize());
+    }
+
+    __device__ __forceinline__ int fast_angle_bin(const float& dx, const float& dy)
+    {
+        const float angle_quantum = M_PI / 6.f;
+        float angle = atan2(dx, dy) + (angle_quantum / 2.f);
+
+        if (angle < 0) angle += M_PI;
+
+        const float angle_scaling = 1.f / angle_quantum;
+        return static_cast<int>(angle * angle_scaling) % 6;
+    }
+
+    texture<uchar,  cudaTextureType2D, cudaReadModeElementType> tgray;
+
+    __global__ void magnitude_d(PtrStepSzb mag)
+    {
+        const int x = blockIdx.x * blockDim.x + threadIdx.x;
+        const int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+        const float dx_a = tex2D(tgray, x + 1, y),
+                    dx_b = tex2D(tgray, x - 1, y),
+                    dx = dx_a - dx_b,
+
+                    dy_a = tex2D(tgray, x, y + 1),
+                    dy_b = tex2D(tgray, x, y - 1),
+                    dy = dy_a - dy_b;
+
+
+        const float magnitude_scaling = 1.0f/ sqrtf(2);
+
+        const float magnitude = sqrtf((dx * dx) + (dy * dy)) * magnitude_scaling;
+        const uchar magnitude_u8 = static_cast<uchar>(magnitude);
+
+        mag( 480 * 6 + y, x) = magnitude_u8;
+
+        int angle_channel_index;
+
+        angle_channel_index = fast_angle_bin(dy, dx);
+        mag( 480 * angle_channel_index + y, x) = magnitude_u8;
+    }
+
+    void magnitude(const PtrStepSzb& gray, PtrStepSzb mag)
+    {
+        dim3 block(32, 8);
+        dim3 grid(gray.cols / 32, gray.rows / 8);
+
+        cudaChannelFormatDesc desc = cudaCreateChannelDesc<uchar>();
+        cudaSafeCall( cudaBindTexture2D(0, tgray, gray.data, desc, gray.cols, gray.rows, gray.step) );
+
+        magnitude_d<<<grid, block>>>(mag);
+
+        cudaSafeCall(cudaDeviceSynchronize());
+    }
 
     // ToDo: use textures or uncached load instruction.
     __global__ void magToHist(const uchar* __restrict__ mag,

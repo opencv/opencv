@@ -1576,6 +1576,9 @@ public:
     // Param stream is stream is a high-level CUDA stream abstraction used for asynchronous execution
     virtual void detect(InputArray image, InputArray rois, OutputArray objects, Stream& stream = Stream::Null()) const;
 
+    // Preprocesing only
+    virtual void preprocess(InputArray image, OutputArray channels, Stream& stream = Stream::Null()) const;
+
     // Convert ROI matrix into the suitable for detect method.
     // Param roi is an input matrix of the same size as the image.
     //    There non zero value mean that detector should be executed in this point.

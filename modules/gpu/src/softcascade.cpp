@@ -88,6 +88,9 @@ namespace icf {
 
     void suppress(const PtrStepSzb& objects, PtrStepSzb overlaps, PtrStepSzi ndetections,
         PtrStepSzb suppressed, cudaStream_t stream);
+
+    void bgr2Luv(const PtrStepSzb& bgr, PtrStepSzb luv);
+    void magnitude(const PtrStepSzb& gray, PtrStepSzb mag);
 }
 
 namespace imgproc {
@@ -605,5 +608,35 @@ void cv::gpu::SCascade::read(const FileNode& fn)
 {
     Algorithm::read(fn);
 }
+
+namespace {
+
+void bgr2Luv(const cv::gpu::GpuMat& input, cv::gpu::GpuMat& integral)
+{
+    cv::gpu::GpuMat bgr;
+    cv::gpu::GaussianBlur(input, bgr, cv::Size(3, 3), -1);
+
+    cv::gpu::GpuMat gray, luv, shrunk, buffer;
+    luv.create(bgr.rows * 10, bgr.cols, CV_8UC1);
+    luv.setTo(0);
+
+    cv::gpu::cvtColor(bgr, gray, CV_BGR2GRAY);
+    cv::gpu::device::icf::magnitude(gray, luv(cv::Rect(0, 0, bgr.cols, bgr.rows * 7)));
+
+    cv::gpu::GpuMat __luv(luv, cv::Rect(0, bgr.rows * 7, bgr.cols, bgr.rows * 3));
+    cv::gpu::device::icf::bgr2Luv(bgr, __luv);
+
+    cv::gpu::resize(luv, shrunk, cv::Size(), 0.25f, 0.25f, CV_INTER_AREA);
+    cv::gpu::integralBuffered(shrunk, integral, buffer);
+}
+}
+
+void cv::gpu::SCascade::preprocess(InputArray _bgr, OutputArray _channels, Stream& stream) const
+{
+    CV_Assert(fields);
+    (void)stream;
+    const GpuMat bgr = _bgr.getGpuMat(), channels = _channels.getGpuMat();
+}
+
 
 #endif
