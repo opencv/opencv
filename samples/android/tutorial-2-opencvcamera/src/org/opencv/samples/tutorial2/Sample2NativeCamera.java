@@ -110,7 +110,7 @@ public class Sample2NativeCamera extends Activity implements CvCameraViewListene
             case Sample2NativeCamera.VIEW_MODE_RGBA:
             {
                 inputFrame.copyTo(mRgba);
-                Core.putText(mRgba, "OpenCV+Android", new Point(10, 50), 3, 1, new Scalar(255, 0, 0, 255), 2);
+                Core.putText(mRgba, "OpenCV+Android", new Point(10, inputFrame.rows() - 10), 3, 1, new Scalar(255, 0, 0, 255), 2);
             } break;
             case Sample2NativeCamera.VIEW_MODE_CANNY:
             {
