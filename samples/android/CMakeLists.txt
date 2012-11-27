@@ -16,6 +16,7 @@ add_subdirectory(tutorial-1-addopencv)
 add_subdirectory(tutorial-2-opencvcamera)
 add_subdirectory(tutorial-3-native)
 add_subdirectory(tutorial-4-mixed)
+add_subdirectory(tutorial-5-customcamera)
 
 #hello-android sample
 if(HAVE_opencv_highgui)
