@@ -43,6 +43,7 @@
 #include "precomp.hpp"
 
 #include <limits>
+#include <iostream>
 
 namespace cv
 {
@@ -310,7 +311,29 @@ static void Bayer2Gray_( const Mat& srcmat, Mat& dstmat, int code )
             dst0[i] = dst0[i + (size.height-1)*dst_step] = 0;
         }
 }
-    
+
+template <typename T>
+struct Alpha
+{
+    static T value() { return std::numeric_limits<T>::max(); }
+};
+
+template <>
+struct Alpha<float>
+{
+    static float value() { return 1.0f; }
+};
+
+static cv::Mutex m;
+
+template <typename T>
+static void print(const T& value)
+{
+    m.lock();
+    std::cout << value << " ";
+    m.unlock();
+}
+
 template <typename T, typename SIMDInterpolator>
 class Bayer2RGB_Invoker :
     public ParallelLoopBody
@@ -319,11 +342,14 @@ public:
     Bayer2RGB_Invoker(const Mat& _srcmat, Mat& _dstmat, int _start_with_green, int _blue, const Size& _size) :
         srcmat(_srcmat), dstmat(_dstmat), Start_with_green(_start_with_green), Blue(_blue), size(_size)
     {
+        print("Bayer2RGB_Invoker()\n");
     }
     
     virtual void operator() (const Range& range) const
     {
         SIMDInterpolator vecOp;
+        T alpha = Alpha<T>::value();
+
         const T* bayer0 = (const T*)srcmat.data;
         int bayer_step = (int)(srcmat.step/sizeof(T));
         
@@ -331,7 +357,6 @@ public:
         int dst_step = (int)(dstmat.step/sizeof(T));
         
         int blue = Blue, start_with_green = Start_with_green;
-        int alpha = std::numeric_limits<T>::max();
         if (range.start % 2)
         {
             blue = -blue;
@@ -344,6 +369,8 @@ public:
         
         dst0 += dst_step * range.start;
         bayer0 += bayer_step * range.start;
+
+        print(range.start);
         
         for (int i = range.start; i < range.end; bayer0 += bayer_step, dst0 += dst_step, ++i )
         {
@@ -525,6 +552,9 @@ public:
     Mat dstmat;
     int Start_with_green, Blue;
     const Size size;
+
+    const Bayer2RGB_Invoker& operator= (const Bayer2RGB_Invoker&);
+    Bayer2RGB_Invoker(const Bayer2RGB_Invoker&);
 };
 
 template<typename T, class SIMDInterpolator>
@@ -542,7 +572,9 @@ static void Bayer2RGB_( const Mat& srcmat, Mat& dstmat, int code )
     Range range(0, size.height);
     Bayer2RGB_Invoker<T, SIMDInterpolator> invoker(srcmat, dstmat, start_with_green, blue, size);
 
+    print("before parallel_for_\n");
     parallel_for_(range, invoker);
+    print("after parallel_for_\n");
     
     // filling the first and the last rows
     size = dstmat.size();
