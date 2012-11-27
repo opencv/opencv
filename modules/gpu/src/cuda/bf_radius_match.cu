@@ -42,7 +42,8 @@
 
 #if !defined CUDA_DISABLER
 
-#include "internal_shared.hpp"
+#include "opencv2/gpu/device/common.hpp"
+#include "opencv2/gpu/device/utility.hpp"
 #include "opencv2/gpu/device/limits.hpp"
 #include "opencv2/gpu/device/vec_distance.hpp"
 #include "opencv2/gpu/device/datamov_utils.hpp"
@@ -58,8 +59,6 @@ namespace cv { namespace gpu { namespace device
         __global__ void matchUnrolled(const PtrStepSz<T> query, int imgIdx, const PtrStepSz<T> train, float maxDistance, const Mask mask,
             PtrStepi bestTrainIdx, PtrStepi bestImgIdx, PtrStepf bestDistance, unsigned int* nMatches, int maxCount)
         {
-            #if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ >= 110)
-
             extern __shared__ int smem[];
 
             const int queryIdx = blockIdx.y * BLOCK_SIZE + threadIdx.y;
@@ -110,8 +109,6 @@ namespace cv { namespace gpu { namespace device
                     bestDistance.ptr(queryIdx)[ind] = distVal;
                 }
             }
-
-            #endif
         }
 
         template <int BLOCK_SIZE, int MAX_DESC_LEN, typename Dist, typename T, typename Mask>
@@ -170,8 +167,6 @@ namespace cv { namespace gpu { namespace device
         __global__ void match(const PtrStepSz<T> query, int imgIdx, const PtrStepSz<T> train, float maxDistance, const Mask mask,
             PtrStepi bestTrainIdx, PtrStepi bestImgIdx, PtrStepf bestDistance, unsigned int* nMatches, int maxCount)
         {
-            #if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ >= 110)
-
             extern __shared__ int smem[];
 
             const int queryIdx = blockIdx.y * BLOCK_SIZE + threadIdx.y;
@@ -221,8 +216,6 @@ namespace cv { namespace gpu { namespace device
                     bestDistance.ptr(queryIdx)[ind] = distVal;
                 }
             }
-
-            #endif
         }
 
         template <int BLOCK_SIZE, typename Dist, typename T, typename Mask>

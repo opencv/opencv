@@ -42,10 +42,13 @@
 
 #if !defined CUDA_DISABLER
 
-#include "internal_shared.hpp"
+#include "opencv2/gpu/device/common.hpp"
+#include "opencv2/gpu/device/utility.hpp"
+#include "opencv2/gpu/device/reduce.hpp"
 #include "opencv2/gpu/device/limits.hpp"
 #include "opencv2/gpu/device/vec_distance.hpp"
 #include "opencv2/gpu/device/datamov_utils.hpp"
+#include "opencv2/gpu/device/warp_shuffle.hpp"
 
 namespace cv { namespace gpu { namespace device
 {
@@ -59,6 +62,45 @@ namespace cv { namespace gpu { namespace device
                                       int& bestTrainIdx1, int& bestTrainIdx2,
                                       float* s_distance, int* s_trainIdx)
         {
+        #if __CUDA_ARCH__ >= 300
+            (void) s_distance;
+            (void) s_trainIdx;
+
+            float d1, d2;
+            int i1, i2;
+
+            #pragma unroll
+            for (int i = BLOCK_SIZE / 2; i >= 1; i /= 2)
+            {
+                d1 = shfl_down(bestDistance1, i, BLOCK_SIZE);
+                d2 = shfl_down(bestDistance2, i, BLOCK_SIZE);
+                i1 = shfl_down(bestTrainIdx1, i, BLOCK_SIZE);
+                i2 = shfl_down(bestTrainIdx2, i, BLOCK_SIZE);
+
+                if (bestDistance1 < d1)
+                {
+                    if (d1 < bestDistance2)
+                    {
+                        bestDistance2 = d1;
+                        bestTrainIdx2 = i1;
+                    }
+                }
+                else
+                {
+                    bestDistance2 = bestDistance1;
+                    bestTrainIdx2 = bestTrainIdx1;
+
+                    bestDistance1 = d1;
+                    bestTrainIdx1 = i1;
+
+                    if (d2 < bestDistance2)
+                    {
+                        bestDistance2 = d2;
+                        bestTrainIdx2 = i2;
+                    }
+                }
+            }
+        #else
             float myBestDistance1 = numeric_limits<float>::max();
             float myBestDistance2 = numeric_limits<float>::max();
             int myBestTrainIdx1 = -1;
@@ -122,6 +164,7 @@ namespace cv { namespace gpu { namespace device
 
             bestTrainIdx1 = myBestTrainIdx1;
             bestTrainIdx2 = myBestTrainIdx2;
+        #endif
         }
 
         template <int BLOCK_SIZE>
@@ -130,6 +173,53 @@ namespace cv { namespace gpu { namespace device
                                        int& bestImgIdx1, int& bestImgIdx2,
                                        float* s_distance, int* s_trainIdx, int* s_imgIdx)
         {
+        #if __CUDA_ARCH__ >= 300
+            (void) s_distance;
+            (void) s_trainIdx;
+            (void) s_imgIdx;
+
+            float d1, d2;
+            int i1, i2;
+            int j1, j2;
+
+            #pragma unroll
+            for (int i = BLOCK_SIZE / 2; i >= 1; i /= 2)
+            {
+                d1 = shfl_down(bestDistance1, i, BLOCK_SIZE);
+                d2 = shfl_down(bestDistance2, i, BLOCK_SIZE);
+                i1 = shfl_down(bestTrainIdx1, i, BLOCK_SIZE);
+                i2 = shfl_down(bestTrainIdx2, i, BLOCK_SIZE);
+                j1 = shfl_down(bestImgIdx1, i, BLOCK_SIZE);
+                j2 = shfl_down(bestImgIdx2, i, BLOCK_SIZE);
+
+                if (bestDistance1 < d1)
+                {
+                    if (d1 < bestDistance2)
+                    {
+                        bestDistance2 = d1;
+                        bestTrainIdx2 = i1;
+                        bestImgIdx2 = j1;
+                    }
+                }
+                else
+                {
+                    bestDistance2 = bestDistance1;
+                    bestTrainIdx2 = bestTrainIdx1;
+                    bestImgIdx2 = bestImgIdx1;
+
+                    bestDistance1 = d1;
+                    bestTrainIdx1 = i1;
+                    bestImgIdx1 = j1;
+
+                    if (d2 < bestDistance2)
+                    {
+                        bestDistance2 = d2;
+                        bestTrainIdx2 = i2;
+                        bestImgIdx2 = j2;
+                    }
+                }
+            }
+        #else
             float myBestDistance1 = numeric_limits<float>::max();
             float myBestDistance2 = numeric_limits<float>::max();
             int myBestTrainIdx1 = -1;
@@ -205,6 +295,7 @@ namespace cv { namespace gpu { namespace device
 
             bestImgIdx1 = myBestImgIdx1;
             bestImgIdx2 = myBestImgIdx2;
+        #endif
         }
 
         ///////////////////////////////////////////////////////////////////////////////
@@ -1005,7 +1096,7 @@ namespace cv { namespace gpu { namespace device
             s_trainIdx[threadIdx.x] = bestIdx;
             __syncthreads();
 
-            reducePredVal<BLOCK_SIZE>(s_dist, dist, s_trainIdx, bestIdx, threadIdx.x, less<volatile float>());
+            reduceKeyVal<BLOCK_SIZE>(s_dist, dist, s_trainIdx, bestIdx, threadIdx.x, less<float>());
 
             if (threadIdx.x == 0)
             {

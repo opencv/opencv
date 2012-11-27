@@ -792,30 +792,22 @@ private:
     GpuMat lab, l, ab;
 };
 
+struct CV_EXPORTS CannyBuf
+{
+    void create(const Size& image_size, int apperture_size = 3);
+    void release();
 
-struct CV_EXPORTS CannyBuf;
+    GpuMat dx, dy;
+    GpuMat mag;
+    GpuMat map;
+    GpuMat st1, st2;
+    Ptr<FilterEngine_GPU> filterDX, filterDY;
+};
 
 CV_EXPORTS void Canny(const GpuMat& image, GpuMat& edges, double low_thresh, double high_thresh, int apperture_size = 3, bool L2gradient = false);
 CV_EXPORTS void Canny(const GpuMat& image, CannyBuf& buf, GpuMat& edges, double low_thresh, double high_thresh, int apperture_size = 3, bool L2gradient = false);
 CV_EXPORTS void Canny(const GpuMat& dx, const GpuMat& dy, GpuMat& edges, double low_thresh, double high_thresh, bool L2gradient = false);
 CV_EXPORTS void Canny(const GpuMat& dx, const GpuMat& dy, CannyBuf& buf, GpuMat& edges, double low_thresh, double high_thresh, bool L2gradient = false);
-
-struct CV_EXPORTS CannyBuf
-{
-    CannyBuf() {}
-    explicit CannyBuf(const Size& image_size, int apperture_size = 3) {create(image_size, apperture_size);}
-    CannyBuf(const GpuMat& dx_, const GpuMat& dy_);
-
-    void create(const Size& image_size, int apperture_size = 3);
-
-    void release();
-
-    GpuMat dx, dy;
-    GpuMat dx_buf, dy_buf;
-    GpuMat edgeBuf;
-    GpuMat trackBuf1, trackBuf2;
-    Ptr<FilterEngine_GPU> filterDX, filterDY;
-};
 
 class CV_EXPORTS ImagePyramid
 {
@@ -1036,11 +1028,9 @@ CV_EXPORTS void histRange(const GpuMat& src, GpuMat hist[4], const GpuMat levels
 //! Calculates histogram for 8u one channel image
 //! Output hist will have one row, 256 cols and CV32SC1 type.
 CV_EXPORTS void calcHist(const GpuMat& src, GpuMat& hist, Stream& stream = Stream::Null());
-CV_EXPORTS void calcHist(const GpuMat& src, GpuMat& hist, GpuMat& buf, Stream& stream = Stream::Null());
 
 //! normalizes the grayscale image brightness and contrast by normalizing its histogram
 CV_EXPORTS void equalizeHist(const GpuMat& src, GpuMat& dst, Stream& stream = Stream::Null());
-CV_EXPORTS void equalizeHist(const GpuMat& src, GpuMat& dst, GpuMat& hist, Stream& stream = Stream::Null());
 CV_EXPORTS void equalizeHist(const GpuMat& src, GpuMat& dst, GpuMat& hist, GpuMat& buf, Stream& stream = Stream::Null());
 
 //////////////////////////////// StereoBM_GPU ////////////////////////////////

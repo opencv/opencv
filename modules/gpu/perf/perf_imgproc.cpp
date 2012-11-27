@@ -581,13 +581,12 @@ PERF_TEST_P(Sz, ImgProc_CalcHist, GPU_TYPICAL_MAT_SIZES)
     {
         cv::gpu::GpuMat d_src(src);
         cv::gpu::GpuMat d_hist;
-        cv::gpu::GpuMat d_buf;
 
-        cv::gpu::calcHist(d_src, d_hist, d_buf);
+        cv::gpu::calcHist(d_src, d_hist);
 
         TEST_CYCLE()
         {
-            cv::gpu::calcHist(d_src, d_hist, d_buf);
+            cv::gpu::calcHist(d_src, d_hist);
         }
 
         GPU_SANITY_CHECK(d_hist);

@@ -302,18 +302,18 @@ namespace cv { namespace gpu { namespace device
     template <> struct name<type> : binary_function<type, type, type> \
     { \
         __device__ __forceinline__ type operator()(type lhs, type rhs) const {return op(lhs, rhs);} \
-        __device__ __forceinline__ name(const name& other):binary_function<type, type, type>(){}\
-        __device__ __forceinline__ name():binary_function<type, type, type>(){}\
+        __device__ __forceinline__ name() {}\
+        __device__ __forceinline__ name(const name&) {}\
     };
 
     template <typename T> struct maximum : binary_function<T, T, T>
     {
         __device__ __forceinline__ T operator()(typename TypeTraits<T>::ParameterType lhs, typename TypeTraits<T>::ParameterType rhs) const
         {
-            return lhs < rhs ? rhs : lhs;
+            return max(lhs, rhs);
         }
-        __device__ __forceinline__ maximum(const maximum& other):binary_function<T, T, T>(){}
-        __device__ __forceinline__ maximum():binary_function<T, T, T>(){}
+        __device__ __forceinline__ maximum() {}
+        __device__ __forceinline__ maximum(const maximum&) {}
     };
 
     OPENCV_GPU_IMPLEMENT_MINMAX(maximum, uchar, ::max)
@@ -330,10 +330,10 @@ namespace cv { namespace gpu { namespace device
     {
         __device__ __forceinline__ T operator()(typename TypeTraits<T>::ParameterType lhs, typename TypeTraits<T>::ParameterType rhs) const
         {
-            return lhs < rhs ? lhs : rhs;
+            return min(lhs, rhs);
         }
-        __device__ __forceinline__ minimum(const minimum& other):binary_function<T, T, T>(){}
-        __device__ __forceinline__ minimum():binary_function<T, T, T>(){}
+        __device__ __forceinline__ minimum() {}
+        __device__ __forceinline__ minimum(const minimum&) {}
     };
 
     OPENCV_GPU_IMPLEMENT_MINMAX(minimum, uchar, ::min)
@@ -350,6 +350,108 @@ namespace cv { namespace gpu { namespace device
 
     // Math functions
 ///bound=========================================
+
+    template <typename T> struct abs_func : unary_function<T, T>
+    {
+        __device__ __forceinline__ T operator ()(typename TypeTraits<T>::ParameterType x) const
+        {
+            return abs(x);
+        }
+
+        __device__ __forceinline__ abs_func() {}
+        __device__ __forceinline__ abs_func(const abs_func&) {}
+    };
+    template <> struct abs_func<unsigned char> : unary_function<unsigned char, unsigned char>
+    {
+        __device__ __forceinline__ unsigned char operator ()(unsigned char x) const
+        {
+            return x;
+        }
+
+        __device__ __forceinline__ abs_func() {}
+        __device__ __forceinline__ abs_func(const abs_func&) {}
+    };
+    template <> struct abs_func<signed char> : unary_function<signed char, signed char>
+    {
+        __device__ __forceinline__ signed char operator ()(signed char x) const
+        {
+            return ::abs(x);
+        }
+
+        __device__ __forceinline__ abs_func() {}
+        __device__ __forceinline__ abs_func(const abs_func&) {}
+    };
+    template <> struct abs_func<char> : unary_function<char, char>
+    {
+        __device__ __forceinline__ char operator ()(char x) const
+        {
+            return ::abs(x);
+        }
+
+        __device__ __forceinline__ abs_func() {}
+        __device__ __forceinline__ abs_func(const abs_func&) {}
+    };
+    template <> struct abs_func<unsigned short> : unary_function<unsigned short, unsigned short>
+    {
+        __device__ __forceinline__ unsigned short operator ()(unsigned short x) const
+        {
+            return x;
+        }
+
+        __device__ __forceinline__ abs_func() {}
+        __device__ __forceinline__ abs_func(const abs_func&) {}
+    };
+    template <> struct abs_func<short> : unary_function<short, short>
+    {
+        __device__ __forceinline__ short operator ()(short x) const
+        {
+            return ::abs(x);
+        }
+
+        __device__ __forceinline__ abs_func() {}
+        __device__ __forceinline__ abs_func(const abs_func&) {}
+    };
+    template <> struct abs_func<unsigned int> : unary_function<unsigned int, unsigned int>
+    {
+        __device__ __forceinline__ unsigned int operator ()(unsigned int x) const
+        {
+            return x;
+        }
+
+        __device__ __forceinline__ abs_func() {}
+        __device__ __forceinline__ abs_func(const abs_func&) {}
+    };
+    template <> struct abs_func<int> : unary_function<int, int>
+    {
+        __device__ __forceinline__ int operator ()(int x) const
+        {
+            return ::abs(x);
+        }
+
+        __device__ __forceinline__ abs_func() {}
+        __device__ __forceinline__ abs_func(const abs_func&) {}
+    };
+    template <> struct abs_func<float> : unary_function<float, float>
+    {
+        __device__ __forceinline__ float operator ()(float x) const
+        {
+            return ::fabsf(x);
+        }
+
+        __device__ __forceinline__ abs_func() {}
+        __device__ __forceinline__ abs_func(const abs_func&) {}
+    };
+    template <> struct abs_func<double> : unary_function<double, double>
+    {
+        __device__ __forceinline__ double operator ()(double x) const
+        {
+            return ::fabs(x);
+        }
+
+        __device__ __forceinline__ abs_func() {}
+        __device__ __forceinline__ abs_func(const abs_func&) {}
+    };
+
 #define OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(name, func) \
     template <typename T> struct name ## _func : unary_function<T, float> \
     { \
@@ -357,6 +459,8 @@ namespace cv { namespace gpu { namespace device
         { \
             return func ## f(v); \
         } \
+        __device__ __forceinline__ name ## _func() {} \
+        __device__ __forceinline__ name ## _func(const name ## _func&) {} \
     }; \
     template <> struct name ## _func<double> : unary_function<double, double> \
     { \
@@ -364,6 +468,8 @@ namespace cv { namespace gpu { namespace device
         { \
             return func(v); \
         } \
+        __device__ __forceinline__ name ## _func() {} \
+        __device__ __forceinline__ name ## _func(const name ## _func&) {} \
     };
 
 #define OPENCV_GPU_IMPLEMENT_BIN_FUNCTOR(name, func) \
@@ -382,7 +488,6 @@ namespace cv { namespace gpu { namespace device
         } \
     };
 
-    OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(fabs, ::fabs)
     OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(sqrt, ::sqrt)
     OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(exp, ::exp)
     OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(exp2, ::exp2)

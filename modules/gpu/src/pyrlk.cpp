@@ -55,21 +55,18 @@ void cv::gpu::PyrLKOpticalFlow::releaseMemory() {}
 
 #else /* !defined (HAVE_CUDA) */
 
-namespace cv { namespace gpu { namespace device
+namespace pyrlk
 {
-    namespace pyrlk
-    {
-        void loadConstants(int2 winSize, int iters);
+    void loadConstants(int2 winSize, int iters);
 
-        void lkSparse1_gpu(PtrStepSzf I, PtrStepSzf J, const float2* prevPts, float2* nextPts, uchar* status, float* err, int ptcount,
-            int level, dim3 block, dim3 patch, cudaStream_t stream = 0);
-        void lkSparse4_gpu(PtrStepSz<float4> I, PtrStepSz<float4> J, const float2* prevPts, float2* nextPts, uchar* status, float* err, int ptcount,
-            int level, dim3 block, dim3 patch, cudaStream_t stream = 0);
+    void sparse1(PtrStepSzf I, PtrStepSzf J, const float2* prevPts, float2* nextPts, uchar* status, float* err, int ptcount,
+                 int level, dim3 block, dim3 patch, cudaStream_t stream = 0);
+    void sparse4(PtrStepSz<float4> I, PtrStepSz<float4> J, const float2* prevPts, float2* nextPts, uchar* status, float* err, int ptcount,
+                 int level, dim3 block, dim3 patch, cudaStream_t stream = 0);
 
-        void lkDense_gpu(PtrStepSzb I, PtrStepSzf J, PtrStepSzf u, PtrStepSzf v, PtrStepSzf prevU, PtrStepSzf prevV,
-                         PtrStepSzf err, int2 winSize, cudaStream_t stream = 0);
-    }
-}}}
+    void dense(PtrStepSzb I, PtrStepSzf J, PtrStepSzf u, PtrStepSzf v, PtrStepSzf prevU, PtrStepSzf prevV,
+               PtrStepSzf err, int2 winSize, cudaStream_t stream = 0);
+}
 
 cv::gpu::PyrLKOpticalFlow::PyrLKOpticalFlow()
 {
@@ -104,8 +101,6 @@ namespace
 
 void cv::gpu::PyrLKOpticalFlow::sparse(const GpuMat& prevImg, const GpuMat& nextImg, const GpuMat& prevPts, GpuMat& nextPts, GpuMat& status, GpuMat* err)
 {
-    using namespace cv::gpu::device::pyrlk;
-
     if (prevPts.empty())
     {
         nextPts.release();
@@ -166,19 +161,19 @@ void cv::gpu::PyrLKOpticalFlow::sparse(const GpuMat& prevImg, const GpuMat& next
         pyrDown(nextPyr_[level - 1], nextPyr_[level]);
     }
 
-    loadConstants(make_int2(winSize.width, winSize.height), iters);
+    pyrlk::loadConstants(make_int2(winSize.width, winSize.height), iters);
 
     for (int level = maxLevel; level >= 0; level--)
     {
         if (cn == 1)
         {
-            lkSparse1_gpu(prevPyr_[level], nextPyr_[level],
+            pyrlk::sparse1(prevPyr_[level], nextPyr_[level],
                 prevPts.ptr<float2>(), nextPts.ptr<float2>(), status.ptr(), level == 0 && err ? err->ptr<float>() : 0, prevPts.cols,
                 level, block, patch);
         }
         else
         {
-            lkSparse4_gpu(prevPyr_[level], nextPyr_[level],
+            pyrlk::sparse4(prevPyr_[level], nextPyr_[level],
                 prevPts.ptr<float2>(), nextPts.ptr<float2>(), status.ptr(), level == 0 && err ? err->ptr<float>() : 0, prevPts.cols,
                 level, block, patch);
         }
@@ -187,8 +182,6 @@ void cv::gpu::PyrLKOpticalFlow::sparse(const GpuMat& prevImg, const GpuMat& next
 
 void cv::gpu::PyrLKOpticalFlow::dense(const GpuMat& prevImg, const GpuMat& nextImg, GpuMat& u, GpuMat& v, GpuMat* err)
 {
-    using namespace cv::gpu::device::pyrlk;
-
     CV_Assert(prevImg.type() == CV_8UC1);
     CV_Assert(prevImg.size() == nextImg.size() && prevImg.type() == nextImg.type());
     CV_Assert(maxLevel >= 0);
@@ -219,7 +212,7 @@ void cv::gpu::PyrLKOpticalFlow::dense(const GpuMat& prevImg, const GpuMat& nextI
     vPyr_[1].setTo(Scalar::all(0));
 
     int2 winSize2i = make_int2(winSize.width, winSize.height);
-    loadConstants(winSize2i, iters);
+    pyrlk::loadConstants(winSize2i, iters);
 
     PtrStepSzf derr = err ? *err : PtrStepSzf();
 
@@ -229,7 +222,7 @@ void cv::gpu::PyrLKOpticalFlow::dense(const GpuMat& prevImg, const GpuMat& nextI
     {
         int idx2 = (idx + 1) & 1;
 
-        lkDense_gpu(prevPyr_[level], nextPyr_[level], uPyr_[idx], vPyr_[idx], uPyr_[idx2], vPyr_[idx2],
+        pyrlk::dense(prevPyr_[level], nextPyr_[level], uPyr_[idx], vPyr_[idx], uPyr_[idx2], vPyr_[idx2],
             level == 0 ? derr : PtrStepSzf(), winSize2i);
 
         if (level > 0)

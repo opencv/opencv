@@ -86,8 +86,7 @@ namespace cv { namespace gpu { namespace device
 
         void icvCalcOrientation_gpu(const float* featureX, const float* featureY, const float* featureSize, float* featureDir, int nFeatures);
 
-        void compute_descriptors_gpu(const PtrStepSzf& descriptors,
-            const float* featureX, const float* featureY, const float* featureSize, const float* featureDir, int nFeatures);
+        void compute_descriptors_gpu(PtrStepSz<float4> descriptors, const float* featureX, const float* featureY, const float* featureSize, const float* featureDir, int nFeatures);
     }
 }}}
 

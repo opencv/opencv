@@ -46,6 +46,8 @@
 #include "opencv2/gpu/device/vec_math.hpp"
 #include "opencv2/gpu/device/limits.hpp"
 #include "opencv2/gpu/device/utility.hpp"
+#include "opencv2/gpu/device/reduce.hpp"
+#include "opencv2/gpu/device/functional.hpp"
 #include "fgd_bgfg_common.hpp"
 
 using namespace cv::gpu;
@@ -181,57 +183,8 @@ namespace bgfg
         __shared__ unsigned int data1[MERGE_THREADBLOCK_SIZE];
         __shared__ unsigned int data2[MERGE_THREADBLOCK_SIZE];
 
-        data0[threadIdx.x] = sum0;
-        data1[threadIdx.x] = sum1;
-        data2[threadIdx.x] = sum2;
-        __syncthreads();
-
-        if (threadIdx.x < 128)
-        {
-            data0[threadIdx.x] = sum0 += data0[threadIdx.x + 128];
-            data1[threadIdx.x] = sum1 += data1[threadIdx.x + 128];
-            data2[threadIdx.x] = sum2 += data2[threadIdx.x + 128];
-        }
-        __syncthreads();
-
-        if (threadIdx.x < 64)
-        {
-            data0[threadIdx.x] = sum0 += data0[threadIdx.x + 64];
-            data1[threadIdx.x] = sum1 += data1[threadIdx.x + 64];
-            data2[threadIdx.x] = sum2 += data2[threadIdx.x + 64];
-        }
-        __syncthreads();
-
-        if (threadIdx.x < 32)
-        {
-            volatile unsigned int* vdata0 = data0;
-            volatile unsigned int* vdata1 = data1;
-            volatile unsigned int* vdata2 = data2;
-
-            vdata0[threadIdx.x] = sum0 += vdata0[threadIdx.x + 32];
-            vdata1[threadIdx.x] = sum1 += vdata1[threadIdx.x + 32];
-            vdata2[threadIdx.x] = sum2 += vdata2[threadIdx.x + 32];
-
-            vdata0[threadIdx.x] = sum0 += vdata0[threadIdx.x + 16];
-            vdata1[threadIdx.x] = sum1 += vdata1[threadIdx.x + 16];
-            vdata2[threadIdx.x] = sum2 += vdata2[threadIdx.x + 16];
-
-            vdata0[threadIdx.x] = sum0 += vdata0[threadIdx.x + 8];
-            vdata1[threadIdx.x] = sum1 += vdata1[threadIdx.x + 8];
-            vdata2[threadIdx.x] = sum2 += vdata2[threadIdx.x + 8];
-
-            vdata0[threadIdx.x] = sum0 += vdata0[threadIdx.x + 4];
-            vdata1[threadIdx.x] = sum1 += vdata1[threadIdx.x + 4];
-            vdata2[threadIdx.x] = sum2 += vdata2[threadIdx.x + 4];
-
-            vdata0[threadIdx.x] = sum0 += vdata0[threadIdx.x + 2];
-            vdata1[threadIdx.x] = sum1 += vdata1[threadIdx.x + 2];
-            vdata2[threadIdx.x] = sum2 += vdata2[threadIdx.x + 2];
-
-            vdata0[threadIdx.x] = sum0 += vdata0[threadIdx.x + 1];
-            vdata1[threadIdx.x] = sum1 += vdata1[threadIdx.x + 1];
-            vdata2[threadIdx.x] = sum2 += vdata2[threadIdx.x + 1];
-        }
+        plus<unsigned int> op;
+        reduce<MERGE_THREADBLOCK_SIZE>(smem_tuple(data0, data1, data2), thrust::tie(sum0, sum1, sum2), threadIdx.x, thrust::make_tuple(op, op, op));
 
         if(threadIdx.x == 0)
         {

@@ -313,7 +313,7 @@ TEST_P(Canny, Accuracy)
         cv::Mat edges_gold;
         cv::Canny(img, edges_gold, low_thresh, high_thresh, apperture_size, useL2gradient);
 
-        EXPECT_MAT_SIMILAR(edges_gold, edges, 1e-2);
+        EXPECT_MAT_SIMILAR(edges_gold, edges, 2e-2);
     }
 }
 

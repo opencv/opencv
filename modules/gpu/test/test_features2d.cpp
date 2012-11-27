@@ -328,7 +328,7 @@ TEST_P(SURF, Descriptor)
         int matchedCount = getMatchedPointsCount(keypoints, keypoints, matches);
         double matchedRatio = static_cast<double>(matchedCount) / keypoints.size();
 
-        EXPECT_GT(matchedRatio, 0.35);
+        EXPECT_GT(matchedRatio, 0.6);
     }
 }
 
