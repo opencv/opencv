@@ -284,7 +284,9 @@ RUN_GPU(SCascadeTest, detectStream)
         cascade.detect(colored, trois, objectBoxes, s);
     }
 
+#ifdef HAVE_CUDA
     cudaDeviceSynchronize();
+#endif
 
     SANITY_CHECK(sortDetections(objectBoxes));
 }
