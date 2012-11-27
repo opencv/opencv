@@ -1,4 +1,5 @@
-src/stabilizer.d: ../src/stabilizer.cpp ../src/precomp.hpp \
+src/videostab.d: ../src/videostab.cpp \
+ /home/rodrygojose/opencv/modules/videostab_polimi/include/opencv2/videostab/videostab.hpp \
  /home/rodrygojose/opencv/modules/videostab_polimi/include/opencv2/videostab/stabilizer.hpp \
  /home/rodrygojose/opencv/modules/videostab_polimi/include/opencv2/videostab/global_motion.hpp \
  /home/rodrygojose/opencv/modules/videostab_polimi/include/opencv2/videostab/optical_flow.hpp \
@@ -14,7 +15,7 @@ src/stabilizer.d: ../src/stabilizer.cpp ../src/precomp.hpp \
  /home/rodrygojose/opencv/modules/videostab_polimi/include/opencv2/videostab/wobble_suppression.hpp \
  /home/rodrygojose/opencv/modules/videostab_polimi/include/opencv2/videostab/ring_buffer.hpp
 
-../src/precomp.hpp:
+/home/rodrygojose/opencv/modules/videostab_polimi/include/opencv2/videostab/videostab.hpp:
 
 /home/rodrygojose/opencv/modules/videostab_polimi/include/opencv2/videostab/stabilizer.hpp:
 

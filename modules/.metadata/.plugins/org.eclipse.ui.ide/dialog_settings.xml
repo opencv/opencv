@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <section name="Workbench">
 	<section name="TaskPropertiesDialogSettings">
-		<item value="828" key="DIALOG_WIDTH"/>
+		<item value="830" key="DIALOG_WIDTH"/>
 		<item value="32" key="DIALOG_Y_ORIGIN"/>
-		<item value="351" key="DIALOG_HEIGHT"/>
-		<item value="226" key="DIALOG_X_ORIGIN"/>
+		<item value="324" key="DIALOG_HEIGHT"/>
+		<item value="225" key="DIALOG_X_ORIGIN"/>
 		<item value="1|Cantarell|11.0|0|GTK|1|" key="DIALOG_FONT_NAME"/>
 	</section>
 	<section name="ExternalProjectImportWizard">

@@ -2,9 +2,9 @@
 <section name="Workbench">
 	<section name="org.eclipse.ui.texteditor.FindReplaceDialog_dialogBounds">
 		<item value="316" key="DIALOG_WIDTH"/>
-		<item value="79" key="DIALOG_Y_ORIGIN"/>
-		<item value="502" key="DIALOG_HEIGHT"/>
-		<item value="639" key="DIALOG_X_ORIGIN"/>
+		<item value="59" key="DIALOG_Y_ORIGIN"/>
+		<item value="572" key="DIALOG_HEIGHT"/>
+		<item value="648" key="DIALOG_X_ORIGIN"/>
 		<item value="1|Cantarell|11.0|0|GTK|1|" key="DIALOG_FONT_NAME"/>
 	</section>
 	<section name="org.eclipse.ui.texteditor.FindReplaceDialog">
@@ -13,10 +13,16 @@
 		<item value="false" key="casesensitive"/>
 		<item value="false" key="incremental"/>
 		<item value="false" key="wholeword"/>
-		<item value="Error" key="selection"/>
+		<item value="HOMOGR" key="selection"/>
 		<list key="findhistory">
-			<item value="error"/>
-			<item value="lin-prog"/>
+			<item value="homogr"/>
+			<item value="to gray"/>
+			<item value="gray"/>
+			<item value="orGpu::est"/>
+			<item value="or::est"/>
+			<item value="estimatorGpu"/>
+			<item value=":estimate"/>
+			<item value="estimate"/>
 		</list>
 		<list key="replacehistory">
 		</list>

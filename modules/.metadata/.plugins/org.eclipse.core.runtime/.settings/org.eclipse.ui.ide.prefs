@@ -1,3 +1,4 @@
+BOOKMARKS_FILTERS_MIGRATE=true
 PROBLEMS_FILTERS_MIGRATE=true
 TASKS_FILTERS_MIGRATE=true
 eclipse.preferences.version=1

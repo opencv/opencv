@@ -1,8 +1,6 @@
 ColorsAndFontsPreferencePage.expandedCategories=Torg.eclipse.cdt.ui.presentation\tTorg.eclipse.cdt.ui.CEditor.presentation
 ColorsAndFontsPreferencePage.selectedElement=Forg.eclipse.cdt.ui.editors.textfont
 UIActivities.org.eclipse.cdt.debug.dsfgdbActivity=true
-coolBarVisible=false
 eclipse.preferences.version=1
 org.eclipse.cdt.ui.buildconsole.ConsoleFont=1|Monospace|9.0|0|GTK|1|;
 org.eclipse.cdt.ui.editors.textfont=1|Monospace|9.0|0|GTK|1|;
-perspectiveBarVisible=false
