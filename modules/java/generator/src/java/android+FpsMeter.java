@@ -10,46 +10,45 @@ import android.graphics.Paint;
 import android.util.Log;
 
 public class FpsMeter {
-    private static final String TAG       = "OCVSample::FpsMeter";
-    int                         step;
-    int                         framesCouner;
-    double                      freq;
-    long                        prevFrameTime;
-    String                      strfps;
-    DecimalFormat               twoPlaces = new DecimalFormat("0.00");
-    Paint                       paint;
-    boolean                     isInitialized = false;
+    private static final String TAG               = "FpsMeter";
+    private static final int    STEP              = 20;
+    private static final DecimalFormat FPS_FORMAT = new DecimalFormat("0.00");
+
+    private int                 mFramesCouner;
+    private double              mFrequency;
+    private long                mprevFrameTime;
+    private String              mStrfps;
+    Paint                       mPaint;
+    boolean                     mIsInitialized = false;
     int                         mWidth = 0;
     int                         mHeight = 0;
 
     public void init() {
-        step = 20;
-        framesCouner = 0;
-        freq = Core.getTickFrequency();
-        prevFrameTime = Core.getTickCount();
-        strfps = "";
+        mFramesCouner = 0;
+        mFrequency = Core.getTickFrequency();
+        mprevFrameTime = Core.getTickCount();
+        mStrfps = "";
 
-        paint = new Paint();
-        paint.setColor(Color.BLUE);
-        paint.setTextSize(50);
+        mPaint = new Paint();
+        mPaint.setColor(Color.BLUE);
+        mPaint.setTextSize(20);
     }
 
     public void measure() {
-        if (!isInitialized) {
+        if (!mIsInitialized) {
             init();
-            isInitialized = true;
+            mIsInitialized = true;
         } else {
-            framesCouner++;
-            if (framesCouner % step == 0) {
+            mFramesCouner++;
+            if (mFramesCouner % STEP == 0) {
                 long time = Core.getTickCount();
-                double fps = step * freq / (time - prevFrameTime);
-                prevFrameTime = time;
-                DecimalFormat twoPlaces = new DecimalFormat("0.00");
+                double fps = STEP * mFrequency / (time - mprevFrameTime);
+                mprevFrameTime = time;
                 if (mWidth != 0 && mHeight != 0)
-                    strfps = twoPlaces.format(fps) + " FPS@" + Integer.valueOf(mWidth) + "x" + Integer.valueOf(mHeight);
+                    mStrfps = FPS_FORMAT.format(fps) + " FPS@" + Integer.valueOf(mWidth) + "x" + Integer.valueOf(mHeight);
                 else
-                    strfps = twoPlaces.format(fps) + " FPS";
-                Log.i(TAG, strfps);
+                    mStrfps = FPS_FORMAT.format(fps) + " FPS";
+                Log.i(TAG, mStrfps);
             }
         }
     }
@@ -60,8 +59,8 @@ public class FpsMeter {
     }
 
     public void draw(Canvas canvas, float offsetx, float offsety) {
-        Log.d(TAG, strfps);
-        canvas.drawText(strfps, 20 + offsetx, 10 + 50 + offsety, paint);
+        Log.d(TAG, mStrfps);
+        canvas.drawText(mStrfps, offsetx, offsety, mPaint);
     }
 
 }

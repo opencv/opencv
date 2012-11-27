@@ -28,34 +28,26 @@ import android.view.SurfaceView;
  * The clients shall implement CvCameraViewListener.
  */
 public abstract class CameraBridgeViewBase extends SurfaceView implements SurfaceHolder.Callback {
-//TODO: add method to control the format in which the frames will be delivered to CvCameraViewListener
 
+    private static final String TAG = "CameraBridge";
     private static final int MAX_UNSPECIFIED = -1;
-
     private static final int STOPPED = 0;
     private static final int STARTED = 1;
 
-    private static final String TAG = "CameraBridge";
+    private int mState = STOPPED;
+    private Bitmap mCacheBitmap;
+    private CvCameraViewListener mListener;
+    private boolean mSurfaceExist;
+    private Object mSyncObject = new Object();
 
     protected int mFrameWidth;
     protected int mFrameHeight;
-
     protected int mMaxHeight;
     protected int mMaxWidth;
-
     protected int mPreviewFormat = Highgui.CV_CAP_ANDROID_COLOR_FRAME_RGBA;
     protected int mCameraIndex = -1;
-    private boolean mEnabled;
-
-    private Bitmap mCacheBitmap;
+    protected boolean mEnabled;
     protected FpsMeter mFpsMeter = null;
-
-    private CvCameraViewListener mListener;
-    private int mState = STOPPED;
-
-    private boolean mSurfaceExist;
-
-    private Object mSyncObject = new Object();
 
     public CameraBridgeViewBase(Context context, int cameraId) {
         super(context);
@@ -68,11 +60,11 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
         int count = attrs.getAttributeCount();
         Log.d(TAG, "Attr count: " + Integer.valueOf(count));
 
-        TypedArray tmp = getContext().obtainStyledAttributes(attrs, R.styleable.CameraBridgeViewBase);
-        if (tmp.getBoolean(R.styleable.CameraBridgeViewBase_show_fps, false))
+        TypedArray styledAttrs = getContext().obtainStyledAttributes(attrs, R.styleable.CameraBridgeViewBase);
+        if (styledAttrs.getBoolean(R.styleable.CameraBridgeViewBase_show_fps, false))
             enableFpsMeter();
 
-        mCameraIndex = tmp.getInt(R.styleable.CameraBridgeViewBase_camera_id, -1);
+        mCameraIndex = styledAttrs.getInt(R.styleable.CameraBridgeViewBase_camera_id, -1);
 
         getHolder().addCallback(this);
         mMaxWidth = MAX_UNSPECIFIED;
@@ -312,7 +304,7 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
                 canvas.drawBitmap(mCacheBitmap, (canvas.getWidth() - mCacheBitmap.getWidth()) / 2, (canvas.getHeight() - mCacheBitmap.getHeight()) / 2, null);
                 if (mFpsMeter != null) {
                     mFpsMeter.measure();
-                    mFpsMeter.draw(canvas, 0, 0);
+                    mFpsMeter.draw(canvas, 20, 30);
                 }
                 getHolder().unlockCanvasAndPost(canvas);
             }
