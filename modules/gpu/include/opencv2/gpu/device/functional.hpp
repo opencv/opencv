@@ -375,7 +375,7 @@ namespace cv { namespace gpu { namespace device
     {
         __device__ __forceinline__ signed char operator ()(signed char x) const
         {
-            return ::abs(x);
+            return ::abs((int)x);
         }
 
         __device__ __forceinline__ abs_func() {}
@@ -385,7 +385,7 @@ namespace cv { namespace gpu { namespace device
     {
         __device__ __forceinline__ char operator ()(char x) const
         {
-            return ::abs(x);
+            return ::abs((int)x);
         }
 
         __device__ __forceinline__ abs_func() {}
@@ -405,7 +405,7 @@ namespace cv { namespace gpu { namespace device
     {
         __device__ __forceinline__ short operator ()(short x) const
         {
-            return ::abs(x);
+            return ::abs((int)x);
         }
 
         __device__ __forceinline__ abs_func() {}
