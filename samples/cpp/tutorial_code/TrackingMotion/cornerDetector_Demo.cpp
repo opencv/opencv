@@ -26,8 +26,8 @@ double myShiTomasi_minVal; double myShiTomasi_maxVal;
 
 RNG rng(12345);
 
-char* myHarris_window = "My Harris corner detector";
-char* myShiTomasi_window = "My Shi Tomasi corner detector";
+const char* myHarris_window = "My Harris corner detector";
+const char* myShiTomasi_window = "My Shi Tomasi corner detector";
 
 /// Function headers
 void myShiTomasi_function( int, void* );
@@ -36,7 +36,7 @@ void myHarris_function( int, void* );
 /**
  * @function main
  */
-int main( int argc, char** argv )
+int main( int, char** argv )
 {
   /// Load source image and convert it to gray
   src = imread( argv[1], 1 );
@@ -57,7 +57,7 @@ int main( int argc, char** argv )
           {
             float lambda_1 = myHarris_dst.at<Vec6f>(j, i)[0];
             float lambda_2 = myHarris_dst.at<Vec6f>(j, i)[1];
-            Mc.at<float>(j,i) = lambda_1*lambda_2 - 0.04*pow( ( lambda_1 + lambda_2 ), 2 );
+            Mc.at<float>(j,i) = lambda_1*lambda_2 - 0.04f*pow( ( lambda_1 + lambda_2 ), 2 );
           }
      }
 

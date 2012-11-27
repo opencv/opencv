@@ -24,7 +24,7 @@ void thresh_callback(int, void* );
 /**
  * @function main
  */
-int main( int argc, char** argv )
+int main( int, char** argv )
 {
   /// Load source image and convert it to gray
   src = imread( argv[1], 1 );
@@ -34,7 +34,7 @@ int main( int argc, char** argv )
   blur( src_gray, src_gray, Size(3,3) );
 
   /// Create Window
-  char* source_window = "Source";
+  const char* source_window = "Source";
   namedWindow( source_window, CV_WINDOW_AUTOSIZE );
   imshow( source_window, src );
 
@@ -61,10 +61,10 @@ void thresh_callback(int, void* )
 
   /// Draw contours
   Mat drawing = Mat::zeros( canny_output.size(), CV_8UC3 );
-  for( int i = 0; i< contours.size(); i++ )
+  for( size_t i = 0; i< contours.size(); i++ )
      {
        Scalar color = Scalar( rng.uniform(0, 255), rng.uniform(0,255), rng.uniform(0,255) );
-       drawContours( drawing, contours, i, color, 2, 8, hierarchy, 0, Point() );
+       drawContours( drawing, contours, (int)i, color, 2, 8, hierarchy, 0, Point() );
      }
 
   /// Show in a window

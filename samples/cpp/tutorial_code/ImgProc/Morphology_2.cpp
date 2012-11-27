@@ -21,7 +21,7 @@ int const max_operator = 4;
 int const max_elem = 2;
 int const max_kernel_size = 21;
 
-char* window_name = "Morphology Transformations Demo";
+const char* window_name = "Morphology Transformations Demo";
 
 
 /** Function Headers */
@@ -30,7 +30,7 @@ void Morphology_Operations( int, void* );
 /**
  * @function main
  */
-int main( int argc, char** argv )
+int main( int, char** argv )
 {
   /// Load an image
   src = imread( argv[1] );

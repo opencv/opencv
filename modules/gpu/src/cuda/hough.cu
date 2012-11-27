@@ -236,7 +236,7 @@ namespace cv { namespace gpu { namespace device
             const int r = blockIdx.x * blockDim.x + threadIdx.x;
             const int n = blockIdx.y * blockDim.y + threadIdx.y;
 
-            if (r >= accum.cols - 2 && n >= accum.rows - 2)
+            if (r >= accum.cols - 2 || n >= accum.rows - 2)
                 return;
 
             const int curVotes = accum(n + 1, r + 1);

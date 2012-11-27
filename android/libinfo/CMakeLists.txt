@@ -35,5 +35,5 @@ set_target_properties(${the_module} PROPERTIES
     INSTALL_NAME_DIR lib
   )
 
-get_filename_component(lib_name "opencv_info" NAME)
+get_filename_component(lib_name "libopencv_info.so" NAME)
 install(FILES "${LIBRARY_OUTPUT_PATH}/${lib_name}" DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT main)

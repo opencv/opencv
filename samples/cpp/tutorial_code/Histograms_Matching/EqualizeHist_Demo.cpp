@@ -15,12 +15,12 @@ using namespace std;
 /**
  * @function main
  */
-int main( int argc, char** argv )
+int main( int, char** argv )
 {
   Mat src, dst;
 
-  char* source_window = "Source image";
-  char* equalized_window = "Equalized Image";
+  const char* source_window = "Source image";
+  const char* equalized_window = "Equalized Image";
 
   /// Load image
   src = imread( argv[1], 1 );

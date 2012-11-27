@@ -863,17 +863,17 @@ template <class ElemType>
 int calcDiffElemCountImpl(const vector<Mat>& mv, const Mat& m)
 {
     int diffElemCount = 0;
-    const size_t mChannels = m.channels();
+    const int mChannels = m.channels();
     for(int y = 0; y < m.rows; y++)
     {
         for(int x = 0; x < m.cols; x++)
         {
             const ElemType* mElem = &m.at<ElemType>(y,x*mChannels);
-            size_t loc = 0;
+            int loc = 0;
             for(size_t i = 0; i < mv.size(); i++)
             {
                 const size_t mvChannel = mv[i].channels();
-                const ElemType* mvElem = &mv[i].at<ElemType>(y,x*mvChannel);
+                const ElemType* mvElem = &mv[i].at<ElemType>(y,x*(int)mvChannel);
                 for(size_t li = 0; li < mvChannel; li++)
                     if(mElem[loc + li] != mvElem[li])
                         diffElemCount++;
@@ -1020,7 +1020,7 @@ public:
 protected:
     virtual int run_case(int depth, size_t channels, const Size& size, RNG& rng)
     {
-        Mat src(size, CV_MAKETYPE(depth, channels));
+        Mat src(size, CV_MAKETYPE(depth, (int)channels));
         rng.fill(src, RNG::UNIFORM, 0, 100, true);
 
         vector<Mat> dst;
