@@ -52,6 +52,103 @@
 using namespace cv::gpu;
 using namespace cv::gpu::device;
 
+namespace
+{
+    template <size_t src_size, size_t dst_size> struct ArithmFuncTraits
+    {
+        enum { simple_block_dim_x = 32 };
+        enum { simple_block_dim_y = 8 };
+
+        enum { smart_block_dim_x = 32 };
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 1 };
+    };
+
+    template <> struct ArithmFuncTraits<1, 1>
+    {
+        enum { simple_block_dim_x = 32 };
+        enum { simple_block_dim_y = 8 };
+
+        enum { smart_block_dim_x = 32 };
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    template <> struct ArithmFuncTraits<1, 2>
+    {
+        enum { simple_block_dim_x = 32 };
+        enum { simple_block_dim_y = 8 };
+
+        enum { smart_block_dim_x = 32 };
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    template <> struct ArithmFuncTraits<1, 4>
+    {
+        enum { simple_block_dim_x = 32 };
+        enum { simple_block_dim_y = 8 };
+
+        enum { smart_block_dim_x = 32 };
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+
+    template <> struct ArithmFuncTraits<2, 1>
+    {
+        enum { simple_block_dim_x = 32 };
+        enum { simple_block_dim_y = 8 };
+
+        enum { smart_block_dim_x = 32 };
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    template <> struct ArithmFuncTraits<2, 2>
+    {
+        enum { simple_block_dim_x = 32 };
+        enum { simple_block_dim_y = 8 };
+
+        enum { smart_block_dim_x = 32 };
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    template <> struct ArithmFuncTraits<2, 4>
+    {
+        enum { simple_block_dim_x = 32 };
+        enum { simple_block_dim_y = 8 };
+
+        enum { smart_block_dim_x = 32 };
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+
+    template <> struct ArithmFuncTraits<4, 1>
+    {
+        enum { simple_block_dim_x = 32 };
+        enum { simple_block_dim_y = 8 };
+
+        enum { smart_block_dim_x = 32 };
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    template <> struct ArithmFuncTraits<4, 2>
+    {
+        enum { simple_block_dim_x = 32 };
+        enum { simple_block_dim_y = 8 };
+
+        enum { smart_block_dim_x = 32 };
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+    template <> struct ArithmFuncTraits<4, 4>
+    {
+        enum { simple_block_dim_x = 32 };
+        enum { simple_block_dim_y = 8 };
+
+        enum { smart_block_dim_x = 32 };
+        enum { smart_block_dim_y = 8 };
+        enum { smart_shift = 4 };
+    };
+}
+
 //////////////////////////////////////////////////////////////////////////
 // addMat
 
@@ -239,39 +336,20 @@ namespace
 
 namespace cv { namespace gpu { namespace device
 {
-    template <typename T, typename D> struct TransformFunctorTraits< VAdd4<T, D> > : DefaultTransformFunctorTraits< VAdd4<T, D> >
+    template <typename T, typename D> struct TransformFunctorTraits< VAdd4<T, D> > : ArithmFuncTraits<sizeof(T), sizeof(D)>
     {
-        enum { smart_shift = 2 };
     };
 
     ////////////////////////////////////
 
-    template <typename T, typename D> struct TransformFunctorTraits< VAdd2<T, D> > : DefaultTransformFunctorTraits< VAdd4<T, D> >
+    template <typename T, typename D> struct TransformFunctorTraits< VAdd2<T, D> > : ArithmFuncTraits<sizeof(T), sizeof(D)>
     {
-        enum { smart_shift = 2 };
     };
 
     ////////////////////////////////////
 
-    template <> struct TransformFunctorTraits< AddMat<ushort, ushort> > : DefaultTransformFunctorTraits< AddMat<ushort, ushort> >
+    template <typename T, typename D> struct TransformFunctorTraits< AddMat<T, D> > : ArithmFuncTraits<sizeof(T), sizeof(D)>
     {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< AddMat<short, short> > : DefaultTransformFunctorTraits< AddMat<short, short> >
-    {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< AddMat<int, int> > : DefaultTransformFunctorTraits< AddMat<int, int> >
-    {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< AddMat<float, float> > : DefaultTransformFunctorTraits< AddMat<float, float> >
-    {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
     };
 }}}
 
@@ -385,25 +463,8 @@ namespace
 
 namespace cv { namespace gpu { namespace device
 {
-    template <> struct TransformFunctorTraits< AddScalar<ushort, float, ushort> > : DefaultTransformFunctorTraits< AddScalar<ushort, float, ushort>  >
+    template <typename T, typename S, typename D> struct TransformFunctorTraits< AddScalar<T, S, D> > : ArithmFuncTraits<sizeof(T), sizeof(D)>
     {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< AddScalar<short, float, short> > : DefaultTransformFunctorTraits< AddScalar<short, float, short> >
-    {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< AddScalar<int, float, int> > : DefaultTransformFunctorTraits< AddScalar<int, float, int> >
-    {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< AddScalar<float, float, float> > : DefaultTransformFunctorTraits< AddScalar<float, float, float> >
-    {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
     };
 }}}
 
@@ -664,39 +725,20 @@ namespace
 
 namespace cv { namespace gpu { namespace device
 {
-    template <typename T, typename D> struct TransformFunctorTraits< VSub4<T, D> > : DefaultTransformFunctorTraits< VSub4<T, D> >
+    template <typename T, typename D> struct TransformFunctorTraits< VSub4<T, D> > : ArithmFuncTraits<sizeof(T), sizeof(D)>
     {
-        enum { smart_shift = 2 };
     };
 
     ////////////////////////////////////
 
-    template <typename T, typename D> struct TransformFunctorTraits< VSub2<T, D> > : DefaultTransformFunctorTraits< VSub2<T, D> >
+    template <typename T, typename D> struct TransformFunctorTraits< VSub2<T, D> > : ArithmFuncTraits<sizeof(T), sizeof(D)>
     {
-        enum { smart_shift = 2 };
     };
 
     ////////////////////////////////////
 
-    template <> struct TransformFunctorTraits< SubMat<ushort, ushort> > : DefaultTransformFunctorTraits< SubMat<ushort, ushort> >
+    template <typename T, typename D> struct TransformFunctorTraits< SubMat<T, D> > : ArithmFuncTraits<sizeof(T), sizeof(D)>
     {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< SubMat<short, short> > : DefaultTransformFunctorTraits< SubMat<short, short> >
-    {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< SubMat<int, int> > : DefaultTransformFunctorTraits< SubMat<int, int> >
-    {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< SubMat<float, float> > : DefaultTransformFunctorTraits< SubMat<float, float> >
-    {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
     };
 }}}
 
@@ -924,53 +966,16 @@ namespace
 
 namespace cv { namespace gpu { namespace device
 {
-    OPENCV_GPU_TRANSFORM_FUNCTOR_TRAITS(Mul_8uc4_32f)
+    template <> struct TransformFunctorTraits<Mul_8uc4_32f> : ArithmFuncTraits<sizeof(uint), sizeof(uint)>
     {
-        enum { smart_block_dim_x = 8 };
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 8 };
     };
 
-    template <> struct TransformFunctorTraits< Mul<ushort, ushort> > : DefaultTransformFunctorTraits< Mul<ushort, ushort> >
+    template <typename T, typename D> struct TransformFunctorTraits< Mul<T, D> > : ArithmFuncTraits<sizeof(T), sizeof(D)>
     {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< Mul<short, short> > : DefaultTransformFunctorTraits< Mul<short, short> >
-    {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< Mul<int, int> > : DefaultTransformFunctorTraits< Mul<int, int> >
-    {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< Mul<float, float> > : DefaultTransformFunctorTraits< Mul<float, float> >
-    {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
     };
 
-    template <> struct TransformFunctorTraits< MulScale<ushort, float, ushort> > : DefaultTransformFunctorTraits< MulScale<ushort, float, ushort> >
+    template <typename T, typename S, typename D> struct TransformFunctorTraits< MulScale<T, S, D> > : ArithmFuncTraits<sizeof(T), sizeof(D)>
     {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< MulScale<short, float, short> > : DefaultTransformFunctorTraits< MulScale<short, float, short> >
-    {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< MulScale<int, float, int> > : DefaultTransformFunctorTraits< MulScale<int, float, int> >
-    {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< MulScale<float, float, float> > : DefaultTransformFunctorTraits< MulScale<float, float, float> >
-    {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
     };
 }}}
 
@@ -1078,25 +1083,8 @@ namespace
 
 namespace cv { namespace gpu { namespace device
 {
-    template <> struct TransformFunctorTraits< MulScalar<ushort, float, ushort> > : DefaultTransformFunctorTraits< MulScalar<ushort, float, ushort> >
+    template <typename T, typename S, typename D> struct TransformFunctorTraits< MulScalar<T, S, D> > : ArithmFuncTraits<sizeof(T), sizeof(D)>
     {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< MulScalar<short, float, short> > : DefaultTransformFunctorTraits< MulScalar<short, float, short> >
-    {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< MulScalar<int, float, int> > : DefaultTransformFunctorTraits< MulScalar<int, float, int> >
-    {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< MulScalar<float, float, float> > : DefaultTransformFunctorTraits< MulScalar<float, float, float> >
-    {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
     };
 }}}
 
@@ -1246,53 +1234,16 @@ namespace
 
 namespace cv { namespace gpu { namespace device
 {
-    OPENCV_GPU_TRANSFORM_FUNCTOR_TRAITS(Div_8uc4_32f)
+    template <> struct TransformFunctorTraits<Div_8uc4_32f> : ArithmFuncTraits<sizeof(uint), sizeof(uint)>
     {
-        enum { smart_block_dim_x = 8 };
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 8 };
     };
 
-    template <> struct TransformFunctorTraits< Div<ushort, ushort> > : DefaultTransformFunctorTraits< Div<ushort, ushort> >
+    template <typename T, typename D> struct TransformFunctorTraits< Div<T, D> > : ArithmFuncTraits<sizeof(T), sizeof(D)>
     {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< Div<short, short> > : DefaultTransformFunctorTraits< Div<short, short> >
-    {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< Div<int, int> > : DefaultTransformFunctorTraits< Div<int, int> >
-    {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< Div<float, float> > : DefaultTransformFunctorTraits< Div<float, float> >
-    {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
     };
 
-    template <> struct TransformFunctorTraits< DivScale<ushort, float, ushort> > : DefaultTransformFunctorTraits< DivScale<ushort, float, ushort> >
+    template <typename T, typename S, typename D> struct TransformFunctorTraits< DivScale<T, S, D> > : ArithmFuncTraits<sizeof(T), sizeof(D)>
     {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< DivScale<short, float, short> > : DefaultTransformFunctorTraits< DivScale<short, float, short> >
-    {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< DivScale<int, float, int> > : DefaultTransformFunctorTraits< DivScale<int, float, int> >
-    {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< DivScale<float, float, float> > : DefaultTransformFunctorTraits< DivScale<float, float, float> >
-    {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
     };
 }}}
 
@@ -1469,25 +1420,8 @@ namespace
 
 namespace cv { namespace gpu { namespace device
 {
-    template <> struct TransformFunctorTraits< DivInv<ushort, float, ushort> > : DefaultTransformFunctorTraits< DivInv<ushort, float, ushort> >
+    template <typename T, typename S, typename D> struct TransformFunctorTraits< DivInv<T, S, D> > : ArithmFuncTraits<sizeof(T), sizeof(D)>
     {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< DivInv<short, float, short> > : DefaultTransformFunctorTraits< DivInv<short, float, short> >
-    {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< DivInv<int, float, int> > : DefaultTransformFunctorTraits< DivInv<int, float, int> >
-    {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< DivInv<float, float, float> > : DefaultTransformFunctorTraits< DivInv<float, float, float> >
-    {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
     };
 }}}
 
@@ -1677,39 +1611,20 @@ namespace
 
 namespace cv { namespace gpu { namespace device
 {
-    template <typename T, typename D> struct TransformFunctorTraits< VAbsDiff4<T, D> > : DefaultTransformFunctorTraits< VAbsDiff4<T, D> >
+    template <typename T, typename D> struct TransformFunctorTraits< VAbsDiff4<T, D> > : ArithmFuncTraits<sizeof(T), sizeof(D)>
     {
-        enum { smart_shift = 2 };
     };
 
     ////////////////////////////////////
 
-    template <typename T, typename D> struct TransformFunctorTraits< VAbsDiff2<T, D> > : DefaultTransformFunctorTraits< VAbsDiff4<T, D> >
+    template <typename T, typename D> struct TransformFunctorTraits< VAbsDiff2<T, D> > : ArithmFuncTraits<sizeof(T), sizeof(D)>
     {
-        enum { smart_shift = 2 };
     };
 
     ////////////////////////////////////
 
-    template <> struct TransformFunctorTraits< AbsDiffMat<ushort> > : DefaultTransformFunctorTraits< AbsDiffMat<ushort> >
+    template <typename T> struct TransformFunctorTraits< AbsDiffMat<T> > : ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< AbsDiffMat<short> > : DefaultTransformFunctorTraits< AbsDiffMat<short> >
-    {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< AbsDiffMat<int> > : DefaultTransformFunctorTraits< AbsDiffMat<int> >
-    {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< AbsDiffMat<float> > : DefaultTransformFunctorTraits< AbsDiffMat<float> >
-    {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
     };
 }}}
 
@@ -1769,25 +1684,8 @@ namespace
 
 namespace cv { namespace gpu { namespace device
 {
-    template <> struct TransformFunctorTraits< AbsDiffScalar<ushort, float> > : DefaultTransformFunctorTraits< AbsDiffScalar<ushort, float>  >
+    template <typename T, typename S> struct TransformFunctorTraits< AbsDiffScalar<T, S> > : ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< AbsDiffScalar<short, float> > : DefaultTransformFunctorTraits< AbsDiffScalar<short, float> >
-    {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< AbsDiffScalar<int, float> > : DefaultTransformFunctorTraits< AbsDiffScalar<int, float> >
-    {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< AbsDiffScalar<float, float> > : DefaultTransformFunctorTraits< AbsDiffScalar<float, float> >
-    {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
     };
 }}}
 
@@ -1815,25 +1713,8 @@ namespace arithm
 
 namespace cv { namespace gpu { namespace device
 {
-    template <> struct TransformFunctorTraits< abs_func<ushort> > : DefaultTransformFunctorTraits< abs_func<ushort> >
+    template <typename T> struct TransformFunctorTraits< abs_func<T> > : ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< abs_func<short> > : DefaultTransformFunctorTraits< abs_func<short> >
-    {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< abs_func<int> > : DefaultTransformFunctorTraits< abs_func<int> >
-    {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< abs_func<float> > : DefaultTransformFunctorTraits< abs_func<float> >
-    {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
     };
 }}}
 
@@ -1873,25 +1754,8 @@ namespace
 
 namespace cv { namespace gpu { namespace device
 {
-    template <> struct TransformFunctorTraits< Sqr<ushort> > : DefaultTransformFunctorTraits< Sqr<ushort> >
+    template <typename T> struct TransformFunctorTraits< Sqr<T> > : ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< Sqr<short> > : DefaultTransformFunctorTraits< Sqr<short> >
-    {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< Sqr<int> > : DefaultTransformFunctorTraits< Sqr<int> >
-    {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< Sqr<float> > : DefaultTransformFunctorTraits< Sqr<float> >
-    {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
     };
 }}}
 
@@ -1917,33 +1781,8 @@ namespace arithm
 
 namespace cv { namespace gpu { namespace device
 {
-    template <> struct TransformFunctorTraits< sqrt_func<uchar> > : DefaultTransformFunctorTraits< sqrt_func<ushort> >
+    template <typename T> struct TransformFunctorTraits< sqrt_func<T> > : ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< sqrt_func<schar> > : DefaultTransformFunctorTraits< sqrt_func<schar> >
-    {
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< sqrt_func<ushort> > : DefaultTransformFunctorTraits< sqrt_func<ushort> >
-    {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< sqrt_func<short> > : DefaultTransformFunctorTraits< sqrt_func<short> >
-    {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< sqrt_func<int> > : DefaultTransformFunctorTraits< sqrt_func<int> >
-    {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< sqrt_func<float> > : DefaultTransformFunctorTraits< sqrt_func<float> >
-    {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
     };
 }}}
 
@@ -1969,33 +1808,8 @@ namespace arithm
 
 namespace cv { namespace gpu { namespace device
 {
-    template <> struct TransformFunctorTraits< log_func<uchar> > : DefaultTransformFunctorTraits< log_func<ushort> >
+    template <typename T> struct TransformFunctorTraits< log_func<T> > : ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< log_func<schar> > : DefaultTransformFunctorTraits< log_func<schar> >
-    {
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< log_func<ushort> > : DefaultTransformFunctorTraits< log_func<ushort> >
-    {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< log_func<short> > : DefaultTransformFunctorTraits< log_func<short> >
-    {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< log_func<int> > : DefaultTransformFunctorTraits< log_func<int> >
-    {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< log_func<float> > : DefaultTransformFunctorTraits< log_func<float> >
-    {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
     };
 }}}
 
@@ -2036,25 +1850,8 @@ namespace
 
 namespace cv { namespace gpu { namespace device
 {
-    template <> struct TransformFunctorTraits< Exp<ushort> > : DefaultTransformFunctorTraits< Exp<ushort> >
+    template <typename T> struct TransformFunctorTraits< Exp<T> > : ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< Exp<short> > : DefaultTransformFunctorTraits< Exp<short> >
-    {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< Exp<int> > : DefaultTransformFunctorTraits< Exp<int> >
-    {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< Exp<float> > : DefaultTransformFunctorTraits< Exp<float> >
-    {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
     };
 }}}
 
@@ -2080,12 +1877,12 @@ namespace arithm
 
 namespace
 {
-    template <template <typename> class Op, typename T>
-    struct Cmp: binary_function<T, T, uchar>
+    template <class Op, typename T>
+    struct Cmp : binary_function<T, T, uchar>
     {
         __device__ __forceinline__ uchar operator()(T a, T b) const
         {
-            Op<T> op;
+            Op op;
             return -op(a, b);
         }
     };
@@ -2093,27 +1890,9 @@ namespace
 
 namespace cv { namespace gpu { namespace device
 {
-    #define IMPLEMENT_COMPARE_TRANSFORM_FUNCTOR_TRAITS(op, type, block_dim_y, shift) \
-        template <> struct TransformFunctorTraits< Cmp<op, type> > : DefaultTransformFunctorTraits< Cmp<op, type> > \
-        { \
-            enum { smart_block_dim_y = block_dim_y }; \
-            enum { smart_shift = shift }; \
-        };
-
-    IMPLEMENT_COMPARE_TRANSFORM_FUNCTOR_TRAITS(equal_to, int, 8, 4)
-    IMPLEMENT_COMPARE_TRANSFORM_FUNCTOR_TRAITS(equal_to, float, 8, 4)
-    IMPLEMENT_COMPARE_TRANSFORM_FUNCTOR_TRAITS(not_equal_to, int, 8, 4)
-    IMPLEMENT_COMPARE_TRANSFORM_FUNCTOR_TRAITS(not_equal_to, float, 8, 4)
-    IMPLEMENT_COMPARE_TRANSFORM_FUNCTOR_TRAITS(greater, int, 8, 4)
-    IMPLEMENT_COMPARE_TRANSFORM_FUNCTOR_TRAITS(greater, float, 8, 4)
-    IMPLEMENT_COMPARE_TRANSFORM_FUNCTOR_TRAITS(less, int, 8, 4)
-    IMPLEMENT_COMPARE_TRANSFORM_FUNCTOR_TRAITS(less, float, 8, 4)
-    IMPLEMENT_COMPARE_TRANSFORM_FUNCTOR_TRAITS(greater_equal, int, 8, 4)
-    IMPLEMENT_COMPARE_TRANSFORM_FUNCTOR_TRAITS(greater_equal, float, 8, 4)
-    IMPLEMENT_COMPARE_TRANSFORM_FUNCTOR_TRAITS(less_equal, int, 8, 4)
-    IMPLEMENT_COMPARE_TRANSFORM_FUNCTOR_TRAITS(less_equal, float, 8, 4)
-
-    #undef IMPLEMENT_COMPARE_TRANSFORM_FUNCTOR_TRAITS
+    template <class Op, typename T> struct TransformFunctorTraits< Cmp<Op, T> > : ArithmFuncTraits<sizeof(T), sizeof(uchar)>
+    {
+    };
 }}}
 
 namespace arithm
@@ -2121,7 +1900,7 @@ namespace arithm
     template <template <typename> class Op, typename T>
     void cmpMat(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream)
     {
-        Cmp<Op, T> op;
+        Cmp<Op<T>, T> op;
         transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, dst, op, WithOutMask(), stream);
     }
 
@@ -2182,8 +1961,8 @@ namespace
 {
 #define TYPE_VEC(type, cn) typename TypeVec<type, cn>::vec_type
 
-    template <template <typename> class Op, typename T, int cn> struct CmpScalar;
-    template <template <typename> class Op, typename T>
+    template <class Op, typename T, int cn> struct CmpScalar;
+    template <class Op, typename T>
     struct CmpScalar<Op, T, 1> : unary_function<T, uchar>
     {
         const T val;
@@ -2196,7 +1975,7 @@ namespace
             return op(src, val);
         }
     };
-    template <template <typename> class Op, typename T>
+    template <class Op, typename T>
     struct CmpScalar<Op, T, 2> : unary_function<TYPE_VEC(T, 2), TYPE_VEC(uchar, 2)>
     {
         const TYPE_VEC(T, 2) val;
@@ -2209,7 +1988,7 @@ namespace
             return VecTraits<TYPE_VEC(uchar, 2)>::make(op(src.x, val.x), op(src.y, val.y));
         }
     };
-    template <template <typename> class Op, typename T>
+    template <class Op, typename T>
     struct CmpScalar<Op, T, 3> : unary_function<TYPE_VEC(T, 3), TYPE_VEC(uchar, 3)>
     {
         const TYPE_VEC(T, 3) val;
@@ -2222,7 +2001,7 @@ namespace
             return VecTraits<TYPE_VEC(uchar, 3)>::make(op(src.x, val.x), op(src.y, val.y), op(src.z, val.z));
         }
     };
-    template <template <typename> class Op, typename T>
+    template <class Op, typename T>
     struct CmpScalar<Op, T, 4> : unary_function<TYPE_VEC(T, 4), TYPE_VEC(uchar, 4)>
     {
         const TYPE_VEC(T, 4) val;
@@ -2241,27 +2020,9 @@ namespace
 
 namespace cv { namespace gpu { namespace device
 {
-#define IMPLEMENT_COMPARE_TRANSFORM_FUNCTOR_TRAITS(op, type, block_dim_y, shift) \
-    template <> struct TransformFunctorTraits< CmpScalar<op, type, 1> > : DefaultTransformFunctorTraits< CmpScalar<op, type, 1> > \
-    { \
-        enum { smart_block_dim_y = block_dim_y }; \
-        enum { smart_shift = shift }; \
+    template <class Op, typename T> struct TransformFunctorTraits< CmpScalar<Op, T, 1> > : ArithmFuncTraits<sizeof(T), sizeof(uchar)>
+    {
     };
-
-    IMPLEMENT_COMPARE_TRANSFORM_FUNCTOR_TRAITS(equal_to, int, 8, 4)
-    IMPLEMENT_COMPARE_TRANSFORM_FUNCTOR_TRAITS(equal_to, float, 8, 4)
-    IMPLEMENT_COMPARE_TRANSFORM_FUNCTOR_TRAITS(not_equal_to, int, 8, 4)
-    IMPLEMENT_COMPARE_TRANSFORM_FUNCTOR_TRAITS(not_equal_to, float, 8, 4)
-    IMPLEMENT_COMPARE_TRANSFORM_FUNCTOR_TRAITS(greater, int, 8, 4)
-    IMPLEMENT_COMPARE_TRANSFORM_FUNCTOR_TRAITS(greater, float, 8, 4)
-    IMPLEMENT_COMPARE_TRANSFORM_FUNCTOR_TRAITS(less, int, 8, 4)
-    IMPLEMENT_COMPARE_TRANSFORM_FUNCTOR_TRAITS(less, float, 8, 4)
-    IMPLEMENT_COMPARE_TRANSFORM_FUNCTOR_TRAITS(greater_equal, int, 8, 4)
-    IMPLEMENT_COMPARE_TRANSFORM_FUNCTOR_TRAITS(greater_equal, float, 8, 4)
-    IMPLEMENT_COMPARE_TRANSFORM_FUNCTOR_TRAITS(less_equal, int, 8, 4)
-    IMPLEMENT_COMPARE_TRANSFORM_FUNCTOR_TRAITS(less_equal, float, 8, 4)
-
-#undef IMPLEMENT_COMPARE_TRANSFORM_FUNCTOR_TRAITS
 }}}
 
 namespace arithm
@@ -2275,7 +2036,7 @@ namespace arithm
         T sval[] = {static_cast<T>(val[0]), static_cast<T>(val[1]), static_cast<T>(val[2]), static_cast<T>(val[3])};
         src_t val1 = VecTraits<src_t>::make(sval);
 
-        CmpScalar<Op, T, cn> op(val1);
+        CmpScalar<Op<T>, T, cn> op(val1);
         transform((PtrStepSz<src_t>) src, (PtrStepSz<dst_t>) dst, op, WithOutMask(), stream);
     }
 
@@ -2418,56 +2179,20 @@ namespace arithm
 
 namespace cv { namespace gpu { namespace device
 {
-    template <> struct TransformFunctorTraits< bit_not<uchar> > : DefaultTransformFunctorTraits< bit_not<uchar> >
+    template <typename T> struct TransformFunctorTraits< bit_not<T> > : ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< bit_not<ushort> > : DefaultTransformFunctorTraits< bit_not<ushort> >
-    {
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< bit_not<uint> > : DefaultTransformFunctorTraits< bit_not<uint> >
-    {
-        enum { smart_shift = 2 };
     };
 
-    template <> struct TransformFunctorTraits< bit_and<uchar> > : DefaultTransformFunctorTraits< bit_and<uchar> >
+    template <typename T> struct TransformFunctorTraits< bit_and<T> > : ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< bit_and<ushort> > : DefaultTransformFunctorTraits< bit_and<ushort> >
-    {
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< bit_and<uint> > : DefaultTransformFunctorTraits< bit_and<uint> >
-    {
-        enum { smart_shift = 2 };
     };
 
-    template <> struct TransformFunctorTraits< bit_or<uchar> > : DefaultTransformFunctorTraits< bit_or<uchar> >
+    template <typename T> struct TransformFunctorTraits< bit_or<T> > : ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< bit_or<ushort> > : DefaultTransformFunctorTraits< bit_or<ushort> >
-    {
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< bit_or<uint> > : DefaultTransformFunctorTraits< bit_or<uint> >
-    {
-        enum { smart_shift = 2 };
     };
 
-    template <> struct TransformFunctorTraits< bit_xor<uchar> > : DefaultTransformFunctorTraits< bit_xor<uchar> >
+    template <typename T> struct TransformFunctorTraits< bit_xor<T> > : ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< bit_xor<ushort> > : DefaultTransformFunctorTraits< bit_xor<ushort> >
-    {
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< bit_xor<uint> > : DefaultTransformFunctorTraits< bit_xor<uint> >
-    {
-        enum { smart_shift = 2 };
     };
 }}}
 
@@ -2527,43 +2252,16 @@ namespace arithm
 
 namespace cv { namespace gpu { namespace device
 {
-    template <> struct TransformFunctorTraits< binder2nd< bit_and<uchar> > > : DefaultTransformFunctorTraits< binder2nd< bit_and<uchar> > >
+    template <typename T> struct TransformFunctorTraits< binder2nd< bit_and<T> > > : ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< binder2nd< bit_and<ushort> > > : DefaultTransformFunctorTraits< binder2nd< bit_and<ushort> > >
-    {
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< binder2nd< bit_and<uint> > > : DefaultTransformFunctorTraits< binder2nd< bit_and<uint> > >
-    {
-        enum { smart_shift = 2 };
     };
 
-    template <> struct TransformFunctorTraits< binder2nd< bit_or<uchar> > > : DefaultTransformFunctorTraits< binder2nd< bit_or<uchar> > >
+    template <typename T> struct TransformFunctorTraits< binder2nd< bit_or<T> > > : ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< binder2nd< bit_or<ushort> > > : DefaultTransformFunctorTraits< binder2nd< bit_or<ushort> > >
-    {
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< binder2nd< bit_or<uint> > > : DefaultTransformFunctorTraits< binder2nd< bit_or<uint> > >
-    {
-        enum { smart_shift = 2 };
     };
 
-    template <> struct TransformFunctorTraits< binder2nd< bit_xor<uchar> > > : DefaultTransformFunctorTraits< binder2nd< bit_xor<uchar> > >
+    template <typename T> struct TransformFunctorTraits< binder2nd< bit_xor<T> > > : ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< binder2nd< bit_xor<ushort> > > : DefaultTransformFunctorTraits< binder2nd< bit_xor<ushort> > >
-    {
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< binder2nd< bit_xor<uint> > > : DefaultTransformFunctorTraits< binder2nd< bit_xor<uint> > >
-    {
-        enum { smart_shift = 2 };
     };
 }}}
 
@@ -2691,58 +2389,24 @@ namespace
 
 namespace cv { namespace gpu { namespace device
 {
-    template <typename T> struct TransformFunctorTraits< VMin4<T> > : DefaultTransformFunctorTraits< VMin4<T> >
+    template <typename T> struct TransformFunctorTraits< VMin4<T> > : ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
-                enum { smart_block_dim_y = 4 };
-        enum { smart_shift = 4 };
     };
 
     ////////////////////////////////////
 
-    template <typename T> struct TransformFunctorTraits< VMin2<T> > : DefaultTransformFunctorTraits< VMin2<T> >
+    template <typename T> struct TransformFunctorTraits< VMin2<T> > : ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
-                enum { smart_block_dim_y = 4 };
-        enum { smart_shift = 4 };
     };
 
     ////////////////////////////////////
 
-    template <> struct TransformFunctorTraits< minimum<ushort> > : DefaultTransformFunctorTraits< minimum<ushort> >
+    template <typename T> struct TransformFunctorTraits< minimum<T> > : ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< minimum<short> > : DefaultTransformFunctorTraits< minimum<short> >
-    {
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< minimum<int> > : DefaultTransformFunctorTraits< minimum<int> >
-    {
-        enum { smart_block_dim_y = 4 };
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< minimum<float> > : DefaultTransformFunctorTraits< minimum<float> >
-    {
-        enum { smart_block_dim_y = 4 };
-        enum { smart_shift = 4 };
     };
 
-    template <> struct TransformFunctorTraits< binder2nd< minimum<ushort> > > : DefaultTransformFunctorTraits< binder2nd< minimum<ushort> > >
+    template <typename T> struct TransformFunctorTraits< binder2nd< minimum<T> > > : ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< binder2nd< minimum<short> > > : DefaultTransformFunctorTraits< binder2nd< minimum<short> > >
-    {
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< binder2nd< minimum<int> > > : DefaultTransformFunctorTraits< binder2nd< minimum<int> > >
-    {
-        enum { smart_block_dim_y = 4 };
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< binder2nd< minimum<float> > > : DefaultTransformFunctorTraits< binder2nd< minimum<float> > >
-    {
-        enum { smart_block_dim_y = 4 };
-        enum { smart_shift = 4 };
     };
 }}}
 
@@ -2885,58 +2549,24 @@ namespace
 
 namespace cv { namespace gpu { namespace device
 {
-    template <typename T> struct TransformFunctorTraits< VMax4<T> > : DefaultTransformFunctorTraits< VMax4<T> >
+    template <typename T> struct TransformFunctorTraits< VMax4<T> > : ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
-        enum { smart_block_dim_y = 4 };
-        enum { smart_shift = 4 };
     };
 
     ////////////////////////////////////
 
-    template <typename T> struct TransformFunctorTraits< VMax2<T> > : DefaultTransformFunctorTraits< VMax2<T> >
+    template <typename T> struct TransformFunctorTraits< VMax2<T> > : ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
-        enum { smart_block_dim_y = 4 };
-        enum { smart_shift = 4 };
     };
 
     ////////////////////////////////////
 
-    template <> struct TransformFunctorTraits< maximum<ushort> > : DefaultTransformFunctorTraits< maximum<ushort> >
+    template <typename T> struct TransformFunctorTraits< maximum<T> > : ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< maximum<short> > : DefaultTransformFunctorTraits< maximum<short> >
-    {
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< maximum<int> > : DefaultTransformFunctorTraits< maximum<int> >
-    {
-        enum { smart_block_dim_y = 4 };
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< maximum<float> > : DefaultTransformFunctorTraits< maximum<float> >
-    {
-        enum { smart_block_dim_y = 4 };
-        enum { smart_shift = 4 };
     };
 
-    template <> struct TransformFunctorTraits< binder2nd< maximum<ushort> > > : DefaultTransformFunctorTraits< binder2nd< maximum<ushort> > >
+    template <typename T> struct TransformFunctorTraits< binder2nd< maximum<T> > > : ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< binder2nd< maximum<short> > > : DefaultTransformFunctorTraits< binder2nd< maximum<short> > >
-    {
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< binder2nd< maximum<int> > > : DefaultTransformFunctorTraits< binder2nd< maximum<int> > >
-    {
-        enum { smart_block_dim_y = 4 };
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< binder2nd< maximum<float> > > : DefaultTransformFunctorTraits< binder2nd< maximum<float> > >
-    {
-        enum { smart_block_dim_y = 4 };
-        enum { smart_shift = 4 };
     };
 }}}
 
@@ -2990,35 +2620,23 @@ namespace arithm
 
 namespace cv { namespace gpu { namespace device
 {
-    namespace detail
+    template <typename T> struct TransformFunctorTraits< thresh_binary_func<T> > : ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
-        template <size_t size, typename F> struct ThresholdTraits : DefaultTransformFunctorTraits<F>
-        {
-        };
-        template <typename F> struct ThresholdTraits<2, F> : DefaultTransformFunctorTraits<F>
-        {
-            enum { smart_shift = 4 };
-        };
-        template <typename F> struct ThresholdTraits<4, F> : DefaultTransformFunctorTraits<F>
-        {
-            enum { smart_block_dim_y = 4 };
-            enum { smart_shift = 4 };
-        };
-    }
+    };
 
-    template <typename T> struct TransformFunctorTraits< thresh_binary_func<T> > : detail::ThresholdTraits< sizeof(T), thresh_binary_func<T> >
+    template <typename T> struct TransformFunctorTraits< thresh_binary_inv_func<T> > : ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
     };
-    template <typename T> struct TransformFunctorTraits< thresh_binary_inv_func<T> > : detail::ThresholdTraits< sizeof(T), thresh_binary_inv_func<T> >
+
+    template <typename T> struct TransformFunctorTraits< thresh_trunc_func<T> > : ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
     };
-    template <typename T> struct TransformFunctorTraits< thresh_trunc_func<T> > : detail::ThresholdTraits< sizeof(T), thresh_trunc_func<T> >
+
+    template <typename T> struct TransformFunctorTraits< thresh_to_zero_func<T> > : ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
     };
-    template <typename T> struct TransformFunctorTraits< thresh_to_zero_func<T> > : detail::ThresholdTraits< sizeof(T), thresh_to_zero_func<T> >
-    {
-    };
-    template <typename T> struct TransformFunctorTraits< thresh_to_zero_inv_func<T> > : detail::ThresholdTraits< sizeof(T), thresh_to_zero_inv_func<T> >
+
+    template <typename T> struct TransformFunctorTraits< thresh_to_zero_inv_func<T> > : ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
     };
 }}}
@@ -3116,28 +2734,7 @@ namespace
 
 namespace cv { namespace gpu { namespace device
 {
-    namespace detail
-    {
-        template <size_t size, typename T> struct PowOpTraits : DefaultTransformFunctorTraits< PowOp<T> >
-        {
-        };
-        template <typename T> struct PowOpTraits<1, T> : DefaultTransformFunctorTraits< PowOp<T> >
-        {
-            enum { smart_block_dim_y = 8 };
-            enum { smart_shift = 8 };
-        };
-        template <typename T> struct PowOpTraits<2, T> : DefaultTransformFunctorTraits< PowOp<T> >
-        {
-            enum { smart_shift = 4 };
-        };
-        template <typename T> struct PowOpTraits<4, T> : DefaultTransformFunctorTraits< PowOp<T> >
-        {
-            enum { smart_block_dim_y = 4 };
-            enum { smart_shift = 4 };
-        };
-    }
-
-    template <typename T> struct TransformFunctorTraits< PowOp<T> > : detail::PowOpTraits<sizeof(T), T>
+    template <typename T> struct TransformFunctorTraits< PowOp<T> > : ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
     };
 }}}
@@ -3212,60 +2809,15 @@ namespace
 
 namespace cv { namespace gpu { namespace device
 {
-    template <> struct TransformFunctorTraits< AddWeighted<ushort, ushort, ushort> > : DefaultTransformFunctorTraits< AddWeighted<ushort, ushort, ushort> >
+    template <typename T1, typename T2, typename D, size_t src1_size, size_t src2_size, size_t dst_size> struct AddWeightedTraits : DefaultTransformFunctorTraits< AddWeighted<T1, T2, D> >
     {
-        enum { smart_shift = 4 };
     };
-    template <> struct TransformFunctorTraits< AddWeighted<ushort, ushort, short> > : DefaultTransformFunctorTraits< AddWeighted<ushort, ushort, short> >
+    template <typename T1, typename T2, typename D, size_t src_size, size_t dst_size> struct AddWeightedTraits<T1, T2, D, src_size, src_size, dst_size> : ArithmFuncTraits<src_size, dst_size>
     {
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< AddWeighted<ushort, short, ushort> > : DefaultTransformFunctorTraits< AddWeighted<ushort, short, ushort> >
-    {
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< AddWeighted<ushort, short, short> > : DefaultTransformFunctorTraits< AddWeighted<ushort, short, short> >
-    {
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< AddWeighted<short, short, ushort> > : DefaultTransformFunctorTraits< AddWeighted<short, short, ushort> >
-    {
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< AddWeighted<short, short, short> > : DefaultTransformFunctorTraits< AddWeighted<short, short, short> >
-    {
-        enum { smart_shift = 4 };
     };
 
-    template <> struct TransformFunctorTraits< AddWeighted<int, int, int> > : DefaultTransformFunctorTraits< AddWeighted<int, int, int> >
+    template <typename T1, typename T2, typename D> struct TransformFunctorTraits< AddWeighted<T1, T2, D> > : AddWeightedTraits<T1, T2, D, sizeof(T1), sizeof(T2), sizeof(D)>
     {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< AddWeighted<int, int, float> > : DefaultTransformFunctorTraits< AddWeighted<int, int, float> >
-    {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< AddWeighted<int, float, int> > : DefaultTransformFunctorTraits< AddWeighted<int, float, int> >
-    {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< AddWeighted<int, float, float> > : DefaultTransformFunctorTraits< AddWeighted<int, float, float> >
-    {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< AddWeighted<float, float, int> > : DefaultTransformFunctorTraits< AddWeighted<float, float, float> >
-    {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
-    };
-    template <> struct TransformFunctorTraits< AddWeighted<float, float, float> > : DefaultTransformFunctorTraits< AddWeighted<float, float, float> >
-    {
-        enum { smart_block_dim_y = 8 };
-        enum { smart_shift = 4 };
     };
 }}}
 
