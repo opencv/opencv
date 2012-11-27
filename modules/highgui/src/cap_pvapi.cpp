@@ -189,17 +189,12 @@ bool CvCaptureCAM_PvAPI::open( int index )
         tPvUint32 frameWidth, frameHeight;
         unsigned long maxSize;
 
-    	// By Default, set the pixel format to Mono8.  This can be changed later
+    	// By Default, try to set the pixel format to Mono8.  This can be changed later
     	// via calls to setProperty. Some colour cameras (i.e. the Manta line) have a default
-    	// image mode of Bayer8.
+    	// image mode of Bayer8, which is currently unsupported, so Mono8 is a safe bet for
+        // startup.
 
-    	if (PvAttrEnumSet(Camera.Handle, "PixelFormat", "Mono8") != ePvErrSuccess) {
-    		fprintf (stderr, "ERROR:  Cannot set default pixel format to Mono8\n");
-    		close();
-    		return false;
-    	}
-
-    	monocrome = true;
+    	monocrome = (PvAttrEnumSet(Camera.Handle, "PixelFormat", "Mono8") == ePvErrSuccess);
 
         PvAttrUint32Get(Camera.Handle, "Width", &frameWidth);
         PvAttrUint32Get(Camera.Handle, "Height", &frameHeight);
