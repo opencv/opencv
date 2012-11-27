@@ -210,19 +210,120 @@ public:
 typedef SIMDBayerStubInterpolator_<uchar> SIMDBayerInterpolator_8u;
 #endif
 
+
 template<typename T, class SIMDInterpolator>
+class Bayer2Gray_Invoker :
+    public ParallelLoopBody
+{
+public:
+    Bayer2Gray_Invoker(const Mat& _srcmat, Mat& _dstmat, int _start_with_green, bool _brow,
+        const Size& _size, int _bcoeff, int _rcoeff) :
+        ParallelLoopBody(), srcmat(_srcmat), dstmat(_dstmat), Start_with_green(_start_with_green),
+        Brow(_brow), size(_size), Bcoeff(_bcoeff), Rcoeff(_rcoeff)
+    {
+    }
+
+    virtual void operator ()(const Range& range) const
+    {
+        SIMDInterpolator vecOp;
+        const int G2Y = 9617;
+        const int SHIFT = 14;
+
+        const T* bayer0 = (const T*)srcmat.data;
+        int bayer_step = (int)(srcmat.step/sizeof(T));
+        T* dst0 = (T*)dstmat.data;
+        int dst_step = (int)(dstmat.step/sizeof(T));
+        int bcoeff = Bcoeff, rcoeff = Rcoeff;
+        int start_with_green = Start_with_green;
+        bool brow = Brow;
+
+        dst0 += dst_step + 1;
+
+        if (range.start % 2)
+        {
+            brow = !brow;
+            std::swap(bcoeff, rcoeff);
+            start_with_green = !start_with_green;
+        }
+
+        bayer0 += range.start * bayer_step;
+        dst0 += range.start * dst_step;
+
+        for(int i = range.start ; i < range.end; ++i, bayer0 += bayer_step, dst0 += dst_step )
+        {
+            unsigned t0, t1, t2;
+            const T* bayer = bayer0;
+            T* dst = dst0;
+            const T* bayer_end = bayer + size.width;
+
+            if( size.width <= 0 )
+            {
+                dst[-1] = dst[size.width] = 0;
+                continue;
+            }
+
+            if( start_with_green )
+            {
+                t0 = (bayer[1] + bayer[bayer_step*2+1])*rcoeff;
+                t1 = (bayer[bayer_step] + bayer[bayer_step+2])*bcoeff;
+                t2 = bayer[bayer_step+1]*(2*G2Y);
+
+                dst[0] = (T)CV_DESCALE(t0 + t1 + t2, SHIFT+1);
+                bayer++;
+                dst++;
+            }
+
+            int delta = vecOp.bayer2Gray(bayer, bayer_step, dst, size.width, bcoeff, G2Y, rcoeff);
+            bayer += delta;
+            dst += delta;
+
+            for( ; bayer <= bayer_end - 2; bayer += 2, dst += 2 )
+            {
+                t0 = (bayer[0] + bayer[2] + bayer[bayer_step*2] + bayer[bayer_step*2+2])*rcoeff;
+                t1 = (bayer[1] + bayer[bayer_step] + bayer[bayer_step+2] + bayer[bayer_step*2+1])*G2Y;
+                t2 = bayer[bayer_step+1]*(4*bcoeff);
+                dst[0] = (T)CV_DESCALE(t0 + t1 + t2, SHIFT+2);
+
+                t0 = (bayer[2] + bayer[bayer_step*2+2])*rcoeff;
+                t1 = (bayer[bayer_step+1] + bayer[bayer_step+3])*bcoeff;
+                t2 = bayer[bayer_step+2]*(2*G2Y);
+                dst[1] = (T)CV_DESCALE(t0 + t1 + t2, SHIFT+1);
+            }
+
+            if( bayer < bayer_end )
+            {
+                t0 = (bayer[0] + bayer[2] + bayer[bayer_step*2] + bayer[bayer_step*2+2])*rcoeff;
+                t1 = (bayer[1] + bayer[bayer_step] + bayer[bayer_step+2] + bayer[bayer_step*2+1])*G2Y;
+                t2 = bayer[bayer_step+1]*(4*bcoeff);
+                dst[0] = (T)CV_DESCALE(t0 + t1 + t2, SHIFT+2);
+                bayer++;
+                dst++;
+            }
+
+            dst0[-1] = dst0[0];
+            dst0[size.width] = dst0[size.width-1];
+
+            brow = !brow;
+            std::swap(bcoeff, rcoeff);
+            start_with_green = !start_with_green;
+        }
+    }
+
+private:
+    const Mat srcmat;
+    Mat dstmat;
+    const int Start_with_green;
+    const bool Brow;
+    const Size size;
+    const int Bcoeff, Rcoeff;
+};
+
+template<typename T, typename SIMDInterpolator>
 static void Bayer2Gray_( const Mat& srcmat, Mat& dstmat, int code )
 {
-    SIMDInterpolator vecOp;
     const int R2Y = 4899;
-    const int G2Y = 9617;
     const int B2Y = 1868;
-    const int SHIFT = 14;
 
-    const T* bayer0 = (const T*)srcmat.data;
-    int bayer_step = (int)(srcmat.step/sizeof(T));
-    T* dst0 = (T*)dstmat.data;
-    int dst_step = (int)(dstmat.step/sizeof(T));
     Size size = srcmat.size();
     int bcoeff = B2Y, rcoeff = R2Y;
     int start_with_green = code == CV_BayerGB2GRAY || code == CV_BayerGR2GRAY;
@@ -233,72 +334,17 @@ static void Bayer2Gray_( const Mat& srcmat, Mat& dstmat, int code )
         brow = false;
         std::swap(bcoeff, rcoeff);
     }
-
-    dst0 += dst_step + 1;
     size.height -= 2;
     size.width -= 2;
 
-    for( ; size.height-- > 0; bayer0 += bayer_step, dst0 += dst_step )
-    {
-        unsigned t0, t1, t2;
-        const T* bayer = bayer0;
-        T* dst = dst0;
-        const T* bayer_end = bayer + size.width;
-
-        if( size.width <= 0 )
-        {
-            dst[-1] = dst[size.width] = 0;
-            continue;
-        }
-
-        if( start_with_green )
-        {
-            t0 = (bayer[1] + bayer[bayer_step*2+1])*rcoeff;
-            t1 = (bayer[bayer_step] + bayer[bayer_step+2])*bcoeff;
-            t2 = bayer[bayer_step+1]*(2*G2Y);
-
-            dst[0] = (T)CV_DESCALE(t0 + t1 + t2, SHIFT+1);
-            bayer++;
-            dst++;
-        }
-
-        int delta = vecOp.bayer2Gray(bayer, bayer_step, dst, size.width, bcoeff, G2Y, rcoeff);
-        bayer += delta;
-        dst += delta;
-
-        for( ; bayer <= bayer_end - 2; bayer += 2, dst += 2 )
-        {
-            t0 = (bayer[0] + bayer[2] + bayer[bayer_step*2] + bayer[bayer_step*2+2])*rcoeff;
-            t1 = (bayer[1] + bayer[bayer_step] + bayer[bayer_step+2] + bayer[bayer_step*2+1])*G2Y;
-            t2 = bayer[bayer_step+1]*(4*bcoeff);
-            dst[0] = (T)CV_DESCALE(t0 + t1 + t2, SHIFT+2);
-
-            t0 = (bayer[2] + bayer[bayer_step*2+2])*rcoeff;
-            t1 = (bayer[bayer_step+1] + bayer[bayer_step+3])*bcoeff;
-            t2 = bayer[bayer_step+2]*(2*G2Y);
-            dst[1] = (T)CV_DESCALE(t0 + t1 + t2, SHIFT+1);
-        }
-
-        if( bayer < bayer_end )
-        {
-            t0 = (bayer[0] + bayer[2] + bayer[bayer_step*2] + bayer[bayer_step*2+2])*rcoeff;
-            t1 = (bayer[1] + bayer[bayer_step] + bayer[bayer_step+2] + bayer[bayer_step*2+1])*G2Y;
-            t2 = bayer[bayer_step+1]*(4*bcoeff);
-            dst[0] = (T)CV_DESCALE(t0 + t1 + t2, SHIFT+2);
-            bayer++;
-            dst++;
-        }
-
-        dst0[-1] = dst0[0];
-        dst0[size.width] = dst0[size.width-1];
-
-        brow = !brow;
-        std::swap(bcoeff, rcoeff);
-        start_with_green = !start_with_green;
-    }
+    Range range(0, size.height);
+    Bayer2Gray_Invoker<T, SIMDInterpolator> invoker(srcmat, dstmat,
+        start_with_green, brow, size, bcoeff, rcoeff);
+    parallel_for_(range, invoker);
 
     size = dstmat.size();
-    dst0 = (T*)dstmat.data;
+    T* dst0 = (T*)dstmat.data;
+    int dst_step = (int)(dstmat.step/sizeof(T));
     if( size.height > 2 )
         for( int i = 0; i < size.width; i++ )
         {
@@ -340,6 +386,7 @@ class Bayer2RGB_Invoker :
 {
 public:
     Bayer2RGB_Invoker(const Mat& _srcmat, Mat& _dstmat, int _start_with_green, int _blue, const Size& _size) :
+        ParallelLoopBody(),
         srcmat(_srcmat), dstmat(_dstmat), Start_with_green(_start_with_green), Blue(_blue), size(_size)
     {
         print("Bayer2RGB_Invoker()\n");
@@ -349,12 +396,14 @@ public:
     {
         SIMDInterpolator vecOp;
         T alpha = Alpha<T>::value();
+        int dcn = dstmat.channels();
+        int dcn2 = dcn << 1;
 
-        const T* bayer0 = (const T*)srcmat.data;
         int bayer_step = (int)(srcmat.step/sizeof(T));
+        const T* bayer0 = reinterpret_cast<const T*>(srcmat.data) + bayer_step * range.start;
         
-        T* dst0 = (T*)dstmat.data;
         int dst_step = (int)(dstmat.step/sizeof(T));
+        T* dst0 = reinterpret_cast<T*>(dstmat.data) + (range.start + 1) * dst_step + dcn + 1;
         
         int blue = Blue, start_with_green = Start_with_green;
         if (range.start % 2)
@@ -362,14 +411,6 @@ public:
             blue = -blue;
             start_with_green = !start_with_green;
         }
-        
-        int dcn = dstmat.channels();
-        dst0 += dst_step + dcn + 1;
-        int dcn2 = dcn << 1;
-        
-        dst0 += dst_step * range.start;
-        bayer0 += bayer_step * range.start;
-
         print(range.start);
         
         for (int i = range.start; i < range.end; bayer0 += bayer_step, dst0 += dst_step, ++i )
@@ -547,7 +588,7 @@ public:
         }
     }
     
-public:
+private:
     const Mat srcmat;
     Mat dstmat;
     int Start_with_green, Blue;
