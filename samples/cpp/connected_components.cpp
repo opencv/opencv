@@ -12,7 +12,7 @@ static void on_trackbar(int, void*)
 {
     Mat bw = threshval < 128 ? (img < threshval) : (img > threshval);
     Mat labelImage(img.size(), CV_32S);
-    uint64_t nLabels = connectedComponents(labelImage, bw, 8);
+    int nLabels = connectedComponents(bw, labelImage, 8);
     Vec3b colors[nLabels];
     colors[0] = Vec3b(0, 0, 0);//background
     for(int label = 1; label < nLabels; ++label){
