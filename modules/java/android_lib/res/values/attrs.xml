@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <attr name="show_fps" format="boolean"/>
-    <attr name="camera_index" format="integer"/>
+    <declare-styleable name = "CameraBridgeViewBase" >
+       <attr name="show_fps" format="boolean"/>
+       <attr name="camera_id" format="integer" >
+          <enum name="any" value="-1" />
+          <enum name="back" value="0" />
+          <enum name="front" value="1" />
+       </attr>
+    </declare-styleable>
 </resources>

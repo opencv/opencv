@@ -57,6 +57,10 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
         }
     }
 
+    public JavaCameraView(Context context, int cameraId) {
+        super(context, cameraId);
+    }
+
     public JavaCameraView(Context context, AttributeSet attrs) {
         super(context, attrs);
         Log.d(TAG, "Java camera view ctor");
@@ -130,6 +134,10 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
 
                     mFrameWidth = params.getPreviewSize().width;
                     mFrameHeight = params.getPreviewSize().height;
+
+                    if (mFpsMeter != null) {
+                        mFpsMeter.setResolution(mFrameWidth, mFrameHeight);
+                    }
 
                     int size = mFrameWidth * mFrameHeight;
                     size  = size * ImageFormat.getBitsPerPixel(params.getPreviewFormat()) / 8;

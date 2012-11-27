@@ -19,6 +19,8 @@ public class FpsMeter {
     DecimalFormat               twoPlaces = new DecimalFormat("0.00");
     Paint                       paint;
     boolean                     isInitialized = false;
+    int                         mWidth = 0;
+    int                         mHeight = 0;
 
     public void init() {
         step = 20;
@@ -43,10 +45,18 @@ public class FpsMeter {
                 double fps = step * freq / (time - prevFrameTime);
                 prevFrameTime = time;
                 DecimalFormat twoPlaces = new DecimalFormat("0.00");
-                strfps = twoPlaces.format(fps) + " FPS";
+                if (mWidth != 0 && mHeight != 0)
+                    strfps = twoPlaces.format(fps) + " FPS@" + Integer.valueOf(mWidth) + "x" + Integer.valueOf(mHeight);
+                else
+                    strfps = twoPlaces.format(fps) + " FPS";
                 Log.i(TAG, strfps);
             }
         }
+    }
+
+    public void setResolution(int width, int height) {
+        mWidth = width;
+        mHeight = height;
     }
 
     public void draw(Canvas canvas, float offsetx, float offsety) {

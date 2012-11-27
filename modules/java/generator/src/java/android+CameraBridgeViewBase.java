@@ -2,6 +2,7 @@ package org.opencv.android;
 
 import java.util.List;
 
+import org.opencv.R;
 import org.opencv.android.Utils;
 import org.opencv.core.Mat;
 import org.opencv.core.Size;
@@ -11,6 +12,7 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.res.TypedArray;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.util.AttributeSet;
@@ -55,12 +57,22 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
 
     private Object mSyncObject = new Object();
 
+    public CameraBridgeViewBase(Context context, int cameraId) {
+        super(context);
+        mCameraIndex = cameraId;
+    }
+
     public CameraBridgeViewBase(Context context, AttributeSet attrs) {
         super(context, attrs);
-        if (attrs.getAttributeBooleanValue(null, "show_fps", false))
+
+        int count = attrs.getAttributeCount();
+        Log.d(TAG, "Attr count: " + Integer.valueOf(count));
+
+        TypedArray tmp = getContext().obtainStyledAttributes(attrs, R.styleable.CameraBridgeViewBase);
+        if (tmp.getBoolean(R.styleable.CameraBridgeViewBase_show_fps, false))
             enableFpsMeter();
 
-        mCameraIndex = attrs.getAttributeIntValue(null,"camera_index", -1);
+        mCameraIndex = tmp.getInt(R.styleable.CameraBridgeViewBase_camera_id, -1);
 
         getHolder().addCallback(this);
         mMaxWidth = MAX_UNSPECIFIED;
@@ -148,6 +160,7 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
     public void enableFpsMeter() {
         if (mFpsMeter == null) {
             mFpsMeter = new FpsMeter();
+            mFpsMeter.setResolution(mFrameWidth, mFrameHeight);
         }
     }
 

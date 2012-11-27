@@ -22,6 +22,10 @@ public class NativeCameraView extends CameraBridgeViewBase {
 
     protected VideoCapture mCamera;
 
+    public NativeCameraView(Context context, int cameraId) {
+        super(context, cameraId);
+    }
+
     public NativeCameraView(Context context, AttributeSet attrs) {
         super(context, attrs);
     }
@@ -97,6 +101,10 @@ public class NativeCameraView extends CameraBridgeViewBase {
 
             mFrameWidth = (int)frameSize.width;
             mFrameHeight = (int)frameSize.height;
+
+            if (mFpsMeter != null) {
+                mFpsMeter.setResolution(mFrameWidth, mFrameHeight);
+            }
 
             AllocateCache();
 
