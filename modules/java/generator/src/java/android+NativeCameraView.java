@@ -19,7 +19,12 @@ public class NativeCameraView extends CameraBridgeViewBase {
     public static final String TAG = "NativeCameraView";
     private boolean mStopThread;
     private Thread mThread;
-    private VideoCapture mCamera;
+
+    protected VideoCapture mCamera;
+
+    public NativeCameraView(Context context, int cameraId) {
+        super(context, cameraId);
+    }
 
     public NativeCameraView(Context context, AttributeSet attrs) {
         super(context, attrs);
@@ -77,12 +82,17 @@ public class NativeCameraView extends CameraBridgeViewBase {
 
     private boolean initializeCamera(int width, int height) {
         synchronized (this) {
-            mCamera = new VideoCapture(Highgui.CV_CAP_ANDROID);
+
+            if (mCameraIndex == -1)
+                mCamera = new VideoCapture(Highgui.CV_CAP_ANDROID);
+            else
+                mCamera = new VideoCapture(Highgui.CV_CAP_ANDROID + mCameraIndex);
 
             if (mCamera == null)
                 return false;
 
-            //TODO: improve error handling
+            if (mCamera.isOpened() == false)
+                return false;
 
             java.util.List<Size> sizes = mCamera.getSupportedPreviewSizes();
 
@@ -91,6 +101,10 @@ public class NativeCameraView extends CameraBridgeViewBase {
 
             mFrameWidth = (int)frameSize.width;
             mFrameHeight = (int)frameSize.height;
+
+            if (mFpsMeter != null) {
+                mFpsMeter.setResolution(mFrameWidth, mFrameHeight);
+            }
 
             AllocateCache();
 
