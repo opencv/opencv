@@ -1,10 +1,12 @@
 package org.opencv.samples.tutorial5;
 
+import java.util.List;
+import java.util.ListIterator;
+
 import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.core.Mat;
-import org.opencv.android.CameraBridgeViewBase;
 import org.opencv.android.CameraBridgeViewBase.CvCameraViewListener;
 
 import android.app.Activity;
@@ -14,14 +16,12 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.SurfaceView;
 import android.view.WindowManager;
-import android.widget.Toast;
 
 public class Sample5CustomCamera extends Activity implements CvCameraViewListener {
     private static final String TAG = "OCVSample::Activity";
 
-    private CameraBridgeViewBase mOpenCvCameraView;
-    private boolean              mIsJavaCamera = true;
-    private MenuItem             mItemSwitchCamera = null;
+    private CustomJavaCameraView mOpenCvCameraView;
+    private MenuItem[] mEffectMenuItems;
 
     private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this) {
         @Override
@@ -53,8 +53,7 @@ public class Sample5CustomCamera extends Activity implements CvCameraViewListene
 
         setContentView(R.layout.tutorial5_surface_view);
 
-        if (mIsJavaCamera)
-            mOpenCvCameraView = (CameraBridgeViewBase) findViewById(R.id.tutorial5_activity_java_surface_view);
+        mOpenCvCameraView = (CustomJavaCameraView) findViewById(R.id.tutorial5_activity_java_surface_view);
 
         mOpenCvCameraView.setVisibility(SurfaceView.VISIBLE);
 
@@ -82,37 +81,6 @@ public class Sample5CustomCamera extends Activity implements CvCameraViewListene
             mOpenCvCameraView.disableView();
     }
 
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        Log.i(TAG, "called onCreateOptionsMenu");
-        mItemSwitchCamera = menu.add("Switch camera");
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        String toastMesage = new String();
-        Log.i(TAG, "called onOptionsItemSelected; selected item: " + item);
-
-        if (item == mItemSwitchCamera) {
-            mOpenCvCameraView.setVisibility(SurfaceView.GONE);
-            mIsJavaCamera = !mIsJavaCamera;
-
-            if (mIsJavaCamera) {
-                mOpenCvCameraView = (CameraBridgeViewBase) findViewById(R.id.tutorial5_activity_java_surface_view);
-                toastMesage = "Java Camera";
-            }
-
-            mOpenCvCameraView.setVisibility(SurfaceView.VISIBLE);
-            mOpenCvCameraView.setCvCameraViewListener(this);
-            mOpenCvCameraView.enableView();
-            Toast toast = Toast.makeText(this, toastMesage, Toast.LENGTH_LONG);
-            toast.show();
-        }
-
-        return true;
-    }
-
     public void onCameraViewStarted(int width, int height) {
     }
 
@@ -121,5 +89,27 @@ public class Sample5CustomCamera extends Activity implements CvCameraViewListene
 
     public Mat onCameraFrame(Mat inputFrame) {
         return inputFrame;
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        List<String> effects = mOpenCvCameraView.getEffectList();
+
+        mEffectMenuItems = new MenuItem[effects.size()];
+
+        int idx = 0;
+        ListIterator<String> itr = effects.listIterator();
+        while(itr.hasNext()) {
+           String element = itr.next();
+           mEffectMenuItems[idx] = menu.add(element);
+           idx++;
+        }
+        return true;
+    }
+
+    public boolean onOptionsItemSelected(MenuItem item) {
+        Log.i(TAG, "called onOptionsItemSelected; selected item: " + item);
+        mOpenCvCameraView.setEffect((String) item.getTitle());
+        return true;
     }
 }
