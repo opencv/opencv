@@ -119,6 +119,7 @@ PERF_TEST_P(Norm_CrossCheck, batchDistance_32F,
     Mat ndix;
 
     generateData(queryDescriptors, trainDescriptors, CV_32F);
+    declare.time(100);
 
     TEST_CYCLE()
     {
