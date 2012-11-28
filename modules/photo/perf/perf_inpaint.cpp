@@ -29,7 +29,7 @@ PERF_TEST_P(InpaintArea_InpaintingMethod, inpaint,
     Rect inpaintArea(src.cols/3, src.rows/3, sz.width, sz.height);
     mask(inpaintArea).setTo(255);
 
-    declare.in(src, mask).out(result).time(30);
+    declare.in(src, mask).out(result).time(120);
 
     TEST_CYCLE() inpaint(src, mask, result, 10.0, inpaintingMethod);
 

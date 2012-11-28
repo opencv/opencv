@@ -133,6 +133,7 @@ PERF_TEST_P( TestWarpPerspectiveNear_t, WarpPerspectiveNear,
     Mat dst(size, type);
 
     declare.in(src).out(dst);
+    declare.time(100);
 
     TEST_CYCLE()
     {
