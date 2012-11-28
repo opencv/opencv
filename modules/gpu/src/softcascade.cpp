@@ -96,6 +96,8 @@ namespace icf {
 
     void bgr2Luv(const PtrStepSzb& bgr, PtrStepSzb luv);
     void gray2hog(const PtrStepSzb& gray, PtrStepSzb mag, const int bins);
+
+    void shrink(const cv::gpu::PtrStepSzb& channels, cv::gpu::PtrStepSzb shrunk);
 }
 
 namespace imgproc {
@@ -669,13 +671,15 @@ struct SeparablePreprocessor : public cv::gpu::SCascade::Preprocessor
 {
     SeparablePreprocessor(const int s, const int b) : cv::gpu::SCascade::Preprocessor(), shrinkage(s), bins(b) {}
 
-    virtual void apply(InputArray _frame, OutputArray _channels, Stream& s = Stream::Null())
+    virtual void apply(InputArray _frame, OutputArray _shrunk, Stream& s = Stream::Null())
     {
         const GpuMat frame = _frame.getGpuMat();
         cv::gpu::GaussianBlur(frame, bgr, cv::Size(3, 3), -1.0);
 
-        _channels.create(frame.rows * (4 + bins), frame.cols, CV_8UC1);
-        GpuMat channels = _channels.getGpuMat();
+        _shrunk.create(frame.rows * (4 + bins) / shrinkage, frame.cols / shrinkage, CV_8UC1);
+        GpuMat shrunk = _shrunk.getGpuMat();
+
+        channels.create(frame.rows * (4 + bins), frame.cols, CV_8UC1);
         setZero(channels, s);
 
         cv::gpu::cvtColor(bgr, gray, CV_BGR2GRAY);
@@ -683,6 +687,7 @@ struct SeparablePreprocessor : public cv::gpu::SCascade::Preprocessor
 
         cv::gpu::GpuMat luv(channels, cv::Rect(0, bgr.rows * (bins + 1), bgr.cols, bgr.rows * 3));
         cv::gpu::device::icf::bgr2Luv(bgr, luv);
+        cv::gpu::device::icf::shrink(channels, shrunk);
     }
 
 private:
@@ -691,6 +696,7 @@ private:
 
     GpuMat bgr;
     GpuMat gray;
+    GpuMat channels;
 };
 
 }

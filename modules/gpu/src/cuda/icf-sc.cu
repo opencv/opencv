@@ -50,6 +50,41 @@
 namespace cv { namespace gpu { namespace device {
 namespace icf {
 
+    template <int FACTOR>
+    __device__ __forceinline__ uchar shrink(const uchar* ptr, const int pitch, const int y, const int x)
+    {
+        int out = 0;
+#pragma unroll
+        for(int dy = 0; dy < FACTOR; ++dy)
+#pragma unroll
+            for(int dx = 0; dx < FACTOR; ++dx)
+            {
+                out += ptr[dy * pitch + dx];
+            }
+
+        return static_cast<uchar>(out / (FACTOR * FACTOR));
+    }
+
+    template<int FACTOR>
+    __global__ void shrink(const uchar* __restrict__ hogluv, const int inPitch,
+                                 uchar* __restrict__ shrank, const int outPitch )
+    {
+        const int y = blockIdx.y * blockDim.y + threadIdx.y;
+        const int x = blockIdx.x * blockDim.x + threadIdx.x;
+
+        const uchar* ptr = hogluv + (FACTOR * y) * inPitch + (FACTOR * x);
+
+        shrank[ y * outPitch + x] = shrink<FACTOR>(ptr, inPitch, y, x);
+    }
+
+    void shrink(const cv::gpu::PtrStepSzb& channels, cv::gpu::PtrStepSzb shrunk)
+    {
+        dim3 block(32, 8);
+        dim3 grid(shrunk.cols / 32, shrunk.rows / 8);
+        shrink<4><<<grid, block>>>((uchar*)channels.ptr(), channels.step, (uchar*)shrunk.ptr(), shrunk.step);
+        cudaSafeCall(cudaDeviceSynchronize());
+    }
+
     __device__ __forceinline__ void luv(const float& b, const float& g, const float& r, uchar& __l, uchar& __u, uchar& __v)
     {
         // rgb -> XYZ
