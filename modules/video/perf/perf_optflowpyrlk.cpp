@@ -163,6 +163,7 @@ PERF_TEST_P(Path_Idx_Cn_NPoints_WSize_Deriv, OpticalFlowPyrLK_self, testing::Com
     maxLevel = buildOpticalFlowPyramid(frame2, pyramid2, Size(winSize, winSize), maxLevel, withDerivatives);
 
     declare.in(pyramid1, pyramid2, inPoints).out(outPoints);
+    declare.time(400);
 
     TEST_CYCLE()
     {

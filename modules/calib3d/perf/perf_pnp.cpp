@@ -86,6 +86,7 @@ PERF_TEST(PointsNum_Algo, solveP3P)
     add(points2d, noise, points2d);
 
     declare.in(points3d, points2d);
+    declare.time(100);
 
     TEST_CYCLE_N(1000)
     {
