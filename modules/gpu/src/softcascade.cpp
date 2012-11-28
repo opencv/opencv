@@ -57,6 +57,11 @@ void cv::gpu::SCascade::genRoi(InputArray, OutputArray, Stream&) const { throw_n
 
 void cv::gpu::SCascade::read(const FileNode& fn) { Algorithm::read(fn); }
 
+cv::gpu::SCascade::Preprocessor::Preprocessor() { throw_nogpu(); }
+
+void cv::gpu::SCascade::Preprocessor::create(const int, const int, const int) { throw_nogpu(); }
+
+
 #else
 
 #include <icf.hpp>
@@ -90,7 +95,7 @@ namespace icf {
         PtrStepSzb suppressed, cudaStream_t stream);
 
     void bgr2Luv(const PtrStepSzb& bgr, PtrStepSzb luv);
-    void magnitude(const PtrStepSzb& gray, PtrStepSzb mag);
+    void gray2hog(const PtrStepSzb& gray, PtrStepSzb mag, const int bins);
 }
 
 namespace imgproc {
@@ -609,34 +614,97 @@ void cv::gpu::SCascade::read(const FileNode& fn)
     Algorithm::read(fn);
 }
 
+// namespace {
+
+// void bgr2Luv(const cv::gpu::GpuMat& input, cv::gpu::GpuMat& luv /*integral*/)
+// {
+//     cv::gpu::GpuMat bgr;
+//     cv::gpu::GaussianBlur(input, bgr, cv::Size(3, 3), -1);
+
+//     cv::gpu::GpuMat gray, /*luv,*/ shrunk, buffer;
+//     luv.create(bgr.rows * 10, bgr.cols, CV_8UC1);
+//     luv.setTo(0);
+
+//     cv::gpu::cvtColor(bgr, gray, CV_BGR2GRAY);
+//     cv::gpu::device::icf::magnitude(gray, luv(cv::Rect(0, 0, bgr.cols, bgr.rows * 7)));
+
+//     cv::gpu::GpuMat __luv(luv, cv::Rect(0, bgr.rows * 7, bgr.cols, bgr.rows * 3));
+//     cv::gpu::device::icf::bgr2Luv(bgr, __luv);
+
+//     // cv::gpu::resize(luv, shrunk, cv::Size(), 0.25f, 0.25f, CV_INTER_AREA);
+//     // cv::gpu::integralBuffered(shrunk, integral, buffer);
+// }
+// }
+
 namespace {
 
-void bgr2Luv(const cv::gpu::GpuMat& input, cv::gpu::GpuMat& integral)
+using cv::InputArray;
+using cv::OutputArray;
+using cv::gpu::Stream;
+using cv::gpu::GpuMat;
+
+struct GenricPreprocessor : public cv::gpu::SCascade::Preprocessor
 {
-    cv::gpu::GpuMat bgr;
-    cv::gpu::GaussianBlur(input, bgr, cv::Size(3, 3), -1);
+    GenricPreprocessor(const int s, const int b) : cv::gpu::SCascade::Preprocessor(), shrinkage(s), bins(b) {}
 
-    cv::gpu::GpuMat gray, luv, shrunk, buffer;
-    luv.create(bgr.rows * 10, bgr.cols, CV_8UC1);
-    luv.setTo(0);
+    virtual void apply(InputArray /*frame*/, OutputArray /*channels*/, Stream& /*s*/ = Stream::Null())
+    {
 
-    cv::gpu::cvtColor(bgr, gray, CV_BGR2GRAY);
-    cv::gpu::device::icf::magnitude(gray, luv(cv::Rect(0, 0, bgr.cols, bgr.rows * 7)));
+    }
 
-    cv::gpu::GpuMat __luv(luv, cv::Rect(0, bgr.rows * 7, bgr.cols, bgr.rows * 3));
-    cv::gpu::device::icf::bgr2Luv(bgr, __luv);
+private:
+    const int shrinkage;
+    const int bins;
+};
 
-    cv::gpu::resize(luv, shrunk, cv::Size(), 0.25f, 0.25f, CV_INTER_AREA);
-    cv::gpu::integralBuffered(shrunk, integral, buffer);
-}
-}
-
-void cv::gpu::SCascade::preprocess(InputArray _bgr, OutputArray _channels, Stream& stream) const
+inline void setZero(cv::gpu::GpuMat& m, Stream& s)
 {
-    CV_Assert(fields);
-    (void)stream;
-    const GpuMat bgr = _bgr.getGpuMat(), channels = _channels.getGpuMat();
+    if (s)
+        s.enqueueMemSet(m, 0);
+    else
+        m.setTo(0);
 }
 
+struct SeparablePreprocessor : public cv::gpu::SCascade::Preprocessor
+{
+    SeparablePreprocessor(const int s, const int b) : cv::gpu::SCascade::Preprocessor(), shrinkage(s), bins(b) {}
+
+    virtual void apply(InputArray _frame, OutputArray _channels, Stream& s = Stream::Null())
+    {
+        const GpuMat frame = _frame.getGpuMat();
+        cv::gpu::GaussianBlur(frame, bgr, cv::Size(3, 3), -1.0);
+
+        _channels.create(frame.rows * (4 + bins), frame.cols, CV_8UC1);
+        GpuMat channels = _channels.getGpuMat();
+        setZero(channels, s);
+
+        cv::gpu::cvtColor(bgr, gray, CV_BGR2GRAY);
+        cv::gpu::device::icf::gray2hog(gray, channels(cv::Rect(0, 0, bgr.cols, bgr.rows * (bins + 1))), bins);
+
+        cv::gpu::GpuMat luv(channels, cv::Rect(0, bgr.rows * (bins + 1), bgr.cols, bgr.rows * 3));
+        cv::gpu::device::icf::bgr2Luv(bgr, luv);
+    }
+
+private:
+    const int shrinkage;
+    const int bins;
+
+    GpuMat bgr;
+    GpuMat gray;
+};
+
+}
+
+cv::gpu::SCascade::Preprocessor::Preprocessor(){}
+
+cv::Ptr<cv::gpu::SCascade::Preprocessor> cv::gpu::SCascade::Preprocessor::create(const int s, const int b, const int m)
+{
+    CV_Assert(m == SEPARABLE || m == GENERIC);
+
+    if (m == GENERIC)
+        return cv::Ptr<cv::gpu::SCascade::Preprocessor>(new GenricPreprocessor(s, b));
+
+    return cv::Ptr<cv::gpu::SCascade::Preprocessor>(new SeparablePreprocessor(s, b));
+}
 
 #endif

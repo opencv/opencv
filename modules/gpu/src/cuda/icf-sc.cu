@@ -99,6 +99,7 @@ namespace icf {
         cudaSafeCall(cudaDeviceSynchronize());
     }
 
+    template<bool isDefaultNum>
     __device__ __forceinline__ int fast_angle_bin(const float& dx, const float& dy)
     {
         const float angle_quantum = M_PI / 6.f;
@@ -110,36 +111,82 @@ namespace icf {
         return static_cast<int>(angle * angle_scaling) % 6;
     }
 
+    template<>
+    __device__ __forceinline__ int fast_angle_bin<true>(const float& dy, const float& dx)
+    {
+        int index = 0;
+
+        float max_dot = fabs(dx);
+
+        {
+            const float dot_product = fabs(dx * 0.8660254037844386f + dy * 0.5f);
+
+            if(dot_product > max_dot)
+            {
+                max_dot = dot_product;
+                index = 1;
+            }
+        }
+        {
+            const float dot_product = fabs(dy * 0.8660254037844386f + dx * 0.5f);
+
+            if(dot_product > max_dot)
+            {
+                max_dot = dot_product;
+                index = 2;
+            }
+        }
+        {
+            int i = 3;
+            float2 bin_vector_i;
+            bin_vector_i.x = ::cos(i * (M_PI / 6.f));
+            bin_vector_i.y = ::sin(i * (M_PI / 6.f));
+
+            const float dot_product = fabs(dx * bin_vector_i.x + dy * bin_vector_i.y);
+            if(dot_product > max_dot)
+            {
+                max_dot = dot_product;
+                index = i;
+            }
+        }
+        {
+            const float dot_product = fabs(dx * (-0.4999999999999998f) + dy * 0.8660254037844387f);
+            if(dot_product > max_dot)
+            {
+                max_dot = dot_product;
+                index = 4;
+            }
+        }
+        {
+            const float dot_product = fabs(dx * (-0.8660254037844387f) + dy * 0.49999999999999994f);
+            if(dot_product > max_dot)
+            {
+                max_dot = dot_product;
+                index = 5;
+            }
+        }
+        return index;
+    }
+
     texture<uchar,  cudaTextureType2D, cudaReadModeElementType> tgray;
 
-    __global__ void magnitude_d(PtrStepSzb mag)
+    template<bool isDefaultNum>
+    __global__ void gray2hog(PtrStepSzb mag)
     {
         const int x = blockIdx.x * blockDim.x + threadIdx.x;
         const int y = blockIdx.y * blockDim.y + threadIdx.y;
 
-        const float dx_a = tex2D(tgray, x + 1, y),
-                    dx_b = tex2D(tgray, x - 1, y),
-                    dx = dx_a - dx_b,
+        const float dx = tex2D(tgray, x + 1, y + 0) - tex2D(tgray, x - 1, y - 0);
+        const float dy = tex2D(tgray, x + 0, y + 1) - tex2D(tgray, x - 0, y - 1);
 
-                    dy_a = tex2D(tgray, x, y + 1),
-                    dy_b = tex2D(tgray, x, y - 1),
-                    dy = dy_a - dy_b;
+        const float magnitude = sqrtf((dx * dx) + (dy * dy)) * (1.0f / sqrtf(2));
+        const uchar cmag = static_cast<uchar>(magnitude);
 
-
-        const float magnitude_scaling = 1.0f/ sqrtf(2);
-
-        const float magnitude = sqrtf((dx * dx) + (dy * dy)) * magnitude_scaling;
-        const uchar magnitude_u8 = static_cast<uchar>(magnitude);
-
-        mag( 480 * 6 + y, x) = magnitude_u8;
-
-        int angle_channel_index;
-
-        angle_channel_index = fast_angle_bin(dy, dx);
-        mag( 480 * angle_channel_index + y, x) = magnitude_u8;
+        mag( 480 * 6 + y, x) = cmag;
+        mag( 480 * fast_angle_bin<isDefaultNum>(dy, dx) + y, x) = cmag;
     }
 
-    void magnitude(const PtrStepSzb& gray, PtrStepSzb mag)
+    void gray2hog(const PtrStepSzb& gray, PtrStepSzb mag, const int bins)
     {
         dim3 block(32, 8);
         dim3 grid(gray.cols / 32, gray.rows / 8);
@@ -147,7 +194,10 @@ namespace icf {
         cudaChannelFormatDesc desc = cudaCreateChannelDesc<uchar>();
         cudaSafeCall( cudaBindTexture2D(0, tgray, gray.data, desc, gray.cols, gray.rows, gray.step) );
 
-        magnitude_d<<<grid, block>>>(mag);
+        if (bins == 6)
+            gray2hog<true><<<grid, block>>>(mag);
+        else
+            gray2hog<false><<<grid, block>>>(mag);
 
         cudaSafeCall(cudaDeviceSynchronize());
     }

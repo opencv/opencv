@@ -1534,6 +1534,28 @@ class CV_EXPORTS SCascade : public Algorithm
 {
 public:
 
+    enum { GENERIC = 1, SEPARABLE = 2};
+    class CV_EXPORTS Preprocessor
+    {
+    public:
+
+        // Appends specified number of HOG first-order features integrals into given vector.
+        // Param frame is an input 3-channel bgr image.
+        // Param channels is a GPU matrix of integrals.
+        // Param stream is stream is a high-level CUDA stream abstraction used for asynchronous execution.
+        virtual void apply(InputArray frame, OutputArray channels, Stream& stream = Stream::Null()) = 0;
+
+        // Creates a specific preprocessor implementation.
+        // Param shrinkage is a resizing factor. Resize is applied before the computing integral sum
+        // Param bins is a number of HOG-like channels.
+        // Param method is a channel computing method.
+        static cv::Ptr<Preprocessor> create(const int shrinkage, const int bins, const int method = GENERIC);
+
+
+    protected:
+        Preprocessor();
+    };
+
     // Representation of detectors result.
     struct CV_EXPORTS Detection
     {
@@ -1575,9 +1597,6 @@ public:
     //    The first element of the matrix is  actually a count of detections.
     // Param stream is stream is a high-level CUDA stream abstraction used for asynchronous execution
     virtual void detect(InputArray image, InputArray rois, OutputArray objects, Stream& stream = Stream::Null()) const;
-
-    // Preprocesing only
-    virtual void preprocess(InputArray image, OutputArray channels, Stream& stream = Stream::Null()) const;
 
     // Convert ROI matrix into the suitable for detect method.
     // Param roi is an input matrix of the same size as the image.
