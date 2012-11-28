@@ -92,6 +92,7 @@ PERF_TEST_P(Source_CrossCheck, batchDistance_L2,
 
     generateData(queryDescriptors, trainDescriptors, sourceType);
 
+    declare.time(50);
     TEST_CYCLE()
     {
         batchDistance(queryDescriptors, trainDescriptors, dist, CV_32F, (isCrossCheck) ? ndix : noArray(),

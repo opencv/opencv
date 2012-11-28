@@ -106,6 +106,7 @@ PERF_TEST_P(MatInfo_Size_Scale_Area, ResizeArea,
     cv::Mat dst(to, matType);
 
     declare.in(src, WARMUP_RNG).out(dst);
+    declare.time(100);
 
     TEST_CYCLE() resize(src, dst, dst.size(), 0, 0, INTER_AREA);
 
