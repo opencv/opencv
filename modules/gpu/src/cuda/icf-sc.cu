@@ -65,7 +65,8 @@ namespace icf {
         const float _u = __fdividef(4.f * x, divisor);
         const float _v = __fdividef(9.f * y, divisor);
 
-        const float L = fmax(0.f, ((116.f * cbrtf(y)) - 16.f));
+        float hack = static_cast<float>(__float2int_rn(y * 2047)) / 2047;
+        const float L = fmax(0.f, ((116.f * cbrtf(hack)) - 16.f));
         const float U = 13.f * L * (_u - _ur);
         const float V = 13.f * L * (_v - _vr);
 
