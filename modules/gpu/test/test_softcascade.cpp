@@ -234,7 +234,7 @@ GPU_TEST_P(SCascadeTestAll, detect,
         + "../cv/cascadeandhog/bahnhof/image_00000000_0.png");
     ASSERT_FALSE(coloredCpu.empty());
 
-    GpuMat colored(coloredCpu), objectBoxes(1, 100000, CV_8UC1), rois(colored.size(), CV_8UC1);
+    GpuMat colored(coloredCpu), objectBoxes, rois(colored.size(), CV_8UC1);
     rois.setTo(0);
     GpuMat sub(rois, cv::Rect(rois.cols / 4, rois.rows / 4,rois.cols / 2, rois.rows / 2));
     sub.setTo(cv::Scalar::all(1));

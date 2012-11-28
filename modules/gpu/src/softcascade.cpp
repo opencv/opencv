@@ -519,6 +519,8 @@ public:
 
     GpuMat collected;
 
+    cv::gpu::GpuMat genRoiTmp;
+
     std::vector<device::icf::Octave> voctaves;
 
     DeviceInfo info;
@@ -546,29 +548,33 @@ bool cv::gpu::SCascade::load(const FileNode& fn)
     return fields != 0;
 }
 
-void cv::gpu::SCascade::detect(InputArray image, InputArray _rois, OutputArray _objects, Stream& s) const
+void cv::gpu::SCascade::detect(InputArray _image, InputArray _rois, OutputArray _objects, Stream& s) const
 {
     CV_Assert(fields);
-    const GpuMat colored = image.getGpuMat();
 
-    // only color images are supperted
-    CV_Assert(colored.type() == CV_8UC3 || colored.type() == CV_32SC1);
+    // only color images and precomputed integrals are supported
+    int type = _image.type();
+    CV_Assert(type == CV_8UC3 || type == CV_32SC1 || (!_rois.empty()));
+
+    const GpuMat image = _image.getGpuMat();
+
+    if (_objects.empty()) _objects.create(1, 4096 * sizeof(Detection), CV_8UC1);
 
     GpuMat rois = _rois.getGpuMat(), objects = _objects.getGpuMat();
-    Fields& flds = *fields;
 
-    if (colored.type() == CV_8UC3)
+    Fields& flds = *fields;
+    if (type == CV_8UC3)
     {
-        if (!flds.update(colored.rows, colored.cols, flds.shrinkage) || flds.check(minScale, maxScale, scales))
-            flds.createLevels(colored.rows, colored.cols);
-        flds.preprocess(colored, s);
+        if (!flds.update(image.rows, image.cols, flds.shrinkage) || flds.check(minScale, maxScale, scales))
+            flds.createLevels(image.rows, image.cols);
+        flds.preprocess(image, s);
     }
     else
     {
         if (s)
-            s.enqueueCopy(colored, flds.hogluv);
+            s.enqueueCopy(image, flds.hogluv);
         else
-            colored.copyTo(flds.hogluv);
+            image.copyTo(flds.hogluv);
     }
 
     flds.detect(rois, objects, s);
@@ -587,10 +593,10 @@ void cv::gpu::SCascade::genRoi(InputArray _roi, OutputArray _mask, Stream& strea
     int shr = (*fields).shrinkage;
 
     const GpuMat roi = _roi.getGpuMat();
-    _mask.create( roi.cols / shr, roi.rows / shr, roi.type() );
+    _mask.create( roi.cols / shr, roi.rows / shr, roi.type());
     GpuMat mask = _mask.getGpuMat();
-    cv::gpu::GpuMat tmp;
 
+    GpuMat& tmp =  (*fields).genRoiTmp;
     cv::gpu::resize(roi, tmp, cv::Size(), 1.f / shr, 1.f / shr, CV_INTER_AREA, stream);
     cv::gpu::transpose(tmp, mask, stream);
 }
