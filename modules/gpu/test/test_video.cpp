@@ -203,6 +203,21 @@ TEST_P(GoodFeaturesToTrack, Accuracy)
     }
 }
 
+TEST_P(GoodFeaturesToTrack, EmptyCorners)
+{
+    int maxCorners = 1000;
+    double qualityLevel = 0.01;
+
+    cv::gpu::GoodFeaturesToTrackDetector_GPU detector(maxCorners, qualityLevel, minDistance);
+
+    cv::gpu::GpuMat src(100, 100, CV_8UC1, cv::Scalar::all(0));
+    cv::gpu::GpuMat corners(1, maxCorners, CV_32FC2);
+
+    detector(src, corners);
+
+    ASSERT_TRUE( corners.empty() );
+}
+
 INSTANTIATE_TEST_CASE_P(GPU_Video, GoodFeaturesToTrack, testing::Combine(
     ALL_DEVICES,
     testing::Values(MinDistance(0.0), MinDistance(3.0))));
