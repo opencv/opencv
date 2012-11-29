@@ -11,16 +11,20 @@ import org.opencv.android.CameraBridgeViewBase.CvCameraViewListener;
 
 import android.app.Activity;
 import android.os.Bundle;
+import android.os.Environment;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.MotionEvent;
 import android.view.SurfaceView;
+import android.view.View;
+import android.view.View.OnTouchListener;
 import android.view.WindowManager;
 
-public class Sample5CustomCamera extends Activity implements CvCameraViewListener {
+public class Sample5CameraControl extends Activity implements CvCameraViewListener, OnTouchListener {
     private static final String TAG = "OCVSample::Activity";
 
-    private CustomJavaCameraView mOpenCvCameraView;
+    private SampleJavaCameraView mOpenCvCameraView;
     private MenuItem[] mEffectMenuItems;
 
     private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this) {
@@ -31,6 +35,7 @@ public class Sample5CustomCamera extends Activity implements CvCameraViewListene
                 {
                     Log.i(TAG, "OpenCV loaded successfully");
                     mOpenCvCameraView.enableView();
+                    mOpenCvCameraView.setOnTouchListener(Sample5CameraControl.this);
                 } break;
                 default:
                 {
@@ -40,7 +45,7 @@ public class Sample5CustomCamera extends Activity implements CvCameraViewListene
         }
     };
 
-    public Sample5CustomCamera() {
+    public Sample5CameraControl() {
         Log.i(TAG, "Instantiated new " + this.getClass());
     }
 
@@ -53,7 +58,7 @@ public class Sample5CustomCamera extends Activity implements CvCameraViewListene
 
         setContentView(R.layout.tutorial5_surface_view);
 
-        mOpenCvCameraView = (CustomJavaCameraView) findViewById(R.id.tutorial5_activity_java_surface_view);
+        mOpenCvCameraView = (SampleJavaCameraView) findViewById(R.id.tutorial5_activity_java_surface_view);
 
         mOpenCvCameraView.setVisibility(SurfaceView.VISIBLE);
 
@@ -111,5 +116,12 @@ public class Sample5CustomCamera extends Activity implements CvCameraViewListene
         Log.i(TAG, "called onOptionsItemSelected; selected item: " + item);
         mOpenCvCameraView.setEffect((String) item.getTitle());
         return true;
+    }
+
+    @Override
+    public boolean onTouch(View v, MotionEvent event) {
+        Log.i(TAG,"onTouch event");
+        mOpenCvCameraView.takePicture(Environment.getExternalStorageDirectory().getPath() + "/sample_picture.jpg");
+        return false;
     }
 }

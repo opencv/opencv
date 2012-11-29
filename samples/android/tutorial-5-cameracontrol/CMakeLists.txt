@@ -1,4 +1,4 @@
-set(sample example-tutorial-5-customcamera)
+set(sample example-tutorial-5-cameracontrol)
 
 add_android_project(${sample} "${CMAKE_CURRENT_SOURCE_DIR}" LIBRARY_DEPS ${OpenCV_BINARY_DIR} SDK_TARGET 11 ${ANDROID_SDK_TARGET})
 if(TARGET ${sample})

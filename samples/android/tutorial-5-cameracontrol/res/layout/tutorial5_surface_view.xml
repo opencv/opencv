@@ -3,7 +3,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent" >
 
-    <org.opencv.samples.tutorial5.CustomJavaCameraView
+    <org.opencv.samples.tutorial5.SampleJavaCameraView
         android:layout_width="fill_parent"
         android:layout_height="fill_parent"
         android:visibility="gone"
