@@ -64,8 +64,8 @@ void cv::gpu::SCascade::read(const FileNode& fn) { Algorithm::read(fn); }
 cv::gpu::device::icf::Level::Level(int idx, const Octave& oct, const float scale, const int w, const int h)
 :  octave(idx), step(oct.stages), relScale(scale / oct.scale)
 {
-    workRect.x = round(w / (float)oct.shrinkage);
-    workRect.y = round(h / (float)oct.shrinkage);
+    workRect.x = cvRound(w / (float)oct.shrinkage);
+    workRect.y = cvRound(h / (float)oct.shrinkage);
 
     objSize.x  = cv::saturate_cast<uchar>(oct.size.x * relScale);
     objSize.y  = cv::saturate_cast<uchar>(oct.size.y * relScale);
@@ -75,7 +75,7 @@ cv::gpu::device::icf::Level::Level(int idx, const Octave& oct, const float scale
         scaling[0] = scaling[1] = 1.f;
     else
     {
-        scaling[0] = (relScale < 1.f) ? 0.89f * ::pow(relScale, 1.099f / ::log(2)) : 1.f;
+        scaling[0] = (relScale < 1.f) ? 0.89f * ::pow(relScale, 1.099f / ::log(2.0f)) : 1.f;
         scaling[1] = relScale * relScale;
     }
 }
@@ -199,7 +199,7 @@ struct cv::gpu::SCascade::Fields
                         // int feature = (int)(*(inIt +=2)) + feature_offset;
                         inIt +=3;
                         // extract feature, Todo:check it
-                        uint th = saturate_cast<uint>((float)(*(inIt++)));
+                        unsigned int th = saturate_cast<unsigned int>((float)(*(inIt++)));
                         cv::FileNode ftn = (*ftrs)[SC_F_RECT];
                         cv::FileNodeIterator r_it = ftn.begin();
                         uchar4 rect;
@@ -214,7 +214,7 @@ struct cv::gpu::SCascade::Fields
                             rect.w -= rect.y;
                         }
 
-                        uint channel = saturate_cast<uint>((int)(*ftrs)[SC_F_CHANNEL]);
+                        unsigned int channel = saturate_cast<unsigned int>((int)(*ftrs)[SC_F_CHANNEL]);
                         vnodes.push_back(Node(rect, channel, th));
                         ++ftrs;
                     }
@@ -426,7 +426,7 @@ private:
         GpuMat nmag(fplane, cv::Rect(0, 4 * fh, fw, fh));
         GpuMat nang(fplane, cv::Rect(0, 5 * fh, fw, fh));
 
-        cv::gpu::multiply(mag, cv::Scalar::all(1.f / (8 *::log(2))), nmag, 1, -1, s);
+        cv::gpu::multiply(mag, cv::Scalar::all(1.f / (8 *::log(2.0f))), nmag, 1, -1, s);
         cv::gpu::multiply(ang, cv::Scalar::all(1.f / 60.f),     nang, 1, -1, s);
 
         //create uchar magnitude

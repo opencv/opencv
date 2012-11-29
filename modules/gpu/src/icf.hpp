@@ -88,11 +88,11 @@ struct __align__(8) Node
 {
     uchar4 rect;
     // ushort channel;
-    uint threshold;
+    unsigned int threshold;
 
     enum { THRESHOLD_MASK = 0x0FFFFFFF };
 
-    Node(const uchar4 r, const uint ch, const uint t) : rect(r), threshold(t + (ch << 28)) {}
+    Node(const uchar4 r, const unsigned int ch, const unsigned int t) : rect(r), threshold(t + (ch << 28)) {}
 };
 
 struct __align__(16) Detection
@@ -144,7 +144,7 @@ struct CascadeInvoker
         const int downscales, const cudaStream_t& stream = 0) const;
 
     template<bool isUp>
-    __device void detect(Detection* objects, const uint ndetections, uint* ctr, const int downscales) const;
+    __device void detect(Detection* objects, const unsigned int ndetections, unsigned int* ctr, const int downscales) const;
 };
 
 }
