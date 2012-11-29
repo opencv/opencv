@@ -1008,10 +1008,6 @@ static CvCaptureCAM_V4L * icvCaptureFromCAM_V4L (int index)
       return NULL;
    }
 
-   /* set the default size */
-   capture->width  = DEFAULT_V4L_WIDTH;
-   capture->height = DEFAULT_V4L_HEIGHT;
-
 #ifdef USE_TEMP_BUFFER
    capture->buffers[MAX_V4L_BUFFERS].start = NULL;
 #endif
@@ -1035,6 +1031,9 @@ static CvCaptureCAM_V4L * icvCaptureFromCAM_V4L (int index)
       the standard set of cv calls promoting transparency.  "Vector Table" insertion. */
    capture->FirstCapture = 1;
 
+   /* set the default size */
+   capture->width  = DEFAULT_V4L_WIDTH;
+   capture->height = DEFAULT_V4L_HEIGHT;
 
    if (_capture_V4L2 (capture, deviceName) == -1) {
        icvCloseCAM_V4L(capture);
