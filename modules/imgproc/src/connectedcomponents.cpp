@@ -69,29 +69,42 @@ namespace cv{
         }
         void finish(){}
     };
+    struct Point2ui64{
+        uint64_t x, y;
+        Point2ui64(uint64_t _x, uint64_t _y):x(_x), y(_y){}
+    };
     template<typename LabelT>
     struct CCStatsOp{
+        OutputArray _mstatsv;
         cv::Mat statsv;
-        CCStatsOp(OutputArray _statsv): statsv(_statsv.getMat()){
+        OutputArray _mcentroidsv;
+        cv::Mat centroidsv;
+        std::vector<Point2ui64> integrals;
+
+        CCStatsOp(OutputArray _statsv, OutputArray _centroidsv): _mstatsv(_statsv), _mcentroidsv(_centroidsv){
         }
         inline
         void init(const LabelT nlabels){
-            statsv = cv::Mat(nlabels, CC_STAT_MAX, cv::DataType<double>::type);
+            _mstatsv.create(cv::Size(nlabels, CC_STAT_MAX), cv::DataType<int>::type);
+            statsv = _mstatsv.getMat();
+            _mcentroidsv.create(cv::Size(nlabels, 2), cv::DataType<double>::type);
+            centroidsv = _mcentroidsv.getMat();
+
             for(int l = 0; l < (int) nlabels; ++l){
-                double *row = &statsv.at<double>(l, 0);
+                unsigned int *row = (unsigned int *) &statsv.at<int>(l, 0);
                 row[CC_STAT_LEFT] = std::numeric_limits<LabelT>::max();
                 row[CC_STAT_TOP] = std::numeric_limits<LabelT>::max();
                 row[CC_STAT_WIDTH] = std::numeric_limits<LabelT>::min();
                 row[CC_STAT_HEIGHT] = std::numeric_limits<LabelT>::min();
-                row[CC_STAT_CX] = 0;
-                row[CC_STAT_CY] = 0;
+                //row[CC_STAT_CX] = 0;
+                //row[CC_STAT_CY] = 0;
                 row[CC_STAT_AREA] = 0;
-                row[CC_STAT_INTEGRAL_X] = 0;
-                row[CC_STAT_INTEGRAL_Y] = 0;
             }
+            integrals.resize(nlabels, Point2ui64(0, 0));
         }
         void operator()(int r, int c, LabelT l){
-            double *row = &statsv.at<double>(l, 0);
+            int *row = &statsv.at<int>(l, 0);
+            unsigned int *urow = (unsigned int *) row;
             if(c > row[CC_STAT_WIDTH]){
                 row[CC_STAT_WIDTH] = c;
             }else{
@@ -106,19 +119,23 @@ namespace cv{
                     row[CC_STAT_TOP] = r;
                 }
             }
-            row[CC_STAT_INTEGRAL_X] += c;
-            row[CC_STAT_INTEGRAL_Y] += r;
-            row[CC_STAT_AREA]++;
+            urow[CC_STAT_AREA]++;
+            Point2ui64 &integral = integrals[l];
+            integral.x += c;
+            integral.y += r;
         }
         void finish(){
             for(int l = 0; l < statsv.rows; ++l){
-                double *row = &statsv.at<double>(l, 0);
+                unsigned int *row = (unsigned int *) &statsv.at<int>(l, 0);
                 row[CC_STAT_LEFT] = std::min(row[CC_STAT_LEFT], row[CC_STAT_WIDTH]);
                 row[CC_STAT_WIDTH] = row[CC_STAT_WIDTH] - row[CC_STAT_LEFT] + 1;
                 row[CC_STAT_TOP] = std::min(row[CC_STAT_TOP], row[CC_STAT_HEIGHT]);
                 row[CC_STAT_HEIGHT] = row[CC_STAT_HEIGHT] - row[CC_STAT_TOP] + 1;
-                row[CC_STAT_CX] = row[CC_STAT_INTEGRAL_X] / double(row[CC_STAT_AREA]);
-                row[CC_STAT_CY] = row[CC_STAT_INTEGRAL_Y] / double(row[CC_STAT_AREA]);
+
+                Point2ui64 &integral = integrals[l];
+                double *centroid = &centroidsv.at<double>(l, 0);
+                centroid[0] = double(integral.x) / row[CC_STAT_AREA];
+                centroid[1] = double(integral.y) / row[CC_STAT_AREA];
             }
         }
     };
@@ -196,9 +213,7 @@ namespace cv{
     const int G8[4][2] = {{1, -1}, {1, 0}, {1, 1}, {0, -1}};//a, b, c, d neighborhoods
     template<typename LabelT, typename PixelT, typename StatsOp = NoOp<LabelT>, int connectivity = 8>
     struct LabelingImpl{
-    LabelT operator()(InputArray _I, OutputArray _L, StatsOp &sop){
-        cv::Mat I = _I.getMat();
-        cv::Mat L = _L.getMat();
+    LabelT operator()(const cv::Mat &I, cv::Mat &L, StatsOp &sop){
         CV_Assert(L.rows == I.rows);
         CV_Assert(L.cols == I.cols);
         const int rows = L.rows;
@@ -347,7 +362,8 @@ namespace cv{
 
 //L's type must have an appropriate depth for the number of pixels in I
 template<typename StatsOp>
-int connectedComponents_sub1(InputArray I, OutputArray L, int connectivity, StatsOp &sop){
+static
+int connectedComponents_sub1(const cv::Mat &I, cv::Mat &L, int connectivity, StatsOp &sop){
     CV_Assert(L.channels() == 1 && I.channels() == 1);
     CV_Assert(connectivity == 8 || connectivity == 4);
 
@@ -394,13 +410,15 @@ int connectedComponents_sub1(InputArray I, OutputArray L, int connectivity, Stat
     return -1;
 }
 
-int connectedComponents(InputArray I, OutputArray L, int connectivity){
-    int lDepth = L.depth();
-    if(lDepth == CV_8U){
+int connectedComponents(InputArray _I, OutputArray _L, int connectivity, int ltype){
+    const cv::Mat I = _I.getMat();
+    _L.create(I.size(), CV_MAT_TYPE(ltype));
+    cv::Mat L = _L.getMat();
+    if(ltype == CV_8U){
         connectedcomponents::NoOp<uint8_t> sop; return connectedComponents_sub1(I, L, connectivity, sop);
-    }else if(lDepth == CV_16U){
+    }else if(ltype == CV_16U){
         connectedcomponents::NoOp<uint16_t> sop; return connectedComponents_sub1(I, L, connectivity, sop);
-    }else if(lDepth == CV_32S){
+    }else if(ltype == CV_32S){
         connectedcomponents::NoOp<uint32_t> sop; return connectedComponents_sub1(I, L, connectivity, sop);
     }else{
         CV_Assert(false);
@@ -408,14 +426,16 @@ int connectedComponents(InputArray I, OutputArray L, int connectivity){
     }
 }
 
-int connectedComponentsWithStats(InputArray I, OutputArray L, OutputArray statsv, int connectivity){
-    int lDepth = L.depth();
-    if(lDepth == CV_8U){
-        connectedcomponents::CCStatsOp<uint8_t> sop(statsv); return connectedComponents_sub1(I, L, connectivity, sop);
-    }else if(lDepth == CV_16U){
-        connectedcomponents::CCStatsOp<uint16_t> sop(statsv); return connectedComponents_sub1(I, L, connectivity, sop);
-    }else if(lDepth == CV_32S){
-        connectedcomponents::CCStatsOp<uint32_t> sop(statsv); return connectedComponents_sub1(I, L, connectivity, sop);
+int connectedComponentsWithStats(InputArray _I, OutputArray _L, OutputArray statsv, OutputArray centroids, int connectivity, int ltype){
+    const cv::Mat I = _I.getMat();
+    _L.create(I.size(), CV_MAT_TYPE(ltype));
+    cv::Mat L = _L.getMat();
+    if(ltype == CV_8U){
+        connectedcomponents::CCStatsOp<uint8_t> sop(statsv, centroids); return connectedComponents_sub1(I, L, connectivity, sop);
+    }else if(ltype == CV_16U){
+        connectedcomponents::CCStatsOp<uint16_t> sop(statsv, centroids); return connectedComponents_sub1(I, L, connectivity, sop);
+    }else if(ltype == CV_32S){
+        connectedcomponents::CCStatsOp<uint32_t> sop(statsv, centroids); return connectedComponents_sub1(I, L, connectivity, sop);
     }else{
         CV_Assert(false);
         return 0;
