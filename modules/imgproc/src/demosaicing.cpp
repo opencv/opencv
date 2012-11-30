@@ -43,7 +43,6 @@
 #include "precomp.hpp"
 
 #include <limits>
-#include <iostream>
 
 namespace cv
 {
@@ -337,10 +336,13 @@ static void Bayer2Gray_( const Mat& srcmat, Mat& dstmat, int code )
     size.height -= 2;
     size.width -= 2;
 
-    Range range(0, size.height);
-    Bayer2Gray_Invoker<T, SIMDInterpolator> invoker(srcmat, dstmat,
-        start_with_green, brow, size, bcoeff, rcoeff);
-    parallel_for_(range, invoker);
+    if (size.height > 0)
+    {
+        Range range(0, size.height);
+        Bayer2Gray_Invoker<T, SIMDInterpolator> invoker(srcmat, dstmat,
+            start_with_green, brow, size, bcoeff, rcoeff);
+        parallel_for_(range, invoker, dstmat.total()/static_cast<double>(1<<16));
+    }
 
     size = dstmat.size();
     T* dst0 = (T*)dstmat.data;
@@ -353,9 +355,7 @@ static void Bayer2Gray_( const Mat& srcmat, Mat& dstmat, int code )
         }
     else
         for( int i = 0; i < size.width; i++ )
-        {
             dst0[i] = dst0[i + (size.height-1)*dst_step] = 0;
-        }
 }
 
 template <typename T>
@@ -370,16 +370,6 @@ struct Alpha<float>
     static float value() { return 1.0f; }
 };
 
-static cv::Mutex m;
-
-template <typename T>
-static void print(const T& value)
-{
-    m.lock();
-    std::cout << value << " ";
-    m.unlock();
-}
-
 template <typename T, typename SIMDInterpolator>
 class Bayer2RGB_Invoker :
     public ParallelLoopBody
@@ -389,7 +379,6 @@ public:
         ParallelLoopBody(),
         srcmat(_srcmat), dstmat(_dstmat), Start_with_green(_start_with_green), Blue(_blue), size(_size)
     {
-        print("Bayer2RGB_Invoker()\n");
     }
     
     virtual void operator() (const Range& range) const
@@ -411,7 +400,6 @@ public:
             blue = -blue;
             start_with_green = !start_with_green;
         }
-        print(range.start);
         
         for (int i = range.start; i < range.end; bayer0 += bayer_step, dst0 += dst_step, ++i )
         {
@@ -606,13 +594,13 @@ static void Bayer2RGB_( const Mat& srcmat, Mat& dstmat, int code )
     int dcn = dstmat.channels();
     size.height -= 2;
     size.width -= 2;
-    
-    Range range(0, size.height);
-    Bayer2RGB_Invoker<T, SIMDInterpolator> invoker(srcmat, dstmat, start_with_green, blue, size);
 
-    print("before parallel_for_\n");
-    parallel_for_(range, invoker);
-    print("after parallel_for_\n");
+    if (size.height > 0)
+    {
+        Range range(0, size.height);
+        Bayer2RGB_Invoker<T, SIMDInterpolator> invoker(srcmat, dstmat, start_with_green, blue, size);
+        parallel_for_(range, invoker, dstmat.total()/static_cast<double>(1<<16));
+    }
     
     // filling the first and the last rows
     size = dstmat.size();
@@ -1200,13 +1188,18 @@ public:
     virtual void operator()(const Range& range) const
     {
         int dcn = dst.channels();
+        int dcn2 = dcn<<1;
         int start_with_green = Start_with_green, blue = Blue;
         int sstep = src.step / src.elemSize1(), dstep = dst.step / dst.elemSize1();
 
-        start_with_green = range.start % 2 == 0 ? (Start_with_green ^ 1) : Start_with_green;
-        blue = range.start % 2 == 0 ? (Blue ^ 1) : Blue;
-        const T* S = reinterpret_cast<const T*>(src.data + range.start * src.step) + 1;
-        T* D = reinterpret_cast<T*>(dst.data + range.start * dst.step) + dcn;
+        const T* S = reinterpret_cast<const T*>(src.data + (range.start + 1) * src.step) + 1;
+        T* D = reinterpret_cast<T*>(dst.data + (range.start + 1) * dst.step) + dcn;
+
+        if (range.start % 2)
+        {
+            start_with_green ^= 1;
+            blue ^= 1;
+        }
 
         // to BGR
         for (int y = range.start; y < range.end; ++y)
@@ -1223,7 +1216,7 @@ public:
             }
 
             if (blue)
-                for (; x < size.width; x += 2, S += 2, D += 2*dcn)
+                for (; x < size.width; x += 2, S += 2, D += dcn2)
                 {
                     D[0] = S[0];
                     D[1] = (std::abs(S[-1] - S[1]) > std::abs(S[sstep] - S[-sstep]) ? (S[sstep] + S[-sstep] + 1) : (S[-1] + S[1] + 1)) >> 1;
@@ -1234,7 +1227,7 @@ public:
                     D[5] = (S[-sstep+1] + S[sstep+1] + 1) >> 1;
                 }
             else
-                for (; x < size.width; x += 2, S += 2, D += 2*dcn)
+                for (; x < size.width; x += 2, S += 2, D += dcn2    )
                 {
                     D[0] = (S[-sstep-1] + S[-sstep+1] + S[sstep-1] + S[sstep+1] + 2) >> 2;
                     D[1] = (std::abs(S[-1] - S[1]) > std::abs(S[sstep] - S[-sstep]) ? (S[sstep] + S[-sstep] + 1) : (S[-1] + S[1] + 1)) >> 1;
@@ -1263,7 +1256,7 @@ public:
             start_with_green ^= 1;
             blue ^= 1;
             S += 2;
-            D += 2*dcn;
+            D += dcn2;
         }
     }
 
@@ -1287,24 +1280,34 @@ static void Bayer2RGB_EdgeAware_T(const Mat& src, Mat& dst, int code)
     }
 
     size.width -= 2;
-    size.height -= 1;
+    size.height -= 2;
 
     int start_with_green = code == CV_BayerGB2BGR_EA || code == CV_BayerGR2BGR_EA ? 1 : 0;
     int blue = code == CV_BayerGB2BGR_EA || code == CV_BayerBG2BGR_EA ? 1 : 0;
 
-    Bayer2RGB_EdgeAware_T_Invoker<T> invoker(src, dst, size, blue, start_with_green);
-    Range range(1, size.height);
-    parallel_for_(range, invoker);
-
-    size.width += 2;
-    T* firstRow = reinterpret_cast<T*>(dst.data), *lastRow = reinterpret_cast<T*>(dst.data + size.height * dst.step);
+    if (size.height > 0)
+    {
+        Bayer2RGB_EdgeAware_T_Invoker<T> invoker(src, dst, size, blue, start_with_green);
+        Range range(0, size.height);
+        parallel_for_(range, invoker, dst.total()/static_cast<double>(1<<16));
+    }
+    size = dst.size();
     size.width *= dst.channels();
     int dstep = dst.step / dst.elemSize1();
-    for (int x = 0; x < size.width; ++x)
+    T* firstRow = reinterpret_cast<T*>(dst.data);
+    T* lastRow = reinterpret_cast<T*>(dst.data) + (size.height-1) * dstep;
+
+    if (size.height > 2)
     {
-        firstRow[x] = firstRow[dstep + x];
-        lastRow[x] = lastRow[-dstep+x];
+        for (int x = 0; x < size.width; ++x)
+        {
+            firstRow[x] = firstRow[dstep+x];
+            lastRow[x] = lastRow[-dstep+x];
+        }
     }
+    else
+        for (int x = 0; x < size.width; ++x)
+            firstRow[x] = lastRow[x] = 0;
 }
 
 } // end namespace cv
