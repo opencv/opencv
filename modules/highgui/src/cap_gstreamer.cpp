@@ -65,7 +65,24 @@
 #define CV_WARN(message) fprintf(stderr, "warning: %s (%s:%d)\n", message, __FILE__, __LINE__)
 #endif
 
-static bool isInited = false;
+static cv::Mutex gst_initializer_mutex;
+
+class gst_initializer
+{
+public:
+    static void init()
+    {
+        gst_initializer_mutex.lock();
+        static gst_initializer init;
+        gst_initializer_mutex.unlock();
+    }
+private:
+    gst_initializer()
+    {
+        gst_init(NULL, NULL);
+    }
+};
+
 class CvCapture_GStreamer : public CvCapture
 {
 public:
@@ -298,16 +315,18 @@ bool CvCapture_GStreamer::open( int type, const char* filename )
 
     __BEGIN__;
 
-    if(!isInited) {
+    gst_initializer::init();
+
+//    if(!isInited) {
 //        printf("gst_init\n");
-        gst_init (NULL, NULL);
+//        gst_init (NULL, NULL);
 
 //        gst_debug_set_active(TRUE);
 //        gst_debug_set_colored(TRUE);
 //        gst_debug_set_default_threshold(GST_LEVEL_WARNING);
 
-        isInited = true;
-    }
+//        isInited = true;
+//    }
     bool stream = false;
     bool manualpipeline = false;
     char *uri = NULL;
@@ -477,10 +496,11 @@ bool CvVideoWriter_GStreamer::open( const char * filename, int fourcc,
     encit=encs.find(fourcc);
     if (encit==encs.end())
         CV_ERROR( CV_StsUnsupportedFormat,"Gstreamer Opencv backend doesn't support this codec acutally.");
-    if(!isInited) {
-        gst_init (NULL, NULL);
-        isInited = true;
-    }
+//    if(!isInited) {
+//        gst_init (NULL, NULL);
+//        isInited = true;
+//    }
+    gst_initializer::init();
     close();
     source=gst_element_factory_make("appsrc",NULL);
     file=gst_element_factory_make("filesink", NULL);

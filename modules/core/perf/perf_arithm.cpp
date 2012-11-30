@@ -123,6 +123,7 @@ PERF_TEST_P(Size_MatType, add, TYPICAL_MATS_CORE_ARITHM)
     cv::Mat c = Mat(sz, type);
 
     declare.in(a, b, WARMUP_RNG).out(c);
+    declare.time(50);
 
     if (CV_MAT_DEPTH(type) == CV_32S)
     {

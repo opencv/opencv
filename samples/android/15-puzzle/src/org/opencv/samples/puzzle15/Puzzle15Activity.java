@@ -13,8 +13,8 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
-import android.view.Window;
 import android.view.View;
+import android.view.WindowManager;
 
 public class Puzzle15Activity extends Activity implements CvCameraViewListener, View.OnTouchListener {
 
@@ -50,7 +50,7 @@ public class Puzzle15Activity extends Activity implements CvCameraViewListener, 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        requestWindowFeature(Window.FEATURE_NO_TITLE);
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
         setContentView(R.layout.activity_puzzle15);
 

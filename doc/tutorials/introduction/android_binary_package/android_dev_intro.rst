@@ -334,7 +334,11 @@ and exceptions are used in C++, it also should be created. Example of the file :
 
    APP_STL := gnustl_static
    APP_CPPFLAGS := -frtti -fexceptions
-   APP_ABI := armeabi-v7a
+   APP_ABI := all
+
+.. note:: We recommend setting ``APP_ABI := all`` for all targets. If you want to specify the 
+          target explicitly, use ``armeabi`` for ARMv5/ARMv6, ``armeabi-v7a`` for ARMv7, ``x86`` 
+          for Intel Atom or ``mips`` for MIPS. 
 
 
 .. _NDK_build_cli:

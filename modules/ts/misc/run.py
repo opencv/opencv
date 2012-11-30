@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import sys, os, platform, xml, re, tempfile, glob, datetime, getpass, shutil
 from optparse import OptionParser
 from subprocess import Popen, PIPE
@@ -267,17 +269,21 @@ class RunInfo(object):
                 else:
                     # assume here that device name may consists of any characters except newline
                     connected_devices = re.findall(r"^[^\n]+[ \t]+device\r?$", adb_res, re.MULTILINE)
-                    if len(connected_devices) != 1:
-                        self.error = "Too many (%s) devices are connected. Please specify single device using --serial option" % (len(connected_devices))
+                    if not connected_devices:
+                        self.error = "Android device not found"
+                        self.adb = []
+                    elif len(connected_devices) != 1:
+                        self.error = "Too many (%s) devices are connected. Please specify single device using --serial option:\n\n" % (len(connected_devices)) + adb_res
                         self.adb = []
                     else:
-                        adb_serial = connected_devices[0].split("\t")[0]
-                        self.adb = self.adb + ["-s", adb_serial]
-            print "adb command:", " ".join(self.adb)
+                        options.adb_serial = connected_devices[0].split("\t")[0]
+                        self.adb = self.adb + ["-s", options.adb_serial]
+            if self.adb:
+                print "adb command:", " ".join(self.adb)
 
-        if self.adb:
-            #construct name for aapt tool
-            self.aapt = [os.path.join(os.path.dirname(self.adb[0]), ("aapt","aapt.exe")[hostos == 'nt'])]
+            if self.adb:
+                #construct name for aapt tool
+                self.aapt = [os.path.join(os.path.dirname(self.adb[0]), ("aapt","aapt.exe")[hostos == 'nt'])]
 
         # fix has_perf_tests param
         self.has_perf_tests = self.has_perf_tests == "ON"
@@ -688,13 +694,12 @@ class RunInfo(object):
                 exename = os.path.basename(exe)
                 androidexe = andoidcwd + exename
                 #upload
-                print >> _stderr, "Uploading", exename, "to device..."
+                _stderr.write("Uploading... ")
                 output = Popen(self.adb + ["push", exe, androidexe], stdout=_stdout, stderr=_stderr).wait()
                 if output != 0:
                     print >> _stderr, "adb finishes unexpectedly with error code", output
                     return
                 #chmod
-                print >> _stderr, "Changing mode of ", androidexe
                 output = Popen(self.adb + ["shell", "chmod 777 " + androidexe], stdout=_stdout, stderr=_stderr).wait()
                 if output != 0:
                     print >> _stderr, "adb finishes unexpectedly with error code", output
@@ -704,7 +709,7 @@ class RunInfo(object):
                     command = exename + " --help"
                 else:
                     command = exename + " " + " ".join(args)
-                print >> _stderr, "Running:", command
+                print >> _stderr, "Run command:", command
                 if self.setUp is not None:
                     self.setUp()
                 Popen(self.adb + ["shell", "export OPENCV_TEST_DATA_PATH=" + self.test_data_path + "&& cd " + andoidcwd + "&& ./" + command], stdout=_stdout, stderr=_stderr).wait()
@@ -712,17 +717,17 @@ class RunInfo(object):
                     self.tearDown()
                 # try get log
                 if not self.options.help:
-                    print >> _stderr, "Pulling", logfile, "from device..."
+                    #_stderr.write("Pull log...  ")
                     hostlogpath = os.path.join(workingDir, logfile)
-                    output = Popen(self.adb + ["pull", andoidcwd + logfile, hostlogpath], stdout=_stdout, stderr=_stderr).wait()
+                    output = Popen(self.adb + ["pull", andoidcwd + logfile, hostlogpath], stdout=_stdout, stderr=PIPE).wait()
                     if output != 0:
                         print >> _stderr, "adb finishes unexpectedly with error code", output
                         return
                     #rm log
-                    Popen(self.adb + ["shell", "rm " + andoidcwd + logfile], stdout=_stdout, stderr=_stderr).wait()
+                    Popen(self.adb + ["shell", "rm " + andoidcwd + logfile], stdout=PIPE, stderr=PIPE).wait()
 
                 # clean temporary files
-                Popen(self.adb + ["shell", "rm " + tempdir + "__opencv_temp.*"], stdout=_stdout, stderr=_stderr).wait()
+                Popen(self.adb + ["shell", "rm " + tempdir + "__opencv_temp.*"], stdout=PIPE, stderr=PIPE).wait()
             except OSError:
                 pass
             if os.path.isfile(hostlogpath):
@@ -739,7 +744,7 @@ class RunInfo(object):
             temp_path = tempfile.mkdtemp(prefix="__opencv_temp.", dir=orig_temp_path or None)
             os.environ['OPENCV_TEMP_PATH'] = temp_path
 
-            print >> _stderr, "Running:", " ".join(cmd)
+            print >> _stderr, "Run command:", " ".join(cmd)
             try:
                 Popen(cmd, stdout=_stdout, stderr=_stderr, cwd = workingDir).wait()
             except OSError:
@@ -806,6 +811,7 @@ if __name__ == "__main__":
     parser.add_option("", "--serial", dest="adb_serial", help="Android: directs command to the USB device or emulator with the given serial number", metavar="serial number", default="")
     parser.add_option("", "--package", dest="junit_package", help="Android: run jUnit tests for specified package", metavar="package", default="")
     parser.add_option("", "--help-tests", dest="help", help="Show help for test executable", action="store_true", default=False)
+    parser.add_option("", "--check", dest="check", help="Shortcut for '--perf_min_samples=1 --perf_force_samples=1'", action="store_true", default=False)
 
     (options, args) = parser.parse_args(argv)
 
@@ -823,8 +829,11 @@ if __name__ == "__main__":
     tests = [s.strip() for s in options.tests.split(",") if s]
 
     if len(tests) != 1 or len(run_args) != 1:
-        #remove --gtest_output from params
+        # remove --gtest_output from params
         test_args = [a for a in test_args if not a.startswith("--gtest_output=")]
+
+    if options.check:
+        test_args.extend(["--perf_min_samples=1", "--perf_force_samples=1"])
 
     logs = []
     for path in run_args:
@@ -837,4 +846,4 @@ if __name__ == "__main__":
             logs.extend(info.runTests(tests, sys.stdout, sys.stderr, options.cwd, test_args))
 
     if logs:
-        print >> sys.stderr, "Collected:", " ".join(logs)
+        print >> sys.stderr, "Collected:  ", " ".join(logs)

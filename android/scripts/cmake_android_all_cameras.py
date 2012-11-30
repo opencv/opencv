@@ -33,20 +33,27 @@ for s in ConfFile.readlines():
         continue
 
     shutil.rmtree(os.path.join(AndroidTreeRoot, "out", "target", "product", "generic", "system"), ignore_errors=True)
+
+    LinkerLibs = os.path.join(AndroidTreeRoot, "bin_arm", "system")
     if (Arch == "x86"):
-        shutil.copytree(os.path.join(AndroidTreeRoot, "bin_x86", "system"), os.path.join(AndroidTreeRoot, "out", "target", "product", "generic", "system"))
+        LinkerLibs = os.path.join(AndroidTreeRoot, "bin_x86", "system")
     elif (Arch == "mips"):
-        shutil.copytree(os.path.join(AndroidTreeRoot, "bin_mips", "system"), os.path.join(AndroidTreeRoot, "out", "target", "product", "generic", "system"))
-    else:
-        shutil.copytree(os.path.join(AndroidTreeRoot, "bin_arm", "system"), os.path.join(AndroidTreeRoot, "out", "target", "product", "generic", "system"))
+        LinkerLibs = os.path.join(AndroidTreeRoot, "bin_mips", "system")
+
+    if (not os.path.exists(LinkerLibs)):
+        print("Error: Paltform libs for linker in path \"%s\" not found" % LinkerLibs)
+        print("Building %s for %s\t[\033[91mFAILED\033[0m]" % (MakeTarget, Arch))
+        continue
+
+    shutil.copytree(LinkerLibs, os.path.join(AndroidTreeRoot, "out", "target", "product", "generic", "system"))
 
     os.chdir(BuildDir)
     BuildLog = os.path.join(BuildDir, "build.log")
     CmakeCmdLine = "cmake -DCMAKE_TOOLCHAIN_FILE=../android.toolchain.cmake -DANDROID_SOURCE_TREE=\"%s\" -DANDROID_NATIVE_API_LEVEL=\"%s\" -DANDROID_ABI=\"%s\" -DANDROID_STL=stlport_static ../../ > \"%s\" 2>&1" % (AndroidTreeRoot, NativeApiLevel, Arch, BuildLog)
     MakeCmdLine = "make %s >> \"%s\" 2>&1" % (MakeTarget, BuildLog);
-    print(CmakeCmdLine)
+    #print(CmakeCmdLine)
     os.system(CmakeCmdLine)
-    print(MakeCmdLine)
+    #print(MakeCmdLine)
     os.system(MakeCmdLine)
     os.chdir(HomeDir)
     CameraLib = os.path.join(BuildDir, "lib", Arch, "lib" + MakeTarget + ".so")

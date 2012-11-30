@@ -1,3 +1,5 @@
+#/usr/bin/env python
+
 '''
 Feature-based image matching sample.
 

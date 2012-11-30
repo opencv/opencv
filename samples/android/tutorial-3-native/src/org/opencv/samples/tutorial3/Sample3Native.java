@@ -12,7 +12,6 @@ import org.opencv.imgproc.Imgproc;
 import android.app.Activity;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.Window;
 import android.view.WindowManager;
 
 public class Sample3Native extends Activity implements CvCameraViewListener {
@@ -52,7 +51,6 @@ public class Sample3Native extends Activity implements CvCameraViewListener {
     public void onCreate(Bundle savedInstanceState) {
         Log.i(TAG, "called onCreate");
         super.onCreate(savedInstanceState);
-        requestWindowFeature(Window.FEATURE_NO_TITLE);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
         setContentView(R.layout.tutorial3_surface_view);

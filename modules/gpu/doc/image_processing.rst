@@ -873,15 +873,16 @@ gpu::FastNonLocalMeansDenoising
 -------------------------------
 .. ocv:class:: gpu::FastNonLocalMeansDenoising
 
-    class FastNonLocalMeansDenoising
-    {
-    public:
-        //! Simple method, recommended for grayscale images (though it supports multichannel images)
-        void simpleMethod(const GpuMat& src, GpuMat& dst, float h, int search_window = 21, int block_size = 7, Stream& s = Stream::Null())
+    ::
 
-        //! Processes luminance and color components separatelly
-        void labMethod(const GpuMat& src, GpuMat& dst, float h_luminance, float h_color, int search_window = 21, int block_size = 7, Stream& s = Stream::Null())
-    };
+        class FastNonLocalMeansDenoising
+        {
+        public:
+            //! Simple method, recommended for grayscale images (though it supports multichannel images)
+            void simpleMethod(const GpuMat& src, GpuMat& dst, float h, int search_window = 21, int block_size = 7, Stream& s = Stream::Null())
+            //! Processes luminance and color components separatelly
+            void labMethod(const GpuMat& src, GpuMat& dst, float h_luminance, float h_color, int search_window = 21, int block_size = 7, Stream& s = Stream::Null())
+        };
 
 The class implements fast approximate Non Local Means Denoising algorithm.
 

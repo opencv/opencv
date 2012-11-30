@@ -1,3 +1,5 @@
+#/usr/bin/env python
+
 '''
 gabor_threads.py
 =========

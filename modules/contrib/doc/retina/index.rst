@@ -208,7 +208,7 @@ Retina::getMagno
 Retina::getParameters
 +++++++++++++++++++++
 
-.. ocv:function:: struct Retina::RetinaParameters Retina::getParameters()
+.. ocv:function:: Retina::RetinaParameters Retina::getParameters()
 
     Retrieve the current parameters values in a *Retina::RetinaParameters* structure
 
@@ -323,7 +323,8 @@ Retina::RetinaParameters
 ========================
 
 .. ocv:struct:: Retina::RetinaParameters
-This structure merges all the parameters that can be adjusted threw the **Retina::setup()**, **Retina::setupOPLandIPLParvoChannel** and **Retina::setupIPLMagnoChannel** setup methods
+
+  This structure merges all the parameters that can be adjusted threw the **Retina::setup()**, **Retina::setupOPLandIPLParvoChannel** and **Retina::setupIPLMagnoChannel** setup methods
 Parameters structure for better clarity, check explenations on the comments of methods : setupOPLandIPLParvoChannel and setupIPLMagnoChannel. ::
 
     class RetinaParameters{

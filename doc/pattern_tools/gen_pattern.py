@@ -1,3 +1,5 @@
+#/usr/bin/env python
+
 """gen_pattern.py
 To run:
 -c 10 -r 12 -o out.svg
