@@ -12,7 +12,13 @@ if(WIN32 AND NOT PYTHON_EXECUTABLE)
     )
   endforeach()
 endif()
-find_host_package(PythonInterp 2.0)
+# This may lead to side effects by changing the current behaviour, though
+# it was the only sane method to get the build system to recognize my pythonbrew
+# environments.
+# Regarding Pythonbrew:
+# Through it we have numerous Python installations installed in parallel
+# with the systemwide installation being the most outdated (> 2 years old).
+find_package(PythonInterp 2.0)
 
 unset(PYTHON_USE_NUMPY CACHE)
 unset(HAVE_SPHINX CACHE)
