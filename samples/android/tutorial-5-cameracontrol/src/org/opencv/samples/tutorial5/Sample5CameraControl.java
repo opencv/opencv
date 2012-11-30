@@ -20,6 +20,7 @@ import android.view.SurfaceView;
 import android.view.View;
 import android.view.View.OnTouchListener;
 import android.view.WindowManager;
+import android.widget.Toast;
 
 public class Sample5CameraControl extends Activity implements CvCameraViewListener, OnTouchListener {
     private static final String TAG = "OCVSample::Activity";
@@ -100,6 +101,11 @@ public class Sample5CameraControl extends Activity implements CvCameraViewListen
     public boolean onCreateOptionsMenu(Menu menu) {
         List<String> effects = mOpenCvCameraView.getEffectList();
 
+        if (effects == null) {
+            Log.e(TAG, "Color effects are not supported by device!");
+            return true;
+        }
+
         mEffectMenuItems = new MenuItem[effects.size()];
 
         int idx = 0;
@@ -115,13 +121,16 @@ public class Sample5CameraControl extends Activity implements CvCameraViewListen
     public boolean onOptionsItemSelected(MenuItem item) {
         Log.i(TAG, "called onOptionsItemSelected; selected item: " + item);
         mOpenCvCameraView.setEffect((String) item.getTitle());
+        Toast.makeText(this, mOpenCvCameraView.getEffect(), Toast.LENGTH_SHORT).show();
         return true;
     }
 
     @Override
     public boolean onTouch(View v, MotionEvent event) {
         Log.i(TAG,"onTouch event");
-        mOpenCvCameraView.takePicture(Environment.getExternalStorageDirectory().getPath() + "/sample_picture.jpg");
+        String fileName = Environment.getExternalStorageDirectory().getPath() + "/sample_picture.jpg";
+        mOpenCvCameraView.takePicture(fileName);
+        Toast.makeText(this, fileName + " saved", Toast.LENGTH_SHORT).show();
         return false;
     }
 }
