@@ -310,12 +310,12 @@ public:
     }
 
 private:
-    const Mat srcmat;
+    Mat srcmat;
     Mat dstmat;
-    const int Start_with_green;
-    const bool Brow;
-    const Size size;
-    const int Bcoeff, Rcoeff;
+    int Start_with_green;
+    bool Brow;
+    Size size;
+    int Bcoeff, Rcoeff;
 };
 
 template<typename T, typename SIMDInterpolator>
@@ -589,13 +589,10 @@ public:
     }
     
 private:
-    const Mat srcmat;
+    Mat srcmat;
     Mat dstmat;
     int Start_with_green, Blue;
-    const Size size;
-
-    const Bayer2RGB_Invoker& operator= (const Bayer2RGB_Invoker&);
-    Bayer2RGB_Invoker(const Bayer2RGB_Invoker&);
+    Size size;
 };
 
 template<typename T, class SIMDInterpolator>
@@ -1271,13 +1268,10 @@ public:
     }
 
 private:
-    const Mat src;
+    Mat src;
     Mat dst;
-    const Size size;
-    const int Blue, Start_with_green;
-
-    const Bayer2RGB_EdgeAware_T_Invoker& operator= (const Bayer2RGB_EdgeAware_T_Invoker&);
-    Bayer2RGB_EdgeAware_T_Invoker(const Bayer2RGB_EdgeAware_T_Invoker&);
+    Size size;
+    int Blue, Start_with_green;
 };
 
 template <typename T>
