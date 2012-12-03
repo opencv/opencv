@@ -71,6 +71,13 @@ public:
         PIXEL_UNPACK_BUFFER  = 0x88EC  //!< The buffer will be used for writing to OpenGL textures
     };
 
+    enum Access
+    {
+        READ_ONLY  = 0x88B8,
+        WRITE_ONLY = 0x88B9,
+        READ_WRITE = 0x88BA
+    };
+
     //! create empty buffer
     GlBuffer();
 
@@ -79,15 +86,15 @@ public:
     GlBuffer(Size asize, int atype, unsigned int abufId, bool autoRelease = false);
 
     //! create buffer
-    GlBuffer(int arows, int acols, int atype, Target target = ARRAY_BUFFER);
-    GlBuffer(Size asize, int atype, Target target = ARRAY_BUFFER);
+    GlBuffer(int arows, int acols, int atype, Target target = ARRAY_BUFFER, bool autoRelease = false);
+    GlBuffer(Size asize, int atype, Target target = ARRAY_BUFFER, bool autoRelease = false);
 
     //! copy from host/device memory
-    explicit GlBuffer(InputArray arr, Target target = ARRAY_BUFFER);
+    explicit GlBuffer(InputArray arr, Target target = ARRAY_BUFFER, bool autoRelease = false);
 
     //! create buffer
-    void create(int arows, int acols, int atype, Target target = ARRAY_BUFFER);
-    void create(Size asize, int atype, Target target = ARRAY_BUFFER) { create(asize.height, asize.width, atype, target); }
+    void create(int arows, int acols, int atype, Target target = ARRAY_BUFFER, bool autoRelease = false);
+    void create(Size asize, int atype, Target target = ARRAY_BUFFER, bool autoRelease = false) { create(asize.height, asize.width, atype, target, autoRelease); }
 
     //! release memory and delete buffer object
     void release();
@@ -96,7 +103,7 @@ public:
     void setAutoRelease(bool flag);
 
     //! copy from host/device memory
-    void copyFrom(InputArray arr, Target target = ARRAY_BUFFER);
+    void copyFrom(InputArray arr, Target target = ARRAY_BUFFER, bool autoRelease = false);
 
     //! copy to host/device memory
     void copyTo(OutputArray arr, Target target = ARRAY_BUFFER) const;
@@ -111,7 +118,7 @@ public:
     static void unbind(Target target);
 
     //! map to host memory
-    Mat mapHost();
+    Mat mapHost(Access access);
     void unmapHost();
 
     //! map to device memory
@@ -162,15 +169,15 @@ public:
     GlTexture2D(Size asize, Format aformat, unsigned int atexId, bool autoRelease = false);
 
     //! create texture
-    GlTexture2D(int arows, int acols, Format aformat);
-    GlTexture2D(Size asize, Format aformat);
+    GlTexture2D(int arows, int acols, Format aformat, bool autoRelease = false);
+    GlTexture2D(Size asize, Format aformat, bool autoRelease = false);
 
     //! copy from host/device memory
-    explicit GlTexture2D(InputArray arr);
+    explicit GlTexture2D(InputArray arr, bool autoRelease = false);
 
     //! create texture
-    void create(int arows, int acols, Format aformat);
-    void create(Size asize, Format aformat) { create(asize.height, asize.width, aformat); }
+    void create(int arows, int acols, Format aformat, bool autoRelease = false);
+    void create(Size asize, Format aformat, bool autoRelease = false) { create(asize.height, asize.width, aformat, autoRelease); }
 
     //! release memory and delete texture object
     void release();
@@ -179,7 +186,7 @@ public:
     void setAutoRelease(bool flag);
 
     //! copy from host/device memory
-    void copyFrom(InputArray arr);
+    void copyFrom(InputArray arr, bool autoRelease = false);
 
     //! copy to host/device memory
     void copyTo(OutputArray arr, int ddepth = CV_32F) const;

@@ -327,7 +327,7 @@ public:
     static const Ptr<Impl>& empty();
 
     Impl(GLuint bufId, bool autoRelease);
-    Impl(GLsizeiptr size, const GLvoid* data, GLenum target);
+    Impl(GLsizeiptr size, const GLvoid* data, GLenum target, bool autoRelease);
     ~Impl();
 
     void bind(GLenum target) const;
@@ -337,7 +337,7 @@ public:
     void copyFrom(GLsizeiptr size, const GLvoid* data);
     void copyTo(GLsizeiptr size, GLvoid* data) const;
 
-    void* mapHost();
+    void* mapHost(GLenum access);
     void unmapHost();
 
 #ifdef HAVE_CUDA
@@ -377,7 +377,7 @@ cv::GlBuffer::Impl::Impl(GLuint abufId, bool autoRelease) : bufId_(abufId), auto
 {
 }
 
-cv::GlBuffer::Impl::Impl(GLsizeiptr size, const GLvoid* data, GLenum target) : bufId_(0), autoRelease_(true)
+cv::GlBuffer::Impl::Impl(GLsizeiptr size, const GLvoid* data, GLenum target, bool autoRelease) : bufId_(0), autoRelease_(autoRelease)
 {
     gl::GenBuffers(1, &bufId_);
     CV_CheckGlError();
@@ -436,12 +436,12 @@ void cv::GlBuffer::Impl::copyTo(GLsizeiptr size, GLvoid* data) const
     CV_CheckGlError();
 }
 
-void* cv::GlBuffer::Impl::mapHost()
+void* cv::GlBuffer::Impl::mapHost(GLenum access)
 {
     gl::BindBuffer(gl::COPY_READ_BUFFER, bufId_);
     CV_CheckGlError();
 
-    GLvoid* data = gl::MapBuffer(gl::COPY_READ_BUFFER, gl::READ_WRITE);
+    GLvoid* data = gl::MapBuffer(gl::COPY_READ_BUFFER, access);
     CV_CheckGlError();
 
     return data;
@@ -521,17 +521,17 @@ cv::GlBuffer::GlBuffer(Size asize, int atype, unsigned int abufId, bool autoRele
 #endif
 }
 
-cv::GlBuffer::GlBuffer(int arows, int acols, int atype, Target target) : rows_(0), cols_(0), type_(0)
+cv::GlBuffer::GlBuffer(int arows, int acols, int atype, Target target, bool autoRelease) : rows_(0), cols_(0), type_(0)
 {
-    create(arows, acols, atype, target);
+    create(arows, acols, atype, target, autoRelease);
 }
 
-cv::GlBuffer::GlBuffer(Size asize, int atype, Target target) : rows_(0), cols_(0), type_(0)
+cv::GlBuffer::GlBuffer(Size asize, int atype, Target target, bool autoRelease) : rows_(0), cols_(0), type_(0)
 {
-    create(asize, atype, target);
+    create(asize, atype, target, autoRelease);
 }
 
-cv::GlBuffer::GlBuffer(InputArray arr, Target target) : rows_(0), cols_(0), type_(0)
+cv::GlBuffer::GlBuffer(InputArray arr, Target target, bool autoRelease) : rows_(0), cols_(0), type_(0)
 {
 #ifndef HAVE_OPENGL
     (void) arr;
@@ -544,19 +544,19 @@ cv::GlBuffer::GlBuffer(InputArray arr, Target target) : rows_(0), cols_(0), type
     {
     case _InputArray::OPENGL_BUFFER:
         {
-            copyFrom(arr, target);
+            copyFrom(arr, target, autoRelease);
             break;
         }
 
     case _InputArray::OPENGL_TEXTURE2D:
         {
-            copyFrom(arr, target);
+            copyFrom(arr, target, autoRelease);
             break;
         }
 
     case _InputArray::GPU_MAT:
         {
-            copyFrom(arr, target);
+            copyFrom(arr, target, autoRelease);
             break;
         }
 
@@ -565,7 +565,7 @@ cv::GlBuffer::GlBuffer(InputArray arr, Target target) : rows_(0), cols_(0), type
             Mat mat = arr.getMat();
             CV_Assert( mat.isContinuous() );
             const GLsizeiptr asize = mat.rows * mat.cols * mat.elemSize();
-            impl_ = new Impl(asize, mat.data, target);
+            impl_ = new Impl(asize, mat.data, target, autoRelease);
             rows_ = mat.rows;
             cols_ = mat.cols;
             type_ = mat.type();
@@ -575,7 +575,7 @@ cv::GlBuffer::GlBuffer(InputArray arr, Target target) : rows_(0), cols_(0), type
 #endif
 }
 
-void cv::GlBuffer::create(int arows, int acols, int atype, Target target)
+void cv::GlBuffer::create(int arows, int acols, int atype, Target target, bool autoRelease)
 {
 #ifndef HAVE_OPENGL
     (void) arows;
@@ -587,7 +587,7 @@ void cv::GlBuffer::create(int arows, int acols, int atype, Target target)
     if (rows_ != arows || cols_ != acols || type_ != atype)
     {
         const GLsizeiptr asize = arows * acols * CV_ELEM_SIZE(atype);
-        impl_ = new Impl(asize, 0, target);
+        impl_ = new Impl(asize, 0, target, autoRelease);
         rows_ = arows;
         cols_ = acols;
         type_ = atype;
@@ -598,6 +598,8 @@ void cv::GlBuffer::create(int arows, int acols, int atype, Target target)
 void cv::GlBuffer::release()
 {
 #ifdef HAVE_OPENGL
+    if (*impl_.refcount == 1)
+        impl_->setAutoRelease(true);
     impl_ = Impl::empty();
     rows_ = 0;
     cols_ = 0;
@@ -615,7 +617,7 @@ void cv::GlBuffer::setAutoRelease(bool flag)
 #endif
 }
 
-void cv::GlBuffer::copyFrom(InputArray arr, Target target)
+void cv::GlBuffer::copyFrom(InputArray arr, Target target, bool autoRelease)
 {
 #ifndef HAVE_OPENGL
     (void) arr;
@@ -628,12 +630,13 @@ void cv::GlBuffer::copyFrom(InputArray arr, Target target)
     {
         GlTexture2D tex = arr.getGlTexture2D();
         tex.copyTo(*this);
+        setAutoRelease(autoRelease);
         return;
     }
 
     const Size asize = arr.size();
     const int atype = arr.type();
-    create(asize, atype, target);
+    create(asize, atype, target, autoRelease);
 
     switch (kind)
     {
@@ -747,13 +750,14 @@ void cv::GlBuffer::unbind(Target target)
 #endif
 }
 
-Mat cv::GlBuffer::mapHost()
+Mat cv::GlBuffer::mapHost(Access access)
 {
 #ifndef HAVE_OPENGL
+    (void) access;
     throw_nogl();
     return Mat();
 #else
-    return Mat(rows_, cols_, type_, impl_->mapHost());
+    return Mat(rows_, cols_, type_, impl_->mapHost(access));
 #endif
 }
 
@@ -826,7 +830,7 @@ public:
     static const Ptr<Impl> empty();
 
     Impl(GLuint texId, bool autoRelease);
-    Impl(GLint internalFormat, GLsizei width, GLsizei height, GLenum format, GLenum type, const GLvoid* pixels);
+    Impl(GLint internalFormat, GLsizei width, GLsizei height, GLenum format, GLenum type, const GLvoid* pixels, bool autoRelease);
     ~Impl();
 
     void copyFrom(GLsizei width, GLsizei height, GLenum format, GLenum type, const GLvoid *pixels);
@@ -859,7 +863,7 @@ cv::GlTexture2D::Impl::Impl(GLuint atexId, bool autoRelease) : texId_(atexId), a
 {
 }
 
-cv::GlTexture2D::Impl::Impl(GLint internalFormat, GLsizei width, GLsizei height, GLenum format, GLenum type, const GLvoid* pixels) : texId_(0), autoRelease_(true)
+cv::GlTexture2D::Impl::Impl(GLint internalFormat, GLsizei width, GLsizei height, GLenum format, GLenum type, const GLvoid* pixels, bool autoRelease) : texId_(0), autoRelease_(autoRelease)
 {
     gl::GenTextures(1, &texId_);
     CV_CheckGlError();
@@ -962,17 +966,17 @@ cv::GlTexture2D::GlTexture2D(Size asize, Format aformat, unsigned int atexId, bo
 #endif
 }
 
-cv::GlTexture2D::GlTexture2D(int arows, int acols, Format aformat) : rows_(0), cols_(0), format_(NONE)
+cv::GlTexture2D::GlTexture2D(int arows, int acols, Format aformat, bool autoRelease) : rows_(0), cols_(0), format_(NONE)
 {
-    create(arows, acols, aformat);
+    create(arows, acols, aformat, autoRelease);
 }
 
-cv::GlTexture2D::GlTexture2D(Size asize, Format aformat) : rows_(0), cols_(0), format_(NONE)
+cv::GlTexture2D::GlTexture2D(Size asize, Format aformat, bool autoRelease) : rows_(0), cols_(0), format_(NONE)
 {
-    create(asize, aformat);
+    create(asize, aformat, autoRelease);
 }
 
-cv::GlTexture2D::GlTexture2D(InputArray arr) : rows_(0), cols_(0), format_(NONE)
+cv::GlTexture2D::GlTexture2D(InputArray arr, bool autoRelease) : rows_(0), cols_(0), format_(NONE)
 {
 #ifndef HAVE_OPENGL
     (void) arr;
@@ -1004,7 +1008,7 @@ cv::GlTexture2D::GlTexture2D(InputArray arr) : rows_(0), cols_(0), format_(NONE)
         {
             GlBuffer buf = arr.getGlBuffer();
             buf.bind(GlBuffer::PIXEL_UNPACK_BUFFER);
-            impl_ = new Impl(internalFormats[cn], asize.width, asize.height, srcFormats[cn], gl_types[depth], 0);
+            impl_ = new Impl(internalFormats[cn], asize.width, asize.height, srcFormats[cn], gl_types[depth], 0, autoRelease);
             GlBuffer::unbind(GlBuffer::PIXEL_UNPACK_BUFFER);
             break;
         }
@@ -1017,7 +1021,7 @@ cv::GlTexture2D::GlTexture2D(InputArray arr) : rows_(0), cols_(0), format_(NONE)
                 GpuMat dmat = arr.getGpuMat();
                 GlBuffer buf(dmat, GlBuffer::PIXEL_UNPACK_BUFFER);
                 buf.bind(GlBuffer::PIXEL_UNPACK_BUFFER);
-                impl_ = new Impl(internalFormats[cn], asize.width, asize.height, srcFormats[cn], gl_types[depth], 0);
+                impl_ = new Impl(internalFormats[cn], asize.width, asize.height, srcFormats[cn], gl_types[depth], 0, autoRelease);
                 GlBuffer::unbind(GlBuffer::PIXEL_UNPACK_BUFFER);
             #endif
 
@@ -1029,7 +1033,7 @@ cv::GlTexture2D::GlTexture2D(InputArray arr) : rows_(0), cols_(0), format_(NONE)
             Mat mat = arr.getMat();
             CV_Assert( mat.isContinuous() );
             GlBuffer::unbind(GlBuffer::PIXEL_UNPACK_BUFFER);
-            impl_ = new Impl(internalFormats[cn], asize.width, asize.height, srcFormats[cn], gl_types[depth], mat.data);
+            impl_ = new Impl(internalFormats[cn], asize.width, asize.height, srcFormats[cn], gl_types[depth], mat.data, autoRelease);
             break;
         }
     }
@@ -1040,7 +1044,7 @@ cv::GlTexture2D::GlTexture2D(InputArray arr) : rows_(0), cols_(0), format_(NONE)
 #endif
 }
 
-void cv::GlTexture2D::create(int arows, int acols, Format aformat)
+void cv::GlTexture2D::create(int arows, int acols, Format aformat, bool autoRelease)
 {
 #ifndef HAVE_OPENGL
     (void) arows;
@@ -1051,7 +1055,7 @@ void cv::GlTexture2D::create(int arows, int acols, Format aformat)
     if (rows_ != arows || cols_ != acols || format_ != aformat)
     {
         GlBuffer::unbind(GlBuffer::PIXEL_UNPACK_BUFFER);
-        impl_ = new Impl(aformat, acols, arows, aformat, gl::FLOAT, 0);
+        impl_ = new Impl(aformat, acols, arows, aformat, gl::FLOAT, 0, autoRelease);
         rows_ = arows;
         cols_ = acols;
         format_ = aformat;
@@ -1062,6 +1066,8 @@ void cv::GlTexture2D::create(int arows, int acols, Format aformat)
 void cv::GlTexture2D::release()
 {
 #ifdef HAVE_OPENGL
+    if (*impl_.refcount == 1)
+        impl_->setAutoRelease(true);
     impl_ = Impl::empty();
     rows_ = 0;
     cols_ = 0;
@@ -1079,7 +1085,7 @@ void cv::GlTexture2D::setAutoRelease(bool flag)
 #endif
 }
 
-void cv::GlTexture2D::copyFrom(InputArray arr)
+void cv::GlTexture2D::copyFrom(InputArray arr, bool autoRelease)
 {
 #ifndef HAVE_OPENGL
     (void) arr;
@@ -1105,7 +1111,7 @@ void cv::GlTexture2D::copyFrom(InputArray arr)
         0, gl::DEPTH_COMPONENT, 0, gl::BGR, gl::BGRA
     };
 
-    create(asize, internalFormats[cn]);
+    create(asize, internalFormats[cn], autoRelease);
 
     switch(kind)
     {

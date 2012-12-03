@@ -351,18 +351,39 @@ TEST_P(GlBuffer, Clone)
     cv::destroyAllWindows();
 }
 
-TEST_P(GlBuffer, MapHost)
+TEST_P(GlBuffer, MapHostRead)
 {
     cv::namedWindow("test", cv::WINDOW_OPENGL);
 
     cv::Mat gold = randomMat(size, type);
     cv::GlBuffer buf(gold);
 
-    cv::Mat dst = buf.mapHost();
+    cv::Mat dst = buf.mapHost(cv::GlBuffer::READ_ONLY);
 
     EXPECT_MAT_NEAR(gold, dst, 0);
 
     buf.unmapHost();
+
+    buf.release();
+    cv::destroyAllWindows();
+}
+
+TEST_P(GlBuffer, MapHostWrite)
+{
+    cv::namedWindow("test", cv::WINDOW_OPENGL);
+
+    cv::Mat gold = randomMat(size, type);
+    cv::GlBuffer buf(size, type);
+
+    cv::Mat dst = buf.mapHost(cv::GlBuffer::WRITE_ONLY);
+    gold.copyTo(dst);
+    buf.unmapHost();
+    dst.release();
+
+    cv::Mat bufData;
+    buf.copyTo(bufData);
+
+    EXPECT_MAT_NEAR(gold, bufData, 0);
 
     buf.release();
     cv::destroyAllWindows();

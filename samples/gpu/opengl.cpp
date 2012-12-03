@@ -56,14 +56,18 @@ void CV_CDECL draw(void* userdata)
 
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
-    gluLookAt(0, 0, 4, 0, 0, 0, 0, 1, 0);
+    gluLookAt(0, 0, 3, 0, 0, 0, 0, 1, 0);
     glRotated(angle, 0, 1, 0);
 
     glEnable(GL_TEXTURE_2D);
     data->tex.bind();
 
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexEnvi(GL_TEXTURE_2D, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+
     glDisable(GL_CULL_FACE);
-    glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST);
 
     render(data->arr, data->indices, RenderMode::TRIANGLES);
 
@@ -101,13 +105,8 @@ int main(int argc, char* argv[])
 
     data.arr.setVertexArray(vertex);
     data.arr.setTexCoordArray(texCoords);
-    data.arr.setAutoRelease(false);
-
     data.indices.copyFrom(indices);
-    data.indices.setAutoRelease(false);
-
     data.tex.copyFrom(img);
-    data.tex.setAutoRelease(false);
 
     setOpenGlDrawCallback("OpenGL", draw, &data);
 
