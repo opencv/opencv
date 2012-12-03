@@ -58,9 +58,6 @@
 /* OpenEXR codec */
 #cmakedefine  HAVE_ILMIMF
 
-/* Apple ImageIO Framework */
-#cmakedefine  HAVE_IMAGEIO
-
 /* Define to 1 if you have the <inttypes.h> header file. */
 #cmakedefine  HAVE_INTTYPES_H 1
 
