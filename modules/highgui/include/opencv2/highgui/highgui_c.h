@@ -307,9 +307,7 @@ enum
 
     CV_CAP_XIAPI    =1100,   // XIMEA Camera API
 
-    CV_CAP_AVFOUNDATION = 1200,  // AVFoundation framework for iOS (OS X Lion will have the same API)
-
-    CV_CAP_GIGANETIX = 1300  // Smartek Giganetix GigEVisionSDK
+    CV_CAP_AVFOUNDATION = 1200  // AVFoundation framework for iOS (OS X Lion will have the same API)
 };
 
 /* start capturing frames from camera: index = camera_index + domain_offset (CV_CAP_*) */
@@ -456,15 +454,6 @@ enum
     CV_CAP_PROP_IOS_DEVICE_FLASH = 9003,
     CV_CAP_PROP_IOS_DEVICE_WHITEBALANCE = 9004,
     CV_CAP_PROP_IOS_DEVICE_TORCH = 9005
-
-    // Properties of cameras available through Smartek Giganetix Ethernet Vision interface
-    /* --- Vladimir Litvinenko (litvinenko.vladimir@gmail.com) --- */
-    ,CV_CAP_PROP_GIGA_FRAME_OFFSET_X = 10001,
-    CV_CAP_PROP_GIGA_FRAME_OFFSET_Y = 10002,
-    CV_CAP_PROP_GIGA_FRAME_WIDTH_MAX = 10003,
-    CV_CAP_PROP_GIGA_FRAME_HEIGH_MAX = 10004,
-    CV_CAP_PROP_GIGA_FRAME_SENS_WIDTH = 10005,
-    CV_CAP_PROP_GIGA_FRAME_SENS_HEIGH = 10006
 };
 
 enum
