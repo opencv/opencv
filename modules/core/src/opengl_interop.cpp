@@ -536,6 +536,7 @@ cv::GlBuffer::GlBuffer(InputArray arr, Target target, bool autoRelease) : rows_(
 #ifndef HAVE_OPENGL
     (void) arr;
     (void) target;
+    (void) autoRelease;
     throw_nogl();
 #else
     const int kind = arr.kind();
@@ -582,6 +583,7 @@ void cv::GlBuffer::create(int arows, int acols, int atype, Target target, bool a
     (void) acols;
     (void) atype;
     (void) target;
+    (void) autoRelease;
     throw_nogl();
 #else
     if (rows_ != arows || cols_ != acols || type_ != atype)
@@ -622,6 +624,7 @@ void cv::GlBuffer::copyFrom(InputArray arr, Target target, bool autoRelease)
 #ifndef HAVE_OPENGL
     (void) arr;
     (void) target;
+    (void) autoRelease;
     throw_nogl();
 #else
     const int kind = arr.kind();
@@ -980,6 +983,7 @@ cv::GlTexture2D::GlTexture2D(InputArray arr, bool autoRelease) : rows_(0), cols_
 {
 #ifndef HAVE_OPENGL
     (void) arr;
+    (void) autoRelease;
     throw_nogl();
 #else
     const int kind = arr.kind();
@@ -1050,6 +1054,7 @@ void cv::GlTexture2D::create(int arows, int acols, Format aformat, bool autoRele
     (void) arows;
     (void) acols;
     (void) aformat;
+    (void) autoRelease;
     throw_nogl();
 #else
     if (rows_ != arows || cols_ != acols || format_ != aformat)
@@ -1089,6 +1094,7 @@ void cv::GlTexture2D::copyFrom(InputArray arr, bool autoRelease)
 {
 #ifndef HAVE_OPENGL
     (void) arr;
+    (void) autoRelease;
     throw_nogl();
 #else
     const int kind = arr.kind();

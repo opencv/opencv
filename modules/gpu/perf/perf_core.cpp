@@ -1859,7 +1859,7 @@ PERF_TEST_P(Sz_Depth, Core_CountNonZero, Combine(
     cv::Mat src(size, depth);
     fillRandom(src);
 
-    int dst;
+    int dst = 0;
 
     if (PERF_RUN_GPU())
     {
