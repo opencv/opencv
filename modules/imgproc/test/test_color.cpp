@@ -2173,14 +2173,11 @@ TEST(ImgProc_Bayer2RGBA, accuracy)
 
                     Mat diff;
                     absdiff(actual, reference, diff);
-                    
+
                     cv::Rect r(0, ssize.height - 5, 7, 5);
                     std::cout << "Actual: " << std::endl << actual(r) << std::endl << std::endl;
                     std::cout << "Reference: " << std::endl << reference(r) << std::endl << std::endl;
                     std::cout << "Difference: " << std::endl << diff(r) << std::endl << std::endl;
-                    
-                    imshow("Diff", diff);
-                    waitKey();
 
                     EXPECT_EQ(countNonZero(diff.reshape(1) > 1), 0);
 
