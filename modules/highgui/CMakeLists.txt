@@ -171,13 +171,6 @@ if(HAVE_PVAPI)
   list(APPEND HIGHGUI_LIBRARIES ${PVAPI_LIBRARY})
 endif()
 
-if(WITH_IMAGEIO)
-  add_definitions(-DHAVE_IMAGEIO=1)
-  if(IOS)
-    list(APPEND HIGHGUI_LIBRARIES "-framework ImageIO")
-  endif()
-endif(WITH_IMAGEIO)
-
 if(WITH_AVFOUNDATION)
   add_definitions(-DHAVE_AVFOUNDATION=1)
   list(APPEND highgui_srcs src/cap_avfoundation.mm)
