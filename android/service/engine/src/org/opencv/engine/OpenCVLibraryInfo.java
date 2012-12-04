@@ -2,7 +2,7 @@ package org.opencv.engine;
 
 public class OpenCVLibraryInfo {
     public OpenCVLibraryInfo(String packagePath) {
-        mNativeObj = open(packagePath);
+        mNativeObj = open(packagePath + "/libopencv_info.so");
         if (mNativeObj != 0) {
             mPackageName = getPackageName(mNativeObj);
             mLibraryList = getLibraryList(mNativeObj);
