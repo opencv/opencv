@@ -114,7 +114,9 @@ namespace icf {
                     excluded = excluded || (suppessed == i);
                 }
 
+            #if __CUDA_ARCH__ >= 120
                 if (__all(excluded)) break;
+            #endif
             }
         }
     }
@@ -312,7 +314,9 @@ __device void CascadeInvoker<Policy>::detect(Detection* objects, const uint ndet
         PrefixSum<Policy>::apply(impact);
         confidence += impact;
 
+    #if __CUDA_ARCH__ >= 120
         if(__any((confidence <= stages[(st + threadIdx.x)]))) st += 2048;
+    #endif
     }
 
     if(!threadIdx.x && st == stEnd &&  ((confidence - FLT_EPSILON) >= 0))
