@@ -41,26 +41,6 @@ JNIEXPORT jstring JNICALL Java_org_opencv_engine_OpenCVLibraryInfo_getPackageNam
     return env->NewStringUTF(result);
 }
 
-JNIEXPORT jstring JNICALL Java_org_opencv_engine_OpenCVLibraryInfo_getPublicName
-(JNIEnv* env, jobject, jlong)
-{
-    const char* (*info_func)();
-    const char* result;
-    const char* error;
-
-    dlerror();
-    *(void **) (&info_func) = dlsym((void*)handle, "GetPublicName");
-    if ((error = dlerror()) == NULL)
-        result = (*info_func)();
-    else
-    {
-        LOGE("dlsym error: \"%s\"", error);
-        result = "unknown";
-    }
-
-    return env->NewStringUTF(result);
-}
-
 JNIEXPORT jstring JNICALL Java_org_opencv_engine_OpenCVLibraryInfo_getLibraryList
   (JNIEnv* env, jobject, jlong handle)
 {

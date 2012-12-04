@@ -7,7 +7,6 @@ public class OpenCVLibraryInfo {
             mPackageName = getPackageName(mNativeObj);
             mLibraryList = getLibraryList(mNativeObj);
             mVersionName = getVersionName(mNativeObj);
-            mPublicName = getPublicName(mNativeObj);
             close(mNativeObj);
         }
     }
@@ -20,10 +19,6 @@ public class OpenCVLibraryInfo {
         return mPackageName;
     }
 
-    public String publicName() {
-        return mPublicName;
-    }
-
     public String libraryList() {
         return mLibraryList;
     }
@@ -34,13 +29,11 @@ public class OpenCVLibraryInfo {
 
     private long mNativeObj;
     private String mPackageName;
-    private String mPublicName;
     private String mLibraryList;
     private String mVersionName;
 
     private native long open(String packagePath);
     private native String getPackageName(long obj);
-    private native String getPublicName(long obj);
     private native String getLibraryList(long obj);
     private native String getVersionName(long obj);
     private native void close(long obj);

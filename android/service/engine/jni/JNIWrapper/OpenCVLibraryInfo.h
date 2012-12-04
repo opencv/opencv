@@ -12,9 +12,6 @@ JNIEXPORT jlong JNICALL Java_org_opencv_engine_OpenCVLibraryInfo_open
 JNIEXPORT jstring JNICALL Java_org_opencv_engine_OpenCVLibraryInfo_getPackageName
   (JNIEnv *, jobject, jlong);
 
-  JNIEXPORT jstring JNICALL Java_org_opencv_engine_OpenCVLibraryInfo_getPublicName
-  (JNIEnv *, jobject, jlong);
-
 JNIEXPORT jstring JNICALL Java_org_opencv_engine_OpenCVLibraryInfo_getLibraryList
   (JNIEnv *, jobject, jlong);
 
