@@ -7,7 +7,9 @@ import java.util.StringTokenizer;
 import org.opencv.engine.HardwareDetector;
 import org.opencv.engine.MarketConnector;
 import org.opencv.engine.OpenCVEngineInterface;
+import org.opencv.engine.OpenCVLibraryInfo;
 import org.opencv.engine.R;
+import android.annotation.TargetApi;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.BroadcastReceiver;
@@ -266,10 +268,10 @@ public class ManagerActivity extends Activity
         }
     };
 
+    @TargetApi(Build.VERSION_CODES.GINGERBREAD)
     synchronized protected void FillPackageList()
     {
         synchronized (mListViewItems) {
-            mMarket.mIncludeManager = false;
             mInstalledPackageInfo = mMarket.GetInstalledOpenCVPackages();
             mListViewItems.clear();
 
@@ -277,12 +279,36 @@ public class ManagerActivity extends Activity
             {
                 // Convert to Items for package list view
                 HashMap<String,String> temp = new HashMap<String,String>();
-                String PublicName = mMarket.GetApplicationName(mInstalledPackageInfo[i].applicationInfo);
 
-                int idx = 0;
+                String PackageName = "";
+                String PublicName = "";
                 String OpenCVersion = "unknown";
                 String HardwareName = "";
-                StringTokenizer tokenizer = new StringTokenizer(mInstalledPackageInfo[i].packageName, "_");
+                String NativeLibDir = "";
+                String VersionName = "";
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.GINGERBREAD)
+                    NativeLibDir = mInstalledPackageInfo[i].applicationInfo.nativeLibraryDir;
+                else
+                    NativeLibDir = "/data/data/" + mInstalledPackageInfo[i].packageName + "/lib";
+
+                OpenCVLibraryInfo nativeInfo = new OpenCVLibraryInfo(NativeLibDir);
+
+                if (nativeInfo.status())
+                {
+                    PublicName = nativeInfo.publicName();
+                    PackageName = nativeInfo.packageName();
+                    VersionName = nativeInfo.versionName();
+                }
+                else
+                {
+                    PublicName = mMarket.GetApplicationName(mInstalledPackageInfo[i].applicationInfo);
+                    PackageName = mInstalledPackageInfo[i].packageName;
+                    VersionName = mInstalledPackageInfo[i].versionName;
+                }
+
+                int idx = 0;
+                StringTokenizer tokenizer = new StringTokenizer(PackageName, "_");
                 while (tokenizer.hasMoreTokens())
                 {
                     if (idx == 1)
@@ -326,8 +352,9 @@ public class ManagerActivity extends Activity
                 }
 
                 temp.put("Name", PublicName);
-                temp.put("Version", NormalizeVersion(OpenCVersion, mInstalledPackageInfo[i].versionName));
+                temp.put("Version", NormalizeVersion(OpenCVersion, VersionName));
                 temp.put("Hardware", HardwareName);
+
                 mListViewItems.add(temp);
             }
 
