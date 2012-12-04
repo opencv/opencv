@@ -1,0 +1,47 @@
+package org.opencv.engine;
+
+public class OpenCVLibraryInfo {
+    public OpenCVLibraryInfo(String packagePath) {
+        mNativeObj = open(packagePath);
+        if (mNativeObj != 0) {
+            mPackageName = getPackageName(mNativeObj);
+            mLibraryList = getLibraryList(mNativeObj);
+            mVersionName = getVersionName(mNativeObj);
+            mPublicName = getPublicName(mNativeObj);
+            close(mNativeObj);
+        }
+    }
+
+    public boolean status() {
+        return (mNativeObj != 0);
+    }
+
+    public String packageName() {
+        return mPackageName;
+    }
+
+    public String publicName() {
+        return mPublicName;
+    }
+
+    public String libraryList() {
+        return mLibraryList;
+    }
+
+    public String versionName() {
+        return mVersionName;
+    }
+
+    private long mNativeObj;
+    private String mPackageName;
+    private String mPublicName;
+    private String mLibraryList;
+    private String mVersionName;
+
+    private native long open(String packagePath);
+    private native String getPackageName(long obj);
+    private native String getPublicName(long obj);
+    private native String getLibraryList(long obj);
+    private native String getVersionName(long obj);
+    private native void close(long obj);
+}
