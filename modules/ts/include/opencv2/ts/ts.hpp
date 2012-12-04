@@ -10,17 +10,6 @@
 #endif
 #endif
 
-#ifdef ANDROID
-# include <android/api-level.h>
-# define GTEST_HAS_CLONE (__ANDROID_API__ > 7 && !defined __i386__)
-# define GTEST_HAS_POSIX_RE (__ANDROID_API__ > 7)
-# if defined _GLIBCXX_USE_WCHAR_T && _GLIBCXX_USE_WCHAR_T
-#  define GTEST_HAS_STD_WSTRING 1
-# else
-#  define GTEST_HAS_STD_WSTRING 0
-#endif
-#endif
-
 #include <stdarg.h> // for va_list
 
 #ifdef _MSC_VER
