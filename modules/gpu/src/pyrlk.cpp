@@ -112,7 +112,7 @@ void cv::gpu::PyrLKOpticalFlow::sparse(const GpuMat& prevImg, const GpuMat& next
     dim3 block, patch;
     calcPatchSize(winSize, block, patch, isDeviceArch11_);
 
-    CV_Assert(prevImg.type() == CV_8UC1 || prevImg.type() == CV_8UC3 || prevImg.type() == CV_8UC4);
+    CV_Assert(prevImg.channels() == 1 || prevImg.channels() == 3 || prevImg.channels() == 4);
     CV_Assert(prevImg.size() == nextImg.size() && prevImg.type() == nextImg.type());
     CV_Assert(maxLevel >= 0);
     CV_Assert(winSize.width > 2 && winSize.height > 2);
