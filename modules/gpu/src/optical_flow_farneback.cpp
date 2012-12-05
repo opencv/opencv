@@ -209,7 +209,7 @@ void cv::gpu::FarnebackOpticalFlow::updateFlow_gaussianBlur(
 void cv::gpu::FarnebackOpticalFlow::operator ()(
         const GpuMat &frame0, const GpuMat &frame1, GpuMat &flowx, GpuMat &flowy, Stream &s)
 {
-    CV_Assert(frame0.type() == CV_8U && frame1.type() == CV_8U);
+    CV_Assert(frame0.channels() == 1 && frame1.channels() == 1);
     CV_Assert(frame0.size() == frame1.size());
     CV_Assert(polyN == 5 || polyN == 7);
     CV_Assert(!fastPyramids || std::abs(pyrScale - 0.5) < 1e-6);
