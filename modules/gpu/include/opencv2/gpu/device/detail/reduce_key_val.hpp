@@ -399,7 +399,7 @@ namespace cv { namespace gpu { namespace device
             template <class KP, class KR, class VP, class VR, class Cmp>
             static __device__ void reduce(KP skeys, KR key, VP svals, VR val, unsigned int tid, Cmp cmp)
             {
-            #if __CUDA_ARCH__ >= 300
+            #if 0 // __CUDA_ARCH__ >= 300
                 (void) skeys;
                 (void) svals;
                 (void) tid;
@@ -424,7 +424,7 @@ namespace cv { namespace gpu { namespace device
             {
                 const unsigned int laneId = Warp::laneId();
 
-            #if __CUDA_ARCH__ >= 300
+            #if 0 // __CUDA_ARCH__ >= 300
                 Unroll<16, KP, KR, VP, VR, Cmp>::loopShfl(key, val, cmp, warpSize);
 
                 if (laneId == 0)
@@ -454,7 +454,7 @@ namespace cv { namespace gpu { namespace device
 
                 if (tid < 32)
                 {
-                #if __CUDA_ARCH__ >= 300
+                #if 0 // __CUDA_ARCH__ >= 300
                     loadFromSmem(svals, val, tid);
 
                     Unroll<M / 2, KP, KR, VP, VR, Cmp>::loopShfl(key, val, cmp, M);
