@@ -106,10 +106,10 @@ public:
     void copyFrom(InputArray arr, Target target = ARRAY_BUFFER, bool autoRelease = false);
 
     //! copy to host/device memory
-    void copyTo(OutputArray arr, Target target = ARRAY_BUFFER) const;
+    void copyTo(OutputArray arr, Target target = ARRAY_BUFFER, bool autoRelease = false) const;
 
     //! create copy of current buffer
-    GlBuffer clone(Target target = ARRAY_BUFFER) const;
+    GlBuffer clone(Target target = ARRAY_BUFFER, bool autoRelease = false) const;
 
     //! bind buffer for specified target
     void bind(Target target) const;
@@ -189,7 +189,7 @@ public:
     void copyFrom(InputArray arr, bool autoRelease = false);
 
     //! copy to host/device memory
-    void copyTo(OutputArray arr, int ddepth = CV_32F) const;
+    void copyTo(OutputArray arr, int ddepth = CV_32F, bool autoRelease = false) const;
 
     //! bind texture to current active texture unit for GL_TEXTURE_2D target
     void bind() const;

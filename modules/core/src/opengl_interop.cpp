@@ -672,11 +672,12 @@ void cv::GlBuffer::copyFrom(InputArray arr, Target target, bool autoRelease)
 #endif
 }
 
-void cv::GlBuffer::copyTo(OutputArray arr, Target target) const
+void cv::GlBuffer::copyTo(OutputArray arr, Target target, bool autoRelease) const
 {
 #ifndef HAVE_OPENGL
     (void) arr;
     (void) target;
+    (void) autoRelease;
     throw_nogl();
 #else
     const int kind = arr.kind();
@@ -685,13 +686,13 @@ void cv::GlBuffer::copyTo(OutputArray arr, Target target) const
     {
     case _InputArray::OPENGL_BUFFER:
         {
-            arr.getGlBufferRef().copyFrom(*this, target);
+            arr.getGlBufferRef().copyFrom(*this, target, autoRelease);
             break;
         }
 
     case _InputArray::OPENGL_TEXTURE2D:
         {
-            arr.getGlTexture2DRef().copyFrom(*this);
+            arr.getGlTexture2DRef().copyFrom(*this, autoRelease);
             break;
         }
 
@@ -719,15 +720,16 @@ void cv::GlBuffer::copyTo(OutputArray arr, Target target) const
 #endif
 }
 
-GlBuffer cv::GlBuffer::clone(Target target) const
+GlBuffer cv::GlBuffer::clone(Target target, bool autoRelease) const
 {
 #ifndef HAVE_OPENGL
     (void) target;
+    (void) autoRelease;
     throw_nogl();
     return GlBuffer();
 #else
     GlBuffer buf;
-    buf.copyFrom(*this, target);
+    buf.copyFrom(*this, target, autoRelease);
     return buf;
 #endif
 }
@@ -1156,11 +1158,12 @@ void cv::GlTexture2D::copyFrom(InputArray arr, bool autoRelease)
 #endif
 }
 
-void cv::GlTexture2D::copyTo(OutputArray arr, int ddepth) const
+void cv::GlTexture2D::copyTo(OutputArray arr, int ddepth, bool autoRelease) const
 {
 #ifndef HAVE_OPENGL
     (void) arr;
     (void) ddepth;
+    (void) autoRelease;
     throw_nogl();
 #else
     const int kind = arr.kind();
@@ -1173,7 +1176,7 @@ void cv::GlTexture2D::copyTo(OutputArray arr, int ddepth) const
     case _InputArray::OPENGL_BUFFER:
         {
             GlBuffer& buf = arr.getGlBufferRef();
-            buf.create(rows_, cols_, CV_MAKE_TYPE(ddepth, cn), GlBuffer::PIXEL_PACK_BUFFER);
+            buf.create(rows_, cols_, CV_MAKE_TYPE(ddepth, cn), GlBuffer::PIXEL_PACK_BUFFER, autoRelease);
             buf.bind(GlBuffer::PIXEL_PACK_BUFFER);
             impl_->copyTo(dstFormat, gl_types[ddepth], 0);
             GlBuffer::unbind(GlBuffer::PIXEL_PACK_BUFFER);
