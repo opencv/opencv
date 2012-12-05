@@ -113,29 +113,35 @@ INSTANTIATE_TEST_CASE_P(GPU_Filter, Blur, testing::Combine(
 IMPLEMENT_PARAM_CLASS(Deriv_X, int)
 IMPLEMENT_PARAM_CLASS(Deriv_Y, int)
 
-PARAM_TEST_CASE(Sobel, cv::gpu::DeviceInfo, cv::Size, MatType, KSize, Deriv_X, Deriv_Y, BorderType, UseRoi)
+PARAM_TEST_CASE(Sobel, cv::gpu::DeviceInfo, cv::Size, MatDepth, Channels, KSize, Deriv_X, Deriv_Y, BorderType, UseRoi)
 {
     cv::gpu::DeviceInfo devInfo;
     cv::Size size;
-    int type;
+    int depth;
+    int cn;
     cv::Size ksize;
     int dx;
     int dy;
     int borderType;
     bool useRoi;
 
+    int type;
+
     virtual void SetUp()
     {
         devInfo = GET_PARAM(0);
         size = GET_PARAM(1);
-        type = GET_PARAM(2);
-        ksize = GET_PARAM(3);
-        dx = GET_PARAM(4);
-        dy = GET_PARAM(5);
-        borderType = GET_PARAM(6);
-        useRoi = GET_PARAM(7);
+        depth = GET_PARAM(2);
+        cn = GET_PARAM(3);
+        ksize = GET_PARAM(4);
+        dx = GET_PARAM(5);
+        dy = GET_PARAM(6);
+        borderType = GET_PARAM(7);
+        useRoi = GET_PARAM(8);
 
         cv::gpu::setDevice(devInfo.deviceID());
+
+        type = CV_MAKE_TYPE(depth, cn);
     }
 };
 
@@ -158,7 +164,8 @@ TEST_P(Sobel, Accuracy)
 INSTANTIATE_TEST_CASE_P(GPU_Filter, Sobel, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
-    testing::Values(MatType(CV_8UC1), MatType(CV_8UC3), MatType(CV_8UC4), MatType(CV_32FC1), MatType(CV_32FC3), MatType(CV_32FC4)),
+    testing::Values(MatDepth(CV_8U), MatDepth(CV_16U), MatDepth(CV_16S), MatDepth(CV_32F)),
+    IMAGE_CHANNELS,
     testing::Values(KSize(cv::Size(3, 3)), KSize(cv::Size(5, 5)), KSize(cv::Size(7, 7))),
     testing::Values(Deriv_X(0), Deriv_X(1), Deriv_X(2)),
     testing::Values(Deriv_Y(0), Deriv_Y(1), Deriv_Y(2)),
@@ -171,27 +178,33 @@ INSTANTIATE_TEST_CASE_P(GPU_Filter, Sobel, testing::Combine(
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // Scharr
 
-PARAM_TEST_CASE(Scharr, cv::gpu::DeviceInfo, cv::Size, MatType, Deriv_X, Deriv_Y, BorderType, UseRoi)
+PARAM_TEST_CASE(Scharr, cv::gpu::DeviceInfo, cv::Size, MatDepth, Channels, Deriv_X, Deriv_Y, BorderType, UseRoi)
 {
     cv::gpu::DeviceInfo devInfo;
     cv::Size size;
-    int type;
+    int depth;
+    int cn;
     int dx;
     int dy;
     int borderType;
     bool useRoi;
 
+    int type;
+
     virtual void SetUp()
     {
         devInfo = GET_PARAM(0);
         size = GET_PARAM(1);
-        type = GET_PARAM(2);
-        dx = GET_PARAM(3);
-        dy = GET_PARAM(4);
-        borderType = GET_PARAM(5);
-        useRoi = GET_PARAM(6);
+        depth = GET_PARAM(2);
+        cn = GET_PARAM(3);
+        dx = GET_PARAM(4);
+        dy = GET_PARAM(5);
+        borderType = GET_PARAM(6);
+        useRoi = GET_PARAM(7);
 
         cv::gpu::setDevice(devInfo.deviceID());
+
+        type = CV_MAKE_TYPE(depth, cn);
     }
 };
 
@@ -214,7 +227,8 @@ TEST_P(Scharr, Accuracy)
 INSTANTIATE_TEST_CASE_P(GPU_Filter, Scharr, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
-    testing::Values(MatType(CV_8UC1), MatType(CV_8UC3), MatType(CV_8UC4), MatType(CV_32FC1), MatType(CV_32FC3), MatType(CV_32FC4)),
+    testing::Values(MatDepth(CV_8U), MatDepth(CV_16U), MatDepth(CV_16S), MatDepth(CV_32F)),
+    IMAGE_CHANNELS,
     testing::Values(Deriv_X(0), Deriv_X(1)),
     testing::Values(Deriv_Y(0), Deriv_Y(1)),
     testing::Values(BorderType(cv::BORDER_REFLECT101),
@@ -226,25 +240,31 @@ INSTANTIATE_TEST_CASE_P(GPU_Filter, Scharr, testing::Combine(
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // GaussianBlur
 
-PARAM_TEST_CASE(GaussianBlur, cv::gpu::DeviceInfo, cv::Size, MatType, KSize, BorderType, UseRoi)
+PARAM_TEST_CASE(GaussianBlur, cv::gpu::DeviceInfo, cv::Size, MatDepth, Channels, KSize, BorderType, UseRoi)
 {
     cv::gpu::DeviceInfo devInfo;
     cv::Size size;
-    int type;
+    int depth;
+    int cn;
     cv::Size ksize;
     int borderType;
     bool useRoi;
+
+    int type;
 
     virtual void SetUp()
     {
         devInfo = GET_PARAM(0);
         size = GET_PARAM(1);
-        type = GET_PARAM(2);
-        ksize = GET_PARAM(3);
-        borderType = GET_PARAM(4);
-        useRoi = GET_PARAM(5);
+        depth = GET_PARAM(2);
+        cn = GET_PARAM(3);
+        ksize = GET_PARAM(4);
+        borderType = GET_PARAM(5);
+        useRoi = GET_PARAM(6);
 
         cv::gpu::setDevice(devInfo.deviceID());
+
+        type = CV_MAKE_TYPE(depth, cn);
     }
 };
 
@@ -281,7 +301,8 @@ TEST_P(GaussianBlur, Accuracy)
 INSTANTIATE_TEST_CASE_P(GPU_Filter, GaussianBlur, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
-    testing::Values(MatType(CV_8UC1), MatType(CV_8UC3), MatType(CV_8UC4), MatType(CV_32FC1), MatType(CV_32FC3), MatType(CV_32FC4)),
+    testing::Values(MatDepth(CV_8U), MatDepth(CV_16U), MatDepth(CV_16S), MatDepth(CV_32F)),
+    IMAGE_CHANNELS,
     testing::Values(KSize(cv::Size(3, 3)),
                     KSize(cv::Size(5, 5)),
                     KSize(cv::Size(7, 7)),

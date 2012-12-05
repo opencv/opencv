@@ -893,69 +893,55 @@ namespace
 
 Ptr<BaseRowFilter_GPU> cv::gpu::getLinearRowFilter_GPU(int srcType, int bufType, const Mat& rowKernel, int anchor, int borderType)
 {
-    static const nppFilter1D_t nppFilter1D_callers[] = {0, nppiFilterRow_8u_C1R, 0, 0, nppiFilterRow_8u_C4R};
+    static const gpuFilter1D_t funcs[7][4] =
+    {
+        {filter::linearRow<uchar, float>, 0, filter::linearRow<uchar3, float3>, filter::linearRow<uchar4, float4>},
+        {0, 0, 0, 0},
+        {filter::linearRow<ushort, float>, 0, filter::linearRow<ushort3, float3>, filter::linearRow<ushort4, float4>},
+        {filter::linearRow<short, float>, 0, filter::linearRow<short3, float3>, filter::linearRow<short4, float4>},
+        {filter::linearRow<int, float>, 0, filter::linearRow<int3, float3>, filter::linearRow<int4, float4>},
+        {filter::linearRow<float, float>, 0, filter::linearRow<float3, float3>, filter::linearRow<float4, float4>},
+        {0, 0, 0, 0}
+    };
+    static const nppFilter1D_t npp_funcs[] =
+    {
+        0, nppiFilterRow_8u_C1R, 0, 0, nppiFilterRow_8u_C4R
+    };
 
     if ((bufType == srcType) && (srcType == CV_8UC1 || srcType == CV_8UC4))
     {
-        CV_Assert(borderType == BORDER_CONSTANT);
+        CV_Assert( borderType == BORDER_CONSTANT );
 
         GpuMat gpu_row_krnl;
         int nDivisor;
         normalizeKernel(rowKernel, gpu_row_krnl, CV_32S, &nDivisor, true);
 
-        int ksize = gpu_row_krnl.cols;
+        const int ksize = gpu_row_krnl.cols;
         normalizeAnchor(anchor, ksize);
 
-        return Ptr<BaseRowFilter_GPU>(new NppLinearRowFilter(ksize, anchor, gpu_row_krnl, nDivisor,
-            nppFilter1D_callers[CV_MAT_CN(srcType)]));
+        return Ptr<BaseRowFilter_GPU>(new NppLinearRowFilter(ksize, anchor, gpu_row_krnl, nDivisor, npp_funcs[CV_MAT_CN(srcType)]));
     }
 
-    CV_Assert(borderType == BORDER_REFLECT101 || borderType == BORDER_REPLICATE || borderType == BORDER_CONSTANT || borderType == BORDER_REFLECT || borderType == BORDER_WRAP);
+    CV_Assert( borderType == BORDER_REFLECT101 || borderType == BORDER_REPLICATE || borderType == BORDER_CONSTANT || borderType == BORDER_REFLECT || borderType == BORDER_WRAP );
+
     int gpuBorderType;
-    CV_Assert(tryConvertToGpuBorderType(borderType, gpuBorderType));
+    CV_Assert( tryConvertToGpuBorderType(borderType, gpuBorderType) );
 
-    CV_Assert(srcType == CV_8UC1 || srcType == CV_8UC3 || srcType == CV_8UC4 || srcType == CV_16SC3 || srcType == CV_32SC1 || srcType == CV_32FC1 || srcType == CV_32FC3 || srcType == CV_32FC4);
+    const int sdepth = CV_MAT_DEPTH(srcType);
+    const int cn = CV_MAT_CN(srcType);
+    CV_Assert( sdepth <= CV_64F && cn <= 4 );
+    CV_Assert( CV_MAT_DEPTH(bufType) == CV_32F && CV_MAT_CN(bufType) == cn );
 
-    CV_Assert(CV_MAT_DEPTH(bufType) == CV_32F && CV_MAT_CN(srcType) == CV_MAT_CN(bufType));
+    const gpuFilter1D_t func = funcs[sdepth][cn - 1];
+    CV_Assert( func != 0 );
 
     GpuMat gpu_row_krnl;
     normalizeKernel(rowKernel, gpu_row_krnl, CV_32F);
 
-    int ksize = gpu_row_krnl.cols;
-
-    CV_Assert(ksize > 0 && ksize <= 32);
+    const int ksize = gpu_row_krnl.cols;
+    CV_Assert( ksize > 0 && ksize <= 32 );
 
     normalizeAnchor(anchor, ksize);
-
-    gpuFilter1D_t func = 0;
-
-    switch (srcType)
-    {
-    case CV_8UC1:
-        func = filter::linearRow<uchar, float>;
-        break;
-    case CV_8UC3:
-        func = filter::linearRow<uchar3, float3>;
-        break;
-    case CV_8UC4:
-        func = filter::linearRow<uchar4, float4>;
-        break;
-    case CV_16SC3:
-        func = filter::linearRow<short3, float3>;
-        break;
-    case CV_32SC1:
-        func = filter::linearRow<int, float>;
-        break;
-    case CV_32FC1:
-        func = filter::linearRow<float, float>;
-        break;
-    case CV_32FC3:
-        func = filter::linearRow<float3, float3>;
-        break;
-    case CV_32FC4:
-        func = filter::linearRow<float4, float4>;
-        break;
-    }
 
     return Ptr<BaseRowFilter_GPU>(new GpuLinearRowFilter(ksize, anchor, gpu_row_krnl, func, gpuBorderType));
 }
@@ -1012,69 +998,55 @@ namespace
 
 Ptr<BaseColumnFilter_GPU> cv::gpu::getLinearColumnFilter_GPU(int bufType, int dstType, const Mat& columnKernel, int anchor, int borderType)
 {
-    static const nppFilter1D_t nppFilter1D_callers[] = {0, nppiFilterColumn_8u_C1R, 0, 0, nppiFilterColumn_8u_C4R};
+    static const gpuFilter1D_t funcs[7][4] =
+    {
+        {filter::linearColumn<float, uchar>, 0, filter::linearColumn<float3, uchar3>, filter::linearColumn<float4, uchar4>},
+        {0, 0, 0, 0},
+        {filter::linearColumn<float, ushort>, 0, filter::linearColumn<float3, ushort3>, filter::linearColumn<float4, ushort4>},
+        {filter::linearColumn<float, short>, 0, filter::linearColumn<float3, short3>, filter::linearColumn<float4, short4>},
+        {filter::linearColumn<float, int>, 0, filter::linearColumn<float3, int3>, filter::linearColumn<float4, int4>},
+        {filter::linearColumn<float, float>, 0, filter::linearColumn<float3, float3>, filter::linearColumn<float4, float4>},
+        {0, 0, 0, 0}
+    };
+    static const nppFilter1D_t npp_funcs[] =
+    {
+        0, nppiFilterColumn_8u_C1R, 0, 0, nppiFilterColumn_8u_C4R
+    };
 
     if ((bufType == dstType) && (bufType == CV_8UC1 || bufType == CV_8UC4))
     {
-        CV_Assert(borderType == BORDER_CONSTANT);
+        CV_Assert( borderType == BORDER_CONSTANT );
 
         GpuMat gpu_col_krnl;
         int nDivisor;
         normalizeKernel(columnKernel, gpu_col_krnl, CV_32S, &nDivisor, true);
 
-        int ksize = gpu_col_krnl.cols;
+        const int ksize = gpu_col_krnl.cols;
         normalizeAnchor(anchor, ksize);
 
-        return Ptr<BaseColumnFilter_GPU>(new NppLinearColumnFilter(ksize, anchor, gpu_col_krnl, nDivisor,
-            nppFilter1D_callers[CV_MAT_CN(bufType)]));
+        return Ptr<BaseColumnFilter_GPU>(new NppLinearColumnFilter(ksize, anchor, gpu_col_krnl, nDivisor, npp_funcs[CV_MAT_CN(bufType)]));
     }
 
-    CV_Assert(borderType == BORDER_REFLECT101 || borderType == BORDER_REPLICATE || borderType == BORDER_CONSTANT || borderType == BORDER_REFLECT || borderType == BORDER_WRAP);
+    CV_Assert( borderType == BORDER_REFLECT101 || borderType == BORDER_REPLICATE || borderType == BORDER_CONSTANT || borderType == BORDER_REFLECT || borderType == BORDER_WRAP );
+
     int gpuBorderType;
-    CV_Assert(tryConvertToGpuBorderType(borderType, gpuBorderType));
+    CV_Assert( tryConvertToGpuBorderType(borderType, gpuBorderType) );
 
-    CV_Assert(dstType == CV_8UC1 || dstType == CV_8UC3 || dstType == CV_8UC4 || dstType == CV_16SC3 || dstType == CV_32SC1 || dstType == CV_32FC1 || dstType == CV_32FC3 || dstType == CV_32FC4);
+    const int ddepth = CV_MAT_DEPTH(dstType);
+    const int cn = CV_MAT_CN(dstType);
+    CV_Assert( ddepth <= CV_64F && cn <= 4 );
+    CV_Assert( CV_MAT_DEPTH(bufType) == CV_32F && CV_MAT_CN(bufType) == cn );
 
-    CV_Assert(CV_MAT_DEPTH(bufType) == CV_32F && CV_MAT_CN(dstType) == CV_MAT_CN(bufType));
+    gpuFilter1D_t func = funcs[ddepth][cn - 1];
+    CV_Assert( func != 0 );
 
     GpuMat gpu_col_krnl;
     normalizeKernel(columnKernel, gpu_col_krnl, CV_32F);
 
-    int ksize = gpu_col_krnl.cols;
-
+    const int ksize = gpu_col_krnl.cols;
     CV_Assert(ksize > 0 && ksize <= 32);
 
     normalizeAnchor(anchor, ksize);
-
-    gpuFilter1D_t func = 0;
-
-    switch (dstType)
-    {
-    case CV_8UC1:
-        func = filter::linearColumn<float, uchar>;
-        break;
-    case CV_8UC3:
-        func = filter::linearColumn<float3, uchar3>;
-        break;
-    case CV_8UC4:
-        func = filter::linearColumn<float4, uchar4>;
-        break;
-    case CV_16SC3:
-        func = filter::linearColumn<float3, short3>;
-        break;
-    case CV_32SC1:
-        func = filter::linearColumn<float, int>;
-        break;
-    case CV_32FC1:
-        func = filter::linearColumn<float, float>;
-        break;
-    case CV_32FC3:
-        func = filter::linearColumn<float3, float3>;
-        break;
-    case CV_32FC4:
-        func = filter::linearColumn<float4, float4>;
-        break;
-    }
 
     return Ptr<BaseColumnFilter_GPU>(new GpuLinearColumnFilter(ksize, anchor, gpu_col_krnl, func, gpuBorderType));
 }
