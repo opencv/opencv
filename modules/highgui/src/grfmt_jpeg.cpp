@@ -229,7 +229,8 @@ bool  JpegDecoder::readHeader()
             if( m_f )
                 jpeg_stdio_src( &state->cinfo, m_f );
         }
-        jpeg_read_header( &state->cinfo, TRUE );
+        if (state->cinfo.src != 0)
+            jpeg_read_header( &state->cinfo, TRUE );
 
         m_width = state->cinfo.image_width;
         m_height = state->cinfo.image_height;
