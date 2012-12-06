@@ -52,16 +52,21 @@ int main(int argc, char** argv)
     int npositives = 10;
     int nnegatives = 10;
 
+    int shrinkage  = 4;
+    int octave = 0;
+
     int nsamples = npositives + nnegatives;
     cv::Size model(64, 128);
     std::string path = "/home/kellan/cuda-dev/opencv_extra/testdata/sctrain/rescaled-train-2012-10-27-19-02-52";
 
-    sft::Octave boost(0);
-    cv::Mat train_data(nfeatures, nsamples, CV_32FC1);
+    sft::Octave boost(npositives, nnegatives, octave, shrinkage);
 
     sft::FeaturePool pool(model, nfeatures);
-    sft::Dataset(path, boost.logScale);
+    sft::Dataset dataset(path, boost.logScale);
 
+    boost.train(dataset, pool);
+
+    cv::Mat train_data(nfeatures, nsamples, CV_32FC1);
     cv::RNG rng;
 
     for (int y = 0; y < nfeatures; ++y)
@@ -113,7 +118,7 @@ int main(int argc, char** argv)
 
     bool update = false;
 
-    boost.train(train_data, responses, var_idx, sample_idx, var_type, missing_mask);
+    // boost.train(train_data, responses, var_idx, sample_idx, var_type, missing_mask);
 
     // CvFileStorage* fs = cvOpenFileStorage( "/home/kellan/train_res.xml", 0, CV_STORAGE_WRITE );
     // boost.write(fs, "test_res");

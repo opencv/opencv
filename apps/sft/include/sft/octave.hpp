@@ -54,7 +54,7 @@ class Dataset
 public:
     Dataset(const sft::string& path, const int octave);
 
-private:
+// private:
     svector pos;
     svector neg;
 };
@@ -83,14 +83,13 @@ class FeaturePool
 public:
     FeaturePool(cv::Size model, int nfeatures);
     ~FeaturePool();
+    int size() const { return (int)pool.size(); }
+
 private:
     void fill(int desired);
 
     cv::Size model;
     int nfeatures;
-
-    Mat integrals;
-    Mat responces;
 
     Icfvector pool;
 
@@ -103,15 +102,30 @@ private:
 class Octave : cv::Boost
 {
 public:
-    Octave(int logScale);
+    Octave(int npositives, int nnegatives, int logScale, int shrinkage);
     virtual ~Octave();
 
+     virtual bool train(const Dataset& dataset, const FeaturePool& pool);
+
+    int logScale;
+
+protected:
     virtual bool train( const cv::Mat& trainData, const cv::Mat& responses, const cv::Mat& varIdx=cv::Mat(),
        const cv::Mat& sampleIdx=cv::Mat(), const cv::Mat& varType=cv::Mat(), const cv::Mat& missingDataMask=cv::Mat());
 
-    int logScale;
+    void processPositives(const Dataset& dataset, const FeaturePool& pool);
 private:
+
+    int npositives;
+    int nnegatives;
+
+    int shrinkage;
+
+    Mat integrals;
+    Mat responses;
+
     CvBoostParams params;
+
 };
 
 }

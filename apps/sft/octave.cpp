@@ -44,7 +44,6 @@
 #include <sft/random.hpp>
 
 #if defined VISUALIZE_GENERATION
-# include <opencv2/highgui/highgui.hpp>
 # define show(a, b)  \
     do {             \
     cv::imshow(a,b); \
@@ -55,18 +54,126 @@
 #endif
 
 #include <glob.h>
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/highgui/highgui.hpp>
 
 // ============ Octave ============ //
-sft::Octave::Octave(int ls) : logScale(ls) {}
+sft::Octave::Octave(int np, int nn, int ls, int shr)
+: logScale(ls), npositives(np), nnegatives(nn), shrinkage(shr)
+{
+    int maxSample = npositives + nnegatives;
+    responses.create(maxSample, 1, CV_32FC1);
+}
 
 sft::Octave::~Octave(){}
 
-bool sft::Octave::train( const cv::Mat& trainData, const cv::Mat& responses, const cv::Mat& varIdx,
+bool sft::Octave::train( const cv::Mat& trainData, const cv::Mat& _responses, const cv::Mat& varIdx,
        const cv::Mat& sampleIdx, const cv::Mat& varType, const cv::Mat& missingDataMask)
 {
     bool update = false;
-    return cv::Boost::train(trainData, CV_COL_SAMPLE, responses, varIdx, sampleIdx, varType, missingDataMask, params,
+    return cv::Boost::train(trainData, CV_COL_SAMPLE, _responses, varIdx, sampleIdx, varType, missingDataMask, params,
     update);
+}
+
+namespace {
+using namespace sft;
+class Preprocessor
+{
+public:
+    Preprocessor(int shr) : shrinkage(shr) {}
+
+    void apply(const Mat& frame, Mat integrals)
+    {
+        CV_Assert(frame.type() == CV_8UC3);
+
+        int h = frame.rows;
+        int w = frame.cols;
+
+        cv::Mat channels, gray;
+
+        channels.create(h * BINS, w, CV_8UC1);
+        channels.setTo(0);
+
+        cvtColor(frame, gray, CV_BGR2GRAY);
+
+        cv::Mat df_dx, df_dy, mag, angle;
+        cv::Sobel(gray, df_dx, CV_32F, 1, 0);
+        cv::Sobel(gray, df_dy, CV_32F, 0, 1);
+
+        cv::cartToPolar(df_dx, df_dy, mag, angle, true);
+        mag *= (1.f / (8 * sqrt(2.f)));
+
+        cv::Mat nmag;
+        mag.convertTo(nmag, CV_8UC1);
+
+        angle *=  6 / 360.f;
+
+        for (int y = 0; y < h; ++y)
+        {
+            uchar* magnitude = nmag.ptr<uchar>(y);
+            float* ang = angle.ptr<float>(y);
+
+            for (int x = 0; x < w; ++x)
+            {
+                channels.ptr<uchar>(y + (h * (int)ang[x]))[x] = magnitude[x];
+            }
+        }
+
+        cv::Mat luv, shrunk;
+        cv::cvtColor(frame, luv, CV_BGR2Luv);
+
+        std::vector<cv::Mat> splited;
+        for (int i = 0; i < 3; ++i)
+            splited.push_back(channels(cv::Rect(0, h * (7 + i), w, h)));
+        split(luv, splited);
+
+        cv::resize(channels, shrunk, cv::Size(), 1.0 / shrinkage, 1.0 / shrinkage, CV_INTER_AREA);
+        cv::integral(shrunk, integrals, cv::noArray(), CV_32S);
+    }
+
+    int shrinkage;
+    enum {BINS = 10};
+};
+}
+
+// ToDo: parallelize it
+void sft::Octave::processPositives(const Dataset& dataset, const FeaturePool& pool)
+{
+    Preprocessor prepocessor(shrinkage);
+
+    int cols = (64 * pow(2, logScale) + 1) * (128 * pow(2, logScale) + 1);
+    integrals.create(pool.size(), cols, CV_32SC1);
+
+    int total = 0;
+
+    // float* responce = responce.ptr<float>(0);
+    for (svector::const_iterator it = dataset.pos.begin(); it != dataset.pos.end(); ++it)
+    {
+        const string& curr = *it;
+
+        dprintf("Process candidate positive image %s\n", curr.c_str());
+
+        cv::Mat channels = integrals.col(total).reshape(0, (128 * pow(2, logScale) + 1));
+
+        cv::Mat sample = cv::imread(curr);
+        prepocessor.apply(sample, channels);
+        responses.ptr<float>(total)[0] = 1.f;
+
+        ++total;
+        if (total >= npositives) break;
+    }
+
+    dprintf("Processing positives finished:\n\trequested %d positives, collected %d samples.\n", npositives, total);
+
+    npositives = total;
+    nnegatives *= total / (float)npositives;
+}
+
+bool sft::Octave::train(const Dataset& dataset, const FeaturePool& pool)
+{
+    // 1. fill integrals and classes
+    return false;
+
 }
 
 // ========= FeaturePool ========= //
