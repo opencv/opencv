@@ -4,6 +4,7 @@
 #include <opencv2/gpu/gpu.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/video/video.hpp>
+#include <opencv2/legacy/legacy.hpp>
 #include <opencv2/ts/ts.hpp>
 #include <opencv2/ts/ts_perf.hpp>
 
@@ -66,27 +67,81 @@ int main(int argc, char* argv[])
     return RUN_ALL_TESTS();
 }
 
-//////////////////////////////////////////////////////////
-// Tests
-
 #define DEF_PARAM_TEST(name, ...) typedef ::perf::TestBaseWithParam< std::tr1::tuple< __VA_ARGS__ > > name
 #define DEF_PARAM_TEST_1(name, param_type) typedef ::perf::TestBaseWithParam< param_type > name
 
-DEF_PARAM_TEST_1(Depth, perf::MatDepth);
+//////////////////////////////////////////////////////////
+// HoughLinesP
 
-PERF_TEST_P(Depth, GoodFeaturesToTrack, testing::Values(CV_8U, CV_16U))
+DEF_PARAM_TEST_1(Image, std::string);
+
+PERF_TEST_P(Image, HoughLinesP,
+            testing::Values(std::string("im1_1280x800.jpg")))
+{
+    declare.time(30.0);
+
+    std::string fileName = GetParam();
+
+    const double rho = 1.0;
+    const double theta = 1.0;
+    const int threshold = 40;
+    const int minLineLenght = 20;
+    const int maxLineGap = 5;
+
+    cv::Mat image = cv::imread(fileName, cv::IMREAD_GRAYSCALE);
+
+    if (PERF_RUN_GPU())
+    {
+        cv::gpu::GpuMat d_image(image);
+        cv::gpu::GpuMat d_lines;
+        cv::gpu::CannyBuf d_buf;
+
+        cv::gpu::HoughLinesP(d_image, d_lines, d_buf, minLineLenght, maxLineGap);
+
+        TEST_CYCLE()
+        {
+            cv::gpu::HoughLinesP(d_image, d_lines, d_buf, minLineLenght, maxLineGap);
+        }
+    }
+    else
+    {
+        cv::Mat mask;
+        cv::Canny(image, mask, 50, 100);
+
+        std::vector<cv::Vec4i> lines;
+        cv::HoughLinesP(mask, lines, rho, theta, threshold, minLineLenght, maxLineGap);
+
+        TEST_CYCLE()
+        {
+            cv::HoughLinesP(mask, lines, rho, theta, threshold, minLineLenght, maxLineGap);
+        }
+    }
+
+    SANITY_CHECK(0);
+}
+
+//////////////////////////////////////////////////////////
+// GoodFeaturesToTrack
+
+DEF_PARAM_TEST(Image_Depth, std::string, perf::MatDepth);
+
+PERF_TEST_P(Image_Depth, GoodFeaturesToTrack,
+            testing::Combine(
+                testing::Values(std::string("im1_1280x800.jpg")),
+                testing::Values(CV_8U, CV_16U)
+                ))
 {
     declare.time(60);
 
-    const int depth = GetParam();
+    const std::string fileName = std::tr1::get<0>(GetParam());
+    const int depth = std::tr1::get<1>(GetParam());
+
     const int maxCorners = 5000;
     const double qualityLevel = 0.05;
     const int minDistance = 5;
     const int blockSize = 3;
     const bool useHarrisDetector = true;
     const double k = 0.05;
-
-    const std::string fileName = "im1_1280x800.jpg";
 
     cv::Mat src = cv::imread(fileName, cv::IMREAD_GRAYSCALE);
     if (src.empty())
@@ -115,6 +170,9 @@ PERF_TEST_P(Depth, GoodFeaturesToTrack, testing::Values(CV_8U, CV_16U))
     }
     else
     {
+        if (depth != CV_8U)
+            FAIL() << "Unsupported depth";
+
         cv::Mat pts;
 
         cv::goodFeaturesToTrack(src, pts, maxCorners, qualityLevel, minDistance, mask, blockSize, useHarrisDetector, k);
@@ -128,14 +186,25 @@ PERF_TEST_P(Depth, GoodFeaturesToTrack, testing::Values(CV_8U, CV_16U))
     SANITY_CHECK(0);
 }
 
-DEF_PARAM_TEST(Depth_GraySource, perf::MatDepth, bool);
+//////////////////////////////////////////////////////////
+// OpticalFlowPyrLKSparse
 
-PERF_TEST_P(Depth_GraySource, PyrLKOpticalFlowSparse, testing::Combine(testing::Values(CV_8U, CV_16U), testing::Bool()))
+typedef std::pair<std::string, std::string> string_pair;
+
+DEF_PARAM_TEST(ImagePair_Depth_GraySource, string_pair, perf::MatDepth, bool);
+
+PERF_TEST_P(ImagePair_Depth_GraySource, OpticalFlowPyrLKSparse,
+            testing::Combine(
+                testing::Values(string_pair("im1_1280x800.jpg", "im2_1280x800.jpg")),
+                testing::Values(CV_8U, CV_16U),
+                testing::Bool()
+                ))
 {
     declare.time(60);
 
-    const int depth = std::tr1::get<0>(GetParam());
-    const bool graySource = std::tr1::get<1>(GetParam());
+    const string_pair fileNames = std::tr1::get<0>(GetParam());
+    const int depth = std::tr1::get<1>(GetParam());
+    const bool graySource = std::tr1::get<2>(GetParam());
 
     // PyrLK params
     const cv::Size winSize(15, 15);
@@ -150,16 +219,13 @@ PERF_TEST_P(Depth_GraySource, PyrLKOpticalFlowSparse, testing::Combine(testing::
     const bool useHarrisDetector = true;
     const double k = 0.05;
 
-    const std::string fileName1 = "im1_1280x800.jpg";
-    const std::string fileName2 = "im2_1280x800.jpg";
-
-    cv::Mat src1 = cv::imread(fileName1, graySource ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
+    cv::Mat src1 = cv::imread(fileNames.first, graySource ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
     if (src1.empty())
-        FAIL() << "Unable to load source image [" << fileName1 << "]";
+        FAIL() << "Unable to load source image [" << fileNames.first << "]";
 
-    cv::Mat src2 = cv::imread(fileName2, graySource ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
+    cv::Mat src2 = cv::imread(fileNames.second, graySource ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
     if (src2.empty())
-        FAIL() << "Unable to load source image [" << fileName2 << "]";
+        FAIL() << "Unable to load source image [" << fileNames.second << "]";
 
     cv::Mat gray_src;
     if (graySource)
@@ -199,6 +265,9 @@ PERF_TEST_P(Depth_GraySource, PyrLKOpticalFlowSparse, testing::Combine(testing::
     }
     else
     {
+        if (depth != CV_8U)
+            FAIL() << "Unsupported depth";
+
         cv::Mat nextPts;
         cv::Mat status;
 
@@ -213,13 +282,21 @@ PERF_TEST_P(Depth_GraySource, PyrLKOpticalFlowSparse, testing::Combine(testing::
     SANITY_CHECK(0);
 }
 
-DEF_PARAM_TEST_1(Depth, perf::MatDepth);
+//////////////////////////////////////////////////////////
+// OpticalFlowFarneback
 
-PERF_TEST_P(Depth, FarnebackOpticalFlow, testing::Values(CV_8U, CV_16U))
+DEF_PARAM_TEST(ImagePair_Depth, string_pair, perf::MatDepth);
+
+PERF_TEST_P(ImagePair_Depth, OpticalFlowFarneback,
+            testing::Combine(
+                testing::Values(string_pair("im1_1280x800.jpg", "im2_1280x800.jpg")),
+                testing::Values(CV_8U, CV_16U)
+                ))
 {
-    declare.time(60);
+    declare.time(500);
 
-    const int depth = GetParam();
+    const string_pair fileNames = std::tr1::get<0>(GetParam());
+    const int depth = std::tr1::get<1>(GetParam());
 
     const double pyrScale = 0.5;
     const int numLevels = 6;
@@ -229,16 +306,13 @@ PERF_TEST_P(Depth, FarnebackOpticalFlow, testing::Values(CV_8U, CV_16U))
     const double polySigma = 1.5;
     const int flags = cv::OPTFLOW_USE_INITIAL_FLOW;
 
-    const std::string fileName1 = "im1_1280x800.jpg";
-    const std::string fileName2 = "im2_1280x800.jpg";
-
-    cv::Mat src1 = cv::imread(fileName1, cv::IMREAD_GRAYSCALE);
+    cv::Mat src1 = cv::imread(fileNames.first, cv::IMREAD_GRAYSCALE);
     if (src1.empty())
-        FAIL() << "Unable to load source image [" << fileName1 << "]";
+        FAIL() << "Unable to load source image [" << fileNames.first << "]";
 
-    cv::Mat src2 = cv::imread(fileName2, cv::IMREAD_GRAYSCALE);
+    cv::Mat src2 = cv::imread(fileNames.second, cv::IMREAD_GRAYSCALE);
     if (src2.empty())
-        FAIL() << "Unable to load source image [" << fileName2 << "]";
+        FAIL() << "Unable to load source image [" << fileNames.second << "]";
 
     if (depth != CV_8U)
     {
@@ -264,20 +338,97 @@ PERF_TEST_P(Depth, FarnebackOpticalFlow, testing::Values(CV_8U, CV_16U))
 
         d_farneback(d_src1, d_src2, d_u, d_v);
 
-        TEST_CYCLE()
+        TEST_CYCLE_N(10)
         {
             d_farneback(d_src1, d_src2, d_u, d_v);
         }
     }
     else
     {
+        if (depth != CV_8U)
+            FAIL() << "Unsupported depth";
+
         cv::Mat flow(src1.size(), CV_32FC2, cv::Scalar::all(0));
 
         cv::calcOpticalFlowFarneback(src1, src2, flow, pyrScale, numLevels, winSize, numIters, polyN, polySigma, flags);
 
-        TEST_CYCLE()
+        TEST_CYCLE_N(10)
         {
             cv::calcOpticalFlowFarneback(src1, src2, flow, pyrScale, numLevels, winSize, numIters, polyN, polySigma, flags);
+        }
+    }
+
+    SANITY_CHECK(0);
+}
+
+//////////////////////////////////////////////////////////
+// OpticalFlowBM
+
+void calcOpticalFlowBM(const cv::Mat& prev, const cv::Mat& curr,
+                       cv::Size bSize, cv::Size shiftSize, cv::Size maxRange, int usePrevious,
+                       cv::Mat& velx, cv::Mat& vely)
+{
+    cv::Size sz((curr.cols - bSize.width + shiftSize.width)/shiftSize.width, (curr.rows - bSize.height + shiftSize.height)/shiftSize.height);
+
+    velx.create(sz, CV_32FC1);
+    vely.create(sz, CV_32FC1);
+
+    CvMat cvprev = prev;
+    CvMat cvcurr = curr;
+
+    CvMat cvvelx = velx;
+    CvMat cvvely = vely;
+
+    cvCalcOpticalFlowBM(&cvprev, &cvcurr, bSize, shiftSize, maxRange, usePrevious, &cvvelx, &cvvely);
+}
+
+DEF_PARAM_TEST(ImagePair_BlockSize_ShiftSize_MaxRange, string_pair, cv::Size, cv::Size, cv::Size);
+
+PERF_TEST_P(ImagePair_BlockSize_ShiftSize_MaxRange, OpticalFlowBM,
+            testing::Combine(
+                testing::Values(string_pair("im1_1280x800.jpg", "im2_1280x800.jpg")),
+                testing::Values(cv::Size(16, 16)),
+                testing::Values(cv::Size(2, 2)),
+                testing::Values(cv::Size(16, 16))
+                ))
+{
+    declare.time(1000);
+
+    const string_pair fileNames = std::tr1::get<0>(GetParam());
+    const cv::Size block_size = std::tr1::get<1>(GetParam());
+    const cv::Size shift_size = std::tr1::get<2>(GetParam());
+    const cv::Size max_range = std::tr1::get<3>(GetParam());
+
+    cv::Mat src1 = cv::imread(fileNames.first, cv::IMREAD_GRAYSCALE);
+    if (src1.empty())
+        FAIL() << "Unable to load source image [" << fileNames.first << "]";
+
+    cv::Mat src2 = cv::imread(fileNames.second, cv::IMREAD_GRAYSCALE);
+    if (src2.empty())
+        FAIL() << "Unable to load source image [" << fileNames.second << "]";
+
+    if (PERF_RUN_GPU())
+    {
+        cv::gpu::GpuMat d_src1(src1);
+        cv::gpu::GpuMat d_src2(src2);
+        cv::gpu::GpuMat d_velx, d_vely, buf;
+
+        cv::gpu::calcOpticalFlowBM(d_src1, d_src2, block_size, shift_size, max_range, false, d_velx, d_vely, buf);
+
+        TEST_CYCLE_N(10)
+        {
+            cv::gpu::calcOpticalFlowBM(d_src1, d_src2, block_size, shift_size, max_range, false, d_velx, d_vely, buf);
+        }
+    }
+    else
+    {
+        cv::Mat velx, vely;
+
+        calcOpticalFlowBM(src1, src2, block_size, shift_size, max_range, false, velx, vely);
+
+        TEST_CYCLE_N(10)
+        {
+            calcOpticalFlowBM(src1, src2, block_size, shift_size, max_range, false, velx, vely);
         }
     }
 
