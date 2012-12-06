@@ -44,85 +44,119 @@
 
 #include <sft/common.hpp>
 #include <sft/octave.hpp>
+#include <sft/config.hpp>
 
 int main(int argc, char** argv)
 {
-// hard coded now
-    int nfeatures  = 50;
-    int npositives = 10;
-    int nnegatives = 10;
+    using namespace sft;
 
-    int shrinkage  = 4;
-    int octave = 0;
+    const string keys =
+        "{help h usage ? |      | print this message              }"
+        "{config c       |      | path to configuration xml       }"
+    ;
 
-    int nsamples = npositives + nnegatives;
-    cv::Size model(64, 128);
-    std::string path = "/home/kellan/cuda-dev/opencv_extra/testdata/sctrain/rescaled-train-2012-10-27-19-02-52";
+    cv::CommandLineParser parser(argc, argv, keys);
+    parser.about("Soft cascade training application.");
 
-    cv::Rect boundingBox(5, 5 ,16, 32);
-    sft::Octave boost(boundingBox, npositives, nnegatives, octave, shrinkage);
-
-    sft::FeaturePool pool(model, nfeatures);
-    sft::Dataset dataset(path, boost.logScale);
-
-    boost.train(dataset, pool);
-
-    cv::Mat train_data(nfeatures, nsamples, CV_32FC1);
-    cv::RNG rng;
-
-    for (int y = 0; y < nfeatures; ++y)
-        for (int x = 0; x < nsamples; ++x)
-            train_data.at<float>(y, x) = rng.uniform(0.f, 1.f);
-// +
-    int tflag = CV_COL_SAMPLE;
-    cv::Mat responses(nsamples, 1, CV_32FC1);
-    for (int y = 0; y < nsamples; ++y)
-        responses.at<float>(y, 0) = (y < npositives) ? 1.f : 0.f;
-
-
-    cv::Mat var_idx(1, nfeatures, CV_32SC1);
-    for (int x = 0; x < nfeatures; ++x)
-        var_idx.at<int>(0, x) = x;
-
-    // Mat sample_idx;
-    cv::Mat sample_idx(1, nsamples, CV_32SC1);
-    for (int x = 0; x < nsamples; ++x)
-        sample_idx.at<int>(0, x) = x;
-
-    cv::Mat var_type(1, nfeatures + 1, CV_8UC1);
-    for (int x = 0; x < nfeatures; ++x)
-        var_type.at<uchar>(0, x) = CV_VAR_ORDERED;
-
-    var_type.at<uchar>(0, nfeatures) = CV_VAR_CATEGORICAL;
-
-    cv::Mat missing_mask;
-
-    CvBoostParams params;
+    if (parser.has("help"))
     {
-        params.max_categories       = 10;
-        params.max_depth            = 2;
-        params.min_sample_count     = 2;
-        params.cv_folds             = 0;
-        params.truncate_pruned_tree = false;
-
-        /// ??????????????????
-        params.regression_accuracy = 0.01;
-        params.use_surrogates      = false;
-        params.use_1se_rule        = false;
-
-        ///////// boost params
-        params.boost_type       = CvBoost::GENTLE;
-        params.weak_count       = 1;
-        params.split_criteria   = CvBoost::SQERR;
-        params.weight_trim_rate = 0.95;
+        parser.printMessage();
+        return 0;
     }
 
-    bool update = false;
+    if (!parser.check())
+    {
+        parser.printErrors();
+        return 1;
+    }
 
-    // boost.train(train_data, responses, var_idx, sample_idx, var_type, missing_mask);
+    string configPath = parser.get<string>("config");
+    if (configPath.empty())
+    {
+        std::cout << "Configuration file is missing or empty. Could not start training." << std::endl << std::flush;
+        return 0;
+    }
 
-    // CvFileStorage* fs = cvOpenFileStorage( "/home/kellan/train_res.xml", 0, CV_STORAGE_WRITE );
-    // boost.write(fs, "test_res");
+    std::cout << "Read configuration from file " << configPath << std::endl;
+    cv::FileStorage fs(configPath, cv::FileStorage::READ);
+    if(!fs.isOpened())
+    {
+        std::cout << "Configuration file " << configPath << " can't be opened." << std::endl << std::flush;
+        return 1;
+    }
 
-    // cvReleaseFileStorage( &fs );
+    // 1. load config
+    sft::Config cfg;
+    fs["config"] >> cfg;
+    std::cout << std::endl << "Training will be executed for configuration:" << std::endl << cfg << std::endl;
+
+    // 2. check and open output file
+    cv::FileStorage fso(cfg.outXmlPath, cv::FileStorage::WRITE);
+    if(!fs.isOpened())
+    {
+        std::cout << "Training stopped. Output classifier Xml file " << cfg.outXmlPath << " can't be opened." << std::endl << std::flush;
+        return 1;
+    }
+
+    // ovector strong;
+    // strong.reserve(cfg.octaves.size());
+
+    // fso << "softcascade" << "{" << "octaves" << "[";
+
+    // 3. Train all octaves
+    for (ivector::const_iterator it = cfg.octaves.begin(); it != cfg.octaves.end(); ++it)
+    {
+        int nfeatures  = cfg.poolSize;
+        int npositives = cfg.positives;
+        int nnegatives = cfg.negatives;
+
+        int shrinkage  = cfg.shrinkage;
+        int octave = *it;
+
+        cv::Size model = cfg.modelWinSize;
+        std::string path = cfg.trainPath;
+
+        cv::Rect boundingBox(cfg.offset.x / cfg.shrinkage, cfg.offset.y / cfg.shrinkage,
+            cfg.modelWinSize.width / cfg.shrinkage, cfg.modelWinSize.height / cfg.shrinkage);
+
+        sft::Octave boost(boundingBox, npositives, nnegatives, octave, shrinkage);
+
+        sft::FeaturePool pool(model, nfeatures);
+        sft::Dataset dataset(path, boost.logScale);
+
+        if (boost.train(dataset, pool))
+        {
+        }
+        std::cout << "Octave " << octave << " was successfully trained..." << std::endl;
+    //     // d. crain octave
+    //     if (octave.train(pool, cfg.positives, cfg.negatives, cfg.weaks))
+    //     {
+    //         strong.push_back(octave);
+    //     }
+    }
+
+    // fso << "]" << "}";
+
+//     // 3. create Soft Cascade
+//     // sft::SCascade cascade(cfg.modelWinSize, cfg.octs, cfg.shrinkage);
+
+//     // // 4. Generate feature pool
+//     // std::vector<sft::ICF> pool;
+//     // sft::fillPool(pool, cfg.poolSize, cfg.modelWinSize / cfg.shrinkage, cfg.seed);
+
+//     // // 5. Train all octaves
+//     // cascade.train(cfg.trainPath);
+
+//     // // 6. Set thresolds
+//     // cascade.prune();
+
+//     // // 7. Postprocess
+//     // cascade.normolize();
+
+//     // // 8. Write result xml
+//     // cv::FileStorage ofs(cfg.outXmlPath, cv::FileStorage::WRITE);
+//     // ofs << cfg.cascadeName << cascade;
+
+    std::cout << "Training complete..." << std::endl;
+    return 0;
 }
