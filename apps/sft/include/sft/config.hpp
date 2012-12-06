@@ -40,32 +40,75 @@
 //
 //M*/
 
-#ifndef __SFT_COMMON_HPP__
-#define __SFT_COMMON_HPP__
+#ifndef __SFT_CONFIG_HPP__
+#define __SFT_CONFIG_HPP__
 
-#include <opencv2/core/core.hpp>
+#include <sft/common.hpp>
 
-namespace sft
+#include <ostream>
+
+namespace sft {
+
+struct Config
 {
-    using cv::Mat;
-    struct ICF;
+    Config();
 
-    typedef std::string   string;
+    void write(cv::FileStorage& fs) const;
 
-    typedef std::vector<ICF>           Icfvector;
-    typedef std::vector<sft::string>   svector;
-    typedef std::vector<int>           ivector;
+    void read(const cv::FileNode& node);
+
+    // Paths to a rescaled data
+    string trainPath;
+    string testPath;
+
+    // Original model size.
+    cv::Size modelWinSize;
+
+    // example offset into positive image
+    cv::Point2i offset;
+
+    // List of octaves for which have to be trained cascades (a list of powers of two)
+    ivector octaves;
+
+    // Maximum number of positives that should be ised during training
+    int positives;
+
+    // Initial number of negatives used during training.
+    int negatives;
+
+    // Number of weak negatives to add each bootstrapping step.
+    int btpNegatives;
+
+    // Inverse of scale for feature resazing
+    int shrinkage;
+
+    // Depth on weak classifier's desition tree
+    int treeDepth;
+
+    // Weak classifiers number in resulted cascade
+    int weaks;
+
+    // Feature random pool size
+    int poolSize;
+
+    // file name to store cascade
+    string cascadeName;
+
+    // path to resulting cascade
+    string outXmlPath;
+
+    // seed for fandom generation
+    int seed;
+
+    // // bounding retangle for actual exemple into example window
+    // cv::Rect exampleWindow;
+};
+
+// required for cv::FileStorage serialization
+void write(cv::FileStorage& fs, const string&, const Config& x);
+void read(const cv::FileNode& node, Config& x, const Config& default_value);
+std::ostream& operator<<(std::ostream& out, const Config& m);
+
 }
-
-// used for noisy printfs
-#define WITH_DEBUG_OUT
-
-#if defined WITH_DEBUG_OUT
-# include <stdio.h>
-# define dprintf(format, ...) \
-            do { printf(format, ##__VA_ARGS__); } while (0)
-#else
-# define dprintf(format, ...)
-#endif
 
 #endif
