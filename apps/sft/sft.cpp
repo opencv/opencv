@@ -51,13 +51,16 @@ int main(int argc, char** argv)
     int nfeatures  = 50;
     int npositives = 10;
     int nnegatives = 10;
+
     int nsamples = npositives + nnegatives;
     cv::Size model(64, 128);
+    std::string path = "/home/kellan/cuda-dev/opencv_extra/testdata/sctrain/rescaled-train-2012-10-27-19-02-52";
 
-    sft::Octave boost;
+    sft::Octave boost(0);
     cv::Mat train_data(nfeatures, nsamples, CV_32FC1);
 
     sft::FeaturePool pool(model, nfeatures);
+    sft::Dataset(path, boost.logScale);
 
     cv::RNG rng;
 

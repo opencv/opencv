@@ -49,6 +49,16 @@
 namespace sft
 {
 
+class Dataset
+{
+public:
+    Dataset(const sft::string& path, const int octave);
+
+private:
+    svector pos;
+    svector neg;
+};
+
 struct ICF
 {
     ICF(int x, int y, int w, int h, int ch) : bb(cv::Rect(x, y, w, h)), channel(ch) {}
@@ -93,12 +103,13 @@ private:
 class Octave : cv::Boost
 {
 public:
-    Octave();
+    Octave(int logScale);
     virtual ~Octave();
 
     virtual bool train( const cv::Mat& trainData, const cv::Mat& responses, const cv::Mat& varIdx=cv::Mat(),
        const cv::Mat& sampleIdx=cv::Mat(), const cv::Mat& varType=cv::Mat(), const cv::Mat& missingDataMask=cv::Mat());
 
+    int logScale;
 private:
     CvBoostParams params;
 };

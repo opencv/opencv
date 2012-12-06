@@ -49,8 +49,12 @@ namespace sft
 {
     using cv::Mat;
     struct ICF;
-    typedef std::vector<ICF>   Icfvector;
 
+    typedef std::string   string;
+
+    typedef std::vector<ICF>           Icfvector;
+    typedef std::vector<sft::string>   svector;
 }
+
 
 #endif
