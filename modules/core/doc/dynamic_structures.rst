@@ -317,9 +317,9 @@ Creates an empty graph.
 
     :param header_size: Graph header size; may not be less than  ``sizeof(CvGraph)``
 
-    :param vtx_size: Graph vertex size; the custom vertex structure must start with  :ocv:struct:`CvGraphVtx`  (use  ``CV_GRAPH_VERTEX_FIELDS()`` )
+    :param vtx_size: Graph vertex size; the custom vertex structure must start with ocv:struct:`CvGraphVtx` (use  ``CV_GRAPH_VERTEX_FIELDS()`` )
 
-    :param edge_size: Graph edge size; the custom edge structure must start with  :ocv:struct:`CvGraphEdge`  (use  ``CV_GRAPH_EDGE_FIELDS()`` )
+    :param edge_size: Graph edge size; the custom edge structure must start with :ocv:struct:CvGraphEdge (use  ``CV_GRAPH_EDGE_FIELDS()`` )
 
     :param storage: The graph container
 
@@ -419,7 +419,7 @@ Creates an empty set.
 
     :param header_size: Set header size; may not be less than  ``sizeof(CvSet)``
 
-    :param elem_size: Set element size; may not be less than  :ocv:struct:`CvSetElem`
+    :param elem_size: Set element size; may not be less than ocv:struct:CvSetElem
 
     :param storage: Container for the set
 
