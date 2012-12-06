@@ -70,8 +70,30 @@ sft::Octave::~Octave(){}
 bool sft::Octave::train( const cv::Mat& trainData, const cv::Mat& _responses, const cv::Mat& varIdx,
        const cv::Mat& sampleIdx, const cv::Mat& varType, const cv::Mat& missingDataMask)
 {
+    CvBoostParams _params;
+    {
+        // tree params
+        _params.max_categories       = 10;
+        _params.max_depth            = 2;
+        _params.cv_folds             = 0;
+        _params.truncate_pruned_tree = false;
+        _params.use_surrogates       = false;
+        _params.use_1se_rule         = false;
+        _params.regression_accuracy  = 0.0;
+
+        // boost params
+        _params.boost_type           = CvBoost::GENTLE;
+        _params.split_criteria       = CvBoost::SQERR;
+        _params.weight_trim_rate     = 0.95;
+
+
+        /// ToDo: move to params
+        _params.min_sample_count     = 2;
+        _params.weak_count           = 1;
+    }
+
     bool update = false;
-    return cv::Boost::train(trainData, CV_COL_SAMPLE, _responses, varIdx, sampleIdx, varType, missingDataMask, params,
+    return cv::Boost::train(trainData, CV_COL_SAMPLE, _responses, varIdx, sampleIdx, varType, missingDataMask, _params,
     update);
 }
 
@@ -224,7 +246,42 @@ bool sft::Octave::train(const Dataset& dataset, const FeaturePool& pool)
     processPositives(dataset, pool);
     generateNegatives(dataset);
 
-    return false;
+    // 2. only sumple case (all features used)
+    int nfeatures = pool.size();
+    cv::Mat varIdx(1, nfeatures, CV_32SC1);
+    int* ptr = varIdx.ptr<int>(0);
+
+    for (int x = 0; x < nfeatures; ++x)
+        ptr[x] = x;
+
+    // 3. only sumple case (all samples used)
+    int nsamples = npositives + nnegatives;
+    cv::Mat sampleIdx(1, nsamples, CV_32SC1);
+    ptr = varIdx.ptr<int>(0);
+
+    for (int x = 0; x < nsamples; ++x)
+        ptr[x] = x;
+
+    // 4. ICF has an orderable responce.
+    cv::Mat varType(1, nfeatures + 1, CV_8UC1);
+    uchar* uptr = varType.ptr<uchar>(0);
+    for (int x = 0; x < nfeatures; ++x)
+        uptr[x] = CV_VAR_ORDERED;
+    uptr[nfeatures] = CV_VAR_CATEGORICAL;
+
+    cv::Mat trainData(nfeatures, nsamples, CV_32FC1);
+    for (int fi = 0; fi < nfeatures; ++fi)
+    {
+        float* dptr = trainData.ptr<float>(fi);
+        for (int si = 0; si < nsamples; ++si)
+        {
+            dptr[si] = pool.apply(fi, si, integrals);
+        }
+    }
+
+    cv::Mat missingMask;
+
+    return train(trainData, responses, varIdx, sampleIdx, varType, missingMask);
 
 }
 
@@ -236,6 +293,11 @@ sft::FeaturePool::FeaturePool(cv::Size m, int n) : model(m), nfeatures(n)
 }
 
 sft::FeaturePool::~FeaturePool(){}
+
+float sft::FeaturePool::apply(int fi, int si, const Mat& integrals) const
+{
+    return 0.f;
+}
 
 
 void sft::FeaturePool::fill(int desired)

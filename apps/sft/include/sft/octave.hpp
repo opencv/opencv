@@ -84,6 +84,7 @@ public:
     FeaturePool(cv::Size model, int nfeatures);
     ~FeaturePool();
     int size() const { return (int)pool.size(); }
+    float apply(int fi, int si, const Mat& integrals) const;
 
 private:
     void fill(int desired);

@@ -73,7 +73,7 @@ int main(int argc, char** argv)
     for (int y = 0; y < nfeatures; ++y)
         for (int x = 0; x < nsamples; ++x)
             train_data.at<float>(y, x) = rng.uniform(0.f, 1.f);
-
+// +
     int tflag = CV_COL_SAMPLE;
     cv::Mat responses(nsamples, 1, CV_32FC1);
     for (int y = 0; y < nsamples; ++y)
