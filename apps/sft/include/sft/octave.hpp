@@ -102,7 +102,7 @@ private:
 class Octave : cv::Boost
 {
 public:
-    Octave(int npositives, int nnegatives, int logScale, int shrinkage);
+    Octave(cv::Rect boundingBox, int npositives, int nnegatives, int logScale, int shrinkage);
     virtual ~Octave();
 
      virtual bool train(const Dataset& dataset, const FeaturePool& pool);
@@ -114,7 +114,9 @@ protected:
        const cv::Mat& sampleIdx=cv::Mat(), const cv::Mat& varType=cv::Mat(), const cv::Mat& missingDataMask=cv::Mat());
 
     void processPositives(const Dataset& dataset, const FeaturePool& pool);
+    void generateNegatives(const Dataset& dataset);
 private:
+    cv::Rect boundingBox;
 
     int npositives;
     int nnegatives;
