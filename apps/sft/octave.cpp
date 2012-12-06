@@ -147,7 +147,7 @@ void glob(const string& path, svector& ret)
     for(uint i = 0; i < glob_result.gl_pathc; ++i)
     {
         ret.push_back(std::string(glob_result.gl_pathv[i]));
-        // dprintf("%s\n", ret[i].c_str());
+        dprintf("%s\n", ret[i].c_str());
     }
 
     globfree(&glob_result);
@@ -158,12 +158,12 @@ void glob(const string& path, svector& ret)
 // 2. negatives: <train or test path>/octave_<octave number>/neg/*.png
 Dataset::Dataset(const string& path, const int oct)
 {
-    // dprintf("%s\n", "get dataset file names...");
+    dprintf("%s\n", "get dataset file names...");
 
-    // dprintf("%s\n", "Positives globbing...");
+    dprintf("%s\n", "Positives globbing...");
     glob(path + "/pos/octave_" + itoa(oct) + "/*.png", pos);
 
-    // dprintf("%s\n", "Negatives globbing...");
+    dprintf("%s\n", "Negatives globbing...");
     glob(path + "/neg/octave_" + itoa(oct) + "/*.png", neg);
 
     // Check: files not empty

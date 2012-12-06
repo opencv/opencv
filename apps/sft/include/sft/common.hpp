@@ -56,5 +56,15 @@ namespace sft
     typedef std::vector<sft::string>   svector;
 }
 
+// used for noisy printfs
+#define WITH_DEBUG_OUT
+
+#if defined WITH_DEBUG_OUT
+# include <stdio.h>
+# define dprintf(format, ...) \
+            do { printf(format, ##__VA_ARGS__); } while (0)
+#else
+# define dprintf(format, ...)
+#endif
 
 #endif
