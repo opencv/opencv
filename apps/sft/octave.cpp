@@ -54,8 +54,10 @@
 # define show(a, b)
 #endif
 
+#include <glob.h>
+
 // ============ Octave ============ //
-sft::Octave::Octave(){}
+sft::Octave::Octave(int ls) : logScale(ls) {}
 
 sft::Octave::~Octave(){}
 
@@ -121,4 +123,50 @@ void sft::FeaturePool::fill(int desired)
         if (std::find(pool.begin(), pool.end(),f) == pool.end())
             pool.push_back(f);
     }
+}
+
+// ============ Dataset ============ //
+namespace {
+using namespace sft;
+
+string itoa(long i)
+{
+    char s[65];
+    sprintf(s, "%ld", i);
+    return std::string(s);
+}
+
+void glob(const string& path, svector& ret)
+{
+    glob_t glob_result;
+    glob(path.c_str(), GLOB_TILDE, 0, &glob_result);
+
+    ret.clear();
+    ret.reserve(glob_result.gl_pathc);
+
+    for(uint i = 0; i < glob_result.gl_pathc; ++i)
+    {
+        ret.push_back(std::string(glob_result.gl_pathv[i]));
+        // dprintf("%s\n", ret[i].c_str());
+    }
+
+    globfree(&glob_result);
+}
+}
+// in the default case data folders should be alligned as following:
+// 1. positives: <train or test path>/octave_<octave number>/pos/*.png
+// 2. negatives: <train or test path>/octave_<octave number>/neg/*.png
+Dataset::Dataset(const string& path, const int oct)
+{
+    // dprintf("%s\n", "get dataset file names...");
+
+    // dprintf("%s\n", "Positives globbing...");
+    glob(path + "/pos/octave_" + itoa(oct) + "/*.png", pos);
+
+    // dprintf("%s\n", "Negatives globbing...");
+    glob(path + "/neg/octave_" + itoa(oct) + "/*.png", neg);
+
+    // Check: files not empty
+    CV_Assert(pos.size() != size_t(0));
+    CV_Assert(neg.size() != size_t(0));
 }
