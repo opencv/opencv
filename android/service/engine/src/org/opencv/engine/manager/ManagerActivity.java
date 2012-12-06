@@ -173,6 +173,7 @@ public class ManagerActivity extends Activity
         mInstalledPackageView.setOnItemClickListener(new OnItemClickListener() {
 
             public void onItemClick(AdapterView<?> adapter, View view, int position, long id) {
+                //if (!mListViewItems.get((int) id).get("Name").equals("Built-in OpenCV library"));
                 if (!mInstalledPackageInfo[(int) id].packageName.equals("org.opencv.engine"))
                 {
                     mInstalledPackageView.setTag(Integer.valueOf((int)id));
@@ -276,8 +277,12 @@ public class ManagerActivity extends Activity
             mInstalledPackageInfo = mMarket.GetInstalledOpenCVPackages();
             mListViewItems.clear();
 
-            for (int i = 0; i < mInstalledPackageInfo.length; i++)
+            int RealPackageCount = mInstalledPackageInfo.length;
+            for (int i = 0; i < RealPackageCount; i++)
             {
+                if (mInstalledPackageInfo[i] == null)
+                    break;
+
                 // Convert to Items for package list view
                 HashMap<String,String> temp = new HashMap<String,String>();
 
@@ -288,7 +293,6 @@ public class ManagerActivity extends Activity
                 String PublicName = mMarket.GetApplicationName(mInstalledPackageInfo[i].applicationInfo);
                 String PackageName = mInstalledPackageInfo[i].packageName;
                 String VersionName = mInstalledPackageInfo[i].versionName;
-
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.GINGERBREAD)
                     NativeLibDir = mInstalledPackageInfo[i].applicationInfo.nativeLibraryDir;
@@ -306,7 +310,13 @@ public class ManagerActivity extends Activity
                         VersionName = NativeInfo.versionName();
                     }
                     else
+                    {
+                        mInstalledPackageInfo[i] = mInstalledPackageInfo[RealPackageCount-1];
+                        mInstalledPackageInfo[RealPackageCount-1] = null;
+                        RealPackageCount--;
+                        i--;
                         continue;
+                    }
                 }
 
                 int idx = 0;
