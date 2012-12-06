@@ -92,6 +92,8 @@ bool sft::Octave::train( const cv::Mat& trainData, const cv::Mat& _responses, co
         _params.weak_count           = 1;
     }
 
+    std::cout << "WARNING: " << sampleIdx << std::endl;
+
     bool update = false;
     return cv::Boost::train(trainData, CV_COL_SAMPLE, _responses, varIdx, sampleIdx, varType, missingDataMask, _params,
     update);
@@ -104,7 +106,7 @@ class Preprocessor
 public:
     Preprocessor(int shr) : shrinkage(shr) {}
 
-    void apply(const Mat& frame, Mat integrals)
+    void apply(const Mat& frame, Mat& integrals)
     {
         CV_Assert(frame.type() == CV_8UC3);
 
@@ -178,7 +180,7 @@ void sft::Octave::processPositives(const Dataset& dataset, const FeaturePool& po
         dprintf("Process candidate positive image %s\n", curr.c_str());
 
         cv::Mat sample   = cv::imread(curr);
-        cv::Mat channels = integrals.col(total).reshape(0, h + 1);
+        cv::Mat channels = integrals.row(total).reshape(0, h + 1);
         prepocessor.apply(sample, channels);
 
         responses.ptr<float>(total)[0] = 1.f;
@@ -198,6 +200,9 @@ void sft::Octave::generateNegatives(const Dataset& dataset)
     sft::Random::engine eng;
     sft::Random::engine idxEng;
 
+    int w =  64 * pow(2, logScale) /shrinkage;
+    int h = 128 * pow(2, logScale) /shrinkage * 10;
+
     Preprocessor prepocessor(shrinkage);
 
     int nimages = (int)dataset.neg.size();
@@ -215,24 +220,33 @@ void sft::Octave::generateNegatives(const Dataset& dataset)
         Mat frame = cv::imread(dataset.neg[curr]);
         prepocessor.apply(frame, sum);
 
-        int maxW = frame.cols - 2 * boundingBox.x - boundingBox.width;
-        int maxH = frame.rows - 2 * boundingBox.y - boundingBox.height;
+        std::cout << "WARNING: " << frame.cols << " " << frame.rows << std::endl;
+        std::cout << "WARNING: " << frame.cols / shrinkage << " " << frame.rows / shrinkage << std::endl;
 
-        sft::Random::uniform wRand(0, maxW);
-        sft::Random::uniform hRand(0, maxH);
+        int maxW = frame.cols / shrinkage - 2 * boundingBox.x - boundingBox.width;
+        int maxH = frame.rows / shrinkage - 2 * boundingBox.y - boundingBox.height;
+
+        std::cout << "WARNING: " << maxW << " " << maxH << std::endl;
+
+        sft::Random::uniform wRand(0, maxW -1);
+        sft::Random::uniform hRand(0, maxH -1);
 
         int dx = wRand(eng);
         int dy = hRand(eng);
 
-        sum = sum(cv::Rect(dx, dy, boundingBox.width, boundingBox.height));
+        std::cout << "WARNING: " << dx << " " << dy << std::endl;
+        std::cout << "WARNING: " << dx + boundingBox.width + 1 << " " << dy + boundingBox.height + 1 << std::endl;
+        std::cout << "WARNING: " << sum.cols << " " << sum.rows << std::endl;
+
+        sum = sum(cv::Rect(dx, dy, boundingBox.width + 1, boundingBox.height * 10 + 1));
 
         dprintf("generated %d %d\n", dx, dy);
 
-        if (predict(sum))
+        // if (predict(sum))
         {
             responses.ptr<float>(i)[0] = 0.f;
-            sum = sum.reshape(0, 1);
-            sum.copyTo(integrals.col(i));
+            // sum = sum.reshape(0, 1);
+            sum.copyTo(integrals.row(i).reshape(0, h + 1));
             ++i;
         }
     }
@@ -257,7 +271,7 @@ bool sft::Octave::train(const Dataset& dataset, const FeaturePool& pool)
     // 3. only sumple case (all samples used)
     int nsamples = npositives + nnegatives;
     cv::Mat sampleIdx(1, nsamples, CV_32SC1);
-    ptr = varIdx.ptr<int>(0);
+    ptr = sampleIdx.ptr<int>(0);
 
     for (int x = 0; x < nsamples; ++x)
         ptr[x] = x;
@@ -281,7 +295,10 @@ bool sft::Octave::train(const Dataset& dataset, const FeaturePool& pool)
 
     cv::Mat missingMask;
 
-    return train(trainData, responses, varIdx, sampleIdx, varType, missingMask);
+    bool ok = train(trainData, responses, varIdx, sampleIdx, varType, missingMask);
+    if (!ok)
+        std::cout << "ERROR:tree couldnot be trained" << std::endl;
+    return ok;
 
 }
 
