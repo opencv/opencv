@@ -48,6 +48,9 @@
 namespace sft
 {
     using cv::Mat;
+    struct ICF;
+    typedef std::vector<ICF>   Icfvector;
+
 }
 
 #endif

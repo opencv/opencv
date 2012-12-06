@@ -44,18 +44,63 @@
 #define __SFT_OCTAVE_HPP__
 
 #include <opencv2/ml/ml.hpp>
+#include <sft/common.hpp>
 
 namespace sft
 {
 
+struct ICF
+{
+    ICF(int x, int y, int w, int h, int ch) : bb(cv::Rect(x, y, w, h)), channel(ch) {}
+
+    bool operator ==(ICF b)
+    {
+        return bb == b.bb && channel == b.channel;
+    }
+
+    bool operator !=(ICF b)
+    {
+        return bb != b.bb || channel != b.channel;
+    }
+
+private:
+    cv::Rect bb;
+    int channel;
+};
+
+class FeaturePool
+{
+public:
+    FeaturePool(cv::Size model, int nfeatures);
+    ~FeaturePool();
+private:
+    void fill(int desired);
+
+    cv::Size model;
+    int nfeatures;
+
+    Mat integrals;
+    Mat responces;
+
+    Icfvector pool;
+
+    static const unsigned int seed = 0;
+
+    enum { N_CHANNELS = 10 };
+};
+
 // used for traning single octave scale
-class Octave : public cv::Boost
+class Octave : cv::Boost
 {
 public:
     Octave();
-    ~Octave();
+    virtual ~Octave();
+
+    virtual bool train( const cv::Mat& trainData, const cv::Mat& responses, const cv::Mat& varIdx=cv::Mat(),
+       const cv::Mat& sampleIdx=cv::Mat(), const cv::Mat& varType=cv::Mat(), const cv::Mat& missingDataMask=cv::Mat());
 
 private:
+    CvBoostParams params;
 };
 
 }
