@@ -58,8 +58,8 @@
 #include <opencv2/highgui/highgui.hpp>
 
 // ============ Octave ============ //
-sft::Octave::Octave(int np, int nn, int ls, int shr)
-: logScale(ls), npositives(np), nnegatives(nn), shrinkage(shr)
+sft::Octave::Octave(cv::Rect bb, int np, int nn, int ls, int shr)
+: logScale(ls), boundingBox(bb), npositives(np), nnegatives(nn), shrinkage(shr)
 {
     int maxSample = npositives + nnegatives;
     responses.create(maxSample, 1, CV_32FC1);
@@ -137,41 +137,93 @@ public:
 }
 
 // ToDo: parallelize it
+// ToDo: sunch model size and shrinced model size usage/ Now model size mean already shrinked model
 void sft::Octave::processPositives(const Dataset& dataset, const FeaturePool& pool)
 {
     Preprocessor prepocessor(shrinkage);
 
-    int cols = (64 * pow(2, logScale) + 1) * (128 * pow(2, logScale) + 1);
-    integrals.create(pool.size(), cols, CV_32SC1);
+    int w =  64 * pow(2, logScale) /shrinkage;
+    int h = 128 * pow(2, logScale) /shrinkage * 10;
+
+    integrals.create(pool.size(), (w + 1) * (h + 1), CV_32SC1);
 
     int total = 0;
 
-    // float* responce = responce.ptr<float>(0);
     for (svector::const_iterator it = dataset.pos.begin(); it != dataset.pos.end(); ++it)
     {
         const string& curr = *it;
 
         dprintf("Process candidate positive image %s\n", curr.c_str());
 
-        cv::Mat channels = integrals.col(total).reshape(0, (128 * pow(2, logScale) + 1));
-
-        cv::Mat sample = cv::imread(curr);
+        cv::Mat sample   = cv::imread(curr);
+        cv::Mat channels = integrals.col(total).reshape(0, h + 1);
         prepocessor.apply(sample, channels);
+
         responses.ptr<float>(total)[0] = 1.f;
 
-        ++total;
-        if (total >= npositives) break;
+        if (++total >= npositives) break;
     }
 
     dprintf("Processing positives finished:\n\trequested %d positives, collected %d samples.\n", npositives, total);
 
-    npositives = total;
-    nnegatives *= total / (float)npositives;
+    npositives  = total;
+    nnegatives = cvRound(nnegatives * total / (double)npositives);
+}
+
+void sft::Octave::generateNegatives(const Dataset& dataset)
+{
+    // ToDo: set seed, use offsets
+    sft::Random::engine eng;
+    sft::Random::engine idxEng;
+
+    Preprocessor prepocessor(shrinkage);
+
+    int nimages = (int)dataset.neg.size();
+    sft::Random::uniform iRand(0, nimages - 1);
+
+    int total = 0;
+    Mat sum;
+    for (int i = npositives; i < nnegatives + npositives; ++total)
+    {
+        int curr = iRand(idxEng);
+
+        dprintf("View %d-th sample\n", curr);
+        dprintf("Process %s\n", dataset.neg[curr].c_str());
+
+        Mat frame = cv::imread(dataset.neg[curr]);
+        prepocessor.apply(frame, sum);
+
+        int maxW = frame.cols - 2 * boundingBox.x - boundingBox.width;
+        int maxH = frame.rows - 2 * boundingBox.y - boundingBox.height;
+
+        sft::Random::uniform wRand(0, maxW);
+        sft::Random::uniform hRand(0, maxH);
+
+        int dx = wRand(eng);
+        int dy = hRand(eng);
+
+        sum = sum(cv::Rect(dx, dy, boundingBox.width, boundingBox.height));
+
+        dprintf("generated %d %d\n", dx, dy);
+
+        if (predict(sum))
+        {
+            responses.ptr<float>(i)[0] = 0.f;
+            sum = sum.reshape(0, 1);
+            sum.copyTo(integrals.col(i));
+            ++i;
+        }
+    }
+
+    dprintf("Processing negatives finished:\n\trequested %d negatives, viewed %d samples.\n", nnegatives, total);
 }
 
 bool sft::Octave::train(const Dataset& dataset, const FeaturePool& pool)
 {
     // 1. fill integrals and classes
+    processPositives(dataset, pool);
+    generateNegatives(dataset);
+
     return false;
 
 }

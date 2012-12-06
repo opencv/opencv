@@ -59,7 +59,8 @@ int main(int argc, char** argv)
     cv::Size model(64, 128);
     std::string path = "/home/kellan/cuda-dev/opencv_extra/testdata/sctrain/rescaled-train-2012-10-27-19-02-52";
 
-    sft::Octave boost(npositives, nnegatives, octave, shrinkage);
+    cv::Rect boundingBox(5, 5 ,16, 32);
+    sft::Octave boost(boundingBox, npositives, nnegatives, octave, shrinkage);
 
     sft::FeaturePool pool(model, nfeatures);
     sft::Dataset dataset(path, boost.logScale);
