@@ -52,63 +52,65 @@ int main(int argc, char** argv)
     int npositives = 10;
     int nnegatives = 10;
     int nsamples = npositives + nnegatives;
+    cv::Size model(64, 128);
 
     sft::Octave boost;
     cv::Mat train_data(nfeatures, nsamples, CV_32FC1);
 
-    // cv::RNG rng;
+    sft::FeaturePool pool(model, nfeatures);
 
-    // for (int y = 0; y < nfeatures; ++y)
-    //     for (int x = 0; x < nsamples; ++x)
-    //         train_data.at<float>(y, x) = rng.uniform(0.f, 1.f);
+    cv::RNG rng;
 
-    // int tflag = CV_COL_SAMPLE;
-    // Mat responses(nsamples, 1, CV_32FC1);
-    // for (int y = 0; y < nsamples; ++y)
-    //     responses.at<float>(y, 0) = (y < npositives) ? 1.f : 0.f;
+    for (int y = 0; y < nfeatures; ++y)
+        for (int x = 0; x < nsamples; ++x)
+            train_data.at<float>(y, x) = rng.uniform(0.f, 1.f);
+
+    int tflag = CV_COL_SAMPLE;
+    cv::Mat responses(nsamples, 1, CV_32FC1);
+    for (int y = 0; y < nsamples; ++y)
+        responses.at<float>(y, 0) = (y < npositives) ? 1.f : 0.f;
 
 
-    // Mat var_idx(1, nfeatures, CV_32SC1);
-    // for (int x = 0; x < nfeatures; ++x)
-    //     var_idx.at<int>(0, x) = x;
+    cv::Mat var_idx(1, nfeatures, CV_32SC1);
+    for (int x = 0; x < nfeatures; ++x)
+        var_idx.at<int>(0, x) = x;
 
-    // // Mat sample_idx;
-    // Mat sample_idx(1, nsamples, CV_32SC1);
-    // for (int x = 0; x < nsamples; ++x)
-    //     sample_idx.at<int>(0, x) = x;
+    // Mat sample_idx;
+    cv::Mat sample_idx(1, nsamples, CV_32SC1);
+    for (int x = 0; x < nsamples; ++x)
+        sample_idx.at<int>(0, x) = x;
 
-    // Mat var_type(1, nfeatures + 1, CV_8UC1);
-    // for (int x = 0; x < nfeatures; ++x)
-    //     var_type.at<uchar>(0, x) = CV_VAR_ORDERED;
+    cv::Mat var_type(1, nfeatures + 1, CV_8UC1);
+    for (int x = 0; x < nfeatures; ++x)
+        var_type.at<uchar>(0, x) = CV_VAR_ORDERED;
 
-    // var_type.at<uchar>(0, nfeatures) = CV_VAR_CATEGORICAL;
+    var_type.at<uchar>(0, nfeatures) = CV_VAR_CATEGORICAL;
 
-    // Mat missing_mask;
+    cv::Mat missing_mask;
 
-    // CvBoostParams params;
-    // {
-    //     params.max_categories       = 10;
-    //     params.max_depth            = 2;
-    //     params.min_sample_count     = 2;
-    //     params.cv_folds             = 0;
-    //     params.truncate_pruned_tree = false;
+    CvBoostParams params;
+    {
+        params.max_categories       = 10;
+        params.max_depth            = 2;
+        params.min_sample_count     = 2;
+        params.cv_folds             = 0;
+        params.truncate_pruned_tree = false;
 
-    //     /// ??????????????????
-    //     params.regression_accuracy = 0.01;
-    //     params.use_surrogates      = false;
-    //     params.use_1se_rule        = false;
+        /// ??????????????????
+        params.regression_accuracy = 0.01;
+        params.use_surrogates      = false;
+        params.use_1se_rule        = false;
 
-    //     ///////// boost params
-    //     params.boost_type       = CvBoost::GENTLE;
-    //     params.weak_count       = 1;
-    //     params.split_criteria   = CvBoost::SQERR;
-    //     params.weight_trim_rate = 0.95;
-    // }
+        ///////// boost params
+        params.boost_type       = CvBoost::GENTLE;
+        params.weak_count       = 1;
+        params.split_criteria   = CvBoost::SQERR;
+        params.weight_trim_rate = 0.95;
+    }
 
-    // bool update = false;
+    bool update = false;
 
-    // boost.train(train_data, tflag, responses,
-    //     var_idx, sample_idx, var_type, missing_mask, params, update);
+    boost.train(train_data, responses, var_idx, sample_idx, var_type, missing_mask);
 
     // CvFileStorage* fs = cvOpenFileStorage( "/home/kellan/train_res.xml", 0, CV_STORAGE_WRITE );
     // boost.write(fs, "test_res");
