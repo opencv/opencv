@@ -1484,6 +1484,7 @@ namespace
     {
         using namespace canny;
 
+        buf.map.setTo(Scalar::all(0));
         calcMap(dx, dy, buf.mag, buf.map, low_thresh, high_thresh);
 
         edgesHysteresisLocal(buf.map, buf.st1.ptr<ushort2>());

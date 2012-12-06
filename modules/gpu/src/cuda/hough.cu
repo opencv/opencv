@@ -292,6 +292,108 @@ namespace cv { namespace gpu { namespace device
         }
 
         ////////////////////////////////////////////////////////////////////////
+        // houghLinesProbabilistic
+
+        texture<uchar, cudaTextureType2D, cudaReadModeElementType> tex_mask(false, cudaFilterModePoint, cudaAddressModeClamp);
+
+        __global__ void houghLinesProbabilistic(const PtrStepSzi Dx, const PtrStepi Dy,
+                                                int4* out, const int maxSize,
+                                                const int lineGap, const int lineLength)
+        {
+            const int SHIFT = 10;
+
+            const int x = blockIdx.x * blockDim.x + threadIdx.x;
+            const int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+            if (x >= Dx.cols || y >= Dx.rows || tex2D(tex_mask, x, y) == 0)
+                return;
+
+            const int dx = Dx(y, x);
+            const int dy = Dy(y, x);
+
+            if (dx == 0 && dy == 0)
+                return;
+
+            const int vx = dy;
+            const int vy = -dx;
+
+            const float mag = ::sqrtf(vx * vx + vy * vy);
+
+            const int x0 = x << SHIFT;
+            const int y0 = y << SHIFT;
+
+            int sx = __float2int_rn((vx << SHIFT) / mag);
+            int sy = __float2int_rn((vy << SHIFT) / mag);
+
+            int2 line_end[2] = {make_int2(x,y), make_int2(x,y)};
+
+            for (int k = 0; k < 2; ++k)
+            {
+                int gap = 0;
+                int x1 = x0 + sx;
+                int y1 = y0 + sy;
+
+                for (;; x1 += sx, y1 += sy)
+                {
+                    const int x2 = x1 >> SHIFT;
+                    const int y2 = y1 >> SHIFT;
+
+                    if (x2 < 0 || x2 >= Dx.cols || y2 < 0 || y2 >= Dx.rows)
+                        break;
+
+                    if (tex2D(tex_mask, x2, y2))
+                    {
+                        gap = 0;
+                        line_end[k].x = x2;
+                        line_end[k].y = y2;
+                    }
+                    else if(++gap > lineGap)
+                        break;
+                }
+
+                sx = -sx;
+                sy = -sy;
+            }
+
+            const bool good_line = ::abs(line_end[1].x - line_end[0].x) >= lineLength ||
+                                   ::abs(line_end[1].y - line_end[0].y) >= lineLength;
+
+            if (good_line)
+            {
+                const int ind = ::atomicAdd(&g_counter, 1);
+                if (ind < maxSize)
+                    out[ind] = make_int4(line_end[0].x, line_end[0].y, line_end[1].x, line_end[1].y);
+            }
+        }
+
+        int houghLinesProbabilistic_gpu(PtrStepSzb mask, PtrStepSzi Dx, PtrStepSzi Dy,
+                                        int4* out, int maxSize,
+                                        int lineGap, int lineLength)
+        {
+            void* counterPtr;
+            cudaSafeCall( cudaGetSymbolAddress(&counterPtr, g_counter) );
+
+            cudaSafeCall( cudaMemset(counterPtr, 0, sizeof(int)) );
+
+            const dim3 block(32, 8);
+            const dim3 grid(divUp(mask.cols, block.x), divUp(mask.rows, block.y));
+
+            bindTexture(&tex_mask, mask);
+
+            houghLinesProbabilistic<<<grid, block>>>(Dx, Dy, out, maxSize, lineGap, lineLength);
+            cudaSafeCall( cudaGetLastError() );
+
+            cudaSafeCall( cudaDeviceSynchronize() );
+
+            int totalCount;
+            cudaSafeCall( cudaMemcpy(&totalCount, counterPtr, sizeof(int), cudaMemcpyDeviceToHost) );
+
+            totalCount = ::min(totalCount, maxSize);
+
+            return totalCount;
+        }
+
+        ////////////////////////////////////////////////////////////////////////
         // circlesAccumCenters
 
         __global__ void circlesAccumCenters(const unsigned int* list, const int count, const PtrStepi dx, const PtrStepi dy,

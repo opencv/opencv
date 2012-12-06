@@ -177,7 +177,7 @@ namespace
         const int x = blockIdx.x * blockDim.x + threadIdx.x;
         const int y = blockIdx.y * blockDim.y + threadIdx.y;
 
-        if (x >= dx.cols || y >= dx.rows)
+        if (x == 0 || x >= dx.cols - 1 || y == 0 || y >= dx.rows - 1)
             return;
 
         int dxVal = dx(y, x);
@@ -378,7 +378,7 @@ namespace
             pos.x += c_dx[threadIdx.x];
             pos.y += c_dy[threadIdx.x];
 
-            if (pos.x > 0 && pos.x <= map.cols && pos.y > 0 && pos.y <= map.rows && map(pos.y, pos.x) == 1)
+            if (pos.x > 0 && pos.x < map.cols && pos.y > 0 && pos.y < map.rows && map(pos.y, pos.x) == 1)
             {
                 map(pos.y, pos.x) = 2;
 
@@ -410,7 +410,7 @@ namespace
                 pos.x += c_dx[threadIdx.x & 7];
                 pos.y += c_dy[threadIdx.x & 7];
 
-                if (pos.x > 0 && pos.x <= map.cols && pos.y > 0 && pos.y <= map.rows && map(pos.y, pos.x) == 1)
+                if (pos.x > 0 && pos.x < map.cols && pos.y > 0 && pos.y < map.rows && map(pos.y, pos.x) == 1)
                 {
                     map(pos.y, pos.x) = 2;
 

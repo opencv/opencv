@@ -52,6 +52,8 @@ void cv::gpu::HoughLines(const GpuMat&, GpuMat&, float, float, int, bool, int) {
 void cv::gpu::HoughLines(const GpuMat&, GpuMat&, HoughLinesBuf&, float, float, int, bool, int) { throw_nogpu(); }
 void cv::gpu::HoughLinesDownload(const GpuMat&, OutputArray, OutputArray) { throw_nogpu(); }
 
+void cv::gpu::HoughLinesP(const GpuMat&, GpuMat&, CannyBuf&, int, int, int) { throw_nogpu(); }
+
 void cv::gpu::HoughCircles(const GpuMat&, GpuMat&, int, float, float, int, int, int, int, int) { throw_nogpu(); }
 void cv::gpu::HoughCircles(const GpuMat&, GpuMat&, HoughCirclesBuf&, int, float, float, int, int, int, int, int) { throw_nogpu(); }
 void cv::gpu::HoughCirclesDownload(const GpuMat&, OutputArray) { throw_nogpu(); }
@@ -153,6 +155,42 @@ void cv::gpu::HoughLinesDownload(const GpuMat& d_lines, OutputArray h_lines_, Ou
         GpuMat d_votes(1, d_lines.cols, CV_32SC1, const_cast<int*>(d_lines.ptr<int>(1)));
         d_votes.download(h_votes);
     }
+}
+
+//////////////////////////////////////////////////////////
+// HoughLinesP
+
+namespace cv { namespace gpu { namespace device
+{
+    namespace hough
+    {
+        int houghLinesProbabilistic_gpu(PtrStepSzb mask, PtrStepSzi Dx, PtrStepSzi Dy,
+                                        int4* out, int maxSize,
+                                        int lineGap, int lineLength);
+    }
+}}}
+
+void cv::gpu::HoughLinesP(const GpuMat& image, GpuMat& lines, CannyBuf& cannyBuf, int minLineLength, int maxLineGap, int maxLines)
+{
+    using namespace cv::gpu::device::hough;
+
+    CV_Assert( image.type() == CV_8UC1 );
+    CV_Assert( image.cols < std::numeric_limits<unsigned short>::max() );
+    CV_Assert( image.rows < std::numeric_limits<unsigned short>::max() );
+
+    GpuMat mask;
+    Canny(image, cannyBuf, mask, 50, 100);
+
+    ensureSizeIsEnough(1, maxLines, CV_32SC4, lines);
+
+    int linesCount = houghLinesProbabilistic_gpu(mask, cannyBuf.dx, cannyBuf.dy,
+                                                 lines.ptr<int4>(), maxLines,
+                                                 maxLineGap, minLineLength);
+
+    if (linesCount > 0)
+        lines.cols = linesCount;
+    else
+        lines.release();
 }
 
 //////////////////////////////////////////////////////////
