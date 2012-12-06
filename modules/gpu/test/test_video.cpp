@@ -445,6 +445,60 @@ INSTANTIATE_TEST_CASE_P(GPU_Video, OpticalFlowDual_TVL1, testing::Combine(
     WHOLE_SUBMAT));
 
 //////////////////////////////////////////////////////
+// OpticalFlowBM
+
+void calcOpticalFlowBM(const cv::Mat& prev, const cv::Mat& curr,
+                       cv::Size bSize, cv::Size shiftSize, cv::Size maxRange, int usePrevious,
+                       cv::Mat& velx, cv::Mat& vely)
+{
+    cv::Size sz((curr.cols - bSize.width + shiftSize.width)/shiftSize.width, (curr.rows - bSize.height + shiftSize.height)/shiftSize.height);
+
+    velx.create(sz, CV_32FC1);
+    vely.create(sz, CV_32FC1);
+
+    CvMat cvprev = prev;
+    CvMat cvcurr = curr;
+
+    CvMat cvvelx = velx;
+    CvMat cvvely = vely;
+
+    cvCalcOpticalFlowBM(&cvprev, &cvcurr, bSize, shiftSize, maxRange, usePrevious, &cvvelx, &cvvely);
+}
+
+struct OpticalFlowBM : testing::TestWithParam<cv::gpu::DeviceInfo>
+{
+};
+
+TEST_P(OpticalFlowBM, Accuracy)
+{
+    cv::gpu::DeviceInfo devInfo = GetParam();
+    cv::gpu::setDevice(devInfo.deviceID());
+
+    cv::Mat frame0 = readImage("opticalflow/rubberwhale1.png", cv::IMREAD_GRAYSCALE);
+    ASSERT_FALSE(frame0.empty());
+
+    cv::Mat frame1 = readImage("opticalflow/rubberwhale2.png", cv::IMREAD_GRAYSCALE);
+    ASSERT_FALSE(frame1.empty());
+
+    cv::Size block_size(16, 16);
+    cv::Size shift_size(1, 1);
+    cv::Size max_range(16, 16);
+
+    cv::gpu::GpuMat d_velx, d_vely, buf;
+    cv::gpu::calcOpticalFlowBM(loadMat(frame0), loadMat(frame1),
+                               block_size, shift_size, max_range, false,
+                               d_velx, d_vely, buf);
+
+    cv::Mat velx, vely;
+    calcOpticalFlowBM(frame0, frame1, block_size, shift_size, max_range, false, velx, vely);
+
+    EXPECT_MAT_NEAR(velx, d_velx, 0);
+    EXPECT_MAT_NEAR(vely, d_vely, 0);
+}
+
+INSTANTIATE_TEST_CASE_P(GPU_Video, OpticalFlowBM, ALL_DEVICES);
+
+//////////////////////////////////////////////////////
 // FGDStatModel
 
 namespace cv

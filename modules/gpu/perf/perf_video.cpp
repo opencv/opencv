@@ -445,6 +445,74 @@ PERF_TEST_P(ImagePair, Video_OpticalFlowDual_TVL1,
 }
 
 //////////////////////////////////////////////////////
+// OpticalFlowBM
+
+void calcOpticalFlowBM(const cv::Mat& prev, const cv::Mat& curr,
+                       cv::Size bSize, cv::Size shiftSize, cv::Size maxRange, int usePrevious,
+                       cv::Mat& velx, cv::Mat& vely)
+{
+    cv::Size sz((curr.cols - bSize.width + shiftSize.width)/shiftSize.width, (curr.rows - bSize.height + shiftSize.height)/shiftSize.height);
+
+    velx.create(sz, CV_32FC1);
+    vely.create(sz, CV_32FC1);
+
+    CvMat cvprev = prev;
+    CvMat cvcurr = curr;
+
+    CvMat cvvelx = velx;
+    CvMat cvvely = vely;
+
+    cvCalcOpticalFlowBM(&cvprev, &cvcurr, bSize, shiftSize, maxRange, usePrevious, &cvvelx, &cvvely);
+}
+
+PERF_TEST_P(ImagePair, Video_OpticalFlowBM,
+    Values<pair_string>(make_pair("gpu/opticalflow/frame0.png", "gpu/opticalflow/frame1.png")))
+{
+    declare.time(400);
+
+    cv::Mat frame0 = readImage(GetParam().first, cv::IMREAD_GRAYSCALE);
+    ASSERT_FALSE(frame0.empty());
+
+    cv::Mat frame1 = readImage(GetParam().second, cv::IMREAD_GRAYSCALE);
+    ASSERT_FALSE(frame1.empty());
+
+    cv::Size block_size(16, 16);
+    cv::Size shift_size(1, 1);
+    cv::Size max_range(16, 16);
+
+    if (PERF_RUN_GPU())
+    {
+        cv::gpu::GpuMat d_frame0(frame0);
+        cv::gpu::GpuMat d_frame1(frame1);
+        cv::gpu::GpuMat d_velx, d_vely, buf;
+
+        cv::gpu::calcOpticalFlowBM(d_frame0, d_frame1, block_size, shift_size, max_range, false, d_velx, d_vely, buf);
+
+        TEST_CYCLE()
+        {
+            cv::gpu::calcOpticalFlowBM(d_frame0, d_frame1, block_size, shift_size, max_range, false, d_velx, d_vely, buf);
+        }
+
+        GPU_SANITY_CHECK(d_velx);
+        GPU_SANITY_CHECK(d_vely);
+    }
+    else
+    {
+        cv::Mat velx, vely;
+
+        calcOpticalFlowBM(frame0, frame1, block_size, shift_size, max_range, false, velx, vely);
+
+        TEST_CYCLE()
+        {
+            calcOpticalFlowBM(frame0, frame1, block_size, shift_size, max_range, false, velx, vely);
+        }
+
+        CPU_SANITY_CHECK(velx);
+        CPU_SANITY_CHECK(vely);
+    }
+}
+
+//////////////////////////////////////////////////////
 // FGDStatModel
 
 DEF_PARAM_TEST_1(Video, string);

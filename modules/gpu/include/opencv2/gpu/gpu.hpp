@@ -2097,6 +2097,13 @@ private:
 };
 
 
+//! Calculates optical flow for 2 images using block matching algorithm */
+CV_EXPORTS void calcOpticalFlowBM(const GpuMat& prev, const GpuMat& curr,
+                                  Size block_size, Size shift_size, Size max_range, bool use_previous,
+                                  GpuMat& velx, GpuMat& vely, GpuMat& buf,
+                                  Stream& stream = Stream::Null());
+
+
 //! Interpolate frames (images) using provided optical flow (displacement field).
 //! frame0   - frame 0 (32-bit floating point images, single channel)
 //! frame1   - frame 1 (the same type and size)
