@@ -148,10 +148,12 @@ enum { EMOD_PropWnd, EMOD_Zoom, EMOD_Panning, EMOD_SaveImg,
 CVAPI(int)  cvGetCommand( const char* WndName, char* cmd );
 CVAPI(int)  cvGetButtonBarContent(const char * WndName, int idx, char * txt );
 CVAPI(int)  cvSetButtonBarContent(const char * WndName, int etype, int idx, char * txt );
-CVAPI(void) cvDispInfoBox_Qt( const char* WndName, char* caption, const char * csTxt ); 
+CVAPI(int)  cvSetMapContent(const char * WndName, const char * varname, char * txt );
+
+CVAPI(void) cvDispInfoBox_QT( const char* WndName, char* caption, const char * csTxt );
 
 /* adjust window in relation to screen resolution; all int values as percentage */
-CVAPI(void) cvAdjustWindowPos_Qt( const char * name, int xp, int xwp, int yp, int yhp );
+CVAPI(void) cvAdjustWindowPos_QT( const char * name, int xp, int xwp, int yp, int yhp );
 // ---------------------
 
 
@@ -236,6 +238,7 @@ enum
     CV_IMWRITE_JPEG_QUALITY =1,
     CV_IMWRITE_PNG_COMPRESSION =16,
     CV_IMWRITE_PNG_STRATEGY =17,
+    CV_IMWRITE_PNG_BILEVEL =18,
     CV_IMWRITE_PNG_STRATEGY_DEFAULT =0,
     CV_IMWRITE_PNG_STRATEGY_FILTERED =1,
     CV_IMWRITE_PNG_STRATEGY_HUFFMAN_ONLY =2,
@@ -325,7 +328,10 @@ enum
 
     CV_CAP_XIAPI    =1100,   // XIMEA Camera API
 
-    CV_CAP_AVFOUNDATION = 1200  // AVFoundation framework for iOS (OS X Lion will have the same API)
+    CV_CAP_AVFOUNDATION = 1200,  // AVFoundation framework for iOS (OS X Lion will have the same API)
+
+    CV_CAP_GIGANETIX = 1300  // Smartek Giganetix GigEVisionSDK
+    
 };
 
 /* start capturing frames from camera: index = camera_index + domain_offset (CV_CAP_*) */
@@ -472,6 +478,16 @@ enum
     CV_CAP_PROP_IOS_DEVICE_FLASH = 9003,
     CV_CAP_PROP_IOS_DEVICE_WHITEBALANCE = 9004,
     CV_CAP_PROP_IOS_DEVICE_TORCH = 9005
+    
+    // Properties of cameras available through Smartek Giganetix Ethernet Vision interface
+    /* --- Vladimir Litvinenko (litvinenko.vladimir@gmail.com) --- */
+    ,CV_CAP_PROP_GIGA_FRAME_OFFSET_X = 10001,
+    CV_CAP_PROP_GIGA_FRAME_OFFSET_Y = 10002,
+    CV_CAP_PROP_GIGA_FRAME_WIDTH_MAX = 10003,
+    CV_CAP_PROP_GIGA_FRAME_HEIGH_MAX = 10004,
+    CV_CAP_PROP_GIGA_FRAME_SENS_WIDTH = 10005,
+    CV_CAP_PROP_GIGA_FRAME_SENS_HEIGH = 10006
+
 };
 
 enum
@@ -493,7 +509,9 @@ enum
 {
     CV_CAP_OPENNI_VGA_30HZ     = 0,
     CV_CAP_OPENNI_SXGA_15HZ    = 1,
-    CV_CAP_OPENNI_SXGA_30HZ    = 2
+    CV_CAP_OPENNI_SXGA_30HZ    = 2,
+    CV_CAP_OPENNI_QVGA_30HZ    = 3,
+    CV_CAP_OPENNI_QVGA_60HZ    = 4
 };
 
 //supported by Android camera output formats
@@ -508,7 +526,8 @@ enum
 };
 
 // supported Android camera flash modes
-enum {
+enum 
+{
     CV_CAP_ANDROID_FLASH_MODE_AUTO = 0,
     CV_CAP_ANDROID_FLASH_MODE_OFF,
     CV_CAP_ANDROID_FLASH_MODE_ON,
@@ -517,7 +536,8 @@ enum {
 };
 
 // supported Android camera focus modes
-enum {
+enum 
+{
     CV_CAP_ANDROID_FOCUS_MODE_AUTO = 0,
     CV_CAP_ANDROID_FOCUS_MODE_CONTINUOUS_VIDEO,
     CV_CAP_ANDROID_FOCUS_MODE_EDOF,
@@ -527,7 +547,8 @@ enum {
 };
 
 // supported Android camera white balance modes
-enum {
+enum 
+{
     CV_CAP_ANDROID_WHITE_BALANCE_AUTO = 0,
     CV_CAP_ANDROID_WHITE_BALANCE_CLOUDY_DAYLIGHT,
     CV_CAP_ANDROID_WHITE_BALANCE_DAYLIGHT,
@@ -539,7 +560,8 @@ enum {
 };
 
 // supported Android camera antibanding modes
-enum {
+enum 
+{
     CV_CAP_ANDROID_ANTIBANDING_50HZ = 0,
     CV_CAP_ANDROID_ANTIBANDING_60HZ,
     CV_CAP_ANDROID_ANTIBANDING_AUTO,
