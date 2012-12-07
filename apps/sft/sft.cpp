@@ -106,46 +106,33 @@ int main(int argc, char** argv)
     // 3. Train all octaves
     for (ivector::const_iterator it = cfg.octaves.begin(); it != cfg.octaves.end(); ++it)
     {
+        // a. create rangom feature pool
         int nfeatures  = cfg.poolSize;
+        cv::Size model = cfg.model(it);
+        std::cout << "Model " << model << std::endl;
+        sft::FeaturePool pool(model, nfeatures);
+        nfeatures = pool.size();
+
+
         int npositives = cfg.positives;
         int nnegatives = cfg.negatives;
-
         int shrinkage  = cfg.shrinkage;
-        int octave = *it;
+        cv::Rect boundingBox = cfg.bbox(it);
+        std::cout << "Object bounding box" << boundingBox << std::endl;
 
-        cv::Size model = cv::Size(cfg.modelWinSize.width / cfg.shrinkage, cfg.modelWinSize.height / cfg.shrinkage );
+        sft::Octave boost(boundingBox, npositives, nnegatives, *it, shrinkage);
+
         std::string path = cfg.trainPath;
-
-        cv::Rect boundingBox(cfg.offset.x / cfg.shrinkage, cfg.offset.y / cfg.shrinkage,
-            cfg.modelWinSize.width / cfg.shrinkage, cfg.modelWinSize.height / cfg.shrinkage);
-
-        sft::Octave boost(boundingBox, npositives, nnegatives, octave, shrinkage);
-
-        sft::FeaturePool pool(model, nfeatures);
         sft::Dataset dataset(path, boost.logScale);
 
-        if (boost.train(dataset, pool))
+        if (boost.train(dataset, pool, cfg.weaks, cfg.treeDepth))
         {
-        }
-        std::cout << "Octave " << octave << " was successfully trained..." << std::endl;
-    //     // d. crain octave
-    //     if (octave.train(pool, cfg.positives, cfg.negatives, cfg.weaks))
-    //     {
+            std::cout << "Octave " << *it << " was successfully trained..." << std::endl;
     //         strong.push_back(octave);
-    //     }
+        }
     }
 
     // fso << "]" << "}";
-
-//     // 3. create Soft Cascade
-//     // sft::SCascade cascade(cfg.modelWinSize, cfg.octs, cfg.shrinkage);
-
-//     // // 4. Generate feature pool
-//     // std::vector<sft::ICF> pool;
-//     // sft::fillPool(pool, cfg.poolSize, cfg.modelWinSize / cfg.shrinkage, cfg.seed);
-
-//     // // 5. Train all octaves
-//     // cascade.train(cfg.trainPath);
 
 //     // // 6. Set thresolds
 //     // cascade.prune();

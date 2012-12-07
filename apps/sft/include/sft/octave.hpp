@@ -76,12 +76,14 @@ struct ICF
 
     float operator() (const Mat& integrals, const cv::Size& model) const
     {
-        const int* ptr = integrals.ptr<int>(0) + (model.height * channel + bb.y) * model.width + bb.x;
+        int step = model.width + 1;
+
+        const int* ptr = integrals.ptr<int>(0) + (model.height * channel + bb.y) * step + bb.x;
 
         int a = ptr[0];
         int b = ptr[bb.width];
 
-        ptr += bb.height * model.width;
+        ptr += bb.height * step;
 
         int c = ptr[bb.width];
         int d = ptr[0];
@@ -92,13 +94,17 @@ struct ICF
 private:
     cv::Rect bb;
     int channel;
+
+    friend std::ostream& operator<<(std::ostream& out, const ICF& m);
 };
+
+std::ostream& operator<<(std::ostream& out, const ICF& m);
 
 class FeaturePool
 {
 public:
     FeaturePool(cv::Size model, int nfeatures);
-    ~FeaturePool();
+
     int size() const { return (int)pool.size(); }
     float apply(int fi, int si, const Mat& integrals) const;
 
@@ -122,7 +128,7 @@ public:
     Octave(cv::Rect boundingBox, int npositives, int nnegatives, int logScale, int shrinkage);
     virtual ~Octave();
 
-     virtual bool train(const Dataset& dataset, const FeaturePool& pool);
+     virtual bool train(const Dataset& dataset, const FeaturePool& pool, int weaks, int treeDepth);
 
     int logScale;
 
@@ -144,7 +150,6 @@ private:
     Mat responses;
 
     CvBoostParams params;
-
 };
 
 }
