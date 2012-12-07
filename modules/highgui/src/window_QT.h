@@ -91,16 +91,16 @@ enum { CV_MODE_NORMAL = 0, CV_MODE_OPENGL = 1 };
 
 //we can change the keyboard shortcuts from here !
 enum {	shortcut_zoom_normal 	= Qt::CTRL + Qt::Key_Z,
-		shortcut_zoom_imgRegion = Qt::CTRL + Qt::Key_X,
-		shortcut_save_img		= Qt::CTRL + Qt::Key_S,
-		shortcut_properties_win	= Qt::CTRL + Qt::Key_P,
-		shortcut_zoom_in 		= Qt::CTRL + Qt::Key_Plus,//QKeySequence(QKeySequence::ZoomIn),
-		shortcut_zoom_out		= Qt::CTRL + Qt::Key_Minus,//QKeySequence(QKeySequence::ZoomOut),
-		shortcut_panning_left 	= Qt::CTRL + Qt::Key_Left,
-		shortcut_panning_right 	= Qt::CTRL + Qt::Key_Right,
-		shortcut_panning_up 	= Qt::CTRL + Qt::Key_Up,
-		shortcut_panning_down 	= Qt::CTRL + Qt::Key_Down
-	};
+        shortcut_zoom_imgRegion = Qt::CTRL + Qt::Key_X,
+        shortcut_save_img		= Qt::CTRL + Qt::Key_S,
+        shortcut_properties_win	= Qt::CTRL + Qt::Key_P,
+        shortcut_zoom_in 		= Qt::CTRL + Qt::Key_Plus,//QKeySequence(QKeySequence::ZoomIn),
+        shortcut_zoom_out		= Qt::CTRL + Qt::Key_Minus,//QKeySequence(QKeySequence::ZoomOut),
+        shortcut_panning_left 	= Qt::CTRL + Qt::Key_Left,
+        shortcut_panning_right 	= Qt::CTRL + Qt::Key_Right,
+        shortcut_panning_up 	= Qt::CTRL + Qt::Key_Up,
+        shortcut_panning_down 	= Qt::CTRL + Qt::Key_Down
+    };
 
 //end enum
 
@@ -114,13 +114,13 @@ class GuiReceiver : public QObject
 
 public:
     GuiReceiver();
-	~GuiReceiver();
+    ~GuiReceiver();
 
     int start();
-	void isLastWindow();
+    void isLastWindow();
 
     bool bTimeOut;
-	QTimer* timer;
+    QTimer* timer;
 
 public slots:
     void createWindow( QString name, int flags = 0 );
@@ -143,6 +143,8 @@ public slots:
     void saveWindowParameters(QString name);
     void loadWindowParameters(QString name);
     void ModifyContent(QString WndName, int etype, int idx, QString text); // GuiReceiver
+    void SetMapContent(QString WndName, QString varname, QString content );
+
     void putText(void* arg1, QString text, QPoint org, void* font);
     void addButton(QString button_name, int button_type, int initial_button_state , void* on_change, void* userdata);
     void enablePropertiesButtonEachWindow();
@@ -154,8 +156,8 @@ public slots:
     double isOpenGl(QString name);
 
 private:
-	int nb_windows;
-	bool doesExternalQAppExist;
+    int nb_windows;
+    bool doesExternalQAppExist;
 };
 
 
@@ -241,7 +243,7 @@ class CvTrackbar :  public CvBar
     Q_OBJECT
 public:
     CvTrackbar(CvWindow* parent, QString name, int* value, int count, CvTrackbarCallback on_change);
-	CvTrackbar(CvWindow* parent, QString name, int* value, int count, CvTrackbarCallback2 on_change, void* data);
+    CvTrackbar(CvWindow* parent, QString name, int* value, int count, CvTrackbarCallback2 on_change, void* data);
 
     QPointer<QSlider> slider;
 
@@ -251,13 +253,13 @@ private slots:
 
 private:
     void setLabel(int myvalue);
-	void create(CvWindow* arg, QString name, int* value, int count);
+    void create(CvWindow* arg, QString name, int* value, int count);
     QString createLabel();
     QPointer<QPushButton > label;
     CvTrackbarCallback callback;
-	CvTrackbarCallback2 callback2;//look like it is use by python binding
+    CvTrackbarCallback2 callback2;//look like it is use by python binding
     int* dataSlider;
-	void* userdata;
+    void* userdata;
 };
 
 //Both are top level window, so that a way to differenciate them.
@@ -316,9 +318,14 @@ public:
     void displayInfo(QString text, int delayms);
     void displayStatusBar(QString text, int delayms);
     //-------------------------------------------------------------
+    void prepareControls( char *csBuffer );
+    void replaceBrackets(QString & txt);
     void modifyContent(QString WndName, int eType,  int idx, QString text );  // *.cfg
     void MsgBoxInfo(char * pCaption, std::string Info );
     void applyTransTab();
+    void getMapContent(QString in, QString & out );
+	void setMapContent(QString varname, QString content );
+
     //-------------------------------------------------------------
     void enablePropertiesButton();
 
@@ -344,7 +351,7 @@ public:
     QPointer<QBoxLayout> myBarLayout;
 
     QVector<QAction*> vect_QActions;
-    
+
     QPointer<QStatusBar> myStatusBar;
     QPointer<QToolBar> myToolBar;
     QPointer<QLabel> myStatusBar_msg;
@@ -353,7 +360,8 @@ public:
     QVector<QString> m_CmdVec;
     QVector<QString> m_LanguageVec;
     bool m_bApplyLanguage;
-
+    QMap<QString,QString> VarMap;
+	
 protected:
     virtual void keyPressEvent(QKeyEvent* event);
 
@@ -363,9 +371,10 @@ private:
     ViewPort* myView;
 
     //------- new Toolbar elements from *.cfg ----------
-    bool bVerbose;
-    QString m_WndName;
+    int m_verboseLevel;
     int m_idxPropWnd;
+    QString m_WndName;
+    QString m_StatusLine;
     QVector<QPushButton*>    vect_QButton;  
     QVector<QComboBox*>      vect_QCombo;
     QVector<QLineEdit*>      vect_QLineEdit;
@@ -388,7 +397,7 @@ private:
     void icvLoadButtonbar(CvButtonbar* t,QSettings *settings);
     void icvSaveButtonbar(CvButtonbar* t,QSettings *settings);
 
-    void InitExchange(int idx);
+    void InitExchange(int idx, int iValue = -1);
     void createStandardActions();
     void createActions();
     void createShortcuts();
@@ -401,7 +410,7 @@ private:
 
     void hideTools();
     void showTools();
-	QSize getAvailableSize();
+    QSize getAvailableSize();
 
 private slots:
     void displayPropertiesWin();
@@ -476,6 +485,9 @@ public:
     virtual void updateGl() = 0;
 
     virtual void setSize(QSize size_) = 0;
+    
+    virtual void setStatusLineComponents(QString components) = 0;    
+    
 };
 
 
@@ -509,6 +521,9 @@ public:
 
     void setSize(QSize size_);
 
+    void setStatusLineComponents(QString components);
+    void getMapContent( QString in, QString & out );
+
 protected:
     void initializeGL();
     void resizeGL(int w, int h);
@@ -523,6 +538,7 @@ protected:
 
 private:
     QSize size;
+    QStringList StatusLineList; 
 
     CvMouseCallback mouseCallback;
     void* mouseData;
@@ -571,6 +587,10 @@ public:
 
     void setSize(QSize size_);
 
+    void setStatusLineComponents(QString components);
+    void getMapContent( QString in, QString & out );
+
+    
 public slots:
     //reference:
     //http://www.qtcentre.org/wiki/index.php?title=QGraphicsView:_Smooth_Panning_and_Zooming
@@ -599,15 +619,17 @@ protected:
     void mouseDoubleClickEvent(QMouseEvent* event);
 
 private:
-	int param_keepRatio;
+    int param_keepRatio;
 
     //parameters (will be save/load)
     QTransform param_matrixWorld;
 
-	CvMat* image2Draw_mat;
+    CvMat* image2Draw_mat;
     QImage image2Draw_qt;
     QImage image2Draw_qt_resized;
     int nbChannelOriginImage;
+
+    QStringList StatusLineList; 
 
     //for mouse callback
     CvMouseCallback on_mouse;
@@ -630,7 +652,7 @@ private:
     QPointer<QTimer> timerDisplay;
     bool drawInfo;
     QString infoText;
-	QRectF target;
+    QRectF target;
 
     void drawInstructions(QPainter *painter);
     void drawViewOverview(QPainter *painter);
