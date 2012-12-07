@@ -56,7 +56,7 @@
 namespace cv { namespace gpu { namespace device {
 namespace icf {
 
-struct __align__(16) Octave
+struct Octave
 {
     ushort index;
     ushort stages;
@@ -68,7 +68,7 @@ struct __align__(16) Octave
     : index(i), stages(s), shrinkage(sh), size(sz), scale(sc) {}
 };
 
-struct __align__(8) Level //is actually 24 bytes
+struct Level //is actually 24 bytes
 {
     int octave;
     int step;
@@ -84,7 +84,7 @@ struct __align__(8) Level //is actually 24 bytes
     __device Level(){}
 };
 
-struct __align__(8) Node
+struct Node
 {
     uchar4 rect;
     // ushort channel;
@@ -95,12 +95,13 @@ struct __align__(8) Node
     Node(const uchar4 r, const unsigned int ch, const unsigned int t) : rect(r), threshold(t + (ch << 28)) {}
 };
 
-struct __align__(16) Detection
+struct Detection
 {
     ushort x;
     ushort y;
     ushort w;
     ushort h;
+
     float confidence;
     int kind;
 
