@@ -129,6 +129,7 @@ public:
     virtual ~Octave();
 
      virtual bool train(const Dataset& dataset, const FeaturePool& pool, int weaks, int treeDepth);
+     virtual void write( CvFileStorage* fs, string name) const;
 
     int logScale;
 

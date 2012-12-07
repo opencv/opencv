@@ -297,6 +297,11 @@ bool sft::Octave::train(const Dataset& dataset, const FeaturePool& pool, int wea
 
 }
 
+void sft::Octave::write( CvFileStorage* fs, string name) const
+{
+    CvBoost::write(fs, name.c_str());
+}
+
 // ========= FeaturePool ========= //
 sft::FeaturePool::FeaturePool(cv::Size m, int n) : model(m), nfeatures(n)
 {
