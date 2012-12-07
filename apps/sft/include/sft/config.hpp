@@ -73,6 +73,13 @@ struct Config
             cvRound(modelWinSize.width  * octave), cvRound(modelWinSize.height * octave));
     }
 
+    string resPath(ivector::const_iterator it) const
+    {
+        char s[65];
+        sprintf(s, "%d", *it);
+        return std::string(cascadeName) + s + ".xml";
+    }
+
     // Paths to a rescaled data
     string trainPath;
     string testPath;

@@ -46,6 +46,8 @@
 #include <sft/octave.hpp>
 #include <sft/config.hpp>
 
+#include <opencv2/core/core_c.h>
+
 int main(int argc, char** argv)
 {
     using namespace sft;
@@ -128,7 +130,10 @@ int main(int argc, char** argv)
         if (boost.train(dataset, pool, cfg.weaks, cfg.treeDepth))
         {
             std::cout << "Octave " << *it << " was successfully trained..." << std::endl;
-    //         strong.push_back(octave);
+             CvFileStorage* fout = cvOpenFileStorage(cfg.resPath(it).c_str(), 0, CV_STORAGE_WRITE);
+             boost.write(fout, cfg.cascadeName);
+            // strong.push_back(octave);
+             cvReleaseFileStorage( &fout);
         }
     }
 
