@@ -38,26 +38,6 @@
 
 //--------------------Google Code 2010 -- Yannick Verdie--------------------//
 
-//--------------------------------------------------------------------------//
-// following interface functions added by H.Schmidt :
-// 
-// CVAPI(int)  cvGetCommand(const const char* WndName, char* cmd );
-// CVAPI(int)  cvGetButtonBarContent(const char * WndName, int idx, char * txt );
-// CVAPI(int)  cvSetButtonBarContent(const char * WndName, int etype, int idx, char * txt );
-// CVAPI(void) cvDispInfoBox_Qt( const char* WndName, char* caption, const char * csTxt ); 
-// CVAPI(void) cvAdjustWindowPos_Qt( const char * name, int xp, int xwp, int yp, int yhp );
-//
-// 
-// This functions interact with a *.cfg file named by *.exe of your application.
-// If your executable is named test.exe and you have test.cfg in the same directory
-// opencv_highgui*.dll will read in the config file and compose a new ButtonBar for
-// each window defined in test.cfg
-// If this specific *.cfg is missing we try to read ButtonNames.cfg instead
-// ButtonNames.cfg ist of type "general purpose" so "source" is the window name.
-// Panning and Zoom Functions are yet available across right mouse key (shortcut menue),
-// if no ButtonBar is configured. Add $Zoom, $Panning $PropWnd in *.cfg to reactivate icons
-//
-// Harald Schmidt, 21.8.2012 
 
 #if defined(HAVE_QT)
 
@@ -66,8 +46,9 @@
 #include <window_QT.h>
 
 #include <math.h>
-#include <string>      	// HS, 10.6.2012
+#include <string>  		// HS, 10.6.2012
 #include <QDesktopWidget>	// to get screen resolution
+#include <opencv2/core/core.hpp>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -223,11 +204,12 @@ double cvGetModeWindow_QT(const char* name)
     return result;
 }
 
-CV_IMPL void cvAdjustWindowPos_Qt( const char * name, int xp, int xwp, int yp, int yhp )
+
+CV_IMPL void cvAdjustWindowPos_QT( const char * name, int xp, int xwp, int yp, int yhp )
 {
     int cx,cy;
     QDesktopWidget* pDeskWid = QApplication::desktop() ;
-    QRect ScreenGeo = pDeskWid->screenGeometry();  // braucht  #include <QDesktopWidget>
+    QRect ScreenGeo = pDeskWid->screenGeometry();  // needs  #include <QDesktopWidget>
     cx = ScreenGeo.width();
     cy = ScreenGeo.height();
     int    x = 0.01 * ( xp * cx );
@@ -237,6 +219,7 @@ CV_IMPL void cvAdjustWindowPos_Qt( const char * name, int xp, int xwp, int yp, i
     cvMoveWindow( name, x, y );
     cvResizeWindow( name, neww, newh );   
 }
+
 
 CV_IMPL void cvDisplayOverlay(const char* name, const char* text, int delayms)
 {
@@ -251,6 +234,7 @@ CV_IMPL void cvDisplayOverlay(const char* name, const char* text, int delayms)
         Q_ARG(QString, QString(text)),
         Q_ARG(int, delayms));
 }
+
 
 CV_IMPL void cvSaveWindowParameters(const char* name)
 {
@@ -467,6 +451,7 @@ static CvTrackbar* icvFindTrackBarByName(const char* name_trackbar, const char* 
     }
 }
 
+
 /*
 static CvButtonbar* icvFindButtonBarByName(const char* button_name, QBoxLayout* layout)
 {
@@ -482,7 +467,7 @@ static int icvInitSystem(int* c, char** v)
     {
         new QApplication(*c, v);
 
-        qDebug() << "init done";
+        qDebug() << "new QApplication done";
 
 #ifdef HAVE_QT_OPENGL
         qDebug() << "opengl support available";
@@ -703,22 +688,57 @@ CV_IMPL void cvShowImage(const char* name, const CvArr* arr)
         Q_ARG(void*, (void*)arr));
 }
 
-CV_IMPL void cvDispInfoBox_Qt( const char* WndName, char* caption, const char * csTxt ) 
+
+CV_IMPL void cvDispInfoBox_QT( const char* WndName, char* caption, const char * csTxt )
 {
     if (!WndName)
-	    CV_Error( CV_StsNullPtr, "NULL name string" );
+            CV_Error( CV_StsNullPtr, "NULL name string" );
 
     QPointer<CvWindow> w = icvFindWindowByName(QLatin1String(WndName));
-    if ( w == NULL ) 
+    if ( w == NULL )
     {
-	    printf("\ncvDispInfoBox_Qt: [%s] is unknown as WndName ! ", WndName ); 
-	    return;
+            printf("\ncvDispInfoBox_QT: [%s] is unknown as WndName ! ", WndName );
+            return;
     }
     w->MsgBoxInfo( caption, std::string(csTxt) );
 }
 
+
+// -------------------------------------------------------------------------------
+// Read or modify the content of the OpenCV buttonbar and react on pressed buttons.
+// 
+// following interface functions added: 
+// CVAPI(int)  cvGetCommand(const const char* WndName, char* cmd );
+// CVAPI(int)  cvGetButtonBarContent(const char * WndName, int idx, char * txt );
+// CVAPI(int)  cvSetButtonBarContent(const char * WndName, int etype, int idx, char * txt );
+//
+// 6.12.2012, Harald Schmidt
+//--------------------------------------------------------------------------------
+//
+// The initial definition is done by a *.cfg with internal XML Format.
+// Your appliction should periodically call cv::getCommandVec as
+// in the following example:
+//
+// while (iKey != 27)
+// {
+//    cv::getCommandVec("ColorImg", stringVec, csBuffer );
+//    if ( strlen(csBuffer) > 0  )
+//    {
+//      printf("\n cvGetCommandVec(ColorImg)->[%s]\n ", csBuffer );
+//      // print whole buttonbar content ......
+//      for ( int j=0; j < stringVec.size() ; j++ )
+//      {
+//	      printf("<%s>", stringVec[j].c_str() );
+//      }
+//      // do something, depending on csBuffer.......
+//    }
+//    iKey = cv::waitKey(5);
+// }
+
+
 CV_IMPL int cvGetCommand( const char* WndName, char* cmd)
 {
+    // this function is called by cv::getCommandVec
     if (!WndName)
     {
       CV_Error( CV_StsNullPtr, "NULL name string" );
@@ -742,6 +762,7 @@ CV_IMPL int cvGetCommand( const char* WndName, char* cmd)
 
 CV_IMPL int cvGetButtonBarContent(const char * WndName, int idx, char * txt )
 {
+    // retrieve content of element with index idx
     if (!WndName)
     {
       CV_Error( CV_StsNullPtr, "NULL name string" );
@@ -778,24 +799,24 @@ CV_IMPL int cvSetButtonBarContent(const char * WndName, int etype, int idx, char
 return 0;
 }
 
-/*
-// Example for usage from application:
-while (iKey != 27)
+CV_IMPL int cvSetMapContent(const char * WndName, const char * varname, char * txt )
 {
-    cv::getCommandVec("ColorImg", stringVec, csBuffer );
-    if ( strlen(csBuffer) > 0  )
-    {
-      printf("\n cvGetCommandVec(ColorImg)->[%s]\n ", csBuffer );
-      // print buttonbar content ......
-      for ( int j=0; j < stringVec.size() ; j++ )
-      {
-	      printf("<%s>", stringVec[j].c_str() );
-      }
-      // do something, depending on csBuffer.......
-    }
-    iKey = cv::waitKey(5);
+    // set a varname and it's content
+    if (!guiMainThread)
+      CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
+
+    QMetaObject::invokeMethod(guiMainThread,
+      "SetMapContent",
+      Qt::AutoConnection,
+      Q_ARG(QString, QString(WndName)),
+      Q_ARG(QString, QString(varname)),
+      Q_ARG(QString, QString(txt)) );
+
+  return 0;
 }
-*/
+
+
+
 
 
 
@@ -1196,15 +1217,6 @@ void GuiReceiver::enablePropertiesButtonEachWindow()
     }
 }
 
-void GuiReceiver::ModifyContent(QString WndName, int etype, int idx, QString text)
-{
-	QPointer<CvWindow> w = icvFindWindowByName(WndName);
-
-	if (w)
-		w->modifyContent(WndName,etype,idx,text);
-	else 
-		printf("\nNo window found with name [%s] ", qPrintable(WndName) );
-}
 
 void GuiReceiver::addButton(QString button_name, int button_type, int initial_button_state, void* on_change, void* userdata)
 {
@@ -1348,6 +1360,28 @@ double GuiReceiver::isOpenGl(QString name)
         result = (double) w->isOpenGl();
 
     return result;
+}
+
+
+// some functions for buttonbar content
+void GuiReceiver::ModifyContent(QString WndName, int etype, int idx, QString text)
+{
+	QPointer<CvWindow> w = icvFindWindowByName(WndName);
+
+	if (w)
+		w->modifyContent(WndName,etype,idx,text);
+	else 
+		printf("\nNo window found with name [%s] ", qPrintable(WndName) );
+}
+
+void GuiReceiver::SetMapContent( QString WndName, QString varname, QString content )
+{
+	QPointer<CvWindow> w = icvFindWindowByName(WndName);
+
+	if (w)
+		w->setMapContent(varname,content);
+	else 
+		printf("\nNo window found with name [%s] ", qPrintable(WndName) );
 }
 
 
@@ -1684,7 +1718,6 @@ CvWinProperties::~CvWinProperties()
 
 CvWindow::CvWindow(QString name, int arg2)
 {
-
     type = type_CvWindow;
     moveToThread(qApp->instance()->thread());
 
@@ -1692,13 +1725,8 @@ CvWindow::CvWindow(QString name, int arg2)
     param_gui_mode = arg2 & 0x000000F0;
     param_ratio_mode =  arg2 & 0x00000F00;
     m_idxPropWnd = -1;
-    bVerbose = false;
-	
-    if ( bVerbose)
-    {
-	printf("\n\n CvWindow::CvWindow(%s,%d) => ratio=%d  gui=%d  flags=%d  bVerbose=%d \n", qPrintable(name), 
-					arg2,param_ratio_mode, param_gui_mode, param_flags, (int) bVerbose );
-    }
+    m_verboseLevel = -1;
+    m_StatusLine = "xy RGB Zoom"; // default elements for display in statusbar
 
     //setAttribute(Qt::WA_DeleteOnClose); //in other case, does not release memory
     setContentsMargins(0, 0, 0, 0);
@@ -1714,24 +1742,8 @@ CvWindow::CvWindow(QString name, int arg2)
     {
 	printf(" CV_WINDOW_NORMAL_Z ");
         resize(1024, 768);
-    } else {
-		if ( bVerbose )
-		{
-			if ( param_flags == CV_WINDOW_NORMAL   )
-			{
-					printf("\nCvWindow::CvWindow(%s,CV_WINDOW_NORMAL ", qPrintable(name) ); 
-			}	 	
-			if ( param_flags == CV_WINDOW_AUTOSIZE ) 
-			{ 
-					printf("\nCvWindow::CvWindow(%s,CV_WINDOW_AUTOSIZE ", qPrintable(name) ); 	
-			}
-		
-			if ( param_gui_mode == CV_GUI_EXPANDED    ) printf("| CV_GUI_EXPANDED) ");
-			if ( param_gui_mode == CV_GUI_NORMAL      ) printf("| CV_GUI_NORMAL)   ");
-		}
-		// resize(640, 480);
-    }
-    
+    } 
+
     setMinimumSize(1, 1);
 
     //1: create control panel
@@ -1758,13 +1770,40 @@ CvWindow::CvWindow(QString name, int arg2)
     //5: toolBar and statusbar
     if (param_gui_mode == CV_GUI_EXPANDED)
     {
-        createActions();
+        createActions();   // add all user defined controls to buttonbar
         createShortcuts();
 
         createToolBar();
         createStatusBar();
+
+        myView->setStatusLineComponents(m_StatusLine);
+
     }
 
+    if ( m_verboseLevel > 1 )
+    {
+	    if ( param_flags == CV_WINDOW_NORMAL   )
+	    {
+			    printf("\nCvWindow::CvWindow(%s,CV_WINDOW_NORMAL ", qPrintable(name) ); 
+	    }	 	
+	    if ( param_flags == CV_WINDOW_AUTOSIZE ) 
+	    { 
+			    printf("\nCvWindow::CvWindow(%s,CV_WINDOW_AUTOSIZE ", qPrintable(name) ); 	
+	    }
+    
+	    if ( param_gui_mode == CV_GUI_EXPANDED    ) printf("| CV_GUI_EXPANDED) ");
+	    if ( param_gui_mode == CV_GUI_NORMAL      ) printf("| CV_GUI_NORMAL)   ");
+    }
+
+    if ( m_verboseLevel > 1 )
+    {
+	printf("\n\n CvWindow::CvWindow(%s,%d) => ratio=%d  gui=%d  flags=%d  m_verboseLevel=%d \n", qPrintable(name), 
+					arg2,param_ratio_mode, param_gui_mode, param_flags, m_verboseLevel );
+    
+	printf("\n [m_StatusLine=%s]", qPrintable(m_StatusLine) ); 
+    }
+
+        
     //Now attach everything
     if (myToolBar)
         myGlobalLayout->addWidget(myToolBar, Qt::AlignCenter);
@@ -2030,7 +2069,7 @@ void CvWindow::setViewportSize(QSize _size)
     QWidget* view = myView->getWidget();
     int dx = _size.width();
     int dy = _size.height();
-    view->parentWidget()->resize(dx-7, dy);
+    view->parentWidget()->resize(dx, dy);
     myView->setSize(_size);
 }
 
@@ -2125,15 +2164,373 @@ void CvWindow::createStandardActions()
 }
 
 
+void CvWindow::prepareControls( char *csBuffer )
+{	
+    char * p;
+    AdmElem CtrlElem;	  
+			
+    //---------------------- split
+    QString str    = "";
+    QString name   = "";
+    QString param  = "";
+    QString tmp    = "";
+    QString attrib = "";
+    bool bEmit = false;
+    p = strchr(csBuffer,' ');
+    if ( p != NULL )
+    {
+	str = QString(p+1);
+
+	int pos_attrib = str.indexOf(QString(" ;"));
+	if ( pos_attrib >= 0 ) {
+		attrib = str.mid(pos_attrib+2);
+		str = str.left(pos_attrib+1);
+	}
+	
+	int ipos = str.indexOf(QString(" "));
+	name  = str.left(ipos);
+	if ( ipos > 0 ) param = str.mid(ipos+1);
+	ipos = param.indexOf(QString(" emit"));
+	if ( ipos > 0 )
+	{
+			bEmit = true;
+			param = param.left(ipos);
+	}
+    }
+
+    if ( m_verboseLevel > 2 )
+    {
+	printf("\n[name=%s]", qPrintable(name) );
+	printf(" [param=%s]"  , qPrintable(param) );
+	printf(" [attrib=%s] bEmit=%d\n" , qPrintable(attrib), (int) bEmit );
+    }
+
+    if ( strstr(csBuffer,"$Button") != NULL )
+    {
+      // simple text button internal later stored as QToolButton   
+      CtrlElem.elemtype = EMOD_TxtButton;
+      vect_Adm.push_back(CtrlElem);			
+      vecString.push_back(str);
+    }
+
+    if ( strstr(csBuffer,"$Label") != NULL )
+    {
+      QLabel * pLabel = new QLabel();
+      pLabel->setFrameStyle(QFrame::Panel | QFrame::Sunken);
+      p = strchr(csBuffer,' ');
+      if ( p != NULL )
+      {
+	      pLabel->setText(QString(p+1));
+      }
+      CtrlElem.elemtype = EMOD_Label;
+      CtrlElem.start    = vect_QLabel.size();
+      vect_QLabel.push_back(pLabel);
+      vect_Adm.push_back(CtrlElem);
+    }
+	
+    if ( strstr(csBuffer,"$CheckBox") != NULL )
+    {
+	// Example: $CheckBox Logging true		
+	if (param.length() > 0 )
+	{
+	  bool bChecked = false;
+	  int ipos = param.indexOf(QString("true"));
+	  if ( ipos>= 0) 
+	  {
+		  bChecked = true;
+	  }
+	  QCheckBox * pCheck = new  QCheckBox(name, this);
+	  if ( bChecked )	pCheck->setChecked(true);
+	  pCheck->setObjectName( name + "_EMOD_CheckBox" );
+	  CtrlElem.elemtype = EMOD_CheckBox;
+	  CtrlElem.start    = vect_QCheckBox.size();
+	  if ( CtrlElem.start == 0 ) 
+		  QObject::connect( pCheck, SIGNAL(clicked()), this, SLOT( slotCallCheck_0() ));
+	  if ( CtrlElem.start == 1 ) 
+		  QObject::connect( pCheck, SIGNAL(clicked()), this, SLOT( slotCallCheck_1() ));
+	  if ( CtrlElem.start == 2 ) 
+		  QObject::connect( pCheck, SIGNAL(clicked()), this, SLOT( slotCallCheck_2() ));				
+	  vect_QCheckBox.push_back(pCheck);
+	  vect_Adm.push_back(CtrlElem);
+	}
+    }
+
+
+    if ( strstr(csBuffer,"$CheckText") != NULL )
+    {
+      // Example1: $CheckText Histo2D false
+      //           => Histo2D_EMOD_CheckText
+      // Example2: $CheckText Apply
+      //           => Apply_EMOD_PushText
+      bool bCheck = false;
+      bool bChecked = false;
+      if (param.length() > 3 )
+      {
+	      bCheck = true;
+	      int ipos = param.indexOf(QString("true"));
+	      if ( ipos>= 0) 
+	      {
+		 bChecked = true;
+	      }
+      }
+
+      QPushButton * pBut = new QPushButton(name, this);
+
+      //------------------------
+      if ( attrib.length() > 0 )
+      {
+	int ipos2 = attrib.indexOf(QString("w"));
+	if ( ipos2 >=0 ) {
+		  QString Num = attrib.mid(ipos2+1);
+		  int cellwidth = atoi(qPrintable(Num)); // max display width
+		  if ( cellwidth > 5 ) pBut->setMaximumWidth(cellwidth);
+	}
+      }
+      //-----------------------
+
+      CtrlElem.start    = vect_QButton.size();
+      if ( bCheck )   
+      {
+	  pBut->setCheckable(true);
+	  if ( bChecked )	pBut->setChecked(true);
+	  CtrlElem.elemtype = EMOD_CheckText;
+	  pBut->setObjectName( name + "_EMOD_CheckText");
+      } else {
+	  CtrlElem.elemtype = EMOD_PushText;
+	  pBut->setObjectName( name + "_EMOD_PushText");
+      }
+	
+      if ( CtrlElem.start == 0 ) QObject::connect( pBut, SIGNAL(clicked()), this, SLOT( slotCallPush_0() ));
+      if ( CtrlElem.start == 1 ) QObject::connect( pBut, SIGNAL(clicked()), this, SLOT( slotCallPush_1() ));
+      if ( CtrlElem.start == 2 ) QObject::connect( pBut, SIGNAL(clicked()), this, SLOT( slotCallPush_2() ));
+      if ( CtrlElem.start == 3 ) QObject::connect( pBut, SIGNAL(clicked()), this, SLOT( slotCallPush_3() ));
+      if ( CtrlElem.start == 4 ) QObject::connect( pBut, SIGNAL(clicked()), this, SLOT( slotCallPush_4() ));
+      vect_QButton.push_back(pBut);
+      vect_Adm.push_back(CtrlElem);
+    }
+			    
+    if ( strstr(csBuffer,"$Edit") != NULL )
+    {
+      // Example: $Edit jpgq 80; w30					    
+      CtrlElem.elemtype = EMOD_Edit;
+      CtrlElem.start    = vect_QLineEdit.size();
+
+      QLineEdit * pEdit = new QLineEdit();							
+      if ( name.length() > 0 )
+      {
+	  //------------------------
+	  if ( attrib.length() > 0 )
+	  {
+	      int ipos2 = attrib.indexOf(QString("w"));
+	      if ( ipos2 >=0 ) {
+			QString Num = attrib.mid(ipos2+1);
+			int cellwidth = atoi(qPrintable(Num)); // max display width
+			if ( cellwidth > 5 ) pEdit->setMaximumWidth(cellwidth);
+	      }
+	  }
+	  //-----------------------
+	  pEdit->setObjectName(QString(name + "_EMOD_Edit_%1").arg(CtrlElem.start) );
+	  pEdit->setText(param);
+      }
+      
+      vect_QLineEdit.push_back(pEdit);
+      vect_Adm.push_back(CtrlElem);
+    }
+
+    if ( strstr(csBuffer,"$Combo") != NULL )
+    {
+      // example: $Combo ComboSrc WebCam,Video,Image emit
+      //          => 3 Elements in ComboBox; emit => connect() 
+      if ( name.length() > 0 )
+      {
+	  QStringList list = param.split(",");
+	  if ( list.size() > 0 )
+	  {
+		  QComboBox * pCombo = new QComboBox();
+		  pCombo->addItems( list );
+		  CtrlElem.elemtype = EMOD_Combo;
+		  CtrlElem.start    = vect_QCombo.size();
+		  pCombo->setObjectName(name+"_EMOD_Combo");
+		  vect_QCombo.push_back( pCombo );
+		  vect_Adm.push_back(CtrlElem);
+	  
+		  if (bEmit)
+		  {
+			  connect( pCombo, SIGNAL(currentIndexChanged(const QString &)),
+					    this, SLOT( slotCallString(const QString &) ) 
+			  );
+		  }	
+	  }
+      }	
+    }
+
+
+    if ( strstr(csBuffer,"$Spin") != NULL )
+    {
+	// example: $Spin JPGQ 0,100,75
+	//          => 
+	if ( name.length() > 0 )
+	{
+	  QStringList list = param.split(",");
+	  if ( list.size() > 2 )
+	  {
+	    int iMin  = list[0].toInt();
+	    int iMax  = list[1].toInt();
+	    int iVal  = list[2].toInt();
+	    QSpinBox * pSpin = new QSpinBox();
+	    pSpin->setRange(iMin, iMax);
+	    pSpin->setValue(iVal);
+	    pSpin->setObjectName(name + "_EMOD_Spin");
+	    CtrlElem.elemtype = EMOD_Spin;
+	    CtrlElem.start    = vect_QSpinBox.size();
+	    vect_QSpinBox.push_back(pSpin);
+	    vect_Adm.push_back(CtrlElem);
+	    if (bEmit)
+	    {
+	      if ( CtrlElem.start == 0 ) { connect( pSpin, SIGNAL(valueChanged(int)),
+					    this, SLOT( slotCallSpin_0(int) )  );
+	      }
+	      if ( CtrlElem.start == 1 ) { connect( pSpin, SIGNAL(valueChanged(int)),
+					    this, SLOT( slotCallSpin_1(int) )  );
+	      }
+	      if ( CtrlElem.start == 2 ) { connect( pSpin, SIGNAL(valueChanged(int)),
+					    this, SLOT( slotCallSpin_2(int) )  );
+	      }
+	      if ( CtrlElem.start == 3 ) { connect( pSpin, SIGNAL(valueChanged(int)),
+					    this, SLOT( slotCallSpin_3(int) )  );
+	      }
+	      if ( CtrlElem.start == 4 ) { connect( pSpin, SIGNAL(valueChanged(int)),
+					    this, SLOT( slotCallSpin_4(int) )  );
+	      }
+	    }
+	  }
+	}
+    }
+
+    if ( strstr(csBuffer,"$SliderSpin") != NULL )
+    {
+      // example: $SliderSpin MySlider -75,100,20 emit
+      //			=> horz. slider with limits [-75 .. 100] default 20
+      //			important: SpinBox is automatical 
+      //			generated+named+added+connected
+      if ( name.length() > 0 )
+      {
+	  QStringList list = param.split(",");
+	  if ( list.size() > 2 )
+	  {
+	    int iMin  = list[0].toInt();
+	    int iMax  = list[1].toInt();
+	    int iVal  = list[2].toInt();
+	    // printf("\n Slider [%d .. %d] %d", iMin, iMax, iVal );
+	    QSlider * pSlider = new QSlider(Qt::Horizontal);
+	    pSlider->setTickInterval( 20 );  // TODO: als Parameter aus *.cfg
+	    pSlider->setTickPosition( QSlider::TicksBothSides );
+	    pSlider->setRange(iMin, iMax);
+	    pSlider->setValue(iVal);
+	    CtrlElem.elemtype = EMOD_Slider;
+	    CtrlElem.start    = vect_QSlider.size();
+	    // pSlider->setObjectName(name+"_EMOD_Slider_"); // we have a SliderSpin combination
+	                                                     // so we need the name only one
+	    vect_QSlider.push_back( pSlider );
+	    vect_Adm.push_back(CtrlElem);  
+
+	    // we need something to display the slider value....
+	    QSpinBox * pSpin = new QSpinBox();
+	    pSpin->setRange(iMin, iMax);
+	    pSpin->setValue(iVal);
+	    CtrlElem.elemtype = EMOD_Spin;
+	    CtrlElem.start    = vect_QSpinBox.size();
+	    
+	    // set a name to detect it with cv::getCommandVec at runtime
+	    pSpin->setObjectName(name+"_EMOD_Spin"); 
+	    
+	    vect_QSpinBox.push_back(pSpin);
+	    vect_Adm.push_back(CtrlElem);
+	    // cross connect of slider and spin
+	      connect( pSlider, SIGNAL(valueChanged(int)),
+	    pSpin, SLOT( setValue(int) )  );
+	      connect( pSpin, SIGNAL(valueChanged(int)),
+	    pSlider, SLOT( setValue(int) )  );
+
+	    if (bEmit)
+	    {
+	      if ( CtrlElem.start == 0 ) { connect( pSpin, SIGNAL(valueChanged(int)),
+					   this, SLOT( slotCallSpin_0(int) )  );
+	      }
+	      if ( CtrlElem.start == 1 ) { connect( pSpin, SIGNAL(valueChanged(int)),
+					   this, SLOT( slotCallSpin_1(int) )  );
+	      }
+	      if ( CtrlElem.start == 2 ) { connect( pSpin, SIGNAL(valueChanged(int)),
+		                           this, SLOT( slotCallSpin_2(int) )  );
+	      }
+	      if ( CtrlElem.start == 3 ) { connect( pSpin, SIGNAL(valueChanged(int)),
+					   this, SLOT( slotCallSpin_3(int) )  );
+	      }
+	      if ( CtrlElem.start == 4 ) { connect( pSpin, SIGNAL(valueChanged(int)),
+					   this, SLOT( slotCallSpin_4(int) )  );
+	      }
+	    }
+
+	  }
+      }
+    }
+
+    //-----------------------
+    if ( strstr(csBuffer,"$Menu") != NULL )
+    {
+      if ( name.length() > 0 )
+      {
+	    QStringList list = param.split(",");
+	    if ( list.size() > 0 )
+	    {							
+	    QToolButton * pTool = new QToolButton();
+	    p = strchr(csBuffer,' ');
+	    if ( p != NULL )
+	    {
+		    pTool->setText(name);
+	    }
+	    CtrlElem.elemtype = EMOD_Pulldown;
+	    CtrlElem.start    = vect_QToolButton.size();
+	    
+	    pTool->setObjectName( name + "_EMOD_Pulldown" );
+	    QMenu * pMenu = new QMenu(name);
+	    for ( int j=0; j < list.size() ; j++ )
+	    {								
+		    QAction * pAct = new QAction( list[j], this);
+		    QString concData = name + "|" + list[j];
+		    pAct->setData( concData );
+		    pAct->setStatusTip(tr("Open an existing file"));
+		    int idx = vect_MenuAct.size();
+		    if ( idx == 0 ) connect(pAct, SIGNAL(triggered()), this, SLOT( slotMenuAct0() ));
+		    if ( idx == 1 ) connect(pAct, SIGNAL(triggered()), this, SLOT( slotMenuAct1() ));
+		    if ( idx == 2 ) connect(pAct, SIGNAL(triggered()), this, SLOT( slotMenuAct2() ));
+		    if ( idx == 3 ) connect(pAct, SIGNAL(triggered()), this, SLOT( slotMenuAct3() ));
+		    if ( idx == 4 ) connect(pAct, SIGNAL(triggered()), this, SLOT( slotMenuAct4() ));
+		    pMenu->addAction(pAct);
+		    vect_MenuAct.push_back(pAct); 																
+	    }
+
+	    pTool->setMenu(pMenu);
+	    pTool->setPopupMode( QToolButton::MenuButtonPopup );  // MenuButtonPopup
+	    
+	    vect_QToolButton.push_back(pTool);
+	    vect_Adm.push_back(CtrlElem);		
+	    }
+      }
+    }
+
+}
+
+
+
 void CvWindow::createActions()
 {
-	// Read in dynamic controls coming from *.cfg 
+	// Read in dynamic controls comming from *.cfg 
 	
 	QString CfgWndName = "";
 	m_bApplyLanguage = false;
 
 	vecString.clear();
-	char csBuffer[255];
 	QString exe_name = QFileInfo(QApplication::applicationFilePath()).fileName();
 	char csCfgFile[512];
 	strcpy( csCfgFile, qPrintable(exe_name));
@@ -2147,442 +2544,144 @@ void CvWindow::createActions()
 		// linux
 		strcat( csCfgFile, ".cfg") ;
 	}
-	FILE * fp = fopen(csCfgFile,"rt");
-	if ( fp == NULL )
-	{
-		strcpy(csCfgFile, "ButtonNames.cfg" );
-		fp = fopen(csCfgFile,"rt");
-	}
-	//----------------------------------------------------------
-	vect_Adm.clear();
-    // int ElemIdx = 0;
-	if ( fp != NULL )
-	{	
-		while ( !feof(fp) )
-		{ 
-		  fgets(csBuffer,250, fp);
-		  char *p = strrchr(csBuffer,10);
-		  if ( p != NULL ) *p =0;
-		  p = strrchr(csBuffer,13);
-		  if ( p != NULL ) *p =0;
-			  
-		  // todo: remove trailing blanks/tabs
 
-		  if ( strlen(csBuffer) > 0 )
+       // std::string filename = string(csCfgFile);
+       // cout << endl << "Reading: " << filename.c_str() << endl;
+
+       cv::FileStorage fs;
+       fs.open(csCfgFile, cv::FileStorage::READ);
+
+       if (!fs.isOpened())
+       {
+           // cerr << "Failed to open " << filename << endl;
+           return;
+       }
+
+       vect_Adm.clear();
+       
+       cv::FileNode n = fs["verboseLevel"];
+       cv::FileNodeIterator it = n.begin(), it_end = n.end(); // Go through the node
+       for (; it != it_end; ++it) {
+	  cv::FileNode node = *it;
+          if ( node.type() == CV_NODE_INTEGER )
+	  {
+	    m_verboseLevel = (int) *it;    
+	  }
+       }        
+       
+       n = fs["LanguageTransTab"];
+       it = n.begin(), it_end = n.end(); // Go through the node
+       for (; it != it_end; ++it) {
+           std::string src = (std::string)*it;
+           ++it;
+           std::string concat = src + " <-> " + (std::string)*it;
+           m_LanguageVec.push_back( concat.c_str()  );
+       }
+       
+       
+       for ( int cnt=0; cnt <= 20 ; cnt++ )
+       {
+           std::string WndName = cv::format("Wnd%d",cnt);
+           n = fs[WndName];
+           if (  n.size() <= 0 ) continue;
+
+	   /*
+	   if ( bVerbose )
+	   {
+		  if ( n.isNamed() )
 		  {
-			  // recognize a new window definition 
-			  p = strstr(csBuffer,"-- [");
-			  if ( p != NULL )
-			  {
-				  // 
-				  char * q = strchr(csBuffer,']');
-				  if ( q != NULL )
-				  {   *q = 0;
-					  CfgWndName = QString(p+4);
-					  csBuffer[0] = 0;
-					  if ( bVerbose )
-						  printf("\n[CfgWndName=%s]", qPrintable(CfgWndName) );
-				  }
-			  }
-
-			  p = strstr(csBuffer,"-- <");
-			  if ( p != NULL )
-			  {
-				  char * q = strchr(csBuffer,'>');
-				  if ( q != NULL )
-				  {   *q = 0;
-					  CfgWndName = "<" + QString(p+4) + ">";
-					  csBuffer[0] = 0;
-					  if ( bVerbose )
-						  printf("\n[CfgWndName=%s]", qPrintable(CfgWndName) );
-				  }
-			  }
-
+		      printf("\n[name=%s]  n.type=%d  n.size=%d", n.name().c_str(), n.type(), n.size() );
+		  } else {
+		      printf("\n[wndName=%s] size=%d",  WndName.c_str(), n.size() );
 		  }
-		  
-		  if ( CfgWndName != "<LanguageTransTab>" ) 
-		  {
-			  if ( strstr(csBuffer,"$verbose") != NULL ) {
-				  if ( csBuffer[0] != '#') 
-						  bVerbose = true;
-			  }
-			  
-			  if ( CfgWndName != m_WndName ) csBuffer[0] = 0;
-		  }
-
-		  if ( strlen(csBuffer) > 0 )
-		  {
-			  // only if CfgWndName == m_WndName
-			  AdmElem CtrlElem;
-			  if ( (csBuffer[0] != '$') && (csBuffer[0] != '#')  ) {
-
-				  if ( CfgWndName == "<LanguageTransTab>" ) 
-				  {
-					  m_LanguageVec.push_back(csBuffer);
-				  } else {
-					  // simple text button internal later stored as QToolButton  
-					  CtrlElem.elemtype = EMOD_TxtButton;
-					  vect_Adm.push_back(CtrlElem);			
-					  vecString.push_back(QString(csBuffer));
-				  }
-
-			  } else {
-				  if ( csBuffer[0] != '#' )
-				  {
-				    // some default action buttons with used icons
-	    
-				    if ( strstr(csBuffer,"$Panning") != NULL )
+		  printf("\n");
+	   }
+	   */
+	   
+           int linecnt = -1;
+           it = n.begin(), it_end = n.end(); // Go through the node
+	   for (; it != it_end; ++it) {
+               
+                cv::FileNode node = *it;
+                std::string content = "?";
+                if ( node.type() == CV_NODE_INTEGER )
+                {
+                   content = cv::format("%d (integer)", (int) *it);
+                }
+               
+		if ( node.type() == cv::FileNode::STRING )
+		{
+		    AdmElem CtrlElem;	      
+		    content = (std::string) *it;
+		    char csBuffer[512];
+		    strcpy(csBuffer, content.c_str() );
+		    if (csBuffer[0] == '#') content = "";
+		    if ( content.length() > 0 )
+		    {   
+			linecnt++;
+			if ( linecnt == 0 )
+			{	
+				CfgWndName = QString(csBuffer);
+				if ( CfgWndName != m_WndName ) {
+				  linecnt = -1000;
+				} else {
+				    if ( m_verboseLevel > 0 )
 				    {
-					    CtrlElem.elemtype = EMOD_Panning;
-					    vect_Adm.push_back(CtrlElem);
-				    }
-				    if ( strstr(csBuffer,"$Zoom") != NULL )
-				    {
-					    CtrlElem.elemtype = EMOD_Zoom;
-					    vect_Adm.push_back(CtrlElem);
-				    }
-				    if ( strstr(csBuffer,"$SaveImg") != NULL )
-				    {
-					    CtrlElem.elemtype = EMOD_SaveImg;
-					    vect_Adm.push_back(CtrlElem);
-				    }
-				    if ( strstr(csBuffer,"$PropWnd") != NULL )
-				    {
-					    CtrlElem.elemtype = EMOD_PropWnd;
-					    vect_Adm.push_back(CtrlElem);
-				    }
-
-				    if ( strstr(csBuffer,"$applyLanguage") != NULL )
-					    m_bApplyLanguage = true;
-			    
-				    //----------------------------------------
-				    // icons are not supported for user defined controls in *.cfg
-				    if ( strstr(csBuffer,"$Label") != NULL )
-				    {
-					    QLabel * pLabel = new QLabel();
-					    pLabel->setFrameStyle(QFrame::Panel | QFrame::Sunken);
-					    p = strchr(csBuffer,' ');
-					    if ( p != NULL )
-					    {
-						    pLabel->setText(QString(p+1));
-					    }
-					    CtrlElem.elemtype = EMOD_Label;
-					    CtrlElem.start    = vect_QLabel.size();
-					    vect_QLabel.push_back(pLabel);
-					    vect_Adm.push_back(CtrlElem);
-				    }
-
-				    //---------------------- split 
-				    QString str   = "";
-				    QString name  = "";
-				    QString param = "";
-				    QString tmp   = "";
-				    bool bEmit = false;
-				    p = strchr(csBuffer,' ');
-				    if ( p != NULL )
-				    {
-					    str = QString(p+1);
-					    int ipos = str.indexOf(QString(" "));
-					    name  = str.left(ipos);									
-					    if ( ipos > 0 ) param = str.mid(ipos+1);
-					    ipos = param.indexOf(QString(" emit"));
-					    if ( ipos > 0 )
-					    {	
-						    bEmit = true;
-						    param = param.left(ipos);
-					    }
-				    }
-				    
-				    //printf("\n\n[%s]\n[name=%s][param=%s][bEmit=%d]\n", 
-				    //	csBuffer, qPrintable(name), qPrintable(param), (int) bEmit ); 
-
-				    if ( strstr(csBuffer,"$CheckBox") != NULL )
-				    {
-					    // Example: $CheckBox Logging true		
-					    if (param.length() > 0 )
-					    {
-						    bool bChecked = false;
-						    int ipos = param.indexOf(QString("true"));
-						    if ( ipos>= 0) 
-						    {
-							    bChecked = true;
-						    }
-						    QCheckBox * pCheck = new  QCheckBox(name, this);
-						    if ( bChecked )	pCheck->setChecked(true);
-						    pCheck->setObjectName( name + "_EMOD_CheckBox" );
-						    CtrlElem.elemtype = EMOD_CheckBox;
-						    CtrlElem.start    = vect_QCheckBox.size();
-						    if ( CtrlElem.start == 0 ) 
-							    QObject::connect( pCheck, SIGNAL(clicked()), this, SLOT( slotCallCheck_0() ));
-						    if ( CtrlElem.start == 1 ) 
-							    QObject::connect( pCheck, SIGNAL(clicked()), this, SLOT( slotCallCheck_1() ));
-						    if ( CtrlElem.start == 2 ) 
-							    QObject::connect( pCheck, SIGNAL(clicked()), this, SLOT( slotCallCheck_2() ));				
-						    vect_QCheckBox.push_back(pCheck);
-						    vect_Adm.push_back(CtrlElem);
-					    }
-				    }
-
-				    if ( strstr(csBuffer,"$CheckText") != NULL )
-				    {
-					    // Example1: $CheckText Histo2D false
-					    //           => Histo2D_EMOD_CheckText
-					    // Example2: $CheckText Apply
-					    //           => Apply_EMOD_PushText
-					    bool bCheck = false;
-					    bool bChecked = false;
-					    if (param.length() > 3 )
-					    {
-						    bCheck = true;
-						    int ipos = param.indexOf(QString("true"));
-						    if ( ipos>= 0) 
-						    {
-							    bChecked = true;
-						    }
-					    }
-					    QPushButton * pBut = new QPushButton(name, this);
-					    CtrlElem.start    = vect_QButton.size();
-					    if ( bCheck )   
-					    {
-						    pBut->setCheckable(true);
-						    if ( bChecked )	pBut->setChecked(true);
-						    CtrlElem.elemtype = EMOD_CheckText;
-						    pBut->setObjectName( name + "_EMOD_CheckText");
-					    } else {
-						    CtrlElem.elemtype = EMOD_PushText;
-						    pBut->setObjectName( name + "_EMOD_PushText");
-					    }
-					    if ( CtrlElem.start == 0 ) QObject::connect( pBut, SIGNAL(clicked()), this, SLOT( slotCallPush_0() ));
-					    if ( CtrlElem.start == 1 ) QObject::connect( pBut, SIGNAL(clicked()), this, SLOT( slotCallPush_1() ));
-					    if ( CtrlElem.start == 2 ) QObject::connect( pBut, SIGNAL(clicked()), this, SLOT( slotCallPush_2() ));
-					    if ( CtrlElem.start == 3 ) QObject::connect( pBut, SIGNAL(clicked()), this, SLOT( slotCallPush_3() ));
-					    if ( CtrlElem.start == 4 ) QObject::connect( pBut, SIGNAL(clicked()), this, SLOT( slotCallPush_4() ));
-					    vect_QButton.push_back(pBut);
-					    vect_Adm.push_back(CtrlElem);
-				    }
-
-					  
-				    if ( strstr(csBuffer,"$Edit") != NULL )
-				    {
-					    // Example: $Edit jpgq 80; w30					    
-					    CtrlElem.elemtype = EMOD_Edit;
-					    CtrlElem.start    = vect_QLineEdit.size();
-
-					    QLineEdit * pEdit = new QLineEdit();							
-					    if ( name.length() > 0 )
-					    {
-						    int ipos = param.indexOf(QString(";"));
-						    if ( ipos>= 0) 
-						    {
-							    QString attr = param.mid(ipos+1);
-							    tmp = param.left(ipos);
-							    int ipos2 = attr.indexOf(QString("w"));
-							    if ( ipos2 >=0 ) {
-								      QString Num = attr.mid(ipos2+1);  
-								      int width = atoi(qPrintable(Num)); // max display width
-								      if ( width > 5 ) pEdit->setMaximumWidth(width); 
-							    }
-						    } else {
-							    tmp = param;	
-						    }
-						    // pEdit->setObjectName(name+"_EMOD_Edit_");
-						    pEdit->setObjectName(QString(name + "_EMOD_Edit_%1").arg(CtrlElem.start) );
-						    pEdit->setText(tmp);							
-					    }
-					    
-					    vect_QLineEdit.push_back(pEdit);
-					    vect_Adm.push_back(CtrlElem);
-				    }
-
-				    if ( strstr(csBuffer,"$Combo") != NULL )
-				    {
-					    // example: $Combo ComboSrc WebCam,Video,Image emit
-					    //          => 3 Elements in ComboBox; emit => connect() 
-					    if ( name.length() > 0 )
-					    {
-							    QStringList list = param.split(",");
-							    if ( list.size() > 0 )
-							    {
-								    QComboBox * pCombo = new QComboBox();
-								    pCombo->addItems( list );
-								    CtrlElem.elemtype = EMOD_Combo;
-								    CtrlElem.start    = vect_QCombo.size();
-								    pCombo->setObjectName(name+"_EMOD_Combo");
-								    vect_QCombo.push_back( pCombo );
-								    vect_Adm.push_back(CtrlElem);
-							    
-								    if (bEmit)
-								    {
-									    connect( pCombo, SIGNAL(currentIndexChanged(const QString &)),
-											      this, SLOT( slotCallString(const QString &) ) 
-									    );
-								    }	
-							    }
-					    }	
-				    }
-					  
-					  if ( strstr(csBuffer,"$Menu") != NULL )
-					  {
-						  if ( name.length() > 0 )
-						  {
-						    QStringList list = param.split(",");
-						    if ( list.size() > 0 )
-						    {							
-							QToolButton * pTool = new QToolButton();
-							p = strchr(csBuffer,' ');
-							if ( p != NULL )
-							{
-								pTool->setText(name);
-							}
-							CtrlElem.elemtype = EMOD_Pulldown;
-							CtrlElem.start    = vect_QToolButton.size();
-							
-							pTool->setObjectName( name + "_EMOD_Pulldown" );
-							QMenu * pMenu;
-							// QMenu * pM;
-							pMenu = new QMenu(name);
-							for ( int j=0; j < list.size() ; j++ )
-							{								
-								QAction * pAct = new QAction( list[j], this);
-								QString userData = name + "|" + list[j];
-								pAct->setData( userData );
-								pAct->setStatusTip(tr("Open an existing file"));
-								int idx = vect_MenuAct.size();
-								if ( idx == 0 ) connect(pAct, SIGNAL(triggered()), this, SLOT( slotMenuAct0() ));
-								if ( idx == 1 ) connect(pAct, SIGNAL(triggered()), this, SLOT( slotMenuAct1() ));
-								if ( idx == 2 ) connect(pAct, SIGNAL(triggered()), this, SLOT( slotMenuAct2() ));
-								if ( idx == 3 ) connect(pAct, SIGNAL(triggered()), this, SLOT( slotMenuAct3() ));
-								if ( idx == 4 ) connect(pAct, SIGNAL(triggered()), this, SLOT( slotMenuAct4() ));
-								pMenu->addAction(pAct);
-								vect_MenuAct.push_back(pAct); 																
-							}
-
-							// vect_QMenu.push_back(pMenu);
-							pTool->setMenu(pMenu);
-							pTool->setPopupMode( QToolButton::MenuButtonPopup );  // MenuButtonPopup
-							
-							vect_QToolButton.push_back(pTool);
-							vect_Adm.push_back(CtrlElem);		
-						    }
-						  }
-					  }
-
-
-					  if ( strstr(csBuffer,"$Slider") != NULL )
-					  {
-						  // example: $Slider MySlider -75,100,20 emit
-						  //			=> horz. slider with limits [-75 .. 100] default 20
-						  //			   SpinBox automatical generated+named+added
-						  if ( name.length() > 0 )
-						  {
-							  QStringList list = param.split(",");
-							  if ( list.size() > 2 )
-							  {
-							    int iMin  = list[0].toInt();
-							    int iMax  = list[1].toInt();
-							    int iVal  = list[2].toInt();
-							    // printf("\n Slider [%d .. %d] %d", iMin, iMax, iVal );
-							    QSlider * pSlider = new QSlider(Qt::Horizontal);
-							    pSlider->setTickInterval( 20 );
-							    pSlider->setTickPosition( QSlider::TicksBothSides );
-							    pSlider->setRange(iMin, iMax);
-							    pSlider->setValue(iVal);
-							    CtrlElem.elemtype = EMOD_Slider;
-							    CtrlElem.start    = vect_QSlider.size();										
-							    
-							    pSlider->setObjectName(name+"_EMOD_Slider_");
-							    
-							    vect_QSlider.push_back( pSlider );
-							    vect_Adm.push_back(CtrlElem);
-
-							    // we need something to display the slider value....
-							    QSpinBox * pSpin = new QSpinBox();
-							    pSpin->setRange(iMin, iMax);
-							    pSpin->setValue(iVal);
-							    CtrlElem.elemtype = EMOD_Spin;
-							    CtrlElem.start    = vect_QSpinBox.size();
-							    pSpin->setObjectName(name+"_EMOD_Spin");
-							    vect_QSpinBox.push_back(pSpin);
-							    vect_Adm.push_back(CtrlElem);
-							    // cross connect of slider and spin
-							    connect( pSlider, SIGNAL(valueChanged(int)),
-							    pSpin, SLOT( setValue(int) )  );
-								  connect( pSpin, SIGNAL(valueChanged(int)),
-							    pSlider, SLOT( setValue(int) )  );
-
-								  if (bEmit)
-								  {
-								    if ( CtrlElem.start == 0 ) { connect( pSpin, SIGNAL(valueChanged(int)),
-																    this, SLOT( slotCallSpin_0(int) )  );
-								    }
-								    if ( CtrlElem.start == 1 ) { connect( pSpin, SIGNAL(valueChanged(int)),
-																    this, SLOT( slotCallSpin_1(int) )  );
-								    }
-								    if ( CtrlElem.start == 2 ) { connect( pSpin, SIGNAL(valueChanged(int)),
-																    this, SLOT( slotCallSpin_2(int) )  );
-								    }
-								    if ( CtrlElem.start == 3 ) { connect( pSpin, SIGNAL(valueChanged(int)),
-																    this, SLOT( slotCallSpin_3(int) )  );
-								    }
-								    if ( CtrlElem.start == 4 ) { connect( pSpin, SIGNAL(valueChanged(int)),
-																    this, SLOT( slotCallSpin_4(int) )  );
-								    }
-								  }
-
-							  }
-						  }
-					  }
-					  
-					  if ( strstr(csBuffer,"Spin") != NULL )
-					  {
-					      // example: $Spin JPGQ 0,100,75
-					      //          => 
-					      if ( name.length() > 0 )
-					      {
-						QStringList list = param.split(",");
-						if ( list.size() > 2 )
-						{
-						    int iMin  = list[0].toInt();
-						    int iMax  = list[1].toInt();
-						    int iVal  = list[2].toInt();
-						    QSpinBox * pSpin = new QSpinBox();
-						    pSpin->setRange(iMin, iMax);
-						    pSpin->setValue(iVal);
-						    pSpin->setObjectName(name + "_EMOD_Spin");
-						    CtrlElem.elemtype = EMOD_Spin;
-						    CtrlElem.start    = vect_QSpinBox.size();
-						    vect_QSpinBox.push_back(pSpin);
-						    vect_Adm.push_back(CtrlElem);
-						    if (bEmit)
-						    {
-							    if ( CtrlElem.start == 0 ) { connect( pSpin, SIGNAL(valueChanged(int)),
-															    this, SLOT( slotCallSpin_0(int) )  );
-							    }
-							    if ( CtrlElem.start == 1 ) { connect( pSpin, SIGNAL(valueChanged(int)),
-															    this, SLOT( slotCallSpin_1(int) )  );
-							    }
-							    if ( CtrlElem.start == 2 ) { connect( pSpin, SIGNAL(valueChanged(int)),
-															    this, SLOT( slotCallSpin_2(int) )  );
-							    }
-							    if ( CtrlElem.start == 3 ) { connect( pSpin, SIGNAL(valueChanged(int)),
-															    this, SLOT( slotCallSpin_3(int) )  );
-							    }
-							    if ( CtrlElem.start == 4 ) { connect( pSpin, SIGNAL(valueChanged(int)),
-															    this, SLOT( slotCallSpin_4(int) )  );
-							    }
-						    }
-						}
-					      }
-					  }
-					  //-----------------------
-				  }
-			  }
+					printf("\n-------- m_WndName=[%s]", qPrintable(m_WndName));
+				    }  
+				}
 			}
-		}
-	} 
 
-	if ( bVerbose )
-                printf("\n m_LanguageVec.size()=%d ", m_LanguageVec.size() );
+			if ( linecnt > 0 )
+			{
+			
+			  if ( m_verboseLevel > 1 )
+			  {
+			      printf("\n   [%s]", content.c_str() );
+			  }  
+	      	  
+			  // ----------- Standard Controls of Yannic Verdie with Icons
+			  if ( strstr(csBuffer,"$Panning") != NULL )
+			  {
+				  CtrlElem.elemtype = EMOD_Panning;
+				  vect_Adm.push_back(CtrlElem);
+			  }
+			  if ( strstr(csBuffer,"$Zoom") != NULL )
+			  {
+				  CtrlElem.elemtype = EMOD_Zoom;
+				  vect_Adm.push_back(CtrlElem);
+			  }
+			  if ( strstr(csBuffer,"$SaveImg") != NULL )
+			  {
+				  CtrlElem.elemtype = EMOD_SaveImg;
+				  vect_Adm.push_back(CtrlElem);
+			  }
+			  if ( strstr(csBuffer,"$PropWnd") != NULL )
+			  {
+				  CtrlElem.elemtype = EMOD_PropWnd;
+				  vect_Adm.push_back(CtrlElem);
+			  }
+
+			  // -------- commands or new controls without icons
+			  //          user defined controls from *.cfg
+			  if ( strstr(csBuffer,"$applyLanguage") != NULL )
+					  m_bApplyLanguage = true;
+  
+			  char * posptr = strstr(csBuffer,"$StatusLine");
+			  if ( posptr != NULL )
+                                          m_StatusLine = QString(posptr+12);
+			                            
+			  prepareControls( csBuffer );   
+			}		
+		    }
+		}
+                // int tagNr =  it.container->tag;
+                // cout << "[" << tagNr << "] ["  << node.name() << "] " <<  content << endl;
+           }
+       }
+
+       printf("\n --->[m_StatusLine=%s] ", qPrintable(m_StatusLine) );
+
 
 	if ( vect_Adm.size() == 0 )
 	{
@@ -2596,51 +2695,50 @@ void CvWindow::createActions()
 	int txtidx = 0;
 	QWidget* view = myView->getWidget();
 
-	for (int i=0; i < vect_Adm.size(); i++)
-	{
-		AdmElem * pCtrl = &vect_Adm[i];
+    for (int i=0; i < vect_Adm.size(); i++)
+    {
+	AdmElem * pCtrl = &vect_Adm[i];
 		
-		if ( pCtrl->elemtype == EMOD_Panning )
-		{
-			pCtrl->start = idx;
-			pCtrl->cnt   = 4;
+	if ( pCtrl->elemtype == EMOD_Panning ) {
+		pCtrl->start = idx;
+		pCtrl->cnt   = 4;
 
-			vect_QActions[idx] = new QAction(QIcon(":/left-icon"), "Panning left (CTRL+arrowLEFT)", this);
-			vect_QActions[idx]->setIconVisibleInMenu(true);
-			QObject::connect(vect_QActions[idx++], SIGNAL(triggered()), view, SLOT(siftWindowOnLeft()));
+		vect_QActions[idx] = new QAction(QIcon(":/left-icon"), "Panning left (CTRL+arrowLEFT)", this);
+		vect_QActions[idx]->setIconVisibleInMenu(true);
+		QObject::connect(vect_QActions[idx++], SIGNAL(triggered()), view, SLOT(siftWindowOnLeft()));
 
-			vect_QActions[idx] = new QAction(QIcon(":/right-icon"), "Panning right (CTRL+arrowRIGHT)", this);
-			vect_QActions[idx]->setIconVisibleInMenu(true);
-			QObject::connect(vect_QActions[idx++], SIGNAL(triggered()), view, SLOT(siftWindowOnRight()));
+		vect_QActions[idx] = new QAction(QIcon(":/right-icon"), "Panning right (CTRL+arrowRIGHT)", this);
+		vect_QActions[idx]->setIconVisibleInMenu(true);
+		QObject::connect(vect_QActions[idx++], SIGNAL(triggered()), view, SLOT(siftWindowOnRight()));
 
-			vect_QActions[idx] = new QAction(QIcon(":/up-icon"), "Panning up (CTRL+arrowUP)", this);
-			vect_QActions[idx]->setIconVisibleInMenu(true);
-			QObject::connect(vect_QActions[idx++], SIGNAL(triggered()), view, SLOT(siftWindowOnUp()));
+		vect_QActions[idx] = new QAction(QIcon(":/up-icon"), "Panning up (CTRL+arrowUP)", this);
+		vect_QActions[idx]->setIconVisibleInMenu(true);
+		QObject::connect(vect_QActions[idx++], SIGNAL(triggered()), view, SLOT(siftWindowOnUp()));
 
-			vect_QActions[idx] = new QAction(QIcon(":/down-icon"), "Panning down (CTRL+arrowDOWN)", this);
-			vect_QActions[idx]->setIconVisibleInMenu(true);
-			QObject::connect(vect_QActions[idx++], SIGNAL(triggered()), view, SLOT(siftWindowOnDown()) );		
-		}
+		vect_QActions[idx] = new QAction(QIcon(":/down-icon"), "Panning down (CTRL+arrowDOWN)", this);
+		vect_QActions[idx]->setIconVisibleInMenu(true);
+		QObject::connect(vect_QActions[idx++], SIGNAL(triggered()), view, SLOT(siftWindowOnDown()) );		
+	}
 
-		if ( pCtrl->elemtype == EMOD_Zoom ) {
-			pCtrl->start = idx;
-			pCtrl->cnt   = 4;
-			vect_QActions[idx] = new QAction(QIcon(":/zoom_x1-icon"), "Zoom x1 (CTRL+P)", this);
-			vect_QActions[idx]->setIconVisibleInMenu(true);
-			QObject::connect(vect_QActions[idx++], SIGNAL(triggered()), view, SLOT(resetZoom()));
+	if ( pCtrl->elemtype == EMOD_Zoom ) {
+		pCtrl->start = idx;
+		pCtrl->cnt   = 4;
+		vect_QActions[idx] = new QAction(QIcon(":/zoom_x1-icon"), "Zoom x1 (CTRL+P)", this);
+		vect_QActions[idx]->setIconVisibleInMenu(true);
+		QObject::connect(vect_QActions[idx++], SIGNAL(triggered()), view, SLOT(resetZoom()));
 
-			vect_QActions[idx] = new QAction(QIcon(":/imgRegion-icon"), tr("Zoom x%1 (see label) (CTRL+X)").arg(threshold_zoom_img_region), this);
-			vect_QActions[idx]->setIconVisibleInMenu(true);
-			QObject::connect(vect_QActions[idx++], SIGNAL(triggered()), view, SLOT(imgRegion()));
+		vect_QActions[idx] = new QAction(QIcon(":/imgRegion-icon"), tr("Zoom x%1 (see label) (CTRL+X)").arg(threshold_zoom_img_region), this);
+		vect_QActions[idx]->setIconVisibleInMenu(true);
+		QObject::connect(vect_QActions[idx++], SIGNAL(triggered()), view, SLOT(imgRegion()));
 
-			vect_QActions[idx] = new QAction(QIcon(":/zoom_in-icon"), "Zoom in (CTRL++)", this);
-			vect_QActions[idx]->setIconVisibleInMenu(true);
-			QObject::connect(vect_QActions[idx++], SIGNAL(triggered()), view, SLOT(ZoomIn()));
+		vect_QActions[idx] = new QAction(QIcon(":/zoom_in-icon"), "Zoom in (CTRL++)", this);
+		vect_QActions[idx]->setIconVisibleInMenu(true);
+		QObject::connect(vect_QActions[idx++], SIGNAL(triggered()), view, SLOT(ZoomIn()));
 
-			vect_QActions[idx] = new QAction(QIcon(":/zoom_out-icon"), "Zoom out (CTRL+-)", this);
-			vect_QActions[idx]->setIconVisibleInMenu(true);
-			QObject::connect(vect_QActions[idx++], SIGNAL(triggered()), view, SLOT(ZoomOut()));
-		}
+		vect_QActions[idx] = new QAction(QIcon(":/zoom_out-icon"), "Zoom out (CTRL+-)", this);
+		vect_QActions[idx]->setIconVisibleInMenu(true);
+		QObject::connect(vect_QActions[idx++], SIGNAL(triggered()), view, SLOT(ZoomOut()));
+	}
 
         if ( pCtrl->elemtype == EMOD_SaveImg ) {
 			pCtrl->start = idx;
@@ -2663,38 +2761,41 @@ void CvWindow::createActions()
             QObject::connect(vect_QActions[idx++], SIGNAL(triggered()), this, SLOT(displayPropertiesWin()));
         }
 
-		if ( pCtrl->elemtype == EMOD_TxtButton ) {		
-			vect_QActions[idx] = new QAction( vecString[txtidx] , this);	// Add Text Button
-			if ( txtidx == 0 )
-					QObject::connect(vect_QActions[idx], SIGNAL(triggered()), this, SLOT( slotCall_0() ));
-			if ( txtidx == 1 )
-					QObject::connect(vect_QActions[idx], SIGNAL(triggered()), this, SLOT( slotCall_1() ));
-			if ( txtidx == 2 )
-					QObject::connect(vect_QActions[idx], SIGNAL(triggered()), this, SLOT( slotCall_2() ));
-			if ( txtidx == 3 )
-					QObject::connect(vect_QActions[idx], SIGNAL(triggered()), this, SLOT( slotCall_3() ));
-			if ( txtidx == 4 )
-					QObject::connect(vect_QActions[idx], SIGNAL(triggered()), this, SLOT( slotCall_4() ));
-			if ( txtidx == 5 )
-					QObject::connect(vect_QActions[idx], SIGNAL(triggered()), this, SLOT( slotCall_5() ));
-			if ( txtidx == 6 )
-					QObject::connect(vect_QActions[idx], SIGNAL(triggered()), this, SLOT( slotCall_6() ));
-			if ( txtidx == 7 )
-					QObject::connect(vect_QActions[idx], SIGNAL(triggered()), this, SLOT( slotCall_7() ));
-			if ( txtidx == 8 )
-					QObject::connect(vect_QActions[idx], SIGNAL(triggered()), this, SLOT( slotCall_8() ));
-			if ( txtidx == 9 )
-					QObject::connect(vect_QActions[idx], SIGNAL(triggered()), this, SLOT( slotCall_9() ));
+        if ( pCtrl->elemtype == EMOD_TxtButton ) {
+      
+		vect_QActions[idx] = new QAction( vecString[txtidx] , this);	// Add Text Button
+		if ( txtidx == 0 )
+				QObject::connect(vect_QActions[idx], SIGNAL(triggered()), this, SLOT( slotCall_0() ));
+		if ( txtidx == 1 )
+				QObject::connect(vect_QActions[idx], SIGNAL(triggered()), this, SLOT( slotCall_1() ));
+		if ( txtidx == 2 )
+				QObject::connect(vect_QActions[idx], SIGNAL(triggered()), this, SLOT( slotCall_2() ));
+		if ( txtidx == 3 )
+				QObject::connect(vect_QActions[idx], SIGNAL(triggered()), this, SLOT( slotCall_3() ));
+		if ( txtidx == 4 )
+				QObject::connect(vect_QActions[idx], SIGNAL(triggered()), this, SLOT( slotCall_4() ));
+		if ( txtidx == 5 )
+				QObject::connect(vect_QActions[idx], SIGNAL(triggered()), this, SLOT( slotCall_5() ));
+		if ( txtidx == 6 )
+				QObject::connect(vect_QActions[idx], SIGNAL(triggered()), this, SLOT( slotCall_6() ));
+		if ( txtidx == 7 )
+				QObject::connect(vect_QActions[idx], SIGNAL(triggered()), this, SLOT( slotCall_7() ));
+		if ( txtidx == 8 )
+				QObject::connect(vect_QActions[idx], SIGNAL(triggered()), this, SLOT( slotCall_8() ));
+		if ( txtidx == 9 )
+				QObject::connect(vect_QActions[idx], SIGNAL(triggered()), this, SLOT( slotCall_9() ));
 
-			vect_QActions[idx]->setObjectName( QString("_EMOD_Action_%1").arg(idx) );
-								
-			pCtrl->start = idx;
-			pCtrl->cnt   = 1;
-			txtidx++;
-			idx++;
-		}		
+		vect_QActions[idx]->setObjectName( QString("_EMOD_Action_%1").arg(idx) );
+							
+		pCtrl->start = idx;
+		pCtrl->cnt   = 1;
+		txtidx++;
+		idx++;
 	}
-	vect_QActions.resize(idx);   
+	
+    }
+	
+    vect_QActions.resize(idx);   
 }
 
 
@@ -2739,88 +2840,88 @@ void CvWindow::createShortcuts()
 
 void CvWindow::createToolBar()
 {
-	if ( vect_Adm.size() <= 0 ) return;
+    if ( vect_Adm.size() <= 0 ) return;
 
-	myToolBar = new QToolBar(this);
-	myToolBar->setFloatable(false); //is not a window
-	myToolBar->setFixedHeight(28);  // icon size grows automatical, if incremented
-	myToolBar->setMinimumWidth(1);
+    myToolBar = new QToolBar(this);
+    myToolBar->setFloatable(false); //is not a window
+    myToolBar->setFixedHeight(28);  // icon size grows automatical, if incremented
+    myToolBar->setMinimumWidth(1);
 
-	for (int i=0; i < vect_Adm.size(); i++)
+    for (int i=0; i < vect_Adm.size(); i++)
+    {
+	// Add some Qt-Controls from *.cfg and build up myToolBar with it.
+	AdmElem * pCtrl = &vect_Adm[i];	
+	if ( (pCtrl->elemtype == EMOD_PropWnd) || (pCtrl->elemtype == EMOD_SaveImg ) || 
+	      (pCtrl->elemtype == EMOD_TxtButton)  )
 	{
-		// Add some Qt-Controls from *.cfg and build up myToolBar with it.
-		AdmElem * pCtrl = &vect_Adm[i];	
-		if ( (pCtrl->elemtype == EMOD_PropWnd) || (pCtrl->elemtype == EMOD_SaveImg ) || 
-                     (pCtrl->elemtype == EMOD_TxtButton)  )
+		myToolBar->addAction( vect_QActions[pCtrl->start] );
+	}
+	if ( (pCtrl->elemtype == EMOD_Zoom) || (pCtrl->elemtype == EMOD_Panning )  )
+	{
+		for ( int j=pCtrl->start; j < pCtrl->start + pCtrl->cnt ; j++ )
 		{
-			myToolBar->addAction( vect_QActions[pCtrl->start] );
-		}
-		if ( (pCtrl->elemtype == EMOD_Zoom) || (pCtrl->elemtype == EMOD_Panning )  )
-		{
-			for ( int j=pCtrl->start; j < pCtrl->start + pCtrl->cnt ; j++ )
-			{
-				myToolBar->addAction( vect_QActions[j]);
-			}
-		}
-		if ( pCtrl->elemtype == EMOD_Combo )
-		{
-			pCtrl->cnt = 1;
-			QWidget * pWid = (QWidget *) vect_QCombo[pCtrl->start];
-			myToolBar->addWidget( pWid );
-		}
-		if ( pCtrl->elemtype == EMOD_Edit )
-		{
-			pCtrl->cnt = 1;
-			QWidget * pWid = (QWidget *) vect_QLineEdit[pCtrl->start];
-			QString name = pWid->objectName();
-			myToolBar->addWidget( pWid  );
-		}
-		
-		if ( pCtrl->elemtype == EMOD_Pulldown )
-		{
-			pCtrl->cnt = 1;
-			QWidget * pWid = (QWidget *) vect_QToolButton[pCtrl->start];
-			QString name = pWid->objectName();
-			myToolBar->addWidget( pWid  );
-		}
-
-		if ( pCtrl->elemtype == EMOD_Label )
-		{
-			QWidget * pWid = (QWidget *) vect_QLabel[pCtrl->start];
-			pWid->setObjectName(QString("EMOD_Label_%1").arg(pCtrl->start));
-			myToolBar->addWidget( pWid );
-		}
-		if ( pCtrl->elemtype == EMOD_CheckBox )
-		{
-			QWidget * pWid = (QWidget *) vect_QCheckBox[pCtrl->start];
-			myToolBar->addWidget( pWid );
-		}
-		if ( pCtrl->elemtype == EMOD_CheckText )
-		{
-			QWidget * pWid = (QWidget *) vect_QButton[pCtrl->start];
-			myToolBar->addWidget( pWid );
-		}
-		if ( pCtrl->elemtype == EMOD_PushText )
-		{
-			QWidget * pWid = (QWidget *) vect_QButton[pCtrl->start];
-			myToolBar->addWidget( pWid );
-		}
-		if ( pCtrl->elemtype == EMOD_Slider )
-		{
-			QWidget * pWid = (QWidget *) vect_QSlider[pCtrl->start];
-			myToolBar->addWidget( pWid );
-		}
-		if ( pCtrl->elemtype == EMOD_Spin )
-		{
-			QWidget * pWid = (QWidget *) vect_QSpinBox[pCtrl->start];
-			myToolBar->addWidget( pWid );
+			myToolBar->addAction( vect_QActions[j]);
 		}
 	}
-
-	if ( m_bApplyLanguage )
-			applyTransTab();
+	if ( pCtrl->elemtype == EMOD_Combo )
+	{
+		pCtrl->cnt = 1;
+		QWidget * pWid = (QWidget *) vect_QCombo[pCtrl->start];
+		myToolBar->addWidget( pWid );
+	}
+	if ( pCtrl->elemtype == EMOD_Edit )
+	{
+		pCtrl->cnt = 1;
+		QWidget * pWid = (QWidget *) vect_QLineEdit[pCtrl->start];
+		QString name = pWid->objectName();
+		myToolBar->addWidget( pWid  );
+	}
 	
-	InitExchange(-1);
+	if ( pCtrl->elemtype == EMOD_Pulldown )
+	{
+		pCtrl->cnt = 1;
+		QWidget * pWid = (QWidget *) vect_QToolButton[pCtrl->start];
+		QString name = pWid->objectName();
+		myToolBar->addWidget( pWid  );
+	}
+
+	if ( pCtrl->elemtype == EMOD_Label )
+	{
+		QWidget * pWid = (QWidget *) vect_QLabel[pCtrl->start];
+		pWid->setObjectName(QString("EMOD_Label_%1").arg(pCtrl->start));
+		myToolBar->addWidget( pWid );
+	}
+	if ( pCtrl->elemtype == EMOD_CheckBox )
+	{
+		QWidget * pWid = (QWidget *) vect_QCheckBox[pCtrl->start];
+		myToolBar->addWidget( pWid );
+	}
+	if ( pCtrl->elemtype == EMOD_CheckText )
+	{
+		QWidget * pWid = (QWidget *) vect_QButton[pCtrl->start];
+		myToolBar->addWidget( pWid );
+	}
+	if ( pCtrl->elemtype == EMOD_PushText )
+	{
+		QWidget * pWid = (QWidget *) vect_QButton[pCtrl->start];
+		myToolBar->addWidget( pWid );
+	}
+	if ( pCtrl->elemtype == EMOD_Slider )
+	{
+		QWidget * pWid = (QWidget *) vect_QSlider[pCtrl->start];
+		myToolBar->addWidget( pWid );
+	}
+	if ( pCtrl->elemtype == EMOD_Spin )
+	{
+		QWidget * pWid = (QWidget *) vect_QSpinBox[pCtrl->start];
+		myToolBar->addWidget( pWid );
+	}
+    }
+
+    if ( m_bApplyLanguage )
+		    applyTransTab();
+    
+    InitExchange(-1);
 }
 
 
@@ -2828,7 +2929,7 @@ void CvWindow::createStatusBar()
 {
     myStatusBar = new QStatusBar(this);
     myStatusBar->setSizeGripEnabled(false);
-    myStatusBar->setFixedHeight(20);
+    myStatusBar->setFixedHeight(24);  // previous value 20
     myStatusBar->setMinimumWidth(1);
     myStatusBar_msg = new QLabel;
 
@@ -2864,139 +2965,200 @@ void CvWindow::showTools()
         myStatusBar->show();
 }
 
+void CvWindow::replaceBrackets(QString & txt)
+{
+     // replace [....] by <....> if HTML Syntax
+     // Example:
+     // "[font color=blue]Sat:[/font]"
+
+    int ipos = txt.indexOf("[/");
+    while ( ipos >= 0 )
+    {
+        QString tagname = txt.mid(ipos+2,999);
+        int iposc = tagname.indexOf("]");
+        if ( iposc > 0 )
+        {
+            tagname = tagname.mid(0,iposc);
+            txt[ipos]  = '<';
+            txt[ipos+iposc+2] = '>';
+
+            int ipos3 = txt.indexOf("["+tagname);
+            if ( ipos3 >= 0 )
+            {
+                iposc = txt.indexOf("]");
+                if ( iposc > 0 )
+                {
+                    txt[ipos3] = '<';
+                    txt[iposc] = '>';
+                    // printf("\nreplace:[%s] iposc=%d", qPrintable(txt), iposc);
+                }
+            }
+        }
+        ipos = txt.indexOf("[/");
+    }
+
+    /*
+    ipos = txt.indexOf("[[");
+    if ( ipos >= 0 )
+    {
+        txt[ipos]   = '<';
+        txt[ipos+1] = ' ';
+    }
+
+    ipos = txt.indexOf("]]");
+    if ( ipos >= 0 )
+    {
+        txt[ipos] = '>';
+        txt[ipos+1] = ' ';
+    }
+    */
+
+    ipos = txt.indexOf("uml;;");
+    if ( ipos >= 0 )
+    {
+        txt.replace(QString("uml;;"), QString("uml;"));
+    }
+
+
+}
 
 void CvWindow::applyTransTab()
 {
-	// translation of strings for purpose of display
-	int TransCnt = 0;
-	QList<QObject*> ObjList = myToolBar->children();	 
-	for ( int iobj=0 ; iobj < ObjList.count(); iobj++  )
+    // translation of strings for purpose of display
+    int TransCnt = 0;
+    QList<QObject*> ObjList = myToolBar->children();	 
+    for ( int iobj=0 ; iobj < ObjList.count(); iobj++  )
+    {
+	QObject* pObj = ObjList.at(iobj);
+	QString ObjName = pObj->objectName();		
+	QString metaName = QString(pObj->metaObject()->className());
+
+	if (metaName == "QToolButton" )
 	{
-		 QObject* pObj = ObjList.at(iobj);
-		 QString ObjName = pObj->objectName();		
-		 QString metaName = QString(pObj->metaObject()->className());
-
-		 if (metaName == "QToolButton" )
-		 {
-				QToolButton * pBut = (QToolButton * ) pObj;
-				for ( int j=0; j < m_LanguageVec.size() ; j++ )
-				{
-					QString txt1 = "";
-					QString txt2 = "";
-					QString * pTxt = &m_LanguageVec[j];
-					int ipos = pTxt->indexOf(" <-> ");
-					if ( ipos > 0 )
-					{
-						txt1 = pTxt->mid(0,ipos);
-						txt2 = pTxt->mid(ipos+5,999);
-						if ( txt1 == pBut->text() ) {
-							pBut->setText(txt2);
-							TransCnt++;
-						}
-					}
-				}
-		 }
-
-		 if (metaName == "QPushButton" )
-		 {
-				QPushButton * pBut = (QPushButton * ) pObj;
-				for ( int i=0; i < m_LanguageVec.size() ; i++ )
-				{
-					QString txt1 = "";
-					QString txt2 = "";
-					QString * pTxt = &m_LanguageVec[i];
-					int ipos = pTxt->indexOf(" <-> ");
-					if ( ipos > 0 )
-					{
-						txt1 = pTxt->mid(0,ipos);
-						txt2 = pTxt->mid(ipos+5,999);
-						if ( txt1 == pBut->text() ) {
-							pBut->setText(txt2);
-							TransCnt++;
-						}
-					}
-				}
-		 }
-
-
-		 if (metaName == "QLabel" )
-		 {
-				QLabel * pBut = (QLabel * ) pObj;
-				for ( int i=0; i < m_LanguageVec.size() ; i++ )
-				{
-					QString txt1 = "";
-					QString txt2 = "";
-					QString * pTxt = &m_LanguageVec[i];
-					int ipos = pTxt->indexOf(" <-> ");
-					if ( ipos > 0 )
-					{
-						txt1 = pTxt->mid(0,ipos);
-						txt2 = pTxt->mid(ipos+5,999);
-						if ( txt1 == pBut->text() ) {
-                            // printf("   [%s][%s->%s]   ", qPrintable(txt1),
-                            //  qPrintable(txt2), qPrintable(pBut->text())  );
-							pBut->setText(txt2);
-							if(txt2.contains("<font color"))
-							{
-							 pBut->setFrameStyle(QFrame::Panel | QFrame::Raised);		
-							}
-							TransCnt++;
-						}
-					}
-				}
-		 }
-
-		 if (metaName == "QLineEdit" )
-		 {
-				QLineEdit * pBut = ( QLineEdit * ) pObj;
-				for ( int i=0; i < m_LanguageVec.size() ; i++ )
-				{
-					QString txt1 = "";
-					QString txt2 = "";
-					QString * pTxt = &m_LanguageVec[i];
-					int ipos = pTxt->indexOf(" <-> ");
-					if ( ipos > 0 )
-					{
-						txt1 = pTxt->mid(0,ipos);
-						txt2 = pTxt->mid(ipos+5,999);
-						if ( txt1 == pBut->text() ) {
-							printf("   [%s][%s->%s]   ", qPrintable(txt1), qPrintable(txt2), qPrintable(pBut->text())  );
-							pBut->setText(txt2);
-							TransCnt++;
-						}
-					}
-				}
-
-		 }
-
-		 if (metaName == "QAction" )
-		 {
-				QAction * pBut = ( QAction * ) pObj;
-				for ( int i=0; i < m_LanguageVec.size() ; i++ )
-				{
-					QString txt1 = "";
-					QString txt2 = "";
-					QString * pTxt = &m_LanguageVec[i];
-					int ipos = pTxt->indexOf(" <-> ");
-					if ( ipos > 0 )
-					{
-						txt1 = pTxt->mid(0,ipos);
-						txt2 = pTxt->mid(ipos+5,999);
-						if ( txt1 == pBut->text() ) {
-							printf("   [%s][%s->%s]   ", qPrintable(txt1), qPrintable(txt2), qPrintable(pBut->text())  );
-							pBut->setText(txt2);
-							TransCnt++;
-						}
-					}
-				}
-		 }
+	    QToolButton * pBut = (QToolButton * ) pObj;
+	    for ( int j=0; j < m_LanguageVec.size() ; j++ )
+	    {
+		    QString txt1 = "";
+		    QString txt2 = "";
+		    QString * pTxt = &m_LanguageVec[j];
+		    int ipos = pTxt->indexOf(" <-> ");
+		    if ( ipos > 0 )
+		    {
+			    txt1 = pTxt->mid(0,ipos);
+			    txt2 = pTxt->mid(ipos+5,999);
+			    if ( txt1 == pBut->text() ) {
+				replaceBrackets(txt2);
+				pBut->setText(txt2);
+				TransCnt++;
+			    }
+		    }
+	    }
 	}
-	if ( bVerbose )
-		printf("\n %s --> Language Translation for %d Words done ", qPrintable(m_WndName), TransCnt );
-		
+
+	if (metaName == "QPushButton" )
+	{
+	    QPushButton * pBut = (QPushButton * ) pObj;
+	    for ( int i=0; i < m_LanguageVec.size() ; i++ )
+	    {
+		    QString txt1 = "";
+		    QString txt2 = "";
+		    QString * pTxt = &m_LanguageVec[i];
+		    int ipos = pTxt->indexOf(" <-> ");
+		    if ( ipos > 0 )
+		    {
+			    txt1 = pTxt->mid(0,ipos);
+			    txt2 = pTxt->mid(ipos+5,999);
+			    if ( txt1 == pBut->text() ) {
+				    replaceBrackets(txt2);
+				    pBut->setText(txt2);
+				    TransCnt++;
+			    }
+		    }
+	    }
+	}
+
+	if (metaName == "QLabel" )
+	{
+	    QLabel * pBut = (QLabel * ) pObj;
+	    for ( int i=0; i < m_LanguageVec.size() ; i++ )
+	    {
+		    QString txt1 = "";
+		    QString txt2 = "";
+		    QString * pTxt = &m_LanguageVec[i];
+		    int ipos = pTxt->indexOf(" <-> ");
+		    if ( ipos > 0 )
+		    {
+			    txt1 = pTxt->mid(0,ipos);
+			    txt2 = pTxt->mid(ipos+5,999);
+			    if ( txt1 == pBut->text() ) {
+	// printf("   [%s][%s->%s]   ", qPrintable(txt1),
+	//  qPrintable(txt2), qPrintable(pBut->text())  );
+
+				    replaceBrackets(txt2);
+
+
+				    pBut->setText(txt2);
+				    if(txt2.contains("<font color"))
+				    {
+				      pBut->setFrameStyle(QFrame::Panel | QFrame::Raised);		
+				    }
+				    TransCnt++;
+			    }
+		    }
+	    }
+	}
+
+	if (metaName == "QLineEdit" )
+	{
+	    QLineEdit * pBut = ( QLineEdit * ) pObj;
+	    for ( int i=0; i < m_LanguageVec.size() ; i++ )
+	    {
+		    QString txt1 = "";
+		    QString txt2 = "";
+		    QString * pTxt = &m_LanguageVec[i];
+		    int ipos = pTxt->indexOf(" <-> ");
+		    if ( ipos > 0 )
+		    {
+			    txt1 = pTxt->mid(0,ipos);
+			    txt2 = pTxt->mid(ipos+5,999);
+			    if ( txt1 == pBut->text() ) {
+				    printf("   [%s][%s->%s]   ", qPrintable(txt1), qPrintable(txt2), qPrintable(pBut->text())  );
+				    pBut->setText(txt2);
+				    TransCnt++;
+			    }
+		    }
+	    }
+
+	}
+
+	if (metaName == "QAction" )
+	{
+	    QAction * pBut = ( QAction * ) pObj;
+	    for ( int i=0; i < m_LanguageVec.size() ; i++ )
+	    {
+		    QString txt1 = "";
+		    QString txt2 = "";
+		    QString * pTxt = &m_LanguageVec[i];
+		    int ipos = pTxt->indexOf(" <-> ");
+		    if ( ipos > 0 )
+		    {
+			    txt1 = pTxt->mid(0,ipos);
+			    txt2 = pTxt->mid(ipos+5,999);
+			    if ( txt1 == pBut->text() ) {
+				    printf("   [%s][%s->%s]   ", qPrintable(txt1), qPrintable(txt2), qPrintable(pBut->text())  );
+				    pBut->setText(txt2);
+				    TransCnt++;
+			    }
+		    }
+	    }
+	}
+    }
+    if ( m_verboseLevel > 0 )
+	    printf("\n %s --> Language Translation for %d Words done ", qPrintable(m_WndName), TransCnt );
+	    
 }
 
-void CvWindow::InitExchange(int idx)
+void CvWindow::InitExchange(int idx, int iValue)
 {
 	// Some Qt-Controls in the Toolbar may be changed by user interaction
 	// fill up CvWindow::m_ContentVec[i] with the content of controls
@@ -3029,7 +3191,7 @@ void CvWindow::InitExchange(int idx)
 			QPushButton * pBut = (QPushButton *) pObj;
 			if ( pBut->isChecked() ) bVal = true;
 			int ipos = ObjName.lastIndexOf("_");
-			QString num = ObjName.mid(ipos+1);          //--->linuxErr
+			QString num = ObjName.mid(ipos+1);
 			ipos = ObjName.indexOf("_");
 			QString Name = ObjName.left(ipos);			
 			if ( bVal ) {
@@ -3128,14 +3290,14 @@ void CvWindow::modifyContent(QString WndName, int eType,  int idx, QString text)
 		 }
 	}
 
-	 if ( bVerbose)
-	 {
-		printf("\n CvWindow::modifyContent [%s] ", qPrintable(WndName) );  // //--->linuxWarn
-	 }
+	if ( m_verboseLevel > 1 )
+	{
+	      printf("\n CvWindow::modifyContent [%s] ", qPrintable(WndName) );  // //--->linuxWarn
+	}
 
-	 if ( myToolBar == NULL ) return;
+	if ( myToolBar == NULL ) return;
 
-	 QList<QObject*> ObjList = myToolBar->children();	 
+	QList<QObject*> ObjList = myToolBar->children();	 
 
 	 int FitCnt = 0;
 	 for ( int i=0 ; i < ObjList.count(); i++  )
@@ -3177,7 +3339,7 @@ void CvWindow::modifyContent(QString WndName, int eType,  int idx, QString text)
 
 			 if (  ObjName.contains(Name)  )
 			 {
-				if ( bVerbose )
+				if ( m_verboseLevel > 1 )
 				{
 					printf("\n[pObj->objectName=%s] --->[%s]", qPrintable( ObjName ), qPrintable(text) );
 				}
@@ -3198,16 +3360,36 @@ void CvWindow::modifyContent(QString WndName, int eType,  int idx, QString text)
 		 }
 	 }
 	 
-	 if ( bVerbose)
+	 if ( m_verboseLevel > 1 )
 	 {
 		if ( FitCnt == 0 ) printf("\n [%s] not fitting <--- [%s]", qPrintable(Name), qPrintable(text) );
 		printf("\n");
 	 }	 
 }
 
+void CvWindow::setMapContent( QString varname, QString content )
+{
+    VarMap.insert(varname,content);
+}
+
+void CvWindow::getMapContent( QString in, QString & out )
+{
+    if (VarMap.contains(in))
+        out = VarMap.value(in);  
+}
+    
+
+/*
+void CvWindow::setStatusBarContent( QString text )
+{
+	  centralWidget->myStatusBar_msg->setText(text); 	
+}
+*/
+
+
 void CvWindow::MsgBoxInfo(char * pCaption, std::string Info )
 {
-	 QMessageBox::information( this, pCaption, Info.c_str() );
+    QMessageBox::information( this, pCaption, Info.c_str() );
 }   
 
 
@@ -3411,34 +3593,34 @@ void CvWindow::slotCallSpin_0(int iVal)
 {
 	QWidget * pWid = (QWidget*) vect_QSpinBox[0]; 
 	m_CmdVec.push_back( pWid->objectName() );
-	InitExchange(0);
+	InitExchange(0,iVal);
 }  
 
 void CvWindow::slotCallSpin_1(int iVal)
 {
 	QWidget * pWid = (QWidget*) vect_QSpinBox[1]; 
 	m_CmdVec.push_back( pWid->objectName() );
-	InitExchange(1);
+	InitExchange(1,iVal);
 }  
 
 void CvWindow::slotCallSpin_2(int iVal)
 {
 	QWidget * pWid = (QWidget*) vect_QSpinBox[2]; 
 	m_CmdVec.push_back( pWid->objectName() );
-	InitExchange(2);
+	InitExchange(2,iVal);
 }  
 
 void CvWindow::slotCallSpin_3(int iVal)
 {
 	QWidget * pWid = (QWidget*) vect_QSpinBox[3]; 
 	m_CmdVec.push_back( pWid->objectName() );
-	InitExchange(3);
+	InitExchange(3,iVal);
 }  
 void CvWindow::slotCallSpin_4(int iVal)
 {
 	QWidget * pWid = (QWidget*) vect_QSpinBox[4]; 
 	m_CmdVec.push_back( pWid->objectName() );
-	InitExchange(4);
+	InitExchange(4,iVal);
 }  
 
 //-------------------------------------
@@ -3679,6 +3861,9 @@ DefaultViewPort::DefaultViewPort(CvWindow* arg, int arg2) : QGraphicsView(arg), 
 
     setInteractive(false);
     setMouseTracking(true); //receive mouse event everytime
+    
+    // default for display of statusline:
+    StatusLineList = ( QStringList() << "xy" << "RGB");
 }
 
 
@@ -4265,8 +4450,10 @@ QSize DefaultViewPort::sizeHint() const
 void DefaultViewPort::draw2D(QPainter *painter)
 {
     image2Draw_qt = QImage(image2Draw_mat->data.ptr, image2Draw_mat->cols, image2Draw_mat->rows,image2Draw_mat->step,QImage::Format_RGB888);
-    image2Draw_qt_resized = image2Draw_qt.scaled(viewport()->width(),viewport()->height(),Qt::IgnoreAspectRatio,Qt::FastTransformation);//Qt::SmoothTransformation);
-    painter->drawImage(0,0,image2Draw_qt_resized);
+    painter->drawImage(QRect(0,0,viewport()->width(),viewport()->height()), image2Draw_qt, QRect(0,0, image2Draw_qt.width(), image2Draw_qt.height()) );
+
+    // image2Draw_qt_resized = image2Draw_qt.scaled(viewport()->width(),viewport()->height(),Qt::IgnoreAspectRatio,Qt::FastTransformation);//Qt::SmoothTransformation);
+    // painter->drawImage(0,0,image2Draw_qt_resized);
 }
 
 //only if CV_8UC1 or CV_8UC3
@@ -4275,6 +4462,33 @@ void DefaultViewPort::drawStatusBar()
     if (nbChannelOriginImage!=CV_8UC1 && nbChannelOriginImage!=CV_8UC3)
         return;
 
+    float ZoomX = 100.0 * viewport()->width()  / image2Draw_mat->cols;
+    float ZoomY = 100.0 * viewport()->height() / image2Draw_mat->rows;
+    
+    QString ViewZoom = "";
+    QString ViewInfo = "";
+    QString AddInfo  = "";
+  
+    QString WidthHeight = tr("[%1*%2 <font color='black' size=2 > Pixel</font>] ")
+			  .arg(image2Draw_mat->cols).arg(image2Draw_mat->rows);
+			  
+    if ( ZoomX == ZoomY )
+    {
+	  if ( ZoomX == 100.0 && ZoomY == 100.0 )
+	  {
+
+	  } else {
+	      ViewInfo = tr("<font color='black' size=2 >[View %1*%2]</font> ")
+		    .arg(viewport()->width()).arg(viewport()->height());
+	  }
+
+	  ViewZoom = tr("<font color='brown' size=2 >[%1%2]</font> ").arg(ZoomX).arg('%');
+
+    } else {
+	  ViewInfo = tr("<font color='black' size=2 >[View %1*%2]</font> ").arg(viewport()->width()).arg(viewport()->height());
+	  ViewZoom = tr("<font color='brown' size=2 >[Zoom: %1 * %2]</font> ").arg(ZoomX).arg(ZoomY);
+    }
+	
     if (mouseCoordinate.x()>=0 &&
         mouseCoordinate.y()>=0 &&
         mouseCoordinate.x()<image2Draw_qt.width() &&
@@ -4282,27 +4496,62 @@ void DefaultViewPort::drawStatusBar()
 //  if (mouseCoordinate.x()>=0 && mouseCoordinate.y()>=0)
     {
         QRgb rgbValue = image2Draw_qt.pixel(mouseCoordinate);
-
-        if (nbChannelOriginImage==CV_8UC3 )
+		
+	
+        // "$StatusLine xy RGB WidthHeight Viewport Zoom"
+        for ( int idx =0 ; idx < StatusLineList.size() ; idx++ )
         {
-            centralWidget->myStatusBar_msg->setText(tr("<font color='black'>(x=%1, y=%2) ~ </font>")
-                .arg(mouseCoordinate.x())
-                .arg(mouseCoordinate.y())+
-                tr("<font color='red'>R:%3 </font>").arg(qRed(rgbValue))+//.arg(value.val[0])+
-                tr("<font color='green'>G:%4 </font>").arg(qGreen(rgbValue))+//.arg(value.val[1])+
-                tr("<font color='blue'>B:%5</font>").arg(qBlue(rgbValue))//.arg(value.val[2])
-                );
+            QString out = "";
+            centralWidget->getMapContent( StatusLineList[idx], out );
+            
+	    if (out.length() > 0 )
+            {
+              AddInfo += " " + out + " ";
+            } else {
+                if ( StatusLineList[idx] == "xy" )  {
+                     AddInfo += tr("<font color='black' size=2 >(x=%1, y=%2)</font>  ")
+                        .arg(mouseCoordinate.x())
+                        .arg(mouseCoordinate.y());
+                }
+                if ( StatusLineList[idx] == "RGB" )  {
+		    if (nbChannelOriginImage==CV_8UC3 )
+		    { 
+			AddInfo += tr("~ <font color='red'>R:%3 </font>").arg(qRed(rgbValue))+
+				    tr("<font color='green'>G:%4 </font>").arg(qGreen(rgbValue))+
+				    tr("<font color='blue'>B:%5</font> ~   ").arg(qBlue(rgbValue));
+		    }  
+		    if (nbChannelOriginImage==CV_8UC1)
+		    {
+			AddInfo += tr("~ <font color='grey'>L:%3 </font>").arg(qRed(rgbValue));
+		    }	
+                }
+                if ( StatusLineList[idx] == "WidthHeight" )  AddInfo += WidthHeight;
+                if ( StatusLineList[idx] == "Viewport"    )  AddInfo += ViewInfo;
+                if ( StatusLineList[idx] == "Zoom"        )  AddInfo += ViewZoom;
+            }
         }
 
-        if (nbChannelOriginImage==CV_8UC1)
-        {
-            //all the channel have the same value (because of cvconvertimage), so only the r channel is dsplayed
-            centralWidget->myStatusBar_msg->setText(tr("<font color='black'>(x=%1, y=%2) ~ </font>")
-                .arg(mouseCoordinate.x())
-                .arg(mouseCoordinate.y())+
-                tr("<font color='grey'>L:%3 </font>").arg(qRed(rgbValue))
-                );
-        }
+        centralWidget->myStatusBar_msg->setText(AddInfo);
+                  
+    } else {
+    
+      for ( int idx =0 ; idx < StatusLineList.size() ; idx++ )
+      {
+            QString out = "";
+            centralWidget->getMapContent( StatusLineList[idx], out );
+            
+	    if (out.length() > 0 )
+            {
+              AddInfo += " " + out + " ";
+            } else {
+                if ( StatusLineList[idx] == "WidthHeight" )  AddInfo += WidthHeight;
+                if ( StatusLineList[idx] == "Viewport"    )  AddInfo += ViewInfo;
+                if ( StatusLineList[idx] == "Zoom"        )  AddInfo += ViewZoom;
+            }
+      }
+
+      centralWidget->myStatusBar_msg->setText(AddInfo);
+      
     }
 }
 
@@ -4449,6 +4698,12 @@ void DefaultViewPort::setSize(QSize /*size_*/)
 {
 }
 
+void DefaultViewPort::setStatusLineComponents(QString components)
+{
+  // set components of statusline
+  StatusLineList = components.split(" ");
+}
+
 
 //////////////////////////////////////////////////////
 // OpenGlViewPort
@@ -4540,6 +4795,13 @@ void OpenGlViewPort::updateGl()
 {
     QGLWidget::updateGL();
 }
+
+void OpenGlViewPort::setStatusLineComponents(QString components)
+{
+  // set components of statusline
+  StatusLineList = components.split(" ");
+}
+
 
 #ifndef APIENTRY
     #define APIENTRY
@@ -4923,6 +5185,5 @@ void OpenGlViewPort::setSize(QSize size_)
 }
 
 #endif
-
 
 #endif // HAVE_QT
