@@ -113,7 +113,7 @@ int main(int argc, char** argv)
         int shrinkage  = cfg.shrinkage;
         int octave = *it;
 
-        cv::Size model = cfg.modelWinSize;
+        cv::Size model = cv::Size(cfg.modelWinSize.width / cfg.shrinkage, cfg.modelWinSize.height / cfg.shrinkage );
         std::string path = cfg.trainPath;
 
         cv::Rect boundingBox(cfg.offset.x / cfg.shrinkage, cfg.offset.y / cfg.shrinkage,

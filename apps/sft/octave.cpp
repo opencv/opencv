@@ -93,6 +93,10 @@ bool sft::Octave::train( const cv::Mat& trainData, const cv::Mat& _responses, co
     }
 
     std::cout << "WARNING: " << sampleIdx << std::endl;
+    std::cout << "WARNING: " << trainData << std::endl;
+    std::cout << "WARNING: " << _responses << std::endl;
+    std::cout << "WARNING: " << varIdx << std::endl;
+    std::cout << "WARNING: " << varType << std::endl;
 
     bool update = false;
     return cv::Boost::train(trainData, CV_COL_SAMPLE, _responses, varIdx, sampleIdx, varType, missingDataMask, _params,
@@ -313,7 +317,7 @@ sft::FeaturePool::~FeaturePool(){}
 
 float sft::FeaturePool::apply(int fi, int si, const Mat& integrals) const
 {
-    return 0.f;
+    return pool[fi](integrals.row(si), model);
 }
 
 
