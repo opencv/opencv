@@ -13,7 +13,7 @@ from distutils.command.install_lib import install_lib
 version = "2.4.9"
 
 
-OWN_PATH = os.path.dirname(__file__)
+OWN_PATH = os.path.dirname(os.path.realpath(__file__))
 
 
 class BuildOpenCV(build_ext):
