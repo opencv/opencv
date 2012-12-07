@@ -40,13 +40,6 @@
 //M*/
 
 
-// inserted by HS:
-// void cv::adjustWindowPos(const string& winname, int xp, int xwp, int yp, int yhp) {...}
-// int  cv::getButtonBarContent(const string& winname, int idx, char * txt) {...}
-// int  cv::setButtonBarContent(const string& winname, int etype, int idx, char * txt)  {...}
-// bool cv::getCommandVec(const string& winname, vector<string> & stringVec, string & cmd) {...}
-
-
 #include "precomp.hpp"
 #include "opencv2/core/opengl_interop.hpp"
 
@@ -185,7 +178,9 @@ void cv::moveWindow( const string& winname, int x, int y )
     cvMoveWindow( winname.c_str(), x, y );
 }
 
-// ---------------------------------- inserted by HS:
+
+// -----------------------------------------------
+// Dummy calls if Qt is not available:
 
 void cv::adjustWindowPos( const string& winname, int xp, int xwp, int yp, int yhp )
 {
@@ -201,7 +196,7 @@ void cv::adjustWindowPos( const string& winname, int xp, int xwp, int yp, int yh
       cvResizeWindow( winname.c_str(),neww, newh );
    #else
        #if defined(HAVE_QT)
-          cvAdjustWindowPos_Qt( winname.c_str(),  xp, xwp, yp,  yhp );
+          cvAdjustWindowPos_QT( winname.c_str(),  xp, xwp, yp,  yhp );
        #endif
        #if defined(HAVE_GTK)
           // todo.. 
@@ -212,7 +207,7 @@ void cv::adjustWindowPos( const string& winname, int xp, int xwp, int yp, int yh
 void cv::dispInfoBox( const string& winname, char* caption, const string& text ) 
 {
       #if defined(HAVE_QT)
-	cvDispInfoBox_Qt( winname.c_str(), caption, text.c_str() );
+	cvDispInfoBox_QT( winname.c_str(), caption, text.c_str() );
       #endif
 }
 
@@ -228,6 +223,14 @@ int cv::setButtonBarContent(const string& winname, int etype, int idx, char * tx
 {
    #if defined(HAVE_QT)
        return cvSetButtonBarContent( winname.c_str(), etype, idx,  txt );
+   #endif
+   return 0;
+}
+
+int cv::setMapContent(const string& winname, const string& varname, char * text )
+{
+   #if defined(HAVE_QT)
+      return cvSetMapContent( winname.c_str(), varname.c_str(), text );
    #endif
    return 0;
 }
@@ -453,9 +456,9 @@ void cv::pointCloudShow(const string& winname, const GlCamera& camera, const GlA
 {
 #ifndef HAVE_OPENGL
     CV_Error(CV_OpenGlNotSupported, "The library is compiled without OpenGL support");
-	(void)winname;
-	(void)camera;
-	(void)arr;
+    (void)winname;
+    (void)camera;
+    (void)arr;
 #else
     namedWindow(winname, WINDOW_OPENGL);
 
@@ -499,10 +502,10 @@ void cv::pointCloudShow(const string& winname, const GlCamera& camera, const GlA
 void cv::pointCloudShow(const std::string& winname, const cv::GlCamera& camera, InputArray points, InputArray colors)
 {
 #ifndef HAVE_OPENGL
-	(void)winname;
-	(void)camera;
-	(void)points;
-	(void)colors;
+    (void)winname;
+    (void)camera;
+    (void)points;
+    (void)colors;
     CV_Error(CV_OpenGlNotSupported, "The library is compiled without OpenGL support");
 #else
     namedWindow(winname, WINDOW_OPENGL);
@@ -628,15 +631,14 @@ int cv::createButton(const string& button_name, ButtonCallback on_change, void* 
     return cvCreateButton(button_name.c_str(), on_change, userdata, button_type , initial_button_state );
 }
 
-
-//-------------------------------- processing of *.cfg 
-
-
+// Get events+content from buttonbar in case of HAVE_QT :
 bool cv::getCommandVec( const string& winname, vector<string> & stringVec,  char * cmd )
 {
-    stringVec.clear();
-    
-    if ( cmd != NULL ) cvGetCommand( winname.c_str(), cmd );
+	// All controls inside a buttonbar are configured by a *.cfg file
+    stringVec.clear();  // clear content vector
+  
+	// read last command (e.g. pressed button ) and content of buttonbar    
+    if ( cmd != NULL ) cvGetCommand( winname.c_str(), cmd ); 
 	
     char buffer[512];
     int idx = 0;
@@ -653,6 +655,8 @@ bool cv::getCommandVec( const string& winname, vector<string> & stringVec,  char
 
 #else
 
+// Dummy function in case of Qt switched off,
+// but application with Qt scpecific calls....
 bool cv::getCommandVec( const string& winname, vector<string> & stringVec,  char* cmd )
 {
     return false;
@@ -829,6 +833,10 @@ CV_IMPL int cvCreateButton(const char*, void (*)(int, void*), void*, int, int)
     return -1;
 }
 
+
+// Some dummy functions in case of Qt switched off,
+// but application with Qt specific calls....
+
 CV_IMPL int cvGetButtonBarContent(const char *, int, char * )
 {
     // CV_NO_GUI_ERROR("cvGetButtonBarContent");
@@ -841,9 +849,9 @@ CV_IMPL int cvSetButtonBarContent(const char *, int, int, char * )
     return -1;
 }
 
-CV_IMPL int cvDispInfoBox_Qt( char*, char* , const char * )
+CV_IMPL int cvDispInfoBox_QT( char*, char* , const char * )
 {
-    // CV_NO_GUI_ERROR("cvDispInfoBox_Qt");
+    // CV_NO_GUI_ERROR("cvDispInfoBox_QT");
     return -1;
 }
 
