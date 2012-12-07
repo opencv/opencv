@@ -807,9 +807,9 @@ namespace cv { namespace gpu { namespace device
 
         template <int bidx, typename T, typename D> static __device__ __forceinline__ void RGB2XYZConvert(const T* src, D& dst)
         {
+            dst.z = saturate_cast<T>(CV_DESCALE(src[bidx^2] * c_RGB2XYZ_D65i[6] + src[1] * c_RGB2XYZ_D65i[7] + src[bidx] * c_RGB2XYZ_D65i[8], xyz_shift));
             dst.x = saturate_cast<T>(CV_DESCALE(src[bidx^2] * c_RGB2XYZ_D65i[0] + src[1] * c_RGB2XYZ_D65i[1] + src[bidx] * c_RGB2XYZ_D65i[2], xyz_shift));
             dst.y = saturate_cast<T>(CV_DESCALE(src[bidx^2] * c_RGB2XYZ_D65i[3] + src[1] * c_RGB2XYZ_D65i[4] + src[bidx] * c_RGB2XYZ_D65i[5], xyz_shift));
-            dst.z = saturate_cast<T>(CV_DESCALE(src[bidx^2] * c_RGB2XYZ_D65i[6] + src[1] * c_RGB2XYZ_D65i[7] + src[bidx] * c_RGB2XYZ_D65i[8], xyz_shift));
         }
 
         template <int bidx> static __device__ __forceinline__ uint RGB2XYZConvert(uint src)
