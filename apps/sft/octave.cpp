@@ -43,16 +43,6 @@
 #include <sft/octave.hpp>
 #include <sft/random.hpp>
 
-#if defined VISUALIZE_GENERATION
-# define show(a, b)  \
-    do {             \
-    cv::imshow(a,b); \
-    cv::waitkey(0);  \
-    } while(0)
-#else
-# define show(a, b)
-#endif
-
 #include <glob.h>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -63,13 +53,7 @@ sft::Octave::Octave(cv::Rect bb, int np, int nn, int ls, int shr)
 {
     int maxSample = npositives + nnegatives;
     responses.create(maxSample, 1, CV_32FC1);
-}
 
-sft::Octave::~Octave(){}
-
-bool sft::Octave::train( const cv::Mat& trainData, const cv::Mat& _responses, const cv::Mat& varIdx,
-       const cv::Mat& sampleIdx, const cv::Mat& varType, const cv::Mat& missingDataMask)
-{
     CvBoostParams _params;
     {
         // tree params
@@ -79,27 +63,35 @@ bool sft::Octave::train( const cv::Mat& trainData, const cv::Mat& _responses, co
         _params.truncate_pruned_tree = false;
         _params.use_surrogates       = false;
         _params.use_1se_rule         = false;
-        _params.regression_accuracy  = 0.0;
+        _params.regression_accuracy  = 1.0e-6;
 
         // boost params
         _params.boost_type           = CvBoost::GENTLE;
         _params.split_criteria       = CvBoost::SQERR;
         _params.weight_trim_rate     = 0.95;
 
-
-        /// ToDo: move to params
+        // simple defaults
         _params.min_sample_count     = 2;
         _params.weak_count           = 1;
     }
 
-    std::cout << "WARNING: " << sampleIdx << std::endl;
-    std::cout << "WARNING: " << trainData << std::endl;
-    std::cout << "WARNING: " << _responses << std::endl;
-    std::cout << "WARNING: " << varIdx << std::endl;
-    std::cout << "WARNING: " << varType << std::endl;
+    params = _params;
+}
+
+sft::Octave::~Octave(){}
+
+bool sft::Octave::train( const cv::Mat& trainData, const cv::Mat& _responses, const cv::Mat& varIdx,
+       const cv::Mat& sampleIdx, const cv::Mat& varType, const cv::Mat& missingDataMask)
+{
+
+    std::cout << "WARNING: sampleIdx " << sampleIdx << std::endl;
+    std::cout << "WARNING: trainData " << trainData << std::endl;
+    std::cout << "WARNING: _responses " << _responses << std::endl;
+    std::cout << "WARNING: varIdx" << varIdx << std::endl;
+    std::cout << "WARNING: varType" << varType << std::endl;
 
     bool update = false;
-    return cv::Boost::train(trainData, CV_COL_SAMPLE, _responses, varIdx, sampleIdx, varType, missingDataMask, _params,
+    return cv::Boost::train(trainData, CV_COL_SAMPLE, _responses, varIdx, sampleIdx, varType, missingDataMask, params,
     update);
 }
 
@@ -164,29 +156,30 @@ public:
 };
 }
 
-// ToDo: parallelize it
+// ToDo: parallelize it, fix curring
 // ToDo: sunch model size and shrinced model size usage/ Now model size mean already shrinked model
 void sft::Octave::processPositives(const Dataset& dataset, const FeaturePool& pool)
 {
     Preprocessor prepocessor(shrinkage);
 
-    int w =  64 * pow(2, logScale) /shrinkage;
-    int h = 128 * pow(2, logScale) /shrinkage * 10;
+    int w = boundingBox.width;
+    int h = boundingBox.height;
 
-    integrals.create(pool.size(), (w + 1) * (h + 1), CV_32SC1);
+    integrals.create(pool.size(), (w / shrinkage + 1) * (h / shrinkage * 10 + 1), CV_32SC1);
 
     int total = 0;
-
     for (svector::const_iterator it = dataset.pos.begin(); it != dataset.pos.end(); ++it)
     {
         const string& curr = *it;
 
         dprintf("Process candidate positive image %s\n", curr.c_str());
 
-        cv::Mat sample   = cv::imread(curr);
-        cv::Mat channels = integrals.row(total).reshape(0, h + 1);
-        prepocessor.apply(sample, channels);
+        cv::Mat sample = cv::imread(curr);
 
+        cv::Mat channels = integrals.row(total).reshape(0, h / shrinkage * 10 + 1);
+        sample = sample(boundingBox);
+
+        prepocessor.apply(sample, channels);
         responses.ptr<float>(total)[0] = 1.f;
 
         if (++total >= npositives) break;
@@ -204,8 +197,8 @@ void sft::Octave::generateNegatives(const Dataset& dataset)
     sft::Random::engine eng;
     sft::Random::engine idxEng;
 
-    int w =  64 * pow(2, logScale) /shrinkage;
-    int h = 128 * pow(2, logScale) /shrinkage * 10;
+    int w = boundingBox.width;
+    int h = boundingBox.height;
 
     Preprocessor prepocessor(shrinkage);
 
@@ -222,15 +215,9 @@ void sft::Octave::generateNegatives(const Dataset& dataset)
         dprintf("Process %s\n", dataset.neg[curr].c_str());
 
         Mat frame = cv::imread(dataset.neg[curr]);
-        prepocessor.apply(frame, sum);
 
-        std::cout << "WARNING: " << frame.cols << " " << frame.rows << std::endl;
-        std::cout << "WARNING: " << frame.cols / shrinkage << " " << frame.rows / shrinkage << std::endl;
-
-        int maxW = frame.cols / shrinkage - 2 * boundingBox.x - boundingBox.width;
-        int maxH = frame.rows / shrinkage - 2 * boundingBox.y - boundingBox.height;
-
-        std::cout << "WARNING: " << maxW << " " << maxH << std::endl;
+        int maxW = frame.cols - 2 * boundingBox.x - boundingBox.width;
+        int maxH = frame.rows - 2 * boundingBox.y - boundingBox.height;
 
         sft::Random::uniform wRand(0, maxW -1);
         sft::Random::uniform hRand(0, maxH -1);
@@ -238,19 +225,16 @@ void sft::Octave::generateNegatives(const Dataset& dataset)
         int dx = wRand(eng);
         int dy = hRand(eng);
 
-        std::cout << "WARNING: " << dx << " " << dy << std::endl;
-        std::cout << "WARNING: " << dx + boundingBox.width + 1 << " " << dy + boundingBox.height + 1 << std::endl;
-        std::cout << "WARNING: " << sum.cols << " " << sum.rows << std::endl;
+        frame = frame(cv::Rect(dx, dy, boundingBox.width, boundingBox.height));
 
-        sum = sum(cv::Rect(dx, dy, boundingBox.width + 1, boundingBox.height * 10 + 1));
+        cv::Mat channels = integrals.row(i).reshape(0, h / shrinkage * 10 + 1);
+        prepocessor.apply(frame, channels);
 
         dprintf("generated %d %d\n", dx, dy);
 
-        // if (predict(sum))
+        // // if (predict(sum))
         {
             responses.ptr<float>(i)[0] = 0.f;
-            // sum = sum.reshape(0, 1);
-            sum.copyTo(integrals.row(i).reshape(0, h + 1));
             ++i;
         }
     }
@@ -258,11 +242,18 @@ void sft::Octave::generateNegatives(const Dataset& dataset)
     dprintf("Processing negatives finished:\n\trequested %d negatives, viewed %d samples.\n", nnegatives, total);
 }
 
-bool sft::Octave::train(const Dataset& dataset, const FeaturePool& pool)
+bool sft::Octave::train(const Dataset& dataset, const FeaturePool& pool, int weaks, int treeDepth)
 {
+    CV_Assert(treeDepth == 2);
+    CV_Assert(weaks > 0);
+
+    params.max_depth  = treeDepth;
+    params.weak_count = weaks;
+
     // 1. fill integrals and classes
     processPositives(dataset, pool);
     generateNegatives(dataset);
+    // exit(0);
 
     // 2. only sumple case (all features used)
     int nfeatures = pool.size();
@@ -313,8 +304,6 @@ sft::FeaturePool::FeaturePool(cv::Size m, int n) : model(m), nfeatures(n)
     fill(nfeatures);
 }
 
-sft::FeaturePool::~FeaturePool(){}
-
 float sft::FeaturePool::apply(int fi, int si, const Mat& integrals) const
 {
     return pool[fi](integrals.row(si), model);
@@ -323,13 +312,13 @@ float sft::FeaturePool::apply(int fi, int si, const Mat& integrals) const
 
 void sft::FeaturePool::fill(int desired)
 {
-
     int mw = model.width;
     int mh = model.height;
 
     int maxPoolSize = (mw -1) * mw / 2 * (mh - 1) * mh / 2 * N_CHANNELS;
 
     nfeatures = std::min(desired, maxPoolSize);
+    dprintf("Requeste feature pool %d max %d suggested %d\n", desired, maxPoolSize, nfeatures);
 
     pool.reserve(nfeatures);
 
@@ -363,8 +352,17 @@ void sft::FeaturePool::fill(int desired)
         sft::ICF f(x, y, w, h, ch);
 
         if (std::find(pool.begin(), pool.end(),f) == pool.end())
+        {
+            // std::cout << f << std::endl;
             pool.push_back(f);
+        }
     }
+}
+
+std::ostream& sft::operator<<(std::ostream& out, const sft::ICF& m)
+{
+    out << m.channel << " " << m.bb;
+    return out;
 }
 
 // ============ Dataset ============ //
