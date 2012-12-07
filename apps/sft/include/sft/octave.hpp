@@ -73,6 +73,22 @@ struct ICF
         return bb != b.bb || channel != b.channel;
     }
 
+
+    float operator() (const Mat& integrals, const cv::Size& model) const
+    {
+        const int* ptr = integrals.ptr<int>(0) + (model.height * channel + bb.y) * model.width + bb.x;
+
+        int a = ptr[0];
+        int b = ptr[bb.width];
+
+        ptr += bb.height * model.width;
+
+        int c = ptr[bb.width];
+        int d = ptr[0];
+
+        return (float)(a - b + c - d);
+    }
+
 private:
     cv::Rect bb;
     int channel;
