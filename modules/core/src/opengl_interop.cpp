@@ -44,13 +44,11 @@
 #include "opencv2/core/opengl_interop.hpp"
 #include "opencv2/core/gpumat.hpp"
 
-#ifdef HAVE_OPENGL
-    #include "gl_core_3_1.hpp"
+#include "gl_core_3_1.hpp"
 
-    #ifdef HAVE_CUDA
-        #include <cuda_runtime.h>
-        #include <cuda_gl_interop.h>
-    #endif
+#ifdef HAVE_CUDA
+    #include <cuda_runtime.h>
+    #include <cuda_gl_interop.h>
 #endif
 
 using namespace std;
@@ -59,6 +57,12 @@ using namespace cv::gpu;
 
 namespace
 {
+    #ifndef HAVE_OPENGL
+        void throw_nogl() { CV_Error(CV_OpenGlNotSupported, "The library is compiled without OpenGL support"); }
+    #else
+        void throw_nogl() { CV_Error(CV_OpenGlApiCallError, "OpenGL context doesn't exist"); }
+    #endif
+
     #ifndef HAVE_CUDA
         void throw_nocuda() { CV_Error(CV_GpuNotSupported, "The library is compiled without GPU support"); }
     #else
@@ -75,12 +79,6 @@ namespace
             if (cudaSuccess != err)
                 cv::gpu::error(cudaGetErrorString(err), file, line, func);
         }
-    #endif
-
-    #ifndef HAVE_OPENGL
-        void throw_nogl() { CV_Error(CV_OpenGlNotSupported, "The library is compiled without OpenGL support"); }
-    #else
-        void throw_nogl() { CV_Error(CV_OpenGlApiCallError, "OpenGL context doesn't exist"); }
     #endif
 }
 
@@ -145,12 +143,7 @@ void cv::gpu::setGlDevice(int device)
     (void) device;
     throw_nocuda();
 #else
-    #ifndef HAVE_OPENGL
-        (void) device;
-        throw_nogl();
-    #else
-        cudaSafeCall( cudaGLSetGLDevice(device) );
-    #endif
+    cudaSafeCall( cudaGLSetGLDevice(device) );
 #endif
 }
 

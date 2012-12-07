@@ -1,94 +1,111 @@
-#include "cvconfig.h"
-
-#ifdef HAVE_OPENGL
-
 #include <string>
+#include <sstream>
+#include "cvconfig.h"
+#include "opencv2/core/core.hpp"
 #include "gl_core_3_1.hpp"
 
-#if defined(__APPLE__)
-    #include <mach-o/dyld.h>
+#ifdef HAVE_OPENGL
+    #if defined(__APPLE__)
+        #include <mach-o/dyld.h>
 
-    static void* AppleGLGetProcAddress (const GLubyte *name)
-    {
-        static const struct mach_header* image = 0;
-        if (!image)
-            image = NSAddImage("/System/Library/Frameworks/OpenGL.framework/Versions/Current/OpenGL", NSADDIMAGE_OPTION_RETURN_ON_ERROR);
-
-        // prepend a '_' for the Unix C symbol mangling convention
-        std::string symbolName = "_";
-        symbolName += std::string((const char*)name);
-
-        NSSymbol symbol = image ? NSLookupSymbolInImage(image, &symbolName[0], NSLOOKUPSYMBOLINIMAGE_OPTION_BIND | NSLOOKUPSYMBOLINIMAGE_OPTION_RETURN_ON_ERROR) : 0;
-
-        return symbol ? NSAddressOfSymbol(symbol) : 0;
-    }
-#endif // __APPLE__
-
-#if defined(__sgi) || defined (__sun)
-    #include <dlfcn.h>
-    #include <stdio.h>
-
-    static void* SunGetProcAddress (const GLubyte* name)
-    {
-        typedef void* (func_t*)(const GLubyte*);
-
-        static void* h = 0;
-        static func_t gpa = 0;
-
-        if (!h)
+        static void* AppleGLGetProcAddress (const char* name)
         {
-            h = dlopen(NULL, RTLD_LAZY | RTLD_LOCAL);
+            static const struct mach_header* image = 0;
+            if (!image)
+                image = NSAddImage("/System/Library/Frameworks/OpenGL.framework/Versions/Current/OpenGL", NSADDIMAGE_OPTION_RETURN_ON_ERROR);
+
+            // prepend a '_' for the Unix C symbol mangling convention
+            std::string symbolName = "_";
+            symbolName += std::string(name);
+
+            NSSymbol symbol = image ? NSLookupSymbolInImage(image, &symbolName[0], NSLOOKUPSYMBOLINIMAGE_OPTION_BIND | NSLOOKUPSYMBOLINIMAGE_OPTION_RETURN_ON_ERROR) : 0;
+
+            return symbol ? NSAddressOfSymbol(symbol) : 0;
+        }
+    #endif // __APPLE__
+
+    #if defined(__sgi) || defined (__sun)
+        #include <dlfcn.h>
+        #include <stdio.h>
+
+        static void* SunGetProcAddress (const char* name)
+        {
+            typedef void* (func_t*)(const GLubyte*);
+
+            static void* h = 0;
+            static func_t gpa = 0;
+
             if (!h)
+            {
+                h = dlopen(NULL, RTLD_LAZY | RTLD_LOCAL);
+                if (!h)
+                    return 0;
+                gpa = (func_t) dlsym(h, "glXGetProcAddress");
+            }
+
+            return gpa ? gpa((const GLubyte*) name) : dlsym(h, name);
+        }
+    #endif // __sgi || __sun
+
+    #if defined(_WIN32)
+        #ifdef _MSC_VER
+            #pragma warning(disable: 4055)
+            #pragma warning(disable: 4054)
+        #endif
+
+        static int TestPointer(const PROC pTest)
+        {
+            if(!pTest)
                 return 0;
-            gpa = (func_t) dlsym(h, "glXGetProcAddress");
+
+            ptrdiff_t iTest = (ptrdiff_t) pTest;
+
+            if (iTest == 1 || iTest == 2 || iTest == 3 || iTest == -1)
+                return 0;
+
+            return 1;
         }
 
-        return gpa ? gpa(name) : dlsym(h, (const char*) name);
-    }
-#endif /* __sgi || __sun */
+        static PROC WinGetProcAddress(const char* name)
+        {
+            PROC pFunc = wglGetProcAddress((LPCSTR) name);
+            if (TestPointer(pFunc))
+                return pFunc;
 
-#if defined(_WIN32)
-    #ifdef _MSC_VER
-        #pragma warning(disable: 4055)
-        #pragma warning(disable: 4054)
+            HMODULE glMod = GetModuleHandleA("OpenGL32.dll");
+            return (PROC) GetProcAddress(glMod, (LPCSTR) name);
+        }
+    #endif // _WIN32
+
+    #if defined(_WIN32)
+        #define CV_GL_GET_PROC_ADDRESS(name) WinGetProcAddress(name)
+    #elif defined(__APPLE__)
+        #define CV_GL_GET_PROC_ADDRESS(name) AppleGLGetProcAddress(name)
+    #elif defined(__sgi) || defined(__sun)
+        #define CV_GL_GET_PROC_ADDRESS(name) SunGetProcAddress(name)
+    #else // GLX
+        #include <GL/glx.h>
+
+        #define CV_GL_GET_PROC_ADDRESS(name) (*glXGetProcAddressARB)((const GLubyte*) name)
     #endif
 
-    static int TestPointer(const PROC pTest)
+    static void* IntGetProcAddress(const char* name)
     {
-        if(!pTest)
-            return 0;
-
-        ptrdiff_t iTest = (ptrdiff_t) pTest;
-
-        if (iTest == 1 || iTest == 2 || iTest == 3 || iTest == -1)
-            return 0;
-
-        return 1;
+        void* func = CV_GL_GET_PROC_ADDRESS(name);
+        if (!func)
+        {
+            std::ostringstream msg;
+            msg << "Can't load OpenGL extension [" << name << "]";
+            CV_Error(CV_OpenGlApiCallError, msg.str());
+        }
+        return func;
     }
-
-    static PROC WinGetProcAddress(const char* name)
-    {
-        PROC pFunc = wglGetProcAddress((LPCSTR) name);
-        if (TestPointer(pFunc))
-            return pFunc;
-
-        HMODULE glMod = GetModuleHandleA("OpenGL32.dll");
-        return (PROC) GetProcAddress(glMod, (LPCSTR) name);
-    }
-
-    #define IntGetProcAddress(name) WinGetProcAddress(name)
 #else
-    #if defined(__APPLE__)
-        #define IntGetProcAddress(name) AppleGLGetProcAddress(name)
-    #else
-        #if defined(__sgi) || defined(__sun)
-            #define IntGetProcAddress(name) SunGetProcAddress(name)
-        #else /* GLX */
-            #include <GL/glx.h>
-
-            #define IntGetProcAddress(name) (*glXGetProcAddressARB)((const GLubyte*) name)
-        #endif
-    #endif
+    static void* IntGetProcAddress(const char*)
+    {
+        CV_Error(CV_OpenGlNotSupported, "The library is compiled without OpenGL support");
+        return 0;
+    }
 #endif
 
 namespace gl
@@ -2699,5 +2716,3 @@ namespace gl
 
     InitializeVariables g_initVariables;
 }
-
-#endif
