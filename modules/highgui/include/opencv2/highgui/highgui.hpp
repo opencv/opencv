@@ -163,6 +163,9 @@ CV_EXPORTS_W int setButtonBarContent(const string& winname, int etype, int idx, 
 CV_EXPORTS bool getCommandVec(const string& winname, vector<string> & stringVec, char* cmd = NULL);
 CV_EXPORTS void dispInfoBox(const string& winname, char* caption, const string& text);
 
+CV_EXPORTS_W int setMapContent(const string& winname, const string& varname, char * text );
+
+
 //-------------------------
 
 enum
@@ -184,6 +187,7 @@ enum
     IMWRITE_JPEG_QUALITY =1,
     IMWRITE_PNG_COMPRESSION =16,
     IMWRITE_PNG_STRATEGY =17,
+    IMWRITE_PNG_BILEVEL =18,
     IMWRITE_PNG_STRATEGY_DEFAULT =0,
     IMWRITE_PNG_STRATEGY_FILTERED =1,
     IMWRITE_PNG_STRATEGY_HUFFMAN_ONLY =2,
@@ -196,6 +200,7 @@ CV_EXPORTS_W Mat imread( const string& filename, int flags=1 );
 CV_EXPORTS_W bool imwrite( const string& filename, InputArray img,
               const vector<int>& params=vector<int>());
 CV_EXPORTS_W Mat imdecode( InputArray buf, int flags );
+CV_EXPORTS Mat imdecode( InputArray buf, int flags, Mat* dst );
 CV_EXPORTS_W bool imencode( const string& ext, InputArray img,
                             CV_OUT vector<uchar>& buf,
                             const vector<int>& params=vector<int>());
