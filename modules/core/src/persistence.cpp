@@ -45,7 +45,6 @@
 #include <ctype.h>
 #include <deque>
 #include <iterator>
-#include <wchar.h>
 
 #define USE_ZLIB 1
 
@@ -154,35 +153,6 @@ cv::string cv::FileStorage::getDefaultObjectName(const string& _filename)
     if( strcmp( name, "_" ) == 0 )
         strcpy( name, stubname );
     return cv::string(name);
-}
-
-namespace cv
-{
-#if !defined(ANDROID) || (defined(_GLIBCXX_USE_WCHAR_T) && _GLIBCXX_USE_WCHAR_T)
-string fromUtf16(const WString& str)
-{
-    cv::AutoBuffer<char> _buf(str.size()*4 + 1);
-    char* buf = _buf;
-
-    size_t sz = wcstombs(buf, str.c_str(), str.size());
-    if( sz == (size_t)-1 )
-        return string();
-    buf[sz] = '\0';
-    return string(buf);
-}
-
-WString toUtf16(const string& str)
-{
-    cv::AutoBuffer<wchar_t> _buf(str.size() + 1);
-    wchar_t* buf = _buf;
-
-    size_t sz = mbstowcs(buf, str.c_str(), str.size());
-    if( sz == (size_t)-1 )
-        return WString();
-    buf[sz] = '\0';
-    return WString(buf);
-}
-#endif
 }
 
 typedef struct CvGenericHash

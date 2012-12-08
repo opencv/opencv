@@ -109,13 +109,6 @@ template<typename _Tp> class CV_EXPORTS MatIterator_;
 template<typename _Tp> class CV_EXPORTS MatConstIterator_;
 template<typename _Tp> class CV_EXPORTS MatCommaInitializer_;
 
-#if !defined(ANDROID) || (defined(_GLIBCXX_USE_WCHAR_T) && _GLIBCXX_USE_WCHAR_T)
-typedef std::basic_string<wchar_t> WString;
-
-CV_EXPORTS string fromUtf16(const WString& str);
-CV_EXPORTS WString toUtf16(const string& str);
-#endif
-
 CV_EXPORTS string format( const char* fmt, ... );
 CV_EXPORTS string tempfile( const char* suffix CV_DEFAULT(0));
 
