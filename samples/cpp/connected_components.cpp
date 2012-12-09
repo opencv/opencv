@@ -13,7 +13,7 @@ static void on_trackbar(int, void*)
     Mat bw = threshval < 128 ? (img < threshval) : (img > threshval);
     Mat labelImage(img.size(), CV_32S);
     int nLabels = connectedComponents(bw, labelImage, 8);
-    Vec3b colors[nLabels];
+    std::vector<Vec3b> colors(nLabels);
     colors[0] = Vec3b(0, 0, 0);//background
     for(int label = 1; label < nLabels; ++label){
         colors[label] = Vec3b( (rand()&255), (rand()&255), (rand()&255) );
@@ -41,14 +41,14 @@ static void help()
 
 const char* keys =
 {
-    "{@image |stuff.jpg|image for converting to a grayscale}"
+    "{@image|stuff.jpg|image for converting to a grayscale}"
 };
 
 int main( int argc, const char** argv )
 {
     help();
     CommandLineParser parser(argc, argv, keys);
-    string inputImage = parser.get<string>(1);
+    string inputImage = parser.get<string>("@image");
     img = imread(inputImage.c_str(), 0);
 
     if(img.empty())
