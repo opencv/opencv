@@ -414,9 +414,7 @@ int connectedComponents(InputArray _I, OutputArray _L, int connectivity, int lty
     const cv::Mat I = _I.getMat();
     _L.create(I.size(), CV_MAT_TYPE(ltype));
     cv::Mat L = _L.getMat();
-    if(ltype == CV_8U){
-        connectedcomponents::NoOp<uint8_t> sop; return connectedComponents_sub1(I, L, connectivity, sop);
-    }else if(ltype == CV_16U){
+    if(ltype == CV_16U){
         connectedcomponents::NoOp<uint16_t> sop; return connectedComponents_sub1(I, L, connectivity, sop);
     }else if(ltype == CV_32S){
         connectedcomponents::NoOp<uint32_t> sop; return connectedComponents_sub1(I, L, connectivity, sop);
@@ -430,9 +428,7 @@ int connectedComponentsWithStats(InputArray _I, OutputArray _L, OutputArray stat
     const cv::Mat I = _I.getMat();
     _L.create(I.size(), CV_MAT_TYPE(ltype));
     cv::Mat L = _L.getMat();
-    if(ltype == CV_8U){
-        connectedcomponents::CCStatsOp<uint8_t> sop(statsv, centroids); return connectedComponents_sub1(I, L, connectivity, sop);
-    }else if(ltype == CV_16U){
+    if(ltype == CV_16U){
         connectedcomponents::CCStatsOp<uint16_t> sop(statsv, centroids); return connectedComponents_sub1(I, L, connectivity, sop);
     }else if(ltype == CV_32S){
         connectedcomponents::CCStatsOp<uint32_t> sop(statsv, centroids); return connectedComponents_sub1(I, L, connectivity, sop);
