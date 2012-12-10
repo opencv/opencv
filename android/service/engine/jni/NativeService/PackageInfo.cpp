@@ -197,6 +197,7 @@ InstallPath("")
     #ifndef __SUPPORT_TEGRA3
     Platform = PLATFORM_UNKNOWN;
     #endif
+
     FullName = BasePackageName + "_v" + Version.substr(0, Version.size()-1);
     if (PLATFORM_UNKNOWN != Platform)
     {
@@ -392,7 +393,17 @@ InstallPath(install_path)
         Platform = SplitPlatfrom(features);
         if (PLATFORM_UNKNOWN != Platform)
         {
-            CpuID = 0;
+            switch (Platform)
+            {
+                case PLATFORM_TEGRA2:
+                {
+                    CpuID = ARCH_ARMv7 | FEATURES_HAS_VFPv3d16;
+                } break;
+                case PLATFORM_TEGRA3:
+                {
+                    CpuID = ARCH_ARMv7 | FEATURES_HAS_VFPv3 | FEATURES_HAS_NEON;
+                } break;
+            }
         }
         else
         {
