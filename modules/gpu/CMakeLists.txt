@@ -22,17 +22,14 @@ source_group("Device"         FILES ${lib_device_hdrs})
 source_group("Device\\Detail" FILES ${lib_device_hdrs_detail})
 
 if (HAVE_CUDA)
-  file(GLOB_RECURSE ncv_srcs "src/nvidia/*.cpp")
-  file(GLOB_RECURSE ncv_cuda "src/nvidia/*.cu")
-  file(GLOB_RECURSE ncv_hdrs "src/nvidia/*.hpp" "src/nvidia/*.h")
-  set(ncv_files ${ncv_srcs} ${ncv_hdrs} ${ncv_cuda})
+  file(GLOB_RECURSE ncv_srcs "src/nvidia/*.cpp" "src/nvidia/*.h*")
+  file(GLOB_RECURSE ncv_cuda "src/nvidia/*.cu")  
+  set(ncv_files ${ncv_srcs} ${ncv_cuda})
 
   source_group("Src\\NVidia" FILES ${ncv_files})
   ocv_include_directories("src/nvidia" "src/nvidia/core" "src/nvidia/NPP_staging" ${CUDA_INCLUDE_DIRS})
   ocv_warnings_disable(CMAKE_CXX_FLAGS -Wundef -Wmissing-declarations /wd4211 /wd4201 /wd4100 /wd4505 /wd4408)
-  string(REPLACE "-Wsign-promo" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-
-  #set (CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-keep")
+  string(REPLACE "-Wsign-promo" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")  
   #set (CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-Xcompiler;/EHsc-;")
 
   if(MSVC)
@@ -46,8 +43,6 @@ if (HAVE_CUDA)
   endif()
 
   ocv_cuda_compile(cuda_objs ${lib_cuda} ${ncv_cuda})
-
-  #CUDA_BUILD_CLEAN_TARGET()
 
   set(cuda_link_libs ${CUDA_LIBRARIES} ${CUDA_npp_LIBRARY})
 
