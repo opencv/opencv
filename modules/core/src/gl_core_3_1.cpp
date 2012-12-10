@@ -86,12 +86,12 @@
     #else // GLX
         #include <GL/glx.h>
 
-        #define CV_GL_GET_PROC_ADDRESS(name) (*glXGetProcAddressARB)((const GLubyte*) name)
+        #define CV_GL_GET_PROC_ADDRESS(name) glXGetProcAddressARB((const GLubyte*) name)
     #endif
 
     static void* IntGetProcAddress(const char* name)
     {
-        void* func = CV_GL_GET_PROC_ADDRESS(name);
+        void* func =  (void*) CV_GL_GET_PROC_ADDRESS(name);
         if (!func)
         {
             std::ostringstream msg;
