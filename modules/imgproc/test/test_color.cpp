@@ -1991,8 +1991,8 @@ static void test_Bayer2RGB_EdgeAware_8u(const Mat& src, Mat& dst, int code)
             {
                 // red
                 D[0] = S[0];
-                D[1] = (std::abs(S[-1] - S[1]) > std::abs(S[step] - S[-step]) ? (S[step] + S[-step]) : (S[-1] + S[1])) / 2;
-                D[2] = ((S[-step-1] + S[-step+1] + S[step-1] + S[step+1]) / 4);
+                D[1] = (std::abs(S[-1] - S[1]) > std::abs(S[step] - S[-step]) ? (S[step] + S[-step] + 1) : (S[-1] + S[1] + 1)) / 2;
+                D[2] = ((S[-step-1] + S[-step+1] + S[step-1] + S[step+1] + 2) / 4);
                 if (!blue)
                     std::swap(D[0], D[2]);
             }
@@ -2002,8 +2002,8 @@ static void test_Bayer2RGB_EdgeAware_8u(const Mat& src, Mat& dst, int code)
             for (int x = 1; x < size.width; x += 2, S += 2, D += 2*dcn)
             {
                 D[0] = S[0];
-                D[1] = (std::abs(S[-1] - S[1]) > std::abs(S[step] - S[-step]) ? (S[step] + S[-step]) : (S[-1] + S[1])) / 2;
-                D[2] = ((S[-step-1] + S[-step+1] + S[step-1] + S[step+1]) / 4);
+                D[1] = (std::abs(S[-1] - S[1]) > std::abs(S[step] - S[-step]) ? (S[step] + S[-step] + 1) : (S[-1] + S[1] + 1)) / 2;
+                D[2] = ((S[-step-1] + S[-step+1] + S[step-1] + S[step+1] + 2) / 4);
                 if (!blue)
                     std::swap(D[0], D[2]);
             }
@@ -2013,9 +2013,9 @@ static void test_Bayer2RGB_EdgeAware_8u(const Mat& src, Mat& dst, int code)
 
             for (int x = 2; x < size.width; x += 2, S += 2, D += 2*dcn)
             {
-                D[0] = (S[-1] + S[1]) / 2;
+                D[0] = (S[-1] + S[1] + 1) / 2;
                 D[1] = S[0];
-                D[2] = (S[-step] + S[step]) / 2;
+                D[2] = (S[-step] + S[step] + 1) / 2;
                 if (!blue)
                     std::swap(D[0], D[2]);
             }
@@ -2051,7 +2051,9 @@ static void checkData(const Mat& actual, const Mat& reference, cvtest::TS* ts, c
     EXPECT_EQ(actual.depth(), reference.depth());
 
     Size size = reference.size();
-    size.width *= reference.channels();
+    int dcn = reference.channels();
+    size.width *= dcn;
+
     for (int y = 0; y < size.height && next; ++y)
     {
         const T* A = reinterpret_cast<const T*>(actual.data + actual.step * y);
@@ -2064,9 +2066,14 @@ static void checkData(const Mat& actual, const Mat& reference, cvtest::TS* ts, c
                 ts->printf(SUM, "\nReference value: %d\n", static_cast<int>(R[x]));
                 ts->printf(SUM, "Actual value: %d\n", static_cast<int>(A[x]));
                 ts->printf(SUM, "(y, x): (%d, %d)\n", y, x / reference.channels());
+                ts->printf(SUM, "Channel pos: %d\n", x % reference.channels());
                 ts->printf(SUM, "Pattern: %s\n", type);
                 ts->printf(SUM, "Bayer image type: %s", bayer_type);
                 #undef SUM
+
+                Mat diff;
+                absdiff(actual, reference, diff);
+                EXPECT_EQ(countNonZero(diff.reshape(1) > 1), 0);
 
                 ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
                 ts->set_gtest_status();
@@ -2173,12 +2180,6 @@ TEST(ImgProc_Bayer2RGBA, accuracy)
 
                     Mat diff;
                     absdiff(actual, reference, diff);
-
-                    cv::Rect r(0, ssize.height - 5, 7, 5);
-                    std::cout << "Actual: " << std::endl << actual(r) << std::endl << std::endl;
-                    std::cout << "Reference: " << std::endl << reference(r) << std::endl << std::endl;
-                    std::cout << "Difference: " << std::endl << diff(r) << std::endl << std::endl;
-
                     EXPECT_EQ(countNonZero(diff.reshape(1) > 1), 0);
 
                     ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);

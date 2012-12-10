@@ -63,6 +63,11 @@ public:
     {
         return 0;
     }
+
+    int bayer2RGB_EA(const T*, int, T*, int, int) const
+    {
+        return 0;
+    }
 };
 
 #if CV_SSE2
@@ -129,6 +134,7 @@ public:
          G R G R | G R G R | G R G R | G R G R
          B G B G | B G B G | B G B G | B G B G
          */
+
         __m128i delta1 = _mm_set1_epi16(1), delta2 = _mm_set1_epi16(2);
         __m128i mask = _mm_set1_epi16(blue < 0 ? -1 : 0), z = _mm_setzero_si128();
         __m128i masklo = _mm_set1_epi16(0x00ff);
@@ -141,10 +147,11 @@ public:
             __m128i r2 = _mm_loadu_si128((const __m128i*)(bayer+bayer_step*2));
 
             __m128i b1 = _mm_add_epi16(_mm_and_si128(r0, masklo), _mm_and_si128(r2, masklo));
-            __m128i b0 = _mm_add_epi16(b1, _mm_srli_si128(b1, 2));
-            b1 = _mm_srli_si128(b1, 2);
-            b1 = _mm_srli_epi16(_mm_add_epi16(b1, delta1), 1);
+            __m128i nextb1 = _mm_srli_si128(b1, 2);
+            __m128i b0 = _mm_add_epi16(b1, nextb1);
+            b1 = _mm_srli_epi16(_mm_add_epi16(nextb1, delta1), 1);
             b0 = _mm_srli_epi16(_mm_add_epi16(b0, delta2), 2);
+            // b0 b2 ... b14 b1 b3 ... b15
             b0 = _mm_packus_epi16(b0, b1);
 
             __m128i g0 = _mm_add_epi16(_mm_srli_epi16(r0, 8), _mm_srli_epi16(r2, 8));
@@ -152,38 +159,42 @@ public:
             g0 = _mm_add_epi16(g0, _mm_add_epi16(g1, _mm_srli_si128(g1, 2)));
             g1 = _mm_srli_si128(g1, 2);
             g0 = _mm_srli_epi16(_mm_add_epi16(g0, delta2), 2);
+            // g0 g2 ... g14 g1 g3 ... g15
             g0 = _mm_packus_epi16(g0, g1);
 
             r0 = _mm_srli_epi16(r1, 8);
             r1 = _mm_add_epi16(r0, _mm_srli_si128(r0, 2));
             r1 = _mm_srli_epi16(_mm_add_epi16(r1, delta1), 1);
+            // r0 r2 ... r14 r1 r3 ... r15
             r0 = _mm_packus_epi16(r0, r1);
 
             b1 = _mm_and_si128(_mm_xor_si128(b0, r0), mask);
             b0 = _mm_xor_si128(b0, b1);
             r0 = _mm_xor_si128(r0, b1);
 
-            // b1 g1 b1 g1 ...
+            // b1 g1 b3 g3 b5 g5...
             b1 = _mm_unpackhi_epi8(b0, g0);
             // b0 g0 b2 g2 b4 g4 ....
             b0 = _mm_unpacklo_epi8(b0, g0);
 
-            // r1 0 r3 0 ...
+            // r1 0 r3 0 r5 0 ...
             r1 = _mm_unpackhi_epi8(r0, z);
             // r0 0 r2 0 r4 0 ...
             r0 = _mm_unpacklo_epi8(r0, z);
 
-            // 0 b0 g0 r0 0 b2 g2 r2 0 ...
+            // 0 b0 g0 r0 0 b2 g2 r2 ...
             g0 = _mm_slli_si128(_mm_unpacklo_epi16(b0, r0), 1);
-            // 0 b8 g8 r8 0 b10 g10 r10 0 ...
+            // 0 b8 g8 r8 0 b10 g10 r10 ...
             g1 = _mm_slli_si128(_mm_unpackhi_epi16(b0, r0), 1);
 
-            // b1 g1 r1 0 b3 g3 r3 ....
+            // b1 g1 r1 0 b3 g3 r3 0 ...
             r0 = _mm_unpacklo_epi16(b1, r1);
-            // b9 g9 r9 0 ...
+            // b9 g9 r9 0 b11 g11 r11 0 ...
             r1 = _mm_unpackhi_epi16(b1, r1);
 
+            // 0 b0 g0 r0 b1 g1 r1 0 ...
             b0 = _mm_srli_si128(_mm_unpacklo_epi32(g0, r0), 1);
+            // 0 b4 g4 r4 b5 g5 r5 0 ...
             b1 = _mm_srli_si128(_mm_unpackhi_epi32(g0, r0), 1);
 
             _mm_storel_epi64((__m128i*)(dst-1+0), b0);
@@ -191,7 +202,9 @@ public:
             _mm_storel_epi64((__m128i*)(dst-1+6*2), b1);
             _mm_storel_epi64((__m128i*)(dst-1+6*3), _mm_srli_si128(b1, 8));
 
+            // 0 b8 g8 r8 b9 g9 r9 0 ...
             g0 = _mm_srli_si128(_mm_unpacklo_epi32(g1, r1), 1);
+            // 0 b12 g12 r12 b13 g13 r13 0 ...
             g1 = _mm_srli_si128(_mm_unpackhi_epi32(g1, r1), 1);
 
             _mm_storel_epi64((__m128i*)(dst-1+6*4), g0);
@@ -201,6 +214,109 @@ public:
         }
 
         return (int)(bayer - (bayer_end - width));
+    }
+
+    int bayer2RGB_EA(const uchar* bayer, int bayer_step, uchar* dst, int width, int blue) const
+    {
+        if (!use_simd)
+            return 0;
+
+        const uchar* bayer_end = bayer + width;
+        __m128i masklow = _mm_set1_epi16(0x00ff);
+        __m128i delta1 = _mm_set1_epi16(1), delta2 = _mm_set1_epi16(2);
+        __m128i full = _mm_set1_epi16(-1), z = _mm_setzero_si128();
+        __m128i mask = _mm_set1_epi16(blue > 0 ? -1 : 0);
+
+        for ( ; bayer <= bayer_end - 18; bayer += 14, dst += 42)
+        {
+            /*
+             B G B G | B G B G | B G B G | B G B G
+             G R G R | G R G R | G R G R | G R G R
+             B G B G | B G B G | B G B G | B G B G
+             */
+
+            __m128i r0 = _mm_loadu_si128((const __m128i*)bayer);
+            __m128i r1 = _mm_loadu_si128((const __m128i*)(bayer+bayer_step));
+            __m128i r2 = _mm_loadu_si128((const __m128i*)(bayer+bayer_step*2));
+
+            __m128i b1 = _mm_add_epi16(_mm_and_si128(r0, masklow), _mm_and_si128(r2, masklow));
+            __m128i nextb1 = _mm_srli_si128(b1, 2);
+            __m128i b0 = _mm_add_epi16(b1, nextb1);
+            b1 = _mm_srli_epi16(_mm_add_epi16(nextb1, delta1), 1);
+            b0 = _mm_srli_epi16(_mm_add_epi16(b0, delta2), 2);
+            // b0 b2 ... b14 b1 b3 ... b15
+            b0 = _mm_packus_epi16(b0, b1);
+
+            // vertical sum
+            __m128i r0g = _mm_srli_epi16(r0, 8);
+            __m128i r2g = _mm_srli_epi16(r2, 8);
+            __m128i sumv = _mm_srli_epi16(_mm_add_epi16(_mm_add_epi16(r0g, r2g), delta1), 1);
+            // gorizontal sum
+            __m128i g1 = _mm_and_si128(masklow, r1);
+            __m128i nextg1 = _mm_srli_si128(g1, 2);
+            __m128i sumg = _mm_srli_epi16(_mm_add_epi16(_mm_add_epi16(g1, nextg1), delta1), 1);
+
+            // gradients
+            __m128i gradv = _mm_adds_epi16(_mm_subs_epu16(r0g, r2g), _mm_subs_epu16(r2g, r0g));
+            __m128i gradg = _mm_adds_epi16(_mm_subs_epu16(nextg1, g1), _mm_subs_epu16(g1, nextg1));
+            __m128i gmask = _mm_cmpgt_epi16(gradg, gradv);
+
+            __m128i g0 = _mm_add_epi16(_mm_and_si128(gmask, sumv), _mm_and_si128(sumg, _mm_xor_si128(gmask, full)));
+            // g0 g2 ... g14 g1 g3 ...
+            g0 = _mm_packus_epi16(g0, nextg1);
+
+            r0 = _mm_srli_epi16(r1, 8);
+            r1 = _mm_add_epi16(r0, _mm_srli_si128(r0, 2));
+            r1 = _mm_srli_epi16(_mm_add_epi16(r1, delta1), 1);
+            // r0 r2 ... r14 r1 r3 ... r15
+            r0 = _mm_packus_epi16(r0, r1);
+
+            b1 = _mm_and_si128(_mm_xor_si128(b0, r0), mask);
+            b0 = _mm_xor_si128(b0, b1);
+            r0 = _mm_xor_si128(r0, b1);
+
+            // b1 g1 b3 g3 b5 g5...
+            b1 = _mm_unpackhi_epi8(b0, g0);
+            // b0 g0 b2 g2 b4 g4 ....
+            b0 = _mm_unpacklo_epi8(b0, g0);
+
+            // r1 0 r3 0 r5 0 ...
+            r1 = _mm_unpackhi_epi8(r0, z);
+            // r0 0 r2 0 r4 0 ...
+            r0 = _mm_unpacklo_epi8(r0, z);
+
+            // 0 b0 g0 r0 0 b2 g2 r2 ...
+            g0 = _mm_slli_si128(_mm_unpacklo_epi16(b0, r0), 1);
+            // 0 b8 g8 r8 0 b10 g10 r10 ...
+            g1 = _mm_slli_si128(_mm_unpackhi_epi16(b0, r0), 1);
+
+            // b1 g1 r1 0 b3 g3 r3 0 ...
+            r0 = _mm_unpacklo_epi16(b1, r1);
+            // b9 g9 r9 0 b11 g11 r11 0 ...
+            r1 = _mm_unpackhi_epi16(b1, r1);
+
+            // 0 b0 g0 r0 b1 g1 r1 0 ...
+            b0 = _mm_srli_si128(_mm_unpacklo_epi32(g0, r0), 1);
+            // 0 b4 g4 r4 b5 g5 r5 0 ...
+            b1 = _mm_srli_si128(_mm_unpackhi_epi32(g0, r0), 1);
+
+            _mm_storel_epi64((__m128i*)(dst+0), b0);
+            _mm_storel_epi64((__m128i*)(dst+6*1), _mm_srli_si128(b0, 8));
+            _mm_storel_epi64((__m128i*)(dst+6*2), b1);
+            _mm_storel_epi64((__m128i*)(dst+6*3), _mm_srli_si128(b1, 8));
+
+            // 0 b8 g8 r8 b9 g9 r9 0 ...
+            g0 = _mm_srli_si128(_mm_unpacklo_epi32(g1, r1), 1);
+            // 0 b12 g12 r12 b13 g13 r13 0 ...
+            g1 = _mm_srli_si128(_mm_unpackhi_epi32(g1, r1), 1);
+
+            _mm_storel_epi64((__m128i*)(dst+6*4), g0);
+            _mm_storel_epi64((__m128i*)(dst+6*5), _mm_srli_si128(g0, 8));
+
+            _mm_storel_epi64((__m128i*)(dst+6*6), g1);
+        }
+
+        return bayer - (bayer_end - width);
     }
 
     bool use_simd;
@@ -1173,7 +1289,7 @@ static void Bayer2RGB_VNG_8u( const Mat& srcmat, Mat& dstmat, int code )
 
 //////////////////////////////// Edge-Aware Demosaicing //////////////////////////////////
 
-template <typename T>
+template <typename T, typename SIMDInterpolator>
 class Bayer2RGB_EdgeAware_T_Invoker :
     public cv::ParallelLoopBody
 {
@@ -1191,6 +1307,7 @@ public:
         int dcn2 = dcn<<1;
         int start_with_green = Start_with_green, blue = Blue;
         int sstep = src.step / src.elemSize1(), dstep = dst.step / dst.elemSize1();
+        SIMDInterpolator vecOp;
 
         const T* S = reinterpret_cast<const T*>(src.data + (range.start + 1) * src.step) + 1;
         T* D = reinterpret_cast<T*>(dst.data + (range.start + 1) * dst.step) + dcn;
@@ -1215,6 +1332,11 @@ public:
                 ++x;
             }
 
+            int delta = vecOp.bayer2RGB_EA(S - sstep - 1, sstep, D, size.width, blue);
+            x += delta;
+            S += delta;
+            D += dcn * delta;
+
             if (blue)
                 for (; x < size.width; x += 2, S += 2, D += dcn2)
                 {
@@ -1227,7 +1349,7 @@ public:
                     D[5] = (S[-sstep+1] + S[sstep+1] + 1) >> 1;
                 }
             else
-                for (; x < size.width; x += 2, S += 2, D += dcn2    )
+                for (; x < size.width; x += 2, S += 2, D += dcn2)
                 {
                     D[0] = (S[-sstep-1] + S[-sstep+1] + S[sstep-1] + S[sstep+1] + 2) >> 2;
                     D[1] = (std::abs(S[-1] - S[1]) > std::abs(S[sstep] - S[-sstep]) ? (S[sstep] + S[-sstep] + 1) : (S[-1] + S[1] + 1)) >> 1;
@@ -1267,7 +1389,7 @@ private:
     int Blue, Start_with_green;
 };
 
-template <typename T>
+template <typename T, typename SIMDInterpolator>
 static void Bayer2RGB_EdgeAware_T(const Mat& src, Mat& dst, int code)
 {
     Size size = src.size();
@@ -1287,7 +1409,7 @@ static void Bayer2RGB_EdgeAware_T(const Mat& src, Mat& dst, int code)
 
     if (size.height > 0)
     {
-        Bayer2RGB_EdgeAware_T_Invoker<T> invoker(src, dst, size, blue, start_with_green);
+        Bayer2RGB_EdgeAware_T_Invoker<T, SIMDInterpolator> invoker(src, dst, size, blue, start_with_green);
         Range range(0, size.height);
         parallel_for_(range, invoker, dst.total()/static_cast<double>(1<<16));
     }
@@ -1380,9 +1502,9 @@ void cv::demosaicing(InputArray _src, OutputArray _dst, int code, int dcn)
         dst = _dst.getMat();
 
         if (depth == CV_8U)
-            Bayer2RGB_EdgeAware_T<uchar>(src, dst, code);
+            Bayer2RGB_EdgeAware_T<uchar, SIMDBayerInterpolator_8u>(src, dst, code);
         else if (depth == CV_16U)
-            Bayer2RGB_EdgeAware_T<ushort>(src, dst, code);
+            Bayer2RGB_EdgeAware_T<ushort, SIMDBayerStubInterpolator_<ushort> >(src, dst, code);
         else
             CV_Error(CV_StsUnsupportedFormat, "Bayer->RGB Edge-Aware demosaicing only currently supports 8u and 16u types");
 
