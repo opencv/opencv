@@ -229,12 +229,16 @@ bool  JpegDecoder::readHeader()
             if( m_f )
                 jpeg_stdio_src( &state->cinfo, m_f );
         }
-        jpeg_read_header( &state->cinfo, TRUE );
 
-        m_width = state->cinfo.image_width;
-        m_height = state->cinfo.image_height;
-        m_type = state->cinfo.num_components > 1 ? CV_8UC3 : CV_8UC1;
-        result = true;
+        if (state->cinfo.src != 0)
+        {
+            jpeg_read_header( &state->cinfo, TRUE );
+
+            m_width = state->cinfo.image_width;
+            m_height = state->cinfo.image_height;
+            m_type = state->cinfo.num_components > 1 ? CV_8UC3 : CV_8UC1;
+            result = true;
+        }
     }
 
     if( !result )

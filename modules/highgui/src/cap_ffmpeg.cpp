@@ -114,24 +114,18 @@ private:
             icvWriteFrame_FFMPEG_p =
                 (CvWriteFrame_Plugin)GetProcAddress(icvFFOpenCV, "cvWriteFrame_FFMPEG");
 
-#if 0
-            if( icvCreateFileCapture_FFMPEG_p != 0 &&
-                icvReleaseCapture_FFMPEG_p != 0 &&
-                icvGrabFrame_FFMPEG_p != 0 &&
-                icvRetrieveFrame_FFMPEG_p != 0 &&
-                icvSetCaptureProperty_FFMPEG_p != 0 &&
-                icvGetCaptureProperty_FFMPEG_p != 0 &&
-                icvCreateVideoWriter_FFMPEG_p != 0 &&
-                icvReleaseVideoWriter_FFMPEG_p != 0 &&
-                icvWriteFrame_FFMPEG_p != 0 )
+            if( icvCreateFileCapture_FFMPEG_p == NULL ||
+                icvReleaseCapture_FFMPEG_p == NULL ||
+                icvGrabFrame_FFMPEG_p == NULL  ||
+                icvRetrieveFrame_FFMPEG_p == NULL ||
+                icvSetCaptureProperty_FFMPEG_p == NULL ||
+                icvGetCaptureProperty_FFMPEG_p == NULL ||
+                icvCreateVideoWriter_FFMPEG_p == NULL ||
+                icvReleaseVideoWriter_FFMPEG_p == NULL ||
+                icvWriteFrame_FFMPEG_p == NULL )
             {
-                printf("Successfully initialized ffmpeg plugin!\n");
+                fprintf(stderr, "Failed to load FFMPEG plugin: module handle=%p\n", icvFFOpenCV);
             }
-            else
-            {
-                printf("Failed to load FFMPEG plugin: module handle=%p\n", icvFFOpenCV);
-            }
-#endif
         }
     #elif defined HAVE_FFMPEG
         icvCreateFileCapture_FFMPEG_p = (CvCreateFileCapture_Plugin)cvCreateFileCapture_FFMPEG;
