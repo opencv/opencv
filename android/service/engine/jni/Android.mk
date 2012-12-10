@@ -52,7 +52,8 @@ LOCAL_SRC_FILES := \
     NativeService/CommonPackageManager.cpp \
     JNIWrapper/JavaBasedPackageManager.cpp \
     NativeService/PackageInfo.cpp \
-    JNIWrapper/HardwareDetector_jni.cpp
+    JNIWrapper/HardwareDetector_jni.cpp \
+    JNIWrapper/OpenCVLibraryInfo.cpp
 
 LOCAL_C_INCLUDES := \
     $(LOCAL_PATH)/include \

@@ -2,7 +2,7 @@ set(engine OpenCVEngine)
 set(JNI_LIB_NAME ${engine} ${engine}_jni)
 
 unset(__android_project_chain CACHE)
-add_android_project(opencv_engine "${CMAKE_CURRENT_SOURCE_DIR}" SDK_TARGET 8 ${ANDROID_SDK_TARGET} IGNORE_JAVA ON IGNORE_MANIFEST ON )
+add_android_project(opencv_engine "${CMAKE_CURRENT_SOURCE_DIR}" SDK_TARGET 9 ${ANDROID_SDK_TARGET} IGNORE_JAVA ON IGNORE_MANIFEST ON )
 
 set(ANDROID_PLATFORM_VERSION_CODE "0")
 
