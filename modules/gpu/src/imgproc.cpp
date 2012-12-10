@@ -534,7 +534,7 @@ namespace cv { namespace gpu { namespace device
 {
     namespace imgproc
     {
-        void shfl_integral_gpu(PtrStepSzb img, PtrStepSz<unsigned int> integral, cudaStream_t stream);
+        void shfl_integral_gpu(const PtrStepSzb& img, PtrStepSz<unsigned int> integral, cudaStream_t stream);
     }
 }}}
 
@@ -550,44 +550,26 @@ void cv::gpu::integralBuffered(const GpuMat& src, GpuMat& sum, GpuMat& buffer, S
 
     src.locateROI(whole, offset);
 
-    if (info.supports(WARP_SHUFFLE_FUNCTIONS) && src.cols <= 2048)
+    if (info.supports(WARP_SHUFFLE_FUNCTIONS) && src.cols <= 2048
+        && offset.x % 16 == 0 && ((src.cols + 63) / 64) * 64 <= (src.step - offset.x))
     {
-        GpuMat srcAlligned;
+        ensureSizeIsEnough(((src.rows + 7) / 8) * 8, ((src.cols + 63) / 64) * 64, CV_32SC1, buffer);
 
-        if (src.cols % 16 == 0 && src.rows % 8 == 0 && offset.x % 16 == 0 && offset.y % 8 == 0)
-            srcAlligned = src;
-        else
-        {
-            ensureSizeIsEnough(((src.rows + 7) / 8) * 8, ((src.cols + 15) / 16) * 16, src.type(), buffer);
+        cv::gpu::device::imgproc::shfl_integral_gpu(src, buffer, stream);
 
-            GpuMat inner = buffer(Rect(0, 0, src.cols, src.rows));
-
-            if (s)
-            {
-                s.enqueueMemSet(buffer, Scalar::all(0));
-                s.enqueueCopy(src, inner);
-            }
-            else
-            {
-                buffer.setTo(Scalar::all(0));
-                src.copyTo(inner);
-            }
-
-            srcAlligned = buffer;
-        }
-
-        sum.create(srcAlligned.rows + 1, srcAlligned.cols + 4, CV_32SC1);
-
+        sum.create(src.rows + 1, src.cols + 1, CV_32SC1);
         if (s)
             s.enqueueMemSet(sum, Scalar::all(0));
         else
             sum.setTo(Scalar::all(0));
 
-        GpuMat inner = sum(Rect(4, 1, srcAlligned.cols, srcAlligned.rows));
+        GpuMat inner = sum(Rect(1, 1, src.cols, src.rows));
+        GpuMat res = buffer(Rect(0, 0, src.cols, src.rows));
 
-        cv::gpu::device::imgproc::shfl_integral_gpu(srcAlligned, inner, stream);
-
-            sum = sum(Rect(3, 0, src.cols + 1, src.rows + 1));
+        if (s)
+            s.enqueueCopy(res, inner);
+        else
+            res.copyTo(inner);
     }
     else
     {

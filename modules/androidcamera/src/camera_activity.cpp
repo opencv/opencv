@@ -9,6 +9,7 @@
 #include <opencv2/core/version.hpp>
 #include "camera_activity.hpp"
 #include "camera_wrapper.h"
+#include "EngineCommon.h"
 
 #undef LOG_TAG
 #undef LOGE
@@ -267,12 +268,13 @@ void CameraWrapperConnector::fillListWrapperLibs(const string& folderPath, vecto
 
 std::string CameraWrapperConnector::getDefaultPathLibFolder()
 {
-    const string packageList[] = {"tegra3", "armv7a_neon", "armv7a", "armv5", "x86"};
-    for (size_t i = 0; i < 5; i++)
+    #define BIN_PACKAGE_NAME(x) "org.opencv.lib_v" CVAUX_STR(CV_MAJOR_VERSION) CVAUX_STR(CV_MINOR_VERSION) "_" x
+    const char* const packageList[] = {BIN_PACKAGE_NAME("armv7a"), OPENCV_ENGINE_PACKAGE};
+    for (size_t i = 0; i < sizeof(packageList)/sizeof(packageList[0]); i++)
     {
         char path[128];
-        sprintf(path, "/data/data/org.opencv.lib_v%d%d_%s/lib/", CV_MAJOR_VERSION, CV_MINOR_VERSION, packageList[i].c_str());
-        LOGD("Trying package \"%s\" (\"%s\")", packageList[i].c_str(), path);
+        sprintf(path, "/data/data/%s/lib/", packageList[i]);
+        LOGD("Trying package \"%s\" (\"%s\")", packageList[i], path);
 
         DIR* dir = opendir(path);
         if (!dir)
@@ -427,7 +429,6 @@ void CameraActivity::applyProperties()
 
 int CameraActivity::getFrameWidth()
 {
-    LOGD("CameraActivity::getFrameWidth()");
     if (frameWidth <= 0)
     frameWidth = getProperty(ANDROID_CAMERA_PROPERTY_FRAMEWIDTH);
     return frameWidth;
@@ -435,7 +436,6 @@ int CameraActivity::getFrameWidth()
 
 int CameraActivity::getFrameHeight()
 {
-    LOGD("CameraActivity::getFrameHeight()");
     if (frameHeight <= 0)
     frameHeight = getProperty(ANDROID_CAMERA_PROPERTY_FRAMEHEIGHT);
     return frameHeight;

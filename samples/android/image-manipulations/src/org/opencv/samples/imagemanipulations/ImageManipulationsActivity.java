@@ -22,7 +22,6 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.Window;
 import android.view.WindowManager;
 
 public class ImageManipulationsActivity extends Activity implements CvCameraViewListener {
@@ -101,7 +100,6 @@ public class ImageManipulationsActivity extends Activity implements CvCameraView
     public void onCreate(Bundle savedInstanceState) {
         Log.i(TAG, "called onCreate");
         super.onCreate(savedInstanceState);
-        requestWindowFeature(Window.FEATURE_NO_TITLE);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
         setContentView(R.layout.image_manipulations_surface_view);

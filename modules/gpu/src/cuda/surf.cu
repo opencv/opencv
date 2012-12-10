@@ -177,7 +177,7 @@ namespace cv { namespace gpu { namespace device
             return (HAAR_SIZE0 + HAAR_SIZE_INC * layer) << octave;
         }
 
-        __global__ void icvCalcLayerDetAndTrace(PtrStepf det, PtrStepf trace, uint sumOffset)
+        __global__ void icvCalcLayerDetAndTrace(PtrStepf det, PtrStepf trace)
         {
             // Determine the indices
             const int gridDim_y = gridDim.y / (c_nOctaveLayers + 2);
@@ -198,9 +198,9 @@ namespace cv { namespace gpu { namespace device
 
             if (size <= c_img_rows && size <= c_img_cols && i < samples_i && j < samples_j)
             {
-                const float dx  = icvCalcHaarPatternSum<3>(c_DX , 9, size, (i << c_octave), sumOffset + (j << c_octave));
-                const float dy  = icvCalcHaarPatternSum<3>(c_DY , 9, size, (i << c_octave), sumOffset + (j << c_octave));
-                const float dxy = icvCalcHaarPatternSum<4>(c_DXY, 9, size, (i << c_octave), sumOffset + (j << c_octave));
+                const float dx  = icvCalcHaarPatternSum<3>(c_DX , 9, size, (i << c_octave), (j << c_octave));
+                const float dy  = icvCalcHaarPatternSum<3>(c_DY , 9, size, (i << c_octave), (j << c_octave));
+                const float dxy = icvCalcHaarPatternSum<4>(c_DXY, 9, size, (i << c_octave), (j << c_octave));
 
                 det.ptr(layer * c_layer_rows + i + margin)[j + margin] = dx * dy - 0.81f * dxy * dxy;
                 trace.ptr(layer * c_layer_rows + i + margin)[j + margin] = dx + dy;
@@ -208,7 +208,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         void icvCalcLayerDetAndTrace_gpu(const PtrStepf& det, const PtrStepf& trace, int img_rows, int img_cols,
-            int octave, int nOctaveLayers, const size_t sumOffset)
+            int octave, int nOctaveLayers)
         {
             const int min_size = calcSize(octave, 0);
             const int max_samples_i = 1 + ((img_rows - min_size) >> octave);
@@ -220,7 +220,7 @@ namespace cv { namespace gpu { namespace device
             grid.x = divUp(max_samples_j, threads.x);
             grid.y = divUp(max_samples_i, threads.y) * (nOctaveLayers + 2);
 
-            icvCalcLayerDetAndTrace<<<grid, threads>>>(det, trace, (uint)sumOffset);
+            icvCalcLayerDetAndTrace<<<grid, threads>>>(det, trace);
             cudaSafeCall( cudaGetLastError() );
 
             cudaSafeCall( cudaDeviceSynchronize() );
@@ -233,7 +233,7 @@ namespace cv { namespace gpu { namespace device
 
         struct WithMask
         {
-            static __device__ bool check(int sum_i, int sum_j, int size, const uint offset)
+            static __device__ bool check(int sum_i, int sum_j, int size)
             {
                 float ratio = (float)size / 9.0f;
 
@@ -245,10 +245,10 @@ namespace cv { namespace gpu { namespace device
                 int dy2 = __float2int_rn(ratio * c_DM[3]);
 
                 float t = 0;
-                t += tex2D(maskSumTex, offset + sum_j + dx1, sum_i + dy1);
-                t -= tex2D(maskSumTex, offset + sum_j + dx1, sum_i + dy2);
-                t -= tex2D(maskSumTex, offset + sum_j + dx2, sum_i + dy1);
-                t += tex2D(maskSumTex, offset + sum_j + dx2, sum_i + dy2);
+                t += tex2D(maskSumTex, sum_j + dx1, sum_i + dy1);
+                t -= tex2D(maskSumTex, sum_j + dx1, sum_i + dy2);
+                t -= tex2D(maskSumTex, sum_j + dx2, sum_i + dy1);
+                t += tex2D(maskSumTex, sum_j + dx2, sum_i + dy2);
 
                 d += t * c_DM[4] / ((dx2 - dx1) * (dy2 - dy1));
 
@@ -258,7 +258,7 @@ namespace cv { namespace gpu { namespace device
 
         template <typename Mask>
         __global__ void icvFindMaximaInLayer(const PtrStepf det, const PtrStepf trace, int4* maxPosBuffer,
-            unsigned int* maxCounter, const uint maskOffset)
+            unsigned int* maxCounter)
         {
             #if __CUDA_ARCH__ && __CUDA_ARCH__ >= 110
 
@@ -299,7 +299,7 @@ namespace cv { namespace gpu { namespace device
                     const int sum_i = (i - ((size >> 1) >> c_octave)) << c_octave;
                     const int sum_j = (j - ((size >> 1) >> c_octave)) << c_octave;
 
-                    if (Mask::check(sum_i, sum_j, size, maskOffset))
+                    if (Mask::check(sum_i, sum_j, size))
                     {
                         // Check to see if we have a max (in its 26 neighbours)
                         const bool condmax = val0 > N9[localLin - 1 - blockDim.x - zoff]
@@ -351,7 +351,7 @@ namespace cv { namespace gpu { namespace device
         }
 
         void icvFindMaximaInLayer_gpu(const PtrStepf& det, const PtrStepf& trace, int4* maxPosBuffer, unsigned int* maxCounter,
-            int img_rows, int img_cols, int octave, bool use_mask, int nOctaveLayers, const size_t maskOffset)
+            int img_rows, int img_cols, int octave, bool use_mask, int nOctaveLayers)
         {
             const int layer_rows = img_rows >> octave;
             const int layer_cols = img_cols >> octave;
@@ -367,9 +367,9 @@ namespace cv { namespace gpu { namespace device
             const size_t smem_size = threads.x * threads.y * 3 * sizeof(float);
 
             if (use_mask)
-                icvFindMaximaInLayer<WithMask><<<grid, threads, smem_size>>>(det, trace, maxPosBuffer, maxCounter, (uint)maskOffset);
+                icvFindMaximaInLayer<WithMask><<<grid, threads, smem_size>>>(det, trace, maxPosBuffer, maxCounter);
             else
-                icvFindMaximaInLayer<WithOutMask><<<grid, threads, smem_size>>>(det, trace, maxPosBuffer, maxCounter, 0);
+                icvFindMaximaInLayer<WithOutMask><<<grid, threads, smem_size>>>(det, trace, maxPosBuffer, maxCounter);
 
             cudaSafeCall( cudaGetLastError() );
 

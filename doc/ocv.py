@@ -1,3 +1,4 @@
+#/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
     ocv domain, a modified copy of sphinx.domains.cpp + shpinx.domains.python.

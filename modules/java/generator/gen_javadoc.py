@@ -1,3 +1,5 @@
+#/usr/bin/env python
+
 import os, sys, re, string, glob
 from optparse import OptionParser
 

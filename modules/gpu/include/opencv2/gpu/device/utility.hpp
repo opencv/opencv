@@ -149,7 +149,7 @@ namespace cv { namespace gpu { namespace device
             return true;
         }
 
-        static __device__ __forceinline__ bool check(int, int, int, uint offset = 0)
+        static __device__ __forceinline__ bool check(int, int, int)
         {
             return true;
         }

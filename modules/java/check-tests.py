@@ -1,3 +1,5 @@
+#/usr/bin/env python
+
 import sys, os, re
 
 classes_ignore_list = (

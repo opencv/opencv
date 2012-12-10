@@ -1,3 +1,5 @@
+#/usr/bin/env python
+
 '''
 Affine invariant feature-based image matching sample.
 

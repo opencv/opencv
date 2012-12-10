@@ -85,6 +85,12 @@ void cv::gpu::GoodFeaturesToTrackDetector_GPU::operator ()(const GpuMat& image, 
 
     int total = findCorners_gpu(eig_, static_cast<float>(maxVal * qualityLevel), mask, tmpCorners_.ptr<float2>(), tmpCorners_.cols);
 
+    if (total == 0)
+    {
+        corners.release();
+        return;
+    }
+
     sortCorners_gpu(eig_, tmpCorners_.ptr<float2>(), total);
 
     if (minDistance < 1)

@@ -1,3 +1,5 @@
+#/usr/bin/env python
+
 '''
 Scans current directory for *.py files and reports
 ones with missing __doc__ string.

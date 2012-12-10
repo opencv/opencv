@@ -43,7 +43,6 @@
 #define _GRFMTS_H_
 
 #include "grfmt_base.hpp"
-#include "grfmt_imageio.hpp"
 #include "grfmt_bmp.hpp"
 #include "grfmt_sunras.hpp"
 #include "grfmt_jpeg.hpp"

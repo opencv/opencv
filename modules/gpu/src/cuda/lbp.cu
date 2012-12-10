@@ -185,6 +185,7 @@ namespace cv { namespace gpu { namespace device
 
         void connectedConmonents(PtrStepSz<int4> candidates, int ncandidates, PtrStepSz<int4> objects, int groupThreshold, float grouping_eps, unsigned int* nclasses)
         {
+            if (!ncandidates) return;
             int block = ncandidates;
             int smem  = block * ( sizeof(int) + sizeof(int4) );
             disjoin<InSameComponint><<<1, block, smem>>>(candidates, objects, ncandidates, groupThreshold, grouping_eps, nclasses);

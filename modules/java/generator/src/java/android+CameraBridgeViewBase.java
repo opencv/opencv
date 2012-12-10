@@ -2,6 +2,7 @@ package org.opencv.android;
 
 import java.util.List;
 
+import org.opencv.R;
 import org.opencv.android.Utils;
 import org.opencv.core.Mat;
 import org.opencv.core.Size;
@@ -11,6 +12,7 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.res.TypedArray;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.util.AttributeSet;
@@ -26,22 +28,44 @@ import android.view.SurfaceView;
  * The clients shall implement CvCameraViewListener.
  */
 public abstract class CameraBridgeViewBase extends SurfaceView implements SurfaceHolder.Callback {
-//TODO: add method to control the format in which the frames will be delivered to CvCameraViewListener
 
+    private static final String TAG = "CameraBridge";
     private static final int MAX_UNSPECIFIED = -1;
+    private static final int STOPPED = 0;
+    private static final int STARTED = 1;
+
+    private int mState = STOPPED;
+    private Bitmap mCacheBitmap;
+    private CvCameraViewListener mListener;
+    private boolean mSurfaceExist;
+    private Object mSyncObject = new Object();
 
     protected int mFrameWidth;
     protected int mFrameHeight;
-
     protected int mMaxHeight;
     protected int mMaxWidth;
-
     protected int mPreviewFormat = Highgui.CV_CAP_ANDROID_COLOR_FRAME_RGBA;
+    protected int mCameraIndex = -1;
+    protected boolean mEnabled;
+    protected FpsMeter mFpsMeter = null;
 
-    private Bitmap mCacheBitmap;
+    public CameraBridgeViewBase(Context context, int cameraId) {
+        super(context);
+        mCameraIndex = cameraId;
+    }
 
     public CameraBridgeViewBase(Context context, AttributeSet attrs) {
         super(context, attrs);
+
+        int count = attrs.getAttributeCount();
+        Log.d(TAG, "Attr count: " + Integer.valueOf(count));
+
+        TypedArray styledAttrs = getContext().obtainStyledAttributes(attrs, R.styleable.CameraBridgeViewBase);
+        if (styledAttrs.getBoolean(R.styleable.CameraBridgeViewBase_show_fps, false))
+            enableFpsMeter();
+
+        mCameraIndex = styledAttrs.getInt(R.styleable.CameraBridgeViewBase_camera_id, -1);
+
         getHolder().addCallback(this);
         mMaxWidth = MAX_UNSPECIFIED;
         mMaxHeight = MAX_UNSPECIFIED;
@@ -70,19 +94,6 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
         public Mat onCameraFrame(Mat inputFrame);
 
     }
-
-    private static final int STOPPED = 0;
-    private static final int STARTED = 1;
-
-    private static final String TAG = "CameraBridge";
-
-    private CvCameraViewListener mListener;
-    private int mState = STOPPED;
-
-    private boolean mEnabled;
-    private boolean mSurfaceExist;
-
-    private Object mSyncObject = new Object();
 
     public void surfaceChanged(SurfaceHolder arg0, int arg1, int arg2, int arg3) {
         Log.d(TAG, "call surfaceChanged event");
@@ -134,6 +145,25 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
             checkCurrentState();
         }
     }
+
+    /**
+     * This method enables label with fps value on the screen
+     */
+    public void enableFpsMeter() {
+        if (mFpsMeter == null) {
+            mFpsMeter = new FpsMeter();
+            mFpsMeter.setResolution(mFrameWidth, mFrameHeight);
+        }
+    }
+
+    public void disableFpsMeter() {
+            mFpsMeter = null;
+    }
+
+    /**
+     *
+     * @param listener
+     */
 
     public void setCvCameraViewListener(CvCameraViewListener listener) {
         mListener = listener;
@@ -272,6 +302,10 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
             if (canvas != null) {
                 canvas.drawColor(0, android.graphics.PorterDuff.Mode.CLEAR);
                 canvas.drawBitmap(mCacheBitmap, (canvas.getWidth() - mCacheBitmap.getWidth()) / 2, (canvas.getHeight() - mCacheBitmap.getHeight()) / 2, null);
+                if (mFpsMeter != null) {
+                    mFpsMeter.measure();
+                    mFpsMeter.draw(canvas, 20, 30);
+                }
                 getHolder().unlockCanvasAndPost(canvas);
             }
         }

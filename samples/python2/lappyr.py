@@ -1,3 +1,5 @@
+#/usr/bin/env python
+
 ''' An example of Laplacian Pyramid construction and merging.
 
 Level : Intermediate

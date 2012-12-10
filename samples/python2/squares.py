@@ -1,3 +1,5 @@
+#/usr/bin/env python
+
 '''
 Simple "Square Detector" program.
 

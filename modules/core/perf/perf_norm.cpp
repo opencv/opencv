@@ -150,6 +150,7 @@ PERF_TEST_P(Size_MatType_NormType, normalize_mask,
     if(normType==NORM_L2) alpha = (double)src.total()/10;
 
     declare.in(src, WARMUP_RNG).in(mask).out(dst);
+    declare.time(100);
 
     TEST_CYCLE() normalize(src, dst, alpha, 0., normType, -1, mask);
 

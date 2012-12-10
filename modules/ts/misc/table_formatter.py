@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import sys, re, os.path, cgi, stat
 from optparse import OptionParser
 from color import getColorizer
