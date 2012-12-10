@@ -7,6 +7,16 @@ import shutil
 ScriptHome = os.path.split(sys.argv[0])[0]
 ConfFile = open(os.path.join(ScriptHome, "camera_build.conf"), "rt")
 HomeDir = os.getcwd()
+
+stub = ""
+try:
+    stub = os.environ["ANDROID_STUB_ROOT"]
+except:
+    None
+
+if (stub == ""):
+    print("Warning: ANDROID_STUB_ROOT environment variable is not set")
+
 for s in ConfFile.readlines():
     s = s[0:s.find("#")]
     if (not s):
@@ -20,6 +30,7 @@ for s in ConfFile.readlines():
     NativeApiLevel = str.strip(keys[2])
     AndroidTreeRoot = str.strip(keys[3])
     AndroidTreeRoot = str.strip(AndroidTreeRoot, "\n")
+    AndroidTreeRoot = os.path.expandvars(AndroidTreeRoot)
     print("Building %s for %s" % (MakeTarget, Arch))
     BuildDir = os.path.join(HomeDir, MakeTarget + "_" + Arch)
 
