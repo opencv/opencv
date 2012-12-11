@@ -1529,32 +1529,37 @@ public:
 
 // ======================== GPU version for soft cascade ===================== //
 
+class CV_EXPORTS ChannelsProcessor
+{
+public:
+    enum
+    {
+        GENERIC   = 1 << 4,
+        SEPARABLE = 2 << 4
+    };
+
+    // Appends specified number of HOG first-order features integrals into given vector.
+    // Param frame is an input 3-channel bgr image.
+    // Param channels is a GPU matrix of optionally shrinked channels
+    // Param stream is stream is a high-level CUDA stream abstraction used for asynchronous execution.
+    virtual void apply(InputArray frame, OutputArray channels, Stream& stream = Stream::Null()) = 0;
+
+    // Creates a specific preprocessor implementation.
+    // Param shrinkage is a resizing factor. Resize is applied before the computing integral sum
+    // Param bins is a number of HOG-like channels.
+    // Param flags is a channel computing extra flags.
+    static cv::Ptr<ChannelsProcessor> create(const int shrinkage, const int bins, const int flags = GENERIC);
+
+    virtual ~ChannelsProcessor();
+
+protected:
+    ChannelsProcessor();
+};
+
 // Implementation of soft (stageless) cascaded detector.
 class CV_EXPORTS SCascade : public Algorithm
 {
 public:
-
-    enum { GENERIC = 1, SEPARABLE = 2};
-    class CV_EXPORTS Preprocessor
-    {
-    public:
-
-        // Appends specified number of HOG first-order features integrals into given vector.
-        // Param frame is an input 3-channel bgr image.
-        // Param channels is a GPU matrix of integrals.
-        // Param stream is stream is a high-level CUDA stream abstraction used for asynchronous execution.
-        virtual void apply(InputArray frame, OutputArray channels, Stream& stream = Stream::Null()) = 0;
-
-        // Creates a specific preprocessor implementation.
-        // Param shrinkage is a resizing factor. Resize is applied before the computing integral sum
-        // Param bins is a number of HOG-like channels.
-        // Param method is a channel computing method.
-        static cv::Ptr<Preprocessor> create(const int shrinkage, const int bins, const int method = GENERIC);
-
-
-    protected:
-        Preprocessor();
-    };
 
     // Representation of detectors result.
     struct CV_EXPORTS Detection
@@ -1569,14 +1574,15 @@ public:
         enum {PEDESTRIAN = 0};
     };
 
-    enum { NO_REJECT = 1, DOLLAR = 2, /*PASCAL = 4,*/ DEFAULT = NO_REJECT};
+    enum { NO_REJECT = 1, DOLLAR = 2, /*PASCAL = 4,*/ DEFAULT = NO_REJECT, NMS_MASK = 0xF};
 
     // An empty cascade will be created.
     // Param minScale is a minimum scale relative to the original size of the image on which cascade will be applyed.
     // Param minScale is a maximum scale relative to the original size of the image on which cascade will be applyed.
     // Param scales is a number of scales from minScale to maxScale.
-    // Param rejfactor is used for NMS.
-    SCascade(const double minScale = 0.4, const double maxScale = 5., const int scales = 55, const int rejCriteria = 1);
+    // Param flags is an extra tuning flags.
+    SCascade(const double minScale = 0.4, const double maxScale = 5., const int scales = 55,
+        const int flags = NO_REJECT || ChannelsProcessor::GENERIC);
 
     virtual ~SCascade();
 
@@ -1598,13 +1604,6 @@ public:
     // Param stream is stream is a high-level CUDA stream abstraction used for asynchronous execution
     virtual void detect(InputArray image, InputArray rois, OutputArray objects, Stream& stream = Stream::Null()) const;
 
-    // Convert ROI matrix into the suitable for detect method.
-    // Param roi is an input matrix of the same size as the image.
-    //    There non zero value mean that detector should be executed in this point.
-    // Param mask is an output mask
-    // Param stream is stream is a high-level CUDA stream abstraction used for asynchronous execution
-    virtual void genRoi(InputArray roi, OutputArray mask, Stream& stream = Stream::Null()) const;
-
 private:
 
     struct Fields;
@@ -1612,9 +1611,9 @@ private:
 
     double minScale;
     double maxScale;
-
     int scales;
-    int rejCriteria;
+
+    int flags;
 };
 
 CV_EXPORTS bool initModule_gpu(void);

@@ -169,7 +169,7 @@ GPU_TEST_P(SCascadeTestRoi, detect,
 
     ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
 
-    GpuMat colored(coloredCpu), objectBoxes(1, 16384, CV_8UC1), rois(colored.size(), CV_8UC1), trois;
+    GpuMat colored(coloredCpu), objectBoxes(1, 16384, CV_8UC1), rois(colored.size(), CV_8UC1);
     rois.setTo(0);
 
     int nroi = GET_PARAM(3);
@@ -183,8 +183,8 @@ GPU_TEST_P(SCascadeTestRoi, detect,
         cv::rectangle(result, r, cv::Scalar(0, 0, 255, 255), 1);
     }
     objectBoxes.setTo(0);
-    cascade.genRoi(rois, trois);
-    cascade.detect(colored, trois, objectBoxes);
+
+    cascade.detect(colored, rois, objectBoxes);
 
     cv::Mat dt(objectBoxes);
     typedef cv::gpu::SCascade::Detection Detection;
@@ -239,10 +239,8 @@ GPU_TEST_P(SCascadeTestAll, detect,
     GpuMat sub(rois, cv::Rect(rois.cols / 4, rois.rows / 4,rois.cols / 2, rois.rows / 2));
     sub.setTo(cv::Scalar::all(1));
 
-    cv::gpu::GpuMat trois;
-    cascade.genRoi(rois, trois);
     objectBoxes.setTo(0);
-    cascade.detect(colored, trois, objectBoxes);
+    cascade.detect(colored, rois, objectBoxes);
 
     typedef cv::gpu::SCascade::Detection Detection;
     cv::Mat detections(objectBoxes);
@@ -279,10 +277,8 @@ GPU_TEST_P(SCascadeTestAll, detectOnIntegral,
     GpuMat objectBoxes(1, 100000, CV_8UC1), rois(cv::Size(640, 480), CV_8UC1);
     rois.setTo(1);
 
-    cv::gpu::GpuMat trois;
-    cascade.genRoi(rois, trois);
     objectBoxes.setTo(0);
-    cascade.detect(hogluv, trois, objectBoxes);
+    cascade.detect(hogluv, rois, objectBoxes);
 
     typedef cv::gpu::SCascade::Detection Detection;
     cv::Mat detections(objectBoxes);
@@ -315,12 +311,9 @@ GPU_TEST_P(SCascadeTestAll, detectStream,
 
     cv::gpu::Stream s;
 
-    cv::gpu::GpuMat trois;
-    cascade.genRoi(rois, trois, s);
     objectBoxes.setTo(0);
-    cascade.detect(colored, trois, objectBoxes, s);
-
-    cudaDeviceSynchronize();
+    cascade.detect(colored, rois, objectBoxes, s);
+    s.waitForCompletion();
 
     typedef cv::gpu::SCascade::Detection Detection;
     cv::Mat detections(objectBoxes);

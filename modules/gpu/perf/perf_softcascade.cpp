@@ -71,15 +71,14 @@ RUN_GPU(SCascadeTest, detect)
 
     ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
 
-    cv::gpu::GpuMat objectBoxes(1, 10000 * sizeof(cv::gpu::SCascade::Detection), CV_8UC1), rois(colored.size(), CV_8UC1), trois;
+    cv::gpu::GpuMat objectBoxes(1, 10000 * sizeof(cv::gpu::SCascade::Detection), CV_8UC1), rois(colored.size(), CV_8UC1);
     rois.setTo(1);
-    cascade.genRoi(rois, trois);
 
-    cascade.detect(colored, trois, objectBoxes);
+    cascade.detect(colored, rois, objectBoxes);
 
     TEST_CYCLE()
     {
-        cascade.detect(colored, trois, objectBoxes);
+        cascade.detect(colored, rois, objectBoxes);
     }
 
     SANITY_CHECK(sortDetections(objectBoxes));
@@ -142,14 +141,11 @@ RUN_GPU(SCascadeTestRoi, detectInRoi)
         sub.setTo(1);
     }
 
-    cv::gpu::GpuMat trois;
-    cascade.genRoi(rois, trois);
-
-    cascade.detect(colored, trois, objectBoxes);
+    cascade.detect(colored, rois, objectBoxes);
 
     TEST_CYCLE()
     {
-        cascade.detect(colored, trois, objectBoxes);
+        cascade.detect(colored, rois, objectBoxes);
     }
 
     SANITY_CHECK(sortDetections(objectBoxes));
@@ -186,14 +182,11 @@ RUN_GPU(SCascadeTestRoi, detectEachRoi)
     cv::gpu::GpuMat sub(rois, r);
     sub.setTo(1);
 
-    cv::gpu::GpuMat trois;
-    cascade.genRoi(rois, trois);
-
-    cascade.detect(colored, trois, objectBoxes);
+    cascade.detect(colored, rois, objectBoxes);
 
     TEST_CYCLE()
     {
-        cascade.detect(colored, trois, objectBoxes);
+        cascade.detect(colored, rois, objectBoxes);
     }
 
     SANITY_CHECK(sortDetections(objectBoxes));
@@ -235,15 +228,14 @@ RUN_GPU(SCascadeTest, detectOnIntegral)
 
     ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
 
-    cv::gpu::GpuMat objectBoxes(1, 10000 * sizeof(cv::gpu::SCascade::Detection), CV_8UC1), rois(cv::Size(640, 480), CV_8UC1), trois;
+    cv::gpu::GpuMat objectBoxes(1, 10000 * sizeof(cv::gpu::SCascade::Detection), CV_8UC1), rois(cv::Size(640, 480), CV_8UC1);
     rois.setTo(1);
-    cascade.genRoi(rois, trois);
 
-    cascade.detect(hogluv, trois, objectBoxes);
+    cascade.detect(hogluv, rois, objectBoxes);
 
     TEST_CYCLE()
     {
-        cascade.detect(hogluv, trois, objectBoxes);
+        cascade.detect(hogluv, rois, objectBoxes);
     }
 
     SANITY_CHECK(sortDetections(objectBoxes));
@@ -270,18 +262,16 @@ RUN_GPU(SCascadeTest, detectStream)
 
     ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
 
-    cv::gpu::GpuMat objectBoxes(1, 10000 * sizeof(cv::gpu::SCascade::Detection), CV_8UC1), rois(colored.size(), CV_8UC1), trois;
+    cv::gpu::GpuMat objectBoxes(1, 10000 * sizeof(cv::gpu::SCascade::Detection), CV_8UC1), rois(colored.size(), CV_8UC1);
     rois.setTo(1);
 
     cv::gpu::Stream s;
 
-    cascade.genRoi(rois, trois, s);
-
-    cascade.detect(colored, trois, objectBoxes, s);
+    cascade.detect(colored, rois, objectBoxes, s);
 
     TEST_CYCLE()
     {
-        cascade.detect(colored, trois, objectBoxes, s);
+        cascade.detect(colored, rois, objectBoxes, s);
     }
 
 #ifdef HAVE_CUDA
