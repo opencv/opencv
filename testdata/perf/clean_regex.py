@@ -3,7 +3,7 @@ from xml.dom.minidom import parse
 
 def parseLogFile(filename):
     tests = []
-    log = parse(filename)
+    log = parse(open(filename, 'rb'))
     fstorage = log.firstChild
     #print help(log)
     for case in fstorage.childNodes:
@@ -14,7 +14,7 @@ def parseLogFile(filename):
     return tests
 
 def process(filename, expr, save_results):
-    log = parse(filename)
+    log = parse(open(filename, 'rb'))
     fstorage = log.firstChild
     for case in fstorage.childNodes:
         if case.nodeName == "#text":
@@ -29,7 +29,7 @@ def process(filename, expr, save_results):
         xmlstr = re.sub(r"(\s*\r\n)+", "\r\n", xmlstr)
         xmlstr = re.sub(r"<(\w*)/>", "<\\1></\\1>", xmlstr)
         xmlstr = xmlstr.replace("&quot;", "\"")
-        f = open(filename, 'w')
+        f = open(filename, 'wb')
         f.write(xmlstr)
         f.close()
 

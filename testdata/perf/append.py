@@ -2,25 +2,31 @@ import sys, re, os.path
 from xml.dom.minidom import parse
 
 def parseLogFile(filename):
-    tests = []
+    tests = {}
     log = parse(open(filename, 'rb'))
     fstorage = log.firstChild
-    #print help(log)
     for case in fstorage.childNodes:
         if case.nodeName == "#text":
             continue
-        #print case.nodeName
-        tests.append(case.nodeName)
+        tests[case.nodeName] = case
     return tests
 
-def processLogFile(outname, inname, tests):
-    log = parse(open(inname, 'rb'))
+def processLogFile(outname, inname):
+    tests = parseLogFile(inname)
+
+    log = parse(open(outname, 'rb'))
     fstorage = log.firstChild
     for case in fstorage.childNodes:
         if case.nodeName == "#text":
             continue
-        if not case.nodeName in tests:
-            fstorage.removeChild(case)
+        if case.nodeName in tests:
+            del tests[case.nodeName]
+
+    for case in tests.items():
+        fstorage.appendChild(case[1])
+
+    if tests:
+        fstorage.appendChild(log.createTextNode('\n'))
 
     xmlstr = log.toxml()
     xmlstr = re.sub(r"(\s*\n)+", "\n", xmlstr)
@@ -33,9 +39,8 @@ def processLogFile(outname, inname, tests):
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:
-        print "Usage:\n", os.path.basename(sys.argv[0]), "<log_name>.xml <log_name>.backup.xml"
+        print "Usage:\n", os.path.basename(sys.argv[0]), "<log_name>.xml <new_log_name>.xml"
         exit(0)
 
-    tests = parseLogFile(sys.argv[1])
-    processLogFile(sys.argv[1], sys.argv[2], tests)
+    processLogFile(sys.argv[1], sys.argv[2])
 
