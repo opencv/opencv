@@ -849,6 +849,8 @@ if __name__ == "__main__":
             test_args.extend(["--perf_min_samples=1"])
         if not [a for a in test_args if a.startswith("--perf_force_samples=")] :
             test_args.extend(["--perf_force_samples=1"])
+        if not [a for a in test_args if a.startswith("--perf_verify_sanity")] :
+            test_args.extend(["--perf_verify_sanity"])
 
     logs = []
     test_list = []
