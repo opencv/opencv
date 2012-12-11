@@ -143,33 +143,31 @@ namespace
     {
         typedef typename NppWarpFunc<DEPTH>::npp_t npp_t;
 
-        static void call(const cv::gpu::GpuMat& src, cv::Size wholeSize, cv::Point ofs, cv::gpu::GpuMat& dst,
-                         double coeffs[][3], cv::Size dsize, int interpolation, cudaStream_t stream)
+        static void call(const cv::gpu::GpuMat& src, cv::gpu::GpuMat& dst, double coeffs[][3], int interpolation, cudaStream_t stream)
         {
             static const int npp_inter[] = {NPPI_INTER_NN, NPPI_INTER_LINEAR, NPPI_INTER_CUBIC};
 
-            dst.create(dsize, src.type());
-            dst.setTo(cv::Scalar::all(0));
-
             NppiSize srcsz;
-            srcsz.height = wholeSize.height;
-            srcsz.width = wholeSize.width;
+            srcsz.height = src.rows;
+            srcsz.width = src.cols;
 
             NppiRect srcroi;
-            srcroi.x = ofs.x;
-            srcroi.y = ofs.y;
+            srcroi.x = 0;
+            srcroi.y = 0;
             srcroi.height = src.rows;
             srcroi.width = src.cols;
 
             NppiRect dstroi;
-            dstroi.x = dstroi.y = 0;
+            dstroi.x = 0;
+            dstroi.y = 0;
             dstroi.height = dst.rows;
             dstroi.width = dst.cols;
 
             cv::gpu::NppStreamHandler h(stream);
 
-            nppSafeCall( func((npp_t*)src.datastart, srcsz, static_cast<int>(src.step), srcroi,
-                              dst.ptr<npp_t>(), static_cast<int>(dst.step), dstroi, coeffs, npp_inter[interpolation]) );
+            nppSafeCall( func(src.ptr<npp_t>(), srcsz, static_cast<int>(src.step), srcroi,
+                              dst.ptr<npp_t>(), static_cast<int>(dst.step), dstroi, 
+                              coeffs, npp_inter[interpolation]) );
 
             if (stream == 0)
                 cudaSafeCall( cudaDeviceSynchronize() );
@@ -186,6 +184,8 @@ void cv::gpu::warpAffine(const GpuMat& src, GpuMat& dst, const Mat& M, Size dsiz
     CV_Assert(src.depth() <= CV_32F && src.channels() <= 4);
     CV_Assert(interpolation == INTER_NEAREST || interpolation == INTER_LINEAR || interpolation == INTER_CUBIC);
     CV_Assert(borderMode == BORDER_REFLECT101 || borderMode == BORDER_REPLICATE || borderMode == BORDER_CONSTANT || borderMode == BORDER_REFLECT || borderMode == BORDER_WRAP);
+
+    dst.create(dsize, src.type());
 
     Size wholeSize;
     Point ofs;
@@ -231,8 +231,7 @@ void cv::gpu::warpAffine(const GpuMat& src, GpuMat& dst, const Mat& M, Size dsiz
         }
     };
 
-    bool useNpp = borderMode == BORDER_CONSTANT;
-    useNpp = useNpp && useNppTab[src.depth()][src.channels() - 1][interpolation];
+    bool useNpp = borderMode == BORDER_CONSTANT && ofs.x == 0 && ofs.y == 0 && useNppTab[src.depth()][src.channels() - 1][interpolation];
     #ifdef linux
         // NPP bug on float data
         useNpp = useNpp && src.depth() != CV_32F;
@@ -240,7 +239,7 @@ void cv::gpu::warpAffine(const GpuMat& src, GpuMat& dst, const Mat& M, Size dsiz
 
     if (useNpp)
     {
-        typedef void (*func_t)(const cv::gpu::GpuMat& src, cv::Size wholeSize, cv::Point ofs, cv::gpu::GpuMat& dst, double coeffs[][3], cv::Size dsize, int flags, cudaStream_t stream);
+        typedef void (*func_t)(const cv::gpu::GpuMat& src, cv::gpu::GpuMat& dst, double coeffs[][3], int flags, cudaStream_t stream);
 
         static const func_t funcs[2][6][4] =
         {
@@ -262,6 +261,8 @@ void cv::gpu::warpAffine(const GpuMat& src, GpuMat& dst, const Mat& M, Size dsiz
             }
         };
 
+        dst.setTo(borderValue);
+
         double coeffs[2][3];
         Mat coeffsMat(2, 3, CV_64F, (void*)coeffs);
         M.convertTo(coeffsMat, coeffsMat.type());
@@ -269,7 +270,7 @@ void cv::gpu::warpAffine(const GpuMat& src, GpuMat& dst, const Mat& M, Size dsiz
         const func_t func = funcs[(flags & WARP_INVERSE_MAP) != 0][src.depth()][src.channels() - 1];
         CV_Assert(func != 0);
 
-        func(src, wholeSize, ofs, dst, coeffs, dsize, interpolation, StreamAccessor::getStream(s));
+        func(src, dst, coeffs, interpolation, StreamAccessor::getStream(s));
     }
     else
     {
@@ -293,8 +294,6 @@ void cv::gpu::warpAffine(const GpuMat& src, GpuMat& dst, const Mat& M, Size dsiz
 
         int gpuBorderType;
         CV_Assert(tryConvertToGpuBorderType(borderMode, gpuBorderType));
-
-        dst.create(dsize, src.type());
 
         float coeffs[2 * 3];
         Mat coeffsMat(2, 3, CV_32F, (void*)coeffs);
@@ -329,6 +328,8 @@ void cv::gpu::warpPerspective(const GpuMat& src, GpuMat& dst, const Mat& M, Size
     CV_Assert(interpolation == INTER_NEAREST || interpolation == INTER_LINEAR || interpolation == INTER_CUBIC);
     CV_Assert(borderMode == BORDER_REFLECT101 || borderMode == BORDER_REPLICATE || borderMode == BORDER_CONSTANT || borderMode == BORDER_REFLECT || borderMode == BORDER_WRAP);
 
+    dst.create(dsize, src.type());
+
     Size wholeSize;
     Point ofs;
     src.locateROI(wholeSize, ofs);
@@ -373,8 +374,7 @@ void cv::gpu::warpPerspective(const GpuMat& src, GpuMat& dst, const Mat& M, Size
         }
     };
 
-    bool useNpp = borderMode == BORDER_CONSTANT;
-    useNpp = useNpp && useNppTab[src.depth()][src.channels() - 1][interpolation];
+    bool useNpp = borderMode == BORDER_CONSTANT && ofs.x == 0 && ofs.y == 0 && useNppTab[src.depth()][src.channels() - 1][interpolation];
     #ifdef linux
         // NPP bug on float data
         useNpp = useNpp && src.depth() != CV_32F;
@@ -382,7 +382,7 @@ void cv::gpu::warpPerspective(const GpuMat& src, GpuMat& dst, const Mat& M, Size
 
     if (useNpp)
     {
-        typedef void (*func_t)(const cv::gpu::GpuMat& src, cv::Size wholeSize, cv::Point ofs, cv::gpu::GpuMat& dst, double coeffs[][3], cv::Size dsize, int flags, cudaStream_t stream);
+        typedef void (*func_t)(const cv::gpu::GpuMat& src, cv::gpu::GpuMat& dst, double coeffs[][3], int flags, cudaStream_t stream);
 
         static const func_t funcs[2][6][4] =
         {
@@ -404,6 +404,8 @@ void cv::gpu::warpPerspective(const GpuMat& src, GpuMat& dst, const Mat& M, Size
             }
         };
 
+        dst.setTo(borderValue);
+
         double coeffs[3][3];
         Mat coeffsMat(3, 3, CV_64F, (void*)coeffs);
         M.convertTo(coeffsMat, coeffsMat.type());
@@ -411,7 +413,7 @@ void cv::gpu::warpPerspective(const GpuMat& src, GpuMat& dst, const Mat& M, Size
         const func_t func = funcs[(flags & WARP_INVERSE_MAP) != 0][src.depth()][src.channels() - 1];
         CV_Assert(func != 0);
 
-        func(src, wholeSize, ofs, dst, coeffs, dsize, interpolation, StreamAccessor::getStream(s));
+        func(src, dst, coeffs, interpolation, StreamAccessor::getStream(s));
     }
     else
     {
@@ -435,8 +437,6 @@ void cv::gpu::warpPerspective(const GpuMat& src, GpuMat& dst, const Mat& M, Size
 
         int gpuBorderType;
         CV_Assert(tryConvertToGpuBorderType(borderMode, gpuBorderType));
-
-        dst.create(dsize, src.type());
 
         float coeffs[3 * 3];
         Mat coeffsMat(3, 3, CV_32F, (void*)coeffs);
