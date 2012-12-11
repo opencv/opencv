@@ -125,11 +125,24 @@ private:
 class Octave : cv::Boost
 {
 public:
+
+    enum
+    {
+        // Direct backward pruning. (Cha Zhang and Paul Viola)
+        DBP = 1,
+        // Multiple instance pruning. (Cha Zhang and Paul Viola)
+        MIP = 2,
+        // Originally proposed by L. bourdev and J. brandt
+        HEURISTIC = 4
+    };
+
     Octave(cv::Rect boundingBox, int npositives, int nnegatives, int logScale, int shrinkage);
     virtual ~Octave();
 
-     virtual bool train(const Dataset& dataset, const FeaturePool& pool, int weaks, int treeDepth);
-     virtual void write( CvFileStorage* fs, string name) const;
+    virtual bool train(const Dataset& dataset, const FeaturePool& pool, int weaks, int treeDepth);
+    virtual void write( CvFileStorage* fs, string name) const;
+    virtual float predict( const Mat& _sample, Mat& _votes, bool raw_mode, bool return_sum ) const;
+    virtual void setRejectThresholds(cv::Mat& thresholds);
 
     int logScale;
 
@@ -139,6 +152,8 @@ protected:
 
     void processPositives(const Dataset& dataset, const FeaturePool& pool);
     void generateNegatives(const Dataset& dataset);
+
+    float predict( const Mat& _sample, const cv::Range range) const;
 private:
     cv::Rect boundingBox;
 
@@ -151,6 +166,8 @@ private:
     Mat responses;
 
     CvBoostParams params;
+
+    Mat trainData;
 };
 
 }

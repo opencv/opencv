@@ -1091,9 +1091,7 @@ CvBoost::train( const CvMat* _train_data, int _tflag,
     return ok;
 }
 
-bool CvBoost::train( CvMLData* _data,
-             CvBoostParams _params,
-             bool update )
+bool CvBoost::train( CvMLData* _data, CvBoostParams _params, bool update )
 {
     bool result = false;
 
@@ -1151,6 +1149,7 @@ CvBoost::update_weights( CvBoostTree* tree )
         sample_idx = data->get_sample_indices( data->data_root, sample_idx_buf );
     }
     CvMat* dtree_data_buf = data->buf;
+
     if( !tree ) // before training the first tree, initialize weights and other parameters
     {
         int* class_labels_buf = (int*)cur_buf_pos;
@@ -1607,14 +1606,16 @@ CvBoost::predict( const CvMat* _sample, const CvMat* _missing,
     if( !weak )
         CV_Error( CV_StsError, "The boosted tree ensemble has not been trained yet" );
 
-    if( !CV_IS_MAT(_sample) || CV_MAT_TYPE(_sample->type) != CV_32FC1 ||
-        (_sample->cols != 1 && _sample->rows != 1) ||
-        (_sample->cols + _sample->rows - 1 != data->var_all && !raw_mode) ||
-        (active_vars && _sample->cols + _sample->rows - 1 != active_vars->cols && raw_mode) )
-            CV_Error( CV_StsBadArg,
-        "the input sample must be 1d floating-point vector with the same "
-        "number of elements as the total number of variables or "
-        "as the number of variables used for training" );
+        // std::cout << "WAR: " << _sample->cols << " " << _sample->rows << " " << data->var_all << " " << active_vars->cols << std::endl;
+
+    // if( !CV_IS_MAT(_sample) || CV_MAT_TYPE(_sample->type) != CV_32FC1 ||
+    //     (_sample->cols != 1 && _sample->rows != 1) ||
+    //     (_sample->cols + _sample->rows - 1 != data->var_all && !raw_mode) ||
+    //     (active_vars && _sample->cols + _sample->rows - 1 != active_vars->cols && raw_mode) )
+    //         CV_Error( CV_StsBadArg,
+    //     "the input sample must be 1d floating-point vector with the same "
+    //     "number of elements as the total number of variables or "
+    //     "as the number of variables used for training" );
 
     if( _missing )
     {
@@ -2147,5 +2148,3 @@ CvBoost::predict( const Mat& _sample, const Mat& _missing,
 }
 
 /* End of file. */
-
-
