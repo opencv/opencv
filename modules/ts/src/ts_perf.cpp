@@ -491,7 +491,7 @@ void Regression::verify(cv::FileNode node, cv::InputArray array, double eps, ERR
                         cv::minMaxLoc(diff.reshape(1), 0, &max);
 
                         FAIL() << "  Absolute difference (=" << max << ") between argument \""
-                               << node.name() << "[" <<  idx << "]\" and expected value is bugger than " << eps;
+                               << node.name() << "[" <<  idx << "]\" and expected value is greater than " << eps;
                     }
                 }
                 else if (err == ERROR_RELATIVE)
@@ -501,7 +501,7 @@ void Regression::verify(cv::FileNode node, cv::InputArray array, double eps, ERR
                     if (violations > 0)
                     {
                         FAIL() << "  Relative difference (" << maxv << " of " << maxa << " allowed) between argument \""
-                               << node.name() << "[" <<  idx << "]\" and expected value is bugger than " << eps << " in " << violations << " points";
+                               << node.name() << "[" <<  idx << "]\" and expected value is greater than " << eps << " in " << violations << " points";
                     }
                 }
             }
@@ -545,7 +545,7 @@ void Regression::verify(cv::FileNode node, cv::InputArray array, double eps, ERR
                         cv::minMaxLoc(diff.reshape(1), 0, &max);
 
                         FAIL() << "  Difference (=" << max << ") between argument1 \"" << node.name()
-                               << "\" and expected value is bugger than " << eps;
+                               << "\" and expected value is greater than " << eps;
                     }
                 }
                 else if (err == ERROR_RELATIVE)
@@ -555,7 +555,7 @@ void Regression::verify(cv::FileNode node, cv::InputArray array, double eps, ERR
                     if (violations > 0)
                     {
                         FAIL() << "  Relative difference (" << maxv << " of " << maxa << " allowed) between argument \"" << node.name()
-                               << "\" and expected value is bugger than " << eps << " in " << violations << " points";
+                               << "\" and expected value is greater than " << eps << " in " << violations << " points";
                     }
                 }
             }
@@ -595,6 +595,7 @@ Regression& Regression::operator() (const std::string& name, cv::InputArray arra
 
                 write() << nodename << "{";
             }
+            // TODO: verify that name is alphanumeric, current error message is useless
             write() << name << "{";
             write(array);
             write() << "}";
@@ -971,7 +972,7 @@ void TestBase::validateMetrics()
     if (m.gstddev > DBL_EPSILON)
     {
         EXPECT_GT(/*m.gmean * */1., /*m.gmean * */ 2 * sinh(m.gstddev * param_max_deviation))
-          << "  Test results are not reliable ((mean-sigma,mean+sigma) deviation interval is bigger than measured time interval).";
+          << "  Test results are not reliable ((mean-sigma,mean+sigma) deviation interval is greater than measured time interval).";
     }
 
     EXPECT_LE(m.outliers, std::max((unsigned int)cvCeil(m.samples * param_max_outliers / 100.), 1u))
