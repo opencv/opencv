@@ -80,19 +80,70 @@ sft::Octave::Octave(cv::Rect bb, int np, int nn, int ls, int shr)
 
 sft::Octave::~Octave(){}
 
-bool sft::Octave::train( const cv::Mat& trainData, const cv::Mat& _responses, const cv::Mat& varIdx,
+bool sft::Octave::train( const cv::Mat& _trainData, const cv::Mat& _responses, const cv::Mat& varIdx,
        const cv::Mat& sampleIdx, const cv::Mat& varType, const cv::Mat& missingDataMask)
 {
 
     std::cout << "WARNING: sampleIdx " << sampleIdx << std::endl;
-    std::cout << "WARNING: trainData " << trainData << std::endl;
+    std::cout << "WARNING: trainData " << _trainData << std::endl;
     std::cout << "WARNING: _responses " << _responses << std::endl;
     std::cout << "WARNING: varIdx" << varIdx << std::endl;
     std::cout << "WARNING: varType" << varType << std::endl;
 
     bool update = false;
-    return cv::Boost::train(trainData, CV_COL_SAMPLE, _responses, varIdx, sampleIdx, varType, missingDataMask, params,
+    return cv::Boost::train(_trainData, CV_COL_SAMPLE, _responses, varIdx, sampleIdx, varType, missingDataMask, params,
     update);
+}
+
+void sft::Octave::setRejectThresholds(cv::Mat& thresholds)
+{
+    dprintf("set thresholds according to DBP strategy\n");
+
+    // labels desided by classifier
+    cv::Mat desisions(responses.cols, responses.rows, responses.type());
+    float* dptr = desisions.ptr<float>(0);
+
+    // mask of samples satisfying the condition
+    cv::Mat ppmask(responses.cols, responses.rows, CV_8UC1);
+    uchar* mptr = ppmask.ptr<uchar>(0);
+
+    int nsamples = npositives + nnegatives;
+
+    cv::Mat stab;
+
+    for (int si = 0; si < nsamples; ++si)
+    {
+        float decision = dptr[si] = predict(trainData.col(si), stab, false, false);
+        mptr[si] = cv::saturate_cast<uchar>((uint)(responses.ptr<float>(si)[0] == 1.f && decision == 1.f));
+    }
+
+    std::cout << "WARNING: responses " << responses << std::endl;
+    std::cout << "WARNING: desisions " << desisions << std::endl;
+    std::cout << "WARNING: ppmask "    << ppmask    << std::endl;
+
+    int weaks = weak->total;
+    thresholds.create(1, weaks, CV_64FC1);
+    double* thptr = thresholds.ptr<double>(0);
+
+    cv::Mat traces(weaks, nsamples, CV_64FC1, cv::Scalar::all(FLT_MAX));
+
+    for (int w = 0; w < weaks; ++w)
+    {
+        double* rptr = traces.ptr<double>(w);
+        for (int si = 0; si < nsamples; ++si)
+        {
+            cv::Range curr(0, w + 1);
+            if (mptr[si])
+            {
+                float trace = predict(trainData.col(si), curr);
+                rptr[si] = trace;
+            }
+        }
+        double mintrace = 0.;
+        cv::minMaxLoc(traces.row(w), &mintrace);
+        thptr[w] = mintrace;
+        std::cout << "mintrace " << mintrace << std::endl << traces.colRange(0, npositives) << std::endl;
+    }
 }
 
 namespace {
@@ -194,10 +245,10 @@ void sft::Octave::processPositives(const Dataset& dataset, const FeaturePool& po
 void sft::Octave::generateNegatives(const Dataset& dataset)
 {
     // ToDo: set seed, use offsets
-    sft::Random::engine eng;
-    sft::Random::engine idxEng;
+    sft::Random::engine eng(65633343L);
+    sft::Random::engine idxEng(764224349868L);
 
-    int w = boundingBox.width;
+    // int w = boundingBox.width;
     int h = boundingBox.height;
 
     Preprocessor prepocessor(shrinkage);
@@ -278,7 +329,7 @@ bool sft::Octave::train(const Dataset& dataset, const FeaturePool& pool, int wea
         uptr[x] = CV_VAR_ORDERED;
     uptr[nfeatures] = CV_VAR_CATEGORICAL;
 
-    cv::Mat trainData(nfeatures, nsamples, CV_32FC1);
+    trainData.create(nfeatures, nsamples, CV_32FC1);
     for (int fi = 0; fi < nfeatures; ++fi)
     {
         float* dptr = trainData.ptr<float>(fi);
@@ -292,9 +343,34 @@ bool sft::Octave::train(const Dataset& dataset, const FeaturePool& pool, int wea
 
     bool ok = train(trainData, responses, varIdx, sampleIdx, varType, missingMask);
     if (!ok)
-        std::cout << "ERROR:tree couldnot be trained" << std::endl;
+        std::cout << "ERROR: tree can not be trained " << std::endl;
+
+#if defined SELF_TEST
+    cv::Mat a(1, nfeatures, CV_32FC1);
+    cv::Mat votes(1, cvSliceLength( CV_WHOLE_SEQ, weak ), CV_32FC1, cv::Scalar::all(0));
+
+    std::cout << a.cols << " " << a.rows << " !!!!!!!!!!! " << data->var_all << std::endl;
+    for (int si = 0; si < nsamples; ++si)
+    {
+        // trainData.col(si).copyTo(a.reshape(0,trainData.rows));
+        float desision = predict(trainData.col(si), votes, false, true);
+        std::cout << "desision " << desision << " class " << responses.at<float>(si, 0) << votes <<std::endl;
+    }
+#endif
     return ok;
 
+}
+
+float sft::Octave::predict( const Mat& _sample, Mat& _votes, bool raw_mode, bool return_sum ) const
+{
+    CvMat sample = _sample, votes = _votes;
+    return CvBoost::predict(&sample, 0, (_votes.empty())? 0 : &votes, CV_WHOLE_SEQ, raw_mode, return_sum);
+}
+
+float sft::Octave::predict( const Mat& _sample, const cv::Range range) const
+{
+    CvMat sample = _sample;
+    return CvBoost::predict(&sample, 0, 0, range, false, true);
 }
 
 void sft::Octave::write( CvFileStorage* fs, string name) const
@@ -327,8 +403,8 @@ void sft::FeaturePool::fill(int desired)
 
     pool.reserve(nfeatures);
 
-    sft::Random::engine eng(seed);
-    sft::Random::engine eng_ch(seed);
+    sft::Random::engine eng(8854342234L);
+    sft::Random::engine eng_ch(314152314L);
 
     sft::Random::uniform chRand(0, N_CHANNELS - 1);
 

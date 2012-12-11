@@ -130,10 +130,15 @@ int main(int argc, char** argv)
         if (boost.train(dataset, pool, cfg.weaks, cfg.treeDepth))
         {
             std::cout << "Octave " << *it << " was successfully trained..." << std::endl;
-             CvFileStorage* fout = cvOpenFileStorage(cfg.resPath(it).c_str(), 0, CV_STORAGE_WRITE);
-             boost.write(fout, cfg.cascadeName);
+            CvFileStorage* fout = cvOpenFileStorage(cfg.resPath(it).c_str(), 0, CV_STORAGE_WRITE);
+            boost.write(fout, cfg.cascadeName);
             // strong.push_back(octave);
-             cvReleaseFileStorage( &fout);
+            cvReleaseFileStorage( &fout);
+
+            cv::Mat thresholds;
+            boost.setRejectThresholds(thresholds);
+
+            std::cout << "thresholds " << thresholds << std::endl;
         }
     }
 
