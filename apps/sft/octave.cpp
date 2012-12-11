@@ -84,11 +84,11 @@ bool sft::Octave::train( const cv::Mat& _trainData, const cv::Mat& _responses, c
        const cv::Mat& sampleIdx, const cv::Mat& varType, const cv::Mat& missingDataMask)
 {
 
-    std::cout << "WARNING: sampleIdx " << sampleIdx << std::endl;
-    std::cout << "WARNING: trainData " << _trainData << std::endl;
-    std::cout << "WARNING: _responses " << _responses << std::endl;
-    std::cout << "WARNING: varIdx" << varIdx << std::endl;
-    std::cout << "WARNING: varType" << varType << std::endl;
+    // std::cout << "WARNING: sampleIdx " << sampleIdx << std::endl;
+    // std::cout << "WARNING: trainData " << _trainData << std::endl;
+    // std::cout << "WARNING: _responses " << _responses << std::endl;
+    // std::cout << "WARNING: varIdx" << varIdx << std::endl;
+    // std::cout << "WARNING: varType" << varType << std::endl;
 
     bool update = false;
     return cv::Boost::train(_trainData, CV_COL_SAMPLE, _responses, varIdx, sampleIdx, varType, missingDataMask, params,
@@ -117,9 +117,9 @@ void sft::Octave::setRejectThresholds(cv::Mat& thresholds)
         mptr[si] = cv::saturate_cast<uchar>((uint)(responses.ptr<float>(si)[0] == 1.f && decision == 1.f));
     }
 
-    std::cout << "WARNING: responses " << responses << std::endl;
-    std::cout << "WARNING: desisions " << desisions << std::endl;
-    std::cout << "WARNING: ppmask "    << ppmask    << std::endl;
+    // std::cout << "WARNING: responses " << responses << std::endl;
+    // std::cout << "WARNING: desisions " << desisions << std::endl;
+    // std::cout << "WARNING: ppmask "    << ppmask    << std::endl;
 
     int weaks = weak->total;
     thresholds.create(1, weaks, CV_64FC1);
@@ -142,7 +142,7 @@ void sft::Octave::setRejectThresholds(cv::Mat& thresholds)
         double mintrace = 0.;
         cv::minMaxLoc(traces.row(w), &mintrace);
         thptr[w] = mintrace;
-        std::cout << "mintrace " << mintrace << std::endl << traces.colRange(0, npositives) << std::endl;
+        // std::cout << "mintrace " << mintrace << std::endl << traces.colRange(0, npositives) << std::endl;
     }
 }
 
@@ -223,7 +223,7 @@ void sft::Octave::processPositives(const Dataset& dataset, const FeaturePool& po
     {
         const string& curr = *it;
 
-        dprintf("Process candidate positive image %s\n", curr.c_str());
+        // dprintf("Process candidate positive image %s\n", curr.c_str());
 
         cv::Mat sample = cv::imread(curr);
 
@@ -262,8 +262,8 @@ void sft::Octave::generateNegatives(const Dataset& dataset)
     {
         int curr = iRand(idxEng);
 
-        dprintf("View %d-th sample\n", curr);
-        dprintf("Process %s\n", dataset.neg[curr].c_str());
+        // dprintf("View %d-th sample\n", curr);
+        // dprintf("Process %s\n", dataset.neg[curr].c_str());
 
         Mat frame = cv::imread(dataset.neg[curr]);
 
@@ -349,12 +349,12 @@ bool sft::Octave::train(const Dataset& dataset, const FeaturePool& pool, int wea
     cv::Mat a(1, nfeatures, CV_32FC1);
     cv::Mat votes(1, cvSliceLength( CV_WHOLE_SEQ, weak ), CV_32FC1, cv::Scalar::all(0));
 
-    std::cout << a.cols << " " << a.rows << " !!!!!!!!!!! " << data->var_all << std::endl;
+    // std::cout << a.cols << " " << a.rows << " !!!!!!!!!!! " << data->var_all << std::endl;
     for (int si = 0; si < nsamples; ++si)
     {
         // trainData.col(si).copyTo(a.reshape(0,trainData.rows));
         float desision = predict(trainData.col(si), votes, false, true);
-        std::cout << "desision " << desision << " class " << responses.at<float>(si, 0) << votes <<std::endl;
+        // std::cout << "desision " << desision << " class " << responses.at<float>(si, 0) << votes <<std::endl;
     }
 #endif
     return ok;
