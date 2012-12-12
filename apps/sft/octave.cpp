@@ -47,6 +47,8 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
+#include <queue>
+
 // ============ Octave ============ //
 sft::Octave::Octave(cv::Rect bb, int np, int nn, int ls, int shr)
 : logScale(ls), boundingBox(bb), npositives(np), nnegatives(nn), shrinkage(shr)
@@ -291,6 +293,89 @@ void sft::Octave::generateNegatives(const Dataset& dataset)
     }
 
     dprintf("Processing negatives finished:\n\trequested %d negatives, viewed %d samples.\n", nnegatives, total);
+}
+
+template <typename T> int sgn(T val) {
+    return (T(0) < val) - (val < T(0));
+}
+
+void sft::Octave::traverse(const CvBoostTree* tree, cv::FileStorage& fs, const float* th) const
+{
+    std::queue<const CvDTreeNode*> nodes;
+    nodes.push( tree->get_root());
+    const CvDTreeNode* tempNode;
+    int leafValIdx = 0;
+    int internalNodeIdx = 1;
+    float* leafs = new float[(int)pow(2.f, get_params().max_depth)];
+
+    fs << "{";
+    fs << "internalNodes" << "[";
+    while (!nodes.empty())
+    {
+        tempNode = nodes.front();
+        CV_Assert( tempNode->left );
+        if ( !tempNode->left->left && !tempNode->left->right)
+        {
+            leafs[-leafValIdx] = (float)tempNode->left->value;
+            fs << leafValIdx-- ;
+        }
+        else
+        {
+            nodes.push( tempNode->left );
+            fs << internalNodeIdx++;
+        }
+        CV_Assert( tempNode->right );
+        if ( !tempNode->right->left && !tempNode->right->right)
+        {
+            leafs[-leafValIdx] = (float)tempNode->right->value;
+            fs << leafValIdx--;
+        }
+        else
+        {
+            nodes.push( tempNode->right );
+            fs << internalNodeIdx++;
+        }
+        int fidx = tempNode->split->var_idx;
+        fs << fidx;
+
+        fs << tempNode->split->ord.c;
+
+        nodes.pop();
+    }
+    fs << "]";
+
+    fs << "leafValues" << "[";
+    for (int ni = 0; ni < -leafValIdx; ni++)
+        fs << ( (!th) ? leafs[ni] : (sgn(leafs[ni]) * *th));
+    fs << "]";
+
+    fs << "}";
+}
+
+void sft::Octave::write( cv::FileStorage &fso, const Mat& thresholds) const
+{
+    fso << "{"
+        << "scale" << logScale
+        << "weaks" << weak->total
+        << "trees" << "[";
+        // should be replased with the H.L. one
+        CvSeqReader reader;
+        cvStartReadSeq( weak, &reader);
+
+        for(int i = 0; i < weak->total; i++ )
+        {
+            CvBoostTree* tree;
+            CV_READ_SEQ_ELEM( tree, reader );
+
+            if (!thresholds.empty())
+                traverse(tree, fso, thresholds.ptr<float>(0)+ i);
+            else
+                traverse(tree, fso);
+        }
+        //
+
+    fso << "]"
+        << "}";
 }
 
 bool sft::Octave::train(const Dataset& dataset, const FeaturePool& pool, int weaks, int treeDepth)
