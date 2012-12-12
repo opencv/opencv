@@ -1,0 +1,422 @@
+<?xml version="1.0" ?><opencv_storage>
+<stitch_a123--a123---surf->
+  <pano_small>
+    <kind>65536</kind>
+    <type>16</type>
+    <min>0.</min>
+    <max>247.</max>
+    <last>
+      <x>319</x>
+      <y>239</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>111</x>
+      <y>47</y>
+      <cn>2</cn>
+      <val>70.</val></rng1>
+    <rng2>
+      <x>210</x>
+      <y>114</y>
+      <cn>2</cn>
+      <val>50.</val></rng2></pano_small></stitch_a123--a123---surf->
+<stitch_a123--a123---orb->
+  <pano_small>
+    <kind>65536</kind>
+    <type>16</type>
+    <min>0.</min>
+    <max>251.</max>
+    <last>
+      <x>319</x>
+      <y>239</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>236</x>
+      <y>198</y>
+      <cn>2</cn>
+      <val>26.</val></rng1>
+    <rng2>
+      <x>150</x>
+      <y>50</y>
+      <cn>1</cn>
+      <val>15.</val></rng2></pano_small></stitch_a123--a123---orb->
+<stitch_b12--b12---surf->
+  <pano_small>
+    <kind>65536</kind>
+    <type>0</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>0</cols>
+      <dt>u</dt>
+      <data></data></val></pano_small></stitch_b12--b12---surf->
+<stitch_b12--b12---orb->
+  <pano_small>
+    <kind>65536</kind>
+    <type>16</type>
+    <min>0.</min>
+    <max>240.</max>
+    <last>
+      <x>319</x>
+      <y>239</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>162</x>
+      <y>129</y>
+      <val>103.</val></rng1>
+    <rng2>
+      <x>236</x>
+      <y>2</y>
+      <cn>2</cn>
+      <val>0.</val></rng2></pano_small></stitch_b12--b12---orb->
+ <!-- resumed -->
+
+<match_bestOf2Nearest--bestOf2Nearest---surf->
+  <matches-queryIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data>
+        41 152 606 611</data></val></matches-queryIdx>
+  <matches-trainIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data>
+        58 141 503 581</data></val></matches-trainIdx>
+  <matches-imgIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data>
+        0 0 0 0</data></val></matches-imgIdx>
+  <matches-distance>
+    <kind>65536</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>f</dt>
+      <data>
+        1.43683448e-001 7.33579099e-002 6.23222664e-002 7.66958371e-002</data></val></matches-distance></match_bestOf2Nearest--bestOf2Nearest---surf->
+<match_bestOf2Nearest--bestOf2Nearest---orb->
+  <matches-queryIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data></data></val></matches-queryIdx>
+  <matches-trainIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data></data></val></matches-trainIdx>
+  <matches-imgIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data></data></val></matches-imgIdx>
+  <matches-distance>
+    <kind>65536</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>1</cols>
+      <dt>f</dt>
+      <data></data></val></matches-distance></match_bestOf2Nearest--bestOf2Nearest---orb->
+<matchVector_bestOf2NearestVectorFeatures--bestOf2NearestVectorFeatures----surf---2->
+  <matches-queryIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data>
+        41 152 606 611</data></val></matches-queryIdx>
+  <matches-trainIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data>
+        58 141 503 581</data></val></matches-trainIdx>
+  <matches-imgIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data>
+        0 0 0 0</data></val></matches-imgIdx>
+  <matches-distance>
+    <kind>65536</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>f</dt>
+      <data>
+        1.43683448e-001 7.33579099e-002 6.23222664e-002 7.66958371e-002</data></val></matches-distance></matchVector_bestOf2NearestVectorFeatures--bestOf2NearestVectorFeatures----surf---2->
+<matchVector_bestOf2NearestVectorFeatures--bestOf2NearestVectorFeatures----surf---4->
+  <matches-queryIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data>
+        41 152 606 611</data></val></matches-queryIdx>
+  <matches-trainIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data>
+        58 141 503 581</data></val></matches-trainIdx>
+  <matches-imgIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data>
+        0 0 0 0</data></val></matches-imgIdx>
+  <matches-distance>
+    <kind>65536</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>f</dt>
+      <data>
+        1.43683448e-001 7.33579099e-002 6.23222664e-002 7.66958371e-002</data></val></matches-distance></matchVector_bestOf2NearestVectorFeatures--bestOf2NearestVectorFeatures----surf---4->
+<matchVector_bestOf2NearestVectorFeatures--bestOf2NearestVectorFeatures----surf---6->
+  <matches-queryIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data>
+        41 152 606 611</data></val></matches-queryIdx>
+  <matches-trainIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data>
+        58 141 503 581</data></val></matches-trainIdx>
+  <matches-imgIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data>
+        0 0 0 0</data></val></matches-imgIdx>
+  <matches-distance>
+    <kind>65536</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>f</dt>
+      <data>
+        1.43683448e-001 7.33579099e-002 6.23222664e-002 7.66958371e-002</data></val></matches-distance></matchVector_bestOf2NearestVectorFeatures--bestOf2NearestVectorFeatures----surf---6->
+<matchVector_bestOf2NearestVectorFeatures--bestOf2NearestVectorFeatures----surf---8->
+  <matches-queryIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data>
+        41 152 606 611</data></val></matches-queryIdx>
+  <matches-trainIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data>
+        58 141 503 581</data></val></matches-trainIdx>
+  <matches-imgIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data>
+        0 0 0 0</data></val></matches-imgIdx>
+  <matches-distance>
+    <kind>65536</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>f</dt>
+      <data>
+        1.43683448e-001 7.33579099e-002 6.23222664e-002 7.66958371e-002</data></val></matches-distance></matchVector_bestOf2NearestVectorFeatures--bestOf2NearestVectorFeatures----surf---8->
+<matchVector_bestOf2NearestVectorFeatures--bestOf2NearestVectorFeatures----orb---2->
+  <matches-queryIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data></data></val></matches-queryIdx>
+  <matches-trainIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data></data></val></matches-trainIdx>
+  <matches-imgIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data></data></val></matches-imgIdx>
+  <matches-distance>
+    <kind>65536</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>1</cols>
+      <dt>f</dt>
+      <data></data></val></matches-distance></matchVector_bestOf2NearestVectorFeatures--bestOf2NearestVectorFeatures----orb---2->
+<matchVector_bestOf2NearestVectorFeatures--bestOf2NearestVectorFeatures----orb---4->
+  <matches-queryIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data></data></val></matches-queryIdx>
+  <matches-trainIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data></data></val></matches-trainIdx>
+  <matches-imgIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data></data></val></matches-imgIdx>
+  <matches-distance>
+    <kind>65536</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>1</cols>
+      <dt>f</dt>
+      <data></data></val></matches-distance></matchVector_bestOf2NearestVectorFeatures--bestOf2NearestVectorFeatures----orb---4->
+<matchVector_bestOf2NearestVectorFeatures--bestOf2NearestVectorFeatures----orb---6->
+  <matches-queryIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data></data></val></matches-queryIdx>
+  <matches-trainIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data></data></val></matches-trainIdx>
+  <matches-imgIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data></data></val></matches-imgIdx>
+  <matches-distance>
+    <kind>65536</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>1</cols>
+      <dt>f</dt>
+      <data></data></val></matches-distance></matchVector_bestOf2NearestVectorFeatures--bestOf2NearestVectorFeatures----orb---6->
+<matchVector_bestOf2NearestVectorFeatures--bestOf2NearestVectorFeatures----orb---8->
+  <matches-queryIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data></data></val></matches-queryIdx>
+  <matches-trainIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data></data></val></matches-trainIdx>
+  <matches-imgIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data></data></val></matches-imgIdx>
+  <matches-distance>
+    <kind>65536</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>1</cols>
+      <dt>f</dt>
+      <data></data></val></matches-distance></matchVector_bestOf2NearestVectorFeatures--bestOf2NearestVectorFeatures----orb---8->
+</opencv_storage>
