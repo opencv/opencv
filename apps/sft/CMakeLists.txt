@@ -2,7 +2,7 @@ if(IOS OR ANDROID)
   return()
 endif()
 
-set(the_target stf)
+set(the_target sft)
 set(name ${the_target})
 
 set(OPENCV_${the_target}_DEPS opencv_core opencv_objdetect opencv_highgui opencv_imgproc opencv_ml)
