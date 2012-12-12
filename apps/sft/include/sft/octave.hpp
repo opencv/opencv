@@ -144,6 +144,8 @@ public:
     virtual float predict( const Mat& _sample, Mat& _votes, bool raw_mode, bool return_sum ) const;
     virtual void setRejectThresholds(cv::Mat& thresholds);
 
+    virtual void write( cv::FileStorage &fs, const Mat& thresholds = Mat()) const;
+
     int logScale;
 
 protected:
@@ -155,6 +157,8 @@ protected:
 
     float predict( const Mat& _sample, const cv::Range range) const;
 private:
+    void traverse(const CvBoostTree* tree, cv::FileStorage& fs, const float* th = 0) const;
+
     cv::Rect boundingBox;
 
     int npositives;

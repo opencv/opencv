@@ -94,16 +94,41 @@ int main(int argc, char** argv)
 
     // 2. check and open output file
     cv::FileStorage fso(cfg.outXmlPath, cv::FileStorage::WRITE);
-    if(!fs.isOpened())
+    if(!fso.isOpened())
     {
         std::cout << "Training stopped. Output classifier Xml file " << cfg.outXmlPath << " can't be opened." << std::endl << std::flush;
+        return 1;
+    }
+
+    cv::FileStorage fsr(cfg.outXmlPath + ".raw.xml" , cv::FileStorage::WRITE);
+    if(!fsr.isOpened())
+    {
+        std::cout << "Training stopped. Output classifier Xml file " <<cfg.outXmlPath + ".raw.xml" << " can't be opened." << std::endl << std::flush;
         return 1;
     }
 
     // ovector strong;
     // strong.reserve(cfg.octaves.size());
 
-    // fso << "softcascade" << "{" << "octaves" << "[";
+    fso << cfg.cascadeName
+        << "{"
+        << "stageType"   << "BOOST"
+        << "featureType" << "ICF"
+        << "octavesNum"  << (int)cfg.octaves.size()
+        << "width"       << cfg.modelWinSize.width
+        << "height"      << cfg.modelWinSize.height
+        << "shrinkage"   << cfg.shrinkage
+        << "octaves"     << "[";
+
+    fsr << cfg.cascadeName
+        << "{"
+        << "stageType"   << "BOOST"
+        << "featureType" << "ICF"
+        << "octavesNum"  << (int)cfg.octaves.size()
+        << "width"       << cfg.modelWinSize.width
+        << "height"      << cfg.modelWinSize.height
+        << "shrinkage"   << cfg.shrinkage
+        << "octaves"     << "[";
 
     // 3. Train all octaves
     for (ivector::const_iterator it = cfg.octaves.begin(); it != cfg.octaves.end(); ++it)
@@ -137,6 +162,8 @@ int main(int argc, char** argv)
             cv::Mat thresholds;
             boost.setRejectThresholds(thresholds);
 
+            boost.write(fso, thresholds);
+            boost.write(fsr);
             // std::cout << "thresholds " << thresholds << std::endl;
 
             cv::FileStorage tfs(("thresholds." + cfg.resPath(it)).c_str(), cv::FileStorage::WRITE);
@@ -146,7 +173,8 @@ int main(int argc, char** argv)
         }
     }
 
-    // fso << "]" << "}";
+    fso << "]" << "}";
+    fsr << "]" << "}";
 
 //     // // 6. Set thresolds
 //     // cascade.prune();

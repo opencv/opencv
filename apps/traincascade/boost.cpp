@@ -1580,8 +1580,11 @@ bool CvCascadeBoost::isErrDesired()
     for( int i = 0; i < sCount; i++ )
         if( ((CvCascadeBoostTrainData*)data)->featureEvaluator->getCls( i ) == 1.0F )
             eval[numPos++] = predict( i, true );
+
     icvSortFlt( &eval[0], numPos, 0 );
+
     int thresholdIdx = (int)((1.0F - minHitRate) * numPos);
+
     threshold = eval[ thresholdIdx ];
     numPosTrue = numPos - thresholdIdx;
     for( int i = thresholdIdx - 1; i >= 0; i--)
