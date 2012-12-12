@@ -245,7 +245,7 @@ GPU_TEST_P(SCascadeTestAll, detect,
     typedef cv::gpu::SCascade::Detection Detection;
     cv::Mat detections(objectBoxes);
     int a = *(detections.ptr<int>(0));
-    ASSERT_EQ(a ,2460);
+    ASSERT_EQ(a ,2448);
 }
 
 GPU_TEST_P(SCascadeTestAll, detectOnIntegral,
@@ -318,7 +318,7 @@ GPU_TEST_P(SCascadeTestAll, detectStream,
     typedef cv::gpu::SCascade::Detection Detection;
     cv::Mat detections(objectBoxes);
     int a = *(detections.ptr<int>(0));
-    ASSERT_EQ(a ,2460);
+    ASSERT_EQ(a ,2448);
 }
 
 
