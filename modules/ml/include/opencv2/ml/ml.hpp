@@ -1251,6 +1251,8 @@ protected:
     virtual void write_params( CvFileStorage* fs ) const;
     virtual void read_params( CvFileStorage* fs, CvFileNode* node );
 
+    virtual void initial_weights(double (&p)[2]);
+
     CvDTreeTrainData* data;
     CvBoostParams params;
     CvSeq* weak;
