@@ -224,9 +224,9 @@ The sample has been rejected if it fall rejection threshold. So stageless cascad
 .. [BMTG12] Rodrigo Benenson, Markus Mathias, Radu Timofte and Luc Van Gool. Pedestrian detection at 100 frames per second. IEEE CVPR, 2012.
 
 
-SCascade
-----------------
-.. ocv:class:: SCascade : public Algorithm
+gpu::SCascade
+-----------------------------------------------
+.. ocv:class:: gpu::SCascade : public Algorithm
 
 Implementation of soft (stageless) cascaded detector. ::
 
@@ -252,45 +252,29 @@ Implementation of soft (stageless) cascaded detector. ::
     };
 
 
-SCascade::SCascade
---------------------------
-An empty cascade will be created.
-
-.. ocv:function:: bool SCascade::SCascade(const float minScale = 0.4f, const float maxScale = 5.f, const int scales = 55, const int rejfactor = 1)
-
-    :param minScale: a minimum scale relative to the original size of the image on which cascade will be applyed.
-
-    :param maxScale: a maximum scale relative to the original size of the image on which cascade will be applyed.
-
-    :param scales: a number of scales from minScale to maxScale.
-
-    :param rejfactor: used for non maximum suppression.
-
-
-
-SCascade::~SCascade
+gpu::SCascade::~SCascade
 ---------------------------
 Destructor for SCascade.
 
-.. ocv:function:: SCascade::~SCascade()
+.. ocv:function:: gpu::SCascade::~SCascade()
 
 
 
-SCascade::load
+gpu::SCascade::load
 --------------------------
 Load cascade from FileNode.
 
-.. ocv:function:: bool SCascade::load(const FileNode& fn)
+.. ocv:function:: bool gpu::SCascade::load(const FileNode& fn)
 
     :param fn: File node from which the soft cascade are read.
 
 
 
-SCascade::detect
+gpu::SCascade::detect
 --------------------------
 Apply cascade to an input frame and return the vector of Decection objcts.
 
-.. ocv:function:: void detect(InputArray image, InputArray rois, OutputArray objects, Stream& stream = Stream::Null()) const
+.. ocv:function:: void gpu::SCascade::detect(InputArray image, InputArray rois, OutputArray objects, Stream& stream = Stream::Null()) const
 
     :param image: a frame on which detector will be applied.
 
@@ -299,20 +283,6 @@ Apply cascade to an input frame and return the vector of Decection objcts.
     :param objects: an output array of Detections represented as GpuMat of detections (SCascade::Detection). The first element of the matrix is  actually a count of detections.
 
     :param stream: a high-level CUDA stream abstraction used for asynchronous execution.
-
-
-SCascade::genRoi
---------------------------
-Convert ROI matrix into the suitable for detect method.
-
-.. ocv:function:: void genRoi(InputArray roi, OutputArray mask, Stream& stream = Stream::Null()) const
-
-    :param rois: an input matrix of the same size as the image. There non zero value mean that detector should be executed in this point.
-
-    :param mask: an output mask
-
-    :param stream: a high-level CUDA stream abstraction used for asynchronous execution.
-
 
 
 gpu::CascadeClassifier_GPU
