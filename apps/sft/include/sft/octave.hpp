@@ -158,7 +158,7 @@ protected:
     float predict( const Mat& _sample, const cv::Range range) const;
 private:
     void traverse(const CvBoostTree* tree, cv::FileStorage& fs, const float* th = 0) const;
-
+    virtual void initial_weights(double (&p)[2]);
     cv::Rect boundingBox;
 
     int npositives;

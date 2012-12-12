@@ -295,6 +295,7 @@ void sft::Octave::generateNegatives(const Dataset& dataset)
     dprintf("Processing negatives finished:\n\trequested %d negatives, viewed %d samples.\n", nnegatives, total);
 }
 
+
 template <typename T> int sgn(T val) {
     return (T(0) < val) - (val < T(0));
 }
@@ -376,6 +377,13 @@ void sft::Octave::write( cv::FileStorage &fso, const Mat& thresholds) const
 
     fso << "]"
         << "}";
+}
+
+void sft::Octave::initial_weights(double (&p)[2])
+{
+    double n = data->sample_count;
+    p[0] =  n / (double)(nnegatives) ;
+    p[1] =  n / (double)(npositives);
 }
 
 bool sft::Octave::train(const Dataset& dataset, const FeaturePool& pool, int weaks, int treeDepth)
