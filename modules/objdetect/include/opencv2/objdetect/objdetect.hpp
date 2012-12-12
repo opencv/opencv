@@ -540,7 +540,7 @@ public:
     // Param minScale is a minimum scale relative to the original size of the image on which cascade will be applyed.
     // Param minScale is a maximum scale relative to the original size of the image on which cascade will be applyed.
     // Param scales is a number of scales from minScale to maxScale.
-    // Param rejfactor is used for NMS.
+    // Param rejCriteria is used for NMS.
     CV_WRAP SCascade(const double minScale = 0.4, const double maxScale = 5., const int scales = 55, const int rejCriteria = 1);
 
     CV_WRAP virtual ~SCascade();
