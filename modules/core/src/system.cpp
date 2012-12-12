@@ -359,26 +359,24 @@ string format( const char* fmt, ... )
 
 string tempfile( const char* suffix )
 {
+    const char *temp_dir = getenv("OPENCV_TEMP_PATH");
+    string fname;
+
 #if defined WIN32 || defined _WIN32
-    char temp_dir[MAX_PATH + 1] = { 0 };
+    char temp_dir2[MAX_PATH + 1] = { 0 };
     char temp_file[MAX_PATH + 1] = { 0 };
 
-    ::GetTempPathA(sizeof(temp_dir), temp_dir);
+    if (temp_dir == 0 || temp_dir[0] == 0)
+    {
+        ::GetTempPathA(sizeof(temp_dir2), temp_dir2);
+        temp_dir = temp_dir2;
+    }
     if(0 == ::GetTempFileNameA(temp_dir, "ocv", 0, temp_file))
         return string();
 
     DeleteFileA(temp_file);
 
-    string name = temp_file;
-    if(suffix)
-    {
-        if (suffix[0] != '.')
-            return name + "." + suffix;
-        else
-            return name + suffix;
-    }
-    else
-        return name;
+    fname = temp_file;
 # else
 #  ifdef ANDROID
     //char defaultTemplate[] = "/mnt/sdcard/__opencv_temp.XXXXXX";
@@ -387,9 +385,7 @@ string tempfile( const char* suffix )
     char defaultTemplate[] = "/tmp/__opencv_temp.XXXXXX";
 #  endif
 
-    string fname;
-    const char *temp_dir = getenv("OPENCV_TEMP_PATH");
-    if(temp_dir == 0 || temp_dir[0] == 0)
+    if (temp_dir == 0 || temp_dir[0] == 0)
         fname = defaultTemplate;
     else
     {
@@ -401,19 +397,20 @@ string tempfile( const char* suffix )
     }
 
     const int fd = mkstemp((char*)fname.c_str());
-    if(fd == -1) return "";
+    if (fd == -1) return string();
+
     close(fd);
     remove(fname.c_str());
+# endif
 
-    if(suffix)
+    if (suffix)
     {
         if (suffix[0] != '.')
-            fname = fname + "." + suffix;
+            return fname + "." + suffix;
         else
-            fname += suffix;
+            return fname + suffix;
     }
     return fname;
-# endif
 }
 
 static CvErrorCallback customErrorCallback = 0;
