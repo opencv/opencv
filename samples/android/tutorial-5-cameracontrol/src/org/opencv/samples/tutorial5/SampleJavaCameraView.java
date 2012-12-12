@@ -25,6 +25,10 @@ public class SampleJavaCameraView extends JavaCameraView {
         return mCamera.getParameters().getSupportedColorEffects();
     }
 
+    public boolean isEffectSupported() {
+        return (mCamera.getParameters().getColorEffect() != null);
+    }
+
     public String getEffect() {
         return mCamera.getParameters().getColorEffect();
     }
@@ -48,6 +52,7 @@ public class SampleJavaCameraView extends JavaCameraView {
                 try {
                     FileOutputStream out = new FileOutputStream(mPictureFileName);
                     picture.compress(Bitmap.CompressFormat.JPEG, 90, out);
+                    picture.recycle();
                     mCamera.startPreview();
                 } catch (Exception e) {
                     e.printStackTrace();
