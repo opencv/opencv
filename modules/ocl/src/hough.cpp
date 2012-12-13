@@ -88,22 +88,14 @@ namespace cv { namespace ocl
     {
         const int PIXELS_PER_THREAD = 16;
 
-        // void* counterPtr;
-        // cudaSafeCall( cudaGetSymbolAddress(&counterPtr, g_counter) );
-        // cudaSafeCall( cudaMemset(counterPtr, 0, sizeof(int)) );
-
         int totalCount = 0;
         int err = CL_SUCCESS;
         cl_mem counter = clCreateBuffer(src.clCxt->impl->clContext,
-                                        CL_MEM_COPY_HOST_PTR, // CL_MEM_READ_WRITE, 
+                                        CL_MEM_COPY_HOST_PTR,  
                                         sizeof(int),
-                                        &totalCount, // NULL,  
+                                        &totalCount,   
                                         &err);
         openCLSafeCall(err);
-        // openCLSafeCall(clEnqueueWriteBuffer(src.clCxt->impl->clCmdQueue, counter, CL_TRUE, 0, sizeof(int), &totalCount, 0, 0, 0)); 
-
-        // const dim3 block(32, 4);
-        // const dim3 grid(divUp(src.cols, block.x * PIXELS_PER_THREAD), divUp(src.rows, block.y));
 
         const size_t blkSizeX = 32;
         const size_t blkSizeY = 4;
@@ -114,11 +106,6 @@ namespace cv { namespace ocl
         const size_t glbSizeY = src.rows % blkSizeY == 0 ? src.rows : (src.rows / blkSizeY + 1) * blkSizeY;      
         size_t globalThreads[3] = { glbSizeX, glbSizeY, 1 };
 
-        // cudaSafeCall( cudaFuncSetCacheConfig(buildPointList<PIXELS_PER_THREAD>, cudaFuncCachePreferShared) );
-
-        // buildPointList<PIXELS_PER_THREAD><<<grid, block>>>(src, list);
-        // cudaSafeCall( cudaGetLastError() );
-        // cudaSafeCall( cudaDeviceSynchronize() );
         vector<pair<size_t , const void *> > args;
         args.push_back( make_pair( sizeof(cl_mem)  , (void *)&src.data ));
         args.push_back( make_pair( sizeof(cl_int)  , (void *)&src.cols ));
@@ -128,8 +115,6 @@ namespace cv { namespace ocl
         args.push_back( make_pair( sizeof(cl_mem)  , (void *)&counter ));
 
         openCLExecuteKernel(src.clCxt, &hough, "buildPointList", globalThreads, localThreads, args, -1, -1);
-        // int totalCount;
-        // cudaSafeCall( cudaMemcpy(&totalCount, counterPtr, sizeof(int), cudaMemcpyDeviceToHost) );
         openCLSafeCall(clEnqueueReadBuffer(src.clCxt->impl->clCmdQueue, counter, CL_TRUE, 0, sizeof(int), &totalCount, 0, NULL, NULL));  
         openCLSafeCall(clReleaseMemObject(counter));
         
