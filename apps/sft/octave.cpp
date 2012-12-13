@@ -382,8 +382,8 @@ void sft::Octave::write( cv::FileStorage &fso, const Mat& thresholds) const
 void sft::Octave::initial_weights(double (&p)[2])
 {
     double n = data->sample_count;
-    p[0] =  n / (double)(nnegatives) ;
-    p[1] =  n / (double)(npositives);
+    p[0] =  n / (2. * (double)(nnegatives));
+    p[1] =  n / (2. * (double)(npositives));
 }
 
 bool sft::Octave::train(const Dataset& dataset, const FeaturePool& pool, int weaks, int treeDepth)
