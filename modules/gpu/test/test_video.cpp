@@ -868,10 +868,10 @@ INSTANTIATE_TEST_CASE_P(GPU_Video, GMG, testing::Combine(
     testing::Values(Channels(1), Channels(3), Channels(4)),
     WHOLE_SUBMAT));
 
+#ifdef WIN32
+
 //////////////////////////////////////////////////////
 // VideoWriter
-
-#ifdef WIN32
 
 PARAM_TEST_CASE(VideoWriter, cv::gpu::DeviceInfo, std::string)
 {
@@ -934,8 +934,6 @@ INSTANTIATE_TEST_CASE_P(GPU_Video, VideoWriter, testing::Combine(
     ALL_DEVICES,
     testing::Values(std::string("768x576.avi"), std::string("1920x1080.avi"))));
 
-#endif // WIN32
-
 //////////////////////////////////////////////////////
 // VideoReader
 
@@ -975,5 +973,7 @@ TEST_P(VideoReader, Regression)
 INSTANTIATE_TEST_CASE_P(GPU_Video, VideoReader, testing::Combine(
     ALL_DEVICES,
     testing::Values(std::string("768x576.avi"), std::string("1920x1080.avi"))));
+
+#endif // WIN32
 
 #endif // HAVE_CUDA

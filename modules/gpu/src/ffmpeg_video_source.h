@@ -46,7 +46,7 @@
 #include "precomp.hpp"
 #include "thread_wrappers.h"
 
-#if defined(HAVE_CUDA) && !defined(__APPLE__)
+#if defined(HAVE_CUDA) && defined(WIN32)
 
 struct InputMediaStream_FFMPEG;
 

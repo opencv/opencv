@@ -5,7 +5,7 @@ endif()
 set(the_description "GPU-accelerated Computer Vision")
 ocv_add_module(gpu opencv_imgproc opencv_calib3d opencv_objdetect opencv_video opencv_nonfree opencv_photo opencv_legacy)
 
-ocv_module_include_directories("${CMAKE_CURRENT_SOURCE_DIR}/src/cuda" "${CMAKE_CURRENT_SOURCE_DIR}/../highgui/src")
+ocv_module_include_directories("${CMAKE_CURRENT_SOURCE_DIR}/src/cuda" "${OpenCV_SOURCE_DIR}/modules/highgui/src")
 
 file(GLOB lib_hdrs               "include/opencv2/${name}/*.hpp"               "include/opencv2/${name}/*.h")
 file(GLOB lib_device_hdrs        "include/opencv2/${name}/device/*.hpp"        "include/opencv2/${name}/device/*.h")
@@ -21,16 +21,16 @@ source_group("Src\\Cuda"      FILES ${lib_cuda} ${lib_cuda_hdrs})
 source_group("Device"         FILES ${lib_device_hdrs})
 source_group("Device\\Detail" FILES ${lib_device_hdrs_detail})
 
-if (HAVE_CUDA)
+if(HAVE_CUDA)
   file(GLOB_RECURSE ncv_srcs "src/nvidia/*.cpp" "src/nvidia/*.h*")
-  file(GLOB_RECURSE ncv_cuda "src/nvidia/*.cu")  
+  file(GLOB_RECURSE ncv_cuda "src/nvidia/*.cu")
   set(ncv_files ${ncv_srcs} ${ncv_cuda})
 
   source_group("Src\\NVidia" FILES ${ncv_files})
-  ocv_include_directories("src/nvidia" "src/nvidia/core" "src/nvidia/NPP_staging" ${CUDA_INCLUDE_DIRS})
+
+  ocv_include_directories("${CMAKE_CURRENT_SOURCE_DIR}/src/nvidia" "${CMAKE_CURRENT_SOURCE_DIR}/src/nvidia/core" "${CMAKE_CURRENT_SOURCE_DIR}/src/nvidia/NPP_staging" ${CUDA_INCLUDE_DIRS})
   ocv_warnings_disable(CMAKE_CXX_FLAGS -Wundef -Wmissing-declarations /wd4211 /wd4201 /wd4100 /wd4505 /wd4408)
-  string(REPLACE "-Wsign-promo" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")  
-  #set (CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-Xcompiler;/EHsc-;")
+  string(REPLACE "-Wsign-promo" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
   if(MSVC)
     if(NOT ENABLE_NOISY_WARNINGS)
@@ -46,20 +46,12 @@ if (HAVE_CUDA)
 
   set(cuda_link_libs ${CUDA_LIBRARIES} ${CUDA_npp_LIBRARY})
 
-  if(NOT APPLE)
-    unset(CUDA_nvcuvid_LIBRARY CACHE)
+  if(WIN32)
     find_cuda_helper_libs(nvcuvid)
     set(cuda_link_libs ${cuda_link_libs} ${CUDA_nvcuvid_LIBRARY})
-  endif()
 
-  if(WIN32)
-    unset(CUDA_nvcuvenc_LIBRARY CACHE)
     find_cuda_helper_libs(nvcuvenc)
     set(cuda_link_libs ${cuda_link_libs} ${CUDA_nvcuvenc_LIBRARY})
-  endif()
-
-  if(NOT APPLE AND WITH_FFMPEG)
-    set(cuda_link_libs ${cuda_link_libs} ${HIGHGUI_LIBRARIES})
   endif()
 else()
   set(lib_cuda "")

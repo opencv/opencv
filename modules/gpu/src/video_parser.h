@@ -48,7 +48,7 @@
 #include "frame_queue.h"
 #include "video_decoder.h"
 
-#if defined(HAVE_CUDA) && !defined(__APPLE__)
+#if defined(HAVE_CUDA) && defined(WIN32)
 
 namespace cv { namespace gpu
 {

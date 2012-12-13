@@ -43,7 +43,7 @@
 #include "video_decoder.h"
 #include "frame_queue.h"
 
-#if defined(HAVE_CUDA) && !defined(__APPLE__)
+#if defined(HAVE_CUDA) && defined(WIN32)
 
 void cv::gpu::detail::VideoDecoder::create(const VideoReader_GPU::FormatInfo& videoFormat)
 {

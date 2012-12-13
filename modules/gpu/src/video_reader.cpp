@@ -42,7 +42,7 @@
 
 #include "precomp.hpp"
 
-#if !defined HAVE_CUDA || defined(CUDA_DISABLER) || defined(__APPLE__)
+#if !defined HAVE_CUDA || defined(CUDA_DISABLER) || !defined(WIN32)
 
 class cv::gpu::VideoReader_GPU::Impl
 {
