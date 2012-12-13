@@ -138,10 +138,10 @@ namespace icf {
     template<bool isDefaultNum>
     __device__ __forceinline__ int fast_angle_bin(const float& dx, const float& dy)
     {
-        const float angle_quantum = M_PI / 6.f;
+        const float angle_quantum = CV_PI / 6.f;
         float angle = atan2(dx, dy) + (angle_quantum / 2.f);
 
-        if (angle < 0) angle += M_PI;
+        if (angle < 0) angle += CV_PI;
 
         const float angle_scaling = 1.f / angle_quantum;
         return static_cast<int>(angle * angle_scaling) % 6;
@@ -175,8 +175,8 @@ namespace icf {
         {
             int i = 3;
             float2 bin_vector_i;
-            bin_vector_i.x = ::cos(i * (M_PI / 6.f));
-            bin_vector_i.y = ::sin(i * (M_PI / 6.f));
+            bin_vector_i.x = ::cos(i * (CV_PI / 6.f));
+            bin_vector_i.y = ::sin(i * (CV_PI / 6.f));
 
             const float dot_product = fabs(dx * bin_vector_i.x + dy * bin_vector_i.y);
             if(dot_product > max_dot)

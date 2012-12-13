@@ -1409,7 +1409,7 @@ namespace arithm
     {
         S val;
 
-        explicit DivInv(double val_) : val(val_) {}
+        explicit DivInv(S val_) : val(val_) {}
 
         __device__ __forceinline__ D operator ()(T a) const
         {
