@@ -827,6 +827,21 @@ namespace cv
 
         };
 
+        ///////////////////////////////////////// Hough Transform /////////////////////////////////////////
+        //! HoughCircles
+        struct HoughCirclesBuf
+        {
+            oclMat edges;
+            oclMat accum;
+            oclMat list;
+            CannyBuf cannyBuf;
+        };
+
+        CV_EXPORTS void HoughCircles(const oclMat& src, oclMat& circles, int method, float dp, float minDist, int cannyThreshold, int votesThreshold, int minRadius, int maxRadius, int maxCircles = 4096);
+        CV_EXPORTS void HoughCircles(const oclMat& src, oclMat& circles, HoughCirclesBuf& buf, int method, float dp, float minDist, int cannyThreshold, int votesThreshold, int minRadius, int maxRadius, int maxCircles = 4096);
+        CV_EXPORTS void HoughCirclesDownload(const oclMat& d_circles, OutputArray h_circles);
+
+    
         ///////////////////////////////////////// clAmdFft related /////////////////////////////////////////
         //! Performs a forward or inverse discrete Fourier transform (1D or 2D) of floating point matrix.
         //! Param dft_size is the size of DFT transform.
