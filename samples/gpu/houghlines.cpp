@@ -30,14 +30,14 @@ int main(int argc, const char* argv[])
     }
 
     Mat mask;
-    Canny(src, mask, 50, 200, 3);
+    Canny(src, mask, 100, 200, 3);
 
     Mat dst_cpu;
     cvtColor(mask, dst_cpu, CV_GRAY2BGR);
     Mat dst_gpu = dst_cpu.clone();
 
     vector<Vec4i> lines_cpu;
-    HoughLinesP(mask, lines_cpu, 1, CV_PI / 180, 50, 50, 5);
+    HoughLinesP(mask, lines_cpu, 1, CV_PI / 180, 50, 60, 5);
     cout << lines_cpu.size() << endl;
 
     for (size_t i = 0; i < lines_cpu.size(); ++i)
@@ -46,10 +46,10 @@ int main(int argc, const char* argv[])
         line(dst_cpu, Point(l[0], l[1]), Point(l[2], l[3]), Scalar(0, 0, 255), 3, CV_AA);
     }
 
-    GpuMat d_src(src);
+    GpuMat d_src(mask);
     GpuMat d_lines;
-    CannyBuf d_buf;
-    gpu::HoughLinesP(d_src, d_lines, d_buf, 50, 5);
+    HoughLinesBuf d_buf;
+    gpu::HoughLinesP(d_src, d_lines, d_buf, 1, CV_PI / 180, 50, 5);
     vector<Vec4i> lines_gpu;
     if (!d_lines.empty())
     {

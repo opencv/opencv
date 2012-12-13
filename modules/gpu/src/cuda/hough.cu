@@ -298,79 +298,168 @@ namespace cv { namespace gpu { namespace device
 
         texture<uchar, cudaTextureType2D, cudaReadModeElementType> tex_mask(false, cudaFilterModePoint, cudaAddressModeClamp);
 
-        __global__ void houghLinesProbabilistic(const PtrStepSzi Dx, const PtrStepi Dy,
+        __global__ void houghLinesProbabilistic(const PtrStepSzi accum,
                                                 int4* out, const int maxSize,
-                                                const int lineGap, const int lineLength)
+                                                const float rho, const float theta,
+                                                const int lineGap, const int lineLength,
+                                                const int rows, const int cols)
         {
-            const int SHIFT = 10;
+            const int r = blockIdx.x * blockDim.x + threadIdx.x;
+            const int n = blockIdx.y * blockDim.y + threadIdx.y;
 
-            const int x = blockIdx.x * blockDim.x + threadIdx.x;
-            const int y = blockIdx.y * blockDim.y + threadIdx.y;
-
-            if (x >= Dx.cols || y >= Dx.rows || tex2D(tex_mask, x, y) == 0)
+            if (r >= accum.cols - 2 || n >= accum.rows - 2)
                 return;
 
-            const int dx = Dx(y, x);
-            const int dy = Dy(y, x);
+            const int curVotes = accum(n + 1, r + 1);
 
-            if (dx == 0 && dy == 0)
-                return;
-
-            const int vx = dy;
-            const int vy = -dx;
-
-            const float mag = ::sqrtf(vx * vx + vy * vy);
-
-            const int x0 = x << SHIFT;
-            const int y0 = y << SHIFT;
-
-            int sx = __float2int_rn((vx << SHIFT) / mag);
-            int sy = __float2int_rn((vy << SHIFT) / mag);
-
-            int2 line_end[2] = {make_int2(x,y), make_int2(x,y)};
-
-            for (int k = 0; k < 2; ++k)
+            if (curVotes >= lineLength &&
+                curVotes > accum(n, r) &&
+                curVotes > accum(n, r + 1) &&
+                curVotes > accum(n, r + 2) &&
+                curVotes > accum(n + 1, r) &&
+                curVotes > accum(n + 1, r + 2) &&
+                curVotes > accum(n + 2, r) &&
+                curVotes > accum(n + 2, r + 1) &&
+                curVotes > accum(n + 2, r + 2))
             {
-                int gap = 0;
-                int x1 = x0 + sx;
-                int y1 = y0 + sy;
+                const float radius = (r - (accum.cols - 2 - 1) * 0.5f) * rho;
+                const float angle = n * theta;
 
-                for (;; x1 += sx, y1 += sy)
+                float cosa;
+                float sina;
+                sincosf(angle, &sina, &cosa);
+
+                float2 p0 = make_float2(cosa * radius, sina * radius);
+                float2 dir = make_float2(-sina, cosa);
+
+                float2 pb[4] = {make_float2(-1, -1), make_float2(-1, -1), make_float2(-1, -1), make_float2(-1, -1)};
+                float a;
+
+                if (dir.x != 0)
                 {
-                    const int x2 = x1 >> SHIFT;
-                    const int y2 = y1 >> SHIFT;
+                    a = -p0.x / dir.x;
+                    pb[0].x = 0;
+                    pb[0].y = p0.y + a * dir.y;
 
-                    if (x2 < 0 || x2 >= Dx.cols || y2 < 0 || y2 >= Dx.rows)
-                        break;
+                    a = (cols - 1 - p0.x) / dir.x;
+                    pb[1].x = cols - 1;
+                    pb[1].y = p0.y + a * dir.y;
+                }
+                if (dir.y != 0)
+                {
+                    a = -p0.y / dir.y;
+                    pb[2].x = p0.x + a * dir.x;
+                    pb[2].y = 0;
 
-                    if (tex2D(tex_mask, x2, y2))
-                    {
-                        gap = 0;
-                        line_end[k].x = x2;
-                        line_end[k].y = y2;
-                    }
-                    else if(++gap > lineGap)
-                        break;
+                    a = (rows - 1 - p0.y) / dir.y;
+                    pb[3].x = p0.x + a * dir.x;
+                    pb[3].y = rows - 1;
                 }
 
-                sx = -sx;
-                sy = -sy;
-            }
+                if (pb[0].x == 0 && (pb[0].y >= 0 && pb[0].y < rows))
+                {
+                    p0 = pb[0];
+                    if (dir.x < 0)
+                        dir = -dir;
+                }
+                else if (pb[1].x == cols - 1 && (pb[0].y >= 0 && pb[0].y < rows))
+                {
+                    p0 = pb[1];
+                    if (dir.x > 0)
+                        dir = -dir;
+                }
+                else if (pb[2].y == 0 && (pb[2].x >= 0 && pb[2].x < cols))
+                {
+                    p0 = pb[2];
+                    if (dir.y < 0)
+                        dir = -dir;
+                }
+                else if (pb[3].y == rows - 1 && (pb[3].x >= 0 && pb[3].x < cols))
+                {
+                    p0 = pb[3];
+                    if (dir.y > 0)
+                        dir = -dir;
+                }
 
-            const bool good_line = ::abs(line_end[1].x - line_end[0].x) >= lineLength ||
-                                   ::abs(line_end[1].y - line_end[0].y) >= lineLength;
+                float2 d;
+                if (::fabsf(dir.x) > ::fabsf(dir.y))
+                {
+                    d.x = dir.x > 0 ? 1 : -1;
+                    d.y = dir.y / ::fabsf(dir.x);
+                }
+                else
+                {
+                    d.x = dir.x / ::fabsf(dir.y);
+                    d.y = dir.y > 0 ? 1 : -1;
+                }
 
-            if (good_line)
-            {
-                const int ind = ::atomicAdd(&g_counter, 1);
-                if (ind < maxSize)
-                    out[ind] = make_int4(line_end[0].x, line_end[0].y, line_end[1].x, line_end[1].y);
+                float2 line_end[2];
+                int gap;
+                bool inLine = false;
+
+                float2 p1 = p0;
+                if (p1.x < 0 || p1.x >= cols || p1.y < 0 || p1.y >= rows)
+                    return;
+
+                for (;;)
+                {
+                    if (tex2D(tex_mask, p1.x, p1.y))
+                    {
+                        gap = 0;
+
+                        if (!inLine)
+                        {
+                            line_end[0] = p1;
+                            line_end[1] = p1;
+                            inLine = true;
+                        }
+                        else
+                        {
+                            line_end[1] = p1;
+                        }
+                    }
+                    else if (inLine)
+                    {
+                        if (++gap > lineGap)
+                        {
+                            bool good_line = ::abs(line_end[1].x - line_end[0].x) >= lineLength ||
+                                             ::abs(line_end[1].y - line_end[0].y) >= lineLength;
+
+                            if (good_line)
+                            {
+                                const int ind = ::atomicAdd(&g_counter, 1);
+                                if (ind < maxSize)
+                                    out[ind] = make_int4(line_end[0].x, line_end[0].y, line_end[1].x, line_end[1].y);
+                            }
+
+                            gap = 0;
+                            inLine = false;
+                        }
+                    }
+
+                    p1 = p1 + d;
+                    if (p1.x < 0 || p1.x >= cols || p1.y < 0 || p1.y >= rows)
+                    {
+                        if (inLine)
+                        {
+                            bool good_line = ::abs(line_end[1].x - line_end[0].x) >= lineLength ||
+                                             ::abs(line_end[1].y - line_end[0].y) >= lineLength;
+
+                            if (good_line)
+                            {
+                                const int ind = ::atomicAdd(&g_counter, 1);
+                                if (ind < maxSize)
+                                    out[ind] = make_int4(line_end[0].x, line_end[0].y, line_end[1].x, line_end[1].y);
+                            }
+
+                        }
+                        break;
+                    }
+                }
             }
         }
 
-        int houghLinesProbabilistic_gpu(PtrStepSzb mask, PtrStepSzi Dx, PtrStepSzi Dy,
-                                        int4* out, int maxSize,
-                                        int lineGap, int lineLength)
+        int houghLinesProbabilistic_gpu(PtrStepSzb mask, PtrStepSzi accum, int4* out, int maxSize, float rho, float theta, int lineGap, int lineLength)
         {
             void* counterPtr;
             cudaSafeCall( cudaGetSymbolAddress(&counterPtr, g_counter) );
@@ -378,11 +467,15 @@ namespace cv { namespace gpu { namespace device
             cudaSafeCall( cudaMemset(counterPtr, 0, sizeof(int)) );
 
             const dim3 block(32, 8);
-            const dim3 grid(divUp(mask.cols, block.x), divUp(mask.rows, block.y));
+            const dim3 grid(divUp(accum.cols - 2, block.x), divUp(accum.rows - 2, block.y));
 
             bindTexture(&tex_mask, mask);
 
-            houghLinesProbabilistic<<<grid, block>>>(Dx, Dy, out, maxSize, lineGap, lineLength);
+            houghLinesProbabilistic<<<grid, block>>>(accum,
+                                                     out, maxSize,
+                                                     rho, theta,
+                                                     lineGap, lineLength,
+                                                     mask.rows, mask.cols);
             cudaSafeCall( cudaGetLastError() );
 
             cudaSafeCall( cudaDeviceSynchronize() );

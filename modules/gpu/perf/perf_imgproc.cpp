@@ -1813,17 +1813,20 @@ PERF_TEST_P(Image, ImgProc_HoughLinesP, testing::Values("cv/shared/pic5.png", "s
 
     cv::Mat image = cv::imread(fileName, cv::IMREAD_GRAYSCALE);
 
+    cv::Mat mask;
+    cv::Canny(image, mask, 50, 100);
+
     if (PERF_RUN_GPU())
     {
-        cv::gpu::GpuMat d_image(image);
+        cv::gpu::GpuMat d_mask(mask);
         cv::gpu::GpuMat d_lines;
-        cv::gpu::CannyBuf d_buf;
+        cv::gpu::HoughLinesBuf d_buf;
 
-        cv::gpu::HoughLinesP(d_image, d_lines, d_buf, minLineLenght, maxLineGap);
+        cv::gpu::HoughLinesP(d_mask, d_lines, d_buf, rho, theta, minLineLenght, maxLineGap);
 
         TEST_CYCLE()
         {
-            cv::gpu::HoughLinesP(d_image, d_lines, d_buf, minLineLenght, maxLineGap);
+            cv::gpu::HoughLinesP(d_mask, d_lines, d_buf, rho, theta, minLineLenght, maxLineGap);
         }
 
         cv::Mat h_lines(d_lines);
@@ -1834,9 +1837,6 @@ PERF_TEST_P(Image, ImgProc_HoughLinesP, testing::Values("cv/shared/pic5.png", "s
     }
     else
     {
-        cv::Mat mask;
-        cv::Canny(image, mask, 50, 100);
-
         std::vector<cv::Vec4i> lines;
         cv::HoughLinesP(mask, lines, rho, theta, threshold, minLineLenght, maxLineGap);
 

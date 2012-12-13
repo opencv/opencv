@@ -52,7 +52,7 @@ void cv::gpu::HoughLines(const GpuMat&, GpuMat&, float, float, int, bool, int) {
 void cv::gpu::HoughLines(const GpuMat&, GpuMat&, HoughLinesBuf&, float, float, int, bool, int) { throw_nogpu(); }
 void cv::gpu::HoughLinesDownload(const GpuMat&, OutputArray, OutputArray) { throw_nogpu(); }
 
-void cv::gpu::HoughLinesP(const GpuMat&, GpuMat&, CannyBuf&, int, int, int) { throw_nogpu(); }
+void cv::gpu::HoughLinesP(const GpuMat&, GpuMat&, HoughLinesBuf&, float, float, int, int, int) { throw_nogpu(); }
 
 void cv::gpu::HoughCircles(const GpuMat&, GpuMat&, int, float, float, int, int, int, int, int) { throw_nogpu(); }
 void cv::gpu::HoughCircles(const GpuMat&, GpuMat&, HoughCirclesBuf&, int, float, float, int, int, int, int, int) { throw_nogpu(); }
@@ -164,28 +164,41 @@ namespace cv { namespace gpu { namespace device
 {
     namespace hough
     {
-        int houghLinesProbabilistic_gpu(PtrStepSzb mask, PtrStepSzi Dx, PtrStepSzi Dy,
-                                        int4* out, int maxSize,
-                                        int lineGap, int lineLength);
+        int houghLinesProbabilistic_gpu(PtrStepSzb mask, PtrStepSzi accum, int4* out, int maxSize, float rho, float theta, int lineGap, int lineLength);
     }
 }}}
 
-void cv::gpu::HoughLinesP(const GpuMat& image, GpuMat& lines, CannyBuf& cannyBuf, int minLineLength, int maxLineGap, int maxLines)
+void cv::gpu::HoughLinesP(const GpuMat& src, GpuMat& lines, HoughLinesBuf& buf, float rho, float theta, int minLineLength, int maxLineGap, int maxLines)
 {
     using namespace cv::gpu::device::hough;
 
-    CV_Assert( image.type() == CV_8UC1 );
-    CV_Assert( image.cols < std::numeric_limits<unsigned short>::max() );
-    CV_Assert( image.rows < std::numeric_limits<unsigned short>::max() );
+    CV_Assert( src.type() == CV_8UC1 );
+    CV_Assert( src.cols < std::numeric_limits<unsigned short>::max() );
+    CV_Assert( src.rows < std::numeric_limits<unsigned short>::max() );
 
-    GpuMat mask;
-    Canny(image, cannyBuf, mask, 50, 100);
+    ensureSizeIsEnough(1, src.size().area(), CV_32SC1, buf.list);
+    unsigned int* srcPoints = buf.list.ptr<unsigned int>();
+
+    const int pointsCount = buildPointList_gpu(src, srcPoints);
+    if (pointsCount == 0)
+    {
+        lines.release();
+        return;
+    }
+
+    const int numangle = cvRound(CV_PI / theta);
+    const int numrho = cvRound(((src.cols + src.rows) * 2 + 1) / rho);
+    CV_Assert( numangle > 0 && numrho > 0 );
+
+    ensureSizeIsEnough(numangle + 2, numrho + 2, CV_32SC1, buf.accum);
+    buf.accum.setTo(Scalar::all(0));
+
+    DeviceInfo devInfo;
+    linesAccum_gpu(srcPoints, pointsCount, buf.accum, rho, theta, devInfo.sharedMemPerBlock(), devInfo.supports(FEATURE_SET_COMPUTE_20));
 
     ensureSizeIsEnough(1, maxLines, CV_32SC4, lines);
 
-    int linesCount = houghLinesProbabilistic_gpu(mask, cannyBuf.dx, cannyBuf.dy,
-                                                 lines.ptr<int4>(), maxLines,
-                                                 maxLineGap, minLineLength);
+    int linesCount = houghLinesProbabilistic_gpu(src, buf.accum, lines.ptr<int4>(), maxLines, rho, theta, maxLineGap, minLineLength);
 
     if (linesCount > 0)
         lines.cols = linesCount;
