@@ -681,7 +681,65 @@ corresponding to the specified points. It can also be passed to
     Mat fundamental_matrix =
      findFundamentalMat(points1, points2, FM_RANSAC, 3, 0.99);
 
+findEssentialMat
+------------------
+Calculates an essential matrix from the corresponding points in two images.
 
+.. ocv:function:: Mat findEssentialMat( InputArray points1, InputArray points2, double focal = 1.0, Point2d pp = Point2d(0, 0), int method = FM_RANSAC, double prob = 0.999, double threshold = 1.0, OutputArray mask = noArray() )
+
+    :param points1: Array of  ``N``  points from the first image. The point coordinates should be floating-point (single or double precision).
+
+    :param points2: Array of the second image points of the same size and format as  ``points1`` .
+
+    :param focal: focal length of the camera. Note that this function assumes that ``points1`` and ``points2`` are feature points from cameras with same focal length and principle point. 
+
+    :param pp: principle point of the camera. 
+
+    :param method: Method for computing a fundamental matrix.
+
+            * **CV_FM_RANSAC** for the RANSAC algorithm. 
+            * **CV_FM_LMEDS** for the LMedS algorithm. 
+
+    :param threshold: Parameter used for RANSAC. It is the maximum distance from a point to an epipolar line in pixels, beyond which the point is considered an outlier and is not used for computing the final fundamental matrix. It can be set to something like 1-3, depending on the accuracy of the point localization, image resolution, and the image noise.
+
+    :param prob: Parameter used for the RANSAC or LMedS methods only. It specifies a desirable level of confidence (probability) that the estimated matrix is correct.
+
+    :param mask: Output array of N elements, every element of which is set to 0 for outliers and to 1 for the other points. The array is computed only in the RANSAC and LMedS methods. 
+
+The epipolar geometry is described by the following equation:
+
+.. math::
+
+    [p_2; 1]^T K^T E K [p_1; 1] = 0 \\
+
+    K = 
+    \begin{bmatrix}
+    f & 0 & x_{pp}  \\
+    0 & f & y_{pp}  \\
+    0 & 0 & 1
+    \end{bmatrix}
+
+where
+:math:`E` is an essential matrix,
+:math:`p_1` and
+:math:`p_2` are corresponding points in the first and the second images, respectively.
+
+
+decomposeEssentialMat
+-------------------------
+Decompose an essential matrix to possible rotations and translation. 
+
+.. ocv:function:: void decomposeEssentialMat( const Mat & E, Mat & R1, Mat & R2, Mat & t )
+
+    :param E: The input essential matrix. 
+
+    :param R1: One possible rotation matrix. 
+
+    :param R2: Another possible rotation matrix. 
+
+    :param t: One possible translation. 
+
+    
 
 findHomography
 ------------------
