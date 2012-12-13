@@ -76,8 +76,7 @@ int main(int argc, char** argv)
 
         cv::gpu::GpuMat dframe(frame), roi(frame.rows, frame.cols, CV_8UC1), trois;
         roi.setTo(cv::Scalar::all(1));
-        cascade.genRoi(roi, trois);
-        cascade.detect(dframe, trois, objects);
+        cascade.detect(dframe, roi, objects);
 
         cv::Mat dt(objects);
         typedef cv::gpu::SCascade::Detection Detection;

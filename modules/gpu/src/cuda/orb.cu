@@ -47,6 +47,7 @@
 
 #if !defined CUDA_DISABLER
 
+#include <thrust/device_ptr.h>
 #include <thrust/sort.h>
 
 #include "opencv2/gpu/device/common.hpp"

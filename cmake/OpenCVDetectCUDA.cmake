@@ -3,12 +3,12 @@ if(${CMAKE_VERSION} VERSION_LESS "2.8.3")
   return()
 endif()
 
-if (WIN32 AND NOT MSVC)
+if(WIN32 AND NOT MSVC)
   message(STATUS "CUDA compilation is disabled (due to only Visual Studio compiler suppoted on your platform).")
   return()
 endif()
 
-if (CMAKE_COMPILER_IS_GNUCXX AND NOT APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+if(CMAKE_COMPILER_IS_GNUCXX AND NOT APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
   message(STATUS "CUDA compilation is disabled (due to Clang unsuppoted on your platform).")
   return()
 endif()
@@ -72,11 +72,11 @@ if(CUDA_FOUND)
 
   # Tell NVCC to add PTX intermediate code for the specified architectures
   string(REGEX MATCHALL "[0-9]+" ARCH_LIST "${ARCH_PTX_NO_POINTS}")
-    foreach(ARCH IN LISTS ARCH_LIST)
-      set(NVCC_FLAGS_EXTRA ${NVCC_FLAGS_EXTRA} -gencode arch=compute_${ARCH},code=compute_${ARCH})
-      set(OPENCV_CUDA_ARCH_PTX "${OPENCV_CUDA_ARCH_PTX} ${ARCH}")
-      set(OPENCV_CUDA_ARCH_FEATURES "${OPENCV_CUDA_ARCH_FEATURES} ${ARCH}")
-    endforeach()
+  foreach(ARCH IN LISTS ARCH_LIST)
+    set(NVCC_FLAGS_EXTRA ${NVCC_FLAGS_EXTRA} -gencode arch=compute_${ARCH},code=compute_${ARCH})
+    set(OPENCV_CUDA_ARCH_PTX "${OPENCV_CUDA_ARCH_PTX} ${ARCH}")
+    set(OPENCV_CUDA_ARCH_FEATURES "${OPENCV_CUDA_ARCH_FEATURES} ${ARCH}")
+  endforeach()
 
   # These vars will be processed in other scripts
   set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} ${NVCC_FLAGS_EXTRA})
@@ -84,7 +84,7 @@ if(CUDA_FOUND)
 
   message(STATUS "CUDA NVCC target flags: ${CUDA_NVCC_FLAGS}")
 
-  OCV_OPTION(CUDA_FAST_MATH  "Enable --use_fast_math for CUDA compiler " OFF)
+  OCV_OPTION(CUDA_FAST_MATH "Enable --use_fast_math for CUDA compiler " OFF)
 
   if(CUDA_FAST_MATH)
     set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} --use_fast_math)
@@ -92,7 +92,6 @@ if(CUDA_FOUND)
 
   mark_as_advanced(CUDA_BUILD_CUBIN CUDA_BUILD_EMULATION CUDA_VERBOSE_BUILD CUDA_SDK_ROOT_DIR)
 
-  unset(CUDA_npp_LIBRARY CACHE)
   find_cuda_helper_libs(npp)
 
   macro(ocv_cuda_compile VAR)
@@ -106,15 +105,15 @@ if(CUDA_FOUND)
       string(REPLACE "-ggdb3" "" ${var} "${${var}}")
     endforeach()
 
-    if (BUILD_SHARED_LIBS)
+    if(BUILD_SHARED_LIBS)
       set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -Xcompiler -DCVAPI_EXPORTS)
     endif()
 
     if(UNIX OR APPLE)
-      set (CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -Xcompiler -fPIC)
+      set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -Xcompiler -fPIC)
     endif()
     if(APPLE)
-      set (CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -Xcompiler -fno-finite-math-only)
+      set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -Xcompiler -fno-finite-math-only)
     endif()
 
     # disabled because of multiple warnings during building nvcc auto generated files

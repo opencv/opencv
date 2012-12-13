@@ -44,11 +44,13 @@
 #include "opencv2/core/opengl_interop.hpp"
 #include "opencv2/core/gpumat.hpp"
 
-#include "gl_core_3_1.hpp"
+#ifdef HAVE_OPENGL
+    #include "gl_core_3_1.hpp"
 
-#ifdef HAVE_CUDA
-    #include <cuda_runtime.h>
-    #include <cuda_gl_interop.h>
+    #ifdef HAVE_CUDA
+        #include <cuda_runtime.h>
+        #include <cuda_gl_interop.h>
+    #endif
 #endif
 
 using namespace std;
@@ -61,24 +63,24 @@ namespace
         void throw_nogl() { CV_Error(CV_OpenGlNotSupported, "The library is compiled without OpenGL support"); }
     #else
         void throw_nogl() { CV_Error(CV_OpenGlApiCallError, "OpenGL context doesn't exist"); }
-    #endif
 
-    #ifndef HAVE_CUDA
-        void throw_nocuda() { CV_Error(CV_GpuNotSupported, "The library is compiled without GPU support"); }
-    #else
-        void throw_nocuda() { CV_Error(CV_StsNotImplemented, "The called functionality is disabled for current build or platform"); }
+        #ifndef HAVE_CUDA
+            void throw_nocuda() { CV_Error(CV_GpuNotSupported, "The library is compiled without GPU support"); }
+        #else
+            void throw_nocuda() { CV_Error(CV_StsNotImplemented, "The called functionality is disabled for current build or platform"); }
 
-        #if defined(__GNUC__)
-            #define cudaSafeCall(expr)  ___cudaSafeCall(expr, __FILE__, __LINE__, __func__)
-        #else /* defined(__CUDACC__) || defined(__MSVC__) */
-            #define cudaSafeCall(expr)  ___cudaSafeCall(expr, __FILE__, __LINE__)
+            #if defined(__GNUC__)
+                #define cudaSafeCall(expr)  ___cudaSafeCall(expr, __FILE__, __LINE__, __func__)
+            #else /* defined(__CUDACC__) || defined(__MSVC__) */
+                #define cudaSafeCall(expr)  ___cudaSafeCall(expr, __FILE__, __LINE__)
+            #endif
+
+            void ___cudaSafeCall(cudaError_t err, const char* file, const int line, const char* func = "")
+            {
+                if (cudaSuccess != err)
+                    cv::gpu::error(cudaGetErrorString(err), file, line, func);
+            }
         #endif
-
-        void ___cudaSafeCall(cudaError_t err, const char* file, const int line, const char* func = "")
-        {
-            if (cudaSuccess != err)
-                cv::gpu::error(cudaGetErrorString(err), file, line, func);
-        }
     #endif
 }
 
@@ -139,11 +141,16 @@ namespace
 
 void cv::gpu::setGlDevice(int device)
 {
-#if !defined(HAVE_CUDA) || defined(CUDA_DISABLER)
+#ifndef HAVE_OPENGL
     (void) device;
-    throw_nocuda();
+    throw_nogl();
 #else
-    cudaSafeCall( cudaGLSetGLDevice(device) );
+    #if !defined(HAVE_CUDA) || defined(CUDA_DISABLER)
+        (void) device;
+        throw_nocuda();
+    #else
+        cudaSafeCall( cudaGLSetGLDevice(device) );
+    #endif
 #endif
 }
 

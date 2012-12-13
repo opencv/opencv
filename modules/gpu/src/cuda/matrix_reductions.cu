@@ -55,7 +55,7 @@
 using namespace cv::gpu;
 using namespace cv::gpu::device;
 
-namespace
+namespace detail
 {
     template <int cn> struct Unroll;
     template <> struct Unroll<1>
@@ -218,7 +218,7 @@ namespace sum
             {
                 sum = tid < gridDim.x * gridDim.y ? result[tid] : VecTraits<result_type>::all(0);
 
-                device::reduce<BLOCK_SIZE>(Unroll<cn>::template smem_tuple<BLOCK_SIZE>(smem), Unroll<cn>::tie(sum), tid, Unroll<cn>::op(plus<R>()));
+                device::reduce<BLOCK_SIZE>(detail::Unroll<cn>::template smem_tuple<BLOCK_SIZE>(smem), detail::Unroll<cn>::tie(sum), tid, detail::Unroll<cn>::op(plus<R>()));
 
                 if (tid == 0)
                 {
@@ -254,7 +254,7 @@ namespace sum
             {
                 sum = tid < gridDim.x * gridDim.y ? result[tid] : VecTraits<result_type>::all(0);
 
-                device::reduce<BLOCK_SIZE>(Unroll<cn>::template smem_tuple<BLOCK_SIZE>(smem), Unroll<cn>::tie(sum), tid, Unroll<cn>::op(plus<double>()));
+                device::reduce<BLOCK_SIZE>(detail::Unroll<cn>::template smem_tuple<BLOCK_SIZE>(smem), detail::Unroll<cn>::tie(sum), tid, detail::Unroll<cn>::op(plus<double>()));
 
                 if (tid == 0)
                 {
@@ -294,7 +294,7 @@ namespace sum
             }
         }
 
-        device::reduce<BLOCK_SIZE>(Unroll<cn>::template smem_tuple<BLOCK_SIZE>(smem), Unroll<cn>::tie(sum), tid, Unroll<cn>::op(plus<R>()));
+        device::reduce<BLOCK_SIZE>(detail::Unroll<cn>::template smem_tuple<BLOCK_SIZE>(smem), detail::Unroll<cn>::tie(sum), tid, detail::Unroll<cn>::op(plus<R>()));
 
         GlobalReduce<BLOCK_SIZE, R, cn>::run(sum, result, tid, bid, smem);
     }
@@ -918,13 +918,11 @@ namespace countNonZero
     __global__ void kernel(const PtrStepSz<T> src, unsigned int* count, const int twidth, const int theight)
     {
         __shared__ unsigned int scount[BLOCK_SIZE];
-        __shared__ bool is_last;
 
         const int x0 = blockIdx.x * blockDim.x * twidth + threadIdx.x;
         const int y0 = blockIdx.y * blockDim.y * theight + threadIdx.y;
 
         const int tid = threadIdx.y * blockDim.x + threadIdx.x;
-        const int bid = blockIdx.y * gridDim.x + blockIdx.x;
 
         unsigned int mycount = 0;
 
@@ -946,6 +944,9 @@ namespace countNonZero
         if (tid == 0)
             ::atomicAdd(count, mycount);
     #else
+        __shared__ bool is_last;
+        const int bid = blockIdx.y * gridDim.x + blockIdx.x;
+
         if (tid == 0)
         {
             count[bid] = mycount;
@@ -1244,7 +1245,7 @@ namespace reduce
         for (int x = threadIdx.x; x < src.cols; x += BLOCK_SIZE)
             myVal = op(myVal, saturate_cast<work_type>(srcRow[x]));
 
-        device::reduce<BLOCK_SIZE>(Unroll<cn>::template smem_tuple<BLOCK_SIZE>(smem), Unroll<cn>::tie(myVal), threadIdx.x, Unroll<cn>::op(op));
+        device::reduce<BLOCK_SIZE>(detail::Unroll<cn>::template smem_tuple<BLOCK_SIZE>(smem), detail::Unroll<cn>::tie(myVal), threadIdx.x, detail::Unroll<cn>::op(op));
 
         if (threadIdx.x == 0)
             dst[y] = saturate_cast<dst_type>(op.result(myVal, src.cols));

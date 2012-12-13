@@ -57,7 +57,7 @@
 using namespace cv::gpu;
 using namespace cv::gpu::device;
 
-namespace
+namespace pyrlk
 {
     __constant__ int c_winSize_x;
     __constant__ int c_winSize_y;
@@ -123,7 +123,7 @@ namespace
     }
 
     template <int cn, int PATCH_X, int PATCH_Y, bool calcErr>
-    __global__ void sparse(const float2* prevPts, float2* nextPts, uchar* status, float* err, const int level, const int rows, const int cols)
+    __global__ void sparseKernel(const float2* prevPts, float2* nextPts, uchar* status, float* err, const int level, const int rows, const int cols)
     {
     #if __CUDA_ARCH__ <= 110
         const int BLOCK_SIZE = 128;
@@ -321,9 +321,9 @@ namespace
         dim3 grid(ptcount);
 
         if (level == 0 && err)
-            sparse<cn, PATCH_X, PATCH_Y, true><<<grid, block>>>(prevPts, nextPts, status, err, level, rows, cols);
+            sparseKernel<cn, PATCH_X, PATCH_Y, true><<<grid, block>>>(prevPts, nextPts, status, err, level, rows, cols);
         else
-            sparse<cn, PATCH_X, PATCH_Y, false><<<grid, block>>>(prevPts, nextPts, status, err, level, rows, cols);
+            sparseKernel<cn, PATCH_X, PATCH_Y, false><<<grid, block>>>(prevPts, nextPts, status, err, level, rows, cols);
 
         cudaSafeCall( cudaGetLastError() );
 
@@ -332,7 +332,7 @@ namespace
     }
 
     template <bool calcErr>
-    __global__ void dense(PtrStepf u, PtrStepf v, const PtrStepf prevU, const PtrStepf prevV, PtrStepf err, const int rows, const int cols)
+    __global__ void denseKernel(PtrStepf u, PtrStepf v, const PtrStepf prevU, const PtrStepf prevV, PtrStepf err, const int rows, const int cols)
     {
         extern __shared__ int smem[];
 
@@ -476,10 +476,7 @@ namespace
             err(y, x) = static_cast<float>(errval) / (c_winSize_x * c_winSize_y);
         }
     }
-}
 
-namespace pyrlk
-{
     void loadConstants(int2 winSize, int iters)
     {
         cudaSafeCall( cudaMemcpyToSymbol(c_winSize_x, &winSize.x, sizeof(int)) );
@@ -500,11 +497,11 @@ namespace pyrlk
 
         static const func_t funcs[5][5] =
         {
-            {::sparse_caller<1, 1, 1>, ::sparse_caller<1, 2, 1>, ::sparse_caller<1, 3, 1>, ::sparse_caller<1, 4, 1>, ::sparse_caller<1, 5, 1>},
-            {::sparse_caller<1, 1, 2>, ::sparse_caller<1, 2, 2>, ::sparse_caller<1, 3, 2>, ::sparse_caller<1, 4, 2>, ::sparse_caller<1, 5, 2>},
-            {::sparse_caller<1, 1, 3>, ::sparse_caller<1, 2, 3>, ::sparse_caller<1, 3, 3>, ::sparse_caller<1, 4, 3>, ::sparse_caller<1, 5, 3>},
-            {::sparse_caller<1, 1, 4>, ::sparse_caller<1, 2, 4>, ::sparse_caller<1, 3, 4>, ::sparse_caller<1, 4, 4>, ::sparse_caller<1, 5, 4>},
-            {::sparse_caller<1, 1, 5>, ::sparse_caller<1, 2, 5>, ::sparse_caller<1, 3, 5>, ::sparse_caller<1, 4, 5>, ::sparse_caller<1, 5, 5>}
+            {sparse_caller<1, 1, 1>, sparse_caller<1, 2, 1>, sparse_caller<1, 3, 1>, sparse_caller<1, 4, 1>, sparse_caller<1, 5, 1>},
+            {sparse_caller<1, 1, 2>, sparse_caller<1, 2, 2>, sparse_caller<1, 3, 2>, sparse_caller<1, 4, 2>, sparse_caller<1, 5, 2>},
+            {sparse_caller<1, 1, 3>, sparse_caller<1, 2, 3>, sparse_caller<1, 3, 3>, sparse_caller<1, 4, 3>, sparse_caller<1, 5, 3>},
+            {sparse_caller<1, 1, 4>, sparse_caller<1, 2, 4>, sparse_caller<1, 3, 4>, sparse_caller<1, 4, 4>, sparse_caller<1, 5, 4>},
+            {sparse_caller<1, 1, 5>, sparse_caller<1, 2, 5>, sparse_caller<1, 3, 5>, sparse_caller<1, 4, 5>, sparse_caller<1, 5, 5>}
         };
 
         bindTexture(&tex_If, I);
@@ -522,11 +519,11 @@ namespace pyrlk
 
         static const func_t funcs[5][5] =
         {
-            {::sparse_caller<4, 1, 1>, ::sparse_caller<4, 2, 1>, ::sparse_caller<4, 3, 1>, ::sparse_caller<4, 4, 1>, ::sparse_caller<4, 5, 1>},
-            {::sparse_caller<4, 1, 2>, ::sparse_caller<4, 2, 2>, ::sparse_caller<4, 3, 2>, ::sparse_caller<4, 4, 2>, ::sparse_caller<4, 5, 2>},
-            {::sparse_caller<4, 1, 3>, ::sparse_caller<4, 2, 3>, ::sparse_caller<4, 3, 3>, ::sparse_caller<4, 4, 3>, ::sparse_caller<4, 5, 3>},
-            {::sparse_caller<4, 1, 4>, ::sparse_caller<4, 2, 4>, ::sparse_caller<4, 3, 4>, ::sparse_caller<4, 4, 4>, ::sparse_caller<4, 5, 4>},
-            {::sparse_caller<4, 1, 5>, ::sparse_caller<4, 2, 5>, ::sparse_caller<4, 3, 5>, ::sparse_caller<4, 4, 5>, ::sparse_caller<4, 5, 5>}
+            {sparse_caller<4, 1, 1>, sparse_caller<4, 2, 1>, sparse_caller<4, 3, 1>, sparse_caller<4, 4, 1>, sparse_caller<4, 5, 1>},
+            {sparse_caller<4, 1, 2>, sparse_caller<4, 2, 2>, sparse_caller<4, 3, 2>, sparse_caller<4, 4, 2>, sparse_caller<4, 5, 2>},
+            {sparse_caller<4, 1, 3>, sparse_caller<4, 2, 3>, sparse_caller<4, 3, 3>, sparse_caller<4, 4, 3>, sparse_caller<4, 5, 3>},
+            {sparse_caller<4, 1, 4>, sparse_caller<4, 2, 4>, sparse_caller<4, 3, 4>, sparse_caller<4, 4, 4>, sparse_caller<4, 5, 4>},
+            {sparse_caller<4, 1, 5>, sparse_caller<4, 2, 5>, sparse_caller<4, 3, 5>, sparse_caller<4, 4, 5>, sparse_caller<4, 5, 5>}
         };
 
         bindTexture(&tex_If4, I);
@@ -551,12 +548,12 @@ namespace pyrlk
 
         if (err.data)
         {
-            ::dense<true><<<grid, block, smem_size, stream>>>(u, v, prevU, prevV, err, I.rows, I.cols);
+            denseKernel<true><<<grid, block, smem_size, stream>>>(u, v, prevU, prevV, err, I.rows, I.cols);
             cudaSafeCall( cudaGetLastError() );
         }
         else
         {
-            ::dense<false><<<grid, block, smem_size, stream>>>(u, v, prevU, prevV, PtrStepf(), I.rows, I.cols);
+            denseKernel<false><<<grid, block, smem_size, stream>>>(u, v, prevU, prevV, PtrStepf(), I.rows, I.cols);
             cudaSafeCall( cudaGetLastError() );
         }
 

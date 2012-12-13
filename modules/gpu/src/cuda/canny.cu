@@ -52,7 +52,7 @@
 using namespace cv::gpu;
 using namespace cv::gpu::device;
 
-namespace
+namespace canny
 {
     struct L1 : binary_function<int, int, float>
     {
@@ -78,17 +78,17 @@ namespace
 
 namespace cv { namespace gpu { namespace device
 {
-    template <> struct TransformFunctorTraits<L1> : DefaultTransformFunctorTraits<L1>
+    template <> struct TransformFunctorTraits<canny::L1> : DefaultTransformFunctorTraits<canny::L1>
     {
         enum { smart_shift = 4 };
     };
-    template <> struct TransformFunctorTraits<L2> : DefaultTransformFunctorTraits<L2>
+    template <> struct TransformFunctorTraits<canny::L2> : DefaultTransformFunctorTraits<canny::L2>
     {
         enum { smart_shift = 4 };
     };
 }}}
 
-namespace
+namespace canny
 {
     texture<uchar, cudaTextureType2D, cudaReadModeElementType> tex_src(false, cudaFilterModePoint, cudaAddressModeClamp);
     struct SrcTex
@@ -104,7 +104,7 @@ namespace
     };
 
     template <class Norm> __global__
-    void calcMagnitude(const SrcTex src, PtrStepi dx, PtrStepi dy, PtrStepSzf mag, const Norm norm)
+    void calcMagnitudeKernel(const SrcTex src, PtrStepi dx, PtrStepi dy, PtrStepSzf mag, const Norm norm)
     {
         const int x = blockIdx.x * blockDim.x + threadIdx.x;
         const int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -120,10 +120,7 @@ namespace
 
         mag(y, x) = norm(dxVal, dyVal);
     }
-}
 
-namespace canny
-{
     void calcMagnitude(PtrStepSzb srcWhole, int xoff, int yoff, PtrStepSzi dx, PtrStepSzi dy, PtrStepSzf mag, bool L2Grad)
     {
         const dim3 block(16, 16);
@@ -135,12 +132,12 @@ namespace canny
         if (L2Grad)
         {
             L2 norm;
-            ::calcMagnitude<<<grid, block>>>(src, dx, dy, mag, norm);
+            calcMagnitudeKernel<<<grid, block>>>(src, dx, dy, mag, norm);
         }
         else
         {
             L1 norm;
-            ::calcMagnitude<<<grid, block>>>(src, dx, dy, mag, norm);
+            calcMagnitudeKernel<<<grid, block>>>(src, dx, dy, mag, norm);
         }
 
         cudaSafeCall( cudaGetLastError() );
@@ -165,11 +162,11 @@ namespace canny
 
 //////////////////////////////////////////////////////////////////////////////////////////
 
-namespace
+namespace canny
 {
     texture<float, cudaTextureType2D, cudaReadModeElementType> tex_mag(false, cudaFilterModePoint, cudaAddressModeClamp);
 
-    __global__ void calcMap(const PtrStepSzi dx, const PtrStepi dy, PtrStepi map, const float low_thresh, const float high_thresh)
+    __global__ void calcMapKernel(const PtrStepSzi dx, const PtrStepi dy, PtrStepi map, const float low_thresh, const float high_thresh)
     {
         const int CANNY_SHIFT = 15;
         const int TG22 = (int)(0.4142135623730950488016887242097*(1<<CANNY_SHIFT) + 0.5);
@@ -220,10 +217,7 @@ namespace
 
         map(y, x) = edge_type;
     }
-}
 
-namespace canny
-{
     void calcMap(PtrStepSzi dx, PtrStepSzi dy, PtrStepSzf mag, PtrStepSzi map, float low_thresh, float high_thresh)
     {
         const dim3 block(16, 16);
@@ -231,7 +225,7 @@ namespace canny
 
         bindTexture(&tex_mag, mag);
 
-        ::calcMap<<<grid, block>>>(dx, dy, map, low_thresh, high_thresh);
+        calcMapKernel<<<grid, block>>>(dx, dy, map, low_thresh, high_thresh);
         cudaSafeCall( cudaGetLastError() );
 
         cudaSafeCall( cudaDeviceSynchronize() );
@@ -240,11 +234,11 @@ namespace canny
 
 //////////////////////////////////////////////////////////////////////////////////////////
 
-namespace
+namespace canny
 {
     __device__ int counter = 0;
 
-    __global__ void edgesHysteresisLocal(PtrStepSzi map, ushort2* st)
+    __global__ void edgesHysteresisLocalKernel(PtrStepSzi map, ushort2* st)
     {
         __shared__ volatile int smem[18][18];
 
@@ -325,10 +319,7 @@ namespace
             st[ind] = make_ushort2(x, y);
         }
     }
-}
 
-namespace canny
-{
     void edgesHysteresisLocal(PtrStepSzi map, ushort2* st1)
     {
         void* counter_ptr;
@@ -339,7 +330,7 @@ namespace canny
         const dim3 block(16, 16);
         const dim3 grid(divUp(map.cols, block.x), divUp(map.rows, block.y));
 
-        ::edgesHysteresisLocal<<<grid, block>>>(map, st1);
+        edgesHysteresisLocalKernel<<<grid, block>>>(map, st1);
         cudaSafeCall( cudaGetLastError() );
 
         cudaSafeCall( cudaDeviceSynchronize() );
@@ -348,12 +339,12 @@ namespace canny
 
 //////////////////////////////////////////////////////////////////////////////////////////
 
-namespace
+namespace canny
 {
     __constant__ int c_dx[8] = {-1,  0,  1, -1, 1, -1, 0, 1};
     __constant__ int c_dy[8] = {-1, -1, -1,  0, 0,  1, 1, 1};
 
-    __global__ void edgesHysteresisGlobal(PtrStepSzi map, ushort2* st1, ushort2* st2, const int count)
+    __global__ void edgesHysteresisGlobalKernel(PtrStepSzi map, ushort2* st1, ushort2* st2, const int count)
     {
         const int stack_size = 512;
 
@@ -439,14 +430,11 @@ namespace
                 st2[ind + i] = s_st[i];
         }
     }
-}
 
-namespace canny
-{
     void edgesHysteresisGlobal(PtrStepSzi map, ushort2* st1, ushort2* st2)
     {
         void* counter_ptr;
-        cudaSafeCall( cudaGetSymbolAddress(&counter_ptr, ::counter) );
+        cudaSafeCall( cudaGetSymbolAddress(&counter_ptr, canny::counter) );
 
         int count;
         cudaSafeCall( cudaMemcpy(&count, counter_ptr, sizeof(int), cudaMemcpyDeviceToHost) );
@@ -458,7 +446,7 @@ namespace canny
             const dim3 block(128);
             const dim3 grid(::min(count, 65535u), divUp(count, 65535), 1);
 
-            ::edgesHysteresisGlobal<<<grid, block>>>(map, st1, st2, count);
+            edgesHysteresisGlobalKernel<<<grid, block>>>(map, st1, st2, count);
             cudaSafeCall( cudaGetLastError() );
 
             cudaSafeCall( cudaDeviceSynchronize() );
@@ -472,7 +460,7 @@ namespace canny
 
 //////////////////////////////////////////////////////////////////////////////////////////
 
-namespace
+namespace canny
 {
     struct GetEdges : unary_function<int, uchar>
     {
@@ -488,7 +476,7 @@ namespace
 
 namespace cv { namespace gpu { namespace device
 {
-    template <> struct TransformFunctorTraits<GetEdges> : DefaultTransformFunctorTraits<GetEdges>
+    template <> struct TransformFunctorTraits<canny::GetEdges> : DefaultTransformFunctorTraits<canny::GetEdges>
     {
         enum { smart_shift = 4 };
     };

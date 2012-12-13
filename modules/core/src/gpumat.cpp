@@ -45,8 +45,7 @@
 #include <iostream>
 
 #ifdef HAVE_CUDA
-    #include <cuda.h>
-    #include <cuda_runtime_api.h>
+    #include <cuda_runtime.h>
     #include <npp.h>
 
     #define CUDART_MINIMUM_REQUIRED_VERSION 4010
@@ -394,18 +393,6 @@ void cv::gpu::DeviceInfo::queryMemory(size_t& free_memory, size_t& total_memory)
 
 namespace
 {
-    template <class T> void getCudaAttribute(T *attribute, CUdevice_attribute device_attribute, int device)
-    {
-        *attribute = T();
-        //CUresult error = CUDA_SUCCESS;// = cuDeviceGetAttribute( attribute, device_attribute, device ); why link erros under ubuntu??
-        CUresult error = cuDeviceGetAttribute( attribute, device_attribute, device );
-        if( CUDA_SUCCESS == error )
-            return;
-
-        printf("Driver API error = %04d\n", error);
-        cv::gpu::error("driver API error", __FILE__, __LINE__);
-    }
-
     int convertSMVer2Cores(int major, int minor)
     {
         // Defines for GPU Architecture types (using the SM version to determine the # of cores per SM
@@ -465,17 +452,6 @@ void cv::gpu::printCudaDeviceInfo(int device)
             prop.multiProcessorCount, convertSMVer2Cores(prop.major, prop.minor),
             convertSMVer2Cores(prop.major, prop.minor) * prop.multiProcessorCount);
         printf("  GPU Clock Speed:                               %.2f GHz\n", prop.clockRate * 1e-6f);
-
-        // This is not available in the CUDA Runtime API, so we make the necessary calls the driver API to support this for output
-        int memoryClock, memBusWidth, L2CacheSize;
-        getCudaAttribute<int>( &memoryClock, CU_DEVICE_ATTRIBUTE_MEMORY_CLOCK_RATE, dev );
-        getCudaAttribute<int>( &memBusWidth, CU_DEVICE_ATTRIBUTE_GLOBAL_MEMORY_BUS_WIDTH, dev );
-        getCudaAttribute<int>( &L2CacheSize, CU_DEVICE_ATTRIBUTE_L2_CACHE_SIZE, dev );
-
-        printf("  Memory Clock rate:                             %.2f Mhz\n", memoryClock * 1e-3f);
-        printf("  Memory Bus Width:                              %d-bit\n", memBusWidth);
-        if (L2CacheSize)
-            printf("  L2 Cache Size:                                 %d bytes\n", L2CacheSize);
 
         printf("  Max Texture Dimension Size (x,y,z)             1D=(%d), 2D=(%d,%d), 3D=(%d,%d,%d)\n",
             prop.maxTexture1D, prop.maxTexture2D[0], prop.maxTexture2D[1],

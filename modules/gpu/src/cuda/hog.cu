@@ -244,15 +244,17 @@ namespace cv { namespace gpu { namespace device
                 return smem[0];
             #endif
             }
+            else
+            {
+            #if __CUDA_ARCH__ >= 300
+                if (threadIdx.x == 0)
+                    smem[0] = sum;
+            #endif
 
-        #if __CUDA_ARCH__ >= 300
-            if (threadIdx.x == 0)
-                smem[0] = sum;
-        #endif
+                __syncthreads();
 
-            __syncthreads();
-
-            return smem[0];
+                return smem[0];
+            }
         }
 
 

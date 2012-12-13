@@ -52,7 +52,7 @@
 using namespace cv::gpu;
 using namespace cv::gpu::device;
 
-namespace
+namespace arithm
 {
     template <size_t src_size, size_t dst_size> struct ArithmFuncTraits
     {
@@ -152,7 +152,7 @@ namespace
 //////////////////////////////////////////////////////////////////////////
 // addMat
 
-namespace
+namespace arithm
 {
     template <typename T, typename D> struct VAdd4;
     template <> struct VAdd4<uint, uint> : binary_function<uint, uint, uint>
@@ -336,19 +336,19 @@ namespace
 
 namespace cv { namespace gpu { namespace device
 {
-    template <typename T, typename D> struct TransformFunctorTraits< VAdd4<T, D> > : ArithmFuncTraits<sizeof(T), sizeof(D)>
+    template <typename T, typename D> struct TransformFunctorTraits< arithm::VAdd4<T, D> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(D)>
     {
     };
 
     ////////////////////////////////////
 
-    template <typename T, typename D> struct TransformFunctorTraits< VAdd2<T, D> > : ArithmFuncTraits<sizeof(T), sizeof(D)>
+    template <typename T, typename D> struct TransformFunctorTraits< arithm::VAdd2<T, D> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(D)>
     {
     };
 
     ////////////////////////////////////
 
-    template <typename T, typename D> struct TransformFunctorTraits< AddMat<T, D> > : ArithmFuncTraits<sizeof(T), sizeof(D)>
+    template <typename T, typename D> struct TransformFunctorTraits< arithm::AddMat<T, D> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(D)>
     {
     };
 }}}
@@ -446,7 +446,7 @@ namespace arithm
 //////////////////////////////////////////////////////////////////////////
 // addScalar
 
-namespace
+namespace arithm
 {
     template <typename T, typename S, typename D> struct AddScalar : unary_function<T, D>
     {
@@ -463,7 +463,7 @@ namespace
 
 namespace cv { namespace gpu { namespace device
 {
-    template <typename T, typename S, typename D> struct TransformFunctorTraits< AddScalar<T, S, D> > : ArithmFuncTraits<sizeof(T), sizeof(D)>
+    template <typename T, typename S, typename D> struct TransformFunctorTraits< arithm::AddScalar<T, S, D> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(D)>
     {
     };
 }}}
@@ -541,7 +541,7 @@ namespace arithm
 //////////////////////////////////////////////////////////////////////////
 // subMat
 
-namespace
+namespace arithm
 {
     template <typename T, typename D> struct VSub4;
     template <> struct VSub4<uint, uint> : binary_function<uint, uint, uint>
@@ -725,19 +725,19 @@ namespace
 
 namespace cv { namespace gpu { namespace device
 {
-    template <typename T, typename D> struct TransformFunctorTraits< VSub4<T, D> > : ArithmFuncTraits<sizeof(T), sizeof(D)>
+    template <typename T, typename D> struct TransformFunctorTraits< arithm::VSub4<T, D> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(D)>
     {
     };
 
     ////////////////////////////////////
 
-    template <typename T, typename D> struct TransformFunctorTraits< VSub2<T, D> > : ArithmFuncTraits<sizeof(T), sizeof(D)>
+    template <typename T, typename D> struct TransformFunctorTraits< arithm::VSub2<T, D> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(D)>
     {
     };
 
     ////////////////////////////////////
 
-    template <typename T, typename D> struct TransformFunctorTraits< SubMat<T, D> > : ArithmFuncTraits<sizeof(T), sizeof(D)>
+    template <typename T, typename D> struct TransformFunctorTraits< arithm::SubMat<T, D> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(D)>
     {
     };
 }}}
@@ -908,7 +908,7 @@ namespace arithm
 //////////////////////////////////////////////////////////////////////////
 // mulMat
 
-namespace
+namespace arithm
 {
     struct Mul_8uc4_32f : binary_function<uint, float, uint>
     {
@@ -966,15 +966,15 @@ namespace
 
 namespace cv { namespace gpu { namespace device
 {
-    template <> struct TransformFunctorTraits<Mul_8uc4_32f> : ArithmFuncTraits<sizeof(uint), sizeof(uint)>
+    template <> struct TransformFunctorTraits<arithm::Mul_8uc4_32f> : arithm::ArithmFuncTraits<sizeof(uint), sizeof(uint)>
     {
     };
 
-    template <typename T, typename D> struct TransformFunctorTraits< Mul<T, D> > : ArithmFuncTraits<sizeof(T), sizeof(D)>
+    template <typename T, typename D> struct TransformFunctorTraits< arithm::Mul<T, D> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(D)>
     {
     };
 
-    template <typename T, typename S, typename D> struct TransformFunctorTraits< MulScale<T, S, D> > : ArithmFuncTraits<sizeof(T), sizeof(D)>
+    template <typename T, typename S, typename D> struct TransformFunctorTraits< arithm::MulScale<T, S, D> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(D)>
     {
     };
 }}}
@@ -1066,7 +1066,7 @@ namespace arithm
 //////////////////////////////////////////////////////////////////////////
 // mulScalar
 
-namespace
+namespace arithm
 {
     template <typename T, typename S, typename D> struct MulScalar : unary_function<T, D>
     {
@@ -1083,7 +1083,7 @@ namespace
 
 namespace cv { namespace gpu { namespace device
 {
-    template <typename T, typename S, typename D> struct TransformFunctorTraits< MulScalar<T, S, D> > : ArithmFuncTraits<sizeof(T), sizeof(D)>
+    template <typename T, typename S, typename D> struct TransformFunctorTraits< arithm::MulScalar<T, S, D> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(D)>
     {
     };
 }}}
@@ -1157,7 +1157,7 @@ namespace arithm
 //////////////////////////////////////////////////////////////////////////
 // divMat
 
-namespace
+namespace arithm
 {
     struct Div_8uc4_32f : binary_function<uint, float, uint>
     {
@@ -1234,15 +1234,15 @@ namespace
 
 namespace cv { namespace gpu { namespace device
 {
-    template <> struct TransformFunctorTraits<Div_8uc4_32f> : ArithmFuncTraits<sizeof(uint), sizeof(uint)>
+    template <> struct TransformFunctorTraits<arithm::Div_8uc4_32f> : arithm::ArithmFuncTraits<sizeof(uint), sizeof(uint)>
     {
     };
 
-    template <typename T, typename D> struct TransformFunctorTraits< Div<T, D> > : ArithmFuncTraits<sizeof(T), sizeof(D)>
+    template <typename T, typename D> struct TransformFunctorTraits< arithm::Div<T, D> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(D)>
     {
     };
 
-    template <typename T, typename S, typename D> struct TransformFunctorTraits< DivScale<T, S, D> > : ArithmFuncTraits<sizeof(T), sizeof(D)>
+    template <typename T, typename S, typename D> struct TransformFunctorTraits< arithm::DivScale<T, S, D> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(D)>
     {
     };
 }}}
@@ -1403,7 +1403,7 @@ namespace arithm
 //////////////////////////////////////////////////////////////////////////
 // divInv
 
-namespace
+namespace arithm
 {
     template <typename T, typename S, typename D> struct DivInv : unary_function<T, D>
     {
@@ -1420,7 +1420,7 @@ namespace
 
 namespace cv { namespace gpu { namespace device
 {
-    template <typename T, typename S, typename D> struct TransformFunctorTraits< DivInv<T, S, D> > : ArithmFuncTraits<sizeof(T), sizeof(D)>
+    template <typename T, typename S, typename D> struct TransformFunctorTraits< arithm::DivInv<T, S, D> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(D)>
     {
     };
 }}}
@@ -1494,7 +1494,7 @@ namespace arithm
 //////////////////////////////////////////////////////////////////////////
 // absDiffMat
 
-namespace
+namespace arithm
 {
     template <typename T, typename D> struct VAbsDiff4;
     template <> struct VAbsDiff4<uint, uint> : binary_function<uint, uint, uint>
@@ -1611,19 +1611,19 @@ namespace
 
 namespace cv { namespace gpu { namespace device
 {
-    template <typename T, typename D> struct TransformFunctorTraits< VAbsDiff4<T, D> > : ArithmFuncTraits<sizeof(T), sizeof(D)>
+    template <typename T, typename D> struct TransformFunctorTraits< arithm::VAbsDiff4<T, D> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(D)>
     {
     };
 
     ////////////////////////////////////
 
-    template <typename T, typename D> struct TransformFunctorTraits< VAbsDiff2<T, D> > : ArithmFuncTraits<sizeof(T), sizeof(D)>
+    template <typename T, typename D> struct TransformFunctorTraits< arithm::VAbsDiff2<T, D> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(D)>
     {
     };
 
     ////////////////////////////////////
 
-    template <typename T> struct TransformFunctorTraits< AbsDiffMat<T> > : ArithmFuncTraits<sizeof(T), sizeof(T)>
+    template <typename T> struct TransformFunctorTraits< arithm::AbsDiffMat<T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
     };
 }}}
@@ -1666,7 +1666,7 @@ namespace arithm
 //////////////////////////////////////////////////////////////////////////
 // absDiffScalar
 
-namespace
+namespace arithm
 {
     template <typename T, typename S> struct AbsDiffScalar : unary_function<T, T>
     {
@@ -1684,7 +1684,7 @@ namespace
 
 namespace cv { namespace gpu { namespace device
 {
-    template <typename T, typename S> struct TransformFunctorTraits< AbsDiffScalar<T, S> > : ArithmFuncTraits<sizeof(T), sizeof(T)>
+    template <typename T, typename S> struct TransformFunctorTraits< arithm::AbsDiffScalar<T, S> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
     };
 }}}
@@ -1713,7 +1713,7 @@ namespace arithm
 
 namespace cv { namespace gpu { namespace device
 {
-    template <typename T> struct TransformFunctorTraits< abs_func<T> > : ArithmFuncTraits<sizeof(T), sizeof(T)>
+    template <typename T> struct TransformFunctorTraits< abs_func<T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
     };
 }}}
@@ -1738,7 +1738,7 @@ namespace arithm
 //////////////////////////////////////////////////////////////////////////
 // sqrMat
 
-namespace
+namespace arithm
 {
     template <typename T> struct Sqr : unary_function<T, T>
     {
@@ -1754,7 +1754,7 @@ namespace
 
 namespace cv { namespace gpu { namespace device
 {
-    template <typename T> struct TransformFunctorTraits< Sqr<T> > : ArithmFuncTraits<sizeof(T), sizeof(T)>
+    template <typename T> struct TransformFunctorTraits< arithm::Sqr<T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
     };
 }}}
@@ -1781,7 +1781,7 @@ namespace arithm
 
 namespace cv { namespace gpu { namespace device
 {
-    template <typename T> struct TransformFunctorTraits< sqrt_func<T> > : ArithmFuncTraits<sizeof(T), sizeof(T)>
+    template <typename T> struct TransformFunctorTraits< sqrt_func<T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
     };
 }}}
@@ -1808,7 +1808,7 @@ namespace arithm
 
 namespace cv { namespace gpu { namespace device
 {
-    template <typename T> struct TransformFunctorTraits< log_func<T> > : ArithmFuncTraits<sizeof(T), sizeof(T)>
+    template <typename T> struct TransformFunctorTraits< log_func<T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
     };
 }}}
@@ -1833,7 +1833,7 @@ namespace arithm
 //////////////////////////////////////////////////////////////////////////
 // expMat
 
-namespace
+namespace arithm
 {
     template <typename T> struct Exp : unary_function<T, T>
     {
@@ -1850,7 +1850,7 @@ namespace
 
 namespace cv { namespace gpu { namespace device
 {
-    template <typename T> struct TransformFunctorTraits< Exp<T> > : ArithmFuncTraits<sizeof(T), sizeof(T)>
+    template <typename T> struct TransformFunctorTraits< arithm::Exp<T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
     };
 }}}
@@ -1875,7 +1875,7 @@ namespace arithm
 //////////////////////////////////////////////////////////////////////////////////////
 // cmpMat
 
-namespace
+namespace arithm
 {
     template <class Op, typename T>
     struct Cmp : binary_function<T, T, uchar>
@@ -1890,7 +1890,7 @@ namespace
 
 namespace cv { namespace gpu { namespace device
 {
-    template <class Op, typename T> struct TransformFunctorTraits< Cmp<Op, T> > : ArithmFuncTraits<sizeof(T), sizeof(uchar)>
+    template <class Op, typename T> struct TransformFunctorTraits< arithm::Cmp<Op, T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(uchar)>
     {
     };
 }}}
@@ -1957,7 +1957,7 @@ namespace arithm
 //////////////////////////////////////////////////////////////////////////////////////
 // cmpScalar
 
-namespace
+namespace arithm
 {
 #define TYPE_VEC(type, cn) typename TypeVec<type, cn>::vec_type
 
@@ -2020,7 +2020,7 @@ namespace
 
 namespace cv { namespace gpu { namespace device
 {
-    template <class Op, typename T> struct TransformFunctorTraits< CmpScalar<Op, T, 1> > : ArithmFuncTraits<sizeof(T), sizeof(uchar)>
+    template <class Op, typename T> struct TransformFunctorTraits< arithm::CmpScalar<Op, T, 1> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(uchar)>
     {
     };
 }}}
@@ -2179,19 +2179,19 @@ namespace arithm
 
 namespace cv { namespace gpu { namespace device
 {
-    template <typename T> struct TransformFunctorTraits< bit_not<T> > : ArithmFuncTraits<sizeof(T), sizeof(T)>
+    template <typename T> struct TransformFunctorTraits< bit_not<T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
     };
 
-    template <typename T> struct TransformFunctorTraits< bit_and<T> > : ArithmFuncTraits<sizeof(T), sizeof(T)>
+    template <typename T> struct TransformFunctorTraits< bit_and<T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
     };
 
-    template <typename T> struct TransformFunctorTraits< bit_or<T> > : ArithmFuncTraits<sizeof(T), sizeof(T)>
+    template <typename T> struct TransformFunctorTraits< bit_or<T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
     };
 
-    template <typename T> struct TransformFunctorTraits< bit_xor<T> > : ArithmFuncTraits<sizeof(T), sizeof(T)>
+    template <typename T> struct TransformFunctorTraits< bit_xor<T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
     };
 }}}
@@ -2252,15 +2252,15 @@ namespace arithm
 
 namespace cv { namespace gpu { namespace device
 {
-    template <typename T> struct TransformFunctorTraits< binder2nd< bit_and<T> > > : ArithmFuncTraits<sizeof(T), sizeof(T)>
+    template <typename T> struct TransformFunctorTraits< binder2nd< bit_and<T> > > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
     };
 
-    template <typename T> struct TransformFunctorTraits< binder2nd< bit_or<T> > > : ArithmFuncTraits<sizeof(T), sizeof(T)>
+    template <typename T> struct TransformFunctorTraits< binder2nd< bit_or<T> > > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
     };
 
-    template <typename T> struct TransformFunctorTraits< binder2nd< bit_xor<T> > > : ArithmFuncTraits<sizeof(T), sizeof(T)>
+    template <typename T> struct TransformFunctorTraits< binder2nd< bit_xor<T> > > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
     };
 }}}
@@ -2298,7 +2298,7 @@ namespace arithm
 //////////////////////////////////////////////////////////////////////////
 // min
 
-namespace
+namespace arithm
 {
     template <typename T> struct VMin4;
     template <> struct VMin4<uint> : binary_function<uint, uint, uint>
@@ -2389,23 +2389,23 @@ namespace
 
 namespace cv { namespace gpu { namespace device
 {
-    template <typename T> struct TransformFunctorTraits< VMin4<T> > : ArithmFuncTraits<sizeof(T), sizeof(T)>
+    template <typename T> struct TransformFunctorTraits< arithm::VMin4<T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
     };
 
     ////////////////////////////////////
 
-    template <typename T> struct TransformFunctorTraits< VMin2<T> > : ArithmFuncTraits<sizeof(T), sizeof(T)>
+    template <typename T> struct TransformFunctorTraits< arithm::VMin2<T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
     };
 
     ////////////////////////////////////
 
-    template <typename T> struct TransformFunctorTraits< minimum<T> > : ArithmFuncTraits<sizeof(T), sizeof(T)>
+    template <typename T> struct TransformFunctorTraits< minimum<T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
     };
 
-    template <typename T> struct TransformFunctorTraits< binder2nd< minimum<T> > > : ArithmFuncTraits<sizeof(T), sizeof(T)>
+    template <typename T> struct TransformFunctorTraits< binder2nd< minimum<T> > > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
     };
 }}}
@@ -2458,7 +2458,7 @@ namespace arithm
 //////////////////////////////////////////////////////////////////////////
 // max
 
-namespace
+namespace arithm
 {
     template <typename T> struct VMax4;
     template <> struct VMax4<uint> : binary_function<uint, uint, uint>
@@ -2549,23 +2549,23 @@ namespace
 
 namespace cv { namespace gpu { namespace device
 {
-    template <typename T> struct TransformFunctorTraits< VMax4<T> > : ArithmFuncTraits<sizeof(T), sizeof(T)>
+    template <typename T> struct TransformFunctorTraits< arithm::VMax4<T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
     };
 
     ////////////////////////////////////
 
-    template <typename T> struct TransformFunctorTraits< VMax2<T> > : ArithmFuncTraits<sizeof(T), sizeof(T)>
+    template <typename T> struct TransformFunctorTraits< arithm::VMax2<T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
     };
 
     ////////////////////////////////////
 
-    template <typename T> struct TransformFunctorTraits< maximum<T> > : ArithmFuncTraits<sizeof(T), sizeof(T)>
+    template <typename T> struct TransformFunctorTraits< maximum<T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
     };
 
-    template <typename T> struct TransformFunctorTraits< binder2nd< maximum<T> > > : ArithmFuncTraits<sizeof(T), sizeof(T)>
+    template <typename T> struct TransformFunctorTraits< binder2nd< maximum<T> > > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
     };
 }}}
@@ -2620,23 +2620,23 @@ namespace arithm
 
 namespace cv { namespace gpu { namespace device
 {
-    template <typename T> struct TransformFunctorTraits< thresh_binary_func<T> > : ArithmFuncTraits<sizeof(T), sizeof(T)>
+    template <typename T> struct TransformFunctorTraits< thresh_binary_func<T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
     };
 
-    template <typename T> struct TransformFunctorTraits< thresh_binary_inv_func<T> > : ArithmFuncTraits<sizeof(T), sizeof(T)>
+    template <typename T> struct TransformFunctorTraits< thresh_binary_inv_func<T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
     };
 
-    template <typename T> struct TransformFunctorTraits< thresh_trunc_func<T> > : ArithmFuncTraits<sizeof(T), sizeof(T)>
+    template <typename T> struct TransformFunctorTraits< thresh_trunc_func<T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
     };
 
-    template <typename T> struct TransformFunctorTraits< thresh_to_zero_func<T> > : ArithmFuncTraits<sizeof(T), sizeof(T)>
+    template <typename T> struct TransformFunctorTraits< thresh_to_zero_func<T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
     };
 
-    template <typename T> struct TransformFunctorTraits< thresh_to_zero_inv_func<T> > : ArithmFuncTraits<sizeof(T), sizeof(T)>
+    template <typename T> struct TransformFunctorTraits< thresh_to_zero_inv_func<T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
     };
 }}}
@@ -2679,7 +2679,7 @@ namespace arithm
 //////////////////////////////////////////////////////////////////////////
 // pow
 
-namespace
+namespace arithm
 {
     template<typename T, bool Signed = numeric_limits<T>::is_signed> struct PowOp : unary_function<T, T>
     {
@@ -2734,7 +2734,7 @@ namespace
 
 namespace cv { namespace gpu { namespace device
 {
-    template <typename T> struct TransformFunctorTraits< PowOp<T> > : ArithmFuncTraits<sizeof(T), sizeof(T)>
+    template <typename T> struct TransformFunctorTraits< arithm::PowOp<T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
     };
 }}}
@@ -2759,7 +2759,7 @@ namespace arithm
 //////////////////////////////////////////////////////////////////////////
 // addWeighted
 
-namespace
+namespace arithm
 {
     template <typename T> struct UseDouble_
     {
@@ -2809,14 +2809,14 @@ namespace
 
 namespace cv { namespace gpu { namespace device
 {
-    template <typename T1, typename T2, typename D, size_t src1_size, size_t src2_size, size_t dst_size> struct AddWeightedTraits : DefaultTransformFunctorTraits< AddWeighted<T1, T2, D> >
+    template <typename T1, typename T2, typename D, size_t src1_size, size_t src2_size, size_t dst_size> struct AddWeightedTraits : DefaultTransformFunctorTraits< arithm::AddWeighted<T1, T2, D> >
     {
     };
-    template <typename T1, typename T2, typename D, size_t src_size, size_t dst_size> struct AddWeightedTraits<T1, T2, D, src_size, src_size, dst_size> : ArithmFuncTraits<src_size, dst_size>
+    template <typename T1, typename T2, typename D, size_t src_size, size_t dst_size> struct AddWeightedTraits<T1, T2, D, src_size, src_size, dst_size> : arithm::ArithmFuncTraits<src_size, dst_size>
     {
     };
 
-    template <typename T1, typename T2, typename D> struct TransformFunctorTraits< AddWeighted<T1, T2, D> > : AddWeightedTraits<T1, T2, D, sizeof(T1), sizeof(T2), sizeof(D)>
+    template <typename T1, typename T2, typename D> struct TransformFunctorTraits< arithm::AddWeighted<T1, T2, D> > : AddWeightedTraits<T1, T2, D, sizeof(T1), sizeof(T2), sizeof(D)>
     {
     };
 }}}

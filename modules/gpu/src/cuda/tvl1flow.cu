@@ -52,9 +52,9 @@ using namespace cv::gpu::device;
 ////////////////////////////////////////////////////////////
 // centeredGradient
 
-namespace
+namespace tvl1flow
 {
-    __global__ void centeredGradient(const PtrStepSzf src, PtrStepf dx, PtrStepf dy)
+    __global__ void centeredGradientKernel(const PtrStepSzf src, PtrStepf dx, PtrStepf dy)
     {
         const int x = blockIdx.x * blockDim.x + threadIdx.x;
         const int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -65,16 +65,13 @@ namespace
         dx(y, x) = 0.5f * (src(y, ::min(x + 1, src.cols - 1)) - src(y, ::max(x - 1, 0)));
         dy(y, x) = 0.5f * (src(::min(y + 1, src.rows - 1), x) - src(::max(y - 1, 0), x));
     }
-}
 
-namespace tvl1flow
-{
     void centeredGradient(PtrStepSzf src, PtrStepSzf dx, PtrStepSzf dy)
     {
         const dim3 block(32, 8);
         const dim3 grid(divUp(src.cols, block.x), divUp(src.rows, block.y));
 
-        ::centeredGradient<<<grid, block>>>(src, dx, dy);
+        centeredGradientKernel<<<grid, block>>>(src, dx, dy);
         cudaSafeCall( cudaGetLastError() );
 
         cudaSafeCall( cudaDeviceSynchronize() );
@@ -84,7 +81,7 @@ namespace tvl1flow
 ////////////////////////////////////////////////////////////
 // warpBackward
 
-namespace
+namespace tvl1flow
 {
     static __device__ __forceinline__ float bicubicCoeff(float x_)
     {
@@ -107,7 +104,7 @@ namespace
     texture<float, cudaTextureType2D, cudaReadModeElementType> tex_I1x(false, cudaFilterModePoint, cudaAddressModeClamp);
     texture<float, cudaTextureType2D, cudaReadModeElementType> tex_I1y(false, cudaFilterModePoint, cudaAddressModeClamp);
 
-    __global__ void warpBackward(const PtrStepSzf I0, const PtrStepf u1, const PtrStepf u2, PtrStepf I1w, PtrStepf I1wx, PtrStepf I1wy, PtrStepf grad, PtrStepf rho)
+    __global__ void warpBackwardKernel(const PtrStepSzf I0, const PtrStepf u1, const PtrStepf u2, PtrStepf I1w, PtrStepf I1wx, PtrStepf I1wy, PtrStepf grad, PtrStepf rho)
     {
         const int x = blockIdx.x * blockDim.x + threadIdx.x;
         const int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -166,10 +163,7 @@ namespace
         const float I0Val = I0(y, x);
         rho(y, x) = I1wVal - I1wxVal * u1Val - I1wyVal * u2Val - I0Val;
     }
-}
 
-namespace tvl1flow
-{
     void warpBackward(PtrStepSzf I0, PtrStepSzf I1, PtrStepSzf I1x, PtrStepSzf I1y, PtrStepSzf u1, PtrStepSzf u2, PtrStepSzf I1w, PtrStepSzf I1wx, PtrStepSzf I1wy, PtrStepSzf grad, PtrStepSzf rho)
     {
         const dim3 block(32, 8);
@@ -179,7 +173,7 @@ namespace tvl1flow
         bindTexture(&tex_I1x, I1x);
         bindTexture(&tex_I1y, I1y);
 
-        ::warpBackward<<<grid, block>>>(I0, u1, u2, I1w, I1wx, I1wy, grad, rho);
+        warpBackwardKernel<<<grid, block>>>(I0, u1, u2, I1w, I1wx, I1wy, grad, rho);
         cudaSafeCall( cudaGetLastError() );
 
         cudaSafeCall( cudaDeviceSynchronize() );
@@ -189,7 +183,7 @@ namespace tvl1flow
 ////////////////////////////////////////////////////////////
 // estimateU
 
-namespace
+namespace tvl1flow
 {
     __device__ float divergence(const PtrStepf& v1, const PtrStepf& v2, int y, int x)
     {
@@ -213,7 +207,7 @@ namespace
         }
     }
 
-    __global__ void estimateU(const PtrStepSzf I1wx, const PtrStepf I1wy,
+    __global__ void estimateUKernel(const PtrStepSzf I1wx, const PtrStepf I1wy,
                               const PtrStepf grad, const PtrStepf rho_c,
                               const PtrStepf p11, const PtrStepf p12, const PtrStepf p21, const PtrStepf p22,
                               PtrStepf u1, PtrStepf u2, PtrStepf error,
@@ -275,10 +269,7 @@ namespace
         const float n2 = (u2OldVal - u2NewVal) * (u2OldVal - u2NewVal);
         error(y, x) = n1 + n2;
     }
-}
 
-namespace tvl1flow
-{
     void estimateU(PtrStepSzf I1wx, PtrStepSzf I1wy,
                    PtrStepSzf grad, PtrStepSzf rho_c,
                    PtrStepSzf p11, PtrStepSzf p12, PtrStepSzf p21, PtrStepSzf p22,
@@ -288,7 +279,7 @@ namespace tvl1flow
         const dim3 block(32, 8);
         const dim3 grid(divUp(I1wx.cols, block.x), divUp(I1wx.rows, block.y));
 
-        ::estimateU<<<grid, block>>>(I1wx, I1wy, grad, rho_c, p11, p12, p21, p22, u1, u2, error, l_t, theta);
+        estimateUKernel<<<grid, block>>>(I1wx, I1wy, grad, rho_c, p11, p12, p21, p22, u1, u2, error, l_t, theta);
         cudaSafeCall( cudaGetLastError() );
 
         cudaSafeCall( cudaDeviceSynchronize() );
@@ -298,9 +289,9 @@ namespace tvl1flow
 ////////////////////////////////////////////////////////////
 // estimateDualVariables
 
-namespace
+namespace tvl1flow
 {
-    __global__ void estimateDualVariables(const PtrStepSzf u1, const PtrStepf u2, PtrStepf p11, PtrStepf p12, PtrStepf p21, PtrStepf p22, const float taut)
+    __global__ void estimateDualVariablesKernel(const PtrStepSzf u1, const PtrStepf u2, PtrStepf p11, PtrStepf p12, PtrStepf p21, PtrStepf p22, const float taut)
     {
         const int x = blockIdx.x * blockDim.x + threadIdx.x;
         const int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -325,16 +316,13 @@ namespace
         p21(y, x) = (p21(y, x) + taut * u2x) / ng2;
         p22(y, x) = (p22(y, x) + taut * u2y) / ng2;
     }
-}
 
-namespace tvl1flow
-{
     void estimateDualVariables(PtrStepSzf u1, PtrStepSzf u2, PtrStepSzf p11, PtrStepSzf p12, PtrStepSzf p21, PtrStepSzf p22, float taut)
     {
         const dim3 block(32, 8);
         const dim3 grid(divUp(u1.cols, block.x), divUp(u1.rows, block.y));
 
-        ::estimateDualVariables<<<grid, block>>>(u1, u2, p11, p12, p21, p22, taut);
+        estimateDualVariablesKernel<<<grid, block>>>(u1, u2, p11, p12, p21, p22, taut);
         cudaSafeCall( cudaGetLastError() );
 
         cudaSafeCall( cudaDeviceSynchronize() );

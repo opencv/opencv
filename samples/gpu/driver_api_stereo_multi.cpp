@@ -76,7 +76,7 @@ GpuMat d_result[2];
 // CPU result
 Mat result;
 
-void printHelp()
+static void printHelp()
 {
     std::cout << "Usage: driver_api_stereo_multi_gpu --left <left_image> --right <right_image>\n";
 }

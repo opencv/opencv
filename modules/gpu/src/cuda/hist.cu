@@ -51,9 +51,9 @@
 using namespace cv::gpu;
 using namespace cv::gpu::device;
 
-namespace
+namespace hist
 {
-    __global__ void histogram256(const uchar* src, int cols, int rows, size_t step, int* hist)
+    __global__ void histogram256Kernel(const uchar* src, int cols, int rows, size_t step, int* hist)
     {
         __shared__ int shist[256];
 
@@ -94,16 +94,13 @@ namespace
         if (histVal > 0)
             ::atomicAdd(hist + tid, histVal);
     }
-}
 
-namespace hist
-{
     void histogram256(PtrStepSzb src, int* hist, cudaStream_t stream)
     {
         const dim3 block(32, 8);
         const dim3 grid(divUp(src.rows, block.y));
 
-        ::histogram256<<<grid, block, 0, stream>>>(src.data, src.cols, src.rows, src.step, hist);
+        histogram256Kernel<<<grid, block, 0, stream>>>(src.data, src.cols, src.rows, src.step, hist);
         cudaSafeCall( cudaGetLastError() );
 
         if (stream == 0)
@@ -113,7 +110,7 @@ namespace hist
 
 /////////////////////////////////////////////////////////////////////////
 
-namespace
+namespace hist
 {
     __constant__ int c_lut[256];
 
@@ -133,7 +130,7 @@ namespace
 
 namespace cv { namespace gpu { namespace device
 {
-    template <> struct TransformFunctorTraits<EqualizeHist> : DefaultTransformFunctorTraits<EqualizeHist>
+    template <> struct TransformFunctorTraits<hist::EqualizeHist> : DefaultTransformFunctorTraits<hist::EqualizeHist>
     {
         enum { smart_shift = 4 };
     };

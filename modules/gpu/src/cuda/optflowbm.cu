@@ -48,7 +48,7 @@
 using namespace cv::gpu;
 using namespace cv::gpu::device;
 
-namespace
+namespace optflowbm
 {
     texture<uchar, cudaTextureType2D, cudaReadModeElementType> tex_prev(false, cudaFilterModePoint, cudaAddressModeClamp);
     texture<uchar, cudaTextureType2D, cudaReadModeElementType> tex_curr(false, cudaFilterModePoint, cudaAddressModeClamp);
@@ -145,10 +145,7 @@ namespace
         velx(i, j) = static_cast<float>(sumx) / countMin;
         vely(i, j) = static_cast<float>(sumy) / countMin;
     }
-}
 
-namespace optflowbm
-{
     void calc(PtrStepSzb prev, PtrStepSzb curr, PtrStepSzf velx, PtrStepSzf vely, int2 blockSize, int2 shiftSize, bool usePrevious,
               int maxX, int maxY, int acceptLevel, int escapeLevel, const short2* ss, int ssCount, cudaStream_t stream)
     {
