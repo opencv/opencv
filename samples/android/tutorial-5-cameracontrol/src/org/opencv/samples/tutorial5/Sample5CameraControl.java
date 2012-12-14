@@ -1,5 +1,7 @@
 package org.opencv.samples.tutorial5;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
 import java.util.ListIterator;
 
@@ -9,6 +11,7 @@ import org.opencv.android.OpenCVLoader;
 import org.opencv.core.Mat;
 import org.opencv.android.CameraBridgeViewBase.CvCameraViewListener;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.os.Bundle;
 import android.os.Environment;
@@ -20,6 +23,7 @@ import android.view.SurfaceView;
 import android.view.View;
 import android.view.View.OnTouchListener;
 import android.view.WindowManager;
+import android.widget.Toast;
 
 public class Sample5CameraControl extends Activity implements CvCameraViewListener, OnTouchListener {
     private static final String TAG = "OCVSample::Activity";
@@ -100,6 +104,11 @@ public class Sample5CameraControl extends Activity implements CvCameraViewListen
     public boolean onCreateOptionsMenu(Menu menu) {
         List<String> effects = mOpenCvCameraView.getEffectList();
 
+        if (effects == null) {
+            Log.e(TAG, "Color effects are not supported by device!");
+            return true;
+        }
+
         mEffectMenuItems = new MenuItem[effects.size()];
 
         int idx = 0;
@@ -115,13 +124,20 @@ public class Sample5CameraControl extends Activity implements CvCameraViewListen
     public boolean onOptionsItemSelected(MenuItem item) {
         Log.i(TAG, "called onOptionsItemSelected; selected item: " + item);
         mOpenCvCameraView.setEffect((String) item.getTitle());
+        Toast.makeText(this, mOpenCvCameraView.getEffect(), Toast.LENGTH_SHORT).show();
         return true;
     }
 
+    @SuppressLint("SimpleDateFormat")
     @Override
     public boolean onTouch(View v, MotionEvent event) {
         Log.i(TAG,"onTouch event");
-        mOpenCvCameraView.takePicture(Environment.getExternalStorageDirectory().getPath() + "/sample_picture.jpg");
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss");
+        String currentDateandTime = sdf.format(new Date());
+        String fileName = Environment.getExternalStorageDirectory().getPath() +
+                               "/sample_picture_" + currentDateandTime + ".jpg";
+        mOpenCvCameraView.takePicture(fileName);
+        Toast.makeText(this, fileName + " saved", Toast.LENGTH_SHORT).show();
         return false;
     }
 }
