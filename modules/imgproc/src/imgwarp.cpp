@@ -1271,7 +1271,7 @@ public:
         if (cn == 1)
         {
             __m128i masklow = _mm_set1_epi16(0x00ff);
-            for ( ; dx < w; dx += 8, S0 += 16, S1 += 16, D += 8)
+            for ( ; dx < w - 8; dx += 8, S0 += 16, S1 += 16, D += 8)
             {
                 __m128i r0 = _mm_loadu_si128((const __m128i*)S0);
                 __m128i r1 = _mm_loadu_si128((const __m128i*)S1);
@@ -1285,7 +1285,7 @@ public:
             }
         }
         else if (cn == 3)
-            for ( ; dx < w; dx += 6, S0 += 12, S1 += 12, D += 6)
+            for ( ; dx < w - 6; dx += 6, S0 += 12, S1 += 12, D += 6)
             {
                 __m128i r0 = _mm_loadu_si128((const __m128i*)S0);
                 __m128i r1 = _mm_loadu_si128((const __m128i*)S1);
@@ -1310,7 +1310,7 @@ public:
         else
         {
             CV_Assert(cn == 4);
-            for ( ; dx < w; dx += 8, S0 += 16, S1 += 16, D += 8)
+            for ( ; dx < w - 8; dx += 8, S0 += 16, S1 += 16, D += 8)
             {
                 __m128i r0 = _mm_loadu_si128((const __m128i*)S0);
                 __m128i r1 = _mm_loadu_si128((const __m128i*)S1);
@@ -1359,7 +1359,7 @@ public:
 
         int dx = 0;
         const ushort* S0 = (const ushort*)S;
-        const ushort* S1 = (const ushort*)(S0 + step);
+        const ushort* S1 = (const ushort*)(S + step);
         __m128i masklow = _mm_set1_epi32(0x0000ffff);
         __m128i zero = _mm_setzero_si128();
         __m128i delta2 = _mm_set1_epi32(2);
