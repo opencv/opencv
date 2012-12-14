@@ -300,7 +300,7 @@ template <typename T> int sgn(T val) {
     return (T(0) < val) - (val < T(0));
 }
 
-void sft::Octave::traverse(const CvBoostTree* tree, cv::FileStorage& fs, const float* th) const
+void sft::Octave::traverse(const CvBoostTree* tree, cv::FileStorage& fs, int& nfeatures, int* used, const float* th) const
 {
     std::queue<const CvDTreeNode*> nodes;
     nodes.push( tree->get_root());
@@ -336,8 +336,10 @@ void sft::Octave::traverse(const CvBoostTree* tree, cv::FileStorage& fs, const f
             nodes.push( tempNode->right );
             fs << internalNodeIdx++;
         }
+
         int fidx = tempNode->split->var_idx;
-        fs << fidx;
+        fs << nfeatures;
+        used[nfeatures++] = fidx;
 
         fs << tempNode->split->ord.c;
 
@@ -353,8 +355,11 @@ void sft::Octave::traverse(const CvBoostTree* tree, cv::FileStorage& fs, const f
     fs << "}";
 }
 
-void sft::Octave::write( cv::FileStorage &fso, const Mat& thresholds) const
+void sft::Octave::write( cv::FileStorage &fso, const FeaturePool& pool, const Mat& thresholds) const
 {
+    cv::Mat used( 1, weak->total * (pow(2, params.max_depth) - 1), CV_32SC1);
+    int* usedPtr = used.ptr<int>(0);
+    int nfeatures = 0;
     fso << "{"
         << "scale" << logScale
         << "weaks" << weak->total
@@ -369,12 +374,19 @@ void sft::Octave::write( cv::FileStorage &fso, const Mat& thresholds) const
             CV_READ_SEQ_ELEM( tree, reader );
 
             if (!thresholds.empty())
-                traverse(tree, fso, thresholds.ptr<float>(0)+ i);
+                traverse(tree, fso, nfeatures, usedPtr, thresholds.ptr<float>(0)+ i);
             else
-                traverse(tree, fso);
+                traverse(tree, fso, nfeatures, usedPtr);
         }
         //
 
+    fso << "]";
+    // features
+
+    fso << "features" << "[";
+    for (int i = 0; i < nfeatures; ++i)
+        // fso << usedPtr[i];
+        pool.write(fso, usedPtr[i]);
     fso << "]"
         << "}";
 }
@@ -481,6 +493,17 @@ sft::FeaturePool::FeaturePool(cv::Size m, int n) : model(m), nfeatures(n)
 float sft::FeaturePool::apply(int fi, int si, const Mat& integrals) const
 {
     return pool[fi](integrals.row(si), model);
+}
+
+void sft::FeaturePool::write( cv::FileStorage& fs, int index) const
+{
+    CV_Assert((index > 0) && (index < (int)pool.size()));
+    fs << pool[index];
+}
+
+void sft::write(cv::FileStorage& fs, const string&, const ICF& f)
+{
+    fs << "{" << "channel" << f.channel << "rect" << f.bb << "}";
 }
 
 

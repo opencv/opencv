@@ -162,8 +162,8 @@ int main(int argc, char** argv)
             cv::Mat thresholds;
             boost.setRejectThresholds(thresholds);
 
-            boost.write(fso, thresholds);
-            boost.write(fsr);
+            boost.write(fso, pool, thresholds);
+            boost.write(fsr, pool);
             // std::cout << "thresholds " << thresholds << std::endl;
 
             cv::FileStorage tfs(("thresholds." + cfg.resPath(it)).c_str(), cv::FileStorage::WRITE);
