@@ -833,7 +833,8 @@ namespace cv
         {
             oclMat edges;
             oclMat accum;
-            oclMat list;
+            oclMat srcPoints;
+            oclMat centers;
             CannyBuf cannyBuf;
         };
 
