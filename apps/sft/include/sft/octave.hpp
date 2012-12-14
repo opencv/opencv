@@ -95,9 +95,11 @@ private:
     cv::Rect bb;
     int channel;
 
-    friend std::ostream& operator<<(std::ostream& out, const ICF& m);
+    friend void write(cv::FileStorage& fs, const string&, const ICF& f);
+    friend std::ostream& operator<<(std::ostream& out, const ICF& f);
 };
 
+void write(cv::FileStorage& fs, const string&, const ICF& f);
 std::ostream& operator<<(std::ostream& out, const ICF& m);
 
 class FeaturePool
@@ -107,6 +109,7 @@ public:
 
     int size() const { return (int)pool.size(); }
     float apply(int fi, int si, const Mat& integrals) const;
+    void write( cv::FileStorage& fs, int index) const;
 
 private:
     void fill(int desired);
@@ -140,11 +143,11 @@ public:
     virtual ~Octave();
 
     virtual bool train(const Dataset& dataset, const FeaturePool& pool, int weaks, int treeDepth);
-    virtual void write( CvFileStorage* fs, string name) const;
     virtual float predict( const Mat& _sample, Mat& _votes, bool raw_mode, bool return_sum ) const;
     virtual void setRejectThresholds(cv::Mat& thresholds);
+    virtual void write( CvFileStorage* fs, string name) const;
 
-    virtual void write( cv::FileStorage &fs, const Mat& thresholds = Mat()) const;
+    virtual void write( cv::FileStorage &fs, const FeaturePool& pool, const Mat& thresholds = Mat()) const;
 
     int logScale;
 
@@ -157,8 +160,9 @@ protected:
 
     float predict( const Mat& _sample, const cv::Range range) const;
 private:
-    void traverse(const CvBoostTree* tree, cv::FileStorage& fs, const float* th = 0) const;
+    void traverse(const CvBoostTree* tree, cv::FileStorage& fs, int& nfeatures, int* used, const float* th = 0) const;
     virtual void initial_weights(double (&p)[2]);
+
     cv::Rect boundingBox;
 
     int npositives;
