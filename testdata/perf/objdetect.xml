@@ -862,4 +862,14 @@
       <dt>"4i"</dt>
       <data>
         155 170 101 101</data></val></faces></ImageName_MinSize_CascadeClassifierLBPFrontalFace--CascadeClassifierLBPFrontalFace----cv-shared-1_itseez-0002524-png---90->
+ <!-- resumed -->
+<detect_SCascade--SCascade----cv-cascadeandhog-sc_cvpr_2012_to_opencv-xml----cv-cascadeandhog-bahnhof-image_00000000_0-png-->
+  <rects>
+    <kind>196608</kind>
+    <type>28</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>0</cols>
+      <dt>u</dt>
+      <data></data></val></rects></detect_SCascade--SCascade----cv-cascadeandhog-sc_cvpr_2012_to_opencv-xml----cv-cascadeandhog-bahnhof-image_00000000_0-png-->
 </opencv_storage>

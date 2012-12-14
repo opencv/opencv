@@ -11784,4 +11784,24 @@
       <y>48</y>
       <cn>1</cn>
       <val>51.</val></rng2></pyramid></Path_Win_Deriv_Border_Reuse_OpticalFlowPyrLK_pyr--OpticalFlowPyrLK_pyr----cv-optflow-frames-720p_01-png---11--true--BORDER_TRANSPARENT--true->
+ <!-- resumed -->
+<ImagePair_OpticalFlowDual_TVL1--OpticalFlowDual_TVL1----cv-optflow-RubberWhale1-png----cv-optflow-RubberWhale2-png-->
+  <flow>
+    <kind>65536</kind>
+    <type>13</type>
+    <min>-3.6553812026977539e+00</min>
+    <max>3.6595113277435303e+00</max>
+    <last>
+      <x>583</x>
+      <y>387</y>
+      <val>-2.7028935030102730e-02</val></last>
+    <rng1>
+      <x>226</x>
+      <y>35</y>
+      <cn>1</cn>
+      <val>-3.7812042981386185e-02</val></rng1>
+    <rng2>
+      <x>581</x>
+      <y>276</y>
+      <val>1.0239248275756836e+00</val></rng2></flow></ImagePair_OpticalFlowDual_TVL1--OpticalFlowDual_TVL1----cv-optflow-RubberWhale1-png----cv-optflow-RubberWhale2-png-->
 </opencv_storage>
