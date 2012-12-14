@@ -16,7 +16,8 @@ const std::string command_line_keys =
     "{   |perf_force_samples  |100      |force set maximum number of samples for all tests}"
     "{   |perf_seed           |809564   |seed for random numbers generator}"
     "{   |perf_threads        |-1       |the number of worker threads, if parallel execution is enabled}"
-    "{   |perf_write_sanity   |false    |allow to create new records for sanity checks}"
+    "{   |perf_write_sanity   |false    |create new records for sanity checks}"
+    "{   |perf_verify_sanity  |false    |fail tests having no regression data for sanity checks}"
 #ifdef ANDROID
     "{   |perf_time_limit     |6.0      |default time limit for a single test (in seconds)}"
     "{   |perf_affinity_mask  |0        |set affinity mask for the main thread}"
@@ -41,6 +42,7 @@ static uint64       param_seed;
 static double       param_time_limit;
 static int          param_threads;
 static bool         param_write_sanity;
+static bool         param_verify_sanity;
 #ifdef HAVE_CUDA
 static bool         param_run_cpu;
 static int          param_cuda_device;
@@ -600,6 +602,10 @@ Regression& Regression::operator() (const std::string& name, cv::InputArray arra
             write(array);
             write() << "}";
         }
+        else if(param_verify_sanity)
+        {
+            ADD_FAILURE() << "  No regression data for " << name << " argument";
+        }
     }
     else
     {
@@ -658,6 +664,7 @@ void TestBase::Init(int argc, const char* const argv[])
     param_time_limit    = std::max(0., args.get<double>("perf_time_limit"));
     param_force_samples = args.get<unsigned int>("perf_force_samples");
     param_write_sanity  = args.get<bool>("perf_write_sanity");
+    param_verify_sanity = args.get<bool>("perf_verify_sanity");
     param_threads  = args.get<int>("perf_threads");
 #ifdef ANDROID
     param_affinity_mask   = args.get<int>("perf_affinity_mask");
