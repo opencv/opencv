@@ -1359,7 +1359,7 @@ public:
 
         int dx = 0;
         const ushort* S0 = (const ushort*)S;
-        const ushort* S1 = (const ushort*)(S + step);
+        const ushort* S1 = (const ushort*)(S + step/2);
         __m128i masklow = _mm_set1_epi32(0x0000ffff);
         __m128i zero = _mm_setzero_si128();
         __m128i delta2 = _mm_set1_epi32(2);
