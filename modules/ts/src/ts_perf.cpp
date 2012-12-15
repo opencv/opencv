@@ -305,23 +305,25 @@ double Regression::getElem(cv::Mat& m, int y, int x, int cn)
 
 void Regression::write(cv::Mat m)
 {
+    if (!m.empty() && m.dims < 2) return;
+
     double min, max;
-    cv::minMaxLoc(m, &min, &max);
+    cv::minMaxIdx(m, &min, &max);
     write() << "min" << min << "max" << max;
 
-    write() << "last" << "{" << "x" << m.cols-1 << "y" << m.rows-1
-        << "val" << getElem(m, m.rows-1, m.cols-1, m.channels()-1) << "}";
+    write() << "last" << "{" << "x" << m.size.p[1] - 1 << "y" << m.size.p[0] - 1
+        << "val" << getElem(m, m.size.p[0] - 1, m.size.p[1] - 1, m.channels() - 1) << "}";
 
     int x, y, cn;
-    x = regRNG.uniform(0, m.cols);
-    y = regRNG.uniform(0, m.rows);
+    x = regRNG.uniform(0, m.size.p[1]);
+    y = regRNG.uniform(0, m.size.p[0]);
     cn = regRNG.uniform(0, m.channels());
     write() << "rng1" << "{" << "x" << x << "y" << y;
     if(cn > 0) write() << "cn" << cn;
     write() << "val" << getElem(m, y, x, cn) << "}";
 
-    x = regRNG.uniform(0, m.cols);
-    y = regRNG.uniform(0, m.rows);
+    x = regRNG.uniform(0, m.size.p[1]);
+    y = regRNG.uniform(0, m.size.p[0]);
     cn = regRNG.uniform(0, m.channels());
     write() << "rng2" << "{" << "x" << x << "y" << y;
     if (cn > 0) write() << "cn" << cn;
@@ -339,8 +341,10 @@ static double evalEps(double expected, double actual, double _eps, ERROR_TYPE er
 
 void Regression::verify(cv::FileNode node, cv::Mat actual, double _eps, std::string argname, ERROR_TYPE err)
 {
+    if (!actual.empty() && actual.dims < 2) return;
+
     double actual_min, actual_max;
-    cv::minMaxLoc(actual, &actual_min, &actual_max);
+    cv::minMaxIdx(actual, &actual_min, &actual_max);
 
     double expect_min = (double)node["min"];
     double eps = evalEps(expect_min, actual_min, _eps, err);
@@ -353,12 +357,12 @@ void Regression::verify(cv::FileNode node, cv::Mat actual, double _eps, std::str
             << argname << " has unexpected maximal value" << std::endl;
 
     cv::FileNode last = node["last"];
-    double actual_last = getElem(actual, actual.rows - 1, actual.cols - 1, actual.channels() - 1);
+    double actual_last = getElem(actual, actual.size.p[0] - 1, actual.size.p[1] - 1, actual.channels() - 1);
     int expect_cols = (int)last["x"] + 1;
     int expect_rows = (int)last["y"] + 1;
-    ASSERT_EQ(expect_cols, actual.cols)
+    ASSERT_EQ(expect_cols, actual.size.p[1])
             << argname << " has unexpected number of columns" << std::endl;
-    ASSERT_EQ(expect_rows, actual.rows)
+    ASSERT_EQ(expect_rows, actual.size.p[0])
             << argname << " has unexpected number of rows" << std::endl;
 
     double expect_last = (double)last["val"];
@@ -372,6 +376,8 @@ void Regression::verify(cv::FileNode node, cv::Mat actual, double _eps, std::str
     int cn1 = rng1["cn"];
 
     double expect_rng1 = (double)rng1["val"];
+    // it is safe to use x1 and y1 without checks here because we have already
+    // verified that mat size is the same as recorded
     double actual_rng1 = getElem(actual, y1, x1, cn1);
 
     eps = evalEps(expect_rng1, actual_rng1, _eps, err);
@@ -490,7 +496,7 @@ void Regression::verify(cv::FileNode node, cv::InputArray array, double eps, ERR
                             std::cout << " Expected: " << std::endl << expected << std::endl << " Actual:" << std::endl << actual << std::endl;
 
                         double max;
-                        cv::minMaxLoc(diff.reshape(1), 0, &max);
+                        cv::minMaxIdx(diff.reshape(1), 0, &max);
 
                         FAIL() << "  Absolute difference (=" << max << ") between argument \""
                                << node.name() << "[" <<  idx << "]\" and expected value is greater than " << eps;
@@ -544,7 +550,7 @@ void Regression::verify(cv::FileNode node, cv::InputArray array, double eps, ERR
                             std::cout << " Expected: " << std::endl << expected << std::endl << " Actual:" << std::endl << actual << std::endl;
 
                         double max;
-                        cv::minMaxLoc(diff.reshape(1), 0, &max);
+                        cv::minMaxIdx(diff.reshape(1), 0, &max);
 
                         FAIL() << "  Difference (=" << max << ") between argument1 \"" << node.name()
                                << "\" and expected value is greater than " << eps;
@@ -1154,12 +1160,17 @@ void TestBase::RunPerfTestBody()
     catch(cv::Exception e)
     {
         metrics.terminationReason = performance_metrics::TERM_EXCEPTION;
-        FAIL() << "Expected: PerfTestBody() doesn't throw an exception.\n  Actual: it throws:\n  " << e.what();
+        FAIL() << "Expected: PerfTestBody() doesn't throw an exception.\n  Actual: it throws cv::Exception:\n  " << e.what();
+    }
+    catch(std::exception e)
+    {
+        metrics.terminationReason = performance_metrics::TERM_EXCEPTION;
+        FAIL() << "Expected: PerfTestBody() doesn't throw an exception.\n  Actual: it throws std::exception:\n  " << e.what();
     }
     catch(...)
     {
         metrics.terminationReason = performance_metrics::TERM_EXCEPTION;
-        FAIL() << "Expected: PerfTestBody() doesn't throw an exception.\n  Actual: it throws.";
+        FAIL() << "Expected: PerfTestBody() doesn't throw an exception.\n  Actual: it throws...";
     }
 }
 
