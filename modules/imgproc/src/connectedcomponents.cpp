@@ -43,22 +43,16 @@
 #include "precomp.hpp"
 #include <vector>
 
-#if defined _MSC_VER
-#pragma warning(disable: 4127)
-#endif
-
 namespace cv{
     namespace connectedcomponents{
 
-    template<typename LabelT>
     struct NoOp{
         NoOp(){
         }
-        void init(const LabelT labels){
-            (void) labels;
+        void init(int /*labels*/){
         }
         inline
-        void operator()(int r, int c, LabelT l){
+        void operator()(int r, int c, int l){
             (void) r;
             (void) c;
             (void) l;
@@ -69,38 +63,35 @@ namespace cv{
         uint64 x, y;
         Point2ui64(uint64 _x, uint64 _y):x(_x), y(_y){}
     };
-    template<typename LabelT>
+
     struct CCStatsOp{
-        OutputArray _mstatsv;
+        const _OutputArray* _mstatsv;
         cv::Mat statsv;
-        OutputArray _mcentroidsv;
+        const _OutputArray* _mcentroidsv;
         cv::Mat centroidsv;
         std::vector<Point2ui64> integrals;
 
-        CCStatsOp(OutputArray _statsv, OutputArray _centroidsv): _mstatsv(_statsv), _mcentroidsv(_centroidsv){
+        CCStatsOp(OutputArray _statsv, OutputArray _centroidsv): _mstatsv(&_statsv), _mcentroidsv(&_centroidsv){
         }
         inline
-        void init(const LabelT nlabels){
-            _mstatsv.create(cv::Size(nlabels, CC_STAT_MAX), cv::DataType<int>::type);
-            statsv = _mstatsv.getMat();
-            _mcentroidsv.create(cv::Size(nlabels, 2), cv::DataType<double>::type);
-            centroidsv = _mcentroidsv.getMat();
+        void init(int nlabels){
+            _mstatsv->create(cv::Size(nlabels, CC_STAT_MAX), cv::DataType<int>::type);
+            statsv = _mstatsv->getMat();
+            _mcentroidsv->create(cv::Size(nlabels, 2), cv::DataType<double>::type);
+            centroidsv = _mcentroidsv->getMat();
 
             for(int l = 0; l < (int) nlabels; ++l){
-                unsigned int *row = (unsigned int *) &statsv.at<int>(l, 0);
-                row[CC_STAT_LEFT] = std::numeric_limits<LabelT>::max();
-                row[CC_STAT_TOP] = std::numeric_limits<LabelT>::max();
-                row[CC_STAT_WIDTH] = std::numeric_limits<LabelT>::min();
-                row[CC_STAT_HEIGHT] = std::numeric_limits<LabelT>::min();
-                //row[CC_STAT_CX] = 0;
-                //row[CC_STAT_CY] = 0;
+                int *row = (int *) &statsv.at<int>(l, 0);
+                row[CC_STAT_LEFT] = INT_MAX;
+                row[CC_STAT_TOP] = INT_MAX;
+                row[CC_STAT_WIDTH] = INT_MIN;
+                row[CC_STAT_HEIGHT] = INT_MIN;
                 row[CC_STAT_AREA] = 0;
             }
             integrals.resize(nlabels, Point2ui64(0, 0));
         }
-        void operator()(int r, int c, LabelT l){
+        void operator()(int r, int c, int l){
             int *row = &statsv.at<int>(l, 0);
-            unsigned int *urow = (unsigned int *) row;
             if(c > row[CC_STAT_WIDTH]){
                 row[CC_STAT_WIDTH] = c;
             }else{
@@ -115,14 +106,14 @@ namespace cv{
                     row[CC_STAT_TOP] = r;
                 }
             }
-            urow[CC_STAT_AREA]++;
+            row[CC_STAT_AREA]++;
             Point2ui64 &integral = integrals[l];
             integral.x += c;
             integral.y += r;
         }
         void finish(){
             for(int l = 0; l < statsv.rows; ++l){
-                unsigned int *row = (unsigned int *) &statsv.at<int>(l, 0);
+                int *row = &statsv.at<int>(l, 0);
                 row[CC_STAT_LEFT] = std::min(row[CC_STAT_LEFT], row[CC_STAT_WIDTH]);
                 row[CC_STAT_WIDTH] = row[CC_STAT_WIDTH] - row[CC_STAT_LEFT] + 1;
                 row[CC_STAT_TOP] = std::min(row[CC_STAT_TOP], row[CC_STAT_HEIGHT]);
@@ -130,8 +121,9 @@ namespace cv{
 
                 Point2ui64 &integral = integrals[l];
                 double *centroid = &centroidsv.at<double>(l, 0);
-                centroid[0] = double(integral.x) / row[CC_STAT_AREA];
-                centroid[1] = double(integral.y) / row[CC_STAT_AREA];
+                double area = ((unsigned*)row)[CC_STAT_AREA];
+                centroid[0] = double(integral.x) / area;
+                centroid[1] = double(integral.y) / area;
             }
         }
     };
@@ -207,11 +199,12 @@ namespace cv{
     const int G4[2][2] = {{1, 0}, {0, -1}};//b, d neighborhoods
     //reference for 8-way: {{-1, -1}, {-1, 0}, {-1, 1}, {0, -1}};//a, b, c, d neighborhoods
     const int G8[4][2] = {{1, -1}, {1, 0}, {1, 1}, {0, -1}};//a, b, c, d neighborhoods
-    template<typename LabelT, typename PixelT, typename StatsOp = NoOp<LabelT>, int connectivity = 8>
+    template<typename LabelT, typename PixelT, typename StatsOp = NoOp >
     struct LabelingImpl{
-    LabelT operator()(const cv::Mat &I, cv::Mat &L, StatsOp &sop){
+    LabelT operator()(const cv::Mat &I, cv::Mat &L, int connectivity, StatsOp &sop){
         CV_Assert(L.rows == I.rows);
         CV_Assert(L.cols == I.cols);
+        CV_Assert(connectivity == 8 || connectivity == 4);
         const int rows = L.rows;
         const int cols = L.cols;
         size_t Plength = (size_t(rows + 3 - 1)/3) * (size_t(cols + 3 - 1)/3);
@@ -295,7 +288,6 @@ namespace cv{
                 }
             }else{
                 //B & D only
-                assert(connectivity == 4);
                 const int b = 0;
                 const int d = 1;
                 const bool T_b_r = (r_i - G4[b][0]) >= 0;
@@ -368,70 +360,52 @@ int connectedComponents_sub1(const cv::Mat &I, cv::Mat &L, int connectivity, Sta
     using connectedcomponents::LabelingImpl;
     //warn if L's depth is not sufficient?
 
+    CV_Assert(iDepth == CV_8U || iDepth == CV_8S);
+
     if(lDepth == CV_8U){
-        if(iDepth == CV_8U || iDepth == CV_8S){
-            if(connectivity == 4){
-                return (int) LabelingImpl<uchar, uchar, StatsOp, 4>()(I, L, sop);
-            }else{
-                return (int) LabelingImpl<uchar, uchar, StatsOp, 8>()(I, L, sop);
-            }
-        }else{
-            CV_Assert(false);
-        }
+        return (int) LabelingImpl<uchar, uchar, StatsOp>()(I, L, connectivity, sop);
     }else if(lDepth == CV_16U){
-        if(iDepth == CV_8U || iDepth == CV_8S){
-            if(connectivity == 4){
-                return (int) LabelingImpl<ushort, uchar, StatsOp, 4>()(I, L, sop);
-            }else{
-                return (int) LabelingImpl<ushort, uchar, StatsOp, 8>()(I, L, sop);
-            }
-        }else{
-            CV_Assert(false);
-        }
+        return (int) LabelingImpl<ushort, uchar, StatsOp>()(I, L, connectivity, sop);
     }else if(lDepth == CV_32S){
         //note that signed types don't really make sense here and not being able to use unsigned matters for scientific projects
         //OpenCV: how should we proceed?  .at<T> typechecks in debug mode
-        if(iDepth == CV_8U || iDepth == CV_8S){
-            if(connectivity == 4){
-                return (int) LabelingImpl<int, uchar, StatsOp, 4>()(I, L, sop);
-            }else{
-                return (int) LabelingImpl<int, uchar, StatsOp, 8>()(I, L, sop);
-            }
-        }else{
-            CV_Assert(false);
-        }
+        return (int) LabelingImpl<int, uchar, StatsOp>()(I, L, connectivity, sop);
     }
 
     CV_Error(CV_StsUnsupportedFormat, "unsupported label/image type");
     return -1;
 }
 
-int connectedComponents(InputArray _I, OutputArray _L, int connectivity, int ltype){
+}
+
+int cv::connectedComponents(InputArray _I, OutputArray _L, int connectivity, int ltype){
     const cv::Mat I = _I.getMat();
-    _L.create(I.size(), CV_MAT_TYPE(ltype));
+    _L.create(I.size(), CV_MAT_DEPTH(ltype));
     cv::Mat L = _L.getMat();
+    connectedcomponents::NoOp sop;
     if(ltype == CV_16U){
-        connectedcomponents::NoOp<ushort> sop; return connectedComponents_sub1(I, L, connectivity, sop);
+        return connectedComponents_sub1(I, L, connectivity, sop);
     }else if(ltype == CV_32S){
-        connectedcomponents::NoOp<unsigned> sop; return connectedComponents_sub1(I, L, connectivity, sop);
+        return connectedComponents_sub1(I, L, connectivity, sop);
     }else{
-        CV_Assert(false);
+        CV_Error(CV_StsUnsupportedFormat, "the type of labels must be 16u or 32s");
         return 0;
     }
 }
 
-int connectedComponentsWithStats(InputArray _I, OutputArray _L, OutputArray statsv, OutputArray centroids, int connectivity, int ltype){
+int cv::connectedComponentsWithStats(InputArray _I, OutputArray _L, OutputArray statsv,
+                                     OutputArray centroids, int connectivity, int ltype)
+{
     const cv::Mat I = _I.getMat();
-    _L.create(I.size(), CV_MAT_TYPE(ltype));
+    _L.create(I.size(), CV_MAT_DEPTH(ltype));
     cv::Mat L = _L.getMat();
+    connectedcomponents::CCStatsOp sop(statsv, centroids); 
     if(ltype == CV_16U){
-        connectedcomponents::CCStatsOp<ushort> sop(statsv, centroids); return connectedComponents_sub1(I, L, connectivity, sop);
+        return connectedComponents_sub1(I, L, connectivity, sop);
     }else if(ltype == CV_32S){
-        connectedcomponents::CCStatsOp<unsigned> sop(statsv, centroids); return connectedComponents_sub1(I, L, connectivity, sop);
+        return connectedComponents_sub1(I, L, connectivity, sop);
     }else{
-        CV_Assert(false);
+        CV_Error(CV_StsUnsupportedFormat, "the type of labels must be 16u or 32s");
         return 0;
     }
-}
-
 }
