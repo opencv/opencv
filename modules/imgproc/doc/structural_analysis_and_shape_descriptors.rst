@@ -118,6 +118,48 @@ These values are proved to be invariants to the image scale, rotation, and refle
 
 .. seealso:: :ocv:func:`matchShapes`
 
+connectedComponents
+-----------
+computes the connected components labeled image of boolean image I with 4 or 8 way connectivity - returns N, the total
+number of labels [0, N-1] where 0 represents the background label. L's value type determines the label type, an important
+consideration based on the total number of labels or alternatively the total number of pixels.
+
+.. ocv:function:: uint64 connectedComponents(Mat &L, const Mat &I, int connectivity = 8)
+
+.. ocv:function:: uint64 connectedComponentsWithStats(Mat &L, const Mat &I, std::vector<ConnectedComponentStats> &statsv, int connectivity = 8)
+
+    :param L: destitination Labeled image
+
+    :param I: the image to be labeled
+
+    :param connectivity: 8 or 4 for 8-way or 4-way connectivity respectively
+
+    :param statsv: statistics for each label, including the background label
+
+Statistics information such as bounding box, area, and centroid is exported via the ``ConnectComponentStats`` structure defined as: ::
+
+    class CV_EXPORTS ConnectedComponentStats
+    {
+        public:
+        //! lower left corner column
+        int lower_x;
+        //! lower left corner row
+        int lower_y;
+        //! upper right corner column
+        int upper_x;
+        //! upper right corner row
+        int upper_y;
+        //! centroid column
+        double centroid_x;
+        //! centroid row
+        double centroid_y;
+        //! sum of all columns where the image was non-zero
+        uint64 integral_x;
+        //! sum of all rows where the image was non-zero
+        uint64 integral_y;
+        //! count of all non-zero pixels
+        unsigned int area;
+    };
 
 findContours
 ----------------

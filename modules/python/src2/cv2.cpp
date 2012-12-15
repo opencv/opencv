@@ -410,7 +410,7 @@ static bool pyopencv_to(PyObject* obj, bool& value, const char* name = "<unknown
 
 static PyObject* pyopencv_from(size_t value)
 {
-    return PyLong_FromUnsignedLong((unsigned long)value);
+    return PyLong_FromSize_t(value);
 }
 
 static bool pyopencv_to(PyObject* obj, size_t& value, const char* name = "<unknown>")
@@ -497,8 +497,15 @@ static bool pyopencv_to(PyObject* obj, float& value, const char* name = "<unknow
 
 static PyObject* pyopencv_from(int64 value)
 {
-    return PyFloat_FromDouble((double)value);
+    return PyLong_FromLongLong(value);
 }
+
+#if !defined(__LP64__)
+static PyObject* pyopencv_from(uint64 value)
+{
+    return PyLong_FromUnsignedLongLong(value);
+}
+#endif
 
 static PyObject* pyopencv_from(const string& value)
 {
