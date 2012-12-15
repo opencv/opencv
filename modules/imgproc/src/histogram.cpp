@@ -2407,58 +2407,106 @@ cvCalcProbDensity( const CvHistogram* hist, const CvHistogram* hist_mask,
 
 CV_IMPL void cvEqualizeHist( const CvArr* srcarr, CvArr* dstarr )
 {
-    CvMat sstub, *src = cvGetMat(srcarr, &sstub);
-    CvMat dstub, *dst = cvGetMat(dstarr, &dstub);
-
-    CV_Assert( CV_ARE_SIZES_EQ(src, dst) && CV_ARE_TYPES_EQ(src, dst) &&
-               CV_MAT_TYPE(src->type) == CV_8UC1 );
-    CvSize size = cvGetMatSize(src);
-    if( CV_IS_MAT_CONT(src->type & dst->type) )
-    {
-        size.width *= size.height;
-        size.height = 1;
-    }
-    int x, y;
-    const int hist_sz = 256;
-    int hist[hist_sz];
-    memset(hist, 0, sizeof(hist));
-
-    for( y = 0; y < size.height; y++ )
-    {
-        const uchar* sptr = src->data.ptr + src->step*y;
-        for( x = 0; x < size.width; x++ )
-            hist[sptr[x]]++;
-    }
-
-    float scale = 255.f/(size.width*size.height);
-    int sum = 0;
-    uchar lut[hist_sz+1];
-
-    for( int i = 0; i < hist_sz; i++ )
-    {
-        sum += hist[i];
-        int val = cvRound(sum*scale);
-        lut[i] = CV_CAST_8U(val);
-    }
-
-    lut[0] = 0;
-    for( y = 0; y < size.height; y++ )
-    {
-        const uchar* sptr = src->data.ptr + src->step*y;
-        uchar* dptr = dst->data.ptr + dst->step*y;
-        for( x = 0; x < size.width; x++ )
-            dptr[x] = lut[sptr[x]];
-    }
+    cv::equalizeHist(cv::cvarrToMat(srcarr), cv::cvarrToMat(dstarr));
 }
-
 
 void cv::equalizeHist( InputArray _src, OutputArray _dst )
 {
     Mat src = _src.getMat();
+    CV_Assert( src.type() == CV_8UC1 );
+
     _dst.create( src.size(), src.type() );
     Mat dst = _dst.getMat();
-    CvMat _csrc = src, _cdst = dst;
-    cvEqualizeHist( &_csrc, &_cdst );
+
+    if(src.empty())
+        return;
+
+    const int hist_sz = (1 << (8*sizeof(uchar)));
+    int hist[hist_sz] = {0,};
+
+    const size_t sstep = src.step;
+    const size_t dstep = dst.step;
+
+    int width = src.cols;
+    int height = src.rows;
+
+    if (src.isContinuous())
+    {
+        width *= height;
+        height = 1;
+    }
+
+    for (const uchar* ptr = src.ptr<uchar>(); height--; ptr += sstep)
+    {
+        int x = 0;
+        for (; x <= width - 4; x += 4)
+        {
+            int t0 = ptr[x], t1 = ptr[x+1];
+            hist[t0]++; hist[t1]++;
+            t0 = ptr[x+2]; t1 = ptr[x+3];
+            hist[t0]++; hist[t1]++;
+        }
+
+        for (; x < width; ++x, ++ptr)
+            hist[ptr[x]]++;
+    }
+
+    int i = 0;
+    while (!hist[i]) ++i;
+
+    int total = (int)src.total();
+    if (hist[i] == total)
+    {
+        dst.setTo(i);
+        return;
+    }
+
+    float scale = (hist_sz - 1.f)/(total - hist[i]);
+    int sum = 0;
+
+    int lut[hist_sz];
+
+    for (lut[i++] = 0; i < hist_sz; ++i)
+    {
+        sum += hist[i];
+        lut[i] = saturate_cast<uchar>(sum * scale);
+    }
+
+    int cols = src.cols;
+    int rows = src.rows;
+
+    if (src.isContinuous() && dst.isContinuous())
+    {
+        cols *= rows;
+        rows = 1;
+    }
+
+    const uchar* sptr = src.ptr<uchar>();
+    uchar* dptr = dst.ptr<uchar>();
+
+    for (; rows--; sptr += sstep, dptr += dstep)
+    {
+        int x = 0;
+        for (; x <= cols - 4; x += 4)
+        {
+            int v0 = sptr[x];
+            int v1 = sptr[x+1];
+            int x0 = lut[v0];
+            int x1 = lut[v1];
+            dptr[x] = (uchar)x0;
+            dptr[x+1] = (uchar)x1;
+
+            v0 = sptr[x+2];
+            v1 = sptr[x+3];
+            x0 = lut[v0];
+            x1 = lut[v1];
+            dptr[x+2] = (uchar)x0;
+            dptr[x+3] = (uchar)x1;
+        }
+
+        for (; x < cols; ++x)
+            dptr[x] = (uchar)lut[sptr[x]];
+    }
 }
 
 /* Implementation of RTTI and Generic Functions for CvHistogram */
