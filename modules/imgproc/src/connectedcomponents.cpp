@@ -43,14 +43,6 @@
 #include "precomp.hpp"
 #include <vector>
 
-//It's 2012 and we still let compilers get by without defining standard integer types...
-typedef schar int8_t;
-typedef uchar uint8_t;
-typedef short int16_t;
-typedef unsigned short uint16_t;
-typedef int int32_t;
-typedef unsigned int uint32_t;
-
 namespace cv{
     namespace connectedcomponents{
 
@@ -70,8 +62,8 @@ namespace cv{
         void finish(){}
     };
     struct Point2ui64{
-        uint64_t x, y;
-        Point2ui64(uint64_t _x, uint64_t _y):x(_x), y(_y){}
+        uint64 x, y;
+        Point2ui64(uint64 _x, uint64 _y):x(_x), y(_y){}
     };
     template<typename LabelT>
     struct CCStatsOp{
@@ -375,9 +367,9 @@ int connectedComponents_sub1(const cv::Mat &I, cv::Mat &L, int connectivity, Sta
     if(lDepth == CV_8U){
         if(iDepth == CV_8U || iDepth == CV_8S){
             if(connectivity == 4){
-                return (int) LabelingImpl<uint8_t, uint8_t, StatsOp, 4>()(I, L, sop);
+                return (int) LabelingImpl<uchar, uchar, StatsOp, 4>()(I, L, sop);
             }else{
-                return (int) LabelingImpl<uint8_t, uint8_t, StatsOp, 8>()(I, L, sop);
+                return (int) LabelingImpl<uchar, uchar, StatsOp, 8>()(I, L, sop);
             }
         }else{
             CV_Assert(false);
@@ -385,21 +377,21 @@ int connectedComponents_sub1(const cv::Mat &I, cv::Mat &L, int connectivity, Sta
     }else if(lDepth == CV_16U){
         if(iDepth == CV_8U || iDepth == CV_8S){
             if(connectivity == 4){
-                return (int) LabelingImpl<uint16_t, uint8_t, StatsOp, 4>()(I, L, sop);
+                return (int) LabelingImpl<ushort, uchar, StatsOp, 4>()(I, L, sop);
             }else{
-                return (int) LabelingImpl<uint16_t, uint8_t, StatsOp, 8>()(I, L, sop);
+                return (int) LabelingImpl<ushort, uchar, StatsOp, 8>()(I, L, sop);
             }
         }else{
             CV_Assert(false);
         }
     }else if(lDepth == CV_32S){
-        //note that signed types don't really make sense here and not being able to use uint32_t matters for scientific projects
+        //note that signed types don't really make sense here and not being able to use unsigned matters for scientific projects
         //OpenCV: how should we proceed?  .at<T> typechecks in debug mode
         if(iDepth == CV_8U || iDepth == CV_8S){
             if(connectivity == 4){
-                return (int) LabelingImpl<int32_t, uint8_t, StatsOp, 4>()(I, L, sop);
+                return (int) LabelingImpl<int, uchar, StatsOp, 4>()(I, L, sop);
             }else{
-                return (int) LabelingImpl<int32_t, uint8_t, StatsOp, 8>()(I, L, sop);
+                return (int) LabelingImpl<int, uchar, StatsOp, 8>()(I, L, sop);
             }
         }else{
             CV_Assert(false);
@@ -415,9 +407,9 @@ int connectedComponents(InputArray _I, OutputArray _L, int connectivity, int lty
     _L.create(I.size(), CV_MAT_TYPE(ltype));
     cv::Mat L = _L.getMat();
     if(ltype == CV_16U){
-        connectedcomponents::NoOp<uint16_t> sop; return connectedComponents_sub1(I, L, connectivity, sop);
+        connectedcomponents::NoOp<ushort> sop; return connectedComponents_sub1(I, L, connectivity, sop);
     }else if(ltype == CV_32S){
-        connectedcomponents::NoOp<uint32_t> sop; return connectedComponents_sub1(I, L, connectivity, sop);
+        connectedcomponents::NoOp<unsigned> sop; return connectedComponents_sub1(I, L, connectivity, sop);
     }else{
         CV_Assert(false);
         return 0;
@@ -429,9 +421,9 @@ int connectedComponentsWithStats(InputArray _I, OutputArray _L, OutputArray stat
     _L.create(I.size(), CV_MAT_TYPE(ltype));
     cv::Mat L = _L.getMat();
     if(ltype == CV_16U){
-        connectedcomponents::CCStatsOp<uint16_t> sop(statsv, centroids); return connectedComponents_sub1(I, L, connectivity, sop);
+        connectedcomponents::CCStatsOp<ushort> sop(statsv, centroids); return connectedComponents_sub1(I, L, connectivity, sop);
     }else if(ltype == CV_32S){
-        connectedcomponents::CCStatsOp<uint32_t> sop(statsv, centroids); return connectedComponents_sub1(I, L, connectivity, sop);
+        connectedcomponents::CCStatsOp<unsigned> sop(statsv, centroids); return connectedComponents_sub1(I, L, connectivity, sop);
     }else{
         CV_Assert(false);
         return 0;
