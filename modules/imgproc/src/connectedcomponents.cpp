@@ -75,9 +75,9 @@ namespace cv{
         }
         inline
         void init(int nlabels){
-            _mstatsv->create(cv::Size(nlabels, CC_STAT_MAX), cv::DataType<int>::type);
+            _mstatsv->create(cv::Size(CC_STAT_MAX, nlabels), cv::DataType<int>::type);
             statsv = _mstatsv->getMat();
-            _mcentroidsv->create(cv::Size(nlabels, 2), cv::DataType<double>::type);
+            _mcentroidsv->create(cv::Size(2, nlabels), cv::DataType<double>::type);
             centroidsv = _mcentroidsv->getMat();
 
             for(int l = 0; l < (int) nlabels; ++l){
