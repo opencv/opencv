@@ -37,8 +37,15 @@ int main(int argc, const char* argv[])
     Mat dst_gpu = dst_cpu.clone();
 
     vector<Vec4i> lines_cpu;
-    HoughLinesP(mask, lines_cpu, 1, CV_PI / 180, 50, 60, 5);
-    cout << lines_cpu.size() << endl;
+    {
+        const double start = getTickCount();
+
+        HoughLinesP(mask, lines_cpu, 1, CV_PI / 180, 50, 60, 5);
+
+        const double timeSec = (getTickCount() - start) / getTickFrequency();
+        cout << "CPU Time : " << timeSec * 1000 << " ms" << endl;
+        cout << "CPU Found : " << lines_cpu.size() << endl;
+    }
 
     for (size_t i = 0; i < lines_cpu.size(); ++i)
     {
@@ -49,7 +56,15 @@ int main(int argc, const char* argv[])
     GpuMat d_src(mask);
     GpuMat d_lines;
     HoughLinesBuf d_buf;
-    gpu::HoughLinesP(d_src, d_lines, d_buf, 1, CV_PI / 180, 50, 5);
+    {
+        const double start = getTickCount();
+
+        gpu::HoughLinesP(d_src, d_lines, d_buf, 1, CV_PI / 180, 50, 5);
+
+        const double timeSec = (getTickCount() - start) / getTickFrequency();
+        cout << "GPU Time : " << timeSec * 1000 << " ms" << endl;
+        cout << "GPU Found : " << d_lines.cols << endl;
+    }
     vector<Vec4i> lines_gpu;
     if (!d_lines.empty())
     {
@@ -57,7 +72,6 @@ int main(int argc, const char* argv[])
         Mat h_lines(1, d_lines.cols, CV_32SC4, &lines_gpu[0]);
         d_lines.download(h_lines);
     }
-    cout << lines_gpu.size() << endl;
 
     for (size_t i = 0; i < lines_gpu.size(); ++i)
     {
