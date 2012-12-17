@@ -422,7 +422,7 @@ struct cv::SCascade::Fields
 };
 
 cv::SCascade::SCascade(const double mins, const double maxs, const int nsc, const int rej)
-: fields(0), minScale(mins), maxScale(maxs), scales(nsc), rejfactor(rej) {}
+: fields(0), minScale(mins), maxScale(maxs), scales(nsc), rejCriteria(rej) {}
 
 cv::SCascade::~SCascade() { delete fields;}
 
@@ -437,6 +437,57 @@ bool cv::SCascade::load(const FileNode& fn)
 
     fields = new Fields;
     return fields->fill(fn);
+}
+
+namespace {
+typedef cv::SCascade::Detection Detection;
+typedef std::vector<Detection>  dvector;
+
+
+struct ConfidenceGt
+{
+    bool operator()(const Detection& a, const Detection& b) const
+    {
+        return a.confidence > b.confidence;
+    }
+};
+
+static float overlap(const cv::Rect &a, const cv::Rect &b)
+{
+    int w = std::min(a.x + a.width,  b.x + b.width)  - std::max(a.x, b.x);
+    int h = std::min(a.y + a.height, b.y + b.height) - std::max(a.y, b.y);
+
+    return (w < 0 || h < 0)? 0.f : (float)(w * h);
+}
+
+void DollarNMS(dvector& objects)
+{
+    static const float DollarThreshold = 0.65f;
+    std::sort(objects.begin(), objects.end(), ConfidenceGt());
+
+    for (dvector::iterator dIt = objects.begin(); dIt != objects.end(); ++dIt)
+    {
+        const Detection &a = *dIt;
+        for (dvector::iterator next = dIt + 1; next != objects.end(); )
+        {
+            const Detection &b = *next;
+
+            const float ovl =  overlap(a.bb, b.bb) / std::min(a.bb.area(), b.bb.area());
+
+            if (ovl > DollarThreshold)
+                next = objects.erase(next);
+            else
+                ++next;
+        }
+    }
+}
+
+static void suppress(int type, std::vector<Detection>& objects)
+{
+    CV_Assert(type == cv::SCascade::DOLLAR);
+    DollarNMS(objects);
+}
+
 }
 
 void cv::SCascade::detectNoRoi(const cv::Mat& image, std::vector<Detection>& objects) const
@@ -459,6 +510,8 @@ void cv::SCascade::detectNoRoi(const cv::Mat& image, std::vector<Detection>& obj
             }
         }
     }
+
+    if (rejCriteria != NO_REJECT) suppress(rejCriteria, objects);
 }
 
 void cv::SCascade::detect(cv::InputArray _image, cv::InputArray _rois, std::vector<Detection>& objects) const
@@ -506,6 +559,8 @@ void cv::SCascade::detect(cv::InputArray _image, cv::InputArray _rois, std::vect
              }
          }
     }
+
+    if (rejCriteria != NO_REJECT) suppress(rejCriteria, objects);
 }
 
 void cv::SCascade::detect(InputArray _image, InputArray _rois,  OutputArray _rects, OutputArray _confs) const
