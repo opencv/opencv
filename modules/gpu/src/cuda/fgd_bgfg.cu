@@ -198,9 +198,9 @@ namespace bgfg
     void calcDiffHistogram_gpu(PtrStepSzb prevFrame, PtrStepSzb curFrame,
                                unsigned int* hist0, unsigned int* hist1, unsigned int* hist2,
                                unsigned int* partialBuf0, unsigned int* partialBuf1, unsigned int* partialBuf2,
-                               int cc, cudaStream_t stream)
+                               bool cc20, cudaStream_t stream)
     {
-        const int HISTOGRAM_WARP_COUNT = cc < 20 ? 4 : 6;
+        const int HISTOGRAM_WARP_COUNT = cc20 ? 6 : 4;
         const int HISTOGRAM_THREADBLOCK_SIZE = HISTOGRAM_WARP_COUNT * WARP_SIZE;
 
         calcPartialHistogram<PT, CT><<<PARTIAL_HISTOGRAM_COUNT, HISTOGRAM_THREADBLOCK_SIZE, 0, stream>>>(
@@ -214,10 +214,10 @@ namespace bgfg
             cudaSafeCall( cudaDeviceSynchronize() );
     }
 
-    template void calcDiffHistogram_gpu<uchar3, uchar3>(PtrStepSzb prevFrame, PtrStepSzb curFrame, unsigned int* hist0, unsigned int* hist1, unsigned int* hist2, unsigned int* partialBuf0, unsigned int* partialBuf1, unsigned int* partialBuf2, int cc, cudaStream_t stream);
-    template void calcDiffHistogram_gpu<uchar3, uchar4>(PtrStepSzb prevFrame, PtrStepSzb curFrame, unsigned int* hist0, unsigned int* hist1, unsigned int* hist2, unsigned int* partialBuf0, unsigned int* partialBuf1, unsigned int* partialBuf2, int cc, cudaStream_t stream);
-    template void calcDiffHistogram_gpu<uchar4, uchar3>(PtrStepSzb prevFrame, PtrStepSzb curFrame, unsigned int* hist0, unsigned int* hist1, unsigned int* hist2, unsigned int* partialBuf0, unsigned int* partialBuf1, unsigned int* partialBuf2, int cc, cudaStream_t stream);
-    template void calcDiffHistogram_gpu<uchar4, uchar4>(PtrStepSzb prevFrame, PtrStepSzb curFrame, unsigned int* hist0, unsigned int* hist1, unsigned int* hist2, unsigned int* partialBuf0, unsigned int* partialBuf1, unsigned int* partialBuf2, int cc, cudaStream_t stream);
+    template void calcDiffHistogram_gpu<uchar3, uchar3>(PtrStepSzb prevFrame, PtrStepSzb curFrame, unsigned int* hist0, unsigned int* hist1, unsigned int* hist2, unsigned int* partialBuf0, unsigned int* partialBuf1, unsigned int* partialBuf2, bool cc20, cudaStream_t stream);
+    template void calcDiffHistogram_gpu<uchar3, uchar4>(PtrStepSzb prevFrame, PtrStepSzb curFrame, unsigned int* hist0, unsigned int* hist1, unsigned int* hist2, unsigned int* partialBuf0, unsigned int* partialBuf1, unsigned int* partialBuf2, bool cc20, cudaStream_t stream);
+    template void calcDiffHistogram_gpu<uchar4, uchar3>(PtrStepSzb prevFrame, PtrStepSzb curFrame, unsigned int* hist0, unsigned int* hist1, unsigned int* hist2, unsigned int* partialBuf0, unsigned int* partialBuf1, unsigned int* partialBuf2, bool cc20, cudaStream_t stream);
+    template void calcDiffHistogram_gpu<uchar4, uchar4>(PtrStepSzb prevFrame, PtrStepSzb curFrame, unsigned int* hist0, unsigned int* hist1, unsigned int* hist2, unsigned int* partialBuf0, unsigned int* partialBuf1, unsigned int* partialBuf2, bool cc20, cudaStream_t stream);
 
     /////////////////////////////////////////////////////////////////////////
     // calcDiffThreshMask

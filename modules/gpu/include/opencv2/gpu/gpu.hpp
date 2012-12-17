@@ -1963,8 +1963,6 @@ private:
 
     GpuMat uPyr_[2];
     GpuMat vPyr_[2];
-
-    bool isDeviceArch11_;
 };
 
 
@@ -1981,7 +1979,6 @@ public:
         polyN = 5;
         polySigma = 1.1;
         flags = 0;
-        isDeviceArch11_ = !DeviceInfo().supports(FEATURE_SET_COMPUTE_12);
     }
 
     int numLevels;
@@ -2029,8 +2026,6 @@ private:
     GpuMat frames_[2];
     GpuMat pyrLevel_[2], M_, bufM_, R_[2], blurredFrame_[2];
     std::vector<GpuMat> pyramid0_, pyramid1_;
-
-    bool isDeviceArch11_;
 };
 
 

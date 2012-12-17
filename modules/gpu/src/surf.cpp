@@ -121,9 +121,6 @@ namespace
             CV_Assert(mask.empty() || (mask.size() == img.size() && mask.type() == CV_8UC1));
             CV_Assert(surf_.nOctaves > 0 && surf_.nOctaveLayers > 0);
 
-            if (!TargetArchs::builtWith(GLOBAL_ATOMICS) || !DeviceInfo().supports(GLOBAL_ATOMICS))
-                CV_Error(CV_StsNotImplemented, "The device doesn't support global atomics");
-
             const int min_size = calcSize(surf_.nOctaves - 1, 0);
             CV_Assert(img_rows - min_size >= 0);
             CV_Assert(img_cols - min_size >= 0);

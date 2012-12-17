@@ -544,13 +544,12 @@ void cv::gpu::integralBuffered(const GpuMat& src, GpuMat& sum, GpuMat& buffer, S
 
     cudaStream_t stream = StreamAccessor::getStream(s);
 
-    DeviceInfo info;
     cv::Size whole;
     cv::Point offset;
 
     src.locateROI(whole, offset);
 
-    if (info.supports(WARP_SHUFFLE_FUNCTIONS) && src.cols <= 2048
+    if (deviceSupports(WARP_SHUFFLE_FUNCTIONS) && src.cols <= 2048
         && offset.x % 16 == 0 && ((src.cols + 63) / 64) * 64 <= (static_cast<int>(src.step) - offset.x))
     {
         ensureSizeIsEnough(((src.rows + 7) / 8) * 8, ((src.cols + 63) / 64) * 64, CV_32SC1, buffer);
@@ -1489,7 +1488,7 @@ void cv::gpu::Canny(const GpuMat& src, CannyBuf& buf, GpuMat& dst, double low_th
 
     CV_Assert(src.type() == CV_8UC1);
 
-    if (!TargetArchs::builtWith(SHARED_ATOMICS) || !DeviceInfo().supports(SHARED_ATOMICS))
+    if (!deviceSupports(SHARED_ATOMICS))
         CV_Error(CV_StsNotImplemented, "The device doesn't support shared atomics");
 
     if( low_thresh > high_thresh )

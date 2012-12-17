@@ -118,7 +118,7 @@ void cv::gpu::meanStdDev(const GpuMat& src, Scalar& mean, Scalar& stddev, GpuMat
 {
     CV_Assert(src.type() == CV_8UC1);
 
-    if (!TargetArchs::builtWith(FEATURE_SET_COMPUTE_13) || !DeviceInfo().supports(FEATURE_SET_COMPUTE_13))
+    if (!deviceSupports(FEATURE_SET_COMPUTE_13))
         CV_Error(CV_StsNotImplemented, "Not sufficient compute capebility");
 
     NppiSize sz;
@@ -240,7 +240,7 @@ Scalar cv::gpu::sum(const GpuMat& src, GpuMat& buf)
 
     if (src.depth() == CV_64F)
     {
-        if (!TargetArchs::builtWith(NATIVE_DOUBLE) || !DeviceInfo().supports(NATIVE_DOUBLE))
+        if (!deviceSupports(NATIVE_DOUBLE))
             CV_Error(CV_StsUnsupportedFormat, "The device doesn't support double");
     }
 
@@ -277,6 +277,12 @@ Scalar cv::gpu::absSum(const GpuMat& src, GpuMat& buf)
         {0, ::sum::runAbs<double, 1>, ::sum::runAbs<double, 2>, ::sum::runAbs<double, 3>, ::sum::runAbs<double, 4>}
     };
 
+    if (src.depth() == CV_64F)
+    {
+        if (!deviceSupports(NATIVE_DOUBLE))
+            CV_Error(CV_StsUnsupportedFormat, "The device doesn't support double");
+    }
+
     Size buf_size;
     ::sum::getBufSize(src.cols, src.rows, src.channels(), buf_size.width, buf_size.height);
     ensureSizeIsEnough(buf_size, CV_8U, buf);
@@ -309,6 +315,12 @@ Scalar cv::gpu::sqrSum(const GpuMat& src, GpuMat& buf)
         {0, ::sum::runSqr<float , 1>, ::sum::runSqr<float , 2>, ::sum::runSqr<float , 3>, ::sum::runSqr<float , 4>},
         {0, ::sum::runSqr<double, 1>, ::sum::runSqr<double, 2>, ::sum::runSqr<double, 3>, ::sum::runSqr<double, 4>}
     };
+
+    if (src.depth() == CV_64F)
+    {
+        if (!deviceSupports(NATIVE_DOUBLE))
+            CV_Error(CV_StsUnsupportedFormat, "The device doesn't support double");
+    }
 
     Size buf_size;
     ::sum::getBufSize(src.cols, src.rows, src.channels(), buf_size.width, buf_size.height);
@@ -359,7 +371,7 @@ void cv::gpu::minMax(const GpuMat& src, double* minVal, double* maxVal, const Gp
 
     if (src.depth() == CV_64F)
     {
-        if (!TargetArchs::builtWith(NATIVE_DOUBLE) || !DeviceInfo().supports(NATIVE_DOUBLE))
+        if (!deviceSupports(NATIVE_DOUBLE))
             CV_Error(CV_StsUnsupportedFormat, "The device doesn't support double");
     }
 
@@ -410,7 +422,7 @@ void cv::gpu::minMaxLoc(const GpuMat& src, double* minVal, double* maxVal, Point
 
     if (src.depth() == CV_64F)
     {
-        if (!TargetArchs::builtWith(NATIVE_DOUBLE) || !DeviceInfo().supports(NATIVE_DOUBLE))
+        if (!deviceSupports(NATIVE_DOUBLE))
             CV_Error(CV_StsUnsupportedFormat, "The device doesn't support double");
     }
 
@@ -461,7 +473,7 @@ int cv::gpu::countNonZero(const GpuMat& src, GpuMat& buf)
 
     if (src.depth() == CV_64F)
     {
-        if (!TargetArchs::builtWith(NATIVE_DOUBLE) || !DeviceInfo().supports(NATIVE_DOUBLE))
+        if (!deviceSupports(NATIVE_DOUBLE))
             CV_Error(CV_StsUnsupportedFormat, "The device doesn't support double");
     }
 

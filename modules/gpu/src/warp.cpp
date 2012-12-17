@@ -61,13 +61,13 @@ namespace cv { namespace gpu { namespace device
 
         template <typename T>
         void warpAffine_gpu(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, float coeffs[2 * 3], PtrStepSzb dst, int interpolation,
-                            int borderMode, const float* borderValue, cudaStream_t stream, int cc);
+                            int borderMode, const float* borderValue, cudaStream_t stream, bool cc20);
 
         void buildWarpPerspectiveMaps_gpu(float coeffs[3 * 3], PtrStepSzf xmap, PtrStepSzf ymap, cudaStream_t stream);
 
         template <typename T>
         void warpPerspective_gpu(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, float coeffs[3 * 3], PtrStepSzb dst, int interpolation,
-                            int borderMode, const float* borderValue, cudaStream_t stream, int cc);
+                            int borderMode, const float* borderValue, cudaStream_t stream, bool cc20);
     }
 }}}
 
@@ -166,7 +166,7 @@ namespace
             cv::gpu::NppStreamHandler h(stream);
 
             nppSafeCall( func(src.ptr<npp_t>(), srcsz, static_cast<int>(src.step), srcroi,
-                              dst.ptr<npp_t>(), static_cast<int>(dst.step), dstroi, 
+                              dst.ptr<npp_t>(), static_cast<int>(dst.step), dstroi,
                               coeffs, npp_inter[interpolation]) );
 
             if (stream == 0)
@@ -277,7 +277,7 @@ void cv::gpu::warpAffine(const GpuMat& src, GpuMat& dst, const Mat& M, Size dsiz
         using namespace cv::gpu::device::imgproc;
 
         typedef void (*func_t)(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, float coeffs[2 * 3], PtrStepSzb dst, int interpolation,
-            int borderMode, const float* borderValue, cudaStream_t stream, int cc);
+            int borderMode, const float* borderValue, cudaStream_t stream, bool cc20);
 
         static const func_t funcs[6][4] =
         {
@@ -310,11 +310,8 @@ void cv::gpu::warpAffine(const GpuMat& src, GpuMat& dst, const Mat& M, Size dsiz
         Scalar_<float> borderValueFloat;
         borderValueFloat = borderValue;
 
-        DeviceInfo info;
-        int cc = info.majorVersion() * 10 + info.minorVersion();
-
         func(src, PtrStepSzb(wholeSize.height, wholeSize.width, src.datastart, src.step), ofs.x, ofs.y, coeffs,
-            dst, interpolation, gpuBorderType, borderValueFloat.val, StreamAccessor::getStream(s), cc);
+            dst, interpolation, gpuBorderType, borderValueFloat.val, StreamAccessor::getStream(s), deviceSupports(FEATURE_SET_COMPUTE_20));
     }
 }
 
@@ -420,7 +417,7 @@ void cv::gpu::warpPerspective(const GpuMat& src, GpuMat& dst, const Mat& M, Size
         using namespace cv::gpu::device::imgproc;
 
         typedef void (*func_t)(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, float coeffs[2 * 3], PtrStepSzb dst, int interpolation,
-            int borderMode, const float* borderValue, cudaStream_t stream, int cc);
+            int borderMode, const float* borderValue, cudaStream_t stream, bool cc20);
 
         static const func_t funcs[6][4] =
         {
@@ -453,11 +450,8 @@ void cv::gpu::warpPerspective(const GpuMat& src, GpuMat& dst, const Mat& M, Size
         Scalar_<float> borderValueFloat;
         borderValueFloat = borderValue;
 
-        DeviceInfo info;
-        int cc = info.majorVersion() * 10 + info.minorVersion();
-
         func(src, PtrStepSzb(wholeSize.height, wholeSize.width, src.datastart, src.step), ofs.x, ofs.y, coeffs,
-            dst, interpolation, gpuBorderType, borderValueFloat.val, StreamAccessor::getStream(s), cc);
+            dst, interpolation, gpuBorderType, borderValueFloat.val, StreamAccessor::getStream(s), deviceSupports(FEATURE_SET_COMPUTE_20));
     }
 }
 

@@ -336,7 +336,7 @@ namespace
 {
     void calcDiffHistogram(const cv::gpu::GpuMat& prevFrame, const cv::gpu::GpuMat& curFrame, cv::gpu::GpuMat& hist, cv::gpu::GpuMat& histBuf)
     {
-        typedef void (*func_t)(cv::gpu::PtrStepSzb prevFrame, cv::gpu::PtrStepSzb curFrame, unsigned int* hist0, unsigned int* hist1, unsigned int* hist2, unsigned int* partialBuf0, unsigned int* partialBuf1, unsigned int* partialBuf2, int cc, cudaStream_t stream);
+        typedef void (*func_t)(cv::gpu::PtrStepSzb prevFrame, cv::gpu::PtrStepSzb curFrame, unsigned int* hist0, unsigned int* hist1, unsigned int* hist2, unsigned int* partialBuf0, unsigned int* partialBuf1, unsigned int* partialBuf2, bool cc20, cudaStream_t stream);
         static const func_t funcs[4][4] =
         {
             {0,0,0,0},
@@ -348,14 +348,11 @@ namespace
         hist.create(3, 256, CV_32SC1);
         histBuf.create(3, bgfg::PARTIAL_HISTOGRAM_COUNT * bgfg::HISTOGRAM_BIN_COUNT, CV_32SC1);
 
-        cv::gpu::DeviceInfo devInfo;
-        int cc = devInfo.majorVersion() * 10 + devInfo.minorVersion();
-
         funcs[prevFrame.channels() - 1][curFrame.channels() - 1](
                     prevFrame, curFrame,
                     hist.ptr<unsigned int>(0), hist.ptr<unsigned int>(1), hist.ptr<unsigned int>(2),
                     histBuf.ptr<unsigned int>(0), histBuf.ptr<unsigned int>(1), histBuf.ptr<unsigned int>(2),
-                    cc, 0);
+                    cv::gpu::deviceSupports(cv::gpu::FEATURE_SET_COMPUTE_20), 0);
     }
 
     void calcRelativeVariance(unsigned int hist[3 * 256], double relativeVariance[3][bgfg::HISTOGRAM_BIN_COUNT])

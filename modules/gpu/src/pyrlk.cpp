@@ -74,22 +74,21 @@ cv::gpu::PyrLKOpticalFlow::PyrLKOpticalFlow()
     maxLevel = 3;
     iters = 30;
     useInitialFlow = false;
-    isDeviceArch11_ = !DeviceInfo().supports(FEATURE_SET_COMPUTE_12);
 }
 
 namespace
 {
-    void calcPatchSize(cv::Size winSize, dim3& block, dim3& patch, bool isDeviceArch11)
+    void calcPatchSize(cv::Size winSize, dim3& block, dim3& patch)
     {
         if (winSize.width > 32 && winSize.width > 2 * winSize.height)
         {
-            block.x = isDeviceArch11 ? 16 : 32;
+            block.x = deviceSupports(FEATURE_SET_COMPUTE_12) ? 32 : 16;
             block.y = 8;
         }
         else
         {
             block.x = 16;
-            block.y = isDeviceArch11 ? 8 : 16;
+            block.y = deviceSupports(FEATURE_SET_COMPUTE_12) ? 16 : 8;
         }
 
         patch.x = (winSize.width  + block.x - 1) / block.x;
@@ -110,7 +109,7 @@ void cv::gpu::PyrLKOpticalFlow::sparse(const GpuMat& prevImg, const GpuMat& next
     }
 
     dim3 block, patch;
-    calcPatchSize(winSize, block, patch, isDeviceArch11_);
+    calcPatchSize(winSize, block, patch);
 
     CV_Assert(prevImg.channels() == 1 || prevImg.channels() == 3 || prevImg.channels() == 4);
     CV_Assert(prevImg.size() == nextImg.size() && prevImg.type() == nextImg.type());
