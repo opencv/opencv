@@ -110,24 +110,6 @@ CvBoostTree::train( CvDTreeTrainData* _train_data,
     return do_train( _subsample_idx );
 }
 
-
-bool
-CvBoostTree::train( const CvMat*, int, const CvMat*, const CvMat*,
-                    const CvMat*, const CvMat*, const CvMat*, CvDTreeParams )
-{
-    assert(0);
-    return false;
-}
-
-
-bool
-CvBoostTree::train( CvDTreeTrainData*, const CvMat* )
-{
-    assert(0);
-    return false;
-}
-
-
 void
 CvBoostTree::scale( double _scale )
 {
@@ -880,10 +862,10 @@ void CvBoostTree::read( CvFileStorage* fs, CvFileNode* fnode, CvBoost* _ensemble
 }
 
 
-void CvBoostTree::read( CvFileStorage*, CvFileNode* )
-{
-    assert(0);
-}
+// void CvBoostTree::read( CvFileStorage*, CvFileNode* )
+// {
+//     assert(0);
+// }
 
 void CvBoostTree::read( CvFileStorage* _fs, CvFileNode* _node,
                         CvDTreeTrainData* _data )
@@ -1074,6 +1056,8 @@ CvBoost::train( const CvMat* _train_data, int _tflag,
         trim_weights();
         if( cvCountNonZero(subsample_mask) == 0 )
             break;
+
+        printf("trained %d-th tree...\n", i);
     }
 
     if(weak->total > 0)

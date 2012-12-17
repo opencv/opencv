@@ -1143,16 +1143,7 @@ public:
     virtual void clear();
 
     /* dummy methods to avoid warnings: BEGIN */
-    virtual bool train( const CvMat* trainData, int tflag,
-                        const CvMat* responses, const CvMat* varIdx=0,
-                        const CvMat* sampleIdx=0, const CvMat* varType=0,
-                        const CvMat* missingDataMask=0,
-                        CvDTreeParams params=CvDTreeParams() );
-    virtual bool train( CvDTreeTrainData* trainData, const CvMat* _subsample_idx );
-
-    virtual void read( CvFileStorage* fs, CvFileNode* node );
-    virtual void read( CvFileStorage* fs, CvFileNode* node,
-                       CvDTreeTrainData* data );
+    virtual void read( CvFileStorage* fs, CvFileNode* node, CvDTreeTrainData* data );
     /* dummy methods to avoid warnings: END */
 
 protected:
