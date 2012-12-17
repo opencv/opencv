@@ -116,7 +116,7 @@ void sft::Octave::setRejectThresholds(cv::Mat& thresholds)
     for (int si = 0; si < nsamples; ++si)
     {
         float decision = dptr[si] = predict(trainData.col(si), stab, false, false);
-        mptr[si] = cv::saturate_cast<uchar>((uint)(responses.ptr<float>(si)[0] == 1.f && decision == 1.f));
+        mptr[si] = cv::saturate_cast<uchar>((uint)( (responses.ptr<float>(si)[0] == 1.f) && (decision == 1.f)));
     }
 
     // std::cout << "WARNING: responses " << responses << std::endl;
@@ -144,8 +144,10 @@ void sft::Octave::setRejectThresholds(cv::Mat& thresholds)
         double mintrace = 0.;
         cv::minMaxLoc(traces.row(w), &mintrace);
         thptr[w] = mintrace;
-        // std::cout << "mintrace " << mintrace << std::endl << traces.colRange(0, npositives) << std::endl;
+        // std::cout << "mintrace " << mintrace << std::endl << traces.colRange(0, npositives).rowRange(w, w + 1) << std::endl  << std::endl << std::endl << std::endl;
     }
+
+    std::cout << "WARNING: thresholds "    << thresholds << std::endl;
 }
 
 namespace {
@@ -300,7 +302,7 @@ template <typename T> int sgn(T val) {
     return (T(0) < val) - (val < T(0));
 }
 
-void sft::Octave::traverse(const CvBoostTree* tree, cv::FileStorage& fs, int& nfeatures, int* used, const float* th) const
+void sft::Octave::traverse(const CvBoostTree* tree, cv::FileStorage& fs, int& nfeatures, int* used, const double* th) const
 {
     std::queue<const CvDTreeNode*> nodes;
     nodes.push( tree->get_root());
@@ -310,6 +312,7 @@ void sft::Octave::traverse(const CvBoostTree* tree, cv::FileStorage& fs, int& nf
     float* leafs = new float[(int)pow(2.f, get_params().max_depth)];
 
     fs << "{";
+    fs << "treeThreshold" << *th;
     fs << "internalNodes" << "[";
     while (!nodes.empty())
     {
@@ -349,14 +352,16 @@ void sft::Octave::traverse(const CvBoostTree* tree, cv::FileStorage& fs, int& nf
 
     fs << "leafValues" << "[";
     for (int ni = 0; ni < -leafValIdx; ni++)
-        fs << ( (!th) ? leafs[ni] : (sgn(leafs[ni]) * *th));
+        fs << leafs[ni];//( (!th) ? leafs[ni] : (sgn(leafs[ni]) * *th));
     fs << "]";
+
 
     fs << "}";
 }
 
 void sft::Octave::write( cv::FileStorage &fso, const FeaturePool& pool, const Mat& thresholds) const
 {
+    CV_Assert(!thresholds.empty());
     cv::Mat used( 1, weak->total * (pow(2, params.max_depth) - 1), CV_32SC1);
     int* usedPtr = used.ptr<int>(0);
     int nfeatures = 0;
@@ -373,19 +378,13 @@ void sft::Octave::write( cv::FileStorage &fso, const FeaturePool& pool, const Ma
             CvBoostTree* tree;
             CV_READ_SEQ_ELEM( tree, reader );
 
-            if (!thresholds.empty())
-                traverse(tree, fso, nfeatures, usedPtr, thresholds.ptr<float>(0)+ i);
-            else
-                traverse(tree, fso, nfeatures, usedPtr);
+            traverse(tree, fso, nfeatures, usedPtr, thresholds.ptr<double>(0) + i);
         }
-        //
-
     fso << "]";
     // features
 
     fso << "features" << "[";
     for (int i = 0; i < nfeatures; ++i)
-        // fso << usedPtr[i];
         pool.write(fso, usedPtr[i]);
     fso << "]"
         << "}";
@@ -409,7 +408,6 @@ bool sft::Octave::train(const Dataset& dataset, const FeaturePool& pool, int wea
     // 1. fill integrals and classes
     processPositives(dataset, pool);
     generateNegatives(dataset);
-    // exit(0);
 
     // 2. only sumple case (all features used)
     int nfeatures = pool.size();
@@ -550,7 +548,6 @@ void sft::FeaturePool::fill(int desired)
 
         if (std::find(pool.begin(), pool.end(),f) == pool.end())
         {
-            // std::cout << f << std::endl;
             pool.push_back(f);
         }
     }
