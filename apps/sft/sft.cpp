@@ -100,27 +100,7 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    cv::FileStorage fsr(cfg.outXmlPath + ".raw.xml" , cv::FileStorage::WRITE);
-    if(!fsr.isOpened())
-    {
-        std::cout << "Training stopped. Output classifier Xml file " <<cfg.outXmlPath + ".raw.xml" << " can't be opened." << std::endl << std::flush;
-        return 1;
-    }
-
-    // ovector strong;
-    // strong.reserve(cfg.octaves.size());
-
     fso << cfg.cascadeName
-        << "{"
-        << "stageType"   << "BOOST"
-        << "featureType" << "ICF"
-        << "octavesNum"  << (int)cfg.octaves.size()
-        << "width"       << cfg.modelWinSize.width
-        << "height"      << cfg.modelWinSize.height
-        << "shrinkage"   << cfg.shrinkage
-        << "octaves"     << "[";
-
-    fsr << cfg.cascadeName
         << "{"
         << "stageType"   << "BOOST"
         << "featureType" << "ICF"
@@ -163,8 +143,6 @@ int main(int argc, char** argv)
             boost.setRejectThresholds(thresholds);
 
             boost.write(fso, pool, thresholds);
-            boost.write(fsr, pool);
-            // std::cout << "thresholds " << thresholds << std::endl;
 
             cv::FileStorage tfs(("thresholds." + cfg.resPath(it)).c_str(), cv::FileStorage::WRITE);
             tfs << "thresholds" << thresholds;
@@ -174,18 +152,6 @@ int main(int argc, char** argv)
     }
 
     fso << "]" << "}";
-    fsr << "]" << "}";
-
-//     // // 6. Set thresolds
-//     // cascade.prune();
-
-//     // // 7. Postprocess
-//     // cascade.normolize();
-
-//     // // 8. Write result xml
-//     // cv::FileStorage ofs(cfg.outXmlPath, cv::FileStorage::WRITE);
-//     // ofs << cfg.cascadeName << cascade;
-
     std::cout << "Training complete..." << std::endl;
     return 0;
 }

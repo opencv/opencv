@@ -147,7 +147,7 @@ public:
     virtual void setRejectThresholds(cv::Mat& thresholds);
     virtual void write( CvFileStorage* fs, string name) const;
 
-    virtual void write( cv::FileStorage &fs, const FeaturePool& pool, const Mat& thresholds = Mat()) const;
+    virtual void write( cv::FileStorage &fs, const FeaturePool& pool, const Mat& thresholds) const;
 
     int logScale;
 
@@ -160,7 +160,7 @@ protected:
 
     float predict( const Mat& _sample, const cv::Range range) const;
 private:
-    void traverse(const CvBoostTree* tree, cv::FileStorage& fs, int& nfeatures, int* used, const float* th = 0) const;
+    void traverse(const CvBoostTree* tree, cv::FileStorage& fs, int& nfeatures, int* used, const double* th) const;
     virtual void initial_weights(double (&p)[2]);
 
     cv::Rect boundingBox;
