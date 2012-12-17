@@ -239,6 +239,7 @@ public:
     CV_WRAP virtual void release();
     virtual VideoWriter& operator << (const Mat& image);
     CV_WRAP virtual void write(const Mat& image);
+    static int fourcc(char c1, char c2, char c3, char c4) { return CV_FOURCC(c1, c2, c3, c4); }
 
 protected:
     Ptr<CvVideoWriter> writer;
