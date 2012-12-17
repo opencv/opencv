@@ -1301,11 +1301,35 @@ public:
                 s0 = _mm_packus_epi16(_mm_srli_epi16(s0, 2), zero);
                 _mm_storel_epi64((__m128i*)D, s0);
 
+//                union
+//                {
+//                   __m128i m;
+//                   unsigned char us[16];
+//                } u;
+
+//                u.m = s0;
+//                unsigned char v0 = (unsigned char)((S0[0] + S0[3] + S1[0] + S1[3] + 2) >> 2);
+//                unsigned char v1 = (unsigned char)((S0[1] + S0[4] + S1[1] + S1[4] + 2) >> 2);
+//                unsigned char v2 = (unsigned char)((S0[2] + S0[5] + S1[2] + S1[5] + 2) >> 2);
+//                unsigned char ar1[] = { v0, v1, v2 };
+//                for (unsigned int i = 0; i < 3; ++i)
+//                    std::cout << ((int)(u.us[i]) - (int)(ar1[i])) << "   ";
+//                std::cout << "\t1" << std::endl;
+
                 s0 = _mm_add_epi16(r0_16h, _mm_srli_si128(r0_16h, 6));
                 s1 = _mm_add_epi16(r1_16h, _mm_srli_si128(r1_16h, 6));
                 s0 = _mm_add_epi16(s1, _mm_add_epi16(s0, delta2));
                 s0 = _mm_packus_epi16(_mm_srli_epi16(s0, 2), zero);
                 _mm_storel_epi64((__m128i*)(D+3), s0);
+
+//                u.m = s0;
+//                v0 = (unsigned char)((S0[6] + S0[9] + S1[6] + S1[9] + 2) >> 2);
+//                v1 = (unsigned char)((S0[7] + S0[10] + S1[7] + S1[10] + 2) >> 2);
+//                v2 = (unsigned char)((S0[8] + S0[11] + S1[8] + S1[11] + 2) >> 2);
+//                unsigned char ar2[] = { v0, v1, v2 };
+//                for (unsigned int i = 0; i < 3; ++i)
+//                    std::cout << ((int)(u.us[i]) - (int)(ar2[i])) << "   ";
+//                std::cout << "\t2" << std::endl;
             }
         else
         {
@@ -1359,10 +1383,12 @@ public:
 
         int dx = 0;
         const ushort* S0 = (const ushort*)S;
-        const ushort* S1 = (const ushort*)(S + step/2);
+        const ushort* S1 = (const ushort*)((const uchar*)(S) + step);
         __m128i masklow = _mm_set1_epi32(0x0000ffff);
         __m128i zero = _mm_setzero_si128();
         __m128i delta2 = _mm_set1_epi32(2);
+
+#define _mm_packus_epi32(a, zero) _mm_packs_epi32(_mm_srai_epi32(_mm_slli_epi32(a, 16), 16), zero);
 
         if (cn == 1)
         {
@@ -1374,7 +1400,8 @@ public:
                 __m128i s0 = _mm_add_epi32(_mm_srli_epi32(r0, 16), _mm_and_si128(r0, masklow));
                 __m128i s1 = _mm_add_epi32(_mm_srli_epi32(r1, 16), _mm_and_si128(r1, masklow));
                 s0 = _mm_add_epi32(_mm_add_epi32(s0, s1), delta2);
-                s0 = _mm_packs_epi32(_mm_srli_epi32(s0, 2), zero);
+                s0 = _mm_srli_epi32(s0, 2);
+                s0 = _mm_packus_epi32(s0, zero);
 
                 _mm_storel_epi64((__m128i*)D, s0);
             }
@@ -1393,7 +1420,7 @@ public:
                 __m128i s0 = _mm_add_epi16(r0_16l, r0_16h);
                 __m128i s1 = _mm_add_epi16(r1_16l, r1_16h);
                 s0 = _mm_add_epi32(s1, _mm_add_epi32(s0, delta2));
-                s0 = _mm_packs_epi32(_mm_srli_epi32(s0, 2), zero);
+                s0 = _mm_packus_epi32(_mm_srli_epi32(s0, 2), zero);
                 _mm_storel_epi64((__m128i*)D, s0);
             }
         else
@@ -1412,7 +1439,7 @@ public:
                 __m128i s0 = _mm_add_epi32(r0_32l, r0_32h);
                 __m128i s1 = _mm_add_epi32(r1_32l, r1_32h);
                 s0 = _mm_add_epi32(s1, _mm_add_epi32(s0, delta2));
-                s0 = _mm_packs_epi32(_mm_srli_epi32(s0, 2), zero);
+                s0 = _mm_packus_epi32(_mm_srli_epi32(s0, 2), zero);
                 _mm_storel_epi64((__m128i*)D, s0);
             }
         }
