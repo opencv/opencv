@@ -2129,6 +2129,17 @@ CV_EXPORTS void calcOpticalFlowBM(const GpuMat& prev, const GpuMat& curr,
                                   GpuMat& velx, GpuMat& vely, GpuMat& buf,
                                   Stream& stream = Stream::Null());
 
+class CV_EXPORTS FastOpticalFlowBM
+{
+public:
+    void operator ()(const GpuMat& I0, const GpuMat& I1, GpuMat& flowx, GpuMat& flowy, int search_window = 21, int block_window = 7, Stream& s = Stream::Null());
+
+private:
+    GpuMat buffer;
+    GpuMat extended_I0;
+    GpuMat extended_I1;
+};
+
 
 //! Interpolate frames (images) using provided optical flow (displacement field).
 //! frame0   - frame 0 (32-bit floating point images, single channel)

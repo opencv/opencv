@@ -512,6 +512,55 @@ PERF_TEST_P(ImagePair, Video_OpticalFlowBM,
     }
 }
 
+PERF_TEST_P(ImagePair, Video_FastOpticalFlowBM,
+    Values<pair_string>(make_pair("gpu/opticalflow/frame0.png", "gpu/opticalflow/frame1.png")))
+{
+    declare.time(400);
+
+    cv::Mat frame0 = readImage(GetParam().first, cv::IMREAD_GRAYSCALE);
+    ASSERT_FALSE(frame0.empty());
+
+    cv::Mat frame1 = readImage(GetParam().second, cv::IMREAD_GRAYSCALE);
+    ASSERT_FALSE(frame1.empty());
+
+    cv::Size block_size(16, 16);
+    cv::Size shift_size(1, 1);
+    cv::Size max_range(16, 16);
+
+    if (PERF_RUN_GPU())
+    {
+        cv::gpu::GpuMat d_frame0(frame0);
+        cv::gpu::GpuMat d_frame1(frame1);
+        cv::gpu::GpuMat d_velx, d_vely;
+
+        cv::gpu::FastOpticalFlowBM fastBM;
+
+        fastBM(d_frame0, d_frame1, d_velx, d_vely, max_range.width, block_size.width);
+
+        TEST_CYCLE()
+        {
+            fastBM(d_frame0, d_frame1, d_velx, d_vely, max_range.width, block_size.width);
+        }
+
+        GPU_SANITY_CHECK(d_velx);
+        GPU_SANITY_CHECK(d_vely);
+    }
+    else
+    {
+        cv::Mat velx, vely;
+
+        calcOpticalFlowBM(frame0, frame1, block_size, shift_size, max_range, false, velx, vely);
+
+        TEST_CYCLE()
+        {
+            calcOpticalFlowBM(frame0, frame1, block_size, shift_size, max_range, false, velx, vely);
+        }
+
+        CPU_SANITY_CHECK(velx);
+        CPU_SANITY_CHECK(vely);
+    }
+}
+
 //////////////////////////////////////////////////////
 // FGDStatModel
 

@@ -44,6 +44,8 @@
 
 #include "opencv2/gpu/device/common.hpp"
 #include "opencv2/gpu/device/limits.hpp"
+#include "opencv2/gpu/device/functional.hpp"
+#include "opencv2/gpu/device/reduce.hpp"
 
 using namespace cv::gpu;
 using namespace cv::gpu::device;
@@ -162,6 +164,251 @@ namespace optflowbm
         if (stream == 0)
             cudaSafeCall( cudaDeviceSynchronize() );
     }
+}
+
+/////////////////////////////////////////////////////////
+// Fast approximate version
+
+namespace optflowbm_fast
+{
+    enum
+    {
+        CTA_SIZE = 128,
+
+        TILE_COLS = 128,
+        TILE_ROWS = 32,
+
+        STRIDE = CTA_SIZE
+    };
+
+    template <typename T> __device__ __forceinline__ int calcDist(T a, T b)
+    {
+        return ::abs(a - b);
+    }
+
+    template <class T> struct FastOptFlowBM
+    {
+
+        int search_radius;
+        int block_radius;
+
+        int search_window;
+        int block_window;
+
+        PtrStepSz<T> I0;
+        PtrStep<T> I1;
+
+        mutable PtrStepi buffer;
+
+        FastOptFlowBM(int search_window_, int block_window_,
+                      PtrStepSz<T> I0_, PtrStepSz<T> I1_,
+                      PtrStepi buffer_) :
+            search_radius(search_window_ / 2), block_radius(block_window_ / 2),
+            search_window(search_window_), block_window(block_window_),
+            I0(I0_), I1(I1_),
+            buffer(buffer_)
+        {
+        }
+
+        __device__ void initSums_BruteForce(int i, int j, int* dist_sums, PtrStepi& col_sums, PtrStepi& up_col_sums) const
+        {
+            for (int index = threadIdx.x; index < search_window * search_window; index += STRIDE)
+            {
+                dist_sums[index] = 0;
+
+                for (int tx = 0; tx < block_window; ++tx)
+                    col_sums(tx, index) = 0;
+
+                int y = index / search_window;
+                int x = index - y * search_window;
+
+                int ay = i;
+                int ax = j;
+
+                int by = i + y - search_radius;
+                int bx = j + x - search_radius;
+
+                for (int tx = -block_radius; tx <= block_radius; ++tx)
+                {
+                    int col_sum = 0;
+                    for (int ty = -block_radius; ty <= block_radius; ++ty)
+                    {
+                        int dist = calcDist(I0(ay + ty, ax + tx), I1(by + ty, bx + tx));
+
+                        dist_sums[index] += dist;
+                        col_sum += dist;
+                    }
+
+                    col_sums(tx + block_radius, index) = col_sum;
+                }
+
+                up_col_sums(j, index) = col_sums(block_window - 1, index);
+            }
+        }
+
+        __device__ void shiftRight_FirstRow(int i, int j, int first, int* dist_sums, PtrStepi& col_sums, PtrStepi& up_col_sums) const
+        {
+            for (int index = threadIdx.x; index < search_window * search_window; index += STRIDE)
+            {
+                int y = index / search_window;
+                int x = index - y * search_window;
+
+                int ay = i;
+                int ax = j + block_radius;
+
+                int by = i + y - search_radius;
+                int bx = j + x - search_radius + block_radius;
+
+                int col_sum = 0;
+
+                for (int ty = -block_radius; ty <= block_radius; ++ty)
+                    col_sum += calcDist(I0(ay + ty, ax), I1(by + ty, bx));
+
+                dist_sums[index] += col_sum - col_sums(first, index);
+
+                col_sums(first, index) = col_sum;
+                up_col_sums(j, index) = col_sum;
+            }
+        }
+
+        __device__ void shiftRight_UpSums(int i, int j, int first, int* dist_sums, PtrStepi& col_sums, PtrStepi& up_col_sums) const
+        {
+            int ay = i;
+            int ax = j + block_radius;
+
+            T a_up   = I0(ay - block_radius - 1, ax);
+            T a_down = I0(ay + block_radius, ax);
+
+            for(int index = threadIdx.x; index < search_window * search_window; index += STRIDE)
+            {
+                int y = index / search_window;
+                int x = index - y * search_window;
+
+                int by = i + y - search_radius;
+                int bx = j + x - search_radius + block_radius;
+
+                T b_up   = I1(by - block_radius - 1, bx);
+                T b_down = I1(by + block_radius, bx);
+
+                int col_sum = up_col_sums(j, index) + calcDist(a_down, b_down) - calcDist(a_up, b_up);
+
+                dist_sums[index] += col_sum  - col_sums(first, index);
+                col_sums(first, index) = col_sum;
+                up_col_sums(j, index) = col_sum;
+            }
+        }
+
+        __device__ void convolve_window(int i, int j, const int* dist_sums, float& velx, float& vely) const
+        {
+            int bestDist = numeric_limits<int>::max();
+            int bestInd = -1;
+
+            for (int index = threadIdx.x; index < search_window * search_window; index += STRIDE)
+            {
+                int curDist = dist_sums[index];
+                if (curDist < bestDist)
+                {
+                    bestDist = curDist;
+                    bestInd = index;
+                }
+            }
+
+            __shared__ int cta_dist_buffer[CTA_SIZE];
+            __shared__ int cta_ind_buffer[CTA_SIZE];
+
+            reduceKeyVal<CTA_SIZE>(cta_dist_buffer, bestDist, cta_ind_buffer, bestInd, threadIdx.x, less<int>());
+
+            if (threadIdx.x == 0)
+            {
+                int y = bestInd / search_window;
+                int x = bestInd - y * search_window;
+
+                velx = x - search_radius;
+                vely = y - search_radius;
+            }
+        }
+
+        __device__ void operator()(PtrStepf velx, PtrStepf vely) const
+        {
+            int tbx = blockIdx.x * TILE_COLS;
+            int tby = blockIdx.y * TILE_ROWS;
+
+            int tex = ::min(tbx + TILE_COLS, I0.cols);
+            int tey = ::min(tby + TILE_ROWS, I0.rows);
+
+            PtrStepi col_sums;
+            col_sums.data = buffer.ptr(I0.cols + blockIdx.x * block_window) + blockIdx.y * search_window * search_window;
+            col_sums.step = buffer.step;
+
+            PtrStepi up_col_sums;
+            up_col_sums.data = buffer.data + blockIdx.y * search_window * search_window;
+            up_col_sums.step = buffer.step;
+
+            extern __shared__ int dist_sums[]; //search_window * search_window
+
+            int first = 0;
+
+            for (int i = tby; i < tey; ++i)
+            {
+                for (int j = tbx; j < tex; ++j)
+                {
+                    __syncthreads();
+
+                    if (j == tbx)
+                    {
+                        initSums_BruteForce(i, j, dist_sums, col_sums, up_col_sums);
+                        first = 0;
+                    }
+                    else
+                    {
+                        if (i == tby)
+                          shiftRight_FirstRow(i, j, first, dist_sums, col_sums, up_col_sums);
+                        else
+                          shiftRight_UpSums(i, j, first, dist_sums, col_sums, up_col_sums);
+
+                        first = (first + 1) % block_window;
+                    }
+
+                    __syncthreads();
+
+                    convolve_window(i, j, dist_sums, velx(i, j), vely(i, j));
+                }
+            }
+        }
+
+    };
+
+    template<typename T> __global__ void optflowbm_fast_kernel(const FastOptFlowBM<T> fbm, PtrStepf velx, PtrStepf vely)
+    {
+        fbm(velx, vely);
+    }
+
+    void get_buffer_size(int src_cols, int src_rows, int search_window, int block_window, int& buffer_cols, int& buffer_rows)
+    {
+        dim3 grid(divUp(src_cols, TILE_COLS), divUp(src_rows, TILE_ROWS));
+
+        buffer_cols = search_window * search_window * grid.y;
+        buffer_rows = src_cols + block_window * grid.x;
+    }
+
+    template <typename T>
+    void calc(PtrStepSzb I0, PtrStepSzb I1, PtrStepSzf velx, PtrStepSzf vely, PtrStepi buffer, int search_window, int block_window, cudaStream_t stream)
+    {
+        FastOptFlowBM<T> fbm(search_window, block_window, I0, I1, buffer);
+
+        dim3 block(CTA_SIZE, 1);
+        dim3 grid(divUp(I0.cols, TILE_COLS), divUp(I0.rows, TILE_ROWS));
+
+        size_t smem = search_window * search_window * sizeof(int);
+
+        optflowbm_fast_kernel<<<grid, block, smem, stream>>>(fbm, velx, vely);
+        cudaSafeCall ( cudaGetLastError () );
+
+        if (stream == 0)
+            cudaSafeCall( cudaDeviceSynchronize() );
+    }
+
+    template void calc<uchar>(PtrStepSzb I0, PtrStepSzb I1, PtrStepSzf velx, PtrStepSzf vely, PtrStepi buffer, int search_window, int block_window, cudaStream_t stream);
 }
 
 #endif // !defined CUDA_DISABLER

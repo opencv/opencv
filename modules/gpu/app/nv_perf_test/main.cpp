@@ -94,13 +94,13 @@ PERF_TEST_P(Image, HoughLinesP,
     {
         cv::gpu::GpuMat d_image(image);
         cv::gpu::GpuMat d_lines;
-        cv::gpu::CannyBuf d_buf;
+        cv::gpu::HoughLinesBuf d_buf;
 
-        cv::gpu::HoughLinesP(d_image, d_lines, d_buf, minLineLenght, maxLineGap);
+        cv::gpu::HoughLinesP(d_image, d_lines, d_buf, rho, theta, minLineLenght, maxLineGap);
 
         TEST_CYCLE()
         {
-            cv::gpu::HoughLinesP(d_image, d_lines, d_buf, minLineLenght, maxLineGap);
+            cv::gpu::HoughLinesP(d_image, d_lines, d_buf, rho, theta, minLineLenght, maxLineGap);
         }
     }
     else
@@ -418,6 +418,59 @@ PERF_TEST_P(ImagePair_BlockSize_ShiftSize_MaxRange, OpticalFlowBM,
         TEST_CYCLE_N(10)
         {
             cv::gpu::calcOpticalFlowBM(d_src1, d_src2, block_size, shift_size, max_range, false, d_velx, d_vely, buf);
+        }
+    }
+    else
+    {
+        cv::Mat velx, vely;
+
+        calcOpticalFlowBM(src1, src2, block_size, shift_size, max_range, false, velx, vely);
+
+        TEST_CYCLE_N(10)
+        {
+            calcOpticalFlowBM(src1, src2, block_size, shift_size, max_range, false, velx, vely);
+        }
+    }
+
+    SANITY_CHECK(0);
+}
+
+PERF_TEST_P(ImagePair_BlockSize_ShiftSize_MaxRange, FastOpticalFlowBM,
+            testing::Combine(
+                testing::Values(string_pair("im1_1280x800.jpg", "im2_1280x800.jpg")),
+                testing::Values(cv::Size(16, 16)),
+                testing::Values(cv::Size(1, 1)),
+                testing::Values(cv::Size(16, 16))
+                ))
+{
+    declare.time(1000);
+
+    const string_pair fileNames = std::tr1::get<0>(GetParam());
+    const cv::Size block_size = std::tr1::get<1>(GetParam());
+    const cv::Size shift_size = std::tr1::get<2>(GetParam());
+    const cv::Size max_range = std::tr1::get<3>(GetParam());
+
+    cv::Mat src1 = cv::imread(fileNames.first, cv::IMREAD_GRAYSCALE);
+    if (src1.empty())
+        FAIL() << "Unable to load source image [" << fileNames.first << "]";
+
+    cv::Mat src2 = cv::imread(fileNames.second, cv::IMREAD_GRAYSCALE);
+    if (src2.empty())
+        FAIL() << "Unable to load source image [" << fileNames.second << "]";
+
+    if (PERF_RUN_GPU())
+    {
+        cv::gpu::GpuMat d_src1(src1);
+        cv::gpu::GpuMat d_src2(src2);
+        cv::gpu::GpuMat d_velx, d_vely;
+
+        cv::gpu::FastOpticalFlowBM fastBM;
+
+        fastBM(d_src1, d_src2, d_velx, d_vely, max_range.width, block_size.width);
+
+        TEST_CYCLE_N(10)
+        {
+            fastBM(d_src1, d_src2, d_velx, d_vely, max_range.width, block_size.width);
         }
     }
     else

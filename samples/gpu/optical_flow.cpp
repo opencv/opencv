@@ -121,6 +121,17 @@ static void drawOpticalFlow(const Mat_<float>& flowx, const Mat_<float>& flowy, 
     }
 }
 
+static void showFlow(const char* name, const GpuMat& d_flowx, const GpuMat& d_flowy)
+{
+    Mat flowx(d_flowx);
+    Mat flowy(d_flowy);
+
+    Mat out;
+    drawOpticalFlow(flowx, flowy, out, 10);
+
+    imshow(name, out);
+}
+
 int main(int argc, const char* argv[])
 {
     if (argc < 3)
@@ -152,20 +163,90 @@ int main(int argc, const char* argv[])
     GpuMat d_frame0(frame0);
     GpuMat d_frame1(frame1);
 
-    GpuMat d_flowx, d_flowy;
+    GpuMat d_flowx(frame0.size(), CV_32FC1);
+    GpuMat d_flowy(frame0.size(), CV_32FC1);
+
+    BroxOpticalFlow brox(0.197, 50.0, 0.8, 10, 77, 10);
+    PyrLKOpticalFlow lk; lk.winSize = Size(7, 7);
+    FarnebackOpticalFlow farn;
     OpticalFlowDual_TVL1_GPU tvl1;
+    FastOpticalFlowBM fastBM;
 
-    const double start = getTickCount();
-    tvl1(d_frame0, d_frame1, d_flowx, d_flowy);
-    const double timeSec = (getTickCount() - start) / getTickFrequency();
-    cout << "Time : " << timeSec << " sec" << endl;
+    {
+        GpuMat d_frame0f;
+        GpuMat d_frame1f;
 
-    Mat flowx(d_flowx);
-    Mat flowy(d_flowy);
-    Mat out;
-    drawOpticalFlow(flowx, flowy, out);
+        d_frame0.convertTo(d_frame0f, CV_32F, 1.0 / 255.0);
+        d_frame1.convertTo(d_frame1f, CV_32F, 1.0 / 255.0);
 
-    imshow("Flow", out);
+        const double start = getTickCount();
+
+        brox(d_frame0f, d_frame1f, d_flowx, d_flowy);
+
+        const double timeSec = (getTickCount() - start) / getTickFrequency();
+        cout << "Brox : " << timeSec << " sec" << endl;
+
+        showFlow("Brox", d_flowx, d_flowy);
+    }
+
+    {
+        const double start = getTickCount();
+
+        lk.dense(d_frame0, d_frame1, d_flowx, d_flowy);
+
+        const double timeSec = (getTickCount() - start) / getTickFrequency();
+        cout << "LK : " << timeSec << " sec" << endl;
+
+        showFlow("LK", d_flowx, d_flowy);
+    }
+
+    {
+        const double start = getTickCount();
+
+        farn(d_frame0, d_frame1, d_flowx, d_flowy);
+
+        const double timeSec = (getTickCount() - start) / getTickFrequency();
+        cout << "Farn : " << timeSec << " sec" << endl;
+
+        showFlow("Farn", d_flowx, d_flowy);
+    }
+
+    {
+        const double start = getTickCount();
+
+        tvl1(d_frame0, d_frame1, d_flowx, d_flowy);
+
+        const double timeSec = (getTickCount() - start) / getTickFrequency();
+        cout << "TVL1 : " << timeSec << " sec" << endl;
+
+        showFlow("TVL1", d_flowx, d_flowy);
+    }
+
+    {
+        const double start = getTickCount();
+
+        GpuMat buf;
+        calcOpticalFlowBM(d_frame0, d_frame1, Size(7, 7), Size(1, 1), Size(21, 21), false, d_flowx, d_flowy, buf);
+
+        const double timeSec = (getTickCount() - start) / getTickFrequency();
+        cout << "BM : " << timeSec << " sec" << endl;
+
+        showFlow("BM", d_flowx, d_flowy);
+    }
+
+    {
+        const double start = getTickCount();
+
+        fastBM(d_frame0, d_frame1, d_flowx, d_flowy);
+
+        const double timeSec = (getTickCount() - start) / getTickFrequency();
+        cout << "Fast BM : " << timeSec << " sec" << endl;
+
+        showFlow("Fast BM", d_flowx, d_flowy);
+    }
+
+    imshow("Frame 0", frame0);
+    imshow("Frame 1", frame1);
     waitKey();
 
     return 0;
