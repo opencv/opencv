@@ -1079,6 +1079,8 @@ protected:
     void run_func();
     void prepare_to_validation( int );
 
+    double sampson_error(const double* f, double x1, double y1, double x2, double y2); 
+
     int method;
     int img_size;
     int cube_size;
@@ -1135,7 +1137,7 @@ void CV_EssentialMatTest::get_test_array_types_and_sizes( int /*test_case_idx*/,
     RNG& rng = ts->get_rng();
     int pt_depth = cvtest::randInt(rng) % 2 == 0 ? CV_32F : CV_64F;
     double pt_count_exp = cvtest::randReal(rng)*6 + 1;
-    int pt_count = cvRound(exp(pt_count_exp));
+    int pt_count = MAX(5, cvRound(exp(pt_count_exp)));
 
     dims = cvtest::randInt(rng) % 2 + 2;
     dims = 2; 
@@ -1277,15 +1279,29 @@ void CV_EssentialMatTest::run_func()
     cv::Point2d pp(K.at<double>(0, 2), K.at<double>(1, 2)); 
 
     Mat E, mask(test_mat[TEMP][1]);
-    E = cv::findEssentialMat( _input0, _input1, focal, pp, method, MAX(sigma*3, 0.01), 0.999, mask ); 
-    std::cout << _input0 << std::endl; 
-    std::cout << _input1 << std::endl; 
-    std::cout << E << std::endl; 
+    E = cv::findEssentialMat( _input0, _input1, focal, pp, method, 0.999, MAX(sigma*3, 0.001), mask ); 
     E.copyTo(test_mat[TEMP][0]); 
 }
-// TODO: fail on the following test case: 
-// [10.837263, 12.710028, 10.362407, 11.140052, 10.301775, 12.008795, 9.7840118, 11.346763, 9.875452, 11.887743, 10.569054, 11.720129, 9.9423704, 11.284388, 10.401793, 11.248892, 10.958783, 11.650566, 11.183965, 12.625159, 10.668415, 11.477759, 10.10011, 11.490536, 11.18885, 12.841625, 10.831551, 11.480332, 10.437989, 12.176274, 9.6552134, 12.73022, 10.684226, 11.176487, 10.275943, 11.938254, 9.8393602, 11.867973, 10.634809, 12.283775, 10.038941, 11.851966, 9.6635656, 11.604572, 9.8184586, 12.233249, 10.214502, 11.545464, 10.615603, 13.121259, 10.913926, 11.194108, 10.807973, 11.27883, 10.123512, 12.675542, 9.6367006, 11.985994, 11.828124, 11.325003]
-// [12.868367, 23.245411, 7.9657893, 3.9572544, 0.18888345, -28.700233, 4.1038027, 2.6156232, 2.4843416, -6.5012612, 2.1475539, -17.265524, 7.242486, 4.2517233, 7.1892347, 2.3075557, 10.242195, -12.837704, 10.584843, 23.888157, 9.2608099, -1.0389435, 6.3604612, 1.1351184, 10.857638, 21.156445, 10.104443, -2.2945759, 60.173248, 212.66412, 23.924448, 34.045135, 7.1062942, 1.1199529, 0.65921843, -21.069214, 3.9812198, -4.0510745, 18.576475, 33.074841, -3.6377053, -15.415064, 4.2229509, 1.158181, -26.736351, -66.691078, 6.7879362, -0.041390315, 13.270225, 19.749489, 9.9233637, 1.6848755, 9.4226179, 0.937644, 18.118668, 32.114094, -2.6586828, -10.412882, 14.748135, -59.412228]
+
+double CV_EssentialMatTest::sampson_error(const double * f, double x1, double y1, double x2, double y2)
+{
+    double Fx1[3] = {
+        f[0] * x1 + f[1] * y1 + f[2], 
+        f[3] * x1 + f[4] * y1 + f[5], 
+        f[6] * x1 + f[7] * y1 + f[8]
+    }; 
+    double Ftx2[3] = {
+        f[0] * x2 + f[3] * y2 + f[6], 
+        f[1] * x2 + f[4] * y2 + f[7], 
+        f[2] * x2 + f[5] * y2 + f[8]
+    }; 
+    double x2tFx1 = Fx1[0] * x2 + Fx1[1] * y2 + Fx1[2]; 
+
+    double error = x2tFx1 * x2tFx1 / (Fx1[0] * Fx1[0] + Fx1[1] * Fx1[1] + Ftx2[0] * Ftx2[0] + Ftx2[1] * Ftx2[1]); 
+    error = sqrt(error); 
+    return error; 
+
+}
 
 void CV_EssentialMatTest::prepare_to_validation( int test_case_idx )
 {
@@ -1335,6 +1351,8 @@ void CV_EssentialMatTest::prepare_to_validation( int test_case_idx )
         double y1 = p1.at<Point2d>(i).y;
         double x2 = p2.at<Point2d>(i).x;
         double y2 = p2.at<Point2d>(i).y;
+//        double t0 = sampson_error(f0, x1, y1, x2, y2); 
+//        double t = sampson_error(f, x1, y1, x2, y2); 
         double n1 = 1./sqrt(x1*x1 + y1*y1 + 1);
         double n2 = 1./sqrt(x2*x2 + y2*y2 + 1);
         double t0 = fabs(f0[0]*x2*x1 + f0[1]*x2*y1 + f0[2]*x2 +
@@ -1345,14 +1363,8 @@ void CV_EssentialMatTest::prepare_to_validation( int test_case_idx )
                    f[6]*x1 + f[7]*y1 + f[8])*n1*n2;
         mtfm1[i] = 1;
         mtfm2[i] = !status[i] || t0 > err_level || t < err_level;
-        if (i < 10)
-        {
-            std::cout << "(" << (int)status[i] << ", " << t0 << ", " << t << ")"; 
-        }
     }
-        std::cout << endl; 
-    std::cout << E << std::endl; 
-
+    
     e_prop1[0] = 1;
     e_prop1[1] = 1;
     e_prop1[2] = 0;

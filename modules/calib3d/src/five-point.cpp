@@ -1,7 +1,7 @@
-#include "precomp.hpp"
-#include "_modelest.h"
 
 #include <eigen3/Eigen/Eigen>
+#include "precomp.hpp"
+#include "_modelest.h"
 
 using namespace cv; 
 using namespace std; 
@@ -30,7 +30,7 @@ Mat cv::findEssentialMat( InputArray _points1, InputArray _points2, double focal
 	_points2.getMat().copyTo(points2); 
 
 	int npoints = points1.checkVector(2);
-    CV_Assert( npoints >= 0 && points2.checkVector(2) == npoints &&
+    CV_Assert( npoints >= 5 && points2.checkVector(2) == npoints &&
 				              points1.type() == points2.type());
 
 	if (points1.channels() > 1)
@@ -60,7 +60,7 @@ Mat cv::findEssentialMat( InputArray _points1, InputArray _points2, double focal
 	
 	assert(npoints >= 5); 
 	threshold /= focal; 
-	if (method == FM_RANSAC)
+	if (method == CV_RANSAC)
 	{
 		estimator.runRANSAC(&p1, &p2, &_E, tempMask, threshold, prob); 
 	}
@@ -72,7 +72,7 @@ Mat cv::findEssentialMat( InputArray _points1, InputArray _points2, double focal
     {
     	_mask.create(1, npoints, CV_8U, -1, true); 
     	Mat mask = _mask.getMat(); 
-    	mask = Mat(tempMask).clone(); 
+    	Mat(tempMask).copyTo(mask); 
     }
 
 	return E; 
@@ -243,8 +243,8 @@ int CvEMEstimator::run5Point( const CvMat* q1, const CvMat* q2, CvMat* ematrix )
 	// Therefore, left q1 and right q2 are swap to Q2 and Q1. 
 	// Q1 and Q2 are Nx2 (with omitted third coord as 1). 
 	Eigen::MatrixXd Q1, Q2; 
-	cv::cv2eigen(cv::Mat(q1).reshape(1, q1->cols), Q2); 
-	cv::cv2eigen(cv::Mat(q2).reshape(1, q2->cols), Q1); 
+	cv2eigen(Mat(q1).reshape(1, q1->cols), Q2); 
+	cv2eigen(Mat(q2).reshape(1, q2->cols), Q1); 
 
 
 	int n = Q1.rows(); 
@@ -296,23 +296,15 @@ int CvEMEstimator::run5Point( const CvMat* q1, const CvMat* q2, CvMat* ematrix )
 		if (Evec(1, c).imag() == 0) 
 		{
 			for (r = 0; r < 9; r++) _e->data.db[3 * (r%3) + r/3] = Evec(r, c).real(); 
-			if (reliable(q2, q1, _e)) // Notice q2 is left and q1 right. 
-			{
-				for (r = 0; r < 9; r++) e[3 * (r%3) + r/3] = Evec(r, c).real(); 
-				e += 9; 
-				count++; 
-			}
+		
+            for (r = 0; r < 9; r++) e[3 * (r%3) + r/3] = Evec(r, c).real(); 
+            e += 9; 
+            count++; 
 		}
 	}
 
 	return count; 
     
-}
-
-bool CvEMEstimator::reliable( const CvMat* m1, const CvMat* m2, const CvMat* model )
-{ 
-	Mat R, t; 
-	return recoverPose( Mat(model), Mat(m1), Mat(m2), R, t ) >= 5; 
 }
 
 // Same as the runKernel (run5Point), m1 and m2 should be
@@ -322,8 +314,8 @@ void CvEMEstimator::computeReprojError( const CvMat* m1, const CvMat* m2,
                                      const CvMat* model, CvMat* error )
 {
 	Eigen::MatrixXd X1t, X2t; 
-	cv::cv2eigen(cv::Mat(m1).reshape(1, m1->cols), X1t); 
-	cv::cv2eigen(cv::Mat(m2).reshape(1, m2->cols), X2t); 
+	cv2eigen(Mat(m1).reshape(1, m1->cols), X1t); 
+	cv2eigen(Mat(m2).reshape(1, m2->cols), X2t); 
 	Eigen::MatrixXd X1(3, X1t.rows()); 
 	Eigen::MatrixXd X2(3, X2t.rows()); 
 	X1.topRows(2) = X1t.transpose(); 
@@ -332,7 +324,7 @@ void CvEMEstimator::computeReprojError( const CvMat* m1, const CvMat* m2,
 	X2.row(2).setOnes(); 
 
 	Eigen::MatrixXd E; 
-	cv::cv2eigen(cv::Mat(model), E); 
+	cv2eigen(Mat(model), E); 
 	
 	// Compute Simpson's error
 	Eigen::MatrixXd Ex1, x2tEx1, Etx2, SimpsonError; 
@@ -342,7 +334,7 @@ void CvEMEstimator::computeReprojError( const CvMat* m1, const CvMat* m2,
 	SimpsonError = x2tEx1.array().square() / (Ex1.row(0).array().square() + Ex1.row(1).array().square() + Etx2.row(0).array().square() + Etx2.row(1).array().square()); 
 	
 	assert( CV_IS_MAT_CONT(error->type) ); 
-	cv::Mat isInliers, R, t; 	
+	Mat isInliers, R, t; 	
 	for (int i = 0; i < SimpsonError.cols(); i++) 
 	{
 		error->data.fl[i] = SimpsonError(0, i); 
@@ -681,3 +673,8 @@ A[9 + 10*18]=-e20*e35*e37+e20*e34*e38+e30*e24*e38-e30*e35*e27-e30*e25*e37+e30*e3
 A[9 + 10*19]=-e33*e31*e38-e30*e35*e37+e36*e31*e35+e33*e32*e37+e30*e34*e38-e36*e32*e34;
 
 }
+
+
+
+
+

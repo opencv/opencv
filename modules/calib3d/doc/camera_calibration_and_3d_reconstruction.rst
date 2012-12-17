@@ -687,7 +687,7 @@ Calculates an essential matrix from the corresponding points in two images.
 
 .. ocv:function:: Mat findEssentialMat( InputArray points1, InputArray points2, double focal = 1.0, Point2d pp = Point2d(0, 0), int method = FM_RANSAC, double prob = 0.999, double threshold = 1.0, OutputArray mask = noArray() )
 
-    :param points1: Array of  ``N`` ``(N >= 5)`` points from the first image. The point coordinates should be floating-point (single or double precision). 
+    :param points1: Array of  ``N`` ``(N >= 5)`` 2D points from the first image. The point coordinates should be floating-point (single or double precision). 
 
     :param points2: Array of the second image points of the same size and format as  ``points1`` .
 
@@ -697,8 +697,8 @@ Calculates an essential matrix from the corresponding points in two images.
 
     :param method: Method for computing a fundamental matrix.
 
-            * **CV_FM_RANSAC** for the RANSAC algorithm. 
-            * **CV_FM_LMEDS** for the LMedS algorithm. 
+            * **CV_RANSAC** for the RANSAC algorithm. 
+            * **CV_LMEDS** for the LMedS algorithm. 
 
     :param threshold: Parameter used for RANSAC. It is the maximum distance from a point to an epipolar line in pixels, beyond which the point is considered an outlier and is not used for computing the final fundamental matrix. It can be set to something like 1-3, depending on the accuracy of the point localization, image resolution, and the image noise.
 
@@ -706,7 +706,7 @@ Calculates an essential matrix from the corresponding points in two images.
 
     :param mask: Output array of N elements, every element of which is set to 0 for outliers and to 1 for the other points. The array is computed only in the RANSAC and LMedS methods. 
 
-This function estimates essential matrix based on an implementation of five-point algorithm [SteweniusEN06]_.  
+This function estimates essential matrix based on an implementation of five-point algorithm [Nister03]_ [SteweniusEN06]_.  
 The epipolar geometry is described by the following equation:
 
 .. math::
@@ -757,7 +757,7 @@ Returns the number of inliers which pass the check.
 
     :param E: The input essential matrix. 
 
-    :param points1: Array of  ``N``  points from the first image. The point coordinates should be floating-point (single or double precision).
+    :param points1: Array of  ``N``  2D points from the first image. The point coordinates should be floating-point (single or double precision).
 
     :param points2: Array of the second image points of the same size and format as  ``points1`` .
 
@@ -775,7 +775,7 @@ Returns the number of inliers which pass the check.
                  In the output mask only inliers which pass the cheirality check. 
     
 This function decomposes an essential matrix using ``decomposeEssentialMat()`` and then verifies possible pose hypotheses by doing cheirality check. 
-The cheirality check basically means that the triangulated 3D points should have positive depth. Some details can be found from [SteweniusEN06]_. 
+The cheirality check basically means that the triangulated 3D points should have positive depth. Some details can be found from [Nister03]_. 
 
 This function can be used to process output ``E`` and ``mask`` from ``findEssentialMat()``. 
 In this scenario, ``points1`` and ``points2`` are the same input for ``findEssentialMat()``. ::
@@ -1596,6 +1596,8 @@ The function reconstructs 3-dimensional points (in homogeneous coordinates) by u
 .. [HartleyZ00] Hartley, R. and Zisserman, A. Multiple View Geomtry in Computer Vision, Cambridge University Press, 2000. 
 
 .. [HH08] Hirschmuller, H. Stereo Processing by Semiglobal Matching and Mutual Information, PAMI(30), No. 2, February 2008, pp. 328-341.
+
+.. [Nister03] Nistér, D. An efficient solution to the five-point relative pose problem, CVPR 2003.  
 
 .. [SteweniusEN06] Stewénius, H., Engels, C. and Nistér, D. Recent developments on direct relative orientation. ISPRS Journal of Photogrammetry and Remote Sensing, 60:284-294, June 2006.
 
