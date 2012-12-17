@@ -378,32 +378,32 @@ int connectedComponents_sub1(const cv::Mat &I, cv::Mat &L, int connectivity, Sta
 
 }
 
-int cv::connectedComponents(InputArray _I, OutputArray _L, int connectivity, int ltype){
-    const cv::Mat I = _I.getMat();
-    _L.create(I.size(), ltype);
-    cv::Mat L = _L.getMat();
+int cv::connectedComponents(InputArray _img, OutputArray _labels, int connectivity, int ltype){
+    const cv::Mat img = _img.getMat();
+    _labels.create(img.size(), CV_MAT_DEPTH(ltype));
+    cv::Mat labels = _labels.getMat();
     connectedcomponents::NoOp sop;
     if(ltype == CV_16U){
-        return connectedComponents_sub1(I, L, connectivity, sop);
+        return connectedComponents_sub1(img, labels, connectivity, sop);
     }else if(ltype == CV_32S){
-        return connectedComponents_sub1(I, L, connectivity, sop);
+        return connectedComponents_sub1(img, labels, connectivity, sop);
     }else{
         CV_Error(CV_StsUnsupportedFormat, "the type of labels must be 16u or 32s");
         return 0;
     }
 }
 
-int cv::connectedComponentsWithStats(InputArray _I, OutputArray _L, OutputArray statsv,
+int cv::connectedComponentsWithStats(InputArray _img, OutputArray _labels, OutputArray statsv,
                                      OutputArray centroids, int connectivity, int ltype)
 {
-    const cv::Mat I = _I.getMat();
-    _L.create(I.size(), ltype);
-    cv::Mat L = _L.getMat();
+    const cv::Mat img = _img.getMat();
+    _labels.create(img.size(), CV_MAT_DEPTH(ltype));
+    cv::Mat labels = _labels.getMat();
     connectedcomponents::CCStatsOp sop(statsv, centroids); 
     if(ltype == CV_16U){
-        return connectedComponents_sub1(I, L, connectivity, sop);
+        return connectedComponents_sub1(img, labels, connectivity, sop);
     }else if(ltype == CV_32S){
-        return connectedComponents_sub1(I, L, connectivity, sop);
+        return connectedComponents_sub1(img, labels, connectivity, sop);
     }else{
         CV_Error(CV_StsUnsupportedFormat, "the type of labels must be 16u or 32s");
         return 0;
