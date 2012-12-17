@@ -380,7 +380,7 @@ int connectedComponents_sub1(const cv::Mat &I, cv::Mat &L, int connectivity, Sta
 
 int cv::connectedComponents(InputArray _I, OutputArray _L, int connectivity, int ltype){
     const cv::Mat I = _I.getMat();
-    _L.create(I.size(), CV_MAT_DEPTH(ltype));
+    _L.create(I.size(), ltype);
     cv::Mat L = _L.getMat();
     connectedcomponents::NoOp sop;
     if(ltype == CV_16U){
@@ -397,7 +397,7 @@ int cv::connectedComponentsWithStats(InputArray _I, OutputArray _L, OutputArray 
                                      OutputArray centroids, int connectivity, int ltype)
 {
     const cv::Mat I = _I.getMat();
-    _L.create(I.size(), CV_MAT_DEPTH(ltype));
+    _L.create(I.size(), ltype);
     cv::Mat L = _L.getMat();
     connectedcomponents::CCStatsOp sop(statsv, centroids); 
     if(ltype == CV_16U){
