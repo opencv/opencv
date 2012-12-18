@@ -152,6 +152,7 @@ int main(int argc, char** argv)
     }
 
     fso << "]" << "}";
+    fso.release();
     std::cout << "Training complete..." << std::endl;
     return 0;
 }
