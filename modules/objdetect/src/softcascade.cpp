@@ -47,18 +47,19 @@ namespace {
 struct Octave
 {
     Octave(const int i, const cv::Size& origObjSize, const cv::FileNode& fn)
-    : index(i), scale((float)fn[SC_OCT_SCALE]), stages((int)fn[SC_OCT_STAGES]),
-      size(cvRound(origObjSize.width * scale), cvRound(origObjSize.height * scale)),
-      shrinkage((int)fn[SC_OCT_SHRINKAGE]) {}
+    : index(i), weaks((int)fn[SC_OCT_WEAKS]), scale(pow(2,(float)fn[SC_OCT_SCALE])),
+      size(cvRound(origObjSize.width * scale), cvRound(origObjSize.height * scale)) {}
 
-    int index;
+    int   index;
+    int   weaks;
+
     float scale;
-    int stages;
+
     cv::Size size;
     int shrinkage;
 
     static const char *const SC_OCT_SCALE;
-    static const char *const SC_OCT_STAGES;
+    static const char *const SC_OCT_WEAKS;
     static const char *const SC_OCT_SHRINKAGE;
 };
 
@@ -66,11 +67,11 @@ struct Octave
 struct Weak
 {
     Weak(){}
-    Weak(const cv::FileNode& fn) : threshold((float)fn[SC_STAGE_THRESHOLD]){}
+    Weak(const cv::FileNode& fn) : threshold((float)fn[SC_WEAK_THRESHOLD]) {}
 
     float threshold;
 
-    static const char *const SC_STAGE_THRESHOLD;
+    static const char *const SC_WEAK_THRESHOLD;
 };
 
 
@@ -78,9 +79,9 @@ struct Node
 {
     Node(){}
     Node(const int offset, cv::FileNodeIterator& fIt)
-    : feature((int)(*(fIt +=2)++) + offset), threshold((float)(*(fIt++))){}
+    : feature((int)(*(fIt +=2)++) + offset), threshold((float)(*(fIt++))) {}
 
-    int feature;
+    int   feature;
     float threshold;
 };
 
@@ -96,7 +97,9 @@ struct Feature
         int y = *r_it++;
         int w = *r_it++;
         int h = *r_it++;
-        rect = cv::Rect(x, y, w, h);
+
+        // ToDo: fix me
+        rect = cv::Rect(x, y, w + x, h + y);
 
         // 1 / area
         rarea = 1.f / ((rect.width - rect.x) * (rect.height - rect.y));
@@ -112,9 +115,9 @@ struct Feature
 };
 
 const char *const Octave::SC_OCT_SCALE      = "scale";
-const char *const Octave::SC_OCT_STAGES     = "stageNum";
+const char *const Octave::SC_OCT_WEAKS      = "weaks";
 const char *const Octave::SC_OCT_SHRINKAGE  = "shrinkingFactor";
-const char *const Weak::SC_STAGE_THRESHOLD  = "stageThreshold";
+const char *const Weak::SC_WEAK_THRESHOLD   = "treeThreshold";
 const char *const Feature::SC_F_CHANNEL     = "channel";
 const char *const Feature::SC_F_RECT        = "rect";
 
@@ -144,7 +147,8 @@ struct Level
 
     void addDetection(const int x, const int y, float confidence, std::vector<Detection>& detections) const
     {
-        int shrinkage = (*octave).shrinkage;
+        // fix me
+        int shrinkage = 4;//(*octave).shrinkage;
         cv::Rect rect(cvRound(x * shrinkage), cvRound(y * shrinkage), objSize.width, objSize.height);
 
         detections.push_back(Detection(rect, confidence));
@@ -237,41 +241,47 @@ struct cv::SCascade::Fields
         float detectionScore = 0.f;
 
         const Octave& octave = *(level.octave);
-        int stBegin = octave.index * octave.stages, stEnd = stBegin + octave.stages;
+
+        int stBegin = octave.index * octave.weaks, stEnd = stBegin + ((octave.index)? 1024 : 416;
 
         int st = stBegin;
+        int offset = (octave.index)? -2: 0;
         for(; st < stEnd; ++st)
         {
             const Weak& stage = stages[st];
             {
-                int nId = st * 3;
+                int nId = st * 3 + offset;
 
                 // work with root node
                 const Node& node = nodes[nId];
-                const Feature& feature = features[node.feature];
+                const Feature& feature = features[node.feature + offset];
                 cv::Rect scaledRect(feature.rect);
 
                 float threshold = level.rescale(scaledRect, node.threshold,(int)(feature.channel > 6)) * feature.rarea;
 
                 float sum = storage.get(feature.channel, scaledRect);
+                // std::cout << "root: node.threshold " << node.threshold << " " << threshold << " " << sum << " node.feature " << node.feature << " " << feature.rect << std::endl;
 
                 int next = (sum >= threshold)? 2 : 1;
 
                 // leaves
                 const Node& leaf = nodes[nId + next];
-                const Feature& fLeaf = features[leaf.feature];
+                const Feature& fLeaf = features[leaf.feature + offset];
 
                 scaledRect = fLeaf.rect;
                 threshold = level.rescale(scaledRect, leaf.threshold, (int)(fLeaf.channel > 6)) * fLeaf.rarea;
 
                 sum = storage.get(fLeaf.channel, scaledRect);
+                // std::cout << "leaf: node.threshold " << leaf.threshold << " " << threshold << " " << sum << " node.feature " << leaf.feature << " " << fLeaf.rect << std::endl;
 
                 int lShift = (next - 1) * 2 + ((sum >= threshold) ? 1 : 0);
-                float impact = leaves[(st * 4) + lShift];
+                float impact = leaves[(st * 4 + offset) + lShift];
+                // std::cout << "impact " << impact;
 
                 detectionScore += impact;
             }
 
+            // std::cout << dx << " " << dy << " " << detectionScore << " " << stage.threshold << std::endl;
             if (detectionScore <= stage.threshold) return;
         }
 
@@ -364,55 +374,61 @@ struct cv::SCascade::Fields
         origObjWidth  = (int)root[SC_ORIG_W];
         origObjHeight = (int)root[SC_ORIG_H];
 
-        // for each octave (~ one cascade in classic OpenCV xml)
+        shrinkage = (int)root["shrinkage"];
+
         FileNode fn = root[SC_OCTAVES];
         if (fn.empty()) return false;
 
-        // octaves.reserve(noctaves);
+    //     // octaves.reserve(noctaves);
         FileNodeIterator it = fn.begin(), it_end = fn.end();
         int feature_offset = 0;
         int octIndex = 0;
+
+        // for each octave
         for (; it != it_end; ++it)
         {
             FileNode fns = *it;
             Octave octave(octIndex, cv::Size(origObjWidth, origObjHeight), fns);
-            CV_Assert(octave.stages > 0);
+            CV_Assert(octave.weaks > 0);
             octaves.push_back(octave);
 
             FileNode ffs = fns[SC_FEATURES];
             if (ffs.empty()) return false;
 
-            fns = fns[SC_STAGES];
+            fns = fns["trees"];
             if (fn.empty()) return false;
 
-            // for each stage (~ decision tree with H = 2)
+            // for each tree (~ decision tree with H = 2)
             FileNodeIterator st = fns.begin(), st_end = fns.end();
+            // int i = 0;
             for (; st != st_end; ++st )
             {
-                fns = *st;
-                stages.push_back(Weak(fns));
+                stages.push_back(Weak(*st));
 
-                fns = fns[SC_WEEK];
-                FileNodeIterator ftr = fns.begin(), ft_end = fns.end();
-                for (; ftr != ft_end; ++ftr)
+                fns = (*st)[SC_INTERNAL];
+                FileNodeIterator inIt = fns.begin(), inIt_end = fns.end();
+                for (; inIt != inIt_end;)
+                    nodes.push_back(Node(feature_offset, inIt));
+
+                fns = (*st)[SC_LEAF];
+                inIt = fns.begin(), inIt_end = fns.end();
+                int l = 0;
+                for (; inIt != inIt_end; ++inIt)
                 {
-                    fns = (*ftr)[SC_INTERNAL];
-                    FileNodeIterator inIt = fns.begin(), inIt_end = fns.end();
-                    for (; inIt != inIt_end;)
-                        nodes.push_back(Node(feature_offset, inIt));
-
-                    fns = (*ftr)[SC_LEAF];
-                    inIt = fns.begin(), inIt_end = fns.end();
-                    for (; inIt != inIt_end; ++inIt)
-                        leaves.push_back((float)(*inIt));
+                    leaves.push_back((float)(*inIt));
+                    // l++;
+                    // std::cout << ((float)(*inIt)) << std::endl;
                 }
+                // if (l =! 4) std::cout << "!!!!!!! " << i << std::endl;
+                // i++;
+                // std::cout << i << " nodes " << nodes.size() << " " << nodes.size() / 3.0  << std::endl;
             }
 
             st = ffs.begin(), st_end = ffs.end();
             for (; st != st_end; ++st )
                 features.push_back(Feature(*st));
 
-            feature_offset += octave.stages * 3;
+            feature_offset += octave.weaks * 3;
             ++octIndex;
         }
 
@@ -497,9 +513,12 @@ void cv::SCascade::detectNoRoi(const cv::Mat& image, std::vector<Detection>& obj
     ChannelStorage storage(image, fld.shrinkage);
 
     typedef std::vector<Level>::const_iterator lIt;
+    int i = 13;
     for (lIt it = fld.levels.begin(); it != fld.levels.end(); ++it)
     {
         const Level& level = *it;
+
+        if (i++ == 26) return;
 
         for (int dy = 0; dy < level.workRect.height; ++dy)
         {
@@ -507,6 +526,7 @@ void cv::SCascade::detectNoRoi(const cv::Mat& image, std::vector<Detection>& obj
             {
                 storage.offset = dy * storage.step + dx;
                 fld.detectAt(dx, dy, level, storage, objects);
+                // std::cout << std::endl << std::endl << std::endl;
             }
         }
     }
@@ -568,11 +588,11 @@ void cv::SCascade::detect(InputArray _image, InputArray _rois,  OutputArray _rec
     std::vector<Detection> objects;
     detect( _image, _rois, objects);
 
-    _rects.create(1, (int)objects.size(), CV_32SC4);
+    _rects.create(1, objects.size(), CV_32SC4);
     cv::Mat_<cv::Rect> rects = (cv::Mat_<cv::Rect>)_rects.getMat();
     cv::Rect* rectPtr = rects.ptr<cv::Rect>(0);
 
-    _confs.create(1, (int)objects.size(), CV_32F);
+    _confs.create(1, objects.size(), CV_32F);
     cv::Mat confs = _confs.getMat();
     float* confPtr = rects.ptr<float>(0);
 
