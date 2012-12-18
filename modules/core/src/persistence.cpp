@@ -5200,6 +5200,7 @@ void FileStorage::release()
 string FileStorage::releaseAndGetString()
 {
     string buf;
+    buf.reserve(16); // HACK: Work around for compiler bug
     if( fs.obj && fs.obj->outbuf )
         icvClose(fs.obj, &buf);
 
