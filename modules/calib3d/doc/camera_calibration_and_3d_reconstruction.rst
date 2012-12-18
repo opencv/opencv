@@ -706,7 +706,7 @@ Calculates an essential matrix from the corresponding points in two images.
 
     :param mask: Output array of N elements, every element of which is set to 0 for outliers and to 1 for the other points. The array is computed only in the RANSAC and LMedS methods. 
 
-This function estimates essential matrix based on an implementation of five-point algorithm [Nister03]_ [SteweniusEN06]_.  
+This function estimates essential matrix based on an implementation of five-point algorithm [Nister03]_ [SteweniusCFS]_.  
 The epipolar geometry is described by the following equation:
 
 .. math::
@@ -1599,7 +1599,7 @@ The function reconstructs 3-dimensional points (in homogeneous coordinates) by u
 
 .. [Nister03] Nistér, D. An efficient solution to the five-point relative pose problem, CVPR 2003.  
 
-.. [SteweniusEN06] Stewénius, H., Engels, C. and Nistér, D. Recent developments on direct relative orientation. ISPRS Journal of Photogrammetry and Remote Sensing, 60:284-294, June 2006.
+.. [SteweniusCFS] Stewénius, H., Calibrated Fivepoint solver. http://www.vis.uky.edu/~stewe/FIVEPOINT/
 
 .. [Slabaugh] Slabaugh, G.G. Computing Euler angles from a rotation matrix. http://gregslabaugh.name/publications/euler.pdf
 
