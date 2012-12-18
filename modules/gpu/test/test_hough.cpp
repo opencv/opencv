@@ -89,7 +89,7 @@ TEST_P(HoughLines, Accuracy)
         const bool useRoi = GET_PARAM(2);
 
         const float rho = 1.0f;
-        const float theta = 1.5f * CV_PI / 180.0f;
+        const float theta = (float) (1.5 * CV_PI / 180.0);
         const int threshold = 100;
 
         cv::Mat src(size, CV_8UC1);

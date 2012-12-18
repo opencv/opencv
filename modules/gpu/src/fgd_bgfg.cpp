@@ -523,15 +523,15 @@ namespace
 
         size_t total = all_contours.size();
 
-        _contours.create(total, 1, 0, -1, true);
+        _contours.create((int) total, 1, 0, -1, true);
 
         cv::SeqIterator<CvSeq*> it = all_contours.begin();
         for (size_t i = 0; i < total; ++i, ++it)
         {
             CvSeq* c = *it;
             ((CvContour*)c)->color = (int)i;
-            _contours.create((int)c->total, 1, CV_32SC2, i, true);
-            cv::Mat ci = _contours.getMat(i);
+            _contours.create((int)c->total, 1, CV_32SC2, (int)i, true);
+            cv::Mat ci = _contours.getMat((int)i);
             CV_Assert( ci.isContinuous() );
             cvCvtSeqToArray(c, ci.data);
         }

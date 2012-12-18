@@ -57,7 +57,7 @@ static Vec3b computeColor(float fx, float fy)
     }
 
     const float rad = sqrt(fx * fx + fy * fy);
-    const float a = atan2(-fy, -fx) / CV_PI;
+    const float a = atan2(-fy, -fx) / (float) CV_PI;
 
     const float fk = (a + 1.0f) / 2.0f * (NCOLS - 1);
     const int k0 = static_cast<int>(fk);
@@ -68,8 +68,8 @@ static Vec3b computeColor(float fx, float fy)
 
     for (int b = 0; b < 3; b++)
     {
-        const float col0 = colorWheel[k0][b] / 255.0;
-        const float col1 = colorWheel[k1][b] / 255.0;
+        const float col0 = colorWheel[k0][b] / 255.0f;
+        const float col1 = colorWheel[k1][b] / 255.0f;
 
         float col = (1 - f) * col0 + f * col1;
 
@@ -78,7 +78,7 @@ static Vec3b computeColor(float fx, float fy)
         else
             col *= .75; // out of range
 
-        pix[2 - b] = static_cast<int>(255.0 * col);
+        pix[2 - b] = static_cast<uchar>(255.0 * col);
     }
 
     return pix;
@@ -166,7 +166,7 @@ int main(int argc, const char* argv[])
     GpuMat d_flowx(frame0.size(), CV_32FC1);
     GpuMat d_flowy(frame0.size(), CV_32FC1);
 
-    BroxOpticalFlow brox(0.197, 50.0, 0.8, 10, 77, 10);
+    BroxOpticalFlow brox(0.197f, 50.0f, 0.8f, 10, 77, 10);
     PyrLKOpticalFlow lk; lk.winSize = Size(7, 7);
     FarnebackOpticalFlow farn;
     OpticalFlowDual_TVL1_GPU tvl1;
@@ -179,7 +179,7 @@ int main(int argc, const char* argv[])
         d_frame0.convertTo(d_frame0f, CV_32F, 1.0 / 255.0);
         d_frame1.convertTo(d_frame1f, CV_32F, 1.0 / 255.0);
 
-        const double start = getTickCount();
+        const int64 start = getTickCount();
 
         brox(d_frame0f, d_frame1f, d_flowx, d_flowy);
 
@@ -190,7 +190,7 @@ int main(int argc, const char* argv[])
     }
 
     {
-        const double start = getTickCount();
+        const int64 start = getTickCount();
 
         lk.dense(d_frame0, d_frame1, d_flowx, d_flowy);
 
@@ -201,7 +201,7 @@ int main(int argc, const char* argv[])
     }
 
     {
-        const double start = getTickCount();
+        const int64 start = getTickCount();
 
         farn(d_frame0, d_frame1, d_flowx, d_flowy);
 
@@ -212,7 +212,7 @@ int main(int argc, const char* argv[])
     }
 
     {
-        const double start = getTickCount();
+        const int64 start = getTickCount();
 
         tvl1(d_frame0, d_frame1, d_flowx, d_flowy);
 
@@ -223,7 +223,7 @@ int main(int argc, const char* argv[])
     }
 
     {
-        const double start = getTickCount();
+        const int64 start = getTickCount();
 
         GpuMat buf;
         calcOpticalFlowBM(d_frame0, d_frame1, Size(7, 7), Size(1, 1), Size(21, 21), false, d_flowx, d_flowy, buf);
@@ -235,7 +235,7 @@ int main(int argc, const char* argv[])
     }
 
     {
-        const double start = getTickCount();
+        const int64 start = getTickCount();
 
         fastBM(d_frame0, d_frame1, d_flowx, d_flowy);
 

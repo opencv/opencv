@@ -82,7 +82,7 @@ namespace {
             int cc = -1;
 
             int* dist_labels = (int*)labels.data;
-            int pitch = labels.step1();
+            int pitch = (int) labels.step1();
 
             unsigned char* source = (unsigned char*)image.data;
             int width = image.cols;

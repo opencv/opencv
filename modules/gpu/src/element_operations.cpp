@@ -2086,7 +2086,7 @@ void cv::gpu::bitwise_not(const GpuMat& src, GpuMat& dst, const GpuMat& mask, St
 
     cudaStream_t stream = StreamAccessor::getStream(s);
 
-    const int bcols = src.cols * src.elemSize();
+    const int bcols = (int) (src.cols * src.elemSize());
 
     if ((bcols & 3) == 0)
     {
@@ -2139,7 +2139,7 @@ void cv::gpu::bitwise_and(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, c
 
     cudaStream_t stream = StreamAccessor::getStream(s);
 
-    const int bcols = src1.cols * src1.elemSize();
+    const int bcols = (int) (src1.cols * src1.elemSize());
 
     if ((bcols & 3) == 0)
     {
@@ -2186,7 +2186,7 @@ void cv::gpu::bitwise_or(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, co
 
     cudaStream_t stream = StreamAccessor::getStream(s);
 
-    const int bcols = src1.cols * src1.elemSize();
+    const int bcols = (int) (src1.cols * src1.elemSize());
 
     if ((bcols & 3) == 0)
     {
@@ -2233,7 +2233,7 @@ void cv::gpu::bitwise_xor(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, c
 
     cudaStream_t stream = StreamAccessor::getStream(s);
 
-    const int bcols = src1.cols * src1.elemSize();
+    const int bcols = (int) (src1.cols * src1.elemSize());
 
     if ((bcols & 3) == 0)
     {

@@ -235,13 +235,13 @@ struct cv::gpu::SCascade::Fields
             ++octIndex;
         }
 
-        cv::Mat hoctaves(1, voctaves.size() * sizeof(Octave), CV_8UC1, (uchar*)&(voctaves[0]));
+        cv::Mat hoctaves(1, (int) (voctaves.size() * sizeof(Octave)), CV_8UC1, (uchar*)&(voctaves[0]));
         CV_Assert(!hoctaves.empty());
 
         cv::Mat hstages(cv::Mat(vstages).reshape(1,1));
         CV_Assert(!hstages.empty());
 
-        cv::Mat hnodes(1, vnodes.size() * sizeof(Node), CV_8UC1, (uchar*)&(vnodes[0]) );
+        cv::Mat hnodes(1, (int) (vnodes.size() * sizeof(Node)), CV_8UC1, (uchar*)&(vnodes[0]) );
         CV_Assert(!hnodes.empty());
 
         cv::Mat hleaves(cv::Mat(vleaves).reshape(1,1));
@@ -296,7 +296,7 @@ struct cv::gpu::SCascade::Fields
             scale = ::std::min(maxScale, ::expf(::log(scale) + logFactor));
         }
 
-        cv::Mat hlevels = cv::Mat(1, vlevels.size() * sizeof(Level), CV_8UC1, (uchar*)&(vlevels[0]) );
+        cv::Mat hlevels = cv::Mat(1, (int) (vlevels.size() * sizeof(Level)), CV_8UC1, (uchar*)&(vlevels[0]) );
         CV_Assert(!hlevels.empty());
         levels.upload(hlevels);
         downscales = dcs;

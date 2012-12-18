@@ -38,7 +38,7 @@ int main(int argc, const char* argv[])
 
     vector<Vec4i> lines_cpu;
     {
-        const double start = getTickCount();
+        const int64 start = getTickCount();
 
         HoughLinesP(mask, lines_cpu, 1, CV_PI / 180, 50, 60, 5);
 
@@ -57,9 +57,9 @@ int main(int argc, const char* argv[])
     GpuMat d_lines;
     HoughLinesBuf d_buf;
     {
-        const double start = getTickCount();
+        const int64 start = getTickCount();
 
-        gpu::HoughLinesP(d_src, d_lines, d_buf, 1, CV_PI / 180, 50, 5);
+        gpu::HoughLinesP(d_src, d_lines, d_buf, 1.0f, (float) (CV_PI / 180.0f), 50, 5);
 
         const double timeSec = (getTickCount() - start) / getTickFrequency();
         cout << "GPU Time : " << timeSec * 1000 << " ms" << endl;

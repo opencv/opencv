@@ -606,8 +606,8 @@ static void FastOpticalFlowBM_gold(const cv::Mat_<uchar>& I0, const cv::Mat_<uch
                 }
             }
 
-            velx(y, x) = bestDx;
-            vely(y, x) = bestDy;
+            velx(y, x) = (float) bestDx;
+            vely(y, x) = (float) bestDy;
         }
     }
 }

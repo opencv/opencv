@@ -579,7 +579,7 @@ namespace
         const func_t func = funcs[dx.depth()];
         CV_Assert(func != 0);
 
-        edgePointList.cols = edgePointList.step / sizeof(int);
+        edgePointList.cols = (int) (edgePointList.step / sizeof(int));
         ensureSizeIsEnough(2, edges.size().area(), CV_32SC1, edgePointList);
 
         edgePointList.cols = func(edges, dx, dy, edgePointList.ptr<unsigned int>(0), edgePointList.ptr<float>(1));
