@@ -532,17 +532,16 @@
       <cols>1</cols>
       <dt>"4i"</dt>
       <data>
-        412 141 89 89</data></val></faces></ImageName_MinSize_CascadeClassifierLBPFrontalFace--CascadeClassifierLBPFrontalFace----cv-shared-1_itseez-0000892-png---70->
+	414 142 85 85</data></val></faces></ImageName_MinSize_CascadeClassifierLBPFrontalFace--CascadeClassifierLBPFrontalFace----cv-shared-1_itseez-0000892-png---70->
 <ImageName_MinSize_CascadeClassifierLBPFrontalFace--CascadeClassifierLBPFrontalFace----cv-shared-1_itseez-0000892-png---80->
   <faces>
     <kind>196608</kind>
     <type>28</type>
     <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>"4i"</dt>
-      <data>
-        410 139 91 91</data></val></faces></ImageName_MinSize_CascadeClassifierLBPFrontalFace--CascadeClassifierLBPFrontalFace----cv-shared-1_itseez-0000892-png---80->
+      <rows>0</rows>
+      <cols>0</cols>
+      <dt>u</dt>
+      <data></data></val></faces></ImageName_MinSize_CascadeClassifierLBPFrontalFace--CascadeClassifierLBPFrontalFace----cv-shared-1_itseez-0000892-png---80->
 <ImageName_MinSize_CascadeClassifierLBPFrontalFace--CascadeClassifierLBPFrontalFace----cv-shared-1_itseez-0000892-png---90->
   <faces>
     <kind>196608</kind>
