@@ -1088,7 +1088,6 @@ protected:
     int e_result;
     double min_f, max_f;
     double sigma;
-    bool test_cpp;
 };
 
 
@@ -1120,7 +1119,6 @@ CV_EssentialMatTest::CV_EssentialMatTest()
     min_f = 1;
     max_f = 3;
 
-    test_cpp = false;
 }
 
 
@@ -1182,7 +1180,6 @@ void CV_EssentialMatTest::get_test_array_types_and_sizes( int /*test_case_idx*/,
     sizes[OUTPUT][1] = sizes[REF_OUTPUT][1] = cvSize(pt_count,1);
     types[OUTPUT][1] = types[REF_OUTPUT][1] = CV_8UC1;
 
-    test_cpp = (cvtest::randInt(rng) & 256) == 0;
 }
 
 
@@ -1333,6 +1330,7 @@ void CV_EssentialMatTest::prepare_to_validation( int test_case_idx )
     uchar* mtfm2 = test_mat[OUTPUT][1].data;
     double* e_prop1 = (double*)test_mat[REF_OUTPUT][0].data;
     double* e_prop2 = (double*)test_mat[OUTPUT][0].data;
+    Mat E_prop2 = Mat(3, 1, CV_64F, e_prop2); 
 
     int i, pt_count = test_mat[INPUT][2].cols;
     Mat p1( 1, pt_count, CV_64FC2 );
@@ -1365,13 +1363,14 @@ void CV_EssentialMatTest::prepare_to_validation( int test_case_idx )
         mtfm2[i] = !status[i] || t0 > err_level || t < err_level;
     }
     
-    e_prop1[0] = 1;
-    e_prop1[1] = 1;
+    e_prop1[0] = sqrt(0.5);
+    e_prop1[1] = sqrt(0.5);
     e_prop1[2] = 0;
 
-    e_prop2[0] = 1;
-    e_prop2[1] = 1;
-    e_prop2[2] = cv::determinant( E );
+    e_prop2[0] = 0;
+    e_prop2[1] = 0;
+    e_prop2[2] = 0;
+    SVD::compute(E, E_prop2); 
 }
 
 /********************************** convert homogeneous *********************************/
