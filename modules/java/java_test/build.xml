@@ -58,9 +58,6 @@
       <batchtest fork="yes" todir="testResults">
 	<zipfileset src="build/jar/opencv-test.jar" includes="**/*.class" excludes="**/OpenCVTest*">
 	 <exclude name="**/*$*.class"/>
-	 <!-- These tests fail, unfortunately causing other tests to fail for no reason. -->
-	 <exclude name="**/*CoreTest*.class"/>
-	 <exclude name="**/*Extractor*.class"/>
 	</zipfileset>
       </batchtest>
     </junit>
