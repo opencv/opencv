@@ -36792,78 +36792,6 @@
       <x>0</x>
       <y>41</y>
       <val>2.</val></rng2></hist></Size_Source_calcHist--calcHist---127x61--32FC1->
-<MatSize_equalizeHist--equalizeHist--640x480>
-  <destination>
-    <kind>65536</kind>
-    <type>0</type>
-    <min>0.</min>
-    <max>255.</max>
-    <last>
-      <x>639</x>
-      <y>479</y>
-      <val>144.</val></last>
-    <rng1>
-      <x>361</x>
-      <y>427</y>
-      <val>60.</val></rng1>
-    <rng2>
-      <x>195</x>
-      <y>328</y>
-      <val>25.</val></rng2></destination></MatSize_equalizeHist--equalizeHist--640x480>
-<MatSize_equalizeHist--equalizeHist--1280x720>
-  <destination>
-    <kind>65536</kind>
-    <type>0</type>
-    <min>0.</min>
-    <max>255.</max>
-    <last>
-      <x>1279</x>
-      <y>719</y>
-      <val>179.</val></last>
-    <rng1>
-      <x>1236</x>
-      <y>174</y>
-      <val>48.</val></rng1>
-    <rng2>
-      <x>475</x>
-      <y>304</y>
-      <val>183.</val></rng2></destination></MatSize_equalizeHist--equalizeHist--1280x720>
-<MatSize_equalizeHist--equalizeHist--1920x1080>
-  <destination>
-    <kind>65536</kind>
-    <type>0</type>
-    <min>0.</min>
-    <max>255.</max>
-    <last>
-      <x>1919</x>
-      <y>1079</y>
-      <val>0.</val></last>
-    <rng1>
-      <x>989</x>
-      <y>396</y>
-      <val>133.</val></rng1>
-    <rng2>
-      <x>582</x>
-      <y>707</y>
-      <val>33.</val></rng2></destination></MatSize_equalizeHist--equalizeHist--1920x1080>
-<MatSize_equalizeHist--equalizeHist--127x61>
-  <destination>
-    <kind>65536</kind>
-    <type>0</type>
-    <min>0.</min>
-    <max>255.</max>
-    <last>
-      <x>126</x>
-      <y>60</y>
-      <val>188.</val></last>
-    <rng1>
-      <x>112</x>
-      <y>56</y>
-      <val>230.</val></rng1>
-    <rng2>
-      <x>64</x>
-      <y>18</y>
-      <val>240.</val></rng2></destination></MatSize_equalizeHist--equalizeHist--127x61>
 <Image_MaxCorners_QualityLevel_MinDistance_BlockSize_UseHarris_goodFeaturesToTrack--goodFeaturesToTrack----stitching-a1-png---100--0-1--3--false->
   <corners>
     <kind>196608</kind>
@@ -49783,4 +49711,77 @@
       <x>7</x>
       <y>27</y>
       <val>168.</val></rng2></hist></Size_Source_calcHist3d--calcHist3d---2592x1944--32FC3->
+ <!-- resumed -->
+<MatSize_equalizeHist--equalizeHist--640x480>
+  <destination>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>143.</val></last>
+    <rng1>
+      <x>184</x>
+      <y>371</y>
+      <val>173.</val></rng1>
+    <rng2>
+      <x>456</x>
+      <y>391</y>
+      <val>76.</val></rng2></destination></MatSize_equalizeHist--equalizeHist--640x480>
+<MatSize_equalizeHist--equalizeHist--1280x720>
+  <destination>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>179.</val></last>
+    <rng1>
+      <x>528</x>
+      <y>464</y>
+      <val>113.</val></rng1>
+    <rng2>
+      <x>242</x>
+      <y>84</y>
+      <val>162.</val></rng2></destination></MatSize_equalizeHist--equalizeHist--1280x720>
+<MatSize_equalizeHist--equalizeHist--1920x1080>
+  <destination>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>361</x>
+      <y>580</y>
+      <val>13.</val></rng1>
+    <rng2>
+      <x>72</x>
+      <y>229</y>
+      <val>212.</val></rng2></destination></MatSize_equalizeHist--equalizeHist--1920x1080>
+<MatSize_equalizeHist--equalizeHist--127x61>
+  <destination>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>126</x>
+      <y>60</y>
+      <val>188.</val></last>
+    <rng1>
+      <x>61</x>
+      <y>26</y>
+      <val>220.</val></rng1>
+    <rng2>
+      <x>49</x>
+      <y>33</y>
+      <val>184.</val></rng2></destination></MatSize_equalizeHist--equalizeHist--127x61>
 </opencv_storage>
