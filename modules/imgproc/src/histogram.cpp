@@ -2404,6 +2404,146 @@ cvCalcProbDensity( const CvHistogram* hist, const CvHistogram* hist_mask,
     }
 }
 
+class EqualizeHistCalcHist_Invoker
+{
+public:
+    enum {HIST_SZ = 256};
+
+#ifdef HAVE_TBB
+    typedef tbb::mutex* MutextPtr;
+#else
+    typedef void* MutextPtr;
+#endif
+
+    EqualizeHistCalcHist_Invoker(cv::Mat& src, int* histogram, MutextPtr histogramLock)
+        : src_(src), globalHistogram_(histogram), histogramLock_(histogramLock)
+    { }
+
+    void operator()( const cv::BlockedRange& rowRange ) const
+    {
+        int localHistogram[HIST_SZ] = {0, };
+
+        const size_t sstep = src_.step;
+
+        int width = src_.cols;
+        int height = rowRange.end() - rowRange.begin();
+
+        if (src_.isContinuous())
+        {
+            width *= height;
+            height = 1;
+        }
+
+        for (const uchar* ptr = src_.ptr<uchar>(rowRange.begin()); height--; ptr += sstep)
+        {
+            int x = 0;
+            for (; x <= width - 4; x += 4)
+            {
+                int t0 = ptr[x], t1 = ptr[x+1];
+                localHistogram[t0]++; localHistogram[t1]++;
+                t0 = ptr[x+2]; t1 = ptr[x+3];
+                localHistogram[t0]++; localHistogram[t1]++;
+            }
+
+            for (; x < width; ++x, ++ptr)
+                localHistogram[ptr[x]]++;
+        }
+
+#ifdef HAVE_TBB
+        tbb::mutex::scoped_lock lock(*histogramLock_);
+#endif
+
+        for( int i = 0; i < HIST_SZ; i++ )
+            globalHistogram_[i] += localHistogram[i];
+    }
+
+    static bool isWorthParallel( const cv::Mat& src )
+    {
+#ifdef HAVE_TBB
+        return ( src.total() >= 640*480 );
+#else
+        (void)src;
+        return false;
+#endif
+    }
+
+private:
+    EqualizeHistCalcHist_Invoker& operator=(const EqualizeHistCalcHist_Invoker&);
+
+    cv::Mat& src_;
+    int* globalHistogram_;
+    MutextPtr histogramLock_;
+};
+
+class EqualizeHistLut_Invoker
+{
+public:
+    EqualizeHistLut_Invoker( cv::Mat& src, cv::Mat& dst, int* lut )
+        : src_(src),
+          dst_(dst),
+          lut_(lut)
+    { }
+
+    void operator()( const cv::BlockedRange& rowRange ) const
+    {
+        const size_t sstep = src_.step;
+        const size_t dstep = dst_.step;
+
+        int width = src_.cols;
+        int height = rowRange.end() - rowRange.begin();
+        int* lut = lut_;
+
+        if (src_.isContinuous() && dst_.isContinuous())
+        {
+            width *= height;
+            height = 1;
+        }
+
+        const uchar* sptr = src_.ptr<uchar>(rowRange.begin());
+        uchar* dptr = dst_.ptr<uchar>(rowRange.begin());
+
+        for (; height--; sptr += sstep, dptr += dstep)
+        {
+            int x = 0;
+            for (; x <= width - 4; x += 4)
+            {
+                int v0 = sptr[x];
+                int v1 = sptr[x+1];
+                int x0 = lut[v0];
+                int x1 = lut[v1];
+                dptr[x] = (uchar)x0;
+                dptr[x+1] = (uchar)x1;
+
+                v0 = sptr[x+2];
+                v1 = sptr[x+3];
+                x0 = lut[v0];
+                x1 = lut[v1];
+                dptr[x+2] = (uchar)x0;
+                dptr[x+3] = (uchar)x1;
+            }
+
+            for (; x < width; ++x)
+                dptr[x] = (uchar)lut[sptr[x]];
+        }
+    }
+
+    static bool isWorthParallel( const cv::Mat& src )
+    {
+#ifdef HAVE_TBB
+        return ( src.total() >= 640*480 );
+#else
+        (void)src;
+        return false;
+#endif
+    }
+
+private:
+    EqualizeHistLut_Invoker& operator=(const EqualizeHistLut_Invoker&);
+
+    cv::Mat& src_;
+    cv::Mat& dst_;
+    int* lut_;
+};
 
 CV_IMPL void cvEqualizeHist( const CvArr* srcarr, CvArr* dstarr )
 {
@@ -2421,35 +2561,25 @@ void cv::equalizeHist( InputArray _src, OutputArray _dst )
     if(src.empty())
         return;
 
-    const int hist_sz = (1 << (8*sizeof(uchar)));
+#ifdef HAVE_TBB
+    tbb::mutex histogramLockInstance;
+    EqualizeHistCalcHist_Invoker::MutextPtr histogramLock = &histogramLockInstance;
+#else
+    EqualizeHistCalcHist_Invoker::MutextPtr histogramLock = 0;
+#endif
+
+    const int hist_sz = EqualizeHistCalcHist_Invoker::HIST_SZ;
     int hist[hist_sz] = {0,};
+    int lut[hist_sz];
 
-    const size_t sstep = src.step;
-    const size_t dstep = dst.step;
+    EqualizeHistCalcHist_Invoker calcBody(src, hist, histogramLock);
+    EqualizeHistLut_Invoker      lutBody(src, dst, lut);
+    cv::BlockedRange heightRange(0, src.rows);
 
-    int width = src.cols;
-    int height = src.rows;
-
-    if (src.isContinuous())
-    {
-        width *= height;
-        height = 1;
-    }
-
-    for (const uchar* ptr = src.ptr<uchar>(); height--; ptr += sstep)
-    {
-        int x = 0;
-        for (; x <= width - 4; x += 4)
-        {
-            int t0 = ptr[x], t1 = ptr[x+1];
-            hist[t0]++; hist[t1]++;
-            t0 = ptr[x+2]; t1 = ptr[x+3];
-            hist[t0]++; hist[t1]++;
-        }
-
-        for (; x < width; ++x, ++ptr)
-            hist[ptr[x]]++;
-    }
+    if(EqualizeHistCalcHist_Invoker::isWorthParallel(src))
+        parallel_for(heightRange, calcBody);
+    else
+        calcBody(heightRange);
 
     int i = 0;
     while (!hist[i]) ++i;
@@ -2464,49 +2594,16 @@ void cv::equalizeHist( InputArray _src, OutputArray _dst )
     float scale = (hist_sz - 1.f)/(total - hist[i]);
     int sum = 0;
 
-    int lut[hist_sz];
-
     for (lut[i++] = 0; i < hist_sz; ++i)
     {
         sum += hist[i];
         lut[i] = saturate_cast<uchar>(sum * scale);
     }
 
-    int cols = src.cols;
-    int rows = src.rows;
-
-    if (src.isContinuous() && dst.isContinuous())
-    {
-        cols *= rows;
-        rows = 1;
-    }
-
-    const uchar* sptr = src.ptr<uchar>();
-    uchar* dptr = dst.ptr<uchar>();
-
-    for (; rows--; sptr += sstep, dptr += dstep)
-    {
-        int x = 0;
-        for (; x <= cols - 4; x += 4)
-        {
-            int v0 = sptr[x];
-            int v1 = sptr[x+1];
-            int x0 = lut[v0];
-            int x1 = lut[v1];
-            dptr[x] = (uchar)x0;
-            dptr[x+1] = (uchar)x1;
-
-            v0 = sptr[x+2];
-            v1 = sptr[x+3];
-            x0 = lut[v0];
-            x1 = lut[v1];
-            dptr[x+2] = (uchar)x0;
-            dptr[x+3] = (uchar)x1;
-        }
-
-        for (; x < cols; ++x)
-            dptr[x] = (uchar)lut[sptr[x]];
-    }
+    if(EqualizeHistLut_Invoker::isWorthParallel(src))
+        parallel_for(heightRange, lutBody);
+    else
+        lutBody(heightRange);
 }
 
 /* Implementation of RTTI and Generic Functions for CvHistogram */
