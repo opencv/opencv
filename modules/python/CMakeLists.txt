@@ -10,7 +10,7 @@ if(ANDROID OR IOS OR NOT PYTHONLIBS_FOUND OR NOT PYTHON_USE_NUMPY)
 endif()
 
 set(the_description "The python bindings")
-ocv_add_module(python BINDINGS opencv_core opencv_flann opencv_imgproc opencv_video opencv_ml opencv_features2d opencv_highgui opencv_calib3d opencv_photo opencv_objdetect opencv_contrib opencv_legacy OPTIONAL opencv_nonfree)
+ocv_add_module(python BINDINGS opencv_core opencv_flann opencv_imgproc opencv_video opencv_ml opencv_features2d opencv_highgui opencv_calib3d opencv_photo opencv_objdetect opencv_contrib opencv_legacy OPTIONAL opencv_nonfree opencv_gpu)
 
 add_definitions(-DPYTHON_USE_NUMPY=1)
 
@@ -40,6 +40,12 @@ if(HAVE_opencv_nonfree)
   list(APPEND opencv_hdrs     "${OPENCV_MODULE_opencv_nonfree_LOCATION}/include/opencv2/nonfree/features2d.hpp"
                               "${OPENCV_MODULE_opencv_nonfree_LOCATION}/include/opencv2/nonfree/nonfree.hpp")
 endif()
+
+if(HAVE_opencv_gpu)
+  list(APPEND opencv_hdrs     "${OPENCV_MODULE_opencv_gpu_LOCATION}/include/opencv2/gpu/gpu.hpp"
+                              "${OPENCV_MODULE_opencv_core_LOCATION}/include/opencv2/core/gpumat.hpp")
+endif()
+
 
 set(cv2_generated_hdrs
     "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_funcs.h"

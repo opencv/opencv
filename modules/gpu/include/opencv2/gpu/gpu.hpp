@@ -138,7 +138,7 @@ public:
 // Passed to each function that supports async kernel execution.
 // Reference counting is enabled
 
-class CV_EXPORTS Stream
+class CV_EXPORTS_W Stream
 {
 public:
     Stream();
@@ -759,10 +759,10 @@ CV_EXPORTS void matchTemplate(const GpuMat& image, const GpuMat& templ, GpuMat& 
 CV_EXPORTS void matchTemplate(const GpuMat& image, const GpuMat& templ, GpuMat& result, int method, MatchTemplateBuf &buf, Stream& stream = Stream::Null());
 
 //! smoothes the source image and downsamples it
-CV_EXPORTS void pyrDown(const GpuMat& src, GpuMat& dst, Stream& stream = Stream::Null());
+CV_EXPORTS_W void pyrDown(const gpu::GpuMat& src, CV_OUT gpu::GpuMat& dst, gpu::Stream& stream = gpu::Stream::Null());
 
 //! upsamples the source image and then smoothes it
-CV_EXPORTS void pyrUp(const GpuMat& src, GpuMat& dst, Stream& stream = Stream::Null());
+CV_EXPORTS_W void pyrUp(const gpu::GpuMat& src, CV_OUT gpu::GpuMat& dst, gpu::Stream& stream = gpu::Stream::Null());
 
 //! performs linear blending of two images
 //! to avoid accuracy errors sum of weigths shouldn't be very close to zero

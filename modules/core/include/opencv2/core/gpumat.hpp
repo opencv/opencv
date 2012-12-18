@@ -146,11 +146,11 @@ namespace cv { namespace gpu
     //////////////////////////////// GpuMat ///////////////////////////////
 
     //! Smart pointer for GPU memory with reference counting. Its interface is mostly similar with cv::Mat.
-    class CV_EXPORTS GpuMat
+    class CV_EXPORTS_W GpuMat
     {
     public:
         //! default constructor
-        GpuMat();
+        CV_WRAP GpuMat();
 
         //! constructs GpuMatrix of the specified size and type (_type is CV_8UC1, CV_64FC3, CV_32SC(12) etc.)
         GpuMat(int rows, int cols, int type);
@@ -172,7 +172,7 @@ namespace cv { namespace gpu
         GpuMat(const GpuMat& m, Rect roi);
 
         //! builds GpuMat from Mat. Perfom blocking upload to device.
-        explicit GpuMat(const Mat& m);
+        CV_WRAP explicit GpuMat(const Mat& m);
 
         //! destructor - calls release()
         ~GpuMat();
@@ -181,10 +181,10 @@ namespace cv { namespace gpu
         GpuMat& operator = (const GpuMat& m);
 
         //! pefroms blocking upload data to GpuMat.
-        void upload(const Mat& m);
+        CV_WRAP void upload(const Mat& m);
 
         //! downloads data from device to host memory. Blocking calls.
-        void download(Mat& m) const;
+        CV_WRAP void download(CV_OUT Mat& m) const;
 
         //! returns a new GpuMatrix header for the specified row
         GpuMat row(int y) const;

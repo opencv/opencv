@@ -14,7 +14,9 @@ opencv_hdr_list = [
 "../../video/include/opencv2/video/background_segm.hpp",
 "../../objdetect/include/opencv2/objdetect/objdetect.hpp",
 "../../contrib/include/opencv2/contrib/contrib.hpp",
-"../../highgui/include/opencv2/highgui/highgui.hpp"
+"../../highgui/include/opencv2/highgui/highgui.hpp",
+"../../gpu/include/opencv2/gpu/gpu.hpp",
+"../../core/include/opencv2/core/gpumat.hpp",
 ]
 
 """
@@ -207,6 +209,8 @@ class CppHeaderParser(object):
         prev_val_delta = -1
         decl = []
         for pair in ll:
+            if pair.strip() == '': # handle final comma
+                break
             pv = pair.split("=")
             if len(pv) == 1:
                 prev_val_delta += 1
@@ -406,6 +410,8 @@ class CppHeaderParser(object):
         context = top[0]
         if decl_str.startswith("static") and (context == "class" or context == "struct"):
             decl_str = decl_str[len("static"):].lstrip()
+            static_method = True
+        if context == "namespace" and top[1] != 'cv':  # HACK
             static_method = True
 
         args_begin = decl_str.find("(")
