@@ -25,8 +25,6 @@ import org.opencv.features2d.DMatch;
 import org.opencv.features2d.KeyPoint;
 import org.opencv.highgui.Highgui;
 
-//import android.util.Log;
-
 public class OpenCVTestCase extends TestCase {
     //change to 'true' to unblock fail on fail("Not yet implemented")
     public static final boolean passNYI = true;
