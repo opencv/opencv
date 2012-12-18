@@ -40,7 +40,7 @@
 //
 //M*/
 
-#include <test_precomp.hpp>
+#include "test_precomp.hpp"
 #include <time.h>
 
 #ifdef HAVE_CUDA
@@ -158,62 +158,77 @@ GPU_TEST_P(SCascadeTestRoi, detect,
         testing::Values(std::string("../cv/cascadeandhog/bahnhof/image_00000000_0.png")),
         testing::Range(0, 5)))
 {
-    cv::gpu::setDevice(GET_PARAM(0).deviceID());
-    cv::Mat coloredCpu = cv::imread(cvtest::TS::ptr()->get_data_path() + GET_PARAM(2));
-    ASSERT_FALSE(coloredCpu.empty());
-
-    cv::gpu::SCascade cascade;
-
-    cv::FileStorage fs(perf::TestBase::getDataPath(GET_PARAM(1)), cv::FileStorage::READ);
-    ASSERT_TRUE(fs.isOpened());
-
-    ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
-
-    GpuMat colored(coloredCpu), objectBoxes(1, 16384, CV_8UC1), rois(colored.size(), CV_8UC1);
-    rois.setTo(0);
-
-    int nroi = GET_PARAM(3);
-    cv::Mat result(coloredCpu);
-    cv::RNG rng;
-    for (int i = 0; i < nroi; ++i)
+    try
     {
-        cv::Rect r = getFromTable(rng(10));
-        GpuMat sub(rois, r);
-        sub.setTo(1);
-        cv::rectangle(result, r, cv::Scalar(0, 0, 255, 255), 1);
+        cv::gpu::setDevice(GET_PARAM(0).deviceID());
+        cv::Mat coloredCpu = cv::imread(cvtest::TS::ptr()->get_data_path() + GET_PARAM(2));
+        ASSERT_FALSE(coloredCpu.empty());
+
+        cv::gpu::SCascade cascade;
+
+        cv::FileStorage fs(perf::TestBase::getDataPath(GET_PARAM(1)), cv::FileStorage::READ);
+        ASSERT_TRUE(fs.isOpened());
+
+        ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
+
+        GpuMat colored(coloredCpu), objectBoxes(1, 16384, CV_8UC1), rois(colored.size(), CV_8UC1);
+        rois.setTo(0);
+
+        int nroi = GET_PARAM(3);
+        cv::Mat result(coloredCpu);
+        cv::RNG rng;
+        for (int i = 0; i < nroi; ++i)
+        {
+            cv::Rect r = getFromTable(rng(10));
+            GpuMat sub(rois, r);
+            sub.setTo(1);
+            cv::rectangle(result, r, cv::Scalar(0, 0, 255, 255), 1);
+        }
+        objectBoxes.setTo(0);
+
+        cascade.detect(colored, rois, objectBoxes);
+
+        cv::Mat dt(objectBoxes);
+        typedef cv::gpu::SCascade::Detection Detection;
+
+        Detection* dts = ((Detection*)dt.data) + 1;
+        int* count = dt.ptr<int>(0);
+
+        printTotal(std::cout, *count);
+
+        for (int i = 0; i  < *count; ++i)
+        {
+            Detection d = dts[i];
+            print(std::cout, d);
+            cv::rectangle(result, cv::Rect(d.x, d.y, d.w, d.h), cv::Scalar(255, 0, 0, 255), 1);
+        }
+
+        SHOW(result);
     }
-    objectBoxes.setTo(0);
-
-    cascade.detect(colored, rois, objectBoxes);
-
-    cv::Mat dt(objectBoxes);
-    typedef cv::gpu::SCascade::Detection Detection;
-
-    Detection* dts = ((Detection*)dt.data) + 1;
-    int* count = dt.ptr<int>(0);
-
-    printTotal(std::cout, *count);
-
-    for (int i = 0; i  < *count; ++i)
+    catch (...)
     {
-        Detection d = dts[i];
-        print(std::cout, d);
-        cv::rectangle(result, cv::Rect(d.x, d.y, d.w, d.h), cv::Scalar(255, 0, 0, 255), 1);
+        cv::gpu::resetDevice();
+        throw;
     }
-
-    SHOW(result);
-
 }
 
 TEST(SCascadeTest, readCascade)
 {
-    std::string xml = cvtest::TS::ptr()->get_data_path() + "../cv/cascadeandhog/icf-template.xml";
-    cv::gpu::SCascade cascade;
+    try
+    {
+        std::string xml = cvtest::TS::ptr()->get_data_path() + "../cv/cascadeandhog/icf-template.xml";
+        cv::gpu::SCascade cascade;
 
-    cv::FileStorage fs(xml, cv::FileStorage::READ);
-    ASSERT_TRUE(fs.isOpened());
+        cv::FileStorage fs(xml, cv::FileStorage::READ);
+        ASSERT_TRUE(fs.isOpened());
 
-    ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
+        ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
+    }
+    catch (...)
+    {
+        cv::gpu::resetDevice();
+        throw;
+    }
 }
 
 typedef ::testing::TestWithParam<cv::gpu::DeviceInfo > SCascadeTestAll;
@@ -221,104 +236,128 @@ GPU_TEST_P(SCascadeTestAll, detect,
         ALL_DEVICES
         )
 {
-    cv::gpu::setDevice(GetParam().deviceID());
-    std::string xml =  cvtest::TS::ptr()->get_data_path() + "../cv/cascadeandhog/sc_cvpr_2012_to_opencv.xml";
-    cv::gpu::SCascade cascade;
+    try
+    {
+        cv::gpu::setDevice(GetParam().deviceID());
+        std::string xml =  cvtest::TS::ptr()->get_data_path() + "../cv/cascadeandhog/sc_cvpr_2012_to_opencv.xml";
+        cv::gpu::SCascade cascade;
 
-    cv::FileStorage fs(xml, cv::FileStorage::READ);
-    ASSERT_TRUE(fs.isOpened());
+        cv::FileStorage fs(xml, cv::FileStorage::READ);
+        ASSERT_TRUE(fs.isOpened());
 
-    ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
+        ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
 
-    cv::Mat coloredCpu = cv::imread(cvtest::TS::ptr()->get_data_path()
-        + "../cv/cascadeandhog/bahnhof/image_00000000_0.png");
-    ASSERT_FALSE(coloredCpu.empty());
+        cv::Mat coloredCpu = cv::imread(cvtest::TS::ptr()->get_data_path()
+            + "../cv/cascadeandhog/bahnhof/image_00000000_0.png");
+        ASSERT_FALSE(coloredCpu.empty());
 
-    GpuMat colored(coloredCpu), objectBoxes, rois(colored.size(), CV_8UC1);
-    rois.setTo(0);
-    GpuMat sub(rois, cv::Rect(rois.cols / 4, rois.rows / 4,rois.cols / 2, rois.rows / 2));
-    sub.setTo(cv::Scalar::all(1));
+        GpuMat colored(coloredCpu), objectBoxes, rois(colored.size(), CV_8UC1);
+        rois.setTo(0);
+        GpuMat sub(rois, cv::Rect(rois.cols / 4, rois.rows / 4,rois.cols / 2, rois.rows / 2));
+        sub.setTo(cv::Scalar::all(1));
 
-    objectBoxes.setTo(0);
-    cascade.detect(colored, rois, objectBoxes);
+        objectBoxes.setTo(0);
+        cascade.detect(colored, rois, objectBoxes);
 
-    typedef cv::gpu::SCascade::Detection Detection;
-    cv::Mat detections(objectBoxes);
-    int a = *(detections.ptr<int>(0));
-    ASSERT_EQ(a ,2448);
+        typedef cv::gpu::SCascade::Detection Detection;
+        cv::Mat detections(objectBoxes);
+        int a = *(detections.ptr<int>(0));
+        ASSERT_EQ(a, 2448);
+    }
+    catch (...)
+    {
+        cv::gpu::resetDevice();
+        throw;
+    }
 }
 
 GPU_TEST_P(SCascadeTestAll, detectOnIntegral,
         ALL_DEVICES
         )
 {
-    cv::gpu::setDevice(GetParam().deviceID());
-    std::string xml =  cvtest::TS::ptr()->get_data_path() + "../cv/cascadeandhog/sc_cvpr_2012_to_opencv.xml";
-    cv::gpu::SCascade cascade;
-
-    cv::FileStorage fs(xml, cv::FileStorage::READ);
-    ASSERT_TRUE(fs.isOpened());
-
-    ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
-
-    std::string intPath = cvtest::TS::ptr()->get_data_path() + "../cv/cascadeandhog/integrals.xml";
-    cv::FileStorage fsi(intPath, cv::FileStorage::READ);
-    ASSERT_TRUE(fsi.isOpened());
-
-    GpuMat hogluv(121 * 10, 161, CV_32SC1);
-    for (int i = 0; i < 10; ++i)
+    try
     {
-        cv::Mat channel;
-        fsi[std::string("channel") + itoa(i)] >> channel;
-        GpuMat gchannel(hogluv, cv::Rect(0, 121 * i, 161, 121));
-        gchannel.upload(channel);
+        cv::gpu::setDevice(GetParam().deviceID());
+        std::string xml =  cvtest::TS::ptr()->get_data_path() + "../cv/cascadeandhog/sc_cvpr_2012_to_opencv.xml";
+        cv::gpu::SCascade cascade;
+
+        cv::FileStorage fs(xml, cv::FileStorage::READ);
+        ASSERT_TRUE(fs.isOpened());
+
+        ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
+
+        std::string intPath = cvtest::TS::ptr()->get_data_path() + "../cv/cascadeandhog/integrals.xml";
+        cv::FileStorage fsi(intPath, cv::FileStorage::READ);
+        ASSERT_TRUE(fsi.isOpened());
+
+        GpuMat hogluv(121 * 10, 161, CV_32SC1);
+        for (int i = 0; i < 10; ++i)
+        {
+            cv::Mat channel;
+            fsi[std::string("channel") + itoa(i)] >> channel;
+            GpuMat gchannel(hogluv, cv::Rect(0, 121 * i, 161, 121));
+            gchannel.upload(channel);
+        }
+
+        GpuMat objectBoxes(1, 100000, CV_8UC1), rois(cv::Size(640, 480), CV_8UC1);
+        rois.setTo(1);
+
+        objectBoxes.setTo(0);
+        cascade.detect(hogluv, rois, objectBoxes);
+
+        typedef cv::gpu::SCascade::Detection Detection;
+        cv::Mat detections(objectBoxes);
+        int a = *(detections.ptr<int>(0));
+
+        ASSERT_EQ(a, 1024);
     }
-
-    GpuMat objectBoxes(1, 100000, CV_8UC1), rois(cv::Size(640, 480), CV_8UC1);
-    rois.setTo(1);
-
-    objectBoxes.setTo(0);
-    cascade.detect(hogluv, rois, objectBoxes);
-
-    typedef cv::gpu::SCascade::Detection Detection;
-    cv::Mat detections(objectBoxes);
-    int a = *(detections.ptr<int>(0));
-
-    ASSERT_EQ( a ,1024);
+    catch (...)
+    {
+        cv::gpu::resetDevice();
+        throw;
+    }
 }
 
 GPU_TEST_P(SCascadeTestAll, detectStream,
         ALL_DEVICES
         )
 {
-    cv::gpu::setDevice(GetParam().deviceID());
-    std::string xml =  cvtest::TS::ptr()->get_data_path() + "../cv/cascadeandhog/sc_cvpr_2012_to_opencv.xml";
-    cv::gpu::SCascade cascade;
+    try
+    {
+        cv::gpu::setDevice(GetParam().deviceID());
+        std::string xml =  cvtest::TS::ptr()->get_data_path() + "../cv/cascadeandhog/sc_cvpr_2012_to_opencv.xml";
+        cv::gpu::SCascade cascade;
 
-    cv::FileStorage fs(xml, cv::FileStorage::READ);
-    ASSERT_TRUE(fs.isOpened());
+        cv::FileStorage fs(xml, cv::FileStorage::READ);
+        ASSERT_TRUE(fs.isOpened());
 
-    ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
+        ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
 
-    cv::Mat coloredCpu = cv::imread(cvtest::TS::ptr()->get_data_path()
-        + "../cv/cascadeandhog/bahnhof/image_00000000_0.png");
-    ASSERT_FALSE(coloredCpu.empty());
+        cv::Mat coloredCpu = cv::imread(cvtest::TS::ptr()->get_data_path()
+            + "../cv/cascadeandhog/bahnhof/image_00000000_0.png");
+        ASSERT_FALSE(coloredCpu.empty());
 
-    GpuMat colored(coloredCpu), objectBoxes(1, 100000, CV_8UC1), rois(colored.size(), CV_8UC1);
-    rois.setTo(0);
-    GpuMat sub(rois, cv::Rect(rois.cols / 4, rois.rows / 4,rois.cols / 2, rois.rows / 2));
-    sub.setTo(cv::Scalar::all(1));
+        GpuMat colored(coloredCpu), objectBoxes(1, 100000, CV_8UC1), rois(colored.size(), CV_8UC1);
+        rois.setTo(0);
+        GpuMat sub(rois, cv::Rect(rois.cols / 4, rois.rows / 4,rois.cols / 2, rois.rows / 2));
+        sub.setTo(cv::Scalar::all(1));
 
-    cv::gpu::Stream s;
+        cv::gpu::Stream s;
 
-    objectBoxes.setTo(0);
-    cascade.detect(colored, rois, objectBoxes, s);
-    s.waitForCompletion();
+        objectBoxes.setTo(0);
+        cascade.detect(colored, rois, objectBoxes, s);
+        s.waitForCompletion();
 
-    typedef cv::gpu::SCascade::Detection Detection;
-    cv::Mat detections(objectBoxes);
-    int a = *(detections.ptr<int>(0));
-    ASSERT_EQ(a ,2448);
+        typedef cv::gpu::SCascade::Detection Detection;
+        cv::Mat detections(objectBoxes);
+        int a = *(detections.ptr<int>(0));
+        ASSERT_EQ(a, 2448);
+    }
+    catch (...)
+    {
+        cv::gpu::resetDevice();
+        throw;
+    }
 }
 
 

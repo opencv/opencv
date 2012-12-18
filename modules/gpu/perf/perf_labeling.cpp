@@ -108,22 +108,30 @@ PERF_TEST_P(Image, Labeling_ConnectedComponents, Values<string>("gpu/labeling/al
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::GpuMat mask;
-        mask.create(image.rows, image.cols, CV_8UC1);
-
-        cv::gpu::GpuMat components;
-        components.create(image.rows, image.cols, CV_32SC1);
-
-        cv::gpu::connectivityMask(cv::gpu::GpuMat(image), mask, cv::Scalar::all(0), cv::Scalar::all(2));
-
-        ASSERT_NO_THROW(cv::gpu::labelComponents(mask, components));
-
-        TEST_CYCLE()
+        try
         {
-            cv::gpu::labelComponents(mask, components);
-        }
+            cv::gpu::GpuMat mask;
+            mask.create(image.rows, image.cols, CV_8UC1);
 
-        GPU_SANITY_CHECK(components);
+            cv::gpu::GpuMat components;
+            components.create(image.rows, image.cols, CV_32SC1);
+
+            cv::gpu::connectivityMask(cv::gpu::GpuMat(image), mask, cv::Scalar::all(0), cv::Scalar::all(2));
+
+            ASSERT_NO_THROW(cv::gpu::labelComponents(mask, components));
+
+            TEST_CYCLE()
+            {
+                cv::gpu::labelComponents(mask, components);
+            }
+
+            GPU_SANITY_CHECK(components);
+        }
+        catch (...)
+        {
+            cv::gpu::resetDevice();
+            throw;
+        }
     }
     else
     {

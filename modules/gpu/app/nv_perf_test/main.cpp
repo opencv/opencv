@@ -92,15 +92,23 @@ PERF_TEST_P(Image, HoughLinesP,
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::GpuMat d_image(image);
-        cv::gpu::GpuMat d_lines;
-        cv::gpu::HoughLinesBuf d_buf;
-
-        cv::gpu::HoughLinesP(d_image, d_lines, d_buf, rho, theta, minLineLenght, maxLineGap);
-
-        TEST_CYCLE()
+        try
         {
+            cv::gpu::GpuMat d_image(image);
+            cv::gpu::GpuMat d_lines;
+            cv::gpu::HoughLinesBuf d_buf;
+
             cv::gpu::HoughLinesP(d_image, d_lines, d_buf, rho, theta, minLineLenght, maxLineGap);
+
+            TEST_CYCLE()
+            {
+                cv::gpu::HoughLinesP(d_image, d_lines, d_buf, rho, theta, minLineLenght, maxLineGap);
+            }
+        }
+        catch (...)
+        {
+            cv::gpu::resetDevice();
+            throw;
         }
     }
     else
@@ -155,17 +163,25 @@ PERF_TEST_P(Image_Depth, GoodFeaturesToTrack,
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::GoodFeaturesToTrackDetector_GPU d_detector(maxCorners, qualityLevel, minDistance, blockSize, useHarrisDetector, k);
-
-        cv::gpu::GpuMat d_src(src);
-        cv::gpu::GpuMat d_mask(mask);
-        cv::gpu::GpuMat d_pts;
-
-        d_detector(d_src, d_pts, d_mask);
-
-        TEST_CYCLE()
+        try
         {
+            cv::gpu::GoodFeaturesToTrackDetector_GPU d_detector(maxCorners, qualityLevel, minDistance, blockSize, useHarrisDetector, k);
+
+            cv::gpu::GpuMat d_src(src);
+            cv::gpu::GpuMat d_mask(mask);
+            cv::gpu::GpuMat d_pts;
+
             d_detector(d_src, d_pts, d_mask);
+
+            TEST_CYCLE()
+            {
+                d_detector(d_src, d_pts, d_mask);
+            }
+        }
+        catch (...)
+        {
+            cv::gpu::resetDevice();
+            throw;
         }
     }
     else
@@ -244,23 +260,31 @@ PERF_TEST_P(ImagePair_Depth_GraySource, OpticalFlowPyrLKSparse,
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::GpuMat d_src1(src1);
-        cv::gpu::GpuMat d_src2(src2);
-        cv::gpu::GpuMat d_pts(pts.reshape(2, 1));
-        cv::gpu::GpuMat d_nextPts;
-        cv::gpu::GpuMat d_status;
-
-        cv::gpu::PyrLKOpticalFlow d_pyrLK;
-        d_pyrLK.winSize = winSize;
-        d_pyrLK.maxLevel = maxLevel;
-        d_pyrLK.iters = criteria.maxCount;
-        d_pyrLK.useInitialFlow = false;
-
-        d_pyrLK.sparse(d_src1, d_src2, d_pts, d_nextPts, d_status);
-
-        TEST_CYCLE()
+        try
         {
+            cv::gpu::GpuMat d_src1(src1);
+            cv::gpu::GpuMat d_src2(src2);
+            cv::gpu::GpuMat d_pts(pts.reshape(2, 1));
+            cv::gpu::GpuMat d_nextPts;
+            cv::gpu::GpuMat d_status;
+
+            cv::gpu::PyrLKOpticalFlow d_pyrLK;
+            d_pyrLK.winSize = winSize;
+            d_pyrLK.maxLevel = maxLevel;
+            d_pyrLK.iters = criteria.maxCount;
+            d_pyrLK.useInitialFlow = false;
+
             d_pyrLK.sparse(d_src1, d_src2, d_pts, d_nextPts, d_status);
+
+            TEST_CYCLE()
+            {
+                d_pyrLK.sparse(d_src1, d_src2, d_pts, d_nextPts, d_status);
+            }
+        }
+        catch (...)
+        {
+            cv::gpu::resetDevice();
+            throw;
         }
     }
     else
@@ -322,25 +346,33 @@ PERF_TEST_P(ImagePair_Depth, OpticalFlowFarneback,
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::GpuMat d_src1(src1);
-        cv::gpu::GpuMat d_src2(src2);
-        cv::gpu::GpuMat d_u(src1.size(), CV_32FC1, cv::Scalar::all(0));
-        cv::gpu::GpuMat d_v(src1.size(), CV_32FC1, cv::Scalar::all(0));
-
-        cv::gpu::FarnebackOpticalFlow d_farneback;
-        d_farneback.pyrScale = pyrScale;
-        d_farneback.numLevels = numLevels;
-        d_farneback.winSize = winSize;
-        d_farneback.numIters = numIters;
-        d_farneback.polyN = polyN;
-        d_farneback.polySigma = polySigma;
-        d_farneback.flags = flags;
-
-        d_farneback(d_src1, d_src2, d_u, d_v);
-
-        TEST_CYCLE_N(10)
+        try
         {
+            cv::gpu::GpuMat d_src1(src1);
+            cv::gpu::GpuMat d_src2(src2);
+            cv::gpu::GpuMat d_u(src1.size(), CV_32FC1, cv::Scalar::all(0));
+            cv::gpu::GpuMat d_v(src1.size(), CV_32FC1, cv::Scalar::all(0));
+
+            cv::gpu::FarnebackOpticalFlow d_farneback;
+            d_farneback.pyrScale = pyrScale;
+            d_farneback.numLevels = numLevels;
+            d_farneback.winSize = winSize;
+            d_farneback.numIters = numIters;
+            d_farneback.polyN = polyN;
+            d_farneback.polySigma = polySigma;
+            d_farneback.flags = flags;
+
             d_farneback(d_src1, d_src2, d_u, d_v);
+
+            TEST_CYCLE_N(10)
+            {
+                d_farneback(d_src1, d_src2, d_u, d_v);
+            }
+        }
+        catch (...)
+        {
+            cv::gpu::resetDevice();
+            throw;
         }
     }
     else
@@ -409,15 +441,23 @@ PERF_TEST_P(ImagePair_BlockSize_ShiftSize_MaxRange, OpticalFlowBM,
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::GpuMat d_src1(src1);
-        cv::gpu::GpuMat d_src2(src2);
-        cv::gpu::GpuMat d_velx, d_vely, buf;
-
-        cv::gpu::calcOpticalFlowBM(d_src1, d_src2, block_size, shift_size, max_range, false, d_velx, d_vely, buf);
-
-        TEST_CYCLE_N(10)
+        try
         {
+            cv::gpu::GpuMat d_src1(src1);
+            cv::gpu::GpuMat d_src2(src2);
+            cv::gpu::GpuMat d_velx, d_vely, buf;
+
             cv::gpu::calcOpticalFlowBM(d_src1, d_src2, block_size, shift_size, max_range, false, d_velx, d_vely, buf);
+
+            TEST_CYCLE_N(10)
+            {
+                cv::gpu::calcOpticalFlowBM(d_src1, d_src2, block_size, shift_size, max_range, false, d_velx, d_vely, buf);
+            }
+        }
+        catch (...)
+        {
+            cv::gpu::resetDevice();
+            throw;
         }
     }
     else
@@ -460,17 +500,25 @@ PERF_TEST_P(ImagePair_BlockSize_ShiftSize_MaxRange, FastOpticalFlowBM,
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::GpuMat d_src1(src1);
-        cv::gpu::GpuMat d_src2(src2);
-        cv::gpu::GpuMat d_velx, d_vely;
-
-        cv::gpu::FastOpticalFlowBM fastBM;
-
-        fastBM(d_src1, d_src2, d_velx, d_vely, max_range.width, block_size.width);
-
-        TEST_CYCLE_N(10)
+        try
         {
+            cv::gpu::GpuMat d_src1(src1);
+            cv::gpu::GpuMat d_src2(src2);
+            cv::gpu::GpuMat d_velx, d_vely;
+
+            cv::gpu::FastOpticalFlowBM fastBM;
+
             fastBM(d_src1, d_src2, d_velx, d_vely, max_range.width, block_size.width);
+
+            TEST_CYCLE_N(10)
+            {
+                fastBM(d_src1, d_src2, d_velx, d_vely, max_range.width, block_size.width);
+            }
+        }
+        catch (...)
+        {
+            cv::gpu::resetDevice();
+            throw;
         }
     }
     else

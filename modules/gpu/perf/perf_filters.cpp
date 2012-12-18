@@ -23,17 +23,25 @@ PERF_TEST_P(Sz_Type_KernelSz, Filters_Blur, Combine(GPU_TYPICAL_MAT_SIZES, Value
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::GpuMat d_src(src);
-        cv::gpu::GpuMat d_dst;
-
-        cv::gpu::blur(d_src, d_dst, cv::Size(ksize, ksize));
-
-        TEST_CYCLE()
+        try
         {
-            cv::gpu::blur(d_src, d_dst, cv::Size(ksize, ksize));
-        }
+            cv::gpu::GpuMat d_src(src);
+            cv::gpu::GpuMat d_dst;
 
-        GPU_SANITY_CHECK(d_dst);
+            cv::gpu::blur(d_src, d_dst, cv::Size(ksize, ksize));
+
+            TEST_CYCLE()
+            {
+                cv::gpu::blur(d_src, d_dst, cv::Size(ksize, ksize));
+            }
+
+            GPU_SANITY_CHECK(d_dst);
+        }
+        catch (...)
+        {
+            cv::gpu::resetDevice();
+            throw;
+        }
     }
     else
     {
@@ -66,18 +74,26 @@ PERF_TEST_P(Sz_Type_KernelSz, Filters_Sobel, Combine(GPU_TYPICAL_MAT_SIZES, Valu
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::GpuMat d_src(src);
-        cv::gpu::GpuMat d_dst;
-        cv::gpu::GpuMat d_buf;
-
-        cv::gpu::Sobel(d_src, d_dst, -1, 1, 1, d_buf, ksize);
-
-        TEST_CYCLE()
+        try
         {
-            cv::gpu::Sobel(d_src, d_dst, -1, 1, 1, d_buf, ksize);
-        }
+            cv::gpu::GpuMat d_src(src);
+            cv::gpu::GpuMat d_dst;
+            cv::gpu::GpuMat d_buf;
 
-        GPU_SANITY_CHECK(d_dst);
+            cv::gpu::Sobel(d_src, d_dst, -1, 1, 1, d_buf, ksize);
+
+            TEST_CYCLE()
+            {
+                cv::gpu::Sobel(d_src, d_dst, -1, 1, 1, d_buf, ksize);
+            }
+
+            GPU_SANITY_CHECK(d_dst);
+        }
+        catch (...)
+        {
+            cv::gpu::resetDevice();
+            throw;
+        }
     }
     else
     {
@@ -109,18 +125,26 @@ PERF_TEST_P(Sz_Type, Filters_Scharr, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8U
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::GpuMat d_src(src);
-        cv::gpu::GpuMat d_dst;
-        cv::gpu::GpuMat d_buf;
-
-        cv::gpu::Scharr(d_src, d_dst, -1, 1, 0, d_buf);
-
-        TEST_CYCLE()
+        try
         {
-            cv::gpu::Scharr(d_src, d_dst, -1, 1, 0, d_buf);
-        }
+            cv::gpu::GpuMat d_src(src);
+            cv::gpu::GpuMat d_dst;
+            cv::gpu::GpuMat d_buf;
 
-        GPU_SANITY_CHECK(d_dst);
+            cv::gpu::Scharr(d_src, d_dst, -1, 1, 0, d_buf);
+
+            TEST_CYCLE()
+            {
+                cv::gpu::Scharr(d_src, d_dst, -1, 1, 0, d_buf);
+            }
+
+            GPU_SANITY_CHECK(d_dst);
+        }
+        catch (...)
+        {
+            cv::gpu::resetDevice();
+            throw;
+        }
     }
     else
     {
@@ -153,18 +177,26 @@ PERF_TEST_P(Sz_Type_KernelSz, Filters_GaussianBlur, Combine(GPU_TYPICAL_MAT_SIZE
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::GpuMat d_src(src);
-        cv::gpu::GpuMat d_dst;
-        cv::gpu::GpuMat d_buf;
-
-        cv::gpu::GaussianBlur(d_src, d_dst, cv::Size(ksize, ksize), d_buf, 0.5);
-
-        TEST_CYCLE()
+        try
         {
-            cv::gpu::GaussianBlur(d_src, d_dst, cv::Size(ksize, ksize), d_buf, 0.5);
-        }
+            cv::gpu::GpuMat d_src(src);
+            cv::gpu::GpuMat d_dst;
+            cv::gpu::GpuMat d_buf;
 
-        GPU_SANITY_CHECK(d_dst);
+            cv::gpu::GaussianBlur(d_src, d_dst, cv::Size(ksize, ksize), d_buf, 0.5);
+
+            TEST_CYCLE()
+            {
+                cv::gpu::GaussianBlur(d_src, d_dst, cv::Size(ksize, ksize), d_buf, 0.5);
+            }
+
+            GPU_SANITY_CHECK(d_dst);
+        }
+        catch (...)
+        {
+            cv::gpu::resetDevice();
+            throw;
+        }
     }
     else
     {
@@ -197,17 +229,25 @@ PERF_TEST_P(Sz_Type_KernelSz, Filters_Laplacian, Combine(GPU_TYPICAL_MAT_SIZES, 
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::GpuMat d_src(src);
-        cv::gpu::GpuMat d_dst;
-
-        cv::gpu::Laplacian(d_src, d_dst, -1, ksize);
-
-        TEST_CYCLE()
+        try
         {
-            cv::gpu::Laplacian(d_src, d_dst, -1, ksize);
-        }
+            cv::gpu::GpuMat d_src(src);
+            cv::gpu::GpuMat d_dst;
 
-        GPU_SANITY_CHECK(d_dst);
+            cv::gpu::Laplacian(d_src, d_dst, -1, ksize);
+
+            TEST_CYCLE()
+            {
+                cv::gpu::Laplacian(d_src, d_dst, -1, ksize);
+            }
+
+            GPU_SANITY_CHECK(d_dst);
+        }
+        catch (...)
+        {
+            cv::gpu::resetDevice();
+            throw;
+        }
     }
     else
     {
@@ -241,18 +281,26 @@ PERF_TEST_P(Sz_Type, Filters_Erode, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8UC
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::GpuMat d_src(src);
-        cv::gpu::GpuMat d_dst;
-        cv::gpu::GpuMat d_buf;
-
-        cv::gpu::erode(d_src, d_dst, ker, d_buf);
-
-        TEST_CYCLE()
+        try
         {
-            cv::gpu::erode(d_src, d_dst, ker, d_buf);
-        }
+            cv::gpu::GpuMat d_src(src);
+            cv::gpu::GpuMat d_dst;
+            cv::gpu::GpuMat d_buf;
 
-        GPU_SANITY_CHECK(d_dst);
+            cv::gpu::erode(d_src, d_dst, ker, d_buf);
+
+            TEST_CYCLE()
+            {
+                cv::gpu::erode(d_src, d_dst, ker, d_buf);
+            }
+
+            GPU_SANITY_CHECK(d_dst);
+        }
+        catch (...)
+        {
+            cv::gpu::resetDevice();
+            throw;
+        }
     }
     else
     {
@@ -286,18 +334,26 @@ PERF_TEST_P(Sz_Type, Filters_Dilate, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8U
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::GpuMat d_src(src);
-        cv::gpu::GpuMat d_dst;
-        cv::gpu::GpuMat d_buf;
-
-        cv::gpu::dilate(d_src, d_dst, ker, d_buf);
-
-        TEST_CYCLE()
+        try
         {
-            cv::gpu::dilate(d_src, d_dst, ker, d_buf);
-        }
+            cv::gpu::GpuMat d_src(src);
+            cv::gpu::GpuMat d_dst;
+            cv::gpu::GpuMat d_buf;
 
-        GPU_SANITY_CHECK(d_dst);
+            cv::gpu::dilate(d_src, d_dst, ker, d_buf);
+
+            TEST_CYCLE()
+            {
+                cv::gpu::dilate(d_src, d_dst, ker, d_buf);
+            }
+
+            GPU_SANITY_CHECK(d_dst);
+        }
+        catch (...)
+        {
+            cv::gpu::resetDevice();
+            throw;
+        }
     }
     else
     {
@@ -337,19 +393,27 @@ PERF_TEST_P(Sz_Type_Op, Filters_MorphologyEx, Combine(GPU_TYPICAL_MAT_SIZES, Val
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::GpuMat d_src(src);
-        cv::gpu::GpuMat d_dst;
-        cv::gpu::GpuMat d_buf1;
-        cv::gpu::GpuMat d_buf2;
-
-        cv::gpu::morphologyEx(d_src, d_dst, morphOp, ker, d_buf1, d_buf2);
-
-        TEST_CYCLE()
+        try
         {
-            cv::gpu::morphologyEx(d_src, d_dst, morphOp, ker, d_buf1, d_buf2);
-        }
+            cv::gpu::GpuMat d_src(src);
+            cv::gpu::GpuMat d_dst;
+            cv::gpu::GpuMat d_buf1;
+            cv::gpu::GpuMat d_buf2;
 
-        GPU_SANITY_CHECK(d_dst);
+            cv::gpu::morphologyEx(d_src, d_dst, morphOp, ker, d_buf1, d_buf2);
+
+            TEST_CYCLE()
+            {
+                cv::gpu::morphologyEx(d_src, d_dst, morphOp, ker, d_buf1, d_buf2);
+            }
+
+            GPU_SANITY_CHECK(d_dst);
+        }
+        catch (...)
+        {
+            cv::gpu::resetDevice();
+            throw;
+        }
     }
     else
     {
@@ -385,17 +449,25 @@ PERF_TEST_P(Sz_Type_KernelSz, Filters_Filter2D, Combine(GPU_TYPICAL_MAT_SIZES, V
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::GpuMat d_src(src);
-        cv::gpu::GpuMat d_dst;
-
-        cv::gpu::filter2D(d_src, d_dst, -1, kernel);
-
-        TEST_CYCLE()
+        try
         {
-            cv::gpu::filter2D(d_src, d_dst, -1, kernel);
-        }
+            cv::gpu::GpuMat d_src(src);
+            cv::gpu::GpuMat d_dst;
 
-        GPU_SANITY_CHECK(d_dst);
+            cv::gpu::filter2D(d_src, d_dst, -1, kernel);
+
+            TEST_CYCLE()
+            {
+                cv::gpu::filter2D(d_src, d_dst, -1, kernel);
+            }
+
+            GPU_SANITY_CHECK(d_dst);
+        }
+        catch (...)
+        {
+            cv::gpu::resetDevice();
+            throw;
+        }
     }
     else
     {

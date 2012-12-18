@@ -138,15 +138,23 @@ PARAM_TEST_CASE(Resize, cv::gpu::DeviceInfo, cv::Size, MatType, double, Interpol
 
 TEST_P(Resize, Accuracy)
 {
-    cv::Mat src = randomMat(size, type);
+    try
+    {
+        cv::Mat src = randomMat(size, type);
 
-    cv::gpu::GpuMat dst = createMat(cv::Size(cv::saturate_cast<int>(src.cols * coeff), cv::saturate_cast<int>(src.rows * coeff)), type, useRoi);
-    cv::gpu::resize(loadMat(src, useRoi), dst, cv::Size(), coeff, coeff, interpolation);
+        cv::gpu::GpuMat dst = createMat(cv::Size(cv::saturate_cast<int>(src.cols * coeff), cv::saturate_cast<int>(src.rows * coeff)), type, useRoi);
+        cv::gpu::resize(loadMat(src, useRoi), dst, cv::Size(), coeff, coeff, interpolation);
 
-    cv::Mat dst_gold;
-    resizeGold(src, dst_gold, coeff, coeff, interpolation);
+        cv::Mat dst_gold;
+        resizeGold(src, dst_gold, coeff, coeff, interpolation);
 
-    EXPECT_MAT_NEAR(dst_gold, dst, src.depth() == CV_32F ? 1e-2 : 1.0);
+        EXPECT_MAT_NEAR(dst_gold, dst, src.depth() == CV_32F ? 1e-2 : 1.0);
+    }
+    catch (...)
+    {
+        cv::gpu::resetDevice();
+        throw;
+    }
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_ImgProc, Resize, testing::Combine(
@@ -184,15 +192,23 @@ PARAM_TEST_CASE(ResizeSameAsHost, cv::gpu::DeviceInfo, cv::Size, MatType, double
 // downscaling only: used for classifiers
 TEST_P(ResizeSameAsHost, Accuracy)
 {
-    cv::Mat src = randomMat(size, type);
+    try
+    {
+        cv::Mat src = randomMat(size, type);
 
-    cv::gpu::GpuMat dst = createMat(cv::Size(cv::saturate_cast<int>(src.cols * coeff), cv::saturate_cast<int>(src.rows * coeff)), type, useRoi);
-    cv::gpu::resize(loadMat(src, useRoi), dst, cv::Size(), coeff, coeff, interpolation);
+        cv::gpu::GpuMat dst = createMat(cv::Size(cv::saturate_cast<int>(src.cols * coeff), cv::saturate_cast<int>(src.rows * coeff)), type, useRoi);
+        cv::gpu::resize(loadMat(src, useRoi), dst, cv::Size(), coeff, coeff, interpolation);
 
-    cv::Mat dst_gold;
-    cv::resize(src, dst_gold, cv::Size(), coeff, coeff, interpolation);
+        cv::Mat dst_gold;
+        cv::resize(src, dst_gold, cv::Size(), coeff, coeff, interpolation);
 
-    EXPECT_MAT_NEAR(dst_gold, dst, src.depth() == CV_32F ? 1e-2 : 1.0);
+        EXPECT_MAT_NEAR(dst_gold, dst, src.depth() == CV_32F ? 1e-2 : 1.0);
+    }
+    catch (...)
+    {
+        cv::gpu::resetDevice();
+        throw;
+    }
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_ImgProc, ResizeSameAsHost, testing::Combine(
@@ -226,16 +242,24 @@ PARAM_TEST_CASE(ResizeNPP, cv::gpu::DeviceInfo, MatType, double, Interpolation)
 
 TEST_P(ResizeNPP, Accuracy)
 {
-    cv::Mat src = readImageType("stereobp/aloe-L.png", type);
-    ASSERT_FALSE(src.empty());
+    try
+    {
+        cv::Mat src = readImageType("stereobp/aloe-L.png", type);
+        ASSERT_FALSE(src.empty());
 
-    cv::gpu::GpuMat dst;
-    cv::gpu::resize(loadMat(src), dst, cv::Size(), coeff, coeff, interpolation);
+        cv::gpu::GpuMat dst;
+        cv::gpu::resize(loadMat(src), dst, cv::Size(), coeff, coeff, interpolation);
 
-    cv::Mat dst_gold;
-    resizeGold(src, dst_gold, coeff, coeff, interpolation);
+        cv::Mat dst_gold;
+        resizeGold(src, dst_gold, coeff, coeff, interpolation);
 
-    EXPECT_MAT_SIMILAR(dst_gold, dst, 1e-1);
+        EXPECT_MAT_SIMILAR(dst_gold, dst, 1e-1);
+    }
+    catch (...)
+    {
+        cv::gpu::resetDevice();
+        throw;
+    }
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_ImgProc, ResizeNPP, testing::Combine(

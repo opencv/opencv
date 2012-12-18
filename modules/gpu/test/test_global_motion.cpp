@@ -53,35 +53,43 @@ struct CompactPoints : testing::TestWithParam<gpu::DeviceInfo>
 
 TEST_P(CompactPoints, CanCompactizeSmallInput)
 {
-    Mat src0(1, 3, CV_32FC2);
-    src0.at<Point2f>(0,0) = Point2f(0,0);
-    src0.at<Point2f>(0,1) = Point2f(0,1);
-    src0.at<Point2f>(0,2) = Point2f(0,2);
+    try
+    {
+        Mat src0(1, 3, CV_32FC2);
+        src0.at<Point2f>(0,0) = Point2f(0,0);
+        src0.at<Point2f>(0,1) = Point2f(0,1);
+        src0.at<Point2f>(0,2) = Point2f(0,2);
 
-    Mat src1(1, 3, CV_32FC2);
-    src1.at<Point2f>(0,0) = Point2f(1,0);
-    src1.at<Point2f>(0,1) = Point2f(1,1);
-    src1.at<Point2f>(0,2) = Point2f(1,2);
+        Mat src1(1, 3, CV_32FC2);
+        src1.at<Point2f>(0,0) = Point2f(1,0);
+        src1.at<Point2f>(0,1) = Point2f(1,1);
+        src1.at<Point2f>(0,2) = Point2f(1,2);
 
-    Mat mask(1, 3, CV_8U);
-    mask.at<uchar>(0,0) = 1;
-    mask.at<uchar>(0,1) = 0;
-    mask.at<uchar>(0,2) = 1;
+        Mat mask(1, 3, CV_8U);
+        mask.at<uchar>(0,0) = 1;
+        mask.at<uchar>(0,1) = 0;
+        mask.at<uchar>(0,2) = 1;
 
-    gpu::GpuMat dsrc0(src0), dsrc1(src1), dmask(mask);
-    gpu::compactPoints(dsrc0, dsrc1, dmask);
+        gpu::GpuMat dsrc0(src0), dsrc1(src1), dmask(mask);
+        gpu::compactPoints(dsrc0, dsrc1, dmask);
 
-    dsrc0.download(src0);
-    dsrc1.download(src1);
+        dsrc0.download(src0);
+        dsrc1.download(src1);
 
-    ASSERT_EQ(2, src0.cols);
-    ASSERT_EQ(2, src1.cols);
+        ASSERT_EQ(2, src0.cols);
+        ASSERT_EQ(2, src1.cols);
 
-    ASSERT_TRUE(src0.at<Point2f>(0,0) == Point2f(0,0));
-    ASSERT_TRUE(src0.at<Point2f>(0,1) == Point2f(0,2));
+        ASSERT_TRUE(src0.at<Point2f>(0,0) == Point2f(0,0));
+        ASSERT_TRUE(src0.at<Point2f>(0,1) == Point2f(0,2));
 
-    ASSERT_TRUE(src1.at<Point2f>(0,0) == Point2f(1,0));
-    ASSERT_TRUE(src1.at<Point2f>(0,1) == Point2f(1,2));
+        ASSERT_TRUE(src1.at<Point2f>(0,0) == Point2f(1,0));
+        ASSERT_TRUE(src1.at<Point2f>(0,1) == Point2f(1,2));
+    }
+    catch (...)
+    {
+        cv::gpu::resetDevice();
+        throw;
+    }
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_GlobalMotion, CompactPoints, ALL_DEVICES);

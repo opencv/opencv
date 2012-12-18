@@ -69,82 +69,169 @@ struct NVidiaTest : TestWithParam<cv::gpu::DeviceInfo>
 struct NPPST : NVidiaTest {};
 struct NCV : NVidiaTest {};
 
-//TEST_P(NPPST, Integral)
-//{
-//    bool res = nvidia_NPPST_Integral_Image(path, nvidiaTestOutputLevel);
+TEST_P(NPPST, Integral)
+{
+    try
+    {
+        bool res = nvidia_NPPST_Integral_Image(_path, nvidiaTestOutputLevel);
 
-//    ASSERT_TRUE(res);
-//}
+        ASSERT_TRUE(res);
+    }
+    catch (...)
+    {
+        cv::gpu::resetDevice();
+        throw;
+    }
+}
 
 TEST_P(NPPST, SquaredIntegral)
 {
-    bool res = nvidia_NPPST_Squared_Integral_Image(_path, nvidiaTestOutputLevel);
+    try
+    {
+        bool res = nvidia_NPPST_Squared_Integral_Image(_path, nvidiaTestOutputLevel);
 
-    ASSERT_TRUE(res);
+        ASSERT_TRUE(res);
+    }
+    catch (...)
+    {
+        cv::gpu::resetDevice();
+        throw;
+    }
 }
 
 TEST_P(NPPST, RectStdDev)
 {
-    bool res = nvidia_NPPST_RectStdDev(_path, nvidiaTestOutputLevel);
+    try
+    {
+        bool res = nvidia_NPPST_RectStdDev(_path, nvidiaTestOutputLevel);
 
-    ASSERT_TRUE(res);
+        ASSERT_TRUE(res);
+    }
+    catch (...)
+    {
+        cv::gpu::resetDevice();
+        throw;
+    }
 }
 
 TEST_P(NPPST, Resize)
 {
-    bool res = nvidia_NPPST_Resize(_path, nvidiaTestOutputLevel);
+    try
+    {
+        bool res = nvidia_NPPST_Resize(_path, nvidiaTestOutputLevel);
 
-    ASSERT_TRUE(res);
+        ASSERT_TRUE(res);
+    }
+    catch (...)
+    {
+        cv::gpu::resetDevice();
+        throw;
+    }
 }
 
 TEST_P(NPPST, VectorOperations)
 {
-    bool res = nvidia_NPPST_Vector_Operations(_path, nvidiaTestOutputLevel);
+    try
+    {
+        bool res = nvidia_NPPST_Vector_Operations(_path, nvidiaTestOutputLevel);
 
-    ASSERT_TRUE(res);
+        ASSERT_TRUE(res);
+    }
+    catch (...)
+    {
+        cv::gpu::resetDevice();
+        throw;
+    }
 }
 
 TEST_P(NPPST, Transpose)
 {
-    bool res = nvidia_NPPST_Transpose(_path, nvidiaTestOutputLevel);
+    try
+    {
+        bool res = nvidia_NPPST_Transpose(_path, nvidiaTestOutputLevel);
 
-    ASSERT_TRUE(res);
+        ASSERT_TRUE(res);
+    }
+    catch (...)
+    {
+        cv::gpu::resetDevice();
+        throw;
+    }
 }
 
 TEST_P(NCV, VectorOperations)
 {
-    bool res = nvidia_NCV_Vector_Operations(_path, nvidiaTestOutputLevel);
+    try
+    {
+        bool res = nvidia_NCV_Vector_Operations(_path, nvidiaTestOutputLevel);
 
-    ASSERT_TRUE(res);
+        ASSERT_TRUE(res);
+    }
+    catch (...)
+    {
+        cv::gpu::resetDevice();
+        throw;
+    }
 }
 
 TEST_P(NCV, HaarCascadeLoader)
 {
-    bool res = nvidia_NCV_Haar_Cascade_Loader(_path, nvidiaTestOutputLevel);
+    try
+    {
+        bool res = nvidia_NCV_Haar_Cascade_Loader(_path, nvidiaTestOutputLevel);
 
-    ASSERT_TRUE(res);
+        ASSERT_TRUE(res);
+    }
+    catch (...)
+    {
+        cv::gpu::resetDevice();
+        throw;
+    }
 }
 
 TEST_P(NCV, HaarCascadeApplication)
 {
-    bool res = nvidia_NCV_Haar_Cascade_Application(_path, nvidiaTestOutputLevel);
+    try
+    {
+        bool res = nvidia_NCV_Haar_Cascade_Application(_path, nvidiaTestOutputLevel);
 
-    ASSERT_TRUE(res);
+        ASSERT_TRUE(res);
+    }
+    catch (...)
+    {
+        cv::gpu::resetDevice();
+        throw;
+    }
 }
 
 TEST_P(NCV, HypothesesFiltration)
 {
-    bool res = nvidia_NCV_Hypotheses_Filtration(_path, nvidiaTestOutputLevel);
+    try
+    {
+        bool res = nvidia_NCV_Hypotheses_Filtration(_path, nvidiaTestOutputLevel);
 
-    ASSERT_TRUE(res);
+        ASSERT_TRUE(res);
+    }
+    catch (...)
+    {
+        cv::gpu::resetDevice();
+        throw;
+    }
 }
 
 TEST_P(NCV, Visualization)
 {
-    // this functionality doesn't used in gpu module
-    bool res = nvidia_NCV_Visualization(_path, nvidiaTestOutputLevel);
+    try
+    {
+        bool res = nvidia_NCV_Visualization(_path, nvidiaTestOutputLevel);
 
-    ASSERT_TRUE(res);
+        ASSERT_TRUE(res);
+    }
+    catch (...)
+    {
+        cv::gpu::resetDevice();
+        throw;
+    }
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_NVidia, NPPST, ALL_DEVICES);

@@ -175,114 +175,129 @@ struct HOG : testing::TestWithParam<cv::gpu::DeviceInfo>, cv::gpu::HOGDescriptor
     }
 };
 
-// desabled while resize does not fixed
-TEST_P(HOG, DISABLED_Detect)
+TEST_P(HOG, Detect)
 {
-    cv::Mat img_rgb = readImage("hog/road.png");
-    ASSERT_FALSE(img_rgb.empty());
+    try
+    {
+        cv::Mat img_rgb = readImage("hog/road.png");
+        ASSERT_FALSE(img_rgb.empty());
 
-#ifdef DUMP
-    f.open((std::string(cvtest::TS::ptr()->get_data_path()) + "hog/expected_output.bin").c_str(), std::ios_base::binary);
-    ASSERT_TRUE(f.is_open());
-#else
-    f.open((std::string(cvtest::TS::ptr()->get_data_path()) + "hog/expected_output.bin").c_str(), std::ios_base::binary);
-    ASSERT_TRUE(f.is_open());
-#endif
+    #ifdef DUMP
+        f.open((std::string(cvtest::TS::ptr()->get_data_path()) + "hog/expected_output.bin").c_str(), std::ios_base::binary);
+        ASSERT_TRUE(f.is_open());
+    #else
+        f.open((std::string(cvtest::TS::ptr()->get_data_path()) + "hog/expected_output.bin").c_str(), std::ios_base::binary);
+        ASSERT_TRUE(f.is_open());
+    #endif
 
-    // Test on color image
-    cv::Mat img;
-    cv::cvtColor(img_rgb, img, CV_BGR2BGRA);
-    testDetect(img);
+        // Test on color image
+        cv::Mat img;
+        cv::cvtColor(img_rgb, img, CV_BGR2BGRA);
+        testDetect(img);
 
-    // Test on gray image
-    cv::cvtColor(img_rgb, img, CV_BGR2GRAY);
-    testDetect(img);
+        // Test on gray image
+        cv::cvtColor(img_rgb, img, CV_BGR2GRAY);
+        testDetect(img);
 
-    f.close();
+        f.close();
+    }
+    catch (...)
+    {
+        cv::gpu::resetDevice();
+        throw;
+    }
 }
 
 TEST_P(HOG, GetDescriptors)
 {
-    // Load image (e.g. train data, composed from windows)
-    cv::Mat img_rgb = readImage("hog/train_data.png");
-    ASSERT_FALSE(img_rgb.empty());
-
-    // Convert to C4
-    cv::Mat img;
-    cv::cvtColor(img_rgb, img, CV_BGR2BGRA);
-
-    cv::gpu::GpuMat d_img(img);
-
-    // Convert train images into feature vectors (train table)
-    cv::gpu::GpuMat descriptors, descriptors_by_cols;
-    getDescriptors(d_img, win_size, descriptors, DESCR_FORMAT_ROW_BY_ROW);
-    getDescriptors(d_img, win_size, descriptors_by_cols, DESCR_FORMAT_COL_BY_COL);
-
-    // Check size of the result train table
-    wins_per_img_x = 3;
-    wins_per_img_y = 2;
-    blocks_per_win_x = 7;
-    blocks_per_win_y = 15;
-    block_hist_size = 36;
-    cv::Size descr_size_expected = cv::Size(blocks_per_win_x * blocks_per_win_y * block_hist_size,
-                                            wins_per_img_x * wins_per_img_y);
-    ASSERT_EQ(descr_size_expected, descriptors.size());
-
-    // Check both formats of output descriptors are handled correctly
-    cv::Mat dr(descriptors);
-    cv::Mat dc(descriptors_by_cols);
-    for (int i = 0; i < wins_per_img_x * wins_per_img_y; ++i)
+    try
     {
-        const float* l = dr.rowRange(i, i + 1).ptr<float>();
-        const float* r = dc.rowRange(i, i + 1).ptr<float>();
-        for (int y = 0; y < blocks_per_win_y; ++y)
-            for (int x = 0; x < blocks_per_win_x; ++x)
-                for (int k = 0; k < block_hist_size; ++k)
-                    ASSERT_EQ(l[(y * blocks_per_win_x + x) * block_hist_size + k],
-                              r[(x * blocks_per_win_y + y) * block_hist_size + k]);
+        // Load image (e.g. train data, composed from windows)
+        cv::Mat img_rgb = readImage("hog/train_data.png");
+        ASSERT_FALSE(img_rgb.empty());
+
+        // Convert to C4
+        cv::Mat img;
+        cv::cvtColor(img_rgb, img, CV_BGR2BGRA);
+
+        cv::gpu::GpuMat d_img(img);
+
+        // Convert train images into feature vectors (train table)
+        cv::gpu::GpuMat descriptors, descriptors_by_cols;
+        getDescriptors(d_img, win_size, descriptors, DESCR_FORMAT_ROW_BY_ROW);
+        getDescriptors(d_img, win_size, descriptors_by_cols, DESCR_FORMAT_COL_BY_COL);
+
+        // Check size of the result train table
+        wins_per_img_x = 3;
+        wins_per_img_y = 2;
+        blocks_per_win_x = 7;
+        blocks_per_win_y = 15;
+        block_hist_size = 36;
+        cv::Size descr_size_expected = cv::Size(blocks_per_win_x * blocks_per_win_y * block_hist_size,
+                                                wins_per_img_x * wins_per_img_y);
+        ASSERT_EQ(descr_size_expected, descriptors.size());
+
+        // Check both formats of output descriptors are handled correctly
+        cv::Mat dr(descriptors);
+        cv::Mat dc(descriptors_by_cols);
+        for (int i = 0; i < wins_per_img_x * wins_per_img_y; ++i)
+        {
+            const float* l = dr.rowRange(i, i + 1).ptr<float>();
+            const float* r = dc.rowRange(i, i + 1).ptr<float>();
+            for (int y = 0; y < blocks_per_win_y; ++y)
+                for (int x = 0; x < blocks_per_win_x; ++x)
+                    for (int k = 0; k < block_hist_size; ++k)
+                        ASSERT_EQ(l[(y * blocks_per_win_x + x) * block_hist_size + k],
+                                  r[(x * blocks_per_win_y + y) * block_hist_size + k]);
+        }
+
+        /* Now we want to extract the same feature vectors, but from single images. NOTE: results will
+        be defferent, due to border values interpolation. Using of many small images is slower, however we
+        wont't call getDescriptors and will use computeBlockHistograms instead of. computeBlockHistograms
+        works good, it can be checked in the gpu_hog sample */
+
+        img_rgb = readImage("hog/positive1.png");
+        ASSERT_TRUE(!img_rgb.empty());
+        cv::cvtColor(img_rgb, img, CV_BGR2BGRA);
+        computeBlockHistograms(cv::gpu::GpuMat(img));
+        // Everything is fine with interpolation for left top subimage
+        ASSERT_EQ(0.0, cv::norm((cv::Mat)block_hists, (cv::Mat)descriptors.rowRange(0, 1)));
+
+        img_rgb = readImage("hog/positive2.png");
+        ASSERT_TRUE(!img_rgb.empty());
+        cv::cvtColor(img_rgb, img, CV_BGR2BGRA);
+        computeBlockHistograms(cv::gpu::GpuMat(img));
+        compare_inner_parts(cv::Mat(block_hists), cv::Mat(descriptors.rowRange(1, 2)));
+
+        img_rgb = readImage("hog/negative1.png");
+        ASSERT_TRUE(!img_rgb.empty());
+        cv::cvtColor(img_rgb, img, CV_BGR2BGRA);
+        computeBlockHistograms(cv::gpu::GpuMat(img));
+        compare_inner_parts(cv::Mat(block_hists), cv::Mat(descriptors.rowRange(2, 3)));
+
+        img_rgb = readImage("hog/negative2.png");
+        ASSERT_TRUE(!img_rgb.empty());
+        cv::cvtColor(img_rgb, img, CV_BGR2BGRA);
+        computeBlockHistograms(cv::gpu::GpuMat(img));
+        compare_inner_parts(cv::Mat(block_hists), cv::Mat(descriptors.rowRange(3, 4)));
+
+        img_rgb = readImage("hog/positive3.png");
+        ASSERT_TRUE(!img_rgb.empty());
+        cv::cvtColor(img_rgb, img, CV_BGR2BGRA);
+        computeBlockHistograms(cv::gpu::GpuMat(img));
+        compare_inner_parts(cv::Mat(block_hists), cv::Mat(descriptors.rowRange(4, 5)));
+
+        img_rgb = readImage("hog/negative3.png");
+        ASSERT_TRUE(!img_rgb.empty());
+        cv::cvtColor(img_rgb, img, CV_BGR2BGRA);
+        computeBlockHistograms(cv::gpu::GpuMat(img));
+        compare_inner_parts(cv::Mat(block_hists), cv::Mat(descriptors.rowRange(5, 6)));
     }
-
-    /* Now we want to extract the same feature vectors, but from single images. NOTE: results will
-    be defferent, due to border values interpolation. Using of many small images is slower, however we
-    wont't call getDescriptors and will use computeBlockHistograms instead of. computeBlockHistograms
-    works good, it can be checked in the gpu_hog sample */
-
-    img_rgb = readImage("hog/positive1.png");
-    ASSERT_TRUE(!img_rgb.empty());
-    cv::cvtColor(img_rgb, img, CV_BGR2BGRA);
-    computeBlockHistograms(cv::gpu::GpuMat(img));
-    // Everything is fine with interpolation for left top subimage
-    ASSERT_EQ(0.0, cv::norm((cv::Mat)block_hists, (cv::Mat)descriptors.rowRange(0, 1)));
-
-    img_rgb = readImage("hog/positive2.png");
-    ASSERT_TRUE(!img_rgb.empty());
-    cv::cvtColor(img_rgb, img, CV_BGR2BGRA);
-    computeBlockHistograms(cv::gpu::GpuMat(img));
-    compare_inner_parts(cv::Mat(block_hists), cv::Mat(descriptors.rowRange(1, 2)));
-
-    img_rgb = readImage("hog/negative1.png");
-    ASSERT_TRUE(!img_rgb.empty());
-    cv::cvtColor(img_rgb, img, CV_BGR2BGRA);
-    computeBlockHistograms(cv::gpu::GpuMat(img));
-    compare_inner_parts(cv::Mat(block_hists), cv::Mat(descriptors.rowRange(2, 3)));
-
-    img_rgb = readImage("hog/negative2.png");
-    ASSERT_TRUE(!img_rgb.empty());
-    cv::cvtColor(img_rgb, img, CV_BGR2BGRA);
-    computeBlockHistograms(cv::gpu::GpuMat(img));
-    compare_inner_parts(cv::Mat(block_hists), cv::Mat(descriptors.rowRange(3, 4)));
-
-    img_rgb = readImage("hog/positive3.png");
-    ASSERT_TRUE(!img_rgb.empty());
-    cv::cvtColor(img_rgb, img, CV_BGR2BGRA);
-    computeBlockHistograms(cv::gpu::GpuMat(img));
-    compare_inner_parts(cv::Mat(block_hists), cv::Mat(descriptors.rowRange(4, 5)));
-
-    img_rgb = readImage("hog/negative3.png");
-    ASSERT_TRUE(!img_rgb.empty());
-    cv::cvtColor(img_rgb, img, CV_BGR2BGRA);
-    computeBlockHistograms(cv::gpu::GpuMat(img));
-    compare_inner_parts(cv::Mat(block_hists), cv::Mat(descriptors.rowRange(5, 6)));
+    catch (...)
+    {
+        cv::gpu::resetDevice();
+        throw;
+    }
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_ObjDetect, HOG, ALL_DEVICES);
@@ -305,27 +320,35 @@ struct CalTech : public ::testing::TestWithParam<std::tr1::tuple<cv::gpu::Device
 
 TEST_P(CalTech, HOG)
 {
-    cv::gpu::GpuMat d_img(img);
-    cv::Mat markedImage(img.clone());
-
-    cv::gpu::HOGDescriptor d_hog;
-    d_hog.setSVMDetector(cv::gpu::HOGDescriptor::getDefaultPeopleDetector());
-    d_hog.nlevels = d_hog.nlevels + 32;
-
-    std::vector<cv::Rect> found_locations;
-    d_hog.detectMultiScale(d_img, found_locations);
-
-#if defined (LOG_CASCADE_STATISTIC)
-    for (int i = 0; i < (int)found_locations.size(); i++)
+    try
     {
-        cv::Rect r = found_locations[i];
+        cv::gpu::GpuMat d_img(img);
+        cv::Mat markedImage(img.clone());
 
-        std::cout << r.x << " " << r.y  << " " << r.width << " " << r.height << std::endl;
-        cv::rectangle(markedImage, r , CV_RGB(255, 0, 0));
+        cv::gpu::HOGDescriptor d_hog;
+        d_hog.setSVMDetector(cv::gpu::HOGDescriptor::getDefaultPeopleDetector());
+        d_hog.nlevels = d_hog.nlevels + 32;
+
+        std::vector<cv::Rect> found_locations;
+        d_hog.detectMultiScale(d_img, found_locations);
+
+    #if defined (LOG_CASCADE_STATISTIC)
+        for (int i = 0; i < (int)found_locations.size(); i++)
+        {
+            cv::Rect r = found_locations[i];
+
+            std::cout << r.x << " " << r.y  << " " << r.width << " " << r.height << std::endl;
+            cv::rectangle(markedImage, r , CV_RGB(255, 0, 0));
+        }
+
+        cv::imshow("Res", markedImage); cv::waitKey();
+    #endif
     }
-
-    cv::imshow("Res", markedImage); cv::waitKey();
-#endif
+    catch (...)
+    {
+        cv::gpu::resetDevice();
+        throw;
+    }
 }
 
 INSTANTIATE_TEST_CASE_P(detect, CalTech, testing::Combine(ALL_DEVICES,
@@ -352,9 +375,17 @@ PARAM_TEST_CASE(LBP_Read_classifier, cv::gpu::DeviceInfo, int)
 
 TEST_P(LBP_Read_classifier, Accuracy)
 {
-    cv::gpu::CascadeClassifier_GPU classifier;
-    std::string classifierXmlPath = std::string(cvtest::TS::ptr()->get_data_path()) + "lbpcascade/lbpcascade_frontalface.xml";
-    ASSERT_TRUE(classifier.load(classifierXmlPath));
+    try
+    {
+        cv::gpu::CascadeClassifier_GPU classifier;
+        std::string classifierXmlPath = std::string(cvtest::TS::ptr()->get_data_path()) + "lbpcascade/lbpcascade_frontalface.xml";
+        ASSERT_TRUE(classifier.load(classifierXmlPath));
+    }
+    catch (...)
+    {
+        cv::gpu::resetDevice();
+        throw;
+    }
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_ObjDetect, LBP_Read_classifier,
@@ -374,49 +405,57 @@ PARAM_TEST_CASE(LBP_classify, cv::gpu::DeviceInfo, int)
 
 TEST_P(LBP_classify, Accuracy)
 {
-    std::string classifierXmlPath = std::string(cvtest::TS::ptr()->get_data_path()) + "lbpcascade/lbpcascade_frontalface.xml";
-    std::string imagePath = std::string(cvtest::TS::ptr()->get_data_path()) + "lbpcascade/er.png";
-
-    cv::CascadeClassifier cpuClassifier(classifierXmlPath);
-    ASSERT_FALSE(cpuClassifier.empty());
-
-    cv::Mat image = cv::imread(imagePath);
-    image = image.colRange(0, image.cols/2);
-    cv::Mat grey;
-    cvtColor(image, grey, CV_BGR2GRAY);
-    ASSERT_FALSE(image.empty());
-
-    std::vector<cv::Rect> rects;
-    cpuClassifier.detectMultiScale(grey, rects);
-    cv::Mat markedImage = image.clone();
-
-    std::vector<cv::Rect>::iterator it = rects.begin();
-    for (; it != rects.end(); ++it)
-        cv::rectangle(markedImage, *it, CV_RGB(0, 0, 255));
-
-    cv::gpu::CascadeClassifier_GPU gpuClassifier;
-    ASSERT_TRUE(gpuClassifier.load(classifierXmlPath));
-
-    cv::gpu::GpuMat gpu_rects;
-    cv::gpu::GpuMat tested(grey);
-    int count = gpuClassifier.detectMultiScale(tested, gpu_rects);
-
-#if defined (LOG_CASCADE_STATISTIC)
-    cv::Mat downloaded(gpu_rects);
-    const cv::Rect* faces = downloaded.ptr<cv::Rect>();
-    for (int i = 0; i < count; i++)
+    try
     {
-        cv::Rect r = faces[i];
+        std::string classifierXmlPath = std::string(cvtest::TS::ptr()->get_data_path()) + "lbpcascade/lbpcascade_frontalface.xml";
+        std::string imagePath = std::string(cvtest::TS::ptr()->get_data_path()) + "lbpcascade/er.png";
 
-        std::cout << r.x << " " << r.y  << " " << r.width << " " << r.height << std::endl;
-        cv::rectangle(markedImage, r , CV_RGB(255, 0, 0));
+        cv::CascadeClassifier cpuClassifier(classifierXmlPath);
+        ASSERT_FALSE(cpuClassifier.empty());
+
+        cv::Mat image = cv::imread(imagePath);
+        image = image.colRange(0, image.cols/2);
+        cv::Mat grey;
+        cvtColor(image, grey, CV_BGR2GRAY);
+        ASSERT_FALSE(image.empty());
+
+        std::vector<cv::Rect> rects;
+        cpuClassifier.detectMultiScale(grey, rects);
+        cv::Mat markedImage = image.clone();
+
+        std::vector<cv::Rect>::iterator it = rects.begin();
+        for (; it != rects.end(); ++it)
+            cv::rectangle(markedImage, *it, CV_RGB(0, 0, 255));
+
+        cv::gpu::CascadeClassifier_GPU gpuClassifier;
+        ASSERT_TRUE(gpuClassifier.load(classifierXmlPath));
+
+        cv::gpu::GpuMat gpu_rects;
+        cv::gpu::GpuMat tested(grey);
+        int count = gpuClassifier.detectMultiScale(tested, gpu_rects);
+
+    #if defined (LOG_CASCADE_STATISTIC)
+        cv::Mat downloaded(gpu_rects);
+        const cv::Rect* faces = downloaded.ptr<cv::Rect>();
+        for (int i = 0; i < count; i++)
+        {
+            cv::Rect r = faces[i];
+
+            std::cout << r.x << " " << r.y  << " " << r.width << " " << r.height << std::endl;
+            cv::rectangle(markedImage, r , CV_RGB(255, 0, 0));
+        }
+    #endif
+
+    #if defined (LOG_CASCADE_STATISTIC)
+        cv::imshow("Res", markedImage); cv::waitKey();
+    #endif
+        (void)count;
     }
-#endif
-
-#if defined (LOG_CASCADE_STATISTIC)
-    cv::imshow("Res", markedImage); cv::waitKey();
-#endif
-    (void)count;
+    catch (...)
+    {
+        cv::gpu::resetDevice();
+        throw;
+    }
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_ObjDetect, LBP_classify,

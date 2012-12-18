@@ -68,17 +68,25 @@ PARAM_TEST_CASE(Threshold, cv::gpu::DeviceInfo, cv::Size, MatType, ThreshOp, Use
 
 TEST_P(Threshold, Accuracy)
 {
-    cv::Mat src = randomMat(size, type);
-    double maxVal = randomDouble(20.0, 127.0);
-    double thresh = randomDouble(0.0, maxVal);
+    try
+    {
+        cv::Mat src = randomMat(size, type);
+        double maxVal = randomDouble(20.0, 127.0);
+        double thresh = randomDouble(0.0, maxVal);
 
-    cv::gpu::GpuMat dst = createMat(src.size(), src.type(), useRoi);
-    cv::gpu::threshold(loadMat(src, useRoi), dst, thresh, maxVal, threshOp);
+        cv::gpu::GpuMat dst = createMat(src.size(), src.type(), useRoi);
+        cv::gpu::threshold(loadMat(src, useRoi), dst, thresh, maxVal, threshOp);
 
-    cv::Mat dst_gold;
-    cv::threshold(src, dst_gold, thresh, maxVal, threshOp);
+        cv::Mat dst_gold;
+        cv::threshold(src, dst_gold, thresh, maxVal, threshOp);
 
-    EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
+        EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
+    }
+    catch (...)
+    {
+        cv::gpu::resetDevice();
+        throw;
+    }
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_ImgProc, Threshold, testing::Combine(

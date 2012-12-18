@@ -60,28 +60,36 @@ GPU_PERF_TEST_P(SCascadeTest, detect,
 
 RUN_GPU(SCascadeTest, detect)
 {
-    cv::Mat cpu = readImage (GET_PARAM(1));
-    ASSERT_FALSE(cpu.empty());
-    cv::gpu::GpuMat colored(cpu);
-
-    cv::gpu::SCascade cascade;
-
-    cv::FileStorage fs(perf::TestBase::getDataPath(GET_PARAM(0)), cv::FileStorage::READ);
-    ASSERT_TRUE(fs.isOpened());
-
-    ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
-
-    cv::gpu::GpuMat objectBoxes(1, 10000 * sizeof(cv::gpu::SCascade::Detection), CV_8UC1), rois(colored.size(), CV_8UC1);
-    rois.setTo(1);
-
-    cascade.detect(colored, rois, objectBoxes);
-
-    TEST_CYCLE()
+    try
     {
-        cascade.detect(colored, rois, objectBoxes);
-    }
+        cv::Mat cpu = readImage (GET_PARAM(1));
+        ASSERT_FALSE(cpu.empty());
+        cv::gpu::GpuMat colored(cpu);
 
-    SANITY_CHECK(sortDetections(objectBoxes));
+        cv::gpu::SCascade cascade;
+
+        cv::FileStorage fs(perf::TestBase::getDataPath(GET_PARAM(0)), cv::FileStorage::READ);
+        ASSERT_TRUE(fs.isOpened());
+
+        ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
+
+        cv::gpu::GpuMat objectBoxes(1, 10000 * sizeof(cv::gpu::SCascade::Detection), CV_8UC1), rois(colored.size(), CV_8UC1);
+        rois.setTo(1);
+
+        cascade.detect(colored, rois, objectBoxes);
+
+        TEST_CYCLE()
+        {
+            cascade.detect(colored, rois, objectBoxes);
+        }
+
+        SANITY_CHECK(sortDetections(objectBoxes));
+    }
+    catch (...)
+    {
+        cv::gpu::resetDevice();
+        throw;
+    }
 }
 
 NO_CPU(SCascadeTest, detect)
@@ -118,37 +126,45 @@ GPU_PERF_TEST_P(SCascadeTestRoi, detectInRoi,
 
 RUN_GPU(SCascadeTestRoi, detectInRoi)
 {
-    cv::Mat cpu = readImage (GET_PARAM(1));
-    ASSERT_FALSE(cpu.empty());
-    cv::gpu::GpuMat colored(cpu);
-
-    cv::gpu::SCascade cascade;
-
-    cv::FileStorage fs(perf::TestBase::getDataPath(GET_PARAM(0)), cv::FileStorage::READ);
-    ASSERT_TRUE(fs.isOpened());
-
-    ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
-
-    cv::gpu::GpuMat objectBoxes(1, 16384 * 20, CV_8UC1), rois(colored.size(), CV_8UC1);
-    rois.setTo(0);
-
-    int nroi = GET_PARAM(2);
-    cv::RNG rng;
-    for (int i = 0; i < nroi; ++i)
+    try
     {
-        cv::Rect r = getFromTable(rng(10));
-        cv::gpu::GpuMat sub(rois, r);
-        sub.setTo(1);
-    }
+        cv::Mat cpu = readImage (GET_PARAM(1));
+        ASSERT_FALSE(cpu.empty());
+        cv::gpu::GpuMat colored(cpu);
 
-    cascade.detect(colored, rois, objectBoxes);
+        cv::gpu::SCascade cascade;
 
-    TEST_CYCLE()
-    {
+        cv::FileStorage fs(perf::TestBase::getDataPath(GET_PARAM(0)), cv::FileStorage::READ);
+        ASSERT_TRUE(fs.isOpened());
+
+        ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
+
+        cv::gpu::GpuMat objectBoxes(1, 16384 * 20, CV_8UC1), rois(colored.size(), CV_8UC1);
+        rois.setTo(0);
+
+        int nroi = GET_PARAM(2);
+        cv::RNG rng;
+        for (int i = 0; i < nroi; ++i)
+        {
+            cv::Rect r = getFromTable(rng(10));
+            cv::gpu::GpuMat sub(rois, r);
+            sub.setTo(1);
+        }
+
         cascade.detect(colored, rois, objectBoxes);
-    }
 
-    SANITY_CHECK(sortDetections(objectBoxes));
+        TEST_CYCLE()
+        {
+            cascade.detect(colored, rois, objectBoxes);
+        }
+
+        SANITY_CHECK(sortDetections(objectBoxes));
+    }
+    catch (...)
+    {
+        cv::gpu::resetDevice();
+        throw;
+    }
 }
 
 NO_CPU(SCascadeTestRoi, detectInRoi)
@@ -163,33 +179,41 @@ GPU_PERF_TEST_P(SCascadeTestRoi, detectEachRoi,
 
 RUN_GPU(SCascadeTestRoi, detectEachRoi)
 {
-    cv::Mat cpu = readImage (GET_PARAM(1));
-    ASSERT_FALSE(cpu.empty());
-    cv::gpu::GpuMat colored(cpu);
-
-    cv::gpu::SCascade cascade;
-
-    cv::FileStorage fs(perf::TestBase::getDataPath(GET_PARAM(0)), cv::FileStorage::READ);
-    ASSERT_TRUE(fs.isOpened());
-
-    ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
-
-    cv::gpu::GpuMat objectBoxes(1, 16384 * 20, CV_8UC1), rois(colored.size(), CV_8UC1);
-    rois.setTo(0);
-
-    int idx = GET_PARAM(2);
-    cv::Rect r = getFromTable(idx);
-    cv::gpu::GpuMat sub(rois, r);
-    sub.setTo(1);
-
-    cascade.detect(colored, rois, objectBoxes);
-
-    TEST_CYCLE()
+    try
     {
-        cascade.detect(colored, rois, objectBoxes);
-    }
+        cv::Mat cpu = readImage (GET_PARAM(1));
+        ASSERT_FALSE(cpu.empty());
+        cv::gpu::GpuMat colored(cpu);
 
-    SANITY_CHECK(sortDetections(objectBoxes));
+        cv::gpu::SCascade cascade;
+
+        cv::FileStorage fs(perf::TestBase::getDataPath(GET_PARAM(0)), cv::FileStorage::READ);
+        ASSERT_TRUE(fs.isOpened());
+
+        ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
+
+        cv::gpu::GpuMat objectBoxes(1, 16384 * 20, CV_8UC1), rois(colored.size(), CV_8UC1);
+        rois.setTo(0);
+
+        int idx = GET_PARAM(2);
+        cv::Rect r = getFromTable(idx);
+        cv::gpu::GpuMat sub(rois, r);
+        sub.setTo(1);
+
+        cascade.detect(colored, rois, objectBoxes);
+
+        TEST_CYCLE()
+        {
+            cascade.detect(colored, rois, objectBoxes);
+        }
+
+        SANITY_CHECK(sortDetections(objectBoxes));
+    }
+    catch (...)
+    {
+        cv::gpu::resetDevice();
+        throw;
+    }
 }
 
 NO_CPU(SCascadeTestRoi, detectEachRoi)
@@ -209,36 +233,44 @@ GPU_PERF_TEST_P(SCascadeTest, detectOnIntegral,
 
 RUN_GPU(SCascadeTest, detectOnIntegral)
 {
-    cv::FileStorage fsi(perf::TestBase::getDataPath(GET_PARAM(1)), cv::FileStorage::READ);
-    ASSERT_TRUE(fsi.isOpened());
-
-    cv::gpu::GpuMat hogluv(121 * 10, 161, CV_32SC1);
-    for (int i = 0; i < 10; ++i)
+    try
     {
-        cv::Mat channel;
-        fsi[std::string("channel") + itoa(i)] >> channel;
-        cv::gpu::GpuMat gchannel(hogluv, cv::Rect(0, 121 * i, 161, 121));
-        gchannel.upload(channel);
-    }
+        cv::FileStorage fsi(perf::TestBase::getDataPath(GET_PARAM(1)), cv::FileStorage::READ);
+        ASSERT_TRUE(fsi.isOpened());
 
-    cv::gpu::SCascade cascade;
+        cv::gpu::GpuMat hogluv(121 * 10, 161, CV_32SC1);
+        for (int i = 0; i < 10; ++i)
+        {
+            cv::Mat channel;
+            fsi[std::string("channel") + itoa(i)] >> channel;
+            cv::gpu::GpuMat gchannel(hogluv, cv::Rect(0, 121 * i, 161, 121));
+            gchannel.upload(channel);
+        }
 
-    cv::FileStorage fs(perf::TestBase::getDataPath(GET_PARAM(0)), cv::FileStorage::READ);
-    ASSERT_TRUE(fs.isOpened());
+        cv::gpu::SCascade cascade;
 
-    ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
+        cv::FileStorage fs(perf::TestBase::getDataPath(GET_PARAM(0)), cv::FileStorage::READ);
+        ASSERT_TRUE(fs.isOpened());
 
-    cv::gpu::GpuMat objectBoxes(1, 10000 * sizeof(cv::gpu::SCascade::Detection), CV_8UC1), rois(cv::Size(640, 480), CV_8UC1);
-    rois.setTo(1);
+        ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
 
-    cascade.detect(hogluv, rois, objectBoxes);
+        cv::gpu::GpuMat objectBoxes(1, 10000 * sizeof(cv::gpu::SCascade::Detection), CV_8UC1), rois(cv::Size(640, 480), CV_8UC1);
+        rois.setTo(1);
 
-    TEST_CYCLE()
-    {
         cascade.detect(hogluv, rois, objectBoxes);
-    }
 
-    SANITY_CHECK(sortDetections(objectBoxes));
+        TEST_CYCLE()
+        {
+            cascade.detect(hogluv, rois, objectBoxes);
+        }
+
+        SANITY_CHECK(sortDetections(objectBoxes));
+    }
+    catch (...)
+    {
+        cv::gpu::resetDevice();
+        throw;
+    }
 }
 
 NO_CPU(SCascadeTest, detectOnIntegral)
@@ -251,34 +283,42 @@ GPU_PERF_TEST_P(SCascadeTest, detectStream,
 
 RUN_GPU(SCascadeTest, detectStream)
 {
-    cv::Mat cpu = readImage (GET_PARAM(1));
-    ASSERT_FALSE(cpu.empty());
-    cv::gpu::GpuMat colored(cpu);
-
-    cv::gpu::SCascade cascade;
-
-    cv::FileStorage fs(perf::TestBase::getDataPath(GET_PARAM(0)), cv::FileStorage::READ);
-    ASSERT_TRUE(fs.isOpened());
-
-    ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
-
-    cv::gpu::GpuMat objectBoxes(1, 10000 * sizeof(cv::gpu::SCascade::Detection), CV_8UC1), rois(colored.size(), CV_8UC1);
-    rois.setTo(1);
-
-    cv::gpu::Stream s;
-
-    cascade.detect(colored, rois, objectBoxes, s);
-
-    TEST_CYCLE()
+    try
     {
+        cv::Mat cpu = readImage (GET_PARAM(1));
+        ASSERT_FALSE(cpu.empty());
+        cv::gpu::GpuMat colored(cpu);
+
+        cv::gpu::SCascade cascade;
+
+        cv::FileStorage fs(perf::TestBase::getDataPath(GET_PARAM(0)), cv::FileStorage::READ);
+        ASSERT_TRUE(fs.isOpened());
+
+        ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
+
+        cv::gpu::GpuMat objectBoxes(1, 10000 * sizeof(cv::gpu::SCascade::Detection), CV_8UC1), rois(colored.size(), CV_8UC1);
+        rois.setTo(1);
+
+        cv::gpu::Stream s;
+
         cascade.detect(colored, rois, objectBoxes, s);
+
+        TEST_CYCLE()
+        {
+            cascade.detect(colored, rois, objectBoxes, s);
+        }
+
+    #ifdef HAVE_CUDA
+        cudaDeviceSynchronize();
+    #endif
+
+        SANITY_CHECK(sortDetections(objectBoxes));
     }
-
-#ifdef HAVE_CUDA
-    cudaDeviceSynchronize();
-#endif
-
-    SANITY_CHECK(sortDetections(objectBoxes));
+    catch (...)
+    {
+        cv::gpu::resetDevice();
+        throw;
+    }
 }
 
 NO_CPU(SCascadeTest, detectStream)

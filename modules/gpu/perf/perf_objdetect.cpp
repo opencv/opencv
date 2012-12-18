@@ -19,16 +19,24 @@ PERF_TEST_P(Image, ObjDetect_HOG, Values<string>("gpu/hog/road.png"))
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::GpuMat d_img(img);
-
-        cv::gpu::HOGDescriptor d_hog;
-        d_hog.setSVMDetector(cv::gpu::HOGDescriptor::getDefaultPeopleDetector());
-
-        d_hog.detectMultiScale(d_img, found_locations);
-
-        TEST_CYCLE()
+        try
         {
+            cv::gpu::GpuMat d_img(img);
+
+            cv::gpu::HOGDescriptor d_hog;
+            d_hog.setSVMDetector(cv::gpu::HOGDescriptor::getDefaultPeopleDetector());
+
             d_hog.detectMultiScale(d_img, found_locations);
+
+            TEST_CYCLE()
+            {
+                d_hog.detectMultiScale(d_img, found_locations);
+            }
+        }
+        catch (...)
+        {
+            cv::gpu::resetDevice();
+            throw;
         }
     }
     else
@@ -61,16 +69,24 @@ PERF_TEST_P(HOG, CalTech, Values<string>("gpu/caltech/image_00000009_0.png", "gp
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::GpuMat d_img(img);
-
-        cv::gpu::HOGDescriptor d_hog;
-        d_hog.setSVMDetector(cv::gpu::HOGDescriptor::getDefaultPeopleDetector());
-
-        d_hog.detectMultiScale(d_img, found_locations);
-
-        TEST_CYCLE()
+        try
         {
+            cv::gpu::GpuMat d_img(img);
+
+            cv::gpu::HOGDescriptor d_hog;
+            d_hog.setSVMDetector(cv::gpu::HOGDescriptor::getDefaultPeopleDetector());
+
             d_hog.detectMultiScale(d_img, found_locations);
+
+            TEST_CYCLE()
+            {
+                d_hog.detectMultiScale(d_img, found_locations);
+            }
+        }
+        catch (...)
+        {
+            cv::gpu::resetDevice();
+            throw;
         }
     }
     else
@@ -103,20 +119,28 @@ PERF_TEST_P(ImageAndCascade, ObjDetect_HaarClassifier,
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::CascadeClassifier_GPU d_cascade;
-        ASSERT_TRUE(d_cascade.load(perf::TestBase::getDataPath(GetParam().second)));
-
-        cv::gpu::GpuMat d_img(img);
-        cv::gpu::GpuMat d_objects_buffer;
-
-        d_cascade.detectMultiScale(d_img, d_objects_buffer);
-
-        TEST_CYCLE()
+        try
         {
-            d_cascade.detectMultiScale(d_img, d_objects_buffer);
-        }
+            cv::gpu::CascadeClassifier_GPU d_cascade;
+            ASSERT_TRUE(d_cascade.load(perf::TestBase::getDataPath(GetParam().second)));
 
-        GPU_SANITY_CHECK(d_objects_buffer);
+            cv::gpu::GpuMat d_img(img);
+            cv::gpu::GpuMat d_objects_buffer;
+
+            d_cascade.detectMultiScale(d_img, d_objects_buffer);
+
+            TEST_CYCLE()
+            {
+                d_cascade.detectMultiScale(d_img, d_objects_buffer);
+            }
+
+            GPU_SANITY_CHECK(d_objects_buffer);
+        }
+        catch (...)
+        {
+            cv::gpu::resetDevice();
+            throw;
+        }
     }
     else
     {
@@ -147,20 +171,28 @@ PERF_TEST_P(ImageAndCascade, ObjDetect_LBPClassifier,
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::CascadeClassifier_GPU d_cascade;
-        ASSERT_TRUE(d_cascade.load(perf::TestBase::getDataPath(GetParam().second)));
-
-        cv::gpu::GpuMat d_img(img);
-        cv::gpu::GpuMat d_gpu_rects;
-
-        d_cascade.detectMultiScale(d_img, d_gpu_rects);
-
-        TEST_CYCLE()
+        try
         {
-            d_cascade.detectMultiScale(d_img, d_gpu_rects);
-        }
+            cv::gpu::CascadeClassifier_GPU d_cascade;
+            ASSERT_TRUE(d_cascade.load(perf::TestBase::getDataPath(GetParam().second)));
 
-        GPU_SANITY_CHECK(d_gpu_rects);
+            cv::gpu::GpuMat d_img(img);
+            cv::gpu::GpuMat d_gpu_rects;
+
+            d_cascade.detectMultiScale(d_img, d_gpu_rects);
+
+            TEST_CYCLE()
+            {
+                d_cascade.detectMultiScale(d_img, d_gpu_rects);
+            }
+
+            GPU_SANITY_CHECK(d_gpu_rects);
+        }
+        catch (...)
+        {
+            cv::gpu::resetDevice();
+            throw;
+        }
     }
     else
     {
