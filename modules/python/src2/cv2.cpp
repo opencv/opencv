@@ -27,6 +27,11 @@
 #  include "opencv2/nonfree/nonfree.hpp"
 #endif
 
+#ifdef HAVE_OPENCV_GPU
+#  include "opencv2/gpu/gpu.hpp"
+#endif
+
+
 using cv::flann::IndexParams;
 using cv::flann::SearchParams;
 
@@ -133,6 +138,23 @@ typedef Ptr<flann::SearchParams> Ptr_flann_SearchParams;
 
 typedef Ptr<FaceRecognizer> Ptr_FaceRecognizer;
 typedef vector<Scalar> vector_Scalar;
+
+template<class T> 
+struct RefPtr : public Ptr<T>
+{
+    RefPtr() : Ptr(new T()) {}
+    RefPtr(T * _obj) : Ptr(_obj) {}
+    RefPtr(T & _obj) : Ptr(&_obj) {}
+
+    operator T& () {return **this;}
+    operator T const& () const {return **this;}
+};
+
+
+#ifdef HAVE_OPENCV_GPU
+    typedef RefPtr<gpu::GpuMat> gpu_GpuMat;
+    typedef RefPtr<gpu::Stream> gpu_Stream;
+#endif
 
 static PyObject* failmsgp(const char *fmt, ...)
 {
