@@ -514,7 +514,12 @@ void cv::gpu::printShortCudaDeviceInfo(int device)
 
         const char *arch_str = prop.major < 2 ? " (not Fermi)" : "";
         printf("Device %d:  \"%s\"  %.0fMb", dev, prop.name, (float)prop.totalGlobalMem/1048576.0f);
-        printf(", sm_%d%d%s, %d cores", prop.major, prop.minor, arch_str, convertSMVer2Cores(prop.major, prop.minor) * prop.multiProcessorCount);
+        printf(", sm_%d%d%s", prop.major, prop.minor, arch_str);
+
+        int cores = convertSMVer2Cores(prop.major, prop.minor);
+        if (cores > 0)
+            printf(", %d cores", cores * prop.multiProcessorCount);
+
         printf(", Driver/Runtime ver.%d.%d/%d.%d\n", driverVersion/1000, driverVersion%100, runtimeVersion/1000, runtimeVersion%100);
     }
     fflush(stdout);
