@@ -21,7 +21,8 @@ ocv_list_filterout(opencv_test_java_files ".*#.*")
 # These are the files that need to be updated for pure Java.
 ocv_list_filterout(opencv_test_java_files ".*OpenCVTestCase.*")
 ocv_list_filterout(opencv_test_java_files ".*OpenCVTestRunner.*")
-ocv_list_filterout(opencv_test_java_files ".*FASTFeatureDetectorTest.*")
+# These files aren't for desktop Java.
+ocv_list_filterout(opencv_test_java_files ".*android.*")
 
 # These are files updated for pure Java.
 file(GLOB_RECURSE modified_files RELATIVE "${java_source_dir}" "${java_source_dir}/src/*")
@@ -57,11 +58,10 @@ endforeach()
 
 # Copy the OpenCV jar after it has been generated.
 add_custom_command(
-  OUTPUT "${opencv_test_java_bin_dir}/bin/opencv-2.4.9.jar"
-  # TODO: This is brittle; it needs to be updated each time the version increments.
-  COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_BINARY_DIR}/bin/opencv-2.4.9.jar" "${opencv_test_java_bin_dir}/bin/opencv-2.4.9.jar"
+  OUTPUT "${opencv_test_java_bin_dir}/bin/${JAR_NAME}"
+  COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_BINARY_DIR}/bin/${JAR_NAME}" "${opencv_test_java_bin_dir}/bin/${JAR_NAME}"
   COMMENT "Copying the OpenCV jar")
-add_custom_target(copy_opencv_jar ALL SOURCES "${opencv_test_java_bin_dir}/bin/opencv-2.4.9.jar")
+add_custom_target(copy_opencv_jar ALL SOURCES "${opencv_test_java_bin_dir}/bin/${JAR_NAME}")
 # ${the_module} is the target for the Java jar.
 add_dependencies(copy_opencv_jar ${the_module})
 
@@ -69,7 +69,12 @@ add_dependencies(copy_opencv_jar ${the_module})
 file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/build.xml" DESTINATION "${opencv_test_java_bin_dir}")
 
 # Create a script for running the Java tests and place it in build/bin.
-file(WRITE "${CMAKE_BINARY_DIR}/bin/opencv_test_java.sh" "cd ${opencv_test_java_bin_dir};\nant -DjavaLibraryPath=${CMAKE_BINARY_DIR}/lib buildAndTest;\ncd -")
+if(WIN32)
+  file(WRITE "${CMAKE_BINARY_DIR}/bin/opencv_test_java.cmd" "cd ${opencv_test_java_bin_dir}\nant -DjavaLibraryPath=${LIBRARY_OUTPUT_PATH}/Release buildAndTest")
+  file(WRITE "${CMAKE_BINARY_DIR}/bin/opencv_test_java_D.cmd" "cd ${opencv_test_java_bin_dir}\nant -DjavaLibraryPath=${LIBRARY_OUTPUT_PATH}/Debug buildAndTest")
+else()
+  file(WRITE "${CMAKE_BINARY_DIR}/bin/opencv_test_java.sh" "cd ${opencv_test_java_bin_dir};\nant -DjavaLibraryPath=${LIBRARY_OUTPUT_PATH} buildAndTest;\ncd -")
+endif()
 
 add_custom_target(${PROJECT_NAME} ALL SOURCES ${opencv_test_java_file_deps})
 add_dependencies(opencv_tests ${PROJECT_NAME})

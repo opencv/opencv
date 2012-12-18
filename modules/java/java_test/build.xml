@@ -14,7 +14,6 @@
   </target>
 
   <target name="compile">
-    <delete dir="src/org/opencv/test/android/"/>
     <mkdir dir="build/classes"/>
 
     <javac sourcepath="" srcdir="src" destdir="build/classes" >
