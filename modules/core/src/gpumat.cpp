@@ -401,7 +401,7 @@ namespace
             int Cores;
         } SMtoCores;
 
-        SMtoCores gpuArchCoresPerSM[] =  { { 0x10,  8 }, { 0x11,  8 }, { 0x12,  8 }, { 0x13,  8 }, { 0x20, 32 }, { 0x21, 48 }, {0x30, 192}, { -1, -1 }  };
+        SMtoCores gpuArchCoresPerSM[] =  { { 0x10,  8 }, { 0x11,  8 }, { 0x12,  8 }, { 0x13,  8 }, { 0x20, 32 }, { 0x21, 48 }, {0x30, 192}, {0x35, 192}, { -1, -1 }  };
 
         int index = 0;
         while (gpuArchCoresPerSM[index].SM != -1)
@@ -410,7 +410,7 @@ namespace
                 return gpuArchCoresPerSM[index].Cores;
             index++;
         }
-        printf("MapSMtoCores undefined SMversion %d.%d!\n", major, minor);
+
         return -1;
     }
 }
@@ -448,9 +448,11 @@ void cv::gpu::printCudaDeviceInfo(int device)
         printf("  CUDA Driver Version / Runtime Version          %d.%d / %d.%d\n", driverVersion/1000, driverVersion%100, runtimeVersion/1000, runtimeVersion%100);
         printf("  CUDA Capability Major/Minor version number:    %d.%d\n", prop.major, prop.minor);
         printf("  Total amount of global memory:                 %.0f MBytes (%llu bytes)\n", (float)prop.totalGlobalMem/1048576.0f, (unsigned long long) prop.totalGlobalMem);
-        printf("  (%2d) Multiprocessors x (%2d) CUDA Cores/MP:     %d CUDA Cores\n",
-            prop.multiProcessorCount, convertSMVer2Cores(prop.major, prop.minor),
-            convertSMVer2Cores(prop.major, prop.minor) * prop.multiProcessorCount);
+
+        int cores = convertSMVer2Cores(prop.major, prop.minor);
+        if (cores > 0)
+            printf("  (%2d) Multiprocessors x (%2d) CUDA Cores/MP:     %d CUDA Cores\n", prop.multiProcessorCount, cores, cores * prop.multiProcessorCount);
+
         printf("  GPU Clock Speed:                               %.2f GHz\n", prop.clockRate * 1e-6f);
 
         printf("  Max Texture Dimension Size (x,y,z)             1D=(%d), 2D=(%d,%d), 3D=(%d,%d,%d)\n",
