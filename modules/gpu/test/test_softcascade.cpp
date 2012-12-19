@@ -40,14 +40,14 @@
 //
 //M*/
 
-#include <test_precomp.hpp>
-#include <time.h>
+#include "test_precomp.hpp"
 
 #ifdef HAVE_CUDA
+
 using cv::gpu::GpuMat;
 
 // show detection results on input image with cv::imshow
-// #define SHOW_DETECTIONS
+//#define SHOW_DETECTIONS
 
 #if defined SHOW_DETECTIONS
 # define SHOW(res)           \
@@ -57,22 +57,22 @@ using cv::gpu::GpuMat;
 # define SHOW(res)
 #endif
 
-#define GPU_TEST_P(fixture, name, params)                         \
-    class fixture##_##name : public fixture {                     \
-     public:                                                      \
-      fixture##_##name() {}                                       \
-     protected:                                                   \
-      virtual void body();                                        \
-    };                                                            \
-    TEST_P(fixture##_##name, name /*none*/){ body();}             \
-    INSTANTIATE_TEST_CASE_P(/*none*/, fixture##_##name, params);  \
-    void fixture##_##name::body()
+TEST(SCascadeTest, readCascade)
+{
+    std::string xml = cvtest::TS::ptr()->get_data_path() + "../cv/cascadeandhog/icf-template.xml";
+    cv::gpu::SCascade cascade;
 
-namespace {
+    cv::FileStorage fs(xml, cv::FileStorage::READ);
+    ASSERT_TRUE(fs.isOpened());
 
+    ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
+}
+
+namespace
+{
     typedef cv::gpu::SCascade::Detection Detection;
 
-    static cv::Rect getFromTable(int idx)
+    cv::Rect getFromTable(int idx)
     {
         static const cv::Rect rois[] =
         {
@@ -92,16 +92,16 @@ namespace {
         return rois[idx];
     }
 
-    static std::string itoa(long i)
+    std::string itoa(long i)
     {
         static char s[65];
         sprintf(s, "%ld", i);
         return std::string(s);
     }
 
-    static void print(std::ostream &out, const Detection& d)
+    void print(std::ostream &out, const Detection& d)
     {
-#if defined SHOW_DETECTIONS
+    #if defined SHOW_DETECTIONS
         out << "\x1b[32m[ detection]\x1b[0m ("
             << std::setw(4)  << d.x
             << " "
@@ -113,22 +113,22 @@ namespace {
             << ") "
             << std::setw(12) << d.confidence
             <<  std::endl;
-#else
+    #else
         (void)out; (void)d;
-#endif
+    #endif
     }
 
-    static void printTotal(std::ostream &out, int detbytes)
+    void printTotal(std::ostream &out, int detbytes)
     {
-#if defined SHOW_DETECTIONS
+    #if defined SHOW_DETECTIONS
         out << "\x1b[32m[          ]\x1b[0m Total detections " << (detbytes / sizeof(Detection)) << std::endl;
-#else
+    #else
         (void)out; (void)detbytes;
-#endif
+    #endif
     }
 
 #if defined SHOW_DETECTIONS
-    static std::string getImageName(int level)
+    std::string getImageName(int level)
     {
         time_t rawtime;
         struct tm * timeinfo;
@@ -141,7 +141,7 @@ namespace {
         return "gpu_rec_level_" + itoa(level)+ "_" + std::string(buffer) + ".png";
     }
 
-    static void writeResult(const cv::Mat& result, const int level)
+    void writeResult(const cv::Mat& result, const int level)
     {
         std::string path = cv::tempfile(getImageName(level).c_str());
         cv::imwrite(path, result);
@@ -150,13 +150,11 @@ namespace {
 #endif
 }
 
-typedef ::testing::TestWithParam<std::tr1::tuple<cv::gpu::DeviceInfo, std::string, std::string, int> > SCascadeTestRoi;
-GPU_TEST_P(SCascadeTestRoi, detect,
-    testing::Combine(
-        ALL_DEVICES,
-        testing::Values(std::string("cv/cascadeandhog/sc_cvpr_2012_to_opencv.xml")),
-        testing::Values(std::string("../cv/cascadeandhog/bahnhof/image_00000000_0.png")),
-        testing::Range(0, 5)))
+PARAM_TEST_CASE(SCascadeTestRoi, cv::gpu::DeviceInfo, std::string, std::string, int)
+{
+};
+
+GPU_TEST_P(SCascadeTestRoi, Detect)
 {
     cv::gpu::setDevice(GET_PARAM(0).deviceID());
     cv::Mat coloredCpu = cv::imread(cvtest::TS::ptr()->get_data_path() + GET_PARAM(2));
@@ -202,26 +200,24 @@ GPU_TEST_P(SCascadeTestRoi, detect,
     }
 
     SHOW(result);
-
 }
 
-TEST(SCascadeTest, readCascade)
+INSTANTIATE_TEST_CASE_P(GPU_SoftCascade, SCascadeTestRoi, testing::Combine(
+    ALL_DEVICES,
+    testing::Values(std::string("cv/cascadeandhog/sc_cvpr_2012_to_opencv.xml")),
+    testing::Values(std::string("../cv/cascadeandhog/bahnhof/image_00000000_0.png")),
+    testing::Range(0, 5)));
+
+struct SCascadeTestAll : testing::TestWithParam<cv::gpu::DeviceInfo>
 {
-    std::string xml = cvtest::TS::ptr()->get_data_path() + "../cv/cascadeandhog/icf-template.xml";
-    cv::gpu::SCascade cascade;
+    virtual void SetUp()
+    {
+        cv::gpu::setDevice(GetParam().deviceID());
+    }
+};
 
-    cv::FileStorage fs(xml, cv::FileStorage::READ);
-    ASSERT_TRUE(fs.isOpened());
-
-    ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
-}
-
-typedef ::testing::TestWithParam<cv::gpu::DeviceInfo > SCascadeTestAll;
-GPU_TEST_P(SCascadeTestAll, detect,
-        ALL_DEVICES
-        )
+GPU_TEST_P(SCascadeTestAll, detect)
 {
-    cv::gpu::setDevice(GetParam().deviceID());
     std::string xml =  cvtest::TS::ptr()->get_data_path() + "../cv/cascadeandhog/sc_cvpr_2012_to_opencv.xml";
     cv::gpu::SCascade cascade;
 
@@ -239,20 +235,16 @@ GPU_TEST_P(SCascadeTestAll, detect,
     GpuMat sub(rois, cv::Rect(rois.cols / 4, rois.rows / 4,rois.cols / 2, rois.rows / 2));
     sub.setTo(cv::Scalar::all(1));
 
-    objectBoxes.setTo(0);
     cascade.detect(colored, rois, objectBoxes);
 
     typedef cv::gpu::SCascade::Detection Detection;
     cv::Mat detections(objectBoxes);
     int a = *(detections.ptr<int>(0));
-    ASSERT_EQ(a ,2448);
+    ASSERT_EQ(a, 2448);
 }
 
-GPU_TEST_P(SCascadeTestAll, detectOnIntegral,
-        ALL_DEVICES
-        )
+GPU_TEST_P(SCascadeTestAll, detectOnIntegral)
 {
-    cv::gpu::setDevice(GetParam().deviceID());
     std::string xml =  cvtest::TS::ptr()->get_data_path() + "../cv/cascadeandhog/sc_cvpr_2012_to_opencv.xml";
     cv::gpu::SCascade cascade;
 
@@ -283,15 +275,11 @@ GPU_TEST_P(SCascadeTestAll, detectOnIntegral,
     typedef cv::gpu::SCascade::Detection Detection;
     cv::Mat detections(objectBoxes);
     int a = *(detections.ptr<int>(0));
-
-    ASSERT_EQ( a ,1024);
+    ASSERT_EQ(a, 1024);
 }
 
-GPU_TEST_P(SCascadeTestAll, detectStream,
-        ALL_DEVICES
-        )
+GPU_TEST_P(SCascadeTestAll, detectStream)
 {
-    cv::gpu::setDevice(GetParam().deviceID());
     std::string xml =  cvtest::TS::ptr()->get_data_path() + "../cv/cascadeandhog/sc_cvpr_2012_to_opencv.xml";
     cv::gpu::SCascade cascade;
 
@@ -318,8 +306,9 @@ GPU_TEST_P(SCascadeTestAll, detectStream,
     typedef cv::gpu::SCascade::Detection Detection;
     cv::Mat detections(objectBoxes);
     int a = *(detections.ptr<int>(0));
-    ASSERT_EQ(a ,2448);
+    ASSERT_EQ(a, 2448);
 }
 
+INSTANTIATE_TEST_CASE_P(GPU_SoftCascade, SCascadeTestAll, ALL_DEVICES);
 
 #endif

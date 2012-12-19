@@ -43,8 +43,8 @@
 
 #ifdef HAVE_CUDA
 
-namespace {
-
+namespace
+{
     struct GreedyLabeling
     {
         struct dot
@@ -166,7 +166,7 @@ struct Labeling : testing::TestWithParam<cv::gpu::DeviceInfo>
     }
 };
 
-TEST_P(Labeling, ConnectedComponents)
+GPU_TEST_P(Labeling, ConnectedComponents)
 {
     cv::Mat image;
     cvtColor(loat_image(), image, CV_BGR2GRAY);
@@ -191,6 +191,6 @@ TEST_P(Labeling, ConnectedComponents)
     host.checkCorrectness(cv::Mat(components));
 }
 
-INSTANTIATE_TEST_CASE_P(ConnectedComponents, Labeling, ALL_DEVICES);
+INSTANTIATE_TEST_CASE_P(GPU_ConnectedComponents, Labeling, ALL_DEVICES);
 
 #endif // HAVE_CUDA

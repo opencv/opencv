@@ -51,6 +51,7 @@
 #define __OPENCV_TEST_PRECOMP_HPP__
 
 #include <cmath>
+#include <ctime>
 #include <cstdio>
 #include <iostream>
 #include <fstream>
