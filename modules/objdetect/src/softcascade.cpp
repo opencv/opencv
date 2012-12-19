@@ -41,6 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include <iostream>
 
 namespace {
 
@@ -56,7 +57,6 @@ struct Octave
     float scale;
 
     cv::Size size;
-    int shrinkage;
 
     static const char *const SC_OCT_SCALE;
     static const char *const SC_OCT_WEAKS;
@@ -111,7 +111,6 @@ struct Feature
 
     static const char *const SC_F_CHANNEL;
     static const char *const SC_F_RECT;
-
 };
 
 const char *const Octave::SC_OCT_SCALE      = "scale";
@@ -140,6 +139,8 @@ struct Level
        workRect(cv::Size(cvRound(w / (float)shrinkage),cvRound(h / (float)shrinkage))),
        objSize(cv::Size(cvRound(oct.size.width * relScale), cvRound(oct.size.height * relScale)))
     {
+        std::cout << "Level " << oct.scale << " " << scale << " " << shrinkage << " " << w << " " << h << std::endl;
+
         scaling[0] = ((relScale >= 1.f)? 1.f : (0.89f * pow(relScale, 1.099f / log(2.f)))) / (relScale * relScale);
         scaling[1] = 1.f;
         scaleshift = static_cast<int>(relScale * (1 << 16));
@@ -242,7 +243,7 @@ struct cv::SCascade::Fields
 
         const Octave& octave = *(level.octave);
 
-        int stBegin = octave.index * octave.weaks, stEnd = stBegin + ((octave.index)? 1024 : 416;
+        int stBegin = octave.index * octave.weaks, stEnd = stBegin + ((octave.index)? 1024 : 416);
 
         int st = stBegin;
         int offset = (octave.index)? -2: 0;
@@ -362,7 +363,6 @@ struct cv::SCascade::Fields
         static const char *const SC_INTERNAL         = "internalNodes";
         static const char *const SC_LEAF             = "leafValues";
 
-
         // only Ada Boost supported
         std::string stageTypeStr = (string)root[SC_STAGE_TYPE];
         CV_Assert(stageTypeStr == SC_BOOST);
@@ -412,7 +412,7 @@ struct cv::SCascade::Fields
 
                 fns = (*st)[SC_LEAF];
                 inIt = fns.begin(), inIt_end = fns.end();
-                int l = 0;
+                // int l = 0;
                 for (; inIt != inIt_end; ++inIt)
                 {
                     leaves.push_back((float)(*inIt));
@@ -430,9 +430,15 @@ struct cv::SCascade::Fields
 
             feature_offset += octave.weaks * 3;
             ++octIndex;
+
+            std::cout << "octaves " << octaves.size() << std::endl;
+            std::cout << "stages " << stages.size() << std::endl;
+            std::cout << "nodes " << nodes.size() << std::endl;
+            std::cout << "leaves " << leaves.size() << std::endl;
+            std::cout << "features " << features.size() << std::endl;
         }
 
-        shrinkage = octaves[0].shrinkage;
+        // exit(0);
         return true;
     }
 };
@@ -518,7 +524,9 @@ void cv::SCascade::detectNoRoi(const cv::Mat& image, std::vector<Detection>& obj
     {
         const Level& level = *it;
 
-        if (i++ == 26) return;
+        if (level.octave->index != 2) continue;
+
+        std::cout << level.origScale << std::endl;
 
         for (int dy = 0; dy < level.workRect.height; ++dy)
         {
