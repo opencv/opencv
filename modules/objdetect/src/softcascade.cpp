@@ -139,8 +139,6 @@ struct Level
        workRect(cv::Size(cvRound(w / (float)shrinkage),cvRound(h / (float)shrinkage))),
        objSize(cv::Size(cvRound(oct.size.width * relScale), cvRound(oct.size.height * relScale)))
     {
-        std::cout << "Level " << oct.scale << " " << scale << " " << shrinkage << " " << w << " " << h << std::endl;
-
         scaling[0] = ((relScale >= 1.f)? 1.f : (0.89f * pow(relScale, 1.099f / log(2.f)))) / (relScale * relScale);
         scaling[1] = 1.f;
         scaleshift = static_cast<int>(relScale * (1 << 16));
@@ -259,10 +257,7 @@ struct cv::SCascade::Fields
                 cv::Rect scaledRect(feature.rect);
 
                 float threshold = level.rescale(scaledRect, node.threshold,(int)(feature.channel > 6)) * feature.rarea;
-
                 float sum = storage.get(feature.channel, scaledRect);
-                // std::cout << "root: node.threshold " << node.threshold << " " << threshold << " " << sum << " node.feature " << node.feature << " " << feature.rect << std::endl;
-
                 int next = (sum >= threshold)? 2 : 1;
 
                 // leaves
@@ -271,18 +266,13 @@ struct cv::SCascade::Fields
 
                 scaledRect = fLeaf.rect;
                 threshold = level.rescale(scaledRect, leaf.threshold, (int)(fLeaf.channel > 6)) * fLeaf.rarea;
-
                 sum = storage.get(fLeaf.channel, scaledRect);
-                // std::cout << "leaf: node.threshold " << leaf.threshold << " " << threshold << " " << sum << " node.feature " << leaf.feature << " " << fLeaf.rect << std::endl;
 
                 int lShift = (next - 1) * 2 + ((sum >= threshold) ? 1 : 0);
                 float impact = leaves[(st * 4 + offset) + lShift];
-                // std::cout << "impact " << impact;
 
                 detectionScore += impact;
             }
-
-            // std::cout << dx << " " << dy << " " << detectionScore << " " << stage.threshold << std::endl;
             if (detectionScore <= stage.threshold) return;
         }
 
@@ -379,7 +369,6 @@ struct cv::SCascade::Fields
         FileNode fn = root[SC_OCTAVES];
         if (fn.empty()) return false;
 
-    //     // octaves.reserve(noctaves);
         FileNodeIterator it = fn.begin(), it_end = fn.end();
         int feature_offset = 0;
         int octIndex = 0;
@@ -400,7 +389,6 @@ struct cv::SCascade::Fields
 
             // for each tree (~ decision tree with H = 2)
             FileNodeIterator st = fns.begin(), st_end = fns.end();
-            // int i = 0;
             for (; st != st_end; ++st )
             {
                 stages.push_back(Weak(*st));
@@ -412,16 +400,9 @@ struct cv::SCascade::Fields
 
                 fns = (*st)[SC_LEAF];
                 inIt = fns.begin(), inIt_end = fns.end();
-                // int l = 0;
+
                 for (; inIt != inIt_end; ++inIt)
-                {
                     leaves.push_back((float)(*inIt));
-                    // l++;
-                    // std::cout << ((float)(*inIt)) << std::endl;
-                }
-                // if (l =! 4) std::cout << "!!!!!!! " << i << std::endl;
-                // i++;
-                // std::cout << i << " nodes " << nodes.size() << " " << nodes.size() / 3.0  << std::endl;
             }
 
             st = ffs.begin(), st_end = ffs.end();
@@ -430,15 +411,7 @@ struct cv::SCascade::Fields
 
             feature_offset += octave.weaks * 3;
             ++octIndex;
-
-            std::cout << "octaves " << octaves.size() << std::endl;
-            std::cout << "stages " << stages.size() << std::endl;
-            std::cout << "nodes " << nodes.size() << std::endl;
-            std::cout << "leaves " << leaves.size() << std::endl;
-            std::cout << "features " << features.size() << std::endl;
         }
-
-        // exit(0);
         return true;
     }
 };
@@ -519,14 +492,12 @@ void cv::SCascade::detectNoRoi(const cv::Mat& image, std::vector<Detection>& obj
     ChannelStorage storage(image, fld.shrinkage);
 
     typedef std::vector<Level>::const_iterator lIt;
-    int i = 13;
     for (lIt it = fld.levels.begin(); it != fld.levels.end(); ++it)
     {
         const Level& level = *it;
 
-        if (level.octave->index != 2) continue;
-
-        std::cout << level.origScale << std::endl;
+        // we train only 3 scales.
+        if (level.origScale > 2.5) break;
 
         for (int dy = 0; dy < level.workRect.height; ++dy)
         {
@@ -534,7 +505,6 @@ void cv::SCascade::detectNoRoi(const cv::Mat& image, std::vector<Detection>& obj
             {
                 storage.offset = dy * storage.step + dx;
                 fld.detectAt(dx, dy, level, storage, objects);
-                // std::cout << std::endl << std::endl << std::endl;
             }
         }
     }
@@ -573,6 +543,9 @@ void cv::SCascade::detect(cv::InputArray _image, cv::InputArray _rois, std::vect
     for (lIt it = fld.levels.begin(); it != fld.levels.end(); ++it)
     {
          const Level& level = *it;
+
+        // we train only 3 scales.
+        if (level.origScale > 2.5) break;
 
          for (int dy = 0; dy < level.workRect.height; ++dy)
          {
