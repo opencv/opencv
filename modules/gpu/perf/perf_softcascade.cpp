@@ -9,9 +9,9 @@
         virtual void __gpu();\
       virtual void PerfTestBody();\
     };\
-    TEST_P(fixture##_##name, name /*perf*/){ RunPerfTestBody(); if (PERF_RUN_GPU()) __gpu(); else __cpu();}\
+    TEST_P(fixture##_##name, name /*perf*/){ RunPerfTestBody(); }\
     INSTANTIATE_TEST_CASE_P(/*none*/, fixture##_##name, params);\
-    void fixture##_##name::PerfTestBody()
+    void fixture##_##name::PerfTestBody() { if (PERF_RUN_GPU()) __gpu(); else __cpu(); }
 
 #define RUN_CPU(fixture, name)\
     void fixture##_##name::__cpu()
@@ -56,7 +56,6 @@ GPU_PERF_TEST_P(SCascadeTest, detect,
     testing::Combine(
         testing::Values(std::string("cv/cascadeandhog/sc_cvpr_2012_to_opencv.xml")),
         testing::Values(std::string("cv/cascadeandhog/bahnhof/image_00000000_0.png"))))
-{ }
 
 RUN_GPU(SCascadeTest, detect)
 {
@@ -114,7 +113,6 @@ GPU_PERF_TEST_P(SCascadeTestRoi, detectInRoi,
         testing::Values(std::string("cv/cascadeandhog/sc_cvpr_2012_to_opencv.xml")),
         testing::Values(std::string("cv/cascadeandhog/bahnhof/image_00000000_0.png")),
         testing::Range(0, 5)))
-{}
 
 RUN_GPU(SCascadeTestRoi, detectInRoi)
 {
@@ -159,7 +157,6 @@ GPU_PERF_TEST_P(SCascadeTestRoi, detectEachRoi,
         testing::Values(std::string("cv/cascadeandhog/sc_cvpr_2012_to_opencv.xml")),
         testing::Values(std::string("cv/cascadeandhog/bahnhof/image_00000000_0.png")),
         testing::Range(0, 10)))
-{}
 
 RUN_GPU(SCascadeTestRoi, detectEachRoi)
 {
@@ -198,14 +195,13 @@ GPU_PERF_TEST_P(SCascadeTest, detectOnIntegral,
     testing::Combine(
         testing::Values(std::string("cv/cascadeandhog/sc_cvpr_2012_to_opencv.xml")),
         testing::Values(std::string("cv/cascadeandhog/integrals.xml"))))
-{ }
 
-    static std::string itoa(long i)
-    {
-        static char s[65];
-        sprintf(s, "%ld", i);
-        return std::string(s);
-    }
+static std::string itoa(long i)
+{
+    static char s[65];
+    sprintf(s, "%ld", i);
+    return std::string(s);
+}
 
 RUN_GPU(SCascadeTest, detectOnIntegral)
 {
@@ -247,7 +243,6 @@ GPU_PERF_TEST_P(SCascadeTest, detectStream,
     testing::Combine(
         testing::Values(std::string("cv/cascadeandhog/sc_cvpr_2012_to_opencv.xml")),
         testing::Values(std::string("cv/cascadeandhog/bahnhof/image_00000000_0.png"))))
-{ }
 
 RUN_GPU(SCascadeTest, detectStream)
 {
