@@ -1065,6 +1065,7 @@ void CV_FundamentalMatTest::prepare_to_validation( int test_case_idx )
     f_prop2[2] = cv::determinant( F );
 }
 /******************************* find essential matrix ***********************************/
+#ifdef HAVE_EIGEN
 class CV_EssentialMatTest : public cvtest::ArrayTest
 {
 public:
@@ -1373,6 +1374,8 @@ void CV_EssentialMatTest::prepare_to_validation( int test_case_idx )
     SVD::compute(E, E_prop2); 
 }
 
+#endif
+
 /********************************** convert homogeneous *********************************/
 
 class CV_ConvertHomogeneousTest : public cvtest::ArrayTest
@@ -1664,9 +1667,10 @@ void CV_ComputeEpilinesTest::prepare_to_validation( int /*test_case_idx*/ )
 
 TEST(Calib3d_Rodrigues, accuracy) { CV_RodriguesTest test; test.safe_run(); }
 TEST(Calib3d_FindFundamentalMat, accuracy) { CV_FundamentalMatTest test; test.safe_run(); }
-TEST(Calib3d_FindEssentialMat, accuracy) { CV_EssentialMatTest test; test.safe_run(); }
 TEST(Calib3d_ConvertHomogeneoous, accuracy) { CV_ConvertHomogeneousTest test; test.safe_run(); }
 TEST(Calib3d_ComputeEpilines, accuracy) { CV_ComputeEpilinesTest test; test.safe_run(); }
-
+#ifdef HAVE_EIGEN
+TEST(Calib3d_FindEssentialMat, accuracy) { CV_EssentialMatTest test; test.safe_run(); }
+#endif
 
 /* End of file. */

@@ -51,7 +51,6 @@
 #include "opencv2/imgproc/imgproc_c.h"
 #include "opencv2/core/internal.hpp"
 #include "opencv2/features2d/features2d.hpp"
-#include "opencv2/core/eigen.hpp"
 #include <vector>
 
 #ifdef HAVE_TEGRA_OPTIMIZATION

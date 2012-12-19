@@ -1,7 +1,11 @@
 
-#include <eigen3/Eigen/Eigen>
 #include "precomp.hpp"
 #include "_modelest.h"
+
+#ifdef HAVE_EIGEN
+#include <eigen3/Eigen/Eigen>
+#include "opencv2/core/eigen.hpp"
+
 
 using namespace cv; 
 using namespace std; 
@@ -677,4 +681,4 @@ A[9 + 10*19]=-e33*e31*e38-e30*e35*e37+e36*e31*e35+e33*e32*e37+e30*e34*e38-e36*e3
 
 
 
-
+#endif
