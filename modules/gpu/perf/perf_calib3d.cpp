@@ -26,28 +26,20 @@ PERF_TEST_P(ImagePair, Calib3D_StereoBM, Values(pair_string("gpu/perf/aloe.png",
 
     if (PERF_RUN_GPU())
     {
-        try
+        cv::gpu::StereoBM_GPU d_bm(preset, ndisp);
+
+        cv::gpu::GpuMat d_imgLeft(imgLeft);
+        cv::gpu::GpuMat d_imgRight(imgRight);
+        cv::gpu::GpuMat d_dst;
+
+        d_bm(d_imgLeft, d_imgRight, d_dst);
+
+        TEST_CYCLE()
         {
-            cv::gpu::StereoBM_GPU d_bm(preset, ndisp);
-
-            cv::gpu::GpuMat d_imgLeft(imgLeft);
-            cv::gpu::GpuMat d_imgRight(imgRight);
-            cv::gpu::GpuMat d_dst;
-
             d_bm(d_imgLeft, d_imgRight, d_dst);
-
-            TEST_CYCLE()
-            {
-                d_bm(d_imgLeft, d_imgRight, d_dst);
-            }
-
-            GPU_SANITY_CHECK(d_dst);
         }
-        catch (...)
-        {
-            cv::gpu::resetDevice();
-            throw;
-        }
+
+        GPU_SANITY_CHECK(d_dst);
     }
     else
     {
@@ -83,28 +75,20 @@ PERF_TEST_P(ImagePair, Calib3D_StereoBeliefPropagation, Values(pair_string("gpu/
 
     if (PERF_RUN_GPU())
     {
-        try
+        cv::gpu::StereoBeliefPropagation d_bp(ndisp);
+
+        cv::gpu::GpuMat d_imgLeft(imgLeft);
+        cv::gpu::GpuMat d_imgRight(imgRight);
+        cv::gpu::GpuMat d_dst;
+
+        d_bp(d_imgLeft, d_imgRight, d_dst);
+
+        TEST_CYCLE()
         {
-            cv::gpu::StereoBeliefPropagation d_bp(ndisp);
-
-            cv::gpu::GpuMat d_imgLeft(imgLeft);
-            cv::gpu::GpuMat d_imgRight(imgRight);
-            cv::gpu::GpuMat d_dst;
-
             d_bp(d_imgLeft, d_imgRight, d_dst);
-
-            TEST_CYCLE()
-            {
-                d_bp(d_imgLeft, d_imgRight, d_dst);
-            }
-
-            GPU_SANITY_CHECK(d_dst);
         }
-        catch (...)
-        {
-            cv::gpu::resetDevice();
-            throw;
-        }
+
+        GPU_SANITY_CHECK(d_dst);
     }
     else
     {
@@ -129,28 +113,20 @@ PERF_TEST_P(ImagePair, Calib3D_StereoConstantSpaceBP, Values(pair_string("gpu/st
 
     if (PERF_RUN_GPU())
     {
-        try
+        cv::gpu::StereoConstantSpaceBP d_csbp(ndisp);
+
+        cv::gpu::GpuMat d_imgLeft(imgLeft);
+        cv::gpu::GpuMat d_imgRight(imgRight);
+        cv::gpu::GpuMat d_dst;
+
+        d_csbp(d_imgLeft, d_imgRight, d_dst);
+
+        TEST_CYCLE()
         {
-            cv::gpu::StereoConstantSpaceBP d_csbp(ndisp);
-
-            cv::gpu::GpuMat d_imgLeft(imgLeft);
-            cv::gpu::GpuMat d_imgRight(imgRight);
-            cv::gpu::GpuMat d_dst;
-
             d_csbp(d_imgLeft, d_imgRight, d_dst);
-
-            TEST_CYCLE()
-            {
-                d_csbp(d_imgLeft, d_imgRight, d_dst);
-            }
-
-            GPU_SANITY_CHECK(d_dst);
         }
-        catch (...)
-        {
-            cv::gpu::resetDevice();
-            throw;
-        }
+
+        GPU_SANITY_CHECK(d_dst);
     }
     else
     {
@@ -173,28 +149,20 @@ PERF_TEST_P(ImagePair, Calib3D_DisparityBilateralFilter, Values(pair_string("gpu
 
     if (PERF_RUN_GPU())
     {
-        try
+        cv::gpu::DisparityBilateralFilter d_filter(ndisp);
+
+        cv::gpu::GpuMat d_img(img);
+        cv::gpu::GpuMat d_disp(disp);
+        cv::gpu::GpuMat d_dst;
+
+        d_filter(d_disp, d_img, d_dst);
+
+        TEST_CYCLE()
         {
-            cv::gpu::DisparityBilateralFilter d_filter(ndisp);
-
-            cv::gpu::GpuMat d_img(img);
-            cv::gpu::GpuMat d_disp(disp);
-            cv::gpu::GpuMat d_dst;
-
             d_filter(d_disp, d_img, d_dst);
-
-            TEST_CYCLE()
-            {
-                d_filter(d_disp, d_img, d_dst);
-            }
-
-            GPU_SANITY_CHECK(d_dst);
         }
-        catch (...)
-        {
-            cv::gpu::resetDevice();
-            throw;
-        }
+
+        GPU_SANITY_CHECK(d_dst);
     }
     else
     {
@@ -219,25 +187,17 @@ PERF_TEST_P(Count, Calib3D_TransformPoints, Values(5000, 10000, 20000))
 
     if (PERF_RUN_GPU())
     {
-        try
-        {
-            cv::gpu::GpuMat d_src(src);
-            cv::gpu::GpuMat d_dst;
+        cv::gpu::GpuMat d_src(src);
+        cv::gpu::GpuMat d_dst;
 
+        cv::gpu::transformPoints(d_src, rvec, tvec, d_dst);
+
+        TEST_CYCLE()
+        {
             cv::gpu::transformPoints(d_src, rvec, tvec, d_dst);
-
-            TEST_CYCLE()
-            {
-                cv::gpu::transformPoints(d_src, rvec, tvec, d_dst);
-            }
-
-            GPU_SANITY_CHECK(d_dst);
         }
-        catch (...)
-        {
-            cv::gpu::resetDevice();
-            throw;
-        }
+
+        GPU_SANITY_CHECK(d_dst);
     }
     else
     {
@@ -261,25 +221,17 @@ PERF_TEST_P(Count, Calib3D_ProjectPoints, Values(5000, 10000, 20000))
 
     if (PERF_RUN_GPU())
     {
-        try
-        {
-            cv::gpu::GpuMat d_src(src);
-            cv::gpu::GpuMat d_dst;
+        cv::gpu::GpuMat d_src(src);
+        cv::gpu::GpuMat d_dst;
 
+        cv::gpu::projectPoints(d_src, rvec, tvec, camera_mat, cv::Mat(), d_dst);
+
+        TEST_CYCLE()
+        {
             cv::gpu::projectPoints(d_src, rvec, tvec, camera_mat, cv::Mat(), d_dst);
-
-            TEST_CYCLE()
-            {
-                cv::gpu::projectPoints(d_src, rvec, tvec, camera_mat, cv::Mat(), d_dst);
-            }
-
-            GPU_SANITY_CHECK(d_dst);
         }
-        catch (...)
-        {
-            cv::gpu::resetDevice();
-            throw;
-        }
+
+        GPU_SANITY_CHECK(d_dst);
     }
     else
     {
@@ -331,19 +283,11 @@ PERF_TEST_P(Count, Calib3D_SolvePnPRansac, Values(5000, 10000, 20000))
 
     if (PERF_RUN_GPU())
     {
-        try
+        cv::gpu::solvePnPRansac(object, image, camera_mat, dist_coef, rvec, tvec);
+
+        TEST_CYCLE()
         {
             cv::gpu::solvePnPRansac(object, image, camera_mat, dist_coef, rvec, tvec);
-
-            TEST_CYCLE()
-            {
-                cv::gpu::solvePnPRansac(object, image, camera_mat, dist_coef, rvec, tvec);
-            }
-        }
-        catch (...)
-        {
-            cv::gpu::resetDevice();
-            throw;
         }
     }
     else
@@ -376,25 +320,17 @@ PERF_TEST_P(Sz_Depth, Calib3D_ReprojectImageTo3D, Combine(GPU_TYPICAL_MAT_SIZES,
 
     if (PERF_RUN_GPU())
     {
-        try
-        {
-            cv::gpu::GpuMat d_src(src);
-            cv::gpu::GpuMat d_dst;
+        cv::gpu::GpuMat d_src(src);
+        cv::gpu::GpuMat d_dst;
 
+        cv::gpu::reprojectImageTo3D(d_src, d_dst, Q);
+
+        TEST_CYCLE()
+        {
             cv::gpu::reprojectImageTo3D(d_src, d_dst, Q);
-
-            TEST_CYCLE()
-            {
-                cv::gpu::reprojectImageTo3D(d_src, d_dst, Q);
-            }
-
-            GPU_SANITY_CHECK(d_dst);
         }
-        catch (...)
-        {
-            cv::gpu::resetDevice();
-            throw;
-        }
+
+        GPU_SANITY_CHECK(d_dst);
     }
     else
     {
@@ -424,25 +360,17 @@ PERF_TEST_P(Sz_Depth, Calib3D_DrawColorDisp, Combine(GPU_TYPICAL_MAT_SIZES, Valu
 
     if (PERF_RUN_GPU())
     {
-        try
-        {
-            cv::gpu::GpuMat d_src(src);
-            cv::gpu::GpuMat d_dst;
+        cv::gpu::GpuMat d_src(src);
+        cv::gpu::GpuMat d_dst;
 
+        cv::gpu::drawColorDisp(d_src, d_dst, 255);
+
+        TEST_CYCLE()
+        {
             cv::gpu::drawColorDisp(d_src, d_dst, 255);
-
-            TEST_CYCLE()
-            {
-                cv::gpu::drawColorDisp(d_src, d_dst, 255);
-            }
-
-            GPU_SANITY_CHECK(d_dst);
         }
-        catch (...)
-        {
-            cv::gpu::resetDevice();
-            throw;
-        }
+
+        GPU_SANITY_CHECK(d_dst);
     }
     else
     {

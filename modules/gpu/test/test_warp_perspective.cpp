@@ -77,29 +77,21 @@ PARAM_TEST_CASE(BuildWarpPerspectiveMaps, cv::gpu::DeviceInfo, cv::Size, Inverse
 
 TEST_P(BuildWarpPerspectiveMaps, Accuracy)
 {
-    try
-    {
-        cv::Mat M = createTransfomMatrix(size, CV_PI / 4);
-        cv::gpu::GpuMat xmap, ymap;
-        cv::gpu::buildWarpPerspectiveMaps(M, inverse, size, xmap, ymap);
+    cv::Mat M = createTransfomMatrix(size, CV_PI / 4);
+    cv::gpu::GpuMat xmap, ymap;
+    cv::gpu::buildWarpPerspectiveMaps(M, inverse, size, xmap, ymap);
 
-        cv::Mat src = randomMat(randomSize(200, 400), CV_8UC1);
-        cv::Mat dst;
-        cv::remap(src, dst, cv::Mat(xmap), cv::Mat(ymap), cv::INTER_NEAREST, cv::BORDER_CONSTANT);
+    cv::Mat src = randomMat(randomSize(200, 400), CV_8UC1);
+    cv::Mat dst;
+    cv::remap(src, dst, cv::Mat(xmap), cv::Mat(ymap), cv::INTER_NEAREST, cv::BORDER_CONSTANT);
 
-        int flags = cv::INTER_NEAREST;
-        if (inverse)
-            flags |= cv::WARP_INVERSE_MAP;
-        cv::Mat dst_gold;
-        cv::warpPerspective(src, dst_gold, M, size, flags, cv::BORDER_CONSTANT);
+    int flags = cv::INTER_NEAREST;
+    if (inverse)
+        flags |= cv::WARP_INVERSE_MAP;
+    cv::Mat dst_gold;
+    cv::warpPerspective(src, dst_gold, M, size, flags, cv::BORDER_CONSTANT);
 
-        EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
-    }
-    catch (...)
-    {
-        cv::gpu::resetDevice();
-        throw;
-    }
+    EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_ImgProc, BuildWarpPerspectiveMaps, testing::Combine(
@@ -209,28 +201,20 @@ PARAM_TEST_CASE(WarpPerspective, cv::gpu::DeviceInfo, cv::Size, MatType, Inverse
 
 TEST_P(WarpPerspective, Accuracy)
 {
-    try
-    {
-        cv::Mat src = randomMat(size, type);
-        cv::Mat M = createTransfomMatrix(size, CV_PI / 3);
-        int flags = interpolation;
-        if (inverse)
-            flags |= cv::WARP_INVERSE_MAP;
-        cv::Scalar val = randomScalar(0.0, 255.0);
+    cv::Mat src = randomMat(size, type);
+    cv::Mat M = createTransfomMatrix(size, CV_PI / 3);
+    int flags = interpolation;
+    if (inverse)
+        flags |= cv::WARP_INVERSE_MAP;
+    cv::Scalar val = randomScalar(0.0, 255.0);
 
-        cv::gpu::GpuMat dst = createMat(size, type, useRoi);
-        cv::gpu::warpPerspective(loadMat(src, useRoi), dst, M, size, flags, borderType, val);
+    cv::gpu::GpuMat dst = createMat(size, type, useRoi);
+    cv::gpu::warpPerspective(loadMat(src, useRoi), dst, M, size, flags, borderType, val);
 
-        cv::Mat dst_gold;
-        warpPerspectiveGold(src, M, inverse, size, dst_gold, interpolation, borderType, val);
+    cv::Mat dst_gold;
+    warpPerspectiveGold(src, M, inverse, size, dst_gold, interpolation, borderType, val);
 
-        EXPECT_MAT_NEAR(dst_gold, dst, src.depth() == CV_32F ? 1e-1 : 1.0);
-    }
-    catch (...)
-    {
-        cv::gpu::resetDevice();
-        throw;
-    }
+    EXPECT_MAT_NEAR(dst_gold, dst, src.depth() == CV_32F ? 1e-1 : 1.0);
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_ImgProc, WarpPerspective, testing::Combine(
@@ -265,27 +249,19 @@ PARAM_TEST_CASE(WarpPerspectiveNPP, cv::gpu::DeviceInfo, MatType, Inverse, Inter
 
 TEST_P(WarpPerspectiveNPP, Accuracy)
 {
-    try
-    {
-        cv::Mat src = readImageType("stereobp/aloe-L.png", type);
-        cv::Mat M = createTransfomMatrix(src.size(), CV_PI / 4);
-        int flags = interpolation;
-        if (inverse)
-            flags |= cv::WARP_INVERSE_MAP;
+    cv::Mat src = readImageType("stereobp/aloe-L.png", type);
+    cv::Mat M = createTransfomMatrix(src.size(), CV_PI / 4);
+    int flags = interpolation;
+    if (inverse)
+        flags |= cv::WARP_INVERSE_MAP;
 
-        cv::gpu::GpuMat dst;
-        cv::gpu::warpPerspective(loadMat(src), dst, M, src.size(), flags);
+    cv::gpu::GpuMat dst;
+    cv::gpu::warpPerspective(loadMat(src), dst, M, src.size(), flags);
 
-        cv::Mat dst_gold;
-        warpPerspectiveGold(src, M, inverse, src.size(), dst_gold, interpolation, cv::BORDER_CONSTANT, cv::Scalar::all(0));
+    cv::Mat dst_gold;
+    warpPerspectiveGold(src, M, inverse, src.size(), dst_gold, interpolation, cv::BORDER_CONSTANT, cv::Scalar::all(0));
 
-        EXPECT_MAT_SIMILAR(dst_gold, dst, 2e-2);
-    }
-    catch (...)
-    {
-        cv::gpu::resetDevice();
-        throw;
-    }
+    EXPECT_MAT_SIMILAR(dst_gold, dst, 2e-2);
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_ImgProc, WarpPerspectiveNPP, testing::Combine(

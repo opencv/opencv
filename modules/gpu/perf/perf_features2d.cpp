@@ -19,28 +19,20 @@ PERF_TEST_P(Image, Features2D_SURF, Values<string>("gpu/perf/aloe.png"))
 
     if (PERF_RUN_GPU())
     {
-        try
+        cv::gpu::SURF_GPU d_surf;
+
+        cv::gpu::GpuMat d_img(img);
+        cv::gpu::GpuMat d_keypoints, d_descriptors;
+
+        d_surf(d_img, cv::gpu::GpuMat(), d_keypoints, d_descriptors);
+
+        TEST_CYCLE()
         {
-            cv::gpu::SURF_GPU d_surf;
-
-            cv::gpu::GpuMat d_img(img);
-            cv::gpu::GpuMat d_keypoints, d_descriptors;
-
             d_surf(d_img, cv::gpu::GpuMat(), d_keypoints, d_descriptors);
-
-            TEST_CYCLE()
-            {
-                d_surf(d_img, cv::gpu::GpuMat(), d_keypoints, d_descriptors);
-            }
-
-            GPU_SANITY_CHECK(d_descriptors, 1e-4);
-            GPU_SANITY_CHECK_KEYPOINTS(SURF, d_keypoints);
         }
-        catch (...)
-        {
-            cv::gpu::resetDevice();
-            throw;
-        }
+
+        GPU_SANITY_CHECK(d_descriptors, 1e-4);
+        GPU_SANITY_CHECK_KEYPOINTS(SURF, d_keypoints);
     }
     else
     {
@@ -72,27 +64,19 @@ PERF_TEST_P(Image, Features2D_FAST, Values<string>("gpu/perf/aloe.png"))
 
     if (PERF_RUN_GPU())
     {
-        try
+        cv::gpu::FAST_GPU d_fast(20);
+
+        cv::gpu::GpuMat d_img(img);
+        cv::gpu::GpuMat d_keypoints;
+
+        d_fast(d_img, cv::gpu::GpuMat(), d_keypoints);
+
+        TEST_CYCLE()
         {
-            cv::gpu::FAST_GPU d_fast(20);
-
-            cv::gpu::GpuMat d_img(img);
-            cv::gpu::GpuMat d_keypoints;
-
             d_fast(d_img, cv::gpu::GpuMat(), d_keypoints);
-
-            TEST_CYCLE()
-            {
-                d_fast(d_img, cv::gpu::GpuMat(), d_keypoints);
-            }
-
-            GPU_SANITY_CHECK_RESPONSE(FAST, d_keypoints);
         }
-        catch (...)
-        {
-            cv::gpu::resetDevice();
-            throw;
-        }
+
+        GPU_SANITY_CHECK_RESPONSE(FAST, d_keypoints);
     }
     else
     {
@@ -120,28 +104,20 @@ PERF_TEST_P(Image, Features2D_ORB, Values<string>("gpu/perf/aloe.png"))
 
     if (PERF_RUN_GPU())
     {
-        try
+        cv::gpu::ORB_GPU d_orb(4000);
+
+        cv::gpu::GpuMat d_img(img);
+        cv::gpu::GpuMat d_keypoints, d_descriptors;
+
+        d_orb(d_img, cv::gpu::GpuMat(), d_keypoints, d_descriptors);
+
+        TEST_CYCLE()
         {
-            cv::gpu::ORB_GPU d_orb(4000);
-
-            cv::gpu::GpuMat d_img(img);
-            cv::gpu::GpuMat d_keypoints, d_descriptors;
-
             d_orb(d_img, cv::gpu::GpuMat(), d_keypoints, d_descriptors);
-
-            TEST_CYCLE()
-            {
-                d_orb(d_img, cv::gpu::GpuMat(), d_keypoints, d_descriptors);
-            }
-
-            GPU_SANITY_CHECK_KEYPOINTS(ORB, d_keypoints);
-            GPU_SANITY_CHECK(d_descriptors);
         }
-        catch (...)
-        {
-            cv::gpu::resetDevice();
-            throw;
-        }
+
+        GPU_SANITY_CHECK_KEYPOINTS(ORB, d_keypoints);
+        GPU_SANITY_CHECK(d_descriptors);
     }
     else
     {
@@ -185,29 +161,21 @@ PERF_TEST_P(DescSize_Norm, Features2D_BFMatch, Combine(Values(64, 128, 256), Val
 
     if (PERF_RUN_GPU())
     {
-        try
+        cv::gpu::BFMatcher_GPU d_matcher(normType);
+
+        cv::gpu::GpuMat d_query(query);
+        cv::gpu::GpuMat d_train(train);
+        cv::gpu::GpuMat d_trainIdx, d_distance;
+
+        d_matcher.matchSingle(d_query, d_train, d_trainIdx, d_distance);
+
+        TEST_CYCLE()
         {
-            cv::gpu::BFMatcher_GPU d_matcher(normType);
-
-            cv::gpu::GpuMat d_query(query);
-            cv::gpu::GpuMat d_train(train);
-            cv::gpu::GpuMat d_trainIdx, d_distance;
-
             d_matcher.matchSingle(d_query, d_train, d_trainIdx, d_distance);
-
-            TEST_CYCLE()
-            {
-                d_matcher.matchSingle(d_query, d_train, d_trainIdx, d_distance);
-            }
-
-            GPU_SANITY_CHECK(d_trainIdx);
-            GPU_SANITY_CHECK(d_distance);
         }
-        catch (...)
-        {
-            cv::gpu::resetDevice();
-            throw;
-        }
+
+        GPU_SANITY_CHECK(d_trainIdx);
+        GPU_SANITY_CHECK(d_distance);
     }
     else
     {
@@ -252,29 +220,21 @@ PERF_TEST_P(DescSize_K_Norm, Features2D_BFKnnMatch, Combine(
 
     if (PERF_RUN_GPU())
     {
-        try
+        cv::gpu::BFMatcher_GPU d_matcher(normType);
+
+        cv::gpu::GpuMat d_query(query);
+        cv::gpu::GpuMat d_train(train);
+        cv::gpu::GpuMat d_trainIdx, d_distance, d_allDist;
+
+        d_matcher.knnMatchSingle(d_query, d_train, d_trainIdx, d_distance, d_allDist, k);
+
+        TEST_CYCLE()
         {
-            cv::gpu::BFMatcher_GPU d_matcher(normType);
-
-            cv::gpu::GpuMat d_query(query);
-            cv::gpu::GpuMat d_train(train);
-            cv::gpu::GpuMat d_trainIdx, d_distance, d_allDist;
-
             d_matcher.knnMatchSingle(d_query, d_train, d_trainIdx, d_distance, d_allDist, k);
-
-            TEST_CYCLE()
-            {
-                d_matcher.knnMatchSingle(d_query, d_train, d_trainIdx, d_distance, d_allDist, k);
-            }
-
-            GPU_SANITY_CHECK(d_trainIdx);
-            GPU_SANITY_CHECK(d_distance);
         }
-        catch (...)
-        {
-            cv::gpu::resetDevice();
-            throw;
-        }
+
+        GPU_SANITY_CHECK(d_trainIdx);
+        GPU_SANITY_CHECK(d_distance);
     }
     else
     {
@@ -313,29 +273,21 @@ PERF_TEST_P(DescSize_Norm, Features2D_BFRadiusMatch, Combine(Values(64, 128, 256
 
     if (PERF_RUN_GPU())
     {
-        try
+        cv::gpu::BFMatcher_GPU d_matcher(normType);
+
+        cv::gpu::GpuMat d_query(query);
+        cv::gpu::GpuMat d_train(train);
+        cv::gpu::GpuMat d_trainIdx, d_nMatches, d_distance;
+
+        d_matcher.radiusMatchSingle(d_query, d_train, d_trainIdx, d_distance, d_nMatches, 2.0);
+
+        TEST_CYCLE()
         {
-            cv::gpu::BFMatcher_GPU d_matcher(normType);
-
-            cv::gpu::GpuMat d_query(query);
-            cv::gpu::GpuMat d_train(train);
-            cv::gpu::GpuMat d_trainIdx, d_nMatches, d_distance;
-
             d_matcher.radiusMatchSingle(d_query, d_train, d_trainIdx, d_distance, d_nMatches, 2.0);
-
-            TEST_CYCLE()
-            {
-                d_matcher.radiusMatchSingle(d_query, d_train, d_trainIdx, d_distance, d_nMatches, 2.0);
-            }
-
-            GPU_SANITY_CHECK(d_trainIdx);
-            GPU_SANITY_CHECK(d_distance);
         }
-        catch (...)
-        {
-            cv::gpu::resetDevice();
-            throw;
-        }
+
+        GPU_SANITY_CHECK(d_trainIdx);
+        GPU_SANITY_CHECK(d_distance);
     }
     else
     {

@@ -81,36 +81,28 @@ PARAM_TEST_CASE(HoughLines, cv::gpu::DeviceInfo, cv::Size, UseRoi)
 
 TEST_P(HoughLines, Accuracy)
 {
-    try
-    {
-        const cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
-        cv::gpu::setDevice(devInfo.deviceID());
-        const cv::Size size = GET_PARAM(1);
-        const bool useRoi = GET_PARAM(2);
+    const cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
+    cv::gpu::setDevice(devInfo.deviceID());
+    const cv::Size size = GET_PARAM(1);
+    const bool useRoi = GET_PARAM(2);
 
-        const float rho = 1.0f;
-        const float theta = (float) (1.5 * CV_PI / 180.0);
-        const int threshold = 100;
+    const float rho = 1.0f;
+    const float theta = (float) (1.5 * CV_PI / 180.0);
+    onst int threshold = 100;
 
-        cv::Mat src(size, CV_8UC1);
-        generateLines(src);
+    cv::Mat src(size, CV_8UC1);
+    generateLines(src);
 
-        cv::gpu::GpuMat d_lines;
-        cv::gpu::HoughLines(loadMat(src, useRoi), d_lines, rho, theta, threshold);
+    cv::gpu::GpuMat d_lines;
+    cv::gpu::HoughLines(loadMat(src, useRoi), d_lines, rho, theta, threshold);
 
-        std::vector<cv::Vec2f> lines;
-        cv::gpu::HoughLinesDownload(d_lines, lines);
+    std::vector<cv::Vec2f> lines;
+    cv::gpu::HoughLinesDownload(d_lines, lines);
 
-        cv::Mat dst(size, CV_8UC1);
-        drawLines(dst, lines);
+    cv::Mat dst(size, CV_8UC1);
+    drawLines(dst, lines);
 
-        ASSERT_MAT_NEAR(src, dst, 0.0);
-    }
-    catch (...)
-    {
-        cv::gpu::resetDevice();
-        throw;
-    }
+    ASSERT_MAT_NEAR(src, dst, 0.0);
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_ImgProc, HoughLines, testing::Combine(
@@ -134,61 +126,53 @@ PARAM_TEST_CASE(HoughCircles, cv::gpu::DeviceInfo, cv::Size, UseRoi)
 
 TEST_P(HoughCircles, Accuracy)
 {
-    try
+    const cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
+    cv::gpu::setDevice(devInfo.deviceID());
+    const cv::Size size = GET_PARAM(1);
+    const bool useRoi = GET_PARAM(2);
+
+    const float dp = 2.0f;
+    const float minDist = 10.0f;
+    const int minRadius = 10;
+    const int maxRadius = 20;
+    const int cannyThreshold = 100;
+    const int votesThreshold = 20;
+
+    std::vector<cv::Vec3f> circles_gold(4);
+    circles_gold[0] = cv::Vec3i(20, 20, minRadius);
+    circles_gold[1] = cv::Vec3i(90, 87, minRadius + 3);
+    circles_gold[2] = cv::Vec3i(30, 70, minRadius + 8);
+    circles_gold[3] = cv::Vec3i(80, 10, maxRadius);
+
+    cv::Mat src(size, CV_8UC1);
+    drawCircles(src, circles_gold, true);
+
+    cv::gpu::GpuMat d_circles;
+    cv::gpu::HoughCircles(loadMat(src, useRoi), d_circles, CV_HOUGH_GRADIENT, dp, minDist, cannyThreshold, votesThreshold, minRadius, maxRadius);
+
+    std::vector<cv::Vec3f> circles;
+    cv::gpu::HoughCirclesDownload(d_circles, circles);
+
+    ASSERT_FALSE(circles.empty());
+
+    for (size_t i = 0; i < circles.size(); ++i)
     {
-        const cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
-        cv::gpu::setDevice(devInfo.deviceID());
-        const cv::Size size = GET_PARAM(1);
-        const bool useRoi = GET_PARAM(2);
+        cv::Vec3f cur = circles[i];
 
-        const float dp = 2.0f;
-        const float minDist = 10.0f;
-        const int minRadius = 10;
-        const int maxRadius = 20;
-        const int cannyThreshold = 100;
-        const int votesThreshold = 20;
+        bool found = false;
 
-        std::vector<cv::Vec3f> circles_gold(4);
-        circles_gold[0] = cv::Vec3i(20, 20, minRadius);
-        circles_gold[1] = cv::Vec3i(90, 87, minRadius + 3);
-        circles_gold[2] = cv::Vec3i(30, 70, minRadius + 8);
-        circles_gold[3] = cv::Vec3i(80, 10, maxRadius);
-
-        cv::Mat src(size, CV_8UC1);
-        drawCircles(src, circles_gold, true);
-
-        cv::gpu::GpuMat d_circles;
-        cv::gpu::HoughCircles(loadMat(src, useRoi), d_circles, CV_HOUGH_GRADIENT, dp, minDist, cannyThreshold, votesThreshold, minRadius, maxRadius);
-
-        std::vector<cv::Vec3f> circles;
-        cv::gpu::HoughCirclesDownload(d_circles, circles);
-
-        ASSERT_FALSE(circles.empty());
-
-        for (size_t i = 0; i < circles.size(); ++i)
+        for (size_t j = 0; j < circles_gold.size(); ++j)
         {
-            cv::Vec3f cur = circles[i];
+            cv::Vec3f gold = circles_gold[j];
 
-            bool found = false;
-
-            for (size_t j = 0; j < circles_gold.size(); ++j)
+            if (std::fabs(cur[0] - gold[0]) < minDist && std::fabs(cur[1] - gold[1]) < minDist && std::fabs(cur[2] - gold[2]) < minDist)
             {
-                cv::Vec3f gold = circles_gold[j];
-
-                if (std::fabs(cur[0] - gold[0]) < minDist && std::fabs(cur[1] - gold[1]) < minDist && std::fabs(cur[2] - gold[2]) < minDist)
-                {
-                    found = true;
-                    break;
-                }
+                found = true;
+                break;
             }
-
-            ASSERT_TRUE(found);
         }
-    }
-    catch (...)
-    {
-        cv::gpu::resetDevice();
-        throw;
+
+        ASSERT_TRUE(found);
     }
 }
 
@@ -206,68 +190,60 @@ PARAM_TEST_CASE(GeneralizedHough, cv::gpu::DeviceInfo, UseRoi)
 
 TEST_P(GeneralizedHough, POSITION)
 {
-    try
+    const cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
+    cv::gpu::setDevice(devInfo.deviceID());
+    const bool useRoi = GET_PARAM(1);
+
+    cv::Mat templ = readImage("../cv/shared/templ.png", cv::IMREAD_GRAYSCALE);
+    ASSERT_FALSE(templ.empty());
+
+    cv::Point templCenter(templ.cols / 2, templ.rows / 2);
+
+    const size_t gold_count = 3;
+    cv::Point pos_gold[gold_count];
+    pos_gold[0] = cv::Point(templCenter.x + 10, templCenter.y + 10);
+    pos_gold[1] = cv::Point(2 * templCenter.x + 40, templCenter.y + 10);
+    pos_gold[2] = cv::Point(2 * templCenter.x + 40, 2 * templCenter.y + 40);
+
+    cv::Mat image(templ.rows * 3, templ.cols * 3, CV_8UC1, cv::Scalar::all(0));
+    for (size_t i = 0; i < gold_count; ++i)
     {
-        const cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
-        cv::gpu::setDevice(devInfo.deviceID());
-        const bool useRoi = GET_PARAM(1);
-
-        cv::Mat templ = readImage("../cv/shared/templ.png", cv::IMREAD_GRAYSCALE);
-        ASSERT_FALSE(templ.empty());
-
-        cv::Point templCenter(templ.cols / 2, templ.rows / 2);
-
-        const size_t gold_count = 3;
-        cv::Point pos_gold[gold_count];
-        pos_gold[0] = cv::Point(templCenter.x + 10, templCenter.y + 10);
-        pos_gold[1] = cv::Point(2 * templCenter.x + 40, templCenter.y + 10);
-        pos_gold[2] = cv::Point(2 * templCenter.x + 40, 2 * templCenter.y + 40);
-
-        cv::Mat image(templ.rows * 3, templ.cols * 3, CV_8UC1, cv::Scalar::all(0));
-        for (size_t i = 0; i < gold_count; ++i)
-        {
-            cv::Rect rec(pos_gold[i].x - templCenter.x, pos_gold[i].y - templCenter.y, templ.cols, templ.rows);
-            cv::Mat imageROI = image(rec);
-            templ.copyTo(imageROI);
-        }
-
-        cv::Ptr<cv::gpu::GeneralizedHough_GPU> hough = cv::gpu::GeneralizedHough_GPU::create(cv::GHT_POSITION);
-        hough->set("votesThreshold", 200);
-
-        hough->setTemplate(loadMat(templ, useRoi));
-
-        cv::gpu::GpuMat d_pos;
-        hough->detect(loadMat(image, useRoi), d_pos);
-
-        std::vector<cv::Vec4f> pos;
-        hough->download(d_pos, pos);
-
-        ASSERT_EQ(gold_count, pos.size());
-
-        for (size_t i = 0; i < gold_count; ++i)
-        {
-            cv::Point gold = pos_gold[i];
-
-            bool found = false;
-
-            for (size_t j = 0; j < pos.size(); ++j)
-            {
-                cv::Point2f p(pos[j][0], pos[j][1]);
-
-                if (::fabs(p.x - gold.x) < 2 && ::fabs(p.y - gold.y) < 2)
-                {
-                    found = true;
-                    break;
-                }
-            }
-
-            ASSERT_TRUE(found);
-        }
+        cv::Rect rec(pos_gold[i].x - templCenter.x, pos_gold[i].y - templCenter.y, templ.cols, templ.rows);
+        cv::Mat imageROI = image(rec);
+        templ.copyTo(imageROI);
     }
-    catch (...)
+
+    cv::Ptr<cv::gpu::GeneralizedHough_GPU> hough = cv::gpu::GeneralizedHough_GPU::create(cv::GHT_POSITION);
+    hough->set("votesThreshold", 200);
+
+    hough->setTemplate(loadMat(templ, useRoi));
+
+    cv::gpu::GpuMat d_pos;
+    hough->detect(loadMat(image, useRoi), d_pos);
+
+    std::vector<cv::Vec4f> pos;
+    hough->download(d_pos, pos);
+
+    ASSERT_EQ(gold_count, pos.size());
+
+    for (size_t i = 0; i < gold_count; ++i)
     {
-        cv::gpu::resetDevice();
-        throw;
+        cv::Point gold = pos_gold[i];
+
+        bool found = false;
+
+        for (size_t j = 0; j < pos.size(); ++j)
+        {
+            cv::Point2f p(pos[j][0], pos[j][1]);
+
+            if (::fabs(p.x - gold.x) < 2 && ::fabs(p.y - gold.y) < 2)
+            {
+                found = true;
+                break;
+            }
+        }
+
+        ASSERT_TRUE(found);
     }
 }
 

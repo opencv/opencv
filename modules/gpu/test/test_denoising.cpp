@@ -71,25 +71,17 @@ PARAM_TEST_CASE(BilateralFilter, cv::gpu::DeviceInfo, cv::Size, MatType)
 
 TEST_P(BilateralFilter, Accuracy)
 {
-    try
-    {
-        cv::Mat src = randomMat(size, type);
+    cv::Mat src = randomMat(size, type);
 
-        src.convertTo(src, type);
-        cv::gpu::GpuMat dst;
+    src.convertTo(src, type);
+    cv::gpu::GpuMat dst;
 
-        cv::gpu::bilateralFilter(loadMat(src), dst, kernel_size, sigma_color, sigma_spatial);
+    cv::gpu::bilateralFilter(loadMat(src), dst, kernel_size, sigma_color, sigma_spatial);
 
-        cv::Mat dst_gold;
-        cv::bilateralFilter(src, dst_gold, kernel_size, sigma_color, sigma_spatial);
+    cv::Mat dst_gold;
+    cv::bilateralFilter(src, dst_gold, kernel_size, sigma_color, sigma_spatial);
 
-        EXPECT_MAT_NEAR(dst_gold, dst, src.depth() == CV_32F ? 1e-3 : 1.0);
-    }
-    catch (...)
-    {
-        cv::gpu::resetDevice();
-        throw;
-    }
+    EXPECT_MAT_NEAR(dst_gold, dst, src.depth() == CV_32F ? 1e-3 : 1.0);
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_Denoising, BilateralFilter, testing::Combine(
@@ -115,40 +107,34 @@ struct BruteForceNonLocalMeans: testing::TestWithParam<cv::gpu::DeviceInfo>
 
 TEST_P(BruteForceNonLocalMeans, Regression)
 {
-    try
-    {
-        using cv::gpu::GpuMat;
+    using cv::gpu::GpuMat;
 
-        cv::Mat bgr  = readImage("denoising/lena_noised_gaussian_sigma=20_multi_0.png", cv::IMREAD_COLOR);
-        ASSERT_FALSE(bgr.empty());
+    cv::Mat bgr  = readImage("denoising/lena_noised_gaussian_sigma=20_multi_0.png", cv::IMREAD_COLOR);
+    ASSERT_FALSE(bgr.empty());
 
-        cv::Mat gray;
-        cv::cvtColor(bgr, gray, CV_BGR2GRAY);
+    cv::Mat gray;
+    cv::cvtColor(bgr, gray, CV_BGR2GRAY);
 
-        GpuMat dbgr, dgray;
-        cv::gpu::nonLocalMeans(GpuMat(bgr),  dbgr, 20);
-        cv::gpu::nonLocalMeans(GpuMat(gray), dgray, 20);
+    GpuMat dbgr, dgray;
+    cv::gpu::nonLocalMeans(GpuMat(bgr),  dbgr, 20);
+    cv::gpu::nonLocalMeans(GpuMat(gray), dgray, 20);
 
-    #if 0
-        dumpImage("denoising/nlm_denoised_lena_bgr.png", cv::Mat(dbgr));
-        dumpImage("denoising/nlm_denoised_lena_gray.png", cv::Mat(dgray));
-    #endif
+#if 0
+    dumpImage("denoising/nlm_denoised_lena_bgr.png", cv::Mat(dbgr));
+    dumpImage("denoising/nlm_denoised_lena_gray.png", cv::Mat(dgray));
+#endif
 
-        cv::Mat bgr_gold  = readImage("denoising/nlm_denoised_lena_bgr.png", cv::IMREAD_COLOR);
-        cv::Mat gray_gold  = readImage("denoising/nlm_denoised_lena_gray.png", cv::IMREAD_GRAYSCALE);
-        ASSERT_FALSE(bgr_gold.empty() || gray_gold.empty());
+    cv::Mat bgr_gold  = readImage("denoising/nlm_denoised_lena_bgr.png", cv::IMREAD_COLOR);
+    cv::Mat gray_gold  = readImage("denoising/nlm_denoised_lena_gray.png", cv::IMREAD_GRAYSCALE);
+    ASSERT_FALSE(bgr_gold.empty() || gray_gold.empty());
 
-        EXPECT_MAT_NEAR(bgr_gold, dbgr, 1e-4);
-        EXPECT_MAT_NEAR(gray_gold, dgray, 1e-4);
-    }
-    catch (...)
-    {
-        cv::gpu::resetDevice();
-        throw;
-    }
+    EXPECT_MAT_NEAR(bgr_gold, dbgr, 1e-4);
+    EXPECT_MAT_NEAR(gray_gold, dgray, 1e-4);
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_Denoising, BruteForceNonLocalMeans, ALL_DEVICES);
+
+
 
 ////////////////////////////////////////////////////////
 // Fast Force Non local means
@@ -166,41 +152,34 @@ struct FastNonLocalMeans: testing::TestWithParam<cv::gpu::DeviceInfo>
 
 TEST_P(FastNonLocalMeans, Regression)
 {
-    try
-    {
-        using cv::gpu::GpuMat;
+    using cv::gpu::GpuMat;
 
-        cv::Mat bgr  = readImage("denoising/lena_noised_gaussian_sigma=20_multi_0.png", cv::IMREAD_COLOR);
-        ASSERT_FALSE(bgr.empty());
+    cv::Mat bgr  = readImage("denoising/lena_noised_gaussian_sigma=20_multi_0.png", cv::IMREAD_COLOR);
+    ASSERT_FALSE(bgr.empty());
 
-        cv::Mat gray;
-        cv::cvtColor(bgr, gray, CV_BGR2GRAY);
+    cv::Mat gray;
+    cv::cvtColor(bgr, gray, CV_BGR2GRAY);
 
-        GpuMat dbgr, dgray;
-        cv::gpu::FastNonLocalMeansDenoising fnlmd;
+    GpuMat dbgr, dgray;
+    cv::gpu::FastNonLocalMeansDenoising fnlmd;
 
-        fnlmd.simpleMethod(GpuMat(gray),  dgray, 20);
-        fnlmd.labMethod(GpuMat(bgr),  dbgr, 20, 10);
+    fnlmd.simpleMethod(GpuMat(gray),  dgray, 20);
+    fnlmd.labMethod(GpuMat(bgr),  dbgr, 20, 10);
 
-    #if 0
-        //dumpImage("denoising/fnlm_denoised_lena_bgr.png", cv::Mat(dbgr));
-        //dumpImage("denoising/fnlm_denoised_lena_gray.png", cv::Mat(dgray));
-    #endif
+#if 0
+    //dumpImage("denoising/fnlm_denoised_lena_bgr.png", cv::Mat(dbgr));
+    //dumpImage("denoising/fnlm_denoised_lena_gray.png", cv::Mat(dgray));
+#endif
 
-        cv::Mat bgr_gold  = readImage("denoising/fnlm_denoised_lena_bgr.png", cv::IMREAD_COLOR);
-        cv::Mat gray_gold  = readImage("denoising/fnlm_denoised_lena_gray.png", cv::IMREAD_GRAYSCALE);
-        ASSERT_FALSE(bgr_gold.empty() || gray_gold.empty());
+    cv::Mat bgr_gold  = readImage("denoising/fnlm_denoised_lena_bgr.png", cv::IMREAD_COLOR);
+    cv::Mat gray_gold  = readImage("denoising/fnlm_denoised_lena_gray.png", cv::IMREAD_GRAYSCALE);
+    ASSERT_FALSE(bgr_gold.empty() || gray_gold.empty());
 
-        EXPECT_MAT_NEAR(bgr_gold, dbgr, 1);
-        EXPECT_MAT_NEAR(gray_gold, dgray, 1);
-    }
-    catch (...)
-    {
-        cv::gpu::resetDevice();
-        throw;
-    }
+    EXPECT_MAT_NEAR(bgr_gold, dbgr, 1);
+    EXPECT_MAT_NEAR(gray_gold, dgray, 1);
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_Denoising, FastNonLocalMeans, ALL_DEVICES);
+
 
 #endif // HAVE_CUDA

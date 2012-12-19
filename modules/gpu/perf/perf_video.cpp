@@ -36,31 +36,23 @@ PERF_TEST_P(ImagePair, Video_BroxOpticalFlow,
 
     if (PERF_RUN_GPU())
     {
-        try
+        cv::gpu::GpuMat d_frame0(frame0);
+        cv::gpu::GpuMat d_frame1(frame1);
+        cv::gpu::GpuMat d_u;
+        cv::gpu::GpuMat d_v;
+
+        cv::gpu::BroxOpticalFlow d_flow(0.197f /*alpha*/, 50.0f /*gamma*/, 0.8f /*scale_factor*/,
+                                        10 /*inner_iterations*/, 77 /*outer_iterations*/, 10 /*solver_iterations*/);
+
+        d_flow(d_frame0, d_frame1, d_u, d_v);
+
+        TEST_CYCLE()
         {
-            cv::gpu::GpuMat d_frame0(frame0);
-            cv::gpu::GpuMat d_frame1(frame1);
-            cv::gpu::GpuMat d_u;
-            cv::gpu::GpuMat d_v;
-
-            cv::gpu::BroxOpticalFlow d_flow(0.197f /*alpha*/, 50.0f /*gamma*/, 0.8f /*scale_factor*/,
-                                            10 /*inner_iterations*/, 77 /*outer_iterations*/, 10 /*solver_iterations*/);
-
             d_flow(d_frame0, d_frame1, d_u, d_v);
-
-            TEST_CYCLE()
-            {
-                d_flow(d_frame0, d_frame1, d_u, d_v);
-            }
-
-            GPU_SANITY_CHECK(d_u);
-            GPU_SANITY_CHECK(d_v);
         }
-        catch (...)
-        {
-            cv::gpu::resetDevice();
-            throw;
-        }
+
+        GPU_SANITY_CHECK(d_u);
+        GPU_SANITY_CHECK(d_v);
     }
     else
     {
@@ -85,39 +77,31 @@ PERF_TEST_P(ImagePair, Video_InterpolateFrames,
 
     if (PERF_RUN_GPU())
     {
-        try
+        cv::gpu::GpuMat d_frame0(frame0);
+        cv::gpu::GpuMat d_frame1(frame1);
+        cv::gpu::GpuMat d_fu, d_fv;
+        cv::gpu::GpuMat d_bu, d_bv;
+
+        cv::gpu::BroxOpticalFlow d_flow(0.197f /*alpha*/, 50.0f /*gamma*/, 0.8f /*scale_factor*/,
+                                        10 /*inner_iterations*/, 77 /*outer_iterations*/, 10 /*solver_iterations*/);
+
+        d_flow(d_frame0, d_frame1, d_fu, d_fv);
+        d_flow(d_frame1, d_frame0, d_bu, d_bv);
+
+        cv::gpu::GpuMat d_newFrame;
+        cv::gpu::GpuMat d_buf;
+
+        cv::gpu::interpolateFrames(d_frame0, d_frame1, d_fu, d_fv, d_bu, d_bv, 0.5f, d_newFrame, d_buf);
+
+        TEST_CYCLE()
         {
-            cv::gpu::GpuMat d_frame0(frame0);
-            cv::gpu::GpuMat d_frame1(frame1);
-            cv::gpu::GpuMat d_fu, d_fv;
-            cv::gpu::GpuMat d_bu, d_bv;
-
-            cv::gpu::BroxOpticalFlow d_flow(0.197f /*alpha*/, 50.0f /*gamma*/, 0.8f /*scale_factor*/,
-                                            10 /*inner_iterations*/, 77 /*outer_iterations*/, 10 /*solver_iterations*/);
-
-            d_flow(d_frame0, d_frame1, d_fu, d_fv);
-            d_flow(d_frame1, d_frame0, d_bu, d_bv);
-
-            cv::gpu::GpuMat d_newFrame;
-            cv::gpu::GpuMat d_buf;
-
             cv::gpu::interpolateFrames(d_frame0, d_frame1, d_fu, d_fv, d_bu, d_bv, 0.5f, d_newFrame, d_buf);
-
-            TEST_CYCLE()
-            {
-                cv::gpu::interpolateFrames(d_frame0, d_frame1, d_fu, d_fv, d_bu, d_bv, 0.5f, d_newFrame, d_buf);
-            }
-
-            GPU_SANITY_CHECK(d_fu);
-            GPU_SANITY_CHECK(d_fv);
-            GPU_SANITY_CHECK(d_bu);
-            GPU_SANITY_CHECK(d_bv);
         }
-        catch (...)
-        {
-            cv::gpu::resetDevice();
-            throw;
-        }
+
+        GPU_SANITY_CHECK(d_fu);
+        GPU_SANITY_CHECK(d_fv);
+        GPU_SANITY_CHECK(d_bu);
+        GPU_SANITY_CHECK(d_bv);
     }
     else
     {
@@ -142,35 +126,27 @@ PERF_TEST_P(ImagePair, Video_CreateOpticalFlowNeedleMap,
 
     if (PERF_RUN_GPU())
     {
-        try
+        cv::gpu::GpuMat d_frame0(frame0);
+        cv::gpu::GpuMat d_frame1(frame1);
+        cv::gpu::GpuMat d_u;
+        cv::gpu::GpuMat d_v;
+
+        cv::gpu::BroxOpticalFlow d_flow(0.197f /*alpha*/, 50.0f /*gamma*/, 0.8f /*scale_factor*/,
+                                        10 /*inner_iterations*/, 77 /*outer_iterations*/, 10 /*solver_iterations*/);
+
+        d_flow(d_frame0, d_frame1, d_u, d_v);
+
+        cv::gpu::GpuMat d_vertex, d_colors;
+
+        cv::gpu::createOpticalFlowNeedleMap(d_u, d_v, d_vertex, d_colors);
+
+        TEST_CYCLE()
         {
-            cv::gpu::GpuMat d_frame0(frame0);
-            cv::gpu::GpuMat d_frame1(frame1);
-            cv::gpu::GpuMat d_u;
-            cv::gpu::GpuMat d_v;
-
-            cv::gpu::BroxOpticalFlow d_flow(0.197f /*alpha*/, 50.0f /*gamma*/, 0.8f /*scale_factor*/,
-                                            10 /*inner_iterations*/, 77 /*outer_iterations*/, 10 /*solver_iterations*/);
-
-            d_flow(d_frame0, d_frame1, d_u, d_v);
-
-            cv::gpu::GpuMat d_vertex, d_colors;
-
             cv::gpu::createOpticalFlowNeedleMap(d_u, d_v, d_vertex, d_colors);
-
-            TEST_CYCLE()
-            {
-                cv::gpu::createOpticalFlowNeedleMap(d_u, d_v, d_vertex, d_colors);
-            }
-
-            GPU_SANITY_CHECK(d_vertex);
-            GPU_SANITY_CHECK(d_colors);
         }
-        catch (...)
-        {
-            cv::gpu::resetDevice();
-            throw;
-        }
+
+        GPU_SANITY_CHECK(d_vertex);
+        GPU_SANITY_CHECK(d_colors);
     }
     else
     {
@@ -194,27 +170,19 @@ PERF_TEST_P(Image_MinDistance, Video_GoodFeaturesToTrack,
 
     if (PERF_RUN_GPU())
     {
-        try
+        cv::gpu::GoodFeaturesToTrackDetector_GPU d_detector(8000, 0.01, minDistance);
+
+        cv::gpu::GpuMat d_image(image);
+        cv::gpu::GpuMat d_pts;
+
+        d_detector(d_image, d_pts);
+
+        TEST_CYCLE()
         {
-            cv::gpu::GoodFeaturesToTrackDetector_GPU d_detector(8000, 0.01, minDistance);
-
-            cv::gpu::GpuMat d_image(image);
-            cv::gpu::GpuMat d_pts;
-
             d_detector(d_image, d_pts);
-
-            TEST_CYCLE()
-            {
-                d_detector(d_image, d_pts);
-            }
-
-            GPU_SANITY_CHECK(d_pts);
         }
-        catch (...)
-        {
-            cv::gpu::resetDevice();
-            throw;
-        }
+
+        GPU_SANITY_CHECK(d_pts);
     }
     else
     {
@@ -270,34 +238,26 @@ PERF_TEST_P(ImagePair_Gray_NPts_WinSz_Levels_Iters, Video_PyrLKOpticalFlowSparse
 
     if (PERF_RUN_GPU())
     {
-        try
+        cv::gpu::GpuMat d_pts(pts.reshape(2, 1));
+
+        cv::gpu::PyrLKOpticalFlow d_pyrLK;
+        d_pyrLK.winSize = cv::Size(winSize, winSize);
+        d_pyrLK.maxLevel = levels - 1;
+        d_pyrLK.iters = iters;
+
+        cv::gpu::GpuMat d_frame0(frame0);
+        cv::gpu::GpuMat d_frame1(frame1);
+        cv::gpu::GpuMat d_nextPts;
+        cv::gpu::GpuMat d_status;
+
+        d_pyrLK.sparse(d_frame0, d_frame1, d_pts, d_nextPts, d_status);
+
+        TEST_CYCLE()
         {
-            cv::gpu::GpuMat d_pts(pts.reshape(2, 1));
-
-            cv::gpu::PyrLKOpticalFlow d_pyrLK;
-            d_pyrLK.winSize = cv::Size(winSize, winSize);
-            d_pyrLK.maxLevel = levels - 1;
-            d_pyrLK.iters = iters;
-
-            cv::gpu::GpuMat d_frame0(frame0);
-            cv::gpu::GpuMat d_frame1(frame1);
-            cv::gpu::GpuMat d_nextPts;
-            cv::gpu::GpuMat d_status;
-
             d_pyrLK.sparse(d_frame0, d_frame1, d_pts, d_nextPts, d_status);
-
-            TEST_CYCLE()
-            {
-                d_pyrLK.sparse(d_frame0, d_frame1, d_pts, d_nextPts, d_status);
-            }
-
-            GPU_SANITY_CHECK(d_status);
         }
-        catch (...)
-        {
-            cv::gpu::resetDevice();
-            throw;
-        }
+
+        GPU_SANITY_CHECK(d_status);
     }
     else
     {
@@ -345,33 +305,25 @@ PERF_TEST_P(ImagePair_WinSz_Levels_Iters, Video_PyrLKOpticalFlowDense, Combine(
 
     if (PERF_RUN_GPU())
     {
-        try
+        cv::gpu::GpuMat d_frame0(frame0);
+        cv::gpu::GpuMat d_frame1(frame1);
+        cv::gpu::GpuMat d_u;
+        cv::gpu::GpuMat d_v;
+
+        cv::gpu::PyrLKOpticalFlow d_pyrLK;
+        d_pyrLK.winSize = cv::Size(winSize, winSize);
+        d_pyrLK.maxLevel = levels - 1;
+        d_pyrLK.iters = iters;
+
+        d_pyrLK.dense(d_frame0, d_frame1, d_u, d_v);
+
+        TEST_CYCLE()
         {
-            cv::gpu::GpuMat d_frame0(frame0);
-            cv::gpu::GpuMat d_frame1(frame1);
-            cv::gpu::GpuMat d_u;
-            cv::gpu::GpuMat d_v;
-
-            cv::gpu::PyrLKOpticalFlow d_pyrLK;
-            d_pyrLK.winSize = cv::Size(winSize, winSize);
-            d_pyrLK.maxLevel = levels - 1;
-            d_pyrLK.iters = iters;
-
             d_pyrLK.dense(d_frame0, d_frame1, d_u, d_v);
-
-            TEST_CYCLE()
-            {
-                d_pyrLK.dense(d_frame0, d_frame1, d_u, d_v);
-            }
-
-            GPU_SANITY_CHECK(d_u);
-            GPU_SANITY_CHECK(d_v);
         }
-        catch (...)
-        {
-            cv::gpu::resetDevice();
-            throw;
-        }
+
+        GPU_SANITY_CHECK(d_u);
+        GPU_SANITY_CHECK(d_v);
     }
     else
     {
@@ -403,37 +355,29 @@ PERF_TEST_P(ImagePair, Video_FarnebackOpticalFlow,
 
     if (PERF_RUN_GPU())
     {
-        try
+        cv::gpu::GpuMat d_frame0(frame0);
+        cv::gpu::GpuMat d_frame1(frame1);
+        cv::gpu::GpuMat d_u;
+        cv::gpu::GpuMat d_v;
+
+        cv::gpu::FarnebackOpticalFlow d_farneback;
+        d_farneback.numLevels = numLevels;
+        d_farneback.pyrScale = pyrScale;
+        d_farneback.winSize = winSize;
+        d_farneback.numIters = numIters;
+        d_farneback.polyN = polyN;
+        d_farneback.polySigma = polySigma;
+        d_farneback.flags = flags;
+
+        d_farneback(d_frame0, d_frame1, d_u, d_v);
+
+        TEST_CYCLE()
         {
-            cv::gpu::GpuMat d_frame0(frame0);
-            cv::gpu::GpuMat d_frame1(frame1);
-            cv::gpu::GpuMat d_u;
-            cv::gpu::GpuMat d_v;
-
-            cv::gpu::FarnebackOpticalFlow d_farneback;
-            d_farneback.numLevels = numLevels;
-            d_farneback.pyrScale = pyrScale;
-            d_farneback.winSize = winSize;
-            d_farneback.numIters = numIters;
-            d_farneback.polyN = polyN;
-            d_farneback.polySigma = polySigma;
-            d_farneback.flags = flags;
-
             d_farneback(d_frame0, d_frame1, d_u, d_v);
-
-            TEST_CYCLE()
-            {
-                d_farneback(d_frame0, d_frame1, d_u, d_v);
-            }
-
-            GPU_SANITY_CHECK(d_u);
-            GPU_SANITY_CHECK(d_v);
         }
-        catch (...)
-        {
-            cv::gpu::resetDevice();
-            throw;
-        }
+
+        GPU_SANITY_CHECK(d_u);
+        GPU_SANITY_CHECK(d_v);
     }
     else
     {
@@ -466,30 +410,22 @@ PERF_TEST_P(ImagePair, Video_OpticalFlowDual_TVL1,
 
     if (PERF_RUN_GPU())
     {
-        try
+        cv::gpu::GpuMat d_frame0(frame0);
+        cv::gpu::GpuMat d_frame1(frame1);
+        cv::gpu::GpuMat d_flowx;
+        cv::gpu::GpuMat d_flowy;
+
+        cv::gpu::OpticalFlowDual_TVL1_GPU d_alg;
+
+        d_alg(d_frame0, d_frame1, d_flowx, d_flowy);
+
+        TEST_CYCLE()
         {
-            cv::gpu::GpuMat d_frame0(frame0);
-            cv::gpu::GpuMat d_frame1(frame1);
-            cv::gpu::GpuMat d_flowx;
-            cv::gpu::GpuMat d_flowy;
-
-            cv::gpu::OpticalFlowDual_TVL1_GPU d_alg;
-
             d_alg(d_frame0, d_frame1, d_flowx, d_flowy);
-
-            TEST_CYCLE()
-            {
-                d_alg(d_frame0, d_frame1, d_flowx, d_flowy);
-            }
-
-            GPU_SANITY_CHECK(d_flowx);
-            GPU_SANITY_CHECK(d_flowy);
         }
-        catch (...)
-        {
-            cv::gpu::resetDevice();
-            throw;
-        }
+
+        GPU_SANITY_CHECK(d_flowx);
+        GPU_SANITY_CHECK(d_flowy);
     }
     else
     {
@@ -546,27 +482,19 @@ PERF_TEST_P(ImagePair, Video_OpticalFlowBM,
 
     if (PERF_RUN_GPU())
     {
-        try
-        {
-            cv::gpu::GpuMat d_frame0(frame0);
-            cv::gpu::GpuMat d_frame1(frame1);
-            cv::gpu::GpuMat d_velx, d_vely, buf;
+        cv::gpu::GpuMat d_frame0(frame0);
+        cv::gpu::GpuMat d_frame1(frame1);
+        cv::gpu::GpuMat d_velx, d_vely, buf;
 
+        cv::gpu::calcOpticalFlowBM(d_frame0, d_frame1, block_size, shift_size, max_range, false, d_velx, d_vely, buf);
+
+        TEST_CYCLE()
+        {
             cv::gpu::calcOpticalFlowBM(d_frame0, d_frame1, block_size, shift_size, max_range, false, d_velx, d_vely, buf);
-
-            TEST_CYCLE()
-            {
-                cv::gpu::calcOpticalFlowBM(d_frame0, d_frame1, block_size, shift_size, max_range, false, d_velx, d_vely, buf);
-            }
-
-            GPU_SANITY_CHECK(d_velx);
-            GPU_SANITY_CHECK(d_vely);
         }
-        catch (...)
-        {
-            cv::gpu::resetDevice();
-            throw;
-        }
+
+        GPU_SANITY_CHECK(d_velx);
+        GPU_SANITY_CHECK(d_vely);
     }
     else
     {
@@ -601,29 +529,21 @@ PERF_TEST_P(ImagePair, Video_FastOpticalFlowBM,
 
     if (PERF_RUN_GPU())
     {
-        try
+        cv::gpu::GpuMat d_frame0(frame0);
+        cv::gpu::GpuMat d_frame1(frame1);
+        cv::gpu::GpuMat d_velx, d_vely;
+
+        cv::gpu::FastOpticalFlowBM fastBM;
+
+        fastBM(d_frame0, d_frame1, d_velx, d_vely, max_range.width, block_size.width);
+
+        TEST_CYCLE()
         {
-            cv::gpu::GpuMat d_frame0(frame0);
-            cv::gpu::GpuMat d_frame1(frame1);
-            cv::gpu::GpuMat d_velx, d_vely;
-
-            cv::gpu::FastOpticalFlowBM fastBM;
-
             fastBM(d_frame0, d_frame1, d_velx, d_vely, max_range.width, block_size.width);
-
-            TEST_CYCLE()
-            {
-                fastBM(d_frame0, d_frame1, d_velx, d_vely, max_range.width, block_size.width);
-            }
-
-            GPU_SANITY_CHECK(d_velx);
-            GPU_SANITY_CHECK(d_vely);
         }
-        catch (...)
-        {
-            cv::gpu::resetDevice();
-            throw;
-        }
+
+        GPU_SANITY_CHECK(d_velx);
+        GPU_SANITY_CHECK(d_vely);
     }
     else
     {
@@ -661,29 +581,21 @@ PERF_TEST_P(Video, DISABLED_Video_FGDStatModel, Values("gpu/video/768x576.avi", 
 
     if (PERF_RUN_GPU())
     {
-        try
+        cv::gpu::GpuMat d_frame(frame);
+
+        cv::gpu::FGDStatModel d_model(4);
+        d_model.create(d_frame);
+
+        for (int i = 0; i < 10; ++i)
         {
-            cv::gpu::GpuMat d_frame(frame);
+            cap >> frame;
+            ASSERT_FALSE(frame.empty());
 
-            cv::gpu::FGDStatModel d_model(4);
-            d_model.create(d_frame);
+            d_frame.upload(frame);
 
-            for (int i = 0; i < 10; ++i)
-            {
-                cap >> frame;
-                ASSERT_FALSE(frame.empty());
-
-                d_frame.upload(frame);
-
-                startTimer(); next();
-                d_model.update(d_frame);
-                stopTimer();
-            }
-        }
-        catch (...)
-        {
-            cv::gpu::resetDevice();
-            throw;
+            startTimer(); next();
+            d_model.update(d_frame);
+            stopTimer();
         }
     }
     else
@@ -737,40 +649,32 @@ PERF_TEST_P(Video_Cn_LearningRate, DISABLED_Video_MOG,
 
     if (PERF_RUN_GPU())
     {
-        try
+        cv::gpu::GpuMat d_frame(frame);
+        cv::gpu::MOG_GPU d_mog;
+        cv::gpu::GpuMat d_foreground;
+
+        d_mog(d_frame, d_foreground, learningRate);
+
+        for (int i = 0; i < 10; ++i)
         {
-            cv::gpu::GpuMat d_frame(frame);
-            cv::gpu::MOG_GPU d_mog;
-            cv::gpu::GpuMat d_foreground;
+            cap >> frame;
+            ASSERT_FALSE(frame.empty());
 
-            d_mog(d_frame, d_foreground, learningRate);
-
-            for (int i = 0; i < 10; ++i)
+            if (cn != 3)
             {
-                cap >> frame;
-                ASSERT_FALSE(frame.empty());
-
-                if (cn != 3)
-                {
-                    cv::Mat temp;
-                    if (cn == 1)
-                        cv::cvtColor(frame, temp, cv::COLOR_BGR2GRAY);
-                    else
-                        cv::cvtColor(frame, temp, cv::COLOR_BGR2BGRA);
-                    cv::swap(temp, frame);
-                }
-
-                d_frame.upload(frame);
-
-                startTimer(); next();
-                d_mog(d_frame, d_foreground, learningRate);
-                stopTimer();
+                cv::Mat temp;
+                if (cn == 1)
+                    cv::cvtColor(frame, temp, cv::COLOR_BGR2GRAY);
+                else
+                    cv::cvtColor(frame, temp, cv::COLOR_BGR2BGRA);
+                cv::swap(temp, frame);
             }
-        }
-        catch (...)
-        {
-            cv::gpu::resetDevice();
-            throw;
+
+            d_frame.upload(frame);
+
+            startTimer(); next();
+            d_mog(d_frame, d_foreground, learningRate);
+            stopTimer();
         }
     }
     else
@@ -833,40 +737,32 @@ PERF_TEST_P(Video_Cn, DISABLED_Video_MOG2,
 
     if (PERF_RUN_GPU())
     {
-        try
+        cv::gpu::GpuMat d_frame(frame);
+        cv::gpu::MOG2_GPU d_mog2;
+        cv::gpu::GpuMat d_foreground;
+
+        d_mog2(d_frame, d_foreground);
+
+        for (int i = 0; i < 10; ++i)
         {
-            cv::gpu::GpuMat d_frame(frame);
-            cv::gpu::MOG2_GPU d_mog2;
-            cv::gpu::GpuMat d_foreground;
+            cap >> frame;
+            ASSERT_FALSE(frame.empty());
 
-            d_mog2(d_frame, d_foreground);
-
-            for (int i = 0; i < 10; ++i)
+            if (cn != 3)
             {
-                cap >> frame;
-                ASSERT_FALSE(frame.empty());
-
-                if (cn != 3)
-                {
-                    cv::Mat temp;
-                    if (cn == 1)
-                        cv::cvtColor(frame, temp, cv::COLOR_BGR2GRAY);
-                    else
-                        cv::cvtColor(frame, temp, cv::COLOR_BGR2BGRA);
-                    cv::swap(temp, frame);
-                }
-
-                d_frame.upload(frame);
-
-                startTimer(); next();
-                d_mog2(d_frame, d_foreground);
-                stopTimer();
+                cv::Mat temp;
+                if (cn == 1)
+                    cv::cvtColor(frame, temp, cv::COLOR_BGR2GRAY);
+                else
+                    cv::cvtColor(frame, temp, cv::COLOR_BGR2BGRA);
+                cv::swap(temp, frame);
             }
-        }
-        catch (...)
-        {
-            cv::gpu::resetDevice();
-            throw;
+
+            d_frame.upload(frame);
+
+            startTimer(); next();
+            d_mog2(d_frame, d_foreground);
+            stopTimer();
         }
     }
     else
@@ -914,47 +810,39 @@ PERF_TEST_P(Video_Cn, Video_MOG2GetBackgroundImage,
 
     if (PERF_RUN_GPU())
     {
-        try
+        cv::gpu::GpuMat d_frame;
+        cv::gpu::MOG2_GPU d_mog2;
+        cv::gpu::GpuMat d_foreground;
+
+        for (int i = 0; i < 10; ++i)
         {
-            cv::gpu::GpuMat d_frame;
-            cv::gpu::MOG2_GPU d_mog2;
-            cv::gpu::GpuMat d_foreground;
+            cap >> frame;
+            ASSERT_FALSE(frame.empty());
 
-            for (int i = 0; i < 10; ++i)
+            if (cn != 3)
             {
-                cap >> frame;
-                ASSERT_FALSE(frame.empty());
-
-                if (cn != 3)
-                {
-                    cv::Mat temp;
-                    if (cn == 1)
-                        cv::cvtColor(frame, temp, cv::COLOR_BGR2GRAY);
-                    else
-                        cv::cvtColor(frame, temp, cv::COLOR_BGR2BGRA);
-                    cv::swap(temp, frame);
-                }
-
-                d_frame.upload(frame);
-
-                d_mog2(d_frame, d_foreground);
+                cv::Mat temp;
+                if (cn == 1)
+                    cv::cvtColor(frame, temp, cv::COLOR_BGR2GRAY);
+                else
+                    cv::cvtColor(frame, temp, cv::COLOR_BGR2BGRA);
+                cv::swap(temp, frame);
             }
 
-            cv::gpu::GpuMat d_background;
+            d_frame.upload(frame);
+
+            d_mog2(d_frame, d_foreground);
+        }
+
+        cv::gpu::GpuMat d_background;
+        d_mog2.getBackgroundImage(d_background);
+
+        TEST_CYCLE()
+        {
             d_mog2.getBackgroundImage(d_background);
-
-            TEST_CYCLE()
-            {
-                d_mog2.getBackgroundImage(d_background);
-            }
-
-            GPU_SANITY_CHECK(d_background);
         }
-        catch (...)
-        {
-            cv::gpu::resetDevice();
-            throw;
-        }
+
+        GPU_SANITY_CHECK(d_background);
     }
     else
     {
@@ -1019,40 +907,32 @@ PERF_TEST_P(Video_Cn, DISABLED_Video_VIBE,
 
     if (PERF_RUN_GPU())
     {
-        try
+        cv::gpu::GpuMat d_frame(frame);
+        cv::gpu::VIBE_GPU d_vibe;
+        cv::gpu::GpuMat d_foreground;
+
+        d_vibe(d_frame, d_foreground);
+
+        for (int i = 0; i < 10; ++i)
         {
-            cv::gpu::GpuMat d_frame(frame);
-            cv::gpu::VIBE_GPU d_vibe;
-            cv::gpu::GpuMat d_foreground;
+            cap >> frame;
+            ASSERT_FALSE(frame.empty());
 
-            d_vibe(d_frame, d_foreground);
-
-            for (int i = 0; i < 10; ++i)
+            if (cn != 3)
             {
-                cap >> frame;
-                ASSERT_FALSE(frame.empty());
-
-                if (cn != 3)
-                {
-                    cv::Mat temp;
-                    if (cn == 1)
-                        cv::cvtColor(frame, temp, cv::COLOR_BGR2GRAY);
-                    else
-                        cv::cvtColor(frame, temp, cv::COLOR_BGR2BGRA);
-                    cv::swap(temp, frame);
-                }
-
-                d_frame.upload(frame);
-
-                startTimer(); next();
-                d_vibe(d_frame, d_foreground);
-                stopTimer();
+                cv::Mat temp;
+                if (cn == 1)
+                    cv::cvtColor(frame, temp, cv::COLOR_BGR2GRAY);
+                else
+                    cv::cvtColor(frame, temp, cv::COLOR_BGR2BGRA);
+                cv::swap(temp, frame);
             }
-        }
-        catch (...)
-        {
-            cv::gpu::resetDevice();
-            throw;
+
+            d_frame.upload(frame);
+
+            startTimer(); next();
+            d_vibe(d_frame, d_foreground);
+            stopTimer();
         }
     }
     else
@@ -1092,47 +972,39 @@ PERF_TEST_P(Video_Cn_MaxFeatures, DISABLED_Video_GMG,
 
     if (PERF_RUN_GPU())
     {
-        try
+        cv::gpu::GpuMat d_frame(frame);
+        cv::gpu::GpuMat d_fgmask;
+
+        cv::gpu::GMG_GPU d_gmg;
+        d_gmg.maxFeatures = maxFeatures;
+
+        d_gmg(d_frame, d_fgmask);
+
+        for (int i = 0; i < 150; ++i)
         {
-            cv::gpu::GpuMat d_frame(frame);
-            cv::gpu::GpuMat d_fgmask;
-
-            cv::gpu::GMG_GPU d_gmg;
-            d_gmg.maxFeatures = maxFeatures;
-
-            d_gmg(d_frame, d_fgmask);
-
-            for (int i = 0; i < 150; ++i)
+            cap >> frame;
+            if (frame.empty())
             {
+                cap.release();
+                cap.open(inputFile);
                 cap >> frame;
-                if (frame.empty())
-                {
-                    cap.release();
-                    cap.open(inputFile);
-                    cap >> frame;
-                }
-
-                if (cn != 3)
-                {
-                    cv::Mat temp;
-                    if (cn == 1)
-                        cv::cvtColor(frame, temp, cv::COLOR_BGR2GRAY);
-                    else
-                        cv::cvtColor(frame, temp, cv::COLOR_BGR2BGRA);
-                    cv::swap(temp, frame);
-                }
-
-                d_frame.upload(frame);
-
-                startTimer(); next();
-                d_gmg(d_frame, d_fgmask);
-                stopTimer();
             }
-        }
-        catch (...)
-        {
-            cv::gpu::resetDevice();
-            throw;
+
+            if (cn != 3)
+            {
+                cv::Mat temp;
+                if (cn == 1)
+                    cv::cvtColor(frame, temp, cv::COLOR_BGR2GRAY);
+                else
+                    cv::cvtColor(frame, temp, cv::COLOR_BGR2BGRA);
+                cv::swap(temp, frame);
+            }
+
+            d_frame.upload(frame);
+
+            startTimer(); next();
+            d_gmg(d_frame, d_fgmask);
+            stopTimer();
         }
     }
     else
@@ -1194,31 +1066,23 @@ PERF_TEST_P(Video, Video_VideoWriter, Values("gpu/video/768x576.avi", "gpu/video
 
     if (PERF_RUN_GPU())
     {
-        try
+        cv::gpu::VideoWriter_GPU d_writer;
+
+        cv::gpu::GpuMat d_frame;
+
+        for (int i = 0; i < 10; ++i)
         {
-            cv::gpu::VideoWriter_GPU d_writer;
+            reader >> frame;
+            ASSERT_FALSE(frame.empty());
 
-            cv::gpu::GpuMat d_frame;
+            d_frame.upload(frame);
 
-            for (int i = 0; i < 10; ++i)
-            {
-                reader >> frame;
-                ASSERT_FALSE(frame.empty());
+            if (!d_writer.isOpened())
+                d_writer.open(outputFile, frame.size(), FPS);
 
-                d_frame.upload(frame);
-
-                if (!d_writer.isOpened())
-                    d_writer.open(outputFile, frame.size(), FPS);
-
-                startTimer(); next();
-                d_writer.write(d_frame);
-                stopTimer();
-            }
-        }
-        catch (...)
-        {
-            cv::gpu::resetDevice();
-            throw;
+            startTimer(); next();
+            d_writer.write(d_frame);
+            stopTimer();
         }
     }
     else
@@ -1251,27 +1115,19 @@ PERF_TEST_P(Video, Video_VideoReader, Values("gpu/video/768x576.avi", "gpu/video
 
     if (PERF_RUN_GPU())
     {
-        try
+        cv::gpu::VideoReader_GPU d_reader(inputFile);
+        ASSERT_TRUE( d_reader.isOpened() );
+
+        cv::gpu::GpuMat d_frame;
+
+        d_reader.read(d_frame);
+
+        TEST_CYCLE_N(10)
         {
-            cv::gpu::VideoReader_GPU d_reader(inputFile);
-            ASSERT_TRUE( d_reader.isOpened() );
-
-            cv::gpu::GpuMat d_frame;
-
             d_reader.read(d_frame);
-
-            TEST_CYCLE_N(10)
-            {
-                d_reader.read(d_frame);
-            }
-
-            GPU_SANITY_CHECK(d_frame);
         }
-        catch (...)
-        {
-            cv::gpu::resetDevice();
-            throw;
-        }
+
+        GPU_SANITY_CHECK(d_frame);
     }
     else
     {

@@ -70,402 +70,258 @@ PARAM_TEST_CASE(GlBuffer, cv::Size, MatType)
 
 TEST_P(GlBuffer, Constructor1)
 {
-    try
-    {
-        cv::GlBuffer buf(size.height, size.width, type, cv::GlBuffer::ARRAY_BUFFER, true);
+    cv::GlBuffer buf(size.height, size.width, type, cv::GlBuffer::ARRAY_BUFFER, true);
 
-        EXPECT_EQ(size.height, buf.rows());
-        EXPECT_EQ(size.width, buf.cols());
-        EXPECT_EQ(type, buf.type());
-    }
-    catch (...)
-    {
-        cv::gpu::resetDevice();
-        throw;
-    }
+    EXPECT_EQ(size.height, buf.rows());
+    EXPECT_EQ(size.width, buf.cols());
+    EXPECT_EQ(type, buf.type());
 }
 
 TEST_P(GlBuffer, Constructor2)
 {
-    try
-    {
-        cv::GlBuffer buf(size, type, cv::GlBuffer::ARRAY_BUFFER, true);
+    cv::GlBuffer buf(size, type, cv::GlBuffer::ARRAY_BUFFER, true);
 
-        EXPECT_EQ(size.height, buf.rows());
-        EXPECT_EQ(size.width, buf.cols());
-        EXPECT_EQ(type, buf.type());
-    }
-    catch (...)
-    {
-        cv::gpu::resetDevice();
-        throw;
-    }
+    EXPECT_EQ(size.height, buf.rows());
+    EXPECT_EQ(size.width, buf.cols());
+    EXPECT_EQ(type, buf.type());
 }
 
 TEST_P(GlBuffer, ConstructorFromMat)
 {
-    try
-    {
-        cv::Mat gold = randomMat(size, type);
+    cv::Mat gold = randomMat(size, type);
 
-        cv::GlBuffer buf(gold, cv::GlBuffer::ARRAY_BUFFER, true);
+    cv::GlBuffer buf(gold, cv::GlBuffer::ARRAY_BUFFER, true);
 
-        cv::Mat bufData;
-        buf.copyTo(bufData);
+    cv::Mat bufData;
+    buf.copyTo(bufData);
 
-        EXPECT_MAT_NEAR(gold, bufData, 0);
-    }
-    catch (...)
-    {
-        cv::gpu::resetDevice();
-        throw;
-    }
+    EXPECT_MAT_NEAR(gold, bufData, 0);
 }
 
 TEST_P(GlBuffer, ConstructorFromGpuMat)
 {
-    try
-    {
-        cv::Mat gold = randomMat(size, type);
-        cv::gpu::GpuMat d_gold(gold);
+    cv::Mat gold = randomMat(size, type);
+    cv::gpu::GpuMat d_gold(gold);
 
-        cv::GlBuffer buf(d_gold, cv::GlBuffer::ARRAY_BUFFER);
+    cv::GlBuffer buf(d_gold, cv::GlBuffer::ARRAY_BUFFER);
 
-        cv::Mat bufData;
-        buf.copyTo(bufData);
+    cv::Mat bufData;
+    buf.copyTo(bufData);
 
-        EXPECT_MAT_NEAR(gold, bufData, 0);
-    }
-    catch (...)
-    {
-        cv::gpu::resetDevice();
-        throw;
-    }
+    EXPECT_MAT_NEAR(gold, bufData, 0);
 }
 
 TEST_P(GlBuffer, ConstructorFromGlBuffer)
 {
-    try
-    {
-        cv::GlBuffer buf_gold(size, type, cv::GlBuffer::ARRAY_BUFFER, true);
+    cv::GlBuffer buf_gold(size, type, cv::GlBuffer::ARRAY_BUFFER, true);
 
-        cv::GlBuffer buf(buf_gold);
+    cv::GlBuffer buf(buf_gold);
 
-        EXPECT_EQ(buf_gold.bufId(), buf.bufId());
-        EXPECT_EQ(buf_gold.rows(), buf.rows());
-        EXPECT_EQ(buf_gold.cols(), buf.cols());
-        EXPECT_EQ(buf_gold.type(), buf.type());
-    }
-    catch (...)
-    {
-        cv::gpu::resetDevice();
-        throw;
-    }
+    EXPECT_EQ(buf_gold.bufId(), buf.bufId());
+    EXPECT_EQ(buf_gold.rows(), buf.rows());
+    EXPECT_EQ(buf_gold.cols(), buf.cols());
+    EXPECT_EQ(buf_gold.type(), buf.type());
 }
 
 TEST_P(GlBuffer, ConstructorFromGlTexture2D)
 {
-    try
-    {
-        const int depth = CV_MAT_DEPTH(type);
-        const int cn = CV_MAT_CN(type);
+    const int depth = CV_MAT_DEPTH(type);
+    const int cn = CV_MAT_CN(type);
 
-        if (depth != CV_32F || cn == 2)
-            return;
+    if (depth != CV_32F || cn == 2)
+        return;
 
-        cv::Mat gold = randomMat(size, type, 0, 1.0);
-        cv::GlTexture2D tex_gold(gold, true);
+    cv::Mat gold = randomMat(size, type, 0, 1.0);
+    cv::GlTexture2D tex_gold(gold, true);
 
-        cv::GlBuffer buf(tex_gold, cv::GlBuffer::PIXEL_PACK_BUFFER, true);
+    cv::GlBuffer buf(tex_gold, cv::GlBuffer::PIXEL_PACK_BUFFER, true);
 
-        cv::Mat bufData;
-        buf.copyTo(bufData);
+    cv::Mat bufData;
+    buf.copyTo(bufData);
 
-        EXPECT_MAT_NEAR(gold, bufData, 1e-2);
-    }
-    catch (...)
-    {
-        cv::gpu::resetDevice();
-        throw;
-    }
+    EXPECT_MAT_NEAR(gold, bufData, 1e-2);
 }
 
 TEST_P(GlBuffer, Create)
 {
-    try
-    {
-        cv::GlBuffer buf;
-        buf.create(size.height, size.width, type, cv::GlBuffer::ARRAY_BUFFER, true);
+    cv::GlBuffer buf;
+    buf.create(size.height, size.width, type, cv::GlBuffer::ARRAY_BUFFER, true);
 
-        EXPECT_EQ(size.height, buf.rows());
-        EXPECT_EQ(size.width, buf.cols());
-        EXPECT_EQ(type, buf.type());
-    }
-    catch (...)
-    {
-        cv::gpu::resetDevice();
-        throw;
-    }
+    EXPECT_EQ(size.height, buf.rows());
+    EXPECT_EQ(size.width, buf.cols());
+    EXPECT_EQ(type, buf.type());
 }
 
 TEST_P(GlBuffer, CopyFromMat)
 {
-    try
-    {
-        cv::Mat gold = randomMat(size, type);
+    cv::Mat gold = randomMat(size, type);
 
-        cv::GlBuffer buf;
-        buf.copyFrom(gold, cv::GlBuffer::ARRAY_BUFFER, true);
+    cv::GlBuffer buf;
+    buf.copyFrom(gold, cv::GlBuffer::ARRAY_BUFFER, true);
 
-        cv::Mat bufData;
-        buf.copyTo(bufData);
+    cv::Mat bufData;
+    buf.copyTo(bufData);
 
-        EXPECT_MAT_NEAR(gold, bufData, 0);
-    }
-    catch (...)
-    {
-        cv::gpu::resetDevice();
-        throw;
-    }
+    EXPECT_MAT_NEAR(gold, bufData, 0);
 }
 
 TEST_P(GlBuffer, CopyFromGpuMat)
 {
-    try
-    {
-        cv::Mat gold = randomMat(size, type);
-        cv::gpu::GpuMat d_gold(gold);
+    cv::Mat gold = randomMat(size, type);
+    cv::gpu::GpuMat d_gold(gold);
 
-        cv::GlBuffer buf;
-        buf.copyFrom(d_gold, cv::GlBuffer::ARRAY_BUFFER, true);
+    cv::GlBuffer buf;
+    buf.copyFrom(d_gold, cv::GlBuffer::ARRAY_BUFFER, true);
 
-        cv::Mat bufData;
-        buf.copyTo(bufData);
+    cv::Mat bufData;
+    buf.copyTo(bufData);
 
-        EXPECT_MAT_NEAR(gold, bufData, 0);
-    }
-    catch (...)
-    {
-        cv::gpu::resetDevice();
-        throw;
-    }
+    EXPECT_MAT_NEAR(gold, bufData, 0);
 }
 
 TEST_P(GlBuffer, CopyFromGlBuffer)
 {
-    try
-    {
-        cv::Mat gold = randomMat(size, type);
-        cv::GlBuffer buf_gold(gold, cv::GlBuffer::ARRAY_BUFFER, true);
+    cv::Mat gold = randomMat(size, type);
+    cv::GlBuffer buf_gold(gold, cv::GlBuffer::ARRAY_BUFFER, true);
 
-        cv::GlBuffer buf;
-        buf.copyFrom(buf_gold, cv::GlBuffer::ARRAY_BUFFER, true);
+    cv::GlBuffer buf;
+    buf.copyFrom(buf_gold, cv::GlBuffer::ARRAY_BUFFER, true);
 
-        EXPECT_NE(buf_gold.bufId(), buf.bufId());
+    EXPECT_NE(buf_gold.bufId(), buf.bufId());
 
-        cv::Mat bufData;
-        buf.copyTo(bufData);
+    cv::Mat bufData;
+    buf.copyTo(bufData);
 
-        EXPECT_MAT_NEAR(gold, bufData, 0);
-    }
-    catch (...)
-    {
-        cv::gpu::resetDevice();
-        throw;
-    }
+    EXPECT_MAT_NEAR(gold, bufData, 0);
 }
 
 TEST_P(GlBuffer, CopyFromGlTexture2D)
 {
-    try
-    {
-        const int depth = CV_MAT_DEPTH(type);
-        const int cn = CV_MAT_CN(type);
+    const int depth = CV_MAT_DEPTH(type);
+    const int cn = CV_MAT_CN(type);
 
-        if (depth != CV_32F || cn == 2)
-            return;
+    if (depth != CV_32F || cn == 2)
+        return;
 
-        cv::Mat gold = randomMat(size, type, 0, 1.0);
-        cv::GlTexture2D tex_gold(gold, true);
+    cv::Mat gold = randomMat(size, type, 0, 1.0);
+    cv::GlTexture2D tex_gold(gold, true);
 
-        cv::GlBuffer buf;
-        buf.copyFrom(tex_gold, cv::GlBuffer::ARRAY_BUFFER, true);
+    cv::GlBuffer buf;
+    buf.copyFrom(tex_gold, cv::GlBuffer::ARRAY_BUFFER, true);
 
-        cv::Mat bufData;
-        buf.copyTo(bufData);
+    cv::Mat bufData;
+    buf.copyTo(bufData);
 
-        EXPECT_MAT_NEAR(gold, bufData, 1e-2);
-    }
-    catch (...)
-    {
-        cv::gpu::resetDevice();
-        throw;
-    }
+    EXPECT_MAT_NEAR(gold, bufData, 1e-2);
 }
 
 TEST_P(GlBuffer, CopyToGpuMat)
 {
-    try
-    {
-        cv::Mat gold = randomMat(size, type);
+    cv::Mat gold = randomMat(size, type);
 
-        cv::GlBuffer buf(gold, cv::GlBuffer::ARRAY_BUFFER, true);
+    cv::GlBuffer buf(gold, cv::GlBuffer::ARRAY_BUFFER, true);
 
-        cv::gpu::GpuMat dst;
-        buf.copyTo(dst);
+    cv::gpu::GpuMat dst;
+    buf.copyTo(dst);
 
-        EXPECT_MAT_NEAR(gold, dst, 0);
-    }
-    catch (...)
-    {
-        cv::gpu::resetDevice();
-        throw;
-    }
+    EXPECT_MAT_NEAR(gold, dst, 0);
 }
 
 TEST_P(GlBuffer, CopyToGlBuffer)
 {
-    try
-    {
-        cv::Mat gold = randomMat(size, type);
+    cv::Mat gold = randomMat(size, type);
 
-        cv::GlBuffer buf(gold, cv::GlBuffer::ARRAY_BUFFER, true);
+    cv::GlBuffer buf(gold, cv::GlBuffer::ARRAY_BUFFER, true);
 
-        cv::GlBuffer dst;
-        buf.copyTo(dst, cv::GlBuffer::ARRAY_BUFFER, true);
+    cv::GlBuffer dst;
+    buf.copyTo(dst, cv::GlBuffer::ARRAY_BUFFER, true);
 
-        EXPECT_NE(buf.bufId(), dst.bufId());
+    EXPECT_NE(buf.bufId(), dst.bufId());
 
-        cv::Mat bufData;
-        dst.copyTo(bufData);
+    cv::Mat bufData;
+    dst.copyTo(bufData);
 
-        EXPECT_MAT_NEAR(gold, bufData, 0);
-    }
-    catch (...)
-    {
-        cv::gpu::resetDevice();
-        throw;
-    }
+    EXPECT_MAT_NEAR(gold, bufData, 0);
 }
 
 TEST_P(GlBuffer, CopyToGlTexture2D)
 {
-    try
-    {
-        const int depth = CV_MAT_DEPTH(type);
-        const int cn = CV_MAT_CN(type);
+    const int depth = CV_MAT_DEPTH(type);
+    const int cn = CV_MAT_CN(type);
 
-        if (depth != CV_32F || cn == 2)
-            return;
+    if (depth != CV_32F || cn == 2)
+        return;
 
-        cv::Mat gold = randomMat(size, type, 0, 1.0);
+    cv::Mat gold = randomMat(size, type, 0, 1.0);
 
-        cv::GlBuffer buf(gold, cv::GlBuffer::PIXEL_PACK_BUFFER, true);
+    cv::GlBuffer buf(gold, cv::GlBuffer::PIXEL_PACK_BUFFER, true);
 
-        cv::GlTexture2D tex;
-        buf.copyTo(tex, cv::GlBuffer::PIXEL_PACK_BUFFER, true);
+    cv::GlTexture2D tex;
+    buf.copyTo(tex, cv::GlBuffer::PIXEL_PACK_BUFFER, true);
 
-        cv::Mat texData;
-        tex.copyTo(texData);
+    cv::Mat texData;
+    tex.copyTo(texData);
 
-        EXPECT_MAT_NEAR(gold, texData, 1e-2);
-    }
-    catch (...)
-    {
-        cv::gpu::resetDevice();
-        throw;
-    }
+    EXPECT_MAT_NEAR(gold, texData, 1e-2);
 }
 
 TEST_P(GlBuffer, Clone)
 {
-    try
-    {
-        cv::Mat gold = randomMat(size, type);
+    cv::Mat gold = randomMat(size, type);
 
-        cv::GlBuffer buf(gold, cv::GlBuffer::ARRAY_BUFFER, true);
+    cv::GlBuffer buf(gold, cv::GlBuffer::ARRAY_BUFFER, true);
 
-        cv::GlBuffer dst = buf.clone(cv::GlBuffer::ARRAY_BUFFER, true);
+    cv::GlBuffer dst = buf.clone(cv::GlBuffer::ARRAY_BUFFER, true);
 
-        EXPECT_NE(buf.bufId(), dst.bufId());
+    EXPECT_NE(buf.bufId(), dst.bufId());
 
-        cv::Mat bufData;
-        dst.copyTo(bufData);
+    cv::Mat bufData;
+    dst.copyTo(bufData);
 
-        EXPECT_MAT_NEAR(gold, bufData, 0);
-    }
-    catch (...)
-    {
-        cv::gpu::resetDevice();
-        throw;
-    }
+    EXPECT_MAT_NEAR(gold, bufData, 0);
 }
 
 TEST_P(GlBuffer, MapHostRead)
 {
-    try
-    {
-        cv::Mat gold = randomMat(size, type);
+    cv::Mat gold = randomMat(size, type);
 
-        cv::GlBuffer buf(gold, cv::GlBuffer::ARRAY_BUFFER, true);
+    cv::GlBuffer buf(gold, cv::GlBuffer::ARRAY_BUFFER, true);
 
-        cv::Mat dst = buf.mapHost(cv::GlBuffer::READ_ONLY);
+    cv::Mat dst = buf.mapHost(cv::GlBuffer::READ_ONLY);
 
-        EXPECT_MAT_NEAR(gold, dst, 0);
+    EXPECT_MAT_NEAR(gold, dst, 0);
 
-        buf.unmapHost();
-    }
-    catch (...)
-    {
-        cv::gpu::resetDevice();
-        throw;
-    }
+    buf.unmapHost();
 }
 
 TEST_P(GlBuffer, MapHostWrite)
 {
-    try
-    {
-        cv::Mat gold = randomMat(size, type);
+    cv::Mat gold = randomMat(size, type);
 
-        cv::GlBuffer buf(size, type, cv::GlBuffer::ARRAY_BUFFER, true);
+    cv::GlBuffer buf(size, type, cv::GlBuffer::ARRAY_BUFFER, true);
 
-        cv::Mat dst = buf.mapHost(cv::GlBuffer::WRITE_ONLY);
-        gold.copyTo(dst);
-        buf.unmapHost();
-        dst.release();
+    cv::Mat dst = buf.mapHost(cv::GlBuffer::WRITE_ONLY);
+    gold.copyTo(dst);
+    buf.unmapHost();
+    dst.release();
 
-        cv::Mat bufData;
-        buf.copyTo(bufData);
+    cv::Mat bufData;
+    buf.copyTo(bufData);
 
-        EXPECT_MAT_NEAR(gold, bufData, 0);
-    }
-    catch (...)
-    {
-        cv::gpu::resetDevice();
-        throw;
-    }
+    EXPECT_MAT_NEAR(gold, bufData, 0);
 }
 
 TEST_P(GlBuffer, MapDevice)
 {
-    try
-    {
-        cv::Mat gold = randomMat(size, type);
+    cv::Mat gold = randomMat(size, type);
 
-        cv::GlBuffer buf(gold, cv::GlBuffer::ARRAY_BUFFER, true);
+    cv::GlBuffer buf(gold, cv::GlBuffer::ARRAY_BUFFER, true);
 
-        cv::gpu::GpuMat dst = buf.mapDevice();
+    cv::gpu::GpuMat dst = buf.mapDevice();
 
-        EXPECT_MAT_NEAR(gold, dst, 0);
+    EXPECT_MAT_NEAR(gold, dst, 0);
 
-        buf.unmapDevice();
-    }
-    catch (...)
-    {
-        cv::gpu::resetDevice();
-        throw;
-    }
+    buf.unmapDevice();
 }
 
 INSTANTIATE_TEST_CASE_P(OpenGL, GlBuffer, testing::Combine(DIFFERENT_SIZES, ALL_TYPES));
@@ -504,243 +360,147 @@ PARAM_TEST_CASE(GlTexture2D, cv::Size, MatType)
 
 TEST_P(GlTexture2D, Constructor1)
 {
-    try
-    {
-        cv::GlTexture2D tex(size.height, size.width, format, true);
+    cv::GlTexture2D tex(size.height, size.width, format, true);
 
-        EXPECT_EQ(size.height, tex.rows());
-        EXPECT_EQ(size.width, tex.cols());
-        EXPECT_EQ(format, tex.format());
-    }
-    catch (...)
-    {
-        cv::gpu::resetDevice();
-        throw;
-    }
+    EXPECT_EQ(size.height, tex.rows());
+    EXPECT_EQ(size.width, tex.cols());
+    EXPECT_EQ(format, tex.format());
 }
 
 TEST_P(GlTexture2D, Constructor2)
 {
-    try
-    {
-        cv::GlTexture2D tex(size, format, true);
+    cv::GlTexture2D tex(size, format, true);
 
-        EXPECT_EQ(size.height, tex.rows());
-        EXPECT_EQ(size.width, tex.cols());
-        EXPECT_EQ(format, tex.format());
-    }
-    catch (...)
-    {
-        cv::gpu::resetDevice();
-        throw;
-    }
+    EXPECT_EQ(size.height, tex.rows());
+    EXPECT_EQ(size.width, tex.cols());
+    EXPECT_EQ(format, tex.format());
 }
 
 TEST_P(GlTexture2D, ConstructorFromMat)
 {
-    try
-    {
-        cv::Mat gold = randomMat(size, type, 0, depth == CV_8U ? 255 : 1);
+    cv::Mat gold = randomMat(size, type, 0, depth == CV_8U ? 255 : 1);
 
-        cv::GlTexture2D tex(gold, true);
+    cv::GlTexture2D tex(gold, true);
 
-        cv::Mat texData;
-        tex.copyTo(texData, depth);
+    cv::Mat texData;
+    tex.copyTo(texData, depth);
 
-        EXPECT_MAT_NEAR(gold, texData, 1e-2);
-    }
-    catch (...)
-    {
-        cv::gpu::resetDevice();
-        throw;
-    }
+    EXPECT_MAT_NEAR(gold, texData, 1e-2);
 }
 
 TEST_P(GlTexture2D, ConstructorFromGpuMat)
 {
-    try
-    {
-        cv::Mat gold = randomMat(size, type, 0, depth == CV_8U ? 255 : 1);
-        cv::gpu::GpuMat d_gold(gold);
+    cv::Mat gold = randomMat(size, type, 0, depth == CV_8U ? 255 : 1);
+    cv::gpu::GpuMat d_gold(gold);
 
-        cv::GlTexture2D tex(d_gold, true);
+    cv::GlTexture2D tex(d_gold, true);
 
-        cv::Mat texData;
-        tex.copyTo(texData, depth);
+    cv::Mat texData;
+    tex.copyTo(texData, depth);
 
-        EXPECT_MAT_NEAR(gold, texData, 1e-2);
-    }
-    catch (...)
-    {
-        cv::gpu::resetDevice();
-        throw;
-    }
+    EXPECT_MAT_NEAR(gold, texData, 1e-2);
 }
 
 TEST_P(GlTexture2D, ConstructorFromGlBuffer)
 {
-    try
-    {
-        cv::Mat gold = randomMat(size, type, 0, depth == CV_8U ? 255 : 1);
-        cv::GlBuffer buf_gold(gold, cv::GlBuffer::PIXEL_UNPACK_BUFFER, true);
+    cv::Mat gold = randomMat(size, type, 0, depth == CV_8U ? 255 : 1);
+    cv::GlBuffer buf_gold(gold, cv::GlBuffer::PIXEL_UNPACK_BUFFER, true);
 
-        cv::GlTexture2D tex(buf_gold, true);
+    cv::GlTexture2D tex(buf_gold, true);
 
-        cv::Mat texData;
-        tex.copyTo(texData, depth);
+    cv::Mat texData;
+    tex.copyTo(texData, depth);
 
-        EXPECT_MAT_NEAR(gold, texData, 1e-2);
-    }
-    catch (...)
-    {
-        cv::gpu::resetDevice();
-        throw;
-    }
+    EXPECT_MAT_NEAR(gold, texData, 1e-2);
 }
 
 TEST_P(GlTexture2D, ConstructorFromGlTexture2D)
 {
-    try
-    {
-        cv::GlTexture2D tex_gold(size, format, true);
-        cv::GlTexture2D tex(tex_gold);
+    cv::GlTexture2D tex_gold(size, format, true);
+    cv::GlTexture2D tex(tex_gold);
 
-        EXPECT_EQ(tex_gold.texId(), tex.texId());
-        EXPECT_EQ(tex_gold.rows(), tex.rows());
-        EXPECT_EQ(tex_gold.cols(), tex.cols());
-        EXPECT_EQ(tex_gold.format(), tex.format());
-    }
-    catch (...)
-    {
-        cv::gpu::resetDevice();
-        throw;
-    }
+    EXPECT_EQ(tex_gold.texId(), tex.texId());
+    EXPECT_EQ(tex_gold.rows(), tex.rows());
+    EXPECT_EQ(tex_gold.cols(), tex.cols());
+    EXPECT_EQ(tex_gold.format(), tex.format());
 }
 
 TEST_P(GlTexture2D, Create)
 {
-    try
-    {
-        cv::GlTexture2D tex;
-        tex.create(size.height, size.width, format, true);
+    cv::GlTexture2D tex;
+    tex.create(size.height, size.width, format, true);
 
-        EXPECT_EQ(size.height, tex.rows());
-        EXPECT_EQ(size.width, tex.cols());
-        EXPECT_EQ(format, tex.format());
-    }
-    catch (...)
-    {
-        cv::gpu::resetDevice();
-        throw;
-    }
+    EXPECT_EQ(size.height, tex.rows());
+    EXPECT_EQ(size.width, tex.cols());
+    EXPECT_EQ(format, tex.format());
 }
 
 TEST_P(GlTexture2D, CopyFromMat)
 {
-    try
-    {
-        cv::Mat gold = randomMat(size, type, 0, depth == CV_8U ? 255 : 1);
+    cv::Mat gold = randomMat(size, type, 0, depth == CV_8U ? 255 : 1);
 
-        cv::GlTexture2D tex;
-        tex.copyFrom(gold, true);
+    cv::GlTexture2D tex;
+    tex.copyFrom(gold, true);
 
-        cv::Mat texData;
-        tex.copyTo(texData, depth);
+    cv::Mat texData;
+    tex.copyTo(texData, depth);
 
-        EXPECT_MAT_NEAR(gold, texData, 1e-2);
-    }
-    catch (...)
-    {
-        cv::gpu::resetDevice();
-        throw;
-    }
+    EXPECT_MAT_NEAR(gold, texData, 1e-2);
 }
 
 TEST_P(GlTexture2D, CopyFromGpuMat)
 {
-    try
-    {
-        cv::Mat gold = randomMat(size, type, 0, depth == CV_8U ? 255 : 1);
-        cv::gpu::GpuMat d_gold(gold);
+    cv::Mat gold = randomMat(size, type, 0, depth == CV_8U ? 255 : 1);
+    cv::gpu::GpuMat d_gold(gold);
 
-        cv::GlTexture2D tex;
-        tex.copyFrom(d_gold, true);
+    cv::GlTexture2D tex;
+    tex.copyFrom(d_gold, true);
 
-        cv::Mat texData;
-        tex.copyTo(texData, depth);
+    cv::Mat texData;
+    tex.copyTo(texData, depth);
 
-        EXPECT_MAT_NEAR(gold, texData, 1e-2);
-    }
-    catch (...)
-    {
-        cv::gpu::resetDevice();
-        throw;
-    }
+    EXPECT_MAT_NEAR(gold, texData, 1e-2);
 }
 
 TEST_P(GlTexture2D, CopyFromGlBuffer)
 {
-    try
-    {
-        cv::Mat gold = randomMat(size, type, 0, depth == CV_8U ? 255 : 1);
-        cv::GlBuffer buf_gold(gold, cv::GlBuffer::PIXEL_UNPACK_BUFFER, true);
+    cv::Mat gold = randomMat(size, type, 0, depth == CV_8U ? 255 : 1);
+    cv::GlBuffer buf_gold(gold, cv::GlBuffer::PIXEL_UNPACK_BUFFER, true);
 
-        cv::GlTexture2D tex;
-        tex.copyFrom(buf_gold, true);
+    cv::GlTexture2D tex;
+    tex.copyFrom(buf_gold, true);
 
-        cv::Mat texData;
-        tex.copyTo(texData, depth);
+    cv::Mat texData;
+    tex.copyTo(texData, depth);
 
-        EXPECT_MAT_NEAR(gold, texData, 1e-2);
-    }
-    catch (...)
-    {
-        cv::gpu::resetDevice();
-        throw;
-    }
+    EXPECT_MAT_NEAR(gold, texData, 1e-2);
 }
 
 TEST_P(GlTexture2D, CopyToGpuMat)
 {
-    try
-    {
-        cv::Mat gold = randomMat(size, type, 0, depth == CV_8U ? 255 : 1);
+    cv::Mat gold = randomMat(size, type, 0, depth == CV_8U ? 255 : 1);
 
-        cv::GlTexture2D tex(gold, true);
+    cv::GlTexture2D tex(gold, true);
 
-        cv::gpu::GpuMat dst;
-        tex.copyTo(dst, depth);
+    cv::gpu::GpuMat dst;
+    tex.copyTo(dst, depth);
 
-        EXPECT_MAT_NEAR(gold, dst, 1e-2);
-    }
-    catch (...)
-    {
-        cv::gpu::resetDevice();
-        throw;
-    }
+    EXPECT_MAT_NEAR(gold, dst, 1e-2);
 }
 
 TEST_P(GlTexture2D, CopyToGlBuffer)
 {
-    try
-    {
-        cv::Mat gold = randomMat(size, type, 0, depth == CV_8U ? 255 : 1);
+    cv::Mat gold = randomMat(size, type, 0, depth == CV_8U ? 255 : 1);
 
-        cv::GlTexture2D tex(gold, true);
+    cv::GlTexture2D tex(gold, true);
 
-        cv::GlBuffer dst;
-        tex.copyTo(dst, depth, true);
+    cv::GlBuffer dst;
+    tex.copyTo(dst, depth, true);
 
-        cv::Mat bufData;
-        dst.copyTo(bufData);
+    cv::Mat bufData;
+    dst.copyTo(bufData);
 
-        EXPECT_MAT_NEAR(gold, bufData, 1e-2);
-    }
-    catch (...)
-    {
-        cv::gpu::resetDevice();
-        throw;
-    }
+    EXPECT_MAT_NEAR(gold, bufData, 1e-2);
 }
 
 INSTANTIATE_TEST_CASE_P(OpenGL, GlTexture2D, testing::Combine(DIFFERENT_SIZES, testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4)));

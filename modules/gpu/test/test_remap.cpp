@@ -154,24 +154,16 @@ PARAM_TEST_CASE(Remap, cv::gpu::DeviceInfo, cv::Size, MatType, Interpolation, Bo
 
 TEST_P(Remap, Accuracy)
 {
-    try
-    {
-        cv::Mat src = randomMat(size, type);
-        cv::Scalar val = randomScalar(0.0, 255.0);
+    cv::Mat src = randomMat(size, type);
+    cv::Scalar val = randomScalar(0.0, 255.0);
 
-        cv::gpu::GpuMat dst = createMat(xmap.size(), type, useRoi);
-        cv::gpu::remap(loadMat(src, useRoi), dst, loadMat(xmap, useRoi), loadMat(ymap, useRoi), interpolation, borderType, val);
+    cv::gpu::GpuMat dst = createMat(xmap.size(), type, useRoi);
+    cv::gpu::remap(loadMat(src, useRoi), dst, loadMat(xmap, useRoi), loadMat(ymap, useRoi), interpolation, borderType, val);
 
-        cv::Mat dst_gold;
-        remapGold(src, xmap, ymap, dst_gold, interpolation, borderType, val);
+    cv::Mat dst_gold;
+    remapGold(src, xmap, ymap, dst_gold, interpolation, borderType, val);
 
-        EXPECT_MAT_NEAR(dst_gold, dst, src.depth() == CV_32F ? 1e-3 : 1.0);
-    }
-    catch (...)
-    {
-        cv::gpu::resetDevice();
-        throw;
-    }
+    EXPECT_MAT_NEAR(dst_gold, dst, src.depth() == CV_32F ? 1e-3 : 1.0);
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_ImgProc, Remap, testing::Combine(

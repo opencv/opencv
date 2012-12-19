@@ -30,27 +30,19 @@ PERF_TEST_P(Sz_Depth_Cn_KernelSz, Denoising_BilateralFilter,
     cv::Mat src(size, type);
     fillRandom(src);
 
-    if (PERF_RUN_GPU())
+     if (PERF_RUN_GPU())
     {
-        try
-        {
-            cv::gpu::GpuMat d_src(src);
-            cv::gpu::GpuMat d_dst;
+        cv::gpu::GpuMat d_src(src);
+        cv::gpu::GpuMat d_dst;
 
+        cv::gpu::bilateralFilter(d_src, d_dst, kernel_size, sigma_color, sigma_spatial, borderMode);
+
+        TEST_CYCLE()
+        {
             cv::gpu::bilateralFilter(d_src, d_dst, kernel_size, sigma_color, sigma_spatial, borderMode);
-
-            TEST_CYCLE()
-            {
-                cv::gpu::bilateralFilter(d_src, d_dst, kernel_size, sigma_color, sigma_spatial, borderMode);
-            }
-
-            GPU_SANITY_CHECK(d_dst);
         }
-        catch (...)
-        {
-            cv::gpu::resetDevice();
-            throw;
-        }
+
+        GPU_SANITY_CHECK(d_dst);
     }
     else
     {
@@ -95,25 +87,17 @@ PERF_TEST_P(Sz_Depth_Cn_WinSz_BlockSz, Denoising_NonLocalMeans,
 
     if (PERF_RUN_GPU())
     {
-        try
-        {
-            cv::gpu::GpuMat d_src(src);
-            cv::gpu::GpuMat d_dst;
+        cv::gpu::GpuMat d_src(src);
+        cv::gpu::GpuMat d_dst;
 
+        cv::gpu::nonLocalMeans(d_src, d_dst, h, search_widow_size, block_size, borderMode);
+
+        TEST_CYCLE()
+        {
             cv::gpu::nonLocalMeans(d_src, d_dst, h, search_widow_size, block_size, borderMode);
-
-            TEST_CYCLE()
-            {
-                cv::gpu::nonLocalMeans(d_src, d_dst, h, search_widow_size, block_size, borderMode);
-            }
-
-            GPU_SANITY_CHECK(d_dst);
         }
-        catch (...)
-        {
-            cv::gpu::resetDevice();
-            throw;
-        }
+
+        GPU_SANITY_CHECK(d_dst);
     }
     else
     {
@@ -146,26 +130,18 @@ PERF_TEST_P(Sz_Depth_Cn_WinSz_BlockSz, Denoising_FastNonLocalMeans,
 
     if (PERF_RUN_GPU())
     {
-        try
-        {
-            cv::gpu::GpuMat d_src(src);
-            cv::gpu::GpuMat d_dst;
-            cv::gpu::FastNonLocalMeansDenoising fnlmd;
+        cv::gpu::GpuMat d_src(src);
+        cv::gpu::GpuMat d_dst;
+        cv::gpu::FastNonLocalMeansDenoising fnlmd;
 
+        fnlmd.simpleMethod(d_src, d_dst, h, search_widow_size, block_size);
+
+        TEST_CYCLE()
+        {
             fnlmd.simpleMethod(d_src, d_dst, h, search_widow_size, block_size);
-
-            TEST_CYCLE()
-            {
-                fnlmd.simpleMethod(d_src, d_dst, h, search_widow_size, block_size);
-            }
-
-            GPU_SANITY_CHECK(d_dst);
         }
-        catch (...)
-        {
-            cv::gpu::resetDevice();
-            throw;
-        }
+
+        GPU_SANITY_CHECK(d_dst);
     }
     else
     {
@@ -205,26 +181,18 @@ PERF_TEST_P(Sz_Depth_WinSz_BlockSz, Denoising_FastNonLocalMeansColored,
 
     if (PERF_RUN_GPU())
     {
-        try
-        {
-            cv::gpu::GpuMat d_src(src);
-            cv::gpu::GpuMat d_dst;
-            cv::gpu::FastNonLocalMeansDenoising fnlmd;
+        cv::gpu::GpuMat d_src(src);
+        cv::gpu::GpuMat d_dst;
+        cv::gpu::FastNonLocalMeansDenoising fnlmd;
 
+        fnlmd.labMethod(d_src, d_dst, h, h, search_widow_size, block_size);
+
+        TEST_CYCLE()
+        {
             fnlmd.labMethod(d_src, d_dst, h, h, search_widow_size, block_size);
-
-            TEST_CYCLE()
-            {
-                fnlmd.labMethod(d_src, d_dst, h, h, search_widow_size, block_size);
-            }
-
-            GPU_SANITY_CHECK(d_dst);
         }
-        catch (...)
-        {
-            cv::gpu::resetDevice();
-            throw;
-        }
+
+        GPU_SANITY_CHECK(d_dst);
     }
     else
     {

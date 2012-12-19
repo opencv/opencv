@@ -168,35 +168,27 @@ struct Labeling : testing::TestWithParam<cv::gpu::DeviceInfo>
 
 TEST_P(Labeling, ConnectedComponents)
 {
-    try
-    {
-        cv::Mat image;
-        cvtColor(loat_image(), image, CV_BGR2GRAY);
+    cv::Mat image;
+    cvtColor(loat_image(), image, CV_BGR2GRAY);
 
-        cv::threshold(image, image, 150, 255, CV_THRESH_BINARY);
+    cv::threshold(image, image, 150, 255, CV_THRESH_BINARY);
 
-        ASSERT_TRUE(image.type() == CV_8UC1);
+    ASSERT_TRUE(image.type() == CV_8UC1);
 
-        GreedyLabeling host(image);
-        host(host._labels);
+    GreedyLabeling host(image);
+    host(host._labels);
 
-        cv::gpu::GpuMat mask;
-        mask.create(image.rows, image.cols, CV_8UC1);
+    cv::gpu::GpuMat mask;
+    mask.create(image.rows, image.cols, CV_8UC1);
 
-        cv::gpu::GpuMat components;
-        components.create(image.rows, image.cols, CV_32SC1);
+    cv::gpu::GpuMat components;
+    components.create(image.rows, image.cols, CV_32SC1);
 
-        cv::gpu::connectivityMask(cv::gpu::GpuMat(image), mask, cv::Scalar::all(0), cv::Scalar::all(2));
+    cv::gpu::connectivityMask(cv::gpu::GpuMat(image), mask, cv::Scalar::all(0), cv::Scalar::all(2));
 
-        ASSERT_NO_THROW(cv::gpu::labelComponents(mask, components));
+    ASSERT_NO_THROW(cv::gpu::labelComponents(mask, components));
 
-        host.checkCorrectness(cv::Mat(components));
-    }
-    catch (...)
-    {
-        cv::gpu::resetDevice();
-        throw;
-    }
+    host.checkCorrectness(cv::Mat(components));
 }
 
 INSTANTIATE_TEST_CASE_P(ConnectedComponents, Labeling, ALL_DEVICES);

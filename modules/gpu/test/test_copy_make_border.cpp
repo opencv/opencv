@@ -71,24 +71,16 @@ PARAM_TEST_CASE(CopyMakeBorder, cv::gpu::DeviceInfo, cv::Size, MatType, Border, 
 
 TEST_P(CopyMakeBorder, Accuracy)
 {
-    try
-    {
-        cv::Mat src = randomMat(size, type);
-        cv::Scalar val = randomScalar(0, 255);
+    cv::Mat src = randomMat(size, type);
+    cv::Scalar val = randomScalar(0, 255);
 
-        cv::gpu::GpuMat dst = createMat(cv::Size(size.width + 2 * border, size.height + 2 * border), type, useRoi);
-        cv::gpu::copyMakeBorder(loadMat(src, useRoi), dst, border, border, border, border, borderType, val);
+    cv::gpu::GpuMat dst = createMat(cv::Size(size.width + 2 * border, size.height + 2 * border), type, useRoi);
+    cv::gpu::copyMakeBorder(loadMat(src, useRoi), dst, border, border, border, border, borderType, val);
 
-        cv::Mat dst_gold;
-        cv::copyMakeBorder(src, dst_gold, border, border, border, border, borderType, val);
+    cv::Mat dst_gold;
+    cv::copyMakeBorder(src, dst_gold, border, border, border, border, borderType, val);
 
-        EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
-    }
-    catch (...)
-    {
-        cv::gpu::resetDevice();
-        throw;
-    }
+    EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_ImgProc, CopyMakeBorder, testing::Combine(

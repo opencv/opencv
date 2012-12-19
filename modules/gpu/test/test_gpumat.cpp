@@ -69,122 +69,90 @@ PARAM_TEST_CASE(SetTo, cv::gpu::DeviceInfo, cv::Size, MatType, UseRoi)
 
 TEST_P(SetTo, Zero)
 {
-    try
-    {
-        cv::Scalar zero = cv::Scalar::all(0);
+    cv::Scalar zero = cv::Scalar::all(0);
 
-        cv::gpu::GpuMat mat = createMat(size, type, useRoi);
-        mat.setTo(zero);
+    cv::gpu::GpuMat mat = createMat(size, type, useRoi);
+    mat.setTo(zero);
 
-        EXPECT_MAT_NEAR(cv::Mat::zeros(size, type), mat, 0.0);
-    }
-    catch (...)
-    {
-        cv::gpu::resetDevice();
-        throw;
-    }
+    EXPECT_MAT_NEAR(cv::Mat::zeros(size, type), mat, 0.0);
 }
 
 TEST_P(SetTo, SameVal)
 {
-    try
-    {
-        cv::Scalar val = cv::Scalar::all(randomDouble(0.0, 255.0));
+    cv::Scalar val = cv::Scalar::all(randomDouble(0.0, 255.0));
 
-        if (CV_MAT_DEPTH(type) == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
-        {
-            try
-            {
-                cv::gpu::GpuMat mat = createMat(size, type, useRoi);
-                mat.setTo(val);
-            }
-            catch (const cv::Exception& e)
-            {
-                ASSERT_EQ(CV_StsUnsupportedFormat, e.code);
-            }
-        }
-        else
+    if (CV_MAT_DEPTH(type) == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
+    {
+        try
         {
             cv::gpu::GpuMat mat = createMat(size, type, useRoi);
             mat.setTo(val);
-
-            EXPECT_MAT_NEAR(cv::Mat(size, type, val), mat, 0.0);
+        }
+        catch (const cv::Exception& e)
+        {
+            ASSERT_EQ(CV_StsUnsupportedFormat, e.code);
         }
     }
-    catch (...)
+    else
     {
-        cv::gpu::resetDevice();
-        throw;
+        cv::gpu::GpuMat mat = createMat(size, type, useRoi);
+        mat.setTo(val);
+
+        EXPECT_MAT_NEAR(cv::Mat(size, type, val), mat, 0.0);
     }
 }
 
 TEST_P(SetTo, DifferentVal)
 {
-    try
-    {
-        cv::Scalar val = randomScalar(0.0, 255.0);
+    cv::Scalar val = randomScalar(0.0, 255.0);
 
-        if (CV_MAT_DEPTH(type) == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
-        {
-            try
-            {
-                cv::gpu::GpuMat mat = createMat(size, type, useRoi);
-                mat.setTo(val);
-            }
-            catch (const cv::Exception& e)
-            {
-                ASSERT_EQ(CV_StsUnsupportedFormat, e.code);
-            }
-        }
-        else
+    if (CV_MAT_DEPTH(type) == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
+    {
+        try
         {
             cv::gpu::GpuMat mat = createMat(size, type, useRoi);
             mat.setTo(val);
-
-            EXPECT_MAT_NEAR(cv::Mat(size, type, val), mat, 0.0);
+        }
+        catch (const cv::Exception& e)
+        {
+            ASSERT_EQ(CV_StsUnsupportedFormat, e.code);
         }
     }
-    catch (...)
+    else
     {
-        cv::gpu::resetDevice();
-        throw;
+        cv::gpu::GpuMat mat = createMat(size, type, useRoi);
+        mat.setTo(val);
+
+        EXPECT_MAT_NEAR(cv::Mat(size, type, val), mat, 0.0);
     }
 }
 
 TEST_P(SetTo, Masked)
 {
-    try
+    cv::Scalar val = randomScalar(0.0, 255.0);
+    cv::Mat mat_gold = randomMat(size, type);
+    cv::Mat mask = randomMat(size, CV_8UC1, 0.0, 2.0);
+
+    if (CV_MAT_DEPTH(type) == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
     {
-        cv::Scalar val = randomScalar(0.0, 255.0);
-        cv::Mat mat_gold = randomMat(size, type);
-        cv::Mat mask = randomMat(size, CV_8UC1, 0.0, 2.0);
-
-        if (CV_MAT_DEPTH(type) == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
+        try
         {
-            try
-            {
-                cv::gpu::GpuMat mat = createMat(size, type, useRoi);
-                mat.setTo(val, loadMat(mask));
-            }
-            catch (const cv::Exception& e)
-            {
-                ASSERT_EQ(CV_StsUnsupportedFormat, e.code);
-            }
+            cv::gpu::GpuMat mat = createMat(size, type, useRoi);
+            mat.setTo(val, loadMat(mask));
         }
-        else
+        catch (const cv::Exception& e)
         {
-            cv::gpu::GpuMat mat = loadMat(mat_gold, useRoi);
-            mat.setTo(val, loadMat(mask, useRoi));
-
-            mat_gold.setTo(val, mask);
-
-            EXPECT_MAT_NEAR(mat_gold, mat, 0.0);
+            ASSERT_EQ(CV_StsUnsupportedFormat, e.code);
         }
     }
-    catch (...)
+    else
     {
-        cv::gpu::resetDevice();
-        throw;
+        cv::gpu::GpuMat mat = loadMat(mat_gold, useRoi);
+        mat.setTo(val, loadMat(mask, useRoi));
+
+        mat_gold.setTo(val, mask);
+
+        EXPECT_MAT_NEAR(mat_gold, mat, 0.0);
     }
 }
 
@@ -218,59 +186,43 @@ PARAM_TEST_CASE(CopyTo, cv::gpu::DeviceInfo, cv::Size, MatType, UseRoi)
 
 TEST_P(CopyTo, WithOutMask)
 {
-    try
-    {
-        cv::Mat src = randomMat(size, type);
+    cv::Mat src = randomMat(size, type);
 
-        cv::gpu::GpuMat d_src = loadMat(src, useRoi);
-        cv::gpu::GpuMat dst = createMat(size, type, useRoi);
-        d_src.copyTo(dst);
+    cv::gpu::GpuMat d_src = loadMat(src, useRoi);
+    cv::gpu::GpuMat dst = createMat(size, type, useRoi);
+    d_src.copyTo(dst);
 
-        EXPECT_MAT_NEAR(src, dst, 0.0);
-    }
-    catch (...)
-    {
-        cv::gpu::resetDevice();
-        throw;
-    }
+    EXPECT_MAT_NEAR(src, dst, 0.0);
 }
 
 TEST_P(CopyTo, Masked)
 {
-    try
+    cv::Mat src = randomMat(size, type);
+    cv::Mat mask = randomMat(size, CV_8UC1, 0.0, 2.0);
+
+    if (CV_MAT_DEPTH(type) == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
     {
-        cv::Mat src = randomMat(size, type);
-        cv::Mat mask = randomMat(size, CV_8UC1, 0.0, 2.0);
-
-        if (CV_MAT_DEPTH(type) == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
+        try
         {
-            try
-            {
-                cv::gpu::GpuMat d_src = loadMat(src);
-                cv::gpu::GpuMat dst;
-                d_src.copyTo(dst, loadMat(mask, useRoi));
-            }
-            catch (const cv::Exception& e)
-            {
-                ASSERT_EQ(CV_StsUnsupportedFormat, e.code);
-            }
-        }
-        else
-        {
-            cv::gpu::GpuMat d_src = loadMat(src, useRoi);
-            cv::gpu::GpuMat dst = loadMat(cv::Mat::zeros(size, type), useRoi);
+            cv::gpu::GpuMat d_src = loadMat(src);
+            cv::gpu::GpuMat dst;
             d_src.copyTo(dst, loadMat(mask, useRoi));
-
-            cv::Mat dst_gold = cv::Mat::zeros(size, type);
-            src.copyTo(dst_gold, mask);
-
-            EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
+        }
+        catch (const cv::Exception& e)
+        {
+            ASSERT_EQ(CV_StsUnsupportedFormat, e.code);
         }
     }
-    catch (...)
+    else
     {
-        cv::gpu::resetDevice();
-        throw;
+        cv::gpu::GpuMat d_src = loadMat(src, useRoi);
+        cv::gpu::GpuMat dst = loadMat(cv::Mat::zeros(size, type), useRoi);
+        d_src.copyTo(dst, loadMat(mask, useRoi));
+
+        cv::Mat dst_gold = cv::Mat::zeros(size, type);
+        src.copyTo(dst_gold, mask);
+
+        EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
     }
 }
 
@@ -305,79 +257,63 @@ PARAM_TEST_CASE(ConvertTo, cv::gpu::DeviceInfo, cv::Size, MatDepth, MatDepth, Us
 
 TEST_P(ConvertTo, WithOutScaling)
 {
-    try
+    cv::Mat src = randomMat(size, depth1);
+
+    if ((depth1 == CV_64F || depth2 == CV_64F) && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
     {
-        cv::Mat src = randomMat(size, depth1);
-
-        if ((depth1 == CV_64F || depth2 == CV_64F) && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
+        try
         {
-            try
-            {
-                cv::gpu::GpuMat d_src = loadMat(src);
-                cv::gpu::GpuMat dst;
-                d_src.convertTo(dst, depth2);
-            }
-            catch (const cv::Exception& e)
-            {
-                ASSERT_EQ(CV_StsUnsupportedFormat, e.code);
-            }
-        }
-        else
-        {
-            cv::gpu::GpuMat d_src = loadMat(src, useRoi);
-            cv::gpu::GpuMat dst = createMat(size, depth2, useRoi);
+            cv::gpu::GpuMat d_src = loadMat(src);
+            cv::gpu::GpuMat dst;
             d_src.convertTo(dst, depth2);
-
-            cv::Mat dst_gold;
-            src.convertTo(dst_gold, depth2);
-
-            EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
+        }
+        catch (const cv::Exception& e)
+        {
+            ASSERT_EQ(CV_StsUnsupportedFormat, e.code);
         }
     }
-    catch (...)
+    else
     {
-        cv::gpu::resetDevice();
-        throw;
+        cv::gpu::GpuMat d_src = loadMat(src, useRoi);
+        cv::gpu::GpuMat dst = createMat(size, depth2, useRoi);
+        d_src.convertTo(dst, depth2);
+
+        cv::Mat dst_gold;
+        src.convertTo(dst_gold, depth2);
+
+        EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
     }
 }
 
 TEST_P(ConvertTo, WithScaling)
 {
-    try
+    cv::Mat src = randomMat(size, depth1);
+    double a = randomDouble(0.0, 1.0);
+    double b = randomDouble(-10.0, 10.0);
+
+    if ((depth1 == CV_64F || depth2 == CV_64F) && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
     {
-        cv::Mat src = randomMat(size, depth1);
-        double a = randomDouble(0.0, 1.0);
-        double b = randomDouble(-10.0, 10.0);
-
-        if ((depth1 == CV_64F || depth2 == CV_64F) && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
+        try
         {
-            try
-            {
-                cv::gpu::GpuMat d_src = loadMat(src);
-                cv::gpu::GpuMat dst;
-                d_src.convertTo(dst, depth2, a, b);
-            }
-            catch (const cv::Exception& e)
-            {
-                ASSERT_EQ(CV_StsUnsupportedFormat, e.code);
-            }
-        }
-        else
-        {
-            cv::gpu::GpuMat d_src = loadMat(src, useRoi);
-            cv::gpu::GpuMat dst = createMat(size, depth2, useRoi);
+            cv::gpu::GpuMat d_src = loadMat(src);
+            cv::gpu::GpuMat dst;
             d_src.convertTo(dst, depth2, a, b);
-
-            cv::Mat dst_gold;
-            src.convertTo(dst_gold, depth2, a, b);
-
-            EXPECT_MAT_NEAR(dst_gold, dst, depth2 < CV_32F ? 1.0 : 1e-4);
+        }
+        catch (const cv::Exception& e)
+        {
+            ASSERT_EQ(CV_StsUnsupportedFormat, e.code);
         }
     }
-    catch (...)
+    else
     {
-        cv::gpu::resetDevice();
-        throw;
+        cv::gpu::GpuMat d_src = loadMat(src, useRoi);
+        cv::gpu::GpuMat dst = createMat(size, depth2, useRoi);
+        d_src.convertTo(dst, depth2, a, b);
+
+        cv::Mat dst_gold;
+        src.convertTo(dst_gold, depth2, a, b);
+
+        EXPECT_MAT_NEAR(dst_gold, dst, depth2 < CV_32F ? 1.0 : 1e-4);
     }
 }
 
@@ -402,30 +338,22 @@ struct EnsureSizeIsEnough : testing::TestWithParam<cv::gpu::DeviceInfo>
 
 TEST_P(EnsureSizeIsEnough, BufferReuse)
 {
-    try
-    {
-        cv::gpu::GpuMat buffer(100, 100, CV_8U);
-        cv::gpu::GpuMat old = buffer;
+    cv::gpu::GpuMat buffer(100, 100, CV_8U);
+    cv::gpu::GpuMat old = buffer;
 
-        // don't reallocate memory
-        cv::gpu::ensureSizeIsEnough(10, 20, CV_8U, buffer);
-        EXPECT_EQ(10, buffer.rows);
-        EXPECT_EQ(20, buffer.cols);
-        EXPECT_EQ(CV_8UC1, buffer.type());
-        EXPECT_EQ(reinterpret_cast<intptr_t>(old.data), reinterpret_cast<intptr_t>(buffer.data));
+    // don't reallocate memory
+    cv::gpu::ensureSizeIsEnough(10, 20, CV_8U, buffer);
+    EXPECT_EQ(10, buffer.rows);
+    EXPECT_EQ(20, buffer.cols);
+    EXPECT_EQ(CV_8UC1, buffer.type());
+    EXPECT_EQ(reinterpret_cast<intptr_t>(old.data), reinterpret_cast<intptr_t>(buffer.data));
 
-        // don't reallocate memory
-        cv::gpu::ensureSizeIsEnough(20, 30, CV_8U, buffer);
-        EXPECT_EQ(20, buffer.rows);
-        EXPECT_EQ(30, buffer.cols);
-        EXPECT_EQ(CV_8UC1, buffer.type());
-        EXPECT_EQ(reinterpret_cast<intptr_t>(old.data), reinterpret_cast<intptr_t>(buffer.data));
-    }
-    catch (...)
-    {
-        cv::gpu::resetDevice();
-        throw;
-    }
+    // don't reallocate memory
+    cv::gpu::ensureSizeIsEnough(20, 30, CV_8U, buffer);
+    EXPECT_EQ(20, buffer.rows);
+    EXPECT_EQ(30, buffer.cols);
+    EXPECT_EQ(CV_8UC1, buffer.type());
+    EXPECT_EQ(reinterpret_cast<intptr_t>(old.data), reinterpret_cast<intptr_t>(buffer.data));
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_GpuMat, EnsureSizeIsEnough, ALL_DEVICES);
