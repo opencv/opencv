@@ -58,7 +58,7 @@ TEST(SCascade, detect1)
     typedef cv::SCascade::Detection Detection;
     std::string xml =  cvtest::TS::ptr()->get_data_path() + "cascadeandhog/sc_cvpr_2012_to_opencv.xml";
     cv::SCascade cascade;
-    // cascade.set("rejfactor", 0.5);
+    cascade.set("rejCriteria", cv::SCascade::DOLLAR);
     // cascade.set("minScale", 0.5);
     // cascade.set("scales", 2);
     cv::FileStorage fs("/home/kellan/soft-cascade-17.12.2012/first-soft-cascade-composide-octave_1.xml", cv::FileStorage::READ);

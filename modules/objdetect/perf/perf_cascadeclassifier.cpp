@@ -73,7 +73,7 @@ PERF_TEST_P(detect, SCascade,
     ASSERT_FALSE(colored.empty());
 
     cv::SCascade cascade;
-    cv::FileStorage fs(getDataPath(get<0>(GetParam())), cv::FileStorage::READ);
+    cv::FileStorage fs("/home/kellan/soft-cascade-17.12.2012/first-soft-cascade-composide-octave_1.xml", cv::FileStorage::READ);
     ASSERT_TRUE(fs.isOpened());
     ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
 
