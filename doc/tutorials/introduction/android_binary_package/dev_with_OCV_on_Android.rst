@@ -54,20 +54,8 @@ Using async initialization is a **recommended** way for application development.
         :alt: Add dependency from OpenCV library
         :align: center
 
-To run OpenCV Manager-based application for the first time you need to install package with the `OpenCV Manager` for your platform. Armeabi, Armeabi-v7a with NEON, x86 and MIPS achitectures supported.
-You can do it using Google Play Market or manually with ``adb`` tool:
-
-.. code-block:: sh
-    :linenos:
-
-    <Android SDK path>/platform-tools/adb install <OpenCV4Android SDK path>/apk/OpenCV_2.4.3_Manager.apk
-
-For rare cases if NEON instruction set is not supported you need to install aditional OpenCV Library package:
-
-.. code-block:: sh
-    :linenos:
-
-    <Android SDK path>/platform-tools/adb install <OpenCV4Android SDK path>/apk/OpenCV_2.4.3_binary_pack_armv7a.apk
+In most cases OpenCV Manager may be installed automatically from Google Play. For such case, when Google Play is not available, i.e. emulator, developer board, etc, you can
+install it manually using adb tool. See :ref:`manager_selection` for details.
 
 There is a very base code snippet implementing the async initialization. It shows basic principles. See the "15-puzzle" OpenCV sample for details.
 
