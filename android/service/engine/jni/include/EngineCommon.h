@@ -17,4 +17,6 @@
 // Class name of OpenCV engine binder object. Is needned for connection to service
 #define OPECV_ENGINE_CLASSNAME "org.opencv.engine.OpenCVEngineInterface"
 
+typedef const char* (*InfoFunctionType)();
+
 #endif
