@@ -1045,12 +1045,10 @@ PERF_TEST_P(Video_Cn_MaxFeatures, DISABLED_Video_GMG,
     }
 }
 
-#ifdef WIN32
-
 //////////////////////////////////////////////////////
 // VideoWriter
 
-PERF_TEST_P(Video, Video_VideoWriter, Values("gpu/video/768x576.avi", "gpu/video/1920x1080.avi"))
+PERF_TEST_P(Video, DISABLED_Video_VideoWriter, Values("gpu/video/768x576.avi", "gpu/video/1920x1080.avi"))
 {
     declare.time(30);
 
@@ -1146,7 +1144,5 @@ PERF_TEST_P(Video, Video_VideoReader, Values("gpu/video/768x576.avi", "gpu/video
         CPU_SANITY_CHECK(frame);
     }
 }
-
-#endif
 
 } // namespace

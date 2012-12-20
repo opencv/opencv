@@ -42,7 +42,7 @@
 
 #include "ffmpeg_video_source.h"
 
-#if defined(HAVE_CUDA) && defined(WIN32)
+#if defined(HAVE_CUDA) && !defined(__APPLE__)
 
 #if defined(HAVE_FFMPEG) && defined(BUILD_SHARED_LIBS)
     #include "cap_ffmpeg_impl.hpp"

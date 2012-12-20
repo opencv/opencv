@@ -43,10 +43,10 @@
 
 #ifdef HAVE_CUDA
 
-#ifdef WIN32
-
 //////////////////////////////////////////////////////
 // VideoWriter
+
+#ifdef WIN32
 
 PARAM_TEST_CASE(VideoWriter, cv::gpu::DeviceInfo, std::string)
 {
@@ -107,8 +107,12 @@ INSTANTIATE_TEST_CASE_P(GPU_Video, VideoWriter, testing::Combine(
     ALL_DEVICES,
     testing::Values(std::string("768x576.avi"), std::string("1920x1080.avi"))));
 
+#endif // WIN32
+
 //////////////////////////////////////////////////////
 // VideoReader
+
+#ifdef HAVE_NVCUVID
 
 PARAM_TEST_CASE(VideoReader, cv::gpu::DeviceInfo, std::string)
 {
@@ -147,6 +151,6 @@ INSTANTIATE_TEST_CASE_P(GPU_Video, VideoReader, testing::Combine(
     ALL_DEVICES,
     testing::Values(std::string("768x576.avi"), std::string("1920x1080.avi"))));
 
-#endif // WIN32
+#endif // HAVE_NVCUVID
 
 #endif // HAVE_CUDA
