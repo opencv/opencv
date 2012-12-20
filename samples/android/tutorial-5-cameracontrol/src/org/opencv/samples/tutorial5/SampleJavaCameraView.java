@@ -10,6 +10,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.hardware.Camera;
 import android.hardware.Camera.PictureCallback;
+import android.hardware.Camera.Size;
 import android.util.AttributeSet;
 import android.util.Log;
 
@@ -34,9 +35,24 @@ public class SampleJavaCameraView extends JavaCameraView {
     }
 
     public void setEffect(String effect) {
-           Camera.Parameters params = mCamera.getParameters();
+        Camera.Parameters params = mCamera.getParameters();
         params.setColorEffect(effect);
         mCamera.setParameters(params);
+    }
+
+    public List<Size> getResolutionList() {
+        return mCamera.getParameters().getSupportedPreviewSizes();
+    }
+
+    public void setResolution(Size resolution) {
+        disconnectCamera();
+        mMaxHeight = resolution.height;
+        mMaxWidth = resolution.width;
+        connectCamera(getWidth(), getHeight());
+    }
+
+    public Size getResolution() {
+        return mCamera.getParameters().getPreviewSize();
     }
 
     public void takePicture(final String fileName) {
