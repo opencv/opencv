@@ -41,7 +41,47 @@
 
 #include "test_precomp.hpp"
 
-#ifdef HAVE_CUDA
+#if defined(HAVE_CUDA) && defined(HAVE_NVCUVID)
+
+//////////////////////////////////////////////////////
+// VideoReader
+
+PARAM_TEST_CASE(VideoReader, cv::gpu::DeviceInfo, std::string)
+{
+    cv::gpu::DeviceInfo devInfo;
+    std::string inputFile;
+
+    virtual void SetUp()
+    {
+        devInfo = GET_PARAM(0);
+        inputFile = GET_PARAM(1);
+
+        cv::gpu::setDevice(devInfo.deviceID());
+
+        inputFile = std::string(cvtest::TS::ptr()->get_data_path()) + "video/" + inputFile;
+    }
+};
+
+GPU_TEST_P(VideoReader, Regression)
+{
+    cv::gpu::VideoReader_GPU reader(inputFile);
+    ASSERT_TRUE(reader.isOpened());
+
+    cv::gpu::GpuMat frame;
+
+    for (int i = 0; i < 10; ++i)
+    {
+        ASSERT_TRUE(reader.read(frame));
+        ASSERT_FALSE(frame.empty());
+    }
+
+    reader.close();
+    ASSERT_FALSE(reader.isOpened());
+}
+
+INSTANTIATE_TEST_CASE_P(GPU_Video, VideoReader, testing::Combine(
+    ALL_DEVICES,
+    testing::Values(std::string("768x576.avi"), std::string("1920x1080.avi"))));
 
 //////////////////////////////////////////////////////
 // VideoWriter
@@ -109,48 +149,4 @@ INSTANTIATE_TEST_CASE_P(GPU_Video, VideoWriter, testing::Combine(
 
 #endif // WIN32
 
-//////////////////////////////////////////////////////
-// VideoReader
-
-#ifdef HAVE_NVCUVID
-
-PARAM_TEST_CASE(VideoReader, cv::gpu::DeviceInfo, std::string)
-{
-    cv::gpu::DeviceInfo devInfo;
-    std::string inputFile;
-
-    virtual void SetUp()
-    {
-        devInfo = GET_PARAM(0);
-        inputFile = GET_PARAM(1);
-
-        cv::gpu::setDevice(devInfo.deviceID());
-
-        inputFile = std::string(cvtest::TS::ptr()->get_data_path()) + "video/" + inputFile;
-    }
-};
-
-GPU_TEST_P(VideoReader, Regression)
-{
-    cv::gpu::VideoReader_GPU reader(inputFile);
-    ASSERT_TRUE(reader.isOpened());
-
-    cv::gpu::GpuMat frame;
-
-    for (int i = 0; i < 10; ++i)
-    {
-        ASSERT_TRUE(reader.read(frame));
-        ASSERT_FALSE(frame.empty());
-    }
-
-    reader.close();
-    ASSERT_FALSE(reader.isOpened());
-}
-
-INSTANTIATE_TEST_CASE_P(GPU_Video, VideoReader, testing::Combine(
-    ALL_DEVICES,
-    testing::Values(std::string("768x576.avi"), std::string("1920x1080.avi"))));
-
-#endif // HAVE_NVCUVID
-
-#endif // HAVE_CUDA
+#endif //  defined(HAVE_CUDA) && defined(HAVE_NVCUVID)

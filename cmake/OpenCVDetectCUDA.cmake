@@ -13,7 +13,7 @@ if(CMAKE_COMPILER_IS_GNUCXX AND NOT APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "Cl
   return()
 endif()
 
-find_package(CUDA 4.1)
+find_package(CUDA 4.2)
 
 if(CUDA_FOUND)
   set(HAVE_CUDA 1)
@@ -26,15 +26,20 @@ if(CUDA_FOUND)
     set(HAVE_CUBLAS 1)
   endif()
 
-  message(STATUS "CUDA detected: " ${CUDA_VERSION})
-
-  if(${CUDA_VERSION_STRING} VERSION_GREATER "4.1")
-    set(CUDA_ARCH_BIN "1.1 1.2 1.3 2.0 2.1(2.0) 3.0" CACHE STRING "Specify 'real' GPU architectures to build binaries for, BIN(PTX) format is supported")
-  else()
-    set(CUDA_ARCH_BIN "1.1 1.2 1.3 2.0 2.1(2.0)" CACHE STRING "Specify 'real' GPU architectures to build binaries for, BIN(PTX) format is supported")
+  if(WITH_NVCUVID)
+    find_cuda_helper_libs(nvcuvid)
+    set(HAVE_NVCUVID 1)
   endif()
 
-  set(CUDA_ARCH_PTX "2.0" CACHE STRING "Specify 'virtual' PTX architectures to build PTX intermediate code for")
+  message(STATUS "CUDA detected: " ${CUDA_VERSION})
+
+  if (CARMA)
+    set(CUDA_ARCH_BIN "3.0" CACHE STRING "Specify 'real' GPU architectures to build binaries for, BIN(PTX) format is supported")
+    set(CUDA_ARCH_PTX "3.0" CACHE STRING "Specify 'virtual' PTX architectures to build PTX intermediate code for")
+  else()
+    set(CUDA_ARCH_BIN "1.1 1.2 1.3 2.0 2.1(2.0) 3.0" CACHE STRING "Specify 'real' GPU architectures to build binaries for, BIN(PTX) format is supported")
+    set(CUDA_ARCH_PTX "2.0 3.0" CACHE STRING "Specify 'virtual' PTX architectures to build PTX intermediate code for")
+  endif()
 
   string(REGEX REPLACE "\\." "" ARCH_BIN_NO_POINTS "${CUDA_ARCH_BIN}")
   string(REGEX REPLACE "\\." "" ARCH_PTX_NO_POINTS "${CUDA_ARCH_PTX}")
@@ -77,6 +82,10 @@ if(CUDA_FOUND)
     set(OPENCV_CUDA_ARCH_PTX "${OPENCV_CUDA_ARCH_PTX} ${ARCH}")
     set(OPENCV_CUDA_ARCH_FEATURES "${OPENCV_CUDA_ARCH_FEATURES} ${ARCH}")
   endforeach()
+
+  if(CARMA)
+    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} --target-cpu-architecture=ARM "-ccbin=${CMAKE_CXX_COMPILER}")
+  endif()
 
   # These vars will be processed in other scripts
   set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} ${NVCC_FLAGS_EXTRA})
