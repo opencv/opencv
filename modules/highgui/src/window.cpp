@@ -177,6 +177,63 @@ void cv::moveWindow( const string& winname, int x, int y )
     cvMoveWindow( winname.c_str(), x, y );
 }
 
+// -----------------------------------
+// Dummy calls if Qt is not available:
+
+void cv::adjustWindowPos( const string& winname, int xp, int xwp, int yp, int yhp )
+{
+   #ifdef _WIN32
+      int cx,cy;
+      cx = GetSystemMetrics(SM_CXSCREEN);
+      cy = GetSystemMetrics(SM_CYSCREEN);
+      int    x = 0.01 * ( xp * cx );
+      int    y = 0.01 * ( yp * cy );
+      int neww = 0.01 * (xwp * cx );
+      int newh = 0.01 * (yhp * cy );
+      cvMoveWindow( winname.c_str(), x, y );
+      cvResizeWindow( winname.c_str(),neww, newh );
+   #else
+       #if defined(HAVE_QT)
+          cvAdjustWindowPos_QT( winname.c_str(),  xp, xwp, yp,  yhp );
+       #endif
+       #if defined(HAVE_GTK)
+          // todo.. 
+       #endif
+   #endif
+}
+
+void cv::dispInfoBox( const string& winname, char* caption, const string& text ) 
+{
+      #if defined(HAVE_QT)
+    cvDispInfoBox_QT( winname.c_str(), caption, text.c_str() );
+      #endif
+}
+
+int cv::getButtonBarContent(const string& winname, int idx, char * txt )
+{
+   #if defined(HAVE_QT)
+       return cvGetButtonBarContent( winname.c_str(), idx, txt );
+   #endif
+   return 0;
+}
+
+int cv::setButtonBarContent(const string& winname, int etype, int idx, char * txt )
+{
+   #if defined(HAVE_QT)
+       return cvSetButtonBarContent( winname.c_str(), etype, idx,  txt );
+   #endif
+   return 0;
+}
+
+int cv::setMapContent(const string& winname, const string& varname, char * text )
+{
+   #if defined(HAVE_QT)
+      return cvSetMapContent( winname.c_str(), varname.c_str(), text );
+   #endif
+   return 0;
+}
+// -----------------------------------
+
 void cv::setWindowProperty(const string& winname, int prop_id, double prop_value)
 {
     cvSetWindowProperty( winname.c_str(), prop_id, prop_value);
@@ -571,6 +628,30 @@ int cv::createButton(const string& button_name, ButtonCallback on_change, void* 
     return cvCreateButton(button_name.c_str(), on_change, userdata, button_type , initial_button_state );
 }
 
+//--------- Get events+content from buttonbar in case of HAVE_QT :
+bool cv::getCommandVec( const string& winname, vector<string> & stringVec,  char * cmd )
+{
+	// All controls inside a buttonbar are configured by a *.cfg file
+    stringVec.clear();  // clear content vector
+  
+	// read last command (e.g. pressed button ) and content of buttonbar    
+    if ( cmd != NULL ) cvGetCommand( winname.c_str(), cmd ); 
+	
+    char buffer[512];
+    int idx = 0;
+    int iRet = 1;
+    while ( iRet == 1 ) 
+    {
+      iRet = cvGetButtonBarContent( winname.c_str(), idx, buffer );
+      if ( iRet == 1 ) stringVec.push_back( string(buffer) );
+      idx++;
+    }
+    return true;
+}
+//---------
+
+
+
 #else
 
 CvFont cv::fontQt(const string&, int, Scalar, int,  int, int)
@@ -620,6 +701,15 @@ int cv::createButton(const string&, ButtonCallback, void*, int , bool )
     CV_Error(CV_StsNotImplemented, "The library is compiled without QT support");
     return 0;
 }
+
+// Dummy function in case of Qt switched off,
+// but application with Qt scpecific calls....
+bool cv::getCommandVec( const string& winname, vector<string> & stringVec,  char* cmd )
+{
+    return false;
+}
+
+
 
 #endif
 
@@ -789,6 +879,28 @@ CV_IMPL int cvCreateButton(const char*, void (*)(int, void*), void*, int, int)
     CV_NO_GUI_ERROR("cvCreateButton");
     return -1;
 }
+
+// Some dummy functions in case of Qt switched off,
+// but application with Qt specific calls....
+
+CV_IMPL int cvGetButtonBarContent(const char *, int, char * )
+{
+    // CV_NO_GUI_ERROR("cvGetButtonBarContent");
+    return -1;
+}
+
+CV_IMPL int cvSetButtonBarContent(const char *, int, int, char * )
+{
+    // CV_NO_GUI_ERROR("cvSetButtonBarContent");
+    return -1;
+}
+
+CV_IMPL int cvDispInfoBox_QT( char*, char* , const char * )
+{
+    // CV_NO_GUI_ERROR("cvDispInfoBox_QT");
+    return -1;
+}
+
 
 
 #endif
