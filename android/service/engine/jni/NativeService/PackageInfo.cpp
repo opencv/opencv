@@ -342,8 +342,8 @@ InstallPath(install_path)
         LOGD("Trying to load info library \"%s\"", tmp.c_str());
 
             void* handle;
-            const char* (*name_func)();
-            const char* (*revision_func)();
+            InfoFunctionType name_func;
+            InfoFunctionType revision_func;
 
             handle = dlopen(tmp.c_str(), RTLD_LAZY);
             if (handle)
@@ -351,8 +351,8 @@ InstallPath(install_path)
                 const char* error;
 
                 dlerror();
-                *(void **) (&name_func) = dlsym(handle, "GetPackageName");
-                *(void **) (&revision_func) = dlsym(handle, "GetRevision");
+                name_func = (InfoFunctionType)dlsym(handle, "GetPackageName");
+                revision_func = (InfoFunctionType)dlsym(handle, "GetRevision");
                 error = dlerror();
 
                 if (!error && revision_func && name_func)
