@@ -159,7 +159,7 @@ Get the OpenCV4Android SDK
 
       unzip ~/Downloads/OpenCV-2.4.3-android-sdk.zip
 
-.. |opencv_android_bin_pack| replace:: OpenCV-2.4.3-android-sdk.zip
+.. |opencv_android_bin_pack| replace:: OpenCV-2.4.3.1-android-sdk.zip
 .. _opencv_android_bin_pack_url: http://sourceforge.net/projects/opencvlibrary/files/opencv-android/2.4.3/OpenCV-2.4.3-android-sdk.zip/download
 .. |opencv_android_bin_pack_url| replace:: |opencv_android_bin_pack|
 .. |seven_zip| replace:: 7-Zip
@@ -185,6 +185,8 @@ Import OpenCV library and samples to the Eclipse
 
    Each sample included into the |opencv_android_bin_pack| is a regular Android project that already
    references OpenCV library.Follow the steps below to import OpenCV and samples into the workspace:
+
+   .. note:: OpenCV samples are indeed **dependent** on OpenCV library and wouldn't work without it.
 
    * Right click on the :guilabel:`Package Explorer` window and choose :guilabel:`Import...` option
      from the context menu:
@@ -213,7 +215,7 @@ Import OpenCV library and samples to the Eclipse
    and you have to wait some time while it is building OpenCV samples. Just give a minute to
    Eclipse to complete initialization.
 
-   .. note :: After the initial import, on a non-Windows (Linux and Mac OS) operating system Eclipse
+   .. warning :: After the initial import, on a non-Windows (Linux and Mac OS) operating system Eclipse
               will still show build errors for applications with native C++ code. To resolve the
               issues, please do the following:
 
@@ -235,14 +237,14 @@ Import OpenCV library and samples to the Eclipse
 Running OpenCV Samples
 ----------------------
 
-At this point you should be able to build and run the samples. Keep in mind, that ``face-detection``,
-``Tutorial 3`` and ``Tutorial 4`` include some native code and require Android NDK and CDT plugin
-for Eclipse to build working applications. If you haven't installed these tools see the corresponding
-section of :ref:`Android_Dev_Intro`.
+At this point you should be able to build and run the samples. Keep in mind, that 
+``face-detection``, ``Tutorial 3`, ``Tutorial 4`` and ``Tutorial 5`` include some native code and 
+require Android NDK and CDT plugin for Eclipse to build working applications. If you haven't 
+installed these tools, see the corresponding section of :ref:`Android_Dev_Intro`.
 
-Also, please consider that ``Tutorial 0`` and ``Tutorial 1`` samples use Java Camera API that
-definitelly accessible on emulator from the Android SDK.
-Other samples use OpenCV Native Camera which may not work with emulator.
+.. warning:: Please consider that ``Tutorial 1`` samples use Java Camera API, which is accessible 
+             with an AVD. Other samples use OpenCV Native Camera which **may not work** with 
+             an emulator. 
 
 .. note:: Recent *Android SDK tools, revision 19+* can run ARM v7a OS images but they available not
           for all Android versions.
@@ -282,12 +284,48 @@ Well, running samples from Eclipse is very simple:
 
   If you have no access to the *Market*, which is often the case with emulators - you will need to install the packages from OpenCV4Android SDK folder manually. See :ref:`manager_selection` for details.
 
+  .. code-block:: sh
+    :linenos:
+
+    <Android SDK path>/platform-tools/adb install <OpenCV4Android SDK path>/apk/OpenCV_2.4.3_Manager_armv7a-neon.apk
+    <Android SDK path>/platform-tools/adb install <OpenCV4Android SDK path>/apk/OpenCV_2.4.3_binary_pack_armv7a.apk
+
+  .. note:: ``armeabi``, ``armv7a-neon``, ``arm7a-neon-android8``, ``mips`` and ``x86`` stand for 
+            platform targets: 
+
+            * ``armeabi`` is for ARM v5 and ARM v6 architectures, 
+
+            * ``armv7a-neon`` is for NEON-optimized ARM v7, 
+
+            * ``arm7a-neon-android8`` is for NEON-optimized ARM v7 with Android API 8,
+
+            * ``mips`` is for MIPS architecture,
+
+            * ``x86`` is for Intel x86 CPUs.
+
+            If using hardware device for testing/debugging, run the following command to learn 
+            its CPU architecture:
+
+            .. code-block:: sh
+
+               adb shell getprop ro.product.cpu.abi
+
+            If you're using an AVD emulator, go :menuselection:`Window > AVD Manager` to see the 
+            list of availible devices. Click :menuselection:`Edit` in the context menu of the 
+            selected device. In the window, which then pop-ups, find the CPU field.
+
+            You may also see section :ref:`manager_selection` for details.
+
+
+  When done, you will be able to run OpenCV samples on your device/emulator seamlessly.
+
 * Here is ``Tutorial 2 - Use OpenCV Camera`` sample, running on top of stock camera-preview of the emulator.
 
   .. image:: images/emulator_canny.png
      :height: 600px
      :alt: Tutorial 1 Basic - 1. Add OpenCV - running Canny
      :align: center
+
 
 What's next
 ===========

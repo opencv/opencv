@@ -78,7 +78,7 @@ Development in Java
 
 You need the following software to be installed in order to develop for Android in Java:
 
-#. **Sun JDK 6**
+#. **Sun JDK 7**
 
    Visit `Java SE Downloads page <http://www.oracle.com/technetwork/java/javase/downloads/>`_
    and download an installer for your OS.
@@ -93,7 +93,7 @@ You need the following software to be installed in order to develop for Android 
 
         .. code-block:: bash
 
-           sudo update-java-alternatives --set java-6-sun
+           sudo update-java-alternatives --set java-7-sun
 
    .. TODO: Add a note on Sun/Oracle Java installation on Ubuntu 12.
 
@@ -348,6 +348,11 @@ Building application native part from command line
 
 Here is the standard way to compile C++ part of an Android application:
 
+.. warning:: We strongly reccomend using ``cmd.exe`` (standard windows console) instead of Cygwin on 
+             Windows. Use the latter if only you're absolutely sure about, what you're doing. Cygwin 
+             is not really supported and we are unlikely to help you in case you encounter some 
+             problems with it. So, use it only if you're capable of handling the consequences yourself.
+
 #. Open console and go to the root folder of an Android application
 
    .. code-block:: bash
@@ -361,7 +366,7 @@ Here is the standard way to compile C++ part of an Android application:
         <path_where_NDK_is_placed>/ndk-build
 
    .. note:: On Windows we recommend to use ``ndk-build.cmd`` in standard Windows console (``cmd.exe``)
-            rather than the similar ``bash`` script in ``Cygwin`` shell.
+             rather than the similar ``bash`` script in ``Cygwin`` shell.
 
    .. image:: images/ndk_build.png
       :alt: NDK build
@@ -401,7 +406,15 @@ Eclipse build process. We recommend the approach based on Eclipse
    (e.g. ``"X:\\Apps\\android-ndk-r8"`` or ``"/opt/android-ndk-r8"``).
 
    **On Windows** an environment variable can be set via
-   :guilabel:`My Computer -> Properties -> Advanced -> Environment variables` and restarting Eclipse.
+   :guilabel:`My Computer -> Properties -> Advanced -> Environment variables` or in Eclipse itself 
+   :guilabel:`Window -> Preferences -> C/C++ -> Build -> Env`. Restart Eclipse after setting the 
+   variables.
+
+   .. note:: If you're using Eclipse 3 and lower, keep in mind, that it doesn't change variables on 
+             restart as Eclipse 4 does. You may need to clean :file:`org.eclipse.cdt.core.prefs`, 
+             which is located in the following path inside Eclipse workspace: 
+             ``\.metadata\.plugins\org.eclipse.core.runtime\.settings\``.
+
    On Windows 7 it's also possible to use `setx <http://ss64.com/nt/setx.html>`_ command in a console session.
 
    **On Linux** and **MacOS** an environment variable can be set via appending a
@@ -666,8 +679,8 @@ execute :command:`adb devices` command. You will see the list of attached device
    :alt: List of attached devices
    :align: center
 
-MacOS host computer
-^^^^^^^^^^^^^^^^^^^
+Mac OS host computer
+^^^^^^^^^^^^^^^^^^^^
 No actions are required, just connect your device via USB and run ``adb devices`` to check connection.
 
 What's next
