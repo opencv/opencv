@@ -103,6 +103,7 @@ enum
 
     //These 2 flags are used by cvNamedWindow and cvSet/GetWindowProperty
     CV_WINDOW_NORMAL       = 0x00000000, //the user can resize the window (no constraint)  / also use to switch a fullscreen window to a normal size
+    CV_WINDOW_NORMAL_Z     = 0x00000002, //the user can resize the window (no constraint)  / bigger default size == fullscreen
     CV_WINDOW_AUTOSIZE     = 0x00000001, //the user cannot resize the window, the size is constrainted by the image displayed
     CV_WINDOW_OPENGL       = 0x00001000, //window with opengl support
 
@@ -115,6 +116,12 @@ enum
     CV_WINDOW_FREERATIO    = 0x00000100,//the image expends as much as it can (no ratio constraint)
     CV_WINDOW_KEEPRATIO    = 0x00000000//the ration image is respected.
 };
+
+/* some additional modes for button bar config */
+enum { EMOD_PropWnd, EMOD_Zoom, EMOD_Panning, EMOD_SaveImg, 
+       EMOD_TxtButton, EMOD_Label, EMOD_Edit, EMOD_Combo, 
+       EMOD_Slider, EMOD_Pulldown,
+       EMOD_CheckBox, EMOD_CheckText, EMOD_PushText, EMOD_Spin };
 
 /* create window */
 CVAPI(int) cvNamedWindow( const char* name, int flags CV_DEFAULT(CV_WINDOW_AUTOSIZE) );
@@ -135,6 +142,19 @@ CVAPI(void) cvMoveWindow( const char* name, int x, int y );
 CVAPI(void) cvDestroyWindow( const char* name );
 
 CVAPI(void) cvDestroyAllWindows(void);
+
+/* some additional functions for button bar config */
+CVAPI(int)  cvGetCommand( const char* WndName, char* cmd );
+CVAPI(int)  cvGetButtonBarContent(const char * WndName, int idx, char * txt );
+CVAPI(int)  cvSetButtonBarContent(const char * WndName, int etype, int idx, char * txt );
+CVAPI(int)  cvSetMapContent(const char * WndName, const char * varname, char * txt );
+
+CVAPI(void) cvDispInfoBox_QT( const char* WndName, char* caption, const char * csTxt );
+
+/* adjust window in relation to screen resolution; all int values as percentage */
+CVAPI(void) cvAdjustWindowPos_QT( const char * name, int xp, int xwp, int yp, int yhp );
+// ---------------------
+
 
 /* get native window handle (HWND in case of Win32 and Widget in case of X Window) */
 CVAPI(void*) cvGetWindowHandle( const char* name );
