@@ -37,6 +37,7 @@ PERF_TEST_P(Size_MatType, Mat_Zeros,
     Mat zeroMatrix(size.height, size.width, type);
 
     declare.out(zeroMatrix);
+    declare.time(30);
 
     TEST_CYCLE()
     {
