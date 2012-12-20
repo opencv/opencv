@@ -64,11 +64,11 @@ int CV_SLMLTest::run_test_case( int testCaseIdx )
             if( code == cvtest::TS::OK )
             {
                 get_error( testCaseIdx, CV_TEST_ERROR, &test_resps1 );
-                fname1 = tempfile();
+                fname1 = tempfile(".yml.gz");
                 save( fname1.c_str() );
                 load( fname1.c_str() );
                 get_error( testCaseIdx, CV_TEST_ERROR, &test_resps2 );
-                fname2 = tempfile();
+                fname2 = tempfile(".yml.gz");
                 save( fname2.c_str() );
             }
             else
