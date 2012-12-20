@@ -80,6 +80,9 @@ CV_EXPORTS_W void imshow(const string& winname, InputArray mat);
 CV_EXPORTS_W void resizeWindow(const string& winname, int width, int height);
 CV_EXPORTS_W void moveWindow(const string& winname, int x, int y);
 
+// move window dependent from percentage values of screen size.....
+CV_EXPORTS_W void adjustWindowPos(const string& winname, int xp, int xwp, int yp, int yhp);//HS
+
 CV_EXPORTS_W void setWindowProperty(const string& winname, int prop_id, double prop_value);//YV
 CV_EXPORTS_W double getWindowProperty(const string& winname, int prop_id);//YV
 
@@ -154,6 +157,15 @@ typedef void (CV_CDECL *ButtonCallback)(int state, void* userdata);
 CV_EXPORTS int createButton( const string& bar_name, ButtonCallback on_change,
                              void* userdata=NULL, int type=CV_PUSH_BUTTON,
                              bool initial_button_state=0);
+
+
+CV_EXPORTS_W int getButtonBarContent(const string& winname, int idx, char * txt);
+CV_EXPORTS_W int setButtonBarContent(const string& winname, int etype, int idx, char * txt);
+CV_EXPORTS bool getCommandVec(const string& winname, vector<string> & stringVec, char* cmd = NULL);
+CV_EXPORTS void dispInfoBox(const string& winname, char* caption, const string& text);
+
+CV_EXPORTS_W int setMapContent(const string& winname, const string& varname, char * text );
+
 
 //-------------------------
 
