@@ -661,7 +661,7 @@ Applies a fixed-level threshold to each array element.
 
     :param dst: output array of the same size and type as ``src``.
 
-    :param thresh: treshold value.
+    :param thresh: threshold value.
 
     :param maxval: maximum value to use with the ``THRESH_BINARY`` and ``THRESH_BINARY_INV`` thresholding types.
 
