@@ -19,7 +19,7 @@ IF(CMAKE_COMPILER_IS_GNUCXX)
         ARGS ${CMAKE_CXX_COMPILER_ARG1} -dumpversion
         OUTPUT_VARIABLE gcc_compiler_version)
     #MESSAGE("GCC Version: ${gcc_compiler_version}")
-    IF(gcc_compiler_version MATCHES "4\\.[0,2-9]\\.[0-9x]")
+    IF(gcc_compiler_version VERSION_GREATER "4.2.-1")
         SET(PCHSupport_FOUND TRUE)
     ENDIF()
 
