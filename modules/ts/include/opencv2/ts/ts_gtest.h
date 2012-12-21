@@ -433,8 +433,8 @@
 // Defines this to true iff Google Test can use POSIX regular expressions.
 #ifndef GTEST_HAS_POSIX_RE
 # if GTEST_OS_LINUX_ANDROID
-// On Android, <regex.h> is only available starting with Gingerbread.
-#  define GTEST_HAS_POSIX_RE (__ANDROID_API__ >= 9)
+// On Android, <regex.h> is only available starting with Froyo.
+#  define GTEST_HAS_POSIX_RE (__ANDROID_API__ >= 8)
 # else
 # define GTEST_HAS_POSIX_RE (!GTEST_OS_WINDOWS)
 #endif
