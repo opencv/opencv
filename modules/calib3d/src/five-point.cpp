@@ -375,7 +375,7 @@ void CvEMEstimator::computeReprojError( const CvMat* m1, const CvMat* m2,
         double c = Etx2.at<double>(0) * Etx2.at<double>(0); 
         double d = Etx2.at<double>(0) * Etx2.at<double>(0); 
 
-        error->data.fl[i] = x2tEx1 * x2tEx1 / (a + b + c + d); 
+        error->data.fl[i] = (float)(x2tEx1 * x2tEx1 / (a + b + c + d)); 
     }
 
 }
