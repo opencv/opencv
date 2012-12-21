@@ -3,6 +3,7 @@
 #include <sys/stat.h>
 #include <dirent.h>
 #include <android/log.h>
+#include <cctype>
 #include <string>
 #include <vector>
 #include <algorithm>
@@ -303,8 +304,8 @@ std::string CameraWrapperConnector::getPathLibFolder()
         LOGD("Library name: %s", dl_info.dli_fname);
         LOGD("Library base address: %p", dl_info.dli_fbase);
 
-    const char* libName=dl_info.dli_fname;
-    while( ((*libName)=='/') || ((*libName)=='.') )
+        const char* libName=dl_info.dli_fname;
+        while( ((*libName)=='/') || ((*libName)=='.') )
         libName++;
 
         char lineBuf[2048];
@@ -312,9 +313,9 @@ std::string CameraWrapperConnector::getPathLibFolder()
 
         if(file)
         {
-        while (fgets(lineBuf, sizeof lineBuf, file) != NULL)
-        {
-        //verify that line ends with library name
+            while (fgets(lineBuf, sizeof lineBuf, file) != NULL)
+            {
+                //verify that line ends with library name
                 int lineLength = strlen(lineBuf);
                 int libNameLength = strlen(libName);
 
@@ -327,7 +328,7 @@ std::string CameraWrapperConnector::getPathLibFolder()
 
                 if (0 != strncmp(lineBuf + lineLength - libNameLength, libName, libNameLength))
                 {
-            //the line does not contain the library name
+                //the line does not contain the library name
                     continue;
                 }
 
@@ -346,18 +347,18 @@ std::string CameraWrapperConnector::getPathLibFolder()
 
                 fclose(file);
                 return pathBegin;
-        }
-        fclose(file);
-        LOGE("Could not find library path");
+            }
+            fclose(file);
+            LOGE("Could not find library path");
         }
         else
         {
-        LOGE("Could not read /proc/self/smaps");
+            LOGE("Could not read /proc/self/smaps");
         }
     }
     else
     {
-    LOGE("Could not get library name and base address");
+        LOGE("Could not get library name and base address");
     }
 
     return string();
