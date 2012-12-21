@@ -1,11 +1,7 @@
 
 #include "precomp.hpp"
 #include "_modelest.h"
-
-#ifdef HAVE_EIGEN
-#include <eigen3/Eigen/Eigen>
-#include "opencv2/core/eigen.hpp"
-
+#include <complex>
 
 using namespace cv; 
 using namespace std; 
@@ -78,6 +74,7 @@ Mat cv::findEssentialMat( InputArray _points1, InputArray _points2, double focal
     	Mat mask = _mask.getMat(); 
     	Mat(tempMask).copyTo(mask); 
     }
+
 
 	return E; 
 
@@ -242,73 +239,113 @@ int CvEMEstimator::runKernel( const CvMat* m1, const CvMat* m2, CvMat* model )
 // to be of 1 row x n col x 2 channel. 
 int CvEMEstimator::run5Point( const CvMat* q1, const CvMat* q2, CvMat* ematrix )
 {
-	// Notice to keep notion consistence with our reference Matlab code, 
-	// in this function Q1 denotes right points while Q2 left. 
-	// Therefore, left q1 and right q2 are swap to Q2 and Q1. 
-	// Q1 and Q2 are Nx2 (with omitted third coord as 1). 
-	Eigen::MatrixXd Q1, Q2; 
-	cv2eigen(Mat(q1).reshape(1, q1->cols), Q2); 
-	cv2eigen(Mat(q2).reshape(1, q2->cols), Q1); 
+	Mat Q1 = Mat(q1).reshape(1, q1->cols); 
+	Mat Q2 = Mat(q2).reshape(1, q2->cols); 
 
+	int n = Q1.rows; 
+	Mat Q(n, 9, CV_64F); 
+	Q.col(0) = Q1.col(0).mul( Q2.col(0) ); 
+	Q.col(1) = Q1.col(1).mul( Q2.col(0) ); 
+	Q.col(2) = Q2.col(0) * 1.0; 
+	Q.col(3) = Q1.col(0).mul( Q2.col(1) ); 
+	Q.col(4) = Q1.col(1).mul( Q2.col(1) ); 
+	Q.col(5) = Q2.col(1) * 1.0; 
+	Q.col(6) = Q1.col(0) * 1.0; 
+	Q.col(7) = Q1.col(1) * 1.0; 
+	Q.col(8) = 1.0; 
 
-	int n = Q1.rows(); 
-	Eigen::MatrixXd Q(n, 9), V, EE; 
-	Q.col(0) = Q1.col(0).array() * Q2.col(0).array(); 
-	Q.col(1) = Q1.col(1).array() * Q2.col(0).array(); 
-	Q.col(2) = Q2.col(0).array(); 
-	Q.col(3) = Q1.col(0).array() * Q2.col(1).array(); 
-	Q.col(4) = Q1.col(1).array() * Q2.col(1).array(); 
-	Q.col(5) = Q2.col(1).array(); 
-	Q.col(6) = Q1.col(0).array(); 
-	Q.col(7) = Q1.col(1).array(); 
-	Q.col(8).setOnes(); 
-	V = Q.jacobiSvd(Eigen::ComputeFullV|Eigen::ComputeThinU).matrixV(); 
-	EE = V.block<9, 4>(0, 5); 
-
-	Eigen::MatrixXd A(10, 20); 
-	calibrated_fivepoint_helper(EE.data(), A.data()); 
-	A = A.block<10, 10>(0, 0).inverse() * A.block<10, 10>(0, 10); 
-	
-	Eigen::MatrixXd M = Eigen::MatrixXd::Zero(10, 10); 
-	M.row(0) = -A.row(0); 
-	M.row(1) = -A.row(1); 
-	M.row(2) = -A.row(2); 
-	M.row(3) = -A.row(4); 
-	M.row(4) = -A.row(5); 
-	M.row(5) = -A.row(7); 
-	M(6, 0) = 1; 
-	M(7, 1) = 1; 
-	M(8, 3) = 1; 
-	M(9, 6) = 1; 
-
-	Eigen::EigenSolver<Eigen::MatrixXd> es(M); 
-	Eigen::MatrixXcd Vc, SOLS; 
-	Vc = es.eigenvectors(); 
-	SOLS = Vc.block<3, 10>(6, 0).array() / (Eigen::MatrixXd::Ones(3, 1) * Vc.row(9)).array(); 
-
-	Eigen::MatrixXcd temp(4, 10); 
-	temp << SOLS, Eigen::MatrixXcd::Ones(1, 10); 
-	Eigen::MatrixXcd Evec = EE * temp; 
-	Evec = Evec.array() / (Eigen::MatrixXd::Ones(9, 1) * Evec.array().square().matrix().colwise().sum().cwiseSqrt()).array(); 
-
-	assert( CV_IS_MAT_CONT(ematrix->type) ); 
-	int count = 0, c, r; 
-	double* e = ematrix->data.db; 
-	CvMat* _e = cvCreateMat(3, 3, CV_64FC1); 
-	for (c = 0; c < Evec.cols(); c++)
-	{
-		if (Evec(1, c).imag() == 0) 
-		{
-			for (r = 0; r < 9; r++) _e->data.db[3 * (r%3) + r/3] = Evec(r, c).real(); 
-		
-            for (r = 0; r < 9; r++) e[3 * (r%3) + r/3] = Evec(r, c).real(); 
-            e += 9; 
-            count++; 
-		}
-	}
-
-	return count; 
+    Mat U, W, Vt; 
+    SVD::compute(Q, W, U, Vt, SVD::MODIFY_A | SVD::FULL_UV); 
     
+    Mat EE = Mat(Vt.t()).colRange(5, 9) * 1.0; 
+	Mat AA(20, 10, CV_64F); 
+    EE = EE.t(); 
+	calibrated_fivepoint_helper((double*)EE.data, (double*)AA.data); 
+    AA = AA.t(); 
+    EE = EE.t(); 
+
+    Mat A(10, 20, CV_64F); 
+    int perm[20] = {0, 3, 1, 2, 4, 10, 6, 12, 5, 11, 7, 13, 16, 8, 14, 17, 9, 15, 18, 19}; 
+    for (int i = 0; i < 20; i++)
+        A.col(i) = AA.col(perm[i]) * 1.0; 
+
+
+	A = A.colRange(0, 10).inv() * A.colRange(10, 20); 
+    
+    double b[3 * 13]; 
+    Mat B(3, 13, CV_64F, b); 
+    for (int i = 0; i < 3; i++)
+    {
+        Mat arow1 = A.row(i * 2 + 4) * 1.0; 
+        Mat arow2 = A.row(i * 2 + 5) * 1.0; 
+        Mat row1(1, 13, CV_64F, Scalar(0.0)); 
+        Mat row2(1, 13, CV_64F, Scalar(0.0)); 
+
+        row1.colRange(1, 4) = arow1.colRange(0, 3) * 1.0; 
+        row1.colRange(5, 8) = arow1.colRange(3, 6) * 1.0; 
+        row1.colRange(9, 13) = arow1.colRange(6, 10) * 1.0; 
+
+        row2.colRange(0, 3) = arow2.colRange(0, 3) * 1.0; 
+        row2.colRange(4, 7) = arow2.colRange(3, 6) * 1.0; 
+        row2.colRange(8, 12) = arow2.colRange(6, 10) * 1.0; 
+        
+        B.row(i) = row1 - row2; 
+    }
+
+    double c[11]; 
+    Mat coeffs(1, 11, CV_64F, c); 
+    c[10] = (b[0]*b[17]*b[34]+b[26]*b[4]*b[21]-b[26]*b[17]*b[8]-b[13]*b[4]*b[34]-b[0]*b[21]*b[30]+b[13]*b[30]*b[8]); 
+    c[9] = (b[26]*b[4]*b[22]+b[14]*b[30]*b[8]+b[13]*b[31]*b[8]+b[1]*b[17]*b[34]-b[13]*b[5]*b[34]+b[26]*b[5]*b[21]-b[0]*b[21]*b[31]-b[26]*b[17]*b[9]-b[1]*b[21]*b[30]+b[27]*b[4]*b[21]+b[0]*b[17]*b[35]-b[0]*b[22]*b[30]+b[13]*b[30]*b[9]+b[0]*b[18]*b[34]-b[27]*b[17]*b[8]-b[14]*b[4]*b[34]-b[13]*b[4]*b[35]-b[26]*b[18]*b[8]); 
+    c[8] = (b[14]*b[30]*b[9]+b[14]*b[31]*b[8]+b[13]*b[31]*b[9]-b[13]*b[4]*b[36]-b[13]*b[5]*b[35]+b[15]*b[30]*b[8]-b[13]*b[6]*b[34]+b[13]*b[30]*b[10]+b[13]*b[32]*b[8]-b[14]*b[4]*b[35]-b[14]*b[5]*b[34]+b[26]*b[4]*b[23]+b[26]*b[5]*b[22]+b[26]*b[6]*b[21]-b[26]*b[17]*b[10]-b[15]*b[4]*b[34]-b[26]*b[18]*b[9]-b[26]*b[19]*b[8]+b[27]*b[4]*b[22]+b[27]*b[5]*b[21]-b[27]*b[17]*b[9]-b[27]*b[18]*b[8]-b[1]*b[21]*b[31]-b[0]*b[23]*b[30]-b[0]*b[21]*b[32]+b[28]*b[4]*b[21]-b[28]*b[17]*b[8]+b[2]*b[17]*b[34]+b[0]*b[18]*b[35]-b[0]*b[22]*b[31]+b[0]*b[17]*b[36]+b[0]*b[19]*b[34]-b[1]*b[22]*b[30]+b[1]*b[18]*b[34]+b[1]*b[17]*b[35]-b[2]*b[21]*b[30]); 
+    c[7] = (b[14]*b[30]*b[10]+b[14]*b[32]*b[8]-b[3]*b[21]*b[30]+b[3]*b[17]*b[34]+b[13]*b[32]*b[9]+b[13]*b[33]*b[8]-b[13]*b[4]*b[37]-b[13]*b[5]*b[36]+b[15]*b[30]*b[9]+b[15]*b[31]*b[8]-b[16]*b[4]*b[34]-b[13]*b[6]*b[35]-b[13]*b[7]*b[34]+b[13]*b[30]*b[11]+b[13]*b[31]*b[10]+b[14]*b[31]*b[9]-b[14]*b[4]*b[36]-b[14]*b[5]*b[35]-b[14]*b[6]*b[34]+b[16]*b[30]*b[8]-b[26]*b[20]*b[8]+b[26]*b[4]*b[24]+b[26]*b[5]*b[23]+b[26]*b[6]*b[22]+b[26]*b[7]*b[21]-b[26]*b[17]*b[11]-b[15]*b[4]*b[35]-b[15]*b[5]*b[34]-b[26]*b[18]*b[10]-b[26]*b[19]*b[9]+b[27]*b[4]*b[23]+b[27]*b[5]*b[22]+b[27]*b[6]*b[21]-b[27]*b[17]*b[10]-b[27]*b[18]*b[9]-b[27]*b[19]*b[8]+b[0]*b[17]*b[37]-b[0]*b[23]*b[31]-b[0]*b[24]*b[30]-b[0]*b[21]*b[33]-b[29]*b[17]*b[8]+b[28]*b[4]*b[22]+b[28]*b[5]*b[21]-b[28]*b[17]*b[9]-b[28]*b[18]*b[8]+b[29]*b[4]*b[21]+b[1]*b[19]*b[34]-b[2]*b[21]*b[31]+b[0]*b[20]*b[34]+b[0]*b[19]*b[35]+b[0]*b[18]*b[36]-b[0]*b[22]*b[32]-b[1]*b[23]*b[30]-b[1]*b[21]*b[32]+b[1]*b[18]*b[35]-b[1]*b[22]*b[31]-b[2]*b[22]*b[30]+b[2]*b[17]*b[35]+b[1]*b[17]*b[36]+b[2]*b[18]*b[34]); 
+    c[6] = (-b[14]*b[6]*b[35]-b[14]*b[7]*b[34]-b[3]*b[22]*b[30]-b[3]*b[21]*b[31]+b[3]*b[17]*b[35]+b[3]*b[18]*b[34]+b[13]*b[32]*b[10]+b[13]*b[33]*b[9]-b[13]*b[4]*b[38]-b[13]*b[5]*b[37]-b[15]*b[6]*b[34]+b[15]*b[30]*b[10]+b[15]*b[32]*b[8]-b[16]*b[4]*b[35]-b[13]*b[6]*b[36]-b[13]*b[7]*b[35]+b[13]*b[31]*b[11]+b[13]*b[30]*b[12]+b[14]*b[32]*b[9]+b[14]*b[33]*b[8]-b[14]*b[4]*b[37]-b[14]*b[5]*b[36]+b[16]*b[30]*b[9]+b[16]*b[31]*b[8]-b[26]*b[20]*b[9]+b[26]*b[4]*b[25]+b[26]*b[5]*b[24]+b[26]*b[6]*b[23]+b[26]*b[7]*b[22]-b[26]*b[17]*b[12]+b[14]*b[30]*b[11]+b[14]*b[31]*b[10]+b[15]*b[31]*b[9]-b[15]*b[4]*b[36]-b[15]*b[5]*b[35]-b[26]*b[18]*b[11]-b[26]*b[19]*b[10]-b[27]*b[20]*b[8]+b[27]*b[4]*b[24]+b[27]*b[5]*b[23]+b[27]*b[6]*b[22]+b[27]*b[7]*b[21]-b[27]*b[17]*b[11]-b[27]*b[18]*b[10]-b[27]*b[19]*b[9]-b[16]*b[5]*b[34]-b[29]*b[17]*b[9]-b[29]*b[18]*b[8]+b[28]*b[4]*b[23]+b[28]*b[5]*b[22]+b[28]*b[6]*b[21]-b[28]*b[17]*b[10]-b[28]*b[18]*b[9]-b[28]*b[19]*b[8]+b[29]*b[4]*b[22]+b[29]*b[5]*b[21]-b[2]*b[23]*b[30]+b[2]*b[18]*b[35]-b[1]*b[22]*b[32]-b[2]*b[21]*b[32]+b[2]*b[19]*b[34]+b[0]*b[19]*b[36]-b[0]*b[22]*b[33]+b[0]*b[20]*b[35]-b[0]*b[23]*b[32]-b[0]*b[25]*b[30]+b[0]*b[17]*b[38]+b[0]*b[18]*b[37]-b[0]*b[24]*b[31]+b[1]*b[17]*b[37]-b[1]*b[23]*b[31]-b[1]*b[24]*b[30]-b[1]*b[21]*b[33]+b[1]*b[20]*b[34]+b[1]*b[19]*b[35]+b[1]*b[18]*b[36]+b[2]*b[17]*b[36]-b[2]*b[22]*b[31]); 
+    c[5] = (-b[14]*b[6]*b[36]-b[14]*b[7]*b[35]+b[14]*b[31]*b[11]-b[3]*b[23]*b[30]-b[3]*b[21]*b[32]+b[3]*b[18]*b[35]-b[3]*b[22]*b[31]+b[3]*b[17]*b[36]+b[3]*b[19]*b[34]+b[13]*b[32]*b[11]+b[13]*b[33]*b[10]-b[13]*b[5]*b[38]-b[15]*b[6]*b[35]-b[15]*b[7]*b[34]+b[15]*b[30]*b[11]+b[15]*b[31]*b[10]+b[16]*b[31]*b[9]-b[13]*b[6]*b[37]-b[13]*b[7]*b[36]+b[13]*b[31]*b[12]+b[14]*b[32]*b[10]+b[14]*b[33]*b[9]-b[14]*b[4]*b[38]-b[14]*b[5]*b[37]-b[16]*b[6]*b[34]+b[16]*b[30]*b[10]+b[16]*b[32]*b[8]-b[26]*b[20]*b[10]+b[26]*b[5]*b[25]+b[26]*b[6]*b[24]+b[26]*b[7]*b[23]+b[14]*b[30]*b[12]+b[15]*b[32]*b[9]+b[15]*b[33]*b[8]-b[15]*b[4]*b[37]-b[15]*b[5]*b[36]+b[29]*b[5]*b[22]+b[29]*b[6]*b[21]-b[26]*b[18]*b[12]-b[26]*b[19]*b[11]-b[27]*b[20]*b[9]+b[27]*b[4]*b[25]+b[27]*b[5]*b[24]+b[27]*b[6]*b[23]+b[27]*b[7]*b[22]-b[27]*b[17]*b[12]-b[27]*b[18]*b[11]-b[27]*b[19]*b[10]-b[28]*b[20]*b[8]-b[16]*b[4]*b[36]-b[16]*b[5]*b[35]-b[29]*b[17]*b[10]-b[29]*b[18]*b[9]-b[29]*b[19]*b[8]+b[28]*b[4]*b[24]+b[28]*b[5]*b[23]+b[28]*b[6]*b[22]+b[28]*b[7]*b[21]-b[28]*b[17]*b[11]-b[28]*b[18]*b[10]-b[28]*b[19]*b[9]+b[29]*b[4]*b[23]-b[2]*b[22]*b[32]-b[2]*b[21]*b[33]-b[1]*b[24]*b[31]+b[0]*b[18]*b[38]-b[0]*b[24]*b[32]+b[0]*b[19]*b[37]+b[0]*b[20]*b[36]-b[0]*b[25]*b[31]-b[0]*b[23]*b[33]+b[1]*b[19]*b[36]-b[1]*b[22]*b[33]+b[1]*b[20]*b[35]+b[2]*b[19]*b[35]-b[2]*b[24]*b[30]-b[2]*b[23]*b[31]+b[2]*b[20]*b[34]+b[2]*b[17]*b[37]-b[1]*b[25]*b[30]+b[1]*b[18]*b[37]+b[1]*b[17]*b[38]-b[1]*b[23]*b[32]+b[2]*b[18]*b[36]); 
+    c[4] = (-b[14]*b[6]*b[37]-b[14]*b[7]*b[36]+b[14]*b[31]*b[12]+b[3]*b[17]*b[37]-b[3]*b[23]*b[31]-b[3]*b[24]*b[30]-b[3]*b[21]*b[33]+b[3]*b[20]*b[34]+b[3]*b[19]*b[35]+b[3]*b[18]*b[36]-b[3]*b[22]*b[32]+b[13]*b[32]*b[12]+b[13]*b[33]*b[11]-b[15]*b[6]*b[36]-b[15]*b[7]*b[35]+b[15]*b[31]*b[11]+b[15]*b[30]*b[12]+b[16]*b[32]*b[9]+b[16]*b[33]*b[8]-b[13]*b[6]*b[38]-b[13]*b[7]*b[37]+b[14]*b[32]*b[11]+b[14]*b[33]*b[10]-b[14]*b[5]*b[38]-b[16]*b[6]*b[35]-b[16]*b[7]*b[34]+b[16]*b[30]*b[11]+b[16]*b[31]*b[10]-b[26]*b[19]*b[12]-b[26]*b[20]*b[11]+b[26]*b[6]*b[25]+b[26]*b[7]*b[24]+b[15]*b[32]*b[10]+b[15]*b[33]*b[9]-b[15]*b[4]*b[38]-b[15]*b[5]*b[37]+b[29]*b[5]*b[23]+b[29]*b[6]*b[22]+b[29]*b[7]*b[21]-b[27]*b[20]*b[10]+b[27]*b[5]*b[25]+b[27]*b[6]*b[24]+b[27]*b[7]*b[23]-b[27]*b[18]*b[12]-b[27]*b[19]*b[11]-b[28]*b[20]*b[9]-b[16]*b[4]*b[37]-b[16]*b[5]*b[36]+b[0]*b[19]*b[38]-b[0]*b[24]*b[33]+b[0]*b[20]*b[37]-b[29]*b[17]*b[11]-b[29]*b[18]*b[10]-b[29]*b[19]*b[9]+b[28]*b[4]*b[25]+b[28]*b[5]*b[24]+b[28]*b[6]*b[23]+b[28]*b[7]*b[22]-b[28]*b[17]*b[12]-b[28]*b[18]*b[11]-b[28]*b[19]*b[10]-b[29]*b[20]*b[8]+b[29]*b[4]*b[24]+b[2]*b[18]*b[37]-b[0]*b[25]*b[32]+b[1]*b[18]*b[38]-b[1]*b[24]*b[32]+b[1]*b[19]*b[37]+b[1]*b[20]*b[36]-b[1]*b[25]*b[31]+b[2]*b[17]*b[38]+b[2]*b[19]*b[36]-b[2]*b[24]*b[31]-b[2]*b[22]*b[33]-b[2]*b[23]*b[32]+b[2]*b[20]*b[35]-b[1]*b[23]*b[33]-b[2]*b[25]*b[30]); 
+    c[3] = (-b[14]*b[6]*b[38]-b[14]*b[7]*b[37]+b[3]*b[19]*b[36]-b[3]*b[22]*b[33]+b[3]*b[20]*b[35]-b[3]*b[23]*b[32]-b[3]*b[25]*b[30]+b[3]*b[17]*b[38]+b[3]*b[18]*b[37]-b[3]*b[24]*b[31]-b[15]*b[6]*b[37]-b[15]*b[7]*b[36]+b[15]*b[31]*b[12]+b[16]*b[32]*b[10]+b[16]*b[33]*b[9]+b[13]*b[33]*b[12]-b[13]*b[7]*b[38]+b[14]*b[32]*b[12]+b[14]*b[33]*b[11]-b[16]*b[6]*b[36]-b[16]*b[7]*b[35]+b[16]*b[31]*b[11]+b[16]*b[30]*b[12]+b[15]*b[32]*b[11]+b[15]*b[33]*b[10]-b[15]*b[5]*b[38]+b[29]*b[5]*b[24]+b[29]*b[6]*b[23]-b[26]*b[20]*b[12]+b[26]*b[7]*b[25]-b[27]*b[19]*b[12]-b[27]*b[20]*b[11]+b[27]*b[6]*b[25]+b[27]*b[7]*b[24]-b[28]*b[20]*b[10]-b[16]*b[4]*b[38]-b[16]*b[5]*b[37]+b[29]*b[7]*b[22]-b[29]*b[17]*b[12]-b[29]*b[18]*b[11]-b[29]*b[19]*b[10]+b[28]*b[5]*b[25]+b[28]*b[6]*b[24]+b[28]*b[7]*b[23]-b[28]*b[18]*b[12]-b[28]*b[19]*b[11]-b[29]*b[20]*b[9]+b[29]*b[4]*b[25]-b[2]*b[24]*b[32]+b[0]*b[20]*b[38]-b[0]*b[25]*b[33]+b[1]*b[19]*b[38]-b[1]*b[24]*b[33]+b[1]*b[20]*b[37]-b[2]*b[25]*b[31]+b[2]*b[20]*b[36]-b[1]*b[25]*b[32]+b[2]*b[19]*b[37]+b[2]*b[18]*b[38]-b[2]*b[23]*b[33]); 
+    c[2] = (b[3]*b[18]*b[38]-b[3]*b[24]*b[32]+b[3]*b[19]*b[37]+b[3]*b[20]*b[36]-b[3]*b[25]*b[31]-b[3]*b[23]*b[33]-b[15]*b[6]*b[38]-b[15]*b[7]*b[37]+b[16]*b[32]*b[11]+b[16]*b[33]*b[10]-b[16]*b[5]*b[38]-b[16]*b[6]*b[37]-b[16]*b[7]*b[36]+b[16]*b[31]*b[12]+b[14]*b[33]*b[12]-b[14]*b[7]*b[38]+b[15]*b[32]*b[12]+b[15]*b[33]*b[11]+b[29]*b[5]*b[25]+b[29]*b[6]*b[24]-b[27]*b[20]*b[12]+b[27]*b[7]*b[25]-b[28]*b[19]*b[12]-b[28]*b[20]*b[11]+b[29]*b[7]*b[23]-b[29]*b[18]*b[12]-b[29]*b[19]*b[11]+b[28]*b[6]*b[25]+b[28]*b[7]*b[24]-b[29]*b[20]*b[10]+b[2]*b[19]*b[38]-b[1]*b[25]*b[33]+b[2]*b[20]*b[37]-b[2]*b[24]*b[33]-b[2]*b[25]*b[32]+b[1]*b[20]*b[38]); 
+    c[1] = (b[29]*b[7]*b[24]-b[29]*b[20]*b[11]+b[2]*b[20]*b[38]-b[2]*b[25]*b[33]-b[28]*b[20]*b[12]+b[28]*b[7]*b[25]-b[29]*b[19]*b[12]-b[3]*b[24]*b[33]+b[15]*b[33]*b[12]+b[3]*b[19]*b[38]-b[16]*b[6]*b[38]+b[3]*b[20]*b[37]+b[16]*b[32]*b[12]+b[29]*b[6]*b[25]-b[16]*b[7]*b[37]-b[3]*b[25]*b[32]-b[15]*b[7]*b[38]+b[16]*b[33]*b[11]); 
+    c[0] = -b[29]*b[20]*b[12]+b[29]*b[7]*b[25]+b[16]*b[33]*b[12]-b[16]*b[7]*b[38]+b[3]*b[20]*b[38]-b[3]*b[25]*b[33]; 
+    
+    std::vector<std::complex<double> > roots; 
+    solvePoly(coeffs, roots); 
+
+    std::vector<double> xs, ys, zs; 
+    int count = 0; 
+    double * e = ematrix->data.db; 
+    for (size_t i = 0; i < roots.size(); i++)
+    {
+        if (fabs(roots[i].imag()) > 1e-10) continue; 
+        double z1 = roots[i].real(); 
+        double z2 = z1 * z1; 
+        double z3 = z2 * z1; 
+        double z4 = z3 * z1; 
+        
+        double bz[3][3]; 
+        for (int j = 0; j < 3; j++)
+        {
+            const double * br = b + j * 13; 
+            bz[j][0] = br[0] * z3 + br[1] * z2 + br[2] * z1 + br[3]; 
+            bz[j][1] = br[4] * z3 + br[5] * z2 + br[6] * z1 + br[7]; 
+            bz[j][2] = br[8] * z4 + br[9] * z3 + br[10] * z2 + br[11] * z1 + br[12]; 
+        }
+
+        Mat Bz(3, 3, CV_64F, bz); 
+        cv::Mat xy1; 
+        SVD::solveZ(Bz, xy1); 
+
+        if (fabs(xy1.at<double>(2)) < 1e-10) continue; 
+        xs.push_back(xy1.at<double>(0) / xy1.at<double>(2)); 
+        ys.push_back(xy1.at<double>(1) / xy1.at<double>(2)); 
+        zs.push_back(z1); 
+
+        cv::Mat Evec = EE.col(0) * xs.back() + EE.col(1) * ys.back() + EE.col(2) * zs.back() + EE.col(3); 
+        Evec /= norm(Evec); 
+        
+        memcpy(e + count * 9, Evec.data, 9 * sizeof(double)); 
+        count++; 
+    }
+    return count; 
+
 }
 
 // Same as the runKernel (run5Point), m1 and m2 should be
@@ -317,32 +354,29 @@ int CvEMEstimator::run5Point( const CvMat* q1, const CvMat* q2, CvMat* ematrix )
 void CvEMEstimator::computeReprojError( const CvMat* m1, const CvMat* m2,
                                      const CvMat* model, CvMat* error )
 {
-	Eigen::MatrixXd X1t, X2t; 
-	cv2eigen(Mat(m1).reshape(1, m1->cols), X1t); 
-	cv2eigen(Mat(m2).reshape(1, m2->cols), X2t); 
-	Eigen::MatrixXd X1(3, X1t.rows()); 
-	Eigen::MatrixXd X2(3, X2t.rows()); 
-	X1.topRows(2) = X1t.transpose(); 
-	X2.topRows(2) = X2t.transpose(); 
-	X1.row(2).setOnes(); 
-	X2.row(2).setOnes(); 
+    Mat X1(m1), X2(m2); 
+    int n = X1.cols; 
+    X1 = X1.reshape(1, n); 
+    X2 = X2.reshape(1, n); 
 
-	Eigen::MatrixXd E; 
-	cv2eigen(Mat(model), E); 
-	
-	// Compute Simpson's error
-	Eigen::MatrixXd Ex1, x2tEx1, Etx2, SimpsonError; 
-	Ex1 = E * X1; 
-	x2tEx1 = (X2.array() * Ex1.array()).matrix().colwise().sum(); 
-	Etx2 = E.transpose() * X2; 
-	SimpsonError = x2tEx1.array().square() / (Ex1.row(0).array().square() + Ex1.row(1).array().square() + Etx2.row(0).array().square() + Etx2.row(1).array().square()); 
-	
-	assert( CV_IS_MAT_CONT(error->type) ); 
-	Mat isInliers, R, t; 	
-	for (int i = 0; i < SimpsonError.cols(); i++) 
-	{
-		error->data.fl[i] = SimpsonError(0, i); 
-	}
+    X1.convertTo(X1, CV_64F); 
+    X2.convertTo(X2, CV_64F); 
+
+    Mat E(model); 
+    for (int i = 0; i < n; i++)
+    {
+        Mat x1 = (Mat_<double>(3, 1) << X1.at<double>(i, 0), X1.at<double>(i, 1), 1.0); 
+        Mat x2 = (Mat_<double>(3, 1) << X2.at<double>(i, 0), X2.at<double>(i, 1), 1.0); 
+        double x2tEx1 = x2.dot(E * x1); 
+        Mat Ex1 = E * x1; 
+        Mat Etx2 = E * x2; 
+        double a = Ex1.at<double>(0) * Ex1.at<double>(0); 
+        double b = Ex1.at<double>(1) * Ex1.at<double>(1); 
+        double c = Etx2.at<double>(0) * Etx2.at<double>(0); 
+        double d = Etx2.at<double>(0) * Etx2.at<double>(0); 
+
+        error->data.fl[i] = x2tEx1 * x2tEx1 / (a + b + c + d); 
+    }
 
 }
 
@@ -681,4 +715,3 @@ void CvEMEstimator::calibrated_fivepoint_helper( double *EE, double* A )
 
 
 
-#endif
