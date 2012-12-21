@@ -5519,7 +5519,7 @@ void read( const FileNode& node, SparseMat& mat, const SparseMat& default_mat )
         return;
     }
     Ptr<CvSparseMat> m = (CvSparseMat*)cvRead((CvFileStorage*)node.fs, (CvFileNode*)*node);
-    CV_Assert(CV_IS_SPARSE_MAT(m));
+    CV_Assert(CV_IS_SPARSE_MAT(m.obj));
     SparseMat(m).copyTo(mat);
 }
 

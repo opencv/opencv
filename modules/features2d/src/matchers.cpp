@@ -616,7 +616,7 @@ void FlannBasedMatcher::write( FileStorage& fs) const
 {
      fs << "indexParams" << "[";
 
-     if (indexParams != 0)
+     if (indexParams)
      {
          std::vector<std::string> names;
          std::vector<int> types;
@@ -667,7 +667,7 @@ void FlannBasedMatcher::write( FileStorage& fs) const
 
      fs << "]" << "searchParams" << "[";
 
-     if (searchParams != 0)
+     if (searchParams)
      {
          std::vector<std::string> names;
          std::vector<int> types;
