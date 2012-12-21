@@ -1136,11 +1136,12 @@ void CV_EssentialMatTest::get_test_array_types_and_sizes( int /*test_case_idx*/,
     RNG& rng = ts->get_rng();
     int pt_depth = cvtest::randInt(rng) % 2 == 0 ? CV_32F : CV_64F;
     double pt_count_exp = cvtest::randReal(rng)*6 + 1;
-    int pt_count = MAX(5, cvRound(exp(pt_count_exp)));
+    int pt_count = 5; //MAX(5, cvRound(exp(pt_count_exp)));
 
     dims = cvtest::randInt(rng) % 2 + 2;
     dims = 2; 
     method = CV_LMEDS << (cvtest::randInt(rng) % 2);
+    method = CV_RANSAC; 
 
     types[INPUT][0] = CV_MAKETYPE(pt_depth, 1);
 
