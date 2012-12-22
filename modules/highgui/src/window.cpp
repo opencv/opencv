@@ -895,7 +895,7 @@ CV_IMPL int cvSetButtonBarContent(const char *, int, int, char * )
     return -1;
 }
 
-CV_IMPL int cvDispInfoBox_QT( char*, char* , const char * )
+CV_IMPL int cvDispInfoBox_QT(const char*, char* , const char * )
 {
     // CV_NO_GUI_ERROR("cvDispInfoBox_QT");
     return -1;
