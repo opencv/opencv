@@ -1340,7 +1340,7 @@ public:
     virtual int channels(int i=-1) const;
     virtual bool empty() const;
 
-    /*virtual*/ ~_InputArray();
+    virtual ~_InputArray();
 
     int flags;
     void* obj;
@@ -1402,7 +1402,7 @@ public:
     virtual void release() const;
     virtual void clear() const;
 
-    /*virtual*/ ~_OutputArray();
+    virtual ~_OutputArray();
 };
 
 typedef const _InputArray& InputArray;
