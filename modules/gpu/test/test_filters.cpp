@@ -158,7 +158,7 @@ GPU_TEST_P(Sobel, Accuracy)
     cv::Mat dst_gold;
     cv::Sobel(src, dst_gold, -1, dx, dy, ksize.width, 1.0, 0.0, borderType);
 
-    EXPECT_MAT_NEAR(dst_gold, dst, CV_MAT_DEPTH(type) < CV_32F ? 0.0 : 0.1);
+    EXPECT_MAT_NEAR(getInnerROI(dst_gold, ksize), getInnerROI(dst, ksize), CV_MAT_DEPTH(type) < CV_32F ? 0.0 : 0.1);
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_Filter, Sobel, testing::Combine(
@@ -221,7 +221,7 @@ GPU_TEST_P(Scharr, Accuracy)
     cv::Mat dst_gold;
     cv::Scharr(src, dst_gold, -1, dx, dy, 1.0, 0.0, borderType);
 
-    EXPECT_MAT_NEAR(dst_gold, dst, CV_MAT_DEPTH(type) < CV_32F ? 0.0 : 0.1);
+    EXPECT_MAT_NEAR(getInnerROI(dst_gold, cv::Size(3, 3)), getInnerROI(dst, cv::Size(3, 3)), CV_MAT_DEPTH(type) < CV_32F ? 0.0 : 0.1);
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_Filter, Scharr, testing::Combine(
