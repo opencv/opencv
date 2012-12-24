@@ -31,7 +31,7 @@ PERF_TEST_P(fast, detect, testing::Combine(
     declare.in(frame);
 
     Ptr<FeatureDetector> fd = Algorithm::create<FeatureDetector>("Feature2D.FAST");
-    ASSERT_FALSE( fd == 0 );
+    ASSERT_FALSE( fd.empty() );
     fd->set("threshold", 20);
     fd->set("nonmaxSuppression", true);
     fd->set("type", type);

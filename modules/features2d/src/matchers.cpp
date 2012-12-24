@@ -531,7 +531,7 @@ void FlannBasedMatcher::train()
 
 void FlannBasedMatcher::read( const FileNode& fn)
 {
-     if (indexParams == 0)
+     if (indexParams.empty())
          indexParams = new flann::IndexParams();
 
      FileNode ip = fn["indexParams"];
@@ -570,7 +570,7 @@ void FlannBasedMatcher::read( const FileNode& fn)
         };
      }
 
-     if (searchParams == 0)
+     if (searchParams.empty())
          searchParams = new flann::SearchParams();
 
      FileNode sp = fn["searchParams"];

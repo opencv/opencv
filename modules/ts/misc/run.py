@@ -66,13 +66,13 @@ parse_patterns = (
   {'name': "opencv_cxx_flags_debug",   'default': "",         'pattern': re.compile("^OPENCV_EXTRA_C_FLAGS_DEBUG:INTERNAL=(.*)$")},
   {'name': "opencv_cxx_flags_release", 'default': "",         'pattern': re.compile("^OPENCV_EXTRA_C_FLAGS_RELEASE:INTERNAL=(.*)$")},
   {'name': "cxx_flags_android",        'default': None,       'pattern': re.compile("^ANDROID_CXX_FLAGS:INTERNAL=(.*)$")},
-  {'name': "cxx_compiler_path",        'default': None,       'pattern': re.compile("^CMAKE_CXX_COMPILER:FILEPATH=(.*)$")},
   {'name': "ndk_path",                 'default': None,       'pattern': re.compile("^(?:ANDROID_NDK|ANDROID_STANDALONE_TOOLCHAIN)?:PATH=(.*)$")},
   {'name': "android_abi",              'default': None,       'pattern': re.compile("^ANDROID_ABI:STRING=(.*)$")},
   {'name': "android_executable",       'default': None,       'pattern': re.compile("^ANDROID_EXECUTABLE:FILEPATH=(.*android.*)$")},
   {'name': "is_x64",                   'default': "OFF",      'pattern': re.compile("^CUDA_64_BIT_DEVICE_CODE:BOOL=(ON)$")},#ugly(
   {'name': "cmake_generator",          'default': None,       'pattern': re.compile("^CMAKE_GENERATOR:INTERNAL=(.+)$")},
   {'name': "cxx_compiler",             'default': None,       'pattern': re.compile("^CMAKE_CXX_COMPILER:FILEPATH=(.+)$")},
+  {'name': "cxx_compiler_arg1",        'default': None,       'pattern': re.compile("^CMAKE_CXX_COMPILER_ARG1:[A-Z]+=(.+)$")},
   {'name': "with_cuda",                'default': "OFF",      'pattern': re.compile("^WITH_CUDA:BOOL=(ON)$")},
   {'name': "cuda_library",             'default': None,       'pattern': re.compile("^CUDA_CUDA_LIBRARY:FILEPATH=(.+)$")},
   {'name': "core_dependencies",        'default': None,       'pattern': re.compile("^opencv_core_LIB_DEPENDS:STATIC=(.+)$")},
@@ -199,40 +199,51 @@ def getRunningProcessExePathByName(name):
     except:
         return None
 
-class RunInfo(object):
-    def setCallback(self, name, callback):
-        setattr(self, name, callback)
-
-    def __init__(self, path, options):
+class TestSuite(object):
+    def __init__(self, options, path = None):
         self.options = options
         self.path = path
         self.error = None
         self.setUp = None
         self.tearDown = None
-        self.nameprefix = "opencv_" + options.mode + "_"
+        self.adb = None
+        self.targetos = None
+        self.nameprefix = "opencv_" + self.options.mode + "_"
         for p in parse_patterns:
             setattr(self, p["name"], p["default"])
-        cachefile = open(os.path.join(path, "CMakeCache.txt"), "rt")
-        try:
-            for l in cachefile.readlines():
-                ll = l.strip()
-                if not ll or ll.startswith("#"):
-                    continue
-                for p in parse_patterns:
-                    match = p["pattern"].match(ll)
-                    if match:
-                        value = match.groups()[0]
-                        if value and not value.endswith("-NOTFOUND"):
-                            setattr(self, p["name"], value)
-        except:
-            pass
-        cachefile.close()
 
+        if self.path:
+            cachefile = open(os.path.join(self.path, "CMakeCache.txt"), "rt")
+            try:
+                for l in cachefile.readlines():
+                    ll = l.strip()
+                    if not ll or ll.startswith("#"):
+                        continue
+                    for p in parse_patterns:
+                        match = p["pattern"].match(ll)
+                        if match:
+                            value = match.groups()[0]
+                            if value and not value.endswith("-NOTFOUND"):
+                                setattr(self, p["name"], value)
+            except:
+                pass
+            cachefile.close()
+
+            # detect target platform
+            if self.android_executable or self.android_abi or self.ndk_path:
+                self.targetos = "android"
+            else:
+                self.targetos = hostos
+
+            self.initialize()
+
+    def initialize(self):
         # fix empty tests dir
         if not self.tests_dir:
             self.tests_dir = self.path
         self.tests_dir = os.path.normpath(self.tests_dir)
-        # add path to adb
+
+        # compute path to adb
         if self.android_executable:
             self.adb = os.path.join(os.path.dirname(os.path.dirname(self.android_executable)), ("platform-tools/adb","platform-tools/adb.exe")[hostos == 'nt'])
             if not os.path.isfile(self.adb) or not os.access(self.adb, os.X_OK):
@@ -240,20 +251,14 @@ class RunInfo(object):
         else:
             self.adb = None
 
-        # detect target platform
-        if self.android_executable or self.android_abi or self.ndk_path:
-            self.targetos = "android"
-        else:
-            self.targetos = hostos
-
         if self.targetos == "android":
             # fix adb tool location
             if not self.adb:
                 self.adb = getRunningProcessExePathByName("adb")
             if not self.adb:
                 self.adb = "adb"
-            if options.adb_serial:
-                self.adb = [self.adb, "-s", options.adb_serial]
+            if self.options.adb_serial:
+                self.adb = [self.adb, "-s", self.options.adb_serial]
             else:
                 self.adb = [self.adb]
             try:
@@ -261,7 +266,7 @@ class RunInfo(object):
             except OSError:
                 self.adb = []
             # remember current device serial. Needed if another device is connected while this script runs
-            if self.adb and not options.adb_serial:
+            if self.adb and not self.options.adb_serial:
                 adb_res = self.runAdb("devices")
                 if not adb_res:
                     self.error = "Could not run adb command: %s (for %s)" % (self.error, self.path)
@@ -276,13 +281,10 @@ class RunInfo(object):
                         self.error = "Too many (%s) devices are connected. Please specify single device using --serial option:\n\n" % (len(connected_devices)) + adb_res
                         self.adb = []
                     else:
-                        options.adb_serial = connected_devices[0].split("\t")[0]
-                        self.adb = self.adb + ["-s", options.adb_serial]
+                        self.options.adb_serial = connected_devices[0].split("\t")[0]
+                        self.adb = self.adb + ["-s", self.options.adb_serial]
             if self.adb:
-                print "adb command:", " ".join(self.adb)
-
-            if self.adb:
-                #construct name for aapt tool
+                # construct name for aapt tool
                 self.aapt = [os.path.join(os.path.dirname(self.adb[0]), ("aapt","aapt.exe")[hostos == 'nt'])]
 
         # fix has_perf_tests param
@@ -295,14 +297,17 @@ class RunInfo(object):
 
         # fix test path
         if "Visual Studio" in self.cmake_generator:
-            if options.configuration:
-                self.tests_dir = os.path.join(self.tests_dir, options.configuration)
+            if self.options.configuration:
+                self.tests_dir = os.path.join(self.tests_dir, self.options.configuration)
             else:
                 self.tests_dir = os.path.join(self.tests_dir, self.build_type)
         elif not self.is_x64 and self.cxx_compiler:
             #one more attempt to detect x64 compiler
             try:
-                output = Popen([self.cxx_compiler, "-v"], stdout=PIPE, stderr=PIPE).communicate()
+                compiler = [self.cxx_compiler]
+                if self.cxx_compiler_arg1:
+                    compiler.append(self.cxx_compiler_arg1)
+                output = Popen(compiler + ["-v"], stdout=PIPE, stderr=PIPE).communicate()
                 if not output[0] and "x86_64" in output[1]:
                     self.is_x64 = True
             except OSError:
@@ -499,9 +504,11 @@ class RunInfo(object):
                 fd = os.fdopen(tmpfile[0], "w+b")
                 fd.write(SIMD_DETECTION_PROGRAM)
                 fd.close();
-                options = [self.cxx_compiler_path]
+                options = [self.cxx_compiler]
+                if self.cxx_compiler_arg1:
+                    options.append(self.cxx_compiler_arg1)
                 cxx_flags = self.cxx_flags + " " + self.cxx_flags_release + " " + self.opencv_cxx_flags + " " + self.opencv_cxx_flags_release
-                if self.targetos == "android":
+                if self.targetos == "android" and self.cxx_flags_android:
                     cxx_flags = self.cxx_flags_android + " " + cxx_flags
 
                 prev_option = None
@@ -634,21 +641,21 @@ class RunInfo(object):
             logfile = userlog[0][userlog[0].find(":")+1:]
 
         if self.targetos == "android" and exe.endswith(".apk"):
-            print "running java tests:", exe
+            print "Run java tests:", exe
             try:
                 # get package info
                 output = Popen(self.aapt + ["dump", "xmltree", exe, "AndroidManifest.xml"], stdout=PIPE, stderr=_stderr).communicate()
                 if not output[0]:
-                    print >> _stderr, "failed to get manifest info from", exe
+                    print >> _stderr, "fail to dump manifest from", exe
                     return
                 tags = re.split(r"[ ]+E: ", output[0])
-                #get package name
+                # get package name
                 manifest_tag = [t for t in tags if t.startswith("manifest ")]
                 if not manifest_tag:
-                    print >> _stderr, "failed to get manifest info from", exe
+                    print >> _stderr, "fail to read package name from", exe
                     return
                 pkg_name =  re.search(r"^[ ]+A: package=\"(?P<pkg>.*?)\" \(Raw: \"(?P=pkg)\"\)\r?$", manifest_tag[0], flags=re.MULTILINE).group("pkg")
-                #get test instrumentation info
+                # get test instrumentation info
                 instrumentation_tag = [t for t in tags if t.startswith("instrumentation ")]
                 if not instrumentation_tag:
                     print >> _stderr, "can not find instrumentation detials in", exe
@@ -663,7 +670,7 @@ class RunInfo(object):
                         pkg_target += self.options.junit_package
                     else:
                         pkg_target = self.options.junit_package
-                #uninstall already installed package
+                # uninstall previously installed package
                 print >> _stderr, "Uninstalling old", pkg_name, "from device..."
                 Popen(self.adb + ["uninstall", pkg_name], stdout=PIPE, stderr=_stderr).communicate()
                 print >> _stderr, "Installing new", exe, "to device...",
@@ -675,10 +682,10 @@ class RunInfo(object):
                     print >> _stderr, "Failed to install", exe, "to device"
                     return
                 print >> _stderr, "Running jUnit tests for ", pkg_target
-                if self.setUp is not None:
+                if self.setUp:
                     self.setUp()
                 Popen(self.adb + ["shell", "am instrument -w -e package " + pkg_target + " " + pkg_name + "/" + pkg_runner], stdout=_stdout, stderr=_stderr).wait()
-                if self.tearDown is not None:
+                if self.tearDown:
                     self.tearDown()
             except OSError:
                 pass
@@ -693,27 +700,27 @@ class RunInfo(object):
                 andoidcwd = tempdir + getpass.getuser().replace(" ","") + "_" + self.options.mode +"/"
                 exename = os.path.basename(exe)
                 androidexe = andoidcwd + exename
-                #upload
+                # upload
                 _stderr.write("Uploading... ")
                 output = Popen(self.adb + ["push", exe, androidexe], stdout=_stdout, stderr=_stderr).wait()
                 if output != 0:
                     print >> _stderr, "adb finishes unexpectedly with error code", output
                     return
-                #chmod
+                # chmod
                 output = Popen(self.adb + ["shell", "chmod 777 " + androidexe], stdout=_stdout, stderr=_stderr).wait()
                 if output != 0:
                     print >> _stderr, "adb finishes unexpectedly with error code", output
                     return
-                #run
+                # run
                 if self.options.help:
                     command = exename + " --help"
                 else:
                     command = exename + " " + " ".join(args)
                 print >> _stderr, "Run command:", command
-                if self.setUp is not None:
+                if self.setUp:
                     self.setUp()
-                Popen(self.adb + ["shell", "export OPENCV_TEST_DATA_PATH=" + self.test_data_path + "&& cd " + andoidcwd + "&& ./" + command], stdout=_stdout, stderr=_stderr).wait()
-                if self.tearDown is not None:
+                Popen(self.adb + ["shell", "export OPENCV_TEST_DATA_PATH=" + self.options.test_data_path + "&& cd " + andoidcwd + "&& ./" + command], stdout=_stdout, stderr=_stderr).wait()
+                if self.tearDown:
                     self.tearDown()
                 # try get log
                 if not self.options.help:
@@ -758,6 +765,7 @@ class RunInfo(object):
 
             try:
                 shutil.rmtree(temp_path)
+                pass
             except:
                 pass
 
@@ -767,8 +775,12 @@ class RunInfo(object):
             return None
 
     def runTests(self, tests, _stdout, _stderr, workingDir, args = []):
+        if not self.isRunnable():
+            print >> _stderr, "Error:", self.error
         if self.error:
             return []
+        if self.adb and self.targetos == "android":
+            print "adb command:", " ".join(self.adb)
         if not tests:
             tests = self.tests
         logs = []
@@ -802,7 +814,6 @@ if __name__ == "__main__":
 
     parser = OptionParser()
     parser.add_option("-t", "--tests", dest="tests", help="comma-separated list of modules to test", metavar="SUITS", default="")
-
     parser.add_option("-w", "--cwd", dest="cwd", help="working directory for tests", metavar="PATH", default=".")
     parser.add_option("-a", "--accuracy", dest="accuracy", help="look for accuracy tests instead of performance tests", action="store_true", default=False)
     parser.add_option("-l", "--longname", dest="useLongNames", action="store_true", help="generate log files with long names", default=False)
@@ -812,6 +823,7 @@ if __name__ == "__main__":
     parser.add_option("", "--package", dest="junit_package", help="Android: run jUnit tests for specified package", metavar="package", default="")
     parser.add_option("", "--help-tests", dest="help", help="Show help for test executable", action="store_true", default=False)
     parser.add_option("", "--check", dest="check", help="Shortcut for '--perf_min_samples=1 --perf_force_samples=1'", action="store_true", default=False)
+    parser.add_option("", "--list", dest="list", help="List available tests", action="store_true", default=False)
 
     (options, args) = parser.parse_args(argv)
 
@@ -823,7 +835,7 @@ if __name__ == "__main__":
     run_args = getRunArgs(args[1:] or ['.'])
 
     if len(run_args) == 0:
-        print >> sys.stderr, "Usage:\n", os.path.basename(sys.argv[0]), "<build_path>"
+        print >> sys.stderr, "Usage:", os.path.basename(sys.argv[0]), "[options] [build_path]"
         exit(1)
 
     tests = [s.strip() for s in options.tests.split(",") if s]
@@ -833,17 +845,25 @@ if __name__ == "__main__":
         test_args = [a for a in test_args if not a.startswith("--gtest_output=")]
 
     if options.check:
-        test_args.extend(["--perf_min_samples=1", "--perf_force_samples=1"])
+        if not [a for a in test_args if a.startswith("--perf_min_samples=")] :
+            test_args.extend(["--perf_min_samples=1"])
+        if not [a for a in test_args if a.startswith("--perf_force_samples=")] :
+            test_args.extend(["--perf_force_samples=1"])
+        if not [a for a in test_args if a.startswith("--perf_verify_sanity")] :
+            test_args.extend(["--perf_verify_sanity"])
 
     logs = []
+    test_list = []
     for path in run_args:
-        info = RunInfo(path, options)
-        #print vars(info),"\n"
-        if not info.isRunnable():
-            print >> sys.stderr, "Error:", info.error
+        suite = TestSuite(options, path)
+        #print vars(suite),"\n"
+        if options.list:
+            test_list.extend(suite.tests)
         else:
-            info.test_data_path = options.test_data_path
-            logs.extend(info.runTests(tests, sys.stdout, sys.stderr, options.cwd, test_args))
+            logs.extend(suite.runTests(tests, sys.stdout, sys.stderr, options.cwd, test_args))
+
+    if options.list:
+        print os.linesep.join(test_list) or "No tests found"
 
     if logs:
         print >> sys.stderr, "Collected:  ", " ".join(logs)

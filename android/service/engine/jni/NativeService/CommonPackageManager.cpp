@@ -134,7 +134,7 @@ bool CommonPackageManager::IsVersionCompatible(const std::string& target_version
     // major version is the same and minor package version is above or the same as target.
     if ((package_version[0] == target_version[0]) && (package_version[1] == target_version[1]) && (package_version[2] >= target_version[2]))
     {
-    result = true;
+        result = true;
     }
 
     return result;
@@ -144,13 +144,21 @@ int CommonPackageManager::GetHardwareRating(int platform, int cpu_id, const std:
 {
     int result = -1;
 
-    for (size_t i = 0; i < group.size(); i++)
+    if ((cpu_id & ARCH_X86) || (cpu_id & ARCH_X64) || (cpu_id & ARCH_MIPS))
+        // Note: No raiting for x86, x64 and MIPS
+        // only one package is used
+        result = 0;
+    else
     {
-    if (group[i] == std::pair<int, int>(platform, cpu_id))
-    {
-        result = i;
-        break;
-    }
+        // Calculate rating for Arm
+        for (size_t i = 0; i < group.size(); i++)
+        {
+            if (group[i] == std::pair<int, int>(platform, cpu_id))
+            {
+                result = i;
+                break;
+            }
+        }
     }
 
     return result;
