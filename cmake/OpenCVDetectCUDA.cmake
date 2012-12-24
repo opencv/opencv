@@ -84,7 +84,12 @@ if(CUDA_FOUND)
   endforeach()
 
   if(CARMA)
-    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} --target-cpu-architecture=ARM "-ccbin=${CMAKE_CXX_COMPILER}")
+    set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} --target-cpu-architecture=ARM" )
+
+    if (CMAKE_VERSION VERSION_LESS 2.8.10)
+      set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} -ccbin=${CMAKE_CXX_COMPILER}" )
+    endif()
+
   endif()
 
   # These vars will be processed in other scripts
