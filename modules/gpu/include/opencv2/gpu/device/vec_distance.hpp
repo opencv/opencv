@@ -43,7 +43,7 @@
 #ifndef __OPENCV_GPU_VEC_DISTANCE_HPP__
 #define __OPENCV_GPU_VEC_DISTANCE_HPP__
 
-#include "utility.hpp"
+#include "reduce.hpp"
 #include "functional.hpp"
 #include "detail/vec_distance_detail.hpp"
 
@@ -63,7 +63,7 @@ namespace cv { namespace gpu { namespace device
 
         template <int THREAD_DIM> __device__ __forceinline__ void reduceAll(int* smem, int tid)
         {
-            reduce<THREAD_DIM>(smem, mySum, tid, plus<volatile int>());
+            reduce<THREAD_DIM>(smem, mySum, tid, plus<int>());
         }
 
         __device__ __forceinline__ operator int() const
@@ -87,7 +87,7 @@ namespace cv { namespace gpu { namespace device
 
         template <int THREAD_DIM> __device__ __forceinline__ void reduceAll(float* smem, int tid)
         {
-            reduce<THREAD_DIM>(smem, mySum, tid, plus<volatile float>());
+            reduce<THREAD_DIM>(smem, mySum, tid, plus<float>());
         }
 
         __device__ __forceinline__ operator float() const
@@ -113,7 +113,7 @@ namespace cv { namespace gpu { namespace device
 
         template <int THREAD_DIM> __device__ __forceinline__ void reduceAll(float* smem, int tid)
         {
-            reduce<THREAD_DIM>(smem, mySum, tid, plus<volatile float>());
+            reduce<THREAD_DIM>(smem, mySum, tid, plus<float>());
         }
 
         __device__ __forceinline__ operator float() const
@@ -138,7 +138,7 @@ namespace cv { namespace gpu { namespace device
 
         template <int THREAD_DIM> __device__ __forceinline__ void reduceAll(int* smem, int tid)
         {
-            reduce<THREAD_DIM>(smem, mySum, tid, plus<volatile int>());
+            reduce<THREAD_DIM>(smem, mySum, tid, plus<int>());
         }
 
         __device__ __forceinline__ operator int() const

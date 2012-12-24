@@ -1,5 +1,9 @@
 #include "precomp.hpp"
 
+#ifdef HAVE_CUDA
+#include "opencv2/core/gpumat.hpp"
+#endif
+
 #ifdef ANDROID
 # include <sys/time.h>
 #endif
@@ -1159,6 +1163,10 @@ void TestBase::RunPerfTestBody()
     catch(cv::Exception e)
     {
         metrics.terminationReason = performance_metrics::TERM_EXCEPTION;
+        #ifdef HAVE_CUDA
+            if (e.code == CV_GpuApiCallError)
+                cv::gpu::resetDevice();
+        #endif
         FAIL() << "Expected: PerfTestBody() doesn't throw an exception.\n  Actual: it throws cv::Exception:\n  " << e.what();
     }
     catch(std::exception e)

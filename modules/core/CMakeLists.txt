@@ -10,7 +10,6 @@ if(HAVE_CUDA)
   file(GLOB lib_cuda "src/cuda/*.cu")
   ocv_cuda_compile(cuda_objs ${lib_cuda})
 
-
   set(cuda_link_libs ${CUDA_LIBRARIES} ${CUDA_npp_LIBRARY})
 else()
   set(lib_cuda "")

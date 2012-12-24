@@ -47,13 +47,13 @@
 
 #if !defined CUDA_DISABLER
 
-#include "internal_shared.hpp"
+#include "opencv2/gpu/device/common.hpp"
 #include "opencv2/gpu/device/limits.hpp"
 #include "opencv2/gpu/device/saturate_cast.hpp"
+#include "opencv2/gpu/device/reduce.hpp"
 #include "opencv2/gpu/device/utility.hpp"
 #include "opencv2/gpu/device/functional.hpp"
 #include "opencv2/gpu/device/filters.hpp"
-#include <float.h>
 
 namespace cv { namespace gpu { namespace device
 {
@@ -568,7 +568,9 @@ namespace cv { namespace gpu { namespace device
 
             float bestx = 0, besty = 0, best_mod = 0;
 
+        #if __CUDA_ARCH__ >= 200
             #pragma unroll
+        #endif
             for (int i = 0; i < 18; ++i)
             {
                 const int dir = (i * 4 + threadIdx.y) * ORI_SEARCH_INC;
@@ -599,8 +601,9 @@ namespace cv { namespace gpu { namespace device
                     sumy += s_Y[threadIdx.x + 96];
                 }
 
-                device::reduce<32>(s_sumx + threadIdx.y * 32, sumx, threadIdx.x, plus<volatile float>());
-                device::reduce<32>(s_sumy + threadIdx.y * 32, sumy, threadIdx.x, plus<volatile float>());
+                plus<float> op;
+                device::reduce<32>(smem_tuple(s_sumx + threadIdx.y * 32, s_sumy + threadIdx.y * 32),
+                                   thrust::tie(sumx, sumy), threadIdx.x, thrust::make_tuple(op, op));
 
                 const float temp_mod = sumx * sumx + sumy * sumy;
                 if (temp_mod > best_mod)
@@ -638,7 +641,7 @@ namespace cv { namespace gpu { namespace device
                 kp_dir *= 180.0f / CV_PI_F;
 
                 kp_dir = 360.0f - kp_dir;
-                if (abs(kp_dir - 360.f) < FLT_EPSILON)
+                if (::fabsf(kp_dir - 360.f) < numeric_limits<float>::epsilon())
                     kp_dir = 0.f;
 
                 featureDir[blockIdx.x] = kp_dir;
@@ -697,11 +700,6 @@ namespace cv { namespace gpu { namespace device
         {
             typedef uchar elem_type;
 
-            __device__ __forceinline__ WinReader(float centerX_, float centerY_, float win_offset_, float cos_dir_, float sin_dir_) :
-                centerX(centerX_), centerY(centerY_), win_offset(win_offset_), cos_dir(cos_dir_), sin_dir(sin_dir_)
-            {
-            }
-
             __device__ __forceinline__ uchar operator ()(int i, int j) const
             {
                 float pixel_x = centerX + (win_offset + j) * cos_dir + (win_offset + i) * sin_dir;
@@ -715,285 +713,215 @@ namespace cv { namespace gpu { namespace device
             float win_offset;
             float cos_dir;
             float sin_dir;
+            int width;
+            int height;
         };
 
-        __device__ void calc_dx_dy(float s_dx_bin[25], float s_dy_bin[25],
-            const float* featureX, const float* featureY, const float* featureSize, const float* featureDir)
+        __device__ void calc_dx_dy(const float* featureX, const float* featureY, const float* featureSize, const float* featureDir,
+                                   float& dx, float& dy)
         {
-            __shared__ float s_PATCH[6][6];
+            __shared__ float s_PATCH[PATCH_SZ + 1][PATCH_SZ + 1];
 
-            const float centerX = featureX[blockIdx.x];
-            const float centerY = featureY[blockIdx.x];
-            const float size = featureSize[blockIdx.x];
-            float descriptor_dir = 360.0f - featureDir[blockIdx.x];
-            if (std::abs(descriptor_dir - 360.f) < FLT_EPSILON)
-                descriptor_dir = 0.f;
-            descriptor_dir *= (float)(CV_PI_F / 180.0f);
+            dx = dy = 0.0f;
 
-            /* The sampling intervals and wavelet sized for selecting an orientation
-             and building the keypoint descriptor are defined relative to 's' */
-            const float s = size * 1.2f / 9.0f;
+            WinReader win;
 
-            /* Extract a window of pixels around the keypoint of size 20s */
+            win.centerX = featureX[blockIdx.x];
+            win.centerY = featureY[blockIdx.x];
+
+            // The sampling intervals and wavelet sized for selecting an orientation
+            // and building the keypoint descriptor are defined relative to 's'
+            const float s = featureSize[blockIdx.x] * 1.2f / 9.0f;
+
+            // Extract a window of pixels around the keypoint of size 20s
             const int win_size = (int)((PATCH_SZ + 1) * s);
 
-            float sin_dir;
-            float cos_dir;
-            sincosf(descriptor_dir, &sin_dir, &cos_dir);
+            win.width = win.height = win_size;
 
-            /* Nearest neighbour version (faster) */
-            const float win_offset = -(float)(win_size - 1) / 2;
+            // Nearest neighbour version (faster)
+            win.win_offset = -(win_size - 1.0f) / 2.0f;
 
-            // Compute sampling points
-            // since grids are 2D, need to compute xBlock and yBlock indices
-            const int xBlock = (blockIdx.y & 3);  // blockIdx.y % 4
-            const int yBlock = (blockIdx.y >> 2); // floor(blockIdx.y/4)
-            const int xIndex = xBlock * 5 + threadIdx.x;
-            const int yIndex = yBlock * 5 + threadIdx.y;
-
-            const float icoo = ((float)yIndex / (PATCH_SZ + 1)) * win_size;
-            const float jcoo = ((float)xIndex / (PATCH_SZ + 1)) * win_size;
-
-            LinearFilter<WinReader> filter(WinReader(centerX, centerY, win_offset, cos_dir, sin_dir));
-
-            s_PATCH[threadIdx.y][threadIdx.x] = filter(icoo, jcoo);
-
-            __syncthreads();
-
-            if (threadIdx.x < 5 && threadIdx.y < 5)
-            {
-                const int tid = threadIdx.y * 5 + threadIdx.x;
-
-                const float dw = c_DW[yIndex * PATCH_SZ + xIndex];
-
-                const float vx = (s_PATCH[threadIdx.y    ][threadIdx.x + 1] - s_PATCH[threadIdx.y][threadIdx.x] + s_PATCH[threadIdx.y + 1][threadIdx.x + 1] - s_PATCH[threadIdx.y + 1][threadIdx.x    ]) * dw;
-                const float vy = (s_PATCH[threadIdx.y + 1][threadIdx.x    ] - s_PATCH[threadIdx.y][threadIdx.x] + s_PATCH[threadIdx.y + 1][threadIdx.x + 1] - s_PATCH[threadIdx.y    ][threadIdx.x + 1]) * dw;
-
-                s_dx_bin[tid] = vx;
-                s_dy_bin[tid] = vy;
-            }
-        }
-
-        __device__ void reduce_sum25(volatile float* sdata1, volatile float* sdata2, volatile float* sdata3, volatile float* sdata4, int tid)
-        {
-            // first step is to reduce from 25 to 16
-            if (tid < 9) // use 9 threads
-            {
-                sdata1[tid] += sdata1[tid + 16];
-                sdata2[tid] += sdata2[tid + 16];
-                sdata3[tid] += sdata3[tid + 16];
-                sdata4[tid] += sdata4[tid + 16];
-            }
-
-            // sum (reduce) from 16 to 1 (unrolled - aligned to a half-warp)
-            if (tid < 8)
-            {
-                sdata1[tid] += sdata1[tid + 8];
-                sdata1[tid] += sdata1[tid + 4];
-                sdata1[tid] += sdata1[tid + 2];
-                sdata1[tid] += sdata1[tid + 1];
-
-                sdata2[tid] += sdata2[tid + 8];
-                sdata2[tid] += sdata2[tid + 4];
-                sdata2[tid] += sdata2[tid + 2];
-                sdata2[tid] += sdata2[tid + 1];
-
-                sdata3[tid] += sdata3[tid + 8];
-                sdata3[tid] += sdata3[tid + 4];
-                sdata3[tid] += sdata3[tid + 2];
-                sdata3[tid] += sdata3[tid + 1];
-
-                sdata4[tid] += sdata4[tid + 8];
-                sdata4[tid] += sdata4[tid + 4];
-                sdata4[tid] += sdata4[tid + 2];
-                sdata4[tid] += sdata4[tid + 1];
-            }
-        }
-
-        __global__ void compute_descriptors64(PtrStepf descriptors, const float* featureX, const float* featureY, const float* featureSize, const float* featureDir)
-        {
-            // 2 floats (dx,dy) for each thread (5x5 sample points in each sub-region)
-            __shared__ float sdx[25];
-            __shared__ float sdy[25];
-            __shared__ float sdxabs[25];
-            __shared__ float sdyabs[25];
-
-            calc_dx_dy(sdx, sdy, featureX, featureY, featureSize, featureDir);
-            __syncthreads();
-
+            float descriptor_dir = 360.0f - featureDir[blockIdx.x];
+            if (::fabsf(descriptor_dir - 360.f) < numeric_limits<float>::epsilon())
+                descriptor_dir = 0.f;
+            descriptor_dir *= CV_PI_F / 180.0f;
+            sincosf(descriptor_dir, &win.sin_dir, &win.cos_dir);
 
             const int tid = threadIdx.y * blockDim.x + threadIdx.x;
 
-            if (tid < 25)
+            const int xLoadInd = tid % (PATCH_SZ + 1);
+            const int yLoadInd = tid / (PATCH_SZ + 1);
+
+            if (yLoadInd < (PATCH_SZ + 1))
             {
-                sdxabs[tid] = ::fabs(sdx[tid]); // |dx| array
-                sdyabs[tid] = ::fabs(sdy[tid]); // |dy| array
-                __syncthreads();
-
-                reduce_sum25(sdx, sdy, sdxabs, sdyabs, tid);
-                __syncthreads();
-
-                float* descriptors_block = descriptors.ptr(blockIdx.x) + (blockIdx.y << 2);
-
-                // write dx, dy, |dx|, |dy|
-                if (tid == 0)
+                if (s > 1)
                 {
-                    descriptors_block[0] = sdx[0];
-                    descriptors_block[1] = sdy[0];
-                    descriptors_block[2] = sdxabs[0];
-                    descriptors_block[3] = sdyabs[0];
+                    AreaFilter<WinReader> filter(win, s, s);
+                    s_PATCH[yLoadInd][xLoadInd] = filter(yLoadInd, xLoadInd);
                 }
+                else
+                {
+                    LinearFilter<WinReader> filter(win);
+                    s_PATCH[yLoadInd][xLoadInd] = filter(yLoadInd * s, xLoadInd * s);
+                }
+            }
+
+            __syncthreads();
+
+            const int xPatchInd = threadIdx.x % 5;
+            const int yPatchInd = threadIdx.x / 5;
+
+            if (yPatchInd < 5)
+            {
+                const int xBlockInd = threadIdx.y % 4;
+                const int yBlockInd = threadIdx.y / 4;
+
+                const int xInd = xBlockInd * 5 + xPatchInd;
+                const int yInd = yBlockInd * 5 + yPatchInd;
+
+                const float dw = c_DW[yInd * PATCH_SZ + xInd];
+
+                dx = (s_PATCH[yInd    ][xInd + 1] - s_PATCH[yInd][xInd] + s_PATCH[yInd + 1][xInd + 1] - s_PATCH[yInd + 1][xInd    ]) * dw;
+                dy = (s_PATCH[yInd + 1][xInd    ] - s_PATCH[yInd][xInd] + s_PATCH[yInd + 1][xInd + 1] - s_PATCH[yInd    ][xInd + 1]) * dw;
             }
         }
 
-        __global__ void compute_descriptors128(PtrStepf descriptors, const float* featureX, const float* featureY, const float* featureSize, const float* featureDir)
+        __global__ void compute_descriptors_64(PtrStep<float4> descriptors, const float* featureX, const float* featureY, const float* featureSize, const float* featureDir)
         {
-            // 2 floats (dx,dy) for each thread (5x5 sample points in each sub-region)
-            __shared__ float sdx[25];
-            __shared__ float sdy[25];
+            __shared__ float smem[32 * 16];
 
-            // sum (reduce) 5x5 area response
-            __shared__ float sd1[25];
-            __shared__ float sd2[25];
-            __shared__ float sdabs1[25];
-            __shared__ float sdabs2[25];
+            float* sRow = smem + threadIdx.y * 32;
 
-            calc_dx_dy(sdx, sdy, featureX, featureY, featureSize, featureDir);
-            __syncthreads();
+            float dx, dy;
+            calc_dx_dy(featureX, featureY, featureSize, featureDir, dx, dy);
 
-            const int tid = threadIdx.y * blockDim.x + threadIdx.x;
+            float dxabs = ::fabsf(dx);
+            float dyabs = ::fabsf(dy);
 
-            if (tid < 25)
+            plus<float> op;
+
+            reduce<32>(sRow, dx, threadIdx.x, op);
+            reduce<32>(sRow, dy, threadIdx.x, op);
+            reduce<32>(sRow, dxabs, threadIdx.x, op);
+            reduce<32>(sRow, dyabs, threadIdx.x, op);
+
+            float4* descriptors_block = descriptors.ptr(blockIdx.x) + threadIdx.y;
+
+            // write dx, dy, |dx|, |dy|
+            if (threadIdx.x == 0)
+                *descriptors_block = make_float4(dx, dy, dxabs, dyabs);
+        }
+
+        __global__ void compute_descriptors_128(PtrStep<float4> descriptors, const float* featureX, const float* featureY, const float* featureSize, const float* featureDir)
+        {
+            __shared__ float smem[32 * 16];
+
+            float* sRow = smem + threadIdx.y * 32;
+
+            float dx, dy;
+            calc_dx_dy(featureX, featureY, featureSize, featureDir, dx, dy);
+
+            float4* descriptors_block = descriptors.ptr(blockIdx.x) + threadIdx.y * 2;
+
+            plus<float> op;
+
+            float d1 = 0.0f;
+            float d2 = 0.0f;
+            float abs1 = 0.0f;
+            float abs2 = 0.0f;
+
+            if (dy >= 0)
             {
-                if (sdy[tid] >= 0)
-                {
-                    sd1[tid] = sdx[tid];
-                    sdabs1[tid] = ::fabs(sdx[tid]);
-                    sd2[tid] = 0;
-                    sdabs2[tid] = 0;
-                }
-                else
-                {
-                    sd1[tid] = 0;
-                    sdabs1[tid] = 0;
-                    sd2[tid] = sdx[tid];
-                    sdabs2[tid] = ::fabs(sdx[tid]);
-                }
-                __syncthreads();
-
-                reduce_sum25(sd1, sd2, sdabs1, sdabs2, tid);
-                __syncthreads();
-
-                float* descriptors_block = descriptors.ptr(blockIdx.x) + (blockIdx.y << 3);
-
-                // write dx (dy >= 0), |dx| (dy >= 0), dx (dy < 0), |dx| (dy < 0)
-                if (tid == 0)
-                {
-                    descriptors_block[0] = sd1[0];
-                    descriptors_block[1] = sdabs1[0];
-                    descriptors_block[2] = sd2[0];
-                    descriptors_block[3] = sdabs2[0];
-                }
-                __syncthreads();
-
-                if (sdx[tid] >= 0)
-                {
-                    sd1[tid] = sdy[tid];
-                    sdabs1[tid] = ::fabs(sdy[tid]);
-                    sd2[tid] = 0;
-                    sdabs2[tid] = 0;
-                }
-                else
-                {
-                    sd1[tid] = 0;
-                    sdabs1[tid] = 0;
-                    sd2[tid] = sdy[tid];
-                    sdabs2[tid] = ::fabs(sdy[tid]);
-                }
-                __syncthreads();
-
-                reduce_sum25(sd1, sd2, sdabs1, sdabs2, tid);
-                __syncthreads();
-
-                // write dy (dx >= 0), |dy| (dx >= 0), dy (dx < 0), |dy| (dx < 0)
-                if (tid == 0)
-                {
-                    descriptors_block[4] = sd1[0];
-                    descriptors_block[5] = sdabs1[0];
-                    descriptors_block[6] = sd2[0];
-                    descriptors_block[7] = sdabs2[0];
-                }
+                d1 = dx;
+                abs1 = ::fabsf(dx);
             }
+            else
+            {
+                d2 = dx;
+                abs2 = ::fabsf(dx);
+            }
+
+            reduce<32>(sRow, d1, threadIdx.x, op);
+            reduce<32>(sRow, d2, threadIdx.x, op);
+            reduce<32>(sRow, abs1, threadIdx.x, op);
+            reduce<32>(sRow, abs2, threadIdx.x, op);
+
+            // write dx (dy >= 0), |dx| (dy >= 0), dx (dy < 0), |dx| (dy < 0)
+            if (threadIdx.x == 0)
+                descriptors_block[0] = make_float4(d1, abs1, d2, abs2);
+
+            if (dx >= 0)
+            {
+                d1 = dy;
+                abs1 = ::fabsf(dy);
+                d2 = 0.0f;
+                abs2 = 0.0f;
+            }
+            else
+            {
+                d1 = 0.0f;
+                abs1 = 0.0f;
+                d2 = dy;
+                abs2 = ::fabsf(dy);
+            }
+
+            reduce<32>(sRow, d1, threadIdx.x, op);
+            reduce<32>(sRow, d2, threadIdx.x, op);
+            reduce<32>(sRow, abs1, threadIdx.x, op);
+            reduce<32>(sRow, abs2, threadIdx.x, op);
+
+            // write dy (dx >= 0), |dy| (dx >= 0), dy (dx < 0), |dy| (dx < 0)
+            if (threadIdx.x == 0)
+                descriptors_block[1] = make_float4(d1, abs1, d2, abs2);
         }
 
         template <int BLOCK_DIM_X> __global__ void normalize_descriptors(PtrStepf descriptors)
         {
+            __shared__ float smem[BLOCK_DIM_X];
+            __shared__ float s_len;
+
             // no need for thread ID
             float* descriptor_base = descriptors.ptr(blockIdx.x);
 
             // read in the unnormalized descriptor values (squared)
-            __shared__ float sqDesc[BLOCK_DIM_X];
-            const float lookup = descriptor_base[threadIdx.x];
-            sqDesc[threadIdx.x] = lookup * lookup;
-            __syncthreads();
+            const float val = descriptor_base[threadIdx.x];
 
-            if (BLOCK_DIM_X >= 128)
-            {
-                if (threadIdx.x < 64)
-                    sqDesc[threadIdx.x] += sqDesc[threadIdx.x + 64];
-                __syncthreads();
-            }
+            float len = val * val;
+            reduce<BLOCK_DIM_X>(smem, len, threadIdx.x, plus<float>());
 
-            // reduction to get total
-            if (threadIdx.x < 32)
-            {
-                volatile float* smem = sqDesc;
-
-                smem[threadIdx.x] += smem[threadIdx.x + 32];
-                smem[threadIdx.x] += smem[threadIdx.x + 16];
-                smem[threadIdx.x] += smem[threadIdx.x + 8];
-                smem[threadIdx.x] += smem[threadIdx.x + 4];
-                smem[threadIdx.x] += smem[threadIdx.x + 2];
-                smem[threadIdx.x] += smem[threadIdx.x + 1];
-            }
-
-            // compute length (square root)
-            __shared__ float len;
             if (threadIdx.x == 0)
-            {
-                len = sqrtf(sqDesc[0]);
-            }
+                s_len = ::sqrtf(len);
+
             __syncthreads();
 
             // normalize and store in output
-            descriptor_base[threadIdx.x] = lookup / len;
+            descriptor_base[threadIdx.x] = val / s_len;
         }
 
-        void compute_descriptors_gpu(const PtrStepSzf& descriptors,
-            const float* featureX, const float* featureY, const float* featureSize, const float* featureDir, int nFeatures)
+        void compute_descriptors_gpu(PtrStepSz<float4> descriptors, const float* featureX, const float* featureY, const float* featureSize, const float* featureDir, int nFeatures)
         {
             // compute unnormalized descriptors, then normalize them - odd indexing since grid must be 2D
 
             if (descriptors.cols == 64)
             {
-                compute_descriptors64<<<dim3(nFeatures, 16, 1), dim3(6, 6, 1)>>>(descriptors, featureX, featureY, featureSize, featureDir);
+                compute_descriptors_64<<<nFeatures, dim3(32, 16)>>>(descriptors, featureX, featureY, featureSize, featureDir);
                 cudaSafeCall( cudaGetLastError() );
 
                 cudaSafeCall( cudaDeviceSynchronize() );
 
-                normalize_descriptors<64><<<dim3(nFeatures, 1, 1), dim3(64, 1, 1)>>>(descriptors);
+                normalize_descriptors<64><<<nFeatures, 64>>>((PtrStepSzf) descriptors);
                 cudaSafeCall( cudaGetLastError() );
 
                 cudaSafeCall( cudaDeviceSynchronize() );
             }
             else
             {
-                compute_descriptors128<<<dim3(nFeatures, 16, 1), dim3(6, 6, 1)>>>(descriptors, featureX, featureY, featureSize, featureDir);
+                compute_descriptors_128<<<nFeatures, dim3(32, 16)>>>(descriptors, featureX, featureY, featureSize, featureDir);
                 cudaSafeCall( cudaGetLastError() );
 
                 cudaSafeCall( cudaDeviceSynchronize() );
 
-                normalize_descriptors<128><<<dim3(nFeatures, 1, 1), dim3(128, 1, 1)>>>(descriptors);
+                normalize_descriptors<128><<<nFeatures, 128>>>((PtrStepSzf) descriptors);
                 cudaSafeCall( cudaGetLastError() );
 
                 cudaSafeCall( cudaDeviceSynchronize() );

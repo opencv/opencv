@@ -97,12 +97,12 @@
         #include <cublas.h>
     #endif
 
-    #ifndef __APPLE__
+    #ifdef HAVE_NVCUVID
         #include <nvcuvid.h>
-    #endif
 
-    #ifdef WIN32
-        #include <NVEncoderAPI.h>
+        #ifdef WIN32
+            #include <NVEncoderAPI.h>
+        #endif
     #endif
 
     #include "internal_shared.hpp"

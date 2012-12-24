@@ -79,6 +79,8 @@ namespace cv { namespace gpu
         WARP_SHUFFLE_FUNCTIONS = FEATURE_SET_COMPUTE_30
     };
 
+    CV_EXPORTS bool deviceSupports(FeatureSet feature_set);
+
     // Gives information about what GPU archs this OpenCV GPU module was
     // compiled for
     class CV_EXPORTS TargetArchs
@@ -543,22 +545,6 @@ namespace cv { namespace gpu
     inline void ensureSizeIsEnough(Size size, int type, GpuMat& m)
     {
         ensureSizeIsEnough(size.height, size.width, type, m);
-    }
-
-    inline void createContinuous(int rows, int cols, int type, GpuMat& m)
-    {
-        int area = rows * cols;
-        if (!m.isContinuous() || m.type() != type || m.size().area() != area)
-            ensureSizeIsEnough(1, area, type, m);
-        m = m.reshape(0, rows);
-    }
-
-    inline void ensureSizeIsEnough(int rows, int cols, int type, GpuMat& m)
-    {
-        if (m.type() == type && m.rows >= rows && m.cols >= cols)
-            m = m(Rect(0, 0, cols, rows));
-        else
-            m.create(rows, cols, type);
     }
 
     inline GpuMat allocMatFromBuf(int rows, int cols, int type, GpuMat &mat)
