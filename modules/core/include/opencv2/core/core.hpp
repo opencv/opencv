@@ -4655,7 +4655,7 @@ class CV_EXPORTS CommandLineParser
     template<typename _Tp>
     static _Tp getData(const std::string& str)
     {
-        _Tp res;
+        _Tp res = _Tp();
         std::stringstream s1(str);
         s1 >> res;
         return res;

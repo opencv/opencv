@@ -122,7 +122,7 @@ void estimateFocal(const vector<ImageFeatures> &features, const vector<MatchesIn
     {
         double median;
 
-        sort(all_focals.begin(), all_focals.end());
+        std::sort(all_focals.begin(), all_focals.end());
         if (all_focals.size() % 2 == 1)
             median = all_focals[all_focals.size() / 2];
         else

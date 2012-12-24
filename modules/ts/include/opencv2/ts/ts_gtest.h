@@ -564,7 +564,7 @@
 #    define GTEST_HAS_RTTI 0
 #   else
 #   define GTEST_HAS_RTTI 1
-#   endif  // GTEST_OS_LINUX_ANDROID && __STLPORT_MAJOR && !__EXCEPTIONS
+#   endif  // GTEST_OS_LINUX_ANDROID && _STLPORT_MAJOR && !__EXCEPTIONS
 #  else
 #   define GTEST_HAS_RTTI 0
 #  endif  // __GXX_RTTI
@@ -650,8 +650,11 @@
 // support TR1 tuple.  libc++ only provides std::tuple, in C++11 mode,
 // and it can be used with some compilers that define __GNUC__.
 # if (defined(__GNUC__) && !defined(__CUDACC__) && (GTEST_GCC_VER_ >= 40000) \
-      && !GTEST_OS_QNX && !defined(_LIBCPP_VERSION)) || _MSC_VER >= 1600
+      && !GTEST_OS_QNX && !defined(_LIBCPP_VERSION)) && !defined(_STLPORT_MAJOR) \
+      || (defined(_MSC_VER) && _MSC_VER >= 1600)
 #  define GTEST_ENV_HAS_TR1_TUPLE_ 1
+# else
+#  define GTEST_ENV_HAS_TR1_TUPLE_ 0
 # endif
 
 // C++11 specifies that <tuple> provides std::tuple. Use that if gtest is used
@@ -659,7 +662,7 @@
 // can build with clang but need to use gcc4.2's libstdc++).
 # if GTEST_LANG_CXX11 && (!defined(__GLIBCXX__) || __GLIBCXX__ > 20110325)
 #  define GTEST_ENV_HAS_STD_TUPLE_ 1
-#else
+# else
 #  define GTEST_ENV_HAS_STD_TUPLE_ 0
 # endif
 
@@ -667,6 +670,8 @@
 #  define GTEST_USE_OWN_TR1_TUPLE 0
 # else
 #  define GTEST_USE_OWN_TR1_TUPLE 1
+#  undef  GTEST_HAS_TR1_TUPLE
+#  define GTEST_HAS_TR1_TUPLE 1
 # endif
 
 #endif  // GTEST_USE_OWN_TR1_TUPLE

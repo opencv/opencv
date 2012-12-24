@@ -767,8 +767,8 @@ void ChamferMatcher::Matching::findContourOrientations(const template_coords_t& 
         }
 
         // get the middle two angles
-        nth_element(angles.begin(), angles.begin()+M-1,  angles.end());
-        nth_element(angles.begin()+M-1, angles.begin()+M,  angles.end());
+        std::nth_element(angles.begin(), angles.begin()+M-1,  angles.end());
+        std::nth_element(angles.begin()+M-1, angles.begin()+M,  angles.end());
         //        sort(angles.begin(), angles.end());
 
         // average them to compute tangent
