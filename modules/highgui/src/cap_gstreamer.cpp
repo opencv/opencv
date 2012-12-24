@@ -65,16 +65,15 @@
 #define CV_WARN(message) fprintf(stderr, "warning: %s (%s:%d)\n", message, __FILE__, __LINE__)
 #endif
 
-static cv::Mutex gst_initializer_mutex;
+static cv::CriticalSection gst_initializer_lock;
 
 class gst_initializer
 {
 public:
     static void init()
     {
-        gst_initializer_mutex.lock();
+        cv::CriticalSection::ScopedLock guard(gst_initializer_lock);
         static gst_initializer init;
-        gst_initializer_mutex.unlock();
     }
 private:
     gst_initializer()

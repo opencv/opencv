@@ -798,19 +798,6 @@ namespace cv
 
 #if defined WIN32 || defined _WIN32 || defined WINCE
 
-struct Mutex::Impl
-{
-    Impl() { InitializeCriticalSection(&cs); refcount = 1; }
-    ~Impl() { DeleteCriticalSection(&cs); }
-
-    void lock() { EnterCriticalSection(&cs); }
-    bool trylock() { return TryEnterCriticalSection(&cs) != 0; }
-    void unlock() { LeaveCriticalSection(&cs); }
-
-    CRITICAL_SECTION cs;
-    int refcount;
-};
-
 #ifndef __GNUC__
 int _interlockedExchangeAdd(int* addr, int delta)
 {
@@ -822,13 +809,25 @@ int _interlockedExchangeAdd(int* addr, int delta)
 }
 #endif // __GNUC__
 
+struct Mutex::Impl
+{
+    Impl() { InitializeCriticalSection(&cs); }
+    ~Impl() { DeleteCriticalSection(&cs); }
+
+    void lock() { EnterCriticalSection(&cs); }
+    bool trylock() { return TryEnterCriticalSection(&cs) != 0; }
+    void unlock() { LeaveCriticalSection(&cs); }
+
+    CRITICAL_SECTION cs;
+};
+
 #elif defined __APPLE__
 
 #include <libkern/OSAtomic.h>
 
 struct Mutex::Impl
 {
-    Impl() { sl = OS_SPINLOCK_INIT; refcount = 1; }
+    Impl() { sl = OS_SPINLOCK_INIT; }
     ~Impl() {}
 
     void lock() { OSSpinLockLock(&sl); }
@@ -836,14 +835,13 @@ struct Mutex::Impl
     void unlock() { OSSpinLockUnlock(&sl); }
 
     OSSpinLock sl;
-    int refcount;
 };
 
-#elif defined __linux__ && !defined ANDROID
+#elif defined __linux__ && !defined __ANDROID__
 
 struct Mutex::Impl
 {
-    Impl() { pthread_spin_init(&sl, 0); refcount = 1; }
+    Impl() { pthread_spin_init(&sl, 0); }
     ~Impl() { pthread_spin_destroy(&sl); }
 
     void lock() { pthread_spin_lock(&sl); }
@@ -851,14 +849,13 @@ struct Mutex::Impl
     void unlock() { pthread_spin_unlock(&sl); }
 
     pthread_spinlock_t sl;
-    int refcount;
 };
 
 #else
 
 struct Mutex::Impl
 {
-    Impl() { pthread_mutex_init(&sl, 0); refcount = 1; }
+    Impl() { pthread_mutex_init(&sl, 0); }
     ~Impl() { pthread_mutex_destroy(&sl); }
 
     void lock() { pthread_mutex_lock(&sl); }
@@ -866,38 +863,24 @@ struct Mutex::Impl
     void unlock() { pthread_mutex_unlock(&sl); }
 
     pthread_mutex_t sl;
-    int refcount;
 };
 
 #endif
 
-Mutex::Mutex()
+
+Mutex::Mutex(const Mutex&)
 {
-    impl = new Mutex::Impl;
+    CV_Error(CV_StsNotImplemented, "cv::Mutex copying is not supported. Pass you mutex by reference.");
 }
 
-Mutex::~Mutex()
+Mutex& Mutex::operator = (const Mutex&)
 {
-    if( CV_XADD(&impl->refcount, -1) == 1 )
-        delete impl;
-    impl = 0;
-}
-
-Mutex::Mutex(const Mutex& m)
-{
-    impl = m.impl;
-    CV_XADD(&impl->refcount, 1);
-}
-
-Mutex& Mutex::operator = (const Mutex& m)
-{
-    CV_XADD(&m.impl->refcount, 1);
-    if( CV_XADD(&impl->refcount, -1) == 1 )
-        delete impl;
-    impl = m.impl;
+    CV_Error(CV_StsNotImplemented, "cv::Mutex copying is not supported. Pass you mutex by reference.");
     return *this;
 }
 
+Mutex::Mutex() { impl = new Mutex::Impl; }
+Mutex::~Mutex() { delete impl; }
 void Mutex::lock() { impl->lock(); }
 void Mutex::unlock() { impl->unlock(); }
 bool Mutex::trylock() { return impl->trylock(); }

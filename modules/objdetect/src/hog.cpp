@@ -944,7 +944,7 @@ class HOGInvoker : public ParallelLoopBody
 public:
     HOGInvoker( const HOGDescriptor* _hog, const Mat& _img,
                 double _hitThreshold, Size _winStride, Size _padding,
-                const double* _levelScale, std::vector<Rect> * _vec, Mutex* _mtx,
+                const double* _levelScale, std::vector<Rect> * _vec, CriticalSection* _cs,
                 std::vector<double>* _weights=0, std::vector<double>* _scales=0 )
     {
         hog = _hog;
@@ -956,7 +956,7 @@ public:
         vec = _vec;
         weights = _weights;
         scales = _scales;
-        mtx = _mtx;
+        cs = _cs;
     }
 
     void operator()( const Range& range ) const
@@ -980,27 +980,27 @@ public:
             hog->detect(smallerImg, locations, hitsWeights, hitThreshold, winStride, padding);
             Size scaledWinSize = Size(cvRound(hog->winSize.width*scale), cvRound(hog->winSize.height*scale));
 
-            mtx->lock();
-            for( size_t j = 0; j < locations.size(); j++ )
             {
-                vec->push_back(Rect(cvRound(locations[j].x*scale),
-                                    cvRound(locations[j].y*scale),
-                                    scaledWinSize.width, scaledWinSize.height));
-                if (scales)
+                CriticalSection::ScopedLock guard(*cs);
+                for( size_t j = 0; j < locations.size(); j++ )
                 {
-                    scales->push_back(scale);
+                    vec->push_back(Rect(cvRound(locations[j].x*scale),
+                                        cvRound(locations[j].y*scale),
+                                        scaledWinSize.width, scaledWinSize.height));
+                    if (scales)
+                    {
+                        scales->push_back(scale);
+                    }
                 }
             }
-            mtx->unlock();
 
             if (weights && (!hitsWeights.empty()))
             {
-                mtx->lock();
+                CriticalSection::ScopedLock guard(*cs);
                 for (size_t j = 0; j < locations.size(); j++)
                 {
                     weights->push_back(hitsWeights[j]);
                 }
-                mtx->unlock();
             }
         }
     }
@@ -1014,7 +1014,7 @@ public:
     std::vector<Rect>* vec;
     std::vector<double>* weights;
     std::vector<double>* scales;
-    Mutex* mtx;
+    CriticalSection* cs;
 };
 
 
@@ -1043,10 +1043,10 @@ void HOGDescriptor::detectMultiScale(
     std::vector<double> tempScales;
     std::vector<double> tempWeights;
     std::vector<double> foundScales;
-    Mutex mtx;
+    CriticalSection cs;
 
     parallel_for_(Range(0, (int)levelScale.size()),
-                 HOGInvoker(this, img, hitThreshold, winStride, padding, &levelScale[0], &allCandidates, &mtx, &tempWeights, &tempScales));
+                 HOGInvoker(this, img, hitThreshold, winStride, padding, &levelScale[0], &allCandidates, &cs, &tempWeights, &tempScales));
 
     std::copy(tempScales.begin(), tempScales.end(), back_inserter(foundScales));
     foundLocations.clear();
@@ -2398,7 +2398,7 @@ public:
        HOGConfInvoker( const HOGDescriptor* _hog, const Mat& _img,
                                double _hitThreshold, Size _padding,
                                std::vector<DetectionROI>* locs,
-                               std::vector<Rect>* _vec, Mutex* _mtx )
+                               std::vector<Rect>* _vec, CriticalSection* _cs )
        {
                hog = _hog;
                img = _img;
@@ -2406,7 +2406,7 @@ public:
                padding = _padding;
                locations = locs;
                vec = _vec;
-               mtx = _mtx;
+               cs = _cs;
        }
 
        void operator()( const Range& range ) const
@@ -2431,14 +2431,14 @@ public:
 
                        hog->detectROI(smallerImg, (*locations)[i].locations, dets, (*locations)[i].confidences, hitThreshold, Size(), padding);
                        Size scaledWinSize = Size(cvRound(hog->winSize.width*scale), cvRound(hog->winSize.height*scale));
-                       mtx->lock();
+
+                       CriticalSection::ScopedLock guard(*cs);
                        for( size_t j = 0; j < dets.size(); j++ )
                        {
                                vec->push_back(Rect(cvRound(dets[j].x*scale),
                                                                        cvRound(dets[j].y*scale),
                                                                        scaledWinSize.width, scaledWinSize.height));
                        }
-                       mtx->unlock();
                }
        }
 
@@ -2448,7 +2448,7 @@ public:
        std::vector<DetectionROI>* locations;
        Size padding;
        std::vector<Rect>* vec;
-       Mutex* mtx;
+       CriticalSection* cs;
 };
 
 void HOGDescriptor::detectROI(const cv::Mat& img, const vector<cv::Point> &locations,
@@ -2534,10 +2534,10 @@ void HOGDescriptor::detectMultiScaleROI(const cv::Mat& img,
                                                            int groupThreshold) const
 {
    std::vector<Rect> allCandidates;
-   Mutex mtx;
+   CriticalSection cs;
 
    parallel_for_(Range(0, (int)locations.size()),
-                        HOGConfInvoker(this, img, hitThreshold, Size(8, 8), &locations, &allCandidates, &mtx));
+                        HOGConfInvoker(this, img, hitThreshold, Size(8, 8), &locations, &allCandidates, &cs));
 
    foundLocations.resize(allCandidates.size());
    std::copy(allCandidates.begin(), allCandidates.end(), foundLocations.begin());
