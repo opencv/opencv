@@ -1805,8 +1805,8 @@ PERF_TEST_P(Image, ImgProc_HoughLinesP, testing::Values("cv/shared/pic5.png", "s
 
     std::string fileName = getDataPath(GetParam());
 
-    const double rho = 1.0f;
-    const double theta = CV_PI / 180.0;
+    const float rho = 1.f;
+    const float theta = float(CV_PI) / 180.f;
     const int threshold = 100;
     const int minLineLenght = 50;
     const int maxLineGap = 5;

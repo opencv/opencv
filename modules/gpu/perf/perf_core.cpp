@@ -1708,7 +1708,8 @@ PERF_TEST_P(Sz_Depth_Cn, Core_Sum, Combine(
         TEST_CYCLE() dst = cv::sum(src);
     }
 
-    SANITY_CHECK(dst, 1e-6);
+    double error = (depth == CV_32F) ? 3e+1 : 1e-6;
+    SANITY_CHECK(dst,  error);
 }
 
 //////////////////////////////////////////////////////////////////////
