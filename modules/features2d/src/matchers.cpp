@@ -77,7 +77,7 @@ DescriptorMatcher::DescriptorCollection::DescriptorCollection()
 DescriptorMatcher::DescriptorCollection::DescriptorCollection( const DescriptorCollection& collection )
 {
     mergedDescriptors = collection.mergedDescriptors.clone();
-    copy( collection.startIdxs.begin(), collection.startIdxs.begin(), startIdxs.begin() );
+    std::copy( collection.startIdxs.begin(), collection.startIdxs.begin(), startIdxs.begin() );
 }
 
 DescriptorMatcher::DescriptorCollection::~DescriptorCollection()
@@ -531,7 +531,7 @@ void FlannBasedMatcher::train()
 
 void FlannBasedMatcher::read( const FileNode& fn)
 {
-     if (indexParams == 0)
+     if (indexParams.empty())
          indexParams = new flann::IndexParams();
 
      FileNode ip = fn["indexParams"];
@@ -570,7 +570,7 @@ void FlannBasedMatcher::read( const FileNode& fn)
         };
      }
 
-     if (searchParams == 0)
+     if (searchParams.empty())
          searchParams = new flann::SearchParams();
 
      FileNode sp = fn["searchParams"];
@@ -807,9 +807,9 @@ GenericDescriptorMatcher::KeyPointCollection::KeyPointCollection( const KeyPoint
 
     keypoints.resize( collection.keypoints.size() );
     for( size_t i = 0; i < keypoints.size(); i++ )
-        copy( collection.keypoints[i].begin(), collection.keypoints[i].end(), keypoints[i].begin() );
+        std::copy( collection.keypoints[i].begin(), collection.keypoints[i].end(), keypoints[i].begin() );
 
-    copy( collection.startIndices.begin(), collection.startIndices.end(), startIndices.begin() );
+    std::copy( collection.startIndices.begin(), collection.startIndices.end(), startIndices.begin() );
 }
 
 void GenericDescriptorMatcher::KeyPointCollection::add( const vector<Mat>& _images,

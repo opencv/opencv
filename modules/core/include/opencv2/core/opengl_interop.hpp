@@ -47,205 +47,212 @@
 
 #include "opencv2/core/core.hpp"
 
-namespace cv
-{
+namespace cv {
+
+CV_EXPORTS bool checkGlError(const char* file, const int line, const char* func = "");
+
+#if defined(__GNUC__)
+    #define CV_CheckGlError() CV_DbgAssert( (cv::checkGlError(__FILE__, __LINE__, __func__)) )
+#else
+    #define CV_CheckGlError() CV_DbgAssert( (cv::checkGlError(__FILE__, __LINE__)) )
+#endif
+
+/////////////////// OpenGL Objects ///////////////////
+
 //! Smart pointer for OpenGL buffer memory with reference counting.
 class CV_EXPORTS GlBuffer
 {
 public:
-    enum Usage
+    enum Target
     {
-        ARRAY_BUFFER = 0x8892,  // buffer will use for OpenGL arrays (vertices, colors, normals, etc)
-        TEXTURE_BUFFER = 0x88EC // buffer will ise for OpenGL textures
+        ARRAY_BUFFER         = 0x8892, //!< The buffer will be used as a source for vertex data
+        ELEMENT_ARRAY_BUFFER = 0x8893, //!< The buffer will be used for indices (in glDrawElements, for example)
+        PIXEL_PACK_BUFFER    = 0x88EB, //!< The buffer will be used for reading from OpenGL textures
+        PIXEL_UNPACK_BUFFER  = 0x88EC  //!< The buffer will be used for writing to OpenGL textures
+    };
+
+    enum Access
+    {
+        READ_ONLY  = 0x88B8,
+        WRITE_ONLY = 0x88B9,
+        READ_WRITE = 0x88BA
     };
 
     //! create empty buffer
-    explicit GlBuffer(Usage usage);
+    GlBuffer();
+
+    //! create buffer from existed buffer id
+    GlBuffer(int arows, int acols, int atype, unsigned int abufId, bool autoRelease = false);
+    GlBuffer(Size asize, int atype, unsigned int abufId, bool autoRelease = false);
 
     //! create buffer
-    GlBuffer(int rows, int cols, int type, Usage usage);
-    GlBuffer(Size size, int type, Usage usage);
+    GlBuffer(int arows, int acols, int atype, Target target = ARRAY_BUFFER, bool autoRelease = false);
+    GlBuffer(Size asize, int atype, Target target = ARRAY_BUFFER, bool autoRelease = false);
 
     //! copy from host/device memory
-    GlBuffer(InputArray mat, Usage usage);
+    explicit GlBuffer(InputArray arr, Target target = ARRAY_BUFFER, bool autoRelease = false);
 
-    void create(int rows, int cols, int type, Usage usage);
-    void create(Size size, int type, Usage usage);
-    void create(int rows, int cols, int type);
-    void create(Size size, int type);
+    //! create buffer
+    void create(int arows, int acols, int atype, Target target = ARRAY_BUFFER, bool autoRelease = false);
+    void create(Size asize, int atype, Target target = ARRAY_BUFFER, bool autoRelease = false) { create(asize.height, asize.width, atype, target, autoRelease); }
 
+    //! release memory and delete buffer object
     void release();
 
-    //! copy from host/device memory
-    void copyFrom(InputArray mat);
+    //! set auto release mode (if true, release will be called in object's destructor)
+    void setAutoRelease(bool flag);
 
-    void bind() const;
-    void unbind() const;
+    //! copy from host/device memory
+    void copyFrom(InputArray arr, Target target = ARRAY_BUFFER, bool autoRelease = false);
+
+    //! copy to host/device memory
+    void copyTo(OutputArray arr, Target target = ARRAY_BUFFER, bool autoRelease = false) const;
+
+    //! create copy of current buffer
+    GlBuffer clone(Target target = ARRAY_BUFFER, bool autoRelease = false) const;
+
+    //! bind buffer for specified target
+    void bind(Target target) const;
+
+    //! unbind any buffers from specified target
+    static void unbind(Target target);
 
     //! map to host memory
-    Mat mapHost();
+    Mat mapHost(Access access);
     void unmapHost();
 
     //! map to device memory
     gpu::GpuMat mapDevice();
     void unmapDevice();
 
-    inline int rows() const { return rows_; }
-    inline int cols() const { return cols_; }
-    inline Size size() const { return Size(cols_, rows_); }
-    inline bool empty() const { return rows_ == 0 || cols_ == 0; }
+    int rows() const { return rows_; }
+    int cols() const { return cols_; }
+    Size size() const { return Size(cols_, rows_); }
+    bool empty() const { return rows_ == 0 || cols_ == 0; }
 
-    inline int type() const { return type_; }
-    inline int depth() const { return CV_MAT_DEPTH(type_); }
-    inline int channels() const { return CV_MAT_CN(type_); }
-    inline int elemSize() const { return CV_ELEM_SIZE(type_); }
-    inline int elemSize1() const { return CV_ELEM_SIZE1(type_); }
+    int type() const { return type_; }
+    int depth() const { return CV_MAT_DEPTH(type_); }
+    int channels() const { return CV_MAT_CN(type_); }
+    int elemSize() const { return CV_ELEM_SIZE(type_); }
+    int elemSize1() const { return CV_ELEM_SIZE1(type_); }
 
-    inline Usage usage() const { return usage_; }
+    unsigned int bufId() const;
 
     class Impl;
+
 private:
+    Ptr<Impl> impl_;
     int rows_;
     int cols_;
     int type_;
-    Usage usage_;
-
-    Ptr<Impl> impl_;
 };
 
 template <> CV_EXPORTS void Ptr<GlBuffer::Impl>::delete_obj();
 
-//! Smart pointer for OpenGL 2d texture memory with reference counting.
-class CV_EXPORTS GlTexture
+//! Smart pointer for OpenGL 2D texture memory with reference counting.
+class CV_EXPORTS GlTexture2D
 {
 public:
+    enum Format
+    {
+        NONE            = 0,
+        DEPTH_COMPONENT = 0x1902, //!< Depth
+        RGB             = 0x1907, //!< Red, Green, Blue
+        RGBA            = 0x1908  //!< Red, Green, Blue, Alpha
+    };
+
     //! create empty texture
-    GlTexture();
+    GlTexture2D();
+
+    //! create texture from existed texture id
+    GlTexture2D(int arows, int acols, Format aformat, unsigned int atexId, bool autoRelease = false);
+    GlTexture2D(Size asize, Format aformat, unsigned int atexId, bool autoRelease = false);
 
     //! create texture
-    GlTexture(int rows, int cols, int type);
-    GlTexture(Size size, int type);
+    GlTexture2D(int arows, int acols, Format aformat, bool autoRelease = false);
+    GlTexture2D(Size asize, Format aformat, bool autoRelease = false);
 
     //! copy from host/device memory
-    explicit GlTexture(InputArray mat, bool bgra = true);
+    explicit GlTexture2D(InputArray arr, bool autoRelease = false);
 
-    void create(int rows, int cols, int type);
-    void create(Size size, int type);
+    //! create texture
+    void create(int arows, int acols, Format aformat, bool autoRelease = false);
+    void create(Size asize, Format aformat, bool autoRelease = false) { create(asize.height, asize.width, aformat, autoRelease); }
+
+    //! release memory and delete texture object
     void release();
 
+    //! set auto release mode (if true, release will be called in object's destructor)
+    void setAutoRelease(bool flag);
+
     //! copy from host/device memory
-    void copyFrom(InputArray mat, bool bgra = true);
+    void copyFrom(InputArray arr, bool autoRelease = false);
 
+    //! copy to host/device memory
+    void copyTo(OutputArray arr, int ddepth = CV_32F, bool autoRelease = false) const;
+
+    //! bind texture to current active texture unit for GL_TEXTURE_2D target
     void bind() const;
-    void unbind() const;
 
-    inline int rows() const { return rows_; }
-    inline int cols() const { return cols_; }
-    inline Size size() const { return Size(cols_, rows_); }
-    inline bool empty() const { return rows_ == 0 || cols_ == 0; }
+    int rows() const { return rows_; }
+    int cols() const { return cols_; }
+    Size size() const { return Size(cols_, rows_); }
+    bool empty() const { return rows_ == 0 || cols_ == 0; }
 
-    inline int type() const { return type_; }
-    inline int depth() const { return CV_MAT_DEPTH(type_); }
-    inline int channels() const { return CV_MAT_CN(type_); }
-    inline int elemSize() const { return CV_ELEM_SIZE(type_); }
-    inline int elemSize1() const { return CV_ELEM_SIZE1(type_); }
+    Format format() const { return format_; }
+
+    unsigned int texId() const;
 
     class Impl;
+
 private:
+    Ptr<Impl> impl_;
     int rows_;
     int cols_;
-    int type_;
-
-    Ptr<Impl> impl_;
-    GlBuffer buf_;
+    Format format_;
 };
 
-template <> CV_EXPORTS void Ptr<GlTexture::Impl>::delete_obj();
+template <> CV_EXPORTS void Ptr<GlTexture2D::Impl>::delete_obj();
 
 //! OpenGL Arrays
 class CV_EXPORTS GlArrays
 {
 public:
-    inline GlArrays()
-        : vertex_(GlBuffer::ARRAY_BUFFER), color_(GlBuffer::ARRAY_BUFFER), bgra_(true), normal_(GlBuffer::ARRAY_BUFFER), texCoord_(GlBuffer::ARRAY_BUFFER)
-    {
-    }
+    GlArrays();
 
     void setVertexArray(InputArray vertex);
-    inline void resetVertexArray() { vertex_.release(); }
+    void resetVertexArray();
 
-    void setColorArray(InputArray color, bool bgra = true);
-    inline void resetColorArray() { color_.release(); }
+    void setColorArray(InputArray color);
+    void resetColorArray();
 
     void setNormalArray(InputArray normal);
-    inline void resetNormalArray() { normal_.release(); }
+    void resetNormalArray();
 
     void setTexCoordArray(InputArray texCoord);
-    inline void resetTexCoordArray() { texCoord_.release(); }
+    void resetTexCoordArray();
+
+    void release();
+
+    void setAutoRelease(bool flag);
 
     void bind() const;
-    void unbind() const;
 
-    inline int rows() const { return vertex_.rows(); }
-    inline int cols() const { return vertex_.cols(); }
-    inline Size size() const { return vertex_.size(); }
-    inline bool empty() const { return vertex_.empty(); }
+    int size() const { return size_; }
+    bool empty() const { return size_ == 0; }
 
 private:
+    int size_;
     GlBuffer vertex_;
     GlBuffer color_;
-    bool bgra_;
     GlBuffer normal_;
     GlBuffer texCoord_;
 };
 
-//! OpenGL Font
-class CV_EXPORTS GlFont
-{
-public:
-    enum Weight
-    {
-        WEIGHT_LIGHT    = 300,
-        WEIGHT_NORMAL   = 400,
-        WEIGHT_SEMIBOLD = 600,
-        WEIGHT_BOLD     = 700,
-        WEIGHT_BLACK    = 900
-    };
-
-    enum Style
-    {
-        STYLE_NORMAL    = 0,
-        STYLE_ITALIC    = 1,
-        STYLE_UNDERLINE = 2
-    };
-
-    static Ptr<GlFont> get(const std::string& family, int height = 12, Weight weight = WEIGHT_NORMAL, Style style = STYLE_NORMAL);
-
-    void draw(const char* str, size_t len) const;
-
-    inline const std::string& family() const { return family_; }
-    inline int height() const { return height_; }
-    inline Weight weight() const { return weight_; }
-    inline Style style() const { return style_; }
-
-private:
-    GlFont(const std::string& family, int height, Weight weight, Style style);
-
-    std::string family_;
-    int height_;
-    Weight weight_;
-    Style style_;
-
-    unsigned int base_;
-
-    GlFont(const GlFont&);
-    GlFont& operator =(const GlFont&);
-};
-
-//! render functions
+/////////////////// Render Functions ///////////////////
 
 //! render texture rectangle in window
-CV_EXPORTS void render(const GlTexture& tex,
+CV_EXPORTS void render(const GlTexture2D& tex,
     Rect_<double> wndRect = Rect_<double>(0.0, 0.0, 1.0, 1.0),
     Rect_<double> texRect = Rect_<double>(0.0, 0.0, 1.0, 1.0));
 
@@ -267,67 +274,13 @@ namespace RenderMode {
 
 //! render OpenGL arrays
 CV_EXPORTS void render(const GlArrays& arr, int mode = RenderMode::POINTS, Scalar color = Scalar::all(255));
+CV_EXPORTS void render(const GlArrays& arr, InputArray indices, int mode = RenderMode::POINTS, Scalar color = Scalar::all(255));
 
-CV_EXPORTS void render(const std::string& str, const Ptr<GlFont>& font, Scalar color, Point2d pos);
-
-//! OpenGL camera
-class CV_EXPORTS GlCamera
-{
-public:
-    GlCamera();
-
-    void lookAt(Point3d eye, Point3d center, Point3d up);
-    void setCameraPos(Point3d pos, double yaw, double pitch, double roll);
-
-    void setScale(Point3d scale);
-
-    void setProjectionMatrix(const Mat& projectionMatrix, bool transpose = true);
-    void setPerspectiveProjection(double fov, double aspect, double zNear, double zFar);
-    void setOrthoProjection(double left, double right, double bottom, double top, double zNear, double zFar);
-
-    void setupProjectionMatrix() const;
-    void setupModelViewMatrix() const;
-
-private:
-    Point3d eye_;
-    Point3d center_;
-    Point3d up_;
-
-    Point3d pos_;
-    double yaw_;
-    double pitch_;
-    double roll_;
-
-    bool useLookAtParams_;
-
-    Point3d scale_;
-
-    Mat projectionMatrix_;
-
-    double fov_;
-    double aspect_;
-
-    double left_;
-    double right_;
-    double bottom_;
-    double top_;
-
-    double zNear_;
-    double zFar_;
-
-    bool perspectiveProjection_;
-};
-
-inline void GlBuffer::create(Size _size, int _type, Usage _usage) { create(_size.height, _size.width, _type, _usage); }
-inline void GlBuffer::create(int _rows, int _cols, int _type) { create(_rows, _cols, _type, usage()); }
-inline void GlBuffer::create(Size _size, int _type) { create(_size.height, _size.width, _type, usage()); }
-inline void GlTexture::create(Size _size, int _type) { create(_size.height, _size.width, _type); }
-
-namespace gpu
-{
+namespace gpu {
     //! set a CUDA device to use OpenGL interoperability
     CV_EXPORTS void setGlDevice(int device = 0);
 }
+
 } // namespace cv
 
 #endif // __cplusplus

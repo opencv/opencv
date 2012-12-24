@@ -50,8 +50,8 @@ The structure of package contents looks as follows:
 
     OpenCV-2.4.3-android-sdk
     |_ apk
-    |   |_ OpenCV_2.4.3_binary_pack_XXX.apk
-    |   |_ OpenCV_2.4.3_Manager.apk
+    |   |_ OpenCV_2.4.3_binary_pack_armv7a.apk
+    |   |_ OpenCV_2.4.3_Manager_2.0_XXX.apk
     |
     |_ doc
     |_ samples
@@ -85,8 +85,8 @@ The structure of package contents looks as follows:
   On production devices that have access to Google Play Market (and Internet) these packages will be
   installed from Market on the first start of an application using OpenCV Manager API.
   But devkits without Market or Internet connection require this packages to be installed manually.
-  Install the `Manager.apk` and the corresponding `binary_pack.apk` depending on the device CPU,
-  the Manager GUI provides this info. Below you'll see exact commands on how to do this.
+  Install the `Manager.apk` and optional `binary_pack.apk` if it needed.
+  See :ref:`manager_selection` for details.
 
   .. note:: Installation from Internet is the preferable way since OpenCV team may publish updated
             versions of this packages on the Market.
@@ -280,21 +280,7 @@ Well, running samples from Eclipse is very simple:
   To get rid of the message you will need to install `OpenCV Manager` and the appropriate `OpenCV binary pack`.
   Simply tap :menuselection:`Yes` if you have *Google Play Market* installed on your device/emulator. It will redirect you to the corresponding page on *Google Play Market*.
 
-  If you have no access to the *Market*, which is often the case with emulators - you will need to install the packages from OpenCV4Android SDK folder manually. Open the console/terminal and type in the following two commands:
-
-  .. code-block:: sh
-    :linenos:
-
-    <Android SDK path>/platform-tools/adb install <OpenCV4Android SDK path>/apk/OpenCV_2.4.3_Manager.apk
-    <Android SDK path>/platform-tools/adb install <OpenCV4Android SDK path>/apk/OpenCV_2.4.3_binary_pack_armv7a.apk
-
-  If you're running Windows, that will probably look like this:
-
-  .. image:: images/install_opencv_manager_with_adb.png
-     :alt: Run these commands in the console to install OpenCV Manager
-     :align: center
-
-  When done, you will be able to run OpenCV samples on your device/emulator seamlessly.
+  If you have no access to the *Market*, which is often the case with emulators - you will need to install the packages from OpenCV4Android SDK folder manually. See :ref:`manager_selection` for details.
 
 * Here is ``Tutorial 2 - Use OpenCV Camera`` sample, running on top of stock camera-preview of the emulator.
 

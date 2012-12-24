@@ -91,7 +91,7 @@ class SparseMat;
 typedef Mat MatND;
 
 class GlBuffer;
-class GlTexture;
+class GlTexture2D;
 class GlArrays;
 class GlCamera;
 
@@ -108,13 +108,6 @@ template<typename _Tp> class CV_EXPORTS Mat_;
 template<typename _Tp> class CV_EXPORTS MatIterator_;
 template<typename _Tp> class CV_EXPORTS MatConstIterator_;
 template<typename _Tp> class CV_EXPORTS MatCommaInitializer_;
-
-#if !defined(ANDROID) || (defined(_GLIBCXX_USE_WCHAR_T) && _GLIBCXX_USE_WCHAR_T)
-typedef std::basic_string<wchar_t> WString;
-
-CV_EXPORTS string fromUtf16(const WString& str);
-CV_EXPORTS WString toUtf16(const string& str);
-#endif
 
 CV_EXPORTS string format( const char* fmt, ... );
 CV_EXPORTS string tempfile( const char* suffix CV_DEFAULT(0));
@@ -1284,6 +1277,8 @@ public:
     operator _Tp* ();
     operator const _Tp*() const;
 
+    bool operator==(const Ptr<_Tp>& ptr) const;
+
     _Tp* obj; //< the object pointer.
     int* refcount; //< the associated reference counter
 };
@@ -1311,7 +1306,7 @@ public:
         STD_VECTOR_MAT    = 5 << KIND_SHIFT,
         EXPR              = 6 << KIND_SHIFT,
         OPENGL_BUFFER     = 7 << KIND_SHIFT,
-        OPENGL_TEXTURE    = 8 << KIND_SHIFT,
+        OPENGL_TEXTURE2D    = 8 << KIND_SHIFT,
         GPU_MAT           = 9 << KIND_SHIFT
     };
     _InputArray();
@@ -1328,13 +1323,13 @@ public:
     _InputArray(const Scalar& s);
     _InputArray(const double& val);
     _InputArray(const GlBuffer& buf);
-    _InputArray(const GlTexture& tex);
+    _InputArray(const GlTexture2D& tex);
     _InputArray(const gpu::GpuMat& d_mat);
 
     virtual Mat getMat(int i=-1) const;
     virtual void getMatVector(vector<Mat>& mv) const;
     virtual GlBuffer getGlBuffer() const;
-    virtual GlTexture getGlTexture() const;
+    virtual GlTexture2D getGlTexture2D() const;
     virtual gpu::GpuMat getGpuMat() const;
 
     virtual int kind() const;
@@ -1345,7 +1340,7 @@ public:
     virtual int channels(int i=-1) const;
     virtual bool empty() const;
 
-    /*virtual*/ ~_InputArray();
+    virtual ~_InputArray();
 
     int flags;
     void* obj;
@@ -1385,6 +1380,8 @@ public:
     template<typename _Tp, int m, int n> _OutputArray(Matx<_Tp, m, n>& matx);
     template<typename _Tp> _OutputArray(_Tp* vec, int n);
     _OutputArray(gpu::GpuMat& d_mat);
+    _OutputArray(GlBuffer& buf);
+    _OutputArray(GlTexture2D& tex);
 
     _OutputArray(const Mat& m);
     template<typename _Tp> _OutputArray(const vector<_Tp>& vec);
@@ -1395,19 +1392,23 @@ public:
     template<typename _Tp, int m, int n> _OutputArray(const Matx<_Tp, m, n>& matx);
     template<typename _Tp> _OutputArray(const _Tp* vec, int n);
     _OutputArray(const gpu::GpuMat& d_mat);
+    _OutputArray(const GlBuffer& buf);
+    _OutputArray(const GlTexture2D& tex);
 
     virtual bool fixedSize() const;
     virtual bool fixedType() const;
     virtual bool needed() const;
     virtual Mat& getMatRef(int i=-1) const;
     virtual gpu::GpuMat& getGpuMatRef() const;
+    virtual GlBuffer& getGlBufferRef() const;
+    virtual GlTexture2D& getGlTexture2DRef() const;
     virtual void create(Size sz, int type, int i=-1, bool allowTransposed=false, int fixedDepthMask=0) const;
     virtual void create(int rows, int cols, int type, int i=-1, bool allowTransposed=false, int fixedDepthMask=0) const;
     virtual void create(int dims, const int* size, int type, int i=-1, bool allowTransposed=false, int fixedDepthMask=0) const;
     virtual void release() const;
     virtual void clear() const;
 
-    /*virtual*/ ~_OutputArray();
+    virtual ~_OutputArray();
 };
 
 typedef const _InputArray& InputArray;

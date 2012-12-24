@@ -295,7 +295,7 @@ void CommandLineParser::Impl::sort_params()
         sort(data[i].keys.begin(), data[i].keys.end());
     }
 
-    sort (data.begin(), data.end(), cmp_params);
+    std::sort (data.begin(), data.end(), cmp_params);
 }
 
 string CommandLineParser::Impl::cat_string(const string& str) const

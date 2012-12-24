@@ -64,8 +64,9 @@
     #endif
   #elif __GNUC__*10 + __GNUC_MINOR__ >= 42
 
-    #if !defined WIN32 && (defined __i486__ || defined __i586__ || \
-        defined __i686__ || defined __MMX__ || defined __SSE__  || defined __ppc__)
+    #if !(defined WIN32 || defined _WIN32) && (defined __i486__ || defined __i586__ || \
+        defined __i686__ || defined __MMX__ || defined __SSE__  || defined __ppc__) || \
+        (defined __GNUC__ && defined _STLPORT_MAJOR)
       #define CV_XADD __sync_fetch_and_add
     #else
       #include <ext/atomicity.h>
@@ -2688,6 +2689,11 @@ template<typename _Tp> template<typename _Tp2> inline const Ptr<_Tp2> Ptr<_Tp>::
     p.obj = obj_casted;
     p.refcount = refcount;
     return p;
+}
+
+template<typename _Tp> inline bool Ptr<_Tp>::operator==(const Ptr<_Tp>& _ptr) const
+{
+    return refcount == _ptr.refcount;
 }
 
 //// specializied implementations of Ptr::delete_obj() for classic OpenCV types

@@ -174,7 +174,7 @@ void ConsistentMosaicInpainter::inpaint(int idx, Mat &frame, Mat &mask)
 
                     if (var < stdevThresh_ * stdevThresh_)
                     {
-                        sort(pixels.begin(), pixels.begin() + n);
+                        std::sort(pixels.begin(), pixels.begin() + n);
                         int nh = (n-1)/2;
                         int c1 = pixels[nh].color.x;
                         int c2 = pixels[nh].color.y;

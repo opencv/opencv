@@ -358,6 +358,8 @@ public class ManagerActivity extends Activity
                     else
                     {
                         temp.put("Activity", "n");
+                        if (!PublicName.equals("Built-in OpenCV library"))
+                            Tags = "safe to remove";
                     }
                 }
                 else

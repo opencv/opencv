@@ -68,9 +68,6 @@ void cv::gpu::GoodFeaturesToTrackDetector_GPU::operator ()(const GpuMat& image, 
     CV_Assert(qualityLevel > 0 && minDistance >= 0 && maxCorners >= 0);
     CV_Assert(mask.empty() || (mask.type() == CV_8UC1 && mask.size() == image.size()));
 
-    if (!TargetArchs::builtWith(GLOBAL_ATOMICS) || !DeviceInfo().supports(GLOBAL_ATOMICS))
-        CV_Error(CV_StsNotImplemented, "The device doesn't support global atomics");
-
     ensureSizeIsEnough(image.size(), CV_32F, eig_);
 
     if (useHarrisDetector)

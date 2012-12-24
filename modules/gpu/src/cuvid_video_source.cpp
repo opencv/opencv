@@ -1,7 +1,7 @@
 #include "cuvid_video_source.h"
 #include "cu_safe_call.h"
 
-#if defined(HAVE_CUDA) && !defined(__APPLE__)
+#if defined(HAVE_CUDA) && defined(HAVE_NVCUVID)
 
 cv::gpu::detail::CuvidVideoSource::CuvidVideoSource(const std::string& fname)
 {
