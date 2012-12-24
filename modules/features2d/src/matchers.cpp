@@ -77,7 +77,7 @@ DescriptorMatcher::DescriptorCollection::DescriptorCollection()
 DescriptorMatcher::DescriptorCollection::DescriptorCollection( const DescriptorCollection& collection )
 {
     mergedDescriptors = collection.mergedDescriptors.clone();
-    copy( collection.startIdxs.begin(), collection.startIdxs.begin(), startIdxs.begin() );
+    std::copy( collection.startIdxs.begin(), collection.startIdxs.begin(), startIdxs.begin() );
 }
 
 DescriptorMatcher::DescriptorCollection::~DescriptorCollection()
@@ -807,9 +807,9 @@ GenericDescriptorMatcher::KeyPointCollection::KeyPointCollection( const KeyPoint
 
     keypoints.resize( collection.keypoints.size() );
     for( size_t i = 0; i < keypoints.size(); i++ )
-        copy( collection.keypoints[i].begin(), collection.keypoints[i].end(), keypoints[i].begin() );
+        std::copy( collection.keypoints[i].begin(), collection.keypoints[i].end(), keypoints[i].begin() );
 
-    copy( collection.startIndices.begin(), collection.startIndices.end(), startIndices.begin() );
+    std::copy( collection.startIndices.begin(), collection.startIndices.end(), startIndices.begin() );
 }
 
 void GenericDescriptorMatcher::KeyPointCollection::add( const vector<Mat>& _images,

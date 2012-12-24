@@ -45,11 +45,11 @@ int main( int argc, char* argv[])
         return -1;
     }
 
-    int divideWith; // convert our input string to number - C++ style
+    int divideWith = 0; // convert our input string to number - C++ style
     stringstream s;
     s << argv[2];
     s >> divideWith;
-    if (!s)
+    if (!s || !divideWith)
     {
         cout << "Invalid number entered for dividing. " << endl;
         return -1;
