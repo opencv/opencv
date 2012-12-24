@@ -2778,17 +2778,13 @@ CV_IMPL int cvStereoRectifyUncalibrated(
     cvPerspectiveTransform( _m1, _m1, &H0 );
     cvPerspectiveTransform( _m2, _m2, &H2 );
     CvMat A = cvMat( 1, npoints, CV_64FC3, lines1 ), BxBy, B;
-    double a[9], atb[3], x[3];
-    CvMat AtA = cvMat( 3, 3, CV_64F, a );
-    CvMat AtB = cvMat( 3, 1, CV_64F, atb );
+    double x[3];
     CvMat X = cvMat( 3, 1, CV_64F, x );
     cvConvertPointsHomogeneous( _m1, &A );
     cvReshape( &A, &A, 1, npoints );
     cvReshape( _m2, &BxBy, 1, npoints );
     cvGetCol( &BxBy, &B, 0 );
-    cvGEMM( &A, &A, 1, 0, 0, &AtA, CV_GEMM_A_T );
-    cvGEMM( &A, &B, 1, 0, 0, &AtB, CV_GEMM_A_T );
-    cvSolve( &AtA, &AtB, &X, CV_SVD_SYM );
+    cvSolve( &A, &B, &X, CV_SVD );
 
     double ha[] =
     {

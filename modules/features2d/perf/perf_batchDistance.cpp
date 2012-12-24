@@ -150,7 +150,7 @@ void generateData( Mat& query, Mat& train, const int sourceType )
     // in ascending order. General boundaries of the perturbation
     // are (0.f, 1.f).
     train.create( query.rows*countFactor, query.cols, sourceType );
-    float step = 1.f / countFactor;
+    float step = (sourceType == CV_8U ? 256.f : 1.f) / countFactor;
     for( int qIdx = 0; qIdx < query.rows; qIdx++ )
     {
         Mat queryDescriptor = query.row(qIdx);
@@ -161,7 +161,7 @@ void generateData( Mat& query, Mat& train, const int sourceType )
             queryDescriptor.copyTo( trainDescriptor );
             int elem = rng(dim);
             float diff = rng.uniform( step*c, step*(c+1) );
-            trainDescriptor.at<float>(0, elem) += diff;
+            trainDescriptor.col(elem) += diff;
         }
     }
 }

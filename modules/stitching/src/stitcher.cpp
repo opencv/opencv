@@ -468,7 +468,7 @@ void Stitcher::estimateCameraParams()
         focals.push_back(cameras_[i].focal);
     }
 
-    sort(focals.begin(), focals.end());
+    std::sort(focals.begin(), focals.end());
     if (focals.size() % 2 == 1)
         warped_image_scale_ = static_cast<float>(focals[focals.size() / 2]);
     else

@@ -1186,6 +1186,24 @@ Size _InputArray::size(int i) const
 
 size_t _InputArray::total(int i) const
 {
+    int k = kind();
+
+    if( k == MAT )
+    {
+        CV_Assert( i < 0 );
+        return ((const Mat*)obj)->total();
+    }
+
+    if( k == STD_VECTOR_MAT )
+    {
+        const vector<Mat>& vv = *(const vector<Mat>*)obj;
+        if( i < 0 )
+            return vv.size();
+
+        CV_Assert( i < (int)vv.size() );
+        return vv[i].total();
+    }
+
     return size(i).area();
 }
 
