@@ -41,8 +41,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_GPU_HPP__
-#define __OPENCV_GPU_HPP__
+#ifndef __OPENCV_OCL_HPP__
+#define __OPENCV_OCL_HPP__
 
 #include <memory>
 #include <vector>
@@ -1762,4 +1762,4 @@ namespace cv
 #if _MSC_VER >= 1200
 #pragma warning( pop)
 #endif
-#endif /* __OPENCV_GPU_HPP__ */
+#endif /* __OPENCV_OCL_HPP__ */
