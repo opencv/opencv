@@ -78,7 +78,7 @@ Development in Java
 
 You need the following software to be installed in order to develop for Android in Java:
 
-#. **Sun JDK 7**
+#. **Sun JDK 6** (Sun JDK 7 is also possible)
 
    Visit `Java SE Downloads page <http://www.oracle.com/technetwork/java/javase/downloads/>`_
    and download an installer for your OS.
@@ -93,7 +93,7 @@ You need the following software to be installed in order to develop for Android 
 
         .. code-block:: bash
 
-           sudo update-java-alternatives --set java-7-sun
+           sudo update-java-alternatives --set java-6-sun
 
    .. TODO: Add a note on Sun/Oracle Java installation on Ubuntu 12.
 
@@ -103,9 +103,10 @@ You need the following software to be installed in order to develop for Android 
 
    Here is Google's `install guide <http://developer.android.com/sdk/installing.html>`_ for the SDK.
 
-   .. note:: If you choose SDK packed into a Windows installer, then you should have 32-bit JRE
-             installed. It is not a prerequisite for Android development, but installer is a x86
-             application and requires 32-bit Java runtime.
+   .. note:: You can choose downloading ``ADT Bundle package`` that in addition to Android SDK Tools includes
+             Eclipse + ADT + CDT plugins, Android Platform-tools, the latest Android platform and the latest
+             Android system image for the emulator - this is the best choice for those who is setting up Android
+             development environment the first time!
 
    .. note:: If you are running x64 version of Ubuntu Linux, then you need ia32 shared libraries
              for use on amd64 and ia64 systems to be installed. You can install them with the
@@ -215,45 +216,11 @@ You need the following software to be installed in order to develop for Android 
 
 #. **CDT plugin for Eclipse**
 
+   If you selected for installation the ``NDK plugins`` component of Eclipse ADT plugin (see the picture above) your Eclipse IDE
+   should already have ``CDT plugin`` (that means ``C/C++ Development Tooling``).
    There are several possible ways to integrate compilation of C++ code by Android NDK into Eclipse
    compilation process. We recommend the approach based on Eclipse
    :abbr:`CDT(C/C++ Development Tooling)` Builder.
-   Make sure your Eclipse IDE has the :abbr:`CDT(C/C++ Development Tooling)` plugin
-   installed. Menu :guilabel:`Help -> About Eclipse SDK -> Installation Details`.
-
-       .. image:: images/eclipse_about_cdt_0.png
-         :alt: CDT in Eclipse About
-         :align: center
-
-   ..
-
-       .. image:: images/eclipse_about_cdt_1.png
-         :alt: CDT in Eclipse About
-         :align: center
-
-   .. note:: If you're using the latest ADT plugin for Eclipse (version 20 and above), most likely
-             you already have the CDT plugin and don't need to install it.
-
-   .. image:: images/eclipse_about_cdt_1.png
-     :alt: CDT in Eclipse About
-     :align: center
-
-   To install the `CDT plugin <http://eclipse.org/cdt/>`_ use menu
-   :guilabel:`Help -> Install New Software...`, then paste the CDT 8.0 repository URL
-   http://download.eclipse.org/tools/cdt/releases/indigo as shown in the picture below and click
-   :guilabel:`Add...`, name it *CDT* and click :guilabel:`OK`.
-
-   .. image:: images/eclipse_inst_cdt.png
-     :alt: Configure builders
-     :align: center
-
-   ``CDT Main Features`` should be enough:
-
-   .. image:: images/eclipse_inst_cdt_2.png
-     :alt: Configure builders
-     :align: center
-
-   That's it. Compilation of C++ code is fully integrated into Eclipse building process now.
 
 
 Android application structure
@@ -336,9 +303,9 @@ and exceptions are used in C++, it also should be created. Example of the file :
    APP_CPPFLAGS := -frtti -fexceptions
    APP_ABI := all
 
-.. note:: We recommend setting ``APP_ABI := all`` for all targets. If you want to specify the 
-          target explicitly, use ``armeabi`` for ARMv5/ARMv6, ``armeabi-v7a`` for ARMv7, ``x86`` 
-          for Intel Atom or ``mips`` for MIPS. 
+.. note:: We recommend setting ``APP_ABI := all`` for all targets. If you want to specify the
+          target explicitly, use ``armeabi`` for ARMv5/ARMv6, ``armeabi-v7a`` for ARMv7, ``x86``
+          for Intel Atom or ``mips`` for MIPS.
 
 
 .. _NDK_build_cli:
@@ -348,9 +315,9 @@ Building application native part from command line
 
 Here is the standard way to compile C++ part of an Android application:
 
-.. warning:: We strongly reccomend using ``cmd.exe`` (standard windows console) instead of Cygwin on 
-             Windows. Use the latter if only you're absolutely sure about, what you're doing. Cygwin 
-             is not really supported and we are unlikely to help you in case you encounter some 
+.. warning:: We strongly reccomend using ``cmd.exe`` (standard Windows console) instead of Cygwin on
+             **Windows**. Use the latter if only you're absolutely sure about, what you're doing. Cygwin
+             is not really supported and we are unlikely to help you in case you encounter some
              problems with it. So, use it only if you're capable of handling the consequences yourself.
 
 #. Open console and go to the root folder of an Android application
@@ -406,19 +373,18 @@ Eclipse build process. We recommend the approach based on Eclipse
    (e.g. ``"X:\\Apps\\android-ndk-r8"`` or ``"/opt/android-ndk-r8"``).
 
    **On Windows** an environment variable can be set via
-   :guilabel:`My Computer -> Properties -> Advanced -> Environment variables` or in Eclipse itself 
-   :guilabel:`Window -> Preferences -> C/C++ -> Build -> Env`. Restart Eclipse after setting the 
-   variables.
-
-   .. note:: If you're using Eclipse 3 and lower, keep in mind, that it doesn't change variables on 
-             restart as Eclipse 4 does. You may need to clean :file:`org.eclipse.cdt.core.prefs`, 
-             which is located in the following path inside Eclipse workspace: 
-             ``\.metadata\.plugins\org.eclipse.core.runtime\.settings\``.
-
+   :guilabel:`My Computer -> Properties -> Advanced -> Environment variables`.
    On Windows 7 it's also possible to use `setx <http://ss64.com/nt/setx.html>`_ command in a console session.
 
    **On Linux** and **MacOS** an environment variable can be set via appending a
    ``"export VAR_NAME=VAR_VALUE"`` line to the :file:`"~/.bashrc"` file and logging off and then on.
+
+   .. note:: It's also possible to define the ``NDKROOT`` environment variable within Eclipse IDE,
+             but it should be done for every new workspace you create. If you prefer this option better than setting system
+             environment variable, open Eclipse menu :guilabel:`Window -> Preferences -> C/C++ -> Build -> Environment`,
+             press the :guilabel:`Add...` button and set variable name to ``NDKROOT`` and value to local Android NDK path.
+
+#. After that you need to **restart Eclipse** to apply the changes.
 
 #. Open Eclipse and load the Android app project to configure.
 
@@ -476,9 +442,18 @@ Eclipse build process. We recommend the approach based on Eclipse
 
    ::
 
+        # for NDK r8 and prior:
         ${NDKROOT}/platforms/android-9/arch-arm/usr/include
         ${NDKROOT}/sources/cxx-stl/gnu-libstdc++/include
         ${NDKROOT}/sources/cxx-stl/gnu-libstdc++/libs/armeabi-v7a/include
+        ${ProjDirPath}/../../sdk/native/jni/include
+
+   ::
+
+        # for NDK r8b and later:
+        ${NDKROOT}/platforms/android-9/arch-arm/usr/include
+        ${NDKROOT}/sources/cxx-stl/gnu-libstdc++/4.6/include
+        ${NDKROOT}/sources/cxx-stl/gnu-libstdc++/4.6/libs/armeabi-v7a/include
         ${ProjDirPath}/../../sdk/native/jni/include
 
    The last path should be changed to the correct absolute or relative path to OpenCV4Android SDK location.
@@ -488,16 +463,6 @@ Eclipse build process. We recommend the approach based on Eclipse
    .. image:: images/eclipse_cdt_cfg8.png
       :alt: Configure CDT
       :align: center
-
-   .. note:: The latest Android NDK **r8b** uses different STL headers path. So if you use this NDK
-             release add the following **Include** paths list instead:
-
-   ::
-
-        ${NDKROOT}/platforms/android-9/arch-arm/usr/include
-        ${NDKROOT}/sources/cxx-stl/gnu-libstdc++/4.6/include
-        ${NDKROOT}/sources/cxx-stl/gnu-libstdc++/4.6/libs/armeabi-v7a/include
-        ${ProjDirPath}/../../sdk/native/jni/include
 
 
 Debugging and Testing
