@@ -861,12 +861,6 @@ void CvBoostTree::read( CvFileStorage* fs, CvFileNode* fnode, CvBoost* _ensemble
     ensemble = _ensemble;
 }
 
-
-// void CvBoostTree::read( CvFileStorage*, CvFileNode* )
-// {
-//     assert(0);
-// }
-
 void CvBoostTree::read( CvFileStorage* _fs, CvFileNode* _node,
                         CvDTreeTrainData* _data )
 {
@@ -1597,16 +1591,14 @@ CvBoost::predict( const CvMat* _sample, const CvMat* _missing,
     if( !weak )
         CV_Error( CV_StsError, "The boosted tree ensemble has not been trained yet" );
 
-        // std::cout << "WAR: " << _sample->cols << " " << _sample->rows << " " << data->var_all << " " << active_vars->cols << std::endl;
-
-    // if( !CV_IS_MAT(_sample) || CV_MAT_TYPE(_sample->type) != CV_32FC1 ||
-    //     (_sample->cols != 1 && _sample->rows != 1) ||
-    //     (_sample->cols + _sample->rows - 1 != data->var_all && !raw_mode) ||
-    //     (active_vars && _sample->cols + _sample->rows - 1 != active_vars->cols && raw_mode) )
-    //         CV_Error( CV_StsBadArg,
-    //     "the input sample must be 1d floating-point vector with the same "
-    //     "number of elements as the total number of variables or "
-    //     "as the number of variables used for training" );
+    if( !CV_IS_MAT(_sample) || CV_MAT_TYPE(_sample->type) != CV_32FC1 ||
+        (_sample->cols != 1 && _sample->rows != 1) ||
+        (_sample->cols + _sample->rows - 1 != data->var_all && !raw_mode) ||
+        (active_vars && _sample->cols + _sample->rows - 1 != active_vars->cols && raw_mode) )
+            CV_Error( CV_StsBadArg,
+        "the input sample must be 1d floating-point vector with the same "
+        "number of elements as the total number of variables or "
+        "as the number of variables used for training" );
 
     if( _missing )
     {
