@@ -159,8 +159,8 @@ Get the OpenCV4Android SDK
 
       unzip ~/Downloads/OpenCV-2.4.3-android-sdk.zip
 
-.. |opencv_android_bin_pack| replace:: OpenCV-2.4.3.1-android-sdk.zip
-.. _opencv_android_bin_pack_url: http://sourceforge.net/projects/opencvlibrary/files/opencv-android/2.4.3/OpenCV-2.4.3-android-sdk.zip/download
+.. |opencv_android_bin_pack| replace:: OpenCV-2.4.3.2-android-sdk.zip
+.. _opencv_android_bin_pack_url: http://sourceforge.net/projects/opencvlibrary/files/opencv-android/2.4.3/OpenCV-2.4.3.2-android-sdk.zip/download
 .. |opencv_android_bin_pack_url| replace:: |opencv_android_bin_pack|
 .. |seven_zip| replace:: 7-Zip
 .. _seven_zip: http://www.7-zip.org/
@@ -186,7 +186,7 @@ Import OpenCV library and samples to the Eclipse
    Each sample included into the |opencv_android_bin_pack| is a regular Android project that already
    references OpenCV library.Follow the steps below to import OpenCV and samples into the workspace:
 
-   .. note:: OpenCV samples are indeed **dependent** on OpenCV library and wouldn't work without it.
+   .. note:: OpenCV samples are indeed **dependent** on OpenCV library project so don't forget to import it to your workspace as well.
 
    * Right click on the :guilabel:`Package Explorer` window and choose :guilabel:`Import...` option
      from the context menu:
@@ -222,6 +222,14 @@ Import OpenCV library and samples to the Eclipse
               Open :guilabel:`Project Properties -> C/C++ Build`, and replace "Build command" text
               to ``"${NDKROOT}/ndk-build"`` (remove .cmd at the end).
 
+   .. note :: In some cases the build errors don't disappear, then try the following actions:
+
+              * right click on ``OpenCV Library`` project -> :guilabel:`Android Tools -> Fix Project Properties`,
+                then menu :guilabel:`Project -> Clean... -> Clean all`
+              * right click on the project with errors -> :guilabel:`Properties -> Android`, make sure the
+                ``Target`` is selected and is ``Android 3.0`` or higher
+              * check the build errors in the :guilabel:`Problems` view window and try to resolve them by yourselves
+
    .. image:: images/eclipse_cdt_cfg4.png
       :alt: Configure CDT
       :align: center
@@ -237,14 +245,14 @@ Import OpenCV library and samples to the Eclipse
 Running OpenCV Samples
 ----------------------
 
-At this point you should be able to build and run the samples. Keep in mind, that 
-``face-detection``, ``Tutorial 3`, ``Tutorial 4`` and ``Tutorial 5`` include some native code and 
-require Android NDK and CDT plugin for Eclipse to build working applications. If you haven't 
+At this point you should be able to build and run the samples. Keep in mind, that
+``face-detection``, ``Tutorial 3` and ``Tutorial 4`` include some native code and
+require Android NDK and CDT plugin for Eclipse to build working applications. If you haven't
 installed these tools, see the corresponding section of :ref:`Android_Dev_Intro`.
 
-.. warning:: Please consider that ``Tutorial 1`` samples use Java Camera API, which is accessible 
-             with an AVD. Other samples use OpenCV Native Camera which **may not work** with 
-             an emulator. 
+.. warning:: Please consider that some samples use Android Java Camera API, which is accessible
+             with an AVD. But most of samples use OpenCV Native Camera which **may not work** with
+             an emulator.
 
 .. note:: Recent *Android SDK tools, revision 19+* can run ARM v7a OS images but they available not
           for all Android versions.
@@ -288,30 +296,29 @@ Well, running samples from Eclipse is very simple:
     :linenos:
 
     <Android SDK path>/platform-tools/adb install <OpenCV4Android SDK path>/apk/OpenCV_2.4.3_Manager_armv7a-neon.apk
-    <Android SDK path>/platform-tools/adb install <OpenCV4Android SDK path>/apk/OpenCV_2.4.3_binary_pack_armv7a.apk
 
-  .. note:: ``armeabi``, ``armv7a-neon``, ``arm7a-neon-android8``, ``mips`` and ``x86`` stand for 
-            platform targets: 
+  .. note:: ``armeabi``, ``armv7a-neon``, ``arm7a-neon-android8``, ``mips`` and ``x86`` stand for
+            platform targets:
 
-            * ``armeabi`` is for ARM v5 and ARM v6 architectures, 
+            * ``armeabi`` is for ARM v5 and ARM v6 architectures with Android API 8+,
 
-            * ``armv7a-neon`` is for NEON-optimized ARM v7, 
+            * ``armv7a-neon`` is for NEON-optimized ARM v7 with Android API 9+,
 
             * ``arm7a-neon-android8`` is for NEON-optimized ARM v7 with Android API 8,
 
-            * ``mips`` is for MIPS architecture,
+            * ``mips`` is for MIPS architecture with Android API 9+,
 
-            * ``x86`` is for Intel x86 CPUs.
+            * ``x86`` is for Intel x86 CPUs with Android API 9+.
 
-            If using hardware device for testing/debugging, run the following command to learn 
+            If using hardware device for testing/debugging, run the following command to learn
             its CPU architecture:
 
             .. code-block:: sh
 
                adb shell getprop ro.product.cpu.abi
 
-            If you're using an AVD emulator, go :menuselection:`Window > AVD Manager` to see the 
-            list of availible devices. Click :menuselection:`Edit` in the context menu of the 
+            If you're using an AVD emulator, go :menuselection:`Window > AVD Manager` to see the
+            list of availible devices. Click :menuselection:`Edit` in the context menu of the
             selected device. In the window, which then pop-ups, find the CPU field.
 
             You may also see section :ref:`manager_selection` for details.
