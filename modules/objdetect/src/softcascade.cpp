@@ -223,7 +223,7 @@ struct cv::SCascade::Fields
     int shrinkage;
 
     std::vector<Octave>  octaves;
-    std::vector<Weak>    stages;
+    std::vector<Weak>    weaks;
     std::vector<Node>    nodes;
     std::vector<float>   leaves;
     std::vector<Feature> features;
@@ -233,47 +233,46 @@ struct cv::SCascade::Fields
     cv::Size frameSize;
 
     typedef std::vector<Octave>::iterator  octIt_t;
+    typedef std::vector<Detection> dvector;
 
-    void detectAt(const int dx, const int dy, const Level& level, const ChannelStorage& storage,
-        std::vector<Detection>& detections) const
+    void detectAt(const int dx, const int dy, const Level& level, const ChannelStorage& storage, dvector& detections) const
     {
         float detectionScore = 0.f;
 
         const Octave& octave = *(level.octave);
 
-        int stBegin = octave.index * octave.weaks, stEnd = stBegin + ((octave.index)? 1024 : 416);
+        int stBegin = octave.index * octave.weaks, stEnd = stBegin + octave.weaks;
 
-        int st = stBegin;
-        int offset = (octave.index)? -2: 0;
-        for(; st < stEnd; ++st)
+        for(int st = stBegin; st < stEnd; ++st)
         {
-            const Weak& stage = stages[st];
-            {
-                int nId = st * 3 + offset;
+            const Weak& weak = weaks[st];
 
-                // work with root node
-                const Node& node = nodes[nId];
-                const Feature& feature = features[node.feature + offset];
-                cv::Rect scaledRect(feature.rect);
+            int nId = st * 3;
 
-                float threshold = level.rescale(scaledRect, node.threshold,(int)(feature.channel > 6)) * feature.rarea;
-                float sum = storage.get(feature.channel, scaledRect);
-                int next = (sum >= threshold)? 2 : 1;
+            // work with root node
+            const Node& node = nodes[nId];
+            const Feature& feature = features[node.feature];
 
-                // leaves
-                const Node& leaf = nodes[nId + next];
-                const Feature& fLeaf = features[leaf.feature + offset];
+            cv::Rect scaledRect(feature.rect);
 
-                scaledRect = fLeaf.rect;
-                threshold = level.rescale(scaledRect, leaf.threshold, (int)(fLeaf.channel > 6)) * fLeaf.rarea;
-                sum = storage.get(fLeaf.channel, scaledRect);
+            float threshold = level.rescale(scaledRect, node.threshold, (int)(feature.channel > 6)) * feature.rarea;
+            float sum = storage.get(feature.channel, scaledRect);
+            int next = (sum >= threshold)? 2 : 1;
 
-                int lShift = (next - 1) * 2 + ((sum >= threshold) ? 1 : 0);
-                float impact = leaves[(st * 4 + offset) + lShift];
+            // leaves
+            const Node& leaf = nodes[nId + next];
+            const Feature& fLeaf = features[leaf.feature];
 
-                detectionScore += impact;
-            }
-            if (detectionScore <= stage.threshold) return;
+            scaledRect = fLeaf.rect;
+            threshold = level.rescale(scaledRect, leaf.threshold, (int)(fLeaf.channel > 6)) * fLeaf.rarea;
+            sum = storage.get(fLeaf.channel, scaledRect);
+
+            int lShift = (next - 1) * 2 + ((sum >= threshold) ? 1 : 0);
+            float impact = leaves[(st * 4) + lShift];
+
+            detectionScore += impact;
+
+            if (detectionScore <= weak.threshold) return;
         }
 
         if (detectionScore > 0)
@@ -346,12 +345,13 @@ struct cv::SCascade::Fields
         static const char *const SC_ORIG_H           = "height";
 
         static const char *const SC_OCTAVES          = "octaves";
-        static const char *const SC_STAGES           = "stages";
+        static const char *const SC_TREES            = "trees";
         static const char *const SC_FEATURES         = "features";
 
-        static const char *const SC_WEEK             = "weakClassifiers";
         static const char *const SC_INTERNAL         = "internalNodes";
         static const char *const SC_LEAF             = "leafValues";
+
+        static const char *const SC_SHRINKAGE        = "shrinkage";
 
         // only Ada Boost supported
         std::string stageTypeStr = (string)root[SC_STAGE_TYPE];
@@ -364,17 +364,14 @@ struct cv::SCascade::Fields
         origObjWidth  = (int)root[SC_ORIG_W];
         origObjHeight = (int)root[SC_ORIG_H];
 
-        shrinkage = (int)root["shrinkage"];
+        shrinkage = (int)root[SC_SHRINKAGE];
 
         FileNode fn = root[SC_OCTAVES];
         if (fn.empty()) return false;
 
-        FileNodeIterator it = fn.begin(), it_end = fn.end();
-        int feature_offset = 0;
-        int octIndex = 0;
-
         // for each octave
-        for (; it != it_end; ++it)
+        FileNodeIterator it = fn.begin(), it_end = fn.end();
+        for (int octIndex = 0; it != it_end; ++it, ++octIndex)
         {
             FileNode fns = *it;
             Octave octave(octIndex, cv::Size(origObjWidth, origObjHeight), fns);
@@ -384,19 +381,18 @@ struct cv::SCascade::Fields
             FileNode ffs = fns[SC_FEATURES];
             if (ffs.empty()) return false;
 
-            fns = fns["trees"];
+            fns = fns[SC_TREES];
             if (fn.empty()) return false;
 
-            // for each tree (~ decision tree with H = 2)
             FileNodeIterator st = fns.begin(), st_end = fns.end();
             for (; st != st_end; ++st )
             {
-                stages.push_back(Weak(*st));
+                weaks.push_back(Weak(*st));
 
                 fns = (*st)[SC_INTERNAL];
                 FileNodeIterator inIt = fns.begin(), inIt_end = fns.end();
                 for (; inIt != inIt_end;)
-                    nodes.push_back(Node(feature_offset, inIt));
+                    nodes.push_back(Node(features.size(), inIt));
 
                 fns = (*st)[SC_LEAF];
                 inIt = fns.begin(), inIt_end = fns.end();
@@ -408,10 +404,8 @@ struct cv::SCascade::Fields
             st = ffs.begin(), st_end = ffs.end();
             for (; st != st_end; ++st )
                 features.push_back(Feature(*st));
-
-            feature_offset += octave.weaks * 3;
-            ++octIndex;
         }
+
         return true;
     }
 };
