@@ -118,8 +118,8 @@ icvHoughLinesStandard( const CvMat* img, float rho, float theta,
     float ang = 0;
     for(int n = 0; n < numangle; ang += theta, n++ )
     {
-        tabSin[n] = (float)(sin(ang) * irho);
-        tabCos[n] = (float)(cos(ang) * irho);
+        tabSin[n] = (float)(sin((double)ang) * irho);
+        tabCos[n] = (float)(cos((double)ang) * irho);
     }
 
     // stage 1. fill accumulator
