@@ -26,7 +26,7 @@
                       android:largeScreens="true"
                       android:anyDensity="true" />
 
-    <uses-sdk android:minSdkVersion="8" />
+    <uses-sdk android:minSdkVersion="8" android:targetSdkVersion="11" />
 
     <uses-permission android:name="android.permission.CAMERA"/>
 
