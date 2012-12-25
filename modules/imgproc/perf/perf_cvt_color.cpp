@@ -269,7 +269,7 @@ PERF_TEST_P(Size_CvtMode2, cvtColorYUV420,
     Mat src(sz.height + sz.height / 2, sz.width, CV_8UC(ch.scn));
     Mat dst(sz, CV_8UC(ch.dcn));
 
-    declare.time(150);
+    declare.iterations(100);
     declare.in(src, WARMUP_RNG).out(dst);
 
     TEST_CYCLE() cvtColor(src, dst, mode, ch.dcn);

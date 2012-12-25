@@ -51,7 +51,7 @@ PERF_TEST_P( Size_MatType_CmpType, compareScalar,
     Mat dst(sz, CV_8UC(CV_MAT_CN(matType)));
 
     declare.in(src1, src2, WARMUP_RNG).out(dst);
-    declare.time(30);
+    declare.iterations(100);
 
     TEST_CYCLE() cv::compare(src1, src2, dst, cmpType);
 

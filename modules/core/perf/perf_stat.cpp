@@ -96,7 +96,7 @@ PERF_TEST_P(Size_MatType, countNonZero, testing::Combine( testing::Values( TYPIC
     int cnt = 0;
 
     declare.in(src, WARMUP_RNG);
-    declare.time(60);
+    declare.iterations(150);
 
     TEST_CYCLE() cnt = countNonZero(src);
 
