@@ -276,8 +276,8 @@ struct cv::gpu::SCascade::Fields
         int dcs = 0;
         for (int sc = 0; sc < totals; ++sc)
         {
-            int width  = ::std::max(0.0f, fw - (origObjWidth  * scale));
-            int height = ::std::max(0.0f, fh - (origObjHeight * scale));
+            int width  = (int)::std::max(0.0f, fw - (origObjWidth  * scale));
+            int height = (int)::std::max(0.0f, fh - (origObjHeight * scale));
 
             float logScale = ::log(scale);
             int fit = fitOctave(voctaves, logScale);
@@ -457,7 +457,7 @@ cv::gpu::SCascade::~SCascade() { delete fields; }
 bool cv::gpu::SCascade::load(const FileNode& fn)
 {
     if (fields) delete fields;
-    fields = Fields::parseCascade(fn, minScale, maxScale, scales, flags);
+    fields = Fields::parseCascade(fn, (float)minScale, (float)maxScale, scales, flags);
     return fields != 0;
 }
 
@@ -488,7 +488,7 @@ void cv::gpu::SCascade::detect(InputArray _image, InputArray _rois, OutputArray 
     {
         flds.update(image.rows, image.cols, flds.shrinkage);
 
-        if (flds.check(minScale, maxScale, scales))
+        if (flds.check((float)minScale, (float)maxScale, scales))
             flds.createLevels(image.rows, image.cols);
 
         flds.preprocessor->apply(image, flds.shrunk);

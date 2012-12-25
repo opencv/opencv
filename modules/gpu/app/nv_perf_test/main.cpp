@@ -81,8 +81,8 @@ GPU_PERF_TEST_P(Image, HoughLinesP, testing::Values(std::string("im1_1280x800.jp
 
     std::string fileName = GetParam();
 
-    const double rho = 1.0;
-    const double theta = 1.0;
+    const float rho = 1.f;
+    const float theta = 1.f;
     const int threshold = 40;
     const int minLineLenght = 20;
     const int maxLineGap = 5;
