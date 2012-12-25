@@ -210,7 +210,7 @@ namespace optflowbm_fast
         {
         }
 
-        __device__ void initSums_BruteForce(int i, int j, int* dist_sums, PtrStepi& col_sums, PtrStepi& up_col_sums) const
+        __device__ __forceinline__ void initSums_BruteForce(int i, int j, int* dist_sums, PtrStepi& col_sums, PtrStepi& up_col_sums) const
         {
             for (int index = threadIdx.x; index < search_window * search_window; index += STRIDE)
             {
@@ -246,7 +246,7 @@ namespace optflowbm_fast
             }
         }
 
-        __device__ void shiftRight_FirstRow(int i, int j, int first, int* dist_sums, PtrStepi& col_sums, PtrStepi& up_col_sums) const
+        __device__ __forceinline__ void shiftRight_FirstRow(int i, int j, int first, int* dist_sums, PtrStepi& col_sums, PtrStepi& up_col_sums) const
         {
             for (int index = threadIdx.x; index < search_window * search_window; index += STRIDE)
             {
@@ -271,7 +271,7 @@ namespace optflowbm_fast
             }
         }
 
-        __device__ void shiftRight_UpSums(int i, int j, int first, int* dist_sums, PtrStepi& col_sums, PtrStepi& up_col_sums) const
+        __device__ __forceinline__ void shiftRight_UpSums(int i, int j, int first, int* dist_sums, PtrStepi& col_sums, PtrStepi& up_col_sums) const
         {
             int ay = i;
             int ax = j + block_radius;
@@ -298,7 +298,7 @@ namespace optflowbm_fast
             }
         }
 
-        __device__ void convolve_window(int i, int j, const int* dist_sums, float& velx, float& vely) const
+        __device__ __forceinline__ void convolve_window(int i, int j, const int* dist_sums, float& velx, float& vely) const
         {
             int bestDist = numeric_limits<int>::max();
             int bestInd = -1;
@@ -328,7 +328,7 @@ namespace optflowbm_fast
             }
         }
 
-        __device__ void operator()(PtrStepf velx, PtrStepf vely) const
+        __device__ __forceinline__ void operator()(PtrStepf velx, PtrStepf vely) const
         {
             int tbx = blockIdx.x * TILE_COLS;
             int tby = blockIdx.y * TILE_ROWS;
