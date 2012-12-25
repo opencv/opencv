@@ -20,7 +20,7 @@ If OpenCV library installation has been approved\:
 
 .. image:: img/LibInstallAproved.png
 
-If OpenCV library installation has been canceled\:
+If OpenCV library installation has been cancelled\:
 
 .. image:: img/LibInstallCanceled.png
 
