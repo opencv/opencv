@@ -575,6 +575,8 @@ class CppHeaderParser(object):
         """
         if not self.block_stack:
             return name
+        if name.startswith("cv."):
+            return name
         n = ""
         for b in self.block_stack:
             block_type, block_name = b[self.BLOCK_TYPE], b[self.BLOCK_NAME]
