@@ -1106,8 +1106,15 @@ CV_EssentialMatTest::CV_EssentialMatTest()
     test_array[INPUT].push_back(NULL);
     test_array[TEMP].push_back(NULL);
     test_array[TEMP].push_back(NULL);
-    test_array[OUTPUT].push_back(NULL);
-    test_array[OUTPUT].push_back(NULL);
+    test_array[TEMP].push_back(NULL);
+    test_array[TEMP].push_back(NULL);
+    test_array[TEMP].push_back(NULL);
+    test_array[OUTPUT].push_back(NULL); // Essential Matrix singularity
+    test_array[OUTPUT].push_back(NULL); // Inliers mask
+    test_array[OUTPUT].push_back(NULL); // Translation error
+    test_array[OUTPUT].push_back(NULL); // Positive depth count
+    test_array[REF_OUTPUT].push_back(NULL);
+    test_array[REF_OUTPUT].push_back(NULL);
     test_array[REF_OUTPUT].push_back(NULL);
     test_array[REF_OUTPUT].push_back(NULL);
 
@@ -1140,7 +1147,7 @@ void CV_EssentialMatTest::get_test_array_types_and_sizes( int /*test_case_idx*/,
     dims = cvtest::randInt(rng) % 2 + 2;
     dims = 2; 
     method = CV_LMEDS << (cvtest::randInt(rng) % 2);
-    method = CV_RANSAC; 
+    
 
     types[INPUT][0] = CV_MAKETYPE(pt_depth, 1);
 
@@ -1175,11 +1182,21 @@ void CV_EssentialMatTest::get_test_array_types_and_sizes( int /*test_case_idx*/,
     types[TEMP][0] = CV_64FC1;
     sizes[TEMP][1] = cvSize(pt_count,1);
     types[TEMP][1] = CV_8UC1;
+    sizes[TEMP][2] = cvSize(3,3);
+    types[TEMP][2] = CV_64FC1;
+    sizes[TEMP][3] = cvSize(3, 1);
+    types[TEMP][3] = CV_64FC1;
+    sizes[TEMP][4] = cvSize(pt_count,1);
+    types[TEMP][4] = CV_8UC1;
 
     sizes[OUTPUT][0] = sizes[REF_OUTPUT][0] = cvSize(3,1);
     types[OUTPUT][0] = types[REF_OUTPUT][0] = CV_64FC1;
     sizes[OUTPUT][1] = sizes[REF_OUTPUT][1] = cvSize(pt_count,1);
-    types[OUTPUT][1] = types[REF_OUTPUT][1] = CV_8UC1;
+    types[OUTPUT][1] = types[REF_OUTPUT][1] = CV_8UC1;       
+    sizes[OUTPUT][2] = sizes[REF_OUTPUT][2] = cvSize(1,1);
+    types[OUTPUT][2] = types[REF_OUTPUT][2] = CV_64FC1;
+    sizes[OUTPUT][3] = sizes[REF_OUTPUT][3] = cvSize(1,1);
+    types[OUTPUT][3] = types[REF_OUTPUT][3] = CV_8UC1;       
 
 }
 
@@ -1276,9 +1293,23 @@ void CV_EssentialMatTest::run_func()
     double focal(K.at<double>(0, 0)); 
     cv::Point2d pp(K.at<double>(0, 2), K.at<double>(1, 2)); 
 
-    Mat E, mask(test_mat[TEMP][1]);
-    E = cv::findEssentialMat( _input0, _input1, focal, pp, method, 0.999, MAX(sigma*3, 0.001), mask ); 
+    RNG& rng = ts->get_rng();
+    Mat E, mask1(test_mat[TEMP][1]);
+    E = cv::findEssentialMat( _input0, _input1, focal, pp, method, 0.99, MAX(sigma*3, 0.0001), mask1 ); 
+    if (E.rows > 3) 
+    {
+        int count = E.rows / 3; 
+        int row = (cvtest::randInt(rng) % count) * 3; 
+        E = E.rowRange(row, row + 3) * 1.0; 
+    }
+
     E.copyTo(test_mat[TEMP][0]); 
+
+    Mat R, t, mask2; 
+    recoverPose( E, _input0, _input1, R, t, focal, pp, mask2 ); 
+    R.copyTo(test_mat[TEMP][2]); 
+    t.copyTo(test_mat[TEMP][3]); 
+    mask2.copyTo(test_mat[TEMP][4]); 
 }
 
 double CV_EssentialMatTest::sampson_error(const double * f, double x1, double y1, double x2, double y2)
@@ -1303,19 +1334,19 @@ double CV_EssentialMatTest::sampson_error(const double * f, double x1, double y1
 
 void CV_EssentialMatTest::prepare_to_validation( int test_case_idx )
 {
-    const Mat& Rt = test_mat[INPUT][3];
+    const Mat& Rt0 = test_mat[INPUT][3];
     const Mat& A = test_mat[INPUT][4];
     double f0[9], f[9], e[9];
     Mat F0(3, 3, CV_64FC1, f0), F(3, 3, CV_64F, f);
     Mat E(3, 3, CV_64F, e); 
 
-    Mat invA, R=Rt.colRange(0, 3), T1, T2;
+    Mat invA, R=Rt0.colRange(0, 3), T1, T2;
 
     cv::invert(A, invA, CV_SVD);
 
-    double tx = Rt.at<double>(0, 3);
-    double ty = Rt.at<double>(1, 3);
-    double tz = Rt.at<double>(2, 3);
+    double tx = Rt0.at<double>(0, 3);
+    double ty = Rt0.at<double>(1, 3);
+    double tz = Rt0.at<double>(2, 3);
 
     double _t_x[] = { 0, -tz, ty, tz, 0, -tx, -ty, tx, 0 };
 
@@ -1372,6 +1403,27 @@ void CV_EssentialMatTest::prepare_to_validation( int test_case_idx )
     e_prop2[1] = 0;
     e_prop2[2] = 0;
     SVD::compute(E, E_prop2); 
+
+
+
+    double* pose_prop1 = (double*)test_mat[REF_OUTPUT][2].data; 
+    double* pose_prop2 = (double*)test_mat[OUTPUT][2].data; 
+    double terr1 = norm(Rt0.col(3) / norm(Rt0.col(3)) + test_mat[TEMP][3]); 
+    double terr2 = norm(Rt0.col(3) / norm(Rt0.col(3)) - test_mat[TEMP][3]); 
+    Mat rvec; 
+    Rodrigues(Rt0.colRange(0, 3), rvec); 
+    pose_prop1[0] = 0; 
+    // No check for CV_LMeDS on translation. Since it 
+    // involves with some degraded problem, when data is exact inliers. 
+    pose_prop2[0] = method == CV_LMEDS || pt_count == 5 ? 0 : MIN(terr1, terr2); 
+
+
+//    int inliers_count = countNonZero(test_mat[TEMP][1]); 
+//    int good_count = countNonZero(test_mat[TEMP][4]); 
+    test_mat[OUTPUT][3] = true; //good_count >= inliers_count / 2; 
+    test_mat[REF_OUTPUT][3] = true; 
+
+
 }
 
 

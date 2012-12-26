@@ -644,10 +644,10 @@ CV_EXPORTS Mat findEssentialMat( InputArray points1, InputArray points2, double 
                                  double prob = 0.999, double threshold = 1.0, OutputArray mask = noArray() ); 
 
 //! decompose essential matrix to possible rotation matrix and one translation vector
-CV_EXPORTS void decomposeEssentialMat( const Mat & E, Mat & R1, Mat & R2, Mat & t ); 
+CV_EXPORTS void decomposeEssentialMat( InputArray E, OutputArray R1, OutputArray R2, OutputArray t ); 
 
 //! recover relative camera pose from a set of corresponding 2D points
-CV_EXPORTS int recoverPose( const Mat & E, InputArray points1, InputArray points2, Mat & R, Mat & t, 
+CV_EXPORTS int recoverPose( InputArray E, InputArray points1, InputArray points2, OutputArray R, OutputArray t, 
                             double focal = 1.0, Point2d pp = Point2d(0, 0), 
                             InputOutputArray mask = noArray()); 
                                    

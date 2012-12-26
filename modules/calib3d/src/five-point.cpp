@@ -38,6 +38,8 @@ Mat cv::findEssentialMat( InputArray _points1, InputArray _points2, double focal
 		points1 = points1.reshape(1, npoints); 
 		points2 = points2.reshape(1, npoints); 
 	}
+    
+
 	points1.convertTo(points1, CV_64F); 
 	points2.convertTo(points2, CV_64F); 
 
@@ -60,7 +62,16 @@ Mat cv::findEssentialMat( InputArray _points1, InputArray _points2, double focal
 	
 	assert(npoints >= 5); 
 	threshold /= focal; 
-	if (method == CV_RANSAC)
+    int count = 1; 
+    if (npoints == 5)
+    {
+        E.create(3 * 10, 3, CV_64F); 
+        _E = E; 
+        count = estimator.runKernel(&p1, &p2, &_E); 
+        E = E.rowRange(0, 3 * count) * 1.0; 
+        Mat(tempMask).setTo(true); 
+    }
+    else if (method == CV_RANSAC)
 	{
 		estimator.runRANSAC(&p1, &p2, &_E, tempMask, threshold, prob); 
 	}
@@ -74,19 +85,20 @@ Mat cv::findEssentialMat( InputArray _points1, InputArray _points2, double focal
     	Mat mask = _mask.getMat(); 
     	Mat(tempMask).copyTo(mask); 
     }
-
+        
 
 	return E; 
 
 }
 
-int cv::recoverPose( const Mat & E, InputArray _points1, InputArray _points2, Mat & _R, Mat & _t, 
+int cv::recoverPose( InputArray E, InputArray _points1, InputArray _points2, OutputArray _R, OutputArray _t, 
 					double focal, Point2d pp, 
 					InputOutputArray _mask) 
 {
 	Mat points1, points2; 
 	_points1.getMat().copyTo(points1); 
 	_points2.getMat().copyTo(points2); 
+    
 	int npoints = points1.checkVector(2);
     CV_Assert( npoints >= 0 && points2.checkVector(2) == npoints &&
 				              points1.type() == points2.type());
@@ -177,31 +189,41 @@ int cv::recoverPose( const Mat & E, InputArray _points1, InputArray _points2, Ma
 		bitwise_and(mask, mask4, mask4); 
 	}
 
+    CV_Assert(_R.needed() && _t.needed()); 
+    _R.create(3, 3, R1.type()); 
+    _t.create(3, 1, t.type()); 
+
 	int good1 = countNonZero(mask1); 
 	int good2 = countNonZero(mask2); 
 	int good3 = countNonZero(mask3); 
 	int good4 = countNonZero(mask4); 
 	if (good1 >= good2 && good1 >= good3 && good1 >= good4)
 	{
-		_R = R1; _t = t; 
+        R1.copyTo(_R.getMat()); 
+        t.copyTo(_t.getMat()); 
 		if (_mask.needed()) mask1.copyTo(_mask.getMat()); 
 		return good1; 
 	}
 	else if (good2 >= good1 && good2 >= good3 && good2 >= good4)
 	{
-		_R = R2; _t = t; 
+        R2.copyTo(_R.getMat()); 
+        t.copyTo(_t.getMat()); 
 		if (_mask.needed()) mask2.copyTo(_mask.getMat()); 
 		return good2; 
 	}
 	else if (good3 >= good1 && good3 >= good2 && good3 >= good4)
 	{
-		_R = R1; _t = -t; 
+        t = -t; 
+        R1.copyTo(_R.getMat()); 
+        t.copyTo(_t.getMat()); 
 		if (_mask.needed()) mask3.copyTo(_mask.getMat()); 
 		return good3; 
 	}
 	else  
 	{
-		_R = R2; _t = -t; 
+        t = -t; 
+        R2.copyTo(_R.getMat()); 
+        t.copyTo(_t.getMat()); 
 		if (_mask.needed()) mask4.copyTo(_mask.getMat()); 
 		return good4; 
 	}
@@ -210,18 +232,35 @@ int cv::recoverPose( const Mat & E, InputArray _points1, InputArray _points2, Ma
 
 
 
-void cv::decomposeEssentialMat( const Mat & E, Mat & R1, Mat & R2, Mat & t ) 
+void cv::decomposeEssentialMat( InputArray _E, OutputArray _R1, OutputArray _R2, OutputArray _t ) 
 {
+    Mat E; 
+    _E.getMat().copyTo(E);     
+    E = E.reshape(1, 3); 
+
 	assert(E.cols == 3 && E.rows == 3); 
-	Mat D, U, Vt; 
+	
+    Mat D, U, Vt; 
 	SVD::compute(E, D, U, Vt); 
-	if (determinant(U) < 0) U = -U; 
+	
+    if (determinant(U) < 0) U = -U; 
 	if (determinant(Vt) < 0) Vt = -Vt; 
-	Mat W = (Mat_<double>(3, 3) << 0, 1, 0, -1, 0, 0, 0, 0, 1); 
+	
+    Mat W = (Mat_<double>(3, 3) << 0, 1, 0, -1, 0, 0, 0, 0, 1); 
 	W.convertTo(W, E.type()); 
-	R1 = U * W * Vt; 
+	
+    Mat R1, R2, t; 
+    R1 = U * W * Vt; 
 	R2 = U * W.t() * Vt; 
 	t = U.col(2) * 1.0; 
+
+    _R1.create(3, 3, E.type()); 
+    _R2.create(3, 3, E.type()); 
+    _t.create(3, 1, E.type()); 
+    R1.copyTo(_R1.getMat()); 
+    R2.copyTo(_R2.getMat()); 
+    t.copyTo(_t.getMat()); 
+
 }
 
 

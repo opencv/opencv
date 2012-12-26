@@ -730,7 +730,7 @@ decomposeEssentialMat
 -------------------------
 Decompose an essential matrix to possible rotations and translation. 
 
-.. ocv:function:: void decomposeEssentialMat( const Mat & E, Mat & R1, Mat & R2, Mat & t )
+.. ocv:function:: void decomposeEssentialMat( InputArray E, OutputArray R1, OutputArray R2, OutputArray t )
 
     :param E: The input essential matrix. 
 
@@ -753,7 +753,7 @@ recoverPose
 Recover relative camera rotation and translation from an estimated essential matrix and the corresponding points in two images, using cheirality check. 
 Returns the number of inliers which pass the check. 
 
-.. ocv:function:: int recoverPose( const Mat & E, InputArray points1, InputArray points2, Mat & R, Mat & t, double focal = 1.0, Point2d pp = Point2d(0, 0), InputOutputArray mask = noArray())
+.. ocv:function:: int recoverPose( InputArray E, InputArray points1, InputArray points2, OutputArray R, OutputArray t, double focal = 1.0, Point2d pp = Point2d(0, 0), InputOutputArray mask = noArray())
 
     :param E: The input essential matrix. 
 
@@ -796,7 +796,7 @@ In this scenario, ``points1`` and ``points2`` are the same input for ``findEssen
     cv::Point2d pp(0.0, 0.0); 
     Mat E, R, t, mask; 
 
-    E = findEssentialMat(points1, points2, focal, pp, FM_RANSAC, 0.999, 1.0, mask);
+    E = findEssentialMat(points1, points2, focal, pp, CV_RANSAC, 0.999, 1.0, mask);
     recoverPose(E, points1, points2, R, t, focal, pp, mask); 
 
     
