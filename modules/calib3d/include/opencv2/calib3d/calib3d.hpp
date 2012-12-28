@@ -638,6 +638,20 @@ CV_EXPORTS Mat findFundamentalMat( InputArray points1, InputArray points2,
                                    OutputArray mask, int method=FM_RANSAC,
                                    double param1=3., double param2=0.99);
 
+//! finds essential matrix from a set of corresponding 2D points using five-point algorithm
+CV_EXPORTS Mat findEssentialMat( InputArray points1, InputArray points2, double focal = 1.0, Point2d pp = Point2d(0, 0), 
+                                 int method = CV_RANSAC, 
+                                 double prob = 0.999, double threshold = 1.0, OutputArray mask = noArray() ); 
+
+//! decompose essential matrix to possible rotation matrix and one translation vector
+CV_EXPORTS void decomposeEssentialMat( InputArray E, OutputArray R1, OutputArray R2, OutputArray t ); 
+
+//! recover relative camera pose from a set of corresponding 2D points
+CV_EXPORTS int recoverPose( InputArray E, InputArray points1, InputArray points2, OutputArray R, OutputArray t, 
+                            double focal = 1.0, Point2d pp = Point2d(0, 0), 
+                            InputOutputArray mask = noArray()); 
+                                   
+
 //! finds coordinates of epipolar lines corresponding the specified points
 CV_EXPORTS void computeCorrespondEpilines( InputArray points,
                                            int whichImage, InputArray F,
