@@ -7,7 +7,7 @@ namespace detail
 
     typedef short deriv_type;
 
-    struct LKTrackerInvoker
+    struct LKTrackerInvoker : public ParallelLoopBody
     {
         LKTrackerInvoker( const Mat& _prevImg, const Mat& _prevDeriv, const Mat& _nextImg,
                           const Point2f* _prevPts, Point2f* _nextPts,
@@ -15,7 +15,7 @@ namespace detail
                           Size _winSize, TermCriteria _criteria,
                           int _level, int _maxLevel, int _flags, float _minEigThreshold );
 
-        void operator()(const BlockedRange& range) const;
+        void operator()(const Range& range) const;
 
         const Mat* prevImg;
         const Mat* nextImg;

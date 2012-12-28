@@ -156,7 +156,7 @@ cv::detail::LKTrackerInvoker::LKTrackerInvoker(
     minEigThreshold = _minEigThreshold;
 }
 
-void cv::detail::LKTrackerInvoker::operator()(const BlockedRange& range) const
+void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
 {
     Point2f halfWin((winSize.width-1)*0.5f, (winSize.height-1)*0.5f);
     const Mat& I = *prevImg;
@@ -170,7 +170,7 @@ void cv::detail::LKTrackerInvoker::operator()(const BlockedRange& range) const
     Mat IWinBuf(winSize, CV_MAKETYPE(derivDepth, cn), (deriv_type*)_buf);
     Mat derivIWinBuf(winSize, CV_MAKETYPE(derivDepth, cn2), (deriv_type*)_buf + winSize.area()*cn);
 
-    for( int ptidx = range.begin(); ptidx < range.end(); ptidx++ )
+    for( int ptidx = range.start; ptidx < range.end; ptidx++ )
     {
         Point2f prevPt = prevPts[ptidx]*(float)(1./(1 << level));
         Point2f nextPt;
@@ -733,11 +733,11 @@ void cv::calcOpticalFlowPyrLK( InputArray _prevImg, InputArray _nextImg,
         typedef cv::detail::LKTrackerInvoker LKTrackerInvoker;
 #endif
 
-        parallel_for(BlockedRange(0, npoints), LKTrackerInvoker(prevPyr[level * lvlStep1], derivI,
-                                                                nextPyr[level * lvlStep2], prevPts, nextPts,
-                                                                status, err,
-                                                                winSize, criteria, level, maxLevel,
-                                                                flags, (float)minEigThreshold));
+        parallel_for_(Range(0, npoints), LKTrackerInvoker(prevPyr[level * lvlStep1], derivI,
+                                                          nextPyr[level * lvlStep2], prevPts, nextPts,
+                                                          status, err,
+                                                          winSize, criteria, level, maxLevel,
+                                                          flags, (float)minEigThreshold));
     }
 }
 
