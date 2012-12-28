@@ -28,6 +28,7 @@ public class SIFTDescriptorExtractorTest extends OpenCVTestCase {
 
     @Override
     protected void setUp() throws Exception {
+        super.setUp();
         extractor = DescriptorExtractor.create(DescriptorExtractor.SIFT);
         keypoint = new KeyPoint(55.775577545166016f, 44.224422454833984f, 16, 9.754629f, 8617.863f, 1, -1);
         matSize = 100;
@@ -44,8 +45,6 @@ public class SIFTDescriptorExtractorTest extends OpenCVTestCase {
                    );
             }
         };
-
-        super.setUp();
     }
 
     public void testComputeListOfMatListOfListOfKeyPointListOfMat() {

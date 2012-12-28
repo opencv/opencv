@@ -70,8 +70,8 @@ file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/build.xml" DESTINATION "${opencv_test_jav
 
 # Create a script for running the Java tests and place it in build/bin.
 if(WIN32)
-  file(WRITE "${CMAKE_BINARY_DIR}/bin/opencv_test_java.cmd" "cd ${opencv_test_java_bin_dir}\nset path=${EXECUTABLE_OUTPUT_PATH};%path%\nant -DjavaLibraryPath=${EXECUTABLE_OUTPUT_PATH}/Release buildAndTest")
-  file(WRITE "${CMAKE_BINARY_DIR}/bin/opencv_test_java_D.cmd" "cd ${opencv_test_java_bin_dir}\nset path=${EXECUTABLE_OUTPUT_PATH};%path%\nant -DjavaLibraryPath=${EXECUTABLE_OUTPUT_PATH}/Debug buildAndTest")
+  file(WRITE "${CMAKE_BINARY_DIR}/bin/opencv_test_java.cmd"   "cd ${opencv_test_java_bin_dir}\nset PATH=${EXECUTABLE_OUTPUT_PATH}/Release;%PATH%\nant -DjavaLibraryPath=${EXECUTABLE_OUTPUT_PATH}/Release buildAndTest")
+  file(WRITE "${CMAKE_BINARY_DIR}/bin/opencv_test_java_D.cmd" "cd ${opencv_test_java_bin_dir}\nset PATH=${EXECUTABLE_OUTPUT_PATH}/Debug;%PATH%\nant   -DjavaLibraryPath=${EXECUTABLE_OUTPUT_PATH}/Debug   buildAndTest")
 else()
   file(WRITE "${CMAKE_BINARY_DIR}/bin/opencv_test_java.sh" "cd ${opencv_test_java_bin_dir};\nant -DjavaLibraryPath=${LIBRARY_OUTPUT_PATH} buildAndTest;\ncd -")
 endif()

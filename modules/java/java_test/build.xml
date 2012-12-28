@@ -31,21 +31,9 @@
     </jar>
   </target>
 
-  <!-- <target name="run" > -->
-  <!--   <java fork="true" classname="org.opencv.test.OpenCVTestRunner"> -->
-  <!--     <sysproperty key="java.library.path" path="${javaLibraryPath}"/> -->
-  <!--     <classpath refid="master-classpath"/> -->
-  <!--     <classpath> -->
-  <!-- 	<fileset dir="build/jar"> -->
-  <!-- 	  <include name="*.jar"/> -->
-  <!-- 	</fileset> -->
-  <!--     </classpath> -->
-  <!--   </java> -->
-  <!-- </target> -->
-
   <target name="test">
     <mkdir dir="testResults"/>
-    <junit printsummary="yes" haltonfailure="false">
+    <junit printsummary="false" haltonfailure="false" haltonerror="false" showoutput="false" logfailedtests="true" maxmemory="256m">
       <sysproperty key="java.library.path" path="${javaLibraryPath}"/>
       <classpath refid="master-classpath"/>
       <classpath>
