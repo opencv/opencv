@@ -50,22 +50,18 @@ using namespace perf;
 //////////////////////////////////////////////////////////////////////
 // HoughCircles
 
-PARAM_TEST_CASE(HoughCircles_Perf, cv::Size, float, float)
-{
-    static void drawCircles(cv::Mat& dst, const std::vector<cv::Vec3f>& circles, bool fill)
-    {
-        dst.setTo(cv::Scalar::all(0));
+typedef std::tr1::tuple<cv::Size, float, float> Size_Dp_MinDist_t;
+typedef perf::TestBaseWithParam<Size_Dp_MinDist_t> Size_Dp_MinDist;
 
-        for (size_t i = 0; i < circles.size(); ++i)
-            cv::circle(dst, cv::Point2f(circles[i][0], circles[i][1]), (int)circles[i][2], cv::Scalar::all(255), fill ? -1 : 1);
-    }
-};
-
-TEST_P(HoughCircles_Perf, Performance)
+PERF_TEST_P(Size_Dp_MinDist, OCL_HoughCircles,
+            testing::Combine(
+                testing::Values(perf::sz720p, perf::szSXGA, perf::sz1080p),
+                testing::Values(1.0f, 2.0f, 4.0f),
+                testing::Values(1.0f, 10.0f)))
 {
-    const cv::Size size = GET_PARAM(0);
-    const float dp = GET_PARAM(1);
-    const float minDist = GET_PARAM(2);
+    const cv::Size size = std::tr1::get<0>(GetParam());
+    const float dp      = std::tr1::get<1>(GetParam());
+    const float minDist = std::tr1::get<2>(GetParam());
 
     const int minRadius = 10;
     const int maxRadius = 30;
@@ -85,48 +81,18 @@ TEST_P(HoughCircles_Perf, Performance)
         cv::circle(src, center, radius, cv::Scalar::all(255), -1);
     }
     
-    cv::ocl::oclMat d_circles;
+    cv::ocl::oclMat ocl_src(src);
+    cv::ocl::oclMat ocl_circles;
 
-    double totalgputick = 0;
-    double totalgputick_kernel = 0;
+    declare.time(10.0).iterations(25);
     
-    double t1 = 0.0;
-    double t2 = 0.0;
-    for (int j = 0; j < LOOP_TIMES + 1; ++j)
+    TEST_CYCLE()
     {
-
-        t1 = (double)cvGetTickCount();//gpu start1
-
-        cv::ocl::oclMat ocl_src = cv::ocl::oclMat(src);//upload
-
-        t2 = (double)cvGetTickCount(); //kernel
-        cv::ocl::HoughCircles(ocl_src, d_circles, CV_HOUGH_GRADIENT, dp, minDist, cannyThreshold, votesThreshold, minRadius, maxRadius);
-        t2 = (double)cvGetTickCount() - t2;//kernel
-    
-        cv::Mat cpu_dst;
-        if (d_circles.rows > 0)
-            d_circles.download (cpu_dst);//download
-
-        t1 = (double)cvGetTickCount() - t1;//gpu end1
-
-        if(j == 0)
-            continue;
-
-        totalgputick = t1 + totalgputick;
-
-        totalgputick_kernel = t2 + totalgputick_kernel;        
+        cv::ocl::HoughCircles(ocl_src, ocl_circles, CV_HOUGH_GRADIENT, dp, minDist, cannyThreshold, votesThreshold, minRadius, maxRadius);
     }
-
-    std::cout << "average gpu runtime is  " << totalgputick / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << std::endl;
-    std::cout << "average gpu runtime without data transfer is  " << totalgputick_kernel / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << std::endl;
     
+    cv::Mat circles(ocl_circles);    
+    SANITY_CHECK(circles);
 }
-
-
-INSTANTIATE_TEST_CASE_P(Hough, HoughCircles_Perf,
-                        testing::Combine(
-                            testing::Values(perf::sz720p, perf::szSXGA, perf::sz1080p),
-                            testing::Values(1.0f, 2.0f, 4.0f),
-                            testing::Values(1.0f, 10.0f)));
 
 #endif // HAVE_OPENCL
