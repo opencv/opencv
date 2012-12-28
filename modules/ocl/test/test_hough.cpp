@@ -7,13 +7,12 @@
 //  copy or use the software.
 //
 //
-//                        Intel License Agreement
+//                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2000, Intel Corporation, all rights reserved.
+// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
+// Copyright (C) 2008-2011, Willow Garage Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
-//
-// Modified by Seunghoon Park(pclove1@gmail.com)
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
