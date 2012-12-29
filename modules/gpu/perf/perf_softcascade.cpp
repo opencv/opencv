@@ -1,6 +1,6 @@
 #include "perf_precomp.hpp"
 
-#define GPU_PERF_TEST_P(fixture, name, params)  \
+#define PERF_TEST_P1(fixture, name, params)  \
     class fixture##_##name : public fixture {\
      public:\
       fixture##_##name() {}\
@@ -52,7 +52,7 @@ namespace {
 typedef std::tr1::tuple<std::string, std::string> fixture_t;
 typedef perf::TestBaseWithParam<fixture_t> SCascadeTest;
 
-GPU_PERF_TEST_P(SCascadeTest, detect,
+PERF_TEST_P1(SCascadeTest, detect,
     testing::Combine(
         testing::Values(std::string("cv/cascadeandhog/sc_cvpr_2012_to_opencv.xml")),
         testing::Values(std::string("cv/cascadeandhog/bahnhof/image_00000000_0.png"))))
@@ -108,7 +108,7 @@ static cv::Rect getFromTable(int idx)
 typedef std::tr1::tuple<std::string, std::string, int> roi_fixture_t;
 typedef perf::TestBaseWithParam<roi_fixture_t> SCascadeTestRoi;
 
-GPU_PERF_TEST_P(SCascadeTestRoi, detectInRoi,
+PERF_TEST_P1(SCascadeTestRoi, detectInRoi,
     testing::Combine(
         testing::Values(std::string("cv/cascadeandhog/sc_cvpr_2012_to_opencv.xml")),
         testing::Values(std::string("cv/cascadeandhog/bahnhof/image_00000000_0.png")),
@@ -152,7 +152,7 @@ RUN_GPU(SCascadeTestRoi, detectInRoi)
 NO_CPU(SCascadeTestRoi, detectInRoi)
 
 
-GPU_PERF_TEST_P(SCascadeTestRoi, detectEachRoi,
+PERF_TEST_P1(SCascadeTestRoi, detectEachRoi,
     testing::Combine(
         testing::Values(std::string("cv/cascadeandhog/sc_cvpr_2012_to_opencv.xml")),
         testing::Values(std::string("cv/cascadeandhog/bahnhof/image_00000000_0.png")),
@@ -191,7 +191,7 @@ RUN_GPU(SCascadeTestRoi, detectEachRoi)
 
 NO_CPU(SCascadeTestRoi, detectEachRoi)
 
-GPU_PERF_TEST_P(SCascadeTest, detectOnIntegral,
+PERF_TEST_P1(SCascadeTest, detectOnIntegral,
     testing::Combine(
         testing::Values(std::string("cv/cascadeandhog/sc_cvpr_2012_to_opencv.xml")),
         testing::Values(std::string("cv/cascadeandhog/integrals.xml"))))
@@ -239,7 +239,7 @@ RUN_GPU(SCascadeTest, detectOnIntegral)
 
 NO_CPU(SCascadeTest, detectOnIntegral)
 
-GPU_PERF_TEST_P(SCascadeTest, detectStream,
+PERF_TEST_P1(SCascadeTest, detectStream,
     testing::Combine(
         testing::Values(std::string("cv/cascadeandhog/sc_cvpr_2012_to_opencv.xml")),
         testing::Values(std::string("cv/cascadeandhog/bahnhof/image_00000000_0.png"))))
