@@ -4,12 +4,12 @@ if(${CMAKE_VERSION} VERSION_LESS "2.8.3")
 endif()
 
 if(WIN32 AND NOT MSVC)
-  message(STATUS "CUDA compilation is disabled (due to only Visual Studio compiler suppoted on your platform).")
+  message(STATUS "CUDA compilation is disabled (due to only Visual Studio compiler supported on your platform).")
   return()
 endif()
 
 if(CMAKE_COMPILER_IS_GNUCXX AND NOT APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-  message(STATUS "CUDA compilation is disabled (due to Clang unsuppoted on your platform).")
+  message(STATUS "CUDA compilation is disabled (due to Clang unsupported on your platform).")
   return()
 endif()
 
