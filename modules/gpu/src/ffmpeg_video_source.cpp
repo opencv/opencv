@@ -45,9 +45,9 @@
 #if defined(HAVE_CUDA) && defined(HAVE_NVCUVID)
 
 #if defined(HAVE_FFMPEG) && defined(BUILD_SHARED_LIBS)
-    #include "cap_ffmpeg_impl.hpp"
+    #include "../src/cap_ffmpeg_impl.hpp"
 #else
-    #include "cap_ffmpeg_api.hpp"
+    #include "../src/cap_ffmpeg_api.hpp"
 #endif
 
 namespace
