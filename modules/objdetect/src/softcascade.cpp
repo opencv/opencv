@@ -40,7 +40,7 @@
 //
 //M*/
 
-#include <precomp.hpp>
+#include "precomp.hpp"
 
 namespace {
 
@@ -568,11 +568,11 @@ void cv::SCascade::detect(InputArray _image, InputArray _rois,  OutputArray _rec
     std::vector<Detection> objects;
     detect( _image, _rois, objects);
 
-    _rects.create(1, objects.size(), CV_32SC4);
+    _rects.create(1, (int)objects.size(), CV_32SC4);
     cv::Mat_<cv::Rect> rects = (cv::Mat_<cv::Rect>)_rects.getMat();
     cv::Rect* rectPtr = rects.ptr<cv::Rect>(0);
 
-    _confs.create(1, objects.size(), CV_32F);
+    _confs.create(1, (int)objects.size(), CV_32F);
     cv::Mat confs = _confs.getMat();
     float* confPtr = rects.ptr<float>(0);
 
