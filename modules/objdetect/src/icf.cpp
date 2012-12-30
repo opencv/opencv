@@ -40,7 +40,7 @@
 //
 //M*/
 
-#include <precomp.hpp>
+#include "precomp.hpp"
 
 cv::SCascade::Channels::Channels(int shr) : shrinkage(shr) {}
 

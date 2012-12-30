@@ -40,7 +40,7 @@
 //
 //M*/
 
-#include <precomp.hpp>
+#include "precomp.hpp"
 
 #if !defined (HAVE_CUDA)
 cv::gpu::SCascade::SCascade(const double, const double, const int, const int) { throw_nogpu(); }
@@ -60,7 +60,7 @@ cv::Ptr<cv::gpu::ChannelsProcessor> cv::gpu::ChannelsProcessor::create(const int
 { throw_nogpu(); return cv::Ptr<cv::gpu::ChannelsProcessor>(0); }
 
 #else
-# include <icf.hpp>
+# include "icf.hpp"
 
 cv::gpu::device::icf::Level::Level(int idx, const Octave& oct, const float scale, const int w, const int h)
 :  octave(idx), step(oct.stages), relScale(scale / oct.scale)
@@ -94,14 +94,6 @@ namespace icf {
     void gray2hog(const PtrStepSzb& gray, PtrStepSzb mag, const int bins);
     void shrink(const cv::gpu::PtrStepSzb& channels, cv::gpu::PtrStepSzb shrunk);
 }
-
-// namespace imgproc {
-//     void shfl_integral_gpu_buffered(PtrStepSzb, PtrStepSz<uint4>, PtrStepSz<unsigned int>, int, cudaStream_t);
-
-//     template <typename T>
-//     void resize_gpu(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, float fx, float fy,
-//                     PtrStepSzb dst, int interpolation, cudaStream_t stream);
-// }
 
 }}}
 
