@@ -50247,81 +50247,6 @@
       <x>768</x>
       <y>333</y>
       <val>18746.</val></rng2></dst></MatInfo_Size_Scale_ResizeAreaFast--ResizeAreaFast---16UC1--1920x1080--2->
-<MatInfo_Size_Scale_ResizeAreaFast--ResizeAreaFast---16UC3--640x480--2->
-  <dst>
-    <kind>65536</kind>
-    <type>18</type>
-    <min>86.</min>
-    <max>62141.</max>
-    <last>
-      <x>319</x>
-      <y>239</y>
-      <val>43695.</val></last>
-    <rng1>
-      <x>55</x>
-      <y>61</y>
-      <cn>1</cn>
-      <val>23311.</val></rng1>
-    <rng2>
-      <x>156</x>
-      <y>78</y>
-      <val>22937.</val></rng2></dst></MatInfo_Size_Scale_ResizeAreaFast--ResizeAreaFast---16UC3--640x480--2->
-<MatInfo_Size_Scale_ResizeAreaFast--ResizeAreaFast---16UC3--960x540--2->
-  <dst>
-    <kind>65536</kind>
-    <type>18</type>
-    <min>7.</min>
-    <max>59748.</max>
-    <last>
-      <x>479</x>
-      <y>269</y>
-      <val>12229.</val></last>
-    <rng1>
-      <x>248</x>
-      <y>86</y>
-      <cn>2</cn>
-      <val>17351.</val></rng1>
-    <rng2>
-      <x>179</x>
-      <y>29</y>
-      <val>27551.</val></rng2></dst></MatInfo_Size_Scale_ResizeAreaFast--ResizeAreaFast---16UC3--960x540--2->
-<MatInfo_Size_Scale_ResizeAreaFast--ResizeAreaFast---16UC3--1280x720--2->
-  <dst>
-    <kind>65536</kind>
-    <type>18</type>
-    <min>46.</min>
-    <max>58483.</max>
-    <last>
-      <x>639</x>
-      <y>359</y>
-      <val>35390.</val></last>
-    <rng1>
-      <x>281</x>
-      <y>10</y>
-      <cn>1</cn>
-      <val>13590.</val></rng1>
-    <rng2>
-      <x>498</x>
-      <y>321</y>
-      <val>18108.</val></rng2></dst></MatInfo_Size_Scale_ResizeAreaFast--ResizeAreaFast---16UC3--1280x720--2->
-<MatInfo_Size_Scale_ResizeAreaFast--ResizeAreaFast---16UC3--1920x1080--2->
-  <dst>
-    <kind>65536</kind>
-    <type>18</type>
-    <min>20.</min>
-    <max>59651.</max>
-    <last>
-      <x>959</x>
-      <y>539</y>
-      <val>30759.</val></last>
-    <rng1>
-      <x>435</x>
-      <y>438</y>
-      <val>14469.</val></rng1>
-    <rng2>
-      <x>688</x>
-      <y>346</y>
-      <val>12186.</val></rng2></dst></MatInfo_Size_Scale_ResizeAreaFast--ResizeAreaFast---16UC3--1920x1080--2->
 <MatInfo_Size_Scale_ResizeAreaFast--ResizeAreaFast---16UC4--640x480--2->
   <dst>
     <kind>65536</kind>
@@ -50399,4 +50324,83 @@
       <y>245</y>
       <cn>1</cn>
       <val>25794.</val></rng2></dst></MatInfo_Size_Scale_ResizeAreaFast--ResizeAreaFast---16UC4--1920x1080--2->
+ <!-- resumed -->
+<MatInfo_Size_Scale_ResizeAreaFast--ResizeAreaFast---16UC3--640x480--2->
+  <dst>
+    <kind>65536</kind>
+    <type>18</type>
+    <min>1135.</min>
+    <max>64451.</max>
+    <last>
+      <x>319</x>
+      <y>239</y>
+      <val>43695.</val></last>
+    <rng1>
+      <x>285</x>
+      <y>233</y>
+      <val>28886.</val></rng1>
+    <rng2>
+      <x>253</x>
+      <y>156</y>
+      <cn>2</cn>
+      <val>37154.</val></rng2></dst></MatInfo_Size_Scale_ResizeAreaFast--ResizeAreaFast---16UC3--640x480--2->
+<MatInfo_Size_Scale_ResizeAreaFast--ResizeAreaFast---16UC3--960x540--2->
+  <dst>
+    <kind>65536</kind>
+    <type>18</type>
+    <min>1432.</min>
+    <max>64067.</max>
+    <last>
+      <x>479</x>
+      <y>269</y>
+      <val>12229.</val></last>
+    <rng1>
+      <x>177</x>
+      <y>153</y>
+      <cn>1</cn>
+      <val>35828.</val></rng1>
+    <rng2>
+      <x>235</x>
+      <y>28</y>
+      <cn>2</cn>
+      <val>33598.</val></rng2></dst></MatInfo_Size_Scale_ResizeAreaFast--ResizeAreaFast---16UC3--960x540--2->
+<MatInfo_Size_Scale_ResizeAreaFast--ResizeAreaFast---16UC3--1280x720--2->
+  <dst>
+    <kind>65536</kind>
+    <type>18</type>
+    <min>985.</min>
+    <max>64876.</max>
+    <last>
+      <x>639</x>
+      <y>359</y>
+      <val>35390.</val></last>
+    <rng1>
+      <x>210</x>
+      <y>211</y>
+      <cn>2</cn>
+      <val>48816.</val></rng1>
+    <rng2>
+      <x>39</x>
+      <y>189</y>
+      <cn>1</cn>
+      <val>31891.</val></rng2></dst></MatInfo_Size_Scale_ResizeAreaFast--ResizeAreaFast---16UC3--1280x720--2->
+<MatInfo_Size_Scale_ResizeAreaFast--ResizeAreaFast---16UC3--1920x1080--2->
+  <dst>
+    <kind>65536</kind>
+    <type>18</type>
+    <min>976.</min>
+    <max>64949.</max>
+    <last>
+      <x>959</x>
+      <y>539</y>
+      <val>30759.</val></last>
+    <rng1>
+      <x>388</x>
+      <y>418</y>
+      <val>36425.</val></rng1>
+    <rng2>
+      <x>617</x>
+      <y>484</y>
+      <cn>1</cn>
+      <val>22065.</val></rng2></dst></MatInfo_Size_Scale_ResizeAreaFast--ResizeAreaFast---16UC3--1920x1080--2->
 </opencv_storage>
