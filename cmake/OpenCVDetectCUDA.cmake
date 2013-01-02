@@ -4,12 +4,12 @@ if(${CMAKE_VERSION} VERSION_LESS "2.8.3")
 endif()
 
 if(WIN32 AND NOT MSVC)
-  message(STATUS "CUDA compilation is disabled (due to only Visual Studio compiler suppoted on your platform).")
+  message(STATUS "CUDA compilation is disabled (due to only Visual Studio compiler supported on your platform).")
   return()
 endif()
 
 if(CMAKE_COMPILER_IS_GNUCXX AND NOT APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-  message(STATUS "CUDA compilation is disabled (due to Clang unsuppoted on your platform).")
+  message(STATUS "CUDA compilation is disabled (due to Clang unsupported on your platform).")
   return()
 endif()
 
@@ -34,7 +34,7 @@ if(CUDA_FOUND)
   message(STATUS "CUDA detected: " ${CUDA_VERSION})
 
   if (CARMA)
-    set(CUDA_ARCH_BIN "3.0" CACHE STRING "Specify 'real' GPU architectures to build binaries for, BIN(PTX) format is supported")
+    set(CUDA_ARCH_BIN "2.1(2.0) 3.0" CACHE STRING "Specify 'real' GPU architectures to build binaries for, BIN(PTX) format is supported")
     set(CUDA_ARCH_PTX "3.0" CACHE STRING "Specify 'virtual' PTX architectures to build PTX intermediate code for")
   else()
     set(CUDA_ARCH_BIN "1.1 1.2 1.3 2.0 2.1(2.0) 3.0" CACHE STRING "Specify 'real' GPU architectures to build binaries for, BIN(PTX) format is supported")

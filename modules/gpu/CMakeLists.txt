@@ -5,7 +5,7 @@ endif()
 set(the_description "GPU-accelerated Computer Vision")
 ocv_add_module(gpu opencv_imgproc opencv_calib3d opencv_objdetect opencv_video opencv_nonfree opencv_photo opencv_legacy)
 
-ocv_module_include_directories("${CMAKE_CURRENT_SOURCE_DIR}/src/cuda" "${CMAKE_CURRENT_SOURCE_DIR}/../highgui/src")
+ocv_module_include_directories("${CMAKE_CURRENT_SOURCE_DIR}/src/cuda")
 
 file(GLOB lib_hdrs               "include/opencv2/${name}/*.hpp"               "include/opencv2/${name}/*.h")
 file(GLOB lib_device_hdrs        "include/opencv2/${name}/device/*.hpp"        "include/opencv2/${name}/device/*.h")

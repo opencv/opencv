@@ -75,15 +75,14 @@ int main(int argc, char* argv[])
 
 DEF_PARAM_TEST_1(Image, std::string);
 
-PERF_TEST_P(Image, HoughLinesP,
-            testing::Values(std::string("im1_1280x800.jpg")))
+GPU_PERF_TEST_P(Image, HoughLinesP, testing::Values(std::string("im1_1280x800.jpg")))
 {
     declare.time(30.0);
 
     std::string fileName = GetParam();
 
-    const double rho = 1.0;
-    const double theta = 1.0;
+    const float rho = 1.f;
+    const float theta = 1.f;
     const int threshold = 40;
     const int minLineLenght = 20;
     const int maxLineGap = 5;
@@ -125,8 +124,8 @@ PERF_TEST_P(Image, HoughLinesP,
 
 DEF_PARAM_TEST(Image_Depth, std::string, perf::MatDepth);
 
-PERF_TEST_P(Image_Depth, GoodFeaturesToTrack,
-            testing::Combine(
+GPU_PERF_TEST_P(Image_Depth, GoodFeaturesToTrack,
+                testing::Combine(
                 testing::Values(std::string("im1_1280x800.jpg")),
                 testing::Values(CV_8U, CV_16U)
                 ))
@@ -193,12 +192,12 @@ typedef std::pair<std::string, std::string> string_pair;
 
 DEF_PARAM_TEST(ImagePair_Depth_GraySource, string_pair, perf::MatDepth, bool);
 
-PERF_TEST_P(ImagePair_Depth_GraySource, OpticalFlowPyrLKSparse,
-            testing::Combine(
-                testing::Values(string_pair("im1_1280x800.jpg", "im2_1280x800.jpg")),
-                testing::Values(CV_8U, CV_16U),
-                testing::Bool()
-                ))
+GPU_PERF_TEST_P(ImagePair_Depth_GraySource, OpticalFlowPyrLKSparse,
+                testing::Combine(
+                    testing::Values(string_pair("im1_1280x800.jpg", "im2_1280x800.jpg")),
+                    testing::Values(CV_8U, CV_16U),
+                    testing::Bool()
+                    ))
 {
     declare.time(60);
 
@@ -287,11 +286,11 @@ PERF_TEST_P(ImagePair_Depth_GraySource, OpticalFlowPyrLKSparse,
 
 DEF_PARAM_TEST(ImagePair_Depth, string_pair, perf::MatDepth);
 
-PERF_TEST_P(ImagePair_Depth, OpticalFlowFarneback,
-            testing::Combine(
-                testing::Values(string_pair("im1_1280x800.jpg", "im2_1280x800.jpg")),
-                testing::Values(CV_8U, CV_16U)
-                ))
+GPU_PERF_TEST_P(ImagePair_Depth, OpticalFlowFarneback,
+                testing::Combine(
+                    testing::Values(string_pair("im1_1280x800.jpg", "im2_1280x800.jpg")),
+                    testing::Values(CV_8U, CV_16U)
+                    ))
 {
     declare.time(500);
 
@@ -384,15 +383,15 @@ void calcOpticalFlowBM(const cv::Mat& prev, const cv::Mat& curr,
 
 DEF_PARAM_TEST(ImagePair_BlockSize_ShiftSize_MaxRange, string_pair, cv::Size, cv::Size, cv::Size);
 
-PERF_TEST_P(ImagePair_BlockSize_ShiftSize_MaxRange, OpticalFlowBM,
-            testing::Combine(
-                testing::Values(string_pair("im1_1280x800.jpg", "im2_1280x800.jpg")),
-                testing::Values(cv::Size(16, 16)),
-                testing::Values(cv::Size(2, 2)),
-                testing::Values(cv::Size(16, 16))
-                ))
+GPU_PERF_TEST_P(ImagePair_BlockSize_ShiftSize_MaxRange, OpticalFlowBM,
+                testing::Combine(
+                    testing::Values(string_pair("im1_1280x800.jpg", "im2_1280x800.jpg")),
+                    testing::Values(cv::Size(16, 16)),
+                    testing::Values(cv::Size(2, 2)),
+                    testing::Values(cv::Size(16, 16))
+                    ))
 {
-    declare.time(1000);
+    declare.time(3000);
 
     const string_pair fileNames = std::tr1::get<0>(GetParam());
     const cv::Size block_size = std::tr1::get<1>(GetParam());
@@ -435,15 +434,15 @@ PERF_TEST_P(ImagePair_BlockSize_ShiftSize_MaxRange, OpticalFlowBM,
     SANITY_CHECK(0);
 }
 
-PERF_TEST_P(ImagePair_BlockSize_ShiftSize_MaxRange, FastOpticalFlowBM,
-            testing::Combine(
-                testing::Values(string_pair("im1_1280x800.jpg", "im2_1280x800.jpg")),
-                testing::Values(cv::Size(16, 16)),
-                testing::Values(cv::Size(1, 1)),
-                testing::Values(cv::Size(16, 16))
-                ))
+GPU_PERF_TEST_P(ImagePair_BlockSize_ShiftSize_MaxRange, FastOpticalFlowBM,
+                testing::Combine(
+                    testing::Values(string_pair("im1_1280x800.jpg", "im2_1280x800.jpg")),
+                    testing::Values(cv::Size(16, 16)),
+                    testing::Values(cv::Size(1, 1)),
+                    testing::Values(cv::Size(16, 16))
+                    ))
 {
-    declare.time(1000);
+    declare.time(3000);
 
     const string_pair fileNames = std::tr1::get<0>(GetParam());
     const cv::Size block_size = std::tr1::get<1>(GetParam());

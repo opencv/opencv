@@ -474,6 +474,21 @@ CV_EXPORTS void PrintTo(const Size& sz, ::std::ostream* os);
     INSTANTIATE_TEST_CASE_P(/*none*/, fixture##_##name, params);\
     void fixture##_##name::PerfTestBody()
 
+#define GPU_PERF_TEST_P(fixture, name, params)  \
+    class fixture##_##name : public fixture {\
+     public:\
+      fixture##_##name() {}\
+     protected:\
+      virtual void PerfTestBody();\
+    };\
+    TEST_P(fixture##_##name, name /*perf*/) \
+    { \
+        try { RunPerfTestBody(); } \
+        catch (...) { cv::gpu::resetDevice(); throw; } \
+    } \
+    INSTANTIATE_TEST_CASE_P(/*none*/, fixture##_##name, params);\
+    void fixture##_##name::PerfTestBody()
+
 
 #define CV_PERF_TEST_MAIN(testsuitname, ...) \
 int main(int argc, char **argv)\

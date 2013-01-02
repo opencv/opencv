@@ -681,7 +681,125 @@ corresponding to the specified points. It can also be passed to
     Mat fundamental_matrix =
      findFundamentalMat(points1, points2, FM_RANSAC, 3, 0.99);
 
+findEssentialMat
+------------------
+Calculates an essential matrix from the corresponding points in two images.
 
+.. ocv:function:: Mat findEssentialMat( InputArray points1, InputArray points2, double focal = 1.0, Point2d pp = Point2d(0, 0), int method = FM_RANSAC, double prob = 0.999, double threshold = 1.0, OutputArray mask = noArray() )
+
+    :param points1: Array of  ``N`` ``(N >= 5)`` 2D points from the first image. The point coordinates should be floating-point (single or double precision). 
+
+    :param points2: Array of the second image points of the same size and format as  ``points1`` .
+
+    :param focal: focal length of the camera. Note that this function assumes that ``points1`` and ``points2`` are feature points from cameras with same focal length and principle point. 
+
+    :param pp: principle point of the camera. 
+
+    :param method: Method for computing a fundamental matrix.
+
+            * **CV_RANSAC** for the RANSAC algorithm. 
+            * **CV_LMEDS** for the LMedS algorithm. 
+
+    :param threshold: Parameter used for RANSAC. It is the maximum distance from a point to an epipolar line in pixels, beyond which the point is considered an outlier and is not used for computing the final fundamental matrix. It can be set to something like 1-3, depending on the accuracy of the point localization, image resolution, and the image noise.
+
+    :param prob: Parameter used for the RANSAC or LMedS methods only. It specifies a desirable level of confidence (probability) that the estimated matrix is correct.
+
+    :param mask: Output array of N elements, every element of which is set to 0 for outliers and to 1 for the other points. The array is computed only in the RANSAC and LMedS methods. 
+
+This function estimates essential matrix based on an implementation of five-point algorithm [Nister03]_ [SteweniusCFS]_.  
+The epipolar geometry is described by the following equation:
+
+.. math::
+
+    [p_2; 1]^T K^T E K [p_1; 1] = 0 \\
+
+    K = 
+    \begin{bmatrix}
+    f & 0 & x_{pp}  \\
+    0 & f & y_{pp}  \\
+    0 & 0 & 1
+    \end{bmatrix}
+
+where
+:math:`E` is an essential matrix,
+:math:`p_1` and
+:math:`p_2` are corresponding points in the first and the second images, respectively.
+The result of this function may be passed further to ``decomposeEssentialMat()`` or ``recoverPose()`` to recover the relative pose between cameras. 
+
+decomposeEssentialMat
+-------------------------
+Decompose an essential matrix to possible rotations and translation. 
+
+.. ocv:function:: void decomposeEssentialMat( InputArray E, OutputArray R1, OutputArray R2, OutputArray t )
+
+    :param E: The input essential matrix. 
+
+    :param R1: One possible rotation matrix. 
+
+    :param R2: Another possible rotation matrix. 
+
+    :param t: One possible translation. 
+
+This function decompose an essential matrix ``E`` using svd decomposition [HartleyZ00]_. Generally 4 possible poses exists for a given ``E``. 
+They are 
+:math:`[R_1, t]`, 
+:math:`[R_1, -t]`, 
+:math:`[R_2, t]`, 
+:math:`[R_2, -t]`. 
+
+
+recoverPose
+---------------
+Recover relative camera rotation and translation from an estimated essential matrix and the corresponding points in two images, using cheirality check. 
+Returns the number of inliers which pass the check. 
+
+.. ocv:function:: int recoverPose( InputArray E, InputArray points1, InputArray points2, OutputArray R, OutputArray t, double focal = 1.0, Point2d pp = Point2d(0, 0), InputOutputArray mask = noArray())
+
+    :param E: The input essential matrix. 
+
+    :param points1: Array of  ``N``  2D points from the first image. The point coordinates should be floating-point (single or double precision).
+
+    :param points2: Array of the second image points of the same size and format as  ``points1`` .
+
+    :param R: Recovered relative rotation. 
+
+    :param t: Recoverd relative translation. 
+
+    :param focal: Focal length of the camera. Note that this function assumes that ``points1`` and ``points2`` are feature points from cameras with same focal length and principle point. 
+
+    :param pp: Principle point of the camera. 
+
+    :param mask: Input/output mask for inliers in ``points1`` and ``points2``. 
+                 If it is not empty, then it marks inliers in ``points1`` and ``points2`` for then given essential matrix ``E``. 
+                 Only these inliers will be used to recover pose. 
+                 In the output mask only inliers which pass the cheirality check. 
+    
+This function decomposes an essential matrix using ``decomposeEssentialMat()`` and then verifies possible pose hypotheses by doing cheirality check. 
+The cheirality check basically means that the triangulated 3D points should have positive depth. Some details can be found from [Nister03]_. 
+
+This function can be used to process output ``E`` and ``mask`` from ``findEssentialMat()``. 
+In this scenario, ``points1`` and ``points2`` are the same input for ``findEssentialMat()``. ::
+
+    // Example. Estimation of fundamental matrix using the RANSAC algorithm
+    int point_count = 100;
+    vector<Point2f> points1(point_count);
+    vector<Point2f> points2(point_count);
+
+    // initialize the points here ... */
+    for( int i = 0; i < point_count; i++ )
+    {
+        points1[i] = ...;
+        points2[i] = ...;
+    }
+
+    double focal = 1.0; 
+    cv::Point2d pp(0.0, 0.0); 
+    Mat E, R, t, mask; 
+
+    E = findEssentialMat(points1, points2, focal, pp, CV_RANSAC, 0.999, 1.0, mask);
+    recoverPose(E, points1, points2, R, t, focal, pp, mask); 
+
+    
 
 findHomography
 ------------------
@@ -1475,7 +1593,13 @@ The function reconstructs 3-dimensional points (in homogeneous coordinates) by u
 
 .. [Hartley99] Hartley, R.I., Theory and Practice of Projective Rectification. IJCV 35 2, pp 115-127 (1999)
 
+.. [HartleyZ00] Hartley, R. and Zisserman, A. Multiple View Geomtry in Computer Vision, Cambridge University Press, 2000. 
+
 .. [HH08] Hirschmuller, H. Stereo Processing by Semiglobal Matching and Mutual Information, PAMI(30), No. 2, February 2008, pp. 328-341.
+
+.. [Nister03] Nistér, D. An efficient solution to the five-point relative pose problem, CVPR 2003.  
+
+.. [SteweniusCFS] Stewénius, H., Calibrated Fivepoint solver. http://www.vis.uky.edu/~stewe/FIVEPOINT/
 
 .. [Slabaugh] Slabaugh, G.G. Computing Euler angles from a rotation matrix. http://gregslabaugh.name/publications/euler.pdf
 

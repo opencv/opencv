@@ -98,7 +98,8 @@ int main(int argc, char** argv)
 
         std::cout << "working..." << std::endl;
         cv::imshow("Soft Cascade demo", result);
-        cv::waitKey(10);
+        if (27 == cv::waitKey(10))
+            break;
     }
 
     return 0;
