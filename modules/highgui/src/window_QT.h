@@ -42,6 +42,7 @@
 
 #include "precomp.hpp"
 
+
 #if defined( HAVE_QT_OPENGL )
 #include <QtOpenGL>
 #include <QGLWidget>

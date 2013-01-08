@@ -43,6 +43,7 @@
 #include <map>
 #include "opencv2/core/opengl_interop.hpp"
 
+
 // in later times, use this file as a dispatcher to implementations like cvcap.cpp
 
 CV_IMPL void cvSetWindowProperty(const char* name, int prop_id, double prop_value)
