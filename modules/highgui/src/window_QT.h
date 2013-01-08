@@ -89,7 +89,7 @@
 enum { CV_MODE_NORMAL = 0, CV_MODE_OPENGL = 1 };
 
 //we can change the keyboard shortcuts from here !
-enum {        shortcut_zoom_normal 	= Qt::CTRL + Qt::Key_Z,
+enum {  shortcut_zoom_normal 	= Qt::CTRL + Qt::Key_Z,
         shortcut_zoom_imgRegion = Qt::CTRL + Qt::Key_X,
         shortcut_save_img		= Qt::CTRL + Qt::Key_S,
         shortcut_properties_win	= Qt::CTRL + Qt::Key_P,
@@ -150,7 +150,6 @@ public slots:
     void enablePropertiesButtonEachWindow();
 
     void setOpenGlDrawCallback(QString name, void* callback, void* userdata);
-    void setOpenGlCleanCallback(QString name, void* callback, void* userdata);
     void setOpenGlContext(QString name);
     void updateWindow(QString name);
     double isOpenGl(QString name);
@@ -321,10 +320,12 @@ public:
     void displayStatusBar(QString text, int delayms);
 
     //----
-    void prepareControls( char *csBuffer );
+    
+    void readConfigControls_QT( cv::FileStorage fs );
+    void prepareControls(char *csBuffer);
     void replaceBrackets(QString & txt);
     void modifyContent(QString WndName, int eType,  int idx, QString text );  // *.cfg
-    void MsgBoxInfo(char * pCaption, std::string Info );
+    void MsgBoxInfo(const char * pCaption, std::string Info );
     void applyTransTab();
     void getMapContent(QString in, QString & out );
     void setMapContent(QString varname, QString content );
@@ -338,7 +339,6 @@ public:
     static void addSlider2(CvWindow* w, QString name, int* value, int count, CvTrackbarCallback2 on_change CV_DEFAULT(NULL), void* userdata CV_DEFAULT(0));
 
     void setOpenGlDrawCallback(CvOpenGlDrawCallback callback, void* userdata);
-    void setOpenGlCleanCallback(CvOpenGlCleanCallback callback, void* userdata);
     void makeCurrentOpenGlContext();
     void updateGl();
     bool isOpenGl();
@@ -374,6 +374,13 @@ private:
     int mode_display; //opengl or native
     ViewPort* myView;
 
+    //--------------- basic data for window position+size 
+    int initWidth;
+    int initHeight;
+    int initPosX;
+    int initPosY;
+    int WindowMode;
+    
     //------- new Toolbar elements from *.cfg 
     int m_verboseLevel;
     int m_idxPropWnd;
@@ -400,7 +407,7 @@ private:
     void icvSaveControlPanel();
     void icvLoadButtonbar(CvButtonbar* t,QSettings *settings);
     void icvSaveButtonbar(CvButtonbar* t,QSettings *settings);
-    void InitExchange(int idx, int iValue = -1);
+    void InitExchange();
     void createStandardActions();    
     void createActions();
     void createShortcuts();
@@ -482,7 +489,6 @@ public:
     virtual void startDisplayInfo(QString text, int delayms) = 0;
 
     virtual void setOpenGlDrawCallback(CvOpenGlDrawCallback callback, void* userdata) = 0;
-    virtual void setOpenGlCleanCallback(CvOpenGlCleanCallback callback, void* userdata) = 0;
     virtual void makeCurrentOpenGlContext() = 0;
     virtual void updateGl() = 0;
 
@@ -515,7 +521,6 @@ public:
     void startDisplayInfo(QString text, int delayms);
 
     void setOpenGlDrawCallback(CvOpenGlDrawCallback callback, void* userdata);
-    void setOpenGlCleanCallback(CvOpenGlCleanCallback callback, void* userdata);
     void makeCurrentOpenGlContext();
     void updateGl();
 
@@ -545,11 +550,6 @@ private:
 
     CvOpenGlDrawCallback glDrawCallback;
     void* glDrawData;
-
-    CvOpenGlCleanCallback glCleanCallback;
-    void* glCleanData;
-
-    CvOpenGlFuncTab* glFuncTab;
 
     void icvmouseHandler(QMouseEvent* event, type_mouse_event category, int& cv_event, int& flags);
     void icvmouseProcessing(QPointF pt, int cv_event, int flags);
@@ -581,7 +581,6 @@ public:
     void startDisplayInfo(QString text, int delayms);
 
     void setOpenGlDrawCallback(CvOpenGlDrawCallback callback, void* userdata);
-    void setOpenGlCleanCallback(CvOpenGlCleanCallback callback, void* userdata);
     void makeCurrentOpenGlContext();
     void updateGl();
 

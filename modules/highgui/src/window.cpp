@@ -40,6 +40,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include <map>
 #include "opencv2/core/opengl_interop.hpp"
 
 // in later times, use this file as a dispatcher to implementations like cvcap.cpp
@@ -178,7 +179,6 @@ void cv::moveWindow( const string& winname, int x, int y )
 }
 
 // -----------------------------------
-// Dummy calls if Qt is not available:
 
 void cv::adjustWindowPos( const string& winname, int xp, int xwp, int yp, int yhp )
 {
@@ -196,42 +196,66 @@ void cv::adjustWindowPos( const string& winname, int xp, int xwp, int yp, int yh
        #if defined(HAVE_QT)
           cvAdjustWindowPos_QT( winname.c_str(),  xp, xwp, yp,  yhp );
        #endif
-       #if defined(HAVE_GTK)
-          // todo.. 
-       #endif
-   #endif
-}
-
-void cv::dispInfoBox( const string& winname, char* caption, const string& text ) 
-{
-      #if defined(HAVE_QT)
-    cvDispInfoBox_QT( winname.c_str(), caption, text.c_str() );
+	// Dummy calls if Qt is not available:
+      #if defined(HAVE_GTK)
+		(void) winname;
+		(void) xp;
+		(void) xwp;
+		(void) yp;
+		(void) yhp;
+		// TODO: 
+		// cvAdjustWindowPos_GTK( winname.c_str(),  xp, xwp, yp,  yhp );
       #endif
+   #endif
 }
 
-int cv::getButtonBarContent(const string& winname, int idx, char * txt )
+
+#if defined(HAVE_QT)
+
+void cv::dispInfoBox( const string winname, const char* caption, const string& text ) 
 {
-   #if defined(HAVE_QT)
+    cvDispInfoBox_QT( winname.c_str(), caption, text.c_str() );
+}
+
+int cv::getButtonBarContent(const string winname, int idx, char * txt )
+{
        return cvGetButtonBarContent( winname.c_str(), idx, txt );
-   #endif
-   return 0;
 }
 
-int cv::setButtonBarContent(const string& winname, int etype, int idx, char * txt )
+int cv::setButtonBarContent(const string winname, int etype, int idx, const char * txt )
 {
-   #if defined(HAVE_QT)
        return cvSetButtonBarContent( winname.c_str(), etype, idx,  txt );
-   #endif
+}
+
+int cv::setMapContent(const string winname, const string& varname, const char * text )
+{
+      return cvSetMapContent( winname.c_str(), varname.c_str(), text );
+}
+
+#else
+
+// some dummy definitions in case of missing QT
+void cv::dispInfoBox( const string , const char* , const string&  ) 
+{
+}
+
+int cv::getButtonBarContent(const string , int , char * )
+{
    return 0;
 }
 
-int cv::setMapContent(const string& winname, const string& varname, char * text )
+int cv::setButtonBarContent(const string , int , int , const char *  )
 {
-   #if defined(HAVE_QT)
-      return cvSetMapContent( winname.c_str(), varname.c_str(), text );
-   #endif
    return 0;
 }
+
+int cv::setMapContent(const string , const string& , const char *  )
+{
+   return 0;
+}
+
+#endif
+
 // -----------------------------------
 
 void cv::setWindowProperty(const string& winname, int prop_id, double prop_value)
@@ -277,6 +301,160 @@ int cv::startWindowThread()
     return cvStartWindowThread();
 }
 
+
+
+
+int cv::readConfig( const char* file, const char * name, CvConfigBase * cfg  )
+{
+  // read some basic data from *.cfg but no controls here
+  
+  cfg->initWidth  = -1;
+  cfg->initHeight = -1;
+  cfg->initPosX   = -1;
+  cfg->initPosY   = -1;
+  cfg->WindowMode = -1;
+  cfg->wndname = std::string(name);
+  
+  char csCfgFile[512];
+  strcpy( csCfgFile, file); 
+  char * p = strrchr( csCfgFile,'.');
+
+  if ( p != NULL )
+  {
+	  *p = 0;
+	  strcat( csCfgFile, ".cfg") ;
+  } else {
+	  // linux
+	  strcat( csCfgFile, ".cfg") ;
+  }
+ 
+  // TODO: 
+  // - use GetModuleFileName(NULL, szFilename, MAX_PATH) to get executable name
+  //   in window_w32.cpp 
+  // - use  QString exe_name = QFileInfo(QApplication::applicationFilePath()).fileName();
+  //   in window_QT.cpp for the same purpose
+  // - how to do it with GTK ? 
+  //   g_get_prgname() or g_get_application_name() deliver the name of the window
+  //   and not the name of the executable. Whats wrong ??
+	
+ 
+  cfg->fs.open(csCfgFile, cv::FileStorage::READ);
+  if (!cfg->fs.isOpened())
+  {
+      return -1;
+  }
+    
+  cv::FileNode n = cfg->fs["verboseLevel"];
+  cv::FileNodeIterator it = n.begin(), it_end = n.end(); // Go through the node
+  for (; it != it_end; ++it) {
+    cv::FileNode node = *it;
+    if ( node.type() == CV_NODE_INTEGER )
+    {
+      cfg->m_verboseLevel = (int) *it;    
+    }
+  }        
+  
+  std::string CfgWndName = "";
+  
+  //---------------------------------------- cv::readConfig
+  for ( int cnt=0; cnt <= 20 ; cnt++ )
+  {
+      std::string CfgWndN = cv::format("Wnd%d",cnt);
+         
+      n = cfg->fs[CfgWndN];
+      if (  n.size() <= 0 ) continue;
+	
+      int linecnt = -1;
+      it = n.begin(), it_end = n.end(); // Go through the node
+      for (; it != it_end; ++it) {
+	
+	cv::FileNode node = *it;
+	std::string content = "?";
+	if ( node.type() == CV_NODE_INTEGER )
+	{
+	    content = cv::format("%d (integer)", (int) *it);
+	}	
+	if ( node.type() == cv::FileNode::STRING )
+	{
+	    content = (std::string) *it;
+	    char csBuffer[512];
+	    strcpy(csBuffer, content.c_str() );
+	    if (csBuffer[0] == '#') content = "";
+	    if ( content.length() > 0 )
+	    {   
+		linecnt++;
+		if ( linecnt == 0 )
+		{	
+			CfgWndName = std::string(csBuffer);	
+			if ( CfgWndName != cfg->wndname ) {
+			  linecnt = -5000;
+			} 
+		}
+
+		if ( linecnt > 0 )
+		{
+		
+		  if ( cfg->m_verboseLevel > 1 )
+		  {
+		      printf("\n   [%s]", content.c_str() );
+		  }  
+	
+		  // aus cmdparser.cpp kommt:
+		  // vector<string> split_string(const string& str, const string& delimiters)
+		  // vector<string> baseVec = split_string( strBase, " ");
+
+	
+		  if ( strstr(csBuffer,"CV_WINDOW_") != NULL )
+		  { 
+		    // may be there is a window position or size behind the window mode in *.cfg
+		    std::string sizestr(csBuffer);		  
+		    std::string strBase(csBuffer);		  
+		    
+		    SplitList baselist(sizestr," ");
+  
+		    if ( baselist.size() >= 2 )
+		    {
+		        std::string Mode = baselist[0];
+			if ( Mode == "CV_WINDOW_NORMAL"   ) cfg->WindowMode = CV_WINDOW_NORMAL;
+			if ( Mode == "CV_WINDOW_AUTOSIZE" ) cfg->WindowMode = CV_WINDOW_AUTOSIZE;
+		
+			SplitList poslist(baselist[1],",");
+			if ( poslist.size() == 2 )
+			{
+			  cfg->initPosX = atoi( poslist[0].c_str() );
+			  cfg->initPosY = atoi( poslist[1].c_str() );
+			}
+			if ( baselist.size() == 3 )
+			{
+			  SplitList sizelist(baselist[2],"*");
+			  if ( sizelist.size() == 2 )
+			  {
+			    cfg->initWidth = atoi( sizelist[0].c_str() );
+			    cfg->initHeight = atoi( sizelist[1].c_str() );
+			  }
+			}
+		    }
+
+		    if ( cfg->m_verboseLevel > 0 )
+		    {
+			  printf("\n%s:[%s]  %d,%d (%d*%d Pixel) WindowMode=%d  (cv::readConfig)", 
+				CfgWndN.c_str(), cfg->wndname.c_str(), cfg->initPosX, cfg->initPosY , cfg->initWidth, cfg->initHeight, cfg->WindowMode );
+		    }	    
+		  }
+		  	  
+		}		
+	    }
+	}
+		
+      }
+  }
+     
+  return 0;   
+}
+
+
+
+
 // OpenGL support
 
 void cv::setOpenGlDrawCallback(const string& name, OpenGlDrawCallback callback, void* userdata)
@@ -297,97 +475,23 @@ void cv::updateWindow(const string& windowName)
 #ifdef HAVE_OPENGL
 namespace
 {
-    const int CV_TEXTURE_MAGIC_VAL        = 0x00287653;
-    const int CV_POINT_CLOUD_MAGIC_VAL    = 0x00287654;
+    std::map<std::string, cv::GlTexture2D> wndTexs;
+    std::map<std::string, cv::GlTexture2D> ownWndTexs;
+    std::map<std::string, cv::GlBuffer> ownWndBufs;
 
-    struct GlObjBase
-    {
-        int flag;
-        GlObjBase* next;
-        GlObjBase* prev;
-        std::string winname;
 
-        virtual ~GlObjBase() {}
-    };
-
-    GlObjBase* g_glObjs = 0;
-
-    GlObjBase* findGlObjByName(const std::string& winname)
-    {
-        GlObjBase* obj = g_glObjs;
-
-        while(obj && obj->winname != winname)
-            obj = obj->next;
-
-        return obj;
-    }
-
-    void addGlObj(GlObjBase* glObj)
-    {
-        glObj->next = g_glObjs;
-        glObj->prev = 0;
-        if (g_glObjs)
-            g_glObjs->prev = glObj;
-        g_glObjs = glObj;
-    }
-
-    void removeGlObj(GlObjBase* glObj)
-    {
-        if (glObj->prev)
-            glObj->prev->next = glObj->next;
-        else
-            g_glObjs = glObj->next;
-
-        if (glObj->next)
-            glObj->next->prev = glObj->prev;
-
-        delete glObj;
-    }
-
-    struct GlObjTex : GlObjBase
-    {
-        cv::GlTexture tex;
-    };
 
     void CV_CDECL glDrawTextureCallback(void* userdata)
     {
-        GlObjTex* texObj = static_cast<GlObjTex*>(userdata);
+	cv::GlTexture2D* texObj = static_cast<cv::GlTexture2D*>(userdata);
 
-        CV_DbgAssert(texObj->flag == CV_TEXTURE_MAGIC_VAL);
-
-        static cv::GlCamera glCamera;
-
-        glCamera.setupProjectionMatrix();
-
-        cv::render(texObj->tex);
+        cv::render(*texObj);
     }
 
-    struct GlObjPointCloud : GlObjBase
-    {
-        cv::GlArrays arr;
-        cv::GlCamera camera;
-    };
-
-    void CV_CDECL glDrawPointCloudCallback(void* userdata)
-    {
-        GlObjPointCloud* pointCloudObj = static_cast<GlObjPointCloud*>(userdata);
-
-        CV_DbgAssert(pointCloudObj->flag == CV_POINT_CLOUD_MAGIC_VAL);
-
-        pointCloudObj->camera.setupProjectionMatrix();
-        pointCloudObj->camera.setupModelViewMatrix();
-
-        cv::render(pointCloudObj->arr);
-    }
-
-    void CV_CDECL glCleanCallback(void* userdata)
-    {
-        GlObjBase* glObj = static_cast<GlObjBase*>(userdata);
-
-        removeGlObj(glObj);
-    }
 }
 #endif // HAVE_OPENGL
+
+
 
 void cv::imshow( const string& winname, InputArray _img )
 {
@@ -396,7 +500,8 @@ void cv::imshow( const string& winname, InputArray _img )
     CvMat c_img = img;
     cvShowImage(winname.c_str(), &c_img);
 #else
-    double useGl = getWindowProperty(winname, WND_PROP_OPENGL);
+    const double useGl = getWindowProperty(winname, WND_PROP_OPENGL);
+
     if (useGl <= 0)
     {
         Mat img = _img.getMat();
@@ -405,7 +510,7 @@ void cv::imshow( const string& winname, InputArray _img )
     }
     else
     {
-        double autoSize = getWindowProperty(winname, WND_PROP_AUTOSIZE);
+        const double autoSize = getWindowProperty(winname, WND_PROP_AUTOSIZE);
 
         if (autoSize > 0)
         {
@@ -415,142 +520,41 @@ void cv::imshow( const string& winname, InputArray _img )
 
         setOpenGlContext(winname);
 
-        GlObjBase* glObj = findGlObjByName(winname);
-
-        if (glObj && glObj->flag != CV_TEXTURE_MAGIC_VAL)
+        if (_img.kind() == _InputArray::OPENGL_TEXTURE2D)
         {
-            icvSetOpenGlCleanCallback(winname.c_str(), 0, 0);
-            glObj = 0;
-        }
+            cv::GlTexture2D& tex = wndTexs[winname];
 
-        if (glObj)
-        {
-            GlObjTex* texObj = static_cast<GlObjTex*>(glObj);
-            texObj->tex.copyFrom(_img);
+            tex = _img.getGlTexture2D();
+
+            tex.setAutoRelease(false);
+
+            setOpenGlDrawCallback(winname, glDrawTextureCallback, &tex);
         }
         else
         {
-            GlObjTex* texObj = new GlObjTex;
-            texObj->tex.copyFrom(_img);
+            cv::GlTexture2D& tex = ownWndTexs[winname];
 
-            glObj = texObj;
-            glObj->flag = CV_TEXTURE_MAGIC_VAL;
-            glObj->winname = winname;
+            if (_img.kind() == _InputArray::GPU_MAT)
+            {
+                cv::GlBuffer& buf = ownWndBufs[winname];
+                buf.copyFrom(_img);
+                buf.setAutoRelease(false);
 
-            addGlObj(glObj);
+                tex.copyFrom(buf);
+                tex.setAutoRelease(false);
+            }
+            else
+            {
+                tex.copyFrom(_img);
+            }
 
-            icvSetOpenGlCleanCallback(winname.c_str(), glCleanCallback, glObj);
+            tex.setAutoRelease(false);
+
+            setOpenGlDrawCallback(winname, glDrawTextureCallback, &tex);
         }
-
-        setOpenGlDrawCallback(winname, glDrawTextureCallback, glObj);
 
         updateWindow(winname);
     }
-#endif
-}
-
-void cv::pointCloudShow(const string& winname, const GlCamera& camera, const GlArrays& arr)
-{
-#ifndef HAVE_OPENGL
-    CV_Error(CV_OpenGlNotSupported, "The library is compiled without OpenGL support");
-    (void)winname;
-    (void)camera;
-    (void)arr;
-#else
-    namedWindow(winname, WINDOW_OPENGL);
-
-    setOpenGlContext(winname);
-
-    GlObjBase* glObj = findGlObjByName(winname);
-
-    if (glObj && glObj->flag != CV_POINT_CLOUD_MAGIC_VAL)
-    {
-        icvSetOpenGlCleanCallback(winname.c_str(), 0, 0);
-        glObj = 0;
-    }
-
-    if (glObj)
-    {
-        GlObjPointCloud* pointCloudObj = static_cast<GlObjPointCloud*>(glObj);
-        pointCloudObj->arr = arr;
-        pointCloudObj->camera = camera;
-    }
-    else
-    {
-        GlObjPointCloud* pointCloudObj = new GlObjPointCloud;
-        pointCloudObj->arr = arr;
-        pointCloudObj->camera = camera;
-
-        glObj = pointCloudObj;
-        glObj->flag = CV_POINT_CLOUD_MAGIC_VAL;
-        glObj->winname = winname;
-
-        addGlObj(glObj);
-
-        icvSetOpenGlCleanCallback(winname.c_str(), glCleanCallback, glObj);
-    }
-
-    setOpenGlDrawCallback(winname, glDrawPointCloudCallback, glObj);
-
-    updateWindow(winname);
-#endif
-}
-
-void cv::pointCloudShow(const std::string& winname, const cv::GlCamera& camera, InputArray points, InputArray colors)
-{
-#ifndef HAVE_OPENGL
-    (void)winname;
-    (void)camera;
-    (void)points;
-    (void)colors;
-    CV_Error(CV_OpenGlNotSupported, "The library is compiled without OpenGL support");
-#else
-    namedWindow(winname, WINDOW_OPENGL);
-
-    setOpenGlContext(winname);
-
-    GlObjBase* glObj = findGlObjByName(winname);
-
-    if (glObj && glObj->flag != CV_POINT_CLOUD_MAGIC_VAL)
-    {
-        icvSetOpenGlCleanCallback(winname.c_str(), 0, 0);
-        glObj = 0;
-    }
-
-    if (glObj)
-    {
-        GlObjPointCloud* pointCloudObj = static_cast<GlObjPointCloud*>(glObj);
-
-        pointCloudObj->arr.setVertexArray(points);
-        if (colors.empty())
-            pointCloudObj->arr.resetColorArray();
-        else
-            pointCloudObj->arr.setColorArray(colors);
-
-        pointCloudObj->camera = camera;
-    }
-    else
-    {
-        GlObjPointCloud* pointCloudObj = new GlObjPointCloud;
-
-        pointCloudObj->arr.setVertexArray(points);
-        if (!colors.empty())
-            pointCloudObj->arr.setColorArray(colors);
-
-        pointCloudObj->camera = camera;
-
-        glObj = pointCloudObj;
-        glObj->flag = CV_POINT_CLOUD_MAGIC_VAL;
-        glObj->winname = winname;
-
-        addGlObj(glObj);
-
-        icvSetOpenGlCleanCallback(winname.c_str(), glCleanCallback, glObj);
-    }
-
-    setOpenGlDrawCallback(winname, glDrawPointCloudCallback, glObj);
-
-    updateWindow(winname);
 #endif
 }
 
@@ -573,10 +577,6 @@ CV_IMPL void cvUpdateWindow(const char*)
     CV_Error(CV_OpenGlNotSupported, "The library is compiled without OpenGL support");
 }
 
-void icvSetOpenGlCleanCallback(const char*, CvOpenGlCleanCallback, void*)
-{
-    CV_Error(CV_OpenGlNotSupported, "The library is compiled without OpenGL support");
-}
 
 #endif // !HAVE_OPENGL
 
@@ -704,7 +704,7 @@ int cv::createButton(const string&, ButtonCallback, void*, int , bool )
 
 // Dummy function in case of Qt switched off,
 // but application with Qt scpecific calls....
-bool cv::getCommandVec( const string& winname, vector<string> & stringVec,  char* cmd )
+bool cv::getCommandVec( const string& , vector<string> & ,  char* )
 {
     return false;
 }
@@ -895,7 +895,7 @@ CV_IMPL int cvSetButtonBarContent(const char *, int, int, char * )
     return -1;
 }
 
-CV_IMPL int cvDispInfoBox_QT(const char*, char* , const char * )
+CV_IMPL int cvDispInfoBox_QT(const char*, const char* , const char * )
 {
     // CV_NO_GUI_ERROR("cvDispInfoBox_QT");
     return -1;

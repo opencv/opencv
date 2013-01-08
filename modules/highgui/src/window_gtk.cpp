@@ -417,9 +417,6 @@ typedef struct CvWindow
 
     CvOpenGlDrawCallback glDrawCallback;
     void* glDrawData;
-
-    CvOpenGlCleanCallback glCleanCallback;
-    void* glCleanData;
 #endif
 }
 CvWindow;
@@ -692,238 +689,6 @@ double cvGetOpenGlProp_GTK(const char* name)
 
 namespace
 {
-    class GlFuncTab_GTK : public CvOpenGlFuncTab
-    {
-    public:
-        GlFuncTab_GTK();
-
-        void genBuffers(int n, unsigned int* buffers) const;
-        void deleteBuffers(int n, const unsigned int* buffers) const;
-
-        void bufferData(unsigned int target, ptrdiff_t size, const void* data, unsigned int usage) const;
-        void bufferSubData(unsigned int target, ptrdiff_t offset, ptrdiff_t size, const void* data) const;
-
-        void bindBuffer(unsigned int target, unsigned int buffer) const;
-
-        void* mapBuffer(unsigned int target, unsigned int access) const;
-        void unmapBuffer(unsigned int target) const;
-
-        void generateBitmapFont(const std::string& family, int height, int weight, bool italic, bool underline, int start, int count, int base) const;
-
-        bool isGlContextInitialized() const;
-
-        PFNGLGENBUFFERSPROC    glGenBuffersExt;
-        PFNGLDELETEBUFFERSPROC glDeleteBuffersExt;
-
-        PFNGLBUFFERDATAPROC    glBufferDataExt;
-        PFNGLBUFFERSUBDATAPROC glBufferSubDataExt;
-
-        PFNGLBINDBUFFERPROC    glBindBufferExt;
-
-        PFNGLMAPBUFFERPROC     glMapBufferExt;
-        PFNGLUNMAPBUFFERPROC   glUnmapBufferExt;
-
-        bool initialized;
-    };
-
-    GlFuncTab_GTK::GlFuncTab_GTK()
-    {
-        glGenBuffersExt    = 0;
-        glDeleteBuffersExt = 0;
-
-        glBufferDataExt    = 0;
-        glBufferSubDataExt = 0;
-
-        glBindBufferExt    = 0;
-
-        glMapBufferExt     = 0;
-        glUnmapBufferExt   = 0;
-
-        initialized = false;
-    }
-
-    void GlFuncTab_GTK::genBuffers(int n, unsigned int* buffers) const
-    {
-        CV_FUNCNAME( "GlFuncTab_GTK::genBuffers" );
-
-        __BEGIN__;
-
-        if (!glGenBuffersExt)
-            CV_ERROR(CV_OpenGlApiCallError, "Current OpenGL implementation doesn't support required extension");
-
-        glGenBuffersExt(n, buffers);
-        CV_CheckGlError();
-
-        __END__;
-    }
-
-    void GlFuncTab_GTK::deleteBuffers(int n, const unsigned int* buffers) const
-    {
-        CV_FUNCNAME( "GlFuncTab_GTK::deleteBuffers" );
-
-        __BEGIN__;
-
-        if (!glDeleteBuffersExt)
-            CV_ERROR(CV_OpenGlApiCallError, "Current OpenGL implementation doesn't support required extension");
-
-        glDeleteBuffersExt(n, buffers);
-        CV_CheckGlError();
-
-        __END__;
-    }
-
-    void GlFuncTab_GTK::bufferData(unsigned int target, ptrdiff_t size, const void* data, unsigned int usage) const
-    {
-        CV_FUNCNAME( "GlFuncTab_GTK::bufferData" );
-
-        __BEGIN__;
-
-        if (!glBufferDataExt)
-            CV_ERROR(CV_OpenGlApiCallError, "Current OpenGL implementation doesn't support required extension");
-
-        glBufferDataExt(target, size, data, usage);
-        CV_CheckGlError();
-
-        __END__;
-    }
-
-    void GlFuncTab_GTK::bufferSubData(unsigned int target, ptrdiff_t offset, ptrdiff_t size, const void* data) const
-    {
-        CV_FUNCNAME( "GlFuncTab_GTK::bufferSubData" );
-
-        __BEGIN__;
-
-        if (!glBufferSubDataExt)
-            CV_ERROR(CV_OpenGlApiCallError, "Current OpenGL implementation doesn't support required extension");
-
-        glBufferSubDataExt(target, offset, size, data);
-        CV_CheckGlError();
-
-        __END__;
-    }
-
-    void GlFuncTab_GTK::bindBuffer(unsigned int target, unsigned int buffer) const
-    {
-        CV_FUNCNAME( "GlFuncTab_GTK::bindBuffer" );
-
-        __BEGIN__;
-
-        if (!glBindBufferExt)
-            CV_ERROR(CV_OpenGlApiCallError, "Current OpenGL implementation doesn't support required extension");
-
-        glBindBufferExt(target, buffer);
-        CV_CheckGlError();
-
-        __END__;
-    }
-
-    void* GlFuncTab_GTK::mapBuffer(unsigned int target, unsigned int access) const
-    {
-        CV_FUNCNAME( "GlFuncTab_GTK::mapBuffer" );
-
-        void* res = 0;
-
-        __BEGIN__;
-
-        if (!glMapBufferExt)
-            CV_ERROR(CV_OpenGlApiCallError, "Current OpenGL implementation doesn't support required extension");
-
-        res = glMapBufferExt(target, access);
-        CV_CheckGlError();
-
-        __END__;
-
-        return res;
-    }
-
-    void GlFuncTab_GTK::unmapBuffer(unsigned int target) const
-    {
-        CV_FUNCNAME( "GlFuncTab_GTK::unmapBuffer" );
-
-        __BEGIN__;
-
-        if (!glUnmapBufferExt)
-            CV_ERROR(CV_OpenGlApiCallError, "Current OpenGL implementation doesn't support required extension");
-
-        glUnmapBufferExt(target);
-        CV_CheckGlError();
-
-        __END__;
-    }
-
-    void GlFuncTab_GTK::generateBitmapFont(const std::string& family, int height, int weight, bool italic, bool /*underline*/, int start, int count, int base) const
-    {
-        PangoFontDescription* fontDecr;
-        PangoFont* pangoFont;
-
-        CV_FUNCNAME( "GlFuncTab_GTK::generateBitmapFont" );
-
-        __BEGIN__;
-
-        fontDecr = pango_font_description_new();
-
-        pango_font_description_set_size(fontDecr, height);
-
-        pango_font_description_set_family_static(fontDecr, family.c_str());
-
-        pango_font_description_set_weight(fontDecr, static_cast<PangoWeight>(weight));
-
-        pango_font_description_set_style(fontDecr, italic ? PANGO_STYLE_ITALIC : PANGO_STYLE_NORMAL);
-
-        pangoFont = gdk_gl_font_use_pango_font(fontDecr, start, count, base);
-
-        pango_font_description_free(fontDecr);
-
-        if (!pangoFont)
-            CV_ERROR(CV_OpenGlApiCallError, "Can't create font");
-
-        __END__;
-    }
-
-    bool GlFuncTab_GTK::isGlContextInitialized() const
-    {
-        return initialized;
-    }
-
-    void initGl()
-    {
-        static GlFuncTab_GTK glFuncTab;
-        static bool first = true;
-
-        if (first)
-        {
-            // Load extensions
-            GdkGLProc func;
-
-            func = gdk_gl_get_proc_address("glGenBuffers");
-            glFuncTab.glGenBuffersExt = (PFNGLGENBUFFERSPROC)func;
-
-            func = gdk_gl_get_proc_address("glDeleteBuffers");
-            glFuncTab.glDeleteBuffersExt = (PFNGLDELETEBUFFERSPROC)func;
-
-            func = gdk_gl_get_proc_address("glBufferData");
-            glFuncTab.glBufferDataExt = (PFNGLBUFFERDATAPROC)func;
-
-            func = gdk_gl_get_proc_address("glBufferSubData");
-            glFuncTab.glBufferSubDataExt = (PFNGLBUFFERSUBDATAPROC)func;
-
-            func = gdk_gl_get_proc_address("glBindBuffer");
-            glFuncTab.glBindBufferExt = (PFNGLBINDBUFFERPROC)func;
-
-            func = gdk_gl_get_proc_address("glMapBuffer");
-            glFuncTab.glMapBufferExt = (PFNGLMAPBUFFERPROC)func;
-
-            func = gdk_gl_get_proc_address("glUnmapBuffer");
-            glFuncTab.glUnmapBufferExt = (PFNGLUNMAPBUFFERPROC)func;
-
-            glFuncTab.initialized = true;
-
-            icvSetOpenGlFuncTab(&glFuncTab);
-
-            first = false;
-        }
-    }
-
     void createGlContext(CvWindow* window)
     {
         GdkGLConfig* glconfig;
@@ -931,8 +696,6 @@ namespace
         CV_FUNCNAME( "createGlContext" );
 
         __BEGIN__;
-
-        window->useGl = false;
 
         // Try double-buffered visual
         glconfig = gdk_gl_config_new_by_mode((GdkGLConfigMode)(GDK_GL_MODE_RGB | GDK_GL_MODE_DEPTH | GDK_GL_MODE_DOUBLE));
@@ -943,22 +706,9 @@ namespace
         if (!gtk_widget_set_gl_capability(window->widget, glconfig, NULL, TRUE, GDK_GL_RGBA_TYPE))
             CV_ERROR( CV_OpenGlApiCallError, "Can't Create A GL Device Context" );
 
-        initGl();
-
         window->useGl = true;
 
         __END__;
-    }
-
-    void releaseGlContext(CvWindow* window)
-    {
-        //CV_FUNCNAME( "releaseGlContext" );
-
-        //__BEGIN__;
-
-        window->useGl = false;
-
-        //__END__;
     }
 
     void drawGl(CvWindow* window)
@@ -979,8 +729,6 @@ namespace
 
         if (window->glDrawCallback)
             window->glDrawCallback(window->glDrawData);
-
-        CV_CheckGlError();
 
         if (gdk_gl_drawable_is_double_buffered (gldrawable))
             gdk_gl_drawable_swap_buffers(gldrawable);
@@ -1101,9 +849,6 @@ CV_IMPL int cvNamedWindow( const char* name, int flags )
 
     window->glDrawCallback = 0;
     window->glDrawData = 0;
-
-    window->glCleanCallback = 0;
-    window->glCleanData = 0;
 #endif
 
     //
@@ -1233,40 +978,6 @@ CV_IMPL void cvSetOpenGlDrawCallback(const char* name, CvOpenGlDrawCallback call
     __END__;
 }
 
-void icvSetOpenGlCleanCallback(const char* name, CvOpenGlCleanCallback callback, void* userdata)
-{
-    CvWindow* window;
-    GdkGLContext* glcontext;
-    GdkGLDrawable* gldrawable;
-
-    CV_FUNCNAME( "icvSetOpenGlCleanCallback" );
-
-    __BEGIN__;
-
-    if (!name)
-        CV_ERROR(CV_StsNullPtr, "NULL name string");
-
-    window = icvFindWindowByName(name);
-    if (!window)
-        EXIT;
-
-    if (!window->useGl)
-        CV_ERROR( CV_OpenGlNotSupported, "Window doesn't support OpenGL" );
-
-    glcontext = gtk_widget_get_gl_context(window->widget);
-    gldrawable = gtk_widget_get_gl_drawable(window->widget);
-
-    gdk_gl_drawable_make_current(gldrawable, glcontext);
-
-    if (window->glCleanCallback)
-        window->glCleanCallback(window->glCleanData);
-
-    window->glCleanCallback = callback;
-    window->glCleanData = userdata;
-
-    __END__;
-}
-
 #endif // HAVE_OPENGL
 
 
@@ -1275,25 +986,6 @@ void icvSetOpenGlCleanCallback(const char* name, CvOpenGlCleanCallback callback,
 static void icvDeleteWindow( CvWindow* window )
 {
     CvTrackbar* trackbar;
-
-#ifdef HAVE_OPENGL
-    if (window->useGl)
-    {
-        GdkGLContext* glcontext = gtk_widget_get_gl_context(window->widget);
-        GdkGLDrawable* gldrawable = gtk_widget_get_gl_drawable(window->widget);
-
-        gdk_gl_drawable_make_current(gldrawable, glcontext);
-
-        if (window->glCleanCallback)
-        {
-            window->glCleanCallback(window->glCleanData);
-            window->glCleanCallback = 0;
-            window->glCleanData = 0;
-        }
-
-        releaseGlContext(window);
-    }
-#endif
 
     if( window->prev )
         window->prev->next = window->next;

@@ -110,14 +110,15 @@ endif()
 
 # Optional 3rd party components
 # ===================================================
-OCV_OPTION(WITH_1394           "Include IEEE1394 support"                    ON   IF (UNIX AND NOT ANDROID AND NOT IOS) )
+OCV_OPTION(WITH_1394           "Include IEEE1394 support"                    ON   IF (UNIX AND NOT ANDROID AND NOT IOS AND NOT CARMA) )
 OCV_OPTION(WITH_AVFOUNDATION   "Use AVFoundation for Video I/O"              ON   IF IOS)
 OCV_OPTION(WITH_CARBON         "Use Carbon for UI instead of Cocoa"          OFF  IF APPLE )
-OCV_OPTION(WITH_CUBLAS         "Include NVidia Cuda Basic Linear Algebra Subprograms (BLAS) library support" OFF IF (CMAKE_VERSION VERSION_GREATER "2.8" AND NOT ANDROID AND NOT IOS) )
 OCV_OPTION(WITH_CUDA           "Include NVidia Cuda Runtime support"         ON   IF (CMAKE_VERSION VERSION_GREATER "2.8" AND NOT ANDROID AND NOT IOS) )
 OCV_OPTION(WITH_CUFFT          "Include NVidia Cuda Fast Fourier Transform (FFT) library support"            ON  IF (CMAKE_VERSION VERSION_GREATER "2.8" AND NOT ANDROID AND NOT IOS) )
+OCV_OPTION(WITH_CUBLAS         "Include NVidia Cuda Basic Linear Algebra Subprograms (BLAS) library support" OFF IF (CMAKE_VERSION VERSION_GREATER "2.8" AND NOT ANDROID AND NOT IOS) )
+OCV_OPTION(WITH_NVCUVID        "Include NVidia Video Decoding library support"                               OFF IF (CMAKE_VERSION VERSION_GREATER "2.8" AND NOT ANDROID AND NOT IOS AND NOT APPLE) )
 OCV_OPTION(WITH_EIGEN          "Include Eigen2/Eigen3 support"               ON)
-OCV_OPTION(WITH_FFMPEG         "Include FFMPEG support"                      ON   IF (NOT ANDROID AND NOT IOS) )
+OCV_OPTION(WITH_FFMPEG         "Include FFMPEG support"                      ON   IF (NOT ANDROID AND NOT IOS))
 OCV_OPTION(WITH_GSTREAMER      "Include Gstreamer support"                   ON   IF (UNIX AND NOT APPLE AND NOT ANDROID) )
 OCV_OPTION(WITH_GTK            "Include GTK support"                         ON   IF (UNIX AND NOT APPLE AND NOT ANDROID) )
 OCV_OPTION(WITH_IPP            "Include Intel IPP support"                   OFF  IF (MSVC OR X86 OR X86_64) )
@@ -139,9 +140,9 @@ OCV_OPTION(WITH_VIDEOINPUT     "Build HighGUI with DirectShow support"       ON 
 OCV_OPTION(WITH_XIMEA          "Include XIMEA cameras support"               OFF  IF (NOT ANDROID AND NOT APPLE) )
 OCV_OPTION(WITH_XINE           "Include Xine support (GPL)"                  OFF  IF (UNIX AND NOT APPLE AND NOT ANDROID) )
 OCV_OPTION(WITH_CLP            "Include Clp support (EPL)"                   OFF)
-OCV_OPTION(WITH_OPENCL         "Include OpenCL Runtime support"              OFF  IF (NOT ANDROID AND NOT IOS) )
-OCV_OPTION(WITH_OPENCLAMDFFT   "Include AMD OpenCL FFT library support"      OFF  IF (NOT ANDROID AND NOT IOS) )
-OCV_OPTION(WITH_OPENCLAMDBLAS  "Include AMD OpenCL BLAS library support"     OFF  IF (NOT ANDROID AND NOT IOS) )
+OCV_OPTION(WITH_OPENCL         "Include OpenCL Runtime support"              OFF  IF (NOT ANDROID AND NOT IOS AND NOT CARMA) )
+OCV_OPTION(WITH_OPENCLAMDFFT   "Include AMD OpenCL FFT library support"      OFF  IF (NOT ANDROID AND NOT IOS AND NOT CARMA) )
+OCV_OPTION(WITH_OPENCLAMDBLAS  "Include AMD OpenCL BLAS library support"     OFF  IF (NOT ANDROID AND NOT IOS AND NOT CARMA) )
 
 
 # OpenCV build components
@@ -160,12 +161,12 @@ OCV_OPTION(BUILD_ANDROID_SERVICE    "Build OpenCV Manager for Google Play" OFF I
 OCV_OPTION(BUILD_ANDROID_PACKAGE    "Build platform-specific package for Google Play" OFF IF ANDROID )
 
 # 3rd party libs
-OCV_OPTION(BUILD_ZLIB               "Build zlib from source"         WIN32 OR APPLE )
-OCV_OPTION(BUILD_TIFF               "Build libtiff from source"      WIN32 OR ANDROID OR APPLE )
-OCV_OPTION(BUILD_JASPER             "Build libjasper from source"    WIN32 OR ANDROID OR APPLE )
-OCV_OPTION(BUILD_JPEG               "Build libjpeg from source"      WIN32 OR ANDROID OR APPLE )
-OCV_OPTION(BUILD_PNG                "Build libpng from source"       WIN32 OR ANDROID OR APPLE )
-OCV_OPTION(BUILD_OPENEXR            "Build openexr from source"      WIN32 OR ANDROID OR APPLE )
+OCV_OPTION(BUILD_ZLIB               "Build zlib from source"         WIN32 OR APPLE OR CARMA )
+OCV_OPTION(BUILD_TIFF               "Build libtiff from source"      WIN32 OR ANDROID OR APPLE OR CARMA )
+OCV_OPTION(BUILD_JASPER             "Build libjasper from source"    WIN32 OR ANDROID OR APPLE OR CARMA )
+OCV_OPTION(BUILD_JPEG               "Build libjpeg from source"      WIN32 OR ANDROID OR APPLE OR CARMA )
+OCV_OPTION(BUILD_PNG                "Build libpng from source"       WIN32 OR ANDROID OR APPLE OR CARMA )
+OCV_OPTION(BUILD_OPENEXR            "Build openexr from source"      WIN32 OR ANDROID OR APPLE OR CARMA )
 
 
 # OpenCV installation options
@@ -458,7 +459,7 @@ if(BUILD_EXAMPLES OR BUILD_ANDROID_EXAMPLES OR INSTALL_PYTHON_EXAMPLES)
   add_subdirectory(samples)
 endif()
 
-if(BUILD_ANDROID_SERVICE)
+if(ANDROID)
   add_subdirectory(android/service)
 endif()
 
@@ -564,6 +565,7 @@ if(ANDROID)
   status("")
   status("  Android: ")
   status("    Android ABI:" ${ANDROID_ABI})
+  status("    STL type:" ${ANDROID_STL})
   status("    Native API level:" android-${ANDROID_NATIVE_API_LEVEL})
   status("    SDK target:" "${ANDROID_SDK_TARGET}")
   if(BUILD_WITH_ANDROID_NDK)
@@ -767,8 +769,9 @@ if(HAVE_CUDA)
   status("")
   status("  NVIDIA CUDA")
 
-  status("    Use CUFFT:"            HAVE_CUFFT  THEN YES ELSE NO)
-  status("    Use CUBLAS:"           HAVE_CUBLAS THEN YES ELSE NO)
+  status("    Use CUFFT:"            HAVE_CUFFT   THEN YES ELSE NO)
+  status("    Use CUBLAS:"           HAVE_CUBLAS  THEN YES ELSE NO)
+  status("    USE NVCUVID:"          HAVE_NVCUVID THEN YES ELSE NO)
   status("    NVIDIA GPU arch:"      ${OPENCV_CUDA_ARCH_BIN})
   status("    NVIDIA PTX archs:"     ${OPENCV_CUDA_ARCH_PTX})
   status("    Use fast math:"        CUDA_FAST_MATH THEN YES ELSE NO)

@@ -50,8 +50,8 @@ The structure of package contents looks as follows:
 
     OpenCV-2.4.3-android-sdk
     |_ apk
-    |   |_ OpenCV_2.4.3_binary_pack_XXX.apk
-    |   |_ OpenCV_2.4.3_Manager.apk
+    |   |_ OpenCV_2.4.3_binary_pack_armv7a.apk
+    |   |_ OpenCV_2.4.3_Manager_2.0_XXX.apk
     |
     |_ doc
     |_ samples
@@ -85,8 +85,8 @@ The structure of package contents looks as follows:
   On production devices that have access to Google Play Market (and Internet) these packages will be
   installed from Market on the first start of an application using OpenCV Manager API.
   But devkits without Market or Internet connection require this packages to be installed manually.
-  Install the `Manager.apk` and the corresponding `binary_pack.apk` depending on the device CPU,
-  the Manager GUI provides this info. Below you'll see exact commands on how to do this.
+  Install the `Manager.apk` and optional `binary_pack.apk` if it needed.
+  See :ref:`manager_selection` for details.
 
   .. note:: Installation from Internet is the preferable way since OpenCV team may publish updated
             versions of this packages on the Market.
@@ -159,8 +159,8 @@ Get the OpenCV4Android SDK
 
       unzip ~/Downloads/OpenCV-2.4.3-android-sdk.zip
 
-.. |opencv_android_bin_pack| replace:: OpenCV-2.4.3-android-sdk.zip
-.. _opencv_android_bin_pack_url: http://sourceforge.net/projects/opencvlibrary/files/opencv-android/2.4.3/OpenCV-2.4.3-android-sdk.zip/download
+.. |opencv_android_bin_pack| replace:: OpenCV-2.4.3.2-android-sdk.zip
+.. _opencv_android_bin_pack_url: http://sourceforge.net/projects/opencvlibrary/files/opencv-android/2.4.3/OpenCV-2.4.3.2-android-sdk.zip/download
 .. |opencv_android_bin_pack_url| replace:: |opencv_android_bin_pack|
 .. |seven_zip| replace:: 7-Zip
 .. _seven_zip: http://www.7-zip.org/
@@ -185,6 +185,8 @@ Import OpenCV library and samples to the Eclipse
 
    Each sample included into the |opencv_android_bin_pack| is a regular Android project that already
    references OpenCV library.Follow the steps below to import OpenCV and samples into the workspace:
+
+   .. note:: OpenCV samples are indeed **dependent** on OpenCV library project so don't forget to import it to your workspace as well.
 
    * Right click on the :guilabel:`Package Explorer` window and choose :guilabel:`Import...` option
      from the context menu:
@@ -213,12 +215,20 @@ Import OpenCV library and samples to the Eclipse
    and you have to wait some time while it is building OpenCV samples. Just give a minute to
    Eclipse to complete initialization.
 
-   .. note :: After the initial import, on a non-Windows (Linux and Mac OS) operating system Eclipse
+   .. warning :: After the initial import, on a non-Windows (Linux and Mac OS) operating system Eclipse
               will still show build errors for applications with native C++ code. To resolve the
               issues, please do the following:
 
               Open :guilabel:`Project Properties -> C/C++ Build`, and replace "Build command" text
               to ``"${NDKROOT}/ndk-build"`` (remove .cmd at the end).
+
+   .. note :: In some cases the build errors don't disappear, then try the following actions:
+
+              * right click on ``OpenCV Library`` project -> :guilabel:`Android Tools -> Fix Project Properties`,
+                then menu :guilabel:`Project -> Clean... -> Clean all`
+              * right click on the project with errors -> :guilabel:`Properties -> Android`, make sure the
+                ``Target`` is selected and is ``Android 3.0`` or higher
+              * check the build errors in the :guilabel:`Problems` view window and try to resolve them by yourselves
 
    .. image:: images/eclipse_cdt_cfg4.png
       :alt: Configure CDT
@@ -235,14 +245,14 @@ Import OpenCV library and samples to the Eclipse
 Running OpenCV Samples
 ----------------------
 
-At this point you should be able to build and run the samples. Keep in mind, that ``face-detection``,
-``Tutorial 3`` and ``Tutorial 4`` include some native code and require Android NDK and CDT plugin
-for Eclipse to build working applications. If you haven't installed these tools see the corresponding
-section of :ref:`Android_Dev_Intro`.
+At this point you should be able to build and run the samples. Keep in mind, that
+``face-detection``, ``Tutorial 3` and ``Tutorial 4`` include some native code and
+require Android NDK and CDT plugin for Eclipse to build working applications. If you haven't
+installed these tools, see the corresponding section of :ref:`Android_Dev_Intro`.
 
-Also, please consider that ``Tutorial 0`` and ``Tutorial 1`` samples use Java Camera API that
-definitelly accessible on emulator from the Android SDK.
-Other samples use OpenCV Native Camera which may not work with emulator.
+.. warning:: Please consider that some samples use Android Java Camera API, which is accessible
+             with an AVD. But most of samples use OpenCV Native Camera which **may not work** with
+             an emulator.
 
 .. note:: Recent *Android SDK tools, revision 19+* can run ARM v7a OS images but they available not
           for all Android versions.
@@ -280,19 +290,39 @@ Well, running samples from Eclipse is very simple:
   To get rid of the message you will need to install `OpenCV Manager` and the appropriate `OpenCV binary pack`.
   Simply tap :menuselection:`Yes` if you have *Google Play Market* installed on your device/emulator. It will redirect you to the corresponding page on *Google Play Market*.
 
-  If you have no access to the *Market*, which is often the case with emulators - you will need to install the packages from OpenCV4Android SDK folder manually. Open the console/terminal and type in the following two commands:
+  If you have no access to the *Market*, which is often the case with emulators - you will need to install the packages from OpenCV4Android SDK folder manually. See :ref:`manager_selection` for details.
 
   .. code-block:: sh
     :linenos:
 
-    <Android SDK path>/platform-tools/adb install <OpenCV4Android SDK path>/apk/OpenCV_2.4.3_Manager.apk
-    <Android SDK path>/platform-tools/adb install <OpenCV4Android SDK path>/apk/OpenCV_2.4.3_binary_pack_armv7a.apk
+    <Android SDK path>/platform-tools/adb install <OpenCV4Android SDK path>/apk/OpenCV_2.4.3_Manager_armv7a-neon.apk
 
-  If you're running Windows, that will probably look like this:
+  .. note:: ``armeabi``, ``armv7a-neon``, ``arm7a-neon-android8``, ``mips`` and ``x86`` stand for
+            platform targets:
 
-  .. image:: images/install_opencv_manager_with_adb.png
-     :alt: Run these commands in the console to install OpenCV Manager
-     :align: center
+            * ``armeabi`` is for ARM v5 and ARM v6 architectures with Android API 8+,
+
+            * ``armv7a-neon`` is for NEON-optimized ARM v7 with Android API 9+,
+
+            * ``arm7a-neon-android8`` is for NEON-optimized ARM v7 with Android API 8,
+
+            * ``mips`` is for MIPS architecture with Android API 9+,
+
+            * ``x86`` is for Intel x86 CPUs with Android API 9+.
+
+            If using hardware device for testing/debugging, run the following command to learn
+            its CPU architecture:
+
+            .. code-block:: sh
+
+               adb shell getprop ro.product.cpu.abi
+
+            If you're using an AVD emulator, go :menuselection:`Window > AVD Manager` to see the
+            list of availible devices. Click :menuselection:`Edit` in the context menu of the
+            selected device. In the window, which then pop-ups, find the CPU field.
+
+            You may also see section :ref:`manager_selection` for details.
+
 
   When done, you will be able to run OpenCV samples on your device/emulator seamlessly.
 
@@ -302,6 +332,7 @@ Well, running samples from Eclipse is very simple:
      :height: 600px
      :alt: Tutorial 1 Basic - 1. Add OpenCV - running Canny
      :align: center
+
 
 What's next
 ===========

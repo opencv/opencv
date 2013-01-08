@@ -51,6 +51,29 @@
 struct CvCapture;
 struct CvVideoWriter;
 
+// Split string into parts, see:
+// http://www.codeproject.com/Articles/1114/STL-Split-String
+class SplitList : public std::vector<std::string>
+{
+public:
+    SplitList(const std::string& str, const char* delimList)
+    {
+        size_t lastPos = 0;
+        size_t pos = str.find_first_of(delimList);
+ 
+        while (pos != std::string::npos)
+        {
+            if (pos != lastPos)
+                push_back(str.substr(lastPos, pos-lastPos));
+            lastPos = pos + 1;
+            pos = str.find_first_of(delimList, lastPos);
+        }
+        if (lastPos < str.length())
+            push_back(str.substr(lastPos, pos-lastPos));
+    }
+};
+
+
 namespace cv
 {
 
@@ -66,6 +89,24 @@ enum {
     WND_PROP_ASPECT_RATIO = CV_WND_PROP_ASPECTRATIO, // window's aspect ration
     WND_PROP_OPENGL       = CV_WND_PROP_OPENGL       // opengl support
 };
+
+
+
+/***************************** CvConfigBase structure ******************************/
+typedef struct CvConfigBase
+{
+    int initWidth;
+    int initHeight;
+    int initPosX;
+    int initPosY;
+    int WindowMode;
+    int m_verboseLevel;
+    
+    std::string wndname;
+    cv::FileStorage fs;
+    
+} CvConfigBase;
+
 
 CV_EXPORTS_W void namedWindow(const string& winname, int flags = WINDOW_AUTOSIZE);
 CV_EXPORTS_W void destroyWindow(const string& winname);
@@ -126,17 +167,20 @@ CV_EXPORTS int createTrackbar(const string& trackbarname, const string& winname,
 CV_EXPORTS_W int getTrackbarPos(const string& trackbarname, const string& winname);
 CV_EXPORTS_W void setTrackbarPos(const string& trackbarname, const string& winname, int pos);
 
+
+// *.cfg reading
+CV_EXPORTS int readConfig( const char* file, const char * name, CvConfigBase * cfg );
+
+
 // OpenGL support
 
-typedef void (*OpenGlDrawCallback)(void* userdata);
+typedef void (CV_CDECL *OpenGlDrawCallback)(void* userdata);
 CV_EXPORTS void setOpenGlDrawCallback(const string& winname, OpenGlDrawCallback onOpenGlDraw, void* userdata = 0);
 
 CV_EXPORTS void setOpenGlContext(const string& winname);
 
 CV_EXPORTS void updateWindow(const string& winname);
 
-CV_EXPORTS void pointCloudShow(const string& winname, const GlCamera& camera, const GlArrays& arr);
-CV_EXPORTS void pointCloudShow(const string& winname, const GlCamera& camera, InputArray points, InputArray colors = noArray());
 
 //Only for Qt
 
@@ -159,12 +203,14 @@ CV_EXPORTS int createButton( const string& bar_name, ButtonCallback on_change,
                              bool initial_button_state=0);
 
 
-CV_EXPORTS_W int getButtonBarContent(const string& winname, int idx, char * txt);
-CV_EXPORTS_W int setButtonBarContent(const string& winname, int etype, int idx, char * txt);
-CV_EXPORTS bool getCommandVec(const string& winname, vector<string> & stringVec, char* cmd = NULL);
-CV_EXPORTS void dispInfoBox(const string& winname, char* caption, const string& text);
+CV_EXPORTS_W int getButtonBarContent(const string winname, int idx, char * txt);
+CV_EXPORTS_W int setButtonBarContent(const string winname, int etype, int idx, const char * txt);
+CV_EXPORTS_W int setMapContent(const string winname, const string& varname, const char * text );
+CV_EXPORTS void dispInfoBox(const string winname, const char* caption, const string& text);
 
-CV_EXPORTS_W int setMapContent(const string& winname, const string& varname, char * text );
+
+CV_EXPORTS bool getCommandVec(const string& winname, vector<string> & stringVec, char* cmd = NULL);
+
 
 
 //-------------------------
@@ -255,6 +301,7 @@ public:
 protected:
     Ptr<CvVideoWriter> writer;
 };
+
 
 #endif
 

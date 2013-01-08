@@ -172,7 +172,7 @@ void cv::gpu::FarnebackOpticalFlow::updateFlow_boxFilter(
         const GpuMat& R0, const GpuMat& R1, GpuMat& flowx, GpuMat &flowy,
         GpuMat& M, GpuMat &bufM, int blockSize, bool updateMatrices, Stream streams[])
 {
-    if (!isDeviceArch11_)
+    if (deviceSupports(FEATURE_SET_COMPUTE_12))
         device::optflow_farneback::boxFilter5Gpu(M, blockSize/2, bufM, S(streams[0]));
     else
         device::optflow_farneback::boxFilter5Gpu_CC11(M, blockSize/2, bufM, S(streams[0]));
@@ -191,7 +191,7 @@ void cv::gpu::FarnebackOpticalFlow::updateFlow_gaussianBlur(
         const GpuMat& R0, const GpuMat& R1, GpuMat& flowx, GpuMat& flowy,
         GpuMat& M, GpuMat &bufM, int blockSize, bool updateMatrices, Stream streams[])
 {
-    if (!isDeviceArch11_)
+    if (deviceSupports(FEATURE_SET_COMPUTE_12))
         device::optflow_farneback::gaussianBlur5Gpu(
                     M, blockSize/2, bufM, BORDER_REPLICATE_GPU, S(streams[0]));
     else
@@ -209,7 +209,7 @@ void cv::gpu::FarnebackOpticalFlow::updateFlow_gaussianBlur(
 void cv::gpu::FarnebackOpticalFlow::operator ()(
         const GpuMat &frame0, const GpuMat &frame1, GpuMat &flowx, GpuMat &flowy, Stream &s)
 {
-    CV_Assert(frame0.type() == CV_8U && frame1.type() == CV_8U);
+    CV_Assert(frame0.channels() == 1 && frame1.channels() == 1);
     CV_Assert(frame0.size() == frame1.size());
     CV_Assert(polyN == 5 || polyN == 7);
     CV_Assert(!fastPyramids || std::abs(pyrScale - 0.5) < 1e-6);

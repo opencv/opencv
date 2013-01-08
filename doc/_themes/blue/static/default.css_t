@@ -395,3 +395,11 @@ div.linenodiv {
     min-width: 1em;
     text-align: right;
 }
+
+div.sphinxsidebar #searchbox input[type="text"] {
+    width:auto;
+}
+
+div.sphinxsidebar #searchbox input[type="submit"] {
+    width:auto;
+}

@@ -792,30 +792,22 @@ private:
     GpuMat lab, l, ab;
 };
 
+struct CV_EXPORTS CannyBuf
+{
+    void create(const Size& image_size, int apperture_size = 3);
+    void release();
 
-struct CV_EXPORTS CannyBuf;
+    GpuMat dx, dy;
+    GpuMat mag;
+    GpuMat map;
+    GpuMat st1, st2;
+    Ptr<FilterEngine_GPU> filterDX, filterDY;
+};
 
 CV_EXPORTS void Canny(const GpuMat& image, GpuMat& edges, double low_thresh, double high_thresh, int apperture_size = 3, bool L2gradient = false);
 CV_EXPORTS void Canny(const GpuMat& image, CannyBuf& buf, GpuMat& edges, double low_thresh, double high_thresh, int apperture_size = 3, bool L2gradient = false);
 CV_EXPORTS void Canny(const GpuMat& dx, const GpuMat& dy, GpuMat& edges, double low_thresh, double high_thresh, bool L2gradient = false);
 CV_EXPORTS void Canny(const GpuMat& dx, const GpuMat& dy, CannyBuf& buf, GpuMat& edges, double low_thresh, double high_thresh, bool L2gradient = false);
-
-struct CV_EXPORTS CannyBuf
-{
-    CannyBuf() {}
-    explicit CannyBuf(const Size& image_size, int apperture_size = 3) {create(image_size, apperture_size);}
-    CannyBuf(const GpuMat& dx_, const GpuMat& dy_);
-
-    void create(const Size& image_size, int apperture_size = 3);
-
-    void release();
-
-    GpuMat dx, dy;
-    GpuMat dx_buf, dy_buf;
-    GpuMat edgeBuf;
-    GpuMat trackBuf1, trackBuf2;
-    Ptr<FilterEngine_GPU> filterDX, filterDY;
-};
 
 class CV_EXPORTS ImagePyramid
 {
@@ -854,6 +846,11 @@ struct HoughLinesBuf
 CV_EXPORTS void HoughLines(const GpuMat& src, GpuMat& lines, float rho, float theta, int threshold, bool doSort = false, int maxLines = 4096);
 CV_EXPORTS void HoughLines(const GpuMat& src, GpuMat& lines, HoughLinesBuf& buf, float rho, float theta, int threshold, bool doSort = false, int maxLines = 4096);
 CV_EXPORTS void HoughLinesDownload(const GpuMat& d_lines, OutputArray h_lines, OutputArray h_votes = noArray());
+
+//! HoughLinesP
+
+//! finds line segments in the black-n-white image using probabalistic Hough transform
+CV_EXPORTS void HoughLinesP(const GpuMat& image, GpuMat& lines, HoughLinesBuf& buf, float rho, float theta, int minLineLength, int maxLineGap, int maxLines = 4096);
 
 //! HoughCircles
 
@@ -1036,11 +1033,9 @@ CV_EXPORTS void histRange(const GpuMat& src, GpuMat hist[4], const GpuMat levels
 //! Calculates histogram for 8u one channel image
 //! Output hist will have one row, 256 cols and CV32SC1 type.
 CV_EXPORTS void calcHist(const GpuMat& src, GpuMat& hist, Stream& stream = Stream::Null());
-CV_EXPORTS void calcHist(const GpuMat& src, GpuMat& hist, GpuMat& buf, Stream& stream = Stream::Null());
 
 //! normalizes the grayscale image brightness and contrast by normalizing its histogram
 CV_EXPORTS void equalizeHist(const GpuMat& src, GpuMat& dst, Stream& stream = Stream::Null());
-CV_EXPORTS void equalizeHist(const GpuMat& src, GpuMat& dst, GpuMat& hist, Stream& stream = Stream::Null());
 CV_EXPORTS void equalizeHist(const GpuMat& src, GpuMat& dst, GpuMat& hist, GpuMat& buf, Stream& stream = Stream::Null());
 
 //////////////////////////////// StereoBM_GPU ////////////////////////////////
@@ -1532,6 +1527,97 @@ public:
     int detectMultiScale(const GpuMat& image, GpuMat& objectsBuf, Size maxObjectSize, Size minSize = Size(), double scaleFactor = 1.1, int minNeighbors = 4);
 };
 
+// ======================== GPU version for soft cascade ===================== //
+
+class CV_EXPORTS ChannelsProcessor
+{
+public:
+    enum
+    {
+        GENERIC   = 1 << 4,
+        SEPARABLE = 2 << 4
+    };
+
+    // Appends specified number of HOG first-order features integrals into given vector.
+    // Param frame is an input 3-channel bgr image.
+    // Param channels is a GPU matrix of optionally shrinked channels
+    // Param stream is stream is a high-level CUDA stream abstraction used for asynchronous execution.
+    virtual void apply(InputArray frame, OutputArray channels, Stream& stream = Stream::Null()) = 0;
+
+    // Creates a specific preprocessor implementation.
+    // Param shrinkage is a resizing factor. Resize is applied before the computing integral sum
+    // Param bins is a number of HOG-like channels.
+    // Param flags is a channel computing extra flags.
+    static cv::Ptr<ChannelsProcessor> create(const int shrinkage, const int bins, const int flags = GENERIC);
+
+    virtual ~ChannelsProcessor();
+
+protected:
+    ChannelsProcessor();
+};
+
+// Implementation of soft (stageless) cascaded detector.
+class CV_EXPORTS SCascade : public Algorithm
+{
+public:
+
+    // Representation of detectors result.
+    struct CV_EXPORTS Detection
+    {
+        ushort x;
+        ushort y;
+        ushort w;
+        ushort h;
+        float confidence;
+        int kind;
+
+        enum {PEDESTRIAN = 0};
+    };
+
+    enum { NO_REJECT = 1, DOLLAR = 2, /*PASCAL = 4,*/ DEFAULT = NO_REJECT, NMS_MASK = 0xF};
+
+    // An empty cascade will be created.
+    // Param minScale is a minimum scale relative to the original size of the image on which cascade will be applyed.
+    // Param minScale is a maximum scale relative to the original size of the image on which cascade will be applyed.
+    // Param scales is a number of scales from minScale to maxScale.
+    // Param flags is an extra tuning flags.
+    SCascade(const double minScale = 0.4, const double maxScale = 5., const int scales = 55,
+        const int flags = NO_REJECT || ChannelsProcessor::GENERIC);
+
+    virtual ~SCascade();
+
+    cv::AlgorithmInfo* info() const;
+
+    // Load cascade from FileNode.
+    // Param fn is a root node for cascade. Should be <cascade>.
+    virtual bool load(const FileNode& fn);
+
+    // Load cascade config.
+    virtual void read(const FileNode& fn);
+
+    // Return the matrix of of detectioned objects.
+    // Param image is a frame on which detector will be applied.
+    // Param rois is a regions of interests mask generated by genRoi.
+    //    Only the objects that fall into one of the regions will be returned.
+    // Param objects is an output array of Detections represented as GpuMat of detections (SCascade::Detection)
+    //    The first element of the matrix is  actually a count of detections.
+    // Param stream is stream is a high-level CUDA stream abstraction used for asynchronous execution
+    virtual void detect(InputArray image, InputArray rois, OutputArray objects, Stream& stream = Stream::Null()) const;
+
+private:
+
+    struct Fields;
+    Fields* fields;
+
+    double minScale;
+    double maxScale;
+    int scales;
+
+    int flags;
+};
+
+CV_EXPORTS bool initModule_gpu(void);
+
 ////////////////////////////////// SURF //////////////////////////////////////////
 
 class CV_EXPORTS SURF_GPU
@@ -1877,8 +1963,6 @@ private:
 
     GpuMat uPyr_[2];
     GpuMat vPyr_[2];
-
-    bool isDeviceArch11_;
 };
 
 
@@ -1895,7 +1979,6 @@ public:
         polyN = 5;
         polySigma = 1.1;
         flags = 0;
-        isDeviceArch11_ = !DeviceInfo().supports(FEATURE_SET_COMPUTE_12);
     }
 
     int numLevels;
@@ -1943,8 +2026,113 @@ private:
     GpuMat frames_[2];
     GpuMat pyrLevel_[2], M_, bufM_, R_[2], blurredFrame_[2];
     std::vector<GpuMat> pyramid0_, pyramid1_;
+};
 
-    bool isDeviceArch11_;
+
+// Implementation of the Zach, Pock and Bischof Dual TV-L1 Optical Flow method
+//
+// see reference:
+//   [1] C. Zach, T. Pock and H. Bischof, "A Duality Based Approach for Realtime TV-L1 Optical Flow".
+//   [2] Javier Sanchez, Enric Meinhardt-Llopis and Gabriele Facciolo. "TV-L1 Optical Flow Estimation".
+class CV_EXPORTS OpticalFlowDual_TVL1_GPU
+{
+public:
+    OpticalFlowDual_TVL1_GPU();
+
+    void operator ()(const GpuMat& I0, const GpuMat& I1, GpuMat& flowx, GpuMat& flowy);
+
+    void collectGarbage();
+
+    /**
+     * Time step of the numerical scheme.
+     */
+    double tau;
+
+    /**
+     * Weight parameter for the data term, attachment parameter.
+     * This is the most relevant parameter, which determines the smoothness of the output.
+     * The smaller this parameter is, the smoother the solutions we obtain.
+     * It depends on the range of motions of the images, so its value should be adapted to each image sequence.
+     */
+    double lambda;
+
+    /**
+     * Weight parameter for (u - v)^2, tightness parameter.
+     * It serves as a link between the attachment and the regularization terms.
+     * In theory, it should have a small value in order to maintain both parts in correspondence.
+     * The method is stable for a large range of values of this parameter.
+     */
+    double theta;
+
+    /**
+     * Number of scales used to create the pyramid of images.
+     */
+    int nscales;
+
+    /**
+     * Number of warpings per scale.
+     * Represents the number of times that I1(x+u0) and grad( I1(x+u0) ) are computed per scale.
+     * This is a parameter that assures the stability of the method.
+     * It also affects the running time, so it is a compromise between speed and accuracy.
+     */
+    int warps;
+
+    /**
+     * Stopping criterion threshold used in the numerical scheme, which is a trade-off between precision and running time.
+     * A small value will yield more accurate solutions at the expense of a slower convergence.
+     */
+    double epsilon;
+
+    /**
+     * Stopping criterion iterations number used in the numerical scheme.
+     */
+    int iterations;
+
+    bool useInitialFlow;
+
+private:
+    void procOneScale(const GpuMat& I0, const GpuMat& I1, GpuMat& u1, GpuMat& u2);
+
+    std::vector<GpuMat> I0s;
+    std::vector<GpuMat> I1s;
+    std::vector<GpuMat> u1s;
+    std::vector<GpuMat> u2s;
+
+    GpuMat I1x_buf;
+    GpuMat I1y_buf;
+
+    GpuMat I1w_buf;
+    GpuMat I1wx_buf;
+    GpuMat I1wy_buf;
+
+    GpuMat grad_buf;
+    GpuMat rho_c_buf;
+
+    GpuMat p11_buf;
+    GpuMat p12_buf;
+    GpuMat p21_buf;
+    GpuMat p22_buf;
+
+    GpuMat diff_buf;
+    GpuMat norm_buf;
+};
+
+
+//! Calculates optical flow for 2 images using block matching algorithm */
+CV_EXPORTS void calcOpticalFlowBM(const GpuMat& prev, const GpuMat& curr,
+                                  Size block_size, Size shift_size, Size max_range, bool use_previous,
+                                  GpuMat& velx, GpuMat& vely, GpuMat& buf,
+                                  Stream& stream = Stream::Null());
+
+class CV_EXPORTS FastOpticalFlowBM
+{
+public:
+    void operator ()(const GpuMat& I0, const GpuMat& I1, GpuMat& flowx, GpuMat& flowy, int search_window = 21, int block_window = 7, Stream& s = Stream::Null());
+
+private:
+    GpuMat buffer;
+    GpuMat extended_I0;
+    GpuMat extended_I1;
 };
 
 

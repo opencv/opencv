@@ -581,13 +581,12 @@ PERF_TEST_P(Sz, ImgProc_CalcHist, GPU_TYPICAL_MAT_SIZES)
     {
         cv::gpu::GpuMat d_src(src);
         cv::gpu::GpuMat d_hist;
-        cv::gpu::GpuMat d_buf;
 
-        cv::gpu::calcHist(d_src, d_hist, d_buf);
+        cv::gpu::calcHist(d_src, d_hist);
 
         TEST_CYCLE()
         {
-            cv::gpu::calcHist(d_src, d_hist, d_buf);
+            cv::gpu::calcHist(d_src, d_hist);
         }
 
         GPU_SANITY_CHECK(d_hist);
@@ -1706,10 +1705,40 @@ PERF_TEST_P(Sz_Depth_Cn, ImgProc_ImagePyramidGetLayer, Combine(GPU_TYPICAL_MAT_S
     }
 }
 
+namespace {
+    struct Vec4iComparator
+    {
+        bool operator()(const cv::Vec4i& a, const cv::Vec4i b) const
+        {
+            if (a[0] != b[0]) return a[0] < b[0];
+            else if(a[1] != b[1]) return a[1] < b[1];
+            else if(a[2] != b[2]) return a[2] < b[2];
+            else return a[3] < b[3];
+        }
+    };
+    struct Vec3fComparator
+    {
+        bool operator()(const cv::Vec3f& a, const cv::Vec3f b) const
+        {
+            if(a[0] != b[0]) return a[0] < b[0];
+            else if(a[1] != b[1]) return a[1] < b[1];
+            else return a[2] < b[2];
+        }
+    };
+    struct Vec2fComparator
+    {
+        bool operator()(const cv::Vec2f& a, const cv::Vec2f b) const
+        {
+            if(a[0] != b[0]) return a[0] < b[0];
+            else return a[1] < b[1];
+        }
+    };
+}
+
 //////////////////////////////////////////////////////////////////////
 // HoughLines
 
-PERF_TEST_P(Sz, DISABLED_ImgProc_HoughLines, GPU_TYPICAL_MAT_SIZES)
+PERF_TEST_P(Sz, ImgProc_HoughLines, GPU_TYPICAL_MAT_SIZES)
 {
     declare.time(30.0);
 
@@ -1744,7 +1773,11 @@ PERF_TEST_P(Sz, DISABLED_ImgProc_HoughLines, GPU_TYPICAL_MAT_SIZES)
             cv::gpu::HoughLines(d_src, d_lines, d_buf, rho, theta, threshold);
         }
 
-        GPU_SANITY_CHECK(d_lines);
+        cv::Mat h_lines(d_lines);
+        cv::Vec2f* begin = (cv::Vec2f*)(h_lines.ptr<char>(0));
+        cv::Vec2f* end = (cv::Vec2f*)(h_lines.ptr<char>(0) + (h_lines.cols) * 2 * sizeof(float));
+        std::sort(begin, end, Vec2fComparator());
+        SANITY_CHECK(h_lines);
     }
     else
     {
@@ -1756,7 +1789,64 @@ PERF_TEST_P(Sz, DISABLED_ImgProc_HoughLines, GPU_TYPICAL_MAT_SIZES)
             cv::HoughLines(src, lines, rho, theta, threshold);
         }
 
-        CPU_SANITY_CHECK(lines);
+        std::sort(lines.begin(), lines.end(), Vec2fComparator());
+        SANITY_CHECK(lines);
+    }
+}
+
+//////////////////////////////////////////////////////////////////////
+// HoughLinesP
+
+DEF_PARAM_TEST_1(Image, std::string);
+
+PERF_TEST_P(Image, ImgProc_HoughLinesP, testing::Values("cv/shared/pic5.png", "stitching/a1.png"))
+{
+    declare.time(30.0);
+
+    std::string fileName = getDataPath(GetParam());
+
+    const float rho = 1.0f;
+    const float theta = static_cast<float>(CV_PI / 180.0);
+    const int threshold = 100;
+    const int minLineLenght = 50;
+    const int maxLineGap = 5;
+
+    cv::Mat image = cv::imread(fileName, cv::IMREAD_GRAYSCALE);
+
+    cv::Mat mask;
+    cv::Canny(image, mask, 50, 100);
+
+    if (PERF_RUN_GPU())
+    {
+        cv::gpu::GpuMat d_mask(mask);
+        cv::gpu::GpuMat d_lines;
+        cv::gpu::HoughLinesBuf d_buf;
+
+        cv::gpu::HoughLinesP(d_mask, d_lines, d_buf, rho, theta, minLineLenght, maxLineGap);
+
+        TEST_CYCLE()
+        {
+            cv::gpu::HoughLinesP(d_mask, d_lines, d_buf, rho, theta, minLineLenght, maxLineGap);
+        }
+
+        cv::Mat h_lines(d_lines);
+        cv::Vec4i* begin = h_lines.ptr<cv::Vec4i>();
+        cv::Vec4i* end = h_lines.ptr<cv::Vec4i>() + h_lines.cols;
+        std::sort(begin, end, Vec4iComparator());
+        SANITY_CHECK(h_lines);
+    }
+    else
+    {
+        std::vector<cv::Vec4i> lines;
+        cv::HoughLinesP(mask, lines, rho, theta, threshold, minLineLenght, maxLineGap);
+
+        TEST_CYCLE()
+        {
+            cv::HoughLinesP(mask, lines, rho, theta, threshold, minLineLenght, maxLineGap);
+        }
+
+        std::sort(lines.begin(), lines.end(), Vec4iComparator());
+        SANITY_CHECK(lines);
     }
 }
 
@@ -1804,7 +1894,11 @@ PERF_TEST_P(Sz_Dp_MinDist, ImgProc_HoughCircles, Combine(GPU_TYPICAL_MAT_SIZES, 
             cv::gpu::HoughCircles(d_src, d_circles, d_buf, CV_HOUGH_GRADIENT, dp, minDist, cannyThreshold, votesThreshold, minRadius, maxRadius);
         }
 
-        GPU_SANITY_CHECK(d_circles);
+        cv::Mat h_circles(d_circles);
+        cv::Vec3f* begin = (cv::Vec3f*)(h_circles.ptr<char>(0));
+        cv::Vec3f* end = (cv::Vec3f*)(h_circles.ptr<char>(0) + (h_circles.cols) * 3 * sizeof(float));
+        std::sort(begin, end, Vec3fComparator());
+        SANITY_CHECK(h_circles);
     }
     else
     {
@@ -1817,7 +1911,8 @@ PERF_TEST_P(Sz_Dp_MinDist, ImgProc_HoughCircles, Combine(GPU_TYPICAL_MAT_SIZES, 
             cv::HoughCircles(src, circles, CV_HOUGH_GRADIENT, dp, minDist, cannyThreshold, votesThreshold, minRadius, maxRadius);
         }
 
-        CPU_SANITY_CHECK(circles);
+        std::sort(circles.begin(), circles.end(), Vec3fComparator());
+        SANITY_CHECK(circles);
     }
 }
 

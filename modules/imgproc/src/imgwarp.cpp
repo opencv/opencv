@@ -1271,7 +1271,7 @@ public:
         if (cn == 1)
         {
             __m128i masklow = _mm_set1_epi16(0x00ff);
-            for ( ; dx < w - 8; dx += 8, S0 += 16, S1 += 16, D += 8)
+            for ( ; dx <= w - 8; dx += 8, S0 += 16, S1 += 16, D += 8)
             {
                 __m128i r0 = _mm_loadu_si128((const __m128i*)S0);
                 __m128i r1 = _mm_loadu_si128((const __m128i*)S1);
@@ -1285,7 +1285,7 @@ public:
             }
         }
         else if (cn == 3)
-            for ( ; dx < w - 6; dx += 6, S0 += 12, S1 += 12, D += 6)
+            for ( ; dx <= w - 6; dx += 6, S0 += 12, S1 += 12, D += 6)
             {
                 __m128i r0 = _mm_loadu_si128((const __m128i*)S0);
                 __m128i r1 = _mm_loadu_si128((const __m128i*)S1);
@@ -1310,7 +1310,7 @@ public:
         else
         {
             CV_Assert(cn == 4);
-            for ( ; dx < w - 8; dx += 8, S0 += 16, S1 += 16, D += 8)
+            for ( ; dx <= w - 8; dx += 8, S0 += 16, S1 += 16, D += 8)
             {
                 __m128i r0 = _mm_loadu_si128((const __m128i*)S0);
                 __m128i r1 = _mm_loadu_si128((const __m128i*)S1);
@@ -1368,7 +1368,7 @@ public:
 
         if (cn == 1)
         {
-            for ( ; dx < w - 4; dx += 4, S0 += 8, S1 += 8, D += 4)
+            for ( ; dx <= w - 4; dx += 4, S0 += 8, S1 += 8, D += 4)
             {
                 __m128i r0 = _mm_loadu_si128((const __m128i*)S0);
                 __m128i r1 = _mm_loadu_si128((const __m128i*)S1);
@@ -1383,7 +1383,7 @@ public:
             }
         }
         else if (cn == 3)
-            for ( ; dx < w - 3; dx += 3, S0 += 6, S1 += 6, D += 3)
+            for ( ; dx <= w - 3; dx += 3, S0 += 6, S1 += 6, D += 3)
             {
                 __m128i r0 = _mm_loadu_si128((const __m128i*)S0);
                 __m128i r1 = _mm_loadu_si128((const __m128i*)S1);
@@ -1393,16 +1393,16 @@ public:
                 __m128i r1_16l = _mm_unpacklo_epi16(r1, zero);
                 __m128i r1_16h = _mm_unpacklo_epi16(_mm_srli_si128(r1, 6), zero);
 
-                __m128i s0 = _mm_add_epi16(r0_16l, r0_16h);
-                __m128i s1 = _mm_add_epi16(r1_16l, r1_16h);
-                s0 = _mm_add_epi32(s1, _mm_add_epi32(s0, delta2));
+                __m128i s0 = _mm_add_epi32(r0_16l, r0_16h);
+                __m128i s1 = _mm_add_epi32(r1_16l, r1_16h);
+                s0 = _mm_add_epi32(delta2, _mm_add_epi32(s0, s1));
                 s0 = _mm_packus_epi32(_mm_srli_epi32(s0, 2), zero);
                 _mm_storel_epi64((__m128i*)D, s0);
             }
         else
         {
             CV_Assert(cn == 4);
-            for ( ; dx < w - 4; dx += 4, S0 += 8, S1 += 8, D += 4)
+            for ( ; dx <= w - 4; dx += 4, S0 += 8, S1 += 8, D += 4)
             {
                 __m128i r0 = _mm_loadu_si128((const __m128i*)S0);
                 __m128i r1 = _mm_loadu_si128((const __m128i*)S1);

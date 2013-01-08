@@ -103,7 +103,6 @@ enum
 
     //These 2 flags are used by cvNamedWindow and cvSet/GetWindowProperty
     CV_WINDOW_NORMAL       = 0x00000000, //the user can resize the window (no constraint)  / also use to switch a fullscreen window to a normal size
-    CV_WINDOW_NORMAL_Z     = 0x00000002, //the user can resize the window (no constraint)  / bigger default size == fullscreen
     CV_WINDOW_AUTOSIZE     = 0x00000001, //the user cannot resize the window, the size is constrainted by the image displayed
     CV_WINDOW_OPENGL       = 0x00001000, //window with opengl support
 
@@ -146,10 +145,10 @@ CVAPI(void) cvDestroyAllWindows(void);
 /* some additional functions for button bar config */
 CVAPI(int)  cvGetCommand( const char* WndName, char* cmd );
 CVAPI(int)  cvGetButtonBarContent(const char * WndName, int idx, char * txt );
-CVAPI(int)  cvSetButtonBarContent(const char * WndName, int etype, int idx, char * txt );
-CVAPI(int)  cvSetMapContent(const char * WndName, const char * varname, char * txt );
+CVAPI(int)  cvSetButtonBarContent(const char * WndName, int etype, int idx, const char * txt );
+CVAPI(int)  cvSetMapContent(const char * WndName, const char * varname, const char * txt );
 
-CVAPI(void) cvDispInfoBox_QT( const char* WndName, char* caption, const char * csTxt );
+CVAPI(void) cvDispInfoBox_QT( const char* WndName, const char* caption, const char * csTxt );
 
 /* adjust window in relation to screen resolution; all int values as percentage */
 CVAPI(void) cvAdjustWindowPos_QT( const char * name, int xp, int xwp, int yp, int yhp );

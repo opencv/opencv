@@ -64,7 +64,7 @@ PARAM_TEST_CASE(PyrDown, cv::gpu::DeviceInfo, cv::Size, MatType, UseRoi)
     }
 };
 
-TEST_P(PyrDown, Accuracy)
+GPU_TEST_P(PyrDown, Accuracy)
 {
     cv::Mat src = randomMat(size, type);
 
@@ -104,7 +104,7 @@ PARAM_TEST_CASE(PyrUp, cv::gpu::DeviceInfo, cv::Size, MatType, UseRoi)
     }
 };
 
-TEST_P(PyrUp, Accuracy)
+GPU_TEST_P(PyrUp, Accuracy)
 {
     cv::Mat src = randomMat(size, type);
 

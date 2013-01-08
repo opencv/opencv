@@ -402,10 +402,16 @@ public class ManagerActivity extends Activity
 
     protected String NormalizeVersion(String OpenCVersion, String PackageVersion)
     {
+        if (OpenCVersion == null || PackageVersion == null)
+            return "unknown";
+
         int dot = PackageVersion.indexOf(".");
-        return OpenCVersion.substring(0,  OpenCVersion.length()-1) + "." +
-            OpenCVersion.toCharArray()[OpenCVersion.length()-1] + "." +
-            PackageVersion.substring(0, dot) + " rev " + PackageVersion.substring(dot+1);
+        if (dot == -1 || OpenCVersion.length() == 0)
+            return "unknown";
+        else
+            return OpenCVersion.substring(0,  OpenCVersion.length()-1) + "." +
+                OpenCVersion.toCharArray()[OpenCVersion.length()-1] + "." +
+                PackageVersion.substring(0, dot) + " rev " + PackageVersion.substring(dot+1);
     }
 
     protected String ConvertPackageName(String Name, String Version)

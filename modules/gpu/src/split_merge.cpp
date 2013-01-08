@@ -78,7 +78,7 @@ namespace
 
         if (depth == CV_64F)
         {
-            if (!TargetArchs::builtWith(NATIVE_DOUBLE) || !DeviceInfo().supports(NATIVE_DOUBLE))
+            if (!deviceSupports(NATIVE_DOUBLE))
                 CV_Error(CV_StsUnsupportedFormat, "The device doesn't support double");
         }
 
@@ -122,7 +122,7 @@ namespace
 
         if (depth == CV_64F)
         {
-            if (!TargetArchs::builtWith(NATIVE_DOUBLE) || !DeviceInfo().supports(NATIVE_DOUBLE))
+            if (!deviceSupports(NATIVE_DOUBLE))
                 CV_Error(CV_StsUnsupportedFormat, "The device doesn't support double");
         }
 

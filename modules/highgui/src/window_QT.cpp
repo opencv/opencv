@@ -451,7 +451,6 @@ static CvTrackbar* icvFindTrackBarByName(const char* name_trackbar, const char* 
     }
 }
 
-
 /*
 static CvButtonbar* icvFindButtonBarByName(const char* button_name, QBoxLayout* layout)
 {
@@ -466,7 +465,6 @@ static int icvInitSystem(int* c, char** v)
     if (!QApplication::instance())
     {
         new QApplication(*c, v);
-
         qDebug() << "new QApplication done";
 
 #ifdef HAVE_QT_OPENGL
@@ -689,7 +687,7 @@ CV_IMPL void cvShowImage(const char* name, const CvArr* arr)
 }
 
 
-CV_IMPL void cvDispInfoBox_QT( const char* WndName, char* caption, const char * csTxt )
+CV_IMPL void cvDispInfoBox_QT( const char* WndName, const char* caption, const char * csTxt )
 {
     if (!WndName)
             CV_Error( CV_StsNullPtr, "NULL name string" );
@@ -710,7 +708,7 @@ CV_IMPL void cvDispInfoBox_QT( const char* WndName, char* caption, const char * 
 // following interface functions added: 
 // CVAPI(int)  cvGetCommand(const const char* WndName, char* cmd );
 // CVAPI(int)  cvGetButtonBarContent(const char * WndName, int idx, char * txt );
-// CVAPI(int)  cvSetButtonBarContent(const char * WndName, int etype, int idx, char * txt );
+// CVAPI(int)  cvSetButtonBarContent(const char * WndName, int etype, int idx, const char * txt );
 //
 // 6.12.2012, Harald Schmidt
 //--------------------------------------------------------------------------------
@@ -783,7 +781,7 @@ CV_IMPL int cvGetButtonBarContent(const char * WndName, int idx, char * txt )
     return 0;
 }
 
-CV_IMPL int cvSetButtonBarContent(const char * WndName, int etype, int idx, char * txt )
+CV_IMPL int cvSetButtonBarContent(const char * WndName, int etype, int idx, const char * txt )
 {
     if (!guiMainThread)
       CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
@@ -799,7 +797,7 @@ CV_IMPL int cvSetButtonBarContent(const char * WndName, int etype, int idx, char
 return 0;
 }
 
-CV_IMPL int cvSetMapContent(const char * WndName, const char * varname, char * txt )
+CV_IMPL int cvSetMapContent(const char * WndName, const char * varname, const char * txt )
 {
     // set a varname and it's content
     if (!guiMainThread)
@@ -829,20 +827,6 @@ CV_IMPL void cvSetOpenGlDrawCallback(const char* window_name, CvOpenGlDrawCallba
 
     QMetaObject::invokeMethod(guiMainThread,
         "setOpenGlDrawCallback",
-        Qt::AutoConnection,
-        Q_ARG(QString, QString(window_name)),
-        Q_ARG(void*, (void*)callback),
-        Q_ARG(void*, userdata));
-}
-
-
-void icvSetOpenGlCleanCallback(const char* window_name, CvOpenGlCleanCallback callback, void* userdata)
-{
-    if (!guiMainThread)
-        CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
-
-    QMetaObject::invokeMethod(guiMainThread,
-        "setOpenGlCleanCallback",
         Qt::AutoConnection,
         Q_ARG(QString, QString(window_name)),
         Q_ARG(void*, (void*)callback),
@@ -1326,13 +1310,6 @@ void GuiReceiver::setOpenGlDrawCallback(QString name, void* callback, void* user
         w->setOpenGlDrawCallback((CvOpenGlDrawCallback) callback, userdata);
 }
 
-void GuiReceiver::setOpenGlCleanCallback(QString name, void* callback, void* userdata)
-{
-    QPointer<CvWindow> w = icvFindWindowByName(name);
-
-    if (w)
-        w->setOpenGlCleanCallback((CvOpenGlCleanCallback) callback, userdata);
-}
 
 void GuiReceiver::setOpenGlContext(QString name)
 {
@@ -1721,29 +1698,90 @@ CvWindow::CvWindow(QString name, int arg2)
     type = type_CvWindow;
     moveToThread(qApp->instance()->thread());
 
-    param_flags = arg2 & 0x0000000F;
-    param_gui_mode = arg2 & 0x000000F0;
-    param_ratio_mode =  arg2 & 0x00000F00;
+    initWidth  = -1;
+    initHeight = -1;
+    initPosX   = -1;
+    initPosY   = -1;
+    WindowMode = -1;
     m_idxPropWnd = -1;
     m_verboseLevel = -1;
     m_StatusLine = "xy RGB Zoom"; // default elements for display in statusbar
+    m_WndName = name;
+
+    param_gui_mode = arg2 & 0x000000F0;
+    int useOpenGL = arg2 & CV_WINDOW_OPENGL;
+    int gui_mode_org = param_gui_mode;
+
+    QString exe_name = QFileInfo(QApplication::applicationFilePath()).fileName();
+
+    cv::CvConfigBase myCfg;
+
+    // read window position + size from *.cfg
+    cv::readConfig( qPrintable(exe_name), qPrintable(m_WndName), &myCfg );
+
+    WindowMode     = myCfg.WindowMode;
+    initPosX       = myCfg.initPosX;
+    initPosY       = myCfg.initPosY;
+    initWidth      = myCfg.initWidth;
+    initHeight     = myCfg.initHeight;
+    m_verboseLevel = myCfg.m_verboseLevel;
+    
+    if ( m_verboseLevel > 0 )
+    {
+      printf("\n[%s]  arg2=%d  param_gui_mode=%d  useOpenGL=%d", 
+	   qPrintable(name),  arg2,  param_gui_mode, useOpenGL );  
+      printf("\nmyCfg:   pos=%d,%d   size=%d*%d  [%s]", initPosX, initPosY, initWidth, initHeight, qPrintable(m_WndName) );
+    }
+    
+    // compare name with entries in *.cfg and fill vect_Adm[] with used controls     
+    readConfigControls_QT( myCfg.fs );
+
+    param_gui_mode = arg2 & 0x000000F0;
+    
+    if ( WindowMode >= 0 )
+    {
+      // changed WindowMode by entry in *.cfg
+      // by a line like:
+      //     "CV_WINDOW_NORMAL 520,5 1400*1000"
+      // or
+      //     "CV_WINDOW_AUTOSIZE 0,600"
+      // inside <Wnd></Wnd>
+     
+      int oldarg = arg2;      
+      arg2 &= 0xFFFFFFFE;
+       
+      if ( WindowMode == 1 )
+      {
+	arg2 |= CV_WINDOW_AUTOSIZE;
+      } else {
+        arg2 |= CV_WINDOW_NORMAL;	
+      }     
+      param_gui_mode = arg2 & 0x000000F0;
+   
+      if ( m_verboseLevel > 0 )
+      {
+	  printf("\n[%s]  %d,%d  (%d*%d Pix) from *.cfg   %d =>[HexArg: %x -> %x] gui_mode=%d<-%d\n", 
+	   qPrintable(name), initPosX, initPosY, initWidth, initHeight, WindowMode, oldarg, arg2, param_gui_mode, gui_mode_org );  
+      }  
+    }
+           
+    param_flags = arg2 & 0x0000000F;
+    param_ratio_mode =  arg2 & 0x00000F00;
 
     //setAttribute(Qt::WA_DeleteOnClose); //in other case, does not release memory
     setContentsMargins(0, 0, 0, 0);
     setWindowTitle(name);
     setObjectName(name);
-    m_WndName = name;
 
     setFocus( Qt::PopupFocusReason ); //#1695 arrow keys are not recieved without the explicit focus
 
-    resize(400, 300);
-
-    if ( param_flags == CV_WINDOW_NORMAL_Z ) 
+    if ( initWidth > 0 && initHeight > 0 )
     {
-	printf(" CV_WINDOW_NORMAL_Z ");
-        resize(1024, 768);
-    } 
-
+        resize(initWidth,initHeight);
+    } else {
+        resize(400, 300);
+    }
+  
     setMinimumSize(1, 1);
 
     //1: create control panel
@@ -1755,33 +1793,41 @@ CvWindow::CvWindow(QString name, int arg2)
     createGlobalLayout();
 
     //3: my view
+    
+    
 #ifndef HAVE_QT_OPENGL
     if (arg2 & CV_WINDOW_OPENGL)
         CV_Error( CV_OpenGlNotSupported, "Library was built without OpenGL support" );
     mode_display = CV_MODE_NORMAL;
 #else
+
     mode_display = arg2 & CV_WINDOW_OPENGL ? CV_MODE_OPENGL : CV_MODE_NORMAL;
-    if (mode_display == CV_MODE_OPENGL)
-        param_gui_mode = CV_GUI_NORMAL;
+
+    //if (mode_display == CV_MODE_OPENGL)
+    //    param_gui_mode = CV_GUI_NORMAL;
+
 #endif
+
     createView();
 
     //4: shortcuts and actions
     //5: toolBar and statusbar
     if (param_gui_mode == CV_GUI_EXPANDED)
     {
-        createActions();   // add all user defined controls to buttonbar
-        createShortcuts();
-
-        createToolBar();
+          createActions();   // add all user defined controls to buttonbar
+      
+	  if ( useOpenGL == 0 )
+	    createShortcuts();
+          
+	  createToolBar();
+	
         createStatusBar();
-
         myView->setStatusLineComponents(m_StatusLine);
-
+    } else {
+        createStatusBar();
+        myView->setStatusLineComponents(m_StatusLine);
     }
 
-    
-        
     //Now attach everything
     if (myToolBar)
         myGlobalLayout->addWidget(myToolBar, Qt::AlignCenter);
@@ -1795,6 +1841,12 @@ CvWindow::CvWindow(QString name, int arg2)
 
     setLayout(myGlobalLayout);
     show();
+    
+    if ( initPosX >= 0 && initPosY >= 0 )
+    {
+        cvMoveWindow( qPrintable(name), initPosX, initPosY );
+    }
+    
 }
 
 
@@ -2015,12 +2067,6 @@ void CvWindow::addSlider2(CvWindow* w, QString name, int* value, int count, CvTr
 void CvWindow::setOpenGlDrawCallback(CvOpenGlDrawCallback callback, void* userdata)
 {
     myView->setOpenGlDrawCallback(callback, userdata);
-}
-
-
-void CvWindow::setOpenGlCleanCallback(CvOpenGlCleanCallback callback, void* userdata)
-{
-    myView->setOpenGlCleanCallback(callback, userdata);
 }
 
 
@@ -2500,169 +2546,125 @@ void CvWindow::prepareControls( char *csBuffer )
 }
 
 
+void CvWindow::readConfigControls_QT( cv::FileStorage fs )
+{  
+
+  if (!fs.isOpened())
+  {
+      // cerr << "Failed to open " << filename << endl;
+      return;
+  }
+
+  vect_Adm.clear();
+  
+  cv::FileNode n = fs["LanguageTransTab"];
+  cv::FileNodeIterator it = n.begin(), it_end = n.end(); // Go through the node
+  for (; it != it_end; ++it) {
+      std::string src = (std::string)*it;
+      ++it;
+      std::string concat = src + " <-> " + (std::string)*it;
+      m_LanguageVec.push_back( concat.c_str()  );
+  }
+  
+  QString CfgWndName = "";
+  m_bApplyLanguage = false;
+  vecString.clear();
+
+  for ( int cnt=0; cnt <= 20 ; cnt++ )
+  {
+      std::string WndName = cv::format("Wnd%d",cnt);
+      n = fs[WndName];
+      if (  n.size() <= 0 ) continue;
+	  
+      int linecnt = -1;
+      it = n.begin(), it_end = n.end(); // Go through the node
+      for (; it != it_end; ++it) {
+	
+	cv::FileNode node = *it;
+	std::string content = "?";
+	if ( node.type() == CV_NODE_INTEGER )
+	{
+	    content = cv::format("%d (integer)", (int) *it);
+	}	
+	if ( node.type() == cv::FileNode::STRING )
+	{
+	    AdmElem CtrlElem;	      
+	    content = (std::string) *it;
+	    char csBuffer[512];
+	    strcpy(csBuffer, content.c_str() );
+	    if (csBuffer[0] == '#') content = "";
+	    if ( content.length() > 0 )
+	    {   
+		linecnt++;
+		if ( linecnt == 0 )
+		{	
+			CfgWndName = QString(csBuffer);
+			if ( CfgWndName != m_WndName ) {
+			  linecnt = -5000;
+			} 
+		}
+
+		if ( linecnt > 0 )
+		{
+		
+		  if ( m_verboseLevel > 1 )
+		  {
+		      printf("\n   [%s]", content.c_str() );
+		  }  
+	  
+		  // ----------- Standard Controls of Yannic Verdie with Icons
+		  if ( strstr(csBuffer,"$Panning") != NULL )
+		  {
+			  CtrlElem.elemtype = EMOD_Panning;
+			  vect_Adm.push_back(CtrlElem);
+		  }
+		  if ( strstr(csBuffer,"$Zoom") != NULL )
+		  {
+			  CtrlElem.elemtype = EMOD_Zoom;
+			  vect_Adm.push_back(CtrlElem);
+		  }
+		  if ( strstr(csBuffer,"$SaveImg") != NULL )
+		  {
+			  CtrlElem.elemtype = EMOD_SaveImg;
+			  vect_Adm.push_back(CtrlElem);
+		  }
+		  if ( strstr(csBuffer,"$PropWnd") != NULL )
+		  {
+			  CtrlElem.elemtype = EMOD_PropWnd;
+			  vect_Adm.push_back(CtrlElem);
+		  }
+
+		  // -------- commands or new controls without icons
+		  //          user defined controls from *.cfg
+		  if ( strstr(csBuffer,"$applyLanguage") != NULL )
+				  m_bApplyLanguage = true;
+
+		  char * posptr = strstr(csBuffer,"$StatusLine");
+		  if ( posptr != NULL )
+				  m_StatusLine = QString(posptr+12);
+				  
+		  		  
+		  prepareControls( csBuffer );   
+		}		
+	    }
+	}
+
+	
+      }
+  }
+
+
+}
+
 
 void CvWindow::createActions()
 {
-	// Read in dynamic controls comming from *.cfg 
+	// Assumption: vect_Adm[] was filled by data comming from *.cfg 
+	// this was done by  readCFG / readConfig / readConfigControls_QT
 	
-	QString CfgWndName = "";
-	m_bApplyLanguage = false;
-
-	vecString.clear();
-	QString exe_name = QFileInfo(QApplication::applicationFilePath()).fileName();
-	char csCfgFile[512];
-	strcpy( csCfgFile, qPrintable(exe_name));
-	char * p = strrchr( csCfgFile,'.');
-
-	if ( p != NULL )
-	{
-		*p = 0;
-		strcat( csCfgFile, ".cfg") ;
-	} else {
-		// linux
-		strcat( csCfgFile, ".cfg") ;
-	}
-
-       // std::string filename = string(csCfgFile);
-       // cout << endl << "Reading: " << filename.c_str() << endl;
-
-       cv::FileStorage fs;
-       fs.open(csCfgFile, cv::FileStorage::READ);
-
-       if (!fs.isOpened())
-       {
-           // cerr << "Failed to open " << filename << endl;
-           return;
-       }
-
-       vect_Adm.clear();
-       
-       cv::FileNode n = fs["verboseLevel"];
-       cv::FileNodeIterator it = n.begin(), it_end = n.end(); // Go through the node
-       for (; it != it_end; ++it) {
-	  cv::FileNode node = *it;
-          if ( node.type() == CV_NODE_INTEGER )
-	  {
-	    m_verboseLevel = (int) *it;    
-	  }
-       }        
-       
-       n = fs["LanguageTransTab"];
-       it = n.begin(), it_end = n.end(); // Go through the node
-       for (; it != it_end; ++it) {
-           std::string src = (std::string)*it;
-           ++it;
-           std::string concat = src + " <-> " + (std::string)*it;
-           m_LanguageVec.push_back( concat.c_str()  );
-       }
-       
-       
-       for ( int cnt=0; cnt <= 20 ; cnt++ )
-       {
-           std::string WndName = cv::format("Wnd%d",cnt);
-           n = fs[WndName];
-           if (  n.size() <= 0 ) continue;
-
-	   /*
-	   if ( bVerbose )
-	   {
-		  if ( n.isNamed() )
-		  {
-		      printf("\n[name=%s]  n.type=%d  n.size=%d", n.name().c_str(), n.type(), n.size() );
-		  } else {
-		      printf("\n[wndName=%s] size=%d",  WndName.c_str(), n.size() );
-		  }
-		  printf("\n");
-	   }
-	   */
-	   
-           int linecnt = -1;
-           it = n.begin(), it_end = n.end(); // Go through the node
-	   for (; it != it_end; ++it) {
-               
-                cv::FileNode node = *it;
-                std::string content = "?";
-                if ( node.type() == CV_NODE_INTEGER )
-                {
-                   content = cv::format("%d (integer)", (int) *it);
-                }
-               
-		if ( node.type() == cv::FileNode::STRING )
-		{
-		    AdmElem CtrlElem;	      
-		    content = (std::string) *it;
-		    char csBuffer[512];
-		    strcpy(csBuffer, content.c_str() );
-		    if (csBuffer[0] == '#') content = "";
-		    if ( content.length() > 0 )
-		    {   
-			linecnt++;
-			if ( linecnt == 0 )
-			{	
-				CfgWndName = QString(csBuffer);
-				if ( CfgWndName != m_WndName ) {
-				  linecnt = -1000;
-				} else {
-				    if ( m_verboseLevel > 0 )
-				    {
-					printf("\n-------- m_WndName=[%s]", qPrintable(m_WndName));
-				    }  
-				}
-			}
-
-			if ( linecnt > 0 )
-			{
-			
-			  if ( m_verboseLevel > 1 )
-			  {
-			      printf("\n   [%s]", content.c_str() );
-			  }  
-	      	  
-			  // ----------- Standard Controls of Yannic Verdie with Icons
-			  if ( strstr(csBuffer,"$Panning") != NULL )
-			  {
-				  CtrlElem.elemtype = EMOD_Panning;
-				  vect_Adm.push_back(CtrlElem);
-			  }
-			  if ( strstr(csBuffer,"$Zoom") != NULL )
-			  {
-				  CtrlElem.elemtype = EMOD_Zoom;
-				  vect_Adm.push_back(CtrlElem);
-			  }
-			  if ( strstr(csBuffer,"$SaveImg") != NULL )
-			  {
-				  CtrlElem.elemtype = EMOD_SaveImg;
-				  vect_Adm.push_back(CtrlElem);
-			  }
-			  if ( strstr(csBuffer,"$PropWnd") != NULL )
-			  {
-				  CtrlElem.elemtype = EMOD_PropWnd;
-				  vect_Adm.push_back(CtrlElem);
-			  }
-
-			  // -------- commands or new controls without icons
-			  //          user defined controls from *.cfg
-			  if ( strstr(csBuffer,"$applyLanguage") != NULL )
-					  m_bApplyLanguage = true;
-  
-			  char * posptr = strstr(csBuffer,"$StatusLine");
-			  if ( posptr != NULL )
-                                          m_StatusLine = QString(posptr+12);
-			                            
-			  prepareControls( csBuffer );   
-			}		
-		    }
-		}
-                // int tagNr =  it.container->tag;
-                // cout << "[" << tagNr << "] ["  << node.name() << "] " <<  content << endl;
-           }
-       }
-
-       printf("\n --->[m_StatusLine=%s] ", qPrintable(m_StatusLine) );
-
-
 	if ( vect_Adm.size() == 0 )
 	{
+                // no specification for layout of used windows available
 		createStandardActions();
 		return;
 	}
@@ -2899,7 +2901,7 @@ void CvWindow::createToolBar()
     if ( m_bApplyLanguage )
 		    applyTransTab();
     
-    InitExchange(-1);
+    InitExchange();
 }
 
 
@@ -3136,7 +3138,10 @@ void CvWindow::applyTransTab()
 	    
 }
 
-void CvWindow::InitExchange(int idx, int iValue)
+
+// void CvWindow::InitExchange(int idx, int iValue)
+
+void CvWindow::InitExchange()
 {
 	// Some Qt-Controls in the Toolbar may be changed by user interaction
 	// fill up CvWindow::m_ContentVec[i] with the content of controls
@@ -3365,7 +3370,7 @@ void CvWindow::setStatusBarContent( QString text )
 */
 
 
-void CvWindow::MsgBoxInfo(char * pCaption, std::string Info )
+void CvWindow::MsgBoxInfo(const char * pCaption, std::string Info )
 {
     QMessageBox::information( this, pCaption, Info.c_str() );
 }   
@@ -3398,58 +3403,58 @@ void CvWindow::displayPropertiesWin()
 void CvWindow::slotCall_0()
 {
 	m_CmdVec.push_back(vecString[0]);
-	InitExchange(0);
+	InitExchange();
 }
 void CvWindow::slotCall_1()
 {
 	m_CmdVec.push_back(vecString[1]);
-	InitExchange(1);
+	InitExchange();
 }
 void CvWindow::slotCall_2()
 {
 	m_CmdVec.push_back(vecString[2]);
-	InitExchange(2);
+	InitExchange();
 }
 void CvWindow::slotCall_3()
 {
 	m_CmdVec.push_back(vecString[3]);
-	InitExchange(3);
+	InitExchange();
 }
 void CvWindow::slotCall_4()
 {
 	m_CmdVec.push_back(vecString[4]);
-	InitExchange(4);
+	InitExchange();
 }
 void CvWindow::slotCall_5()
 {
 	m_CmdVec.push_back(vecString[5]);
-	InitExchange(5);
+	InitExchange();
 }
 void CvWindow::slotCall_6()
 {
 	m_CmdVec.push_back(vecString[6]);
-	InitExchange(6);
+	InitExchange();
 }
 void CvWindow::slotCall_7()
 {
 	m_CmdVec.push_back(vecString[7]);
-	InitExchange(7);
+	InitExchange();
 }
 void CvWindow::slotCall_8()
 {
 	m_CmdVec.push_back(vecString[8]);
-	InitExchange(8);
+	InitExchange();
 }
 void CvWindow::slotCall_9()
 {
 	m_CmdVec.push_back(vecString[9]);
-	InitExchange(9);
+	InitExchange();
 }
 
 void CvWindow::slotCallString( const QString & s)
 {
 	m_CmdVec.push_back(s);
-	InitExchange(0);	
+	InitExchange();	
 }
 
 void CvWindow::slotCallBox()
@@ -3462,7 +3467,7 @@ void CvWindow::slotMenuAct0()
 	QVariant qVar = vect_MenuAct[0]->data();
 	QString stng = QString( qVar.toString()  );
 	m_CmdVec.push_back(stng);
-	InitExchange(0);
+	InitExchange();
 }
 
 void CvWindow::slotMenuAct1()
@@ -3470,21 +3475,21 @@ void CvWindow::slotMenuAct1()
 	QVariant qVar = vect_MenuAct[1]->data();
 	QString stng = QString( qVar.toString()  );
 	m_CmdVec.push_back(stng);
-	InitExchange(1);
+	InitExchange();
 }
 void CvWindow::slotMenuAct2()
 {
 	QVariant qVar = vect_MenuAct[2]->data();
 	QString stng = QString( qVar.toString()  );
 	m_CmdVec.push_back(stng);
-	InitExchange(2);
+	InitExchange();
 }
 void CvWindow::slotMenuAct3()
 {
 	QVariant qVar = vect_MenuAct[3]->data();
 	QString stng = QString( qVar.toString()  );
 	m_CmdVec.push_back(stng);
-	InitExchange(3);
+	InitExchange();
 }
 	
 void CvWindow::slotMenuAct4()
@@ -3492,7 +3497,7 @@ void CvWindow::slotMenuAct4()
 	QVariant qVar = vect_MenuAct[4]->data();
 	QString stng = QString( qVar.toString()  );
 	m_CmdVec.push_back(stng);
-	InitExchange(4);
+	InitExchange();
 }
 
 //-------------------------------------
@@ -3504,31 +3509,31 @@ void CvWindow::slotCallPush_0()
 {
 	QWidget * pWid = (QWidget*) vect_QButton[0]; 
 	m_CmdVec.push_back( pWid->objectName() );
-	InitExchange(0);
+	InitExchange();
 }
 void CvWindow::slotCallPush_1()
 {
 	QWidget * pWid = (QWidget*) vect_QButton[1]; 
 	m_CmdVec.push_back( pWid->objectName() );
-	InitExchange(1);
+	InitExchange();
 }  
 void CvWindow::slotCallPush_2()
 {
 	QWidget * pWid = (QWidget*) vect_QButton[2]; 
 	m_CmdVec.push_back( pWid->objectName() );
-	InitExchange(2);
+	InitExchange();
 }  
 void CvWindow::slotCallPush_3()
 {
 	QWidget * pWid = (QWidget*) vect_QButton[3]; 
 	m_CmdVec.push_back( pWid->objectName() );
-	InitExchange(3);
+	InitExchange();
 }  
 void CvWindow::slotCallPush_4()
 {
 	QWidget * pWid = (QWidget*) vect_QButton[4]; 
 	m_CmdVec.push_back( pWid->objectName() );
-	InitExchange(4);
+	InitExchange();
 }  
 
 //-------------------------------------
@@ -3538,31 +3543,31 @@ void CvWindow::slotCallCheck_0()
 {
 	QWidget * pWid = (QWidget*) vect_QCheckBox[0]; 
 	m_CmdVec.push_back( pWid->objectName() );
-	InitExchange(0);
+	InitExchange();
 }  
 void CvWindow::slotCallCheck_1()
 {
 	QWidget * pWid = (QWidget*) vect_QCheckBox[1]; 
 	m_CmdVec.push_back( pWid->objectName() );
-	InitExchange(1);
+	InitExchange();
 }  
 void CvWindow::slotCallCheck_2()
 {
 	QWidget * pWid = (QWidget*) vect_QCheckBox[2]; 
 	m_CmdVec.push_back( pWid->objectName() );
-	InitExchange(2);
+	InitExchange();
 }  
 void CvWindow::slotCallCheck_3()
 {
 	QWidget * pWid = (QWidget*) vect_QCheckBox[2]; 
 	m_CmdVec.push_back( pWid->objectName() );
-	InitExchange(3);
+	InitExchange();
 }  
 void CvWindow::slotCallCheck_4()
 {
 	QWidget * pWid = (QWidget*) vect_QCheckBox[2]; 
 	m_CmdVec.push_back( pWid->objectName() );
-	InitExchange(4);
+	InitExchange();
 }  
 
 //-------------------------------------
@@ -3571,34 +3576,39 @@ void CvWindow::slotCallSpin_0(int iVal)
 {
 	QWidget * pWid = (QWidget*) vect_QSpinBox[0]; 
 	m_CmdVec.push_back( pWid->objectName() );
-	InitExchange(0,iVal);
+	InitExchange();
+	(void) iVal;
 }  
 
 void CvWindow::slotCallSpin_1(int iVal)
 {
 	QWidget * pWid = (QWidget*) vect_QSpinBox[1]; 
 	m_CmdVec.push_back( pWid->objectName() );
-	InitExchange(1,iVal);
+	InitExchange();
+	(void) iVal;
 }  
 
 void CvWindow::slotCallSpin_2(int iVal)
 {
 	QWidget * pWid = (QWidget*) vect_QSpinBox[2]; 
 	m_CmdVec.push_back( pWid->objectName() );
-	InitExchange(2,iVal);
+	InitExchange();
+	(void) iVal;
 }  
 
 void CvWindow::slotCallSpin_3(int iVal)
 {
 	QWidget * pWid = (QWidget*) vect_QSpinBox[3]; 
 	m_CmdVec.push_back( pWid->objectName() );
-	InitExchange(3,iVal);
+	InitExchange();
+	(void) iVal;
 }  
 void CvWindow::slotCallSpin_4(int iVal)
 {
 	QWidget * pWid = (QWidget*) vect_QSpinBox[4]; 
 	m_CmdVec.push_back( pWid->objectName() );
-	InitExchange(4,iVal);
+	InitExchange();
+	(void) iVal;
 }  
 
 //-------------------------------------
@@ -3965,12 +3975,6 @@ void DefaultViewPort::startDisplayInfo(QString text, int delayms)
 
 
 void DefaultViewPort::setOpenGlDrawCallback(CvOpenGlDrawCallback /*callback*/, void* /*userdata*/)
-{
-    CV_Error(CV_OpenGlNotSupported, "Window doesn't support OpenGL");
-}
-
-
-void DefaultViewPort::setOpenGlCleanCallback(CvOpenGlCleanCallback /*callback*/, void* /*userdata*/)
 {
     CV_Error(CV_OpenGlNotSupported, "Window doesn't support OpenGL");
 }
@@ -4474,8 +4478,7 @@ void DefaultViewPort::drawStatusBar()
 //  if (mouseCoordinate.x()>=0 && mouseCoordinate.y()>=0)
     {
         QRgb rgbValue = image2Draw_qt.pixel(mouseCoordinate);
-		
-	
+
         // "$StatusLine xy RGB WidthHeight Viewport Zoom"
         for ( int idx =0 ; idx < StatusLineList.size() ; idx++ )
         {
@@ -4494,9 +4497,9 @@ void DefaultViewPort::drawStatusBar()
                 if ( StatusLineList[idx] == "RGB" )  {
 		    if (nbChannelOriginImage==CV_8UC3 )
 		    { 
-			AddInfo += tr("~ <font color='red'>R:%3 </font>").arg(qRed(rgbValue))+
-				    tr("<font color='green'>G:%4 </font>").arg(qGreen(rgbValue))+
-				    tr("<font color='blue'>B:%5</font> ~   ").arg(qBlue(rgbValue));
+                      AddInfo += tr("~ <font color='red'>R:%3 </font>").arg(qRed(rgbValue))+
+                                 tr("<font color='green'>G:%4 </font>").arg(qGreen(rgbValue))+
+                                 tr("<font color='blue'>B:%5</font> ~   ").arg(qBlue(rgbValue));
 		    }  
 		    if (nbChannelOriginImage==CV_8UC1)
 		    {
@@ -4683,6 +4686,7 @@ void DefaultViewPort::setStatusLineComponents(QString components)
 }
 
 
+
 //////////////////////////////////////////////////////
 // OpenGlViewPort
 
@@ -4695,19 +4699,10 @@ OpenGlViewPort::OpenGlViewPort(QWidget* _parent) : QGLWidget(_parent), size(-1, 
 
     glDrawCallback = 0;
     glDrawData = 0;
-
-    glCleanCallback = 0;
-    glCleanData = 0;
-
-    glFuncTab = 0;
 }
 
 OpenGlViewPort::~OpenGlViewPort()
 {
-    if (glFuncTab)
-        delete glFuncTab;
-
-    setOpenGlCleanCallback(0, 0);
 }
 
 QWidget* OpenGlViewPort::getWidget()
@@ -4752,21 +4747,10 @@ void OpenGlViewPort::setOpenGlDrawCallback(CvOpenGlDrawCallback callback, void* 
     glDrawData = userdata;
 }
 
-void OpenGlViewPort::setOpenGlCleanCallback(CvOpenGlCleanCallback callback, void* userdata)
-{
-    makeCurrentOpenGlContext();
-
-    if (glCleanCallback)
-        glCleanCallback(glCleanData);
-
-    glCleanCallback = callback;
-    glCleanData = userdata;
-}
 
 void OpenGlViewPort::makeCurrentOpenGlContext()
 {
     makeCurrent();
-    icvSetOpenGlFuncTab(glFuncTab);
 }
 
 void OpenGlViewPort::updateGl()
@@ -4781,255 +4765,9 @@ void OpenGlViewPort::setStatusLineComponents(QString components)
 }
 
 
-#ifndef APIENTRY
-    #define APIENTRY
-#endif
-
-#ifndef APIENTRYP
-    #define APIENTRYP APIENTRY *
-#endif
-
-#ifndef GL_VERSION_1_5
-    /* GL types for handling large vertex buffer objects */
-    typedef ptrdiff_t GLintptr;
-    typedef ptrdiff_t GLsizeiptr;
-#endif
-
-typedef void (APIENTRYP PFNGLGENBUFFERSPROC   ) (GLsizei n, GLuint *buffers);
-typedef void (APIENTRYP PFNGLDELETEBUFFERSPROC) (GLsizei n, const GLuint *buffers);
-
-typedef void (APIENTRYP PFNGLBUFFERDATAPROC   ) (GLenum target, GLsizeiptr size, const GLvoid *data, GLenum usage);
-typedef void (APIENTRYP PFNGLBUFFERSUBDATAPROC) (GLenum target, GLintptr offset, GLsizeiptr size, const GLvoid* data);
-
-typedef void (APIENTRYP PFNGLBINDBUFFERPROC   ) (GLenum target, GLuint buffer);
-
-typedef GLvoid* (APIENTRYP PFNGLMAPBUFFERPROC) (GLenum target, GLenum access);
-typedef GLboolean (APIENTRYP PFNGLUNMAPBUFFERPROC) (GLenum target);
-
-class GlFuncTab_QT : public CvOpenGlFuncTab
-{
-public:
-#ifdef Q_WS_WIN
-    GlFuncTab_QT(HDC hDC);
-#else
-    GlFuncTab_QT();
-#endif
-
-    void genBuffers(int n, unsigned int* buffers) const;
-    void deleteBuffers(int n, const unsigned int* buffers) const;
-
-    void bufferData(unsigned int target, ptrdiff_t size, const void* data, unsigned int usage) const;
-    void bufferSubData(unsigned int target, ptrdiff_t offset, ptrdiff_t size, const void* data) const;
-
-    void bindBuffer(unsigned int target, unsigned int buffer) const;
-
-    void* mapBuffer(unsigned int target, unsigned int access) const;
-    void unmapBuffer(unsigned int target) const;
-
-    void generateBitmapFont(const std::string& family, int height, int weight, bool italic, bool underline, int start, int count, int base) const;
-
-    bool isGlContextInitialized() const;
-
-    PFNGLGENBUFFERSPROC    glGenBuffersExt;
-    PFNGLDELETEBUFFERSPROC glDeleteBuffersExt;
-
-    PFNGLBUFFERDATAPROC    glBufferDataExt;
-    PFNGLBUFFERSUBDATAPROC glBufferSubDataExt;
-
-    PFNGLBINDBUFFERPROC    glBindBufferExt;
-
-    PFNGLMAPBUFFERPROC     glMapBufferExt;
-    PFNGLUNMAPBUFFERPROC   glUnmapBufferExt;
-
-    bool initialized;
-
-#ifdef Q_WS_WIN
-    HDC hDC;
-#endif
-};
-
-#ifdef Q_WS_WIN
-    GlFuncTab_QT::GlFuncTab_QT(HDC hDC_) : hDC(hDC_)
-#else
-    GlFuncTab_QT::GlFuncTab_QT()
-#endif
-{
-    glGenBuffersExt    = 0;
-    glDeleteBuffersExt = 0;
-
-    glBufferDataExt    = 0;
-    glBufferSubDataExt = 0;
-
-    glBindBufferExt    = 0;
-
-    glMapBufferExt     = 0;
-    glUnmapBufferExt   = 0;
-
-    initialized = false;
-}
-
-void GlFuncTab_QT::genBuffers(int n, unsigned int* buffers) const
-{
-    CV_FUNCNAME( "GlFuncTab_QT::genBuffers" );
-
-    __BEGIN__;
-
-    if (!glGenBuffersExt)
-        CV_ERROR(CV_OpenGlApiCallError, "Current OpenGL implementation doesn't support required extension");
-
-    glGenBuffersExt(n, buffers);
-    CV_CheckGlError();
-
-    __END__;
-}
-
-void GlFuncTab_QT::deleteBuffers(int n, const unsigned int* buffers) const
-{
-    CV_FUNCNAME( "GlFuncTab_QT::deleteBuffers" );
-
-    __BEGIN__;
-
-    if (!glDeleteBuffersExt)
-        CV_ERROR(CV_OpenGlApiCallError, "Current OpenGL implementation doesn't support required extension");
-
-    glDeleteBuffersExt(n, buffers);
-    CV_CheckGlError();
-
-    __END__;
-}
-
-void GlFuncTab_QT::bufferData(unsigned int target, ptrdiff_t size, const void* data, unsigned int usage) const
-{
-    CV_FUNCNAME( "GlFuncTab_QT::bufferData" );
-
-    __BEGIN__;
-
-    if (!glBufferDataExt)
-        CV_ERROR(CV_OpenGlApiCallError, "Current OpenGL implementation doesn't support required extension");
-
-    glBufferDataExt(target, size, data, usage);
-    CV_CheckGlError();
-
-    __END__;
-}
-
-void GlFuncTab_QT::bufferSubData(unsigned int target, ptrdiff_t offset, ptrdiff_t size, const void* data) const
-{
-    CV_FUNCNAME( "GlFuncTab_QT::bufferSubData" );
-
-    __BEGIN__;
-
-    if (!glBufferSubDataExt)
-        CV_ERROR(CV_OpenGlApiCallError, "Current OpenGL implementation doesn't support required extension");
-
-    glBufferSubDataExt(target, offset, size, data);
-    CV_CheckGlError();
-
-    __END__;
-}
-
-void GlFuncTab_QT::bindBuffer(unsigned int target, unsigned int buffer) const
-{
-    CV_FUNCNAME( "GlFuncTab_QT::bindBuffer" );
-
-    __BEGIN__;
-
-    if (!glBindBufferExt)
-        CV_ERROR(CV_OpenGlApiCallError, "Current OpenGL implementation doesn't support required extension");
-
-    glBindBufferExt(target, buffer);
-    CV_CheckGlError();
-
-    __END__;
-}
-
-void* GlFuncTab_QT::mapBuffer(unsigned int target, unsigned int access) const
-{
-    CV_FUNCNAME( "GlFuncTab_QT::mapBuffer" );
-
-    void* res = 0;
-
-    __BEGIN__;
-
-    if (!glMapBufferExt)
-        CV_ERROR(CV_OpenGlApiCallError, "Current OpenGL implementation doesn't support required extension");
-
-    res = glMapBufferExt(target, access);
-    CV_CheckGlError();
-
-    __END__;
-
-    return res;
-}
-
-void GlFuncTab_QT::unmapBuffer(unsigned int target) const
-{
-    CV_FUNCNAME( "GlFuncTab_QT::unmapBuffer" );
-
-    __BEGIN__;
-
-    if (!glUnmapBufferExt)
-        CV_ERROR(CV_OpenGlApiCallError, "Current OpenGL implementation doesn't support required extension");
-
-    glUnmapBufferExt(target);
-    CV_CheckGlError();
-
-    __END__;
-}
-
-void GlFuncTab_QT::generateBitmapFont(const std::string& family, int height, int weight, bool italic, bool /*underline*/, int start, int count, int base) const
-{
-#ifdef Q_WS_WIN
-    CV_FUNCNAME( "GlFuncTab_QT::generateBitmapFont" );
-#endif
-
-    QFont font(QString(family.c_str()), height, weight, italic);
-
-    __BEGIN__;
-
-#ifndef Q_WS_WIN
-    font.setStyleStrategy(QFont::OpenGLCompatible);
-    if (font.handle())
-        glXUseXFont(font.handle(), start, count, base);
-#else
-    SelectObject(hDC, font.handle());
-    if (!wglUseFontBitmaps(hDC, start, count, base))
-        CV_ERROR(CV_OpenGlApiCallError, "Can't create font");
-#endif
-
-    __END__;
-}
-
-bool GlFuncTab_QT::isGlContextInitialized() const
-{
-    return initialized;
-}
-
 void OpenGlViewPort::initializeGL()
 {
     glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
-
-#ifdef Q_WS_WIN
-    std::auto_ptr<GlFuncTab_QT> qglFuncTab(new GlFuncTab_QT(getDC()));
-#else
-    std::auto_ptr<GlFuncTab_QT> qglFuncTab(new GlFuncTab_QT);
-#endif
-
-    // Load extensions
-
-    qglFuncTab->glGenBuffersExt = (PFNGLGENBUFFERSPROC)context()->getProcAddress("glGenBuffers");
-    qglFuncTab->glDeleteBuffersExt = (PFNGLDELETEBUFFERSPROC)context()->getProcAddress("glDeleteBuffers");
-    qglFuncTab->glBufferDataExt = (PFNGLBUFFERDATAPROC)context()->getProcAddress("glBufferData");
-    qglFuncTab->glBufferSubDataExt = (PFNGLBUFFERSUBDATAPROC)context()->getProcAddress("glBufferSubData");
-    qglFuncTab->glBindBufferExt = (PFNGLBINDBUFFERPROC)context()->getProcAddress("glBindBuffer");
-    qglFuncTab->glMapBufferExt = (PFNGLMAPBUFFERPROC)context()->getProcAddress("glMapBuffer");
-    qglFuncTab->glUnmapBufferExt = (PFNGLUNMAPBUFFERPROC)context()->getProcAddress("glUnmapBuffer");
-
-    qglFuncTab->initialized = true;
-
-    glFuncTab = qglFuncTab.release();
-
-    icvSetOpenGlFuncTab(glFuncTab);
 }
 
 void OpenGlViewPort::resizeGL(int w, int h)
@@ -5039,14 +4777,10 @@ void OpenGlViewPort::resizeGL(int w, int h)
 
 void OpenGlViewPort::paintGL()
 {
-    icvSetOpenGlFuncTab(glFuncTab);
-
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     if (glDrawCallback)
         glDrawCallback(glDrawData);
-
-    CV_CheckGlError();
 }
 
 void OpenGlViewPort::mousePressEvent(QMouseEvent* evnt)

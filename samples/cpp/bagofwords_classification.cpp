@@ -1453,7 +1453,7 @@ void VocData::readClassifierGroundTruth(const string& filename, vector<string>& 
 
     string line;
     string image;
-    int obj_present;
+    int obj_present = 0;
     while (!gtfile.eof())
     {
         std::getline(gtfile,line);
@@ -1826,7 +1826,7 @@ void VocData::readFileToString(const string filename, string& file_contents)
 
 int VocData::stringToInteger(const string input_str)
 {
-    int result;
+    int result = 0;
 
     stringstream ss(input_str);
     if ((ss >> result).fail())
