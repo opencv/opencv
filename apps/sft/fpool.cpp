@@ -54,7 +54,7 @@ sft::ICFFeaturePool::ICFFeaturePool(cv::Size m, int n) : FeaturePool(), model(m)
     fill(nfeatures);
 }
 
-void sft::ICFFeaturePool::preprocess(const Mat& frame, Mat& integrals) const
+void sft::ICFFeaturePool::preprocess(cv::InputArray frame, cv::OutputArray integrals) const
 {
     preprocessor.apply(frame, integrals);
 }

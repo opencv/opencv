@@ -56,9 +56,12 @@ class Preprocessor
 public:
     Preprocessor() {}
 
-    void apply(const cv::Mat& frame, cv::Mat& integrals) const
+    void apply(cv::InputArray _frame, cv::OutputArray _integrals) const //const cv::Mat& frame, cv::Mat& integrals
     {
-        CV_Assert(frame.type() == CV_8UC3);
+        CV_Assert(_frame.type() == CV_8UC3);
+
+        cv::Mat frame     = _frame.getMat();
+        cv::Mat& integrals = _integrals.getMatRef();
 
         int h = frame.rows;
         int w = frame.cols;
@@ -165,7 +168,7 @@ public:
 
     virtual int size() const { return (int)pool.size(); }
     virtual float apply(int fi, int si, const cv::Mat& integrals) const;
-    virtual void preprocess(const cv::Mat& frame, cv::Mat& integrals) const;
+    virtual void preprocess(cv::InputArray _frame, cv::OutputArray _integrals) const;
     virtual void write( cv::FileStorage& fs, int index) const;
 
     virtual ~ICFFeaturePool();
