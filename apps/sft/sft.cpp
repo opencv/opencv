@@ -130,7 +130,7 @@ int main(int argc, char** argv)
         cv::Octave boost(boundingBox, npositives, nnegatives, *it, shrinkage);
 
         std::string path = cfg.trainPath;
-        sft::ScaledDataset dataset(path, boost.logScale);
+        sft::ScaledDataset dataset(path, *it);
 
         if (boost.train(&dataset, &pool, cfg.weaks, cfg.treeDepth))
         {

@@ -2166,16 +2166,8 @@ public:
     virtual void setRejectThresholds(OutputArray thresholds);
     virtual void write( CvFileStorage* fs, string name) const;
     virtual void write( cv::FileStorage &fs, const FeaturePool* pool, InputArray thresholds) const;
-    virtual ~Octave();
-
-
     virtual float predict( InputArray _sample, InputArray _votes, bool raw_mode, bool return_sum ) const;
-
-
-
-
-    int logScale;
-
+    virtual ~Octave();
 protected:
     virtual bool train( const cv::Mat& trainData, const cv::Mat& responses, const cv::Mat& varIdx=cv::Mat(),
        const cv::Mat& sampleIdx=cv::Mat(), const cv::Mat& varType=cv::Mat(), const cv::Mat& missingDataMask=cv::Mat());
@@ -2188,6 +2180,7 @@ private:
     void traverse(const CvBoostTree* tree, cv::FileStorage& fs, int& nfeatures, int* used, const double* th) const;
     virtual void initial_weights(double (&p)[2]);
 
+    int logScale;
     cv::Rect boundingBox;
 
     int npositives;
