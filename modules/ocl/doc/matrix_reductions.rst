@@ -7,7 +7,7 @@ ocl::countNonZero
 ------------------
 Returns the number of non-zero elements in src
 
-.. ocv:function:: int countNonZero(const oclMat &src)
+.. ocv:function:: int ocl::countNonZero(const oclMat &src)
 
     :param src: Single-channel array
 
@@ -17,7 +17,7 @@ ocl::minMax
 ------------------
 Returns void
 
-.. ocv:function:: void minMax(const oclMat &src, double *minVal, double *maxVal = 0, const oclMat &mask = oclMat())
+.. ocv:function:: void ocl::minMax(const oclMat &src, double *minVal, double *maxVal = 0, const oclMat &mask = oclMat())
 
     :param src: Single-channel array
 
@@ -33,7 +33,7 @@ ocl::minMaxLoc
 ------------------
 Returns void
 
-.. ocv:function:: void minMaxLoc(const oclMat &src, double *minVal, double *maxVal = 0, Point *minLoc = 0, Point *maxLoc = 0,const oclMat &mask = oclMat())
+.. ocv:function:: void ocl::minMaxLoc(const oclMat &src, double *minVal, double *maxVal = 0, Point *minLoc = 0, Point *maxLoc = 0,const oclMat &mask = oclMat())
 
     :param src: Single-channel array
 
@@ -53,7 +53,7 @@ ocl::Sum
 ------------------
 Returns the sum of matrix elements for each channel
 
-.. ocv:function:: Scalar sum(const oclMat &m)
+.. ocv:function:: Scalar ocl::sum(const oclMat &m)
 
     :param m: The Source image of all depth
 
@@ -63,7 +63,7 @@ ocl::sqrSum
 ------------------
 Returns the squared sum of matrix elements for each channel
 
-.. ocv:function:: Scalar sqrSum(const oclMat &m)
+.. ocv:function:: Scalar ocl::sqrSum(const oclMat &m)
 
     :param m: The Source image of all depth
 
