@@ -43,7 +43,7 @@
 // Trating application for Soft Cascades.
 
 #include <sft/common.hpp>
-#include <sft/octave.hpp>
+#include <sft/fpool.hpp>
 #include <sft/config.hpp>
 
 #include <opencv2/core/core_c.h>
