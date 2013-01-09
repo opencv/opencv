@@ -150,7 +150,7 @@ void glob(const string& path, svector& ret)
     ret.clear();
     ret.reserve(glob_result.gl_pathc);
 
-    for(uint i = 0; i < glob_result.gl_pathc; ++i)
+    for(unsigned int i = 0; i < glob_result.gl_pathc; ++i)
     {
         ret.push_back(std::string(glob_result.gl_pathv[i]));
         dprintf("%s\n", ret[i].c_str());

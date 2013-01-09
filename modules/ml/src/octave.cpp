@@ -186,7 +186,7 @@ void cv::Octave::setRejectThresholds(cv::OutputArray _thresholds)
     for (int si = 0; si < nsamples; ++si)
     {
         float decision = dptr[si] = predict(trainData.col(si), stab, false, false);
-        mptr[si] = cv::saturate_cast<uchar>((uint)( (responses.ptr<float>(si)[0] == 1.f) && (decision == 1.f)));
+        mptr[si] = cv::saturate_cast<uchar>((unsigned int)( (responses.ptr<float>(si)[0] == 1.f) && (decision == 1.f)));
     }
 
     int weaks = weak->total;
@@ -350,7 +350,7 @@ void cv::Octave::traverse(const CvBoostTree* tree, cv::FileStorage& fs, int& nfe
 void cv::Octave::write( cv::FileStorage &fso, const FeaturePool* pool, InputArray _thresholds) const
 {
     CV_Assert(!_thresholds.empty());
-    cv::Mat used( 1, weak->total * (pow(2, params.max_depth) - 1), CV_32SC1);
+    cv::Mat used( 1, weak->total * ( pow(2.f, params.max_depth) - 1), CV_32SC1);
     int* usedPtr = used.ptr<int>(0);
     int nfeatures = 0;
     cv::Mat thresholds = _thresholds.getMat();
