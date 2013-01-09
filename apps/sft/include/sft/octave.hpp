@@ -46,17 +46,70 @@
 #include <opencv2/ml/ml.hpp>
 #include <sft/common.hpp>
 
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/highgui/highgui.hpp>
 namespace sft
 {
 
-class Dataset
+class Preprocessor
 {
 public:
-    Dataset(const sft::string& path, const int octave);
+    Preprocessor() {}
 
-// private:
-    svector pos;
-    svector neg;
+    void apply(const cv::Mat& frame, cv::Mat& integrals) const
+    {
+        CV_Assert(frame.type() == CV_8UC3);
+
+        int h = frame.rows;
+        int w = frame.cols;
+
+        cv::Mat channels, gray;
+
+        channels.create(h * BINS, w, CV_8UC1);
+        channels.setTo(0);
+
+        cvtColor(frame, gray, CV_BGR2GRAY);
+
+        cv::Mat df_dx, df_dy, mag, angle;
+        cv::Sobel(gray, df_dx, CV_32F, 1, 0);
+        cv::Sobel(gray, df_dy, CV_32F, 0, 1);
+
+        cv::cartToPolar(df_dx, df_dy, mag, angle, true);
+        mag *= (1.f / (8 * sqrt(2.f)));
+
+        cv::Mat nmag;
+        mag.convertTo(nmag, CV_8UC1);
+
+        angle *=  6 / 360.f;
+
+        for (int y = 0; y < h; ++y)
+        {
+            uchar* magnitude = nmag.ptr<uchar>(y);
+            float* ang = angle.ptr<float>(y);
+
+            for (int x = 0; x < w; ++x)
+            {
+                channels.ptr<uchar>(y + (h * (int)ang[x]))[x] = magnitude[x];
+            }
+        }
+
+        cv::Mat luv, shrunk;
+        cv::cvtColor(frame, luv, CV_BGR2Luv);
+
+        std::vector<cv::Mat> splited;
+        for (int i = 0; i < 3; ++i)
+            splited.push_back(channels(cv::Rect(0, h * (7 + i), w, h)));
+        split(luv, splited);
+
+        float shrinkage = static_cast<float>(integrals.cols - 1) / channels.cols;
+
+        CV_Assert(shrinkage == 0.25);
+
+        cv::resize(channels, shrunk, cv::Size(), shrinkage, shrinkage, CV_INTER_AREA);
+        cv::integral(shrunk, integrals, cv::noArray(), CV_32S);
+    }
+
+    enum {BINS = 10};
 };
 
 struct ICF
@@ -74,7 +127,7 @@ struct ICF
     }
 
 
-    float operator() (const Mat& integrals, const cv::Size& model) const
+    float operator() (const cv::Mat& integrals, const cv::Size& model) const
     {
         int step = model.width + 1;
 
@@ -95,11 +148,11 @@ private:
     cv::Rect bb;
     int channel;
 
-    friend void write(cv::FileStorage& fs, const string&, const ICF& f);
+    friend void write(cv::FileStorage& fs, const std::string&, const ICF& f);
     friend std::ostream& operator<<(std::ostream& out, const ICF& f);
 };
 
-void write(cv::FileStorage& fs, const string&, const ICF& f);
+void write(cv::FileStorage& fs, const std::string&, const ICF& f);
 std::ostream& operator<<(std::ostream& out, const ICF& m);
 
 class ICFFeaturePool : public cv::FeaturePool
@@ -108,7 +161,8 @@ public:
     ICFFeaturePool(cv::Size model, int nfeatures);
 
     virtual int size() const { return (int)pool.size(); }
-    virtual float apply(int fi, int si, const Mat& integrals) const;
+    virtual float apply(int fi, int si, const cv::Mat& integrals) const;
+    virtual void preprocess(const cv::Mat& frame, cv::Mat& integrals) const;
     virtual void write( cv::FileStorage& fs, int index) const;
 
     virtual ~ICFFeaturePool();
@@ -124,11 +178,29 @@ private:
 
     static const unsigned int seed = 0;
 
+    Preprocessor preprocessor;
+
     enum { N_CHANNELS = 10 };
 };
 
 
 using cv::FeaturePool;
+
+
+
+class Dataset
+{
+public:
+    typedef enum {POSITIVE = 1, NEGATIVE = 2} SampleType;
+    Dataset(const sft::string& path, const int octave);
+
+    cv::Mat get(SampleType type, int idx) const;
+    int available(SampleType type) const;
+
+private:
+    svector pos;
+    svector neg;
+};
 
 // used for traning single octave scale
 class Octave : cv::Boost
@@ -163,7 +235,7 @@ protected:
        const cv::Mat& sampleIdx=cv::Mat(), const cv::Mat& varType=cv::Mat(), const cv::Mat& missingDataMask=cv::Mat());
 
     void processPositives(const Dataset& dataset, const FeaturePool* pool);
-    void generateNegatives(const Dataset& dataset);
+    void generateNegatives(const Dataset& dataset, const FeaturePool* pool);
 
     float predict( const Mat& _sample, const cv::Range range) const;
 private:
