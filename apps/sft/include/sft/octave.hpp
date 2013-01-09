@@ -155,6 +155,9 @@ private:
 void write(cv::FileStorage& fs, const std::string&, const ICF& f);
 std::ostream& operator<<(std::ostream& out, const ICF& m);
 
+using cv::FeaturePool;
+using cv::Dataset;
+
 class ICFFeaturePool : public cv::FeaturePool
 {
 public:
@@ -184,79 +187,20 @@ private:
 };
 
 
-using cv::FeaturePool;
 
-
-
-class Dataset
+class ScaledDataset : public Dataset
 {
 public:
-    typedef enum {POSITIVE = 1, NEGATIVE = 2} SampleType;
-    Dataset(const sft::string& path, const int octave);
+    ScaledDataset(const sft::string& path, const int octave);
 
-    cv::Mat get(SampleType type, int idx) const;
-    int available(SampleType type) const;
+    virtual cv::Mat get(SampleType type, int idx) const;
+    virtual int available(SampleType type) const;
+    virtual ~ScaledDataset();
 
 private:
     svector pos;
     svector neg;
 };
-
-// used for traning single octave scale
-class Octave : cv::Boost
-{
-public:
-
-    enum
-    {
-        // Direct backward pruning. (Cha Zhang and Paul Viola)
-        DBP = 1,
-        // Multiple instance pruning. (Cha Zhang and Paul Viola)
-        MIP = 2,
-        // Originally proposed by L. bourdev and J. brandt
-        HEURISTIC = 4
-    };
-
-    Octave(cv::Rect boundingBox, int npositives, int nnegatives, int logScale, int shrinkage);
-    virtual ~Octave();
-
-    virtual bool train(const Dataset& dataset, const FeaturePool* pool, int weaks, int treeDepth);
-
-    virtual float predict( const Mat& _sample, Mat& _votes, bool raw_mode, bool return_sum ) const;
-    virtual void setRejectThresholds(cv::Mat& thresholds);
-    virtual void write( CvFileStorage* fs, string name) const;
-
-    virtual void write( cv::FileStorage &fs, const FeaturePool* pool, const Mat& thresholds) const;
-
-    int logScale;
-
-protected:
-    virtual bool train( const cv::Mat& trainData, const cv::Mat& responses, const cv::Mat& varIdx=cv::Mat(),
-       const cv::Mat& sampleIdx=cv::Mat(), const cv::Mat& varType=cv::Mat(), const cv::Mat& missingDataMask=cv::Mat());
-
-    void processPositives(const Dataset& dataset, const FeaturePool* pool);
-    void generateNegatives(const Dataset& dataset, const FeaturePool* pool);
-
-    float predict( const Mat& _sample, const cv::Range range) const;
-private:
-    void traverse(const CvBoostTree* tree, cv::FileStorage& fs, int& nfeatures, int* used, const double* th) const;
-    virtual void initial_weights(double (&p)[2]);
-
-    cv::Rect boundingBox;
-
-    int npositives;
-    int nnegatives;
-
-    int shrinkage;
-
-    Mat integrals;
-    Mat responses;
-
-    CvBoostParams params;
-
-    Mat trainData;
-};
-
 }
 
 #endif
