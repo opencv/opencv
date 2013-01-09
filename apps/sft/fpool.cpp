@@ -40,7 +40,7 @@
 //
 //M*/
 
-#include <sft/octave.hpp>
+#include <sft/fpool.hpp>
 #include <sft/random.hpp>
 
 #include <glob.h>
