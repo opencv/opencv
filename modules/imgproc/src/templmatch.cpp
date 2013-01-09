@@ -346,7 +346,10 @@ void cv::matchTemplate( InputArray _img, InputArray _templ, OutputArray _result,
                 }
 
                 if( numType == 2 )
+                {
                     num = wndSum2 - 2*num + templSum2;
+                    num = MAX(num, 0.);
+                }
             }
 
             if( isNormed )
