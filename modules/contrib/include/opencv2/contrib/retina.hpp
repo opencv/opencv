@@ -203,10 +203,10 @@ public:
      */
     void setup(RetinaParameters newParameters);
 
-        /**
-         * @return the current parameters setup
-         */
-        struct Retina::RetinaParameters getParameters();
+    /**
+     * @return the current parameters setup
+     */
+    struct Retina::RetinaParameters getParameters();
 
     /**
      * parameters setup display method
