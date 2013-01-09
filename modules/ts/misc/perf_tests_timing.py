@@ -5,6 +5,7 @@ from table_formatter import *
 from optparse import OptionParser
 from operator import itemgetter, attrgetter
 from summary import getSetName, alphanum_keyselector
+import re
 
 if __name__ == "__main__":
     usage = "%prog <log_name>.xml [...]"
@@ -22,7 +23,11 @@ if __name__ == "__main__":
     options.generateHtml = detectHtmlOutputType(options.format)
 
     # expand wildcards and filter duplicates
-    file = os.path.abspath(args[0])
+    input_file = args[0]
+    if input_file.startswith('./'):
+        input_file = input_file[2:]
+
+    file = os.path.abspath(input_file)
     if not os.path.isfile(file):
         sys.stderr.write("IOError reading \"" + file + "\" - " + str(err) + os.linesep)
         parser.print_help()
@@ -56,7 +61,7 @@ if __name__ == "__main__":
                 test_cases[name] = [None] * setsCount
             test_cases[name][i] = case
 
-    testsuits = [] # testsuit name, time, flag for failed tests
+    testsuits = []
 
     prevGroupName = None
     suit_time = 0
@@ -81,26 +86,36 @@ if __name__ == "__main__":
                 if case.get('status') == 'failed':
                     has_failed = True
 
-    tbl = table()
+    testsuits.append({'name': prevGroupName, 'time': suit_time, \
+        'failed': has_failed})
 
-    # header
-    tbl.newColumn('name', 'Name of testsuit', align = 'left', cssclass = 'col_name')
-    tbl.newColumn('time', 'Time (ms)', align = 'left', cssclass = 'col_name')
-    tbl.newColumn('failed', 'Failed tests', align = 'center', cssclass = 'col_name')
+    if len(testsuits)>0:
+        tbl = table()
 
-    # rows
-    for suit in sorted(testsuits, key = lambda suit: suit['time'], reverse = True):
-        tbl.newRow()
-        tbl.newCell('name', suit['name'])
-        tbl.newCell('time', formatValue(suit['time'], '', ''), suit['time'])
-        if (suit['failed']):
-            tbl.newCell('failed', 'Yes')
+        # header
+        tbl.newColumn('name', 'Name of testsuit', align = 'left', cssclass = 'col_name')
+        tbl.newColumn('time', 'Time (ms)', align = 'left', cssclass = 'col_name')
+        tbl.newColumn('failed', 'Failed tests', align = 'center', cssclass = 'col_name')
+
+        # rows
+        for suit in sorted(testsuits, key = lambda suit: suit['time'], reverse = True):
+            tbl.newRow()
+            tbl.newCell('name', suit['name'])
+            tbl.newCell('time', formatValue(suit['time'], '', ''), suit['time'])
+            if (suit['failed']):
+                tbl.newCell('failed', 'Yes')
+            else:
+                tbl.newCell('failed', ' ')
+
+        # output table
+        if options.generateHtml:
+            tbl.htmlPrintTable(sys.stdout)
+            htmlPrintFooter(sys.stdout)
         else:
-            tbl.newCell('failed', ' ')
+            find_module_name = re.search('^[^_]*', input_file)
+            module_name = find_module_name.group(0)
 
-    # output table
-    if options.generateHtml:
-        tbl.htmlPrintTable(sys.stdout)
-        htmlPrintFooter(sys.stdout)
-    else:
-        tbl.consolePrintTable(sys.stdout)
+            splitter = 15 * '*'
+            print '\n%s\n  %s\n%s\n' % (splitter, module_name, splitter)
+            tbl.consolePrintTable(sys.stdout)
+            print 4 * '\n'
