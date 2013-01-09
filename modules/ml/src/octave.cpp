@@ -167,7 +167,7 @@ bool cv::Octave::train( const cv::Mat& _trainData, const cv::Mat& _responses, co
     update);
 }
 
-void cv::Octave::setRejectThresholds(cv::Mat& thresholds)
+void cv::Octave::setRejectThresholds(cv::OutputArray _thresholds)
 {
     dprintf("set thresholds according to DBP strategy\n");
 
@@ -190,7 +190,8 @@ void cv::Octave::setRejectThresholds(cv::Mat& thresholds)
     }
 
     int weaks = weak->total;
-    thresholds.create(1, weaks, CV_64FC1);
+    _thresholds.create(1, weaks, CV_64FC1);
+    cv::Mat& thresholds = _thresholds.getMatRef();
     double* thptr = thresholds.ptr<double>(0);
 
     cv::Mat traces(weaks, nsamples, CV_64FC1, cv::Scalar::all(FLT_MAX));
@@ -346,12 +347,13 @@ void cv::Octave::traverse(const CvBoostTree* tree, cv::FileStorage& fs, int& nfe
     fs << "}";
 }
 
-void cv::Octave::write( cv::FileStorage &fso, const FeaturePool* pool, const Mat& thresholds) const
+void cv::Octave::write( cv::FileStorage &fso, const FeaturePool* pool, InputArray _thresholds) const
 {
-    CV_Assert(!thresholds.empty());
+    CV_Assert(!_thresholds.empty());
     cv::Mat used( 1, weak->total * (pow(2, params.max_depth) - 1), CV_32SC1);
     int* usedPtr = used.ptr<int>(0);
     int nfeatures = 0;
+    cv::Mat thresholds = _thresholds.getMat();
     fso << "{"
         << "scale" << logScale
         << "weaks" << weak->total
@@ -438,10 +440,18 @@ bool cv::Octave::train(const Dataset* dataset, const FeaturePool* pool, int weak
 
 }
 
-float cv::Octave::predict( const Mat& _sample, Mat& _votes, bool raw_mode, bool return_sum ) const
+float cv::Octave::predict( cv::InputArray _sample, cv::InputArray _votes, bool raw_mode, bool return_sum ) const
 {
-    CvMat sample = _sample, votes = _votes;
-    return CvBoost::predict(&sample, 0, (_votes.empty())? 0 : &votes, CV_WHOLE_SEQ, raw_mode, return_sum);
+    cv::Mat sample = _sample.getMat();
+    CvMat csample = sample;
+    if (_votes.empty())
+        return CvBoost::predict(&csample, 0, 0, CV_WHOLE_SEQ, raw_mode, return_sum);
+    else
+    {
+        cv::Mat votes = _votes.getMat();
+        CvMat cvotes = votes;
+        return CvBoost::predict(&csample, 0, &cvotes, CV_WHOLE_SEQ, raw_mode, return_sum);
+    }
 }
 
 float cv::Octave::predict( const Mat& _sample, const cv::Range range) const
