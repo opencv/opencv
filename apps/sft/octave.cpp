@@ -197,14 +197,14 @@ public:
 };
 }
 
-void sft::Octave::processPositives(const Dataset& dataset, const FeaturePool& pool)
+void sft::Octave::processPositives(const Dataset& dataset, const FeaturePool* pool)
 {
     Preprocessor prepocessor(shrinkage);
 
     int w = boundingBox.width;
     int h = boundingBox.height;
 
-    integrals.create(pool.size(), (w / shrinkage + 1) * (h / shrinkage * 10 + 1), CV_32SC1);
+    integrals.create(pool->size(), (w / shrinkage + 1) * (h / shrinkage * 10 + 1), CV_32SC1);
 
     int total = 0;
     for (svector::const_iterator it = dataset.pos.begin(); it != dataset.pos.end(); ++it)
@@ -338,7 +338,7 @@ void sft::Octave::traverse(const CvBoostTree* tree, cv::FileStorage& fs, int& nf
     fs << "}";
 }
 
-void sft::Octave::write( cv::FileStorage &fso, const FeaturePool& pool, const Mat& thresholds) const
+void sft::Octave::write( cv::FileStorage &fso, const FeaturePool* pool, const Mat& thresholds) const
 {
     CV_Assert(!thresholds.empty());
     cv::Mat used( 1, weak->total * (pow(2, params.max_depth) - 1), CV_32SC1);
@@ -364,7 +364,7 @@ void sft::Octave::write( cv::FileStorage &fso, const FeaturePool& pool, const Ma
 
     fso << "features" << "[";
     for (int i = 0; i < nfeatures; ++i)
-        pool.write(fso, usedPtr[i]);
+        pool->write(fso, usedPtr[i]);
     fso << "]"
         << "}";
 }
@@ -376,7 +376,7 @@ void sft::Octave::initial_weights(double (&p)[2])
     p[1] =  n / (2. * (double)(npositives));
 }
 
-bool sft::Octave::train(const Dataset& dataset, const FeaturePool& pool, int weaks, int treeDepth)
+bool sft::Octave::train(const Dataset& dataset, const FeaturePool* pool, int weaks, int treeDepth)
 {
     CV_Assert(treeDepth == 2);
     CV_Assert(weaks > 0);
@@ -389,7 +389,7 @@ bool sft::Octave::train(const Dataset& dataset, const FeaturePool& pool, int wea
     generateNegatives(dataset);
 
     // 2. only sumple case (all features used)
-    int nfeatures = pool.size();
+    int nfeatures = pool->size();
     cv::Mat varIdx(1, nfeatures, CV_32SC1);
     int* ptr = varIdx.ptr<int>(0);
 
@@ -417,7 +417,7 @@ bool sft::Octave::train(const Dataset& dataset, const FeaturePool& pool, int wea
         float* dptr = trainData.ptr<float>(fi);
         for (int si = 0; si < nsamples; ++si)
         {
-            dptr[si] = pool.apply(fi, si, integrals);
+            dptr[si] = pool->apply(fi, si, integrals);
         }
     }
 
@@ -448,18 +448,19 @@ void sft::Octave::write( CvFileStorage* fs, string name) const
 }
 
 // ========= FeaturePool ========= //
-sft::FeaturePool::FeaturePool(cv::Size m, int n) : model(m), nfeatures(n)
+
+sft::ICFFeaturePool::ICFFeaturePool(cv::Size m, int n) : FeaturePool(), model(m), nfeatures(n)
 {
     CV_Assert(m != cv::Size() && n > 0);
     fill(nfeatures);
 }
 
-float sft::FeaturePool::apply(int fi, int si, const Mat& integrals) const
+float sft::ICFFeaturePool::apply(int fi, int si, const Mat& integrals) const
 {
     return pool[fi](integrals.row(si), model);
 }
 
-void sft::FeaturePool::write( cv::FileStorage& fs, int index) const
+void sft::ICFFeaturePool::write( cv::FileStorage& fs, int index) const
 {
     CV_Assert((index > 0) && (index < (int)pool.size()));
     fs << pool[index];
@@ -470,8 +471,9 @@ void sft::write(cv::FileStorage& fs, const string&, const ICF& f)
     fs << "{" << "channel" << f.channel << "rect" << f.bb << "}";
 }
 
+sft::ICFFeaturePool::~ICFFeaturePool(){}
 
-void sft::FeaturePool::fill(int desired)
+void sft::ICFFeaturePool::fill(int desired)
 {
     int mw = model.width;
     int mh = model.height;

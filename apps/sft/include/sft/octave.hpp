@@ -102,27 +102,33 @@ private:
 void write(cv::FileStorage& fs, const string&, const ICF& f);
 std::ostream& operator<<(std::ostream& out, const ICF& m);
 
-class FeaturePool
+class ICFFeaturePool : public cv::FeaturePool
 {
 public:
-    FeaturePool(cv::Size model, int nfeatures);
+    ICFFeaturePool(cv::Size model, int nfeatures);
 
-    int size() const { return (int)pool.size(); }
-    float apply(int fi, int si, const Mat& integrals) const;
-    void write( cv::FileStorage& fs, int index) const;
+    virtual int size() const { return (int)pool.size(); }
+    virtual float apply(int fi, int si, const Mat& integrals) const;
+    virtual void write( cv::FileStorage& fs, int index) const;
+
+    virtual ~ICFFeaturePool();
 
 private:
+
     void fill(int desired);
 
     cv::Size model;
     int nfeatures;
 
-    Icfvector pool;
+    std::vector<ICF> pool;
 
     static const unsigned int seed = 0;
 
     enum { N_CHANNELS = 10 };
 };
+
+
+using cv::FeaturePool;
 
 // used for traning single octave scale
 class Octave : cv::Boost
@@ -142,12 +148,13 @@ public:
     Octave(cv::Rect boundingBox, int npositives, int nnegatives, int logScale, int shrinkage);
     virtual ~Octave();
 
-    virtual bool train(const Dataset& dataset, const FeaturePool& pool, int weaks, int treeDepth);
+    virtual bool train(const Dataset& dataset, const FeaturePool* pool, int weaks, int treeDepth);
+
     virtual float predict( const Mat& _sample, Mat& _votes, bool raw_mode, bool return_sum ) const;
     virtual void setRejectThresholds(cv::Mat& thresholds);
     virtual void write( CvFileStorage* fs, string name) const;
 
-    virtual void write( cv::FileStorage &fs, const FeaturePool& pool, const Mat& thresholds) const;
+    virtual void write( cv::FileStorage &fs, const FeaturePool* pool, const Mat& thresholds) const;
 
     int logScale;
 
@@ -155,7 +162,7 @@ protected:
     virtual bool train( const cv::Mat& trainData, const cv::Mat& responses, const cv::Mat& varIdx=cv::Mat(),
        const cv::Mat& sampleIdx=cv::Mat(), const cv::Mat& varType=cv::Mat(), const cv::Mat& missingDataMask=cv::Mat());
 
-    void processPositives(const Dataset& dataset, const FeaturePool& pool);
+    void processPositives(const Dataset& dataset, const FeaturePool* pool);
     void generateNegatives(const Dataset& dataset);
 
     float predict( const Mat& _sample, const cv::Range range) const;

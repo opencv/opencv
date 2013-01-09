@@ -2132,6 +2132,17 @@ template<> CV_EXPORTS void Ptr<CvDTreeSplit>::delete_obj();
 
 CV_EXPORTS bool initModule_ml(void);
 
+CV_EXPORTS class FeaturePool
+{
+public:
+
+    virtual int size() const = 0;
+    virtual float apply(int fi, int si, const Mat& integrals) const = 0;
+    virtual void write( cv::FileStorage& fs, int index) const = 0;
+
+    virtual ~FeaturePool() = 0;
+};
+
 }
 
 #endif // __cplusplus
