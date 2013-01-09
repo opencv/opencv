@@ -221,7 +221,6 @@ void cv::Octave::processPositives(const Dataset* dataset, const FeaturePool* poo
     integrals.create(pool->size(), (w / shrinkage + 1) * (h / shrinkage * 10 + 1), CV_32SC1);
 
     int total = 0;
-    // for (svector::const_iterator it = dataset.pos.begin(); it != dataset.pos.end(); ++it)
     for (int curr = 0; curr < dataset->available( Dataset::POSITIVE); ++curr)
     {
         cv::Mat sample = dataset->get( Dataset::POSITIVE, curr);
@@ -247,7 +246,6 @@ void cv::Octave::generateNegatives(const Dataset* dataset, const FeaturePool* po
     sft::Random::engine eng(65633343L);
     sft::Random::engine idxEng(764224349868L);
 
-    // int w = boundingBox.width;
     int h = boundingBox.height;
 
     int nimages = dataset->available(Dataset::NEGATIVE);
@@ -276,7 +274,6 @@ void cv::Octave::generateNegatives(const Dataset* dataset, const FeaturePool* po
         pool->preprocess(frame, channels);
 
         dprintf("generated %d %d\n", dx, dy);
-
         // // if (predict(sum))
         {
             responses.ptr<float>(i)[0] = 0.f;
@@ -436,7 +433,7 @@ bool cv::Octave::train(const Dataset* dataset, const FeaturePool* pool, int weak
 
     bool ok = train(trainData, responses, varIdx, sampleIdx, varType, missingMask);
     if (!ok)
-        std::cout << "ERROR: tree can not be trained " << std::endl;
+        CV_Error(CV_StsInternal, "ERROR: tree can not be trained");
     return ok;
 
 }
