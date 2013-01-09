@@ -127,12 +127,12 @@ int main(int argc, char** argv)
         cv::Rect boundingBox = cfg.bbox(it);
         std::cout << "Object bounding box" << boundingBox << std::endl;
 
-        sft::Octave boost(boundingBox, npositives, nnegatives, *it, shrinkage);
+        cv::Octave boost(boundingBox, npositives, nnegatives, *it, shrinkage);
 
         std::string path = cfg.trainPath;
-        sft::Dataset dataset(path, boost.logScale);
+        sft::ScaledDataset dataset(path, boost.logScale);
 
-        if (boost.train(dataset, &pool, cfg.weaks, cfg.treeDepth))
+        if (boost.train(&dataset, &pool, cfg.weaks, cfg.treeDepth))
         {
             CvFileStorage* fout = cvOpenFileStorage(cfg.resPath(it).c_str(), 0, CV_STORAGE_WRITE);
             boost.write(fout, cfg.cascadeName);
