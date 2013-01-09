@@ -44,9 +44,6 @@
 #include <sft/random.hpp>
 
 #include <glob.h>
-#include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/highgui/highgui.hpp>
-
 #include <queue>
 
 // ============ Octave ============ //
@@ -138,85 +135,26 @@ void sft::Octave::setRejectThresholds(cv::Mat& thresholds)
 
 namespace {
 using namespace sft;
-class Preprocessor
-{
-public:
-    Preprocessor(int shr) : shrinkage(shr) {}
 
-    void apply(const Mat& frame, Mat& integrals)
-    {
-        CV_Assert(frame.type() == CV_8UC3);
-
-        int h = frame.rows;
-        int w = frame.cols;
-
-        cv::Mat channels, gray;
-
-        channels.create(h * BINS, w, CV_8UC1);
-        channels.setTo(0);
-
-        cvtColor(frame, gray, CV_BGR2GRAY);
-
-        cv::Mat df_dx, df_dy, mag, angle;
-        cv::Sobel(gray, df_dx, CV_32F, 1, 0);
-        cv::Sobel(gray, df_dy, CV_32F, 0, 1);
-
-        cv::cartToPolar(df_dx, df_dy, mag, angle, true);
-        mag *= (1.f / (8 * sqrt(2.f)));
-
-        cv::Mat nmag;
-        mag.convertTo(nmag, CV_8UC1);
-
-        angle *=  6 / 360.f;
-
-        for (int y = 0; y < h; ++y)
-        {
-            uchar* magnitude = nmag.ptr<uchar>(y);
-            float* ang = angle.ptr<float>(y);
-
-            for (int x = 0; x < w; ++x)
-            {
-                channels.ptr<uchar>(y + (h * (int)ang[x]))[x] = magnitude[x];
-            }
-        }
-
-        cv::Mat luv, shrunk;
-        cv::cvtColor(frame, luv, CV_BGR2Luv);
-
-        std::vector<cv::Mat> splited;
-        for (int i = 0; i < 3; ++i)
-            splited.push_back(channels(cv::Rect(0, h * (7 + i), w, h)));
-        split(luv, splited);
-
-        cv::resize(channels, shrunk, cv::Size(), 1.0 / shrinkage, 1.0 / shrinkage, CV_INTER_AREA);
-        cv::integral(shrunk, integrals, cv::noArray(), CV_32S);
-    }
-
-    int shrinkage;
-    enum {BINS = 10};
-};
 }
 
 void sft::Octave::processPositives(const Dataset& dataset, const FeaturePool* pool)
 {
-    Preprocessor prepocessor(shrinkage);
-
     int w = boundingBox.width;
     int h = boundingBox.height;
 
     integrals.create(pool->size(), (w / shrinkage + 1) * (h / shrinkage * 10 + 1), CV_32SC1);
 
     int total = 0;
-    for (svector::const_iterator it = dataset.pos.begin(); it != dataset.pos.end(); ++it)
+    // for (svector::const_iterator it = dataset.pos.begin(); it != dataset.pos.end(); ++it)
+    for (int curr = 0; curr < dataset.available( Dataset::POSITIVE); ++curr)
     {
-        const string& curr = *it;
-
-        cv::Mat sample = cv::imread(curr);
+        cv::Mat sample = dataset.get( Dataset::POSITIVE, curr);
 
         cv::Mat channels = integrals.row(total).reshape(0, h / shrinkage * 10 + 1);
         sample = sample(boundingBox);
 
-        prepocessor.apply(sample, channels);
+        pool->preprocess(sample, channels);
         responses.ptr<float>(total)[0] = 1.f;
 
         if (++total >= npositives) break;
@@ -228,7 +166,7 @@ void sft::Octave::processPositives(const Dataset& dataset, const FeaturePool* po
     nnegatives = cvRound(nnegatives * total / (double)npositives);
 }
 
-void sft::Octave::generateNegatives(const Dataset& dataset)
+void sft::Octave::generateNegatives(const Dataset& dataset, const FeaturePool* pool)
 {
     // ToDo: set seed, use offsets
     sft::Random::engine eng(65633343L);
@@ -237,9 +175,7 @@ void sft::Octave::generateNegatives(const Dataset& dataset)
     // int w = boundingBox.width;
     int h = boundingBox.height;
 
-    Preprocessor prepocessor(shrinkage);
-
-    int nimages = (int)dataset.neg.size();
+    int nimages = dataset.available(Dataset::NEGATIVE);
     sft::Random::uniform iRand(0, nimages - 1);
 
     int total = 0;
@@ -248,7 +184,7 @@ void sft::Octave::generateNegatives(const Dataset& dataset)
     {
         int curr = iRand(idxEng);
 
-        Mat frame = cv::imread(dataset.neg[curr]);
+        Mat frame = dataset.get(Dataset::NEGATIVE, curr);
 
         int maxW = frame.cols - 2 * boundingBox.x - boundingBox.width;
         int maxH = frame.rows - 2 * boundingBox.y - boundingBox.height;
@@ -262,7 +198,7 @@ void sft::Octave::generateNegatives(const Dataset& dataset)
         frame = frame(cv::Rect(dx, dy, boundingBox.width, boundingBox.height));
 
         cv::Mat channels = integrals.row(i).reshape(0, h / shrinkage * 10 + 1);
-        prepocessor.apply(frame, channels);
+        pool->preprocess(frame, channels);
 
         dprintf("generated %d %d\n", dx, dy);
 
@@ -386,7 +322,7 @@ bool sft::Octave::train(const Dataset& dataset, const FeaturePool* pool, int wea
 
     // 1. fill integrals and classes
     processPositives(dataset, pool);
-    generateNegatives(dataset);
+    generateNegatives(dataset, pool);
 
     // 2. only sumple case (all features used)
     int nfeatures = pool->size();
@@ -453,6 +389,11 @@ sft::ICFFeaturePool::ICFFeaturePool(cv::Size m, int n) : FeaturePool(), model(m)
 {
     CV_Assert(m != cv::Size() && n > 0);
     fill(nfeatures);
+}
+
+void sft::ICFFeaturePool::preprocess(const Mat& frame, Mat& integrals) const
+{
+    preprocessor.apply(frame, integrals);
 }
 
 float sft::ICFFeaturePool::apply(int fi, int si, const Mat& integrals) const
@@ -571,4 +512,15 @@ Dataset::Dataset(const string& path, const int oct)
     // Check: files not empty
     CV_Assert(pos.size() != size_t(0));
     CV_Assert(neg.size() != size_t(0));
+}
+
+cv::Mat Dataset::get(SampleType type, int idx) const
+{
+    const std::string& src = (type == POSITIVE)? pos[idx]: neg[idx];
+    return cv::imread(src);
+}
+
+int Dataset::available(SampleType type) const
+{
+    return (int)((type == POSITIVE)? pos.size():neg.size());
 }

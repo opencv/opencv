@@ -2131,6 +2131,8 @@ public:
     virtual float apply(int fi, int si, const Mat& integrals) const = 0;
     virtual void write( cv::FileStorage& fs, int index) const = 0;
 
+    virtual void preprocess(const Mat& frame, Mat& integrals) const = 0;
+
     virtual ~FeaturePool() = 0;
 };
 
