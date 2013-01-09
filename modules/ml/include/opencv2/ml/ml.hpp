@@ -2132,7 +2132,7 @@ template<> CV_EXPORTS void Ptr<CvDTreeSplit>::delete_obj();
 
 CV_EXPORTS bool initModule_ml(void);
 
-CV_EXPORTS class FeaturePool
+class CV_EXPORTS FeaturePool
 {
 public:
 
@@ -2145,7 +2145,7 @@ public:
     virtual ~FeaturePool();
 };
 
-class Dataset
+class CV_EXPORTS Dataset
 {
 public:
     typedef enum {POSITIVE = 1, NEGATIVE = 2} SampleType;
@@ -2156,7 +2156,7 @@ public:
 };
 
 // used for traning single octave scale
-class Octave : cv::Boost
+class CV_EXPORTS Octave : public cv::Boost
 {
 public:
 

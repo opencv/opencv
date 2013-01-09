@@ -62,8 +62,7 @@ namespace sft
 
 #if defined WITH_DEBUG_OUT
 # include <stdio.h>
-# define dprintf(format, ...) \
-            do { printf(format, ##__VA_ARGS__); } while (0)
+# define dprintf(format, ...)  printf(format, ##__VA_ARGS__)
 #else
 # define dprintf(format, ...)
 #endif

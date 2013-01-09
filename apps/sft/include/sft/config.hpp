@@ -60,7 +60,7 @@ struct Config
     // Scaled and shrunk model size.
     cv::Size model(ivector::const_iterator it) const
     {
-        float octave = powf(2, *it);
+        float octave = powf(2.f, *it);
         return cv::Size( cvRound(modelWinSize.width  * octave) / shrinkage,
                          cvRound(modelWinSize.height * octave) / shrinkage );
     }
@@ -68,7 +68,7 @@ struct Config
     // Scaled but, not shrunk bounding box for object in sample image.
     cv::Rect bbox(ivector::const_iterator it) const
     {
-        float octave = powf(2, *it);
+        float octave = powf(2.f, *it);
         return cv::Rect( cvRound(offset.x * octave), cvRound(offset.y * octave),
             cvRound(modelWinSize.width  * octave), cvRound(modelWinSize.height * octave));
     }

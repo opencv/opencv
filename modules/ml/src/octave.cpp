@@ -47,8 +47,7 @@
 
 #if defined WITH_DEBUG_OUT
 # include <stdio.h>
-# define dprintf(format, ...) \
-            do { printf(format, ##__VA_ARGS__); } while (0)
+# define dprintf(format, ...)  printf(format, ##__VA_ARGS__)
 #else
 # define dprintf(format, ...)
 #endif
@@ -121,7 +120,6 @@ struct Random
     typedef rnd::uniform_int<int> uniform;
 };
 }
-
 #endif
 
 cv::FeaturePool::~FeaturePool(){}
@@ -244,8 +242,8 @@ void cv::Octave::processPositives(const Dataset* dataset, const FeaturePool* poo
 void cv::Octave::generateNegatives(const Dataset* dataset, const FeaturePool* pool)
 {
     // ToDo: set seed, use offsets
-    sft::Random::engine eng(65633343L);
-    sft::Random::engine idxEng(764224349868L);
+    sft::Random::engine eng(65633343LU);
+    sft::Random::engine idxEng(764224349868LU);
 
     int h = boundingBox.height;
 
@@ -350,7 +348,7 @@ void cv::Octave::traverse(const CvBoostTree* tree, cv::FileStorage& fs, int& nfe
 void cv::Octave::write( cv::FileStorage &fso, const FeaturePool* pool, InputArray _thresholds) const
 {
     CV_Assert(!_thresholds.empty());
-    cv::Mat used( 1, weak->total * ( pow(2.f, params.max_depth) - 1), CV_32SC1);
+    cv::Mat used( 1, weak->total * ( (int)pow(2.f, params.max_depth) - 1), CV_32SC1);
     int* usedPtr = used.ptr<int>(0);
     int nfeatures = 0;
     cv::Mat thresholds = _thresholds.getMat();
