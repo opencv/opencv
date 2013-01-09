@@ -2162,15 +2162,17 @@ public:
     };
 
     Octave(cv::Rect boundingBox, int npositives, int nnegatives, int logScale, int shrinkage);
+    virtual bool train(const Dataset* dataset, const FeaturePool* pool, int weaks, int treeDepth);
+    virtual void setRejectThresholds(OutputArray thresholds);
+    virtual void write( CvFileStorage* fs, string name) const;
+    virtual void write( cv::FileStorage &fs, const FeaturePool* pool, InputArray thresholds) const;
     virtual ~Octave();
 
-    virtual bool train(const Dataset* dataset, const FeaturePool* pool, int weaks, int treeDepth);
 
-    virtual float predict( const Mat& _sample, Mat& _votes, bool raw_mode, bool return_sum ) const;
-    virtual void setRejectThresholds(cv::Mat& thresholds);
-    virtual void write( CvFileStorage* fs, string name) const;
+    virtual float predict( InputArray _sample, InputArray _votes, bool raw_mode, bool return_sum ) const;
 
-    virtual void write( cv::FileStorage &fs, const FeaturePool* pool, const Mat& thresholds) const;
+
+
 
     int logScale;
 
