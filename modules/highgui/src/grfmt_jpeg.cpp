@@ -63,6 +63,9 @@
 typedef unsigned char boolean;
 #endif
 
+#undef FALSE
+#undef TRUE
+
 extern "C" {
 #include "jpeglib.h"
 }
