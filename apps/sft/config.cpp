@@ -121,6 +121,8 @@ struct Out
     void operator ()(const T a) const {out << a << " ";}
 
     std::ostream& out;
+private:
+    Out& operator=(Out const& other);
 };
 
 std::ostream& sft::operator<<(std::ostream& out, const Config& m)
