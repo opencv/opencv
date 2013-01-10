@@ -21,14 +21,12 @@ if __name__ == "__main__":
 
     options.generateHtml = detectHtmlOutputType(options.format)
 
-    # expand wildcards and filter duplicates
     file = os.path.abspath(args[0])
     if not os.path.isfile(file):
         sys.stderr.write("IOError reading \"" + file + "\" - " + str(err) + os.linesep)
         parser.print_help()
         exit(0)
 
-    # read all passed files
     test_sets = []
     try:
         tests = testlog_parser.parseLogFile(file)
@@ -41,7 +39,7 @@ if __name__ == "__main__":
 
     if not test_sets:
         sys.stderr.write("Error: no test data found" + os.linesep)
-        quit()
+        exit(0)
 
     # find matches
     setsCount = len(test_sets)
@@ -83,6 +81,10 @@ if __name__ == "__main__":
 
     testsuits.append({'name': prevGroupName, 'time': suit_time, \
         'failed': has_failed})
+
+    if len(testsuits)==0:
+        print 'No testsuits found'
+        exit(0)
 
     tbl = table()
 
