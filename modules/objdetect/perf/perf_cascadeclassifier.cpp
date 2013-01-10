@@ -65,8 +65,8 @@ namespace {
 }
 
 PERF_TEST_P(detect, SCascade,
-    testing::Combine(testing::Values(std::string("cv/cascadeandhog/sc_cvpr_2012_to_opencv.xml")),
-    testing::Values(std::string("cv/cascadeandhog/bahnhof/image_00000000_0.png"))))
+    testing::Combine(testing::Values(std::string("cv/softcascade/soft-cascade-17.12.2012.xml")),
+    testing::Values(std::string("cv/softcascade/bahnhof/image_00000000_0.png"))))
 {
     typedef cv::SCascade::Detection Detection;
     cv::Mat colored = imread(getDataPath(get<1>(GetParam())));

@@ -110,24 +110,6 @@ CvBoostTree::train( CvDTreeTrainData* _train_data,
     return do_train( _subsample_idx );
 }
 
-
-bool
-CvBoostTree::train( const CvMat*, int, const CvMat*, const CvMat*,
-                    const CvMat*, const CvMat*, const CvMat*, CvDTreeParams )
-{
-    assert(0);
-    return false;
-}
-
-
-bool
-CvBoostTree::train( CvDTreeTrainData*, const CvMat* )
-{
-    assert(0);
-    return false;
-}
-
-
 void
 CvBoostTree::scale( double _scale )
 {
@@ -879,12 +861,6 @@ void CvBoostTree::read( CvFileStorage* fs, CvFileNode* fnode, CvBoost* _ensemble
     ensemble = _ensemble;
 }
 
-
-void CvBoostTree::read( CvFileStorage*, CvFileNode* )
-{
-    assert(0);
-}
-
 void CvBoostTree::read( CvFileStorage* _fs, CvFileNode* _node,
                         CvDTreeTrainData* _data )
 {
@@ -1074,6 +1050,8 @@ CvBoost::train( const CvMat* _train_data, int _tflag,
         trim_weights();
         if( cvCountNonZero(subsample_mask) == 0 )
             break;
+
+        printf("trained %d-th tree...\n", i);
     }
 
     if(weak->total > 0)
@@ -1091,9 +1069,7 @@ CvBoost::train( const CvMat* _train_data, int _tflag,
     return ok;
 }
 
-bool CvBoost::train( CvMLData* _data,
-             CvBoostParams _params,
-             bool update )
+bool CvBoost::train( CvMLData* _data, CvBoostParams _params, bool update )
 {
     bool result = false;
 
@@ -1114,6 +1090,12 @@ bool CvBoost::train( CvMLData* _data,
     __END__;
 
     return result;
+}
+
+void CvBoost::initial_weights(double (&p)[2])
+{
+    p[0] = 1.;
+    p[1] = 1.;
 }
 
 void
@@ -1151,6 +1133,7 @@ CvBoost::update_weights( CvBoostTree* tree )
         sample_idx = data->get_sample_indices( data->data_root, sample_idx_buf );
     }
     CvMat* dtree_data_buf = data->buf;
+
     if( !tree ) // before training the first tree, initialize weights and other parameters
     {
         int* class_labels_buf = (int*)cur_buf_pos;
@@ -1159,8 +1142,9 @@ CvBoost::update_weights( CvBoostTree* tree )
         // in case of logitboost and gentle adaboost each weak tree is a regression tree,
         // so we need to convert class labels to floating-point values
 
-        double w0 = 1./n;
-        double p[2] = { 1, 1 };
+        double w0 = 1./ n;
+        double p[2] = { 1., 1. };
+        initial_weights(p);
 
         cvReleaseMat( &orig_response );
         cvReleaseMat( &sum_response );
@@ -2147,5 +2131,3 @@ CvBoost::predict( const Mat& _sample, const Mat& _missing,
 }
 
 /* End of file. */
-
-
