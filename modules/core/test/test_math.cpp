@@ -2430,8 +2430,8 @@ protected:
         }
 
         Mat convertedRes = resInRad * 180. / CV_PI;
-        double normDiff = norm(convertedRes - resInDeg);
-        if(normDiff > FLT_EPSILON)
+        double normDiff = norm(convertedRes - resInDeg, NORM_INF);
+        if(normDiff > FLT_EPSILON * 180.)
         {
             ts->printf(cvtest::TS::LOG, "There are incorrect result angles (in radians)\n");
             ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
