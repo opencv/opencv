@@ -239,11 +239,21 @@ void cv::Octave::processPositives(const Dataset* dataset, const FeaturePool* poo
     nnegatives = cvRound(nnegatives * total / (double)npositives);
 }
 
+// #define USE_LONG_SEEDS
+#if defined USE_LONG_SEEDS
+# define INDEX_ENGINE_SEED      764224349868LU
+#else
+# define INDEX_ENGINE_SEED      76422434LU
+#endif
+# define DX_DY_SEED             65633343LU
+#undef USE_LONG_SEEDS
+
+
 void cv::Octave::generateNegatives(const Dataset* dataset, const FeaturePool* pool)
 {
     // ToDo: set seed, use offsets
-    sft::Random::engine eng(65633343LU);
-    sft::Random::engine idxEng(764224349868LU);
+    sft::Random::engine eng(DX_DY_SEED);
+    sft::Random::engine idxEng(INDEX_ENGINE_SEED);
 
     int h = boundingBox.height;
 

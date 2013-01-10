@@ -76,6 +76,15 @@ void sft::write(cv::FileStorage& fs, const string&, const ICF& f)
 
 sft::ICFFeaturePool::~ICFFeaturePool(){}
 
+// #define USE_LONG_SEEDS
+#if defined USE_LONG_SEEDS
+# define FEATURE_RECT_SEED      8854342234LU
+#else
+# define FEATURE_RECT_SEED      88543422LU
+#endif
+# define DCHANNELS_SEED         314152314LU
+#undef USE_LONG_SEEDS
+
 void sft::ICFFeaturePool::fill(int desired)
 {
     int mw = model.width;
@@ -88,8 +97,8 @@ void sft::ICFFeaturePool::fill(int desired)
 
     pool.reserve(nfeatures);
 
-    sft::Random::engine eng(8854342234LU);
-    sft::Random::engine eng_ch(314152314LU);
+    sft::Random::engine eng(FEATURE_RECT_SEED);
+    sft::Random::engine eng_ch(DCHANNELS_SEED);
 
     sft::Random::uniform chRand(0, N_CHANNELS - 1);
 
