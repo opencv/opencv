@@ -44,8 +44,6 @@
 #include "opencv2/core/opengl_interop.hpp"
 
 
-
-
 // in later times, use this file as a dispatcher to implementations like cvcap.cpp
 
 CV_IMPL void cvSetWindowProperty(const char* name, int prop_id, double prop_value)
@@ -185,27 +183,28 @@ void cv::moveWindow( const string& winname, int x, int y )
 
 void cv::adjustWindowPos( const string& winname, int xp, int xwp, int yp, int yhp )
 {
+   // set window pos+size with params in percentage of screen width/height
    #ifdef _WIN32
       int cx,cy;
       cx = GetSystemMetrics(SM_CXSCREEN);
       cy = GetSystemMetrics(SM_CYSCREEN);
-      int    x = 0.01 * ( xp * cx );
-      int    y = 0.01 * ( yp * cy );
-      int neww = 0.01 * (xwp * cx );
-      int newh = 0.01 * (yhp * cy );
+      int    x = (int) (0.01 * ( xp * cx ));
+      int    y = (int) (0.01 * ( yp * cy ));
+      int neww = (int) (0.01 * (xwp * cx ));
+      int newh = (int) (0.01 * (yhp * cy ));
       cvMoveWindow( winname.c_str(), x, y );
       cvResizeWindow( winname.c_str(),neww, newh );
    #else
        #if defined(HAVE_QT)
           cvAdjustWindowPos_QT( winname.c_str(),  xp, xwp, yp,  yhp );
        #endif
-	// Dummy calls if Qt is not available:
-      #if defined(HAVE_GTK)
 		(void) winname;
 		(void) xp;
 		(void) xwp;
 		(void) yp;
 		(void) yhp;
+       // Dummy calls if Qt is not available:
+      #if defined(HAVE_GTK)
 		// TODO: 
 		// cvAdjustWindowPos_GTK( winname.c_str(),  xp, xwp, yp,  yhp );
       #endif
@@ -892,16 +891,16 @@ CV_IMPL int cvGetButtonBarContent(const char *, int, char * )
     return -1;
 }
 
-CV_IMPL int cvSetButtonBarContent(const char *, int, int, char * )
+CV_IMPL int cvSetButtonBarContent(const char *, int, int, const char * )
 {
     // CV_NO_GUI_ERROR("cvSetButtonBarContent");
     return -1;
 }
 
-CV_IMPL int cvDispInfoBox_QT(const char*, const char* , const char * )
+CV_IMPL void cvDispInfoBox_QT(const char*, const char* , const char * )
 {
     // CV_NO_GUI_ERROR("cvDispInfoBox_QT");
-    return -1;
+    return;
 }
 
 
