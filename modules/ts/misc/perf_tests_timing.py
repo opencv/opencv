@@ -81,6 +81,9 @@ if __name__ == "__main__":
                 if case.get('status') == 'failed':
                     has_failed = True
 
+    testsuits.append({'name': prevGroupName, 'time': suit_time, \
+        'failed': has_failed})
+
     tbl = table()
 
     # header
