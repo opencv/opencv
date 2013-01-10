@@ -87,7 +87,7 @@ struct Node
 struct Feature
 {
     Feature() {}
-    Feature(const cv::FileNode& fn) : channel((int)fn[SC_F_CHANNEL])
+    Feature(const cv::FileNode& fn, bool useBoxes = false) : channel((int)fn[SC_F_CHANNEL])
     {
         cv::FileNode rn = fn[SC_F_RECT];
         cv::FileNodeIterator r_it = rn.begin();
@@ -98,7 +98,10 @@ struct Feature
         int h = *r_it++;
 
         // ToDo: fix me
-        rect = cv::Rect(x, y, w + x, h + y);
+        if (useBoxes)
+            rect = cv::Rect(x, y, w, h);
+        else
+            rect = cv::Rect(x, y, w + x, h + x);
 
         // 1 / area
         rarea = 1.f / ((rect.width - rect.x) * (rect.height - rect.y));
@@ -352,9 +355,14 @@ struct cv::SCascade::Fields
 
         static const char *const SC_SHRINKAGE        = "shrinkage";
 
+        static const char *const FEATURE_FORMAT      = "featureFormat";
+
         // only Ada Boost supported
         std::string stageTypeStr = (string)root[SC_STAGE_TYPE];
         CV_Assert(stageTypeStr == SC_BOOST);
+
+        std::string fformat = (string)root[FEATURE_FORMAT];
+        bool useBoxes = (fformat == "BOX");
 
         // only HOG-like integral channel features cupported
         string featureTypeStr = (string)root[SC_FEATURE_TYPE];
@@ -402,7 +410,7 @@ struct cv::SCascade::Fields
 
             st = ffs.begin(), st_end = ffs.end();
             for (; st != st_end; ++st )
-                features.push_back(Feature(*st));
+                features.push_back(Feature(*st, useBoxes));
         }
 
         return true;
