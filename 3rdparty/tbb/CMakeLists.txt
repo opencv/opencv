@@ -1,8 +1,4 @@
 #build TBB for Android from source
-if(NOT ANDROID)
-  message(FATAL_ERROR "The script is designed for Android only!")
-endif()
-
 project(tbb)
 
 # 4.1 update 1 - works fine
@@ -140,13 +136,26 @@ if(tbb_need_GENERIC_DWORD_LOAD_STORE)
   set(tbb_need_GENERIC_DWORD_LOAD_STORE ON PARENT_SCOPE)
 endif()
 
-add_library(tbb STATIC ${lib_srcs} ${lib_hdrs} "${CMAKE_CURRENT_SOURCE_DIR}/android_additional.h" "${CMAKE_CURRENT_SOURCE_DIR}/${tbb_version_file}")
-target_link_libraries(tbb c m dl)
+if (ANDROID)
+  set(TBB_SOURCE_FILES ${lib_srcs} ${lib_hdrs} "${CMAKE_CURRENT_SOURCE_DIR}/android_additional.h" "${CMAKE_CURRENT_SOURCE_DIR}/${tbb_version_file}")
+else()
+  set(TBB_SOURCE_FILES ${lib_srcs} ${lib_hdrs} "${CMAKE_CURRENT_SOURCE_DIR}/${tbb_version_file}")
+endif()
+
+if (BUILD_SHARED_LIBS)
+  add_library(tbb SHARED ${TBB_SOURCE_FILES})
+  target_link_libraries(tbb c m dl)
+else()
+  add_library(tbb STATIC ${TBB_SOURCE_FILES})
+  target_link_libraries(tbb c m dl)
+endif()
 
 ocv_warnings_disable(CMAKE_CXX_FLAGS -Wundef -Wmissing-declarations)
 string(REPLACE "-Werror=non-virtual-dtor" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -include \"${CMAKE_CURRENT_SOURCE_DIR}/android_additional.h\"")
+if(ANDROID)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -include \"${CMAKE_CURRENT_SOURCE_DIR}/android_additional.h\"")
+endif()
 
 set_target_properties(tbb
   PROPERTIES OUTPUT_NAME tbb
