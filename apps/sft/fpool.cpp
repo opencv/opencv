@@ -120,6 +120,7 @@ void sft::ICFFeaturePool::fill(int desired)
         if (std::find(pool.begin(), pool.end(),f) == pool.end())
         {
             pool.push_back(f);
+            std::cout << f << std::endl;
         }
     }
 }

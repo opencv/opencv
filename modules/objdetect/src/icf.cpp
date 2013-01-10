@@ -42,6 +42,63 @@
 
 #include "precomp.hpp"
 
+cv::ICFPreprocessor::ICFPreprocessor() {}
+void cv::ICFPreprocessor::apply(cv::InputArray _frame, cv::OutputArray _integrals) const
+{
+    CV_Assert(_frame.type() == CV_8UC3);
+
+    cv::Mat frame      = _frame.getMat();
+    cv::Mat& integrals = _integrals.getMatRef();
+
+    int h = frame.rows;
+    int w = frame.cols;
+
+    cv::Mat channels, gray;
+
+    channels.create(h * BINS, w, CV_8UC1);
+    channels.setTo(0);
+
+    cvtColor(frame, gray, CV_BGR2GRAY);
+
+    cv::Mat df_dx, df_dy, mag, angle;
+    cv::Sobel(gray, df_dx, CV_32F, 1, 0);
+    cv::Sobel(gray, df_dy, CV_32F, 0, 1);
+
+    cv::cartToPolar(df_dx, df_dy, mag, angle, true);
+    mag *= (1.f / (8 * sqrt(2.f)));
+
+    cv::Mat nmag;
+    mag.convertTo(nmag, CV_8UC1);
+
+    angle *=  6 / 360.f;
+
+    for (int y = 0; y < h; ++y)
+    {
+        uchar* magnitude = nmag.ptr<uchar>(y);
+        float* ang = angle.ptr<float>(y);
+
+        for (int x = 0; x < w; ++x)
+        {
+            channels.ptr<uchar>(y + (h * (int)ang[x]))[x] = magnitude[x];
+        }
+    }
+
+    cv::Mat luv, shrunk;
+    cv::cvtColor(frame, luv, CV_BGR2Luv);
+
+    std::vector<cv::Mat> splited;
+    for (int i = 0; i < 3; ++i)
+        splited.push_back(channels(cv::Rect(0, h * (7 + i), w, h)));
+    split(luv, splited);
+
+    float shrinkage = static_cast<float>(integrals.cols - 1) / channels.cols;
+
+    CV_Assert(shrinkage == 0.25);
+
+    cv::resize(channels, shrunk, cv::Size(), shrinkage, shrinkage, CV_INTER_AREA);
+    cv::integral(shrunk, integrals, cv::noArray(), CV_32S);
+}
+
 cv::SCascade::Channels::Channels(int shr) : shrinkage(shr) {}
 
 void cv::SCascade::Channels::appendHogBins(const cv::Mat& gray, std::vector<cv::Mat>& integrals, int bins) const

@@ -488,6 +488,16 @@ protected:
     Ptr<MaskGenerator> maskGenerator;
 };
 
+
+class CV_EXPORTS_W ICFPreprocessor
+{
+public:
+    CV_WRAP ICFPreprocessor();
+    CV_WRAP void apply(cv::InputArray _frame, cv::OutputArray _integrals) const;
+protected:
+    enum {BINS = 10};
+};
+
 // Implementation of soft (stageless) cascaded detector.
 class CV_EXPORTS_W SCascade : public Algorithm
 {
@@ -560,7 +570,7 @@ public:
     virtual void detect(InputArray image, InputArray rois, std::vector<Detection>& objects) const;
     // Param rects is an output array of bounding rectangles for detected objects.
     // Param confs is an output array of confidence for detected objects. i-th bounding rectangle corresponds i-th configence.
-    CV_WRAP virtual void detect(InputArray image, InputArray rois, CV_OUT OutputArray rects, CV_OUT OutputArray confs) const;
+    CV_WRAP virtual void detect(InputArray image, InputArray rois, OutputArray rects, OutputArray confs) const;
 
 private:
     void detectNoRoi(const Mat& image, std::vector<Detection>& objects) const;
