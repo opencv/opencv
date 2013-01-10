@@ -5,6 +5,7 @@ from table_formatter import *
 from optparse import OptionParser
 from operator import itemgetter, attrgetter
 from summary import getSetName, alphanum_keyselector
+import re
 
 if __name__ == "__main__":
     usage = "%prog <log_name>.xml [...]"
@@ -21,7 +22,8 @@ if __name__ == "__main__":
 
     options.generateHtml = detectHtmlOutputType(options.format)
 
-    file = os.path.abspath(args[0])
+    input_file = args[0]
+    file = os.path.abspath(input_file)
     if not os.path.isfile(file):
         sys.stderr.write("IOError reading \"" + file + "\" - " + str(err) + os.linesep)
         parser.print_help()
@@ -108,4 +110,11 @@ if __name__ == "__main__":
         tbl.htmlPrintTable(sys.stdout)
         htmlPrintFooter(sys.stdout)
     else:
+        input_file = re.sub(r'^[\.\/]*', '', input_file)
+        find_module_name = re.search(r'([^_]*)', input_file)
+        module_name = find_module_name.group(0)
+
+        splitter = 15 * '*'
+        print '\n%s\n  %s\n%s\n' % (splitter, module_name, splitter)
         tbl.consolePrintTable(sys.stdout)
+        print 4 * '\n'
