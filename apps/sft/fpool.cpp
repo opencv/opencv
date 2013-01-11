@@ -76,7 +76,7 @@ void sft::write(cv::FileStorage& fs, const string&, const ICF& f)
 
 sft::ICFFeaturePool::~ICFFeaturePool(){}
 
-// #define USE_LONG_SEEDS
+#define USE_LONG_SEEDS
 #if defined USE_LONG_SEEDS
 # define FEATURE_RECT_SEED      8854342234LU
 #else
