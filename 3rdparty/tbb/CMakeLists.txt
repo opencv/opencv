@@ -115,15 +115,28 @@ file(GLOB lib_srcs "${tbb_src_dir}/src/tbb/*.cpp")
 file(GLOB lib_hdrs "${tbb_src_dir}/src/tbb/*.h")
 list(APPEND lib_srcs "${tbb_src_dir}/src/rml/client/rml_tbb.cpp")
 
-add_definitions(-D__TBB_DYNAMIC_LOAD_ENABLED=0         #required
-                -D__TBB_BUILD=1                        #required
-                -D__TBB_SURVIVE_THREAD_SWITCH=0        #no cilk on Android ?
-                -DUSE_PTHREAD                          #required
-                -DTBB_USE_GCC_BUILTINS=1               #required
-                -DTBB_USE_DEBUG=0                      #just to be sure
-                -DTBB_NO_LEGACY=1                      #don't need backward compatibility
-                -DDO_ITT_NOTIFY=0                      #it seems that we don't need these notifications
+if (ANDROID)
+  add_definitions(-D__TBB_DYNAMIC_LOAD_ENABLED=0         #required
+                  -D__TBB_BUILD=1                        #required
+                  -D__TBB_SURVIVE_THREAD_SWITCH=0        #no cilk on Android?
+                  -DUSE_PTHREAD                          #required
+                  -DTBB_USE_GCC_BUILTINS=1               #required
+                  -DTBB_USE_DEBUG=0                      #just to be sure
+                  -DTBB_NO_LEGACY=1                      #don't need backward compatibility
+                  -DDO_ITT_NOTIFY=0                      #it seems that we don't need these notifications on Android
                )
+else()
+  add_definitions(-D__TBB_DYNAMIC_LOAD_ENABLED=1         #required
+                  -D__TBB_BUILD=1                        #required
+                  -D__TBB_SURVIVE_THREAD_SWITCH=1        #cilk
+                  -DUSE_PTHREAD                          #required
+                  -DTBB_USE_GCC_BUILTINS=1               #required
+                  -DTBB_USE_DEBUG=0                      #just to be sure
+                  -DTBB_NO_LEGACY=1                      #don't need backward compatibility
+                  -DDO_ITT_NOTIFY=0                      #Required
+               )
+
+endif()
 
 if(ANDROID_COMPILER_IS_CLANG)
   add_definitions(-D__TBB_GCC_BUILTIN_ATOMICS_PRESENT=1)
