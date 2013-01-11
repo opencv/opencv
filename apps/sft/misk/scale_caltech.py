@@ -6,62 +6,6 @@ from optparse import OptionParser
 import re
 import numpy as np
 
-
-def extract(f):
-    person = re.compile("^lbl=\'person\'\s+str=(\d+)\s+end=(\d+)\s+hide=0$")
-    newobj = re.compile("^lbl=\'(\w+)\'\s+str=(\d+)\s+end=(\d+)\s+hide=0$")
-    pos = re.compile("^pos\s=(\[[((\d+\.+\d*)|\s+|\;)]*\])$")
-    nonarray = re.compile("\;\s+(?!\])|\s+(?!\])")
-    lastSemicolon = re.compile("\;\s+(?=\])")
-
-    goNext = 0
-    start = 0
-    end = 0
-
-    modelW = 32
-    modelH = 64
-
-    for l in f:
-        qq = newobj.match(l)
-        if qq is not None:
-            if qq.group(1) == "person":
-                goNext = 1
-            else:
-                goNext = 0
-            print qq.group(0), qq.group(1)
-        m = person.match(l)
-        if m is not None:
-            start = m.group(1)
-            end   = m.group(2)
-
-            print m.group(0), start, end
-        else:
-            m = pos.match(l)
-            if m is not None:
-                if not goNext:
-                    continue
-                strarr = re.sub(r"\s", ", ", re.sub(r"\;\s+(?=\])", "]", re.sub(r"\;\s+(?!\])", "],[", re.sub(r"(\[)(\d)", "\\1[\\2", m.group(1)))))
-                list = eval(strarr)
-                for idx, box in enumerate(list):
-                    if (box[2] >= 32) or (box[3] >= 64):
-                        x = box[0]
-                        y = box[1]
-                        w = box[2]
-                        h = box[3]
-
-                        ratio = w / h
-                        neww = h / 2.0
-                        offset = (w - neww) / 2.0
-                        print "HERE is big!! ", box, ratio, offset
-                        if (x + offset) > 0:
-                            id = int(start) + idx
-                            file = "/home/kellan/datasets/caltech/set00/V004.seq/I0%04d.jpg" % id # I00000.jpg
-                            print file
-                            img = cv2.imread(file)
-                            cv2.rectangle(img, (int(x), int(y)), (int(x + w), int(y + h)), (0,255,0), 2)
-                            cv2.imshow("sample", img)
-                            cv2.waitKey(50)
-
 def showPeople(f, path, opath):
     newobj = re.compile("^lbl=\'(\w+)\'\s+str=(\d+)\s+end=(\d+)\s+hide=0$")
     pos    = re.compile("^pos\s=(\[[((\d+\.+\d*)|\s+|\;)]*\])$")
@@ -152,20 +96,9 @@ if __name__ == "__main__":
     opath = os.path.join(options.output, datetime.now().strftime("raw_ge48-" + "-%Y-%m-%d-%H-%M-%S"))
     os.mkdir(opath)
 
-    # mat = cv2.imread("/home/kellan/datasets/INRIArescaled/training_set/pos/octave_-1/sample_0.png");
-    # cv2.rectangle(mat, (10, 10), (42, 74), (8, 107, 255), 1)
-
-    # cv2.imshow("person", mat)
-    # cv2.waitKey(0)
-    # if c == 27:
-    #     exit(0)
-
     gl = glob.iglob( os.path.join(options.input, "set[0-1][0-9]/V0[0-9][0-9].txt"))
     for each in gl:
         path, ext = os.path.splitext(each)
         path = path + ".seq"
         print path
         showPeople(open(each), path, opath)
-
-    # f = open("/home/kellan/datasets/caltech/set00/V004.txt")
-    # extract(f)
