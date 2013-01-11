@@ -20,19 +20,17 @@ def resize(image, d_w, d_h):
 
     return cv2.resize(image_to_resize,(d_w, d_h), None, 0, 0, interpolation_type)
 
-def showPeople(f, path, opath):
+def extractPositive(f, path, opath, octave, min_possible):
     newobj = re.compile("^lbl=\'(\w+)\'\s+str=(\d+)\s+end=(\d+)\s+hide=0$")
     pos    = re.compile("^pos\s=(\[[((\d+\.+\d*)|\s+|\;)]*\])$")
     occl   = re.compile("^occl\s*=(\[[0-1|\s]*\])$")
 
-    octave = 0.5
-
-    whole_mod_w = int(64 * octave) + 2 * int(20 * octave)
+    whole_mod_w = int(64  * octave) + 2 * int(20 * octave)
     whole_mod_h = int(128 * octave) + 2 * int(20 * octave)
 
     goNext = 0
-    start = 0
-    end = 0
+    start  = 0
+    end    = 0
 
     person_id = -1;
 
@@ -64,7 +62,6 @@ def showPeople(f, path, opath):
 
                     if len(boxes) > 0 and len(boxes) == len(occls):
                         for idx, box in enumerate(boxes):
-                            color = (8, 107, 255)
                             if occls[idx] == 1:
                                 continue
 
@@ -76,12 +73,13 @@ def showPeople(f, path, opath):
                             id = int(start) - 1 + idx
                             file = os.path.join(path, "I0%04d.jpg" % id)
 
-                            if (start + id) >= end or w < 10 or h < 64:
+                            if (start + id) >= end or w < 10 or h < min_possible:
                                 continue
 
                             mat = cv2.imread(file)
                             mat_h, mat_w, _ = mat.shape
 
+                            # let default height of person be 96.
                             scale = h / float(96)
                             rel_scale = scale / octave
 
@@ -131,10 +129,16 @@ def showPeople(f, path, opath):
 if __name__ == "__main__":
     parser = OptionParser()
     parser.add_option("-i", "--input", dest="input", metavar="DIRECTORY", type="string",
-                       help="path to the Caltech dataset folder.")
+                       help="Path to the Caltech dataset folder.")
 
-    parser.add_option("-o", "--output", dest="output", metavar="DIRECTORY", type="string",
-                       help="path to store data", default=".")
+    parser.add_option("-d", "--output-dir", dest="output", metavar="DIRECTORY", type="string",
+                       help="Path to store data", default=".")
+
+    parser.add_option("-o", "--octave", dest="octave", type="float",
+                       help="Octave for a dataset to be scaled", default="0.5")
+
+    parser.add_option("-m", "--min-possible", dest="min_possible", type="int",
+                       help="Minimum possible height for positive.", default="64")
 
     (options, args) = parser.parse_args()
 
@@ -149,4 +153,4 @@ if __name__ == "__main__":
         path, ext = os.path.splitext(each)
         path = path + ".seq"
         print path
-        showPeople(open(each), path, opath)
+        extractPositive(open(each), path, opath, options.octave, options.min_possible)
