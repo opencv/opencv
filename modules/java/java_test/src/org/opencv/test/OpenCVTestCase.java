@@ -2,9 +2,11 @@
 
 package org.opencv.test;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.IOException;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
@@ -94,31 +96,31 @@ public class OpenCVTestCase extends TestCase {
     protected void setUp() throws Exception {
         super.setUp();
 
-	try {
-	    System.loadLibrary("opencv_java");	
-	} catch (SecurityException e) {
-	    System.out.println(e.toString());
-	    System.exit(-1);
-	} catch (UnsatisfiedLinkError e) {
-	    System.out.println(e.toString());
-	    System.exit(-1);
-	}	
+    try {
+        System.loadLibrary("opencv_java");
+    } catch (SecurityException e) {
+        System.out.println(e.toString());
+        System.exit(-1);
+    } catch (UnsatisfiedLinkError e) {
+        System.out.println(e.toString());
+        System.exit(-1);
+    }
 
-	String pwd;
-	try {
-	    pwd = new File(".").getCanonicalPath() + File.separator;
-	} catch (IOException e) {
-	    System.out.println(e);
-	    return;
-	}
+    String pwd;
+    try {
+        pwd = new File(".").getCanonicalPath() + File.separator;
+    } catch (IOException e) {
+        System.out.println(e);
+        return;
+    }
 
-	OpenCVTestRunner.LENA_PATH = pwd + "res/drawable/lena.jpg";
-	OpenCVTestRunner.CHESS_PATH = pwd + "res/drawable/chessboard.jpg";
-	OpenCVTestRunner.LBPCASCADE_FRONTALFACE_PATH = pwd + "res/raw/lbpcascade_frontalface.xml";
+    OpenCVTestRunner.LENA_PATH = pwd + "res/drawable/lena.jpg";
+    OpenCVTestRunner.CHESS_PATH = pwd + "res/drawable/chessboard.jpg";
+    OpenCVTestRunner.LBPCASCADE_FRONTALFACE_PATH = pwd + "res/raw/lbpcascade_frontalface.xml";
 
-	assert(new File(OpenCVTestRunner.LENA_PATH).exists());
-	assert(new File(OpenCVTestRunner.CHESS_PATH).exists());
-	assert(new File(OpenCVTestRunner.LBPCASCADE_FRONTALFACE_PATH).exists());
+    assert(new File(OpenCVTestRunner.LENA_PATH).exists());
+    assert(new File(OpenCVTestRunner.CHESS_PATH).exists());
+    assert(new File(OpenCVTestRunner.LBPCASCADE_FRONTALFACE_PATH).exists());
 
         dst = new Mat();
         assertTrue(dst.empty());
@@ -452,24 +454,19 @@ public class OpenCVTestCase extends TestCase {
     }
 
     protected static String readFile(String path) {
-        FileInputStream stream = null;
         try {
-            stream = new FileInputStream(new File(path));
-            FileChannel fc = stream.getChannel();
-            MappedByteBuffer bb = fc.map(FileChannel.MapMode.READ_ONLY, 0,
-                    fc.size());
-            return Charset.defaultCharset().decode(bb).toString();
+        BufferedReader br = new BufferedReader(new FileReader(path));
+        String line;
+        StringBuffer result = new StringBuffer();
+        while ((line = br.readLine()) != null) {
+            result.append(line);
+            result.append("\n");
+        }
+        return result.toString();
         } catch (IOException e) {
             OpenCVTestRunner.Log("Failed to read file \"" + path
                     + "\". Exception is thrown: " + e);
             return null;
-        } finally {
-            if (stream != null)
-                try {
-                    stream.close();
-                } catch (IOException e) {
-                    OpenCVTestRunner.Log("Exception is thrown: " + e);
-                }
         }
     }
 

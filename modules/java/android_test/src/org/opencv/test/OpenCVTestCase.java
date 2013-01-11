@@ -1,8 +1,10 @@
 package org.opencv.test;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.IOException;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
@@ -426,24 +428,19 @@ public class OpenCVTestCase extends TestCase {
     }
 
     protected static String readFile(String path) {
-        FileInputStream stream = null;
         try {
-            stream = new FileInputStream(new File(path));
-            FileChannel fc = stream.getChannel();
-            MappedByteBuffer bb = fc.map(FileChannel.MapMode.READ_ONLY, 0,
-                    fc.size());
-            return Charset.defaultCharset().decode(bb).toString();
+        BufferedReader br = new BufferedReader(new FileReader(path));
+        String line;
+        StringBuffer result = new StringBuffer();
+        while ((line = br.readLine()) != null) {
+            result.append(line);
+            result.append("\n");
+        }
+        return result.toString();
         } catch (IOException e) {
             OpenCVTestRunner.Log("Failed to read file \"" + path
                     + "\". Exception is thrown: " + e);
             return null;
-        } finally {
-            if (stream != null)
-                try {
-                    stream.close();
-                } catch (IOException e) {
-                    OpenCVTestRunner.Log("Exception is thrown: " + e);
-                }
         }
     }
 
