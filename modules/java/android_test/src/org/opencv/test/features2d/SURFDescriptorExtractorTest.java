@@ -26,10 +26,9 @@ public class SURFDescriptorExtractorTest extends OpenCVTestCase {
 
     @Override
     protected void setUp() throws Exception {
+        super.setUp();
         extractor = DescriptorExtractor.create(DescriptorExtractor.SURF);
         matSize = 100;
-
-        super.setUp();
     }
 
     public void testComputeListOfMatListOfListOfKeyPointListOfMat() {
