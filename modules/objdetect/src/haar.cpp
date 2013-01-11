@@ -1277,14 +1277,15 @@ cvRunHaarClassifierCascade( const CvHaarClassifierCascade* _cascade,
 namespace cv
 {
 
-struct HaarDetectObjects_ScaleImage_Invoker
+class HaarDetectObjects_ScaleImage_Invoker : public ParallelLoopBody
 {
+public:
     HaarDetectObjects_ScaleImage_Invoker( const CvHaarClassifierCascade* _cascade,
                                           int _stripSize, double _factor,
                                           const Mat& _sum1, const Mat& _sqsum1, Mat* _norm1,
-                                          Mat* _mask1, Rect _equRect, ConcurrentRectVector& _vec,
+                                          Mat* _mask1, Rect _equRect, std::vector<Rect>& _vec,
                                           std::vector<int>& _levels, std::vector<double>& _weights,
-                                          bool _outputLevels  )
+                                          bool _outputLevels, Mutex *_mtx )
     {
         cascade = _cascade;
         stripSize = _stripSize;
@@ -1297,13 +1298,14 @@ struct HaarDetectObjects_ScaleImage_Invoker
         vec = &_vec;
         rejectLevels = _outputLevels ? &_levels : 0;
         levelWeights = _outputLevels ? &_weights : 0;
+        mtx = _mtx;
     }
 
-    void operator()( const BlockedRange& range ) const
+    void operator()( const Range& range ) const
     {
         Size winSize0 = cascade->orig_window_size;
         Size winSize(cvRound(winSize0.width*factor), cvRound(winSize0.height*factor));
-        int y1 = range.begin()*stripSize, y2 = min(range.end()*stripSize, sum1.rows - 1 - winSize0.height);
+        int y1 = range.start*stripSize, y2 = min(range.end*stripSize, sum1.rows - 1 - winSize0.height);
 
         if (y2 <= y1 || sum1.cols <= 1 + winSize0.width)
             return;
@@ -1356,8 +1358,10 @@ struct HaarDetectObjects_ScaleImage_Invoker
                     for( x = 0; x < ssz.width; x += ystep )
                         if( mask1row[x] != 0 )
                         {
+                            mtx->lock();
                             vec->push_back(Rect(cvRound(x*factor), cvRound(y*factor),
                                                 winSize.width, winSize.height));
+                            mtx->unlock();
                             if( --positive == 0 )
                                 break;
                         }
@@ -1378,17 +1382,23 @@ struct HaarDetectObjects_ScaleImage_Invoker
                             result = -1*cascade->count;
                         if( cascade->count + result < 4 )
                         {
+                            mtx->lock();
                             vec->push_back(Rect(cvRound(x*factor), cvRound(y*factor),
                                            winSize.width, winSize.height));
                             rejectLevels->push_back(-result);
                             levelWeights->push_back(gypWeight);
+                            mtx->unlock();
                         }
                     }
                     else
                     {
                         if( result > 0 )
+                        {
+                            mtx->lock();
                             vec->push_back(Rect(cvRound(x*factor), cvRound(y*factor),
                                            winSize.width, winSize.height));
+                            mtx->unlock();
+                        }
                     }
                 }
     }
@@ -1398,18 +1408,20 @@ struct HaarDetectObjects_ScaleImage_Invoker
     double factor;
     Mat sum1, sqsum1, *norm1, *mask1;
     Rect equRect;
-    ConcurrentRectVector* vec;
+    std::vector<Rect>* vec;
     std::vector<int>* rejectLevels;
     std::vector<double>* levelWeights;
+    Mutex* mtx;
 };
 
 
-struct HaarDetectObjects_ScaleCascade_Invoker
+class HaarDetectObjects_ScaleCascade_Invoker : public ParallelLoopBody
 {
+public:
     HaarDetectObjects_ScaleCascade_Invoker( const CvHaarClassifierCascade* _cascade,
                                             Size _winsize, const Range& _xrange, double _ystep,
                                             size_t _sumstep, const int** _p, const int** _pq,
-                                            ConcurrentRectVector& _vec )
+                                            std::vector<Rect>& _vec, Mutex* _mtx )
     {
         cascade = _cascade;
         winsize = _winsize;
@@ -1418,11 +1430,12 @@ struct HaarDetectObjects_ScaleCascade_Invoker
         sumstep = _sumstep;
         p = _p; pq = _pq;
         vec = &_vec;
+        mtx = _mtx;
     }
 
-    void operator()( const BlockedRange& range ) const
+    void operator()( const Range& range ) const
     {
-        int iy, startY = range.begin(), endY = range.end();
+        int iy, startY = range.start, endY = range.end;
         const int *p0 = p[0], *p1 = p[1], *p2 = p[2], *p3 = p[3];
         const int *pq0 = pq[0], *pq1 = pq[1], *pq2 = pq[2], *pq3 = pq[3];
         bool doCannyPruning = p0 != 0;
@@ -1449,7 +1462,11 @@ struct HaarDetectObjects_ScaleCascade_Invoker
 
                 int result = cvRunHaarClassifierCascade( cascade, cvPoint(x, y), 0 );
                 if( result > 0 )
+                {
+                    mtx->lock();
                     vec->push_back(Rect(x, y, winsize.width, winsize.height));
+                    mtx->unlock();
+                }
                 ixstep = result != 0 ? 1 : 2;
             }
         }
@@ -1462,7 +1479,8 @@ struct HaarDetectObjects_ScaleCascade_Invoker
     Range xrange;
     const int** p;
     const int** pq;
-    ConcurrentRectVector* vec;
+    std::vector<Rect>* vec;
+    Mutex* mtx;
 };
 
 
@@ -1482,7 +1500,7 @@ cvHaarDetectObjectsForROC( const CvArr* _img,
     CvSeq* result_seq = 0;
     cv::Ptr<CvMemStorage> temp_storage;
 
-    cv::ConcurrentRectVector allCandidates;
+    std::vector<cv::Rect> allCandidates;
     std::vector<cv::Rect> rectList;
     std::vector<int> rweights;
     double factor;
@@ -1490,6 +1508,7 @@ cvHaarDetectObjectsForROC( const CvArr* _img,
     bool doCannyPruning = (flags & CV_HAAR_DO_CANNY_PRUNING) != 0;
     bool findBiggestObject = (flags & CV_HAAR_FIND_BIGGEST_OBJECT) != 0;
     bool roughSearch = (flags & CV_HAAR_DO_ROUGH_SEARCH) != 0;
+    cv::Mutex mtx;
 
     if( !CV_IS_HAAR_CLASSIFIER(cascade) )
         CV_Error( !cascade ? CV_StsNullPtr : CV_StsBadArg, "Invalid classifier cascade" );
@@ -1599,11 +1618,11 @@ cvHaarDetectObjectsForROC( const CvArr* _img,
                 cvSetImagesForHaarClassifierCascade( cascade, &sum1, &sqsum1, _tilted, 1. );
 
             cv::Mat _norm1(&norm1), _mask1(&mask1);
-            cv::parallel_for(cv::BlockedRange(0, stripCount),
+            cv::parallel_for_(cv::Range(0, stripCount),
                          cv::HaarDetectObjects_ScaleImage_Invoker(cascade,
                                 (((sz1.height + stripCount - 1)/stripCount + ystep-1)/ystep)*ystep,
                                 factor, cv::Mat(&sum1), cv::Mat(&sqsum1), &_norm1, &_mask1,
-                                cv::Rect(equRect), allCandidates, rejectLevels, levelWeights, outputRejectLevels));
+                                cv::Rect(equRect), allCandidates, rejectLevels, levelWeights, outputRejectLevels, &mtx));
         }
     }
     else
@@ -1695,10 +1714,10 @@ cvHaarDetectObjectsForROC( const CvArr* _img,
                 endX = cvRound((scanROI.x + scanROI.width - winSize.width) / ystep);
             }
 
-            cv::parallel_for(cv::BlockedRange(startY, endY),
+            cv::parallel_for_(cv::Range(startY, endY),
                 cv::HaarDetectObjects_ScaleCascade_Invoker(cascade, winSize, cv::Range(startX, endX),
                                                            ystep, sum->step, (const int**)p,
-                                                           (const int**)pq, allCandidates ));
+                                                           (const int**)pq, allCandidates, &mtx ));
 
             if( findBiggestObject && !allCandidates.empty() && scanROI.area() == 0 )
             {

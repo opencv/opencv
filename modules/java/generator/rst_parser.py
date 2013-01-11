@@ -11,7 +11,7 @@ params_blacklist = {
     "fromarray" : ("object", "allowND"), # python only function
     "reprojectImageTo3D" : ("ddepth"),   # python only argument
     "composeRT" : ("d*d*"),              # wildchards in parameter names are not supported by this parser
-    "CvSVM::train_auto" : ("\*Grid"),    # wildchards in parameter names are not supported by this parser
+    "CvSVM::train_auto" : ("\\*Grid"),   # wildchards in parameter names are not supported by this parser
     "error" : "args", # parameter of supporting macro
     "getConvertElem" : ("from", "cn", "to", "beta", "alpha"), # arguments of returned functions
     "gpu::swapChannels" : ("dstOrder") # parameter is not parsed correctly by the hdr_parser
@@ -71,7 +71,8 @@ class DeclarationParser(object):
     def isready(self):
         return self.balance == 0
 
-    def getLang(self, line):
+    @classmethod
+    def getLang(cls, line):
         if line.startswith(".. ocv:function::"):
             return "C++"
         if line.startswith(".. ocv:cfunction::"):
@@ -98,7 +99,7 @@ class ParamParser(object):
         offset = line.find(":param")
         assert offset > 0
         self.prefix = line[:offset]
-        assert self.prefix==" "*len(self.prefix), ":param definition should be prefixed with spaces"
+        assert self.prefix == " "*len(self.prefix), ":param definition should be prefixed with spaces"
         line = line[offset + 6:].lstrip()
         name_end = line.find(":")
         assert name_end > 0
@@ -115,7 +116,8 @@ class ParamParser(object):
         else:
             self.active = False
 
-    def hasDeclaration(self, line):
+    @classmethod
+    def hasDeclaration(cls, line):
         return line.lstrip().startswith(":param")
 
 class RstParser(object):
@@ -177,6 +179,7 @@ class RstParser(object):
         was_code_line = False
         fdecl = DeclarationParser()
         pdecl = ParamParser()
+        ll = None
 
         for l in lines:
             # read tail of function/method declaration if needed
@@ -189,7 +192,7 @@ class RstParser(object):
             # continue capture seealso
             if capturing_seealso:
                 if not l or l.startswith(" "):
-                    seealso = func.get("seealso",[])
+                    seealso = func.get("seealso", [])
                     seealso.extend(l.split(","))
                     func["seealso"] = seealso
                     continue
@@ -206,9 +209,7 @@ class RstParser(object):
             if skip_code_lines:
                 if not l:
                     continue
-                if l.startswith(" "):
-                    None
-                else:
+                if not l.startswith(" "):
                     skip_code_lines = False
 
             if ll.startswith(".. code-block::") or ll.startswith(".. image::"):
@@ -248,7 +249,7 @@ class RstParser(object):
                 if ll.endswith(".. seealso::"):
                     capturing_seealso = True
                 else:
-                    seealso = func.get("seealso",[])
+                    seealso = func.get("seealso", [])
                     seealso.extend(ll[ll.find("::")+2:].split(","))
                     func["seealso"] = seealso
                 continue
@@ -300,12 +301,12 @@ class RstParser(object):
                 if (was_code_line):
                     func["long"] = func.get("long", "") + "\n" + ll + "\n"
                 else:
-                    was_code_line = True;
+                    was_code_line = True
                     func["long"] = func.get("long", "") + ll +"\n<code>\n\n // C++ code:\n\n"
             else:
                 if (was_code_line):
-                    func["long"] = func.get("long", "") + "\n" + ll + "\n</code>\n";
-                    was_code_line = False;
+                    func["long"] = func.get("long", "") + "\n" + ll + "\n</code>\n"
+                    was_code_line = False
                 else:
                     func["long"] = func.get("long", "") + "\n" + ll
         # endfor l in lines
@@ -377,7 +378,8 @@ class RstParser(object):
         if len(lines) > 1:
             self.parse_section_safe(module_name, fname, doc, flineno, lines)
 
-    def parse_namespace(self, func, section_name):
+    @classmethod
+    def parse_namespace(cls, func, section_name):
         known_namespaces = ["cv", "gpu", "flann"]
         l = section_name.strip()
         for namespace in known_namespaces:
@@ -390,7 +392,7 @@ class RstParser(object):
         if decl.fdecl.endswith(";"):
             print >> sys.stderr, "RST parser error E%03d: unexpected semicolon at the end of declaration in \"%s\" at %s:%s" \
                         % (ERROR_011_EOLEXPECTED, func["name"], func["file"], func["line"])
-        decls =  func.get("decls",[])
+        decls =  func.get("decls", [])
         if (decl.lang == "C++" or decl.lang == "C"):
             rst_decl = self.cpp_parser.parse_func_decl_no_wrap(decl.fdecl)
             decls.append( [decl.lang, decl.fdecl, rst_decl] )
@@ -398,8 +400,9 @@ class RstParser(object):
             decls.append( [decl.lang, decl.fdecl] )
         func["decls"] = decls
 
-    def add_new_pdecl(self, func, decl):
-        params =  func.get("params",{})
+    @classmethod
+    def add_new_pdecl(cls, func, decl):
+        params =  func.get("params", {})
         if decl.name in params:
             if show_errors:
                 #check black_list
@@ -416,8 +419,8 @@ class RstParser(object):
             print >> out, "SKIPPED DEFINITION:"
         print >> out, "name:      %s" % (func.get("name","~empty~"))
         print >> out, "file:      %s:%s" % (func.get("file","~empty~"), func.get("line","~empty~"))
-        print >> out, "is class:  %s" % func.get("isclass",False)
-        print >> out, "is struct: %s" % func.get("isstruct",False)
+        print >> out, "is class:  %s" % func.get("isclass", False)
+        print >> out, "is struct: %s" % func.get("isstruct", False)
         print >> out, "module:    %s" % func.get("module","~unknown~")
         print >> out, "namespace: %s" % func.get("namespace", "~empty~")
         print >> out, "class:     %s" % (func.get("class","~empty~"))
@@ -426,7 +429,7 @@ class RstParser(object):
         if "decls" in func:
             print >> out, "declarations:"
             for d in func["decls"]:
-               print >> out, "     %7s: %s" % (d[0], re.sub(r"[ ]+", " ", d[1]))
+                print >> out, "     %7s: %s" % (d[0], re.sub(r"[ ]+", " ", d[1]))
         if "seealso" in func:
             print >> out, "seealso:  ", func["seealso"]
         if "params" in func:
@@ -437,8 +440,8 @@ class RstParser(object):
         print >> out
 
     def validate(self, func):
-        if func.get("decls",None) is None:
-            if not func.get("isclass",False) and not func.get("isstruct",False):
+        if func.get("decls", None) is None:
+            if not func.get("isclass", False) and not func.get("isstruct", False):
                 return False
         if func["name"] in self.definitions:
             if show_errors:
@@ -448,7 +451,7 @@ class RstParser(object):
         return self.validateParams(func)
 
     def validateParams(self, func):
-        documentedParams = func.get("params",{}).keys()
+        documentedParams = func.get("params", {}).keys()
         params = []
 
         for decl in func.get("decls", []):
@@ -486,11 +489,11 @@ class RstParser(object):
         if "class" in func:
             func["class"] = self.normalizeText(func["class"])
         if "brief" in func:
-            func["brief"] = self.normalizeText(func.get("brief",None))
+            func["brief"] = self.normalizeText(func.get("brief", None))
             if not func["brief"]:
                 del func["brief"]
         if "long" in func:
-            func["long"] = self.normalizeText(func.get("long",None))
+            func["long"] = self.normalizeText(func.get("long", None))
             if not func["long"]:
                 del func["long"]
         if "decls" in func:
@@ -518,7 +521,7 @@ class RstParser(object):
                 del func["seealso"]
 
         # special case for old C functions - section name should omit "cv" prefix
-        if not func.get("isclass",False) and not func.get("isstruct",False):
+        if not func.get("isclass", False) and not func.get("isstruct", False):
             self.fixOldCFunctionName(func)
         return func
 
@@ -616,7 +619,7 @@ class RstParser(object):
         s = re.sub(r" +", " ", s)
 
         # restore math
-        s = re.sub(r" *<BR> *","\n", s)
+        s = re.sub(r" *<BR> *", "\n", s)
 
         # remove extra space before .
         s = re.sub(r"[\n ]+\.", ".", s)
@@ -642,13 +645,13 @@ class RstParser(object):
         classes = 0
         structs = 0
         for name, d in self.definitions.items():
-           if d.get("isclass", False):
-               classes += 1
-           elif d.get("isstruct", False):
-               structs += 1
-           else:
-               for decl in d.get("decls",[]):
-                   stat[decl[0]] = stat.get(decl[0],0) + 1
+            if d.get("isclass", False):
+                classes += 1
+            elif d.get("isstruct", False):
+                structs += 1
+            else:
+                for decl in d.get("decls", []):
+                    stat[decl[0]] = stat.get(decl[0], 0) + 1
 
         print
         print "  classes documented:           %s" % classes

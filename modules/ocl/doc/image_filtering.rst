@@ -7,7 +7,7 @@ ocl::Sobel
 ------------------
 Returns void
 
-.. ocv:function:: void Sobel(const oclMat &src, oclMat &dst, int ddepth, int dx, int dy, int ksize = 3, double scale = 1, double delta = 0.0, int bordertype = BORDER_DEFAULT)
+.. ocv:function:: void ocl::Sobel(const oclMat &src, oclMat &dst, int ddepth, int dx, int dy, int ksize = 3, double scale = 1, double delta = 0.0, int bordertype = BORDER_DEFAULT)
 
     :param src: The source image
 
@@ -33,7 +33,7 @@ ocl::Scharr
 ------------------
 Returns void
 
-.. ocv:function:: void Scharr(const oclMat &src, oclMat &dst, int ddepth, int dx, int dy, double scale = 1, double delta = 0.0, int bordertype = BORDER_DEFAULT)
+.. ocv:function:: void ocl::Scharr(const oclMat &src, oclMat &dst, int ddepth, int dx, int dy, double scale = 1, double delta = 0.0, int bordertype = BORDER_DEFAULT)
 
     :param src: The source image
 
@@ -57,7 +57,7 @@ ocl::GaussianBlur
 ------------------
 Returns void
 
-.. ocv:function:: void GaussianBlur(const oclMat &src, oclMat &dst, Size ksize, double sigma1, double sigma2 = 0, int bordertype = BORDER_DEFAULT)
+.. ocv:function:: void ocl::GaussianBlur(const oclMat &src, oclMat &dst, Size ksize, double sigma1, double sigma2 = 0, int bordertype = BORDER_DEFAULT)
 
     :param src: The source image
 
@@ -75,7 +75,7 @@ ocl::boxFilter
 ------------------
 Returns void
 
-.. ocv:function:: void boxFilter(const oclMat &src, oclMat &dst, int ddepth, Size ksize, Point anchor = Point(-1, -1), int borderType = BORDER_DEFAULT)
+.. ocv:function:: void ocl::boxFilter(const oclMat &src, oclMat &dst, int ddepth, Size ksize, Point anchor = Point(-1, -1), int borderType = BORDER_DEFAULT)
 
     :param src: The source image
 
@@ -95,7 +95,7 @@ ocl::Laplacian
 ------------------
 Returns void
 
-.. ocv:function:: void Laplacian(const oclMat &src, oclMat &dst, int ddepth, int ksize = 1, double scale = 1)
+.. ocv:function:: void ocl::Laplacian(const oclMat &src, oclMat &dst, int ddepth, int ksize = 1, double scale = 1)
 
     :param src: The source image
 
@@ -113,7 +113,7 @@ ocl::convolve
 ------------------
 Returns void
 
-.. ocv:function:: void convolve(const oclMat &image, const oclMat &temp1, oclMat &result)
+.. ocv:function:: void ocl::convolve(const oclMat &image, const oclMat &temp1, oclMat &result)
 
     :param image: The source image
 
@@ -127,7 +127,7 @@ ocl::bilateralFilter
 --------------------
 Returns void
 
-.. ocv:function:: void bilateralFilter(const oclMat &src, oclMat &dst, int d, double sigmaColor, double sigmaSpave, int borderType=BORDER_DEFAULT)
+.. ocv:function:: void ocl::bilateralFilter(const oclMat &src, oclMat &dst, int d, double sigmaColor, double sigmaSpave, int borderType=BORDER_DEFAULT)
 
     :param src: The source image
 
@@ -147,7 +147,7 @@ ocl::copyMakeBorder
 --------------------
 Returns void
 
-.. ocv:function:: void copyMakeBorder(const oclMat &src, oclMat &dst, int top, int bottom, int left, int right, int boardtype, const Scalar &value = Scalar())
+.. ocv:function:: void ocl::copyMakeBorder(const oclMat &src, oclMat &dst, int top, int bottom, int left, int right, int boardtype, const Scalar &value = Scalar())
 
     :param src: The source image
 
@@ -165,7 +165,7 @@ ocl::dilate
 ------------------
 Returns void
 
-.. ocv:function:: void dilate( const oclMat &src, oclMat &dst, const Mat &kernel, Point anchor = Point(-1, -1), int iterations = 1, int borderType = BORDER_CONSTANT, const Scalar &borderValue = morphologyDefaultBorderValue())
+.. ocv:function:: void ocl::dilate( const oclMat &src, oclMat &dst, const Mat &kernel, Point anchor = Point(-1, -1), int iterations = 1, int borderType = BORDER_CONSTANT, const Scalar &borderValue = morphologyDefaultBorderValue())
 
     :param src: The source image
 
@@ -187,7 +187,7 @@ ocl::erode
 ------------------
 Returns void
 
-.. ocv:function:: void erode( const oclMat &src, oclMat &dst, const Mat &kernel, Point anchor = Point(-1, -1), int iterations = 1, int borderType = BORDER_CONSTANT, const Scalar &borderValue = morphologyDefaultBorderValue())
+.. ocv:function:: void ocl::erode( const oclMat &src, oclMat &dst, const Mat &kernel, Point anchor = Point(-1, -1), int iterations = 1, int borderType = BORDER_CONSTANT, const Scalar &borderValue = morphologyDefaultBorderValue())
 
     :param src: The source image
 
@@ -209,7 +209,7 @@ ocl::morphologyEx
 ------------------
 Returns void
 
-.. ocv:function:: void morphologyEx( const oclMat &src, oclMat &dst, int op, const Mat &kernel, Point anchor = Point(-1, -1), int iterations = 1, int borderType = BORDER_CONSTANT, const Scalar &borderValue = morphologyDefaultBorderValue())
+.. ocv:function:: void ocl::morphologyEx( const oclMat &src, oclMat &dst, int op, const Mat &kernel, Point anchor = Point(-1, -1), int iterations = 1, int borderType = BORDER_CONSTANT, const Scalar &borderValue = morphologyDefaultBorderValue())
 
     :param src: The source image
 

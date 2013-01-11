@@ -3023,7 +3023,7 @@ public:
                 localHistogram[t0]++; localHistogram[t1]++;
             }
 
-            for (; x < width; ++x, ++ptr)
+            for (; x < width; ++x)
                 localHistogram[ptr[x]]++;
         }
 

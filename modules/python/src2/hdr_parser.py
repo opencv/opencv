@@ -337,10 +337,10 @@ class CppHeaderParser(object):
                     atype = arg[:pos+1].strip()
                     if aname.endswith("&") or aname.endswith("*") or (aname in ["int", "string", "Mat"]):
                         atype = (atype + " " + aname).strip()
-                        aname = "param"
+                        aname = ""
                 else:
                     atype = arg
-                    aname = "param"
+                    aname = ""
                 if aname.endswith("]"):
                     bidx = aname.find('[')
                     atype += aname[bidx:]
@@ -574,6 +574,8 @@ class CppHeaderParser(object):
         the function will convert "A" to "cv.A" and "f" to "cv.A.f".
         """
         if not self.block_stack:
+            return name
+        if name.startswith("cv."):
             return name
         n = ""
         for b in self.block_stack:
