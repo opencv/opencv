@@ -105,10 +105,10 @@ if __name__ == "__main__":
 
                 cropped = mat[inner[1]:inner[3], inner[0]:inner[2], :]
 
-                top = int(max(0, 0 - box[1]))
-                bottom = int(max(0, box[3] - mat_h))
-                left = int(max(0, 0 - box[0]))
-                right = int(max(0, box[2] - mat_w))
+                top     = int(max(0, 0 - box[1]))
+                bottom  = int(max(0, box[3] - mat_h))
+                left    = int(max(0, 0 - box[0]))
+                right   = int(max(0, box[2] - mat_w))
                 cropped = cv2.copyMakeBorder(cropped, top, bottom, left, right, cv2.BORDER_REPLICATE)
                 resized = resize(cropped, whole_mod_w, whole_mod_h)
 
