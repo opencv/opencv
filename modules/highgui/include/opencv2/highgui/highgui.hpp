@@ -202,16 +202,12 @@ CV_EXPORTS int createButton( const string& bar_name, ButtonCallback on_change,
                              void* userdata=NULL, int type=CV_PUSH_BUTTON,
                              bool initial_button_state=0);
 
-
-CV_EXPORTS_W int getButtonBarContent(const string winname, int idx, char * txt);
-CV_EXPORTS_W int setButtonBarContent(const string winname, int etype, int idx, const char * txt);
-CV_EXPORTS_W int setMapContent(const string winname, const string& varname, const char * text );
+//------------------- functions for buttonbar + statusline  (highgui.hpp)
+CV_EXPORTS  int getButtonBarContent(const string winname, int idx, char * txt);
+CV_EXPORTS  int setButtonBarContent(const string winname, int etype, int idx, const char * txt);
+CV_EXPORTS  int setMapContent(const string winname, const string& varname, const char * text );
 CV_EXPORTS void dispInfoBox(const string winname, const char* caption, const string& text);
-
-
 CV_EXPORTS bool getCommandVec(const string& winname, vector<string> & stringVec, char* cmd = NULL);
-
-
 
 //-------------------------
 

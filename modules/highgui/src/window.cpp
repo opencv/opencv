@@ -39,6 +39,37 @@
 //
 //M*/
 
+
+// ------------------- window.cpp ---------------------
+// changes by HS :
+//
+// -setting window position+size by percentage of screen resolution:
+// void cv::adjustWindowPos( const string& winname, int xp, int xwp, int yp, int yhp )
+//
+// - messagebox display
+// void cv::dispInfoBox( const string winname, const char* caption, const string& text )
+//
+// - get the content of a single control inside buttonbar (Qt only, other cases dummy)
+// int cv::getButtonBarContent(const string winname, int idx, char * txt )
+//
+// - set the content of a buttonbar control, e.g. transfer filename to QLabel (Qt only, other cases dummy)
+// int cv::setButtonBarContent(const string winname, int etype, int idx, const char * txt )
+//
+// - create a element inside a map and fill it with text (Qt only, other cases dummy)
+// reading of this map is only done inside window_QT.cpp in the moment ( CvWindow::getMapContent )
+// int cv::setMapContent(const string winname, const string& varname, const char * text )
+//
+// - Reading of a new config file .cfg which contains data for window positioning and
+// additional the configuration of several controls (Qt only). In the first step
+// only a structure is filled with:
+// int cv::readConfig( const char file, const char * name, CvConfigBase * cfg )
+//
+// - New Interface function for communication between an OpenCV application and the HighGUI module
+// If this function is called inside a time loop, you get information about pressed buttons
+// or you get the content of several controls inside buttonbar. ( Dummy if not QT )
+// bool cv::getCommandVec( const string& winname, vector & stringVec, char * cmd )
+
+
 #include "precomp.hpp"
 #include <map>
 #include "opencv2/core/opengl_interop.hpp"
@@ -236,7 +267,7 @@ int cv::setMapContent(const string winname, const string& varname, const char * 
 
 #else
 
-// some dummy definitions in case of missing QT
+// some dummy definitions in case of missing QT   (window.cpp)
 void cv::dispInfoBox( const string , const char* , const string&  ) 
 {
 }

@@ -45,13 +45,13 @@ void calcSaturation( Mat original, int iSatur )
     Mat hsv,melt,mix;
     vector<Mat> planes;
 
-  cvtColor( original, hsv, CV_BGR2HSV );
-	split(hsv,planes);	// planes[1] == Saturation 
-	double scale = iSatur / 100.0;
-	
-	planes[1] = Mat_<uchar>(planes[1] * scale); 
-	merge(planes, melt);
-	cvtColor(melt,mix,CV_HSV2BGR);
+    cvtColor( original, hsv, CV_BGR2HSV );
+    split(hsv,planes);	// planes[1] == Saturation 
+    double scale = iSatur / 100.0;
+
+    planes[1] = Mat_<uchar>(planes[1] * scale); 
+    merge(planes, melt);
+    cvtColor(melt,mix,CV_HSV2BGR);
     cv::imshow("Saturation", mix);
 }
 
@@ -84,7 +84,7 @@ int main( int , char** argv )
     int Mode           = myCfg.WindowMode;
 
     double ticks = (double) getTickCount();
-    int sec = ticks / getTickFrequency();
+    int sec = (int) (ticks / getTickFrequency());
     int randomcode = (sec %2);  
 
     int WinMode = CV_WINDOW_NORMAL;
@@ -168,7 +168,7 @@ int main( int , char** argv )
     //             cv::getCommandVec("ColorImg", stringVec )
     // call with three parameters => fetch field content + command 
     //             cv::getCommandVec("ColorImg", stringVec, csBuffer )
- 
+     
     if ( cv::getCommandVec("ColorImg", stringVec ) )
     {
         printf("\n\ninitial values:" );
@@ -211,7 +211,6 @@ int main( int , char** argv )
     //---------------------------  Start of processing loop
     while (iKey != 27)
     {
-      
         char csBuffer[255];
         csBuffer[0] = 0;
 
@@ -228,12 +227,10 @@ int main( int , char** argv )
 	  // let statusline contain filename for window "Saturation"
 	  // $StatusLine is a part of *.cfg and should contain filename of course...
 	  cv::setMapContent("Saturation", "filename", (char * ) nameVec[idx].c_str() );
-
         }
-        
 
         iKey = cv::waitKey(5);
-      
+
         //------------------------ some events from window "Saturation"  ?
         cv::getCommandVec("Saturation", stringVec, csBuffer );
         if ( strlen(csBuffer) > 0  )
@@ -265,7 +262,6 @@ int main( int , char** argv )
            }
         }
 
-        
         //------------------------ some events from window "ColorImg"  ?
         string strCmd = "";
         cv::getCommandVec("ColorImg", stringVec, csBuffer );
@@ -305,14 +301,14 @@ int main( int , char** argv )
         {
             idx--;
             if (idx < 0) idx = 0;
-	    // only QT:
+            // only QT:
             // displayStatusBar("ColorImg","Loading previous image .....", 500 );
         }
         if ( iKey == 'n')
         {
             idx++;
             if (idx >= cnt) idx = 0;
-	    // only QT:
+            // only QT:
             // displayStatusBar("ColorImg","Loading next image .....", 500 );
         }
 
@@ -327,7 +323,7 @@ int main( int , char** argv )
 
             string filename = "SaveImg";
             if ( USE_hms ) {
-                int tick =  0.001 * getTickCount() ;
+                int tick =  (int) (0.001 * getTickCount()) ;
                 sprintf(csBuffer,"%010d", tick);
                 filename += string(csBuffer);
                 filename += string(szParam) + ".jpg";
@@ -366,19 +362,13 @@ int main( int , char** argv )
             info  = "All lines between <Wnd1></Wnd1> are for configuring the buttonbar and statusline of one window.\n";
 	    info += "<Wnd2></Wnd2> is designed for the next window (and so on ...) \n";
 	    info += "The first line inside <Wnd1></Wnd1> has to be the name of the window, and has to fit to the name in your source.\n";
-	     
 	    info += "Between <Wnd3></Wnd3> you find a definition for an unused window, named \"Dummy\". The names $Zoom, $Panning, $SaveImg, $PropWnd, describe standard controls of  QtGui. ";
-	    
-	    info += "All other controls are available from OpenCV2.4.4 on. \n";
-	    
-	    // Example:\n cv::namedWindow(\"ColorImg\", WinMode); \n";
+	    info += "All other controls are available from OpenCV2.4.4 on. \n";	    
 	    info += "Each line generates one control (or a special group). All standard controls have icons, but do not deeper interact with the application\n";
 	    
 	    cv::dispInfoBox( "ColorImg", "New Qt Function Info", info );
 
-	  
-	    info =  "In such a case no name for the button is needed and the HighGui-DLL stores \ninternal that you have pressed this button. ";
-            info += "Your App says then to the DLL: \n   Give me the name of the last clicked button.\nIn your sorce code you just call:\n";
+	    info += "Each example application says to the HighGUI Module: \n   Give me the name of the last clicked button.\nIn your application sorce code you just call:\n";
             info += "     cvGetCommandVec(\"ColorImg\", stringVec, csBuffer );\n";
             info += "And csBuffer will be will filled with the last command.";
             cv::dispInfoBox( "ColorImg", "New Function Info", info );
@@ -411,4 +401,3 @@ int main( int , char** argv )
 
     return 0;
 }
-
