@@ -69,6 +69,7 @@ protected:
     virtual void computeReprojError( const CvMat* m1, const CvMat* m2,
                                      const CvMat* model, CvMat* error );
     virtual bool isMinimalSetConsistent( const CvMat* m1, const CvMat* m2 );
+    virtual bool weakConstraint ( const CvMat* srcPoints, const CvMat* dstPoints, int t1, int t2, int t3 );
 };
 
 
@@ -297,15 +298,8 @@ cvFindHomography( const CvMat* objectPoints, const CvMat* imagePoints,
 // "Speeding-up homography estimation in mobile devices"
 // Journal of Real-Time Image Processing. 2013. DOI: 10.1007/s11554-012-0314-1
 // Pablo Marquez-Neila, Javier Lopez-Alberca, Jose M. Buenaposada, Luis Baumela
-CV_IMPL bool
-weakConstraint
-  (
-  const CvMat* srcPoints,
-  const CvMat* dstPoints,
-  int t1,
-  int t2,
-  int t3
-  )
+bool
+CvHomographyEstimator::weakConstraint ( const CvMat* srcPoints, const CvMat* dstPoints, int t1, int t2, int t3 )
 {
   const CvPoint2D64f* src = (const CvPoint2D64f*)srcPoints->data.ptr;
   const CvPoint2D64f* dst = (const CvPoint2D64f*)dstPoints->data.ptr;
@@ -355,11 +349,7 @@ weakConstraint
 // Journal of Real-Time Image Processing. 2013. DOI: 10.1007/s11554-012-0314-1
 // Pablo Marquez-Neila, Javier Lopez-Alberca, Jose M. Buenaposada, Luis Baumela
 bool
-CvHomographyEstimator::isMinimalSetConsistent
-  (
-  const CvMat* srcPoints,
-  const CvMat* dstPoints
-  )
+CvHomographyEstimator::isMinimalSetConsistent ( const CvMat* srcPoints, const CvMat* dstPoints )
 {
   return weakConstraint(srcPoints, dstPoints, 0, 1, 2) &&
          weakConstraint(srcPoints, dstPoints, 1, 2, 3) &&
