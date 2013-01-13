@@ -156,7 +156,7 @@ CvStatModel::predict
 --------------------
 Predicts the response for a sample.
 
-.. ocv:function:: float CvStatModel::predict( const Mat& sample, <prediction_params> ) const
+.. ocv:function:: float CvStatModel::predict( const Mat& sample, ... ) const
 
 The method is used to predict the response for a new sample. In case of a classification, the method returns the class label. In case of a regression, the method returns the output function value. The input sample must have as many components as the ``train_data`` passed to ``train`` contains. If the ``var_idx`` parameter is passed to ``train``, it is remembered and then is used to extract only the necessary components from the input sample in the method ``predict``.
 
