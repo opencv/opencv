@@ -50,10 +50,10 @@ def det2negative(xmldoc, opath):
                     rect[3] = rect[1] + 64 + 20
                     try:
                         cropped = mat[rect[1]:(rect[3]), rect[0]:(rect[2]), :]
-                        cv2.imshow("mat", cropped)
-                        cv2.waitKey(10)
                         img = os.path.join(opath, ''.join(random.choice(string.lowercase) for i in range(8)) + ".png")
-                        cv2.imwrite(img, cropped)
+                        cr_h, cr_w, _ = cropped.shape
+                        if cr_h is 84 and cr_w is 52:
+                            cv2.imwrite(img, cropped)
                     except:
                         pass
 
@@ -74,7 +74,7 @@ if __name__ == "__main__":
     opath = os.path.join(options.output, datetime.now().strftime("negatives" + "-%Y-%m-%d-%H-%M-%S"))
     os.mkdir(opath)
 
-    gl = glob.iglob( os.path.join(options.input, "set[0-1][0-9]_V0[0-9][0-9].seq.xml"))
+    gl = glob.iglob( os.path.join(options.input, "set[0][0]_V0[0][5].seq.xml"))
     for f in gl:
         print f
         xmldoc = minidom.parse(f)
